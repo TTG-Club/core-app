@@ -9,7 +9,6 @@
   import {
     ADMIN_ONLINE_STATS_DESCRIPTION,
     ADMIN_ONLINE_STATS_EMPTY_TEXT,
-    ADMIN_ONLINE_STATS_EMPTY_VALUE,
     ADMIN_ONLINE_STATS_GUESTS_LABEL,
     ADMIN_ONLINE_STATS_MINUTES_LABEL,
     ADMIN_ONLINE_STATS_PLACEHOLDER_SITE_IDS,
@@ -19,12 +18,13 @@
     ADMIN_ONLINE_STATS_SUMMARY_LABEL,
     ADMIN_ONLINE_STATS_TITLE,
     ADMIN_ONLINE_STATS_TOTAL_LABEL,
-    ADMIN_ONLINE_STATS_VTTG_PLAYERS_LABEL,
-    ADMIN_ONLINE_STATS_VTTG_REGISTERED_LABEL,
     ADMIN_ONLINE_STATS_VTTG_SITE_ID,
-    ADMIN_ONLINE_STATS_VTTG_SITE_LABEL,
+    ADMIN_ONLINE_STATS_VTTG_TABLE_SITE_ID,
     ADMIN_ONLINE_STATS_WINDOW_LABEL,
+    formatCounter,
+    isVttgSite,
   } from '../model';
+  import AdminOnlineAppCard from './AdminOnlineAppCard.vue';
   import AdminOnlineStatsRow from './AdminOnlineStatsRow.vue';
 
   const props = defineProps<{
@@ -37,21 +37,10 @@
     refresh: [];
   }>();
 
-  const slots = useSlots();
-
   // Скелетон только пока ответа ждём: после ошибки ждать нечего — там прочерки.
   const isPending = computed(
     () => props.isLoading || (!props.hasError && !props.stats),
   );
-
-  /**
-   * Приводит счётчик к строке: без данных ставим прочерк, ноль остаётся нулём.
-   */
-  function formatCounter(value: number | undefined): string {
-    return typeof value === 'number'
-      ? String(value)
-      : ADMIN_ONLINE_STATS_EMPTY_VALUE;
-  }
 
   /**
    * Собирает строки карточки сайта: гости и вошедшие в аккаунт — непересекающиеся
@@ -83,72 +72,50 @@
   }
 
   /**
-   * Собирает строки карточки приложения: VTTG шлёт один ключ на человека, поэтому итог —
-   * это люди, а «в мирах» и «с аккаунтом» лишь признаки этих же людей. Играющий под
-   * аккаунтом попадает в обе строки, складывать их нельзя — итог поэтому стоит первым.
-   */
-  function createAppRows(
-    counters: AdminOnlineCounters | null,
-  ): AdminOnlineSiteCardRow[] {
-    return [
-      {
-        divider: 'below',
-        isTotal: true,
-        label: ADMIN_ONLINE_STATS_TOTAL_LABEL,
-        value: formatCounter(counters?.total),
-      },
-      {
-        divider: 'none',
-        isTotal: false,
-        label: ADMIN_ONLINE_STATS_VTTG_PLAYERS_LABEL,
-        value: formatCounter(counters?.players),
-      },
-      {
-        divider: 'none',
-        isTotal: false,
-        label: ADMIN_ONLINE_STATS_VTTG_REGISTERED_LABEL,
-        value: formatCounter(counters?.registered),
-      },
-    ];
-  }
-
-  /**
-   * Собирает карточку площадки: VTTG — десктопное приложение со своей аудиторией,
-   * поэтому у него подпись «Приложение» и свой набор строк, у сайтов остаётся «Сайт».
+   * Собирает карточку сайта.
    */
   function createSiteCard(
     siteId: string,
     counters: AdminOnlineCounters | null,
   ): AdminOnlineSiteCard {
-    const isApp = siteId === ADMIN_ONLINE_STATS_VTTG_SITE_ID;
-
     return {
-      rows: isApp ? createAppRows(counters) : createSiteRows(counters),
+      rows: createSiteRows(counters),
       siteId,
-      siteLabel: isApp
-        ? ADMIN_ONLINE_STATS_VTTG_SITE_LABEL
-        : ADMIN_ONLINE_STATS_SITE_LABEL,
+      siteLabel: ADMIN_ONLINE_STATS_SITE_LABEL,
     };
+  }
+
+  /**
+   * Находит счётчики площадки в ответе.
+   */
+  function findSiteCounters(siteId: string): AdminOnlineCounters | null {
+    return (
+      props.stats?.sites.find((siteStats) => siteStats.siteId === siteId)
+      ?? null
+    );
   }
 
   // Без данных сетка не схлопывается: остаётся каркас из известных площадок, а
   // числа показываем скелетоном (ждём ответ) или прочерком (ответа не будет).
   const siteCards = computed<AdminOnlineSiteCard[]>(() =>
     props.stats
-      ? props.stats.sites.map((siteStats) =>
-          createSiteCard(siteStats.siteId, siteStats),
-        )
-      : ADMIN_ONLINE_STATS_PLACEHOLDER_SITE_IDS.map((siteId) =>
-          createSiteCard(siteId, null),
-        ),
+      ? props.stats.sites
+          .filter((siteStats) => !isVttgSite(siteStats.siteId))
+          .map((siteStats) => createSiteCard(siteStats.siteId, siteStats))
+      : ADMIN_ONLINE_STATS_PLACEHOLDER_SITE_IDS.filter(
+          (siteId) => !isVttgSite(siteId),
+        ).map((siteId) => createSiteCard(siteId, null)),
+  );
+
+  const appCounters = computed(() =>
+    findSiteCounters(ADMIN_ONLINE_STATS_VTTG_SITE_ID),
+  );
+
+  const tableCounters = computed(() =>
+    findSiteCounters(ADMIN_ONLINE_STATS_VTTG_TABLE_SITE_ID),
   );
 
   const summaryTotal = computed(() => formatCounter(props.stats?.total.total));
-
-  // Сетку карточек держим отдельно от ответа online-app: в неё через слот
-  // добавляются карточки другой статистики (листы персонажа), и падение
-  // online-app не должно их прятать.
-  const hasCards = computed(() => !!siteCards.value.length || !!slots.default);
 
   // Сообщение показываем, когда online-app ответил без сайтов, — даже если сетка
   // рендерится ради карточек из слота, иначе пропажу online-данных не заметить.
@@ -223,10 +190,12 @@
       {{ ADMIN_ONLINE_STATS_EMPTY_TEXT }}
     </div>
 
-    <div
-      v-if="hasCards"
-      class="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4"
-    >
+    <!--
+      Минимум колонки задаёт карточка приложения: в ней самая длинная строка — три
+      плитки-числа в ряд. На 220px они переносились, и карточка снова становилась выше
+      соседних. Карточкам сайтов лишняя ширина не мешает, им и так просторно.
+    -->
+    <div class="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
       <UCard
         v-for="card in siteCards"
         :key="card.siteId"
@@ -249,6 +218,12 @@
           />
         </dl>
       </UCard>
+
+      <AdminOnlineAppCard
+        :app-counters="appCounters"
+        :is-pending="isPending"
+        :table-counters="tableCounters"
+      />
 
       <slot />
     </div>

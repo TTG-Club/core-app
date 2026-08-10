@@ -498,28 +498,17 @@
         <div class="truncate text-xs text-muted">
           {{ subtitle }}
         </div>
-
-        <!-- Состояния идут под подписью: строка и так плотная, а иконок может
-             быть много — здесь они переносятся, не ломая колонки статов. -->
-        <ParticipantConditions
-          class="mt-1"
-          :conditions="participant.conditions"
-          :round="round"
-          :disabled="disabled"
-          @add="onAddCondition"
-          @remove="onRemoveCondition"
-        />
       </div>
     </div>
 
-    <!-- Статы: одинаковые плитки КД/Бонус/Иниц. фиксированной ширины + меню.
-         Колонки совпадают между строками, режимами и типами участников
-         (у игроков в КД — прочерк). На мобильном — вторая строка справа. -->
+    <!-- Статы: одинаковые плитки Хиты/КД/Состояния/Бонус/Иниц. фиксированной
+         ширины + меню. Колонки совпадают между строками, режимами и типами
+         участников (у игроков в КД — прочерк). На мобильном — вторая строка. -->
     <div
       class="flex basis-full flex-wrap items-center justify-end gap-2 sm:flex-none sm:basis-auto sm:flex-nowrap"
     >
-      <!-- Группа выживаемости (Хиты, КД) -->
-      <div class="flex min-w-[120px] flex-1 items-center gap-2 sm:flex-none">
+      <!-- Группа состояния бойца (Хиты, КД, Состояния) -->
+      <div class="flex min-w-52 flex-1 items-center gap-2 sm:flex-none">
         <div class="w-16 flex-1 sm:flex-none">
           <ParticipantHitPointsControl
             :current="participant.currentHitPoints"
@@ -557,10 +546,26 @@
             </ParticipantStatTile>
           </UTooltip>
         </div>
+
+        <!-- Состояния — такая же плитка, как хиты и КД: наложенное читается
+             прямо из ряда, а не отдельной строкой под именем. -->
+        <div
+          class="w-20 flex-1 sm:flex-none"
+          :class="dimmedClass"
+        >
+          <ParticipantConditions
+            :conditions="participant.conditions"
+            :participant-name="participant.name"
+            :round="round"
+            :disabled="disabled"
+            @add="onAddCondition"
+            @remove="onRemoveCondition"
+          />
+        </div>
       </div>
 
       <!-- Группа инициативы и действий (Бонус, Иниц, Меню) -->
-      <div class="flex min-w-[212px] flex-1 items-center gap-2 sm:flex-none">
+      <div class="flex min-w-53 flex-1 items-center gap-2 sm:flex-none">
         <ParticipantStatTile
           label="Бонус"
           class="w-24 flex-1 sm:flex-none"
