@@ -96,7 +96,7 @@
     <div class="flex flex-wrap items-end gap-2">
       <UFormField
         label="Существо"
-        class="min-w-48 flex-1"
+        class="min-w-32 flex-1"
       >
         <UInputMenu
           v-model="selected"
@@ -132,7 +132,7 @@
 
       <UFormField
         label="Имя (необязательно)"
-        class="min-w-40 flex-1"
+        class="min-w-28 flex-1"
       >
         <UInput
           v-model="nameOverride"
@@ -152,14 +152,16 @@
           :min="MIN_CREATURE_BATCH"
           :max="maxCount"
           :disabled="disabled || remaining < 1"
-          class="w-28"
+          class="w-24"
         />
       </UFormField>
 
+      <!-- На узком экране кнопка не влезает в строку полей и переносится —
+           там она растягивается на всю ширину, чтобы не висеть огрызком. -->
       <UButton
         type="submit"
         icon="tabler:plus"
-        class="shrink-0"
+        class="shrink-0 max-sm:grow max-sm:justify-center"
         :loading
         :disabled="!canSubmit || loading"
         aria-label="Добавить существ"

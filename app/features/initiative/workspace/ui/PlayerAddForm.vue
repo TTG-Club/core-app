@@ -71,7 +71,7 @@
     <div class="flex flex-wrap items-end gap-2">
       <UFormField
         label="Имя игрока"
-        class="min-w-0 basis-full"
+        class="min-w-24 flex-1"
       >
         <UInput
           v-model="name"
@@ -108,10 +108,12 @@
         />
       </UFormField>
 
+      <!-- На узком экране кнопка не влезает в строку полей и переносится —
+           там она растягивается на всю ширину, чтобы не висеть огрызком. -->
       <UButton
         type="submit"
         icon="tabler:plus"
-        class="ml-auto shrink-0"
+        class="shrink-0 max-sm:grow max-sm:justify-center"
         :loading
         :disabled="!canSubmit || loading"
         aria-label="Добавить игрока"
