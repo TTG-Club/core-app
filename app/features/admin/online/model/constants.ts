@@ -28,23 +28,48 @@ export const ADMIN_ONLINE_STATS_VTTG_TABLE_SITE_ID = 'vttg-play';
 
 export const ADMIN_ONLINE_STATS_VTTG_SITE_LABEL = 'Приложение';
 
-export const ADMIN_ONLINE_STATS_VTTG_APPS_LABEL = 'Запущено приложений';
+/**
+ * Подписи плиток карточки приложения.
+ *
+ * Чисел у приложения вшестеро больше, чем у сайта, и полными подписями карточка
+ * вытягивалась вдвое выше соседних, ломая ряд. Поэтому здесь короткие подписи, а весь
+ * смысл вынесен в подсказку рядом: правило «текст целиком» для компактных плиток-чисел
+ * с подсказкой не действует. Подписи короткие, но не обрубленные — сокращений с точкой
+ * тут нет, иначе читать пришлось бы по догадке.
+ */
+export const ADMIN_ONLINE_STATS_VTTG_APPS_LABEL = 'Запущено';
+
+export const ADMIN_ONLINE_STATS_VTTG_APPS_HINT =
+  'Сколько человек держат приложение открытым. Один человек считается один раз, сколько бы окон он ни открыл.';
+
+export const ADMIN_ONLINE_STATS_VTTG_TABLE_LABEL = 'За столами';
+
+export const ADMIN_ONLINE_STATS_VTTG_TABLE_HINT =
+  'Игроки, пришедшие в чужой мир по ссылке: приложение у них не запущено, только вкладка браузера.';
 
 /**
- * Три строки «Из них» — доли запущенных приложений, а не слагаемые: играющий под
- * аккаунтом попадает и в «играют», и в «вошли в аккаунт». «Из них» проговаривает это в
- * подписи, чтобы числа не пытались сложить.
+ * Три плитки помельче — доли запущенных приложений, а не слагаемые: играющий под
+ * аккаунтом попадает и в «В игре», и в «Аккаунт». Что это доли, проговаривают подсказки.
  */
-export const ADMIN_ONLINE_STATS_VTTG_PLAYERS_LABEL = 'Из них играют в мирах';
+export const ADMIN_ONLINE_STATS_VTTG_PLAYERS_LABEL = 'В игре';
 
-export const ADMIN_ONLINE_STATS_VTTG_IDLE_LABEL = 'Из них просто открыто';
+export const ADMIN_ONLINE_STATS_VTTG_PLAYERS_HINT =
+  'Из запущенных приложений: сколько человек прямо сейчас на игровой сцене.';
 
-export const ADMIN_ONLINE_STATS_VTTG_REGISTERED_LABEL =
-  'Из них вошли в аккаунт';
+export const ADMIN_ONLINE_STATS_VTTG_IDLE_LABEL = 'Вне игры';
 
-export const ADMIN_ONLINE_STATS_VTTG_TABLE_LABEL = 'Игроков за столами';
+export const ADMIN_ONLINE_STATS_VTTG_IDLE_HINT =
+  'Из запущенных приложений: сколько человек открыли приложение, но в мир не заходили.';
+
+export const ADMIN_ONLINE_STATS_VTTG_REGISTERED_LABEL = 'Аккаунт';
+
+export const ADMIN_ONLINE_STATS_VTTG_REGISTERED_HINT =
+  'Из запущенных приложений: сколько вошли в аккаунт TTG. Остальных считаем по идентификатору браузера.';
 
 export const ADMIN_ONLINE_STATS_VTTG_TOTAL_LABEL = 'Всего людей';
+
+export const ADMIN_ONLINE_STATS_VTTG_TOTAL_HINT =
+  'Запущенные приложения и игроки за столами — разные люди, поэтому складываются.';
 
 export const ADMIN_ONLINE_STATS_REGISTERED_LABEL = 'Пользователей';
 
