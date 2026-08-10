@@ -18,16 +18,33 @@ export const ADMIN_ONLINE_STATS_GUESTS_LABEL = 'Гостей';
 /** VTTG — десктопное приложение, а не сайт, поэтому подписи у него свои. */
 export const ADMIN_ONLINE_STATS_VTTG_SITE_ID = 'vttg';
 
+/**
+ * Вторая аудитория VTTG: люди за чужими столами. Приложения у них нет — только вкладка
+ * браузера с чужим миром, поэтому сервис онлайна держит их отдельным сайтом, иначе один
+ * человек с открытой панелью и открытым миром получил бы два ключа и стал бы двумя.
+ * Своей карточки у них нет: в отрыве от приложения эта аудитория ничего не значит.
+ */
+export const ADMIN_ONLINE_STATS_VTTG_TABLE_SITE_ID = 'vttg-play';
+
 export const ADMIN_ONLINE_STATS_VTTG_SITE_LABEL = 'Приложение';
 
+export const ADMIN_ONLINE_STATS_VTTG_APPS_LABEL = 'Запущено приложений';
+
 /**
- * У приложения обе строки — подмножества итога, а не слагаемые: играющий под аккаунтом
- * попадает в обе. «Из них» проговаривает это в подписи, чтобы числа не пытались сложить.
+ * Три строки «Из них» — доли запущенных приложений, а не слагаемые: играющий под
+ * аккаунтом попадает и в «играют», и в «вошли в аккаунт». «Из них» проговаривает это в
+ * подписи, чтобы числа не пытались сложить.
  */
 export const ADMIN_ONLINE_STATS_VTTG_PLAYERS_LABEL = 'Из них играют в мирах';
 
+export const ADMIN_ONLINE_STATS_VTTG_IDLE_LABEL = 'Из них просто открыто';
+
 export const ADMIN_ONLINE_STATS_VTTG_REGISTERED_LABEL =
   'Из них вошли в аккаунт';
+
+export const ADMIN_ONLINE_STATS_VTTG_TABLE_LABEL = 'Игроков за столами';
+
+export const ADMIN_ONLINE_STATS_VTTG_TOTAL_LABEL = 'Всего людей';
 
 export const ADMIN_ONLINE_STATS_REGISTERED_LABEL = 'Пользователей';
 

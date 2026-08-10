@@ -19,10 +19,15 @@
     ADMIN_ONLINE_STATS_SUMMARY_LABEL,
     ADMIN_ONLINE_STATS_TITLE,
     ADMIN_ONLINE_STATS_TOTAL_LABEL,
+    ADMIN_ONLINE_STATS_VTTG_APPS_LABEL,
+    ADMIN_ONLINE_STATS_VTTG_IDLE_LABEL,
     ADMIN_ONLINE_STATS_VTTG_PLAYERS_LABEL,
     ADMIN_ONLINE_STATS_VTTG_REGISTERED_LABEL,
     ADMIN_ONLINE_STATS_VTTG_SITE_ID,
     ADMIN_ONLINE_STATS_VTTG_SITE_LABEL,
+    ADMIN_ONLINE_STATS_VTTG_TABLE_LABEL,
+    ADMIN_ONLINE_STATS_VTTG_TABLE_SITE_ID,
+    ADMIN_ONLINE_STATS_VTTG_TOTAL_LABEL,
     ADMIN_ONLINE_STATS_WINDOW_LABEL,
   } from '../model';
   import AdminOnlineStatsRow from './AdminOnlineStatsRow.vue';
@@ -50,6 +55,31 @@
   function formatCounter(value: number | undefined): string {
     return typeof value === 'number'
       ? String(value)
+      : ADMIN_ONLINE_STATS_EMPTY_VALUE;
+  }
+
+  /**
+   * Считает, сколько осталось за вычетом доли. Нет одного из чисел — нет и разности:
+   * прочерк честнее выдуманного нуля.
+   */
+  function formatRemainder(
+    total: number | undefined,
+    part: number | undefined,
+  ): string {
+    return typeof total === 'number' && typeof part === 'number'
+      ? String(total - part)
+      : ADMIN_ONLINE_STATS_EMPTY_VALUE;
+  }
+
+  /**
+   * Складывает две аудитории в общее число людей. Одной из них нет — итога тоже нет.
+   */
+  function formatSum(
+    first: number | undefined,
+    second: number | undefined,
+  ): string {
+    return typeof first === 'number' && typeof second === 'number'
+      ? String(first + second)
       : ADMIN_ONLINE_STATS_EMPTY_VALUE;
   }
 
@@ -83,65 +113,115 @@
   }
 
   /**
-   * Собирает строки карточки приложения: VTTG шлёт один ключ на человека, поэтому итог —
-   * это люди, а «в мирах» и «с аккаунтом» лишь признаки этих же людей. Играющий под
-   * аккаунтом попадает в обе строки, складывать их нельзя — итог поэтому стоит первым.
+   * Собирает строки карточки VTTG. Аудиторий у приложения две, и это разные люди:
+   * владельцы с запущенным приложением и те, кто пришёл за чужой стол по ссылке.
+   * Складываются они только в самом низу, а три строки «Из них» — доли первой строки,
+   * а не слагаемые: играющий под аккаунтом попадает и в «играют», и в «вошли в аккаунт».
    */
-  function createAppRows(
-    counters: AdminOnlineCounters | null,
+  function createVttgRows(
+    appCounters: AdminOnlineCounters | null,
+    tableCounters: AdminOnlineCounters | null,
   ): AdminOnlineSiteCardRow[] {
     return [
       {
         divider: 'below',
         isTotal: true,
-        label: ADMIN_ONLINE_STATS_TOTAL_LABEL,
-        value: formatCounter(counters?.total),
+        label: ADMIN_ONLINE_STATS_VTTG_APPS_LABEL,
+        value: formatCounter(appCounters?.total),
       },
       {
         divider: 'none',
         isTotal: false,
         label: ADMIN_ONLINE_STATS_VTTG_PLAYERS_LABEL,
-        value: formatCounter(counters?.players),
+        value: formatCounter(appCounters?.players),
+      },
+      {
+        divider: 'none',
+        isTotal: false,
+        label: ADMIN_ONLINE_STATS_VTTG_IDLE_LABEL,
+        value: formatRemainder(appCounters?.total, appCounters?.players),
       },
       {
         divider: 'none',
         isTotal: false,
         label: ADMIN_ONLINE_STATS_VTTG_REGISTERED_LABEL,
-        value: formatCounter(counters?.registered),
+        value: formatCounter(appCounters?.registered),
+      },
+      {
+        divider: 'above',
+        isTotal: false,
+        label: ADMIN_ONLINE_STATS_VTTG_TABLE_LABEL,
+        value: formatCounter(tableCounters?.total),
+      },
+      {
+        divider: 'above',
+        isTotal: true,
+        label: ADMIN_ONLINE_STATS_VTTG_TOTAL_LABEL,
+        value: formatSum(appCounters?.total, tableCounters?.total),
       },
     ];
   }
 
   /**
-   * Собирает карточку площадки: VTTG — десктопное приложение со своей аудиторией,
-   * поэтому у него подпись «Приложение» и свой набор строк, у сайтов остаётся «Сайт».
+   * Собирает карточку VTTG: обе его аудитории живут в одной карточке, потому что в
+   * отрыве друг от друга не значат ничего — столы без приложений и приложения без столов.
+   *
+   * Про столы сервис онлайна может ещё не знать — тогда в двух нижних строках прочерк,
+   * как и в любом другом месте, где числа у нас нет. Строки при этом остаются: карточка
+   * не должна менять форму от того, обновлён сервис или ещё нет.
+   */
+  function createVttgCard(
+    appCounters: AdminOnlineCounters | null,
+    tableCounters: AdminOnlineCounters | null,
+  ): AdminOnlineSiteCard {
+    return {
+      rows: createVttgRows(appCounters, tableCounters),
+      siteId: ADMIN_ONLINE_STATS_VTTG_SITE_ID,
+      siteLabel: ADMIN_ONLINE_STATS_VTTG_SITE_LABEL,
+    };
+  }
+
+  /**
+   * Собирает карточку обычного сайта.
    */
   function createSiteCard(
     siteId: string,
     counters: AdminOnlineCounters | null,
   ): AdminOnlineSiteCard {
-    const isApp = siteId === ADMIN_ONLINE_STATS_VTTG_SITE_ID;
-
     return {
-      rows: isApp ? createAppRows(counters) : createSiteRows(counters),
+      rows: createSiteRows(counters),
       siteId,
-      siteLabel: isApp
-        ? ADMIN_ONLINE_STATS_VTTG_SITE_LABEL
-        : ADMIN_ONLINE_STATS_SITE_LABEL,
+      siteLabel: ADMIN_ONLINE_STATS_SITE_LABEL,
     };
   }
 
   // Без данных сетка не схлопывается: остаётся каркас из известных площадок, а
   // числа показываем скелетоном (ждём ответ) или прочерком (ответа не будет).
-  const siteCards = computed<AdminOnlineSiteCard[]>(() =>
-    props.stats
-      ? props.stats.sites.map((siteStats) =>
-          createSiteCard(siteStats.siteId, siteStats),
-        )
-      : ADMIN_ONLINE_STATS_PLACEHOLDER_SITE_IDS.map((siteId) =>
-          createSiteCard(siteId, null),
-        ),
-  );
+  const siteCards = computed<AdminOnlineSiteCard[]>(() => {
+    if (!props.stats) {
+      return ADMIN_ONLINE_STATS_PLACEHOLDER_SITE_IDS.map((siteId) =>
+        siteId === ADMIN_ONLINE_STATS_VTTG_SITE_ID
+          ? createVttgCard(null, null)
+          : createSiteCard(siteId, null),
+      );
+    }
+
+    const tableCounters = props.stats.sites.find(
+      (siteStats) => siteStats.siteId === ADMIN_ONLINE_STATS_VTTG_TABLE_SITE_ID,
+    );
+
+    // Столы своей карточки не получают — они уходят строками в карточку приложения.
+    return props.stats.sites
+      .filter(
+        (siteStats) =>
+          siteStats.siteId !== ADMIN_ONLINE_STATS_VTTG_TABLE_SITE_ID,
+      )
+      .map((siteStats) =>
+        siteStats.siteId === ADMIN_ONLINE_STATS_VTTG_SITE_ID
+          ? createVttgCard(siteStats, tableCounters ?? null)
+          : createSiteCard(siteStats.siteId, siteStats),
+      );
+  });
 
   const summaryTotal = computed(() => formatCounter(props.stats?.total.total));
 
