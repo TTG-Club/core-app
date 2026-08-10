@@ -10,6 +10,7 @@ import {
   buildMarkdownEntity,
   buildStatsBlock,
   escapeMarkdown,
+  escapeMarkdownCell,
   joinStat,
   toInlineValue,
   toMarkdown,
@@ -139,13 +140,27 @@ function toParenthesized(value: string | undefined | null): string {
   return value ? `(${value})` : '';
 }
 
-/** Характеристики таблицей: значение, модификатор и спасбросок по каждой. */
+/**
+ * Характеристики таблицей: значение, модификатор и спасбросок по каждой.
+ *
+ * Значения — сырые строки из API, поэтому кроме парных символов гасится
+ * пайп: таблица собрана вручную, мимо `renderCell`, и литеральный пайп
+ * добавил бы колонку. Подписи берутся из `ABILITY_LABELS` — это наш
+ * литерал, экранировать в нём нечего.
+ */
 function getAbilitiesTable(abilities: CreatureAbilitiesResponse): string {
   const rows = ABILITY_LABELS.filter(([key]) => abilities[key]).map(
     ([key, label]) => {
       const { value, mod, sav } = abilities[key];
 
-      return `| ${label} | ${value} | ${mod} | ${sav} |`;
+      const cells = [
+        label,
+        escapeMarkdownCell(value),
+        escapeMarkdownCell(mod),
+        escapeMarkdownCell(sav),
+      ];
+
+      return `| ${cells.join(' | ')} |`;
     },
   );
 
@@ -206,18 +221,26 @@ function getLegendary(creature: CreatureDetailResponse): string {
     .join('\n\n');
 }
 
-/** Логово: описание, эффекты и правило их окончания. */
+/**
+ * Логово: описание, эффекты и правило их окончания.
+ *
+ * Блок рисуется, если есть хоть одно из полей, а придти без ключа может
+ * любое, — поэтому эффекты разворачиваются из нормализованного массива:
+ * существо с описанием, но без эффектов, роняло бы сборку на `.map`.
+ */
 function getLair(creature: CreatureDetailResponse): string {
   const { lair } = creature;
 
-  if (!lair.effects?.length && !lair.description?.length) {
+  const effects = lair.effects ?? [];
+
+  if (!effects.length && !lair.description?.length) {
     return '';
   }
 
   return [
     `##### ${escapeMarkdown(lair.name) || LAIR_FALLBACK_NAME}`,
     toMarkdown(lair.description),
-    ...lair.effects.map(toActionItem),
+    ...effects.map(toActionItem),
     toMarkdown(lair.ending),
   ]
     .filter(Boolean)

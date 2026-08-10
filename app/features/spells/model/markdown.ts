@@ -110,7 +110,12 @@ function getAffiliationNames(items: SpellDetailAffiliationItem[]): string {
  *
  * Курсив не переживает пустую строку, поэтому оборачивается каждый блок
  * отдельно: обёртка вокруг всего текста развалилась бы, будь в `upper`
- * больше одного абзаца. Подпись идёт только в первом блоке.
+ * больше одного абзаца.
+ *
+ * Подпись приклеивается к первому блоку, только если он однострочный.
+ * Начнись `upper` со списка или таблицы, приклеенная подпись съела бы
+ * первый пункт («**Подпись.** - пункт» пунктом уже не является), поэтому
+ * там она выносится отдельным абзацем перед блоком.
  */
 function getUpper(spell: SpellDetailResponse): string | undefined {
   if (!spell.upper?.length) {
@@ -121,17 +126,21 @@ function getUpper(spell: SpellDetailResponse): string | undefined {
     ? 'Накладывание более высокой ячейкой.'
     : 'Улучшение заговора.';
 
-  const blocks = toMarkdown(spell.upper).split('\n\n').filter(Boolean);
+  const [first, ...rest] = toMarkdown(spell.upper)
+    .split('\n\n')
+    .filter(Boolean);
 
-  if (!blocks.length) {
+  if (!first) {
     return undefined;
   }
 
-  return blocks
-    .map((block, index) =>
-      toEmphasized(index ? block : `**${label}** ${block}`),
-    )
-    .join('\n\n');
+  // Над списком и таблицей подпись стоит жирной строкой-зачином без курсива:
+  // в книгах она набрана так же.
+  const head = isMultiline(first)
+    ? [`**${label}**`, first]
+    : [toEmphasized(`**${label}** ${first}`)];
+
+  return [...head, ...rest.map(toEmphasized)].join('\n\n');
 }
 
 /**
@@ -140,5 +149,10 @@ function getUpper(spell: SpellDetailResponse): string | undefined {
  * разъехались бы по разным пунктам списка.
  */
 function toEmphasized(block: string): string {
-  return block.includes('\n') ? block : `*${block}*`;
+  return isMultiline(block) ? block : `*${block}*`;
+}
+
+/** Список и таблица приходят многострочным блоком, абзац — однострочным. */
+function isMultiline(block: string): boolean {
+  return block.includes('\n');
 }

@@ -21,6 +21,13 @@ const MARKDOWN_SPECIAL_REGEXP = /([\\`*_])/g;
 export const MARKDOWN_NEWLINE_REGEXP = /\s*\n\s*/g;
 
 /**
+ * Литеральный пайп. В потоке текста он безобиден, а в ячейке таблицы
+ * читается как граница колонки: неэкранированный добавит лишнюю колонку и
+ * сдвинет всю строку относительно шапки.
+ */
+const MARKDOWN_PIPE_REGEXP = /\|/g;
+
+/**
  * Экранирует парные символы Markdown в сыром тексте из данных.
  *
  * Скобки и решётка не трогаются — они безопасны в потоке текста, а
@@ -33,6 +40,33 @@ export const MARKDOWN_NEWLINE_REGEXP = /\s*\n\s*/g;
  */
 export function escapeMarkdown(value: string | undefined): string {
   return value ? value.replace(MARKDOWN_SPECIAL_REGEXP, '\\$1') : '';
+}
+
+/**
+ * Экранирует пайпы в готовом Markdown-тексте ячейки.
+ *
+ * Отдельно от `escapeMarkdown`, потому что на вход идёт уже собранная
+ * разметка (`**жирный**`): повторное экранирование парных символов
+ * превратило бы её в литеральные звёздочки.
+ *
+ * @param value - Готовый Markdown-текст ячейки
+ * @returns Текст с экранированными пайпами
+ */
+export function escapePipes(value: string): string {
+  return value.replace(MARKDOWN_PIPE_REGEXP, '\\|');
+}
+
+/**
+ * Экранирует сырой текст из данных для ячейки Markdown-таблицы.
+ *
+ * Сверх `escapeMarkdown` гасит пайп: таблица, собранная вручную, идёт мимо
+ * `renderCell`, и литеральный пайп в значении развалил бы её.
+ *
+ * @param value - Сырой текст из данных
+ * @returns Текст, безопасный внутри ячейки таблицы
+ */
+export function escapeMarkdownCell(value: string | undefined): string {
+  return escapePipes(escapeMarkdown(value));
 }
 
 /**

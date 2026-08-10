@@ -17,6 +17,7 @@ export {
 export {
   clampHeadingLevel,
   escapeMarkdown,
+  escapeMarkdownCell,
   getNodeText,
   isBlockNode,
   isMarkerNode,

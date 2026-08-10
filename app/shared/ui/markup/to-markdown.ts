@@ -5,6 +5,7 @@ import { parse } from './parser';
 import {
   clampHeadingLevel,
   escapeMarkdown,
+  escapePipes,
   getNodeText,
   isBlockNode,
   isMarkerNode,
@@ -327,14 +328,20 @@ function toAlign(style: string | undefined): string {
  * Содержимое ячейки: всегда инлайн — перенос строки оборвал бы строку
  * таблицы, а неэкранированный `|` добавил бы лишнюю колонку (парсер
  * намеренно оставляет литеральные пайпы, см. `convertMarker`).
+ *
+ * Парные символы здесь уже экранированы `renderNode`, поэтому берётся
+ * только пайповая половина: `escapeMarkdownCell` прогнал бы разметку через
+ * `escapeMarkdown` повторно.
  */
 function renderCell(value: unknown, depth: number): string {
   const { content } = normalizeCell(value);
 
-  return renderInline(toNodes(content), depth + 1)
-    .replace(MARKDOWN_NEWLINE_REGEXP, ' ')
-    .replace(/\|/g, '\\|')
-    .trim();
+  return escapePipes(
+    renderInline(toNodes(content), depth + 1).replace(
+      MARKDOWN_NEWLINE_REGEXP,
+      ' ',
+    ),
+  ).trim();
 }
 
 /** Разворачивает ячейку-объект `{ content, align }` в её содержимое. */
