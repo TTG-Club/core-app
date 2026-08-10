@@ -103,6 +103,11 @@ Always import feature components using the domain alias (e.g.,
     any unmount (settings, caches, user preferences). If the source of truth is
     already persistent (`useLocalStorage`), the composable around it only shares
     a reactive reference — that is still the first case.
+  - **SSR caveat:** `createSharedComposable` deliberately falls back to a
+    non-shared version on the server — every call builds a fresh instance, so
+    never rely on it to share state during SSR. `createGlobalState` has no such
+    fallback: its state lives in the server process and is shared by every
+    request, therefore it must never hold user-specific data.
 - **Rendering:** Pure frontend features (calculators, dice rollers) must
   strictly be wrapped in `<ClientOnly>`.
 - **Documentation (JSDoc):** All functions (especially in `utils.ts`) must have
@@ -122,9 +127,10 @@ Always import feature components using the domain alias (e.g.,
 - **Watcher Hygiene:**
   - If multiple watchers call the **same handler**, combine them into a single
     `watch([sourceA, sourceB], handler)`.
-  - Be aware of **watcher cycles** (`watch(A) → B changes → watch(B) → A
-    changes`). Always document the cycle-breaking guard (e.g., `isEqual` check)
-    with a comment explaining _why_ the cycle terminates.
+  - Be aware of **watcher cycles**
+    (`watch(A) → B changes → watch(B) → A changes`). Always document the
+    cycle-breaking guard (e.g., `isEqual` check) with a comment explaining
+    _why_ the cycle terminates.
 - **URL Query Defensiveness:** Values from `route.query` are
   `string | null | (string | null)[]`. Always check for both `null` and empty
   string (`''`). A bare `typeof val === 'string'` check is **NOT sufficient** —

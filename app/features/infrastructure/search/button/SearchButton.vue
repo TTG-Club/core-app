@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import { useGlobalSearch } from '~infrastructure/search/composable';
+  import { useGlobalSearch } from '../composable';
 
   const { open } = useGlobalSearch();
 </script>
