@@ -32,16 +32,19 @@ export function isFilterSearchable(groups: FilterGroups): boolean {
  * Оставляет в группе значения, подходящие под запрос.
  *
  * Совпадение по названию группы показывает её значения целиком: иначе поиск по
- * названию группы приводил бы к пустой группе. Выбранные значения остаются
- * видимыми всегда — иначе выбор, влияющий на выдачу, пропал бы с экрана, и
- * снять его было бы негде.
+ * названию группы приводил бы к пустой группе.
+ *
+ * Функция отвечает только за совпадение с запросом и поэтому не удерживает
+ * тронутые значения — их добавляет `getSearchedGroupItems`. Иначе выдача у
+ * группы с любым выбором никогда не пуста, и фолбэк по раскладке не
+ * срабатывает.
  *
  * @param group группа фильтров.
  * @param items доступные значения группы (уже отфильтрованные каскадом).
  * @param query нормализованный поисковый запрос.
- * @returns значения, которые следует отрисовать.
+ * @returns значения, совпавшие с запросом.
  */
-function getMatchedItems(
+function getQueryMatchedItems(
   group: FilterGroup,
   items: FilterItems,
   query: string,
@@ -50,19 +53,18 @@ function getMatchedItems(
     return items;
   }
 
-  return items.filter(
-    (filterItem: FilterItem) =>
-      normalizeForSearch(filterItem.name).includes(query)
-      || filterItem.selected !== null,
+  return items.filter((filterItem: FilterItem) =>
+    normalizeForSearch(filterItem.name).includes(query),
   );
 }
 
 /**
  * Применяет поисковый запрос к значениям группы с учётом неверной раскладки.
  *
- * Раскладка пробуется только когда прямой запрос ничего не нашёл — тем же
- * фолбэком, что и в поиске по каталогам листа персонажа, чтобы конверсия не
- * добавляла ложных совпадений к успешному запросу.
+ * Выбранные значения остаются видимыми всегда — иначе выбор, влияющий на
+ * выдачу, пропал бы с экрана, и снять его было бы негде. Накладываются они
+ * поверх совпадений, а не внутри поиска: признаком «ничего не нашлось» для
+ * фолбэка служит именно чистая выдача.
  *
  * @param group группа фильтров.
  * @param items доступные значения группы.
@@ -80,15 +82,12 @@ export function getSearchedGroupItems(
     return items;
   }
 
-  const matched = getMatchedItems(group, items, query);
+  const matchedItems = withLayoutFallback(query, (searchQuery) =>
+    getQueryMatchedItems(group, items, searchQuery),
+  );
 
-  if (matched.length) {
-    return matched;
-  }
-
-  const layoutQuery = normalizeForSearch(convertKeyboardLayout(query));
-
-  return layoutQuery === query
-    ? matched
-    : getMatchedItems(group, items, layoutQuery);
+  return items.filter(
+    (filterItem: FilterItem) =>
+      matchedItems.includes(filterItem) || filterItem.selected !== null,
+  );
 }
