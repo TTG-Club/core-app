@@ -8,6 +8,7 @@
   import { FilterDrawer } from '../drawer';
   import { FILTER_CONTROLS_SEARCH_PLACEHOLDER } from '../model';
   import { FilterPreview } from '../preview';
+  import { FilterSearchInput } from '../search-input';
   import {
     getGroupItems,
     getSelectedItemIds,
@@ -224,25 +225,10 @@
 
 <template>
   <div class="flex gap-2 lg:flex-col lg:gap-4">
-    <UInput
+    <FilterSearchInput
       v-model="localSearch"
       :placeholder="FILTER_CONTROLS_SEARCH_PLACEHOLDER"
-      allow-clear
-      :ui="{ trailing: 'pe-0.5' }"
-    >
-      <template
-        v-if="localSearch"
-        #trailing
-      >
-        <UButton
-          icon="tabler:x"
-          variant="link"
-          color="neutral"
-          size="sm"
-          @click.left.exact.prevent="localSearch = ''"
-        />
-      </template>
-    </UInput>
+    />
 
     <div class="flex gap-2">
       <UFieldGroup class="w-full space-x-px">

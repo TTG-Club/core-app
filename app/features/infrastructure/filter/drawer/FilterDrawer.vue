@@ -12,6 +12,7 @@
     FILTER_SEARCH_EMPTY_SUBTITLE,
     FILTER_SEARCH_EMPTY_TITLE,
   } from '../model';
+  import { FilterSearchInput } from '../search-input';
   import { isFilterSearchable } from '../utils';
 
   defineEmits<{
@@ -34,12 +35,19 @@
   // дебаунснутому значению.
   const debouncedSearch = refDebounced(search, FILTER_SEARCH_DEBOUNCE);
 
+  // Пустой запрос применяется без задержки: после крестика очистки и при
+  // повторном открытии дровера список иначе ещё 200 мс остаётся отфильтрованным
+  // прошлым запросом, которого в поле уже нет.
+  const appliedSearch = computed(() =>
+    search.value ? debouncedSearch.value : '',
+  );
+
   const isSearchable = computed(() => isFilterSearchable(groups));
 
   // Пустое состояние только для непустого запроса: без него пустой список
   // означает, что фильтры ещё не пришли, а не что ничего не нашлось.
   const showEmptyResult = computed(
-    () => isSearchable.value && !!debouncedSearch.value && isEmpty.value,
+    () => isSearchable.value && !!appliedSearch.value && isEmpty.value,
   );
 
   watch(opened, (value) => {
@@ -72,11 +80,11 @@
         v-if="isSearchable"
         class="sticky -top-4 z-10 -mx-4 -mt-4 bg-default px-4 pt-4 pb-6 sm:-top-6 sm:-mx-6 sm:-mt-6 sm:px-6 sm:pt-6"
       >
-        <UInput
+        <FilterSearchInput
           v-model="search"
+          class="w-full"
           :placeholder="FILTER_DRAWER_SEARCH_PLACEHOLDER"
           icon="tabler:search"
-          allow-clear
         />
       </div>
 
@@ -89,8 +97,8 @@
 
       <FilterList
         v-model="cloned"
-        :search="debouncedSearch"
-        @update:empty="isEmpty = $event"
+        :search="appliedSearch"
+        @empty="isEmpty = $event"
       />
     </template>
 

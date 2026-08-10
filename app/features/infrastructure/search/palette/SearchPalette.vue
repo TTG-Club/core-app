@@ -3,9 +3,9 @@
 
   import { sortBy } from 'es-toolkit';
 
-  import { useGlobalSearch } from '~infrastructure/search/composable';
   import { SourceTag } from '~ui/source-tag';
 
+  import { useGlobalSearch } from '../composable';
   import {
     getPathBySearchItem,
     getTypeNameBySearchItem,
@@ -94,7 +94,6 @@
   >
     <template #content>
       <UCommandPalette
-        v-model:open="isOpen"
         v-model:search-term="searchTerm"
         placeholder="Введите запрос..."
         :loading="isLoading"
