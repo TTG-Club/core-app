@@ -122,12 +122,14 @@ export const DEFAULT_CONDITION_ROUNDS = 0;
 
 /** Тексты блока состояний участника. */
 export const CONDITION_LABELS = {
+  title: 'Состояния',
   add: 'Наложить состояние',
   remove: 'Снять состояние',
   rounds: 'Раундов',
   roundsHint: '0 — до снятия вручную',
   expiry: 'Спадает',
   permanent: 'до снятия',
+  remaining: 'ещё',
 } as const;
 
 /** Формы слова «раунд» для остатка длительности состояния. */

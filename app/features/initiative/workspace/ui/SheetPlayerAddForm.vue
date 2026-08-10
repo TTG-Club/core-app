@@ -71,10 +71,11 @@
     () => Boolean(selectedOption.value) && !isSelectDisabled.value,
   );
 
-  // Под полем всегда одна строка: сперва отказ загрузки, затем исчерпанный
-  // лимит игроков (иначе поле выглядело бы отключённым без объяснения), затем
-  // пустой список, иначе — подсказка о том, что перенесётся с листа.
-  const note = computed<{ text: string; toneClass: string }>(() => {
+  // Под полем показываем только то, что объясняет неработающий выбор: отказ
+  // загрузки, исчерпанный лимит игроков, пустой список. Рассказ о том, что
+  // перенесётся с листа, ушёл в подсказку у заголовка — строкой он занимал
+  // место в каждом бою, хотя нужен один раз.
+  const notice = computed<{ text: string; toneClass: string } | null>(() => {
     if (hasError.value) {
       return { text: SHEET_PLAYER_FORM_LABELS.error, toneClass: 'text-error' };
     }
@@ -83,12 +84,9 @@
       return { text: SHEET_PLAYER_FORM_LABELS.limit, toneClass: 'text-error' };
     }
 
-    return {
-      text: isEmpty.value
-        ? SHEET_PLAYER_FORM_LABELS.empty
-        : SHEET_PLAYER_FORM_LABELS.hint,
-      toneClass: 'text-muted',
-    };
+    return isEmpty.value
+      ? { text: SHEET_PLAYER_FORM_LABELS.empty, toneClass: 'text-muted' }
+      : null;
   });
 
   function submit(): void {
@@ -116,6 +114,20 @@
         class="size-5 text-primary"
       />
       {{ SHEET_PLAYER_FORM_LABELS.title }}
+
+      <!-- Что перенесётся с листа — подсказкой, а не строкой под полем.
+           Кнопкой, а не голой иконкой: на телефоне тултип открывается
+           фокусом, а иконку сфокусировать нельзя. -->
+      <UTooltip :text="SHEET_PLAYER_FORM_LABELS.hint">
+        <UButton
+          class="shrink-0"
+          icon="tabler:info-circle-filled"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          :aria-label="SHEET_PLAYER_FORM_LABELS.hint"
+        />
+      </UTooltip>
 
       <!-- Список тянется один раз при открытии боя: лист, созданный в соседней
            вкладке, приезжает по этой кнопке, а не перезагрузкой страницы. -->
@@ -194,10 +206,11 @@
     </div>
 
     <p
+      v-if="notice"
       class="text-xs"
-      :class="note.toneClass"
+      :class="notice.toneClass"
     >
-      {{ note.text }}
+      {{ notice.text }}
     </p>
   </form>
 </template>
