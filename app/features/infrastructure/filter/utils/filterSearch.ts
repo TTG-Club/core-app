@@ -58,11 +58,39 @@ function getMatchedItems(
 }
 
 /**
+ * Проверяет, отвечает ли группа запросу сама по себе — названием или хотя бы
+ * одним из значений.
+ *
+ * Выбранные значения в расчёт не берутся: они остаются видимыми при любом
+ * запросе, поэтому по ним нельзя судить, нашёл ли запрос хоть что-то.
+ *
+ * @param group группа фильтров.
+ * @param items доступные значения группы.
+ * @param query нормализованный поисковый запрос.
+ * @returns `true`, если запросу что-то соответствует.
+ */
+function hasQueryMatch(
+  group: FilterGroup,
+  items: FilterItems,
+  query: string,
+): boolean {
+  return (
+    normalizeForSearch(group.name).includes(query)
+    || items.some((filterItem: FilterItem) =>
+      normalizeForSearch(filterItem.name).includes(query),
+    )
+  );
+}
+
+/**
  * Применяет поисковый запрос к значениям группы с учётом неверной раскладки.
  *
  * Раскладка пробуется только когда прямой запрос ничего не нашёл — тем же
  * фолбэком, что и в поиске по каталогам листа персонажа, чтобы конверсия не
- * добавляла ложных совпадений к успешному запросу.
+ * добавляла ложных совпадений к успешному запросу. Решение принимается по
+ * совпадениям запроса, а не по итоговому набору: иначе всегда видимые
+ * выбранные значения выдавали бы себя за успешный поиск и в группе с выбором
+ * раскладка не подхватывалась бы вовсе.
  *
  * @param group группа фильтров.
  * @param items доступные значения группы.
@@ -80,15 +108,15 @@ export function getSearchedGroupItems(
     return items;
   }
 
-  const matched = getMatchedItems(group, items, query);
-
-  if (matched.length) {
-    return matched;
+  if (hasQueryMatch(group, items, query)) {
+    return getMatchedItems(group, items, query);
   }
 
   const layoutQuery = normalizeForSearch(convertKeyboardLayout(query));
 
-  return layoutQuery === query
-    ? matched
-    : getMatchedItems(group, items, layoutQuery);
+  return getMatchedItems(
+    group,
+    items,
+    layoutQuery === query ? query : layoutQuery,
+  );
 }

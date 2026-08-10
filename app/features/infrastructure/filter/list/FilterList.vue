@@ -30,7 +30,7 @@
   }
 
   const emit = defineEmits<{
-    (event: 'update:empty', value: boolean): void;
+    (event: 'empty', value: boolean): void;
   }>();
 
   const { preview = false, search = '' } = defineProps<{
@@ -134,7 +134,7 @@
   // а не считается там заново.
   watch(
     () => groupedFilters.value.length === 0,
-    (isEmpty) => emit('update:empty', isEmpty),
+    (isEmpty) => emit('empty', isEmpty),
     { immediate: true },
   );
 
