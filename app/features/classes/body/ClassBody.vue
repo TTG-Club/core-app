@@ -69,7 +69,6 @@
         <StatsBlock
           :hit-dice="detail.hitDice"
           :saving-throws="detail.savingThrows"
-          :requirements="detail.requirements"
           :primary-characteristics="detail.primaryCharacteristics"
         />
       </div>
