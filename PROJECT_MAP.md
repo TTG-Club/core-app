@@ -423,6 +423,13 @@ modals), so its capabilities are listed here rather than squeezed into the table
   record (editable afterwards), removing one drops it from
   `species.innateSpells` so the next level-up does not bring it back. Both are
   undone by picking the species again in the wizard.
+- An innate spell is prepared from the start and never takes a slot in the
+  prepared pool: the counter (`getPreparedSpellsBreakdown`) reads
+  `character.spells` alone, so the limit neither shrinks nor blocks the mark.
+  Its icon still toggles — the flag lives in `species.innateSpells[].spell`
+  where a missing value reads as prepared (`isInnateSpellPrepared`), which is
+  what sheets saved before the flag get. Copying such a spell into the book
+  drops the mark: there it would count against the limit.
 - The «Личность» tab holds the person rather than the build: seven appearance
   tiles (alignment from the `alignments` dictionary plus age, height, weight,
   eyes, hair and skin as free text — clicking a tile opens the form with the

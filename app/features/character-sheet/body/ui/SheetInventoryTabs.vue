@@ -103,6 +103,7 @@
     'remove-innate-spell': [spellUrl: string];
     'roll-spell-damage': [roll: SpellDamageRoll];
     'toggle-spell-prepared': [spellUrl: string];
+    'toggle-innate-spell-prepared': [spellUrl: string];
     'toggle-spell-slot': [level: number, index: number, kind: SpellSlotKind];
   }>();
 
@@ -220,6 +221,10 @@
 
   function handleSpellPreparedToggle(spellUrl: string) {
     emit('toggle-spell-prepared', spellUrl);
+  }
+
+  function handleInnateSpellPreparedToggle(spellUrl: string) {
+    emit('toggle-innate-spell-prepared', spellUrl);
   }
 
   function handleSpellSlotToggle(
@@ -950,6 +955,7 @@
             @remove-innate-spell="handleInnateSpellRemove"
             @roll-spell-damage="handleSpellDamageRoll"
             @toggle-spell-prepared="handleSpellPreparedToggle"
+            @toggle-innate-spell-prepared="handleInnateSpellPreparedToggle"
             @toggle-spell-slot="handleSpellSlotToggle"
           />
 

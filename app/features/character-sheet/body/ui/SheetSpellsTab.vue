@@ -54,9 +54,6 @@
 
   /** Состояние квадрата со значком заклинания в строке. */
   interface PreparedIconState {
-    /** Значок переключает подготовку (кнопка), а не просто стоит в строке. */
-    canPrepare: boolean;
-
     /** Заклинание подготовлено: квадрат горит тёплым. */
     isPrepared: boolean;
 
@@ -66,7 +63,7 @@
     /** Подсказка по наведению. */
     tooltip: string;
 
-    /** Подпись кнопки для скринридера; '' — значок не нажимается. */
+    /** Подпись кнопки для скринридера. */
     ariaLabel: string;
   }
 
@@ -97,9 +94,6 @@
   const UNPREPARED_ICON_CLASS =
     'border-default/50 bg-default/40 text-muted hover:border-primary/60';
 
-  /** Заклинание, которому подготовка не нужна (врождённое заклинание вида). */
-  const PLAIN_ICON_CLASS = 'border-default/50 bg-default/40 text-muted';
-
   const props = defineProps<{
     spells: CharacterSpell[];
     innateSpells: CharacterSpell[];
@@ -121,6 +115,7 @@
     'remove-innate-spell': [spellUrl: string];
     'roll-spell-damage': [roll: SpellDamageRoll];
     'toggle-spell-prepared': [spellUrl: string];
+    'toggle-innate-spell-prepared': [spellUrl: string];
     'toggle-spell-slot': [level: number, index: number, kind: SpellSlotKind];
   }>();
 
@@ -272,10 +267,12 @@
   );
 
   /**
-   * Подготовка касается только книги персонажа: пока в ней пусто (в списке одни
-   * врождённые заклинания вида), помечать нечего — чипа отбора нет.
+   * Пометка подготовки есть и у книги персонажа, и у врождённых заклинаний:
+   * пока список пуст, помечать нечего — чипа отбора нет.
    */
-  const isPreparedFilterAvailable = computed(() => props.spells.length > 0);
+  const isPreparedFilterAvailable = computed(
+    () => props.spells.length > 0 || props.innateSpells.length > 0,
+  );
 
   /** Кругов больше одного — есть между чем выбирать. */
   const hasLevelChips = computed(() => availableLevels.value.length > 1);
@@ -434,28 +431,29 @@
     spell: CharacterSpell,
     innate: boolean,
   ): PreparedIconState {
-    // Врождённые заклинания вида доступны всегда: подготовка их не касается,
-    // значок у них обычный и ничего не переключает.
-    if (innate) {
-      return {
-        canPrepare: false,
-        isPrepared: false,
-        iconClass: PLAIN_ICON_CLASS,
-        tooltip: PREPARED_SPELL_TOGGLE_LABELS.innate,
-        ariaLabel: '',
-      };
-    }
-
     const isPrepared = Boolean(spell.prepared);
 
     const label = isPrepared
       ? PREPARED_SPELL_TOGGLE_LABELS.unprepare
       : PREPARED_SPELL_TOGGLE_LABELS.prepare;
 
+    const iconClass = isPrepared ? PREPARED_ICON_CLASS : UNPREPARED_ICON_CLASS;
+
+    // Врождённое заклинание приходит подготовленным и в предел не входит:
+    // значок только снимает и возвращает пометку, а подсказка напоминает, что
+    // места среди подготовленных такое заклинание не занимает.
+    if (innate) {
+      return {
+        isPrepared,
+        iconClass,
+        tooltip: `${label}. ${PREPARED_SPELL_TOGGLE_LABELS.innate}`,
+        ariaLabel: `${label}: ${spell.name}`,
+      };
+    }
+
     return {
-      canPrepare: true,
       isPrepared,
-      iconClass: isPrepared ? PREPARED_ICON_CLASS : UNPREPARED_ICON_CLASS,
+      iconClass,
       // Предел выбран целиком — значок остаётся нажимаемым: подсказка и
       // предупреждение объясняют отказ понятнее, чем погашенная кнопка.
       // Заговоры смотрят на свой предел, заклинания книги — на свой.
@@ -530,9 +528,10 @@
             ...spell,
             isCustom,
             isExpanded,
+            isInnate: group.innate,
             // Подготовку переключает значок строки — как надевание доспеха в
-            // снаряжении. Врождённые заклинания и заговоры значком не
-            // переключаются.
+            // снаряжении. У врождённых заклинаний пометка стоит сразу и в
+            // предел подготовленных не входит, снять её значок тоже даёт.
             preparedIcon: getPreparedIconState(spell, group.innate),
             // Действия строки — те же, что и у предмета снаряжения: своё
             // заклинание правится формой листа, каталожное сначала копируется в
@@ -600,8 +599,18 @@
     emit('toggle-spell-slot', circle.level, circle.index, circle.kind);
   }
 
-  /** Нажатие на значок заклинания: пометка подготовленным либо снятие пометки. */
+  /**
+   * Нажатие на значок заклинания: пометка подготовленным либо снятие пометки.
+   * Врождённое заклинание живёт в виде, а не в книге персонажа, поэтому у его
+   * пометки своё событие.
+   */
   function handlePreparedToggle(spell: DisplaySpell) {
+    if (spell.isInnate) {
+      emit('toggle-innate-spell-prepared', spell.url);
+
+      return;
+    }
+
     emit('toggle-spell-prepared', spell.url);
   }
 
@@ -859,10 +868,7 @@
             <!-- Значок заклинания — переключатель подготовки: нажатие метит
               заклинание подготовленным, повторное — снимает пометку. Горит при
               этом только сам квадрат, строка остаётся обычной -->
-            <UTooltip
-              v-if="spell.preparedIcon.canPrepare"
-              :text="spell.preparedIcon.tooltip"
-            >
+            <UTooltip :text="spell.preparedIcon.tooltip">
               <button
                 type="button"
                 :class="[
@@ -879,18 +885,6 @@
                   class="size-5"
                 />
               </button>
-            </UTooltip>
-
-            <UTooltip
-              v-else
-              :text="spell.preparedIcon.tooltip"
-            >
-              <span :class="[SPELL_ICON_CLASS, spell.preparedIcon.iconClass]">
-                <UIcon
-                  name="tabler:wand"
-                  class="size-5"
-                />
-              </span>
             </UTooltip>
 
             <button

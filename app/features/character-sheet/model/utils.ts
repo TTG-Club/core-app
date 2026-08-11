@@ -4785,8 +4785,8 @@ export function getSpellListLevels(
 
 /**
  * Проходит ли заклинание отбор вкладки: подготовленное — только помеченное
- * значком (врождённые заклинания подготовки не требуют, поэтому под таким
- * отбором их не остаётся), круг — любой из отобранных.
+ * значком (врождённые заклинания помечены сразу, пока подготовку с них не
+ * сняли), круг — любой из отобранных.
  *
  * @param spell заклинание списка.
  * @param filter отбор вкладки заклинаний.
@@ -4839,6 +4839,9 @@ export function getSpellGroups(
 
 /**
  * Возвращает врождённые заклинания, уже открытые на текущем уровне персонажа.
+ * Подготовка у них снимается вручную, поэтому запись без флага считается
+ * подготовленной: врождённое заклинание готово сразу, а место среди
+ * подготовленных не занимает (счётчик смотрит только на книгу персонажа).
  *
  * @param character персонаж листа.
  * @returns доступные врождённые заклинания вида и происхождения.
@@ -4848,7 +4851,21 @@ export function getAvailableInnateSpells(
 ): CharacterSpell[] {
   return (character.species?.innateSpells ?? [])
     .filter((innateSpell) => innateSpell.requiredLevel <= character.level)
-    .map((innateSpell) => innateSpell.spell);
+    .map((innateSpell) => ({
+      ...innateSpell.spell,
+      prepared: isInnateSpellPrepared(innateSpell.spell),
+    }));
+}
+
+/**
+ * Подготовлено ли врождённое заклинание: флага нет — подготовлено (лист мог
+ * быть сохранён до появления пометки, да и новая запись приходит готовой).
+ *
+ * @param spell врождённое заклинание вида.
+ * @returns true — заклинание подготовлено.
+ */
+export function isInnateSpellPrepared(spell: CharacterSpell): boolean {
+  return spell.prepared !== false;
 }
 
 /**
