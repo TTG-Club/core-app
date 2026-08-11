@@ -310,8 +310,8 @@
 
   /**
    * Чипы кругов, которые есть в списке: сам чип — номер круга, у заговоров
-   * вместо номера буква. Полную подпись («Заговоры», «3 круг») показывает
-   * подсказка по наведению.
+   * вместо номера сокращение. Полную подпись («Заговоры», «3 круг»)
+   * показывает подсказка по наведению.
    */
   const levelChips = computed(() =>
     availableLevels.value.map((level) => ({
@@ -637,108 +637,112 @@
 <template>
   <div class="flex flex-col gap-3 pt-2">
     <!-- Свой @container: подписи шапки сокращаются по ширине самого ряда, а не
-      окна — лист бывает узким и на широком экране (дровер, правая панель) -->
-    <div class="@container flex flex-wrap items-center justify-between gap-2">
-      <div class="flex flex-wrap items-center gap-2">
-        <!-- У мультикласса заклинательство считается по каждому классу
-          отдельно: своя характеристика — свои Сл и бонус атаки -->
+      окна — лист бывает узким и на широком экране (дровер, правая панель).
+      Плитки и «Добавить» лежат в ряду поштучно, без вложенной группы: у
+      мультикласса плитки переносятся, и кнопка встаёт в конец второй строки, а
+      не занимает собой третью -->
+    <div class="@container flex flex-wrap items-center gap-2">
+      <!-- У мультикласса заклинательство считается по каждому классу
+        отдельно: своя характеристика — свои Сл и бонус атаки -->
+      <button
+        v-for="stat in spellcastingStats"
+        :key="stat.classUrl"
+        type="button"
+        :class="SHEET_HEADER_STAT_CLASS"
+        aria-label="Настроить заклинательство"
+        @click.left.exact.prevent="emit('edit-spellcasting', stat.classUrl)"
+      >
+        <span
+          v-if="stat.className"
+          class="max-w-24 truncate text-[10px] font-bold tracking-wider text-muted uppercase"
+        >
+          {{ stat.className }}
+        </span>
+
+        <!-- Подписи чисел в плитке короткие, чтобы ряд помещался на узком
+          листе; полное название показывает подсказка по наведению -->
+        <UTooltip :text="SPELLCASTING_STAT_LABELS.saveDc.full">
+          <span class="flex items-center gap-1.5">
+            <span
+              class="text-[10px] font-bold tracking-wider text-muted uppercase"
+            >
+              {{ SPELLCASTING_STAT_LABELS.saveDc.short }}
+            </span>
+
+            <span class="text-xs font-bold text-highlighted">
+              {{ stat.saveDc }}
+            </span>
+          </span>
+        </UTooltip>
+
+        <span class="h-5 w-px bg-default/60" />
+
+        <UTooltip :text="SPELLCASTING_STAT_LABELS.attack.full">
+          <span class="flex items-center gap-1.5">
+            <span
+              class="text-[10px] font-bold tracking-wider text-muted uppercase"
+            >
+              {{ SPELLCASTING_STAT_LABELS.attack.short }}
+            </span>
+
+            <span class="text-xs font-bold text-highlighted">
+              {{ stat.attackBonus }}
+            </span>
+          </span>
+        </UTooltip>
+      </button>
+
+      <!-- Сколько можно подготовить: число берётся из таблицы класса, нажатие
+        открывает настройку своего числа или бонуса к нему. Заговоры считаются
+        отдельной плиткой — колонка таблицы класса у них своя -->
+      <UTooltip
+        v-for="preparedStat in preparedStats"
+        :key="preparedStat.kind"
+        :text="preparedStat.hint"
+      >
         <button
-          v-for="stat in spellcastingStats"
-          :key="stat.classUrl"
           type="button"
           :class="SHEET_HEADER_STAT_CLASS"
-          aria-label="Настроить заклинательство"
-          @click.left.exact.prevent="emit('edit-spellcasting', stat.classUrl)"
+          :aria-label="preparedStat.labels.ariaLabel"
+          @click.left.exact.prevent="handlePreparedEdit(preparedStat.kind)"
         >
-          <span
-            v-if="stat.className"
-            class="max-w-24 truncate text-[10px] font-bold tracking-wider text-muted uppercase"
-          >
-            {{ stat.className }}
+          <span class="flex items-center gap-1.5">
+            <!-- На узком ряду подпись занимает больше места, чем само число,
+              поэтому уступает значку: название остаётся в подсказке -->
+            <UIcon
+              :name="preparedStat.labels.icon"
+              class="size-4 shrink-0 text-muted @lg:hidden"
+            />
+
+            <span
+              class="hidden text-[10px] font-bold tracking-wider text-muted uppercase @lg:inline"
+            >
+              {{ preparedStat.labels.stat }}
+            </span>
+
+            <span
+              class="text-xs font-bold"
+              :class="preparedStat.valueClass"
+            >
+              {{ preparedStat.value }}
+            </span>
           </span>
-
-          <!-- Подписи чисел в плитке короткие, чтобы ряд помещался на узком
-            листе; полное название показывает подсказка по наведению -->
-          <UTooltip :text="SPELLCASTING_STAT_LABELS.saveDc.full">
-            <span class="flex items-center gap-1.5">
-              <span
-                class="text-[10px] font-bold tracking-wider text-muted uppercase"
-              >
-                {{ SPELLCASTING_STAT_LABELS.saveDc.short }}
-              </span>
-
-              <span class="text-xs font-bold text-highlighted">
-                {{ stat.saveDc }}
-              </span>
-            </span>
-          </UTooltip>
-
-          <span class="h-5 w-px bg-default/60" />
-
-          <UTooltip :text="SPELLCASTING_STAT_LABELS.attack.full">
-            <span class="flex items-center gap-1.5">
-              <span
-                class="text-[10px] font-bold tracking-wider text-muted uppercase"
-              >
-                {{ SPELLCASTING_STAT_LABELS.attack.short }}
-              </span>
-
-              <span class="text-xs font-bold text-highlighted">
-                {{ stat.attackBonus }}
-              </span>
-            </span>
-          </UTooltip>
         </button>
-
-        <!-- Сколько можно подготовить: число берётся из таблицы класса, нажатие
-          открывает настройку своего числа или бонуса к нему. Заговоры считаются
-          отдельной плиткой — колонка таблицы класса у них своя -->
-        <UTooltip
-          v-for="preparedStat in preparedStats"
-          :key="preparedStat.kind"
-          :text="preparedStat.hint"
-        >
-          <button
-            type="button"
-            :class="SHEET_HEADER_STAT_CLASS"
-            :aria-label="preparedStat.labels.ariaLabel"
-            @click.left.exact.prevent="handlePreparedEdit(preparedStat.kind)"
-          >
-            <span class="flex items-center gap-1.5">
-              <!-- На узком ряду подпись занимает больше места, чем само число,
-                поэтому уступает значку: название остаётся в подсказке -->
-              <UIcon
-                :name="preparedStat.labels.icon"
-                class="size-4 shrink-0 text-muted @lg:hidden"
-              />
-
-              <span
-                class="hidden text-[10px] font-bold tracking-wider text-muted uppercase @lg:inline"
-              >
-                {{ preparedStat.labels.stat }}
-              </span>
-
-              <span
-                class="text-xs font-bold"
-                :class="preparedStat.valueClass"
-              >
-                {{ preparedStat.value }}
-              </span>
-            </span>
-          </button>
-        </UTooltip>
-      </div>
+      </UTooltip>
 
       <UDropdownMenu
         :items="addMenuItems"
         :content="{ align: 'end' }"
       >
+        <!-- Кнопка держится правого края своей строки: на широком листе она
+          стоит напротив плиток, на узком — в конце строки с переносом -->
         <UButton
           icon="tabler:plus"
           label="Добавить"
           color="neutral"
           variant="ghost"
           size="sm"
+          class="ml-auto"
           :class="editControlClass"
         />
       </UDropdownMenu>
