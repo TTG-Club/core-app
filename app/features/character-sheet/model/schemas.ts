@@ -910,6 +910,15 @@ const classFeatureSchema = z.object({
   isSubclass: z.boolean().catch(false),
   fightingStyleChoice: z.boolean().catch(false),
   abilityImprovement: z.boolean().catch(false),
+  // Структурный выбор владения навыками у самого умения. Заполнен не везде:
+  // где его нет, выбор по-прежнему распознаётся по прозе описания.
+  skillChoice: z
+    .object({
+      count: z.coerce.number().catch(1),
+      skills: z.array(z.string()).catch([]),
+    })
+    .nullable()
+    .catch(null),
   scaling: z
     .array(z.object({ level: z.coerce.number().catch(0) }))
     .nullable()
@@ -1095,6 +1104,7 @@ function toClassSummary(
     abilityImprovement:
       feature.abilityImprovement
       || isAbilityImprovementFeature(feature.name, feature.description),
+    skillChoice: feature.skillChoice,
     scalingLevels: (feature.scaling ?? [])
       .map((entry) => entry.level)
       .filter((entry) => entry > 0),

@@ -16,6 +16,7 @@
     getHitDieAverage,
     getHitDieLabel,
     getLevelHitPointsGain,
+    getRequiredChoiceCount,
     HIT_POINTS_GAIN_MODE_LABELS,
     isHitPointsGainMode,
     LEVEL_SHORT_SUFFIX,
@@ -135,20 +136,29 @@
   );
 
   const featureRows = computed(() =>
-    step.features.map((feature) => ({
-      ...feature,
-      badgeLabel: `${feature.originLabel} · ${feature.level} ур.`,
-      chooseLabel: feature.choice
-        ? `${LEVEL_UP_WIZARD_LABELS.chooseLabel} ${feature.choice.count}`
-        : '',
-      options: feature.choice ? choiceOptions(feature.choice) : [],
-      hints: feature.choice ? choiceHints(feature.choice) : {},
-      featOptions: feature.abilityImprovement ? featOptions(feature.id) : [],
-      selectedFeat: feature.abilityImprovement
-        ? selectedFeat(feature.id)
-        : null,
-      featAbilities: draft.featChoices[feature.id]?.abilities ?? [],
-    })),
+    step.features.map((feature) => {
+      const options = feature.choice ? choiceOptions(feature.choice) : [];
+
+      const requiredCount = feature.choice
+        ? getRequiredChoiceCount(feature.choice, options)
+        : 0;
+
+      return {
+        ...feature,
+        badgeLabel: `${feature.originLabel} · ${feature.level} ур.`,
+        chooseLabel: feature.choice
+          ? `${LEVEL_UP_WIZARD_LABELS.chooseLabel} ${requiredCount}`
+          : '',
+        options,
+        requiredCount,
+        hints: feature.choice ? choiceHints(feature.choice) : {},
+        featOptions: feature.abilityImprovement ? featOptions(feature.id) : [],
+        selectedFeat: feature.abilityImprovement
+          ? selectedFeat(feature.id)
+          : null,
+        featAbilities: draft.featChoices[feature.id]?.abilities ?? [],
+      };
+    }),
   );
 
   /** Способ прироста из радиогруппы: контрол отдаёт значение нетипизированным. */
@@ -162,8 +172,12 @@
     emit('roll');
   }
 
-  function handleSelection(choice: ClassChoice, values: string[]) {
-    emit('update:selection', choice.id, values.slice(0, choice.count));
+  function handleSelection(
+    choice: ClassChoice,
+    requiredCount: number,
+    values: string[],
+  ) {
+    emit('update:selection', choice.id, values.slice(0, requiredCount));
   }
 
   function handleNote(featureId: string, value: string) {
@@ -303,9 +317,11 @@
             :items="feature.options"
             :hints="feature.hints"
             :warning="SKILL_DUPLICATE_WARNING"
-            :count="feature.choice.count"
+            :count="feature.requiredCount"
             :placeholder="feature.chooseLabel"
-            @update:model-value="handleSelection(feature.choice, $event)"
+            @update:model-value="
+              handleSelection(feature.choice, feature.requiredCount, $event)
+            "
           />
         </div>
 
