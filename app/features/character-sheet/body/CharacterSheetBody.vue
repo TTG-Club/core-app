@@ -34,6 +34,7 @@
   import {
     SheetAbilitiesRow,
     SheetAbilityModal,
+    SheetAbilityScoresModal,
     SheetArmorClassModal,
     SheetAttunementModal,
     SheetBackgroundWizardModal,
@@ -121,6 +122,7 @@
     setAbilityScore,
     spendSpellSlot,
     toggleSavingThrowProficiency,
+    toggleInnateSpellPrepared,
     toggleSpellPrepared,
     toggleSpellSlot,
     cycleSkillProficiency,
@@ -316,6 +318,10 @@
     },
   });
 
+  // Набор характеристик целиком (как в калькуляторе) — в отличие от модалки
+  // одной характеристики, ему нечего передавать: всё нужное он берёт из листа.
+  const abilityScoresModal = overlay.create(SheetAbilityScoresModal);
+
   const speedModal = overlay.create(SheetSpeedModal);
 
   const healthModal = overlay.create(SheetHealthModal);
@@ -467,6 +473,14 @@
     }
 
     abilityModal.open({ abilityKey });
+  }
+
+  function handleAbilityScoresEdit() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    abilityScoresModal.open();
   }
 
   function handleAbilityRoll(abilityKey: AbilityKey) {
@@ -1018,6 +1032,7 @@
         @copy-shared="handleCopyShared"
         @save-link="handleSaveLink"
         @expand="handleExpand"
+        @edit-ability-scores="handleAbilityScoresEdit"
         @edit-background="handleBackgroundEdit"
         @edit-class="handleClassEdit"
         @edit-name="handleNameEdit"
@@ -1212,6 +1227,7 @@
           @remove-innate-spell="removeInnateSpell"
           @roll-spell-damage="handleSpellDamageRoll"
           @toggle-spell-prepared="toggleSpellPrepared"
+          @toggle-innate-spell-prepared="toggleInnateSpellPrepared"
           @toggle-spell-slot="toggleSpellSlot"
         >
           <template #main>

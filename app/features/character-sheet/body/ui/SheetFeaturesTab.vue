@@ -5,13 +5,17 @@
     FeatureTabFilter,
   } from '../../model';
 
+  import { ConfirmDialog } from '~initiative/ui-kit';
   import { MarkupRender } from '~ui/markup';
 
   import { useCharacterSheet } from '../../composables';
   import {
     FEATURE_ORIGIN_GROUP_HINTS,
     FEATURE_ORIGIN_LABELS,
+    FEATURE_REMOVE_CONFIRM_LABEL,
+    FEATURE_REMOVE_CONFIRM_TITLE,
     getFeatureOriginGroups,
+    getFeatureRemoveDescription,
     getFeaturesAddMenuItems,
     getFilterChipClass,
     matchesFeatureFilter,
@@ -58,8 +62,38 @@
     emit('edit-feature', featureId);
   }
 
-  function handleRemove(featureId: string) {
-    emit('remove-feature', featureId);
+  // Удаление подтверждаем: отменить его нечем, а кнопка стоит вплотную к
+  // правке — промахнуться по соседней легко. Особенность держим до закрытия
+  // диалога, иначе на анимации закрытия описание мигало бы пустым. shallowRef:
+  // особенность всегда заменяется целиком, следить за её полями незачем —
+  // читаем только название и id.
+  const removalFeature = shallowRef<CharacterFeature | null>(null);
+
+  const isRemoveOpen = ref(false);
+
+  const removeDescription = computed(() =>
+    removalFeature.value
+      ? getFeatureRemoveDescription(removalFeature.value.name)
+      : '',
+  );
+
+  /**
+   * Спрашивает подтверждение удаления: особенность пока остаётся на листе.
+   *
+   * @param feature особенность, которую просят убрать.
+   */
+  function handleRemoveRequest(feature: CharacterFeature) {
+    removalFeature.value = feature;
+    isRemoveOpen.value = true;
+  }
+
+  /** Убирает подтверждённую особенность с листа и закрывает диалог. */
+  function handleRemoveConfirm() {
+    if (removalFeature.value) {
+      emit('remove-feature', removalFeature.value.id);
+    }
+
+    isRemoveOpen.value = false;
   }
 
   /**
@@ -94,9 +128,11 @@
   /**
    * Внутренняя обёртка кнопок: `overflow-hidden` обнуляет минимальную ширину
    * ячейки грида (без него `0fr` не схлопнется под содержимое), а прозрачность
-   * убирает кнопки из виду, пока колонка ещё разъезжается.
+   * убирает кнопки из виду, пока колонка ещё разъезжается. Правку и удаление
+   * разводит зазор пошире обычного: кнопки соседние, а промах по удалению
+   * стоит дороже.
    */
-  const ROW_ACTIONS_INNER_CLASS = `flex items-center gap-1 overflow-hidden pl-2 opacity-0 transition-opacity duration-200 group-hover/feature:opacity-100 focus-within:opacity-100 ${SHEET_REVEAL_CONTROL_CLASS}`;
+  const ROW_ACTIONS_INNER_CLASS = `flex items-center gap-2.5 overflow-hidden pl-2 opacity-0 transition-opacity duration-200 group-hover/feature:opacity-100 focus-within:opacity-100 ${SHEET_REVEAL_CONTROL_CLASS}`;
 
   /**
    * Без прав на правку (лист чужой или заперт замком) колонка не разъезжается
@@ -335,7 +371,7 @@
                 square
                 :class="editControlClass"
                 :aria-label="`Удалить особенность: ${feature.name}`"
-                @click.left.exact.prevent="handleRemove(feature.id)"
+                @click.left.exact.prevent="handleRemoveRequest(feature)"
               />
             </div>
           </div>
@@ -414,5 +450,15 @@
     >
       {{ emptyLabel }}
     </div>
+
+    <ConfirmDialog
+      v-model:open="isRemoveOpen"
+      :title="FEATURE_REMOVE_CONFIRM_TITLE"
+      :description="removeDescription"
+      :confirm-label="FEATURE_REMOVE_CONFIRM_LABEL"
+      confirm-color="error"
+      confirm-icon="tabler:trash"
+      @confirm="handleRemoveConfirm"
+    />
   </div>
 </template>

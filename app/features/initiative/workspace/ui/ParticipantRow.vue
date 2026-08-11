@@ -2,6 +2,9 @@
   import type { DropdownMenuItem } from '@nuxt/ui';
 
   import type {
+    ConditionExpiry,
+    ConditionKey,
+    ParticipantColor,
     TrackerParticipant,
     UpdateParticipantRequest,
   } from '~initiative/model';
@@ -10,19 +13,28 @@
 
   import {
     useCreatureDrawer,
-    useCreatureSummaries,
+    useParticipantAvatars,
   } from '~initiative/composables';
   import {
+    DEFAULT_PARTICIPANT_COLOR,
     extractArmorClassValue,
     formatInitiativeBonus,
     getCreatureRoute,
+    getSheetPlayerRoute,
     MAX_INITIATIVE_BONUS,
     MIN_INITIATIVE_BONUS,
+    OPEN_SHEET_MENU_LABEL,
+    PARTICIPANT_COLOR_CLASS,
+    PARTICIPANT_COLOR_LABEL,
+    PARTICIPANT_COLOR_TITLE,
+    PARTICIPANT_COLORS,
     PARTICIPANT_TYPE_LABEL,
+    SHEET_PLAYER_ROW_LABEL,
   } from '~initiative/model';
 
   import ParticipantArmorClassControl from './ParticipantArmorClassControl.vue';
   import ParticipantAvatar from './ParticipantAvatar.vue';
+  import ParticipantConditions from './ParticipantConditions.vue';
   import ParticipantHitPointsControl from './ParticipantHitPointsControl.vue';
   import ParticipantRenameControl from './ParticipantRenameControl.vue';
   import ParticipantRollControl from './ParticipantRollControl.vue';
@@ -34,9 +46,7 @@
     isCurrent = false,
     order = 0,
     disabled = false,
-    currentHitPoints = undefined,
-    maxHitPointsOverride = undefined,
-    playerArmorClass = undefined,
+    round = 0,
   } = defineProps<{
     participant: TrackerParticipant;
     /** Идёт бой: бонус — только чтение. Макет строки от режима не меняется. */
@@ -44,13 +54,13 @@
     isCurrent?: boolean;
     order?: number;
     disabled?: boolean;
-    /** Текущие хиты из localStorage (нет записи — существо на полных). */
-    currentHitPoints?: number;
-    /** Прокинутый максимум хитов (нет записи — среднее из статблока). */
-    maxHitPointsOverride?: number;
-    /** КД игрока из localStorage (нет записи — не задан). */
-    playerArmorClass?: number;
+    /** Текущий раунд боя — из него считается остаток длительности состояний. */
+    round?: number;
   }>();
+
+  const sheetLink = computed(() => participant.sheetLink);
+
+  const color = computed(() => participant.color ?? DEFAULT_PARTICIPANT_COLOR);
 
   const emit = defineEmits<{
     'edit': [id: string, patch: UpdateParticipantRequest];
@@ -60,17 +70,31 @@
     'set-hit-points': [id: string, value: number];
     'set-max-hit-points': [id: string, value: number];
     'set-armor-class': [id: string, value: number];
+    'set-color': [id: string, value: ParticipantColor];
+    'add-condition': [
+      id: string,
+      key: ConditionKey,
+      rounds: number,
+      expiry: ConditionExpiry,
+    ];
+    'remove-condition': [id: string, key: ConditionKey];
   }>();
 
   const { openCreature } = useCreatureDrawer();
 
-  const { imageFor, summaryFor, dropImage } = useCreatureSummaries(() => [
+  const { avatarFor, summaryFor, dropAvatar } = useParticipantAvatars(() => [
     participant,
   ]);
 
   const bonus = ref(participant.initiativeBonus);
 
   const isDead = computed(() => participant.dead);
+
+  const sheetRoute = computed(() =>
+    sheetLink.value ? getSheetPlayerRoute(sheetLink.value) : '',
+  );
+
+  const avatarImage = computed(() => avatarFor(participant));
 
   const stateClass = computed(() => {
     if (isActive) {
@@ -111,12 +135,17 @@
     () => participant.typeName || PARTICIPANT_TYPE_LABEL[participant.type],
   );
 
-  // Вторая строка идентификации: тип участника, существам — ещё и опасность.
+  // Вторая строка идентификации: тип участника, существам — ещё и опасность,
+  // игроку из листа — пометка о нём (иначе привязка видна только в меню).
   const subtitle = computed(() => {
     const challengeRating = summary.value?.challengeRating;
 
-    return challengeRating
-      ? `${typeLabel.value} · ПО ${challengeRating}`
+    if (challengeRating) {
+      return `${typeLabel.value} · ПО ${challengeRating}`;
+    }
+
+    return sheetLink.value
+      ? `${typeLabel.value} · ${SHEET_PLAYER_ROW_LABEL}`
       : typeLabel.value;
   });
 
@@ -128,9 +157,9 @@
 
   const armorClassDisplay = computed(() => armorClassValue.value || '—');
 
-  // Прокинутый максимум приоритетнее среднего из статблока.
+  // Заданный мастером максимум приоритетнее среднего из статблока.
   const maxHitPoints = computed(
-    () => maxHitPointsOverride ?? summary.value?.maxHitPoints ?? 0,
+    () => participant.maxHitPoints ?? summary.value?.maxHitPoints ?? 0,
   );
 
   const hitFormula = computed(() => summary.value?.hitFormula ?? '');
@@ -169,6 +198,16 @@
         label: 'Статблок в новой вкладке',
         icon: 'tabler:external-link',
         to: getCreatureRoute(creatureUrl),
+        target: '_blank',
+      });
+    }
+
+    // Лист привязанного персонажа — своей вкладкой: бой при этом не теряется.
+    if (sheetRoute.value) {
+      items.push({
+        label: OPEN_SHEET_MENU_LABEL,
+        icon: 'tabler:id-badge-2',
+        to: sheetRoute.value,
         target: '_blank',
       });
     }
@@ -270,6 +309,60 @@
     );
   }
 
+  /** Гасит битую картинку аватара — он падает на иконку или инициалы. */
+  function onAvatarError(): void {
+    dropAvatar(participant);
+  }
+
+  const isColorOpen = ref(false);
+
+  /**
+   * Оформление образца палитры: тот же кружок, что и у иконки участника.
+   * @param option Цвет палитры.
+   */
+  function swatchClass(option: ParticipantColor): string {
+    return PARTICIPANT_COLOR_CLASS[option].surface;
+  }
+
+  /**
+   * Оформление галочки на выбранном образце палитры.
+   * @param option Цвет палитры.
+   */
+  function swatchCheckClass(option: ParticipantColor): string {
+    return PARTICIPANT_COLOR_CLASS[option].content;
+  }
+
+  /**
+   * Меняет цвет иконки участника и закрывает палитру.
+   * @param option Выбранный цвет.
+   */
+  function selectColor(option: ParticipantColor): void {
+    isColorOpen.value = false;
+
+    emit('set-color', participant.id, option);
+  }
+
+  /**
+   * Пробрасывает наложение состояния с id участника.
+   * @param key Ключ состояния.
+   * @param rounds Длительность в раундах (0 — до снятия вручную).
+   */
+  function onAddCondition(
+    key: ConditionKey,
+    rounds: number,
+    expiry: ConditionExpiry,
+  ): void {
+    emit('add-condition', participant.id, key, rounds, expiry);
+  }
+
+  /**
+   * Пробрасывает снятие состояния с id участника.
+   * @param key Ключ состояния.
+   */
+  function onRemoveCondition(key: ConditionKey): void {
+    emit('remove-condition', participant.id, key);
+  }
+
   function onRename(id: string, name: string): void {
     emit('edit', id, { name });
   }
@@ -326,11 +419,63 @@
         {{ order }}
       </span>
 
+      <!-- Без картинки участника различает цвет иконки: кружок сам и открывает
+           палитру. С картинкой выбирать нечего — она цвет и перекрывает. -->
+      <UPopover
+        v-if="!avatarImage"
+        v-model:open="isColorOpen"
+      >
+        <button
+          type="button"
+          class="shrink-0 cursor-pointer rounded-full transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
+          :disabled
+          :aria-label="PARTICIPANT_COLOR_TITLE"
+        >
+          <ParticipantAvatar
+            :participant="participant"
+            :color="color"
+            :class="isDead && 'opacity-40 grayscale'"
+          />
+        </button>
+
+        <template #content>
+          <div class="flex flex-col gap-2">
+            <span class="text-xs text-secondary">
+              {{ PARTICIPANT_COLOR_TITLE }}
+            </span>
+
+            <div class="flex flex-wrap gap-1.5">
+              <UTooltip
+                v-for="option in PARTICIPANT_COLORS"
+                :key="option"
+                :text="PARTICIPANT_COLOR_LABEL[option]"
+              >
+                <button
+                  type="button"
+                  class="grid size-7 cursor-pointer place-items-center rounded-full border transition-transform hover:scale-110"
+                  :class="swatchClass(option)"
+                  :aria-label="PARTICIPANT_COLOR_LABEL[option]"
+                  @click.left.exact.prevent="selectColor(option)"
+                >
+                  <UIcon
+                    v-if="option === color"
+                    name="tabler:check"
+                    class="size-4"
+                    :class="swatchCheckClass(option)"
+                  />
+                </button>
+              </UTooltip>
+            </div>
+          </div>
+        </template>
+      </UPopover>
+
       <ParticipantAvatar
+        v-else
         :participant="participant"
-        :image="imageFor(participant)"
+        :image="avatarImage"
         :class="isDead && 'opacity-40 grayscale'"
-        @image-error="dropImage(participant.creatureUrl)"
+        @image-error="onAvatarError"
       />
 
       <div class="min-w-0 flex-1">
@@ -356,17 +501,17 @@
       </div>
     </div>
 
-    <!-- Статы: одинаковые плитки КД/Бонус/Иниц. фиксированной ширины + меню.
-         Колонки совпадают между строками, режимами и типами участников
-         (у игроков в КД — прочерк). На мобильном — вторая строка справа. -->
+    <!-- Статы: одинаковые плитки Хиты/КД/Состояния/Бонус/Иниц. фиксированной
+         ширины + меню. Колонки совпадают между строками, режимами и типами
+         участников (у игроков в КД — прочерк). На мобильном — вторая строка. -->
     <div
       class="flex basis-full flex-wrap items-center justify-end gap-2 sm:flex-none sm:basis-auto sm:flex-nowrap"
     >
-      <!-- Группа выживаемости (Хиты, КД) -->
-      <div class="flex min-w-[120px] flex-1 items-center gap-2 sm:flex-none">
+      <!-- Группа состояния бойца (Хиты, КД, Состояния) -->
+      <div class="flex min-w-52 flex-1 items-center gap-2 sm:flex-none">
         <div class="w-16 flex-1 sm:flex-none">
           <ParticipantHitPointsControl
-            :current="currentHitPoints"
+            :current="participant.currentHitPoints"
             :max="maxHitPoints"
             :formula="hitFormula"
             :disabled="disabled"
@@ -380,7 +525,7 @@
           <!-- Игроку КД задаёт мастер вручную, существам — из статблока. -->
           <ParticipantArmorClassControl
             v-if="participant.type === 'PLAYER'"
-            :current="playerArmorClass"
+            :current="participant.armorClass"
             :disabled
             :class="dimmedClass"
             @change="onChangeArmorClass"
@@ -401,10 +546,26 @@
             </ParticipantStatTile>
           </UTooltip>
         </div>
+
+        <!-- Состояния — такая же плитка, как хиты и КД: наложенное читается
+             прямо из ряда, а не отдельной строкой под именем. -->
+        <div
+          class="w-20 flex-1 sm:flex-none"
+          :class="dimmedClass"
+        >
+          <ParticipantConditions
+            :conditions="participant.conditions"
+            :participant-name="participant.name"
+            :round="round"
+            :disabled="disabled"
+            @add="onAddCondition"
+            @remove="onRemoveCondition"
+          />
+        </div>
       </div>
 
       <!-- Группа инициативы и действий (Бонус, Иниц, Меню) -->
-      <div class="flex min-w-[212px] flex-1 items-center gap-2 sm:flex-none">
+      <div class="flex min-w-53 flex-1 items-center gap-2 sm:flex-none">
         <ParticipantStatTile
           label="Бонус"
           class="w-24 flex-1 sm:flex-none"

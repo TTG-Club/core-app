@@ -254,6 +254,11 @@ export default defineAppConfig({
         root: 'col-span-full',
       },
     },
+    toaster: {
+      slots: {
+        viewport: 'fixed-scrollbar-offset',
+      },
+    },
     toast: {
       variants: {
         color: {

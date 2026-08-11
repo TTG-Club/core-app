@@ -6,7 +6,9 @@
   import { cloneDeep } from 'es-toolkit';
 
   import { FilterDrawer } from '../drawer';
+  import { FILTER_CONTROLS_SEARCH_PLACEHOLDER } from '../model';
   import { FilterPreview } from '../preview';
+  import { FilterSearchInput } from '../search-input';
   import {
     getGroupItems,
     getSelectedItemIds,
@@ -223,25 +225,10 @@
 
 <template>
   <div class="flex gap-2 lg:flex-col lg:gap-4">
-    <UInput
+    <FilterSearchInput
       v-model="localSearch"
-      placeholder="Поиск..."
-      allow-clear
-      :ui="{ trailing: 'pe-0.5' }"
-    >
-      <template
-        v-if="localSearch"
-        #trailing
-      >
-        <UButton
-          icon="tabler:x"
-          variant="link"
-          color="neutral"
-          size="sm"
-          @click.left.exact.prevent="localSearch = ''"
-        />
-      </template>
-    </UInput>
+      :placeholder="FILTER_CONTROLS_SEARCH_PLACEHOLDER"
+    />
 
     <div class="flex gap-2">
       <UFieldGroup class="w-full space-x-px">

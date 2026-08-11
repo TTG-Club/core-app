@@ -26,6 +26,16 @@ export interface ClassFeatureOptionCreate {
   hideInSubclasses: boolean | undefined;
 }
 
+/**
+ * Выбор владения навыками у самого умения: «Величие гения» паладина даёт один
+ * навык из четырёх, и это не тот выбор, что лежит во владениях класса
+ * (`proficiency.skill` — выбор при создании персонажа на 1 уровне).
+ */
+export interface ClassFeatureSkillChoiceCreate {
+  count: number;
+  skills: Array<string>;
+}
+
 export interface ClassFeatureCreate {
   level: number;
   name: string;
@@ -38,6 +48,7 @@ export interface ClassFeatureCreate {
   scaling: Array<ClassFeatureScalingCreate>;
   options: Array<ClassFeatureOptionCreate>;
   abilityBonus?: ClassFeatureAbilityBonusCreate;
+  skillChoice?: ClassFeatureSkillChoiceCreate;
 }
 
 export interface ClassFeatureAbilityBonusCreate {

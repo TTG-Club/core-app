@@ -61,6 +61,7 @@
     'duplicate': [];
     'expand': [];
     'remove': [];
+    'edit-ability-scores': [];
     'edit-background': [];
     'edit-class': [];
     'edit-name': [];
@@ -95,6 +96,7 @@
       onDuplicate: () => emit('duplicate'),
       onRemove: () => emit('remove'),
       onSettings: () => emit('edit-settings'),
+      onAbilityScores: () => emit('edit-ability-scores'),
       onShare: () => emit('share'),
     }),
   );
@@ -191,6 +193,34 @@
 
   const inspirationTooltip = computed(() =>
     props.character.inspiration ? 'Вдохновение есть' : 'Вдохновения нет',
+  );
+
+  /**
+   * Заполнение полосы опыта, %. Порога следующего уровня нет (20-й) — полоса
+   * считается заполненной целиком.
+   */
+  const experienceProgress = computed(() => {
+    const { current, nextLevel } = props.character.experience;
+
+    if (nextLevel <= 0) {
+      return 100;
+    }
+
+    return Math.min(100, Math.max(0, (current / nextLevel) * 100));
+  });
+
+  /**
+   * Полосу опыта разрывает посередине подпись «X / Y XP», поэтому она состоит
+   * из двух отрезков: первая половина прогресса заполняет левый, вторая —
+   * правый. Вместе они читаются как одна непрерывная линия.
+   */
+  const experienceLeftWidth = computed(() =>
+    Math.min(100, experienceProgress.value * 2),
+  );
+
+  /** Заполнение правого отрезка полосы опыта, % (см. `experienceLeftWidth`) */
+  const experienceRightWidth = computed(() =>
+    Math.max(0, experienceProgress.value * 2 - 100),
   );
 
   const visionRows = computed(() => getVisionRows(props.character.vision));
@@ -336,20 +366,28 @@
           >{{ character.level }}</span
         >
 
-        <span class="relative grow">
-          <UProgress
-            :model-value="character.experience.current"
-            :max="character.experience.nextLevel"
-            size="sm"
-            color="primary"
-            class="w-full"
-          />
+        <!-- Полоса опыта: подпись разрывает её посередине, обе половины
+          читаются как одна непрерывная линия -->
+        <span class="flex grow items-center gap-2">
+          <span class="h-1 flex-1 overflow-hidden rounded-full bg-elevated">
+            <span
+              class="block h-full rounded-full bg-linear-to-r from-primary/50 to-primary transition-[width] duration-300"
+              :style="{ width: `${experienceLeftWidth}%` }"
+            />
+          </span>
 
           <span
-            class="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-default/60 px-2 py-0.5 text-[10px] leading-none font-medium text-toned backdrop-blur-md"
+            class="text-[10px] leading-none font-medium tracking-widest whitespace-nowrap text-dimmed"
           >
             {{ character.experience.current }} /
             {{ character.experience.nextLevel }} XP
+          </span>
+
+          <span class="h-1 flex-1 overflow-hidden rounded-full bg-elevated">
+            <span
+              class="block h-full rounded-full bg-primary transition-[width] duration-300"
+              :style="{ width: `${experienceRightWidth}%` }"
+            />
           </span>
         </span>
 

@@ -9,6 +9,7 @@
     FeatureAbilityBonus,
     FeatureOptions,
     FeatureScaling,
+    FeatureSkillChoice,
   } from './features';
 
   const { isSubclass = false } = defineProps<{
@@ -191,6 +192,8 @@
               v-model="feat.options"
               :is-subclass="isSubclass"
             />
+
+            <FeatureSkillChoice v-model="feat.skillChoice" />
 
             <FeatureAbilityBonus
               v-if="feat.level >= 20"

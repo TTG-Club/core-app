@@ -1,12 +1,22 @@
 <script setup lang="ts">
-  import type { TrackerParticipant } from '~initiative/model';
+  import type { ParticipantColor, TrackerParticipant } from '~initiative/model';
 
-  import { PARTICIPANT_TYPE_ICON } from '~initiative/model';
+  import {
+    DEFAULT_PARTICIPANT_COLOR,
+    PARTICIPANT_COLOR_CLASS,
+    PARTICIPANT_TYPE_ICON,
+  } from '~initiative/model';
 
-  const { participant, image = undefined } = defineProps<{
+  const {
+    participant,
+    image = undefined,
+    color = DEFAULT_PARTICIPANT_COLOR,
+  } = defineProps<{
     participant: TrackerParticipant;
-    /** URL картинки существа из бестиария (для игроков — не задаётся). */
+    /** URL картинки: статблок существа либо аватар листа персонажа. */
     image?: string;
+    /** Цвет иконки — виден, только когда картинки нет. */
+    color?: ParticipantColor;
   }>();
 
   defineEmits<{
@@ -14,6 +24,8 @@
   }>();
 
   const isCreature = computed(() => participant.type === 'CREATURE');
+
+  const colorClass = computed(() => PARTICIPANT_COLOR_CLASS[color]);
 
   // Аббревиатура игрока: инициалы двух слов либо две первые буквы одного.
   const initials = computed(() => {
@@ -37,10 +49,11 @@
 <template>
   <!-- size-11 — в высоту плиток статов строки, чтобы ряд был одной высоты. -->
   <div
-    class="relative grid size-11 shrink-0 place-items-center overflow-hidden rounded-full border border-default bg-elevated"
+    class="relative grid size-11 shrink-0 place-items-center overflow-hidden rounded-full border"
+    :class="colorClass.surface"
   >
     <img
-      v-if="isCreature && image"
+      v-if="image"
       :src="image"
       alt=""
       loading="lazy"
@@ -51,12 +64,14 @@
     <UIcon
       v-else-if="isCreature"
       :name="PARTICIPANT_TYPE_ICON.CREATURE"
-      class="size-5 text-secondary"
+      class="size-5"
+      :class="colorClass.content"
     />
 
     <span
       v-else
-      class="text-xs font-semibold text-secondary uppercase tabular-nums"
+      class="text-xs font-semibold uppercase tabular-nums"
+      :class="colorClass.content"
     >
       {{ initials }}
     </span>

@@ -67,11 +67,13 @@ body,
 }
 
 html {
-  --scrollbar-width: 0;
+  --app-scrollbar-width: 0;
 
-  &[style*='overflow:hidden'],
-  &[style*='overflow: hidden'] {
-    padding-right: var(--scrollbar-width);
+  // `data-scroll-locked` и `data-scroll-compensated` ставит плагин `scrollbarWidth.ts` — он же единственное место, где определяется, что скролл заблокирован и компенсировал ли кто-то полосу за нас. Утилита `fixed-scrollbar-offset` в `tailwind.css` опирается на первый атрибут.
+  //
+  // Отступ нужен, только пока полосу не компенсировали: Reka UI делает это сам паддингом на `body`, и второй такой же отступ сжал бы контент и сдвинул его влево.
+  &[data-scroll-locked]:not([data-scroll-compensated]) {
+    padding-right: var(--app-scrollbar-width);
   }
 }
 

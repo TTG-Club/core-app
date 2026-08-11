@@ -1,6 +1,14 @@
 import { SearchPalette } from '../palette';
 
-export function useGlobalSearch() {
+/**
+ * Управляет палитрой глобального поиска.
+ *
+ * `createSharedComposable` обязателен: `overlay.create` на каждый вызов заводит
+ * оверлей с новым `id`, а палитра должна быть одна на всех потребителей — пока
+ * смонтирован хотя бы один из них. По размонтировании последнего scope
+ * останавливается, и следующий вызов заведёт новый оверлей.
+ */
+export const useGlobalSearch = createSharedComposable(() => {
   const overlay = useOverlay();
   const modal = overlay.create(SearchPalette);
 
@@ -30,4 +38,4 @@ export function useGlobalSearch() {
     close,
     open,
   };
-}
+});

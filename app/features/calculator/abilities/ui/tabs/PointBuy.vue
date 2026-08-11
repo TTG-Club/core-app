@@ -212,13 +212,15 @@
       </template>
     </UCollapsible>
 
+    <!-- Поле под подписью — как в остальных вкладках набора: в узкой плитке
+         строка «подпись + контрол» не помещается. -->
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <div
         v-for="key in ABILITY_KEYS"
         :key="key"
-        class="bg-card flex items-center justify-between gap-3 rounded-xl border border-default p-3"
+        class="flex flex-col gap-2 rounded-xl border border-default bg-elevated p-3"
       >
-        <div>
+        <div class="flex items-baseline justify-between gap-2">
           <div class="font-semibold">{{ ABILITY_LABELS[key] }}</div>
 
           <div class="text-xs text-secondary">
@@ -230,7 +232,6 @@
           :model-value="localScores[key]"
           :min="minScore"
           :max="canIncrease(key) ? maxScore : localScores[key]"
-          class="w-32"
           @update:model-value="handleScoreUpdate(key, $event)"
         />
       </div>

@@ -6,7 +6,7 @@ import {
   fetchTrackerList,
   getTrackerErrorMessage,
   MAX_AUTHORIZED_TRACKERS,
-  renameTracker,
+  updateTracker,
 } from '~initiative/model';
 
 /**
@@ -98,7 +98,7 @@ export function useTrackerList() {
     isMutating.value = true;
 
     try {
-      await renameTracker(id, name);
+      await updateTracker(id, { name });
       await load();
 
       return true;

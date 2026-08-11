@@ -262,14 +262,14 @@
       <div
         v-for="(rollValue, index) in localState.rolls"
         :key="index"
-        class="bg-card flex flex-col gap-3 rounded-xl border border-default p-3 transition-colors"
+        class="flex flex-col gap-3 rounded-xl border border-default bg-elevated p-3 transition-colors"
         :class="{
           'border-success bg-success/5':
             !isAnimating && rollValue === RANDOM_ROLL_MAX_RESULT,
         }"
       >
-        <div class="flex items-center justify-between">
-          <div class="pl-2 text-2xl font-bold">
+        <div class="flex items-center gap-3">
+          <div class="shrink-0 pl-2 text-2xl font-bold">
             <USkeleton
               v-if="isAnimating"
               class="h-7 w-8"
@@ -282,14 +282,14 @@
             v-if="!isAnimating"
             :model-value="localState.assignments[index] ?? null"
             :items="getAbilityOptions(localState.assignments[index] ?? null)"
-            class="w-40"
+            class="min-w-0 flex-1"
             placeholder="Назначить..."
             @update:model-value="handleAssignmentUpdate(index, $event)"
           />
 
           <USkeleton
             v-else
-            class="h-8 w-40"
+            class="h-8 min-w-0 flex-1"
           />
         </div>
 

@@ -1,6 +1,7 @@
 import type {
   AbilityKey,
   Character,
+  CharacterAbilities,
   CharacterArmorClass,
   CharacterAttunement,
   CharacterCarryingCapacity,
@@ -104,6 +105,7 @@ import {
   isCustomInventoryItem,
   isCustomSpell,
   isEquippableInventoryItem,
+  isInnateSpellPrepared,
   isMissingInventoryItem,
   isVersatileInventoryItem,
   LEVEL_MAX,
@@ -385,6 +387,40 @@ export function useCharacterSheet() {
               clampedScore,
             )
           : character.value.health,
+    };
+  }
+
+  /**
+   * Запись всех шести характеристик разом (набор из калькулятора). Одной
+   * правкой, а не шестью подряд: иначе промежуточные значения Телосложения
+   * двигали бы хиты туда-сюда.
+   *
+   * @param abilities новые значения характеристик.
+   */
+  function setAbilityScores(abilities: CharacterAbilities): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const clampedAbilities = { ...abilities };
+
+    for (const ability of ABILITY_ORDER) {
+      clampedAbilities[ability] = clamp(
+        Math.trunc(abilities[ability]),
+        ABILITY_SCORE_MIN,
+        ABILITY_SCORE_MAX,
+      );
+    }
+
+    character.value = {
+      ...character.value,
+      abilities: clampedAbilities,
+      health: adjustHealthForConstitution(
+        character.value.health,
+        character.value.level,
+        character.value.abilities.constitution,
+        clampedAbilities.constitution,
+      ),
     };
   }
 
@@ -2172,11 +2208,16 @@ export function useCharacterSheet() {
       return;
     }
 
-    const ownSpell = toCopiedSpell(
-      `${CUSTOM_SPELL_URL_PREFIX}${crypto.randomUUID()}`,
-      currentInnateSpell.spell,
-      detail,
-    );
+    const ownSpell: CharacterSpell = {
+      ...toCopiedSpell(
+        `${CUSTOM_SPELL_URL_PREFIX}${crypto.randomUUID()}`,
+        currentInnateSpell.spell,
+        detail,
+      ),
+      // В книге заклинание уже считается подготовленным наравне с остальными:
+      // пометка врождённого сюда не едет, иначе копия перебрала бы предел.
+      prepared: undefined,
+    };
 
     character.value = {
       ...character.value,
@@ -2221,6 +2262,47 @@ export function useCharacterSheet() {
         ...species,
         innateSpells: species.innateSpells.filter(
           (innateSpell) => innateSpell.spell.url !== spellUrl,
+        ),
+      },
+    };
+  }
+
+  /**
+   * Снятие и возврат подготовки врождённого заклинания. Такое заклинание
+   * подготовлено сразу и места среди подготовленных не занимает, поэтому
+   * предел здесь не проверяется — снять пометку игрок может, чтобы отметить
+   * потраченное на день применение.
+   * Игровое действие: запертый лист его разрешает, чужой — нет.
+   *
+   * @param spellUrl URL врождённого заклинания.
+   */
+  function toggleInnateSpellPrepared(spellUrl: string): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    const species = character.value.species;
+
+    const currentInnateSpell = species?.innateSpells.find(
+      (innateSpell) => innateSpell.spell.url === spellUrl,
+    );
+
+    // Записи уже нет (вид сменили): переписывать лист нельзя — автосохранение
+    // сработало бы на подмену, которой не было.
+    if (!species || !currentInnateSpell) {
+      return;
+    }
+
+    const prepared = !isInnateSpellPrepared(currentInnateSpell.spell);
+
+    character.value = {
+      ...character.value,
+      species: {
+        ...species,
+        innateSpells: species.innateSpells.map((innateSpell) =>
+          innateSpell.spell.url === spellUrl
+            ? { ...innateSpell, spell: { ...innateSpell.spell, prepared } }
+            : innateSpell,
         ),
       },
     };
@@ -2961,6 +3043,7 @@ export function useCharacterSheet() {
     carryingCapacity,
     attunement,
     setAbilityScore,
+    setAbilityScores,
     setArmorClass,
     setCarryingCapacity,
     setAttunement,
@@ -3025,6 +3108,7 @@ export function useCharacterSheet() {
     completeLongRest,
     spendSpellSlot,
     toggleSavingThrowProficiency,
+    toggleInnateSpellPrepared,
     toggleSpellPrepared,
     toggleSpellSlot,
     cycleSkillProficiency,

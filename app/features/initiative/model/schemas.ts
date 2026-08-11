@@ -8,13 +8,47 @@ import type {
 
 import { z } from '~/utils/zod';
 
-import { DEFAULT_TRACKER_NAME } from './constants';
+import { DEFAULT_CONDITION_EXPIRY, DEFAULT_TRACKER_NAME } from './constants';
+import { isConditionKey, isParticipantColor } from './utils';
 
 /**
  * Схема одного участника. Числовые поля приведены (`coerce`) и снабжены
  * `catch`-дефолтами: бэк ещё не развёрнут, поэтому валидация должна быть
  * устойчивой к мелким расхождениям типов, а не падать на них.
  */
+const conditionSchema = z.object({
+  key: z.string().refine(isConditionKey),
+  expiresAtRound: z.coerce.number().nullable().catch(null),
+  // Момента нет у записей прежних версий — они спадали в начале своего хода.
+  expiresOn: z
+    .enum(['round-end', 'turn-start', 'turn-end'])
+    .catch(DEFAULT_CONDITION_EXPIRY),
+});
+
+/**
+ * Состояния участника: неизвестный ключ (состояние из будущей версии справочника
+ * или чужой клиент) отбрасывается поштучно — ронять из-за него разбор всего
+ * участника нельзя.
+ */
+const conditionsSchema = z
+  .array(z.unknown())
+  .catch([])
+  .transform((items) =>
+    items.flatMap((item) => {
+      const parsed = conditionSchema.safeParse(item);
+
+      return parsed.success ? [parsed.data] : [];
+    }),
+  );
+
+const sheetLinkSchema = z.object({
+  sheetId: z.string(),
+  source: z.enum(['own', 'saved']).catch('own'),
+  shareToken: z.string().nullable().catch(null),
+  savedId: z.string().nullable().catch(null),
+  avatarUrl: z.string().nullable().catch(null),
+});
+
 const participantSchema = z.object({
   id: z.string(),
   type: z.enum(['PLAYER', 'CREATURE']).catch('CREATURE'),
@@ -25,6 +59,17 @@ const participantSchema = z.object({
   initiativeRoll: z.coerce.number().optional(),
   initiativeTotal: z.coerce.number().optional(),
   creatureUrl: z.string().optional(),
+  currentHitPoints: z.coerce.number().optional(),
+  maxHitPoints: z.coerce.number().optional(),
+  armorClass: z.coerce.number().optional(),
+  color: z
+    .string()
+    .optional()
+    .transform((value) =>
+      value && isParticipantColor(value) ? value : undefined,
+    ),
+  sheetLink: sheetLinkSchema.optional(),
+  conditions: conditionsSchema,
 });
 
 /** Схема полного состояния трекера (ответ мутаций и `GET /{id}`). */
@@ -34,6 +79,7 @@ const trackerDetailedSchema = z.object({
   status: z.enum(['PREPARING', 'ACTIVE']).catch('PREPARING'),
   statusName: z.string().catch(''),
   round: z.coerce.number().catch(0),
+  rerollEachRound: z.boolean().catch(false),
   currentParticipantId: z.string().optional(),
   accessKey: z.string().optional(),
   createdAt: z.string().catch(''),
@@ -48,6 +94,7 @@ const trackerListItemSchema = z.object({
   status: z.enum(['PREPARING', 'ACTIVE']).catch('PREPARING'),
   statusName: z.string().catch(''),
   round: z.coerce.number().catch(0),
+  rerollEachRound: z.boolean().catch(false),
   deleted: z.boolean().catch(false),
   createdAt: z.string().catch(''),
   updatedAt: z.string().catch(''),

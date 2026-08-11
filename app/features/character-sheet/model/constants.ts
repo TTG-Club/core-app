@@ -52,6 +52,7 @@ import type {
 import bytes from 'bytes';
 import { range } from 'es-toolkit';
 
+import { AbilityKey as ApiAbilityKey } from '~/shared/types';
 import { CasterType } from '~classes/model';
 
 /** Название инструмента «Лист персонажа». */
@@ -444,6 +445,19 @@ export const ABILITY_SHORT_LABELS: Record<AbilityKey, string> = {
   intelligence: 'Инт',
   wisdom: 'Мдр',
   charisma: 'Хар',
+};
+
+/**
+ * Ключи характеристик в формате API и калькулятора (`STRENGTH`) — обратное
+ * соответствие к `parseApiAbilityKey`.
+ */
+export const API_ABILITY_KEYS: Record<AbilityKey, ApiAbilityKey> = {
+  strength: ApiAbilityKey.STRENGTH,
+  dexterity: ApiAbilityKey.DEXTERITY,
+  constitution: ApiAbilityKey.CONSTITUTION,
+  intelligence: ApiAbilityKey.INTELLIGENCE,
+  wisdom: ApiAbilityKey.WISDOM,
+  charisma: ApiAbilityKey.CHARISMA,
 };
 
 /** Варианты характеристик для селектов листа — в порядке отображения. */
@@ -850,6 +864,29 @@ export const SHEET_SETTINGS_LABELS = {
   totalProficiencyBonusTitle: 'Итоговый бонус мастерства',
   totalInitiativeTitle: 'Итоговая инициатива',
 };
+
+/** Подписи набора характеристик (калькулятор в листе персонажа). */
+export const ABILITY_SCORES_LABELS = {
+  menu: 'Калькулятор характеристик',
+  title: 'Набор характеристик',
+  description:
+    'Соберите значения как в калькуляторе характеристик и запишите их в лист',
+  current: 'Сейчас в листе',
+  incompleteHint: 'Назначьте значения всем шести характеристикам',
+  backgroundBonusPrefix: 'Предыстория',
+  backgroundHint:
+    'Прибавки предыстории уже входят в значения листа, поэтому они добавляются к набору сами.',
+  replaceHint:
+    'Набор заменяет все шесть значений целиком: прибавки за уровни и черты, уже записанные в лист, придётся выставить заново.',
+  apply: 'Записать в лист',
+  cancel: 'Отмена',
+};
+
+/**
+ * Идентификатор источника прибавок предыстории для калькулятора. Источник
+ * ровно один, поэтому идентификатор постоянный.
+ */
+export const ABILITY_SCORES_BACKGROUND_SOURCE_ID = 'sheet-background';
 
 /** Минимальное значение характеристики. */
 export const ABILITY_SCORE_MIN = 1;
@@ -2151,7 +2188,7 @@ export const PREPARED_SPELL_TOGGLE_LABELS: Record<
 > = {
   prepare: 'Подготовить',
   unprepare: 'Снять подготовку',
-  innate: 'Врождённое заклинание подготавливать не нужно',
+  innate: 'Врождённое заклинание не занимает место среди подготовленных',
   limit: 'Больше подготовить нельзя',
 };
 
@@ -2242,7 +2279,9 @@ export const SPELL_FILTER_LABELS: Record<
   prepared: 'Подготовленные',
   preparedHint:
     'Оставить в списке только заклинания и заговоры, помеченные значком',
-  cantrip: 'З',
+  // Чипы кругов — числа, у заговоров вместо номера сокращение: одной буквы «З»
+  // мало, её путают с цифрой в соседних чипах.
+  cantrip: 'Зг',
 };
 
 /** Общая часть оформления чипа отбора (каталог заклинаний, вкладка). */
@@ -3539,6 +3578,12 @@ export const SHEET_FEATURE_ROW_LABELS: Record<
   choice: 'Выбор:',
   emptyDescription: 'Описание не заполнено',
 };
+
+/** Заголовок подтверждения удаления особенности. */
+export const FEATURE_REMOVE_CONFIRM_TITLE = 'Удалить особенность?';
+
+/** Подпись кнопки подтверждения удаления особенности. */
+export const FEATURE_REMOVE_CONFIRM_LABEL = 'Удалить';
 
 /**
  * Варианты происхождения при добавлении особенности вручную: те же группы, что

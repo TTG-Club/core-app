@@ -12,7 +12,13 @@
 
   const props = defineProps<{
     selectedClassUrl?: string;
-    classAbilityTemplate: number[];
+
+    /**
+     * Шаблон распределения от класса. Не передан — кнопки шаблона нет вовсе:
+     * там, где класс рядом не выбирают (лист персонажа), она осталась бы
+     * навсегда неактивной.
+     */
+    classAbilityTemplate?: number[];
   }>();
 
   const model = defineModel<AbilityScores>({ required: true });
@@ -84,7 +90,9 @@
   }
 
   const isClassTemplateButtonDisabled = computed(() => {
-    return !props.selectedClassUrl || props.classAbilityTemplate.length === 0;
+    return (
+      !props.selectedClassUrl || (props.classAbilityTemplate?.length ?? 0) === 0
+    );
   });
 
   function applyClassTemplate() {
@@ -101,7 +109,7 @@
         continue;
       }
 
-      const value = props.classAbilityTemplate[index];
+      const value = props.classAbilityTemplate?.[index];
 
       if (value === undefined) {
         continue;
@@ -133,6 +141,7 @@
       </div>
 
       <UButton
+        v-if="classAbilityTemplate"
         :disabled="isClassTemplateButtonDisabled"
         variant="subtle"
         color="neutral"
@@ -143,18 +152,22 @@
       </UButton>
     </div>
 
+    <!--
+      Подпись над полем, а не рядом: в узкой плитке (три колонки в модалке листа)
+      названию характеристики и селекту не хватает ширины в один ряд, и текст
+      выбора обрезается.
+    -->
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <div
         v-for="key in ABILITY_KEYS"
         :key="key"
-        class="bg-card flex items-center justify-between gap-3 rounded-xl border border-default p-3"
+        class="flex flex-col gap-2 rounded-xl border border-default bg-elevated p-3"
       >
         <div class="font-semibold">{{ ABILITY_LABELS[key] }}</div>
 
         <USelect
           :model-value="localScores[key]"
           :items="getOptions(localScores[key])"
-          class="w-32"
           @update:model-value="updateScore(key, Number($event))"
         />
       </div>

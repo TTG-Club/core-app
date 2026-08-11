@@ -88,13 +88,84 @@ core-app/
 
 ### 🛠️ Interactive tools
 
-| Domain            | Purpose                                                                                                                                                                             | Sub-features                                                                                                                             |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `tokenator`       | Canvas VTT token generator (`/tokenator`): mask/frame/tint/text/3D lighting, export. Dexie (IndexedDB) + Pinia store                                                                | `canvas`, `controls`, `preview`, `model`, `composables`                                                                                  |
-| `dice-roller`     | Dice-notation roller w/ crit detection + history; float/sidebar toggle, inline links, modal                                                                                         | `modal`, `float-button`, `sidebar-button`, `link`, `composables`, `model` (+ legacy `const.ts` / `types.ts` / `utils.ts` at domain root) |
-| `calculator`      | Character-math tools container (`/calculators/abilities`)                                                                                                                           | `abilities` — ability-score calc (Point Buy / Standard Array / Random Roll)                                                              |
-| `initiative`      | Initiative tracker (`/tools/initiative[/:id]`): participants, HP/AC editing, bestiary lookup; anonymous slot in localStorage + `X-Tracker-Key`                                      | `list`, `workspace`, `ui-kit`, `composables`, `model`                                                                                    |
-| `character-sheet` | D&D 2024 character sheet (`/tools/character-sheet[/:id]`; the list page is public and shows a sign-in prompt to guests, creating/saving needs an account) — see the breakdown below | `body`, `list`, `controls`, `drawer`, `composables`, `model`                                                                             |
+| Domain            | Purpose                                                                                                                                                                                                       | Sub-features                                                                                                                             |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `tokenator`       | Canvas VTT token generator (`/tokenator`): mask/frame/tint/text/3D lighting, export. Dexie (IndexedDB) + Pinia store                                                                                          | `canvas`, `controls`, `preview`, `model`, `composables`                                                                                  |
+| `dice-roller`     | Dice-notation roller w/ crit detection + history; float/sidebar toggle, inline links, modal                                                                                                                   | `modal`, `float-button`, `sidebar-button`, `link`, `composables`, `model` (+ legacy `const.ts` / `types.ts` / `utils.ts` at domain root) |
+| `calculator`      | Character-math tools container (`/calculators/abilities`)                                                                                                                                                     | `abilities` — ability-score calc (Point Buy / Standard Array / Random Roll)                                                              |
+| `initiative`      | Initiative tracker (`/tools/initiative[/:id]`): participants, HP/AC editing, bestiary lookup, players from character sheets (own + saved shared, see below); anonymous slot in localStorage + `X-Tracker-Key` | `list`, `workspace`, `ui-kit`, `composables`, `model`                                                                                    |
+| `character-sheet` | D&D 2024 character sheet (`/tools/character-sheet[/:id]`; the list page is public and shows a sign-in prompt to guests, creating/saving needs an account) — see the breakdown below                           | `body`, `list`, `controls`, `drawer`, `composables`, `model`                                                                             |
+
+#### `initiative`: players from character sheets
+
+**Everything a participant carries lives on the server.** Hit points (current and
+the master's maximum), a player's AC, the icon colour, the link to a character
+sheet and the conditions are columns of `initiative_participant` in core-api —
+`localStorage` kept none of it beyond one browser, so a second device or a
+cleared site data lost the whole fight. They are written by the same
+`PUT /participants/{id}` that renames a participant (`null` = не менять,
+`conditions` arrives whole), and a player joins with all of it in the single
+`POST /participants`, so no id has to be fished out of the response.
+
+Besides the manual player form, the add panel of an authorized master offers
+`SheetPlayerAddForm` — a picker over their own active sheets and the shared ones
+they saved (`useSheetPlayerOptions` reads both lists straight through
+`~character-sheet/model`, in parallel and independently, so one failing list
+still shows the other). `buildSheetPlayerOption` takes the name, the initiative
+bonus, the AC and the hit points from the sheet (clamped to the tracker's own
+limits) and the link itself, so the row shows the character's avatar, marks
+itself «лист персонажа» and opens the sheet from its menu (own sheets by id,
+saved ones by share token). Sheets already standing in the fight are badged in
+the list, and the picker reloads on demand.
+
+Hit points travel back: damage and healing marked on a player built from a sheet
+are written into that sheet's `health.current` (`useSheetHitPointsSync`) — only
+the current value, never the maximum, which the sheet computes itself. An own
+sheet is saved whole (`PUT`), so the document is re-read right before the write
+and a sheet the player edited meanwhile is not overwritten by the snapshot taken
+when they joined the fight. Someone else's sheet is reached through the narrow
+endpoint of its saved link (`PATCH /tools/character-sheet/saved/{id}/health`,
+`updateSavedCharacterSheetHitPoints`): the master has no rights to the rest of
+the document, the server clamps the value to that sheet's own maximum, and the
+right to write comes from having saved the link rather than from the token
+itself. Writes are debounced and queued per sheet, and temporary hit points the
+tracker knows nothing about stay untouched either way.
+
+The avatar itself is shared by the row and the reel (`useParticipantAvatars`):
+the creature's stat-block picture, the sheet's avatar for a linked player, and a
+per-participant fallback colour for everyone drawn as an icon or initials (the
+seven semantic colours of the theme). The colour is picked from the avatar
+itself — it doubles as the popover trigger whenever there is no picture — and
+paints both the row circle and the reel token, replacing the primary highlight on
+the token whose turn it is, so a colour chosen for a player does not vanish
+exactly when they act.
+
+Two things the tracker now does by itself. A creature whose hit points reach
+zero is marked defeated (and un-marked when it is healed above zero) — the same
+`dead` flag the row menu sets, so it keeps its place in the order and is skipped
+in the turn queue; players are left alone, since at zero a character falls
+unconscious rather than out of the fight, and that call is the master's. And the
+header carries the tracker's own «Новая инициатива каждый раунд» switch
+(`rerollEachRound` on the tracker, `PUT /tools/initiative/{id}`): the re-roll
+itself belongs to the backend, which rolls every living participant on the round
+change and hands the turn to the first one of the new order.
+
+Conditions are the fifteen PHB 2024 ones with the names and artwork of VTTG
+(`app/assets/icons/status-*.svg`, taken from its `assets/status`; the two without
+their own picture fall back to `tabler`, as they do there) plus six common combat
+effects that are not conditions by the rules — concentration, haste, slow,
+enlarge, reduce, polymorph. They are added from the row itself: a palette with an
+optional duration in rounds and, for a timed one, the moment it drops — in the
+start of its owner's turn (default), in the end of it, or on the round boundary
+(«начало» and «конец» of a round name the same instant, so that is one option).
+A timed condition stores not the remaining rounds but the round it drops on, so
+a reload cannot lose count of it, and the backend removes it at the matching
+moment of `nextTurn` — the same server that moves the turn, so two open screens
+cannot disagree. `prevTurn` only rewinds the pointer and the round: a condition
+already dropped is not brought back, and the master re-applies it by hand.
+Finishing the fight («Пересоздать бой») clears the conditions along with the
+rolls, since the backend revives the defeated at the same moment; hit points it
+leaves alone — the end of a fight does not heal.
 
 #### `character-sheet` in detail
 
@@ -105,6 +176,20 @@ modals), so its capabilities are listed here rather than squeezed into the table
 
 - Wizards for species / class / background; rolls go through `dice-roller`
   (universal `SheetRollModal`).
+- «Калькулятор характеристик» in the sheet action menu (`SheetAbilityScoresModal`) sets
+  all six scores the way `/calculators/abilities` does. The three generators
+  (random roll / standard array / point buy) plus the resulting summary live in
+  one component of the calculator domain — `CalculatorAbilityScores`
+  (`~calculator/abilities`) — used by the calculator page and the sheet alike;
+  the sheet passes its background ability bonuses as a bonus source, so they are
+  shown in the summary and added on apply (the sheet stores scores together with
+  them). Applying goes through `setAbilityScores` — one edit, so Constitution
+  moves the hit points once, and the only place where the range is clamped. The
+  set is written only when all six are assigned, and the class template button
+  of the standard array is hidden where no class is picked next to it. The set
+  replaces all six values outright: level-up ability increases are baked into
+  `abilities` and kept in no separate ledger, so they cannot be carried over —
+  the modal says so before applying.
 - The class and background wizards also hand out the starting equipment. The
   reference `startingEquipment` field carries the official options («А», «Б»,
   «В») as structured item lists plus coins, so the review step shows them as a
@@ -338,6 +423,13 @@ modals), so its capabilities are listed here rather than squeezed into the table
   record (editable afterwards), removing one drops it from
   `species.innateSpells` so the next level-up does not bring it back. Both are
   undone by picking the species again in the wizard.
+- An innate spell is prepared from the start and never takes a slot in the
+  prepared pool: the counter (`getPreparedSpellsBreakdown`) reads
+  `character.spells` alone, so the limit neither shrinks nor blocks the mark.
+  Its icon still toggles — the flag lives in `species.innateSpells[].spell`
+  where a missing value reads as prepared (`isInnateSpellPrepared`), which is
+  what sheets saved before the flag get. Copying such a spell into the book
+  drops the mark: there it would count against the limit.
 - The «Личность» tab holds the person rather than the build: seven appearance
   tiles (alignment from the `alignments` dictionary plus age, height, weight,
   eyes, hair and skin as free text — clicking a tile opens the form with the
