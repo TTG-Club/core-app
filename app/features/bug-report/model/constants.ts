@@ -42,11 +42,19 @@ export const BUG_REPORT_STATS_API_URL = `${BUG_REPORT_API_URL}/stats`;
 /** URL API получения списка баг-репортов (админка) */
 export const ADMIN_BUGS_API_URL = '/api/admin/bugs';
 
+/** URL API получения количества баг-репортов по каждому статусу (админка) */
+export const ADMIN_BUGS_COUNT_BY_STATUS_API_URL = `${ADMIN_BUGS_API_URL}/count-by-status`;
+
 /**
  * Платформа-источник бага. Реэкспорт из `#shared/consts`: идентичность сайта —
  * общее знание, её нельзя разнести по константам двух фич.
  */
 export { SOURCE_PLATFORM } from '#shared/consts';
+/**
+ * Набор статусов баг-репорта в порядке отображения. Реэкспорт из `#shared/consts`:
+ * тем же списком серверная ручка считает сводку по статусам.
+ */
+export { BUG_REPORT_STATUSES } from '#shared/consts';
 
 /**
  * Возвращает URL для получения одного баг-репорта по ID (админка).
@@ -85,17 +93,28 @@ export const ADMIN_BUGS_PAGE_DESCRIPTION =
 /** Текст при пустом списке баг-репортов */
 export const ADMIN_BUGS_EMPTY_TEXT = 'Баг-репорты не найдены';
 
-/** Ключ кеша сводной статистики баг-репортов в админке */
-export const ADMIN_BUGS_STATS_DATA_KEY = 'admin-bugs-stats';
+/** Текст при ошибке загрузки списка баг-репортов */
+export const ADMIN_BUGS_LOAD_ERROR_TEXT =
+  'Не удалось загрузить список баг-репортов.';
+
+/** Текст кнопки повторной загрузки списка */
+export const ADMIN_BUGS_RETRY_LABEL = 'Повторить попытку';
+
+/** Заголовок заглушки, когда баг-репорт не выбран */
+export const ADMIN_BUGS_DETAIL_EMPTY_TITLE = 'Баг-репорт не выбран';
+
+/** Текст заглушки, когда баг-репорт не выбран */
+export const ADMIN_BUGS_DETAIL_EMPTY_TEXT =
+  'Выберите сообщение об ошибке из списка слева, чтобы просмотреть подробную информацию';
+
+/** Ключ кеша сводки количества баг-репортов по статусам в админке */
+export const ADMIN_BUGS_STATUS_COUNTS_DATA_KEY = 'admin-bugs-status-counts';
 
 /** Ключ кеша баг-репорта, догруженного по ID из ссылки, в админке */
 export const ADMIN_BUG_SELECTED_DATA_KEY = 'admin-bug-selected';
 
 /** Подпись стата «всего найдено багов» в шапке админки */
 export const ADMIN_BUGS_STAT_TOTAL_LABEL = 'Всего найдено';
-
-/** Подпись стата «исправлено багов» в шапке админки */
-export const ADMIN_BUGS_STAT_FIXED_LABEL = 'Исправлено';
 
 /** Значение фильтра "Все статусы" */
 export const ADMIN_BUGS_STATUS_ALL_LABEL = 'Все статусы';
@@ -110,14 +129,6 @@ export const BUG_REPORT_STATUS_LABELS: Record<BugReportStatus, string> = {
   FIXED: 'Исправлен',
   REJECTED: 'Отклонен',
 };
-
-/** Порядок отображения статусов баг-репорта в панели управления */
-export const BUG_REPORT_STATUS_ORDER: ReadonlyArray<BugReportStatus> = [
-  'NEW',
-  'WAIT',
-  'FIXED',
-  'REJECTED',
-];
 
 /**
  * Мапа русских названий для платформ. Сам набор живёт в `#shared/consts`: теми же
@@ -146,6 +157,27 @@ export function getBugReportStatusColor(
 ): 'warning' | 'info' | 'success' | 'error' {
   return BUG_REPORT_STATUS_COLOR_MAP[status];
 }
+
+/** Подсказка к усечённому UUID в строке списка */
+export const BUG_REPORT_UUID_TITLE = 'UUID баг-репорта';
+
+/** Подсказка к дате создания в строке списка */
+export const BUG_REPORT_CREATED_AT_TITLE = 'Дата создания';
+
+/** Подсказки к иконке скриншота: приложен и не приложен */
+export const BUG_REPORT_SCREENSHOT_PRESENT_TITLE = 'Есть скриншот';
+export const BUG_REPORT_SCREENSHOT_ABSENT_TITLE = 'Нет скриншота';
+
+/** Подсказки к иконке выделенного текста: есть и нет */
+export const BUG_REPORT_SELECTION_PRESENT_TITLE = 'Есть выделенный текст';
+export const BUG_REPORT_SELECTION_ABSENT_TITLE = 'Нет выделенного текста';
+
+/** Подсказки к иконке комментария: есть и нет */
+export const BUG_REPORT_COMMENT_PRESENT_TITLE = 'Есть комментарий';
+export const BUG_REPORT_COMMENT_ABSENT_TITLE = 'Нет комментария';
+
+/** Подсказка к идентификатору в детальном просмотре */
+export const BUG_REPORT_COPY_ID_TITLE = 'Нажмите, чтобы скопировать ID';
 
 /** Имя анонимного пользователя по умолчанию */
 export const BUG_REPORT_ANONYMOUS_USER = 'Аноним';
@@ -186,6 +218,15 @@ export const BUG_REPORT_STATUS_COMMENT_MAX_LENGTH = 2000;
 
 /** Значение фильтра "Все" для статуса/платформы */
 export const ADMIN_BUGS_FILTER_ALL = 'ALL';
+
+/** Ключ URL-параметра с фильтром по статусу */
+export const ADMIN_BUGS_STATUS_QUERY_KEY = 'status';
+
+/** Ключ URL-параметра с фильтром по платформе */
+export const ADMIN_BUGS_PLATFORM_QUERY_KEY = 'platform';
+
+/** Ключ URL-параметра с идентификатором открытого баг-репорта */
+export const ADMIN_BUGS_ID_QUERY_KEY = 'id';
 
 /** Количество элементов на странице по умолчанию */
 export const ADMIN_BUGS_DEFAULT_PAGE_SIZE = 20;

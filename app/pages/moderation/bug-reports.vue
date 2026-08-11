@@ -2,13 +2,14 @@
   import type { WritableComputedRef } from 'vue';
 
   import type {
+    BugCountByStatusResponse,
     BugReportResponse,
-    BugReportStatsResponse,
     BugReportStatus,
     BugReportStatusUpdatePayload,
     PageBugReportResponse,
   } from '~bug-report/model';
 
+  import { SOURCE_PLATFORMS } from '#shared/consts';
   import {
     AdminBugReportDetailPane,
     AdminBugReportRow,
@@ -16,24 +17,32 @@
   import {
     ADMIN_BUG_SELECTED_DATA_KEY,
     ADMIN_BUGS_API_URL,
+    ADMIN_BUGS_COUNT_BY_STATUS_API_URL,
     ADMIN_BUGS_DEFAULT_PAGE_SIZE,
     ADMIN_BUGS_DEFAULT_SORT,
+    ADMIN_BUGS_DETAIL_EMPTY_TEXT,
+    ADMIN_BUGS_DETAIL_EMPTY_TITLE,
     ADMIN_BUGS_EMPTY_TEXT,
     ADMIN_BUGS_FILTER_ALL,
+    ADMIN_BUGS_ID_QUERY_KEY,
     ADMIN_BUGS_LAYOUT_TITLE,
+    ADMIN_BUGS_LOAD_ERROR_TEXT,
     ADMIN_BUGS_PAGE_DESCRIPTION,
     ADMIN_BUGS_PAGE_TITLE,
     ADMIN_BUGS_PLATFORM_ALL_LABEL,
-    ADMIN_BUGS_STAT_FIXED_LABEL,
+    ADMIN_BUGS_PLATFORM_QUERY_KEY,
+    ADMIN_BUGS_RETRY_LABEL,
     ADMIN_BUGS_STAT_TOTAL_LABEL,
-    ADMIN_BUGS_STATS_DATA_KEY,
     ADMIN_BUGS_STATUS_ALL_LABEL,
+    ADMIN_BUGS_STATUS_COUNTS_DATA_KEY,
+    ADMIN_BUGS_STATUS_QUERY_KEY,
     applyBugStatusPatch,
     BUG_REPORT_DETAIL_DATE_FORMAT,
     BUG_REPORT_PLATFORM_LABELS,
-    BUG_REPORT_STATS_API_URL,
     BUG_REPORT_STATUS_LABELS,
+    BUG_REPORT_STATUSES,
     getAdminBugApiUrl,
+    getBugReportStatusColor,
   } from '~bug-report/model';
 
   const { isSplitActive } = useLayoutWidth();
@@ -51,14 +60,23 @@
   /**
    * Создает вычисляемый фильтр, синхронизированный с URL query.
    *
+   * Значение из адреса принимается, только если оно есть среди допустимых:
+   * иначе произвольная строка (`?status=foo`) ушла бы в API, где Spring не
+   * сможет привести её к enum и ответит ошибкой на весь список.
+   *
    * @param queryKey Ключ параметра в URL query.
+   * @param allowedValues Допустимые значения фильтра.
    */
-  function createQueryFilter(queryKey: string): WritableComputedRef<string> {
+  function createQueryFilter(
+    queryKey: string,
+    allowedValues: ReadonlyArray<string>,
+  ): WritableComputedRef<string> {
     return computed({
       get: () => {
         const queryValue = route.query[queryKey];
 
-        return typeof queryValue === 'string' && queryValue
+        return typeof queryValue === 'string'
+          && allowedValues.includes(queryValue)
           ? queryValue
           : ADMIN_BUGS_FILTER_ALL;
       },
@@ -67,20 +85,27 @@
           query: {
             ...route.query,
             [queryKey]: value === ADMIN_BUGS_FILTER_ALL ? undefined : value,
-            id: undefined,
+            [ADMIN_BUGS_ID_QUERY_KEY]: undefined,
           },
         });
       },
     });
   }
 
-  const statusFilter = createQueryFilter('status');
-  const platformFilter = createQueryFilter('platform');
+  const statusFilter = createQueryFilter(
+    ADMIN_BUGS_STATUS_QUERY_KEY,
+    BUG_REPORT_STATUSES,
+  );
+
+  const platformFilter = createQueryFilter(
+    ADMIN_BUGS_PLATFORM_QUERY_KEY,
+    SOURCE_PLATFORMS,
+  );
 
   // Синхронизация выбранного ID бага с URL query
   const selectedBugId = computed({
     get: () => {
-      const queryId = route.query.id;
+      const queryId = route.query[ADMIN_BUGS_ID_QUERY_KEY];
 
       return typeof queryId === 'string' && queryId ? queryId : null;
     },
@@ -88,37 +113,34 @@
       router.replace({
         query: {
           ...route.query,
-          id: value || undefined,
+          [ADMIN_BUGS_ID_QUERY_KEY]: value || undefined,
         },
       });
     },
   });
 
-  // Опции для фильтра статусов
-  const statusOptions = computed(() => {
-    const options = [
-      { label: ADMIN_BUGS_STATUS_ALL_LABEL, value: ADMIN_BUGS_FILTER_ALL },
-    ];
+  /** Пункт селекта-фильтра: подпись и значение. */
+  interface FilterOption {
+    label: string;
+    value: string;
+  }
 
-    Object.entries(BUG_REPORT_STATUS_LABELS).forEach(([key, value]) => {
-      options.push({ label: value, value: key });
-    });
+  // Опции фильтров не зависят от состояния страницы — считаются один раз
+  const statusOptions: FilterOption[] = [
+    { label: ADMIN_BUGS_STATUS_ALL_LABEL, value: ADMIN_BUGS_FILTER_ALL },
+    ...BUG_REPORT_STATUSES.map((status) => ({
+      label: BUG_REPORT_STATUS_LABELS[status],
+      value: status,
+    })),
+  ];
 
-    return options;
-  });
-
-  // Опции для фильтра платформ
-  const platformOptions = computed(() => {
-    const options = [
-      { label: ADMIN_BUGS_PLATFORM_ALL_LABEL, value: ADMIN_BUGS_FILTER_ALL },
-    ];
-
-    Object.entries(BUG_REPORT_PLATFORM_LABELS).forEach(([key, value]) => {
-      options.push({ label: value, value: key });
-    });
-
-    return options;
-  });
+  const platformOptions: FilterOption[] = [
+    { label: ADMIN_BUGS_PLATFORM_ALL_LABEL, value: ADMIN_BUGS_FILTER_ALL },
+    ...SOURCE_PLATFORMS.map((platform) => ({
+      label: BUG_REPORT_PLATFORM_LABELS[platform],
+      value: platform,
+    })),
+  ];
 
   // Сброс страницы и выделения при изменении фильтров
   watch([statusFilter, platformFilter], () => {
@@ -163,27 +185,77 @@
   const resolvedBugsList = computed(() => bugsData.value?.content ?? []);
   const totalBugsCount = computed(() => bugsData.value?.totalElements ?? 0);
 
-  // Сводная статистика по всем баг-репортам (не зависит от фильтров)
-  const { data: bugStats } = await useAsyncData<BugReportStatsResponse>(
-    ADMIN_BUGS_STATS_DATA_KEY,
-    () => requestFetch<BugReportStatsResponse>(BUG_REPORT_STATS_API_URL),
+  /** Повторяет загрузку списка после ошибки. */
+  function handleRetry(): void {
+    void refreshBugs();
+  }
+
+  // Сводка по статусам зависит только от платформы: цифры должны совпадать со
+  // списком, но не схлопываться до одного статуса при фильтрации по статусу
+  const { data: statusCounts, refresh: refreshStatusCounts } =
+    await useAsyncData<BugCountByStatusResponse[]>(
+      ADMIN_BUGS_STATUS_COUNTS_DATA_KEY,
+      () =>
+        requestFetch<BugCountByStatusResponse[]>(
+          ADMIN_BUGS_COUNT_BY_STATUS_API_URL,
+          {
+            query: {
+              sourcePlatform:
+                platformFilter.value === ADMIN_BUGS_FILTER_ALL
+                  ? undefined
+                  : platformFilter.value,
+            },
+          },
+        ),
+      {
+        watch: [platformFilter],
+      },
+    );
+
+  /**
+   * Строки сводки: статус, его подпись, цвет бейджа, количество багов и признак
+   * того, что список сейчас отфильтрован именно по этому статусу.
+   */
+  const statusSummaryRows = computed(() => {
+    return BUG_REPORT_STATUSES.map((status) => ({
+      status,
+      label: BUG_REPORT_STATUS_LABELS[status],
+      color: getBugReportStatusColor(status),
+      count:
+        statusCounts.value?.find((statusCount) => statusCount.status === status)
+          ?.count ?? 0,
+      isActive: statusFilter.value === status,
+    }));
+  });
+
+  /**
+   * Общее количество баг-репортов. Статусы взаимоисключающие и покрывают все
+   * баги, поэтому сумма сводки и есть общее число — отдельный запрос не нужен.
+   */
+  const totalFoundCount = computed(() => {
+    return statusSummaryRows.value.reduce(
+      (total, summaryRow) => total + summaryRow.count,
+      0,
+    );
+  });
+
+  /** Список показан без фильтра по статусу. */
+  const isAllStatusesActive = computed(
+    () => statusFilter.value === ADMIN_BUGS_FILTER_ALL,
   );
 
-  const totalFoundCount = computed(() => bugStats.value?.totalCount ?? 0);
-  const fixedFoundCount = computed(() => bugStats.value?.fixedCount ?? 0);
-
-  /** Отфильтровать список по новым баг-репортам. */
-  function showNewBugs(): void {
-    const status: BugReportStatus = 'NEW';
-
+  /**
+   * Отфильтровать список по конкретному статусу.
+   *
+   * @param status Статус баг-репорта.
+   */
+  function showBugsWithStatus(status: BugReportStatus): void {
     statusFilter.value = status;
   }
 
-  /** Отфильтровать список по исправленным баг-репортам. */
-  function showFixedBugs(): void {
-    const status: BugReportStatus = 'FIXED';
-
-    statusFilter.value = status;
+  /** Сбросить фильтр по статусу. */
+  function showAllBugs(): void {
+    statusFilter.value = ADMIN_BUGS_FILTER_ALL;
   }
 
   // Выбранный баг на основе ID из текущей страницы списка
@@ -275,6 +347,9 @@
    * @param payload Данные об обновлении статуса.
    */
   function handleBugStatusUpdate(payload: BugReportStatusUpdatePayload): void {
+    // Статус сменился — сводка по статусам устарела
+    void refreshStatusCounts();
+
     // Баг, догруженный по ID, обновляем отдельно — в списке его может не быть
     const loadedBug = fetchedSelectedBug.value;
 
@@ -310,12 +385,16 @@
             {{ ADMIN_BUGS_PAGE_DESCRIPTION }}
           </p>
 
-          <!-- Сводная статистика по баг-репортам (скрыта на мобильных) -->
-          <div class="hidden flex-col gap-2 lg:flex">
+          <!-- Сводка по баг-репортам: всего и по каждому статусу (скрыта на мобильных) -->
+          <div
+            class="hidden overflow-hidden rounded-lg border border-default bg-elevated/50 lg:block"
+          >
             <button
               type="button"
-              class="flex cursor-pointer flex-col rounded-lg border border-default bg-elevated/50 px-3 py-2.5 text-left transition-colors hover:bg-elevated"
-              @click.left.exact.prevent="showNewBugs"
+              :aria-pressed="isAllStatusesActive"
+              class="flex w-full cursor-pointer flex-col px-3 py-2.5 text-left transition-colors hover:bg-elevated"
+              :class="{ 'bg-elevated': isAllStatusesActive }"
+              @click.left.exact.prevent="showAllBugs"
             >
               <span
                 class="text-[10px] font-medium tracking-wider text-muted uppercase"
@@ -330,23 +409,32 @@
               </span>
             </button>
 
-            <button
-              type="button"
-              class="flex cursor-pointer flex-col rounded-lg border border-default bg-elevated/50 px-3 py-2.5 text-left transition-colors hover:bg-elevated"
-              @click.left.exact.prevent="showFixedBugs"
-            >
-              <span
-                class="text-[10px] font-medium tracking-wider text-muted uppercase"
+            <div class="flex flex-col border-t border-default">
+              <button
+                v-for="summaryRow in statusSummaryRows"
+                :key="summaryRow.status"
+                type="button"
+                :aria-pressed="summaryRow.isActive"
+                class="flex cursor-pointer items-center justify-between gap-2 px-3 py-1.5 text-left transition-colors hover:bg-elevated"
+                :class="{ 'bg-elevated': summaryRow.isActive }"
+                @click.left.exact.prevent="
+                  showBugsWithStatus(summaryRow.status)
+                "
               >
-                {{ ADMIN_BUGS_STAT_FIXED_LABEL }}
-              </span>
+                <span class="truncate text-xs text-secondary">
+                  {{ summaryRow.label }}
+                </span>
 
-              <span
-                class="text-lg leading-tight font-bold text-success-400 tabular-nums"
-              >
-                {{ fixedFoundCount }}
-              </span>
-            </button>
+                <UBadge
+                  :color="summaryRow.color"
+                  variant="subtle"
+                  size="sm"
+                  class="shrink-0 tabular-nums"
+                >
+                  {{ summaryRow.count }}
+                </UBadge>
+              </button>
+            </div>
           </div>
 
           <div class="flex flex-col gap-2">
@@ -390,13 +478,14 @@
           v-else-if="hasBugsError"
           class="py-12 text-center text-error"
         >
-          Не удалось загрузить список баг-репортов.
+          {{ ADMIN_BUGS_LOAD_ERROR_TEXT }}
+
           <UButton
             variant="ghost"
             class="ml-2"
-            @click.left.exact.prevent="() => refreshBugs()"
+            @click.left.exact.prevent="handleRetry"
           >
-            Повторить попытку
+            {{ ADMIN_BUGS_RETRY_LABEL }}
           </UButton>
         </div>
 
@@ -458,12 +547,11 @@
             />
 
             <h3 class="text-lg font-semibold text-highlighted">
-              Баг-репорт не выбран
+              {{ ADMIN_BUGS_DETAIL_EMPTY_TITLE }}
             </h3>
 
             <p class="text-sm text-secondary">
-              Выберите сообщение об ошибке из списка слева, чтобы просмотреть
-              подробную информацию
+              {{ ADMIN_BUGS_DETAIL_EMPTY_TEXT }}
             </p>
           </div>
         </div>
