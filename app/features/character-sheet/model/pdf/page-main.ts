@@ -50,6 +50,7 @@ import {
   PDF_ABILITY_BOX_HEIGHT,
   PDF_ABILITY_BOX_WIDTH,
   PDF_COLORS,
+  PDF_COMBAT_TILE_RATIOS,
   PDF_CONTENT_BOTTOM,
   PDF_CONTENT_WIDTH,
   PDF_DEATH_SAVE_COUNT,
@@ -98,6 +99,9 @@ interface KeyValueRowOptions extends PdfSlot {
 interface CombatTile {
   label: string;
   value: string;
+
+  /** Ширина плитки: в ряду они бывают разной ширины. */
+  width: number;
 
   /** Приписка под значением. */
   note?: string;
@@ -525,8 +529,44 @@ function drawProficienciesPanel(
 }
 
 /**
+ * Ряд плиток боевых показателей. Ширина у плиток своя, поэтому левый край
+ * каждой следующей набегает от предыдущей: умножение на номер увело бы ряд за
+ * колонку, если ширины в нём разные.
+ *
+ * @param context документ в процессе сборки.
+ * @param page страница.
+ * @param tiles плитки ряда слева направо.
+ * @param position левый верхний угол ряда.
+ * @param position.left левая граница ряда.
+ * @param position.top верх ряда.
+ */
+function drawCombatTileRow(
+  context: PdfBuildContext,
+  page: PDFPage,
+  tiles: CombatTile[],
+  position: { left: number; top: number },
+): void {
+  let left = position.left;
+
+  for (const tile of tiles) {
+    drawValueBox(context, page, {
+      left,
+      top: position.top,
+      width: tile.width,
+      height: PDF_TILE_HEIGHT,
+      label: tile.label,
+      value: tile.value,
+      note: tile.note,
+      valueSize: tile.valueSize,
+    });
+
+    left += tile.width + PDF_GAP;
+  }
+}
+
+/**
  * Плитки боевых показателей: класс доспеха, инициатива, скорость, бонус
- * мастерства, размер и пассивная внимательность.
+ * мастерства, размер и истощение.
  *
  * @param context документ в процессе сборки.
  * @param page страница.
@@ -540,7 +580,10 @@ function drawCombatTiles(
   character: Character,
   options: PdfSlot,
 ): number {
-  const tileWidth = (options.width - PDF_GAP * 2) / 3;
+  // Ширина ряда без зазоров между плитками — от неё считаются и равные трети
+  // первого ряда, и доли второго.
+  const rowWidth = options.width - PDF_GAP * 2;
+  const tileWidth = rowWidth / 3;
   // Скорость печатается с истощением — как и на самом листе.
   const primarySpeed = getPrimarySpeed(getEffectiveSpeed(character));
 
@@ -548,65 +591,53 @@ function drawCombatTiles(
     {
       label: PDF_LABELS.armorClass,
       value: String(getArmorClassValue(character)),
+      width: tileWidth,
     },
     {
       label: PDF_LABELS.initiative,
       value: getFormattedBonus(getInitiativeBonus(character)),
+      width: tileWidth,
     },
     {
       label: PDF_LABELS.speed,
       value: String(primarySpeed.value),
       note: `${primarySpeed.label.toLowerCase()}, ${primarySpeed.unitLabel}`,
+      width: tileWidth,
     },
   ];
 
-  // Второй ряд — из двух плиток: «Бонус мастерства» целиком в треть колонки не
-  // влезает, а сокращать подписи на листе нельзя.
+  // Второй ряд — из плиток разной ширины: «Бонус мастерства» и размер целиком в
+  // треть колонки не влезают, а сокращать подписи на листе нельзя.
   const secondRow: CombatTile[] = [
     {
       label: PDF_LABELS.proficiencyBonus,
       value: getFormattedBonus(getCharacterProficiencyBonus(character)),
+      width: rowWidth * PDF_COMBAT_TILE_RATIOS.proficiencyBonus,
     },
     {
       label: PDF_LABELS.size,
       value: character.size ?? PDF_EMPTY_VALUE,
       valueSize: PDF_FONT_SIZES.mediumValue,
+      width: rowWidth * PDF_COMBAT_TILE_RATIOS.size,
     },
     // Третья плитка ряда была пустой: истощение встаёт в неё, а его эффекты
     // уже сидят в числах листа — отдельной строкой их печатать незачем.
     {
       label: PDF_LABELS.exhaustion,
       value: String(getExhaustionEffects(character.health.exhaustion).level),
+      width: rowWidth * PDF_COMBAT_TILE_RATIOS.exhaustion,
     },
   ];
 
-  for (const [index, tile] of firstRow.entries()) {
-    drawValueBox(context, page, {
-      left: options.left + (tileWidth + PDF_GAP) * index,
-      top: options.top,
-      width: tileWidth,
-      height: PDF_TILE_HEIGHT,
-      label: tile.label,
-      value: tile.value,
-      note: tile.note,
-      valueSize: tile.valueSize,
-    });
-  }
+  drawCombatTileRow(context, page, firstRow, {
+    left: options.left,
+    top: options.top,
+  });
 
-  const wideWidth = (options.width - PDF_GAP) / 2;
-
-  for (const [index, tile] of secondRow.entries()) {
-    drawValueBox(context, page, {
-      left: options.left + (wideWidth + PDF_GAP) * index,
-      top: options.top + PDF_TILE_HEIGHT + PDF_GAP,
-      width: wideWidth,
-      height: PDF_TILE_HEIGHT,
-      label: tile.label,
-      value: tile.value,
-      note: tile.note,
-      valueSize: tile.valueSize,
-    });
-  }
+  drawCombatTileRow(context, page, secondRow, {
+    left: options.left,
+    top: options.top + PDF_TILE_HEIGHT + PDF_GAP,
+  });
 
   return PDF_TILE_HEIGHT * 2 + PDF_GAP;
 }
