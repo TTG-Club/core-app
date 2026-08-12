@@ -5,6 +5,8 @@
     CreatureSenses,
   } from '~bestiary/model';
 
+  import { watchDerivedField } from '~workshop/composable';
+
   const model = defineModel<CreatureSenses>({ required: true });
 
   const { wisdom, skills, proficiencyBonus } = defineProps<{
@@ -13,24 +15,33 @@
     proficiencyBonus: number;
   }>();
 
-  watchEffect(() => {
+  const derivedPassivePerception = computed(() => {
     const wisdomMod = getModifier(wisdom.value);
 
     const perception = skills.find((skill) => skill.skill === 'PERCEPTION');
 
     if (!perception) {
-      model.value.passivePerception = 10 + wisdomMod;
-
-      return;
+      return 10 + wisdomMod;
     }
 
     // `bonus` у загруженных записей приходит как `null`, поэтому `?? 0`.
-    model.value.passivePerception =
+    return (
       10
       + wisdomMod
       + perception.multiplier * proficiencyBonus
-      + (perception.bonus ?? 0);
+      + (perception.bonus ?? 0)
+    );
   });
+
+  // Пересчитываем только по правкам Мудрости, навыка «Внимательность» и бонуса
+  // мастерства: при загрузке записи сохранённое значение важнее формулы.
+  watchDerivedField(
+    model,
+    () => derivedPassivePerception.value,
+    (value, senses) => {
+      senses.passivePerception = value;
+    },
+  );
 </script>
 
 <template>

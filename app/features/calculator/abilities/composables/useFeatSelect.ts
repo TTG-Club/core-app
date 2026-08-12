@@ -88,6 +88,13 @@ export function useFeatSelect(hasEpicBoon: Ref<boolean>) {
     });
   }
 
+  /**
+   * Характеристики, которые черта предлагает на выбор.
+   *
+   * Источник истины — `mechanics.abilityBonuses`: там варианты повышения с
+   * пределом и количеством. У черт, чья механика ещё не размечена, остаётся
+   * плоская проекция `abilities`.
+   */
   function getFeatAbilities(url: string | undefined): AbilityKey[] {
     if (!url) {
       return [];
@@ -95,11 +102,17 @@ export function useFeatSelect(hasEpicBoon: Ref<boolean>) {
 
     const feat = featsByUrl.value[url];
 
-    if (!feat?.abilities) {
+    if (!feat) {
       return [];
     }
 
-    return feat.abilities.filter(isAbilityKey);
+    const fromMechanics = (feat.mechanics?.abilityBonuses ?? []).flatMap(
+      (bonus) => bonus.abilities ?? [],
+    );
+
+    const keys = fromMechanics.length ? fromMechanics : (feat.abilities ?? []);
+
+    return [...new Set(keys.filter(isAbilityKey))];
   }
 
   function getAbilityOptions(

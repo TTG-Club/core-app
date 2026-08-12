@@ -179,6 +179,17 @@ export const PDF_HEADER_BOX_WIDTH = 64;
 /** Высота плитки боевого показателя. */
 export const PDF_TILE_HEIGHT = 42;
 
+/**
+ * Доли ширины второго ряда боевых плиток (без зазоров): в равные трети колонки
+ * «Бонус мастерства» подписью и размер значением не влезают и обрезались бы,
+ * а истощению хватает узкой плитки — там однозначное число.
+ */
+export const PDF_COMBAT_TILE_RATIOS = {
+  proficiencyBonus: 0.375,
+  size: 0.365,
+  exhaustion: 0.26,
+};
+
 /** Высота бокса хитов. */
 export const PDF_HEALTH_BOX_HEIGHT = 34;
 

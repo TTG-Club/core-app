@@ -48,6 +48,7 @@ import {
   getHitPointsGainForMode,
   getLevelFeatureRows,
   getLevelHitPointsGain,
+  getRequiredChoiceCount,
   getSelectedCasterType,
   getToolNames,
   LANGUAGE_PROFICIENCY_GROUPS,
@@ -969,11 +970,20 @@ export function useLevelUpWizard(): LevelUpWizard {
     const hasIncompleteChoice = step.features.some((row) => {
       const choice = row.choice;
 
-      if (!choice || !choiceOptions(choice).length) {
+      if (!choice) {
         return false;
       }
 
-      return (draft.selections[choice.id] ?? []).length < choice.count;
+      const options = choiceOptions(choice);
+
+      if (!options.length) {
+        return false;
+      }
+
+      return (
+        (draft.selections[choice.id] ?? []).length
+        < getRequiredChoiceCount(choice, options)
+      );
     });
 
     if (hasIncompleteChoice || !areFeatChoicesComplete(step, draft)) {

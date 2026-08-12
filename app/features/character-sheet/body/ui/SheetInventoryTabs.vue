@@ -103,6 +103,7 @@
     'remove-innate-spell': [spellUrl: string];
     'roll-spell-damage': [roll: SpellDamageRoll];
     'toggle-spell-prepared': [spellUrl: string];
+    'toggle-innate-spell-prepared': [spellUrl: string];
     'toggle-spell-slot': [level: number, index: number, kind: SpellSlotKind];
   }>();
 
@@ -220,6 +221,10 @@
 
   function handleSpellPreparedToggle(spellUrl: string) {
     emit('toggle-spell-prepared', spellUrl);
+  }
+
+  function handleInnateSpellPreparedToggle(spellUrl: string) {
+    emit('toggle-innate-spell-prepared', spellUrl);
   }
 
   function handleSpellSlotToggle(
@@ -483,9 +488,12 @@
   );
 
   // Отступ pt-2 повторяет зазор между лентой вкладок и содержимым, который
-  // UTabs давал своим `gap-2` (сейчас контент рендерим сами).
+  // UTabs давал своим `gap-2` (сейчас контент рендерим сами). В широком режиме
+  // содержимое скроллится внутри, поэтому справа добавлен pr-2: без него
+  // управление у правого края (кружки ячеек, кнопки строк) липнет к полосе
+  // прокрутки и по нему неудобно попадать.
   const contentClass = computed(() =>
-    isWideLayout.value ? 'min-h-0 flex-1 overflow-y-auto pt-2' : 'pt-2',
+    isWideLayout.value ? 'min-h-0 flex-1 overflow-y-auto pt-2 pr-2' : 'pt-2',
   );
 
   /**
@@ -947,6 +955,7 @@
             @remove-innate-spell="handleInnateSpellRemove"
             @roll-spell-damage="handleSpellDamageRoll"
             @toggle-spell-prepared="handleSpellPreparedToggle"
+            @toggle-innate-spell-prepared="handleInnateSpellPreparedToggle"
             @toggle-spell-slot="handleSpellSlotToggle"
           />
 

@@ -4785,8 +4785,8 @@ export function getSpellListLevels(
 
 /**
  * Проходит ли заклинание отбор вкладки: подготовленное — только помеченное
- * значком (врождённые заклинания подготовки не требуют, поэтому под таким
- * отбором их не остаётся), круг — любой из отобранных.
+ * значком (врождённые заклинания помечены сразу, пока подготовку с них не
+ * сняли), круг — любой из отобранных.
  *
  * @param spell заклинание списка.
  * @param filter отбор вкладки заклинаний.
@@ -4839,6 +4839,9 @@ export function getSpellGroups(
 
 /**
  * Возвращает врождённые заклинания, уже открытые на текущем уровне персонажа.
+ * Подготовка у них снимается вручную, поэтому запись без флага считается
+ * подготовленной: врождённое заклинание готово сразу, а место среди
+ * подготовленных не занимает (счётчик смотрит только на книгу персонажа).
  *
  * @param character персонаж листа.
  * @returns доступные врождённые заклинания вида и происхождения.
@@ -4848,7 +4851,21 @@ export function getAvailableInnateSpells(
 ): CharacterSpell[] {
   return (character.species?.innateSpells ?? [])
     .filter((innateSpell) => innateSpell.requiredLevel <= character.level)
-    .map((innateSpell) => innateSpell.spell);
+    .map((innateSpell) => ({
+      ...innateSpell.spell,
+      prepared: isInnateSpellPrepared(innateSpell.spell),
+    }));
+}
+
+/**
+ * Подготовлено ли врождённое заклинание: флага нет — подготовлено (лист мог
+ * быть сохранён до появления пометки, да и новая запись приходит готовой).
+ *
+ * @param spell врождённое заклинание вида.
+ * @returns true — заклинание подготовлено.
+ */
+export function isInnateSpellPrepared(spell: CharacterSpell): boolean {
+  return spell.prepared !== false;
 }
 
 /**
@@ -6989,7 +7006,7 @@ export function getLevelFeatureRows(
         // умению не нужен — иначе под чертой висело бы пустое поле ввода.
         choice: summary.abilityImprovement
           ? null
-          : detectFeatureChoice(id, summary.description, skillNames),
+          : getClassFeatureChoice(id, summary, skillNames),
         abilityImprovement: summary.abilityImprovement,
       });
     }
@@ -7376,19 +7393,20 @@ export function syncClassHitDice(
 }
 
 /**
- * Количество для выбора из прозы: первое число либо числительное словом
- * (один/два/три/четыре); по умолчанию 1.
+ * Числительные выбора: цифрой либо словом в любом падеже. Косвенные падежи
+ * обязательны — «владение двумя навыками» без них не распознавалось и давало
+ * один навык вместо двух. Корень «дву» сужен до «двум/двух», иначе числительным
+ * стало бы свойство оружия «Двуручное».
+ */
+const CHOICE_COUNT_SOURCE = String.raw`(\d+)|оди?н|(дв[ае]|дву[мх])|(тр[иеё])|(четыр)`;
+
+/**
+ * Количество из совпадения числительного: цифра как есть, слово — по группе.
  *
- * @param text строка с описанием выбора.
+ * @param match совпадение `CHOICE_COUNT_SOURCE`.
  * @returns распознанное количество.
  */
-export function parseChoiceCount(text: string): number {
-  const match = /(\d+)|оди?н|(дв[ае])|(тр[иеё])|(четыр)/i.exec(text);
-
-  if (!match) {
-    return 1;
-  }
-
+function getMatchedChoiceCount(match: RegExpMatchArray): number {
   if (match[1]) {
     return Number(match[1]);
   }
@@ -7406,6 +7424,36 @@ export function parseChoiceCount(text: string): number {
   }
 
   return 1;
+}
+
+/**
+ * Количество для выбора из прозы: первое число либо числительное словом
+ * (один/два/три/четыре); по умолчанию 1.
+ *
+ * @param text строка с описанием выбора.
+ * @returns распознанное количество.
+ */
+export function parseChoiceCount(text: string): number {
+  const match = new RegExp(CHOICE_COUNT_SOURCE, 'i').exec(text);
+
+  return match ? getMatchedChoiceCount(match) : 1;
+}
+
+/**
+ * Количество из фразы о выдаче: берётся последнее числительное, то есть
+ * ближайшее к предмету выдачи. У «Благословения знаний» жреца фраза начинается
+ * с инструментов («владение одним типом инструментов… и двумя из следующих
+ * навыков»), и первое числительное описывает инструменты, а не навыки.
+ *
+ * @param text отрезок фразы до предмета выдачи.
+ * @returns распознанное количество.
+ */
+export function parseTrailingChoiceCount(text: string): number {
+  const match = [...text.matchAll(new RegExp(CHOICE_COUNT_SOURCE, 'gi'))].at(
+    -1,
+  );
+
+  return match ? getMatchedChoiceCount(match) : 1;
 }
 
 /**
@@ -7508,6 +7556,44 @@ const EXPERTISE_GRANT_PATTERN = new RegExp(
   'u',
 );
 
+/** Корень слова «владение»: одно из условий выдачи владения навыком. */
+const PROFICIENCY_KEYWORD = 'владени';
+
+/** Корень слова «навык»: предмет выдачи, которым заканчивается фраза. */
+const SKILL_KEYWORD = 'навык';
+
+/** Корень слова «выбор»: выдача должна быть выбором, а не фиксированной. */
+const CHOICE_KEYWORD = 'выбор';
+
+/** Максимум символов между глаголом выдачи и словом «навык» внутри фразы. */
+const SKILL_GRANT_SPAN = 160;
+
+/**
+ * Глаголы выдачи: «получаете», «приобретаете» и все формы выбора — «выберите»,
+ * «на выбор», «выбираете», «можете выбрать». Формы выбора расходятся по корню
+ * («выбер» и «выбра»), и без второй из них «Шёпот мёртвых» плута («вы можете
+ * выбрать одно владение навыком») переставал считаться выбором.
+ */
+const GRANT_VERB_SOURCE = String.raw`получ|приобрет|выб(?:[еои]р|ра)`;
+
+/**
+ * Фраза о выдаче владения навыком: глагол выдачи или выбора, а следом «навык»
+ * в пределах одного предложения (точка фразу обрывает). Одних лишь слов
+ * «навык», «владение» и «выбор» где угодно в описании мало: «Дикая форма»
+ * друида говорит «вы также сохраняете владение навыками», слово «выбор»
+ * приезжает из соседнего абзаца про известные формы — и визард просил выбрать
+ * два произвольных навыка из восемнадцати на втором уровне.
+ *
+ * Начало фразы служит и якорем количества: у «Величия гения» паладина (Клятва
+ * благородных гениев) описание открывается формулой доспеха («базовый КД равен
+ * 10 + …»), и счёт по всему описанию требовал 10 навыков при четырёх
+ * перечисленных — шаг визарда становился непроходимым.
+ */
+const SKILL_GRANT_PATTERN = new RegExp(
+  `(?:${GRANT_VERB_SOURCE})[^.]{0,${SKILL_GRANT_SPAN}}?${SKILL_KEYWORD}`,
+  'u',
+);
+
 /**
  * Распознавание выбора внутри особенности класса или вида: компетентность
  * (экспертиза), владение навыком на выбор или язык на выбор. Иначе — null
@@ -7543,17 +7629,25 @@ export function detectFeatureChoice(
   }
 
   if (
-    text.includes('навык')
-    && text.includes('владени')
-    && text.includes('выбор')
+    text.includes(SKILL_KEYWORD)
+    && text.includes(PROFICIENCY_KEYWORD)
+    && text.includes(CHOICE_KEYWORD)
   ) {
-    return {
-      id: featureId,
-      kind: 'skill-proficiency',
-      label: '',
-      count: parseChoiceCount(text),
-      listed: skillNames.filter((name) => rawText.includes(name)),
-    };
+    const grant = SKILL_GRANT_PATTERN.exec(text);
+
+    if (grant) {
+      // Количество ищется до предмета выдачи: дальше идёт перечень навыков, а в
+      // нём числительные встречаются в названиях и ссылках.
+      const phrase = grant[0].slice(0, -SKILL_KEYWORD.length);
+
+      return {
+        id: featureId,
+        kind: 'skill-proficiency',
+        label: '',
+        count: parseTrailingChoiceCount(phrase),
+        listed: skillNames.filter((name) => rawText.includes(name)),
+      };
+    }
   }
 
   if (text.includes('язык') && text.includes('выбор')) {
@@ -7567,6 +7661,39 @@ export function detectFeatureChoice(
   }
 
   return null;
+}
+
+/**
+ * Выбор внутри умения класса: структурный из справочника, а если его там нет —
+ * распознанный по прозе описания. Структура точнее прозы (у неё явные пул и
+ * количество), поэтому имеет приоритет; проза остаётся страховкой для умений,
+ * которым выбор ещё не проставили в редакторе класса.
+ *
+ * @param featureId идентификатор умения (он же id выбора).
+ * @param summary умение класса или подкласса.
+ * @param skillNames имена всех навыков персонажа.
+ * @returns выбор умения или null.
+ */
+export function getClassFeatureChoice(
+  featureId: string,
+  summary: ClassFeatureSummary,
+  skillNames: string[],
+): ClassChoice | null {
+  const skillChoice = summary.skillChoice;
+
+  if (skillChoice) {
+    return {
+      id: featureId,
+      kind: 'skill-proficiency',
+      label: '',
+      count: skillChoice.count,
+      // Пустой пул в справочнике означает выбор из всех навыков: пустой
+      // `listed` резолвится всеми навыками листа в `resolveChoiceOptions`.
+      listed: skillChoice.skills,
+    };
+  }
+
+  return detectFeatureChoice(featureId, summary.description, skillNames);
 }
 
 /**
@@ -7605,6 +7732,23 @@ export function resolveChoiceOptions(
   const toolOptions = choice.listed.length ? choice.listed : context.allTools;
 
   return toolOptions.filter((name) => !knownTools.has(name));
+}
+
+/**
+ * Сколько опций требуется выбрать: распознанное из прозы количество не может
+ * превышать длину списка. Количество приезжает из эвристики по тексту, и
+ * завышенное число делало шаг визарда непроходимым — условие «выбрано меньше
+ * требуемого» не выполнить, а кнопка «Далее» остаётся заблокированной.
+ *
+ * @param choice распознанный выбор.
+ * @param options доступные опции выбора.
+ * @returns требуемое число опций.
+ */
+export function getRequiredChoiceCount(
+  choice: ClassChoice,
+  options: string[],
+): number {
+  return Math.min(choice.count, options.length);
 }
 
 /**
@@ -8801,6 +8945,17 @@ export function getInnateSpellMenuItems(
  */
 export function getInventoryRemoveDescription(name: string): string {
   return `«${name}» исчезнет из снаряжения — вернуть его можно только заново добавив.`;
+}
+
+/**
+ * Текст подтверждения удаления особенности: называет особенность, чтобы в
+ * длинном списке было видно, какая именно строка исчезнет.
+ *
+ * @param name название особенности.
+ * @returns описание для диалога подтверждения.
+ */
+export function getFeatureRemoveDescription(name: string): string {
+  return `«${name}» исчезнет с листа вместе со сделанным в ней выбором — вернуть её можно только заново добавив.`;
 }
 
 /**

@@ -105,6 +105,7 @@ import {
   isCustomInventoryItem,
   isCustomSpell,
   isEquippableInventoryItem,
+  isInnateSpellPrepared,
   isMissingInventoryItem,
   isVersatileInventoryItem,
   LEVEL_MAX,
@@ -2207,11 +2208,16 @@ export function useCharacterSheet() {
       return;
     }
 
-    const ownSpell = toCopiedSpell(
-      `${CUSTOM_SPELL_URL_PREFIX}${crypto.randomUUID()}`,
-      currentInnateSpell.spell,
-      detail,
-    );
+    const ownSpell: CharacterSpell = {
+      ...toCopiedSpell(
+        `${CUSTOM_SPELL_URL_PREFIX}${crypto.randomUUID()}`,
+        currentInnateSpell.spell,
+        detail,
+      ),
+      // В книге заклинание уже считается подготовленным наравне с остальными:
+      // пометка врождённого сюда не едет, иначе копия перебрала бы предел.
+      prepared: undefined,
+    };
 
     character.value = {
       ...character.value,
@@ -2256,6 +2262,47 @@ export function useCharacterSheet() {
         ...species,
         innateSpells: species.innateSpells.filter(
           (innateSpell) => innateSpell.spell.url !== spellUrl,
+        ),
+      },
+    };
+  }
+
+  /**
+   * Снятие и возврат подготовки врождённого заклинания. Такое заклинание
+   * подготовлено сразу и места среди подготовленных не занимает, поэтому
+   * предел здесь не проверяется — снять пометку игрок может, чтобы отметить
+   * потраченное на день применение.
+   * Игровое действие: запертый лист его разрешает, чужой — нет.
+   *
+   * @param spellUrl URL врождённого заклинания.
+   */
+  function toggleInnateSpellPrepared(spellUrl: string): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    const species = character.value.species;
+
+    const currentInnateSpell = species?.innateSpells.find(
+      (innateSpell) => innateSpell.spell.url === spellUrl,
+    );
+
+    // Записи уже нет (вид сменили): переписывать лист нельзя — автосохранение
+    // сработало бы на подмену, которой не было.
+    if (!species || !currentInnateSpell) {
+      return;
+    }
+
+    const prepared = !isInnateSpellPrepared(currentInnateSpell.spell);
+
+    character.value = {
+      ...character.value,
+      species: {
+        ...species,
+        innateSpells: species.innateSpells.map((innateSpell) =>
+          innateSpell.spell.url === spellUrl
+            ? { ...innateSpell, spell: { ...innateSpell.spell, prepared } }
+            : innateSpell,
         ),
       },
     };
@@ -3061,6 +3108,7 @@ export function useCharacterSheet() {
     completeLongRest,
     spendSpellSlot,
     toggleSavingThrowProficiency,
+    toggleInnateSpellPrepared,
     toggleSpellPrepared,
     toggleSpellSlot,
     cycleSkillProficiency,

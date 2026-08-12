@@ -54,9 +54,6 @@
 
   /** Состояние квадрата со значком заклинания в строке. */
   interface PreparedIconState {
-    /** Значок переключает подготовку (кнопка), а не просто стоит в строке. */
-    canPrepare: boolean;
-
     /** Заклинание подготовлено: квадрат горит тёплым. */
     isPrepared: boolean;
 
@@ -66,7 +63,7 @@
     /** Подсказка по наведению. */
     tooltip: string;
 
-    /** Подпись кнопки для скринридера; '' — значок не нажимается. */
+    /** Подпись кнопки для скринридера. */
     ariaLabel: string;
   }
 
@@ -97,9 +94,6 @@
   const UNPREPARED_ICON_CLASS =
     'border-default/50 bg-default/40 text-muted hover:border-primary/60';
 
-  /** Заклинание, которому подготовка не нужна (врождённое заклинание вида). */
-  const PLAIN_ICON_CLASS = 'border-default/50 bg-default/40 text-muted';
-
   const props = defineProps<{
     spells: CharacterSpell[];
     innateSpells: CharacterSpell[];
@@ -121,6 +115,7 @@
     'remove-innate-spell': [spellUrl: string];
     'roll-spell-damage': [roll: SpellDamageRoll];
     'toggle-spell-prepared': [spellUrl: string];
+    'toggle-innate-spell-prepared': [spellUrl: string];
     'toggle-spell-slot': [level: number, index: number, kind: SpellSlotKind];
   }>();
 
@@ -272,10 +267,12 @@
   );
 
   /**
-   * Подготовка касается только книги персонажа: пока в ней пусто (в списке одни
-   * врождённые заклинания вида), помечать нечего — чипа отбора нет.
+   * Пометка подготовки есть и у книги персонажа, и у врождённых заклинаний:
+   * пока список пуст, помечать нечего — чипа отбора нет.
    */
-  const isPreparedFilterAvailable = computed(() => props.spells.length > 0);
+  const isPreparedFilterAvailable = computed(
+    () => props.spells.length > 0 || props.innateSpells.length > 0,
+  );
 
   /** Кругов больше одного — есть между чем выбирать. */
   const hasLevelChips = computed(() => availableLevels.value.length > 1);
@@ -313,8 +310,8 @@
 
   /**
    * Чипы кругов, которые есть в списке: сам чип — номер круга, у заговоров
-   * вместо номера буква. Полную подпись («Заговоры», «3 круг») показывает
-   * подсказка по наведению.
+   * вместо номера сокращение. Полную подпись («Заговоры», «3 круг»)
+   * показывает подсказка по наведению.
    */
   const levelChips = computed(() =>
     availableLevels.value.map((level) => ({
@@ -434,28 +431,29 @@
     spell: CharacterSpell,
     innate: boolean,
   ): PreparedIconState {
-    // Врождённые заклинания вида доступны всегда: подготовка их не касается,
-    // значок у них обычный и ничего не переключает.
-    if (innate) {
-      return {
-        canPrepare: false,
-        isPrepared: false,
-        iconClass: PLAIN_ICON_CLASS,
-        tooltip: PREPARED_SPELL_TOGGLE_LABELS.innate,
-        ariaLabel: '',
-      };
-    }
-
     const isPrepared = Boolean(spell.prepared);
 
     const label = isPrepared
       ? PREPARED_SPELL_TOGGLE_LABELS.unprepare
       : PREPARED_SPELL_TOGGLE_LABELS.prepare;
 
+    const iconClass = isPrepared ? PREPARED_ICON_CLASS : UNPREPARED_ICON_CLASS;
+
+    // Врождённое заклинание приходит подготовленным и в предел не входит:
+    // значок только снимает и возвращает пометку, а подсказка напоминает, что
+    // места среди подготовленных такое заклинание не занимает.
+    if (innate) {
+      return {
+        isPrepared,
+        iconClass,
+        tooltip: `${label}. ${PREPARED_SPELL_TOGGLE_LABELS.innate}`,
+        ariaLabel: `${label}: ${spell.name}`,
+      };
+    }
+
     return {
-      canPrepare: true,
       isPrepared,
-      iconClass: isPrepared ? PREPARED_ICON_CLASS : UNPREPARED_ICON_CLASS,
+      iconClass,
       // Предел выбран целиком — значок остаётся нажимаемым: подсказка и
       // предупреждение объясняют отказ понятнее, чем погашенная кнопка.
       // Заговоры смотрят на свой предел, заклинания книги — на свой.
@@ -530,9 +528,10 @@
             ...spell,
             isCustom,
             isExpanded,
+            isInnate: group.innate,
             // Подготовку переключает значок строки — как надевание доспеха в
-            // снаряжении. Врождённые заклинания и заговоры значком не
-            // переключаются.
+            // снаряжении. У врождённых заклинаний пометка стоит сразу и в
+            // предел подготовленных не входит, снять её значок тоже даёт.
             preparedIcon: getPreparedIconState(spell, group.innate),
             // Действия строки — те же, что и у предмета снаряжения: своё
             // заклинание правится формой листа, каталожное сначала копируется в
@@ -600,8 +599,18 @@
     emit('toggle-spell-slot', circle.level, circle.index, circle.kind);
   }
 
-  /** Нажатие на значок заклинания: пометка подготовленным либо снятие пометки. */
+  /**
+   * Нажатие на значок заклинания: пометка подготовленным либо снятие пометки.
+   * Врождённое заклинание живёт в виде, а не в книге персонажа, поэтому у его
+   * пометки своё событие.
+   */
   function handlePreparedToggle(spell: DisplaySpell) {
+    if (spell.isInnate) {
+      emit('toggle-innate-spell-prepared', spell.url);
+
+      return;
+    }
+
     emit('toggle-spell-prepared', spell.url);
   }
 
@@ -628,108 +637,112 @@
 <template>
   <div class="flex flex-col gap-3 pt-2">
     <!-- Свой @container: подписи шапки сокращаются по ширине самого ряда, а не
-      окна — лист бывает узким и на широком экране (дровер, правая панель) -->
-    <div class="@container flex flex-wrap items-center justify-between gap-2">
-      <div class="flex flex-wrap items-center gap-2">
-        <!-- У мультикласса заклинательство считается по каждому классу
-          отдельно: своя характеристика — свои Сл и бонус атаки -->
+      окна — лист бывает узким и на широком экране (дровер, правая панель).
+      Плитки и «Добавить» лежат в ряду поштучно, без вложенной группы: у
+      мультикласса плитки переносятся, и кнопка встаёт в конец второй строки, а
+      не занимает собой третью -->
+    <div class="@container flex flex-wrap items-center gap-2">
+      <!-- У мультикласса заклинательство считается по каждому классу
+        отдельно: своя характеристика — свои Сл и бонус атаки -->
+      <button
+        v-for="stat in spellcastingStats"
+        :key="stat.classUrl"
+        type="button"
+        :class="SHEET_HEADER_STAT_CLASS"
+        aria-label="Настроить заклинательство"
+        @click.left.exact.prevent="emit('edit-spellcasting', stat.classUrl)"
+      >
+        <span
+          v-if="stat.className"
+          class="max-w-24 truncate text-[10px] font-bold tracking-wider text-muted uppercase"
+        >
+          {{ stat.className }}
+        </span>
+
+        <!-- Подписи чисел в плитке короткие, чтобы ряд помещался на узком
+          листе; полное название показывает подсказка по наведению -->
+        <UTooltip :text="SPELLCASTING_STAT_LABELS.saveDc.full">
+          <span class="flex items-center gap-1.5">
+            <span
+              class="text-[10px] font-bold tracking-wider text-muted uppercase"
+            >
+              {{ SPELLCASTING_STAT_LABELS.saveDc.short }}
+            </span>
+
+            <span class="text-xs font-bold text-highlighted">
+              {{ stat.saveDc }}
+            </span>
+          </span>
+        </UTooltip>
+
+        <span class="h-5 w-px bg-default/60" />
+
+        <UTooltip :text="SPELLCASTING_STAT_LABELS.attack.full">
+          <span class="flex items-center gap-1.5">
+            <span
+              class="text-[10px] font-bold tracking-wider text-muted uppercase"
+            >
+              {{ SPELLCASTING_STAT_LABELS.attack.short }}
+            </span>
+
+            <span class="text-xs font-bold text-highlighted">
+              {{ stat.attackBonus }}
+            </span>
+          </span>
+        </UTooltip>
+      </button>
+
+      <!-- Сколько можно подготовить: число берётся из таблицы класса, нажатие
+        открывает настройку своего числа или бонуса к нему. Заговоры считаются
+        отдельной плиткой — колонка таблицы класса у них своя -->
+      <UTooltip
+        v-for="preparedStat in preparedStats"
+        :key="preparedStat.kind"
+        :text="preparedStat.hint"
+      >
         <button
-          v-for="stat in spellcastingStats"
-          :key="stat.classUrl"
           type="button"
           :class="SHEET_HEADER_STAT_CLASS"
-          aria-label="Настроить заклинательство"
-          @click.left.exact.prevent="emit('edit-spellcasting', stat.classUrl)"
+          :aria-label="preparedStat.labels.ariaLabel"
+          @click.left.exact.prevent="handlePreparedEdit(preparedStat.kind)"
         >
-          <span
-            v-if="stat.className"
-            class="max-w-24 truncate text-[10px] font-bold tracking-wider text-muted uppercase"
-          >
-            {{ stat.className }}
+          <span class="flex items-center gap-1.5">
+            <!-- На узком ряду подпись занимает больше места, чем само число,
+              поэтому уступает значку: название остаётся в подсказке -->
+            <UIcon
+              :name="preparedStat.labels.icon"
+              class="size-4 shrink-0 text-muted @lg:hidden"
+            />
+
+            <span
+              class="hidden text-[10px] font-bold tracking-wider text-muted uppercase @lg:inline"
+            >
+              {{ preparedStat.labels.stat }}
+            </span>
+
+            <span
+              class="text-xs font-bold"
+              :class="preparedStat.valueClass"
+            >
+              {{ preparedStat.value }}
+            </span>
           </span>
-
-          <!-- Подписи чисел в плитке короткие, чтобы ряд помещался на узком
-            листе; полное название показывает подсказка по наведению -->
-          <UTooltip :text="SPELLCASTING_STAT_LABELS.saveDc.full">
-            <span class="flex items-center gap-1.5">
-              <span
-                class="text-[10px] font-bold tracking-wider text-muted uppercase"
-              >
-                {{ SPELLCASTING_STAT_LABELS.saveDc.short }}
-              </span>
-
-              <span class="text-xs font-bold text-highlighted">
-                {{ stat.saveDc }}
-              </span>
-            </span>
-          </UTooltip>
-
-          <span class="h-5 w-px bg-default/60" />
-
-          <UTooltip :text="SPELLCASTING_STAT_LABELS.attack.full">
-            <span class="flex items-center gap-1.5">
-              <span
-                class="text-[10px] font-bold tracking-wider text-muted uppercase"
-              >
-                {{ SPELLCASTING_STAT_LABELS.attack.short }}
-              </span>
-
-              <span class="text-xs font-bold text-highlighted">
-                {{ stat.attackBonus }}
-              </span>
-            </span>
-          </UTooltip>
         </button>
-
-        <!-- Сколько можно подготовить: число берётся из таблицы класса, нажатие
-          открывает настройку своего числа или бонуса к нему. Заговоры считаются
-          отдельной плиткой — колонка таблицы класса у них своя -->
-        <UTooltip
-          v-for="preparedStat in preparedStats"
-          :key="preparedStat.kind"
-          :text="preparedStat.hint"
-        >
-          <button
-            type="button"
-            :class="SHEET_HEADER_STAT_CLASS"
-            :aria-label="preparedStat.labels.ariaLabel"
-            @click.left.exact.prevent="handlePreparedEdit(preparedStat.kind)"
-          >
-            <span class="flex items-center gap-1.5">
-              <!-- На узком ряду подпись занимает больше места, чем само число,
-                поэтому уступает значку: название остаётся в подсказке -->
-              <UIcon
-                :name="preparedStat.labels.icon"
-                class="size-4 shrink-0 text-muted @lg:hidden"
-              />
-
-              <span
-                class="hidden text-[10px] font-bold tracking-wider text-muted uppercase @lg:inline"
-              >
-                {{ preparedStat.labels.stat }}
-              </span>
-
-              <span
-                class="text-xs font-bold"
-                :class="preparedStat.valueClass"
-              >
-                {{ preparedStat.value }}
-              </span>
-            </span>
-          </button>
-        </UTooltip>
-      </div>
+      </UTooltip>
 
       <UDropdownMenu
         :items="addMenuItems"
         :content="{ align: 'end' }"
       >
+        <!-- Кнопка держится правого края своей строки: на широком листе она
+          стоит напротив плиток, на узком — в конце строки с переносом -->
         <UButton
           icon="tabler:plus"
           label="Добавить"
           color="neutral"
           variant="ghost"
           size="sm"
+          class="ml-auto"
           :class="editControlClass"
         />
       </UDropdownMenu>
@@ -859,10 +872,7 @@
             <!-- Значок заклинания — переключатель подготовки: нажатие метит
               заклинание подготовленным, повторное — снимает пометку. Горит при
               этом только сам квадрат, строка остаётся обычной -->
-            <UTooltip
-              v-if="spell.preparedIcon.canPrepare"
-              :text="spell.preparedIcon.tooltip"
-            >
+            <UTooltip :text="spell.preparedIcon.tooltip">
               <button
                 type="button"
                 :class="[
@@ -879,18 +889,6 @@
                   class="size-5"
                 />
               </button>
-            </UTooltip>
-
-            <UTooltip
-              v-else
-              :text="spell.preparedIcon.tooltip"
-            >
-              <span :class="[SPELL_ICON_CLASS, spell.preparedIcon.iconClass]">
-                <UIcon
-                  name="tabler:wand"
-                  class="size-5"
-                />
-              </span>
             </UTooltip>
 
             <button
