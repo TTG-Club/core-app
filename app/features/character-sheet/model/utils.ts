@@ -25,6 +25,7 @@ import type {
   CharacterExhaustionEffects,
   CharacterExtraHitDie,
   CharacterFeature,
+  CharacterFeatureModifiers,
   CharacterHealth,
   CharacterHitDie,
   CharacterInventoryGroup,
@@ -60,7 +61,9 @@ import type {
   DamageDiceGroup,
   DamageRollSource,
   DistanceRowDraft,
+  FeatGrantedSpeedKey,
   FeatSelectOption,
+  FeatSpeedModifiers,
   FeatSummary,
   FeatureDescriptionNode,
   FeatureOrigin,
@@ -124,7 +127,7 @@ import type {
   WeaponDamage,
 } from './types';
 
-import { capitalize, clamp, mapValues, upperFirst } from 'es-toolkit';
+import { capitalize, clamp, mapValues, round, upperFirst } from 'es-toolkit';
 
 import { LEVELS } from '~/shared/consts';
 import {
@@ -198,8 +201,10 @@ import {
   CUSTOM_ARMOR_TYPE_META,
   CUSTOM_BACKGROUND_URL_PREFIX,
   CUSTOM_BONUS_FLAT_SOURCE,
+  CUSTOM_BONUS_KIND_LABELS,
   CUSTOM_BONUS_MAX,
   CUSTOM_BONUS_MIN,
+  CUSTOM_BONUS_PROFICIENCY_SOURCE,
   CUSTOM_CLASS_URL_PREFIX,
   CUSTOM_FLAT_BONUS_LABEL,
   CUSTOM_INVENTORY_KIND_CATEGORIES,
@@ -232,6 +237,7 @@ import {
   EXHAUSTION_LEVEL_MIN,
   EXHAUSTION_SPEED_PENALTY_BY_UNIT,
   EXHAUSTION_SPEED_PENALTY_PER_LEVEL,
+  FEAT_CUSTOM_BONUS_ID_PREFIX,
   FEATURE_ORIGIN_GROUP_ORDER,
   FEATURE_ORIGIN_LABELS,
   FILTER_CHIP_CLASS,
@@ -269,6 +275,7 @@ import {
   MAGIC_ITEMS_DETAIL_BASE_PATH,
   MULTICLASS_ABILITY_REQUIREMENT,
   MULTICLASS_REQUIREMENT_WARNING_PREFIX,
+  NEW_CUSTOM_BONUS,
   NEW_CUSTOM_INVENTORY_ITEM,
   ORIGIN_FEAT_CATEGORY,
   PACT_SPELL_SLOT_LABEL,
@@ -310,9 +317,11 @@ import {
   SKILL_OWNED_HINTS,
   SKILL_PROFICIENCY_LABELS,
   SKILL_PROFICIENCY_MULTIPLIERS,
+  SPEED_FEET_RATIO_BY_UNIT,
   SPEED_PARSE_FALLBACK,
   SPEED_PRIMARY_ORDER,
   SPEED_TYPE_LABELS,
+  SPEED_UNIT_FRACTION_DIGITS,
   SPEED_UNIT_SHORT_LABELS,
   SPELL_DAMAGE_ABILITY_MODIFIER_TAG,
   SPELL_DAMAGE_CONDITION_TAG_LABELS,
@@ -381,6 +390,10 @@ export function getBaseProficiencyBonus(character: Character): number {
  * Бонус мастерства листа: основа плюс свои бонусы из настроек. Считать бонус
  * мастерства персонажа нужно именно так — везде, где он участвует.
  *
+ * Записи вида «бонус мастерства» здесь пропускаются: сам себе слагаемым он быть
+ * не может, а без отбора подсчёт ушёл бы в бесконечную рекурсию. В остальных
+ * целях (инициатива, навыки, спасброски) такие записи работают как обычно.
+ *
  * @param character персонаж.
  * @returns итоговый бонус мастерства.
  */
@@ -389,7 +402,9 @@ export function getCharacterProficiencyBonus(character: Character): number {
     getBaseProficiencyBonus(character)
     + getCustomBonusesValue(
       character,
-      character.settings.customProficiencyBonuses,
+      character.settings.customProficiencyBonuses.filter(
+        (bonus) => bonus.kind !== 'proficiency',
+      ),
     )
   );
 }
@@ -905,7 +920,13 @@ export function toStoredSettings(
 export function getCustomBonusSource(
   bonus: CharacterCustomBonus,
 ): CustomBonusSource {
-  return bonus.kind === 'ability' ? bonus.ability : CUSTOM_BONUS_FLAT_SOURCE;
+  if (bonus.kind === 'ability') {
+    return bonus.ability;
+  }
+
+  return bonus.kind === 'proficiency'
+    ? CUSTOM_BONUS_PROFICIENCY_SOURCE
+    : CUSTOM_BONUS_FLAT_SOURCE;
 }
 
 /**
@@ -920,9 +941,15 @@ export function withCustomBonusSource(
   bonus: CharacterCustomBonus,
   source: CustomBonusSource,
 ): CharacterCustomBonus {
-  return source === CUSTOM_BONUS_FLAT_SOURCE
-    ? { ...bonus, kind: 'flat' }
-    : { ...bonus, kind: 'ability', ability: source };
+  if (source === CUSTOM_BONUS_FLAT_SOURCE) {
+    return { ...bonus, kind: 'flat' };
+  }
+
+  if (source === CUSTOM_BONUS_PROFICIENCY_SOURCE) {
+    return { ...bonus, kind: 'proficiency' };
+  }
+
+  return { ...bonus, kind: 'ability', ability: source };
 }
 
 /**
@@ -939,6 +966,12 @@ export function getCustomBonusValue(
 ): number {
   if (bonus.kind === 'ability') {
     return getAbilityModifier(character, bonus.ability);
+  }
+
+  // Бонус мастерства растёт с уровнем, поэтому своим числом он не описывается:
+  // «Бдительный» прибавляет к инициативе именно его, а не +2 навсегда.
+  if (bonus.kind === 'proficiency') {
+    return getCharacterProficiencyBonus(character);
   }
 
   // Записанный бонус уже приведён `toStoredCustomBonuses`, но черновики форм
@@ -977,8 +1010,12 @@ export function getCustomBonusLabel(bonus: CharacterCustomBonus): string {
     return bonus.label;
   }
 
-  return bonus.kind === 'ability'
-    ? ABILITY_LABELS[bonus.ability]
+  if (bonus.kind === 'ability') {
+    return ABILITY_LABELS[bonus.ability];
+  }
+
+  return bonus.kind === 'proficiency'
+    ? CUSTOM_BONUS_KIND_LABELS.proficiency
     : CUSTOM_FLAT_BONUS_LABEL;
 }
 
@@ -3390,10 +3427,15 @@ export function getArmorClassBreakdown(
 
   const abilityBonuses = getArmorClassAbilityBonuses(character, abilities);
 
+  // Прибавка черт идёт и в ручной режим: она не зависит от того, откуда взята
+  // основа КД. Условные прибавки («Оборона» — только в доспехе) в механику не
+  // попадают и остаются в описании черты.
+  const featBonus = getFeatArmorClassBonus(character.features);
+
   if (custom) {
     const value = abilityBonuses.reduce(
       (total, bonus) => total + bonus.modifier,
-      base,
+      base + featBonus,
     );
 
     return {
@@ -3407,6 +3449,7 @@ export function getArmorClassBreakdown(
       dexLimited: false,
       shieldBonus: 0,
       itemBonus: 0,
+      featBonus,
       extraAbilities: abilityBonuses,
     };
   }
@@ -3490,7 +3533,7 @@ export function getArmorClassBreakdown(
   );
 
   return {
-    value: bodyArmorValue + shieldBonus + itemBonus + extraBonus,
+    value: bodyArmorValue + shieldBonus + itemBonus + featBonus + extraBonus,
     custom: false,
     bodyArmorName,
     bodyArmorValue,
@@ -3502,6 +3545,7 @@ export function getArmorClassBreakdown(
     dexLimited: dexCapped && dexLimit !== null,
     shieldBonus,
     itemBonus,
+    featBonus,
     extraAbilities,
   };
 }
@@ -4423,7 +4467,32 @@ export function getEffectiveSpeed(character: Character): CharacterSpeed {
   // что такого передвижения у персонажа нет.
   const commonBonus = getInventoryBonusValue(character, 'all-speeds');
 
-  const values = mapValues(character.speed.values, (value, key) => {
+  const featSpeed = getFeatSpeedModifiers(
+    character.features,
+    character.speed.unit,
+  );
+
+  // Ходьба считается первой: от неё зависят скорости, которые черта приравняла
+  // к ней.
+  const walk = Math.max(0, character.speed.values.walk + featSpeed.walkBonus);
+
+  // Черта выдаёт скорость с нуля (полёт тому, кто не летал), поэтому её вклад
+  // идёт до отбора нулевых значений — в отличие от бонусов предметов, которые
+  // ускоряют только то, чем персонаж уже владеет.
+  const granted: Record<SpeedTypeKey, number> = {
+    ...character.speed.values,
+    walk,
+    fly: getGrantedSpeed(character.speed.values.fly, featSpeed, 'fly', walk),
+    climb: getGrantedSpeed(
+      character.speed.values.climb,
+      featSpeed,
+      'climb',
+      walk,
+    ),
+    swim: getGrantedSpeed(character.speed.values.swim, featSpeed, 'swim', walk),
+  };
+
+  const values = mapValues(granted, (value, key) => {
     if (value <= 0) {
       return value;
     }
@@ -6206,13 +6275,19 @@ export function buildCharacterFeatures(
  * Повторяемая черта получает уникальный суффикс в идентификаторе — так копии
  * одной черты не схлопываются дедупом и удаляются/правятся независимо.
  *
+ * Механика черты кладётся в запись снимком: прибавка «Крепкого» к максимуму
+ * хитов зависит от уровня взятия, поэтому лист обязан помнить и её, и сам
+ * уровень — за механикой в справочник он больше не ходит.
+ *
  * @param summary деталь черты.
  * @param repeatable черту можно брать несколько раз (уникальный id для копии).
+ * @param level уровень взятия черты; null — уровень неизвестен.
  * @returns особенность персонажа с происхождением «Черта».
  */
 export function buildFeatFeature(
   summary: FeatSummary,
   repeatable = false,
+  level: number | null = null,
 ): CharacterFeature {
   const baseId = getCharacterFeatureId('feat', summary.url);
 
@@ -6222,8 +6297,286 @@ export function buildFeatFeature(
     description: [...summary.description],
     origin: 'feat',
     originName: summary.category,
-    level: null,
+    level,
     choice: null,
+    modifiers: summary.modifiers,
+  };
+}
+
+/**
+ * Постоянные модификаторы листа от черт: записи без снимка механики (умения
+ * вида и класса, ручные записи, черты, добавленные до её появления) выпадают.
+ *
+ * @param features особенности листа.
+ * @returns модификаторы черт в порядке записей.
+ */
+function getFeatureModifiers(
+  features: CharacterFeature[],
+): CharacterFeatureModifiers[] {
+  return features.flatMap((feature) =>
+    feature.modifiers ? [feature.modifiers] : [],
+  );
+}
+
+/**
+ * Прибавка к максимуму хитов от одной черты:
+ * `flat + perAcquisitionLevel × уровень взятия +
+ * perLevelAfterAcquisition × (текущий уровень − уровень взятия)`.
+ *
+ * Уровень взятия у черты за классовое улучшение характеристик — уровень В
+ * КЛАССЕ (`useLevelUpWizard` записывает его вместе с давшим черту умением), а у
+ * взятой вручную — общий уровень персонажа. У мультикласса это разные числа, но
+ * ни одна размеченная черта разницы не замечает: у «Крепкого»
+ * `perAcquisitionLevel` и `perLevelAfterAcquisition` равны, а значит прибавка
+ * сводится к `2 × текущий уровень` при любом уровне взятия. Появится черта, где
+ * они различаются, — уровень взятия придётся хранить общим, а не классовым.
+ *
+ * @param feature особенность листа.
+ * @param level текущий общий уровень персонажа.
+ * @returns прибавка к максимуму хитов от этой черты.
+ */
+function getFeatureHitPointsBonus(
+  feature: CharacterFeature,
+  level: number,
+): number {
+  const hitPoints = feature.modifiers?.hitPoints;
+
+  if (!hitPoints) {
+    return 0;
+  }
+
+  // Уровень взятия не записан (лист собран до его учёта) — считаем черту
+  // взятой сейчас: слагаемое «за уровни после взятия» тогда обнуляется.
+  const acquisitionLevel = feature.level ?? level;
+
+  const levelsAfter = Math.max(0, level - acquisitionLevel);
+
+  return (
+    (hitPoints.flat ?? 0)
+    + (hitPoints.perAcquisitionLevel ?? 0) * acquisitionLevel
+    + (hitPoints.perLevelAfterAcquisition ?? 0) * levelsAfter
+  );
+}
+
+/**
+ * Прибавка к максимуму хитов от всех черт листа. Слагаемое к сумме
+ * `health.levelGains`: конвейер своих бонусов (`customBonus`) сюда не годится —
+ * он покрывает только броски к20.
+ *
+ * @param features особенности листа.
+ * @param level текущий общий уровень персонажа.
+ * @returns суммарная прибавка к максимуму хитов от черт.
+ */
+function getFeatHitPointsBonus(
+  features: CharacterFeature[],
+  level: number,
+): number {
+  return features.reduce(
+    (total, feature) => total + getFeatureHitPointsBonus(feature, level),
+    0,
+  );
+}
+
+/**
+ * Доведение здоровья до нового вклада черт: максимум и текущие хиты двигаются
+ * на разницу между прежней и новой прибавкой. Вызывается всюду, где меняются
+ * черты или уровень, — иначе прибавка «Крепкого» либо потерялась бы при
+ * пересчёте уровней, либо начислилась дважды.
+ *
+ * Незаполненное здоровье (нулевой максимум) не трогается — как и в
+ * {@link adjustHealthForConstitution}: прибавлять не к чему.
+ *
+ * @param health здоровье персонажа.
+ * @param previous особенности и уровень до изменения.
+ * @param next особенности и уровень после изменения.
+ * @returns новое здоровье персонажа.
+ */
+function applyFeatHitPoints(
+  health: CharacterHealth,
+  previous: Pick<Character, 'features' | 'level'>,
+  next: Pick<Character, 'features' | 'level'>,
+): CharacterHealth {
+  const delta =
+    getFeatHitPointsBonus(next.features, next.level)
+    - getFeatHitPointsBonus(previous.features, previous.level);
+
+  if (delta === 0 || health.max <= 0) {
+    return health;
+  }
+
+  const max = Math.max(0, health.max + delta);
+
+  return { ...health, max, current: clamp(health.current + delta, 0, max) };
+}
+
+/**
+ * Постоянная прибавка к КД от черт листа.
+ *
+ * @param features особенности листа.
+ * @returns суммарная прибавка к классу доспеха.
+ */
+function getFeatArmorClassBonus(features: CharacterFeature[]): number {
+  return getFeatureModifiers(features).reduce(
+    (total, modifiers) => total + (modifiers.armorClassBonus ?? 0),
+    0,
+  );
+}
+
+/**
+ * Изменение скоростей чертами, приведённое к единицам листа.
+ *
+ * Ходьбе черты прибавляют, и прибавки складываются: «Подвижный» (+10) и «Метка
+ * пути» (+5) дают +15. Полёт, лазание и плавание черта задаёт числом — это само
+ * значение скорости, а не прибавка, поэтому у нескольких черт в зачёт идёт
+ * большее. Флаги «равна скорости ходьбы» собираются отдельно: их применяет
+ * {@link getGrantedSpeed} уже по посчитанной ходьбе.
+ *
+ * @param features особенности листа.
+ * @param unit единица измерения скоростей листа.
+ * @returns изменение скоростей чертами в единицах листа.
+ */
+function getFeatSpeedModifiers(
+  features: CharacterFeature[],
+  unit: SpeedUnit,
+): FeatSpeedModifiers {
+  let walkBonusInFeet = 0;
+
+  const grantedInFeet: Record<FeatGrantedSpeedKey, number> = {
+    fly: 0,
+    climb: 0,
+    swim: 0,
+  };
+
+  const equalsWalk: Record<FeatGrantedSpeedKey, boolean> = {
+    fly: false,
+    climb: false,
+    swim: false,
+  };
+
+  for (const modifiers of getFeatureModifiers(features)) {
+    const { speed } = modifiers;
+
+    if (!speed) {
+      continue;
+    }
+
+    walkBonusInFeet += speed.walkBonus ?? 0;
+
+    grantedInFeet.fly = Math.max(grantedInFeet.fly, speed.fly ?? 0);
+    grantedInFeet.climb = Math.max(grantedInFeet.climb, speed.climb ?? 0);
+    grantedInFeet.swim = Math.max(grantedInFeet.swim, speed.swim ?? 0);
+
+    equalsWalk.fly ||= speed.flyEqualsWalk ?? false;
+    equalsWalk.climb ||= speed.climbEqualsWalk ?? false;
+    equalsWalk.swim ||= speed.swimEqualsWalk ?? false;
+  }
+
+  // Складываем в футах и переводим один раз на итог способа передвижения:
+  // 0.3 — двоичная дробь, и перевод каждой прибавки порознь дал бы в подписи
+  // плитки хвост вида 0.8999999999999999.
+  const ratio = SPEED_FEET_RATIO_BY_UNIT[unit];
+
+  return {
+    walkBonus: round(walkBonusInFeet * ratio, SPEED_UNIT_FRACTION_DIGITS),
+    granted: mapValues(grantedInFeet, (feet) =>
+      round(feet * ratio, SPEED_UNIT_FRACTION_DIGITS),
+    ),
+    equalsWalk,
+  };
+}
+
+/**
+ * Скорость полёта, лазания или плавания с учётом черт. Три источника — своя
+ * скорость персонажа, выданная чертой и равенство скорости ходьбы — друг с
+ * другом не спорят: в зачёт идёт большее. Иначе черта, дающая полёт «как
+ * скорость ходьбы», урезала бы уже имеющиеся крылья.
+ *
+ * @param value записанная скорость персонажа.
+ * @param featSpeed изменение скоростей чертами листа.
+ * @param key способ передвижения.
+ * @param walk итоговая скорость ходьбы.
+ * @returns скорость с учётом черт.
+ */
+function getGrantedSpeed(
+  value: number,
+  featSpeed: FeatSpeedModifiers,
+  key: FeatGrantedSpeedKey,
+  walk: number,
+): number {
+  return Math.max(
+    value,
+    featSpeed.granted[key],
+    featSpeed.equalsWalk[key] ? walk : 0,
+  );
+}
+
+/**
+ * Свои бонусы инициативы, заведённые чертами листа: по записи на каждую черту с
+ * флагом `initiativeProficiencyBonus` («Бдительный»). Сверка идемпотентна —
+ * заведённые чертами записи пересобираются целиком, а добавленные игроком
+ * вручную остаются нетронутыми. Вызывается всюду, где меняется список черт.
+ *
+ * @param bonuses свои бонусы инициативы из настроек листа.
+ * @param features особенности листа.
+ * @returns свои бонусы инициативы, согласованные с чертами.
+ */
+function withFeatInitiativeBonuses(
+  bonuses: CharacterCustomBonus[],
+  features: CharacterFeature[],
+): CharacterCustomBonus[] {
+  const manual = bonuses.filter(
+    (bonus) => !bonus.id.startsWith(FEAT_CUSTOM_BONUS_ID_PREFIX),
+  );
+
+  const fromFeats = features
+    .filter((feature) => feature.modifiers?.initiativeProficiencyBonus)
+    .map<CharacterCustomBonus>((feature) => ({
+      id: `${FEAT_CUSTOM_BONUS_ID_PREFIX}${feature.id}`,
+      kind: 'proficiency',
+      // Запись хранит оба источника разом, поэтому характеристика нужна и
+      // бонусу мастерства: в счёт она не идёт и ждёт, если игрок переключит
+      // источник вручную. Берётся заготовка новой записи — как у кнопки
+      // «Добавить бонус».
+      ability: NEW_CUSTOM_BONUS.ability,
+      value: 0,
+      // Пометка источника — название черты: в разборе инициативы игрок должен
+      // видеть, откуда взялся бонус мастерства, а не безымянную строку.
+      label: feature.name,
+    }));
+
+  return [...manual, ...fromFeats];
+}
+
+/**
+ * Доведение листа до нового набора черт и уровня.
+ *
+ * Постоянные модификаторы черт лист хранит по-разному, и сверка нужна не всем.
+ * КД и скорости считаются на лету — там слагаемое от черт появляется само.
+ * Максимум хитов, наоборот, хранится числом и правится игроком вручную, поэтому
+ * его прибавка ведётся разницей: иначе пересчёт уровней или смена класса затёрли
+ * бы её, а повторное применение начислило бы дважды. Свои бонусы инициативы
+ * пересобираются целиком — эта часть сверки идемпотентна.
+ *
+ * Вызывать нужно везде, где меняется список особенностей или уровень.
+ *
+ * @param next лист после изменения.
+ * @param previous особенности и уровень до изменения.
+ * @returns лист с согласованной прибавкой черт.
+ */
+export function withFeatModifiers(
+  next: Character,
+  previous: Pick<Character, 'features' | 'level'>,
+): Character {
+  return {
+    ...next,
+    health: applyFeatHitPoints(next.health, previous, next),
+    settings: {
+      ...next.settings,
+      customInitiativeBonuses: withFeatInitiativeBonuses(
+        next.settings.customInitiativeBonuses,
+        next.features,
+      ),
+    },
   };
 }
 

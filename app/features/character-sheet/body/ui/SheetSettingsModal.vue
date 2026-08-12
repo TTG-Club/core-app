@@ -3,15 +3,15 @@
     AbilityKey,
     Character,
     CharacterCustomBonus,
-    CustomBonusSource,
+    CustomBonusBaseSource,
     ProficiencyBaseSource,
   } from '../../model';
 
   import { useCharacterSheetList } from '../../composables';
   import {
     ABILITY_LABELS,
+    CUSTOM_BONUS_BASE_SOURCE_OPTIONS,
     CUSTOM_BONUS_FLAT_SOURCE,
-    CUSTOM_BONUS_SOURCE_OPTIONS,
     CUSTOM_INITIATIVE_BONUS_HINT,
     CUSTOM_PROFICIENCY_BONUS_HINT,
     DEFAULT_INITIATIVE_ABILITY,
@@ -93,7 +93,7 @@
   // выбранная характеристика ждёт возврата к ней.
   const draftInitiativeAbility = ref<AbilityKey>(initialInitiativeAbility);
 
-  const draftInitiativeBaseSource = ref<CustomBonusSource>(
+  const draftInitiativeBaseSource = ref<CustomBonusBaseSource>(
     props.character.settings.customInitiativeBase === null
       ? initialInitiativeAbility
       : CUSTOM_BONUS_FLAT_SOURCE,
@@ -132,7 +132,7 @@
 
   // Источник основы инициативы и выбранная характеристика ходят парой: выбор
   // характеристики запоминается, чтобы своё число не стирало её насовсем.
-  const initiativeBaseSource = computed<CustomBonusSource>({
+  const initiativeBaseSource = computed<CustomBonusBaseSource>({
     get: () => draftInitiativeBaseSource.value,
     set: (source) => {
       draftInitiativeBaseSource.value = source;
@@ -356,6 +356,7 @@
               :character="character"
               :title="SHEET_SETTINGS_LABELS.proficiencyBonusTitle"
               :base-items="PROFICIENCY_BASE_OPTIONS"
+              :source-items="CUSTOM_BONUS_BASE_SOURCE_OPTIONS"
               :base-value="proficiencyBase"
               :total-label="SHEET_SETTINGS_LABELS.totalProficiencyBonusTitle"
               :hint="CUSTOM_PROFICIENCY_BONUS_HINT"
@@ -369,7 +370,7 @@
               v-model:base-custom-value="draftInitiativeBaseValue"
               :character="character"
               :title="SHEET_SETTINGS_LABELS.initiativeTitle"
-              :base-items="CUSTOM_BONUS_SOURCE_OPTIONS"
+              :base-items="CUSTOM_BONUS_BASE_SOURCE_OPTIONS"
               :base-value="initiativeBase"
               :penalty-label="EXHAUSTION_LABELS.title"
               :penalty-value="exhaustionPenalty"

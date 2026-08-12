@@ -40,7 +40,10 @@ import {
   MAGIC_ITEM_BONUS_NONE,
 } from '~magic-items/model';
 
-import { descriptionNodesSchema } from './character-schema';
+import {
+  descriptionNodesSchema,
+  featModifiersSchema,
+} from './character-schema';
 import {
   CURRENCY_KEYS_BY_LABEL,
   INVENTORY_QUANTITY_MAX,
@@ -338,12 +341,21 @@ export function parseRepeatableFeatUrls(input: unknown): Set<string> {
   );
 }
 
-/** Схема детального ответа черты (нужные листу поля). */
+/**
+ * Схема детального ответа черты (нужные листу поля). Постоянные модификаторы
+ * лежат внутри механики: у черт без механики её нет вовсе, у черт с механикой
+ * без постоянных эффектов — нет блока `modifiers`, и оба случая означают одно и
+ * то же — лист черта не двигает.
+ */
 const featDetailSchema = z.object({
   url: z.string(),
   name: z.object({ rus: z.string().catch('') }),
   category: z.string().catch(''),
   description: descriptionNodesSchema,
+  mechanics: z
+    .object({ modifiers: featModifiersSchema })
+    .nullable()
+    .catch(null),
 });
 
 /**
@@ -364,6 +376,7 @@ export function parseFeatDetail(input: unknown): FeatSummary | null {
     name: result.data.name.rus,
     category: result.data.category,
     description: result.data.description,
+    modifiers: result.data.mechanics?.modifiers ?? null,
   };
 }
 

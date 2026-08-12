@@ -34,6 +34,7 @@
     getRequiredChoiceCount,
     getToolNames,
     LANGUAGE_PROFICIENCY_GROUPS,
+    ORIGIN_FEAT_ACQUISITION_LEVEL,
     parseBackgroundDetail,
     parseBackgroundOptions,
     parseFeatDetail,
@@ -406,7 +407,13 @@
         const summary = await fetchFeatDetail(detail.featUrl);
 
         if (summary) {
-          const feature = buildFeatFeature(summary);
+          // Черта происхождения даётся на первом уровне (правило 2024) — от
+          // него и считается прибавка «Крепкого» к максимуму хитов.
+          const feature = buildFeatFeature(
+            summary,
+            false,
+            ORIGIN_FEAT_ACQUISITION_LEVEL,
+          );
 
           featFeature = detail.featSubchoice
             ? { ...feature, choice: detail.featSubchoice }
