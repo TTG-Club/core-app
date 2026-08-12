@@ -669,6 +669,38 @@ export interface CharacterProficiencies {
   languages: string[];
 }
 
+/**
+ * Набор владений, выданный источником. Мастерство оружием сюда не входит: его
+ * выдают отдельные умения по одному виду, а не наборами.
+ */
+export interface GrantedProficiencies {
+  armor: string[];
+  weapons: string[];
+  tools: CharacterToolProficiency[];
+  languages: string[];
+}
+
+/**
+ * Запись журнала выдач: что именно выдал один источник. По ней снятие класса,
+ * предыстории, вида или черты забирает ровно своё и не трогает ни чужого, ни
+ * отмеченного игроком вручную.
+ *
+ * Устроено как `health.levelGains`: общий журнал листа с пометкой источника, а не
+ * запись на самой сущности. Источников четыре, а журнал один — так снятие любого
+ * из них считается одинаково.
+ *
+ * У листов, сохранённых до появления журнала, записей нет: там всё считается
+ * отмеченным вручную и не снимается — ровно прежнее поведение.
+ */
+export interface ProficiencyGrant extends GrantedProficiencies {
+  /**
+   * Кто выдал: `class:<url>`, `background:<url>`, `species:<url>` либо
+   * `feature:<id>` (у черты — идентификатор её записи, поэтому копии
+   * повторяемой черты снимаются независимо).
+   */
+  source: string;
+}
+
 /** Ключ группы владений персонажа. */
 export type ProficiencyGroupKey = keyof CharacterProficiencies;
 
@@ -1041,6 +1073,13 @@ export interface CharacterFeature {
    * особенностей вида, класса и заведённых вручную — им двигать лист нечем.
    */
   modifiers?: CharacterFeatureModifiers | null;
+
+  /**
+   * Владения, которые черта выдаёт без выбора; null — не выдаёт. Снимок, как и
+   * `modifiers`: по нему сверка ведёт запись журнала выдач, а снятие черты
+   * забирает ровно выданное.
+   */
+  proficiencies?: GrantedProficiencies | null;
 }
 
 /** Отбор особенностей на вкладке особенностей. */
@@ -1083,6 +1122,13 @@ export interface FeatSummary {
    * не двигает либо механика у записи каталога не заполнена.
    */
   modifiers: CharacterFeatureModifiers | null;
+
+  /**
+   * Владения из `mechanics.proficiencies`, уже приведённые к справочнику листа
+   * (категории справочника — к записям вида «Всё воинское оружие»); null —
+   * черта владений не выдаёт.
+   */
+  proficiencies: GrantedProficiencies | null;
 }
 
 /** Заклинание в книге персонажа (и опция поиска заклинаний). */
@@ -2654,6 +2700,14 @@ export interface Character {
   classResources: CharacterClassResource[];
 
   proficiencies: CharacterProficiencies;
+
+  /**
+   * Журнал выдач владений: кто и что выдал. Сами владения лежат в
+   * `proficiencies` одним списком — журнал нужен только затем, чтобы снятие
+   * источника забрало ровно своё.
+   */
+  proficiencyGrants: ProficiencyGrant[];
+
   currency: CharacterCurrency;
 
   /** Пользовательские денежные единицы (сверх пяти стандартных). */

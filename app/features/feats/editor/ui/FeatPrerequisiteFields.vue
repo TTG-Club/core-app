@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { FeatEntityRef, FeatPrerequisiteDetails } from '../../model';
+  import type { FeatPrerequisiteDetails } from '../../model';
 
   import {
     SelectArmorCategory,
@@ -12,43 +12,32 @@
   import {
     CLASS_FEATURE_REQUIREMENT_OPTIONS,
     createAbilityRequirement,
+    toEntityRefs,
+    toEntityRefUrls,
+    toUrlList,
   } from '../../model';
   import FeatAbilityRequirements from './FeatAbilityRequirements.vue';
-
-  /** Селекты справочников отдают url'ы, а core-api ждёт ссылки `{ url }`. */
-  function toUrls(refs: Array<FeatEntityRef>): Array<string> {
-    return refs.map((reference) => reference.url);
-  }
-
-  function toRefs(urls: Array<string>): Array<FeatEntityRef> {
-    return urls.map((url) => ({ url }));
-  }
-
-  /** Селект отдаёт либо один url, либо список — приводим к списку. */
-  function normalizeUrls(value: string | Array<string>): Array<string> {
-    return Array.isArray(value) ? value : [value];
-  }
 
   const model = defineModel<FeatPrerequisiteDetails>({ required: true });
 
   const featUrls = computed<string | Array<string>>({
-    get: () => toUrls(model.value.feats),
+    get: () => toEntityRefUrls(model.value.feats),
     set: (value) => {
-      model.value = { ...model.value, feats: toRefs(normalizeUrls(value)) };
+      model.value = { ...model.value, feats: toEntityRefs(toUrlList(value)) };
     },
   });
 
   const classUrls = computed<string | Array<string>>({
-    get: () => toUrls(model.value.classes),
+    get: () => toEntityRefUrls(model.value.classes),
     set: (value) => {
-      model.value = { ...model.value, classes: toRefs(normalizeUrls(value)) };
+      model.value = { ...model.value, classes: toEntityRefs(toUrlList(value)) };
     },
   });
 
   const speciesUrls = computed<string | Array<string>>({
-    get: () => toUrls(model.value.species),
+    get: () => toEntityRefUrls(model.value.species),
     set: (value) => {
-      model.value = { ...model.value, species: toRefs(normalizeUrls(value)) };
+      model.value = { ...model.value, species: toEntityRefs(toUrlList(value)) };
     },
   });
 
@@ -58,7 +47,7 @@
     set: (value) => {
       model.value = {
         ...model.value,
-        backgrounds: value ? toRefs([value]) : [],
+        backgrounds: value ? toEntityRefs([value]) : [],
       };
     },
   });

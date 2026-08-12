@@ -164,11 +164,69 @@ export interface FeatModifiers {
   initiativeProficiencyBonus: boolean;
 }
 
+/**
+ * Владения, которые черта выдаёт сразу и целиком: «Вы получаете владение
+ * воинским оружием». Выбираемые владения сюда не идут — у них есть количество и
+ * пул значений, поэтому они живут в {@link FeatChoice}.
+ *
+ * Навыков, спасбросков и языков здесь нет: первые два черты выдают выбором, а
+ * справочник языков сайта и словарь языков листа пока расходятся в названиях и
+ * группировке.
+ */
+export interface FeatProficiencyGrant {
+  /** Категории оружия справочника (`MATERIAL_MELEE` и подобные). */
+  weaponCategories: Array<string>;
+
+  /** Категории доспехов справочника (`MEDIUM`, `SHIELD`). */
+  armorCategories: Array<string>;
+
+  /** Инструменты из раздела «Предметы». */
+  tools: Array<FeatEntityRef>;
+}
+
 /** Механика черты целиком. */
 export interface FeatMechanics {
   abilityBonuses: Array<FeatAbilityBonus>;
   choices: Array<FeatChoice>;
   modifiers: FeatModifiers;
+  proficiencies: FeatProficiencyGrant;
+}
+
+/**
+ * Ссылки на сущности к списку url: селекты справочников хранят только их.
+ *
+ * @param refs ссылки на сущности.
+ * @returns url сущностей.
+ */
+export function toEntityRefUrls(refs: Array<FeatEntityRef>): Array<string> {
+  return refs.map((reference) => reference.url);
+}
+
+/**
+ * Url к ссылкам: core-api ждёт `{ url }`, а название подставится при следующей
+ * загрузке черты — снимок имени форме не нужен.
+ *
+ * @param urls url сущностей.
+ * @returns ссылки на сущности.
+ */
+export function toEntityRefs(urls: Array<string>): Array<FeatEntityRef> {
+  return urls.map((url) => ({ url }));
+}
+
+/**
+ * Значение селекта к списку: одиночный выбор приходит строкой, пустой — ничем.
+ *
+ * @param value значение селекта.
+ * @returns выбранные значения списком.
+ */
+export function toUrlList(
+  value: string | Array<string> | undefined,
+): Array<string> {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  return value ? [value] : [];
 }
 
 /** Новый вариант повышения характеристик. */
@@ -274,11 +332,21 @@ export function createFeatModifiers(): FeatModifiers {
   };
 }
 
+/** Пустая выдача владений. */
+export function createFeatProficiencyGrant(): FeatProficiencyGrant {
+  return {
+    weaponCategories: [],
+    armorCategories: [],
+    tools: [],
+  };
+}
+
 /** Пустая механика черты. */
 export function createFeatMechanics(): FeatMechanics {
   return {
     abilityBonuses: [],
     choices: [],
     modifiers: createFeatModifiers(),
+    proficiencies: createFeatProficiencyGrant(),
   };
 }

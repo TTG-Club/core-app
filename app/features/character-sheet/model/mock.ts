@@ -208,6 +208,9 @@ export const DEFAULT_CHARACTER: Character = {
     tools: [],
     languages: ['Общий'],
   },
+  // Общий язык нового листа выдан заготовкой, а не источником, поэтому в журнале
+  // его нет: снимать по нему нечего.
+  proficiencyGrants: [],
   currency: {
     copper: 0,
     silver: 0,

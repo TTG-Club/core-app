@@ -5,6 +5,7 @@ import type {
   FeatMechanics,
   FeatModifiers,
   FeatPrerequisiteDetails,
+  FeatProficiencyGrant,
   FeatSpellFilter,
 } from './mechanics';
 
@@ -100,12 +101,24 @@ function buildModifiers(modifiers: FeatModifiers): FeatModifiers | undefined {
   });
 }
 
+/** Готовит выдаваемые владения: инструмент без ссылки отправлять некуда. */
+function buildProficiencies(
+  proficiencies: FeatProficiencyGrant,
+): FeatProficiencyGrant | undefined {
+  return orUndefined({
+    ...proficiencies,
+    tools: proficiencies.tools.filter((tool) => !!text(tool.url)),
+  });
+}
+
 /** Готовит механику целиком. */
 function buildMechanics(mechanics: FeatMechanics): FeatMechanics | undefined {
   return orUndefined({
     abilityBonuses: buildAbilityBonuses(mechanics.abilityBonuses),
     choices: buildChoices(mechanics.choices),
     modifiers: buildModifiers(mechanics.modifiers) ?? mechanics.modifiers,
+    proficiencies:
+      buildProficiencies(mechanics.proficiencies) ?? mechanics.proficiencies,
   });
 }
 
