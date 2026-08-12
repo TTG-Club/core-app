@@ -15,9 +15,13 @@
     withCustomBonusSource,
   } from '../../model';
 
-  // Персонаж нужен только для показа модификатора выбранной характеристики:
+  // Персонаж нужен только для показа посчитанного вклада выбранного источника:
   // сами бонусы правятся через модель, лист от строк не меняется.
-  const { character, withAdd = true } = defineProps<{
+  const {
+    character,
+    withAdd = true,
+    sourceItems = CUSTOM_BONUS_SOURCE_OPTIONS,
+  } = defineProps<{
     character: Character;
 
     /**
@@ -26,18 +30,25 @@
      * бы его.
      */
     withAdd?: boolean;
+
+    /**
+     * Доступные источники бонуса. По умолчанию — все; раздел бонуса мастерства
+     * сужает список, потому что сам себе слагаемым бонус мастерства не бывает.
+     */
+    sourceItems?: typeof CUSTOM_BONUS_SOURCE_OPTIONS;
   }>();
 
   const rows = defineModel<CharacterCustomBonus[]>({ required: true });
 
   /**
-   * Вклад бонуса от характеристики: место числа в строке занимает готовый
-   * модификатор — вводить там нечего.
+   * Вклад бонуса, который лист считает сам (модификатор характеристики или
+   * бонус мастерства): место числа в строке занимает готовое значение —
+   * вводить там нечего.
    *
    * @param bonus свой бонус строки.
-   * @returns модификатор характеристики со знаком.
+   * @returns посчитанный вклад бонуса со знаком.
    */
-  function getAbilityValue(bonus: CharacterCustomBonus): string {
+  function getComputedValue(bonus: CharacterCustomBonus): string {
     return getFormattedBonus(getCustomBonusValue(character, bonus));
   }
 
@@ -53,7 +64,7 @@
   }
 
   function handleSource(rowId: string, source: unknown) {
-    const selectedOption = CUSTOM_BONUS_SOURCE_OPTIONS.find(
+    const selectedOption = sourceItems.find(
       (option) => option.value === source,
     );
 
@@ -83,7 +94,7 @@
 
       <USelect
         :model-value="getCustomBonusSource(row)"
-        :items="CUSTOM_BONUS_SOURCE_OPTIONS"
+        :items="sourceItems"
         :placeholder="SHEET_SETTINGS_LABELS.customBonusSourcePlaceholder"
         class="min-w-0 grow basis-32"
         @update:model-value="handleSource(row.id, $event)"
@@ -98,13 +109,14 @@
         class="w-28 shrink-0"
       />
 
-      <!-- Модификатор характеристики считается сам, поэтому вместо поля ввода
-        у строки стоит коробка того же размера: колонка значений не едет -->
+      <!-- Модификатор характеристики и бонус мастерства лист считает сам,
+        поэтому вместо поля ввода у строки стоит коробка того же размера:
+        колонка значений не едет -->
       <span
         v-else
         class="w-28 shrink-0 rounded-md border border-default/50 bg-elevated/40 px-2 py-1.5 text-center text-sm font-semibold text-toned tabular-nums"
       >
-        {{ getAbilityValue(row) }}
+        {{ getComputedValue(row) }}
       </span>
 
       <!-- Корзина красная, как и во всех остальных списках листа: заметки,

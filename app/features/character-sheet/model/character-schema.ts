@@ -157,6 +157,75 @@ const characterBackgroundSchema = z
   .nullable()
   .catch(null);
 
+/** Необязательное число снимка механики: чужое значение просто пропадает. */
+const modifierNumberSchema = z.coerce.number().optional().catch(undefined);
+
+/** Необязательный флаг снимка механики. */
+const modifierFlagSchema = z.boolean().optional().catch(undefined);
+
+/** Необязательный список кодов словаря в снимке механики. */
+const modifierCodesSchema = z.array(z.string()).optional().catch(undefined);
+
+/**
+ * Снимок `mechanics.modifiers` черты в записи умения листа. Зеркало
+ * `featModifiersSchema` из `~feats/model`, но `catch` стоит на каждом уровне, а
+ * не только снаружи: у сохранённых листов поля нет вовсе, а у записанных ранней
+ * версией справочника часть блоков может не совпасть по форме — ни то, ни
+ * другое не должно ронять загрузку листа целиком.
+ *
+ * Справочник отдаёт механику в той же форме, что хранит документ листа, поэтому
+ * схема одна на оба случая: `schemas.ts` разбирает ей деталь черты — как это уже
+ * сделано с описанием (`descriptionNodesSchema`).
+ */
+export const featModifiersSchema = z
+  .object({
+    hitPoints: z
+      .object({
+        flat: modifierNumberSchema,
+        perAcquisitionLevel: modifierNumberSchema,
+        perLevelAfterAcquisition: modifierNumberSchema,
+      })
+      .optional()
+      .catch(undefined),
+    speed: z
+      .object({
+        walkBonus: modifierNumberSchema,
+        fly: modifierNumberSchema,
+        climb: modifierNumberSchema,
+        swim: modifierNumberSchema,
+        flyEqualsWalk: modifierFlagSchema,
+        climbEqualsWalk: modifierFlagSchema,
+        swimEqualsWalk: modifierFlagSchema,
+      })
+      .optional()
+      .catch(undefined),
+    armorClassBonus: modifierNumberSchema,
+    senses: z
+      .array(
+        z.object({
+          type: z.string().optional().catch(undefined),
+          range: modifierNumberSchema,
+        }),
+      )
+      .optional()
+      .catch(undefined),
+    telepathyRange: modifierNumberSchema,
+    damage: z
+      .object({
+        resistances: modifierCodesSchema,
+        immunities: modifierCodesSchema,
+        vulnerabilities: modifierCodesSchema,
+        resistanceFromChoiceKey: z.string().optional().catch(undefined),
+      })
+      .optional()
+      .catch(undefined),
+    conditionImmunities: modifierCodesSchema,
+    creatureType: z.string().optional().catch(undefined),
+    initiativeProficiencyBonus: modifierFlagSchema,
+  })
+  .nullable()
+  .catch(null);
+
 const featureSchema = z.object({
   id: z.string(),
   name: z.string().catch(''),
@@ -167,6 +236,9 @@ const featureSchema = z.object({
   // трогает, пока уровень не будет взят заново.
   level: z.coerce.number().nullable().catch(null),
   choice: z.string().nullable().catch(null),
+  // Снимок механики черты; у записей до её появления поля нет — такая черта
+  // лист не двигает, пока её не добавят заново.
+  modifiers: featModifiersSchema,
 });
 
 // Поля своих заклинаний (`custom:<uuid>`) отсутствуют у записей из каталога,
@@ -247,7 +319,9 @@ const spellcastingSchema = z
 // источника (характеристика и число) и пометка игрока.
 const customBonusSchema = z.object({
   id: z.string(),
-  kind: z.enum(['ability', 'flat']).catch(NEW_CUSTOM_BONUS.kind),
+  // Вид «бонус мастерства» появился вместе с механикой черт («Бдительный»):
+  // листы до него таких записей не имеют, а незнакомый вид падает в число.
+  kind: z.enum(['ability', 'flat', 'proficiency']).catch(NEW_CUSTOM_BONUS.kind),
   ability: abilityKeySchema.catch(NEW_CUSTOM_BONUS.ability),
   value: z.coerce.number().int().catch(0),
   label: z.string().catch(''),

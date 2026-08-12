@@ -228,8 +228,14 @@
       const features = results
         .map((result) => (result.status === 'fulfilled' ? result.value : null))
         .filter((summary): summary is FeatSummary => summary !== null)
+        // Уровень взятия нужен прибавке к максимуму хитов: у «Крепкого» она
+        // считается от него, а не от текущего уровня.
         .map((summary) =>
-          buildFeatFeature(summary, repeatableUrls.value.has(summary.url)),
+          buildFeatFeature(
+            summary,
+            repeatableUrls.value.has(summary.url),
+            character.value.level,
+          ),
         );
 
       if (features.length) {
