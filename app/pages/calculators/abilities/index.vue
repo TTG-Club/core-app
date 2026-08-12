@@ -13,6 +13,8 @@
     name="detail"
     title="Калькулятор характеристик"
   >
-    <CalculatorAbilities />
+    <ClientOnly>
+      <CalculatorAbilities />
+    </ClientOnly>
   </NuxtLayout>
 </template>

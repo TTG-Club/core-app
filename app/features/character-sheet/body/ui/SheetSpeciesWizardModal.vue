@@ -23,6 +23,7 @@
     getCharacterFeatureId,
     getChoiceSkillHints,
     getDarkvisionDistance,
+    getRequiredChoiceCount,
     getToolNames,
     LANGUAGE_PROFICIENCY_GROUPS,
     parseSizeOptionsFromText,
@@ -316,11 +317,16 @@
     return getChoiceSkillHints(choice, character.value.skills);
   }
 
+  /** Требуемое число опций: не больше, чем доступно в списке выбора. */
+  function choiceCount(choice: ClassChoice): number {
+    return getRequiredChoiceCount(choice, choiceOptions(choice));
+  }
+
   /** Обновление выбора с ограничением по требуемому количеству. */
   function updateSelection(choice: ClassChoice, values: string[]): void {
     selections.value = {
       ...selections.value,
-      [choice.id]: values.slice(0, choice.count),
+      [choice.id]: values.slice(0, choiceCount(choice)),
     };
   }
 
@@ -761,7 +767,7 @@
                 class="flex flex-col gap-1"
               >
                 <span class="text-xs text-muted">
-                  Выберите {{ row.choiceControl.count }}
+                  Выберите {{ choiceCount(row.choiceControl) }}
                 </span>
 
                 <SheetChoiceSelect
@@ -769,8 +775,8 @@
                   :items="choiceOptions(row.choiceControl)"
                   :hints="choiceHints(row.choiceControl)"
                   :warning="SKILL_DUPLICATE_WARNING"
-                  :count="row.choiceControl.count"
-                  :placeholder="`Выберите ${row.choiceControl.count}`"
+                  :count="choiceCount(row.choiceControl)"
+                  :placeholder="`Выберите ${choiceCount(row.choiceControl)}`"
                   @update:model-value="
                     updateSelection(row.choiceControl, $event)
                   "

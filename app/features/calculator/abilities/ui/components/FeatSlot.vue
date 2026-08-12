@@ -62,7 +62,7 @@
 
 <template>
   <div
-    class="bg-card flex h-full flex-col gap-2 rounded-lg border border-default p-4"
+    class="flex h-full flex-col gap-2 rounded-lg border border-default bg-elevated p-4"
     :class="{
       'opacity-50 grayscale': disabled && !model,
     }"

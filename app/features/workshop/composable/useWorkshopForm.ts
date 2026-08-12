@@ -113,8 +113,13 @@ export function useWorkshopForm<T extends { url: string }>(
     return _options.actionUrl;
   });
 
+  // Сравниваем состояния как есть, без `toRaw()`: снятие прокси лишало computed
+  // зависимостей от вложенных полей — он отслеживал только сами ref'ы, которые
+  // меняются лишь при загрузке записи. Из-за этого результат «замерзал» после
+  // первого вычисления (первый клик по «Сохранить»), и дальше форма отвечала
+  // «Нечего сохранять» на любые правки до перезагрузки страницы.
   const isFormEdited = computed(
-    () => !isEqual(toRaw(previousState.value), toRaw(state.value)),
+    () => !isEqual(previousState.value, state.value),
   );
 
   const { revisionControl, refreshRevisions, clearSelectedRevision } =

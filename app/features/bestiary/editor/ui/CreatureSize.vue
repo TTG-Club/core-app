@@ -7,23 +7,40 @@
     required: true,
   });
 
+  // Стандартный и нестандартный размеры исключают друг друга: заполнение одного
+  // очищает второй. Встречная пара вотчеров не зацикливается, потому что каждый
+  // очищает соседнее поле только когда собственное заполнено: после очистки оно
+  // пустое, и ответное срабатывание сразу выходит по guard'у. Раньше вотчеры
+  // сравнивали старое и новое значения — очистка соседа выглядела как правка, и
+  // цикл возвращался, стирая только что введённый нестандартный размер.
+  //
+  // Сравнение `toRaw(model.value)` отсекает загрузку записи: форма подменяет
+  // объект модели целиком, и без проверки загруженный размер стирался сам.
   watchDebounced(
-    () => [model.value.values, model.value.text],
-    ([size, text], [oldSize, oldText]) => {
-      if (size !== oldSize || text !== oldText) {
-        model.value.sizeString = undefined;
+    [
+      () => toRaw(model.value),
+      () => model.value.values,
+      () => model.value.text,
+    ],
+    ([nextSizes, values, text], [previousSizes]) => {
+      if (nextSizes !== previousSizes || (!values.length && !text)) {
+        return;
       }
+
+      model.value.sizeString = undefined;
     },
     { debounce: 300 },
   );
 
   watchDebounced(
-    () => model.value.sizeString,
-    (sizeString, oldSizeString) => {
-      if (sizeString !== oldSizeString) {
-        model.value.values = [];
-        model.value.text = undefined;
+    [() => toRaw(model.value), () => model.value.sizeString],
+    ([nextSizes, sizeString], [previousSizes]) => {
+      if (nextSizes !== previousSizes || !sizeString) {
+        return;
       }
+
+      model.value.values = [];
+      model.value.text = undefined;
     },
     { debounce: 300 },
   );

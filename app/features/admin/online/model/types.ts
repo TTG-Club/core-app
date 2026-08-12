@@ -44,3 +44,14 @@ export interface AdminOnlineSiteCard {
   siteId: string;
   siteLabel: string;
 }
+
+/**
+ * Плитка карточки приложения: короткая подпись, число и расшифровка для подсказки.
+ * Число уже приведено к строке — без данных там прочерк.
+ */
+export interface AdminOnlineAppTile {
+  /** Что за число: разворачивается в подсказке при наведении */
+  hint: string;
+  label: string;
+  value: string;
+}

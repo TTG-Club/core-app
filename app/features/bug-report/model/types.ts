@@ -1,9 +1,10 @@
 /**
- * Платформы-источники переехали в `#shared/consts`: набор общий с комментариями,
- * и держать его в фиче значило бы дублировать значения, которые обязаны совпадать.
+ * Платформы-источники и статусы переехали в `#shared/consts`: платформы общие с
+ * комментариями, статусы нужны серверной ручке сводки по статусам, и держать их
+ * в фиче значило бы дублировать значения, которые обязаны совпадать.
  * Реэкспорт оставлен, чтобы не переписывать импорты внутри фичи.
  */
-import type { SourcePlatform } from '#shared/consts';
+import type { BugReportStatus, SourcePlatform } from '#shared/consts';
 
 /** Контекст выделенного текста для баг-репорта */
 export interface TextSelection {
@@ -17,7 +18,7 @@ export interface TextSelection {
   after: string;
 }
 
-export type { SourcePlatform };
+export type { BugReportStatus, SourcePlatform };
 
 /** Запрос на создание баг-репорта для API */
 export interface BugReportCreateRequest {
@@ -36,9 +37,6 @@ export interface BugReportCreateRequest {
   /** Выделенный текст на странице */
   selectedText?: string;
 }
-
-/** Допустимые статусы баг-репорта */
-export type BugReportStatus = 'NEW' | 'WAIT' | 'FIXED' | 'REJECTED';
 
 /** Результат парсинга выделенного текста с контекстом */
 export interface ParsedSelection {

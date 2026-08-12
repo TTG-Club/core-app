@@ -13,6 +13,9 @@
   import { useWorkshopForm } from '~workshop/composable';
 
   import {
+    ARTICLE_DISCORD_MENTION_DEFAULT,
+    ARTICLE_DISCORD_MENTION_OPTIONS,
+    ARTICLE_DISCORD_MENTIONS,
     ARTICLE_FALLBACK_IMAGE,
     ARTICLE_IMAGE_MAX_SIZE,
     ARTICLE_IMAGE_SECTION,
@@ -62,6 +65,7 @@
       accessibleByLink: false,
       publishToTelegram: false,
       publishToDiscord: false,
+      discordMention: ARTICLE_DISCORD_MENTION_DEFAULT,
       publishToVk: false,
       title: '',
       previewImageUrl: null,
@@ -83,14 +87,15 @@
       // а `defineModel({ default: '' })` подставляет дефолт только на undefined),
       // из-за чего `state.preview` остаётся null и PUT падает на `@NotNull`.
       // Нормализуем при загрузке к пустой строке. `publishToTelegram`,
-      // `publishToDiscord` и `publishToVk` также страхуем на случай null у
-      // записей до миграции бэка.
+      // `publishToDiscord`, `publishToVk` и `discordMention` также страхуем на
+      // случай null у записей до миграции бэка.
       normalizeLoaded: (raw) => ({
         ...raw,
         preview: raw.preview ?? '',
         publishToTelegram: raw.publishToTelegram ?? false,
         publishToDiscord: raw.publishToDiscord ?? false,
         publishToVk: raw.publishToVk ?? false,
+        discordMention: raw.discordMention ?? ARTICLE_DISCORD_MENTION_DEFAULT,
       }),
       transformBeforeSubmit: (formState) => {
         const isActivePublish = !formState.draft && formState.active;
@@ -336,6 +341,7 @@
     accessibleByLink: z.boolean(),
     publishToTelegram: z.boolean(),
     publishToDiscord: z.boolean(),
+    discordMention: z.enum(ARTICLE_DISCORD_MENTIONS),
     publishToVk: z.boolean(),
     // Анонс необязателен: пустую строку допускаем (бэк принимает пустой preview).
     preview: z.string().trim(),
@@ -531,6 +537,31 @@
         >
           Везде
         </UButton>
+      </div>
+
+      <div
+        v-if="state.publishToDiscord"
+        class="mt-4 flex flex-col gap-2 border-t border-default pt-4"
+      >
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-sm font-medium text-highlighted">
+            Пинг в Discord:
+          </span>
+
+          <UTabs
+            v-model="state.discordMention"
+            :items="ARTICLE_DISCORD_MENTION_OPTIONS"
+            :content="false"
+            size="sm"
+            class="w-fit"
+          />
+        </div>
+
+        <p class="text-sm text-muted">
+          Уходит первой строкой поста и только при первой отправке — правка
+          новости повторно не звенит. Подписчикам других серверов пинг не
+          передаётся: Discord вырезает упоминания из копии.
+        </p>
       </div>
 
       <div

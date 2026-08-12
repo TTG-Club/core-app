@@ -204,9 +204,11 @@ html.svifty7 {
   --color-hover: oklch(0.976 0 89.876 / 0.09);
   --color-link: var(--color-primary-400);
 
-  // Logo
-  --color-logo-stroke: oklch(0.66 0.07 84.542);
-  --color-logo-dice: oklch(0.66 0.07 84.542);
+  // Logo — тема плоская: верх и низ каждого градиента совпадают
+  --color-logo-stroke-top: oklch(0.66 0.07 84.542);
+  --color-logo-stroke-bottom: oklch(0.66 0.07 84.542);
+  --color-logo-dice-top: oklch(0.66 0.07 84.542);
+  --color-logo-dice-bottom: oklch(0.66 0.07 84.542);
   --color-logo-tree-top: oklch(0.529 0.119 28.939);
   --color-logo-tree-bottom: oklch(0.529 0.119 28.939);
 }

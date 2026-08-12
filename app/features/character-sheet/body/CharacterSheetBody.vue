@@ -122,6 +122,7 @@
     setAbilityScore,
     spendSpellSlot,
     toggleSavingThrowProficiency,
+    toggleInnateSpellPrepared,
     toggleSpellPrepared,
     toggleSpellSlot,
     cycleSkillProficiency,
@@ -1226,6 +1227,7 @@
           @remove-innate-spell="removeInnateSpell"
           @roll-spell-damage="handleSpellDamageRoll"
           @toggle-spell-prepared="toggleSpellPrepared"
+          @toggle-innate-spell-prepared="toggleInnateSpellPrepared"
           @toggle-spell-slot="toggleSpellSlot"
         >
           <template #main>

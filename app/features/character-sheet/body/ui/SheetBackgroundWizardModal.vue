@@ -31,6 +31,7 @@
     CUSTOM_BACKGROUND_LABELS,
     FEATS_DETAIL_BASE_PATH,
     getOwnedSkillHints,
+    getRequiredChoiceCount,
     getToolNames,
     LANGUAGE_PROFICIENCY_GROUPS,
     parseBackgroundDetail,
@@ -292,10 +293,15 @@
     });
   }
 
+  /** Требуемое число опций: не больше, чем доступно в списке выбора. */
+  function choiceCount(choice: ClassChoice): number {
+    return getRequiredChoiceCount(choice, choiceOptions(choice));
+  }
+
   function updateSelection(choice: ClassChoice, values: string[]): void {
     selections.value = {
       ...selections.value,
-      [choice.id]: values.slice(0, choice.count),
+      [choice.id]: values.slice(0, choiceCount(choice)),
     };
   }
 
@@ -588,8 +594,8 @@
               v-if="backgroundDetail.toolChoice"
               :model-value="selections['background-tool'] ?? []"
               :items="choiceOptions(backgroundDetail.toolChoice)"
-              :count="backgroundDetail.toolChoice.count"
-              :placeholder="`Выберите ${backgroundDetail.toolChoice.count}`"
+              :count="choiceCount(backgroundDetail.toolChoice)"
+              :placeholder="`Выберите ${choiceCount(backgroundDetail.toolChoice)}`"
               @update:model-value="
                 updateSelection(backgroundDetail.toolChoice, $event)
               "

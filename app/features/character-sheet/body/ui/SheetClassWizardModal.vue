@@ -30,7 +30,6 @@
     deriveCantripsScaling,
     deriveClassResources,
     derivePreparedSpellsScaling,
-    detectFeatureChoice,
     FEAT_SOURCES_ASYNC_DATA_KEY,
     FEATS_FILTERS_PATH,
     FEATURE_ORIGIN_LABELS,
@@ -41,6 +40,7 @@
     FIGHTING_STYLE_INVALID_RESPONSE_ERROR,
     getCharacterClasses,
     getChoiceSkillHints,
+    getClassFeatureChoice,
     getClassFeatureId,
     getClassMaxHitPoints,
     getClassSkillChoice,
@@ -48,6 +48,7 @@
     getHitDieAverage,
     getLevelHitPointsGain,
     getMulticlassRequirementWarning,
+    getRequiredChoiceCount,
     getSelectedCasterType,
     getToolNames,
     getUnmetMulticlassRequirements,
@@ -436,11 +437,16 @@
     return getChoiceSkillHints(choice, character.value.skills);
   }
 
+  /** Требуемое число опций: не больше, чем доступно в списке выбора. */
+  function choiceCount(choice: ClassChoice): number {
+    return getRequiredChoiceCount(choice, choiceOptions(choice));
+  }
+
   /** Обновление выбора с ограничением по требуемому количеству. */
   function updateSelection(choice: ClassChoice, values: string[]): void {
     selections.value = {
       ...selections.value,
-      [choice.id]: values.slice(0, choice.count),
+      [choice.id]: values.slice(0, choiceCount(choice)),
     };
   }
 
@@ -488,11 +494,7 @@
           description: feature.description,
           originLabel,
           fightingStyleChoice: feature.fightingStyleChoice,
-          choiceControl: detectFeatureChoice(
-            id,
-            feature.description,
-            skillNames.value,
-          ),
+          choiceControl: getClassFeatureChoice(id, feature, skillNames.value),
         });
       }
     };
@@ -809,7 +811,10 @@
     );
 
     const proficientSkills: string[] = skillsChoice
-      ? (selections.value['class-skills'] ?? []).slice(0, skillsChoice.count)
+      ? (selections.value['class-skills'] ?? []).slice(
+          0,
+          choiceCount(skillsChoice),
+        )
       : [];
 
     const chosenTools = selections.value['class-tools'] ?? [];
@@ -1302,7 +1307,7 @@
               class="flex flex-col gap-1"
             >
               <span class="text-xs text-muted">
-                {{ choice.label }} (выберите {{ choice.count }})
+                {{ choice.label }} (выберите {{ choiceCount(choice) }})
               </span>
 
               <SheetChoiceSelect
@@ -1310,8 +1315,8 @@
                 :items="choiceOptions(choice)"
                 :hints="choiceHints(choice)"
                 :warning="SKILL_DUPLICATE_WARNING"
-                :count="choice.count"
-                :placeholder="`Выберите ${choice.count}`"
+                :count="choiceCount(choice)"
+                :placeholder="`Выберите ${choiceCount(choice)}`"
                 @update:model-value="updateSelection(choice, $event)"
               />
             </div>
@@ -1369,7 +1374,7 @@
                 class="flex flex-col gap-1"
               >
                 <span class="text-xs text-muted">
-                  Выберите {{ row.choiceControl.count }}
+                  Выберите {{ choiceCount(row.choiceControl) }}
                 </span>
 
                 <SheetChoiceSelect
@@ -1377,8 +1382,8 @@
                   :items="choiceOptions(row.choiceControl)"
                   :hints="choiceHints(row.choiceControl)"
                   :warning="SKILL_DUPLICATE_WARNING"
-                  :count="row.choiceControl.count"
-                  :placeholder="`Выберите ${row.choiceControl.count}`"
+                  :count="choiceCount(row.choiceControl)"
+                  :placeholder="`Выберите ${choiceCount(row.choiceControl)}`"
                   @update:model-value="
                     updateSelection(row.choiceControl, $event)
                   "

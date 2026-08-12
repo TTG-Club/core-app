@@ -1,5 +1,6 @@
 import type {
   ArticleAdminTab,
+  ArticleDiscordMention,
   ArticlePublishChannel,
   ArticlePublishMode,
   ArticlePubState,
@@ -132,6 +133,37 @@ export const ARTICLE_PUBLISH_CHANNELS: ReadonlyArray<{
   { key: 'publishToDiscord', label: 'Discord', icon: 'ttg:discord' },
   { key: 'publishToVk', label: 'ВКонтакте', icon: 'ttg:vk' },
 ];
+
+/**
+ * Варианты пинга в Discord-канале — единый источник и для схемы формы, и для
+ * тумблера в редакторе. Пинг уходит первой строкой поста и только в первом
+ * сообщении; подписчикам других серверов он не передаётся — Discord вырезает
+ * упоминания из копии.
+ */
+export const ARTICLE_DISCORD_MENTIONS: readonly ArticleDiscordMention[] = [
+  'NONE',
+  'EVERYONE',
+  'SERVER',
+] as const;
+
+/** Подписи вариантов пинга. */
+const ARTICLE_DISCORD_MENTION_LABELS = {
+  NONE: 'Без пинга',
+  EVERYONE: '@everyone',
+  SERVER: '@server',
+} as const satisfies Record<ArticleDiscordMention, string>;
+
+/** Опции сегментированного выбора пинга в редакторе. */
+export const ARTICLE_DISCORD_MENTION_OPTIONS: Array<{
+  label: string;
+  value: ArticleDiscordMention;
+}> = ARTICLE_DISCORD_MENTIONS.map((mention) => ({
+  label: ARTICLE_DISCORD_MENTION_LABELS[mention],
+  value: mention,
+}));
+
+/** Пинг по умолчанию при создании записи — не звеним, пока не попросили. */
+export const ARTICLE_DISCORD_MENTION_DEFAULT: ArticleDiscordMention = 'NONE';
 
 /** Формат даты публикации для карточек и страницы чтения. */
 export const ARTICLE_DATE_FORMAT = 'LL';

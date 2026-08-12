@@ -6,10 +6,11 @@
   import { useCharacterSheet } from '../../composables';
   import {
     ABILITY_ORDER,
+    ABILITY_SCORES_BACKGROUND_SOURCE_ID,
     ABILITY_SCORES_LABELS,
     ABILITY_SHORT_LABELS,
     API_ABILITY_KEYS,
-    getScoresAbilities,
+    getAbilitiesFromScores,
   } from '../../model';
 
   const emit = defineEmits<{
@@ -32,28 +33,23 @@
   // видны и в сводке, и в разборе значения.
   const bonusSources = computed<BonusSource[]>(() => {
     const background = character.value.characterBackground;
-
-    if (!background) {
-      return [];
-    }
-
     const scores: Partial<AbilityScores> = {};
 
     for (const key of ABILITY_ORDER) {
-      const bonus = backgroundBonuses.value[key] ?? 0;
+      const bonus = backgroundBonuses.value[key];
 
-      if (bonus !== 0) {
+      if (bonus) {
         scores[API_ABILITY_KEYS[key]] = bonus;
       }
     }
 
-    if (Object.keys(scores).length === 0) {
+    if (!background || Object.keys(scores).length === 0) {
       return [];
     }
 
     return [
       {
-        id: `background-${background.url}`,
+        id: ABILITY_SCORES_BACKGROUND_SOURCE_ID,
         label: `${ABILITY_SCORES_LABELS.backgroundBonusPrefix}: ${background.name}`,
         type: 'background',
         scores,
@@ -89,7 +85,7 @@
     }
 
     setAbilityScores(
-      getScoresAbilities(
+      getAbilitiesFromScores(
         character.value.abilities,
         draftScores.value,
         backgroundBonuses.value,
@@ -130,12 +126,13 @@
           @update:scores="handleScoresUpdate"
         />
 
-        <p
-          v-if="hasBackgroundBonuses"
-          class="text-xs text-dimmed"
-        >
-          {{ ABILITY_SCORES_LABELS.backgroundHint }}
-        </p>
+        <div class="flex flex-col gap-1 text-xs text-dimmed">
+          <p>{{ ABILITY_SCORES_LABELS.replaceHint }}</p>
+
+          <p v-if="hasBackgroundBonuses">
+            {{ ABILITY_SCORES_LABELS.backgroundHint }}
+          </p>
+        </div>
       </div>
     </template>
 

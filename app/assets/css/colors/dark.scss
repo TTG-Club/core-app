@@ -217,9 +217,11 @@ html.dark {
   --color-searchanel-800: #304a66;
   --color-searchanel-900: #212e3d;
 
-  /* Logo */
-  --color-logo-stroke: oklch(0.69 0.15 213.619);
-  --color-logo-dice: oklch(0.704 0.107 211.694);
-  --color-logo-tree-top: oklch(0.754 0.108 208.294);
-  --color-logo-tree-bottom: oklch(0.438 0.086 241.626);
+  /* Logo — палитра VTTG (logo-dark.svg): три вертикальных градиента */
+  --color-logo-stroke-top: #83bdc8;
+  --color-logo-stroke-bottom: #21596a;
+  --color-logo-dice-top: #bfebea;
+  --color-logo-dice-bottom: #296f7b;
+  --color-logo-tree-top: #d9efee;
+  --color-logo-tree-bottom: #6ca8a9;
 }
