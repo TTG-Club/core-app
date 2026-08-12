@@ -32,6 +32,7 @@ import type {
   CharacterInventoryItem,
   CharacterLevelHitPoints,
   CharacterPersonality,
+  CharacterProficiencies,
   CharacterSavingThrow,
   CharacterSettings,
   CharacterSkill,
@@ -69,6 +70,7 @@ import type {
   FeatureOrigin,
   FeatureOriginGroup,
   FeatureTabFilter,
+  GrantedProficiencies,
   GrantedStartingEquipment,
   HitDiceAmount,
   HitDicePool,
@@ -97,6 +99,7 @@ import type {
   PreparedSpellsScaling,
   PrimarySpeed,
   ProficiencyCatalogGroup,
+  ProficiencyGrant,
   ResourceRecovery,
   ResourceRecoveryMode,
   ResourceRecoveryRule,
@@ -127,7 +130,14 @@ import type {
   WeaponDamage,
 } from './types';
 
-import { capitalize, clamp, mapValues, round, upperFirst } from 'es-toolkit';
+import {
+  capitalize,
+  clamp,
+  mapValues,
+  round,
+  union,
+  upperFirst,
+} from 'es-toolkit';
 
 import { LEVELS } from '~/shared/consts';
 import {
@@ -290,6 +300,7 @@ import {
   PREPARED_SPELLS_MAX,
   PREPARED_SPELLS_MIN,
   PREPARED_SPELLS_VALUE_SEPARATOR,
+  PROFICIENCY_SOURCE_PREFIXES,
   RESOURCE_CHARGE_FORMS,
   RESOURCE_COUNT_MAX,
   RESOURCE_RECOVERY_ALL_LABEL,
@@ -6300,7 +6311,200 @@ export function buildFeatFeature(
     level,
     choice: null,
     modifiers: summary.modifiers,
+    proficiencies: summary.proficiencies,
   };
+}
+
+/**
+ * Владения всех выдач одним набором: по нему считается, что на листе держится
+ * выдачами, а что отмечено игроком вручную.
+ *
+ * @param grants записи журнала выдач.
+ * @returns объединение выданного по группам; инструменты — по названиям.
+ */
+function collectGrantedProficiencies(grants: ProficiencyGrant[]): {
+  armor: Set<string>;
+  weapons: Set<string>;
+  tools: Set<string>;
+  languages: Set<string>;
+} {
+  return {
+    armor: new Set(grants.flatMap((grant) => grant.armor)),
+    weapons: new Set(grants.flatMap((grant) => grant.weapons)),
+    // Инструменты сверяются по названию: ссылка на предмет у одной и той же
+    // записи бывает и заполненной, и пустой (свой инструмент игрока).
+    tools: new Set(
+      grants.flatMap((grant) => grant.tools.map(({ name }) => name)),
+    ),
+    languages: new Set(grants.flatMap((grant) => grant.languages)),
+  };
+}
+
+/**
+ * Приведение владений листа к новому журналу выдач: то, что перестал давать
+ * хоть кто-то, снимается — но только если этого не даёт никто из оставшихся;
+ * новое добавляется без дублей.
+ *
+ * Отмеченное игроком вручную не трогается: его в журнале нет, а снимается
+ * только то, что там записано. Обратная сторона — владение, которое игрок
+ * отметил сам, а потом ровно то же выдал класс или черта, уйдёт вместе с ними:
+ * различить эти два случая по одному списку нельзя. Ровно тот же размен уже
+ * сделан у выданного снаряжения ({@link applyStartingEquipmentChange}).
+ *
+ * @param proficiencies владения персонажа.
+ * @param previous журнал выдач до изменения.
+ * @param next журнал выдач после изменения.
+ * @returns владения, согласованные с новым журналом.
+ */
+export function applyProficiencyGrants(
+  proficiencies: CharacterProficiencies,
+  previous: ProficiencyGrant[],
+  next: ProficiencyGrant[],
+): CharacterProficiencies {
+  const before = collectGrantedProficiencies(previous);
+  const after = collectGrantedProficiencies(next);
+
+  return {
+    ...proficiencies,
+    armor: union(dropRevoked(proficiencies.armor, before.armor, after.armor), [
+      ...after.armor,
+    ]),
+    weapons: union(
+      dropRevoked(proficiencies.weapons, before.weapons, after.weapons),
+      [...after.weapons],
+    ),
+    tools: unionToolProficiencies(
+      proficiencies.tools.filter((tool) =>
+        isKeptProficiency(tool.name, before.tools, after.tools),
+      ),
+      next.flatMap((grant) => grant.tools),
+    ),
+    languages: union(
+      dropRevoked(proficiencies.languages, before.languages, after.languages),
+      [...after.languages],
+    ),
+  };
+}
+
+/**
+ * Держится ли владение на листе после смены журнала: то, чего не выдавал никто,
+ * отмечено игроком и остаётся; выданное — только пока его даёт хоть кто-то.
+ *
+ * @param key название владения (у инструментов — их название).
+ * @param before выданное до изменения.
+ * @param after выданное после изменения.
+ * @returns true — владение остаётся на листе.
+ */
+function isKeptProficiency(
+  key: string,
+  before: Set<string>,
+  after: Set<string>,
+): boolean {
+  return !before.has(key) || after.has(key);
+}
+
+/**
+ * Список владений без тех, что перестали выдаваться.
+ *
+ * @param items владения группы.
+ * @param before выданное до изменения.
+ * @param after выданное после изменения.
+ * @returns владения, оставшиеся на листе.
+ */
+function dropRevoked(
+  items: string[],
+  before: Set<string>,
+  after: Set<string>,
+): string[] {
+  return items.filter((item) => isKeptProficiency(item, before, after));
+}
+
+/**
+ * Журнал выдач, подрезанный по владениям листа: из записей уходит то, чего на
+ * листе больше нет.
+ *
+ * Нужно после ручной правки владений. Игрок снял галочку с выданного владения —
+ * значит он его не хочет; оставь запись в журнале, и владение вернулось бы при
+ * ближайшей смене класса или черты, потому что сверка добавляет всё выданное.
+ * Опустевшие записи выпадают целиком.
+ *
+ * @param grants журнал выдач листа.
+ * @param proficiencies владения персонажа после правки.
+ * @returns журнал без того, чего на листе не осталось.
+ */
+export function pruneProficiencyGrants(
+  grants: ProficiencyGrant[],
+  proficiencies: CharacterProficiencies,
+): ProficiencyGrant[] {
+  const armor = new Set(proficiencies.armor);
+  const weapons = new Set(proficiencies.weapons);
+  const languages = new Set(proficiencies.languages);
+  const tools = new Set(proficiencies.tools.map(({ name }) => name));
+
+  return grants.flatMap((grant) => {
+    const pruned: ProficiencyGrant = {
+      source: grant.source,
+      armor: grant.armor.filter((item) => armor.has(item)),
+      weapons: grant.weapons.filter((item) => weapons.has(item)),
+      tools: grant.tools.filter((tool) => tools.has(tool.name)),
+      languages: grant.languages.filter((item) => languages.has(item)),
+    };
+
+    return hasGrantedProficiencies(pruned) ? [pruned] : [];
+  });
+}
+
+/**
+ * Идентификатор источника выдачи для журнала владений.
+ *
+ * @param kind вид источника.
+ * @param key url класса, предыстории или вида либо идентификатор записи умения.
+ * @returns идентификатор источника.
+ */
+export function getProficiencySourceId(
+  kind: keyof typeof PROFICIENCY_SOURCE_PREFIXES,
+  key: string,
+): string {
+  return `${PROFICIENCY_SOURCE_PREFIXES[kind]}${key}`;
+}
+
+/**
+ * Журнал выдач с обновлённой записью источника: прежняя запись заменяется, а
+ * пустая выдача (источник ушёл или ничего не даёт) запись убирает.
+ *
+ * @param grants журнал выдач листа.
+ * @param source идентификатор источника.
+ * @param granted выданные владения; null — источник ничего не выдаёт.
+ * @returns новый журнал выдач.
+ */
+export function withProficiencyGrant(
+  grants: ProficiencyGrant[],
+  source: string,
+  granted: GrantedProficiencies | null,
+): ProficiencyGrant[] {
+  const others = grants.filter((grant) => grant.source !== source);
+
+  if (!granted || !hasGrantedProficiencies(granted)) {
+    return others;
+  }
+
+  return [...others, { ...granted, source }];
+}
+
+/**
+ * Есть ли в наборе хоть одно владение: пустые записи в журнал не попадают —
+ * снимать по ним нечего.
+ *
+ * @param granted набор выданных владений.
+ * @returns true — набор не пуст.
+ */
+function hasGrantedProficiencies(granted: GrantedProficiencies): boolean {
+  return Boolean(
+    granted.armor.length
+    || granted.weapons.length
+    || granted.tools.length
+    || granted.languages.length,
+  );
 }
 
 /**
@@ -6548,14 +6752,45 @@ function withFeatInitiativeBonuses(
 }
 
 /**
+ * Записи журнала выдач от черт листа: по записи на каждую черту со снимком
+ * владений. Как и свои бонусы инициативы, пересобираются целиком — записи
+ * прочих источников (класс, предыстория, вид) остаются нетронутыми.
+ *
+ * @param grants журнал выдач листа.
+ * @param features особенности листа.
+ * @returns журнал, согласованный с чертами.
+ */
+function withFeatProficiencyGrants(
+  grants: ProficiencyGrant[],
+  features: CharacterFeature[],
+): ProficiencyGrant[] {
+  const others = grants.filter(
+    (grant) => !grant.source.startsWith(PROFICIENCY_SOURCE_PREFIXES.feature),
+  );
+
+  const fromFeatures = features.flatMap<ProficiencyGrant>((feature) =>
+    feature.proficiencies
+      ? [
+          {
+            ...feature.proficiencies,
+            source: `${PROFICIENCY_SOURCE_PREFIXES.feature}${feature.id}`,
+          },
+        ]
+      : [],
+  );
+
+  return [...others, ...fromFeatures];
+}
+
+/**
  * Доведение листа до нового набора черт и уровня.
  *
  * Постоянные модификаторы черт лист хранит по-разному, и сверка нужна не всем.
  * КД и скорости считаются на лету — там слагаемое от черт появляется само.
  * Максимум хитов, наоборот, хранится числом и правится игроком вручную, поэтому
  * его прибавка ведётся разницей: иначе пересчёт уровней или смена класса затёрли
- * бы её, а повторное применение начислило бы дважды. Свои бонусы инициативы
- * пересобираются целиком — эта часть сверки идемпотентна.
+ * бы её, а повторное применение начислило бы дважды. Свои бонусы инициативы и
+ * записи журнала выдач пересобираются целиком — эти части сверки идемпотентны.
  *
  * Вызывать нужно везде, где меняется список особенностей или уровень.
  *
@@ -6567,6 +6802,11 @@ export function withFeatModifiers(
   next: Character,
   previous: Pick<Character, 'features' | 'level'>,
 ): Character {
+  const proficiencyGrants = withFeatProficiencyGrants(
+    next.proficiencyGrants,
+    next.features,
+  );
+
   return {
     ...next,
     health: applyFeatHitPoints(next.health, previous, next),
@@ -6577,6 +6817,14 @@ export function withFeatModifiers(
         next.features,
       ),
     },
+    proficiencyGrants,
+    // Прежний журнал ещё лежит в `next`: черты уже сменились, а записи — нет,
+    // поэтому он и служит состоянием «до».
+    proficiencies: applyProficiencyGrants(
+      next.proficiencies,
+      next.proficiencyGrants,
+      proficiencyGrants,
+    ),
   };
 }
 

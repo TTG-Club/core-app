@@ -1004,6 +1004,44 @@ export const CUSTOM_BONUS_BASE_SOURCE_OPTIONS: Array<{
 ];
 
 /**
+ * Категории оружия справочника к группам владения листа. Словарь делит
+ * категории ещё и по дальнобойности, а правила — нет: обе половины воинского
+ * оружия дают одну и ту же группу. Огнестрельное (`FIREARM`, `FUTURISTIC`)
+ * своей группы на листе не имеет и не переводится.
+ */
+export const WEAPON_GROUP_BY_API_CATEGORY: Record<
+  string,
+  WeaponProficiencyGroup['key']
+> = {
+  SIMPLE_MELEE: 'simple',
+  SIMPLE_RANGED: 'simple',
+  MATERIAL_MELEE: 'martial',
+  MATERIAL_RANGED: 'martial',
+};
+
+/** Категории доспехов справочника к группам владения листа. */
+export const ARMOR_GROUP_BY_API_CATEGORY: Record<
+  string,
+  ArmorProficiencyGroup['key']
+> = {
+  LIGHT: 'light',
+  MEDIUM: 'medium',
+  HEAVY: 'heavy',
+  SHIELD: 'shields',
+};
+
+/**
+ * Начало идентификатора источника выдачи владений в журнале листа. Хвост —
+ * url класса, предыстории или вида либо идентификатор записи умения.
+ */
+export const PROFICIENCY_SOURCE_PREFIXES = {
+  class: 'class:',
+  background: 'background:',
+  species: 'species:',
+  feature: 'feature:',
+} as const;
+
+/**
  * Уровень взятия черты происхождения. По правилам 2024 предыстория даёт её на
  * первом уровне — независимо от того, на каком уровне игрок заполнил лист.
  */

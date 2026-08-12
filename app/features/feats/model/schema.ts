@@ -120,10 +120,17 @@ const modifiersSchema = z.object({
   initiativeProficiencyBonus: z.boolean().optional(),
 });
 
+const proficiencyGrantSchema = z.object({
+  weaponCategories: z.array(z.string()).optional(),
+  armorCategories: z.array(z.string()).optional(),
+  tools: z.array(entityRefSchema).optional(),
+});
+
 const mechanicsSchema = z.object({
   abilityBonuses: z.array(abilityBonusSchema).optional(),
   choices: z.array(choiceSchema).optional(),
   modifiers: modifiersSchema.optional(),
+  proficiencies: proficiencyGrantSchema.optional(),
 });
 
 const prerequisiteDetailsSchema = z.object({

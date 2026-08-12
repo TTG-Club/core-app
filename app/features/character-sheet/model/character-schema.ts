@@ -157,6 +157,39 @@ const characterBackgroundSchema = z
   .nullable()
   .catch(null);
 
+// Листы до появления ссылок на инструменты хранят владения строками: такая
+// запись читается без ссылки, а url подставится при следующей правке владений.
+const toolProficiencySchema = z.union([
+  z.string().transform((name) => ({ name, url: null })),
+  z.object({
+    name: z.string().catch(''),
+    url: z.string().nullable().catch(null),
+  }),
+]);
+
+/**
+ * Набор выданных владений. Отдельная схема на два случая: журнал выдач листа и
+ * снимок владений на записи черты.
+ */
+const grantedProficienciesSchema = z.object({
+  armor: z.array(z.string()).catch([]),
+  weapons: z.array(z.string()).catch([]),
+  tools: z.array(toolProficiencySchema).catch([]),
+  languages: z.array(z.string()).catch([]),
+});
+
+/**
+ * Снимок владений, выдаваемых чертой, в записи умения.
+ *
+ * Схема только для документа листа — в отличие от механики, одной на оба
+ * случая: справочник отдаёт владения категориями (`MATERIAL_MELEE`), а лист
+ * хранит записями своего справочника («Всё воинское оружие»), и перевод между
+ * ними делает разбор детали черты в `schemas.ts`.
+ */
+const featProficienciesSchema = grantedProficienciesSchema
+  .nullable()
+  .catch(null);
+
 /** Необязательное число снимка механики: чужое значение просто пропадает. */
 const modifierNumberSchema = z.coerce.number().optional().catch(undefined);
 
@@ -239,6 +272,8 @@ const featureSchema = z.object({
   // Снимок механики черты; у записей до её появления поля нет — такая черта
   // лист не двигает, пока её не добавят заново.
   modifiers: featModifiersSchema,
+  // Снимок выдаваемых чертой владений; у записей до его появления поля нет.
+  proficiencies: featProficienciesSchema,
 });
 
 // Поля своих заклинаний (`custom:<uuid>`) отсутствуют у записей из каталога,
@@ -633,16 +668,6 @@ const classResourceSchema = z
     longRest: toResourceRecoveryRule(longRest, recovery, false),
   }));
 
-// Листы до появления ссылок на инструменты хранят владения строками: такая
-// запись читается без ссылки, а url подставится при следующей правке владений.
-const toolProficiencySchema = z.union([
-  z.string().transform((name) => ({ name, url: null })),
-  z.object({
-    name: z.string().catch(''),
-    url: z.string().nullable().catch(null),
-  }),
-]);
-
 const proficienciesSchema = z
   .object({
     armor: z.array(z.string()).catch([]),
@@ -652,6 +677,24 @@ const proficienciesSchema = z
     languages: z.array(z.string()).catch([]),
   })
   .catch(() => structuredClone(DEFAULT_CHARACTER.proficiencies));
+
+/**
+ * Журнал выдач владений. У листов, сохранённых до его появления, поля нет:
+ * пустой журнал означает, что все владения отмечены вручную и снятие источника
+ * их не трогает — ровно прежнее поведение листа.
+ *
+ * Запись без источника бессмысленна (снять по ней нечего), поэтому `source`
+ * обязателен, а битая запись выпадает поодиночке.
+ */
+const proficiencyGrantsSchema = z
+  .array(
+    grantedProficienciesSchema
+      .extend({ source: z.string() })
+      .nullable()
+      .catch(null),
+  )
+  .catch([])
+  .transform((grants) => grants.filter((grant) => grant !== null));
 
 const currencySchema = z
   .object({
@@ -1057,6 +1100,7 @@ const characterSchema = z
     extraHitDice: z.array(extraHitDieSchema).catch([]),
     classResources: z.array(classResourceSchema).catch([]),
     proficiencies: proficienciesSchema,
+    proficiencyGrants: proficiencyGrantsSchema,
     currency: currencySchema,
     customCurrencies: z.array(customCurrencySchema).catch([]),
     inventory: z.array(inventoryItemSchema).catch([]),
