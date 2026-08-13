@@ -8,6 +8,7 @@
   import { FilterControls, useFilter } from '~infrastructure/filter';
   import { SourceBody } from '~sources/body';
   import { SourceLink } from '~sources/link';
+  import { getSourceMarkdown } from '~sources/types';
   import { UiDetailPane } from '~ui/detail-pane';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkBig } from '~ui/skeleton';
@@ -101,6 +102,8 @@
     apiBasePath: '/api/v2/source',
     items: sources,
   });
+
+  const markdown = useEntityMarkdown(detailSource, getSourceMarkdown);
 </script>
 
 <template>
@@ -169,6 +172,7 @@
         :date-time="detailSource?.updatedAt"
         :url="detailUrlForCopy"
         :edit-url="detailEditUrl"
+        :markdown
         :is-loading="isDetailLoading"
         :is-error="isDetailError"
         copy-title

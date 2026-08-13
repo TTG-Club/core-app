@@ -7,6 +7,7 @@
   import { FilterControls, useFilter } from '~infrastructure/filter';
   import { SpeciesBody } from '~species/body';
   import { SpeciesLink } from '~species/link';
+  import { getSpeciesMarkdown } from '~species/model';
   import { UiDetailPane } from '~ui/detail-pane';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkBig } from '~ui/skeleton';
@@ -59,6 +60,8 @@
     items: data,
     getParentUrl: (detail) => detail.parent?.url ?? detail.species?.url,
   });
+
+  const markdown = useEntityMarkdown(detailSpecies, getSpeciesMarkdown);
 </script>
 
 <template>
@@ -115,6 +118,7 @@
         :date-time="detailSpecies?.updatedAt"
         :url="detailUrlForCopy"
         :edit-url="detailEditUrl"
+        :markdown
         :is-loading="isDetailLoading"
         :is-error="isDetailError"
         :back-to="

@@ -17,6 +17,7 @@
   import { SpellLegend } from '~spells/legend';
   import { SpellLink } from '~spells/link';
   import {
+    getSpellMarkdown,
     SPELL_LIST_LOAD_MORE_DISTANCE,
     SPELL_LIST_PAGE_SIZE,
     SPELL_LIST_PRESENTATION_CONFIG,
@@ -95,6 +96,8 @@
     apiBasePath: '/api/v2/spells',
     items: visibleSpells,
   });
+
+  const markdown = useEntityMarkdown(detailSpell, getSpellMarkdown);
 
   // Динамический таргет для бесконечного скролла
   // В стандартном режиме — window с большим distance (900px),
@@ -448,6 +451,7 @@
         :date-time="detailSpell?.updatedAt"
         :url="detailUrlForCopy"
         :edit-url="detailEditUrl"
+        :markdown
         :is-loading="isDetailLoading"
         :is-error="isDetailError"
         copy-title
