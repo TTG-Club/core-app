@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import {
   CasterType,
   FULL_CASTER_SPELL_SLOTS,
+  getClassProficiencyBonus,
   HALF_CASTER_SPELL_SLOTS,
   THIRD_CASTER_SPELL_SLOTS,
 } from '../../../model';
@@ -13,10 +14,6 @@ interface UseDndMechanicsOptions {
 
 export function useDndMechanics(options: UseDndMechanicsOptions) {
   const { casterType } = options;
-
-  function getProficiencyBonus(level: number): number {
-    return Math.ceil(level / 4) + 1;
-  }
 
   const spellSlots = computed(() => {
     const type = toValue(casterType);
@@ -53,6 +50,6 @@ export function useDndMechanics(options: UseDndMechanicsOptions) {
     isPactSpellcaster,
     isRegularSpellcaster,
 
-    getProficiencyBonus,
+    getProficiencyBonus: getClassProficiencyBonus,
   };
 }

@@ -5,6 +5,7 @@
   } from '~backgrounds/model';
 
   import { BackgroundBody } from '~backgrounds/body';
+  import { getBackgroundMarkdown } from '~backgrounds/model';
   import { UiDrawer } from '~ui/drawer';
 
   const opened = defineModel<boolean>('open', { required: true });
@@ -34,6 +35,8 @@
   const isLoading = computed(() => status.value === 'pending');
   const isError = computed(() => status.value === 'error');
 
+  const markdown = useEntityMarkdown(background, getBackgroundMarkdown);
+
   whenever(opened, () => {
     clear();
     loadPreview();
@@ -49,6 +52,7 @@
     :source="background?.source"
     :is-loading
     :is-error
+    :markdown
     width="100%"
     @close="opened = false"
   >

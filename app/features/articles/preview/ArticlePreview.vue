@@ -4,7 +4,7 @@
   import { UiDrawer } from '~ui/drawer';
 
   import { ArticleBody } from '../body';
-  import { ARTICLES_API_PATH } from '../model';
+  import { ARTICLES_API_PATH, getArticleMarkdown } from '../model';
 
   const opened = defineModel<boolean>('open', { required: true });
 
@@ -33,6 +33,8 @@
   const isLoading = computed(() => status.value === 'pending');
   const isError = computed(() => status.value === 'error');
 
+  const markdown = useEntityMarkdown(article, getArticleMarkdown);
+
   whenever(opened, () => {
     clear();
     loadPreview();
@@ -47,6 +49,7 @@
     :title="article?.title"
     :is-loading
     :is-error
+    :markdown
     width="100%"
     @close="opened = false"
   >

@@ -2,6 +2,7 @@
   import type { FeatCreate, FeatDetailResponse } from '~feats/model';
 
   import { FeatBody } from '~feats/body';
+  import { getFeatMarkdown } from '~feats/model';
   import { UiDrawer } from '~ui/drawer';
 
   const opened = defineModel<boolean>('open', { required: true });
@@ -31,6 +32,8 @@
   const isLoading = computed(() => status.value === 'pending');
   const isError = computed(() => status.value === 'error');
 
+  const markdown = useEntityMarkdown(feat, getFeatMarkdown);
+
   whenever(opened, () => {
     clear();
     loadPreview();
@@ -46,6 +49,7 @@
     :source="feat?.source"
     :is-loading
     :is-error
+    :markdown
     width="100%"
     @close="opened = false"
   >
