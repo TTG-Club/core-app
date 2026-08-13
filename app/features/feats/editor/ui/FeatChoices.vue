@@ -7,13 +7,24 @@
     createFeatChoice,
     createSpellFilter,
     FEAT_CASTING_TIME_OPTIONS,
+    FEAT_CHOICE_GRANT_OPTIONS,
     FEAT_CHOICE_TYPE_OPTIONS,
+    PROFICIENCY_FEAT_CHOICE_TYPES,
     SPELL_FEAT_CHOICE_TYPES,
   } from '../../model';
 
   /** Нужен ли выбору фильтр заклинаний. */
   function isSpellChoice(choice: FeatChoice): boolean {
     return !!choice.type && SPELL_FEAT_CHOICE_TYPES.includes(choice.type);
+  }
+
+  /**
+   * Есть ли у выбираемого уровень владения. Только тогда осмысленны исход
+   * «компетентность» и ограничения пула: у заклинания или типа урона владения
+   * нет, и эти поля лишь путали бы.
+   */
+  function isProficiencyChoice(choice: FeatChoice): boolean {
+    return !!choice.type && PROFICIENCY_FEAT_CHOICE_TYPES.includes(choice.type);
   }
 
   const model = defineModel<Array<FeatChoice>>({ default: () => [] });
@@ -39,6 +50,47 @@
     patchChoice(index, {
       spellFilter: enabled === true ? createSpellFilter() : undefined,
     });
+  }
+
+  /**
+   * Ограничения пула взаимно исключают друг друга: вместе они не оставляют, из
+   * чего выбирать, поэтому включение одного снимает второе.
+   *
+   * @param index номер выбора в списке.
+   * @param enabled новое значение отметки.
+   */
+  function toggleOnlyIfProficient(
+    index: number,
+    enabled: boolean | 'indeterminate',
+  ) {
+    const isEnabled = enabled === true;
+
+    patchChoice(
+      index,
+      isEnabled
+        ? { onlyIfProficient: true, onlyIfNotProficient: false }
+        : { onlyIfProficient: false },
+    );
+  }
+
+  /**
+   * Обратная отметка пула — с тем же взаимным исключением.
+   *
+   * @param index номер выбора в списке.
+   * @param enabled новое значение отметки.
+   */
+  function toggleOnlyIfNotProficient(
+    index: number,
+    enabled: boolean | 'indeterminate',
+  ) {
+    const isEnabled = enabled === true;
+
+    patchChoice(
+      index,
+      isEnabled
+        ? { onlyIfNotProficient: true, onlyIfProficient: false }
+        : { onlyIfNotProficient: false },
+    );
   }
 </script>
 
@@ -130,19 +182,48 @@
         <UCheckbox v-model="choice.countEqualsProficiencyBonus" />
       </UFormField>
 
-      <UFormField
-        class="col-span-12 md:col-span-4"
-        label="Только без владения"
-      >
-        <UCheckbox v-model="choice.onlyIfNotProficient" />
-      </UFormField>
+      <!-- Уровень владения есть только у навыков, инструментов и спасбросков:
+        у заклинания или типа урона выбирать между владением и компетентностью
+        не из чего -->
+      <template v-if="isProficiencyChoice(choice)">
+        <UFormField
+          class="col-span-12 md:col-span-6"
+          label="Что даёт выбор"
+        >
+          <USelectMenu
+            v-model="choice.grants"
+            :items="FEAT_CHOICE_GRANT_OPTIONS"
+            value-key="value"
+          />
+        </UFormField>
 
-      <UFormField
-        class="col-span-12 md:col-span-5"
-        label="Владеет — компетентность"
-      >
-        <UCheckbox v-model="choice.expertiseIfProficient" />
-      </UFormField>
+        <UFormField
+          class="col-span-12 md:col-span-4"
+          label="Только без владения"
+        >
+          <UCheckbox
+            :model-value="choice.onlyIfNotProficient"
+            @update:model-value="toggleOnlyIfNotProficient(index, $event)"
+          />
+        </UFormField>
+
+        <UFormField
+          class="col-span-12 md:col-span-4"
+          label="Только с владением"
+        >
+          <UCheckbox
+            :model-value="choice.onlyIfProficient"
+            @update:model-value="toggleOnlyIfProficient(index, $event)"
+          />
+        </UFormField>
+
+        <UFormField
+          class="col-span-12 md:col-span-5"
+          label="Владеет — компетентность"
+        >
+          <UCheckbox v-model="choice.expertiseIfProficient" />
+        </UFormField>
+      </template>
 
       <UFormField
         class="col-span-12 md:col-span-5"

@@ -26,6 +26,25 @@ export const FEAT_CHOICE_TYPE_OPTIONS: Array<SelectOption> = [
   { label: 'Вариант из описания', value: 'OPTION' },
 ];
 
+/**
+ * Что даёт сделанный выбор. Компетентность удваивает бонус мастерства, поэтому
+ * это отдельный исход, а не «владение посильнее».
+ */
+export const FEAT_CHOICE_GRANT_OPTIONS: Array<SelectOption> = [
+  { label: 'Владение', value: 'PROFICIENCY' },
+  { label: 'Компетентность', value: 'EXPERTISE' },
+];
+
+/**
+ * Типы выборов, у которых есть уровень владения: только им осмысленны исход
+ * «компетентность» и ограничения пула по уже имеющемуся владению.
+ */
+export const PROFICIENCY_FEAT_CHOICE_TYPES: Array<FeatChoiceType> = [
+  'SKILL',
+  'TOOL',
+  'SAVING_THROW',
+];
+
 /** Типы выборов, которым нужен фильтр заклинаний. */
 export const SPELL_FEAT_CHOICE_TYPES: Array<FeatChoiceType> = [
   'SPELL',
