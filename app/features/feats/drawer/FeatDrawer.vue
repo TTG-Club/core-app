@@ -27,13 +27,7 @@
   const urlForCopy = computed(() => `${getOrigin()}/feats/${url}`);
   const editUrl = computed(() => `/workshop/feats/${url}`);
 
-  // Геттер, а не готовая строка: сборка Markdown разбирает всю
-  // разметку сущности, поэтому откладывается до клика по кнопке.
-  const markdown = computed(() => {
-    const entity = detail.value;
-
-    return entity ? () => getFeatMarkdown(entity) : undefined;
-  });
+  const markdown = useEntityMarkdown(detail, getFeatMarkdown);
 </script>
 
 <template>

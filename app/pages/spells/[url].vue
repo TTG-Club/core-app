@@ -22,13 +22,7 @@
 
   const editUrl = computed(() => `/workshop/spells/${route.params.url}`);
 
-  // Геттер, а не готовая строка: сборка Markdown разбирает всю
-  // разметку сущности, поэтому откладывается до клика по кнопке.
-  const markdown = computed(() => {
-    const entity = spell.value;
-
-    return entity ? () => getSpellMarkdown(entity) : undefined;
-  });
+  const markdown = useEntityMarkdown(spell, getSpellMarkdown);
 
   function getSeoTitle() {
     if (!spell.value) {

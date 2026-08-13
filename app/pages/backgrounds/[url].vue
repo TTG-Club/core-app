@@ -17,13 +17,7 @@
       ),
   );
 
-  // Геттер, а не готовая строка: сборка Markdown разбирает всю
-  // разметку сущности, поэтому откладывается до клика по кнопке.
-  const markdown = computed(() => {
-    const entity = background.value;
-
-    return entity ? () => getBackgroundMarkdown(entity) : undefined;
-  });
+  const markdown = useEntityMarkdown(background, getBackgroundMarkdown);
 
   useSeoMeta({
     title: getSeoTitle,

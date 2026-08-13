@@ -27,13 +27,7 @@
   const urlForCopy = computed(() => `${getOrigin()}/species/${url}`);
   const editUrl = computed(() => `/workshop/species/${url}`);
 
-  // Геттер, а не готовая строка: сборка Markdown разбирает всю
-  // разметку сущности, поэтому откладывается до клика по кнопке.
-  const markdown = computed(() => {
-    const entity = detail.value;
-
-    return entity ? () => getSpeciesMarkdown(entity) : undefined;
-  });
+  const markdown = useEntityMarkdown(detail, getSpeciesMarkdown);
 </script>
 
 <template>

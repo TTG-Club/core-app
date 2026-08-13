@@ -14,13 +14,7 @@
     () => $fetch<SourceDetailResponse>(`/api/v2/source/${route.params.url}`),
   );
 
-  // Геттер, а не готовая строка: сборка Markdown разбирает всю
-  // разметку сущности, поэтому откладывается до клика по кнопке.
-  const markdown = computed(() => {
-    const entity = source.value;
-
-    return entity ? () => getSourceMarkdown(entity) : undefined;
-  });
+  const markdown = useEntityMarkdown(source, getSourceMarkdown);
 
   useSeoMeta({
     title: getSeoTitle,

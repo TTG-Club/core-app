@@ -27,13 +27,7 @@
   const urlForCopy = computed(() => `${getOrigin()}/backgrounds/${url}`);
   const editUrl = computed(() => `/workshop/backgrounds/${url}`);
 
-  // Геттер, а не готовая строка: сборка Markdown разбирает всю
-  // разметку сущности, поэтому откладывается до клика по кнопке.
-  const markdown = computed(() => {
-    const entity = detail.value;
-
-    return entity ? () => getBackgroundMarkdown(entity) : undefined;
-  });
+  const markdown = useEntityMarkdown(detail, getBackgroundMarkdown);
 </script>
 
 <template>

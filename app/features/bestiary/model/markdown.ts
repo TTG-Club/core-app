@@ -251,7 +251,10 @@ function getLair(creature: CreatureDetailResponse): string {
 function getSection(creature: CreatureDetailResponse): string {
   const { section } = creature;
 
-  if (!section.description?.length) {
+  // Хватает любого из трёх полей — то же условие, что и у блока на странице
+  // существа: описание бывает пустым, а места обитания с сокровищами
+  // указаны.
+  if (!section.description?.length && !section.habitats && !section.treasures) {
     return '';
   }
 

@@ -20,13 +20,7 @@
     $fetch<SpeciesDetailResponse>(`/api/v2/species/${url}`),
   );
 
-  // Геттер, а не готовая строка: сборка Markdown разбирает всю
-  // разметку сущности, поэтому откладывается до клика по кнопке.
-  const markdown = computed(() => {
-    const entity = species.value;
-
-    return entity ? () => getSpeciesMarkdown(entity) : undefined;
-  });
+  const markdown = useEntityMarkdown(species, getSpeciesMarkdown);
 
   useSeoMeta({
     title: getSeoTitle,
