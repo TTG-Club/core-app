@@ -6551,9 +6551,13 @@ function getFeatureHitPointsBonus(
 
   // Уровень взятия не записан (лист собран до его учёта) — считаем черту
   // взятой сейчас: слагаемое «за уровни после взятия» тогда обнуляется.
-  const acquisitionLevel = feature.level ?? level;
+  //
+  // Выше текущего уровня взятие не поднимается: снятые уровни забирают черты за
+  // классовое улучшение характеристик, но не взятую вручную, и без этого предела
+  // «Крепкий», взятый на 12 уровне, держал бы +24 и на третьем.
+  const acquisitionLevel = Math.min(feature.level ?? level, level);
 
-  const levelsAfter = Math.max(0, level - acquisitionLevel);
+  const levelsAfter = level - acquisitionLevel;
 
   return (
     (hitPoints.flat ?? 0)
@@ -6715,6 +6719,18 @@ function getGrantedSpeed(
 }
 
 /**
+ * Заведён ли свой бонус чертой листа. Такие записи пересобирает сверка
+ * (`withFeatModifiers`), поэтому править и удалять их вручную нечего: правка
+ * вернулась бы назад при ближайшей смене черт — форма их и не даёт трогать.
+ *
+ * @param bonus свой бонус листа.
+ * @returns true — запись завела черта.
+ */
+export function isFeatCustomBonus(bonus: CharacterCustomBonus): boolean {
+  return bonus.id.startsWith(FEAT_CUSTOM_BONUS_ID_PREFIX);
+}
+
+/**
  * Свои бонусы инициативы, заведённые чертами листа: по записи на каждую черту с
  * флагом `initiativeProficiencyBonus` («Бдительный»). Сверка идемпотентна —
  * заведённые чертами записи пересобираются целиком, а добавленные игроком
@@ -6728,9 +6744,7 @@ function withFeatInitiativeBonuses(
   bonuses: CharacterCustomBonus[],
   features: CharacterFeature[],
 ): CharacterCustomBonus[] {
-  const manual = bonuses.filter(
-    (bonus) => !bonus.id.startsWith(FEAT_CUSTOM_BONUS_ID_PREFIX),
-  );
+  const manual = bonuses.filter((bonus) => !isFeatCustomBonus(bonus));
 
   const fromFeats = features
     .filter((feature) => feature.modifiers?.initiativeProficiencyBonus)
@@ -6773,7 +6787,7 @@ function withFeatProficiencyGrants(
       ? [
           {
             ...feature.proficiencies,
-            source: `${PROFICIENCY_SOURCE_PREFIXES.feature}${feature.id}`,
+            source: getProficiencySourceId('feature', feature.id),
           },
         ]
       : [],

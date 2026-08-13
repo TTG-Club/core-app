@@ -10,6 +10,7 @@
     getCustomBonusSource,
     getCustomBonusValue,
     getFormattedBonus,
+    isFeatCustomBonus,
     NEW_CUSTOM_BONUS,
     SHEET_SETTINGS_LABELS,
     withCustomBonusSource,
@@ -85,10 +86,13 @@
       :key="row.id"
       class="flex flex-wrap items-center gap-2"
     >
+      <!-- Строку от черты лист ведёт сам: подпись — название черты, источник
+        задан её механикой, поэтому поля показаны, но заперты -->
       <UInput
         v-model="row.label"
         :maxlength="CUSTOM_BONUS_LABEL_MAX_LENGTH"
         :placeholder="SHEET_SETTINGS_LABELS.customBonusLabelPlaceholder"
+        :disabled="isFeatCustomBonus(row)"
         class="min-w-0 grow basis-40"
       />
 
@@ -96,6 +100,7 @@
         :model-value="getCustomBonusSource(row)"
         :items="sourceItems"
         :placeholder="SHEET_SETTINGS_LABELS.customBonusSourcePlaceholder"
+        :disabled="isFeatCustomBonus(row)"
         class="min-w-0 grow basis-32"
         @update:model-value="handleSource(row.id, $event)"
       />
@@ -119,9 +124,26 @@
         {{ getComputedValue(row) }}
       </span>
 
+      <!-- Замок вместо корзины: запись снимается вместе с чертой, а не отсюда.
+        Иконка, а не запертая кнопка, — у выключенной кнопки нет наведения, и
+        подсказка с объяснением до игрока не дошла бы -->
+      <UTooltip
+        v-if="isFeatCustomBonus(row)"
+        :text="SHEET_SETTINGS_LABELS.customBonusFromFeat"
+      >
+        <UIcon
+          name="tabler:lock"
+          class="mx-1.5 size-5 shrink-0 text-dimmed"
+          :aria-label="SHEET_SETTINGS_LABELS.customBonusFromFeat"
+        />
+      </UTooltip>
+
       <!-- Корзина красная, как и во всех остальных списках листа: заметки,
         валюты, ресурсы класса -->
-      <UTooltip :text="SHEET_SETTINGS_LABELS.customBonusRemove">
+      <UTooltip
+        v-else
+        :text="SHEET_SETTINGS_LABELS.customBonusRemove"
+      >
         <UButton
           icon="tabler:trash"
           color="error"
