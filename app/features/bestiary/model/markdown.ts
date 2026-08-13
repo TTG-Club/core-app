@@ -151,13 +151,14 @@ function toParenthesized(value: string | undefined | null): string {
 function getAbilitiesTable(abilities: CreatureAbilitiesResponse): string {
   const rows = ABILITY_LABELS.filter(([key]) => abilities[key]).map(
     ([key, label]) => {
-      const { value, mod, sav } = abilities[key];
+      // Поля ответа названы сокращённо, поэтому переименовываются на месте.
+      const { value, mod: modifier, sav: save } = abilities[key];
 
       const cells = [
         label,
         escapeMarkdownCell(value),
-        escapeMarkdownCell(mod),
-        escapeMarkdownCell(sav),
+        escapeMarkdownCell(modifier),
+        escapeMarkdownCell(save),
       ];
 
       return `| ${cells.join(' | ')} |`;

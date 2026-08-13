@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { ButtonProps } from '@nuxt/ui';
 
+  import { COPY_BUTTON_LABELS } from './constants';
+
   const { text, size = undefined } = defineProps<{
     /**
      * Геттер Markdown-текста: сборка сущности разбирает всю её разметку,
@@ -12,13 +14,20 @@
 
   const { copy } = useCopyAndShare();
 
-  function copyMarkdown() {
-    copy(text());
+  /**
+   * Геттер уходит в `copy` как есть — она сама его вызовет через `toValue`.
+   *
+   * Промис возвращается наружу, а не теряется: `copy` бросает после того,
+   * как показала тост, и Vue гасит отказ обработчика сам. Потерянный промис
+   * всплыл бы необработанным отказом.
+   */
+  async function copyMarkdown(): Promise<void> {
+    await copy(text);
   }
 </script>
 
 <template>
-  <UTooltip text="Скопировать как Markdown">
+  <UTooltip :text="COPY_BUTTON_LABELS.markdown">
     <UButton
       icon="tabler:markdown"
       variant="ghost"
