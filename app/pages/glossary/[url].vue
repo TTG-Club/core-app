@@ -2,6 +2,7 @@
   import type { GlossaryDetailResponse } from '~glossary/model';
 
   import { GlossaryBody } from '~glossary/body';
+  import { getGlossaryMarkdown } from '~glossary/model';
   import { PageActions } from '~ui/page';
 
   const route = useRoute();
@@ -13,6 +14,14 @@
     () =>
       $fetch<GlossaryDetailResponse>(`/api/v2/glossary/${route.params.url}`),
   );
+
+  // Геттер, а не готовая строка: сборка Markdown разбирает всю
+  // разметку сущности, поэтому откладывается до клика по кнопке.
+  const markdown = computed(() => {
+    const entity = glossary.value;
+
+    return entity ? () => getGlossaryMarkdown(entity) : undefined;
+  });
 
   useSeoMeta({
     title: getSeoTitle,
@@ -56,6 +65,7 @@
       <PageActions
         :edit-url="editUrl"
         :close-url="{ name: 'glossary' }"
+        :markdown
       />
     </template>
 

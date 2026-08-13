@@ -2,6 +2,7 @@
   import type { FeatDetailResponse } from '~feats/model';
 
   import { FeatBody } from '~feats/body';
+  import { getFeatMarkdown } from '~feats/model';
   import { PageActions } from '~ui/page';
 
   const route = useRoute();
@@ -11,6 +12,14 @@
   const { data: feat } = await useAsyncData(`feat-${route.params.url}`, () =>
     $fetch<FeatDetailResponse>(`/api/v2/feats/${route.params.url}`),
   );
+
+  // Геттер, а не готовая строка: сборка Markdown разбирает всю
+  // разметку сущности, поэтому откладывается до клика по кнопке.
+  const markdown = computed(() => {
+    const entity = feat.value;
+
+    return entity ? () => getFeatMarkdown(entity) : undefined;
+  });
 
   useSeoMeta({
     title: getSeoTitle,
@@ -54,6 +63,7 @@
       <PageActions
         :edit-url="editUrl"
         :close-url="{ name: 'feats' }"
+        :markdown
       />
     </template>
 

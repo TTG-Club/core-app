@@ -2,6 +2,7 @@
   import type { SpeciesDetailResponse } from '~species/model';
 
   import { SpeciesBody } from '~species/body';
+  import { getSpeciesMarkdown } from '~species/model';
   import { PageActions } from '~ui/page';
   import { UiResult } from '~ui/result';
 
@@ -18,6 +19,14 @@
   } = await useAsyncData(`species-${url}`, () =>
     $fetch<SpeciesDetailResponse>(`/api/v2/species/${url}`),
   );
+
+  // Геттер, а не готовая строка: сборка Markdown разбирает всю
+  // разметку сущности, поэтому откладывается до клика по кнопке.
+  const markdown = computed(() => {
+    const entity = species.value;
+
+    return entity ? () => getSpeciesMarkdown(entity) : undefined;
+  });
 
   useSeoMeta({
     title: getSeoTitle,
@@ -74,6 +83,7 @@
       <PageActions
         :edit-url="editUrl"
         :close-url="{ name: 'species' }"
+        :markdown
       />
     </template>
 

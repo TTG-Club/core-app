@@ -2,6 +2,7 @@
   import type { MagicItemDetailResponse } from '~magic-items/model';
 
   import { MagicItemBody } from '~magic-items/body';
+  import { getMagicItemMarkdown } from '~magic-items/model';
   import { PageActions } from '~ui/page';
 
   const route = useRoute();
@@ -15,6 +16,14 @@
         `/api/v2/magic-items/${route.params.url}`,
       ),
   );
+
+  // Геттер, а не готовая строка: сборка Markdown разбирает всю
+  // разметку сущности, поэтому откладывается до клика по кнопке.
+  const markdown = computed(() => {
+    const entity = magicItem.value;
+
+    return entity ? () => getMagicItemMarkdown(entity) : undefined;
+  });
 
   useSeoMeta({
     title: getSeoTitle,
@@ -60,6 +69,7 @@
       <PageActions
         :edit-url="editUrl"
         :close-url="{ name: 'magic-items' }"
+        :markdown
       />
     </template>
 

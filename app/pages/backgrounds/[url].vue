@@ -2,6 +2,7 @@
   import type { BackgroundDetailResponse } from '~backgrounds/model';
 
   import { BackgroundBody } from '~backgrounds/body';
+  import { getBackgroundMarkdown } from '~backgrounds/model';
   import { PageActions } from '~ui/page';
 
   const route = useRoute();
@@ -15,6 +16,14 @@
         `/api/v2/backgrounds/${route.params.url}`,
       ),
   );
+
+  // Геттер, а не готовая строка: сборка Markdown разбирает всю
+  // разметку сущности, поэтому откладывается до клика по кнопке.
+  const markdown = computed(() => {
+    const entity = background.value;
+
+    return entity ? () => getBackgroundMarkdown(entity) : undefined;
+  });
 
   useSeoMeta({
     title: getSeoTitle,
@@ -59,6 +68,7 @@
       <PageActions
         :edit-url="editUrl"
         :close-url="{ name: 'backgrounds' }"
+        :markdown
       />
     </template>
 

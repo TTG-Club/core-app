@@ -2,6 +2,7 @@
   import type { ItemDetailResponse } from '~items/model';
 
   import { ItemBody } from '~items/body';
+  import { getItemMarkdown } from '~items/model';
   import { PageActions } from '~ui/page';
 
   const route = useRoute();
@@ -11,6 +12,14 @@
   const { data: item } = await useAsyncData(`item-${route.params.url}`, () =>
     $fetch<ItemDetailResponse>(`/api/v2/item/${route.params.url}`),
   );
+
+  // Геттер, а не готовая строка: сборка Markdown разбирает всю
+  // разметку сущности, поэтому откладывается до клика по кнопке.
+  const markdown = computed(() => {
+    const entity = item.value;
+
+    return entity ? () => getItemMarkdown(entity) : undefined;
+  });
 
   useSeoMeta({
     title: getSeoTitle,
@@ -55,6 +64,7 @@
       <PageActions
         :edit-url="editUrl"
         :close-url="{ name: 'items' }"
+        :markdown
       />
     </template>
 

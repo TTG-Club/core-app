@@ -2,6 +2,7 @@
   import type { CreatureDetailResponse } from '~bestiary/model';
 
   import { CreatureBody } from '~bestiary/body';
+  import { getCreatureMarkdown } from '~bestiary/model';
   import { PageActions } from '~ui/page';
 
   const route = useRoute();
@@ -13,6 +14,14 @@
     () =>
       $fetch<CreatureDetailResponse>(`/api/v2/bestiary/${route.params.url}`),
   );
+
+  // Геттер, а не готовая строка: сборка Markdown разбирает всю
+  // разметку сущности, поэтому откладывается до клика по кнопке.
+  const markdown = computed(() => {
+    const entity = creature.value;
+
+    return entity ? () => getCreatureMarkdown(entity) : undefined;
+  });
 
   useSeoMeta({
     title: getSeoTitle,
@@ -57,6 +66,7 @@
       <PageActions
         :edit-url="editUrl"
         :close-url="{ name: 'bestiary' }"
+        :markdown
       />
     </template>
 
