@@ -11,6 +11,7 @@ import type {
   CurrencyKey,
   CustomArmorType,
   CustomArmorTypeMeta,
+  CustomBonusBaseSource,
   CustomBonusKind,
   CustomBonusSource,
   CustomInventoryItemDraft,
@@ -720,6 +721,7 @@ export const ARMOR_CLASS_LABELS: Record<
   | 'dexCappedOf'
   | 'shieldTitle'
   | 'itemTitle'
+  | 'featTitle'
   | 'totalTitle'
   | 'equipmentHint',
   string
@@ -755,6 +757,7 @@ export const ARMOR_CLASS_LABELS: Record<
   dexCappedOf: 'из',
   shieldTitle: 'Щит',
   itemTitle: 'Магические предметы',
+  featTitle: 'Черты',
   totalTitle: 'Итоговый КД',
   equipmentHint:
     'Надевайте доспехи и щит на вкладке «Снаряжение» — в зачёт идёт доспех с наибольшим КД, щит складывается сверху.',
@@ -857,6 +860,10 @@ export const SHEET_SETTINGS_LABELS = {
   customBonusRemove: 'Удалить бонус',
   customBonusLabelPlaceholder: 'Откуда бонус',
   customBonusSourcePlaceholder: 'Источник',
+  // Запись от черты лист ведёт сам: правку вернула бы ближайшая сверка черт,
+  // поэтому строка показана, но заперта — и подсказка говорит, как её убрать.
+  customBonusFromFeat:
+    'Бонус даёт черта — уберите её на вкладке особенностей, чтобы снять',
   levelProficiencyBonusTitle: 'По уровню',
   // Полные подписи итогов в плитку не влезают, поэтому на ней короткое «Итог»,
   // а полная подпись уходит в подсказку.
@@ -957,23 +964,99 @@ export const SKILL_DUPLICATE_WARNING =
 export const CUSTOM_BONUS_KIND_LABELS: Record<CustomBonusKind, string> = {
   ability: 'Характеристика',
   flat: 'Своё число',
+  proficiency: 'Бонус мастерства',
 };
 
 /** Источник своего бонуса «своё число» в общем селекторе источников. */
 export const CUSTOM_BONUS_FLAT_SOURCE = 'flat';
 
+/** Источник своего бонуса «бонус мастерства» в общем селекторе источников. */
+export const CUSTOM_BONUS_PROFICIENCY_SOURCE = 'proficiency';
+
 /**
- * Варианты источника своего бонуса: своё число и все характеристики одним
- * списком — так строка бонуса обходится одним селектором вместо пары
- * «вид + характеристика».
+ * Варианты источника своего бонуса: своё число, бонус мастерства и все
+ * характеристики одним списком — так строка бонуса обходится одним селектором
+ * вместо пары «вид + характеристика».
  */
 export const CUSTOM_BONUS_SOURCE_OPTIONS: Array<{
   label: string;
   value: CustomBonusSource;
 }> = [
   { label: CUSTOM_BONUS_KIND_LABELS.flat, value: CUSTOM_BONUS_FLAT_SOURCE },
+  {
+    label: CUSTOM_BONUS_KIND_LABELS.proficiency,
+    value: CUSTOM_BONUS_PROFICIENCY_SOURCE,
+  },
   ...ABILITY_OPTIONS,
 ];
+
+/**
+ * Варианты источника ОСНОВЫ инициативы: своё число и все характеристики. От
+ * списка источников бонуса отличается отсутствием бонуса мастерства — он бывает
+ * только прибавкой сверх основы («Бдительный»), а не самой основой броска.
+ *
+ * Тот же список подходит и своим бонусам САМОГО бонуса мастерства: слагаемым
+ * себе он быть не может, иначе подсчёт ушёл бы в бесконечную рекурсию (см.
+ * `getCharacterProficiencyBonus`).
+ */
+export const CUSTOM_BONUS_BASE_SOURCE_OPTIONS: Array<{
+  label: string;
+  value: CustomBonusBaseSource;
+}> = [
+  { label: CUSTOM_BONUS_KIND_LABELS.flat, value: CUSTOM_BONUS_FLAT_SOURCE },
+  ...ABILITY_OPTIONS,
+];
+
+/**
+ * Категории оружия справочника к группам владения листа. Словарь делит
+ * категории ещё и по дальнобойности, а правила — нет: обе половины воинского
+ * оружия дают одну и ту же группу. Огнестрельное (`FIREARM`, `FUTURISTIC`)
+ * своей группы на листе не имеет и не переводится.
+ */
+export const WEAPON_GROUP_BY_API_CATEGORY: Record<
+  string,
+  WeaponProficiencyGroup['key']
+> = {
+  SIMPLE_MELEE: 'simple',
+  SIMPLE_RANGED: 'simple',
+  MATERIAL_MELEE: 'martial',
+  MATERIAL_RANGED: 'martial',
+};
+
+/** Категории доспехов справочника к группам владения листа. */
+export const ARMOR_GROUP_BY_API_CATEGORY: Record<
+  string,
+  ArmorProficiencyGroup['key']
+> = {
+  LIGHT: 'light',
+  MEDIUM: 'medium',
+  HEAVY: 'heavy',
+  SHIELD: 'shields',
+};
+
+/**
+ * Начало идентификатора источника выдачи владений в журнале листа. Хвост —
+ * url класса, предыстории или вида либо идентификатор записи умения.
+ */
+export const PROFICIENCY_SOURCE_PREFIXES = {
+  class: 'class:',
+  background: 'background:',
+  species: 'species:',
+  feature: 'feature:',
+} as const;
+
+/**
+ * Уровень взятия черты происхождения. По правилам 2024 предыстория даёт её на
+ * первом уровне — независимо от того, на каком уровне игрок заполнил лист.
+ */
+export const ORIGIN_FEAT_ACQUISITION_LEVEL = 1;
+
+/**
+ * Начало идентификатора своего бонуса, заведённого чертой листа: по нему
+ * сверка находит свои записи и не трогает заведённые игроком вручную. Хвост —
+ * идентификатор записи умения, поэтому у копии повторяемой черты бонус свой.
+ */
+export const FEAT_CUSTOM_BONUS_ID_PREFIX = 'feat-bonus:';
 
 /**
  * Варианты основы бонуса мастерства: расчёт по уровню персонажа либо своё
@@ -1446,6 +1529,26 @@ export const EXHAUSTION_SPEED_PENALTY_BY_UNIT: Record<SpeedUnit, number> = {
   miles: 0,
   kilometers: 0,
 };
+
+/**
+ * Перевод футов справочника в единицы скоростей листа. Механика черт написана
+ * в футах (правила 2024 знают только их), а лист умеет считать и в метрах.
+ * Мили и километры дают ноль по той же причине, что и штраф истощения: прибавка
+ * в футах на таком масштабе не различима.
+ */
+export const SPEED_FEET_RATIO_BY_UNIT: Record<SpeedUnit, number> = {
+  feet: 1,
+  meters: 0.3,
+  miles: 0,
+  kilometers: 0,
+};
+
+/**
+ * До скольких знаков округляется переведённая из футов скорость. Без округления
+ * двоичная дробь вылезает в подпись плитки: 3 фута дают 0.8999999999999999 м.
+ * Одного знака хватает — скорости в метрах кратны половине (1.5, 3, 4.5).
+ */
+export const SPEED_UNIT_FRACTION_DIGITS = 1;
 
 /** Сколько уровней истощения снимает продолжительный отдых (PHB 2024). */
 export const EXHAUSTION_LONG_REST_RECOVERY = 1;

@@ -16,6 +16,7 @@ import type {
   FeatSelectOption,
   FeatSummary,
   FeatureDescriptionNode,
+  GrantedProficiencies,
   InventoryArmor,
   InventoryWeapon,
   InventoryWeaponDamage,
@@ -31,7 +32,7 @@ import type {
   StartingEquipmentOption,
 } from './types';
 
-import { clamp } from 'es-toolkit';
+import { clamp, uniq } from 'es-toolkit';
 
 import { z } from '~/utils/zod';
 import { CasterType } from '~classes/model';
@@ -40,13 +41,20 @@ import {
   MAGIC_ITEM_BONUS_NONE,
 } from '~magic-items/model';
 
-import { descriptionNodesSchema } from './character-schema';
 import {
+  descriptionNodesSchema,
+  featModifiersSchema,
+} from './character-schema';
+import {
+  ARMOR_GROUP_BY_API_CATEGORY,
+  ARMOR_PROFICIENCY_GROUPS,
   CURRENCY_KEYS_BY_LABEL,
   INVENTORY_QUANTITY_MAX,
   SPELL_COMPONENT_LABELS,
   STARTING_EQUIPMENT_DEFAULT_COIN_KEY,
   STARTING_EQUIPMENT_LABELS,
+  WEAPON_GROUP_BY_API_CATEGORY,
+  WEAPON_PROFICIENCY_GROUPS,
 } from './constants';
 import {
   getClassToolChoice,
@@ -338,13 +346,97 @@ export function parseRepeatableFeatUrls(input: unknown): Set<string> {
   );
 }
 
-/** Схема детального ответа черты (нужные листу поля). */
+/**
+ * Схема детального ответа черты (нужные листу поля). Постоянные модификаторы
+ * лежат внутри механики: у черт без механики её нет вовсе, у черт с механикой
+ * без постоянных эффектов — нет блока `modifiers`, и оба случая означают одно и
+ * то же — лист черта не двигает.
+ */
 const featDetailSchema = z.object({
   url: z.string(),
   name: z.object({ rus: z.string().catch('') }),
   category: z.string().catch(''),
   description: descriptionNodesSchema,
+  mechanics: z
+    .object({
+      modifiers: featModifiersSchema,
+      // Владения приходят категориями справочника — лист хранит их записями
+      // «вся группа», поэтому разбор ниже их переводит.
+      proficiencies: z
+        .object({
+          weaponCategories: z.array(z.string()).nullable().catch(null),
+          armorCategories: z.array(z.string()).nullable().catch(null),
+          tools: z
+            .array(
+              z.object({
+                url: z.string().catch(''),
+                name: z.string().catch(''),
+              }),
+            )
+            .nullable()
+            .catch(null),
+        })
+        .nullable()
+        .catch(null),
+    })
+    .nullable()
+    .catch(null),
 });
+
+/** Ответ справочника с владениями черты, как его разбирает схема детали. */
+type FeatProficienciesResponse = NonNullable<
+  NonNullable<z.infer<typeof featDetailSchema>['mechanics']>['proficiencies']
+>;
+
+/**
+ * Перевод владений черты из справочника в записи листа: категории оружия и
+ * доспехов становятся записями «вся группа» (одна на группу — обе половины
+ * воинского оружия дают одну запись), инструменты — владениями со ссылкой на
+ * предмет. Нераспознанные категории (огнестрельное — своей группы на листе нет)
+ * отбрасываются.
+ *
+ * @param proficiencies владения из механики черты.
+ * @returns владения в форме листа; null — черта ничего не выдаёт.
+ */
+function toGrantedProficiencies(
+  proficiencies: FeatProficienciesResponse,
+): GrantedProficiencies | null {
+  const weapons = uniq(
+    (proficiencies.weaponCategories ?? []).flatMap((category) => {
+      const key = WEAPON_GROUP_BY_API_CATEGORY[category];
+
+      const group = WEAPON_PROFICIENCY_GROUPS.find(
+        (candidate) => candidate.key === key,
+      );
+
+      return group ? [group.all] : [];
+    }),
+  );
+
+  const armor = uniq(
+    (proficiencies.armorCategories ?? []).flatMap((category) => {
+      const key = ARMOR_GROUP_BY_API_CATEGORY[category];
+
+      const group = ARMOR_PROFICIENCY_GROUPS.find(
+        (candidate) => candidate.key === key,
+      );
+
+      return group ? [group.all] : [];
+    }),
+  );
+
+  // Инструмент без названия показать нечем, а без ссылки — можно: у своих
+  // инструментов её и не бывает.
+  const tools = (proficiencies.tools ?? []).flatMap((tool) =>
+    tool.name ? [{ name: tool.name, url: tool.url || null }] : [],
+  );
+
+  if (!weapons.length && !armor.length && !tools.length) {
+    return null;
+  }
+
+  return { armor, weapons, tools, languages: [] };
+}
 
 /**
  * Валидация детального ответа `GET /api/v2/feats/{url}`.
@@ -359,11 +451,15 @@ export function parseFeatDetail(input: unknown): FeatSummary | null {
     return null;
   }
 
+  const proficiencies = result.data.mechanics?.proficiencies;
+
   return {
     url: result.data.url,
     name: result.data.name.rus,
     category: result.data.category,
     description: result.data.description,
+    modifiers: result.data.mechanics?.modifiers ?? null,
+    proficiencies: proficiencies ? toGrantedProficiencies(proficiencies) : null,
   };
 }
 

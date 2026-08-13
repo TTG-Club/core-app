@@ -16,6 +16,12 @@
     source: string;
   }
 
+  /** Ссылка на предмет со снимком названия: форма хранит в JSONB именно её. */
+  interface ItemSelectRef {
+    url: string;
+    name: string;
+  }
+
   /** Схема детали предмета: из неё собирается опция уже выбранного предмета. */
   const itemDetailSchema = z.object({
     url: z.string(),
@@ -46,6 +52,16 @@
   // USelectMenu при clearable может эмитить null.
   // Внизу нормализуем null -> '' (а не даём ему попасть в model).
   const model = defineModel<string | Array<string>>();
+
+  /**
+   * Выбранные предметы ссылками со снимком названия — рядом с `v-model`, где
+   * лежат одни url. Нужно формам, которые пишут ссылку в JSONB core-api
+   * (`EntityRef`): название там — снимок на момент сохранения, бэк его не
+   * подставляет, а кроме селекта взять его негде.
+   */
+  const emit = defineEmits<{
+    select: [refs: Array<ItemSelectRef>];
+  }>();
 
   const search = ref('');
   const searchQuery = refDebounced(search, SELECT_DROPDOWN_DEBOUNCE_MS);
@@ -190,15 +206,28 @@
 
     const loadedItems = await Promise.all(missingUrls.map(fetchSelectedItem));
 
-    resolvedSelectedItems.value = [
-      ...resolvedSelectedItems.value,
-      ...loadedItems.filter((item): item is ItemSelectItem => item !== null),
-    ];
+    const resolved = loadedItems.filter(
+      (item): item is ItemSelectItem => item !== null,
+    );
+
+    if (!resolved.length) {
+      return;
+    }
+
+    resolvedSelectedItems.value = [...resolvedSelectedItems.value, ...resolved];
+
+    // Подписи догруженного нужны и родителю: форма со снимком названия до этой
+    // минуты знала один url, и так же чинится запись, сохранённая без имени.
+    // Цикла нет: ответ родителя вернётся сюда тем же набором url, а `requestedUrls`
+    // не даст запросить их снова — на следующем заходе список пуст.
+    emit('select', toSelectedRefs(model.value ?? []));
   }
 
   // Один watcher на оба источника: догрузка нужна и когда пришло значение
   // формы, и когда выдача поиска сменилась и выбранный предмет из неё выпал.
-  // Цикла нет: обработчик пишет только в `resolvedSelectedItems`.
+  // Обработчик пишет в `resolvedSelectedItems` и отдаёт подписи наружу, отчего
+  // значение формы возвращается сюда; цикл обрывает `requestedUrls` — на втором
+  // заходе догружать нечего и обработчик выходит до записи.
   watch([selectedUrls, data], () => void loadMissingSelectedItems(), {
     immediate: true,
   });
@@ -211,17 +240,32 @@
     await refresh();
   }, SELECT_DROPDOWN_DEBOUNCE_MS);
 
+  /**
+   * Ссылки на выбранные предметы: подпись берётся из уже загруженных опций —
+   * выбирают всегда из показанного списка, поэтому она там есть.
+   *
+   * @param value значение селекта.
+   * @returns ссылки со снимком названия.
+   */
+  function toSelectedRefs(value: string | Array<string>): Array<ItemSelectRef> {
+    const urls = Array.isArray(value) ? value : [value];
+
+    return urls.filter(Boolean).map((itemUrl) => ({
+      url: itemUrl,
+      name:
+        selectItems.value.find((item) => item.value === itemUrl)?.label ?? '',
+    }));
+  }
+
   function handleModelValueUpdate(
     value: string | Array<string> | null | undefined,
   ): void {
-    if (value === null || value === undefined) {
-      // нормализация "очистки" в пустое значение, без null
-      model.value = props.multiple ? [] : '';
+    // нормализация "очистки" в пустое значение, без null
+    const selected = value ?? (props.multiple ? [] : '');
 
-      return;
-    }
+    model.value = selected;
 
-    model.value = value;
+    emit('select', toSelectedRefs(selected));
   }
 </script>
 

@@ -31,6 +31,7 @@
     fetchFeatDetail,
     getOriginFeatOptions,
     getOwnedSkillHints,
+    ORIGIN_FEAT_ACQUISITION_LEVEL,
     parseFeatSelectOptions,
     SKILL_DUPLICATE_WARNING,
   } from '../../model';
@@ -241,7 +242,10 @@
 
     const summary = await fetchFeatDetail(draftFeatUrl.value);
 
-    return summary ? buildFeatFeature(summary) : null;
+    // Уровень взятия — первый, как и у каталожной предыстории.
+    return summary
+      ? buildFeatFeature(summary, false, ORIGIN_FEAT_ACQUISITION_LEVEL)
+      : null;
   }
 
   async function handleApply() {

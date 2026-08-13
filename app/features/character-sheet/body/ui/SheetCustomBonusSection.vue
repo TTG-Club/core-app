@@ -6,6 +6,7 @@
     CUSTOM_BONUS_FORMAT_OPTIONS,
     CUSTOM_BONUS_MAX,
     CUSTOM_BONUS_MIN,
+    CUSTOM_BONUS_SOURCE_OPTIONS,
     getCustomBonusesValue,
     getFormattedBonus,
     SHEET_REVEAL_CONTROL_CLASS,
@@ -19,6 +20,7 @@
     character,
     title,
     baseItems,
+    sourceItems = CUSTOM_BONUS_SOURCE_OPTIONS,
     baseValue,
     penaltyLabel = '',
     penaltyValue = 0,
@@ -32,6 +34,12 @@
 
     /** Варианты основы: свои у мастерства и у инициативы. */
     baseItems: Array<{ label: string; value: string }>;
+
+    /**
+     * Доступные источники бонуса; по умолчанию — все. Раздел бонуса мастерства
+     * сужает список: сам себе слагаемым бонус мастерства не бывает.
+     */
+    sourceItems?: typeof CUSTOM_BONUS_SOURCE_OPTIONS;
 
     /** Значение основы с учётом выбранного источника. */
     baseValue: number;
@@ -245,6 +253,7 @@
     <SheetCustomBonusRows
       v-model="rows"
       :character="character"
+      :source-items="sourceItems"
     />
 
     <p class="text-xs text-dimmed">

@@ -20,6 +20,7 @@
     FeatChoices,
     FeatModifiers,
     FeatPrerequisiteFields,
+    FeatProficiencies,
   } from './ui';
 
   const formRef = useTemplateRef('formRef');
@@ -168,6 +169,14 @@
       </template>
 
       <FeatModifiers v-model="mechanics.modifiers" />
+    </UCard>
+
+    <UCard variant="subtle">
+      <template #header>
+        <h2 class="truncate text-base text-highlighted">Выдаваемые владения</h2>
+      </template>
+
+      <FeatProficiencies v-model="mechanics.proficiencies" />
     </UCard>
 
     <UCard variant="subtle">

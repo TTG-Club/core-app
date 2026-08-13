@@ -3,3 +3,4 @@ export { default as FeatAbilityRequirements } from './FeatAbilityRequirements.vu
 export { default as FeatChoices } from './FeatChoices.vue';
 export { default as FeatModifiers } from './FeatModifiers.vue';
 export { default as FeatPrerequisiteFields } from './FeatPrerequisiteFields.vue';
+export { default as FeatProficiencies } from './FeatProficiencies.vue';
