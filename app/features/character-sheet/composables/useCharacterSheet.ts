@@ -123,7 +123,6 @@ import {
   PREPARED_SPELLS_BONUS_MIN,
   PREPARED_SPELLS_MAX,
   PREPARED_SPELLS_MIN,
-  pruneProficiencyGrants,
   removeClassFeatures,
   removeClassResources,
   removeFeaturesAboveLevel,
@@ -859,6 +858,11 @@ export function useCharacterSheet() {
    * журналу — выданное прежним источником снимается, если его не даёт больше
    * никто.
    *
+   * Навыков записи класса, предыстории и вида не несут: те наделяют навыками
+   * через выбор, а его применяет `applySkillProficiencies` мимо журнала. Навыки
+   * в выдаче есть только у черт, и уровни по ним доводит `withFeatModifiers`.
+   * Появятся навыки и здесь — доводить уровни придётся и в этом помощнике.
+   *
    * @param previousSource идентификатор прежнего источника; null — его не было.
    * @param source идентификатор нового источника.
    * @param granted выданные владения; null — источник ничего не выдаёт.
@@ -1390,6 +1394,7 @@ export function useCharacterSheet() {
         weapons: [],
         tools: [],
         languages: payload.proficiencies.languages,
+        skills: [],
       },
     );
 
@@ -1550,6 +1555,7 @@ export function useCharacterSheet() {
         weapons: payload.proficiencies.weapons,
         tools: payload.proficiencies.tools,
         languages: payload.proficiencies.languages,
+        skills: [],
       },
     );
 
@@ -1694,7 +1700,13 @@ export function useCharacterSheet() {
     const addedClassProficiencies = withSourceProficiencies(
       null,
       getProficiencySourceId('class', characterClass.url),
-      { armor: [], weapons: [], tools: [], languages: payload.languages },
+      {
+        armor: [],
+        weapons: [],
+        tools: [],
+        languages: payload.languages,
+        skills: [],
+      },
     );
 
     const withLevels = withClassLevels(
@@ -1883,7 +1895,13 @@ export function useCharacterSheet() {
     const backgroundProficiencies = withSourceProficiencies(
       previous ? getProficiencySourceId('background', previous.url) : null,
       getProficiencySourceId('background', payload.background.url),
-      { armor: [], weapons: [], tools: payload.tools, languages: [] },
+      {
+        armor: [],
+        weapons: [],
+        tools: payload.tools,
+        languages: [],
+        skills: [],
+      },
     );
 
     // Как и у класса: снимается ровно выданный прошлой предысторией набор,
@@ -3038,20 +3056,15 @@ export function useCharacterSheet() {
       return;
     }
 
-    const proficiencies = {
-      ...character.value.proficiencies,
-      [group]: [...items],
-    };
-
+    // Журнал выдач не трогается: он записывает, что источник дал, а не что игрок
+    // согласен иметь. Снятое здесь обратно не вернётся — сверка применяет
+    // разницу журналов и к уже выданному не притрагивается.
     character.value = {
       ...character.value,
-      proficiencies,
-      // Снятое игроком уходит и из журнала: иначе сверка вернула бы владение
-      // при ближайшей смене класса или черты.
-      proficiencyGrants: pruneProficiencyGrants(
-        character.value.proficiencyGrants,
-        proficiencies,
-      ),
+      proficiencies: {
+        ...character.value.proficiencies,
+        [group]: [...items],
+      },
     };
   }
 
@@ -3066,19 +3079,12 @@ export function useCharacterSheet() {
       return;
     }
 
-    const proficiencies = {
-      ...character.value.proficiencies,
-      tools: tools.map((tool) => ({ ...tool })),
-    };
-
     character.value = {
       ...character.value,
-      proficiencies,
-      // Как и у прочих групп: снятый игроком инструмент уходит и из журнала.
-      proficiencyGrants: pruneProficiencyGrants(
-        character.value.proficiencyGrants,
-        proficiencies,
-      ),
+      proficiencies: {
+        ...character.value.proficiencies,
+        tools: tools.map((tool) => ({ ...tool })),
+      },
     };
   }
 
@@ -3093,6 +3099,9 @@ export function useCharacterSheet() {
       return;
     }
 
+    // Журнал выдач не трогается — как и у прочих владений. Прокрутка проходит
+    // через «нет владения», и подрезка журнала на каждом клике стирала бы запись
+    // о выдаче у того, кто просто возвращается от компетентности к владению.
     character.value = {
       ...character.value,
       skills: character.value.skills.map((skill) =>
