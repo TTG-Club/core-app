@@ -77,7 +77,11 @@ const choiceSchema = z.object({
   spellFilter: spellFilterSchema.optional(),
   onlyIfNotProficient: z.boolean().optional(),
   onlyIfProficient: z.boolean().optional(),
-  grants: z.enum(['PROFICIENCY', 'EXPERTISE']).optional(),
+  // Единственное значение, которое разбор подставляет сам: слияние с начальным
+  // состоянием формы до выборов внутри списка не достаёт, а отсутствие поля —
+  // это владение, и без подстановки селект «Что даёт выбор» открывался бы
+  // пустым у всех записей, сохранённых с обычным исходом.
+  grants: z.enum(['PROFICIENCY', 'EXPERTISE']).default('PROFICIENCY'),
   expertiseIfProficient: z.boolean().optional(),
   rechooseOnLongRest: z.boolean().optional(),
 });

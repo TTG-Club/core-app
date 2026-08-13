@@ -9,6 +9,12 @@ import type {
   FeatSpellFilter,
 } from './mechanics';
 
+import {
+  isExpertiseChoiceType,
+  isProficiencyChoiceType,
+  isSpellChoiceType,
+} from './constants';
+
 /**
  * Пустое ли значение с точки зрения формы: `undefined`, пустая строка, пустой
  * массив или объект, у которого пусты все поля.
@@ -60,21 +66,40 @@ function buildSpellFilter(
   });
 }
 
-/** Готовит выборы: без типа и ключа выбор бессмысленен и не отправляется. */
+/**
+ * Готовит выборы: без типа и ключа выбор бессмысленен и не отправляется.
+ *
+ * Поля, которых у типа выбора не бывает, обнуляются: их могли заполнить до
+ * смены типа, а форма после неё их уже не показывает — иначе в JSONB осталась
+ * бы бессмыслица вроде компетентности за выбранное заклинание.
+ */
 function buildChoices(choices: Array<FeatChoice>): Array<FeatChoice> {
   return choices
     .filter((choice) => !!choice.type && !!text(choice.key))
-    .map((choice) => ({
-      ...choice,
-      key: choice.key.trim(),
-      label: text(choice.label) ?? '',
-      options: choice.options.filter((option) => !!option.value),
-      spellFilter: buildSpellFilter(choice.spellFilter),
-      countEqualsProficiencyBonus: !!choice.countEqualsProficiencyBonus,
-      // Исход по умолчанию не пишется: у записей до его появления поля нет, и
-      // core-api читает его отсутствие как владение.
-      grants: choice.grants === 'EXPERTISE' ? choice.grants : undefined,
-    }));
+    .map((choice) => {
+      const isProficiency = isProficiencyChoiceType(choice.type);
+      const isExpertise = isExpertiseChoiceType(choice.type);
+
+      return {
+        ...choice,
+        key: choice.key.trim(),
+        label: text(choice.label) ?? '',
+        options: choice.options.filter((option) => !!option.value),
+        spellFilter: isSpellChoiceType(choice.type)
+          ? buildSpellFilter(choice.spellFilter)
+          : undefined,
+        countEqualsProficiencyBonus: !!choice.countEqualsProficiencyBonus,
+        onlyIfNotProficient: isProficiency && choice.onlyIfNotProficient,
+        onlyIfProficient: isProficiency && choice.onlyIfProficient,
+        // Исход по умолчанию не пишется: у записей до его появления поля нет, и
+        // core-api читает его отсутствие как владение.
+        grants:
+          isExpertise && choice.grants === 'EXPERTISE'
+            ? choice.grants
+            : undefined,
+        expertiseIfProficient: isExpertise && choice.expertiseIfProficient,
+      };
+    });
 }
 
 /** Готовит варианты повышения характеристик. */

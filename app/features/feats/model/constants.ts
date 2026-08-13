@@ -36,13 +36,27 @@ export const FEAT_CHOICE_GRANT_OPTIONS: Array<SelectOption> = [
 ];
 
 /**
- * Типы выборов, у которых есть уровень владения: только им осмысленны исход
- * «компетентность» и ограничения пула по уже имеющемуся владению.
+ * Типы выборов, у которых есть уровень владения: только им осмысленны
+ * ограничения пула по уже имеющемуся владению. Язык и оружие сюда входят
+ * («выберите язык, которого вы не знаете», «оружие, которым вы не владеете»),
+ * а тип урона или заклинание — нет: владения у них не бывает.
  */
 export const PROFICIENCY_FEAT_CHOICE_TYPES: Array<FeatChoiceType> = [
   'SKILL',
   'TOOL',
   'SAVING_THROW',
+  'LANGUAGE',
+  'WEAPON',
+];
+
+/**
+ * Типы выборов, которые могут дать компетентность. Она удваивает бонус
+ * мастерства в проверке, поэтому бывает только у навыков и инструментов: ни у
+ * спасброска, ни у языка, ни у оружия удваивать нечего.
+ */
+export const EXPERTISE_FEAT_CHOICE_TYPES: Array<FeatChoiceType> = [
+  'SKILL',
+  'TOOL',
 ];
 
 /** Типы выборов, которым нужен фильтр заклинаний. */
@@ -68,3 +82,39 @@ export const FEAT_CASTING_TIME_OPTIONS: Array<SelectOption> = [
   { label: 'Минута', value: 'MINUTE' },
   { label: 'Час', value: 'HOUR' },
 ];
+
+/**
+ * Есть ли у выбираемого уровень владения: только тогда осмысленны ограничения
+ * пула «только с владением» и «только без владения».
+ *
+ * @param type тип выбора; у незаполненного выбора ответ отрицательный.
+ * @returns признак выбора с уровнем владения.
+ */
+export function isProficiencyChoiceType(
+  type: FeatChoiceType | undefined,
+): boolean {
+  return !!type && PROFICIENCY_FEAT_CHOICE_TYPES.includes(type);
+}
+
+/**
+ * Может ли выбор дать компетентность — безусловную или взамен уже имеющегося
+ * владения.
+ *
+ * @param type тип выбора; у незаполненного выбора ответ отрицательный.
+ * @returns признак выбора, у которого бывает компетентность.
+ */
+export function isExpertiseChoiceType(
+  type: FeatChoiceType | undefined,
+): boolean {
+  return !!type && EXPERTISE_FEAT_CHOICE_TYPES.includes(type);
+}
+
+/**
+ * Нужен ли выбору фильтр заклинаний.
+ *
+ * @param type тип выбора; у незаполненного выбора ответ отрицательный.
+ * @returns признак выбора заклинания или заговора.
+ */
+export function isSpellChoiceType(type: FeatChoiceType | undefined): boolean {
+  return !!type && SPELL_FEAT_CHOICE_TYPES.includes(type);
+}

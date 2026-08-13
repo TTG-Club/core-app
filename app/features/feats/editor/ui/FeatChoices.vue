@@ -9,23 +9,10 @@
     FEAT_CASTING_TIME_OPTIONS,
     FEAT_CHOICE_GRANT_OPTIONS,
     FEAT_CHOICE_TYPE_OPTIONS,
-    PROFICIENCY_FEAT_CHOICE_TYPES,
-    SPELL_FEAT_CHOICE_TYPES,
+    isExpertiseChoiceType,
+    isProficiencyChoiceType,
+    isSpellChoiceType,
   } from '../../model';
-
-  /** Нужен ли выбору фильтр заклинаний. */
-  function isSpellChoice(choice: FeatChoice): boolean {
-    return !!choice.type && SPELL_FEAT_CHOICE_TYPES.includes(choice.type);
-  }
-
-  /**
-   * Есть ли у выбираемого уровень владения. Только тогда осмысленны исход
-   * «компетентность» и ограничения пула: у заклинания или типа урона владения
-   * нет, и эти поля лишь путали бы.
-   */
-  function isProficiencyChoice(choice: FeatChoice): boolean {
-    return !!choice.type && PROFICIENCY_FEAT_CHOICE_TYPES.includes(choice.type);
-  }
 
   const model = defineModel<Array<FeatChoice>>({ default: () => [] });
 
@@ -182,21 +169,9 @@
         <UCheckbox v-model="choice.countEqualsProficiencyBonus" />
       </UFormField>
 
-      <!-- Уровень владения есть только у навыков, инструментов и спасбросков:
-        у заклинания или типа урона выбирать между владением и компетентностью
-        не из чего -->
-      <template v-if="isProficiencyChoice(choice)">
-        <UFormField
-          class="col-span-12 md:col-span-6"
-          label="Что даёт выбор"
-        >
-          <USelectMenu
-            v-model="choice.grants"
-            :items="FEAT_CHOICE_GRANT_OPTIONS"
-            value-key="value"
-          />
-        </UFormField>
-
+      <!-- Ограничить пул уже имеющимся владением можно только там, где владение
+        бывает: у заклинания или типа урона его нет, и отметки лишь путали бы -->
+      <template v-if="isProficiencyChoiceType(choice.type)">
         <UFormField
           class="col-span-12 md:col-span-4"
           label="Только без владения"
@@ -216,6 +191,21 @@
             @update:model-value="toggleOnlyIfProficient(index, $event)"
           />
         </UFormField>
+      </template>
+
+      <!-- Компетентность удваивает бонус мастерства в проверке, поэтому бывает
+        только у навыков и инструментов -->
+      <template v-if="isExpertiseChoiceType(choice.type)">
+        <UFormField
+          class="col-span-12 md:col-span-6"
+          label="Что даёт выбор"
+        >
+          <USelectMenu
+            v-model="choice.grants"
+            :items="FEAT_CHOICE_GRANT_OPTIONS"
+            value-key="value"
+          />
+        </UFormField>
 
         <UFormField
           class="col-span-12 md:col-span-5"
@@ -232,7 +222,7 @@
         <UCheckbox v-model="choice.rechooseOnLongRest" />
       </UFormField>
 
-      <template v-if="isSpellChoice(choice)">
+      <template v-if="isSpellChoiceType(choice.type)">
         <UFormField
           class="col-span-full md:col-span-6"
           label="Ограничить заклинания"
