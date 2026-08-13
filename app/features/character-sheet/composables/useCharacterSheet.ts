@@ -123,7 +123,6 @@ import {
   PREPARED_SPELLS_BONUS_MIN,
   PREPARED_SPELLS_MAX,
   PREPARED_SPELLS_MIN,
-  pruneProficiencyGrants,
   removeClassFeatures,
   removeClassResources,
   removeFeaturesAboveLevel,
@@ -3057,20 +3056,15 @@ export function useCharacterSheet() {
       return;
     }
 
-    const proficiencies = {
-      ...character.value.proficiencies,
-      [group]: [...items],
-    };
-
+    // Журнал выдач не трогается: он записывает, что источник дал, а не что игрок
+    // согласен иметь. Снятое здесь обратно не вернётся — сверка применяет
+    // разницу журналов и к уже выданному не притрагивается.
     character.value = {
       ...character.value,
-      proficiencies,
-      // Снятое игроком уходит и из журнала: иначе сверка вернула бы владение
-      // при ближайшей смене класса или черты.
-      proficiencyGrants: pruneProficiencyGrants(
-        character.value.proficiencyGrants,
-        { ...character.value, proficiencies },
-      ),
+      proficiencies: {
+        ...character.value.proficiencies,
+        [group]: [...items],
+      },
     };
   }
 
@@ -3085,19 +3079,12 @@ export function useCharacterSheet() {
       return;
     }
 
-    const proficiencies = {
-      ...character.value.proficiencies,
-      tools: tools.map((tool) => ({ ...tool })),
-    };
-
     character.value = {
       ...character.value,
-      proficiencies,
-      // Как и у прочих групп: снятый игроком инструмент уходит и из журнала.
-      proficiencyGrants: pruneProficiencyGrants(
-        character.value.proficiencyGrants,
-        { ...character.value, proficiencies },
-      ),
+      proficiencies: {
+        ...character.value.proficiencies,
+        tools: tools.map((tool) => ({ ...tool })),
+      },
     };
   }
 
@@ -3112,20 +3099,15 @@ export function useCharacterSheet() {
       return;
     }
 
-    const skills = character.value.skills.map((skill) =>
-      skill.name === skillName
-        ? { ...skill, proficiency: SKILL_PROFICIENCY_NEXT[skill.proficiency] }
-        : skill,
-    );
-
+    // Журнал выдач не трогается — как и у прочих владений. Прокрутка проходит
+    // через «нет владения», и подрезка журнала на каждом клике стирала бы запись
+    // о выдаче у того, кто просто возвращается от компетентности к владению.
     character.value = {
       ...character.value,
-      skills,
-      // Сброшенный игроком навык уходит из журнала выдач: иначе сверка подняла
-      // бы уровень обратно при ближайшей смене черты.
-      proficiencyGrants: pruneProficiencyGrants(
-        character.value.proficiencyGrants,
-        { ...character.value, skills },
+      skills: character.value.skills.map((skill) =>
+        skill.name === skillName
+          ? { ...skill, proficiency: SKILL_PROFICIENCY_NEXT[skill.proficiency] }
+          : skill,
       ),
     };
   }
