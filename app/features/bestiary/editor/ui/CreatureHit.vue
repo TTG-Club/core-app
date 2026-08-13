@@ -5,6 +5,8 @@
     CreatureSizes,
   } from '~bestiary/model';
 
+  import { watchDerivedField } from '~workshop/composable';
+
   const model = defineModel<CreateHit>({
     required: true,
   });
@@ -84,13 +86,19 @@
     return Math.floor(total);
   });
 
-  watchImmediate(avgHit, (value) => {
-    if (!value) {
-      return;
-    }
+  // Пересчитываем только по правкам костей хитов, размера и Телосложения:
+  // при загрузке записи сохранённое число хитов важнее формулы.
+  watchDerivedField(
+    model,
+    () => avgHit.value,
+    (value, hit) => {
+      if (!value) {
+        return;
+      }
 
-    model.value.value = value;
-  });
+      hit.value = value;
+    },
+  );
 </script>
 
 <template>

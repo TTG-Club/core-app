@@ -2,6 +2,7 @@
   import type { CreateAbility, CreateInitiative } from '~bestiary/model';
 
   import { SelectMastery } from '~ui/select';
+  import { watchDerivedField } from '~workshop/composable';
 
   const { dex, proficiencyBonus } = defineProps<{
     dex: CreateAbility;
@@ -10,12 +11,19 @@
 
   const model = defineModel<CreateInitiative>({ required: true });
 
-  watch(
-    [() => dex.value, () => model.value.multiplier],
-    ([dexValue, multiplier]) => {
-      model.value.value = getModifier(dexValue) + multiplier * proficiencyBonus;
+  const derivedValue = computed(
+    () => getModifier(dex.value) + model.value.multiplier * proficiencyBonus,
+  );
+
+  // Пересчитываем только по правкам Ловкости, уровня владения и бонуса
+  // мастерства. При загрузке записи сохранённое значение важнее формулы: у
+  // существ оно берётся из статблока и может с ней не совпадать.
+  watchDerivedField(
+    model,
+    () => derivedValue.value,
+    (value, initiative) => {
+      initiative.value = value;
     },
-    { immediate: true },
   );
 </script>
 
@@ -31,11 +39,12 @@
       name="value"
     >
       <UFieldGroup>
+        <!-- Без `min`: у существ с Ловкостью ниже 10 инициатива отрицательная
+             (например, −2 у зомби), а `min="0"` не давал её ввести. -->
         <UInputNumber
           v-model="model.value"
           :precision="0"
           placeholder="Введи инициативу"
-          :min="0"
         />
 
         <UBadge

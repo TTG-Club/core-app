@@ -12,16 +12,17 @@
     BUG_REPORT_COMMENT_SAVE_BUTTON_LABEL,
     BUG_REPORT_COMMENT_SAVE_SUCCESS_DESC,
     BUG_REPORT_COMMENT_SAVE_SUCCESS_TITLE,
+    BUG_REPORT_COPY_ID_TITLE,
     BUG_REPORT_DETAIL_DATE_FORMAT,
     BUG_REPORT_PLATFORM_LABELS,
     BUG_REPORT_STATUS_COMMENT_MAX_LENGTH,
     BUG_REPORT_STATUS_COMMENT_PLACEHOLDER,
     BUG_REPORT_STATUS_LABELS,
-    BUG_REPORT_STATUS_ORDER,
     BUG_REPORT_STATUS_UPDATE_ERROR_DESC,
     BUG_REPORT_STATUS_UPDATE_ERROR_TITLE,
     BUG_REPORT_STATUS_UPDATE_SUCCESS_TITLE,
     BUG_REPORT_STATUS_UPDATED_BY_LABEL,
+    BUG_REPORT_STATUSES,
     getAdminBugStatusApiUrl,
     getBugReportStatusColor,
   } from '../../model';
@@ -82,7 +83,7 @@
   }
 
   const statusButtons = computed<StatusButtonOption[]>(() => {
-    return BUG_REPORT_STATUS_ORDER.map((status) => ({
+    return BUG_REPORT_STATUSES.map((status) => ({
       status,
       label: BUG_REPORT_STATUS_LABELS[status],
       color: getBugReportStatusColor(status),
@@ -246,7 +247,7 @@
 
         <span
           class="cursor-pointer font-mono text-sm break-all text-highlighted transition-colors select-all hover:text-primary"
-          title="Нажмите, чтобы скопировать ID"
+          :title="BUG_REPORT_COPY_ID_TITLE"
           @click.left.exact.prevent="() => copy(bugReport.id)"
         >
           {{ bugReport.id }}

@@ -1,12 +1,16 @@
 <script setup lang="ts">
-  import type { ClassDetailResponse, ClassInMulticlass } from '../../model';
+  import type {
+    ClassDetailResponse,
+    ClassInMulticlass,
+    MulticlassDetailResponse,
+  } from '../../model';
 
   import { InfoTooltip } from '~ui/tooltip';
 
   interface MulticlassStatsBlockProps {
     savingThrows: ClassDetailResponse['savingThrows'];
     primaryCharacteristics: ClassDetailResponse['primaryCharacteristics'];
-    requirements: ClassDetailResponse['requirements'];
+    requirements: MulticlassDetailResponse['requirements'];
     multiclass?: Array<ClassInMulticlass>;
   }
 
@@ -82,9 +86,12 @@
       </span>
     </div>
 
-    <div class="flex w-full min-w-full flex-col gap-1 px-4 py-1.5">
+    <div
+      v-if="props.requirements"
+      class="flex w-full min-w-full flex-col gap-1 px-4 py-1.5"
+    >
       <span class="min-w-20 flex-none text-sm font-medium text-highlighted">
-        Требования:
+        Требования для мультиклассирования:
       </span>
 
       <span>{{ props.requirements }}</span>

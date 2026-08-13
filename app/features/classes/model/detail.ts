@@ -18,7 +18,6 @@ export interface ClassDetailResponse {
   proficiency: ClassProficiency;
   equipment: RenderNode;
   savingThrows: string;
-  requirements: string;
   table: Array<ClassTable>;
   features: Array<ClassFeature>;
   hasSubclasses?: boolean;
@@ -32,6 +31,11 @@ export interface MulticlassDetailResponse extends Omit<
   'hitDice'
 > {
   hitDice?: HitDice;
+  /**
+   * Требования к характеристикам для взятия дополнительных классов. Приходит
+   * только в ответе мультикласса — обычный класс такого поля не отдаёт.
+   */
+  requirements: string;
   characterLevel: number;
   spellcastingLevel?: number;
   multiclassProficiency?: ClassMulticlassProficiency;

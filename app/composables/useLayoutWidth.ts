@@ -18,9 +18,11 @@ export function useLayoutWidth() {
   const { isLgOrGreater } = useBreakpoints();
   const { isDesktopOrTablet } = useDevice();
 
+  // Значение по умолчанию — только для новых посетителей: у тех, кто уже был на
+  // сайте, кука проставлена явно (useCookie записывает её при первом заходе).
   const width = useCookie<LayoutWidth>(LAYOUT_WIDTH_STORE_KEY, {
     maxAge: ONE_DAY_IN_SECONDS * 365,
-    default: () => LayoutWidthName.Default,
+    default: () => LayoutWidthName.Wide,
   });
 
   const isWide = computed(() => width.value === LayoutWidthName.Wide);

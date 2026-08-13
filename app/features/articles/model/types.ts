@@ -30,6 +30,13 @@ export type ArticlePublishChannel =
   | 'publishToVk';
 
 /**
+ * Пинг участников Discord-канала при публикации: без пинга / `@everyone` / роль
+ * server. Работает только вместе с `publishToDiscord` и только в первом сообщении
+ * поста — правка новости повторно никого не пингует.
+ */
+export type ArticleDiscordMention = 'NONE' | 'EVERYONE' | 'SERVER';
+
+/**
  * Тело запроса на создание/редактирование/предпросмотр записи, а также ответ
  * `GET /articles/{url}/raw` (форма для редактирования). Поля `preview` и
  * `content` — строки хранимой разметки (модель `MarkupEditor`).
@@ -43,6 +50,7 @@ export type ArticlePublishChannel =
  * - `accessibleByLink` — при `draft=false, active=false` (неактивна) открыть по прямой ссылке;
  * - `publishToTelegram` — при сохранении продублировать новость в Telegram-канал;
  * - `publishToDiscord` — при сохранении продублировать новость в Discord через вебхук;
+ * - `discordMention` — пинг в Discord-канале при публикации (учитывается при `publishToDiscord`);
  * - `publishToVk` — при сохранении продублировать новость в сообщество ВКонтакте.
  */
 export interface ArticleRequest {
@@ -53,6 +61,7 @@ export interface ArticleRequest {
   accessibleByLink: boolean;
   publishToTelegram: boolean;
   publishToDiscord: boolean;
+  discordMention: ArticleDiscordMention;
   publishToVk: boolean;
   title: string;
   previewImageUrl: string | null;

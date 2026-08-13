@@ -31,8 +31,10 @@
     CUSTOM_BACKGROUND_LABELS,
     FEATS_DETAIL_BASE_PATH,
     getOwnedSkillHints,
+    getRequiredChoiceCount,
     getToolNames,
     LANGUAGE_PROFICIENCY_GROUPS,
+    ORIGIN_FEAT_ACQUISITION_LEVEL,
     parseBackgroundDetail,
     parseBackgroundOptions,
     parseFeatDetail,
@@ -292,10 +294,15 @@
     });
   }
 
+  /** Требуемое число опций: не больше, чем доступно в списке выбора. */
+  function choiceCount(choice: ClassChoice): number {
+    return getRequiredChoiceCount(choice, choiceOptions(choice));
+  }
+
   function updateSelection(choice: ClassChoice, values: string[]): void {
     selections.value = {
       ...selections.value,
-      [choice.id]: values.slice(0, choice.count),
+      [choice.id]: values.slice(0, choiceCount(choice)),
     };
   }
 
@@ -400,7 +407,13 @@
         const summary = await fetchFeatDetail(detail.featUrl);
 
         if (summary) {
-          const feature = buildFeatFeature(summary);
+          // Черта происхождения даётся на первом уровне (правило 2024) — от
+          // него и считается прибавка «Крепкого» к максимуму хитов.
+          const feature = buildFeatFeature(
+            summary,
+            false,
+            ORIGIN_FEAT_ACQUISITION_LEVEL,
+          );
 
           featFeature = detail.featSubchoice
             ? { ...feature, choice: detail.featSubchoice }
@@ -588,8 +601,8 @@
               v-if="backgroundDetail.toolChoice"
               :model-value="selections['background-tool'] ?? []"
               :items="choiceOptions(backgroundDetail.toolChoice)"
-              :count="backgroundDetail.toolChoice.count"
-              :placeholder="`Выберите ${backgroundDetail.toolChoice.count}`"
+              :count="choiceCount(backgroundDetail.toolChoice)"
+              :placeholder="`Выберите ${choiceCount(backgroundDetail.toolChoice)}`"
               @update:model-value="
                 updateSelection(backgroundDetail.toolChoice, $event)
               "

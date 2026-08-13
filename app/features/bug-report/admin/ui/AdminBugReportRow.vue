@@ -3,11 +3,57 @@
 
   import {
     BUG_REPORT_ANONYMOUS_USER,
+    BUG_REPORT_COMMENT_ABSENT_TITLE,
+    BUG_REPORT_COMMENT_PRESENT_TITLE,
+    BUG_REPORT_CREATED_AT_TITLE,
     BUG_REPORT_DATE_FORMAT,
     BUG_REPORT_PLATFORM_LABELS,
+    BUG_REPORT_SCREENSHOT_ABSENT_TITLE,
+    BUG_REPORT_SCREENSHOT_PRESENT_TITLE,
+    BUG_REPORT_SELECTION_ABSENT_TITLE,
+    BUG_REPORT_SELECTION_PRESENT_TITLE,
     BUG_REPORT_STATUS_LABELS,
+    BUG_REPORT_UUID_TITLE,
     getBugReportStatusColor,
   } from '../../model';
+
+  /** Иконка-признак строки: подсказка при наведении и цвет. */
+  interface MediaIndicator {
+    title: string;
+    iconClass: string;
+  }
+
+  /** Цвет иконки-признака, когда данные приложены к баг-репорту. */
+  const INDICATOR_PRESENT_CLASS = 'text-primary';
+
+  /** Цвет иконки-признака, когда данных нет. */
+  const INDICATOR_ABSENT_CLASS = 'text-muted/30';
+
+  /** Оформление выбранной строки списка. */
+  const OPENED_ROW_CLASS =
+    'border-primary bg-primary/10 shadow-xs ring-1 ring-primary/50';
+
+  /** Оформление обычной строки списка. */
+  const ROW_CLASS =
+    'border-default bg-elevated hover:border-accented hover:bg-accented';
+
+  /**
+   * Собирает подсказку и цвет иконки-признака.
+   *
+   * @param isPresent Приложены ли данные к баг-репорту.
+   * @param presentTitle Подсказка, когда данные есть.
+   * @param absentTitle Подсказка, когда данных нет.
+   */
+  function buildMediaIndicator(
+    isPresent: boolean,
+    presentTitle: string,
+    absentTitle: string,
+  ): MediaIndicator {
+    return {
+      title: isPresent ? presentTitle : absentTitle,
+      iconClass: isPresent ? INDICATOR_PRESENT_CLASS : INDICATOR_ABSENT_CLASS,
+    };
+  }
 
   /**
    * Свойства компонента строки списка баг-репортов.
@@ -47,6 +93,38 @@
     return format(props.bugReport.createdAt, BUG_REPORT_DATE_FORMAT);
   });
 
+  /** Оформление строки: выбранная подсвечена рамкой и фоном. */
+  const rowClass = computed(() => {
+    return props.isOpened ? OPENED_ROW_CLASS : ROW_CLASS;
+  });
+
+  /** Признак наличия скриншота. */
+  const screenshotIndicator = computed(() => {
+    return buildMediaIndicator(
+      Boolean(props.bugReport.screenshotUrl),
+      BUG_REPORT_SCREENSHOT_PRESENT_TITLE,
+      BUG_REPORT_SCREENSHOT_ABSENT_TITLE,
+    );
+  });
+
+  /** Признак наличия выделенного текста. */
+  const selectionIndicator = computed(() => {
+    return buildMediaIndicator(
+      Boolean(props.bugReport.selectedText),
+      BUG_REPORT_SELECTION_PRESENT_TITLE,
+      BUG_REPORT_SELECTION_ABSENT_TITLE,
+    );
+  });
+
+  /** Признак наличия комментария к статусу. */
+  const commentIndicator = computed(() => {
+    return buildMediaIndicator(
+      Boolean(props.bugReport.statusComment),
+      BUG_REPORT_COMMENT_PRESENT_TITLE,
+      BUG_REPORT_COMMENT_ABSENT_TITLE,
+    );
+  });
+
   /**
    * Обработчик клика по строке.
    */
@@ -58,11 +136,7 @@
 <template>
   <div
     class="flex cursor-pointer flex-row flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-xl border px-4 py-3 transition select-none"
-    :class="
-      isOpened
-        ? 'border-primary bg-primary/10 shadow-xs ring-1 ring-primary/50'
-        : 'border-default bg-elevated hover:border-accented hover:bg-accented'
-    "
+    :class="rowClass"
     @click.left.exact.prevent="handleClick"
   >
     <!-- Левая секция: UUID, Статус, Платформа -->
@@ -72,7 +146,7 @@
       <!-- UUID -->
       <span
         class="shrink-0 font-mono text-xs text-secondary"
-        title="UUID баг-репорта"
+        :title="BUG_REPORT_UUID_TITLE"
       >
         {{ shortUuid }}
       </span>
@@ -119,30 +193,24 @@
         <UIcon
           name="tabler:photo"
           class="size-5 transition-colors"
-          :class="bugReport.screenshotUrl ? 'text-primary' : 'text-muted/30'"
-          :title="bugReport.screenshotUrl ? 'Есть скриншот' : 'Нет скриншота'"
+          :class="screenshotIndicator.iconClass"
+          :title="screenshotIndicator.title"
         />
 
         <!-- Выделенный текст -->
         <UIcon
           name="tabler:blockquote"
           class="size-5 transition-colors"
-          :class="bugReport.selectedText ? 'text-primary' : 'text-muted/30'"
-          :title="
-            bugReport.selectedText
-              ? 'Есть выделенный текст'
-              : 'Нет выделенного текста'
-          "
+          :class="selectionIndicator.iconClass"
+          :title="selectionIndicator.title"
         />
 
         <!-- Комментарий к статусу -->
         <UIcon
           name="tabler:message"
           class="size-5 transition-colors"
-          :class="bugReport.statusComment ? 'text-primary' : 'text-muted/30'"
-          :title="
-            bugReport.statusComment ? 'Есть комментарий' : 'Нет комментария'
-          "
+          :class="commentIndicator.iconClass"
+          :title="commentIndicator.title"
         />
       </div>
 
@@ -151,7 +219,7 @@
       <!-- Дата создания -->
       <span
         class="whitespace-nowrap"
-        title="Дата создания"
+        :title="BUG_REPORT_CREATED_AT_TITLE"
       >
         {{ createdDateFormatted }}
       </span>

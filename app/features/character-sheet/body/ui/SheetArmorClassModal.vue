@@ -90,7 +90,10 @@
   // В ручном режиме без выбранных характеристик между настройками и итогом
   // показывать нечего: разделитель там только сдвоил бы линию.
   const hasBreakdownRows = computed(
-    () => !draftCustom.value || breakdown.value.extraAbilities.length > 0,
+    () =>
+      !draftCustom.value
+      || breakdown.value.extraAbilities.length > 0
+      || breakdown.value.featBonus !== 0,
   );
 
   function handleAbilities(value: unknown): void {
@@ -244,6 +247,19 @@
             </span>
           </div>
         </template>
+
+        <!-- Прибавка черт идёт и в ручном режиме, поэтому строка стоит вне
+             блока автоподсчёта: игрок должен видеть, откуда взялось число. -->
+        <div
+          v-if="breakdown.featBonus !== 0"
+          class="flex items-center justify-between gap-4 text-sm"
+        >
+          <span class="text-toned">{{ ARMOR_CLASS_LABELS.featTitle }}</span>
+
+          <span class="text-toned">
+            {{ getFormattedBonus(breakdown.featBonus) }}
+          </span>
+        </div>
 
         <div
           v-for="bonus in breakdown.extraAbilities"

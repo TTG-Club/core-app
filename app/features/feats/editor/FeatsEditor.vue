@@ -1,13 +1,27 @@
 <script setup lang="ts">
-  import type { FeatCreate } from '~feats/model';
+  import type { FeatCreate } from '../model';
 
   import { FeatPreview } from '~feats/preview';
   import { EditorBaseInfo } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
-  import { SelectAbilities, SelectFeatCategory } from '~ui/select';
+  import { SelectFeatCategory } from '~ui/select';
   import { useWorkshopForm } from '~workshop/composable';
   import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
   import { WorkshopEditorFormControls } from '~workshop/revision/ui';
+
+  import {
+    createFeatMechanics,
+    createPrerequisiteDetails,
+    normalizeLoadedFeat,
+    transformFeatBeforeSubmit,
+  } from '../model';
+  import {
+    FeatAbilityBonuses,
+    FeatChoices,
+    FeatModifiers,
+    FeatPrerequisiteFields,
+    FeatProficiencies,
+  } from './ui';
 
   const formRef = useTemplateRef('formRef');
 
@@ -29,10 +43,12 @@
       },
       srdVersion: undefined,
       prerequisite: '',
+      prerequisiteDetails: createPrerequisiteDetails(),
       description: '',
       category: undefined,
       repeatability: false,
       abilities: [],
+      mechanics: createFeatMechanics(),
       tags: [],
     };
   }
@@ -42,7 +58,28 @@
       actionUrl: '/api/v2/feats',
       getInitialState,
       revisionEntityType: REVISION_ENTITY_TYPES.FEAT,
+      normalizeLoaded: normalizeLoadedFeat,
+      transformBeforeSubmit: transformFeatBeforeSubmit,
     });
+
+  /**
+   * Начальное состояние всегда содержит механику и разобранное условие, но в
+   * типе они необязательны: перед отправкой пустые блоки выбрасываются, чтобы
+   * не писать в JSONB пустышки. Эти обёртки дают шаблону непустые объекты.
+   */
+  const mechanics = computed({
+    get: () => state.value.mechanics ?? createFeatMechanics(),
+    set: (value) => {
+      state.value.mechanics = value;
+    },
+  });
+
+  const prerequisiteDetails = computed({
+    get: () => state.value.prerequisiteDetails ?? createPrerequisiteDetails(),
+    set: (value) => {
+      state.value.prerequisiteDetails = value;
+    },
+  });
 </script>
 
 <template>
@@ -93,19 +130,53 @@
             label="Можно брать несколько раз"
           />
         </UFormField>
-
-        <UFormField
-          class="md:col-span-12 lg:col-span-6"
-          label="Улучшаемые характеристики"
-          name="abilities"
-        >
-          <SelectAbilities
-            v-model="state.abilities"
-            :limit="6"
-            multiple
-          />
-        </UFormField>
       </div>
+    </UCard>
+
+    <UCard variant="subtle">
+      <template #header>
+        <h2 class="truncate text-base text-highlighted">
+          Предварительное условие
+        </h2>
+      </template>
+
+      <FeatPrerequisiteFields v-model="prerequisiteDetails" />
+    </UCard>
+
+    <UCard variant="subtle">
+      <template #header>
+        <h2 class="truncate text-base text-highlighted">
+          Повышение характеристик
+        </h2>
+      </template>
+
+      <FeatAbilityBonuses v-model="mechanics.abilityBonuses" />
+    </UCard>
+
+    <UCard variant="subtle">
+      <template #header>
+        <h2 class="truncate text-base text-highlighted">
+          Выборы при взятии черты
+        </h2>
+      </template>
+
+      <FeatChoices v-model="mechanics.choices" />
+    </UCard>
+
+    <UCard variant="subtle">
+      <template #header>
+        <h2 class="truncate text-base text-highlighted">Модификаторы листа</h2>
+      </template>
+
+      <FeatModifiers v-model="mechanics.modifiers" />
+    </UCard>
+
+    <UCard variant="subtle">
+      <template #header>
+        <h2 class="truncate text-base text-highlighted">Выдаваемые владения</h2>
+      </template>
+
+      <FeatProficiencies v-model="mechanics.proficiencies" />
     </UCard>
 
     <UCard variant="subtle">

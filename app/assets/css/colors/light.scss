@@ -206,9 +206,11 @@ html.light {
     0.5 0.14 245
   ); /* холодные чернила — контраст к тёплой бумаге */
 
-  /* Logo */
-  --color-logo-stroke: oklch(0.325 0.007 95.278);
-  --color-logo-dice: oklch(0.325 0.007 95.278);
+  /* Logo — тема плоская: верх и низ каждого градиента совпадают */
+  --color-logo-stroke-top: oklch(0.325 0.007 95.278);
+  --color-logo-stroke-bottom: oklch(0.325 0.007 95.278);
+  --color-logo-dice-top: oklch(0.325 0.007 95.278);
+  --color-logo-dice-bottom: oklch(0.325 0.007 95.278);
   --color-logo-tree-top: oklch(0.537 0.146 30.314);
   --color-logo-tree-bottom: oklch(0.537 0.146 30.314);
 }
