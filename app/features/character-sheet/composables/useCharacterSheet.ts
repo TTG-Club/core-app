@@ -859,6 +859,11 @@ export function useCharacterSheet() {
    * журналу — выданное прежним источником снимается, если его не даёт больше
    * никто.
    *
+   * Навыков записи класса, предыстории и вида не несут: те наделяют навыками
+   * через выбор, а его применяет `applySkillProficiencies` мимо журнала. Навыки
+   * в выдаче есть только у черт, и уровни по ним доводит `withFeatModifiers`.
+   * Появятся навыки и здесь — доводить уровни придётся и в этом помощнике.
+   *
    * @param previousSource идентификатор прежнего источника; null — его не было.
    * @param source идентификатор нового источника.
    * @param granted выданные владения; null — источник ничего не выдаёт.
@@ -1390,6 +1395,7 @@ export function useCharacterSheet() {
         weapons: [],
         tools: [],
         languages: payload.proficiencies.languages,
+        skills: [],
       },
     );
 
@@ -1550,6 +1556,7 @@ export function useCharacterSheet() {
         weapons: payload.proficiencies.weapons,
         tools: payload.proficiencies.tools,
         languages: payload.proficiencies.languages,
+        skills: [],
       },
     );
 
@@ -1694,7 +1701,13 @@ export function useCharacterSheet() {
     const addedClassProficiencies = withSourceProficiencies(
       null,
       getProficiencySourceId('class', characterClass.url),
-      { armor: [], weapons: [], tools: [], languages: payload.languages },
+      {
+        armor: [],
+        weapons: [],
+        tools: [],
+        languages: payload.languages,
+        skills: [],
+      },
     );
 
     const withLevels = withClassLevels(
@@ -1883,7 +1896,13 @@ export function useCharacterSheet() {
     const backgroundProficiencies = withSourceProficiencies(
       previous ? getProficiencySourceId('background', previous.url) : null,
       getProficiencySourceId('background', payload.background.url),
-      { armor: [], weapons: [], tools: payload.tools, languages: [] },
+      {
+        armor: [],
+        weapons: [],
+        tools: payload.tools,
+        languages: [],
+        skills: [],
+      },
     );
 
     // Как и у класса: снимается ровно выданный прошлой предысторией набор,
@@ -3050,7 +3069,7 @@ export function useCharacterSheet() {
       // при ближайшей смене класса или черты.
       proficiencyGrants: pruneProficiencyGrants(
         character.value.proficiencyGrants,
-        proficiencies,
+        { ...character.value, proficiencies },
       ),
     };
   }
@@ -3077,7 +3096,7 @@ export function useCharacterSheet() {
       // Как и у прочих групп: снятый игроком инструмент уходит и из журнала.
       proficiencyGrants: pruneProficiencyGrants(
         character.value.proficiencyGrants,
-        proficiencies,
+        { ...character.value, proficiencies },
       ),
     };
   }
@@ -3093,12 +3112,20 @@ export function useCharacterSheet() {
       return;
     }
 
+    const skills = character.value.skills.map((skill) =>
+      skill.name === skillName
+        ? { ...skill, proficiency: SKILL_PROFICIENCY_NEXT[skill.proficiency] }
+        : skill,
+    );
+
     character.value = {
       ...character.value,
-      skills: character.value.skills.map((skill) =>
-        skill.name === skillName
-          ? { ...skill, proficiency: SKILL_PROFICIENCY_NEXT[skill.proficiency] }
-          : skill,
+      skills,
+      // Сброшенный игроком навык уходит из журнала выдач: иначе сверка подняла
+      // бы уровень обратно при ближайшей смене черты.
+      proficiencyGrants: pruneProficiencyGrants(
+        character.value.proficiencyGrants,
+        { ...character.value, skills },
       ),
     };
   }

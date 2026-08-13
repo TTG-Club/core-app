@@ -6387,6 +6387,45 @@ export function applyProficiencyGrants(
 }
 
 /**
+ * Приведение навыков к новому журналу выдач.
+ *
+ * Навык — не строка в списке владений, а запись со своим уровнем, поэтому
+ * правило своё. Выданный навык поднимает уровень до владения, но только с «нет
+ * владения»: половину владения и компетенцию источник не трогает — они выше и
+ * получены иначе. Ровно так же ведёт себя {@link applySkillProficiencies}.
+ *
+ * Снятие возвращает «нет владения» только тем навыкам, у которых уровень ровно
+ * «владение», то есть в точности то, что источник и дал. Компетенцию, поднятую
+ * поверх выдачи, снятие черты не отбирает.
+ *
+ * @param skills навыки персонажа.
+ * @param previous журнал выдач до изменения.
+ * @param next журнал выдач после изменения.
+ * @returns навыки с уровнями, согласованными с журналом.
+ */
+function applyGrantedSkills(
+  skills: CharacterSkill[],
+  previous: ProficiencyGrant[],
+  next: ProficiencyGrant[],
+): CharacterSkill[] {
+  const before = new Set(previous.flatMap((grant) => grant.skills));
+  const after = new Set(next.flatMap((grant) => grant.skills));
+
+  return skills.map((skill): CharacterSkill => {
+    if (after.has(skill.name)) {
+      return skill.proficiency === 'none'
+        ? { ...skill, proficiency: 'proficient' }
+        : skill;
+    }
+
+    const isRevoked =
+      before.has(skill.name) && skill.proficiency === 'proficient';
+
+    return isRevoked ? { ...skill, proficiency: 'none' } : skill;
+  });
+}
+
+/**
  * Держится ли владение на листе после смены журнала: то, чего не выдавал никто,
  * отмечено игроком и остаётся; выданное — только пока его даёт хоть кто-то.
  *
@@ -6429,29 +6468,39 @@ function dropRevoked(
  * Опустевшие записи выпадают целиком.
  *
  * @param grants журнал выдач листа.
- * @param proficiencies владения персонажа после правки.
+ * @param character владения и навыки персонажа после правки.
  * @returns журнал без того, чего на листе не осталось.
  */
 export function pruneProficiencyGrants(
   grants: ProficiencyGrant[],
-  proficiencies: CharacterProficiencies,
+  character: Pick<Character, 'proficiencies' | 'skills'>,
 ): ProficiencyGrant[] {
+  const { proficiencies } = character;
+
   const armor = new Set(proficiencies.armor);
   const weapons = new Set(proficiencies.weapons);
   const languages = new Set(proficiencies.languages);
   const tools = new Set(proficiencies.tools.map(({ name }) => name));
 
-  return grants.flatMap((grant) => {
-    const pruned: ProficiencyGrant = {
-      source: grant.source,
-      armor: grant.armor.filter((item) => armor.has(item)),
-      weapons: grant.weapons.filter((item) => weapons.has(item)),
-      tools: grant.tools.filter((tool) => tools.has(tool.name)),
-      languages: grant.languages.filter((item) => languages.has(item)),
-    };
+  // У навыка «нет на листе» означает не отсутствие записи, а уровень «нет
+  // владения»: игрок сбросил выданный навык — значит выдачу он снял.
+  const skills = new Set(
+    character.skills
+      .filter((skill) => skill.proficiency !== 'none')
+      .map(({ name }) => name),
+  );
 
-    return hasGrantedProficiencies(pruned) ? [pruned] : [];
-  });
+  // Опустевшая запись из журнала не выбрасывается: она и означает «всё, что этот
+  // источник давал, игрок снял». Выбрось её — и сверка завела бы запись заново
+  // из снимка на записи умения, вернув снятое.
+  return grants.map((grant) => ({
+    source: grant.source,
+    armor: grant.armor.filter((item) => armor.has(item)),
+    weapons: grant.weapons.filter((item) => weapons.has(item)),
+    tools: grant.tools.filter((tool) => tools.has(tool.name)),
+    languages: grant.languages.filter((item) => languages.has(item)),
+    skills: grant.skills.filter((item) => skills.has(item)),
+  }));
 }
 
 /**
@@ -6503,7 +6552,8 @@ function hasGrantedProficiencies(granted: GrantedProficiencies): boolean {
     granted.armor.length
     || granted.weapons.length
     || granted.tools.length
-    || granted.languages.length,
+    || granted.languages.length
+    || granted.skills.length,
   );
 }
 
@@ -6767,8 +6817,16 @@ function withFeatInitiativeBonuses(
 
 /**
  * Записи журнала выдач от черт листа: по записи на каждую черту со снимком
- * владений. Как и свои бонусы инициативы, пересобираются целиком — записи
- * прочих источников (класс, предыстория, вид) остаются нетронутыми.
+ * владений. Записи прочих источников (класс, предыстория, вид) не трогаются.
+ *
+ * Уже заведённая запись остаётся как есть, а не пересобирается из снимка. Снимок
+ * на записи умения — это то, что черта даёт при взятии; журнал — то, что она
+ * даёт на листе сейчас. Разойтись они могут по воле игрока: он снял выданное
+ * владение в панели или сбросил выданный навык, и подрезка убрала это из
+ * записи. Пересборка из снимка вернула бы снятое при ближайшей смене черты.
+ *
+ * Поэтому же опустевшая запись черты остаётся в журнале: она и означает «эту
+ * выдачу игрок снял». Уходит запись только вместе со своей чертой.
  *
  * @param grants журнал выдач листа.
  * @param features особенности листа.
@@ -6782,16 +6840,17 @@ function withFeatProficiencyGrants(
     (grant) => !grant.source.startsWith(PROFICIENCY_SOURCE_PREFIXES.feature),
   );
 
-  const fromFeatures = features.flatMap<ProficiencyGrant>((feature) =>
-    feature.proficiencies
-      ? [
-          {
-            ...feature.proficiencies,
-            source: getProficiencySourceId('feature', feature.id),
-          },
-        ]
-      : [],
-  );
+  const recorded = new Map(grants.map((grant) => [grant.source, grant]));
+
+  const fromFeatures = features.flatMap<ProficiencyGrant>((feature) => {
+    if (!feature.proficiencies) {
+      return [];
+    }
+
+    const source = getProficiencySourceId('feature', feature.id);
+
+    return [recorded.get(source) ?? { ...feature.proficiencies, source }];
+  });
 
   return [...others, ...fromFeatures];
 }
@@ -6836,6 +6895,11 @@ export function withFeatModifiers(
     // поэтому он и служит состоянием «до».
     proficiencies: applyProficiencyGrants(
       next.proficiencies,
+      next.proficiencyGrants,
+      proficiencyGrants,
+    ),
+    skills: applyGrantedSkills(
+      next.skills,
       next.proficiencyGrants,
       proficiencyGrants,
     ),

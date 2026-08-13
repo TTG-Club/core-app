@@ -4,6 +4,7 @@
   import {
     SelectArmorCategory,
     SelectItem,
+    SelectSkills,
     SelectWeaponCategory,
   } from '~ui/select';
 
@@ -22,6 +23,13 @@
     get: () => model.value.armorCategories,
     set: (value) => {
       model.value = { ...model.value, armorCategories: toUrlList(value) };
+    },
+  });
+
+  const skills = computed<string | Array<string>>({
+    get: () => model.value.skills,
+    set: (value) => {
+      model.value = { ...model.value, skills: toUrlList(value) };
     },
   });
 
@@ -84,7 +92,18 @@
     </UFormField>
 
     <UFormField
-      class="md:col-span-full"
+      class="md:col-span-12"
+      label="Навыки"
+      help="Владение выдаётся сразу; компетенцию и половину владения выдача не трогает"
+    >
+      <SelectSkills
+        v-model="skills"
+        multiple
+      />
+    </UFormField>
+
+    <UFormField
+      class="md:col-span-12"
       label="Инструменты"
     >
       <SelectItem
