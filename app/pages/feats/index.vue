@@ -3,6 +3,7 @@
 
   import { FeatBody } from '~feats/body';
   import { FeatLink } from '~feats/link';
+  import { getFeatMarkdown } from '~feats/model';
   import { FilterControls, useFilter } from '~infrastructure/filter';
   import { UiDetailPane } from '~ui/detail-pane';
   import { GroupedList } from '~ui/grouped-list';
@@ -58,6 +59,8 @@
     apiBasePath: '/api/v2/feats',
     items: feats,
   });
+
+  const markdown = useEntityMarkdown(detailFeat, getFeatMarkdown);
 
   const listResetKey = computed(() =>
     JSON.stringify({
@@ -128,6 +131,7 @@
         :date-time="detailFeat?.updatedAt"
         :url="detailUrlForCopy"
         :edit-url="detailEditUrl"
+        :markdown
         :is-loading="isDetailLoading"
         :is-error="isDetailError"
         copy-title

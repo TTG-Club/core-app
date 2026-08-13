@@ -2,6 +2,7 @@
   import type { GlossaryDetailResponse } from '~glossary/model';
 
   import { GlossaryBody } from '~glossary/body';
+  import { getGlossaryMarkdown } from '~glossary/model';
   import { UiDrawer } from '~ui/drawer';
 
   const { url } = defineProps<{
@@ -25,6 +26,8 @@
   const isError = computed(() => status.value === 'error');
   const urlForCopy = computed(() => `${getOrigin()}/glossary/${url}`);
   const editUrl = computed(() => `/workshop/glossary/${url}`);
+
+  const markdown = useEntityMarkdown(detail, getGlossaryMarkdown);
 </script>
 
 <template>
@@ -34,6 +37,7 @@
     :date-time="detail?.updatedAt"
     :url="urlForCopy"
     :edit-url="editUrl"
+    :markdown
     :is-loading
     :is-error
     copy-title

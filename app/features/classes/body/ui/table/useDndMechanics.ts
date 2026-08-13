@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import {
   CasterType,
   FULL_CASTER_SPELL_SLOTS,
+  getClassProficiencyBonus,
   HALF_CASTER_SPELL_SLOTS,
   THIRD_CASTER_SPELL_SLOTS,
 } from '../../../model';
@@ -11,12 +12,15 @@ interface UseDndMechanicsOptions {
   casterType: MaybeRefOrGetter<CasterType>;
 }
 
+/**
+ * Механики заклинателя для таблицы прогрессии: ячейки заклинаний по типу
+ * заклинателя и бонус мастерства.
+ *
+ * @param options - Тип заклинателя (реактивный)
+ * @returns Таблица ячеек, флаги типа заклинателя и бонус мастерства
+ */
 export function useDndMechanics(options: UseDndMechanicsOptions) {
   const { casterType } = options;
-
-  function getProficiencyBonus(level: number): number {
-    return Math.ceil(level / 4) + 1;
-  }
 
   const spellSlots = computed(() => {
     const type = toValue(casterType);
@@ -53,6 +57,6 @@ export function useDndMechanics(options: UseDndMechanicsOptions) {
     isPactSpellcaster,
     isRegularSpellcaster,
 
-    getProficiencyBonus,
+    getProficiencyBonus: getClassProficiencyBonus,
   };
 }

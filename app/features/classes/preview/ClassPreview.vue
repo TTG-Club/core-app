@@ -4,6 +4,8 @@
   import { ClassBody } from '~classes/body';
   import { UiDrawer } from '~ui/drawer';
 
+  import { getClassMarkdown } from '../model';
+
   const opened = defineModel<boolean>('open', { required: true });
 
   const { state } = defineProps<{
@@ -31,6 +33,8 @@
   const isLoading = computed(() => status.value === 'pending');
   const isError = computed(() => status.value === 'error');
 
+  const markdown = useEntityMarkdown(characterClass, getClassMarkdown);
+
   whenever(opened, () => {
     clear();
     loadPreview();
@@ -46,6 +50,7 @@
     :source="characterClass?.source"
     :is-loading
     :is-error
+    :markdown
     width="100%"
     @close="opened = false"
   >

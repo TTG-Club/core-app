@@ -10,6 +10,7 @@
   import { ItemLink } from '~items/link';
   import {
     createItemListPresentationConfig,
+    getItemMarkdown,
     getItemTypeLabels,
     parseItemLinks,
   } from '~items/model';
@@ -87,6 +88,8 @@
     apiBasePath: '/api/v2/item',
     items,
   });
+
+  const markdown = useEntityMarkdown(detailItem, getItemMarkdown);
 
   // Группировка по категории берёт подписи из фильтров: пока они грузятся,
   // список показывать нечем — иначе группы мигнут без подписей подгрупп.
@@ -172,6 +175,7 @@
         :date-time="detailItem?.updatedAt"
         :url="detailUrlForCopy"
         :edit-url="detailEditUrl"
+        :markdown
         :is-loading="isDetailLoading"
         :is-error="isDetailError"
         copy-title

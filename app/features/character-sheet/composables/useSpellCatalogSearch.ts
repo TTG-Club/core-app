@@ -311,6 +311,9 @@ export function useSpellCatalogSearch(
       let appliedSearch = trimmedSearch;
 
       // Пустая выдача по запросу в неверной раскладке — пробуем конверсию.
+      // Общее правило описано в `withLayoutFallback`, но сам хелпер здесь не
+      // подходит: поиск асинхронный, а конвертированный запрос нужно запомнить
+      // в `appliedSearch`, чтобы по нему шла дальнейшая пагинация.
       if (!firstPage.length && trimmedSearch) {
         const layoutSearch = convertKeyboardLayout(trimmedSearch);
 

@@ -5,7 +5,7 @@ import type {
   SimpleTextNode,
 } from './types';
 
-import { MARKER_ALIASES, MARKER_MAP } from './config';
+import { MARKER_ALIASES, MARKER_ALIASES_LOWERCASE, MARKER_MAP } from './config';
 import { LEADING_CHARACTER, MAX_DEPTH, MAX_STRING_LENGTH } from './consts';
 import { logError } from './utils';
 
@@ -65,16 +65,74 @@ function recursiveParse(text: string, depth: number): RenderNode[] {
       }
     } catch (err) {
       logError('Parser', 'Converting error', { str, err });
+
+      // Разобрать маркер не удалось (неизвестное имя, битые атрибуты) —
+      // оставляем хотя бы его текст. Молчаливый пропуск вырезал бы кусок
+      // предложения вместе со знаками препинания вокруг.
+      const fallback = recoverMarkerText(str, depth);
+
+      if (fallback.length) {
+        result.push(...fallback);
+      }
     }
   }
 
   return result;
 }
 
+/**
+ * Достаёт из неразобранного чанка его текст, чтобы предложение не осталось
+ * с дырой.
+ *
+ * `{@name текст | attr:value}` даёт «текст»: имя маркера и хвост атрибутов
+ * пользователю не нужны, а вложенные маркеры внутри разбираются обычным
+ * путём. Не-маркерный чанк возвращается как есть.
+ *
+ * @param chunk - Чанк, на котором споткнулся разбор
+ * @param depth - Текущая глубина рекурсии
+ * @returns Узлы с текстом маркера либо пустой массив, если текста не было
+ */
+function recoverMarkerText(chunk: string, depth: number): RenderNode[] {
+  if (!chunk.startsWith(`{${LEADING_CHARACTER}`) || !chunk.endsWith('}')) {
+    return chunk.trim() ? [{ type: 'text', text: chunk }] : [];
+  }
+
+  const { text: rawName, rest } = splitFirstSpace(chunk.slice(1, -1));
+
+  // Имени нет вовсе (`{@ i текст}` — лишний пробел после «@»): без него
+  // неясно, где кончается имя и начинается текст, и восстановление вывело
+  // бы обрубок имени как прозу. Такой чанк отбрасываем целиком.
+  if (!rawName.replace(/^@/, '')) {
+    return [];
+  }
+
+  // Берётся только часть до первого `|`. Хвост — это либо атрибуты, либо
+  // ссылочный ключ (`{@book Название|dmg}`), и ни то ни другое пользователю
+  // показывать не нужно. Литеральный `|` внутри текста неизвестного маркера
+  // при этом теряется, но отличить его от ключа нечем: `splitAttrs`
+  // бросает одинаково на «dmg» и на «10».
+  const { text } = splitByPipeBase(rest);
+
+  if (!text?.trim()) {
+    return [];
+  }
+
+  try {
+    return recursiveParse(text, depth + 1);
+  } catch {
+    return [{ type: 'text', text }];
+  }
+}
+
 function convertMarker(string: string, depth: number): MarkerNode {
   const { text: rawMarker, rest } = splitFirstSpace(string);
+  const name = rawMarker.replace(/^@/, '');
 
-  const marker = MARKER_ALIASES.get(rawMarker.replace(/^@/, ''));
+  // Регистр имени не важен: в данных попадается `{@I ...}` вместо
+  // `{@i ...}`, и без этого маркер считался бы неизвестным.
+  const marker =
+    MARKER_ALIASES.get(name)
+    ?? MARKER_ALIASES_LOWERCASE.get(name.toLowerCase());
 
   if (!marker) {
     throw new Error(`Unknown marker: ${rawMarker}`);
@@ -121,7 +179,8 @@ function convertMarker(string: string, depth: number): MarkerNode {
     attrs = splitAttrs(params);
   } catch (err) {
     // Атрибуты не распарсились: скорее всего `|` — это часть текста, а не
-    // разделитель key:value (например форматирующий маркер над текстом «5 | 10»).
+    // разделитель key:value (например форматирующий маркер над текстом
+    // «5 | 10»).
     // Не теряем маркер целиком — трактуем всё тело как контент, `|` остаётся
     // литеральным. Так текст не пропадает со страницы.
     logError('Parser', 'Invalid attributes, treating body as content', {
@@ -177,9 +236,10 @@ interface TableNode extends MarkerNode {
 
 /**
  * Строит структурный узел таблицы из тела `{@table …}`. Строка-заголовок — это
- * `{@tr}`, чьи ячейки `{@th}` → colLabels/colStyles; прочие `{@tr}` из `{@td}` →
- * rows. Форма идентична бэкенд-AST, поэтому MarkupTable не меняется. Содержимое
- * ячеек и подписи разбираются рекурсивно (внутри может быть {@dice}, {@creature}…).
+ * `{@tr}`, чьи ячейки `{@th}` → colLabels/colStyles; прочие `{@tr}` из
+ * `{@td}` → rows. Форма идентична бэкенд-AST, поэтому MarkupTable не
+ * меняется. Содержимое ячеек и подписи разбираются рекурсивно (внутри
+ * может быть {@dice}, {@creature}…).
  */
 function buildTableNode(rest: string, depth: number): MarkerNode {
   const { text } = splitByPipeBase(rest); // params таблицы зарезервированы
@@ -238,7 +298,8 @@ function buildTableNode(rest: string, depth: number): MarkerNode {
 
       // Атрибуты не распарсились (например ячейка «5 | 10») — значит `|`
       // литеральный: весь текст ячейки идёт в контент, чтобы не потерять часть
-      // после `|` (иначе от «5 | 10» осталось бы только «5»). Ср. convertMarker.
+      // после `|` (иначе от «5 | 10» осталось бы только «5»). Ср.
+      // convertMarker.
       const content =
         attrs || params.length === 0
           ? recursiveParse(cellText ?? '', depth + 1)

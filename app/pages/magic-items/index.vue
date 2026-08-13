@@ -13,7 +13,10 @@
   import { useMagicItemRarityGroupOrder } from '~magic-items/composable';
   import { MagicItemLegend } from '~magic-items/legend';
   import { MagicItemLink } from '~magic-items/link';
-  import { createMagicItemListPresentationConfig } from '~magic-items/model';
+  import {
+    createMagicItemListPresentationConfig,
+    getMagicItemMarkdown,
+  } from '~magic-items/model';
   import { UiDetailPane } from '~ui/detail-pane';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
@@ -83,6 +86,8 @@
     apiBasePath: '/api/v2/magic-items',
     items: magicItems,
   });
+
+  const markdown = useEntityMarkdown(detailMagicItem, getMagicItemMarkdown);
 
   const isLoading = computed(() => {
     const isItemsLoading =
@@ -172,6 +177,7 @@
         :date-time="detailMagicItem?.updatedAt"
         :url="detailUrlForCopy"
         :edit-url="detailEditUrl"
+        :markdown
         :is-loading="isDetailLoading"
         :is-error="isDetailError"
         copy-title

@@ -8,6 +8,7 @@
     ARTICLE_DATE_FORMAT,
     ARTICLES_ADMIN_ROUTE,
     ARTICLES_API_PATH,
+    getArticleMarkdown,
     getArticleRoute,
   } from '../model';
 
@@ -38,6 +39,8 @@
   const editUrl = computed(() =>
     isAdmin.value ? `${ARTICLES_ADMIN_ROUTE}/${url}` : undefined,
   );
+
+  const markdown = useEntityMarkdown(article, getArticleMarkdown);
 </script>
 
 <template>
@@ -47,6 +50,7 @@
     :date-time-format="ARTICLE_DATE_FORMAT"
     :url="urlForCopy"
     :edit-url="editUrl"
+    :markdown
     :is-loading
     :is-error
     copy-title

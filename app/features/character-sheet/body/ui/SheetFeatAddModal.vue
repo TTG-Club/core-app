@@ -113,6 +113,24 @@
       ),
   );
 
+  /**
+   * Фильтрация каталога по подстроке русского или английского названия.
+   *
+   * @param catalogFeats черты каталога.
+   * @param query поисковый запрос в нижнем регистре.
+   * @returns черты, чьё название содержит запрос.
+   */
+  function filterFeatsByName(
+    catalogFeats: FeatCatalogItem[],
+    query: string,
+  ): FeatCatalogItem[] {
+    return catalogFeats.filter(
+      (feat) =>
+        feat.name.toLowerCase().includes(query)
+        || feat.nameEng.toLowerCase().includes(query),
+    );
+  }
+
   const filteredFeats = computed<FeatCatalogItem[]>(() => {
     const query = searchTerm.value.trim().toLowerCase();
 
@@ -122,10 +140,8 @@
       return list;
     }
 
-    return list.filter(
-      (feat) =>
-        feat.name.toLowerCase().includes(query)
-        || feat.nameEng.toLowerCase().includes(query),
+    return withLayoutFallback(query, (searchQuery) =>
+      filterFeatsByName(list, searchQuery),
     );
   });
 

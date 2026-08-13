@@ -2,6 +2,7 @@
   import type { GlossaryCreate, GlossaryDetailResponse } from '~glossary/model';
 
   import { GlossaryBody } from '~glossary/body';
+  import { getGlossaryMarkdown } from '~glossary/model';
   import { UiDrawer } from '~ui/drawer';
 
   const opened = defineModel<boolean>('open', { required: true });
@@ -31,6 +32,8 @@
   const isLoading = computed(() => status.value === 'pending');
   const isError = computed(() => status.value === 'error');
 
+  const markdown = useEntityMarkdown(glossary, getGlossaryMarkdown);
+
   whenever(opened, () => {
     clear();
     loadPreview();
@@ -46,6 +49,7 @@
     :source="glossary?.source"
     :is-loading
     :is-error
+    :markdown
     width="100%"
     @close="opened = false"
   >

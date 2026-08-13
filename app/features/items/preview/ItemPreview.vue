@@ -2,6 +2,7 @@
   import type { ItemCreate, ItemDetailResponse } from '~items/model';
 
   import { ItemBody } from '~items/body';
+  import { getItemMarkdown } from '~items/model';
   import { UiDrawer } from '~ui/drawer';
 
   const opened = defineModel<boolean>('open', { required: true });
@@ -31,6 +32,8 @@
   const isLoading = computed(() => status.value === 'pending');
   const isError = computed(() => status.value === 'error');
 
+  const markdown = useEntityMarkdown(item, getItemMarkdown);
+
   whenever(opened, () => {
     clear();
     loadPreview();
@@ -46,6 +49,7 @@
     :source="item?.source"
     :is-loading
     :is-error
+    :markdown
     width="100%"
     @close="opened = false"
   >
