@@ -12,6 +12,13 @@ interface UseDndMechanicsOptions {
   casterType: MaybeRefOrGetter<CasterType>;
 }
 
+/**
+ * Механики заклинателя для таблицы прогрессии: ячейки заклинаний по типу
+ * заклинателя и бонус мастерства.
+ *
+ * @param options - Тип заклинателя (реактивный)
+ * @returns Таблица ячеек, флаги типа заклинателя и бонус мастерства
+ */
 export function useDndMechanics(options: UseDndMechanicsOptions) {
   const { casterType } = options;
 

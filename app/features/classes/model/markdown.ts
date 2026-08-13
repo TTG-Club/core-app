@@ -1,5 +1,5 @@
 import type { Level } from '~/shared/types';
-import type { MarkdownStat } from '~ui/markup';
+import type { MarkdownColumn, MarkdownStat } from '~ui/markup';
 
 import type {
   ClassDetailResponse,
@@ -7,6 +7,7 @@ import type {
   ClassFeatureOption,
   ClassInMulticlass,
   ClassMulticlassProficiency,
+  ClassTable,
   MulticlassDetailResponse,
 } from './detail';
 
@@ -15,6 +16,7 @@ import { maxBy, orderBy, range } from 'es-toolkit';
 import { LEVELS } from '~/shared/consts';
 import {
   buildMarkdownEntity,
+  buildMarkdownTable,
   buildStatsBlock,
   escapeMarkdown,
   escapeMarkdownCell,
@@ -50,6 +52,12 @@ const CLASS_LABELS = {
   equipment: 'Снаряжение',
   description: 'Описание',
 } as const;
+
+/** Колонки пактового заклинателя: число ячеек и их круг. */
+const PACT_SLOT_COLUMNS: MarkdownColumn[] = [
+  { label: CLASS_LABELS.pactSlotsCount, align: 'center' },
+  { label: CLASS_LABELS.pactSlotsLevel, align: 'center' },
+];
 
 /** Вступление блока снаряжения — тем же текстом, что и на странице. */
 const EQUIPMENT_INTRO =
@@ -149,7 +157,10 @@ export function getMulticlassMarkdown(
 /** Строки блока свойств сборки. */
 function getMulticlassStats(detail: MulticlassDetailResponse): MarkdownStat[] {
   return [
-    ['Уровень персонажа', String(detail.characterLevel)],
+    [
+      'Уровень персонажа',
+      detail.characterLevel ? String(detail.characterLevel) : '',
+    ],
     ['Классы', getClassList(detail.multiclass)],
     [
       'Уровень заклинателя',
@@ -186,18 +197,14 @@ function getMulticlassTable(detail: MulticlassDetailResponse): string {
   const features = getLeveledFeatures(detail.features);
   const classByLevel = getClassByLevel(detail.multiclass);
 
-  const headers = [
-    CLASS_LABELS.level,
-    CLASS_LABELS.class,
-    CLASS_LABELS.proficiencyBonus,
-    CLASS_LABELS.features,
-    ...detail.table.map((column) => escapeMarkdownCell(column.name)),
-  ];
-
   // Класс и умения — колонки с прозой, остальные держат короткие числа.
-  const aligns = headers.map((_, index) =>
-    index === 1 || index === 3 ? ':---' : ':---:',
-  );
+  const columns: MarkdownColumn[] = [
+    { label: CLASS_LABELS.level, align: 'center' },
+    { label: CLASS_LABELS.class, align: 'left' },
+    { label: CLASS_LABELS.proficiencyBonus, align: 'center' },
+    { label: CLASS_LABELS.features, align: 'left' },
+    ...detail.table.map(toClassColumn),
+  ];
 
   const rows = LEVELS.filter((level) => level <= detail.characterLevel).map(
     (level) => [
@@ -211,7 +218,7 @@ function getMulticlassTable(detail: MulticlassDetailResponse): string {
     ],
   );
 
-  return [headers, aligns, ...rows].map(toRow).join('\n');
+  return buildMarkdownTable(columns, rows);
 }
 
 /**
@@ -262,14 +269,10 @@ function getMulticlassSlotsTable(detail: MulticlassDetailResponse): string {
   }
 
   if (detail.casterType === CasterType.PACT) {
-    return toSlotsTable(
-      [CLASS_LABELS.pactSlotsCount, CLASS_LABELS.pactSlotsLevel],
-      spellcastingLevel,
-      [
-        String(PACT_CASTER_SPELL_SLOTS_COUNT[spellcastingLevel]),
-        String(PACT_CASTER_SPELL_SLOTS_LEVEL[spellcastingLevel]),
-      ],
-    );
+    return toSlotsTable(PACT_SLOT_COLUMNS, spellcastingLevel, [
+      String(PACT_CASTER_SPELL_SLOTS_COUNT[spellcastingLevel]),
+      String(PACT_CASTER_SPELL_SLOTS_LEVEL[spellcastingLevel]),
+    ]);
   }
 
   if (detail.casterType !== CasterType.MULTICLASS) {
@@ -279,7 +282,7 @@ function getMulticlassSlotsTable(detail: MulticlassDetailResponse): string {
   const slots = MULTICLASS_SPELL_SLOTS[spellcastingLevel];
 
   return toSlotsTable(
-    range(1, slots.length + 1).map((slotLevel) => `${slotLevel}-й`),
+    range(1, slots.length + 1).map(toSlotColumn),
     spellcastingLevel,
     slots.map(toSlotCell),
   );
@@ -287,17 +290,14 @@ function getMulticlassSlotsTable(detail: MulticlassDetailResponse): string {
 
 /** Однострочная таблица ячеек: слева уровень заклинателя, справа значения. */
 function toSlotsTable(
-  headers: string[],
+  columns: MarkdownColumn[],
   spellcastingLevel: Level,
   cells: string[],
 ): string {
-  return [
-    [CLASS_LABELS.spellcasterLevel, ...headers],
-    [':---', ...headers.map(() => ':---:')],
-    [String(spellcastingLevel), ...cells],
-  ]
-    .map(toRow)
-    .join('\n');
+  return buildMarkdownTable(
+    [{ label: CLASS_LABELS.spellcasterLevel, align: 'left' }, ...columns],
+    [[String(spellcastingLevel), ...cells]],
+  );
 }
 
 /** Строки блока свойств; пустые отбрасывает сборщик. */
@@ -342,19 +342,15 @@ function getProgressionTable(detail: ClassDetailResponse): string {
   const slotCount = spellSlots ? countSlotColumns(spellSlots) : 0;
   const isPactCaster = detail.casterType === CasterType.PACT;
 
-  const headers = [
-    CLASS_LABELS.level,
-    CLASS_LABELS.proficiencyBonus,
-    CLASS_LABELS.features,
-    ...detail.table.map((column) => escapeMarkdownCell(column.name)),
-    ...range(1, slotCount + 1).map((slotLevel) => `${slotLevel}-й`),
-    ...(isPactCaster
-      ? [CLASS_LABELS.pactSlotsCount, CLASS_LABELS.pactSlotsLevel]
-      : []),
+  const columns: MarkdownColumn[] = [
+    { label: CLASS_LABELS.level, align: 'center' },
+    { label: CLASS_LABELS.proficiencyBonus, align: 'center' },
+    // Умения — единственная колонка с прозой, остальные держат короткие числа.
+    { label: CLASS_LABELS.features, align: 'left' },
+    ...detail.table.map(toClassColumn),
+    ...range(1, slotCount + 1).map(toSlotColumn),
+    ...(isPactCaster ? PACT_SLOT_COLUMNS : []),
   ];
-
-  // Умения — единственная колонка с прозой, остальные держат короткие числа.
-  const aligns = headers.map((_, index) => (index === 2 ? ':---' : ':---:'));
 
   const rows = LEVELS.map((level) => [
     String(level),
@@ -374,12 +370,17 @@ function getProgressionTable(detail: ClassDetailResponse): string {
       : []),
   ]);
 
-  return [headers, aligns, ...rows].map(toRow).join('\n');
+  return buildMarkdownTable(columns, rows);
 }
 
-/** Собирает строку таблицы: `| a | b |`. */
-function toRow(cells: string[]): string {
-  return `| ${cells.join(' | ')} |`;
+/** Собственная колонка класса: значения в ней короткие, потому по центру. */
+function toClassColumn(column: ClassTable): MarkdownColumn {
+  return { label: escapeMarkdownCell(column.name), align: 'center' };
+}
+
+/** Колонка круга заклинаний: подписана порядковым номером круга. */
+function toSlotColumn(slotLevel: number): MarkdownColumn {
+  return { label: `${slotLevel}-й`, align: 'center' };
 }
 
 /** Ноль ячеек этого круга на уровне рисуется прочерком, как на странице. */

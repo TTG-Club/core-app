@@ -1,6 +1,7 @@
 import type { MarkerNode, RenderNode } from './types';
 
 import { MAX_DEPTH } from './consts';
+import { toMarkdownRow } from './markdown-table';
 import { parse } from './parser';
 import {
   clampHeadingLevel,
@@ -264,14 +265,14 @@ function renderTable(table: TableLikeNode, depth: number): string {
   const indexes = Array.from({ length: columnCount }, (_, index) => index);
 
   const lines = [
-    toRow(indexes.map((index) => headers[index] ?? '')),
-    toRow(
+    toMarkdownRow(indexes.map((index) => headers[index] ?? '')),
+    toMarkdownRow(
       indexes.map((index) =>
         toAlign(table.colAligns?.[index] || table.colStyles?.[index]),
       ),
     ),
     ...rows.map((row) =>
-      toRow(indexes.map((index) => renderCell(row?.[index], depth))),
+      toMarkdownRow(indexes.map((index) => renderCell(row?.[index], depth))),
     ),
   ];
 
@@ -298,11 +299,6 @@ function toCaption(caption: string): string {
   return caption.startsWith('*') && caption.endsWith('*')
     ? caption
     : `**${caption}**`;
-}
-
-/** Собирает строку таблицы: `| a | b |`. */
-function toRow(cells: string[]): string {
-  return `| ${cells.join(' | ')} |`;
 }
 
 /**

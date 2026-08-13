@@ -1,4 +1,4 @@
-import type { MarkdownStat } from '~ui/markup';
+import type { MarkdownColumn, MarkdownStat } from '~ui/markup';
 
 import type {
   CreatureAbilitiesResponse,
@@ -8,6 +8,7 @@ import type {
 
 import {
   buildMarkdownEntity,
+  buildMarkdownTable,
   buildStatsBlock,
   escapeMarkdown,
   escapeMarkdownCell,
@@ -15,6 +16,14 @@ import {
   toInlineValue,
   toMarkdown,
 } from '~ui/markup';
+
+/** Колонки таблицы характеристик — в порядке вывода. */
+const ABILITY_COLUMNS: MarkdownColumn[] = [
+  { label: 'Хар.', align: 'left' },
+  { label: 'Знач.', align: 'center' },
+  { label: 'Мод.', align: 'center' },
+  { label: 'Спас.', align: 'center' },
+];
 
 /** Подписи характеристик в порядке строк таблицы. */
 const ABILITY_LABELS: Array<[keyof CreatureAbilitiesResponse, string]> = [
@@ -154,14 +163,12 @@ function getAbilitiesTable(abilities: CreatureAbilitiesResponse): string {
       // Поля ответа названы сокращённо, поэтому переименовываются на месте.
       const { value, mod: modifier, sav: save } = abilities[key];
 
-      const cells = [
+      return [
         label,
         escapeMarkdownCell(value),
         escapeMarkdownCell(modifier),
         escapeMarkdownCell(save),
       ];
-
-      return `| ${cells.join(' | ')} |`;
     },
   );
 
@@ -169,11 +176,7 @@ function getAbilitiesTable(abilities: CreatureAbilitiesResponse): string {
     return '';
   }
 
-  return [
-    '| Хар. | Знач. | Мод. | Спас. |',
-    '| :--- | :---: | :---: | :---: |',
-    ...rows,
-  ].join('\n');
+  return buildMarkdownTable(ABILITY_COLUMNS, rows);
 }
 
 /** Блок однотипных пунктов «название + описание» под общим подзаголовком. */
