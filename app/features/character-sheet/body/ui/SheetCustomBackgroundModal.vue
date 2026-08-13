@@ -244,7 +244,7 @@
 
     // Уровень взятия — первый, как и у каталожной предыстории.
     return summary
-      ? buildFeatFeature(summary, false, ORIGIN_FEAT_ACQUISITION_LEVEL)
+      ? buildFeatFeature(summary, { level: ORIGIN_FEAT_ACQUISITION_LEVEL })
       : null;
   }
 

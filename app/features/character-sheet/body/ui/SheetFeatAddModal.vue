@@ -14,8 +14,10 @@
     getFeatUrlFromFeatureId,
     parseFeatCatalog,
     parseRepeatableFeatUrls,
+    resolveChoiceOptions,
     SHEET_SEARCH_LABELS,
   } from '../../model';
+  import SheetChoiceSelect from './SheetChoiceSelect.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
 
   const emit = defineEmits<{
@@ -229,6 +231,72 @@
     draftUrls.value = nextUrls;
   }
 
+  /** Загруженные детали выбранных черт — их же применяет второй шаг. */
+  const loadedSummaries = ref<FeatSummary[]>([]);
+
+  /** Ответы игрока на выборы черт: id выбора → выбранные навыки. */
+  const choiceAnswers = ref<Record<string, string[]>>({});
+
+  /** Черты, которые о чём-то спрашивают, — по ним и строится шаг выбора. */
+  const choiceRows = computed(() =>
+    loadedSummaries.value.flatMap((summary) =>
+      summary.choices.map((choice) => ({
+        choice,
+        featName: summary.name,
+        options: resolveChoiceOptions(choice, {
+          skillNames: character.value.skills.map((skill) => skill.name),
+          proficientSkillNames: character.value.skills
+            .filter((skill) => skill.proficiency !== 'none')
+            .map((skill) => skill.name),
+          // Выбор идёт по уже собранному листу, а не внутри мастера, поэтому
+          // «выбранных прямо сейчас во владение» навыков здесь не бывает.
+          chosenProficientSkills: [],
+          knownLanguages: character.value.proficiencies.languages,
+          knownTools: character.value.proficiencies.tools.map(
+            (tool) => tool.name,
+          ),
+          // Пул компетентности резолвится владениями навыками, поэтому
+          // справочники языков и инструментов ему не нужны.
+          allLanguages: [],
+          allTools: [],
+        }),
+      })),
+    ),
+  );
+
+  const isChoiceStep = computed(() => choiceRows.value.length > 0);
+
+  /** Все выборы отвечены — иначе применять рано. */
+  const isChoiceComplete = computed(() =>
+    choiceRows.value.every(
+      (row) => (choiceAnswers.value[row.choice.id]?.length ?? 0) > 0,
+    ),
+  );
+
+  /**
+   * Собирает записи умений из загруженных деталей с ответами игрока и добавляет
+   * их на лист.
+   */
+  function applyLoadedFeats() {
+    const features = loadedSummaries.value.map((summary) =>
+      // Уровень взятия нужен прибавке к максимуму хитов: у «Крепкого» она
+      // считается от него, а не от текущего уровня.
+      buildFeatFeature(summary, {
+        repeatable: repeatableUrls.value.has(summary.url),
+        level: character.value.level,
+        expertiseSkills: summary.choices.flatMap(
+          (choice) => choiceAnswers.value[choice.id] ?? [],
+        ),
+      }),
+    );
+
+    if (features.length) {
+      addFeats(features);
+    }
+
+    emit('close');
+  }
+
   async function handleApply() {
     const urls = [...draftUrls.value];
 
@@ -241,25 +309,12 @@
     try {
       const results = await Promise.allSettled(urls.map(fetchFeatDetail));
 
-      const features = results
+      loadedSummaries.value = results
         .map((result) => (result.status === 'fulfilled' ? result.value : null))
-        .filter((summary): summary is FeatSummary => summary !== null)
-        // Уровень взятия нужен прибавке к максимуму хитов: у «Крепкого» она
-        // считается от него, а не от текущего уровня.
-        .map((summary) =>
-          buildFeatFeature(
-            summary,
-            repeatableUrls.value.has(summary.url),
-            character.value.level,
-          ),
-        );
-
-      if (features.length) {
-        addFeats(features);
-      }
+        .filter((summary): summary is FeatSummary => summary !== null);
 
       // Часть черт не загрузилась — сообщаем, но добавляем успешные.
-      if (features.length < urls.length) {
+      if (loadedSummaries.value.length < urls.length) {
         toast.add({
           color: 'error',
           icon: 'tabler:alert-triangle',
@@ -267,7 +322,11 @@
         });
       }
 
-      emit('close');
+      // Черта может просить выбор («Знаток» — навык для компетентности): тогда
+      // модалка не закрывается, а показывает второй шаг.
+      if (!isChoiceStep.value) {
+        applyLoadedFeats();
+      }
     } finally {
       isApplying.value = false;
     }
@@ -275,6 +334,12 @@
 
   function handleCancel() {
     emit('close');
+  }
+
+  /** Возврат к списку черт: ответы сбрасываются вместе с загруженными деталями. */
+  function handleChoiceBack() {
+    loadedSummaries.value = [];
+    choiceAnswers.value = {};
   }
 </script>
 
@@ -284,7 +349,48 @@
     :ui="{ content: 'sm:max-w-2xl' }"
   >
     <template #body>
-      <div class="flex h-[65dvh] min-h-96 flex-col gap-4">
+      <!-- Второй шаг: черта о чём-то спрашивает. Пока это только навык для
+        компетентности («Знаток») — остальные виды выбора лист не применяет и
+        потому не показывает -->
+      <div
+        v-if="isChoiceStep"
+        class="flex h-[65dvh] min-h-96 flex-col gap-4 overflow-y-auto pr-1"
+      >
+        <p class="text-sm text-dimmed">
+          Черта даёт компетентность: бонус мастерства в выбранном навыке
+          удваивается. Выбрать можно только навык, которым персонаж уже владеет.
+        </p>
+
+        <div
+          v-for="row in choiceRows"
+          :key="row.choice.id"
+          class="flex flex-col gap-1"
+        >
+          <span class="text-sm font-medium text-highlighted">
+            {{ row.featName }}
+          </span>
+
+          <SheetChoiceSelect
+            v-model="choiceAnswers[row.choice.id]"
+            :items="row.options"
+            :count="row.choice.count"
+            :placeholder="row.choice.label || 'Выберите навык'"
+          />
+        </div>
+
+        <p
+          v-if="!choiceRows.some((row) => row.options.length)"
+          class="text-sm text-warning"
+        >
+          Персонаж пока не владеет ни одним навыком — компетентность дать не в
+          чем. Выберите класс или предысторию, затем добавьте черту.
+        </p>
+      </div>
+
+      <div
+        v-else
+        class="flex h-[65dvh] min-h-96 flex-col gap-4"
+      >
         <SheetSearchInput
           v-model="searchTerm"
           :placeholder="SHEET_SEARCH_LABELS.byNamePlaceholder"
@@ -422,7 +528,29 @@
       <div class="flex w-full items-center justify-between gap-2">
         <span class="text-sm text-muted">{{ selectedCountLabel }}</span>
 
-        <div class="flex gap-2">
+        <div
+          v-if="isChoiceStep"
+          class="flex gap-2"
+        >
+          <UButton
+            label="Назад"
+            color="neutral"
+            variant="ghost"
+            @click.left.exact.prevent="handleChoiceBack"
+          />
+
+          <UButton
+            label="Применить"
+            color="primary"
+            :disabled="!isChoiceComplete"
+            @click.left.exact.prevent="applyLoadedFeats"
+          />
+        </div>
+
+        <div
+          v-else
+          class="flex gap-2"
+        >
           <UButton
             label="Отмена"
             color="neutral"

@@ -1422,6 +1422,7 @@ export function useCharacterSheet() {
         tools: [],
         languages: payload.proficiencies.languages,
         skills: [],
+        expertiseSkills: [],
       },
     );
 
@@ -1583,6 +1584,7 @@ export function useCharacterSheet() {
         tools: payload.proficiencies.tools,
         languages: payload.proficiencies.languages,
         skills: [],
+        expertiseSkills: [],
       },
     );
 
@@ -1733,6 +1735,7 @@ export function useCharacterSheet() {
         tools: [],
         languages: payload.languages,
         skills: [],
+        expertiseSkills: [],
       },
     );
 
@@ -1928,6 +1931,7 @@ export function useCharacterSheet() {
         tools: payload.tools,
         languages: [],
         skills: [],
+        expertiseSkills: [],
       },
     );
 

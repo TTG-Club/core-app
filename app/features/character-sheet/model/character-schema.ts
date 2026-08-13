@@ -178,6 +178,8 @@ const grantedProficienciesSchema = z.object({
   languages: z.array(z.string()).catch([]),
   // Навыки появились в выдаче позже прочего: у записей без поля их просто нет.
   skills: z.array(z.string()).catch([]),
+  // Компетентность — ещё позже, вместе с выбором игрока при взятии черты.
+  expertiseSkills: z.array(z.string()).catch([]),
 });
 
 /**

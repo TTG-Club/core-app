@@ -59,6 +59,7 @@ import {
   WEAPON_PROFICIENCY_GROUPS,
 } from './constants';
 import {
+  getCharacterFeatureId,
   getClassToolChoice,
   isAbilityImprovementFeature,
   parseAbilityKeys,
@@ -407,6 +408,20 @@ const featDetailSchema = z.object({
         .object({ alwaysPrepared: z.boolean().catch(false) })
         .nullable()
         .catch(null),
+      // Выборы при взятии черты. Лист умеет применить только компетентность в
+      // навыке, поэтому разбирает лишь поля, нужные ей.
+      choices: z
+        .array(
+          z.object({
+            key: z.string().catch(''),
+            type: z.string().nullable().catch(null),
+            label: z.string().nullable().catch(null),
+            count: z.coerce.number().nullable().catch(null),
+            grants: z.string().nullable().catch(null),
+          }),
+        )
+        .nullable()
+        .catch(null),
     })
     .nullable()
     .catch(null),
@@ -475,7 +490,55 @@ function toGrantedProficiencies(
     return null;
   }
 
-  return { armor, weapons, tools, languages: [], skills };
+  return {
+    armor,
+    weapons,
+    tools,
+    languages: [],
+    skills,
+    // Компетентность без выбора черты не выдают: она приходит выбором игрока.
+    expertiseSkills: [],
+  };
+}
+
+/** Выборы черты, как их разбирает схема детали. */
+type FeatChoicesResponse = NonNullable<
+  NonNullable<z.infer<typeof featDetailSchema>['mechanics']>['choices']
+>;
+
+/**
+ * Выборы черты, которые лист умеет применить, — в виде своих выборов листа.
+ *
+ * Пока это только компетентность в навыке: пул у неё резолвится по уже
+ * имеющимся владениям (`resolveChoiceOptions`), а результат лист умеет
+ * применить и снять. Остальные виды выбора лист не применяет, поэтому и не
+ * спрашивает — иначе игрок отвечал бы в пустоту.
+ *
+ * @param choices выборы из механики черты.
+ * @param featUrl url черты (идёт в устойчивый id выбора).
+ * @returns выборы для пикеров листа.
+ */
+function toFeatChoices(
+  choices: FeatChoicesResponse,
+  featUrl: string,
+): ClassChoice[] {
+  return choices.flatMap<ClassChoice>((choice) => {
+    if (choice.type !== 'SKILL' || choice.grants !== 'EXPERTISE') {
+      return [];
+    }
+
+    return [
+      {
+        id: `${getCharacterFeatureId('feat', featUrl)}:${choice.key}`,
+        kind: 'skill-expertise',
+        label: choice.label ?? '',
+        count: Math.max(1, choice.count ?? 1),
+        // Пул компетентности резолвится владениями листа, а не списком из
+        // справочника: выбирать можно только то, чем персонаж уже владеет.
+        listed: [],
+      },
+    ];
+  });
 }
 
 /**
@@ -499,6 +562,8 @@ export function parseFeatDetail(input: unknown): FeatSummary | null {
   // игрок ставит пометку сам, как у врождённого заклинания вида.
   const prepared = result.data.mechanics?.spells?.alwaysPrepared ?? false;
 
+  const choices = result.data.mechanics?.choices;
+
   return {
     url: result.data.url,
     name: result.data.name.rus,
@@ -509,6 +574,7 @@ export function parseFeatDetail(input: unknown): FeatSummary | null {
     spells: granted.length
       ? granted.map((spell) => ({ ...toCharacterSpell(spell), prepared }))
       : null,
+    choices: choices ? toFeatChoices(choices, result.data.url) : [],
   };
 }
 

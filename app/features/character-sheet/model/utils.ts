@@ -6636,16 +6636,26 @@ export function buildCharacterFeatures(
  * хитов зависит от уровня взятия, поэтому лист обязан помнить и её, и сам
  * уровень — за механикой в справочник он больше не ходит.
  *
+ * Выбранная игроком компетентность попадает в тот же снимок: журнал выдач
+ * пересобирается из него, и без этого выбор терялся бы при ближайшей сверке.
+ *
  * @param summary деталь черты.
- * @param repeatable черту можно брать несколько раз (уникальный id для копии).
- * @param level уровень взятия черты; null — уровень неизвестен.
+ * @param options параметры взятия черты.
+ * @param options.repeatable черту можно брать несколько раз (уникальный id).
+ * @param options.level уровень взятия черты; null — уровень неизвестен.
+ * @param options.expertiseSkills навыки, в которых игрок выбрал компетентность.
  * @returns особенность персонажа с происхождением «Черта».
  */
 export function buildFeatFeature(
   summary: FeatSummary,
-  repeatable = false,
-  level: number | null = null,
+  options: {
+    repeatable?: boolean;
+    level?: number | null;
+    expertiseSkills?: string[];
+  } = {},
 ): CharacterFeature {
+  const { repeatable = false, level = null, expertiseSkills = [] } = options;
+
   const baseId = getCharacterFeatureId('feat', summary.url);
 
   return {
@@ -6657,10 +6667,41 @@ export function buildFeatFeature(
     level,
     choice: null,
     modifiers: summary.modifiers,
-    proficiencies: summary.proficiencies,
+    proficiencies: withChosenExpertise(summary.proficiencies, expertiseSkills),
     // Копия списка: подготовку игрок снимает прямо в записи, и делить её с
     // деталью справочника, из которой собрана черта, нельзя.
     spells: summary.spells ? [...summary.spells] : null,
+  };
+}
+
+/**
+ * Снимок владений черты с выбранной игроком компетентностью. Черта могла не
+ * выдавать ничего сама — тогда снимок заводится ради одного выбора.
+ *
+ * @param granted выданные чертой владения; null — черта их не выдаёт.
+ * @param expertiseSkills навыки, в которых игрок выбрал компетентность.
+ * @returns снимок владений записи умения; null — записывать нечего.
+ */
+function withChosenExpertise(
+  granted: GrantedProficiencies | null,
+  expertiseSkills: string[],
+): GrantedProficiencies | null {
+  if (!expertiseSkills.length) {
+    return granted;
+  }
+
+  const base: GrantedProficiencies = granted ?? {
+    armor: [],
+    weapons: [],
+    tools: [],
+    languages: [],
+    skills: [],
+    expertiseSkills: [],
+  };
+
+  return {
+    ...base,
+    expertiseSkills: union(base.expertiseSkills, expertiseSkills),
   };
 }
 
@@ -6791,9 +6832,10 @@ function isRevoked(
  * половину владения и компетентность источник не трогает — они выше и получены
  * иначе. Ровно так же ведёт себя {@link applySkillProficiencies}.
  *
- * Переставший быть выдачей возвращается в «нет владения» только с уровня ровно
- * «владение», то есть в точности с того, что источник и дал. Компетентность,
- * поднятую поверх выдачи, снятие черты не отбирает.
+ * Переставший быть выдачей возвращается на уровень ниже — ровно на тот, с
+ * которого источник его поднял: владение уходит в «нет владения»,
+ * компетентность возвращается во владение. И только если уровень в точности
+ * тот, что источник и дал: поднятое игроком поверх выдачи снятие не отбирает.
  *
  * @param skills навыки персонажа.
  * @param previous журнал выдач до изменения.
@@ -6808,7 +6850,30 @@ function applyGrantedSkills(
   const before = new Set(previous.flatMap((grant) => grant.skills));
   const after = new Set(next.flatMap((grant) => grant.skills));
 
+  const expertiseBefore = new Set(
+    previous.flatMap((grant) => grant.expertiseSkills),
+  );
+
+  const expertiseAfter = new Set(
+    next.flatMap((grant) => grant.expertiseSkills),
+  );
+
   return skills.map((skill): CharacterSkill => {
+    // Компетентность идёт первой: она выше владения, и черта, выдавшая оба
+    // разом, должна оставить навык на верхнем уровне.
+    if (expertiseAfter.has(skill.name) && !expertiseBefore.has(skill.name)) {
+      return skill.proficiency === 'expertise'
+        ? skill
+        : { ...skill, proficiency: 'expertise' };
+    }
+
+    if (
+      isRevoked(skill.name, expertiseBefore, expertiseAfter)
+      && skill.proficiency === 'expertise'
+    ) {
+      return { ...skill, proficiency: 'proficient' };
+    }
+
     if (after.has(skill.name) && !before.has(skill.name)) {
       return skill.proficiency === 'none'
         ? { ...skill, proficiency: 'proficient' }
@@ -6876,7 +6941,8 @@ function hasGrantedProficiencies(granted: GrantedProficiencies): boolean {
     || granted.weapons.length
     || granted.tools.length
     || granted.languages.length
-    || granted.skills.length,
+    || granted.skills.length
+    || granted.expertiseSkills.length,
   );
 }
 
