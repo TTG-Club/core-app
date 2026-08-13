@@ -76,6 +76,8 @@ const choiceSchema = z.object({
   options: z.array(choiceOptionSchema).optional(),
   spellFilter: spellFilterSchema.optional(),
   onlyIfNotProficient: z.boolean().optional(),
+  onlyIfProficient: z.boolean().optional(),
+  grants: z.enum(['PROFICIENCY', 'EXPERTISE']).optional(),
   expertiseIfProficient: z.boolean().optional(),
   rechooseOnLongRest: z.boolean().optional(),
 });

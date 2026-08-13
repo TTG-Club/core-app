@@ -73,6 +73,13 @@ export interface FeatPrerequisiteDetails {
   custom: string;
 }
 
+/**
+ * Что даёт сделанный выбор. `EXPERTISE` — безусловная компетентность («Знаток»);
+ * условная замена «владеешь — получишь компетентность» описана отдельным флагом
+ * `expertiseIfProficient` («Наблюдательный»).
+ */
+export type FeatChoiceGrant = 'PROFICIENCY' | 'EXPERTISE';
+
 /** Допустимое значение выбора: код словаря либо url сущности. */
 export interface FeatChoiceOption {
   value: string;
@@ -103,6 +110,23 @@ export interface FeatChoice {
   options: Array<FeatChoiceOption>;
   spellFilter: FeatSpellFilter | undefined;
   onlyIfNotProficient: boolean;
+
+  /**
+   * Выбирать можно только то, чем персонаж уже владеет («Знаток» — навык, в
+   * котором есть владение). Обратен `onlyIfNotProficient`: вместе они оставляют
+   * пустой пул, поэтому форма даёт отметить только один из двух.
+   */
+  onlyIfProficient: boolean;
+
+  /**
+   * Что даёт выбор: владение или компетентность. Компетентность удваивает бонус
+   * мастерства, поэтому это не «владение посильнее», а другой исход.
+   *
+   * `undefined` — владение: так поле уходит из отправляемой механики, когда
+   * исход обычный, и так же читаются записи, сделанные до его появления.
+   */
+  grants: FeatChoiceGrant | undefined;
+
   expertiseIfProficient: boolean;
   rechooseOnLongRest: boolean;
 }
@@ -264,6 +288,8 @@ export function createFeatChoice(): FeatChoice {
     options: [],
     spellFilter: undefined,
     onlyIfNotProficient: false,
+    onlyIfProficient: false,
+    grants: 'PROFICIENCY',
     expertiseIfProficient: false,
     rechooseOnLongRest: false,
   };

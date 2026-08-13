@@ -71,6 +71,9 @@ function buildChoices(choices: Array<FeatChoice>): Array<FeatChoice> {
       options: choice.options.filter((option) => !!option.value),
       spellFilter: buildSpellFilter(choice.spellFilter),
       countEqualsProficiencyBonus: !!choice.countEqualsProficiencyBonus,
+      // Исход по умолчанию не пишется: у записей до его появления поля нет, и
+      // core-api читает его отсутствие как владение.
+      grants: choice.grants === 'EXPERTISE' ? choice.grants : undefined,
     }));
 }
 
