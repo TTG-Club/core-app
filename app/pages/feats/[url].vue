@@ -2,6 +2,7 @@
   import type { FeatDetailResponse } from '~feats/model';
 
   import { FeatBody } from '~feats/body';
+  import { getFeatMarkdown } from '~feats/model';
   import { PageActions } from '~ui/page';
 
   const route = useRoute();
@@ -11,6 +12,8 @@
   const { data: feat } = await useAsyncData(`feat-${route.params.url}`, () =>
     $fetch<FeatDetailResponse>(`/api/v2/feats/${route.params.url}`),
   );
+
+  const markdown = useEntityMarkdown(feat, getFeatMarkdown);
 
   useSeoMeta({
     title: getSeoTitle,
@@ -54,6 +57,7 @@
       <PageActions
         :edit-url="editUrl"
         :close-url="{ name: 'feats' }"
+        :markdown
       />
     </template>
 

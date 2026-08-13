@@ -8,6 +8,7 @@
     ARTICLES_ADMIN_ROUTE,
     ARTICLES_API_PATH,
     ARTICLES_ROUTE,
+    getArticleMarkdown,
     getArticlePreviewText,
     NEWS_ROUTE,
   } from '~articles/model';
@@ -52,6 +53,8 @@
     titleTemplate: '%s | TTG Club',
   });
 
+  const markdown = useEntityMarkdown(article, getArticleMarkdown);
+
   const editUrl = computed(() =>
     isAdmin.value ? `${ARTICLES_ADMIN_ROUTE}/${route.params.url}` : undefined,
   );
@@ -74,6 +77,7 @@
       <PageActions
         :edit-url="editUrl"
         :close-url="closeUrl"
+        :markdown
       />
     </template>
 

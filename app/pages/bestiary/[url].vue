@@ -2,6 +2,7 @@
   import type { CreatureDetailResponse } from '~bestiary/model';
 
   import { CreatureBody } from '~bestiary/body';
+  import { getCreatureMarkdown } from '~bestiary/model';
   import { PageActions } from '~ui/page';
 
   const route = useRoute();
@@ -13,6 +14,8 @@
     () =>
       $fetch<CreatureDetailResponse>(`/api/v2/bestiary/${route.params.url}`),
   );
+
+  const markdown = useEntityMarkdown(creature, getCreatureMarkdown);
 
   useSeoMeta({
     title: getSeoTitle,
@@ -57,6 +60,7 @@
       <PageActions
         :edit-url="editUrl"
         :close-url="{ name: 'bestiary' }"
+        :markdown
       />
     </template>
 

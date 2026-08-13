@@ -2,6 +2,7 @@
   import type { SourceDetailResponse } from '~sources/types';
 
   import { SourceBody } from '~sources/body';
+  import { getSourceMarkdown } from '~sources/types';
   import { PageActions } from '~ui/page';
 
   const route = useRoute();
@@ -12,6 +13,8 @@
     `source-${route.params.url}`,
     () => $fetch<SourceDetailResponse>(`/api/v2/source/${route.params.url}`),
   );
+
+  const markdown = useEntityMarkdown(source, getSourceMarkdown);
 
   useSeoMeta({
     title: getSeoTitle,
@@ -54,6 +57,7 @@
     <template #actions>
       <PageActions
         :edit-url="editUrl"
+        :markdown
         @close="navigateTo({ name: 'sources' })"
       />
     </template>

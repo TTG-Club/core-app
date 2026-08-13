@@ -1,11 +1,21 @@
 <script setup lang="ts">
   import type { RouteLocationRaw } from 'vue-router';
 
-  import { CopyButton } from '../copy-button';
+  import { CopyButton, CopyMarkdownButton } from '../copy-button';
 
-  const { closeUrl = undefined, editUrl = undefined } = defineProps<{
+  const {
+    closeUrl = undefined,
+    editUrl = undefined,
+    markdown = undefined,
+  } = defineProps<{
     closeUrl?: RouteLocationRaw | undefined | null;
     editUrl?: string;
+    /**
+     * Геттер Markdown сущности; пока сущность не загружена — `undefined`, и
+     * кнопка копирования не показывается. Именно геттер, а не строка: сборка
+     * разбирает всю разметку сущности и идёт по клику, а не на рендер.
+     */
+    markdown?: () => string;
   }>();
 
   const emit = defineEmits<{
@@ -52,6 +62,11 @@
       no-rel
     />
   </UTooltip>
+
+  <CopyMarkdownButton
+    v-if="markdown"
+    :text="markdown"
+  />
 
   <CopyButton :url="urlForCopy" />
 

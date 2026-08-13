@@ -2,6 +2,7 @@
   import type { GlossaryDetailResponse } from '~glossary/model';
 
   import { GlossaryBody } from '~glossary/body';
+  import { getGlossaryMarkdown } from '~glossary/model';
   import { PageActions } from '~ui/page';
 
   const route = useRoute();
@@ -13,6 +14,8 @@
     () =>
       $fetch<GlossaryDetailResponse>(`/api/v2/glossary/${route.params.url}`),
   );
+
+  const markdown = useEntityMarkdown(glossary, getGlossaryMarkdown);
 
   useSeoMeta({
     title: getSeoTitle,
@@ -56,6 +59,7 @@
       <PageActions
         :edit-url="editUrl"
         :close-url="{ name: 'glossary' }"
+        :markdown
       />
     </template>
 
