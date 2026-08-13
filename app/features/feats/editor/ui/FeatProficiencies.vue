@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { FeatProficiencyGrant } from '../../model';
+  import type { FeatEntityRef, FeatProficiencyGrant } from '../../model';
 
   import {
     SelectArmorCategory,
@@ -7,7 +7,7 @@
     SelectWeaponCategory,
   } from '~ui/select';
 
-  import { toEntityRefs, toEntityRefUrls, toUrlList } from '../../model';
+  import { toEntityRefUrls, toUrlList } from '../../model';
 
   const model = defineModel<FeatProficiencyGrant>({ required: true });
 
@@ -25,12 +25,34 @@
     },
   });
 
-  const toolUrls = computed<string | Array<string>>({
-    get: () => toEntityRefUrls(model.value.tools),
-    set: (value) => {
-      model.value = { ...model.value, tools: toEntityRefs(toUrlList(value)) };
-    },
-  });
+  const toolUrls = computed<Array<string>>(() =>
+    toEntityRefUrls(model.value.tools),
+  );
+
+  /**
+   * Инструменты пишутся ссылкой со снимком названия, поэтому селект связан не
+   * `v-model`, а парой «значение + `select`»: url'а мало — лист персонажа
+   * заводит владение по названию, а core-api имя ссылки не подставляет.
+   *
+   * Известное название держится за url: подпись селект берёт из показанной
+   * выдачи, а она сменяется поиском — у выбранного раньше инструмента её может
+   * не оказаться, и пустым именем затирать записанное нельзя.
+   *
+   * @param tools выбранные предметы ссылками со снимком названия.
+   */
+  function handleTools(tools: Array<FeatEntityRef>): void {
+    const known = new Map(
+      model.value.tools.map((tool) => [tool.url, tool.name]),
+    );
+
+    model.value = {
+      ...model.value,
+      tools: tools.map((tool) => ({
+        url: tool.url,
+        name: tool.name || known.get(tool.url),
+      })),
+    };
+  }
 </script>
 
 <template>
@@ -66,8 +88,9 @@
       label="Инструменты"
     >
       <SelectItem
-        v-model="toolUrls"
+        :model-value="toolUrls"
         multiple
+        @select="handleTools"
       />
     </UFormField>
   </div>
