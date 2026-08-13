@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { ButtonProps } from '@nuxt/ui';
 
+  import { COPY_BUTTON_LABELS } from './constants';
+
   const { url = '', size = undefined } = defineProps<{
     url?: string;
     disabled?: boolean;
@@ -14,7 +16,7 @@
 <template>
   <UTooltip
     v-if="url"
-    text="Поделиться ссылкой"
+    :text="COPY_BUTTON_LABELS.share"
   >
     <UButton
       :href="url"

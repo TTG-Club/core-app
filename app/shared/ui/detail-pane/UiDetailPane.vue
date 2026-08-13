@@ -14,6 +14,7 @@
     source = undefined,
     url = undefined,
     editUrl = undefined,
+    markdown = undefined,
     dateTime = undefined,
     dateTimeFormat = undefined,
     backTo = undefined,
@@ -31,6 +32,12 @@
     url?: string;
     /** Ссылка на редактирование (для админов) */
     editUrl?: string;
+    /**
+     * Геттер Markdown сущности; пока сущность не загружена — `undefined`, и
+     * кнопка копирования не показывается. Именно геттер, а не строка: сборка
+     * разбирает всю разметку сущности и идёт по клику, а не на рендер.
+     */
+    markdown?: () => string;
     /** Разрешить копирование заголовка */
     copyTitle?: boolean;
     /** Дата и время */
@@ -84,6 +91,7 @@
           <DrawerActions
             :edit-url="editUrl"
             :url="url"
+            :markdown
             @close="$emit('close')"
           />
         </template>

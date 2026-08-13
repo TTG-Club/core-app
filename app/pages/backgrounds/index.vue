@@ -6,6 +6,7 @@
 
   import { BackgroundBody } from '~backgrounds/body';
   import { BackgroundLink } from '~backgrounds/link';
+  import { getBackgroundMarkdown } from '~backgrounds/model';
   import { FilterControls, useFilter } from '~infrastructure/filter';
   import { UiDetailPane } from '~ui/detail-pane';
   import { GroupedList } from '~ui/grouped-list';
@@ -61,6 +62,8 @@
     apiBasePath: '/api/v2/backgrounds',
     items: backgrounds,
   });
+
+  const markdown = useEntityMarkdown(detailBackground, getBackgroundMarkdown);
 </script>
 
 <template>
@@ -122,6 +125,7 @@
         :date-time="detailBackground?.updatedAt"
         :url="detailUrlForCopy"
         :edit-url="detailEditUrl"
+        :markdown
         :is-loading="isDetailLoading"
         :is-error="isDetailError"
         copy-title

@@ -678,6 +678,13 @@ export interface GrantedProficiencies {
   weapons: string[];
   tools: CharacterToolProficiency[];
   languages: string[];
+
+  /**
+   * Названия навыков, которыми наделил источник. Лежат в журнале наравне с
+   * прочим выданным, но применяются иначе: навык — не строка в списке владений,
+   * а запись со своим уровнем (`CharacterSkill.proficiency`).
+   */
+  skills: string[];
 }
 
 /**
@@ -2703,8 +2710,8 @@ export interface Character {
 
   /**
    * Журнал выдач владений: кто и что выдал. Сами владения лежат в
-   * `proficiencies` одним списком — журнал нужен только затем, чтобы снятие
-   * источника забрало ровно своё.
+   * `proficiencies` одним списком, а выданные навыки — записями в `skills`;
+   * журнал нужен только затем, чтобы снятие источника забрало ровно своё.
    */
   proficiencyGrants: ProficiencyGrant[];
 

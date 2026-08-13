@@ -35,15 +35,23 @@ export interface CreatureDetailResponse {
   legendaryAction: number;
   legendaryActionInLair: number;
   legendary: {
-    actions: Array<CreatureActionResponse>;
+    /**
+     * Пустоту бэкенд не присылает вовсе: `LegendaryActionResponse` помечен
+     * `@JsonInclude(NON_NULL)`, поэтому у существа без легендарных действий
+     * ключа в ответе нет. Отсюда `?`, а не `| null`.
+     */
+    actions?: Array<CreatureActionResponse>;
     count: string;
     description: string;
   };
   lair: {
     name: string;
-    description: Array<string>;
-    effects: Array<CreatureActionResponse>;
-    ending: Array<string>;
+    /** См. `legendary.actions`: `CreatureLairResponse` тоже `NON_NULL`. */
+    description?: Array<string>;
+    /** См. `legendary.actions`: `CreatureLairResponse` тоже `NON_NULL`. */
+    effects?: Array<CreatureActionResponse>;
+    /** См. `legendary.actions`: `CreatureLairResponse` тоже `NON_NULL`. */
+    ending?: Array<string>;
   };
   section: CreatureSection;
 }
@@ -59,7 +67,12 @@ export interface CreatureSection {
   subtitle: string;
   habitats: string;
   treasures: string;
-  description: Array<string>;
+  /**
+   * Здесь именно `null`, а не пропуск ключа: `CreatureSectionResponse` —
+   * единственный из трёх без `@JsonInclude(NON_NULL)`, поэтому пустое
+   * описание приезжает значением.
+   */
+  description: Array<string> | null;
 }
 
 export interface CreatureAbilitiesResponse {

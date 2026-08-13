@@ -125,6 +125,7 @@ const modifiersSchema = z.object({
 const proficiencyGrantSchema = z.object({
   weaponCategories: z.array(z.string()).optional(),
   armorCategories: z.array(z.string()).optional(),
+  skills: z.array(z.string()).optional(),
   tools: z.array(entityRefSchema).optional(),
 });
 

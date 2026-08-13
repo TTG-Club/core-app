@@ -2,6 +2,7 @@
   import type { ItemDetailResponse } from '~items/model';
 
   import { ItemBody } from '~items/body';
+  import { getItemMarkdown } from '~items/model';
   import { UiDrawer } from '~ui/drawer';
 
   const { url } = defineProps<{
@@ -25,6 +26,8 @@
   const isError = computed(() => status.value === 'error');
   const urlForCopy = computed(() => `${getOrigin()}/items/${url}`);
   const editUrl = computed(() => `/workshop/items/${url}`);
+
+  const markdown = useEntityMarkdown(detail, getItemMarkdown);
 </script>
 
 <template>
@@ -34,6 +37,7 @@
     :date-time="detail?.updatedAt"
     :url="urlForCopy"
     :edit-url="editUrl"
+    :markdown
     :is-loading
     :is-error
     copy-title

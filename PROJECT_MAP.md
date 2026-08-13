@@ -677,7 +677,7 @@ imported via the auto-generated `~<domain>` alias (see
 | `animated-number` | Count-up animated number                                                               |
 | `card`            | Workshop entity card                                                                   |
 | `collapse`        | Collapsible / accordion primitive                                                      |
-| `copy-button`     | Copy-to-clipboard button                                                               |
+| `copy-button`     | Copy-to-clipboard buttons: share link + copy entity as Markdown                        |
 | `date-picker`     | Date/time picker input                                                                 |
 | `detail-pane`     | Wide-mode entity detail panel                                                          |
 | `drawer`          | Overlay drawer (+ header/body/title/actions, DrawerCollection)                         |
@@ -689,7 +689,7 @@ imported via the auto-generated `~<domain>` alias (see
 | `input`           | URL input field                                                                        |
 | `kbd-shortcut`    | Keyboard shortcut hint display                                                         |
 | `link`            | Card & small entity links                                                              |
-| `markup`          | Custom `{@...}` markup parser/renderer                                                 |
+| `markup`          | Custom `{@...}` markup parser/renderer + Homebrewery Markdown converter                |
 | `markup-editor`   | Tiptap markup WYSIWYG editor (+ insert panel/toolbar)                                  |
 | `page`            | Page grid / actions / result / legend scaffolding                                      |
 | `placeholder`     | Dashed empty-state placeholder                                                         |
@@ -713,10 +713,11 @@ imported via the auto-generated `~<domain>` alias (see
   plus `useUser` / `useUserRoles`, `useTheme`, `useDrawer`, `useAnchorScroll`,
   `useBreakpoints`, `useCanvasExport`, `useCommentsNameSync` (fire-and-forget
   display-name sync after renaming or posting), `useCopyAndShare`, `useDayjs`,
+  `useEntityMarkdown` (lazy Markdown getter for the section copy buttons),
   `useImageUpload` (validate → `/s3/upload` → delete/copy, used by
   `shared/ui/upload` and the character-sheet avatar), `useImageCrop` (square
   crop geometry + canvas export for `shared/ui/image-crop`),
-  `useResizableHeight`, `useSidebarPopover` (20 in total).
+  `useResizableHeight`, `useSidebarPopover` (21 in total).
 - **Plugins** (`app/plugins/`) — `anchorScroll.client`, `dayjs`,
   `online-heartbeat.client` (30 s presence ping), `scrollBehavior`, `scrollbarWidth`.
 - **Middleware** (`app/middleware/`) — `auth.global` (role guard vs

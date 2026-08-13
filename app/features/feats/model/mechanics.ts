@@ -204,6 +204,9 @@ export interface FeatProficiencyGrant {
   /** Категории доспехов справочника (`MEDIUM`, `SHIELD`). */
   armorCategories: Array<string>;
 
+  /** Навыки справочника (`PERCEPTION`, `STEALTH`). */
+  skills: Array<string>;
+
   /** Инструменты из раздела «Предметы». */
   tools: Array<FeatEntityRef>;
 }
@@ -365,6 +368,7 @@ export function createFeatProficiencyGrant(): FeatProficiencyGrant {
   return {
     weaponCategories: [],
     armorCategories: [],
+    skills: [],
     tools: [],
   };
 }

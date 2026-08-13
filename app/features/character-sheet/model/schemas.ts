@@ -50,6 +50,7 @@ import {
   ARMOR_PROFICIENCY_GROUPS,
   CURRENCY_KEYS_BY_LABEL,
   INVENTORY_QUANTITY_MAX,
+  SKILL_NAME_BY_API_KEY,
   SPELL_COMPONENT_LABELS,
   STARTING_EQUIPMENT_DEFAULT_COIN_KEY,
   STARTING_EQUIPMENT_LABELS,
@@ -366,6 +367,7 @@ const featDetailSchema = z.object({
         .object({
           weaponCategories: z.array(z.string()).nullable().catch(null),
           armorCategories: z.array(z.string()).nullable().catch(null),
+          skills: z.array(z.string()).nullable().catch(null),
           tools: z
             .array(
               z.object({
@@ -431,11 +433,21 @@ function toGrantedProficiencies(
     tool.name ? [{ name: tool.name, url: tool.url || null }] : [],
   );
 
-  if (!weapons.length && !armor.length && !tools.length) {
+  // Незнакомый навык отбрасывается: списки справочника и листа сошлись, значит
+  // чужое значение — это опечатка в данных, а не навык, которого лист не знает.
+  const skills = uniq(
+    (proficiencies.skills ?? []).flatMap((skill) => {
+      const name = SKILL_NAME_BY_API_KEY[skill];
+
+      return name ? [name] : [];
+    }),
+  );
+
+  if (!weapons.length && !armor.length && !tools.length && !skills.length) {
     return null;
   }
 
-  return { armor, weapons, tools, languages: [] };
+  return { armor, weapons, tools, languages: [], skills };
 }
 
 /**

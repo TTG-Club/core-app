@@ -176,6 +176,8 @@ const grantedProficienciesSchema = z.object({
   weapons: z.array(z.string()).catch([]),
   tools: z.array(toolProficiencySchema).catch([]),
   languages: z.array(z.string()).catch([]),
+  // Навыки появились в выдаче позже прочего: у записей без поля их просто нет.
+  skills: z.array(z.string()).catch([]),
 });
 
 /**
