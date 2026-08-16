@@ -249,6 +249,12 @@ export default defineNuxtConfig({
       '/api/**': {
         security: {
           enabled: process.env.NODE_ENV !== 'development',
+          // Валидатор nuxt-security не санитайзит тело, а целиком отклоняет
+          // запрос с 400, если в JSON встретился любой `<` или `>`. Это рубило
+          // вход с паролем, содержащим `>`, а заодно любые тексты с угловыми
+          // скобками (комментарии, статьи, заметки, markdown-цитаты).
+          // От XSS защищает экранирование на выводе, а не отказ на входе.
+          xssValidator: false,
           rateLimiter: {
             tokensPerInterval: 75,
             interval: ms('1m'),
