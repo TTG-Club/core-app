@@ -18,7 +18,6 @@
     ARMOR_DEXTERITY_HINT_LABELS,
     CUSTOM_INVENTORY_BADGE_HINT,
     getAbilityModifier,
-    getCharacterProficiencyBonus,
     getFormattedBonus,
     getInventoryEquipIcon,
     getInventoryItemBonusLabels,
@@ -40,6 +39,7 @@
     INVENTORY_MISSING_BADGE_LABEL,
     INVENTORY_QUANTITY_MIN,
     INVENTORY_ROLL_KIND_LABELS,
+    INVENTORY_STAT_HINT_LABELS,
     INVENTORY_STAT_LABELS,
     INVENTORY_TWO_HANDED_BADGE_HINT,
     INVENTORY_TWO_HANDED_BADGE_LABEL,
@@ -48,6 +48,7 @@
     isCustomInventoryItem,
     isEquippableInventoryItem,
     isMissingInventoryItem,
+    isProficientWeapon,
     isVersatileInventoryItem,
     SHEET_ROLL_HINT_LABEL,
     WEIGHT_UNIT_LABEL,
@@ -197,6 +198,11 @@
 
   const isTwoHanded = computed(
     () => isVersatile.value && props.inventoryItem.twoHanded,
+  );
+
+  // Владение оружием решает, входит ли в атаку бонус мастерства (правила 2024).
+  const hasWeaponProficiency = computed(() =>
+    isProficientWeapon(character.value, props.inventoryItem),
   );
 
   const openLabel = computed(() =>
@@ -368,11 +374,17 @@
     };
   }
 
+  /** Слагаемое подсказки: подпись и бонус со знаком («мастерство +3»). */
+  function getBonusPart(label: string, bonus: number): string {
+    return `${label} ${getFormattedBonus(bonus)}`;
+  }
+
   /** Слагаемое подсказки с модификатором характеристики («Сила +3»). */
   function getAbilityPart(abilityKey: AbilityKey): string {
-    return `${ABILITY_LABELS[abilityKey]} ${getFormattedBonus(
+    return getBonusPart(
+      ABILITY_LABELS[abilityKey],
       getAbilityModifier(character.value, abilityKey),
-    )}`;
+    );
   }
 
   /** Бросок плитки оружия с подписью кнопки для скринридера. */
@@ -407,24 +419,45 @@
     };
   }
 
-  /** Плитка бонуса атаки оружием: бонус мастерства плюс модификатор стата. */
+  /**
+   * Плитка бонуса атаки оружием: бонус мастерства плюс модификатор стата.
+   * Оружию без владения бонус мастерства не полагается — в разборе его нет, а
+   * хвост подсказки говорит почему.
+   */
   function getWeaponAttackStat(weapon: InventoryWeapon): ItemStat {
-    const attack = getWeaponAttackBonus(character.value, weapon);
+    const attack = getWeaponAttackBonus(
+      character.value,
+      weapon,
+      hasWeaponProficiency.value,
+    );
 
-    const masteryPart = `мастерство ${getFormattedBonus(
-      getCharacterProficiencyBonus(character.value),
-    )}`;
+    const tooltipParts = attack.proficiencyBonus
+      ? [
+          getBonusPart(
+            INVENTORY_STAT_HINT_LABELS.proficiency,
+            attack.proficiencyBonus,
+          ),
+        ]
+      : [];
 
-    const tooltipParts = [masteryPart, getAbilityPart(attack.ability)];
+    tooltipParts.push(getAbilityPart(attack.ability));
 
     if (attack.weaponBonus !== 0) {
-      tooltipParts.push(`оружие ${getFormattedBonus(attack.weaponBonus)}`);
+      tooltipParts.push(
+        getBonusPart(INVENTORY_STAT_HINT_LABELS.weapon, attack.weaponBonus),
+      );
     }
+
+    const proficiencyHint = hasWeaponProficiency.value
+      ? ''
+      : ` · ${INVENTORY_STAT_HINT_LABELS.noProficiency}`;
+
+    const formula = `${tooltipParts.join(' + ')}${proficiencyHint}`;
 
     return {
       label: INVENTORY_STAT_LABELS.attack,
       value: getFormattedBonus(attack.value),
-      tooltip: `Бонус атаки = ${tooltipParts.join(' + ')}`,
+      tooltip: `${INVENTORY_STAT_HINT_LABELS.attack} = ${formula}`,
       accent: true,
       action: getStatRoll('attack'),
     };
@@ -453,7 +486,9 @@
     }
 
     if (damage.weaponBonus !== 0) {
-      tooltipParts.push(`оружие ${getFormattedBonus(damage.weaponBonus)}`);
+      tooltipParts.push(
+        getBonusPart(INVENTORY_STAT_HINT_LABELS.weapon, damage.weaponBonus),
+      );
     }
 
     tooltipParts.push(getAbilityPart(damage.ability));

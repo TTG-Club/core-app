@@ -45,6 +45,7 @@ import {
   getWeaponAttackBonus,
   getWeaponDamage,
   isMissingInventoryItem,
+  isProficientWeapon,
 } from '../utils';
 import {
   PDF_ABILITY_BOX_HEIGHT,
@@ -825,7 +826,12 @@ function drawWeaponsPanel(
             return [item.name, PDF_EMPTY_VALUE, PDF_EMPTY_VALUE];
           }
 
-          const attack = getWeaponAttackBonus(character, weapon);
+          const attack = getWeaponAttackBonus(
+            character,
+            weapon,
+            isProficientWeapon(character, item),
+          );
+
           // Урон печатаем по нынешнему хвату: универсальное оружие, взятое
           // двумя руками, и на бумаге катит свою большую кость.
           const damage = getWeaponDamage(character, weapon, item.twoHanded);

@@ -28,6 +28,7 @@
     getAvailableInnateSpells,
     getWeaponAttackBonus,
     getWeaponDamageSource,
+    isProficientWeapon,
     LANGUAGE_PROFICIENCY_GROUPS,
   } from '../model';
   import CharacterSheetSkeleton from './CharacterSheetSkeleton.vue';
@@ -694,7 +695,11 @@
       return;
     }
 
-    const attack = getWeaponAttackBonus(character.value, inventoryItem.weapon);
+    const attack = getWeaponAttackBonus(
+      character.value,
+      inventoryItem.weapon,
+      isProficientWeapon(character.value, inventoryItem),
+    );
 
     rollModal.open({
       title: `Атака: ${inventoryItem.name}`,

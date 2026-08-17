@@ -3585,27 +3585,117 @@ export function getWeaponAttackAbility(character: Character): AbilityKey {
 }
 
 /**
+ * Приписка магии в конце названия предмета («Длинный меч, +1»): владение
+ * оружием даётся виду, а не конкретному экземпляру.
+ */
+const WEAPON_MAGIC_SUFFIX_PATTERN = /[\s,]*[+-]\d+\s*$/u;
+
+/** Уточнение в скобках в конце названия предмета («Дубинка (большая)»). */
+const WEAPON_HINT_PATTERN = /\s*\([^()]*\)\s*$/u;
+
+/**
+ * Название оружия в сопоставимом с каталогом владений виде: без уточнения в
+ * скобках и приписки магии.
+ *
+ * @param name название предмета или вида оружия.
+ * @returns название для сверки владения.
+ */
+function getWeaponMatchName(name: string): string {
+  return normalizeCatalogName(
+    name
+      .replace(WEAPON_HINT_PATTERN, '')
+      .replace(WEAPON_MAGIC_SUFFIX_PATTERN, ''),
+  );
+}
+
+/** Виды оружия каталога владений по сопоставимому названию. */
+const WEAPON_CATALOG_MATCH_NAMES = new Set(
+  WEAPON_PROFICIENCY_GROUPS.flatMap((group) =>
+    group.items.map((name) => getWeaponMatchName(name)),
+  ),
+);
+
+/**
+ * Виды оружия, которыми персонаж владеет, в сопоставимом виде: запись «вся
+ * группа» разворачивается в свои виды, остальные записи (в том числе не из
+ * каталога) идут как есть.
+ *
+ * @param character персонаж.
+ * @returns названия видов оружия для сверки владения.
+ */
+function getProficientWeaponNames(character: Character): Set<string> {
+  return new Set(
+    character.proficiencies.weapons.flatMap((entry) => {
+      const group = WEAPON_PROFICIENCY_GROUPS.find(
+        (candidate) =>
+          normalizeCatalogName(candidate.all) === normalizeCatalogName(entry),
+      );
+
+      return (group?.items ?? [entry]).map((name) => getWeaponMatchName(name));
+    }),
+  );
+}
+
+/**
+ * Владеет ли персонаж этим оружием: название предмета сверяется со списком
+ * владений листа, где запись «вся группа» стоит за все виды своей категории.
+ *
+ * Оружие, которого в каталоге видов нет (своё, магическое со своим названием),
+ * лист считает знакомым: сверять такое не с чем, а отнимать бонус мастерства по
+ * одному лишь незнакомому названию — портить чужие листы вслепую.
+ *
+ * @param character персонаж.
+ * @param inventoryItem предмет инвентаря с оружием.
+ * @returns true — бонус мастерства идёт в атаку этим оружием.
+ */
+export function isProficientWeapon(
+  character: Character,
+  inventoryItem: CharacterInventoryItem,
+): boolean {
+  const matchName = getWeaponMatchName(inventoryItem.name);
+
+  return (
+    getProficientWeaponNames(character).has(matchName)
+    || !WEAPON_CATALOG_MATCH_NAMES.has(matchName)
+  );
+}
+
+/**
  * Бонус к броску атаки оружием: бонус мастерства (БаБ) плюс модификатор
  * характеристики. Базовая характеристика берётся из настроек листа (по
  * умолчанию — Сила); фехтовальное и дальнобойное оружие бьёт от Ловкости.
  *
+ * Бонус мастерства даёт владение оружием: без него по правилам 2024 в атаке
+ * остаются только модификатор характеристики и собственный бонус оружия.
+ *
  * @param character персонаж.
  * @param weapon параметры оружия.
+ * @param isProficient персонаж владеет этим оружием.
  * @returns бонус атаки и использованная характеристика.
  */
 export function getWeaponAttackBonus(
   character: Character,
   weapon: InventoryWeapon,
+  isProficient: boolean,
 ): WeaponAttack {
   const ability = getWeaponAbility(character, weapon);
 
+  const proficiencyBonus = isProficient
+    ? getCharacterProficiencyBonus(character)
+    : 0;
+
   const value =
-    getCharacterProficiencyBonus(character)
+    proficiencyBonus
     + getAbilityModifier(character, ability)
     + weapon.attackBonus
     - getExhaustionD20Penalty(character);
 
-  return { value, ability, weaponBonus: weapon.attackBonus };
+  return {
+    value,
+    ability,
+    weaponBonus: weapon.attackBonus,
+    proficiencyBonus,
+  };
 }
 
 /**
