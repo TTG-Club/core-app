@@ -397,6 +397,30 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Запись своих бонусов одной характеристики: модалка настройки правит их
+   * черновиком и отдаёт список целиком.
+   *
+   * @param ability ключ характеристики.
+   * @param bonuses свои бонусы характеристики из черновика модалки.
+   */
+  function setAbilityBonuses(
+    ability: AbilityKey,
+    bonuses: CharacterCustomBonus[],
+  ): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      abilityBonuses: {
+        ...character.value.abilityBonuses,
+        [ability]: toStoredCustomBonuses(bonuses),
+      },
+    };
+  }
+
+  /**
    * Запись всех шести характеристик разом (набор из калькулятора). Одной
    * правкой, а не шестью подряд: иначе промежуточные значения Телосложения
    * двигали бы хиты туда-сюда.
@@ -3201,6 +3225,7 @@ export function useCharacterSheet() {
     totalWeight,
     carryingCapacity,
     attunement,
+    setAbilityBonuses,
     setAbilityScore,
     setAbilityScores,
     setArmorClass,

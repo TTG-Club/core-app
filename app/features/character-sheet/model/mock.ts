@@ -59,6 +59,14 @@ export const DEFAULT_CHARACTER: Character = {
     wisdom: 10,
     charisma: 10,
   },
+  abilityBonuses: {
+    strength: [],
+    dexterity: [],
+    constitution: [],
+    intelligence: [],
+    wisdom: [],
+    charisma: [],
+  },
   // Шесть записей заведены сразу: спасброски правилами закрыты, поэтому список
   // не растёт и не сокращается — меняются только владение, характеристика и
   // свои бонусы записи.

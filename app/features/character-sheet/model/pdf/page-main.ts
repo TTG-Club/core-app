@@ -24,6 +24,7 @@ import {
 } from '../constants';
 import {
   collapseProficiencies,
+  getAbilityModifier,
   getAbilityRows,
   getArmorClassValue,
   getCharacterProficiencyBonus,
@@ -998,7 +999,7 @@ function drawSensesPanel(
   // плитку не влезает, а по смыслу это тоже про восприятие.
   const passivePerception = perceptionSkill
     ? PASSIVE_SKILL_BASE + getSkillValue(character, perceptionSkill)
-    : PASSIVE_SKILL_BASE + getModifier(character.abilities.wisdom);
+    : PASSIVE_SKILL_BASE + getAbilityModifier(character, 'wisdom');
 
   return drawPanel(
     context,

@@ -315,6 +315,7 @@ import {
   ROLL_MODE_DICE_COUNT,
   ROLL_MODE_DICE_SUFFIX,
   SAVING_THROW_PROFICIENCY_LABELS,
+  SHEET_ABILITY_SETTINGS_LABELS,
   SHEET_COPY_LIMIT_HINT,
   SHEET_DOWNLOAD_JSON_LABEL,
   SHEET_DOWNLOAD_PDF_HINT,
@@ -561,24 +562,62 @@ export function getInventorySavingThrowSources(
 }
 
 /**
- * Значения характеристик с бонусами снаряжения — именно их показывает лист и
- * от них считаются модификаторы. Правка характеристик идёт по записанным
- * значениям (`character.abilities`), а не по этим.
+ * Персонаж без своих бонусов характеристик. На нём и считаются сами эти бонусы:
+ * бонус вида «бонус мастерства» зовёт подсчёт мастерства, а тот умеет брать
+ * модификатор характеристики — на исходном персонаже подсчёт пошёл бы по кругу.
  *
  * @param character персонаж.
- * @returns значения характеристик с бонусами предметов.
+ * @returns персонаж с пустыми своими бонусами характеристик.
+ */
+function toBaseAbilityCharacter(character: Character): Character {
+  return {
+    ...character,
+    abilityBonuses: mapValues(character.abilityBonuses, () => []),
+  };
+}
+
+/**
+ * Сумма своих бонусов к значению характеристики.
+ *
+ * @param character персонаж.
+ * @param ability ключ характеристики.
+ * @returns вклад своих бонусов в значение характеристики.
+ */
+export function getAbilityBonusesValue(
+  character: Character,
+  ability: AbilityKey,
+): number {
+  const bonuses = character.abilityBonuses[ability];
+
+  if (!bonuses.length) {
+    return 0;
+  }
+
+  return getCustomBonusesValue(toBaseAbilityCharacter(character), bonuses);
+}
+
+/**
+ * Значения характеристик с бонусами снаряжения и своими бонусами — именно их
+ * показывает лист и от них считаются модификаторы. Правка характеристик идёт по
+ * записанным значениям (`character.abilities`), а не по этим.
+ *
+ * @param character персонаж.
+ * @returns значения характеристик со всеми прибавками.
  */
 export function getEffectiveAbilities(
   character: Character,
 ): CharacterAbilities {
   return mapValues(
     character.abilities,
-    (score, key) => score + getInventoryBonusValue(character, 'ability', key),
+    (score, key) =>
+      score
+      + getInventoryBonusValue(character, 'ability', key)
+      + getAbilityBonusesValue(character, key),
   );
 }
 
 /**
- * Значение одной характеристики с бонусами снаряжения.
+ * Значение одной характеристики с бонусами снаряжения и своими бонусами.
  *
  * @param character персонаж.
  * @param ability ключ характеристики.
@@ -591,6 +630,7 @@ export function getEffectiveAbilityScore(
   return (
     character.abilities[ability]
     + getInventoryBonusValue(character, 'ability', ability)
+    + getAbilityBonusesValue(character, ability)
   );
 }
 
@@ -1259,6 +1299,72 @@ export function toSelectedAbilityKeys(value: unknown): AbilityKey[] {
 }
 
 /**
+ * Разбор значения характеристики на слагаемые: записанное значение, каждый
+ * предмет по названию и каждый свой бонус по пометке. Предмет и свой бонус
+ * названы поимённо — игрок должен видеть, что именно поднимает характеристику.
+ *
+ * @param character персонаж.
+ * @param ability ключ характеристики.
+ * @returns слагаемые значения характеристики в порядке подсчёта.
+ */
+export function getAbilityScoreBreakdown(
+  character: Character,
+  ability: AbilityKey,
+): BonusBreakdownPart[] {
+  // Бонусы считаются на том же базовом персонаже, что и в подсчёте значения:
+  // иначе бонус мастерства в разборе разошёлся бы с итогом на плитке.
+  const baseCharacter = toBaseAbilityCharacter(character);
+
+  return [
+    {
+      id: 'score',
+      label: SHEET_ABILITY_SETTINGS_LABELS.breakdownScore,
+      formattedValue: String(character.abilities[ability]),
+    },
+    ...getInventoryBonusSources(character, 'ability', ability).map(
+      (source) => ({
+        id: source.id,
+        label: source.name,
+        formattedValue: getFormattedBonus(source.value),
+      }),
+    ),
+    ...character.abilityBonuses[ability].map((bonus) => ({
+      id: bonus.id,
+      label: getCustomBonusLabel(bonus),
+      formattedValue: getFormattedBonus(
+        getCustomBonusValue(baseCharacter, bonus),
+      ),
+    })),
+  ];
+}
+
+/**
+ * Подсказка к значению характеристики: без разбора не понять, почему на плитке
+ * одно число, а в настройке другое. Значению без прибавок объяснять нечего — у
+ * него `null`.
+ *
+ * @param character персонаж.
+ * @param ability ключ характеристики.
+ * @returns разбор значения строкой или null.
+ */
+export function getAbilityScoreHint(
+  character: Character,
+  ability: AbilityKey,
+): string | null {
+  const isPlain =
+    getEffectiveAbilityScore(character, ability)
+    === character.abilities[ability];
+
+  if (isPlain) {
+    return null;
+  }
+
+  return getAbilityScoreBreakdown(character, ability)
+    .map((part) => `${part.label} ${part.formattedValue}`)
+    .join(' · ');
+}
+
+/**
  * Строки блока характеристик.
  *
  * @param character персонаж.
@@ -1273,9 +1379,10 @@ export function getAbilityRows(character: Character): AbilityRow[] {
     shortLabel: ABILITY_SHORT_LABELS[key],
     score: abilities[key],
     formattedModifier: getFormattedModifier(abilities[key]),
-    // Плитка показывает значение с бонусами предметов, а правится записанное:
-    // без разницы игрок не понял бы, почему в модалке другое число.
-    itemBonus: abilities[key] - character.abilities[key],
+    // Плитка показывает значение с прибавками, а правится записанное: без
+    // разницы игрок не понял бы, почему в настройке другое число.
+    bonus: abilities[key] - character.abilities[key],
+    bonusHint: getAbilityScoreHint(character, key),
   }));
 }
 
@@ -3107,7 +3214,9 @@ export function getCarryingCapacityBreakdown(
   // телосложение» считает существо крупнее только для переносимого веса.
   const capacitySize = size ?? character.size;
 
-  const strength = character.abilities.strength;
+  // Сила с прибавками (пояс силы великанов, свои бонусы): грузоподъёмность
+  // считается от того же значения, что показывает плитка характеристики.
+  const strength = getEffectiveAbilityScore(character, 'strength');
 
   const ruleValue = getCarryingCapacity(strength, capacitySize);
 
@@ -3484,8 +3593,11 @@ export function getArmorClassBreakdown(
     0,
   );
 
+  // Модификатор берётся с прибавками к Ловкости (снаряжение, свои бонусы) — как
+  // и у остальных характеристик КД выше: по записанному значению КД разошёлся
+  // бы с плиткой характеристики.
   const dexModifier = abilities.includes(DEFAULT_ARMOR_CLASS_ABILITY)
-    ? getModifier(character.abilities.dexterity)
+    ? getAbilityModifier(character, DEFAULT_ARMOR_CLASS_ABILITY)
     : 0;
 
   // Группа предмета здесь не важна: доспех со своей магической пометкой лежит

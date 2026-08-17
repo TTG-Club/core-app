@@ -537,6 +537,21 @@ const abilitiesSchema = z
   })
   .catch(() => ({ ...DEFAULT_CHARACTER.abilities }));
 
+/**
+ * Свои бонусы к значениям характеристик. Списки заведены по всем шести ключам
+ * сразу: пустой список — бонусов нет, и разбирать в подсчёте нечего.
+ */
+const abilityBonusesSchema = z
+  .object({
+    strength: z.array(customBonusSchema).catch([]),
+    dexterity: z.array(customBonusSchema).catch([]),
+    constitution: z.array(customBonusSchema).catch([]),
+    intelligence: z.array(customBonusSchema).catch([]),
+    wisdom: z.array(customBonusSchema).catch([]),
+    charisma: z.array(customBonusSchema).catch([]),
+  })
+  .catch(() => structuredClone(DEFAULT_CHARACTER.abilityBonuses));
+
 const savingThrowSchema = z.object({
   key: abilityKeySchema,
   ability: abilityKeySchema,
@@ -1087,6 +1102,9 @@ const characterSchema = z
     speed: speedSchema,
     vision: visionSchema,
     abilities: abilitiesSchema,
+    // Свои бонусы характеристик появились позже самих значений: у листов до них
+    // поля нет, и оно падает в пустые списки.
+    abilityBonuses: abilityBonusesSchema,
     // Легаси-поле: одним списком владений спасброски хранились до того, как у
     // каждого появились своя характеристика и свои бонусы.
     savingThrowProficiencies: z

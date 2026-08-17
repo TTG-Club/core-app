@@ -507,6 +507,23 @@ modals), so its capabilities are listed here rather than squeezed into the table
   settings show the penalty as its own line, so the numbers add up. The level
   lives in `health.exhaustion`, so it is saved by the usual autosave and sheets
   stored before it read as `0`; the PDF prints it as a combat tile.
+- Ability settings (`SheetAbilityModal`, opened by the gear next to the tile
+  title — the same reveal-on-hover control every other panel has — or by a long
+  press on the tile itself): the written score plus any number of
+  `CharacterCustomBonus` rows on top (`SheetCustomBonusRows` with a narrowed
+  source list, `ABILITY_BONUS_SOURCE_OPTIONS` — a flat number or the proficiency
+  bonus; an ability modifier is no summand of a score and a pair of such bonuses
+  would send the maths round in circles). The bonus raises the score itself, so
+  it flows through `getEffectiveAbilities` / `getAbilityModifier` into every
+  derived number — modifier, saving throws, skills and their passive values, AC,
+  attacks, spellcasting, carrying capacity and the PDF — exactly like an item
+  bonus, hit points excluded for the same reason. The proficiency-bonus kind is
+  counted on a character stripped of these bonuses (`toBaseAbilityCharacter`),
+  since the proficiency bonus itself may take an ability modifier and the two
+  would otherwise call each other forever. The tile shows the total, underlines
+  nothing but explains itself in the tooltip (`getAbilityScoreHint` — the written
+  score, every item by name, every bonus by its label), while ± and the score
+  field keep editing the written value. Sheets saved before them read empty lists.
 - Skill settings (`SheetSkillsSettingsModal`, opened by the gear next to the
   «Навыки» panel title — revealed on hover and always visible below `lg`, like
   every other edit control of the sheet): every skill gets its ability picked

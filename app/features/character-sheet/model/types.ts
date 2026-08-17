@@ -29,6 +29,16 @@ export type CurrencyKey =
 /** Значения характеристик персонажа. */
 export type CharacterAbilities = Record<AbilityKey, number>;
 
+/**
+ * Свои бонусы к значениям характеристик: по списку на каждую. Прибавка идёт в
+ * само значение, а не в отдельный бросок, — поэтому её подхватывает всё, что от
+ * характеристики считается: модификатор, спасброски, навыки, КД, атаки.
+ */
+export type CharacterAbilityBonuses = Record<
+  AbilityKey,
+  CharacterCustomBonus[]
+>;
+
 /** Кошелёк персонажа. */
 export type CharacterCurrency = Record<CurrencyKey, number>;
 
@@ -2709,6 +2719,13 @@ export interface Character {
 
   abilities: CharacterAbilities;
 
+  /**
+   * Свои бонусы к значениям характеристик (умение, эффект, договорённость за
+   * столом). Прибавка сидит отдельно от записанного значения: правка значения и
+   * быстрые ± на плитке трогают только его, а бонус остаётся на месте.
+   */
+  abilityBonuses: CharacterAbilityBonuses;
+
   /** Спасброски: владение, характеристика и свои бонусы каждого из шести. */
   savingThrows: CharacterSavingThrow[];
 
@@ -2888,10 +2905,16 @@ export interface AbilityRow {
   formattedModifier: string;
 
   /**
-   * Сколько в значении характеристики дали предметы; 0 — значение записано в
-   * листе как есть.
+   * Сколько в значении характеристики набежало сверх записанного: бонусы
+   * предметов и свои бонусы вместе; 0 — значение записано в листе как есть.
    */
-  itemBonus: number;
+  bonus: number;
+
+  /**
+   * Разбор значения строкой: откуда взялась прибавка. null — прибавок нет и
+   * объяснять нечего.
+   */
+  bonusHint: string | null;
 }
 
 /** Строка блока спасбросков. */
