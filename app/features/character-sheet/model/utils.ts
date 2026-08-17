@@ -239,6 +239,7 @@ import {
   DEFAULT_INITIATIVE_ABILITY,
   DEFAULT_INVENTORY_MAGIC_STATE,
   DEFAULT_ROLL_DICE_FACES,
+  DEFAULT_ROLL_MODE,
   DEFAULT_WEAPON_ATTACK_ABILITY,
   DICE_NOTATION_LETTER,
   EXHAUSTION_D20_PENALTY_PER_LEVEL,
@@ -253,6 +254,7 @@ import {
   FILTER_CHIP_CLASS,
   FILTER_CHIP_IDLE_CLASS,
   FILTER_CHIP_SELECTED_CLASS,
+  HEAVY_WEAPON_ABILITY_MINIMUM,
   HIT_DICE_ROLL_COUNT,
   HIT_POINTS_LEVEL_GAIN_MIN,
   INNATE_SPELL_REMOVE_MENU_LABEL,
@@ -2485,6 +2487,10 @@ function getCustomInventoryTypesLabel(draft: CustomInventoryItemDraft): string {
     labelParts.push(CUSTOM_WEAPON_PROPERTY_LABELS.finesse);
   }
 
+  if (draft.heavy) {
+    labelParts.push(CUSTOM_WEAPON_PROPERTY_LABELS.heavy);
+  }
+
   return labelParts.join(', ');
 }
 
@@ -2558,6 +2564,7 @@ function getCustomInventoryWeapon(
     category: draft.weaponCategory,
     ranged: draft.ranged,
     finesse: draft.finesse,
+    heavy: draft.heavy,
     // Собственный бонус к попаданию есть у любого оружия: чаще его даёт магия,
     // но задать его игрок должен уметь и без неё. Дополнительный урон остаётся
     // магическим — у обычного оружия его поля в форме выключены.
@@ -2988,6 +2995,7 @@ export function getCustomInventoryItemDraft(
       weapon?.category ?? NEW_CUSTOM_INVENTORY_ITEM.weaponCategory,
     ranged: weapon?.ranged ?? NEW_CUSTOM_INVENTORY_ITEM.ranged,
     finesse: weapon?.finesse ?? NEW_CUSTOM_INVENTORY_ITEM.finesse,
+    heavy: weapon?.heavy ?? NEW_CUSTOM_INVENTORY_ITEM.heavy,
     damageDiceCount:
       weapon?.damage?.diceCount ?? NEW_CUSTOM_INVENTORY_ITEM.damageDiceCount,
     damageDiceFaces:
@@ -3695,7 +3703,58 @@ export function getWeaponAttackBonus(
     ability,
     weaponBonus: weapon.attackBonus,
     proficiencyBonus,
+    heavyAbility: getHeavyWeaponAbility(character, weapon),
   };
+}
+
+/**
+ * Характеристика, которой тяжёлому оружию не хватает до броска без помехи.
+ * По правилам 2024 требование у свойства своё и от настройки листа не зависит:
+ * рукопашному тяжёлому оружию нужна Сила, дальнобойному — Ловкость, и меньше 13
+ * любая из них даёт помеху на атаку.
+ *
+ * @param character персонаж.
+ * @param weapon параметры оружия.
+ * @returns недостающая характеристика; null — помехи нет (оружие не тяжёлое
+ *   либо требование выполнено).
+ */
+function getHeavyWeaponAbility(
+  character: Character,
+  weapon: InventoryWeapon,
+): AbilityKey | null {
+  if (!weapon.heavy) {
+    return null;
+  }
+
+  const ability: AbilityKey = weapon.ranged ? 'dexterity' : 'strength';
+
+  return getEffectiveAbilityScore(character, ability)
+    < HEAVY_WEAPON_ABILITY_MINIMUM
+    ? ability
+    : null;
+}
+
+/**
+ * Режим броска атаки по правилам: тяжёлое оружие не по руке бьёт с помехой,
+ * остальное — обычным броском. Правило живёт в модели, а не в модалке: та
+ * только открывается в предложенном режиме, а сменить его игрок волен сам.
+ *
+ * @param attack разбор бонуса атаки оружием.
+ * @returns режим броска, которым открывается модалка атаки.
+ */
+export function getWeaponAttackRollMode(attack: WeaponAttack): RollMode {
+  return attack.heavyAbility ? 'disadvantage' : DEFAULT_ROLL_MODE;
+}
+
+/**
+ * Подсказка помехи от свойства «Тяжёлое»: называет характеристику, которой не
+ * хватает, — сам значок «Помеха» о причине не говорит.
+ *
+ * @param ability недостающая характеристика.
+ * @returns текст подсказки.
+ */
+export function getHeavyWeaponHint(ability: AbilityKey): string {
+  return `Тяжёлое оружие: атака с помехой, пока характеристика «${ABILITY_LABELS[ability]}» меньше ${HEAVY_WEAPON_ABILITY_MINIMUM}`;
 }
 
 /**

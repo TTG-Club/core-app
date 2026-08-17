@@ -748,6 +748,9 @@ const inventoryWeaponSchema = z
     category: z.enum(['simple', 'martial']).catch('simple'),
     ranged: z.boolean().catch(false),
     finesse: z.boolean().catch(false),
+    // Листы, сохранённые до появления свойства «Тяжёлое», поля не содержат:
+    // помехи у такого оружия нет, пока игрок не отметит свойство сам.
+    heavy: z.boolean().catch(false),
     // Листы, сохранённые до появления магических бонусов, поля не содержат:
     // ноль означает обычное оружие, поэтому доливать нечего.
     attackBonus: z.coerce.number().catch(0),

@@ -1427,6 +1427,9 @@ export const SPEED_UNIT_OPTIONS: Array<{ label: string; value: SpeedUnit }> = [
   { label: 'Километры (km)', value: 'kilometers' },
 ];
 
+/** Режим броска d20 по умолчанию: без преимущества и помехи. */
+export const DEFAULT_ROLL_MODE: RollMode = 'normal';
+
 /** Варианты режима броска d20. */
 export const ROLL_MODE_OPTIONS: Array<{
   value: RollMode;
@@ -3064,6 +3067,9 @@ export const INVENTORY_TWO_HANDED_BADGE_LABEL = 'Двумя руками';
 export const INVENTORY_TWO_HANDED_BADGE_HINT =
   'Универсальное оружие взято двумя руками: урон катится большей костью';
 
+/** Значок оружия, которым персонаж атакует с помехой по свойству «Тяжёлое». */
+export const INVENTORY_HEAVY_BADGE_LABEL = 'Помеха';
+
 /** Значок предмета, которого у персонажа не осталось (количество — ноль). */
 export const INVENTORY_MISSING_BADGE_LABEL = 'Отсутствует';
 
@@ -3132,6 +3138,12 @@ export const INVENTORY_STAT_HINT_LABELS = {
    * пропавший бонус мастерства выглядит ошибкой подсчёта.
    */
   noProficiency: 'без владения оружием',
+
+  /**
+   * Хвост разбора атаки тяжёлым оружием, которое персонажу не по руке: на сам
+   * бонус помеха не влияет, поэтому в разборе о ней сказано отдельно.
+   */
+  heavyDisadvantage: 'помеха: тяжёлое оружие',
 };
 
 /** Подсказка в тултипе о том, что плитка бросается по нажатию. */
@@ -3283,12 +3295,19 @@ export const WEAPON_CATEGORY_OPTIONS: Array<{
 
 /** Подписи свойств своего оружия для строки типов предмета. */
 export const CUSTOM_WEAPON_PROPERTY_LABELS: Record<
-  'ranged' | 'finesse',
+  'ranged' | 'finesse' | 'heavy',
   string
 > = {
   ranged: 'Дальнобойное',
   finesse: 'Фехтовальное',
+  heavy: 'Тяжёлое',
 };
+
+/**
+ * Минимальное значение характеристики, при котором тяжёлое оружие бьёт без
+ * помехи (правила 2024).
+ */
+export const HEAVY_WEAPON_ABILITY_MINIMUM = 13;
 
 /** Порядок типов доспеха в селекте формы. */
 const CUSTOM_ARMOR_TYPE_ORDER: CustomArmorType[] = [
@@ -3485,6 +3504,7 @@ export const NEW_CUSTOM_INVENTORY_ITEM: CustomInventoryItemDraft = {
   weaponCategory: 'simple',
   ranged: false,
   finesse: false,
+  heavy: false,
   damageDiceCount: 1,
   damageDiceFaces: 6,
   damageBonus: 0,
@@ -3609,6 +3629,9 @@ export const CUSTOM_ITEM_MAGIC_LABELS = {
   bonusesHint:
     'Бонус на строку: выберите цель (характеристика, навык, спасбросок, скорость, класс доспеха) и величину. Прибавка к КД доспеха тоже задаётся здесь.',
 };
+
+/** Пояснение свойства «Тяжёлое» в форме своего оружия. */
+export const CUSTOM_ITEM_HEAVY_HINT = `Тяжёлым оружием атакуют с помехой, пока характеристика меньше ${HEAVY_WEAPON_ABILITY_MINIMUM}: у рукопашного — «${ABILITY_LABELS.strength}», у дальнобойного — «${ABILITY_LABELS.dexterity}».`;
 
 /** Подписи свойства «Универсальное» в форме своего оружия. */
 export const CUSTOM_ITEM_VERSATILE_LABELS = {

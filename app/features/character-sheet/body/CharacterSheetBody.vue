@@ -27,6 +27,7 @@
     getAbilityCheckValue,
     getAvailableInnateSpells,
     getWeaponAttackBonus,
+    getWeaponAttackRollMode,
     getWeaponDamageSource,
     isProficientWeapon,
     LANGUAGE_PROFICIENCY_GROUPS,
@@ -706,6 +707,9 @@
       modifier: attack.value,
       ability: attack.ability,
       actionLabel: 'Бросить атаку',
+      // Тяжёлое оружие не по руке бьёт с помехой (правила 2024): модалка
+      // открывается сразу в этом режиме, но игрок волен его сменить.
+      mode: getWeaponAttackRollMode(attack),
     });
   }
 

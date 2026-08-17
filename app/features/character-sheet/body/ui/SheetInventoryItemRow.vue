@@ -8,6 +8,7 @@
     InventoryCharges,
     InventoryStatRollKind,
     InventoryWeapon,
+    WeaponAttack,
   } from '../../model';
 
   import { MarkupRender } from '~ui/markup';
@@ -19,6 +20,7 @@
     CUSTOM_INVENTORY_BADGE_HINT,
     getAbilityModifier,
     getFormattedBonus,
+    getHeavyWeaponHint,
     getInventoryEquipIcon,
     getInventoryItemBonusLabels,
     getInventoryItemMenuItems,
@@ -35,6 +37,7 @@
     INVENTORY_CHARGES_HINT_LABELS,
     INVENTORY_CHARGES_SPEND_LABEL,
     INVENTORY_EQUIP_ACTION_LABELS,
+    INVENTORY_HEAVY_BADGE_LABEL,
     INVENTORY_MISSING_BADGE_HINT,
     INVENTORY_MISSING_BADGE_LABEL,
     INVENTORY_QUANTITY_MIN,
@@ -204,6 +207,28 @@
   const hasWeaponProficiency = computed(() =>
     isProficientWeapon(character.value, props.inventoryItem),
   );
+
+  // Разбор атаки нужен и плитке, и значку помехи тяжёлого оружия — считаем его
+  // один раз. null — предмет оружием не является.
+  const weaponAttack = computed<WeaponAttack | null>(() => {
+    const { weapon } = props.inventoryItem;
+
+    return weapon
+      ? getWeaponAttackBonus(
+          character.value,
+          weapon,
+          hasWeaponProficiency.value,
+        )
+      : null;
+  });
+
+  // Помеха от свойства «Тяжёлое» стоит значком: на бонус атаки она не влияет, и
+  // без него о ней узнавали бы только из тултипа плитки.
+  const heavyHint = computed(() => {
+    const heavyAbility = weaponAttack.value?.heavyAbility;
+
+    return heavyAbility ? getHeavyWeaponHint(heavyAbility) : '';
+  });
 
   const openLabel = computed(() =>
     isCustom.value
@@ -422,15 +447,10 @@
   /**
    * Плитка бонуса атаки оружием: бонус мастерства плюс модификатор стата.
    * Оружию без владения бонус мастерства не полагается — в разборе его нет, а
-   * хвост подсказки говорит почему.
+   * хвост подсказки говорит почему. Тем же хвостом идёт и помеха тяжёлого
+   * оружия: в бонусе её не видно, а на бросок она влияет.
    */
-  function getWeaponAttackStat(weapon: InventoryWeapon): ItemStat {
-    const attack = getWeaponAttackBonus(
-      character.value,
-      weapon,
-      hasWeaponProficiency.value,
-    );
-
+  function getWeaponAttackStat(attack: WeaponAttack): ItemStat {
     const tooltipParts = attack.proficiencyBonus
       ? [
           getBonusPart(
@@ -452,7 +472,11 @@
       ? ''
       : ` · ${INVENTORY_STAT_HINT_LABELS.noProficiency}`;
 
-    const formula = `${tooltipParts.join(' + ')}${proficiencyHint}`;
+    const heavyDisadvantageHint = attack.heavyAbility
+      ? ` · ${INVENTORY_STAT_HINT_LABELS.heavyDisadvantage}`
+      : '';
+
+    const formula = `${tooltipParts.join(' + ')}${proficiencyHint}${heavyDisadvantageHint}`;
 
     return {
       label: INVENTORY_STAT_LABELS.attack,
@@ -505,9 +529,12 @@
   }
 
   /** Плитки оружия: бонус атаки и урон — обе бросаются по нажатию. */
-  function getWeaponStats(weapon: InventoryWeapon): ItemStat[] {
+  function getWeaponStats(
+    weapon: InventoryWeapon,
+    attack: WeaponAttack,
+  ): ItemStat[] {
     const damageStat = getWeaponDamageStat(weapon);
-    const attackStat = getWeaponAttackStat(weapon);
+    const attackStat = getWeaponAttackStat(attack);
 
     return damageStat ? [attackStat, damageStat] : [attackStat];
   }
@@ -523,7 +550,10 @@
 
     const { armor, weapon, cost, weight } = props.inventoryItem;
 
-    const weaponStats = armor || !weapon ? [] : getWeaponStats(weapon);
+    const attack = weaponAttack.value;
+
+    const weaponStats =
+      armor || !weapon || !attack ? [] : getWeaponStats(weapon, attack);
 
     if (armor) {
       stats.push(getArmorStat(armor));
@@ -722,6 +752,22 @@
                 class="relative z-10 shrink-0"
               >
                 {{ INVENTORY_TWO_HANDED_BADGE_LABEL }}
+              </UBadge>
+            </UTooltip>
+
+            <!-- Помеха тяжёлого оружия: в плитке атаки её не видно (на бонус
+              она не влияет), а на бросок влияет — значок предупреждает -->
+            <UTooltip
+              v-if="heavyHint"
+              :text="heavyHint"
+            >
+              <UBadge
+                size="sm"
+                color="warning"
+                variant="subtle"
+                class="relative z-10 shrink-0"
+              >
+                {{ INVENTORY_HEAVY_BADGE_LABEL }}
               </UBadge>
             </UTooltip>
 

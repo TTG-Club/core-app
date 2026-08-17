@@ -894,6 +894,11 @@ export function parseItemWeapon(input: unknown): InventoryWeapon | null {
     finesse: weapon.properties.some((property) =>
       /фехтов|finesse/i.test(property),
     ),
+    // «Тяжёлое» ищем в свойствах, а не в названии: тяжёлым оружие делает
+    // свойство, а не слово «тяжёлый» в имени.
+    heavy: weapon.properties.some((property) =>
+      /тяж[её]л|heavy/i.test(property),
+    ),
     // Немагическое оружие своего бонуса к атаке не имеет: его даёт только магия.
     attackBonus: MAGIC_ITEM_BONUS_NONE,
     damage,
