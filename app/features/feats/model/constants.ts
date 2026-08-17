@@ -11,7 +11,9 @@ export const CLASS_FEATURE_REQUIREMENT_OPTIONS: Array<SelectOption> = [
 ];
 
 /** Что игрок выбирает при взятии черты. */
-export const FEAT_CHOICE_TYPE_OPTIONS: Array<SelectOption> = [
+export const FEAT_CHOICE_TYPE_OPTIONS: Array<
+  SelectOption & { value: FeatChoiceType }
+> = [
   { label: 'Характеристика', value: 'ABILITY' },
   { label: 'Спасбросок', value: 'SAVING_THROW' },
   { label: 'Навык', value: 'SKILL' },
@@ -25,6 +27,34 @@ export const FEAT_CHOICE_TYPE_OPTIONS: Array<SelectOption> = [
   { label: 'Оружие', value: 'WEAPON' },
   { label: 'Вариант из описания', value: 'OPTION' },
 ];
+
+/**
+ * Ключ по умолчанию для каждого типа выбора. core-api ключ не проверяет и
+ * словаря для него не держит: это соглашение редактора, чтобы одинаковые по
+ * смыслу выборы в разных чертах звались одинаково, а ссылка `fromChoiceKey`
+ * читалась без сверки с описанием черты.
+ */
+export const FEAT_CHOICE_KEY_BY_TYPE: Record<FeatChoiceType, string> = {
+  ABILITY: 'ability',
+  SAVING_THROW: 'saving-throw',
+  SKILL: 'skill',
+  TOOL: 'tool',
+  LANGUAGE: 'language',
+  DAMAGE_TYPE: 'damage-type',
+  SPELL: 'spell',
+  CANTRIP: 'cantrip',
+  SPELL_LIST: 'spell-list',
+  SPELLCASTING_ABILITY: 'spellcasting-ability',
+  WEAPON: 'weapon',
+  OPTION: 'option',
+};
+
+/** Библиотека ключей выбора (для поля `choice.key`). */
+export const FEAT_CHOICE_KEY_SUGGESTIONS: Array<SelectOption> =
+  FEAT_CHOICE_TYPE_OPTIONS.map(({ label, value }) => ({
+    value: FEAT_CHOICE_KEY_BY_TYPE[value],
+    label: `${label} (${FEAT_CHOICE_KEY_BY_TYPE[value]})`,
+  }));
 
 /**
  * Что даёт сделанный выбор. Компетентность удваивает бонус мастерства, поэтому

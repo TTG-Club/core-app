@@ -150,7 +150,10 @@
         </h2>
       </template>
 
-      <FeatAbilityBonuses v-model="mechanics.abilityBonuses" />
+      <FeatAbilityBonuses
+        v-model="mechanics.abilityBonuses"
+        :choices="mechanics.choices"
+      />
     </UCard>
 
     <UCard variant="subtle">

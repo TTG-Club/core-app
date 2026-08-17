@@ -295,6 +295,32 @@ export function createFeatChoice(): FeatChoice {
   };
 }
 
+/**
+ * Свободный ключ выбора: к занятому имени приписывается номер. Ключ попадает в
+ * идентификатор умения на листе персонажа, поэтому два выбора с одним ключом
+ * схлопнулись бы в один.
+ *
+ * @param preferred желаемый ключ.
+ * @param taken ключи, уже занятые в этой черте.
+ * @returns желаемый ключ либо он же с номером.
+ */
+export function getFreeFeatChoiceKey(
+  preferred: string,
+  taken: Array<string>,
+): string {
+  if (!taken.includes(preferred)) {
+    return preferred;
+  }
+
+  let position = 2;
+
+  while (taken.includes(`${preferred}-${position}`)) {
+    position += 1;
+  }
+
+  return `${preferred}-${position}`;
+}
+
 /** Новое чувство. */
 export function createSenseGrant(): FeatSenseGrant {
   return {

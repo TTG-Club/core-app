@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import type { FeatChoice } from '../../model';
+  import type { FeatChoice, FeatChoiceType } from '../../model';
 
+  import { InputWithLibrary } from '~ui/input';
   import { SelectMagicSchool, SelectSpellLevel } from '~ui/select';
 
   import {
@@ -8,13 +9,46 @@
     createSpellFilter,
     FEAT_CASTING_TIME_OPTIONS,
     FEAT_CHOICE_GRANT_OPTIONS,
+    FEAT_CHOICE_KEY_BY_TYPE,
+    FEAT_CHOICE_KEY_SUGGESTIONS,
     FEAT_CHOICE_TYPE_OPTIONS,
+    getFreeFeatChoiceKey,
     isExpertiseChoiceType,
     isProficiencyChoiceType,
     isSpellChoiceType,
   } from '../../model';
 
   const model = defineModel<Array<FeatChoice>>({ default: () => [] });
+
+  /** Ключи, занятые остальными выборами черты. */
+  function getTakenKeys(exceptIndex: number): Array<string> {
+    return model.value
+      .filter((_, position) => position !== exceptIndex)
+      .map((choice) => choice.key.trim())
+      .filter((key) => !!key);
+  }
+
+  /** Ключи, встречающиеся у нескольких выборов сразу. */
+  const duplicateKeys = computed(() => {
+    const seen = new Set<string>();
+    const duplicates = new Set<string>();
+
+    for (const choice of model.value) {
+      const key = choice.key.trim();
+
+      if (!key) {
+        continue;
+      }
+
+      if (seen.has(key)) {
+        duplicates.add(key);
+      }
+
+      seen.add(key);
+    }
+
+    return duplicates;
+  });
 
   function addChoice() {
     model.value = [...model.value, createFeatChoice()];
@@ -28,6 +62,36 @@
     model.value = model.value.map((choice, position) =>
       position === index ? { ...choice, ...patch } : choice,
     );
+  }
+
+  /**
+   * Смена типа выбора заодно подсказывает ключ, но только пустому полю:
+   * введённое руками имя не перетирается, а занятое в этой черте получает
+   * номер.
+   *
+   * @param index номер выбора в списке.
+   * @param type новый тип выбора.
+   */
+  function changeType(index: number, type: FeatChoiceType | undefined) {
+    const choice = model.value[index];
+
+    if (!choice) {
+      return;
+    }
+
+    if (!type || choice.key.trim()) {
+      patchChoice(index, { type });
+
+      return;
+    }
+
+    patchChoice(index, {
+      type,
+      key: getFreeFeatChoiceKey(
+        FEAT_CHOICE_KEY_BY_TYPE[type],
+        getTakenKeys(index),
+      ),
+    });
   }
 
   function toggleSpellFilter(
@@ -86,7 +150,10 @@
     <div class="flex items-center justify-between gap-4">
       <span class="text-sm text-dimmed">
         Только выборы в момент взятия черты. Выборы по ходу игры («выберите
-        существо в пределах 30 футов») сюда не идут.
+        существо в пределах 30 футов») сюда не идут. Ключ — имя выбора: по нему
+        на него ссылается повышение характеристик и по нему лист персонажа
+        помнит ответ игрока, поэтому у черты, которую уже могли взять, ключ
+        менять нельзя — сохранённый выбор потеряется.
       </span>
 
       <UButton
@@ -114,9 +181,15 @@
       <UFormField
         class="col-span-full md:col-span-6"
         label="Ключ"
+        :error="
+          duplicateKeys.has(choice.key.trim())
+            ? 'Такой ключ в черте уже есть'
+            : undefined
+        "
       >
-        <UInput
+        <InputWithLibrary
           v-model="choice.key"
+          :options="FEAT_CHOICE_KEY_SUGGESTIONS"
           placeholder="damage-type"
         />
       </UFormField>
@@ -126,9 +199,10 @@
         label="Что выбирают"
       >
         <USelectMenu
-          v-model="choice.type"
           :items="FEAT_CHOICE_TYPE_OPTIONS"
+          :model-value="choice.type"
           value-key="value"
+          @update:model-value="changeType(index, $event)"
         />
       </UFormField>
 
