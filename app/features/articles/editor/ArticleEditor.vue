@@ -25,6 +25,9 @@
     ARTICLE_PUB_STATE_OPTIONS,
     ARTICLE_PUBLISH_CHANNELS,
     ARTICLE_PUBLISH_MODES,
+    ARTICLE_TELEGRAM_FORMAT_DEFAULT,
+    ARTICLE_TELEGRAM_FORMAT_OPTIONS,
+    ARTICLE_TELEGRAM_FORMATS,
     ARTICLE_TYPE_DEFAULT,
     ARTICLE_TYPE_OPTIONS,
     ARTICLES_ADMIN_ROUTE,
@@ -64,6 +67,7 @@
       active: true,
       accessibleByLink: false,
       publishToTelegram: false,
+      telegramFormat: ARTICLE_TELEGRAM_FORMAT_DEFAULT,
       publishToDiscord: false,
       discordMention: ARTICLE_DISCORD_MENTION_DEFAULT,
       publishToVk: false,
@@ -87,8 +91,8 @@
       // а `defineModel({ default: '' })` подставляет дефолт только на undefined),
       // из-за чего `state.preview` остаётся null и PUT падает на `@NotNull`.
       // Нормализуем при загрузке к пустой строке. `publishToTelegram`,
-      // `publishToDiscord`, `publishToVk` и `discordMention` также страхуем на
-      // случай null у записей до миграции бэка.
+      // `publishToDiscord`, `publishToVk`, `discordMention` и `telegramFormat`
+      // также страхуем на случай null у записей до миграции бэка.
       normalizeLoaded: (raw) => ({
         ...raw,
         preview: raw.preview ?? '',
@@ -96,6 +100,7 @@
         publishToDiscord: raw.publishToDiscord ?? false,
         publishToVk: raw.publishToVk ?? false,
         discordMention: raw.discordMention ?? ARTICLE_DISCORD_MENTION_DEFAULT,
+        telegramFormat: raw.telegramFormat ?? ARTICLE_TELEGRAM_FORMAT_DEFAULT,
       }),
       transformBeforeSubmit: (formState) => {
         const isActivePublish = !formState.draft && formState.active;
@@ -164,6 +169,21 @@
     hasCover.value
       ? `с картинкой; без картинки — до ${ARTICLE_POST_CHAR_TARGET_NO_IMAGE}`
       : `без картинки; с картинкой — до ${ARTICLE_POST_CHAR_TARGET_WITH_IMAGE}`,
+  );
+
+  // Длина поста ограничена только в «полном тексте»: у карточки Instant View текст
+  // читается в Telegram целиком, лимит сообщения к нему не относится — счётчик
+  // порога показываем лишь для прежнего вида.
+  const isTelegramFullText = computed(
+    () =>
+      state.value.publishToTelegram
+      && state.value.telegramFormat === 'FULL_TEXT',
+  );
+
+  const isTelegramInstantView = computed(
+    () =>
+      state.value.publishToTelegram
+      && state.value.telegramFormat === 'INSTANT_VIEW',
   );
 
   const isOverTelegramTarget = computed(
@@ -340,6 +360,7 @@
     active: z.boolean(),
     accessibleByLink: z.boolean(),
     publishToTelegram: z.boolean(),
+    telegramFormat: z.enum(ARTICLE_TELEGRAM_FORMATS),
     publishToDiscord: z.boolean(),
     discordMention: z.enum(ARTICLE_DISCORD_MENTIONS),
     publishToVk: z.boolean(),
@@ -540,6 +561,43 @@
       </div>
 
       <div
+        v-if="state.publishToTelegram"
+        class="mt-4 flex flex-col gap-2 border-t border-default pt-4"
+      >
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-sm font-medium text-highlighted">
+            Вид поста в Telegram:
+          </span>
+
+          <UTabs
+            v-model="state.telegramFormat"
+            :items="ARTICLE_TELEGRAM_FORMAT_OPTIONS"
+            :content="false"
+            size="sm"
+            class="w-fit"
+          />
+        </div>
+
+        <p
+          v-if="isTelegramInstantView"
+          class="text-sm text-muted"
+        >
+          Одно сообщение — карточка с обложкой, заголовком и анонсом; полный
+          текст открывается в Telegram по кнопке на карточке, поэтому его длина
+          не важна. Если шаблон Instant View на сервере не настроен, пост уйдёт
+          полным текстом.
+        </p>
+
+        <p
+          v-else
+          class="text-sm text-muted"
+        >
+          Как было раньше: полный текст прямо в посте (длинный разобьётся на
+          несколько сообщений), обложка — над текстом или подписью к фото.
+        </p>
+      </div>
+
+      <div
         v-if="state.publishToDiscord"
         class="mt-4 flex flex-col gap-2 border-t border-default pt-4"
       >
@@ -574,13 +632,20 @@
         </p>
 
         <p
-          v-if="state.publishToTelegram"
+          v-if="isTelegramFullText"
           class="tabular-nums"
           :class="isOverTelegramTarget ? 'text-warning' : 'text-muted'"
         >
           Telegram: {{ postCharCount }} / {{ telegramTarget }} ({{
             telegramHint
           }})
+        </p>
+
+        <p
+          v-else-if="isTelegramInstantView"
+          class="text-muted"
+        >
+          Telegram: длина не ограничена (Instant View)
         </p>
 
         <p
