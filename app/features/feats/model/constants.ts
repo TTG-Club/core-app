@@ -1,6 +1,6 @@
 import type { SelectOption } from '~/shared/types';
 
-import type { FeatChoiceType } from './mechanics';
+import type { FeatChoice, FeatChoiceType } from './mechanics';
 
 /** Классовые умения, которых может требовать черта. */
 export const CLASS_FEATURE_REQUIREMENT_OPTIONS: Array<SelectOption> = [
@@ -95,6 +95,91 @@ export const SPELL_FEAT_CHOICE_TYPES: Array<FeatChoiceType> = [
   'CANTRIP',
 ];
 
+/**
+ * Типы выборов, которые редактор больше не предлагает: то же самое говорится
+ * другим полем, а два способа сказать одно расходятся в данных.
+ *
+ * Заговор — это заклинание с уровнем «заговор», и уровень у выбора заклинания
+ * задаётся всё равно, поэтому отдельный тип только удваивал бы ответ. Из модели
+ * тип не убран: черты, сохранённые с ним, читаются и правятся как раньше.
+ */
+export const LEGACY_FEAT_CHOICE_TYPES: Array<FeatChoiceType> = ['CANTRIP'];
+
+/**
+ * Раздел формы, к которому относится выбор.
+ *
+ * Механика черты делится по смыслу — характеристики, владения, заклинания, — и
+ * в каждом разделе что-то черта даёт сразу, а что-то игрок выбирает. Одним
+ * списком выборы стояли в стороне от той же по смыслу безвыборной выдачи, и
+ * увидеть в них «получение заклинаний» было неоткуда.
+ */
+export type FeatChoiceDomain = 'ABILITY' | 'PROFICIENCY' | 'SPELL' | 'OTHER';
+
+/**
+ * Типы выборов раздела «Заклинания». Кроме самих заклинаний сюда входит выбор
+ * заклинательной характеристики: она относится к магии черты, а не к повышению
+ * характеристик.
+ */
+export const SPELL_CHOICE_DOMAIN_TYPES: Array<FeatChoiceType> = [
+  ...SPELL_FEAT_CHOICE_TYPES,
+  'SPELL_LIST',
+  'SPELLCASTING_ABILITY',
+];
+
+/**
+ * Тип нового выбора в разделе — самый частый в нём: «выберите один навык»
+ * встречается чаще прочих владений, заклинание — чаще списка заклинаний.
+ * Остальные типы раздела остаются в селекте.
+ */
+export const FEAT_CHOICE_DEFAULT_TYPE_BY_DOMAIN: Record<
+  FeatChoiceDomain,
+  FeatChoiceType
+> = {
+  ABILITY: 'ABILITY',
+  PROFICIENCY: 'SKILL',
+  SPELL: 'SPELL',
+  OTHER: 'OPTION',
+};
+
+/** Подписи и пояснения к разделам механики черты. */
+export const FEAT_MECHANICS_EDITOR = {
+  /** Заголовок безвыборной части раздела. */
+  grantedTitle: 'Даётся чертой',
+
+  /** Заголовок выбираемой части раздела. */
+  chosenTitle: 'Даётся на выбор',
+
+  addChoiceLabel: 'Добавить выбор',
+  emptyChoicesHint: 'Здесь игрок ничего не выбирает.',
+
+  /** Пометка ссылки на выбор, которого в черте больше нет. */
+  missingChoiceHint: 'выбора с таким ключом нет',
+
+  /** Чем выбор раздела отличается от того, что черта выдаёт сразу. */
+  choiceHintByDomain: {
+    ABILITY:
+      'Игрок выбирает характеристику, а повышение выше ссылается на этот выбор.',
+    PROFICIENCY:
+      'Игрок выбирает, чем владеть: «выберите один навык», «выберите вид оружия».',
+    SPELL:
+      'Игрок выбирает заклинание сам: «выберите один заговор из списка жреца». Заклинания, которые черта даёт знать всем, перечислены выше.',
+    OTHER:
+      'Выборы, у которых нет своего раздела: вариант из описания и тип урона для сопротивления. Ключ — имя выбора: по нему на выбор ссылаются модификаторы листа и по нему лист персонажа помнит ответ игрока, поэтому у черты, которую уже могли взять, ключ менять нельзя — сохранённый выбор потеряется.',
+  } satisfies Record<FeatChoiceDomain, string>,
+} as const;
+
+/** Подписи раздела выдаваемых заклинаний. */
+export const FEAT_SPELL_EDITOR = {
+  description:
+    'Заклинания, которые черта даёт знать без выбора. Круг и школу лист берёт из справочника, поэтому здесь достаточно указать заклинание.',
+  spellLabel: 'Заклинание',
+  addLabel: 'Добавить заклинание',
+  emptyHint: 'Черта не даёт знать заклинания без выбора.',
+  abilityLabel: 'Заклинательная характеристика',
+  abilityHelp: 'Не указана — лист возьмёт характеристику класса, чья это магия',
+  alwaysPreparedLabel: 'Всегда подготовлено',
+} as const;
+
 /** Чувства, которые может дать черта. */
 export const FEAT_SENSE_OPTIONS: Array<SelectOption> = [
   { label: 'Тёмное зрение', value: 'DARKVISION' },
@@ -147,4 +232,131 @@ export function isExpertiseChoiceType(
  */
 export function isSpellChoiceType(type: FeatChoiceType | undefined): boolean {
   return !!type && SPELL_FEAT_CHOICE_TYPES.includes(type);
+}
+
+/**
+ * Раздел формы, в котором живёт выбор.
+ *
+ * @param type тип выбора; у незаполненного раздел определить нельзя.
+ * @returns раздел формы; `OTHER` — выбор без своего раздела.
+ */
+export function getFeatChoiceDomain(
+  type: FeatChoiceType | undefined,
+): FeatChoiceDomain {
+  if (type === 'ABILITY') {
+    return 'ABILITY';
+  }
+
+  if (isProficiencyChoiceType(type)) {
+    return 'PROFICIENCY';
+  }
+
+  if (!!type && SPELL_CHOICE_DOMAIN_TYPES.includes(type)) {
+    return 'SPELL';
+  }
+
+  return 'OTHER';
+}
+
+/**
+ * Заведённые выборы как варианты привязки к ним.
+ *
+ * По ключу на сделанный выбор ссылаются повышение характеристик («+1 к
+ * выбранной характеристике»), сопротивление типу урона и пул заклинаний
+ * («Посвящённый в магию» сначала спрашивает список класса, а потом даёт выбрать
+ * из него заговоры). Редактор берёт ключ из списка, а не набирает руками.
+ *
+ * Пустой привязке отдельного варианта нет: значением списка она была бы пустой
+ * строкой, а с ней список не открывается вовсе — снимает привязку кнопка рядом.
+ *
+ * @param choices выборы черты.
+ * @param types типы выборов, годные для привязки; пусто — годятся любые.
+ * @returns варианты списка «ключ — подпись».
+ */
+export function getFeatChoiceLinkOptions(
+  choices: Array<FeatChoice>,
+  types: Array<FeatChoiceType> = [],
+): Array<SelectOption> {
+  return choices
+    .filter(
+      (choice) => !types.length || (choice.type && types.includes(choice.type)),
+    )
+    .map((choice) => ({ key: choice.key.trim(), label: choice.label.trim() }))
+    .filter(({ key }) => !!key)
+    .map(({ key, label }) => ({
+      value: key,
+      label: label ? `${key} — ${label}` : key,
+    }));
+}
+
+/**
+ * Варианты привязки вместе с уже записанным ключом: он может ссылаться на
+ * выбор, которого в черте больше нет. Молча подменять такую ссылку пустотой
+ * нельзя — она уйдёт на сервер потерянной, поэтому значение остаётся в списке с
+ * пометкой.
+ *
+ * @param options варианты привязки.
+ * @param key записанный ключ выбора; пустой — подставлять нечего.
+ * @returns варианты, среди которых записанный ключ есть наверняка.
+ */
+export function withFeatChoiceLink(
+  options: Array<SelectOption>,
+  key: string,
+): Array<SelectOption> {
+  const trimmed = key.trim();
+
+  if (!trimmed || options.some((option) => option.value === trimmed)) {
+    return options;
+  }
+
+  return [
+    ...options,
+    {
+      value: trimmed,
+      label: `${trimmed} — ${FEAT_MECHANICS_EDITOR.missingChoiceHint}`,
+    },
+  ];
+}
+
+/**
+ * Типы выборов, уместные в разделе: селект в разделе «Заклинания» не должен
+ * предлагать выбрать навык — для навыка есть раздел «Владения». Устаревшие типы
+ * ({@link LEGACY_FEAT_CHOICE_TYPES}) не предлагаются нигде.
+ *
+ * @param domain раздел формы.
+ * @returns варианты для селекта «Что выбирают».
+ */
+export function getFeatChoiceTypeOptions(
+  domain: FeatChoiceDomain,
+): Array<SelectOption & { value: FeatChoiceType }> {
+  return FEAT_CHOICE_TYPE_OPTIONS.filter(
+    ({ value }) =>
+      getFeatChoiceDomain(value) === domain
+      && !LEGACY_FEAT_CHOICE_TYPES.includes(value),
+  );
+}
+
+/**
+ * Варианты «Что выбирают» вместе с типом самой записи: у черты, сохранённой
+ * раньше, тип может быть из тех, что редактор больше не предлагает. Молча
+ * подменять его нельзя — открыв и сохранив черту, редактор потерял бы ответ
+ * игрока, поэтому свой тип остаётся в списке.
+ *
+ * @param options варианты раздела.
+ * @param type тип записи; не задан — подставлять нечего.
+ * @returns варианты, среди которых тип записи есть наверняка.
+ */
+export function withFeatChoiceType(
+  options: Array<SelectOption & { value: FeatChoiceType }>,
+  type: FeatChoiceType | undefined,
+): Array<SelectOption & { value: FeatChoiceType }> {
+  if (!type || options.some((option) => option.value === type)) {
+    return options;
+  }
+
+  const legacy = FEAT_CHOICE_TYPE_OPTIONS.find(
+    (option) => option.value === type,
+  );
+
+  return legacy ? [...options, legacy] : options;
 }

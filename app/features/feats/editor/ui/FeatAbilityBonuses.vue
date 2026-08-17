@@ -5,7 +5,11 @@
 
   import { SelectAbilities } from '~ui/select';
 
-  import { createAbilityBonus } from '../../model';
+  import {
+    createAbilityBonus,
+    getFeatChoiceLinkOptions,
+    withFeatChoiceLink,
+  } from '../../model';
 
   const { choices } = defineProps<{
     /** Выборы черты: повышение может быть привязано к одному из них. */
@@ -14,40 +18,20 @@
 
   const model = defineModel<Array<FeatAbilityBonus>>({ default: () => [] });
 
-  /**
-   * Заведённые выборы как варианты привязки. Пустой привязке отдельного
-   * варианта нет: значением списка она была бы пустой строкой, а с ней список
-   * не открывается вовсе — снимает привязку кнопка рядом.
-   */
+  /** Заведённые выборы как варианты привязки. */
   const choiceOptions = computed<Array<SelectOption>>(() =>
-    choices
-      .map((choice) => ({ key: choice.key.trim(), label: choice.label.trim() }))
-      .filter(({ key }) => !!key)
-      .map(({ key, label }) => ({
-        value: key,
-        label: label ? `${key} — ${label}` : key,
-      })),
+    getFeatChoiceLinkOptions(choices),
   );
 
   /**
    * Варианты для каждой строки: ключ загруженной записи может ссылаться на
-   * выбор, которого в черте больше нет. Молча подменять такую ссылку пустотой
-   * нельзя — она уйдёт на сервер потерянной, поэтому значение остаётся в
-   * списке с пометкой.
+   * выбор, которого в черте больше нет, и такая ссылка остаётся в списке с
+   * пометкой.
    */
   const optionsByBonus = computed<Array<Array<SelectOption>>>(() =>
-    model.value.map((bonus) => {
-      const key = bonus.fromChoiceKey.trim();
-
-      if (!key || choiceOptions.value.some((option) => option.value === key)) {
-        return choiceOptions.value;
-      }
-
-      return [
-        ...choiceOptions.value,
-        { value: key, label: `${key} — выбора с таким ключом нет` },
-      ];
-    }),
+    model.value.map((bonus) =>
+      withFeatChoiceLink(choiceOptions.value, bonus.fromChoiceKey),
+    ),
   );
 
   function addBonus() {

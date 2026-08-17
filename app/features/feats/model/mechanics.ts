@@ -91,7 +91,18 @@ export interface FeatSpellFilter {
   level: number | undefined;
   maxLevel: number | undefined;
   schools: Array<string>;
+
+  /** Классы, из списков заклинаний которых можно выбирать. */
   classes: Array<FeatEntityRef>;
+
+  /**
+   * Ключ выбора, из ответа на который берётся класс. «Посвящённый в магию»
+   * сначала спрашивает список — жреца, друида или волшебника, — и только потом
+   * даёт выбрать из него заговоры: пул сужается до выбранного класса, а не до
+   * всех трёх. Пусто — пул задан `classes` напрямую.
+   */
+  classesFromChoiceKey: string;
+
   castingTime: string | undefined;
 }
 
@@ -211,12 +222,36 @@ export interface FeatProficiencyGrant {
   tools: Array<FeatEntityRef>;
 }
 
+/**
+ * Заклинания, которые черта даёт знать без выбора: «Отмеченный драконом Ориена»
+ * даёт «Магическую руку». Выбираемые заклинания сюда не идут — у них есть
+ * количество и фильтр пула, поэтому они живут в {@link FeatChoice}.
+ */
+export interface FeatSpellGrant {
+  /**
+   * Заклинания справочника ссылками — без снимка круга и школы: те берутся из
+   * самой записи заклинания и в снимке разошлись бы с каталогом при его правке.
+   * Потребителю их отдаёт core-api отдельным полем детали (`grantedSpells`).
+   */
+  spells: Array<FeatEntityRef>;
+
+  /**
+   * Характеристика для расчёта СЛ и атаки заклинаний черты. `undefined` — черта
+   * её не задаёт: тогда лист берёт характеристику того класса, чья это магия.
+   */
+  spellcastingAbility: AbilityKey | undefined;
+
+  /** Заклинание всегда подготовлено и не занимает ячейку подготовки. */
+  alwaysPrepared: boolean;
+}
+
 /** Механика черты целиком. */
 export interface FeatMechanics {
   abilityBonuses: Array<FeatAbilityBonus>;
   choices: Array<FeatChoice>;
   modifiers: FeatModifiers;
   proficiencies: FeatProficiencyGrant;
+  spells: FeatSpellGrant;
 }
 
 /**
@@ -336,6 +371,7 @@ export function createSpellFilter(): FeatSpellFilter {
     maxLevel: undefined,
     schools: [],
     classes: [],
+    classesFromChoiceKey: '',
     castingTime: undefined,
   };
 }
@@ -399,6 +435,15 @@ export function createFeatProficiencyGrant(): FeatProficiencyGrant {
   };
 }
 
+/** Пустая выдача заклинаний. */
+export function createFeatSpellGrant(): FeatSpellGrant {
+  return {
+    spells: [],
+    spellcastingAbility: undefined,
+    alwaysPrepared: false,
+  };
+}
+
 /** Пустая механика черты. */
 export function createFeatMechanics(): FeatMechanics {
   return {
@@ -406,5 +451,6 @@ export function createFeatMechanics(): FeatMechanics {
     choices: [],
     modifiers: createFeatModifiers(),
     proficiencies: createFeatProficiencyGrant(),
+    spells: createFeatSpellGrant(),
   };
 }

@@ -1,24 +1,108 @@
 <script setup lang="ts">
-  import type { FeatChoice, FeatChoiceType } from '../../model';
+  import type { SelectOption } from '~/shared/types';
+
+  import type {
+    FeatChoice,
+    FeatChoiceDomain,
+    FeatChoiceType,
+    FeatSpellFilter,
+  } from '../../model';
 
   import { InputWithLibrary } from '~ui/input';
-  import { SelectMagicSchool, SelectSpellLevel } from '~ui/select';
+  import { SelectClass, SelectMagicSchool, SelectSpellLevel } from '~ui/select';
 
   import {
     createFeatChoice,
     createSpellFilter,
     FEAT_CASTING_TIME_OPTIONS,
+    FEAT_CHOICE_DEFAULT_TYPE_BY_DOMAIN,
     FEAT_CHOICE_GRANT_OPTIONS,
     FEAT_CHOICE_KEY_BY_TYPE,
     FEAT_CHOICE_KEY_SUGGESTIONS,
-    FEAT_CHOICE_TYPE_OPTIONS,
+    FEAT_MECHANICS_EDITOR,
+    getFeatChoiceDomain,
+    getFeatChoiceLinkOptions,
+    getFeatChoiceTypeOptions,
     getFreeFeatChoiceKey,
     isExpertiseChoiceType,
     isProficiencyChoiceType,
     isSpellChoiceType,
+    toEntityRefs,
+    toEntityRefUrls,
+    toUrlList,
+    withFeatChoiceLink,
+    withFeatChoiceType,
   } from '../../model';
 
+  const { domain } = defineProps<{
+    /** Раздел механики, чьи выборы правит этот список. */
+    domain: FeatChoiceDomain;
+  }>();
+
   const model = defineModel<Array<FeatChoice>>({ default: () => [] });
+
+  /**
+   * Выборы раздела вместе с их местом в общем списке: механика хранит выборы
+   * одним массивом, а форма раскладывает их по разделам, поэтому правка
+   * обращается к исходному номеру, а не к номеру строки на экране.
+   */
+  const entries = computed<Array<{ choice: FeatChoice; index: number }>>(() =>
+    model.value
+      .map((choice, index) => ({ choice, index }))
+      .filter(({ choice }) => getFeatChoiceDomain(choice.type) === domain),
+  );
+
+  /** Типы, которые предлагает селект «Что выбирают» в этом разделе. */
+  const typeOptions = computed(() => getFeatChoiceTypeOptions(domain));
+
+  /**
+   * Ключ виден только там, где на выбор ссылаются руками: в модификаторах листа
+   * сопротивление указывает ключ выбора типа урона строкой. В остальных
+   * разделах ссылку даёт селект по имени выбора, а ключ проставляется сам —
+   * менять его незачем, а у взятой черты правка ключа потеряла бы ответ игрока.
+   */
+  const withKey = computed<boolean>(() => domain === 'OTHER');
+
+  /**
+   * Выборы списка заклинаний: из ответа на такой выбор пул сужается до одного
+   * класса — «Посвящённый в магию» спрашивает список жреца, друида или
+   * волшебника, а заговоры даёт выбрать уже из него.
+   */
+  const spellListOptions = computed<Array<SelectOption>>(() =>
+    getFeatChoiceLinkOptions(model.value, ['SPELL_LIST']),
+  );
+
+  /**
+   * Классы пула строкой url: селект справочника хранит только их, а фильтр —
+   * ссылки.
+   *
+   * @param filter фильтр заклинаний выбора.
+   * @returns url классов.
+   */
+  function getFilterClassUrls(filter: FeatSpellFilter): Array<string> {
+    return toEntityRefUrls(filter.classes);
+  }
+
+  /**
+   * Записывает классы пула ссылками.
+   *
+   * @param index номер выбора в списке.
+   * @param urls url выбранных классов.
+   */
+  function setFilterClasses(
+    index: number,
+    urls: string | Array<string> | undefined,
+  ) {
+    const filter = model.value[index]?.spellFilter;
+
+    if (!filter) {
+      return;
+    }
+
+    patchChoice(index, {
+      spellFilter: { ...filter, classes: toEntityRefs(toUrlList(urls)) },
+    });
+  }
 
   /** Ключи, занятые остальными выборами черты. */
   function getTakenKeys(exceptIndex: number): Array<string> {
@@ -50,8 +134,24 @@
     return duplicates;
   });
 
+  /**
+   * Новый выбор сразу получает тип своего раздела: без типа он не попал бы ни в
+   * один раздел и исчез бы с экрана.
+   */
   function addChoice() {
-    model.value = [...model.value, createFeatChoice()];
+    const type = FEAT_CHOICE_DEFAULT_TYPE_BY_DOMAIN[domain];
+
+    model.value = [
+      ...model.value,
+      {
+        ...createFeatChoice(),
+        type,
+        key: getFreeFeatChoiceKey(
+          FEAT_CHOICE_KEY_BY_TYPE[type],
+          getTakenKeys(model.value.length),
+        ),
+      },
+    ];
   }
 
   function removeChoice(index: number) {
@@ -149,11 +249,7 @@
   <div class="flex flex-col gap-2">
     <div class="flex items-center justify-between gap-4">
       <span class="text-sm text-dimmed">
-        Только выборы в момент взятия черты. Выборы по ходу игры («выберите
-        существо в пределах 30 футов») сюда не идут. Ключ — имя выбора: по нему
-        на него ссылается повышение характеристик и по нему лист персонажа
-        помнит ответ игрока, поэтому у черты, которую уже могли взять, ключ
-        менять нельзя — сохранённый выбор потеряется.
+        {{ FEAT_MECHANICS_EDITOR.choiceHintByDomain[domain] }}
       </span>
 
       <UButton
@@ -162,23 +258,24 @@
         variant="ghost"
         @click.left.exact.prevent="addChoice"
       >
-        Добавить выбор
+        {{ FEAT_MECHANICS_EDITOR.addChoiceLabel }}
       </UButton>
     </div>
 
     <p
-      v-if="!model.length"
+      v-if="!entries.length"
       class="rounded-lg border border-dashed border-default p-4 text-center text-xs text-dimmed italic"
     >
-      Черта не требует выбора при взятии.
+      {{ FEAT_MECHANICS_EDITOR.emptyChoicesHint }}
     </p>
 
     <div
-      v-for="(choice, index) in model"
+      v-for="{ choice, index } in entries"
       :key="index"
       class="grid grid-cols-24 items-end gap-2 rounded-lg border border-default bg-elevated/50 p-3"
     >
       <UFormField
+        v-if="withKey"
         class="col-span-full md:col-span-6"
         label="Ключ"
         :error="
@@ -199,7 +296,7 @@
         label="Что выбирают"
       >
         <USelectMenu
-          :items="FEAT_CHOICE_TYPE_OPTIONS"
+          :items="withFeatChoiceType(typeOptions, choice.type)"
           :model-value="choice.type"
           value-key="value"
           @update:model-value="changeType(index, $event)"
@@ -339,6 +436,35 @@
             <USelectMenu
               v-model="choice.spellFilter.castingTime"
               :items="FEAT_CASTING_TIME_OPTIONS"
+              value-key="value"
+            />
+          </UFormField>
+
+          <UFormField
+            class="col-span-full md:col-span-8"
+            label="Списки классов"
+          >
+            <SelectClass
+              :model-value="getFilterClassUrls(choice.spellFilter)"
+              multiple
+              @update:model-value="setFilterClasses(index, $event)"
+            />
+          </UFormField>
+
+          <!-- «Посвящённый в магию»: класс не задан заранее, его выбирает игрок,
+            и пул сужается до одного выбранного списка -->
+          <UFormField
+            class="col-span-full md:col-span-8"
+            label="Список из выбора"
+          >
+            <USelectMenu
+              v-model="choice.spellFilter.classesFromChoiceKey"
+              :items="
+                withFeatChoiceLink(
+                  spellListOptions,
+                  choice.spellFilter.classesFromChoiceKey,
+                )
+              "
               value-key="value"
             />
           </UFormField>

@@ -49,6 +49,7 @@ const spellFilterSchema = z.object({
   maxLevel: z.number().optional(),
   schools: z.array(z.string()).optional(),
   classes: z.array(entityRefSchema).optional(),
+  classesFromChoiceKey: z.string().optional(),
   castingTime: z.string().optional(),
 });
 
@@ -133,11 +134,18 @@ const proficiencyGrantSchema = z.object({
   tools: z.array(entityRefSchema).optional(),
 });
 
+const spellGrantSchema = z.object({
+  spells: z.array(entityRefSchema).optional(),
+  spellcastingAbility: abilityKeySchema.optional(),
+  alwaysPrepared: z.boolean().optional(),
+});
+
 const mechanicsSchema = z.object({
   abilityBonuses: z.array(abilityBonusSchema).optional(),
   choices: z.array(choiceSchema).optional(),
   modifiers: modifiersSchema.optional(),
   proficiencies: proficiencyGrantSchema.optional(),
+  spells: spellGrantSchema.optional(),
 });
 
 const prerequisiteDetailsSchema = z.object({

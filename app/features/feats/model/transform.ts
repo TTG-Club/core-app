@@ -7,6 +7,7 @@ import type {
   FeatPrerequisiteDetails,
   FeatProficiencyGrant,
   FeatSpellFilter,
+  FeatSpellGrant,
 } from './mechanics';
 
 import {
@@ -62,6 +63,7 @@ function buildSpellFilter(
     ...filter,
     schools: orUndefinedList(filter.schools) ?? [],
     classes: orUndefinedList(filter.classes) ?? [],
+    classesFromChoiceKey: text(filter.classesFromChoiceKey) ?? '',
     castingTime: text(filter.castingTime),
   });
 }
@@ -139,6 +141,24 @@ function buildProficiencies(
   });
 }
 
+/**
+ * Готовит выдаваемые заклинания.
+ *
+ * Заклинание без ссылки отправлять некуда — так выглядит пустая строка, только
+ * что добавленная в списке. Остальные поля блока без заклинаний бессмысленны:
+ * заклинательная характеристика не к чему применяться, поэтому блок целиком
+ * уходит пустым.
+ */
+function buildSpells(spells: FeatSpellGrant): FeatSpellGrant | undefined {
+  const granted = spells.spells.filter((spell) => !!text(spell.url));
+
+  if (!granted.length) {
+    return undefined;
+  }
+
+  return { ...spells, spells: granted };
+}
+
 /** Готовит механику целиком. */
 function buildMechanics(mechanics: FeatMechanics): FeatMechanics | undefined {
   return orUndefined({
@@ -147,6 +167,7 @@ function buildMechanics(mechanics: FeatMechanics): FeatMechanics | undefined {
     modifiers: buildModifiers(mechanics.modifiers) ?? mechanics.modifiers,
     proficiencies:
       buildProficiencies(mechanics.proficiencies) ?? mechanics.proficiencies,
+    spells: buildSpells(mechanics.spells) ?? mechanics.spells,
   });
 }
 
