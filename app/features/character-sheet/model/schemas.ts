@@ -688,15 +688,16 @@ export function parseItemDetail(input: unknown): ItemSummary | null {
   };
 }
 
+/** Правило Ловкости в «сыром» ответе доспеха. */
+type ArmorRawDexterityMod = 'PLUS' | 'PLUS_MAX_2' | 'NONE';
+
 /** Правила Ловкости из «сырого» ответа доспеха к внутреннему представлению. */
-const ARMOR_DEXTERITY_MOD_MAP: Record<
-  'PLUS' | 'PLUS_MAX_2' | 'NONE',
-  ArmorDexterityMod
-> = {
-  PLUS: 'full',
-  PLUS_MAX_2: 'capped',
-  NONE: 'none',
-};
+const ARMOR_DEXTERITY_MOD_MAP: Record<ArmorRawDexterityMod, ArmorDexterityMod> =
+  {
+    PLUS: 'full',
+    PLUS_MAX_2: 'capped',
+    NONE: 'none',
+  };
 
 /**
  * Схема «сырого» ответа предмета `GET /api/v2/item/{url}/raw` в части доспеха.
