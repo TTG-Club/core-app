@@ -2023,7 +2023,7 @@ export interface BackgroundSummary {
   featSubchoice: string;
 
   /** Стартовое снаряжение в разметке (справка). */
-  equipment: string[];
+  equipment: FeatureDescriptionNode[];
 
   /** Варианты стартового снаряжения; пустой список — справочник их не даёт. */
   startingEquipment: StartingEquipmentOption[];

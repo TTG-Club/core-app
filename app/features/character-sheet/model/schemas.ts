@@ -1298,7 +1298,9 @@ const backgroundDetailSchema = z.object({
   skillProficiencies: z.string().catch(''),
   feat: z.string().catch(''),
   toolProficiency: z.array(z.string()).catch([]),
-  equipment: z.array(z.string()).catch([]),
+  // Справка приходит как описание раздела — строки-абзацы вперемешку с узлами
+  // разметки (список вариантов «А)/Б)»), поэтому массивом строк не разбирается.
+  equipment: descriptionNodesSchema,
   // Разбирается отдельной функцией: то же поле есть и у класса.
   startingEquipment: z.unknown(),
 });
