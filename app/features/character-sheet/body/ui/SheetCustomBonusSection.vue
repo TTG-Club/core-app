@@ -1,5 +1,9 @@
 <script setup lang="ts">
-  import type { Character, CharacterCustomBonus } from '../../model';
+  import type {
+    Character,
+    CharacterCustomBonus,
+    CustomBonusSourceOption,
+  } from '../../model';
 
   import {
     CUSTOM_BONUS_FLAT_SOURCE,
@@ -39,7 +43,7 @@
      * Доступные источники бонуса; по умолчанию — все. Раздел бонуса мастерства
      * сужает список: сам себе слагаемым бонус мастерства не бывает.
      */
-    sourceItems?: typeof CUSTOM_BONUS_SOURCE_OPTIONS;
+    sourceItems?: CustomBonusSourceOption[];
 
     /** Значение основы с учётом выбранного источника. */
     baseValue: number;

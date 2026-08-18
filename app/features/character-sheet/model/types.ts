@@ -2,6 +2,11 @@ import type { CasterType, ClassResourceRecovery } from '~classes/model';
 import type { MagicItemBonuses } from '~magic-items/model';
 import type { MarkerNode, SimpleTextNode } from '~ui/markup';
 
+// Начало значения источника «уровень класса» берётся из констант домена, чтобы
+// префикс жил в одном месте: импорт типовой, поэтому кольца в сборке нет —
+// `constants.ts` сам берёт отсюда только типы.
+import type { CUSTOM_BONUS_CLASS_SOURCE_PREFIX } from './constants';
+
 /** Ключ характеристики персонажа. */
 export type AbilityKey =
   | 'strength'
@@ -561,18 +566,46 @@ export interface SpeedRow {
 }
 
 /**
- * Вид своего бонуса: модификатор характеристики, число или бонус мастерства.
- * Последний, в отличие от числа, растёт с уровнем — им описан «Бдительный»,
- * прибавляющий бонус мастерства к инициативе.
+ * Вид своего бонуса: модификатор характеристики, число, бонус мастерства,
+ * общий уровень персонажа или уровень одного его класса. Всё, кроме числа,
+ * растёт вместе с персонажем: бонусом мастерства описан «Бдительный», а
+ * уровнями — умения и черты, чья прибавка привязана к уровню.
  */
-export type CustomBonusKind = 'ability' | 'flat' | 'proficiency';
+export type CustomBonusKind =
+  | 'ability'
+  | 'classLevel'
+  | 'flat'
+  | 'level'
+  | 'proficiency';
 
 /**
  * Источник своего бонуса одним значением — для селектора, где число, бонус
- * мастерства и характеристики стоят в общем списке: `flat` и `proficiency`
- * отвечают одноимённым видам, ключ характеристики — виду `ability`.
+ * мастерства, уровни и характеристики стоят в общем списке: `flat`,
+ * `proficiency` и `level` отвечают одноимённым видам, ключ характеристики —
+ * виду `ability`, а `class:<url класса>` — виду `classLevel`.
  */
-export type CustomBonusSource = AbilityKey | 'flat' | 'proficiency';
+export type CustomBonusSource =
+  | AbilityKey
+  | 'flat'
+  | 'level'
+  | 'proficiency'
+  | CustomBonusClassSource;
+
+/**
+ * Источник своего бонуса «уровень класса»: хвостом значения идёт url класса
+ * персонажа (`class:wizard-phb24`).
+ */
+export type CustomBonusClassSource =
+  `${typeof CUSTOM_BONUS_CLASS_SOURCE_PREFIX}${string}`;
+
+/** Вариант источника своего бонуса в селекторе строки. */
+export interface CustomBonusSourceOption {
+  /** Подпись варианта («Уровень класса: Волшебник»). */
+  label: string;
+
+  /** Источник, который выбирает вариант. */
+  value: CustomBonusSource;
+}
 
 /**
  * Источник ОСНОВЫ значения (инициативы): характеристика либо своё число. Бонус
@@ -602,6 +635,13 @@ export interface CharacterCustomBonus {
 
   /** Характеристика-источник (для вида `ability`). */
   ability: AbilityKey;
+
+  /**
+   * URL класса, чей уровень идёт в бонус (для вида `classLevel`); пустая
+   * строка — класс не выбран. Класса у персонажа больше нет — бонус даёт ноль:
+   * прибавка от уровня класса без самого класса не берётся.
+   */
+  classUrl: string;
 
   /** Своё число (для вида `flat`). */
   value: number;

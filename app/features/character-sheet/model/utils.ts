@@ -53,7 +53,9 @@ import type {
   ClassTableColumn,
   CurrencyKey,
   CustomArmorType,
+  CustomBonusClassSource,
   CustomBonusSource,
+  CustomBonusSourceOption,
   CustomFeatureDraft,
   CustomInventoryItemDraft,
   CustomInventoryKind,
@@ -211,8 +213,10 @@ import {
   CUSTOM_ARMOR_TYPE_BY_DEXTERITY_MOD,
   CUSTOM_ARMOR_TYPE_META,
   CUSTOM_BACKGROUND_URL_PREFIX,
+  CUSTOM_BONUS_CLASS_SOURCE_PREFIX,
   CUSTOM_BONUS_FLAT_SOURCE,
   CUSTOM_BONUS_KIND_LABELS,
+  CUSTOM_BONUS_LEVEL_SOURCE,
   CUSTOM_BONUS_MAX,
   CUSTOM_BONUS_MIN,
   CUSTOM_BONUS_PROFICIENCY_SOURCE,
@@ -965,8 +969,21 @@ export function toStoredSettings(
 }
 
 /**
- * Источник своего бонуса одним значением — для селектора, где своё число и
- * характеристики стоят общим списком.
+ * Проверка, что источник своего бонуса — уровень класса персонажа: у таких
+ * источников хвостом значения идёт url класса.
+ *
+ * @param source источник своего бонуса.
+ * @returns true — источником выбран уровень класса.
+ */
+function isClassLevelSource(
+  source: CustomBonusSource,
+): source is CustomBonusClassSource {
+  return source.startsWith(CUSTOM_BONUS_CLASS_SOURCE_PREFIX);
+}
+
+/**
+ * Источник своего бонуса одним значением — для селектора, где своё число,
+ * бонус мастерства, уровни и характеристики стоят общим списком.
  *
  * @param bonus свой бонус.
  * @returns источник бонуса.
@@ -976,6 +993,14 @@ export function getCustomBonusSource(
 ): CustomBonusSource {
   if (bonus.kind === 'ability') {
     return bonus.ability;
+  }
+
+  if (bonus.kind === 'classLevel') {
+    return `${CUSTOM_BONUS_CLASS_SOURCE_PREFIX}${bonus.classUrl}`;
+  }
+
+  if (bonus.kind === 'level') {
+    return CUSTOM_BONUS_LEVEL_SOURCE;
   }
 
   return bonus.kind === 'proficiency'
@@ -1003,7 +1028,63 @@ export function withCustomBonusSource(
     return { ...bonus, kind: 'proficiency' };
   }
 
+  if (source === CUSTOM_BONUS_LEVEL_SOURCE) {
+    return { ...bonus, kind: 'level' };
+  }
+
+  if (isClassLevelSource(source)) {
+    return {
+      ...bonus,
+      kind: 'classLevel',
+      classUrl: source.slice(CUSTOM_BONUS_CLASS_SOURCE_PREFIX.length),
+    };
+  }
+
   return { ...bonus, kind: 'ability', ability: source };
+}
+
+/**
+ * Варианты источника своего бонуса для селектора строки: к источникам раздела
+ * добавлены уровни классов персонажа. Константой они не лежат — классы у
+ * каждого листа свои; в списке уровни классов встают сразу за уровнем
+ * персонажа, рядом с ним их и ищут.
+ *
+ * @param character персонаж.
+ * @param sourceItems источники бонуса, разрешённые разделу.
+ * @returns источники бонуса вместе с уровнями классов персонажа.
+ */
+export function getCustomBonusSourceOptions(
+  character: Character,
+  sourceItems: CustomBonusSourceOption[],
+): CustomBonusSourceOption[] {
+  const classItems = getCharacterClasses(
+    character,
+  ).map<CustomBonusSourceOption>((characterClass) => ({
+    label: `${CUSTOM_BONUS_KIND_LABELS.classLevel}: ${characterClass.name}`,
+    value: `${CUSTOM_BONUS_CLASS_SOURCE_PREFIX}${characterClass.url}`,
+  }));
+
+  return sourceItems.flatMap((option) =>
+    option.value === CUSTOM_BONUS_LEVEL_SOURCE
+      ? [option, ...classItems]
+      : [option],
+  );
+}
+
+/**
+ * Класс персонажа, чей уровень идёт в свой бонус.
+ *
+ * @param character персонаж.
+ * @param bonus свой бонус на уровень класса.
+ * @returns класс-источник; undefined — такого класса у персонажа нет.
+ */
+function getCustomBonusClass(
+  character: Character,
+  bonus: CharacterCustomBonus,
+): CharacterClass | undefined {
+  return getCharacterClasses(character).find(
+    (characterClass) => characterClass.url === bonus.classUrl,
+  );
 }
 
 /**
@@ -1026,6 +1107,17 @@ export function getCustomBonusValue(
   // «Бдительный» прибавляет к инициативе именно его, а не +2 навсегда.
   if (bonus.kind === 'proficiency') {
     return getCharacterProficiencyBonus(character);
+  }
+
+  if (bonus.kind === 'level') {
+    return character.level;
+  }
+
+  // Уровень пропавшего класса — ноль: мультикласс могли снять уже после того,
+  // как игрок завёл бонус, и лист не должен считать прибавку от того, чего у
+  // персонажа больше нет.
+  if (bonus.kind === 'classLevel') {
+    return getCustomBonusClass(character, bonus)?.level ?? 0;
   }
 
   // Записанный бонус уже приведён `toStoredCustomBonuses`, но черновики форм
@@ -1053,19 +1145,38 @@ export function getCustomBonusesValue(
 }
 
 /**
- * Подпись источника бонуса: своя пометка игрока, а без неё — характеристика
- * или общее название своего бонуса.
+ * Подпись источника бонуса: своя пометка игрока, а без неё — характеристика,
+ * класс-источник или общее название своего бонуса.
  *
+ * @param character персонаж.
  * @param bonus свой бонус.
  * @returns подпись источника бонуса.
  */
-export function getCustomBonusLabel(bonus: CharacterCustomBonus): string {
+export function getCustomBonusLabel(
+  character: Character,
+  bonus: CharacterCustomBonus,
+): string {
   if (bonus.label) {
     return bonus.label;
   }
 
   if (bonus.kind === 'ability') {
     return ABILITY_LABELS[bonus.ability];
+  }
+
+  // Класс назван по имени: у мультикласса «Уровень класса» не сказало бы, от
+  // какого именно класса взялась прибавка. Класса уже нет — остаётся общая
+  // подпись вида, как и у бонуса, который ничего не даёт.
+  if (bonus.kind === 'classLevel') {
+    const bonusClass = getCustomBonusClass(character, bonus);
+
+    return bonusClass
+      ? `${CUSTOM_BONUS_KIND_LABELS.classLevel}: ${bonusClass.name}`
+      : CUSTOM_BONUS_KIND_LABELS.classLevel;
+  }
+
+  if (bonus.kind === 'level') {
+    return CUSTOM_BONUS_KIND_LABELS.level;
   }
 
   return bonus.kind === 'proficiency'
@@ -1128,7 +1239,7 @@ export function getSkillBreakdown(
     ...proficiencyParts,
     ...skill.bonuses.map((bonus) => ({
       id: bonus.id,
-      label: getCustomBonusLabel(bonus),
+      label: getCustomBonusLabel(character, bonus),
       formattedValue: getFormattedBonus(getCustomBonusValue(character, bonus)),
     })),
     ...getInventoryBonusSources(character, 'skill', skill.name).map(
@@ -1215,7 +1326,7 @@ export function getSavingThrowBreakdown(
     ...[...savingThrow.bonuses, ...character.commonSavingThrowBonuses].map(
       (bonus) => ({
         id: bonus.id,
-        label: getCustomBonusLabel(bonus),
+        label: getCustomBonusLabel(character, bonus),
         formattedValue: getFormattedBonus(
           getCustomBonusValue(character, bonus),
         ),
@@ -1331,7 +1442,7 @@ export function getAbilityScoreBreakdown(
     ),
     ...character.abilityBonuses[ability].map((bonus) => ({
       id: bonus.id,
-      label: getCustomBonusLabel(bonus),
+      label: getCustomBonusLabel(character, bonus),
       formattedValue: getFormattedBonus(
         getCustomBonusValue(baseCharacter, bonus),
       ),
@@ -5940,24 +6051,51 @@ export function getSpellSlotSummary(row: SpellSlotRow): string {
 }
 
 /**
+ * Старший круг, заклинания которого класс даёт выучить на своём уровне: круг
+ * последней ячейки его собственной таблицы. Ячейки колдуна одного круга —
+ * младших рядов у него нет, но заклинания этих кругов ему доступны, поэтому
+ * берётся именно старший ряд, а не количество рядов.
+ *
+ * @param characterClass класс персонажа.
+ * @returns старший круг; 0 — заклинаний класс пока не даёт.
+ */
+function getClassMaxSpellLevel(characterClass: CharacterClass): number {
+  const casterType = getClassCasterType(characterClass);
+
+  if (!casterType) {
+    return 0;
+  }
+
+  return getSpellSlotMaximums(casterType, characterClass.level).reduce(
+    (maxLevel, slotCount, index) => (slotCount > 0 ? index + 1 : maxLevel),
+    0,
+  );
+}
+
+/**
  * Круги заклинаний, доступные персонажу на его уровне класса: заговоры и все
- * круги вплоть до старшего, для которого класс даёт ячейки. Отдельно нигде не
- * хранится — считается от `casterType` и уровня, поэтому повышение и снижение
- * уровня меняют список сами собой.
+ * круги вплоть до старшего, заклинания которого он вправе выучить. Отдельно
+ * нигде не хранится — считается от `casterType` и уровня, поэтому повышение и
+ * снижение уровня меняют список сами собой.
+ *
+ * Круги мультикласса считаются по каждому классу отдельно (правило D&D): общие
+ * ячейки старшего круга появляются раньше права выучить заклинание этого круга
+ * (мистический рыцарь 7 + волшебник 3 — ячейки 3 круга, но заклинания только
+ * 2-го), и по таким ячейкам заклинания лишь повышаются.
  *
  * @param character персонаж.
  * @returns круги по возрастанию; пусто — класс заклинаний пока не даёт.
  */
 export function getAvailableSpellLevels(character: Character): number[] {
-  const slotRows = getSpellSlotRows(character);
+  const maxLevel = getCharacterClasses(character).reduce(
+    (classMaxLevel, characterClass) =>
+      Math.max(classMaxLevel, getClassMaxSpellLevel(characterClass)),
+    0,
+  );
 
-  if (!slotRows.length) {
+  if (!maxLevel) {
     return [];
   }
-
-  // Ячейки колдуна одного круга: младших рядов у него нет, но заклинания этих
-  // кругов ему доступны — считаем по старшему ряду, а не по их количеству.
-  const maxLevel = Math.max(...slotRows.map((row) => row.level));
 
   return Array.from(
     { length: maxLevel + 1 },
@@ -7214,6 +7352,7 @@ function withFeatInitiativeBonuses(
       // источник вручную. Берётся заготовка новой записи — как у кнопки
       // «Добавить бонус».
       ability: NEW_CUSTOM_BONUS.ability,
+      classUrl: NEW_CUSTOM_BONUS.classUrl,
       value: 0,
       // Пометка источника — название черты: в разборе инициативы игрок должен
       // видеть, откуда взялся бонус мастерства, а не безымянную строку.

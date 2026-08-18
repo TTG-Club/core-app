@@ -511,9 +511,9 @@ modals), so its capabilities are listed here rather than squeezed into the table
   title — the same reveal-on-hover control every other panel has — or by a long
   press on the tile itself): the written score plus any number of
   `CharacterCustomBonus` rows on top (`SheetCustomBonusRows` with a narrowed
-  source list, `ABILITY_BONUS_SOURCE_OPTIONS` — a flat number or the proficiency
-  bonus; an ability modifier is no summand of a score and a pair of such bonuses
-  would send the maths round in circles). The bonus raises the score itself, so
+  source list, `ABILITY_BONUS_SOURCE_OPTIONS` — a flat number, the proficiency
+  bonus or a level; an ability modifier is no summand of a score and a pair of
+  such bonuses would send the maths round in circles). The bonus raises the score itself, so
   it flows through `getEffectiveAbilities` / `getAbilityModifier` into every
   derived number — modifier, saving throws, skills and their passive values, AC,
   attacks, spellcasting, carrying capacity and the PDF — exactly like an item
@@ -588,9 +588,14 @@ modals), so its capabilities are listed here rather than squeezed into the table
   and spellcasting (`getCharacterProficiencyBonus`) and the initiative total into
   the tile, its roll and the PDF (`getInitiativeBonus`). A row is one
   `CharacterCustomBonus` — the record skills use as well: an optional label plus
-  a source that is either a flat number or an ability, whose modifier is then
-  taken automatically and follows the ability afterwards
-  (`getCustomBonusesValue`). Sheets saved with the earlier single number migrate
+  a source. That source is a flat number, an ability (its modifier is taken
+  automatically and follows the ability afterwards), the proficiency bonus, the
+  character level or the level of one class — everything but the flat number
+  grows with the character, and the class levels are collected from the sheet
+  itself (`getCustomBonusSourceOptions`), so a class dropped from the sheet
+  leaves its bonus counting zero (`getCustomBonusesValue`). The proficiency
+  bonus is no summand of itself (`PROFICIENCY_BONUS_SOURCE_OPTIONS`), or the
+  count would never end. Sheets saved with the earlier single number migrate
   it into one number row; sheets saved before the bonuses existed read them as an
   empty list. Drafts are cleaned on save (`toStoredSettings`): a cleared input
   reads as `NaN`, and the proficiency bonus would spread it across the sheet.

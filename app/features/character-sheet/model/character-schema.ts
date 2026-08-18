@@ -368,10 +368,16 @@ const spellcastingSchema = z
 // источника (характеристика и число) и пометка игрока.
 const customBonusSchema = z.object({
   id: z.string(),
-  // Вид «бонус мастерства» появился вместе с механикой черт («Бдительный»):
-  // листы до него таких записей не имеют, а незнакомый вид падает в число.
-  kind: z.enum(['ability', 'flat', 'proficiency']).catch(NEW_CUSTOM_BONUS.kind),
+  // Вид «бонус мастерства» появился вместе с механикой черт («Бдительный»), а
+  // виды «уровень персонажа» и «уровень класса» — позже него: листы до них
+  // таких записей не имеют, а незнакомый вид падает в число.
+  kind: z
+    .enum(['ability', 'classLevel', 'flat', 'level', 'proficiency'])
+    .catch(NEW_CUSTOM_BONUS.kind),
   ability: abilityKeySchema.catch(NEW_CUSTOM_BONUS.ability),
+  // Листы до вида «уровень класса» класса-источника не хранят: пустая строка
+  // тут значит «класс не выбран», и такой бонус ничего не прибавляет.
+  classUrl: z.string().catch(NEW_CUSTOM_BONUS.classUrl),
   value: z.coerce.number().int().catch(0),
   label: z.string().catch(''),
 });

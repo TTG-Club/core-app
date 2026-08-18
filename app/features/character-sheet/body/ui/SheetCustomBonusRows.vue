@@ -1,5 +1,9 @@
 <script setup lang="ts">
-  import type { Character, CharacterCustomBonus } from '../../model';
+  import type {
+    Character,
+    CharacterCustomBonus,
+    CustomBonusSourceOption,
+  } from '../../model';
 
   import {
     CUSTOM_BONUS_FORMAT_OPTIONS,
@@ -8,6 +12,7 @@
     CUSTOM_BONUS_MIN,
     CUSTOM_BONUS_SOURCE_OPTIONS,
     getCustomBonusSource,
+    getCustomBonusSourceOptions,
     getCustomBonusValue,
     getFormattedBonus,
     isFeatCustomBonus,
@@ -36,15 +41,21 @@
      * Доступные источники бонуса. По умолчанию — все; раздел бонуса мастерства
      * сужает список, потому что сам себе слагаемым бонус мастерства не бывает.
      */
-    sourceItems?: typeof CUSTOM_BONUS_SOURCE_OPTIONS;
+    sourceItems?: CustomBonusSourceOption[];
   }>();
 
   const rows = defineModel<CharacterCustomBonus[]>({ required: true });
 
+  // Уровни классов встают в список от персонажа: у мультикласса каждый класс
+  // свой вариант, а у листа без классов их просто нет.
+  const sourceOptions = computed(() =>
+    getCustomBonusSourceOptions(character, sourceItems),
+  );
+
   /**
-   * Вклад бонуса, который лист считает сам (модификатор характеристики или
-   * бонус мастерства): место числа в строке занимает готовое значение —
-   * вводить там нечего.
+   * Вклад бонуса, который лист считает сам (модификатор характеристики, бонус
+   * мастерства, уровень персонажа или класса): место числа в строке занимает
+   * готовое значение — вводить там нечего.
    *
    * @param bonus свой бонус строки.
    * @returns посчитанный вклад бонуса со знаком.
@@ -65,7 +76,7 @@
   }
 
   function handleSource(rowId: string, source: unknown) {
-    const selectedOption = sourceItems.find(
+    const selectedOption = sourceOptions.value.find(
       (option) => option.value === source,
     );
 
@@ -98,7 +109,7 @@
 
       <USelect
         :model-value="getCustomBonusSource(row)"
-        :items="sourceItems"
+        :items="sourceOptions"
         :placeholder="SHEET_SETTINGS_LABELS.customBonusSourcePlaceholder"
         :disabled="isFeatCustomBonus(row)"
         class="min-w-0 grow basis-32"
@@ -114,8 +125,9 @@
         class="w-28 shrink-0"
       />
 
-      <!-- Модификатор характеристики и бонус мастерства лист считает сам,
-        поэтому вместо поля ввода у строки стоит коробка того же размера:
+      <!-- Всё, кроме своего числа, лист считает сам — модификатор
+        характеристики, бонус мастерства, уровень персонажа и уровень класса,
+        — поэтому вместо поля ввода у строки стоит коробка того же размера:
         колонка значений не едет -->
       <span
         v-else

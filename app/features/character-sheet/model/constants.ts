@@ -13,7 +13,7 @@ import type {
   CustomArmorTypeMeta,
   CustomBonusBaseSource,
   CustomBonusKind,
-  CustomBonusSource,
+  CustomBonusSourceOption,
   CustomInventoryItemDraft,
   CustomInventoryKind,
   CustomSpellField,
@@ -963,7 +963,9 @@ export const SKILL_DUPLICATE_WARNING =
 /** Подписи видов своего бонуса. */
 export const CUSTOM_BONUS_KIND_LABELS: Record<CustomBonusKind, string> = {
   ability: 'Характеристика',
+  classLevel: 'Уровень класса',
   flat: 'Своё число',
+  level: 'Уровень персонажа',
   proficiency: 'Бонус мастерства',
 };
 
@@ -973,20 +975,30 @@ export const CUSTOM_BONUS_FLAT_SOURCE = 'flat';
 /** Источник своего бонуса «бонус мастерства» в общем селекторе источников. */
 export const CUSTOM_BONUS_PROFICIENCY_SOURCE = 'proficiency';
 
+/** Источник своего бонуса «уровень персонажа» в общем селекторе источников. */
+export const CUSTOM_BONUS_LEVEL_SOURCE = 'level';
+
 /**
- * Варианты источника своего бонуса: своё число, бонус мастерства и все
- * характеристики одним списком — так строка бонуса обходится одним селектором
- * вместо пары «вид + характеристика».
+ * Начало значения источника «уровень класса» в общем селекторе: хвост — url
+ * класса персонажа (`class:wizard-phb24`). Классы у каждого листа свои,
+ * поэтому такие варианты собираются от персонажа, а не лежат константой (см.
+ * `getCustomBonusSourceOptions`).
  */
-export const CUSTOM_BONUS_SOURCE_OPTIONS: Array<{
-  label: string;
-  value: CustomBonusSource;
-}> = [
+export const CUSTOM_BONUS_CLASS_SOURCE_PREFIX = 'class:';
+
+/**
+ * Варианты источника своего бонуса: своё число, бонус мастерства, уровень
+ * персонажа и все характеристики одним списком — так строка бонуса обходится
+ * одним селектором вместо пары «вид + характеристика». Уровни классов встают в
+ * этот же список от персонажа (см. `getCustomBonusSourceOptions`).
+ */
+export const CUSTOM_BONUS_SOURCE_OPTIONS: CustomBonusSourceOption[] = [
   { label: CUSTOM_BONUS_KIND_LABELS.flat, value: CUSTOM_BONUS_FLAT_SOURCE },
   {
     label: CUSTOM_BONUS_KIND_LABELS.proficiency,
     value: CUSTOM_BONUS_PROFICIENCY_SOURCE,
   },
+  { label: CUSTOM_BONUS_KIND_LABELS.level, value: CUSTOM_BONUS_LEVEL_SOURCE },
   ...ABILITY_OPTIONS,
 ];
 
@@ -994,10 +1006,8 @@ export const CUSTOM_BONUS_SOURCE_OPTIONS: Array<{
  * Варианты источника ОСНОВЫ инициативы: своё число и все характеристики. От
  * списка источников бонуса отличается отсутствием бонуса мастерства — он бывает
  * только прибавкой сверх основы («Бдительный»), а не самой основой броска.
- *
- * Тот же список подходит и своим бонусам САМОГО бонуса мастерства: слагаемым
- * себе он быть не может, иначе подсчёт ушёл бы в бесконечную рекурсию (см.
- * `getCharacterProficiencyBonus`).
+ * Уровней здесь нет по той же причине: сама по себе инициатива от уровня не
+ * считается.
  */
 export const CUSTOM_BONUS_BASE_SOURCE_OPTIONS: Array<{
   label: string;
@@ -1008,20 +1018,30 @@ export const CUSTOM_BONUS_BASE_SOURCE_OPTIONS: Array<{
 ];
 
 /**
- * Варианты источника своего бонуса к значению характеристики: своё число и
- * бонус мастерства. Модификатора характеристики в списке нет — слагаемым к
- * значению он не бывает, а пара таких бонусов друг на друга завела бы подсчёт
- * по кругу.
+ * Варианты источника своего бонуса САМОГО бонуса мастерства: всё, кроме него
+ * самого. Слагаемым себе он быть не может, иначе подсчёт ушёл бы в бесконечную
+ * рекурсию (см. `getCharacterProficiencyBonus`), а уровни и характеристики в
+ * прибавке к нему обычны — «половина уровня» и подобные умения.
  */
-export const ABILITY_BONUS_SOURCE_OPTIONS: Array<{
-  label: string;
-  value: CustomBonusSource;
-}> = [
+export const PROFICIENCY_BONUS_SOURCE_OPTIONS: CustomBonusSourceOption[] = [
+  { label: CUSTOM_BONUS_KIND_LABELS.flat, value: CUSTOM_BONUS_FLAT_SOURCE },
+  { label: CUSTOM_BONUS_KIND_LABELS.level, value: CUSTOM_BONUS_LEVEL_SOURCE },
+  ...ABILITY_OPTIONS,
+];
+
+/**
+ * Варианты источника своего бонуса к значению характеристики: своё число,
+ * бонус мастерства и уровни. Модификатора характеристики в списке нет —
+ * слагаемым к значению он не бывает, а пара таких бонусов друг на друга завела
+ * бы подсчёт по кругу.
+ */
+export const ABILITY_BONUS_SOURCE_OPTIONS: CustomBonusSourceOption[] = [
   { label: CUSTOM_BONUS_KIND_LABELS.flat, value: CUSTOM_BONUS_FLAT_SOURCE },
   {
     label: CUSTOM_BONUS_KIND_LABELS.proficiency,
     value: CUSTOM_BONUS_PROFICIENCY_SOURCE,
   },
+  { label: CUSTOM_BONUS_KIND_LABELS.level, value: CUSTOM_BONUS_LEVEL_SOURCE },
 ];
 
 /**
@@ -1133,6 +1153,7 @@ export const CUSTOM_BONUS_LABEL_MAX_LENGTH = 40;
 export const NEW_CUSTOM_BONUS: Omit<CharacterCustomBonus, 'id'> = {
   kind: 'flat',
   ability: 'strength',
+  classUrl: '',
   value: 1,
   label: '',
 };
