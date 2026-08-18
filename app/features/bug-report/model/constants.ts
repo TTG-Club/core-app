@@ -39,6 +39,12 @@ export const BUG_REPORT_MY_COUNT_API_URL = `${BUG_REPORT_API_URL}/my/count-by-st
 /** URL API получения общей статистики по баг-репортам */
 export const BUG_REPORT_STATS_API_URL = `${BUG_REPORT_API_URL}/stats`;
 
+/** URL API получения списка баг-репортов текущего пользователя */
+export const BUG_REPORT_MY_API_URL = `${BUG_REPORT_API_URL}/my`;
+
+/** URL API сводки изменений по баг-репортам текущего пользователя */
+export const BUG_REPORT_MY_UPDATES_API_URL = `${BUG_REPORT_API_URL}/my/updates`;
+
 /** URL API получения списка баг-репортов (админка) */
 export const ADMIN_BUGS_API_URL = '/api/admin/bugs';
 
@@ -249,3 +255,158 @@ export const BUG_REPORT_COMMENT_SAVE_BUTTON_LABEL = 'Сохранить';
 
 /** Префикс-подпись строки «кто последним менял статус» */
 export const BUG_REPORT_STATUS_UPDATED_BY_LABEL = 'Статус изменил';
+
+/**
+ * Подсказка модератору: комментарий к статусу виден автору репорта в его
+ * профиле. Нужна, чтобы во внутреннее по виду поле не писали служебных заметок.
+ */
+export const BUG_REPORT_STATUS_COMMENT_PUBLIC_HINT =
+  'Комментарий виден автору репорта в его профиле';
+
+/* --- Раздел «Мои баг-репорты» в профиле --- */
+
+/** Заголовок раздела и вкладки профиля */
+export const MY_BUGS_TITLE = 'Мои баг-репорты';
+
+/** Подпись вкладки в навигации профиля */
+export const MY_BUGS_NAVIGATION_LABEL = 'Баг-репорты';
+
+/** Путь раздела в профиле */
+export const MY_BUGS_ROUTE = '/user/profile/bugs';
+
+/** Описание раздела под заголовком */
+export const MY_BUGS_DESCRIPTION =
+  'Здесь видно, что стало с ошибками, о которых вы сообщили, и что ответила команда.';
+
+/** Ключ кеша списка баг-репортов пользователя */
+export const MY_BUGS_LIST_DATA_KEY = 'my-bugs-list';
+
+/** Ключ кеша сводки количества баг-репортов пользователя по статусам */
+export const MY_BUGS_STATUS_COUNTS_DATA_KEY = 'my-bugs-status-counts';
+
+/** Ключ кеша сводки изменений по баг-репортам пользователя */
+export const MY_BUGS_UPDATES_DATA_KEY = 'my-bugs-updates';
+
+/**
+ * Ключ localStorage с отметкой последнего просмотра раздела. Хранит строку
+ * `lastStatusUpdatedAt`, полученную от сервера, а не клиентское время: сервер
+ * отдаёт даты без часового пояса, и собственная метка браузера сравнивалась бы
+ * с ними со сдвигом.
+ */
+export const MY_BUGS_SEEN_AT_STORAGE_KEY = 'bug-report:my-reports-seen-at';
+
+/** Количество баг-репортов на странице в профиле */
+export const MY_BUGS_PAGE_SIZE = 10;
+
+/**
+ * Сортировка списка: сначала свежие. Spring по умолчанию сортирует по
+ * возрастанию, поэтому направление передаём явно.
+ */
+export const MY_BUGS_SORT = 'createdAt,desc';
+
+/** Подпись плитки «все репорты» в сводке */
+export const MY_BUGS_SUMMARY_ALL_LABEL = 'Все';
+
+/** Заголовок блока с ответом команды в карточке */
+export const MY_BUGS_COMMENT_TITLE = 'Ответ команды';
+
+/**
+ * Формат дат в карточке репорта. Компактнее локализованного `LLL`: дата
+ * создания и дата обновления стоят в одной строке, и два «30 июля 2026 г.»
+ * подряд её переполняли.
+ */
+export const MY_BUGS_DATE_FORMAT = 'DD.MM.YYYY, HH:mm';
+
+/** Подпись даты создания репорта */
+export const MY_BUGS_CREATED_AT_LABEL = 'Создан';
+
+/** Подпись даты изменения статуса */
+export const MY_BUGS_STATUS_UPDATED_AT_LABEL = 'Обновлён';
+
+/** Подписи метки о том, что именно изменилось в репорте */
+export const MY_BUGS_CHANGE_STATUS_LABEL = 'Обновили статус';
+export const MY_BUGS_CHANGE_COMMENT_LABEL = 'Добавили комментарий';
+
+/**
+ * Подпись, когда изменение есть, но с чем сравнивать — неизвестно: снимок
+ * прошлого просмотра появляется только после первого визита в раздел.
+ */
+export const MY_BUGS_CHANGE_GENERIC_LABEL = 'Есть обновление';
+
+/** Ключ localStorage со снимками просмотренного состояния репортов */
+export const MY_BUGS_SEEN_REPORTS_STORAGE_KEY = 'bug-report:my-reports-seen';
+
+/**
+ * Сколько снимков хранить. Ограничение нужно, чтобы карта в localStorage не
+ * росла бесконечно у активных багхантеров; лишние отбрасываются, начиная с
+ * самых старых по дате изменения.
+ */
+export const MY_BUGS_SEEN_REPORTS_LIMIT = 200;
+
+/**
+ * Сколько карточка должна пробыть на экране, чтобы считаться прочитанной.
+ * Двух секунд хватает, чтобы отсечь пролистывание мимо.
+ */
+export const MY_BUGS_READ_DELAY_MS = 2_000;
+
+/**
+ * Пауза перед пересчётом сводки после отметки прочтения. Карточки читаются
+ * пачкой — несколько попадают в зону видимости разом, — и запрос на каждую
+ * означал бы залп, в котором выигрывает случайный ответ с устаревшей отметкой.
+ */
+export const MY_BUGS_SEEN_SETTLE_MS = 700;
+
+/** Интервал фонового опроса изменений по репортам */
+export const MY_BUGS_POLL_INTERVAL_MS = 30_000;
+
+/**
+ * Минимальный интервал между любыми двумя опросами. Защита от пачки запросов
+ * при частом переключении вкладок — как в опросе подписок.
+ */
+export const MY_BUGS_POLL_COOLDOWN_MS = 10_000;
+
+/** Потолок экспоненциального backoff, если сводка перестала отвечать */
+export const MY_BUGS_POLL_MAX_BACKOFF_MS = 5 * 60_000;
+
+/** Подсказка к точке-индикатору непросмотренных изменений */
+export const MY_BUGS_UPDATES_HINT = 'Есть изменения по вашим баг-репортам';
+
+/** Подписи кнопки раскрытия карточки */
+export const MY_BUGS_EXPAND_LABEL = 'Подробнее';
+export const MY_BUGS_COLLAPSE_LABEL = 'Свернуть';
+
+/**
+ * Длина описания, после которой карточка предлагает раскрытие. Порог по числу
+ * символов, а не по реальному переполнению: замер высоты требовал бы обращения
+ * к DOM на каждую карточку списка.
+ */
+export const MY_BUGS_DESCRIPTION_PREVIEW_LENGTH = 180;
+
+/** Заголовок блока «страница, где найдена ошибка» */
+export const MY_BUGS_URL_TITLE = 'Страница с ошибкой';
+
+/** Заголовок блока с выделенным текстом */
+export const MY_BUGS_SELECTION_TITLE = 'Выделенный текст';
+
+/** Заголовок блока со скриншотом */
+export const MY_BUGS_SCREENSHOT_TITLE = 'Скриншот';
+
+/** Заголовок модалки с полным скриншотом */
+export const MY_BUGS_SCREENSHOT_MODAL_TITLE = 'Скриншот к баг-репорту';
+
+/** Alt-текст миниатюры и полного скриншота */
+export const MY_BUGS_SCREENSHOT_ALT = 'Скриншот к баг-репорту';
+
+/** Заголовок и текст пустого состояния */
+export const MY_BUGS_EMPTY_TITLE = 'Вы ещё не сообщали об ошибках';
+export const MY_BUGS_EMPTY_TEXT =
+  'Нашли неточность или поломку — нажмите кнопку «Сообщить об ошибке» в боковом меню. Репорты, отправленные без входа в аккаунт, сюда не попадают.';
+
+/** Заголовок и текст пустого состояния при активном фильтре по статусу */
+export const MY_BUGS_EMPTY_FILTERED_TITLE = 'Нет репортов с таким статусом';
+export const MY_BUGS_EMPTY_FILTERED_TEXT =
+  'Выберите другой статус или посмотрите все репорты.';
+
+/** Текст ошибки загрузки списка и подпись кнопки повтора */
+export const MY_BUGS_LOAD_ERROR_TEXT = 'Не удалось загрузить ваши баг-репорты.';
+export const MY_BUGS_RETRY_LABEL = 'Повторить попытку';

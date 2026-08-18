@@ -1,5 +1,7 @@
 <script setup lang="ts">
   import { USER_TOKEN_COOKIE } from '#shared/consts';
+  import { MY_BUGS_UPDATES_HINT } from '~bug-report/model';
+  import { useMyBugReportUpdates } from '~bug-report/my';
   import {
     CHARACTER_SHEET_LIST_TITLE,
     CHARACTER_SHEET_ROUTE,
@@ -11,6 +13,7 @@
   } from '~moderation/model';
   import { useProfileBadges } from '~profile/activation/composables';
   import { KbdShortcut } from '~ui/kbd-shortcut';
+  import { UpdatesDot } from '~ui/updates-dot';
   import { AuthModal } from '~user/auth-modal';
 
   import { UserInfo } from './ui';
@@ -36,6 +39,17 @@
     isLoggedIn.value
       ? 'ttg:profile-helmet-filled'
       : 'ttg:profile-helmet-outline',
+  );
+
+  // Сводку изменений по баг-репортам спрашиваем только у авторизованных: у гостя
+  // своих репортов нет, а запрос уходил бы в 401 на каждой странице сайта.
+  // Вызов до await — по той же причине, что и useProfileBadges ниже.
+  const bugReportUpdates = userTokenCookie.value
+    ? useMyBugReportUpdates()
+    : null;
+
+  const hasBugReportUpdates = computed(
+    () => bugReportUpdates?.hasUpdates.value ?? false,
   );
 
   if (userTokenCookie.value) {
@@ -108,14 +122,22 @@
     @update:open="dismissMenu"
   >
     <template #default>
-      <UButton
-        :loading="pending"
-        :icon="helmetIcon"
-        variant="ghost"
-        color="neutral"
-        size="xl"
-        @click.left.exact.prevent.stop="handleHelmetClick"
-      />
+      <!-- Точка на шлеме — единственный намёк снаружи профиля, что там ждёт
+        ответ команды: иначе о смене статуса узнают только случайно -->
+      <UChip
+        :show="hasBugReportUpdates"
+        color="primary"
+        size="md"
+      >
+        <UButton
+          :loading="pending"
+          :icon="helmetIcon"
+          variant="ghost"
+          color="neutral"
+          size="xl"
+          @click.left.exact.prevent.stop="handleHelmetClick"
+        />
+      </UChip>
     </template>
 
     <template
@@ -140,7 +162,14 @@
               icon="tabler:user-cog"
               @click.left.exact.prevent="openProfile"
             >
-              Профиль
+              <span class="flex items-center gap-2">
+                Профиль
+
+                <UpdatesDot
+                  v-if="hasBugReportUpdates"
+                  :title="MY_BUGS_UPDATES_HINT"
+                />
+              </span>
             </UButton>
 
             <!-- Короткий путь к своим листам: раздел лежит в «Инструментах»
