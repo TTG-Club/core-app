@@ -5,14 +5,12 @@
 
   import { NuxtLink } from '#components';
 
-  import { useCommentTimestamp } from '../../composables';
+  import { useCommentLocation, useCommentTimestamp } from '../../composables';
   import {
     COMMENT_EDITED_MARK,
     COMMENT_REPLIES_HIDE_LABEL,
     COMMENT_REPLIES_PLURAL_FORMS,
     COMMENT_REPLY_TO_PREFIX,
-    COMMENT_SECTION_LABELS,
-    getCommentAnchorId,
     MY_COMMENTS_COLLAPSE_LABEL,
     MY_COMMENTS_CONTENT_PREVIEW_LENGTH,
     MY_COMMENTS_EXPAND_LABEL,
@@ -21,7 +19,6 @@
     MY_COMMENTS_OPEN_LABEL,
     MY_COMMENTS_OPEN_UNAVAILABLE_HINT,
     MY_COMMENTS_READ_DELAY_MS,
-    MY_COMMENTS_UNKNOWN_SECTION_LABEL,
   } from '../../model';
   import { useMyCommentReplies } from '../composables';
   import MyCommentReply from './MyCommentReply.vue';
@@ -69,15 +66,9 @@
     props.isUnread ? UPDATED_CARD_CLASS : CARD_CLASS,
   );
 
-  const sectionLabel = computed(() => {
-    const { section } = props.comment;
-
-    if (!section) {
-      return MY_COMMENTS_UNKNOWN_SECTION_LABEL;
-    }
-
-    return COMMENT_SECTION_LABELS[section] ?? section;
-  });
+  const { sectionLabel, linkToComment } = useCommentLocation(
+    () => props.comment,
+  );
 
   /**
    * Метка раздела ведёт на страницу обсуждения. Комментарий без адреса
@@ -138,30 +129,15 @@
    * некуда, и кнопка гаснет.
    */
   const openLink = computed(() => {
-    const { url, lastReply, id } = props.comment;
+    const { lastReply, id } = props.comment;
 
-    if (!url) {
-      return undefined;
-    }
-
-    return `${url}#${getCommentAnchorId(lastReply?.id ?? id)}`;
+    return linkToComment(lastReply?.id ?? id);
   });
 
   /** Подсказка на погашенной кнопке: объясняет, почему переход недоступен. */
   const openHint = computed(() =>
     openLink.value ? undefined : MY_COMMENTS_OPEN_UNAVAILABLE_HINT,
   );
-
-  /**
-   * Ссылка на конкретный ответ в раскрытой ветке.
-   *
-   * @param replyId Идентификатор ответа.
-   */
-  function getReplyLink(replyId: string): string | undefined {
-    const { url } = props.comment;
-
-    return url ? `${url}#${getCommentAnchorId(replyId)}` : undefined;
-  }
 
   /** Разворачивает и сворачивает длинный текст своего комментария. */
   function toggleContent(): void {
@@ -332,7 +308,7 @@
 
           <UButton
             v-if="comment.url"
-            :to="getReplyLink(reply.id)"
+            :to="linkToComment(reply.id)"
             icon="tabler:arrow-right"
             :aria-label="MY_COMMENTS_OPEN_LABEL"
             :title="MY_COMMENTS_OPEN_LABEL"
