@@ -30,6 +30,7 @@
     BACKGROUNDS_SEARCH_PATH,
     buildFeatFeature,
     buildStartingEquipmentItems,
+    CHOICE_SELECT_PLACEHOLDER,
     CLASSES_SEARCH_PATH,
     computeAbilityBonuses,
     CUSTOM_BACKGROUND_LABELS,
@@ -415,17 +416,16 @@
 
   /** Загружает пулы заклинаний для всех выборов черты разом. */
   async function loadSpellPools(): Promise<void> {
-    const spellChoices = featChoices.value.filter(
-      (choice) => choice.kind === 'spell' && choice.spellFilter,
+    const spellChoices = featChoices.value.flatMap((choice) =>
+      choice.kind === 'spell' && choice.spellFilter
+        ? [{ choice, filter: choice.spellFilter }]
+        : [],
     );
 
     const pools = await Promise.all(
-      spellChoices.map(async (choice) => ({
+      spellChoices.map(async ({ choice, filter }) => ({
         id: choice.id,
-        spells: await fetchChoiceSpells(
-          choice.spellFilter!,
-          getChoiceClassUrls(choice),
-        ),
+        spells: await fetchChoiceSpells(filter, getChoiceClassUrls(choice)),
       })),
     );
 
@@ -793,7 +793,7 @@
               :model-value="selections['background-tool'] ?? []"
               :items="choiceOptions(backgroundDetail.toolChoice)"
               :count="choiceCount(backgroundDetail.toolChoice)"
-              :placeholder="`Выберите ${choiceCount(backgroundDetail.toolChoice)}`"
+              :placeholder="`${CHOICE_SELECT_PLACEHOLDER} ${choiceCount(backgroundDetail.toolChoice)}`"
               @update:model-value="
                 updateSelection(backgroundDetail.toolChoice, $event)
               "
@@ -926,7 +926,7 @@
                 :model-value="selections[choice.id] ?? []"
                 :items="choiceOptions(choice)"
                 :count="choiceCount(choice)"
-                :placeholder="`Выберите ${choiceCount(choice)}`"
+                :placeholder="`${CHOICE_SELECT_PLACEHOLDER} ${choiceCount(choice)}`"
                 @update:model-value="updateSelection(choice, $event)"
               />
             </div>

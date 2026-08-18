@@ -4246,3 +4246,6 @@ export const SHEET_FEAT_MODAL_LABELS = {
 
 /** Размер выдачи пула заклинаний выбора: круг одного класса в неё умещается. */
 export const CHOICE_SPELL_POOL_SIZE = 200;
+
+/** Подсказка пикера выбора: сколько значений нужно отметить. */
+export const CHOICE_SELECT_PLACEHOLDER = 'Выберите';
