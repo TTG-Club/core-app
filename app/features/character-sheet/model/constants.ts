@@ -1008,6 +1008,23 @@ export const CUSTOM_BONUS_BASE_SOURCE_OPTIONS: Array<{
 ];
 
 /**
+ * Варианты источника своего бонуса к значению характеристики: своё число и
+ * бонус мастерства. Модификатора характеристики в списке нет — слагаемым к
+ * значению он не бывает, а пара таких бонусов друг на друга завела бы подсчёт
+ * по кругу.
+ */
+export const ABILITY_BONUS_SOURCE_OPTIONS: Array<{
+  label: string;
+  value: CustomBonusSource;
+}> = [
+  { label: CUSTOM_BONUS_KIND_LABELS.flat, value: CUSTOM_BONUS_FLAT_SOURCE },
+  {
+    label: CUSTOM_BONUS_KIND_LABELS.proficiency,
+    value: CUSTOM_BONUS_PROFICIENCY_SOURCE,
+  },
+];
+
+/**
  * Категории оружия справочника к группам владения листа. Словарь делит
  * категории ещё и по дальнобойности, а правила — нет: обе половины воинского
  * оружия дают одну и ту же группу. Огнестрельное (`FIREARM`, `FUTURISTIC`)
@@ -1426,6 +1443,9 @@ export const SPEED_UNIT_OPTIONS: Array<{ label: string; value: SpeedUnit }> = [
   { label: 'Мили (mi)', value: 'miles' },
   { label: 'Километры (km)', value: 'kilometers' },
 ];
+
+/** Режим броска d20 по умолчанию: без преимущества и помехи. */
+export const DEFAULT_ROLL_MODE: RollMode = 'normal';
 
 /** Варианты режима броска d20. */
 export const ROLL_MODE_OPTIONS: Array<{
@@ -3068,6 +3088,9 @@ export const INVENTORY_TWO_HANDED_BADGE_LABEL = 'Двумя руками';
 export const INVENTORY_TWO_HANDED_BADGE_HINT =
   'Универсальное оружие взято двумя руками: урон катится большей костью';
 
+/** Значок оружия, которым персонаж атакует с помехой по свойству «Тяжёлое». */
+export const INVENTORY_HEAVY_BADGE_LABEL = 'Помеха';
+
 /** Значок предмета, которого у персонажа не осталось (количество — ноль). */
 export const INVENTORY_MISSING_BADGE_LABEL = 'Отсутствует';
 
@@ -3076,16 +3099,27 @@ export const INVENTORY_MISSING_BADGE_HINT =
   'Предмета не осталось: его нельзя надеть, им нельзя атаковать и бросать урон';
 
 /**
- * Подписи вклада снаряжения в характеристику: плитка показывает значение с
- * бонусами предметов, а правится записанное — без пояснения числа расходятся.
+ * Подписи настройки характеристики: плитка показывает значение с прибавками, а
+ * правится записанное — без разбора числа расходятся.
  */
-export const ABILITY_ITEM_BONUS_LABELS = {
-  /** Хвост подсказки плитки: «18 = 16 +2 от снаряжения». */
-  hint: 'от снаряжения',
+export const SHEET_ABILITY_SETTINGS_LABELS = {
+  open: 'Настроить характеристику',
+  description:
+    'Укажите значение характеристики — модификатор рассчитается автоматически',
+  scoreTitle: 'Значение',
+  modifierTitle: 'Модификатор',
 
-  /** Пояснение в модалке правки значения. */
-  modalHint: 'Снаряжение добавляет к характеристике',
-};
+  /** Подпись записанного значения в разборе: «Записано 16 · Пояс силы +2». */
+  breakdownScore: 'Записано',
+
+  bonusesTitle: 'Бонусы к значению',
+  bonusesHint:
+    'Бонус поднимает саму характеристику, поэтому вместе с ней растут её '
+    + 'модификатор, спасброски, навыки, класс доспеха и атаки.',
+  totalTitle: 'Итог',
+  save: 'Сохранить',
+  cancel: 'Отмена',
+} as const;
 
 /** Подписи бонусов предмета для сводки в его строке. */
 export const INVENTORY_BONUS_LABELS = {
@@ -3119,6 +3153,30 @@ export const INVENTORY_ROLL_KIND_LABELS: Record<InventoryStatRollKind, string> =
     attack: 'Бросок атаки',
     damage: 'Бросок урона',
   };
+
+/** Подписи слагаемых в подсказке боевой плитки предмета. */
+export const INVENTORY_STAT_HINT_LABELS = {
+  /** Заголовок разбора бонуса атаки. */
+  attack: 'Бонус атаки',
+
+  /** Слагаемое бонуса мастерства. */
+  proficiency: 'мастерство',
+
+  /** Слагаемое собственного бонуса оружия — общее для атаки и урона. */
+  weapon: 'оружие',
+
+  /**
+   * Хвост разбора атаки, когда владения этим оружием нет: без пояснения
+   * пропавший бонус мастерства выглядит ошибкой подсчёта.
+   */
+  noProficiency: 'без владения оружием',
+
+  /**
+   * Хвост разбора атаки тяжёлым оружием, которое персонажу не по руке: на сам
+   * бонус помеха не влияет, поэтому в разборе о ней сказано отдельно.
+   */
+  heavyDisadvantage: 'помеха: тяжёлое оружие',
+};
 
 /** Подсказка в тултипе о том, что плитка бросается по нажатию. */
 export const SHEET_ROLL_HINT_LABEL = 'нажми, чтобы бросить';
@@ -3269,12 +3327,19 @@ export const WEAPON_CATEGORY_OPTIONS: Array<{
 
 /** Подписи свойств своего оружия для строки типов предмета. */
 export const CUSTOM_WEAPON_PROPERTY_LABELS: Record<
-  'ranged' | 'finesse',
+  'ranged' | 'finesse' | 'heavy',
   string
 > = {
   ranged: 'Дальнобойное',
   finesse: 'Фехтовальное',
+  heavy: 'Тяжёлое',
 };
+
+/**
+ * Минимальное значение характеристики, при котором тяжёлое оружие бьёт без
+ * помехи (правила 2024).
+ */
+export const HEAVY_WEAPON_ABILITY_MINIMUM = 13;
 
 /** Порядок типов доспеха в селекте формы. */
 const CUSTOM_ARMOR_TYPE_ORDER: CustomArmorType[] = [
@@ -3471,6 +3536,7 @@ export const NEW_CUSTOM_INVENTORY_ITEM: CustomInventoryItemDraft = {
   weaponCategory: 'simple',
   ranged: false,
   finesse: false,
+  heavy: false,
   damageDiceCount: 1,
   damageDiceFaces: 6,
   damageBonus: 0,
@@ -3595,6 +3661,9 @@ export const CUSTOM_ITEM_MAGIC_LABELS = {
   bonusesHint:
     'Бонус на строку: выберите цель (характеристика, навык, спасбросок, скорость, класс доспеха) и величину. Прибавка к КД доспеха тоже задаётся здесь.',
 };
+
+/** Пояснение свойства «Тяжёлое» в форме своего оружия. */
+export const CUSTOM_ITEM_HEAVY_HINT = `Тяжёлым оружием атакуют с помехой, пока характеристика меньше ${HEAVY_WEAPON_ABILITY_MINIMUM}: у рукопашного — «${ABILITY_LABELS.strength}», у дальнобойного — «${ABILITY_LABELS.dexterity}».`;
 
 /** Подписи свойства «Универсальное» в форме своего оружия. */
 export const CUSTOM_ITEM_VERSATILE_LABELS = {

@@ -27,7 +27,9 @@
     getAbilityCheckValue,
     getAvailableInnateSpells,
     getWeaponAttackBonus,
+    getWeaponAttackRollMode,
     getWeaponDamageSource,
+    isProficientWeapon,
     LANGUAGE_PROFICIENCY_GROUPS,
   } from '../model';
   import CharacterSheetSkeleton from './CharacterSheetSkeleton.vue';
@@ -694,13 +696,20 @@
       return;
     }
 
-    const attack = getWeaponAttackBonus(character.value, inventoryItem.weapon);
+    const attack = getWeaponAttackBonus(
+      character.value,
+      inventoryItem.weapon,
+      isProficientWeapon(character.value, inventoryItem),
+    );
 
     rollModal.open({
       title: `Атака: ${inventoryItem.name}`,
       modifier: attack.value,
       ability: attack.ability,
       actionLabel: 'Бросить атаку',
+      // Тяжёлое оружие не по руке бьёт с помехой (правила 2024): модалка
+      // открывается сразу в этом режиме, но игрок волен его сменить.
+      mode: getWeaponAttackRollMode(attack),
     });
   }
 

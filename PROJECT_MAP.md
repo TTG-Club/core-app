@@ -507,6 +507,23 @@ modals), so its capabilities are listed here rather than squeezed into the table
   settings show the penalty as its own line, so the numbers add up. The level
   lives in `health.exhaustion`, so it is saved by the usual autosave and sheets
   stored before it read as `0`; the PDF prints it as a combat tile.
+- Ability settings (`SheetAbilityModal`, opened by the gear next to the tile
+  title — the same reveal-on-hover control every other panel has — or by a long
+  press on the tile itself): the written score plus any number of
+  `CharacterCustomBonus` rows on top (`SheetCustomBonusRows` with a narrowed
+  source list, `ABILITY_BONUS_SOURCE_OPTIONS` — a flat number or the proficiency
+  bonus; an ability modifier is no summand of a score and a pair of such bonuses
+  would send the maths round in circles). The bonus raises the score itself, so
+  it flows through `getEffectiveAbilities` / `getAbilityModifier` into every
+  derived number — modifier, saving throws, skills and their passive values, AC,
+  attacks, spellcasting, carrying capacity and the PDF — exactly like an item
+  bonus, hit points excluded for the same reason. The proficiency-bonus kind is
+  counted on a character stripped of these bonuses (`toBaseAbilityCharacter`),
+  since the proficiency bonus itself may take an ability modifier and the two
+  would otherwise call each other forever. The tile shows the total, underlines
+  nothing but explains itself in the tooltip (`getAbilityScoreHint` — the written
+  score, every item by name, every bonus by its label), while ± and the score
+  field keep editing the written value. Sheets saved before them read empty lists.
 - Skill settings (`SheetSkillsSettingsModal`, opened by the gear next to the
   «Навыки» panel title — revealed on hover and always visible below `lg`, like
   every other edit control of the sheet): every skill gets its ability picked
@@ -613,14 +630,14 @@ modals), so its capabilities are listed here rather than squeezed into the table
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `admin`      | Admin panel (`/admin`, ADMIN-only): dashboard tiles, top nav, live presence, character-sheet counts, personas, subscriptions & promo codes, bulk code mailing (`/admin/mailing`), users. Pages also cover article CRUD (`articles/admin`) and tokenator frame upload/ordering | `character-sheets`, `dashboard`, `mailing`, `navigation`, `online`, `personas`, `subscriptions`, `users` |
 | `moderation` | Moderator panel (`/moderation`, ADMIN or MODERATOR): dashboard routing to bug triage & comment moderation                                                                                                                                                                     | `model` (routes + dashboard labels)                                                                      |
-| `bug-report` | Bug reporting (screenshot + annotate + text-selection → submit) + admin triage/rating                                                                                                                                                                                         | `modal`, `selection`, `sidebar-button`, `admin`, `composables`, `model`                                  |
+| `bug-report` | Bug reporting (screenshot + annotate + text-selection → submit) + admin triage/rating + author's own reports in profile                                                                                                                                                       | `modal`, `selection`, `sidebar-button`, `admin`, `my`, `composables`, `model`                            |
 
 ### 👤 User & account
 
-| Domain    | Purpose                                                                                                                                                            | Sub-features                                                                            |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| `profile` | User cabinet (`/user/profile`, USER role; bare `/user` redirects there): tabbed account wired to subscription/rewards, display name instead of login in `settings` | `sidebar`, `general`, `activation`, `security`, `settings`, `statistics`, `connections` |
-| `user`    | Auth entry points in the app shell                                                                                                                                 | `auth-modal` (login/register), `helmet` (profile-helmet menu)                           |
+| Domain    | Purpose                                                                                                                                                            | Sub-features                                                  |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| `profile` | User cabinet (`/user/profile`, USER role; bare `/user` redirects there): tabbed account wired to subscription/rewards, display name instead of login in `settings` | `sidebar`, `general`, `activation`, `security`, `settings`    |
+| `user`    | Auth entry points in the app shell                                                                                                                                 | `auth-modal` (login/register), `helmet` (profile-helmet menu) |
 
 > **Display name.** The name is owned by **core-api**, not by the JWT: the server
 > reads it via `server/utils/displayName.ts` and pushes it to comments through
@@ -742,7 +759,7 @@ uploads and presence.
 | `api/auth/*`                            | Sign-in/up, logout, me, email confirm, password reset/change, roles, admin users — proxied to **auth-service**                                                                                                                                                                                                                                                                    |
 | `api/admin/*`                           | Admin bug list/status, subscription grant/revoke/codes, comment hide/restore by author — ADMIN-gated proxies to bug-report, subscriber & comments services (the last via `X-Service-Token` internal API, not the user JWT)                                                                                                                                                        |
 | `api/admin/mailing/*`                   | Bulk promo-code mailing (ADMIN-only): issues one code per address through the subscriber admin API and sends a personal letter over SMTP (`utils/mailer`, `utils/mailingTemplate`, SMTP env shared with auth-service: `SPRING_MAIL_*` + `APP_MAIL_FROM`); `test` sends a sample letter without issuing a code                                                                     |
-| `api/bug-report*`                       | Create report (streams multipart), public stats, my count-by-status → external **bug-report** service                                                                                                                                                                                                                                                                             |
+| `api/bug-report*`                       | Create report (streams multipart), public stats, my count-by-status, my reports list + updates summary (both strip `statusUpdatedBy`/`userLogin`/`sessionId` via a Zod allow-list) → external **bug-report** service                                                                                                                                                              |
 | `api/user/comments/sync-name`           | Best-effort display-name sync: reads the name from core-api, then renames the author's comments through the comments internal API, scoped by `SOURCE_PLATFORM`                                                                                                                                                                                                                    |
 | `api/online`, `routes/online/heartbeat` | Presence heartbeat + stats via **online-app**                                                                                                                                                                                                                                                                                                                                     |
 | `api/vttg/builds`, `domain/vttg`        | All VTTG builds: reads every manifest of the update channel (`runtimeConfig.vttg.updateBaseUrl`) — electron-updater `latest*.yml` for desktop, `latest-node-linux-*.json` / `latest-docker.json` for server — and returns version / size / download links per platform, cached by Nitro. A missing manifest (platform not released yet) yields an empty build instead of an error |

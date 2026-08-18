@@ -3,10 +3,11 @@
 
   import { useCharacterSheet } from '../../composables';
   import {
-    ABILITY_ITEM_BONUS_LABELS,
     ABILITY_SCORE_MAX,
     ABILITY_SCORE_MIN,
-    getFormattedBonus,
+    SHEET_ABILITY_SETTINGS_LABELS,
+    SHEET_TITLE_ACTION_CLASS,
+    SHEET_TITLE_ACTION_REVEAL_CLASS,
   } from '../../model';
   import SheetPanel from './SheetPanel.vue';
 
@@ -17,6 +18,12 @@
    */
   const ADJUST_BUTTON_CLASSES =
     'rounded-full border border-primary/60 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100';
+
+  /**
+   * Шестерёнка настройки поднята над кнопкой броска: та растянута по всей
+   * плитке псевдоэлементом, и без подъёма клик уходил бы в бросок.
+   */
+  const SETTINGS_BUTTON_CLASSES = 'relative z-10';
 
   const props = defineProps<{
     abilityRow: AbilityRow;
@@ -33,11 +40,11 @@
   // кнопки прячутся, а плашка со значением остаётся на прежнем месте.
   const { editControlClass } = useCharacterSheet();
 
-  // Правится записанное значение, а плитка показывает его вместе с бонусами
-  // предметов — границы диапазона проверяются по записанному, иначе бонус
-  // гасил бы кнопку раньше времени.
+  // Правится записанное значение, а плитка показывает его вместе с прибавками
+  // (снаряжение и свои бонусы) — границы диапазона проверяются по записанному,
+  // иначе прибавка гасила бы кнопку раньше времени.
   const baseScore = computed(
-    () => props.abilityRow.score - props.abilityRow.itemBonus,
+    () => props.abilityRow.score - props.abilityRow.bonus,
   );
 
   // Границы диапазона характеристики гасят соответствующую кнопку, чтобы
@@ -52,22 +59,16 @@
 
   // Откуда взялось значение плитки: без разбора игрок не понял бы, почему в
   // модалке правки стоит другое число.
-  const tooltipText = computed(() => {
-    if (props.abilityRow.itemBonus === 0) {
-      return props.abilityRow.label;
-    }
+  const tooltipText = computed(() =>
+    props.abilityRow.bonusHint
+      ? `${props.abilityRow.label} · ${props.abilityRow.bonusHint}`
+      : props.abilityRow.label,
+  );
 
-    return `${props.abilityRow.label} · ${props.abilityRow.score} = ${
-      baseScore.value
-    } ${getFormattedBonus(props.abilityRow.itemBonus)} ${
-      ABILITY_ITEM_BONUS_LABELS.hint
-    }`;
-  });
-
-  // Значение с бонусом предмета выделено цветом: так видно, что число на плитке
-  // не совпадает с записанным в листе.
+  // Значение с прибавкой выделено цветом: так видно, что число на плитке не
+  // совпадает с записанным в листе.
   const scoreClass = computed(() =>
-    props.abilityRow.itemBonus === 0
+    props.abilityRow.bonus === 0
       ? 'border-default/50 bg-default text-muted'
       : 'border-primary/60 bg-primary/15 text-primary',
   );
@@ -124,6 +125,27 @@
       interactive
       class="group w-full"
     >
+      <!-- Шестерёнка в заголовке — как у остальных блоков листа: долгое
+        удержание плитки открывает ту же настройку, но мышью его не сделать -->
+      <template #title-actions>
+        <button
+          type="button"
+          :class="[
+            SHEET_TITLE_ACTION_CLASS,
+            SHEET_TITLE_ACTION_REVEAL_CLASS,
+            SETTINGS_BUTTON_CLASSES,
+            editControlClass,
+          ]"
+          :aria-label="`${SHEET_ABILITY_SETTINGS_LABELS.open}: ${abilityRow.label}`"
+          @click.left.exact.prevent.stop="emit('settings')"
+        >
+          <UIcon
+            name="tabler:settings"
+            class="size-3.5"
+          />
+        </button>
+      </template>
+
       <button
         type="button"
         class="flex w-full cursor-pointer items-center justify-center pt-1 pb-2 after:absolute after:inset-0 after:cursor-pointer"

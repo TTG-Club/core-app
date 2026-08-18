@@ -932,6 +932,11 @@ export function parseItemWeapon(input: unknown): InventoryWeapon | null {
     finesse: weapon.properties.some((property) =>
       /фехтов|finesse/i.test(property),
     ),
+    // «Тяжёлое» ищем в свойствах, а не в названии: тяжёлым оружие делает
+    // свойство, а не слово «тяжёлый» в имени.
+    heavy: weapon.properties.some((property) =>
+      /тяж[её]л|heavy/i.test(property),
+    ),
     // Немагическое оружие своего бонуса к атаке не имеет: его даёт только магия.
     attackBonus: MAGIC_ITEM_BONUS_NONE,
     damage,
@@ -1336,7 +1341,9 @@ const backgroundDetailSchema = z.object({
   skillProficiencies: z.string().catch(''),
   feat: z.string().catch(''),
   toolProficiency: z.array(z.string()).catch([]),
-  equipment: z.array(z.string()).catch([]),
+  // Справка приходит как описание раздела — строки-абзацы вперемешку с узлами
+  // разметки (список вариантов «А)/Б)»), поэтому массивом строк не разбирается.
+  equipment: descriptionNodesSchema,
   // Разбирается отдельной функцией: то же поле есть и у класса.
   startingEquipment: z.unknown(),
 });

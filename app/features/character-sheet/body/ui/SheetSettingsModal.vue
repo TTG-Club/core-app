@@ -210,7 +210,7 @@
   // его бонус рядом, чтобы разница правил была видна сразу.
   const formattedFinesseAttackBonus = computed(() =>
     getFormattedBonus(
-      proficiencyBonus.value + getModifier(props.character.abilities.dexterity),
+      proficiencyBonus.value + getAbilityModifier(props.character, 'dexterity'),
     ),
   );
 

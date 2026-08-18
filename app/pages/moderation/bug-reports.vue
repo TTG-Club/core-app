@@ -44,6 +44,7 @@
     getAdminBugApiUrl,
     getBugReportStatusColor,
   } from '~bug-report/model';
+  import { UiPagination } from '~ui/pagination';
 
   const { isSplitActive } = useLayoutWidth();
 
@@ -503,18 +504,13 @@
           />
 
           <!-- Пагинация -->
-          <div
+          <UiPagination
             v-if="totalBugsCount > itemsPerPage"
-            class="flex justify-center pt-4"
-          >
-            <UPagination
-              v-model:page="currentPage"
-              :total="totalBugsCount"
-              :items-per-page="itemsPerPage"
-              show-edges
-              :sibling-count="1"
-            />
-          </div>
+            v-model:page="currentPage"
+            class="pt-4"
+            :total="totalBugsCount"
+            :items-per-page="itemsPerPage"
+          />
         </div>
 
         <!-- Пустое состояние -->

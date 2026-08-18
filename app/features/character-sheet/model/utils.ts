@@ -240,6 +240,7 @@ import {
   DEFAULT_INITIATIVE_ABILITY,
   DEFAULT_INVENTORY_MAGIC_STATE,
   DEFAULT_ROLL_DICE_FACES,
+  DEFAULT_ROLL_MODE,
   DEFAULT_WEAPON_ATTACK_ABILITY,
   DICE_NOTATION_LETTER,
   EXHAUSTION_D20_PENALTY_PER_LEVEL,
@@ -254,6 +255,7 @@ import {
   FILTER_CHIP_CLASS,
   FILTER_CHIP_IDLE_CLASS,
   FILTER_CHIP_SELECTED_CLASS,
+  HEAVY_WEAPON_ABILITY_MINIMUM,
   HIT_DICE_ROLL_COUNT,
   HIT_POINTS_LEVEL_GAIN_MIN,
   INNATE_SPELL_REMOVE_MENU_LABEL,
@@ -314,6 +316,7 @@ import {
   ROLL_MODE_DICE_COUNT,
   ROLL_MODE_DICE_SUFFIX,
   SAVING_THROW_PROFICIENCY_LABELS,
+  SHEET_ABILITY_SETTINGS_LABELS,
   SHEET_COPY_LIMIT_HINT,
   SHEET_DOWNLOAD_JSON_LABEL,
   SHEET_DOWNLOAD_PDF_HINT,
@@ -560,24 +563,62 @@ export function getInventorySavingThrowSources(
 }
 
 /**
- * Значения характеристик с бонусами снаряжения — именно их показывает лист и
- * от них считаются модификаторы. Правка характеристик идёт по записанным
- * значениям (`character.abilities`), а не по этим.
+ * Персонаж без своих бонусов характеристик. На нём и считаются сами эти бонусы:
+ * бонус вида «бонус мастерства» зовёт подсчёт мастерства, а тот умеет брать
+ * модификатор характеристики — на исходном персонаже подсчёт пошёл бы по кругу.
  *
  * @param character персонаж.
- * @returns значения характеристик с бонусами предметов.
+ * @returns персонаж с пустыми своими бонусами характеристик.
+ */
+function toBaseAbilityCharacter(character: Character): Character {
+  return {
+    ...character,
+    abilityBonuses: mapValues(character.abilityBonuses, () => []),
+  };
+}
+
+/**
+ * Сумма своих бонусов к значению характеристики.
+ *
+ * @param character персонаж.
+ * @param ability ключ характеристики.
+ * @returns вклад своих бонусов в значение характеристики.
+ */
+export function getAbilityBonusesValue(
+  character: Character,
+  ability: AbilityKey,
+): number {
+  const bonuses = character.abilityBonuses[ability];
+
+  if (!bonuses.length) {
+    return 0;
+  }
+
+  return getCustomBonusesValue(toBaseAbilityCharacter(character), bonuses);
+}
+
+/**
+ * Значения характеристик с бонусами снаряжения и своими бонусами — именно их
+ * показывает лист и от них считаются модификаторы. Правка характеристик идёт по
+ * записанным значениям (`character.abilities`), а не по этим.
+ *
+ * @param character персонаж.
+ * @returns значения характеристик со всеми прибавками.
  */
 export function getEffectiveAbilities(
   character: Character,
 ): CharacterAbilities {
   return mapValues(
     character.abilities,
-    (score, key) => score + getInventoryBonusValue(character, 'ability', key),
+    (score, key) =>
+      score
+      + getInventoryBonusValue(character, 'ability', key)
+      + getAbilityBonusesValue(character, key),
   );
 }
 
 /**
- * Значение одной характеристики с бонусами снаряжения.
+ * Значение одной характеристики с бонусами снаряжения и своими бонусами.
  *
  * @param character персонаж.
  * @param ability ключ характеристики.
@@ -590,6 +631,7 @@ export function getEffectiveAbilityScore(
   return (
     character.abilities[ability]
     + getInventoryBonusValue(character, 'ability', ability)
+    + getAbilityBonusesValue(character, ability)
   );
 }
 
@@ -1258,6 +1300,72 @@ export function toSelectedAbilityKeys(value: unknown): AbilityKey[] {
 }
 
 /**
+ * Разбор значения характеристики на слагаемые: записанное значение, каждый
+ * предмет по названию и каждый свой бонус по пометке. Предмет и свой бонус
+ * названы поимённо — игрок должен видеть, что именно поднимает характеристику.
+ *
+ * @param character персонаж.
+ * @param ability ключ характеристики.
+ * @returns слагаемые значения характеристики в порядке подсчёта.
+ */
+export function getAbilityScoreBreakdown(
+  character: Character,
+  ability: AbilityKey,
+): BonusBreakdownPart[] {
+  // Бонусы считаются на том же базовом персонаже, что и в подсчёте значения:
+  // иначе бонус мастерства в разборе разошёлся бы с итогом на плитке.
+  const baseCharacter = toBaseAbilityCharacter(character);
+
+  return [
+    {
+      id: 'score',
+      label: SHEET_ABILITY_SETTINGS_LABELS.breakdownScore,
+      formattedValue: String(character.abilities[ability]),
+    },
+    ...getInventoryBonusSources(character, 'ability', ability).map(
+      (source) => ({
+        id: source.id,
+        label: source.name,
+        formattedValue: getFormattedBonus(source.value),
+      }),
+    ),
+    ...character.abilityBonuses[ability].map((bonus) => ({
+      id: bonus.id,
+      label: getCustomBonusLabel(bonus),
+      formattedValue: getFormattedBonus(
+        getCustomBonusValue(baseCharacter, bonus),
+      ),
+    })),
+  ];
+}
+
+/**
+ * Подсказка к значению характеристики: без разбора не понять, почему на плитке
+ * одно число, а в настройке другое. Значению без прибавок объяснять нечего — у
+ * него `null`.
+ *
+ * @param character персонаж.
+ * @param ability ключ характеристики.
+ * @returns разбор значения строкой или null.
+ */
+export function getAbilityScoreHint(
+  character: Character,
+  ability: AbilityKey,
+): string | null {
+  const isPlain =
+    getEffectiveAbilityScore(character, ability)
+    === character.abilities[ability];
+
+  if (isPlain) {
+    return null;
+  }
+
+  return getAbilityScoreBreakdown(character, ability)
+    .map((part) => `${part.label} ${part.formattedValue}`)
+    .join(' · ');
+}
+
+/**
  * Строки блока характеристик.
  *
  * @param character персонаж.
@@ -1272,9 +1380,10 @@ export function getAbilityRows(character: Character): AbilityRow[] {
     shortLabel: ABILITY_SHORT_LABELS[key],
     score: abilities[key],
     formattedModifier: getFormattedModifier(abilities[key]),
-    // Плитка показывает значение с бонусами предметов, а правится записанное:
-    // без разницы игрок не понял бы, почему в модалке другое число.
-    itemBonus: abilities[key] - character.abilities[key],
+    // Плитка показывает значение с прибавками, а правится записанное: без
+    // разницы игрок не понял бы, почему в настройке другое число.
+    bonus: abilities[key] - character.abilities[key],
+    bonusHint: getAbilityScoreHint(character, key),
   }));
 }
 
@@ -2486,6 +2595,10 @@ function getCustomInventoryTypesLabel(draft: CustomInventoryItemDraft): string {
     labelParts.push(CUSTOM_WEAPON_PROPERTY_LABELS.finesse);
   }
 
+  if (draft.heavy) {
+    labelParts.push(CUSTOM_WEAPON_PROPERTY_LABELS.heavy);
+  }
+
   return labelParts.join(', ');
 }
 
@@ -2559,6 +2672,7 @@ function getCustomInventoryWeapon(
     category: draft.weaponCategory,
     ranged: draft.ranged,
     finesse: draft.finesse,
+    heavy: draft.heavy,
     // Собственный бонус к попаданию есть у любого оружия: чаще его даёт магия,
     // но задать его игрок должен уметь и без неё. Дополнительный урон остаётся
     // магическим — у обычного оружия его поля в форме выключены.
@@ -2989,6 +3103,7 @@ export function getCustomInventoryItemDraft(
       weapon?.category ?? NEW_CUSTOM_INVENTORY_ITEM.weaponCategory,
     ranged: weapon?.ranged ?? NEW_CUSTOM_INVENTORY_ITEM.ranged,
     finesse: weapon?.finesse ?? NEW_CUSTOM_INVENTORY_ITEM.finesse,
+    heavy: weapon?.heavy ?? NEW_CUSTOM_INVENTORY_ITEM.heavy,
     damageDiceCount:
       weapon?.damage?.diceCount ?? NEW_CUSTOM_INVENTORY_ITEM.damageDiceCount,
     damageDiceFaces:
@@ -3100,7 +3215,9 @@ export function getCarryingCapacityBreakdown(
   // телосложение» считает существо крупнее только для переносимого веса.
   const capacitySize = size ?? character.size;
 
-  const strength = character.abilities.strength;
+  // Сила с прибавками (пояс силы великанов, свои бонусы): грузоподъёмность
+  // считается от того же значения, что показывает плитка характеристики.
+  const strength = getEffectiveAbilityScore(character, 'strength');
 
   const ruleValue = getCarryingCapacity(strength, capacitySize);
 
@@ -3477,8 +3594,11 @@ export function getArmorClassBreakdown(
     0,
   );
 
+  // Модификатор берётся с прибавками к Ловкости (снаряжение, свои бонусы) — как
+  // и у остальных характеристик КД выше: по записанному значению КД разошёлся
+  // бы с плиткой характеристики.
   const dexModifier = abilities.includes(DEFAULT_ARMOR_CLASS_ABILITY)
-    ? getModifier(character.abilities.dexterity)
+    ? getAbilityModifier(character, DEFAULT_ARMOR_CLASS_ABILITY)
     : 0;
 
   // Группа предмета здесь не важна: доспех со своей магической пометкой лежит
@@ -3586,27 +3706,168 @@ export function getWeaponAttackAbility(character: Character): AbilityKey {
 }
 
 /**
+ * Приписка магии в конце названия предмета («Длинный меч, +1»): владение
+ * оружием даётся виду, а не конкретному экземпляру.
+ */
+const WEAPON_MAGIC_SUFFIX_PATTERN = /[\s,]*[+-]\d+\s*$/u;
+
+/** Уточнение в скобках в конце названия предмета («Дубинка (большая)»). */
+const WEAPON_HINT_PATTERN = /\s*\([^()]*\)\s*$/u;
+
+/**
+ * Название оружия в сопоставимом с каталогом владений виде: без уточнения в
+ * скобках и приписки магии.
+ *
+ * @param name название предмета или вида оружия.
+ * @returns название для сверки владения.
+ */
+function getWeaponMatchName(name: string): string {
+  return normalizeCatalogName(
+    name
+      .replace(WEAPON_HINT_PATTERN, '')
+      .replace(WEAPON_MAGIC_SUFFIX_PATTERN, ''),
+  );
+}
+
+/** Виды оружия каталога владений по сопоставимому названию. */
+const WEAPON_CATALOG_MATCH_NAMES = new Set(
+  WEAPON_PROFICIENCY_GROUPS.flatMap((group) =>
+    group.items.map((name) => getWeaponMatchName(name)),
+  ),
+);
+
+/**
+ * Виды оружия, которыми персонаж владеет, в сопоставимом виде: запись «вся
+ * группа» разворачивается в свои виды, остальные записи (в том числе не из
+ * каталога) идут как есть.
+ *
+ * @param character персонаж.
+ * @returns названия видов оружия для сверки владения.
+ */
+function getProficientWeaponNames(character: Character): Set<string> {
+  return new Set(
+    character.proficiencies.weapons.flatMap((entry) => {
+      const group = WEAPON_PROFICIENCY_GROUPS.find(
+        (candidate) =>
+          normalizeCatalogName(candidate.all) === normalizeCatalogName(entry),
+      );
+
+      return (group?.items ?? [entry]).map((name) => getWeaponMatchName(name));
+    }),
+  );
+}
+
+/**
+ * Владеет ли персонаж этим оружием: название предмета сверяется со списком
+ * владений листа, где запись «вся группа» стоит за все виды своей категории.
+ *
+ * Оружие, которого в каталоге видов нет (своё, магическое со своим названием),
+ * лист считает знакомым: сверять такое не с чем, а отнимать бонус мастерства по
+ * одному лишь незнакомому названию — портить чужие листы вслепую.
+ *
+ * @param character персонаж.
+ * @param inventoryItem предмет инвентаря с оружием.
+ * @returns true — бонус мастерства идёт в атаку этим оружием.
+ */
+export function isProficientWeapon(
+  character: Character,
+  inventoryItem: CharacterInventoryItem,
+): boolean {
+  const matchName = getWeaponMatchName(inventoryItem.name);
+
+  return (
+    getProficientWeaponNames(character).has(matchName)
+    || !WEAPON_CATALOG_MATCH_NAMES.has(matchName)
+  );
+}
+
+/**
  * Бонус к броску атаки оружием: бонус мастерства (БаБ) плюс модификатор
  * характеристики. Базовая характеристика берётся из настроек листа (по
  * умолчанию — Сила); фехтовальное и дальнобойное оружие бьёт от Ловкости.
  *
+ * Бонус мастерства даёт владение оружием: без него по правилам 2024 в атаке
+ * остаются только модификатор характеристики и собственный бонус оружия.
+ *
  * @param character персонаж.
  * @param weapon параметры оружия.
+ * @param isProficient персонаж владеет этим оружием.
  * @returns бонус атаки и использованная характеристика.
  */
 export function getWeaponAttackBonus(
   character: Character,
   weapon: InventoryWeapon,
+  isProficient: boolean,
 ): WeaponAttack {
   const ability = getWeaponAbility(character, weapon);
 
+  const proficiencyBonus = isProficient
+    ? getCharacterProficiencyBonus(character)
+    : 0;
+
   const value =
-    getCharacterProficiencyBonus(character)
+    proficiencyBonus
     + getAbilityModifier(character, ability)
     + weapon.attackBonus
     - getExhaustionD20Penalty(character);
 
-  return { value, ability, weaponBonus: weapon.attackBonus };
+  return {
+    value,
+    ability,
+    weaponBonus: weapon.attackBonus,
+    proficiencyBonus,
+    heavyAbility: getHeavyWeaponAbility(character, weapon),
+  };
+}
+
+/**
+ * Характеристика, которой тяжёлому оружию не хватает до броска без помехи.
+ * По правилам 2024 требование у свойства своё и от настройки листа не зависит:
+ * рукопашному тяжёлому оружию нужна Сила, дальнобойному — Ловкость, и меньше 13
+ * любая из них даёт помеху на атаку.
+ *
+ * @param character персонаж.
+ * @param weapon параметры оружия.
+ * @returns недостающая характеристика; null — помехи нет (оружие не тяжёлое
+ *   либо требование выполнено).
+ */
+function getHeavyWeaponAbility(
+  character: Character,
+  weapon: InventoryWeapon,
+): AbilityKey | null {
+  if (!weapon.heavy) {
+    return null;
+  }
+
+  const ability: AbilityKey = weapon.ranged ? 'dexterity' : 'strength';
+
+  return getEffectiveAbilityScore(character, ability)
+    < HEAVY_WEAPON_ABILITY_MINIMUM
+    ? ability
+    : null;
+}
+
+/**
+ * Режим броска атаки по правилам: тяжёлое оружие не по руке бьёт с помехой,
+ * остальное — обычным броском. Правило живёт в модели, а не в модалке: та
+ * только открывается в предложенном режиме, а сменить его игрок волен сам.
+ *
+ * @param attack разбор бонуса атаки оружием.
+ * @returns режим броска, которым открывается модалка атаки.
+ */
+export function getWeaponAttackRollMode(attack: WeaponAttack): RollMode {
+  return attack.heavyAbility ? 'disadvantage' : DEFAULT_ROLL_MODE;
+}
+
+/**
+ * Подсказка помехи от свойства «Тяжёлое»: называет характеристику, которой не
+ * хватает, — сам значок «Помеха» о причине не говорит.
+ *
+ * @param ability недостающая характеристика.
+ * @returns текст подсказки.
+ */
+export function getHeavyWeaponHint(ability: AbilityKey): string {
+  return `Тяжёлое оружие: атака с помехой, пока характеристика «${ABILITY_LABELS[ability]}» меньше ${HEAVY_WEAPON_ABILITY_MINIMUM}`;
 }
 
 /**

@@ -7,6 +7,7 @@
   import {
     ABILITY_LABELS,
     DEFAULT_ROLL_DICE_FACES,
+    DEFAULT_ROLL_MODE,
     DICE_NOTATION_LETTER,
     getCheckFormula,
     getFormattedBonus,
@@ -41,9 +42,16 @@
 
       /** Надпись на кнопке броска. */
       actionLabel?: string;
+
+      /**
+       * Режим броска по правилам — им модалка открывается (помеха тяжёлого
+       * оружия). Игрок волен переключить его сам.
+       */
+      mode?: RollMode;
     }>(),
     {
       actionLabel: ROLL_CHECK_ACTION_LABEL,
+      mode: DEFAULT_ROLL_MODE,
     },
   );
 
@@ -59,7 +67,7 @@
 
   const draftBonus = ref(0);
 
-  const rollMode = ref<RollMode>('normal');
+  const rollMode = ref<RollMode>(props.mode);
 
   // Черновики живут только пока модалка открыта: оверлей размонтирует её после
   // закрытия, поэтому следующий бросок снова начинается с «Авто» и к20.

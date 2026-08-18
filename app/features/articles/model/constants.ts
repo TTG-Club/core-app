@@ -5,6 +5,7 @@ import type {
   ArticlePublishMode,
   ArticlePubState,
   ArticleStatus,
+  ArticleTelegramFormat,
   ArticleType,
   ArticleTypeFilter,
 } from './types';
@@ -164,6 +165,34 @@ export const ARTICLE_DISCORD_MENTION_OPTIONS: Array<{
 
 /** Пинг по умолчанию при создании записи — не звеним, пока не попросили. */
 export const ARTICLE_DISCORD_MENTION_DEFAULT: ArticleDiscordMention = 'NONE';
+
+/**
+ * Варианты вида поста в Telegram — единый источник и для схемы формы, и для тумблера
+ * в редакторе. Учитываются только вместе с `publishToTelegram`.
+ */
+export const ARTICLE_TELEGRAM_FORMATS: readonly ArticleTelegramFormat[] = [
+  'INSTANT_VIEW',
+  'FULL_TEXT',
+] as const;
+
+/** Подписи вариантов вида поста. */
+const ARTICLE_TELEGRAM_FORMAT_LABELS = {
+  INSTANT_VIEW: 'Instant View',
+  FULL_TEXT: 'Полный текст',
+} as const satisfies Record<ArticleTelegramFormat, string>;
+
+/** Опции сегментированного выбора вида поста в редакторе. */
+export const ARTICLE_TELEGRAM_FORMAT_OPTIONS: Array<{
+  label: string;
+  value: ArticleTelegramFormat;
+}> = ARTICLE_TELEGRAM_FORMATS.map((format) => ({
+  label: ARTICLE_TELEGRAM_FORMAT_LABELS[format],
+  value: format,
+}));
+
+/** Вид поста по умолчанию при создании записи — карточка Instant View. */
+export const ARTICLE_TELEGRAM_FORMAT_DEFAULT: ArticleTelegramFormat =
+  'INSTANT_VIEW';
 
 /** Формат даты публикации для карточек и страницы чтения. */
 export const ARTICLE_DATE_FORMAT = 'LL';
