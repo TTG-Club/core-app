@@ -29,6 +29,7 @@
     AdminUserNameMatches,
     AdminUserRow,
   } from '~admin/users/ui';
+  import { UiPagination } from '~ui/pagination';
 
   useSeoMeta({
     title: ADMIN_USERS_PAGE_TITLE,
@@ -299,18 +300,13 @@
             />
 
             <!-- Пагинация -->
-            <div
+            <UiPagination
               v-if="totalUsers > itemsPerPage"
-              class="flex justify-center pt-4"
-            >
-              <UPagination
-                v-model:page="currentPage"
-                :total="totalUsers"
-                :items-per-page="itemsPerPage"
-                show-edges
-                :sibling-count="1"
-              />
-            </div>
+              v-model:page="currentPage"
+              class="pt-4"
+              :total="totalUsers"
+              :items-per-page="itemsPerPage"
+            />
           </div>
 
           <!-- Пустое состояние (скрыто, если есть подсказки по имени) -->

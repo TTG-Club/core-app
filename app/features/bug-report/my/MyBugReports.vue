@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { MyBugReportResponse } from '../model';
 
+  import { UiPagination } from '~ui/pagination';
+
   import {
     MY_BUGS_DESCRIPTION,
     MY_BUGS_EMPTY_FILTERED_TEXT,
@@ -184,18 +186,13 @@
         @read="handleRead"
       />
 
-      <div
+      <UiPagination
         v-if="totalCount > MY_BUGS_PAGE_SIZE"
-        class="flex justify-center pt-2"
-      >
-        <UPagination
-          v-model:page="currentPage"
-          :total="totalCount"
-          :items-per-page="MY_BUGS_PAGE_SIZE"
-          show-edges
-          :sibling-count="1"
-        />
-      </div>
+        v-model:page="currentPage"
+        class="pt-2"
+        :total="totalCount"
+        :items-per-page="MY_BUGS_PAGE_SIZE"
+      />
     </div>
   </div>
 </template>
