@@ -12,9 +12,11 @@
     FEATS_SELECT_PATH,
     fetchFeatDetail,
     getFeatUrlFromFeatureId,
+    getRequiredChoiceCount,
     parseFeatCatalog,
     parseRepeatableFeatUrls,
     resolveChoiceOptions,
+    SHEET_FEAT_MODAL_LABELS,
     SHEET_SEARCH_LABELS,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
@@ -266,10 +268,21 @@
 
   const isChoiceStep = computed(() => choiceRows.value.length > 0);
 
-  /** Все выборы отвечены — иначе применять рано. */
-  const isChoiceComplete = computed(() =>
+  /** Есть ли из чего выбирать хоть в одном пикере. */
+  const hasChoiceOptions = computed<boolean>(() =>
+    choiceRows.value.some((row) => row.options.length > 0),
+  );
+
+  /**
+   * Все выборы отвечены сполна — иначе применять рано. Требуемое число берётся
+   * с оглядкой на длину пула: черта могла попросить два навыка, а во владении у
+   * персонажа только один, и тогда шаг иначе было бы не пройти.
+   */
+  const isChoiceComplete = computed<boolean>(() =>
     choiceRows.value.every(
-      (row) => (choiceAnswers.value[row.choice.id]?.length ?? 0) > 0,
+      (row) =>
+        (choiceAnswers.value[row.choice.id]?.length ?? 0)
+        >= getRequiredChoiceCount(row.choice, row.options),
     ),
   );
 
@@ -357,8 +370,7 @@
         class="flex h-[65dvh] min-h-96 flex-col gap-4 overflow-y-auto pr-1"
       >
         <p class="text-sm text-dimmed">
-          Черта даёт компетентность: бонус мастерства в выбранном навыке
-          удваивается. Выбрать можно только навык, которым персонаж уже владеет.
+          {{ SHEET_FEAT_MODAL_LABELS.choiceHint }}
         </p>
 
         <div
@@ -374,16 +386,17 @@
             v-model="choiceAnswers[row.choice.id]"
             :items="row.options"
             :count="row.choice.count"
-            :placeholder="row.choice.label || 'Выберите навык'"
+            :placeholder="
+              row.choice.label || SHEET_FEAT_MODAL_LABELS.choicePlaceholder
+            "
           />
         </div>
 
         <p
-          v-if="!choiceRows.some((row) => row.options.length)"
+          v-if="!hasChoiceOptions"
           class="text-sm text-warning"
         >
-          Персонаж пока не владеет ни одним навыком — компетентность дать не в
-          чем. Выберите класс или предысторию, затем добавьте черту.
+          {{ SHEET_FEAT_MODAL_LABELS.choiceEmptyOptions }}
         </p>
       </div>
 
@@ -462,7 +475,7 @@
                 </UBadge>
               </button>
 
-              <UTooltip text="Открыть описание черты">
+              <UTooltip :text="SHEET_FEAT_MODAL_LABELS.descriptionTooltip">
                 <UButton
                   icon="tabler:layout-sidebar-right-expand"
                   color="neutral"
