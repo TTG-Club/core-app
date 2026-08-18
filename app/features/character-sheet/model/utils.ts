@@ -6645,6 +6645,7 @@ export function buildCharacterFeatures(
  * @param options.level уровень взятия черты; null — уровень неизвестен.
  * @param options.expertiseSkills навыки, в которых игрок выбрал компетентность.
  * @param options.choiceAnswers ответы игрока на выборы черты по ключу выбора.
+ * @param options.spells заклинания, выбранные игроком при взятии черты.
  * @returns особенность персонажа с происхождением «Черта».
  */
 export function buildFeatFeature(
@@ -6654,6 +6655,7 @@ export function buildFeatFeature(
     level?: number | null;
     expertiseSkills?: string[];
     choiceAnswers?: Record<string, string[]>;
+    spells?: CharacterSpell[];
   } = {},
 ): CharacterFeature {
   const {
@@ -6661,7 +6663,12 @@ export function buildFeatFeature(
     level = null,
     expertiseSkills = [],
     choiceAnswers = {},
+    spells = [],
   } = options;
+
+  // Выбранные игроком заклинания лежат там же, где выдаваемые чертой: и те, и
+  // другие персонаж знает вне книги заклинаний.
+  const featureSpells = [...(summary.spells ?? []), ...spells];
 
   const baseId = getCharacterFeatureId('feat', summary.url);
 
@@ -6677,7 +6684,7 @@ export function buildFeatFeature(
     proficiencies: withChosenExpertise(summary.proficiencies, expertiseSkills),
     // Копия списка: подготовку игрок снимает прямо в записи, и делить её с
     // деталью справочника, из которой собрана черта, нельзя.
-    spells: summary.spells ? [...summary.spells] : null,
+    spells: featureSpells.length ? featureSpells : null,
     // Пустой набор не пишется: у черты без выборов запись остаётся такой же,
     // какой была до их появления.
     choiceAnswers: Object.keys(choiceAnswers).length

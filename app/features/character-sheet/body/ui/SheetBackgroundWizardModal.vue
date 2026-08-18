@@ -6,8 +6,10 @@
     BackgroundSummary,
     CharacterFeature,
     CharacterInventoryItem,
+    CharacterSpell,
     ClassChoice,
     FeatSummary,
+    SpellCatalogItem,
   } from '../../model';
 
   import { BackgroundDrawer } from '~backgrounds/drawer';
@@ -28,9 +30,11 @@
     BACKGROUNDS_SEARCH_PATH,
     buildFeatFeature,
     buildStartingEquipmentItems,
+    CLASSES_SEARCH_PATH,
     computeAbilityBonuses,
     CUSTOM_BACKGROUND_LABELS,
     FEATS_DETAIL_BASE_PATH,
+    fetchChoiceSpells,
     getOwnedSkillHints,
     getRequiredChoiceCount,
     getToolNames,
@@ -38,6 +42,7 @@
     ORIGIN_FEAT_ACQUISITION_LEVEL,
     parseBackgroundDetail,
     parseBackgroundOptions,
+    parseClassOptions,
     parseFeatDetail,
     resolveChoiceOptions,
     SHEET_SEARCH_LABELS,
@@ -311,7 +316,51 @@
       || !isFeatChoiceComplete.value,
   );
 
+  /**
+   * Классы каталога для сверки названия с предысторией: «Мудрец» называет класс
+   * черты словом («Волшебник»), а фильтр поиска заклинаний принимает ссылку.
+   * Списка классов в самой механике черты для этого мало — селект редактора
+   * пишет туда только ссылки.
+   */
+  const { data: classOptions } = await useAsyncData(
+    'character-sheet:background-feat-classes',
+    async () => {
+      const response = await $fetch<unknown>(CLASSES_SEARCH_PATH, {
+        method: 'GET',
+        retry: 0,
+      });
+
+      return parseClassOptions(response, true);
+    },
+    { server: false, default: () => [] },
+  );
+
+  /**
+   * Ссылка класса, названного предысторией; null — предыстория класс не
+   * называет или такого класса в каталоге нет.
+   */
+  const featClassUrl = computed<string | null>(() => {
+    const subchoice = backgroundDetail.value?.featSubchoice?.trim();
+
+    if (!subchoice) {
+      return null;
+    }
+
+    const named = (classOptions.value ?? []).find(
+      (option) => option.name === subchoice,
+    );
+
+    return named?.url ?? null;
+  });
+
+  /** Пул заклинаний по id выбора: собирается поиском по каталогу. */
+  const spellPools = ref<Record<string, SpellCatalogItem[]>>({});
+
   function choiceOptions(choice: ClassChoice): string[] {
+    if (choice.kind === 'spell') {
+      return (spellPools.value[choice.id] ?? []).map((spell) => spell.name);
+    }
+
     return resolveChoiceOptions(choice, {
       skillNames: skillNames.value,
       proficientSkillNames: proficientSkillNames.value,
@@ -337,6 +386,72 @@
       ...selections.value,
       [choice.id]: values.slice(0, choiceCount(choice)),
     };
+  }
+
+  /**
+   * Классы, из списков которых идёт выбор. Предыстория может назвать класс сама
+   * («Мудрец» даёт «Посвящённого в магию» со списком волшебника) — тогда пул
+   * сужается до него, потому что по правилам список один, а не объединение.
+   *
+   * @param choice выбор заклинания.
+   * @returns url классов для фильтра поиска.
+   */
+  function getChoiceClassUrls(choice: ClassChoice): string[] {
+    const urls = (choice.spellFilter?.classes ?? []).map(
+      (characterClass) => characterClass.url,
+    );
+
+    // Класс, названный предысторией, сужает пул: по правилам список один, а не
+    // объединение перечисленных в черте. Если черта его не перечисляет, класс
+    // предыстории всё равно задаёт пул — она и определяет, чей это список.
+    const named = featClassUrl.value;
+
+    if (named && (!urls.length || urls.includes(named))) {
+      return [named];
+    }
+
+    return urls;
+  }
+
+  /** Загружает пулы заклинаний для всех выборов черты разом. */
+  async function loadSpellPools(): Promise<void> {
+    const spellChoices = featChoices.value.filter(
+      (choice) => choice.kind === 'spell' && choice.spellFilter,
+    );
+
+    const pools = await Promise.all(
+      spellChoices.map(async (choice) => ({
+        id: choice.id,
+        spells: await fetchChoiceSpells(
+          choice.spellFilter!,
+          getChoiceClassUrls(choice),
+        ),
+      })),
+    );
+
+    spellPools.value = Object.fromEntries(
+      pools.map((pool) => [pool.id, pool.spells]),
+    );
+  }
+
+  /**
+   * Заклинания, выбранные игроком: пул хранит записи справочника, а пикер —
+   * названия, поэтому выбранное сверяется по названию.
+   *
+   * @returns выбранные заклинания записями листа.
+   */
+  function collectChosenSpells(): CharacterSpell[] {
+    return featChoices.value.flatMap((choice) => {
+      const chosen = new Set(selections.value[choice.id] ?? []);
+
+      return (
+        (spellPools.value[choice.id] ?? [])
+          .filter((spell) => chosen.has(spell.name))
+          // Заклинание черты подготовлено сразу и места среди подготовленных не
+          // занимает — как врождённое заклинание вида.
+          .map((spell) => ({ ...spell, prepared: true }))
+      );
+    });
   }
 
   /**
@@ -417,6 +532,9 @@
         ? await fetchFeatDetail(backgroundDetail.value.featUrl)
         : null;
 
+      // Пул заклинаний зависит от загруженной черты, поэтому грузится следом.
+      await loadSpellPools();
+
       selections.value = {};
       abilityMode.value = '2-1';
       plusTwoAbility.value = undefined;
@@ -477,6 +595,7 @@
             .filter((choice) => choice.kind === 'skill-expertise')
             .flatMap((choice) => selections.value[choice.id] ?? []),
           choiceAnswers: collectFeatChoiceAnswers(),
+          spells: collectChosenSpells(),
         });
 
         featFeature = detail.featSubchoice
