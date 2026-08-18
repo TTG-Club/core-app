@@ -5,6 +5,11 @@
     MY_BUGS_UPDATES_HINT,
   } from '~bug-report/model';
   import { useMyBugReportUpdates } from '~bug-report/my';
+  import {
+    MY_COMMENTS_NAVIGATION_LABEL,
+    MY_COMMENTS_UPDATES_HINT,
+  } from '~comments/model';
+  import { useMyCommentUpdates } from '~comments/my';
   import { UpdatesDot } from '~ui/updates-dot';
 
   const props = defineProps<{
@@ -15,6 +20,7 @@
     GENERAL: 'general',
     ACTIVATION: 'activation',
     BUGS: 'bugs',
+    COMMENTS: 'comments',
     SECURITY: 'security',
     SETTINGS: 'settings',
   } as const;
@@ -36,6 +42,11 @@
       icon: 'tabler:bug',
     },
     {
+      value: ProfileTabs.COMMENTS,
+      label: MY_COMMENTS_NAVIGATION_LABEL,
+      icon: 'tabler:message-circle',
+    },
+    {
       value: ProfileTabs.SECURITY,
       label: 'Безопасность',
       icon: 'tabler:shield',
@@ -47,7 +58,8 @@
     },
   ];
 
-  const { hasUpdates } = useMyBugReportUpdates();
+  const { hasUpdates: hasBugReportUpdates } = useMyBugReportUpdates();
+  const { hasUpdates: hasCommentUpdates } = useMyCommentUpdates();
 
   // В сайдбаре вкладки растянуты на всю ширину и крупнее, в мобильной ленте —
   // компактные и по содержимому.
@@ -55,11 +67,27 @@
 
   const tabClass = computed(() => ['shrink-0', props.full ? 'w-full' : '']);
 
-  // Непросмотренное бывает только у баг-репортов: у остальных вкладок точки нет.
+  /**
+   * Непросмотренное бывает у баг-репортов и комментариев: точка и её подсказка
+   * есть только у этих вкладок, у остальных карта ничего не вернёт.
+   */
+  const updatesByTab = computed<
+    Partial<Record<string, { hasUpdates: boolean; hint: string }>>
+  >(() => ({
+    [ProfileTabs.BUGS]: {
+      hasUpdates: hasBugReportUpdates.value,
+      hint: MY_BUGS_UPDATES_HINT,
+    },
+    [ProfileTabs.COMMENTS]: {
+      hasUpdates: hasCommentUpdates.value,
+      hint: MY_COMMENTS_UPDATES_HINT,
+    },
+  }));
+
   const tabItems = computed(() =>
     ProfileTabItems.map((item) => ({
       ...item,
-      hasUpdates: item.value === ProfileTabs.BUGS && hasUpdates.value,
+      updates: updatesByTab.value[item.value],
     })),
   );
 </script>
@@ -79,10 +107,10 @@
     :class="tabClass"
   >
     <template
-      v-if="item.hasUpdates"
+      v-if="item.updates?.hasUpdates"
       #trailing
     >
-      <UpdatesDot :title="MY_BUGS_UPDATES_HINT" />
+      <UpdatesDot :title="item.updates.hint" />
     </template>
   </UButton>
 </template>

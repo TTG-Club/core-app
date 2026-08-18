@@ -3,6 +3,9 @@ import type {
   CommentRateLimitInfo,
   CommentsPage,
   CreateCommentRequest,
+  MyComment,
+  MyCommentsFilter,
+  MyCommentsUpdates,
   PublicComment,
 } from './types';
 
@@ -13,10 +16,13 @@ import { SOURCE_PLATFORM } from '#shared/consts';
 import {
   COMMENTS_API_PATH,
   COMMENTS_MODERATION_ALL_PATH,
+  COMMENTS_MY_PATH,
+  COMMENTS_MY_UPDATES_PATH,
   COMMENTS_PAGE_SIZE,
   COMMENTS_ROOT_SORT,
   COMMENTS_UNKNOWN_ERROR_MESSAGE,
   COMMENTS_USER_PAGE_SIZE,
+  MY_COMMENTS_PAGE_SIZE,
 } from './constants';
 import {
   normalizeCommentContent,
@@ -27,6 +33,8 @@ import {
   parseCreateCommentRequest,
   parseLatestComment,
   parseModerationCommentsPage,
+  parseMyCommentsPage,
+  parseMyCommentsUpdates,
   parsePublicComment,
   parsePublicCommentsPage,
 } from './schemas';
@@ -324,4 +332,45 @@ export async function reportComment(commentId: string): Promise<CommentEntry> {
   });
 
   return parseComment(response);
+}
+
+/**
+ * Страница своих комментариев для профиля вместе со сводкой чужих ответов
+ * на каждый: сколько ответили, сколько новых и кто с чем ответил последним.
+ * @param filter Что показывать: все, только с ответами или только с новыми.
+ * @param since Отметка просмотра — дата последнего просмотренного ответа;
+ *   `null` означает «пользователь не видел ещё ни одного ответа».
+ * @param page Номер страницы (с нуля).
+ * @param size Размер страницы.
+ */
+export async function fetchMyComments(
+  filter: MyCommentsFilter,
+  since: string | null,
+  page: number,
+  size: number = MY_COMMENTS_PAGE_SIZE,
+): Promise<CommentsPage<MyComment>> {
+  const response = await $fetch(COMMENTS_MY_PATH, {
+    method: 'GET',
+    query: { filter, since: since || undefined, page, size },
+    retry: 0,
+  });
+
+  return parseMyCommentsPage(response);
+}
+
+/**
+ * Сводка «вам ответили»: сколько чужих ответов появилось после отметки
+ * просмотра и когда ответили в последний раз.
+ * @param since Отметка просмотра; `null` — новыми считаются все ответы.
+ */
+export async function fetchMyCommentsUpdates(
+  since: string | null,
+): Promise<MyCommentsUpdates> {
+  const response = await $fetch(COMMENTS_MY_UPDATES_PATH, {
+    method: 'GET',
+    query: { since: since || undefined },
+    retry: 0,
+  });
+
+  return parseMyCommentsUpdates(response);
 }

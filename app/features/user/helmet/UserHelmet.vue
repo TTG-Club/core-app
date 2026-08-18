@@ -6,6 +6,8 @@
     CHARACTER_SHEET_LIST_TITLE,
     CHARACTER_SHEET_ROUTE,
   } from '~character-sheet/model';
+  import { MY_COMMENTS_UPDATES_HINT } from '~comments/model';
+  import { useMyCommentUpdates } from '~comments/my';
   import {
     MODERATION_PANEL_ICON,
     MODERATION_PANEL_TITLE,
@@ -41,15 +43,38 @@
       : 'ttg:profile-helmet-outline',
   );
 
-  // Сводку изменений по баг-репортам спрашиваем только у авторизованных: у гостя
-  // своих репортов нет, а запрос уходил бы в 401 на каждой странице сайта.
+  // Сводки изменений (баг-репорты, ответы на комментарии) спрашиваем только у
+  // авторизованных: у гостя ни своих репортов, ни своих комментариев нет,
+  // а запросы уходили бы в 401 на каждой странице сайта.
   // Вызов до await — по той же причине, что и useProfileBadges ниже.
   const bugReportUpdates = userTokenCookie.value
     ? useMyBugReportUpdates()
     : null;
 
+  const commentUpdates = userTokenCookie.value ? useMyCommentUpdates() : null;
+
   const hasBugReportUpdates = computed(
     () => bugReportUpdates?.hasUpdates.value ?? false,
+  );
+
+  const hasCommentUpdates = computed(
+    () => commentUpdates?.hasUpdates.value ?? false,
+  );
+
+  /** Точка на шлеме одна на весь профиль — зажечь её может любая новость. */
+  const hasProfileUpdates = computed(
+    () => hasBugReportUpdates.value || hasCommentUpdates.value,
+  );
+
+  // Подсказка называет всё, что ждёт в профиле: точка одна, а поводов может
+  // быть два сразу.
+  const profileUpdatesHint = computed(() =>
+    [
+      hasBugReportUpdates.value ? MY_BUGS_UPDATES_HINT : '',
+      hasCommentUpdates.value ? MY_COMMENTS_UPDATES_HINT : '',
+    ]
+      .filter(Boolean)
+      .join(' · '),
   );
 
   if (userTokenCookie.value) {
@@ -122,10 +147,10 @@
     @update:open="dismissMenu"
   >
     <template #default>
-      <!-- Точка на шлеме — единственный намёк снаружи профиля, что там ждёт
-        ответ команды: иначе о смене статуса узнают только случайно -->
+      <!-- Точка на шлеме — единственный намёк снаружи профиля, что там ждут
+        ответ команды или ответ на комментарий: иначе о них узнают случайно -->
       <UChip
-        :show="hasBugReportUpdates"
+        :show="hasProfileUpdates"
         color="primary"
         size="md"
       >
@@ -166,8 +191,8 @@
                 Профиль
 
                 <UpdatesDot
-                  v-if="hasBugReportUpdates"
-                  :title="MY_BUGS_UPDATES_HINT"
+                  v-if="hasProfileUpdates"
+                  :title="profileUpdatesHint"
                 />
               </span>
             </UButton>
