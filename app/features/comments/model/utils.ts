@@ -269,3 +269,20 @@ export function removeCommentNode(
 
   return nodes.some((node) => removeCommentNode(node.replies, commentId));
 }
+
+/**
+ * Оставляет в выдаче только настоящие комментарии, отбрасывая надгробия.
+ *
+ * Нужна там, где комментарии показывают вне их ветки — в ленте сайта и в блоке
+ * на главной: надгробие держит видимой ветку ответов, а вне ветки это строка
+ * без автора и текста. Сервис их туда и не отдаёт, но схема выдачи общая
+ * с обсуждением страницы, поэтому тип сужается здесь.
+ * @param comments Комментарии публичной выдачи.
+ */
+export function filterLiveComments(
+  comments: Array<PublicComment>,
+): Array<CommentEntry> {
+  return comments.filter(
+    (comment): comment is CommentEntry => !isCommentTombstone(comment),
+  );
+}

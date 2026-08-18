@@ -215,8 +215,8 @@ export const ARTICLES_LIST_COUNT = 24;
 /** Количество записей, загружаемых в списке админ-панели. */
 export const ARTICLES_ADMIN_LIST_COUNT = 100;
 
-/** Количество новостей в блоке на главной (1 «геройская» + лента из 9). */
-export const HOME_NEWS_COUNT = 10;
+/** Количество новостей в блоке на главной (1 «геройская» + лента из 4). */
+export const HOME_NEWS_COUNT = 5;
 
 /** Количество статей в блоке на главной (компактный список). */
 export const HOME_ARTICLES_COUNT = 5;

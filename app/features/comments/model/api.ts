@@ -9,9 +9,10 @@ import type {
   PublicComment,
 } from './types';
 
+import { StatusCodes } from 'http-status-codes';
 import { FetchError } from 'ofetch';
 
-import { SOURCE_PLATFORM } from '#shared/consts';
+import { SOURCE_PLATFORM, USER_TOKEN_COOKIE } from '#shared/consts';
 
 import {
   COMMENTS_API_PATH,
@@ -19,10 +20,12 @@ import {
   COMMENTS_MY_PATH,
   COMMENTS_MY_UPDATES_PATH,
   COMMENTS_PAGE_SIZE,
+  COMMENTS_RECENT_PATH,
   COMMENTS_ROOT_SORT,
   COMMENTS_UNKNOWN_ERROR_MESSAGE,
   COMMENTS_USER_PAGE_SIZE,
   MY_COMMENTS_PAGE_SIZE,
+  RECENT_COMMENTS_PAGE_SIZE,
 } from './constants';
 import {
   normalizeCommentContent,
@@ -100,6 +103,34 @@ export function getCommentRateLimit(error: unknown): CommentRateLimitInfo {
     ...fromBody,
     retryAfterSeconds: Number.isFinite(headerSeconds) ? headerSeconds : null,
   };
+}
+
+/**
+ * Повторяет чтение один раз, если протухший токен превратил публичную выдачу
+ * в 401: сервис отвергает битый Bearer до проверки прав, а Nitro прикрепляет
+ * куку к каждому запросу. Тот же запрос чистит куки на сервере, поэтому после
+ * сброса кэша куки повтор уходит анонимно и возвращает данные.
+ *
+ * Общий для обеих лент: обсуждения страницы и ленты последних комментариев —
+ * обе читаются без входа и обе спотыкались бы об один и тот же токен.
+ * @param read Само чтение — вызывается повторно как есть.
+ */
+export async function readWithoutStaleToken<T>(
+  read: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await read();
+  } catch (error) {
+    if (getCommentFetchStatus(error) !== StatusCodes.UNAUTHORIZED) {
+      throw error;
+    }
+
+    // Кэш куки помнит уже удалённый токен — без сброса сессия так и считалась
+    // бы живой, и приглашение войти не встало бы на место формы отправки.
+    refreshCookie(USER_TOKEN_COOKIE);
+
+    return await read();
+  }
 }
 
 /**
@@ -373,4 +404,23 @@ export async function fetchMyCommentsUpdates(
   });
 
   return parseMyCommentsUpdates(response);
+}
+
+/**
+ * Лента последних комментариев сайта, свежие сверху. Платформа подставляется
+ * своя: страница показывает обсуждения этого сайта, а не всех сразу.
+ * @param page Номер страницы (с нуля).
+ * @param size Размер страницы.
+ */
+export async function fetchRecentComments(
+  page: number,
+  size: number = RECENT_COMMENTS_PAGE_SIZE,
+): Promise<CommentsPage<PublicComment>> {
+  const response = await $fetch(COMMENTS_RECENT_PATH, {
+    method: 'GET',
+    query: { sourcePlatform: SOURCE_PLATFORM, page, size },
+    retry: 0,
+  });
+
+  return parsePublicCommentsPage(response);
 }
