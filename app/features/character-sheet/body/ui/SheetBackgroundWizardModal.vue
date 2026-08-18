@@ -6,7 +6,10 @@
     BackgroundSummary,
     CharacterFeature,
     CharacterInventoryItem,
+    CharacterSpell,
     ClassChoice,
+    FeatSummary,
+    SpellCatalogItem,
   } from '../../model';
 
   import { BackgroundDrawer } from '~backgrounds/drawer';
@@ -27,9 +30,12 @@
     BACKGROUNDS_SEARCH_PATH,
     buildFeatFeature,
     buildStartingEquipmentItems,
+    CHOICE_SELECT_PLACEHOLDER,
+    CLASSES_SEARCH_PATH,
     computeAbilityBonuses,
     CUSTOM_BACKGROUND_LABELS,
     FEATS_DETAIL_BASE_PATH,
+    fetchChoiceSpells,
     getOwnedSkillHints,
     getRequiredChoiceCount,
     getToolNames,
@@ -37,6 +43,7 @@
     ORIGIN_FEAT_ACQUISITION_LEVEL,
     parseBackgroundDetail,
     parseBackgroundOptions,
+    parseClassOptions,
     parseFeatDetail,
     resolveChoiceOptions,
     SHEET_SEARCH_LABELS,
@@ -102,6 +109,13 @@
     character.value.skills.map((skill) => skill.name),
   );
 
+  /** Навыки, которыми персонаж уже владеет: из них выбирается компетентность. */
+  const proficientSkillNames = computed<string[]>(() =>
+    character.value.skills
+      .filter((skill) => skill.proficiency !== 'none')
+      .map((skill) => skill.name),
+  );
+
   const allLanguages = computed(() =>
     LANGUAGE_PROFICIENCY_GROUPS.flatMap((group) => group.items),
   );
@@ -146,6 +160,13 @@
   const selectedOption = ref<BackgroundOption | undefined>();
 
   const backgroundDetail = ref<BackgroundSummary | null>(null);
+
+  /**
+   * Деталь черты предыстории. Черта может о чём-то спрашивать, и спросить нужно
+   * здесь же: на листе она появляется вместе с предысторией, и второго случая
+   * задать вопрос не будет.
+   */
+  const featSummary = ref<FeatSummary | null>(null);
 
   const isStepLoading = ref(false);
 
@@ -276,15 +297,77 @@
 
   const isNextDisabled = computed(() => !selectedOption.value);
 
-  const isApplyDisabled = computed(
-    () => !backgroundDetail.value || !isAbilityChoiceValid.value,
+  /** Выборы черты предыстории: у «Мудреца» их задаёт «Посвящённый в магию». */
+  const featChoices = computed<ClassChoice[]>(
+    () => featSummary.value?.choices ?? [],
   );
 
+  /** Все выборы черты отвечены сполна — иначе применять рано. */
+  const isFeatChoiceComplete = computed<boolean>(() =>
+    featChoices.value.every(
+      (choice) =>
+        (selections.value[choice.id]?.length ?? 0) >= choiceCount(choice),
+    ),
+  );
+
+  const isApplyDisabled = computed(
+    () =>
+      !backgroundDetail.value
+      || !isAbilityChoiceValid.value
+      || !isFeatChoiceComplete.value,
+  );
+
+  /**
+   * Классы каталога для сверки названия с предысторией: «Мудрец» называет класс
+   * черты словом («Волшебник»), а фильтр поиска заклинаний принимает ссылку.
+   * Списка классов в самой механике черты для этого мало — селект редактора
+   * пишет туда только ссылки.
+   */
+  const { data: classOptions } = await useAsyncData(
+    'character-sheet:background-feat-classes',
+    async () => {
+      const response = await $fetch<unknown>(CLASSES_SEARCH_PATH, {
+        method: 'GET',
+        retry: 0,
+      });
+
+      return parseClassOptions(response, true);
+    },
+    { server: false, default: () => [] },
+  );
+
+  /**
+   * Ссылка класса, названного предысторией; null — предыстория класс не
+   * называет или такого класса в каталоге нет.
+   */
+  const featClassUrl = computed<string | null>(() => {
+    const subchoice = backgroundDetail.value?.featSubchoice?.trim();
+
+    if (!subchoice) {
+      return null;
+    }
+
+    const named = (classOptions.value ?? []).find(
+      (option) => option.name === subchoice,
+    );
+
+    return named?.url ?? null;
+  });
+
+  /** Пул заклинаний по id выбора: собирается поиском по каталогу. */
+  const spellPools = ref<Record<string, SpellCatalogItem[]>>({});
+
   function choiceOptions(choice: ClassChoice): string[] {
+    if (choice.kind === 'spell') {
+      return (spellPools.value[choice.id] ?? []).map((spell) => spell.name);
+    }
+
     return resolveChoiceOptions(choice, {
       skillNames: skillNames.value,
-      proficientSkillNames: [],
-      chosenProficientSkills: [],
+      proficientSkillNames: proficientSkillNames.value,
+      // Навыки самой предыстории тоже считаются владением: они лягут на лист
+      // вместе с чертой, и компетентность в них выбрать можно.
+      chosenProficientSkills: backgroundDetail.value?.skills ?? [],
       knownLanguages: character.value.proficiencies.languages,
       knownTools: getToolNames(character.value.proficiencies.tools),
       allLanguages: allLanguages.value,
@@ -304,6 +387,93 @@
       ...selections.value,
       [choice.id]: values.slice(0, choiceCount(choice)),
     };
+  }
+
+  /**
+   * Классы, из списков которых идёт выбор. Предыстория может назвать класс сама
+   * («Мудрец» даёт «Посвящённого в магию» со списком волшебника) — тогда пул
+   * сужается до него, потому что по правилам список один, а не объединение.
+   *
+   * @param choice выбор заклинания.
+   * @returns url классов для фильтра поиска.
+   */
+  function getChoiceClassUrls(choice: ClassChoice): string[] {
+    const urls = (choice.spellFilter?.classes ?? []).map(
+      (characterClass) => characterClass.url,
+    );
+
+    // Класс, названный предысторией, сужает пул: по правилам список один, а не
+    // объединение перечисленных в черте. Если черта его не перечисляет, класс
+    // предыстории всё равно задаёт пул — она и определяет, чей это список.
+    const named = featClassUrl.value;
+
+    if (named && (!urls.length || urls.includes(named))) {
+      return [named];
+    }
+
+    return urls;
+  }
+
+  /** Загружает пулы заклинаний для всех выборов черты разом. */
+  async function loadSpellPools(): Promise<void> {
+    const spellChoices = featChoices.value.flatMap((choice) =>
+      choice.kind === 'spell' && choice.spellFilter
+        ? [{ choice, filter: choice.spellFilter }]
+        : [],
+    );
+
+    const pools = await Promise.all(
+      spellChoices.map(async ({ choice, filter }) => ({
+        id: choice.id,
+        spells: await fetchChoiceSpells(filter, getChoiceClassUrls(choice)),
+      })),
+    );
+
+    spellPools.value = Object.fromEntries(
+      pools.map((pool) => [pool.id, pool.spells]),
+    );
+  }
+
+  /**
+   * Заклинания, выбранные игроком: пул хранит записи справочника, а пикер —
+   * названия, поэтому выбранное сверяется по названию.
+   *
+   * @returns выбранные заклинания записями листа.
+   */
+  function collectChosenSpells(): CharacterSpell[] {
+    return featChoices.value.flatMap((choice) => {
+      const chosen = new Set(selections.value[choice.id] ?? []);
+
+      return (
+        (spellPools.value[choice.id] ?? [])
+          .filter((spell) => chosen.has(spell.name))
+          // Заклинание черты подготовлено сразу и места среди подготовленных не
+          // занимает — как врождённое заклинание вида.
+          .map((spell) => ({ ...spell, prepared: true }))
+      );
+    });
+  }
+
+  /**
+   * Ответы игрока на выборы черты по ключу выбора: id пикера — это
+   * `feat:<url>:<ключ>`, а в записи ответы лежат под самим ключом, потому что у
+   * повторяемой черты id записи получает ещё и уникальный суффикс.
+   *
+   * @returns ответы по ключу выбора.
+   */
+  function collectFeatChoiceAnswers(): Record<string, string[]> {
+    const answers: Record<string, string[]> = {};
+
+    for (const choice of featChoices.value) {
+      const values = selections.value[choice.id] ?? [];
+      const key = choice.id.split(':').at(-1) ?? '';
+
+      if (key && values.length) {
+        answers[key] = values;
+      }
+    }
+
+    return answers;
   }
 
   function showLoadError() {
@@ -358,6 +528,13 @@
         return;
       }
 
+      featSummary.value = backgroundDetail.value.featUrl
+        ? await fetchFeatDetail(backgroundDetail.value.featUrl)
+        : null;
+
+      // Пул заклинаний зависит от загруженной черты, поэтому грузится следом.
+      await loadSpellPools();
+
       selections.value = {};
       abilityMode.value = '2-1';
       plusTwoAbility.value = undefined;
@@ -403,22 +580,27 @@
 
       let featFeature: CharacterFeature | null = null;
 
-      if (detail.featUrl) {
-        const summary = await fetchFeatDetail(detail.featUrl);
+      // Деталь черты уже загружена на переходе к обзору: там же игрок ответил
+      // на её выборы, и повторный запрос вернул бы то же самое.
+      const summary = featSummary.value;
 
-        if (summary) {
-          // Черта происхождения даётся на первом уровне (правило 2024) — от
-          // него и считается прибавка «Крепкого» к максимуму хитов.
-          const feature = buildFeatFeature(
-            summary,
-            false,
-            ORIGIN_FEAT_ACQUISITION_LEVEL,
-          );
+      if (summary) {
+        // Черта происхождения даётся на первом уровне (правило 2024) — от него и
+        // считается прибавка «Крепкого» к максимуму хитов.
+        const feature = buildFeatFeature(summary, {
+          level: ORIGIN_FEAT_ACQUISITION_LEVEL,
+          // Компетентность применяется сразу — она ложится в снимок владений;
+          // остальные ответы лист хранит в записи черты и применит позже.
+          expertiseSkills: featChoices.value
+            .filter((choice) => choice.kind === 'skill-expertise')
+            .flatMap((choice) => selections.value[choice.id] ?? []),
+          choiceAnswers: collectFeatChoiceAnswers(),
+          spells: collectChosenSpells(),
+        });
 
-          featFeature = detail.featSubchoice
-            ? { ...feature, choice: detail.featSubchoice }
-            : feature;
-        }
+        featFeature = detail.featSubchoice
+          ? { ...feature, choice: detail.featSubchoice }
+          : feature;
       }
 
       setBackground({
@@ -506,6 +688,15 @@
                   class="grow truncate text-sm font-medium text-highlighted"
                 >
                   {{ row.name }}
+                </span>
+
+                <!-- Черта — то, чем предыстории отличаются друг от друга, и
+                  видеть её нужно до выбора, а не на следующем шаге -->
+                <span
+                  v-if="row.featName"
+                  class="hidden shrink-0 truncate text-xs text-muted sm:block"
+                >
+                  {{ row.featName }}
                 </span>
               </button>
 
@@ -602,7 +793,7 @@
               :model-value="selections['background-tool'] ?? []"
               :items="choiceOptions(backgroundDetail.toolChoice)"
               :count="choiceCount(backgroundDetail.toolChoice)"
-              :placeholder="`Выберите ${choiceCount(backgroundDetail.toolChoice)}`"
+              :placeholder="`${CHOICE_SELECT_PLACEHOLDER} ${choiceCount(backgroundDetail.toolChoice)}`"
               @update:model-value="
                 updateSelection(backgroundDetail.toolChoice, $event)
               "
@@ -720,6 +911,24 @@
                   "
                 />
               </UTooltip>
+            </div>
+
+            <!-- Черта может о чём-то спрашивать: ответить нужно здесь, на лист
+              она попадёт вместе с предысторией -->
+            <div
+              v-for="choice in featChoices"
+              :key="choice.id"
+              class="flex flex-col gap-1"
+            >
+              <span class="text-sm text-toned">{{ choice.label }}</span>
+
+              <SheetChoiceSelect
+                :model-value="selections[choice.id] ?? []"
+                :items="choiceOptions(choice)"
+                :count="choiceCount(choice)"
+                :placeholder="`${CHOICE_SELECT_PLACEHOLDER} ${choiceCount(choice)}`"
+                @update:model-value="updateSelection(choice, $event)"
+              />
             </div>
           </div>
 

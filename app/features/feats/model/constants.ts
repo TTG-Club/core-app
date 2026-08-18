@@ -2,6 +2,8 @@ import type { SelectOption } from '~/shared/types';
 
 import type { FeatChoice, FeatChoiceType } from './mechanics';
 
+import { AbilityKey } from '~/shared/types';
+
 /** Классовые умения, которых может требовать черта. */
 export const CLASS_FEATURE_REQUIREMENT_OPTIONS: Array<SelectOption> = [
   { label: 'Использование заклинаний', value: 'SPELLCASTING' },
@@ -386,4 +388,33 @@ export const FEAT_CHOICE_FIELD_LABELS = {
   castingTime: 'Время накладывания',
   spellClasses: 'Списки классов',
   spellClassesFromChoice: 'Список из выбора',
+  abilityOptions: 'Из каких характеристик',
 } as const;
+
+/**
+ * Характеристики словаря. Нужны выбору характеристики: допустимые значения в
+ * механике лежат кодами, а селект принимает только известные ключи — чужое
+ * значение из JSONB до него доходить не должно.
+ */
+export const FEAT_ABILITY_KEYS: Array<AbilityKey> = Object.values(AbilityKey);
+
+/**
+ * Типы выборов, у которых допустимые значения задаются характеристиками:
+ * «Посвящённый в магию» разрешает Интеллект, Мудрость или Харизму, а не любую.
+ */
+export const ABILITY_OPTION_CHOICE_TYPES: Array<FeatChoiceType> = [
+  'ABILITY',
+  'SPELLCASTING_ABILITY',
+];
+
+/**
+ * Задаются ли допустимые значения выбора характеристиками.
+ *
+ * @param type тип выбора; у незаполненного выбора ответ отрицательный.
+ * @returns признак выбора из характеристик.
+ */
+export function isAbilityOptionChoiceType(
+  type: FeatChoiceType | undefined,
+): boolean {
+  return !!type && ABILITY_OPTION_CHOICE_TYPES.includes(type);
+}

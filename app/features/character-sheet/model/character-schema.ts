@@ -178,6 +178,8 @@ const grantedProficienciesSchema = z.object({
   languages: z.array(z.string()).catch([]),
   // Навыки появились в выдаче позже прочего: у записей без поля их просто нет.
   skills: z.array(z.string()).catch([]),
+  // Компетентность — ещё позже, вместе с выбором игрока при взятии черты.
+  expertiseSkills: z.array(z.string()).catch([]),
 });
 
 /**
@@ -298,6 +300,12 @@ const featureSchema = z.object({
   // Подготовку игрок снимает и возвращает прямо здесь, поэтому список хранится
   // в самой записи, а не пересобирается из справочника.
   spells: z.array(spellSchema).nullable().optional().catch(undefined),
+  // Ответы игрока на выборы черты по ключу выбора; у записей до их появления
+  // поля нет.
+  choiceAnswers: z
+    .record(z.string(), z.array(z.string()).catch([]))
+    .optional()
+    .catch(undefined),
 });
 
 const speciesSchema = z

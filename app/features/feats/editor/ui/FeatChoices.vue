@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { SelectOption } from '~/shared/types';
+  import type { AbilityKey, SelectOption } from '~/shared/types';
 
   import type {
     FeatChoice,
@@ -9,11 +9,17 @@
   } from '../../model';
 
   import { InputWithLibrary } from '~ui/input';
-  import { SelectClass, SelectMagicSchool, SelectSpellLevel } from '~ui/select';
+  import {
+    SelectAbilities,
+    SelectClass,
+    SelectMagicSchool,
+    SelectSpellLevel,
+  } from '~ui/select';
 
   import {
     createFeatChoice,
     createSpellFilter,
+    FEAT_ABILITY_KEYS,
     FEAT_CASTING_TIME_OPTIONS,
     FEAT_CHOICE_DEFAULT_TYPE_BY_DOMAIN,
     FEAT_CHOICE_FIELD_LABELS,
@@ -25,6 +31,7 @@
     getFeatChoiceLinkOptions,
     getFeatChoiceTypeOptions,
     getFreeFeatChoiceKey,
+    isAbilityOptionChoiceType,
     isExpertiseChoiceType,
     isProficiencyChoiceType,
     isSpellChoiceType,
@@ -102,6 +109,36 @@
 
     patchChoice(index, {
       spellFilter: { ...filter, classes: toEntityRefs(toUrlList(urls)) },
+    });
+  }
+
+  /**
+   * Допустимые характеристики выбора: механика хранит их кодами словаря, а
+   * незнакомый код до селекта доходить не должен.
+   *
+   * @param choice выбор черты.
+   * @returns известные ключи характеристик.
+   */
+  function getAbilityOptions(choice: FeatChoice): Array<AbilityKey> {
+    return FEAT_ABILITY_KEYS.filter((key) =>
+      choice.options.some((option) => option.value === key),
+    );
+  }
+
+  /**
+   * Записывает допустимые характеристики выбора.
+   *
+   * @param index номер выбора в списке.
+   * @param keys выбранные характеристики.
+   */
+  function setAbilityOptions(
+    index: number,
+    keys: AbilityKey | Array<AbilityKey> | undefined,
+  ) {
+    const values = Array.isArray(keys) ? keys : toUrlList(keys);
+
+    patchChoice(index, {
+      options: values.map((value) => ({ value })),
     });
   }
 
@@ -409,6 +446,20 @@
           <UCheckbox v-model="choice.expertiseIfProficient" />
         </UFormField>
       </template>
+
+      <!-- «Посвящённый в магию» разрешает Интеллект, Мудрость или Харизму, а не
+        любую характеристику: пул задаётся здесь -->
+      <UFormField
+        v-if="isAbilityOptionChoiceType(choice.type)"
+        class="col-span-full md:col-span-8"
+        :label="FEAT_CHOICE_FIELD_LABELS.abilityOptions"
+      >
+        <SelectAbilities
+          :model-value="getAbilityOptions(choice)"
+          multiple
+          @update:model-value="setAbilityOptions(index, $event)"
+        />
+      </UFormField>
 
       <UFormField
         class="col-span-12 md:col-span-5"

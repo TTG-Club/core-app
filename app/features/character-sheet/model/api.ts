@@ -4,12 +4,14 @@ import type {
   CharacterInventoryItem,
   CharacterSheetDetail,
   CharacterSheetListPage,
+  FeatSpellChoiceFilter,
   FeatSummary,
   FeatureDescriptionNode,
   ItemSummary,
   MagicItemSummary,
   SavedCharacterSheet,
   SavedCharacterSheetListPage,
+  SpellCatalogItem,
   StartingEquipmentOption,
 } from './types';
 
@@ -26,6 +28,7 @@ import {
   CHARACTER_SHEET_API_PATH,
   CHARACTER_SHEET_SAVED_API_PATH,
   CHARACTER_SHEET_SHARED_API_PATH,
+  CHOICE_SPELL_POOL_SIZE,
   FEATS_DETAIL_BASE_PATH,
   ITEMS_DETAIL_BASE_PATH,
   MAGIC_ITEMS_DETAIL_BASE_PATH,
@@ -33,6 +36,7 @@ import {
   SHEET_UNKNOWN_ERROR_MESSAGE,
   SPELLS_DETAIL_BASE_PATH,
   SPELLS_RAW_DETAIL_PATH_SUFFIX,
+  SPELLS_SEARCH_PATH,
 } from './constants';
 import {
   parseCatalogDescription,
@@ -42,6 +46,7 @@ import {
   parseItemDetail,
   parseItemWeapon,
   parseMagicItemRaw,
+  parseSpellCatalog,
   parseSpellDamageFormulas,
 } from './schemas';
 import {
@@ -491,4 +496,71 @@ export async function deleteSavedCharacterSheet(
     method: 'DELETE',
     retry: 0,
   });
+}
+
+/**
+ * Пул заклинаний выбора черты.
+ *
+ * Список собирается поиском по каталогу, а не хранится в самой черте:
+ * заклинаний слишком много, и перечень устарел бы при первом же пополнении
+ * справочника. Фильтр поиска повторяет ссылку из описания черты
+ * (`/spells?className=wizard-phb&level=0`), поэтому пул совпадает с тем, что
+ * игрок увидел бы в разделе «Заклинания».
+ *
+ * @param filter ограничения пула из механики черты.
+ * @param classUrls классы, из списков которых идёт выбор; пусто — без сужения.
+ * @returns заклинания пула; пустой список — ответ не разобрался или пуст.
+ */
+export async function fetchChoiceSpells(
+  filter: FeatSpellChoiceFilter,
+  classUrls: string[],
+): Promise<SpellCatalogItem[]> {
+  const query: Record<string, unknown> = {
+    page: 0,
+    size: CHOICE_SPELL_POOL_SIZE,
+  };
+
+  if (classUrls.length) {
+    query.className = classUrls.join(',');
+  }
+
+  const levels = getChoiceSpellLevels(filter);
+
+  if (levels.length) {
+    query.level = levels.join(',');
+  }
+
+  try {
+    const response = await $fetch<unknown>(SPELLS_SEARCH_PATH, {
+      method: 'GET',
+      query,
+      retry: 0,
+    });
+
+    return parseSpellCatalog(response);
+  } catch (error) {
+    consola.error('Ошибка загрузки пула заклинаний черты:', error);
+
+    return [];
+  }
+}
+
+/**
+ * Круги, которые уходят в фильтр поиска: точный круг задаётся одним значением,
+ * «не выше круга» — перечислением от заговора до него, потому что фильтр
+ * каталога знает только точные круги.
+ *
+ * @param filter ограничения пула из механики черты.
+ * @returns круги для параметра `level`; пусто — круг не ограничен.
+ */
+function getChoiceSpellLevels(filter: FeatSpellChoiceFilter): number[] {
+  if (filter.level !== null) {
+    return [filter.level];
+  }
+
+  if (filter.maxLevel === null) {
+    return [];
+  }
+
+  return Array.from({ length: filter.maxLevel + 1 }, (_, level) => level);
 }
