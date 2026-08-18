@@ -411,6 +411,30 @@ modals), so its capabilities are listed here rather than squeezed into the table
   armour's own value so the «best armour wins» comparison stays honest, and an
   item that requires attunement contributes nothing until it is attuned. Sheets
   saved before the fields existed read them as `0`.
+- Everything else a magic item does to the sheet comes from the workshop's
+  «Активные эффекты (VTTG)» block (`mechanics.activeEffects`). `model/effects.ts`
+  translates each numeric change into an `InventoryItemBonus` when the item is
+  added, so the sheet keeps working offline off its own snapshot: `ability.*`,
+  `save.*`, `skill.*` (the VTTG camelCase id is mapped through
+  `SKILL_NAME_BY_API_KEY`), `movement.*`, `armorClass`, `initiative`,
+  `spellSaveDC` and `attack.spell` reach their targets; changes with a condition,
+  formula values (`@…`), the `multiply` / `custom` modes, flags, auras, damage
+  parts and keys the sheet has no target for are dropped, as are disabled effects
+  and effects aimed at someone else. The `transfer` flag is not read — the
+  sheet's own gate (equipped, and attuned where the item asks for it) plays that
+  role. A bonus therefore carries a `mode` (`add` / `override` / `upgrade` /
+  `downgrade`) and a `priority`, and every total is folded rather than summed
+  (`getInventoryBonusTotal(character, targets, base)`): the sheet computes the
+  base itself (`getBaseAbilityScore`, `getBaseSavingThrowValue`,
+  `getBaseSkillValue`) and equipment takes it from there, so a headband of
+  intellect raises Intelligence to 19 while a written 20 stays untouched. The
+  breakdown rows come out of the same fold, so each item is credited with what it
+  actually changed. AC is the exception in shape only: `add` rows keep flowing
+  through the «best armour wins» comparison, and the value-setting modes are
+  applied to the finished number (`getArmorClassWithItemLimits`). Bonuses saved
+  before the modes existed read as plain `add`, and an item already sitting on a
+  sheet keeps its old snapshot — effects added in the workshop later need the
+  item re-added.
 - The «Добавить заклинание» catalog opens preset to what the character can
   actually learn: the class chip is picked by the class slug (the same id the
   `className` filter group uses) and the level chips cover every circle the

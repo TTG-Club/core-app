@@ -802,8 +802,8 @@
 
                 <UInputNumber
                   v-model="bonus.value"
-                  :min="getInventoryBonusMin(bonus.kind)"
-                  :max="getInventoryBonusMax(bonus.kind)"
+                  :min="getInventoryBonusMin(bonus)"
+                  :max="getInventoryBonusMax(bonus)"
                   :disabled="!draftMagic"
                   class="w-32 shrink-0"
                 />

@@ -323,10 +323,23 @@ export async function fetchMagicItemSummary(
       { method: 'GET', retry: 0 },
     );
 
-    const { rarity, baseItemUrls, bonuses, requiresAttunement, maxCharges } =
-      parseMagicItemRaw(response);
+    const {
+      rarity,
+      baseItemUrls,
+      bonuses,
+      requiresAttunement,
+      maxCharges,
+      activeEffects,
+    } = parseMagicItemRaw(response);
 
-    const summary = { rarity, bonuses, requiresAttunement, maxCharges };
+    const summary = {
+      rarity,
+      bonuses,
+      requiresAttunement,
+      maxCharges,
+      activeEffects,
+    };
+
     const [baseItemUrl] = baseItemUrls;
 
     if (baseItemUrls.length !== 1 || !baseItemUrl) {

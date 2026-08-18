@@ -21,6 +21,7 @@ import type {
   FeatureOrigin,
   FeatureOriginGroup,
   HitPointsGainMode,
+  InventoryBonusMode,
   InventoryItemBonus,
   InventoryItemCategory,
   InventoryMagicState,
@@ -3500,6 +3501,19 @@ export const INVENTORY_BONUS_TARGET_LABELS: Record<
   'initiative': 'Инициатива',
 };
 
+/**
+ * Подписи режимов бонуса для сводки предмета: прибавку показывает знак числа, а
+ * остальным режимам нужно слово — иначе «Интеллект 19» читалось бы как «+19».
+ */
+export const INVENTORY_BONUS_MODE_LABELS: Record<
+  Exclude<InventoryBonusMode, 'add'>,
+  string
+> = {
+  override: '=',
+  upgrade: 'не ниже',
+  downgrade: 'не выше',
+};
+
 /** Заголовки групп в селекторе цели бонуса. */
 export const INVENTORY_BONUS_GROUP_LABELS = {
   abilities: 'Характеристики',
@@ -3539,6 +3553,15 @@ export const ITEM_SPEED_BONUS_MIN = -60;
 
 /** Максимальная прибавка предмета к скорости. */
 export const ITEM_SPEED_BONUS_MAX = 120;
+
+/**
+ * Границы величины бонуса в режимах, доводящих значение до заданного: там она —
+ * само значение листа (характеристика, класс доспеха, скорость), а не прибавка.
+ */
+export const ITEM_BONUS_VALUE_MIN = 0;
+
+/** Верхняя граница величины бонуса в тех же режимах. */
+export const ITEM_BONUS_VALUE_MAX = 999;
 
 /** Минимум зарядов предмета (0 — зарядов у него нет). */
 export const INVENTORY_CHARGES_MIN = 0;

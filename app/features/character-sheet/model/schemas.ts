@@ -36,6 +36,7 @@ import type {
 import { clamp, uniq } from 'es-toolkit';
 
 import { z } from '~/utils/zod';
+import { normalizeLoadedActiveEffects } from '~active-effects/model';
 import { CasterType } from '~classes/model';
 import {
   EMPTY_MAGIC_ITEM_BONUSES,
@@ -805,6 +806,8 @@ const magicItemRawSchema = z
           .object({ maxCharges: z.coerce.number().nullable().catch(null) })
           .nullable()
           .catch(null),
+        // Активные эффекты разбирает своя схема раздела — здесь они `unknown`.
+        activeEffects: z.unknown(),
       })
       .nullable()
       .catch(null),
@@ -838,6 +841,9 @@ export function parseMagicItemRaw(input: unknown): MagicItemRawDetail {
     bonuses: parsed.bonuses ?? EMPTY_MAGIC_ITEM_BONUSES,
     requiresAttunement: parsed.attunement?.requires ?? false,
     maxCharges: Math.max(0, Math.trunc(maxCharges)),
+    activeEffects: normalizeLoadedActiveEffects(
+      parsed.mechanics?.activeEffects,
+    ),
   };
 }
 

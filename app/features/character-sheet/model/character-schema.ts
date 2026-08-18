@@ -823,6 +823,13 @@ const inventoryBonusSchema = z
     ]),
     key: z.string().catch(''),
     value: z.coerce.number().catch(0),
+    // Режим и порядок появились вместе с эффектами магических предметов: у
+    // прежних записей и у своей формы листа их нет — это обычные прибавки.
+    mode: z
+      .enum(['add', 'override', 'upgrade', 'downgrade'])
+      .optional()
+      .catch(undefined),
+    priority: z.coerce.number().optional().catch(undefined),
   })
   .nullable()
   .catch(null);
