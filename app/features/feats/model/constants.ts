@@ -360,3 +360,30 @@ export function withFeatChoiceType(
 
   return legacy ? [...options, legacy] : options;
 }
+
+/**
+ * Подписи полей выбора. Вынесены из шаблона: одна и та же подпись встречается в
+ * разных разделах формы, а сверять её по нескольким местам нельзя.
+ */
+export const FEAT_CHOICE_FIELD_LABELS = {
+  key: 'Ключ',
+  keyPlaceholder: 'damage-type',
+  duplicateKeyError: 'Такой ключ в черте уже есть',
+  type: 'Что выбирают',
+  label: 'Подпись для игрока',
+  labelPlaceholder: 'Выберите тип урона',
+  count: 'Сколько выбрать',
+  countEqualsProficiencyBonus: 'Количество = бонус мастерства',
+  onlyIfNotProficient: 'Только без владения',
+  onlyIfProficient: 'Только с владением',
+  grants: 'Что даёт выбор',
+  expertiseIfProficient: 'Владеет — компетентность',
+  rechooseOnLongRest: 'Меняется на отдыхе',
+  spellFilter: 'Ограничить заклинания',
+  spellLevel: 'Уровень',
+  spellMaxLevel: 'Не выше уровня',
+  spellSchools: 'Школы',
+  castingTime: 'Время накладывания',
+  spellClasses: 'Списки классов',
+  spellClassesFromChoice: 'Список из выбора',
+} as const;

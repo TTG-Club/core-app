@@ -16,6 +16,7 @@
     createSpellFilter,
     FEAT_CASTING_TIME_OPTIONS,
     FEAT_CHOICE_DEFAULT_TYPE_BY_DOMAIN,
+    FEAT_CHOICE_FIELD_LABELS,
     FEAT_CHOICE_GRANT_OPTIONS,
     FEAT_CHOICE_KEY_BY_TYPE,
     FEAT_CHOICE_KEY_SUGGESTIONS,
@@ -133,6 +134,33 @@
 
     return duplicates;
   });
+
+  /**
+   * Ошибка поля ключа: два выбора с одним ключом схлопнулись бы в один, и ответ
+   * игрока на второй потерялся бы.
+   *
+   * @param choice выбор черты.
+   * @returns текст ошибки; undefined — ключ свободен.
+   */
+  function getKeyError(choice: FeatChoice): string | undefined {
+    return duplicateKeys.value.has(choice.key.trim())
+      ? FEAT_CHOICE_FIELD_LABELS.duplicateKeyError
+      : undefined;
+  }
+
+  /**
+   * Варианты ссылки на выбор списка заклинаний вместе с уже записанным: выбор,
+   * на который ссылались, могли удалить, и потерять ссылку молча нельзя.
+   *
+   * @param filter фильтр заклинаний выбора.
+   * @returns варианты списка.
+   */
+  function getSpellListOptions(filter: FeatSpellFilter): Array<SelectOption> {
+    return withFeatChoiceLink(
+      spellListOptions.value,
+      filter.classesFromChoiceKey,
+    );
+  }
 
   /**
    * Новый выбор сразу получает тип своего раздела: без типа он не попал бы ни в
@@ -277,23 +305,19 @@
       <UFormField
         v-if="withKey"
         class="col-span-full md:col-span-6"
-        label="Ключ"
-        :error="
-          duplicateKeys.has(choice.key.trim())
-            ? 'Такой ключ в черте уже есть'
-            : undefined
-        "
+        :label="FEAT_CHOICE_FIELD_LABELS.key"
+        :error="getKeyError(choice)"
       >
         <InputWithLibrary
           v-model="choice.key"
           :options="FEAT_CHOICE_KEY_SUGGESTIONS"
-          placeholder="damage-type"
+          :placeholder="FEAT_CHOICE_FIELD_LABELS.keyPlaceholder"
         />
       </UFormField>
 
       <UFormField
         class="col-span-full md:col-span-8"
-        label="Что выбирают"
+        :label="FEAT_CHOICE_FIELD_LABELS.type"
       >
         <USelectMenu
           :items="withFeatChoiceType(typeOptions, choice.type)"
@@ -305,11 +329,11 @@
 
       <UFormField
         class="col-span-full md:col-span-9"
-        label="Подпись для игрока"
+        :label="FEAT_CHOICE_FIELD_LABELS.label"
       >
         <UInput
           v-model="choice.label"
-          placeholder="Выберите тип урона"
+          :placeholder="FEAT_CHOICE_FIELD_LABELS.labelPlaceholder"
         />
       </UFormField>
 
@@ -325,7 +349,7 @@
 
       <UFormField
         class="col-span-12 md:col-span-4"
-        label="Сколько выбрать"
+        :label="FEAT_CHOICE_FIELD_LABELS.count"
       >
         <UInputNumber
           v-model="choice.count"
@@ -335,7 +359,7 @@
 
       <UFormField
         class="col-span-12 md:col-span-6"
-        label="Количество = бонус мастерства"
+        :label="FEAT_CHOICE_FIELD_LABELS.countEqualsProficiencyBonus"
       >
         <UCheckbox v-model="choice.countEqualsProficiencyBonus" />
       </UFormField>
@@ -345,7 +369,7 @@
       <template v-if="isProficiencyChoiceType(choice.type)">
         <UFormField
           class="col-span-12 md:col-span-4"
-          label="Только без владения"
+          :label="FEAT_CHOICE_FIELD_LABELS.onlyIfNotProficient"
         >
           <UCheckbox
             :model-value="choice.onlyIfNotProficient"
@@ -355,7 +379,7 @@
 
         <UFormField
           class="col-span-12 md:col-span-4"
-          label="Только с владением"
+          :label="FEAT_CHOICE_FIELD_LABELS.onlyIfProficient"
         >
           <UCheckbox
             :model-value="choice.onlyIfProficient"
@@ -369,7 +393,7 @@
       <template v-if="isExpertiseChoiceType(choice.type)">
         <UFormField
           class="col-span-12 md:col-span-6"
-          label="Что даёт выбор"
+          :label="FEAT_CHOICE_FIELD_LABELS.grants"
         >
           <USelectMenu
             v-model="choice.grants"
@@ -380,7 +404,7 @@
 
         <UFormField
           class="col-span-12 md:col-span-5"
-          label="Владеет — компетентность"
+          :label="FEAT_CHOICE_FIELD_LABELS.expertiseIfProficient"
         >
           <UCheckbox v-model="choice.expertiseIfProficient" />
         </UFormField>
@@ -388,7 +412,7 @@
 
       <UFormField
         class="col-span-12 md:col-span-5"
-        label="Меняется на отдыхе"
+        :label="FEAT_CHOICE_FIELD_LABELS.rechooseOnLongRest"
       >
         <UCheckbox v-model="choice.rechooseOnLongRest" />
       </UFormField>
@@ -396,7 +420,7 @@
       <template v-if="isSpellChoiceType(choice.type)">
         <UFormField
           class="col-span-full md:col-span-6"
-          label="Ограничить заклинания"
+          :label="FEAT_CHOICE_FIELD_LABELS.spellFilter"
         >
           <UCheckbox
             :model-value="!!choice.spellFilter"
@@ -407,21 +431,21 @@
         <template v-if="choice.spellFilter">
           <UFormField
             class="col-span-12 md:col-span-5"
-            label="Уровень"
+            :label="FEAT_CHOICE_FIELD_LABELS.spellLevel"
           >
             <SelectSpellLevel v-model="choice.spellFilter.level" />
           </UFormField>
 
           <UFormField
             class="col-span-12 md:col-span-5"
-            label="Не выше уровня"
+            :label="FEAT_CHOICE_FIELD_LABELS.spellMaxLevel"
           >
             <SelectSpellLevel v-model="choice.spellFilter.maxLevel" />
           </UFormField>
 
           <UFormField
             class="col-span-full md:col-span-4"
-            label="Школы"
+            :label="FEAT_CHOICE_FIELD_LABELS.spellSchools"
           >
             <SelectMagicSchool
               v-model="choice.spellFilter.schools"
@@ -431,7 +455,7 @@
 
           <UFormField
             class="col-span-full md:col-span-4"
-            label="Время накладывания"
+            :label="FEAT_CHOICE_FIELD_LABELS.castingTime"
           >
             <USelectMenu
               v-model="choice.spellFilter.castingTime"
@@ -442,7 +466,7 @@
 
           <UFormField
             class="col-span-full md:col-span-8"
-            label="Списки классов"
+            :label="FEAT_CHOICE_FIELD_LABELS.spellClasses"
           >
             <SelectClass
               :model-value="getFilterClassUrls(choice.spellFilter)"
@@ -455,16 +479,11 @@
             и пул сужается до одного выбранного списка -->
           <UFormField
             class="col-span-full md:col-span-8"
-            label="Список из выбора"
+            :label="FEAT_CHOICE_FIELD_LABELS.spellClassesFromChoice"
           >
             <USelectMenu
               v-model="choice.spellFilter.classesFromChoiceKey"
-              :items="
-                withFeatChoiceLink(
-                  spellListOptions,
-                  choice.spellFilter.classesFromChoiceKey,
-                )
-              "
+              :items="getSpellListOptions(choice.spellFilter)"
               value-key="value"
             />
           </UFormField>

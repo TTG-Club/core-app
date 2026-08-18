@@ -2355,21 +2355,27 @@ export function useCharacterSheet() {
   ): Character {
     const species = character.value.species;
 
-    if (kind === 'species' && species) {
+    if (kind === 'feature') {
       return {
         ...character.value,
-        species: {
-          ...species,
-          innateSpells: species.innateSpells.filter(
-            (innateSpell) => innateSpell.spell.url !== spellUrl,
-          ),
-        },
+        features: removeFeatureSpell(character.value.features, spellUrl),
       };
+    }
+
+    // Вид сменили, пока шёл запрос: убирать запись уже не из чего, и переписывать
+    // лист нельзя — автосохранение сработало бы на подмену, которой не было.
+    if (!species) {
+      return character.value;
     }
 
     return {
       ...character.value,
-      features: removeFeatureSpell(character.value.features, spellUrl),
+      species: {
+        ...species,
+        innateSpells: species.innateSpells.filter(
+          (innateSpell) => innateSpell.spell.url !== spellUrl,
+        ),
+      },
     };
   }
 

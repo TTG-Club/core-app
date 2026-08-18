@@ -4956,9 +4956,7 @@ export function getAvailableInnateSpells(
  * @param features особенности персонажа.
  * @returns заклинания всех записей подряд.
  */
-export function getFeatureSpells(
-  features: CharacterFeature[],
-): CharacterSpell[] {
+function getFeatureSpells(features: CharacterFeature[]): CharacterSpell[] {
   return features.flatMap((feature) => feature.spells ?? []);
 }
 
