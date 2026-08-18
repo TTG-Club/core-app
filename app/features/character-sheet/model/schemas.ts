@@ -6,6 +6,7 @@ import type {
   BackgroundSummary,
   CatalogSpellDetail,
   CharacterInnateSpell,
+  CharacterSpell,
   CharacterToolProficiency,
   ClassChoice,
   ClassFeatureSummary,
@@ -98,15 +99,41 @@ const speciesFeatureSchema = z.object({
   description: descriptionNodesSchema,
 });
 
+/**
+ * Заклинание справочника там, где оно приходит вложенным в другой ответ:
+ * врождённым заклинанием вида, выдаваемым заклинанием черты. Круг и школу лист
+ * берёт только отсюда — без круга заклинание некуда положить.
+ */
+const catalogSpellSchema = z.object({
+  url: z.string(),
+  name: z.object({ rus: z.string().catch('') }),
+  level: z.coerce.number().catch(0),
+  school: z.string().catch(''),
+  concentration: z.boolean().catch(false),
+  ritual: z.boolean().catch(false),
+});
+
+/**
+ * Заклинание справочника к записи листа.
+ *
+ * @param spell разобранное заклинание справочника.
+ * @returns заклинание в форме листа.
+ */
+function toCharacterSpell(
+  spell: z.infer<typeof catalogSpellSchema>,
+): CharacterSpell {
+  return {
+    url: spell.url,
+    name: spell.name.rus,
+    level: spell.level,
+    school: spell.school,
+    concentration: spell.concentration,
+    ritual: spell.ritual,
+  };
+}
+
 const speciesInnateSpellSchema = z.object({
-  spell: z.object({
-    url: z.string(),
-    name: z.object({ rus: z.string().catch('') }),
-    level: z.coerce.number().catch(0),
-    school: z.string().catch(''),
-    concentration: z.boolean().catch(false),
-    ritual: z.boolean().catch(false),
-  }),
+  spell: catalogSpellSchema,
   requiredLevel: z.coerce.number().min(1).max(20).catch(1),
 });
 
@@ -145,14 +172,7 @@ function toSpeciesSummary(
 
   const innateSpells: CharacterInnateSpell[] = detail.innateSpells.map(
     (innateSpell) => ({
-      spell: {
-        url: innateSpell.spell.url,
-        name: innateSpell.spell.name.rus,
-        level: innateSpell.spell.level,
-        school: innateSpell.spell.school,
-        concentration: innateSpell.spell.concentration,
-        ritual: innateSpell.spell.ritual,
-      },
+      spell: toCharacterSpell(innateSpell.spell),
       requiredLevel: innateSpell.requiredLevel,
     }),
   );
@@ -380,9 +400,17 @@ const featDetailSchema = z.object({
         })
         .nullable()
         .catch(null),
+      // Сами заклинания лист берёт из `grantedSpells`: там они дополнены кругом
+      // и школой, а в механике лежат одними ссылками. Здесь нужна только
+      // подготовка — держит ли черта заклинание готовым.
+      spells: z
+        .object({ alwaysPrepared: z.boolean().catch(false) })
+        .nullable()
+        .catch(null),
     })
     .nullable()
     .catch(null),
+  grantedSpells: z.array(catalogSpellSchema).nullable().catch(null),
 });
 
 /** Ответ справочника с владениями черты, как его разбирает схема детали. */
@@ -464,6 +492,12 @@ export function parseFeatDetail(input: unknown): FeatSummary | null {
   }
 
   const proficiencies = result.data.mechanics?.proficiencies;
+  const granted = result.data.grantedSpells ?? [];
+
+  // Черта либо держит заклинание подготовленным («вы всегда можете накладывать
+  // его»), либо оставляет подготовку игроку: тогда квадрат подготовки гаснет, и
+  // игрок ставит пометку сам, как у врождённого заклинания вида.
+  const prepared = result.data.mechanics?.spells?.alwaysPrepared ?? false;
 
   return {
     url: result.data.url,
@@ -472,6 +506,9 @@ export function parseFeatDetail(input: unknown): FeatSummary | null {
     description: result.data.description,
     modifiers: result.data.mechanics?.modifiers ?? null,
     proficiencies: proficiencies ? toGrantedProficiencies(proficiencies) : null,
+    spells: granted.length
+      ? granted.map((spell) => ({ ...toCharacterSpell(spell), prepared }))
+      : null,
   };
 }
 
@@ -688,15 +725,16 @@ export function parseItemDetail(input: unknown): ItemSummary | null {
   };
 }
 
+/** Правило Ловкости в «сыром» ответе доспеха. */
+type ArmorRawDexterityMod = 'PLUS' | 'PLUS_MAX_2' | 'NONE';
+
 /** Правила Ловкости из «сырого» ответа доспеха к внутреннему представлению. */
-const ARMOR_DEXTERITY_MOD_MAP: Record<
-  'PLUS' | 'PLUS_MAX_2' | 'NONE',
-  ArmorDexterityMod
-> = {
-  PLUS: 'full',
-  PLUS_MAX_2: 'capped',
-  NONE: 'none',
-};
+const ARMOR_DEXTERITY_MOD_MAP: Record<ArmorRawDexterityMod, ArmorDexterityMod> =
+  {
+    PLUS: 'full',
+    PLUS_MAX_2: 'capped',
+    NONE: 'none',
+  };
 
 /**
  * Схема «сырого» ответа предмета `GET /api/v2/item/{url}/raw` в части доспеха.

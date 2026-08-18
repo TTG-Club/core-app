@@ -136,6 +136,7 @@ import {
   mapValues,
   round,
   union,
+  uniqBy,
   upperFirst,
 } from 'es-toolkit';
 
@@ -5179,23 +5180,107 @@ export function getSpellGroups(
 }
 
 /**
- * Возвращает врождённые заклинания, уже открытые на текущем уровне персонажа.
- * Подготовка у них снимается вручную, поэтому запись без флага считается
- * подготовленной: врождённое заклинание готово сразу, а место среди
- * подготовленных не занимает (счётчик смотрит только на книгу персонажа).
+ * Возвращает заклинания, которые персонаж знает вне книги: врождённые
+ * заклинания вида, уже открытые на текущем уровне, и заклинания, выдаваемые
+ * чертами. Место среди подготовленных они не занимают — счётчик смотрит только
+ * на книгу персонажа, — а подготовку игрок снимает и возвращает вручную,
+ * поэтому запись без флага считается подготовленной.
+ *
+ * Одно и то же заклинание может прийти дважды (вид и черта, две черты): в
+ * списке ему место одно, и остаётся первая запись — правки достаются ей.
  *
  * @param character персонаж листа.
- * @returns доступные врождённые заклинания вида и происхождения.
+ * @returns заклинания вне книги персонажа.
  */
 export function getAvailableInnateSpells(
   character: Character,
 ): CharacterSpell[] {
-  return (character.species?.innateSpells ?? [])
-    .filter((innateSpell) => innateSpell.requiredLevel <= character.level)
-    .map((innateSpell) => ({
-      ...innateSpell.spell,
-      prepared: isInnateSpellPrepared(innateSpell.spell),
-    }));
+  const granted = [
+    ...(character.species?.innateSpells ?? [])
+      .filter((innateSpell) => innateSpell.requiredLevel <= character.level)
+      .map((innateSpell) => innateSpell.spell),
+    ...getFeatureSpells(character.features),
+  ];
+
+  return uniqBy(granted, (spell) => spell.url).map((spell) => ({
+    ...spell,
+    prepared: isInnateSpellPrepared(spell),
+  }));
+}
+
+/**
+ * Заклинания, лежащие в записях особенностей персонажа.
+ *
+ * Происхождение записи не проверяется: заклинания кладёт себе только черта, но
+ * если их начнёт выдавать классовое умение, список подхватит и его.
+ *
+ * @param features особенности персонажа.
+ * @returns заклинания всех записей подряд.
+ */
+function getFeatureSpells(features: CharacterFeature[]): CharacterSpell[] {
+  return features.flatMap((feature) => feature.spells ?? []);
+}
+
+/**
+ * Ищет заклинание в записях особенностей: по нему правка выбирает, куда писать
+ * — в вид или в запись черты.
+ *
+ * @param features особенности персонажа.
+ * @param spellUrl URL заклинания.
+ * @returns заклинание записи; undefined — записи с ним нет.
+ */
+export function findFeatureSpell(
+  features: CharacterFeature[],
+  spellUrl: string,
+): CharacterSpell | undefined {
+  return getFeatureSpells(features).find((spell) => spell.url === spellUrl);
+}
+
+/**
+ * Выбрасывает заклинание из записей особенностей. Вернуть его можно, добавив
+ * черту заново — как врождённое заклинание возвращается выбором вида.
+ *
+ * @param features особенности персонажа.
+ * @param spellUrl URL заклинания.
+ * @returns особенности без этого заклинания.
+ */
+export function removeFeatureSpell(
+  features: CharacterFeature[],
+  spellUrl: string,
+): CharacterFeature[] {
+  return features.map((feature) =>
+    feature.spells
+      ? {
+          ...feature,
+          spells: feature.spells.filter((spell) => spell.url !== spellUrl),
+        }
+      : feature,
+  );
+}
+
+/**
+ * Отмечает подготовку заклинания в записях особенностей.
+ *
+ * @param features особенности персонажа.
+ * @param spellUrl URL заклинания.
+ * @param prepared новое состояние подготовки.
+ * @returns особенности с обновлённой пометкой.
+ */
+export function setFeatureSpellPrepared(
+  features: CharacterFeature[],
+  spellUrl: string,
+  prepared: boolean,
+): CharacterFeature[] {
+  return features.map((feature) =>
+    feature.spells
+      ? {
+          ...feature,
+          spells: feature.spells.map((spell) =>
+            spell.url === spellUrl ? { ...spell, prepared } : spell,
+          ),
+        }
+      : feature,
+  );
 }
 
 /**
@@ -6573,6 +6658,9 @@ export function buildFeatFeature(
     choice: null,
     modifiers: summary.modifiers,
     proficiencies: summary.proficiencies,
+    // Копия списка: подготовку игрок снимает прямо в записи, и делить её с
+    // деталью справочника, из которой собрана черта, нельзя.
+    spells: summary.spells ? [...summary.spells] : null,
   };
 }
 

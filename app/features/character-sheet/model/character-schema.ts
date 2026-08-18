@@ -261,23 +261,6 @@ export const featModifiersSchema = z
   .nullable()
   .catch(null);
 
-const featureSchema = z.object({
-  id: z.string(),
-  name: z.string().catch(''),
-  description: descriptionNodesSchema,
-  origin: z.enum(['species', 'lineage', 'class', 'feat', 'none']).catch('none'),
-  originName: z.string().catch(''),
-  // Листы до учёта уровня умений его не хранят: снятие уровня такие записи не
-  // трогает, пока уровень не будет взят заново.
-  level: z.coerce.number().nullable().catch(null),
-  choice: z.string().nullable().catch(null),
-  // Снимок механики черты; у записей до её появления поля нет — такая черта
-  // лист не двигает, пока её не добавят заново.
-  modifiers: featModifiersSchema,
-  // Снимок выдаваемых чертой владений; у записей до его появления поля нет.
-  proficiencies: featProficienciesSchema,
-});
-
 // Поля своих заклинаний (`custom:<uuid>`) отсутствуют у записей из каталога,
 // поэтому необязательны; битое значение отбрасывается вместе с полем, а не
 // роняет всю книгу заклинаний.
@@ -294,6 +277,27 @@ const spellSchema = z.object({
   components: z.string().optional().catch(undefined),
   duration: z.string().optional().catch(undefined),
   description: z.array(descriptionNodeSchema).optional().catch(undefined),
+});
+
+const featureSchema = z.object({
+  id: z.string(),
+  name: z.string().catch(''),
+  description: descriptionNodesSchema,
+  origin: z.enum(['species', 'lineage', 'class', 'feat', 'none']).catch('none'),
+  originName: z.string().catch(''),
+  // Листы до учёта уровня умений его не хранят: снятие уровня такие записи не
+  // трогает, пока уровень не будет взят заново.
+  level: z.coerce.number().nullable().catch(null),
+  choice: z.string().nullable().catch(null),
+  // Снимок механики черты; у записей до её появления поля нет — такая черта
+  // лист не двигает, пока её не добавят заново.
+  modifiers: featModifiersSchema,
+  // Снимок выдаваемых чертой владений; у записей до его появления поля нет.
+  proficiencies: featProficienciesSchema,
+  // Заклинания, которые черта даёт знать; у записей до их появления поля нет.
+  // Подготовку игрок снимает и возвращает прямо здесь, поэтому список хранится
+  // в самой записи, а не пересобирается из справочника.
+  spells: z.array(spellSchema).nullable().optional().catch(undefined),
 });
 
 const speciesSchema = z

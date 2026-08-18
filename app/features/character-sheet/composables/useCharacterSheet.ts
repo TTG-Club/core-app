@@ -75,6 +75,7 @@ import {
   EXPERIENCE_MAX,
   fetchCatalogSpellDetail,
   fetchInventoryItemDescription,
+  findFeatureSpell,
   getAbilityRows,
   getArmorClassValue,
   getAttunementBreakdown,
@@ -126,12 +127,14 @@ import {
   removeClassFeatures,
   removeClassResources,
   removeFeaturesAboveLevel,
+  removeFeatureSpell,
   removeLevelHitPoints,
   RESOURCE_COUNT_MAX,
   RESOURCE_COUNT_MIN,
   RESOURCE_SHORT_LABEL_MAX_LENGTH,
   restoreClassResources,
   restoreHitDice,
+  setFeatureSpellPrepared,
   SHEET_HIDDEN_CONTROL_CLASS,
   SHEET_LOCKED_MESSAGE,
   SHEET_READONLY_MESSAGE,
@@ -2339,53 +2342,57 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Копия врождённого заклинания в книгу персонажа: запись перестаёт зависеть
-   * и от вида, и от раздела сайта — дальше её правит форма листа. Из группы
-   * врождённых заклинание при этом уходит, иначе оно осталось бы в листе
-   * дважды. Характеристики и описание дозагружаются из справочника: у вида их
-   * нет.
+   * Где лист держит заклинание, известное вне книги: у вида или в записи
+   * особенности, которая его выдала. Правки — снятие, подготовка, копия в книгу
+   * — пишутся в найденное место, поэтому искать его нужно всем трём.
    *
-   * @param spellUrl URL врождённого заклинания.
+   * @param spellUrl URL заклинания вне книги.
+   * @returns место и сама запись; null — такого заклинания у листа нет.
    */
-  async function copyInnateSpellToSheet(spellUrl: string): Promise<void> {
-    if (!ensureEditable()) {
-      return;
-    }
-
-    const requestedInnateSpell = character.value.species?.innateSpells.find(
-      (innateSpell) => innateSpell.spell.url === spellUrl,
+  function findGrantedSpell(
+    spellUrl: string,
+  ): { kind: 'species' | 'feature'; spell: CharacterSpell } | null {
+    const innateSpell = character.value.species?.innateSpells.find(
+      (candidate) => candidate.spell.url === spellUrl,
     );
 
-    if (!requestedInnateSpell) {
-      return;
+    if (innateSpell) {
+      return { kind: 'species', spell: innateSpell.spell };
     }
 
-    const detail = await fetchCatalogSpellDetail(spellUrl);
+    const featureSpell = findFeatureSpell(character.value.features, spellUrl);
 
-    // Пока шёл запрос, вид могли сменить или заклинание убрать — перечитываем
-    // запись и отступаем, если её больше нет.
+    return featureSpell ? { kind: 'feature', spell: featureSpell } : null;
+  }
+
+  /**
+   * Лист без этого заклинания вне книги: запись уходит оттуда, где лежала.
+   * Вернуть её можно, заново выбрав вид или добавив черту.
+   *
+   * @param kind место, где лист держал заклинание.
+   * @param spellUrl URL заклинания вне книги.
+   * @returns персонаж без этой записи.
+   */
+  function withoutGrantedSpell(
+    kind: 'species' | 'feature',
+    spellUrl: string,
+  ): Character {
     const species = character.value.species;
 
-    const currentInnateSpell = species?.innateSpells.find(
-      (innateSpell) => innateSpell.spell.url === spellUrl,
-    );
-
-    if (!species || !currentInnateSpell) {
-      return;
+    if (kind === 'feature') {
+      return {
+        ...character.value,
+        features: removeFeatureSpell(character.value.features, spellUrl),
+      };
     }
 
-    const ownSpell: CharacterSpell = {
-      ...toCopiedSpell(
-        `${CUSTOM_SPELL_URL_PREFIX}${crypto.randomUUID()}`,
-        currentInnateSpell.spell,
-        detail,
-      ),
-      // В книге заклинание уже считается подготовленным наравне с остальными:
-      // пометка врождённого сюда не едет, иначе копия перебрала бы предел.
-      prepared: undefined,
-    };
+    // Вид сменили, пока шёл запрос: убирать запись уже не из чего, и переписывать
+    // лист нельзя — автосохранение сработало бы на подмену, которой не было.
+    if (!species) {
+      return character.value;
+    }
 
-    character.value = {
+    return {
       ...character.value,
       species: {
         ...species,
@@ -2393,7 +2400,53 @@ export function useCharacterSheet() {
           (innateSpell) => innateSpell.spell.url !== spellUrl,
         ),
       },
-      spells: [...character.value.spells, ownSpell],
+    };
+  }
+
+  /**
+   * Копия заклинания вне книги в книгу персонажа: запись перестаёт зависеть и от
+   * источника, и от раздела сайта — дальше её правит форма листа. Из группы
+   * заклинаний вне книги оно при этом уходит, иначе осталось бы в листе дважды.
+   * Характеристики и описание дозагружаются из справочника: ни у вида, ни у
+   * черты их нет.
+   *
+   * @param spellUrl URL заклинания вне книги.
+   */
+  async function copyInnateSpellToSheet(spellUrl: string): Promise<void> {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    if (!findGrantedSpell(spellUrl)) {
+      return;
+    }
+
+    const detail = await fetchCatalogSpellDetail(spellUrl);
+
+    // Пока шёл запрос, вид могли сменить или черту снять — перечитываем запись и
+    // отступаем, если её больше нет.
+    const granted = findGrantedSpell(spellUrl);
+
+    if (!granted) {
+      return;
+    }
+
+    const ownSpell: CharacterSpell = {
+      ...toCopiedSpell(
+        `${CUSTOM_SPELL_URL_PREFIX}${crypto.randomUUID()}`,
+        granted.spell,
+        detail,
+      ),
+      // В книге заклинание уже считается подготовленным наравне с остальными:
+      // пометка записи вне книги сюда не едет, иначе копия перебрала бы предел.
+      prepared: undefined,
+    };
+
+    const withoutGranted = withoutGrantedSpell(granted.kind, spellUrl);
+
+    character.value = {
+      ...withoutGranted,
+      spells: [...withoutGranted.spells, ownSpell],
     };
 
     toast.add({
@@ -2405,32 +2458,25 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Удаление врождённого заклинания вида: запись выбрасывается из самого вида,
-   * иначе она вернулась бы на следующем повышении уровня. Заново получить её
-   * можно, ещё раз выбрав вид в мастере.
+   * Удаление заклинания вне книги: запись выбрасывается из самого источника —
+   * из вида или из записи черты, — иначе она вернулась бы на следующем
+   * повышении уровня. Заново получить её можно, ещё раз выбрав вид в мастере
+   * или добавив черту.
    *
-   * @param spellUrl URL врождённого заклинания.
+   * @param spellUrl URL заклинания вне книги.
    */
   function removeInnateSpell(spellUrl: string): void {
     if (!ensureEditable()) {
       return;
     }
 
-    const species = character.value.species;
+    const granted = findGrantedSpell(spellUrl);
 
-    if (!species) {
+    if (!granted) {
       return;
     }
 
-    character.value = {
-      ...character.value,
-      species: {
-        ...species,
-        innateSpells: species.innateSpells.filter(
-          (innateSpell) => innateSpell.spell.url !== spellUrl,
-        ),
-      },
-    };
+    character.value = withoutGrantedSpell(granted.kind, spellUrl);
   }
 
   /**
@@ -2447,19 +2493,33 @@ export function useCharacterSheet() {
       return;
     }
 
+    const granted = findGrantedSpell(spellUrl);
     const species = character.value.species;
 
-    const currentInnateSpell = species?.innateSpells.find(
-      (innateSpell) => innateSpell.spell.url === spellUrl,
-    );
-
-    // Записи уже нет (вид сменили): переписывать лист нельзя — автосохранение
-    // сработало бы на подмену, которой не было.
-    if (!species || !currentInnateSpell) {
+    // Записи уже нет (вид сменили, черту сняли): переписывать лист нельзя —
+    // автосохранение сработало бы на подмену, которой не было.
+    if (!granted) {
       return;
     }
 
-    const prepared = !isInnateSpellPrepared(currentInnateSpell.spell);
+    const prepared = !isInnateSpellPrepared(granted.spell);
+
+    if (granted.kind === 'feature') {
+      character.value = {
+        ...character.value,
+        features: setFeatureSpellPrepared(
+          character.value.features,
+          spellUrl,
+          prepared,
+        ),
+      };
+
+      return;
+    }
+
+    if (!species) {
+      return;
+    }
 
     character.value = {
       ...character.value,
