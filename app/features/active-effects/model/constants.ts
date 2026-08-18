@@ -150,7 +150,7 @@ export const EFFECT_DAMAGE_TARGET_OPTIONS: Array<
 
 /** Библиотека ключей атрибутов (для поля change.key). */
 export const EFFECT_TARGET_KEY_SUGGESTIONS: Array<Option<string>> = [
-  { value: 'armorClass', label: 'Класс брони (AC)' },
+  { value: 'armorClass', label: 'Класс доспеха (AC)' },
   { value: 'initiative', label: 'Инициатива (бонус)' },
   { value: 'proficiencyBonus', label: 'Бонус мастерства' },
   { value: 'spellSaveDC', label: 'Сложность спасброска от заклинаний' },
