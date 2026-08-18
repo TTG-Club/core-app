@@ -339,6 +339,28 @@
     };
   }
 
+  /**
+   * Ответы игрока на выборы черты по ключу выбора: id пикера — это
+   * `feat:<url>:<ключ>`, а в записи ответы лежат под самим ключом, потому что у
+   * повторяемой черты id записи получает ещё и уникальный суффикс.
+   *
+   * @returns ответы по ключу выбора.
+   */
+  function collectFeatChoiceAnswers(): Record<string, string[]> {
+    const answers: Record<string, string[]> = {};
+
+    for (const choice of featChoices.value) {
+      const values = selections.value[choice.id] ?? [];
+      const key = choice.id.split(':').at(-1) ?? '';
+
+      if (key && values.length) {
+        answers[key] = values;
+      }
+    }
+
+    return answers;
+  }
+
   function showLoadError() {
     toast.add({
       color: 'error',
@@ -449,9 +471,12 @@
         // считается прибавка «Крепкого» к максимуму хитов.
         const feature = buildFeatFeature(summary, {
           level: ORIGIN_FEAT_ACQUISITION_LEVEL,
-          expertiseSkills: featChoices.value.flatMap(
-            (choice) => selections.value[choice.id] ?? [],
-          ),
+          // Компетентность применяется сразу — она ложится в снимок владений;
+          // остальные ответы лист хранит в записи черты и применит позже.
+          expertiseSkills: featChoices.value
+            .filter((choice) => choice.kind === 'skill-expertise')
+            .flatMap((choice) => selections.value[choice.id] ?? []),
+          choiceAnswers: collectFeatChoiceAnswers(),
         });
 
         featFeature = detail.featSubchoice

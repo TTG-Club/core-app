@@ -47,8 +47,11 @@ import {
   featModifiersSchema,
 } from './character-schema';
 import {
+  ABILITY_LABELS,
+  ABILITY_ORDER,
   ARMOR_GROUP_BY_API_CATEGORY,
   ARMOR_PROFICIENCY_GROUPS,
+  CANTRIP_SPELL_LEVEL,
   CURRENCY_KEYS_BY_LABEL,
   INVENTORY_QUANTITY_MAX,
   SKILL_NAME_BY_API_KEY,
@@ -418,6 +421,35 @@ const featDetailSchema = z.object({
             label: z.string().nullable().catch(null),
             count: z.coerce.number().nullable().catch(null),
             grants: z.string().nullable().catch(null),
+            // Допустимые значения выбора: коды словаря со снимком названия.
+            options: z
+              .array(
+                z.object({
+                  value: z.string().catch(''),
+                  name: z.string().nullable().catch(null),
+                }),
+              )
+              .nullable()
+              .catch(null),
+            // Пул заклинаний собирается поиском по каталогу, поэтому листу нужны
+            // сами ограничения, а не готовый список.
+            spellFilter: z
+              .object({
+                level: z.coerce.number().nullable().catch(null),
+                maxLevel: z.coerce.number().nullable().catch(null),
+                classes: z
+                  .array(
+                    z.object({
+                      url: z.string().catch(''),
+                      name: z.string().catch(''),
+                    }),
+                  )
+                  .nullable()
+                  .catch(null),
+                classesFromChoiceKey: z.string().nullable().catch(null),
+              })
+              .nullable()
+              .catch(null),
           }),
         )
         .nullable()
@@ -523,16 +555,70 @@ function toFeatChoices(
   featUrl: string,
 ): ClassChoice[] {
   return choices.flatMap<ClassChoice>((choice) => {
+    const id = `${getCharacterFeatureId('feat', featUrl)}:${choice.key}`;
+    const count = Math.max(1, choice.count ?? 1);
+    const label = choice.label ?? '';
+
+    if (choice.type === 'SPELLCASTING_ABILITY') {
+      // Пул — характеристики, перечисленные в механике («Интеллект, Мудрость
+      // или Харизма» у «Посвящённого в магию»). Не перечислены — выбирать можно
+      // любую: запрета в правилах нет, а пустой список сделал бы шаг непроходимым.
+      const listed = (choice.options ?? []).flatMap((option) => {
+        const key = parseApiAbilityKey(option.value);
+
+        return key ? [ABILITY_LABELS[key]] : [];
+      });
+
+      return [
+        {
+          id,
+          kind: 'spellcasting-ability',
+          label,
+          count,
+          listed: listed.length
+            ? listed
+            : ABILITY_ORDER.map((key) => ABILITY_LABELS[key]),
+        },
+      ];
+    }
+
+    if (choice.type === 'SPELL' || choice.type === 'CANTRIP') {
+      return [
+        {
+          id,
+          kind: 'spell',
+          label,
+          count,
+          // Пул приходит поиском по каталогу, а не списком из справочника.
+          listed: [],
+          spellFilter: {
+            // Заговор — это заклинание нулевого круга. У выбора с устаревшим
+            // типом CANTRIP круга в фильтре может не быть вовсе, и тогда его
+            // задаёт сам тип.
+            level:
+              choice.spellFilter?.level
+              ?? (choice.type === 'CANTRIP' ? CANTRIP_SPELL_LEVEL : null),
+            maxLevel: choice.spellFilter?.maxLevel ?? null,
+            classes: (choice.spellFilter?.classes ?? []).filter(
+              (characterClass) => !!characterClass.url,
+            ),
+            classesFromChoiceKey:
+              choice.spellFilter?.classesFromChoiceKey ?? '',
+          },
+        },
+      ];
+    }
+
     if (choice.type !== 'SKILL' || choice.grants !== 'EXPERTISE') {
       return [];
     }
 
     return [
       {
-        id: `${getCharacterFeatureId('feat', featUrl)}:${choice.key}`,
+        id,
         kind: 'skill-expertise',
-        label: choice.label ?? '',
-        count: Math.max(1, choice.count ?? 1),
+        label,
+        count,
         // Пул компетентности резолвится владениями листа, а не списком из
         // справочника: выбирать можно только то, чем персонаж уже владеет.
         listed: [],

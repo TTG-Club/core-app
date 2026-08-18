@@ -6644,6 +6644,7 @@ export function buildCharacterFeatures(
  * @param options.repeatable черту можно брать несколько раз (уникальный id).
  * @param options.level уровень взятия черты; null — уровень неизвестен.
  * @param options.expertiseSkills навыки, в которых игрок выбрал компетентность.
+ * @param options.choiceAnswers ответы игрока на выборы черты по ключу выбора.
  * @returns особенность персонажа с происхождением «Черта».
  */
 export function buildFeatFeature(
@@ -6652,9 +6653,15 @@ export function buildFeatFeature(
     repeatable?: boolean;
     level?: number | null;
     expertiseSkills?: string[];
+    choiceAnswers?: Record<string, string[]>;
   } = {},
 ): CharacterFeature {
-  const { repeatable = false, level = null, expertiseSkills = [] } = options;
+  const {
+    repeatable = false,
+    level = null,
+    expertiseSkills = [],
+    choiceAnswers = {},
+  } = options;
 
   const baseId = getCharacterFeatureId('feat', summary.url);
 
@@ -6671,6 +6678,11 @@ export function buildFeatFeature(
     // Копия списка: подготовку игрок снимает прямо в записи, и делить её с
     // деталью справочника, из которой собрана черта, нельзя.
     spells: summary.spells ? [...summary.spells] : null,
+    // Пустой набор не пишется: у черты без выборов запись остаётся такой же,
+    // какой была до их появления.
+    choiceAnswers: Object.keys(choiceAnswers).length
+      ? choiceAnswers
+      : undefined,
   };
 }
 
@@ -8782,6 +8794,13 @@ export function resolveChoiceOptions(
         ...context.chosenProficientSkills,
       ]),
     ];
+  }
+
+  // Пул характеристик перечислен в самой механике черты, а пул заклинаний
+  // собирается поиском по каталогу и приходит уже готовым: и то, и другое лежит
+  // в `listed`. Без этой ветки они провалились бы в выбор инструмента ниже.
+  if (choice.kind === 'spellcasting-ability' || choice.kind === 'spell') {
+    return choice.listed;
   }
 
   if (choice.kind === 'language') {
