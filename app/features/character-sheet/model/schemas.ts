@@ -1366,6 +1366,9 @@ export function parseClassDetail(input: unknown): ClassSummary | null {
 const backgroundLinkSchema = z.object({
   url: z.string(),
   name: z.object({ rus: z.string().catch('') }),
+  // Черта появилась в ответе поиска позже: у старых записей и у предысторий без
+  // черты полей нет вовсе.
+  featName: z.string().nullable().catch(null),
   source: z
     .object({
       name: z.object({ label: z.string().catch('') }).catch({ label: '' }),
@@ -1396,6 +1399,7 @@ export function parseBackgroundOptions(input: unknown): BackgroundOption[] {
     url: background.url,
     name: background.name.rus,
     sourceLabel: background.source.name.label,
+    featName: background.featName ?? '',
   }));
 }
 

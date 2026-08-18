@@ -7,6 +7,7 @@
     CharacterFeature,
     CharacterInventoryItem,
     ClassChoice,
+    FeatSummary,
   } from '../../model';
 
   import { BackgroundDrawer } from '~backgrounds/drawer';
@@ -102,6 +103,13 @@
     character.value.skills.map((skill) => skill.name),
   );
 
+  /** Навыки, которыми персонаж уже владеет: из них выбирается компетентность. */
+  const proficientSkillNames = computed<string[]>(() =>
+    character.value.skills
+      .filter((skill) => skill.proficiency !== 'none')
+      .map((skill) => skill.name),
+  );
+
   const allLanguages = computed(() =>
     LANGUAGE_PROFICIENCY_GROUPS.flatMap((group) => group.items),
   );
@@ -146,6 +154,13 @@
   const selectedOption = ref<BackgroundOption | undefined>();
 
   const backgroundDetail = ref<BackgroundSummary | null>(null);
+
+  /**
+   * Деталь черты предыстории. Черта может о чём-то спрашивать, и спросить нужно
+   * здесь же: на листе она появляется вместе с предысторией, и второго случая
+   * задать вопрос не будет.
+   */
+  const featSummary = ref<FeatSummary | null>(null);
 
   const isStepLoading = ref(false);
 
@@ -276,15 +291,33 @@
 
   const isNextDisabled = computed(() => !selectedOption.value);
 
+  /** Выборы черты предыстории: у «Мудреца» их задаёт «Посвящённый в магию». */
+  const featChoices = computed<ClassChoice[]>(
+    () => featSummary.value?.choices ?? [],
+  );
+
+  /** Все выборы черты отвечены сполна — иначе применять рано. */
+  const isFeatChoiceComplete = computed<boolean>(() =>
+    featChoices.value.every(
+      (choice) =>
+        (selections.value[choice.id]?.length ?? 0) >= choiceCount(choice),
+    ),
+  );
+
   const isApplyDisabled = computed(
-    () => !backgroundDetail.value || !isAbilityChoiceValid.value,
+    () =>
+      !backgroundDetail.value
+      || !isAbilityChoiceValid.value
+      || !isFeatChoiceComplete.value,
   );
 
   function choiceOptions(choice: ClassChoice): string[] {
     return resolveChoiceOptions(choice, {
       skillNames: skillNames.value,
-      proficientSkillNames: [],
-      chosenProficientSkills: [],
+      proficientSkillNames: proficientSkillNames.value,
+      // Навыки самой предыстории тоже считаются владением: они лягут на лист
+      // вместе с чертой, и компетентность в них выбрать можно.
+      chosenProficientSkills: backgroundDetail.value?.skills ?? [],
       knownLanguages: character.value.proficiencies.languages,
       knownTools: getToolNames(character.value.proficiencies.tools),
       allLanguages: allLanguages.value,
@@ -358,6 +391,10 @@
         return;
       }
 
+      featSummary.value = backgroundDetail.value.featUrl
+        ? await fetchFeatDetail(backgroundDetail.value.featUrl)
+        : null;
+
       selections.value = {};
       abilityMode.value = '2-1';
       plusTwoAbility.value = undefined;
@@ -403,20 +440,23 @@
 
       let featFeature: CharacterFeature | null = null;
 
-      if (detail.featUrl) {
-        const summary = await fetchFeatDetail(detail.featUrl);
+      // Деталь черты уже загружена на переходе к обзору: там же игрок ответил
+      // на её выборы, и повторный запрос вернул бы то же самое.
+      const summary = featSummary.value;
 
-        if (summary) {
-          // Черта происхождения даётся на первом уровне (правило 2024) — от
-          // него и считается прибавка «Крепкого» к максимуму хитов.
-          const feature = buildFeatFeature(summary, {
-            level: ORIGIN_FEAT_ACQUISITION_LEVEL,
-          });
+      if (summary) {
+        // Черта происхождения даётся на первом уровне (правило 2024) — от него и
+        // считается прибавка «Крепкого» к максимуму хитов.
+        const feature = buildFeatFeature(summary, {
+          level: ORIGIN_FEAT_ACQUISITION_LEVEL,
+          expertiseSkills: featChoices.value.flatMap(
+            (choice) => selections.value[choice.id] ?? [],
+          ),
+        });
 
-          featFeature = detail.featSubchoice
-            ? { ...feature, choice: detail.featSubchoice }
-            : feature;
-        }
+        featFeature = detail.featSubchoice
+          ? { ...feature, choice: detail.featSubchoice }
+          : feature;
       }
 
       setBackground({
@@ -504,6 +544,15 @@
                   class="grow truncate text-sm font-medium text-highlighted"
                 >
                   {{ row.name }}
+                </span>
+
+                <!-- Черта — то, чем предыстории отличаются друг от друга, и
+                  видеть её нужно до выбора, а не на следующем шаге -->
+                <span
+                  v-if="row.featName"
+                  class="hidden shrink-0 truncate text-xs text-muted sm:block"
+                >
+                  {{ row.featName }}
                 </span>
               </button>
 
@@ -718,6 +767,24 @@
                   "
                 />
               </UTooltip>
+            </div>
+
+            <!-- Черта может о чём-то спрашивать: ответить нужно здесь, на лист
+              она попадёт вместе с предысторией -->
+            <div
+              v-for="choice in featChoices"
+              :key="choice.id"
+              class="flex flex-col gap-1"
+            >
+              <span class="text-sm text-toned">{{ choice.label }}</span>
+
+              <SheetChoiceSelect
+                :model-value="selections[choice.id] ?? []"
+                :items="choiceOptions(choice)"
+                :count="choiceCount(choice)"
+                :placeholder="`Выберите ${choiceCount(choice)}`"
+                @update:model-value="updateSelection(choice, $event)"
+              />
             </div>
           </div>
 

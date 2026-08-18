@@ -2053,6 +2053,9 @@ export interface BackgroundOption {
   url: string;
   name: string;
   sourceLabel: string;
+
+  /** Название черты, которую даёт предыстория; '' — не даёт. */
+  featName: string;
 }
 
 /** Деталь предыстории из ответа API (нужные листу поля). */
