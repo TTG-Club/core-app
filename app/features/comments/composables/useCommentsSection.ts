@@ -2,8 +2,6 @@ import type { Ref } from 'vue';
 
 import type { CommentEntry, CommentNode, PublicComment } from '../model';
 
-import { USER_TOKEN_COOKIE } from '#shared/consts';
-
 import {
   COMMENT_ALREADY_DELETED_TOAST,
   COMMENT_DELETE_ERROR_TOAST,
@@ -40,6 +38,7 @@ import {
   isCommentFromThread,
   isCommentTombstone,
   mergeRestoredComment,
+  readWithoutStaleToken,
   removeCommentNode,
   reportComment,
   restoreComment,
@@ -137,22 +136,6 @@ function restoreRepliesExpanded(
  * @param read Читающий запрос.
  * @returns Результат запроса — с первой либо со второй попытки.
  */
-async function readWithoutStaleToken<T>(read: () => Promise<T>): Promise<T> {
-  try {
-    return await read();
-  } catch (error) {
-    if (getCommentFetchStatus(error) !== 401) {
-      throw error;
-    }
-
-    // Кэш куки помнит уже удалённый токен — без сброса сессия так и считалась
-    // бы живой, и приглашение войти не встало бы на место формы отправки.
-    refreshCookie(USER_TOKEN_COOKIE);
-
-    return await read();
-  }
-}
-
 interface UseCommentsSectionOptions {
   /** Раздел сайта в сервисе комментариев. */
   section: string;

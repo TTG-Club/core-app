@@ -51,6 +51,7 @@ export const SPELL_PROJECTILE_DISTRIBUTION_OPTIONS = [
   },
 ] as const;
 
+/** Ключ `FAIR` — прежнее имя огненного урона: встречается в данных до переименования. */
 export const SPELL_DAMAGE_TYPE_TAGS: Record<string, string> = {
   ACID: 'dmg.acid',
   BLUDGEONING: 'dmg.bludgeoning',

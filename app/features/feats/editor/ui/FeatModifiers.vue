@@ -138,7 +138,15 @@
     </UFormField>
 
     <UFormField
-      class="md:col-span-12"
+      class="md:col-span-6"
+      label="Прибавка к инициативе"
+      help="Например, +5 у «Бдительного» издания 2014"
+    >
+      <UInputNumber v-model="model.initiativeBonus" />
+    </UFormField>
+
+    <UFormField
+      class="md:col-span-6"
       label="Бонус мастерства к инициативе"
     >
       <UCheckbox

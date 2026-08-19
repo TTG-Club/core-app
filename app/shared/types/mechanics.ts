@@ -28,6 +28,13 @@ export interface MechanicEntityRef {
   name?: string;
 }
 
+/**
+ * Что даёт сделанный выбор. `EXPERTISE` — безусловная компетентность («Знаток»);
+ * условная замена «владеешь — получишь компетентность» описана отдельным флагом
+ * `expertiseIfProficient` («Наблюдательный»).
+ */
+export type MechanicChoiceGrant = 'PROFICIENCY' | 'EXPERTISE';
+
 /** Допустимое значение выбора: код словаря либо url сущности. */
 export interface MechanicChoiceOption {
   value: string;
@@ -39,7 +46,18 @@ export interface MechanicSpellFilter {
   level: number | undefined;
   maxLevel: number | undefined;
   schools: Array<string>;
+
+  /** Классы, из списков заклинаний которых можно выбирать. */
   classes: Array<MechanicEntityRef>;
+
+  /**
+   * Ключ выбора, из ответа на который берётся класс. «Посвящённый в магию»
+   * сначала спрашивает список — жреца, друида или волшебника, — и только потом
+   * даёт выбрать из него заговоры: пул сужается до выбранного класса, а не до
+   * всех трёх. Пусто — пул задан `classes` напрямую.
+   */
+  classesFromChoiceKey: string;
+
   castingTime: string | undefined;
 }
 
@@ -59,6 +77,23 @@ export interface MechanicChoice {
   options: Array<MechanicChoiceOption>;
   spellFilter: MechanicSpellFilter | undefined;
   onlyIfNotProficient: boolean;
+
+  /**
+   * Выбирать можно только то, чем персонаж уже владеет («Знаток» — навык, в
+   * котором есть владение). Обратен `onlyIfNotProficient`: вместе они оставляют
+   * пустой пул, поэтому форма даёт отметить только один из двух.
+   */
+  onlyIfProficient: boolean;
+
+  /**
+   * Что даёт выбор: владение или компетентность. Компетентность удваивает бонус
+   * мастерства, поэтому это не «владение посильнее», а другой исход.
+   *
+   * `undefined` — владение: так поле уходит из отправляемой механики, когда
+   * исход обычный, и так же читаются записи, сделанные до его появления.
+   */
+  grants: MechanicChoiceGrant | undefined;
+
   expertiseIfProficient: boolean;
   rechooseOnLongRest: boolean;
 }
@@ -119,6 +154,13 @@ export interface SheetModifiers {
   damage: DamageAffinity;
   conditionImmunities: Array<string>;
   creatureType: string | undefined;
+
+  /**
+   * Прибавка к инициативе: числом — «Бдительный» издания 2014 даёт +5, — и
+   * бонусом мастерства, как «Бдительный» издания 2024. Слагаемые независимы:
+   * лист складывает оба, а не выбирает одно.
+   */
+  initiativeBonus: number | undefined;
   initiativeProficiencyBonus: boolean;
 }
 
@@ -128,8 +170,7 @@ export interface SheetModifiers {
  * Выбираемые владения сюда не идут — у них есть количество и пул значений,
  * поэтому они живут в {@link MechanicChoice}.
  *
- * Спасбросков и языков здесь нет: спасбросками наделяют выбором, а справочник
- * языков сайта и словарь языков листа пока расходятся в названиях и группировке.
+ * Спасбросков здесь нет: спасбросками наделяют выбором.
  */
 export interface ProficiencyGrant {
   /** Навыки справочника (`PERCEPTION` и подобные). */
@@ -140,6 +181,14 @@ export interface ProficiencyGrant {
 
   /** Категории доспехов справочника (`MEDIUM`, `SHIELD`). */
   armorCategories: Array<string>;
+
+  /**
+   * Языки справочника (`COMMON`, `DWARVISH`) — константами и ровно в том
+   * написании, в каком их отдаёт справочник: среди них есть `Celestial`, и
+   * приведение регистра сломало бы сверку. Со словарём языков листа справочник
+   * сводит выгрузка компендиума.
+   */
+  languages: Array<string>;
 
   /** Инструменты из раздела «Предметы». */
   tools: Array<MechanicEntityRef>;
@@ -156,6 +205,8 @@ export function createMechanicChoice(): MechanicChoice {
     options: [],
     spellFilter: undefined,
     onlyIfNotProficient: false,
+    onlyIfProficient: false,
+    grants: 'PROFICIENCY',
     expertiseIfProficient: false,
     rechooseOnLongRest: false,
   };
@@ -176,6 +227,7 @@ export function createSpellFilter(): MechanicSpellFilter {
     maxLevel: undefined,
     schools: [],
     classes: [],
+    classesFromChoiceKey: '',
     castingTime: undefined,
   };
 }
@@ -208,6 +260,7 @@ export function createSheetModifiers(): SheetModifiers {
     },
     conditionImmunities: [],
     creatureType: undefined,
+    initiativeBonus: undefined,
     initiativeProficiencyBonus: false,
   };
 }
@@ -218,6 +271,7 @@ export function createProficiencyGrant(): ProficiencyGrant {
     skills: [],
     weaponCategories: [],
     armorCategories: [],
+    languages: [],
     tools: [],
   };
 }

@@ -17,6 +17,7 @@
     BUG_REPORT_PLATFORM_LABELS,
     BUG_REPORT_STATUS_COMMENT_MAX_LENGTH,
     BUG_REPORT_STATUS_COMMENT_PLACEHOLDER,
+    BUG_REPORT_STATUS_COMMENT_PUBLIC_HINT,
     BUG_REPORT_STATUS_LABELS,
     BUG_REPORT_STATUS_UPDATE_ERROR_DESC,
     BUG_REPORT_STATUS_UPDATE_ERROR_TITLE,
@@ -25,6 +26,7 @@
     BUG_REPORT_STATUSES,
     getAdminBugStatusApiUrl,
     getBugReportStatusColor,
+    parseSelectedText,
   } from '../../model';
 
   /**
@@ -93,27 +95,9 @@
   /**
    * Разбирает строку выделенного текста на контекст до, выделенный фрагмент и контекст после.
    */
-  const parsedSelection = computed<ParsedSelection>(() => {
-    const text = props.bugReport.selectedText || '';
-    const startIndex = text.indexOf('[');
-    const endIndex = text.indexOf(']');
-
-    if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
-      return {
-        before: text.slice(0, startIndex),
-        selected: text.slice(startIndex + 1, endIndex),
-        after: text.slice(endIndex + 1),
-        hasSelection: true,
-      };
-    }
-
-    return {
-      before: '',
-      selected: text,
-      after: '',
-      hasSelection: false,
-    };
-  });
+  const parsedSelection = computed<ParsedSelection>(() =>
+    parseSelectedText(props.bugReport.selectedText ?? ''),
+  );
 
   /**
    * Открывает модальное окно просмотра скриншота.
@@ -364,6 +348,17 @@
         size="sm"
         :disabled="isUpdating"
       />
+
+      <!-- Комментарий уходит автору репорта — служебным заметкам здесь не место -->
+      <p class="flex items-center gap-1.5 text-xs text-warning">
+        <UIcon
+          name="tabler:eye"
+          class="size-4 shrink-0"
+          aria-hidden="true"
+        />
+
+        <span>{{ BUG_REPORT_STATUS_COMMENT_PUBLIC_HINT }}</span>
+      </p>
     </div>
 
     <!-- Страница ошибки -->

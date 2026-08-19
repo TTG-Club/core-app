@@ -85,6 +85,13 @@
   let lastModel = '';
   let lastSource = '';
 
+  // Значение модели в том виде, в каком его записал бы редактор. Нужно, чтобы
+  // отличить правку автора от пересборки того же самого: бэкенд отдаёт разметку
+  // с отступами (`[ "…", {\n  "type" : "list"`), а редактор пишет её плотно, и
+  // без сверки с приведённым значением форма считалась бы изменённой сразу
+  // после загрузки — сохранение уходило бы на каждое открытие записи.
+  let canonicalModel = '';
+
   // Правка автора (source) → структурная модель. Свою же синхронизацию из модели
   // (source === lastSource) назад не пишем, иначе форма ложно становится «изменённой».
   watch(source, (value) => {
@@ -96,6 +103,12 @@
 
     const stored = toStoredMarkup(value);
 
+    // Разметка та же, разошлось только оформление записи — модель не трогаем.
+    if (stored === canonicalModel) {
+      return;
+    }
+
+    canonicalModel = stored;
     lastModel = stored;
     model.value = stored;
 
@@ -118,6 +131,7 @@
       const next = toMarkupSource(value);
 
       lastSource = next;
+      canonicalModel = toStoredMarkup(next);
       source.value = next;
     },
     { immediate: true },

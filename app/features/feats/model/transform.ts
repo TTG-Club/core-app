@@ -10,7 +10,14 @@ import type {
   FeatAbilityBonus,
   FeatMechanics,
   FeatPrerequisiteDetails,
+  FeatSpellGrant,
 } from './mechanics';
+
+import {
+  isExpertiseChoiceType,
+  isProficiencyChoiceType,
+  isSpellChoiceType,
+} from './constants';
 
 /**
  * Пустое ли значение с точки зрения формы: `undefined`, пустая строка, пустой
@@ -59,22 +66,45 @@ function buildSpellFilter(
     ...filter,
     schools: orUndefinedList(filter.schools) ?? [],
     classes: orUndefinedList(filter.classes) ?? [],
+    classesFromChoiceKey: text(filter.classesFromChoiceKey) ?? '',
     castingTime: text(filter.castingTime),
   });
 }
 
-/** Готовит выборы: без типа и ключа выбор бессмысленен и не отправляется. */
+/**
+ * Готовит выборы: без типа и ключа выбор бессмысленен и не отправляется.
+ *
+ * Поля, которых у типа выбора не бывает, обнуляются: их могли заполнить до
+ * смены типа, а форма после неё их уже не показывает — иначе в JSONB осталась
+ * бы бессмыслица вроде компетентности за выбранное заклинание.
+ */
 function buildChoices(choices: Array<MechanicChoice>): Array<MechanicChoice> {
   return choices
     .filter((choice) => !!choice.type && !!text(choice.key))
-    .map((choice) => ({
-      ...choice,
-      key: choice.key.trim(),
-      label: text(choice.label) ?? '',
-      options: choice.options.filter((option) => !!option.value),
-      spellFilter: buildSpellFilter(choice.spellFilter),
-      countEqualsProficiencyBonus: !!choice.countEqualsProficiencyBonus,
-    }));
+    .map((choice) => {
+      const isProficiency = isProficiencyChoiceType(choice.type);
+      const isExpertise = isExpertiseChoiceType(choice.type);
+
+      return {
+        ...choice,
+        key: choice.key.trim(),
+        label: text(choice.label) ?? '',
+        options: choice.options.filter((option) => !!option.value),
+        spellFilter: isSpellChoiceType(choice.type)
+          ? buildSpellFilter(choice.spellFilter)
+          : undefined,
+        countEqualsProficiencyBonus: !!choice.countEqualsProficiencyBonus,
+        onlyIfNotProficient: isProficiency && choice.onlyIfNotProficient,
+        onlyIfProficient: isProficiency && choice.onlyIfProficient,
+        // Исход по умолчанию не пишется: у записей до его появления поля нет, и
+        // core-api читает его отсутствие как владение.
+        grants:
+          isExpertise && choice.grants === 'EXPERTISE'
+            ? choice.grants
+            : undefined,
+        expertiseIfProficient: isExpertise && choice.expertiseIfProficient,
+      };
+    });
 }
 
 /** Готовит варианты повышения характеристик. */
@@ -114,6 +144,24 @@ function buildProficiencies(
   });
 }
 
+/**
+ * Готовит выдаваемые заклинания.
+ *
+ * Заклинание без ссылки отправлять некуда — так выглядит пустая строка, только
+ * что добавленная в списке. Остальные поля блока без заклинаний бессмысленны:
+ * заклинательная характеристика не к чему применяться, поэтому блок целиком
+ * уходит пустым.
+ */
+function buildSpells(spells: FeatSpellGrant): FeatSpellGrant | undefined {
+  const granted = spells.spells.filter((spell) => !!text(spell.url));
+
+  if (!granted.length) {
+    return undefined;
+  }
+
+  return { ...spells, spells: granted };
+}
+
 /** Готовит механику целиком. */
 function buildMechanics(mechanics: FeatMechanics): FeatMechanics | undefined {
   return orUndefined({
@@ -122,6 +170,7 @@ function buildMechanics(mechanics: FeatMechanics): FeatMechanics | undefined {
     modifiers: buildModifiers(mechanics.modifiers) ?? mechanics.modifiers,
     proficiencies:
       buildProficiencies(mechanics.proficiencies) ?? mechanics.proficiencies,
+    spells: buildSpells(mechanics.spells) ?? mechanics.spells,
   });
 }
 

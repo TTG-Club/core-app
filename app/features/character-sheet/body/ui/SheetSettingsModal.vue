@@ -24,6 +24,7 @@
     getProficiencyBonus,
     PROFICIENCY_BASE_LEVEL_SOURCE,
     PROFICIENCY_BASE_OPTIONS,
+    PROFICIENCY_BONUS_SOURCE_OPTIONS,
     SHEET_SETTINGS_LABELS,
     SHEET_SETTINGS_TABS,
     SHEET_SETTINGS_WEAPON_TAB,
@@ -210,7 +211,7 @@
   // его бонус рядом, чтобы разница правил была видна сразу.
   const formattedFinesseAttackBonus = computed(() =>
     getFormattedBonus(
-      proficiencyBonus.value + getModifier(props.character.abilities.dexterity),
+      proficiencyBonus.value + getAbilityModifier(props.character, 'dexterity'),
     ),
   );
 
@@ -356,7 +357,7 @@
               :character="character"
               :title="SHEET_SETTINGS_LABELS.proficiencyBonusTitle"
               :base-items="PROFICIENCY_BASE_OPTIONS"
-              :source-items="CUSTOM_BONUS_BASE_SOURCE_OPTIONS"
+              :source-items="PROFICIENCY_BONUS_SOURCE_OPTIONS"
               :base-value="proficiencyBase"
               :total-label="SHEET_SETTINGS_LABELS.totalProficiencyBonusTitle"
               :hint="CUSTOM_PROFICIENCY_BONUS_HINT"

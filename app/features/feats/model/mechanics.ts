@@ -14,10 +14,10 @@ import { createProficiencyGrant, createSheetModifiers } from '~/shared/types';
  * Зеркало `FeatMechanics` из core-api. Структура повторяет ответ
  * `GET /api/v2/feats/{url}/raw`, поэтому форма отправляет её без преобразований.
  *
- * Блоки, общие с умением вида (выборы, модификаторы листа, владения, чувства),
- * живут в `~/shared/types` — как и в core-api, где они переехали в
- * `common/model/mechanics`. Здесь остаётся то, что бывает только у черты:
- * повышение характеристик и предварительное условие.
+ * Блоки, общие с механикой вида (выборы, модификаторы листа, владения, чувства,
+ * фильтр заклинаний), живут в `~/shared/types` — как и в core-api, где они
+ * переехали в `common/model/mechanics`. Здесь остаётся то, что бывает только у
+ * черты: повышение характеристик, предусловие и выдача заклинаний.
  */
 
 /** Классовое умение, которого требует черта. */
@@ -65,12 +65,65 @@ export interface FeatPrerequisiteDetails {
   custom: string;
 }
 
+/**
+ * Заклинания, которые черта даёт знать без выбора: «Отмеченный драконом Ориена»
+ * даёт «Магическую руку». Выбираемые заклинания сюда не идут — у них есть
+ * количество и фильтр пула, поэтому они живут в {@link MechanicChoice}.
+ *
+ * Своим блоком, а не общим с видом: заклинания вида лежат в связующей таблице
+ * (`innateSpells`) со своими требуемыми уровнями.
+ */
+export interface FeatSpellGrant {
+  /**
+   * Заклинания справочника ссылками — без снимка круга и школы: те берутся из
+   * самой записи заклинания и в снимке разошлись бы с каталогом при его правке.
+   * Потребителю их отдаёт core-api отдельным полем детали (`grantedSpells`).
+   */
+  spells: Array<MechanicEntityRef>;
+
+  /**
+   * Характеристика для расчёта СЛ и атаки заклинаний черты. `undefined` — черта
+   * её не задаёт: тогда лист берёт характеристику того класса, чья это магия.
+   */
+  spellcastingAbility: AbilityKey | undefined;
+
+  /** Заклинание всегда подготовлено и не занимает ячейку подготовки. */
+  alwaysPrepared: boolean;
+}
+
 /** Механика черты целиком. */
 export interface FeatMechanics {
   abilityBonuses: Array<FeatAbilityBonus>;
   choices: Array<MechanicChoice>;
   modifiers: SheetModifiers;
   proficiencies: ProficiencyGrant;
+  spells: FeatSpellGrant;
+}
+
+/**
+ * Свободный ключ выбора: к занятому имени приписывается номер. Ключ попадает в
+ * идентификатор умения на листе персонажа, поэтому два выбора с одним ключом
+ * схлопнулись бы в один.
+ *
+ * @param preferred желаемый ключ.
+ * @param taken ключи, уже занятые в этой черте.
+ * @returns желаемый ключ либо он же с номером.
+ */
+export function getFreeFeatChoiceKey(
+  preferred: string,
+  taken: Array<string>,
+): string {
+  if (!taken.includes(preferred)) {
+    return preferred;
+  }
+
+  let position = 2;
+
+  while (taken.includes(`${preferred}-${position}`)) {
+    position += 1;
+  }
+
+  return `${preferred}-${position}`;
 }
 
 /** Новый вариант повышения характеристик. */
@@ -109,6 +162,15 @@ export function createPrerequisiteDetails(): FeatPrerequisiteDetails {
   };
 }
 
+/** Пустая выдача заклинаний. */
+export function createFeatSpellGrant(): FeatSpellGrant {
+  return {
+    spells: [],
+    spellcastingAbility: undefined,
+    alwaysPrepared: false,
+  };
+}
+
 /** Пустая механика черты. */
 export function createFeatMechanics(): FeatMechanics {
   return {
@@ -116,5 +178,6 @@ export function createFeatMechanics(): FeatMechanics {
     choices: [],
     modifiers: createSheetModifiers(),
     proficiencies: createProficiencyGrant(),
+    spells: createFeatSpellGrant(),
   };
 }

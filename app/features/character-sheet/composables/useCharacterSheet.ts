@@ -75,6 +75,7 @@ import {
   EXPERIENCE_MAX,
   fetchCatalogSpellDetail,
   fetchInventoryItemDescription,
+  findFeatureSpell,
   getAbilityRows,
   getArmorClassValue,
   getAttunementBreakdown,
@@ -86,6 +87,7 @@ import {
   getClampedInteger,
   getClassLevelHitPoints,
   getEffectiveSpeed,
+  getFeatDefences,
   getFormattedBonus,
   getInitiativeBonus,
   getInventoryWeight,
@@ -123,16 +125,17 @@ import {
   PREPARED_SPELLS_BONUS_MIN,
   PREPARED_SPELLS_MAX,
   PREPARED_SPELLS_MIN,
-  pruneProficiencyGrants,
   removeClassFeatures,
   removeClassResources,
   removeFeaturesAboveLevel,
+  removeFeatureSpell,
   removeLevelHitPoints,
   RESOURCE_COUNT_MAX,
   RESOURCE_COUNT_MIN,
   RESOURCE_SHORT_LABEL_MAX_LENGTH,
   restoreClassResources,
   restoreHitDice,
+  setFeatureSpellPrepared,
   SHEET_HIDDEN_CONTROL_CLASS,
   SHEET_LOCKED_MESSAGE,
   SHEET_READONLY_MESSAGE,
@@ -342,6 +345,22 @@ export function useCharacterSheet() {
   // наружу уходит отдельное производное значение, а не `character.speed`.
   const effectiveSpeed = computed(() => getEffectiveSpeed(character.value));
 
+  // Защиты от черт: своего понятия для них лист не хранит, поэтому собираются
+  // из снимков механики. Панель показывается, только если черта их выдала.
+  const featDefences = computed(() =>
+    getFeatDefences(character.value.features, character.value.speed.unit),
+  );
+
+  const hasFeatDefences = computed(
+    () =>
+      featDefences.value.resistances.length > 0
+      || featDefences.value.immunities.length > 0
+      || featDefences.value.vulnerabilities.length > 0
+      || featDefences.value.conditionImmunities.length > 0
+      || featDefences.value.creatureType !== ''
+      || featDefences.value.telepathyRange > 0,
+  );
+
   const armorClassValue = computed(() => getArmorClassValue(character.value));
 
   const spellcastingBreakdown = computed(() =>
@@ -394,6 +413,30 @@ export function useCharacterSheet() {
               clampedScore,
             )
           : character.value.health,
+    };
+  }
+
+  /**
+   * Запись своих бонусов одной характеристики: модалка настройки правит их
+   * черновиком и отдаёт список целиком.
+   *
+   * @param ability ключ характеристики.
+   * @param bonuses свои бонусы характеристики из черновика модалки.
+   */
+  function setAbilityBonuses(
+    ability: AbilityKey,
+    bonuses: CharacterCustomBonus[],
+  ): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      abilityBonuses: {
+        ...character.value.abilityBonuses,
+        [ability]: toStoredCustomBonuses(bonuses),
+      },
     };
   }
 
@@ -858,6 +901,11 @@ export function useCharacterSheet() {
    * уходит, запись нового ложится поверх, а список владений приводится к новому
    * журналу — выданное прежним источником снимается, если его не даёт больше
    * никто.
+   *
+   * Навыков записи класса, предыстории и вида не несут: те наделяют навыками
+   * через выбор, а его применяет `applySkillProficiencies` мимо журнала. Навыки
+   * в выдаче есть только у черт, и уровни по ним доводит `withFeatModifiers`.
+   * Появятся навыки и здесь — доводить уровни придётся и в этом помощнике.
    *
    * @param previousSource идентификатор прежнего источника; null — его не было.
    * @param source идентификатор нового источника.
@@ -1390,6 +1438,8 @@ export function useCharacterSheet() {
         weapons: [],
         tools: [],
         languages: payload.proficiencies.languages,
+        skills: [],
+        expertiseSkills: [],
       },
     );
 
@@ -1550,6 +1600,8 @@ export function useCharacterSheet() {
         weapons: payload.proficiencies.weapons,
         tools: payload.proficiencies.tools,
         languages: payload.proficiencies.languages,
+        skills: [],
+        expertiseSkills: [],
       },
     );
 
@@ -1694,7 +1746,14 @@ export function useCharacterSheet() {
     const addedClassProficiencies = withSourceProficiencies(
       null,
       getProficiencySourceId('class', characterClass.url),
-      { armor: [], weapons: [], tools: [], languages: payload.languages },
+      {
+        armor: [],
+        weapons: [],
+        tools: [],
+        languages: payload.languages,
+        skills: [],
+        expertiseSkills: [],
+      },
     );
 
     const withLevels = withClassLevels(
@@ -1737,10 +1796,10 @@ export function useCharacterSheet() {
 
   /**
    * Удаление класса с листа: уходят его умения, производные счётчики и кости
-   * хитов, а максимум хитов возвращается к записанному до него. Владения,
-   * навыки и языки, однажды выданные классом, остаются — лист не помнит, кто их
-   * дал, а снимать чужое опаснее, чем оставить лишнее (правится панелью
-   * владений). Удаление основного класса делает основным следующий.
+   * хитов, а максимум хитов возвращается к записанному до него. Владения и
+   * языки, выданные этим классом, снимаются по журналу выдач — если тех же не
+   * даёт кто-то ещё. Навыки остаются: класс наделяет ими через выбор, а выбор
+   * в журнал не пишется. Удаление основного класса делает основным следующий.
    *
    * @param classUrl URL удаляемого класса.
    */
@@ -1878,12 +1937,19 @@ export function useCharacterSheet() {
     );
 
     // Инструменты предыстории — её выдача: смена предыстории забирает прежние и
-    // выдаёт новые. Навыки в журнал не идут — они живут не в списке владений, а
-    // отдельными записями с уровнем владения.
+    // выдаёт новые. Навыки предыстории в журнал не идут: ими она наделяет через
+    // выбор, а его применяет `applySkillProficiencies` мимо журнала.
     const backgroundProficiencies = withSourceProficiencies(
       previous ? getProficiencySourceId('background', previous.url) : null,
       getProficiencySourceId('background', payload.background.url),
-      { armor: [], weapons: [], tools: payload.tools, languages: [] },
+      {
+        armor: [],
+        weapons: [],
+        tools: payload.tools,
+        languages: [],
+        skills: [],
+        expertiseSkills: [],
+      },
     );
 
     // Как и у класса: снимается ровно выданный прошлой предысторией набор,
@@ -2297,53 +2363,57 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Копия врождённого заклинания в книгу персонажа: запись перестаёт зависеть
-   * и от вида, и от раздела сайта — дальше её правит форма листа. Из группы
-   * врождённых заклинание при этом уходит, иначе оно осталось бы в листе
-   * дважды. Характеристики и описание дозагружаются из справочника: у вида их
-   * нет.
+   * Где лист держит заклинание, известное вне книги: у вида или в записи
+   * особенности, которая его выдала. Правки — снятие, подготовка, копия в книгу
+   * — пишутся в найденное место, поэтому искать его нужно всем трём.
    *
-   * @param spellUrl URL врождённого заклинания.
+   * @param spellUrl URL заклинания вне книги.
+   * @returns место и сама запись; null — такого заклинания у листа нет.
    */
-  async function copyInnateSpellToSheet(spellUrl: string): Promise<void> {
-    if (!ensureEditable()) {
-      return;
-    }
-
-    const requestedInnateSpell = character.value.species?.innateSpells.find(
-      (innateSpell) => innateSpell.spell.url === spellUrl,
+  function findGrantedSpell(
+    spellUrl: string,
+  ): { kind: 'species' | 'feature'; spell: CharacterSpell } | null {
+    const innateSpell = character.value.species?.innateSpells.find(
+      (candidate) => candidate.spell.url === spellUrl,
     );
 
-    if (!requestedInnateSpell) {
-      return;
+    if (innateSpell) {
+      return { kind: 'species', spell: innateSpell.spell };
     }
 
-    const detail = await fetchCatalogSpellDetail(spellUrl);
+    const featureSpell = findFeatureSpell(character.value.features, spellUrl);
 
-    // Пока шёл запрос, вид могли сменить или заклинание убрать — перечитываем
-    // запись и отступаем, если её больше нет.
+    return featureSpell ? { kind: 'feature', spell: featureSpell } : null;
+  }
+
+  /**
+   * Лист без этого заклинания вне книги: запись уходит оттуда, где лежала.
+   * Вернуть её можно, заново выбрав вид или добавив черту.
+   *
+   * @param kind место, где лист держал заклинание.
+   * @param spellUrl URL заклинания вне книги.
+   * @returns персонаж без этой записи.
+   */
+  function withoutGrantedSpell(
+    kind: 'species' | 'feature',
+    spellUrl: string,
+  ): Character {
     const species = character.value.species;
 
-    const currentInnateSpell = species?.innateSpells.find(
-      (innateSpell) => innateSpell.spell.url === spellUrl,
-    );
-
-    if (!species || !currentInnateSpell) {
-      return;
+    if (kind === 'feature') {
+      return {
+        ...character.value,
+        features: removeFeatureSpell(character.value.features, spellUrl),
+      };
     }
 
-    const ownSpell: CharacterSpell = {
-      ...toCopiedSpell(
-        `${CUSTOM_SPELL_URL_PREFIX}${crypto.randomUUID()}`,
-        currentInnateSpell.spell,
-        detail,
-      ),
-      // В книге заклинание уже считается подготовленным наравне с остальными:
-      // пометка врождённого сюда не едет, иначе копия перебрала бы предел.
-      prepared: undefined,
-    };
+    // Вид сменили, пока шёл запрос: убирать запись уже не из чего, и переписывать
+    // лист нельзя — автосохранение сработало бы на подмену, которой не было.
+    if (!species) {
+      return character.value;
+    }
 
-    character.value = {
+    return {
       ...character.value,
       species: {
         ...species,
@@ -2351,7 +2421,53 @@ export function useCharacterSheet() {
           (innateSpell) => innateSpell.spell.url !== spellUrl,
         ),
       },
-      spells: [...character.value.spells, ownSpell],
+    };
+  }
+
+  /**
+   * Копия заклинания вне книги в книгу персонажа: запись перестаёт зависеть и от
+   * источника, и от раздела сайта — дальше её правит форма листа. Из группы
+   * заклинаний вне книги оно при этом уходит, иначе осталось бы в листе дважды.
+   * Характеристики и описание дозагружаются из справочника: ни у вида, ни у
+   * черты их нет.
+   *
+   * @param spellUrl URL заклинания вне книги.
+   */
+  async function copyInnateSpellToSheet(spellUrl: string): Promise<void> {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    if (!findGrantedSpell(spellUrl)) {
+      return;
+    }
+
+    const detail = await fetchCatalogSpellDetail(spellUrl);
+
+    // Пока шёл запрос, вид могли сменить или черту снять — перечитываем запись и
+    // отступаем, если её больше нет.
+    const granted = findGrantedSpell(spellUrl);
+
+    if (!granted) {
+      return;
+    }
+
+    const ownSpell: CharacterSpell = {
+      ...toCopiedSpell(
+        `${CUSTOM_SPELL_URL_PREFIX}${crypto.randomUUID()}`,
+        granted.spell,
+        detail,
+      ),
+      // В книге заклинание уже считается подготовленным наравне с остальными:
+      // пометка записи вне книги сюда не едет, иначе копия перебрала бы предел.
+      prepared: undefined,
+    };
+
+    const withoutGranted = withoutGrantedSpell(granted.kind, spellUrl);
+
+    character.value = {
+      ...withoutGranted,
+      spells: [...withoutGranted.spells, ownSpell],
     };
 
     toast.add({
@@ -2363,32 +2479,25 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Удаление врождённого заклинания вида: запись выбрасывается из самого вида,
-   * иначе она вернулась бы на следующем повышении уровня. Заново получить её
-   * можно, ещё раз выбрав вид в мастере.
+   * Удаление заклинания вне книги: запись выбрасывается из самого источника —
+   * из вида или из записи черты, — иначе она вернулась бы на следующем
+   * повышении уровня. Заново получить её можно, ещё раз выбрав вид в мастере
+   * или добавив черту.
    *
-   * @param spellUrl URL врождённого заклинания.
+   * @param spellUrl URL заклинания вне книги.
    */
   function removeInnateSpell(spellUrl: string): void {
     if (!ensureEditable()) {
       return;
     }
 
-    const species = character.value.species;
+    const granted = findGrantedSpell(spellUrl);
 
-    if (!species) {
+    if (!granted) {
       return;
     }
 
-    character.value = {
-      ...character.value,
-      species: {
-        ...species,
-        innateSpells: species.innateSpells.filter(
-          (innateSpell) => innateSpell.spell.url !== spellUrl,
-        ),
-      },
-    };
+    character.value = withoutGrantedSpell(granted.kind, spellUrl);
   }
 
   /**
@@ -2405,19 +2514,33 @@ export function useCharacterSheet() {
       return;
     }
 
+    const granted = findGrantedSpell(spellUrl);
     const species = character.value.species;
 
-    const currentInnateSpell = species?.innateSpells.find(
-      (innateSpell) => innateSpell.spell.url === spellUrl,
-    );
-
-    // Записи уже нет (вид сменили): переписывать лист нельзя — автосохранение
-    // сработало бы на подмену, которой не было.
-    if (!species || !currentInnateSpell) {
+    // Записи уже нет (вид сменили, черту сняли): переписывать лист нельзя —
+    // автосохранение сработало бы на подмену, которой не было.
+    if (!granted) {
       return;
     }
 
-    const prepared = !isInnateSpellPrepared(currentInnateSpell.spell);
+    const prepared = !isInnateSpellPrepared(granted.spell);
+
+    if (granted.kind === 'feature') {
+      character.value = {
+        ...character.value,
+        features: setFeatureSpellPrepared(
+          character.value.features,
+          spellUrl,
+          prepared,
+        ),
+      };
+
+      return;
+    }
+
+    if (!species) {
+      return;
+    }
 
     character.value = {
       ...character.value,
@@ -3038,20 +3161,15 @@ export function useCharacterSheet() {
       return;
     }
 
-    const proficiencies = {
-      ...character.value.proficiencies,
-      [group]: [...items],
-    };
-
+    // Журнал выдач не трогается: он записывает, что источник дал, а не что игрок
+    // согласен иметь. Снятое здесь обратно не вернётся — сверка применяет
+    // разницу журналов и к уже выданному не притрагивается.
     character.value = {
       ...character.value,
-      proficiencies,
-      // Снятое игроком уходит и из журнала: иначе сверка вернула бы владение
-      // при ближайшей смене класса или черты.
-      proficiencyGrants: pruneProficiencyGrants(
-        character.value.proficiencyGrants,
-        proficiencies,
-      ),
+      proficiencies: {
+        ...character.value.proficiencies,
+        [group]: [...items],
+      },
     };
   }
 
@@ -3066,19 +3184,12 @@ export function useCharacterSheet() {
       return;
     }
 
-    const proficiencies = {
-      ...character.value.proficiencies,
-      tools: tools.map((tool) => ({ ...tool })),
-    };
-
     character.value = {
       ...character.value,
-      proficiencies,
-      // Как и у прочих групп: снятый игроком инструмент уходит и из журнала.
-      proficiencyGrants: pruneProficiencyGrants(
-        character.value.proficiencyGrants,
-        proficiencies,
-      ),
+      proficiencies: {
+        ...character.value.proficiencies,
+        tools: tools.map((tool) => ({ ...tool })),
+      },
     };
   }
 
@@ -3093,6 +3204,9 @@ export function useCharacterSheet() {
       return;
     }
 
+    // Журнал выдач не трогается — как и у прочих владений. Прокрутка проходит
+    // через «нет владения», и подрезка журнала на каждом клике стирала бы запись
+    // о выдаче у того, кто просто возвращается от компетентности к владению.
     character.value = {
       ...character.value,
       skills: character.value.skills.map((skill) =>
@@ -3186,12 +3300,15 @@ export function useCharacterSheet() {
     initiativeBonus,
     formattedInitiative,
     effectiveSpeed,
+    featDefences,
+    hasFeatDefences,
     armorClassValue,
     spellcastingBreakdown,
     spellSlotRows,
     totalWeight,
     carryingCapacity,
     attunement,
+    setAbilityBonuses,
     setAbilityScore,
     setAbilityScores,
     setArmorClass,

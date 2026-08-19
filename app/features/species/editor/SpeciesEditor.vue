@@ -213,8 +213,8 @@
             <template #preview>
               <NuxtImg
                 v-slot="{ src, isLoaded, imgAttrs }"
-                :key="state.image"
-                :src="state.image"
+                :key="state.linkImage"
+                :src="state.linkImage"
                 custom
               >
                 <!-- Show the actual image when loaded -->

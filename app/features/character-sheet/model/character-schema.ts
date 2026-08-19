@@ -176,6 +176,10 @@ const grantedProficienciesSchema = z.object({
   weapons: z.array(z.string()).catch([]),
   tools: z.array(toolProficiencySchema).catch([]),
   languages: z.array(z.string()).catch([]),
+  // Навыки появились в выдаче позже прочего: у записей без поля их просто нет.
+  skills: z.array(z.string()).catch([]),
+  // Компетентность — ещё позже, вместе с выбором игрока при взятии черты.
+  expertiseSkills: z.array(z.string()).catch([]),
 });
 
 /**
@@ -254,27 +258,11 @@ export const sheetModifiersSchema = z
       .catch(undefined),
     conditionImmunities: modifierCodesSchema,
     creatureType: z.string().optional().catch(undefined),
+    initiativeBonus: modifierNumberSchema,
     initiativeProficiencyBonus: modifierFlagSchema,
   })
   .nullable()
   .catch(null);
-
-const featureSchema = z.object({
-  id: z.string(),
-  name: z.string().catch(''),
-  description: descriptionNodesSchema,
-  origin: z.enum(['species', 'lineage', 'class', 'feat', 'none']).catch('none'),
-  originName: z.string().catch(''),
-  // Листы до учёта уровня умений его не хранят: снятие уровня такие записи не
-  // трогает, пока уровень не будет взят заново.
-  level: z.coerce.number().nullable().catch(null),
-  choice: z.string().nullable().catch(null),
-  // Снимок механики черты; у записей до её появления поля нет — такая черта
-  // лист не двигает, пока её не добавят заново.
-  modifiers: sheetModifiersSchema,
-  // Снимок выдаваемых чертой владений; у записей до его появления поля нет.
-  proficiencies: featProficienciesSchema,
-});
 
 // Поля своих заклинаний (`custom:<uuid>`) отсутствуют у записей из каталога,
 // поэтому необязательны; битое значение отбрасывается вместе с полем, а не
@@ -292,6 +280,40 @@ const spellSchema = z.object({
   components: z.string().optional().catch(undefined),
   duration: z.string().optional().catch(undefined),
   description: z.array(descriptionNodeSchema).optional().catch(undefined),
+});
+
+const featureSchema = z.object({
+  id: z.string(),
+  name: z.string().catch(''),
+  description: descriptionNodesSchema,
+  origin: z.enum(['species', 'lineage', 'class', 'feat', 'none']).catch('none'),
+  originName: z.string().catch(''),
+  // Листы до учёта уровня умений его не хранят: снятие уровня такие записи не
+  // трогает, пока уровень не будет взят заново.
+  level: z.coerce.number().nullable().catch(null),
+  choice: z.string().nullable().catch(null),
+  // Снимок механики черты; у записей до её появления поля нет — такая черта
+  // лист не двигает, пока её не добавят заново.
+  modifiers: sheetModifiersSchema,
+  // Снимок выдаваемых чертой владений; у записей до его появления поля нет.
+  proficiencies: featProficienciesSchema,
+  // Заклинания, которые черта даёт знать; у записей до их появления поля нет.
+  // Подготовку игрок снимает и возвращает прямо здесь, поэтому список хранится
+  // в самой записи, а не пересобирается из справочника.
+  spells: z.array(spellSchema).nullable().optional().catch(undefined),
+  // Ответы игрока на выборы черты по ключу выбора; у записей до их появления
+  // поля нет.
+  choiceAnswers: z
+    .record(z.string(), z.array(z.string()).catch([]))
+    .optional()
+    .catch(undefined),
+  // Прибавки к характеристикам, уже применённые чертой; у записей до них поля
+  // нет — такая черта характеристики не двигала и при снятии их не тронет.
+  abilityIncreases: z
+    .partialRecord(abilityKeySchema, z.coerce.number())
+    .nullable()
+    .optional()
+    .catch(undefined),
 });
 
 const speciesSchema = z
@@ -354,10 +376,16 @@ const spellcastingSchema = z
 // источника (характеристика и число) и пометка игрока.
 const customBonusSchema = z.object({
   id: z.string(),
-  // Вид «бонус мастерства» появился вместе с механикой черт («Бдительный»):
-  // листы до него таких записей не имеют, а незнакомый вид падает в число.
-  kind: z.enum(['ability', 'flat', 'proficiency']).catch(NEW_CUSTOM_BONUS.kind),
+  // Вид «бонус мастерства» появился вместе с механикой черт («Бдительный»), а
+  // виды «уровень персонажа» и «уровень класса» — позже него: листы до них
+  // таких записей не имеют, а незнакомый вид падает в число.
+  kind: z
+    .enum(['ability', 'classLevel', 'flat', 'level', 'proficiency'])
+    .catch(NEW_CUSTOM_BONUS.kind),
   ability: abilityKeySchema.catch(NEW_CUSTOM_BONUS.ability),
+  // Листы до вида «уровень класса» класса-источника не хранят: пустая строка
+  // тут значит «класс не выбран», и такой бонус ничего не прибавляет.
+  classUrl: z.string().catch(NEW_CUSTOM_BONUS.classUrl),
   value: z.coerce.number().int().catch(0),
   label: z.string().catch(''),
 });
@@ -534,6 +562,21 @@ const abilitiesSchema = z
     charisma: z.coerce.number().catch(10),
   })
   .catch(() => ({ ...DEFAULT_CHARACTER.abilities }));
+
+/**
+ * Свои бонусы к значениям характеристик. Списки заведены по всем шести ключам
+ * сразу: пустой список — бонусов нет, и разбирать в подсчёте нечего.
+ */
+const abilityBonusesSchema = z
+  .object({
+    strength: z.array(customBonusSchema).catch([]),
+    dexterity: z.array(customBonusSchema).catch([]),
+    constitution: z.array(customBonusSchema).catch([]),
+    intelligence: z.array(customBonusSchema).catch([]),
+    wisdom: z.array(customBonusSchema).catch([]),
+    charisma: z.array(customBonusSchema).catch([]),
+  })
+  .catch(() => structuredClone(DEFAULT_CHARACTER.abilityBonuses));
 
 const savingThrowSchema = z.object({
   key: abilityKeySchema,
@@ -746,6 +789,9 @@ const inventoryWeaponSchema = z
     category: z.enum(['simple', 'martial']).catch('simple'),
     ranged: z.boolean().catch(false),
     finesse: z.boolean().catch(false),
+    // Листы, сохранённые до появления свойства «Тяжёлое», поля не содержат:
+    // помехи у такого оружия нет, пока игрок не отметит свойство сам.
+    heavy: z.boolean().catch(false),
     // Листы, сохранённые до появления магических бонусов, поля не содержат:
     // ноль означает обычное оружие, поэтому доливать нечего.
     attackBonus: z.coerce.number().catch(0),
@@ -785,6 +831,13 @@ const inventoryBonusSchema = z
     ]),
     key: z.string().catch(''),
     value: z.coerce.number().catch(0),
+    // Режим и порядок появились вместе с эффектами магических предметов: у
+    // прежних записей и у своей формы листа их нет — это обычные прибавки.
+    mode: z
+      .enum(['add', 'override', 'upgrade', 'downgrade'])
+      .optional()
+      .catch(undefined),
+    priority: z.coerce.number().optional().catch(undefined),
   })
   .nullable()
   .catch(null);
@@ -1082,6 +1135,9 @@ const characterSchema = z
     speed: speedSchema,
     vision: visionSchema,
     abilities: abilitiesSchema,
+    // Свои бонусы характеристик появились позже самих значений: у листов до них
+    // поля нет, и оно падает в пустые списки.
+    abilityBonuses: abilityBonusesSchema,
     // Легаси-поле: одним списком владений спасброски хранились до того, как у
     // каждого появились своя характеристика и свои бонусы.
     savingThrowProficiencies: z

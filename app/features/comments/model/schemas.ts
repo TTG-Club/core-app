@@ -4,6 +4,8 @@ import type {
   CommentRateLimitInfo,
   CommentsPage,
   CreateCommentRequest,
+  MyComment,
+  MyCommentsUpdates,
   PublicComment,
 } from './types';
 
@@ -61,6 +63,22 @@ function normalizeCommentDate(value: unknown): string {
 const commentDateSchema = z.unknown().transform(normalizeCommentDate);
 
 /**
+ * Статус комментария. Незнакомое значение (сборка сервиса новее фронта)
+ * считается опубликованным: спрятать живой комментарий хуже, чем показать его
+ * без точной пометки.
+ */
+const commentStatusSchema = z
+  .enum([
+    'PUBLISHED',
+    'DELETED',
+    'PENDING_MODERATION',
+    'REJECTED',
+    'SPAM',
+    'HIDDEN_BY_BAN',
+  ])
+  .catch('PUBLISHED');
+
+/**
  * Схема комментария. Поля снабжены `catch`-дефолтами, чтобы битое поле не
  * роняло всю ленту. Исключение — `id`: без него комментарий бесполезен.
  *
@@ -78,16 +96,7 @@ const commentSchema = z.object({
   authorId: z.string().nullish().catch(null),
   authorName: z.string().nullish().catch(null),
   content: z.string().nullish().catch(null),
-  status: z
-    .enum([
-      'PUBLISHED',
-      'DELETED',
-      'PENDING_MODERATION',
-      'REJECTED',
-      'SPAM',
-      'HIDDEN_BY_BAN',
-    ])
-    .catch('PUBLISHED'),
+  status: commentStatusSchema,
   replyCount: z.coerce.number().catch(0),
   // Опциональные поля новых сборок сервиса — отсутствие не ломает разбор.
   totalReplyCount: z.coerce.number().nullish().catch(null),
@@ -335,4 +344,102 @@ export function parseCreateCommentRequest(
   request: CreateCommentRequest,
 ): CreateCommentRequest {
   return createCommentRequestSchema.parse(request);
+}
+
+/** Превью последнего чужого ответа в карточке профиля. */
+const myCommentReplyPreviewSchema = z.object({
+  id: z.string().min(1),
+  authorName: z.string().catch(''),
+  content: z.string().catch(''),
+  createdAt: commentDateSchema,
+});
+
+/** Схема своего комментария в профиле: сервис отдаёт только опубликованные. */
+const myCommentSchema = z.object({
+  id: z.string().min(1),
+  section: z.string().nullish().catch(null),
+  url: z.string().nullish().catch(null),
+  parentId: z.string().nullish().catch(null),
+  parentAuthorName: z.string().nullish().catch(null),
+  content: z.string().catch(''),
+  replyCount: z.coerce.number().catch(0),
+  newReplyCount: z.coerce.number().catch(0),
+  lastReplyAt: commentDateSchema.nullable().catch(null),
+  lastReply: myCommentReplyPreviewSchema.nullish().catch(null),
+  createdAt: commentDateSchema,
+  editedAt: commentDateSchema.nullable().catch(null),
+});
+
+/**
+ * Разбирает свои комментарии поштучно, отсеивая битые записи и сообщая о
+ * каждой в консоль, — по той же причине, что и `parseCommentList`: `catch` на
+ * массиве отдал бы пустую страницу целиком из-за одной записи без `id`, и
+ * раздел выглядел бы как «комментариев нет» при непустом счётчике.
+ * @param input Сырой массив из ответа сервиса.
+ */
+function parseMyCommentList(
+  input: unknown,
+): Array<z.infer<typeof myCommentSchema>> {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input.flatMap((item) => {
+    const parsed = myCommentSchema.safeParse(item);
+
+    if (!parsed.success) {
+      consola.warn('[comments] Свой комментарий не прошёл разбор:', item);
+
+      return [];
+    }
+
+    return [parsed.data];
+  });
+}
+
+const myCommentsPageSchema = z.object({
+  content: z.unknown().transform(parseMyCommentList),
+  totalElements: z.coerce.number().catch(0),
+  last: z.boolean().catch(true),
+});
+
+const myCommentsUpdatesSchema = z.object({
+  count: z.coerce.number().catch(0),
+  lastReplyAt: commentDateSchema.nullable().catch(null),
+});
+
+/**
+ * Валидирует страницу своих комментариев из профиля.
+ * @param input Сырой ответ сервера.
+ */
+export function parseMyCommentsPage(input: unknown): CommentsPage<MyComment> {
+  const parsed = myCommentsPageSchema.parse(input);
+
+  return {
+    items: parsed.content.map((comment) => ({
+      ...comment,
+      section: comment.section ?? null,
+      url: comment.url ?? null,
+      parentId: comment.parentId ?? null,
+      parentAuthorName: comment.parentAuthorName ?? null,
+      lastReply: comment.lastReply ?? null,
+    })),
+    totalElements: parsed.totalElements,
+    last: parsed.last,
+  };
+}
+
+/**
+ * Валидирует сводку новых ответов. Пустая дата (сервис прислал null или
+ * непонятный формат) превращается в `null`: отметку просмотра из неё не
+ * построить, и отправлять её обратно нельзя.
+ * @param input Сырой ответ сервера.
+ */
+export function parseMyCommentsUpdates(input: unknown): MyCommentsUpdates {
+  const parsed = myCommentsUpdatesSchema.parse(input);
+
+  return {
+    count: parsed.count,
+    lastReplyAt: parsed.lastReplyAt || null,
+  };
 }

@@ -2,6 +2,7 @@
   import type { SpeciesDetailResponse } from '~species/model';
 
   import { SpeciesBody } from '~species/body';
+  import { getSpeciesMarkdown } from '~species/model';
   import { PageActions } from '~ui/page';
   import { UiResult } from '~ui/result';
 
@@ -18,6 +19,8 @@
   } = await useAsyncData(`species-${url}`, () =>
     $fetch<SpeciesDetailResponse>(`/api/v2/species/${url}`),
   );
+
+  const markdown = useEntityMarkdown(species, getSpeciesMarkdown);
 
   useSeoMeta({
     title: getSeoTitle,
@@ -74,6 +77,7 @@
       <PageActions
         :edit-url="editUrl"
         :close-url="{ name: 'species' }"
+        :markdown
       />
     </template>
 

@@ -17,10 +17,11 @@
   } from '../model';
   import {
     FeatAbilityBonuses,
-    FeatChoices,
+    FeatMechanicsSection,
     FeatModifiers,
     FeatPrerequisiteFields,
     FeatProficiencies,
+    FeatSpells,
   } from './ui';
 
   const formRef = useTemplateRef('formRef');
@@ -145,22 +146,50 @@
 
     <UCard variant="subtle">
       <template #header>
-        <h2 class="truncate text-base text-highlighted">
-          Повышение характеристик
-        </h2>
+        <h2 class="truncate text-base text-highlighted">Характеристики</h2>
       </template>
 
-      <FeatAbilityBonuses v-model="mechanics.abilityBonuses" />
+      <FeatMechanicsSection
+        v-model="mechanics.choices"
+        domain="ABILITY"
+      >
+        <template #granted>
+          <FeatAbilityBonuses
+            v-model="mechanics.abilityBonuses"
+            :choices="mechanics.choices"
+          />
+        </template>
+      </FeatMechanicsSection>
     </UCard>
 
     <UCard variant="subtle">
       <template #header>
-        <h2 class="truncate text-base text-highlighted">
-          Выборы при взятии черты
-        </h2>
+        <h2 class="truncate text-base text-highlighted">Владения</h2>
       </template>
 
-      <FeatChoices v-model="mechanics.choices" />
+      <FeatMechanicsSection
+        v-model="mechanics.choices"
+        domain="PROFICIENCY"
+      >
+        <template #granted>
+          <FeatProficiencies v-model="mechanics.proficiencies" />
+        </template>
+      </FeatMechanicsSection>
+    </UCard>
+
+    <UCard variant="subtle">
+      <template #header>
+        <h2 class="truncate text-base text-highlighted">Заклинания</h2>
+      </template>
+
+      <FeatMechanicsSection
+        v-model="mechanics.choices"
+        domain="SPELL"
+      >
+        <template #granted>
+          <FeatSpells v-model="mechanics.spells" />
+        </template>
+      </FeatMechanicsSection>
     </UCard>
 
     <UCard variant="subtle">
@@ -173,10 +202,13 @@
 
     <UCard variant="subtle">
       <template #header>
-        <h2 class="truncate text-base text-highlighted">Выдаваемые владения</h2>
+        <h2 class="truncate text-base text-highlighted">Прочие выборы</h2>
       </template>
 
-      <FeatProficiencies v-model="mechanics.proficiencies" />
+      <FeatMechanicsSection
+        v-model="mechanics.choices"
+        domain="OTHER"
+      />
     </UCard>
 
     <UCard variant="subtle">

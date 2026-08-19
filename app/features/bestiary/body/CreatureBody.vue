@@ -33,15 +33,31 @@
     ]),
   );
 
+  // Пустые поля логова и раздела приходят без ключа (либо `null` у описания
+  // раздела), а `MarkupRender` и `v-for` ждут узел и массив, — поэтому
+  // пустота отсеивается здесь, а не выражением в шаблоне.
+  const lairDescription = computed(() => creature.lair.description);
+
+  const lairEffects = computed(() => creature.lair.effects ?? []);
+
+  const lairEnding = computed(() => creature.lair.ending);
+
+  const legendaryActions = computed(() => creature.legendary.actions ?? []);
+
+  const sectionDescription = computed(
+    () => creature.section.description ?? undefined,
+  );
+
   const hasLair = computed(
-    () => creature.lair?.description || creature.lair?.effects?.length,
+    () =>
+      Boolean(lairDescription.value?.length) || lairEffects.value.length > 0,
   );
 
   const hasSection = computed(
     () =>
-      creature.section?.description
-      || creature.section?.habitats
-      || creature.section?.treasures,
+      sectionDescription.value?.length
+      || creature.section.habitats
+      || creature.section.treasures,
   );
 </script>
 
@@ -132,7 +148,7 @@
           </UiCollapse>
         </template>
 
-        <template v-if="creature.legendary?.actions?.length">
+        <template v-if="legendaryActions.length">
           <UiCollapse default-open>
             <template #default> Легендарные действия </template>
 
@@ -156,7 +172,7 @@
               </p>
 
               <UiAction
-                v-for="action in creature.legendary.actions"
+                v-for="action in legendaryActions"
                 :key="action.name.eng"
                 :label="action.name.rus"
                 :text="action.description"
@@ -184,13 +200,13 @@
 
             <template #content>
               <MarkupRender
-                v-if="creature.lair.description"
-                :render-node="creature.lair.description"
+                v-if="lairDescription"
+                :render-node="lairDescription"
               />
 
-              <template v-if="creature.lair?.effects?.length">
+              <template v-if="lairEffects.length">
                 <UiAction
-                  v-for="effect in creature.lair.effects"
+                  v-for="effect in lairEffects"
                   :key="effect.name.eng"
                   :label="effect.name.rus"
                   :text="effect.description"
@@ -198,8 +214,8 @@
               </template>
 
               <MarkupRender
-                v-if="creature.lair.ending"
-                :render-node="creature.lair.ending"
+                v-if="lairEnding"
+                :render-node="lairEnding"
               />
             </template>
           </UiCollapse>
@@ -239,8 +255,8 @@
             </div>
 
             <DescriptionsBlock
-              v-if="creature.section.description"
-              :description="creature.section.description"
+              v-if="sectionDescription"
+              :description="sectionDescription"
             />
           </template>
         </UiCollapse>

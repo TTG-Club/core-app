@@ -223,13 +223,14 @@
           v-if="backgroundBonusChips.length"
           class="flex flex-wrap gap-1.5"
         >
-          <span
+          <UBadge
             v-for="chip in backgroundBonusChips"
             :key="chip.ability"
-            class="rounded border border-default bg-default/40 px-2.5 py-1 text-[11px] text-toned"
-          >
-            {{ chip.label }}
-          </span>
+            :label="chip.label"
+            color="neutral"
+            variant="subtle"
+            size="sm"
+          />
         </div>
 
         <span class="text-xs text-dimmed italic">{{ backgroundHint }}</span>

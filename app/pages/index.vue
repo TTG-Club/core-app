@@ -2,6 +2,7 @@
   import { HomeArticles } from '~home/articles';
   import { HomeBackground } from '~home/background';
   import { VttgPromoCard } from '~home/banners';
+  import { HomeComments } from '~home/comments';
   import { HomeCommunity } from '~home/community';
   import { HomeNews } from '~home/news';
   import { HomeRecentChanges } from '~home/recent-changes';
@@ -39,14 +40,27 @@
       <!--
         На мобильном (< xl) колонки-обёртки схлопываются в display:contents, все
         блоки становятся прямыми флекс-элементами и выстраиваются одной колонкой в
-        порядке order-*: промо VTTG → инструменты → Новости → соцсети →
-        статистика онлайн → Статьи → Обновления. На xl колонки восстанавливаются (xl:flex) — раскладка десктопа
+        порядке order-*: промо VTTG → инструменты → Новости → Комментарии →
+        соцсети → статистика онлайн → Статьи → Обновления. Комментарии идут сразу
+        за новостями — там же, где стоят в первой колонке на десктопе.
+        На xl колонки восстанавливаются (xl:flex) — раскладка десктопа
         прежняя, трёхколоночная.
       -->
-      <div class="flex w-full flex-col gap-3 xl:flex-row xl:items-start">
-        <!-- Новости -->
+      <!-- items-stretch: колонки одной высоты, чтобы лента комментариев в
+        первой из них дотягивалась до низа самой длинной колонки -->
+      <div class="flex w-full flex-col gap-3 xl:flex-row xl:items-stretch">
+        <!-- Новости и живая лента обсуждений -->
         <div class="contents xl:flex xl:w-1/3 xl:flex-col xl:gap-3 2xl:w-1/3">
           <HomeNews class="order-2 xl:order-0" />
+
+          <!-- Лента вынута из потока (absolute внутри растянутой ячейки): так её
+            собственная высота не удлиняет колонку, а сама она занимает ровно
+            остаток — и низ колонки совпадает с соседними -->
+          <div
+            class="order-3 xl:relative xl:order-0 xl:min-h-100 xl:min-w-0 xl:flex-1"
+          >
+            <HomeComments class="xl:absolute xl:inset-0" />
+          </div>
         </div>
 
         <!-- Навигация по сайту и обновления -->
@@ -55,16 +69,16 @@
 
           <HomeTools class="order-1 xl:order-0" />
 
-          <HomeArticles class="order-5 xl:order-0" />
+          <HomeArticles class="order-6 xl:order-0" />
 
-          <HomeRecentChanges class="order-6 xl:order-0" />
+          <HomeRecentChanges class="order-7 xl:order-0" />
         </div>
 
         <!-- Соцсети, статистика проекта и охотники за багами -->
         <div class="contents xl:flex xl:w-1/3 xl:flex-col xl:gap-3 2xl:w-1/3">
-          <SocialLinks class="order-3 xl:order-0" />
+          <SocialLinks class="order-4 xl:order-0" />
 
-          <HomeCommunity class="order-4 xl:order-0" />
+          <HomeCommunity class="order-5 xl:order-0" />
         </div>
       </div>
     </div>

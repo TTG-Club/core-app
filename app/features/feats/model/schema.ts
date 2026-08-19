@@ -49,6 +49,7 @@ const spellFilterSchema = z.object({
   maxLevel: z.number().optional(),
   schools: z.array(z.string()).optional(),
   classes: z.array(entityRefSchema).optional(),
+  classesFromChoiceKey: z.string().optional(),
   castingTime: z.string().optional(),
 });
 
@@ -76,6 +77,12 @@ const choiceSchema = z.object({
   options: z.array(choiceOptionSchema).optional(),
   spellFilter: spellFilterSchema.optional(),
   onlyIfNotProficient: z.boolean().optional(),
+  onlyIfProficient: z.boolean().optional(),
+  // Единственное значение, которое разбор подставляет сам: слияние с начальным
+  // состоянием формы до выборов внутри списка не достаёт, а отсутствие поля —
+  // это владение, и без подстановки селект «Что даёт выбор» открывался бы
+  // пустым у всех записей, сохранённых с обычным исходом.
+  grants: z.enum(['PROFICIENCY', 'EXPERTISE']).default('PROFICIENCY'),
   expertiseIfProficient: z.boolean().optional(),
   rechooseOnLongRest: z.boolean().optional(),
 });
@@ -117,13 +124,22 @@ const modifiersSchema = z.object({
   damage: damageAffinitySchema.optional(),
   conditionImmunities: z.array(z.string()).optional(),
   creatureType: z.string().optional(),
+  initiativeBonus: z.number().optional(),
   initiativeProficiencyBonus: z.boolean().optional(),
 });
 
 const proficiencyGrantSchema = z.object({
   weaponCategories: z.array(z.string()).optional(),
   armorCategories: z.array(z.string()).optional(),
+  skills: z.array(z.string()).optional(),
+  languages: z.array(z.string()).optional(),
   tools: z.array(entityRefSchema).optional(),
+});
+
+const spellGrantSchema = z.object({
+  spells: z.array(entityRefSchema).optional(),
+  spellcastingAbility: abilityKeySchema.optional(),
+  alwaysPrepared: z.boolean().optional(),
 });
 
 const mechanicsSchema = z.object({
@@ -131,6 +147,7 @@ const mechanicsSchema = z.object({
   choices: z.array(choiceSchema).optional(),
   modifiers: modifiersSchema.optional(),
   proficiencies: proficiencyGrantSchema.optional(),
+  spells: spellGrantSchema.optional(),
 });
 
 const prerequisiteDetailsSchema = z.object({

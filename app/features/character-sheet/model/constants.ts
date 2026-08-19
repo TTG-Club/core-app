@@ -13,7 +13,7 @@ import type {
   CustomArmorTypeMeta,
   CustomBonusBaseSource,
   CustomBonusKind,
-  CustomBonusSource,
+  CustomBonusSourceOption,
   CustomInventoryItemDraft,
   CustomInventoryKind,
   CustomSpellField,
@@ -21,6 +21,7 @@ import type {
   FeatureOrigin,
   FeatureOriginGroup,
   HitPointsGainMode,
+  InventoryBonusMode,
   InventoryItemBonus,
   InventoryItemCategory,
   InventoryMagicState,
@@ -963,7 +964,9 @@ export const SKILL_DUPLICATE_WARNING =
 /** Подписи видов своего бонуса. */
 export const CUSTOM_BONUS_KIND_LABELS: Record<CustomBonusKind, string> = {
   ability: 'Характеристика',
+  classLevel: 'Уровень класса',
   flat: 'Своё число',
+  level: 'Уровень персонажа',
   proficiency: 'Бонус мастерства',
 };
 
@@ -973,20 +976,30 @@ export const CUSTOM_BONUS_FLAT_SOURCE = 'flat';
 /** Источник своего бонуса «бонус мастерства» в общем селекторе источников. */
 export const CUSTOM_BONUS_PROFICIENCY_SOURCE = 'proficiency';
 
+/** Источник своего бонуса «уровень персонажа» в общем селекторе источников. */
+export const CUSTOM_BONUS_LEVEL_SOURCE = 'level';
+
 /**
- * Варианты источника своего бонуса: своё число, бонус мастерства и все
- * характеристики одним списком — так строка бонуса обходится одним селектором
- * вместо пары «вид + характеристика».
+ * Начало значения источника «уровень класса» в общем селекторе: хвост — url
+ * класса персонажа (`class:wizard-phb24`). Классы у каждого листа свои,
+ * поэтому такие варианты собираются от персонажа, а не лежат константой (см.
+ * `getCustomBonusSourceOptions`).
  */
-export const CUSTOM_BONUS_SOURCE_OPTIONS: Array<{
-  label: string;
-  value: CustomBonusSource;
-}> = [
+export const CUSTOM_BONUS_CLASS_SOURCE_PREFIX = 'class:';
+
+/**
+ * Варианты источника своего бонуса: своё число, бонус мастерства, уровень
+ * персонажа и все характеристики одним списком — так строка бонуса обходится
+ * одним селектором вместо пары «вид + характеристика». Уровни классов встают в
+ * этот же список от персонажа (см. `getCustomBonusSourceOptions`).
+ */
+export const CUSTOM_BONUS_SOURCE_OPTIONS: CustomBonusSourceOption[] = [
   { label: CUSTOM_BONUS_KIND_LABELS.flat, value: CUSTOM_BONUS_FLAT_SOURCE },
   {
     label: CUSTOM_BONUS_KIND_LABELS.proficiency,
     value: CUSTOM_BONUS_PROFICIENCY_SOURCE,
   },
+  { label: CUSTOM_BONUS_KIND_LABELS.level, value: CUSTOM_BONUS_LEVEL_SOURCE },
   ...ABILITY_OPTIONS,
 ];
 
@@ -994,10 +1007,8 @@ export const CUSTOM_BONUS_SOURCE_OPTIONS: Array<{
  * Варианты источника ОСНОВЫ инициативы: своё число и все характеристики. От
  * списка источников бонуса отличается отсутствием бонуса мастерства — он бывает
  * только прибавкой сверх основы («Бдительный»), а не самой основой броска.
- *
- * Тот же список подходит и своим бонусам САМОГО бонуса мастерства: слагаемым
- * себе он быть не может, иначе подсчёт ушёл бы в бесконечную рекурсию (см.
- * `getCharacterProficiencyBonus`).
+ * Уровней здесь нет по той же причине: сама по себе инициатива от уровня не
+ * считается.
  */
 export const CUSTOM_BONUS_BASE_SOURCE_OPTIONS: Array<{
   label: string;
@@ -1005,6 +1016,33 @@ export const CUSTOM_BONUS_BASE_SOURCE_OPTIONS: Array<{
 }> = [
   { label: CUSTOM_BONUS_KIND_LABELS.flat, value: CUSTOM_BONUS_FLAT_SOURCE },
   ...ABILITY_OPTIONS,
+];
+
+/**
+ * Варианты источника своего бонуса САМОГО бонуса мастерства: всё, кроме него
+ * самого. Слагаемым себе он быть не может, иначе подсчёт ушёл бы в бесконечную
+ * рекурсию (см. `getCharacterProficiencyBonus`), а уровни и характеристики в
+ * прибавке к нему обычны — «половина уровня» и подобные умения.
+ */
+export const PROFICIENCY_BONUS_SOURCE_OPTIONS: CustomBonusSourceOption[] = [
+  { label: CUSTOM_BONUS_KIND_LABELS.flat, value: CUSTOM_BONUS_FLAT_SOURCE },
+  { label: CUSTOM_BONUS_KIND_LABELS.level, value: CUSTOM_BONUS_LEVEL_SOURCE },
+  ...ABILITY_OPTIONS,
+];
+
+/**
+ * Варианты источника своего бонуса к значению характеристики: своё число,
+ * бонус мастерства и уровни. Модификатора характеристики в списке нет —
+ * слагаемым к значению он не бывает, а пара таких бонусов друг на друга завела
+ * бы подсчёт по кругу.
+ */
+export const ABILITY_BONUS_SOURCE_OPTIONS: CustomBonusSourceOption[] = [
+  { label: CUSTOM_BONUS_KIND_LABELS.flat, value: CUSTOM_BONUS_FLAT_SOURCE },
+  {
+    label: CUSTOM_BONUS_KIND_LABELS.proficiency,
+    value: CUSTOM_BONUS_PROFICIENCY_SOURCE,
+  },
+  { label: CUSTOM_BONUS_KIND_LABELS.level, value: CUSTOM_BONUS_LEVEL_SOURCE },
 ];
 
 /**
@@ -1035,14 +1073,13 @@ export const ARMOR_GROUP_BY_API_CATEGORY: Record<
 };
 
 /**
- * Навыки справочника к названиям навыков листа. Механика умения вида приходит
- * кодами (`PERCEPTION`), а лист хранит навык русским названием — тем, что видит
- * игрок в таблице навыков.
+ * Навыки справочника к названиям навыков листа. Механика черты хранит навык
+ * константой словаря, а лист — названием; списки сошлись один в один, все 18.
  *
- * Названия взяты из словаря навыков core-api. «Восприятие» в него не входит:
- * так навык называют тексты описаний, а в словаре он «Внимательность».
+ * Отдельной картой, а не запросом словаря: разбор детали черты синхронный. Так
+ * же сделаны и языки — см. {@link LANGUAGE_NAME_BY_API_KEY}.
  */
-export const SKILL_NAME_BY_API_CODE: Record<string, string> = {
+export const SKILL_NAME_BY_API_KEY: Record<string, string> = {
   ACROBATICS: 'Акробатика',
   ANIMAL_HANDLING: 'Уход за животными',
   ARCANA: 'Аркана',
@@ -1061,6 +1098,37 @@ export const SKILL_NAME_BY_API_CODE: Record<string, string> = {
   SLEIGHT_OF_HAND: 'Ловкость рук',
   STEALTH: 'Скрытность',
   SURVIVAL: 'Выживание',
+};
+
+/**
+ * Языки справочника к названиям языков листа. Механика черты хранит язык
+ * константой словаря, а лист — названием; списки сошлись один в один, все 19,
+ * хоть названия и разошлись («гномий» справочника — «Гномский» листа).
+ *
+ * Регистр констант неровный: у небесного языка это `Celestial`, а не
+ * `CELESTIAL`, — так он лежит в словаре бэкенда, и приводить ключи к верхнему
+ * регистру нельзя.
+ */
+export const LANGUAGE_NAME_BY_API_KEY: Record<string, string> = {
+  ABYSSAL: 'Абиссальный',
+  Celestial: 'Небесный',
+  COMMON: 'Общий',
+  COMMON_SIGN_LANGUAGE: 'Общий язык жестов',
+  DEEP: 'Глубинная речь',
+  DRACONIC: 'Драконий',
+  DRUIDIC: 'Друидический',
+  DWARVISH: 'Дварфийский',
+  ELVISH: 'Эльфийский',
+  GIANT: 'Гигантский',
+  GNOMISH: 'Гномский',
+  GOBLIN: 'Гоблинский',
+  HALFLING: 'Полуросликовский',
+  INFERNAL: 'Инфернальный',
+  ORC: 'Оркский',
+  PRIMORDIAL: 'Первоязык',
+  SYLVAN: 'Сильван',
+  THIEVES: 'Язык воров',
+  UNDERCOMMON: 'Подземный',
 };
 
 /**
@@ -1086,6 +1154,13 @@ export const ORIGIN_FEAT_ACQUISITION_LEVEL = 1;
  * идентификатор записи умения, поэтому у копии повторяемой черты бонус свой.
  */
 export const FEAT_CUSTOM_BONUS_ID_PREFIX = 'feat-bonus:';
+
+/**
+ * Хвост идентификатора своего бонуса инициативы числом. Черта может давать и
+ * бонус мастерства, и число («Бдительный» разных изданий), поэтому у второй
+ * записи тот же идентификатор с пометкой — иначе записи схлопнулись бы в одну.
+ */
+export const FEAT_FLAT_INITIATIVE_BONUS_ID_SUFFIX = ':flat';
 
 /**
  * Варианты основы бонуса мастерства: расчёт по уровню персонажа либо своё
@@ -1116,6 +1191,7 @@ export const CUSTOM_BONUS_LABEL_MAX_LENGTH = 40;
 export const NEW_CUSTOM_BONUS: Omit<CharacterCustomBonus, 'id'> = {
   kind: 'flat',
   ability: 'strength',
+  classUrl: '',
   value: 1,
   label: '',
 };
@@ -1426,6 +1502,9 @@ export const SPEED_UNIT_OPTIONS: Array<{ label: string; value: SpeedUnit }> = [
   { label: 'Мили (mi)', value: 'miles' },
   { label: 'Километры (km)', value: 'kilometers' },
 ];
+
+/** Режим броска d20 по умолчанию: без преимущества и помехи. */
+export const DEFAULT_ROLL_MODE: RollMode = 'normal';
 
 /** Варианты режима броска d20. */
 export const ROLL_MODE_OPTIONS: Array<{
@@ -2137,10 +2216,14 @@ export const SPELLS_RAW_DETAIL_PATH_SUFFIX = 'raw';
 /** Ключ общего кэша формул урона заклинаний (каталожные данные, не листа). */
 export const SPELL_DAMAGE_STATE_KEY = 'character-sheet:spell-damage';
 
-/** Подпись отдельной группы заклинаний, полученных от вида и происхождения. */
-export const INNATE_SPELL_GROUP_LABEL = 'Врождённые';
+/**
+ * Подпись группы заклинаний, которые персонаж знает вне книги: врождённых
+ * заклинаний вида и заклинаний, выдаваемых чертами. Место среди подготовленных
+ * они не занимают, поэтому стоят отдельной группой, а не в кругах книги.
+ */
+export const INNATE_SPELL_GROUP_LABEL = 'Врождённые и от черт';
 
-/** Служебный ключ группы врождённых заклинаний, не пересекающийся с кругами 0–9. */
+/** Служебный ключ группы заклинаний вне книги, не пересекающийся с кругами 0–9. */
 export const INNATE_SPELL_GROUP_LEVEL = -1;
 
 /** Локаль сортировки русских названий заклинаний. */
@@ -2320,7 +2403,7 @@ export const PREPARED_SPELL_TOGGLE_LABELS: Record<
 > = {
   prepare: 'Подготовить',
   unprepare: 'Снять подготовку',
-  innate: 'Врождённое заклинание не занимает место среди подготовленных',
+  innate: 'Заклинание вне книги не занимает место среди подготовленных',
   limit: 'Больше подготовить нельзя',
 };
 
@@ -3064,6 +3147,9 @@ export const INVENTORY_TWO_HANDED_BADGE_LABEL = 'Двумя руками';
 export const INVENTORY_TWO_HANDED_BADGE_HINT =
   'Универсальное оружие взято двумя руками: урон катится большей костью';
 
+/** Значок оружия, которым персонаж атакует с помехой по свойству «Тяжёлое». */
+export const INVENTORY_HEAVY_BADGE_LABEL = 'Помеха';
+
 /** Значок предмета, которого у персонажа не осталось (количество — ноль). */
 export const INVENTORY_MISSING_BADGE_LABEL = 'Отсутствует';
 
@@ -3072,16 +3158,27 @@ export const INVENTORY_MISSING_BADGE_HINT =
   'Предмета не осталось: его нельзя надеть, им нельзя атаковать и бросать урон';
 
 /**
- * Подписи вклада снаряжения в характеристику: плитка показывает значение с
- * бонусами предметов, а правится записанное — без пояснения числа расходятся.
+ * Подписи настройки характеристики: плитка показывает значение с прибавками, а
+ * правится записанное — без разбора числа расходятся.
  */
-export const ABILITY_ITEM_BONUS_LABELS = {
-  /** Хвост подсказки плитки: «18 = 16 +2 от снаряжения». */
-  hint: 'от снаряжения',
+export const SHEET_ABILITY_SETTINGS_LABELS = {
+  open: 'Настроить характеристику',
+  description:
+    'Укажите значение характеристики — модификатор рассчитается автоматически',
+  scoreTitle: 'Значение',
+  modifierTitle: 'Модификатор',
 
-  /** Пояснение в модалке правки значения. */
-  modalHint: 'Снаряжение добавляет к характеристике',
-};
+  /** Подпись записанного значения в разборе: «Записано 16 · Пояс силы +2». */
+  breakdownScore: 'Записано',
+
+  bonusesTitle: 'Бонусы к значению',
+  bonusesHint:
+    'Бонус поднимает саму характеристику, поэтому вместе с ней растут её '
+    + 'модификатор, спасброски, навыки, класс доспеха и атаки.',
+  totalTitle: 'Итог',
+  save: 'Сохранить',
+  cancel: 'Отмена',
+} as const;
 
 /** Подписи бонусов предмета для сводки в его строке. */
 export const INVENTORY_BONUS_LABELS = {
@@ -3116,6 +3213,30 @@ export const INVENTORY_ROLL_KIND_LABELS: Record<InventoryStatRollKind, string> =
     damage: 'Бросок урона',
   };
 
+/** Подписи слагаемых в подсказке боевой плитки предмета. */
+export const INVENTORY_STAT_HINT_LABELS = {
+  /** Заголовок разбора бонуса атаки. */
+  attack: 'Бонус атаки',
+
+  /** Слагаемое бонуса мастерства. */
+  proficiency: 'мастерство',
+
+  /** Слагаемое собственного бонуса оружия — общее для атаки и урона. */
+  weapon: 'оружие',
+
+  /**
+   * Хвост разбора атаки, когда владения этим оружием нет: без пояснения
+   * пропавший бонус мастерства выглядит ошибкой подсчёта.
+   */
+  noProficiency: 'без владения оружием',
+
+  /**
+   * Хвост разбора атаки тяжёлым оружием, которое персонажу не по руке: на сам
+   * бонус помеха не влияет, поэтому в разборе о ней сказано отдельно.
+   */
+  heavyDisadvantage: 'помеха: тяжёлое оружие',
+};
+
 /** Подсказка в тултипе о том, что плитка бросается по нажатию. */
 export const SHEET_ROLL_HINT_LABEL = 'нажми, чтобы бросить';
 
@@ -3124,7 +3245,9 @@ export const SPELL_SLOTS_EMPTY_TOAST_TITLE = 'Ячейки закончилис�
 
 /**
  * Названия типов урона справочника предметов
- * (`/api/v2/dictionaries/damage/types`) — для подписи урона оружия.
+ * (`/api/v2/dictionaries/damage/types`) — для подписи урона оружия. Ключ `FAIR` —
+ * прежнее имя огненного урона: справочник отдаёт `FIRE`, но листы, сохранённые до
+ * переименования, всё ещё хранят старое значение.
  */
 export const DAMAGE_TYPE_LABELS: Record<string, string> = {
   ACID: 'Кислотный',
@@ -3144,6 +3267,73 @@ export const DAMAGE_TYPE_LABELS: Record<string, string> = {
 };
 
 /**
+ * Названия состояний справочника (`/api/v2/dictionaries/conditions`) — для
+ * иммунитетов, которые выдаёт черта. Отдельной картой, а не запросом словаря:
+ * разбор снимка механики синхронный, как у навыков и языков.
+ */
+export const CONDITION_LABELS: Record<string, string> = {
+  BLINDED: 'Ослеплённый',
+  CHARMED: 'Очарованный',
+  DEAFENED: 'Оглохший',
+  EXHAUSTION: 'Истощённый',
+  FRIGHTENED: 'Испуганный',
+  GRAPPLED: 'Схваченный',
+  INCAPACITATED: 'Недееспособный',
+  INVISIBLE: 'Невидимый',
+  PARALYZED: 'Парализованный',
+  PETRIFIED: 'Окаменевший',
+  POISONED: 'Отравленный',
+  PRONE: 'Лежащий ничком',
+  RESTRAINED: 'Опутанный',
+  STUNNED: 'Ошеломлённый',
+  UNCONSCIOUS: 'Бессознательный',
+};
+
+/**
+ * Названия типов существ справочника (`/api/v2/dictionaries/creature/types`) —
+ * для черты, которая меняет тип существа («Отмеченный драконом»).
+ */
+export const CREATURE_TYPE_LABELS: Record<string, string> = {
+  ABERRATION: 'Аберрация',
+  BEAST: 'Зверь',
+  CELESTIAL: 'Небожитель',
+  CONSTRUCT: 'Конструкт',
+  DRAGON: 'Дракон',
+  ELEMENTAL: 'Элементаль',
+  FEY: 'Фея',
+  FIEND: 'Исчадие',
+  GIANT: 'Великан',
+  HUMANOID: 'Гуманоид',
+  MONSTROSITY: 'Монстр',
+  PLANT: 'Растение',
+  SLIME: 'Слизь',
+  SWARM_OF_MEDIUM_FIENDS: 'Рой средних исчадий',
+  SWARM_OF_SMALL_FIENDS: 'Рой маленьких исчадий',
+  SWARM_OF_TINY_BEASTS: 'Рой крошечных зверей',
+  SWARM_OF_TINY_MONSTROSITIES: 'Рой крошечных монстров',
+  SWARM_OF_TINY_UNDEAD: 'Рой крошечной нежити',
+  UNDEAD: 'Нежить',
+};
+
+/** Чувства черты к типам зрения листа: коды совпадают по смыслу, но не по виду. */
+export const VISION_KEY_BY_FEAT_SENSE: Record<string, VisionKey> = {
+  DARKVISION: 'darkvision',
+  BLINDSIGHT: 'blindsight',
+  TREMORSENSE: 'tremorsense',
+  TRUESIGHT: 'truesight',
+};
+
+/** Подписи блока защит, которые дают черты. */
+export const SHEET_DEFENCES_LABELS = {
+  resistances: 'Сопротивление урону',
+  immunities: 'Иммунитет к урону',
+  vulnerabilities: 'Уязвимость к урону',
+  conditionImmunities: 'Иммунитет к состояниям',
+  creatureType: 'Тип существа',
+  telepathy: 'Телепатия',
+} as const;
+
+/**
  * Значение варианта «тип урона не указан». Пустая строка в качестве значения
  * селекта запрещена, а хранится незаполненный тип именно ею — поэтому у выбора
  * есть собственное значение пустоты.
@@ -3152,9 +3342,9 @@ export const DAMAGE_TYPE_NONE = 'none';
 
 /**
  * Варианты типа урона своего оружия: подписи берутся из справочника типов
- * урона, порядок — по алфавиту. Ключ `FAIR` — дубль огненного урона из старых
- * записей справочника, в выборе он не нужен. Первым идёт «не указан» — иначе
- * выбранный тип нечем сбросить.
+ * урона, порядок — по алфавиту. Устаревший `FAIR` из выбора убран — новый лист
+ * должен получать только `FIRE`. Первым идёт «не указан» — иначе выбранный тип
+ * нечем сбросить.
  */
 export const DAMAGE_TYPE_OPTIONS: Array<{ label: string; value: string }> = [
   { label: 'Не указан', value: DAMAGE_TYPE_NONE },
@@ -3265,12 +3455,19 @@ export const WEAPON_CATEGORY_OPTIONS: Array<{
 
 /** Подписи свойств своего оружия для строки типов предмета. */
 export const CUSTOM_WEAPON_PROPERTY_LABELS: Record<
-  'ranged' | 'finesse',
+  'ranged' | 'finesse' | 'heavy',
   string
 > = {
   ranged: 'Дальнобойное',
   finesse: 'Фехтовальное',
+  heavy: 'Тяжёлое',
 };
+
+/**
+ * Минимальное значение характеристики, при котором тяжёлое оружие бьёт без
+ * помехи (правила 2024).
+ */
+export const HEAVY_WEAPON_ABILITY_MINIMUM = 13;
 
 /** Порядок типов доспеха в селекте формы. */
 const CUSTOM_ARMOR_TYPE_ORDER: CustomArmorType[] = [
@@ -3408,6 +3605,19 @@ export const INVENTORY_BONUS_TARGET_LABELS: Record<
   'initiative': 'Инициатива',
 };
 
+/**
+ * Подписи режимов бонуса для сводки предмета: прибавку показывает знак числа, а
+ * остальным режимам нужно слово — иначе «Интеллект 19» читалось бы как «+19».
+ */
+export const INVENTORY_BONUS_MODE_LABELS: Record<
+  Exclude<InventoryBonusMode, 'add'>,
+  string
+> = {
+  override: '=',
+  upgrade: 'не ниже',
+  downgrade: 'не выше',
+};
+
 /** Заголовки групп в селекторе цели бонуса. */
 export const INVENTORY_BONUS_GROUP_LABELS = {
   abilities: 'Характеристики',
@@ -3448,6 +3658,15 @@ export const ITEM_SPEED_BONUS_MIN = -60;
 /** Максимальная прибавка предмета к скорости. */
 export const ITEM_SPEED_BONUS_MAX = 120;
 
+/**
+ * Границы величины бонуса в режимах, доводящих значение до заданного: там она —
+ * само значение листа (характеристика, класс доспеха, скорость), а не прибавка.
+ */
+export const ITEM_BONUS_VALUE_MIN = 0;
+
+/** Верхняя граница величины бонуса в тех же режимах. */
+export const ITEM_BONUS_VALUE_MAX = 999;
+
 /** Минимум зарядов предмета (0 — зарядов у него нет). */
 export const INVENTORY_CHARGES_MIN = 0;
 
@@ -3467,6 +3686,7 @@ export const NEW_CUSTOM_INVENTORY_ITEM: CustomInventoryItemDraft = {
   weaponCategory: 'simple',
   ranged: false,
   finesse: false,
+  heavy: false,
   damageDiceCount: 1,
   damageDiceFaces: 6,
   damageBonus: 0,
@@ -3591,6 +3811,9 @@ export const CUSTOM_ITEM_MAGIC_LABELS = {
   bonusesHint:
     'Бонус на строку: выберите цель (характеристика, навык, спасбросок, скорость, класс доспеха) и величину. Прибавка к КД доспеха тоже задаётся здесь.',
 };
+
+/** Пояснение свойства «Тяжёлое» в форме своего оружия. */
+export const CUSTOM_ITEM_HEAVY_HINT = `Тяжёлым оружием атакуют с помехой, пока характеристика меньше ${HEAVY_WEAPON_ABILITY_MINIMUM}: у рукопашного — «${ABILITY_LABELS.strength}», у дальнобойного — «${ABILITY_LABELS.dexterity}».`;
 
 /** Подписи свойства «Универсальное» в форме своего оружия. */
 export const CUSTOM_ITEM_VERSATILE_LABELS = {
@@ -4157,3 +4380,38 @@ export const SHEET_SKELETON_COUNTS = {
   /** Строки содержимого вкладки (снаряжение, заклинания, особенности). */
   tabRows: 6,
 } as const;
+
+/**
+ * Подписи модалки добавления черты: шаг выбора и подсказки. Тексты вынесены из
+ * компонента — правки формулировок не должны требовать правки разметки.
+ */
+export const SHEET_FEAT_MODAL_LABELS = {
+  choiceHint:
+    'Черта просит выбрать при взятии. Компетентность даётся только в навыке, которым персонаж уже владеет: бонус мастерства в нём удваивается.',
+  choicePlaceholder: 'Выберите значение',
+  choiceEmptyOptions:
+    'Выбирать пока не из чего: компетентность дают в навыке, которым персонаж уже владеет. Выберите класс или предысторию, затем добавьте черту.',
+  descriptionTooltip: 'Открыть описание черты',
+  abilityVariantLabel: 'Как повысить характеристики',
+} as const;
+
+/** Формы слова «характеристика» для подписи варианта повышения. */
+export const ABILITY_COUNT_FORMS: [string, string, string] = [
+  'одной характеристике',
+  'двум характеристикам',
+  'характеристикам',
+];
+
+/**
+ * Хвост идентификатора выбора повышения характеристик у черты: `ability-<номер
+ * варианта>` и `ability-variant` у выбора самого варианта. Выборы синтетические
+ * — в механике черты у них ключа нет, поэтому id собирается листом.
+ */
+export const ABILITY_CHOICE_ID_SEGMENT = 'ability';
+export const ABILITY_VARIANT_CHOICE_ID_SEGMENT = 'ability-variant';
+
+/** Размер выдачи пула заклинаний выбора: круг одного класса в неё умещается. */
+export const CHOICE_SPELL_POOL_SIZE = 200;
+
+/** Подсказка пикера выбора: сколько значений нужно отметить. */
+export const CHOICE_SELECT_PLACEHOLDER = 'Выберите';

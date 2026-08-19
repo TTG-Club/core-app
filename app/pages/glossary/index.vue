@@ -6,6 +6,7 @@
 
   import { GlossaryBody } from '~glossary/body';
   import { GlossaryLink } from '~glossary/link';
+  import { getGlossaryMarkdown } from '~glossary/model';
   import { FilterControls, useFilter } from '~infrastructure/filter';
   import { UiDetailPane } from '~ui/detail-pane';
   import { GroupedList } from '~ui/grouped-list';
@@ -61,6 +62,8 @@
     apiBasePath: '/api/v2/glossary',
     items: glossaryItems,
   });
+
+  const markdown = useEntityMarkdown(detailGlossary, getGlossaryMarkdown);
 
   const listResetKey = computed(() =>
     JSON.stringify({
@@ -131,6 +134,7 @@
         :date-time="detailGlossary?.updatedAt"
         :url="detailUrlForCopy"
         :edit-url="detailEditUrl"
+        :markdown
         :is-loading="isDetailLoading"
         :is-error="isDetailError"
         copy-title

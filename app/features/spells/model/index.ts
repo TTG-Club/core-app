@@ -4,4 +4,5 @@ export * from './detail';
 export * from './formula';
 export * from './link';
 export * from './list';
+export * from './markdown';
 export * from './search';

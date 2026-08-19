@@ -18,6 +18,7 @@
     ARTICLES_LIST_COUNT,
     ARTICLES_ROUTE,
     ARTICLES_SEARCH_PATH,
+    getArticleMarkdown,
   } from '../model';
 
   const { type, title } = defineProps<{
@@ -93,6 +94,8 @@
     apiBasePath: ARTICLES_API_PATH,
     items: data,
   });
+
+  const markdown = useEntityMarkdown(detailData, getArticleMarkdown);
 
   // Правка — в админке (useSectionDetail целится в /workshop, у записей другой путь).
   const detailEditUrl = computed(() =>
@@ -201,6 +204,7 @@
         :date-time-format="ARTICLE_DATE_FORMAT"
         :url="detailUrlForCopy"
         :edit-url="detailEditUrl"
+        :markdown
         :is-loading="isDetailLoading"
         :is-error="isDetailError"
         copy-title

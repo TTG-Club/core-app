@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import { useMyBugsCount } from '~bug-report/composables';
+  import { MY_BUGS_ROUTE, MY_BUGS_TITLE } from '~bug-report/model';
   import { useMyCommentsCount } from '~comments/composables';
+  import { MY_COMMENTS_ROUTE, MY_COMMENTS_TITLE } from '~comments/model';
 
   const { fixedBugsCount } = useMyBugsCount();
 
@@ -30,8 +32,10 @@
     class="bg-surface/50 grid w-full grid-cols-3 gap-px overflow-hidden rounded-xl border border-default backdrop-blur-md"
   >
     <!-- Статистика исправленных багов -->
-    <div
-      class="flex cursor-default flex-col items-center justify-center p-3 text-center transition-colors"
+    <NuxtLink
+      :to="MY_BUGS_ROUTE"
+      :title="MY_BUGS_TITLE"
+      class="flex flex-col items-center justify-center p-3 text-center transition-colors hover:bg-elevated"
     >
       <UIcon
         name="tabler:bug"
@@ -41,12 +45,14 @@
       <span class="mt-1 text-xl font-bold text-primary">{{
         fixedBugsCount
       }}</span>
-    </div>
+    </NuxtLink>
 
     <!-- Статистика оставленных комментариев -->
-    <div
+    <NuxtLink
       v-if="showCommentsCount"
-      class="flex cursor-default flex-col items-center justify-center p-3 text-center transition-colors"
+      :to="MY_COMMENTS_ROUTE"
+      :title="MY_COMMENTS_TITLE"
+      class="flex flex-col items-center justify-center p-3 text-center transition-colors hover:bg-elevated"
     >
       <UIcon
         name="tabler:message-circle"
@@ -56,7 +62,7 @@
       <span class="mt-1 text-xl font-bold text-primary">{{
         myCommentsCount
       }}</span>
-    </div>
+    </NuxtLink>
 
     <!-- Остальные статистики -->
     <div

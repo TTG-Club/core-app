@@ -27,7 +27,9 @@
     getAbilityCheckValue,
     getAvailableInnateSpells,
     getWeaponAttackBonus,
+    getWeaponAttackRollMode,
     getWeaponDamageSource,
+    isProficientWeapon,
     LANGUAGE_PROFICIENCY_GROUPS,
   } from '../model';
   import CharacterSheetSkeleton from './CharacterSheetSkeleton.vue';
@@ -46,6 +48,7 @@
     SheetCustomItemModal,
     SheetCustomSpellModal,
     SheetDamageModal,
+    SheetDefencesPanel,
     SheetExhaustionPanel,
     SheetExperienceModal,
     SheetFeatAddModal,
@@ -110,6 +113,8 @@
     savingThrowRows,
     skillGroups,
     effectiveSpeed,
+    featDefences,
+    hasFeatDefences,
     formattedProficiencyBonus,
     initiativeBonus,
     formattedInitiative,
@@ -694,13 +699,20 @@
       return;
     }
 
-    const attack = getWeaponAttackBonus(character.value, inventoryItem.weapon);
+    const attack = getWeaponAttackBonus(
+      character.value,
+      inventoryItem.weapon,
+      isProficientWeapon(character.value, inventoryItem),
+    );
 
     rollModal.open({
       title: `Атака: ${inventoryItem.name}`,
       modifier: attack.value,
       ability: attack.ability,
       actionLabel: 'Бросить атаку',
+      // Тяжёлое оружие не по руке бьёт с помехой (правила 2024): модалка
+      // открывается сразу в этом режиме, но игрок волен его сменить.
+      mode: getWeaponAttackRollMode(attack),
     });
   }
 
@@ -1112,6 +1124,16 @@
               :proficiencies="character.proficiencies"
               class="max-sm:order-6 max-sm:col-span-full"
               @edit="handleProficienciesEdit"
+            />
+
+            <!-- Сопротивления, иммунитеты и прочее от черт: панель появляется,
+              только если черта их выдала — своего понятия для них лист не
+              хранит и правке они не подлежат -->
+            <SheetDefencesPanel
+              v-if="hasFeatDefences"
+              :defences="featDefences"
+              :unit="character.speed.unit"
+              class="max-sm:order-7 max-sm:col-span-full"
             />
           </div>
 

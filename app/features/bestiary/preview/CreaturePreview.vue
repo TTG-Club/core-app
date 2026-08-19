@@ -2,6 +2,7 @@
   import type { CreatureCreate, CreatureDetailResponse } from '~bestiary/model';
 
   import { CreatureBody } from '~bestiary/body';
+  import { getCreatureMarkdown } from '~bestiary/model';
   import { UiDrawer } from '~ui/drawer';
 
   const opened = defineModel<boolean>('open', { required: true });
@@ -31,6 +32,8 @@
   const isLoading = computed(() => status.value === 'pending');
   const isError = computed(() => status.value === 'error');
 
+  const markdown = useEntityMarkdown(creature, getCreatureMarkdown);
+
   whenever(opened, () => {
     clear();
     loadPreview();
@@ -46,6 +49,7 @@
     :source="creature?.source"
     :is-loading
     :is-error
+    :markdown
     width="100%"
     @close="opened = false"
   >

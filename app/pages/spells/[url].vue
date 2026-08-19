@@ -2,6 +2,7 @@
   import type { SpellDetailResponse } from '~spells/model';
 
   import { SpellBody } from '~spells/body';
+  import { getSpellMarkdown } from '~spells/model';
   import { PageActions } from '~ui/page';
 
   const route = useRoute();
@@ -20,6 +21,8 @@
   });
 
   const editUrl = computed(() => `/workshop/spells/${route.params.url}`);
+
+  const markdown = useEntityMarkdown(spell, getSpellMarkdown);
 
   function getSeoTitle() {
     if (!spell.value) {
@@ -60,6 +63,7 @@
       <PageActions
         :edit-url="editUrl"
         :close-url="{ name: 'spells' }"
+        :markdown
       />
     </template>
 
