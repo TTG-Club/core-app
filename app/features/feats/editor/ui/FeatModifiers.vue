@@ -1,15 +1,16 @@
 <script setup lang="ts">
-  import type { FeatModifiers } from '../../model';
+  import type { SheetModifiers } from '~/shared/types';
 
+  import { createSenseGrant } from '~/shared/types';
   import {
     SelectCondition,
     SelectCreatureType,
     SelectDamageType,
   } from '~ui/select';
 
-  import { createSenseGrant, FEAT_SENSE_OPTIONS } from '../../model';
+  import { FEAT_SENSE_OPTIONS } from '../../model';
 
-  const model = defineModel<FeatModifiers>({ required: true });
+  const model = defineModel<SheetModifiers>({ required: true });
 
   function addSense() {
     model.value = {

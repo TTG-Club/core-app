@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { FeatPrerequisiteDetails } from '../../model';
 
+  import { toEntityRefs, toEntityRefUrls, toUrlList } from '~/shared/types';
   import {
     SelectArmorCategory,
     SelectBackground,
@@ -12,9 +13,6 @@
   import {
     CLASS_FEATURE_REQUIREMENT_OPTIONS,
     createAbilityRequirement,
-    toEntityRefs,
-    toEntityRefUrls,
-    toUrlList,
   } from '../../model';
   import FeatAbilityRequirements from './FeatAbilityRequirements.vue';
 

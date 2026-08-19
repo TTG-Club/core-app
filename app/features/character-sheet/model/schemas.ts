@@ -5,9 +5,11 @@ import type {
   BackgroundOption,
   BackgroundSummary,
   CatalogSpellDetail,
+  CharacterFeatureModifiers,
   CharacterInnateSpell,
   CharacterToolProficiency,
   ClassChoice,
+  ClassFeatureSkillChoice,
   ClassFeatureSummary,
   ClassOption,
   ClassSummary,
@@ -43,13 +45,14 @@ import {
 
 import {
   descriptionNodesSchema,
-  featModifiersSchema,
+  sheetModifiersSchema,
 } from './character-schema';
 import {
   ARMOR_GROUP_BY_API_CATEGORY,
   ARMOR_PROFICIENCY_GROUPS,
   CURRENCY_KEYS_BY_LABEL,
   INVENTORY_QUANTITY_MAX,
+  SKILL_NAME_BY_API_CODE,
   SPELL_COMPONENT_LABELS,
   STARTING_EQUIPMENT_DEFAULT_COIN_KEY,
   STARTING_EQUIPMENT_LABELS,
@@ -90,11 +93,49 @@ const speciesSearchResponseSchema = z
   ])
   .catch([]);
 
+/**
+ * Схема механики вида. Одна и та же у самой записи и у её умения: у записи
+ * лежит то, что даёт выбор вида или происхождения целиком, у умения — то, что
+ * даёт конкретное умение.
+ *
+ * Механика есть не везде: её проставляют в редакторе вида, и там, где её ещё
+ * нет, выбор по-прежнему распознаётся по прозе описания. Навыки приходят кодами
+ * справочника (`PERCEPTION`) — лист переводит их в свои названия сам.
+ */
+const speciesMechanicsSchema = z
+  .object({
+    modifiers: sheetModifiersSchema,
+    proficiencies: z
+      .object({
+        skills: z.array(z.string()).nullable().catch(null),
+      })
+      .nullable()
+      .catch(null),
+    choices: z
+      .array(
+        z.object({
+          key: z.string().catch(''),
+          type: z.string().nullable().catch(null),
+          count: z.coerce.number().min(1).nullable().catch(null),
+          options: z
+            .array(z.object({ value: z.string().catch('') }))
+            .nullable()
+            .catch(null),
+        }),
+      )
+      .nullable()
+      .catch(null),
+  })
+  .nullable()
+  .catch(null);
+
 /** Схема особенности вида в детальном ответе. */
 const speciesFeatureSchema = z.object({
   url: z.string().catch(''),
   name: z.object({ rus: z.string().catch('') }),
   description: descriptionNodesSchema,
+  level: z.coerce.number().min(1).max(20).nullable().catch(null),
+  mechanics: speciesMechanicsSchema,
 });
 
 const speciesInnateSpellSchema = z.object({
@@ -118,14 +159,83 @@ const speciesDetailSchema = z.object({
     .object({
       size: z.string().catch(''),
       speed: z.string().catch(''),
+      // Тёмное зрение — свойство вида, а не умения: у видов, которым его ещё не
+      // проставили, дальность по-прежнему ищется в тексте умений.
+      darkVision: z.coerce.number().min(0).nullable().catch(null),
     })
-    .catch({ size: '', speed: '' }),
+    .catch({ size: '', speed: '', darkVision: null }),
+  description: descriptionNodesSchema,
   features: z.array(speciesFeatureSchema).catch([]),
   innateSpells: z.array(speciesInnateSpellSchema).catch([]),
+  // Механика самой записи: у происхождений умений нет вовсе, и всё, что даёт
+  // их выбор, приходит только отсюда.
+  mechanics: speciesMechanicsSchema,
 });
 
 /** Ответ списка подвидов: массив детальных ответов. */
 const speciesLineagesResponseSchema = z.array(speciesDetailSchema).catch([]);
+
+/** Разобранная механика вида или его умения. */
+type SpeciesMechanicsData = NonNullable<z.infer<typeof speciesMechanicsSchema>>;
+
+/** Выборы, как они приходят в механике. */
+type SpeciesMechanicChoices = NonNullable<SpeciesMechanicsData['choices']>;
+
+/**
+ * Выбор владения навыком из механики умения: количество и пул русскими
+ * названиями. Пустой пул означает выбор из всех навыков листа.
+ *
+ * Умение может задавать несколько выборов (кованый выбирает навык и
+ * инструмент) — листу нужен только навыковый, остальные он пока не применяет.
+ *
+ * @param choices выборы из механики умения.
+ * @returns выбор навыка или null, если умение его не даёт.
+ */
+function toSpeciesSkillChoice(
+  choices: SpeciesMechanicChoices,
+): ClassFeatureSkillChoice | null {
+  const skillChoice = choices.find((choice) => choice.type === 'SKILL');
+
+  if (!skillChoice) {
+    return null;
+  }
+
+  const skills = (skillChoice.options ?? []).flatMap((option) => {
+    const name = SKILL_NAME_BY_API_CODE[option.value];
+
+    return name ? [name] : [];
+  });
+
+  return { count: skillChoice.count ?? 1, skills };
+}
+
+/**
+ * Механика к полям листа: модификаторы снимком, навыки — названиями листа,
+ * выбор навыка — количеством и пулом. Одна функция на запись и на её умение:
+ * лист применяет их одинаково.
+ *
+ * @param mechanics механика из ответа; null — её нет.
+ * @returns поля сводки, описывающие влияние на лист.
+ */
+function toSpeciesMechanicsSummary(mechanics: SpeciesMechanicsData | null): {
+  modifiers: CharacterFeatureModifiers | null;
+  skills: string[];
+  skillChoice: ClassFeatureSkillChoice | null;
+} {
+  const skills = mechanics?.proficiencies?.skills ?? [];
+
+  return {
+    modifiers: mechanics?.modifiers ?? null,
+    // Коды, которых нет в словаре листа, отбрасываются: показать такой навык
+    // в таблице всё равно нечем.
+    skills: skills.flatMap((code) => {
+      const name = SKILL_NAME_BY_API_CODE[code];
+
+      return name ? [name] : [];
+    }),
+    skillChoice: toSpeciesSkillChoice(mechanics?.choices ?? []),
+  };
+}
 
 /**
  * Приведение детального ответа вида к полям, нужным листу персонажа.
@@ -140,6 +250,8 @@ function toSpeciesSummary(
     url: feature.url,
     name: feature.name.rus,
     description: feature.description,
+    level: feature.level,
+    ...toSpeciesMechanicsSummary(feature.mechanics),
   }));
 
   const innateSpells: CharacterInnateSpell[] = detail.innateSpells.map(
@@ -162,8 +274,11 @@ function toSpeciesSummary(
     hasLineages: detail.hasLineages,
     sizeText: detail.properties.size,
     speedText: detail.properties.speed,
+    darkVision: detail.properties.darkVision,
+    description: detail.description,
     features,
     innateSpells,
+    ...toSpeciesMechanicsSummary(detail.mechanics),
   };
 }
 
@@ -359,7 +474,7 @@ const featDetailSchema = z.object({
   description: descriptionNodesSchema,
   mechanics: z
     .object({
-      modifiers: featModifiersSchema,
+      modifiers: sheetModifiersSchema,
       // Владения приходят категориями справочника — лист хранит их записями
       // «вся группа», поэтому разбор ниже их переводит.
       proficiencies: z

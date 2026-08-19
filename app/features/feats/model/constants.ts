@@ -1,6 +1,4 @@
-import type { SelectOption } from '~/shared/types';
-
-import type { FeatChoiceType } from './mechanics';
+import type { MechanicChoiceType, SelectOption } from '~/shared/types';
 
 /** Классовые умения, которых может требовать черта. */
 export const CLASS_FEATURE_REQUIREMENT_OPTIONS: Array<SelectOption> = [
@@ -27,7 +25,7 @@ export const FEAT_CHOICE_TYPE_OPTIONS: Array<SelectOption> = [
 ];
 
 /** Типы выборов, которым нужен фильтр заклинаний. */
-export const SPELL_FEAT_CHOICE_TYPES: Array<FeatChoiceType> = [
+export const SPELL_FEAT_CHOICE_TYPES: Array<MechanicChoiceType> = [
   'SPELL',
   'CANTRIP',
 ];

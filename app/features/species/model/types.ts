@@ -1,6 +1,8 @@
 import type { NameResponse, SourceResponse } from '~/shared/types';
 import type { EditorBaseInfoState } from '~ui/editor';
 
+import type { SpeciesMechanics } from './mechanics';
+
 export interface SpeciesLinkResponse {
   url: string;
   name: NameResponse;
@@ -27,19 +29,37 @@ export interface SpeciesDetailResponse {
   description: Array<string>;
   image: string;
   gallery?: Array<string>;
-  features?: Array<{
-    url: string;
-    name: NameResponse;
-    description: Array<string>;
-  }>;
+  features?: Array<SpeciesFeatureResponse>;
+
+  /**
+   * Механика самой записи: то, что даёт выбор вида или происхождения целиком.
+   * Нет поля — запись лист не двигает либо двигает только своими умениями.
+   */
+  mechanics?: SpeciesMechanics | null;
   username: string;
   updatedAt: string;
+}
+
+/** Умение вида в детальном ответе. */
+export interface SpeciesFeatureResponse {
+  url: string;
+  name: NameResponse;
+  description: Array<string>;
+
+  /** Уровень персонажа, с которого умение действует; нет поля — с первого. */
+  level?: number | null;
+
+  /** Механика влияния на лист; нет поля — умение только текстовое. */
+  mechanics?: SpeciesMechanics | null;
 }
 
 export interface SpeciesProperties {
   size: string;
   type: string;
   speed: string;
+
+  /** Дальность тёмного зрения в футах; нет поля — вид его не даёт. */
+  darkVision?: number | null;
 }
 
 export interface SpeciesCreate extends EditorBaseInfoState {
@@ -56,18 +76,34 @@ export interface SpeciesCreate extends EditorBaseInfoState {
     }>;
     type: string | undefined;
     speed: SpeciesCreateSpeed;
+    darkVision: number | undefined;
   };
-  features: Array<{
-    name: {
-      rus: string;
-      eng: string;
-    };
-    description: string;
-  }>;
+  features: Array<SpeciesCreateFeature>;
+
+  /**
+   * Механика самой записи: то, что даёт выбор вида или происхождения целиком.
+   * `undefined` — запись лист не двигает либо двигает только своими умениями.
+   */
+  mechanics: SpeciesMechanics | undefined;
   innateSpells: Array<{
     spell: string;
     requiredLevel: number;
   }>;
+}
+
+/** Умение вида в форме редактора. */
+export interface SpeciesCreateFeature {
+  name: {
+    rus: string;
+    eng: string;
+  };
+  description: string;
+
+  /** Уровень персонажа, с которого умение действует; `undefined` — с первого. */
+  level: number | undefined;
+
+  /** Механика влияния на лист; `undefined` — умение только текстовое. */
+  mechanics: SpeciesMechanics | undefined;
 }
 
 export interface SpeciesCreateSpeed {

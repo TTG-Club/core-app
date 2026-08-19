@@ -18,13 +18,14 @@
   import {
     buildCharacterFeatures,
     CUSTOM_SPECIES_LABELS,
-    detectFeatureChoice,
     FEATURE_ORIGIN_LABELS,
     getCharacterFeatureId,
     getChoiceSkillHints,
-    getDarkvisionDistance,
     getRequiredChoiceCount,
+    getSpeciesFeatureChoice,
+    getSpeciesRecordChoice,
     getToolNames,
+    hasOwnSpeciesMechanics,
     LANGUAGE_PROFICIENCY_GROUPS,
     parseSizeOptionsFromText,
     parseSpeciesDetail,
@@ -32,6 +33,7 @@
     parseSpeciesOptions,
     parseSpeedFromText,
     resolveChoiceOptions,
+    resolveDarkvisionDistance,
     SHEET_SEARCH_LABELS,
     SKILL_DUPLICATE_WARNING,
     SPECIES_DETAIL_BASE_PATH,
@@ -241,63 +243,96 @@
       : speciesDetail.value.name;
   });
 
+  /** Строка списка особенностей в визарде. */
+  interface FeatureRow {
+    id: string;
+    name: string;
+    description: FeatureDescriptionNode[];
+    originLabel: string;
+    choiceControl: ClassChoice | null;
+  }
+
+  /**
+   * Строки одной записи: её собственная механика первой, дальше умения. Своя
+   * строка появляется только у записи со своей механикой — у происхождений,
+   * которые целиком описаны абзацем и умений не имеют.
+   */
+  function summaryRows(
+    summary: SpeciesSummary,
+    origin: 'species' | 'lineage',
+  ): FeatureRow[] {
+    const originLabel = `${FEATURE_ORIGIN_LABELS[origin]}: ${summary.name}`;
+
+    const rows: FeatureRow[] = [];
+
+    if (hasOwnSpeciesMechanics(summary)) {
+      const id = getCharacterFeatureId(origin, summary.url);
+
+      rows.push({
+        id,
+        name: summary.name,
+        description: summary.description,
+        originLabel,
+        choiceControl: getSpeciesRecordChoice(id, summary),
+      });
+    }
+
+    for (const feature of summary.features) {
+      const id = getCharacterFeatureId(origin, feature.url);
+
+      rows.push({
+        id,
+        name: feature.name,
+        description: feature.description,
+        originLabel,
+        choiceControl: getSpeciesFeatureChoice(id, feature, skillNames.value),
+      });
+    }
+
+    return rows;
+  }
+
   const featureRows = computed(() => {
-    const rows: Array<{
-      id: string;
-      name: string;
-      description: FeatureDescriptionNode[];
-      originLabel: string;
-      choiceControl: ClassChoice | null;
-    }> = [];
+    const rows: FeatureRow[] = [];
 
     const detail = speciesDetail.value;
 
     if (detail) {
-      for (const feature of detail.features) {
-        const id = getCharacterFeatureId('species', feature.url);
-
-        rows.push({
-          id,
-          name: feature.name,
-          description: feature.description,
-          originLabel: `${FEATURE_ORIGIN_LABELS.species}: ${detail.name}`,
-          choiceControl: detectFeatureChoice(
-            id,
-            feature.description,
-            skillNames.value,
-          ),
-        });
-      }
+      rows.push(...summaryRows(detail, 'species'));
     }
 
     const lineage = selectedLineage.value;
 
     if (lineage) {
-      for (const feature of lineage.features) {
-        const id = getCharacterFeatureId('lineage', feature.url);
-
-        rows.push({
-          id,
-          name: feature.name,
-          description: feature.description,
-          originLabel: `${FEATURE_ORIGIN_LABELS.lineage}: ${lineage.name}`,
-          choiceControl: detectFeatureChoice(
-            id,
-            feature.description,
-            skillNames.value,
-          ),
-        });
-      }
+      rows.push(...summaryRows(lineage, 'lineage'));
     }
 
     return rows;
   });
 
-  const chosenProficientSkills = computed(() =>
-    featureRows.value
+  /**
+   * Навыки, которые выдаются без выбора: и самой записью вида или
+   * происхождения, и любым её умением.
+   */
+  const grantedSkillNames = computed(() => {
+    const summaries = [speciesDetail.value, selectedLineage.value].filter(
+      (summary) => summary !== null,
+    );
+
+    return summaries.flatMap((summary) => [
+      ...summary.skills,
+      ...summary.features.flatMap((feature) => feature.skills),
+    ]);
+  });
+
+  // Выданные без выбора навыки идут сюда наравне с выбранными: предлагать в
+  // пикере навык, который вид уже дал, — значит потратить выбор впустую.
+  const chosenProficientSkills = computed(() => [
+    ...grantedSkillNames.value,
+    ...featureRows.value
       .filter((row) => row.choiceControl?.kind === 'skill-proficiency')
       .flatMap((row) => selections.value[row.id] ?? []),
-  );
+  ]);
 
   /** Опции пикера выбора в зависимости от его типа. */
   function choiceOptions(choice: ClassChoice): string[] {
@@ -480,7 +515,9 @@
 
     // Сбор выборов-селекторов: навыки (владение/экспертиза) и языки; выбранные
     // значения также идут в текст особенности, чтобы отображаться на листе.
-    const proficientSkills: string[] = [];
+    // Навыки, выданные умением без выбора, лежат в списке с самого начала:
+    // их даёт механика справочника, и спрашивать о них игрока нечего.
+    const proficientSkills: string[] = [...grantedSkillNames.value];
     const expertiseSkills: string[] = [];
     const chosenLanguages: string[] = [];
     const featureChoices: Record<string, string> = { ...choices.value };
@@ -524,7 +561,12 @@
       speed: parseSpeedFromText(effectiveSpeedText.value),
       vision: {
         normal: character.value.vision.normal,
-        darkvision: getDarkvisionDistance(allFeatureSummaries),
+        // Происхождение может поднять дальность вида (дроу — до 120 футов),
+        // поэтому его значение важнее родительского.
+        darkvision: resolveDarkvisionDistance(
+          lineage?.darkVision ?? detail.darkVision,
+          allFeatureSummaries,
+        ),
         blindsight: character.value.vision.blindsight,
         tremorsense: character.value.vision.tremorsense,
         truesight: character.value.vision.truesight,

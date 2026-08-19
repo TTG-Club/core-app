@@ -152,7 +152,7 @@ import {
   toUpdatedCustomInventoryItem,
   VISION_DISTANCE_MAX,
   VISION_DISTANCE_MIN,
-  withFeatModifiers,
+  withFeatureModifiers,
   withProficiencyGrant,
   withSavingThrowProficiencies,
 } from '../model';
@@ -828,7 +828,7 @@ export function useCharacterSheet() {
     // Прибавка черт к максимуму хитов зависит от уровня («Крепкий» растёт
     // вместе с ним) и от самого набора черт: снятие уровней забирает и черты,
     // взятые за классовое улучшение характеристик.
-    return withFeatModifiers(
+    return withFeatureModifiers(
       {
         ...source,
         characterClass,
@@ -926,7 +926,7 @@ export function useCharacterSheet() {
 
     // Записей прироста у листа без класса нет, но прибавка черт от уровня всё
     // равно зависит: «Крепкий» растёт и здесь.
-    character.value = withFeatModifiers(
+    character.value = withFeatureModifiers(
       {
         ...character.value,
         level: clampedLevel,
@@ -997,7 +997,7 @@ export function useCharacterSheet() {
     // Уровни и снятые с ними черты сверил `withClassLevels`; здесь к листу
     // добавляются выбранные в мастере черты — их прибавку доводит вторая сверка
     // от уже посчитанного им состояния.
-    character.value = withFeatModifiers(
+    character.value = withFeatureModifiers(
       {
         ...withLevels,
         abilities,
@@ -1394,7 +1394,7 @@ export function useCharacterSheet() {
     );
 
     // Смена вида заменяет только особенности вида и подвида; добавленные
-    // вручную (класс, без источника) сохраняются. Сверка черт (`withFeatModifiers`)
+    // вручную (класс, без источника) сохраняются. Сверка черт (`withFeatureModifiers`)
     // здесь не нужна: черты остаются нетронутыми, а снимка механики у умений
     // вида не бывает — его кладёт только `buildFeatFeature`.
     const preservedFeatures = character.value.features.filter(
@@ -1567,7 +1567,7 @@ export function useCharacterSheet() {
     //
     // Максимум хитов здесь пересобран из записей прироста, а значит прибавки
     // черт в нём нет вовсе — сверка получает пустое «до» и кладёт её целиком.
-    character.value = withFeatModifiers(
+    character.value = withFeatureModifiers(
       {
         ...character.value,
         characterClass: {
@@ -1709,7 +1709,7 @@ export function useCharacterSheet() {
       },
     );
 
-    character.value = withFeatModifiers(
+    character.value = withFeatureModifiers(
       {
         ...withLevels,
         skills: applySkillProficiencies(
@@ -1789,7 +1789,7 @@ export function useCharacterSheet() {
 
     // Вместе с классом уходят и его черты за улучшение характеристик, а общий
     // уровень падает — прибавка черт к максимуму хитов сверяется по обоим.
-    character.value = withFeatModifiers(
+    character.value = withFeatureModifiers(
       {
         ...character.value,
         characterClass,
@@ -1898,7 +1898,7 @@ export function useCharacterSheet() {
     // Черта происхождения меняется вместе с предысторией, а «Крепкий» — как раз
     // черта происхождения: без сверки её прибавка к хитам осталась бы от
     // прежней предыстории.
-    character.value = withFeatModifiers(
+    character.value = withFeatureModifiers(
       {
         ...character.value,
         characterBackground: {
@@ -1961,7 +1961,7 @@ export function useCharacterSheet() {
     // к хитам не двигается. Сверка нужна ради названия: им подписан свой бонус
     // инициативы от черты, и без неё переименованная черта осталась бы в разборе
     // под старым именем.
-    character.value = withFeatModifiers(
+    character.value = withFeatureModifiers(
       {
         ...character.value,
         features: character.value.features.map((feature) =>
@@ -2844,7 +2844,7 @@ export function useCharacterSheet() {
       return;
     }
 
-    character.value = withFeatModifiers(
+    character.value = withFeatureModifiers(
       {
         ...character.value,
         features: [
@@ -2881,7 +2881,7 @@ export function useCharacterSheet() {
 
     // Черта может двигать лист постоянно: поднимать максимум хитов, прибавлять
     // бонус мастерства к инициативе. Сверка доводит и то, и другое.
-    character.value = withFeatModifiers(
+    character.value = withFeatureModifiers(
       {
         ...character.value,
         features: [
@@ -2906,7 +2906,7 @@ export function useCharacterSheet() {
       return;
     }
 
-    character.value = withFeatModifiers(
+    character.value = withFeatureModifiers(
       {
         ...character.value,
         features: character.value.features.filter(

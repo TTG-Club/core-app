@@ -1,7 +1,10 @@
 <script setup lang="ts">
   import type { SpeciesCreate } from '~species/model';
 
-  import { SPECIES_INNATE_SPELL_EDITOR } from '~species/model';
+  import {
+    SPECIES_CHARACTER_LEVEL,
+    SPECIES_INNATE_SPELL_EDITOR,
+  } from '~species/model';
   import { EditorArrayControls } from '~ui/editor';
   import { SelectSpell } from '~ui/select';
 
@@ -17,7 +20,7 @@
   function getEmptyInnateSpell(): InnateSpells[number] {
     return {
       spell: '',
-      requiredLevel: SPECIES_INNATE_SPELL_EDITOR.defaultCharacterLevel,
+      requiredLevel: SPECIES_CHARACTER_LEVEL.default,
     };
   }
 
@@ -70,8 +73,8 @@
     >
       <UInputNumber
         v-model="innateSpell.requiredLevel"
-        :min="SPECIES_INNATE_SPELL_EDITOR.minimumCharacterLevel"
-        :max="SPECIES_INNATE_SPELL_EDITOR.maximumCharacterLevel"
+        :min="SPECIES_CHARACTER_LEVEL.minimum"
+        :max="SPECIES_CHARACTER_LEVEL.maximum"
       />
     </UFormField>
 

@@ -1,12 +1,15 @@
+import type {
+  MechanicChoice,
+  MechanicSpellFilter,
+  ProficiencyGrant,
+  SheetModifiers,
+} from '~/shared/types';
+
 import type { FeatCreate } from './create';
 import type {
   FeatAbilityBonus,
-  FeatChoice,
   FeatMechanics,
-  FeatModifiers,
   FeatPrerequisiteDetails,
-  FeatProficiencyGrant,
-  FeatSpellFilter,
 } from './mechanics';
 
 /**
@@ -46,8 +49,8 @@ function text(value: string | undefined): string | undefined {
 
 /** Готовит фильтр заклинаний выбора. */
 function buildSpellFilter(
-  filter: FeatSpellFilter | undefined,
-): FeatSpellFilter | undefined {
+  filter: MechanicSpellFilter | undefined,
+): MechanicSpellFilter | undefined {
   if (!filter) {
     return undefined;
   }
@@ -61,7 +64,7 @@ function buildSpellFilter(
 }
 
 /** Готовит выборы: без типа и ключа выбор бессмысленен и не отправляется. */
-function buildChoices(choices: Array<FeatChoice>): Array<FeatChoice> {
+function buildChoices(choices: Array<MechanicChoice>): Array<MechanicChoice> {
   return choices
     .filter((choice) => !!choice.type && !!text(choice.key))
     .map((choice) => ({
@@ -87,7 +90,7 @@ function buildAbilityBonuses(
 }
 
 /** Готовит постоянные модификаторы листа. */
-function buildModifiers(modifiers: FeatModifiers): FeatModifiers | undefined {
+function buildModifiers(modifiers: SheetModifiers): SheetModifiers | undefined {
   return orUndefined({
     ...modifiers,
     senses: modifiers.senses.filter((sense) => !!sense.type),
@@ -103,8 +106,8 @@ function buildModifiers(modifiers: FeatModifiers): FeatModifiers | undefined {
 
 /** Готовит выдаваемые владения: инструмент без ссылки отправлять некуда. */
 function buildProficiencies(
-  proficiencies: FeatProficiencyGrant,
-): FeatProficiencyGrant | undefined {
+  proficiencies: ProficiencyGrant,
+): ProficiencyGrant | undefined {
   return orUndefined({
     ...proficiencies,
     tools: proficiencies.tools.filter((tool) => !!text(tool.url)),

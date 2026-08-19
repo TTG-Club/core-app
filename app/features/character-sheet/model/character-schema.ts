@@ -201,7 +201,7 @@ const modifierCodesSchema = z.array(z.string()).optional().catch(undefined);
 
 /**
  * Снимок `mechanics.modifiers` черты в записи умения листа. Зеркало
- * `featModifiersSchema` из `~feats/model`, но `catch` стоит на каждом уровне, а
+ * `sheetModifiersSchema` из `~feats/model`, но `catch` стоит на каждом уровне, а
  * не только снаружи: у сохранённых листов поля нет вовсе, а у записанных ранней
  * версией справочника часть блоков может не совпасть по форме — ни то, ни
  * другое не должно ронять загрузку листа целиком.
@@ -210,7 +210,7 @@ const modifierCodesSchema = z.array(z.string()).optional().catch(undefined);
  * схема одна на оба случая: `schemas.ts` разбирает ей деталь черты — как это уже
  * сделано с описанием (`descriptionNodesSchema`).
  */
-export const featModifiersSchema = z
+export const sheetModifiersSchema = z
   .object({
     hitPoints: z
       .object({
@@ -271,7 +271,7 @@ const featureSchema = z.object({
   choice: z.string().nullable().catch(null),
   // Снимок механики черты; у записей до её появления поля нет — такая черта
   // лист не двигает, пока её не добавят заново.
-  modifiers: featModifiersSchema,
+  modifiers: sheetModifiersSchema,
   // Снимок выдаваемых чертой владений; у записей до его появления поля нет.
   proficiencies: featProficienciesSchema,
 });

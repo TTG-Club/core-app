@@ -1,6 +1,11 @@
 <script setup lang="ts">
   import type { SpeciesCreate } from '~species/model';
 
+  import {
+    SPECIES_MECHANICS_EDITOR,
+    SPECIES_PROPERTIES_EDITOR,
+    transformSpeciesBeforeSubmit,
+  } from '~species/model';
   import { SpeciesPreview } from '~species/preview';
   import { EditorBaseInfo } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
@@ -13,6 +18,7 @@
   import {
     SpeciesFeatures,
     SpeciesInnateSpells,
+    SpeciesMechanicsFields,
     SpeciesSizes,
     SpeciesSpeed,
   } from './ui';
@@ -45,9 +51,11 @@
           swim: undefined,
           hover: false,
         },
+        darkVision: undefined,
       },
       features: [],
       innateSpells: [],
+      mechanics: undefined,
       tags: [],
     };
   }
@@ -56,6 +64,7 @@
     useWorkshopForm<SpeciesCreate>({
       actionUrl: '/api/v2/species',
       getInitialState,
+      transformBeforeSubmit: transformSpeciesBeforeSubmit,
       revisionEntityType: REVISION_ENTITY_TYPES.SPECIES,
     });
 </script>
@@ -114,9 +123,30 @@
           <SelectCreatureType v-model="state.properties.type" />
         </UFormField>
 
+        <UFormField
+          class="col-span-full md:col-span-12"
+          :label="SPECIES_PROPERTIES_EDITOR.darkVisionLabel"
+          :help="SPECIES_PROPERTIES_EDITOR.darkVisionHelp"
+          name="properties.darkVision"
+        >
+          <UInputNumber
+            v-model="state.properties.darkVision"
+            :placeholder="SPECIES_PROPERTIES_EDITOR.darkVisionPlaceholder"
+            :min="SPECIES_PROPERTIES_EDITOR.distanceMinimum"
+          />
+        </UFormField>
+
         <SpeciesSizes v-model="state.properties.sizes" />
 
         <SpeciesSpeed v-model="state.properties.speed" />
+
+        <USeparator class="col-span-full">
+          <span class="font-bold text-secondary">
+            {{ SPECIES_MECHANICS_EDITOR.title }}
+          </span>
+        </USeparator>
+
+        <SpeciesMechanicsFields v-model="state.mechanics" />
 
         <SpeciesFeatures v-model="state.features" />
 

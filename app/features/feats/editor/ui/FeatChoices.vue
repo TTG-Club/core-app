@@ -1,32 +1,31 @@
 <script setup lang="ts">
-  import type { FeatChoice } from '../../model';
+  import type { MechanicChoice } from '~/shared/types';
 
+  import { createMechanicChoice, createSpellFilter } from '~/shared/types';
   import { SelectMagicSchool, SelectSpellLevel } from '~ui/select';
 
   import {
-    createFeatChoice,
-    createSpellFilter,
     FEAT_CASTING_TIME_OPTIONS,
     FEAT_CHOICE_TYPE_OPTIONS,
     SPELL_FEAT_CHOICE_TYPES,
   } from '../../model';
 
   /** Нужен ли выбору фильтр заклинаний. */
-  function isSpellChoice(choice: FeatChoice): boolean {
+  function isSpellChoice(choice: MechanicChoice): boolean {
     return !!choice.type && SPELL_FEAT_CHOICE_TYPES.includes(choice.type);
   }
 
-  const model = defineModel<Array<FeatChoice>>({ default: () => [] });
+  const model = defineModel<Array<MechanicChoice>>({ default: () => [] });
 
   function addChoice() {
-    model.value = [...model.value, createFeatChoice()];
+    model.value = [...model.value, createMechanicChoice()];
   }
 
   function removeChoice(index: number) {
     model.value = model.value.filter((_, position) => position !== index);
   }
 
-  function patchChoice(index: number, patch: Partial<FeatChoice>) {
+  function patchChoice(index: number, patch: Partial<MechanicChoice>) {
     model.value = model.value.map((choice, position) =>
       position === index ? { ...choice, ...patch } : choice,
     );

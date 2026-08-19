@@ -1,15 +1,14 @@
 <script setup lang="ts">
-  import type { FeatEntityRef, FeatProficiencyGrant } from '../../model';
+  import type { MechanicEntityRef, ProficiencyGrant } from '~/shared/types';
 
+  import { toEntityRefUrls, toUrlList } from '~/shared/types';
   import {
     SelectArmorCategory,
     SelectItem,
     SelectWeaponCategory,
   } from '~ui/select';
 
-  import { toEntityRefUrls, toUrlList } from '../../model';
-
-  const model = defineModel<FeatProficiencyGrant>({ required: true });
+  const model = defineModel<ProficiencyGrant>({ required: true });
 
   const weaponCategories = computed<string | Array<string>>({
     get: () => model.value.weaponCategories,
@@ -40,7 +39,7 @@
    *
    * @param tools выбранные предметы ссылками со снимком названия.
    */
-  function handleTools(tools: Array<FeatEntityRef>): void {
+  function handleTools(tools: Array<MechanicEntityRef>): void {
     const known = new Map(
       model.value.tools.map((tool) => [tool.url, tool.name]),
     );

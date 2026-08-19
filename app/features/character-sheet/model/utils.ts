@@ -64,11 +64,11 @@ import type {
   DistanceRowDraft,
   FeatGrantedSpeedKey,
   FeatSelectOption,
-  FeatSpeedModifiers,
   FeatSummary,
   FeatureDescriptionNode,
   FeatureOrigin,
   FeatureOriginGroup,
+  FeatureSpeedModifiers,
   FeatureTabFilter,
   GrantedProficiencies,
   GrantedStartingEquipment,
@@ -4478,14 +4478,17 @@ export function getEffectiveSpeed(character: Character): CharacterSpeed {
   // что такого передвижения у персонажа нет.
   const commonBonus = getInventoryBonusValue(character, 'all-speeds');
 
-  const featSpeed = getFeatSpeedModifiers(
+  const featureSpeed = getFeatureSpeedModifiers(
     character.features,
     character.speed.unit,
   );
 
   // Ходьба считается первой: от неё зависят скорости, которые черта приравняла
   // к ней.
-  const walk = Math.max(0, character.speed.values.walk + featSpeed.walkBonus);
+  const walk = Math.max(
+    0,
+    character.speed.values.walk + featureSpeed.walkBonus,
+  );
 
   // Черта выдаёт скорость с нуля (полёт тому, кто не летал), поэтому её вклад
   // идёт до отбора нулевых значений — в отличие от бонусов предметов, которые
@@ -4493,14 +4496,19 @@ export function getEffectiveSpeed(character: Character): CharacterSpeed {
   const granted: Record<SpeedTypeKey, number> = {
     ...character.speed.values,
     walk,
-    fly: getGrantedSpeed(character.speed.values.fly, featSpeed, 'fly', walk),
+    fly: getGrantedSpeed(character.speed.values.fly, featureSpeed, 'fly', walk),
     climb: getGrantedSpeed(
       character.speed.values.climb,
-      featSpeed,
+      featureSpeed,
       'climb',
       walk,
     ),
-    swim: getGrantedSpeed(character.speed.values.swim, featSpeed, 'swim', walk),
+    swim: getGrantedSpeed(
+      character.speed.values.swim,
+      featureSpeed,
+      'swim',
+      walk,
+    ),
   };
 
   const values = mapValues(granted, (value, key) => {
@@ -6244,6 +6252,15 @@ export function getFeatUrlFromFeatureId(featureId: string): string | null {
  * Сборка особенностей персонажа из деталей вида и подвида. Выбор игрока
  * подставляется по идентификатору особенности (`origin:url`).
  *
+ * Постоянные модификаторы умения кладутся снимком: дальше их складывает общий
+ * расчёт листа, которому всё равно, пришёл модификатор от вида или от черты.
+ * Уровень умения (`level`) сюда не идёт: на листе это поле хранит уровень
+ * класса, которым умение получено, а умения вида доступны с первого — уровень
+ * из справочника показывает сама карточка умения.
+ *
+ * Запись со своей механикой получает ещё одну особенность — носитель этой
+ * механики, см. {@link toRecordFeature}.
+ *
  * @param species деталь вида.
  * @param lineage деталь подвида; null — подвида нет.
  * @param choices выборы игрока по идентификаторам особенностей.
@@ -6257,8 +6274,8 @@ export function buildCharacterFeatures(
   const toFeatures = (
     summary: SpeciesSummary,
     origin: FeatureOrigin,
-  ): CharacterFeature[] =>
-    summary.features.map((feature) => {
+  ): CharacterFeature[] => {
+    const own = summary.features.map((feature) => {
       const id = getCharacterFeatureId(origin, feature.url);
 
       const choice = choices[id]?.trim();
@@ -6271,13 +6288,78 @@ export function buildCharacterFeatures(
         originName: summary.name,
         level: null,
         choice: choice || null,
+        // Снимок механики: сверка владений и прибавки шапки берут её отсюда, в
+        // справочник за ней лист больше не ходит — как и у черты.
+        modifiers: feature.modifiers,
       };
     });
+
+    const recordFeature = toRecordFeature(summary, origin, choices);
+
+    return recordFeature ? [recordFeature, ...own] : own;
+  };
 
   return [
     ...toFeatures(species, 'species'),
     ...(lineage ? toFeatures(lineage, 'lineage') : []),
   ];
+}
+
+/**
+ * Запись-носитель механики самой записи вида или происхождения.
+ *
+ * Своя механика есть у того, у кого нет умений: происхождение целиком описано
+ * абзацем описания, и повесить сопротивление или прибавку скорости не на что.
+ * Такой записи заводится особенность с её же именем и описанием — она и несёт
+ * снимок модификаторов, и заодно показывает игроку правило происхождения,
+ * которого на листе раньше не было вовсе.
+ *
+ * Запись без своей механики особенности не получает: у видов с умениями эффект
+ * лежит у того умения, которое его даёт, и дублировать его нечем.
+ *
+ * @param summary деталь вида или происхождения.
+ * @param origin происхождение особенности на листе.
+ * @param choices выборы игрока по идентификаторам особенностей.
+ * @returns особенность-носитель или null, если своей механики нет.
+ */
+function toRecordFeature(
+  summary: SpeciesSummary,
+  origin: FeatureOrigin,
+  choices: Record<string, string>,
+): CharacterFeature | null {
+  if (!hasOwnSpeciesMechanics(summary)) {
+    return null;
+  }
+
+  const id = getCharacterFeatureId(origin, summary.url);
+  const choice = choices[id]?.trim();
+
+  return {
+    id,
+    name: summary.name,
+    description: [...summary.description],
+    origin,
+    originName: summary.name,
+    level: null,
+    choice: choice || null,
+    modifiers: summary.modifiers,
+  };
+}
+
+/**
+ * Есть ли у самой записи что применить к листу.
+ *
+ * По этому же признаку визард показывает запись отдельной строкой: список в
+ * визарде и особенности на листе должны совпадать, иначе игрок увидит после
+ * применения запись, которой в превью не было.
+ *
+ * @param summary деталь вида или происхождения.
+ * @returns истина, если запись двигает лист помимо своих умений.
+ */
+export function hasOwnSpeciesMechanics(summary: SpeciesSummary): boolean {
+  return Boolean(
+    summary.modifiers || summary.skills.length || summary.skillChoice,
+  );
 }
 
 /**
@@ -6508,11 +6590,12 @@ function hasGrantedProficiencies(granted: GrantedProficiencies): boolean {
 }
 
 /**
- * Постоянные модификаторы листа от черт: записи без снимка механики (умения
- * вида и класса, ручные записи, черты, добавленные до её появления) выпадают.
+ * Постоянные модификаторы листа от особенностей — черт, видов и происхождений.
+ * Записи без снимка механики (умения класса, ручные записи и всё, что заведено
+ * до её появления) выпадают.
  *
  * @param features особенности листа.
- * @returns модификаторы черт в порядке записей.
+ * @returns модификаторы в порядке записей.
  */
 function getFeatureModifiers(
   features: CharacterFeature[],
@@ -6631,7 +6714,7 @@ function getFeatArmorClassBonus(features: CharacterFeature[]): number {
 }
 
 /**
- * Изменение скоростей чертами, приведённое к единицам листа.
+ * Изменение скоростей особенностями, приведённое к единицам листа.
  *
  * Ходьбе черты прибавляют, и прибавки складываются: «Подвижный» (+10) и «Метка
  * пути» (+5) дают +15. Полёт, лазание и плавание черта задаёт числом — это само
@@ -6641,12 +6724,12 @@ function getFeatArmorClassBonus(features: CharacterFeature[]): number {
  *
  * @param features особенности листа.
  * @param unit единица измерения скоростей листа.
- * @returns изменение скоростей чертами в единицах листа.
+ * @returns изменение скоростей особенностями в единицах листа.
  */
-function getFeatSpeedModifiers(
+function getFeatureSpeedModifiers(
   features: CharacterFeature[],
   unit: SpeedUnit,
-): FeatSpeedModifiers {
+): FeatureSpeedModifiers {
   let walkBonusInFeet = 0;
 
   const grantedInFeet: Record<FeatGrantedSpeedKey, number> = {
@@ -6694,33 +6777,33 @@ function getFeatSpeedModifiers(
 }
 
 /**
- * Скорость полёта, лазания или плавания с учётом черт. Три источника — своя
- * скорость персонажа, выданная чертой и равенство скорости ходьбы — друг с
- * другом не спорят: в зачёт идёт большее. Иначе черта, дающая полёт «как
- * скорость ходьбы», урезала бы уже имеющиеся крылья.
+ * Скорость полёта, лазания или плавания с учётом особенностей. Три источника —
+ * своя скорость персонажа, выданная особенностью и равенство скорости ходьбы —
+ * друг с другом не спорят: в зачёт идёт большее. Иначе особенность, дающая
+ * полёт «как скорость ходьбы», урезала бы уже имеющиеся крылья.
  *
  * @param value записанная скорость персонажа.
- * @param featSpeed изменение скоростей чертами листа.
+ * @param featureSpeed изменение скоростей особенностями листа.
  * @param key способ передвижения.
  * @param walk итоговая скорость ходьбы.
- * @returns скорость с учётом черт.
+ * @returns скорость с учётом особенностей.
  */
 function getGrantedSpeed(
   value: number,
-  featSpeed: FeatSpeedModifiers,
+  featureSpeed: FeatureSpeedModifiers,
   key: FeatGrantedSpeedKey,
   walk: number,
 ): number {
   return Math.max(
     value,
-    featSpeed.granted[key],
-    featSpeed.equalsWalk[key] ? walk : 0,
+    featureSpeed.granted[key],
+    featureSpeed.equalsWalk[key] ? walk : 0,
   );
 }
 
 /**
- * Заведён ли свой бонус чертой листа. Такие записи пересобирает сверка
- * (`withFeatModifiers`), поэтому править и удалять их вручную нечего: правка
+ * Заведён ли свой бонус особенностью листа. Такие записи пересобирает сверка
+ * (`withFeatureModifiers`), поэтому править и удалять их вручную нечего: правка
  * вернулась бы назад при ближайшей смене черт — форма их и не даёт трогать.
  *
  * @param bonus свой бонус листа.
@@ -6731,14 +6814,14 @@ export function isFeatCustomBonus(bonus: CharacterCustomBonus): boolean {
 }
 
 /**
- * Свои бонусы инициативы, заведённые чертами листа: по записи на каждую черту с
+ * Свои бонусы инициативы, заведённые особенностями листа: по записи на каждую с
  * флагом `initiativeProficiencyBonus` («Бдительный»). Сверка идемпотентна —
- * заведённые чертами записи пересобираются целиком, а добавленные игроком
+ * заведённые особенностями записи пересобираются целиком, а добавленные игроком
  * вручную остаются нетронутыми. Вызывается всюду, где меняется список черт.
  *
  * @param bonuses свои бонусы инициативы из настроек листа.
  * @param features особенности листа.
- * @returns свои бонусы инициативы, согласованные с чертами.
+ * @returns свои бонусы инициативы, согласованные с особенностями.
  */
 function withFeatInitiativeBonuses(
   bonuses: CharacterCustomBonus[],
@@ -6772,9 +6855,9 @@ function withFeatInitiativeBonuses(
  *
  * @param grants журнал выдач листа.
  * @param features особенности листа.
- * @returns журнал, согласованный с чертами.
+ * @returns журнал, согласованный с особенностями.
  */
-function withFeatProficiencyGrants(
+function withFeatureProficiencyGrants(
   grants: ProficiencyGrant[],
   features: CharacterFeature[],
 ): ProficiencyGrant[] {
@@ -6810,13 +6893,13 @@ function withFeatProficiencyGrants(
  *
  * @param next лист после изменения.
  * @param previous особенности и уровень до изменения.
- * @returns лист с согласованной прибавкой черт.
+ * @returns лист с согласованной прибавкой особенностей.
  */
-export function withFeatModifiers(
+export function withFeatureModifiers(
   next: Character,
   previous: Pick<Character, 'features' | 'level'>,
 ): Character {
-  const proficiencyGrants = withFeatProficiencyGrants(
+  const proficiencyGrants = withFeatureProficiencyGrants(
     next.proficiencyGrants,
     next.features,
   );
@@ -8309,6 +8392,93 @@ export function getClassFeatureChoice(
   }
 
   return detectFeatureChoice(featureId, summary.description, skillNames);
+}
+
+/**
+ * Выбор внутри умения вида: структурный из справочника, а если его там нет —
+ * распознанный по прозе описания. Правило то же, что и у умения класса
+ * (`getClassFeatureChoice`): структура точнее прозы, а проза остаётся
+ * страховкой для умений, которым механику ещё не проставили.
+ *
+ * @param featureId идентификатор умения (он же id выбора).
+ * @param summary умение вида или происхождения.
+ * @param skillNames имена всех навыков персонажа.
+ * @returns выбор умения или null.
+ */
+export function getSpeciesFeatureChoice(
+  featureId: string,
+  summary: SpeciesFeatureSummary,
+  skillNames: string[],
+): ClassChoice | null {
+  const skillChoice = summary.skillChoice;
+
+  if (skillChoice) {
+    return {
+      id: featureId,
+      kind: 'skill-proficiency',
+      label: '',
+      count: skillChoice.count,
+      // Пустой пул в справочнике означает выбор из всех навыков: пустой
+      // `listed` резолвится всеми навыками листа в `resolveChoiceOptions`.
+      listed: skillChoice.skills,
+    };
+  }
+
+  return detectFeatureChoice(featureId, summary.description, skillNames);
+}
+
+/**
+ * Выбор у самой записи вида или происхождения — того, что даёт выбор записи
+ * целиком.
+ *
+ * В отличие от умения, проза здесь не разбирается: описание записи — это абзац
+ * о её месте в мире, и искать в нём выбор навыка значило бы ловить ложные
+ * срабатывания. У записи выбор либо задан структурно, либо его нет.
+ *
+ * @param featureId идентификатор записи-носителя (он же id выбора).
+ * @param summary деталь вида или происхождения.
+ * @returns выбор записи или null.
+ */
+export function getSpeciesRecordChoice(
+  featureId: string,
+  summary: SpeciesSummary,
+): ClassChoice | null {
+  const skillChoice = summary.skillChoice;
+
+  if (!skillChoice) {
+    return null;
+  }
+
+  return {
+    id: featureId,
+    kind: 'skill-proficiency',
+    label: '',
+    count: skillChoice.count,
+    listed: skillChoice.skills,
+  };
+}
+
+/**
+ * Дальность тёмного зрения вида: свойство справочника, а если его там нет —
+ * первое число с футами из текста умений.
+ *
+ * У видов с заполненным свойством разбор текста не запускается вовсе: свойство
+ * знает и про происхождения, поднимающие дальность до 120 футов, и про виды,
+ * чьё умение названо не «Тёмное зрение».
+ *
+ * @param darkVision дальность из свойств вида; null — свойство не заполнено.
+ * @param features особенности вида и происхождения.
+ * @returns дальность в футах; 0 — тёмного зрения нет.
+ */
+export function resolveDarkvisionDistance(
+  darkVision: number | null,
+  features: SpeciesFeatureSummary[],
+): number {
+  if (darkVision !== null) {
+    return darkVision;
+  }
+
+  return getDarkvisionDistance(features);
 }
 
 /**
