@@ -4,6 +4,7 @@
   import {
     SelectArmorCategory,
     SelectItem,
+    SelectLanguage,
     SelectSkills,
     SelectWeaponCategory,
   } from '~ui/select';
@@ -30,6 +31,13 @@
     get: () => model.value.skills,
     set: (value) => {
       model.value = { ...model.value, skills: toUrlList(value) };
+    },
+  });
+
+  const languages = computed<string | Array<string>>({
+    get: () => model.value.languages,
+    set: (value) => {
+      model.value = { ...model.value, languages: toUrlList(value) };
     },
   });
 
@@ -98,6 +106,16 @@
     >
       <SelectSkills
         v-model="skills"
+        multiple
+      />
+    </UFormField>
+
+    <UFormField
+      class="md:col-span-12"
+      label="Языки"
+    >
+      <SelectLanguage
+        v-model="languages"
         multiple
       />
     </UFormField>

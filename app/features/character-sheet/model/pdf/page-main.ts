@@ -30,6 +30,7 @@ import {
   getCharacterProficiencyBonus,
   getClassesDisplayLabel,
   getEffectiveSpeed,
+  getEffectiveVision,
   getExhaustionEffects,
   getFormattedBonus,
   getHitDicePools,
@@ -983,7 +984,7 @@ function drawSensesPanel(
   character: Character,
   options: PdfSlot,
 ): number {
-  const visionRows = getVisionRows(character.vision).filter(
+  const visionRows = getVisionRows(getEffectiveVision(character)).filter(
     (row) => row.formattedValue !== null,
   );
 

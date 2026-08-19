@@ -87,6 +87,7 @@ import {
   getClampedInteger,
   getClassLevelHitPoints,
   getEffectiveSpeed,
+  getFeatDefences,
   getFormattedBonus,
   getInitiativeBonus,
   getInventoryWeight,
@@ -343,6 +344,22 @@ export function useCharacterSheet() {
   // Скорости листа показываются с истощением, а правятся записанные — поэтому
   // наружу уходит отдельное производное значение, а не `character.speed`.
   const effectiveSpeed = computed(() => getEffectiveSpeed(character.value));
+
+  // Защиты от черт: своего понятия для них лист не хранит, поэтому собираются
+  // из снимков механики. Панель показывается, только если черта их выдала.
+  const featDefences = computed(() =>
+    getFeatDefences(character.value.features, character.value.speed.unit),
+  );
+
+  const hasFeatDefences = computed(
+    () =>
+      featDefences.value.resistances.length > 0
+      || featDefences.value.immunities.length > 0
+      || featDefences.value.vulnerabilities.length > 0
+      || featDefences.value.conditionImmunities.length > 0
+      || featDefences.value.creatureType !== ''
+      || featDefences.value.telepathyRange > 0,
+  );
 
   const armorClassValue = computed(() => getArmorClassValue(character.value));
 
@@ -3283,6 +3300,8 @@ export function useCharacterSheet() {
     initiativeBonus,
     formattedInitiative,
     effectiveSpeed,
+    featDefences,
+    hasFeatDefences,
     armorClassValue,
     spellcastingBreakdown,
     spellSlotRows,

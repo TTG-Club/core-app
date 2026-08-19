@@ -196,6 +196,13 @@ export interface FeatModifiers {
   damage: FeatDamageAffinity;
   conditionImmunities: Array<string>;
   creatureType: string | undefined;
+
+  /**
+   * Прибавка к инициативе: числом — «Бдительный» издания 2014 даёт +5, — и
+   * бонусом мастерства, как «Бдительный» издания 2024. Слагаемые независимы:
+   * лист складывает оба, а не выбирает одно.
+   */
+  initiativeBonus: number | undefined;
   initiativeProficiencyBonus: boolean;
 }
 
@@ -204,9 +211,7 @@ export interface FeatModifiers {
  * воинским оружием». Выбираемые владения сюда не идут — у них есть количество и
  * пул значений, поэтому они живут в {@link FeatChoice}.
  *
- * Навыков, спасбросков и языков здесь нет: первые два черты выдают выбором, а
- * справочник языков сайта и словарь языков листа пока расходятся в названиях и
- * группировке.
+ * Спасбросков здесь нет: их черты выдают выбором.
  */
 export interface FeatProficiencyGrant {
   /** Категории оружия справочника (`MATERIAL_MELEE` и подобные). */
@@ -217,6 +222,14 @@ export interface FeatProficiencyGrant {
 
   /** Навыки справочника (`PERCEPTION`, `STEALTH`). */
   skills: Array<string>;
+
+  /**
+   * Языки справочника (`COMMON`, `DWARVISH`) — константами и ровно в том
+   * написании, в каком их отдаёт справочник: среди них есть `Celestial`, и
+   * приведение регистра сломало бы сверку. Со словарём языков листа справочник
+   * сводит выгрузка компендиума.
+   */
+  languages: Array<string>;
 
   /** Инструменты из раздела «Предметы». */
   tools: Array<FeatEntityRef>;
@@ -421,6 +434,7 @@ export function createFeatModifiers(): FeatModifiers {
     },
     conditionImmunities: [],
     creatureType: undefined,
+    initiativeBonus: undefined,
     initiativeProficiencyBonus: false,
   };
 }
@@ -431,6 +445,7 @@ export function createFeatProficiencyGrant(): FeatProficiencyGrant {
     weaponCategories: [],
     armorCategories: [],
     skills: [],
+    languages: [],
     tools: [],
   };
 }

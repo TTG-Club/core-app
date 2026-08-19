@@ -48,6 +48,7 @@
     SheetCustomItemModal,
     SheetCustomSpellModal,
     SheetDamageModal,
+    SheetDefencesPanel,
     SheetExhaustionPanel,
     SheetExperienceModal,
     SheetFeatAddModal,
@@ -112,6 +113,8 @@
     savingThrowRows,
     skillGroups,
     effectiveSpeed,
+    featDefences,
+    hasFeatDefences,
     formattedProficiencyBonus,
     initiativeBonus,
     formattedInitiative,
@@ -1121,6 +1124,16 @@
               :proficiencies="character.proficiencies"
               class="max-sm:order-6 max-sm:col-span-full"
               @edit="handleProficienciesEdit"
+            />
+
+            <!-- Сопротивления, иммунитеты и прочее от черт: панель появляется,
+              только если черта их выдала — своего понятия для них лист не
+              хранит и правке они не подлежат -->
+            <SheetDefencesPanel
+              v-if="hasFeatDefences"
+              :defences="featDefences"
+              :unit="character.speed.unit"
+              class="max-sm:order-7 max-sm:col-span-full"
             />
           </div>
 

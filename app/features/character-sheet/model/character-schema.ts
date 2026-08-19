@@ -258,6 +258,7 @@ export const featModifiersSchema = z
       .catch(undefined),
     conditionImmunities: modifierCodesSchema,
     creatureType: z.string().optional().catch(undefined),
+    initiativeBonus: modifierNumberSchema,
     initiativeProficiencyBonus: modifierFlagSchema,
   })
   .nullable()
@@ -304,6 +305,13 @@ const featureSchema = z.object({
   // поля нет.
   choiceAnswers: z
     .record(z.string(), z.array(z.string()).catch([]))
+    .optional()
+    .catch(undefined),
+  // Прибавки к характеристикам, уже применённые чертой; у записей до них поля
+  // нет — такая черта характеристики не двигала и при снятии их не тронет.
+  abilityIncreases: z
+    .partialRecord(abilityKeySchema, z.coerce.number())
+    .nullable()
     .optional()
     .catch(undefined),
 });
