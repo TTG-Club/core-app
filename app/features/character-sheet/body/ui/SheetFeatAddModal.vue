@@ -1,18 +1,35 @@
 <script setup lang="ts">
-  import type { FeatCatalogItem, FeatSummary } from '../../model';
+  import type {
+    CharacterSpell,
+    ClassChoice,
+    FeatCatalogItem,
+    FeatSummary,
+    GrantedProficiencies,
+    SpellCatalogItem,
+  } from '../../model';
 
   import { FeatDrawer } from '~feats/drawer';
 
-  import { useCatalogSourceQuery, useCharacterSheet } from '../../composables';
+  import {
+    useCatalogSourceQuery,
+    useCharacterSheet,
+    useToolCatalog,
+  } from '../../composables';
   import {
     buildFeatFeature,
+    collectChosenProficiencies,
     FEAT_SOURCES_ASYNC_DATA_KEY,
     FEATS_FILTERS_PATH,
     FEATS_SEARCH_PATH,
     FEATS_SELECT_PATH,
+    fetchChoiceSpells,
     fetchFeatDetail,
+    getChoiceSpellClassUrls,
+    getFeatAbilityIncreases,
     getFeatUrlFromFeatureId,
     getRequiredChoiceCount,
+    getVisibleFeatChoices,
+    LANGUAGE_PROFICIENCY_GROUPS,
     parseFeatCatalog,
     parseRepeatableFeatUrls,
     resolveChoiceOptions,
@@ -236,35 +253,118 @@
   /** Загруженные детали выбранных черт — их же применяет второй шаг. */
   const loadedSummaries = ref<FeatSummary[]>([]);
 
-  /** Ответы игрока на выборы черт: id выбора → выбранные навыки. */
+  /** Ответы игрока на выборы черт: id выбора → выбранные значения. */
   const choiceAnswers = ref<Record<string, string[]>>({});
+
+  /** Пул заклинаний по id выбора: собирается поиском по каталогу. */
+  const spellPools = ref<Record<string, SpellCatalogItem[]>>({});
+
+  // Каталог инструментов грузится фоном: выбор инструмента появляется только на
+  // втором шаге, а список черт не должен ждать ещё один запрос при открытии.
+  const { getToolNamesForGroups, load: loadToolCatalog } = useToolCatalog();
+
+  void loadToolCatalog();
+
+  /**
+   * Опции пикера выбора. Пул заклинаний приходит поиском по каталогу, а не из
+   * механики черты, поэтому берётся из загруженного пула, а не резолвится.
+   *
+   * @param choice выбор черты.
+   * @returns опции пикера.
+   */
+  function choiceOptions(choice: ClassChoice): string[] {
+    if (choice.kind === 'spell') {
+      return (spellPools.value[choice.id] ?? []).map((spell) => spell.name);
+    }
+
+    return resolveChoiceOptions(choice, {
+      skillNames: character.value.skills.map((skill) => skill.name),
+      proficientSkillNames: character.value.skills
+        .filter((skill) => skill.proficiency !== 'none')
+        .map((skill) => skill.name),
+      // Выбор идёт по уже собранному листу, а не внутри мастера, поэтому
+      // «выбранных прямо сейчас во владение» навыков здесь не бывает.
+      chosenProficientSkills: [],
+      knownLanguages: character.value.proficiencies.languages,
+      knownTools: character.value.proficiencies.tools.map((tool) => tool.name),
+      allLanguages: LANGUAGE_PROFICIENCY_GROUPS.flatMap((group) => group.items),
+      // Инструмент черта называет группой словами («три музыкальных
+      // инструмента»), а не ссылками, поэтому пул — весь каталог: сузить его
+      // листу нечем, а подпись выбора игроку это и говорит.
+      allTools: getToolNamesForGroups(choice.toolGroups),
+    });
+  }
 
   /** Черты, которые о чём-то спрашивают, — по ним и строится шаг выбора. */
   const choiceRows = computed(() =>
     loadedSummaries.value.flatMap((summary) =>
-      summary.choices.map((choice) => ({
-        choice,
-        featName: summary.name,
-        options: resolveChoiceOptions(choice, {
-          skillNames: character.value.skills.map((skill) => skill.name),
-          proficientSkillNames: character.value.skills
-            .filter((skill) => skill.proficiency !== 'none')
-            .map((skill) => skill.name),
-          // Выбор идёт по уже собранному листу, а не внутри мастера, поэтому
-          // «выбранных прямо сейчас во владение» навыков здесь не бывает.
-          chosenProficientSkills: [],
-          knownLanguages: character.value.proficiencies.languages,
-          knownTools: character.value.proficiencies.tools.map(
-            (tool) => tool.name,
-          ),
-          // Пул компетентности резолвится владениями навыками, поэтому
-          // справочники языков и инструментов ему не нужны.
-          allLanguages: [],
-          allTools: [],
+      getVisibleFeatChoices(summary.choices, choiceAnswers.value).map(
+        (choice) => ({
+          choice,
+          featName: summary.name,
+          options: choiceOptions(choice),
         }),
-      })),
+      ),
     ),
   );
+
+  /**
+   * Загружает пулы заклинаний для всех выборов загруженных черт разом. Пул
+   * сужается ответом игрока на выбор списка заклинаний, если черта на него
+   * ссылается, — предыстории, которая назвала бы класс сама, здесь нет.
+   */
+  async function loadSpellPools(): Promise<void> {
+    const spellChoices = loadedSummaries.value.flatMap((summary) =>
+      summary.choices.flatMap((choice) =>
+        choice.kind === 'spell' && choice.spellFilter
+          ? [{ summary, choice, filter: choice.spellFilter }]
+          : [],
+      ),
+    );
+
+    const pools = await Promise.all(
+      spellChoices.map(async ({ summary, choice, filter }) => ({
+        id: choice.id,
+        spells: await fetchChoiceSpells(
+          filter,
+          getChoiceSpellClassUrls(choice, summary.choices, choiceAnswers.value),
+        ),
+      })),
+    );
+
+    spellPools.value = Object.fromEntries(
+      pools.map((pool) => [pool.id, pool.spells]),
+    );
+  }
+
+  /**
+   * Ответы, от которых зависят пулы: пул заклинаний собирается по названному
+   * игроком списку, поэтому после смены ответа его нужно перезапросить.
+   */
+  const spellPoolAnswersKey = computed(() =>
+    loadedSummaries.value
+      .flatMap((summary) =>
+        summary.choices
+          .filter((choice) => choice.kind === 'spell-list')
+          .map((choice) => (choiceAnswers.value[choice.id] ?? []).join(',')),
+      )
+      .join('|'),
+  );
+
+  // Цикла нет: ключ считается только по ответам на выбор списка, а обработчик
+  // чистит ответы выбора заклинания — значение ключа от этого не меняется.
+  watch(spellPoolAnswersKey, () => {
+    // Пул сменился — прежние ответы к нему уже не относятся.
+    for (const summary of loadedSummaries.value) {
+      for (const choice of summary.choices) {
+        if (choice.kind === 'spell') {
+          choiceAnswers.value = { ...choiceAnswers.value, [choice.id]: [] };
+        }
+      }
+    }
+
+    void loadSpellPools();
+  });
 
   const isChoiceStep = computed(() => choiceRows.value.length > 0);
 
@@ -286,6 +386,89 @@
     ),
   );
 
+  /** Навыки, которыми персонаж уже владеет: по ним считается компетентность. */
+  const proficientSkillNames = computed(() =>
+    character.value.skills
+      .filter((skill) => skill.proficiency !== 'none')
+      .map((skill) => skill.name),
+  );
+
+  /**
+   * Владения, выбранные игроком: навык, инструмент и язык. Применяются сразу —
+   * ложатся в снимок владений черты, откуда их берёт журнал выдач.
+   *
+   * @param summary деталь черты.
+   * @returns выбранные владения.
+   */
+  function collectProficiencies(
+    summary: FeatSummary,
+  ): Partial<GrantedProficiencies> {
+    return collectChosenProficiencies(
+      summary.choices,
+      choiceAnswers.value,
+      proficientSkillNames.value,
+    );
+  }
+
+  /**
+   * Ответы игрока на выборы черты по ключу выбора: id пикера — это
+   * `feat:<url>:<ключ>`, а в записи ответы лежат под самим ключом, потому что у
+   * повторяемой черты id записи получает ещё и уникальный суффикс.
+   *
+   * @param summary деталь черты.
+   * @returns ответы по ключу выбора.
+   */
+  function collectChoiceAnswers(
+    summary: FeatSummary,
+  ): Record<string, string[]> {
+    const answers: Record<string, string[]> = {};
+
+    for (const choice of summary.choices) {
+      // Выборы повышения характеристик лист заводит сам, ключа выбора в
+      // механике у них нет — их ответ уходит в прибавки, а не в запись ответов.
+      if (
+        choice.kind === 'ability-score'
+        || choice.kind === 'ability-variant'
+      ) {
+        continue;
+      }
+
+      const values = choiceAnswers.value[choice.id] ?? [];
+      const key = choice.id.split(':').at(-1) ?? '';
+
+      if (key && values.length) {
+        answers[key] = values;
+      }
+    }
+
+    return answers;
+  }
+
+  /**
+   * Заклинания, выбранные игроком: пул хранит записи каталога, а пикер — их
+   * названия, поэтому выбранное сверяется по названию.
+   *
+   * @param summary деталь черты.
+   * @returns выбранные заклинания записями листа.
+   */
+  function collectChosenSpells(summary: FeatSummary): CharacterSpell[] {
+    return summary.choices.flatMap((choice) => {
+      if (choice.kind !== 'spell') {
+        return [];
+      }
+
+      const chosen = new Set(choiceAnswers.value[choice.id] ?? []);
+
+      return (
+        (spellPools.value[choice.id] ?? [])
+          .filter((spell) => chosen.has(spell.name))
+          // Заклинание черты подготовлено сразу и места среди подготовленных не
+          // занимает — как врождённое заклинание вида.
+          .map((spell) => ({ ...spell, prepared: true }))
+      );
+    });
+  }
+
   /**
    * Собирает записи умений из загруженных деталей с ответами игрока и добавляет
    * их на лист.
@@ -297,8 +480,17 @@
       buildFeatFeature(summary, {
         repeatable: repeatableUrls.value.has(summary.url),
         level: character.value.level,
-        expertiseSkills: summary.choices.flatMap(
-          (choice) => choiceAnswers.value[choice.id] ?? [],
+        // Каждый вид ответа ложится в запись по-своему: компетентность — в
+        // снимок владений, заклинание — в список записи, остальное лист хранит
+        // ответом и применит позже. Свалить всё в компетентность нельзя —
+        // выбранная характеристика ушла бы в журнал выдач навыком.
+        proficiencies: collectProficiencies(summary),
+        choiceAnswers: collectChoiceAnswers(summary),
+        spells: collectChosenSpells(summary),
+        abilityIncreases: getFeatAbilityIncreases(
+          summary,
+          character.value.abilities,
+          choiceAnswers.value,
         ),
       }),
     );
@@ -335,6 +527,10 @@
         });
       }
 
+      // Пулы заклинаний нужны шагу выбора: без них пикер «Посвящённого в магию»
+      // открылся бы пустым.
+      await loadSpellPools();
+
       // Черта может просить выбор («Знаток» — навык для компетентности): тогда
       // модалка не закрывается, а показывает второй шаг.
       if (!isChoiceStep.value) {
@@ -353,6 +549,7 @@
   function handleChoiceBack() {
     loadedSummaries.value = [];
     choiceAnswers.value = {};
+    spellPools.value = {};
   }
 </script>
 
@@ -362,9 +559,9 @@
     :ui="{ content: 'sm:max-w-2xl' }"
   >
     <template #body>
-      <!-- Второй шаг: черта о чём-то спрашивает. Пока это только навык для
-        компетентности («Знаток») — остальные виды выбора лист не применяет и
-        потому не показывает -->
+      <!-- Второй шаг: черта о чём-то спрашивает — навык для компетентности
+        («Знаток»), заклинательную характеристику и заклинания («Посвящённый в
+        магию»). Виды выбора, которые лист не применяет, он и не показывает -->
       <div
         v-if="isChoiceStep"
         class="flex h-[65dvh] min-h-96 flex-col gap-4 overflow-y-auto pr-1"

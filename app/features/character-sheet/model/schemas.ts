@@ -13,6 +13,7 @@ import type {
   ClassOption,
   ClassSummary,
   ClassTableColumn,
+  FeatAbilityBonusOption,
   FeatCatalogItem,
   FeatSelectOption,
   FeatSummary,
@@ -48,13 +49,18 @@ import {
   featModifiersSchema,
 } from './character-schema';
 import {
+  ABILITY_CHOICE_ID_SEGMENT,
+  ABILITY_IMPROVEMENT_SCORE_MAX,
   ABILITY_LABELS,
   ABILITY_ORDER,
+  ABILITY_VARIANT_CHOICE_ID_SEGMENT,
   ARMOR_GROUP_BY_API_CATEGORY,
   ARMOR_PROFICIENCY_GROUPS,
   CANTRIP_SPELL_LEVEL,
   CURRENCY_KEYS_BY_LABEL,
   INVENTORY_QUANTITY_MAX,
+  LANGUAGE_NAME_BY_API_KEY,
+  SHEET_FEAT_MODAL_LABELS,
   SKILL_NAME_BY_API_KEY,
   SPELL_COMPONENT_LABELS,
   STARTING_EQUIPMENT_DEFAULT_COIN_KEY,
@@ -63,6 +69,7 @@ import {
   WEAPON_PROFICIENCY_GROUPS,
 } from './constants';
 import {
+  getAbilityBonusLabel,
   getCharacterFeatureId,
   getClassToolChoice,
   isAbilityImprovementFeature,
@@ -386,6 +393,18 @@ const featDetailSchema = z.object({
   mechanics: z
     .object({
       modifiers: featModifiersSchema,
+      // Варианты повышения характеристик: несколько записей — это выбор «или».
+      abilityBonuses: z
+        .array(
+          z.object({
+            abilities: z.array(z.string()).nullable().catch(null),
+            bonus: z.coerce.number().nullable().catch(null),
+            upto: z.coerce.number().nullable().catch(null),
+            count: z.coerce.number().nullable().catch(null),
+          }),
+        )
+        .nullable()
+        .catch(null),
       // Владения приходят категориями справочника — лист хранит их записями
       // «вся группа», поэтому разбор ниже их переводит.
       proficiencies: z
@@ -393,6 +412,7 @@ const featDetailSchema = z.object({
           weaponCategories: z.array(z.string()).nullable().catch(null),
           armorCategories: z.array(z.string()).nullable().catch(null),
           skills: z.array(z.string()).nullable().catch(null),
+          languages: z.array(z.string()).nullable().catch(null),
           tools: z
             .array(
               z.object({
@@ -412,8 +432,8 @@ const featDetailSchema = z.object({
         .object({ alwaysPrepared: z.boolean().catch(false) })
         .nullable()
         .catch(null),
-      // Выборы при взятии черты. Лист умеет применить только компетентность в
-      // навыке, поэтому разбирает лишь поля, нужные ей.
+      // Выборы при взятии черты. Разбираются поля тех видов, которые лист
+      // умеет применить, — см. `toFeatChoices`.
       choices: z
         .array(
           z.object({
@@ -422,6 +442,10 @@ const featDetailSchema = z.object({
             label: z.string().nullable().catch(null),
             count: z.coerce.number().nullable().catch(null),
             grants: z.string().nullable().catch(null),
+            // Выбирать можно только то, чем персонаж ещё не владеет, и обратный
+            // случай: владение превращает выбор в компетентность.
+            onlyIfNotProficient: z.boolean().nullable().catch(null),
+            expertiseIfProficient: z.boolean().nullable().catch(null),
             // Допустимые значения выбора: коды словаря со снимком названия.
             options: z
               .array(
@@ -519,7 +543,23 @@ function toGrantedProficiencies(
     }),
   );
 
-  if (!weapons.length && !armor.length && !tools.length && !skills.length) {
+  // Незнакомый язык отбрасывается по той же причине, что и навык: списки
+  // справочника и листа сошлись, значит чужое значение — опечатка в данных.
+  const languages = uniq(
+    (proficiencies.languages ?? []).flatMap((language) => {
+      const name = LANGUAGE_NAME_BY_API_KEY[language];
+
+      return name ? [name] : [];
+    }),
+  );
+
+  if (
+    !weapons.length
+    && !armor.length
+    && !tools.length
+    && !skills.length
+    && !languages.length
+  ) {
     return null;
   }
 
@@ -527,11 +567,107 @@ function toGrantedProficiencies(
     armor,
     weapons,
     tools,
-    languages: [],
+    languages,
     skills,
     // Компетентность без выбора черты не выдают: она приходит выбором игрока.
     expertiseSkills: [],
   };
+}
+
+/** Варианты повышения характеристик, как их разбирает схема детали. */
+type FeatAbilityBonusesResponse = NonNullable<
+  NonNullable<z.infer<typeof featDetailSchema>['mechanics']>['abilityBonuses']
+>;
+
+/**
+ * Варианты повышения характеристик черты. Вариант без характеристик или без
+ * размера прибавки отбрасывается: поднимать по нему нечего.
+ *
+ * @param bonuses варианты из механики черты.
+ * @returns варианты в форме листа.
+ */
+function toFeatAbilityBonuses(
+  bonuses: FeatAbilityBonusesResponse,
+): FeatAbilityBonusOption[] {
+  return bonuses.flatMap((bonus) => {
+    const abilities = (bonus.abilities ?? []).flatMap((ability) => {
+      const key = parseApiAbilityKey(ability);
+
+      return key ? [key] : [];
+    });
+
+    const amount = bonus.bonus ?? 0;
+
+    if (!abilities.length || amount <= 0) {
+      return [];
+    }
+
+    return [
+      {
+        abilities,
+        bonus: amount,
+        // Потолок по умолчанию — предел прибавок по правилам 2024: у записей
+        // справочника он проставлен, но мог остаться пустым у заведённых вручную.
+        upto: bonus.upto ?? ABILITY_IMPROVEMENT_SCORE_MAX,
+        // Пул из одной характеристики выбора не требует, поэтому и количество
+        // по умолчанию равно одному.
+        count: Math.max(1, bonus.count ?? 1),
+      },
+    ];
+  });
+}
+
+/**
+ * Выборы повышения характеристик: вариант спрашивает игрока, только если
+ * поднять можно не весь пул («+1 к Силе или Ловкости»). Пул ровно по размеру
+ * выбора применяется сам и вопросом не становится.
+ *
+ * Несколько вариантов — это «или», поэтому впереди встаёт ещё один выбор: каким
+ * из них воспользоваться. Он же прячет чужие пикеры (см. `getVisibleFeatChoices`).
+ *
+ * @param bonuses варианты повышения характеристик.
+ * @param featUrl url черты (идёт в устойчивый id выбора).
+ * @returns выборы для пикеров листа.
+ */
+function toFeatAbilityChoices(
+  bonuses: FeatAbilityBonusOption[],
+  featUrl: string,
+): ClassChoice[] {
+  const featureId = getCharacterFeatureId('feat', featUrl);
+
+  const asked = bonuses.flatMap<ClassChoice>((bonus, variantIndex) =>
+    bonus.abilities.length > bonus.count
+      ? [
+          {
+            id: `${featureId}:${ABILITY_CHOICE_ID_SEGMENT}-${variantIndex}`,
+            kind: 'ability-score',
+            label: getAbilityBonusLabel(bonus),
+            count: bonus.count,
+            listed: bonus.abilities.map((key) => ABILITY_LABELS[key]),
+            abilityBonus: {
+              variantIndex,
+              bonus: bonus.bonus,
+              upto: bonus.upto,
+            },
+          },
+        ]
+      : [],
+  );
+
+  if (bonuses.length < 2) {
+    return asked;
+  }
+
+  return [
+    {
+      id: `${featureId}:${ABILITY_VARIANT_CHOICE_ID_SEGMENT}`,
+      kind: 'ability-variant',
+      label: SHEET_FEAT_MODAL_LABELS.abilityVariantLabel,
+      count: 1,
+      listed: bonuses.map((bonus) => getAbilityBonusLabel(bonus)),
+    },
+    ...asked,
+  ];
 }
 
 /** Выборы черты, как их разбирает схема детали. */
@@ -542,10 +678,10 @@ type FeatChoicesResponse = NonNullable<
 /**
  * Выборы черты, которые лист умеет применить, — в виде своих выборов листа.
  *
- * Пока это только компетентность в навыке: пул у неё резолвится по уже
- * имеющимся владениям (`resolveChoiceOptions`), а результат лист умеет
- * применить и снять. Остальные виды выбора лист не применяет, поэтому и не
- * спрашивает — иначе игрок отвечал бы в пустоту.
+ * Это компетентность в навыке (пул резолвится по уже имеющимся владениям),
+ * заклинательная характеристика (пул перечислен в самой механике) и заклинание
+ * либо заговор (пул собирается поиском по каталогу). Остальные виды выбора лист
+ * не применяет, поэтому и не спрашивает — иначе игрок отвечал бы в пустоту.
  *
  * @param choices выборы из механики черты.
  * @param featUrl url черты (идёт в устойчивый id выбора).
@@ -610,19 +746,99 @@ function toFeatChoices(
       ];
     }
 
-    if (choice.type !== 'SKILL' || choice.grants !== 'EXPERTISE') {
+    if (choice.type === 'SPELL_LIST') {
+      // Пул — классы, перечисленные в самом выборе: по ответу сужается пул
+      // заклинаний того выбора, который на него ссылается. Подпись берётся из
+      // снимка названия, а без него остаётся ссылка — иначе выбор был бы пуст.
+      const options = (choice.options ?? []).flatMap((option) =>
+        option.value
+          ? [{ value: option.value, name: option.name || option.value }]
+          : [],
+      );
+
+      return [
+        {
+          id,
+          kind: 'spell-list',
+          label,
+          count,
+          listed: options.map((option) => option.name),
+          optionValues: Object.fromEntries(
+            options.map((option) => [option.name, option.value]),
+          ),
+        },
+      ];
+    }
+
+    if (choice.type === 'TOOL') {
+      return [
+        {
+          id,
+          kind: 'tool',
+          label,
+          count,
+          // Пул инструментов приходит каталогом сайта: в механике перечислены
+          // только те случаи, где выбор сужен до нескольких предметов.
+          listed: (choice.options ?? []).flatMap((option) =>
+            option.name ? [option.name] : [],
+          ),
+          excludeOwned: choice.onlyIfNotProficient ?? false,
+        },
+      ];
+    }
+
+    if (choice.type === 'LANGUAGE') {
+      return [
+        {
+          id,
+          kind: 'language',
+          label,
+          count,
+          // Языки перечисляются кодами словаря; пусто — выбор из всех языков.
+          listed: (choice.options ?? []).flatMap((option) => {
+            const name = LANGUAGE_NAME_BY_API_KEY[option.value];
+
+            return name ? [name] : [];
+          }),
+          excludeOwned: choice.onlyIfNotProficient ?? false,
+        },
+      ];
+    }
+
+    if (choice.type !== 'SKILL') {
       return [];
+    }
+
+    if (choice.grants === 'EXPERTISE') {
+      return [
+        {
+          id,
+          kind: 'skill-expertise',
+          label,
+          count,
+          // Пул компетентности резолвится владениями листа, а не списком из
+          // справочника: выбирать можно только то, чем персонаж уже владеет.
+          listed: [],
+        },
+      ];
     }
 
     return [
       {
         id,
-        kind: 'skill-expertise',
+        kind: 'skill-proficiency',
         label,
         count,
-        // Пул компетентности резолвится владениями листа, а не списком из
-        // справочника: выбирать можно только то, чем персонаж уже владеет.
-        listed: [],
+        // Пул навыков перечисляется кодами словаря; пусто — выбор из всех.
+        listed: (choice.options ?? []).flatMap((option) => {
+          const name = SKILL_NAME_BY_API_KEY[option.value];
+
+          return name ? [name] : [];
+        }),
+        excludeOwned: choice.onlyIfNotProficient ?? false,
+        // «Наблюдательный»: навык, которым персонаж уже владеет, даёт
+        // компетентность вместо второго владения.
+        expertiseIfProficient: choice.expertiseIfProficient ?? false,
       },
     ];
   });
@@ -651,6 +867,10 @@ export function parseFeatDetail(input: unknown): FeatSummary | null {
 
   const choices = result.data.mechanics?.choices;
 
+  const abilityBonuses = toFeatAbilityBonuses(
+    result.data.mechanics?.abilityBonuses ?? [],
+  );
+
   return {
     url: result.data.url,
     name: result.data.name.rus,
@@ -661,7 +881,13 @@ export function parseFeatDetail(input: unknown): FeatSummary | null {
     spells: granted.length
       ? granted.map((spell) => ({ ...toCharacterSpell(spell), prepared }))
       : null,
-    choices: choices ? toFeatChoices(choices, result.data.url) : [],
+    // Повышение характеристик спрашивается первым: остальные выборы черты идут
+    // после того, как игрок решил, что она поднимает.
+    choices: [
+      ...toFeatAbilityChoices(abilityBonuses, result.data.url),
+      ...(choices ? toFeatChoices(choices, result.data.url) : []),
+    ],
+    abilityBonuses,
   };
 }
 

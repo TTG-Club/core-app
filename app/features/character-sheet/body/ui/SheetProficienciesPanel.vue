@@ -27,9 +27,6 @@
 
     /** Ссылка на предмет каталога; null — открывать нечего. */
     url: string | null;
-
-    /** Правый отступ чипа: под кнопку описания он меньше. */
-    paddingClass: string;
   }
 
   interface ProficiencyGroupView {
@@ -55,13 +52,10 @@
     name: string,
     options: { hasMastery?: boolean; url?: string | null } = {},
   ): ProficiencyChip {
-    const url = options.url ?? null;
-
     return {
       name,
       hasMastery: options.hasMastery ?? false,
-      url,
-      paddingClass: url ? 'pr-1' : 'pr-2.5',
+      url: options.url ?? null,
     };
   }
 
@@ -190,39 +184,41 @@
           v-if="group.items.length"
           class="flex flex-wrap gap-1.5"
         >
-          <span
+          <UBadge
             v-for="chip in group.items"
             :key="chip.name"
-            class="flex items-center gap-1 rounded border border-default bg-default/40 py-1 pl-2.5 text-[11px] text-toned"
-            :class="chip.paddingClass"
+            :label="chip.name"
+            color="neutral"
+            variant="subtle"
+            size="sm"
           >
-            {{ chip.name }}
+            <template #trailing>
+              <UTooltip
+                v-if="chip.hasMastery"
+                text="Мастерство"
+              >
+                <UIcon
+                  :name="WEAPON_MASTERY_ICON"
+                  class="size-3 text-success"
+                />
+              </UTooltip>
 
-            <UTooltip
-              v-if="chip.hasMastery"
-              text="Мастерство"
-            >
-              <UIcon
-                :name="WEAPON_MASTERY_ICON"
-                class="size-3 text-success"
-              />
-            </UTooltip>
-
-            <UTooltip
-              v-if="chip.url"
-              :text="SHEET_TOOL_LABELS.preview"
-            >
-              <UButton
-                icon="tabler:layout-sidebar-right-expand"
-                color="neutral"
-                variant="ghost"
-                size="xs"
-                square
-                :aria-label="`${SHEET_TOOL_LABELS.preview}: ${chip.name}`"
-                @click.left.exact.prevent="handleToolPreview(chip.url)"
-              />
-            </UTooltip>
-          </span>
+              <UTooltip
+                v-if="chip.url"
+                :text="SHEET_TOOL_LABELS.preview"
+              >
+                <UButton
+                  icon="tabler:layout-sidebar-right-expand"
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  square
+                  :aria-label="`${SHEET_TOOL_LABELS.preview}: ${chip.name}`"
+                  @click.left.exact.prevent="handleToolPreview(chip.url)"
+                />
+              </UTooltip>
+            </template>
+          </UBadge>
         </div>
 
         <span

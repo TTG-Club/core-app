@@ -454,6 +454,40 @@ modals), so its capabilities are listed here rather than squeezed into the table
   where a missing value reads as prepared (`isInnateSpellPrepared`), which is
   what sheets saved before the flag get. Copying such a spell into the book
   drops the mark: there it would count against the limit.
+- Feats are added from the «Особенности» tab (`SheetFeatAddModal`, catalog
+  list with profile sources respected) or handed out by the background and
+  level-up wizards, and what a feat does to the sheet comes from its workshop
+  `mechanics` — parsed once by `parseFeatDetail` and stored as a snapshot on
+  the feature record, so a feat keeps working offline and stops changing when
+  the catalog entry is edited. Applied at once: hit points, AC, speeds, senses
+  (they raise the sheet's vision through `getEffectiveVision`, never lower
+  it), a flat and a proficiency-bonus initiative term (each becomes its own
+  read-only row in the initiative breakdown, labelled with the feat), granted
+  proficiencies — weapon and armour categories become «вся группа» records,
+  skills, tools and languages are translated through `SKILL_NAME_BY_API_KEY` /
+  `LANGUAGE_NAME_BY_API_KEY` — and ability increases. Everything a feat hands
+  out goes through the grant ledger (`proficiencyGrants`), so removing the
+  feat takes back exactly what it gave; ability increases are written into
+  `abilities` as a difference the same way hit points are, with the rules cap
+  (`upto`) applied once at pick time so removal never drops a score below
+  where it started. Resistances, immunities, vulnerabilities, condition
+  immunities, a new creature type and telepathy have no sheet field of their
+  own: they are collected on the fly by `getFeatDefences` into the read-only
+  `SheetDefencesPanel`, which appears under the proficiencies panel only when
+  a feat granted something.
+- A feat that asks the player something shows a second step in the same modal
+  (`getVisibleFeatChoices` decides what is asked): a skill for proficiency or
+  expertise (the «Наблюдательный» case turns a skill the character already has
+  into expertise), a tool, a language, a spellcasting ability, a spell or
+  cantrip (the pool is a catalog search, `fetchChoiceSpells`), the spell list
+  a feat draws from (the answer narrows the pool through
+  `classesFromChoiceKey`, and a background that names the class itself still
+  wins), and which abilities an increase raises — a feat offering «или»
+  variants asks which variant first. Answers are kept on the feature record
+  (`choiceAnswers`) so a later level-up can reason about them; the ones the
+  sheet applies immediately land in the proficiency snapshot, the granted
+  spells or the ability increases. Choice kinds the sheet cannot apply are not
+  asked at all.
 - The «Личность» tab holds the person rather than the build: seven appearance
   tiles (alignment from the `alignments` dictionary plus age, height, weight,
   eyes, hair and skin as free text — clicking a tile opens the form with the

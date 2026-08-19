@@ -294,23 +294,26 @@
             v-if="customEntries.length"
             class="flex flex-wrap gap-1.5"
           >
-            <span
+            <UBadge
               v-for="entry in customEntries"
               :key="entry"
-              class="flex items-center gap-1 rounded border border-default bg-default/40 py-1 pr-1 pl-2.5 text-[11px] text-toned"
+              :label="entry"
+              color="neutral"
+              variant="subtle"
+              size="sm"
             >
-              {{ entry }}
-
-              <UButton
-                icon="tabler:x"
-                color="error"
-                variant="ghost"
-                size="xs"
-                square
-                :aria-label="`${SHEET_LANGUAGE_LABELS.removeCustom}: ${entry}`"
-                @click.left.exact.prevent="handleRemoveCustomEntry(entry)"
-              />
-            </span>
+              <template #trailing>
+                <UButton
+                  icon="tabler:x"
+                  color="error"
+                  variant="ghost"
+                  size="xs"
+                  square
+                  :aria-label="`${SHEET_LANGUAGE_LABELS.removeCustom}: ${entry}`"
+                  @click.left.exact.prevent="handleRemoveCustomEntry(entry)"
+                />
+              </template>
+            </UBadge>
           </div>
 
           <span

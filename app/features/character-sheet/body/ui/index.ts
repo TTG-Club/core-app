@@ -23,6 +23,7 @@ export { default as SheetCustomItemModal } from './SheetCustomItemModal.vue';
 export { default as SheetCustomSpeciesModal } from './SheetCustomSpeciesModal.vue';
 export { default as SheetCustomSpellModal } from './SheetCustomSpellModal.vue';
 export { default as SheetDamageModal } from './SheetDamageModal.vue';
+export { default as SheetDefencesPanel } from './SheetDefencesPanel.vue';
 export { default as SheetDistanceRows } from './SheetDistanceRows.vue';
 export { default as SheetEquipmentTab } from './SheetEquipmentTab.vue';
 export { default as SheetExhaustionPanel } from './SheetExhaustionPanel.vue';

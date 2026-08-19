@@ -32,13 +32,17 @@
     buildStartingEquipmentItems,
     CHOICE_SELECT_PLACEHOLDER,
     CLASSES_SEARCH_PATH,
+    collectChosenProficiencies,
     computeAbilityBonuses,
     CUSTOM_BACKGROUND_LABELS,
     FEATS_DETAIL_BASE_PATH,
     fetchChoiceSpells,
+    getChoiceSpellClassUrls,
+    getFeatAbilityIncreases,
     getOwnedSkillHints,
     getRequiredChoiceCount,
     getToolNames,
+    getVisibleFeatChoices,
     LANGUAGE_PROFICIENCY_GROUPS,
     ORIGIN_FEAT_ACQUISITION_LEVEL,
     parseBackgroundDetail,
@@ -298,8 +302,8 @@
   const isNextDisabled = computed(() => !selectedOption.value);
 
   /** Выборы черты предыстории: у «Мудреца» их задаёт «Посвящённый в магию». */
-  const featChoices = computed<ClassChoice[]>(
-    () => featSummary.value?.choices ?? [],
+  const featChoices = computed<ClassChoice[]>(() =>
+    getVisibleFeatChoices(featSummary.value?.choices ?? [], selections.value),
   );
 
   /** Все выборы черты отвечены сполна — иначе применять рано. */
@@ -398,8 +402,12 @@
    * @returns url классов для фильтра поиска.
    */
   function getChoiceClassUrls(choice: ClassChoice): string[] {
-    const urls = (choice.spellFilter?.classes ?? []).map(
-      (characterClass) => characterClass.url,
+    // Ответ игрока на выбор списка заклинаний сужает пул сам: если черта на
+    // него ссылается, класс берётся оттуда, а не из перечисления фильтра.
+    const urls = getChoiceSpellClassUrls(
+      choice,
+      featSummary.value?.choices ?? [],
+      selections.value,
     );
 
     // Класс, названный предысторией, сужает пул: по правилам список один, а не
@@ -413,6 +421,30 @@
 
     return urls;
   }
+
+  /**
+   * Ответы, от которых зависят пулы: если черта спрашивает список заклинаний,
+   * пул её заклинаний собирается уже по названному классу.
+   */
+  const spellPoolAnswersKey = computed(() =>
+    featChoices.value
+      .filter((choice) => choice.kind === 'spell-list')
+      .map((choice) => (selections.value[choice.id] ?? []).join(','))
+      .join('|'),
+  );
+
+  // Цикла нет: ключ считается только по ответам на выбор списка, а обработчик
+  // чистит ответы выбора заклинания — значение ключа от этого не меняется.
+  watch(spellPoolAnswersKey, () => {
+    // Пул сменился — прежде выбранные заклинания к нему уже не относятся.
+    for (const choice of featChoices.value) {
+      if (choice.kind === 'spell') {
+        selections.value = { ...selections.value, [choice.id]: [] };
+      }
+    }
+
+    void loadSpellPools();
+  });
 
   /** Загружает пулы заклинаний для всех выборов черты разом. */
   async function loadSpellPools(): Promise<void> {
@@ -465,6 +497,15 @@
     const answers: Record<string, string[]> = {};
 
     for (const choice of featChoices.value) {
+      // Выборы повышения характеристик заведены самим листом: ключа выбора в
+      // механике у них нет, а ответ уходит в прибавки к характеристикам.
+      if (
+        choice.kind === 'ability-score'
+        || choice.kind === 'ability-variant'
+      ) {
+        continue;
+      }
+
       const values = selections.value[choice.id] ?? [];
       const key = choice.id.split(':').at(-1) ?? '';
 
@@ -589,13 +630,22 @@
         // считается прибавка «Крепкого» к максимуму хитов.
         const feature = buildFeatFeature(summary, {
           level: ORIGIN_FEAT_ACQUISITION_LEVEL,
-          // Компетентность применяется сразу — она ложится в снимок владений;
+          // Владения применяются сразу — они ложатся в снимок владений черты;
           // остальные ответы лист хранит в записи черты и применит позже.
-          expertiseSkills: featChoices.value
-            .filter((choice) => choice.kind === 'skill-expertise')
-            .flatMap((choice) => selections.value[choice.id] ?? []),
+          proficiencies: collectChosenProficiencies(
+            featChoices.value,
+            selections.value,
+            // Навыки самой предыстории тоже считаются владением: они лягут на
+            // лист вместе с чертой.
+            [...proficientSkillNames.value, ...(detail.skills ?? [])],
+          ),
           choiceAnswers: collectFeatChoiceAnswers(),
           spells: collectChosenSpells(),
+          abilityIncreases: getFeatAbilityIncreases(
+            summary,
+            character.value.abilities,
+            selections.value,
+          ),
         });
 
         featFeature = detail.featSubchoice

@@ -362,23 +362,26 @@
             v-if="customTools.length"
             class="flex flex-wrap gap-1.5"
           >
-            <span
+            <UBadge
               v-for="tool in customTools"
               :key="tool.name"
-              class="flex items-center gap-1 rounded border border-default bg-default/40 py-1 pr-1 pl-2.5 text-[11px] text-toned"
+              :label="tool.name"
+              color="neutral"
+              variant="subtle"
+              size="sm"
             >
-              {{ tool.name }}
-
-              <UButton
-                icon="tabler:x"
-                color="error"
-                variant="ghost"
-                size="xs"
-                square
-                :aria-label="`${SHEET_TOOL_LABELS.removeCustom}: ${tool.name}`"
-                @click.left.exact.prevent="handleRemoveCustomTool(tool.name)"
-              />
-            </span>
+              <template #trailing>
+                <UButton
+                  icon="tabler:x"
+                  color="error"
+                  variant="ghost"
+                  size="xs"
+                  square
+                  :aria-label="`${SHEET_TOOL_LABELS.removeCustom}: ${tool.name}`"
+                  @click.left.exact.prevent="handleRemoveCustomTool(tool.name)"
+                />
+              </template>
+            </UBadge>
           </div>
 
           <span

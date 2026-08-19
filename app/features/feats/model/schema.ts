@@ -124,6 +124,7 @@ const modifiersSchema = z.object({
   damage: damageAffinitySchema.optional(),
   conditionImmunities: z.array(z.string()).optional(),
   creatureType: z.string().optional(),
+  initiativeBonus: z.number().optional(),
   initiativeProficiencyBonus: z.boolean().optional(),
 });
 
@@ -131,6 +132,7 @@ const proficiencyGrantSchema = z.object({
   weaponCategories: z.array(z.string()).optional(),
   armorCategories: z.array(z.string()).optional(),
   skills: z.array(z.string()).optional(),
+  languages: z.array(z.string()).optional(),
   tools: z.array(entityRefSchema).optional(),
 });
 

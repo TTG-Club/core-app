@@ -5,6 +5,7 @@
 
   import {
     getClassesDisplayLabel,
+    getEffectiveVision,
     getSheetActionMenuItems,
     getSpeciesDisplayName,
     getVisionRows,
@@ -223,7 +224,11 @@
     Math.max(0, experienceProgress.value * 2 - 100),
   );
 
-  const visionRows = computed(() => getVisionRows(props.character.vision));
+  // Чувства, выданные чертами, показываются наравне со своими: считаются на
+  // лету, как и скорость.
+  const visionRows = computed(() =>
+    getVisionRows(getEffectiveVision(props.character)),
+  );
 
   const hasVisionDetails = computed(() =>
     visionRows.value.some((row) => row.formattedValue !== null),
