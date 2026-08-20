@@ -16,6 +16,7 @@
   } from '~ui/select';
   import { InfoTooltip } from '~ui/tooltip';
 
+  import { useFeatRefDirectory } from '../../composable';
   import {
     createSpellChoiceRow,
     FEAT_CASTING_TIME_OPTIONS,
@@ -44,6 +45,18 @@
   }>();
 
   const model = defineModel<Array<FeatSpellChoiceRow>>({ required: true });
+
+  /** Классы, перечисленные в выборах списка: по ним берутся снимки названий. */
+  const classOptionUrls = computed<Array<string>>(() =>
+    model.value
+      .filter((row) => row.type === 'SPELL_LIST')
+      .flatMap((row) => row.options.map((option) => option.value)),
+  );
+
+  const { getEntry: getClassEntry } = useFeatRefDirectory(
+    'CLASS',
+    classOptionUrls,
+  );
 
   /** Ограничивается ли выбор фильтром заклинаний. */
   function isSpellPick(row: FeatSpellChoiceRow): boolean {
@@ -151,7 +164,17 @@
     row: FeatSpellChoiceRow,
     urls: string | Array<string> | undefined,
   ) {
-    row.options = toUrlList(urls).map((value) => ({ value }));
+    // Снимок названия обязателен: лист персонажа показывает варианты выбора
+    // подписями, а по одной ссылке он покажет игроку слаг «wizard-phb».
+    // Известное название держится за ссылкой — справочник мог ещё не ответить
+    const known = new Map(
+      row.options.map((option) => [option.value, option.name]),
+    );
+
+    row.options = toUrlList(urls).map((value) => ({
+      value,
+      name: getClassEntry(value)?.name ?? known.get(value),
+    }));
   }
 
   /** Заводит выбор заклинания: он встречается чаще списка и характеристики. */

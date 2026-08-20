@@ -301,26 +301,6 @@
 
   const isNextDisabled = computed(() => !selectedOption.value);
 
-  /** Выборы черты предыстории: у «Мудреца» их задаёт «Посвящённый в магию». */
-  const featChoices = computed<ClassChoice[]>(() =>
-    getVisibleFeatChoices(featSummary.value?.choices ?? [], selections.value),
-  );
-
-  /** Все выборы черты отвечены сполна — иначе применять рано. */
-  const isFeatChoiceComplete = computed<boolean>(() =>
-    featChoices.value.every(
-      (choice) =>
-        (selections.value[choice.id]?.length ?? 0) >= choiceCount(choice),
-    ),
-  );
-
-  const isApplyDisabled = computed(
-    () =>
-      !backgroundDetail.value
-      || !isAbilityChoiceValid.value
-      || !isFeatChoiceComplete.value,
-  );
-
   /**
    * Классы каталога для сверки названия с предысторией: «Мудрец» называет класс
    * черты словом («Волшебник»), а фильтр поиска заклинаний принимает ссылку.
@@ -357,6 +337,74 @@
 
     return named?.url ?? null;
   });
+
+  /**
+   * Подпись класса в пикере выбора списка: ответы хранятся подписями, а не
+   * ссылками, поэтому названный предысторией класс ищется среди подписей самого
+   * выбора.
+   *
+   * @param choice выбор списка заклинаний.
+   * @returns подпись варианта; `undefined` — этого класса в выборе нет.
+   */
+  function getNamedSpellListAnswer(choice: ClassChoice): string | undefined {
+    const named = featClassUrl.value;
+
+    if (!named) {
+      return undefined;
+    }
+
+    return Object.entries(choice.optionValues ?? {}).find(
+      ([, url]) => url === named,
+    )?.[0];
+  }
+
+  /**
+   * Выборы списка заклинаний, за которые ответила предыстория. Если названного
+   * класса среди вариантов нет, выбор остаётся за игроком — иначе черта
+   * получила бы список, которого в ней не перечислено.
+   */
+  const namedSpellListChoices = computed<ClassChoice[]>(() =>
+    (featSummary.value?.choices ?? []).filter(
+      (choice) =>
+        choice.kind === 'spell-list' && !!getNamedSpellListAnswer(choice),
+    ),
+  );
+
+  /**
+   * Выборы черты предыстории: у «Мудреца» их задаёт «Посвящённый в магию».
+   *
+   * Выбор списка заклинаний, за который ответила сама предыстория, из пикеров
+   * убран: «Мудрец» даёт «Посвящённого в магию (Волшебник)» — класс уже назван,
+   * и спрашивать его второй раз значит предлагать игроку передумать за
+   * предысторию.
+   */
+  const featChoices = computed<ClassChoice[]>(() => {
+    const visible = getVisibleFeatChoices(
+      featSummary.value?.choices ?? [],
+      selections.value,
+    );
+
+    const answered = new Set(
+      namedSpellListChoices.value.map((choice) => choice.id),
+    );
+
+    return visible.filter((choice) => !answered.has(choice.id));
+  });
+
+  /** Все выборы черты отвечены сполна — иначе применять рано. */
+  const isFeatChoiceComplete = computed<boolean>(() =>
+    featChoices.value.every(
+      (choice) =>
+        (selections.value[choice.id]?.length ?? 0) >= choiceCount(choice),
+    ),
+  );
+
+  const isApplyDisabled = computed(
+    () =>
+      !backgroundDetail.value
+      || !isAbilityChoiceValid.value
+      || !isFeatChoiceComplete.value,
+  );
 
   /** Пул заклинаний по id выбора: собирается поиском по каталогу. */
   const spellPools = ref<Record<string, SpellCatalogItem[]>>({});
@@ -511,6 +559,17 @@
 
       if (key && values.length) {
         answers[key] = values;
+      }
+    }
+
+    // Скрытый выбор списка отвечает предыстория: без записанного ответа лист
+    // потом не сузит пул заклинаний до названного ею класса
+    for (const choice of namedSpellListChoices.value) {
+      const key = choice.id.split(':').at(-1) ?? '';
+      const answer = getNamedSpellListAnswer(choice);
+
+      if (key && answer) {
+        answers[key] = [answer];
       }
     }
 
