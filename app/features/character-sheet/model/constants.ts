@@ -2686,6 +2686,32 @@ export const CUSTOM_BACKGROUND_ABILITY_SLOT_LABELS: Record<
   ],
 };
 
+/**
+ * Подписи разделов второго шага мастера предыстории.
+ *
+ * Шаг спрашивает сразу обо всём — прибавках, владениях, черте и снаряжении, —
+ * и одной простынёй читается плохо. Разделы показываются только те, о которых
+ * предыстории есть что сказать: черта и стартовое снаряжение бывают не у всех.
+ */
+export const BACKGROUND_WIZARD_TAB_ORDER = [
+  'abilities',
+  'proficiencies',
+  'feat',
+  'equipment',
+] as const;
+
+/** Раздел второго шага мастера предыстории. */
+export type BackgroundWizardTab = (typeof BACKGROUND_WIZARD_TAB_ORDER)[number];
+
+/** Подписи разделов; порядок вкладок задаёт `BACKGROUND_WIZARD_TAB_ORDER`. */
+export const BACKGROUND_WIZARD_TAB_LABELS: Record<BackgroundWizardTab, string> =
+  {
+    abilities: 'Характеристики',
+    proficiencies: 'Навыки и инструменты',
+    feat: 'Черта',
+    equipment: 'Снаряжение',
+  };
+
 /** Подписи формы своей предыстории. */
 export const CUSTOM_BACKGROUND_LABELS = {
   openButton: 'Своя предыстория',

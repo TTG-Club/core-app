@@ -1,9 +1,12 @@
 <script setup lang="ts">
+  import type { TabsItem } from '@nuxt/ui';
+
   import type {
     AbilityBonusMode,
     AbilityKey,
     BackgroundOption,
     BackgroundSummary,
+    BackgroundWizardTab,
     CharacterFeature,
     CharacterInventoryItem,
     ClassChoice,
@@ -24,6 +27,8 @@
     ABILITY_LABELS,
     ABILITY_ORDER,
     BACKGROUND_ABILITY_MODE_OPTIONS,
+    BACKGROUND_WIZARD_TAB_LABELS,
+    BACKGROUND_WIZARD_TAB_ORDER,
     BACKGROUNDS_DETAIL_BASE_PATH,
     BACKGROUNDS_FILTERS_PATH,
     BACKGROUNDS_SEARCH_PATH,
@@ -166,6 +171,23 @@
   const selectedOption = ref<BackgroundOption | undefined>();
 
   const backgroundDetail = ref<BackgroundSummary | null>(null);
+
+  /**
+   * Описание выбранной предыстории со второго шага: на первом оно открывалось
+   * из строки списка, а после выбора свериться с текстом было уже не по чему.
+   */
+  function handleDetailPreview() {
+    if (backgroundDetail.value) {
+      handlePreview(backgroundDetail.value.url);
+    }
+  }
+
+  /** Описание черты, которую даёт выбранная предыстория. */
+  function handleBackgroundFeatPreview() {
+    if (backgroundDetail.value?.featUrl) {
+      handleFeatPreview(backgroundDetail.value.featUrl);
+    }
+  }
 
   /**
    * Деталь черты предыстории. Черта может о чём-то спрашивать, и спросить нужно
@@ -442,6 +464,94 @@
       || !isFeatChoiceComplete.value,
   );
 
+  /** Открытый раздел второго шага. */
+  const reviewTab = ref<BackgroundWizardTab>('abilities');
+
+  /**
+   * Сколько ответов раздел ещё ждёт: их число висит на вкладке.
+   *
+   * Считаются только те, без которых нельзя применить предысторию, — иначе
+   * счётчик торопил бы с необязательным выбором. Кнопка «Применить» заблокирована
+   * ровно по ним, и по вкладкам видно, где именно недоотвечено.
+   */
+  const pendingByTab = computed<Record<BackgroundWizardTab, number>>(() => ({
+    abilities: isAbilityChoiceValid.value ? 0 : 1,
+    proficiencies: 0,
+    feat: featChoices.value.filter(
+      (choice) =>
+        (selections.value[choice.id]?.length ?? 0) < choiceCount(choice),
+    ).length,
+    equipment: 0,
+  }));
+
+  /**
+   * Разделы второго шага: раздел есть, только если предыстории есть что в нём
+   * показать. Черта и стартовое снаряжение бывают не у всех, а пустой раздел —
+   * обещание содержимого, которого нет.
+   *
+   * Прибавки к характеристикам спрашиваются всегда: без ответа про них
+   * предысторию не применить, и спрятать этот раздел значит запереть мастер.
+   */
+  const shownReviewTabs = computed<BackgroundWizardTab[]>(() => {
+    const detail = backgroundDetail.value;
+
+    if (!detail) {
+      return [];
+    }
+
+    const isShown: Record<BackgroundWizardTab, boolean> = {
+      abilities: true,
+      proficiencies: Boolean(
+        detail.skills.length
+        || detail.skillsText
+        || detail.toolChoice
+        || detail.toolFixed.length,
+      ),
+      feat: !!detail.featUrl,
+      equipment: Boolean(
+        startingEquipmentOptions.value.length || detail.equipment.length,
+      ),
+    };
+
+    return BACKGROUND_WIZARD_TAB_ORDER.filter((tab) => isShown[tab]);
+  });
+
+  const reviewTabItems = computed<TabsItem[]>(() =>
+    shownReviewTabs.value.map((tab) => ({
+      value: tab,
+      label: BACKGROUND_WIZARD_TAB_LABELS[tab],
+      // Число нерешённого — подсказка, куда идти: раздел с ним и заблокировал
+      // применение, а открыт может быть совсем другой
+      badge: pendingByTab.value[tab]
+        ? {
+            label: String(pendingByTab.value[tab]),
+            // В тёмной теме `warning` задан теми же значениями, что и
+            // `primary` (см. `colors/dark.scss`), поэтому на залитой акцентом
+            // открытой вкладке предупреждающая плашка сливается с ней в один
+            // цвет. Там счётчик нейтральный — тёмный кружок на заливке; на
+            // закрытых вкладках он остаётся предупреждающим, и искать по нему
+            // нужно как раз их
+            color: tab === reviewTab.value ? 'neutral' : 'warning',
+            variant: 'subtle',
+          }
+        : undefined,
+    })),
+  );
+
+  /**
+   * Переключение раздела. `UTabs` отдаёт значение строкой, поэтому раздел
+   * ищется среди своих же — так в состояние не попадёт чужое значение.
+   *
+   * @param value значение вкладки.
+   */
+  function handleReviewTabChange(value: string | number) {
+    const tab = shownReviewTabs.value.find((shown) => shown === value);
+
+    if (tab) {
+      reviewTab.value = tab;
+    }
+  }
+
   // Пул сужается классом, названным предысторией: она и определяет, чей это
   // список, а игрока про класс уже не спрашивают
   const {
@@ -602,6 +712,15 @@
         return;
       }
 
+      // Черновик чистится ДО загрузки черты: за выбор списка заклинаний,
+      // названный предысторией, отвечает watch по `namedSpellListChoices`, и
+      // очистка после загрузки стирала его ответ — выбор заклинаний оставался
+      // скрытым, будто ждёт ответа про класс, которого игроку и не задают
+      selections.value = {};
+      abilityMode.value = '2-1';
+      plusTwoAbility.value = undefined;
+      plusOneAbility.value = undefined;
+
       featSummary.value = backgroundDetail.value.featUrl
         ? await fetchFeatDetail(backgroundDetail.value.featUrl)
         : null;
@@ -609,17 +728,15 @@
       // Пул заклинаний зависит от загруженной черты, поэтому грузится следом.
       await loadSpellPools();
 
-      selections.value = {};
-      abilityMode.value = '2-1';
-      plusTwoAbility.value = undefined;
-      plusOneAbility.value = undefined;
-
       // Первый вариант снаряжения предлагается по умолчанию: лист чаще всего
       // заполняется на создании персонажа, где набор предыстории нужен целиком.
       startingEquipmentLabel.value =
         backgroundDetail.value.startingEquipment[0]?.label
         ?? STARTING_EQUIPMENT_SKIP_VALUE;
 
+      // Второй шаг всегда открывается с первого раздела: он есть у любой
+      // предыстории, и с него удобнее идти по вкладкам дальше
+      reviewTab.value = 'abilities';
       step.value = 'review';
     } catch (error) {
       consola.error('Ошибка загрузки предыстории:', error);
@@ -839,219 +956,250 @@
             <span class="font-bold text-highlighted">
               {{ backgroundDetail.name }}
             </span>
-          </div>
 
-          <div class="flex flex-col gap-1">
-            <span
-              class="text-[10px] font-bold tracking-wider text-muted uppercase"
-            >
-              Навыки (будут добавлены)
-            </span>
-
-            <div class="flex flex-wrap gap-1">
-              <UBadge
-                v-for="skill in backgroundSkillRows"
-                :key="skill.name"
-                size="sm"
-                :color="skill.color"
-                variant="subtle"
-              >
-                {{ skill.label }}
-              </UBadge>
-
-              <span
-                v-if="!backgroundDetail.skills.length"
-                class="text-sm text-dimmed italic"
-              >
-                {{ backgroundDetail.skillsText || 'не распознаны' }}
-              </span>
-            </div>
-          </div>
-
-          <div class="flex flex-col gap-1">
-            <span
-              class="text-[10px] font-bold tracking-wider text-muted uppercase"
-            >
-              Инструмент
-            </span>
-
-            <SheetChoiceSelect
-              v-if="backgroundDetail.toolChoice"
-              :model-value="selections['background-tool'] ?? []"
-              :items="choiceOptions(backgroundDetail.toolChoice)"
-              :count="choiceCount(backgroundDetail.toolChoice)"
-              :placeholder="`${CHOICE_SELECT_PLACEHOLDER} ${choiceCount(backgroundDetail.toolChoice)}`"
-              @update:model-value="
-                updateSelection(backgroundDetail.toolChoice, $event)
-              "
-            />
-
-            <div
-              v-else
-              class="flex flex-wrap gap-1"
-            >
-              <UBadge
-                v-for="tool in backgroundDetail.toolFixed"
-                :key="tool.name"
-                size="sm"
+            <UTooltip text="Открыть описание предыстории">
+              <UButton
+                icon="tabler:layout-sidebar-right-expand"
                 color="neutral"
-                variant="subtle"
-              >
-                {{ tool.name }}
-              </UBadge>
-
-              <span
-                v-if="!backgroundDetail.toolFixed.length"
-                class="text-sm text-dimmed italic"
-              >
-                нет
-              </span>
-            </div>
+                variant="ghost"
+                size="xs"
+                square
+                :aria-label="`Описание предыстории: ${backgroundDetail.name}`"
+                @click.left.exact.prevent="handleDetailPreview"
+              />
+            </UTooltip>
           </div>
 
-          <div class="flex flex-col gap-2">
-            <span
-              class="text-[10px] font-bold tracking-wider text-muted uppercase"
-            >
-              Характеристики ({{ backgroundDetail.abilitiesText }})
-            </span>
-
-            <URadioGroup
-              v-model="abilityMode"
-              :items="BACKGROUND_ABILITY_MODE_OPTIONS"
-              orientation="horizontal"
-              variant="list"
+          <!-- Лента вкладок: подписи разделов не сокращаются, поэтому на узком
+            экране ряд не ужимается, а прокручивается -->
+          <div class="-mx-1 hidden-scrollbar overflow-x-auto px-1">
+            <UTabs
+              :items="reviewTabItems"
+              :model-value="reviewTab"
+              :content="false"
               color="primary"
+              variant="pill"
+              :ui="{ list: 'w-max min-w-full', trigger: 'shrink-0' }"
+              @update:model-value="handleReviewTabChange"
             />
-
-            <div
-              v-if="abilityMode === '2-1'"
-              class="flex flex-wrap gap-3"
-            >
-              <div class="flex flex-col gap-1">
-                <span class="text-xs text-muted">+2 к характеристике</span>
-
-                <USelect
-                  v-model="plusTwoAbility"
-                  :items="plusTwoAbilityItems"
-                  placeholder="Характеристика"
-                  class="w-44"
-                />
-              </div>
-
-              <div class="flex flex-col gap-1">
-                <span class="text-xs text-muted">+1 к характеристике</span>
-
-                <USelect
-                  v-model="plusOneAbility"
-                  :items="plusOneAbilityItems"
-                  placeholder="Характеристика"
-                  class="w-44"
-                />
-              </div>
-            </div>
-
-            <div class="flex flex-wrap gap-1">
-              <UBadge
-                v-for="row in bonusRows"
-                :key="row.key"
-                size="sm"
-                color="primary"
-                variant="subtle"
-              >
-                {{ row.label }} {{ row.bonus }}
-              </UBadge>
-            </div>
           </div>
 
-          <div
-            v-if="backgroundDetail.featUrl"
-            class="flex flex-col gap-1"
-          >
-            <span
-              class="text-[10px] font-bold tracking-wider text-muted uppercase"
-            >
-              Черта (будет добавлена)
-            </span>
-
-            <div class="flex items-center gap-2">
-              <span class="text-sm font-medium text-highlighted">
-                {{ backgroundDetail.featName }}
-                <span
-                  v-if="backgroundDetail.featSubchoice"
-                  class="text-muted"
-                >
-                  ({{ backgroundDetail.featSubchoice }})
-                </span>
+          <!-- Высота раздела задана снизу: без неё модалка прыгала бы на
+            каждом переключении вкладки -->
+          <div class="flex min-h-56 flex-col gap-3">
+            <template v-if="reviewTab === 'abilities'">
+              <span
+                v-if="backgroundDetail.abilitiesText"
+                class="text-sm text-muted"
+              >
+                Предыстория повышает: {{ backgroundDetail.abilitiesText }}
               </span>
 
-              <UTooltip text="Открыть описание черты">
-                <UButton
-                  icon="tabler:layout-sidebar-right-expand"
-                  color="neutral"
-                  variant="ghost"
-                  size="xs"
-                  square
-                  aria-label="Описание черты"
-                  @click.left.exact.prevent="
-                    handleFeatPreview(backgroundDetail.featUrl)
+              <URadioGroup
+                v-model="abilityMode"
+                :items="BACKGROUND_ABILITY_MODE_OPTIONS"
+                orientation="horizontal"
+                variant="list"
+                color="primary"
+              />
+
+              <div
+                v-if="abilityMode === '2-1'"
+                class="flex flex-wrap gap-3"
+              >
+                <div class="flex flex-col gap-1">
+                  <span class="text-xs text-muted">+2 к характеристике</span>
+
+                  <USelect
+                    v-model="plusTwoAbility"
+                    :items="plusTwoAbilityItems"
+                    placeholder="Характеристика"
+                    class="w-44"
+                  />
+                </div>
+
+                <div class="flex flex-col gap-1">
+                  <span class="text-xs text-muted">+1 к характеристике</span>
+
+                  <USelect
+                    v-model="plusOneAbility"
+                    :items="plusOneAbilityItems"
+                    placeholder="Характеристика"
+                    class="w-44"
+                  />
+                </div>
+              </div>
+
+              <div class="flex flex-wrap gap-2">
+                <UBadge
+                  v-for="row in bonusRows"
+                  :key="row.key"
+                  size="md"
+                  color="primary"
+                  variant="subtle"
+                >
+                  {{ row.label }} {{ row.bonus }}
+                </UBadge>
+              </div>
+            </template>
+
+            <template v-else-if="reviewTab === 'proficiencies'">
+              <div class="flex flex-col gap-1">
+                <span
+                  class="text-[10px] font-bold tracking-wider text-muted uppercase"
+                >
+                  Навыки (будут добавлены)
+                </span>
+
+                <div class="flex flex-wrap gap-2">
+                  <UBadge
+                    v-for="skill in backgroundSkillRows"
+                    :key="skill.name"
+                    size="md"
+                    :color="skill.color"
+                    variant="subtle"
+                  >
+                    {{ skill.label }}
+                  </UBadge>
+
+                  <span
+                    v-if="!backgroundDetail.skills.length"
+                    class="text-sm text-dimmed italic"
+                  >
+                    {{ backgroundDetail.skillsText || 'не распознаны' }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="flex flex-col gap-1">
+                <span
+                  class="text-[10px] font-bold tracking-wider text-muted uppercase"
+                >
+                  Инструмент
+                </span>
+
+                <SheetChoiceSelect
+                  v-if="backgroundDetail.toolChoice"
+                  :model-value="selections['background-tool'] ?? []"
+                  :items="choiceOptions(backgroundDetail.toolChoice)"
+                  :count="choiceCount(backgroundDetail.toolChoice)"
+                  :placeholder="`${CHOICE_SELECT_PLACEHOLDER} ${choiceCount(backgroundDetail.toolChoice)}`"
+                  @update:model-value="
+                    updateSelection(backgroundDetail.toolChoice, $event)
                   "
                 />
-              </UTooltip>
-            </div>
 
-            <!-- Черта может о чём-то спрашивать: ответить нужно здесь, на лист
-              она попадёт вместе с предысторией -->
-            <div
-              v-for="choice in featChoices"
-              :key="choice.id"
-              class="flex flex-col gap-1"
-            >
-              <span class="text-sm text-toned">{{ choice.label }}</span>
+                <div
+                  v-else
+                  class="flex flex-wrap gap-2"
+                >
+                  <UBadge
+                    v-for="tool in backgroundDetail.toolFixed"
+                    :key="tool.name"
+                    size="md"
+                    color="neutral"
+                    variant="subtle"
+                  >
+                    {{ tool.name }}
+                  </UBadge>
 
-              <!-- Заклинания выбирают своим окном: пул бывает и на сотню
-                записей, а выбранные должны остаться на виду, чтобы их можно
-                было убрать -->
-              <SheetFeatSpellsPicker
-                v-if="choice.kind === 'spell'"
-                :model-value="selections[choice.id] ?? []"
-                :items="getSpellPool(choice)"
-                :count="choiceCount(choice)"
-                :label="choice.label"
-                @update:model-value="updateSelection(choice, $event)"
+                  <span
+                    v-if="!backgroundDetail.toolFixed.length"
+                    class="text-sm text-dimmed italic"
+                  >
+                    нет
+                  </span>
+                </div>
+              </div>
+            </template>
+
+            <template v-else-if="reviewTab === 'feat'">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-medium text-highlighted">
+                  {{ backgroundDetail.featName }}
+                  <span
+                    v-if="backgroundDetail.featSubchoice"
+                    class="text-muted"
+                  >
+                    ({{ backgroundDetail.featSubchoice }})
+                  </span>
+                </span>
+
+                <UTooltip text="Открыть описание черты">
+                  <UButton
+                    icon="tabler:layout-sidebar-right-expand"
+                    color="neutral"
+                    variant="ghost"
+                    size="xs"
+                    square
+                    aria-label="Описание черты"
+                    @click.left.exact.prevent="handleBackgroundFeatPreview"
+                  />
+                </UTooltip>
+              </div>
+
+              <!-- Черта может о чём-то спрашивать: ответить нужно здесь, на
+                лист она попадёт вместе с предысторией -->
+              <div
+                v-for="choice in featChoices"
+                :key="choice.id"
+                class="flex flex-col gap-1"
+              >
+                <span class="text-sm text-toned">{{ choice.label }}</span>
+
+                <!-- Заклинания выбирают своим окном: пул бывает и на сотню
+                  записей, а выбранные должны остаться на виду, чтобы их можно
+                  было убрать -->
+                <SheetFeatSpellsPicker
+                  v-if="choice.kind === 'spell'"
+                  :model-value="selections[choice.id] ?? []"
+                  :items="getSpellPool(choice)"
+                  :count="choiceCount(choice)"
+                  :label="choice.label"
+                  @update:model-value="updateSelection(choice, $event)"
+                />
+
+                <SheetChoiceSelect
+                  v-else
+                  :model-value="selections[choice.id] ?? []"
+                  :items="choiceOptions(choice)"
+                  :count="choiceCount(choice)"
+                  :placeholder="`${CHOICE_SELECT_PLACEHOLDER} ${choiceCount(choice)}`"
+                  @update:model-value="updateSelection(choice, $event)"
+                />
+              </div>
+
+              <span
+                v-if="!featChoices.length"
+                class="text-sm text-dimmed italic"
+              >
+                Черта ни о чём не спрашивает — она добавится как есть.
+              </span>
+            </template>
+
+            <template v-else-if="reviewTab === 'equipment'">
+              <SheetStartingEquipmentChoice
+                v-if="startingEquipmentOptions.length"
+                v-model="startingEquipmentLabel"
+                :options="startingEquipmentOptions"
               />
 
-              <SheetChoiceSelect
-                v-else
-                :model-value="selections[choice.id] ?? []"
-                :items="choiceOptions(choice)"
-                :count="choiceCount(choice)"
-                :placeholder="`${CHOICE_SELECT_PLACEHOLDER} ${choiceCount(choice)}`"
-                @update:model-value="updateSelection(choice, $event)"
-              />
-            </div>
-          </div>
+              <div
+                v-if="backgroundDetail.equipment.length"
+                class="flex flex-col gap-1"
+              >
+                <span
+                  class="text-[10px] font-bold tracking-wider text-muted uppercase"
+                >
+                  Снаряжение (справка)
+                </span>
 
-          <SheetStartingEquipmentChoice
-            v-if="startingEquipmentOptions.length"
-            v-model="startingEquipmentLabel"
-            :options="startingEquipmentOptions"
-          />
-
-          <div
-            v-if="backgroundDetail.equipment.length"
-            class="flex flex-col gap-1"
-          >
-            <span
-              class="text-[10px] font-bold tracking-wider text-muted uppercase"
-            >
-              Снаряжение (справка)
-            </span>
-
-            <MarkupRender
-              :render-node="backgroundDetail.equipment"
-              class="text-sm text-toned"
-            />
+                <MarkupRender
+                  :render-node="backgroundDetail.equipment"
+                  class="text-sm text-toned"
+                />
+              </div>
+            </template>
           </div>
         </template>
       </div>
