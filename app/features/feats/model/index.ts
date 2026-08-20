@@ -4,5 +4,7 @@ export * from './detail';
 export * from './link';
 export * from './markdown';
 export * from './mechanics';
+export * from './prerequisite';
+export * from './rows';
 export * from './schema';
 export * from './transform';

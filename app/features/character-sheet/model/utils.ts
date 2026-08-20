@@ -5554,7 +5554,12 @@ export function getAvailableInnateSpells(
     ...(character.species?.innateSpells ?? [])
       .filter((innateSpell) => innateSpell.requiredLevel <= character.level)
       .map((innateSpell) => innateSpell.spell),
-    ...getFeatureSpells(character.features),
+    // Часть заклинаний черты открывается по уровням («Малое восстановление»
+    // метки дракона — с третьего). Отбор здесь, а не при взятии черты: список
+    // должен пополняться сам, когда персонаж дорастёт
+    ...getFeatureSpells(character.features).filter(
+      (spell) => !spell.requiredLevel || spell.requiredLevel <= character.level,
+    ),
   ];
 
   return uniqBy(granted, (spell) => spell.url).map((spell) => ({

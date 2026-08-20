@@ -1,27 +1,35 @@
 <script setup lang="ts">
+  import type { TabsItem } from '@nuxt/ui';
+
   import type { FeatCreate } from '../model';
 
-  import { FeatPreview } from '~feats/preview';
   import { EditorBaseInfo } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectFeatCategory } from '~ui/select';
+  import { InfoTooltip } from '~ui/tooltip';
   import { useWorkshopForm } from '~workshop/composable';
   import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
   import { WorkshopEditorFormControls } from '~workshop/revision/ui';
 
   import {
+    createFeatEditorRows,
     createFeatMechanics,
     createPrerequisiteDetails,
+    FEAT_EDITOR_LABELS,
+    FEAT_EDITOR_TABS,
+    FEAT_MAIN_TAB_LABELS,
     normalizeLoadedFeat,
     transformFeatBeforeSubmit,
   } from '../model';
+  import { FeatPreview } from '../preview';
   import {
-    FeatAbilityBonuses,
-    FeatMechanicsSection,
-    FeatModifiers,
-    FeatPrerequisiteFields,
-    FeatProficiencies,
-    FeatSpells,
+    FeatCounterRows,
+    FeatGrantedSpells,
+    FeatGrantRows,
+    FeatModifierRows,
+    FeatPrerequisiteRows,
+    FeatSpellChoiceRows,
+    FeatSpellListSpells,
   } from './ui';
 
   const formRef = useTemplateRef('formRef');
@@ -30,6 +38,13 @@
     submit: () => formRef.value!.submit(),
   });
 
+  /**
+   * Пустая черта, с которой открывается форма создания. Механика и строки
+   * редактора здесь всегда объекты: загрузка сливает ответ сервера именно с
+   * этим состоянием, и недостающие блоки берутся отсюда.
+   *
+   * @returns начальное состояние формы.
+   */
   function getInitialState(): FeatCreate {
     return {
       url: '',
@@ -50,6 +65,7 @@
       repeatability: false,
       abilities: [],
       mechanics: createFeatMechanics(),
+      editorRows: createFeatEditorRows(),
       tags: [],
     };
   }
@@ -64,9 +80,10 @@
     });
 
   /**
-   * Начальное состояние всегда содержит механику и разобранное условие, но в
-   * типе они необязательны: перед отправкой пустые блоки выбрасываются, чтобы
-   * не писать в JSONB пустышки. Эти обёртки дают шаблону непустые объекты.
+   * Начальное состояние всегда содержит механику и строки редактора, но в типе
+   * они необязательны: перед отправкой механика пересобирается из строк, а сами
+   * строки из тела запроса выбрасываются. Эти обёртки дают шаблону непустые
+   * объекты.
    */
   const mechanics = computed({
     get: () => state.value.mechanics ?? createFeatMechanics(),
@@ -75,12 +92,20 @@
     },
   });
 
-  const prerequisiteDetails = computed({
-    get: () => state.value.prerequisiteDetails ?? createPrerequisiteDetails(),
+  const editorRows = computed({
+    get: () => state.value.editorRows ?? createFeatEditorRows(),
     set: (value) => {
-      state.value.prerequisiteDetails = value;
+      state.value.editorRows = value;
     },
   });
+
+  const tabItems: Array<TabsItem> = [
+    { label: FEAT_EDITOR_TABS.main, slot: 'main' },
+    { label: FEAT_EDITOR_TABS.grants, slot: 'grants' },
+    { label: FEAT_EDITOR_TABS.spells, slot: 'spells' },
+    { label: FEAT_EDITOR_TABS.automation, slot: 'automation' },
+    { label: FEAT_EDITOR_TABS.prerequisites, slot: 'prerequisites' },
+  ];
 </script>
 
 <template>
@@ -91,143 +116,191 @@
     @submit="onSubmit"
     @error="onError"
   >
+    <!-- Основная информация стоит над вкладками: название и источник нужны на
+      любой из них, а её вложенная форма со схемой обязана быть смонтирована в
+      момент сохранения -->
     <EditorBaseInfo
       v-model="state"
       section="feats"
     />
 
-    <UCard variant="subtle">
-      <template #header>
-        <h2 class="truncate text-base text-highlighted">Подробности</h2>
+    <!-- Вкладки не размонтируются: поля скрытых вкладок остаются в форме, и
+      сохранение видит их наравне с открытой -->
+    <UTabs
+      :items="tabItems"
+      variant="pill"
+      :unmount-on-hide="false"
+      :ui="{ list: 'mb-6' }"
+    >
+      <!-- ОСНОВНОЕ -->
+      <template #main>
+        <div class="grid gap-8">
+          <UCard variant="subtle">
+            <template #header>
+              <h2 class="truncate text-base text-highlighted">
+                {{ FEAT_MAIN_TAB_LABELS.detailsTitle }}
+              </h2>
+            </template>
+
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
+              <UFormField
+                class="md:col-span-12"
+                :label="FEAT_MAIN_TAB_LABELS.category"
+                name="category"
+              >
+                <SelectFeatCategory v-model="state.category" />
+              </UFormField>
+
+              <UFormField
+                class="md:col-span-12"
+                :label="FEAT_MAIN_TAB_LABELS.repeatability"
+                name="repeatability"
+              >
+                <UCheckbox
+                  v-model="state.repeatability"
+                  :label="FEAT_MAIN_TAB_LABELS.repeatabilityCheckbox"
+                />
+              </UFormField>
+            </div>
+          </UCard>
+
+          <UCard variant="subtle">
+            <template #header>
+              <h2 class="truncate text-base text-highlighted">
+                {{ FEAT_MAIN_TAB_LABELS.descriptionTitle }}
+              </h2>
+            </template>
+
+            <UFormField
+              :label="FEAT_MAIN_TAB_LABELS.description"
+              name="description"
+            >
+              <MarkupEditor
+                v-model="state.description"
+                :placeholder="FEAT_MAIN_TAB_LABELS.descriptionPlaceholder"
+              />
+            </UFormField>
+          </UCard>
+        </div>
       </template>
 
-      <div class="grid grid-cols-1 gap-4 pb-24 md:grid-cols-24">
-        <UFormField
-          class="md:col-span-8 lg:col-span-6"
-          label="Категория"
-          name="category"
-        >
-          <SelectFeatCategory v-model="state.category" />
-        </UFormField>
+      <!-- ВЛАДЕНИЯ -->
+      <template #grants>
+        <UCard variant="subtle">
+          <template #header>
+            <h2 class="truncate text-base text-highlighted">
+              {{ FEAT_EDITOR_TABS.grants }}
+            </h2>
+          </template>
 
-        <UFormField
-          class="md:col-span-16 lg:col-span-12"
-          label="Предварительное условие"
-          name="prerequisite"
-        >
-          <UInput
-            v-model="state.prerequisite"
-            placeholder="Введи предварительное условие если есть"
+          <FeatGrantRows
+            v-model="editorRows.grants"
+            :rows="editorRows"
           />
-        </UFormField>
-
-        <UFormField
-          class="md:col-span-12 lg:col-span-6"
-          label="Повторяемость"
-          name="repeatability"
-        >
-          <UCheckbox
-            v-model="state.repeatability"
-            label="Можно брать несколько раз"
-          />
-        </UFormField>
-      </div>
-    </UCard>
-
-    <UCard variant="subtle">
-      <template #header>
-        <h2 class="truncate text-base text-highlighted">
-          Предварительное условие
-        </h2>
+        </UCard>
       </template>
 
-      <FeatPrerequisiteFields v-model="prerequisiteDetails" />
-    </UCard>
+      <!-- ЗАКЛИНАНИЯ -->
+      <template #spells>
+        <div class="grid gap-8">
+          <UCard variant="subtle">
+            <template #header>
+              <h2 class="truncate text-base text-highlighted">
+                {{ FEAT_EDITOR_LABELS.grantedSpellsTitle }}
+              </h2>
+            </template>
 
-    <UCard variant="subtle">
-      <template #header>
-        <h2 class="truncate text-base text-highlighted">Характеристики</h2>
+            <FeatGrantedSpells v-model="mechanics.spells" />
+          </UCard>
+
+          <UCard variant="subtle">
+            <template #header>
+              <h2 class="truncate text-base text-highlighted">
+                {{ FEAT_EDITOR_LABELS.spellListTitle }}
+              </h2>
+            </template>
+
+            <FeatSpellListSpells v-model="mechanics.spellList" />
+          </UCard>
+
+          <UCard variant="subtle">
+            <template #header>
+              <h2 class="truncate text-base text-highlighted">
+                {{ FEAT_EDITOR_LABELS.spellChoicesTitle }}
+              </h2>
+            </template>
+
+            <FeatSpellChoiceRows
+              v-model="editorRows.spellChoices"
+              :rows="editorRows"
+            />
+          </UCard>
+        </div>
       </template>
 
-      <FeatMechanicsSection
-        v-model="mechanics.choices"
-        domain="ABILITY"
-      >
-        <template #granted>
-          <FeatAbilityBonuses
-            v-model="mechanics.abilityBonuses"
-            :choices="mechanics.choices"
-          />
-        </template>
-      </FeatMechanicsSection>
-    </UCard>
+      <!-- АВТОМАТИЗАЦИЯ -->
+      <template #automation>
+        <div class="grid gap-8">
+          <UCard variant="subtle">
+            <template #header>
+              <h2 class="truncate text-base text-highlighted">
+                {{ FEAT_EDITOR_LABELS.modifiersTitle }}
+              </h2>
+            </template>
 
-    <UCard variant="subtle">
-      <template #header>
-        <h2 class="truncate text-base text-highlighted">Владения</h2>
+            <FeatModifierRows v-model="editorRows.modifiers" />
+          </UCard>
+
+          <UCard variant="subtle">
+            <template #header>
+              <h2 class="truncate text-base text-highlighted">
+                {{ FEAT_EDITOR_LABELS.countersTitle }}
+              </h2>
+            </template>
+
+            <FeatCounterRows v-model="editorRows.counters" />
+          </UCard>
+        </div>
       </template>
 
-      <FeatMechanicsSection
-        v-model="mechanics.choices"
-        domain="PROFICIENCY"
-      >
-        <template #granted>
-          <FeatProficiencies v-model="mechanics.proficiencies" />
-        </template>
-      </FeatMechanicsSection>
-    </UCard>
+      <!-- ТРЕБОВАНИЯ -->
+      <template #prerequisites>
+        <div class="grid gap-8">
+          <UCard variant="subtle">
+            <template #header>
+              <h2 class="truncate text-base text-highlighted">
+                {{ FEAT_EDITOR_TABS.prerequisites }}
+              </h2>
+            </template>
 
-    <UCard variant="subtle">
-      <template #header>
-        <h2 class="truncate text-base text-highlighted">Заклинания</h2>
+            <FeatPrerequisiteRows v-model="editorRows.prerequisites" />
+          </UCard>
+
+          <!-- Условие строкой: карточка черты показывает его, только пока
+            строки требований выше не заполнены -->
+          <UCard variant="subtle">
+            <template #header>
+              <InfoTooltip
+                :text="FEAT_EDITOR_LABELS.prerequisiteTextHint"
+                icon="tabler:info-circle-filled"
+                class="text-base text-highlighted"
+              >
+                <h2 class="truncate">
+                  {{ FEAT_EDITOR_LABELS.prerequisiteLegacyTitle }}
+                </h2>
+              </InfoTooltip>
+            </template>
+
+            <UFormField name="prerequisite">
+              <UInput
+                v-model="state.prerequisite"
+                :placeholder="FEAT_EDITOR_LABELS.prerequisiteLegacyPlaceholder"
+              />
+            </UFormField>
+          </UCard>
+        </div>
       </template>
-
-      <FeatMechanicsSection
-        v-model="mechanics.choices"
-        domain="SPELL"
-      >
-        <template #granted>
-          <FeatSpells v-model="mechanics.spells" />
-        </template>
-      </FeatMechanicsSection>
-    </UCard>
-
-    <UCard variant="subtle">
-      <template #header>
-        <h2 class="truncate text-base text-highlighted">Модификаторы листа</h2>
-      </template>
-
-      <FeatModifiers v-model="mechanics.modifiers" />
-    </UCard>
-
-    <UCard variant="subtle">
-      <template #header>
-        <h2 class="truncate text-base text-highlighted">Прочие выборы</h2>
-      </template>
-
-      <FeatMechanicsSection
-        v-model="mechanics.choices"
-        domain="OTHER"
-      />
-    </UCard>
-
-    <UCard variant="subtle">
-      <template #header>
-        <h2 class="truncate text-base text-highlighted">Описание</h2>
-      </template>
-
-      <div class="grid grid-cols-1 gap-4">
-        <UFormField
-          label="Описание"
-          name="description"
-        >
-          <MarkupEditor
-            v-model="state.description"
-            placeholder="Введи описание"
-          />
-        </UFormField>
-      </div>
-    </UCard>
+    </UTabs>
 
     <WorkshopEditorFormControls :revision-control>
       <template #preview="{ opened, changeVisibility }">

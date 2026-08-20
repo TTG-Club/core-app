@@ -2,19 +2,18 @@ import type { FeatCreate } from './create';
 import type {
   FeatAbilityBonus,
   FeatChoice,
+  FeatCounter,
   FeatMechanics,
   FeatModifiers,
   FeatPrerequisiteDetails,
   FeatProficiencyGrant,
   FeatSpellFilter,
   FeatSpellGrant,
+  FeatSpellListExpansion,
 } from './mechanics';
 
-import {
-  isExpertiseChoiceType,
-  isProficiencyChoiceType,
-  isSpellChoiceType,
-} from './constants';
+import { createFeatMechanics, createFeatSpellList } from './mechanics';
+import { fromFeatEditorRows } from './rows';
 
 /**
  * Пустое ли значение с точки зрения формы: `undefined`, пустая строка, пустой
@@ -69,39 +68,19 @@ function buildSpellFilter(
 }
 
 /**
- * Готовит выборы: без типа и ключа выбор бессмысленен и не отправляется.
+ * Готовит выборы: без типа и ключа выбор бессмыслен и не отправляется.
  *
- * Поля, которых у типа выбора не бывает, обнуляются: их могли заполнить до
- * смены типа, а форма после неё их уже не показывает — иначе в JSONB осталась
- * бы бессмыслица вроде компетентности за выбранное заклинание.
+ * Поля, которых у типа выбора не бывает, обнулены ещё в сборке строк редактора
+ * ({@link fromFeatEditorRows}) — здесь остаётся только отсеять пустые фильтры.
  */
 function buildChoices(choices: Array<FeatChoice>): Array<FeatChoice> {
   return choices
     .filter((choice) => !!choice.type && !!text(choice.key))
-    .map((choice) => {
-      const isProficiency = isProficiencyChoiceType(choice.type);
-      const isExpertise = isExpertiseChoiceType(choice.type);
-
-      return {
-        ...choice,
-        key: choice.key.trim(),
-        label: text(choice.label) ?? '',
-        options: choice.options.filter((option) => !!option.value),
-        spellFilter: isSpellChoiceType(choice.type)
-          ? buildSpellFilter(choice.spellFilter)
-          : undefined,
-        countEqualsProficiencyBonus: !!choice.countEqualsProficiencyBonus,
-        onlyIfNotProficient: isProficiency && choice.onlyIfNotProficient,
-        onlyIfProficient: isProficiency && choice.onlyIfProficient,
-        // Исход по умолчанию не пишется: у записей до его появления поля нет, и
-        // core-api читает его отсутствие как владение.
-        grants:
-          isExpertise && choice.grants === 'EXPERTISE'
-            ? choice.grants
-            : undefined,
-        expertiseIfProficient: isExpertise && choice.expertiseIfProficient,
-      };
-    });
+    .map((choice) => ({
+      ...choice,
+      key: choice.key.trim(),
+      spellFilter: buildSpellFilter(choice.spellFilter),
+    }));
 }
 
 /** Готовит варианты повышения характеристик. */
@@ -131,13 +110,20 @@ function buildModifiers(modifiers: FeatModifiers): FeatModifiers | undefined {
   });
 }
 
-/** Готовит выдаваемые владения: инструмент без ссылки отправлять некуда. */
+/**
+ * Готовит выдаваемые владения: ссылка без url — это только что добавленная и
+ * незаполненная строка, отправлять её некуда.
+ */
 function buildProficiencies(
   proficiencies: FeatProficiencyGrant,
 ): FeatProficiencyGrant | undefined {
   return orUndefined({
     ...proficiencies,
     tools: proficiencies.tools.filter((tool) => !!text(tool.url)),
+    weapons: proficiencies.weapons.filter((weapon) => !!text(weapon.url)),
+    weaponMasteries: proficiencies.weaponMasteries.filter(
+      (mastery) => !!text(mastery.url),
+    ),
   });
 }
 
@@ -146,7 +132,7 @@ function buildProficiencies(
  *
  * Заклинание без ссылки отправлять некуда — так выглядит пустая строка, только
  * что добавленная в списке. Остальные поля блока без заклинаний бессмысленны:
- * заклинательная характеристика не к чему применяться, поэтому блок целиком
+ * заклинательной характеристике не к чему применяться, поэтому блок целиком
  * уходит пустым.
  */
 function buildSpells(spells: FeatSpellGrant): FeatSpellGrant | undefined {
@@ -159,6 +145,53 @@ function buildSpells(spells: FeatSpellGrant): FeatSpellGrant | undefined {
   return { ...spells, spells: granted };
 }
 
+/**
+ * Готовит расширение списка заклинаний.
+ *
+ * Без заклинаний блок бессмыслен: расширять нечем, а отметка «нужно
+ * заклинательство» сама по себе ничего не описывает.
+ *
+ * Отправляются только группы: плоский `spells` core-api держит ради записей,
+ * сохранённых до появления уровней, и читает его через `resolveGroups()`, а
+ * пишет всегда группами. Дублировать заклинания вторым полем значило бы
+ * оставлять в JSONB две версии одного списка.
+ *
+ * @param spellList расширение списка из формы.
+ * @returns блок расширения; `undefined` — заклинаний в нём нет.
+ */
+function buildSpellList(
+  spellList: FeatSpellListExpansion,
+): FeatSpellListExpansion | undefined {
+  const groups = spellList.groups
+    .map((group) => ({
+      ...group,
+      count: text(group.count) ?? '',
+      spells: group.spells.filter((spell) => !!text(spell.url)),
+    }))
+    .filter((group) => group.spells.length > 0);
+
+  if (!groups.length) {
+    return undefined;
+  }
+
+  return { ...spellList, groups };
+}
+
+/** Готовит ресурсы черты: без названия счётчику нечего показать на листе. */
+function buildCounters(counters: Array<FeatCounter>): Array<FeatCounter> {
+  return counters
+    .filter((counter) => !!text(counter.name) && !!text(counter.key))
+    .map((counter) => ({
+      ...counter,
+      key: counter.key.trim(),
+      name: counter.name.trim(),
+      shortName: counter.shortName.trim(),
+      // Кривую формулу лист читает как ноль, а пустую — как отсутствие поля:
+      // счётчик без максимума на листе не появится вовсе
+      max: counter.max.trim() || '0',
+    }));
+}
+
 /** Готовит механику целиком. */
 function buildMechanics(mechanics: FeatMechanics): FeatMechanics | undefined {
   return orUndefined({
@@ -168,6 +201,10 @@ function buildMechanics(mechanics: FeatMechanics): FeatMechanics | undefined {
     proficiencies:
       buildProficiencies(mechanics.proficiencies) ?? mechanics.proficiencies,
     spells: buildSpells(mechanics.spells) ?? mechanics.spells,
+    // Без заклинаний блок уходит пустым целиком: отметка «нужно
+    // заклинательство» без списка ничего не описывает
+    spellList: buildSpellList(mechanics.spellList) ?? createFeatSpellList(),
+    counters: buildCounters(mechanics.counters),
   });
 }
 
@@ -189,16 +226,34 @@ function buildPrerequisiteDetails(
 /**
  * Чистит состояние формы перед отправкой.
  *
+ * Механика и предусловие собираются из строк редактора: форма правит их, а
+ * блоки механики — уже результат. Строки в теле запроса не нужны и уходят
+ * `undefined` — такие поля `JSON.stringify` выбрасывает.
+ *
  * Механика и предусловие лежат в core-api в JSONB, поэтому пустые объекты и
  * выключенные флаги туда лучше не писать: они только мешают читать данные.
  */
 export function transformFeatBeforeSubmit(state: FeatCreate): FeatCreate {
+  const built = state.editorRows
+    ? fromFeatEditorRows(
+        state.editorRows,
+        state.mechanics ?? createFeatMechanics(),
+      )
+    : {
+        mechanics: state.mechanics,
+        prerequisiteDetails: state.prerequisiteDetails,
+      };
+
   return {
     ...state,
+    editorRows: undefined,
+    // Плоскую проекцию характеристик core-api пересобирает из
+    // `mechanics.abilityBonuses` сам и в теле запроса её больше не ждёт
+    abilities: undefined,
     prerequisite: state.prerequisite.trim(),
-    prerequisiteDetails: state.prerequisiteDetails
-      ? buildPrerequisiteDetails(state.prerequisiteDetails)
+    prerequisiteDetails: built.prerequisiteDetails
+      ? buildPrerequisiteDetails(built.prerequisiteDetails)
       : undefined,
-    mechanics: state.mechanics ? buildMechanics(state.mechanics) : undefined,
+    mechanics: built.mechanics ? buildMechanics(built.mechanics) : undefined,
   };
 }
