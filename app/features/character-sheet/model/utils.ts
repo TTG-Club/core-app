@@ -9576,6 +9576,40 @@ export function getVisibleFeatChoices(
 }
 
 /**
+ * Выбор списка заклинаний с подписями классов из каталога.
+ *
+ * В механике черты перечислены ссылки классов, а снимка названия у них может не
+ * быть — записи, сохранённые до того, как редактор начал его писать. Без
+ * подписи игрок увидел бы в пикере слаг «wizard-phb» вместо «Волшебник».
+ * Класс, которого в каталоге нет, остаётся ссылкой: выбросить его значило бы
+ * молча урезать пул.
+ *
+ * @param choice выбор черты.
+ * @param classes классы каталога.
+ * @returns выбор с подписями; не про список заклинаний — возвращается как есть.
+ */
+export function withSpellListClassNames(
+  choice: ClassChoice,
+  classes: ClassOption[],
+): ClassChoice {
+  if (choice.kind !== 'spell-list') {
+    return choice;
+  }
+
+  const nameByUrl = new Map(classes.map((option) => [option.url, option.name]));
+
+  const named = Object.entries(choice.optionValues ?? {}).map(
+    ([label, url]) => [nameByUrl.get(url) ?? label, url] as const,
+  );
+
+  return {
+    ...choice,
+    listed: named.map(([label]) => label),
+    optionValues: Object.fromEntries(named),
+  };
+}
+
+/**
  * Сколько опций требуется выбрать: распознанное из прозы количество не может
  * превышать длину списка. Количество приезжает из эвристики по тексту, и
  * завышенное число делало шаг визарда непроходимым — условие «выбрано меньше

@@ -52,6 +52,7 @@
     resolveChoiceOptions,
     SHEET_SEARCH_LABELS,
     STARTING_EQUIPMENT_SKIP_VALUE,
+    withSpellListClassNames,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
   import SheetCustomBackgroundModal from './SheetCustomBackgroundModal.vue';
@@ -308,7 +309,7 @@
    * пишет туда только ссылки.
    */
   const { data: classOptions } = await useAsyncData(
-    'character-sheet:background-feat-classes',
+    'character-sheet:feat-spell-list-classes',
     async () => {
       const response = await $fetch<unknown>(CLASSES_SEARCH_PATH, {
         method: 'GET',
@@ -388,7 +389,9 @@
       namedSpellListChoices.value.map((choice) => choice.id),
     );
 
-    return visible.filter((choice) => !answered.has(choice.id));
+    return visible
+      .filter((choice) => !answered.has(choice.id))
+      .map((choice) => withSpellListClassNames(choice, classOptions.value));
   });
 
   /** Все выборы черты отвечены сполна — иначе применять рано. */

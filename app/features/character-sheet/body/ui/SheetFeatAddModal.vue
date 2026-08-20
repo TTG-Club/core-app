@@ -17,6 +17,7 @@
   } from '../../composables';
   import {
     buildFeatFeature,
+    CLASSES_SEARCH_PATH,
     collectChosenProficiencies,
     FEAT_SOURCES_ASYNC_DATA_KEY,
     FEATS_FILTERS_PATH,
@@ -30,11 +31,13 @@
     getRequiredChoiceCount,
     getVisibleFeatChoices,
     LANGUAGE_PROFICIENCY_GROUPS,
+    parseClassOptions,
     parseFeatCatalog,
     parseRepeatableFeatUrls,
     resolveChoiceOptions,
     SHEET_FEAT_MODAL_LABELS,
     SHEET_SEARCH_LABELS,
+    withSpellListClassNames,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
@@ -295,16 +298,34 @@
     });
   }
 
+  /**
+   * Классы каталога: в механике черты списки заклинаний перечислены ссылками, а
+   * снимка названия у них может не быть — тогда игрок увидел бы слаг. Ключ
+   * общий с визардом предыстории, поэтому запрос на оба окна один.
+   */
+  const { data: classOptions } = await useAsyncData(
+    'character-sheet:feat-spell-list-classes',
+    async () => {
+      const response = await $fetch<unknown>(CLASSES_SEARCH_PATH, {
+        method: 'GET',
+        retry: 0,
+      });
+
+      return parseClassOptions(response, true);
+    },
+    { server: false, default: () => [] },
+  );
+
   /** Черты, которые о чём-то спрашивают, — по ним и строится шаг выбора. */
   const choiceRows = computed(() =>
     loadedSummaries.value.flatMap((summary) =>
-      getVisibleFeatChoices(summary.choices, choiceAnswers.value).map(
-        (choice) => ({
+      getVisibleFeatChoices(summary.choices, choiceAnswers.value)
+        .map((choice) => withSpellListClassNames(choice, classOptions.value))
+        .map((choice) => ({
           choice,
           featName: summary.name,
           options: choiceOptions(choice),
-        }),
-      ),
+        })),
     ),
   );
 

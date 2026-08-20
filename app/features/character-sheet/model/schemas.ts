@@ -779,7 +779,11 @@ function toFeatChoices(
           id,
           kind: 'spell-list',
           label,
-          count,
+          // Список всегда один: ответ на него сужает пул заклинаний до одного
+          // класса, а два ответа дали бы объединение списков, которого в
+          // правилах нет — и `getChoiceSpellClassUrls` читает только первый.
+          // Поэтому количество из механики здесь не в счёт
+          count: 1,
           listed: options.map((option) => option.name),
           optionValues: Object.fromEntries(
             options.map((option) => [option.name, option.value]),
