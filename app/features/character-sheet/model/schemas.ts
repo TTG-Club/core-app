@@ -149,6 +149,24 @@ const speciesInnateSpellSchema = z.object({
   requiredLevel: z.coerce.number().min(1).max(20).catch(1),
 });
 
+/**
+ * Выдаваемое чертой заклинание: запись справочника и уровень, с которого оно
+ * доступно. Форма та же, что у врождённых заклинаний вида, но уровень здесь
+ * необязателен — пустой читается как «с момента взятия черты», и так же
+ * читаются черты, сохранённые до появления поля.
+ */
+const featGrantedSpellSchema = z.union([
+  z.object({
+    spell: catalogSpellSchema,
+    requiredLevel: z.coerce.number().min(1).max(20).nullish().catch(null),
+  }),
+  // Ответ до появления уровней: заклинание лежало в списке без обёртки. Разбор
+  // держит обе формы, потому что фронт и бэк выкатываются порознь: без этого
+  // сайт со свежим разбором и ещё не обновлённым бэком молча перестал бы
+  // выдавать заклинания черт — весь список отбросил бы `.catch(null)` ниже.
+  catalogSpellSchema.transform((spell) => ({ spell, requiredLevel: null })),
+]);
+
 /** Схема детального ответа вида или подвида (нужные листу поля). */
 const speciesDetailSchema = z.object({
   url: z.string(),
@@ -482,7 +500,7 @@ const featDetailSchema = z.object({
     })
     .nullable()
     .catch(null),
-  grantedSpells: z.array(catalogSpellSchema).nullable().catch(null),
+  grantedSpells: z.array(featGrantedSpellSchema).nullable().catch(null),
 });
 
 /** Ответ справочника с владениями черты, как его разбирает схема детали. */
@@ -878,8 +896,14 @@ export function parseFeatDetail(input: unknown): FeatSummary | null {
     description: result.data.description,
     modifiers: result.data.mechanics?.modifiers ?? null,
     proficiencies: proficiencies ? toGrantedProficiencies(proficiencies) : null,
+    // Уровень доступа едет вместе с записью: заклинание с ним попадёт на лист
+    // только когда персонаж дорастёт (см. `getAvailableInnateSpells`)
     spells: granted.length
-      ? granted.map((spell) => ({ ...toCharacterSpell(spell), prepared }))
+      ? granted.map((entry) => ({
+          ...toCharacterSpell(entry.spell),
+          prepared,
+          requiredLevel: entry.requiredLevel ?? undefined,
+        }))
       : null,
     // Повышение характеристик спрашивается первым: остальные выборы черты идут
     // после того, как игрок решил, что она поднимает.

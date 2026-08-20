@@ -1,11 +1,55 @@
 <script setup lang="ts">
-  import type { FeatDetailResponse } from '~feats/model';
+  import type { FeatDetailResponse } from '../../model';
 
+  import { DictionaryService } from '~/shared/api';
   import { MarkupRender } from '~ui/markup';
 
+  import { getFeatPrerequisiteText } from '../../model';
   import { COMPONENT_TOOLTIP_TEXT } from '../model';
 
-  defineProps<Pick<FeatDetailResponse, 'prerequisite'>>();
+  /**
+   * Предварительное условие черты.
+   *
+   * Условие собирается из разобранных требований: они же сверяются листом, и
+   * второй, набранный руками, текст того же смысла рано или поздно с ними
+   * разойдётся. Строка остаётся запасным вариантом — её показывают, пока
+   * требования у черты не разобраны.
+   */
+  const { prerequisite, prerequisiteDetails } =
+    defineProps<
+      Pick<FeatDetailResponse, 'prerequisite' | 'prerequisiteDetails'>
+    >();
+
+  /** Нужны ли подписи доспехов: без такого требования словарь не грузим. */
+  const needsArmorLabels = computed<boolean>(
+    () => !!prerequisiteDetails?.armorProficiency?.length,
+  );
+
+  // Свой ключ, не общий с селектом доспехов: тот грузит словарь всегда, а здесь
+  // запрос нужен редкой черте — общий ключ отдал бы селекту пустой список
+  const { data: armorCategories } = await useAsyncData(
+    'feat-prerequisite-armor-categories',
+    () =>
+      needsArmorLabels.value
+        ? DictionaryService.armorCategories()
+        : Promise.resolve([]),
+    { dedupe: 'defer', default: () => [] },
+  );
+
+  const armorLabels = computed<Map<string, string>>(
+    () =>
+      new Map(
+        (armorCategories.value ?? []).map((category) => [
+          category.value,
+          category.label,
+        ]),
+      ),
+  );
+
+  /** Условие из разобранных требований; пусто — разбора у черты нет. */
+  const composedPrerequisite = computed<string>(() =>
+    getFeatPrerequisiteText(prerequisiteDetails, armorLabels.value),
+  );
 </script>
 
 <template>
@@ -15,7 +59,13 @@
         <div :class="$style.name">Предварительное условие:</div>
       </UTooltip>
 
-      <MarkupRender :render-node="prerequisite" />
+      <span v-if="composedPrerequisite">{{ composedPrerequisite }}</span>
+
+      <!-- Разбора нет — показываем строку, как её набирали раньше -->
+      <MarkupRender
+        v-else
+        :render-node="prerequisite"
+      />
     </div>
   </div>
 </template>

@@ -1,13 +1,25 @@
 <script setup lang="ts">
-  import type { FeatDetailResponse } from '~feats/model';
+  import type { FeatDetailResponse } from '../model';
 
   import { AffiliationBlock } from '~ui/affiliation';
 
+  import { getFeatPrerequisiteParts } from '../model';
+  import { FEAT_BODY_LABELS } from './model';
   import { DescriptionsBlock, StatsBlock, TopBar } from './ui';
 
-  defineProps<{
+  const { feat } = defineProps<{
     feat: FeatDetailResponse;
   }>();
+
+  /**
+   * Есть ли что показать в условии: либо разобранные требования, либо строка,
+   * набранная до разбора. Пусто и то, и другое — черта доступна всем.
+   */
+  const hasPrerequisite = computed<boolean>(
+    () =>
+      !!feat.prerequisite
+      || getFeatPrerequisiteParts(feat.prerequisiteDetails).length > 0,
+  );
 </script>
 
 <template>
@@ -17,8 +29,9 @@
         <TopBar :category="feat.category" />
 
         <StatsBlock
-          v-if="feat.prerequisite"
+          v-if="hasPrerequisite"
           :prerequisite="feat.prerequisite"
+          :prerequisite-details="feat.prerequisiteDetails"
         />
       </div>
 
@@ -28,7 +41,7 @@
         <AffiliationBlock
           v-if="feat.backgrounds"
           :items="feat.backgrounds"
-          label="Предыстории"
+          :label="FEAT_BODY_LABELS.backgrounds"
           section="backgrounds"
         />
       </div>

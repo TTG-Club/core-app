@@ -27,6 +27,8 @@ export type FeatChoiceType =
   | 'SPELL_LIST'
   | 'SPELLCASTING_ABILITY'
   | 'WEAPON'
+  | 'WEAPON_MASTERY'
+  | 'ARMOR'
   | 'OPTION';
 
 /** Ссылка на сущность справочника: url и снимок названия. */
@@ -115,6 +117,18 @@ export interface FeatSpellFilter {
 export interface FeatChoice {
   key: string;
   type: FeatChoiceType | undefined;
+
+  /**
+   * Все виды выбора, когда их несколько: «Умелый» даёт выбрать три штуки из
+   * навыков И инструментов вперемешку, а не три навыка и отдельно три
+   * инструмента. Пусто — вид один и задан `type`.
+   *
+   * `type` при этом остаётся заполненным первым из видов: потребители, не
+   * знающие о смешанном выборе, читают его и получают осмысленный, пусть и
+   * суженный, пул.
+   */
+  types: Array<FeatChoiceType> | undefined;
+
   label: string;
   count: number | undefined;
   countEqualsProficiencyBonus: boolean;
@@ -210,12 +224,33 @@ export interface FeatModifiers {
  * Владения, которые черта выдаёт сразу и целиком: «Вы получаете владение
  * воинским оружием». Выбираемые владения сюда не идут — у них есть количество и
  * пул значений, поэтому они живут в {@link FeatChoice}.
- *
- * Спасбросков здесь нет: их черты выдают выбором.
  */
 export interface FeatProficiencyGrant {
   /** Категории оружия справочника (`MATERIAL_MELEE` и подобные). */
   weaponCategories: Array<string>;
+
+  /**
+   * Конкретные виды оружия из раздела «Предметы»: «Мастер оружия» выдаёт
+   * владение не категорией, а перечисленными видами. Категориями такое не
+   * записать — они шире.
+   */
+  weapons: Array<FeatEntityRef>;
+
+  /**
+   * Оружейные приёмы — ссылками на те же предметы-оружие: приём называется по
+   * виду оружия, которым владеешь («Дурнота» у рапиры).
+   *
+   * Отдельным полем от `weapons`, потому что на листе это отдельный список
+   * владений, а не подмножество владения оружием: приёмом можно владеть, не
+   * имея владения видом, и наоборот.
+   */
+  weaponMasteries: Array<FeatEntityRef>;
+
+  /**
+   * Спасброски, которыми черта даёт владеть без выбора: «Крепыш» выдаёт
+   * владение спасбросками Телосложения.
+   */
+  savingThrows: Array<AbilityKey>;
 
   /** Категории доспехов справочника (`MEDIUM`, `SHIELD`). */
   armorCategories: Array<string>;
@@ -236,6 +271,24 @@ export interface FeatProficiencyGrant {
 }
 
 /**
+ * Ссылка на выдаваемое заклинание вместе с уровнем, с которого оно доступно.
+ *
+ * Своим типом, а не полем в общем {@link FeatEntityRef}: тем же типом описаны
+ * требуемые черты, классы и виды, а уровня у них не бывает.
+ */
+export interface FeatGrantedSpellRef extends FeatEntityRef {
+  /**
+   * Уровень персонажа, с которого заклинание доступно. `undefined` — с момента
+   * взятия черты; так же читаются ссылки, сохранённые до появления поля.
+   *
+   * У «Метки исцеления» «Лечение ран» есть с первого уровня, а «Малое
+   * восстановление» — только с третьего. Без уровня лист выдал бы весь список
+   * сразу, и черта оказалась бы сильнее книжной.
+   */
+  requiredLevel?: number;
+}
+
+/**
  * Заклинания, которые черта даёт знать без выбора: «Отмеченный драконом Ориена»
  * даёт «Магическую руку». Выбираемые заклинания сюда не идут — у них есть
  * количество и фильтр пула, поэтому они живут в {@link FeatChoice}.
@@ -246,7 +299,7 @@ export interface FeatSpellGrant {
    * самой записи заклинания и в снимке разошлись бы с каталогом при его правке.
    * Потребителю их отдаёт core-api отдельным полем детали (`grantedSpells`).
    */
-  spells: Array<FeatEntityRef>;
+  spells: Array<FeatGrantedSpellRef>;
 
   /**
    * Характеристика для расчёта СЛ и атаки заклинаний черты. `undefined` — черта
@@ -258,6 +311,82 @@ export interface FeatSpellGrant {
   alwaysPrepared: boolean;
 }
 
+/**
+ * Заклинания, которые черта добавляет в список заклинаний класса — таблица
+ * «Заклинания метки» у черт метки дракона.
+ *
+ * Отдельным блоком от {@link FeatSpellGrant}, потому что это другая механика.
+ * Выданное заклинание игрок знает и накладывает; заклинание отсюда он только
+ * МОЖЕТ подготовить наравне с классовыми, потратив на него подготовку и ячейку.
+ * Свалить их в одну кучу значило бы выдать «Метке исцеления» девять готовых
+ * заклинаний вместо двух.
+ *
+ * Круг заклинания здесь не хранится, хотя в книге таблица разбита по кругам:
+ * круг — свойство самой записи справочника, и снимок разошёлся бы с каталогом
+ * при первой же правке. Таблицу группирует по кругам потребитель, взяв круг из
+ * записи (`spellListSpells` детали).
+ */
+export interface FeatSpellListGroup {
+  /**
+   * Уровень персонажа, с которого список открывается. `undefined` — с момента
+   * взятия черты.
+   *
+   * Ради него списков и несколько: у метки дракона первая пачка приходит сразу,
+   * следующая — на пятом уровне, и так далее.
+   */
+  requiredLevel?: number;
+
+  /**
+   * Сколько заклинаний из списка игрок берёт. Пусто — весь список целиком.
+   *
+   * Формулой, а не числом: у части черт количество привязано к бонусу
+   * мастерства или к модификатору характеристики и растёт вместе с персонажем.
+   * Грамматика та же, что у максимума ресурса и у активных эффектов: число,
+   * `@prof`, `@level`, `@mod.<abbr>` — второй диалект того же смысла разошёлся
+   * бы с первым.
+   */
+  count: string;
+
+  /** Заклинания списка. Круг берётся из самой записи справочника. */
+  spells: Array<FeatEntityRef>;
+}
+
+export interface FeatSpellListExpansion {
+  /**
+   * Списки заклинаний по уровням доступа. Несколько — это НЕ «или»: каждый
+   * открывается на своём уровне и складывается с предыдущими.
+   */
+  groups: Array<FeatSpellListGroup>;
+
+  /**
+   * Список расширяется, только если у персонажа есть «Использование заклинаний»
+   * или «Магия договора». Так написано у всех черт метки дракона; выключено —
+   * расширяет всегда.
+   */
+  requiresSpellcasting: boolean;
+}
+
+/** Каким отдыхом восстанавливается ресурс. */
+export type FeatCounterRecovery = 'SHORT_REST' | 'LONG_REST';
+
+/**
+ * Ресурс черты со счётчиком: очки удачи «Удачливого», применения «Целителя».
+ *
+ * Максимум записан формулой, а не числом: у большинства таких запасов он привязан
+ * к бонусу мастерства и обязан расти вместе с ним («Удачливый» даёт очков удачи
+ * столько же, сколько бонус мастерства).
+ */
+export interface FeatCounter {
+  /** Стабильный ключ: по нему лист хранит потраченный остаток. */
+  key: string;
+  name: string;
+  /** Краткое название для компактной плитки; пусто — берётся `name`. */
+  shortName: string;
+  /** Формула максимума: число, `@prof`, `@level`, `@mod.<abbr>`. */
+  max: string;
+  recovery: FeatCounterRecovery;
+}
+
 /** Механика черты целиком. */
 export interface FeatMechanics {
   abilityBonuses: Array<FeatAbilityBonus>;
@@ -265,6 +394,12 @@ export interface FeatMechanics {
   modifiers: FeatModifiers;
   proficiencies: FeatProficiencyGrant;
   spells: FeatSpellGrant;
+
+  /** Заклинания, которые черта добавляет в список заклинаний класса. */
+  spellList: FeatSpellListExpansion;
+
+  /** Ресурсы черты со своим счётчиком на листе. */
+  counters: Array<FeatCounter>;
 }
 
 /**
@@ -330,6 +465,7 @@ export function createFeatChoice(): FeatChoice {
   return {
     key: '',
     type: undefined,
+    types: undefined,
     label: '',
     count: 1,
     countEqualsProficiencyBonus: false,
@@ -443,10 +579,43 @@ export function createFeatModifiers(): FeatModifiers {
 export function createFeatProficiencyGrant(): FeatProficiencyGrant {
   return {
     weaponCategories: [],
+    weapons: [],
+    weaponMasteries: [],
+    savingThrows: [],
     armorCategories: [],
     skills: [],
     languages: [],
     tools: [],
+  };
+}
+
+/** Новый ресурс черты. */
+export function createFeatCounter(): FeatCounter {
+  return {
+    key: '',
+    name: '',
+    shortName: '',
+    max: '@prof',
+    recovery: 'LONG_REST',
+  };
+}
+
+/** Новый список заклинаний. */
+export function createFeatSpellListGroup(): FeatSpellListGroup {
+  return {
+    requiredLevel: undefined,
+    count: '',
+    spells: [],
+  };
+}
+
+/** Пустое расширение списка заклинаний. */
+export function createFeatSpellList(): FeatSpellListExpansion {
+  return {
+    groups: [],
+    // Выключено, как и на бэке: пустое поле читается как «расширяет всегда».
+    // Заодно пустой блок остаётся пустым и не тянет за собой всю механику
+    requiresSpellcasting: false,
   };
 }
 
@@ -467,5 +636,7 @@ export function createFeatMechanics(): FeatMechanics {
     modifiers: createFeatModifiers(),
     proficiencies: createFeatProficiencyGrant(),
     spells: createFeatSpellGrant(),
+    spellList: createFeatSpellList(),
+    counters: [],
   };
 }
