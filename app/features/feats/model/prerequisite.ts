@@ -76,14 +76,22 @@ const CLASS_FEATURE_LABELS = new Map(
 
 /**
  * Подпись ссылки на запись справочника: снимок названия, а если его нет —
- * ссылка. Ссылку показывать некрасиво, но честно: молча пропустив требование,
- * карточка соврала бы, что его нет.
+ * догруженное название записи. Нет и его — ссылка: показывать её некрасиво, но
+ * честно, ведь молча пропустив требование, карточка соврала бы, что его нет.
  *
  * @param reference ссылка на запись справочника.
+ * @param refNames названия записей по url.
  * @returns название записи либо её ссылка.
  */
-function getRefLabel(reference: FeatEntityRef): string {
-  return reference.name?.trim() || reference.url;
+function getRefLabel(
+  reference: FeatEntityRef,
+  refNames: Map<string, string>,
+): string {
+  return (
+    reference.name?.trim()
+    || refNames.get(reference.url)?.trim()
+    || reference.url
+  );
 }
 
 /**
@@ -109,34 +117,55 @@ function joinAnyOf(values: Array<string>): string {
  *
  * @param prefix слово перед перечислением.
  * @param refs требуемые записи; пусто — требования нет.
+ * @param refNames названия записей по url.
  * @returns строка требования; `undefined` — записей нет.
  */
 function formatRefs(
   prefix: string,
   refs: Array<FeatEntityRef>,
+  refNames: Map<string, string>,
 ): string | undefined {
   if (!refs.length) {
     return undefined;
   }
 
-  return `${prefix} ${joinAnyOf(refs.map((reference) => `«${getRefLabel(reference)}»`))}`;
+  return `${prefix} ${joinAnyOf(refs.map((reference) => `«${getRefLabel(reference, refNames)}»`))}`;
+}
+
+/**
+ * Подписи, которых в самих требованиях нет: их берут из словарей и справочника.
+ */
+export interface FeatPrerequisiteLabels {
+  /**
+   * Подписи категорий доспехов из словаря по коду; без них владение доспехами
+   * показывается кодом.
+   */
+  armorLabels?: Map<string, string>;
+
+  /**
+   * Названия записей справочника по url — для ссылок без снимка названия.
+   * Без них такое требование показывается ссылкой.
+   */
+  refNames?: Map<string, string>;
 }
 
 /**
  * Собирает предварительное условие черты из разобранных требований.
  *
  * @param prerequisite разобранные требования; не заданы — условия нет.
- * @param armorLabels подписи категорий доспехов из словаря по коду; без них
- *   владение доспехами показывается кодом.
+ * @param labels подписи доспехов и названия записей справочника.
  * @returns требования по одному; пусто — черта доступна всем.
  */
 export function getFeatPrerequisiteParts(
   prerequisite: FeatPrerequisiteSource | undefined,
-  armorLabels: Map<string, string> = new Map(),
+  labels: FeatPrerequisiteLabels = {},
 ): Array<string> {
   if (!prerequisite) {
     return [];
   }
+
+  const armorLabels = labels.armorLabels ?? new Map<string, string>();
+  const refNames = labels.refNames ?? new Map<string, string>();
 
   const parts: Array<string> = [];
 
@@ -194,7 +223,7 @@ export function getFeatPrerequisiteParts(
   ];
 
   for (const [prefix, refs] of refRequirements) {
-    const formatted = formatRefs(prefix, refs);
+    const formatted = formatRefs(prefix, refs, refNames);
 
     if (formatted) {
       parts.push(formatted);
@@ -222,14 +251,14 @@ export function getFeatPrerequisiteParts(
  * Предварительное условие одной строкой.
  *
  * @param prerequisite разобранные требования.
- * @param armorLabels подписи категорий доспехов по коду.
+ * @param labels подписи доспехов и названия записей справочника.
  * @returns строка условия; пусто — требований нет.
  */
 export function getFeatPrerequisiteText(
   prerequisite: FeatPrerequisiteSource | undefined,
-  armorLabels: Map<string, string> = new Map(),
+  labels: FeatPrerequisiteLabels = {},
 ): string {
-  return getFeatPrerequisiteParts(prerequisite, armorLabels).join(
+  return getFeatPrerequisiteParts(prerequisite, labels).join(
     PREREQUISITE_TEXT.separator,
   );
 }

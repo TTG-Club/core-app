@@ -4,6 +4,7 @@
   import { DictionaryService } from '~/shared/api';
   import { MarkupRender } from '~ui/markup';
 
+  import { useFeatPrerequisiteRefNames } from '../../composable';
   import { getFeatPrerequisiteText } from '../../model';
   import { COMPONENT_TOOLTIP_TEXT } from '../model';
 
@@ -46,9 +47,18 @@
       ),
   );
 
+  // Названия требуемых записей: у черт, сохранённых до выбора записей в
+  // редакторе, снимка названия нет, и без догрузки условие показало бы ссылку
+  const { refNames } = await useFeatPrerequisiteRefNames(
+    () => prerequisiteDetails,
+  );
+
   /** Условие из разобранных требований; пусто — разбора у черты нет. */
   const composedPrerequisite = computed<string>(() =>
-    getFeatPrerequisiteText(prerequisiteDetails, armorLabels.value),
+    getFeatPrerequisiteText(prerequisiteDetails, {
+      armorLabels: armorLabels.value,
+      refNames: refNames.value,
+    }),
   );
 </script>
 
