@@ -98,6 +98,18 @@ export interface SpellEffect {
   savingThrows?: AbilityKey[];
   saveEffect?: SpellSaveEffect;
   conditions?: string[];
+
+  /**
+   * Характеристика, от которой считаются Сл спасброска и бонус атаки этого
+   * заклинания.
+   *
+   * Обычно её задаёт заклинатель, а не запись справочника: «Огненный снаряд»
+   * считается от Интеллекта у волшебника и от Харизмы у колдуна. Поле нужно
+   * тем заклинаниям, у которых характеристика своя независимо от источника —
+   * хоумбрю и заклинаниям, выданным чертой. Не задана — лист персонажа возьмёт
+   * характеристику класса.
+   */
+  spellcastingAbility?: AbilityKey;
 }
 
 export interface SpellCreate extends EditorBaseInfoState {
@@ -182,6 +194,7 @@ export function createEmptySpellEffect(): SpellEffect {
     savingThrows: [],
     saveEffect: undefined,
     conditions: [],
+    spellcastingAbility: undefined,
   };
 }
 
@@ -536,6 +549,10 @@ export function normalizeSpellEffect(
 
   if (migratedEffect.saveEffect) {
     normalized.saveEffect = migratedEffect.saveEffect;
+  }
+
+  if (migratedEffect.spellcastingAbility) {
+    normalized.spellcastingAbility = migratedEffect.spellcastingAbility;
   }
 
   if (migratedEffect.conditions && migratedEffect.conditions.length > 0) {

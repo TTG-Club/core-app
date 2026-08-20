@@ -1,15 +1,23 @@
 <script setup lang="ts">
-  import type { CustomSpellDraft, CustomSpellFieldKey } from '../../model';
+  import type {
+    AbilityKey,
+    CustomSpellDraft,
+    CustomSpellFieldKey,
+  } from '../../model';
 
   import { MarkupEditor } from '~ui/markup-editor';
 
   import { useCharacterSheet } from '../../composables';
   import {
+    ABILITY_LABELS,
+    ABILITY_ORDER,
     CUSTOM_SPELL_FIELDS,
     getSpellLevelLabel,
     parseStoredMarkupNodes,
+    SHEET_SPELL_ABILITY_LABELS,
     SPELL_LEVELS,
     SPELL_SCHOOL_OPTIONS,
+    SPELLCASTING_ABILITY_AUTO,
   } from '../../model';
 
   // URL редактируемого заклинания; null — форма создаёт новое. Само заклинание
@@ -52,6 +60,21 @@
     duration: editedSpell?.duration ?? '',
   });
 
+  // Характеристика заклинания: «От класса» — значение по умолчанию, оно же
+  // отсутствие поля в записи. Пустую строку селекту дать нельзя — она у него
+  // зарезервирована под сброс выбора.
+  const abilityOptions = [
+    {
+      value: SPELLCASTING_ABILITY_AUTO,
+      label: SHEET_SPELL_ABILITY_LABELS.auto,
+    },
+    ...ABILITY_ORDER.map((key) => ({ value: key, label: ABILITY_LABELS[key] })),
+  ];
+
+  const draftAbility = ref<AbilityKey | typeof SPELLCASTING_ABILITY_AUTO>(
+    editedSpell?.spellcastingAbility ?? SPELLCASTING_ABILITY_AUTO,
+  );
+
   const draftConcentration = ref(editedSpell?.concentration ?? false);
 
   const draftRitual = ref(editedSpell?.ritual ?? false);
@@ -93,6 +116,10 @@
       duration: draftFields.value.duration,
       concentration: draftConcentration.value,
       ritual: draftRitual.value,
+      spellcastingAbility:
+        draftAbility.value === SPELLCASTING_ABILITY_AUTO
+          ? null
+          : draftAbility.value,
       description: parseStoredMarkupNodes(draftDescription.value),
     };
   }
@@ -159,6 +186,19 @@
               v-model="draftSchool"
               :items="SPELL_SCHOOL_OPTIONS"
               placeholder="Не выбрана"
+            />
+          </div>
+
+          <!-- От этой характеристики считаются Сл спасброска и бонус атаки
+            заклинания; «От класса» — общий подсчёт листа -->
+          <div class="flex min-w-0 flex-col gap-1">
+            <span class="text-[10px] font-bold text-muted uppercase">
+              {{ SHEET_SPELL_ABILITY_LABELS.menu }}
+            </span>
+
+            <USelect
+              v-model="draftAbility"
+              :items="abilityOptions"
             />
           </div>
 

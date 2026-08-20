@@ -135,6 +135,7 @@ import {
   RESOURCE_SHORT_LABEL_MAX_LENGTH,
   restoreClassResources,
   restoreHitDice,
+  setFeatureSpellcastingAbility,
   setFeatureSpellPrepared,
   SHEET_HIDDEN_CONTROL_CLASS,
   SHEET_LOCKED_MESSAGE,
@@ -2363,6 +2364,83 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Характеристика, от которой считается одно заклинание: своя у него либо
+   * (null) характеристика класса, как у заклинаний книги.
+   *
+   * Правится там же, где заклинание лежит: в книге, у записи умения (черта) или
+   * среди врождённых заклинаний вида — копии в книге у последних двух нет.
+   *
+   * @param spellUrl URL заклинания.
+   * @param ability характеристика заклинания; null — считать от класса.
+   */
+  function setSpellSpellcastingAbility(
+    spellUrl: string,
+    ability: AbilityKey | null,
+  ): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    if (character.value.spells.some((spell) => spell.url === spellUrl)) {
+      character.value = {
+        ...character.value,
+        spells: character.value.spells.map((spell) =>
+          spell.url === spellUrl
+            ? { ...spell, spellcastingAbility: ability ?? undefined }
+            : spell,
+        ),
+      };
+
+      return;
+    }
+
+    const granted = findGrantedSpell(spellUrl);
+
+    // Записи уже нет (вид сменили, черту сняли): переписывать лист нельзя —
+    // автосохранение сработало бы на подмену, которой не было.
+    if (!granted) {
+      return;
+    }
+
+    if (granted.kind === 'feature') {
+      character.value = {
+        ...character.value,
+        features: setFeatureSpellcastingAbility(
+          character.value.features,
+          spellUrl,
+          ability,
+        ),
+      };
+
+      return;
+    }
+
+    const species = character.value.species;
+
+    if (!species) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      species: {
+        ...species,
+        innateSpells: species.innateSpells.map((innateSpell) =>
+          innateSpell.spell.url === spellUrl
+            ? {
+                ...innateSpell,
+                spell: {
+                  ...innateSpell.spell,
+                  spellcastingAbility: ability ?? undefined,
+                },
+              }
+            : innateSpell,
+        ),
+      },
+    };
+  }
+
+  /**
    * Где лист держит заклинание, известное вне книги: у вида или в записи
    * особенности, которая его выдала. Правки — снятие, подготовка, копия в книгу
    * — пишутся в найденное место, поэтому искать его нужно всем трём.
@@ -3363,6 +3441,7 @@ export function useCharacterSheet() {
     setSpecies,
     setSpells,
     setSpellcastingAbility,
+    setSpellSpellcastingAbility,
     setPreparedSpells,
     setVision,
     setSpeed,

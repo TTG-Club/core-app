@@ -60,10 +60,8 @@ function buildSpellFilter(
 
   return orUndefined({
     ...filter,
-    schools: orUndefinedList(filter.schools) ?? [],
     classes: orUndefinedList(filter.classes) ?? [],
     classesFromChoiceKey: text(filter.classesFromChoiceKey) ?? '',
-    castingTime: text(filter.castingTime),
   });
 }
 

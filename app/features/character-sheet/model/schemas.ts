@@ -58,8 +58,10 @@ import {
   ARMOR_PROFICIENCY_GROUPS,
   CANTRIP_SPELL_LEVEL,
   CURRENCY_KEYS_BY_LABEL,
+  FEAT_SPELL_CLASS_CHOICE_KEY,
   INVENTORY_QUANTITY_MAX,
   LANGUAGE_NAME_BY_API_KEY,
+  SHEET_FEAT_CHOICE_LABELS,
   SHEET_FEAT_MODAL_LABELS,
   SKILL_NAME_BY_API_KEY,
   SPELL_COMPONENT_LABELS,
@@ -230,6 +232,9 @@ const spellLinkSchema = z.object({
   school: z.string().catch(''),
   concentration: z.boolean().catch(false),
   ritual: z.boolean().catch(false),
+  // Своя характеристика заклинания: справочник задаёт её только там, где она не
+  // зависит от заклинателя. Нет — лист считает заклинание от класса.
+  spellcastingAbility: z.string().nullable().catch(null),
 });
 
 /** Ответ поиска заклинаний: плоский массив или страница `{ value, Count }`. */
@@ -258,6 +263,10 @@ export function parseSpellCatalog(input: unknown): SpellCatalogItem[] {
     school: spell.school,
     concentration: spell.concentration,
     ritual: spell.ritual,
+    // Характеристика справочника — начальное значение записи: дальше игрок
+    // правит её у себя на листе, и каталог ему больше не указ.
+    spellcastingAbility:
+      parseApiAbilityKey(spell.spellcastingAbility ?? '') ?? undefined,
   }));
 }
 
@@ -444,10 +453,14 @@ const featDetailSchema = z.object({
         .nullable()
         .catch(null),
       // Сами заклинания лист берёт из `grantedSpells`: там они дополнены кругом
-      // и школой, а в механике лежат одними ссылками. Здесь нужна только
-      // подготовка — держит ли черта заклинание готовым.
+      // и школой, а в механике лежат одними ссылками. Здесь нужны подготовка —
+      // держит ли черта заклинание готовым — и характеристика, от которой
+      // считаются все заклинания черты.
       spells: z
-        .object({ alwaysPrepared: z.boolean().catch(false) })
+        .object({
+          alwaysPrepared: z.boolean().catch(false),
+          spellcastingAbility: z.string().nullable().catch(null),
+        })
         .nullable()
         .catch(null),
       // Выборы при взятии черты. Разбираются поля тех видов, которые лист
@@ -712,7 +725,7 @@ function toFeatChoices(
   return choices.flatMap<ClassChoice>((choice) => {
     const id = `${getCharacterFeatureId('feat', featUrl)}:${choice.key}`;
     const count = Math.max(1, choice.count ?? 1);
-    const label = choice.label ?? '';
+    const label = choice.label?.trim() ?? '';
 
     if (choice.type === 'SPELLCASTING_ABILITY') {
       // Пул — характеристики, перечисленные в механике («Интеллект, Мудрость
@@ -728,7 +741,8 @@ function toFeatChoices(
         {
           id,
           kind: 'spellcasting-ability',
-          label,
+          label:
+            label || SHEET_FEAT_CHOICE_LABELS['spellcasting-ability'] || '',
           count,
           listed: listed.length
             ? listed
@@ -742,7 +756,7 @@ function toFeatChoices(
         {
           id,
           kind: 'spell',
-          label,
+          label: label || SHEET_FEAT_CHOICE_LABELS.spell || '',
           count,
           // Пул приходит поиском по каталогу, а не списком из справочника.
           listed: [],
@@ -778,7 +792,7 @@ function toFeatChoices(
         {
           id,
           kind: 'spell-list',
-          label,
+          label: label || SHEET_FEAT_CHOICE_LABELS['spell-list'] || '',
           // Список всегда один: ответ на него сужает пул заклинаний до одного
           // класса, а два ответа дали бы объединение списков, которого в
           // правилах нет — и `getChoiceSpellClassUrls` читает только первый.
@@ -867,6 +881,77 @@ function toFeatChoices(
 }
 
 /**
+ * Выбор класса для черт, у которых его в записи нет.
+ *
+ * Выбор заклинания перечисляет несколько классов — «Посвящённый в магию» назвал
+ * жреца, друида и волшебника, — но по правилам список ОДИН, а не объединение
+ * трёх. Записи, сделанные до того, как форма стала заводить вопрос про класс
+ * сама, такого выбора не содержат, и пул у них собирался из всех классов сразу.
+ * Лист спрашивает класс и по ним.
+ *
+ * @param choices выборы черты.
+ * @param featUrl url черты (идёт в устойчивый id выбора).
+ * @returns выборы вместе с вопросом про класс; без нескольких классов — как есть.
+ */
+function withSpellClassChoice(
+  choices: ClassChoice[],
+  featUrl: string,
+): ClassChoice[] {
+  // Вопрос уже есть — второй не нужен: на него и ссылаются выборы заклинаний.
+  if (choices.some((choice) => choice.kind === 'spell-list')) {
+    return choices;
+  }
+
+  const unlinked = choices.filter(
+    (choice) =>
+      choice.kind === 'spell'
+      && !choice.spellFilter?.classesFromChoiceKey
+      && (choice.spellFilter?.classes.length ?? 0) > 1,
+  );
+
+  const [first] = unlinked;
+
+  if (!first?.spellFilter) {
+    return choices;
+  }
+
+  const options = first.spellFilter.classes.map((characterClass) => ({
+    // Снимка названия у ссылки может не быть — тогда подписью служит она сама;
+    // название подставит `withSpellListClassNames` по каталогу классов.
+    name: characterClass.name || characterClass.url,
+    value: characterClass.url,
+  }));
+
+  const classChoice: ClassChoice = {
+    id: `${getCharacterFeatureId('feat', featUrl)}:${FEAT_SPELL_CLASS_CHOICE_KEY}`,
+    kind: 'spell-list',
+    label: SHEET_FEAT_CHOICE_LABELS['spell-list'] ?? '',
+    count: 1,
+    listed: options.map((option) => option.name),
+    optionValues: Object.fromEntries(
+      options.map((option) => [option.name, option.value]),
+    ),
+  };
+
+  const linked = new Set(unlinked.map((choice) => choice.id));
+
+  return [
+    classChoice,
+    ...choices.map((choice) =>
+      linked.has(choice.id) && choice.spellFilter
+        ? {
+            ...choice,
+            spellFilter: {
+              ...choice.spellFilter,
+              classesFromChoiceKey: FEAT_SPELL_CLASS_CHOICE_KEY,
+            },
+          }
+        : choice,
+    ),
+  ];
+}
+
+/**
  * Валидация детального ответа `GET /api/v2/feats/{url}`.
  *
  * @param input сырой детальный ответ черты.
@@ -886,6 +971,13 @@ export function parseFeatDetail(input: unknown): FeatSummary | null {
   // его»), либо оставляет подготовку игроку: тогда квадрат подготовки гаснет, и
   // игрок ставит пометку сам, как у врождённого заклинания вида.
   const prepared = result.data.mechanics?.spells?.alwaysPrepared ?? false;
+
+  // Характеристика заклинаний черты, заданная жёстко. Выбор из нескольких
+  // приезжает отдельным выбором и проставляется уже по ответу игрока
+  // (см. `getFeatSpellcastingAbility`).
+  const spellcastingAbility = parseApiAbilityKey(
+    result.data.mechanics?.spells?.spellcastingAbility ?? '',
+  );
 
   const choices = result.data.mechanics?.choices;
 
@@ -909,11 +1001,15 @@ export function parseFeatDetail(input: unknown): FeatSummary | null {
           requiredLevel: entry.requiredLevel ?? undefined,
         }))
       : null,
+    spellcastingAbility,
     // Повышение характеристик спрашивается первым: остальные выборы черты идут
     // после того, как игрок решил, что она поднимает.
     choices: [
       ...toFeatAbilityChoices(abilityBonuses, result.data.url),
-      ...(choices ? toFeatChoices(choices, result.data.url) : []),
+      ...withSpellClassChoice(
+        choices ? toFeatChoices(choices, result.data.url) : [],
+        result.data.url,
+      ),
     ],
     abilityBonuses,
   };

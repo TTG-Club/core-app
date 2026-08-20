@@ -49,13 +49,14 @@ const choiceOptionSchema = z.object({
   name: z.string().optional(),
 });
 
+// Школа магии и время накладывания в фильтре больше не задаются: пул
+// заклинаний в листе персонажа их не учитывал, и в записи они только
+// расходились с тем, что игрок в итоге видел
 const spellFilterSchema = z.object({
   level: z.number().optional(),
   maxLevel: z.number().optional(),
-  schools: z.array(z.string()).optional(),
   classes: z.array(entityRefSchema).optional(),
   classesFromChoiceKey: z.string().optional(),
-  castingTime: z.string().optional(),
 });
 
 const choiceTypeSchema = z.enum([
@@ -290,10 +291,8 @@ function toFeatMechanicsState(
         ? {
             level: choice.spellFilter.level,
             maxLevel: choice.spellFilter.maxLevel,
-            schools: choice.spellFilter.schools ?? [],
             classes: choice.spellFilter.classes ?? [],
             classesFromChoiceKey: choice.spellFilter.classesFromChoiceKey ?? '',
-            castingTime: choice.spellFilter.castingTime,
           }
         : undefined,
       onlyIfNotProficient: choice.onlyIfNotProficient ?? false,

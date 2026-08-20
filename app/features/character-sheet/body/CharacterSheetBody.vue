@@ -24,6 +24,7 @@
     ABILITY_LABELS,
     ARMOR_PROFICIENCY_GROUPS,
     EMPTY_DAMAGE_ROLL_SOURCE,
+    findCharacterSpell,
     getAbilityCheckValue,
     getAvailableInnateSpells,
     getWeaponAttackBonus,
@@ -81,6 +82,7 @@
     SheetSpeciesWizardModal,
     SheetSpeedModal,
     SheetSpeedTile,
+    SheetSpellAbilityModal,
     SheetSpellAddModal,
     SheetSpellcastingModal,
     SheetStatTile,
@@ -125,6 +127,7 @@
     carryingCapacity,
     attunement,
     setAbilityScore,
+    setSpellSpellcastingAbility,
     spendSpellSlot,
     toggleSavingThrowProficiency,
     toggleInnateSpellPrepared,
@@ -452,6 +455,12 @@
 
   const spellcastingModal = overlay.create(SheetSpellcastingModal, {
     props: { classUrl: '' },
+  });
+
+  // Заклинание приходит нажатием пункта меню строки: значения при создании —
+  // лишь отправная точка, `open()` подставляет нужные.
+  const spellAbilityModal = overlay.create(SheetSpellAbilityModal, {
+    props: { spellName: '', ability: null, classAbility: null },
   });
 
   // Вид подготовки приходит нажатием на плитку: значение при создании — лишь
@@ -887,6 +896,38 @@
     void copyInnateSpellToSheet(spellUrl);
   }
 
+  /**
+   * Настройка характеристики одного заклинания: от неё считаются его Сл
+   * спасброска и бонус атаки. «От класса» возвращает запись к общему подсчёту.
+   *
+   * @param spellUrl URL заклинания.
+   */
+  async function handleSpellAbilityEdit(spellUrl: string) {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const spell = findCharacterSpell(character.value, spellUrl);
+
+    if (!spell) {
+      return;
+    }
+
+    const ability = await spellAbilityModal.open({
+      spellName: spell.name,
+      ability: spell.spellcastingAbility ?? null,
+      // Что подставит «Авто»: характеристика первого класса-заклинателя — по
+      // ней лист считает заклинания книги.
+      classAbility: spellcastingBreakdown.value.ability,
+    }).result;
+
+    if (ability === undefined) {
+      return;
+    }
+
+    setSpellSpellcastingAbility(spellUrl, ability);
+  }
+
   function handleSpellcastingEdit(classUrl: string) {
     if (!ensureEditable()) {
       return;
@@ -1222,6 +1263,7 @@
           @edit-spell="handleSpellEdit"
           @copy-spell="handleSpellCopy"
           @edit-spellcasting="handleSpellcastingEdit"
+          @edit-spell-ability="handleSpellAbilityEdit"
           @edit-prepared-spells="handlePreparedSpellsEdit"
           @edit-currency="handleCurrencyEdit"
           @edit-carrying-capacity="handleCarryingCapacityEdit"

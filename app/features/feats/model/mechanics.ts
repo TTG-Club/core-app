@@ -88,11 +88,15 @@ export interface FeatChoiceOption {
   name?: string;
 }
 
-/** Чем ограничен выбор заклинания или заговора. */
+/**
+ * Чем ограничен выбор заклинания или заговора.
+ *
+ * Круг задан одним из двух полей: `level` — ровно этот круг, `maxLevel` — этот
+ * и ниже. Оба пусты — круг не ограничен.
+ */
 export interface FeatSpellFilter {
   level: number | undefined;
   maxLevel: number | undefined;
-  schools: Array<string>;
 
   /** Классы, из списков заклинаний которых можно выбирать. */
   classes: Array<FeatEntityRef>;
@@ -102,10 +106,11 @@ export interface FeatSpellFilter {
    * сначала спрашивает список — жреца, друида или волшебника, — и только потом
    * даёт выбрать из него заговоры: пул сужается до выбранного класса, а не до
    * всех трёх. Пусто — пул задан `classes` напрямую.
+   *
+   * Автор этот ключ не задаёт: форма пишет его сама, когда классов в выборе
+   * больше одного (см. `fromFeatEditorRows`).
    */
   classesFromChoiceKey: string;
-
-  castingTime: string | undefined;
 }
 
 /**
@@ -302,8 +307,13 @@ export interface FeatSpellGrant {
   spells: Array<FeatGrantedSpellRef>;
 
   /**
-   * Характеристика для расчёта СЛ и атаки заклинаний черты. `undefined` — черта
-   * её не задаёт: тогда лист берёт характеристику того класса, чья это магия.
+   * Характеристика для расчёта Сл и атаки заклинаний черты — и выданных, и
+   * выбранных игроком. Пишется, когда характеристика задана жёстко: если черта
+   * даёт выбрать её из нескольких, вместо неё заводится выбор
+   * `SPELLCASTING_ABILITY`, а здесь остаётся `undefined`.
+   *
+   * `undefined` — черта характеристику не задаёт: тогда лист берёт
+   * характеристику того класса, чья это магия.
    */
   spellcastingAbility: AbilityKey | undefined;
 
@@ -510,18 +520,6 @@ export function createSenseGrant(): FeatSenseGrant {
   return {
     type: undefined,
     range: 10,
-  };
-}
-
-/** Пустой фильтр заклинаний. */
-export function createSpellFilter(): FeatSpellFilter {
-  return {
-    level: undefined,
-    maxLevel: undefined,
-    schools: [],
-    classes: [],
-    classesFromChoiceKey: '',
-    castingTime: undefined,
   };
 }
 

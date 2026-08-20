@@ -347,6 +347,7 @@ import {
   SHEET_PLURAL_FORMS,
   SHEET_SAVE_SHARED_LABELS,
   SHEET_SHARE_ACTIVE_HINT,
+  SHEET_SPELL_ABILITY_LABELS,
   SHEET_UNARMORED_LABEL,
   SIZE_LABEL_WORDS,
   SKILL_GROUP_ALL_KEY,
@@ -5597,6 +5598,32 @@ export function findFeatureSpell(
 }
 
 /**
+ * Заклинание листа, где бы оно ни лежало: в книге, у записи умения или среди
+ * врождённых заклинаний вида. Одна на все три места: правки самой записи —
+ * характеристика, подготовка — ищут её одинаково.
+ *
+ * @param character персонаж.
+ * @param spellUrl URL заклинания.
+ * @returns запись заклинания; undefined — такого заклинания у листа нет.
+ */
+export function findCharacterSpell(
+  character: Character,
+  spellUrl: string,
+): CharacterSpell | undefined {
+  const bookSpell = character.spells.find((spell) => spell.url === spellUrl);
+
+  if (bookSpell) {
+    return bookSpell;
+  }
+
+  const innateSpell = character.species?.innateSpells.find(
+    (candidate) => candidate.spell.url === spellUrl,
+  );
+
+  return innateSpell?.spell ?? findFeatureSpell(character.features, spellUrl);
+}
+
+/**
  * Выбрасывает заклинание из записей особенностей. Вернуть его можно, добавив
  * черту заново — как врождённое заклинание возвращается выбором вида.
  *
@@ -5637,6 +5664,34 @@ export function setFeatureSpellPrepared(
           ...feature,
           spells: feature.spells.map((spell) =>
             spell.url === spellUrl ? { ...spell, prepared } : spell,
+          ),
+        }
+      : feature,
+  );
+}
+
+/**
+ * Особенности с проставленной характеристикой одного заклинания. Заклинание
+ * записи умения правится там же, где лежит: копии в книге у него нет.
+ *
+ * @param features особенности персонажа.
+ * @param spellUrl URL заклинания.
+ * @param ability характеристика заклинания; null — считать от класса.
+ * @returns особенности с переписанной записью заклинания.
+ */
+export function setFeatureSpellcastingAbility(
+  features: CharacterFeature[],
+  spellUrl: string,
+  ability: AbilityKey | null,
+): CharacterFeature[] {
+  return features.map((feature) =>
+    feature.spells
+      ? {
+          ...feature,
+          spells: feature.spells.map((spell) =>
+            spell.url === spellUrl
+              ? { ...spell, spellcastingAbility: ability ?? undefined }
+              : spell,
           ),
         }
       : feature,
@@ -5894,6 +5949,9 @@ export function toCustomSpell(
     school: draft.school.trim(),
     concentration: draft.concentration,
     ritual: draft.ritual,
+    // Своя характеристика пишется, только если её задали: без неё заклинание
+    // считается от класса, как остальные записи книги
+    spellcastingAbility: draft.spellcastingAbility ?? undefined,
     castingTime: draft.castingTime.trim(),
     range: draft.range.trim(),
     components: draft.components.trim(),
@@ -6712,6 +6770,7 @@ export function getSpellcastingRows(
         className: characterClass.name,
         ability,
         auto: characterClass.spellcastingAbility === null,
+        editable: true,
         abilityModifier,
         saveDc: getSpellSaveDc(character, proficiencyBonus, abilityModifier),
         // Сложность спасброска — не бросок к20, истощение её не трогает, а вот
@@ -6721,6 +6780,63 @@ export function getSpellcastingRows(
           - d20Penalty,
       };
     });
+}
+
+/**
+ * Строки заклинательства особенностей, чьи заклинания считаются не от класса.
+ *
+ * Характеристика лежит у самих заклинаний, а не у записи умения: заклинание
+ * остаётся на листе само по себе. Поэтому строка заводится по первому
+ * заклинанию записи со своей характеристикой — одна на запись, потому что черта
+ * задаёт характеристику всем своим заклинаниям сразу.
+ *
+ * Строка, повторяющая класс с той же характеристикой, не заводится: числа у неё
+ * вышли бы те же, а плитка сбивала бы с толку.
+ *
+ * @param character персонаж.
+ * @param classAbilities характеристики классов-заклинателей.
+ * @returns строки заклинательства особенностей.
+ */
+function getFeatureSpellcastingRows(
+  character: Character,
+  classAbilities: Set<AbilityKey>,
+): SpellcastingClassRow[] {
+  const proficiencyBonus = getCharacterProficiencyBonus(character);
+
+  const d20Penalty = getExhaustionD20Penalty(character);
+
+  const taken = new Set(classAbilities);
+
+  const rows: SpellcastingClassRow[] = [];
+
+  for (const feature of character.features) {
+    const ability = (feature.spells ?? []).find(
+      (spell) => spell.spellcastingAbility,
+    )?.spellcastingAbility;
+
+    if (!ability || taken.has(ability)) {
+      continue;
+    }
+
+    taken.add(ability);
+
+    const abilityModifier = getAbilityModifier(character, ability);
+
+    rows.push({
+      classUrl: feature.id,
+      className: feature.name,
+      ability,
+      auto: false,
+      editable: false,
+      abilityModifier,
+      saveDc: getSpellSaveDc(character, proficiencyBonus, abilityModifier),
+      attackBonus:
+        getSpellAttackBonus(character, proficiencyBonus, abilityModifier)
+        - d20Penalty,
+    });
+  }
+
+  return rows;
 }
 
 /**
@@ -6742,7 +6858,19 @@ export function getSpellcastingRows(
 export function getSpellcastingBreakdown(
   character: Character,
 ): SpellcastingBreakdown {
-  const rows = getSpellcastingRows(character);
+  const classRows = getSpellcastingRows(character);
+
+  // Строки особенностей идут после классовых: числа верхнего уровня берутся у
+  // первой строки, и черта класс-заклинатель подменять не должна. А вот класс
+  // без заклинательства она обходит: у воина с «Посвящённым в магию» Сл
+  // спасброска есть, и брать её больше неоткуда
+  const rows = [
+    ...classRows,
+    ...getFeatureSpellcastingRows(
+      character,
+      new Set(classRows.flatMap((row) => (row.ability ? [row.ability] : []))),
+    ),
+  ].sort((left, right) => Number(!left.ability) - Number(!right.ability));
 
   const proficiencyBonus = getCharacterProficiencyBonus(character);
 
@@ -7070,6 +7198,11 @@ export function buildCharacterFeatures(
  *   применяет к листу (см. `getFeatAbilityIncreases`). Не переданы — черта
  *   характеристики не двигает: так берут черту в мастере повышения уровня, где
  *   прибавку считает и применяет он сам.
+ * @param options.choice уточнение черты от её источника: предыстория называет
+ *   класс «Посвящённого в магию» сама.
+ * @param options.spellcastingAbility характеристика заклинаний черты
+ *   (см. `getFeatSpellcastingAbility`); не передана — заклинания считаются от
+ *   характеристики класса.
  * @returns особенность персонажа с происхождением «Черта».
  */
 export function buildFeatFeature(
@@ -7081,6 +7214,19 @@ export function buildFeatFeature(
     choiceAnswers?: Record<string, string[]>;
     spells?: CharacterSpell[];
     abilityIncreases?: Partial<Record<AbilityKey, number>>;
+    /**
+     * Класс, названный источником черты: предыстория даёт «Посвящённого в магию
+     * (Волшебник)» и отвечает за игрока сама. Пусто — класс не назван.
+     */
+    choice?: string | null;
+
+    /**
+     * Характеристика, от которой считаются заклинания черты. Приходит от
+     * вызывающего, а не считается здесь: ответы игрока лежат тут уже по ключу
+     * выбора, а найти среди них характеристику можно только по id пикера
+     * (см. `getFeatSpellcastingAbility`).
+     */
+    spellcastingAbility?: AbilityKey | null;
   } = {},
 ): CharacterFeature {
   const {
@@ -7090,11 +7236,19 @@ export function buildFeatFeature(
     choiceAnswers = {},
     spells = [],
     abilityIncreases = {},
+    choice = null,
+    spellcastingAbility = null,
   } = options;
 
+  // Характеристика черты ложится на каждое её заклинание: заклинание остаётся
+  // на листе само по себе, и искать по нему черту, чтобы посчитать его атаку,
+  // лист не должен.
+  //
   // Выбранные игроком заклинания лежат там же, где выдаваемые чертой: и те, и
   // другие персонаж знает вне книги заклинаний.
-  const featureSpells = [...(summary.spells ?? []), ...spells];
+  const featureSpells = [...(summary.spells ?? []), ...spells].map((spell) =>
+    spellcastingAbility ? { ...spell, spellcastingAbility } : spell,
+  );
 
   const baseId = getCharacterFeatureId('feat', summary.url);
 
@@ -7105,7 +7259,7 @@ export function buildFeatFeature(
     origin: 'feat',
     originName: summary.category,
     level,
-    choice: null,
+    choice,
     modifiers: summary.modifiers,
     proficiencies: withChosenProficiencies(
       summary.proficiencies,
@@ -9561,18 +9715,83 @@ export function getVisibleFeatChoices(
 ): ClassChoice[] {
   const variant = choices.find((choice) => choice.kind === 'ability-variant');
 
-  if (!variant) {
-    return choices;
+  const chosen = variant ? answers[variant.id]?.[0] : undefined;
+
+  const chosenIndex = chosen ? (variant?.listed.indexOf(chosen) ?? -1) : -1;
+
+  return choices.filter((choice) => {
+    // Выбор заклинаний ждёт ответа про класс: до него пул собран не из того
+    // списка, и игрок выбирал бы заклинания, которых черта не даёт
+    if (
+      choice.kind === 'spell'
+      && !isSpellChoiceReady(choice, choices, answers)
+    ) {
+      return false;
+    }
+
+    return (
+      choice.kind !== 'ability-score'
+      || !variant
+      || choice.abilityBonus?.variantIndex === chosenIndex
+    );
+  });
+}
+
+/**
+ * Отвечен ли выбор класса, из списка которого идёт выбор заклинания. Выбор, ни
+ * на какой класс не ссылающийся, готов сразу: его пул задан фильтром.
+ *
+ * @param choice выбор заклинания.
+ * @param choices все выборы черты.
+ * @param answers ответы игрока по id выбора.
+ * @returns готов ли выбор заклинания к показу.
+ */
+function isSpellChoiceReady(
+  choice: ClassChoice,
+  choices: ClassChoice[],
+  answers: Record<string, string[]>,
+): boolean {
+  const key = choice.spellFilter?.classesFromChoiceKey;
+
+  if (!key) {
+    return true;
   }
 
-  const chosen = answers[variant.id]?.[0];
-  const chosenIndex = chosen ? variant.listed.indexOf(chosen) : -1;
-
-  return choices.filter(
-    (choice) =>
-      choice.kind !== 'ability-score'
-      || choice.abilityBonus?.variantIndex === chosenIndex,
+  const source = choices.find(
+    (candidate) =>
+      candidate.kind === 'spell-list' && candidate.id.endsWith(`:${key}`),
   );
+
+  return !source || !!answers[source.id]?.length;
+}
+
+/**
+ * Заклинательная характеристика черты: названная игроком либо заданная самой
+ * чертой. От неё считаются атака и Сл спасброска её заклинаний.
+ *
+ * Ответ игрока хранится подписью характеристики — пикер работает с подписями, а
+ * не с ключами, — поэтому подпись переводится обратно в ключ.
+ *
+ * @param summary деталь черты.
+ * @param answers ответы игрока по id выбора.
+ * @returns характеристика; null — черта её не задаёт, и заклинания считаются
+ *   от характеристики класса.
+ */
+export function getFeatSpellcastingAbility(
+  summary: FeatSummary,
+  answers: Record<string, string[]>,
+): AbilityKey | null {
+  const choice = summary.choices.find(
+    (candidate) => candidate.kind === 'spellcasting-ability',
+  );
+
+  const named = choice ? answers[choice.id]?.[0] : undefined;
+
+  const chosen = named
+    ? ABILITY_ORDER.find((key) => ABILITY_LABELS[key] === named)
+    : undefined;
+
+  return chosen ?? summary.spellcastingAbility;
 }
 
 /**
@@ -10875,6 +11094,15 @@ function getSheetEntryMenuItems(
   return items;
 }
 
+/** Обработчики пунктов меню строки заклинания. */
+export interface SpellMenuOptions extends SheetEntryMenuOptions {
+  /**
+   * Настройка характеристики заклинания; не передан — пункта нет (чужой лист
+   * открыт только на просмотр).
+   */
+  onSpellcastingAbility?: () => void;
+}
+
 /** Обработчики пунктов меню строки снаряжения. */
 export interface InventoryItemMenuOptions extends SheetEntryMenuOptions {
   /**
@@ -10967,9 +11195,39 @@ export function getInventoryItemMenuItems(
  * @returns пункты для `UDropdownMenu`.
  */
 export function getSpellMenuItems(
-  options: SheetEntryMenuOptions,
+  options: SpellMenuOptions,
 ): DropdownMenuItem[] {
-  return getSheetEntryMenuItems(options, SPELL_REMOVE_MENU_LABEL);
+  return withSpellcastingAbilityItem(
+    getSheetEntryMenuItems(options, SPELL_REMOVE_MENU_LABEL),
+    options,
+  );
+}
+
+/**
+ * Пункты меню с настройкой характеристики заклинания. Она правит саму запись,
+ * поэтому пункт встаёт перед удалением: удаление всегда последнее.
+ *
+ * @param items пункты меню строки.
+ * @param options обработчики пунктов.
+ * @returns пункты вместе с настройкой характеристики; без обработчика — как есть.
+ */
+function withSpellcastingAbilityItem(
+  items: DropdownMenuItem[],
+  options: SpellMenuOptions,
+): DropdownMenuItem[] {
+  if (!options.onSpellcastingAbility) {
+    return items;
+  }
+
+  return [
+    ...items.slice(0, -1),
+    {
+      label: SHEET_SPELL_ABILITY_LABELS.menu,
+      icon: 'tabler:wand',
+      onSelect: options.onSpellcastingAbility,
+    },
+    ...items.slice(-1),
+  ];
 }
 
 /**
@@ -10981,9 +11239,12 @@ export function getSpellMenuItems(
  * @returns пункты для `UDropdownMenu`.
  */
 export function getInnateSpellMenuItems(
-  options: SheetEntryMenuOptions,
+  options: SpellMenuOptions,
 ): DropdownMenuItem[] {
-  return getSheetEntryMenuItems(options, INNATE_SPELL_REMOVE_MENU_LABEL);
+  return withSpellcastingAbilityItem(
+    getSheetEntryMenuItems(options, INNATE_SPELL_REMOVE_MENU_LABEL),
+    options,
+  );
 }
 
 /**

@@ -6,10 +6,8 @@
     BackgroundSummary,
     CharacterFeature,
     CharacterInventoryItem,
-    CharacterSpell,
     ClassChoice,
     FeatSummary,
-    SpellCatalogItem,
   } from '../../model';
 
   import { BackgroundDrawer } from '~backgrounds/drawer';
@@ -19,6 +17,7 @@
   import {
     useCatalogSourceQuery,
     useCharacterSheet,
+    useFeatChoiceSpells,
     useToolCatalog,
   } from '../../composables';
   import {
@@ -36,14 +35,15 @@
     computeAbilityBonuses,
     CUSTOM_BACKGROUND_LABELS,
     FEATS_DETAIL_BASE_PATH,
-    fetchChoiceSpells,
     getChoiceSpellClassUrls,
     getFeatAbilityIncreases,
+    getFeatSpellcastingAbility,
     getOwnedSkillHints,
     getRequiredChoiceCount,
     getToolNames,
     getVisibleFeatChoices,
     LANGUAGE_PROFICIENCY_GROUPS,
+    normalizeCatalogName,
     ORIGIN_FEAT_ACQUISITION_LEVEL,
     parseBackgroundDetail,
     parseBackgroundOptions,
@@ -56,6 +56,7 @@
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
   import SheetCustomBackgroundModal from './SheetCustomBackgroundModal.vue';
+  import SheetFeatSpellsPicker from './SheetFeatSpellsPicker.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
   import SheetStartingEquipmentChoice from './SheetStartingEquipmentChoice.vue';
 
@@ -332,8 +333,11 @@
       return null;
     }
 
+    // Сверка по приведённому названию: у записей прода подпись бывает со своим
+    // регистром («…} волшебник»), и точное сравнение с каталогом не сошлось бы
     const named = (classOptions.value ?? []).find(
-      (option) => option.name === subchoice,
+      (option) =>
+        normalizeCatalogName(option.name) === normalizeCatalogName(subchoice),
     );
 
     return named?.url ?? null;
@@ -369,6 +373,35 @@
       (choice) =>
         choice.kind === 'spell-list' && !!getNamedSpellListAnswer(choice),
     ),
+  );
+
+  // Ответ за игрока: предыстория назвала класс, пикер его не показывает — но
+  // ответ обязан лежать в общем наборе. По нему сужается пул заклинаний, и без
+  // него выбор заклинаний так и остался бы скрытым, ожидая ответа про класс.
+  //
+  // Цикла нет: список считается по детали черты и названному классу, а
+  // обработчик пишет ответы — от них список не зависит.
+  watch(
+    namedSpellListChoices,
+    (choices) => {
+      const answered = { ...selections.value };
+
+      let hasAnswer = false;
+
+      for (const choice of choices) {
+        const answer = getNamedSpellListAnswer(choice);
+
+        if (answer && selections.value[choice.id]?.[0] !== answer) {
+          answered[choice.id] = [answer];
+          hasAnswer = true;
+        }
+      }
+
+      if (hasAnswer) {
+        selections.value = answered;
+      }
+    },
+    { immediate: true },
   );
 
   /**
@@ -409,12 +442,22 @@
       || !isFeatChoiceComplete.value,
   );
 
-  /** Пул заклинаний по id выбора: собирается поиском по каталогу. */
-  const spellPools = ref<Record<string, SpellCatalogItem[]>>({});
+  // Пул сужается классом, названным предысторией: она и определяет, чей это
+  // список, а игрока про класс уже не спрашивают
+  const {
+    getPool: getSpellPool,
+    getSpellOptions,
+    collectChosenSpells,
+    load: loadSpellPools,
+  } = useFeatChoiceSpells({
+    summaries: () => (featSummary.value ? [featSummary.value] : []),
+    answers: selections,
+    resolveClassUrls: (choice) => getChoiceClassUrls(choice),
+  });
 
   function choiceOptions(choice: ClassChoice): string[] {
     if (choice.kind === 'spell') {
-      return (spellPools.value[choice.id] ?? []).map((spell) => spell.name);
+      return getSpellOptions(choice);
     }
 
     return resolveChoiceOptions(choice, {
@@ -474,70 +517,6 @@
   }
 
   /**
-   * Ответы, от которых зависят пулы: если черта спрашивает список заклинаний,
-   * пул её заклинаний собирается уже по названному классу.
-   */
-  const spellPoolAnswersKey = computed(() =>
-    featChoices.value
-      .filter((choice) => choice.kind === 'spell-list')
-      .map((choice) => (selections.value[choice.id] ?? []).join(','))
-      .join('|'),
-  );
-
-  // Цикла нет: ключ считается только по ответам на выбор списка, а обработчик
-  // чистит ответы выбора заклинания — значение ключа от этого не меняется.
-  watch(spellPoolAnswersKey, () => {
-    // Пул сменился — прежде выбранные заклинания к нему уже не относятся.
-    for (const choice of featChoices.value) {
-      if (choice.kind === 'spell') {
-        selections.value = { ...selections.value, [choice.id]: [] };
-      }
-    }
-
-    void loadSpellPools();
-  });
-
-  /** Загружает пулы заклинаний для всех выборов черты разом. */
-  async function loadSpellPools(): Promise<void> {
-    const spellChoices = featChoices.value.flatMap((choice) =>
-      choice.kind === 'spell' && choice.spellFilter
-        ? [{ choice, filter: choice.spellFilter }]
-        : [],
-    );
-
-    const pools = await Promise.all(
-      spellChoices.map(async ({ choice, filter }) => ({
-        id: choice.id,
-        spells: await fetchChoiceSpells(filter, getChoiceClassUrls(choice)),
-      })),
-    );
-
-    spellPools.value = Object.fromEntries(
-      pools.map((pool) => [pool.id, pool.spells]),
-    );
-  }
-
-  /**
-   * Заклинания, выбранные игроком: пул хранит записи справочника, а пикер —
-   * названия, поэтому выбранное сверяется по названию.
-   *
-   * @returns выбранные заклинания записями листа.
-   */
-  function collectChosenSpells(): CharacterSpell[] {
-    return featChoices.value.flatMap((choice) => {
-      const chosen = new Set(selections.value[choice.id] ?? []);
-
-      return (
-        (spellPools.value[choice.id] ?? [])
-          .filter((spell) => chosen.has(spell.name))
-          // Заклинание черты подготовлено сразу и места среди подготовленных не
-          // занимает — как врождённое заклинание вида.
-          .map((spell) => ({ ...spell, prepared: true }))
-      );
-    });
-  }
-
-  /**
    * Ответы игрока на выборы черты по ключу выбора: id пикера — это
    * `feat:<url>:<ключ>`, а в записи ответы лежат под самим ключом, потому что у
    * повторяемой черты id записи получает ещё и уникальный суффикс.
@@ -547,7 +526,10 @@
   function collectFeatChoiceAnswers(): Record<string, string[]> {
     const answers: Record<string, string[]> = {};
 
-    for (const choice of featChoices.value) {
+    // Не только показанные пикеры: за скрытый выбор списка ответила сама
+    // предыстория, и без записанного ответа лист потом не сузит пул заклинаний
+    // до названного ею класса
+    for (const choice of featSummary.value?.choices ?? []) {
       // Выборы повышения характеристик заведены самим листом: ключа выбора в
       // механике у них нет, а ответ уходит в прибавки к характеристикам.
       if (
@@ -562,17 +544,6 @@
 
       if (key && values.length) {
         answers[key] = values;
-      }
-    }
-
-    // Скрытый выбор списка отвечает предыстория: без записанного ответа лист
-    // потом не сузит пул заклинаний до названного ею класса
-    for (const choice of namedSpellListChoices.value) {
-      const key = choice.id.split(':').at(-1) ?? '';
-      const answer = getNamedSpellListAnswer(choice);
-
-      if (key && answer) {
-        answers[key] = [answer];
       }
     }
 
@@ -702,17 +673,21 @@
             [...proficientSkillNames.value, ...(detail.skills ?? [])],
           ),
           choiceAnswers: collectFeatChoiceAnswers(),
-          spells: collectChosenSpells(),
+          spells: collectChosenSpells(summary),
           abilityIncreases: getFeatAbilityIncreases(
             summary,
             character.value.abilities,
             selections.value,
           ),
+          // Класс черты назвала предыстория: её подпись едет в запись умения
+          choice: detail.featSubchoice || null,
+          spellcastingAbility: getFeatSpellcastingAbility(
+            summary,
+            selections.value,
+          ),
         });
 
-        featFeature = detail.featSubchoice
-          ? { ...feature, choice: detail.featSubchoice }
-          : feature;
+        featFeature = feature;
       }
 
       setBackground({
@@ -1034,7 +1009,20 @@
             >
               <span class="text-sm text-toned">{{ choice.label }}</span>
 
+              <!-- Заклинания выбирают своим окном: пул бывает и на сотню
+                записей, а выбранные должны остаться на виду, чтобы их можно
+                было убрать -->
+              <SheetFeatSpellsPicker
+                v-if="choice.kind === 'spell'"
+                :model-value="selections[choice.id] ?? []"
+                :items="getSpellPool(choice)"
+                :count="choiceCount(choice)"
+                :label="choice.label"
+                @update:model-value="updateSelection(choice, $event)"
+              />
+
               <SheetChoiceSelect
+                v-else
                 :model-value="selections[choice.id] ?? []"
                 :items="choiceOptions(choice)"
                 :count="choiceCount(choice)"

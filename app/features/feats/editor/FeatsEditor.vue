@@ -28,7 +28,8 @@
     FeatGrantRows,
     FeatModifierRows,
     FeatPrerequisiteRows,
-    FeatSpellChoiceRows,
+    FeatSpellcastingAbility,
+    FeatSpellChoices,
     FeatSpellListSpells,
   } from './ui';
 
@@ -216,24 +217,34 @@
           <UCard variant="subtle">
             <template #header>
               <h2 class="truncate text-base text-highlighted">
-                {{ FEAT_EDITOR_LABELS.spellListTitle }}
+                {{ FEAT_EDITOR_LABELS.spellChoicesTitle }}
               </h2>
             </template>
 
-            <FeatSpellListSpells v-model="mechanics.spellList" />
+            <FeatSpellChoices
+              v-model="editorRows.spellChoice"
+              :rows="editorRows"
+            />
           </UCard>
 
           <UCard variant="subtle">
             <template #header>
               <h2 class="truncate text-base text-highlighted">
-                {{ FEAT_EDITOR_LABELS.spellChoicesTitle }}
+                {{ FEAT_EDITOR_LABELS.spellcastingAbilityTitle }}
               </h2>
             </template>
 
-            <FeatSpellChoiceRows
-              v-model="editorRows.spellChoices"
-              :rows="editorRows"
-            />
+            <FeatSpellcastingAbility v-model="editorRows.spellChoice" />
+          </UCard>
+
+          <UCard variant="subtle">
+            <template #header>
+              <h2 class="truncate text-base text-highlighted">
+                {{ FEAT_EDITOR_LABELS.spellListTitle }}
+              </h2>
+            </template>
+
+            <FeatSpellListSpells v-model="mechanics.spellList" />
           </UCard>
         </div>
       </template>

@@ -13,7 +13,7 @@ import type {
   FeatModifiers,
   FeatPrerequisiteDetails,
   FeatSenseGrant,
-  FeatSpellFilter,
+  FeatSpellGrant,
 } from './mechanics';
 
 import { isAbilityKey } from '~/shared/types';
@@ -21,7 +21,6 @@ import { isAbilityKey } from '~/shared/types';
 import {
   createFeatMechanics,
   createPrerequisiteDetails,
-  createSpellFilter,
   getFreeFeatChoiceKey,
 } from './mechanics';
 
@@ -186,18 +185,61 @@ export interface FeatPrerequisiteRow {
   text: string;
 }
 
-/** Строка выбора, связанного с заклинаниями. */
-export interface FeatSpellChoiceRow {
+/** Как задан круг заклинаний порции. */
+export type FeatSpellLevelMode = 'ANY' | 'EXACT' | 'UP_TO';
+
+/**
+ * Порция заклинаний, которую игрок берёт: «два заговора», «одно заклинание
+ * первого круга».
+ *
+ * Порций бывает несколько, а список классов у них общий: «Посвящённый в магию»
+ * спрашивает класс один раз и берёт из него и заговоры, и заклинание. Поэтому
+ * классы живут в блоке ({@link FeatSpellChoiceBlock}), а не в порции.
+ */
+export interface FeatSpellPickRow {
   uid: string;
-  type: FeatChoiceType;
+
+  /** Машинный ключ выбора: по нему лист помнит ответ игрока. Автору не виден. */
   key: string;
-  label: string;
+
+  mode: FeatSpellLevelMode;
+
+  /** Круг: точный при `EXACT`, наибольший при `UP_TO`; у `ANY` не задан. */
+  level: number | undefined;
+
   count: number | undefined;
   countEqualsProficiencyBonus: boolean;
-  /** Набор для выбора: списки классов либо заклинательные характеристики. */
-  options: Array<FeatChoiceOption>;
-  spellFilter: FeatSpellFilter;
-  rechooseOnLongRest: boolean;
+  label: string;
+}
+
+/**
+ * Выбор заклинаний черты целиком.
+ *
+ * Блок, а не список строк: класс и заклинательная характеристика общие для всех
+ * порций, и спрашивать их у каждой порции значило бы спрашивать дважды.
+ */
+export interface FeatSpellChoiceBlock {
+  /**
+   * Классы, из чьих списков берутся заклинания. Больше одного — игрок сначала
+   * выбирает один из них, и пул сужается до него: по правилам список один, а не
+   * объединение перечисленных.
+   */
+  classes: Array<FeatEntityRef>;
+
+  /** Машинный ключ выбора класса: под ним лист хранит ответ игрока. */
+  classChoiceKey: string;
+
+  picks: Array<FeatSpellPickRow>;
+
+  /**
+   * Характеристики, из которых считаются заклинания черты — и выданные, и
+   * выбранные. Пусто — характеристика берётся от класса; одна — задана жёстко;
+   * несколько — игрок выбирает одну из них.
+   */
+  abilityOptions: Array<AbilityKey>;
+
+  /** Машинный ключ выбора характеристики. */
+  abilityChoiceKey: string;
 }
 
 /** Строка ресурса черты. */
@@ -208,7 +250,7 @@ export interface FeatCounterRow extends FeatCounter {
 /** Механика черты в том виде, в каком её правит форма. */
 export interface FeatEditorRows {
   grants: Array<FeatGrantRow>;
-  spellChoices: Array<FeatSpellChoiceRow>;
+  spellChoice: FeatSpellChoiceBlock;
   modifiers: Array<FeatModifierRow>;
   prerequisites: Array<FeatPrerequisiteRow>;
   counters: Array<FeatCounterRow>;
@@ -305,12 +347,27 @@ const GRANT_KIND_BY_CHOICE_TYPE: Partial<
 };
 
 /** Типы выборов, живущих на вкладке «Заклинания». */
-export const SPELL_CHOICE_ROW_TYPES: Array<FeatChoiceType> = [
+const SPELL_CHOICE_TYPES: Array<FeatChoiceType> = [
   'SPELL',
   'CANTRIP',
   'SPELL_LIST',
   'SPELLCASTING_ABILITY',
 ];
+
+/** Круг заговора: им заклинание отличается от заговора и в фильтре, и в типе. */
+const CANTRIP_LEVEL = 0;
+
+/** Ключ выбора класса по умолчанию. */
+const SPELL_LIST_CHOICE_KEY = 'spell-list';
+
+/** Ключ выбора заклинательной характеристики по умолчанию. */
+const SPELLCASTING_ABILITY_CHOICE_KEY = 'spellcasting-ability';
+
+/** Приставка ключа порции заклинаний. */
+const SPELL_PICK_KEY_PREFIX = 'spell';
+
+/** Приставка ключа порции заговоров: так ключ читается без заглядывания в круг. */
+const CANTRIP_PICK_KEY_PREFIX = 'cantrip';
 
 /** Приставка машинного ключа для вида дара. */
 const CHOICE_KEY_BY_GRANT_KIND: Record<FeatGrantRowKind, string> = {
@@ -325,14 +382,6 @@ const CHOICE_KEY_BY_GRANT_KIND: Record<FeatGrantRowKind, string> = {
   ABILITY: 'ability',
   DAMAGE_TYPE: 'damage-type',
   OPTION: 'option',
-};
-
-/** Приставка машинного ключа для выбора заклинаний. */
-const CHOICE_KEY_BY_SPELL_TYPE: Partial<Record<FeatChoiceType, string>> = {
-  SPELL: 'spell',
-  CANTRIP: 'cantrip',
-  SPELL_LIST: 'spell-list',
-  SPELLCASTING_ABILITY: 'spellcasting-ability',
 };
 
 /** Приставка машинного ключа ресурса черты. */
@@ -488,7 +537,9 @@ function nextRowUid(prefix: string): string {
 export function getTakenChoiceKeys(rows: FeatEditorRows): Array<string> {
   return [
     ...rows.grants.map((row) => row.key.trim()),
-    ...rows.spellChoices.map((row) => row.key.trim()),
+    ...rows.spellChoice.picks.map((row) => row.key.trim()),
+    rows.spellChoice.classChoiceKey.trim(),
+    rows.spellChoice.abilityChoiceKey.trim(),
   ].filter((key) => !!key);
 }
 
@@ -528,29 +579,32 @@ export function createGrantRow(
 }
 
 /**
- * Новая строка выбора заклинаний.
+ * Новая порция заклинаний. Круг по умолчанию — заговор: с него начинаются почти
+ * все черты, дающие заклинания.
  *
- * @param type тип выбора.
  * @param takenKeys ключи выборов, занятые в черте.
- * @returns строка выбора заклинаний.
+ * @returns порция заклинаний.
  */
-export function createSpellChoiceRow(
-  type: FeatChoiceType,
-  takenKeys: Array<string>,
-): FeatSpellChoiceRow {
+export function createSpellPickRow(takenKeys: Array<string>): FeatSpellPickRow {
   return {
-    uid: nextRowUid('spell-choice'),
-    type,
-    key: getFreeFeatChoiceKey(
-      CHOICE_KEY_BY_SPELL_TYPE[type] ?? 'spell',
-      takenKeys,
-    ),
-    label: '',
+    uid: nextRowUid('spell-pick'),
+    key: getFreeFeatChoiceKey(CANTRIP_PICK_KEY_PREFIX, takenKeys),
+    mode: 'EXACT',
+    level: CANTRIP_LEVEL,
     count: 1,
     countEqualsProficiencyBonus: false,
-    options: [],
-    spellFilter: createSpellFilter(),
-    rechooseOnLongRest: false,
+    label: '',
+  };
+}
+
+/** Пустой выбор заклинаний: черта заклинаний не даёт. */
+export function createSpellChoiceBlock(): FeatSpellChoiceBlock {
+  return {
+    classes: [],
+    classChoiceKey: SPELL_LIST_CHOICE_KEY,
+    picks: [],
+    abilityOptions: [],
+    abilityChoiceKey: SPELLCASTING_ABILITY_CHOICE_KEY,
   };
 }
 
@@ -615,7 +669,7 @@ export function createCounterRow(takenKeys: Array<string>): FeatCounterRow {
 export function createFeatEditorRows(): FeatEditorRows {
   return {
     grants: [],
-    spellChoices: [],
+    spellChoice: createSpellChoiceBlock(),
     modifiers: [],
     prerequisites: [],
     counters: [],
@@ -711,21 +765,103 @@ function toChoiceGrantRow(choice: FeatChoice): FeatGrantRow | undefined {
   };
 }
 
-/** Строка выбора заклинаний из выбора черты. */
-function toSpellChoiceRow(choice: FeatChoice): FeatSpellChoiceRow {
+/**
+ * Порция заклинаний из выбора черты.
+ *
+ * Круг задан либо точно, либо потолком: фильтр разрешает оба поля разом, но
+ * значит это то же самое, что один точный круг — так его читает и лист
+ * персонажа. Поэтому точный круг сильнее потолка.
+ *
+ * @param choice выбор заклинания или заговора.
+ * @returns порция заклинаний.
+ */
+function toSpellPickRow(choice: FeatChoice): FeatSpellPickRow {
+  const filter = choice.spellFilter;
+
+  // Тип `CANTRIP` задаёт круг сам: у выбора заговора фильтра круга может не
+  // быть вовсе, и без этого он прочитался бы как заклинание любого круга
+  const exactLevel =
+    filter?.level ?? (choice.type === 'CANTRIP' ? CANTRIP_LEVEL : undefined);
+
+  const level = exactLevel ?? filter?.maxLevel;
+
+  let mode: FeatSpellLevelMode = 'ANY';
+
+  if (exactLevel !== undefined) {
+    mode = 'EXACT';
+  } else if (filter?.maxLevel !== undefined) {
+    mode = 'UP_TO';
+  }
+
   return {
-    uid: nextRowUid('spell-choice'),
-    type: choice.type ?? 'SPELL',
+    uid: nextRowUid('spell-pick'),
     key: choice.key,
-    label: choice.label,
+    mode,
+    level,
     count: choice.count,
     countEqualsProficiencyBonus: choice.countEqualsProficiencyBonus,
-    options: choice.options.map((option) => ({ ...option })),
-    spellFilter: choice.spellFilter
-      ? { ...choice.spellFilter }
-      : createSpellFilter(),
-    rechooseOnLongRest: choice.rechooseOnLongRest,
+    label: choice.label,
   };
+}
+
+/**
+ * Выбор заклинаний блоком из выборов черты.
+ *
+ * Классы берутся из выбора класса, а если его нет — из фильтра первой порции:
+ * так читается и черта с одним списком, у которой спрашивать нечего.
+ * Заклинательная характеристика — из выбора, а без него из жёстко заданной в
+ * выдаче заклинаний.
+ *
+ * @param choices выборы черты.
+ * @param spells выдача заклинаний черты.
+ * @returns блок выбора заклинаний.
+ */
+function toSpellChoiceBlock(
+  choices: Array<FeatChoice>,
+  spells: FeatSpellGrant,
+): FeatSpellChoiceBlock {
+  const block = createSpellChoiceBlock();
+
+  const classChoice = choices.find((choice) => choice.type === 'SPELL_LIST');
+
+  const abilityChoice = choices.find(
+    (choice) => choice.type === 'SPELLCASTING_ABILITY',
+  );
+
+  const spellChoices = choices.filter(
+    (choice) => choice.type === 'SPELL' || choice.type === 'CANTRIP',
+  );
+
+  if (classChoice) {
+    block.classChoiceKey = classChoice.key || block.classChoiceKey;
+
+    block.classes = classChoice.options.map((option) => ({
+      url: option.value,
+      ...(option.name ? { name: option.name } : {}),
+    }));
+  } else {
+    const listed = spellChoices.find(
+      (choice) => choice.spellFilter?.classes.length,
+    );
+
+    block.classes = (listed?.spellFilter?.classes ?? []).map((reference) => ({
+      ...reference,
+    }));
+  }
+
+  if (abilityChoice) {
+    block.abilityChoiceKey = abilityChoice.key || block.abilityChoiceKey;
+
+    block.abilityOptions = abilityChoice.options
+      .map((option) => option.value)
+      .filter((value): value is AbilityKey => isAbilityKey(value));
+  } else if (spells.spellcastingAbility) {
+    block.abilityOptions = [spells.spellcastingAbility];
+  }
+
+  block.picks = spellChoices.map(toSpellPickRow);
+
+  return block;
 }
 
 /** Строки даров из безвыборных владений. */
@@ -1001,10 +1137,10 @@ export function toFeatEditorRows(
 
   rows.grants = toFixedGrantRows(mechanics);
 
-  for (const choice of mechanics.choices) {
-    if (choice.type && SPELL_CHOICE_ROW_TYPES.includes(choice.type)) {
-      rows.spellChoices.push(toSpellChoiceRow(choice));
+  rows.spellChoice = toSpellChoiceBlock(mechanics.choices, mechanics.spells);
 
+  for (const choice of mechanics.choices) {
+    if (choice.type && SPELL_CHOICE_TYPES.includes(choice.type)) {
       continue;
     }
 
@@ -1091,6 +1227,128 @@ function toBaseChoice(
     expertiseIfProficient: false,
     rechooseOnLongRest: row.rechooseOnLongRest,
   };
+}
+
+/** Выбор без заполненных полей: с него начинается сборка выборов заклинаний. */
+function createEmptyChoice(key: string, type: FeatChoiceType): FeatChoice {
+  return {
+    key,
+    type,
+    types: undefined,
+    label: '',
+    count: 1,
+    countEqualsProficiencyBonus: false,
+    options: [],
+    spellFilter: undefined,
+    onlyIfNotProficient: false,
+    onlyIfProficient: false,
+    grants: undefined,
+    expertiseIfProficient: false,
+    rechooseOnLongRest: false,
+  };
+}
+
+/** Классы блока набором значений выбора: снимок названия остаётся при ссылке. */
+function toClassOptions(
+  classes: Array<FeatEntityRef>,
+): Array<FeatChoiceOption> {
+  return classes.map((reference) => ({
+    value: reference.url.trim(),
+    ...(reference.name ? { name: reference.name } : {}),
+  }));
+}
+
+/**
+ * Выборы механики из блока выбора заклинаний.
+ *
+ * Выбор класса заводится, только когда классов больше одного: с единственным
+ * списком спрашивать нечего — пул задан фильтром напрямую. Порция заговоров
+ * пишется типом `CANTRIP`: так её читает потребитель, не заглядывая в фильтр.
+ *
+ * Порядок выборов — тот, в каком их задаёт игроку лист: сперва класс, потом
+ * заклинания, потом характеристика.
+ *
+ * @param block блок выбора заклинаний.
+ * @param resolveKey выдача свободного ключа выбора.
+ * @returns выборы черты.
+ */
+function toSpellChoices(
+  block: FeatSpellChoiceBlock,
+  resolveKey: (key: string, preferred: string) => string,
+): Array<FeatChoice> {
+  const classes = block.classes.filter((reference) => !!reference.url.trim());
+
+  const used = new Set<string>();
+
+  /**
+   * Ключ выбора, не совпавший с уже занятым в блоке. Записи бывают битые:
+   * у «Посвящённого в магию» на деве выбор заговоров лежит под ключом
+   * `spellcasting-ability`, и без проверки он схлопнулся бы с выбором
+   * характеристики.
+   */
+  const takeKey = (key: string, preferred: string): string => {
+    const resolved = resolveKey(key, preferred);
+
+    const free = used.has(resolved) ? resolveKey('', preferred) : resolved;
+
+    used.add(free);
+
+    return free;
+  };
+
+  // Класс спрашивается только ради заклинаний: без единой строки выбора он
+  // ничего не сужает, и игроку пришлось бы отвечать впустую
+  const classChoiceKey =
+    classes.length > 1 && block.picks.length
+      ? takeKey(block.classChoiceKey, SPELL_LIST_CHOICE_KEY)
+      : '';
+
+  const abilityChoiceKey =
+    block.abilityOptions.length > 1
+      ? takeKey(block.abilityChoiceKey, SPELLCASTING_ABILITY_CHOICE_KEY)
+      : '';
+
+  const choices: Array<FeatChoice> = [];
+
+  if (classChoiceKey) {
+    choices.push({
+      ...createEmptyChoice(classChoiceKey, 'SPELL_LIST'),
+      options: toClassOptions(classes),
+    });
+  }
+
+  for (const pick of block.picks) {
+    const isCantrip = pick.mode === 'EXACT' && pick.level === CANTRIP_LEVEL;
+
+    const key = takeKey(
+      pick.key,
+      isCantrip ? CANTRIP_PICK_KEY_PREFIX : SPELL_PICK_KEY_PREFIX,
+    );
+
+    choices.push({
+      ...createEmptyChoice(key, isCantrip ? 'CANTRIP' : 'SPELL'),
+      label: pick.label.trim(),
+      count: pick.count,
+      countEqualsProficiencyBonus: pick.countEqualsProficiencyBonus,
+      spellFilter: {
+        level: pick.mode === 'EXACT' ? pick.level : undefined,
+        maxLevel: pick.mode === 'UP_TO' ? pick.level : undefined,
+        classes,
+        classesFromChoiceKey: classChoiceKey,
+      },
+    });
+  }
+
+  // Характеристика спрашивается последней: она относится ко всем заклинаниям
+  // черты сразу, а не к какой-то одной порции
+  if (abilityChoiceKey) {
+    choices.push({
+      ...createEmptyChoice(abilityChoiceKey, 'SPELLCASTING_ABILITY'),
+      options: block.abilityOptions.map((ability) => ({ value: ability })),
+    });
+  }
+
+  return choices;
 }
 
 /**
@@ -1371,7 +1629,16 @@ export function fromFeatEditorRows(
 ): { mechanics: FeatMechanics; prerequisiteDetails: FeatPrerequisiteDetails } {
   const mechanics = createFeatMechanics();
 
-  mechanics.spells = base.spells;
+  // Характеристика одна на все заклинания черты: заданную жёстко (ровно одну в
+  // блоке) держит выдача заклинаний, выбор из нескольких — отдельный выбор
+  mechanics.spells = {
+    ...base.spells,
+    spellcastingAbility:
+      rows.spellChoice.abilityOptions.length === 1
+        ? rows.spellChoice.abilityOptions[0]
+        : undefined,
+  };
+
   mechanics.spellList = base.spellList;
 
   const takenKeys = getTakenChoiceKeys(rows);
@@ -1435,20 +1702,7 @@ export function fromFeatEditorRows(
     }
   }
 
-  for (const row of rows.spellChoices) {
-    const key = resolveKey(
-      row.key,
-      CHOICE_KEY_BY_SPELL_TYPE[row.type] ?? 'spell',
-    );
-
-    const choice = toBaseChoice(row, key, row.type);
-
-    if (row.type === 'SPELL' || row.type === 'CANTRIP') {
-      choice.spellFilter = { ...row.spellFilter };
-    }
-
-    mechanics.choices.push(choice);
-  }
+  mechanics.choices.push(...toSpellChoices(rows.spellChoice, resolveKey));
 
   mechanics.modifiers = toModifiers(rows.modifiers, rows.unknownSenses);
   mechanics.modifiers.damage.resistanceFromChoiceKey = resistanceFromChoiceKey;

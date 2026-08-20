@@ -76,6 +76,7 @@
     'edit-spell': [spellUrl: string];
     'copy-spell': [spellUrl: string];
     'edit-spellcasting': [classUrl: string];
+    'edit-spell-ability': [spellUrl: string];
     'edit-prepared-spells': [kind: PreparedSpellKind];
     'edit-currency': [];
     'edit-carrying-capacity': [];
@@ -197,6 +198,10 @@
 
   function handleSpellcastingEdit(classUrl: string) {
     emit('edit-spellcasting', classUrl);
+  }
+
+  function handleSpellAbilityEdit(spellUrl: string) {
+    emit('edit-spell-ability', spellUrl);
   }
 
   function handlePreparedSpellsEdit(kind: PreparedSpellKind) {
@@ -949,6 +954,7 @@
             @edit-spell="handleSpellEdit"
             @copy-spell="handleSpellCopy"
             @edit-spellcasting="handleSpellcastingEdit"
+            @edit-spell-ability="handleSpellAbilityEdit"
             @edit-prepared-spells="handlePreparedSpellsEdit"
             @remove-spell="handleSpellRemove"
             @copy-innate-spell="handleInnateSpellCopy"

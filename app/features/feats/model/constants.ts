@@ -1,26 +1,27 @@
 import type { SelectOption } from '~/shared/types';
 
-import type { FeatChoiceType } from './mechanics';
 import type {
   FeatDamageDefenseKind,
   FeatGrantRowKind,
   FeatGrantRowMode,
   FeatModifierRowKind,
   FeatPrerequisiteRowKind,
-  FeatSpellChoiceRow,
+  FeatSpellLevelMode,
 } from './rows';
+
+import { range } from 'es-toolkit';
 
 // Перечисление приходит значением: по нему строятся карты подписей и формул
 import { ABILITY_KEYS, AbilityKey } from '~/shared/types';
 
-/**
- * Значение пункта «не выбрано» в селектах формы.
- *
- * Пустую строку туда положить нельзя: у `reka-ui` она зарезервирована под сброс
- * выбора, и пункт с ней роняет всю форму. В данные это значение не уходит —
- * форма читает его как «поле не задано».
- */
-export const FEAT_NO_SELECTION = 'none';
+/** Значение селекта круга «любой круг»: круг фильтром не ограничен. */
+const FEAT_SPELL_ANY_LEVEL_VALUE = 'ANY';
+
+/** Приставка значения селекта «ровно этот круг». */
+const FEAT_SPELL_EXACT_LEVEL_PREFIX = 'EXACT:';
+
+/** Приставка значения селекта «этот круг и ниже». */
+const FEAT_SPELL_UP_TO_LEVEL_PREFIX = 'UP_TO:';
 
 /** Подписи полей вкладки «Основное». */
 export const FEAT_MAIN_TAB_LABELS = {
@@ -234,60 +235,79 @@ export const FEAT_PREREQUISITE_REF_KINDS: Partial<
   BACKGROUND: 'BACKGROUND',
 };
 
-/** Подписи типов выборов, связанных с заклинаниями. */
-const FEAT_SPELL_CHOICE_LABELS = {
-  SPELL: 'Заклинание',
-  CANTRIP: 'Заговор',
-  SPELL_LIST: 'Список заклинаний класса',
-  SPELLCASTING_ABILITY: 'Заклинательная характеристика',
-} as const;
-
-/** Короткая подпись безымянного выбора списка — вместо машинного ключа. */
-const FEAT_SPELL_LIST_SHORT_LABEL = 'Список заклинаний';
+/**
+ * Варианты круга для строки выбора заклинаний.
+ *
+ * Один селект вместо двух полей («круг» и «не выше круга»): в записи это два
+ * поля фильтра, но автору они задают одно — какого круга заклинание берут.
+ * Значение склеено из вида ограничения и круга, потому что селект хранит одну
+ * строку.
+ */
+export const FEAT_SPELL_LEVEL_OPTIONS: Array<SelectOption> = [
+  { value: FEAT_SPELL_ANY_LEVEL_VALUE, label: 'Любой круг' },
+  ...range(0, 10).map((level) => ({
+    value: `${FEAT_SPELL_EXACT_LEVEL_PREFIX}${level}`,
+    label: level ? `${level} круг` : 'Заговор',
+  })),
+  ...range(1, 10).map((level) => ({
+    value: `${FEAT_SPELL_UP_TO_LEVEL_PREFIX}${level}`,
+    label: `Не выше ${level} круга`,
+  })),
+];
 
 /**
- * Подпись типа выбора заклинаний.
+ * Значение селекта круга по строке выбора.
  *
- * @param type тип выбора; у незнакомого подписи нет.
- * @returns подпись для заголовка строки.
+ * @param mode как задан круг.
+ * @param level круг строки; у «любого» его нет.
+ * @returns значение селекта.
  */
-export function getFeatSpellChoiceLabel(type: FeatChoiceType): string {
-  const labels: Partial<Record<FeatChoiceType, string>> =
-    FEAT_SPELL_CHOICE_LABELS;
+export function getFeatSpellLevelValue(
+  mode: FeatSpellLevelMode,
+  level: number | undefined,
+): string {
+  if (mode === 'ANY' || level === undefined) {
+    return FEAT_SPELL_ANY_LEVEL_VALUE;
+  }
 
-  return labels[type] ?? FEAT_SPELL_CHOICE_LABELS.SPELL;
+  return mode === 'UP_TO'
+    ? `${FEAT_SPELL_UP_TO_LEVEL_PREFIX}${level}`
+    : `${FEAT_SPELL_EXACT_LEVEL_PREFIX}${level}`;
 }
 
 /**
- * Типы выборов заклинаний, которые предлагает форма.
+ * Круг строки по значению селекта. Незнакомое значение читается как «любой
+ * круг» — так же читается и пустой фильтр.
  *
- * Заговор — отдельный тип, а не заклинание с кругом «заговор»: по нему лист
- * подставляет нулевой круг, когда фильтр круга не задаёт вовсе, и без типа
- * такой выбор превратился бы в выбор заклинания любого круга.
+ * @param value значение селекта.
+ * @returns вид ограничения и круг.
  */
-export const FEAT_SPELL_CHOICE_TYPE_OPTIONS: Array<
-  SelectOption & { value: FeatChoiceType }
-> = [
-  { value: 'SPELL', label: 'Заклинание' },
-  { value: 'CANTRIP', label: 'Заговор' },
-  { value: 'SPELL_LIST', label: 'Список заклинаний класса' },
-  { value: 'SPELLCASTING_ABILITY', label: 'Заклинательная характеристика' },
-];
+export function parseFeatSpellLevelValue(value: string): {
+  mode: FeatSpellLevelMode;
+  level: number | undefined;
+} {
+  const prefixes = [
+    [FEAT_SPELL_EXACT_LEVEL_PREFIX, 'EXACT'],
+    [FEAT_SPELL_UP_TO_LEVEL_PREFIX, 'UP_TO'],
+  ] as const;
+
+  for (const [prefix, mode] of prefixes) {
+    if (value.startsWith(prefix)) {
+      const level = Number.parseInt(value.slice(prefix.length), 10);
+
+      if (!Number.isNaN(level)) {
+        return { mode, level };
+      }
+    }
+  }
+
+  return { mode: 'ANY', level: undefined };
+}
 
 /** Когда ресурс черты восстанавливается. */
 export const FEAT_COUNTER_RECOVERY_OPTIONS: Array<SelectOption> = [
   { value: 'SHORT_REST', label: 'Короткий отдых' },
   { value: 'LONG_REST', label: 'Продолжительный отдых' },
-];
-
-/** Время накладывания для фильтра заклинаний. */
-export const FEAT_CASTING_TIME_OPTIONS: Array<SelectOption> = [
-  { label: 'Действие', value: 'ACTION' },
-  { label: 'Бонусное действие', value: 'BONUS' },
-  { label: 'Реакция', value: 'REACTION' },
-  { label: 'Ритуал', value: 'RITUAL' },
-  { label: 'Минута', value: 'MINUTE' },
-  { label: 'Час', value: 'HOUR' },
 ];
 
 /** Подписи и пояснения редактора механики черты. */
@@ -481,47 +501,41 @@ export const FEAT_EDITOR_LABELS = {
   spellListRequiresSpellcastingHint:
     'Так написано у всех черт метки дракона: без своего заклинательства '
     + 'расширять нечего. Выключено — список расширяется всегда.',
-  spellcastingAbility: 'Заклинательная характеристика',
-  spellcastingAbilityFromClass: 'От класса',
-  spellcastingAbilityHint:
-    'От неё считаются и модификатор атаки, и Сл спасброска заклинаний черты. '
-    + 'Не указана — лист возьмёт характеристику того класса, чья это магия.',
   alwaysPrepared: 'Готовить не нужно',
   alwaysPreparedHint:
     'По умолчанию выданное чертой заклинание ложится в книгу наравне с '
     + 'остальными и занимает подготовку.',
 
-  spellChoicesTitle: 'Выборы заклинаний',
-  spellChoicesHint: 'Заклинание, которое игрок выбирает сам при взятии черты.',
+  spellChoicesTitle: 'Выбор заклинаний',
+  spellChoicesHint: 'Заклинания, которые игрок выбирает сам при взятии черты.',
   spellChoicesHintDetails:
-    'Так устроен «Посвящённый в магию»: сперва спрашивает список класса — '
-    + 'жреца, друида или волшебника, — и только потом даёт взять из него два '
-    + 'заговора и одно заклинание первого круга. Выбранное ложится в книгу так '
-    + 'же, как выданное чертой без выбора.',
+    'Так устроен «Посвящённый в магию»: из списка одного класса игрок берёт '
+    + 'два заговора и одно заклинание первого круга. Список классов один на все '
+    + 'строки: если классов несколько, лист персонажа сперва спросит класс, а '
+    + 'потом даст выбрать из его списка все строки сразу. Выбранное ложится в '
+    + 'книгу так же, как выданное чертой без выбора.',
   spellChoicesEmpty: 'Игрок заклинания не выбирает.',
-  addSpellChoice: 'Добавить выбор',
-  spellChoiceType: 'Что выбирают',
-  spellFilterTitle: 'Чем ограничен выбор',
-  spellFilterHint:
-    'Заданы и круг, и максимум — это диапазон кругов. Один круг — ровно он.',
-  spellLevel: 'Круг',
-  spellMaxLevel: 'Не выше круга',
-  spellSchools: 'Школы',
-  spellClasses: 'Списки классов',
-  spellClassesFromChoice: 'Класс берётся из выбора',
-  spellClassesFromChoiceHint:
-    'Пул сужается до класса, который игрок выбрал раньше: «Посвящённый в магию» '
-    + 'сперва спрашивает список, потом заговоры.',
-  castingTime: 'Время накладывания',
-  anyCastingTime: 'Любое',
-  spellChoiceAbilities: 'Из каких характеристик',
-  spellChoiceClasses: 'Из каких классов',
+  addSpellChoice: 'Добавить заклинания',
+  removeSpellChoice: 'Убрать строку выбора',
+  spellChoiceClasses: 'Списки классов',
+  spellChoiceClassesHint:
+    'Из чьих списков заклинаний игрок выбирает. Несколько классов — игрок '
+    + 'выберет один из них, и все строки ниже соберутся из его списка: по '
+    + 'правилам список один, а не объединение перечисленных. Пусто — выбор из '
+    + 'всех заклинаний справочника.',
+  spellChoiceLevel: 'Круг',
+  spellChoiceCount: 'Сколько',
+  spellChoiceLabel: 'Подпись для игрока',
+  spellChoiceLabelPlaceholder: 'Например: Выберите два заговора',
 
-  /** Подпись «выбор ни к чему не привязан» */
-  choiceKeyNone: 'Не привязано',
-
-  /** Пометка ссылки на выбор, которого в черте больше нет */
-  missingChoiceHint: 'выбора с такой подписью нет',
+  spellcastingAbilityTitle: 'Заклинательная характеристика',
+  spellcastingAbility: 'Из каких характеристик',
+  spellcastingAbilityHint:
+    'От неё считаются и модификатор атаки, и Сл спасброска заклинаний черты — '
+    + 'и выданных, и выбранных игроком. Пусто — лист возьмёт характеристику '
+    + 'того класса, чья это магия. Одна — она и будет; несколько — лист даст '
+    + 'игроку выбрать одну из них.',
+  spellcastingAbilityPlaceholder: 'От класса',
 } as const;
 
 /**
@@ -688,54 +702,3 @@ export const FEAT_REF_ROWS_LABELS = {
   empty: 'Записи не выбраны.',
   add: 'Добавить',
 } as const;
-
-/**
- * Варианты привязки к выбору списка заклинаний.
- *
- * Машинный ключ автору не показывается, поэтому безымянный выбор подписывается
- * своим типом и номером. Пустой привязке отдельного варианта нет: значением
- * списка она была бы пустой строкой, а с ней список не открывается вовсе —
- * вместо неё стоит {@link FEAT_NO_SELECTION}.
- *
- * @param rows строки выборов заклинаний.
- * @returns варианты списка «ключ — подпись».
- */
-export function getSpellListChoiceOptions(
-  rows: Array<FeatSpellChoiceRow>,
-): Array<SelectOption> {
-  return rows
-    .filter((row) => row.type === 'SPELL_LIST' && !!row.key.trim())
-    .map((row, index) => ({
-      value: row.key.trim(),
-      label: row.label.trim() || `${FEAT_SPELL_LIST_SHORT_LABEL} ${index + 1}`,
-    }));
-}
-
-/**
- * Варианты привязки вместе с уже записанным ключом: он может ссылаться на
- * выбор, которого в черте больше нет. Молча подменять такую ссылку пустотой
- * нельзя — она уйдёт на сервер потерянной, поэтому значение остаётся в списке с
- * пометкой.
- *
- * @param options варианты привязки.
- * @param key записанный ключ выбора; пустой — подставлять нечего.
- * @returns варианты, среди которых записанный ключ есть наверняка.
- */
-export function withSpellListChoiceOption(
-  options: Array<SelectOption>,
-  key: string,
-): Array<SelectOption> {
-  const trimmed = key.trim();
-
-  if (!trimmed || options.some((option) => option.value === trimmed)) {
-    return options;
-  }
-
-  return [
-    ...options,
-    {
-      value: trimmed,
-      label: `${trimmed} — ${FEAT_EDITOR_LABELS.missingChoiceHint}`,
-    },
-  ];
-}

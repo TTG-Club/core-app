@@ -1,28 +1,20 @@
 <script setup lang="ts">
-  import type { AbilityKey } from '~/shared/types';
-
   import type { FeatEntityRef, FeatSpellGrant } from '../../model';
 
-  import { SelectAbilities } from '~ui/select';
   import { InfoTooltip } from '~ui/tooltip';
 
   import { FEAT_EDITOR_LABELS } from '../../model';
   import FeatEntityRefRows from './FeatEntityRefRows.vue';
 
   /**
-   * Заклинания, которые черта даёт знать без выбора, и общие для них настройки:
-   * от какой характеристики они считаются и нужно ли их готовить.
+   * Заклинания, которые черта даёт знать без выбора, и настройка подготовки.
    *
-   * Настройки относятся ко всем выданным заклинаниям сразу, поэтому живут рядом
-   * со списком, а не у отдельной строки.
+   * Заклинательная характеристика здесь не задаётся: она одна на все заклинания
+   * черты — и выданные, и выбранные игроком, — поэтому живёт своим блоком
+   * (`FeatSpellcastingAbility`), а не рядом с одним из списков.
    */
   const model = defineModel<FeatSpellGrant>({ required: true });
 
-  /**
-   * Заклинательная характеристика приходит из селекта одиночным значением, но
-   * тот же селект умеет и множественный выбор, поэтому список сводится к первому
-   * значению — второму в блоке места нет.
-   */
   /**
    * Уровень строки. Слот отдаёт ссылку из общего списка, поэтому уровень
    * читается и пишется по ней, а не по номеру строки.
@@ -50,18 +42,6 @@
       ),
     };
   }
-
-  const spellcastingAbility = computed<
-    AbilityKey | Array<AbilityKey> | undefined
-  >({
-    get: () => model.value.spellcastingAbility,
-    set: (value) => {
-      model.value = {
-        ...model.value,
-        spellcastingAbility: Array.isArray(value) ? value[0] : value,
-      };
-    },
-  });
 </script>
 
 <template>
@@ -102,39 +82,20 @@
       </template>
     </FeatEntityRefRows>
 
-    <!-- Без заклинаний настраивать нечего: характеристике и подготовке не к
-      чему применяться -->
+    <!-- Без заклинаний подготовке не к чему применяться -->
     <div
       v-if="model.spells.length"
-      class="grid grid-cols-1 items-end gap-3 md:grid-cols-24"
+      class="flex items-center"
     >
-      <UFormField class="md:col-span-12">
-        <template #label>
-          <InfoTooltip
-            :text="FEAT_EDITOR_LABELS.spellcastingAbilityHint"
-            icon="tabler:info-circle-filled"
-          >
-            <span>{{ FEAT_EDITOR_LABELS.spellcastingAbility }}</span>
-          </InfoTooltip>
-        </template>
-
-        <SelectAbilities
-          v-model="spellcastingAbility"
-          :placeholder="FEAT_EDITOR_LABELS.spellcastingAbilityFromClass"
+      <InfoTooltip
+        :text="FEAT_EDITOR_LABELS.alwaysPreparedHint"
+        icon="tabler:info-circle-filled"
+      >
+        <UCheckbox
+          v-model="model.alwaysPrepared"
+          :label="FEAT_EDITOR_LABELS.alwaysPrepared"
         />
-      </UFormField>
-
-      <div class="flex items-center md:col-span-12 md:self-end md:pb-2">
-        <InfoTooltip
-          :text="FEAT_EDITOR_LABELS.alwaysPreparedHint"
-          icon="tabler:info-circle-filled"
-        >
-          <UCheckbox
-            v-model="model.alwaysPrepared"
-            :label="FEAT_EDITOR_LABELS.alwaysPrepared"
-          />
-        </InfoTooltip>
-      </div>
+      </InfoTooltip>
     </div>
   </div>
 </template>
