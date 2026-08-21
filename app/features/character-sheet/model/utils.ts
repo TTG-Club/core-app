@@ -7245,10 +7245,21 @@ export function buildFeatFeature(
   // на листе само по себе, и искать по нему черту, чтобы посчитать его атаку,
   // лист не должен.
   //
-  // Выбранные игроком заклинания лежат там же, где выдаваемые чертой: и те, и
-  // другие персонаж знает вне книги заклинаний.
-  const featureSpells = [...(summary.spells ?? []), ...spells].map((spell) =>
-    spellcastingAbility ? { ...spell, spellcastingAbility } : spell,
+  // Выбранные игроком заклинания и заклинания списка лежат там же, где
+  // выдаваемые чертой: все они приходят от одной черты, ею же названной
+  // характеристикой и считаются.
+  const featureSpells = uniqBy(
+    [
+      ...(summary.spells ?? []),
+      ...spells,
+      // Заклинания списка идут последними: то же заклинание, выданное чертой,
+      // остаётся выданным — оно готово всегда, а из списка его пришлось бы
+      // готовить.
+      ...(summary.spellListSpells ?? []),
+    ].map((spell) =>
+      spellcastingAbility ? { ...spell, spellcastingAbility } : spell,
+    ),
+    (spell) => spell.url,
   );
 
   const baseId = getCharacterFeatureId('feat', summary.url);

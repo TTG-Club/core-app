@@ -169,6 +169,22 @@ const featGrantedSpellSchema = z.union([
   catalogSpellSchema.transform((spell) => ({ spell, requiredLevel: null })),
 ]);
 
+/**
+ * Список заклинаний, который черта добавляет персонажу, — строка таблицы
+ * «Заклинания метки». Списков несколько, и каждый открывается на своём уровне:
+ * у метки дракона первая пачка приходит сразу, следующая — на втором уровне.
+ */
+const featSpellListGroupSchema = z.object({
+  requiredLevel: z.coerce.number().min(1).max(20).nullish().catch(null),
+
+  // Формула количества: заполнена — из списка берут не всё, и лист обязан
+  // спросить игрока. Такого выбора он пока не умеет, поэтому такие списки
+  // пропускает (см. `toFeatSpellListSpells`).
+  count: z.string().nullish().catch(null),
+
+  spells: z.array(catalogSpellSchema).catch([]),
+});
+
 /** Схема детального ответа вида или подвида (нужные листу поля). */
 const speciesDetailSchema = z.object({
   url: z.string(),
@@ -514,6 +530,9 @@ const featDetailSchema = z.object({
     .nullable()
     .catch(null),
   grantedSpells: z.array(featGrantedSpellSchema).nullable().catch(null),
+  // Таблица «Заклинания метки» с данными справочника: в механике списки лежат
+  // одними ссылками, а листу нужен круг — без него заклинание некуда положить.
+  spellListGroups: z.array(featSpellListGroupSchema).nullable().catch(null),
 });
 
 /** Ответ справочника с владениями черты, как его разбирает схема детали. */
@@ -952,6 +971,37 @@ function withSpellClassChoice(
 }
 
 /**
+ * Заклинания списков черты записями листа.
+ *
+ * Это не выдача: заклинание списка персонаж знает наравне с классовыми, но
+ * готовит его сам — поэтому запись приходит неподготовленной, каким бы ни был
+ * `alwaysPrepared` у выданных заклинаний той же черты.
+ *
+ * Уровень доступа списка едет на каждой записи: отбор идёт при показе
+ * (см. `getAvailableInnateSpells`), и книга пополняется сама, когда персонаж
+ * дорастёт до следующего списка.
+ *
+ * @param groups списки заклинаний из детали черты.
+ * @returns заклинания открытых списков; пусто — черта списков не даёт.
+ */
+function toFeatSpellListSpells(
+  groups: Array<z.infer<typeof featSpellListGroupSchema>>,
+): CharacterSpell[] {
+  // Список с количеством игрок набирает сам («два заклинания из пяти»), а такого
+  // выбора лист пока не спрашивает: выдать вместо него весь список значило бы
+  // дать персонажу лишнее.
+  const wholeLists = groups.filter((group) => !group.count);
+
+  return wholeLists.flatMap((group) =>
+    group.spells.map((spell) => ({
+      ...toCharacterSpell(spell),
+      prepared: false,
+      requiredLevel: group.requiredLevel ?? undefined,
+    })),
+  );
+}
+
+/**
  * Валидация детального ответа `GET /api/v2/feats/{url}`.
  *
  * @param input сырой детальный ответ черты.
@@ -981,6 +1031,10 @@ export function parseFeatDetail(input: unknown): FeatSummary | null {
 
   const choices = result.data.mechanics?.choices;
 
+  const spellListSpells = toFeatSpellListSpells(
+    result.data.spellListGroups ?? [],
+  );
+
   const abilityBonuses = toFeatAbilityBonuses(
     result.data.mechanics?.abilityBonuses ?? [],
   );
@@ -1001,6 +1055,7 @@ export function parseFeatDetail(input: unknown): FeatSummary | null {
           requiredLevel: entry.requiredLevel ?? undefined,
         }))
       : null,
+    spellListSpells: spellListSpells.length ? spellListSpells : null,
     spellcastingAbility,
     // Повышение характеристик спрашивается первым: остальные выборы черты идут
     // после того, как игрок решил, что она поднимает.
