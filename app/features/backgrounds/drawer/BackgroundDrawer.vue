@@ -2,6 +2,7 @@
   import type { BackgroundDetailResponse } from '~backgrounds/model';
 
   import { BackgroundBody } from '~backgrounds/body';
+  import { getBackgroundMarkdown } from '~backgrounds/model';
   import { UiDrawer } from '~ui/drawer';
 
   const { url } = defineProps<{
@@ -25,6 +26,8 @@
   const isError = computed(() => status.value === 'error');
   const urlForCopy = computed(() => `${getOrigin()}/backgrounds/${url}`);
   const editUrl = computed(() => `/workshop/backgrounds/${url}`);
+
+  const markdown = useEntityMarkdown(detail, getBackgroundMarkdown);
 </script>
 
 <template>
@@ -34,6 +37,7 @@
     :date-time="detail?.updatedAt"
     :url="urlForCopy"
     :edit-url="editUrl"
+    :markdown
     :is-loading
     :is-error
     copy-title

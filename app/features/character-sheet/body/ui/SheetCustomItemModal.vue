@@ -19,6 +19,7 @@
     CUSTOM_ARMOR_TYPE_OPTIONS,
     CUSTOM_INVENTORY_KIND_OPTIONS,
     CUSTOM_ITEM_FIELD_LABELS,
+    CUSTOM_ITEM_HEAVY_HINT,
     CUSTOM_ITEM_MAGIC_LABELS,
     CUSTOM_ITEM_MAIN_TAB,
     CUSTOM_ITEM_PREVIEW_NAME,
@@ -107,6 +108,8 @@
   const draftRanged = ref(initialDraft.ranged);
 
   const draftFinesse = ref(initialDraft.finesse);
+
+  const draftHeavy = ref(initialDraft.heavy);
 
   const draftDamageDiceCount = ref(initialDraft.damageDiceCount);
 
@@ -293,6 +296,7 @@
       weaponCategory: draftWeaponCategory.value,
       ranged: draftRanged.value,
       finesse: draftFinesse.value,
+      heavy: draftHeavy.value,
       damageDiceCount: draftDamageDiceCount.value,
       damageDiceFaces: draftDamageDiceFaces.value,
       damageBonus: draftDamageBonus.value,
@@ -531,6 +535,14 @@
                     :label="CUSTOM_WEAPON_PROPERTY_LABELS.finesse"
                   />
 
+                  <!-- «Тяжёлое» бонус атаки не меняет: оно добавляет помеху,
+                    пока характеристики не хватает, — поэтому стоит рядом с
+                    остальными свойствами, а не в полях урона -->
+                  <UCheckbox
+                    v-model="draftHeavy"
+                    :label="CUSTOM_WEAPON_PROPERTY_LABELS.heavy"
+                  />
+
                   <!-- Хват двумя руками даёт именно «Универсальное»: у
                     остального оружия вторая рука урон не меняет -->
                   <UCheckbox
@@ -541,6 +553,13 @@
 
                 <span class="text-xs text-dimmed">
                   {{ WEAPON_ATTACK_FINESSE_HINT }}
+                </span>
+
+                <span
+                  v-if="draftHeavy"
+                  class="text-xs text-dimmed"
+                >
+                  {{ CUSTOM_ITEM_HEAVY_HINT }}
                 </span>
               </div>
 
@@ -783,8 +802,8 @@
 
                 <UInputNumber
                   v-model="bonus.value"
-                  :min="getInventoryBonusMin(bonus.kind)"
-                  :max="getInventoryBonusMax(bonus.kind)"
+                  :min="getInventoryBonusMin(bonus)"
+                  :max="getInventoryBonusMax(bonus)"
                   :disabled="!draftMagic"
                   class="w-32 shrink-0"
                 />

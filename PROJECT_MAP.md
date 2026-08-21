@@ -411,6 +411,30 @@ modals), so its capabilities are listed here rather than squeezed into the table
   armour's own value so the «best armour wins» comparison stays honest, and an
   item that requires attunement contributes nothing until it is attuned. Sheets
   saved before the fields existed read them as `0`.
+- Everything else a magic item does to the sheet comes from the workshop's
+  «Активные эффекты (VTTG)» block (`mechanics.activeEffects`). `model/effects.ts`
+  translates each numeric change into an `InventoryItemBonus` when the item is
+  added, so the sheet keeps working offline off its own snapshot: `ability.*`,
+  `save.*`, `skill.*` (the VTTG camelCase id is mapped through
+  `SKILL_NAME_BY_API_KEY`), `movement.*`, `armorClass`, `initiative`,
+  `spellSaveDC` and `attack.spell` reach their targets; changes with a condition,
+  formula values (`@…`), the `multiply` / `custom` modes, flags, auras, damage
+  parts and keys the sheet has no target for are dropped, as are disabled effects
+  and effects aimed at someone else. The `transfer` flag is not read — the
+  sheet's own gate (equipped, and attuned where the item asks for it) plays that
+  role. A bonus therefore carries a `mode` (`add` / `override` / `upgrade` /
+  `downgrade`) and a `priority`, and every total is folded rather than summed
+  (`getInventoryBonusTotal(character, targets, base)`): the sheet computes the
+  base itself (`getBaseAbilityScore`, `getBaseSavingThrowValue`,
+  `getBaseSkillValue`) and equipment takes it from there, so a headband of
+  intellect raises Intelligence to 19 while a written 20 stays untouched. The
+  breakdown rows come out of the same fold, so each item is credited with what it
+  actually changed. AC is the exception in shape only: `add` rows keep flowing
+  through the «best armour wins» comparison, and the value-setting modes are
+  applied to the finished number (`getArmorClassWithItemLimits`). Bonuses saved
+  before the modes existed read as plain `add`, and an item already sitting on a
+  sheet keeps its old snapshot — effects added in the workshop later need the
+  item re-added.
 - The «Добавить заклинание» catalog opens preset to what the character can
   actually learn: the class chip is picked by the class slug (the same id the
   `className` filter group uses) and the level chips cover every circle the
@@ -430,6 +454,45 @@ modals), so its capabilities are listed here rather than squeezed into the table
   where a missing value reads as prepared (`isInnateSpellPrepared`), which is
   what sheets saved before the flag get. Copying such a spell into the book
   drops the mark: there it would count against the limit.
+- Feats are added from the «Особенности» tab (`SheetFeatAddModal`, catalog
+  list with profile sources respected) or handed out by the background and
+  level-up wizards, and what a feat does to the sheet comes from its workshop
+  `mechanics` — parsed once by `parseFeatDetail` and stored as a snapshot on
+  the feature record, so a feat keeps working offline and stops changing when
+  the catalog entry is edited. Applied at once: hit points, AC, speeds, senses
+  (they raise the sheet's vision through `getEffectiveVision`, never lower
+  it), a flat and a proficiency-bonus initiative term (each becomes its own
+  read-only row in the initiative breakdown, labelled with the feat), granted
+  proficiencies — weapon and armour categories become «вся группа» records,
+  skills, tools and languages are translated through `SKILL_NAME_BY_API_KEY` /
+  `LANGUAGE_NAME_BY_API_KEY` — and ability increases. Everything a feat hands
+  out goes through the grant ledger (`proficiencyGrants`), so removing the
+  feat takes back exactly what it gave; ability increases are written into
+  `abilities` as a difference the same way hit points are, with the rules cap
+  (`upto`) applied once at pick time so removal never drops a score below
+  where it started. Resistances, immunities, vulnerabilities, condition
+  immunities, a new creature type and telepathy have no sheet field of their
+  own: they are collected on the fly by `getFeatDefences` into the read-only
+  `SheetDefencesPanel`, which appears under the proficiencies panel only when
+  a feat granted something. A defence whose damage type the player picks is
+  not in the snapshot's sets — the snapshot only links the choice
+  (`damage.defenseChoices`, legacy `resistanceFromChoiceKey`), and
+  `getFeatDefences` reads the answer off `choiceAnswers`.
+- A feat that asks the player something shows a second step in the same modal
+  (`getVisibleFeatChoices` decides what is asked): a skill for proficiency or
+  expertise (the «Наблюдательный» case turns a skill the character already has
+  into expertise), a tool, a language, a spellcasting ability, a spell or
+  cantrip (the pool is a catalog search, `fetchChoiceSpells`), the spell list
+  a feat draws from (the answer narrows the pool through
+  `classesFromChoiceKey`, and a background that names the class itself still
+  wins), the damage type a defence applies to («Закалённая кожа» resists
+  bludgeoning OR slashing; an empty pool in the mechanics means any type), and
+  which abilities an increase raises — a feat offering «или» variants asks
+  which variant first. Answers are kept on the feature record
+  (`choiceAnswers`) so a later level-up can reason about them; the ones the
+  sheet applies immediately land in the proficiency snapshot, the granted
+  spells or the ability increases. Choice kinds the sheet cannot apply are not
+  asked at all.
 - The «Личность» tab holds the person rather than the build: seven appearance
   tiles (alignment from the `alignments` dictionary plus age, height, weight,
   eyes, hair and skin as free text — clicking a tile opens the form with the
@@ -507,6 +570,23 @@ modals), so its capabilities are listed here rather than squeezed into the table
   settings show the penalty as its own line, so the numbers add up. The level
   lives in `health.exhaustion`, so it is saved by the usual autosave and sheets
   stored before it read as `0`; the PDF prints it as a combat tile.
+- Ability settings (`SheetAbilityModal`, opened by the gear next to the tile
+  title — the same reveal-on-hover control every other panel has — or by a long
+  press on the tile itself): the written score plus any number of
+  `CharacterCustomBonus` rows on top (`SheetCustomBonusRows` with a narrowed
+  source list, `ABILITY_BONUS_SOURCE_OPTIONS` — a flat number, the proficiency
+  bonus or a level; an ability modifier is no summand of a score and a pair of
+  such bonuses would send the maths round in circles). The bonus raises the score itself, so
+  it flows through `getEffectiveAbilities` / `getAbilityModifier` into every
+  derived number — modifier, saving throws, skills and their passive values, AC,
+  attacks, spellcasting, carrying capacity and the PDF — exactly like an item
+  bonus, hit points excluded for the same reason. The proficiency-bonus kind is
+  counted on a character stripped of these bonuses (`toBaseAbilityCharacter`),
+  since the proficiency bonus itself may take an ability modifier and the two
+  would otherwise call each other forever. The tile shows the total, underlines
+  nothing but explains itself in the tooltip (`getAbilityScoreHint` — the written
+  score, every item by name, every bonus by its label), while ± and the score
+  field keep editing the written value. Sheets saved before them read empty lists.
 - Skill settings (`SheetSkillsSettingsModal`, opened by the gear next to the
   «Навыки» panel title — revealed on hover and always visible below `lg`, like
   every other edit control of the sheet): every skill gets its ability picked
@@ -571,9 +651,14 @@ modals), so its capabilities are listed here rather than squeezed into the table
   and spellcasting (`getCharacterProficiencyBonus`) and the initiative total into
   the tile, its roll and the PDF (`getInitiativeBonus`). A row is one
   `CharacterCustomBonus` — the record skills use as well: an optional label plus
-  a source that is either a flat number or an ability, whose modifier is then
-  taken automatically and follows the ability afterwards
-  (`getCustomBonusesValue`). Sheets saved with the earlier single number migrate
+  a source. That source is a flat number, an ability (its modifier is taken
+  automatically and follows the ability afterwards), the proficiency bonus, the
+  character level or the level of one class — everything but the flat number
+  grows with the character, and the class levels are collected from the sheet
+  itself (`getCustomBonusSourceOptions`), so a class dropped from the sheet
+  leaves its bonus counting zero (`getCustomBonusesValue`). The proficiency
+  bonus is no summand of itself (`PROFICIENCY_BONUS_SOURCE_OPTIONS`), or the
+  count would never end. Sheets saved with the earlier single number migrate
   it into one number row; sheets saved before the bonuses existed read them as an
   empty list. Drafts are cleaned on save (`toStoredSettings`): a cleared input
   reads as `NaN`, and the proficiency bonus would spread it across the sheet.
@@ -605,7 +690,7 @@ modals), so its capabilities are listed here rather than squeezed into the table
 | `home`     | Landing-page building blocks composed on `pages/index.vue`                                                                                 | `news`, `articles` (separate index block from `news`), `sections`, `banners` (VTTG promo card above the tools block), `tools` (compact tools card, role-gated items), `community`, `counters`, `greetings`, `recent-changes`, `background`, `social-links`, `link-to-5e14` |
 | `workshop` | Content-creation admin (`/workshop/*`, ADMIN or MODERATOR): reusable form engine + section entry cards + revision history                  | `composable` (`useWorkshopForm`), `section`, `revision`                                                                                                                                                                                                                    |
 | `roadmap`  | Project roadmap (`/roadmap`): feature cards with community ratings + admin editor                                                          | `feature`, `detail`, `editor`, `preview`, `types`                                                                                                                                                                                                                          |
-| `comments` | Threaded discussions on wiki & article pages via external **comments-service**; public read, auth to post, soft-delete tombstones, reports | `section` (page block + feed), `admin` (moderation rows), `composables`, `model`                                                                                                                                                                                           |
+| `comments` | Threaded discussions on wiki & article pages via external **comments-service**; public read, auth to post, soft-delete tombstones, reports | `section` (page block + feed), `admin` (moderation rows), `my` (own comments + replies to them in profile), `recent` (site-wide feed on `/comments`), `composables`, `model`                                                                                               |
 
 ### 🛡️ Admin & moderation
 
@@ -613,14 +698,14 @@ modals), so its capabilities are listed here rather than squeezed into the table
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `admin`      | Admin panel (`/admin`, ADMIN-only): dashboard tiles, top nav, live presence, character-sheet counts, personas, subscriptions & promo codes, bulk code mailing (`/admin/mailing`), users. Pages also cover article CRUD (`articles/admin`) and tokenator frame upload/ordering | `character-sheets`, `dashboard`, `mailing`, `navigation`, `online`, `personas`, `subscriptions`, `users` |
 | `moderation` | Moderator panel (`/moderation`, ADMIN or MODERATOR): dashboard routing to bug triage & comment moderation                                                                                                                                                                     | `model` (routes + dashboard labels)                                                                      |
-| `bug-report` | Bug reporting (screenshot + annotate + text-selection → submit) + admin triage/rating                                                                                                                                                                                         | `modal`, `selection`, `sidebar-button`, `admin`, `composables`, `model`                                  |
+| `bug-report` | Bug reporting (screenshot + annotate + text-selection → submit) + admin triage/rating + author's own reports in profile                                                                                                                                                       | `modal`, `selection`, `sidebar-button`, `admin`, `my`, `composables`, `model`                            |
 
 ### 👤 User & account
 
-| Domain    | Purpose                                                                                                                                                            | Sub-features                                                                            |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| `profile` | User cabinet (`/user/profile`, USER role; bare `/user` redirects there): tabbed account wired to subscription/rewards, display name instead of login in `settings` | `sidebar`, `general`, `activation`, `security`, `settings`, `statistics`, `connections` |
-| `user`    | Auth entry points in the app shell                                                                                                                                 | `auth-modal` (login/register), `helmet` (profile-helmet menu)                           |
+| Domain    | Purpose                                                                                                                                                            | Sub-features                                                  |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| `profile` | User cabinet (`/user/profile`, USER role; bare `/user` redirects there): tabbed account wired to subscription/rewards, display name instead of login in `settings` | `sidebar`, `general`, `activation`, `security`, `settings`    |
+| `user`    | Auth entry points in the app shell                                                                                                                                 | `auth-modal` (login/register), `helmet` (profile-helmet menu) |
 
 > **Display name.** The name is owned by **core-api**, not by the JWT: the server
 > reads it via `server/utils/displayName.ts` and pushes it to comments through
@@ -677,7 +762,7 @@ imported via the auto-generated `~<domain>` alias (see
 | `animated-number` | Count-up animated number                                                               |
 | `card`            | Workshop entity card                                                                   |
 | `collapse`        | Collapsible / accordion primitive                                                      |
-| `copy-button`     | Copy-to-clipboard button                                                               |
+| `copy-button`     | Copy-to-clipboard buttons: share link + copy entity as Markdown                        |
 | `date-picker`     | Date/time picker input                                                                 |
 | `detail-pane`     | Wide-mode entity detail panel                                                          |
 | `drawer`          | Overlay drawer (+ header/body/title/actions, DrawerCollection)                         |
@@ -689,7 +774,7 @@ imported via the auto-generated `~<domain>` alias (see
 | `input`           | URL input field                                                                        |
 | `kbd-shortcut`    | Keyboard shortcut hint display                                                         |
 | `link`            | Card & small entity links                                                              |
-| `markup`          | Custom `{@...}` markup parser/renderer                                                 |
+| `markup`          | Custom `{@...}` markup parser/renderer + Homebrewery Markdown converter                |
 | `markup-editor`   | Tiptap markup WYSIWYG editor (+ insert panel/toolbar)                                  |
 | `page`            | Page grid / actions / result / legend scaffolding                                      |
 | `placeholder`     | Dashed empty-state placeholder                                                         |
@@ -713,10 +798,11 @@ imported via the auto-generated `~<domain>` alias (see
   plus `useUser` / `useUserRoles`, `useTheme`, `useDrawer`, `useAnchorScroll`,
   `useBreakpoints`, `useCanvasExport`, `useCommentsNameSync` (fire-and-forget
   display-name sync after renaming or posting), `useCopyAndShare`, `useDayjs`,
+  `useEntityMarkdown` (lazy Markdown getter for the section copy buttons),
   `useImageUpload` (validate → `/s3/upload` → delete/copy, used by
   `shared/ui/upload` and the character-sheet avatar), `useImageCrop` (square
   crop geometry + canvas export for `shared/ui/image-crop`),
-  `useResizableHeight`, `useSidebarPopover` (20 in total).
+  `useResizableHeight`, `useSidebarPopover` (21 in total).
 - **Plugins** (`app/plugins/`) — `anchorScroll.client`, `dayjs`,
   `online-heartbeat.client` (30 s presence ping), `scrollBehavior`, `scrollbarWidth`.
 - **Middleware** (`app/middleware/`) — `auth.global` (role guard vs
@@ -741,7 +827,7 @@ uploads and presence.
 | `api/auth/*`                            | Sign-in/up, logout, me, email confirm, password reset/change, roles, admin users — proxied to **auth-service**                                                                                                                                                                                                                                                                    |
 | `api/admin/*`                           | Admin bug list/status, subscription grant/revoke/codes, comment hide/restore by author — ADMIN-gated proxies to bug-report, subscriber & comments services (the last via `X-Service-Token` internal API, not the user JWT)                                                                                                                                                        |
 | `api/admin/mailing/*`                   | Bulk promo-code mailing (ADMIN-only): issues one code per address through the subscriber admin API and sends a personal letter over SMTP (`utils/mailer`, `utils/mailingTemplate`, SMTP env shared with auth-service: `SPRING_MAIL_*` + `APP_MAIL_FROM`); `test` sends a sample letter without issuing a code                                                                     |
-| `api/bug-report*`                       | Create report (streams multipart), public stats, my count-by-status → external **bug-report** service                                                                                                                                                                                                                                                                             |
+| `api/bug-report*`                       | Create report (streams multipart), public stats, my count-by-status, my reports list + updates summary (both strip `statusUpdatedBy`/`userLogin`/`sessionId` via a Zod allow-list) → external **bug-report** service                                                                                                                                                              |
 | `api/user/comments/sync-name`           | Best-effort display-name sync: reads the name from core-api, then renames the author's comments through the comments internal API, scoped by `SOURCE_PLATFORM`                                                                                                                                                                                                                    |
 | `api/online`, `routes/online/heartbeat` | Presence heartbeat + stats via **online-app**                                                                                                                                                                                                                                                                                                                                     |
 | `api/vttg/builds`, `domain/vttg`        | All VTTG builds: reads every manifest of the update channel (`runtimeConfig.vttg.updateBaseUrl`) — electron-updater `latest*.yml` for desktop, `latest-node-linux-*.json` / `latest-docker.json` for server — and returns version / size / download links per platform, cached by Nitro. A missing manifest (platform not released yet) yields an empty build instead of an error |

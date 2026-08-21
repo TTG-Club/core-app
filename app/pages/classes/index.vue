@@ -3,6 +3,7 @@
 
   import { ClassBody } from '~classes/body';
   import { ClassLink } from '~classes/link';
+  import { getClassMarkdown } from '~classes/model';
   import { FilterControls, useFilter } from '~infrastructure/filter';
   import { UiDetailPane } from '~ui/detail-pane';
   import { PageGrid, PageResult } from '~ui/page';
@@ -60,6 +61,8 @@
     items: classes,
     getParentUrl: (detail) => detail.parent?.url,
   });
+
+  const markdown = useEntityMarkdown(detailClass, getClassMarkdown);
 </script>
 
 <template>
@@ -116,6 +119,7 @@
         :date-time="detailClass?.updatedAt"
         :url="detailUrlForCopy"
         :edit-url="detailEditUrl"
+        :markdown
         :is-loading="isDetailLoading"
         :is-error="isDetailError"
         :back-to="

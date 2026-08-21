@@ -37,6 +37,18 @@ export type ArticlePublishChannel =
 export type ArticleDiscordMention = 'NONE' | 'EVERYONE' | 'SERVER';
 
 /**
+ * Вид поста в Telegram-канале:
+ * - `INSTANT_VIEW` — одно сообщение с карточкой: обложка, заголовок и анонс, а полный
+ *   текст открывается в Telegram по кнопке на карточке (длина поста не важна);
+ * - `FULL_TEXT` — как было раньше: полный текст прямо в посте (при необходимости
+ *   несколькими сообщениями), обложка над текстом или подписью к фото.
+ *
+ * Работает только вместе с `publishToTelegram`. `INSTANT_VIEW` без настроенного на бэке
+ * шаблона Instant View автоматически публикуется как `FULL_TEXT`.
+ */
+export type ArticleTelegramFormat = 'INSTANT_VIEW' | 'FULL_TEXT';
+
+/**
  * Тело запроса на создание/редактирование/предпросмотр записи, а также ответ
  * `GET /articles/{url}/raw` (форма для редактирования). Поля `preview` и
  * `content` — строки хранимой разметки (модель `MarkupEditor`).
@@ -49,6 +61,7 @@ export type ArticleDiscordMention = 'NONE' | 'EVERYONE' | 'SERVER';
  *   не задана = «сейчас»;
  * - `accessibleByLink` — при `draft=false, active=false` (неактивна) открыть по прямой ссылке;
  * - `publishToTelegram` — при сохранении продублировать новость в Telegram-канал;
+ * - `telegramFormat` — вид поста в Telegram (учитывается при `publishToTelegram`);
  * - `publishToDiscord` — при сохранении продублировать новость в Discord через вебхук;
  * - `discordMention` — пинг в Discord-канале при публикации (учитывается при `publishToDiscord`);
  * - `publishToVk` — при сохранении продублировать новость в сообщество ВКонтакте.
@@ -60,6 +73,7 @@ export interface ArticleRequest {
   active: boolean;
   accessibleByLink: boolean;
   publishToTelegram: boolean;
+  telegramFormat: ArticleTelegramFormat;
   publishToDiscord: boolean;
   discordMention: ArticleDiscordMention;
   publishToVk: boolean;

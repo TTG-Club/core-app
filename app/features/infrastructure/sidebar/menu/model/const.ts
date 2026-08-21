@@ -1,6 +1,7 @@
 import type { MenuSection } from './types';
 
 import { Role } from '~/shared/types';
+import { RECENT_COMMENTS_ROUTE, RECENT_COMMENTS_TITLE } from '~comments/model';
 
 export const MENU_SECTIONS: Array<MenuSection> = [
   {
@@ -121,6 +122,10 @@ export const MENU_SECTIONS: Array<MenuSection> = [
       {
         href: '/articles',
         label: 'Статьи',
+      },
+      {
+        href: RECENT_COMMENTS_ROUTE,
+        label: RECENT_COMMENTS_TITLE,
       },
       {
         href: '/roadmap',

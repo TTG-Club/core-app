@@ -86,13 +86,32 @@ export interface CalculatorBackgroundOption {
   sourceLabel: string;
 }
 
+/**
+ * Вариант повышения характеристик из механики черты: игрок берёт `count`
+ * характеристик из `abilities` и поднимает каждую на `bonus`, но не выше
+ * `upto` — у обычных черт это 20, у эпических даров 30.
+ */
+export interface CalculatorFeatAbilityBonus {
+  abilities?: Array<string> | null;
+  bonus?: number | null;
+  upto?: number | null;
+  count?: number | null;
+}
+
 export interface CalculatorAbilitiesFeat {
   url: string;
   category: string;
   prerequisite: string | null;
   repeatability: boolean;
+  /**
+   * Плоская проекция улучшаемых характеристик. Оставлена для черт, у которых
+   * механика ещё не размечена; источник истины — `mechanics.abilityBonuses`.
+   */
   abilities: Array<string> | null;
   abilityScoreIncreaseOptions: number | null;
+  mechanics?: {
+    abilityBonuses?: Array<CalculatorFeatAbilityBonus> | null;
+  } | null;
   source: SourceResponse;
   name: NameResponse & {
     alt?: Array<string> | null;

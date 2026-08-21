@@ -2,6 +2,7 @@
   import type { SpeciesCreate, SpeciesDetailResponse } from '~species/model';
 
   import { SpeciesBody } from '~species/body';
+  import { getSpeciesMarkdown } from '~species/model';
   import { UiDrawer } from '~ui/drawer';
 
   const opened = defineModel<boolean>('open', { required: true });
@@ -31,6 +32,8 @@
   const isLoading = computed(() => status.value === 'pending');
   const isError = computed(() => status.value === 'error');
 
+  const markdown = useEntityMarkdown(species, getSpeciesMarkdown);
+
   whenever(opened, () => {
     clear();
     loadPreview();
@@ -46,6 +49,7 @@
     :source="species?.source"
     :is-loading
     :is-error
+    :markdown
     width="100%"
     @close="opened = false"
   >

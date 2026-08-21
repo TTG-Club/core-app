@@ -1,21 +1,44 @@
 <script setup lang="ts">
-  import type { FeatCatalogItem, FeatSummary } from '../../model';
+  import type {
+    ClassChoice,
+    FeatCatalogItem,
+    FeatSummary,
+    GrantedProficiencies,
+  } from '../../model';
 
   import { FeatDrawer } from '~feats/drawer';
 
-  import { useCatalogSourceQuery, useCharacterSheet } from '../../composables';
+  import {
+    useCatalogSourceQuery,
+    useCharacterSheet,
+    useFeatChoiceSpells,
+    useToolCatalog,
+  } from '../../composables';
   import {
     buildFeatFeature,
+    CLASSES_SEARCH_PATH,
+    collectChosenProficiencies,
     FEAT_SOURCES_ASYNC_DATA_KEY,
     FEATS_FILTERS_PATH,
     FEATS_SEARCH_PATH,
     FEATS_SELECT_PATH,
     fetchFeatDetail,
+    getFeatAbilityIncreases,
+    getFeatSpellcastingAbility,
     getFeatUrlFromFeatureId,
+    getRequiredChoiceCount,
+    getVisibleFeatChoices,
+    LANGUAGE_PROFICIENCY_GROUPS,
+    parseClassOptions,
     parseFeatCatalog,
     parseRepeatableFeatUrls,
+    resolveChoiceOptions,
+    SHEET_FEAT_MODAL_LABELS,
     SHEET_SEARCH_LABELS,
+    withSpellListClassNames,
   } from '../../model';
+  import SheetChoiceSelect from './SheetChoiceSelect.vue';
+  import SheetFeatSpellsPicker from './SheetFeatSpellsPicker.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
 
   const emit = defineEmits<{
@@ -113,6 +136,24 @@
       ),
   );
 
+  /**
+   * Фильтрация каталога по подстроке русского или английского названия.
+   *
+   * @param catalogFeats черты каталога.
+   * @param query поисковый запрос в нижнем регистре.
+   * @returns черты, чьё название содержит запрос.
+   */
+  function filterFeatsByName(
+    catalogFeats: FeatCatalogItem[],
+    query: string,
+  ): FeatCatalogItem[] {
+    return catalogFeats.filter(
+      (feat) =>
+        feat.name.toLowerCase().includes(query)
+        || feat.nameEng.toLowerCase().includes(query),
+    );
+  }
+
   const filteredFeats = computed<FeatCatalogItem[]>(() => {
     const query = searchTerm.value.trim().toLowerCase();
 
@@ -122,10 +163,8 @@
       return list;
     }
 
-    return list.filter(
-      (feat) =>
-        feat.name.toLowerCase().includes(query)
-        || feat.nameEng.toLowerCase().includes(query),
+    return withLayoutFallback(query, (searchQuery) =>
+      filterFeatsByName(list, searchQuery),
     );
   });
 
@@ -213,6 +252,236 @@
     draftUrls.value = nextUrls;
   }
 
+  /** Загруженные детали выбранных черт — их же применяет второй шаг. */
+  const loadedSummaries = ref<FeatSummary[]>([]);
+
+  /** Ответы игрока на выборы черт: id выбора → выбранные значения. */
+  const choiceAnswers = ref<Record<string, string[]>>({});
+
+  // Пул заклинаний собирается по названному игроком списку класса: предыстории,
+  // которая назвала бы его сама, здесь нет
+  const {
+    pools: spellPools,
+    getPool: getSpellPool,
+    getSpellOptions,
+    collectChosenSpells,
+    load: loadSpellPools,
+  } = useFeatChoiceSpells({
+    summaries: () => loadedSummaries.value,
+    answers: choiceAnswers,
+  });
+
+  // Каталог инструментов грузится фоном: выбор инструмента появляется только на
+  // втором шаге, а список черт не должен ждать ещё один запрос при открытии.
+  const { getToolNamesForGroups, load: loadToolCatalog } = useToolCatalog();
+
+  void loadToolCatalog();
+
+  /**
+   * Опции пикера выбора. Пул заклинаний приходит поиском по каталогу, а не из
+   * механики черты, поэтому берётся из загруженного пула, а не резолвится.
+   *
+   * @param choice выбор черты.
+   * @returns опции пикера.
+   */
+  function choiceOptions(choice: ClassChoice): string[] {
+    if (choice.kind === 'spell') {
+      return getSpellOptions(choice);
+    }
+
+    return resolveChoiceOptions(choice, {
+      skillNames: character.value.skills.map((skill) => skill.name),
+      proficientSkillNames: character.value.skills
+        .filter((skill) => skill.proficiency !== 'none')
+        .map((skill) => skill.name),
+      // Выбор идёт по уже собранному листу, а не внутри мастера, поэтому
+      // «выбранных прямо сейчас во владение» навыков здесь не бывает.
+      chosenProficientSkills: [],
+      knownLanguages: character.value.proficiencies.languages,
+      knownTools: character.value.proficiencies.tools.map((tool) => tool.name),
+      allLanguages: LANGUAGE_PROFICIENCY_GROUPS.flatMap((group) => group.items),
+      // Инструмент черта называет группой словами («три музыкальных
+      // инструмента»), а не ссылками, поэтому пул — весь каталог: сузить его
+      // листу нечем, а подпись выбора игроку это и говорит.
+      allTools: getToolNamesForGroups(choice.toolGroups),
+    });
+  }
+
+  /**
+   * Классы каталога: в механике черты списки заклинаний перечислены ссылками, а
+   * снимка названия у них может не быть — тогда игрок увидел бы слаг. Ключ
+   * общий с визардом предыстории, поэтому запрос на оба окна один.
+   */
+  const { data: classOptions } = await useAsyncData(
+    'character-sheet:feat-spell-list-classes',
+    async () => {
+      const response = await $fetch<unknown>(CLASSES_SEARCH_PATH, {
+        method: 'GET',
+        retry: 0,
+      });
+
+      return parseClassOptions(response, true);
+    },
+    { server: false, default: () => [] },
+  );
+
+  /** Выборы одной черты: её название стоит над ними один раз. */
+  interface ChoiceGroup {
+    featName: string;
+    rows: Array<{ choice: ClassChoice; featName: string; options: string[] }>;
+  }
+
+  /** Черты, которые о чём-то спрашивают, — по ним и строится шаг выбора. */
+  const choiceRows = computed(() =>
+    loadedSummaries.value.flatMap((summary) =>
+      getVisibleFeatChoices(summary.choices, choiceAnswers.value)
+        .map((choice) => withSpellListClassNames(choice, classOptions.value))
+        .map((choice) => ({
+          choice,
+          featName: summary.name,
+          options: choiceOptions(choice),
+        })),
+    ),
+  );
+
+  /**
+   * Выборы, сгруппированные по черте: название черты стоит над её выборами
+   * один раз, а не повторяется у каждого пикера — «Посвящённый в магию»
+   * спрашивает три вещи подряд.
+   */
+  const choiceGroups = computed(() => {
+    const byFeat = new Map<string, ChoiceGroup>();
+
+    for (const row of choiceRows.value) {
+      const group = byFeat.get(row.featName);
+
+      if (group) {
+        group.rows.push(row);
+      } else {
+        byFeat.set(row.featName, { featName: row.featName, rows: [row] });
+      }
+    }
+
+    return [...byFeat.values()];
+  });
+
+  const isChoiceStep = computed(() => choiceRows.value.length > 0);
+
+  /** Есть ли из чего выбирать хоть в одном пикере. */
+  const hasChoiceOptions = computed<boolean>(() =>
+    choiceRows.value.some((row) => row.options.length > 0),
+  );
+
+  /**
+   * Все выборы отвечены сполна — иначе применять рано. Требуемое число берётся
+   * с оглядкой на длину пула: черта могла попросить два навыка, а во владении у
+   * персонажа только один, и тогда шаг иначе было бы не пройти.
+   */
+  const isChoiceComplete = computed<boolean>(() =>
+    choiceRows.value.every(
+      (row) =>
+        (choiceAnswers.value[row.choice.id]?.length ?? 0)
+        >= getRequiredChoiceCount(row.choice, row.options),
+    ),
+  );
+
+  /** Навыки, которыми персонаж уже владеет: по ним считается компетентность. */
+  const proficientSkillNames = computed(() =>
+    character.value.skills
+      .filter((skill) => skill.proficiency !== 'none')
+      .map((skill) => skill.name),
+  );
+
+  /**
+   * Владения, выбранные игроком: навык, инструмент и язык. Применяются сразу —
+   * ложатся в снимок владений черты, откуда их берёт журнал выдач.
+   *
+   * @param summary деталь черты.
+   * @returns выбранные владения.
+   */
+  function collectProficiencies(
+    summary: FeatSummary,
+  ): Partial<GrantedProficiencies> {
+    return collectChosenProficiencies(
+      summary.choices,
+      choiceAnswers.value,
+      proficientSkillNames.value,
+    );
+  }
+
+  /**
+   * Ответы игрока на выборы черты по ключу выбора: id пикера — это
+   * `feat:<url>:<ключ>`, а в записи ответы лежат под самим ключом, потому что у
+   * повторяемой черты id записи получает ещё и уникальный суффикс.
+   *
+   * @param summary деталь черты.
+   * @returns ответы по ключу выбора.
+   */
+  function collectChoiceAnswers(
+    summary: FeatSummary,
+  ): Record<string, string[]> {
+    const answers: Record<string, string[]> = {};
+
+    for (const choice of summary.choices) {
+      // Выборы повышения характеристик лист заводит сам, ключа выбора в
+      // механике у них нет — их ответ уходит в прибавки, а не в запись ответов.
+      if (
+        choice.kind === 'ability-score'
+        || choice.kind === 'ability-variant'
+      ) {
+        continue;
+      }
+
+      const values = choiceAnswers.value[choice.id] ?? [];
+      const key = choice.id.split(':').at(-1) ?? '';
+
+      if (key && values.length) {
+        answers[key] = values;
+      }
+    }
+
+    return answers;
+  }
+
+  /**
+   * Собирает записи умений из загруженных деталей с ответами игрока и добавляет
+   * их на лист.
+   */
+  function applyLoadedFeats() {
+    const features = loadedSummaries.value.map((summary) =>
+      // Уровень взятия нужен прибавке к максимуму хитов: у «Крепкого» она
+      // считается от него, а не от текущего уровня.
+      buildFeatFeature(summary, {
+        repeatable: repeatableUrls.value.has(summary.url),
+        level: character.value.level,
+        // Каждый вид ответа ложится в запись по-своему: компетентность — в
+        // снимок владений, заклинание — в список записи, остальное лист хранит
+        // ответом и применит позже. Свалить всё в компетентность нельзя —
+        // выбранная характеристика ушла бы в журнал выдач навыком.
+        proficiencies: collectProficiencies(summary),
+        choiceAnswers: collectChoiceAnswers(summary),
+        spells: collectChosenSpells(summary),
+        // Названная игроком характеристика ложится на заклинания черты: от неё
+        // считаются их атака и Сл спасброска
+        spellcastingAbility: getFeatSpellcastingAbility(
+          summary,
+          choiceAnswers.value,
+        ),
+        abilityIncreases: getFeatAbilityIncreases(
+          summary,
+          character.value.abilities,
+          choiceAnswers.value,
+        ),
+      }),
+    );
+
+    if (features.length) {
+      addFeats(features);
+    }
+
+    emit('close');
+  }
+
   async function handleApply() {
     const urls = [...draftUrls.value];
 
@@ -225,19 +494,12 @@
     try {
       const results = await Promise.allSettled(urls.map(fetchFeatDetail));
 
-      const features = results
+      loadedSummaries.value = results
         .map((result) => (result.status === 'fulfilled' ? result.value : null))
-        .filter((summary): summary is FeatSummary => summary !== null)
-        .map((summary) =>
-          buildFeatFeature(summary, repeatableUrls.value.has(summary.url)),
-        );
-
-      if (features.length) {
-        addFeats(features);
-      }
+        .filter((summary): summary is FeatSummary => summary !== null);
 
       // Часть черт не загрузилась — сообщаем, но добавляем успешные.
-      if (features.length < urls.length) {
+      if (loadedSummaries.value.length < urls.length) {
         toast.add({
           color: 'error',
           icon: 'tabler:alert-triangle',
@@ -245,7 +507,15 @@
         });
       }
 
-      emit('close');
+      // Пулы заклинаний нужны шагу выбора: без них пикер «Посвящённого в магию»
+      // открылся бы пустым.
+      await loadSpellPools();
+
+      // Черта может просить выбор («Знаток» — навык для компетентности): тогда
+      // модалка не закрывается, а показывает второй шаг.
+      if (!isChoiceStep.value) {
+        applyLoadedFeats();
+      }
     } finally {
       isApplying.value = false;
     }
@@ -253,6 +523,13 @@
 
   function handleCancel() {
     emit('close');
+  }
+
+  /** Возврат к списку черт: ответы сбрасываются вместе с загруженными деталями. */
+  function handleChoiceBack() {
+    loadedSummaries.value = [];
+    choiceAnswers.value = {};
+    spellPools.value = {};
   }
 </script>
 
@@ -262,7 +539,67 @@
     :ui="{ content: 'sm:max-w-2xl' }"
   >
     <template #body>
-      <div class="flex h-[65dvh] min-h-96 flex-col gap-4">
+      <!-- Второй шаг: черта о чём-то спрашивает — навык для компетентности
+        («Знаток»), заклинательную характеристику и заклинания («Посвящённый в
+        магию»). Виды выбора, которые лист не применяет, он и не показывает -->
+      <div
+        v-if="isChoiceStep"
+        class="flex h-[65dvh] min-h-96 flex-col gap-4 overflow-y-auto pr-1"
+      >
+        <p class="text-sm text-dimmed">
+          {{ SHEET_FEAT_MODAL_LABELS.choiceHint }}
+        </p>
+
+        <div
+          v-for="group in choiceGroups"
+          :key="group.featName"
+          class="flex flex-col gap-3"
+        >
+          <span class="text-sm font-medium text-highlighted">
+            {{ group.featName }}
+          </span>
+
+          <div
+            v-for="row in group.rows"
+            :key="row.choice.id"
+            class="flex flex-col gap-1"
+          >
+            <span class="text-sm text-toned">{{ row.choice.label }}</span>
+
+            <!-- Заклинания выбирают своим окном: пул бывает и на сотню записей,
+              а выбранные должны остаться на виду, чтобы их можно было убрать -->
+            <SheetFeatSpellsPicker
+              v-if="row.choice.kind === 'spell'"
+              v-model="choiceAnswers[row.choice.id]"
+              :items="getSpellPool(row.choice)"
+              :count="row.choice.count"
+              :label="row.choice.label"
+            />
+
+            <SheetChoiceSelect
+              v-else
+              v-model="choiceAnswers[row.choice.id]"
+              :items="row.options"
+              :count="row.choice.count"
+              :placeholder="
+                row.choice.label || SHEET_FEAT_MODAL_LABELS.choicePlaceholder
+              "
+            />
+          </div>
+        </div>
+
+        <p
+          v-if="!hasChoiceOptions"
+          class="text-sm text-warning"
+        >
+          {{ SHEET_FEAT_MODAL_LABELS.choiceEmptyOptions }}
+        </p>
+      </div>
+
+      <div
+        v-else
+        class="flex h-[65dvh] min-h-96 flex-col gap-4"
+      >
         <SheetSearchInput
           v-model="searchTerm"
           :placeholder="SHEET_SEARCH_LABELS.byNamePlaceholder"
@@ -334,7 +671,7 @@
                 </UBadge>
               </button>
 
-              <UTooltip text="Открыть описание черты">
+              <UTooltip :text="SHEET_FEAT_MODAL_LABELS.descriptionTooltip">
                 <UButton
                   icon="tabler:layout-sidebar-right-expand"
                   color="neutral"
@@ -400,7 +737,29 @@
       <div class="flex w-full items-center justify-between gap-2">
         <span class="text-sm text-muted">{{ selectedCountLabel }}</span>
 
-        <div class="flex gap-2">
+        <div
+          v-if="isChoiceStep"
+          class="flex gap-2"
+        >
+          <UButton
+            label="Назад"
+            color="neutral"
+            variant="ghost"
+            @click.left.exact.prevent="handleChoiceBack"
+          />
+
+          <UButton
+            label="Применить"
+            color="primary"
+            :disabled="!isChoiceComplete"
+            @click.left.exact.prevent="applyLoadedFeats"
+          />
+        </div>
+
+        <div
+          v-else
+          class="flex gap-2"
+        >
           <UButton
             label="Отмена"
             color="neutral"

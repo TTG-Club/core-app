@@ -1,6 +1,7 @@
 import type {
   CommentsModerationTab,
   CommentStatus,
+  MyCommentsFilter,
   UserCommentsTab,
 } from './types';
 
@@ -459,3 +460,198 @@ export const COMMENTS_PLURAL_FORMS: [string, string, string] = [
 /** Сообщение об ошибке, когда сервис не прислал текст. */
 export const COMMENTS_UNKNOWN_ERROR_MESSAGE =
   'Не удалось выполнить действие. Попробуйте позже';
+
+/* --- Раздел «Мои комментарии» в профиле --- */
+
+/**
+ * Свои комментарии со сводкой чужих ответов на каждый. Требует свежей сборки
+ * сервиса — до деплоя отвечает 404, и раздел показывает пустое состояние.
+ */
+export const COMMENTS_MY_PATH = `${COMMENTS_API_PATH}/my`;
+
+/** Сводка новых ответов для индикатора «вам ответили». */
+export const COMMENTS_MY_UPDATES_PATH = `${COMMENTS_API_PATH}/my/updates`;
+
+/** Заголовок раздела в профиле */
+export const MY_COMMENTS_TITLE = 'Мои комментарии';
+
+/** Подпись вкладки в навигации профиля */
+export const MY_COMMENTS_NAVIGATION_LABEL = 'Комментарии';
+
+/** Путь раздела в профиле */
+export const MY_COMMENTS_ROUTE = '/user/profile/comments';
+
+/** Описание раздела под заголовком */
+export const MY_COMMENTS_DESCRIPTION =
+  'Здесь собраны ваши комментарии со всего сайта и ответы на них — видно, кто и что ответил, и куда перейти, чтобы продолжить разговор. Удалённые комментарии сюда не попадают.';
+
+/** Ключ кеша списка своих комментариев */
+export const MY_COMMENTS_LIST_DATA_KEY = 'my-comments-list';
+
+/** Ключ кеша сводки новых ответов */
+export const MY_COMMENTS_UPDATES_DATA_KEY = 'my-comments-updates';
+
+/**
+ * Ключ localStorage с отметкой просмотра ответов. Хранит дату `lastReplyAt`,
+ * полученную от сервиса, а не время браузера: часы клиента и часовой пояс
+ * сравнивались бы с серверными датами со сдвигом.
+ */
+export const MY_COMMENTS_SEEN_AT_STORAGE_KEY = 'comments:my-replies-seen-at';
+
+/** Количество своих комментариев на странице в профиле */
+export const MY_COMMENTS_PAGE_SIZE = 10;
+
+/** Подписи плиток-фильтров раздела */
+export const MY_COMMENTS_FILTER_TILES: Array<{
+  label: string;
+  value: MyCommentsFilter;
+}> = [
+  { label: 'Все', value: 'ALL' },
+  { label: 'Новые ответы', value: 'NEW_REPLIES' },
+  { label: 'С ответами', value: 'WITH_REPLIES' },
+];
+
+/** Заголовок блока с последним ответом в карточке */
+export const MY_COMMENTS_LAST_REPLY_TITLE = 'Последний ответ';
+
+/**
+ * Подпись кнопки перехода к обсуждению. Одно слово: кнопка стоит в строке
+ * с датой, и длинная подпись отжимала дату на вторую строку.
+ */
+export const MY_COMMENTS_OPEN_LABEL = 'Ответить';
+
+/** Подсказка на кнопке перехода, когда адрес страницы неизвестен */
+export const MY_COMMENTS_OPEN_UNAVAILABLE_HINT =
+  'Комментарий пришёл без адреса страницы — перейти к обсуждению не получится';
+
+/** Словоформы для счётчика новых ответов */
+export const MY_COMMENTS_NEW_REPLIES_PLURAL_FORMS: [string, string, string] = [
+  'новый ответ',
+  'новых ответа',
+  'новых ответов',
+];
+
+/**
+ * Сколько карточка должна пробыть на экране, чтобы ответы под ней считались
+ * просмотренными. Двух секунд хватает, чтобы отсечь пролистывание мимо.
+ */
+export const MY_COMMENTS_READ_DELAY_MS = 2_000;
+
+/**
+ * Пауза перед пересчётом сводки после отметки просмотра. Карточки читаются
+ * пачкой, и запрос на каждую превращался бы в залп, где побеждает случайный
+ * ответ с устаревшей отметкой.
+ */
+export const MY_COMMENTS_SEEN_SETTLE_MS = 700;
+
+/** Интервал фонового опроса сводки новых ответов */
+export const MY_COMMENTS_POLL_INTERVAL_MS = 30_000;
+
+/** Минимальный интервал между любыми двумя опросами сводки */
+export const MY_COMMENTS_POLL_COOLDOWN_MS = 10_000;
+
+/** Потолок экспоненциального backoff, если сводка перестала отвечать */
+export const MY_COMMENTS_POLL_MAX_BACKOFF_MS = 5 * 60_000;
+
+/** Подсказка к точке-индикатору новых ответов */
+export const MY_COMMENTS_UPDATES_HINT = 'Вам ответили на комментарий';
+
+/** Заголовок и текст пустого состояния раздела */
+export const MY_COMMENTS_EMPTY_TITLE = 'Комментариев пока нет';
+export const MY_COMMENTS_EMPTY_TEXT =
+  'Комментарии, оставленные без входа в аккаунт, сюда не попадают.';
+
+/** Заголовок и текст пустого состояния при выбранном фильтре */
+export const MY_COMMENTS_EMPTY_FILTERED_TITLE = 'Ничего не нашлось';
+export const MY_COMMENTS_EMPTY_FILTERED_TEXT =
+  'По этому фильтру комментариев нет — попробуйте другой.';
+
+/** Текст ошибки загрузки списка */
+export const MY_COMMENTS_LOAD_ERROR_TEXT =
+  'Не удалось загрузить ваши комментарии. Попробуйте обновить страницу.';
+
+/** Подпись раздела, если сервис прислал комментарий без раздела */
+export const COMMENT_UNKNOWN_SECTION_LABEL = 'Неизвестный раздел';
+
+/**
+ * Названия разделов сайта: где именно оставлен комментарий.
+ * Ключи — те же значения `section`, что и в `COMMENTS_ENABLED_SECTIONS`;
+ * незнакомый раздел показывается как есть.
+ */
+export const COMMENT_SECTION_LABELS: Record<string, string> = {
+  'articles': 'Статьи',
+  'backgrounds': 'Предыстории',
+  'bestiary': 'Бестиарий',
+  'classes': 'Классы',
+  'feats': 'Черты',
+  'glossary': 'Глоссарий',
+  'items': 'Снаряжение',
+  'magic-items': 'Магические предметы',
+  'species': 'Виды',
+  'sources': 'Источники',
+  'spells': 'Заклинания',
+};
+
+/**
+ * Длина текста, после которой карточка предлагает раскрытие. Порог по числу
+ * символов, а не по реальному переполнению: замер высоты требовал бы обращения
+ * к DOM на каждую карточку списка.
+ */
+export const MY_COMMENTS_CONTENT_PREVIEW_LENGTH = 320;
+
+/** Подписи кнопки раскрытия своего текста в карточке */
+export const MY_COMMENTS_EXPAND_LABEL = 'Показать полностью';
+export const MY_COMMENTS_COLLAPSE_LABEL = 'Свернуть';
+
+/* --- Лента последних комментариев сайта --- */
+
+/**
+ * Последние комментарии всех страниц. Требует свежей сборки сервиса — до
+ * деплоя отвечает 404, и страница показывает пустое состояние.
+ */
+export const COMMENTS_RECENT_PATH = `${COMMENTS_API_PATH}/recent`;
+
+/** Путь страницы с лентой */
+export const RECENT_COMMENTS_ROUTE = '/comments';
+
+/** Заголовок страницы с лентой */
+export const RECENT_COMMENTS_TITLE = 'Последние комментарии';
+
+/** Описание под заголовком и в мета-теге страницы */
+export const RECENT_COMMENTS_DESCRIPTION =
+  'Свежие обсуждения со всего сайта: о чём спрашивают и что отвечают прямо сейчас. Здесь последние 100 комментариев.';
+
+/** Ключ кеша ленты последних комментариев */
+export const RECENT_COMMENTS_DATA_KEY = 'recent-comments';
+
+/** Количество комментариев на странице ленты */
+export const RECENT_COMMENTS_PAGE_SIZE = 20;
+
+/**
+ * Сколько комментариев показывает лента всего. Дальше пагинация не пускает:
+ * страница про «что обсуждают прямо сейчас», а не архив за всё время —
+ * листать тысячи старых записей незачем.
+ */
+export const RECENT_COMMENTS_LIMIT = 100;
+
+/** Заголовок и текст пустого состояния ленты */
+export const RECENT_COMMENTS_EMPTY_TITLE = 'Обсуждений пока нет';
+export const RECENT_COMMENTS_EMPTY_TEXT =
+  'Как только кто-нибудь оставит комментарий, он появится здесь.';
+
+/** Текст ошибки загрузки ленты */
+export const RECENT_COMMENTS_LOAD_ERROR_TEXT =
+  'Не удалось загрузить ленту комментариев. Попробуйте обновить страницу.';
+
+/**
+ * Количество комментариев в блоке на главной. Больше, чем помещается на экран:
+ * блок тянется до низа соседней колонки, и остаток прокручивается — пустая
+ * половина карточки выглядела бы недоделанной.
+ */
+export const HOME_COMMENTS_COUNT = 10;
+
+/** Подпись кнопки перехода из блока на главной в ленту */
+export const HOME_COMMENTS_ALL_LABEL = 'Все комментарии';
+
+/** Подпись блока на главной, когда комментариев ещё нет */
+export const HOME_COMMENTS_EMPTY_TEXT = 'Комментариев пока нет';

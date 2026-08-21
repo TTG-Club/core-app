@@ -2,6 +2,7 @@
   import type { ClassDetailResponse } from '~classes/model';
 
   import { ClassBody } from '~classes/body';
+  import { getClassMarkdown } from '~classes/model';
   import { PageActions } from '~ui/page';
   import { UiResult } from '~ui/result';
 
@@ -27,6 +28,8 @@
   } = await useAsyncData(`classes-${url}`, () =>
     $fetch<ClassDetailResponse>(`/api/v2/classes/${url}`),
   );
+
+  const markdown = useEntityMarkdown(detail, getClassMarkdown);
 
   useSeoMeta({
     title: getSeoTitle,
@@ -105,6 +108,7 @@
       <PageActions
         :edit-url="editUrl"
         :close-url="{ name: 'classes' }"
+        :markdown
       />
     </template>
 

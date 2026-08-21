@@ -2,6 +2,7 @@
   import type { SpellCreate, SpellDetailResponse } from '~spells/model';
 
   import { SpellBody } from '~spells/body';
+  import { getSpellMarkdown } from '~spells/model';
   import { UiDrawer } from '~ui/drawer';
 
   const opened = defineModel<boolean>('open', { required: true });
@@ -31,6 +32,8 @@
   const isLoading = computed(() => status.value === 'pending');
   const isError = computed(() => status.value === 'error');
 
+  const markdown = useEntityMarkdown(spell, getSpellMarkdown);
+
   whenever(opened, () => {
     clear();
     loadPreview();
@@ -46,6 +49,7 @@
     :source="spell?.source"
     :is-loading
     :is-error
+    :markdown
     width="100%"
     @close="opened = false"
   >

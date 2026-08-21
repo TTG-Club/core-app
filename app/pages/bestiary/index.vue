@@ -13,6 +13,7 @@
     BESTIARY_LIST_LOAD_MORE_DISTANCE,
     BESTIARY_LIST_PAGE_SIZE,
     createBestiaryListPresentationConfig,
+    getCreatureMarkdown,
   } from '~bestiary/model';
   import { FilterControls, useFilter } from '~infrastructure/filter';
   import {
@@ -50,6 +51,8 @@
     apiBasePath: '/api/v2/bestiary',
     items: bestiary,
   });
+
+  const markdown = useEntityMarkdown(detailCreature, getCreatureMarkdown);
 
   // Фильтры (асинхронный вызов)
   const {
@@ -424,6 +427,7 @@
         :date-time="detailCreature?.updatedAt"
         :url="detailUrlForCopy"
         :edit-url="detailEditUrl"
+        :markdown
         :is-loading="isDetailLoading"
         :is-error="isDetailError"
         copy-title

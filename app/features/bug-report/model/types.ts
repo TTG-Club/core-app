@@ -82,8 +82,8 @@ export interface BugReportResponse {
   /** Дата создания баг-репорта */
   createdAt: string;
 
-  /** Дата последнего изменения статуса */
-  statusUpdatedAt: string;
+  /** Дата последнего изменения статуса (null — статус ещё не меняли) */
+  statusUpdatedAt: string | null;
 
   /** Логин пользователя, последним изменившего статус (null — статус ещё не меняли) */
   statusUpdatedBy?: string | null;
@@ -95,6 +95,100 @@ export interface BugReportResponse {
   selectedText?: string;
 }
 
+/**
+ * Баг-репорт в личном кабинете его автора.
+ *
+ * Отдельный тип, а не `Omit` от `BugReportResponse`: это самостоятельный
+ * контракт ручки `/my`, которая намеренно не отдаёт `statusUpdatedBy`,
+ * `userLogin` и `sessionId` — автор не должен знать, кто менял статус и писал
+ * комментарий.
+ */
+export interface MyBugReportResponse {
+  /** Уникальный идентификатор бага */
+  id: string;
+
+  /** Описание бага */
+  description: string;
+
+  /** URL страницы, на которой обнаружен баг */
+  url?: string;
+
+  /** Текущий статус бага */
+  status: BugReportStatus;
+
+  /** Платформа-источник */
+  sourcePlatform: SourcePlatform;
+
+  /** URL скриншота в S3-хранилище */
+  screenshotUrl?: string;
+
+  /** Дата создания баг-репорта */
+  createdAt: string;
+
+  /** Дата последнего изменения статуса (null — статус ещё не меняли) */
+  statusUpdatedAt: string | null;
+
+  /** Комментарий команды к последнему изменению статуса */
+  statusComment?: string;
+
+  /** Выделенный текст на странице */
+  selectedText?: string;
+}
+
+/** Ответ API с постраничным списком баг-репортов автора */
+export interface PageMyBugReportResponse {
+  /** Список баг-репортов на текущей странице */
+  content: MyBugReportResponse[];
+
+  /** Общее количество элементов */
+  totalElements: number;
+
+  /** Общее количество страниц */
+  totalPages: number;
+
+  /** Номер текущей страницы (0-indexed) */
+  number: number;
+}
+
+/**
+ * Снимок состояния репорта на момент последнего просмотра автором.
+ * По нему определяется, что именно изменилось: статус или комментарий.
+ */
+export interface MyBugReportSeenSnapshot {
+  /** Дата изменения статуса, которую автор уже видел */
+  statusUpdatedAt: string;
+
+  /** Статус, который автор уже видел */
+  status: BugReportStatus;
+
+  /** Комментарий команды, который автор уже видел */
+  statusComment: string;
+}
+
+/** Что изменилось в репорте с прошлого просмотра */
+export interface MyBugReportChanges {
+  /** Есть непросмотренные изменения */
+  isUnread: boolean;
+
+  /** Сменился статус */
+  hasStatusChange: boolean;
+
+  /** Появился или изменился комментарий команды */
+  hasCommentChange: boolean;
+}
+
+/** Сводка изменений по баг-репортам автора (индикатор «есть новости») */
+export interface MyBugUpdatesResponse {
+  /** Количество изменений статуса позже отметки последнего просмотра */
+  count: number;
+
+  /**
+   * Самая свежая дата изменения статуса среди репортов автора.
+   * `null` — статус ни одного репорта ещё не меняли.
+   */
+  lastStatusUpdatedAt: string | null;
+}
+
 /** Данные об обновлении статуса баг-репорта (событие компонентов админки) */
 export interface BugReportStatusUpdatePayload {
   /** Уникальный идентификатор бага */
@@ -103,8 +197,8 @@ export interface BugReportStatusUpdatePayload {
   /** Новый статус бага */
   status: BugReportStatus;
 
-  /** Дата изменения статуса */
-  statusUpdatedAt: string;
+  /** Дата изменения статуса (приходит из ответа API, где поле обнуляемо) */
+  statusUpdatedAt: string | null;
 
   /** Логин пользователя, изменившего статус (null — не менялся) */
   statusUpdatedBy?: string | null;

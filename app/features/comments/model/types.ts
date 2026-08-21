@@ -167,3 +167,51 @@ export interface CommentTreeActions {
    */
   getCommentLink: (commentId: string) => string;
 }
+
+/** Фильтр списка своих комментариев в профиле. */
+export type MyCommentsFilter = 'ALL' | 'WITH_REPLIES' | 'NEW_REPLIES';
+
+/**
+ * Последний чужой ответ на комментарий пользователя — «кто и что ответил»
+ * прямо в карточке профиля, без загрузки всей ветки.
+ */
+export interface MyCommentReplyPreview {
+  id: string;
+  authorName: string;
+  content: string;
+  createdAt: string;
+}
+
+/**
+ * Свой опубликованный комментарий в профиле. Удалённые и скрытые сервис
+ * в раздел не отдаёт, поэтому статуса у него нет. Поля с ответами считают
+ * только чужие опубликованные ответы первого уровня — свой ответ самому
+ * себе новостью не является.
+ */
+export interface MyComment {
+  id: string;
+  section: string | null;
+  url: string | null;
+  parentId: string | null;
+  /** Имя автора комментария, на который отвечал пользователь. */
+  parentAuthorName: string | null;
+  content: string;
+  /** Сколько всего чужих ответов. */
+  replyCount: number;
+  /** Сколько из них появилось после отметки просмотра. */
+  newReplyCount: number;
+  lastReplyAt: string | null;
+  lastReply: MyCommentReplyPreview | null;
+  createdAt: string;
+  editedAt: string | null;
+}
+
+/**
+ * Сводка «вам ответили» для индикатора: число новых ответов и дата самого
+ * свежего ответа за всё время. Дату клиент присылает обратно параметром
+ * `since`, когда помечает ответы просмотренными.
+ */
+export interface MyCommentsUpdates {
+  count: number;
+  lastReplyAt: string | null;
+}

@@ -5,6 +5,7 @@
   } from '~magic-items/model';
 
   import { MagicItemBody } from '~magic-items/body';
+  import { getMagicItemMarkdown } from '~magic-items/model';
   import { UiDrawer } from '~ui/drawer';
 
   const opened = defineModel<boolean>('open', { required: true });
@@ -34,6 +35,8 @@
   const isLoading = computed(() => status.value === 'pending');
   const isError = computed(() => status.value === 'error');
 
+  const markdown = useEntityMarkdown(magicItem, getMagicItemMarkdown);
+
   whenever(opened, () => {
     clear();
     loadPreview();
@@ -49,6 +52,7 @@
     :source="magicItem?.source"
     :is-loading
     :is-error
+    :markdown
     width="100%"
     @close="opened = false"
   >

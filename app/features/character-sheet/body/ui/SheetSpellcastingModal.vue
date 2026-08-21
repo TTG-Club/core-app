@@ -9,7 +9,8 @@
     getCharacterProficiencyBonus,
     getClassSpellcastingAbility,
     getFormattedBonus,
-    getInventoryBonusValue,
+    getSpellAttackBonus,
+    getSpellSaveDc,
     SPELL_SAVE_DC_BASE,
     SPELLCASTING_ABILITY_AUTO,
     SPELLCASTING_ABILITY_OPTIONS,
@@ -87,27 +88,22 @@
       : 0,
   );
 
-  // Жезл боевого мага и прочая магия прибавляют к заклинательству: без них
-  // предпросмотр модалки разошёлся бы с плитками вкладки заклинаний.
-  const itemSaveDcBonus = computed(() =>
-    getInventoryBonusValue(character.value, 'spell-save-dc'),
+  // Жезл боевого мага и прочая магия прибавляют к заклинательству: подсчёт
+  // общий с вкладкой заклинаний, иначе предпросмотр модалки разошёлся бы с ней.
+  const saveDc = computed(() =>
+    getSpellSaveDc(
+      character.value,
+      proficiencyBonus.value,
+      abilityModifier.value,
+    ),
   );
 
-  const itemAttackBonus = computed(() =>
-    getInventoryBonusValue(character.value, 'spell-attack'),
-  );
-
-  const saveDc = computed(
-    () =>
-      SPELL_SAVE_DC_BASE
-      + proficiencyBonus.value
-      + abilityModifier.value
-      + itemSaveDcBonus.value,
-  );
-
-  const attackBonus = computed(
-    () =>
-      proficiencyBonus.value + abilityModifier.value + itemAttackBonus.value,
+  const attackBonus = computed(() =>
+    getSpellAttackBonus(
+      character.value,
+      proficiencyBonus.value,
+      abilityModifier.value,
+    ),
   );
 
   const abilityModifierLabel = computed(() => {

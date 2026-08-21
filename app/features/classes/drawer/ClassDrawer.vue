@@ -4,6 +4,8 @@
   import { ClassBody } from '~classes/body';
   import { UiDrawer } from '~ui/drawer';
 
+  import { getClassMarkdown } from '../model';
+
   const props = defineProps<{
     url: string;
   }>();
@@ -34,6 +36,8 @@
 
   const editUrl = computed(() => `/workshop/classes/${currentUrl.value}`);
 
+  const markdown = useEntityMarkdown(detail, getClassMarkdown);
+
   /**
    * Обработчик inline-навигации — обновляет текущий URL,
    * что триггерит перезагрузку данных через watch в useAsyncData.
@@ -50,6 +54,7 @@
     :date-time="detail?.updatedAt"
     :url="urlForCopy"
     :edit-url="editUrl"
+    :markdown
     :is-loading
     :is-error
     copy-title

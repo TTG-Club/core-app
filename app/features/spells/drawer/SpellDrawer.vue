@@ -2,6 +2,7 @@
   import type { SpellDetailResponse } from '~spells/model';
 
   import { SpellBody } from '~spells/body';
+  import { getSpellMarkdown } from '~spells/model';
   import { UiDrawer } from '~ui/drawer';
 
   const { url } = defineProps<{
@@ -25,6 +26,8 @@
   const isError = computed(() => status.value === 'error');
   const urlForCopy = computed(() => `${getOrigin()}/spells/${url}`);
   const editUrl = computed(() => `/workshop/spells/${url}`);
+
+  const markdown = useEntityMarkdown(detail, getSpellMarkdown);
 </script>
 
 <template>
@@ -34,6 +37,7 @@
     :date-time="detail?.updatedAt"
     :url="urlForCopy"
     :edit-url="editUrl"
+    :markdown
     :is-loading
     :is-error
     copy-title

@@ -11,7 +11,10 @@
   import {
     applySpellDamageFormulaParts,
     getSpellDamageFormulaParts,
+    SPELL_EFFECT_LABELS,
+    SPELL_PROJECTILE_HINTS,
     SPELL_SAVE_EFFECT_OPTIONS,
+    SPELL_TARGET_COUNT_MIN,
     SPELL_TARGET_TYPE_OPTIONS,
   } from '../../model';
   import SpellDamageFormulas from './SpellDamageFormulas.vue';
@@ -48,14 +51,14 @@
   // попадание», поэтому противоречивую комбинацию задать нельзя.
   const projectileHint = computed(() => {
     if (model.value.autoHit) {
-      return 'Снаряды попадают автоматически (как Волшебная стрела): урон кидается за каждый снаряд отдельно.';
+      return SPELL_PROJECTILE_HINTS.autoHit;
     }
 
     if (model.value.attackType) {
-      return 'Каждый снаряд — отдельный бросок атаки (как Мистический заряд): урон кидается только за попавшие снаряды.';
+      return SPELL_PROJECTILE_HINTS.attackRoll;
     }
 
-    return 'Снаряды распределяются по целям; урон кидается за каждый снаряд отдельно.';
+    return SPELL_PROJECTILE_HINTS.distributed;
   });
 
   const showAreaOfEffect = computed(() => model.value.targetType === 'AREA');
@@ -82,7 +85,7 @@
   <UCard variant="subtle">
     <template #header>
       <h2 class="truncate text-base text-highlighted">
-        Воздействие заклинания
+        {{ SPELL_EFFECT_LABELS.title }}
       </h2>
     </template>
 
@@ -90,13 +93,13 @@
       <!-- Тип цели -->
       <UFormField
         class="col-span-full md:col-span-12 xl:col-span-6"
-        label="Тип цели"
+        :label="SPELL_EFFECT_LABELS.targetType"
         name="effect.targetType"
       >
         <USelect
           v-model="model.targetType"
           :items="SPELL_TARGET_TYPE_OPTIONS"
-          placeholder="Выбери тип цели"
+          :placeholder="SPELL_EFFECT_LABELS.targetTypePlaceholder"
           clearable
         />
       </UFormField>
@@ -105,33 +108,33 @@
       <UFormField
         v-if="showTargetCount"
         class="col-span-full md:col-span-12 xl:col-span-6"
-        label="Количество целей"
+        :label="SPELL_EFFECT_LABELS.targetCount"
         name="effect.targetCount"
       >
         <UInput
           v-model.number="model.targetCount"
           type="number"
-          placeholder="Количество целей"
-          :min="1"
+          :placeholder="SPELL_EFFECT_LABELS.targetCountPlaceholder"
+          :min="SPELL_TARGET_COUNT_MIN"
         />
       </UFormField>
 
       <!-- Авто попадание -->
       <UFormField
         class="col-span-full md:col-span-12 xl:col-span-6"
-        label="Авто попадание"
+        :label="SPELL_EFFECT_LABELS.autoHit"
         name="effect.autoHit"
       >
         <USwitch
           v-model="model.autoHit"
-          label="Авто попадание"
+          :label="SPELL_EFFECT_LABELS.autoHit"
         />
       </UFormField>
 
       <!-- Тип атаки -->
       <UFormField
         class="col-span-full md:col-span-12 xl:col-span-6"
-        label="Тип атаки"
+        :label="SPELL_EFFECT_LABELS.attackType"
         name="effect.attackType"
       >
         <SelectAttackType v-model="model.attackType" />
@@ -143,8 +146,8 @@
         class="col-span-full"
         color="warning"
         variant="subtle"
-        title="Конфликт настроек"
-        description="При включённом авто попадании тип атаки и спасброски не должны быть заполнены."
+        :title="SPELL_EFFECT_LABELS.conflictTitle"
+        :description="SPELL_EFFECT_LABELS.conflictDescription"
       />
 
       <SpellProjectiles
@@ -158,7 +161,7 @@
       <!-- Спасброски -->
       <UFormField
         class="col-span-full md:col-span-12 xl:col-span-6"
-        label="Спасброски"
+        :label="SPELL_EFFECT_LABELS.savingThrows"
         name="effect.savingThrows"
       >
         <SelectAbilities
@@ -167,15 +170,29 @@
         />
       </UFormField>
 
+      <!-- Обычно характеристику даёт заклинатель, а не заклинание: поле нужно
+        хоумбрю и заклинаниям, у которых она своя независимо от класса -->
       <UFormField
         class="col-span-full md:col-span-12 xl:col-span-6"
-        label="При успехе"
+        :label="SPELL_EFFECT_LABELS.spellcastingAbility"
+        :hint="SPELL_EFFECT_LABELS.spellcastingAbilityHint"
+        name="effect.spellcastingAbility"
+      >
+        <SelectAbilities
+          v-model="model.spellcastingAbility"
+          :placeholder="SPELL_EFFECT_LABELS.spellcastingAbilityPlaceholder"
+        />
+      </UFormField>
+
+      <UFormField
+        class="col-span-full md:col-span-12 xl:col-span-6"
+        :label="SPELL_EFFECT_LABELS.saveEffect"
         name="effect.saveEffect"
       >
         <USelect
           v-model="model.saveEffect"
           :items="SPELL_SAVE_EFFECT_OPTIONS"
-          placeholder="Выбери эффект"
+          :placeholder="SPELL_EFFECT_LABELS.saveEffectPlaceholder"
           clearable
         />
       </UFormField>
@@ -183,7 +200,7 @@
       <!-- Состояния -->
       <UFormField
         class="col-span-full md:col-span-12 xl:col-span-6"
-        label="Состояния"
+        :label="SPELL_EFFECT_LABELS.conditions"
         name="effect.conditions"
       >
         <SelectCondition
@@ -196,7 +213,7 @@
       <template v-if="showAreaOfEffect">
         <UFormField
           class="col-span-full md:col-span-12 xl:col-span-6"
-          label="Область воздействия"
+          :label="SPELL_EFFECT_LABELS.areaOfEffect"
           name="effect.areaOfEffect.type"
         >
           <SelectSpellArea v-model="model.areaOfEffect!.type" />
@@ -204,26 +221,26 @@
 
         <UFormField
           class="col-span-full md:col-span-6 xl:col-span-3"
-          label="Радиус/длина"
+          :label="SPELL_EFFECT_LABELS.areaValue1"
           name="effect.areaOfEffect.value1"
         >
           <UInput
             v-model.number="model.areaOfEffect!.value1"
             type="number"
-            placeholder="Значение"
+            :placeholder="SPELL_EFFECT_LABELS.areaValuePlaceholder"
           />
         </UFormField>
 
         <UFormField
           v-if="showValue2"
           class="col-span-full md:col-span-6 xl:col-span-3"
-          label="Высота/ширина"
+          :label="SPELL_EFFECT_LABELS.areaValue2"
           name="effect.areaOfEffect.value2"
         >
           <UInput
             v-model.number="model.areaOfEffect!.value2"
             type="number"
-            placeholder="Значение"
+            :placeholder="SPELL_EFFECT_LABELS.areaValuePlaceholder"
           />
         </UFormField>
       </template>

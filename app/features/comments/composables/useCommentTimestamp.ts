@@ -1,8 +1,16 @@
 import type { ComputedRef } from 'vue';
 
-import type { PublicComment } from '../model';
-
 import { COMMENT_DATETIME_FORMAT } from '../model';
+
+/**
+ * Источник дат для подписей времени. Не `PublicComment` целиком: те же подписи
+ * нужны и своим комментариям в профиле, и ответам на них — общего у них ровно
+ * две даты.
+ */
+export interface CommentTimestampSource {
+  createdAt: string;
+  editedAt?: string | null;
+}
 
 /** Возвращаемое значение композабла useCommentTimestamp. */
 export interface UseCommentTimestampReturn {
@@ -20,10 +28,10 @@ export interface UseCommentTimestampReturn {
  * Подписи времени комментария: свежие (до суток) подписываются относительно
  * («7 минут назад»), старше — абсолютной датой и временем; полная дата
  * используется в подсказках.
- * @param getComment Геттер комментария (сохраняет реактивность пропсов).
+ * @param getComment Геттер источника дат (сохраняет реактивность пропсов).
  */
 export function useCommentTimestamp(
-  getComment: () => PublicComment,
+  getComment: () => CommentTimestampSource,
 ): UseCommentTimestampReturn {
   const { $dayjs, format } = useDayjs();
 

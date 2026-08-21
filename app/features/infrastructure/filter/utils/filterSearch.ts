@@ -32,16 +32,16 @@ export function isFilterSearchable(groups: FilterGroups): boolean {
  * Оставляет в группе значения, подходящие под запрос.
  *
  * Совпадение по названию группы показывает её значения целиком: иначе поиск по
- * названию группы приводил бы к пустой группе. Выбранные значения остаются
- * видимыми всегда — иначе выбор, влияющий на выдачу, пропал бы с экрана, и
- * снять его было бы негде.
+ * названию группы приводил бы к пустой группе.
+ *
+ * Тронутые значения не удерживает — их добавляет `getSearchedGroupItems`.
  *
  * @param group группа фильтров.
  * @param items доступные значения группы (уже отфильтрованные каскадом).
  * @param query нормализованный поисковый запрос.
- * @returns значения, которые следует отрисовать.
+ * @returns значения, совпавшие с запросом.
  */
-function getMatchedItems(
+function getQueryMatchedItems(
   group: FilterGroup,
   items: FilterItems,
   query: string,
@@ -50,47 +50,18 @@ function getMatchedItems(
     return items;
   }
 
-  return items.filter(
-    (filterItem: FilterItem) =>
-      normalizeForSearch(filterItem.name).includes(query)
-      || filterItem.selected !== null,
-  );
-}
-
-/**
- * Проверяет, отвечает ли группа запросу сама по себе — названием или хотя бы
- * одним из значений.
- *
- * Выбранные значения в расчёт не берутся: они остаются видимыми при любом
- * запросе, поэтому по ним нельзя судить, нашёл ли запрос хоть что-то.
- *
- * @param group группа фильтров.
- * @param items доступные значения группы.
- * @param query нормализованный поисковый запрос.
- * @returns `true`, если запросу что-то соответствует.
- */
-function hasQueryMatch(
-  group: FilterGroup,
-  items: FilterItems,
-  query: string,
-): boolean {
-  return (
-    normalizeForSearch(group.name).includes(query)
-    || items.some((filterItem: FilterItem) =>
-      normalizeForSearch(filterItem.name).includes(query),
-    )
+  return items.filter((filterItem: FilterItem) =>
+    normalizeForSearch(filterItem.name).includes(query),
   );
 }
 
 /**
  * Применяет поисковый запрос к значениям группы с учётом неверной раскладки.
  *
- * Раскладка пробуется только когда прямой запрос ничего не нашёл — тем же
- * фолбэком, что и в поиске по каталогам листа персонажа, чтобы конверсия не
- * добавляла ложных совпадений к успешному запросу. Решение принимается по
- * совпадениям запроса, а не по итоговому набору: иначе всегда видимые
- * выбранные значения выдавали бы себя за успешный поиск и в группе с выбором
- * раскладка не подхватывалась бы вовсе.
+ * Выбранные значения остаются видимыми всегда — иначе выбор, влияющий на
+ * выдачу, пропал бы с экрана, и снять его было бы негде. Накладываются они
+ * поверх совпадений, а не внутри поиска: иначе они выдавали бы себя за
+ * успешный поиск и в группе с выбором раскладка не подхватывалась бы вовсе.
  *
  * @param group группа фильтров.
  * @param items доступные значения группы.
@@ -108,15 +79,12 @@ export function getSearchedGroupItems(
     return items;
   }
 
-  if (hasQueryMatch(group, items, query)) {
-    return getMatchedItems(group, items, query);
-  }
+  const matchedItems = withLayoutFallback(query, (searchQuery) =>
+    getQueryMatchedItems(group, items, searchQuery),
+  );
 
-  const layoutQuery = normalizeForSearch(convertKeyboardLayout(query));
-
-  return getMatchedItems(
-    group,
-    items,
-    layoutQuery === query ? query : layoutQuery,
+  return items.filter(
+    (filterItem: FilterItem) =>
+      matchedItems.includes(filterItem) || filterItem.selected !== null,
   );
 }

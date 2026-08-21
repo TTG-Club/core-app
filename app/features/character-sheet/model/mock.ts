@@ -59,6 +59,14 @@ export const DEFAULT_CHARACTER: Character = {
     wisdom: 10,
     charisma: 10,
   },
+  abilityBonuses: {
+    strength: [],
+    dexterity: [],
+    constitution: [],
+    intelligence: [],
+    wisdom: [],
+    charisma: [],
+  },
   // Шесть записей заведены сразу: спасброски правилами закрыты, поэтому список
   // не растёт и не сокращается — меняются только владение, характеристика и
   // свои бонусы записи.
@@ -208,6 +216,9 @@ export const DEFAULT_CHARACTER: Character = {
     tools: [],
     languages: ['Общий'],
   },
+  // Общий язык нового листа выдан заготовкой, а не источником, поэтому в журнале
+  // его нет: снимать по нему нечего.
+  proficiencyGrants: [],
   currency: {
     copper: 0,
     silver: 0,
@@ -245,6 +256,13 @@ export const DEFAULT_CHARACTER: Character = {
     initiativeAbility: null,
     customInitiativeBase: null,
     customInitiativeBonuses: [],
+    customSpeedBonuses: {
+      walk: [],
+      burrow: [],
+      climb: [],
+      fly: [],
+      swim: [],
+    },
     groupSkillsByAbility: false,
   },
 };

@@ -20,6 +20,7 @@
     getCommentErrorMessage,
     parseModerationCommentsPage,
   } from '~comments/model';
+  import { UiPagination } from '~ui/pagination';
   import { UiResult } from '~ui/result';
 
   useSeoMeta({ title: ADMIN_COMMENTS_PAGE_TITLE });
@@ -198,18 +199,13 @@
           />
         </div>
 
-        <div
+        <UiPagination
           v-if="totalModerationCount > COMMENTS_MODERATION_PAGE_SIZE"
-          class="flex justify-center pt-2"
-        >
-          <UPagination
-            v-model:page="currentPage"
-            :total="totalModerationCount"
-            :items-per-page="COMMENTS_MODERATION_PAGE_SIZE"
-            show-edges
-            :sibling-count="1"
-          />
-        </div>
+          v-model:page="currentPage"
+          class="pt-2"
+          :total="totalModerationCount"
+          :items-per-page="COMMENTS_MODERATION_PAGE_SIZE"
+        />
       </template>
     </div>
   </NuxtLayout>

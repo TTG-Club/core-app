@@ -8,6 +8,7 @@
   import type { MulticlassDrawerInitialState } from '~classes/multiclass-drawer';
 
   import { MulticlassBody } from '~classes/body';
+  import { getMulticlassMarkdown } from '~classes/model';
   import { MulticlassDrawer } from '~classes/multiclass-drawer';
   import { PageActions } from '~ui/page';
   import { UiResult } from '~ui/result';
@@ -175,6 +176,8 @@
     return fetchMulticlassData(requestBody.value);
   });
 
+  const markdown = useEntityMarkdown(classDetail, getMulticlassMarkdown);
+
   // Формируем initialState для drawer из текущих query параметров
   const drawerInitialState = computed<MulticlassDrawerInitialState | undefined>(
     () => {
@@ -250,7 +253,10 @@
         />
       </UTooltip>
 
-      <PageActions @close="navigateTo('/classes')" />
+      <PageActions
+        :markdown
+        @close="navigateTo('/classes')"
+      />
     </template>
 
     <template #default>

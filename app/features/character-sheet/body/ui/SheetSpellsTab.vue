@@ -15,6 +15,7 @@
 
   import { useCharacterSheet, useSpellDamage } from '../../composables';
   import {
+    ABILITY_LABELS,
     CANTRIP_SPELL_LEVEL,
     CUSTOM_SPELL_BADGE_HINT,
     getFilterChipClass,
@@ -42,6 +43,8 @@
     SHEET_FILTER_LABELS,
     SHEET_HEADER_STAT_CLASS,
     SHEET_ROLL_HINT_LABEL,
+    SHEET_SPELL_ABILITY_LABELS,
+    SHEET_STATIC_STAT_CLASS,
     SHEET_TAB_EMPTY_LABELS,
     SPELL_DAMAGE_ROLL_HINT_LABEL,
     SPELL_DAMAGE_ROLL_LABEL,
@@ -50,6 +53,7 @@
     SPELL_NAME_SORT_LOCALE,
     SPELL_SLOTS_LABEL,
     SPELLCASTING_STAT_LABELS,
+    SPELLCASTING_TILE_LABELS,
   } from '../../model';
 
   /** Состояние квадрата со значком заклинания в строке. */
@@ -109,6 +113,7 @@
     'edit-spell': [spellUrl: string];
     'copy-spell': [spellUrl: string];
     'edit-spellcasting': [classUrl: string];
+    'edit-spell-ability': [spellUrl: string];
     'edit-prepared-spells': [kind: PreparedSpellKind];
     'remove-spell': [spellUrl: string];
     'copy-innate-spell': [spellUrl: string];
@@ -166,8 +171,31 @@
       className: props.spellcasting.rows.length > 1 ? row.className : '',
       saveDc: row.saveDc,
       attackBonus: getFormattedBonus(row.attackBonus),
+      // Характеристику черты на листе не меняют: её назвали при взятии черты
+      editable: row.editable,
+      ariaLabel: row.editable
+        ? SPELLCASTING_TILE_LABELS.edit
+        : `${SPELLCASTING_TILE_LABELS.fixed}: ${row.className}`,
+      tileClass: row.editable
+        ? SHEET_HEADER_STAT_CLASS
+        : SHEET_STATIC_STAT_CLASS,
     })),
   );
+
+  /**
+   * Настройка заклинательства строки: у черты характеристика своя и меняется
+   * только пересдачей черты, поэтому её плитка ничего не открывает.
+   *
+   * @param stat плитка заклинательства.
+   */
+  function handleSpellcastingEdit(stat: {
+    classUrl: string;
+    editable: boolean;
+  }) {
+    if (stat.editable) {
+      emit('edit-spellcasting', stat.classUrl);
+    }
+  }
 
   /**
    * Плитки подготовки в шапке вкладки: заклинания книги и заговоры считаются
@@ -406,7 +434,9 @@
             // Своего плоского бонуса у заклинания нет: всё, что есть в записи
             // справочника, уже сидит в её нотации.
             flatBonus: 0,
-            ability: props.spellcasting.ability,
+            // Заклинание черты считается от её характеристики, а не от
+            // характеристики класса: у «Посвящённого в магию» она своя
+            ability: spell.spellcastingAbility ?? props.spellcasting.ability,
             abilityModifierCount: damage.abilityModifierCount,
             typeLabel: damage.typeLabel,
           } satisfies DamageRollSource,
@@ -417,6 +447,28 @@
         ariaLabel: `${SPELL_DAMAGE_ROLL_LABEL}: ${spell.name}`,
       };
     });
+  }
+
+  /**
+   * Бейдж своей заклинательной характеристики строки.
+   *
+   * Показывается, только когда характеристика задана: у остальных заклинаний
+   * она общая с классом, и бейдж стоял бы у каждой строки, ничего не сообщая.
+   *
+   * @param spell заклинание вкладки.
+   * @returns подпись и подсказка бейджа; null — характеристика от класса.
+   */
+  function getSpellAbilityBadge(spell: CharacterSpell) {
+    if (!spell.spellcastingAbility) {
+      return null;
+    }
+
+    const label = ABILITY_LABELS[spell.spellcastingAbility];
+
+    return {
+      label,
+      hint: `${SHEET_SPELL_ABILITY_LABELS.menu}: ${label}. ${SHEET_SPELL_ABILITY_LABELS.badgeHint}`,
+    };
   }
 
   /**
@@ -541,6 +593,10 @@
               ? getInnateSpellMenuItems({
                   onCopy: () => emit('copy-innate-spell', spell.url),
                   onRemove: () => emit('remove-innate-spell', spell.url),
+                  // Характеристика правится и у врождённого заклинания: копия в
+                  // книгу ради одной характеристики оторвала бы запись от вида
+                  onSpellcastingAbility: () =>
+                    emit('edit-spell-ability', spell.url),
                 })
               : getSpellMenuItems({
                   onEdit: isCustom
@@ -550,7 +606,12 @@
                     ? undefined
                     : () => emit('copy-spell', spell.url),
                   onRemove: () => emit('remove-spell', spell.url),
+                  onSpellcastingAbility: () =>
+                    emit('edit-spell-ability', spell.url),
                 }),
+            // Своя характеристика — бейдж строки: заклинание считается не так,
+            // как остальная книга, и по строке это должно быть видно сразу.
+            abilityBadge: getSpellAbilityBadge(spell),
             // Урон каталожного заклинания приходит из справочника; у своего его
             // нет — форма листа урон не заполняет.
             damageStats: getSpellDamageStats(spell),
@@ -648,9 +709,9 @@
         v-for="stat in spellcastingStats"
         :key="stat.classUrl"
         type="button"
-        :class="SHEET_HEADER_STAT_CLASS"
-        aria-label="Настроить заклинательство"
-        @click.left.exact.prevent="emit('edit-spellcasting', stat.classUrl)"
+        :class="stat.tileClass"
+        :aria-label="stat.ariaLabel"
+        @click.left.exact.prevent="handleSpellcastingEdit(stat)"
       >
         <span
           v-if="stat.className"
@@ -899,8 +960,27 @@
               @click.left.exact.prevent="handleSpellOpen(spell)"
             >
               <span class="flex min-w-0 grow flex-col">
-                <span class="truncate text-sm font-medium text-highlighted">
-                  {{ spell.name }}
+                <span class="flex min-w-0 items-center gap-2">
+                  <span class="truncate text-sm font-medium text-highlighted">
+                    {{ spell.name }}
+                  </span>
+
+                  <!-- Своя характеристика стоит у названия: она относится к
+                    самому заклинанию, а не к его броску, как плитка урона -->
+                  <UTooltip
+                    v-if="spell.abilityBadge"
+                    :text="spell.abilityBadge.hint"
+                  >
+                    <UBadge
+                      size="sm"
+                      color="secondary"
+                      variant="subtle"
+                      icon="tabler:wand"
+                      class="shrink-0"
+                    >
+                      {{ spell.abilityBadge.label }}
+                    </UBadge>
+                  </UTooltip>
                 </span>
 
                 <span

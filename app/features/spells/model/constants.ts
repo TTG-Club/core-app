@@ -20,6 +20,51 @@ export const SPELL_TARGET_TYPE_OPTIONS: Array<
   { label: 'Нет цели', value: 'NONE' },
 ];
 
+/** Подписи блока «Воздействие заклинания» в редакторе. */
+export const SPELL_EFFECT_LABELS = {
+  title: 'Воздействие заклинания',
+  targetType: 'Тип цели',
+  targetTypePlaceholder: 'Выбери тип цели',
+  targetCount: 'Количество целей',
+  targetCountPlaceholder: 'Количество целей',
+  autoHit: 'Авто попадание',
+  attackType: 'Тип атаки',
+  conflictTitle: 'Конфликт настроек',
+  conflictDescription:
+    'При включённом авто попадании тип атаки и спасброски не должны быть '
+    + 'заполнены.',
+  savingThrows: 'Спасброски',
+  spellcastingAbility: 'Заклинательная характеристика',
+  spellcastingAbilityHint: 'необязательно',
+  spellcastingAbilityPlaceholder: 'От класса заклинателя',
+  saveEffect: 'При успехе',
+  saveEffectPlaceholder: 'Выбери эффект',
+  conditions: 'Состояния',
+  areaOfEffect: 'Область воздействия',
+  areaValue1: 'Радиус/длина',
+  areaValue2: 'Высота/ширина',
+  areaValuePlaceholder: 'Значение',
+} as const;
+
+/**
+ * Подсказки снарядного режима: что именно кидается на каждый снаряд. Вид
+ * подсказки выводится из «Типа атаки» и «Авто попадания», а не задаётся
+ * отдельно, — противоречивую пару так не собрать.
+ */
+export const SPELL_PROJECTILE_HINTS = {
+  autoHit:
+    'Снаряды попадают автоматически (как Волшебная стрела): урон кидается за '
+    + 'каждый снаряд отдельно.',
+  attackRoll:
+    'Каждый снаряд — отдельный бросок атаки (как Мистический заряд): урон '
+    + 'кидается только за попавшие снаряды.',
+  distributed:
+    'Снаряды распределяются по целям; урон кидается за каждый снаряд отдельно.',
+} as const;
+
+/** Наименьшее число целей: цель либо одна, либо у заклинания другой тип цели. */
+export const SPELL_TARGET_COUNT_MIN = 1;
+
 export const SPELL_SAVE_EFFECT_OPTIONS: Array<
   SpellSelectOption<SpellSaveEffect>
 > = [
@@ -51,6 +96,7 @@ export const SPELL_PROJECTILE_DISTRIBUTION_OPTIONS = [
   },
 ] as const;
 
+/** Ключ `FAIR` — прежнее имя огненного урона: встречается в данных до переименования. */
 export const SPELL_DAMAGE_TYPE_TAGS: Record<string, string> = {
   ACID: 'dmg.acid',
   BLUDGEONING: 'dmg.bludgeoning',

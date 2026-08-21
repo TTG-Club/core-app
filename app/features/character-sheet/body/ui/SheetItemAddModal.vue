@@ -148,17 +148,9 @@
       return list;
     }
 
-    const matchedItems = filterItemsByName(list, query);
-
-    if (matchedItems.length) {
-      return matchedItems;
-    }
-
-    // Пустая выдача по запросу в неверной раскладке — пробуем конверсию
-    // («ащкешашсфешщт» → «fortification»).
-    const layoutQuery = convertKeyboardLayout(query).toLowerCase();
-
-    return layoutQuery === query ? [] : filterItemsByName(list, layoutQuery);
+    return withLayoutFallback(query, (searchQuery) =>
+      filterItemsByName(list, searchQuery),
+    );
   });
 
   // Дровер «Все фильтры» — переиспользованный FilterDrawer раздела; работает

@@ -3,15 +3,15 @@
     AbilityKey,
     Character,
     CharacterCustomBonus,
-    CustomBonusSource,
+    CustomBonusBaseSource,
     ProficiencyBaseSource,
   } from '../../model';
 
   import { useCharacterSheetList } from '../../composables';
   import {
     ABILITY_LABELS,
+    CUSTOM_BONUS_BASE_SOURCE_OPTIONS,
     CUSTOM_BONUS_FLAT_SOURCE,
-    CUSTOM_BONUS_SOURCE_OPTIONS,
     CUSTOM_INITIATIVE_BONUS_HINT,
     CUSTOM_PROFICIENCY_BONUS_HINT,
     DEFAULT_INITIATIVE_ABILITY,
@@ -24,6 +24,7 @@
     getProficiencyBonus,
     PROFICIENCY_BASE_LEVEL_SOURCE,
     PROFICIENCY_BASE_OPTIONS,
+    PROFICIENCY_BONUS_SOURCE_OPTIONS,
     SHEET_SETTINGS_LABELS,
     SHEET_SETTINGS_TABS,
     SHEET_SETTINGS_WEAPON_TAB,
@@ -93,7 +94,7 @@
   // выбранная характеристика ждёт возврата к ней.
   const draftInitiativeAbility = ref<AbilityKey>(initialInitiativeAbility);
 
-  const draftInitiativeBaseSource = ref<CustomBonusSource>(
+  const draftInitiativeBaseSource = ref<CustomBonusBaseSource>(
     props.character.settings.customInitiativeBase === null
       ? initialInitiativeAbility
       : CUSTOM_BONUS_FLAT_SOURCE,
@@ -132,7 +133,7 @@
 
   // Источник основы инициативы и выбранная характеристика ходят парой: выбор
   // характеристики запоминается, чтобы своё число не стирало её насовсем.
-  const initiativeBaseSource = computed<CustomBonusSource>({
+  const initiativeBaseSource = computed<CustomBonusBaseSource>({
     get: () => draftInitiativeBaseSource.value,
     set: (source) => {
       draftInitiativeBaseSource.value = source;
@@ -210,7 +211,7 @@
   // его бонус рядом, чтобы разница правил была видна сразу.
   const formattedFinesseAttackBonus = computed(() =>
     getFormattedBonus(
-      proficiencyBonus.value + getModifier(props.character.abilities.dexterity),
+      proficiencyBonus.value + getAbilityModifier(props.character, 'dexterity'),
     ),
   );
 
@@ -238,9 +239,11 @@
       customInitiativeBase: isInitiativeBaseCustom.value
         ? draftInitiativeBaseValue.value
         : null,
-      // Группировку навыков задаёт своя модалка настройки навыков — здесь она
-      // идёт насквозь, чтобы сохранение настроек её не сбрасывало.
+      // Группировку навыков задаёт своя модалка настройки навыков, а бонусы
+      // скоростей — окно передвижения: здесь они идут насквозь, чтобы
+      // сохранение настроек их не сбрасывало.
       groupSkillsByAbility: props.character.settings.groupSkillsByAbility,
+      customSpeedBonuses: props.character.settings.customSpeedBonuses,
       // Копии, а не сами черновики: модалка остаётся открытой при ошибке
       // сохранения, и её правки не должны править уже сохранённые настройки.
       customProficiencyBonuses: draftProficiencyBonuses.value.map((bonus) => ({
@@ -356,6 +359,7 @@
               :character="character"
               :title="SHEET_SETTINGS_LABELS.proficiencyBonusTitle"
               :base-items="PROFICIENCY_BASE_OPTIONS"
+              :source-items="PROFICIENCY_BONUS_SOURCE_OPTIONS"
               :base-value="proficiencyBase"
               :total-label="SHEET_SETTINGS_LABELS.totalProficiencyBonusTitle"
               :hint="CUSTOM_PROFICIENCY_BONUS_HINT"
@@ -369,7 +373,7 @@
               v-model:base-custom-value="draftInitiativeBaseValue"
               :character="character"
               :title="SHEET_SETTINGS_LABELS.initiativeTitle"
-              :base-items="CUSTOM_BONUS_SOURCE_OPTIONS"
+              :base-items="CUSTOM_BONUS_BASE_SOURCE_OPTIONS"
               :base-value="initiativeBase"
               :penalty-label="EXHAUSTION_LABELS.title"
               :penalty-value="exhaustionPenalty"

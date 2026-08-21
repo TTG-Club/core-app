@@ -1,3 +1,4 @@
+export * from './useCommentLocation';
 export * from './useCommentsSection';
 export * from './useCommentSubmitCooldown';
 export * from './useCommentTimestamp';

@@ -6,16 +6,19 @@ import type {
   BackgroundSummary,
   CatalogSpellDetail,
   CharacterInnateSpell,
+  CharacterSpell,
   CharacterToolProficiency,
   ClassChoice,
   ClassFeatureSummary,
   ClassOption,
   ClassSummary,
   ClassTableColumn,
+  FeatAbilityBonusOption,
   FeatCatalogItem,
   FeatSelectOption,
   FeatSummary,
   FeatureDescriptionNode,
+  GrantedProficiencies,
   InventoryArmor,
   InventoryWeapon,
   InventoryWeaponDamage,
@@ -31,24 +34,47 @@ import type {
   StartingEquipmentOption,
 } from './types';
 
-import { clamp } from 'es-toolkit';
+import { clamp, uniq } from 'es-toolkit';
 
 import { z } from '~/utils/zod';
+import { normalizeLoadedActiveEffects } from '~active-effects/model';
 import { CasterType } from '~classes/model';
 import {
   EMPTY_MAGIC_ITEM_BONUSES,
   MAGIC_ITEM_BONUS_NONE,
 } from '~magic-items/model';
 
-import { descriptionNodesSchema } from './character-schema';
 import {
+  descriptionNodesSchema,
+  featModifiersSchema,
+} from './character-schema';
+import {
+  ABILITY_CHOICE_ID_SEGMENT,
+  ABILITY_IMPROVEMENT_SCORE_MAX,
+  ABILITY_LABELS,
+  ABILITY_ORDER,
+  ABILITY_VARIANT_CHOICE_ID_SEGMENT,
+  ARMOR_GROUP_BY_API_CATEGORY,
+  ARMOR_PROFICIENCY_GROUPS,
+  CANTRIP_SPELL_LEVEL,
   CURRENCY_KEYS_BY_LABEL,
+  DAMAGE_TYPE_LABELS,
+  DAMAGE_TYPE_NAMES,
+  FEAT_SPELL_CLASS_CHOICE_KEY,
   INVENTORY_QUANTITY_MAX,
+  LANGUAGE_NAME_BY_API_KEY,
+  SHEET_FEAT_CHOICE_LABELS,
+  SHEET_FEAT_MODAL_LABELS,
+  SKILL_NAME_BY_API_KEY,
   SPELL_COMPONENT_LABELS,
   STARTING_EQUIPMENT_DEFAULT_COIN_KEY,
   STARTING_EQUIPMENT_LABELS,
+  WEAPON_GROUP_BY_API_CATEGORY,
+  WEAPON_PROFICIENCY_GROUPS,
 } from './constants';
 import {
+  getAbilityBonusLabel,
+  getCharacterFeatureId,
   getClassToolChoice,
   isAbilityImprovementFeature,
   parseAbilityKeys,
@@ -89,16 +115,76 @@ const speciesFeatureSchema = z.object({
   description: descriptionNodesSchema,
 });
 
+/**
+ * Заклинание справочника там, где оно приходит вложенным в другой ответ:
+ * врождённым заклинанием вида, выдаваемым заклинанием черты. Круг и школу лист
+ * берёт только отсюда — без круга заклинание некуда положить.
+ */
+const catalogSpellSchema = z.object({
+  url: z.string(),
+  name: z.object({ rus: z.string().catch('') }),
+  level: z.coerce.number().catch(0),
+  school: z.string().catch(''),
+  concentration: z.boolean().catch(false),
+  ritual: z.boolean().catch(false),
+});
+
+/**
+ * Заклинание справочника к записи листа.
+ *
+ * @param spell разобранное заклинание справочника.
+ * @returns заклинание в форме листа.
+ */
+function toCharacterSpell(
+  spell: z.infer<typeof catalogSpellSchema>,
+): CharacterSpell {
+  return {
+    url: spell.url,
+    name: spell.name.rus,
+    level: spell.level,
+    school: spell.school,
+    concentration: spell.concentration,
+    ritual: spell.ritual,
+  };
+}
+
 const speciesInnateSpellSchema = z.object({
-  spell: z.object({
-    url: z.string(),
-    name: z.object({ rus: z.string().catch('') }),
-    level: z.coerce.number().catch(0),
-    school: z.string().catch(''),
-    concentration: z.boolean().catch(false),
-    ritual: z.boolean().catch(false),
-  }),
+  spell: catalogSpellSchema,
   requiredLevel: z.coerce.number().min(1).max(20).catch(1),
+});
+
+/**
+ * Выдаваемое чертой заклинание: запись справочника и уровень, с которого оно
+ * доступно. Форма та же, что у врождённых заклинаний вида, но уровень здесь
+ * необязателен — пустой читается как «с момента взятия черты», и так же
+ * читаются черты, сохранённые до появления поля.
+ */
+const featGrantedSpellSchema = z.union([
+  z.object({
+    spell: catalogSpellSchema,
+    requiredLevel: z.coerce.number().min(1).max(20).nullish().catch(null),
+  }),
+  // Ответ до появления уровней: заклинание лежало в списке без обёртки. Разбор
+  // держит обе формы, потому что фронт и бэк выкатываются порознь: без этого
+  // сайт со свежим разбором и ещё не обновлённым бэком молча перестал бы
+  // выдавать заклинания черт — весь список отбросил бы `.catch(null)` ниже.
+  catalogSpellSchema.transform((spell) => ({ spell, requiredLevel: null })),
+]);
+
+/**
+ * Список заклинаний, который черта добавляет персонажу, — строка таблицы
+ * «Заклинания метки». Списков несколько, и каждый открывается на своём уровне:
+ * у метки дракона первая пачка приходит сразу, следующая — на втором уровне.
+ */
+const featSpellListGroupSchema = z.object({
+  requiredLevel: z.coerce.number().min(1).max(20).nullish().catch(null),
+
+  // Формула количества: заполнена — из списка берут не всё, и лист обязан
+  // спросить игрока. Такого выбора он пока не умеет, поэтому такие списки
+  // пропускает (см. `toFeatSpellListSpells`).
+  count: z.string().nullish().catch(null),
+
+  spells: z.array(catalogSpellSchema).catch([]),
 });
 
 /** Схема детального ответа вида или подвида (нужные листу поля). */
@@ -136,14 +222,7 @@ function toSpeciesSummary(
 
   const innateSpells: CharacterInnateSpell[] = detail.innateSpells.map(
     (innateSpell) => ({
-      spell: {
-        url: innateSpell.spell.url,
-        name: innateSpell.spell.name.rus,
-        level: innateSpell.spell.level,
-        school: innateSpell.spell.school,
-        concentration: innateSpell.spell.concentration,
-        ritual: innateSpell.spell.ritual,
-      },
+      spell: toCharacterSpell(innateSpell.spell),
       requiredLevel: innateSpell.requiredLevel,
     }),
   );
@@ -171,6 +250,9 @@ const spellLinkSchema = z.object({
   school: z.string().catch(''),
   concentration: z.boolean().catch(false),
   ritual: z.boolean().catch(false),
+  // Своя характеристика заклинания: справочник задаёт её только там, где она не
+  // зависит от заклинателя. Нет — лист считает заклинание от класса.
+  spellcastingAbility: z.string().nullable().catch(null),
 });
 
 /** Ответ поиска заклинаний: плоский массив или страница `{ value, Count }`. */
@@ -199,6 +281,10 @@ export function parseSpellCatalog(input: unknown): SpellCatalogItem[] {
     school: spell.school,
     concentration: spell.concentration,
     ritual: spell.ritual,
+    // Характеристика справочника — начальное значение записи: дальше игрок
+    // правит её у себя на листе, и каталог ему больше не указ.
+    spellcastingAbility:
+      parseApiAbilityKey(spell.spellcastingAbility ?? '') ?? undefined,
   }));
 }
 
@@ -338,13 +424,606 @@ export function parseRepeatableFeatUrls(input: unknown): Set<string> {
   );
 }
 
-/** Схема детального ответа черты (нужные листу поля). */
+/**
+ * Схема детального ответа черты (нужные листу поля). Постоянные модификаторы
+ * лежат внутри механики: у черт без механики её нет вовсе, у черт с механикой
+ * без постоянных эффектов — нет блока `modifiers`, и оба случая означают одно и
+ * то же — лист черта не двигает.
+ */
 const featDetailSchema = z.object({
   url: z.string(),
   name: z.object({ rus: z.string().catch('') }),
   category: z.string().catch(''),
   description: descriptionNodesSchema,
+  mechanics: z
+    .object({
+      modifiers: featModifiersSchema,
+      // Варианты повышения характеристик: несколько записей — это выбор «или».
+      abilityBonuses: z
+        .array(
+          z.object({
+            abilities: z.array(z.string()).nullable().catch(null),
+            bonus: z.coerce.number().nullable().catch(null),
+            upto: z.coerce.number().nullable().catch(null),
+            count: z.coerce.number().nullable().catch(null),
+          }),
+        )
+        .nullable()
+        .catch(null),
+      // Владения приходят категориями справочника — лист хранит их записями
+      // «вся группа», поэтому разбор ниже их переводит.
+      proficiencies: z
+        .object({
+          weaponCategories: z.array(z.string()).nullable().catch(null),
+          armorCategories: z.array(z.string()).nullable().catch(null),
+          skills: z.array(z.string()).nullable().catch(null),
+          languages: z.array(z.string()).nullable().catch(null),
+          tools: z
+            .array(
+              z.object({
+                url: z.string().catch(''),
+                name: z.string().catch(''),
+              }),
+            )
+            .nullable()
+            .catch(null),
+        })
+        .nullable()
+        .catch(null),
+      // Сами заклинания лист берёт из `grantedSpells`: там они дополнены кругом
+      // и школой, а в механике лежат одними ссылками. Здесь нужны подготовка —
+      // держит ли черта заклинание готовым — и характеристика, от которой
+      // считаются все заклинания черты.
+      spells: z
+        .object({
+          alwaysPrepared: z.boolean().catch(false),
+          spellcastingAbility: z.string().nullable().catch(null),
+        })
+        .nullable()
+        .catch(null),
+      // Выборы при взятии черты. Разбираются поля тех видов, которые лист
+      // умеет применить, — см. `toFeatChoices`.
+      choices: z
+        .array(
+          z.object({
+            key: z.string().catch(''),
+            type: z.string().nullable().catch(null),
+            label: z.string().nullable().catch(null),
+            count: z.coerce.number().nullable().catch(null),
+            grants: z.string().nullable().catch(null),
+            // Выбирать можно только то, чем персонаж ещё не владеет, и обратный
+            // случай: владение превращает выбор в компетентность.
+            onlyIfNotProficient: z.boolean().nullable().catch(null),
+            expertiseIfProficient: z.boolean().nullable().catch(null),
+            // Допустимые значения выбора: коды словаря со снимком названия.
+            options: z
+              .array(
+                z.object({
+                  value: z.string().catch(''),
+                  name: z.string().nullable().catch(null),
+                }),
+              )
+              .nullable()
+              .catch(null),
+            // Пул заклинаний собирается поиском по каталогу, поэтому листу нужны
+            // сами ограничения, а не готовый список.
+            spellFilter: z
+              .object({
+                level: z.coerce.number().nullable().catch(null),
+                maxLevel: z.coerce.number().nullable().catch(null),
+                classes: z
+                  .array(
+                    z.object({
+                      url: z.string().catch(''),
+                      name: z.string().catch(''),
+                    }),
+                  )
+                  .nullable()
+                  .catch(null),
+                classesFromChoiceKey: z.string().nullable().catch(null),
+              })
+              .nullable()
+              .catch(null),
+          }),
+        )
+        .nullable()
+        .catch(null),
+    })
+    .nullable()
+    .catch(null),
+  grantedSpells: z.array(featGrantedSpellSchema).nullable().catch(null),
+  // Таблица «Заклинания метки» с данными справочника: в механике списки лежат
+  // одними ссылками, а листу нужен круг — без него заклинание некуда положить.
+  spellListGroups: z.array(featSpellListGroupSchema).nullable().catch(null),
 });
+
+/** Ответ справочника с владениями черты, как его разбирает схема детали. */
+type FeatProficienciesResponse = NonNullable<
+  NonNullable<z.infer<typeof featDetailSchema>['mechanics']>['proficiencies']
+>;
+
+/**
+ * Перевод владений черты из справочника в записи листа: категории оружия и
+ * доспехов становятся записями «вся группа» (одна на группу — обе половины
+ * воинского оружия дают одну запись), инструменты — владениями со ссылкой на
+ * предмет. Нераспознанные категории (огнестрельное — своей группы на листе нет)
+ * отбрасываются.
+ *
+ * @param proficiencies владения из механики черты.
+ * @returns владения в форме листа; null — черта ничего не выдаёт.
+ */
+function toGrantedProficiencies(
+  proficiencies: FeatProficienciesResponse,
+): GrantedProficiencies | null {
+  const weapons = uniq(
+    (proficiencies.weaponCategories ?? []).flatMap((category) => {
+      const key = WEAPON_GROUP_BY_API_CATEGORY[category];
+
+      const group = WEAPON_PROFICIENCY_GROUPS.find(
+        (candidate) => candidate.key === key,
+      );
+
+      return group ? [group.all] : [];
+    }),
+  );
+
+  const armor = uniq(
+    (proficiencies.armorCategories ?? []).flatMap((category) => {
+      const key = ARMOR_GROUP_BY_API_CATEGORY[category];
+
+      const group = ARMOR_PROFICIENCY_GROUPS.find(
+        (candidate) => candidate.key === key,
+      );
+
+      return group ? [group.all] : [];
+    }),
+  );
+
+  // Инструмент без названия показать нечем, а без ссылки — можно: у своих
+  // инструментов её и не бывает.
+  const tools = (proficiencies.tools ?? []).flatMap((tool) =>
+    tool.name ? [{ name: tool.name, url: tool.url || null }] : [],
+  );
+
+  // Незнакомый навык отбрасывается: списки справочника и листа сошлись, значит
+  // чужое значение — это опечатка в данных, а не навык, которого лист не знает.
+  const skills = uniq(
+    (proficiencies.skills ?? []).flatMap((skill) => {
+      const name = SKILL_NAME_BY_API_KEY[skill];
+
+      return name ? [name] : [];
+    }),
+  );
+
+  // Незнакомый язык отбрасывается по той же причине, что и навык: списки
+  // справочника и листа сошлись, значит чужое значение — опечатка в данных.
+  const languages = uniq(
+    (proficiencies.languages ?? []).flatMap((language) => {
+      const name = LANGUAGE_NAME_BY_API_KEY[language];
+
+      return name ? [name] : [];
+    }),
+  );
+
+  if (
+    !weapons.length
+    && !armor.length
+    && !tools.length
+    && !skills.length
+    && !languages.length
+  ) {
+    return null;
+  }
+
+  return {
+    armor,
+    weapons,
+    tools,
+    languages,
+    skills,
+    // Компетентность без выбора черты не выдают: она приходит выбором игрока.
+    expertiseSkills: [],
+  };
+}
+
+/** Варианты повышения характеристик, как их разбирает схема детали. */
+type FeatAbilityBonusesResponse = NonNullable<
+  NonNullable<z.infer<typeof featDetailSchema>['mechanics']>['abilityBonuses']
+>;
+
+/**
+ * Варианты повышения характеристик черты. Вариант без характеристик или без
+ * размера прибавки отбрасывается: поднимать по нему нечего.
+ *
+ * @param bonuses варианты из механики черты.
+ * @returns варианты в форме листа.
+ */
+function toFeatAbilityBonuses(
+  bonuses: FeatAbilityBonusesResponse,
+): FeatAbilityBonusOption[] {
+  return bonuses.flatMap((bonus) => {
+    const abilities = (bonus.abilities ?? []).flatMap((ability) => {
+      const key = parseApiAbilityKey(ability);
+
+      return key ? [key] : [];
+    });
+
+    const amount = bonus.bonus ?? 0;
+
+    if (!abilities.length || amount <= 0) {
+      return [];
+    }
+
+    return [
+      {
+        abilities,
+        bonus: amount,
+        // Потолок по умолчанию — предел прибавок по правилам 2024: у записей
+        // справочника он проставлен, но мог остаться пустым у заведённых вручную.
+        upto: bonus.upto ?? ABILITY_IMPROVEMENT_SCORE_MAX,
+        // Пул из одной характеристики выбора не требует, поэтому и количество
+        // по умолчанию равно одному.
+        count: Math.max(1, bonus.count ?? 1),
+      },
+    ];
+  });
+}
+
+/**
+ * Выборы повышения характеристик: вариант спрашивает игрока, только если
+ * поднять можно не весь пул («+1 к Силе или Ловкости»). Пул ровно по размеру
+ * выбора применяется сам и вопросом не становится.
+ *
+ * Несколько вариантов — это «или», поэтому впереди встаёт ещё один выбор: каким
+ * из них воспользоваться. Он же прячет чужие пикеры (см. `getVisibleFeatChoices`).
+ *
+ * @param bonuses варианты повышения характеристик.
+ * @param featUrl url черты (идёт в устойчивый id выбора).
+ * @returns выборы для пикеров листа.
+ */
+function toFeatAbilityChoices(
+  bonuses: FeatAbilityBonusOption[],
+  featUrl: string,
+): ClassChoice[] {
+  const featureId = getCharacterFeatureId('feat', featUrl);
+
+  const asked = bonuses.flatMap<ClassChoice>((bonus, variantIndex) =>
+    bonus.abilities.length > bonus.count
+      ? [
+          {
+            id: `${featureId}:${ABILITY_CHOICE_ID_SEGMENT}-${variantIndex}`,
+            kind: 'ability-score',
+            label: getAbilityBonusLabel(bonus),
+            count: bonus.count,
+            listed: bonus.abilities.map((key) => ABILITY_LABELS[key]),
+            abilityBonus: {
+              variantIndex,
+              bonus: bonus.bonus,
+              upto: bonus.upto,
+            },
+          },
+        ]
+      : [],
+  );
+
+  if (bonuses.length < 2) {
+    return asked;
+  }
+
+  return [
+    {
+      id: `${featureId}:${ABILITY_VARIANT_CHOICE_ID_SEGMENT}`,
+      kind: 'ability-variant',
+      label: SHEET_FEAT_MODAL_LABELS.abilityVariantLabel,
+      count: 1,
+      listed: bonuses.map((bonus) => getAbilityBonusLabel(bonus)),
+    },
+    ...asked,
+  ];
+}
+
+/** Выборы черты, как их разбирает схема детали. */
+type FeatChoicesResponse = NonNullable<
+  NonNullable<z.infer<typeof featDetailSchema>['mechanics']>['choices']
+>;
+
+/**
+ * Выборы черты, которые лист умеет применить, — в виде своих выборов листа.
+ *
+ * Это компетентность в навыке (пул резолвится по уже имеющимся владениям),
+ * заклинательная характеристика (пул перечислен в самой механике), заклинание
+ * либо заговор (пул собирается поиском по каталогу) и тип урона, к которому
+ * черта даёт защиту. Остальные виды выбора лист не применяет, поэтому и не
+ * спрашивает — иначе игрок отвечал бы в пустоту.
+ *
+ * @param choices выборы из механики черты.
+ * @param featUrl url черты (идёт в устойчивый id выбора).
+ * @returns выборы для пикеров листа.
+ */
+function toFeatChoices(
+  choices: FeatChoicesResponse,
+  featUrl: string,
+): ClassChoice[] {
+  return choices.flatMap<ClassChoice>((choice) => {
+    const id = `${getCharacterFeatureId('feat', featUrl)}:${choice.key}`;
+    const count = Math.max(1, choice.count ?? 1);
+    const label = choice.label?.trim() ?? '';
+
+    if (choice.type === 'SPELLCASTING_ABILITY') {
+      // Пул — характеристики, перечисленные в механике («Интеллект, Мудрость
+      // или Харизма» у «Посвящённого в магию»). Не перечислены — выбирать можно
+      // любую: запрета в правилах нет, а пустой список сделал бы шаг непроходимым.
+      const listed = (choice.options ?? []).flatMap((option) => {
+        const key = parseApiAbilityKey(option.value);
+
+        return key ? [ABILITY_LABELS[key]] : [];
+      });
+
+      return [
+        {
+          id,
+          kind: 'spellcasting-ability',
+          label:
+            label || SHEET_FEAT_CHOICE_LABELS['spellcasting-ability'] || '',
+          count,
+          listed: listed.length
+            ? listed
+            : ABILITY_ORDER.map((key) => ABILITY_LABELS[key]),
+        },
+      ];
+    }
+
+    if (choice.type === 'SPELL' || choice.type === 'CANTRIP') {
+      return [
+        {
+          id,
+          kind: 'spell',
+          label: label || SHEET_FEAT_CHOICE_LABELS.spell || '',
+          count,
+          // Пул приходит поиском по каталогу, а не списком из справочника.
+          listed: [],
+          spellFilter: {
+            // Заговор — это заклинание нулевого круга. У выбора с устаревшим
+            // типом CANTRIP круга в фильтре может не быть вовсе, и тогда его
+            // задаёт сам тип.
+            level:
+              choice.spellFilter?.level
+              ?? (choice.type === 'CANTRIP' ? CANTRIP_SPELL_LEVEL : null),
+            maxLevel: choice.spellFilter?.maxLevel ?? null,
+            classes: (choice.spellFilter?.classes ?? []).filter(
+              (characterClass) => !!characterClass.url,
+            ),
+            classesFromChoiceKey:
+              choice.spellFilter?.classesFromChoiceKey ?? '',
+          },
+        },
+      ];
+    }
+
+    if (choice.type === 'SPELL_LIST') {
+      // Пул — классы, перечисленные в самом выборе: по ответу сужается пул
+      // заклинаний того выбора, который на него ссылается. Подпись берётся из
+      // снимка названия, а без него остаётся ссылка — иначе выбор был бы пуст.
+      const options = (choice.options ?? []).flatMap((option) =>
+        option.value
+          ? [{ value: option.value, name: option.name || option.value }]
+          : [],
+      );
+
+      return [
+        {
+          id,
+          kind: 'spell-list',
+          label: label || SHEET_FEAT_CHOICE_LABELS['spell-list'] || '',
+          // Список всегда один: ответ на него сужает пул заклинаний до одного
+          // класса, а два ответа дали бы объединение списков, которого в
+          // правилах нет — и `getChoiceSpellClassUrls` читает только первый.
+          // Поэтому количество из механики здесь не в счёт
+          count: 1,
+          listed: options.map((option) => option.name),
+          optionValues: Object.fromEntries(
+            options.map((option) => [option.name, option.value]),
+          ),
+        },
+      ];
+    }
+
+    if (choice.type === 'DAMAGE_TYPE') {
+      // Пул — типы урона, перечисленные в механике («дробящий или рубящий» у
+      // «Закалённой кожи»). Не перечислены — выбирать можно любой: так у «Дара
+      // устойчивости к энергиям», и пустой список сделал бы шаг непроходимым.
+      const listed = (choice.options ?? []).flatMap((option) => {
+        const name = DAMAGE_TYPE_LABELS[option.value];
+
+        return name ? [name] : [];
+      });
+
+      return [
+        {
+          id,
+          kind: 'damage-type',
+          label: label || SHEET_FEAT_CHOICE_LABELS['damage-type'] || '',
+          count,
+          listed: listed.length ? listed : DAMAGE_TYPE_NAMES,
+        },
+      ];
+    }
+
+    if (choice.type === 'TOOL') {
+      return [
+        {
+          id,
+          kind: 'tool',
+          label,
+          count,
+          // Пул инструментов приходит каталогом сайта: в механике перечислены
+          // только те случаи, где выбор сужен до нескольких предметов.
+          listed: (choice.options ?? []).flatMap((option) =>
+            option.name ? [option.name] : [],
+          ),
+          excludeOwned: choice.onlyIfNotProficient ?? false,
+        },
+      ];
+    }
+
+    if (choice.type === 'LANGUAGE') {
+      return [
+        {
+          id,
+          kind: 'language',
+          label,
+          count,
+          // Языки перечисляются кодами словаря; пусто — выбор из всех языков.
+          listed: (choice.options ?? []).flatMap((option) => {
+            const name = LANGUAGE_NAME_BY_API_KEY[option.value];
+
+            return name ? [name] : [];
+          }),
+          excludeOwned: choice.onlyIfNotProficient ?? false,
+        },
+      ];
+    }
+
+    if (choice.type !== 'SKILL') {
+      return [];
+    }
+
+    if (choice.grants === 'EXPERTISE') {
+      return [
+        {
+          id,
+          kind: 'skill-expertise',
+          label,
+          count,
+          // Пул компетентности резолвится владениями листа, а не списком из
+          // справочника: выбирать можно только то, чем персонаж уже владеет.
+          listed: [],
+        },
+      ];
+    }
+
+    return [
+      {
+        id,
+        kind: 'skill-proficiency',
+        label,
+        count,
+        // Пул навыков перечисляется кодами словаря; пусто — выбор из всех.
+        listed: (choice.options ?? []).flatMap((option) => {
+          const name = SKILL_NAME_BY_API_KEY[option.value];
+
+          return name ? [name] : [];
+        }),
+        excludeOwned: choice.onlyIfNotProficient ?? false,
+        // «Наблюдательный»: навык, которым персонаж уже владеет, даёт
+        // компетентность вместо второго владения.
+        expertiseIfProficient: choice.expertiseIfProficient ?? false,
+      },
+    ];
+  });
+}
+
+/**
+ * Выбор класса для черт, у которых его в записи нет.
+ *
+ * Выбор заклинания перечисляет несколько классов — «Посвящённый в магию» назвал
+ * жреца, друида и волшебника, — но по правилам список ОДИН, а не объединение
+ * трёх. Записи, сделанные до того, как форма стала заводить вопрос про класс
+ * сама, такого выбора не содержат, и пул у них собирался из всех классов сразу.
+ * Лист спрашивает класс и по ним.
+ *
+ * @param choices выборы черты.
+ * @param featUrl url черты (идёт в устойчивый id выбора).
+ * @returns выборы вместе с вопросом про класс; без нескольких классов — как есть.
+ */
+function withSpellClassChoice(
+  choices: ClassChoice[],
+  featUrl: string,
+): ClassChoice[] {
+  // Вопрос уже есть — второй не нужен: на него и ссылаются выборы заклинаний.
+  if (choices.some((choice) => choice.kind === 'spell-list')) {
+    return choices;
+  }
+
+  const unlinked = choices.filter(
+    (choice) =>
+      choice.kind === 'spell'
+      && !choice.spellFilter?.classesFromChoiceKey
+      && (choice.spellFilter?.classes.length ?? 0) > 1,
+  );
+
+  const [first] = unlinked;
+
+  if (!first?.spellFilter) {
+    return choices;
+  }
+
+  const options = first.spellFilter.classes.map((characterClass) => ({
+    // Снимка названия у ссылки может не быть — тогда подписью служит она сама;
+    // название подставит `withSpellListClassNames` по каталогу классов.
+    name: characterClass.name || characterClass.url,
+    value: characterClass.url,
+  }));
+
+  const classChoice: ClassChoice = {
+    id: `${getCharacterFeatureId('feat', featUrl)}:${FEAT_SPELL_CLASS_CHOICE_KEY}`,
+    kind: 'spell-list',
+    label: SHEET_FEAT_CHOICE_LABELS['spell-list'] ?? '',
+    count: 1,
+    listed: options.map((option) => option.name),
+    optionValues: Object.fromEntries(
+      options.map((option) => [option.name, option.value]),
+    ),
+  };
+
+  const linked = new Set(unlinked.map((choice) => choice.id));
+
+  return [
+    classChoice,
+    ...choices.map((choice) =>
+      linked.has(choice.id) && choice.spellFilter
+        ? {
+            ...choice,
+            spellFilter: {
+              ...choice.spellFilter,
+              classesFromChoiceKey: FEAT_SPELL_CLASS_CHOICE_KEY,
+            },
+          }
+        : choice,
+    ),
+  ];
+}
+
+/**
+ * Заклинания списков черты записями листа.
+ *
+ * Это не выдача: заклинание списка персонаж знает наравне с классовыми, но
+ * готовит его сам — поэтому запись приходит неподготовленной, каким бы ни был
+ * `alwaysPrepared` у выданных заклинаний той же черты.
+ *
+ * Уровень доступа списка едет на каждой записи: отбор идёт при показе
+ * (см. `getAvailableInnateSpells`), и книга пополняется сама, когда персонаж
+ * дорастёт до следующего списка.
+ *
+ * @param groups списки заклинаний из детали черты.
+ * @returns заклинания открытых списков; пусто — черта списков не даёт.
+ */
+function toFeatSpellListSpells(
+  groups: Array<z.infer<typeof featSpellListGroupSchema>>,
+): CharacterSpell[] {
+  // Список с количеством игрок набирает сам («два заклинания из пяти»), а такого
+  // выбора лист пока не спрашивает: выдать вместо него весь список значило бы
+  // дать персонажу лишнее.
+  const wholeLists = groups.filter((group) => !group.count);
+
+  return wholeLists.flatMap((group) =>
+    group.spells.map((spell) => ({
+      ...toCharacterSpell(spell),
+      prepared: false,
+      requiredLevel: group.requiredLevel ?? undefined,
+    })),
+  );
+}
 
 /**
  * Валидация детального ответа `GET /api/v2/feats/{url}`.
@@ -359,11 +1038,59 @@ export function parseFeatDetail(input: unknown): FeatSummary | null {
     return null;
   }
 
+  const proficiencies = result.data.mechanics?.proficiencies;
+  const granted = result.data.grantedSpells ?? [];
+
+  // Черта либо держит заклинание подготовленным («вы всегда можете накладывать
+  // его»), либо оставляет подготовку игроку: тогда квадрат подготовки гаснет, и
+  // игрок ставит пометку сам, как у врождённого заклинания вида.
+  const prepared = result.data.mechanics?.spells?.alwaysPrepared ?? false;
+
+  // Характеристика заклинаний черты, заданная жёстко. Выбор из нескольких
+  // приезжает отдельным выбором и проставляется уже по ответу игрока
+  // (см. `getFeatSpellcastingAbility`).
+  const spellcastingAbility = parseApiAbilityKey(
+    result.data.mechanics?.spells?.spellcastingAbility ?? '',
+  );
+
+  const choices = result.data.mechanics?.choices;
+
+  const spellListSpells = toFeatSpellListSpells(
+    result.data.spellListGroups ?? [],
+  );
+
+  const abilityBonuses = toFeatAbilityBonuses(
+    result.data.mechanics?.abilityBonuses ?? [],
+  );
+
   return {
     url: result.data.url,
     name: result.data.name.rus,
     category: result.data.category,
     description: result.data.description,
+    modifiers: result.data.mechanics?.modifiers ?? null,
+    proficiencies: proficiencies ? toGrantedProficiencies(proficiencies) : null,
+    // Уровень доступа едет вместе с записью: заклинание с ним попадёт на лист
+    // только когда персонаж дорастёт (см. `getAvailableInnateSpells`)
+    spells: granted.length
+      ? granted.map((entry) => ({
+          ...toCharacterSpell(entry.spell),
+          prepared,
+          requiredLevel: entry.requiredLevel ?? undefined,
+        }))
+      : null,
+    spellListSpells: spellListSpells.length ? spellListSpells : null,
+    spellcastingAbility,
+    // Повышение характеристик спрашивается первым: остальные выборы черты идут
+    // после того, как игрок решил, что она поднимает.
+    choices: [
+      ...toFeatAbilityChoices(abilityBonuses, result.data.url),
+      ...withSpellClassChoice(
+        choices ? toFeatChoices(choices, result.data.url) : [],
+        result.data.url,
+      ),
+    ],
+    abilityBonuses,
   };
 }
 
@@ -508,6 +1235,8 @@ const magicItemRawSchema = z
           .object({ maxCharges: z.coerce.number().nullable().catch(null) })
           .nullable()
           .catch(null),
+        // Активные эффекты разбирает своя схема раздела — здесь они `unknown`.
+        activeEffects: z.unknown(),
       })
       .nullable()
       .catch(null),
@@ -541,6 +1270,9 @@ export function parseMagicItemRaw(input: unknown): MagicItemRawDetail {
     bonuses: parsed.bonuses ?? EMPTY_MAGIC_ITEM_BONUSES,
     requiresAttunement: parsed.attunement?.requires ?? false,
     maxCharges: Math.max(0, Math.trunc(maxCharges)),
+    activeEffects: normalizeLoadedActiveEffects(
+      parsed.mechanics?.activeEffects,
+    ),
   };
 }
 
@@ -580,15 +1312,16 @@ export function parseItemDetail(input: unknown): ItemSummary | null {
   };
 }
 
+/** Правило Ловкости в «сыром» ответе доспеха. */
+type ArmorRawDexterityMod = 'PLUS' | 'PLUS_MAX_2' | 'NONE';
+
 /** Правила Ловкости из «сырого» ответа доспеха к внутреннему представлению. */
-const ARMOR_DEXTERITY_MOD_MAP: Record<
-  'PLUS' | 'PLUS_MAX_2' | 'NONE',
-  ArmorDexterityMod
-> = {
-  PLUS: 'full',
-  PLUS_MAX_2: 'capped',
-  NONE: 'none',
-};
+const ARMOR_DEXTERITY_MOD_MAP: Record<ArmorRawDexterityMod, ArmorDexterityMod> =
+  {
+    PLUS: 'full',
+    PLUS_MAX_2: 'capped',
+    NONE: 'none',
+  };
 
 /**
  * Схема «сырого» ответа предмета `GET /api/v2/item/{url}/raw` в части доспеха.
@@ -785,6 +1518,11 @@ export function parseItemWeapon(input: unknown): InventoryWeapon | null {
       || Boolean(weapon.ammo),
     finesse: weapon.properties.some((property) =>
       /фехтов|finesse/i.test(property),
+    ),
+    // «Тяжёлое» ищем в свойствах, а не в названии: тяжёлым оружие делает
+    // свойство, а не слово «тяжёлый» в имени.
+    heavy: weapon.properties.some((property) =>
+      /тяж[её]л|heavy/i.test(property),
     ),
     // Немагическое оружие своего бонуса к атаке не имеет: его даёт только магия.
     attackBonus: MAGIC_ITEM_BONUS_NONE,
@@ -1149,6 +1887,9 @@ export function parseClassDetail(input: unknown): ClassSummary | null {
 const backgroundLinkSchema = z.object({
   url: z.string(),
   name: z.object({ rus: z.string().catch('') }),
+  // Черта появилась в ответе поиска позже: у старых записей и у предысторий без
+  // черты полей нет вовсе.
+  featName: z.string().nullable().catch(null),
   source: z
     .object({
       name: z.object({ label: z.string().catch('') }).catch({ label: '' }),
@@ -1179,6 +1920,7 @@ export function parseBackgroundOptions(input: unknown): BackgroundOption[] {
     url: background.url,
     name: background.name.rus,
     sourceLabel: background.source.name.label,
+    featName: background.featName ?? '',
   }));
 }
 
@@ -1190,7 +1932,9 @@ const backgroundDetailSchema = z.object({
   skillProficiencies: z.string().catch(''),
   feat: z.string().catch(''),
   toolProficiency: z.array(z.string()).catch([]),
-  equipment: z.array(z.string()).catch([]),
+  // Справка приходит как описание раздела — строки-абзацы вперемешку с узлами
+  // разметки (список вариантов «А)/Б)»), поэтому массивом строк не разбирается.
+  equipment: descriptionNodesSchema,
   // Разбирается отдельной функцией: то же поле есть и у класса.
   startingEquipment: z.unknown(),
 });

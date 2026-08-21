@@ -14,11 +14,18 @@
       disabled?: boolean;
       excludedValues?: Array<string>;
       multiple?: boolean;
+      /**
+       * Хранить название класса вместо ссылки. Так его ждут поля, чьё значение
+       * читает человек: подпись черты предыстории уезжает в текст страницы
+       * («Посвящённый в магию (Волшебник)»), и ссылка на её месте не годится.
+       */
+      nameAsValue?: boolean;
     }>(),
     {
       disabled: false,
       excludedValues: () => [],
       multiple: false,
+      nameAsValue: false,
     },
   );
 
@@ -67,13 +74,17 @@
   }, 250);
 
   const selectItems = computed<Array<ClassSelectItem>>(() => {
-    return (classLinks.value ?? []).map((classLink) => ({
-      label: classLink.name.rus,
-      value: classLink.url,
-      description: classLink.name.eng,
-      source: classLink.source.name.label,
-      disabled: props.excludedValues.includes(classLink.url),
-    }));
+    return (classLinks.value ?? []).map((classLink) => {
+      const value = props.nameAsValue ? classLink.name.rus : classLink.url;
+
+      return {
+        label: classLink.name.rus,
+        value,
+        description: classLink.name.eng,
+        source: classLink.source.name.label,
+        disabled: props.excludedValues.includes(value),
+      };
+    });
   });
 </script>
 

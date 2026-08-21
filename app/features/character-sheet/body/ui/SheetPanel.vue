@@ -33,9 +33,14 @@
    *
    * Без прав на правку кнопка помечена `invisible` — тогда колонки нет вовсе:
    * раздвигать обводку ради пустого места незачем.
+   *
+   * Пара пикселей вверх — выравнивание по подписи: значок на 14 пикселях выше
+   * её заглавных букв, и по центру строки его тянуло вниз. Сдвиг у обёртки, а
+   * не у самой кнопки: `overflow-hidden` внутренней ячейки срезал бы значок,
+   * вылезший за её бокс.
    */
   const TITLE_ACTIONS_CLASS =
-    'inline-grid align-middle transition-[grid-template-columns] duration-200 has-[.invisible]:hidden';
+    '-mt-0.5 inline-grid align-middle transition-[grid-template-columns] duration-200 has-[.invisible]:hidden';
 
   /**
    * Наведение (или переход с клавиатуры) раздвигает колонку, и в обводке рамки

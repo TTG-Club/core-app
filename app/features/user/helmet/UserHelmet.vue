@@ -1,9 +1,13 @@
 <script setup lang="ts">
   import { USER_TOKEN_COOKIE } from '#shared/consts';
+  import { MY_BUGS_UPDATES_HINT } from '~bug-report/model';
+  import { useMyBugReportUpdates } from '~bug-report/my';
   import {
     CHARACTER_SHEET_LIST_TITLE,
     CHARACTER_SHEET_ROUTE,
   } from '~character-sheet/model';
+  import { MY_COMMENTS_UPDATES_HINT } from '~comments/model';
+  import { useMyCommentUpdates } from '~comments/my';
   import {
     MODERATION_PANEL_ICON,
     MODERATION_PANEL_TITLE,
@@ -11,6 +15,7 @@
   } from '~moderation/model';
   import { useProfileBadges } from '~profile/activation/composables';
   import { KbdShortcut } from '~ui/kbd-shortcut';
+  import { UpdatesDot } from '~ui/updates-dot';
   import { AuthModal } from '~user/auth-modal';
 
   import { UserInfo } from './ui';
@@ -36,6 +41,40 @@
     isLoggedIn.value
       ? 'ttg:profile-helmet-filled'
       : 'ttg:profile-helmet-outline',
+  );
+
+  // Сводки изменений (баг-репорты, ответы на комментарии) спрашиваем только у
+  // авторизованных: у гостя ни своих репортов, ни своих комментариев нет,
+  // а запросы уходили бы в 401 на каждой странице сайта.
+  // Вызов до await — по той же причине, что и useProfileBadges ниже.
+  const bugReportUpdates = userTokenCookie.value
+    ? useMyBugReportUpdates()
+    : null;
+
+  const commentUpdates = userTokenCookie.value ? useMyCommentUpdates() : null;
+
+  const hasBugReportUpdates = computed(
+    () => bugReportUpdates?.hasUpdates.value ?? false,
+  );
+
+  const hasCommentUpdates = computed(
+    () => commentUpdates?.hasUpdates.value ?? false,
+  );
+
+  /** Точка на шлеме одна на весь профиль — зажечь её может любая новость. */
+  const hasProfileUpdates = computed(
+    () => hasBugReportUpdates.value || hasCommentUpdates.value,
+  );
+
+  // Подсказка называет всё, что ждёт в профиле: точка одна, а поводов может
+  // быть два сразу.
+  const profileUpdatesHint = computed(() =>
+    [
+      hasBugReportUpdates.value ? MY_BUGS_UPDATES_HINT : '',
+      hasCommentUpdates.value ? MY_COMMENTS_UPDATES_HINT : '',
+    ]
+      .filter(Boolean)
+      .join(' · '),
   );
 
   if (userTokenCookie.value) {
@@ -108,14 +147,22 @@
     @update:open="dismissMenu"
   >
     <template #default>
-      <UButton
-        :loading="pending"
-        :icon="helmetIcon"
-        variant="ghost"
-        color="neutral"
-        size="xl"
-        @click.left.exact.prevent.stop="handleHelmetClick"
-      />
+      <!-- Точка на шлеме — единственный намёк снаружи профиля, что там ждут
+        ответ команды или ответ на комментарий: иначе о них узнают случайно -->
+      <UChip
+        :show="hasProfileUpdates"
+        color="primary"
+        size="md"
+      >
+        <UButton
+          :loading="pending"
+          :icon="helmetIcon"
+          variant="ghost"
+          color="neutral"
+          size="xl"
+          @click.left.exact.prevent.stop="handleHelmetClick"
+        />
+      </UChip>
     </template>
 
     <template
@@ -140,7 +187,14 @@
               icon="tabler:user-cog"
               @click.left.exact.prevent="openProfile"
             >
-              Профиль
+              <span class="flex items-center gap-2">
+                Профиль
+
+                <UpdatesDot
+                  v-if="hasProfileUpdates"
+                  :title="profileUpdatesHint"
+                />
+              </span>
             </UButton>
 
             <!-- Короткий путь к своим листам: раздел лежит в «Инструментах»

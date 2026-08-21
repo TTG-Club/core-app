@@ -24,10 +24,13 @@
     ABILITY_LABELS,
     ARMOR_PROFICIENCY_GROUPS,
     EMPTY_DAMAGE_ROLL_SOURCE,
+    findCharacterSpell,
     getAbilityCheckValue,
     getAvailableInnateSpells,
     getWeaponAttackBonus,
+    getWeaponAttackRollMode,
     getWeaponDamageSource,
+    isProficientWeapon,
     LANGUAGE_PROFICIENCY_GROUPS,
   } from '../model';
   import CharacterSheetSkeleton from './CharacterSheetSkeleton.vue';
@@ -46,6 +49,7 @@
     SheetCustomItemModal,
     SheetCustomSpellModal,
     SheetDamageModal,
+    SheetDefencesPanel,
     SheetExhaustionPanel,
     SheetExperienceModal,
     SheetFeatAddModal,
@@ -78,6 +82,7 @@
     SheetSpeciesWizardModal,
     SheetSpeedModal,
     SheetSpeedTile,
+    SheetSpellAbilityModal,
     SheetSpellAddModal,
     SheetSpellcastingModal,
     SheetStatTile,
@@ -110,6 +115,8 @@
     savingThrowRows,
     skillGroups,
     effectiveSpeed,
+    featDefences,
+    hasFeatDefences,
     formattedProficiencyBonus,
     initiativeBonus,
     formattedInitiative,
@@ -120,6 +127,7 @@
     carryingCapacity,
     attunement,
     setAbilityScore,
+    setSpellSpellcastingAbility,
     spendSpellSlot,
     toggleSavingThrowProficiency,
     toggleInnateSpellPrepared,
@@ -449,6 +457,12 @@
     props: { classUrl: '' },
   });
 
+  // Заклинание приходит нажатием пункта меню строки: значения при создании —
+  // лишь отправная точка, `open()` подставляет нужные.
+  const spellAbilityModal = overlay.create(SheetSpellAbilityModal, {
+    props: { spellName: '', ability: null, classAbility: null },
+  });
+
   // Вид подготовки приходит нажатием на плитку: значение при создании — лишь
   // отправная точка, `open()` подставляет нужное.
   const preparedSpellsModal = overlay.create(SheetPreparedSpellsModal, {
@@ -694,13 +708,20 @@
       return;
     }
 
-    const attack = getWeaponAttackBonus(character.value, inventoryItem.weapon);
+    const attack = getWeaponAttackBonus(
+      character.value,
+      inventoryItem.weapon,
+      isProficientWeapon(character.value, inventoryItem),
+    );
 
     rollModal.open({
       title: `Атака: ${inventoryItem.name}`,
       modifier: attack.value,
       ability: attack.ability,
       actionLabel: 'Бросить атаку',
+      // Тяжёлое оружие не по руке бьёт с помехой (правила 2024): модалка
+      // открывается сразу в этом режиме, но игрок волен его сменить.
+      mode: getWeaponAttackRollMode(attack),
     });
   }
 
@@ -873,6 +894,38 @@
 
   function handleInnateSpellCopy(spellUrl: string) {
     void copyInnateSpellToSheet(spellUrl);
+  }
+
+  /**
+   * Настройка характеристики одного заклинания: от неё считаются его Сл
+   * спасброска и бонус атаки. «От класса» возвращает запись к общему подсчёту.
+   *
+   * @param spellUrl URL заклинания.
+   */
+  async function handleSpellAbilityEdit(spellUrl: string) {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const spell = findCharacterSpell(character.value, spellUrl);
+
+    if (!spell) {
+      return;
+    }
+
+    const ability = await spellAbilityModal.open({
+      spellName: spell.name,
+      ability: spell.spellcastingAbility ?? null,
+      // Что подставит «Авто»: характеристика первого класса-заклинателя — по
+      // ней лист считает заклинания книги.
+      classAbility: spellcastingBreakdown.value.ability,
+    }).result;
+
+    if (ability === undefined) {
+      return;
+    }
+
+    setSpellSpellcastingAbility(spellUrl, ability);
   }
 
   function handleSpellcastingEdit(classUrl: string) {
@@ -1113,6 +1166,16 @@
               class="max-sm:order-6 max-sm:col-span-full"
               @edit="handleProficienciesEdit"
             />
+
+            <!-- Сопротивления, иммунитеты и прочее от черт: панель появляется,
+              только если черта их выдала — своего понятия для них лист не
+              хранит и правке они не подлежат -->
+            <SheetDefencesPanel
+              v-if="hasFeatDefences"
+              :defences="featDefences"
+              :unit="character.speed.unit"
+              class="max-sm:order-7 max-sm:col-span-full"
+            />
           </div>
 
           <div class="flex flex-col gap-4 max-sm:contents">
@@ -1200,6 +1263,7 @@
           @edit-spell="handleSpellEdit"
           @copy-spell="handleSpellCopy"
           @edit-spellcasting="handleSpellcastingEdit"
+          @edit-spell-ability="handleSpellAbilityEdit"
           @edit-prepared-spells="handlePreparedSpellsEdit"
           @edit-currency="handleCurrencyEdit"
           @edit-carrying-capacity="handleCarryingCapacityEdit"

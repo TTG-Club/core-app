@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { EffectChange } from '../../model';
 
+  import { InputWithLibrary } from '~ui/input';
+
   import {
     createEmptyEffectChange,
     EFFECT_CHANGE_MODE_OPTIONS,
@@ -8,7 +10,6 @@
     EFFECT_TARGET_KEY_SUGGESTIONS,
     EFFECT_VALUE_SUGGESTIONS,
   } from '../../model';
-  import EffectLibraryInput from './EffectLibraryInput.vue';
 
   const model = defineModel<Array<EffectChange>>({ default: () => [] });
 
@@ -52,7 +53,7 @@
         label="Ключ атрибута"
         class="col-span-full md:col-span-8"
       >
-        <EffectLibraryInput
+        <InputWithLibrary
           v-model="change.key"
           :options="EFFECT_TARGET_KEY_SUGGESTIONS"
           placeholder="Напр.: armorClass"
@@ -74,7 +75,7 @@
         label="Значение"
         class="col-span-full md:col-span-7"
       >
-        <EffectLibraryInput
+        <InputWithLibrary
           v-model="change.value"
           :options="EFFECT_VALUE_SUGGESTIONS"
           placeholder="+2, 1к4, @mod.spell"
@@ -105,7 +106,7 @@
         label="Условие"
         class="col-span-full"
       >
-        <EffectLibraryInput
+        <InputWithLibrary
           v-model="change.condition"
           :options="EFFECT_CONDITION_EXPR_SUGGESTIONS"
           placeholder="Напр.: roll.hasAdvantage === true"

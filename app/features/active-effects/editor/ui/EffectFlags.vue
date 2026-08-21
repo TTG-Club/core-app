@@ -1,10 +1,11 @@
 <script setup lang="ts">
+  import { InputWithLibrary } from '~ui/input';
+
   import {
     DEFAULT_EFFECT_FLAG,
     EFFECT_FLAG_LABEL_MAP,
     EFFECT_FLAG_OPTIONS,
   } from '../../model';
-  import EffectLibraryInput from './EffectLibraryInput.vue';
 
   const model = defineModel<Array<string>>({ default: () => [] });
 
@@ -55,7 +56,7 @@
       class="flex flex-col gap-1 rounded-lg border border-default bg-elevated/50 p-3"
     >
       <div class="flex items-center gap-2">
-        <EffectLibraryInput
+        <InputWithLibrary
           :model-value="flag"
           :options="EFFECT_FLAG_OPTIONS"
           placeholder="Напр.: vision.blinded"

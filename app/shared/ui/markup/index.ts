@@ -1,3 +1,13 @@
+export type { MarkdownStat } from './markdown-entity';
+export type { MarkdownAlign, MarkdownColumn } from './markdown-table';
+
+export {
+  buildMarkdownEntity,
+  buildStatsBlock,
+  joinStat,
+  toInlineValue,
+} from './markdown-entity';
+
 export {
   serializeInlineNodes,
   serializeMarkup,
@@ -7,6 +17,8 @@ export {
 
 export {
   clampHeadingLevel,
+  escapeMarkdown,
+  escapeMarkdownCell,
   getNodeText,
   isBlockNode,
   isMarkerNode,
@@ -15,7 +27,9 @@ export {
 
 export { MARKER_ALIASES, MARKER_MAP } from './config';
 export { CELL_PLACEHOLDER } from './consts';
+export { buildMarkdownTable, toMarkdownRow } from './markdown-table';
 export { default as MarkupRender } from './MarkupRender.vue';
 export { parse } from './parser';
 export * from './renderer';
+export { toMarkdown } from './to-markdown';
 export * from './types';

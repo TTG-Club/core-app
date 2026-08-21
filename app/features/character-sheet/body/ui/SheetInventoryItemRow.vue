@@ -8,6 +8,7 @@
     InventoryCharges,
     InventoryStatRollKind,
     InventoryWeapon,
+    WeaponAttack,
   } from '../../model';
 
   import { MarkupRender } from '~ui/markup';
@@ -18,8 +19,8 @@
     ARMOR_DEXTERITY_HINT_LABELS,
     CUSTOM_INVENTORY_BADGE_HINT,
     getAbilityModifier,
-    getCharacterProficiencyBonus,
     getFormattedBonus,
+    getHeavyWeaponHint,
     getInventoryEquipIcon,
     getInventoryItemBonusLabels,
     getInventoryItemMenuItems,
@@ -36,10 +37,12 @@
     INVENTORY_CHARGES_HINT_LABELS,
     INVENTORY_CHARGES_SPEND_LABEL,
     INVENTORY_EQUIP_ACTION_LABELS,
+    INVENTORY_HEAVY_BADGE_LABEL,
     INVENTORY_MISSING_BADGE_HINT,
     INVENTORY_MISSING_BADGE_LABEL,
     INVENTORY_QUANTITY_MIN,
     INVENTORY_ROLL_KIND_LABELS,
+    INVENTORY_STAT_HINT_LABELS,
     INVENTORY_STAT_LABELS,
     INVENTORY_TWO_HANDED_BADGE_HINT,
     INVENTORY_TWO_HANDED_BADGE_LABEL,
@@ -48,6 +51,7 @@
     isCustomInventoryItem,
     isEquippableInventoryItem,
     isMissingInventoryItem,
+    isProficientWeapon,
     isVersatileInventoryItem,
     SHEET_ROLL_HINT_LABEL,
     WEIGHT_UNIT_LABEL,
@@ -198,6 +202,33 @@
   const isTwoHanded = computed(
     () => isVersatile.value && props.inventoryItem.twoHanded,
   );
+
+  // Владение оружием решает, входит ли в атаку бонус мастерства (правила 2024).
+  const hasWeaponProficiency = computed(() =>
+    isProficientWeapon(character.value, props.inventoryItem),
+  );
+
+  // Разбор атаки нужен и плитке, и значку помехи тяжёлого оружия — считаем его
+  // один раз. null — предмет оружием не является.
+  const weaponAttack = computed<WeaponAttack | null>(() => {
+    const { weapon } = props.inventoryItem;
+
+    return weapon
+      ? getWeaponAttackBonus(
+          character.value,
+          weapon,
+          hasWeaponProficiency.value,
+        )
+      : null;
+  });
+
+  // Помеха от свойства «Тяжёлое» стоит значком: на бонус атаки она не влияет, и
+  // без него о ней узнавали бы только из тултипа плитки.
+  const heavyHint = computed(() => {
+    const heavyAbility = weaponAttack.value?.heavyAbility;
+
+    return heavyAbility ? getHeavyWeaponHint(heavyAbility) : '';
+  });
 
   const openLabel = computed(() =>
     isCustom.value
@@ -368,11 +399,17 @@
     };
   }
 
+  /** Слагаемое подсказки: подпись и бонус со знаком («мастерство +3»). */
+  function getBonusPart(label: string, bonus: number): string {
+    return `${label} ${getFormattedBonus(bonus)}`;
+  }
+
   /** Слагаемое подсказки с модификатором характеристики («Сила +3»). */
   function getAbilityPart(abilityKey: AbilityKey): string {
-    return `${ABILITY_LABELS[abilityKey]} ${getFormattedBonus(
+    return getBonusPart(
+      ABILITY_LABELS[abilityKey],
       getAbilityModifier(character.value, abilityKey),
-    )}`;
+    );
   }
 
   /** Бросок плитки оружия с подписью кнопки для скринридера. */
@@ -407,24 +444,44 @@
     };
   }
 
-  /** Плитка бонуса атаки оружием: бонус мастерства плюс модификатор стата. */
-  function getWeaponAttackStat(weapon: InventoryWeapon): ItemStat {
-    const attack = getWeaponAttackBonus(character.value, weapon);
+  /**
+   * Плитка бонуса атаки оружием: бонус мастерства плюс модификатор стата.
+   * Оружию без владения бонус мастерства не полагается — в разборе его нет, а
+   * хвост подсказки говорит почему. Тем же хвостом идёт и помеха тяжёлого
+   * оружия: в бонусе её не видно, а на бросок она влияет.
+   */
+  function getWeaponAttackStat(attack: WeaponAttack): ItemStat {
+    const tooltipParts = attack.proficiencyBonus
+      ? [
+          getBonusPart(
+            INVENTORY_STAT_HINT_LABELS.proficiency,
+            attack.proficiencyBonus,
+          ),
+        ]
+      : [];
 
-    const masteryPart = `мастерство ${getFormattedBonus(
-      getCharacterProficiencyBonus(character.value),
-    )}`;
-
-    const tooltipParts = [masteryPart, getAbilityPart(attack.ability)];
+    tooltipParts.push(getAbilityPart(attack.ability));
 
     if (attack.weaponBonus !== 0) {
-      tooltipParts.push(`оружие ${getFormattedBonus(attack.weaponBonus)}`);
+      tooltipParts.push(
+        getBonusPart(INVENTORY_STAT_HINT_LABELS.weapon, attack.weaponBonus),
+      );
     }
+
+    const proficiencyHint = hasWeaponProficiency.value
+      ? ''
+      : ` · ${INVENTORY_STAT_HINT_LABELS.noProficiency}`;
+
+    const heavyDisadvantageHint = attack.heavyAbility
+      ? ` · ${INVENTORY_STAT_HINT_LABELS.heavyDisadvantage}`
+      : '';
+
+    const formula = `${tooltipParts.join(' + ')}${proficiencyHint}${heavyDisadvantageHint}`;
 
     return {
       label: INVENTORY_STAT_LABELS.attack,
       value: getFormattedBonus(attack.value),
-      tooltip: `Бонус атаки = ${tooltipParts.join(' + ')}`,
+      tooltip: `${INVENTORY_STAT_HINT_LABELS.attack} = ${formula}`,
       accent: true,
       action: getStatRoll('attack'),
     };
@@ -453,7 +510,9 @@
     }
 
     if (damage.weaponBonus !== 0) {
-      tooltipParts.push(`оружие ${getFormattedBonus(damage.weaponBonus)}`);
+      tooltipParts.push(
+        getBonusPart(INVENTORY_STAT_HINT_LABELS.weapon, damage.weaponBonus),
+      );
     }
 
     tooltipParts.push(getAbilityPart(damage.ability));
@@ -470,9 +529,12 @@
   }
 
   /** Плитки оружия: бонус атаки и урон — обе бросаются по нажатию. */
-  function getWeaponStats(weapon: InventoryWeapon): ItemStat[] {
+  function getWeaponStats(
+    weapon: InventoryWeapon,
+    attack: WeaponAttack,
+  ): ItemStat[] {
     const damageStat = getWeaponDamageStat(weapon);
-    const attackStat = getWeaponAttackStat(weapon);
+    const attackStat = getWeaponAttackStat(attack);
 
     return damageStat ? [attackStat, damageStat] : [attackStat];
   }
@@ -488,7 +550,10 @@
 
     const { armor, weapon, cost, weight } = props.inventoryItem;
 
-    const weaponStats = armor || !weapon ? [] : getWeaponStats(weapon);
+    const attack = weaponAttack.value;
+
+    const weaponStats =
+      armor || !weapon || !attack ? [] : getWeaponStats(weapon, attack);
 
     if (armor) {
       stats.push(getArmorStat(armor));
@@ -687,6 +752,22 @@
                 class="relative z-10 shrink-0"
               >
                 {{ INVENTORY_TWO_HANDED_BADGE_LABEL }}
+              </UBadge>
+            </UTooltip>
+
+            <!-- Помеха тяжёлого оружия: в плитке атаки её не видно (на бонус
+              она не влияет), а на бросок влияет — значок предупреждает -->
+            <UTooltip
+              v-if="heavyHint"
+              :text="heavyHint"
+            >
+              <UBadge
+                size="sm"
+                color="warning"
+                variant="subtle"
+                class="relative z-10 shrink-0"
+              >
+                {{ INVENTORY_HEAVY_BADGE_LABEL }}
               </UBadge>
             </UTooltip>
 
