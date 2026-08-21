@@ -535,6 +535,17 @@ export interface VisionRow {
   formattedValue: string | null;
 }
 
+/** Чувство, выданное особенностью листа. */
+export interface VisionGrant {
+  key: VisionKey;
+
+  /** Название особенности: черты, умения вида или класса. */
+  source: string;
+
+  /** Дистанция в единицах листа (в механике она всегда в футах). */
+  distance: number;
+}
+
 /** Ключ типа передвижения. */
 export type SpeedTypeKey = 'walk' | 'burrow' | 'climb' | 'fly' | 'swim';
 

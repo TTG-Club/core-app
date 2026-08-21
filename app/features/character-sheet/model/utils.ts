@@ -130,6 +130,7 @@ import type {
   StartingEquipmentItem,
   StartingEquipmentOption,
   ToolCatalogEntry,
+  VisionGrant,
   VisionKey,
   VisionRow,
   WeaponAttack,
@@ -7739,6 +7740,53 @@ function applyFeatHitPoints(
 }
 
 /**
+ * Дистанция чувства из механики в единицах листа.
+ *
+ * Дистанция механики — в футах, как и всё расстояние справочника: на листе
+ * единица своя, поэтому переводим тем же коэффициентом, что и скорости.
+ *
+ * @param range дистанция чувства в футах.
+ * @param unit единица измерения на листе.
+ * @returns дистанция в единицах листа.
+ */
+function toVisionDistance(range: number, unit: SpeedUnit): number {
+  return round(
+    range * SPEED_FEET_RATIO_BY_UNIT[unit],
+    SPEED_UNIT_FRACTION_DIGITS,
+  );
+}
+
+/**
+ * Чувства, выданные особенностями листа: от какой записи и на какую дистанцию.
+ *
+ * Нужны там, где одного итогового числа мало: в редакторе зрения игрок правит
+ * своё значение и должен видеть, что дистанция на листе больше не потому, что
+ * поле врёт, а потому что чувство пришло от черты.
+ *
+ * @param character персонаж.
+ * @returns выданные чувства в порядке записей особенностей.
+ */
+export function getVisionGrants(character: Character): VisionGrant[] {
+  return character.features.flatMap((feature) =>
+    (feature.modifiers?.senses ?? []).flatMap((sense) => {
+      const key = sense.type ? VISION_KEY_BY_FEAT_SENSE[sense.type] : undefined;
+
+      if (!key || !sense.range) {
+        return [];
+      }
+
+      return [
+        {
+          key,
+          source: feature.name,
+          distance: toVisionDistance(sense.range, character.vision.unit),
+        },
+      ];
+    }),
+  );
+}
+
+/**
  * Зрение с учётом чувств, которые дают черты: чувство берётся большим из
  * записанного на листе и выданного чертой — «Отмеченный драконом» даёт тёмное
  * зрение тому, у кого его не было, но не урезает эльфийское.
@@ -7750,32 +7798,16 @@ function applyFeatHitPoints(
  * @returns зрение с учётом черт.
  */
 export function getEffectiveVision(character: Character): CharacterVision {
-  const senses = getFeatureModifiers(character.features).flatMap(
-    (modifiers) => modifiers.senses ?? [],
-  );
+  const grants = getVisionGrants(character);
 
-  if (!senses.length) {
+  if (!grants.length) {
     return character.vision;
   }
 
   const vision = { ...character.vision };
 
-  for (const sense of senses) {
-    const key = sense.type ? VISION_KEY_BY_FEAT_SENSE[sense.type] : undefined;
-
-    if (!key || !sense.range) {
-      continue;
-    }
-
-    // Дистанция механики — в футах, как и всё расстояние справочника: на листе
-    // единица своя, поэтому переводим тем же коэффициентом, что и скорости.
-    vision[key] = Math.max(
-      vision[key],
-      round(
-        sense.range * SPEED_FEET_RATIO_BY_UNIT[vision.unit],
-        SPEED_UNIT_FRACTION_DIGITS,
-      ),
-    );
+  for (const grant of grants) {
+    vision[grant.key] = Math.max(vision[grant.key], grant.distance);
   }
 
   return vision;
