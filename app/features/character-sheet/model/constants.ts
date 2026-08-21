@@ -719,7 +719,8 @@ export const RESOURCE_MAX_COMPUTED_LABEL = 'Сейчас максимум';
 export const RESOURCES_TITLE = 'Ресурсы';
 
 /** Пометка ресурса, который завела черта: правится он только сменой черты. */
-export const FEAT_RESOURCE_HINT = 'Ресурс черты: правится сменой самой черты';
+export const FEAT_RESOURCE_HINT =
+  'Ресурс даёт черта — уберите её на вкладке особенностей, чтобы снять';
 
 /** Подписи строки ресурса в списке настройки. */
 export const RESOURCE_ROW_LABELS = {
@@ -728,12 +729,6 @@ export const RESOURCE_ROW_LABELS = {
 
   /** Подсказка кнопки удаления своего ресурса. */
   remove: 'Удалить ресурс',
-} as const;
-
-/** Иконки строки ресурса: свой правится, ресурс черты заперт справочником. */
-export const RESOURCE_ROW_ICONS = {
-  editable: 'tabler:pencil',
-  locked: 'tabler:lock',
 } as const;
 
 /** Подпись поля «сколько зарядов» у ресурса со своим числом. */
