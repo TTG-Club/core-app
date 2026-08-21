@@ -1,10 +1,11 @@
 import type { SelectOption } from '~/shared/types';
 
+import type { FeatDamageDefenseKind } from './mechanics';
 import type {
-  FeatDamageDefenseKind,
   FeatGrantRowKind,
   FeatGrantRowMode,
   FeatModifierRowKind,
+  FeatModifierRowSource,
   FeatPrerequisiteRowKind,
   FeatSpellLevelMode,
 } from './rows';
@@ -170,6 +171,21 @@ export const FEAT_MODIFIER_KIND_OPTIONS: Array<
   value: kind,
   label: FEAT_MODIFIER_LABELS[kind],
 }));
+
+/**
+ * Границы количества типов урона в одном выборе: меньше одного выбор
+ * бессмыслен, а больше пяти не просит ни одна черта — «Дар устойчивости к
+ * энергиям» просит два.
+ */
+export const FEAT_DAMAGE_CHOICE_COUNT = { min: 1, max: 5 };
+
+/** Как задан тип урона у строки защиты. */
+export const FEAT_MODIFIER_SOURCE_OPTIONS: Array<
+  SelectOption & { value: FeatModifierRowSource }
+> = [
+  { value: 'FIXED', label: 'Фиксированный' },
+  { value: 'CHOICE', label: 'На выбор игрока' },
+];
 
 /** Виды защиты от урона. */
 export const FEAT_DAMAGE_DEFENSE_OPTIONS: Array<
@@ -382,12 +398,6 @@ export const FEAT_EDITOR_LABELS = {
     + 'назвал игрок («Устойчивый»). Предел: 20 у обычных черт, 30 у эпических '
     + 'даров.',
 
-  grantsResistance: 'Даёт сопротивление выбранному типу',
-  grantsResistanceHint:
-    'Сопротивление получает тип урона, который выбрал игрок («Отмеченный '
-    + 'драконом»). Сам тип известен только после выбора, поэтому в списке '
-    + 'модификаторов его нет.',
-
   /** Вкладка «Автоматизация» */
   modifiersTitle: 'Модификаторы листа',
   modifiersHint: 'То, что черта меняет на листе навсегда.',
@@ -402,6 +412,19 @@ export const FEAT_EDITOR_LABELS = {
   equalsWalk: 'Равна скорости ходьбы',
   damageType: 'Тип урона',
   defenseKind: 'Вид защиты',
+  damageTypeSource: 'Тип урона',
+  damageTypeSourceHint:
+    'Фиксированный — тип урона задан здесь и тот же у всех. На выбор игрока — '
+    + 'тип называет игрок при взятии черты: «Закалённая кожа» даёт '
+    + 'сопротивление дробящему ИЛИ рубящему, а не обоим сразу.',
+  damageTypesPool: 'Из чего выбирать',
+  damageTypesPoolHint:
+    'Пусто — любой тип урона: «Отмеченный драконом» ограничен пятью типами, а '
+    + '«Дар устойчивости к энергиям» — нет.',
+  damageTypesPoolPlaceholder: 'Любой тип урона',
+  damageChoiceCount: 'Сколько выбрать',
+  damageChoiceLabel: 'Подпись выбора',
+  damageChoiceLabelPlaceholder: 'Выберите тип урона',
   condition: 'Состояние',
   creatureType: 'Тип существа',
 

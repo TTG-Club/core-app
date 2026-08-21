@@ -1144,6 +1144,24 @@ export interface FeatureSenseGrant {
   range?: number;
 }
 
+/** Вид защиты от урона: что тип урона получает. */
+export type FeatureDamageDefenseKind =
+  | 'RESISTANCE'
+  | 'IMMUNITY'
+  | 'VULNERABILITY';
+
+/**
+ * Защита от типа урона, который назвал игрок при взятии черты.
+ *
+ * Сам тип в наборах ниже не лежит — он известен только из ответа на выбор
+ * (`CharacterFeature.choiceAnswers[choiceKey]`), поэтому здесь ссылка на выбор
+ * и исход, который он даёт.
+ */
+export interface FeatureDamageDefenseChoice {
+  choiceKey: string;
+  kind: FeatureDamageDefenseKind;
+}
+
 /** Сопротивления, иммунитеты и уязвимости к урону от черты. */
 export interface FeatureDamageAffinity {
   /** Коды типов урона, к которым черта даёт сопротивление. */
@@ -1155,7 +1173,13 @@ export interface FeatureDamageAffinity {
   /** Коды типов урона, к которым черта даёт уязвимость. */
   vulnerabilities?: string[];
 
-  /** Ключ выбора типа урона, к которому даётся сопротивление. */
+  /** Защиты от типов урона, которые называет игрок. */
+  defenseChoices?: FeatureDamageDefenseChoice[];
+
+  /**
+   * Легаси-псевдоним первой записи `defenseChoices` с видом `RESISTANCE`: у
+   * снимков, сделанных до её появления, есть только это поле.
+   */
   resistanceFromChoiceKey?: string;
 }
 
@@ -2029,6 +2053,7 @@ export type ClassChoiceKind =
   | 'skill-expertise'
   | 'language'
   | 'tool'
+  | 'damage-type'
   | 'spell'
   | 'spell-list'
   | 'spellcasting-ability'

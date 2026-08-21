@@ -259,7 +259,10 @@
               </h2>
             </template>
 
-            <FeatModifierRows v-model="editorRows.modifiers" />
+            <FeatModifierRows
+              v-model="editorRows.modifiers"
+              :rows="editorRows"
+            />
           </UCard>
 
           <UCard variant="subtle">

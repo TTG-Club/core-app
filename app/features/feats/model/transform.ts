@@ -102,6 +102,11 @@ function buildModifiers(modifiers: FeatModifiers): FeatModifiers | undefined {
     initiativeProficiencyBonus: !!modifiers.initiativeProficiencyBonus,
     damage: {
       ...modifiers.damage,
+      // Ссылка без ключа выбора никуда не ведёт: так выглядит строка защиты,
+      // которую только что перевели в режим выбора и ещё не заполнили
+      defenseChoices: modifiers.damage.defenseChoices.filter(
+        (choice) => !!text(choice.choiceKey),
+      ),
       resistanceFromChoiceKey:
         text(modifiers.damage.resistanceFromChoiceKey) ?? '',
     },

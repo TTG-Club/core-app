@@ -71,6 +71,8 @@ import type {
   FeatSpeedGrantNote,
   FeatSpeedModifiers,
   FeatSummary,
+  FeatureDamageDefenseChoice,
+  FeatureDamageDefenseKind,
   FeatureDescriptionNode,
   FeatureOrigin,
   FeatureOriginGroup,
@@ -253,6 +255,7 @@ import {
   DAMAGE_DICE_COUNT_MAX,
   DAMAGE_DICE_COUNT_MIN,
   DAMAGE_TYPE_LABELS,
+  DAMAGE_TYPE_NAMES,
   DAMAGE_TYPE_NONE,
   DARKVISION_PARSE_FALLBACK,
   DEFAULT_ARMOR_CLASS_ABILITY,
@@ -7883,6 +7886,61 @@ function toDictionaryLabels(
   });
 }
 
+/** Названия типов урона справочника: по ним отсеиваются посторонние ответы. */
+const DAMAGE_TYPE_NAME_SET = new Set(DAMAGE_TYPE_NAMES);
+
+/**
+ * Защиты по выбору игрока в снимке черты.
+ *
+ * Список сильнее легаси-поля: справочник пишет их вместе, и разойтись они могут
+ * только в снимке, сделанном другим потребителем. Снимок до появления списка
+ * содержит одно легаси-поле — оно и разворачивается в ту же форму.
+ *
+ * @param modifiers снимок постоянных модификаторов черты.
+ * @returns защиты по выбору игрока со ссылками на выборы.
+ */
+function getFeatureDefenseChoices(
+  modifiers: CharacterFeatureModifiers,
+): FeatureDamageDefenseChoice[] {
+  const listed = (modifiers.damage?.defenseChoices ?? []).filter(
+    (choice) => !!choice.choiceKey,
+  );
+
+  if (listed.length) {
+    return listed;
+  }
+
+  const legacy = modifiers.damage?.resistanceFromChoiceKey;
+
+  return legacy ? [{ choiceKey: legacy, kind: 'RESISTANCE' }] : [];
+}
+
+/**
+ * Типы урона, которые игрок назвал сам, — названиями и одного вида защиты.
+ *
+ * Ответы лежат в записи уже названиями (их так записал пикер), поэтому
+ * переводить нечего — достаточно отбросить те, которых в справочнике типов
+ * урона нет: запись черты могли поправить, и ответ остался бы от прежнего
+ * выбора.
+ *
+ * @param features особенности листа.
+ * @param kind вид защиты, который даёт выбор.
+ * @returns названия выбранных типов урона.
+ */
+function getChosenDamageDefences(
+  features: CharacterFeature[],
+  kind: FeatureDamageDefenseKind,
+): string[] {
+  return features.flatMap((feature) =>
+    feature.modifiers
+      ? getFeatureDefenseChoices(feature.modifiers)
+          .filter((choice) => choice.kind === kind)
+          .flatMap((choice) => feature.choiceAnswers?.[choice.choiceKey] ?? [])
+          .filter((name) => DAMAGE_TYPE_NAME_SET.has(name))
+      : [],
+  );
+}
+
 /**
  * Защиты, которые дают черты: сопротивления, иммунитеты и уязвимости к урону,
  * иммунитеты к состояниям, новый тип существа и дальность телепатии.
@@ -7890,6 +7948,10 @@ function toDictionaryLabels(
  * Своего понятия для них на листе нет — они целиком приходят из снимков
  * механики, поэтому и собираются на лету. Неизвестные коды отбрасываются: их
  * подпись всё равно неоткуда взять.
+ *
+ * Тип урона, который назвал игрок, приходит не снимком, а ответом на выбор
+ * черты: в наборы механики он лечь не мог — на момент записи черты его ещё не
+ * знали.
  *
  * @param features особенности листа.
  * @param unit единица расстояния листа: в ней отдаётся дальность телепатии.
@@ -7907,21 +7969,24 @@ export function getFeatDefences(
     .at(-1);
 
   return {
-    resistances: uniq(
-      modifiers.flatMap((entry) =>
+    resistances: uniq([
+      ...modifiers.flatMap((entry) =>
         toDictionaryLabels(entry.damage?.resistances, DAMAGE_TYPE_LABELS),
       ),
-    ),
-    immunities: uniq(
-      modifiers.flatMap((entry) =>
+      ...getChosenDamageDefences(features, 'RESISTANCE'),
+    ]),
+    immunities: uniq([
+      ...modifiers.flatMap((entry) =>
         toDictionaryLabels(entry.damage?.immunities, DAMAGE_TYPE_LABELS),
       ),
-    ),
-    vulnerabilities: uniq(
-      modifiers.flatMap((entry) =>
+      ...getChosenDamageDefences(features, 'IMMUNITY'),
+    ]),
+    vulnerabilities: uniq([
+      ...modifiers.flatMap((entry) =>
         toDictionaryLabels(entry.damage?.vulnerabilities, DAMAGE_TYPE_LABELS),
       ),
-    ),
+      ...getChosenDamageDefences(features, 'VULNERABILITY'),
+    ]),
     conditionImmunities: uniq(
       modifiers.flatMap((entry) =>
         toDictionaryLabels(entry.conditionImmunities, CONDITION_LABELS),
@@ -9876,16 +9941,17 @@ export function resolveChoiceOptions(
     ];
   }
 
-  // Пул характеристик, вариантов повышения и списков заклинаний перечислен в
-  // самой механике черты, а пул заклинаний собирается поиском по каталогу и
-  // приходит уже готовым: и то, и другое лежит в `listed`. Без этой ветки они
-  // провалились бы в выбор инструмента ниже.
+  // Пул характеристик, вариантов повышения, списков заклинаний и типов урона
+  // перечислен в самой механике черты, а пул заклинаний собирается поиском по
+  // каталогу и приходит уже готовым: и то, и другое лежит в `listed`. Без этой
+  // ветки они провалились бы в выбор инструмента ниже.
   if (
     choice.kind === 'spellcasting-ability'
     || choice.kind === 'spell'
     || choice.kind === 'spell-list'
     || choice.kind === 'ability-score'
     || choice.kind === 'ability-variant'
+    || choice.kind === 'damage-type'
   ) {
     return choice.listed;
   }

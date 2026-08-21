@@ -58,6 +58,8 @@ import {
   ARMOR_PROFICIENCY_GROUPS,
   CANTRIP_SPELL_LEVEL,
   CURRENCY_KEYS_BY_LABEL,
+  DAMAGE_TYPE_LABELS,
+  DAMAGE_TYPE_NAMES,
   FEAT_SPELL_CLASS_CHOICE_KEY,
   INVENTORY_QUANTITY_MAX,
   LANGUAGE_NAME_BY_API_KEY,
@@ -729,9 +731,10 @@ type FeatChoicesResponse = NonNullable<
  * Выборы черты, которые лист умеет применить, — в виде своих выборов листа.
  *
  * Это компетентность в навыке (пул резолвится по уже имеющимся владениям),
- * заклинательная характеристика (пул перечислен в самой механике) и заклинание
- * либо заговор (пул собирается поиском по каталогу). Остальные виды выбора лист
- * не применяет, поэтому и не спрашивает — иначе игрок отвечал бы в пустоту.
+ * заклинательная характеристика (пул перечислен в самой механике), заклинание
+ * либо заговор (пул собирается поиском по каталогу) и тип урона, к которому
+ * черта даёт защиту. Остальные виды выбора лист не применяет, поэтому и не
+ * спрашивает — иначе игрок отвечал бы в пустоту.
  *
  * @param choices выборы из механики черты.
  * @param featUrl url черты (идёт в устойчивый id выбора).
@@ -821,6 +824,27 @@ function toFeatChoices(
           optionValues: Object.fromEntries(
             options.map((option) => [option.name, option.value]),
           ),
+        },
+      ];
+    }
+
+    if (choice.type === 'DAMAGE_TYPE') {
+      // Пул — типы урона, перечисленные в механике («дробящий или рубящий» у
+      // «Закалённой кожи»). Не перечислены — выбирать можно любой: так у «Дара
+      // устойчивости к энергиям», и пустой список сделал бы шаг непроходимым.
+      const listed = (choice.options ?? []).flatMap((option) => {
+        const name = DAMAGE_TYPE_LABELS[option.value];
+
+        return name ? [name] : [];
+      });
+
+      return [
+        {
+          id,
+          kind: 'damage-type',
+          label: label || SHEET_FEAT_CHOICE_LABELS['damage-type'] || '',
+          count,
+          listed: listed.length ? listed : DAMAGE_TYPE_NAMES,
         },
       ];
     }

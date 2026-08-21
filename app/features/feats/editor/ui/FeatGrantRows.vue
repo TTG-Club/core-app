@@ -89,7 +89,6 @@
       : [next.at(-1) ?? getPrimaryGrantKind(row)];
 
     row.options = [];
-    row.grantsResistance = false;
 
     // Выдать «навык или инструмент» нечем: несколько видов — это всегда выбор
     if (isChoiceOnlyGrantRow(row)) {
@@ -352,17 +351,6 @@
                 v-model="row.rechooseOnLongRest"
                 :label="FEAT_EDITOR_LABELS.rechooseOnLongRest"
               />
-
-              <InfoTooltip
-                v-if="hasGrantKind(row, 'DAMAGE_TYPE')"
-                :text="FEAT_EDITOR_LABELS.grantsResistanceHint"
-                icon="tabler:info-circle-filled"
-              >
-                <UCheckbox
-                  v-model="row.grantsResistance"
-                  :label="FEAT_EDITOR_LABELS.grantsResistance"
-                />
-              </InfoTooltip>
             </div>
           </template>
 

@@ -252,6 +252,19 @@ export const featModifiersSchema = z
         resistances: modifierCodesSchema,
         immunities: modifierCodesSchema,
         vulnerabilities: modifierCodesSchema,
+        // Защиты от типов урона, которые называет игрок: сам тип лежит в
+        // ответе на выбор, а здесь — ссылка на него и исход
+        defenseChoices: z
+          .array(
+            z.object({
+              choiceKey: z.string().catch(''),
+              kind: z
+                .enum(['RESISTANCE', 'IMMUNITY', 'VULNERABILITY'])
+                .catch('RESISTANCE'),
+            }),
+          )
+          .optional()
+          .catch(undefined),
         resistanceFromChoiceKey: z.string().optional().catch(undefined),
       })
       .optional()

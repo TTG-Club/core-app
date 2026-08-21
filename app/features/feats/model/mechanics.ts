@@ -191,12 +191,36 @@ export interface FeatSenseGrant {
   range: number | undefined;
 }
 
+/** Вид защиты от урона: что тип урона получает. */
+export type FeatDamageDefenseKind = 'RESISTANCE' | 'IMMUNITY' | 'VULNERABILITY';
+
+/**
+ * Защита от типа урона, который называет игрок.
+ *
+ * Сам тип известен только после выбора, поэтому в наборы {@link FeatDamageAffinity}
+ * такая защита лечь не может: здесь ссылка на выбор из `choices` и исход, который
+ * выбор даёт. «Закалённая кожа» просит выбрать дробящий или рубящий и даёт к
+ * названному сопротивление, «Дар устойчивости к энергиям» — два типа сразу.
+ */
+export interface FeatDamageDefenseChoice {
+  choiceKey: string;
+  kind: FeatDamageDefenseKind;
+}
+
 /** Сопротивления, иммунитеты и уязвимости к урону. */
 export interface FeatDamageAffinity {
   resistances: Array<string>;
   immunities: Array<string>;
   vulnerabilities: Array<string>;
-  /** Ключ выбора типа урона, к которому даётся сопротивление. */
+
+  /** Защиты от типов урона, которые называет игрок. */
+  defenseChoices: Array<FeatDamageDefenseChoice>;
+
+  /**
+   * Легаси-псевдоним первой записи `defenseChoices` с видом `RESISTANCE`: до появления
+   * списка выбор мог дать только сопротивление и только один. Форма пишет его вместе со
+   * списком — его читают потребители, до которых новое поле ещё не доехало.
+   */
   resistanceFromChoiceKey: string;
 }
 
@@ -564,6 +588,7 @@ export function createFeatModifiers(): FeatModifiers {
       resistances: [],
       immunities: [],
       vulnerabilities: [],
+      defenseChoices: [],
       resistanceFromChoiceKey: '',
     },
     conditionImmunities: [],

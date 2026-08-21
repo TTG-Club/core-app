@@ -474,7 +474,10 @@ modals), so its capabilities are listed here rather than squeezed into the table
   immunities, a new creature type and telepathy have no sheet field of their
   own: they are collected on the fly by `getFeatDefences` into the read-only
   `SheetDefencesPanel`, which appears under the proficiencies panel only when
-  a feat granted something.
+  a feat granted something. A defence whose damage type the player picks is
+  not in the snapshot's sets — the snapshot only links the choice
+  (`damage.defenseChoices`, legacy `resistanceFromChoiceKey`), and
+  `getFeatDefences` reads the answer off `choiceAnswers`.
 - A feat that asks the player something shows a second step in the same modal
   (`getVisibleFeatChoices` decides what is asked): a skill for proficiency or
   expertise (the «Наблюдательный» case turns a skill the character already has
@@ -482,8 +485,10 @@ modals), so its capabilities are listed here rather than squeezed into the table
   cantrip (the pool is a catalog search, `fetchChoiceSpells`), the spell list
   a feat draws from (the answer narrows the pool through
   `classesFromChoiceKey`, and a background that names the class itself still
-  wins), and which abilities an increase raises — a feat offering «или»
-  variants asks which variant first. Answers are kept on the feature record
+  wins), the damage type a defence applies to («Закалённая кожа» resists
+  bludgeoning OR slashing; an empty pool in the mechanics means any type), and
+  which abilities an increase raises — a feat offering «или» variants asks
+  which variant first. Answers are kept on the feature record
   (`choiceAnswers`) so a later level-up can reason about them; the ones the
   sheet applies immediately land in the proficiency snapshot, the granted
   spells or the ability increases. Choice kinds the sheet cannot apply are not

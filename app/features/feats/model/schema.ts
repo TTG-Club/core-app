@@ -117,10 +117,16 @@ const senseSchema = z.object({
   range: z.number().optional(),
 });
 
+const damageDefenseChoiceSchema = z.object({
+  choiceKey: z.string(),
+  kind: z.enum(['RESISTANCE', 'IMMUNITY', 'VULNERABILITY']),
+});
+
 const damageAffinitySchema = z.object({
   resistances: z.array(z.string()).optional(),
   immunities: z.array(z.string()).optional(),
   vulnerabilities: z.array(z.string()).optional(),
+  defenseChoices: z.array(damageDefenseChoiceSchema).optional(),
   resistanceFromChoiceKey: z.string().optional(),
 });
 
@@ -327,6 +333,9 @@ function toFeatMechanicsState(
         resistances: parsed.modifiers?.damage?.resistances ?? [],
         immunities: parsed.modifiers?.damage?.immunities ?? [],
         vulnerabilities: parsed.modifiers?.damage?.vulnerabilities ?? [],
+        defenseChoices: (parsed.modifiers?.damage?.defenseChoices ?? []).map(
+          (choice) => ({ ...choice }),
+        ),
         resistanceFromChoiceKey:
           parsed.modifiers?.damage?.resistanceFromChoiceKey ?? '',
       },

@@ -3459,6 +3459,18 @@ export const DAMAGE_TYPE_OPTIONS: Array<{ label: string; value: string }> = [
     .sort((left, right) => left.label.localeCompare(right.label, 'ru')),
 ];
 
+/**
+ * Названия всех типов урона по алфавиту. Ими подписан пул выбора типа урона у
+ * черты, когда набор в механике не задан: «выберите любой тип урона» — это
+ * весь справочник, и перечислять его в каждой такой черте незачем.
+ *
+ * Устаревший `FAIR` в пул не идёт вслед за {@link DAMAGE_TYPE_OPTIONS}: подпись
+ * у него та же, что у `FIRE`, и в списке он был бы вторым «Огненным».
+ */
+export const DAMAGE_TYPE_NAMES: string[] = DAMAGE_TYPE_OPTIONS.filter(
+  (option) => option.value !== DAMAGE_TYPE_NONE,
+).map((option) => option.label);
+
 /** Префикс тега типа урона в формулах заклинаний (`8к6@dmg.fire`). */
 export const SPELL_DAMAGE_TYPE_TAG_PREFIX = 'dmg.';
 
@@ -4551,6 +4563,7 @@ export const SHEET_FEAT_CHOICE_LABELS: Partial<
   'spell-list': 'Выберите список заклинаний класса',
   'spellcasting-ability': 'Выберите заклинательную характеристику',
   'spell': 'Выберите заклинания',
+  'damage-type': 'Выберите тип урона',
 };
 
 /** Формы слова «характеристика» для подписи варианта повышения. */

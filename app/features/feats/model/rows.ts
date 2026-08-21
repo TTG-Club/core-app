@@ -8,6 +8,9 @@ import type {
   FeatChoiceOption,
   FeatChoiceType,
   FeatCounter,
+  FeatDamageAffinity,
+  FeatDamageDefenseChoice,
+  FeatDamageDefenseKind,
   FeatEntityRef,
   FeatMechanics,
   FeatModifiers,
@@ -97,9 +100,6 @@ export interface FeatGrantRow {
   /** Предел повышения: 20 у обычных черт, 30 у эпических даров. */
   abilityUpto: number | undefined;
 
-  /** Выбранному типу урона даётся сопротивление («Отмеченный драконом»). */
-  grantsResistance: boolean;
-
   /**
    * Повышение характеристик привязано к чужому выбору, которого в черте больше
    * нет. Строка такую привязку не показывает, но и не теряет.
@@ -135,8 +135,11 @@ export type FeatModifierRowKind =
   | 'CONDITION_IMMUNITY'
   | 'CREATURE_TYPE';
 
-/** Вид защиты от урона. */
-export type FeatDamageDefenseKind = 'RESISTANCE' | 'IMMUNITY' | 'VULNERABILITY';
+/**
+ * Откуда строка защиты берёт тип урона: задан автором или назван игроком при
+ * взятии черты.
+ */
+export type FeatModifierRowSource = 'FIXED' | 'CHOICE';
 
 /** Строка модификатора: одна постоянная правка листа. */
 export interface FeatModifierRow {
@@ -145,7 +148,32 @@ export interface FeatModifierRow {
   value: number | undefined;
   /** Скорость равна скорости ходьбы; тогда число не нужно. */
   equalsWalk: boolean;
+
+  /** Как задан тип урона у строки защиты. */
+  source: FeatModifierRowSource;
+
+  /** Тип урона, заданный автором; только у `source: 'FIXED'`. */
   damageType: string | undefined;
+
+  /**
+   * Набор, из которого игрок называет тип урона; только у `source: 'CHOICE'`.
+   * Пусто — любой тип урона: перечислять все тринадцать незачем, лист
+   * подставит их сам.
+   */
+  damageTypes: Array<string>;
+
+  /**
+   * Машинный ключ выбора: по нему защита ссылается на ответ игрока. Автору не
+   * показан — форма заводит его сама, как и у выбора класса заклинаний.
+   */
+  key: string;
+
+  /** Подпись пикера на листе; пусто — лист подпишет его сам. */
+  label: string;
+
+  /** Сколько типов урона называет игрок. */
+  count: number | undefined;
+
   defenseKind: FeatDamageDefenseKind;
   condition: string | undefined;
   creatureType: string | undefined;
@@ -262,11 +290,11 @@ export interface FeatEditorRows {
   unknownSenses: Array<FeatSenseGrant>;
 
   /**
-   * Сопротивление привязано к выбору, которого в черте больше нет. Отметку
-   * такой привязке поставить не на чем — но и потерять её нельзя: ссылка уйдёт
-   * на сервер той же, какой пришла.
+   * Защиты, привязанные к выбору, которого в черте больше нет. Строки таким
+   * привязкам не построить — но и потерять их нельзя: ссылки уйдут на сервер
+   * теми же, какими пришли.
    */
-  unlinkedResistanceChoiceKey: string;
+  unlinkedDefenseChoices: Array<FeatDamageDefenseChoice>;
 }
 
 /** Виды дара, дающие владение: от них зависят настройки владения у строки. */
@@ -363,6 +391,9 @@ const SPELL_LIST_CHOICE_KEY = 'spell-list';
 /** Ключ выбора заклинательной характеристики по умолчанию. */
 const SPELLCASTING_ABILITY_CHOICE_KEY = 'spellcasting-ability';
 
+/** Ключ выбора типа урона по умолчанию. */
+const DAMAGE_TYPE_CHOICE_KEY = 'damage-type';
+
 /** Приставка ключа порции заклинаний. */
 const SPELL_PICK_KEY_PREFIX = 'spell';
 
@@ -380,7 +411,7 @@ const CHOICE_KEY_BY_GRANT_KIND: Record<FeatGrantRowKind, string> = {
   WEAPON: 'weapon',
   WEAPON_MASTERY: 'weapon-mastery',
   ABILITY: 'ability',
-  DAMAGE_TYPE: 'damage-type',
+  DAMAGE_TYPE: DAMAGE_TYPE_CHOICE_KEY,
   OPTION: 'option',
 };
 
@@ -499,6 +530,16 @@ export function supportsEqualsWalk(kind: FeatModifierRowKind): boolean {
   return EQUALS_WALK_MODIFIER_KINDS.includes(kind);
 }
 
+/** Называет ли тип урона игрок, а не автор черты. */
+export function isDamageDefenseChoiceRow(row: FeatModifierRow): boolean {
+  return row.kind === 'DAMAGE_DEFENSE' && row.source === 'CHOICE';
+}
+
+/** Задан ли тип урона автором: тогда строке нужен селект одного типа. */
+export function isFixedDamageDefenseRow(row: FeatModifierRow): boolean {
+  return row.kind === 'DAMAGE_DEFENSE' && row.source === 'FIXED';
+}
+
 /** Требование без полей: такая строка рисуется одной компактной строкой. */
 export function isValuelessPrerequisite(
   kind: FeatPrerequisiteRowKind,
@@ -537,6 +578,7 @@ function nextRowUid(prefix: string): string {
 export function getTakenChoiceKeys(rows: FeatEditorRows): Array<string> {
   return [
     ...rows.grants.map((row) => row.key.trim()),
+    ...rows.modifiers.map((row) => row.key.trim()),
     ...rows.spellChoice.picks.map((row) => row.key.trim()),
     rows.spellChoice.classChoiceKey.trim(),
     rows.spellChoice.abilityChoiceKey.trim(),
@@ -572,7 +614,6 @@ export function createGrantRow(
     rechooseOnLongRest: false,
     abilityBonus: kind === 'ABILITY' ? 1 : undefined,
     abilityUpto: kind === 'ABILITY' ? 20 : undefined,
-    grantsResistance: false,
     fromChoiceKey: '',
     storedAsChoice: false,
   };
@@ -612,15 +653,28 @@ export function createSpellChoiceBlock(): FeatSpellChoiceBlock {
  * Новая строка модификатора листа.
  *
  * @param kind вид модификатора.
+ * @param takenKeys ключи выборов, занятые в черте: защита в режиме выбора
+ *   заводит свой выбор и не должна отобрать ключ у чужого.
  * @returns строка модификатора.
  */
-export function createModifierRow(kind: FeatModifierRowKind): FeatModifierRow {
+export function createModifierRow(
+  kind: FeatModifierRowKind,
+  takenKeys: Array<string> = [],
+): FeatModifierRow {
   return {
     uid: nextRowUid('modifier'),
     kind,
     value: hasModifierValue(kind) ? 0 : undefined,
     equalsWalk: false,
+    source: 'FIXED',
     damageType: undefined,
+    damageTypes: [],
+    key:
+      kind === 'DAMAGE_DEFENSE'
+        ? getFreeFeatChoiceKey(DAMAGE_TYPE_CHOICE_KEY, takenKeys)
+        : '',
+    label: '',
+    count: 1,
     defenseKind: 'RESISTANCE',
     condition: undefined,
     creatureType: undefined,
@@ -674,7 +728,7 @@ export function createFeatEditorRows(): FeatEditorRows {
     prerequisites: [],
     counters: [],
     unknownSenses: [],
-    unlinkedResistanceChoiceKey: '',
+    unlinkedDefenseChoices: [],
   };
 }
 
@@ -759,7 +813,6 @@ function toChoiceGrantRow(choice: FeatChoice): FeatGrantRow | undefined {
     rechooseOnLongRest: choice.rechooseOnLongRest,
     abilityBonus: undefined,
     abilityUpto: undefined,
-    grantsResistance: false,
     fromChoiceKey: '',
     storedAsChoice: kinds.includes('ABILITY'),
   };
@@ -948,13 +1001,53 @@ function isModifierRowKind(value: string): value is FeatModifierRowKind {
   return value in SENSE_TYPE_BY_MODIFIER_KIND;
 }
 
-/** Строки модификаторов из постоянных правок листа. */
-function toModifierRows(modifiers: FeatModifiers): {
+/**
+ * Защиты по выбору игрока: список ссылок, а у записей до его появления —
+ * развёрнутое легаси-поле. Читается что-то одно: список сильнее, потому что
+ * форма пишет легаси-поле по нему же, и разойтись они могут только в записи,
+ * пришедшей от другого потребителя.
+ *
+ * @param damage отношение черты к типам урона.
+ * @returns защиты по выбору игрока с очищенными ключами.
+ */
+function toDefenseChoices(
+  damage: FeatDamageAffinity,
+): Array<FeatDamageDefenseChoice> {
+  const listed = damage.defenseChoices.flatMap((choice) => {
+    const choiceKey = choice.choiceKey.trim();
+
+    return choiceKey ? [{ choiceKey, kind: choice.kind }] : [];
+  });
+
+  if (listed.length) {
+    return listed;
+  }
+
+  const legacy = damage.resistanceFromChoiceKey.trim();
+
+  return legacy ? [{ choiceKey: legacy, kind: 'RESISTANCE' }] : [];
+}
+
+/**
+ * Строки модификаторов из постоянных правок листа.
+ *
+ * Защита по выбору игрока описана в механике двумя записями — ссылкой в
+ * модификаторах и самим выбором в `choices`, — а в форме это одна строка:
+ * автор настраивает защиту целиком в одном месте. Поэтому разбору нужны и
+ * выборы, а не одни модификаторы.
+ */
+function toModifierRows(mechanics: FeatMechanics): {
   rows: Array<FeatModifierRow>;
   unknownSenses: Array<FeatSenseGrant>;
+  /** Ключи выборов, уехавших в строки защиты: строки дара им уже не нужны. */
+  defenseChoiceKeys: Set<string>;
+  unlinkedDefenseChoices: Array<FeatDamageDefenseChoice>;
 } {
   const rows: Array<FeatModifierRow> = [];
   const unknownSenses: Array<FeatSenseGrant> = [];
+  const defenseChoiceKeys = new Set<string>();
+  const seenChoiceKeys = new Set<string>();
+  const unlinkedDefenseChoices: Array<FeatDamageDefenseChoice> = [];
 
   const push = (
     kind: FeatModifierRowKind,
@@ -963,6 +1056,7 @@ function toModifierRows(modifiers: FeatModifiers): {
     rows.push({ ...createModifierRow(kind), ...patch });
   };
 
+  const { modifiers } = mechanics;
   const { hitPoints, speed, damage } = modifiers;
 
   if (hitPoints.flat !== undefined) {
@@ -1033,8 +1127,49 @@ function toModifierRows(modifiers: FeatModifiers): {
 
   for (const [defenseKind, damageTypes] of defences) {
     for (const damageType of damageTypes) {
-      push('DAMAGE_DEFENSE', { damageType, defenseKind });
+      // Ключ фиксированной строке не нужен: он ничего не адресует, а свободный
+      // ключ ей выделит `resolveKey`, если автор переведёт её в режим выбора
+      push('DAMAGE_DEFENSE', { damageType, defenseKind, key: '' });
     }
+  }
+
+  for (const defenseChoice of toDefenseChoices(damage)) {
+    // Два исхода у одного ответа — противоречие: тип урона не бывает разом и
+    // уязвимым, и стойким. Лишняя ссылка отбрасывается, иначе выбор уехал бы в
+    // механику дважды под одним ключом
+    if (seenChoiceKeys.has(defenseChoice.choiceKey)) {
+      continue;
+    }
+
+    seenChoiceKeys.add(defenseChoice.choiceKey);
+
+    const choice = mechanics.choices.find(
+      (entry) => entry.key === defenseChoice.choiceKey,
+    );
+
+    // Строкой защиты показывается только чистый выбор типа урона: смешанный
+    // («навык ИЛИ тип урона») она обрезала бы до одного вида. Такой выбор
+    // остаётся строкой дара, а ссылка на него — непривязанной
+    if (
+      !choice
+      || choice.type !== 'DAMAGE_TYPE'
+      || (choice.types?.length ?? 0) > 1
+    ) {
+      unlinkedDefenseChoices.push({ ...defenseChoice });
+
+      continue;
+    }
+
+    defenseChoiceKeys.add(choice.key);
+
+    push('DAMAGE_DEFENSE', {
+      source: 'CHOICE',
+      defenseKind: defenseChoice.kind,
+      damageTypes: choice.options.map((option) => option.value),
+      key: choice.key,
+      label: choice.label,
+      count: choice.count ?? 1,
+    });
   }
 
   for (const condition of modifiers.conditionImmunities) {
@@ -1045,7 +1180,7 @@ function toModifierRows(modifiers: FeatModifiers): {
     push('CREATURE_TYPE', { creatureType: modifiers.creatureType });
   }
 
-  return { rows, unknownSenses };
+  return { rows, unknownSenses, defenseChoiceKeys, unlinkedDefenseChoices };
 }
 
 /** Строки требований из разобранного предусловия. */
@@ -1135,12 +1270,24 @@ export function toFeatEditorRows(
 ): FeatEditorRows {
   const rows = createFeatEditorRows();
 
+  // Модификаторы разбираются первыми: выбор типа урона, к которому привязана
+  // защита, уезжает в её строку целиком — своей строки дара у него уже нет
+  const modifiers = toModifierRows(mechanics);
+
+  rows.modifiers = modifiers.rows;
+  rows.unknownSenses = modifiers.unknownSenses;
+  rows.unlinkedDefenseChoices = modifiers.unlinkedDefenseChoices;
+
   rows.grants = toFixedGrantRows(mechanics);
 
   rows.spellChoice = toSpellChoiceBlock(mechanics.choices, mechanics.spells);
 
   for (const choice of mechanics.choices) {
     if (choice.type && SPELL_CHOICE_TYPES.includes(choice.type)) {
+      continue;
+    }
+
+    if (modifiers.defenseChoiceKeys.has(choice.key)) {
       continue;
     }
 
@@ -1169,22 +1316,6 @@ export function toFeatEditorRows(
     rows.grants.push(toAbilityGrantRow(bonus));
   }
 
-  const resistanceKey = mechanics.modifiers.damage.resistanceFromChoiceKey;
-
-  if (resistanceKey) {
-    const linked = rows.grants.find((row) => row.key === resistanceKey);
-
-    if (linked) {
-      linked.grantsResistance = true;
-    } else {
-      rows.unlinkedResistanceChoiceKey = resistanceKey;
-    }
-  }
-
-  const modifiers = toModifierRows(mechanics.modifiers);
-
-  rows.modifiers = modifiers.rows;
-  rows.unknownSenses = modifiers.unknownSenses;
   rows.prerequisites = toPrerequisiteRows(prerequisite);
 
   rows.counters = mechanics.counters.map((counter) => ({
@@ -1380,6 +1511,28 @@ function toGrantChoice(row: FeatGrantRow, key: string): FeatChoice {
   };
 }
 
+/**
+ * Выбор типа урона из строки защиты.
+ *
+ * Пустой набор — любой тип урона: перечислять все тринадцать в каждой такой
+ * черте незачем, лист подставит их сам. Пересмотра на отдыхе у защиты не
+ * бывает: сопротивление, которое меняется каждый день, — это условный эффект,
+ * и его место в описании.
+ */
+function toDamageDefenseChoice(row: FeatModifierRow, key: string): FeatChoice {
+  return toBaseChoice(
+    {
+      label: row.label,
+      count: row.count,
+      countEqualsProficiencyBonus: false,
+      options: toDictionaryOptions(row.damageTypes),
+      rechooseOnLongRest: false,
+    },
+    key,
+    'DAMAGE_TYPE',
+  );
+}
+
 /** Раскладывает фиксированную выдачу строки по полям владений. */
 function applyFixedGrantRow(mechanics: FeatMechanics, row: FeatGrantRow): void {
   const { proficiencies } = mechanics;
@@ -1508,6 +1661,12 @@ function toModifiers(
 
         break;
       case 'DAMAGE_DEFENSE':
+        // Тип урона по выбору игрока в наборы не ложится: он ещё не назван.
+        // Такая строка уходит ссылкой на выбор — см. `fromFeatEditorRows`
+        if (isDamageDefenseChoiceRow(row)) {
+          break;
+        }
+
         if (row.damageType && row.defenseKind === 'IMMUNITY') {
           modifiers.damage.immunities.push(row.damageType);
         } else if (row.damageType && row.defenseKind === 'VULNERABILITY') {
@@ -1661,8 +1820,6 @@ export function fromFeatEditorRows(
     return free;
   };
 
-  let resistanceFromChoiceKey = rows.unlinkedResistanceChoiceKey.trim();
-
   for (const row of rows.grants) {
     const primary = getPrimaryGrantKind(row);
 
@@ -1695,17 +1852,34 @@ export function fromFeatEditorRows(
         mechanics.abilityBonuses.push(bonus);
       }
     }
+  }
 
-    // Своя отметка перебивает потерянную ссылку: строка с ней в черте есть
-    if (hasGrantKind(row, 'DAMAGE_TYPE') && row.grantsResistance) {
-      resistanceFromChoiceKey = key;
+  // Строка защиты в режиме выбора описывает его целиком: отдельной строки дара
+  // у такого выбора нет, поэтому и сам выбор, и ссылку на него заводит она
+  const defenseChoices: Array<FeatDamageDefenseChoice> =
+    rows.unlinkedDefenseChoices.map((choice) => ({ ...choice }));
+
+  for (const row of rows.modifiers) {
+    if (!isDamageDefenseChoiceRow(row)) {
+      continue;
     }
+
+    const key = resolveKey(row.key, DAMAGE_TYPE_CHOICE_KEY);
+
+    mechanics.choices.push(toDamageDefenseChoice(row, key));
+    defenseChoices.push({ choiceKey: key, kind: row.defenseKind });
   }
 
   mechanics.choices.push(...toSpellChoices(rows.spellChoice, resolveKey));
 
   mechanics.modifiers = toModifiers(rows.modifiers, rows.unknownSenses);
-  mechanics.modifiers.damage.resistanceFromChoiceKey = resistanceFromChoiceKey;
+  mechanics.modifiers.damage.defenseChoices = defenseChoices;
+
+  // Легаси-поле: первая защита, дающая сопротивление. Иммунитета и уязвимости
+  // по выбору оно не знает — их читают только из `defenseChoices`
+  mechanics.modifiers.damage.resistanceFromChoiceKey =
+    defenseChoices.find((choice) => choice.kind === 'RESISTANCE')?.choiceKey
+    ?? '';
 
   mechanics.counters = rows.counters.map((row) => ({
     key: row.key.trim(),
