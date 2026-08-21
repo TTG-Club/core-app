@@ -36,6 +36,7 @@ import type {
   PlainProficiencyGroupKey,
   PreparedSpellKind,
   ProficiencyGrant,
+  SpeedTypeKey,
   SpellSlotKind,
   StartingEquipmentGrant,
 } from '../model';
@@ -152,6 +153,7 @@ import {
   toStoredCustomBonuses,
   toStoredSavingThrows,
   toStoredSettings,
+  toStoredSpeed,
   toTrimmedPersonality,
   toUpdatedCustomInventoryItem,
   VISION_DISTANCE_MAX,
@@ -1164,21 +1166,31 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Установка скоростей передвижения.
+   * Установка скоростей передвижения вместе со своими бонусами.
+   *
+   * Бонусы лежат в настройках листа, а не в самой скорости: значения скоростей
+   * переписывает вид при выборе, и бонусы игрока уехали бы вместе с ними. Пишет
+   * их то же окно, что и скорости, поэтому и записываются они разом — одной
+   * правкой листа, а не двумя.
    *
    * @param speed новые скорости персонажа.
+   * @param bonuses свои бонусы скоростей по способам передвижения.
    */
-  function setSpeed(speed: CharacterSpeed): void {
+  function setSpeed(
+    speed: CharacterSpeed,
+    bonuses: Record<SpeedTypeKey, CharacterCustomBonus[]>,
+  ): void {
     if (!ensureEditable()) {
       return;
     }
 
     character.value = {
       ...character.value,
-      speed: {
-        ...speed,
-        values: { ...speed.values },
-      },
+      speed: toStoredSpeed(speed),
+      settings: toStoredSettings({
+        ...character.value.settings,
+        customSpeedBonuses: bonuses,
+      }),
     };
   }
 

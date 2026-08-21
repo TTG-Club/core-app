@@ -256,6 +256,13 @@ export const DEFAULT_CHARACTER: Character = {
     initiativeAbility: null,
     customInitiativeBase: null,
     customInitiativeBonuses: [],
+    customSpeedBonuses: {
+      walk: [],
+      burrow: [],
+      climb: [],
+      fly: [],
+      swim: [],
+    },
     groupSkillsByAbility: false,
   },
 };

@@ -68,6 +68,7 @@ import type {
   FeatDefences,
   FeatGrantedSpeedKey,
   FeatSelectOption,
+  FeatSpeedGrantNote,
   FeatSpeedModifiers,
   FeatSummary,
   FeatureDescriptionNode,
@@ -269,6 +270,8 @@ import {
   EXHAUSTION_SPEED_PENALTY_PER_LEVEL,
   FEAT_CUSTOM_BONUS_ID_PREFIX,
   FEAT_FLAT_INITIATIVE_BONUS_ID_SUFFIX,
+  FEAT_GRANTED_SPEED_KEYS,
+  FEAT_SPEED_EQUALS_WALK_KEYS,
   FEATURE_ORIGIN_GROUP_ORDER,
   FEATURE_ORIGIN_LABELS,
   FILTER_CHIP_CLASS,
@@ -348,6 +351,7 @@ import {
   SHEET_PLURAL_FORMS,
   SHEET_SAVE_SHARED_LABELS,
   SHEET_SHARE_ACTIVE_HINT,
+  SHEET_SPEED_LABELS,
   SHEET_SPELL_ABILITY_LABELS,
   SHEET_UNARMORED_LABEL,
   SIZE_LABEL_WORDS,
@@ -355,12 +359,16 @@ import {
   SKILL_OWNED_HINTS,
   SKILL_PROFICIENCY_LABELS,
   SKILL_PROFICIENCY_MULTIPLIERS,
+  SPEED_BONUS_MAX,
+  SPEED_BONUS_MIN,
   SPEED_FEET_RATIO_BY_UNIT,
   SPEED_PARSE_FALLBACK,
   SPEED_PRIMARY_ORDER,
   SPEED_TYPE_LABELS,
   SPEED_UNIT_FRACTION_DIGITS,
   SPEED_UNIT_SHORT_LABELS,
+  SPEED_VALUE_MAX,
+  SPEED_VALUE_MIN,
   SPELL_DAMAGE_ABILITY_MODIFIER_TAG,
   SPELL_DAMAGE_CONDITION_TAG_LABELS,
   SPELL_DAMAGE_TYPE_SEPARATOR,
@@ -1103,15 +1111,19 @@ export function sortSkillsByName(skills: CharacterSkill[]): CharacterSkill[] {
  * сложность спасбросков от заклинаний стали бы пустыми.
  *
  * @param bonuses свои бонусы из черновика формы.
+ * @param min наименьшее значение бонуса; по умолчанию — общий предел листа.
+ * @param max наибольшее значение бонуса; по умолчанию — общий предел листа.
  * @returns свои бонусы для записи в лист.
  */
 export function toStoredCustomBonuses(
   bonuses: CharacterCustomBonus[],
+  min: number = CUSTOM_BONUS_MIN,
+  max: number = CUSTOM_BONUS_MAX,
 ): CharacterCustomBonus[] {
   return bonuses.map((bonus) => ({
     ...bonus,
     value: Number.isFinite(bonus.value)
-      ? clamp(Math.trunc(bonus.value), CUSTOM_BONUS_MIN, CUSTOM_BONUS_MAX)
+      ? clamp(Math.trunc(bonus.value), min, max)
       : 0,
     label: bonus.label.trim(),
   }));
@@ -1153,6 +1165,11 @@ export function toStoredSettings(
     customInitiativeBase: toStoredCustomBase(settings.customInitiativeBase),
     customInitiativeBonuses: toStoredCustomBonuses(
       settings.customInitiativeBonuses,
+    ),
+    // Бонус скорости меряется в единицах передвижения, а не в очках броска,
+    // поэтому предел у него свой: общие ±10 срезали бы монашеские +30 к ходьбе.
+    customSpeedBonuses: mapValues(settings.customSpeedBonuses, (bonuses) =>
+      toStoredCustomBonuses(bonuses, SPEED_BONUS_MIN, SPEED_BONUS_MAX),
     ),
   };
 }
@@ -5092,9 +5109,21 @@ export function getEffectiveSpeed(character: Character): CharacterSpeed {
     character.speed.unit,
   );
 
+  // Свои бонусы игрока прибавляются там же, где прибавка черты: это тот же
+  // «плюс к скорости» от умения, эффекта или предмета, которого нет в
+  // справочнике. Нулевую скорость такой бонус поднимает — игрок завёл его
+  // осознанно, в отличие от бонусов надетых предметов.
+  const customBonuses = mapValues(
+    character.settings.customSpeedBonuses,
+    (bonuses) => getCustomBonusesValue(character, bonuses),
+  );
+
   // Ходьба считается первой: от неё зависят скорости, которые черта приравняла
   // к ней.
-  const walk = Math.max(0, character.speed.values.walk + featSpeed.walkBonus);
+  const walk = Math.max(
+    0,
+    character.speed.values.walk + featSpeed.walkBonus + customBonuses.walk,
+  );
 
   // Черта выдаёт скорость с нуля (полёт тому, кто не летал), поэтому её вклад
   // идёт до отбора нулевых значений — в отличие от бонусов предметов, которые
@@ -5102,14 +5131,25 @@ export function getEffectiveSpeed(character: Character): CharacterSpeed {
   const granted: Record<SpeedTypeKey, number> = {
     ...character.speed.values,
     walk,
-    fly: getGrantedSpeed(character.speed.values.fly, featSpeed, 'fly', walk),
-    climb: getGrantedSpeed(
-      character.speed.values.climb,
-      featSpeed,
-      'climb',
-      walk,
+    burrow: Math.max(0, character.speed.values.burrow + customBonuses.burrow),
+    // Свой бонус прибавляется к тому, что вышло из своей и выданной скорости:
+    // иначе прибавка от предмета терялась бы у персонажа, которому полёт выдала
+    // черта, — большее из двух просто съело бы её.
+    fly: Math.max(
+      0,
+      getGrantedSpeed(character.speed.values.fly, featSpeed, 'fly', walk)
+        + customBonuses.fly,
     ),
-    swim: getGrantedSpeed(character.speed.values.swim, featSpeed, 'swim', walk),
+    climb: Math.max(
+      0,
+      getGrantedSpeed(character.speed.values.climb, featSpeed, 'climb', walk)
+        + customBonuses.climb,
+    ),
+    swim: Math.max(
+      0,
+      getGrantedSpeed(character.speed.values.swim, featSpeed, 'swim', walk)
+        + customBonuses.swim,
+    ),
   };
 
   const values = mapValues(granted, (value, key) => {
@@ -7999,6 +8039,171 @@ function getGrantedSpeed(
     value,
     featSpeed.granted[key],
     featSpeed.equalsWalk[key] ? walk : 0,
+  );
+}
+
+/**
+ * Свои бонусы скоростей, заведённые чертами листа: прибавку черта даёт только
+ * ходьбе («Подвижный» — +10, «Метка пути» — +5), поэтому запертая строка бывает
+ * лишь у неё. Полёт, лазание и плавание черта задаёт числом — это не прибавка,
+ * и объясняет их {@link getFeatSpeedGrantNotes}.
+ *
+ * Строки не хранятся в листе, а собираются на показ: их значение зависит от
+ * выбранных единиц, и записанное число разошлось бы с настройкой при её смене.
+ *
+ * @param features особенности листа.
+ * @param unit единица измерения скоростей листа.
+ * @returns запертые строки бонусов по способам передвижения.
+ */
+function getFeatSpeedBonuses(
+  features: CharacterFeature[],
+  unit: SpeedUnit,
+): Record<SpeedTypeKey, CharacterCustomBonus[]> {
+  const ratio = SPEED_FEET_RATIO_BY_UNIT[unit];
+
+  const walk = features.flatMap<CharacterCustomBonus>((feature) => {
+    const walkBonus = feature.modifiers?.speed?.walkBonus ?? 0;
+
+    if (!walkBonus) {
+      return [];
+    }
+
+    return [
+      {
+        // Запись хранит все источники разом, поэтому неиспользуемые поля
+        // берутся у заготовки новой строки — как у кнопки «Добавить бонус».
+        ...NEW_CUSTOM_BONUS,
+        id: `${FEAT_CUSTOM_BONUS_ID_PREFIX}${feature.id}`,
+        kind: 'flat',
+        value: round(walkBonus * ratio, SPEED_UNIT_FRACTION_DIGITS),
+        // Пометка — название черты: игрок должен видеть, откуда взялась
+        // прибавка, а не безымянную строку.
+        label: feature.name,
+      },
+    ];
+  });
+
+  return { walk, burrow: [], climb: [], fly: [], swim: [] };
+}
+
+/**
+ * Приведение скоростей к записи: очищенное поле ввода отдаёт не число, а
+ * значения листа обязаны остаться числами — иначе плитка скорости показала бы
+ * «NaN», а в документ уехало бы пустое значение. Дробь не округляется: в метрах
+ * скорость вида бывает и половинной.
+ *
+ * @param speed скорости из черновика окна передвижения.
+ * @returns скорости для записи в лист.
+ */
+export function toStoredSpeed(speed: CharacterSpeed): CharacterSpeed {
+  return {
+    ...speed,
+    values: mapValues(speed.values, (value) =>
+      Number.isFinite(value)
+        ? clamp(value, SPEED_VALUE_MIN, SPEED_VALUE_MAX)
+        : 0,
+    ),
+  };
+}
+
+/**
+ * Свои бонусы скоростей для показа в окне передвижения: строки от черт встают
+ * впереди своих, а сами свои строки копируются — их правит черновик модалки, и
+ * делить записи с листом ему нельзя.
+ *
+ * @param bonuses свои бонусы скоростей из настроек листа.
+ * @param features особенности листа.
+ * @param unit единица измерения скоростей листа.
+ * @returns бонусы по способам передвижения вместе со строками от черт.
+ */
+export function withFeatSpeedBonuses(
+  bonuses: Record<SpeedTypeKey, CharacterCustomBonus[]>,
+  features: CharacterFeature[],
+  unit: SpeedUnit,
+): Record<SpeedTypeKey, CharacterCustomBonus[]> {
+  const fromFeats = getFeatSpeedBonuses(features, unit);
+
+  return mapValues(bonuses, (rows, key) => [
+    ...fromFeats[key],
+    ...toManualSpeedRows(rows).map((row) => ({ ...row })),
+  ]);
+}
+
+/**
+ * Свои бонусы скоростей без строк от черт: лист хранит только заведённые
+ * игроком, а прибавку черты считает сам — записанная, она пошла бы в счёт
+ * дважды.
+ *
+ * @param bonuses бонусы скоростей из черновика окна передвижения.
+ * @returns бонусы по способам передвижения без строк от черт.
+ */
+export function toManualSpeedBonuses(
+  bonuses: Record<SpeedTypeKey, CharacterCustomBonus[]>,
+): Record<SpeedTypeKey, CharacterCustomBonus[]> {
+  return mapValues(bonuses, toManualSpeedRows);
+}
+
+/**
+ * Строки бонусов одной скорости без заведённых чертой.
+ *
+ * @param rows строки бонусов одной скорости.
+ * @returns строки, заведённые игроком.
+ */
+function toManualSpeedRows(
+  rows: CharacterCustomBonus[],
+): CharacterCustomBonus[] {
+  return rows.filter((row) => !isFeatCustomBonus(row));
+}
+
+/**
+ * Пояснения к скоростям, выданным чертами: «Дар совершенного полёта» задаёт
+ * полёт числом, а метка дракона приравнивает его к скорости ходьбы. Прибавкой
+ * это не описать, поэтому окно передвижения показывает их подписью — иначе поле
+ * со своим значением стояло бы в нуле без всякого объяснения.
+ *
+ * @param features особенности листа.
+ * @param speed скорости персонажа (нужны единицы измерения).
+ * @returns пояснения к выданным скоростям.
+ */
+export function getFeatSpeedGrantNotes(
+  features: CharacterFeature[],
+  speed: CharacterSpeed,
+): FeatSpeedGrantNote[] {
+  const ratio = SPEED_FEET_RATIO_BY_UNIT[speed.unit];
+
+  const unitLabel = SPEED_UNIT_SHORT_LABELS[speed.unit];
+
+  return features.flatMap<FeatSpeedGrantNote>((feature) =>
+    FEAT_GRANTED_SPEED_KEYS.flatMap<FeatSpeedGrantNote>((key) => {
+      const granted = feature.modifiers?.speed?.[key] ?? 0;
+
+      const equalsWalk =
+        feature.modifiers?.speed?.[FEAT_SPEED_EQUALS_WALK_KEYS[key]] ?? false;
+
+      // Приравнивание к ходьбе сильнее своего числа той же черты: итог
+      // считается по ходьбе, и число рядом с ним только сбивало бы с толку.
+      if (equalsWalk) {
+        return [
+          {
+            id: `${feature.id}:${key}`,
+            key,
+            text: `${feature.name} — ${SPEED_TYPE_LABELS[key].toLowerCase()} ${SHEET_SPEED_LABELS.equalsWalk}`,
+          },
+        ];
+      }
+
+      if (!granted) {
+        return [];
+      }
+
+      return [
+        {
+          id: `${feature.id}:${key}`,
+          key,
+          text: `${feature.name} — ${round(granted * ratio, SPEED_UNIT_FRACTION_DIGITS)} ${unitLabel} ${SHEET_SPEED_LABELS.grantedFromFeat}`,
+        },
+      ];
+    }),
   );
 }
 

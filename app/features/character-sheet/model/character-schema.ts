@@ -445,11 +445,27 @@ const settingsSchema = z
       .array(customBonusSchema)
       .optional()
       .catch(undefined),
+    // Свои бонусы скоростей появились позже прочих: у листов без них бонусов
+    // просто нет, и скорости считаются от своих значений и черт.
+    customSpeedBonuses: z
+      .object({
+        walk: z.array(customBonusSchema).catch([]),
+        burrow: z.array(customBonusSchema).catch([]),
+        climb: z.array(customBonusSchema).catch([]),
+        fly: z.array(customBonusSchema).catch([]),
+        swim: z.array(customBonusSchema).catch([]),
+      })
+      .catch(() =>
+        structuredClone(DEFAULT_CHARACTER.settings.customSpeedBonuses),
+      ),
   })
   .catch(() => ({
     ...DEFAULT_CHARACTER.settings,
     customProficiencyBonuses: [],
     customInitiativeBonuses: [],
+    customSpeedBonuses: structuredClone(
+      DEFAULT_CHARACTER.settings.customSpeedBonuses,
+    ),
   }))
   .transform(
     ({

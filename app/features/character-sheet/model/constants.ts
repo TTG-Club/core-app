@@ -19,6 +19,8 @@ import type {
   CustomInventoryKind,
   CustomSpellField,
   DamageRollSource,
+  FeatGrantedSpeedKey,
+  FeatSpeedEqualsWalkKey,
   FeatureOrigin,
   FeatureOriginGroup,
   HitPointsGainMode,
@@ -1506,6 +1508,51 @@ export const SPEED_UNIT_SHORT_LABELS: Record<SpeedUnit, string> = {
   miles: 'ми',
   kilometers: 'км',
 };
+
+/** Способы передвижения, которые черта выдаёт числом или равенством ходьбе. */
+export const FEAT_GRANTED_SPEED_KEYS: FeatGrantedSpeedKey[] = [
+  'climb',
+  'fly',
+  'swim',
+];
+
+/** Поле механики «равна скорости ходьбы» по способу передвижения. */
+export const FEAT_SPEED_EQUALS_WALK_KEYS: Record<
+  FeatGrantedSpeedKey,
+  FeatSpeedEqualsWalkKey
+> = {
+  climb: 'climbEqualsWalk',
+  fly: 'flyEqualsWalk',
+  swim: 'swimEqualsWalk',
+};
+
+/**
+ * Наименьший свой бонус скорости. Общий предел бонусов (±10) скорости тесен:
+ * она измеряется в единицах передвижения, а не в очках броска, — «Движение без
+ * доспехов» монаха прибавляет к ходьбе до +30 футов. Границы те же, что у
+ * бонуса скорости от предмета.
+ */
+export const SPEED_BONUS_MIN = -60;
+
+/** Наибольший свой бонус скорости. */
+export const SPEED_BONUS_MAX = 120;
+
+/** Подписи окна настройки передвижения. */
+export const SHEET_SPEED_LABELS = {
+  title: 'Передвижение',
+  hint:
+    'Своё значение — скорость по виду и классу. Бонусы складываются с ним и '
+    + 'растут вместе с персонажем: их дают черты, предметы и умения.',
+  unitTitle: 'Единицы',
+  hover: 'Парение',
+  addBonus: 'Добавить бонус',
+  ownValue: 'Своё значение',
+  total: 'Итог с бонусами',
+  // Выданная чертой скорость — не прибавка, а само значение: строкой бонуса её
+  // не показать, поэтому окно объясняет её подписью под способом передвижения.
+  grantedFromFeat: 'от черты',
+  equalsWalk: 'равна скорости ходьбы',
+} as const;
 
 /** Варианты единиц скорости для выбора в модалке. */
 export const SPEED_UNIT_OPTIONS: Array<{ label: string; value: SpeedUnit }> = [

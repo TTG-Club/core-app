@@ -27,6 +27,8 @@
     character,
     withAdd = true,
     sourceItems = CUSTOM_BONUS_SOURCE_OPTIONS,
+    min = CUSTOM_BONUS_MIN,
+    max = CUSTOM_BONUS_MAX,
   } = defineProps<{
     character: Character;
 
@@ -42,6 +44,14 @@
      * сужает список, потому что сам себе слагаемым бонус мастерства не бывает.
      */
     sourceItems?: CustomBonusSourceOption[];
+
+    /**
+     * Пределы своего числа. По умолчанию — общие пределы листа; окно
+     * передвижения расширяет их: скорость меряется в единицах передвижения, а
+     * не в очках броска, и монашеские +30 к ходьбе в ±10 не помещаются.
+     */
+    min?: number;
+    max?: number;
   }>();
 
   const rows = defineModel<CharacterCustomBonus[]>({ required: true });
@@ -119,8 +129,8 @@
       <UInputNumber
         v-if="row.kind === 'flat'"
         v-model="row.value"
-        :min="CUSTOM_BONUS_MIN"
-        :max="CUSTOM_BONUS_MAX"
+        :min="min"
+        :max="max"
         :format-options="CUSTOM_BONUS_FORMAT_OPTIONS"
         class="w-28 shrink-0"
       />

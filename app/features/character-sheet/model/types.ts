@@ -586,6 +586,31 @@ export interface FeatSpeedModifiers {
   equalsWalk: Record<FeatGrantedSpeedKey, boolean>;
 }
 
+/**
+ * Поле механики черты «скорость равна скорости ходьбы» — по одному на способ
+ * передвижения, который черта умеет выдавать.
+ */
+export type FeatSpeedEqualsWalkKey =
+  | 'climbEqualsWalk'
+  | 'flyEqualsWalk'
+  | 'swimEqualsWalk';
+
+/**
+ * Пояснение к скорости, выданной чертой: «Дар совершенного полёта» задаёт полёт
+ * числом, а не прибавкой, поэтому строкой бонуса такую скорость не показать —
+ * окно передвижения объясняет её подписью.
+ */
+export interface FeatSpeedGrantNote {
+  /** Ключ строки списка: черта плюс способ передвижения. */
+  id: string;
+
+  /** Способ передвижения, о котором пояснение. */
+  key: FeatGrantedSpeedKey;
+
+  /** Готовая подпись: «Дар совершенного полёта — 40 фт от черты». */
+  text: string;
+}
+
 /** Основной тип передвижения для плитки на листе. */
 export interface PrimarySpeed {
   key: SpeedTypeKey;
@@ -1728,6 +1753,13 @@ export interface CharacterSettings {
 
   /** Свои бонусы инициативы сверх основы (пустой список — нет). */
   customInitiativeBonuses: CharacterCustomBonus[];
+
+  /**
+   * Свои бонусы скоростей передвижения по способам (пустые списки — бонусов
+   * нет). Живут в настройках, а не в самой скорости: значения скоростей
+   * переписывает вид при выборе, и бонусы игрока уехали бы вместе с ними.
+   */
+  customSpeedBonuses: Record<SpeedTypeKey, CharacterCustomBonus[]>;
 
   /**
    * Навыки в списке идут группами по своим характеристикам, а не общим списком
