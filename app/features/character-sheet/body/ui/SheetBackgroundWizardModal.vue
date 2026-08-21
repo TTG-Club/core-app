@@ -44,6 +44,7 @@
     getFeatAbilityIncreases,
     getFeatSpellcastingAbility,
     getOwnedSkillHints,
+    getOwnedWeaponNames,
     getRequiredChoiceCount,
     getToolNames,
     getVisibleFeatChoices,
@@ -582,6 +583,12 @@
       // Опции выбора инструмента — из каталога сайта, сузженные до групп,
       // названных в прозе («один вид игрового набора»).
       allTools: getToolNamesForGroups(choice.toolGroups),
+      // Пул оружейного приёма — оружие во владении: приём даётся только
+      // знакомому оружию.
+      ownedWeaponNames: getOwnedWeaponNames(character.value),
+      proficientSavingThrowNames: character.value.savingThrows
+        .filter((savingThrow) => savingThrow.proficient)
+        .map((savingThrow) => ABILITY_LABELS[savingThrow.key]),
     });
   }
 

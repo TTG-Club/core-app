@@ -109,6 +109,8 @@ import type {
   PrimarySpeed,
   ProficiencyCatalogGroup,
   ProficiencyGrant,
+  ResourceMaxRule,
+  ResourceMaxSource,
   ResourceRecovery,
   ResourceRecoveryMode,
   ResourceRecoveryRule,
@@ -181,6 +183,7 @@ import {
   ABILITY_IMPROVEMENT_FEAT_URL_PREFIX,
   ABILITY_IMPROVEMENT_FEATURE_NAMES,
   ABILITY_IMPROVEMENT_SCORE_MAX,
+  ABILITY_KEY_BY_LABEL,
   ABILITY_LABELS,
   ABILITY_ORDER,
   ABILITY_SCORE_MAX,
@@ -274,6 +277,7 @@ import {
   FEAT_CUSTOM_BONUS_ID_PREFIX,
   FEAT_FLAT_INITIATIVE_BONUS_ID_SUFFIX,
   FEAT_GRANTED_SPEED_KEYS,
+  FEAT_RESOURCE_ID_PREFIX,
   FEAT_SPEED_EQUALS_WALK_KEYS,
   FEATURE_ORIGIN_GROUP_ORDER,
   FEATURE_ORIGIN_LABELS,
@@ -334,6 +338,12 @@ import {
   PROFICIENCY_SOURCE_PREFIXES,
   RESOURCE_CHARGE_FORMS,
   RESOURCE_COUNT_MAX,
+  RESOURCE_COUNT_MIN,
+  RESOURCE_FORMULA_ABILITIES,
+  RESOURCE_FORMULA_ABILITY_PREFIX,
+  RESOURCE_FORMULA_LEVEL,
+  RESOURCE_FORMULA_PROFICIENCY,
+  RESOURCE_MAX_DEFAULT_ABILITY,
   RESOURCE_RECOVERY_ALL_LABEL,
   RESOURCE_RECOVERY_ALL_SHORT_LABEL,
   RESOURCE_RECOVERY_AMOUNT_MIN,
@@ -4131,6 +4141,30 @@ function getProficientWeaponNames(character: Character): Set<string> {
 }
 
 /**
+ * Названия видов оружия, которыми персонаж владеет, — как они записаны в
+ * каталоге. Из них выбирается оружейный приём: приём даётся только знакомому
+ * оружию, а запись «вся группа» стоит за все виды своей категории.
+ *
+ * Отличается от `getProficientWeaponNames` тем, что отдаёт названия для показа,
+ * а не приведённые к сопоставимому виду ключи сверки.
+ *
+ * @param character персонаж.
+ * @returns названия видов оружия во владении, без повторов.
+ */
+export function getOwnedWeaponNames(character: Character): string[] {
+  return uniq(
+    character.proficiencies.weapons.flatMap((entry) => {
+      const group = WEAPON_PROFICIENCY_GROUPS.find(
+        (candidate) =>
+          normalizeCatalogName(candidate.all) === normalizeCatalogName(entry),
+      );
+
+      return group?.items ?? [entry];
+    }),
+  );
+}
+
+/**
  * Владеет ли персонаж этим оружием: название предмета сверяется со списком
  * владений листа, где запись «вся группа» стоит за все виды своей категории.
  *
@@ -5263,7 +5297,219 @@ export function toClassResourceDraft(
     ...resource,
     shortRest: { ...resource.shortRest },
     longRest: { ...resource.longRest },
+    maxRule: resource.maxRule ? { ...resource.maxRule } : null,
   };
+}
+
+/**
+ * Разбор формулы максимума из механики справочника в правило листа.
+ *
+ * Грамматика та же, что у механики черт: число, `@prof`, `@level` или
+ * `@mod.<аббревиатура>`, любое из них со смещением (`@prof - 1`). Разбирается
+ * один раз при взятии черты — дальше на листе живёт уже правило.
+ *
+ * @param formula формула максимума; пустая строка — правила нет.
+ * @returns правило максимума; null — формула пуста или непонятна.
+ */
+export function parseResourceMaxFormula(
+  formula: string,
+): ResourceMaxRule | null {
+  const trimmed = formula.trim().toLowerCase();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  // Смещение всегда в хвосте: «@prof + 1», «@mod.cha - 1». Ищется отдельно от
+  // источника, а не одним разбором всей строки: у общего выражения источник и
+  // смещение перетягивают друг у друга пробелы и знак.
+  const offsetMatch = /([+-])\s*(\d+)\s*$/.exec(trimmed);
+
+  const offset = offsetMatch
+    ? Number(offsetMatch[2]) * (offsetMatch[1] === '-' ? -1 : 1)
+    : 0;
+
+  const base = trimmed.slice(0, offsetMatch?.index ?? trimmed.length).trim();
+
+  if (!base) {
+    // Формула из одного числа: «10» разобралось как смещение без источника.
+    return offset
+      ? { source: 'fixed', ability: RESOURCE_MAX_DEFAULT_ABILITY, offset }
+      : null;
+  }
+
+  if (/^\d+$/.test(base)) {
+    return {
+      source: 'fixed',
+      ability: RESOURCE_MAX_DEFAULT_ABILITY,
+      offset: Number(base) + offset,
+    };
+  }
+
+  if (base === RESOURCE_FORMULA_PROFICIENCY) {
+    return {
+      source: 'proficiency',
+      ability: RESOURCE_MAX_DEFAULT_ABILITY,
+      offset,
+    };
+  }
+
+  if (base === RESOURCE_FORMULA_LEVEL) {
+    return { source: 'level', ability: RESOURCE_MAX_DEFAULT_ABILITY, offset };
+  }
+
+  if (base.startsWith(RESOURCE_FORMULA_ABILITY_PREFIX)) {
+    const ability =
+      RESOURCE_FORMULA_ABILITIES[
+        base.slice(RESOURCE_FORMULA_ABILITY_PREFIX.length)
+      ];
+
+    return ability ? { source: 'ability', ability, offset } : null;
+  }
+
+  return null;
+}
+
+/**
+ * Максимум ресурса: у правила он считается от листа, без правила — лежит числом.
+ *
+ * Считается при чтении, а не хранится: бонус мастерства и модификатор
+ * характеристики растут вместе с персонажем, и записанное число разошлось бы с
+ * листом при первом же повышении уровня.
+ *
+ * @param character персонаж.
+ * @param resource ресурс класса.
+ * @returns максимум зарядов, не меньше нуля и не больше предела ресурсов.
+ */
+export function getResourceMax(
+  character: Character,
+  resource: CharacterClassResource,
+): number {
+  if (!resource.maxRule) {
+    return resource.max;
+  }
+
+  const { source, ability, offset } = resource.maxRule;
+
+  const base = getResourceMaxBase(character, source, ability);
+
+  return clamp(base + offset, RESOURCE_COUNT_MIN, RESOURCE_COUNT_MAX);
+}
+
+/**
+ * Значение источника максимума до прибавки. «Своё число» источника не имеет —
+ * весь его максимум лежит в прибавке.
+ *
+ * @param character персонаж.
+ * @param source источник максимума.
+ * @param ability характеристика источника `ability`.
+ * @returns значение источника.
+ */
+function getResourceMaxBase(
+  character: Character,
+  source: ResourceMaxSource,
+  ability: AbilityKey,
+): number {
+  if (source === 'proficiency') {
+    return getProficiencyBonus(character.level);
+  }
+
+  if (source === 'level') {
+    return character.level;
+  }
+
+  if (source === 'ability') {
+    return getAbilityModifier(character, ability);
+  }
+
+  return 0;
+}
+
+/**
+ * Ресурс, заведённый чертой: правит его справочник, а не игрок.
+ *
+ * @param resource ресурс класса.
+ * @returns true — запись завела черта.
+ */
+export function isFeatResource(resource: CharacterClassResource): boolean {
+  return resource.id.startsWith(FEAT_RESOURCE_ID_PREFIX);
+}
+
+/**
+ * Ресурсы листа, согласованные с чертами.
+ *
+ * Записи черт пересобираются целиком — как свои бонусы инициативы
+ * ({@link withFeatInitiativeBonuses}): название, максимум и отдых приходят из
+ * справочника, и правка вручную вернулась бы назад при ближайшей смене черт.
+ * Потраченное при этом сохраняется: пересборка не должна восполнять заряды.
+ * Ресурсы, добавленные игроком, не трогаются — их в записях черт нет.
+ *
+ * @param resources ресурсы листа.
+ * @param features особенности листа.
+ * @param character персонаж (нужен для расчёта максимума по правилу).
+ * @returns ресурсы, согласованные с чертами.
+ */
+export function withFeatResources(
+  resources: CharacterClassResource[],
+  features: CharacterFeature[],
+  character: Character,
+): CharacterClassResource[] {
+  const manual = resources.filter((resource) => !isFeatResource(resource));
+
+  const spentById = new Map(
+    resources
+      .filter((resource) => isFeatResource(resource))
+      .map((resource) => [resource.id, resource.max - resource.current]),
+  );
+
+  const fromFeatures = features.flatMap<CharacterClassResource>((feature) =>
+    (feature.counters ?? []).map((counter) => {
+      const maxRule = parseResourceMaxFormula(counter.max);
+      const id = `${FEAT_RESOURCE_ID_PREFIX}${feature.id}:${counter.key}`;
+
+      const base: CharacterClassResource = {
+        id,
+        name: counter.name,
+        // Краткой подписи у ресурса может не быть — тогда её место в строке
+        // панели заняло бы пустое поле; достраиваем из названия, как это
+        // делает форма своего ресурса.
+        shortLabel:
+          counter.shortName
+          || counter.name.slice(0, RESOURCE_SHORT_LABEL_MAX_LENGTH),
+        // Ресурс восстанавливает ровно один вид отдыха — тот, что назван в
+        // механике; второй его не касается.
+        shortRest: {
+          mode: counter.recovery === 'short-rest' ? 'all' : 'none',
+          amount: RESOURCE_RECOVERY_AMOUNT_MIN,
+        },
+        longRest: {
+          // Короткий отдых в правилах короче продолжительного: ресурс,
+          // восстанавливаемый коротким, продолжительным восстанавливается тоже.
+          mode: 'all',
+          amount: RESOURCE_RECOVERY_AMOUNT_MIN,
+        },
+        current: 0,
+        max: 0,
+        maxRule,
+      };
+
+      const max = maxRule
+        ? getResourceMax(character, base)
+        : clamp(
+            Number(counter.max) || 1,
+            RESOURCE_COUNT_MIN,
+            RESOURCE_COUNT_MAX,
+          );
+
+      return {
+        ...base,
+        max,
+        current: clamp(max - (spentById.get(id) ?? 0), 0, max),
+      };
+    }),
+  );
+
+  return [...manual, ...fromFeatures];
 }
 
 /**
@@ -5334,23 +5580,32 @@ export function getResourceRecoverySummary(
  * Ресурсы класса после отдыха: каждому возвращается столько зарядов, сколько
  * задано его правилом для этого вида отдыха, но не выше максимума.
  *
+ * Максимум берётся посчитанным, а не записанным: у ресурса с правилом записанное
+ * число — снимок последнего расчёта, и после повышения уровня отдых восполнял бы
+ * ресурс до прежнего потолка.
+ *
+ * @param character персонаж (по нему считается максимум ресурсов с правилом).
  * @param resources ресурсы класса.
  * @param rest вид отдыха.
  * @returns ресурсы с обновлённым остатком зарядов.
  */
 export function restoreClassResources(
+  character: Character,
   resources: CharacterClassResource[],
   rest: ResourceRecovery,
 ): CharacterClassResource[] {
   return resources.map((resource) => {
+    const max = getResourceMax(character, resource);
+
     const restored = getResourceRecoveryAmount(
       getResourceRecoveryRule(resource, rest),
-      resource.max,
+      max,
     );
 
     return {
       ...resource,
-      current: clamp(resource.current + restored, 0, resource.max),
+      max,
+      current: clamp(resource.current + restored, 0, max),
     };
   });
 }
@@ -7333,6 +7588,9 @@ export function buildFeatFeature(
     abilityIncreases: Object.keys(abilityIncreases).length
       ? abilityIncreases
       : undefined,
+    // Снимок ресурсов: по нему панель пересобирает записи черты, не спрашивая
+    // справочник заново. Черта без ресурсов пишется без поля.
+    counters: summary.counters.length ? [...summary.counters] : undefined,
   };
 }
 
@@ -7352,7 +7610,9 @@ function withChosenProficiencies(
     chosen.skills?.length
     || chosen.expertiseSkills?.length
     || chosen.languages?.length
-    || chosen.tools?.length,
+    || chosen.tools?.length
+    || chosen.weaponMasteries?.length
+    || chosen.savingThrows?.length,
   );
 
   if (!hasChosen) {
@@ -7366,6 +7626,8 @@ function withChosenProficiencies(
     languages: [],
     skills: [],
     expertiseSkills: [],
+    weaponMasteries: [],
+    savingThrows: [],
   };
 
   return {
@@ -7374,6 +7636,8 @@ function withChosenProficiencies(
     expertiseSkills: union(base.expertiseSkills, chosen.expertiseSkills ?? []),
     languages: union(base.languages, chosen.languages ?? []),
     tools: dedupeToolProficiencies([...base.tools, ...(chosen.tools ?? [])]),
+    weaponMasteries: union(base.weaponMasteries, chosen.weaponMasteries ?? []),
+    savingThrows: union(base.savingThrows, chosen.savingThrows ?? []),
   };
 }
 
@@ -7400,11 +7664,32 @@ export function collectChosenProficiencies(
   const expertiseSkills: string[] = [];
   const languages: string[] = [];
   const tools: CharacterToolProficiency[] = [];
+  const weaponMasteries: string[] = [];
+  const savingThrows: AbilityKey[] = [];
 
   for (const choice of choices) {
     const values = answers[choice.id] ?? [];
 
     if (!values.length) {
+      continue;
+    }
+
+    if (choice.kind === 'weapon-mastery') {
+      weaponMasteries.push(...values);
+
+      continue;
+    }
+
+    if (choice.kind === 'saving-throw') {
+      // Пикер отдаёт название характеристики — журналу нужен её ключ.
+      savingThrows.push(
+        ...values.flatMap((name) => {
+          const key = ABILITY_KEY_BY_LABEL[name];
+
+          return key ? [key] : [];
+        }),
+      );
+
       continue;
     }
 
@@ -7439,7 +7724,14 @@ export function collectChosenProficiencies(
     }
   }
 
-  return { skills, expertiseSkills, languages, tools };
+  return {
+    skills,
+    expertiseSkills,
+    languages,
+    tools,
+    weaponMasteries,
+    savingThrows,
+  };
 }
 
 /**
@@ -7454,6 +7746,7 @@ function collectGrantedProficiencies(grants: ProficiencyGrant[]): {
   weapons: Set<string>;
   tools: Set<string>;
   languages: Set<string>;
+  weaponMasteries: Set<string>;
 } {
   return {
     armor: new Set(grants.flatMap((grant) => grant.armor)),
@@ -7464,6 +7757,10 @@ function collectGrantedProficiencies(grants: ProficiencyGrant[]): {
       grants.flatMap((grant) => grant.tools.map(({ name }) => name)),
     ),
     languages: new Set(grants.flatMap((grant) => grant.languages)),
+    // Поля нет у записей журнала, снятых до появления мастерства в выдачах.
+    weaponMasteries: new Set(
+      grants.flatMap((grant) => grant.weaponMasteries ?? []),
+    ),
   };
 }
 
@@ -7514,6 +7811,11 @@ export function applyProficiencyGrants(
       proficiencies.languages,
       before.languages,
       after.languages,
+    ),
+    weaponMasteries: applyGrantedNames(
+      proficiencies.weaponMasteries,
+      before.weaponMasteries,
+      after.weaponMasteries,
     ),
   };
 }
@@ -7679,7 +7981,9 @@ function hasGrantedProficiencies(granted: GrantedProficiencies): boolean {
     || granted.tools.length
     || granted.languages.length
     || granted.skills.length
-    || granted.expertiseSkills.length,
+    || granted.expertiseSkills.length
+    || granted.weaponMasteries.length
+    || granted.savingThrows.length,
   );
 }
 
@@ -8431,7 +8735,48 @@ export function withFeatModifiers(
       next.proficiencyGrants,
       proficiencyGrants,
     ),
+    savingThrows: applyGrantedSavingThrows(
+      next.savingThrows,
+      next.proficiencyGrants,
+      proficiencyGrants,
+    ),
+    classResources: withFeatResources(next.classResources, next.features, next),
   };
+}
+
+/**
+ * Спасброски листа после смены журнала выдач.
+ *
+ * Как и владения, применяется разница: владение спасброском ставится тому, кому
+ * его выдача дала, и снимается у того, у кого выдачей быть перестало. Отмеченное
+ * игроком вручную не трогается — его в журнале нет.
+ *
+ * @param savingThrows спасброски персонажа.
+ * @param previous журнал выдач до изменения.
+ * @param next журнал выдач после изменения.
+ * @returns спасброски, согласованные с новым журналом.
+ */
+export function applyGrantedSavingThrows(
+  savingThrows: CharacterSavingThrow[],
+  previous: ProficiencyGrant[],
+  next: ProficiencyGrant[],
+): CharacterSavingThrow[] {
+  const before = new Set(previous.flatMap((grant) => grant.savingThrows ?? []));
+  const after = new Set(next.flatMap((grant) => grant.savingThrows ?? []));
+
+  return savingThrows.map((savingThrow) => {
+    if (after.has(savingThrow.key)) {
+      return savingThrow.proficient
+        ? savingThrow
+        : { ...savingThrow, proficient: true };
+    }
+
+    if (before.has(savingThrow.key) && savingThrow.proficient) {
+      return { ...savingThrow, proficient: false };
+    }
+
+    return savingThrow;
+  });
 }
 
 /**
@@ -9954,6 +10299,32 @@ export function resolveChoiceOptions(
     || choice.kind === 'damage-type'
   ) {
     return choice.listed;
+  }
+
+  if (choice.kind === 'saving-throw') {
+    if (!choice.excludeOwned) {
+      return choice.listed;
+    }
+
+    // «Устойчивый» и «Здоровяк» просят характеристику, спасброском которой
+    // персонаж не владеет: владение из этого выбора и есть вся его суть.
+    const owned = new Set(context.proficientSavingThrowNames);
+
+    return choice.listed.filter((name) => !owned.has(name));
+  }
+
+  if (choice.kind === 'weapon-mastery') {
+    const listed = choice.listed.length
+      ? choice.listed
+      : context.ownedWeaponNames;
+
+    if (!choice.onlyOwnedWeapons) {
+      return listed;
+    }
+
+    const owned = new Set(context.ownedWeaponNames);
+
+    return listed.filter((name) => owned.has(name));
   }
 
   if (choice.kind === 'language') {

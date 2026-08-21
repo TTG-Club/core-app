@@ -15,6 +15,7 @@
     useToolCatalog,
   } from '../../composables';
   import {
+    ABILITY_LABELS,
     buildFeatFeature,
     CLASSES_SEARCH_PATH,
     collectChosenProficiencies,
@@ -26,6 +27,7 @@
     getFeatAbilityIncreases,
     getFeatSpellcastingAbility,
     getFeatUrlFromFeatureId,
+    getOwnedWeaponNames,
     getRequiredChoiceCount,
     getVisibleFeatChoices,
     LANGUAGE_PROFICIENCY_GROUPS,
@@ -304,6 +306,12 @@
       // инструмента»), а не ссылками, поэтому пул — весь каталог: сузить его
       // листу нечем, а подпись выбора игроку это и говорит.
       allTools: getToolNamesForGroups(choice.toolGroups),
+      // Пул оружейного приёма — оружие во владении: приём даётся только
+      // знакомому оружию.
+      ownedWeaponNames: getOwnedWeaponNames(character.value),
+      proficientSavingThrowNames: character.value.savingThrows
+        .filter((savingThrow) => savingThrow.proficient)
+        .map((savingThrow) => ABILITY_LABELS[savingThrow.key]),
     });
   }
 

@@ -38,6 +38,7 @@ import type {
   PreparedKindLabels,
   PreparedSpellKind,
   ProficiencyBaseSource,
+  ResourceMaxSource,
   ResourceRecovery,
   ResourceRecoveryField,
   ResourceRecoveryMode,
@@ -480,6 +481,18 @@ export const API_ABILITY_KEYS: Record<AbilityKey, ApiAbilityKey> = {
 export const ABILITY_OPTIONS: Array<{ label: string; value: AbilityKey }> =
   ABILITY_ORDER.map((key) => ({ label: ABILITY_LABELS[key], value: key }));
 
+/**
+ * Ключи характеристик по названию — обратное соответствие к `ABILITY_LABELS`.
+ * Нужно там, где пикер отдаёт подпись, а записи листа хранят ключ.
+ */
+export const ABILITY_KEY_BY_LABEL: Record<string, AbilityKey> =
+  Object.fromEntries(
+    ABILITY_ORDER.map((key): [string, AbilityKey] => [
+      ABILITY_LABELS[key],
+      key,
+    ]),
+  );
+
 /** Порядок отображения денежных единиц. */
 export const CURRENCY_ORDER: CurrencyKey[] = [
   'copper',
@@ -626,6 +639,109 @@ export const RESOURCE_RECOVERY_ICONS: Record<ResourceRecovery, string> = {
   'long-rest': 'tabler:sun',
 };
 
+/**
+ * Начало идентификаторов ресурсов, заведённых чертой (дальше — id записи черты
+ * и ключ ресурса из механики). По нему панель отличает их от своих: правит их
+ * справочник, а не игрок.
+ */
+export const FEAT_RESOURCE_ID_PREFIX = 'feat:res:';
+
+/** Значение короткого отдыха в механике справочника. */
+export const API_SHORT_REST_RECOVERY = 'SHORT_REST';
+
+/** Обозначение бонуса мастерства в формуле максимума ресурса. */
+export const RESOURCE_FORMULA_PROFICIENCY = '@prof';
+
+/** Обозначение уровня персонажа в формуле максимума ресурса. */
+export const RESOURCE_FORMULA_LEVEL = '@level';
+
+/** Приставка модификатора характеристики в формуле максимума ресурса. */
+export const RESOURCE_FORMULA_ABILITY_PREFIX = '@mod.';
+
+/**
+ * Аббревиатуры характеристик в формулах справочника. Своя карта, а не
+ * `AbilityShortKey`: там у Харизмы `chr`, а формулы механики знают только `cha`.
+ */
+export const RESOURCE_FORMULA_ABILITIES: Record<string, AbilityKey> = {
+  str: 'strength',
+  dex: 'dexterity',
+  con: 'constitution',
+  int: 'intelligence',
+  wis: 'wisdom',
+  cha: 'charisma',
+};
+
+/**
+ * Характеристика правила максимума по умолчанию: у источников, кроме
+ * модификатора характеристики, она в счёт не идёт, но поле обязано быть
+ * заполненным — иначе переключение источника открывало бы пустой селект.
+ */
+export const RESOURCE_MAX_DEFAULT_ABILITY: AbilityKey = 'constitution';
+
+/** Названия источников максимума ресурса. */
+export const RESOURCE_MAX_SOURCE_LABELS: Record<ResourceMaxSource, string> = {
+  fixed: 'Своё число',
+  proficiency: 'Бонус мастерства',
+  ability: 'Модификатор характеристики',
+  level: 'Уровень персонажа',
+};
+
+/** Варианты источника максимума для селекта в настройке ресурса. */
+export const RESOURCE_MAX_SOURCE_OPTIONS: Array<{
+  label: string;
+  value: ResourceMaxSource;
+}> = [
+  { label: RESOURCE_MAX_SOURCE_LABELS.fixed, value: 'fixed' },
+  { label: RESOURCE_MAX_SOURCE_LABELS.proficiency, value: 'proficiency' },
+  { label: RESOURCE_MAX_SOURCE_LABELS.ability, value: 'ability' },
+  { label: RESOURCE_MAX_SOURCE_LABELS.level, value: 'level' },
+];
+
+/** Минимальная прибавка к значению источника максимума. */
+export const RESOURCE_MAX_OFFSET_MIN = -9;
+
+/** Максимальная прибавка к значению источника максимума. */
+export const RESOURCE_MAX_OFFSET_MAX = 9;
+
+/** Подпись поля прибавки к источнику максимума. */
+export const RESOURCE_MAX_OFFSET_LABEL = 'Прибавка';
+
+/** Подпись поля характеристики, чей модификатор идёт в максимум. */
+export const RESOURCE_MAX_ABILITY_LABEL = 'Характеристика';
+
+/** Подпись строки, объясняющей посчитанный максимум. */
+export const RESOURCE_MAX_COMPUTED_LABEL = 'Сейчас максимум';
+
+/**
+ * Заголовок панели и окна ресурсов. Не «ресурсы класса»: рядом с классовыми
+ * счётчиками там же живут ресурсы черт и свои записи игрока.
+ */
+export const RESOURCES_TITLE = 'Ресурсы';
+
+/** Пометка ресурса, который завела черта: правится он только сменой черты. */
+export const FEAT_RESOURCE_HINT = 'Ресурс черты: правится сменой самой черты';
+
+/** Подписи строки ресурса в списке настройки. */
+export const RESOURCE_ROW_LABELS = {
+  /** Подсказка кнопки правки своего ресурса. */
+  edit: 'Изменить ресурс',
+
+  /** Подсказка кнопки удаления своего ресурса. */
+  remove: 'Удалить ресурс',
+} as const;
+
+/** Иконки строки ресурса: свой правится, ресурс черты заперт справочником. */
+export const RESOURCE_ROW_ICONS = {
+  editable: 'tabler:pencil',
+  locked: 'tabler:lock',
+} as const;
+
+/** Подпись поля «сколько зарядов» у ресурса со своим числом. */
+export const RESOURCE_MAX_AMOUNT_LABEL = 'Сколько';
+
+/** Подпись селекта источника максимума для читалки экрана. */
+export const RESOURCE_MAX_SOURCE_ARIA_LABEL = 'От чего считается максимум';
+
 /** Минимальное количество зарядов ресурса. */
 export const RESOURCE_COUNT_MIN = 0;
 
@@ -663,6 +779,9 @@ export const NEW_CLASS_RESOURCE: Omit<CharacterClassResource, 'id'> = {
   longRest: { mode: 'all', amount: RESOURCE_RECOVERY_AMOUNT_MIN },
   current: 1,
   max: 1,
+  // Максимум по умолчанию — своё число: правило заводится, только если игрок
+  // сам выберет источник в форме.
+  maxRule: null,
 };
 
 /** Минимальное базовое значение класса доспеха. */
@@ -4564,6 +4683,8 @@ export const SHEET_FEAT_CHOICE_LABELS: Partial<
   'spellcasting-ability': 'Выберите заклинательную характеристику',
   'spell': 'Выберите заклинания',
   'damage-type': 'Выберите тип урона',
+  'saving-throw': 'Выберите спасбросок',
+  'weapon-mastery': 'Выберите оружейный приём',
 };
 
 /** Формы слова «характеристика» для подписи варианта повышения. */

@@ -36,6 +36,7 @@ import {
   getHitDicePools,
   getInitiativeBonus,
   getPrimarySpeed,
+  getResourceMax,
   getResourceRecoverySummary,
   getSavingThrowRows,
   getSkillValue,
@@ -1065,7 +1066,9 @@ function drawClassResourcesPanel(
           top: cursor,
           width: contentWidth,
           label: resource.name,
-          value: `${resource.current}/${resource.max}`,
+          // Максимум с правилом считается от листа: записанное число у такого
+          // ресурса — снимок последнего расчёта.
+          value: `${resource.current}/${getResourceMax(character, resource)}`,
         });
 
         cursor += PDF_ROW_HEIGHT;

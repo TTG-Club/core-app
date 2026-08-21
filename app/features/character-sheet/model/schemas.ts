@@ -15,6 +15,7 @@ import type {
   ClassTableColumn,
   FeatAbilityBonusOption,
   FeatCatalogItem,
+  FeatCounter,
   FeatSelectOption,
   FeatSummary,
   FeatureDescriptionNode,
@@ -54,6 +55,7 @@ import {
   ABILITY_LABELS,
   ABILITY_ORDER,
   ABILITY_VARIANT_CHOICE_ID_SEGMENT,
+  API_SHORT_REST_RECOVERY,
   ARMOR_GROUP_BY_API_CATEGORY,
   ARMOR_PROFICIENCY_GROUPS,
   CANTRIP_SPELL_LEVEL,
@@ -481,6 +483,20 @@ const featDetailSchema = z.object({
         })
         .nullable()
         .catch(null),
+      // Ресурсы со счётчиком: максимум приходит формулой, потому что у
+      // большинства он привязан к бонусу мастерства и растёт вместе с ним.
+      counters: z
+        .array(
+          z.object({
+            key: z.string().catch(''),
+            name: z.string().catch(''),
+            shortName: z.string().nullable().catch(null),
+            max: z.string().nullable().catch(null),
+            recovery: z.string().nullable().catch(null),
+          }),
+        )
+        .nullable()
+        .catch(null),
       // Выборы при взятии черты. Разбираются поля тех видов, которые лист
       // умеет применить, — см. `toFeatChoices`.
       choices: z
@@ -494,6 +510,9 @@ const featDetailSchema = z.object({
             // Выбирать можно только то, чем персонаж ещё не владеет, и обратный
             // случай: владение превращает выбор в компетентность.
             onlyIfNotProficient: z.boolean().nullable().catch(null),
+            // Обратный случай: выбирать можно только то, чем персонаж уже
+            // владеет («Мастер оружия» — приём знакомого ему оружия).
+            onlyIfProficient: z.boolean().nullable().catch(null),
             expertiseIfProficient: z.boolean().nullable().catch(null),
             // Допустимые значения выбора: коды словаря со снимком названия.
             options: z
@@ -623,6 +642,8 @@ function toGrantedProficiencies(
     skills,
     // Компетентность без выбора черты не выдают: она приходит выбором игрока.
     expertiseSkills: [],
+    weaponMasteries: [],
+    savingThrows: [],
   };
 }
 
@@ -732,9 +753,10 @@ type FeatChoicesResponse = NonNullable<
  *
  * Это компетентность в навыке (пул резолвится по уже имеющимся владениям),
  * заклинательная характеристика (пул перечислен в самой механике), заклинание
- * либо заговор (пул собирается поиском по каталогу) и тип урона, к которому
- * черта даёт защиту. Остальные виды выбора лист не применяет, поэтому и не
- * спрашивает — иначе игрок отвечал бы в пустоту.
+ * либо заговор (пул собирается поиском по каталогу), тип урона, к которому
+ * черта даёт защиту, владение спасброском и оружейный приём. Остальные виды
+ * выбора лист не применяет, поэтому и не спрашивает — иначе игрок отвечал бы в
+ * пустоту.
  *
  * @param choices выборы из механики черты.
  * @param featUrl url черты (идёт в устойчивый id выбора).
@@ -880,6 +902,48 @@ function toFeatChoices(
             return name ? [name] : [];
           }),
           excludeOwned: choice.onlyIfNotProficient ?? false,
+        },
+      ];
+    }
+
+    if (choice.type === 'SAVING_THROW') {
+      // Пул — характеристики, перечисленные в механике; не перечислены —
+      // выбирать можно любую. Обе черты («Устойчивый», «Здоровяк») просят ту,
+      // спасброском которой персонаж не владеет, — этим пул и сужается.
+      const listed = (choice.options ?? []).flatMap((option) => {
+        const key = parseApiAbilityKey(option.value);
+
+        return key ? [ABILITY_LABELS[key]] : [];
+      });
+
+      return [
+        {
+          id,
+          kind: 'saving-throw',
+          label: label || SHEET_FEAT_CHOICE_LABELS['saving-throw'] || '',
+          count,
+          listed: listed.length
+            ? listed
+            : ABILITY_ORDER.map((key) => ABILITY_LABELS[key]),
+          excludeOwned: choice.onlyIfNotProficient ?? false,
+        },
+      ];
+    }
+
+    if (choice.type === 'WEAPON_MASTERY') {
+      // Пул — виды оружия каталога: их собирает пикер листа по владениям
+      // персонажа, потому что приём даётся только тому оружию, которым он
+      // владеет. В механике перечислены лишь сужения до конкретных видов.
+      return [
+        {
+          id,
+          kind: 'weapon-mastery',
+          label: label || SHEET_FEAT_CHOICE_LABELS['weapon-mastery'] || '',
+          count,
+          listed: (choice.options ?? []).flatMap((option) =>
+            option.name ? [option.name] : [],
+          ),
+          onlyOwnedWeapons: choice.onlyIfProficient ?? false,
         },
       ];
     }
@@ -1091,7 +1155,44 @@ export function parseFeatDetail(input: unknown): FeatSummary | null {
       ),
     ],
     abilityBonuses,
+    counters: toFeatCounters(result.data.mechanics?.counters ?? []),
   };
+}
+
+/** Ресурсы черты, как их отдаёт справочник. */
+type FeatCountersResponse = NonNullable<
+  NonNullable<z.infer<typeof featDetailSchema>['mechanics']>['counters']
+>;
+
+/**
+ * Ресурсы черты из механики: запись без ключа или без названия пропускается —
+ * по ключу лист хранит потраченное, а без названия ресурс нечем подписать.
+ *
+ * Вид отдыха приводится к виду листа; неизвестное значение читается как
+ * продолжительный отдых — так восстанавливается большинство ресурсов черт.
+ *
+ * @param counters ресурсы из механики черты.
+ * @returns ресурсы в виде листа.
+ */
+function toFeatCounters(counters: FeatCountersResponse): FeatCounter[] {
+  return counters.flatMap<FeatCounter>((counter) => {
+    if (!counter.key || !counter.name) {
+      return [];
+    }
+
+    return [
+      {
+        key: counter.key,
+        name: counter.name,
+        shortName: counter.shortName ?? '',
+        max: counter.max ?? '',
+        recovery:
+          counter.recovery === API_SHORT_REST_RECOVERY
+            ? 'short-rest'
+            : 'long-rest',
+      },
+    ];
+  });
 }
 
 /**

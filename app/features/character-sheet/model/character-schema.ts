@@ -34,6 +34,7 @@ import {
   LEVEL_MAX,
   LEVEL_MIN,
   NEW_CUSTOM_BONUS,
+  RESOURCE_MAX_DEFAULT_ABILITY,
   RESOURCE_RECOVERY_AMOUNT_MIN,
   SHEET_NOTE_LABELS,
 } from './constants';
@@ -180,6 +181,22 @@ const grantedProficienciesSchema = z.object({
   skills: z.array(z.string()).catch([]),
   // Компетентность — ещё позже, вместе с выбором игрока при взятии черты.
   expertiseSkills: z.array(z.string()).catch([]),
+  // Мастерство оружием и спасброски пришли в выдачу последними: у записей без
+  // полей их нет, и снятие источника их не тронет.
+  weaponMasteries: z.array(z.string()).catch([]),
+  savingThrows: z.array(abilityKeySchema).catch([]),
+});
+
+/**
+ * Снимок ресурса черты в записи умения: максимум приходит формулой справочника
+ * и разбирается при сборке панели, поэтому здесь он строкой.
+ */
+const featCounterSchema = z.object({
+  key: z.string().catch(''),
+  name: z.string().catch(''),
+  shortName: z.string().catch(''),
+  max: z.string().catch(''),
+  recovery: z.enum(['short-rest', 'long-rest']).catch('long-rest'),
 });
 
 /**
@@ -333,6 +350,9 @@ const featureSchema = z.object({
     .nullable()
     .optional()
     .catch(undefined),
+  // Снимок ресурсов черты; у записей до него поля нет — такая черта ресурсов
+  // не заводила, и панель по ней ничего не пересоберёт.
+  counters: z.array(featCounterSchema).nullable().optional().catch(undefined),
 });
 
 const speciesSchema = z
@@ -702,6 +722,16 @@ const resourceRecoveryRuleSchema = z.object({
 });
 
 /**
+ * Правило максимума ресурса. Неизвестный источник читается как своё число:
+ * такой ресурс останется с записанным максимумом, а не обнулится.
+ */
+const resourceMaxRuleSchema = z.object({
+  source: z.enum(['fixed', 'proficiency', 'ability', 'level']).catch('fixed'),
+  ability: abilityKeySchema.catch(RESOURCE_MAX_DEFAULT_ABILITY),
+  offset: z.coerce.number().catch(0),
+});
+
+/**
  * Правила восстановления ресурса: раздельные порции появились позже одного
  * поля `recovery`, где отдых возвращал ресурс целиком. У старых листов
  * продолжительный отдых возвращал всё всегда, а короткий — только ресурсам,
@@ -739,6 +769,9 @@ const classResourceSchema = z
     longRest: resourceRecoveryRuleSchema.optional().catch(undefined),
     current: z.coerce.number().catch(0),
     max: z.coerce.number().catch(0),
+    // Правило максимума: у ресурсов до него поля нет — их максимум записан
+    // числом и от листа не зависит.
+    maxRule: resourceMaxRuleSchema.nullable().optional().catch(null),
   })
   .transform(({ recovery, shortRest, longRest, ...resource }) => ({
     ...resource,

@@ -488,11 +488,26 @@ modals), so its capabilities are listed here rather than squeezed into the table
   wins), the damage type a defence applies to («Закалённая кожа» resists
   bludgeoning OR slashing; an empty pool in the mechanics means any type), and
   which abilities an increase raises — a feat offering «или» variants asks
-  which variant first. Answers are kept on the feature record
-  (`choiceAnswers`) so a later level-up can reason about them; the ones the
-  sheet applies immediately land in the proficiency snapshot, the granted
-  spells or the ability increases. Choice kinds the sheet cannot apply are not
-  asked at all.
+  which variant first. Two more are asked since the mechanics grew them: the
+  saving throw a feat grants proficiency in («Устойчивый», «Здоровяк» — the
+  pool drops throws the character already has, and «Устойчивый» ties its +1 to
+  the same answer through `fromChoiceKey`) and the weapon mastery
+  («Мастер оружия» — the pool is the weapons the character is proficient with,
+  group records expanded by `getOwnedWeaponNames`). Both travel through the
+  grant ledger like the rest, so removing the feat takes the proficiency back.
+  Answers are kept on the feature record (`choiceAnswers`) so a later level-up
+  can reason about them; the ones the sheet applies immediately land in the
+  proficiency snapshot, the granted spells or the ability increases. Choice
+  kinds the sheet cannot apply — armour and the per-option menus of the Kindred
+  disciplines, where the reference stores the options but not what each one
+  does — are not asked at all.
+- A feat with `mechanics.counters` brings its resource onto the resources
+  panel: taking «Везунчик» adds its luck points, removing the feat takes them
+  away, and what was spent survives the rebuild (`withFeatResources`, the same
+  idempotent pattern as the feat initiative bonuses — records are rebuilt from
+  the snapshot, the player's own resources are left alone). They are spendable
+  but not editable: the reference owns their name, maximum and rest, so an edit
+  would come back at the next feat change.
 - The «Личность» tab holds the person rather than the build: seven appearance
   tiles (alignment from the `alignments` dictionary plus age, height, weight,
   eyes, hair and skin as free text — clicking a tile opens the form with the
@@ -551,6 +566,15 @@ modals), so its capabilities are listed here rather than squeezed into the table
   points, spell slots, feature counters and every spent Hit Point Die (the 2024
   rules return all of them, not half), and removes one Exhaustion level. The
   shared `SheetHitDiceSelect` picks which dice.
+- The resources panel («Ресурсы») holds three kinds at once: the ones derived
+  from a class table, the ones a feat brought in, and the player's own. A own
+  resource can tie its maximum to the sheet instead of a fixed number —
+  proficiency bonus, an ability modifier or the character level, each with a
+  signed offset («бонус мастерства минус один» of «Слабокровный»). The rule is
+  stored (`maxRule`), the number is not: `getResourceMax` computes it on every
+  read, so the maximum grows with the character on the panel, on rest and in the
+  PDF alike. Feat resources parse the reference formula (`@prof`, `@level`,
+  `@mod.<abbr>`) into the same rule through `parseResourceMaxFormula`.
 - Exhaustion sits in its own panel right below the health one
   (`SheetExhaustionPanel`): six steps, a click sets that level and a click on
   the current one drops it by one (`setExhaustion`, a play action — a locked

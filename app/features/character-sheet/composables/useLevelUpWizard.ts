@@ -23,6 +23,7 @@ import { useDiceRoller } from '~dice-roller/composables';
 import {
   ABILITY_IMPROVEMENT_FEATURE_ID_SEGMENT,
   ABILITY_IMPROVEMENT_LABELS,
+  ABILITY_LABELS,
   buildFeatFeature,
   buildLevelClassFeatures,
   buildSubclassFeatures,
@@ -48,6 +49,7 @@ import {
   getHitPointsGainForMode,
   getLevelFeatureRows,
   getLevelHitPointsGain,
+  getOwnedWeaponNames,
   getRequiredChoiceCount,
   getSelectedCasterType,
   getToolNames,
@@ -856,6 +858,12 @@ export function useLevelUpWizard(): LevelUpWizard {
       knownTools: getToolNames(character.value.proficiencies.tools),
       allLanguages: allLanguages.value,
       allTools: getToolNamesForGroups(choice.toolGroups),
+      // Пул оружейного приёма — оружие во владении: приём даётся только
+      // знакомому оружию.
+      ownedWeaponNames: getOwnedWeaponNames(character.value),
+      proficientSavingThrowNames: character.value.savingThrows
+        .filter((savingThrow) => savingThrow.proficient)
+        .map((savingThrow) => ABILITY_LABELS[savingThrow.key]),
     });
   }
 

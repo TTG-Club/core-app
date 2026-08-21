@@ -3,7 +3,9 @@
 
   import { useCharacterSheet } from '../../composables';
   import {
+    getResourceMax,
     getResourceRecoveryBadges,
+    RESOURCES_TITLE,
     SHEET_EMPTY_LABELS,
     SHEET_TITLE_ACTION_CLASS,
     SHEET_TITLE_ACTION_REVEAL_CLASS,
@@ -22,7 +24,7 @@
   // Шестерёнка настраивает состав ресурсов (правка листа), а ± тратят и
   // восстанавливают их (игровое действие): запертый лист оставляет ±, чужой —
   // не оставляет ничего.
-  const { editControlClass, gameControlClass } = useCharacterSheet();
+  const { character, editControlClass, gameControlClass } = useCharacterSheet();
 
   const panelRef = useTemplateRef('panel');
 
@@ -60,19 +62,26 @@
   }
 
   const displayRows = computed(() =>
-    props.resources.map((resource) => ({
-      ...resource,
-      recoveryBadges: getResourceRecoveryBadges(resource),
-      isMinusDisabled: resource.current <= 0,
-      isPlusDisabled: resource.current >= resource.max,
-    })),
+    props.resources.map((resource) => {
+      // Максимум ресурса с правилом считается от листа: записанное число —
+      // лишь снимок, и после повышения уровня оно уже не то.
+      const max = getResourceMax(character.value, resource);
+
+      return {
+        ...resource,
+        max,
+        recoveryBadges: getResourceRecoveryBadges(resource),
+        isMinusDisabled: resource.current <= 0,
+        isPlusDisabled: resource.current >= max,
+      };
+    }),
   );
 </script>
 
 <template>
   <SheetPanel
     ref="panel"
-    title="Ресурсы класса"
+    :title="RESOURCES_TITLE"
   >
     <template #title-actions>
       <button
