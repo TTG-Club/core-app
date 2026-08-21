@@ -4,8 +4,13 @@
   import { useCharacterSheet } from '../../composables';
   import {
     CLASS_RESOURCE_MODAL_TITLES,
+    FEAT_RESOURCE_HINT,
+    getResourceMax,
     getResourceRecoveryBadges,
+    isFeatResource,
     NEW_CLASS_RESOURCE,
+    RESOURCE_ROW_LABELS,
+    RESOURCES_TITLE,
     SHEET_EMPTY_LABELS,
     toClassResourceDraft,
   } from '../../model';
@@ -30,10 +35,26 @@
   const countLabel = computed(() => `${draftResources.value.length} шт.`);
 
   const displayRows = computed(() =>
-    draftResources.value.map((resource) => ({
-      ...resource,
-      recoveryBadges: getResourceRecoveryBadges(resource),
-    })),
+    draftResources.value.map((resource) => {
+      // Ресурс черты пересобирается из справочника при каждой смене черт:
+      // правка и удаление вернулись бы назад, поэтому их и не предлагаем —
+      // строка такого ресурса не кнопка, а обычный блок с замком.
+      const isFromFeat = isFeatResource(resource);
+
+      return {
+        ...resource,
+        max: getResourceMax(character.value, resource),
+        recoveryBadges: getResourceRecoveryBadges(resource),
+        isFromFeat,
+        tag: isFromFeat ? 'div' : 'button',
+        buttonType: isFromFeat ? undefined : 'button',
+        cursorClass: isFromFeat ? 'cursor-default' : 'cursor-pointer',
+        editLabel: isFromFeat
+          ? undefined
+          : `${RESOURCE_ROW_LABELS.edit}: ${resource.name}`,
+        removeLabel: `${RESOURCE_ROW_LABELS.remove}: ${resource.name}`,
+      };
+    }),
   );
 
   /** Добавление ресурса: окно формы открывается с заготовкой нового счётчика. */
@@ -65,7 +86,7 @@
       (draft) => draft.id === resourceId,
     );
 
-    if (!resource) {
+    if (!resource || isFeatResource(resource)) {
       return;
     }
 
@@ -107,7 +128,7 @@
 </script>
 
 <template>
-  <UModal title="Ресурсы класса">
+  <UModal :title="RESOURCES_TITLE">
     <template #body>
       <div class="flex flex-col gap-3">
         <div class="flex items-center justify-between">
@@ -128,10 +149,12 @@
           :key="row.id"
           class="flex items-center gap-2 rounded-lg border border-default/50 bg-elevated/20 p-2"
         >
-          <button
-            type="button"
-            class="flex min-w-0 grow cursor-pointer flex-wrap items-center gap-x-2 gap-y-1 text-left"
-            :aria-label="`Изменить ресурс: ${row.name}`"
+          <component
+            :is="row.tag"
+            :type="row.buttonType"
+            class="flex min-w-0 grow flex-wrap items-center gap-x-2 gap-y-1 text-left"
+            :class="row.cursorClass"
+            :aria-label="row.editLabel"
             @click.left.exact.prevent="handleEditResource(row.id)"
           >
             <span
@@ -166,18 +189,34 @@
             </span>
 
             <UIcon
+              v-if="!row.isFromFeat"
               name="tabler:pencil"
               class="size-4 shrink-0 text-dimmed"
             />
-          </button>
+          </component>
+
+          <!-- Замок вместо корзины: ресурс уходит вместе с чертой, а не отсюда.
+            Иконка, а не запертая кнопка, — у выключенной кнопки нет наведения,
+            и подсказка с объяснением до игрока не дошла бы -->
+          <UTooltip
+            v-if="row.isFromFeat"
+            :text="FEAT_RESOURCE_HINT"
+          >
+            <UIcon
+              name="tabler:lock"
+              class="mx-1.5 size-5 shrink-0 text-dimmed"
+              :aria-label="FEAT_RESOURCE_HINT"
+            />
+          </UTooltip>
 
           <UButton
+            v-else
             icon="tabler:trash"
             color="error"
             variant="ghost"
             size="xs"
             square
-            :aria-label="`Удалить ресурс: ${row.name}`"
+            :aria-label="row.removeLabel"
             @click.left.exact.prevent="handleRemoveResource(row.id)"
           />
         </div>

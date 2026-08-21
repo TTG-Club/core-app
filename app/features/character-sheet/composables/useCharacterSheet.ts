@@ -95,6 +95,7 @@ import {
   getNextLevelExperience,
   getPreparedSpellsLimitDescription,
   getProficiencySourceId,
+  getResourceMax,
   getSavingThrowRows,
   getSkillRowGroups,
   getSkillRows,
@@ -541,11 +542,15 @@ export function useCharacterSheet() {
           const name = resource.name.trim();
           const shortLabel = resource.shortLabel.trim();
 
-          const max = clamp(
-            Math.trunc(resource.max),
-            RESOURCE_COUNT_MIN,
-            RESOURCE_COUNT_MAX,
-          );
+          // Максимум по правилу считается от листа: записанное число у такого
+          // ресурса — лишь снимок последнего расчёта.
+          const max = resource.maxRule
+            ? getResourceMax(character.value, resource)
+            : clamp(
+                Math.trunc(resource.max),
+                RESOURCE_COUNT_MIN,
+                RESOURCE_COUNT_MAX,
+              );
 
           return {
             ...resource,
@@ -606,7 +611,11 @@ export function useCharacterSheet() {
         resource.id === resourceId
           ? {
               ...resource,
-              current: clamp(resource.current + delta, 0, resource.max),
+              current: clamp(
+                resource.current + delta,
+                0,
+                getResourceMax(character.value, resource),
+              ),
             }
           : resource,
       ),
@@ -1358,6 +1367,7 @@ export function useCharacterSheet() {
     character.value = {
       ...character.value,
       classResources: restoreClassResources(
+        character.value,
         character.value.classResources,
         'short-rest',
       ),
@@ -1402,6 +1412,7 @@ export function useCharacterSheet() {
         ),
       },
       classResources: restoreClassResources(
+        character.value,
         character.value.classResources,
         'long-rest',
       ),
@@ -1453,6 +1464,8 @@ export function useCharacterSheet() {
         languages: payload.proficiencies.languages,
         skills: [],
         expertiseSkills: [],
+        weaponMasteries: [],
+        savingThrows: [],
       },
     );
 
@@ -1615,6 +1628,8 @@ export function useCharacterSheet() {
         languages: payload.proficiencies.languages,
         skills: [],
         expertiseSkills: [],
+        weaponMasteries: [],
+        savingThrows: [],
       },
     );
 
@@ -1766,6 +1781,8 @@ export function useCharacterSheet() {
         languages: payload.languages,
         skills: [],
         expertiseSkills: [],
+        weaponMasteries: [],
+        savingThrows: [],
       },
     );
 
@@ -1962,6 +1979,8 @@ export function useCharacterSheet() {
         languages: [],
         skills: [],
         expertiseSkills: [],
+        weaponMasteries: [],
+        savingThrows: [],
       },
     );
 

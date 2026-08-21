@@ -16,6 +16,7 @@
     useToolCatalog,
   } from '../../composables';
   import {
+    ABILITY_LABELS,
     buildCharacterFeatures,
     CUSTOM_SPECIES_LABELS,
     detectFeatureChoice,
@@ -23,6 +24,7 @@
     getCharacterFeatureId,
     getChoiceSkillHints,
     getDarkvisionDistance,
+    getOwnedWeaponNames,
     getRequiredChoiceCount,
     getToolNames,
     LANGUAGE_PROFICIENCY_GROUPS,
@@ -309,6 +311,12 @@
       knownTools: getToolNames(character.value.proficiencies.tools),
       allLanguages: allLanguages.value,
       allTools: getToolNamesForGroups(choice.toolGroups),
+      // Пул оружейного приёма — оружие во владении: приём даётся только
+      // знакомому оружию.
+      ownedWeaponNames: getOwnedWeaponNames(character.value),
+      proficientSavingThrowNames: character.value.savingThrows
+        .filter((savingThrow) => savingThrow.proficient)
+        .map((savingThrow) => ABILITY_LABELS[savingThrow.key]),
     });
   }
 

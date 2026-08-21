@@ -1,9 +1,21 @@
 <script setup lang="ts">
-  import type { CharacterClassResource } from '../../model';
+  import type { CharacterClassResource, ResourceMaxSource } from '../../model';
 
+  import { useCharacterSheet } from '../../composables';
   import {
+    ABILITY_OPTIONS,
+    getResourceMax,
     RESOURCE_COUNT_MAX,
     RESOURCE_COUNT_MIN,
+    RESOURCE_MAX_ABILITY_LABEL,
+    RESOURCE_MAX_AMOUNT_LABEL,
+    RESOURCE_MAX_COMPUTED_LABEL,
+    RESOURCE_MAX_DEFAULT_ABILITY,
+    RESOURCE_MAX_OFFSET_LABEL,
+    RESOURCE_MAX_OFFSET_MAX,
+    RESOURCE_MAX_OFFSET_MIN,
+    RESOURCE_MAX_SOURCE_ARIA_LABEL,
+    RESOURCE_MAX_SOURCE_OPTIONS,
     RESOURCE_PLACEHOLDERS,
     RESOURCE_RECOVERY_AMOUNT_MIN,
     RESOURCE_RECOVERY_FIELDS,
@@ -27,20 +39,56 @@
     close: [resource?: CharacterClassResource];
   }>();
 
+  const { character } = useCharacterSheet();
+
   // Форма правит копию: список ресурсов до сохранения меняться не должен.
   // Черновик живёт до закрытия — оверлей размонтирует модалку.
   const draftResource = ref<CharacterClassResource>(
     toClassResourceDraft(props.resource),
   );
 
+  /** Источник максимума: без правила — своё число. */
+  const maxSource = computed<ResourceMaxSource>(
+    () => draftResource.value.maxRule?.source ?? 'fixed',
+  );
+
+  /** Максимум привязан к растущему значению листа, а не задан числом. */
+  const isMaxComputed = computed(() => maxSource.value !== 'fixed');
+
+  /** Модификатор какой характеристики идёт в максимум. */
+  const isAbilityMax = computed(() => maxSource.value === 'ability');
+
+  /** Посчитанный максимум: показывается там, где поле ввода скрыто. */
+  const computedMax = computed(() =>
+    getResourceMax(character.value, draftResource.value),
+  );
+
+  /**
+   * Смена источника максимума. «Своё число» убирает правило целиком — иначе
+   * запись хранила бы правило, которое ни на что не влияет.
+   *
+   * @param source выбранный источник.
+   */
+  function handleMaxSourceChange(source: ResourceMaxSource) {
+    if (source === 'fixed') {
+      draftResource.value.maxRule = null;
+
+      return;
+    }
+
+    draftResource.value.maxRule = {
+      source,
+      ability:
+        draftResource.value.maxRule?.ability ?? RESOURCE_MAX_DEFAULT_ABILITY,
+      offset: draftResource.value.maxRule?.offset ?? 0,
+    };
+  }
+
   // Остаток не переживает снижение максимума: иначе в списке осталось бы «3/2».
   // Обратной связи нет (максимум от остатка не зависит), поэтому цикла тоже нет.
-  watch(
-    () => draftResource.value.max,
-    (max) => {
-      draftResource.value.current = Math.min(draftResource.value.current, max);
-    },
-  );
+  watch(computedMax, (max) => {
+    draftResource.value.current = Math.min(draftResource.value.current, max);
+  });
 
   /** Ресурс без обеих подписей стал бы на листе пустой строкой. */
   const isSaveDisabled = computed(
@@ -90,7 +138,7 @@
           </div>
         </div>
 
-        <div class="flex items-end gap-3">
+        <div class="flex flex-wrap items-end gap-3">
           <div class="flex w-28 shrink-0 flex-col gap-1">
             <span class="text-[10px] font-bold text-muted uppercase">
               Сейчас
@@ -99,13 +147,29 @@
             <UInputNumber
               v-model="draftResource.current"
               :min="RESOURCE_COUNT_MIN"
-              :max="draftResource.max"
+              :max="computedMax"
             />
           </div>
 
-          <div class="flex w-28 shrink-0 flex-col gap-1">
+          <div class="flex min-w-40 grow flex-col gap-1">
             <span class="text-[10px] font-bold text-muted uppercase">
               Максимум
+            </span>
+
+            <USelect
+              :model-value="maxSource"
+              :items="RESOURCE_MAX_SOURCE_OPTIONS"
+              :aria-label="RESOURCE_MAX_SOURCE_ARIA_LABEL"
+              @update:model-value="handleMaxSourceChange"
+            />
+          </div>
+
+          <div
+            v-if="!isMaxComputed"
+            class="flex w-28 shrink-0 flex-col gap-1"
+          >
+            <span class="text-[10px] font-bold text-muted uppercase">
+              {{ RESOURCE_MAX_AMOUNT_LABEL }}
             </span>
 
             <UInputNumber
@@ -114,6 +178,43 @@
               :max="RESOURCE_COUNT_MAX"
             />
           </div>
+        </div>
+
+        <div
+          v-if="isMaxComputed && draftResource.maxRule"
+          class="flex flex-wrap items-end gap-3 rounded-md bg-elevated/40 p-2"
+        >
+          <div
+            v-if="isAbilityMax"
+            class="flex min-w-40 grow flex-col gap-1"
+          >
+            <span class="text-[10px] font-bold text-muted uppercase">
+              {{ RESOURCE_MAX_ABILITY_LABEL }}
+            </span>
+
+            <USelect
+              v-model="draftResource.maxRule.ability"
+              :items="ABILITY_OPTIONS"
+              :aria-label="RESOURCE_MAX_ABILITY_LABEL"
+            />
+          </div>
+
+          <div class="flex w-28 shrink-0 flex-col gap-1">
+            <span class="text-[10px] font-bold text-muted uppercase">
+              {{ RESOURCE_MAX_OFFSET_LABEL }}
+            </span>
+
+            <UInputNumber
+              v-model="draftResource.maxRule.offset"
+              :min="RESOURCE_MAX_OFFSET_MIN"
+              :max="RESOURCE_MAX_OFFSET_MAX"
+              :aria-label="RESOURCE_MAX_OFFSET_LABEL"
+            />
+          </div>
+
+          <p class="grow text-xs text-muted">
+            {{ RESOURCE_MAX_COMPUTED_LABEL }}: {{ computedMax }}
+          </p>
         </div>
 
         <div class="flex flex-col gap-2">
