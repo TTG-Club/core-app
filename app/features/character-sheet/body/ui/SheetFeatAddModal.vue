@@ -1,11 +1,9 @@
 <script setup lang="ts">
   import type {
-    CharacterSpell,
     ClassChoice,
     FeatCatalogItem,
     FeatSummary,
     GrantedProficiencies,
-    SpellCatalogItem,
   } from '../../model';
 
   import { FeatDrawer } from '~feats/drawer';
@@ -13,30 +11,34 @@
   import {
     useCatalogSourceQuery,
     useCharacterSheet,
+    useFeatChoiceSpells,
     useToolCatalog,
   } from '../../composables';
   import {
     buildFeatFeature,
+    CLASSES_SEARCH_PATH,
     collectChosenProficiencies,
     FEAT_SOURCES_ASYNC_DATA_KEY,
     FEATS_FILTERS_PATH,
     FEATS_SEARCH_PATH,
     FEATS_SELECT_PATH,
-    fetchChoiceSpells,
     fetchFeatDetail,
-    getChoiceSpellClassUrls,
     getFeatAbilityIncreases,
+    getFeatSpellcastingAbility,
     getFeatUrlFromFeatureId,
     getRequiredChoiceCount,
     getVisibleFeatChoices,
     LANGUAGE_PROFICIENCY_GROUPS,
+    parseClassOptions,
     parseFeatCatalog,
     parseRepeatableFeatUrls,
     resolveChoiceOptions,
     SHEET_FEAT_MODAL_LABELS,
     SHEET_SEARCH_LABELS,
+    withSpellListClassNames,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
+  import SheetFeatSpellsPicker from './SheetFeatSpellsPicker.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
 
   const emit = defineEmits<{
@@ -256,8 +258,18 @@
   /** Ответы игрока на выборы черт: id выбора → выбранные значения. */
   const choiceAnswers = ref<Record<string, string[]>>({});
 
-  /** Пул заклинаний по id выбора: собирается поиском по каталогу. */
-  const spellPools = ref<Record<string, SpellCatalogItem[]>>({});
+  // Пул заклинаний собирается по названному игроком списку класса: предыстории,
+  // которая назвала бы его сама, здесь нет
+  const {
+    pools: spellPools,
+    getPool: getSpellPool,
+    getSpellOptions,
+    collectChosenSpells,
+    load: loadSpellPools,
+  } = useFeatChoiceSpells({
+    summaries: () => loadedSummaries.value,
+    answers: choiceAnswers,
+  });
 
   // Каталог инструментов грузится фоном: выбор инструмента появляется только на
   // втором шаге, а список черт не должен ждать ещё один запрос при открытии.
@@ -274,7 +286,7 @@
    */
   function choiceOptions(choice: ClassChoice): string[] {
     if (choice.kind === 'spell') {
-      return (spellPools.value[choice.id] ?? []).map((spell) => spell.name);
+      return getSpellOptions(choice);
     }
 
     return resolveChoiceOptions(choice, {
@@ -295,75 +307,62 @@
     });
   }
 
+  /**
+   * Классы каталога: в механике черты списки заклинаний перечислены ссылками, а
+   * снимка названия у них может не быть — тогда игрок увидел бы слаг. Ключ
+   * общий с визардом предыстории, поэтому запрос на оба окна один.
+   */
+  const { data: classOptions } = await useAsyncData(
+    'character-sheet:feat-spell-list-classes',
+    async () => {
+      const response = await $fetch<unknown>(CLASSES_SEARCH_PATH, {
+        method: 'GET',
+        retry: 0,
+      });
+
+      return parseClassOptions(response, true);
+    },
+    { server: false, default: () => [] },
+  );
+
+  /** Выборы одной черты: её название стоит над ними один раз. */
+  interface ChoiceGroup {
+    featName: string;
+    rows: Array<{ choice: ClassChoice; featName: string; options: string[] }>;
+  }
+
   /** Черты, которые о чём-то спрашивают, — по ним и строится шаг выбора. */
   const choiceRows = computed(() =>
     loadedSummaries.value.flatMap((summary) =>
-      getVisibleFeatChoices(summary.choices, choiceAnswers.value).map(
-        (choice) => ({
+      getVisibleFeatChoices(summary.choices, choiceAnswers.value)
+        .map((choice) => withSpellListClassNames(choice, classOptions.value))
+        .map((choice) => ({
           choice,
           featName: summary.name,
           options: choiceOptions(choice),
-        }),
-      ),
+        })),
     ),
   );
 
   /**
-   * Загружает пулы заклинаний для всех выборов загруженных черт разом. Пул
-   * сужается ответом игрока на выбор списка заклинаний, если черта на него
-   * ссылается, — предыстории, которая назвала бы класс сама, здесь нет.
+   * Выборы, сгруппированные по черте: название черты стоит над её выборами
+   * один раз, а не повторяется у каждого пикера — «Посвящённый в магию»
+   * спрашивает три вещи подряд.
    */
-  async function loadSpellPools(): Promise<void> {
-    const spellChoices = loadedSummaries.value.flatMap((summary) =>
-      summary.choices.flatMap((choice) =>
-        choice.kind === 'spell' && choice.spellFilter
-          ? [{ summary, choice, filter: choice.spellFilter }]
-          : [],
-      ),
-    );
+  const choiceGroups = computed(() => {
+    const byFeat = new Map<string, ChoiceGroup>();
 
-    const pools = await Promise.all(
-      spellChoices.map(async ({ summary, choice, filter }) => ({
-        id: choice.id,
-        spells: await fetchChoiceSpells(
-          filter,
-          getChoiceSpellClassUrls(choice, summary.choices, choiceAnswers.value),
-        ),
-      })),
-    );
+    for (const row of choiceRows.value) {
+      const group = byFeat.get(row.featName);
 
-    spellPools.value = Object.fromEntries(
-      pools.map((pool) => [pool.id, pool.spells]),
-    );
-  }
-
-  /**
-   * Ответы, от которых зависят пулы: пул заклинаний собирается по названному
-   * игроком списку, поэтому после смены ответа его нужно перезапросить.
-   */
-  const spellPoolAnswersKey = computed(() =>
-    loadedSummaries.value
-      .flatMap((summary) =>
-        summary.choices
-          .filter((choice) => choice.kind === 'spell-list')
-          .map((choice) => (choiceAnswers.value[choice.id] ?? []).join(',')),
-      )
-      .join('|'),
-  );
-
-  // Цикла нет: ключ считается только по ответам на выбор списка, а обработчик
-  // чистит ответы выбора заклинания — значение ключа от этого не меняется.
-  watch(spellPoolAnswersKey, () => {
-    // Пул сменился — прежние ответы к нему уже не относятся.
-    for (const summary of loadedSummaries.value) {
-      for (const choice of summary.choices) {
-        if (choice.kind === 'spell') {
-          choiceAnswers.value = { ...choiceAnswers.value, [choice.id]: [] };
-        }
+      if (group) {
+        group.rows.push(row);
+      } else {
+        byFeat.set(row.featName, { featName: row.featName, rows: [row] });
       }
     }
 
-    void loadSpellPools();
+    return [...byFeat.values()];
   });
 
   const isChoiceStep = computed(() => choiceRows.value.length > 0);
@@ -445,31 +444,6 @@
   }
 
   /**
-   * Заклинания, выбранные игроком: пул хранит записи каталога, а пикер — их
-   * названия, поэтому выбранное сверяется по названию.
-   *
-   * @param summary деталь черты.
-   * @returns выбранные заклинания записями листа.
-   */
-  function collectChosenSpells(summary: FeatSummary): CharacterSpell[] {
-    return summary.choices.flatMap((choice) => {
-      if (choice.kind !== 'spell') {
-        return [];
-      }
-
-      const chosen = new Set(choiceAnswers.value[choice.id] ?? []);
-
-      return (
-        (spellPools.value[choice.id] ?? [])
-          .filter((spell) => chosen.has(spell.name))
-          // Заклинание черты подготовлено сразу и места среди подготовленных не
-          // занимает — как врождённое заклинание вида.
-          .map((spell) => ({ ...spell, prepared: true }))
-      );
-    });
-  }
-
-  /**
    * Собирает записи умений из загруженных деталей с ответами игрока и добавляет
    * их на лист.
    */
@@ -487,6 +461,12 @@
         proficiencies: collectProficiencies(summary),
         choiceAnswers: collectChoiceAnswers(summary),
         spells: collectChosenSpells(summary),
+        // Названная игроком характеристика ложится на заклинания черты: от неё
+        // считаются их атака и Сл спасброска
+        spellcastingAbility: getFeatSpellcastingAbility(
+          summary,
+          choiceAnswers.value,
+        ),
         abilityIncreases: getFeatAbilityIncreases(
           summary,
           character.value.abilities,
@@ -571,22 +551,41 @@
         </p>
 
         <div
-          v-for="row in choiceRows"
-          :key="row.choice.id"
-          class="flex flex-col gap-1"
+          v-for="group in choiceGroups"
+          :key="group.featName"
+          class="flex flex-col gap-3"
         >
           <span class="text-sm font-medium text-highlighted">
-            {{ row.featName }}
+            {{ group.featName }}
           </span>
 
-          <SheetChoiceSelect
-            v-model="choiceAnswers[row.choice.id]"
-            :items="row.options"
-            :count="row.choice.count"
-            :placeholder="
-              row.choice.label || SHEET_FEAT_MODAL_LABELS.choicePlaceholder
-            "
-          />
+          <div
+            v-for="row in group.rows"
+            :key="row.choice.id"
+            class="flex flex-col gap-1"
+          >
+            <span class="text-sm text-toned">{{ row.choice.label }}</span>
+
+            <!-- Заклинания выбирают своим окном: пул бывает и на сотню записей,
+              а выбранные должны остаться на виду, чтобы их можно было убрать -->
+            <SheetFeatSpellsPicker
+              v-if="row.choice.kind === 'spell'"
+              v-model="choiceAnswers[row.choice.id]"
+              :items="getSpellPool(row.choice)"
+              :count="row.choice.count"
+              :label="row.choice.label"
+            />
+
+            <SheetChoiceSelect
+              v-else
+              v-model="choiceAnswers[row.choice.id]"
+              :items="row.options"
+              :count="row.choice.count"
+              :placeholder="
+                row.choice.label || SHEET_FEAT_MODAL_LABELS.choicePlaceholder
+              "
+            />
+          </div>
         </div>
 
         <p

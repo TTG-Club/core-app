@@ -8,6 +8,7 @@ import type {
   CharacterClassResource,
   CharacterCustomBonus,
   CharacterCustomCurrency,
+  ClassChoiceKind,
   CurrencyKey,
   CustomArmorType,
   CustomArmorTypeMeta,
@@ -238,8 +239,19 @@ export const SHEET_TITLE_ACTION_REVEAL_CLASS = `opacity-0 transition-opacity dur
  * общий, чтобы шапки вкладок выглядели одинаково — плитка узнаётся по рамке и
  * потеплению под курсором, а не по подписи.
  */
-export const SHEET_HEADER_STAT_CLASS =
-  'flex h-7 cursor-pointer items-center gap-3 rounded-lg border border-default/50 bg-elevated/20 px-3 transition-colors hover:border-primary/60';
+const SHEET_STAT_TILE_CLASS =
+  'flex h-7 items-center gap-3 rounded-lg border border-default/50 bg-elevated/20 px-3 transition-colors';
+
+export const SHEET_HEADER_STAT_CLASS = `${SHEET_STAT_TILE_CLASS} cursor-pointer hover:border-primary/60`;
+
+/**
+ * Плитка, которая ничего не открывает: у заклинательства черты характеристику
+ * назвали при её взятии, и менять её на листе нечем. Своей строкой, а не
+ * добавкой класса поверх: `cursor-default` и `cursor-pointer` — одна и та же
+ * утилита, и какая из них победит, решает порядок в собранном css, а не порядок
+ * в атрибуте.
+ */
+export const SHEET_STATIC_STAT_CLASS = `${SHEET_STAT_TILE_CLASS} cursor-default`;
 
 /** Подпись и подсказка режима просмотра в шапке чужого листа. */
 export const SHEET_READONLY_LABELS: Record<'badge' | 'tooltip', string> = {
@@ -1580,6 +1592,20 @@ export const VISION_ORDER: VisionKey[] = [
   'truesight',
 ];
 
+/**
+ * Подписи редактора зрения.
+ *
+ * В поле игрок правит только своё значение, а на лист идёт большее из своего и
+ * выданного особенностями. Без подписи это выглядело бы ошибкой: в подсказке у
+ * аватара слепое зрение есть, а в редакторе ноль.
+ */
+export const VISION_EDITOR_LABELS = {
+  unit: 'Единицы',
+  grantsTitle: 'Выдано особенностями:',
+  effectiveHint:
+    'Лист берёт большее из своего значения и выданного особенностями.',
+};
+
 /** Минимальная дистанция зрения. */
 export const VISION_DISTANCE_MIN = 0;
 
@@ -2528,6 +2554,12 @@ export const SPELLCASTING_STAT_LABELS: Record<
   attack: { short: 'Атака закл.', full: 'Атака заклинанием' },
 };
 
+/** Подписи плитки заклинательства для скринридера. */
+export const SPELLCASTING_TILE_LABELS = {
+  edit: 'Настроить заклинательство',
+  fixed: 'Заклинательство черты',
+} as const;
+
 /** Значение «Авто (по классу)» в селекте заклинательной характеристики. */
 export const SPELLCASTING_ABILITY_AUTO = 'auto';
 
@@ -2667,6 +2699,32 @@ export const CUSTOM_BACKGROUND_ABILITY_SLOT_LABELS: Record<
     '+1 к характеристике',
   ],
 };
+
+/**
+ * Подписи разделов второго шага мастера предыстории.
+ *
+ * Шаг спрашивает сразу обо всём — прибавках, владениях, черте и снаряжении, —
+ * и одной простынёй читается плохо. Разделы показываются только те, о которых
+ * предыстории есть что сказать: черта и стартовое снаряжение бывают не у всех.
+ */
+export const BACKGROUND_WIZARD_TAB_ORDER = [
+  'abilities',
+  'proficiencies',
+  'feat',
+  'equipment',
+] as const;
+
+/** Раздел второго шага мастера предыстории. */
+export type BackgroundWizardTab = (typeof BACKGROUND_WIZARD_TAB_ORDER)[number];
+
+/** Подписи разделов; порядок вкладок задаёт `BACKGROUND_WIZARD_TAB_ORDER`. */
+export const BACKGROUND_WIZARD_TAB_LABELS: Record<BackgroundWizardTab, string> =
+  {
+    abilities: 'Характеристики',
+    proficiencies: 'Навыки и инструменты',
+    feat: 'Черта',
+    equipment: 'Снаряжение',
+  };
 
 /** Подписи формы своей предыстории. */
 export const CUSTOM_BACKGROUND_LABELS = {
@@ -4394,6 +4452,59 @@ export const SHEET_FEAT_MODAL_LABELS = {
   descriptionTooltip: 'Открыть описание черты',
   abilityVariantLabel: 'Как повысить характеристики',
 } as const;
+
+/** Подписи окна «от какой характеристики считается заклинание». */
+export const SHEET_SPELL_ABILITY_LABELS = {
+  menu: 'Заклинательная характеристика',
+  /** Подсказка бейджа строки: у заклинания характеристика не как у класса. */
+  badgeHint: 'Заклинание считается от этой характеристики, а не от класса',
+  hint: 'От неё считаются Сл спасброска и бонус атаки этого заклинания.',
+  auto: 'От класса',
+  autoUnknown: 'От класса (не определена)',
+  save: 'Сохранить',
+  cancel: 'Отмена',
+} as const;
+
+/** Подписи окна выбора заклинаний черты. */
+export const SHEET_FEAT_SPELLS_LABELS = {
+  add: 'Добавить',
+  apply: 'Добавить',
+  cancel: 'Отмена',
+  chosen: 'Выбрано',
+  rest: 'Осталось выбрать',
+  enough: 'Выбрано столько, сколько даёт черта',
+  empty: 'Заклинаний по этим условиям не нашлось',
+  remove: 'Убрать заклинание',
+  none: 'Заклинания ещё не выбраны',
+} as const;
+
+/**
+ * Сколько вариантов выбора ещё показывать бейджами, а не выпадающим списком.
+ *
+ * Короткий набор — класс списка заклинаний, заклинательная характеристика — в
+ * списке прячется: игрок не видит, из чего выбирает, пока не откроет его. Длинный
+ * (навыки, языки, заклинания) бейджами не показать — ряд занял бы весь экран, и
+ * искать в нём нечем.
+ */
+export const SHEET_CHOICE_BADGE_MAX_OPTIONS = 12;
+
+/**
+ * Ключ выбора класса, который лист заводит сам, когда в записи черты его нет:
+ * заклинания перечисляют несколько классов, но по правилам список один.
+ */
+export const FEAT_SPELL_CLASS_CHOICE_KEY = 'spell-list';
+
+/**
+ * Подписи пикеров черты по умолчанию: подпись у выбора необязательна, а «Выберите
+ * значение» у трёх пикеров подряд не говорит игроку, что от него хотят.
+ */
+export const SHEET_FEAT_CHOICE_LABELS: Partial<
+  Record<ClassChoiceKind, string>
+> = {
+  'spell-list': 'Выберите список заклинаний класса',
+  'spellcasting-ability': 'Выберите заклинательную характеристику',
+  'spell': 'Выберите заклинания',
+};
 
 /** Формы слова «характеристика» для подписи варианта повышения. */
 export const ABILITY_COUNT_FORMS: [string, string, string] = [

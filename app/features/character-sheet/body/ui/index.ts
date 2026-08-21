@@ -29,6 +29,8 @@ export { default as SheetEquipmentTab } from './SheetEquipmentTab.vue';
 export { default as SheetExhaustionPanel } from './SheetExhaustionPanel.vue';
 export { default as SheetExperienceModal } from './SheetExperienceModal.vue';
 export { default as SheetFeatAddModal } from './SheetFeatAddModal.vue';
+export { default as SheetFeatSpellsModal } from './SheetFeatSpellsModal.vue';
+export { default as SheetFeatSpellsPicker } from './SheetFeatSpellsPicker.vue';
 export { default as SheetFeatureAddModal } from './SheetFeatureAddModal.vue';
 export { default as SheetFeatureEditModal } from './SheetFeatureEditModal.vue';
 export { default as SheetFeaturesTab } from './SheetFeaturesTab.vue';
@@ -69,6 +71,7 @@ export { default as SheetSkillsSettingsModal } from './SheetSkillsSettingsModal.
 export { default as SheetSpeciesWizardModal } from './SheetSpeciesWizardModal.vue';
 export { default as SheetSpeedModal } from './SheetSpeedModal.vue';
 export { default as SheetSpeedTile } from './SheetSpeedTile.vue';
+export { default as SheetSpellAbilityModal } from './SheetSpellAbilityModal.vue';
 export { default as SheetSpellAddModal } from './SheetSpellAddModal.vue';
 export { default as SheetSpellcastingModal } from './SheetSpellcastingModal.vue';
 export { default as SheetSpellsTab } from './SheetSpellsTab.vue';

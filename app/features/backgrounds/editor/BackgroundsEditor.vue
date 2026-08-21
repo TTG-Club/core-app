@@ -1,10 +1,17 @@
 <script setup lang="ts">
   import type { BackgroundCreate } from '~backgrounds/model';
 
+  import { BACKGROUND_EDITOR_LABELS } from '~backgrounds/model';
   import { BackgroundPreview } from '~backgrounds/preview';
   import { EditorBaseInfo, StartingEquipmentEditor } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
-  import { SelectAbilities, SelectFeat, SelectSkill } from '~ui/select';
+  import {
+    SelectAbilities,
+    SelectClass,
+    SelectFeat,
+    SelectSkill,
+  } from '~ui/select';
+  import { InfoTooltip } from '~ui/tooltip';
   import { useWorkshopForm } from '~workshop/composable';
   import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
   import { WorkshopEditorFormControls } from '~workshop/revision/ui';
@@ -97,14 +104,25 @@
           />
         </UFormField>
 
+        <!-- Класс черты, а не свободный текст: лист персонажа сверяет подпись
+          с каталогом классов и по ней сужает пул заклинаний «Посвящённого в
+          магию» — с опечаткой или своим написанием сверка не сойдётся -->
         <UFormField
           class="md:col-span-12 lg:col-span-4"
-          label="Суффикс черты"
           name="featSuffix"
         >
-          <UInput
+          <template #label>
+            <InfoTooltip
+              :text="BACKGROUND_EDITOR_LABELS.featClassHint"
+              icon="tabler:info-circle-filled"
+            >
+              <span>{{ BACKGROUND_EDITOR_LABELS.featClass }}</span>
+            </InfoTooltip>
+          </template>
+
+          <SelectClass
             v-model="state.featSuffix"
-            placeholder="Введи суффикс"
+            name-as-value
           />
         </UFormField>
 

@@ -1,7 +1,9 @@
 <script setup lang="ts">
   import type { SpeciesCreate } from '~species/model';
 
+  import { createFeatEditorRows } from '~feats/model';
   import {
+    normalizeLoadedSpecies,
     SPECIES_MECHANICS_EDITOR,
     SPECIES_PROPERTIES_EDITOR,
     transformSpeciesBeforeSubmit,
@@ -56,6 +58,7 @@
       features: [],
       innateSpells: [],
       mechanics: undefined,
+      editorRows: createFeatEditorRows(),
       tags: [],
     };
   }
@@ -64,9 +67,22 @@
     useWorkshopForm<SpeciesCreate>({
       actionUrl: '/api/v2/species',
       getInitialState,
+      normalizeLoaded: normalizeLoadedSpecies,
       transformBeforeSubmit: transformSpeciesBeforeSubmit,
       revisionEntityType: REVISION_ENTITY_TYPES.SPECIES,
     });
+
+  /**
+   * Начальное состояние всегда содержит строки редактора, но в типе они
+   * необязательны: перед отправкой механика пересобирается из строк, а сами
+   * строки из тела запроса выбрасываются. Обёртка даёт шаблону непустой объект.
+   */
+  const editorRows = computed({
+    get: () => state.value.editorRows ?? createFeatEditorRows(),
+    set: (value) => {
+      state.value.editorRows = value;
+    },
+  });
 </script>
 
 <template>
@@ -146,7 +162,7 @@
           </span>
         </USeparator>
 
-        <SpeciesMechanicsFields v-model="state.mechanics" />
+        <SpeciesMechanicsFields v-model="editorRows" />
 
         <SpeciesFeatures v-model="state.features" />
 

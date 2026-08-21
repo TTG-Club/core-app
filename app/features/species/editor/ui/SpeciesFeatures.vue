@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { SpeciesCreate } from '~species/model';
 
+  import { createFeatEditorRows } from '~feats/model';
   import {
     SPECIES_CHARACTER_LEVEL,
     SPECIES_FEATURE_EDITOR,
@@ -26,6 +27,7 @@
       description: '',
       level: undefined,
       mechanics: undefined,
+      editorRows: createFeatEditorRows(),
     };
   }
 
@@ -126,7 +128,13 @@
         />
       </UFormField>
 
-      <SpeciesMechanicsFields v-model="feature.mechanics" />
+      <USeparator class="col-span-full">
+        <span class="font-bold text-secondary">
+          {{ SPECIES_FEATURE_EDITOR.mechanicsTitle }}
+        </span>
+      </USeparator>
+
+      <SpeciesMechanicsFields v-model="feature.editorRows" />
     </UForm>
 
     <USeparator

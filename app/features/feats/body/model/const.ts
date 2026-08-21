@@ -1,3 +1,8 @@
+/** Подписи блоков страницы черты. */
+export const FEAT_BODY_LABELS = {
+  backgrounds: 'Предыстории',
+} as const;
+
 export const COMPONENT_TOOLTIP_TEXT = {
   category:
     'Черта принадлежит к категории, которая указана в черте. '

@@ -275,6 +275,12 @@ const spellSchema = z.object({
   concentration: z.boolean().optional(),
   ritual: z.boolean().optional(),
   prepared: z.boolean().optional().catch(undefined),
+  // Уровень доступа выданного чертой заклинания; у записей до него поля нет —
+  // такое заклинание доступно с момента взятия черты
+  requiredLevel: z.coerce.number().optional().catch(undefined),
+  // Своя характеристика заклинания: её ставит черта, давшая заклинание. Нет
+  // поля — заклинание считается от характеристики класса
+  spellcastingAbility: abilityKeySchema.optional().catch(undefined),
   castingTime: z.string().optional().catch(undefined),
   range: z.string().optional().catch(undefined),
   components: z.string().optional().catch(undefined),

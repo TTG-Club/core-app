@@ -1,4 +1,5 @@
 import type { NameResponse, SourceResponse } from '~/shared/types';
+import type { FeatEditorRows } from '~feats/model';
 import type { EditorBaseInfoState } from '~ui/editor';
 
 import type { SpeciesMechanics } from './mechanics';
@@ -85,6 +86,13 @@ export interface SpeciesCreate extends EditorBaseInfoState {
    * `undefined` — запись лист не двигает либо двигает только своими умениями.
    */
   mechanics: SpeciesMechanics | undefined;
+
+  /**
+   * Строки редактора механики записи. Форма правит их, а не механику напрямую —
+   * как в редакторе черт; механику из них пересобирает
+   * `transformSpeciesBeforeSubmit`, и в тело запроса строки не уходят.
+   */
+  editorRows?: FeatEditorRows;
   innateSpells: Array<{
     spell: string;
     requiredLevel: number;
@@ -104,6 +112,9 @@ export interface SpeciesCreateFeature {
 
   /** Механика влияния на лист; `undefined` — умение только текстовое. */
   mechanics: SpeciesMechanics | undefined;
+
+  /** Строки редактора механики умения; в тело запроса не уходят. */
+  editorRows?: FeatEditorRows;
 }
 
 export interface SpeciesCreateSpeed {

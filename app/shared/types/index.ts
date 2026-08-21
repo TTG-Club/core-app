@@ -2,7 +2,6 @@ export * from './abilities';
 export * from './base';
 export * from './composable';
 export * from './dictionaries';
-export * from './mechanics';
 export * from './subscription';
 export * from './upload';
 export * from './user';
