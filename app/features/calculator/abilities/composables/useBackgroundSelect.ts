@@ -5,6 +5,8 @@ import type {
 
 import { ABILITY_LABELS, isAbilityKey } from '~/shared/types';
 
+import { parseCalculatorBackgrounds } from '../model';
+
 /**
  * Composable для выбора предыстории и расчёта бонусов характеристик.
  *
@@ -13,13 +15,18 @@ import { ABILITY_LABELS, isAbilityKey } from '~/shared/types';
 export function useBackgroundSelect() {
   const selectedUrl = ref<string>();
 
-  const { data: backgrounds, pending } = useFetch<
-    CalculatorAbilitiesBackground[]
-  >('/api/v2/backgrounds/select', {
-    dedupe: 'defer',
-    lazy: true,
-    default: () => [],
-  });
+  // Калькулятор живёт только внутри `<ClientOnly>`: без `server: false`
+  // гидратация принимает `default` за ответ сервера и запрос не уходит вовсе.
+  const { data: backgrounds, pending } = useFetch(
+    '/api/v2/backgrounds/select',
+    {
+      server: false,
+      dedupe: 'defer',
+      lazy: true,
+      default: (): Array<CalculatorAbilitiesBackground> => [],
+      transform: parseCalculatorBackgrounds,
+    },
+  );
 
   const backgroundsByUrl = computed(() => {
     const map: Record<string, CalculatorAbilitiesBackground> = {};
