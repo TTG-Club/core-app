@@ -7,7 +7,6 @@
 
   useSeoMeta({
     title: 'Карта разработки',
-    ogTitle: 'Карта разработки | TTG Club Онлайн-справочник',
   });
 
   const { isAdmin } = useUserRoles();
