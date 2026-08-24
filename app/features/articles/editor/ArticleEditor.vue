@@ -28,6 +28,7 @@
     ARTICLE_TELEGRAM_FORMAT_DEFAULT,
     ARTICLE_TELEGRAM_FORMAT_OPTIONS,
     ARTICLE_TELEGRAM_FORMATS,
+    ARTICLE_TELEGRAM_SUMMARY_TARGET,
     ARTICLE_TYPE_DEFAULT,
     ARTICLE_TYPE_OPTIONS,
     ARTICLES_ADMIN_ROUTE,
@@ -68,6 +69,8 @@
       accessibleByLink: false,
       publishToTelegram: false,
       telegramFormat: ARTICLE_TELEGRAM_FORMAT_DEFAULT,
+      telegramSummaryEnabled: false,
+      telegramSummary: '',
       publishToDiscord: false,
       discordMention: ARTICLE_DISCORD_MENTION_DEFAULT,
       publishToVk: false,
@@ -91,8 +94,9 @@
       // а `defineModel({ default: '' })` подставляет дефолт только на undefined),
       // из-за чего `state.preview` остаётся null и PUT падает на `@NotNull`.
       // Нормализуем при загрузке к пустой строке. `publishToTelegram`,
-      // `publishToDiscord`, `publishToVk`, `discordMention` и `telegramFormat`
-      // также страхуем на случай null у записей до миграции бэка.
+      // `publishToDiscord`, `publishToVk`, `discordMention`, `telegramFormat` и
+      // поля короткого описания также страхуем на случай null у записей до
+      // миграции бэка (у них короткого описания ещё не было).
       normalizeLoaded: (raw) => ({
         ...raw,
         preview: raw.preview ?? '',
@@ -101,6 +105,8 @@
         publishToVk: raw.publishToVk ?? false,
         discordMention: raw.discordMention ?? ARTICLE_DISCORD_MENTION_DEFAULT,
         telegramFormat: raw.telegramFormat ?? ARTICLE_TELEGRAM_FORMAT_DEFAULT,
+        telegramSummaryEnabled: raw.telegramSummaryEnabled ?? false,
+        telegramSummary: raw.telegramSummary ?? '',
       }),
       transformBeforeSubmit: (formState) => {
         const isActivePublish = !formState.draft && formState.active;
@@ -171,6 +177,14 @@
       : `без картинки; с картинкой — до ${ARTICLE_POST_CHAR_TARGET_WITH_IMAGE}`,
   );
 
+  /**
+   * Цвет счётчика символов: мягкий порог превышен — предупреждающий цвет, иначе
+   * приглушённый. Порог не жёсткий, отправку не блокирует — только подсветка.
+   */
+  function counterClass(isOverTarget: boolean): string {
+    return isOverTarget ? 'text-warning' : 'text-muted';
+  }
+
   // Длина поста ограничена только в «полном тексте»: у карточки Instant View текст
   // читается в Telegram целиком, лимит сообщения к нему не относится — счётчик
   // порога показываем лишь для прежнего вида.
@@ -186,12 +200,24 @@
       && state.value.telegramFormat === 'INSTANT_VIEW',
   );
 
-  const isOverTelegramTarget = computed(
-    () => postCharCount.value > telegramTarget.value,
+  // Короткая выжимка под карточкой Instant View: обычный текст, поэтому длину
+  // считаем как есть, без разбора разметки.
+  const summaryCharCount = computed(() => state.value.telegramSummary.length);
+
+  const telegramCounterClass = computed(() =>
+    counterClass(postCharCount.value > telegramTarget.value),
   );
 
-  const isOverDiscordTarget = computed(
-    () => postCharCount.value > discordTarget,
+  const discordCounterClass = computed(() =>
+    counterClass(postCharCount.value > discordTarget),
+  );
+
+  const summaryCounterClass = computed(() =>
+    counterClass(summaryCharCount.value > ARTICLE_TELEGRAM_SUMMARY_TARGET),
+  );
+
+  const previewToggleIcon = computed(() =>
+    isPreviewOpen.value ? 'tabler:chevron-up' : 'tabler:chevron-down',
   );
 
   const hasPreviewText = computed(() => previewCharCount.value > 0);
@@ -361,6 +387,10 @@
     accessibleByLink: z.boolean(),
     publishToTelegram: z.boolean(),
     telegramFormat: z.enum(ARTICLE_TELEGRAM_FORMATS),
+    // Текст выжимки необязателен: пустой равнозначен выключенной галочке —
+    // бэк в таком случае постит карточку без текста.
+    telegramSummaryEnabled: z.boolean(),
+    telegramSummary: z.string(),
     publishToDiscord: z.boolean(),
     discordMention: z.enum(ARTICLE_DISCORD_MENTIONS),
     publishToVk: z.boolean(),
@@ -595,6 +625,38 @@
           Как было раньше: полный текст прямо в посте (длинный разобьётся на
           несколько сообщений), обложка — над текстом или подписью к фото.
         </p>
+
+        <template v-if="isTelegramInstantView">
+          <UCheckbox
+            v-model="state.telegramSummaryEnabled"
+            label="Короткое описание"
+            description="Добавит под карточку пару предложений — основную выжимку новости. Без галочки пост уходит одной карточкой, без текста."
+          />
+
+          <UFormField
+            v-if="state.telegramSummaryEnabled"
+            name="telegramSummary"
+            label="Текст короткого описания"
+            help="Переносы строк сохраняются; работают **жирный**, *курсив* и маркеры разметки. Пустой текст равнозначен выключенной галочке."
+          >
+            <template #hint>
+              <span
+                class="tabular-nums"
+                :class="summaryCounterClass"
+              >
+                {{ summaryCharCount }} / {{ ARTICLE_TELEGRAM_SUMMARY_TARGET }}
+              </span>
+            </template>
+
+            <UTextarea
+              v-model="state.telegramSummary"
+              autoresize
+              :maxrows="8"
+              class="w-full"
+              placeholder="О чём новость в двух-трёх предложениях"
+            />
+          </UFormField>
+        </template>
       </div>
 
       <div
@@ -634,7 +696,7 @@
         <p
           v-if="isTelegramFullText"
           class="tabular-nums"
-          :class="isOverTelegramTarget ? 'text-warning' : 'text-muted'"
+          :class="telegramCounterClass"
         >
           Telegram: {{ postCharCount }} / {{ telegramTarget }} ({{
             telegramHint
@@ -651,7 +713,7 @@
         <p
           v-if="state.publishToDiscord"
           class="tabular-nums"
-          :class="isOverDiscordTarget ? 'text-warning' : 'text-muted'"
+          :class="discordCounterClass"
         >
           Discord: {{ postCharCount }} / {{ discordTarget }} (при любом
           раскладе)
@@ -682,7 +744,7 @@
           </span>
 
           <UIcon
-            :name="isPreviewOpen ? 'tabler:chevron-up' : 'tabler:chevron-down'"
+            :name="previewToggleIcon"
             class="size-5 shrink-0 text-muted"
           />
         </button>

@@ -16,6 +16,8 @@ import {
   isAbilityKey,
 } from '~/shared/types';
 
+import { parseCalculatorFeats } from '../model';
+
 /**
  * Composable для выбора черт и расчёта бонусов характеристик.
  *
@@ -27,17 +29,18 @@ export function useFeatSelect(hasEpicBoon: Ref<boolean>) {
   const selectedEpicFeatUrl = ref<string>();
   const featAbilityChoices = ref<Map<string | number, AbilityKey[]>>(new Map());
 
-  const { data: feats, pending } = useFetch<CalculatorAbilitiesFeat[]>(
-    '/api/v2/feats/select',
-    {
-      query: {
-        categories: ['GENERAL', 'DRAGONMARK', 'EPIC_BOON'],
-      },
-      dedupe: 'defer',
-      lazy: true,
-      default: () => [],
+  // Калькулятор живёт только внутри `<ClientOnly>`: без `server: false`
+  // гидратация принимает `default` за ответ сервера и запрос не уходит вовсе.
+  const { data: feats, pending } = useFetch('/api/v2/feats/select', {
+    server: false,
+    query: {
+      categories: ['GENERAL', 'DRAGONMARK', 'EPIC_BOON'],
     },
-  );
+    dedupe: 'defer',
+    lazy: true,
+    default: (): Array<CalculatorAbilitiesFeat> => [],
+    transform: parseCalculatorFeats,
+  });
 
   const featsByUrl = computed(() => {
     const map: Record<string, CalculatorAbilitiesFeat> = {};

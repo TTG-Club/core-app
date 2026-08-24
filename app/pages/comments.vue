@@ -8,7 +8,6 @@
   useSeoMeta({
     title: RECENT_COMMENTS_TITLE,
     description: RECENT_COMMENTS_DESCRIPTION,
-    ogTitle: `${RECENT_COMMENTS_TITLE} | TTG Club Онлайн-справочник`,
   });
 </script>
 

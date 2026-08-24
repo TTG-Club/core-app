@@ -38,6 +38,17 @@
 
   const markdown = useEntityMarkdown(detail, getClassMarkdown);
 
+  // Дровер остаётся смонтированным после закрытия (`UDrawer` не эмитит
+  // `after:leave`), поэтому переиспользуемый оверлей на повторном `open()`
+  // лишь меняет проп `url`. Без синхронизации локальный `currentUrl` навсегда
+  // застревал на первом открытом классе.
+  watch(
+    () => props.url,
+    (url) => {
+      currentUrl.value = url;
+    },
+  );
+
   /**
    * Обработчик inline-навигации — обновляет текущий URL,
    * что триггерит перезагрузку данных через watch в useAsyncData.

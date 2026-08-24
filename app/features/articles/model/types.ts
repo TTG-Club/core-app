@@ -62,6 +62,12 @@ export type ArticleTelegramFormat = 'INSTANT_VIEW' | 'FULL_TEXT';
  * - `accessibleByLink` — при `draft=false, active=false` (неактивна) открыть по прямой ссылке;
  * - `publishToTelegram` — при сохранении продублировать новость в Telegram-канал;
  * - `telegramFormat` — вид поста в Telegram (учитывается при `publishToTelegram`);
+ * - `telegramSummaryEnabled` — добавить под карточку Instant View короткую выжимку
+ *   (учитывается при `telegramFormat: 'INSTANT_VIEW'`; в `FULL_TEXT` смысла нет —
+ *   там весь текст новости и так в посте);
+ * - `telegramSummary` — текст этой выжимки (учитывается при `telegramSummaryEnabled`).
+ *   Обычный текст, НЕ разметка редактора: переносы строк сохраняются, дополнительно
+ *   работают `**жирный**`, `*курсив*` и маркеры `{@...}`;
  * - `publishToDiscord` — при сохранении продублировать новость в Discord через вебхук;
  * - `discordMention` — пинг в Discord-канале при публикации (учитывается при `publishToDiscord`);
  * - `publishToVk` — при сохранении продублировать новость в сообщество ВКонтакте.
@@ -74,6 +80,8 @@ export interface ArticleRequest {
   accessibleByLink: boolean;
   publishToTelegram: boolean;
   telegramFormat: ArticleTelegramFormat;
+  telegramSummaryEnabled: boolean;
+  telegramSummary: string;
   publishToDiscord: boolean;
   discordMention: ArticleDiscordMention;
   publishToVk: boolean;

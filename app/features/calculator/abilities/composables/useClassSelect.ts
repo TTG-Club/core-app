@@ -10,6 +10,7 @@ import type {
 import {
   ABILITY_MAX_SCORE,
   EPIC_BOON_LEVEL,
+  parseCalculatorClasses,
   STANDARD_ASI_LEVELS,
 } from '../model';
 
@@ -22,12 +23,16 @@ import {
 export function useClassSelect(level: Ref<number>) {
   const selectedUrl = ref<string>();
 
-  const { data: classes, pending } = useFetch<CalculatorAbilitiesClass[]>(
+  // Калькулятор живёт только внутри `<ClientOnly>`: без `server: false`
+  // гидратация принимает `default` за ответ сервера и запрос не уходит вовсе.
+  const { data: classes, pending } = useFetch(
     '/api/v2/classes/ability-improvement',
     {
+      server: false,
       dedupe: 'defer',
       lazy: true,
-      default: () => [],
+      default: (): Array<CalculatorAbilitiesClass> => [],
+      transform: parseCalculatorClasses,
     },
   );
 
