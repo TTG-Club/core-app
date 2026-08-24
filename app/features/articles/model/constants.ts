@@ -194,6 +194,13 @@ export const ARTICLE_TELEGRAM_FORMAT_OPTIONS: Array<{
 export const ARTICLE_TELEGRAM_FORMAT_DEFAULT: ArticleTelegramFormat =
   'INSTANT_VIEW';
 
+/**
+ * Желательный максимум символов короткой выжимки под карточкой Instant View —
+ * пара-тройка предложений о главном. Мягкая подсказка в редакторе: отправку не
+ * блокирует, жёсткий предел — лимит сообщения Telegram (4096).
+ */
+export const ARTICLE_TELEGRAM_SUMMARY_TARGET = 600;
+
 /** Формат даты публикации для карточек и страницы чтения. */
 export const ARTICLE_DATE_FORMAT = 'LL';
 
