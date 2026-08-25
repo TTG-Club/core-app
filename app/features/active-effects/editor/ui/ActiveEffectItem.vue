@@ -5,25 +5,35 @@
     ActiveEffect,
     EffectAbility,
     EffectAreaTrigger,
+    EffectAttackTrigger,
     EffectAuraTarget,
+    EffectConditionKey,
     EffectConditionTemplate,
     EffectDamagePart,
     EffectSaveOutcome,
     EffectSaveTiming,
+    EffectTurnAnchor,
+    EffectTurnTiming,
   } from '../../model';
 
   import {
+    ACTIVE_EFFECT_LABELS,
     DEFAULT_EFFECT_AURA,
     DEFAULT_EFFECT_SAVE,
     EFFECT_ABILITY_OPTIONS,
     EFFECT_AREA_TRIGGER_OPTIONS,
     EFFECT_AURA_TARGET_OPTIONS,
+    EFFECT_CONDITION_OPTIONS,
     EFFECT_CONDITION_TEMPLATES,
+    EFFECT_CONSUME_ON_NONE,
+    EFFECT_CONSUME_ON_OPTIONS,
     EFFECT_DURATION_OPTIONS,
     EFFECT_DURATION_WITH_VALUE,
     EFFECT_SAVE_OUTCOME_OPTIONS,
     EFFECT_SAVE_TIMING_OPTIONS,
     EFFECT_TARGET_OPTIONS,
+    EFFECT_TURN_ANCHOR_OPTIONS,
+    EFFECT_TURN_TIMING_OPTIONS,
   } from '../../model';
   import EffectChanges from './EffectChanges.vue';
   import EffectDamageParts from './EffectDamageParts.vue';
@@ -44,6 +54,9 @@
       conditionKey: template.key,
       changes: template.changes.map((change) => ({ ...change })),
       flags: [...template.flags],
+      conditionImmunities: template.conditionImmunities
+        ? [...template.conditionImmunities]
+        : undefined,
       duration: { type: 'special' },
       aura: undefined,
     };
@@ -67,6 +80,36 @@
   const hasDurationValue = computed(() =>
     EFFECT_DURATION_WITH_VALUE.includes(model.value.duration.type),
   );
+
+  /** Точная «ходовая» длительность: до начала/конца хода носителя либо кастера. */
+  const isTurnDuration = computed(() => model.value.duration.type === 'turn');
+
+  const turnAnchor = computed<EffectTurnAnchor>({
+    get: () => model.value.duration.turnAnchor ?? 'carrier',
+    set: (value) => {
+      model.value.duration.turnAnchor = value;
+    },
+  });
+
+  const turnTiming = computed<EffectTurnTiming>({
+    get: () => model.value.duration.turnTiming ?? 'end',
+    set: (value) => {
+      model.value.duration.turnTiming = value;
+    },
+  });
+
+  /** Одноразовость на броске атаки: «нет» хранится как пустое поле. */
+  const consumeOn = computed<
+    EffectAttackTrigger | typeof EFFECT_CONSUME_ON_NONE
+  >({
+    get: () => model.value.consumeOn ?? EFFECT_CONSUME_ON_NONE,
+    set: (value) => {
+      model.value.consumeOn =
+        value === 'carrierAttack' || value === 'attackOnCarrier'
+          ? value
+          : undefined;
+    },
+  });
 
   // Инвертированный флаг для переключателя «Активен» (хранится как disabled).
   const isActive = computed({
@@ -161,10 +204,35 @@
     },
   });
 
+  // «Даже при успехе» и «только при успехе» — взаимоисключающие: вместе они не
+  // читаются, и движок всё равно выбрал бы одно.
   const applyOnSuccess = computed({
     get: () => model.value.applyOnSuccess === true,
     set: (value) => {
       model.value.applyOnSuccess = value ? true : undefined;
+
+      if (value) {
+        model.value.applyOnSuccessOnly = undefined;
+      }
+    },
+  });
+
+  const applyOnSuccessOnly = computed({
+    get: () => model.value.applyOnSuccessOnly === true,
+    set: (value) => {
+      model.value.applyOnSuccessOnly = value ? true : undefined;
+
+      if (value) {
+        model.value.applyOnSuccess = undefined;
+      }
+    },
+  });
+
+  // --- Иммунитет к состояниям ---
+  const conditionImmunities = computed<Array<EffectConditionKey>>({
+    get: () => model.value.conditionImmunities ?? [],
+    set: (keys) => {
+      model.value.conditionImmunities = keys.length > 0 ? keys : undefined;
     },
   });
 
@@ -353,6 +421,42 @@
           />
         </UFormField>
 
+        <!-- Точная «ходовая» длительность: момент и чей ход -->
+        <template v-if="isTurnDuration">
+          <UFormField
+            :label="ACTIVE_EFFECT_LABELS.durationTurn"
+            :help="ACTIVE_EFFECT_LABELS.durationTurnHint"
+            class="col-span-full md:col-span-8"
+          >
+            <div class="flex w-full items-center gap-2">
+              <USelect
+                v-model="turnTiming"
+                :items="EFFECT_TURN_TIMING_OPTIONS"
+                class="flex-1"
+              />
+
+              <USelect
+                v-model="turnAnchor"
+                :items="EFFECT_TURN_ANCHOR_OPTIONS"
+                class="flex-1"
+              />
+            </div>
+          </UFormField>
+        </template>
+
+        <!-- Одноразовость на броске атаки -->
+        <UFormField
+          :label="ACTIVE_EFFECT_LABELS.consumeOn"
+          :help="ACTIVE_EFFECT_LABELS.consumeOnHint"
+          class="col-span-full md:col-span-12"
+        >
+          <USelect
+            v-model="consumeOn"
+            :items="EFFECT_CONSUME_ON_OPTIONS"
+            class="w-full"
+          />
+        </UFormField>
+
         <!-- Аура -->
         <template v-if="isAura && model.aura">
           <UFormField
@@ -489,6 +593,16 @@
               выше или спасбросок области у действия). Урон при успехе — по
               правилу «При успехе».
             </p>
+
+            <UCheckbox
+              v-model="applyOnSuccessOnly"
+              class="mt-3"
+              :label="ACTIVE_EFFECT_LABELS.applyOnSuccessOnly"
+            />
+
+            <p class="mt-1.5 text-xs text-muted">
+              {{ ACTIVE_EFFECT_LABELS.applyOnSuccessOnlyHint }}
+            </p>
           </div>
         </div>
 
@@ -591,6 +705,34 @@
 
             <EffectDamageParts v-model="recurringDamageParts" />
           </div>
+        </div>
+
+        <!-- Иммунитет к состояниям -->
+        <div class="rounded-lg border border-muted bg-elevated/30 p-3">
+          <div class="flex items-center gap-2">
+            <UIcon
+              name="tabler:shield-check"
+              class="size-4 text-success"
+            />
+
+            <span class="text-sm font-medium">
+              {{ ACTIVE_EFFECT_LABELS.conditionImmunities }}
+            </span>
+          </div>
+
+          <p class="mt-1.5 text-xs text-muted">
+            {{ ACTIVE_EFFECT_LABELS.conditionImmunitiesHint }}
+          </p>
+
+          <USelectMenu
+            v-model="conditionImmunities"
+            :items="EFFECT_CONDITION_OPTIONS"
+            label-key="label"
+            value-key="value"
+            multiple
+            class="mt-3 w-full"
+            :placeholder="ACTIVE_EFFECT_LABELS.conditionImmunitiesPlaceholder"
+          />
         </div>
       </div>
     </template>

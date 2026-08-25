@@ -120,39 +120,6 @@ export const SPELL_HEALING_TYPE_TAGS: Record<string, string> = {
   TEMPORARY_HITPOINTS: 'heal.temp',
 };
 
-export const SPELL_DAMAGE_FORMULA_HEALING_TAGS = [
-  { label: 'Лечение', value: 'heal' },
-  { label: 'Временные ХП', value: 'heal.temp' },
-];
-
-export const SPELL_DAMAGE_FORMULA_DICE = [
-  { label: 'к4', value: 4 },
-  { label: 'к6', value: 6 },
-  { label: 'к8', value: 8 },
-  { label: 'к10', value: 10 },
-  { label: 'к12', value: 12 },
-  { label: 'к20', value: 20 },
-];
-
-export const SPELL_DAMAGE_FORMULA_SEPARATOR = '+';
-
-export const SPELL_DAMAGE_FORMULA_CONDITION_TAGS = [
-  { label: 'Полное HP', value: 'target.full' },
-  { label: 'Неполное HP', value: 'target.notFull' },
-];
-
-export const SPELL_DAMAGE_FORMULA_MODIFIER_TAGS = [
-  { label: 'Заклинание', value: 'mod.spell' },
-  { label: 'Сила', value: 'mod.str' },
-  { label: 'Ловкость', value: 'mod.dex' },
-  { label: 'Телосложение', value: 'mod.con' },
-  { label: 'Интеллект', value: 'mod.int' },
-  { label: 'Мудрость', value: 'mod.wis' },
-  { label: 'Харизма', value: 'mod.cha' },
-  { label: 'Мастерство', value: 'prof' },
-  { label: 'Уровень', value: 'level' },
-];
-
 /**
  * Цель части урона. Значения — словарь VTTG (`DamagePartTarget`); в формулу
  * они не пишутся, а хранятся в `SpellEffect.damageFormulaTargets`.
@@ -165,14 +132,19 @@ export const SPELL_DAMAGE_FORMULA_TARGET_OPTIONS: Array<
   { label: 'Указать отдельно', value: 'choose' },
 ];
 
-export const SPELL_DAMAGE_FORMULA_TOOLS = [
-  { label: 'Кости', value: 'dice' },
-  { label: 'Тип урона', value: 'damage-type' },
-  { label: 'Лечение', value: 'healing' },
-  { label: 'Условия', value: 'condition' },
-  { label: 'Добавить мод', value: 'modifier' },
-];
-
-export const DEFAULT_SPELL_DAMAGE_FORMULA_TOOL = 'modifier';
+/** Подписи строки части урона в редакторе — зеркало `DAMAGE_PART_LABELS` VTTG. */
+export const SPELL_DAMAGE_PART_LABELS = {
+  partPrefix: 'Урон, часть ',
+  formula: 'Формула',
+  formulaPlaceholder: 'Например: 8к6@dmg.fire',
+  target: 'Цель',
+  onlyIfDamaged: 'Только если нанесён урон',
+  onlyIfDamagedHint:
+    'Часть применится, только если урон по цели действительно прошёл — '
+    + '«лечусь, лишь когда задел врага».',
+  addPart: 'Добавить часть',
+  clear: 'Очистить',
+  remove: 'Удалить',
+} as const;
 export const DEFAULT_SPELL_DAMAGE_FORMULA_TARGET: SpellDamageFormulaTarget =
   'selected';

@@ -3,7 +3,11 @@
 
   import type { ActiveEffect, EffectOrigin } from '../model';
 
-  import { createEmptyActiveEffect, DEFAULT_EFFECT_ICON } from '../model';
+  import {
+    ACTIVE_EFFECT_LABELS,
+    createEmptyActiveEffect,
+    DEFAULT_EFFECT_ICON,
+  } from '../model';
   import ActiveEffectItem from './ui/ActiveEffectItem.vue';
 
   // Источник задаёт редактор-хозяин: он же и знает, чем эффект выдан.
@@ -13,7 +17,7 @@
 
   const accordionItems = computed<Array<AccordionItem>>(() =>
     model.value.map((effect, index) => ({
-      label: effect.name || 'Эффект без названия',
+      label: effect.name || ACTIVE_EFFECT_LABELS.unnamed,
       value: `${index}`,
     })),
   );
@@ -39,11 +43,11 @@
       <div class="flex items-center justify-between gap-2">
         <div class="flex min-w-0 flex-col">
           <h2 class="truncate text-base text-highlighted">
-            Активные эффекты (VTTG)
+            {{ ACTIVE_EFFECT_LABELS.title }}
           </h2>
 
           <span class="text-xs text-muted">
-            Считаются листом персонажа и экспортируются в виртуальный стол VTTG
+            {{ ACTIVE_EFFECT_LABELS.subtitle }}
           </span>
         </div>
 
@@ -53,7 +57,7 @@
           variant="subtle"
           @click.left.exact.prevent="addEffect"
         >
-          Добавить эффект
+          {{ ACTIVE_EFFECT_LABELS.add }}
         </UButton>
       </div>
     </template>
@@ -62,9 +66,7 @@
       v-if="!model.length"
       class="rounded-lg border border-dashed border-default p-6 text-center text-sm text-dimmed italic"
     >
-      Нет активных эффектов. Добавь эффект, чтобы запись меняла числа на листе
-      персонажа — класс доспеха, спасброски, характеристики — или накладывала
-      состояния и ауры в VTTG.
+      {{ ACTIVE_EFFECT_LABELS.empty }}
     </p>
 
     <UAccordion
@@ -98,7 +100,7 @@
               size="sm"
               @click.left.exact.prevent="removeEffect(index)"
             >
-              Удалить эффект
+              {{ ACTIVE_EFFECT_LABELS.remove }}
             </UButton>
           </div>
         </div>

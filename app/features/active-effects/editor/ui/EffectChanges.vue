@@ -1,12 +1,18 @@
 <script setup lang="ts">
-  import type { EffectChange } from '../../model';
+  import type { DropdownMenuItem } from '@nuxt/ui';
+
+  import type { EffectChange, EffectModifierPreset } from '../../model';
 
   import { InputWithLibrary } from '~ui/input';
 
   import {
+    ACTIVE_EFFECT_LABELS,
     createEmptyEffectChange,
+    DEFAULT_EFFECT_CHANGE_PRIORITY,
+    DEFAULT_EFFECT_CHANGE_VALUE,
     EFFECT_CHANGE_MODE_OPTIONS,
     EFFECT_CONDITION_EXPR_SUGGESTIONS,
+    EFFECT_MODIFIER_MENU,
     EFFECT_TARGET_KEY_SUGGESTIONS,
     EFFECT_VALUE_SUGGESTIONS,
   } from '../../model';
@@ -16,6 +22,44 @@
   function addChange() {
     model.value = [...model.value, createEmptyEffectChange()];
   }
+
+  /**
+   * Добавляет строку по готовому пункту меню: ключ, режим и (где он осмыслен)
+   * значение уже проставлены — автору остаётся поправить число.
+   *
+   * Пункт-условие оставляет ключ и значение пустыми намеренно: он отвечает
+   * только за «когда», а «что менять» автор называет сам.
+   *
+   * @param preset пункт меню «Готовые».
+   */
+  function addChangeFromPreset(preset: EffectModifierPreset) {
+    const isConditionPreset = Boolean(preset.condition);
+
+    model.value = [
+      ...model.value,
+      {
+        key: preset.key,
+        mode: preset.mode,
+        value:
+          preset.value
+          ?? (isConditionPreset ? '' : DEFAULT_EFFECT_CHANGE_VALUE),
+        condition: preset.condition ?? '',
+        priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
+      },
+    ];
+  }
+
+  const modifierMenuItems = computed<Array<Array<DropdownMenuItem>>>(() =>
+    EFFECT_MODIFIER_MENU.map((group) => [
+      {
+        label: group.label,
+        children: group.items.map((preset) => ({
+          label: preset.label,
+          onSelect: () => addChangeFromPreset(preset),
+        })),
+      },
+    ]),
+  );
 
   function removeChange(index: number) {
     model.value = model.value.filter((_, position) => position !== index);
@@ -27,14 +71,31 @@
     <div class="flex items-center justify-between">
       <span class="text-sm font-medium">Модификаторы (changes)</span>
 
-      <UButton
-        icon="tabler:plus"
-        size="xs"
-        variant="ghost"
-        @click.left.exact.prevent="addChange"
-      >
-        Добавить
-      </UButton>
+      <div class="flex items-center gap-1">
+        <UDropdownMenu
+          :items="modifierMenuItems"
+          :content="{ align: 'end' }"
+          :ui="{ content: 'max-h-96 overflow-y-auto' }"
+        >
+          <UButton
+            icon="tabler:list-search"
+            size="xs"
+            variant="soft"
+            :title="ACTIVE_EFFECT_LABELS.presetsChangesHint"
+          >
+            {{ ACTIVE_EFFECT_LABELS.presets }}
+          </UButton>
+        </UDropdownMenu>
+
+        <UButton
+          icon="tabler:plus"
+          size="xs"
+          variant="ghost"
+          @click.left.exact.prevent="addChange"
+        >
+          Добавить
+        </UButton>
+      </div>
     </div>
 
     <p

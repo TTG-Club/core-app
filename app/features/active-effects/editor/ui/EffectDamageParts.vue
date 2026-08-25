@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { EffectDamagePart } from '../../model';
 
+  import { DamageFormulaInput } from '~ui/damage-formula';
+
   import {
     createEmptyEffectDamagePart,
     EFFECT_DAMAGE_TARGET_OPTIONS,
@@ -15,6 +17,14 @@
     default: () => [],
   });
 
+  /** Типы урона токенами формулы: `@dmg.fire` вместо отдельного поля. */
+  const damageTypeTags = computed(() =>
+    EFFECT_DAMAGE_TYPE_OPTIONS.map((damageType) => ({
+      label: damageType.label,
+      value: `dmg.${damageType.value}`,
+    })),
+  );
+
   function addPart() {
     model.value = [...model.value, createEmptyEffectDamagePart()];
   }
@@ -23,8 +33,10 @@
     model.value = model.value.filter((_, position) => position !== index);
   }
 
-  function isHealing(part: EffectDamagePart): boolean {
-    return part.formula.includes('@heal');
+  function updateFormula(index: number, formula: string) {
+    model.value = model.value.map((part, position) =>
+      position === index ? { ...part, formula } : part,
+    );
   }
 </script>
 
@@ -33,59 +45,46 @@
     <div
       v-for="(part, index) in model"
       :key="index"
-      class="grid grid-cols-24 items-end gap-2 rounded-lg border border-default bg-elevated/50 p-3"
+      class="flex flex-col gap-3 rounded-lg border border-default bg-elevated/50 p-3"
     >
-      <UFormField
-        label="Формула"
-        class="col-span-full md:col-span-9"
-      >
-        <UInput
-          v-model="part.formula"
-          placeholder="Напр.: 2к8@dmg.poison"
-          class="font-mono text-xs"
-        />
-      </UFormField>
+      <!-- Модификаторы и лечение спрятаны, как в редакторе эффектов VTTG:
+        нагрузка эффекта считается без характеристики носителя и не лечит -->
+      <DamageFormulaInput
+        :model-value="part.formula"
+        :damage-type-options="damageTypeTags"
+        hide-modifiers
+        hide-healing
+        @update:model-value="updateFormula(index, $event)"
+      />
 
-      <UFormField
-        label="Тип урона"
-        class="col-span-full md:col-span-6"
-      >
-        <USelect
-          v-model="part.type"
-          :items="EFFECT_DAMAGE_TYPE_OPTIONS"
-          :disabled="isHealing(part)"
-          placeholder="Тип"
-          clearable
-          class="w-full"
-        />
-      </UFormField>
+      <div class="grid grid-cols-24 items-end gap-2">
+        <UFormField
+          label="Цель"
+          class="col-span-full md:col-span-9"
+        >
+          <USelect
+            v-model="part.target"
+            :items="EFFECT_DAMAGE_TARGET_OPTIONS"
+            class="w-full"
+          />
+        </UFormField>
 
-      <UFormField
-        label="Цель"
-        class="col-span-full md:col-span-6"
-      >
-        <USelect
-          v-model="part.target"
-          :items="EFFECT_DAMAGE_TARGET_OPTIONS"
-          class="w-full"
-        />
-      </UFormField>
+        <UFormField class="col-span-full flex items-center md:col-span-12">
+          <UCheckbox
+            v-model="part.requiresDamage"
+            label="Только если по цели нанесён урон"
+          />
+        </UFormField>
 
-      <UFormField class="col-span-full flex items-end md:col-span-3">
-        <UButton
-          icon="tabler:trash"
-          color="error"
-          variant="soft"
-          @click.left.exact.prevent="removePart(index)"
-        />
-      </UFormField>
-
-      <UFormField class="col-span-full">
-        <UCheckbox
-          v-model="part.requiresDamage"
-          label="Только если по цели нанесён урон"
-        />
-      </UFormField>
+        <UFormField class="col-span-full flex items-end md:col-span-3">
+          <UButton
+            icon="tabler:trash"
+            color="error"
+            variant="soft"
+            @click.left.exact.prevent="removePart(index)"
+          />
+        </UFormField>
+      </div>
     </div>
 
     <UButton

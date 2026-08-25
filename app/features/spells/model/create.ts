@@ -48,13 +48,19 @@ export type SpellProjectileDistribution = 'any' | 'single' | 'distinct';
 export type SpellDamageFormulaTarget = 'selected' | 'self' | 'choose';
 
 /**
- * Часть урона в редакторе: формула и её цель. В `SpellEffect` хранится двумя
- * параллельными массивами (`damageFormulas` + `damageFormulaTargets`), потому
- * что справочник отдаёт формулы плоским списком строк.
+ * Часть урона в редакторе: формула, её цель и признак «только если нанесён
+ * урон». В `SpellEffect` части хранятся тремя параллельными массивами
+ * (`damageFormulas` + `damageFormulaTargets` + `damageFormulaRequiresDamage`),
+ * потому что справочник отдаёт формулы плоским списком строк.
+ *
+ * Поля цели и признака здесь обязательные (без `undefined`): редактор сверяет
+ * свои строки с моделью через `isEqual`, и необязательный ключ то появлялся бы,
+ * то исчезал — сравнение считало бы одинаковые части разными.
  */
 export interface SpellDamageFormulaPart {
   formula: string;
   target: SpellDamageFormulaTarget;
+  requiresDamage: boolean;
 }
 
 /**
@@ -92,6 +98,7 @@ export interface SpellEffect {
   projectiles?: SpellProjectiles;
   damageFormulas?: string[];
   damageFormulaTargets?: SpellDamageFormulaTarget[]; // цели частей урона, по индексам damageFormulas
+  damageFormulaRequiresDamage?: boolean[]; // «только если нанесён урон», по индексам damageFormulas
   damageFormula?: string;
   damageTypes?: string[];
   healingTypes?: string[];
@@ -188,6 +195,7 @@ export function createEmptySpellEffect(): SpellEffect {
     projectiles: undefined,
     damageFormulas: [],
     damageFormulaTargets: [],
+    damageFormulaRequiresDamage: [],
     damageFormula: undefined,
     damageTypes: [],
     healingTypes: [],
@@ -343,6 +351,7 @@ export function createEmptySpellDamageFormulaPart(): SpellDamageFormulaPart {
   return {
     formula: '',
     target: DEFAULT_SPELL_DAMAGE_FORMULA_TARGET,
+    requiresDamage: false,
   };
 }
 
@@ -356,10 +365,12 @@ export function getSpellDamageFormulaParts(
   effect: SpellEffect,
 ): SpellDamageFormulaPart[] {
   const damageFormulaTargets = effect.damageFormulaTargets ?? [];
+  const damageFormulaRequiresDamage = effect.damageFormulaRequiresDamage ?? [];
 
   return (effect.damageFormulas ?? []).map((formula, index) => ({
     formula,
     target: damageFormulaTargets[index] ?? DEFAULT_SPELL_DAMAGE_FORMULA_TARGET,
+    requiresDamage: damageFormulaRequiresDamage[index] === true,
   }));
 }
 
@@ -379,6 +390,7 @@ export function applySpellDamageFormulaParts(
     ...effect,
     damageFormulas: parts.map((part) => part.formula),
     damageFormulaTargets: parts.map((part) => part.target),
+    damageFormulaRequiresDamage: parts.map((part) => part.requiresDamage),
   };
 }
 
@@ -406,6 +418,25 @@ function normalizeLoadedSpellDamageFormulaTargets(
 }
 
 /**
+ * Восстанавливает признаки «только если нанесён урон» из загруженного с сервера
+ * raw-значения. Всё, кроме `true`, считается выключенным — чужое значение не
+ * должно сбить выравнивание по индексам формул.
+ */
+function normalizeLoadedSpellDamageFormulaRequiresDamage(
+  raw: unknown,
+): boolean[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  // Array.isArray сужает unknown до any[], поэтому элементы читаются через
+  // явно типизированный unknown-массив.
+  const rawFlags: Array<unknown> = raw;
+
+  return rawFlags.map((flag) => flag === true);
+}
+
+/**
  * Возвращает цель, зашитую legacy-тегом в формулу урона.
  */
 function getLegacyDamageFormulaTarget(
@@ -422,6 +453,7 @@ function getLegacyDamageFormulaTarget(
 function migrateSpellEffectDamageTargets(effect: SpellEffect): SpellEffect {
   const damageFormulas = effect.damageFormulas ?? [];
   const damageFormulaTargets = effect.damageFormulaTargets ?? [];
+  const damageFormulaRequiresDamage = effect.damageFormulaRequiresDamage ?? [];
 
   return {
     ...effect,
@@ -433,6 +465,11 @@ function migrateSpellEffectDamageTargets(effect: SpellEffect): SpellEffect {
         getLegacyDamageFormulaTarget(formula)
         ?? damageFormulaTargets[index]
         ?? DEFAULT_SPELL_DAMAGE_FORMULA_TARGET,
+    ),
+    // Признаки выравниваются по формулам здесь же: у записей до появления поля
+    // массива нет вовсе, а редактор читает его по индексам формул.
+    damageFormulaRequiresDamage: damageFormulas.map(
+      (_formula, index) => damageFormulaRequiresDamage[index] === true,
     ),
   };
 }
@@ -540,6 +577,15 @@ export function normalizeSpellEffect(
 
     if (hasCustomTarget) {
       normalized.damageFormulaTargets = damageFormulaTargets;
+    }
+
+    const damageFormulaRequiresDamage =
+      migratedEffect.damageFormulaRequiresDamage ?? [];
+
+    // Как и с целями: `false` — дефолт VTTG, хранить массив из одних нулей в
+    // справочнике незачем.
+    if (damageFormulaRequiresDamage.some((requiresDamage) => requiresDamage)) {
+      normalized.damageFormulaRequiresDamage = damageFormulaRequiresDamage;
     }
   }
 
@@ -651,6 +697,10 @@ export function normalizeLoadedSpell(
           damageFormulaTargets: normalizeLoadedSpellDamageFormulaTargets(
             rawEffect.damageFormulaTargets,
           ),
+          damageFormulaRequiresDamage:
+            normalizeLoadedSpellDamageFormulaRequiresDamage(
+              rawEffect.damageFormulaRequiresDamage,
+            ),
           areaOfEffect:
             rawEffect.areaOfEffect && isRecord(rawEffect.areaOfEffect)
               ? {

@@ -412,7 +412,7 @@ modals), so its capabilities are listed here rather than squeezed into the table
   item that requires attunement contributes nothing until it is attuned. Sheets
   saved before the fields existed read them as `0`.
 - Everything else a magic item does to the sheet comes from the workshop's
-  «Активные эффекты (VTTG)» block (`mechanics.activeEffects`). `model/effects.ts`
+  «Активные эффекты» block (`mechanics.activeEffects`). `model/effects.ts`
   translates each numeric change into an `InventoryItemBonus` when the item is
   added, so the sheet keeps working offline off its own snapshot: `ability.*`,
   `save.*`, `skill.*` (the VTTG camelCase id is mapped through
