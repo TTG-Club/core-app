@@ -4,6 +4,7 @@
   import { isString } from 'es-toolkit';
 
   import { DictionaryService } from '~/shared/api';
+  import { SPELL_USAGE_LABELS } from '~spells/model';
   import { EditorArrayControls } from '~ui/editor';
 
   const durations = defineModel<Array<SpellDuration>>({
@@ -91,7 +92,7 @@
     :state="duration"
   >
     <UFormField
-      label="Количество"
+      :label="SPELL_USAGE_LABELS.amount"
       name="value"
       class="col-span-full md:col-span-6 xl:col-span-4"
     >
@@ -99,12 +100,12 @@
         v-model="duration.value"
         :disabled="isValueDisabled(duration.unit)"
         :min="0"
-        placeholder="Введи значение"
+        :placeholder="SPELL_USAGE_LABELS.amountPlaceholder"
       />
     </UFormField>
 
     <UFormField
-      label="Единица времени"
+      :label="SPELL_USAGE_LABELS.timeUnit"
       name="unit"
       class="col-span-full md:col-span-6 xl:col-span-4"
     >
@@ -112,7 +113,7 @@
         :model-value="duration.unit"
         :loading="status === 'pending'"
         :items="units || []"
-        placeholder="Выбери из списка"
+        :placeholder="SPELL_USAGE_LABELS.unitPlaceholder"
         searchable
         clearable
         @update:model-value="updateUnit($event, index)"
@@ -125,18 +126,18 @@
     >
       <UCheckbox
         v-model="duration.concentration"
-        label="Концентрация"
+        :label="SPELL_USAGE_LABELS.concentration"
       />
     </UFormField>
 
     <UFormField
-      label="Собственное значение"
+      :label="SPELL_USAGE_LABELS.custom"
       name="custom"
       class="col-span-full md:col-span-12 xl:col-span-6"
     >
       <UInput
         v-model="duration.custom"
-        placeholder="Введи значение"
+        :placeholder="SPELL_USAGE_LABELS.amountPlaceholder"
         clearable
       />
     </UFormField>

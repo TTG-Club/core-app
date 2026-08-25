@@ -137,6 +137,48 @@ export const SPELL_ATTACK_DELIVERY_TYPES: SpellDeliveryType[] = [
   'melee',
 ];
 
+/** Подписи полей вкладки «Основное». */
+export const SPELL_MAIN_TAB_LABELS = {
+  level: 'Уровень заклинания',
+  school: 'Школа',
+  additionalType: 'Подшкола',
+  additionalTypePlaceholder: 'Подшкола',
+  description: 'Описание',
+  descriptionPlaceholder: 'Введи описание',
+  upper: 'На более высоких уровнях',
+} as const;
+
+/** Подписи блока принадлежности заклинания. */
+export const SPELL_AFFILIATION_LABELS = {
+  classes: 'Классы',
+  subclasses: 'Подклассы',
+  species: 'Виды',
+  lineages: 'Происхождения',
+  feats: 'Черта',
+} as const;
+
+/**
+ * Подписи полей вкладки «Применение». Заголовки блоков живут в
+ * `SPELL_EDITOR_SECTIONS`, здесь — только поля внутри них.
+ */
+export const SPELL_USAGE_LABELS = {
+  amount: 'Количество',
+  amountPlaceholder: 'Введи значение',
+  timeUnit: 'Единица времени',
+  unitPlaceholder: 'Выбери из списка',
+  custom: 'Собственное значение',
+  rangeValue: 'Значение',
+  rangeUnit: 'Тип дистанции',
+  concentration: 'Концентрация',
+  verbal: 'Вербальный компонент',
+  somatic: 'Соматический компонент',
+  material: 'Материальный компонент',
+  materialList: 'Список материалов',
+  materialListPlaceholder: 'Введи список материалов',
+  materialWithCost: 'Материалы имеют цену',
+  materialConsumable: 'Материалы расходуются',
+} as const;
+
 /** Подписи блока масштабирования заклинания. */
 export const SPELL_SCALING_LABELS = {
   title: 'Масштабирование',

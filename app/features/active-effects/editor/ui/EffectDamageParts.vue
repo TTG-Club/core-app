@@ -4,12 +4,13 @@
   import { DamageFormulaInput } from '~ui/damage-formula';
 
   import {
+    ACTIVE_EFFECT_LABELS,
     createEmptyEffectDamagePart,
     EFFECT_DAMAGE_TARGET_OPTIONS,
     EFFECT_DAMAGE_TYPE_OPTIONS,
   } from '../../model';
 
-  const { addLabel = 'Добавить урон' } = defineProps<{
+  const { addLabel = ACTIVE_EFFECT_LABELS.damagePartAdd } = defineProps<{
     addLabel?: string;
   }>();
 
@@ -59,7 +60,7 @@
 
       <div class="grid grid-cols-24 items-end gap-2">
         <UFormField
-          label="Цель"
+          :label="ACTIVE_EFFECT_LABELS.damagePartTarget"
           class="col-span-full md:col-span-9"
         >
           <USelect
@@ -72,7 +73,7 @@
         <UFormField class="col-span-full flex items-center md:col-span-12">
           <UCheckbox
             v-model="part.requiresDamage"
-            label="Только если по цели нанесён урон"
+            :label="ACTIVE_EFFECT_LABELS.damagePartRequiresDamage"
           />
         </UFormField>
 

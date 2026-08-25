@@ -36,6 +36,29 @@
     return expanded.value.has(index);
   }
 
+  /**
+   * Значок кнопки свёртки. Функцией, а не вычисляемым свойством: состояние
+   * своё у каждой строки списка.
+   *
+   * @param index позиция эффекта в списке.
+   * @returns имя значка.
+   */
+  function getToggleIcon(index: number): string {
+    return isExpanded(index) ? 'tabler:chevron-up' : 'tabler:chevron-down';
+  }
+
+  /**
+   * Подпись кнопки свёртки для скринридера.
+   *
+   * @param index позиция эффекта в списке.
+   * @returns подпись действия.
+   */
+  function getToggleLabel(index: number): string {
+    return isExpanded(index)
+      ? ACTIVE_EFFECT_LABELS.collapse
+      : ACTIVE_EFFECT_LABELS.expand;
+  }
+
   function toggle(index: number) {
     const next = new Set(expanded.value);
 
@@ -149,17 +172,11 @@
           />
 
           <UButton
-            :icon="
-              isExpanded(index) ? 'tabler:chevron-up' : 'tabler:chevron-down'
-            "
+            :icon="getToggleIcon(index)"
             color="neutral"
             variant="ghost"
             size="xs"
-            :aria-label="
-              isExpanded(index)
-                ? ACTIVE_EFFECT_LABELS.collapse
-                : ACTIVE_EFFECT_LABELS.expand
-            "
+            :aria-label="getToggleLabel(index)"
             @click.left.exact.prevent="toggle(index)"
           />
         </div>

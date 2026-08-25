@@ -9,8 +9,10 @@
     createEmptySpellEffect,
     normalizeLoadedSpell,
     normalizeSpellEffect,
+    SPELL_AFFILIATION_LABELS,
     SPELL_EDITOR_SECTIONS,
     SPELL_EDITOR_TABS,
+    SPELL_MAIN_TAB_LABELS,
   } from '~spells/model';
   import { SpellPreview } from '~spells/preview';
   import { EditorBaseInfo } from '~ui/editor';
@@ -144,7 +146,7 @@
             <div class="grid grid-cols-24 gap-4">
               <UFormField
                 class="col-span-full md:col-span-12"
-                label="Уровень заклинания"
+                :label="SPELL_MAIN_TAB_LABELS.level"
                 name="level"
               >
                 <SelectSpellLevel v-model="state.level" />
@@ -152,7 +154,7 @@
 
               <UFormField
                 class="col-span-full md:col-span-12"
-                label="Школа"
+                :label="SPELL_MAIN_TAB_LABELS.school"
                 name="school"
               >
                 <SelectMagicSchool v-model="state.school.school" />
@@ -160,12 +162,12 @@
 
               <UFormField
                 class="col-span-full"
-                label="Подшкола"
+                :label="SPELL_MAIN_TAB_LABELS.additionalType"
                 name="additionalType"
               >
                 <UInput
                   v-model="state.school.additionalType"
-                  placeholder="Подшкола"
+                  :placeholder="SPELL_MAIN_TAB_LABELS.additionalTypePlaceholder"
                 />
               </UFormField>
             </div>
@@ -181,23 +183,23 @@
             <div class="grid grid-cols-24 gap-4">
               <UFormField
                 class="col-span-full"
-                label="Описание"
+                :label="SPELL_MAIN_TAB_LABELS.description"
                 name="description"
               >
                 <MarkupEditor
                   v-model="state.description"
-                  placeholder="Введи описание"
+                  :placeholder="SPELL_MAIN_TAB_LABELS.descriptionPlaceholder"
                 />
               </UFormField>
 
               <UFormField
                 class="col-span-full"
-                label="На более высоких уровнях"
+                :label="SPELL_MAIN_TAB_LABELS.upper"
                 name="upper"
               >
                 <MarkupEditor
                   v-model="state.upper"
-                  placeholder="Введи описание"
+                  :placeholder="SPELL_MAIN_TAB_LABELS.descriptionPlaceholder"
                 />
               </UFormField>
             </div>
@@ -213,7 +215,7 @@
             <div class="grid grid-cols-24 gap-4">
               <UFormField
                 class="col-span-full md:col-span-12 xl:col-span-6"
-                label="Классы"
+                :label="SPELL_AFFILIATION_LABELS.classes"
                 name="affiliations.classes"
               >
                 <SelectClass
@@ -224,7 +226,7 @@
 
               <UFormField
                 class="col-span-full md:col-span-12 xl:col-span-6"
-                label="Подклассы"
+                :label="SPELL_AFFILIATION_LABELS.subclasses"
                 name="affiliations.subclasses"
               >
                 <SelectSubclass
@@ -235,7 +237,7 @@
 
               <UFormField
                 class="col-span-full md:col-span-12 xl:col-span-6"
-                label="Виды"
+                :label="SPELL_AFFILIATION_LABELS.species"
                 name="affiliations.species"
               >
                 <SelectSpecies
@@ -246,7 +248,7 @@
 
               <UFormField
                 class="col-span-full md:col-span-12 xl:col-span-6"
-                label="Происхождения"
+                :label="SPELL_AFFILIATION_LABELS.lineages"
                 name="affiliations.lineages"
               >
                 <SelectLineage
@@ -257,7 +259,7 @@
 
               <UFormField
                 class="col-span-full md:col-span-12 xl:col-span-6"
-                label="Черта"
+                :label="SPELL_AFFILIATION_LABELS.feats"
                 name="affiliations.feats"
               >
                 <SelectFeat

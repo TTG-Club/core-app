@@ -12,6 +12,8 @@
 
 import type { ActiveEffect, EffectChange, EffectDuration } from './types';
 
+import { upperFirst } from 'es-toolkit';
+
 import {
   EFFECT_ABILITY_OPTIONS,
   EFFECT_AREA_TRIGGER_OPTIONS,
@@ -98,38 +100,6 @@ const TIMING_LABELS: Record<string, string> = {
   startOfTurn: 'в начале хода',
   endOfTurn: 'в конце хода',
 };
-
-/**
- * Русская плюрализация: `pluralize(2, ['раунд', 'раунда', 'раундов'])`.
- *
- * @param count количество.
- * @param forms формы слова для 1, 2 и 5.
- * @returns подходящая форма.
- */
-function pluralize(count: number, forms: [string, string, string]): string {
-  const hundreds = Math.abs(count) % 100;
-  const units = hundreds % 10;
-
-  if (hundreds > 10 && hundreds < 20) {
-    return forms[2];
-  }
-
-  if (units > 1 && units < 5) {
-    return forms[1];
-  }
-
-  return units === 1 ? forms[0] : forms[2];
-}
-
-/**
- * Заглавная первая буква — строки собираются из разных источников.
- *
- * @param text исходная строка.
- * @returns строка с заглавной первой буквой.
- */
-function capitalize(text: string): string {
-  return text.charAt(0).toUpperCase() + text.slice(1);
-}
 
 /**
  * Проверяет, что строка — «голое» число с необязательным знаком.
@@ -290,7 +260,7 @@ function describeDuration(duration: EffectDuration): string | undefined {
     return undefined;
   }
 
-  return `на ${value} ${pluralize(value, forms)}`;
+  return `на ${value} ${getPlural(value, forms)}`;
 }
 
 /**
@@ -399,7 +369,7 @@ export function describeActiveEffect(effect: ActiveEffect): string {
     return '';
   }
 
-  const text = capitalize(clauses.filter(Boolean).join('; '));
+  const text = upperFirst(clauses.filter(Boolean).join('; '));
 
   return text.endsWith('.') ? text : `${text}.`;
 }

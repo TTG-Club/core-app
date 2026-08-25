@@ -766,4 +766,7 @@ export const ACTIVE_EFFECT_LABELS = {
     'Пока эффект висит, носитель не подвержен выбранным состояниям (напр. '
     + 'Окаменевший даёт иммунитет к Отравлению).',
   conditionImmunitiesPlaceholder: 'Выбери состояния',
+  damagePartTarget: 'Цель',
+  damagePartRequiresDamage: 'Только если по цели нанесён урон',
+  damagePartAdd: 'Добавить урон',
 } as const;
