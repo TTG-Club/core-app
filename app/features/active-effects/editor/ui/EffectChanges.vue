@@ -69,7 +69,9 @@
 <template>
   <div class="flex flex-col gap-2">
     <div class="flex items-center justify-between">
-      <span class="text-sm font-medium">Модификаторы (changes)</span>
+      <span class="text-sm font-medium">
+        {{ ACTIVE_EFFECT_LABELS.changesTitle }}
+      </span>
 
       <div class="flex items-center gap-1">
         <UDropdownMenu
@@ -93,7 +95,7 @@
           variant="ghost"
           @click.left.exact.prevent="addChange"
         >
-          Добавить
+          {{ ACTIVE_EFFECT_LABELS.addRow }}
         </UButton>
       </div>
     </div>
@@ -102,7 +104,7 @@
       v-if="!model.length"
       class="rounded-lg border border-dashed border-default p-4 text-center text-xs text-dimmed italic"
     >
-      Нет числовых модификаторов.
+      {{ ACTIVE_EFFECT_LABELS.changesEmpty }}
     </p>
 
     <div
@@ -111,18 +113,18 @@
       class="grid grid-cols-24 items-end gap-2 rounded-lg border border-default bg-elevated/50 p-3"
     >
       <UFormField
-        label="Ключ атрибута"
+        :label="ACTIVE_EFFECT_LABELS.changeKey"
         class="col-span-full md:col-span-8"
       >
         <InputWithLibrary
           v-model="change.key"
           :options="EFFECT_TARGET_KEY_SUGGESTIONS"
-          placeholder="Напр.: armorClass"
+          :placeholder="ACTIVE_EFFECT_LABELS.changeKeyPlaceholder"
         />
       </UFormField>
 
       <UFormField
-        label="Режим"
+        :label="ACTIVE_EFFECT_LABELS.changeMode"
         class="col-span-full md:col-span-5"
       >
         <USelect
@@ -133,18 +135,18 @@
       </UFormField>
 
       <UFormField
-        label="Значение"
+        :label="ACTIVE_EFFECT_LABELS.changeValue"
         class="col-span-full md:col-span-7"
       >
         <InputWithLibrary
           v-model="change.value"
           :options="EFFECT_VALUE_SUGGESTIONS"
-          placeholder="+2, 1к4, @mod.spell"
+          :placeholder="ACTIVE_EFFECT_LABELS.changeValuePlaceholder"
         />
       </UFormField>
 
       <UFormField
-        label="Приоритет"
+        :label="ACTIVE_EFFECT_LABELS.changePriority"
         class="col-span-12 md:col-span-3"
       >
         <UInputNumber
@@ -164,13 +166,13 @@
       </UFormField>
 
       <UFormField
-        label="Условие"
+        :label="ACTIVE_EFFECT_LABELS.changeCondition"
         class="col-span-full"
       >
         <InputWithLibrary
           v-model="change.condition"
           :options="EFFECT_CONDITION_EXPR_SUGGESTIONS"
-          placeholder="Напр.: roll.hasAdvantage === true"
+          :placeholder="ACTIVE_EFFECT_LABELS.changeConditionPlaceholder"
         />
       </UFormField>
     </div>

@@ -769,4 +769,84 @@ export const ACTIVE_EFFECT_LABELS = {
   damagePartTarget: 'Цель',
   damagePartRequiresDamage: 'Только если по цели нанесён урон',
   damagePartAdd: 'Добавить урон',
+  /** Кнопка добавления строки внутри блока — не путать с `add` («Добавить эффект»). */
+  addRow: 'Добавить',
+
+  // Блок числовых модификаторов
+  changesTitle: 'Модификаторы (changes)',
+  changesEmpty: 'Нет числовых модификаторов.',
+  changeKey: 'Ключ атрибута',
+  changeKeyPlaceholder: 'Напр.: armorClass',
+  changeMode: 'Режим',
+  changeValue: 'Значение',
+  changeValuePlaceholder: '+2, 1к4, @mod.spell',
+  changePriority: 'Приоритет',
+  changeCondition: 'Условие',
+  changeConditionPlaceholder: 'Напр.: roll.hasAdvantage === true',
+
+  // Блок флагов
+  flagsTitle: 'Флаги (состояния и иммунитеты)',
+  flagsEmpty: 'Нет активных флагов.',
+  flagPlaceholder: 'Напр.: vision.blinded',
+  flagUnknown: 'Кастомный или неизвестный флаг',
+
+  // Вкладка «Основное» карточки эффекта
+  tabGeneral: 'Основное',
+  tabCombat: 'Боевая механика',
+  conditionTemplate: 'Шаблон состояния',
+  conditionTemplateHint: 'Заполнит форму данными стандартного состояния D&D 5e',
+  name: 'Название',
+  namePlaceholder: 'Название эффекта',
+  icon: 'Иконка',
+  iconPlaceholder: 'Напр.: tabler:sparkles',
+  effectTarget: 'Цель эффекта',
+  aura: 'Аура',
+  active: 'Активен',
+  transfer: 'Перенос при экипировке',
+  duration: 'Длительность',
+  durationValue: 'Количество',
+  auraRadius: 'Радиус ауры (фт)',
+  auraTarget: 'Цель ауры',
+  auraApplyToSelf: 'К источнику',
+  auraVisible: 'Круг на сцене',
+
+  // Вкладка «Боевая механика»
+  combatHint:
+    'Срабатывает при наложении эффекта на цель (напр. при попадании атакой). '
+    + 'Для само-баффов можно оставить пустым.',
+  areaTrigger: 'Триггер ауры',
+  areaTriggerStayHint:
+    'Эффект висит на цели, пока она внутри области/ауры, и снимается при '
+    + 'выходе.',
+  areaTriggerEnterHint:
+    'Разовая нагрузка (урон/статус) в момент входа в область/ауру. Срабатывает '
+    + 'на каждый вход.',
+  areaTriggerExitHint:
+    'Разовая нагрузка (урон/статус) в момент выхода из области/ауры.',
+  applySave: 'Спасбросок при наложении',
+  applySaveHint:
+    'При попадании цель совершает спасбросок — от результата зависят статус и '
+    + 'урон ниже.',
+  ability: 'Характеристика',
+  saveDc: 'Сложность (DC)',
+  saveEffect: 'При успехе',
+  applyOnSuccess: 'Накладывать эффект даже при успешном спасе',
+  applyOnSuccessHint:
+    'Состояние повиснет на цели, даже если она прошла спасбросок (свой выше '
+    + 'или спасбросок области у действия). Урон при успехе — по правилу «При '
+    + 'успехе».',
+  damageTitle: 'Урон при наложении',
+  damageHint:
+    'Наносится цели при наложении. Если включён спасбросок выше — урон '
+    + 'гейтится им (на успехе: нет урона либо половина).',
+  recurringSave: 'Периодический спасбросок снимает эффект',
+  recurringSaveHint:
+    'Пока эффект активен, цель повторяет спасбросок и при успехе сбрасывает '
+    + 'его досрочно.',
+  recurringWhen: 'Когда',
+  recurringDamage: 'Периодический урон (каждый ход)',
+  recurringDamageHint:
+    'Пока эффект висит на цели, наносит урон каждый ход (напр. «Горение»). '
+    + 'Тикает в бою при смене хода.',
+  recurringDamageWhen: 'Когда наносится',
 } as const;

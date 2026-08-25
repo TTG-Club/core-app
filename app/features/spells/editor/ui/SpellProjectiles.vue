@@ -7,6 +7,7 @@
   import {
     createEmptySpellProjectiles,
     SPELL_PROJECTILE_DISTRIBUTION_OPTIONS,
+    SPELL_PROJECTILE_LABELS,
   } from '../../model';
 
   const { level, hint } = defineProps<{
@@ -70,7 +71,7 @@
   <div class="col-span-full flex flex-col gap-3">
     <UCheckbox
       v-model="enabled"
-      label="Снаряды (отдельный бросок на каждый)"
+      :label="SPELL_PROJECTILE_LABELS.enable"
       :ui="{ label: 'text-sm font-semibold text-highlighted' }"
     />
 
@@ -85,31 +86,31 @@
       <div class="grid grid-cols-24 gap-4">
         <UFormField
           class="col-span-full md:col-span-12"
-          label="Базовое число снарядов"
+          :label="SPELL_PROJECTILE_LABELS.count"
         >
           <UInput
             v-model.number="model!.count"
             type="number"
             :min="1"
-            placeholder="Число снарядов"
+            :placeholder="SPELL_PROJECTILE_LABELS.countPlaceholder"
           />
         </UFormField>
 
         <UFormField
           v-if="!isCantrip"
           class="col-span-full md:col-span-12"
-          label="Доп. снарядов за круг выше базового"
+          :label="SPELL_PROJECTILE_LABELS.perSlotLevel"
         >
           <UInput
             v-model.number="model!.perSlotLevel"
             type="number"
             :min="0"
-            placeholder="0"
+            :placeholder="SPELL_PROJECTILE_LABELS.perSlotLevelPlaceholder"
           />
         </UFormField>
       </div>
 
-      <UFormField label="Распределение по целям">
+      <UFormField :label="SPELL_PROJECTILE_LABELS.distribution">
         <URadioGroup
           v-model="distribution"
           :items="[...SPELL_PROJECTILE_DISTRIBUTION_OPTIONS]"
@@ -120,8 +121,7 @@
       <!-- Пороги уровня персонажа (только для заговоров) -->
       <template v-if="isCantrip">
         <p class="text-xs text-dimmed">
-          Пороги уровня персонажа: начиная с указанного уровня число снарядов
-          заменяется целиком (напр. 2 на 5-м, 3 на 11-м, 4 на 17-м).
+          {{ SPELL_PROJECTILE_LABELS.tiersHint }}
         </p>
 
         <div
@@ -131,26 +131,26 @@
         >
           <UFormField
             class="col-span-full md:col-span-11"
-            label="С уровня персонажа"
+            :label="SPELL_PROJECTILE_LABELS.tierLevel"
           >
             <UInput
               v-model.number="tier.level"
               type="number"
               :min="1"
               :max="20"
-              placeholder="Уровень"
+              :placeholder="SPELL_PROJECTILE_LABELS.tierLevelPlaceholder"
             />
           </UFormField>
 
           <UFormField
             class="col-span-full md:col-span-11"
-            label="Снарядов"
+            :label="SPELL_PROJECTILE_LABELS.tierCount"
           >
             <UInput
               v-model.number="tier.count"
               type="number"
               :min="1"
-              placeholder="Число снарядов"
+              :placeholder="SPELL_PROJECTILE_LABELS.countPlaceholder"
             />
           </UFormField>
 
@@ -159,7 +159,7 @@
               icon="tabler:trash"
               color="error"
               variant="soft"
-              aria-label="Удалить порог"
+              :aria-label="SPELL_PROJECTILE_LABELS.tierRemove"
               @click.left.exact.prevent="removeTier(index)"
             />
           </UFormField>
@@ -172,7 +172,7 @@
           class="self-start"
           @click.left.exact.prevent="addTier"
         >
-          Добавить порог
+          {{ SPELL_PROJECTILE_LABELS.tierAdd }}
         </UButton>
       </template>
     </div>

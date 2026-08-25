@@ -232,6 +232,24 @@ export const SPELL_SAVE_EFFECT_OPTIONS: Array<
   { label: 'Особый', value: 'SPECIAL' },
 ];
 
+/** Подписи снарядного режима заклинания. */
+export const SPELL_PROJECTILE_LABELS = {
+  enable: 'Снаряды (отдельный бросок на каждый)',
+  count: 'Базовое число снарядов',
+  countPlaceholder: 'Число снарядов',
+  perSlotLevel: 'Доп. снарядов за круг выше базового',
+  perSlotLevelPlaceholder: '0',
+  distribution: 'Распределение по целям',
+  tiersHint:
+    'Пороги уровня персонажа: начиная с указанного уровня число снарядов '
+    + 'заменяется целиком (напр. 2 на 5-м, 3 на 11-м, 4 на 17-м).',
+  tierLevel: 'С уровня персонажа',
+  tierLevelPlaceholder: 'Уровень',
+  tierCount: 'Снарядов',
+  tierRemove: 'Удалить порог',
+  tierAdd: 'Добавить порог',
+} as const;
+
 /**
  * Режимы распределения снарядов по целям для радио-группы. `any` — дефолт
  * «свободно», в `SpellProjectiles.targetDistribution` не пишется. Зеркало

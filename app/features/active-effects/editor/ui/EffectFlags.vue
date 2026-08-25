@@ -78,7 +78,9 @@
 <template>
   <div class="flex flex-col gap-2">
     <div class="flex items-center justify-between">
-      <span class="text-sm font-medium">Флаги (состояния и иммунитеты)</span>
+      <span class="text-sm font-medium">
+        {{ ACTIVE_EFFECT_LABELS.flagsTitle }}
+      </span>
 
       <div class="flex items-center gap-1">
         <UDropdownMenu
@@ -102,7 +104,7 @@
           variant="ghost"
           @click.left.exact.prevent="addFlag"
         >
-          Добавить
+          {{ ACTIVE_EFFECT_LABELS.addRow }}
         </UButton>
       </div>
     </div>
@@ -111,7 +113,7 @@
       v-if="!model.length"
       class="rounded-lg border border-dashed border-default p-4 text-center text-xs text-dimmed italic"
     >
-      Нет активных флагов.
+      {{ ACTIVE_EFFECT_LABELS.flagsEmpty }}
     </p>
 
     <div
@@ -123,7 +125,7 @@
         <InputWithLibrary
           :model-value="flag"
           :options="EFFECT_FLAG_OPTIONS"
-          placeholder="Напр.: vision.blinded"
+          :placeholder="ACTIVE_EFFECT_LABELS.flagPlaceholder"
           @update:model-value="updateFlag(index, $event)"
         />
 
@@ -146,7 +148,7 @@
         v-else-if="flag"
         class="text-xs text-warning/80 italic"
       >
-        Кастомный или неизвестный флаг
+        {{ ACTIVE_EFFECT_LABELS.flagUnknown }}
       </span>
     </div>
   </div>
