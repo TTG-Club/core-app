@@ -44,6 +44,7 @@ import {
   EMPTY_MAGIC_ITEM_BONUSES,
   MAGIC_ITEM_BONUS_NONE,
 } from '~magic-items/model';
+import { parseDamageFormulaDice } from '~ui/damage-formula';
 
 import {
   descriptionNodesSchema,
@@ -437,6 +438,8 @@ const featDetailSchema = z.object({
   name: z.object({ rus: z.string().catch('') }),
   category: z.string().catch(''),
   description: descriptionNodesSchema,
+  // Эффекты разбирает своя схема раздела — здесь они `unknown`.
+  activeEffects: z.unknown(),
   mechanics: z
     .object({
       modifiers: featModifiersSchema,
@@ -1133,6 +1136,7 @@ export function parseFeatDetail(input: unknown): FeatSummary | null {
     category: result.data.category,
     description: result.data.description,
     modifiers: result.data.mechanics?.modifiers ?? null,
+    activeEffects: normalizeLoadedActiveEffects(result.data.activeEffects),
     proficiencies: proficiencies ? toGrantedProficiencies(proficiencies) : null,
     // Уровень доступа едет вместе с записью: заклинание с ним попадёт на лист
     // только когда персонаж дорастёт (см. `getAvailableInnateSpells`)
@@ -1385,6 +1389,8 @@ const itemDetailSchema = z.object({
   types: z.string().catch(''),
   cost: z.string().catch(''),
   weight: z.string().catch(''),
+  // Эффекты разбирает своя схема раздела — здесь они `unknown`.
+  activeEffects: z.unknown(),
 });
 
 /**
@@ -1410,6 +1416,7 @@ export function parseItemDetail(input: unknown): ItemSummary | null {
     // Публичная деталь структуру доспеха/оружия не отдаёт — её докладывает /raw.
     armor: null,
     weapon: null,
+    activeEffects: normalizeLoadedActiveEffects(result.data.activeEffects),
   };
 }
 
@@ -1512,9 +1519,18 @@ const itemRawWeaponVersatileSchema = z
   .catch(null);
 
 /**
+ * Схема части урона оружия: формулы вокабуляра VTTG, которыми справочник
+ * описывает урон после перехода на части.
+ */
+const itemRawDamagePartSchema = z.object({
+  formula: z.string().catch(''),
+  versatileFormula: z.string().nullable().catch(null),
+});
+
+/**
  * Схема «сырого» ответа предмета в части оружия (форма `WeaponCreate` редактора):
  * категория (простое/воинское, рукопашное/дальнобойное), свойства, боеприпас и
- * урон — обычный и по свойству «Универсальное».
+ * урон — частями-формулами и прежней связкой «кости + тип».
  */
 const itemRawWeaponSchema = z
   .object({
@@ -1523,6 +1539,7 @@ const itemRawWeaponSchema = z
         category: z.string().catch(''),
         properties: z.array(z.string()).catch([]),
         ammo: z.string().nullable().catch(null),
+        damageParts: z.array(itemRawDamagePartSchema).nullable().catch(null),
         damage: itemRawWeaponDamageSchema,
         versatile: itemRawWeaponVersatileSchema,
       })
@@ -1596,9 +1613,83 @@ function parseWeaponVersatileDamage(
 }
 
 /**
+ * Урон из части-формулы справочника. Формулу сложнее простых костей лист
+ * посчитать не может (модификаторы и условия по цели считает виртуальный
+ * стол) — такая часть даёт null, и разбор откатывается к прежней связке
+ * «кости + тип».
+ *
+ * @param formula формула части урона.
+ * @param fallbackType тип урона основной части — им подписывается урон
+ *   двуручного хвата: тип у оружия один на оба хвата.
+ * @returns урон оружия или null.
+ */
+function parseDamagePartFormula(
+  formula: string | null | undefined,
+  fallbackType = '',
+): InventoryWeaponDamage | null {
+  const dice = parseDamageFormulaDice(formula ?? undefined);
+
+  if (!dice || dice.diceCount <= 0 || dice.diceFaces <= 0) {
+    return null;
+  }
+
+  return {
+    diceCount: dice.diceCount,
+    diceFaces: dice.diceFaces,
+    bonus: dice.bonus,
+    type: dice.type || fallbackType,
+  };
+}
+
+/**
+ * Урон оружия из частей-формул: первая часть — основной урон и урон двуручного
+ * хвата, вторая — дополнительный урон своего типа («2к6 огнём»).
+ *
+ * Части — источник истины справочника после перехода на формулы; прежняя связка
+ * «кости + тип» остаётся у записей, сохранённых раньше, и у той, чью формулу в
+ * кости не разложить.
+ *
+ * @param parts части урона из «сырого» ответа; null — их нет.
+ * @returns урон, урон двуручного хвата и дополнительный урон; null — частей
+ *   нет либо первая не раскладывается в кости.
+ */
+function parseWeaponDamageParts(
+  parts: Array<z.infer<typeof itemRawDamagePartSchema>> | null,
+): Pick<InventoryWeapon, 'damage' | 'versatileDamage' | 'extraDamage'> | null {
+  const [firstPart, secondPart] = parts ?? [];
+  const damage = parseDamagePartFormula(firstPart?.formula);
+
+  if (!damage) {
+    return null;
+  }
+
+  const extra = parseDamagePartFormula(secondPart?.formula);
+
+  return {
+    damage,
+    versatileDamage: parseDamagePartFormula(
+      firstPart?.versatileFormula,
+      damage.type,
+    ),
+    // У дополнительного урона своего бонуса нет: плоскую надбавку предмет
+    // даёт основным броском.
+    extraDamage: extra
+      ? {
+          diceCount: extra.diceCount,
+          diceFaces: extra.diceFaces,
+          type: extra.type,
+        }
+      : null,
+  };
+}
+
+/**
  * Разбор параметров оружия из «сырого» ответа предмета для подсчёта бонуса атаки.
  * Категория владения и признаки «дальнобойное»/«фехтовальное» распознаются по
  * категории/свойствам (RU- и EN-корни) — устойчиво к формату справочника на бэке.
+ *
+ * Урон берётся из частей-формул, а без них — из прежней связки «кости + тип»,
+ * как у записей, сохранённых до перехода на формулы.
  *
  * @param input сырой ответ `GET /api/v2/item/{url}/raw`.
  * @returns параметры оружия или null (не оружие либо нет данных).
@@ -1611,6 +1702,17 @@ export function parseItemWeapon(input: unknown): InventoryWeapon | null {
   }
 
   const damage = parseWeaponDamage(weapon.damage);
+
+  const damageFromParts = parseWeaponDamageParts(weapon.damageParts);
+
+  const legacyDamage = {
+    damage,
+    // Свойство «Универсальное» распознаём по самому броску, а не по строке в
+    // `properties`: без второй кости переключать хват всё равно нечем.
+    versatileDamage: parseWeaponVersatileDamage(weapon.versatile, damage),
+    // Дополнительный урон прежняя связка выразить не могла: у неё один бросок.
+    extraDamage: null,
+  };
 
   return {
     category: /martial|воинск/i.test(weapon.category) ? 'martial' : 'simple',
@@ -1627,13 +1729,7 @@ export function parseItemWeapon(input: unknown): InventoryWeapon | null {
     ),
     // Немагическое оружие своего бонуса к атаке не имеет: его даёт только магия.
     attackBonus: MAGIC_ITEM_BONUS_NONE,
-    damage,
-    // Свойство «Универсальное» распознаём по самому броску, а не по строке в
-    // `properties`: без второй кости переключать хват всё равно нечем.
-    versatileDamage: parseWeaponVersatileDamage(weapon.versatile, damage),
-    // Дополнительный урон своего типа справочник предметов не отдаёт: его даёт
-    // магия, и на листе он появляется только у своего предмета.
-    extraDamage: null,
+    ...(damageFromParts ?? legacyDamage),
   };
 }
 

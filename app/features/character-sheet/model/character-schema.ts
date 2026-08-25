@@ -318,6 +318,41 @@ const spellSchema = z.object({
   description: z.array(descriptionNodeSchema).optional().catch(undefined),
 });
 
+const inventoryBonusSchema = z
+  .object({
+    id: z.string().catch(() => crypto.randomUUID()),
+    kind: z.enum([
+      'ability',
+      'ability-check',
+      'skill',
+      'saving-throw',
+      'all-saving-throws',
+      'speed',
+      'all-speeds',
+      'armor-class',
+      'spell-save-dc',
+      'spell-attack',
+      'initiative',
+    ]),
+    key: z.string().catch(''),
+    value: z.coerce.number().catch(0),
+    // Режим и порядок появились вместе с эффектами магических предметов: у
+    // прежних записей и у своей формы листа их нет — это обычные прибавки.
+    mode: z
+      .enum(['add', 'override', 'upgrade', 'downgrade'])
+      .optional()
+      .catch(undefined),
+    priority: z.coerce.number().optional().catch(undefined),
+  })
+  .nullable()
+  .catch(null);
+
+/** Бонусы предмета: у листов, сохранённых до их появления, список пуст. */
+const inventoryBonusesSchema = z
+  .array(inventoryBonusSchema)
+  .catch([])
+  .transform((bonuses) => bonuses.filter((bonus) => bonus !== null));
+
 const featureSchema = z.object({
   id: z.string(),
   name: z.string().catch(''),
@@ -353,6 +388,9 @@ const featureSchema = z.object({
   // Снимок ресурсов черты; у записей до него поля нет — такая черта ресурсов
   // не заводила, и панель по ней ничего не пересоберёт.
   counters: z.array(featCounterSchema).nullable().optional().catch(undefined),
+  // Снимок пассивных бонусов черты из её активных эффектов; у записей до их
+  // появления поля нет — такая черта лист не двигала.
+  bonuses: inventoryBonusesSchema.optional().catch(undefined),
 });
 
 const speciesSchema = z
@@ -881,41 +919,6 @@ const inventoryWeaponSchema = z
  * означает запись из другой версии листа, и такой бонус отбрасывается целиком —
  * иначе он молча ушёл бы не в ту цель.
  */
-const inventoryBonusSchema = z
-  .object({
-    id: z.string().catch(() => crypto.randomUUID()),
-    kind: z.enum([
-      'ability',
-      'ability-check',
-      'skill',
-      'saving-throw',
-      'all-saving-throws',
-      'speed',
-      'all-speeds',
-      'armor-class',
-      'spell-save-dc',
-      'spell-attack',
-      'initiative',
-    ]),
-    key: z.string().catch(''),
-    value: z.coerce.number().catch(0),
-    // Режим и порядок появились вместе с эффектами магических предметов: у
-    // прежних записей и у своей формы листа их нет — это обычные прибавки.
-    mode: z
-      .enum(['add', 'override', 'upgrade', 'downgrade'])
-      .optional()
-      .catch(undefined),
-    priority: z.coerce.number().optional().catch(undefined),
-  })
-  .nullable()
-  .catch(null);
-
-/** Бонусы предмета: у листов, сохранённых до их появления, список пуст. */
-const inventoryBonusesSchema = z
-  .array(inventoryBonusSchema)
-  .catch([])
-  .transform((bonuses) => bonuses.filter((bonus) => bonus !== null));
-
 /**
  * Заряды предмета. Остаток не выше максимума: иначе правка максимума в разделе
  * оставила бы на листе больше зарядов, чем предмет вмещает.

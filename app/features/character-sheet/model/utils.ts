@@ -566,34 +566,59 @@ function applyInventoryBonus(value: number, bonus: InventoryItemBonus): number {
 }
 
 /**
- * Бонусы работающего снаряжения для цели в порядке применения: сперва по
- * приоритету, а при равном — в порядке инвентаря. Порядок важен только
- * режимам, доводящим значение до заданного: прибавкам он безразличен.
+ * Источник пассивного бонуса в разборе значения: предмет или черта.
+ * Идентификатор нужен, чтобы сложить вклад одного источника в одну строку.
+ */
+interface PassiveBonusSource {
+  id: string;
+  name: string;
+}
+
+/**
+ * Пассивные бонусы для цели в порядке применения: сперва по приоритету, а при
+ * равном — в порядке источников. Порядок важен только режимам, доводящим
+ * значение до заданного: прибавкам он безразличен.
+ *
+ * Источников два: работающее снаряжение и черты. И то, и другое мастерская
+ * описывает активными эффектами, а лист переводит их числовые изменения в
+ * бонусы одного вида — значит, и считаться они должны одной цепочкой, иначе
+ * «повысить до 19» от черты и от предмета спорили бы каждый со своим итогом.
  *
  * @param character персонаж.
  * @param targets цели подсчёта.
- * @returns бонусы с предметами-источниками.
+ * @returns бонусы с источниками.
  */
 function getActiveInventoryBonusEntries(
   character: Character,
   targets: InventoryBonusTarget[],
-): Array<{ item: CharacterInventoryItem; bonus: InventoryItemBonus }> {
-  return character.inventory
+): Array<{ source: PassiveBonusSource; bonus: InventoryItemBonus }> {
+  const matchesTarget = (bonus: InventoryItemBonus): boolean =>
+    targets.some((target) =>
+      isMatchingBonus(bonus, target.kind, target.key ?? ''),
+    );
+
+  const itemEntries = character.inventory
     .filter(isActiveBonusItem)
     .flatMap((item) =>
       item.bonuses
-        .filter((bonus) =>
-          targets.some((target) =>
-            isMatchingBonus(bonus, target.kind, target.key ?? ''),
-          ),
-        )
-        .map((bonus) => ({ item, bonus })),
-    )
-    .sort(
-      (first, second) =>
-        getInventoryBonusPriority(first.bonus)
-        - getInventoryBonusPriority(second.bonus),
+        .filter(matchesTarget)
+        .map((bonus) => ({ source: { id: item.id, name: item.name }, bonus })),
     );
+
+  // Черта работает всегда: снимать её, как надетый предмет, нечем — потому
+  // условия работы у неё и нет.
+  const featureEntries = character.features.flatMap((feature) =>
+    (feature.bonuses ?? []).filter(matchesTarget).map((bonus) => ({
+      source: { id: feature.id, name: feature.name },
+      bonus,
+    })),
+  );
+
+  return [...itemEntries, ...featureEntries].sort(
+    (first, second) =>
+      getInventoryBonusPriority(first.bonus)
+      - getInventoryBonusPriority(second.bonus),
+  );
 }
 
 /**
@@ -628,8 +653,8 @@ export function getInventoryBonusTotal(
 }
 
 /**
- * Предметы, меняющие значение цели, — строками разбора: без них итог не
- * сходится ни с характеристикой, ни с владением. Вклад предмета считается по
+ * Источники, меняющие значение цели, — строками разбора: без них итог не
+ * сходится ни с характеристикой, ни с владением. Вклад источника считается по
  * шагам той же свёртки, поэтому повязка интеллекта показывает не «19», а
  * ровно то, на сколько она подняла характеристику.
  *
@@ -647,17 +672,17 @@ export function getInventoryBonusSources(
 
   let value = base;
 
-  for (const { item, bonus } of getActiveInventoryBonusEntries(
+  for (const { source, bonus } of getActiveInventoryBonusEntries(
     character,
     targets,
   )) {
     const next = applyInventoryBonus(value, bonus);
-    const source = sources.get(item.id);
+    const stored = sources.get(source.id);
 
-    sources.set(item.id, {
-      id: item.id,
-      name: item.name,
-      value: (source?.value ?? 0) + next - value,
+    sources.set(source.id, {
+      id: source.id,
+      name: source.name,
+      value: (stored?.value ?? 0) + next - value,
     });
 
     value = next;
@@ -2009,8 +2034,9 @@ export function buildInventoryItem(
     weapon: summary.weapon,
     equipped: false,
     twoHanded: false,
-    // Пассивные бонусы есть только у своих предметов: их задаёт форма листа.
-    bonuses: [],
+    // Влияние предмета на лист мастерская описывает активными эффектами — теми
+    // же, что у магического предмета: лист берёт из них числовые изменения.
+    bonuses: toInventoryBonusesFromEffects(summary.activeEffects),
     // Настройка и заряды бывают только у магии — раздел «Предметы» их не знает.
     ...DEFAULT_INVENTORY_MAGIC_STATE,
   };
@@ -7561,6 +7587,7 @@ export function buildFeatFeature(
   );
 
   const baseId = getCharacterFeatureId('feat', summary.url);
+  const featureBonuses = toInventoryBonusesFromEffects(summary.activeEffects);
 
   return {
     id: repeatable ? `${baseId}:${crypto.randomUUID()}` : baseId,
@@ -7571,6 +7598,9 @@ export function buildFeatFeature(
     level,
     choice,
     modifiers: summary.modifiers,
+    // Снимок пассивных бонусов из активных эффектов черты. Черта без них
+    // пишется без поля — такая запись лист не двигает, как и раньше.
+    bonuses: featureBonuses.length ? featureBonuses : undefined,
     proficiencies: withChosenProficiencies(
       summary.proficiencies,
       proficiencies,
