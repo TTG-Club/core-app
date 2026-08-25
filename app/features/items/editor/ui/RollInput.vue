@@ -5,8 +5,10 @@
 
   const model = defineModel<Roll>({ required: true });
 
-  const { dicePlaceholder = 'Кость' } = defineProps<{
+  const { dicePlaceholder = 'Кость', disabled = false } = defineProps<{
     dicePlaceholder?: string;
+    /** Значение выводится из другого поля и правится только через него. */
+    disabled?: boolean;
   }>();
 </script>
 
@@ -16,16 +18,19 @@
       v-model="model.diceCount"
       placeholder="Кол-во"
       :min="0"
+      :disabled
     />
 
     <SelectDice
       v-model="model.dice"
       :placeholder="dicePlaceholder"
+      :disabled
     />
 
     <UInputNumber
       v-model="model.bonus"
       placeholder="Бонус"
+      :disabled
     />
   </div>
 </template>

@@ -73,18 +73,18 @@ core-app/
 > **Endpoint exceptions:** `items` and `sources` call the API in the singular —
 > `/api/v2/item/…` and `/api/v2/source/…`, not the domain folder name.
 
-| Domain        | Purpose                                            | Notable extras                                                       |
-| ------------- | -------------------------------------------------- | -------------------------------------------------------------------- |
-| `species`     | Races/species with nested lineages (sub-races)     | `lineages`, `lineages-drawer`                                        |
-| `classes`     | Classes, subclasses & multiclass builder           | `multiclass-drawer`, `subclasses-drawer` (body = Class + Multiclass) |
-| `spells`      | Spells; class-grouped infinite-scroll list         | `groups`, `composable` (class pagination), `legend`                  |
-| `bestiary`    | Creatures grouped by challenge rating; stat blocks | `composable` (CR group order)                                        |
-| `magic-items` | Magic items grouped by rarity                      | `composable` (rarity order), `legend` (attunement)                   |
-| `backgrounds` | Character backgrounds                              | —                                                                    |
-| `feats`       | Feats                                              | —                                                                    |
-| `glossary`    | Rules terms / glossary                             | —                                                                    |
-| `items`       | Mundane items & equipment                          | —                                                                    |
-| `sources`     | Source books (publisher/translation, tags)         | model layer is named `types/` (not `model/`)                         |
+| Domain        | Purpose                                            | Notable extras                                                                                                                                        |
+| ------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `species`     | Races/species with nested lineages (sub-races)     | `lineages`, `lineages-drawer`                                                                                                                         |
+| `classes`     | Classes, subclasses & multiclass builder           | `multiclass-drawer`, `subclasses-drawer` (body = Class + Multiclass)                                                                                  |
+| `spells`      | Spells; class-grouped infinite-scroll list         | `groups`, `composable` (class pagination), `legend`                                                                                                   |
+| `bestiary`    | Creatures grouped by challenge rating; stat blocks | `composable` (CR group order)                                                                                                                         |
+| `magic-items` | Magic items grouped by rarity                      | `composable` (rarity order), `legend` (attunement)                                                                                                    |
+| `backgrounds` | Character backgrounds                              | —                                                                                                                                                     |
+| `feats`       | Feats                                              | —                                                                                                                                                     |
+| `glossary`    | Rules terms / glossary                             | —                                                                                                                                                     |
+| `items`       | Mundane items: weapons, armor, tools, gear         | editor switches sub-form by `category`; weapon damage uses the shared `~ui/damage-formula` parts, legacy dice kept in sync on the «Совместимость» tab |
+| `sources`     | Source books (publisher/translation, tags)         | model layer is named `types/` (not `model/`)                                                                                                          |
 
 ### 🛠️ Interactive tools
 
@@ -708,14 +708,14 @@ modals), so its capabilities are listed here rather than squeezed into the table
 
 ### 📰 Content & publishing
 
-| Domain           | Purpose                                                                                                                                                 | Sub-features                                                                                                                                                                                                                                                               |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `articles`       | News/article publishing (`NEWS`/`ARTICLE`; draft·active·scheduled·link-access flags); markup content. Public `/articles`, `/news`                       | `admin`, `body`, `card`, `drawer`, `editor`, `link`, `listing`, `preview`, `model`                                                                                                                                                                                         |
-| `home`           | Landing-page building blocks composed on `pages/index.vue`                                                                                              | `news`, `articles` (separate index block from `news`), `sections`, `banners` (VTTG promo card above the tools block), `tools` (compact tools card, role-gated items), `community`, `counters`, `greetings`, `recent-changes`, `background`, `social-links`, `link-to-5e14` |
-| `workshop`       | Content-creation admin (`/workshop/*`, ADMIN or MODERATOR): reusable form engine + section entry cards + revision history                               | `composable` (`useWorkshopForm`), `section`, `revision`                                                                                                                                                                                                                    |
-| `active-effects` | Shared «Активные эффекты» editor in the VTTG vocabulary — one model + one form for every section that changes sheet numbers: spells, feats, magic items | `editor` (`ActiveEffects` card, per-effect tabs, changes/flags/damage parts), `model` (types & Zod, change & flag menus, PHB 2024 condition templates, `describeActiveEffect`)                                                                                             |
-| `roadmap`        | Project roadmap (`/roadmap`): feature cards with community ratings + admin editor                                                                       | `feature`, `detail`, `editor`, `preview`, `types`                                                                                                                                                                                                                          |
-| `comments`       | Threaded discussions on wiki & article pages via external **comments-service**; public read, auth to post, soft-delete tombstones, reports              | `section` (page block + feed), `admin` (moderation rows), `my` (own comments + replies to them in profile), `recent` (site-wide feed on `/comments`), `composables`, `model`                                                                                               |
+| Domain           | Purpose                                                                                                                                                        | Sub-features                                                                                                                                                                                                                                                               |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `articles`       | News/article publishing (`NEWS`/`ARTICLE`; draft·active·scheduled·link-access flags); markup content. Public `/articles`, `/news`                              | `admin`, `body`, `card`, `drawer`, `editor`, `link`, `listing`, `preview`, `model`                                                                                                                                                                                         |
+| `home`           | Landing-page building blocks composed on `pages/index.vue`                                                                                                     | `news`, `articles` (separate index block from `news`), `sections`, `banners` (VTTG promo card above the tools block), `tools` (compact tools card, role-gated items), `community`, `counters`, `greetings`, `recent-changes`, `background`, `social-links`, `link-to-5e14` |
+| `workshop`       | Content-creation admin (`/workshop/*`, ADMIN or MODERATOR): reusable form engine + section entry cards + revision history                                      | `composable` (`useWorkshopForm`), `section`, `revision`                                                                                                                                                                                                                    |
+| `active-effects` | Shared «Активные эффекты» editor in the VTTG vocabulary — one model + one form for every section that changes sheet numbers: spells, feats, magic items, items | `editor` (`ActiveEffects` card, per-effect tabs, changes/flags/damage parts), `model` (types & Zod, change & flag menus, PHB 2024 condition templates, `describeActiveEffect`)                                                                                             |
+| `roadmap`        | Project roadmap (`/roadmap`): feature cards with community ratings + admin editor                                                                              | `feature`, `detail`, `editor`, `preview`, `types`                                                                                                                                                                                                                          |
+| `comments`       | Threaded discussions on wiki & article pages via external **comments-service**; public read, auth to post, soft-delete tombstones, reports                     | `section` (page block + feed), `admin` (moderation rows), `my` (own comments + replies to them in profile), `recent` (site-wide feed on `/comments`), `composables`, `model`                                                                                               |
 
 ### 🛡️ Admin & moderation
 
@@ -776,7 +776,7 @@ imported via the auto-generated `~<domain>` alias (see
 
 ---
 
-## 🎨 Shared UI Kit (`app/shared/ui/` — 29 components)
+## 🎨 Shared UI Kit (`app/shared/ui/` — 32 components)
 
 **UI Components Priority:** Nuxt UI → `shared/ui` → `features/*/ui`
 
@@ -788,6 +788,7 @@ imported via the auto-generated `~<domain>` alias (see
 | `card`            | Workshop entity card                                                                   |
 | `collapse`        | Collapsible / accordion primitive                                                      |
 | `copy-button`     | Copy-to-clipboard buttons: share link + copy entity as Markdown                        |
+| `damage-formula`  | VTTG damage/heal formula input & parts editor (spells, weapons, active effects)        |
 | `date-picker`     | Date/time picker input                                                                 |
 | `detail-pane`     | Wide-mode entity detail panel                                                          |
 | `drawer`          | Overlay drawer (+ header/body/title/actions, DrawerCollection)                         |
@@ -802,14 +803,16 @@ imported via the auto-generated `~<domain>` alias (see
 | `markup`          | Custom `{@...}` markup parser/renderer + Homebrewery Markdown converter                |
 | `markup-editor`   | Tiptap markup WYSIWYG editor (+ insert panel/toolbar)                                  |
 | `page`            | Page grid / actions / result / legend scaffolding                                      |
+| `pagination`      | Page-number pagination control                                                         |
 | `placeholder`     | Dashed empty-state placeholder                                                         |
 | `rating`          | Star rating widget                                                                     |
 | `result`          | Status/result screen (404 / 403 / error / info)                                        |
 | `section`         | Section content + sidebar layout parts                                                 |
-| `select`          | Domain `USelectMenu` wrappers (39 `Select*.vue`, e.g. class, spell level, damage type) |
+| `select`          | Domain `USelectMenu` wrappers (41 `Select*.vue`, e.g. class, spell level, damage type) |
 | `skeleton`        | Link skeleton loaders                                                                  |
 | `source-tag`      | Sourcebook source/group tag badge                                                      |
 | `tooltip`         | Info tooltip                                                                           |
+| `updates-dot`     | Unread-updates indicator dot                                                           |
 | `upload`          | Image & gallery upload widgets                                                         |
 
 ---
