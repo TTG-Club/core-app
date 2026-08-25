@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { TabsItem } from '@nuxt/ui';
+
   import type { SpellCreate } from '~spells/model';
 
   import { ActiveEffects } from '~active-effects/editor';
@@ -7,6 +9,8 @@
     createEmptySpellEffect,
     normalizeLoadedSpell,
     normalizeSpellEffect,
+    SPELL_EDITOR_SECTIONS,
+    SPELL_EDITOR_TABS,
   } from '~spells/model';
   import { SpellPreview } from '~spells/preview';
   import { EditorBaseInfo } from '~ui/editor';
@@ -30,7 +34,19 @@
     SpellDurations,
     SpellEffectEditor,
     SpellRanges,
+    SpellUses,
   } from './ui';
+
+  /**
+   * Вкладки формы: чем заклинание является → как применяется → что делает в
+   * бою → что оставляет после себя. Тот же порядок, что и в форме системы.
+   */
+  const tabItems: Array<TabsItem> = [
+    { label: SPELL_EDITOR_TABS.main, slot: 'main' },
+    { label: SPELL_EDITOR_TABS.usage, slot: 'usage' },
+    { label: SPELL_EDITOR_TABS.combat, slot: 'combat' },
+    { label: SPELL_EDITOR_TABS.effects, slot: 'effects' },
+  ];
 
   function getInitialState(): SpellCreate {
     return {
@@ -99,155 +115,249 @@
     @error="onError"
     @submit="onSubmit"
   >
+    <!-- Основная информация стоит над вкладками: название и источник нужны на
+      любой из них, а её вложенная форма со схемой обязана быть смонтирована в
+      момент сохранения -->
     <EditorBaseInfo
       v-model="state"
       section="spells"
     />
 
-    <UCard variant="subtle">
-      <template #header>
-        <h2 class="truncate text-base text-highlighted">
-          Характеристики заклинания
-        </h2>
+    <!-- Вкладки не размонтируются: поля скрытых вкладок остаются в форме, и
+      сохранение видит их наравне с открытой -->
+    <UTabs
+      :items="tabItems"
+      variant="pill"
+      :unmount-on-hide="false"
+      :ui="{ list: 'mb-6' }"
+    >
+      <!-- ОСНОВНОЕ -->
+      <template #main>
+        <div class="grid gap-8">
+          <UCard variant="subtle">
+            <template #header>
+              <h2 class="truncate text-base text-highlighted">
+                {{ SPELL_EDITOR_SECTIONS.basics }}
+              </h2>
+            </template>
+
+            <div class="grid grid-cols-24 gap-4">
+              <UFormField
+                class="col-span-full md:col-span-12"
+                label="Уровень заклинания"
+                name="level"
+              >
+                <SelectSpellLevel v-model="state.level" />
+              </UFormField>
+
+              <UFormField
+                class="col-span-full md:col-span-12"
+                label="Школа"
+                name="school"
+              >
+                <SelectMagicSchool v-model="state.school.school" />
+              </UFormField>
+
+              <UFormField
+                class="col-span-full"
+                label="Подшкола"
+                name="additionalType"
+              >
+                <UInput
+                  v-model="state.school.additionalType"
+                  placeholder="Подшкола"
+                />
+              </UFormField>
+            </div>
+          </UCard>
+
+          <UCard variant="subtle">
+            <template #header>
+              <h2 class="truncate text-base text-highlighted">
+                {{ SPELL_EDITOR_SECTIONS.description }}
+              </h2>
+            </template>
+
+            <div class="grid grid-cols-24 gap-4">
+              <UFormField
+                class="col-span-full lg:col-span-12"
+                label="Описание"
+                name="description"
+              >
+                <MarkupEditor
+                  v-model="state.description"
+                  placeholder="Введи описание"
+                />
+              </UFormField>
+
+              <UFormField
+                class="col-span-full lg:col-span-12"
+                label="На более высоких уровнях"
+                name="upper"
+              >
+                <MarkupEditor
+                  v-model="state.upper"
+                  placeholder="Введи описание"
+                />
+              </UFormField>
+            </div>
+          </UCard>
+
+          <UCard variant="subtle">
+            <template #header>
+              <h2 class="truncate text-base text-highlighted">
+                {{ SPELL_EDITOR_SECTIONS.affiliations }}
+              </h2>
+            </template>
+
+            <div class="grid grid-cols-24 gap-4">
+              <UFormField
+                class="col-span-full md:col-span-12 xl:col-span-6"
+                label="Классы"
+                name="affiliations.classes"
+              >
+                <SelectClass
+                  v-model="state.affiliations.classes"
+                  multiple
+                />
+              </UFormField>
+
+              <UFormField
+                class="col-span-full md:col-span-12 xl:col-span-6"
+                label="Подклассы"
+                name="affiliations.subclasses"
+              >
+                <SelectSubclass
+                  v-model="state.affiliations.subclasses"
+                  multiple
+                />
+              </UFormField>
+
+              <UFormField
+                class="col-span-full md:col-span-12 xl:col-span-6"
+                label="Виды"
+                name="affiliations.species"
+              >
+                <SelectSpecies
+                  v-model="state.affiliations.species"
+                  multiple
+                />
+              </UFormField>
+
+              <UFormField
+                class="col-span-full md:col-span-12 xl:col-span-6"
+                label="Происхождения"
+                name="affiliations.lineages"
+              >
+                <SelectLineage
+                  v-model="state.affiliations.lineages"
+                  multiple
+                />
+              </UFormField>
+
+              <UFormField
+                class="col-span-full md:col-span-12 xl:col-span-6"
+                label="Черта"
+                name="affiliations.feats"
+              >
+                <SelectFeat
+                  v-model="state.affiliations.feats"
+                  multiple
+                />
+              </UFormField>
+            </div>
+          </UCard>
+        </div>
       </template>
 
-      <div class="grid grid-cols-24 gap-4">
-        <UFormField
-          class="col-span-full md:col-span-12"
-          label="Уровень заклинания"
-          name="level"
-        >
-          <SelectSpellLevel v-model="state.level" />
-        </UFormField>
+      <!-- ПРИМЕНЕНИЕ -->
+      <template #usage>
+        <div class="grid gap-8">
+          <UCard variant="subtle">
+            <template #header>
+              <h2 class="truncate text-base text-highlighted">
+                {{ SPELL_EDITOR_SECTIONS.castingTime }}
+              </h2>
+            </template>
 
-        <UFormField
-          class="col-span-full md:col-span-12"
-          label="Школа"
-          name="school"
-        >
-          <SelectMagicSchool v-model="state.school.school" />
-        </UFormField>
+            <div class="grid grid-cols-24 gap-4">
+              <SpellCastingTimes v-model="state.castingTime" />
+            </div>
+          </UCard>
 
-        <UFormField
-          class="col-span-full"
-          label="Подшкола"
-          name="additionalType"
-        >
-          <UInput
-            v-model="state.school.additionalType"
-            placeholder="Подшкола"
-          />
-        </UFormField>
+          <UCard variant="subtle">
+            <template #header>
+              <h2 class="truncate text-base text-highlighted">
+                {{ SPELL_EDITOR_SECTIONS.range }}
+              </h2>
+            </template>
 
-        <SpellCastingTimes v-model="state.castingTime" />
+            <div class="grid grid-cols-24 gap-4">
+              <SpellRanges v-model="state.range" />
+            </div>
+          </UCard>
 
-        <SpellRanges v-model="state.range" />
+          <UCard variant="subtle">
+            <template #header>
+              <div class="flex min-w-0 flex-col">
+                <h2 class="truncate text-base text-highlighted">
+                  {{ SPELL_EDITOR_SECTIONS.components }}
+                </h2>
 
-        <SpellComponents v-model="state.components" />
+                <span class="text-xs text-muted">
+                  {{ SPELL_EDITOR_SECTIONS.componentsHint }}
+                </span>
+              </div>
+            </template>
 
-        <SpellDurations v-model="state.duration" />
-      </div>
-    </UCard>
+            <div class="grid grid-cols-24 gap-4">
+              <SpellComponents v-model="state.components" />
+            </div>
+          </UCard>
 
-    <SpellEffectEditor
-      v-model="state.effect"
-      :level="state.level"
-    />
+          <UCard variant="subtle">
+            <template #header>
+              <h2 class="truncate text-base text-highlighted">
+                {{ SPELL_EDITOR_SECTIONS.duration }}
+              </h2>
+            </template>
 
-    <ActiveEffects v-model="state.activeEffects" />
+            <div class="grid grid-cols-24 gap-4">
+              <SpellDurations v-model="state.duration" />
+            </div>
+          </UCard>
 
-    <UCard variant="subtle">
-      <template #header>
-        <h2 class="truncate text-base text-highlighted">Описание</h2>
+          <UCard variant="subtle">
+            <template #header>
+              <div class="flex min-w-0 flex-col">
+                <h2 class="truncate text-base text-highlighted">
+                  {{ SPELL_EDITOR_SECTIONS.uses }}
+                </h2>
+
+                <span class="text-xs text-muted">
+                  {{ SPELL_EDITOR_SECTIONS.usesHint }}
+                </span>
+              </div>
+            </template>
+
+            <SpellUses v-model="state.effect.uses" />
+          </UCard>
+        </div>
       </template>
 
-      <div class="grid grid-cols-24 gap-4">
-        <UFormField
-          label="Описание"
-          name="description"
-          class="col-span-full lg:col-span-12"
-        >
-          <MarkupEditor
-            v-model="state.description"
-            placeholder="Введи описание"
-          />
-        </UFormField>
-
-        <UFormField
-          label="На более высоких уровнях"
-          name="upper"
-          class="col-span-full lg:col-span-12"
-        >
-          <MarkupEditor
-            v-model="state.upper"
-            placeholder="Введи описание"
-          />
-        </UFormField>
-      </div>
-    </UCard>
-
-    <UCard variant="subtle">
-      <template #header>
-        <h2 class="truncate text-base text-highlighted">Принадлежность</h2>
+      <!-- БОЙ -->
+      <template #combat>
+        <SpellEffectEditor
+          v-model="state.effect"
+          :level="state.level"
+        />
       </template>
 
-      <div class="grid grid-cols-24 gap-4">
-        <UFormField
-          label="Классы"
-          name="affiliations.classes"
-          class="col-span-full md:col-span-12 xl:col-span-6"
-        >
-          <SelectClass
-            v-model="state.affiliations.classes"
-            multiple
-          />
-        </UFormField>
-
-        <UFormField
-          class="col-span-full md:col-span-12 xl:col-span-6"
-          label="Подклассы"
-          name="affiliations.subclasses"
-        >
-          <SelectSubclass
-            v-model="state.affiliations.subclasses"
-            multiple
-          />
-        </UFormField>
-
-        <UFormField
-          class="col-span-full md:col-span-12 xl:col-span-6"
-          label="Виды"
-          name="affiliations.species"
-        >
-          <SelectSpecies
-            v-model="state.affiliations.species"
-            multiple
-          />
-        </UFormField>
-
-        <UFormField
-          class="col-span-full md:col-span-12 xl:col-span-6"
-          label="Происхождения"
-          name="affiliations.lineages"
-        >
-          <SelectLineage
-            v-model="state.affiliations.lineages"
-            multiple
-          />
-        </UFormField>
-
-        <UFormField
-          class="col-span-full md:col-span-12 xl:col-span-6"
-          label="Черта"
-          name="affiliations.feats"
-        >
-          <SelectFeat
-            v-model="state.affiliations.feats"
-            multiple
-          />
-        </UFormField>
-      </div>
-    </UCard>
+      <!-- ЭФФЕКТЫ -->
+      <template #effects>
+        <ActiveEffects v-model="state.activeEffects" />
+      </template>
+    </UTabs>
 
     <WorkshopEditorFormControls :revision-control>
       <template #preview="{ opened, changeVisibility }">

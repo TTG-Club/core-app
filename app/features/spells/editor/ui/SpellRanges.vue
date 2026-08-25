@@ -82,12 +82,6 @@
 </script>
 
 <template>
-  <div class="col-span-full mt-4 flex flex-col gap-2 sm:flex-row sm:gap-4">
-    <p class="shrink-0 text-lg">Дистанция</p>
-
-    <USeparator />
-  </div>
-
   <UForm
     v-for="(range, index) in ranges"
     :key="index"
@@ -96,7 +90,7 @@
     :state="range"
   >
     <UFormField
-      label="Дистанция"
+      label="Значение"
       name="value"
       class="col-span-full md:col-span-6 xl:col-span-4"
     >

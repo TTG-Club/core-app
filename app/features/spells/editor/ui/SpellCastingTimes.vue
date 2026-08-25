@@ -82,12 +82,6 @@
 </script>
 
 <template>
-  <div class="col-span-full mt-4 flex flex-col gap-2 sm:flex-row sm:gap-4">
-    <p class="shrink-0 text-lg sm:w-1/5">Время накладывания</p>
-
-    <USeparator />
-  </div>
-
   <UForm
     v-for="(time, index) in times"
     :key="index"
@@ -97,7 +91,7 @@
   >
     <UFormField
       class="col-span-full md:col-span-6 xl:col-span-4"
-      label="Время накладывания"
+      label="Количество"
       name="value"
     >
       <UInput

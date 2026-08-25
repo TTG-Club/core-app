@@ -77,6 +77,24 @@ export type SpellDeliveryType =
   | 'none';
 
 /**
+ * Способ восстановления зарядов заклинания. Зеркало `SpellUsesRecovery` из
+ * VTTG: `atWill` — без лимита, заряды не тратятся.
+ */
+export type SpellUsesRecovery = 'atWill' | 'shortRest' | 'longRest';
+
+/**
+ * Заряды использования заклинания — для врождённой и расовой магии и
+ * заклинаний существ, не тратящих ячейки заклинателя.
+ *
+ * Текущее число зарядов справочник не хранит: оно принадлежит конкретному
+ * персонажу, а не записи. Потребитель получает полный запас.
+ */
+export interface SpellUses {
+  max: number | undefined; // максимум зарядов
+  recovery: SpellUsesRecovery; // чем восстанавливаются
+}
+
+/**
  * Усиление заклинания при трате ячейки выше его круга. Не задано — потребитель
  * разбирает текст «На более высоких уровнях», как разбирал раньше.
  */
@@ -130,6 +148,7 @@ export interface SpellEffect {
   attackBonus?: number;
   autoHit?: boolean;
   projectiles?: SpellProjectiles;
+  uses?: SpellUses;
   scaling?: SpellScaling;
   cantripScalingTiers?: SpellCantripScalingTier[];
   damageFormulas?: string[];
@@ -231,6 +250,7 @@ export function createEmptySpellEffect(): SpellEffect {
     attackBonus: undefined,
     autoHit: false,
     projectiles: undefined,
+    uses: undefined,
     scaling: undefined,
     cantripScalingTiers: [],
     damageFormulas: [],
@@ -243,6 +263,21 @@ export function createEmptySpellEffect(): SpellEffect {
     saveEffect: undefined,
     conditions: [],
     spellcastingAbility: undefined,
+  };
+}
+
+/** Способ восстановления зарядов по умолчанию: он же самый частый. */
+export const DEFAULT_SPELL_USES_RECOVERY: SpellUsesRecovery = 'longRest';
+
+/**
+ * Создаёт заряды по умолчанию (галочка «Ограниченное число применений»).
+ *
+ * @returns заряды с одним применением до продолжительного отдыха.
+ */
+export function createEmptySpellUses(): SpellUses {
+  return {
+    max: 1,
+    recovery: DEFAULT_SPELL_USES_RECOVERY,
   };
 }
 
@@ -566,6 +601,30 @@ function migrateSpellEffectDamageFormulas(effect: SpellEffect): SpellEffect {
 }
 
 /**
+ * Нормализует заряды: ограничение без числа применений ничего не ограничивает,
+ * поэтому такие заряды не пишутся. Исключение — «по желанию»: там максимум и не
+ * нужен, заряды не расходуются.
+ *
+ * @param uses заряды из формы.
+ * @returns заряды для сервера либо `undefined`.
+ */
+function normalizeSpellUses(
+  uses: SpellUses | undefined,
+): SpellUses | undefined {
+  if (!uses) {
+    return undefined;
+  }
+
+  if (uses.recovery === 'atWill') {
+    return { max: undefined, recovery: 'atWill' };
+  }
+
+  return uses.max && uses.max > 0
+    ? { max: uses.max, recovery: uses.recovery }
+    : undefined;
+}
+
+/**
  * Нормализует усиление на высших кругах: пустые поля не пишутся, а усиление
  * без единого заполненного поля не пишется вовсе — иначе запись обещала бы
  * масштабирование, которого нет.
@@ -724,6 +783,12 @@ export function normalizeSpellEffect(
     normalized.attackBonus = migratedEffect.attackBonus;
   }
 
+  const uses = normalizeSpellUses(migratedEffect.uses);
+
+  if (uses) {
+    normalized.uses = uses;
+  }
+
   const scaling = normalizeSpellScaling(migratedEffect.scaling);
 
   if (scaling) {
@@ -842,6 +907,42 @@ export function isSpellDeliveryType(
   return typeof value === 'string' && SPELL_DELIVERY_TYPE_SET.has(value);
 }
 
+/** Способы восстановления зарядов, известные потребителю. */
+const SPELL_USES_RECOVERY_SET: ReadonlySet<string> = new Set<SpellUsesRecovery>(
+  ['atWill', 'shortRest', 'longRest'],
+);
+
+/**
+ * Проверяет, что значение — способ восстановления зарядов из словаря VTTG.
+ *
+ * @param value произвольное значение.
+ * @returns `true`, если это известный способ восстановления.
+ */
+export function isSpellUsesRecovery(
+  value: unknown,
+): value is SpellUsesRecovery {
+  return typeof value === 'string' && SPELL_USES_RECOVERY_SET.has(value);
+}
+
+/**
+ * Восстанавливает заряды из загруженного с сервера raw-значения.
+ *
+ * @param raw значение с сервера.
+ * @returns заряды для формы либо `undefined`.
+ */
+function normalizeLoadedSpellUses(raw: unknown): SpellUses | undefined {
+  if (!isRecord(raw)) {
+    return undefined;
+  }
+
+  return {
+    max: typeof raw.max === 'number' ? raw.max : undefined,
+    recovery: isSpellUsesRecovery(raw.recovery)
+      ? raw.recovery
+      : DEFAULT_SPELL_USES_RECOVERY,
+  };
+}
+
 /**
  * Восстанавливает усиление на высших кругах из загруженного raw-значения.
  *
@@ -953,6 +1054,7 @@ export function normalizeLoadedSpell(
             typeof rawEffect.attackBonus === 'number'
               ? rawEffect.attackBonus
               : undefined,
+          uses: normalizeLoadedSpellUses(rawEffect.uses),
           scaling: normalizeLoadedSpellScaling(rawEffect.scaling),
           cantripScalingTiers: normalizeLoadedSpellCantripScalingTiers(
             rawEffect.cantripScalingTiers,

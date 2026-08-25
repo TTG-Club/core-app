@@ -83,12 +83,6 @@
 </script>
 
 <template>
-  <div class="col-span-full mt-4 flex flex-col gap-2 sm:flex-row sm:gap-4">
-    <p class="shrink-0 text-lg">Длительность</p>
-
-    <USeparator />
-  </div>
-
   <UForm
     v-for="(duration, index) in durations"
     :key="index"
@@ -97,7 +91,7 @@
     :state="duration"
   >
     <UFormField
-      label="Длительность"
+      label="Количество"
       name="value"
       class="col-span-full md:col-span-6 xl:col-span-4"
     >

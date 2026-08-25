@@ -6,4 +6,7 @@ export { default as SpellDurations } from './SpellDurations.vue';
 export { default as SpellEffectEditor } from './SpellEffectEditor.vue';
 export { default as SpellProjectiles } from './SpellProjectiles.vue';
 export { default as SpellRanges } from './SpellRanges.vue';
+export { default as SpellSavingThrow } from './SpellSavingThrow.vue';
 export { default as SpellScaling } from './SpellScaling.vue';
+export { default as SpellTargeting } from './SpellTargeting.vue';
+export { default as SpellUses } from './SpellUses.vue';

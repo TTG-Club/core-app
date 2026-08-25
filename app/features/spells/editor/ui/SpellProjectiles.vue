@@ -67,7 +67,7 @@
 </script>
 
 <template>
-  <div class="col-span-full flex flex-col gap-3 border-t border-default pt-4">
+  <div class="col-span-full flex flex-col gap-3">
     <UCheckbox
       v-model="enabled"
       label="Снаряды (отдельный бросок на каждый)"

@@ -29,12 +29,6 @@
 </script>
 
 <template>
-  <div class="col-span-full mt-4 flex flex-col gap-2 sm:flex-row sm:gap-4">
-    <p class="shrink-0 text-lg">Компоненты</p>
-
-    <USeparator />
-  </div>
-
   <UForm
     class="col-span-full grid grid-cols-24 gap-4"
     attach
