@@ -15,9 +15,10 @@ import {
   DAMAGE_TYPE_TAGS,
   DEFAULT_DAMAGE_FORMULA_TARGET,
   isDamageFormulaTarget,
+  parseDamageFormulaDice,
 } from '~ui/damage-formula';
 
-import { WEAPON_PROPERTY_KEYS } from './constants';
+import { DEFAULT_ITEM_CATEGORY, WEAPON_PROPERTY_KEYS } from './constants';
 
 /** Категории предмета (`ItemCategory` бэкенда). */
 export type ItemCategory =
@@ -258,7 +259,7 @@ export function createEmptyItem(): ItemCreate {
     },
     srdVersion: undefined,
     description: '',
-    category: 'ITEM',
+    category: DEFAULT_ITEM_CATEGORY,
     types: [],
     cost: undefined,
     coin: undefined,
@@ -274,45 +275,23 @@ export function createEmptyItem(): ItemCreate {
 }
 
 /**
- * Тип урона справочника по токену формулы: `@dmg.fire` → `FIRE`. Обратная
- * карта к {@link DAMAGE_TYPE_TAGS}; у огня два ключа (`FAIR` — прежнее имя),
- * и побеждает последний, то есть актуальный.
- */
-const DAMAGE_TYPE_KEY_BY_TAG: Record<string, string> = Object.fromEntries(
-  Object.entries(DAMAGE_TYPE_TAGS).map(([key, tag]) => [tag, key]),
-);
-
-/** Токен типа урона в формуле: `@dmg.<тип>`. */
-const DAMAGE_TYPE_TAG_PATTERN = /@(dmg\.[a-z]+)/i;
-
-/** Любой токен формулы — при разборе костей их отбрасываем. */
-const FORMULA_TAG_PATTERN = /@[\w.]+/g;
-
-/** Простой бросок: `2к6`, `1к8+1`, `1d10-1`. Кость — русская «к» или «d». */
-const SIMPLE_DICE_PATTERN = /^(\d+)\s*[кkd]\s*(\d+)\s*(?:([+-])\s*(\d+))?$/i;
-
-/**
- * Разбирает формулу простого броска в связку «кости + бонус». Токены типа
- * урона отбрасываются: тип хранится отдельным полем.
+ * Бросок формы из разобранной формулы. Кость справочник хранит строкой
+ * (`d8`), а формула — числом граней.
  *
  * @param formula формула части урона.
  * @returns бросок; `undefined` — формула сложнее простых костей.
  */
 function parseSimpleDiceFormula(formula: string | undefined): Roll | undefined {
-  const cleaned = (formula ?? '').replace(FORMULA_TAG_PATTERN, '').trim();
-  const match = SIMPLE_DICE_PATTERN.exec(cleaned);
+  const dice = parseDamageFormulaDice(formula);
 
-  if (!match) {
+  if (!dice) {
     return undefined;
   }
 
-  const [, diceCount, faces, sign, bonus] = match;
-  const signedBonus = sign === '-' ? -Number(bonus) : Number(bonus);
-
   return {
-    diceCount: Number(diceCount),
-    dice: `d${faces}`,
-    bonus: bonus === undefined ? undefined : signedBonus,
+    diceCount: dice.diceCount,
+    dice: `d${dice.diceFaces}`,
+    bonus: dice.bonus === 0 ? undefined : dice.bonus,
   };
 }
 
@@ -343,18 +322,6 @@ function toDamageFormula(
 }
 
 /**
- * Ключ типа урона справочника по формуле части.
- *
- * @param formula формула части урона.
- * @returns ключ типа урона; `undefined` — тип в формуле не указан.
- */
-function getFormulaDamageType(formula: string): string | undefined {
-  const tag = DAMAGE_TYPE_TAG_PATTERN.exec(formula)?.[1]?.toLowerCase();
-
-  return tag ? DAMAGE_TYPE_KEY_BY_TAG[tag] : undefined;
-}
-
-/**
  * Прежняя связка «кости + тип» из частей урона. Выводится только из простой
  * формулы: у сложной (с модификаторами и условиями) прежнего представления
  * нет, и старые значения остаются нетронутыми, а не стираются.
@@ -381,7 +348,8 @@ export function toLegacyWeaponDamage(
   return {
     damage: {
       roll,
-      type: getFormulaDamageType(firstPart.formula) ?? weapon.damage.type,
+      type:
+        parseDamageFormulaDice(firstPart.formula)?.type || weapon.damage.type,
     },
     versatile: parseSimpleDiceFormula(firstPart.versatileFormula) ?? emptyRoll,
   };

@@ -2,6 +2,7 @@ import {
   DAMAGE_FORMULA_DICE_SYMBOL,
   DAMAGE_FORMULA_SEPARATOR,
   DAMAGE_FORMULA_TAG_PREFIX,
+  DAMAGE_TYPE_TAGS,
 } from './constants';
 
 /**
@@ -132,4 +133,70 @@ export function buildDamageFormulaModifier(
  */
 export function isHealingDamageFormula(formula: string): boolean {
   return formula.includes(`${DAMAGE_FORMULA_TAG_PREFIX}heal`);
+}
+
+/**
+ * Ключ типа урона справочника по токену формулы: `dmg.fire` → `FIRE`. Обратная
+ * карта к {@link DAMAGE_TYPE_TAGS}; у огня два ключа (`FAIR` — прежнее имя), и
+ * побеждает последний, то есть актуальный.
+ */
+const DAMAGE_TYPE_KEY_BY_TAG: Record<string, string> = Object.fromEntries(
+  Object.entries(DAMAGE_TYPE_TAGS).map(([key, tag]) => [tag, key]),
+);
+
+/** Токен типа урона в формуле: `@dmg.<тип>`. */
+const DAMAGE_FORMULA_TYPE_PATTERN = /@(dmg\.[a-z]+)/i;
+
+/** Любой токен формулы — при разборе костей их отбрасываем. */
+const DAMAGE_FORMULA_TAG_PATTERN = /@[\w.]+/g;
+
+/** Простой бросок: `2к6`, `1к8+1`, `1d10-1`. Кость — русская «к» или «d». */
+const DAMAGE_FORMULA_DICE_PATTERN =
+  /^(\d+)\s*[кkd]\s*(\d+)\s*(?:([+-])\s*(\d+))?$/i;
+
+/** Кости формулы урона: количество, грани, плоская прибавка и тип урона. */
+export interface DamageFormulaDice {
+  diceCount: number;
+  /** Количество граней кости (8 — к8). */
+  diceFaces: number;
+  /** Плоская прибавка формулы; 0 — её нет. */
+  bonus: number;
+  /** Ключ типа урона справочника (`FIRE`); '' — тип в формуле не указан. */
+  type: string;
+}
+
+/**
+ * Разбирает формулу простого броска в кости, прибавку и тип урона.
+ *
+ * Формулу сложнее простых костей (с модификаторами `@mod.*`, условиями по цели,
+ * арифметикой) разобрать нельзя — такая часть возвращает `undefined`, и
+ * потребитель решает сам, чем её заменить. Токены при разборе костей
+ * отбрасываются: тип урона едет отдельным полем результата.
+ *
+ * @param formula формула части урона.
+ * @returns кости формулы; `undefined` — формула сложнее простых костей.
+ */
+export function parseDamageFormulaDice(
+  formula: string | undefined,
+): DamageFormulaDice | undefined {
+  const cleaned = (formula ?? '')
+    .replace(DAMAGE_FORMULA_TAG_PATTERN, '')
+    .trim();
+
+  const diceMatch = DAMAGE_FORMULA_DICE_PATTERN.exec(cleaned);
+
+  if (!diceMatch) {
+    return undefined;
+  }
+
+  const [, diceCount, diceFaces, sign, bonus] = diceMatch;
+  const signedBonus = sign === '-' ? -Number(bonus) : Number(bonus);
+  const typeTag = DAMAGE_FORMULA_TYPE_PATTERN.exec(formula ?? '')?.[1];
+
+  return {
+    diceCount: Number(diceCount),
+    diceFaces: Number(diceFaces),
+    bonus: bonus === undefined ? 0 : signedBonus,
+    type: typeTag ? (DAMAGE_TYPE_KEY_BY_TAG[typeTag.toLowerCase()] ?? '') : '',
+  };
 }

@@ -70,6 +70,12 @@ export const ITEM_CATEGORY_OPTIONS: Array<{
   },
 ];
 
+/**
+ * Категория новой записи — первая в переключателе. Форма открывается с
+ * выбранной карточкой, а не с подсвеченной серединой списка.
+ */
+export const DEFAULT_ITEM_CATEGORY: ItemCategory = 'WEAPON';
+
 /** Вкладки формы предмета. */
 export const ITEM_EDITOR_TABS = {
   main: 'Основное',
@@ -190,6 +196,13 @@ export const TOOL_FORM_LABELS = {
   bonus: 'Собственный бонус',
   proficiencyMode: 'Учёт владения',
   proficiencyModeUnset: 'Автоматически',
+} as const;
+
+/** Подсказки полей броска костей. */
+export const ROLL_INPUT_LABELS = {
+  diceCount: 'Кол-во',
+  dice: 'Кость',
+  bonus: 'Бонус',
 } as const;
 
 /** Подписи вкладки прежнего представления урона. */
