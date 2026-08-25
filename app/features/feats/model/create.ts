@@ -1,4 +1,5 @@
 import type { AbilityKey } from '~/shared/types';
+import type { ActiveEffect } from '~active-effects/model';
 import type { EditorBaseInfoState } from '~ui/editor';
 
 import type { FeatMechanics, FeatPrerequisiteDetails } from './mechanics';
@@ -18,6 +19,15 @@ export interface FeatCreate extends EditorBaseInfoState {
    */
   abilities: Array<AbilityKey> | undefined;
   mechanics: FeatMechanics | undefined; // механика влияния на лист персонажа
+
+  /**
+   * Активные эффекты черты в вокабуляре VTTG — та же модель, что у заклинаний и
+   * магических предметов. Рядом с `mechanics`, а не внутри неё: механика
+   * описывает дары, которые лист проставляет сам (владения, повышения, выборы),
+   * а эффект меняет числа готовой формулой и уезжает на виртуальный стол как
+   * есть.
+   */
+  activeEffects: Array<ActiveEffect>;
 
   /**
    * Строки редактора механики: форма правит их, а не блоки механики. Перед

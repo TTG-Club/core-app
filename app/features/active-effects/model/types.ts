@@ -1,7 +1,7 @@
 /**
  * Модель «Активных эффектов», совместимая с системой Active Effects приложения
  * VTTG (Virtual TTG Club). Одна и та же у всего, что меняет числа на листе
- * персонажа: заклинаний и магических предметов.
+ * персонажа: заклинаний, черт и магических предметов.
  *
  * Структура повторяет `ActiveEffect` из `@vtt/shared` один-в-один, чтобы экспорт
  * в VTTG был pass-through без преобразования словарей: характеристики хранятся
@@ -39,6 +39,22 @@ export type EffectOrigin =
   | 'condition'
   | 'manual'
   | 'area';
+
+/**
+ * Ключи источников — единственное место, где они перечислены значениями:
+ * отсюда их берут и редактор-хозяин в `origin`, и подписи справочника, и разбор
+ * загруженного эффекта. `Record<EffectOrigin, EffectOrigin>` держит набор в
+ * согласии с типом: новый источник в юнионе не даст собраться, пока его не
+ * заведут и здесь.
+ */
+export const EFFECT_ORIGIN = {
+  spell: 'spell',
+  item: 'item',
+  feature: 'feature',
+  condition: 'condition',
+  manual: 'manual',
+  area: 'area',
+} as const satisfies Record<EffectOrigin, EffectOrigin>;
 
 /** Тип длительности эффекта. */
 export type EffectDurationType =
@@ -260,7 +276,7 @@ function generateEffectId(): string {
  * @returns новый эффект.
  */
 export function createEmptyActiveEffect(
-  origin: EffectOrigin = 'spell',
+  origin: EffectOrigin = EFFECT_ORIGIN.spell,
 ): ActiveEffect {
   return {
     id: generateEffectId(),
@@ -556,7 +572,7 @@ const activeEffectSchema: z.ZodType<ActiveEffect> = z.object({
   description: z.string(),
   icon: z.string().optional(),
   disabled: z.boolean(),
-  origin: z.enum(['item', 'spell', 'feature', 'condition', 'manual', 'area']),
+  origin: z.enum(EFFECT_ORIGIN),
   originId: z.string().optional(),
   transfer: z.boolean(),
   duration: durationSchema,

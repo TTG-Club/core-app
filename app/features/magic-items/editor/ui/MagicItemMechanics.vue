@@ -2,6 +2,7 @@
   import type { MagicItemMechanics } from '~magic-items/model';
 
   import { ActiveEffects } from '~active-effects/editor';
+  import { EFFECT_ORIGIN } from '~active-effects/model';
   import {
     MAGIC_ITEM_ACTIVATION_OPTIONS,
     MAGIC_ITEM_CHARGES_MAX,
@@ -126,7 +127,7 @@
 
     <ActiveEffects
       v-model="mechanics.activeEffects"
-      origin="item"
+      :origin="EFFECT_ORIGIN.item"
     />
   </div>
 </template>

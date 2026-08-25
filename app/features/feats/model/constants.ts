@@ -42,6 +42,7 @@ export const FEAT_EDITOR_TABS = {
   spells: 'Заклинания',
   automation: 'Автоматизация',
   prerequisites: 'Требования',
+  effects: 'Эффекты',
 } as const;
 
 /** Классовые умения, которых может требовать черта. */

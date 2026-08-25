@@ -21,6 +21,8 @@ import type {
   EffectTurnTiming,
 } from './types';
 
+import { EFFECT_ORIGIN } from './types';
+
 interface Option<Value extends string> {
   label: string;
   value: Value;
@@ -38,12 +40,12 @@ export const EFFECT_CHANGE_MODE_OPTIONS: Array<Option<EffectChangeMode>> = [
 
 /** Источники эффекта. */
 export const EFFECT_ORIGIN_OPTIONS: Array<Option<EffectOrigin>> = [
-  { label: 'Заклинание', value: 'spell' },
-  { label: 'Предмет', value: 'item' },
-  { label: 'Особенность', value: 'feature' },
-  { label: 'Состояние', value: 'condition' },
-  { label: 'Вручную', value: 'manual' },
-  { label: 'Область', value: 'area' },
+  { label: 'Заклинание', value: EFFECT_ORIGIN.spell },
+  { label: 'Предмет', value: EFFECT_ORIGIN.item },
+  { label: 'Особенность', value: EFFECT_ORIGIN.feature },
+  { label: 'Состояние', value: EFFECT_ORIGIN.condition },
+  { label: 'Вручную', value: EFFECT_ORIGIN.manual },
+  { label: 'Область', value: EFFECT_ORIGIN.area },
 ];
 
 /** Типы длительности. */

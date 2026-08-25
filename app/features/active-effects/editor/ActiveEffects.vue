@@ -5,11 +5,14 @@
     ACTIVE_EFFECT_LABELS,
     createEmptyActiveEffect,
     DEFAULT_EFFECT_ICON,
+    EFFECT_ORIGIN,
   } from '../model';
   import ActiveEffectItem from './ui/ActiveEffectItem.vue';
 
   // Источник задаёт редактор-хозяин: он же и знает, чем эффект выдан.
-  const { origin = 'spell' } = defineProps<{ origin?: EffectOrigin }>();
+  const { origin = EFFECT_ORIGIN.spell } = defineProps<{
+    origin?: EffectOrigin;
+  }>();
 
   const model = defineModel<Array<ActiveEffect>>({ default: () => [] });
 

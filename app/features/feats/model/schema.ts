@@ -7,6 +7,7 @@ import type {
 import { z } from 'zod';
 
 import { AbilityKey } from '~/shared/types';
+import { normalizeLoadedActiveEffects } from '~active-effects/model';
 
 import { createFeatMechanics, createPrerequisiteDetails } from './mechanics';
 import { toFeatEditorRows } from './rows';
@@ -441,6 +442,9 @@ export function normalizeLoadedFeat(
     ...raw,
     mechanics,
     prerequisiteDetails,
+    // Эффекты разбирает своя схема раздела: битый эффект отбрасывается
+    // поштучно, а не роняет весь список
+    activeEffects: normalizeLoadedActiveEffects(raw.activeEffects),
     editorRows: toFeatEditorRows(mechanics, prerequisiteDetails),
   };
 }
