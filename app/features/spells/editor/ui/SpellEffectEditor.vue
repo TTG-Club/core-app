@@ -1,15 +1,18 @@
 <script setup lang="ts">
-  import type { SpellDamageFormulaPart, SpellEffect } from '../../model';
+  import type { DamageFormulaPart } from '~ui/damage-formula';
+
+  import type { SpellEffect } from '../../model';
 
   import { DictionaryService } from '~/shared/api';
+  import { DamageParts } from '~ui/damage-formula';
 
   import {
     applySpellDamageFormulaParts,
     getSpellDamageFormulaParts,
+    SPELL_DAMAGE_PART_EMPTY,
     SPELL_EDITOR_SECTIONS,
     SPELL_PROJECTILE_HINTS,
   } from '../../model';
-  import SpellDamageFormulas from './SpellDamageFormulas.vue';
   import SpellProjectiles from './SpellProjectiles.vue';
   import SpellSavingThrow from './SpellSavingThrow.vue';
   import SpellScaling from './SpellScaling.vue';
@@ -38,7 +41,7 @@
   // Формулы и их цели хранятся параллельными массивами, но редактируются как
   // один список частей — иначе отдельные обновления модели разъезжаются по
   // индексам.
-  const damageFormulaParts = computed<Array<SpellDamageFormulaPart>>({
+  const damageFormulaParts = computed<Array<DamageFormulaPart>>({
     get: () => getSpellDamageFormulaParts(model.value),
     set: (value) => {
       model.value = applySpellDamageFormulaParts(model.value, value);
@@ -115,10 +118,12 @@
       </template>
 
       <div class="grid grid-cols-24 gap-4">
-        <SpellDamageFormulas
+        <DamageParts
           v-model="damageFormulaParts"
           :damage-type-options="damageTypeOptions"
           :damage-types-pending="isDamageTypesPending"
+          :empty-label="SPELL_DAMAGE_PART_EMPTY"
+          field-name-prefix="effect.damageFormulaTargets"
         />
 
         <SpellScaling

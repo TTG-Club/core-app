@@ -1,15 +1,20 @@
 import type { AbilityKey } from '~/shared/types';
 import type { ActiveEffect } from '~active-effects/model';
+import type {
+  DamageFormulaPart,
+  DamageFormulaTarget,
+} from '~ui/damage-formula';
 import type { EditorBaseInfoState } from '~ui/editor';
 
 import { normalizeLoadedActiveEffects } from '~active-effects/model';
-
 import {
-  DEFAULT_SPELL_DAMAGE_FORMULA_TARGET,
-  SPELL_DAMAGE_FORMULA_TARGET_OPTIONS,
-  SPELL_DAMAGE_TYPE_TAGS,
-  SPELL_HEALING_TYPE_TAGS,
-} from './constants';
+  createEmptyDamageFormulaPart,
+  DAMAGE_TYPE_TAGS,
+  DEFAULT_DAMAGE_FORMULA_TARGET,
+  isDamageFormulaTarget,
+} from '~ui/damage-formula';
+
+import { SPELL_HEALING_TYPE_TAGS } from './constants';
 
 /**
  * Тип цели заклинания.
@@ -39,29 +44,6 @@ export interface SpellAreaOfEffect {
  * Зеркало `SpellProjectiles.targetDistribution` из VTTG.
  */
 export type SpellProjectileDistribution = 'any' | 'single' | 'distinct';
-
-/**
- * Цель части урона/лечения. Зеркало `DamagePartTarget` из VTTG:
- * `selected` — выбранная цель (дефолт), `self` — заклинатель,
- * `choose` — отдельная цель, указывается перед броском.
- */
-export type SpellDamageFormulaTarget = 'selected' | 'self' | 'choose';
-
-/**
- * Часть урона в редакторе: формула, её цель и признак «только если нанесён
- * урон». В `SpellEffect` части хранятся тремя параллельными массивами
- * (`damageFormulas` + `damageFormulaTargets` + `damageFormulaRequiresDamage`),
- * потому что справочник отдаёт формулы плоским списком строк.
- *
- * Поля цели и признака здесь обязательные (без `undefined`): редактор сверяет
- * свои строки с моделью через `isEqual`, и необязательный ключ то появлялся бы,
- * то исчезал — сравнение считало бы одинаковые части разными.
- */
-export interface SpellDamageFormulaPart {
-  formula: string;
-  target: SpellDamageFormulaTarget;
-  requiresDamage: boolean;
-}
 
 /**
  * Способ применения заклинания — как оно достаёт цель. Зеркало
@@ -110,7 +92,7 @@ export interface SpellScaling {
  */
 export interface SpellCantripScalingTier {
   level: number | undefined; // минимальный уровень персонажа
-  parts: SpellDamageFormulaPart[]; // полный набор частей на этом уровне
+  parts: DamageFormulaPart[]; // полный набор частей на этом уровне
 }
 
 /**
@@ -152,7 +134,7 @@ export interface SpellEffect {
   scaling?: SpellScaling;
   cantripScalingTiers?: SpellCantripScalingTier[];
   damageFormulas?: string[];
-  damageFormulaTargets?: SpellDamageFormulaTarget[]; // цели частей урона, по индексам damageFormulas
+  damageFormulaTargets?: DamageFormulaTarget[]; // цели частей урона, по индексам damageFormulas
   damageFormulaRequiresDamage?: boolean[]; // «только если нанесён урон», по индексам damageFormulas
   damageFormula?: string;
   damageTypes?: string[];
@@ -302,7 +284,7 @@ export function createEmptySpellScaling(): SpellScaling {
 export function createEmptySpellCantripScalingTier(): SpellCantripScalingTier {
   return {
     level: undefined,
-    parts: [createEmptySpellDamageFormulaPart()],
+    parts: [createEmptyDamageFormulaPart()],
   };
 }
 
@@ -362,7 +344,7 @@ function normalizeSpellProjectiles(
  * Возвращает тег типа урона заклинания.
  */
 function getSpellDamageTypeTag(damageType: string): string {
-  return SPELL_DAMAGE_TYPE_TAGS[damageType] ?? damageType;
+  return DAMAGE_TYPE_TAGS[damageType] ?? damageType;
 }
 
 /**
@@ -425,35 +407,13 @@ function migrateSpellEffectHealingFormulas(effect: SpellEffect): SpellEffect {
  */
 const LEGACY_DAMAGE_TARGET_TAGS: Array<{
   tag: string;
-  target: SpellDamageFormulaTarget;
+  target: DamageFormulaTarget;
 }> = [
   { tag: '@target.self', target: 'self' },
   { tag: '@target.separate', target: 'choose' },
 ];
 
 const LEGACY_DAMAGE_TARGET_TAG_PATTERN = /@target\.(?:self|separate)\b/g;
-
-/**
- * Проверяет, что значение — цель части урона из словаря VTTG.
- */
-export function isSpellDamageFormulaTarget(
-  value: unknown,
-): value is SpellDamageFormulaTarget {
-  return SPELL_DAMAGE_FORMULA_TARGET_OPTIONS.some(
-    (option) => option.value === value,
-  );
-}
-
-/**
- * Создаёт пустую часть урона для редактора.
- */
-export function createEmptySpellDamageFormulaPart(): SpellDamageFormulaPart {
-  return {
-    formula: '',
-    target: DEFAULT_SPELL_DAMAGE_FORMULA_TARGET,
-    requiresDamage: false,
-  };
-}
 
 /**
  * Собирает части урона редактора из параллельных массивов SpellEffect.
@@ -463,13 +423,13 @@ export function createEmptySpellDamageFormulaPart(): SpellDamageFormulaPart {
  */
 export function getSpellDamageFormulaParts(
   effect: SpellEffect,
-): SpellDamageFormulaPart[] {
+): DamageFormulaPart[] {
   const damageFormulaTargets = effect.damageFormulaTargets ?? [];
   const damageFormulaRequiresDamage = effect.damageFormulaRequiresDamage ?? [];
 
   return (effect.damageFormulas ?? []).map((formula, index) => ({
     formula,
-    target: damageFormulaTargets[index] ?? DEFAULT_SPELL_DAMAGE_FORMULA_TARGET,
+    target: damageFormulaTargets[index] ?? DEFAULT_DAMAGE_FORMULA_TARGET,
     requiresDamage: damageFormulaRequiresDamage[index] === true,
   }));
 }
@@ -484,7 +444,7 @@ export function getSpellDamageFormulaParts(
  */
 export function applySpellDamageFormulaParts(
   effect: SpellEffect,
-  parts: SpellDamageFormulaPart[],
+  parts: DamageFormulaPart[],
 ): SpellEffect {
   return {
     ...effect,
@@ -501,7 +461,7 @@ export function applySpellDamageFormulaParts(
  */
 function normalizeLoadedSpellDamageFormulaTargets(
   raw: unknown,
-): SpellDamageFormulaTarget[] {
+): DamageFormulaTarget[] {
   if (!Array.isArray(raw)) {
     return [];
   }
@@ -511,9 +471,7 @@ function normalizeLoadedSpellDamageFormulaTargets(
   const rawTargets: Array<unknown> = raw;
 
   return rawTargets.map((target) =>
-    isSpellDamageFormulaTarget(target)
-      ? target
-      : DEFAULT_SPELL_DAMAGE_FORMULA_TARGET,
+    isDamageFormulaTarget(target) ? target : DEFAULT_DAMAGE_FORMULA_TARGET,
   );
 }
 
@@ -539,9 +497,9 @@ function normalizeLoadedSpellDamageFormulaRequiresDamage(
 /**
  * Возвращает цель, зашитую legacy-тегом в формулу урона.
  */
-function getLegacyDamageFormulaTarget(
+function getLegacySpellDamageFormulaTarget(
   formula: string,
-): SpellDamageFormulaTarget | undefined {
+): DamageFormulaTarget | undefined {
   return LEGACY_DAMAGE_TARGET_TAGS.find(({ tag }) => formula.includes(tag))
     ?.target;
 }
@@ -562,9 +520,9 @@ function migrateSpellEffectDamageTargets(effect: SpellEffect): SpellEffect {
     ),
     damageFormulaTargets: damageFormulas.map(
       (formula, index) =>
-        getLegacyDamageFormulaTarget(formula)
+        getLegacySpellDamageFormulaTarget(formula)
         ?? damageFormulaTargets[index]
-        ?? DEFAULT_SPELL_DAMAGE_FORMULA_TARGET,
+        ?? DEFAULT_DAMAGE_FORMULA_TARGET,
     ),
     // Признаки выравниваются по формулам здесь же: у записей до появления поля
     // массива нет вовсе, а редактор читает его по индексам формул.
@@ -758,7 +716,7 @@ export function normalizeSpellEffect(
     // Цели пишутся, только если хоть одна часть уходит не в выбранную цель:
     // `selected` — дефолт VTTG, хранить его в справочнике незачем.
     const hasCustomTarget = damageParts.some(
-      (part) => part.target !== DEFAULT_SPELL_DAMAGE_FORMULA_TARGET,
+      (part) => part.target !== DEFAULT_DAMAGE_FORMULA_TARGET,
     );
 
     if (hasCustomTarget) {
@@ -972,16 +930,16 @@ function normalizeLoadedSpellScaling(raw: unknown): SpellScaling | undefined {
  * @param raw значение с сервера.
  * @returns часть урона для формы.
  */
-function normalizeLoadedSpellDamagePart(raw: unknown): SpellDamageFormulaPart {
+function normalizeLoadedSpellDamagePart(raw: unknown): DamageFormulaPart {
   if (!isRecord(raw)) {
-    return createEmptySpellDamageFormulaPart();
+    return createEmptyDamageFormulaPart();
   }
 
   return {
     formula: typeof raw.formula === 'string' ? raw.formula : '',
-    target: isSpellDamageFormulaTarget(raw.target)
+    target: isDamageFormulaTarget(raw.target)
       ? raw.target
-      : DEFAULT_SPELL_DAMAGE_FORMULA_TARGET,
+      : DEFAULT_DAMAGE_FORMULA_TARGET,
     requiresDamage: raw.requiresDamage === true,
   };
 }
@@ -1007,7 +965,7 @@ function normalizeLoadedSpellCantripScalingTiers(
 
     return {
       level: typeof tier.level === 'number' ? tier.level : undefined,
-      parts: parts.length > 0 ? parts : [createEmptySpellDamageFormulaPart()],
+      parts: parts.length > 0 ? parts : [createEmptyDamageFormulaPart()],
     };
   });
 }

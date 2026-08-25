@@ -1,24 +1,24 @@
 <script setup lang="ts">
   import type { SelectOption } from '~/shared/types';
 
-  import type { SpellDamageFormulaPart } from '../../model';
+  import type { DamageFormulaPart } from './part';
 
   import {
-    DamageFormulaInput,
-    isHealingDamageFormula,
-  } from '~ui/damage-formula';
-
-  import {
-    isSpellDamageFormulaTarget,
-    SPELL_DAMAGE_FORMULA_TARGET_OPTIONS,
-    SPELL_DAMAGE_PART_LABELS,
-    SPELL_DAMAGE_TYPE_TAGS,
-  } from '../../model';
+    DAMAGE_FORMULA_TARGET_OPTIONS,
+    DAMAGE_PART_LABELS,
+    DAMAGE_TYPE_TAGS,
+  } from './constants';
+  import DamageFormulaInput from './DamageFormulaInput.vue';
+  import { isHealingDamageFormula } from './formula';
+  import { isDamageFormulaTarget } from './part';
 
   const {
     index,
     damageTypeOptions,
     damageTypesPending = false,
+    fieldNamePrefix = 'damageParts',
+    showVersatile = false,
+    hideModifiers = false,
   } = defineProps<{
     /** Порядковый номер части — идёт в подпись и в имя поля формы. */
     index: number;
@@ -26,6 +26,12 @@
     damageTypeOptions: Array<SelectOption>;
     /** Справочник ещё грузится. */
     damageTypesPending?: boolean;
+    /** Приставка имени поля формы, например `effect.damageFormulaTargets`. */
+    fieldNamePrefix?: string;
+    /** Показать формулу двуручного хвата (свойство «Универсальное» у оружия). */
+    showVersatile?: boolean;
+    /** Скрыть вкладку модификаторов там, где модификатор добавляется сам. */
+    hideModifiers?: boolean;
   }>();
 
   const emit = defineEmits<{
@@ -33,7 +39,7 @@
   }>();
 
   /** Часть урона: формула, цель и признак «только если нанесён урон». */
-  const model = defineModel<SpellDamageFormulaPart>({ required: true });
+  const model = defineModel<DamageFormulaPart>({ required: true });
 
   /**
    * Справочник отдаёт типы урона ключами сайта (`FIRE`), а формуле нужен токен
@@ -42,7 +48,7 @@
   const damageTypeTags = computed(() =>
     damageTypeOptions.map((damageType) => ({
       label: damageType.label,
-      value: SPELL_DAMAGE_TYPE_TAGS[damageType.value] ?? damageType.value,
+      value: DAMAGE_TYPE_TAGS[damageType.value] ?? damageType.value,
     })),
   );
 
@@ -50,6 +56,13 @@
     get: () => model.value.formula,
     set: (value) => {
       model.value = { ...model.value, formula: value };
+    },
+  });
+
+  const versatileFormula = computed({
+    get: () => model.value.versatileFormula ?? '',
+    set: (value) => {
+      model.value = { ...model.value, versatileFormula: value };
     },
   });
 
@@ -64,7 +77,7 @@
   });
 
   function handleTargetInput(value: unknown) {
-    if (!isSpellDamageFormulaTarget(value)) {
+    if (!isDamageFormulaTarget(value)) {
       return;
     }
 
@@ -80,7 +93,7 @@
       <span
         class="truncate text-xs font-semibold tracking-wide text-highlighted"
       >
-        {{ SPELL_DAMAGE_PART_LABELS.partPrefix }}{{ index + 1 }}
+        {{ DAMAGE_PART_LABELS.partPrefix }}{{ index + 1 }}
       </span>
 
       <UButton
@@ -88,7 +101,7 @@
         color="error"
         variant="ghost"
         size="xs"
-        :aria-label="SPELL_DAMAGE_PART_LABELS.remove"
+        :aria-label="DAMAGE_PART_LABELS.remove"
         @click.left.exact.prevent="emit('remove')"
       />
     </div>
@@ -98,17 +111,34 @@
         v-model="formula"
         :damage-type-options="damageTypeTags"
         :damage-types-pending="damageTypesPending"
+        :hide-modifiers="hideModifiers"
       />
+
+      <DamageFormulaInput
+        v-if="showVersatile"
+        v-model="versatileFormula"
+        :damage-type-options="damageTypeTags"
+        :damage-types-pending="damageTypesPending"
+        :hide-modifiers="hideModifiers"
+        :label="DAMAGE_PART_LABELS.versatile"
+      />
+
+      <p
+        v-if="showVersatile"
+        class="text-xs text-dimmed"
+      >
+        {{ DAMAGE_PART_LABELS.versatileHint }}
+      </p>
 
       <div class="grid grid-cols-24 items-end gap-3">
         <UFormField
           class="col-span-full md:col-span-12"
-          :label="SPELL_DAMAGE_PART_LABELS.target"
-          :name="`effect.damageFormulaTargets.${index}`"
+          :label="DAMAGE_PART_LABELS.target"
+          :name="`${fieldNamePrefix}.${index}`"
         >
           <USelect
             :model-value="model.target"
-            :items="SPELL_DAMAGE_FORMULA_TARGET_OPTIONS"
+            :items="DAMAGE_FORMULA_TARGET_OPTIONS"
             class="w-full"
             @update:model-value="handleTargetInput"
           />
@@ -118,12 +148,12 @@
         <UFormField
           v-if="isHealing"
           class="col-span-full flex items-center md:col-span-12"
-          :name="`effect.damageFormulaRequiresDamage.${index}`"
+          :name="`${fieldNamePrefix}.${index}.requiresDamage`"
         >
           <UCheckbox
             v-model="requiresDamage"
-            :label="SPELL_DAMAGE_PART_LABELS.onlyIfDamaged"
-            :description="SPELL_DAMAGE_PART_LABELS.onlyIfDamagedHint"
+            :label="DAMAGE_PART_LABELS.onlyIfDamaged"
+            :description="DAMAGE_PART_LABELS.onlyIfDamagedHint"
           />
         </UFormField>
       </div>

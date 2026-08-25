@@ -1,5 +1,4 @@
 import type {
-  SpellDamageFormulaTarget,
   SpellDeliveryType,
   SpellSaveEffect,
   SpellTargetType,
@@ -273,57 +272,17 @@ export const SPELL_PROJECTILE_DISTRIBUTION_OPTIONS = [
   },
 ] as const;
 
-/** Ключ `FAIR` — прежнее имя огненного урона: встречается в данных до переименования. */
-export const SPELL_DAMAGE_TYPE_TAGS: Record<string, string> = {
-  ACID: 'dmg.acid',
-  BLUDGEONING: 'dmg.bludgeoning',
-  COLD: 'dmg.cold',
-  FAIR: 'dmg.fire',
-  FIRE: 'dmg.fire',
-  FORCE: 'dmg.force',
-  LIGHTNING: 'dmg.lightning',
-  NECROTIC: 'dmg.necrotic',
-  PIERCING: 'dmg.piercing',
-  POISON: 'dmg.poison',
-  PSYCHIC: 'dmg.psychic',
-  RADIANT: 'dmg.radiant',
-  SLASHING: 'dmg.slashing',
-  THUNDER: 'dmg.thunder',
-};
+/**
+ * Текст на месте пустого списка частей урона. Свой у каждого раздела: общий
+ * редактор частей знает про урон, но не про то, чем ещё носитель может
+ * обходиться вместо него.
+ */
+export const SPELL_DAMAGE_PART_EMPTY =
+  'Урона и лечения нет. Заклинание может обходиться без них — например, '
+  + 'накладывать состояние или менять числа активным эффектом.';
 
 export const SPELL_HEALING_TYPE_TAGS: Record<string, string> = {
   HEALING: 'heal',
   TEMPORARY_HIT: 'heal.temp',
   TEMPORARY_HITPOINTS: 'heal.temp',
 };
-
-/**
- * Цель части урона. Значения — словарь VTTG (`DamagePartTarget`); в формулу
- * они не пишутся, а хранятся в `SpellEffect.damageFormulaTargets`.
- */
-export const SPELL_DAMAGE_FORMULA_TARGET_OPTIONS: Array<
-  SpellSelectOption<SpellDamageFormulaTarget>
-> = [
-  { label: 'Выбранная цель', value: 'selected' },
-  { label: 'На себя', value: 'self' },
-  { label: 'Указать отдельно', value: 'choose' },
-];
-
-/** Подписи строки части урона в редакторе — зеркало `DAMAGE_PART_LABELS` VTTG. */
-export const SPELL_DAMAGE_PART_LABELS = {
-  partPrefix: 'Часть ',
-  empty:
-    'Урона и лечения нет. Заклинание может обходиться без них — например, '
-    + 'накладывать состояние или менять числа активным эффектом.',
-  formula: 'Формула',
-  formulaPlaceholder: 'Например: 8к6@dmg.fire',
-  target: 'Цель',
-  onlyIfDamaged: 'Только если нанесён урон',
-  onlyIfDamagedHint:
-    'Часть применится, только если урон по цели действительно прошёл — '
-    + '«лечусь, лишь когда задел врага».',
-  addPart: 'Добавить часть',
-  remove: 'Удалить часть',
-} as const;
-export const DEFAULT_SPELL_DAMAGE_FORMULA_TARGET: SpellDamageFormulaTarget =
-  'selected';

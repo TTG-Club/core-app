@@ -4,12 +4,15 @@
   import type { SpellCantripScalingTier, SpellScaling } from '../../model';
 
   import {
+    createEmptyDamageFormulaPart,
+    DamagePartRow,
+  } from '~ui/damage-formula';
+
+  import {
     createEmptySpellCantripScalingTier,
-    createEmptySpellDamageFormulaPart,
     createEmptySpellScaling,
     SPELL_SCALING_LABELS,
   } from '../../model';
-  import SpellDamageFormulaRow from './SpellDamageFormulaRow.vue';
 
   const {
     level,
@@ -155,7 +158,7 @@
 
     updateTier(tierIndex, {
       ...tier,
-      parts: [...tier.parts, createEmptySpellDamageFormulaPart()],
+      parts: [...tier.parts, createEmptyDamageFormulaPart()],
     });
   }
 
@@ -272,13 +275,14 @@
           {{ SPELL_SCALING_LABELS.tierPartsEmpty }}
         </p>
 
-        <SpellDamageFormulaRow
+        <DamagePartRow
           v-for="(part, partIndex) in tier.parts"
           :key="partIndex"
           :model-value="part"
           :index="partIndex"
           :damage-type-options="damageTypeOptions"
           :damage-types-pending="damageTypesPending"
+          :field-name-prefix="`effect.cantripScalingTiers.${tierIndex}.parts`"
           @update:model-value="updateTierPart(tierIndex, partIndex, $event)"
           @remove="removeTierPart(tierIndex, partIndex)"
         />

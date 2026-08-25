@@ -5,6 +5,8 @@
  * Зеркало `DamagePartRow.vue` + `CREATURE_CATEGORIES` из системы D&D.
  */
 
+import type { DamageFormulaTarget } from './part';
+
 /** Приставка токена формулы. */
 export const DAMAGE_FORMULA_TAG_PREFIX = '@';
 
@@ -101,4 +103,60 @@ export const DAMAGE_FORMULA_LABELS = {
   healing: 'Лечение',
   conditions: 'Условия',
   creatureTypes: 'Тип существ',
+} as const;
+
+/**
+ * Ключ типа урона справочника сайта → токен формулы VTTG. Справочник отдаёт
+ * `FIRE`, а формуле нужен `dmg.fire`; перевод живёт здесь, у знающей оба
+ * словаря стороны.
+ *
+ * Ключ `FAIR` — прежнее имя огненного урона: встречается в данных до
+ * переименования.
+ */
+export const DAMAGE_TYPE_TAGS: Record<string, string> = {
+  ACID: 'dmg.acid',
+  BLUDGEONING: 'dmg.bludgeoning',
+  COLD: 'dmg.cold',
+  FAIR: 'dmg.fire',
+  FIRE: 'dmg.fire',
+  FORCE: 'dmg.force',
+  LIGHTNING: 'dmg.lightning',
+  NECROTIC: 'dmg.necrotic',
+  PIERCING: 'dmg.piercing',
+  POISON: 'dmg.poison',
+  PSYCHIC: 'dmg.psychic',
+  RADIANT: 'dmg.radiant',
+  SLASHING: 'dmg.slashing',
+  THUNDER: 'dmg.thunder',
+};
+
+/**
+ * Цель части урона. Значения — словарь VTTG (`DamagePartTarget`); в формулу
+ * они не пишутся, а хранятся рядом с ней.
+ */
+export const DAMAGE_FORMULA_TARGET_OPTIONS: Array<{
+  label: string;
+  value: DamageFormulaTarget;
+}> = [
+  { label: 'Выбранная цель', value: 'selected' },
+  { label: 'На себя', value: 'self' },
+  { label: 'Указать отдельно', value: 'choose' },
+];
+
+/** Подписи строки части урона в редакторе — зеркало `DAMAGE_PART_LABELS` VTTG. */
+export const DAMAGE_PART_LABELS = {
+  partPrefix: 'Часть ',
+  formula: 'Формула',
+  formulaPlaceholder: 'Например: 8к6@dmg.fire',
+  target: 'Цель',
+  onlyIfDamaged: 'Только если нанесён урон',
+  onlyIfDamagedHint:
+    'Часть применится, только если урон по цели действительно прошёл — '
+    + '«лечусь, лишь когда задел врага».',
+  addPart: 'Добавить часть',
+  remove: 'Удалить часть',
+  versatile: 'Урон двуручным хватом',
+  versatileHint:
+    'Заменяет формулу части, когда оружие держат двумя руками — свойство '
+    + '«Универсальное».',
 } as const;
