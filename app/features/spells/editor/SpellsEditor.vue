@@ -180,7 +180,7 @@
 
             <div class="grid grid-cols-24 gap-4">
               <UFormField
-                class="col-span-full lg:col-span-12"
+                class="col-span-full"
                 label="Описание"
                 name="description"
               >
@@ -191,7 +191,7 @@
               </UFormField>
 
               <UFormField
-                class="col-span-full lg:col-span-12"
+                class="col-span-full"
                 label="На более высоких уровнях"
                 name="upper"
               >
