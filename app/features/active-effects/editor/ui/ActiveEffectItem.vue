@@ -20,6 +20,7 @@
     ACTIVE_EFFECT_LABELS,
     DEFAULT_EFFECT_AURA,
     DEFAULT_EFFECT_SAVE,
+    describeActiveEffect,
     EFFECT_ABILITY_OPTIONS,
     EFFECT_AREA_TRIGGER_OPTIONS,
     EFFECT_AURA_TARGET_OPTIONS,
@@ -71,6 +72,18 @@
       })),
     ],
   );
+
+  /**
+   * Описание, собранное из текущих настроек эффекта. Пустое — описывать нечего,
+   * и кнопка «Сгенерировать» гасится.
+   */
+  const generatedDescription = computed(() =>
+    describeActiveEffect(model.value),
+  );
+
+  function applyGeneratedDescription() {
+    model.value = { ...model.value, description: generatedDescription.value };
+  }
 
   const tabItems = [
     { label: 'Основное', slot: 'general' as const },
@@ -361,6 +374,36 @@
           <UInput
             v-model="model.icon"
             placeholder="Напр.: tabler:sparkles"
+          />
+        </UFormField>
+
+        <UFormField
+          class="col-span-full"
+          name="description"
+        >
+          <template #label>
+            <div class="flex w-full items-center justify-between gap-2">
+              <span>{{ ACTIVE_EFFECT_LABELS.description }}</span>
+
+              <UButton
+                icon="tabler:wand"
+                size="xs"
+                variant="outline"
+                color="neutral"
+                :disabled="!generatedDescription"
+                :title="ACTIVE_EFFECT_LABELS.generateHint"
+                @click.left.exact.prevent="applyGeneratedDescription"
+              >
+                {{ ACTIVE_EFFECT_LABELS.generate }}
+              </UButton>
+            </div>
+          </template>
+
+          <UTextarea
+            v-model="model.description"
+            :rows="2"
+            autoresize
+            :placeholder="ACTIVE_EFFECT_LABELS.descriptionPlaceholder"
           />
         </UFormField>
 

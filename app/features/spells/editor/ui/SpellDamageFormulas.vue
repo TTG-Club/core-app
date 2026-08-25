@@ -1,28 +1,25 @@
 <script setup lang="ts">
+  import type { SelectOption } from '~/shared/types';
+
   import type { SpellDamageFormulaPart } from '../../model';
 
   import { isEqual } from 'es-toolkit';
 
-  import { DictionaryService } from '~/shared/api';
-
   import { createEmptySpellDamageFormulaPart } from '../../model';
   import SpellDamageFormulaRow from './SpellDamageFormulaRow.vue';
+
+  const { damageTypeOptions, damageTypesPending = false } = defineProps<{
+    /** Типы урона справочника — грузит редактор воздействия, один раз на форму. */
+    damageTypeOptions: Array<SelectOption>;
+    /** Справочник ещё грузится. */
+    damageTypesPending?: boolean;
+  }>();
 
   const model = defineModel<Array<SpellDamageFormulaPart>>({ required: true });
 
   const formulaRows = ref<Array<SpellDamageFormulaPart>>([
     createEmptySpellDamageFormulaPart(),
   ]);
-
-  const { data: damageTypes, status } = await useAsyncData(
-    'dictionaries-damage-types',
-    () => DictionaryService.damageTypes(),
-    { dedupe: 'defer' },
-  );
-
-  const damageTypeItems = computed(() => damageTypes.value ?? []);
-
-  const isDamageTypesPending = computed(() => status.value === 'pending');
 
   function normalizeFormulaRows(
     rows: Array<SpellDamageFormulaPart>,
@@ -101,8 +98,8 @@
       :key="rowIndex"
       :model-value="row"
       :index="rowIndex"
-      :damage-type-options="damageTypeItems"
-      :damage-types-pending="isDamageTypesPending"
+      :damage-type-options="damageTypeOptions"
+      :damage-types-pending="damageTypesPending"
       :is-last="isLastFormula(rowIndex)"
       @update:model-value="updateFormulaRow(rowIndex, $event)"
       @add="addFormula(rowIndex)"

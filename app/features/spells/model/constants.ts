@@ -1,5 +1,6 @@
 import type {
   SpellDamageFormulaTarget,
+  SpellDeliveryType,
   SpellSaveEffect,
   SpellTargetType,
 } from './create';
@@ -40,10 +41,69 @@ export const SPELL_EFFECT_LABELS = {
   saveEffect: 'При успехе',
   saveEffectPlaceholder: 'Выбери эффект',
   conditions: 'Состояния',
+  deliveryType: 'Способ применения',
+  deliveryTypePlaceholder: 'По типу атаки и дистанции',
+  deliveryTypeHint:
+    'Как заклинание достигает цели: рукопашная и дальнобойная добавляют бросок '
+    + 'атаки, «Касание» требует досягаемости, «На себя» включает '
+    + 'автопопадание. Не путать с «Типом цели» — там задают, во что нацелено '
+    + 'заклинание.',
+  attackBonus: 'Бонус к атаке',
+  attackBonusHint:
+    'Фиксированная прибавка сверх характеристики (напр. +1 от магии)',
+  scalingTargets: 'Доп. целей за круг',
+  scalingTargetsHint: 'На сколько растёт число целей за каждый круг выше',
   areaOfEffect: 'Область воздействия',
   areaValue1: 'Радиус/длина',
   areaValue2: 'Высота/ширина',
   areaValuePlaceholder: 'Значение',
+} as const;
+
+/**
+ * Способы применения заклинания — зеркало `DELIVERY_TYPE_OPTIONS` из VTTG.
+ * Не задан — потребитель выводит способ по типу атаки и единице дистанции,
+ * как выводил до появления поля.
+ */
+export const SPELL_DELIVERY_TYPE_OPTIONS: Array<
+  SpellSelectOption<SpellDeliveryType>
+> = [
+  { label: 'Дальнобойная атака', value: 'ranged' },
+  { label: 'Рукопашная атака', value: 'melee' },
+  { label: 'На себя', value: 'self' },
+  { label: 'Касание', value: 'touch' },
+  { label: 'Зрение', value: 'sight' },
+  { label: 'Нет', value: 'none' },
+];
+
+/** Способы применения с броском атаки — только им нужен бонус к атаке. */
+export const SPELL_ATTACK_DELIVERY_TYPES: SpellDeliveryType[] = [
+  'ranged',
+  'melee',
+];
+
+/** Подписи блока масштабирования заклинания. */
+export const SPELL_SCALING_LABELS = {
+  title: 'Масштабирование',
+  hint: 'Усиление при трате ячейки выше круга заклинания.',
+  cantripTitle: 'Масштабирование заговора',
+  cantripHint:
+    'Усиление с ростом уровня персонажа — ячейки заговоры не тратят.',
+  enable: 'Усиление на высших кругах',
+  additionalDice: 'Доп. урон за каждый круг',
+  additionalDicePlaceholder: '1к6',
+  description: 'Описание усиления',
+  descriptionPlaceholder: 'Например: урон увеличивается на 1к6 за круг',
+  fallbackHint:
+    'Не заполнено — потребитель разберёт текст «На более высоких уровнях», '
+    + 'как разбирал раньше.',
+  cantripTiersHint:
+    'Поуровневые тиры: с каждого порога уровня персонажа весь набор частей '
+    + 'урона заменяется целиком. До первого тира работают базовые части выше.',
+  tierLevel: 'С уровня персонажа',
+  tierLevelPlaceholder: '5',
+  tierRemove: 'Удалить тир',
+  tierAdd: 'Добавить уровень',
+  tierPartAdd: 'Добавить часть',
 } as const;
 
 /**

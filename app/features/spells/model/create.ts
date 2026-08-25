@@ -64,6 +64,38 @@ export interface SpellDamageFormulaPart {
 }
 
 /**
+ * Способ применения заклинания — как оно достаёт цель. Зеркало
+ * `SpellDeliveryType` из VTTG: рукопашная и дальнобойная добавляют бросок
+ * атаки, «на себя» включает автопопадание, касание требует досягаемости.
+ */
+export type SpellDeliveryType =
+  | 'ranged'
+  | 'melee'
+  | 'self'
+  | 'touch'
+  | 'sight'
+  | 'none';
+
+/**
+ * Усиление заклинания при трате ячейки выше его круга. Не задано — потребитель
+ * разбирает текст «На более высоких уровнях», как разбирал раньше.
+ */
+export interface SpellScaling {
+  additionalDice: string | undefined; // доп. урон за круг (напр. 1к6)
+  additionalTargets: number | undefined; // доп. целей или снарядов за круг
+  description: string | undefined; // текстовое описание усиления
+}
+
+/**
+ * Тир масштабирования заговора: с указанного уровня персонажа набор частей
+ * урона заменяется целиком — так меняется не только кость, но и тип урона.
+ */
+export interface SpellCantripScalingTier {
+  level: number | undefined; // минимальный уровень персонажа
+  parts: SpellDamageFormulaPart[]; // полный набор частей на этом уровне
+}
+
+/**
  * Порог уровня персонажа → полное число снарядов (для заговоров).
  * Начиная с указанного уровня базовое число снарядов заменяется целиком.
  */
@@ -94,8 +126,12 @@ export interface SpellEffect {
   targetCount?: number;
   areaOfEffect?: SpellAreaOfEffect;
   attackType?: string;
+  deliveryType?: SpellDeliveryType;
+  attackBonus?: number;
   autoHit?: boolean;
   projectiles?: SpellProjectiles;
+  scaling?: SpellScaling;
+  cantripScalingTiers?: SpellCantripScalingTier[];
   damageFormulas?: string[];
   damageFormulaTargets?: SpellDamageFormulaTarget[]; // цели частей урона, по индексам damageFormulas
   damageFormulaRequiresDamage?: boolean[]; // «только если нанесён урон», по индексам damageFormulas
@@ -191,8 +227,12 @@ export function createEmptySpellEffect(): SpellEffect {
       value2: undefined,
     },
     attackType: undefined,
+    deliveryType: undefined,
+    attackBonus: undefined,
     autoHit: false,
     projectiles: undefined,
+    scaling: undefined,
+    cantripScalingTiers: [],
     damageFormulas: [],
     damageFormulaTargets: [],
     damageFormulaRequiresDamage: [],
@@ -203,6 +243,31 @@ export function createEmptySpellEffect(): SpellEffect {
     saveEffect: undefined,
     conditions: [],
     spellcastingAbility: undefined,
+  };
+}
+
+/**
+ * Создаёт пустое усиление на высших кругах (галочка «Масштабирование» включена).
+ *
+ * @returns усиление с незаполненными полями.
+ */
+export function createEmptySpellScaling(): SpellScaling {
+  return {
+    additionalDice: undefined,
+    additionalTargets: undefined,
+    description: undefined,
+  };
+}
+
+/**
+ * Создаёт пустой тир масштабирования заговора с одной частью урона.
+ *
+ * @returns тир без уровня и с пустой частью урона.
+ */
+export function createEmptySpellCantripScalingTier(): SpellCantripScalingTier {
+  return {
+    level: undefined,
+    parts: [createEmptySpellDamageFormulaPart()],
   };
 }
 
@@ -501,6 +566,67 @@ function migrateSpellEffectDamageFormulas(effect: SpellEffect): SpellEffect {
 }
 
 /**
+ * Нормализует усиление на высших кругах: пустые поля не пишутся, а усиление
+ * без единого заполненного поля не пишется вовсе — иначе запись обещала бы
+ * масштабирование, которого нет.
+ *
+ * @param scaling усиление из формы.
+ * @returns усиление для сервера либо `undefined`.
+ */
+function normalizeSpellScaling(
+  scaling: SpellScaling | undefined,
+): SpellScaling | undefined {
+  if (!scaling) {
+    return undefined;
+  }
+
+  const additionalDice = scaling.additionalDice?.trim() || undefined;
+  const description = scaling.description?.trim() || undefined;
+
+  const additionalTargets =
+    scaling.additionalTargets && scaling.additionalTargets > 0
+      ? scaling.additionalTargets
+      : undefined;
+
+  if (!additionalDice && !description && additionalTargets === undefined) {
+    return undefined;
+  }
+
+  return { additionalDice, additionalTargets, description };
+}
+
+/**
+ * Нормализует тиры масштабирования заговора: тир без уровня или без единой
+ * непустой формулы отбрасывается, остальные сортируются по уровню — потребитель
+ * выбирает наибольший подходящий тир и на несортированном списке ошибётся.
+ *
+ * @param tiers тиры из формы.
+ * @returns тиры для сервера либо `undefined`.
+ */
+function normalizeSpellCantripScalingTiers(
+  tiers: SpellCantripScalingTier[] | undefined,
+): SpellCantripScalingTier[] | undefined {
+  if (!tiers?.length) {
+    return undefined;
+  }
+
+  const normalized = tiers
+    .map((tier) => ({
+      level: tier.level,
+      parts: tier.parts
+        .map((part) => ({ ...part, formula: part.formula.trim() }))
+        .filter((part) => part.formula),
+    }))
+    .filter(
+      (tier) =>
+        tier.level !== undefined && tier.level > 0 && tier.parts.length > 0,
+    )
+    .sort((tierA, tierB) => (tierA.level ?? 0) - (tierB.level ?? 0));
+
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+/**
  * Нормализует SpellEffect перед отправкой на сервер:
  * - Удаляет пустые массивы и незаполненные вложенные объекты.
  * - Очищает areaOfEffect, если targetType не AREA.
@@ -587,6 +713,29 @@ export function normalizeSpellEffect(
     if (damageFormulaRequiresDamage.some((requiresDamage) => requiresDamage)) {
       normalized.damageFormulaRequiresDamage = damageFormulaRequiresDamage;
     }
+  }
+
+  if (migratedEffect.deliveryType) {
+    normalized.deliveryType = migratedEffect.deliveryType;
+  }
+
+  // Ноль бонуса и его отсутствие равнозначны — хранить ноль незачем.
+  if (migratedEffect.attackBonus) {
+    normalized.attackBonus = migratedEffect.attackBonus;
+  }
+
+  const scaling = normalizeSpellScaling(migratedEffect.scaling);
+
+  if (scaling) {
+    normalized.scaling = scaling;
+  }
+
+  const cantripScalingTiers = normalizeSpellCantripScalingTiers(
+    migratedEffect.cantripScalingTiers,
+  );
+
+  if (cantripScalingTiers) {
+    normalized.cantripScalingTiers = cantripScalingTiers;
   }
 
   if (migratedEffect.savingThrows && migratedEffect.savingThrows.length > 0) {
@@ -676,6 +825,92 @@ function normalizeLoadedSpellProjectiles(
   };
 }
 
+/** Способы применения, известные потребителю: чужое значение не поднимается. */
+const SPELL_DELIVERY_TYPE_SET: ReadonlySet<string> = new Set<SpellDeliveryType>(
+  ['ranged', 'melee', 'self', 'touch', 'sight', 'none'],
+);
+
+/**
+ * Проверяет, что значение — способ применения из словаря VTTG.
+ *
+ * @param value произвольное значение.
+ * @returns `true`, если это известный способ применения.
+ */
+export function isSpellDeliveryType(
+  value: unknown,
+): value is SpellDeliveryType {
+  return typeof value === 'string' && SPELL_DELIVERY_TYPE_SET.has(value);
+}
+
+/**
+ * Восстанавливает усиление на высших кругах из загруженного raw-значения.
+ *
+ * @param raw значение с сервера.
+ * @returns усиление для формы либо `undefined`.
+ */
+function normalizeLoadedSpellScaling(raw: unknown): SpellScaling | undefined {
+  if (!isRecord(raw)) {
+    return undefined;
+  }
+
+  return {
+    additionalDice:
+      typeof raw.additionalDice === 'string' ? raw.additionalDice : undefined,
+    additionalTargets:
+      typeof raw.additionalTargets === 'number'
+        ? raw.additionalTargets
+        : undefined,
+    description:
+      typeof raw.description === 'string' ? raw.description : undefined,
+  };
+}
+
+/**
+ * Восстанавливает часть урона тира из загруженного raw-значения.
+ *
+ * @param raw значение с сервера.
+ * @returns часть урона для формы.
+ */
+function normalizeLoadedSpellDamagePart(raw: unknown): SpellDamageFormulaPart {
+  if (!isRecord(raw)) {
+    return createEmptySpellDamageFormulaPart();
+  }
+
+  return {
+    formula: typeof raw.formula === 'string' ? raw.formula : '',
+    target: isSpellDamageFormulaTarget(raw.target)
+      ? raw.target
+      : DEFAULT_SPELL_DAMAGE_FORMULA_TARGET,
+    requiresDamage: raw.requiresDamage === true,
+  };
+}
+
+/**
+ * Восстанавливает тиры масштабирования заговора из загруженного raw-значения.
+ * У тира всегда есть хотя бы одна часть — иначе форме нечего показать.
+ *
+ * @param raw значение с сервера.
+ * @returns тиры для формы.
+ */
+function normalizeLoadedSpellCantripScalingTiers(
+  raw: unknown,
+): SpellCantripScalingTier[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+
+  return raw.filter(isRecord).map((tier) => {
+    const parts = Array.isArray(tier.parts)
+      ? tier.parts.map(normalizeLoadedSpellDamagePart)
+      : [];
+
+    return {
+      level: typeof tier.level === 'number' ? tier.level : undefined,
+      parts: parts.length > 0 ? parts : [createEmptySpellDamageFormulaPart()],
+    };
+  });
+}
+
 /**
  * Нормализует загруженный с сервера raw-объект заклинания:
  * - Поддерживает старые записи без effect (мигрирует отдельные поля).
@@ -711,6 +946,17 @@ export function normalizeLoadedSpell(
                 }
               : createEmptySpellEffect().areaOfEffect,
           projectiles: normalizeLoadedSpellProjectiles(rawEffect.projectiles),
+          deliveryType: isSpellDeliveryType(rawEffect.deliveryType)
+            ? rawEffect.deliveryType
+            : undefined,
+          attackBonus:
+            typeof rawEffect.attackBonus === 'number'
+              ? rawEffect.attackBonus
+              : undefined,
+          scaling: normalizeLoadedSpellScaling(rawEffect.scaling),
+          cantripScalingTiers: normalizeLoadedSpellCantripScalingTiers(
+            rawEffect.cantripScalingTiers,
+          ),
         }),
       ),
     );

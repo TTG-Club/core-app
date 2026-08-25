@@ -732,6 +732,11 @@ export const ACTIVE_EFFECT_LABELS = {
   add: 'Добавить эффект',
   remove: 'Удалить эффект',
   unnamed: 'Эффект без названия',
+  description: 'Описание',
+  descriptionPlaceholder:
+    'Чем эффект оборачивается для носителя — коротко, своими словами',
+  generate: 'Сгенерировать',
+  generateHint: 'Собрать описание из настроек эффекта',
   presets: 'Готовые',
   presetsFlagsHint: 'Флаг с готовым ключом — разделами',
   presetsChangesHint: 'Строка с готовым ключом, режимом и значением',

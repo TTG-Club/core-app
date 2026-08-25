@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { SpellDamageFormulaPart, SpellEffect } from '../../model';
 
+  import { DictionaryService } from '~/shared/api';
   import {
     SelectAbilities,
     SelectAttackType,
@@ -10,7 +11,10 @@
 
   import {
     applySpellDamageFormulaParts,
+    createEmptySpellScaling,
     getSpellDamageFormulaParts,
+    SPELL_ATTACK_DELIVERY_TYPES,
+    SPELL_DELIVERY_TYPE_OPTIONS,
     SPELL_EFFECT_LABELS,
     SPELL_PROJECTILE_HINTS,
     SPELL_SAVE_EFFECT_OPTIONS,
@@ -19,12 +23,27 @@
   } from '../../model';
   import SpellDamageFormulas from './SpellDamageFormulas.vue';
   import SpellProjectiles from './SpellProjectiles.vue';
+  import SpellScaling from './SpellScaling.vue';
 
   const { level } = defineProps<{
     level: number; // круг заклинания (нужен снарядному режиму)
   }>();
 
   const model = defineModel<SpellEffect>({ required: true });
+
+  // Справочник типов урона грузится здесь, один раз на всю форму: его просят и
+  // базовые части урона, и тиры масштабирования заговора.
+  const { data: damageTypes, status: damageTypesStatus } = await useAsyncData(
+    'dictionaries-damage-types',
+    () => DictionaryService.damageTypes(),
+    { dedupe: 'defer' },
+  );
+
+  const damageTypeOptions = computed(() => damageTypes.value ?? []);
+
+  const isDamageTypesPending = computed(
+    () => damageTypesStatus.value === 'pending',
+  );
 
   // Формулы и их цели хранятся двумя параллельными массивами, но редактируются
   // как один список частей — иначе два отдельных обновления модели разъезжаются
@@ -59,6 +78,47 @@
     }
 
     return SPELL_PROJECTILE_HINTS.distributed;
+  });
+
+  // Бонус к атаке осмыслен только там, где есть сам бросок атаки.
+  const showAttackBonus = computed(() => {
+    const deliveryType = model.value.deliveryType;
+
+    return (
+      deliveryType !== undefined
+      && SPELL_ATTACK_DELIVERY_TYPES.includes(deliveryType)
+    );
+  });
+
+  // Рост числа целей за круг — только у уровневых заклинаний с целями-существами
+  // или предметами: у снарядных за это отвечает снарядный режим.
+  const showScalingTargets = computed(() => level > 0 && showTargetCount.value);
+
+  const scalingAdditionalTargets = computed({
+    get: () => model.value.scaling?.additionalTargets,
+    set: (value) => {
+      model.value = {
+        ...model.value,
+        scaling: {
+          ...(model.value.scaling ?? createEmptySpellScaling()),
+          additionalTargets: value,
+        },
+      };
+    },
+  });
+
+  const cantripScalingTiers = computed({
+    get: () => model.value.cantripScalingTiers ?? [],
+    set: (tiers) => {
+      model.value = { ...model.value, cantripScalingTiers: tiers };
+    },
+  });
+
+  const scaling = computed({
+    get: () => model.value.scaling,
+    set: (value) => {
+      model.value = { ...model.value, scaling: value };
+    },
   });
 
   const showAreaOfEffect = computed(() => model.value.targetType === 'AREA');
@@ -119,6 +179,20 @@
         />
       </UFormField>
 
+      <!-- Рост числа целей за круг усиления -->
+      <UFormField
+        v-if="showScalingTargets"
+        class="col-span-full md:col-span-12 xl:col-span-6"
+        :label="SPELL_EFFECT_LABELS.scalingTargets"
+        :help="SPELL_EFFECT_LABELS.scalingTargetsHint"
+        name="effect.scaling.additionalTargets"
+      >
+        <UInputNumber
+          v-model="scalingAdditionalTargets"
+          :min="0"
+        />
+      </UFormField>
+
       <!-- Авто попадание -->
       <UFormField
         class="col-span-full md:col-span-12 xl:col-span-6"
@@ -140,6 +214,31 @@
         <SelectAttackType v-model="model.attackType" />
       </UFormField>
 
+      <!-- Способ применения: перебивает вывод по типу атаки и дистанции -->
+      <UFormField
+        class="col-span-full md:col-span-12 xl:col-span-6"
+        :label="SPELL_EFFECT_LABELS.deliveryType"
+        :help="SPELL_EFFECT_LABELS.deliveryTypeHint"
+        name="effect.deliveryType"
+      >
+        <USelect
+          v-model="model.deliveryType"
+          :items="SPELL_DELIVERY_TYPE_OPTIONS"
+          :placeholder="SPELL_EFFECT_LABELS.deliveryTypePlaceholder"
+          clearable
+        />
+      </UFormField>
+
+      <UFormField
+        v-if="showAttackBonus"
+        class="col-span-full md:col-span-12 xl:col-span-6"
+        :label="SPELL_EFFECT_LABELS.attackBonus"
+        :help="SPELL_EFFECT_LABELS.attackBonusHint"
+        name="effect.attackBonus"
+      >
+        <UInputNumber v-model="model.attackBonus" />
+      </UFormField>
+
       <!-- Предупреждение при autoHit + attackType/savingThrows -->
       <UAlert
         v-if="showAutoHitWarning"
@@ -156,7 +255,19 @@
         :hint="projectileHint"
       />
 
-      <SpellDamageFormulas v-model="damageFormulaParts" />
+      <SpellDamageFormulas
+        v-model="damageFormulaParts"
+        :damage-type-options="damageTypeOptions"
+        :damage-types-pending="isDamageTypesPending"
+      />
+
+      <SpellScaling
+        v-model:scaling="scaling"
+        v-model:tiers="cantripScalingTiers"
+        :level="level"
+        :damage-type-options="damageTypeOptions"
+        :damage-types-pending="isDamageTypesPending"
+      />
 
       <!-- Спасброски -->
       <UFormField
