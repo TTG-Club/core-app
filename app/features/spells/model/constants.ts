@@ -160,6 +160,7 @@ export const SPELL_SCALING_LABELS = {
   tierRemove: 'Удалить тир',
   tierAdd: 'Добавить уровень',
   tierPartAdd: 'Добавить часть',
+  tierPartsEmpty: 'У тира нет частей — он ничего не заменит.',
 } as const;
 
 /**
@@ -250,7 +251,10 @@ export const SPELL_DAMAGE_FORMULA_TARGET_OPTIONS: Array<
 
 /** Подписи строки части урона в редакторе — зеркало `DAMAGE_PART_LABELS` VTTG. */
 export const SPELL_DAMAGE_PART_LABELS = {
-  partPrefix: 'Урон, часть ',
+  partPrefix: 'Часть ',
+  empty:
+    'Урона и лечения нет. Заклинание может обходиться без них — например, '
+    + 'накладывать состояние или менять числа активным эффектом.',
   formula: 'Формула',
   formulaPlaceholder: 'Например: 8к6@dmg.fire',
   target: 'Цель',
@@ -259,8 +263,7 @@ export const SPELL_DAMAGE_PART_LABELS = {
     'Часть применится, только если урон по цели действительно прошёл — '
     + '«лечусь, лишь когда задел врага».',
   addPart: 'Добавить часть',
-  clear: 'Очистить',
-  remove: 'Удалить',
+  remove: 'Удалить часть',
 } as const;
 export const DEFAULT_SPELL_DAMAGE_FORMULA_TARGET: SpellDamageFormulaTarget =
   'selected';

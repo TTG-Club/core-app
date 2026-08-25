@@ -146,17 +146,17 @@
     });
   }
 
-  function addTierPart(tierIndex: number, partIndex: number) {
+  function addTierPart(tierIndex: number) {
     const tier = tiers.value[tierIndex];
 
     if (!tier) {
       return;
     }
 
-    const parts = [...tier.parts];
-
-    parts.splice(partIndex + 1, 0, createEmptySpellDamageFormulaPart());
-    updateTier(tierIndex, { ...tier, parts });
+    updateTier(tierIndex, {
+      ...tier,
+      parts: [...tier.parts, createEmptySpellDamageFormulaPart()],
+    });
   }
 
   function removeTierPart(tierIndex: number, partIndex: number) {
@@ -171,15 +171,11 @@
       parts: tier.parts.filter((_, position) => position !== partIndex),
     });
   }
-
-  function clearTierPart(tierIndex: number, partIndex: number) {
-    updateTierPart(tierIndex, partIndex, createEmptySpellDamageFormulaPart());
-  }
 </script>
 
 <template>
   <div
-    class="col-span-full flex flex-col gap-3 rounded-lg border border-muted bg-elevated/30 p-3"
+    class="col-span-full flex flex-col gap-3 rounded-lg border border-muted/60 bg-elevated/20 p-3"
   >
     <div class="flex flex-wrap items-center justify-between gap-2">
       <div class="flex min-w-0 flex-col">
@@ -242,7 +238,7 @@
       <div
         v-for="(tier, tierIndex) in tiers"
         :key="tierIndex"
-        class="flex flex-col gap-3 rounded-lg border border-default p-3"
+        class="flex flex-col gap-3 rounded-lg border border-muted/60 bg-elevated/20 p-3"
       >
         <div class="flex items-end justify-between gap-3">
           <UFormField
@@ -269,6 +265,13 @@
           />
         </div>
 
+        <p
+          v-if="!tier.parts.length"
+          class="rounded-lg border border-dashed border-default p-3 text-center text-xs text-dimmed italic"
+        >
+          {{ SPELL_SCALING_LABELS.tierPartsEmpty }}
+        </p>
+
         <SpellDamageFormulaRow
           v-for="(part, partIndex) in tier.parts"
           :key="partIndex"
@@ -276,12 +279,19 @@
           :index="partIndex"
           :damage-type-options="damageTypeOptions"
           :damage-types-pending="damageTypesPending"
-          :is-last="partIndex === tier.parts.length - 1"
           @update:model-value="updateTierPart(tierIndex, partIndex, $event)"
-          @add="addTierPart(tierIndex, partIndex)"
-          @clear="clearTierPart(tierIndex, partIndex)"
           @remove="removeTierPart(tierIndex, partIndex)"
         />
+
+        <UButton
+          icon="tabler:plus"
+          size="xs"
+          variant="soft"
+          class="self-start"
+          @click.left.exact.prevent="addTierPart(tierIndex)"
+        >
+          {{ SPELL_SCALING_LABELS.tierPartAdd }}
+        </UButton>
       </div>
 
       <UButton

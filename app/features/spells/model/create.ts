@@ -746,31 +746,31 @@ export function normalizeSpellEffect(
     );
   }
 
-  if (
-    migratedEffect.damageFormulas
-    && migratedEffect.damageFormulas.length > 0
-  ) {
-    normalized.damageFormulas = migratedEffect.damageFormulas;
+  // Незаполненные части отбрасываются здесь, а не в форме: заклинание бывает и
+  // вовсе без урона, и пустая часть в редакторе — нормальное состояние.
+  const damageParts = getSpellDamageFormulaParts(migratedEffect)
+    .map((part) => ({ ...part, formula: part.formula.trim() }))
+    .filter((part) => part.formula);
 
-    const damageFormulaTargets = migratedEffect.damageFormulaTargets ?? [];
+  if (damageParts.length > 0) {
+    normalized.damageFormulas = damageParts.map((part) => part.formula);
 
     // Цели пишутся, только если хоть одна часть уходит не в выбранную цель:
     // `selected` — дефолт VTTG, хранить его в справочнике незачем.
-    const hasCustomTarget = damageFormulaTargets.some(
-      (target) => target !== DEFAULT_SPELL_DAMAGE_FORMULA_TARGET,
+    const hasCustomTarget = damageParts.some(
+      (part) => part.target !== DEFAULT_SPELL_DAMAGE_FORMULA_TARGET,
     );
 
     if (hasCustomTarget) {
-      normalized.damageFormulaTargets = damageFormulaTargets;
+      normalized.damageFormulaTargets = damageParts.map((part) => part.target);
     }
-
-    const damageFormulaRequiresDamage =
-      migratedEffect.damageFormulaRequiresDamage ?? [];
 
     // Как и с целями: `false` — дефолт VTTG, хранить массив из одних нулей в
     // справочнике незачем.
-    if (damageFormulaRequiresDamage.some((requiresDamage) => requiresDamage)) {
-      normalized.damageFormulaRequiresDamage = damageFormulaRequiresDamage;
+    if (damageParts.some((part) => part.requiresDamage)) {
+      normalized.damageFormulaRequiresDamage = damageParts.map(
+        (part) => part.requiresDamage,
+      );
     }
   }
 

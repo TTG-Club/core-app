@@ -19,7 +19,6 @@
     index,
     damageTypeOptions,
     damageTypesPending = false,
-    isLast = false,
   } = defineProps<{
     /** Порядковый номер части — идёт в подпись и в имя поля формы. */
     index: number;
@@ -27,14 +26,10 @@
     damageTypeOptions: Array<SelectOption>;
     /** Справочник ещё грузится. */
     damageTypesPending?: boolean;
-    /** Последняя часть в списке: у неё вместо «Удалить» — «Очистить». */
-    isLast?: boolean;
   }>();
 
   const emit = defineEmits<{
-    add: [];
     remove: [];
-    clear: [];
   }>();
 
   /** Часть урона: формула, цель и признак «только если нанесён урон». */
@@ -78,13 +73,27 @@
 </script>
 
 <template>
-  <UFormField
-    :label="`${SPELL_DAMAGE_PART_LABELS.partPrefix}${index + 1}`"
-    :name="`effect.damageFormulas.${index}`"
-  >
-    <div
-      class="flex flex-col gap-3 rounded-lg border border-default bg-muted p-3"
-    >
+  <!-- Заголовок и кнопка удаления живут ВНУТРИ рамки части, как секция формы
+    в системе: снаружи остаётся только «Добавить часть» -->
+  <div class="rounded-lg border border-muted/60 bg-elevated/20 px-3 pt-2 pb-3">
+    <div class="mb-2 flex h-6 items-center justify-between gap-2">
+      <span
+        class="truncate text-xs font-semibold tracking-wide text-highlighted"
+      >
+        {{ SPELL_DAMAGE_PART_LABELS.partPrefix }}{{ index + 1 }}
+      </span>
+
+      <UButton
+        icon="tabler:trash"
+        color="error"
+        variant="ghost"
+        size="xs"
+        :aria-label="SPELL_DAMAGE_PART_LABELS.remove"
+        @click.left.exact.prevent="emit('remove')"
+      />
+    </div>
+
+    <div class="flex flex-col gap-3">
       <DamageFormulaInput
         v-model="formula"
         :damage-type-options="damageTypeTags"
@@ -118,40 +127,6 @@
           />
         </UFormField>
       </div>
-
-      <div class="flex flex-wrap gap-2">
-        <UButton
-          icon="tabler:plus"
-          size="xs"
-          variant="subtle"
-          @click.left.exact.prevent="emit('add')"
-        >
-          {{ SPELL_DAMAGE_PART_LABELS.addPart }}
-        </UButton>
-
-        <UButton
-          v-if="isLast"
-          icon="tabler:eraser"
-          size="xs"
-          variant="subtle"
-          color="error"
-          :disabled="!model.formula"
-          @click.left.exact.prevent="emit('clear')"
-        >
-          {{ SPELL_DAMAGE_PART_LABELS.clear }}
-        </UButton>
-
-        <UButton
-          v-else
-          icon="tabler:trash"
-          size="xs"
-          variant="subtle"
-          color="error"
-          @click.left.exact.prevent="emit('remove')"
-        >
-          {{ SPELL_DAMAGE_PART_LABELS.remove }}
-        </UButton>
-      </div>
     </div>
-  </UFormField>
+  </div>
 </template>
