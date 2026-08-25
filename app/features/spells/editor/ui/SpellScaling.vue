@@ -175,7 +175,7 @@
 
 <template>
   <div
-    class="col-span-full flex flex-col gap-3 rounded-lg border border-muted/60 bg-elevated/20 p-3"
+    class="col-span-full flex flex-col gap-3 rounded-lg border border-default bg-elevated/20 p-3"
   >
     <div class="flex flex-wrap items-center justify-between gap-2">
       <div class="flex min-w-0 flex-col">
@@ -238,7 +238,7 @@
       <div
         v-for="(tier, tierIndex) in tiers"
         :key="tierIndex"
-        class="flex flex-col gap-3 rounded-lg border border-muted/60 bg-elevated/20 p-3"
+        class="flex flex-col gap-3 rounded-lg border border-default bg-elevated/20 p-3"
       >
         <div class="flex items-end justify-between gap-3">
           <UFormField

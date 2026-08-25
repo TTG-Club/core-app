@@ -560,7 +560,7 @@
         <!-- Триггер ауры -->
         <div
           v-if="isAura"
-          class="rounded-lg border border-muted bg-elevated/30 p-3"
+          class="rounded-lg border border-default bg-elevated/30 p-3"
         >
           <UFormField label="Триггер ауры">
             <USelect
@@ -576,7 +576,7 @@
         </div>
 
         <!-- Спасбросок при наложении -->
-        <div class="rounded-lg border border-muted bg-elevated/30 p-3">
+        <div class="rounded-lg border border-default bg-elevated/30 p-3">
           <UCheckbox
             v-model="hasApplySave"
             label="Спасбросок при наложении"
@@ -651,7 +651,7 @@
 
         <!-- Урон при наложении -->
         <div
-          class="space-y-2 rounded-lg border border-muted bg-elevated/30 p-3"
+          class="space-y-2 rounded-lg border border-default bg-elevated/30 p-3"
         >
           <div class="flex items-center gap-2">
             <UIcon
@@ -671,7 +671,7 @@
         </div>
 
         <!-- Периодический спасбросок -->
-        <div class="rounded-lg border border-muted bg-elevated/30 p-3">
+        <div class="rounded-lg border border-default bg-elevated/30 p-3">
           <UCheckbox
             v-model="hasRecurringSave"
             label="Периодический спасбросок снимает эффект"
@@ -722,7 +722,7 @@
         </div>
 
         <!-- Периодический урон (DoT) -->
-        <div class="rounded-lg border border-muted bg-elevated/30 p-3">
+        <div class="rounded-lg border border-default bg-elevated/30 p-3">
           <UCheckbox
             v-model="hasRecurringDamage"
             label="Периодический урон (каждый ход)"
@@ -751,7 +751,7 @@
         </div>
 
         <!-- Иммунитет к состояниям -->
-        <div class="rounded-lg border border-muted bg-elevated/30 p-3">
+        <div class="rounded-lg border border-default bg-elevated/30 p-3">
           <div class="flex items-center gap-2">
             <UIcon
               name="tabler:shield-check"

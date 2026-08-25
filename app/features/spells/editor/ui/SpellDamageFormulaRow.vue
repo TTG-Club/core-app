@@ -75,7 +75,7 @@
 <template>
   <!-- Заголовок и кнопка удаления живут ВНУТРИ рамки части, как секция формы
     в системе: снаружи остаётся только «Добавить часть» -->
-  <div class="rounded-lg border border-muted/60 bg-elevated/20 px-3 pt-2 pb-3">
+  <div class="rounded-lg border border-default bg-elevated/20 px-3 pt-2 pb-3">
     <div class="mb-2 flex h-6 items-center justify-between gap-2">
       <span
         class="truncate text-xs font-semibold tracking-wide text-highlighted"

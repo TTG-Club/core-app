@@ -127,7 +127,7 @@
       <div
         v-for="(effect, index) in model"
         :key="index"
-        class="rounded-lg border border-muted/60 bg-elevated/20"
+        class="rounded-lg border border-default bg-elevated/20"
       >
         <div class="flex items-center gap-2 px-3 py-2">
           <UIcon
@@ -166,7 +166,7 @@
 
         <div
           v-if="isExpanded(index)"
-          class="border-t border-muted/60 p-3"
+          class="border-t border-default p-3"
         >
           <ActiveEffectItem
             :model-value="effect"

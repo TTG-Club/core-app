@@ -61,7 +61,11 @@
 
   const tools = computed<Array<{ label: string; slot: DamageFormulaToolSlot }>>(
     () => {
-      const items: Array<{ label: string; slot: DamageFormulaToolSlot }> = [];
+      // Порядок вкладок системы, но «Кости» впереди: в справочнике формулу
+      // набирают с нуля, а не правят готовую — начинают всегда с кости.
+      const items: Array<{ label: string; slot: DamageFormulaToolSlot }> = [
+        { label: DAMAGE_FORMULA_LABELS.dice, slot: 'dice' },
+      ];
 
       if (!hideModifiers) {
         items.push({
@@ -70,10 +74,10 @@
         });
       }
 
-      items.push(
-        { label: DAMAGE_FORMULA_LABELS.dice, slot: 'dice' },
-        { label: DAMAGE_FORMULA_LABELS.damageTypes, slot: 'damageTypes' },
-      );
+      items.push({
+        label: DAMAGE_FORMULA_LABELS.damageTypes,
+        slot: 'damageTypes',
+      });
 
       if (!hideHealing) {
         items.push({ label: DAMAGE_FORMULA_LABELS.healing, slot: 'healing' });
