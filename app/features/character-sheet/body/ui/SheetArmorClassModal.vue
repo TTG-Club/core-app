@@ -13,7 +13,6 @@
     DEFAULT_ARMOR_CLASS_ABILITY,
     getArmorClassBreakdown,
     getArmorDexCappedLabel,
-    getFormattedBonus,
     getUnarmoredArmorClassLabel,
     toSelectedAbilityKeys,
   } from '../../model';

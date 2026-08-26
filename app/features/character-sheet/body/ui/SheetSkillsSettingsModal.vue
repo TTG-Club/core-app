@@ -8,7 +8,6 @@
     CUSTOM_SKILLS_MAX,
     DEFAULT_CUSTOM_SKILL_ABILITY,
     getDefaultSkillAbility,
-    getFormattedBonus,
     getSkillRowGroups,
     getSkillValue,
     hasSkillName,

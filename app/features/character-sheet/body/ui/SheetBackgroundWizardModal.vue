@@ -27,6 +27,8 @@
     ABILITY_LABELS,
     ABILITY_ORDER,
     BACKGROUND_ABILITY_MODE_OPTIONS,
+    BACKGROUND_TOOL_CHOICE_ID,
+    BACKGROUND_WIZARD_LABELS,
     BACKGROUND_WIZARD_TAB_LABELS,
     BACKGROUND_WIZARD_TAB_ORDER,
     BACKGROUNDS_DETAIL_BASE_PATH,
@@ -174,6 +176,13 @@
   const backgroundDetail = ref<BackgroundSummary | null>(null);
 
   /**
+   * Черта предыстории: названная ею самой либо выбранная игроком из списка.
+   * Хранится отдельно от детали, потому что список можно перевыбрать, не
+   * перезагружая предысторию.
+   */
+  const selectedFeatUrl = ref<string | null>(null);
+
+  /**
    * Описание выбранной предыстории со второго шага: на первом оно открывалось
    * из строки списка, а после выбора свериться с текстом было уже не по чему.
    */
@@ -185,8 +194,8 @@
 
   /** Описание черты, которую даёт выбранная предыстория. */
   function handleBackgroundFeatPreview() {
-    if (backgroundDetail.value?.featUrl) {
-      handleFeatPreview(backgroundDetail.value.featUrl);
+    if (selectedFeatUrl.value) {
+      handleFeatPreview(selectedFeatUrl.value);
     }
   }
 
@@ -196,6 +205,27 @@
    * задать вопрос не будет.
    */
   const featSummary = ref<FeatSummary | null>(null);
+
+  /** Черты на выбор — пункты селекта; пусто, если черта у предыстории одна. */
+  const featChoiceItems = computed(() =>
+    (backgroundDetail.value?.featChoices ?? []).map((option) => ({
+      label: option.name,
+      value: option.url,
+    })),
+  );
+
+  /** Название черты в шапке раздела: у выбранной оно приходит с её деталью. */
+  const featTitle = computed<string>(
+    () => featSummary.value?.name ?? backgroundDetail.value?.featName ?? '',
+  );
+
+  /**
+   * Собственные дары предыстории: владения, языки, защиты, выборы игрока и
+   * заклинания сверх канонических. null — предыстория их не даёт.
+   */
+  const ownGrants = computed<FeatSummary | null>(
+    () => backgroundDetail.value?.ownGrants ?? null,
+  );
 
   const isStepLoading = ref(false);
 
@@ -450,19 +480,46 @@
       .map((choice) => withSpellListClassNames(choice, classOptions.value));
   });
 
-  /** Все выборы черты отвечены сполна — иначе применять рано. */
-  const isFeatChoiceComplete = computed<boolean>(() =>
-    featChoices.value.every(
-      (choice) =>
-        (selections.value[choice.id]?.length ?? 0) >= choiceCount(choice),
+  /**
+   * Выборы собственных даров предыстории: язык на выбор, тип защиты и прочее,
+   * что она предлагает назвать сама, помимо черты.
+   */
+  const grantChoices = computed<ClassChoice[]>(() =>
+    getVisibleFeatChoices(ownGrants.value?.choices ?? [], selections.value).map(
+      (choice) => withSpellListClassNames(choice, classOptions.value),
     ),
+  );
+
+  /**
+   * Незакрытые выборы списка: по ним считается и счётчик на вкладке, и запрет
+   * применения.
+   *
+   * @param choices выборы раздела.
+   * @returns выборы, на которые ответов ещё не хватает.
+   */
+  function getPendingChoices(choices: ClassChoice[]): ClassChoice[] {
+    return choices.filter(
+      (choice) =>
+        (selections.value[choice.id]?.length ?? 0) < choiceCount(choice),
+    );
+  }
+
+  /** Все выборы черты отвечены сполна — иначе применять рано. */
+  const isFeatChoiceComplete = computed<boolean>(
+    () => !getPendingChoices(featChoices.value).length,
+  );
+
+  /** То же для собственных даров предыстории. */
+  const isGrantChoiceComplete = computed<boolean>(
+    () => !getPendingChoices(grantChoices.value).length,
   );
 
   const isApplyDisabled = computed(
     () =>
       !backgroundDetail.value
       || !isAbilityChoiceValid.value
-      || !isFeatChoiceComplete.value,
+      || !isFeatChoiceComplete.value
+      || !isGrantChoiceComplete.value,
   );
 
   /** Открытый раздел второго шага. */
@@ -477,11 +534,8 @@
    */
   const pendingByTab = computed<Record<BackgroundWizardTab, number>>(() => ({
     abilities: isAbilityChoiceValid.value ? 0 : 1,
-    proficiencies: 0,
-    feat: featChoices.value.filter(
-      (choice) =>
-        (selections.value[choice.id]?.length ?? 0) < choiceCount(choice),
-    ).length,
+    proficiencies: getPendingChoices(grantChoices.value).length,
+    feat: getPendingChoices(featChoices.value).length,
     equipment: 0,
   }));
 
@@ -506,9 +560,10 @@
         detail.skills.length
         || detail.skillsText
         || detail.toolChoice
-        || detail.toolFixed.length,
+        || detail.toolFixed.length
+        || grantChoices.value.length,
       ),
-      feat: !!detail.featUrl,
+      feat: Boolean(detail.featUrl || detail.featChoices.length),
       equipment: Boolean(
         startingEquipmentOptions.value.length || detail.equipment.length,
       ),
@@ -561,7 +616,12 @@
     collectChosenSpells,
     load: loadSpellPools,
   } = useFeatChoiceSpells({
-    summaries: () => (featSummary.value ? [featSummary.value] : []),
+    // Обе сводки сразу: заклинание бывает и у черты происхождения, и у самой
+    // предыстории, а пул грузится одним проходом по выборам
+    summaries: () =>
+      [featSummary.value, ownGrants.value].filter(
+        (summary): summary is FeatSummary => !!summary,
+      ),
     answers: selections,
     resolveClassUrls: (choice) => getChoiceClassUrls(choice),
   });
@@ -634,19 +694,22 @@
   }
 
   /**
-   * Ответы игрока на выборы черты по ключу выбора: id пикера — это
-   * `feat:<url>:<ключ>`, а в записи ответы лежат под самим ключом, потому что у
-   * повторяемой черты id записи получает ещё и уникальный суффикс.
+   * Ответы игрока на выборы записи по ключу выбора: id пикера — это
+   * `<источник>:<url>:<ключ>`, а в записи ответы лежат под самим ключом, потому
+   * что у повторяемой черты id записи получает ещё и уникальный суффикс.
    *
+   * @param summary сводка, чьи выборы собираются: черта либо дары предыстории.
    * @returns ответы по ключу выбора.
    */
-  function collectFeatChoiceAnswers(): Record<string, string[]> {
+  function collectChoiceAnswers(
+    summary: FeatSummary | null,
+  ): Record<string, string[]> {
     const answers: Record<string, string[]> = {};
 
     // Не только показанные пикеры: за скрытый выбор списка ответила сама
     // предыстория, и без записанного ответа лист потом не сузит пул заклинаний
     // до названного ею класса
-    for (const choice of featSummary.value?.choices ?? []) {
+    for (const choice of summary?.choices ?? []) {
       // Выборы повышения характеристик заведены самим листом: ключа выбора в
       // механике у них нет, а ответ уходит в прибавки к характеристикам.
       if (
@@ -701,6 +764,33 @@
     return parseFeatDetail(response);
   }
 
+  /**
+   * Перевыбор черты из списка предыстории: деталь новой черты грузится сразу —
+   * её выборы показываются в том же разделе, а пул заклинаний зависит от неё.
+   *
+   * @param value url выбранной черты.
+   */
+  async function handleFeatChoiceChange(value: unknown) {
+    const url = typeof value === 'string' && value ? value : null;
+
+    if (!url || url === selectedFeatUrl.value || isStepLoading.value) {
+      return;
+    }
+
+    isStepLoading.value = true;
+
+    try {
+      selectedFeatUrl.value = url;
+      featSummary.value = await fetchFeatDetail(url);
+      await loadSpellPools();
+    } catch (error) {
+      consola.error('Ошибка загрузки черты предыстории:', error);
+      showLoadError();
+    } finally {
+      isStepLoading.value = false;
+    }
+  }
+
   async function handleNext() {
     const option = selectedOption.value;
 
@@ -728,8 +818,15 @@
       plusTwoAbility.value = undefined;
       plusOneAbility.value = undefined;
 
-      featSummary.value = backgroundDetail.value.featUrl
-        ? await fetchFeatDetail(backgroundDetail.value.featUrl)
+      // Черта на выбор: первая предлагается по умолчанию — иначе раздел открылся
+      // бы пустым, и игрок не увидел бы, о чём его вообще спрашивают
+      selectedFeatUrl.value =
+        backgroundDetail.value.featUrl
+        ?? backgroundDetail.value.featChoices[0]?.url
+        ?? null;
+
+      featSummary.value = selectedFeatUrl.value
+        ? await fetchFeatDetail(selectedFeatUrl.value)
         : null;
 
       // Пул заклинаний зависит от загруженной черты, поэтому грузится следом.
@@ -778,6 +875,13 @@
 
       let featFeature: CharacterFeature | null = null;
 
+      // Навыки самой предыстории тоже считаются владением: они лягут на лист
+      // вместе с записями, и компетентность в них выбрать можно
+      const backgroundSkills = [
+        ...proficientSkillNames.value,
+        ...(detail.skills ?? []),
+      ];
+
       // Деталь черты уже загружена на переходе к обзору: там же игрок ответил
       // на её выборы, и повторный запрос вернул бы то же самое.
       const summary = featSummary.value;
@@ -792,11 +896,9 @@
           proficiencies: collectChosenProficiencies(
             featChoices.value,
             selections.value,
-            // Навыки самой предыстории тоже считаются владением: они лягут на
-            // лист вместе с чертой.
-            [...proficientSkillNames.value, ...(detail.skills ?? [])],
+            backgroundSkills,
           ),
-          choiceAnswers: collectFeatChoiceAnswers(),
+          choiceAnswers: collectChoiceAnswers(summary),
           spells: collectChosenSpells(summary),
           abilityIncreases: getFeatAbilityIncreases(
             summary,
@@ -814,6 +916,36 @@
         featFeature = feature;
       }
 
+      // Собственные дары предыстории — своей записью умения: снимок владений,
+      // бонусов и ответов лист применяет и снимает так же, как у черты.
+      const grants = ownGrants.value;
+
+      const backgroundFeature = grants
+        ? buildFeatFeature(grants, {
+            level: ORIGIN_FEAT_ACQUISITION_LEVEL,
+            origin: 'background',
+            // Бейдж источника уже говорит «Предыстория», а название записи —
+            // это имя самой предыстории: вторая подпись повторяла бы его
+            originName: '',
+            proficiencies: collectChosenProficiencies(
+              grantChoices.value,
+              selections.value,
+              backgroundSkills,
+            ),
+            choiceAnswers: collectChoiceAnswers(grants),
+            spells: collectChosenSpells(grants),
+            abilityIncreases: getFeatAbilityIncreases(
+              grants,
+              character.value.abilities,
+              selections.value,
+            ),
+            spellcastingAbility: getFeatSpellcastingAbility(
+              grants,
+              selections.value,
+            ),
+          })
+        : null;
+
       setBackground({
         background: { url: detail.url, name: detail.name },
         abilityBonuses: computeAbilityBonuses(
@@ -827,13 +959,16 @@
         // каталогом сайта: ненайденное станет своим инструментом без ссылки.
         tools: resolveTools([
           ...detail.toolFixed,
-          ...(selections.value['background-tool'] ?? []).map((name) => ({
-            name,
-            url: null,
-          })),
+          ...(selections.value[BACKGROUND_TOOL_CHOICE_ID] ?? []).map(
+            (name) => ({
+              name,
+              url: null,
+            }),
+          ),
         ]),
-        featUrl: detail.featUrl,
+        featUrl: selectedFeatUrl.value,
         featFeature,
+        backgroundFeature,
         // Снаряжение применяется вместе с предысторией: лист сам снимет набор
         // прошлого выбора, поэтому её смена не копит предметы и монеты.
         startingEquipment: startingEquipmentOption
@@ -1087,7 +1222,7 @@
 
                 <SheetChoiceSelect
                   v-if="backgroundDetail.toolChoice"
-                  :model-value="selections['background-tool'] ?? []"
+                  :model-value="selections[BACKGROUND_TOOL_CHOICE_ID] ?? []"
                   :items="choiceOptions(backgroundDetail.toolChoice)"
                   :count="choiceCount(backgroundDetail.toolChoice)"
                   :placeholder="`${CHOICE_SELECT_PLACEHOLDER} ${choiceCount(backgroundDetail.toolChoice)}`"
@@ -1118,12 +1253,59 @@
                   </span>
                 </div>
               </div>
+
+              <!-- Предыстория может дать что-то на выбор и сама: язык, тип
+                защиты, заклинание — ответить нужно здесь же -->
+              <div
+                v-for="choice in grantChoices"
+                :key="choice.id"
+                class="flex flex-col gap-1"
+              >
+                <span class="text-sm text-toned">{{ choice.label }}</span>
+
+                <SheetFeatSpellsPicker
+                  v-if="choice.kind === 'spell'"
+                  :model-value="selections[choice.id] ?? []"
+                  :items="getSpellPool(choice)"
+                  :count="choiceCount(choice)"
+                  :label="choice.label"
+                  @update:model-value="updateSelection(choice, $event)"
+                />
+
+                <SheetChoiceSelect
+                  v-else
+                  :model-value="selections[choice.id] ?? []"
+                  :items="choiceOptions(choice)"
+                  :count="choiceCount(choice)"
+                  :placeholder="`${CHOICE_SELECT_PLACEHOLDER} ${choiceCount(choice)}`"
+                  @update:model-value="updateSelection(choice, $event)"
+                />
+              </div>
             </template>
 
             <template v-else-if="reviewTab === 'feat'">
+              <!-- Черта на выбор: предыстория перечисляет несколько, и какая из
+                них попадёт на лист, решает игрок -->
+              <div
+                v-if="featChoiceItems.length"
+                class="flex flex-col gap-1"
+              >
+                <span class="text-sm text-toned">
+                  {{ BACKGROUND_WIZARD_LABELS.featChoice }}
+                </span>
+
+                <USelect
+                  :model-value="selectedFeatUrl ?? undefined"
+                  :items="featChoiceItems"
+                  :loading="isStepLoading"
+                  :placeholder="BACKGROUND_WIZARD_LABELS.featChoicePlaceholder"
+                  @update:model-value="handleFeatChoiceChange"
+                />
+              </div>
+
               <div class="flex items-center gap-2">
                 <span class="text-sm font-medium text-highlighted">
-                  {{ backgroundDetail.featName }}
+                  {{ featTitle }}
                   <span
                     v-if="backgroundDetail.featSubchoice"
                     class="text-muted"

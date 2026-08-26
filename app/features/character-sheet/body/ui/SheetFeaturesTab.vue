@@ -98,12 +98,13 @@
 
   /**
    * Цвета бейджа происхождения: вид — зелёный, подвид — синий, класс —
-   * основной цвет темы, черта — акцентный.
+   * основной цвет темы, предыстория — предупреждающий, черта — акцентный.
    */
   const ORIGIN_BADGE_COLORS = {
     species: 'success',
     lineage: 'info',
     class: 'primary',
+    background: 'warning',
     feat: 'secondary',
     none: 'neutral',
   } as const;

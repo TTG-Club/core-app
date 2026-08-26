@@ -1,4 +1,5 @@
 import type { ActiveEffect } from '~active-effects/model';
+import type { DamageFormulaPart } from '~ui/damage-formula';
 import type { EditorBaseInfoState } from '~ui/editor';
 
 import { z } from 'zod';
@@ -7,6 +8,10 @@ import {
   normalizeActiveEffects,
   normalizeLoadedActiveEffects,
 } from '~active-effects/model';
+import {
+  normalizeDamageFormulaParts,
+  parseLoadedDamageFormulaParts,
+} from '~ui/damage-formula';
 
 export interface MagicItemCreate extends EditorBaseInfoState {
   description: string; // описание маркап
@@ -19,6 +24,11 @@ export interface MagicItemCreate extends EditorBaseInfoState {
   category: MagicItemCategory;
   items: Array<string>; // связанные немагические предметы (url) для веса/стоимости и фильтра
   bonuses: MagicItemBonuses; // что магия добавляет поверх немагического предмета
+  // Кости, которые магия добавляет к броску основы («2к6 огнём» Огненного языка).
+  // Основной урон описывает сам базовый предмет.
+  damageParts: Array<DamageFormulaPart>;
+  focus: boolean; // предметом колдуют как заклинательной фокусировкой
+  adamantine: boolean; // адамантиновый предмет
   // Как предмет влияет на лист персонажа. В форме — всегда объект, в теле
   // запроса — `null`, если заполнять было нечего.
   mechanics: MagicItemMechanics | null;
@@ -243,6 +253,7 @@ export function normalizeLoadedMagicItem(
   raw: Record<string, unknown>,
 ): Record<string, unknown> {
   const mechanics = normalizeLoadedMagicItemMechanics(raw.mechanics);
+  const damageParts = parseLoadedDamageFormulaParts(raw.damageParts);
 
   const legacyCharges = z.coerce
     .number()
@@ -252,11 +263,33 @@ export function normalizeLoadedMagicItem(
     .catch(null)
     .parse(raw.charges);
 
-  if (!mechanics.resource.maxCharges && legacyCharges) {
-    mechanics.resource.maxCharges = legacyCharges;
-  }
+  const resource =
+    !mechanics.resource.maxCharges && legacyCharges
+      ? { ...mechanics.resource, maxCharges: legacyCharges }
+      : mechanics.resource;
 
-  return { ...raw, mechanics };
+  return { ...raw, mechanics: { ...mechanics, resource }, damageParts };
+}
+
+/**
+ * Состояние формы для отправки: пустая механика уходит как `null`, незаполненные
+ * строки урона отбрасываются, а число зарядов дублируется в отдельное поле раздела
+ * ради фильтра каталога «с зарядами».
+ *
+ * @param state состояние формы.
+ * @returns тело запроса.
+ */
+export function normalizeMagicItemBeforeSubmit(
+  state: MagicItemCreate,
+): MagicItemCreate {
+  return {
+    ...state,
+    mechanics: state.mechanics
+      ? normalizeMagicItemMechanics(state.mechanics)
+      : null,
+    damageParts: normalizeDamageFormulaParts(state.damageParts),
+    charges: getMagicItemChargesField(state.mechanics),
+  };
 }
 
 /**

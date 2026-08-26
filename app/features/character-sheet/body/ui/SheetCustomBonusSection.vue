@@ -12,7 +12,6 @@
     CUSTOM_BONUS_MIN,
     CUSTOM_BONUS_SOURCE_OPTIONS,
     getCustomBonusesValue,
-    getFormattedBonus,
     SHEET_REVEAL_CONTROL_CLASS,
     SHEET_SETTINGS_LABELS,
   } from '../../model';

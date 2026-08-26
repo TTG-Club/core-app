@@ -21,6 +21,10 @@ import type {
   FeatureDescriptionNode,
   GrantedProficiencies,
   InventoryArmor,
+  InventoryBonusActivation,
+  InventoryChargesEvent,
+  InventoryChargesRecovery,
+  InventoryExtraDamage,
   InventoryWeapon,
   InventoryWeaponDamage,
   ItemCatalogItem,
@@ -44,6 +48,11 @@ import {
   EMPTY_MAGIC_ITEM_BONUSES,
   MAGIC_ITEM_BONUS_NONE,
 } from '~magic-items/model';
+import {
+  DAMAGE_TYPE_LABELS,
+  parseDamageFormulaDice,
+  parseLoadedDamageFormulaParts,
+} from '~ui/damage-formula';
 
 import {
   descriptionNodesSchema,
@@ -58,9 +67,10 @@ import {
   API_SHORT_REST_RECOVERY,
   ARMOR_GROUP_BY_API_CATEGORY,
   ARMOR_PROFICIENCY_GROUPS,
+  BACKGROUND_TOOL_CHOICE_ID,
+  BACKGROUND_TOOL_CHOICE_LABEL,
   CANTRIP_SPELL_LEVEL,
   CURRENCY_KEYS_BY_LABEL,
-  DAMAGE_TYPE_LABELS,
   DAMAGE_TYPE_NAMES,
   FEAT_SPELL_CLASS_CHOICE_KEY,
   INVENTORY_QUANTITY_MAX,
@@ -437,6 +447,8 @@ const featDetailSchema = z.object({
   name: z.object({ rus: z.string().catch('') }),
   category: z.string().catch(''),
   description: descriptionNodesSchema,
+  // Эффекты разбирает своя схема раздела — здесь они `unknown`.
+  activeEffects: z.unknown(),
   mechanics: z
     .object({
       modifiers: featModifiersSchema,
@@ -1133,6 +1145,7 @@ export function parseFeatDetail(input: unknown): FeatSummary | null {
     category: result.data.category,
     description: result.data.description,
     modifiers: result.data.mechanics?.modifiers ?? null,
+    activeEffects: normalizeLoadedActiveEffects(result.data.activeEffects),
     proficiencies: proficiencies ? toGrantedProficiencies(proficiencies) : null,
     // Уровень доступа едет вместе с записью: заклинание с ним попадёт на лист
     // только когда персонаж дорастёт (см. `getAvailableInnateSpells`)
@@ -1329,11 +1342,23 @@ const magicItemRawSchema = z
     // Старое плоское поле зарядов раздела: у большинства записей заполнено
     // только оно, поэтому оно и остаётся запасным источником максимума.
     charges: z.coerce.number().nullable().catch(null),
+    // Дополнительный урон магии; части урона разбирает общая схема редактора.
+    damageParts: z.unknown(),
     // Механика влияния на лист; записи до её появления приходят без блока.
     mechanics: z
       .object({
+        activation: z.string().nullable().catch(null),
+        passive: z.string().nullable().catch(null),
         resource: z
-          .object({ maxCharges: z.coerce.number().nullable().catch(null) })
+          .object({
+            maxCharges: z.coerce.number().nullable().catch(null),
+            recharge: z.string().nullable().catch(null),
+            rechargeEvent: z
+              .enum(['DAWN', 'SHORT_REST', 'LONG_REST'])
+              .nullable()
+              .catch(null),
+            cost: z.coerce.number().nullable().catch(null),
+          })
           .nullable()
           .catch(null),
         // Активные эффекты разбирает своя схема раздела — здесь они `unknown`.
@@ -1348,8 +1373,70 @@ const magicItemRawSchema = z
     bonuses: null,
     attunement: null,
     charges: null,
+    damageParts: undefined,
     mechanics: null,
   });
+
+/**
+ * Условие применения раздела → случай листа. Носить при себе достаточно
+ * («CARRIED»), включаемым предметам нужен переключатель, всему остальному —
+ * надеть: так лист вёл себя и до появления условия.
+ */
+const MAGIC_ITEM_BONUS_ACTIVATION: Record<string, InventoryBonusActivation> = {
+  CARRIED: 'carried',
+  CONSUMED: 'manual',
+  MANUAL: 'manual',
+};
+
+/**
+ * Дополнительный урон магии из её частей. Берём первую часть с разбираемой
+ * формулой: `InventoryExtraDamage` листа — один бросок своего типа, и вторая
+ * такая же строка ему негде показать.
+ *
+ * @param raw части урона из «сырого» ответа.
+ * @returns дополнительный урон; null — частей нет или формула сложнее костей.
+ */
+function toMagicItemExtraDamage(raw: unknown): InventoryExtraDamage | null {
+  for (const part of parseLoadedDamageFormulaParts(raw)) {
+    const dice = parseDamageFormulaDice(part.formula);
+
+    if (dice && dice.diceCount > 0) {
+      return {
+        diceCount: dice.diceCount,
+        diceFaces: dice.diceFaces,
+        type: dice.type,
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Правило восстановления зарядов предмета.
+ *
+ * @param resource блок зарядов из «сырого» ответа.
+ * @param maxCharges максимум зарядов; 0 — зарядов нет.
+ * @returns правило восстановления; null — зарядов нет.
+ */
+function toMagicItemChargesRecovery(
+  resource: {
+    recharge: string | null;
+    rechargeEvent: InventoryChargesEvent | null;
+    cost: number | null;
+  } | null,
+  maxCharges: number,
+): InventoryChargesRecovery | null {
+  if (maxCharges <= 0) {
+    return null;
+  }
+
+  return {
+    event: resource?.rechargeEvent ?? null,
+    formula: resource?.recharge?.trim() ?? '',
+    cost: Math.max(0, Math.trunc(resource?.cost ?? 0)),
+  };
+}
 
 /**
  * Валидация «сырого» ответа `GET /api/v2/magic-items/{url}/raw`.
@@ -1365,15 +1452,26 @@ export function parseMagicItemRaw(input: unknown): MagicItemRawDetail {
   const maxCharges =
     parsed.mechanics?.resource?.maxCharges ?? parsed.charges ?? 0;
 
+  const normalizedCharges = Math.max(0, Math.trunc(maxCharges));
+
   return {
     rarity: parsed.rarity?.type ?? 'UNKNOWN',
     baseItemUrls: parsed.items,
     bonuses: parsed.bonuses ?? EMPTY_MAGIC_ITEM_BONUSES,
     requiresAttunement: parsed.attunement?.requires ?? false,
-    maxCharges: Math.max(0, Math.trunc(maxCharges)),
+    maxCharges: normalizedCharges,
     activeEffects: normalizeLoadedActiveEffects(
       parsed.mechanics?.activeEffects,
     ),
+    bonusActivation:
+      MAGIC_ITEM_BONUS_ACTIVATION[parsed.mechanics?.activation ?? '']
+      ?? 'equipped',
+    passive: parsed.mechanics?.passive?.trim() ?? '',
+    chargesRecovery: toMagicItemChargesRecovery(
+      parsed.mechanics?.resource ?? null,
+      normalizedCharges,
+    ),
+    extraDamage: toMagicItemExtraDamage(parsed.damageParts),
   };
 }
 
@@ -1385,6 +1483,8 @@ const itemDetailSchema = z.object({
   types: z.string().catch(''),
   cost: z.string().catch(''),
   weight: z.string().catch(''),
+  // Эффекты разбирает своя схема раздела — здесь они `unknown`.
+  activeEffects: z.unknown(),
 });
 
 /**
@@ -1410,6 +1510,7 @@ export function parseItemDetail(input: unknown): ItemSummary | null {
     // Публичная деталь структуру доспеха/оружия не отдаёт — её докладывает /raw.
     armor: null,
     weapon: null,
+    activeEffects: normalizeLoadedActiveEffects(result.data.activeEffects),
   };
 }
 
@@ -1512,9 +1613,18 @@ const itemRawWeaponVersatileSchema = z
   .catch(null);
 
 /**
+ * Схема части урона оружия: формулы вокабуляра VTTG, которыми справочник
+ * описывает урон после перехода на части.
+ */
+const itemRawDamagePartSchema = z.object({
+  formula: z.string().catch(''),
+  versatileFormula: z.string().nullable().catch(null),
+});
+
+/**
  * Схема «сырого» ответа предмета в части оружия (форма `WeaponCreate` редактора):
  * категория (простое/воинское, рукопашное/дальнобойное), свойства, боеприпас и
- * урон — обычный и по свойству «Универсальное».
+ * урон — частями-формулами и прежней связкой «кости + тип».
  */
 const itemRawWeaponSchema = z
   .object({
@@ -1523,6 +1633,7 @@ const itemRawWeaponSchema = z
         category: z.string().catch(''),
         properties: z.array(z.string()).catch([]),
         ammo: z.string().nullable().catch(null),
+        damageParts: z.array(itemRawDamagePartSchema).nullable().catch(null),
         damage: itemRawWeaponDamageSchema,
         versatile: itemRawWeaponVersatileSchema,
       })
@@ -1596,9 +1707,83 @@ function parseWeaponVersatileDamage(
 }
 
 /**
+ * Урон из части-формулы справочника. Формулу сложнее простых костей лист
+ * посчитать не может (модификаторы и условия по цели считает виртуальный
+ * стол) — такая часть даёт null, и разбор откатывается к прежней связке
+ * «кости + тип».
+ *
+ * @param formula формула части урона.
+ * @param fallbackType тип урона основной части — им подписывается урон
+ *   двуручного хвата: тип у оружия один на оба хвата.
+ * @returns урон оружия или null.
+ */
+function parseDamagePartFormula(
+  formula: string | null | undefined,
+  fallbackType = '',
+): InventoryWeaponDamage | null {
+  const dice = parseDamageFormulaDice(formula ?? undefined);
+
+  if (!dice || dice.diceCount <= 0 || dice.diceFaces <= 0) {
+    return null;
+  }
+
+  return {
+    diceCount: dice.diceCount,
+    diceFaces: dice.diceFaces,
+    bonus: dice.bonus,
+    type: dice.type || fallbackType,
+  };
+}
+
+/**
+ * Урон оружия из частей-формул: первая часть — основной урон и урон двуручного
+ * хвата, вторая — дополнительный урон своего типа («2к6 огнём»).
+ *
+ * Части — источник истины справочника после перехода на формулы; прежняя связка
+ * «кости + тип» остаётся у записей, сохранённых раньше, и у той, чью формулу в
+ * кости не разложить.
+ *
+ * @param parts части урона из «сырого» ответа; null — их нет.
+ * @returns урон, урон двуручного хвата и дополнительный урон; null — частей
+ *   нет либо первая не раскладывается в кости.
+ */
+function parseWeaponDamageParts(
+  parts: Array<z.infer<typeof itemRawDamagePartSchema>> | null,
+): Pick<InventoryWeapon, 'damage' | 'versatileDamage' | 'extraDamage'> | null {
+  const [firstPart, secondPart] = parts ?? [];
+  const damage = parseDamagePartFormula(firstPart?.formula);
+
+  if (!damage) {
+    return null;
+  }
+
+  const extra = parseDamagePartFormula(secondPart?.formula);
+
+  return {
+    damage,
+    versatileDamage: parseDamagePartFormula(
+      firstPart?.versatileFormula,
+      damage.type,
+    ),
+    // У дополнительного урона своего бонуса нет: плоскую надбавку предмет
+    // даёт основным броском.
+    extraDamage: extra
+      ? {
+          diceCount: extra.diceCount,
+          diceFaces: extra.diceFaces,
+          type: extra.type,
+        }
+      : null,
+  };
+}
+
+/**
  * Разбор параметров оружия из «сырого» ответа предмета для подсчёта бонуса атаки.
  * Категория владения и признаки «дальнобойное»/«фехтовальное» распознаются по
  * категории/свойствам (RU- и EN-корни) — устойчиво к формату справочника на бэке.
+ *
+ * Урон берётся из частей-формул, а без них — из прежней связки «кости + тип»,
+ * как у записей, сохранённых до перехода на формулы.
  *
  * @param input сырой ответ `GET /api/v2/item/{url}/raw`.
  * @returns параметры оружия или null (не оружие либо нет данных).
@@ -1611,6 +1796,17 @@ export function parseItemWeapon(input: unknown): InventoryWeapon | null {
   }
 
   const damage = parseWeaponDamage(weapon.damage);
+
+  const damageFromParts = parseWeaponDamageParts(weapon.damageParts);
+
+  const legacyDamage = {
+    damage,
+    // Свойство «Универсальное» распознаём по самому броску, а не по строке в
+    // `properties`: без второй кости переключать хват всё равно нечем.
+    versatileDamage: parseWeaponVersatileDamage(weapon.versatile, damage),
+    // Дополнительный урон прежняя связка выразить не могла: у неё один бросок.
+    extraDamage: null,
+  };
 
   return {
     category: /martial|воинск/i.test(weapon.category) ? 'martial' : 'simple',
@@ -1627,13 +1823,7 @@ export function parseItemWeapon(input: unknown): InventoryWeapon | null {
     ),
     // Немагическое оружие своего бонуса к атаке не имеет: его даёт только магия.
     attackBonus: MAGIC_ITEM_BONUS_NONE,
-    damage,
-    // Свойство «Универсальное» распознаём по самому броску, а не по строке в
-    // `properties`: без второй кости переключать хват всё равно нечем.
-    versatileDamage: parseWeaponVersatileDamage(weapon.versatile, damage),
-    // Дополнительный урон своего типа справочник предметов не отдаёт: его даёт
-    // магия, и на листе он появляется только у своего предмета.
-    extraDamage: null,
+    ...(damageFromParts ?? legacyDamage),
   };
 }
 
@@ -2025,6 +2215,12 @@ export function parseBackgroundOptions(input: unknown): BackgroundOption[] {
   }));
 }
 
+/** Ссылка на запись справочника в JSONB-полях предыстории. */
+const backgroundRefSchema = z.object({
+  url: z.string(),
+  name: z.string().nullable().catch(null),
+});
+
 /** Схема детального ответа предыстории (нужные листу поля). */
 const backgroundDetailSchema = z.object({
   url: z.string(),
@@ -2032,13 +2228,89 @@ const backgroundDetailSchema = z.object({
   abilityScores: z.string().catch(''),
   skillProficiencies: z.string().catch(''),
   feat: z.string().catch(''),
+  // Черты на выбор; у предысторий книги черта одна и лежит в `feat`.
+  featChoices: z.array(backgroundRefSchema).catch([]),
   toolProficiency: z.array(z.string()).catch([]),
+  // Владение инструментами ссылками — главнее текста: по ним лист находит
+  // карточку каталога, не разбирая разметку.
+  toolProficiencies: z.array(backgroundRefSchema).catch([]),
+  toolChoice: z
+    .object({
+      count: z.number().nullable().catch(null),
+      from: z.array(backgroundRefSchema).catch([]),
+    })
+    .nullable()
+    .catch(null),
   // Справка приходит как описание раздела — строки-абзацы вперемешку с узлами
   // разметки (список вариантов «А)/Б)»), поэтому массивом строк не разбирается.
   equipment: descriptionNodesSchema,
   // Разбирается отдельной функцией: то же поле есть и у класса.
   startingEquipment: z.unknown(),
 });
+
+/** Ссылки предыстории с непустой подписью — те, что лист может показать. */
+interface BackgroundRef {
+  url: string;
+  name: string | null;
+}
+
+/**
+ * Владения инструментами из ссылок мастерской.
+ *
+ * @param refs ссылки на карточки инструментов.
+ * @returns владения с подписью и адресом карточки.
+ */
+function toToolProficiencies(
+  refs: BackgroundRef[],
+): CharacterToolProficiency[] {
+  return refs
+    .filter((reference) => reference.name)
+    .map((reference) => ({ name: reference.name ?? '', url: reference.url }));
+}
+
+/**
+ * Выбор инструмента, заданный структурой мастерской. Пустой пул означает выбор
+ * из всего каталога — так предыстория и написана в книге («инструмент на ваш
+ * выбор»).
+ *
+ * @param choice блок выбора из ответа.
+ * @returns выбор для мастера; null — выбора у предыстории нет.
+ */
+function toBackgroundToolChoice(
+  choice: { count: number | null; from: BackgroundRef[] } | null,
+): ClassChoice | null {
+  if (!choice?.count || choice.count < 1) {
+    return null;
+  }
+
+  return {
+    id: BACKGROUND_TOOL_CHOICE_ID,
+    kind: 'tool',
+    label: BACKGROUND_TOOL_CHOICE_LABEL,
+    count: choice.count,
+    listed: choice.from
+      .filter((reference) => reference.name)
+      .map((reference) => reference.name ?? ''),
+  };
+}
+
+/**
+ * Есть ли у предыстории собственные дары, ради которых заводить запись умения.
+ *
+ * @param grants дары, разобранные схемой черты.
+ * @returns признак «есть что применять».
+ */
+function hasOwnBackgroundGrants(grants: FeatSummary): boolean {
+  return Boolean(
+    grants.proficiencies
+    || grants.modifiers
+    || grants.activeEffects.length
+    || grants.spells?.length
+    || grants.choices.length
+    || grants.abilityBonuses.length
+    || grants.counters.length,
+  );
+}
 
 /**
  * Валидация детального ответа `GET /api/v2/backgrounds/{url}`.
@@ -2059,26 +2331,45 @@ export function parseBackgroundDetail(
 
   const detail = result.data;
 
-  const toolFixed: CharacterToolProficiency[] = [];
+  const toolFixed: CharacterToolProficiency[] = toToolProficiencies(
+    detail.toolProficiencies,
+  );
 
-  let toolChoice: ClassChoice | null = null;
+  let toolChoice: ClassChoice | null = toBackgroundToolChoice(
+    detail.toolChoice,
+  );
 
-  for (const toolText of detail.toolProficiency) {
-    // Владения приходят с разметкой каталога («{@item Воровские
-    // инструменты|url:thieves-tools-phb}»): подпись идёт в лист, ссылка —
-    // в кнопку описания инструмента.
-    const tool = parseToolMarker(toolText);
+  // Текст читается, только пока владение не задано ссылками: у переведённых
+  // записей он остаётся прежней прозой и продублировал бы уже выданное.
+  if (!toolFixed.length && !toolChoice) {
+    for (const toolText of detail.toolProficiency) {
+      // Владения приходят с разметкой каталога («{@item Воровские
+      // инструменты|url:thieves-tools-phb}»): подпись идёт в лист, ссылка —
+      // в кнопку описания инструмента.
+      const tool = parseToolMarker(toolText);
 
-    const choice = getClassToolChoice(tool.name, 'background-tool');
+      const choice = getClassToolChoice(tool.name, BACKGROUND_TOOL_CHOICE_ID);
 
-    if (choice) {
-      toolChoice = toolChoice ?? choice;
-    } else if (tool.name) {
-      toolFixed.push(tool);
+      if (choice) {
+        toolChoice = toolChoice ?? choice;
+      } else if (tool.name) {
+        toolFixed.push(tool);
+      }
     }
   }
 
   const feat = parseFeatMarker(detail.feat);
+
+  // Собственные дары предыстории разбираются схемой черты: модель у них общая,
+  // и лист применяет их одинаково — записью умения со снимком владений.
+  // Описание записи пустое: полный текст предыстории живёт на её странице, а в
+  // умении он был бы простынёй на всю вкладку.
+  const parsedGrants = parseFeatDetail(input);
+
+  const ownGrants =
+    parsedGrants && hasOwnBackgroundGrants(parsedGrants)
+      ? { ...parsedGrants, description: [], category: '' }
+      : null;
 
   return {
     url: detail.url,
@@ -2094,6 +2385,13 @@ export function parseBackgroundDetail(
     featUrl: feat.url,
     featName: feat.name,
     featSubchoice: feat.subchoice,
+    featChoices: detail.featChoices
+      .filter((reference) => reference.name)
+      .map((reference) => ({
+        url: reference.url,
+        name: reference.name ?? '',
+      })),
+    ownGrants,
     equipment: detail.equipment,
     startingEquipment: toStartingEquipmentOptions(detail.startingEquipment),
   };

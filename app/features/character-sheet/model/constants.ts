@@ -60,6 +60,7 @@ import { range } from 'es-toolkit';
 
 import { AbilityKey as ApiAbilityKey } from '~/shared/types';
 import { CasterType } from '~classes/model';
+import { DAMAGE_TYPE_LABELS } from '~ui/damage-formula';
 
 /** Название инструмента «Лист персонажа». */
 export const CHARACTER_SHEET_TITLE = 'Лист персонажа';
@@ -1960,6 +1961,9 @@ export const LEVEL_UP_HIT_POINTS_LABELS: Record<
 /** Подпись ячеек заклинаний договора колдуна в списке того, что вернёт отдых. */
 export const PACT_SPELL_SLOTS_LABEL = 'Ячейки заклинаний договора';
 
+/** Приставка подписи предмета, которому отдых вернёт заряды. */
+export const INVENTORY_CHARGES_RECOVERY_LABEL = 'Заряды';
+
 /** Подпись всех ячеек заклинаний в списке того, что вернёт отдых. */
 export const ALL_SPELL_SLOTS_LABEL = 'Ячейки заклинаний';
 
@@ -2298,6 +2302,15 @@ export const FEATS_DETAIL_BASE_PATH = '/api/v2/feats';
 
 /** Категория черт, доступных через классовое умение выбора боевого стиля. */
 export const FIGHTING_STYLE_FEAT_CATEGORIES = ['FIGHTING_STYLE'];
+
+/**
+ * Идентификатор выбора инструмента предыстории: под ним лежит ответ игрока и
+ * его же читает применение — у предыстории такой выбор один.
+ */
+export const BACKGROUND_TOOL_CHOICE_ID = 'background-tool';
+
+/** Заголовок пикера выбора инструмента предыстории. */
+export const BACKGROUND_TOOL_CHOICE_LABEL = 'Владение инструментами';
 
 /** Подпись выбора боевого стиля в визарде класса. */
 export const FIGHTING_STYLE_CHOICE_LABEL =
@@ -2887,6 +2900,12 @@ export const BACKGROUND_WIZARD_TAB_LABELS: Record<BackgroundWizardTab, string> =
     equipment: 'Снаряжение',
   };
 
+/** Подписи мастера предыстории, не привязанные к разделам. */
+export const BACKGROUND_WIZARD_LABELS = {
+  featChoice: 'Черта на выбор',
+  featChoicePlaceholder: 'Выбери черту',
+} as const;
+
 /** Подписи формы своей предыстории. */
 export const CUSTOM_BACKGROUND_LABELS = {
   openButton: 'Своя предыстория',
@@ -3288,6 +3307,10 @@ export const DEFAULT_INVENTORY_MAGIC_STATE: InventoryMagicState = {
   attuned: false,
   active: false,
   charges: null,
+  // Условие применения и пассивное свойство приходят только из раздела
+  // «Магические предметы»; у остальных записей бонусы работают надетыми.
+  bonusActivation: 'equipped',
+  passiveNote: '',
 };
 
 /**
@@ -3461,29 +3484,6 @@ export const SHEET_ROLL_HINT_LABEL = 'нажми, чтобы бросить';
 
 /** Заголовок предупреждения о том, что тратить ячейки круга уже нечего. */
 export const SPELL_SLOTS_EMPTY_TOAST_TITLE = 'Ячейки закончились';
-
-/**
- * Названия типов урона справочника предметов
- * (`/api/v2/dictionaries/damage/types`) — для подписи урона оружия. Ключ `FAIR` —
- * прежнее имя огненного урона: справочник отдаёт `FIRE`, но листы, сохранённые до
- * переименования, всё ещё хранят старое значение.
- */
-export const DAMAGE_TYPE_LABELS: Record<string, string> = {
-  ACID: 'Кислотный',
-  BLUDGEONING: 'Дробящий',
-  COLD: 'Холодный',
-  FAIR: 'Огненный',
-  FIRE: 'Огненный',
-  FORCE: 'Силовое поле',
-  LIGHTNING: 'Электрический',
-  NECROTIC: 'Некротический',
-  PIERCING: 'Колющий',
-  POISON: 'Ядовитый',
-  PSYCHIC: 'Психический',
-  RADIANT: 'Излучение',
-  SLASHING: 'Рубящий',
-  THUNDER: 'Звуковой',
-};
 
 /**
  * Названия состояний справочника (`/api/v2/dictionaries/conditions`) — для
@@ -4129,6 +4129,7 @@ export const FEATURE_ORIGIN_LABELS: Record<FeatureOrigin, string> = {
   lineage: 'Подвид',
   class: 'Класс',
   feat: 'Черта',
+  background: 'Предыстория',
   none: 'Своё',
 };
 
@@ -4139,6 +4140,7 @@ export const FEATURE_ORIGIN_LABELS: Record<FeatureOrigin, string> = {
 export const FEATURE_ORIGIN_GROUP_ORDER: FeatureOriginGroup[] = [
   'species',
   'class',
+  'background',
   'feat',
   'none',
 ];
@@ -4147,6 +4149,7 @@ export const FEATURE_ORIGIN_GROUP_ORDER: FeatureOriginGroup[] = [
 export const FEATURE_ORIGIN_GROUP_HINTS: Record<FeatureOriginGroup, string> = {
   species: 'Оставить в списке особенности вида и подвида',
   class: 'Оставить в списке особенности класса',
+  background: 'Оставить в списке дары предыстории',
   feat: 'Оставить в списке черты',
   none: 'Оставить в списке свои особенности',
 };

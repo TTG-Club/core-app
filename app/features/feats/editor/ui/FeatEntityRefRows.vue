@@ -25,9 +25,16 @@
    * Своё поле у строки — через слот `row`: у выдаваемых чертой заклинаний это
    * уровень, с которого заклинание доступно.
    */
-  const { kind } = defineProps<{
+  const { kind, featCategories = [] } = defineProps<{
     /** Раздел справочника, из которого выбираются записи. */
     kind: FeatRefKind;
+
+    /**
+     * Категории черт, из которых выбирают (`['ORIGIN']`); пусто — предлагаются
+     * все. Предыстория даёт только черту происхождения, и общая черта в её
+     * списке была бы ошибкой правил, а не выбором автора.
+     */
+    featCategories?: Array<string>;
   }>();
 
   const model = defineModel<Array<FeatEntityRef>>({ required: true });
@@ -184,6 +191,7 @@
       v-if="kind === 'FEAT'"
       :model-value="pickedUrl"
       :exclude-urls="urls"
+      :categories="featCategories"
       @update:model-value="addRef"
     />
 

@@ -4,6 +4,7 @@
   import { isString } from 'es-toolkit';
 
   import { DictionaryService } from '~/shared/api';
+  import { SPELL_USAGE_LABELS } from '~spells/model';
   import { EditorArrayControls } from '~ui/editor';
 
   const ranges = defineModel<Array<SpellRange>>({
@@ -82,12 +83,6 @@
 </script>
 
 <template>
-  <div class="col-span-full mt-4 flex flex-col gap-2 sm:flex-row sm:gap-4">
-    <p class="shrink-0 text-lg">Дистанция</p>
-
-    <USeparator />
-  </div>
-
   <UForm
     v-for="(range, index) in ranges"
     :key="index"
@@ -96,7 +91,7 @@
     :state="range"
   >
     <UFormField
-      label="Дистанция"
+      :label="SPELL_USAGE_LABELS.rangeValue"
       name="value"
       class="col-span-full md:col-span-6 xl:col-span-4"
     >
@@ -105,12 +100,12 @@
         :disabled="isValueDisabled(range.unit)"
         :precision="0"
         :min="0"
-        placeholder="Введи значение"
+        :placeholder="SPELL_USAGE_LABELS.amountPlaceholder"
       />
     </UFormField>
 
     <UFormField
-      label="Тип дистанции"
+      :label="SPELL_USAGE_LABELS.rangeUnit"
       name="unit"
       class="col-span-full md:col-span-6 xl:col-span-4"
     >
@@ -118,19 +113,19 @@
         :model-value="range.unit"
         :loading="status === 'pending'"
         :items="units || []"
-        placeholder="Выбери из списка"
+        :placeholder="SPELL_USAGE_LABELS.unitPlaceholder"
         @update:model-value="updateUnit($event, index)"
       />
     </UFormField>
 
     <UFormField
       class="col-span-full xl:col-span-10"
-      label="Собственное значение"
+      :label="SPELL_USAGE_LABELS.custom"
       name="custom"
     >
       <UInput
         v-model="range.custom"
-        placeholder="Введи значение"
+        :placeholder="SPELL_USAGE_LABELS.amountPlaceholder"
       />
     </UFormField>
 

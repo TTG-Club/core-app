@@ -19,7 +19,6 @@
     CANTRIP_SPELL_LEVEL,
     CUSTOM_SPELL_BADGE_HINT,
     getFilterChipClass,
-    getFormattedBonus,
     getInnateSpellMenuItems,
     getPreparedSpellsHint,
     getPreparedSpellsValue,

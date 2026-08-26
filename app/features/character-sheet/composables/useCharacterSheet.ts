@@ -43,6 +43,8 @@ import type {
 
 import { clamp, union } from 'es-toolkit';
 
+import { useDiceRoller } from '~dice-roller/composables';
+
 import {
   ABILITY_ORDER,
   ABILITY_SCORE_MAX,
@@ -83,13 +85,13 @@ import {
   getAttunementLimitDescription,
   getCarryingCapacityValue,
   getCharacterClasses,
+  getCharacterFeatureId,
   getCharacterProficiencyBonus,
   getClampedClassLevels,
   getClampedInteger,
   getClassLevelHitPoints,
   getEffectiveSpeed,
   getFeatDefences,
-  getFormattedBonus,
   getInitiativeBonus,
   getInventoryWeight,
   getNextLevelExperience,
@@ -137,6 +139,7 @@ import {
   RESOURCE_SHORT_LABEL_MAX_LENGTH,
   restoreClassResources,
   restoreHitDice,
+  restoreInventoryCharges,
   setFeatureSpellcastingAbility,
   setFeatureSpellPrepared,
   SHEET_HIDDEN_CONTROL_CLASS,
@@ -203,6 +206,10 @@ function clampCurrencyAmount(amount: number): number {
  */
 export function useCharacterSheet() {
   const toast = useToast();
+
+  // Отдых катит формулу возврата зарядов предмета («1к6+4»): справочник задаёт
+  // её строкой, а не числом.
+  const { rollValue } = useDiceRoller();
 
   const character = useState<Character>('character-sheet:character', () =>
     structuredClone(DEFAULT_CHARACTER),
@@ -1345,11 +1352,11 @@ export function useCharacterSheet() {
 
   /**
    * Завершение короткого отдыха: ресурсам класса возвращается столько зарядов,
-   * сколько задано их правилом для короткого отдыха, и восстанавливаются ячейки
+   * сколько задано их правилом для короткого отдыха, восстанавливаются ячейки
    * заклинаний договора колдуна (у остальных классов ячейки возвращает только
-   * продолжительный отдых). Кости хитов и хиты тратит {@link spendHitDice} —
-   * отдых их не возвращает. Игровое действие — блокировкой листа не
-   * ограничивается.
+   * продолжительный отдых) и заряды предметов, откатывающихся коротким отдыхом.
+   * Кости хитов и хиты тратит {@link spendHitDice} — отдых их не возвращает.
+   * Игровое действие — блокировкой листа не ограничивается.
    */
   function completeShortRest(): void {
     if (!ensureOwnSheet()) {
@@ -1376,6 +1383,11 @@ export function useCharacterSheet() {
       spellSlots: character.value.spellSlots.filter(
         (slot) => !shortRestKinds.has(slot.kind),
       ),
+      inventory: restoreInventoryCharges(
+        character.value.inventory,
+        'short-rest',
+        rollValue,
+      ),
     };
   }
 
@@ -1384,9 +1396,10 @@ export function useCharacterSheet() {
    * хиты пропадают (держатся только до конца отдыха), возвращаются все ячейки
    * заклинаний и все потраченные кости хитов — в редакции 2024 года отдых
    * возвращает их полностью, а не половину. Счётчикам умений возвращается
-   * столько зарядов, сколько задано их правилом для продолжительного отдыха.
-   * Отдых снимает один уровень истощения. Игровое действие: запертый лист его
-   * разрешает, чужой — нет.
+   * столько зарядов, сколько задано их правилом для продолжительного отдыха, а
+   * предметам — заряды, откатывающиеся отдыхом или рассветом. Отдых снимает
+   * один уровень истощения. Игровое действие: запертый лист его разрешает,
+   * чужой — нет.
    */
   function completeLongRest(): void {
     if (!ensureOwnSheet()) {
@@ -1418,6 +1431,11 @@ export function useCharacterSheet() {
       ),
       // Хранится только трата ячеек, поэтому пустой список — все ячейки на месте.
       spellSlots: [],
+      inventory: restoreInventoryCharges(
+        character.value.inventory,
+        'long-rest',
+        rollValue,
+      ),
     };
   }
 
@@ -1923,6 +1941,8 @@ export function useCharacterSheet() {
    * @param payload.tools владения инструментами (фикс + выбранный).
    * @param payload.featUrl URL черты происхождения; null — нет.
    * @param payload.featFeature особенность черты; null — не добавлять.
+   * @param payload.backgroundFeature особенность с собственными дарами
+   *   предыстории; null — предыстория даёт только каноническое.
    * @param payload.startingEquipment выбранный вариант стартового снаряжения; null — не выдавать.
    */
   function setBackground(payload: {
@@ -1932,6 +1952,13 @@ export function useCharacterSheet() {
     tools: CharacterToolProficiency[];
     featUrl: string | null;
     featFeature: CharacterFeature | null;
+    /**
+     * Собственные дары предыстории записью умения (владения, языки, защиты,
+     * заклинания, пассивные бонусы); null — предыстория даёт только
+     * каноническое. Записью, а не отдельными полями: снимок владений, бонусов и
+     * ответов на выборы лист уже умеет применять и снимать именно так.
+     */
+    backgroundFeature: CharacterFeature | null;
     startingEquipment: StartingEquipmentGrant | null;
   }): void {
     if (!ensureEditable()) {
@@ -1955,16 +1982,28 @@ export function useCharacterSheet() {
       );
     }
 
-    // Черта предыстории: убрать прошлую и любую копию новой, затем добавить.
-    const previousFeatId = previous?.featUrl
-      ? `feat:${previous.featUrl}`
-      : null;
-
-    const newFeatId = payload.featFeature?.id ?? null;
+    // Записи предыстории: убрать прошлые и любые копии новых, затем добавить.
+    // Дары предыстории идут своей записью рядом с чертой происхождения — у них
+    // разные источники, и снимаются они независимо.
+    const replacedFeatureIds = new Set(
+      [
+        previous?.featUrl
+          ? getCharacterFeatureId('feat', previous.featUrl)
+          : null,
+        previous ? getCharacterFeatureId('background', previous.url) : null,
+        payload.featFeature?.id ?? null,
+        payload.backgroundFeature?.id ?? null,
+      ].filter((featureId): featureId is string => !!featureId),
+    );
 
     const preservedFeatures = character.value.features.filter(
-      (feature) => feature.id !== previousFeatId && feature.id !== newFeatId,
+      (feature) => !replacedFeatureIds.has(feature.id),
     );
+
+    const backgroundFeatures = [
+      payload.featFeature,
+      payload.backgroundFeature,
+    ].filter((feature): feature is CharacterFeature => !!feature);
 
     // Инструменты предыстории — её выдача: смена предыстории забирает прежние и
     // выдаёт новые. Навыки предыстории в журнал не идут: ими она наделяет через
@@ -2022,9 +2061,7 @@ export function useCharacterSheet() {
           payload.skills,
           [],
         ),
-        features: payload.featFeature
-          ? [payload.featFeature, ...preservedFeatures]
-          : preservedFeatures,
+        features: [...backgroundFeatures, ...preservedFeatures],
       },
       character.value,
     );
@@ -3006,11 +3043,14 @@ export function useCharacterSheet() {
           return inventoryItem;
         }
 
-        const { current, max } = inventoryItem.charges;
+        const { charges } = inventoryItem;
 
         return {
           ...inventoryItem,
-          charges: { current: clamp(current + delta, 0, max), max },
+          charges: {
+            ...charges,
+            current: clamp(charges.current + delta, 0, charges.max),
+          },
         };
       }),
     };

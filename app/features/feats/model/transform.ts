@@ -12,6 +12,8 @@ import type {
   FeatSpellListExpansion,
 } from './mechanics';
 
+import { normalizeActiveEffects } from '~active-effects/model';
+
 import { createFeatMechanics, createFeatSpellList } from './mechanics';
 import { fromFeatEditorRows } from './rows';
 
@@ -195,8 +197,19 @@ function buildCounters(counters: Array<FeatCounter>): Array<FeatCounter> {
     }));
 }
 
-/** Готовит механику целиком. */
-function buildMechanics(mechanics: FeatMechanics): FeatMechanics | undefined {
+/**
+ * Готовит механику целиком: пустые блоки и выключенные флаги в JSONB не пишутся —
+ * они только мешают читать данные.
+ *
+ * Экспортируется ради предыстории: она хранит расширенные дары той же моделью и
+ * чистит их перед отправкой теми же правилами.
+ *
+ * @param mechanics механика из состояния формы.
+ * @returns механика без пустых блоков; `undefined` — записывать нечего.
+ */
+export function buildFeatMechanics(
+  mechanics: FeatMechanics,
+): FeatMechanics | undefined {
   return orUndefined({
     abilityBonuses: buildAbilityBonuses(mechanics.abilityBonuses),
     choices: buildChoices(mechanics.choices),
@@ -250,6 +263,9 @@ export function transformFeatBeforeSubmit(state: FeatCreate): FeatCreate {
   return {
     ...state,
     editorRows: undefined,
+    // Эффекты чистит общий нормализатор раздела: он же обслуживает заклинания
+    // и магические предметы, поэтому правило «что считать пустым» одно на всех
+    activeEffects: normalizeActiveEffects(state.activeEffects),
     // Плоскую проекцию характеристик core-api пересобирает из
     // `mechanics.abilityBonuses` сам и в теле запроса её больше не ждёт
     abilities: undefined,
@@ -257,6 +273,8 @@ export function transformFeatBeforeSubmit(state: FeatCreate): FeatCreate {
     prerequisiteDetails: built.prerequisiteDetails
       ? buildPrerequisiteDetails(built.prerequisiteDetails)
       : undefined,
-    mechanics: built.mechanics ? buildMechanics(built.mechanics) : undefined,
+    mechanics: built.mechanics
+      ? buildFeatMechanics(built.mechanics)
+      : undefined,
   };
 }

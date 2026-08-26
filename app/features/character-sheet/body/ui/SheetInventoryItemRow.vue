@@ -19,7 +19,6 @@
     ARMOR_DEXTERITY_HINT_LABELS,
     CUSTOM_INVENTORY_BADGE_HINT,
     getAbilityModifier,
-    getFormattedBonus,
     getHeavyWeaponHint,
     getInventoryEquipIcon,
     getInventoryItemBonusLabels,
