@@ -144,8 +144,25 @@ export function matchesArmorCondition(
   condition: string,
   armor: SheetArmorState | undefined,
 ): boolean {
-  const trimmed = condition.trim();
+  const parts = splitConditionParts(condition);
 
+  return (
+    parts.length > 0
+    && parts.every((part) => matchesArmorConditionPart(part, armor))
+  );
+}
+
+/**
+ * Выполнение одной части условия о доспехе.
+ *
+ * @param trimmed часть условия, уже обрезанная по краям.
+ * @param armor состояние доспеха персонажа.
+ * @returns признак выполнения; часть другого семейства — `false`.
+ */
+function matchesArmorConditionPart(
+  trimmed: string,
+  armor: SheetArmorState | undefined,
+): boolean {
   if (!trimmed.startsWith(ARMOR_CONDITION_PREFIX) || !armor) {
     return false;
   }
@@ -181,7 +198,29 @@ export function matchesArmorCondition(
  * @returns признак условия о носителе.
  */
 export function isCarrierCondition(condition: string): boolean {
-  return condition.trim().startsWith(ARMOR_CONDITION_PREFIX);
+  const parts = splitConditionParts(condition);
+
+  return (
+    parts.length > 0
+    && parts.every((part) => part.startsWith(ARMOR_CONDITION_PREFIX))
+  );
+}
+
+/**
+ * Части составного условия — словарь системы D&D дословно.
+ *
+ * Условия соединяются `&&` и обязаны выполниться все: «нет доспеха И нет щита»
+ * у наручей защиты. Это не выражение — каждая часть остаётся строкой из
+ * закрытого перечня, другой связки нет.
+ *
+ * @param condition условие изменения.
+ * @returns непустые части, каждая обрезана по краям.
+ */
+function splitConditionParts(condition: string): string[] {
+  return condition
+    .split('&&')
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
 }
 
 /**
