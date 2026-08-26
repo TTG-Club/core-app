@@ -221,6 +221,7 @@ import {
   CHARACTER_FILE_NAME_FALLBACK,
   CLASS_FEAT_CHOICE_ID_SEGMENTS,
   CLASS_FEATURE_ID_PREFIX,
+  CLASS_FIRST_LEVEL,
   CLASS_RESOURCE_ID_PREFIX,
   CLASS_SPELL_PROGRESSIONS,
   CLASS_SPELLCASTING_ABILITIES,
@@ -5883,6 +5884,36 @@ export function parseSizeOptionsFromText(sizeText: string): string[] {
 }
 
 /**
+ * Дистанция тёмного зрения вида и его происхождения.
+ *
+ * Сначала берётся поле записи: справочник хранит зрение числом, и это точнее
+ * любого разбора прозы. Разбор текста остался запасным вариантом для записей,
+ * у которых поле ещё не заполнено, — иначе они разом лишились бы зрения.
+ *
+ * Из двух источников берётся большее: происхождение зрение поднимает, а не
+ * заменяет.
+ *
+ * @param species деталь вида.
+ * @param lineage деталь происхождения; null — происхождения нет.
+ * @returns дистанция в футах; 0 — тёмного зрения нет.
+ */
+export function getSpeciesDarkvision(
+  species: SpeciesSummary,
+  lineage: SpeciesSummary | null,
+): number {
+  const declared = Math.max(species.darkVision ?? 0, lineage?.darkVision ?? 0);
+
+  if (declared > 0) {
+    return declared;
+  }
+
+  return getDarkvisionDistance([
+    ...species.features,
+    ...(lineage?.features ?? []),
+  ]);
+}
+
+/**
  * Дистанция тёмного зрения из особенностей вида: ищется особенность с
  * упоминанием тёмного зрения, из её текста берётся первое число с футами.
  *
@@ -7646,12 +7677,56 @@ export function buildCharacterFeatures(
         originName: summary.name,
         level: null,
         choice: choice || null,
+        // Пассивные прибавки считаются один раз, при выборе вида, — наравне с
+        // бонусами надетого снаряжения; условные проверяются по самому эффекту
+        // каждый раз заново, поэтому эффекты кладутся рядом, а не вместо
+        bonuses: toInventoryBonusesFromEffects(feature.activeEffects),
+        activeEffects: feature.activeEffects.length
+          ? [...feature.activeEffects]
+          : undefined,
       };
     });
 
   return [
+    ...buildSpeciesOwnEffectFeature(species),
     ...toFeatures(species, 'species'),
+    ...(lineage ? buildSpeciesOwnEffectFeature(lineage, 'lineage') : []),
     ...(lineage ? toFeatures(lineage, 'lineage') : []),
+  ];
+}
+
+/**
+ * Запись листа под эффекты самой записи вида или происхождения.
+ *
+ * Отдельной записью, а не приписыванием к первому умению: эффекты даёт выбор
+ * вида целиком, и у происхождений умений не бывает вовсе — приписать их было бы
+ * некуда. Записи нет, когда эффектов нет: пустая строка в списке особенностей
+ * была бы шумом.
+ *
+ * @param summary деталь вида или происхождения.
+ * @param origin происхождение записи; по умолчанию вид.
+ * @returns одна запись листа либо пустой список.
+ */
+function buildSpeciesOwnEffectFeature(
+  summary: SpeciesSummary,
+  origin: FeatureOrigin = 'species',
+): CharacterFeature[] {
+  if (summary.activeEffects.length === 0) {
+    return [];
+  }
+
+  return [
+    {
+      id: getCharacterFeatureId(origin, `${summary.url}:effects`),
+      name: summary.name,
+      description: [],
+      origin,
+      originName: summary.name,
+      level: null,
+      choice: null,
+      bonuses: toInventoryBonusesFromEffects(summary.activeEffects),
+      activeEffects: [...summary.activeEffects],
+    },
   ];
 }
 
@@ -9636,6 +9711,13 @@ function toCharacterFeature(
     originName,
     level: summary.level,
     choice: choice || null,
+    // Пассивные прибавки считаются один раз, при получении умения, — наравне с
+    // бонусами надетого снаряжения; условные проверяются по самому эффекту
+    // каждый раз заново, поэтому эффекты кладутся рядом, а не вместо
+    bonuses: toInventoryBonusesFromEffects(summary.activeEffects),
+    activeEffects: summary.activeEffects.length
+      ? [...summary.activeEffects]
+      : undefined,
   };
 }
 
@@ -9669,6 +9751,9 @@ function collectClassFeatures(
         summary.isSubclass !== onlySubclass
         || !matchesLevel(summary.level)
         || seenKeys.has(summary.key)
+        // Умение-указатель («Подкласс», «Улучшение характеристик») нужно
+        // таблице прогрессии, а записью на листе было бы шумом
+        || summary.informationalOnly
       ) {
         continue;
       }
@@ -9685,7 +9770,55 @@ function collectClassFeatures(
     append(subclass.features, subclass.name, true);
   }
 
-  return features;
+  return [
+    // Эффекты самого класса приходят с первым же его умением: они действуют,
+    // пока класс взят, и снимаются вместе с ним, как и умения
+    ...buildClassOwnEffectFeature(base, matchesLevel),
+    ...(subclass
+      ? buildClassOwnEffectFeature(subclass, matchesLevel, base)
+      : []),
+    ...features,
+  ];
+}
+
+/**
+ * Запись листа под эффекты самой записи класса или подкласса.
+ *
+ * Отдельной записью, а не приписыванием к первому умению: эффекты даёт взятие
+ * класса целиком, и приписать их одному умению значило бы соврать об источнике.
+ * Записи нет, когда эффектов нет.
+ *
+ * Появляется только на первом уровне класса: на каждом следующем она добавилась
+ * бы второй копией — идентификатор у неё один и тот же.
+ *
+ * @param summary деталь класса или подкласса.
+ * @param matchesLevel предикат уровня: по нему запись появляется ровно один раз.
+ * @param owner базовый класс, если запись собирается для подкласса: умения
+ *   подкласса лежат под адресом базового класса, и идентификатор тоже.
+ * @returns одна запись листа либо пустой список.
+ */
+function buildClassOwnEffectFeature(
+  summary: ClassSummary,
+  matchesLevel: (featureLevel: number) => boolean,
+  owner?: ClassSummary,
+): CharacterFeature[] {
+  if (summary.activeEffects.length === 0 || !matchesLevel(CLASS_FIRST_LEVEL)) {
+    return [];
+  }
+
+  return [
+    {
+      id: getClassFeatureId((owner ?? summary).url, `${summary.url}:effects`),
+      name: summary.name,
+      description: [],
+      origin: 'class',
+      originName: summary.name,
+      level: CLASS_FIRST_LEVEL,
+      choice: null,
+      bonuses: toInventoryBonusesFromEffects(summary.activeEffects),
+      activeEffects: [...summary.activeEffects],
+    },
+  ];
 }
 
 /**

@@ -125,6 +125,8 @@ const speciesFeatureSchema = z.object({
   url: z.string().catch(''),
   name: z.object({ rus: z.string().catch('') }),
   description: descriptionNodesSchema,
+  level: z.coerce.number().min(1).max(20).nullish().catch(null),
+  activeEffects: z.unknown().nullish(),
 });
 
 /**
@@ -208,10 +210,12 @@ const speciesDetailSchema = z.object({
     .object({
       size: z.string().catch(''),
       speed: z.string().catch(''),
+      darkVision: z.coerce.number().nullish().catch(null),
     })
-    .catch({ size: '', speed: '' }),
+    .catch({ size: '', speed: '', darkVision: null }),
   features: z.array(speciesFeatureSchema).catch([]),
   innateSpells: z.array(speciesInnateSpellSchema).catch([]),
+  activeEffects: z.unknown().nullish(),
 });
 
 /** Ответ списка подвидов: массив детальных ответов. */
@@ -230,6 +234,10 @@ function toSpeciesSummary(
     url: feature.url,
     name: feature.name.rus,
     description: feature.description,
+    level: feature.level ?? null,
+    // Эффекты разбирает общая схема раздела: битый эффект отбрасывается
+    // поштучно, а не роняет всё умение
+    activeEffects: normalizeLoadedActiveEffects(feature.activeEffects),
   }));
 
   const innateSpells: CharacterInnateSpell[] = detail.innateSpells.map(
@@ -245,8 +253,10 @@ function toSpeciesSummary(
     hasLineages: detail.hasLineages,
     sizeText: detail.properties.size,
     speedText: detail.properties.speed,
+    darkVision: detail.properties.darkVision ?? null,
     features,
     innateSpells,
+    activeEffects: normalizeLoadedActiveEffects(detail.activeEffects),
   };
 }
 
@@ -1952,6 +1962,8 @@ const classFeatureSchema = z.object({
     .array(z.object({ level: z.coerce.number().catch(0) }))
     .nullable()
     .catch(null),
+  informationalOnly: z.boolean().catch(false),
+  activeEffects: z.unknown().nullish(),
 });
 
 /**
@@ -2108,6 +2120,7 @@ const classDetailSchema = z.object({
   features: z.array(classFeatureSchema).catch([]),
   // Разбирается отдельной функцией: то же поле есть и у предыстории.
   startingEquipment: z.unknown(),
+  activeEffects: z.unknown().nullish(),
 });
 
 /**
@@ -2137,6 +2150,10 @@ function toClassSummary(
     scalingLevels: (feature.scaling ?? [])
       .map((entry) => entry.level)
       .filter((entry) => entry > 0),
+    informationalOnly: feature.informationalOnly,
+    // Эффекты разбирает общая схема раздела: битый эффект отбрасывается
+    // поштучно, а не роняет всё умение
+    activeEffects: normalizeLoadedActiveEffects(feature.activeEffects),
   }));
 
   const table: ClassTableColumn[] = detail.table.map((column) => ({
@@ -2159,6 +2176,7 @@ function toClassSummary(
     table,
     features,
     startingEquipment: toStartingEquipmentOptions(detail.startingEquipment),
+    activeEffects: normalizeLoadedActiveEffects(detail.activeEffects),
   };
 }
 

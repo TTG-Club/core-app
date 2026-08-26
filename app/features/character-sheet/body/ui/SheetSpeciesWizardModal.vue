@@ -23,9 +23,9 @@
     FEATURE_ORIGIN_LABELS,
     getCharacterFeatureId,
     getChoiceSkillHints,
-    getDarkvisionDistance,
     getOwnedWeaponNames,
     getRequiredChoiceCount,
+    getSpeciesDarkvision,
     getToolNames,
     LANGUAGE_PROFICIENCY_GROUPS,
     parseSizeOptionsFromText,
@@ -481,11 +481,6 @@
 
     const lineage = selectedLineage.value;
 
-    const allFeatureSummaries = [
-      ...detail.features,
-      ...(lineage?.features ?? []),
-    ];
-
     // Сбор выборов-селекторов: навыки (владение/экспертиза) и языки; выбранные
     // значения также идут в текст особенности, чтобы отображаться на листе.
     const proficientSkills: string[] = [];
@@ -532,7 +527,7 @@
       speed: parseSpeedFromText(effectiveSpeedText.value),
       vision: {
         normal: character.value.vision.normal,
-        darkvision: getDarkvisionDistance(allFeatureSummaries),
+        darkvision: getSpeciesDarkvision(detail, lineage),
         blindsight: character.value.vision.blindsight,
         tremorsense: character.value.vision.tremorsense,
         truesight: character.value.vision.truesight,
