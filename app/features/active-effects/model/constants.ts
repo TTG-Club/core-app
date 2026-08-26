@@ -356,6 +356,25 @@ export const EFFECT_CARRIER_TYPE_CONDITION_PREFIX = 'self.creatureType === ';
 /** Приставка условий по типу ЦЕЛИ. */
 export const EFFECT_TARGET_TYPE_CONDITION_PREFIX = 'target.creatureType === ';
 
+/** Приставка условия по надетому доспеху носителя. */
+export const EFFECT_CARRIER_ARMOR_CONDITION_PREFIX = 'self.armor === ';
+
+/**
+ * Условия по доспеху носителя — зеркало семейства `self.armor` из системы D&D.
+ *
+ * Считаются по самому листу, без броска: прибавка с таким условием попадает в
+ * постоянные числа, и +1 к КД «Обороны» видно в блоке защиты.
+ */
+export const EFFECT_ARMOR_CONDITION_OPTIONS: Array<Option<string>> = [
+  { value: 'any', label: 'в доспехе (любом)' },
+  { value: 'none', label: 'без доспеха' },
+  { value: 'light', label: 'в лёгком доспехе' },
+  { value: 'medium', label: 'в среднем доспехе' },
+  { value: 'heavy', label: 'в тяжёлом доспехе' },
+  { value: 'shield', label: 'со щитом' },
+  { value: 'noShield', label: 'без щита' },
+];
+
 /**
  * Собирает условия по типу существа: движок сверяет тип носителя или цели с
  * названным ключом.
@@ -415,6 +434,12 @@ export const EFFECT_CONDITION_EXPR_SUGGESTIONS: Array<Option<string>> = [
     'Носитель',
   ),
   ...buildCreatureTypeConditions(EFFECT_TARGET_TYPE_CONDITION_PREFIX, 'Цель'),
+  ...EFFECT_ARMOR_CONDITION_OPTIONS.map(
+    (armor): Option<string> => ({
+      value: `${EFFECT_CARRIER_ARMOR_CONDITION_PREFIX}"${armor.value}"`,
+      label: `Носитель: ${armor.label}`,
+    }),
+  ),
 ];
 
 /** Виды защит от урона: приставка ключа флага и подпись. */

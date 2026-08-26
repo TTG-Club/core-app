@@ -394,6 +394,13 @@ const featureSchema = z.object({
   // Снимок пассивных бонусов черты из её активных эффектов; у записей до их
   // появления поля нет — такая черта лист не двигала.
   bonuses: inventoryBonusesSchema.optional().catch(undefined),
+  // Эффекты умения целиком: у листов, сохранённых до их появления, поля нет, и
+  // умение считается по одним бонусам, как считалось раньше.
+  activeEffects: z
+    .unknown()
+    .transform((raw) => normalizeLoadedActiveEffects(raw))
+    .optional()
+    .catch(undefined),
 });
 
 const speciesSchema = z

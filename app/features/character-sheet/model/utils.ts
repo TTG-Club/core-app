@@ -416,6 +416,7 @@ import {
 } from './constants';
 import {
   getCharacterEffectFlags,
+  getConditionalEffectBonus,
   isSpeedZeroedByEffects,
 } from './effect-engine';
 import { toInventoryBonusesFromEffects } from './effects';
@@ -4011,9 +4012,12 @@ export function getArmorClassBreakdown(
   const abilityBonuses = getArmorClassAbilityBonuses(character, abilities);
 
   // Прибавка черт идёт и в ручной режим: она не зависит от того, откуда взята
-  // основа КД. Условные прибавки («Оборона» — только в доспехе) в механику не
-  // попадают и остаются в описании черты.
-  const featBonus = getFeatArmorClassBonus(character.features);
+  // основа КД. Рядом с ней — условные прибавки активных эффектов: «Оборона»
+  // даёт +1 только в доспехе, и такое условие лист проверяет сам, каждый раз
+  // заново, чтобы прибавка ушла при снятии доспеха.
+  const featBonus =
+    getFeatArmorClassBonus(character.features)
+    + getConditionalEffectBonus(character, 'armorClass');
 
   if (custom) {
     const value = abilityBonuses.reduce(
@@ -7763,6 +7767,10 @@ export function buildFeatFeature(
     // Снимок пассивных бонусов из активных эффектов черты. Черта без них
     // пишется без поля — такая запись лист не двигает, как и раньше.
     bonuses: featureBonuses.length ? featureBonuses : undefined,
+    // Эффекты остаются и целиком: условная прибавка бонусом не выражается.
+    activeEffects: summary.activeEffects.length
+      ? [...summary.activeEffects]
+      : undefined,
     proficiencies: withChosenProficiencies(
       summary.proficiencies,
       proficiencies,

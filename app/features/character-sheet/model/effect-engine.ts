@@ -66,6 +66,162 @@ export interface ResolvedSheetEffects {
   conditionalChanges: EffectChange[];
 }
 
+/** Приставка условия по надетому доспеху носителя. */
+const ARMOR_CONDITION_PREFIX = 'self.armor === ';
+
+/**
+ * Состояние доспеха персонажа: категория надетой брони и наличие щита.
+ * Категории нет — брони на персонаже нет.
+ */
+export interface SheetArmorState {
+  category?: 'light' | 'medium' | 'heavy';
+  hasShield: boolean;
+}
+
+/**
+ * Категория брони по правилу модификатора Ловкости: своей категории у записи
+ * инвентаря нет, но правило Ловкости однозначно её называет — полный модификатор
+ * у лёгкой, ограниченный у средней, никакого у тяжёлой.
+ */
+const ARMOR_CATEGORY_BY_DEXTERITY_MOD: Record<
+  string,
+  'light' | 'medium' | 'heavy'
+> = {
+  full: 'light',
+  capped: 'medium',
+  none: 'heavy',
+};
+
+/**
+ * Состояние доспеха персонажа по надетому снаряжению.
+ *
+ * Из нескольких надетых доспехов берётся лучший по базовому КД — тем же
+ * правилом, что и при расчёте класса доспеха.
+ *
+ * @param character персонаж.
+ * @returns категория надетой брони и наличие щита.
+ */
+export function getSheetArmorState(character: Character): SheetArmorState {
+  let category: SheetArmorState['category'];
+  let bestArmorClass = 0;
+  let hasShield = false;
+
+  for (const item of character.inventory) {
+    if (!item.equipped || item.armor === null) {
+      continue;
+    }
+
+    if (item.armor.shield) {
+      hasShield = true;
+
+      continue;
+    }
+
+    const itemCategory =
+      ARMOR_CATEGORY_BY_DEXTERITY_MOD[item.armor.dexterityMod];
+
+    if (!itemCategory) {
+      continue;
+    }
+
+    if (!category || item.armor.baseArmorClass > bestArmorClass) {
+      category = itemCategory;
+      bestArmorClass = item.armor.baseArmorClass;
+    }
+  }
+
+  return { category, hasShield };
+}
+
+/**
+ * Выполняется ли условие о доспехе носителя.
+ *
+ * @param condition условие изменения.
+ * @param armor состояние доспеха персонажа.
+ * @returns признак выполнения; условие другого семейства — `false`.
+ */
+export function matchesArmorCondition(
+  condition: string,
+  armor: SheetArmorState | undefined,
+): boolean {
+  const trimmed = condition.trim();
+
+  if (!trimmed.startsWith(ARMOR_CONDITION_PREFIX) || !armor) {
+    return false;
+  }
+
+  const kind = trimmed
+    .slice(ARMOR_CONDITION_PREFIX.length)
+    .trim()
+    .replace(/^["']|["']$/g, '');
+
+  if (kind === 'shield') {
+    return armor.hasShield;
+  }
+
+  if (kind === 'noShield') {
+    return !armor.hasShield;
+  }
+
+  if (kind === 'none') {
+    return armor.category === undefined;
+  }
+
+  if (kind === 'any') {
+    return armor.category !== undefined;
+  }
+
+  return armor.category === kind;
+}
+
+/**
+ * Условие ли это о носителе — такие лист считает сам, без броска.
+ *
+ * @param condition условие изменения.
+ * @returns признак условия о носителе.
+ */
+export function isCarrierCondition(condition: string): boolean {
+  return condition.trim().startsWith(ARMOR_CONDITION_PREFIX);
+}
+
+/**
+ * Живая прибавка от условных изменений эффектов по одному ключу.
+ *
+ * Отдельно от `toInventoryBonusesFromEffects`: та считает бонусы ОДИН РАЗ, в
+ * момент добавления записи на лист, и замороженная в ней условная прибавка не
+ * ушла бы при снятии доспеха. Здесь условие проверяется каждый раз заново.
+ *
+ * Считаются только условия о носителе: условие о броске («цель ранена») листу
+ * проверить нечем — ни цели, ни оружия в руке у него нет.
+ *
+ * @param character персонаж.
+ * @param targetKey ключ изменения (`armorClass`, `initiative` и подобные).
+ * @returns суммарная прибавка; ноль — подходящих изменений нет.
+ */
+export function getConditionalEffectBonus(
+  character: Character,
+  targetKey: string,
+): number {
+  const armor = getSheetArmorState(character);
+
+  return collectAppliedEffects(character)
+    .filter((effect) => !effect.disabled && effect.effectTarget !== 'target')
+    .flatMap((effect) => effect.changes)
+    .filter(
+      (change) =>
+        change.key === targetKey
+        && change.mode === 'add'
+        && change.condition !== undefined
+        && isCarrierCondition(change.condition)
+        && matchesArmorCondition(change.condition, armor),
+    )
+    .reduce((total, change) => {
+      const parsed = Number(change.value.trim());
+
+      return Number.isInteger(parsed) ? total + parsed : total;
+    }, 0);
+}
+
 /**
  * Условия по состоянию хитов цели — словарь системы D&D дословно. Ключ
  * сравнивается целиком: это не выражение, а закрытый перечень.
@@ -102,7 +258,8 @@ export function getSkillKeyByName(name: string): string | undefined {
 /**
  * Все эффекты, действующие на персонажа: свои и от надетого снаряжения.
  *
- * Эффекты предмета учитываются, только пока он надет, — как и его бонусы.
+ * Эффекты предмета учитываются, только пока он надет, — как и его бонусы;
+ * эффекты умения — пока умение есть на листе.
  *
  * @param character персонаж.
  * @returns эффекты персонажа и его снаряжения одним списком.
@@ -110,6 +267,9 @@ export function getSkillKeyByName(name: string): string | undefined {
 export function collectAppliedEffects(character: Character): ActiveEffect[] {
   return [
     ...character.activeEffects,
+    // Умения листа: черта действует всегда, пока взята, — снимать её нечем,
+    // кроме удаления записи, поэтому условия «надет» тут нет.
+    ...character.features.flatMap((feature) => feature.activeEffects ?? []),
     ...character.inventory
       .filter((item) => item.equipped)
       .flatMap((item) => item.activeEffects ?? []),
