@@ -75,10 +75,10 @@ core-app/
 
 | Domain        | Purpose                                            | Notable extras                                                                                                                                                                         |
 | ------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `species`     | Races/species with nested lineages (sub-races)     | `lineages`, `lineages-drawer`                                                                                                                                                          |
-| `classes`     | Classes, subclasses & multiclass builder           | `multiclass-drawer`, `subclasses-drawer` (body = Class + Multiclass)                                                                                                                   |
+| `species`     | Races/species with nested lineages (sub-races)     | `lineages`, `lineages-drawer`; editor split into «Основное / Характеристики / Умения / Дары / Заклинания / Эффекты / Изображения» tabs, grants reuse the feat row editors               |
+| `classes`     | Classes, subclasses & multiclass builder           | `multiclass-drawer`, `subclasses-drawer` (body = Class + Multiclass); editor split into nine tabs, per-feature mechanics and effects live in a collapsible under each feature          |
 | `spells`      | Spells; class-grouped infinite-scroll list         | `groups`, `composable` (class pagination), `legend`                                                                                                                                    |
-| `bestiary`    | Creatures grouped by challenge rating; stat blocks | `composable` (CR group order)                                                                                                                                                          |
+| `bestiary`    | Creatures grouped by challenge rating; stat blocks | `composable` (CR group order); editor split into «Основное / Статблок / Действия / Эффекты / Изображения» tabs                                                                          |
 | `magic-items` | Magic items grouped by rarity                      | `composable` (rarity order), `legend` (attunement); editor split into «Основное / Свойства / Применение / Эффекты» tabs, magic's own damage uses the shared `~ui/damage-formula` parts |
 | `backgrounds` | Character backgrounds                              | —                                                                                                                                                                                      |
 | `feats`       | Feats                                              | —                                                                                                                                                                                      |
@@ -458,6 +458,22 @@ modals), so its capabilities are listed here rather than squeezed into the table
   before the modes existed read as plain `add`, and an item already sitting on a
   sheet keeps its old snapshot — effects added in the workshop later need the
   item re-added.
+- Species, lineages, classes, subclasses and their features may each carry
+  «Активные эффекты» of their own. They ride onto the sheet with the record:
+  passive changes are frozen into the feature's `bonuses` (the same shape
+  equipment uses), while the effects themselves stay on the record so conditional
+  changes («while wearing armour») are re-checked on every read. Effects of the
+  species or class record itself land as their own feature row rather than being
+  pinned to the first feature — a lineage has no features at all, and a class
+  grants them by being taken; the class row appears only at its first level.
+- The species wizard no longer reads darkvision and proficiencies out of feature
+  prose: `properties.darkVision` and `mechanics.proficiencies` (of the record and
+  of every feature already in effect at the character's level) are used instead,
+  with the prose parse left as the fallback for entries that have no structure
+  yet. Skills granted this way go to the skill rows, not to the proficiency list.
+- A class feature flagged `informationalOnly` («Подкласс волшебника») never
+  becomes a sheet record: the progression table needs the line, the sheet does
+  not.
 - The «Добавить заклинание» catalog opens preset to what the character can
   actually learn: the class chip is picked by the class slug (the same id the
   `className` filter group uses) and the level chips cover every circle the
@@ -735,8 +751,8 @@ modals), so its capabilities are listed here rather than squeezed into the table
 | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `articles`       | News/article publishing (`NEWS`/`ARTICLE`; draft·active·scheduled·link-access flags); markup content. Public `/articles`, `/news`                              | `admin`, `body`, `card`, `drawer`, `editor`, `link`, `listing`, `preview`, `model`                                                                                                                                                                                         |
 | `home`           | Landing-page building blocks composed on `pages/index.vue`                                                                                                     | `news`, `articles` (separate index block from `news`), `sections`, `banners` (VTTG promo card above the tools block), `tools` (compact tools card, role-gated items), `community`, `counters`, `greetings`, `recent-changes`, `background`, `social-links`, `link-to-5e14` |
-| `workshop`       | Content-creation admin (`/workshop/*`, ADMIN or MODERATOR): reusable form engine + section entry cards + revision history                                      | `composable` (`useWorkshopForm`), `section`, `revision`                                                                                                                                                                                                                    |
-| `active-effects` | Shared «Активные эффекты» editor in the VTTG vocabulary — one model + one form for every section that changes sheet numbers: spells, feats, magic items, items | `editor` (`ActiveEffects` card, per-effect tabs, changes/flags/damage parts), `model` (types & Zod, change & flag menus, PHB 2024 condition templates, `describeActiveEffect`)                                                                                             |
+| `workshop`       | Content-creation admin (`/workshop/*`, ADMIN or MODERATOR): reusable form engine + section entry cards + revision history. `useWorkshopForm` keys its `useState` by `actionUrl` — without a key every section would share one state object, and a form would briefly render on the previous section's shape | `composable` (`useWorkshopForm`), `section`, `revision`                                                                                                                                                                                                                    |
+| `active-effects` | Shared «Активные эффекты» editor in the VTTG vocabulary — one model + one form for every section that changes sheet numbers: spells, feats, magic items, items, backgrounds, species, classes and creatures | `editor` (`ActiveEffects` card, per-effect tabs, changes/flags/damage parts), `model` (types & Zod, change & flag menus, PHB 2024 condition templates, `describeActiveEffect`)                                                                                             |
 | `roadmap`        | Project roadmap (`/roadmap`): feature cards with community ratings + admin editor                                                                              | `feature`, `detail`, `editor`, `preview`, `types`                                                                                                                                                                                                                          |
 | `comments`       | Threaded discussions on wiki & article pages via external **comments-service**; public read, auth to post, soft-delete tombstones, reports                     | `section` (page block + feed), `admin` (moderation rows), `my` (own comments + replies to them in profile), `recent` (site-wide feed on `/comments`), `composables`, `model`                                                                                               |
 
