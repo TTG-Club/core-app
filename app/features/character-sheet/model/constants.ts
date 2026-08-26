@@ -2299,6 +2299,15 @@ export const FEATS_DETAIL_BASE_PATH = '/api/v2/feats';
 /** Категория черт, доступных через классовое умение выбора боевого стиля. */
 export const FIGHTING_STYLE_FEAT_CATEGORIES = ['FIGHTING_STYLE'];
 
+/**
+ * Идентификатор выбора инструмента предыстории: под ним лежит ответ игрока и
+ * его же читает применение — у предыстории такой выбор один.
+ */
+export const BACKGROUND_TOOL_CHOICE_ID = 'background-tool';
+
+/** Заголовок пикера выбора инструмента предыстории. */
+export const BACKGROUND_TOOL_CHOICE_LABEL = 'Владение инструментами';
+
 /** Подпись выбора боевого стиля в визарде класса. */
 export const FIGHTING_STYLE_CHOICE_LABEL =
   'Выберите 1 черту категории «Боевой стиль»';
@@ -2886,6 +2895,12 @@ export const BACKGROUND_WIZARD_TAB_LABELS: Record<BackgroundWizardTab, string> =
     feat: 'Черта',
     equipment: 'Снаряжение',
   };
+
+/** Подписи мастера предыстории, не привязанные к разделам. */
+export const BACKGROUND_WIZARD_LABELS = {
+  featChoice: 'Черта на выбор',
+  featChoicePlaceholder: 'Выбери черту',
+} as const;
 
 /** Подписи формы своей предыстории. */
 export const CUSTOM_BACKGROUND_LABELS = {
@@ -4129,6 +4144,7 @@ export const FEATURE_ORIGIN_LABELS: Record<FeatureOrigin, string> = {
   lineage: 'Подвид',
   class: 'Класс',
   feat: 'Черта',
+  background: 'Предыстория',
   none: 'Своё',
 };
 
@@ -4139,6 +4155,7 @@ export const FEATURE_ORIGIN_LABELS: Record<FeatureOrigin, string> = {
 export const FEATURE_ORIGIN_GROUP_ORDER: FeatureOriginGroup[] = [
   'species',
   'class',
+  'background',
   'feat',
   'none',
 ];
@@ -4147,6 +4164,7 @@ export const FEATURE_ORIGIN_GROUP_ORDER: FeatureOriginGroup[] = [
 export const FEATURE_ORIGIN_GROUP_HINTS: Record<FeatureOriginGroup, string> = {
   species: 'Оставить в списке особенности вида и подвида',
   class: 'Оставить в списке особенности класса',
+  background: 'Оставить в списке дары предыстории',
   feat: 'Оставить в списке черты',
   none: 'Оставить в списке свои особенности',
 };

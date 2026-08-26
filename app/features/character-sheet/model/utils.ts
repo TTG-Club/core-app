@@ -7528,7 +7528,12 @@ export function buildCharacterFeatures(
  * @param options.spellcastingAbility характеристика заклинаний черты
  *   (см. `getFeatSpellcastingAbility`); не передана — заклинания считаются от
  *   характеристики класса.
- * @returns особенность персонажа с происхождением «Черта».
+ * @param options.origin происхождение записи; по умолчанию «Черта». Той же
+ *   сводкой лист собирает собственные дары предыстории — модель у них общая, а
+ *   источник разный, и по нему запись снимается при смене предыстории.
+ * @param options.originName подпись источника на бейдже; не передана — берётся
+ *   категория черты.
+ * @returns особенность персонажа с указанным происхождением.
  */
 export function buildFeatFeature(
   summary: FeatSummary,
@@ -7552,6 +7557,16 @@ export function buildFeatFeature(
      * (см. `getFeatSpellcastingAbility`).
      */
     spellcastingAbility?: AbilityKey | null;
+
+    /**
+     * Происхождение записи: «Черта» по умолчанию, «Предыстория» — у собственных
+     * даров предыстории. Оно же попадает в идентификатор записи, поэтому дары
+     * предыстории не схлопываются с её же чертой происхождения.
+     */
+    origin?: FeatureOrigin;
+
+    /** Подпись источника; не передана — категория черты. */
+    originName?: string;
   } = {},
 ): CharacterFeature {
   const {
@@ -7563,6 +7578,8 @@ export function buildFeatFeature(
     abilityIncreases = {},
     choice = null,
     spellcastingAbility = null,
+    origin = 'feat',
+    originName = summary.category,
   } = options;
 
   // Характеристика черты ложится на каждое её заклинание: заклинание остаётся
@@ -7586,15 +7603,15 @@ export function buildFeatFeature(
     (spell) => spell.url,
   );
 
-  const baseId = getCharacterFeatureId('feat', summary.url);
+  const baseId = getCharacterFeatureId(origin, summary.url);
   const featureBonuses = toInventoryBonusesFromEffects(summary.activeEffects);
 
   return {
     id: repeatable ? `${baseId}:${crypto.randomUUID()}` : baseId,
     name: summary.name,
     description: [...summary.description],
-    origin: 'feat',
-    originName: summary.category,
+    origin,
+    originName,
     level,
     choice,
     modifiers: summary.modifiers,

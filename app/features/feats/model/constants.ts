@@ -35,6 +35,12 @@ export const FEAT_MAIN_TAB_LABELS = {
   descriptionPlaceholder: 'Введи описание',
 } as const;
 
+/**
+ * Категория черт происхождения: их даёт предыстория, и только их предлагает её
+ * форма — общая черта в списке предыстории была бы ошибкой правил.
+ */
+export const ORIGIN_FEAT_CATEGORIES: Array<string> = ['ORIGIN'];
+
 /** Вкладки редактора черты. */
 export const FEAT_EDITOR_TABS = {
   main: 'Основное',

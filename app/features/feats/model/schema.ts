@@ -412,6 +412,22 @@ function toFeatPrerequisiteState(
 }
 
 /**
+ * Разбирает механику, пришедшую с сервера, в состояние формы.
+ *
+ * Той же моделью механику хранит предыстория (`Background.mechanics`), поэтому
+ * разбор вынесен из `normalizeLoadedFeat`: обе формы читают один и тот же блок
+ * и должны отсеивать чужое одинаково.
+ *
+ * @param raw сырое значение поля `mechanics` из ответа сервера.
+ * @returns механика со всеми блоками и списками; не прошедшая разбор — пустая.
+ */
+export function parseLoadedMechanics(raw: unknown): FeatMechanics {
+  const parsed = mechanicsSchema.safeParse(raw);
+
+  return toFeatMechanicsState(parsed.success ? parsed.data : undefined);
+}
+
+/**
  * Приводит загруженную с сервера черту к структуре формы.
  *
  * Механика и предусловие разбираются схемами; если их нет или они не прошли
@@ -424,15 +440,11 @@ function toFeatPrerequisiteState(
 export function normalizeLoadedFeat(
   raw: Record<string, unknown>,
 ): Record<string, unknown> {
-  const parsedMechanics = mechanicsSchema.safeParse(raw.mechanics);
-
   const parsedPrerequisite = prerequisiteDetailsSchema.safeParse(
     raw.prerequisiteDetails,
   );
 
-  const mechanics = toFeatMechanicsState(
-    parsedMechanics.success ? parsedMechanics.data : undefined,
-  );
+  const mechanics = parseLoadedMechanics(raw.mechanics);
 
   const prerequisiteDetails = toFeatPrerequisiteState(
     parsedPrerequisite.success ? parsedPrerequisite.data : undefined,

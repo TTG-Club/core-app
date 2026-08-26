@@ -59,6 +59,8 @@ import {
   API_SHORT_REST_RECOVERY,
   ARMOR_GROUP_BY_API_CATEGORY,
   ARMOR_PROFICIENCY_GROUPS,
+  BACKGROUND_TOOL_CHOICE_ID,
+  BACKGROUND_TOOL_CHOICE_LABEL,
   CANTRIP_SPELL_LEVEL,
   CURRENCY_KEYS_BY_LABEL,
   DAMAGE_TYPE_LABELS,
@@ -2121,6 +2123,12 @@ export function parseBackgroundOptions(input: unknown): BackgroundOption[] {
   }));
 }
 
+/** Ссылка на запись справочника в JSONB-полях предыстории. */
+const backgroundRefSchema = z.object({
+  url: z.string(),
+  name: z.string().nullable().catch(null),
+});
+
 /** Схема детального ответа предыстории (нужные листу поля). */
 const backgroundDetailSchema = z.object({
   url: z.string(),
@@ -2128,13 +2136,89 @@ const backgroundDetailSchema = z.object({
   abilityScores: z.string().catch(''),
   skillProficiencies: z.string().catch(''),
   feat: z.string().catch(''),
+  // Черты на выбор; у предысторий книги черта одна и лежит в `feat`.
+  featChoices: z.array(backgroundRefSchema).catch([]),
   toolProficiency: z.array(z.string()).catch([]),
+  // Владение инструментами ссылками — главнее текста: по ним лист находит
+  // карточку каталога, не разбирая разметку.
+  toolProficiencies: z.array(backgroundRefSchema).catch([]),
+  toolChoice: z
+    .object({
+      count: z.number().nullable().catch(null),
+      from: z.array(backgroundRefSchema).catch([]),
+    })
+    .nullable()
+    .catch(null),
   // Справка приходит как описание раздела — строки-абзацы вперемешку с узлами
   // разметки (список вариантов «А)/Б)»), поэтому массивом строк не разбирается.
   equipment: descriptionNodesSchema,
   // Разбирается отдельной функцией: то же поле есть и у класса.
   startingEquipment: z.unknown(),
 });
+
+/** Ссылки предыстории с непустой подписью — те, что лист может показать. */
+interface BackgroundRef {
+  url: string;
+  name: string | null;
+}
+
+/**
+ * Владения инструментами из ссылок мастерской.
+ *
+ * @param refs ссылки на карточки инструментов.
+ * @returns владения с подписью и адресом карточки.
+ */
+function toToolProficiencies(
+  refs: BackgroundRef[],
+): CharacterToolProficiency[] {
+  return refs
+    .filter((reference) => reference.name)
+    .map((reference) => ({ name: reference.name ?? '', url: reference.url }));
+}
+
+/**
+ * Выбор инструмента, заданный структурой мастерской. Пустой пул означает выбор
+ * из всего каталога — так предыстория и написана в книге («инструмент на ваш
+ * выбор»).
+ *
+ * @param choice блок выбора из ответа.
+ * @returns выбор для мастера; null — выбора у предыстории нет.
+ */
+function toBackgroundToolChoice(
+  choice: { count: number | null; from: BackgroundRef[] } | null,
+): ClassChoice | null {
+  if (!choice?.count || choice.count < 1) {
+    return null;
+  }
+
+  return {
+    id: BACKGROUND_TOOL_CHOICE_ID,
+    kind: 'tool',
+    label: BACKGROUND_TOOL_CHOICE_LABEL,
+    count: choice.count,
+    listed: choice.from
+      .filter((reference) => reference.name)
+      .map((reference) => reference.name ?? ''),
+  };
+}
+
+/**
+ * Есть ли у предыстории собственные дары, ради которых заводить запись умения.
+ *
+ * @param grants дары, разобранные схемой черты.
+ * @returns признак «есть что применять».
+ */
+function hasOwnBackgroundGrants(grants: FeatSummary): boolean {
+  return Boolean(
+    grants.proficiencies
+    || grants.modifiers
+    || grants.activeEffects.length
+    || grants.spells?.length
+    || grants.choices.length
+    || grants.abilityBonuses.length
+    || grants.counters.length,
+  );
+}
 
 /**
  * Валидация детального ответа `GET /api/v2/backgrounds/{url}`.
@@ -2155,26 +2239,45 @@ export function parseBackgroundDetail(
 
   const detail = result.data;
 
-  const toolFixed: CharacterToolProficiency[] = [];
+  const toolFixed: CharacterToolProficiency[] = toToolProficiencies(
+    detail.toolProficiencies,
+  );
 
-  let toolChoice: ClassChoice | null = null;
+  let toolChoice: ClassChoice | null = toBackgroundToolChoice(
+    detail.toolChoice,
+  );
 
-  for (const toolText of detail.toolProficiency) {
-    // Владения приходят с разметкой каталога («{@item Воровские
-    // инструменты|url:thieves-tools-phb}»): подпись идёт в лист, ссылка —
-    // в кнопку описания инструмента.
-    const tool = parseToolMarker(toolText);
+  // Текст читается, только пока владение не задано ссылками: у переведённых
+  // записей он остаётся прежней прозой и продублировал бы уже выданное.
+  if (!toolFixed.length && !toolChoice) {
+    for (const toolText of detail.toolProficiency) {
+      // Владения приходят с разметкой каталога («{@item Воровские
+      // инструменты|url:thieves-tools-phb}»): подпись идёт в лист, ссылка —
+      // в кнопку описания инструмента.
+      const tool = parseToolMarker(toolText);
 
-    const choice = getClassToolChoice(tool.name, 'background-tool');
+      const choice = getClassToolChoice(tool.name, BACKGROUND_TOOL_CHOICE_ID);
 
-    if (choice) {
-      toolChoice = toolChoice ?? choice;
-    } else if (tool.name) {
-      toolFixed.push(tool);
+      if (choice) {
+        toolChoice = toolChoice ?? choice;
+      } else if (tool.name) {
+        toolFixed.push(tool);
+      }
     }
   }
 
   const feat = parseFeatMarker(detail.feat);
+
+  // Собственные дары предыстории разбираются схемой черты: модель у них общая,
+  // и лист применяет их одинаково — записью умения со снимком владений.
+  // Описание записи пустое: полный текст предыстории живёт на её странице, а в
+  // умении он был бы простынёй на всю вкладку.
+  const parsedGrants = parseFeatDetail(input);
+
+  const ownGrants =
+    parsedGrants && hasOwnBackgroundGrants(parsedGrants)
+      ? { ...parsedGrants, description: [], category: '' }
+      : null;
 
   return {
     url: detail.url,
@@ -2190,6 +2293,13 @@ export function parseBackgroundDetail(
     featUrl: feat.url,
     featName: feat.name,
     featSubchoice: feat.subchoice,
+    featChoices: detail.featChoices
+      .filter((reference) => reference.name)
+      .map((reference) => ({
+        url: reference.url,
+        name: reference.name ?? '',
+      })),
+    ownGrants,
     equipment: detail.equipment,
     startingEquipment: toStartingEquipmentOptions(detail.startingEquipment),
   };

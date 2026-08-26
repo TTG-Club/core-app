@@ -83,6 +83,7 @@ import {
   getAttunementLimitDescription,
   getCarryingCapacityValue,
   getCharacterClasses,
+  getCharacterFeatureId,
   getCharacterProficiencyBonus,
   getClampedClassLevels,
   getClampedInteger,
@@ -1923,6 +1924,8 @@ export function useCharacterSheet() {
    * @param payload.tools владения инструментами (фикс + выбранный).
    * @param payload.featUrl URL черты происхождения; null — нет.
    * @param payload.featFeature особенность черты; null — не добавлять.
+   * @param payload.backgroundFeature особенность с собственными дарами
+   *   предыстории; null — предыстория даёт только каноническое.
    * @param payload.startingEquipment выбранный вариант стартового снаряжения; null — не выдавать.
    */
   function setBackground(payload: {
@@ -1932,6 +1935,13 @@ export function useCharacterSheet() {
     tools: CharacterToolProficiency[];
     featUrl: string | null;
     featFeature: CharacterFeature | null;
+    /**
+     * Собственные дары предыстории записью умения (владения, языки, защиты,
+     * заклинания, пассивные бонусы); null — предыстория даёт только
+     * каноническое. Записью, а не отдельными полями: снимок владений, бонусов и
+     * ответов на выборы лист уже умеет применять и снимать именно так.
+     */
+    backgroundFeature: CharacterFeature | null;
     startingEquipment: StartingEquipmentGrant | null;
   }): void {
     if (!ensureEditable()) {
@@ -1955,16 +1965,28 @@ export function useCharacterSheet() {
       );
     }
 
-    // Черта предыстории: убрать прошлую и любую копию новой, затем добавить.
-    const previousFeatId = previous?.featUrl
-      ? `feat:${previous.featUrl}`
-      : null;
-
-    const newFeatId = payload.featFeature?.id ?? null;
+    // Записи предыстории: убрать прошлые и любые копии новых, затем добавить.
+    // Дары предыстории идут своей записью рядом с чертой происхождения — у них
+    // разные источники, и снимаются они независимо.
+    const replacedFeatureIds = new Set(
+      [
+        previous?.featUrl
+          ? getCharacterFeatureId('feat', previous.featUrl)
+          : null,
+        previous ? getCharacterFeatureId('background', previous.url) : null,
+        payload.featFeature?.id ?? null,
+        payload.backgroundFeature?.id ?? null,
+      ].filter((featureId): featureId is string => !!featureId),
+    );
 
     const preservedFeatures = character.value.features.filter(
-      (feature) => feature.id !== previousFeatId && feature.id !== newFeatId,
+      (feature) => !replacedFeatureIds.has(feature.id),
     );
+
+    const backgroundFeatures = [
+      payload.featFeature,
+      payload.backgroundFeature,
+    ].filter((feature): feature is CharacterFeature => !!feature);
 
     // Инструменты предыстории — её выдача: смена предыстории забирает прежние и
     // выдаёт новые. Навыки предыстории в журнал не идут: ими она наделяет через
@@ -2022,9 +2044,7 @@ export function useCharacterSheet() {
           payload.skills,
           [],
         ),
-        features: payload.featFeature
-          ? [payload.featFeature, ...preservedFeatures]
-          : preservedFeatures,
+        features: [...backgroundFeatures, ...preservedFeatures],
       },
       character.value,
     );
