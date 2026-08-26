@@ -1481,8 +1481,9 @@ export function useCharacterSheet() {
    * @param payload.skills выбранные навыки (владение и экспертиза).
    * @param payload.skills.proficient навыки для владения.
    * @param payload.skills.expertise навыки для экспертизы.
-   * @param payload.proficiencies распознанные владения из выборов вида.
-   * @param payload.proficiencies.languages владения языками.
+   * @param payload.proficiencies владения вида: заявленные его дарами и
+   *   выбранные игроком. Навыки приходят отдельным полем `skills` — их лист
+   *   ставит не в список владений, а в строки навыков.
    */
   function setSpecies(payload: {
     species: CharacterSpecies;
@@ -1491,28 +1492,21 @@ export function useCharacterSheet() {
     vision: CharacterVision;
     features: CharacterFeature[];
     skills: { proficient: string[]; expertise: string[] };
-    proficiencies: { languages: string[] };
+    proficiencies: GrantedProficiencies;
   }): void {
     if (!ensureEditable()) {
       return;
     }
 
-    // Языки вида — его выдача: смена вида забирает прежние и выдаёт новые.
+    // Владения вида — его выдача: смена вида забирает прежние и выдаёт новые.
+    // Навыки в этот набор не идут: их лист ставит строкам навыков, а не списку
+    // владений, — их приносит `payload.skills`.
     const speciesProficiencies = withSourceProficiencies(
       character.value.species
         ? getProficiencySourceId('species', character.value.species.url)
         : null,
       getProficiencySourceId('species', payload.species.url),
-      {
-        armor: [],
-        weapons: [],
-        tools: [],
-        languages: payload.proficiencies.languages,
-        skills: [],
-        expertiseSkills: [],
-        weaponMasteries: [],
-        savingThrows: [],
-      },
+      { ...payload.proficiencies, skills: [], expertiseSkills: [] },
     );
 
     // Смена вида заменяет только особенности вида и подвида; добавленные

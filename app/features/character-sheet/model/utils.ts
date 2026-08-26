@@ -5884,6 +5884,79 @@ export function parseSizeOptionsFromText(sizeText: string): string[] {
 }
 
 /**
+ * Владения, которые вид и его происхождение выдают без выбора.
+ *
+ * Сводятся из двух мест: самой записи (её даёт выбор вида целиком — так устроены
+ * происхождения, у которых умений нет вовсе) и каждого умения, которое уже
+ * действует на текущем уровне персонажа.
+ *
+ * До появления структурных даров лист искал владения в прозе описания, и умение,
+ * где владение названо иначе, оставалось незамеченным. Разбор прозы остался
+ * рядом — он ловит выборы игрока, которых в дарах нет.
+ *
+ * @param species деталь вида.
+ * @param lineage деталь происхождения; null — происхождения нет.
+ * @param characterLevel суммарный уровень персонажа.
+ * @returns владения одним набором; пустые списки — вид ничего не выдаёт.
+ */
+export function collectSpeciesProficiencies(
+  species: SpeciesSummary,
+  lineage: SpeciesSummary | null,
+  characterLevel: number,
+): GrantedProficiencies {
+  const sources: Array<GrantedProficiencies | null> = [species.proficiencies];
+
+  const appendFeatures = (summary: SpeciesSummary | null): void => {
+    for (const feature of summary?.features ?? []) {
+      if ((feature.level ?? 1) > characterLevel) {
+        continue;
+      }
+
+      sources.push(feature.proficiencies);
+    }
+  };
+
+  appendFeatures(species);
+
+  if (lineage) {
+    sources.push(lineage.proficiencies);
+    appendFeatures(lineage);
+  }
+
+  return mergeGrantedProficiencies(sources);
+}
+
+/**
+ * Складывает наборы владений в один, отбрасывая повторы и пустые источники.
+ *
+ * @param sources наборы владений; null — источник ничего не выдал.
+ * @returns один набор владений.
+ */
+function mergeGrantedProficiencies(
+  sources: Array<GrantedProficiencies | null>,
+): GrantedProficiencies {
+  const filled = sources.filter((source): source is GrantedProficiencies =>
+    Boolean(source),
+  );
+
+  return {
+    armor: uniq(filled.flatMap((source) => source.armor)),
+    weapons: uniq(filled.flatMap((source) => source.weapons)),
+    languages: uniq(filled.flatMap((source) => source.languages)),
+    skills: uniq(filled.flatMap((source) => source.skills)),
+    expertiseSkills: uniq(filled.flatMap((source) => source.expertiseSkills)),
+    weaponMasteries: uniq(filled.flatMap((source) => source.weaponMasteries)),
+    savingThrows: uniq(filled.flatMap((source) => source.savingThrows)),
+    // Инструмент — объект со ссылкой, поэтому повторы снимаются по названию:
+    // одна и та же лютня из вида и из его происхождения — это одно владение
+    tools: uniqBy(
+      filled.flatMap((source) => source.tools),
+      (tool) => tool.name,
+    ),
+  };
+}
+
+/**
  * Дистанция тёмного зрения вида и его происхождения.
  *
  * Сначала берётся поле записи: справочник хранит зрение числом, и это точнее

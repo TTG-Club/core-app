@@ -18,6 +18,7 @@
   import {
     ABILITY_LABELS,
     buildCharacterFeatures,
+    collectSpeciesProficiencies,
     CUSTOM_SPECIES_LABELS,
     detectFeatureChoice,
     FEATURE_ORIGIN_LABELS,
@@ -512,6 +513,14 @@
       featureChoices[control.id] = values.join(', ');
     }
 
+    // Дары, заявленные записью вида и её умениями: до них лист искал владения
+    // в прозе описания и умение с непривычной формулировкой пропускал
+    const declaredProficiencies = collectSpeciesProficiencies(
+      detail,
+      lineage,
+      character.value.level,
+    );
+
     setSpecies({
       species: {
         url: detail.url,
@@ -535,11 +544,23 @@
       },
       features: buildCharacterFeatures(detail, lineage, featureChoices),
       skills: {
-        proficient: [...new Set(proficientSkills)],
-        expertise: [...new Set(expertiseSkills)],
+        // Навыки из даров вида идут туда же, куда выбранные игроком: лист
+        // ставит владение строке навыка, а не списку владений
+        proficient: [
+          ...new Set([...declaredProficiencies.skills, ...proficientSkills]),
+        ],
+        expertise: [
+          ...new Set([
+            ...declaredProficiencies.expertiseSkills,
+            ...expertiseSkills,
+          ]),
+        ],
       },
       proficiencies: {
-        languages: [...new Set(chosenLanguages)],
+        ...declaredProficiencies,
+        languages: [
+          ...new Set([...declaredProficiencies.languages, ...chosenLanguages]),
+        ],
       },
     });
 

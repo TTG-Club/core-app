@@ -120,12 +120,46 @@ const speciesSearchResponseSchema = z
   ])
   .catch([]);
 
+/**
+ * Владения, выдаваемые механикой записи справочника, — черты, вида, умения
+ * класса. Схема одна на всех: блок в core-api общий, и вторая копия тех же
+ * полей разошлась бы с первой.
+ *
+ * Категории приходят справочными ключами, а лист хранит владения записями «вся
+ * группа»: перевод делает {@link toGrantedProficiencies}.
+ */
+const mechanicsProficienciesSchema = z
+  .object({
+    weaponCategories: z.array(z.string()).nullable().catch(null),
+    armorCategories: z.array(z.string()).nullable().catch(null),
+    skills: z.array(z.string()).nullable().catch(null),
+    languages: z.array(z.string()).nullable().catch(null),
+    tools: z
+      .array(
+        z.object({
+          url: z.string().catch(''),
+          name: z.string().catch(''),
+        }),
+      )
+      .nullable()
+      .catch(null),
+  })
+  .nullable()
+  .catch(null);
+
+/** Механика записи справочника в той части, которую лист читает у вида. */
+const speciesMechanicsSchema = z
+  .object({ proficiencies: mechanicsProficienciesSchema })
+  .nullable()
+  .catch(null);
+
 /** Схема особенности вида в детальном ответе. */
 const speciesFeatureSchema = z.object({
   url: z.string().catch(''),
   name: z.object({ rus: z.string().catch('') }),
   description: descriptionNodesSchema,
   level: z.coerce.number().min(1).max(20).nullish().catch(null),
+  mechanics: speciesMechanicsSchema,
   activeEffects: z.unknown().nullish(),
 });
 
@@ -215,6 +249,7 @@ const speciesDetailSchema = z.object({
     .catch({ size: '', speed: '', darkVision: null }),
   features: z.array(speciesFeatureSchema).catch([]),
   innateSpells: z.array(speciesInnateSpellSchema).catch([]),
+  mechanics: speciesMechanicsSchema,
   activeEffects: z.unknown().nullish(),
 });
 
@@ -235,6 +270,9 @@ function toSpeciesSummary(
     name: feature.name.rus,
     description: feature.description,
     level: feature.level ?? null,
+    proficiencies: feature.mechanics?.proficiencies
+      ? toGrantedProficiencies(feature.mechanics.proficiencies)
+      : null,
     // Эффекты разбирает общая схема раздела: битый эффект отбрасывается
     // поштучно, а не роняет всё умение
     activeEffects: normalizeLoadedActiveEffects(feature.activeEffects),
@@ -256,6 +294,9 @@ function toSpeciesSummary(
     darkVision: detail.properties.darkVision ?? null,
     features,
     innateSpells,
+    proficiencies: detail.mechanics?.proficiencies
+      ? toGrantedProficiencies(detail.mechanics.proficiencies)
+      : null,
     activeEffects: normalizeLoadedActiveEffects(detail.activeEffects),
   };
 }
@@ -476,24 +517,7 @@ const featDetailSchema = z.object({
         .catch(null),
       // Владения приходят категориями справочника — лист хранит их записями
       // «вся группа», поэтому разбор ниже их переводит.
-      proficiencies: z
-        .object({
-          weaponCategories: z.array(z.string()).nullable().catch(null),
-          armorCategories: z.array(z.string()).nullable().catch(null),
-          skills: z.array(z.string()).nullable().catch(null),
-          languages: z.array(z.string()).nullable().catch(null),
-          tools: z
-            .array(
-              z.object({
-                url: z.string().catch(''),
-                name: z.string().catch(''),
-              }),
-            )
-            .nullable()
-            .catch(null),
-        })
-        .nullable()
-        .catch(null),
+      proficiencies: mechanicsProficienciesSchema,
       // Сами заклинания лист берёт из `grantedSpells`: там они дополнены кругом
       // и школой, а в механике лежат одними ссылками. Здесь нужны подготовка —
       // держит ли черта заклинание готовым — и характеристика, от которой
@@ -578,9 +602,9 @@ const featDetailSchema = z.object({
   spellListGroups: z.array(featSpellListGroupSchema).nullable().catch(null),
 });
 
-/** Ответ справочника с владениями черты, как его разбирает схема детали. */
+/** Ответ справочника с владениями записи, как его разбирает общая схема. */
 type FeatProficienciesResponse = NonNullable<
-  NonNullable<z.infer<typeof featDetailSchema>['mechanics']>['proficiencies']
+  z.infer<typeof mechanicsProficienciesSchema>
 >;
 
 /**

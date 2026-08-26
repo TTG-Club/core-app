@@ -2029,6 +2029,14 @@ export interface SpeciesFeatureSummary {
    */
   level: number | null;
 
+  /**
+   * Владения, которые умение выдаёт без выбора; null — не выдаёт.
+   *
+   * До их появления лист искал владения в прозе описания: умение, где владение
+   * названо иначе, оставалось незамеченным.
+   */
+  proficiencies: GrantedProficiencies | null;
+
   /** Активные эффекты умения — снимок с записи справочника. */
   activeEffects: ActiveEffect[];
 }
@@ -2057,6 +2065,13 @@ export interface SpeciesSummary {
    * оставался без зрения.
    */
   darkVision: number | null;
+
+  /**
+   * Владения, которые даёт сама запись вида или происхождения без выбора;
+   * null — не даёт. У происхождений умений не бывает, и владение им приписать
+   * больше некуда.
+   */
+  proficiencies: GrantedProficiencies | null;
 
   /** Активные эффекты самой записи вида — снимок с записи справочника. */
   activeEffects: ActiveEffect[];
