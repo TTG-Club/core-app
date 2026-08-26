@@ -1,36 +1,49 @@
 <script setup lang="ts">
-  import type { SpeciesCreate } from '~species/model';
+  import type { SpeciesFeatureCreate } from '~species/model';
 
+  import { createFeatEditorRows, createFeatMechanics } from '~feats/model';
+  import { SPECIES_EDITOR_LABELS, SPECIES_FEATURE_LEVEL } from '~species/model';
   import { EditorArrayControls } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
 
-  type Features = SpeciesCreate['features'];
+  import SpeciesFeatureMechanics from './SpeciesFeatureMechanics.vue';
 
-  function getEmptyFeature(): Features[number] {
+  /**
+   * Пустое умение вида. Механика и строки редактора здесь всегда объекты:
+   * загрузка сливает ответ сервера именно с этим состоянием, и недостающие
+   * блоки берутся отсюда.
+   *
+   * @returns новое умение формы.
+   */
+  function getEmptyFeature(): SpeciesFeatureCreate {
     return {
       name: {
         rus: '',
         eng: '',
       },
       description: '',
+      level: undefined,
+      mechanics: createFeatMechanics(),
+      activeEffects: [],
+      editorRows: createFeatEditorRows(),
     };
   }
 
-  const model = defineModel<Features>({
+  const model = defineModel<Array<SpeciesFeatureCreate>>({
     default: () => [],
   });
 
-  function isLastFeature(index: number) {
+  function isLastFeature(index: number): boolean {
     return index === model.value.length - 1;
   }
 
-  function addFeature(indexOfNewFeature: number) {
+  function addFeature(indexOfNewFeature: number): void {
     model.value.splice(indexOfNewFeature, 0, getEmptyFeature());
   }
 </script>
 
 <template>
-  <USeparator>
+  <USeparator class="col-span-full">
     <span class="font-bold text-secondary">Умения</span>
   </USeparator>
 
@@ -44,7 +57,7 @@
       :state="feature"
     >
       <UFormField
-        class="col-span-full md:col-span-8"
+        class="col-span-full md:col-span-7"
         label="Название"
         name="name.rus"
       >
@@ -55,7 +68,7 @@
       </UFormField>
 
       <UFormField
-        class="col-span-full md:col-span-8"
+        class="col-span-full md:col-span-7"
         label="Название (англ.)"
         help="Английское название"
         name="name.eng"
@@ -66,12 +79,25 @@
         />
       </UFormField>
 
+      <UFormField
+        class="col-span-full md:col-span-4"
+        :label="SPECIES_EDITOR_LABELS.featureLevel"
+        :help="SPECIES_EDITOR_LABELS.featureLevelHint"
+        name="level"
+      >
+        <UInputNumber
+          v-model="feature.level"
+          :min="SPECIES_FEATURE_LEVEL.min"
+          :max="SPECIES_FEATURE_LEVEL.max"
+        />
+      </UFormField>
+
       <EditorArrayControls
         v-model="model"
         :item="feature"
         :empty-object="getEmptyFeature()"
         :index="featIndex"
-        cols="8"
+        cols="6"
         only-remove
       />
 
@@ -85,9 +111,14 @@
           placeholder="Введи описание"
         />
       </UFormField>
+
+      <SpeciesFeatureMechanics v-model="model[featIndex]!" />
     </UForm>
 
-    <USeparator v-if="!isLastFeature(featIndex)" />
+    <USeparator
+      v-if="!isLastFeature(featIndex)"
+      class="col-span-full"
+    />
   </template>
 
   <div
