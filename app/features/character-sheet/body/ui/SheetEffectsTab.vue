@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { ButtonProps } from '@nuxt/ui';
+
   import type { EffectConditionKey } from '~active-effects/model';
 
   import {
@@ -7,7 +9,11 @@
   } from '~active-effects/model';
 
   import { useCharacterSheet, useSheetActiveEffects } from '../../composables';
-  import { SHEET_EFFECT_LABELS, SHEET_TAB_EMPTY_LABELS } from '../../model';
+  import {
+    SHEET_EFFECT_FALLBACK_ICON,
+    SHEET_EFFECT_LABELS,
+    SHEET_TAB_EMPTY_LABELS,
+  } from '../../model';
 
   const emit = defineEmits<{
     'add-effect': [];
@@ -34,8 +40,11 @@
     [...conditionEffects.value, ...customEffects.value].map((effect) => ({
       id: effect.id,
       name: effect.name,
-      icon: effect.icon || 'tabler:sparkles',
-      description: effect.description || describeActiveEffect(effect),
+      icon: effect.icon || SHEET_EFFECT_FALLBACK_ICON,
+      description:
+        effect.description
+        || describeActiveEffect(effect)
+        || SHEET_EFFECT_LABELS.noDescription,
       disabled: effect.disabled,
       // Состояние правится плиткой, а не формой: у него нет своих настроек.
       isCondition: effect.conditionKey !== undefined,
@@ -43,15 +52,29 @@
     })),
   );
 
-  /** Плитки состояний с признаком «наложено». */
-  const conditionTiles = computed(() =>
-    EFFECT_CONDITION_TEMPLATES.map((template) => ({
-      key: template.key,
-      name: template.name,
-      icon: template.icon,
-      description: template.description,
-      isActive: isConditionActive(template.key),
-    })),
+  /** Плитка состояния: наложенная выделяется цветом и заливкой. */
+  interface ConditionTile {
+    key: EffectConditionKey;
+    name: string;
+    icon: string;
+    description: string;
+    color: ButtonProps['color'];
+    variant: ButtonProps['variant'];
+  }
+
+  const conditionTiles = computed<ConditionTile[]>(() =>
+    EFFECT_CONDITION_TEMPLATES.map((template) => {
+      const isActive = isConditionActive(template.key);
+
+      return {
+        key: template.key,
+        name: template.name,
+        icon: template.icon,
+        description: template.description,
+        color: isActive ? 'primary' : 'neutral',
+        variant: isActive ? 'soft' : 'outline',
+      };
+    }),
   );
 
   function handleAdd() {
@@ -110,9 +133,7 @@
             {{ row.name }}
           </span>
 
-          <span class="text-xs text-muted">
-            {{ row.description || SHEET_EFFECT_LABELS.noDescription }}
-          </span>
+          <span class="text-xs text-muted">{{ row.description }}</span>
         </div>
 
         <USwitch
@@ -175,7 +196,7 @@
         class="flex items-start gap-2 rounded-lg border border-default/50 bg-elevated/20 px-3 py-2"
       >
         <UIcon
-          :name="row.effect.icon || 'tabler:sparkles'"
+          :name="row.effect.icon || SHEET_EFFECT_FALLBACK_ICON"
           class="mt-0.5 size-5 shrink-0 text-muted"
         />
 
@@ -196,20 +217,23 @@
       </h3>
 
       <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        <UButton
+        <UTooltip
           v-for="tile in conditionTiles"
           :key="tile.key"
-          :icon="tile.icon"
-          :label="tile.name"
-          :color="tile.isActive ? 'primary' : 'neutral'"
-          :variant="tile.isActive ? 'soft' : 'outline'"
-          size="sm"
-          block
-          class="justify-start"
-          :class="editControlClass"
-          :title="tile.description"
-          @click.left.exact.prevent="handleToggleCondition(tile.key)"
-        />
+          :text="tile.description"
+        >
+          <UButton
+            :icon="tile.icon"
+            :label="tile.name"
+            :color="tile.color"
+            :variant="tile.variant"
+            size="sm"
+            block
+            class="justify-start"
+            :class="editControlClass"
+            @click.left.exact.prevent="handleToggleCondition(tile.key)"
+          />
+        </UTooltip>
       </div>
     </section>
   </div>

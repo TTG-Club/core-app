@@ -163,11 +163,6 @@ export function useSheetActiveEffects() {
     ]);
   }
 
-  /** Заготовка нового своего эффекта — с чем открывается пустая форма. */
-  function createDraftEffect(): ActiveEffect {
-    return createEmptyActiveEffect('manual');
-  }
-
   return {
     canEdit,
     customEffects,
@@ -179,6 +174,5 @@ export function useSheetActiveEffects() {
     removeEffect,
     toggleEffectDisabled,
     toggleCondition,
-    createDraftEffect,
   };
 }

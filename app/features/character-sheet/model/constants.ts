@@ -4529,7 +4529,12 @@ export const SHEET_EFFECT_LABELS = {
   toggle: 'Включить или выключить эффект',
   disabledBadge: 'Выключен',
   noDescription: 'Без описания',
+  cancel: 'Отмена',
+  save: 'Сохранить',
 } as const;
+
+/** Иконка эффекта, у которого своя не задана. */
+export const SHEET_EFFECT_FALLBACK_ICON = 'tabler:sparkles';
 
 /** Подписи вкладки «Заметки» и модалки заметки. */
 export const SHEET_NOTE_LABELS: Record<

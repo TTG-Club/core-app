@@ -2,6 +2,7 @@
   import type { ActiveEffect } from '~active-effects/model';
 
   import { ActiveEffectItem } from '~active-effects/editor';
+  import { createEmptyActiveEffect } from '~active-effects/model';
 
   import { useSheetActiveEffects } from '../../composables';
   import { SHEET_EFFECT_LABELS } from '../../model';
@@ -15,8 +16,7 @@
     close: [];
   }>();
 
-  const { customEffects, saveEffect, createDraftEffect } =
-    useSheetActiveEffects();
+  const { customEffects, saveEffect } = useSheetActiveEffects();
 
   // Снимок эффекта на момент открытия: модалка размонтируется при закрытии, и
   // setup выполняется заново на каждое открытие. Правки применяются по кнопке,
@@ -26,7 +26,9 @@
     : undefined;
 
   const draft = ref<ActiveEffect>(
-    editedEffect ? structuredClone(toRaw(editedEffect)) : createDraftEffect(),
+    editedEffect
+      ? structuredClone(toRaw(editedEffect))
+      : createEmptyActiveEffect('manual'),
   );
 
   const modalTitle = computed(() =>
@@ -55,14 +57,14 @@
     <template #footer>
       <div class="flex w-full justify-end gap-2">
         <UButton
-          label="Отмена"
+          :label="SHEET_EFFECT_LABELS.cancel"
           color="neutral"
           variant="ghost"
           @click.left.exact.prevent="handleCancel"
         />
 
         <UButton
-          label="Сохранить"
+          :label="SHEET_EFFECT_LABELS.save"
           color="primary"
           @click.left.exact.prevent="handleApply"
         />
