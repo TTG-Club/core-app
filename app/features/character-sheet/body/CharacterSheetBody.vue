@@ -27,6 +27,7 @@
     findCharacterSpell,
     getAbilityCheckValue,
     getAvailableInnateSpells,
+    getSkillKeyByName,
     getWeaponAttackBonus,
     getWeaponAttackRollMode,
     getWeaponDamageSource,
@@ -50,6 +51,7 @@
     SheetCustomSpellModal,
     SheetDamageModal,
     SheetDefencesPanel,
+    SheetEffectModal,
     SheetExhaustionPanel,
     SheetExperienceModal,
     SheetFeatAddModal,
@@ -153,6 +155,7 @@
     removeSpell,
     toggleInspiration,
     downloadCharacter,
+    getRollMode,
   } = useCharacterSheet();
 
   // Действия над листом целиком (копия и удаление) живут в общем состоянии
@@ -431,6 +434,14 @@
     },
   });
 
+  // Одна модалка на добавление и правку своего эффекта — тем же приёмом, что и
+  // заметка: пустой идентификатор означает новую запись.
+  const effectModal = overlay.create(SheetEffectModal, {
+    props: {
+      effectId: null,
+    },
+  });
+
   // Одна модалка на все приметы: поле, с которого начали правку, получает
   // курсор — null означает вход карандашом, без выделенного поля.
   const personalityModal = overlay.create(SheetPersonalityModal, {
@@ -676,6 +687,7 @@
       modifier: initiativeBonus.value,
       ability: 'dexterity',
       actionLabel: 'Бросить инициативу',
+      mode: getRollMode({ kind: 'initiative' }),
     });
   }
 
@@ -687,6 +699,10 @@
       // подмену, а в подменённом спасброске это уже другая характеристика.
       ability: row.ability,
       actionLabel: 'Бросить спасбросок',
+      // Источник спасброска на листе неизвестен, поэтому «против магии» здесь
+      // не применяется: выдать преимущество против яда по предмету «против
+      // заклинаний» хуже, чем не выдать вовсе.
+      mode: getRollMode({ kind: 'savingThrow', ability: row.key }),
     });
   }
 
@@ -695,6 +711,12 @@
       title: `Проверка: ${row.name}`,
       modifier: row.value,
       ability: row.ability,
+      mode: getRollMode({
+        kind: 'skill',
+        ability: row.ability,
+        // Свой навык игрока в словаре эффектов не значится — флагов у него нет.
+        skill: getSkillKeyByName(row.name),
+      }),
     });
   }
 
@@ -826,6 +848,22 @@
     }
 
     featureEditModal.open({ featureId });
+  }
+
+  function handleEffectAdd() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    effectModal.open({ effectId: null });
+  }
+
+  function handleEffectEdit(effectId: string) {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    effectModal.open({ effectId });
   }
 
   function handleNoteAdd() {
@@ -1278,6 +1316,8 @@
           @roll-item-attack="handleItemAttackRoll"
           @roll-item-damage="handleItemDamageRoll"
           @edit-feature="handleFeatureEdit"
+          @add-effect="handleEffectAdd"
+          @edit-effect="handleEffectEdit"
           @add-note="handleNoteAdd"
           @edit-note="handleNoteEdit"
           @remove-note="removeNote"

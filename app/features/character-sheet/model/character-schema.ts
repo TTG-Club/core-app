@@ -20,6 +20,7 @@ import type {
 import { clamp } from 'es-toolkit';
 
 import { z } from '~/utils/zod';
+import { normalizeLoadedActiveEffects } from '~active-effects/model';
 import { CasterType } from '~classes/model';
 
 import {
@@ -1046,6 +1047,12 @@ const inventoryItemSchema = z.object({
   equipped: z.boolean().catch(false),
   twoHanded: z.boolean().catch(false),
   bonuses: inventoryBonusesSchema,
+  // Эффекты предмета целиком: у листов, сохранённых до их появления, поля нет,
+  // и лист считает предмет по одним бонусам, как считал раньше.
+  activeEffects: z
+    .unknown()
+    .transform((raw) => normalizeLoadedActiveEffects(raw))
+    .catch([]),
   // Состояние магии; у листов до его появления — настройки нет, предмет
   // выключен, зарядов не заведено.
   requiresAttunement: z.boolean().catch(false),
@@ -1254,6 +1261,12 @@ const characterSchema = z
     attunement: attunementSchema,
     notes: notesSchema,
     personality: personalitySchema,
+    // Разбирается общим нормализатором домена эффектов: он же чинит записи,
+    // сохранённые до переезда типа урона в токен формулы.
+    activeEffects: z
+      .unknown()
+      .transform((raw) => normalizeLoadedActiveEffects(raw))
+      .catch([]),
     settings: settingsSchema,
   })
   // Легаси-список владений спасбросками уходит из документа, как только тот

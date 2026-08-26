@@ -1,3 +1,5 @@
+import type { ActiveEffect } from '~active-effects/model';
+
 import type {
   AbilityKey,
   Character,
@@ -36,6 +38,8 @@ import type {
   PlainProficiencyGroupKey,
   PreparedSpellKind,
   ProficiencyGrant,
+  RollMode,
+  SheetRollContext,
   SpeedTypeKey,
   SpellSlotKind,
   StartingEquipmentGrant,
@@ -99,6 +103,7 @@ import {
   getProficiencySourceId,
   getResourceMax,
   getSavingThrowRows,
+  getSheetRollMode,
   getSkillRowGroups,
   getSkillRows,
   getSpellcastingBreakdown,
@@ -134,6 +139,7 @@ import {
   removeFeaturesAboveLevel,
   removeFeatureSpell,
   removeLevelHitPoints,
+  resolveSheetEffects,
   RESOURCE_COUNT_MAX,
   RESOURCE_COUNT_MIN,
   RESOURCE_SHORT_LABEL_MAX_LENGTH,
@@ -3261,6 +3267,57 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Замена списка активных эффектов персонажа целиком.
+   *
+   * Одним экшеном на добавление, правку, выключение и снятие состояния:
+   * список короткий, а частичные экшены пришлось бы держать в паре с формой
+   * эффекта, которая всё равно отдаёт эффект целиком.
+   *
+   * @param effects новый список эффектов.
+   */
+  function updateActiveEffects(effects: ActiveEffect[]): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      activeEffects: effects,
+    };
+  }
+
+  /**
+   * Все эффекты, действующие на персонажа: свои и от надетого снаряжения.
+   *
+   * Эффекты предмета учитываются, только пока он надет, — как и его бонусы.
+   */
+  const appliedActiveEffects = computed<ActiveEffect[]>(() => [
+    ...character.value.activeEffects,
+    ...character.value.inventory
+      .filter((item) => item.equipped)
+      .flatMap((item) => item.activeEffects ?? []),
+  ]);
+
+  /**
+   * Разобранные эффекты: безусловные флаги и условные изменения. Из них
+   * считается режим броска — преимущество и помеха от предметов, черт и
+   * наложенных состояний.
+   */
+  const resolvedEffects = computed(() =>
+    resolveSheetEffects(appliedActiveEffects.value),
+  );
+
+  /**
+   * Режим броска по флагам персонажа.
+   *
+   * @param context обстоятельства броска.
+   * @returns режим броска: обычный, с преимуществом или с помехой.
+   */
+  function getRollMode(context: SheetRollContext): RollMode {
+    return getSheetRollMode(resolvedEffects.value.flags, context);
+  }
+
+  /**
    * Установка личности персонажа: приметы, мировоззрение и подробное описание.
    * Правят её две модалки, каждая своей частью, поэтому обе присылают личность
    * целиком — поверх текущей. Пробелы по краям снимаются: строка из одних
@@ -3490,6 +3547,10 @@ export function useCharacterSheet() {
     removeInventoryItem,
     removeNote,
     removeSpell,
+    updateActiveEffects,
+    appliedActiveEffects,
+    resolvedEffects,
+    getRollMode,
     updateFeature,
     updateNote,
     updateCustomInventoryItem,

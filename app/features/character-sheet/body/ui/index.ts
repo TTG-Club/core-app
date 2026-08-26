@@ -25,6 +25,8 @@ export { default as SheetCustomSpellModal } from './SheetCustomSpellModal.vue';
 export { default as SheetDamageModal } from './SheetDamageModal.vue';
 export { default as SheetDefencesPanel } from './SheetDefencesPanel.vue';
 export { default as SheetDistanceRows } from './SheetDistanceRows.vue';
+export { default as SheetEffectModal } from './SheetEffectModal.vue';
+export { default as SheetEffectsTab } from './SheetEffectsTab.vue';
 export { default as SheetEquipmentTab } from './SheetEquipmentTab.vue';
 export { default as SheetExhaustionPanel } from './SheetExhaustionPanel.vue';
 export { default as SheetExperienceModal } from './SheetExperienceModal.vue';

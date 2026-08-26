@@ -249,6 +249,7 @@ export const DEFAULT_CHARACTER: Character = {
     skin: '',
     description: '',
   },
+  activeEffects: [],
   settings: {
     weaponAttackAbility: null,
     customProficiencyBase: null,

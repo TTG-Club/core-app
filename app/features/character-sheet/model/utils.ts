@@ -2050,6 +2050,8 @@ export function buildInventoryItem(
     // Влияние предмета на лист мастерская описывает активными эффектами — теми
     // же, что у магического предмета: лист берёт из них числовые изменения.
     bonuses: toInventoryBonusesFromEffects(summary.activeEffects),
+    // Эффекты остаются и целиком: флаги режима броска в бонус не превращаются.
+    activeEffects: summary.activeEffects,
     // Настройка и заряды бывают только у магии — раздел «Предметы» их не знает.
     ...DEFAULT_INVENTORY_MAGIC_STATE,
   };
@@ -2264,6 +2266,8 @@ export function buildMagicItemInventoryItem(
     // Остальное влияние на лист мастерская описывает активными эффектами: лист
     // берёт из них числовые изменения своих значений.
     bonuses: toInventoryBonusesFromEffects(summary?.activeEffects ?? []),
+    // Эффекты остаются и целиком: флаги режима броска в бонус не превращаются.
+    activeEffects: summary?.activeEffects ?? [],
     ...DEFAULT_INVENTORY_MAGIC_STATE,
     // Настройка — свойство предмета: настроиться игрок решает сам, но
     // предлагать это лист должен только там, где настройка вообще нужна.

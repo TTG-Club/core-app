@@ -209,6 +209,32 @@ export const EFFECT_DAMAGE_TYPE_OPTIONS: Array<Option<string>> = [
   { label: 'Психический', value: 'psychic' },
 ];
 
+/**
+ * Навыки D&D 5e — зеркало `SKILLS_LABELS` из системы. Один список на всё, что
+ * про навыки: и ключи изменений (`skill.<навык>`), и флаги преимущества с
+ * помехой. Второй перечень разъехался бы с первым при первом переименовании.
+ */
+export const EFFECT_SKILL_OPTIONS: Array<Option<string>> = [
+  { value: 'acrobatics', label: 'Акробатика' },
+  { value: 'investigation', label: 'Анализ' },
+  { value: 'arcana', label: 'Аркана' },
+  { value: 'athletics', label: 'Атлетика' },
+  { value: 'perception', label: 'Внимательность' },
+  { value: 'survival', label: 'Выживание' },
+  { value: 'performance', label: 'Выступление' },
+  { value: 'intimidation', label: 'Запугивание' },
+  { value: 'history', label: 'История' },
+  { value: 'sleightOfHand', label: 'Ловкость рук' },
+  { value: 'medicine', label: 'Медицина' },
+  { value: 'deception', label: 'Обман' },
+  { value: 'nature', label: 'Природа' },
+  { value: 'insight', label: 'Проницательность' },
+  { value: 'religion', label: 'Религия' },
+  { value: 'stealth', label: 'Скрытность' },
+  { value: 'persuasion', label: 'Убеждение' },
+  { value: 'animalHandling', label: 'Уход за животными' },
+];
+
 /** Цель части урона эффекта. */
 export const EFFECT_DAMAGE_TARGET_OPTIONS: Array<
   Option<EffectDamagePartTarget>
@@ -271,25 +297,13 @@ export const EFFECT_TARGET_KEY_SUGGESTIONS: Array<Option<string>> = [
   { value: 'damage.ranged', label: 'Урон: дальнобойное оружие' },
   { value: 'damage.spell', label: 'Урон: заклинание' },
 
-  // Навыки
-  { value: 'skill.acrobatics', label: 'Навык (Акробатика)' },
-  { value: 'skill.animalHandling', label: 'Навык (Уход за животными)' },
-  { value: 'skill.arcana', label: 'Навык (Аркана)' },
-  { value: 'skill.athletics', label: 'Навык (Атлетика)' },
-  { value: 'skill.deception', label: 'Навык (Обман)' },
-  { value: 'skill.history', label: 'Навык (История)' },
-  { value: 'skill.insight', label: 'Навык (Проницательность)' },
-  { value: 'skill.investigation', label: 'Навык (Анализ)' },
-  { value: 'skill.intimidation', label: 'Навык (Запугивание)' },
-  { value: 'skill.medicine', label: 'Навык (Медицина)' },
-  { value: 'skill.nature', label: 'Навык (Природа)' },
-  { value: 'skill.perception', label: 'Навык (Внимательность)' },
-  { value: 'skill.performance', label: 'Навык (Выступление)' },
-  { value: 'skill.persuasion', label: 'Навык (Убеждение)' },
-  { value: 'skill.religion', label: 'Навык (Религия)' },
-  { value: 'skill.sleightOfHand', label: 'Навык (Ловкость рук)' },
-  { value: 'skill.stealth', label: 'Навык (Скрытность)' },
-  { value: 'skill.survival', label: 'Навык (Выживание)' },
+  // Навыки — из общего списка, чтобы ключ и флаг навыка не разъехались
+  ...EFFECT_SKILL_OPTIONS.map(
+    (skill): Option<string> => ({
+      value: `skill.${skill.value}`,
+      label: `Навык (${skill.label})`,
+    }),
+  ),
 ];
 
 /** Библиотека значений/формул (для поля change.value). */
@@ -429,6 +443,24 @@ function buildAbilityFlagLabels(
 }
 
 /**
+ * Собирает подписи понавыковых флагов: преимущество и помеха задаются отдельно
+ * для каждого из восемнадцати навыков.
+ *
+ * @param keySuffix окончание ключа флага (`.advantage` либо `.disadvantage`).
+ * @param labelPrefix приставка подписи флага.
+ * @returns пары «ключ флага → подпись».
+ */
+function buildSkillFlagLabels(
+  keySuffix: string,
+  labelPrefix: string,
+): Array<[string, string]> {
+  return EFFECT_SKILL_OPTIONS.map((skill): [string, string] => [
+    `skill.${skill.value}${keySuffix}`,
+    `${labelPrefix}: ${skill.label}`,
+  ]);
+}
+
+/**
  * Подписи флагов защит от урона: три вида защиты на каждый тип урона.
  *
  * @returns пары «ключ флага → подпись».
@@ -488,11 +520,20 @@ export const EFFECT_FLAG_LABELS: Record<string, string> = Object.fromEntries([
   ...buildAbilityFlagLabels('abilityCheck.disadvantage.', 'Помеха на проверки'),
 
   // Навыки
-  ['skill.stealth.disadvantage', 'Помеха на проверки: Скрытность'],
+  ...buildSkillFlagLabels('.advantage', 'Преимущество на проверки'),
+  ...buildSkillFlagLabels('.disadvantage', 'Помеха на проверки'),
 
   // Спасброски
   ['save.advantage', 'Преимущество на ВСЕ спасброски'],
   ['save.disadvantage', 'Помеха на ВСЕ спасброски'],
+  [
+    'save.advantage.vsMagic',
+    'Преимущество на спасброски против заклинаний и магических эффектов',
+  ],
+  [
+    'save.disadvantage.vsMagic',
+    'Помеха на спасброски против заклинаний и магических эффектов',
+  ],
   ...buildAbilityFlagLabels('save.advantage.', 'Преимущество на спасброски'),
   ...buildAbilityFlagLabels('save.disadvantage.', 'Помеха на спасброски'),
   ...buildAbilityFlagLabels('save.autoFail.', 'Автопровал спасбросков'),
