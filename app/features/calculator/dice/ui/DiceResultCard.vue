@@ -3,6 +3,7 @@
   import {
     createRollPartView,
     D20_SIDES,
+    EMPTY_VALUE_PLACEHOLDER,
     formatRollNumber,
     getRollBanner,
     RESULT_SPIN_INTERVAL,
@@ -38,7 +39,7 @@
 
   const displayedValue = computed(() => {
     if (!result.value) {
-      return '—';
+      return EMPTY_VALUE_PLACEHOLDER;
     }
 
     return isSpinning.value
@@ -140,7 +141,7 @@
 
             <span
               v-if="face.rerolled"
-              class="ml-0.5 text-[0.625rem] text-muted"
+              class="ml-0.5 text-[10px] text-muted"
               aria-hidden="true"
             >
               ↻

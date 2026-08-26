@@ -1,3 +1,5 @@
+import { EMPTY_VALUE_PLACEHOLDER } from './constants';
+
 /** Дробные значения показываются с двумя знаками и русской запятой. */
 const decimalFormatter = new Intl.NumberFormat('ru-RU', {
   minimumFractionDigits: 2,
@@ -26,7 +28,7 @@ const MIN_VISIBLE_PERCENT = 0.1;
  */
 export function formatRollNumber(value: number): string {
   if (!Number.isFinite(value)) {
-    return '—';
+    return EMPTY_VALUE_PLACEHOLDER;
   }
 
   return Number.isInteger(value)

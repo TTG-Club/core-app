@@ -4,34 +4,27 @@
     chanceAtLeast,
     CHECK_FAILURE_LABELS,
     CHECK_SUCCESS_LABELS,
+    createAnalysisNote,
     createHistogram,
+    CRITICAL_OUTCOME_LABEL,
+    DICE_ANALYSIS_LABELS,
+    EMPTY_VALUE_PLACEHOLDER,
     formatProbability,
     formatRollNumber,
-    MONTE_CARLO_SAMPLES,
   } from '../model';
   import DiceDistributionChart from './DiceDistributionChart.vue';
 
   const { analysis, chanceThreshold, isAnalysisOpen, result } =
     useDiceCalculator();
 
-  const samplesLabel = MONTE_CARLO_SAMPLES.toLocaleString('ru-RU');
-
   const histogram = computed(() =>
     analysis.value ? createHistogram(analysis.value.result) : null,
   );
 
-  const checkKind = computed(() => analysis.value?.checkKind ?? null);
-
-  const successLabel = computed(() =>
-    checkKind.value ? CHECK_SUCCESS_LABELS[checkKind.value] : '',
-  );
-
-  const failureLabel = computed(() =>
-    checkKind.value ? CHECK_FAILURE_LABELS[checkKind.value] : '',
-  );
-
   const meanLabel = computed(() =>
-    analysis.value?.result.outcomeChances ? 'Средний результат' : 'В среднем',
+    analysis.value?.result.outcomeChances
+      ? DICE_ANALYSIS_LABELS.meanWithChecks
+      : DICE_ANALYSIS_LABELS.mean,
   );
 
   const stats = computed(() => {
@@ -47,24 +40,36 @@
         label: meanLabel.value,
         value: formatRollNumber(current.mean),
       },
-      { key: 'min', label: 'Минимум', value: formatRollNumber(current.min) },
-      { key: 'max', label: 'Максимум', value: formatRollNumber(current.max) },
+      {
+        key: 'min',
+        label: DICE_ANALYSIS_LABELS.min,
+        value: formatRollNumber(current.min),
+      },
+      {
+        key: 'max',
+        label: DICE_ANALYSIS_LABELS.max,
+        value: formatRollNumber(current.max),
+      },
     ];
   });
 
+  // Цвет числа в чипе и цвет точки в легенде — один и тот же, иначе
+  // «Попадание» в чипе и «Попадание» под графиком выглядели бы разными вещами.
   const outcomes = computed(() => {
-    const chances = analysis.value?.result.outcomeChances;
+    const current = analysis.value;
+    const chances = current?.result.outcomeChances;
+    const kind = current?.checkKind;
 
-    if (!chances) {
+    if (!chances || !kind) {
       return [];
     }
 
     const rows = [
       {
         key: 'hit',
-        label: successLabel.value,
+        label: CHECK_SUCCESS_LABELS[kind],
         value: formatProbability(chances.hit),
-        color: 'text-success',
+        text: 'text-primary',
         dot: 'bg-primary',
       },
     ];
@@ -72,18 +77,18 @@
     if (chances.critical > 0) {
       rows.push({
         key: 'critical',
-        label: 'Крит',
+        label: CRITICAL_OUTCOME_LABEL,
         value: formatProbability(chances.critical),
-        color: 'text-success',
+        text: 'text-success',
         dot: 'bg-success',
       });
     }
 
     rows.push({
       key: 'miss',
-      label: failureLabel.value,
+      label: CHECK_FAILURE_LABELS[kind],
       value: formatProbability(chances.miss),
-      color: 'text-error',
+      text: 'text-error',
       dot: 'bg-error',
     });
 
@@ -97,13 +102,7 @@
       return '';
     }
 
-    if (current.result.outcomeChances) {
-      return `Оценка по ${samplesLabel} виртуальных бросков с учётом попаданий, критов и промахов.`;
-    }
-
-    return current.result.exact
-      ? `Точный расчёт вероятностей: ${current.label}.`
-      : `Оценка по ${samplesLabel} виртуальных бросков — формула слишком сложна для точного расчёта.`;
+    return createAnalysisNote(current.result, current.label);
   });
 
   const chanceLabel = computed(() => {
@@ -111,7 +110,7 @@
     const threshold = chanceThreshold.value;
 
     if (!current || threshold === null || !Number.isFinite(threshold)) {
-      return '—';
+      return EMPTY_VALUE_PLACEHOLDER;
     }
 
     return formatProbability(
@@ -136,7 +135,7 @@
   <section
     v-if="isAnalysisOpen && analysis && histogram"
     class="flex flex-col gap-3 rounded-xl border border-default bg-muted p-4"
-    aria-label="Анализ вероятностей"
+    :aria-label="DICE_ANALYSIS_LABELS.section"
   >
     <h3 class="flex items-center gap-2 text-sm font-semibold text-highlighted">
       <UIcon
@@ -144,7 +143,7 @@
         class="size-4 text-primary"
       />
 
-      Распределение результатов
+      {{ DICE_ANALYSIS_LABELS.title }}
     </h3>
 
     <div
@@ -160,7 +159,7 @@
 
         <b
           class="tabular-nums"
-          :class="outcome.color"
+          :class="outcome.text"
         >
           {{ outcome.value }}
         </b>
@@ -209,16 +208,16 @@
     <div
       class="flex flex-wrap items-center gap-2.5 border-t border-default pt-3 text-sm"
     >
-      <span>Шанс выбросить</span>
+      <span>{{ DICE_ANALYSIS_LABELS.chancePrefix }}</span>
 
       <UInputNumber
         v-model="chanceThreshold"
         class="w-28"
         :ui="{ base: 'text-center' }"
-        aria-label="Порог значения"
+        :aria-label="DICE_ANALYSIS_LABELS.threshold"
       />
 
-      <span>или больше:</span>
+      <span>{{ DICE_ANALYSIS_LABELS.chanceSuffix }}</span>
 
       <b class="font-bold text-primary tabular-nums">{{ chanceLabel }}</b>
     </div>

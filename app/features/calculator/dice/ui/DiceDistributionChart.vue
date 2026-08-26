@@ -3,10 +3,22 @@
 
   import {
     chanceAtLeast,
+    CHART_BAR_GAP_MAX,
+    CHART_BAR_GAP_MIN_WIDTH,
+    CHART_BAR_GAP_RATIO,
+    CHART_BAR_MIN_WIDTH,
+    CHART_BAR_PLAIN_OPACITY,
+    CHART_BAR_RADIUS_DIVISOR,
+    CHART_BAR_RADIUS_MAX,
+    CHART_CRISP_STROKE_OFFSET,
+    CHART_FULL_OPACITY,
     CHART_GRID_LINES,
     CHART_HEIGHT,
     CHART_LABEL_FONT_SIZE,
+    CHART_LABEL_GAP,
+    CHART_LINE_WIDTH,
     CHART_MAX_AXIS_LABELS,
+    CHART_OUTCOME_OPACITY,
     CHART_PADDING,
     formatProbability,
   } from '../model';
@@ -94,26 +106,26 @@
     context.font = colors.font;
     context.textAlign = 'right';
     context.textBaseline = 'middle';
-    context.lineWidth = 1;
+    context.lineWidth = CHART_LINE_WIDTH;
 
     for (let line = 0; line <= CHART_GRID_LINES; line += 1) {
-      const y =
+      const lineY =
         CHART_PADDING.top + plotHeight - (plotHeight * line) / CHART_GRID_LINES;
 
       const share = (histogram.maxProbability * line) / CHART_GRID_LINES;
 
       context.strokeStyle = colors.grid;
       context.beginPath();
-      context.moveTo(CHART_PADDING.left, y);
-      context.lineTo(CHART_PADDING.left + plotWidth, y);
+      context.moveTo(CHART_PADDING.left, lineY);
+      context.lineTo(CHART_PADDING.left + plotWidth, lineY);
       context.stroke();
 
       context.fillStyle = colors.text;
 
       context.fillText(
         `${(share * 100).toFixed(line ? 1 : 0)}%`,
-        CHART_PADDING.left - 6,
-        y,
+        CHART_PADDING.left - CHART_LABEL_GAP,
+        lineY,
       );
     }
   }
@@ -132,7 +144,7 @@
     context: CanvasRenderingContext2D,
     colors: ChartColors,
     bin: number,
-    geometry: { x: number; width: number; plotHeight: number },
+    geometry: { left: number; width: number; plotHeight: number },
   ): number {
     const outcomes = histogram.outcomes;
 
@@ -141,9 +153,13 @@
     }
 
     const layers: ReadonlyArray<readonly [number, string, number]> = [
-      [outcomes.miss[bin] ?? 0, colors.miss, 0.85],
-      [outcomes.normal[bin] ?? 0, colors.bar, 0.9],
-      [outcomes.critical[bin] ?? 0, colors.critical, 1],
+      [outcomes.miss[bin] ?? 0, colors.miss, CHART_OUTCOME_OPACITY.miss],
+      [outcomes.normal[bin] ?? 0, colors.bar, CHART_OUTCOME_OPACITY.normal],
+      [
+        outcomes.critical[bin] ?? 0,
+        colors.critical,
+        CHART_OUTCOME_OPACITY.critical,
+      ],
     ];
 
     let top = CHART_PADDING.top + geometry.plotHeight;
@@ -158,7 +174,7 @@
 
       context.fillStyle = color;
       context.globalAlpha = alpha;
-      context.fillRect(geometry.x, top - height, geometry.width, height);
+      context.fillRect(geometry.left, top - height, geometry.width, height);
 
       top -= height;
     }
@@ -180,7 +196,7 @@
     binWidthInPixels: number,
     plotHeight: number,
   ): void {
-    context.globalAlpha = 1;
+    context.globalAlpha = CHART_FULL_OPACITY;
     context.textAlign = 'center';
     context.textBaseline = 'top';
     context.fillStyle = colors.text;
@@ -194,7 +210,7 @@
       context.fillText(
         String(histogram.min + bin * histogram.binWidth),
         CHART_PADDING.left + bin * binWidthInPixels + binWidthInPixels / 2,
-        CHART_PADDING.top + plotHeight + 6,
+        CHART_PADDING.top + plotHeight + CHART_LABEL_GAP,
       );
     }
   }
@@ -228,9 +244,12 @@
 
     const binWidthInPixels = plotWidth / histogram.binCount;
 
-    const gap = binWidthInPixels > 4 ? Math.min(2, binWidthInPixels * 0.2) : 0;
+    const gap =
+      binWidthInPixels > CHART_BAR_GAP_MIN_WIDTH
+        ? Math.min(CHART_BAR_GAP_MAX, binWidthInPixels * CHART_BAR_GAP_RATIO)
+        : 0;
 
-    const barWidth = Math.max(binWidthInPixels - gap, 1);
+    const barWidth = Math.max(binWidthInPixels - gap, CHART_BAR_MIN_WIDTH);
 
     const rolledBin =
       rolledValue === null
@@ -238,26 +257,28 @@
         : Math.floor((rolledValue - histogram.min) / histogram.binWidth);
 
     for (let bin = 0; bin < histogram.binCount; bin += 1) {
-      const x = CHART_PADDING.left + bin * binWidthInPixels + gap / 2;
+      const barX = CHART_PADDING.left + bin * binWidthInPixels + gap / 2;
       const isRolled = rolledBin === bin;
 
       if (histogram.outcomes) {
         const top = drawStackedBar(context, colors, bin, {
-          x,
+          left: barX,
           width: barWidth,
           plotHeight,
         });
 
         if (isRolled) {
-          context.globalAlpha = 1;
+          const inset = CHART_CRISP_STROKE_OFFSET * 2;
+
+          context.globalAlpha = CHART_FULL_OPACITY;
           context.strokeStyle = colors.highlight;
-          context.lineWidth = 1;
+          context.lineWidth = CHART_LINE_WIDTH;
 
           context.strokeRect(
-            x + 0.5,
-            top + 0.5,
-            barWidth - 1,
-            CHART_PADDING.top + plotHeight - top - 1,
+            barX + CHART_CRISP_STROKE_OFFSET,
+            top + CHART_CRISP_STROKE_OFFSET,
+            barWidth - inset,
+            CHART_PADDING.top + plotHeight - top - inset,
           );
         }
 
@@ -268,15 +289,22 @@
       const height = (plotHeight * probability) / histogram.maxProbability;
 
       context.fillStyle = isRolled ? colors.critical : colors.bar;
-      context.globalAlpha = isRolled ? 1 : 0.9;
+
+      context.globalAlpha = isRolled
+        ? CHART_FULL_OPACITY
+        : CHART_BAR_PLAIN_OPACITY;
+
       context.beginPath();
 
       context.roundRect(
-        x,
+        barX,
         CHART_PADDING.top + plotHeight - height,
         barWidth,
         height,
-        Math.min(2, binWidthInPixels / 3),
+        Math.min(
+          CHART_BAR_RADIUS_MAX,
+          binWidthInPixels / CHART_BAR_RADIUS_DIVISOR,
+        ),
       );
 
       context.fill();
@@ -323,7 +351,7 @@
     { immediate: true },
   );
 
-  useResizeObserver(wrapperRef, () => draw());
+  useResizeObserver(wrapperRef, draw);
 </script>
 
 <template>

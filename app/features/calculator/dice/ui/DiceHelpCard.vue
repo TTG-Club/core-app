@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import { useDiceCalculator } from '../composables';
-  import { DICE_HELP_ROWS } from '../model';
+  import { DICE_HELP_LABELS, DICE_HELP_ROWS } from '../model';
 
   const { setFormula } = useDiceCalculator();
 </script>
@@ -9,7 +9,7 @@
   <section class="rounded-xl border border-default bg-muted p-4">
     <UCollapsible class="flex flex-col gap-2">
       <UButton
-        label="Как записывать формулы"
+        :label="DICE_HELP_LABELS.title"
         icon="tabler:help-circle"
         trailing-icon="tabler:chevron-down"
         color="neutral"
@@ -37,7 +37,7 @@
                 size="xs"
                 class="font-mono"
                 :label="row.syntax"
-                title="Подставить формулу в поле"
+                :title="DICE_HELP_LABELS.insert"
                 @click.left.exact.prevent="setFormula(row.syntax)"
               />
             </dt>

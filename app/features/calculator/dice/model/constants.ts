@@ -9,6 +9,9 @@ export const DICE_CALCULATOR_TITLE = 'Калькулятор бросков';
 /** Ключ localStorage с последней введённой формулой. */
 export const DICE_FORMULA_STORAGE_KEY = 'dice-calculator:last-formula';
 
+/** Чем показывается значение, которого пока нет. */
+export const EMPTY_VALUE_PLACEHOLDER = '—';
+
 /** Предел длины формулы в поле ввода. */
 export const DICE_FORMULA_MAX_LENGTH = 200;
 
@@ -53,16 +56,16 @@ export const MODIFIER_STEP = 1;
 export const PRESET_VALUE_PLACEHOLDER = '{value}';
 
 /** Наименьшие КД и СЛ, которые можно указать в пресетах. */
-export const PRESET_TARGET_MIN = 1;
+const PRESET_TARGET_MIN = 1;
 
 /** Наибольшие КД и СЛ, которые можно указать в пресетах. */
-export const PRESET_TARGET_MAX = 40;
+const PRESET_TARGET_MAX = 40;
 
 /** КД, предложенный в пресете атаки по умолчанию. */
-export const PRESET_ARMOR_CLASS_DEFAULT = 10;
+const PRESET_ARMOR_CLASS_DEFAULT = 10;
 
 /** СЛ, предложенная в пресете спасброска по умолчанию. */
-export const PRESET_DIFFICULTY_CLASS_DEFAULT = 10;
+const PRESET_DIFFICULTY_CLASS_DEFAULT = 10;
 
 /** Готовые формулы под полем ввода. */
 export const DICE_PRESETS: ReadonlyArray<DicePreset> = [
@@ -187,6 +190,49 @@ export const CHART_MAX_AXIS_LABELS = 8;
 
 /** Размер шрифта подписей на гистограмме в пикселях. */
 export const CHART_LABEL_FONT_SIZE = 11;
+
+/** Отступ подписи от оси гистограммы в пикселях. */
+export const CHART_LABEL_GAP = 6;
+
+/** Ниже этой ширины столбца зазор между столбцами не рисуется. */
+export const CHART_BAR_GAP_MIN_WIDTH = 4;
+
+/** Наибольший зазор между столбцами в пикселях. */
+export const CHART_BAR_GAP_MAX = 2;
+
+/** Какую долю ширины столбца занимает зазор. */
+export const CHART_BAR_GAP_RATIO = 0.2;
+
+/** Наибольший радиус скругления столбца в пикселях. */
+export const CHART_BAR_RADIUS_MAX = 2;
+
+/** Во сколько раз ширина столбца больше его радиуса скругления. */
+export const CHART_BAR_RADIUS_DIVISOR = 3;
+
+/** Полная непрозрачность: ею же сбрасывается прозрачность между слоями. */
+export const CHART_FULL_OPACITY = 1;
+
+/** Прозрачность обычного столбца: выпавший рисуется ярче остальных. */
+export const CHART_BAR_PLAIN_OPACITY = 0.9;
+
+/** Наименьшая ширина столбца в пикселях, чтобы он не исчез совсем. */
+export const CHART_BAR_MIN_WIDTH = 1;
+
+/** Толщина линий сетки и обводки на гистограмме в пикселях. */
+export const CHART_LINE_WIDTH = 1;
+
+/**
+ * Смещение обводки на полпикселя. Координаты canvas проходят между пикселями,
+ * поэтому линия толщиной в пиксель без смещения размазывается на два.
+ */
+export const CHART_CRISP_STROKE_OFFSET = 0.5;
+
+/** Прозрачность слоёв столбца, разложенного по исходам проверки. */
+export const CHART_OUTCOME_OPACITY = {
+  miss: 0.85,
+  normal: 0.9,
+  critical: CHART_FULL_OPACITY,
+} as const;
 
 /** Сколько «прокруток» показывает число результата перед остановкой. */
 export const RESULT_SPIN_TICKS = 8;

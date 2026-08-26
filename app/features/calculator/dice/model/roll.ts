@@ -45,7 +45,7 @@ function rollDie(sides: number): number {
  * @param node - Узел броска костей
  * @returns Подпись для разбора результата
  */
-export function createDiceLabel(node: DiceFormulaNode): string {
+function createDiceLabel(node: DiceFormulaNode): string {
   const count = node.count > 1 ? String(node.count) : '';
 
   const keep = node.keep
@@ -67,8 +67,11 @@ function rollDicePart(node: DiceFormulaNode): {
   sum: number;
   part: DiceRollPart;
 } {
+  // Показать нужно все грани, включая переброшенные, а считать — только
+  // живые, поэтому списка два. Хранятся ссылки на сами грани, а не индексы:
+  // грани создаются здесь же и наружу до конца функции не видны.
   const faces: RolledFace[] = [];
-  const activeIndexes: number[] = [];
+  const activeFaces: RolledFace[] = [];
 
   for (let index = 0; index < node.count; index += 1) {
     let value = rollDie(node.sides);
@@ -78,37 +81,34 @@ function rollDicePart(node: DiceFormulaNode): {
       value = rollDie(node.sides);
     }
 
-    activeIndexes.push(faces.length);
-    faces.push({ value, dropped: false, rerolled: false });
+    const face: RolledFace = { value, dropped: false, rerolled: false };
+
+    faces.push(face);
+    activeFaces.push(face);
   }
 
-  let keptIndexes = activeIndexes;
+  let keptFaces = activeFaces;
 
   if (node.keep) {
-    const sorted = [...activeIndexes].sort(
-      (left, right) => (faces[right]?.value ?? 0) - (faces[left]?.value ?? 0),
+    const sorted = [...activeFaces].sort(
+      (left, right) => right.value - left.value,
     );
 
-    keptIndexes =
+    keptFaces =
       node.keep.kind === 'highest'
         ? sorted.slice(0, node.keep.amount)
         : sorted.slice(sorted.length - node.keep.amount);
 
-    const kept = new Set(keptIndexes);
+    const kept = new Set(keptFaces);
 
-    for (const index of activeIndexes) {
-      const face = faces[index];
-
-      if (face && !kept.has(index)) {
+    for (const face of activeFaces) {
+      if (!kept.has(face)) {
         face.dropped = true;
       }
     }
   }
 
-  const sum = keptIndexes.reduce(
-    (total, index) => total + (faces[index]?.value ?? 0),
-    0,
-  );
+  const sum = keptFaces.reduce((total, face) => total + face.value, 0);
 
   return {
     sum,

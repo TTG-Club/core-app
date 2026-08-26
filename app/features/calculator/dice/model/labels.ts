@@ -1,4 +1,5 @@
 import type {
+  AnalysisResult,
   CheckKind,
   CheckRollPart,
   RollMode,
@@ -7,7 +8,7 @@ import type {
   RollToggleKey,
 } from './types';
 
-import { D20_SIDES } from './constants';
+import { D20_SIDES, MONTE_CARLO_SAMPLES } from './constants';
 
 /** Режимы броска в порядке показа на кнопках. */
 export const ROLL_MODES: ReadonlyArray<RollMode> = [
@@ -68,10 +69,10 @@ export const CHECK_FAILURE_LABELS: Readonly<Record<CheckKind, string>> = {
 };
 
 /** Подпись критического попадания. */
-export const CRITICAL_HIT_LABEL = 'Критическое попадание';
+const CRITICAL_HIT_LABEL = 'Критическое попадание';
 
 /** Подпись критического промаха: натуральная 1 в атаке по КД. */
-export const CRITICAL_MISS_LABEL = 'Критический промах';
+const CRITICAL_MISS_LABEL = 'Критический промах';
 
 /**
  * Собирает подпись формулы вместе с включёнными переключателями.
@@ -134,10 +135,10 @@ export function getCheckOutcomeLabel(check: CheckRollPart): string {
 }
 
 /** Подпись критического успеха на голом броске d20 без проверки. */
-export const CRITICAL_SUCCESS_LABEL = 'Критический успех';
+const CRITICAL_SUCCESS_LABEL = 'Критический успех';
 
 /** Подпись критического провала на голом броске d20 без проверки. */
-export const CRITICAL_FAILURE_LABEL = 'Критический провал';
+const CRITICAL_FAILURE_LABEL = 'Критический провал';
 
 /** Баннер исхода над разбором броска. */
 export interface RollBanner {
@@ -206,4 +207,53 @@ export const DICE_FORMULA_LABELS = {
  */
 export function getAddDieTitle(sides: number): string {
   return `Добавить d${sides} в формулу`;
+}
+
+/** Подпись доли критов среди исходов проверки. */
+export const CRITICAL_OUTCOME_LABEL = 'Крит';
+
+/** Подписи карточки анализа. */
+export const DICE_ANALYSIS_LABELS = {
+  section: 'Анализ вероятностей',
+  title: 'Распределение результатов',
+  mean: 'В среднем',
+  meanWithChecks: 'Средний результат',
+  min: 'Минимум',
+  max: 'Максимум',
+  chancePrefix: 'Шанс выбросить',
+  chanceSuffix: 'или больше:',
+  threshold: 'Порог значения',
+} as const;
+
+/** Подписи карточки справки. */
+export const DICE_HELP_LABELS = {
+  title: 'Как записывать формулы',
+  insert: 'Подставить формулу в поле',
+} as const;
+
+/**
+ * Объясняет, откуда взялись показанные вероятности: точный это расчёт
+ * или оценка по виртуальным броскам.
+ *
+ * @param analysis - Итог анализа формулы
+ * @param formulaLabel - Подпись формулы вместе с переключателями
+ * @returns Пояснение под гистограммой
+ *
+ * @example
+ * createAnalysisNote(analyzeFormula(parseFormula('2d6')), '2d6');
+ * // 'Точный расчёт вероятностей: 2d6.'
+ */
+export function createAnalysisNote(
+  analysis: AnalysisResult,
+  formulaLabel: string,
+): string {
+  const samples = MONTE_CARLO_SAMPLES.toLocaleString('ru-RU');
+
+  if (analysis.outcomeChances) {
+    return `Оценка по ${samples} виртуальных бросков с учётом попаданий, критов и промахов.`;
+  }
+
+  return analysis.exact
+    ? `Точный расчёт вероятностей: ${formulaLabel}.`
+    : `Оценка по ${samples} виртуальных бросков — формула слишком сложна для точного расчёта.`;
 }

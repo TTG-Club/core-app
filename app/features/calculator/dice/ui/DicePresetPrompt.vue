@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import type { DicePreset, DicePresetPrompt } from '../model';
 
-  import { fillPresetFormula } from '../model';
+  import { DICE_FORMULA_LABELS, fillPresetFormula } from '../model';
 
   const { preset, prompt } = defineProps<{
     preset: DicePreset;
@@ -63,7 +63,7 @@
           color="primary"
           size="sm"
           block
-          label="Бросить"
+          :label="DICE_FORMULA_LABELS.roll"
         />
       </form>
     </template>
