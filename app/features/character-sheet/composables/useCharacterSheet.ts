@@ -31,6 +31,7 @@ import type {
   CharacterVision,
   CustomInventoryItemDraft,
   CustomSpellDraft,
+  FeatDefences,
   GrantedProficiencies,
   HitDiceAmount,
   LevelUpHitPointsGain,
@@ -70,6 +71,7 @@ import {
   CARRYING_CAPACITY_MAX,
   CARRYING_CAPACITY_MIN,
   CATALOG_COPY_TOAST_DESCRIPTION,
+  collectAppliedEffects,
   CURRENCY_AMOUNT_MAX,
   CURRENCY_AMOUNT_MIN,
   CUSTOM_INVENTORY_URL_PREFIX,
@@ -89,11 +91,13 @@ import {
   getAttunementLimitDescription,
   getCarryingCapacityValue,
   getCharacterClasses,
+  getCharacterEffectFlags,
   getCharacterFeatureId,
   getCharacterProficiencyBonus,
   getClampedClassLevels,
   getClampedInteger,
   getClassLevelHitPoints,
+  getEffectDamageDefences,
   getEffectiveSpeed,
   getFeatDefences,
   getInitiativeBonus,
@@ -363,10 +367,28 @@ export function useCharacterSheet() {
   const effectiveSpeed = computed(() => getEffectiveSpeed(character.value));
 
   // Защиты от черт: своего понятия для них лист не хранит, поэтому собираются
-  // из снимков механики. Панель показывается, только если черта их выдала.
-  const featDefences = computed(() =>
-    getFeatDefences(character.value.features, character.value.speed.unit),
-  );
+  // из снимков механики. К ним добавляются защиты от активных эффектов —
+  // Окаменевший даёт сопротивление всему урону, и панель обязана его показать.
+  const featDefences = computed<FeatDefences>(() => {
+    const granted = getFeatDefences(
+      character.value.features,
+      character.value.speed.unit,
+    );
+
+    const fromEffects = getEffectDamageDefences(
+      getCharacterEffectFlags(character.value),
+    );
+
+    return {
+      ...granted,
+      resistances: union(granted.resistances, fromEffects.resistances),
+      immunities: union(granted.immunities, fromEffects.immunities),
+      vulnerabilities: union(
+        granted.vulnerabilities,
+        fromEffects.vulnerabilities,
+      ),
+    };
+  });
 
   const hasFeatDefences = computed(
     () =>
@@ -3291,12 +3313,9 @@ export function useCharacterSheet() {
    *
    * Эффекты предмета учитываются, только пока он надет, — как и его бонусы.
    */
-  const appliedActiveEffects = computed<ActiveEffect[]>(() => [
-    ...character.value.activeEffects,
-    ...character.value.inventory
-      .filter((item) => item.equipped)
-      .flatMap((item) => item.activeEffects ?? []),
-  ]);
+  const appliedActiveEffects = computed<ActiveEffect[]>(() =>
+    collectAppliedEffects(character.value),
+  );
 
   /**
    * Разобранные эффекты: безусловные флаги и условные изменения. Из них

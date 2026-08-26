@@ -16,9 +16,12 @@
 
 import type { ActiveEffect, EffectChange } from '~active-effects/model';
 
-import type { RollMode } from './types';
+import type { Character, RollMode } from './types';
 
-import { EFFECT_SKILL_OPTIONS } from '~active-effects/model';
+import {
+  EFFECT_DAMAGE_TYPE_OPTIONS,
+  EFFECT_SKILL_OPTIONS,
+} from '~active-effects/model';
 
 /** Вид броска, для которого подбирается режим. */
 export type SheetRollKind =
@@ -94,6 +97,91 @@ const SKILL_KEY_BY_NAME: Record<string, string> = Object.fromEntries(
  */
 export function getSkillKeyByName(name: string): string | undefined {
   return SKILL_KEY_BY_NAME[name];
+}
+
+/**
+ * Все эффекты, действующие на персонажа: свои и от надетого снаряжения.
+ *
+ * Эффекты предмета учитываются, только пока он надет, — как и его бонусы.
+ *
+ * @param character персонаж.
+ * @returns эффекты персонажа и его снаряжения одним списком.
+ */
+export function collectAppliedEffects(character: Character): ActiveEffect[] {
+  return [
+    ...character.activeEffects,
+    ...character.inventory
+      .filter((item) => item.equipped)
+      .flatMap((item) => item.activeEffects ?? []),
+  ];
+}
+
+/**
+ * Безусловные флаги персонажа — единая точка для всего листа.
+ *
+ * @param character персонаж.
+ * @returns множество активных флагов.
+ */
+export function getCharacterEffectFlags(
+  character: Character,
+): ReadonlySet<string> {
+  return resolveSheetEffects(collectAppliedEffects(character)).flags;
+}
+
+/**
+ * Обнулена ли скорость персонажа эффектом.
+ *
+ * Флаг `speed.zero` ставят Схваченный, Опутанный, Парализованный, Окаменевший и
+ * Бессознательный: по правилам такая скорость именно ноль, а не штраф, и её
+ * нельзя поднять ничем.
+ *
+ * @param flags активные флаги персонажа.
+ * @returns признак обнулённой скорости.
+ */
+export function isSpeedZeroedByEffects(flags: ReadonlySet<string>): boolean {
+  return flags.has('speed.zero');
+}
+
+/** Защиты от урона, выданные активными эффектами. */
+export interface EffectDamageDefences {
+  resistances: string[];
+  immunities: string[];
+  vulnerabilities: string[];
+}
+
+/**
+ * Защиты от урона из флагов вида `resistance.fire`.
+ *
+ * Возвращает русские подписи типов урона — блок защит листа показывает именно
+ * их, и мешать в него ключи словаря нельзя.
+ *
+ * @param flags активные флаги персонажа.
+ * @returns сопротивления, иммунитеты и уязвимости подписями.
+ */
+export function getEffectDamageDefences(
+  flags: ReadonlySet<string>,
+): EffectDamageDefences {
+  const defences: EffectDamageDefences = {
+    resistances: [],
+    immunities: [],
+    vulnerabilities: [],
+  };
+
+  for (const damageType of EFFECT_DAMAGE_TYPE_OPTIONS) {
+    if (flags.has(`resistance.${damageType.value}`)) {
+      defences.resistances.push(damageType.label);
+    }
+
+    if (flags.has(`immunity.${damageType.value}`)) {
+      defences.immunities.push(damageType.label);
+    }
+
+    if (flags.has(`vulnerability.${damageType.value}`)) {
+      defences.vulnerabilities.push(damageType.label);
+    }
+  }
+
+  return defences;
 }
 
 /**
@@ -306,6 +394,34 @@ export function getSheetRollMode(
   }
 
   if (disadvantage && !advantage) {
+    return 'disadvantage';
+  }
+
+  return 'normal';
+}
+
+/**
+ * Сводит два режима броска в один по правилу 5e: преимущество и помеха взаимно
+ * гасятся до обычного броска, одинаковые складываются в себя же.
+ *
+ * Нужно там, где режим дают два независимых источника: помеху тяжёлого оружия
+ * не по руке и преимущество (или помеху) от активных эффектов сложить иначе
+ * нельзя — «две помехи» правилами не предусмотрены.
+ *
+ * @param first режим от первого источника.
+ * @param second режим от второго источника.
+ * @returns итоговый режим броска.
+ */
+export function combineRollModes(first: RollMode, second: RollMode): RollMode {
+  const hasAdvantage = first === 'advantage' || second === 'advantage';
+
+  const hasDisadvantage = first === 'disadvantage' || second === 'disadvantage';
+
+  if (hasAdvantage && !hasDisadvantage) {
+    return 'advantage';
+  }
+
+  if (hasDisadvantage && !hasAdvantage) {
     return 'disadvantage';
   }
 

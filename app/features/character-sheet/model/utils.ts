@@ -414,6 +414,10 @@ import {
   WEAPON_TRAIT_MATCH_KEYWORDS,
   WEIGHT_DECIMALS,
 } from './constants';
+import {
+  getCharacterEffectFlags,
+  isSpeedZeroedByEffects,
+} from './effect-engine';
 import { toInventoryBonusesFromEffects } from './effects';
 import { DEFAULT_CHARACTER } from './mock';
 
@@ -5210,6 +5214,15 @@ export function getExhaustionSpeedPenalty(character: Character): number {
  * @returns скорости с применённым истощением.
  */
 export function getEffectiveSpeed(character: Character): CharacterSpeed {
+  // Обнулённая скорость — не штраф, а ноль: ни прибавка предмета, ни своя
+  // прибавка игрока её не поднимают, поэтому проверка идёт до всех расчётов.
+  if (isSpeedZeroedByEffects(getCharacterEffectFlags(character))) {
+    return {
+      ...character.speed,
+      values: mapValues(character.speed.values, () => 0),
+    };
+  }
+
   const penalty = getExhaustionSpeedPenalty(character);
 
   const featSpeed = getFeatSpeedModifiers(

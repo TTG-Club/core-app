@@ -23,6 +23,7 @@
   import {
     ABILITY_LABELS,
     ARMOR_PROFICIENCY_GROUPS,
+    combineRollModes,
     EMPTY_DAMAGE_ROLL_SOURCE,
     findCharacterSpell,
     getAbilityCheckValue,
@@ -741,9 +742,16 @@
       modifier: attack.value,
       ability: attack.ability,
       actionLabel: 'Бросить атаку',
-      // Тяжёлое оружие не по руке бьёт с помехой (правила 2024): модалка
-      // открывается сразу в этом режиме, но игрок волен его сменить.
-      mode: getWeaponAttackRollMode(attack),
+      // Режим дают два независимых источника: помеха тяжёлого оружия не по руке
+      // (правила 2024) и активные эффекты — Опутанный бьёт с помехой. Свести их
+      // можно только правилом 5e, поэтому не «или», а `combineRollModes`.
+      mode: combineRollModes(
+        getWeaponAttackRollMode(attack),
+        getRollMode({
+          kind: 'attack',
+          attackType: inventoryItem.weapon.ranged ? 'ranged' : 'melee',
+        }),
+      ),
     });
   }
 
