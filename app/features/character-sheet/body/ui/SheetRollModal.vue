@@ -10,7 +10,6 @@
     DEFAULT_ROLL_MODE,
     DICE_NOTATION_LETTER,
     getCheckFormula,
-    getFormattedBonus,
     getSwappedRollModifier,
     ROLL_ABILITY_AUTO,
     ROLL_ABILITY_OPTIONS,

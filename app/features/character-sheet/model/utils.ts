@@ -91,6 +91,9 @@ import type {
   InventoryBonusTargetKind,
   InventoryBonusTargetOption,
   InventoryCharges,
+  InventoryChargesEvent,
+  InventoryChargesRecovery,
+  InventoryExtraDamage,
   InventoryItemBonus,
   InventoryItemOrigin,
   InventoryWeapon,
@@ -168,6 +171,7 @@ import {
   EMPTY_MAGIC_ITEM_BONUSES,
   MAGIC_ITEM_BONUS_NONE,
 } from '~magic-items/model';
+import { DAMAGE_TYPE_LABELS } from '~ui/damage-formula';
 import {
   getNodeText,
   isBlockNode,
@@ -257,7 +261,6 @@ import {
   DAMAGE_BONUS_MIN,
   DAMAGE_DICE_COUNT_MAX,
   DAMAGE_DICE_COUNT_MIN,
-  DAMAGE_TYPE_LABELS,
   DAMAGE_TYPE_NAMES,
   DAMAGE_TYPE_NONE,
   DARKVISION_PARSE_FALLBACK,
@@ -298,6 +301,7 @@ import {
   INVENTORY_BONUS_TARGET_SEPARATOR,
   INVENTORY_CATEGORY_ORDER,
   INVENTORY_CATEGORY_TITLES,
+  INVENTORY_CHARGES_RECOVERY_LABEL,
   INVENTORY_EQUIP_ICONS,
   INVENTORY_GRIP_MENU_LABELS,
   INVENTORY_QUANTITY_MAX,
@@ -414,16 +418,6 @@ import { toInventoryBonusesFromEffects } from './effects';
 import { DEFAULT_CHARACTER } from './mock';
 
 /**
- * Форматирование готового бонуса со знаком.
- *
- * @param bonus значение бонуса.
- * @returns отформатированный бонус (например, '+4' или '−1').
- */
-export function getFormattedBonus(bonus: number): string {
-  return `${bonus < 0 ? '−' : '+'}${Math.abs(bonus)}`;
-}
-
-/**
  * Бонус мастерства персонажа по уровню.
  *
  * @param level уровень персонажа.
@@ -471,7 +465,26 @@ export function getCharacterProficiencyBonus(character: Character): number {
 }
 
 /**
- * Работают ли сейчас пассивные бонусы предмета. Бонус даёт надетый предмет,
+ * Выполнено ли условие применения предмета. «При себе» довольствуется самим
+ * наличием предмета, «вручную» ждёт переключателя в его строке, остальное —
+ * отметки «надет», как лист считал всегда.
+ *
+ * @param inventoryItem предмет инвентаря.
+ * @returns true — магия предмета включена.
+ */
+function isActivatedBonusItem(inventoryItem: CharacterInventoryItem): boolean {
+  switch (inventoryItem.bonusActivation) {
+    case 'carried':
+      return true;
+    case 'manual':
+      return inventoryItem.active;
+    default:
+      return inventoryItem.equipped;
+  }
+}
+
+/**
+ * Работают ли сейчас пассивные бонусы предмета. Бонус даёт включённый предмет,
  * которого у персонажа не ноль, а предмету с настройкой нужна ещё и сама
  * настройка — ненастроенный магический предмет по правилам 2024 не работает.
  *
@@ -480,7 +493,7 @@ export function getCharacterProficiencyBonus(character: Character): number {
  */
 function isActiveBonusItem(inventoryItem: CharacterInventoryItem): boolean {
   return (
-    inventoryItem.equipped
+    isActivatedBonusItem(inventoryItem)
     && !isMissingInventoryItem(inventoryItem)
     && (!inventoryItem.requiresAttunement || inventoryItem.attuned)
   );
@@ -2145,6 +2158,7 @@ function getMagicWeaponDamage(
 function getMagicItemWeapon(
   weapon: InventoryWeapon | null,
   bonuses: MagicItemBonuses,
+  extraDamage: InventoryExtraDamage | null,
 ): InventoryWeapon | null {
   if (!weapon) {
     return null;
@@ -2158,6 +2172,9 @@ function getMagicItemWeapon(
       weapon.versatileDamage,
       bonuses.damage,
     ),
+    // Урон магии перебивает доп. урон основы: он и есть то, что магия добавила,
+    // а строка доп. урона у предмета одна.
+    extraDamage: extraDamage ?? weapon.extraDamage,
   };
 }
 
@@ -2165,12 +2182,16 @@ function getMagicItemWeapon(
  * Заряды предмета для записи инвентаря: свежий предмет заряжен полностью.
  *
  * @param maxCharges максимум зарядов из каталога.
+ * @param recovery правило восстановления из каталога; null — его не задали.
  * @returns заряды предмета; null — зарядов у него нет.
  */
-function getInventoryCharges(maxCharges: number): InventoryCharges | null {
+function getInventoryCharges(
+  maxCharges: number,
+  recovery: InventoryChargesRecovery | null = null,
+): InventoryCharges | null {
   const max = Math.max(0, Math.trunc(maxCharges));
 
-  return max > 0 ? { current: max, max } : null;
+  return max > 0 ? { current: max, max, recovery } : null;
 }
 
 /**
@@ -2201,6 +2222,10 @@ function getMagicItemArmor(
  * вес и боевые параметры. Бонусы мастерской ложатся поверх основы; бонус к КД
  * предмета без брони (плащ защиты) становится плоской надбавкой.
  *
+ * Условие применения, пассивное свойство и правило восстановления зарядов лист
+ * забирает у механики предмета: без них надетый плащ не отличался бы от того,
+ * что достаточно носить при себе, а заряды возвращались бы только вручную.
+ *
  * @param catalogItem магический предмет каталога.
  * @param summary редкость, бонусы и немагическая основа; null — «сырой» ответ не загрузился.
  * @returns предмет инвентаря для вкладки «Снаряжение».
@@ -2229,7 +2254,11 @@ export function buildMagicItemInventoryItem(
     armor,
     // Бонус доспешной основы уже вошёл в её КД — второй раз он не считается.
     armorClassBonus: armor ? MAGIC_ITEM_BONUS_NONE : bonuses.armorClass,
-    weapon: getMagicItemWeapon(baseItem?.weapon ?? null, bonuses),
+    weapon: getMagicItemWeapon(
+      baseItem?.weapon ?? null,
+      bonuses,
+      summary?.extraDamage ?? null,
+    ),
     equipped: false,
     twoHanded: false,
     // Остальное влияние на лист мастерская описывает активными эффектами: лист
@@ -2240,7 +2269,12 @@ export function buildMagicItemInventoryItem(
     // предлагать это лист должен только там, где настройка вообще нужна.
     requiresAttunement: summary?.requiresAttunement ?? false,
     // Свежий предмет попадает на лист заряженным полностью.
-    charges: getInventoryCharges(summary?.maxCharges ?? 0),
+    charges: getInventoryCharges(
+      summary?.maxCharges ?? 0,
+      summary?.chargesRecovery ?? null,
+    ),
+    bonusActivation: summary?.bonusActivation ?? 'equipped',
+    passiveNote: summary?.passive ?? '',
   };
 }
 
@@ -2894,6 +2928,12 @@ export function getInventoryItemBonusLabels(
         ? `${target} ${getFormattedBonus(bonus.value)}`
         : `${target} ${INVENTORY_BONUS_MODE_LABELS[mode]} ${bonus.value}`,
     );
+  }
+
+  // Пассивное свойство лист не считает, но игрок читает его тем же списком —
+  // иначе «вы можете дышать под водой» осталось бы только в описании раздела.
+  if (inventoryItem.passiveNote) {
+    labels.push(inventoryItem.passiveNote);
   }
 
   return labels;
@@ -4762,21 +4802,22 @@ export function getLongRestHitDiceRecovery(
 }
 
 /**
- * Что вернёт продолжительный отдых, кроме хитов и костей: ячейки заклинаний и
- * счётчики умений с восстановлением на продолжительном отдыхе.
+ * Что вернёт продолжительный отдых, кроме хитов и костей: ячейки заклинаний,
+ * счётчики умений с восстановлением на продолжительном отдыхе и заряды
+ * предметов.
  *
  * @param character персонаж.
  * @returns подписи восстанавливаемого; пустой список — восстанавливать нечего.
  */
 export function getLongRestRecoveryLabels(character: Character): string[] {
-  const resourceLabels = getResourceRecoveryLabels(
-    character.classResources,
-    'long-rest',
-  );
+  const labels = [
+    ...getResourceRecoveryLabels(character.classResources, 'long-rest'),
+    ...getInventoryChargesRecoveryLabels(character.inventory, 'long-rest'),
+  ];
 
   return getSpellSlotRows(character).length > 0
-    ? [ALL_SPELL_SLOTS_LABEL, ...resourceLabels]
-    : resourceLabels;
+    ? [ALL_SPELL_SLOTS_LABEL, ...labels]
+    : labels;
 }
 
 /**
@@ -5661,8 +5702,92 @@ function getResourceRecoveryLabels(
 }
 
 /**
+ * События восстановления зарядов, которые закрывает вид отдыха. Рассвет лист
+ * считает продолжительным отдыхом: за столом им заканчивается ночь, а
+ * отдельного «наступило утро» на листе нет. Продолжительный отдых возвращает и
+ * то, что вернул бы короткий — по правилам 2024 он включает его в себя.
+ */
+const REST_CHARGE_EVENTS: Record<ResourceRecovery, InventoryChargesEvent[]> = {
+  'short-rest': ['SHORT_REST'],
+  'long-rest': ['SHORT_REST', 'LONG_REST', 'DAWN'],
+};
+
+/**
+ * Возвращает ли этот отдых заряды предмета.
+ *
+ * @param charges заряды предмета; null — зарядов нет.
+ * @param rest вид отдыха.
+ * @returns true — заряды вернутся.
+ */
+function isRestoredByRest(
+  charges: InventoryCharges | null,
+  rest: ResourceRecovery,
+): boolean {
+  const event = charges?.recovery?.event;
+
+  return Boolean(event && REST_CHARGE_EVENTS[rest].includes(event));
+}
+
+/**
+ * Заряды предметов после отдыха. Предмет с формулой возврата («1к6+4») катит её
+ * и прибавляет выпавшее к остатку, не выше максимума — так же, как в системе
+ * D&D; без формулы предмет заряжается полностью.
+ *
+ * @param inventory снаряжение персонажа.
+ * @param rest вид отдыха.
+ * @param rollFormula бросок формулы возврата.
+ * @returns снаряжение с обновлённым остатком зарядов.
+ */
+export function restoreInventoryCharges(
+  inventory: CharacterInventoryItem[],
+  rest: ResourceRecovery,
+  rollFormula: (formula: string) => number,
+): CharacterInventoryItem[] {
+  return inventory.map((inventoryItem) => {
+    const { charges } = inventoryItem;
+
+    if (!charges || !isRestoredByRest(charges, rest)) {
+      return inventoryItem;
+    }
+
+    const formula = charges.recovery?.formula ?? '';
+
+    const current = formula
+      ? clamp(charges.current + rollFormula(formula), 0, charges.max)
+      : charges.max;
+
+    return { ...inventoryItem, charges: { ...charges, current } };
+  });
+}
+
+/**
+ * Названия предметов, которым этот отдых вернёт заряды. Заряженные полностью в
+ * список не входят: возвращать им нечего.
+ *
+ * @param inventory снаряжение персонажа.
+ * @param rest вид отдыха.
+ * @returns подписи вида «Заряды: Жезл страха».
+ */
+function getInventoryChargesRecoveryLabels(
+  inventory: CharacterInventoryItem[],
+  rest: ResourceRecovery,
+): string[] {
+  return inventory
+    .filter(
+      (inventoryItem) =>
+        isRestoredByRest(inventoryItem.charges, rest)
+        && (inventoryItem.charges?.current ?? 0)
+          < (inventoryItem.charges?.max ?? 0),
+    )
+    .map(
+      (inventoryItem) =>
+        `${INVENTORY_CHARGES_RECOVERY_LABEL}: ${inventoryItem.name}`,
+    );
+}
+
+/**
  * Что вернёт короткий отдых, кроме хитов: ресурсы класса с восстановлением на
- * коротком отдыхе и ячейки заклинаний договора колдуна.
+ * коротком отдыхе, ячейки заклинаний договора колдуна и заряды предметов.
  *
  * @param character персонаж.
  * @returns подписи восстанавливаемого; пустой список — восстанавливать нечего.
@@ -5677,9 +5802,12 @@ export function getShortRestRecoveryLabels(character: Character): string[] {
     (row) => row.recovery === 'short-rest',
   );
 
-  return hasPactSlots
-    ? [PACT_SPELL_SLOTS_LABEL, ...resourceLabels]
-    : resourceLabels;
+  const labels = [
+    ...resourceLabels,
+    ...getInventoryChargesRecoveryLabels(character.inventory, 'short-rest'),
+  ];
+
+  return hasPactSlots ? [PACT_SPELL_SLOTS_LABEL, ...labels] : labels;
 }
 
 /**

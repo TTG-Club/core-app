@@ -20,7 +20,6 @@
     getAbilityModifier,
     getCustomBonusesValue,
     getExhaustionD20Penalty,
-    getFormattedBonus,
     getProficiencyBonus,
     PROFICIENCY_BASE_LEVEL_SOURCE,
     PROFICIENCY_BASE_OPTIONS,

@@ -1,13 +1,12 @@
 <script setup lang="ts">
-  import type { MagicItemMechanics } from '~magic-items/model';
+  import type { MagicItemMechanics } from '../../model';
 
-  import { ActiveEffects } from '~active-effects/editor';
-  import { EFFECT_ORIGIN } from '~active-effects/model';
   import {
     MAGIC_ITEM_ACTIVATION_OPTIONS,
     MAGIC_ITEM_CHARGES_MAX,
+    MAGIC_ITEM_FORM_LABELS,
     MAGIC_ITEM_RECHARGE_EVENT_OPTIONS,
-  } from '~magic-items/model';
+  } from '../../model';
 
   const mechanics = defineModel<MagicItemMechanics>({ required: true });
 
@@ -19,115 +18,93 @@
 </script>
 
 <template>
-  <div class="grid grid-cols-1 gap-8">
-    <UCard variant="subtle">
-      <template #header>
-        <div class="flex min-w-0 flex-col">
-          <h2 class="truncate text-base text-highlighted">
-            Влияние на лист персонажа
-          </h2>
+  <UForm
+    class="grid grid-cols-1 gap-4 md:grid-cols-24"
+    attach
+    :state="mechanics"
+  >
+    <UFormField
+      class="md:col-span-12 lg:col-span-8"
+      :label="MAGIC_ITEM_FORM_LABELS.activation"
+      :help="MAGIC_ITEM_FORM_LABELS.activationHint"
+      name="activation"
+    >
+      <USelectMenu
+        v-model="mechanics.activation"
+        :items="MAGIC_ITEM_ACTIVATION_OPTIONS"
+        value-key="value"
+        label-key="label"
+        :placeholder="MAGIC_ITEM_FORM_LABELS.activationPlaceholder"
+      />
+    </UFormField>
 
-          <span class="text-xs text-muted">
-            Когда работает магия предмета, сколько у него зарядов и что лист
-            показывает справкой
-          </span>
-        </div>
-      </template>
+    <UFormField
+      class="md:col-span-12 lg:col-span-16"
+      :label="MAGIC_ITEM_FORM_LABELS.passive"
+      :help="MAGIC_ITEM_FORM_LABELS.passiveHint"
+      name="passive"
+    >
+      <UInput
+        v-model="mechanics.passive"
+        :placeholder="MAGIC_ITEM_FORM_LABELS.passivePlaceholder"
+      />
+    </UFormField>
 
-      <UForm
-        class="grid grid-cols-1 gap-4 md:grid-cols-24"
-        attach
-        :state="mechanics"
-      >
-        <UFormField
-          class="md:col-span-12 lg:col-span-8"
-          label="Условие применения"
-          help="Когда эффекты включены. Требование настройки задаётся отдельно и проверяется вдобавок"
-          name="activation"
-        >
-          <USelectMenu
-            v-model="mechanics.activation"
-            :items="MAGIC_ITEM_ACTIVATION_OPTIONS"
-            value-key="value"
-            label-key="label"
-            placeholder="Выбери условие"
-          />
-        </UFormField>
+    <UFormField
+      class="md:col-span-8 lg:col-span-6"
+      :label="MAGIC_ITEM_FORM_LABELS.maxCharges"
+      :help="MAGIC_ITEM_FORM_LABELS.maxChargesHint"
+      name="resource.maxCharges"
+    >
+      <UInputNumber
+        v-model="mechanics.resource.maxCharges"
+        :placeholder="MAGIC_ITEM_FORM_LABELS.maxChargesPlaceholder"
+        :min="0"
+        :max="MAGIC_ITEM_CHARGES_MAX"
+      />
+    </UFormField>
 
-        <UFormField
-          class="md:col-span-12 lg:col-span-16"
-          label="Пассивные свойства"
-          help="То, что лист показывает справкой, но не считает: дыхание под водой, иммунитет к чтению мыслей"
-          name="passive"
-        >
-          <UInput
-            v-model="mechanics.passive"
-            placeholder="Например: вы можете дышать под водой"
-          />
-        </UFormField>
+    <UFormField
+      class="md:col-span-8 lg:col-span-6"
+      :label="MAGIC_ITEM_FORM_LABELS.recharge"
+      :help="MAGIC_ITEM_FORM_LABELS.rechargeHint"
+      name="resource.recharge"
+    >
+      <UInput
+        v-model="mechanics.resource.recharge"
+        :placeholder="MAGIC_ITEM_FORM_LABELS.rechargePlaceholder"
+        :disabled="!hasCharges"
+      />
+    </UFormField>
 
-        <UFormField
-          class="md:col-span-8 lg:col-span-6"
-          label="Максимум зарядов"
-          help="Пусто — зарядов у предмета нет"
-          name="resource.maxCharges"
-        >
-          <UInputNumber
-            v-model="mechanics.resource.maxCharges"
-            placeholder="Введи максимум"
-            :min="0"
-            :max="MAGIC_ITEM_CHARGES_MAX"
-          />
-        </UFormField>
+    <UFormField
+      class="md:col-span-8 lg:col-span-8"
+      :label="MAGIC_ITEM_FORM_LABELS.rechargeEvent"
+      name="resource.rechargeEvent"
+    >
+      <USelectMenu
+        v-model="mechanics.resource.rechargeEvent"
+        :items="MAGIC_ITEM_RECHARGE_EVENT_OPTIONS"
+        value-key="value"
+        label-key="label"
+        :placeholder="MAGIC_ITEM_FORM_LABELS.rechargeEventPlaceholder"
+        :disabled="!hasCharges"
+      />
+    </UFormField>
 
-        <UFormField
-          class="md:col-span-8 lg:col-span-6"
-          label="Формула восстановления"
-          help="Сколько зарядов возвращается, например «1к6+4»"
-          name="resource.recharge"
-        >
-          <UInput
-            v-model="mechanics.resource.recharge"
-            placeholder="Введи формулу"
-            :disabled="!hasCharges"
-          />
-        </UFormField>
-
-        <UFormField
-          class="md:col-span-8 lg:col-span-8"
-          label="Когда восстанавливаются"
-          name="resource.rechargeEvent"
-        >
-          <USelectMenu
-            v-model="mechanics.resource.rechargeEvent"
-            :items="MAGIC_ITEM_RECHARGE_EVENT_OPTIONS"
-            value-key="value"
-            label-key="label"
-            placeholder="Выбери событие"
-            :disabled="!hasCharges"
-          />
-        </UFormField>
-
-        <UFormField
-          class="md:col-span-8 lg:col-span-4"
-          label="Стоимость применения"
-          help="Сколько зарядов тратит одно использование"
-          name="resource.cost"
-        >
-          <UInputNumber
-            v-model="mechanics.resource.cost"
-            placeholder="Заряды"
-            :min="0"
-            :max="MAGIC_ITEM_CHARGES_MAX"
-            :disabled="!hasCharges"
-          />
-        </UFormField>
-      </UForm>
-    </UCard>
-
-    <ActiveEffects
-      v-model="mechanics.activeEffects"
-      :origin="EFFECT_ORIGIN.item"
-    />
-  </div>
+    <UFormField
+      class="md:col-span-8 lg:col-span-4"
+      :label="MAGIC_ITEM_FORM_LABELS.chargeCost"
+      :help="MAGIC_ITEM_FORM_LABELS.chargeCostHint"
+      name="resource.cost"
+    >
+      <UInputNumber
+        v-model="mechanics.resource.cost"
+        :placeholder="MAGIC_ITEM_FORM_LABELS.chargeCostPlaceholder"
+        :min="0"
+        :max="MAGIC_ITEM_CHARGES_MAX"
+        :disabled="!hasCharges"
+      />
+    </UFormField>
+  </UForm>
 </template>

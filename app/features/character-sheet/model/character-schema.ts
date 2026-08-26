@@ -929,6 +929,19 @@ const inventoryChargesSchema = z
   .object({
     current: z.coerce.number().int().min(0).catch(0),
     max: z.coerce.number().int().min(0).catch(0),
+    // Правило восстановления появилось позже самих зарядов: у листов без него
+    // заряды возвращает только кнопка в строке предмета, как было раньше.
+    recovery: z
+      .object({
+        event: z
+          .enum(['DAWN', 'SHORT_REST', 'LONG_REST'])
+          .nullable()
+          .catch(null),
+        formula: z.string().catch(''),
+        cost: z.coerce.number().int().min(0).catch(0),
+      })
+      .nullable()
+      .catch(null),
   })
   .transform((charges) => ({
     ...charges,
@@ -1039,6 +1052,10 @@ const inventoryItemSchema = z.object({
   attuned: z.boolean().catch(false),
   active: z.boolean().catch(false),
   charges: inventoryChargesSchema,
+  // Условие применения и пассивное свойство появились позже: у листов до них
+  // бонусы работают надетыми, а справочной строки у предмета нет.
+  bonusActivation: z.enum(['equipped', 'carried', 'manual']).catch('equipped'),
+  passiveNote: z.string().catch(''),
   // Описание есть только у своих предметов (`custom:<uuid>`): у каталожных оно
   // живёт в разделе-источнике, а не в листе.
   description: z.array(descriptionNodeSchema).optional().catch(undefined),

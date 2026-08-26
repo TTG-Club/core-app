@@ -61,3 +61,59 @@ export function createEmptyDamageFormulaPart(): DamageFormulaPart {
     requiresDamage: false,
   };
 }
+
+/** Схема частей урона из «сырого» ответа: битая часть не должна ронять соседние. */
+const loadedDamageFormulaPartsSchema = z
+  .array(
+    z.object({
+      formula: z.string().catch(''),
+      target: z.string().nullish().catch(null),
+      requiresDamage: z.boolean().nullish().catch(null),
+      versatileFormula: z.string().nullish().catch(null),
+    }),
+  )
+  .nullish()
+  .catch(null);
+
+/**
+ * Части урона из «сырого» ответа раздела. Цель и признак «только если нанесён
+ * урон» доводятся до обязательных значений — редактор сверяет свои строки с
+ * моделью через `isEqual`, и необязательный ключ ломал бы сравнение.
+ *
+ * @param raw значение поля с частями урона.
+ * @returns части урона; пустой список — частей нет.
+ */
+export function parseLoadedDamageFormulaParts(
+  raw: unknown,
+): Array<DamageFormulaPart> {
+  const parsed = loadedDamageFormulaPartsSchema.parse(raw);
+
+  return (parsed ?? []).map((part) => ({
+    formula: part.formula,
+    target: isDamageFormulaTarget(part.target)
+      ? part.target
+      : DEFAULT_DAMAGE_FORMULA_TARGET,
+    requiresDamage: part.requiresDamage ?? false,
+    versatileFormula: part.versatileFormula ?? undefined,
+  }));
+}
+
+/**
+ * Части урона для отправки: незаполненные строки отбрасываются, у остальных
+ * снимаются пробелы. Пустая часть — обычное состояние редактора, а не значение,
+ * поэтому в запрос она не идёт.
+ *
+ * @param parts части урона из формы.
+ * @returns части урона для запроса.
+ */
+export function normalizeDamageFormulaParts(
+  parts: Array<DamageFormulaPart>,
+): Array<DamageFormulaPart> {
+  return parts
+    .filter((part) => part.formula.trim().length > 0)
+    .map((part) => ({
+      ...part,
+      formula: part.formula.trim(),
+      versatileFormula: part.versatileFormula?.trim() || undefined,
+    }));
+}

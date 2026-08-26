@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import type { MagicItemRarity } from '~magic-items/model';
+  import type { MagicItemRarity } from '../../../model';
 
+  import { MAGIC_ITEM_FORM_LABELS } from '../../../model';
   import { SelectRarity } from './ui';
 
   const model = defineModel<MagicItemRarity>({
@@ -26,24 +27,24 @@
   >
     <UFormField
       class="md:col-span-8"
-      label="Редкость"
+      :label="MAGIC_ITEM_FORM_LABELS.rarity"
       name="type"
     >
       <SelectRarity
         v-model="model.type"
-        placeholder="Выбери редкость"
+        :placeholder="MAGIC_ITEM_FORM_LABELS.rarityPlaceholder"
       />
     </UFormField>
 
     <UFormField
       class="md:col-span-16"
-      label="Текст редкости"
+      :label="MAGIC_ITEM_FORM_LABELS.rarityVaries"
       name="varies"
     >
       <UInput
         v-model="model.varies"
         :disabled="!isVaries"
-        placeholder="Введи текст для варьируемой редкости"
+        :placeholder="MAGIC_ITEM_FORM_LABELS.rarityVariesPlaceholder"
         clearable
       />
     </UFormField>

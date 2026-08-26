@@ -60,6 +60,7 @@ import { range } from 'es-toolkit';
 
 import { AbilityKey as ApiAbilityKey } from '~/shared/types';
 import { CasterType } from '~classes/model';
+import { DAMAGE_TYPE_LABELS } from '~ui/damage-formula';
 
 /** Название инструмента «Лист персонажа». */
 export const CHARACTER_SHEET_TITLE = 'Лист персонажа';
@@ -1960,6 +1961,9 @@ export const LEVEL_UP_HIT_POINTS_LABELS: Record<
 /** Подпись ячеек заклинаний договора колдуна в списке того, что вернёт отдых. */
 export const PACT_SPELL_SLOTS_LABEL = 'Ячейки заклинаний договора';
 
+/** Приставка подписи предмета, которому отдых вернёт заряды. */
+export const INVENTORY_CHARGES_RECOVERY_LABEL = 'Заряды';
+
 /** Подпись всех ячеек заклинаний в списке того, что вернёт отдых. */
 export const ALL_SPELL_SLOTS_LABEL = 'Ячейки заклинаний';
 
@@ -3303,6 +3307,10 @@ export const DEFAULT_INVENTORY_MAGIC_STATE: InventoryMagicState = {
   attuned: false,
   active: false,
   charges: null,
+  // Условие применения и пассивное свойство приходят только из раздела
+  // «Магические предметы»; у остальных записей бонусы работают надетыми.
+  bonusActivation: 'equipped',
+  passiveNote: '',
 };
 
 /**
@@ -3476,29 +3484,6 @@ export const SHEET_ROLL_HINT_LABEL = 'нажми, чтобы бросить';
 
 /** Заголовок предупреждения о том, что тратить ячейки круга уже нечего. */
 export const SPELL_SLOTS_EMPTY_TOAST_TITLE = 'Ячейки закончились';
-
-/**
- * Названия типов урона справочника предметов
- * (`/api/v2/dictionaries/damage/types`) — для подписи урона оружия. Ключ `FAIR` —
- * прежнее имя огненного урона: справочник отдаёт `FIRE`, но листы, сохранённые до
- * переименования, всё ещё хранят старое значение.
- */
-export const DAMAGE_TYPE_LABELS: Record<string, string> = {
-  ACID: 'Кислотный',
-  BLUDGEONING: 'Дробящий',
-  COLD: 'Холодный',
-  FAIR: 'Огненный',
-  FIRE: 'Огненный',
-  FORCE: 'Силовое поле',
-  LIGHTNING: 'Электрический',
-  NECROTIC: 'Некротический',
-  PIERCING: 'Колющий',
-  POISON: 'Ядовитый',
-  PSYCHIC: 'Психический',
-  RADIANT: 'Излучение',
-  SLASHING: 'Рубящий',
-  THUNDER: 'Звуковой',
-};
 
 /**
  * Названия состояний справочника (`/api/v2/dictionaries/conditions`) — для

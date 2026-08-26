@@ -32,7 +32,6 @@ import {
   getEffectiveSpeed,
   getEffectiveVision,
   getExhaustionEffects,
-  getFormattedBonus,
   getHitDicePools,
   getInitiativeBonus,
   getPrimarySpeed,

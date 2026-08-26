@@ -1,5 +1,7 @@
 <script setup lang="ts">
-  import type { MagicItemAttunement } from '~magic-items/model';
+  import type { MagicItemAttunement } from '../../model';
+
+  import { MAGIC_ITEM_FORM_LABELS } from '../../model';
 
   const attunement = defineModel<MagicItemAttunement>({
     required: true,
@@ -35,19 +37,19 @@
     >
       <UCheckbox
         v-model="attunement.requires"
-        label="Требуется настройка"
+        :label="MAGIC_ITEM_FORM_LABELS.attunementRequires"
       />
     </UFormField>
 
     <UFormField
       class="col-span-full"
-      label="Особенности настройки"
+      :label="MAGIC_ITEM_FORM_LABELS.attunementDescription"
       name="description"
     >
       <UInput
         v-model="description"
         :disabled="!isRequires"
-        placeholder="Введи особенности настройки (если есть)"
+        :placeholder="MAGIC_ITEM_FORM_LABELS.attunementDescriptionPlaceholder"
         clearable
       />
     </UFormField>

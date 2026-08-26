@@ -12,7 +12,6 @@
   import { MarkupRender } from '~ui/markup';
 
   import {
-    getFormattedBonus,
     getHitDieAverage,
     getHitDieLabel,
     getLevelHitPointsGain,

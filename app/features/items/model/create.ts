@@ -14,8 +14,9 @@ import {
   DAMAGE_FORMULA_DICE_SYMBOL,
   DAMAGE_TYPE_TAGS,
   DEFAULT_DAMAGE_FORMULA_TARGET,
-  isDamageFormulaTarget,
+  normalizeDamageFormulaParts,
   parseDamageFormulaDice,
+  parseLoadedDamageFormulaParts,
 } from '~ui/damage-formula';
 
 import { DEFAULT_ITEM_CATEGORY, WEAPON_PROPERTY_KEYS } from './constants';
@@ -389,17 +390,8 @@ type LoadedRoll = z.infer<typeof loadedRollSchema>;
 /** Схема оружия в объёме, нужном для восстановления частей урона. */
 const loadedWeaponSchema = z
   .object({
-    damageParts: z
-      .array(
-        z.object({
-          formula: z.string().catch(''),
-          target: z.string().nullish().catch(null),
-          requiresDamage: z.boolean().nullish().catch(null),
-          versatileFormula: z.string().nullish().catch(null),
-        }),
-      )
-      .nullish()
-      .catch(null),
+    // Части урона разбирает общая схема редактора формулы — здесь они значение.
+    damageParts: z.unknown(),
     damage: z
       .object({
         roll: loadedRollSchema,
@@ -409,7 +401,7 @@ const loadedWeaponSchema = z
       .catch(null),
     versatile: loadedRollSchema,
   })
-  .catch({ damageParts: null, damage: null, versatile: null });
+  .catch({ damageParts: undefined, damage: null, versatile: null });
 
 /**
  * Части урона загруженного оружия. Записи, сохранённые до частей-формул,
@@ -423,16 +415,10 @@ function normalizeLoadedDamageParts(
   rawWeapon: unknown,
 ): Array<DamageFormulaPart> {
   const parsed = loadedWeaponSchema.parse(rawWeapon);
+  const parts = parseLoadedDamageFormulaParts(parsed.damageParts);
 
-  if (parsed.damageParts?.length) {
-    return parsed.damageParts.map((part) => ({
-      formula: part.formula,
-      target: isDamageFormulaTarget(part.target)
-        ? part.target
-        : DEFAULT_DAMAGE_FORMULA_TARGET,
-      requiresDamage: part.requiresDamage ?? false,
-      versatileFormula: part.versatileFormula ?? undefined,
-    }));
+  if (parts.length) {
+    return parts;
   }
 
   const damageType = parsed.damage?.type ?? undefined;
@@ -493,11 +479,6 @@ export function normalizeLoadedItem(
   return normalized;
 }
 
-/** Часть урона без формулы — незаполненная строка редактора. */
-function hasDamageFormula(part: DamageFormulaPart): boolean {
-  return part.formula.trim().length > 0;
-}
-
 /**
  * Оружие для отправки: незаполненные части урона отбрасываются, формула
  * двуручного хвата остаётся только у первой части и только у универсального
@@ -515,16 +496,13 @@ function normalizeWeaponBeforeSubmit(weapon: WeaponCreate): WeaponCreate {
     WEAPON_PROPERTY_KEYS.versatile,
   );
 
-  const damageParts = weapon.damageParts
-    .filter(hasDamageFormula)
-    .map((part, index) => ({
+  const damageParts = normalizeDamageFormulaParts(weapon.damageParts).map(
+    (part, index) => ({
       ...part,
-      formula: part.formula.trim(),
       versatileFormula:
-        hasVersatile && index === 0
-          ? part.versatileFormula?.trim() || undefined
-          : undefined,
-    }));
+        hasVersatile && index === 0 ? part.versatileFormula : undefined,
+    }),
+  );
 
   const normalized: WeaponCreate = { ...weapon, damageParts };
 

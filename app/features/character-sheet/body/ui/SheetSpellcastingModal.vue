@@ -8,7 +8,6 @@
     getCharacterClasses,
     getCharacterProficiencyBonus,
     getClassSpellcastingAbility,
-    getFormattedBonus,
     getSpellAttackBonus,
     getSpellSaveDc,
     SPELL_SAVE_DC_BASE,

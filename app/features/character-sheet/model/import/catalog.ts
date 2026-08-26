@@ -13,13 +13,14 @@ import type {
 } from '../types';
 import type { LssCharacter, LssWeapon } from './types';
 
+import { DAMAGE_TYPE_LABELS } from '~ui/damage-formula';
+
 import { fetchItemSummary, fetchMagicItemSummary } from '../api';
 import {
   BACKGROUNDS_SEARCH_PATH,
   CLASSES_DETAIL_BASE_PATH,
   CLASSES_SEARCH_PATH,
   CUSTOM_INVENTORY_URL_PREFIX,
-  DAMAGE_TYPE_LABELS,
   ITEMS_SEARCH_PATH,
   MAGIC_ITEMS_SEARCH_PATH,
   NEW_CUSTOM_INVENTORY_ITEM,

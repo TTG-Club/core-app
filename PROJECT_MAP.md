@@ -73,18 +73,18 @@ core-app/
 > **Endpoint exceptions:** `items` and `sources` call the API in the singular —
 > `/api/v2/item/…` and `/api/v2/source/…`, not the domain folder name.
 
-| Domain        | Purpose                                            | Notable extras                                                                                                                                        |
-| ------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `species`     | Races/species with nested lineages (sub-races)     | `lineages`, `lineages-drawer`                                                                                                                         |
-| `classes`     | Classes, subclasses & multiclass builder           | `multiclass-drawer`, `subclasses-drawer` (body = Class + Multiclass)                                                                                  |
-| `spells`      | Spells; class-grouped infinite-scroll list         | `groups`, `composable` (class pagination), `legend`                                                                                                   |
-| `bestiary`    | Creatures grouped by challenge rating; stat blocks | `composable` (CR group order)                                                                                                                         |
-| `magic-items` | Magic items grouped by rarity                      | `composable` (rarity order), `legend` (attunement)                                                                                                    |
-| `backgrounds` | Character backgrounds                              | —                                                                                                                                                     |
-| `feats`       | Feats                                              | —                                                                                                                                                     |
-| `glossary`    | Rules terms / glossary                             | —                                                                                                                                                     |
-| `items`       | Mundane items: weapons, armor, tools, gear         | editor switches sub-form by `category`; weapon damage uses the shared `~ui/damage-formula` parts, legacy dice kept in sync on the «Совместимость» tab |
-| `sources`     | Source books (publisher/translation, tags)         | model layer is named `types/` (not `model/`)                                                                                                          |
+| Domain        | Purpose                                            | Notable extras                                                                                                                                                                         |
+| ------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `species`     | Races/species with nested lineages (sub-races)     | `lineages`, `lineages-drawer`                                                                                                                                                          |
+| `classes`     | Classes, subclasses & multiclass builder           | `multiclass-drawer`, `subclasses-drawer` (body = Class + Multiclass)                                                                                                                   |
+| `spells`      | Spells; class-grouped infinite-scroll list         | `groups`, `composable` (class pagination), `legend`                                                                                                                                    |
+| `bestiary`    | Creatures grouped by challenge rating; stat blocks | `composable` (CR group order)                                                                                                                                                          |
+| `magic-items` | Magic items grouped by rarity                      | `composable` (rarity order), `legend` (attunement); editor split into «Основное / Свойства / Применение / Эффекты» tabs, magic's own damage uses the shared `~ui/damage-formula` parts |
+| `backgrounds` | Character backgrounds                              | —                                                                                                                                                                                      |
+| `feats`       | Feats                                              | —                                                                                                                                                                                      |
+| `glossary`    | Rules terms / glossary                             | —                                                                                                                                                                                      |
+| `items`       | Mundane items: weapons, armor, tools, gear         | editor switches sub-form by `category`; weapon damage uses the shared `~ui/damage-formula` parts, legacy dice kept in sync on the «Совместимость» tab                                  |
+| `sources`     | Source books (publisher/translation, tags)         | model layer is named `types/` (not `model/`)                                                                                                                                           |
 
 ### 🛠️ Interactive tools
 
@@ -411,6 +411,29 @@ modals), so its capabilities are listed here rather than squeezed into the table
   armour's own value so the «best armour wins» comparison stays honest, and an
   item that requires attunement contributes nothing until it is attuned. Sheets
   saved before the fields existed read them as `0`.
+- Next to those bonuses the editor's «Свойства» tab carries what the D&D system
+  keeps on the item itself: «Дополнительный урон» (`damageParts`, the shared
+  `~ui/damage-formula` editor — «2к6 огнём» of a Flame Tongue on top of the base
+  weapon's roll), «Заклинательная фокусировка» (`focus`) and «Адамантиновый»
+  (`adamantine`). The sheet folds the first damage part into
+  `InventoryWeapon.extraDamage` (it wins over the base item's own extra damage —
+  it _is_ what the magic added); the two flags exist for the VTTG export, where
+  `isFocus` is also inherited from a linked mundane base. All three are optional:
+  an empty value means «as before», so no catalogue record needed backfilling.
+- «Условие применения» (`mechanics.activation`) now reaches the sheet as
+  `CharacterInventoryItem.bonusActivation`: `CARRIED` → bonuses work without
+  equipping, `CONSUMED`/`MANUAL` → they wait for the row's «включён» switch,
+  everything else → equipped, as the sheet always behaved. «Пассивные свойства»
+  land in `passiveNote` and join the item's bonus summary as a plain line.
+  Charges carry their recharge rule (`InventoryCharges.recovery`), and a rest
+  restores them — a short rest closes `SHORT_REST`, a long rest also `LONG_REST`
+  and `DAWN` (dawn ends the night at the table); a recharge formula («1к6+4») is
+  rolled and added up to the maximum, no formula recharges in full. Items on
+  sheets saved before these fields read as «equipped», no note and no rule.
+- The section page and drawer show the structure in a «Свойства» block
+  (`body/ui/PropertiesBlock.vue` fed by `getMagicItemPropertyRows`): bonuses,
+  extra damage, charges with their recharge, passive properties and the two
+  flags. A record with no structure renders no block at all.
 - Everything else a magic item does to the sheet comes from the workshop's
   «Активные эффекты» block (`mechanics.activeEffects`). `model/effects.ts`
   translates each numeric change into an `InventoryItemBonus` when the item is
@@ -421,8 +444,8 @@ modals), so its capabilities are listed here rather than squeezed into the table
   formula values (`@…`), the `multiply` / `custom` modes, flags, auras, damage
   parts and keys the sheet has no target for are dropped, as are disabled effects
   and effects aimed at someone else. The `transfer` flag is not read — the
-  sheet's own gate (equipped, and attuned where the item asks for it) plays that
-  role. A bonus therefore carries a `mode` (`add` / `override` / `upgrade` /
+  sheet's own gate (the item's activation condition, and attunement where the
+  item asks for it) plays that role. A bonus therefore carries a `mode` (`add` / `override` / `upgrade` /
   `downgrade`) and a `priority`, and every total is folded rather than summed
   (`getInventoryBonusTotal(character, targets, base)`): the sheet computes the
   base itself (`getBaseAbilityScore`, `getBaseSavingThrowValue`,

@@ -9,7 +9,6 @@
   import {
     ABILITY_LABELS,
     ABILITY_OPTIONS,
-    getFormattedBonus,
     getSavingThrowValue,
     isChangedSavingThrow,
     NEW_CUSTOM_BONUS,

@@ -21,6 +21,10 @@ import type {
   FeatureDescriptionNode,
   GrantedProficiencies,
   InventoryArmor,
+  InventoryBonusActivation,
+  InventoryChargesEvent,
+  InventoryChargesRecovery,
+  InventoryExtraDamage,
   InventoryWeapon,
   InventoryWeaponDamage,
   ItemCatalogItem,
@@ -44,7 +48,11 @@ import {
   EMPTY_MAGIC_ITEM_BONUSES,
   MAGIC_ITEM_BONUS_NONE,
 } from '~magic-items/model';
-import { parseDamageFormulaDice } from '~ui/damage-formula';
+import {
+  DAMAGE_TYPE_LABELS,
+  parseDamageFormulaDice,
+  parseLoadedDamageFormulaParts,
+} from '~ui/damage-formula';
 
 import {
   descriptionNodesSchema,
@@ -63,7 +71,6 @@ import {
   BACKGROUND_TOOL_CHOICE_LABEL,
   CANTRIP_SPELL_LEVEL,
   CURRENCY_KEYS_BY_LABEL,
-  DAMAGE_TYPE_LABELS,
   DAMAGE_TYPE_NAMES,
   FEAT_SPELL_CLASS_CHOICE_KEY,
   INVENTORY_QUANTITY_MAX,
@@ -1335,11 +1342,23 @@ const magicItemRawSchema = z
     // Старое плоское поле зарядов раздела: у большинства записей заполнено
     // только оно, поэтому оно и остаётся запасным источником максимума.
     charges: z.coerce.number().nullable().catch(null),
+    // Дополнительный урон магии; части урона разбирает общая схема редактора.
+    damageParts: z.unknown(),
     // Механика влияния на лист; записи до её появления приходят без блока.
     mechanics: z
       .object({
+        activation: z.string().nullable().catch(null),
+        passive: z.string().nullable().catch(null),
         resource: z
-          .object({ maxCharges: z.coerce.number().nullable().catch(null) })
+          .object({
+            maxCharges: z.coerce.number().nullable().catch(null),
+            recharge: z.string().nullable().catch(null),
+            rechargeEvent: z
+              .enum(['DAWN', 'SHORT_REST', 'LONG_REST'])
+              .nullable()
+              .catch(null),
+            cost: z.coerce.number().nullable().catch(null),
+          })
           .nullable()
           .catch(null),
         // Активные эффекты разбирает своя схема раздела — здесь они `unknown`.
@@ -1354,8 +1373,70 @@ const magicItemRawSchema = z
     bonuses: null,
     attunement: null,
     charges: null,
+    damageParts: undefined,
     mechanics: null,
   });
+
+/**
+ * Условие применения раздела → случай листа. Носить при себе достаточно
+ * («CARRIED»), включаемым предметам нужен переключатель, всему остальному —
+ * надеть: так лист вёл себя и до появления условия.
+ */
+const MAGIC_ITEM_BONUS_ACTIVATION: Record<string, InventoryBonusActivation> = {
+  CARRIED: 'carried',
+  CONSUMED: 'manual',
+  MANUAL: 'manual',
+};
+
+/**
+ * Дополнительный урон магии из её частей. Берём первую часть с разбираемой
+ * формулой: `InventoryExtraDamage` листа — один бросок своего типа, и вторая
+ * такая же строка ему негде показать.
+ *
+ * @param raw части урона из «сырого» ответа.
+ * @returns дополнительный урон; null — частей нет или формула сложнее костей.
+ */
+function toMagicItemExtraDamage(raw: unknown): InventoryExtraDamage | null {
+  for (const part of parseLoadedDamageFormulaParts(raw)) {
+    const dice = parseDamageFormulaDice(part.formula);
+
+    if (dice && dice.diceCount > 0) {
+      return {
+        diceCount: dice.diceCount,
+        diceFaces: dice.diceFaces,
+        type: dice.type,
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Правило восстановления зарядов предмета.
+ *
+ * @param resource блок зарядов из «сырого» ответа.
+ * @param maxCharges максимум зарядов; 0 — зарядов нет.
+ * @returns правило восстановления; null — зарядов нет.
+ */
+function toMagicItemChargesRecovery(
+  resource: {
+    recharge: string | null;
+    rechargeEvent: InventoryChargesEvent | null;
+    cost: number | null;
+  } | null,
+  maxCharges: number,
+): InventoryChargesRecovery | null {
+  if (maxCharges <= 0) {
+    return null;
+  }
+
+  return {
+    event: resource?.rechargeEvent ?? null,
+    formula: resource?.recharge?.trim() ?? '',
+    cost: Math.max(0, Math.trunc(resource?.cost ?? 0)),
+  };
+}
 
 /**
  * Валидация «сырого» ответа `GET /api/v2/magic-items/{url}/raw`.
@@ -1371,15 +1452,26 @@ export function parseMagicItemRaw(input: unknown): MagicItemRawDetail {
   const maxCharges =
     parsed.mechanics?.resource?.maxCharges ?? parsed.charges ?? 0;
 
+  const normalizedCharges = Math.max(0, Math.trunc(maxCharges));
+
   return {
     rarity: parsed.rarity?.type ?? 'UNKNOWN',
     baseItemUrls: parsed.items,
     bonuses: parsed.bonuses ?? EMPTY_MAGIC_ITEM_BONUSES,
     requiresAttunement: parsed.attunement?.requires ?? false,
-    maxCharges: Math.max(0, Math.trunc(maxCharges)),
+    maxCharges: normalizedCharges,
     activeEffects: normalizeLoadedActiveEffects(
       parsed.mechanics?.activeEffects,
     ),
+    bonusActivation:
+      MAGIC_ITEM_BONUS_ACTIVATION[parsed.mechanics?.activation ?? '']
+      ?? 'equipped',
+    passive: parsed.mechanics?.passive?.trim() ?? '',
+    chargesRecovery: toMagicItemChargesRecovery(
+      parsed.mechanics?.resource ?? null,
+      normalizedCharges,
+    ),
+    extraDamage: toMagicItemExtraDamage(parsed.damageParts),
   };
 }
 

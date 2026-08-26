@@ -39,6 +39,19 @@ export function getFormattedModifier(ability: number): string {
 }
 
 /**
+ * Форматирование готового бонуса со знаком. В отличие от
+ * {@link getFormattedModifier} на вход идёт уже посчитанный бонус, а не значение
+ * характеристики: так одинаково подписываются бонусы предметов, умений и
+ * настроек листа.
+ *
+ * @param bonus значение бонуса.
+ * @returns отформатированный бонус (например, '+4' или '−1').
+ */
+export function getFormattedBonus(bonus: number): string {
+  return `${bonus < 0 ? '−' : '+'}${Math.abs(bonus)}`;
+}
+
+/**
  * Получение формулы броска из значения характеристики.
  *
  * @param ability значение характеристики.
