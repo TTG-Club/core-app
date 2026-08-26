@@ -410,7 +410,7 @@
 
         <UFormField
           :label="ACTIVE_EFFECT_LABELS.effectTarget"
-          class="col-span-12 md:col-span-5"
+          class="col-span-full md:col-span-8"
         >
           <USelect
             :model-value="model.effectTarget ?? 'self'"
@@ -421,26 +421,30 @@
           />
         </UFormField>
 
-        <UFormField
-          :label="ACTIVE_EFFECT_LABELS.aura"
-          class="col-span-6 flex items-center md:col-span-3"
-        >
-          <USwitch v-model="isAura" />
-        </UFormField>
+        <!--
+          Подпись принадлежит самому переключателю, а не обёртке поля: у
+          `UFormField` подпись и контрол становятся соседями по флексу, и
+          длинная подпись отжимает тумблер тем сильнее, чем она длиннее —
+          «Перенос при экипировке» уезжал от своего тумблера на две строки.
+          Своя строка на все три — чтобы они стояли на одной линии и на равных
+          промежутках, а не по остаткам колонок сетки.
+        -->
+        <div class="col-span-full flex flex-wrap items-center gap-x-8 gap-y-3">
+          <USwitch
+            v-model="isActive"
+            :label="ACTIVE_EFFECT_LABELS.active"
+          />
 
-        <UFormField
-          :label="ACTIVE_EFFECT_LABELS.active"
-          class="col-span-6 flex items-center md:col-span-3"
-        >
-          <USwitch v-model="isActive" />
-        </UFormField>
+          <USwitch
+            v-model="isAura"
+            :label="ACTIVE_EFFECT_LABELS.aura"
+          />
 
-        <UFormField
-          :label="ACTIVE_EFFECT_LABELS.transfer"
-          class="col-span-full flex items-center md:col-span-5"
-        >
-          <USwitch v-model="model.transfer" />
-        </UFormField>
+          <USwitch
+            v-model="model.transfer"
+            :label="ACTIVE_EFFECT_LABELS.transfer"
+          />
+        </div>
 
         <!-- Длительность -->
         <UFormField

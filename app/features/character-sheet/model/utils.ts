@@ -4012,17 +4012,18 @@ export function getArmorClassBreakdown(
   const abilityBonuses = getArmorClassAbilityBonuses(character, abilities);
 
   // Прибавка черт идёт и в ручной режим: она не зависит от того, откуда взята
-  // основа КД. Рядом с ней — условные прибавки активных эффектов: «Оборона»
-  // даёт +1 только в доспехе, и такое условие лист проверяет сам, каждый раз
-  // заново, чтобы прибавка ушла при снятии доспеха.
-  const featBonus =
-    getFeatArmorClassBonus(character.features)
-    + getConditionalEffectBonus(character, 'armorClass');
+  // основа КД.
+  const featBonus = getFeatArmorClassBonus(character.features);
+
+  // Условные прибавки эффектов считаются отдельной строкой: источником бывает и
+  // черта, и надетый предмет, и в строке «Черты» прибавка от наручей вводила бы
+  // в заблуждение. Считается каждый раз заново — чтобы уйти при снятии доспеха.
+  const conditionalBonus = getConditionalEffectBonus(character, 'armorClass');
 
   if (custom) {
     const value = abilityBonuses.reduce(
       (total, bonus) => total + bonus.modifier,
-      base + featBonus,
+      base + featBonus + conditionalBonus,
     );
 
     return {
@@ -4037,6 +4038,7 @@ export function getArmorClassBreakdown(
       shieldBonus: 0,
       itemBonus: 0,
       featBonus,
+      conditionalBonus,
       extraAbilities: abilityBonuses,
     };
   }
@@ -4125,7 +4127,12 @@ export function getArmorClassBreakdown(
   return {
     value: getArmorClassWithItemLimits(
       character,
-      bodyArmorValue + shieldBonus + itemBonus + featBonus + extraBonus,
+      bodyArmorValue
+        + shieldBonus
+        + itemBonus
+        + featBonus
+        + conditionalBonus
+        + extraBonus,
     ),
     custom: false,
     bodyArmorName,
@@ -4139,6 +4146,7 @@ export function getArmorClassBreakdown(
     shieldBonus,
     itemBonus,
     featBonus,
+    conditionalBonus,
     extraAbilities,
   };
 }

@@ -16,12 +16,16 @@
 
 import type { ActiveEffect, EffectChange } from '~active-effects/model';
 
-import type { Character, RollMode } from './types';
+import type { ArmorDexterityMod, Character, RollMode } from './types';
 
 import {
+  EFFECT_CARRIER_ARMOR_CONDITION_PREFIX,
   EFFECT_DAMAGE_TYPE_OPTIONS,
   EFFECT_SKILL_OPTIONS,
+  splitConditionParts,
 } from '~active-effects/model';
+
+import { parseEffectValue } from './effects';
 
 /** Вид броска, для которого подбирается режим. */
 export type SheetRollKind =
@@ -66,9 +70,6 @@ export interface ResolvedSheetEffects {
   conditionalChanges: EffectChange[];
 }
 
-/** Приставка условия по надетому доспеху носителя. */
-const ARMOR_CONDITION_PREFIX = 'self.armor === ';
-
 /**
  * Состояние доспеха персонажа: категория надетой брони и наличие щита.
  * Категории нет — брони на персонаже нет.
@@ -84,7 +85,7 @@ export interface SheetArmorState {
  * у лёгкой, ограниченный у средней, никакого у тяжёлой.
  */
 const ARMOR_CATEGORY_BY_DEXTERITY_MOD: Record<
-  string,
+  ArmorDexterityMod,
   'light' | 'medium' | 'heavy'
 > = {
   full: 'light',
@@ -106,27 +107,30 @@ export function getSheetArmorState(character: Character): SheetArmorState {
   let bestArmorClass = 0;
   let hasShield = false;
 
-  for (const item of character.inventory) {
-    if (!item.equipped || item.armor === null) {
+  for (const inventoryItem of character.inventory) {
+    // Кончившийся предмет (количество — ноль) в зачёт не идёт, даже если остался
+    // помеченным надетым в старой записи листа: тем же правилом его отбрасывает
+    // и расчёт класса доспеха, иначе «Оборона» давала бы +1 за пустую строку.
+    if (
+      !inventoryItem.equipped
+      || inventoryItem.armor === null
+      || inventoryItem.quantity <= 0
+    ) {
       continue;
     }
 
-    if (item.armor.shield) {
+    if (inventoryItem.armor.shield) {
       hasShield = true;
 
       continue;
     }
 
     const itemCategory =
-      ARMOR_CATEGORY_BY_DEXTERITY_MOD[item.armor.dexterityMod];
+      ARMOR_CATEGORY_BY_DEXTERITY_MOD[inventoryItem.armor.dexterityMod];
 
-    if (!itemCategory) {
-      continue;
-    }
-
-    if (!category || item.armor.baseArmorClass > bestArmorClass) {
+    if (!category || inventoryItem.armor.baseArmorClass > bestArmorClass) {
       category = itemCategory;
-      bestArmorClass = item.armor.baseArmorClass;
+      bestArmorClass = inventoryItem.armor.baseArmorClass;
     }
   }
 
@@ -155,20 +159,23 @@ export function matchesArmorCondition(
 /**
  * Выполнение одной части условия о доспехе.
  *
- * @param trimmed часть условия, уже обрезанная по краям.
+ * @param conditionPart часть условия, уже обрезанная по краям.
  * @param armor состояние доспеха персонажа.
  * @returns признак выполнения; часть другого семейства — `false`.
  */
 function matchesArmorConditionPart(
-  trimmed: string,
+  conditionPart: string,
   armor: SheetArmorState | undefined,
 ): boolean {
-  if (!trimmed.startsWith(ARMOR_CONDITION_PREFIX) || !armor) {
+  if (
+    !conditionPart.startsWith(EFFECT_CARRIER_ARMOR_CONDITION_PREFIX)
+    || !armor
+  ) {
     return false;
   }
 
-  const kind = trimmed
-    .slice(ARMOR_CONDITION_PREFIX.length)
+  const kind = conditionPart
+    .slice(EFFECT_CARRIER_ARMOR_CONDITION_PREFIX.length)
     .trim()
     .replace(/^["']|["']$/g, '');
 
@@ -189,38 +196,6 @@ function matchesArmorConditionPart(
   }
 
   return armor.category === kind;
-}
-
-/**
- * Условие ли это о носителе — такие лист считает сам, без броска.
- *
- * @param condition условие изменения.
- * @returns признак условия о носителе.
- */
-export function isCarrierCondition(condition: string): boolean {
-  const parts = splitConditionParts(condition);
-
-  return (
-    parts.length > 0
-    && parts.every((part) => part.startsWith(ARMOR_CONDITION_PREFIX))
-  );
-}
-
-/**
- * Части составного условия — словарь системы D&D дословно.
- *
- * Условия соединяются `&&` и обязаны выполниться все: «нет доспеха И нет щита»
- * у наручей защиты. Это не выражение — каждая часть остаётся строкой из
- * закрытого перечня, другой связки нет.
- *
- * @param condition условие изменения.
- * @returns непустые части, каждая обрезана по краям.
- */
-function splitConditionParts(condition: string): string[] {
-  return condition
-    .split('&&')
-    .map((part) => part.trim())
-    .filter((part) => part.length > 0);
 }
 
 /**
@@ -251,13 +226,12 @@ export function getConditionalEffectBonus(
         change.key === targetKey
         && change.mode === 'add'
         && change.condition !== undefined
-        && isCarrierCondition(change.condition)
         && matchesArmorCondition(change.condition, armor),
     )
     .reduce((total, change) => {
-      const parsed = Number(change.value.trim());
+      const parsed = parseEffectValue(change.value);
 
-      return Number.isInteger(parsed) ? total + parsed : total;
+      return parsed === null ? total : total + parsed;
     }, 0);
 }
 

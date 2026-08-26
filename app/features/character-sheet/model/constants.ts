@@ -852,6 +852,7 @@ export const ARMOR_CLASS_LABELS: Record<
   | 'shieldTitle'
   | 'itemTitle'
   | 'featTitle'
+  | 'conditionalTitle'
   | 'totalTitle'
   | 'equipmentHint',
   string
@@ -888,6 +889,7 @@ export const ARMOR_CLASS_LABELS: Record<
   shieldTitle: 'Щит',
   itemTitle: 'Магические предметы',
   featTitle: 'Черты',
+  conditionalTitle: 'Эффекты по условию',
   totalTitle: 'Итоговый КД',
   equipmentHint:
     'Надевайте доспехи и щит на вкладке «Снаряжение» — в зачёт идёт доспех с наибольшим КД, щит складывается сверху.',

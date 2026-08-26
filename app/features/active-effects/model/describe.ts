@@ -23,6 +23,7 @@ import {
   EFFECT_DAMAGE_TYPE_OPTIONS,
   EFFECT_FLAG_LABELS,
   EFFECT_TARGET_KEY_SUGGESTIONS,
+  splitConditionParts,
 } from './constants';
 
 /**
@@ -192,10 +193,7 @@ function describeChange(change: EffectChange): string {
  * @returns человекочитаемая подпись.
  */
 function describeCondition(condition: string): string {
-  return condition
-    .split('&&')
-    .map((part) => part.trim())
-    .filter((part) => part.length > 0)
+  return splitConditionParts(condition)
     .map((part) => CONDITION_LABELS.get(part) ?? part)
     .join(' и ');
 }

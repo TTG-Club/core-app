@@ -356,6 +356,32 @@ export const EFFECT_CARRIER_TYPE_CONDITION_PREFIX = 'self.creatureType === ';
 /** Приставка условий по типу ЦЕЛИ. */
 export const EFFECT_TARGET_TYPE_CONDITION_PREFIX = 'target.creatureType === ';
 
+/**
+ * Разделитель условий, соединённых «и»: `self.armor === "none" && ...`.
+ *
+ * Это не выражение и не шаг к нему: каждая часть остаётся строкой из закрытого
+ * перечня, а `&&` только позволяет требовать нескольких условий разом — «нет
+ * доспеха И нет щита» у наручей защиты. Другой связки (`||`, отрицания,
+ * скобок) намеренно нет: разбирать их пришлось бы парсером.
+ */
+export const EFFECT_CONDITION_AND_SEPARATOR = '&&';
+
+/**
+ * Части составного условия.
+ *
+ * Одиночное условие — тоже список, из одного элемента: так весь дальнейший
+ * разбор работает единообразно, без ветки «а если разделителя нет».
+ *
+ * @param condition условие изменения.
+ * @returns непустые части, каждая обрезана по краям.
+ */
+export function splitConditionParts(condition: string): string[] {
+  return condition
+    .split(EFFECT_CONDITION_AND_SEPARATOR)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+}
+
 /** Приставка условия по надетому доспеху носителя. */
 export const EFFECT_CARRIER_ARMOR_CONDITION_PREFIX = 'self.armor === ';
 
