@@ -7,6 +7,7 @@
     describeActiveEffect,
     EFFECT_CONDITION_TEMPLATES,
   } from '~active-effects/model';
+  import { ConfirmDialog } from '~initiative/ui-kit';
 
   import { useCharacterSheet, useSheetActiveEffects } from '../../composables';
   import {
@@ -88,6 +89,30 @@
   function handleToggleCondition(key: EffectConditionKey) {
     toggleCondition(key);
   }
+
+  // Эффект удаляется безвозвратно — спрашиваем подтверждение, как и лист целиком.
+  const removingEffectId = ref<string | null>(null);
+
+  const isRemoveOpen = computed({
+    get: () => removingEffectId.value !== null,
+    set: (value) => {
+      if (!value) {
+        removingEffectId.value = null;
+      }
+    },
+  });
+
+  function handleRemove(effectId: string) {
+    removingEffectId.value = effectId;
+  }
+
+  function handleRemoveConfirm() {
+    if (removingEffectId.value) {
+      removeEffect(removingEffectId.value);
+    }
+
+    removingEffectId.value = null;
+  }
 </script>
 
 <template>
@@ -136,52 +161,45 @@
           <span class="text-xs text-muted">{{ row.description }}</span>
         </div>
 
-        <USwitch
-          :model-value="!row.disabled"
-          size="sm"
-          class="shrink-0"
-          :aria-label="SHEET_EFFECT_LABELS.toggle"
-          @update:model-value="toggleEffectDisabled(row.id)"
-        />
+        <div class="flex shrink-0 items-center gap-1">
+          <USwitch
+            :model-value="!row.disabled"
+            size="sm"
+            :aria-label="SHEET_EFFECT_LABELS.toggle"
+            @update:model-value="toggleEffectDisabled(row.id)"
+          />
 
-        <UButton
-          v-if="!row.isCondition"
-          icon="tabler:pencil"
-          color="neutral"
-          variant="ghost"
-          size="xs"
-          square
-          class="shrink-0"
-          :class="editControlClass"
-          :aria-label="SHEET_EFFECT_LABELS.edit"
-          @click.left.exact.prevent="handleEdit(row.id)"
-        />
+          <UButton
+            v-if="!row.isCondition"
+            icon="tabler:pencil"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            square
+            :class="editControlClass"
+            :aria-label="SHEET_EFFECT_LABELS.edit"
+            @click.left.exact.prevent="handleEdit(row.id)"
+          />
 
-        <UButton
-          icon="tabler:trash"
-          color="error"
-          variant="ghost"
-          size="xs"
-          square
-          class="shrink-0"
-          :class="editControlClass"
-          :aria-label="SHEET_EFFECT_LABELS.remove"
-          @click.left.exact.prevent="removeEffect(row.id)"
-        />
+          <UButton
+            icon="tabler:trash"
+            color="error"
+            variant="ghost"
+            size="xs"
+            square
+            :class="editControlClass"
+            :aria-label="SHEET_EFFECT_LABELS.remove"
+            @click.left.exact.prevent="handleRemove(row.id)"
+          />
+        </div>
       </div>
     </section>
 
     <!-- От снаряжения: только для показа -->
     <section class="flex flex-col gap-2">
-      <div class="flex flex-col">
-        <h3 class="text-sm font-semibold text-highlighted">
-          {{ SHEET_EFFECT_LABELS.equipmentTitle }}
-        </h3>
-
-        <span class="text-xs text-muted">
-          {{ SHEET_EFFECT_LABELS.equipmentHint }}
-        </span>
-      </div>
+      <h3 class="text-sm font-semibold text-highlighted">
+        {{ SHEET_EFFECT_LABELS.equipmentTitle }}
+      </h3>
 
       <p
         v-if="!equipmentEffects.length"
@@ -236,5 +254,15 @@
         </UTooltip>
       </div>
     </section>
+
+    <ConfirmDialog
+      v-model:open="isRemoveOpen"
+      :title="SHEET_EFFECT_LABELS.removeConfirmTitle"
+      :description="SHEET_EFFECT_LABELS.removeConfirmDescription"
+      :confirm-label="SHEET_EFFECT_LABELS.removeConfirmApply"
+      confirm-color="error"
+      confirm-icon="tabler:trash"
+      @confirm="handleRemoveConfirm"
+    />
   </div>
 </template>

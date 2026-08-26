@@ -48,7 +48,7 @@
 <template>
   <UModal
     :title="modalTitle"
-    :ui="{ content: 'sm:max-w-3xl' }"
+    :ui="{ content: 'sm:max-w-5xl' }"
   >
     <template #body>
       <ActiveEffectItem v-model="draft" />

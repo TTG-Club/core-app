@@ -4521,7 +4521,6 @@ export const SHEET_EFFECT_LABELS = {
     + 'в режиме броска: преимущество, помеха, автопровал.',
   equipmentTitle: 'От снаряжения',
   equipmentEmpty: 'Надетое снаряжение эффектов не даёт',
-  equipmentHint: 'Правятся в мастерской; действуют, пока предмет надет',
   conditionsTitle: 'Состояния',
   add: 'Добавить эффект',
   edit: 'Редактировать эффект',
@@ -4531,6 +4530,11 @@ export const SHEET_EFFECT_LABELS = {
   noDescription: 'Без описания',
   cancel: 'Отмена',
   save: 'Сохранить',
+  removeConfirmTitle: 'Удалить эффект?',
+  removeConfirmDescription:
+    'Эффект исчезнет с листа вместе со своими флагами и модификаторами. '
+    + 'Наложить его заново придётся вручную.',
+  removeConfirmApply: 'Удалить',
 } as const;
 
 /** Иконка эффекта, у которого своя не задана. */
