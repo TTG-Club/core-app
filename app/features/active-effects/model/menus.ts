@@ -12,6 +12,7 @@
 import type { EffectChangeMode } from './types';
 
 import {
+  EFFECT_CARRIER_ARMOR_CONDITION_PREFIX,
   EFFECT_CARRIER_TYPE_CONDITION_PREFIX,
   EFFECT_CONDITION_EXPR_SUGGESTIONS,
   EFFECT_DAMAGE_DEFENSE_KINDS,
@@ -204,6 +205,7 @@ const EFFECT_MODIFIER_GROUPS = [
   { key: 'attack', label: 'Атака' },
   { key: 'damage', label: 'Урон' },
   { key: 'carrierType', label: 'Условие: тип носителя' },
+  { key: 'carrierArmor', label: 'Условие: доспех носителя' },
   { key: 'targetType', label: 'Условие: тип цели' },
 ] as const;
 
@@ -382,6 +384,11 @@ function buildModifierMenu(): EffectModifierMenuGroup[] {
   itemsByGroup.set(
     'carrierType',
     buildConditionPresets(EFFECT_CARRIER_TYPE_CONDITION_PREFIX),
+  );
+
+  itemsByGroup.set(
+    'carrierArmor',
+    buildConditionPresets(EFFECT_CARRIER_ARMOR_CONDITION_PREFIX),
   );
 
   itemsByGroup.set(

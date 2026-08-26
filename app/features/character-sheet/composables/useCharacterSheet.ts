@@ -1,3 +1,5 @@
+import type { ActiveEffect } from '~active-effects/model';
+
 import type {
   AbilityKey,
   Character,
@@ -29,6 +31,7 @@ import type {
   CharacterVision,
   CustomInventoryItemDraft,
   CustomSpellDraft,
+  FeatDefences,
   GrantedProficiencies,
   HitDiceAmount,
   LevelUpHitPointsGain,
@@ -36,6 +39,8 @@ import type {
   PlainProficiencyGroupKey,
   PreparedSpellKind,
   ProficiencyGrant,
+  RollMode,
+  SheetRollContext,
   SpeedTypeKey,
   SpellSlotKind,
   StartingEquipmentGrant,
@@ -66,6 +71,7 @@ import {
   CARRYING_CAPACITY_MAX,
   CARRYING_CAPACITY_MIN,
   CATALOG_COPY_TOAST_DESCRIPTION,
+  collectAppliedEffects,
   CURRENCY_AMOUNT_MAX,
   CURRENCY_AMOUNT_MIN,
   CUSTOM_INVENTORY_URL_PREFIX,
@@ -85,11 +91,13 @@ import {
   getAttunementLimitDescription,
   getCarryingCapacityValue,
   getCharacterClasses,
+  getCharacterEffectFlags,
   getCharacterFeatureId,
   getCharacterProficiencyBonus,
   getClampedClassLevels,
   getClampedInteger,
   getClassLevelHitPoints,
+  getEffectDamageDefences,
   getEffectiveSpeed,
   getFeatDefences,
   getInitiativeBonus,
@@ -99,6 +107,7 @@ import {
   getProficiencySourceId,
   getResourceMax,
   getSavingThrowRows,
+  getSheetRollMode,
   getSkillRowGroups,
   getSkillRows,
   getSpellcastingBreakdown,
@@ -134,6 +143,7 @@ import {
   removeFeaturesAboveLevel,
   removeFeatureSpell,
   removeLevelHitPoints,
+  resolveSheetEffects,
   RESOURCE_COUNT_MAX,
   RESOURCE_COUNT_MIN,
   RESOURCE_SHORT_LABEL_MAX_LENGTH,
@@ -357,10 +367,28 @@ export function useCharacterSheet() {
   const effectiveSpeed = computed(() => getEffectiveSpeed(character.value));
 
   // Защиты от черт: своего понятия для них лист не хранит, поэтому собираются
-  // из снимков механики. Панель показывается, только если черта их выдала.
-  const featDefences = computed(() =>
-    getFeatDefences(character.value.features, character.value.speed.unit),
-  );
+  // из снимков механики. К ним добавляются защиты от активных эффектов —
+  // Окаменевший даёт сопротивление всему урону, и панель обязана его показать.
+  const featDefences = computed<FeatDefences>(() => {
+    const granted = getFeatDefences(
+      character.value.features,
+      character.value.speed.unit,
+    );
+
+    const fromEffects = getEffectDamageDefences(
+      getCharacterEffectFlags(character.value),
+    );
+
+    return {
+      ...granted,
+      resistances: union(granted.resistances, fromEffects.resistances),
+      immunities: union(granted.immunities, fromEffects.immunities),
+      vulnerabilities: union(
+        granted.vulnerabilities,
+        fromEffects.vulnerabilities,
+      ),
+    };
+  });
 
   const hasFeatDefences = computed(
     () =>
@@ -3261,6 +3289,54 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Замена списка активных эффектов персонажа целиком.
+   *
+   * Одним экшеном на добавление, правку, выключение и снятие состояния:
+   * список короткий, а частичные экшены пришлось бы держать в паре с формой
+   * эффекта, которая всё равно отдаёт эффект целиком.
+   *
+   * @param effects новый список эффектов.
+   */
+  function updateActiveEffects(effects: ActiveEffect[]): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      activeEffects: effects,
+    };
+  }
+
+  /**
+   * Все эффекты, действующие на персонажа: свои и от надетого снаряжения.
+   *
+   * Эффекты предмета учитываются, только пока он надет, — как и его бонусы.
+   */
+  const appliedActiveEffects = computed<ActiveEffect[]>(() =>
+    collectAppliedEffects(character.value),
+  );
+
+  /**
+   * Разобранные эффекты: безусловные флаги и условные изменения. Из них
+   * считается режим броска — преимущество и помеха от предметов, черт и
+   * наложенных состояний.
+   */
+  const resolvedEffects = computed(() =>
+    resolveSheetEffects(appliedActiveEffects.value),
+  );
+
+  /**
+   * Режим броска по флагам персонажа.
+   *
+   * @param context обстоятельства броска.
+   * @returns режим броска: обычный, с преимуществом или с помехой.
+   */
+  function getRollMode(context: SheetRollContext): RollMode {
+    return getSheetRollMode(resolvedEffects.value.flags, context);
+  }
+
+  /**
    * Установка личности персонажа: приметы, мировоззрение и подробное описание.
    * Правят её две модалки, каждая своей частью, поэтому обе присылают личность
    * целиком — поверх текущей. Пробелы по краям снимаются: строка из одних
@@ -3490,6 +3566,10 @@ export function useCharacterSheet() {
     removeInventoryItem,
     removeNote,
     removeSpell,
+    updateActiveEffects,
+    appliedActiveEffects,
+    resolvedEffects,
+    getRollMode,
     updateFeature,
     updateNote,
     updateCustomInventoryItem,

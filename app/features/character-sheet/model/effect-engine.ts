@@ -1,0 +1,616 @@
+/**
+ * Разбор активных эффектов листа персонажа: флаги режима броска и условные
+ * слагаемые урона.
+ *
+ * Сосед `effects.ts`, а не его замена: тот переводит числовые изменения в
+ * пассивные бонусы инвентаря (класс доспеха, спасброски, навыки), и этот путь
+ * остаётся. Здесь — всё, что бонусом не выражается: булевы флаги
+ * («преимущество на Скрытность») и слагаемые, которые появляются только в
+ * момент броска («+1к8 при дальнобойной атаке»).
+ *
+ * Словарь условий закрыт и повторяет `evaluateCondition` движка системы D&D:
+ * условие сравнивается строкой, а не вычисляется. Выражение, которого в словаре
+ * нет, считается невыполненным — эффект, «настроенный» неизвестным условием,
+ * лучше не применить, чем применить всегда.
+ */
+
+import type { ActiveEffect, EffectChange } from '~active-effects/model';
+
+import type { ArmorDexterityMod, Character, RollMode } from './types';
+
+import {
+  EFFECT_CARRIER_ARMOR_CONDITION_PREFIX,
+  EFFECT_DAMAGE_TYPE_OPTIONS,
+  EFFECT_SKILL_OPTIONS,
+  splitConditionParts,
+} from '~active-effects/model';
+
+import { parseEffectValue } from './effects';
+
+/** Вид броска, для которого подбирается режим. */
+export type SheetRollKind =
+  | 'abilityCheck'
+  | 'skill'
+  | 'savingThrow'
+  | 'attack'
+  | 'initiative';
+
+/** Обстоятельства броска: по ним вычисляются условия и профильные флаги. */
+export interface SheetRollContext {
+  /** Вид броска. */
+  kind: SheetRollKind;
+
+  /** Характеристика броска; для проверки навыка — его характеристика. */
+  ability?: string;
+
+  /** Ключ навыка — только для проверки навыка. */
+  skill?: string;
+
+  /** Категория атаки — только для броска атаки. */
+  attackType?: 'melee' | 'ranged' | 'spell';
+
+  /**
+   * Бросок вызван заклинанием или иным магическим эффектом.
+   *
+   * Признак ситуации, а не носителя: Мантия сопротивления заклинаниям даёт
+   * преимущество только на такой спасбросок и молчит на спасброске от яда.
+   */
+  againstMagic?: boolean;
+
+  /** Цель уже выбрана и у неё полный запас хитов. */
+  targetIsFull?: boolean;
+}
+
+/** Разобранные эффекты листа. */
+export interface ResolvedSheetEffects {
+  /** Флаги, действующие безусловно. */
+  flags: ReadonlySet<string>;
+
+  /** Изменения с условием — их проверяют в момент броска. */
+  conditionalChanges: EffectChange[];
+}
+
+/**
+ * Состояние доспеха персонажа: категория надетой брони и наличие щита.
+ * Категории нет — брони на персонаже нет.
+ */
+export interface SheetArmorState {
+  category?: 'light' | 'medium' | 'heavy';
+  hasShield: boolean;
+}
+
+/**
+ * Категория брони по правилу модификатора Ловкости: своей категории у записи
+ * инвентаря нет, но правило Ловкости однозначно её называет — полный модификатор
+ * у лёгкой, ограниченный у средней, никакого у тяжёлой.
+ */
+const ARMOR_CATEGORY_BY_DEXTERITY_MOD: Record<
+  ArmorDexterityMod,
+  'light' | 'medium' | 'heavy'
+> = {
+  full: 'light',
+  capped: 'medium',
+  none: 'heavy',
+};
+
+/**
+ * Состояние доспеха персонажа по надетому снаряжению.
+ *
+ * Из нескольких надетых доспехов берётся лучший по базовому КД — тем же
+ * правилом, что и при расчёте класса доспеха.
+ *
+ * @param character персонаж.
+ * @returns категория надетой брони и наличие щита.
+ */
+export function getSheetArmorState(character: Character): SheetArmorState {
+  let category: SheetArmorState['category'];
+  let bestArmorClass = 0;
+  let hasShield = false;
+
+  for (const inventoryItem of character.inventory) {
+    // Кончившийся предмет (количество — ноль) в зачёт не идёт, даже если остался
+    // помеченным надетым в старой записи листа: тем же правилом его отбрасывает
+    // и расчёт класса доспеха, иначе «Оборона» давала бы +1 за пустую строку.
+    if (
+      !inventoryItem.equipped
+      || inventoryItem.armor === null
+      || inventoryItem.quantity <= 0
+    ) {
+      continue;
+    }
+
+    if (inventoryItem.armor.shield) {
+      hasShield = true;
+
+      continue;
+    }
+
+    const itemCategory =
+      ARMOR_CATEGORY_BY_DEXTERITY_MOD[inventoryItem.armor.dexterityMod];
+
+    if (!category || inventoryItem.armor.baseArmorClass > bestArmorClass) {
+      category = itemCategory;
+      bestArmorClass = inventoryItem.armor.baseArmorClass;
+    }
+  }
+
+  return { category, hasShield };
+}
+
+/**
+ * Выполняется ли условие о доспехе носителя.
+ *
+ * @param condition условие изменения.
+ * @param armor состояние доспеха персонажа.
+ * @returns признак выполнения; условие другого семейства — `false`.
+ */
+export function matchesArmorCondition(
+  condition: string,
+  armor: SheetArmorState | undefined,
+): boolean {
+  const parts = splitConditionParts(condition);
+
+  return (
+    parts.length > 0
+    && parts.every((part) => matchesArmorConditionPart(part, armor))
+  );
+}
+
+/**
+ * Выполнение одной части условия о доспехе.
+ *
+ * @param conditionPart часть условия, уже обрезанная по краям.
+ * @param armor состояние доспеха персонажа.
+ * @returns признак выполнения; часть другого семейства — `false`.
+ */
+function matchesArmorConditionPart(
+  conditionPart: string,
+  armor: SheetArmorState | undefined,
+): boolean {
+  if (
+    !conditionPart.startsWith(EFFECT_CARRIER_ARMOR_CONDITION_PREFIX)
+    || !armor
+  ) {
+    return false;
+  }
+
+  const kind = conditionPart
+    .slice(EFFECT_CARRIER_ARMOR_CONDITION_PREFIX.length)
+    .trim()
+    .replace(/^["']|["']$/g, '');
+
+  if (kind === 'shield') {
+    return armor.hasShield;
+  }
+
+  if (kind === 'noShield') {
+    return !armor.hasShield;
+  }
+
+  if (kind === 'none') {
+    return armor.category === undefined;
+  }
+
+  if (kind === 'any') {
+    return armor.category !== undefined;
+  }
+
+  return armor.category === kind;
+}
+
+/**
+ * Живая прибавка от условных изменений эффектов по одному ключу.
+ *
+ * Отдельно от `toInventoryBonusesFromEffects`: та считает бонусы ОДИН РАЗ, в
+ * момент добавления записи на лист, и замороженная в ней условная прибавка не
+ * ушла бы при снятии доспеха. Здесь условие проверяется каждый раз заново.
+ *
+ * Считаются только условия о носителе: условие о броске («цель ранена») листу
+ * проверить нечем — ни цели, ни оружия в руке у него нет.
+ *
+ * @param character персонаж.
+ * @param targetKey ключ изменения (`armorClass`, `initiative` и подобные).
+ * @returns суммарная прибавка; ноль — подходящих изменений нет.
+ */
+export function getConditionalEffectBonus(
+  character: Character,
+  targetKey: string,
+): number {
+  const armor = getSheetArmorState(character);
+
+  return collectAppliedEffects(character)
+    .filter((effect) => !effect.disabled && effect.effectTarget !== 'target')
+    .flatMap((effect) => effect.changes)
+    .filter(
+      (change) =>
+        change.key === targetKey
+        && change.mode === 'add'
+        && change.condition !== undefined
+        && matchesArmorCondition(change.condition, armor),
+    )
+    .reduce((total, change) => {
+      const parsed = parseEffectValue(change.value);
+
+      return parsed === null ? total : total + parsed;
+    }, 0);
+}
+
+/**
+ * Условия по состоянию хитов цели — словарь системы D&D дословно. Ключ
+ * сравнивается целиком: это не выражение, а закрытый перечень.
+ */
+const TARGET_HP_CONDITIONS: Record<string, 'full' | 'notFull'> = {
+  'target.hp.value === target.hp.max': 'full',
+  'target.hp.value < target.hp.max': 'notFull',
+};
+
+/** Признак «значение изменения — кость, а не число». */
+const DICE_VALUE_REGEX = /\d*\s*[кd]\s*\d+/i;
+
+/**
+ * Русское название навыка → его ключ в словаре эффектов.
+ *
+ * Строки навыков лист называет по-русски, а флаг эффекта — английским ключом
+ * (`skill.stealth.advantage`). Карта собирается из общего списка навыков домена
+ * эффектов, чтобы второй перечень не разъехался с первым.
+ */
+const SKILL_KEY_BY_NAME: Record<string, string> = Object.fromEntries(
+  EFFECT_SKILL_OPTIONS.map((skill) => [skill.label, skill.value]),
+);
+
+/**
+ * Ключ навыка по его русскому названию из строки листа.
+ *
+ * @param name название навыка.
+ * @returns ключ навыка; `undefined` — свой навык игрока, флагов у него нет.
+ */
+export function getSkillKeyByName(name: string): string | undefined {
+  return SKILL_KEY_BY_NAME[name];
+}
+
+/**
+ * Все эффекты, действующие на персонажа: свои и от надетого снаряжения.
+ *
+ * Эффекты предмета учитываются, только пока он надет, — как и его бонусы;
+ * эффекты умения — пока умение есть на листе.
+ *
+ * @param character персонаж.
+ * @returns эффекты персонажа и его снаряжения одним списком.
+ */
+export function collectAppliedEffects(character: Character): ActiveEffect[] {
+  return [
+    ...character.activeEffects,
+    // Умения листа: черта действует всегда, пока взята, — снимать её нечем,
+    // кроме удаления записи, поэтому условия «надет» тут нет.
+    ...character.features.flatMap((feature) => feature.activeEffects ?? []),
+    ...character.inventory
+      .filter((item) => item.equipped)
+      .flatMap((item) => item.activeEffects ?? []),
+  ];
+}
+
+/**
+ * Безусловные флаги персонажа — единая точка для всего листа.
+ *
+ * @param character персонаж.
+ * @returns множество активных флагов.
+ */
+export function getCharacterEffectFlags(
+  character: Character,
+): ReadonlySet<string> {
+  return resolveSheetEffects(collectAppliedEffects(character)).flags;
+}
+
+/**
+ * Обнулена ли скорость персонажа эффектом.
+ *
+ * Флаг `speed.zero` ставят Схваченный, Опутанный, Парализованный, Окаменевший и
+ * Бессознательный: по правилам такая скорость именно ноль, а не штраф, и её
+ * нельзя поднять ничем.
+ *
+ * @param flags активные флаги персонажа.
+ * @returns признак обнулённой скорости.
+ */
+export function isSpeedZeroedByEffects(flags: ReadonlySet<string>): boolean {
+  return flags.has('speed.zero');
+}
+
+/** Защиты от урона, выданные активными эффектами. */
+export interface EffectDamageDefences {
+  resistances: string[];
+  immunities: string[];
+  vulnerabilities: string[];
+}
+
+/**
+ * Защиты от урона из флагов вида `resistance.fire`.
+ *
+ * Возвращает русские подписи типов урона — блок защит листа показывает именно
+ * их, и мешать в него ключи словаря нельзя.
+ *
+ * @param flags активные флаги персонажа.
+ * @returns сопротивления, иммунитеты и уязвимости подписями.
+ */
+export function getEffectDamageDefences(
+  flags: ReadonlySet<string>,
+): EffectDamageDefences {
+  const defences: EffectDamageDefences = {
+    resistances: [],
+    immunities: [],
+    vulnerabilities: [],
+  };
+
+  for (const damageType of EFFECT_DAMAGE_TYPE_OPTIONS) {
+    if (flags.has(`resistance.${damageType.value}`)) {
+      defences.resistances.push(damageType.label);
+    }
+
+    if (flags.has(`immunity.${damageType.value}`)) {
+      defences.immunities.push(damageType.label);
+    }
+
+    if (flags.has(`vulnerability.${damageType.value}`)) {
+      defences.vulnerabilities.push(damageType.label);
+    }
+  }
+
+  return defences;
+}
+
+/**
+ * Разбирает эффекты в набор безусловных флагов и список условных изменений.
+ *
+ * Выключенный эффект и эффект, нацеленный на кого-то другого, пропускаются:
+ * лист считает только то, что действует на самого персонажа.
+ *
+ * @param effects активные эффекты персонажа и его снаряжения.
+ * @returns флаги и условные изменения.
+ */
+export function resolveSheetEffects(
+  effects: readonly ActiveEffect[],
+): ResolvedSheetEffects {
+  const flags = new Set<string>();
+  const conditionalChanges: EffectChange[] = [];
+
+  for (const effect of effects) {
+    if (effect.disabled || effect.effectTarget === 'target') {
+      continue;
+    }
+
+    for (const flag of effect.flags) {
+      flags.add(flag);
+    }
+
+    for (const change of effect.changes) {
+      if (change.condition) {
+        conditionalChanges.push(change);
+      }
+    }
+  }
+
+  return { flags, conditionalChanges };
+}
+
+/**
+ * Выполняется ли условие изменения при данных обстоятельствах броска.
+ *
+ * @param condition условие изменения.
+ * @param context обстоятельства броска.
+ * @returns признак выполнения; неизвестное условие — всегда `false`.
+ */
+export function evaluateSheetCondition(
+  condition: string,
+  context: SheetRollContext,
+): boolean {
+  const trimmed = condition.trim();
+
+  if (trimmed === 'roll.hasAdvantage === true') {
+    return false;
+  }
+
+  if (trimmed === 'roll.hasDisadvantage === true') {
+    return false;
+  }
+
+  const hpGate = TARGET_HP_CONDITIONS[trimmed];
+
+  if (hpGate) {
+    if (context.targetIsFull === undefined) {
+      return false;
+    }
+
+    return hpGate === 'full' ? context.targetIsFull : !context.targetIsFull;
+  }
+
+  return false;
+}
+
+/**
+ * Условные слагаемые урона для броска: значения-кости из изменений
+ * `damage.melee` / `damage.ranged` / `damage.spell`, чьё условие выполнено.
+ *
+ * Этим и описывается «Дварфийский метатель наносит 1к8 только при
+ * дальнобойной атаке»: отдельного поля условия у части урона не нужно.
+ *
+ * @param resolved разобранные эффекты листа.
+ * @param context обстоятельства броска.
+ * @returns формулы слагаемых; пустой список — добавлять нечего.
+ */
+export function getConditionalDamageFormulas(
+  resolved: ResolvedSheetEffects,
+  context: SheetRollContext,
+): string[] {
+  if (!context.attackType) {
+    return [];
+  }
+
+  const wantedKey = `damage.${context.attackType}`;
+
+  return resolved.conditionalChanges
+    .filter(
+      (change) =>
+        change.key === wantedKey
+        && DICE_VALUE_REGEX.test(change.value)
+        && change.condition !== undefined
+        && evaluateSheetCondition(change.condition, context),
+    )
+    .map((change) => change.value);
+}
+
+/**
+ * Есть ли у персонажа флаг преимущества для этого броска.
+ *
+ * @param flags безусловные флаги персонажа.
+ * @param context обстоятельства броска.
+ * @returns признак преимущества.
+ */
+function hasAdvantageFlag(
+  flags: ReadonlySet<string>,
+  context: SheetRollContext,
+): boolean {
+  const { kind, ability, skill, attackType, againstMagic } = context;
+
+  if (kind === 'attack') {
+    return (
+      flags.has('attack.advantage')
+      || (attackType !== undefined
+        && flags.has(`attack.${attackType}.advantage`))
+    );
+  }
+
+  if (kind === 'initiative') {
+    return (
+      flags.has('initiative.advantage')
+      || flags.has('abilityCheck.advantage.dexterity')
+      || flags.has('abilityCheck.advantage')
+    );
+  }
+
+  if (kind === 'savingThrow') {
+    return (
+      flags.has('save.advantage')
+      || (ability !== undefined && flags.has(`save.advantage.${ability}`))
+      || (againstMagic === true && flags.has('save.advantage.vsMagic'))
+    );
+  }
+
+  return (
+    flags.has('abilityCheck.advantage')
+    || (ability !== undefined && flags.has(`abilityCheck.advantage.${ability}`))
+    || (skill !== undefined && flags.has(`skill.${skill}.advantage`))
+  );
+}
+
+/**
+ * Есть ли у персонажа флаг помехи для этого броска.
+ *
+ * @param flags безусловные флаги персонажа.
+ * @param context обстоятельства броска.
+ * @returns признак помехи.
+ */
+function hasDisadvantageFlag(
+  flags: ReadonlySet<string>,
+  context: SheetRollContext,
+): boolean {
+  const { kind, ability, skill, attackType, againstMagic } = context;
+
+  if (kind === 'attack') {
+    return (
+      flags.has('attack.disadvantage')
+      || (attackType !== undefined
+        && flags.has(`attack.${attackType}.disadvantage`))
+    );
+  }
+
+  if (kind === 'initiative') {
+    return (
+      flags.has('initiative.disadvantage')
+      || flags.has('abilityCheck.disadvantage.dexterity')
+      || flags.has('abilityCheck.disadvantage')
+    );
+  }
+
+  if (kind === 'savingThrow') {
+    return (
+      flags.has('save.disadvantage')
+      || (ability !== undefined && flags.has(`save.disadvantage.${ability}`))
+      || (againstMagic === true && flags.has('save.disadvantage.vsMagic'))
+    );
+  }
+
+  return (
+    flags.has('abilityCheck.disadvantage')
+    || (ability !== undefined
+      && flags.has(`abilityCheck.disadvantage.${ability}`))
+    || (skill !== undefined && flags.has(`skill.${skill}.disadvantage`))
+  );
+}
+
+/**
+ * Режим броска по флагам персонажа. Зеркало `resolveAttackRollMode` и
+ * `resolveSavingThrowRollMode` из системы D&D: преимущество и помеха взаимно
+ * гасятся до обычного броска.
+ *
+ * @param flags безусловные флаги персонажа.
+ * @param context обстоятельства броска.
+ * @returns режим броска.
+ */
+export function getSheetRollMode(
+  flags: ReadonlySet<string>,
+  context: SheetRollContext,
+): RollMode {
+  const advantage = hasAdvantageFlag(flags, context);
+  const disadvantage = hasDisadvantageFlag(flags, context);
+
+  if (advantage && !disadvantage) {
+    return 'advantage';
+  }
+
+  if (disadvantage && !advantage) {
+    return 'disadvantage';
+  }
+
+  return 'normal';
+}
+
+/**
+ * Сводит два режима броска в один по правилу 5e: преимущество и помеха взаимно
+ * гасятся до обычного броска, одинаковые складываются в себя же.
+ *
+ * Нужно там, где режим дают два независимых источника: помеху тяжёлого оружия
+ * не по руке и преимущество (или помеху) от активных эффектов сложить иначе
+ * нельзя — «две помехи» правилами не предусмотрены.
+ *
+ * @param first режим от первого источника.
+ * @param second режим от второго источника.
+ * @returns итоговый режим броска.
+ */
+export function combineRollModes(first: RollMode, second: RollMode): RollMode {
+  const hasAdvantage = first === 'advantage' || second === 'advantage';
+
+  const hasDisadvantage = first === 'disadvantage' || second === 'disadvantage';
+
+  if (hasAdvantage && !hasDisadvantage) {
+    return 'advantage';
+  }
+
+  if (hasDisadvantage && !hasAdvantage) {
+    return 'disadvantage';
+  }
+
+  return 'normal';
+}
+
+/**
+ * Автоматически проваливается ли спасбросок этой характеристики.
+ *
+ * @param flags безусловные флаги персонажа.
+ * @param ability характеристика спасброска.
+ * @returns признак автопровала.
+ */
+export function isSavingThrowAutoFailed(
+  flags: ReadonlySet<string>,
+  ability: string,
+): boolean {
+  return flags.has(`save.autoFail.${ability}`);
+}

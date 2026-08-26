@@ -99,7 +99,7 @@ const EFFECT_BONUS_MODES: Record<string, InventoryBonusMode> = {
  * @param value значение изменения эффекта.
  * @returns целое число; null — значение не число.
  */
-function parseEffectValue(value: string): number | null {
+export function parseEffectValue(value: string): number | null {
   const parsed = Number(value.trim());
 
   return Number.isInteger(parsed) ? parsed : null;

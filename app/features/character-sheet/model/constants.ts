@@ -852,6 +852,7 @@ export const ARMOR_CLASS_LABELS: Record<
   | 'shieldTitle'
   | 'itemTitle'
   | 'featTitle'
+  | 'conditionalTitle'
   | 'totalTitle'
   | 'equipmentHint',
   string
@@ -888,6 +889,7 @@ export const ARMOR_CLASS_LABELS: Record<
   shieldTitle: 'Щит',
   itemTitle: 'Магические предметы',
   featTitle: 'Черты',
+  conditionalTitle: 'Эффекты по условию',
   totalTitle: 'Итоговый КД',
   equipmentHint:
     'Надевайте доспехи и щит на вкладке «Снаряжение» — в зачёт идёт доспех с наибольшим КД, щит складывается сверху.',
@@ -4307,6 +4309,7 @@ export const SHEET_TABS: SheetTab[] = [
   SHEET_DEFAULT_TAB,
   { slot: 'spells', label: 'Заклинания' },
   { slot: 'features', label: 'Особенности' },
+  { slot: 'effects', label: 'Эффекты' },
   { slot: 'personality', label: 'Личность' },
   { slot: 'notes', label: 'Заметки' },
 ];
@@ -4429,12 +4432,13 @@ export const CUSTOM_SPELL_BADGE_HINT =
 
 /** Подписи пустых вкладок листа персонажа. */
 export const SHEET_TAB_EMPTY_LABELS: Record<
-  'equipment' | 'spells' | 'features' | 'notes',
+  'equipment' | 'spells' | 'features' | 'effects' | 'notes',
   string
 > = {
   equipment: 'Инвентарь пуст',
   spells: 'Книга заклинаний пуста',
   features: 'Нет особенностей',
+  effects: 'Нет наложенных эффектов',
   notes: 'Нет заметок',
 };
 
@@ -4510,6 +4514,33 @@ export const LEVEL_UP_WIZARD_LABELS: Record<
     'Уровень поднимется сразу, без выбора умений и броска на хиты: максимум вырастет на среднее значение кости класса. Умения новых уровней при этом не добавятся — их можно взять позже, выбрав класс заново.',
   stepClassPrefix: 'Класс',
 };
+
+/** Подписи вкладки «Эффекты». */
+export const SHEET_EFFECT_LABELS = {
+  ownTitle: 'Наложенные эффекты',
+  ownEmpty:
+    'Нет наложенных эффектов. Добавьте эффект или состояние — лист учтёт их '
+    + 'в режиме броска: преимущество, помеха, автопровал.',
+  equipmentTitle: 'От снаряжения',
+  equipmentEmpty: 'Надетое снаряжение эффектов не даёт',
+  conditionsTitle: 'Состояния',
+  add: 'Добавить эффект',
+  edit: 'Редактировать эффект',
+  remove: 'Удалить эффект',
+  toggle: 'Включить или выключить эффект',
+  disabledBadge: 'Выключен',
+  noDescription: 'Без описания',
+  cancel: 'Отмена',
+  save: 'Сохранить',
+  removeConfirmTitle: 'Удалить эффект?',
+  removeConfirmDescription:
+    'Эффект исчезнет с листа вместе со своими флагами и модификаторами. '
+    + 'Наложить его заново придётся вручную.',
+  removeConfirmApply: 'Удалить',
+} as const;
+
+/** Иконка эффекта, у которого своя не задана. */
+export const SHEET_EFFECT_FALLBACK_ICON = 'tabler:sparkles';
 
 /** Подписи вкладки «Заметки» и модалки заметки. */
 export const SHEET_NOTE_LABELS: Record<

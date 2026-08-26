@@ -414,6 +414,11 @@ import {
   WEAPON_TRAIT_MATCH_KEYWORDS,
   WEIGHT_DECIMALS,
 } from './constants';
+import {
+  getCharacterEffectFlags,
+  getConditionalEffectBonus,
+  isSpeedZeroedByEffects,
+} from './effect-engine';
 import { toInventoryBonusesFromEffects } from './effects';
 import { DEFAULT_CHARACTER } from './mock';
 
@@ -2050,6 +2055,8 @@ export function buildInventoryItem(
     // Влияние предмета на лист мастерская описывает активными эффектами — теми
     // же, что у магического предмета: лист берёт из них числовые изменения.
     bonuses: toInventoryBonusesFromEffects(summary.activeEffects),
+    // Эффекты остаются и целиком: флаги режима броска в бонус не превращаются.
+    activeEffects: summary.activeEffects,
     // Настройка и заряды бывают только у магии — раздел «Предметы» их не знает.
     ...DEFAULT_INVENTORY_MAGIC_STATE,
   };
@@ -2264,6 +2271,8 @@ export function buildMagicItemInventoryItem(
     // Остальное влияние на лист мастерская описывает активными эффектами: лист
     // берёт из них числовые изменения своих значений.
     bonuses: toInventoryBonusesFromEffects(summary?.activeEffects ?? []),
+    // Эффекты остаются и целиком: флаги режима броска в бонус не превращаются.
+    activeEffects: summary?.activeEffects ?? [],
     ...DEFAULT_INVENTORY_MAGIC_STATE,
     // Настройка — свойство предмета: настроиться игрок решает сам, но
     // предлагать это лист должен только там, где настройка вообще нужна.
@@ -4003,14 +4012,18 @@ export function getArmorClassBreakdown(
   const abilityBonuses = getArmorClassAbilityBonuses(character, abilities);
 
   // Прибавка черт идёт и в ручной режим: она не зависит от того, откуда взята
-  // основа КД. Условные прибавки («Оборона» — только в доспехе) в механику не
-  // попадают и остаются в описании черты.
+  // основа КД.
   const featBonus = getFeatArmorClassBonus(character.features);
+
+  // Условные прибавки эффектов считаются отдельной строкой: источником бывает и
+  // черта, и надетый предмет, и в строке «Черты» прибавка от наручей вводила бы
+  // в заблуждение. Считается каждый раз заново — чтобы уйти при снятии доспеха.
+  const conditionalBonus = getConditionalEffectBonus(character, 'armorClass');
 
   if (custom) {
     const value = abilityBonuses.reduce(
       (total, bonus) => total + bonus.modifier,
-      base + featBonus,
+      base + featBonus + conditionalBonus,
     );
 
     return {
@@ -4025,6 +4038,7 @@ export function getArmorClassBreakdown(
       shieldBonus: 0,
       itemBonus: 0,
       featBonus,
+      conditionalBonus,
       extraAbilities: abilityBonuses,
     };
   }
@@ -4113,7 +4127,12 @@ export function getArmorClassBreakdown(
   return {
     value: getArmorClassWithItemLimits(
       character,
-      bodyArmorValue + shieldBonus + itemBonus + featBonus + extraBonus,
+      bodyArmorValue
+        + shieldBonus
+        + itemBonus
+        + featBonus
+        + conditionalBonus
+        + extraBonus,
     ),
     custom: false,
     bodyArmorName,
@@ -4127,6 +4146,7 @@ export function getArmorClassBreakdown(
     shieldBonus,
     itemBonus,
     featBonus,
+    conditionalBonus,
     extraAbilities,
   };
 }
@@ -5206,6 +5226,15 @@ export function getExhaustionSpeedPenalty(character: Character): number {
  * @returns скорости с применённым истощением.
  */
 export function getEffectiveSpeed(character: Character): CharacterSpeed {
+  // Обнулённая скорость — не штраф, а ноль: ни прибавка предмета, ни своя
+  // прибавка игрока её не поднимают, поэтому проверка идёт до всех расчётов.
+  if (isSpeedZeroedByEffects(getCharacterEffectFlags(character))) {
+    return {
+      ...character.speed,
+      values: mapValues(character.speed.values, () => 0),
+    };
+  }
+
   const penalty = getExhaustionSpeedPenalty(character);
 
   const featSpeed = getFeatSpeedModifiers(
@@ -7746,6 +7775,10 @@ export function buildFeatFeature(
     // Снимок пассивных бонусов из активных эффектов черты. Черта без них
     // пишется без поля — такая запись лист не двигает, как и раньше.
     bonuses: featureBonuses.length ? featureBonuses : undefined,
+    // Эффекты остаются и целиком: условная прибавка бонусом не выражается.
+    activeEffects: summary.activeEffects.length
+      ? [...summary.activeEffects]
+      : undefined,
     proficiencies: withChosenProficiencies(
       summary.proficiencies,
       proficiencies,

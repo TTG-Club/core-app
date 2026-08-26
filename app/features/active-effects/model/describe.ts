@@ -23,6 +23,7 @@ import {
   EFFECT_DAMAGE_TYPE_OPTIONS,
   EFFECT_FLAG_LABELS,
   EFFECT_TARGET_KEY_SUGGESTIONS,
+  splitConditionParts,
 } from './constants';
 
 /**
@@ -180,7 +181,21 @@ function describeChange(change: EffectChange): string {
     return base;
   }
 
-  return `${base} (только: ${CONDITION_LABELS.get(condition) ?? condition})`;
+  return `${base} (только: ${describeCondition(condition)})`;
+}
+
+/**
+ * Подпись условия, в том числе составного: части, соединённые `&&`, читаются
+ * как «… и …». Незнакомая часть отдаётся кодом — лучше показать автору
+ * непонятную строку, чем скрыть от него условие целиком.
+ *
+ * @param condition условие изменения.
+ * @returns человекочитаемая подпись.
+ */
+function describeCondition(condition: string): string {
+  return splitConditionParts(condition)
+    .map((part) => CONDITION_LABELS.get(part) ?? part)
+    .join(' и ');
 }
 
 /**
