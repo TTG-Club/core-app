@@ -60,7 +60,6 @@
           swim: undefined,
           hover: false,
         },
-        darkVision: undefined,
       },
       features: [],
       innateSpells: [],
@@ -173,19 +172,9 @@
               <SelectCreatureType v-model="state.properties.type" />
             </UFormField>
 
-            <UFormField
-              class="col-span-full md:col-span-12"
-              :label="SPECIES_EDITOR_LABELS.darkVision"
-              :help="SPECIES_EDITOR_LABELS.darkVisionHint"
-              name="properties.darkVision"
-            >
-              <UInputNumber
-                v-model="state.properties.darkVision"
-                :min="0"
-                :max="SPECIES_EDITOR_LABELS.darkVisionMax"
-                :step="SPECIES_EDITOR_LABELS.darkVisionStep"
-              />
-            </UFormField>
+            <p class="col-span-full text-sm text-dimmed">
+              {{ SPECIES_EDITOR_LABELS.sensesHint }}
+            </p>
 
             <SpeciesSizes v-model="state.properties.sizes" />
 
