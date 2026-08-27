@@ -3,8 +3,9 @@
 
   import { isString } from 'es-toolkit';
 
-  import { EditorArrayControls } from '~ui/editor';
   import { SelectSize } from '~ui/select';
+
+  import { SPECIES_SIZES_EDITOR } from '../../model';
 
   type Sizes = SpeciesCreate['properties']['sizes'];
 
@@ -16,93 +17,116 @@
     sizes.value.map((size) => size.type).filter((size) => isString(size)),
   );
 
-  function getEmpty(): Sizes[number] {
-    return {
-      type: undefined,
-      from: undefined,
-      to: undefined,
-    };
+  /** Заводит пустую строку размера в конце списка. */
+  function addSize() {
+    sizes.value = [
+      ...sizes.value,
+      {
+        type: undefined,
+        from: undefined,
+        to: undefined,
+      },
+    ];
   }
 
-  watch(
-    sizes,
-    (value) => {
-      if (!value.length) {
-        sizes.value.push(getEmpty());
-      }
-    },
-    {
-      immediate: true,
-    },
-  );
+  /**
+   * Убирает строку размера.
+   *
+   * @param index номер строки в списке.
+   */
+  function removeSize(index: number) {
+    sizes.value = sizes.value.filter((_, position) => position !== index);
+  }
 </script>
 
 <template>
-  <UForm
-    v-for="(size, index) in sizes"
-    :key="index"
-    class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
-    attach
-    :state="size"
-  >
-    <UFormField
-      name="type"
-      label="Размер"
-      class="col-span-full md:col-span-6"
+  <div class="col-span-full flex flex-col gap-2">
+    <p
+      v-if="!sizes.length"
+      class="rounded-lg border border-dashed border-default p-4 text-center text-xs text-dimmed italic"
     >
-      <SelectSize
-        v-model="size.type"
-        :disabled-keys="disabledKeys"
-      />
-    </UFormField>
+      {{ SPECIES_SIZES_EDITOR.empty }}
+    </p>
 
-    <UFormField
-      class="col-span-full md:col-span-6"
-      label="Высота от"
-      name="from"
+    <UForm
+      v-for="(size, index) in sizes"
+      :key="index"
+      class="grid grid-cols-1 gap-4 md:grid-cols-24"
+      attach
+      :state="size"
     >
-      <UFieldGroup>
-        <UInputNumber
-          v-model="size.from"
-          :min="0"
-          placeholder="Введи минимальную высоту"
+      <UFormField
+        name="type"
+        :label="SPECIES_SIZES_EDITOR.size"
+        class="col-span-full md:col-span-6"
+      >
+        <SelectSize
+          v-model="size.type"
+          :disabled-keys="disabledKeys"
         />
+      </UFormField>
 
-        <UBadge
-          color="neutral"
-          variant="subtle"
-        >
-          фт.
-        </UBadge>
-      </UFieldGroup>
-    </UFormField>
+      <UFormField
+        class="col-span-full md:col-span-8"
+        :label="SPECIES_SIZES_EDITOR.heightFrom"
+        name="from"
+      >
+        <UFieldGroup>
+          <UInputNumber
+            v-model="size.from"
+            :min="0"
+            :placeholder="SPECIES_SIZES_EDITOR.heightFromPlaceholder"
+          />
 
-    <UFormField
-      label="Высота до"
-      name="to"
-      class="col-span-full md:col-span-6"
-    >
-      <UFieldGroup>
-        <UInputNumber
-          v-model="size.to"
-          :min="0"
-          placeholder="Введи максимальную высоту"
+          <UBadge
+            color="neutral"
+            variant="subtle"
+          >
+            {{ SPECIES_SIZES_EDITOR.feet }}
+          </UBadge>
+        </UFieldGroup>
+      </UFormField>
+
+      <UFormField
+        :label="SPECIES_SIZES_EDITOR.heightTo"
+        name="to"
+        class="col-span-full md:col-span-8"
+      >
+        <UFieldGroup>
+          <UInputNumber
+            v-model="size.to"
+            :min="0"
+            :placeholder="SPECIES_SIZES_EDITOR.heightToPlaceholder"
+          />
+
+          <UBadge
+            color="neutral"
+            variant="subtle"
+          >
+            {{ SPECIES_SIZES_EDITOR.feet }}
+          </UBadge>
+        </UFieldGroup>
+      </UFormField>
+
+      <div class="col-span-full flex items-end pb-1 md:col-span-2">
+        <UButton
+          icon="tabler:trash"
+          color="error"
+          variant="ghost"
+          size="xs"
+          :aria-label="SPECIES_SIZES_EDITOR.remove"
+          @click.left.exact.prevent="removeSize(index)"
         />
+      </div>
+    </UForm>
 
-        <UBadge
-          color="neutral"
-          variant="subtle"
-        >
-          фт.
-        </UBadge>
-      </UFieldGroup>
-    </UFormField>
-
-    <EditorArrayControls
-      v-model="sizes"
-      :item="size"
-      :empty-object="getEmpty()"
-      :index="index"
+    <UButton
+      icon="tabler:plus"
+      :label="SPECIES_SIZES_EDITOR.add"
+      color="primary"
+      variant="soft"
+      block
+      @click.left.exact.prevent="addSize"
     />
-  </UForm>
+  </div>
 </template>

@@ -160,15 +160,10 @@
         </UCard>
       </template>
 
-      <!-- ХАРАКТЕРИСТИКИ -->
+      <!-- ХАРАКТЕРИСТИКИ: без заголовка карточки — он дословно повторял бы
+        подпись самой вкладки -->
       <template #properties>
         <UCard variant="subtle">
-          <template #header>
-            <h2 class="truncate text-base text-highlighted">
-              {{ SPECIES_EDITOR_TABS.properties }}
-            </h2>
-          </template>
-
           <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
             <UFormField
               class="col-span-full md:col-span-12"
