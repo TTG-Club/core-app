@@ -5398,12 +5398,51 @@ export function toClassResourceDraft(
   };
 }
 
+/** Целое число без знака — им записаны и своё число максимума, и множитель. */
+const NUMBER_PATTERN = /^\d+$/;
+
+/**
+ * Источник максимума и его множитель, отделённые от формулы.
+ *
+ * Множитель ищется отдельно от источника по той же причине, что и смещение: у
+ * общего разбора всей строки они перетягивают друг у друга пробелы и знак.
+ * Записать его можно с любой стороны — «5 × уровень» и «уровень × 5» читаются
+ * одинаково.
+ *
+ * @param base часть формулы без смещения.
+ * @returns источник без множителя и сам множитель (нет — единица).
+ */
+function splitResourceMaxMultiplier(base: string): {
+  source: string;
+  multiplier: number;
+} {
+  const parts = base.split('*');
+
+  const left = parts[0]?.trim() ?? '';
+  const right = parts[1]?.trim() ?? '';
+
+  if (parts.length !== 2 || !left || !right) {
+    return { source: base, multiplier: 1 };
+  }
+
+  if (NUMBER_PATTERN.test(right)) {
+    return { source: left, multiplier: Number(right) };
+  }
+
+  if (NUMBER_PATTERN.test(left)) {
+    return { source: right, multiplier: Number(left) };
+  }
+
+  return { source: base, multiplier: 1 };
+}
+
 /**
  * Разбор формулы максимума из механики справочника в правило листа.
  *
  * Грамматика та же, что у механики черт: число, `@prof`, `@level` или
- * `@mod.<аббревиатура>`, любое из них со смещением (`@prof - 1`). Разбирается
- * один раз при взятии черты — дальше на листе живёт уже правило.
+ * `@mod.<аббревиатура>`, любое из них с множителем (`@level * 5`) и смещением
+ * (`@prof - 1`). Разбирается один раз при взятии черты — дальше на листе живёт
+ * уже правило.
  *
  * @param formula формула максимума; пустая строка — правила нет.
  * @returns правило максимума; null — формула пуста или непонятна.
@@ -5426,7 +5465,12 @@ export function parseResourceMaxFormula(
     ? Number(offsetMatch[2]) * (offsetMatch[1] === '-' ? -1 : 1)
     : 0;
 
-  const base = trimmed.slice(0, offsetMatch?.index ?? trimmed.length).trim();
+  const withMultiplier = trimmed
+    .slice(0, offsetMatch?.index ?? trimmed.length)
+    .trim();
+
+  const { source: base, multiplier } =
+    splitResourceMaxMultiplier(withMultiplier);
 
   if (!base) {
     // Формула из одного числа: «10» разобралось как смещение без источника.
@@ -5439,7 +5483,7 @@ export function parseResourceMaxFormula(
     return {
       source: 'fixed',
       ability: RESOURCE_MAX_DEFAULT_ABILITY,
-      offset: Number(base) + offset,
+      offset: Number(base) * multiplier + offset,
     };
   }
 
@@ -5448,11 +5492,17 @@ export function parseResourceMaxFormula(
       source: 'proficiency',
       ability: RESOURCE_MAX_DEFAULT_ABILITY,
       offset,
+      multiplier,
     };
   }
 
   if (base === RESOURCE_FORMULA_LEVEL) {
-    return { source: 'level', ability: RESOURCE_MAX_DEFAULT_ABILITY, offset };
+    return {
+      source: 'level',
+      ability: RESOURCE_MAX_DEFAULT_ABILITY,
+      offset,
+      multiplier,
+    };
   }
 
   if (base.startsWith(RESOURCE_FORMULA_ABILITY_PREFIX)) {
@@ -5461,7 +5511,7 @@ export function parseResourceMaxFormula(
         base.slice(RESOURCE_FORMULA_ABILITY_PREFIX.length)
       ];
 
-    return ability ? { source: 'ability', ability, offset } : null;
+    return ability ? { source: 'ability', ability, offset, multiplier } : null;
   }
 
   return null;
@@ -5486,11 +5536,15 @@ export function getResourceMax(
     return resource.max;
   }
 
-  const { source, ability, offset } = resource.maxRule;
+  const { source, ability, offset, multiplier } = resource.maxRule;
 
   const base = getResourceMaxBase(character, source, ability);
 
-  return clamp(base + offset, RESOURCE_COUNT_MIN, RESOURCE_COUNT_MAX);
+  return clamp(
+    base * (multiplier ?? 1) + offset,
+    RESOURCE_COUNT_MIN,
+    RESOURCE_COUNT_MAX,
+  );
 }
 
 /**
