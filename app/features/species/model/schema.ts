@@ -23,24 +23,32 @@ import { SPECIES_INNATE_SPELL_EDITOR } from './constants';
  * слияние с начальным состоянием формы внутри `useWorkshopForm`.
  */
 
+/**
+ * Умение вида, как его отдаёт core-api.
+ *
+ * Незаполненные поля приходят не отсутствующими, а `null`: у колонок записи нет
+ * `NON_NULL`, в отличие от блоков JSONB. Поэтому здесь `nullish`, а не
+ * `optional`: на `optional` разбор умения падал целиком, и умение доставалось
+ * форме пустым — без названия, описания и заклинаний.
+ */
 const featureSchema = z.object({
   name: z
     .object({
-      rus: z.string().optional(),
-      eng: z.string().optional(),
+      rus: z.string().nullish(),
+      eng: z.string().nullish(),
     })
-    .optional(),
-  description: z.string().optional(),
-  level: z.number().optional(),
+    .nullish(),
+  description: z.string().nullish(),
+  level: z.number().nullish(),
   grantedSpells: z
     .array(
       z.object({
         url: z.string(),
-        name: z.string().optional(),
-        requiredLevel: z.number().optional(),
+        name: z.string().nullish(),
+        requiredLevel: z.number().nullish(),
       }),
     )
-    .optional(),
+    .nullish(),
 });
 
 /**
@@ -76,8 +84,12 @@ function parseFeature(raw: unknown): SpeciesFeatureCreate {
       eng: source.name?.eng ?? '',
     },
     description: source.description ?? '',
-    level: source.level,
-    grantedSpells: source.grantedSpells ?? [],
+    level: source.level ?? undefined,
+    grantedSpells: (source.grantedSpells ?? []).map((spell) => ({
+      url: spell.url,
+      name: spell.name ?? undefined,
+      requiredLevel: spell.requiredLevel ?? undefined,
+    })),
     mechanics,
     activeEffects: normalizeLoadedActiveEffects(
       isRecord(raw) ? raw.activeEffects : undefined,
