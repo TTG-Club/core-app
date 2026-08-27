@@ -5,11 +5,21 @@
   import { EFFECT_ORIGIN } from '~active-effects/model';
   import { FeatGrantRows, FeatModifierRows } from '~feats/editor/ui';
   import { createFeatEditorRows } from '~feats/model';
-  import { SPECIES_EDITOR_LABELS } from '~species/model';
+  import {
+    SPECIES_EDITOR_LABELS,
+    SPECIES_INNATE_SPELL_EDITOR,
+  } from '~species/model';
   import { InfoTooltip } from '~ui/tooltip';
 
+  import SpeciesFeatureSpells from './SpeciesFeatureSpells.vue';
+
   /**
-   * Дары и эффекты одного умения вида.
+   * Дары, заклинания и эффекты одного умения вида.
+   *
+   * Всё, что умение даёт, лежит у самого умения — как и в системе D&D, где вид
+   * настраивается одной вкладкой «Особенности». Разнесённое по вкладкам
+   * приходилось бы сводить в голове: какое из умений выдаёт заклинание, форма
+   * тогда не показывала вовсе.
    *
    * Свёрнутым блоком, а не полями рядом с описанием: у большинства умений
    * механики нет вовсе, а развёрнутая она заслоняла бы список умений.
@@ -39,6 +49,7 @@
       [
         editorRows.value.grants.length,
         editorRows.value.modifiers.length,
+        feature.value.grantedSpells.length,
         feature.value.activeEffects.length,
       ].filter(Boolean).length,
   );
@@ -94,6 +105,23 @@
           <FeatModifierRows
             v-model="editorRows.modifiers"
             :rows="editorRows"
+          />
+        </div>
+
+        <div class="grid gap-2">
+          <InfoTooltip
+            :text="SPECIES_INNATE_SPELL_EDITOR.description"
+            icon="tabler:info-circle-filled"
+            class="text-sm text-highlighted"
+          >
+            <h3 class="truncate">
+              {{ SPECIES_EDITOR_LABELS.featureSpellsTitle }}
+            </h3>
+          </InfoTooltip>
+
+          <SpeciesFeatureSpells
+            v-model="feature.grantedSpells"
+            :feature-level="feature.level"
           />
         </div>
 

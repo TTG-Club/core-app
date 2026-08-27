@@ -2,7 +2,11 @@
   import type { SpeciesFeatureCreate } from '~species/model';
 
   import { createFeatEditorRows, createFeatMechanics } from '~feats/model';
-  import { SPECIES_EDITOR_LABELS, SPECIES_FEATURE_LEVEL } from '~species/model';
+  import {
+    SPECIES_EDITOR_LABELS,
+    SPECIES_EDITOR_TABS,
+    SPECIES_FEATURE_LEVEL,
+  } from '~species/model';
   import { EditorArrayControls } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
 
@@ -23,6 +27,7 @@
       },
       description: '',
       level: undefined,
+      grantedSpells: [],
       mechanics: createFeatMechanics(),
       activeEffects: [],
       editorRows: createFeatEditorRows(),
@@ -44,7 +49,9 @@
 
 <template>
   <USeparator class="col-span-full">
-    <span class="font-bold text-secondary">Умения</span>
+    <span class="font-bold text-secondary">
+      {{ SPECIES_EDITOR_TABS.features }}
+    </span>
   </USeparator>
 
   <template
@@ -126,7 +133,7 @@
     class="col-span-full flex justify-center"
   >
     <UButton @click.left.exact.prevent="addFeature(0)">
-      Добавить первое умение
+      {{ SPECIES_EDITOR_LABELS.featureFirst }}
     </UButton>
   </div>
 </template>

@@ -42,11 +42,21 @@ function buildMechanics(holder: MechanicsHolder): SpeciesCreate['mechanics'] {
  * @returns умение для тела запроса.
  */
 function transformFeature(feature: SpeciesFeatureCreate): SpeciesFeatureCreate {
+  const level = feature.level && feature.level > 1 ? feature.level : undefined;
+
   return {
     ...feature,
     // Первый уровень — значение по умолчанию у потребителя, и писать его
     // каждому умению незачем
-    level: feature.level && feature.level > 1 ? feature.level : undefined,
+    level,
+    grantedSpells: feature.grantedSpells.map((spell) => ({
+      ...spell,
+      // То же и у уровня ссылки: совпал с уровнем умения — писать его незачем
+      requiredLevel:
+        spell.requiredLevel && spell.requiredLevel !== (level ?? 1)
+          ? spell.requiredLevel
+          : undefined,
+    })),
     mechanics: buildMechanics(feature),
     activeEffects: normalizeActiveEffects(feature.activeEffects),
     editorRows: undefined,
@@ -65,6 +75,10 @@ export function transformSpeciesBeforeSubmit(
   return {
     ...state,
     editorRows: undefined,
+    // Заклинания уходят у умений, которые их дают. Список у самой записи —
+    // след прежнего хранения: форма разобрала его по умениям при загрузке, и
+    // оставить его здесь значило бы выдать каждое заклинание дважды
+    innateSpells: [],
     mechanics: buildMechanics(state),
     // Эффекты чистит общий нормализатор раздела: он же обслуживает черты,
     // заклинания и магические предметы, поэтому правило «что считать пустым»

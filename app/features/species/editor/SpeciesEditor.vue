@@ -23,12 +23,7 @@
   import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
   import { WorkshopEditorFormControls } from '~workshop/revision/ui';
 
-  import {
-    SpeciesFeatures,
-    SpeciesInnateSpells,
-    SpeciesSizes,
-    SpeciesSpeed,
-  } from './ui';
+  import { SpeciesFeatures, SpeciesSizes, SpeciesSpeed } from './ui';
 
   /**
    * Пустой вид, с которым открывается форма создания. Механика и строки
@@ -100,9 +95,10 @@
   const tabItems: Array<TabsItem> = [
     { label: SPECIES_EDITOR_TABS.main, slot: 'main' },
     { label: SPECIES_EDITOR_TABS.properties, slot: 'properties' },
-    { label: SPECIES_EDITOR_TABS.features, slot: 'features' },
+    // Порядок тот же, что у формы вида в системе D&D: сперва дары самой
+    // записи, потом особенности с их собственными дарами
     { label: SPECIES_EDITOR_TABS.grants, slot: 'grants' },
-    { label: SPECIES_EDITOR_TABS.spells, slot: 'spells' },
+    { label: SPECIES_EDITOR_TABS.features, slot: 'features' },
     { label: SPECIES_EDITOR_TABS.effects, slot: 'effects' },
     { label: SPECIES_EDITOR_TABS.images, slot: 'images' },
   ];
@@ -253,21 +249,6 @@
             />
           </UCard>
         </div>
-      </template>
-
-      <!-- ЗАКЛИНАНИЯ -->
-      <template #spells>
-        <UCard variant="subtle">
-          <template #header>
-            <h2 class="truncate text-base text-highlighted">
-              {{ SPECIES_EDITOR_TABS.spells }}
-            </h2>
-          </template>
-
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
-            <SpeciesInnateSpells v-model="state.innateSpells" />
-          </div>
-        </UCard>
       </template>
 
       <!-- ЭФФЕКТЫ -->

@@ -1,6 +1,10 @@
 import type { NameResponse, SourceResponse } from '~/shared/types';
 import type { ActiveEffect } from '~active-effects/model';
-import type { FeatEditorRows, FeatMechanics } from '~feats/model';
+import type {
+  FeatEditorRows,
+  FeatGrantedSpellRef,
+  FeatMechanics,
+} from '~feats/model';
 import type { EditorBaseInfoState } from '~ui/editor';
 
 export interface SpeciesLinkResponse {
@@ -71,6 +75,19 @@ export interface SpeciesFeatureCreate {
    */
   mechanics: FeatMechanics | undefined;
 
+  /**
+   * Заклинания, которые даёт это умение.
+   *
+   * У самого умения, а не у вида целиком: вид, у которого заклинания дают два
+   * разных умения, иначе не отличить от вида с одним. Так же устроен вид в
+   * системе D&D, и формы обоих совпадают.
+   *
+   * Уровень у ссылки — только если он отличается от уровня умения: у тифлинга
+   * «Наследие преисподней» приходит с первого уровня, а два его заклинания —
+   * с третьего и пятого.
+   */
+  grantedSpells: Array<FeatGrantedSpellRef>;
+
   /** Активные эффекты умения в вокабуляре VTTG. */
   activeEffects: Array<ActiveEffect>;
 
@@ -107,6 +124,12 @@ export interface SpeciesCreate extends EditorBaseInfoState {
     darkVision: number | undefined;
   };
   features: Array<SpeciesFeatureCreate>;
+
+  /**
+   * Врождённые заклинания, привязанные к самому виду. Так они хранились до
+   * того, как переехали к умениям: форма разбирает их по умениям при загрузке и
+   * отправляет пустым списком, поэтому в новых записях поле всегда пусто.
+   */
   innateSpells: Array<{
     spell: string;
     requiredLevel: number;
