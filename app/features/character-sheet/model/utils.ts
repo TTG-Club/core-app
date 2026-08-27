@@ -6096,8 +6096,8 @@ export function getSpeciesDarkvision(
  * Дистанция обычного зрения вида и его происхождения.
  *
  * Происхождение переопределяет вид: у него своя запись со своими свойствами,
- * как у скорости. Ни у кого не задано — null: лист оставляет своё значение,
- * а не сбрасывает его в ноль.
+ * как у скорости. Ни у кого не задано (пусто или ноль из формы) — null: лист
+ * оставляет своё значение, а не сбрасывает его в ноль.
  *
  * @param species деталь вида.
  * @param lineage деталь происхождения; null — происхождения нет.
@@ -6107,7 +6107,7 @@ export function getSpeciesVision(
   species: SpeciesSummary,
   lineage: SpeciesSummary | null,
 ): number | null {
-  return lineage?.vision ?? species.vision ?? null;
+  return lineage?.vision || species.vision || null;
 }
 
 /**
