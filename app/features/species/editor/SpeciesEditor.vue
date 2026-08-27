@@ -194,18 +194,11 @@
         </UCard>
       </template>
 
-      <!-- УМЕНИЯ -->
+      <!-- ОСОБЕННОСТИ: без заголовка карточки — он дословно повторял бы
+        подпись самой вкладки -->
       <template #features>
         <UCard variant="subtle">
-          <template #header>
-            <h2 class="truncate text-base text-highlighted">
-              {{ SPECIES_EDITOR_TABS.features }}
-            </h2>
-          </template>
-
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
-            <SpeciesFeatures v-model="state.features" />
-          </div>
+          <SpeciesFeatures v-model="state.features" />
         </UCard>
       </template>
 

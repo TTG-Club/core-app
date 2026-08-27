@@ -56,10 +56,32 @@ export const SPECIES_EDITOR_LABELS = {
   featureEffectsTitle: 'Эффекты умения',
   featureSpellsTitle: 'Заклинания умения',
   featureAdvanced: 'Механика, заклинания и эффекты',
-  featureFirst: 'Добавить первую особенность',
 
   effectsHint:
     'Активные эффекты вида в вокабуляре виртуального стола: бонусы, флаги, иммунитеты. Дары лист проставляет сам, а эффект меняет числа готовой формулой.',
+} as const;
+
+/** Подписи списка особенностей вида. */
+export const SPECIES_FEATURES_EDITOR = {
+  unnamed: 'Новая особенность',
+  add: 'Добавить особенность',
+  empty: 'У вида пока нет особенностей',
+  nameLabel: 'Название',
+  namePlaceholder: 'Введи название',
+  nameEngLabel: 'Название (англ.)',
+  nameEngPlaceholder: 'Введи английское название',
+  descriptionLabel: 'Описание',
+  descriptionPlaceholder: 'Введи описание',
+  addDescription: 'Добавить описание',
+  mechanicsBadge: 'Механика',
+  collapse: 'Свернуть особенность',
+  expand: 'Развернуть особенность',
+  remove: 'Убрать особенность',
+  removeConfirmTitle: 'Убрать особенность?',
+  removeConfirmText:
+    'Особенность удалится из формы вместе со своей механикой, заклинаниями и эффектами. Пока запись не сохранена, изменение можно отменить, закрыв форму.',
+  removeConfirmCancel: 'Оставить',
+  removeConfirmApply: 'Убрать',
 } as const;
 
 /** Подписи редактора размеров вида. */
