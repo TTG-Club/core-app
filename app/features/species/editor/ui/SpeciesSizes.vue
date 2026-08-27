@@ -98,12 +98,14 @@
       {{ SPECIES_SIZES_EDITOR.heightsTitle }}
     </span>
 
+    <!-- Поля фиксированной ширины вплотную к подписи: растянутые на всю
+      сетку они оставляли между собой пустые провалы -->
     <div
       v-for="(size, index) in sizes"
       :key="size.type ?? index"
-      class="grid grid-cols-1 items-end gap-3 md:grid-cols-[minmax(6rem,1fr)_2fr_2fr]"
+      class="flex flex-wrap items-end gap-3"
     >
-      <span class="text-sm text-highlighted md:pb-2">
+      <span class="min-w-24 pb-2 text-sm text-highlighted">
         {{ getSizeLabel(size.type) }}
       </span>
 
@@ -112,6 +114,7 @@
           <UInputNumber
             v-model="size.from"
             :min="0"
+            class="w-28"
           />
 
           <UBadge
@@ -128,6 +131,7 @@
           <UInputNumber
             v-model="size.to"
             :min="0"
+            class="w-28"
           />
 
           <UBadge
