@@ -11,6 +11,11 @@
   const darkVisionText = computed(
     () => `${properties.darkVision} ${SPECIES_STATS_LABELS.feet}`,
   );
+
+  /** Обычное зрение с единицей измерения. */
+  const visionText = computed(
+    () => `${properties.vision} ${SPECIES_STATS_LABELS.feet}`,
+  );
 </script>
 
 <template>
@@ -35,6 +40,17 @@
       >
 
       <span>{{ properties.speed }}</span>
+    </div>
+
+    <div
+      v-if="properties.vision"
+      class="flex w-full min-w-full gap-0 px-4 py-1.5"
+    >
+      <span class="min-w-20 text-sm font-medium text-highlighted">
+        {{ SPECIES_STATS_LABELS.vision }}
+      </span>
+
+      <span>{{ visionText }}</span>
     </div>
 
     <div

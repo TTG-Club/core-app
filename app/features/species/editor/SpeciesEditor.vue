@@ -60,6 +60,7 @@
           swim: undefined,
           hover: false,
         },
+        vision: undefined,
       },
       features: [],
       innateSpells: [],
@@ -170,6 +171,20 @@
               name="properties.type"
             >
               <SelectCreatureType v-model="state.properties.type" />
+            </UFormField>
+
+            <UFormField
+              class="col-span-full md:col-span-12"
+              :label="SPECIES_EDITOR_LABELS.vision"
+              :help="SPECIES_EDITOR_LABELS.visionHint"
+              name="properties.vision"
+            >
+              <UInputNumber
+                v-model="state.properties.vision"
+                :min="0"
+                :max="SPECIES_EDITOR_LABELS.visionMax"
+                :step="SPECIES_EDITOR_LABELS.visionStep"
+              />
             </UFormField>
 
             <p class="col-span-full text-sm text-dimmed">

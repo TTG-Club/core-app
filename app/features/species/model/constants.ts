@@ -37,6 +37,11 @@ export const SPECIES_EDITOR_LABELS = {
   parentHint: 'Необходимо указать, если создаешь происхождение вида',
   creatureType: 'Тип',
 
+  vision: 'Обычное зрение',
+  visionHint:
+    'Дальность в футах. Пусто — лист персонажа и токен VTTG оставляют своё значение по умолчанию.',
+  visionStep: 5,
+  visionMax: 1000,
   sensesHint:
     'Тёмное зрение и другие чувства задаются модификатором «Тёмное зрение» в правках листа той особенности, которая их дарит. Страница вида и лист персонажа показывают вычисленное значение сами.',
 
@@ -131,6 +136,8 @@ export const SPECIES_FEATURE_LEVEL = {
 
 /** Подписи статблока вида на странице. */
 export const SPECIES_STATS_LABELS = {
+  vision: 'Зрение:',
+  markdownVision: 'Обычное зрение',
   darkVision: 'Тёмное зрение:',
   markdownDarkVision: 'Тёмное зрение',
   feet: 'фт.',

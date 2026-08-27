@@ -54,6 +54,12 @@ export interface SpeciesProperties {
    * своего поля у записи нет, тёмное зрение дарит особенность.
    */
   darkVision?: number;
+
+  /**
+   * Дальность обычного зрения в футах; не задано — лист и токен VTTG оставляют
+   * своё значение по умолчанию. Поле записи, как скорость.
+   */
+  vision?: number;
 }
 
 /**
@@ -117,6 +123,13 @@ export interface SpeciesCreate extends EditorBaseInfoState {
     }>;
     type: string | undefined;
     speed: SpeciesCreateSpeed;
+
+    /**
+     * Дальность обычного зрения в футах. Свойство записи, как скорость: лист
+     * показывает его в шапке, токен VTTG берёт как дальность зрения днём.
+     * Тёмное зрение, в отличие от него, задаётся чувством в механике особенности.
+     */
+    vision: number | undefined;
   };
   features: Array<SpeciesFeatureCreate>;
 

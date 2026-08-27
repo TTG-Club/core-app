@@ -14,7 +14,7 @@ import { SPECIES_STATS_LABELS } from './constants';
  * @returns Markdown-текст вида
  */
 export function getSpeciesMarkdown(species: SpeciesDetailResponse): string {
-  const { size, type, speed, darkVision } = species.properties;
+  const { size, type, speed, vision, darkVision } = species.properties;
 
   const stats: Array<[string, string]> = [
     ['Тип существа', escapeMarkdown(type)],
@@ -22,8 +22,15 @@ export function getSpeciesMarkdown(species: SpeciesDetailResponse): string {
     ['Скорость', escapeMarkdown(speed)],
   ];
 
-  // Строка появляется, только когда зрение есть: у половины видов его нет, и
-  // пустая строка в статблоке читалась бы как «ноль футов»
+  // Строки зрения появляются, только когда оно задано: у большинства видов
+  // его нет, и пустая строка в статблоке читалась бы как «ноль футов»
+  if (vision) {
+    stats.push([
+      SPECIES_STATS_LABELS.markdownVision,
+      `${vision} ${SPECIES_STATS_LABELS.feet}`,
+    ]);
+  }
+
   if (darkVision) {
     stats.push([
       SPECIES_STATS_LABELS.markdownDarkVision,

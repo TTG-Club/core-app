@@ -341,8 +341,9 @@ const speciesDetailSchema = z.object({
       size: z.string().catch(''),
       speed: z.string().catch(''),
       darkVision: z.coerce.number().nullish().catch(null),
+      vision: z.coerce.number().nullish().catch(null),
     })
-    .catch({ size: '', speed: '', darkVision: null }),
+    .catch({ size: '', speed: '', darkVision: null, vision: null }),
   features: z.array(speciesFeatureSchema).catch([]),
   innateSpells: z.array(speciesInnateSpellSchema).catch([]),
   mechanics: speciesMechanicsSchema,
@@ -392,6 +393,7 @@ function toSpeciesSummary(
     sizeText: detail.properties.size,
     speedText: detail.properties.speed,
     darkVision: detail.properties.darkVision ?? null,
+    vision: detail.properties.vision ?? null,
     features,
     innateSpells,
     proficiencies: detail.mechanics?.proficiencies

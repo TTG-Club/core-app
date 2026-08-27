@@ -30,6 +30,7 @@
     getOwnedWeaponNames,
     getRequiredChoiceCount,
     getSpeciesDarkvision,
+    getSpeciesVision,
     getToolNames,
     LANGUAGE_PROFICIENCY_GROUPS,
     parseSizeOptionsFromText,
@@ -590,7 +591,9 @@
       size: sizeChoice.value ?? null,
       speed: parseSpeedFromText(effectiveSpeedText.value),
       vision: {
-        normal: character.value.vision.normal,
+        // Вид задаёт обычное зрение — берём его; иначе оставляем своё
+        normal:
+          getSpeciesVision(detail, lineage) ?? character.value.vision.normal,
         darkvision: getSpeciesDarkvision(detail, lineage),
         blindsight: character.value.vision.blindsight,
         tremorsense: character.value.vision.tremorsense,
