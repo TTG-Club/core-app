@@ -466,11 +466,25 @@ modals), so its capabilities are listed here rather than squeezed into the table
   species or class record itself land as their own feature row rather than being
   pinned to the first feature — a lineage has no features at all, and a class
   grants them by being taken; the class row appears only at its first level.
-- The species wizard no longer reads darkvision and proficiencies out of feature
-  prose: `properties.darkVision` and `mechanics.proficiencies` (of the record and
-  of every feature already in effect at the character's level) are used instead,
-  with the prose parse left as the fallback for entries that have no structure
-  yet. Skills granted this way go to the skill rows, not to the proficiency list.
+- The species wizard no longer reads darkvision, proficiencies and choices out of
+  feature prose: `properties.darkVision`, `mechanics.proficiencies` and
+  `mechanics.choices` (of the record and of every feature already in effect at the
+  character's level) are used instead, with the prose parse left as the fallback
+  for entries that have no structure yet. Skills granted this way go to the skill
+  rows, not to the proficiency list; the record's own choices get their own row —
+  a lineage has no features to hang them on.
+- A class feature carries the same mechanics a feat does — grants, choices,
+  counters, granted spells, a spellcasting ability — and both the class wizard and
+  the level-up wizard ask **every** choice a feature declares, not one: expertise
+  wants two skills, a subclass feature may want a skill and a language. The parse
+  is literally the feat's (`toMechanicChoices`, `collectChosenProficiencies`): the
+  `MechanicChoice` model in core-api is shared, so a second copy would drift.
+  Answers land as a snapshot on the feature record — the grant ledger owns them
+  from there, exactly as with a feat, which is why the wizard no longer puts
+  feature-choice skills and languages into the `setClass` payload: two owners
+  would mean removing the class takes the grant back only halfway. A feature's
+  counter reaches the resource panel and its granted spell reaches the spellbook
+  through the paths feats already use.
 - A class feature flagged `informationalOnly` («Подкласс волшебника») never
   becomes a sheet record: the progression table needs the line, the sheet does
   not.
