@@ -715,6 +715,7 @@ export function createCounterRow(takenKeys: Array<string>): FeatCounterRow {
     name: '',
     shortName: '',
     max: '@prof',
+    scaling: [],
     recovery: 'LONG_REST',
   };
 }
@@ -1886,6 +1887,11 @@ export function fromFeatEditorRows(
     name: row.name.trim(),
     shortName: row.shortName.trim(),
     max: row.max.trim(),
+    // Ступень без уровня или без максимума ничего не описывает: у потребителя
+    // она превратилась бы в ресурс на ноль зарядов
+    scaling: row.scaling
+      .filter((step) => step.level > 0 && step.max > 0)
+      .sort((left, right) => left.level - right.level),
     recovery: row.recovery,
   }));
 

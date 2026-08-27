@@ -155,11 +155,17 @@ const proficiencyGrantSchema = z.object({
   tools: z.array(entityRefSchema).optional(),
 });
 
+const counterScalingSchema = z.object({
+  level: z.number(),
+  max: z.number(),
+});
+
 const counterSchema = z.object({
   key: z.string().optional(),
   name: z.string().optional(),
   shortName: z.string().optional(),
   max: z.string().optional(),
+  scaling: z.array(counterScalingSchema).optional(),
   recovery: z.enum(['SHORT_REST', 'LONG_REST']).default('LONG_REST'),
 });
 
@@ -375,6 +381,7 @@ function toFeatMechanicsState(
       name: counter.name ?? '',
       shortName: counter.shortName ?? '',
       max: counter.max ?? '',
+      scaling: counter.scaling ?? [],
       recovery: counter.recovery,
     })),
   };

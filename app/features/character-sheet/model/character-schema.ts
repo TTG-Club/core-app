@@ -197,6 +197,12 @@ const featCounterSchema = z.object({
   name: z.string().catch(''),
   shortName: z.string().catch(''),
   max: z.string().catch(''),
+  // Ступени максимума; у снимков, сделанных до них, поля нет — такой ресурс
+  // считался формулой, ею и останется
+  scaling: z
+    .array(z.object({ level: z.number(), max: z.number() }))
+    .catch([])
+    .default([]),
   recovery: z.enum(['short-rest', 'long-rest']).catch('long-rest'),
 });
 
@@ -777,6 +783,13 @@ const resourceMaxRuleSchema = z.object({
   source: z.enum(['fixed', 'proficiency', 'ability', 'level']).catch('fixed'),
   ability: abilityKeySchema.catch(RESOURCE_MAX_DEFAULT_ABILITY),
   offset: z.coerce.number().catch(0),
+  // Множителя и ступеней у правил, сохранённых до них, нет: такой ресурс
+  // считался источником с прибавкой, ею и останется
+  multiplier: z.coerce.number().optional().catch(undefined),
+  scaling: z
+    .array(z.object({ level: z.number(), max: z.number() }))
+    .optional()
+    .catch(undefined),
 });
 
 /**

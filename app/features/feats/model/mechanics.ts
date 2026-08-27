@@ -410,6 +410,15 @@ export type FeatCounterRecovery = 'SHORT_REST' | 'LONG_REST';
  * к бонусу мастерства и обязан расти вместе с ним («Удачливый» даёт очков удачи
  * столько же, сколько бонус мастерства).
  */
+/** Ступень максимума ресурса: с какого уровня сколько зарядов. */
+export interface FeatCounterScaling {
+  /** Уровень персонажа, с которого действует ступень. */
+  level: number;
+
+  /** Максимум зарядов на этой ступени. */
+  max: number;
+}
+
 export interface FeatCounter {
   /** Стабильный ключ: по нему лист хранит потраченный остаток. */
   key: string;
@@ -418,6 +427,16 @@ export interface FeatCounter {
   shortName: string;
   /** Формула максимума: число, `@prof`, `@level`, `@mod.<abbr>`. */
   max: string;
+
+  /**
+   * Ступени максимума по уровням; пусто — максимум задан формулой.
+   *
+   * Нужны ресурсу, ряд которого формулой не пишется: костей превосходства
+   * мастера боевых искусств четыре с третьего уровня, пять с седьмого и шесть
+   * с пятнадцатого. Заполнены обе формы — старшей считается ступень.
+   */
+  scaling: Array<FeatCounterScaling>;
+
   recovery: FeatCounterRecovery;
 }
 
@@ -619,6 +638,7 @@ export function createFeatCounter(): FeatCounter {
     name: '',
     shortName: '',
     max: '@prof',
+    scaling: [],
     recovery: 'LONG_REST',
   };
 }

@@ -65,6 +65,7 @@ import type {
   DamageRollSource,
   DistanceRowDraft,
   FeatAbilityBonusOption,
+  FeatCounterScaling,
   FeatDefences,
   FeatGrantedSpeedKey,
   FeatSelectOption,
@@ -5518,6 +5519,38 @@ export function parseResourceMaxFormula(
 }
 
 /**
+ * Максимум ресурса по ступеням: берётся старшая ступень, до которой персонаж
+ * дорос.
+ *
+ * Ступени старше формулы, потому что описывают ряд, который формулой не
+ * пишется: костей превосходства мастера боевых искусств четыре с третьего
+ * уровня, пять с седьмого и шесть с пятнадцатого. До первой ступени ресурса
+ * нет вовсе — там `null`, и лист берёт формулу либо число.
+ *
+ * @param scaling ступени максимума.
+ * @param level уровень персонажа.
+ * @returns максимум зарядов; null — ступеней нет либо персонаж не дорос.
+ */
+function getScaledCounterMax(
+  scaling: FeatCounterScaling[],
+  level: number,
+): number | null {
+  let best: number | null = null;
+  let bestLevel = 0;
+
+  for (const step of scaling) {
+    if (step.level <= level && step.level >= bestLevel) {
+      bestLevel = step.level;
+      best = step.max;
+    }
+  }
+
+  return best === null
+    ? null
+    : clamp(best, RESOURCE_COUNT_MIN, RESOURCE_COUNT_MAX);
+}
+
+/**
  * Максимум ресурса: у правила он считается от листа, без правила — лежит числом.
  *
  * Считается при чтении, а не хранится: бонус мастерства и модификатор
@@ -5536,7 +5569,15 @@ export function getResourceMax(
     return resource.max;
   }
 
-  const { source, ability, offset, multiplier } = resource.maxRule;
+  const { source, ability, offset, multiplier, scaling } = resource.maxRule;
+
+  // Ступень старше источника: ряд, который формулой не пишется, задан ею же и
+  // точнее любого выражения
+  const scaled = getScaledCounterMax(scaling ?? [], character.level);
+
+  if (scaled !== null) {
+    return scaled;
+  }
 
   const base = getResourceMaxBase(character, source, ability);
 
@@ -5615,7 +5656,17 @@ export function withFeatResources(
 
   const fromFeatures = features.flatMap<CharacterClassResource>((feature) =>
     (feature.counters ?? []).map((counter) => {
-      const maxRule = parseResourceMaxFormula(counter.max);
+      // Ресурсу со ступенями формула не нужна вовсе, но правило нужно: без
+      // него максимум замер бы числом и не вырос на следующем уровне
+      const maxRule = counter.scaling.length
+        ? {
+            source: 'fixed' as const,
+            ability: RESOURCE_MAX_DEFAULT_ABILITY,
+            offset: 0,
+            scaling: counter.scaling,
+          }
+        : parseResourceMaxFormula(counter.max);
+
       const id = `${FEAT_RESOURCE_ID_PREFIX}${feature.id}:${counter.key}`;
 
       const base: CharacterClassResource = {

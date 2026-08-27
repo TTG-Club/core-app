@@ -33,6 +33,35 @@
   function removeCounter(index: number) {
     model.value = model.value.filter((_, position) => position !== index);
   }
+
+  /**
+   * Заводит ступень максимума: следующая начинается уровнем позже последней.
+   *
+   * @param counter строка ресурса.
+   */
+  function addScaling(counter: FeatCounterRow) {
+    const last = counter.scaling.at(-1);
+
+    counter.scaling = [
+      ...counter.scaling,
+      {
+        level: Math.min(20, (last?.level ?? 0) + 1),
+        max: (last?.max ?? 0) + 1,
+      },
+    ];
+  }
+
+  /**
+   * Убирает ступень максимума.
+   *
+   * @param counter строка ресурса.
+   * @param index номер ступени.
+   */
+  function removeScaling(counter: FeatCounterRow, index: number) {
+    counter.scaling = counter.scaling.filter(
+      (_, position) => position !== index,
+    );
+  }
 </script>
 
 <template>
@@ -103,6 +132,68 @@
           size="xs"
           :aria-label="counter.name || FEAT_EDITOR_LABELS.countersTitle"
           @click.left.exact.prevent="removeCounter(index)"
+        />
+      </div>
+
+      <!-- Ступени старше формулы: ряд «4 с 3 уровня, 5 с 7, 6 с 15» формулой
+        не пишется, и без них такой ресурс приходилось задавать одним числом -->
+      <div class="flex flex-col gap-2 md:col-span-24">
+        <span class="text-xs font-medium text-muted">
+          {{ FEAT_EDITOR_LABELS.counterScalingTitle }}
+        </span>
+
+        <p
+          v-if="!counter.scaling.length"
+          class="text-xs text-dimmed italic"
+        >
+          {{ FEAT_EDITOR_LABELS.counterScalingEmpty }}
+        </p>
+
+        <div
+          v-for="(step, stepIndex) in counter.scaling"
+          :key="`${counter.uid}-${stepIndex}`"
+          class="flex items-end gap-2"
+        >
+          <UFormField
+            class="w-28"
+            :label="FEAT_EDITOR_LABELS.counterScalingLevel"
+          >
+            <UInputNumber
+              v-model="step.level"
+              :min="1"
+              :max="20"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField
+            class="w-28"
+            :label="FEAT_EDITOR_LABELS.counterScalingMax"
+          >
+            <UInputNumber
+              v-model="step.max"
+              :min="1"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UButton
+            icon="tabler:trash"
+            color="error"
+            variant="ghost"
+            size="xs"
+            :aria-label="FEAT_EDITOR_LABELS.counterScalingTitle"
+            @click.left.exact.prevent="removeScaling(counter, stepIndex)"
+          />
+        </div>
+
+        <UButton
+          icon="tabler:plus"
+          :label="FEAT_EDITOR_LABELS.addCounterScaling"
+          color="neutral"
+          variant="soft"
+          size="xs"
+          @click.left.exact.prevent="addScaling(counter)"
         />
       </div>
     </div>

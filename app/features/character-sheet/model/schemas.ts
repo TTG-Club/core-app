@@ -212,6 +212,10 @@ const mechanicsCountersSchema = z
       name: z.string().catch(''),
       shortName: z.string().nullable().catch(null),
       max: z.string().nullable().catch(null),
+      scaling: z
+        .array(z.object({ level: z.number(), max: z.number() }))
+        .nullable()
+        .catch(null),
       recovery: z.string().nullable().catch(null),
     }),
   )
@@ -1294,6 +1298,9 @@ function toMechanicCounters(counters: FeatCountersResponse): FeatCounter[] {
         name: counter.name,
         shortName: counter.shortName ?? '',
         max: counter.max ?? '',
+        // Ступени приходят как есть: порядок задаёт справочник, а выбор нужной
+        // делает лист по уровню персонажа
+        scaling: counter.scaling ?? [],
         recovery:
           counter.recovery === API_SHORT_REST_RECOVERY
             ? 'short-rest'
