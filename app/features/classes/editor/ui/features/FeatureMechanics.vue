@@ -41,6 +41,22 @@
       feature.value.mechanics = value;
     },
   });
+
+  /**
+   * Сколько блоков механики уже заполнено. Список умений длинный, а механика
+   * свёрнута: без пометки автор не видит, какие умения настроены, и раскрывает
+   * их по одному.
+   */
+  const filledBlocksCount = computed(
+    () =>
+      [
+        editorRows.value.grants.length,
+        editorRows.value.modifiers.length,
+        editorRows.value.counters.length,
+        mechanics.value.spells.spells.length,
+        feature.value.activeEffects.length,
+      ].filter(Boolean).length,
+  );
 </script>
 
 <template>
@@ -51,7 +67,20 @@
       variant="subtle"
       trailing-icon="tabler:chevron-down"
       :label="CLASS_EDITOR_LABELS.featureAdvanced"
-    />
+    >
+      <template #trailing>
+        <UBadge
+          v-if="filledBlocksCount"
+          size="sm"
+          color="primary"
+          variant="subtle"
+        >
+          {{ filledBlocksCount }}
+        </UBadge>
+
+        <UIcon name="tabler:chevron-down" />
+      </template>
+    </UButton>
 
     <template #content>
       <div class="grid gap-6 pt-4">
