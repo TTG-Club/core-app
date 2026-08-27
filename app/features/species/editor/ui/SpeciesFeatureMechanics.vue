@@ -8,6 +8,7 @@
   import { InfoTooltip } from '~ui/tooltip';
 
   import {
+    getFeatureFilledBlocksCount,
     SPECIES_EDITOR_LABELS,
     SPECIES_INNATE_SPELL_EDITOR,
   } from '../../model';
@@ -42,16 +43,10 @@
   /**
    * Сколько блоков механики уже заполнено. Список умений длинный, а механика
    * свёрнута: без пометки автор не видит, какие умения настроены, и раскрывает
-   * их по одному.
+   * их по одному. Счёт общий со шапкой строки списка особенностей.
    */
-  const filledBlocksCount = computed(
-    () =>
-      [
-        editorRows.value.grants.length,
-        editorRows.value.modifiers.length,
-        feature.value.grantedSpells.length,
-        feature.value.activeEffects.length,
-      ].filter(Boolean).length,
+  const filledBlocksCount = computed(() =>
+    getFeatureFilledBlocksCount(feature.value),
   );
 </script>
 

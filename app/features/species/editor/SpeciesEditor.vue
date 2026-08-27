@@ -60,7 +60,6 @@
           swim: undefined,
           hover: false,
         },
-        darkVision: undefined,
       },
       features: [],
       innateSpells: [],
@@ -160,15 +159,10 @@
         </UCard>
       </template>
 
-      <!-- ХАРАКТЕРИСТИКИ -->
+      <!-- ХАРАКТЕРИСТИКИ: без заголовка карточки — он дословно повторял бы
+        подпись самой вкладки -->
       <template #properties>
         <UCard variant="subtle">
-          <template #header>
-            <h2 class="truncate text-base text-highlighted">
-              {{ SPECIES_EDITOR_TABS.properties }}
-            </h2>
-          </template>
-
           <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
             <UFormField
               class="col-span-full md:col-span-12"
@@ -178,19 +172,9 @@
               <SelectCreatureType v-model="state.properties.type" />
             </UFormField>
 
-            <UFormField
-              class="col-span-full md:col-span-12"
-              :label="SPECIES_EDITOR_LABELS.darkVision"
-              :help="SPECIES_EDITOR_LABELS.darkVisionHint"
-              name="properties.darkVision"
-            >
-              <UInputNumber
-                v-model="state.properties.darkVision"
-                :min="0"
-                :max="SPECIES_EDITOR_LABELS.darkVisionMax"
-                :step="SPECIES_EDITOR_LABELS.darkVisionStep"
-              />
-            </UFormField>
+            <p class="col-span-full text-sm text-dimmed">
+              {{ SPECIES_EDITOR_LABELS.sensesHint }}
+            </p>
 
             <SpeciesSizes v-model="state.properties.sizes" />
 
@@ -199,18 +183,11 @@
         </UCard>
       </template>
 
-      <!-- УМЕНИЯ -->
+      <!-- ОСОБЕННОСТИ: без заголовка карточки — он дословно повторял бы
+        подпись самой вкладки -->
       <template #features>
         <UCard variant="subtle">
-          <template #header>
-            <h2 class="truncate text-base text-highlighted">
-              {{ SPECIES_EDITOR_TABS.features }}
-            </h2>
-          </template>
-
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
-            <SpeciesFeatures v-model="state.features" />
-          </div>
+          <SpeciesFeatures v-model="state.features" />
         </UCard>
       </template>
 

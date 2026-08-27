@@ -37,11 +37,8 @@ export const SPECIES_EDITOR_LABELS = {
   parentHint: 'Необходимо указать, если создаешь происхождение вида',
   creatureType: 'Тип',
 
-  darkVision: 'Тёмное зрение',
-  darkVisionHint:
-    'Дальность в футах. Пусто — вида тёмного зрения не имеет. Чувства, которые даёт отдельное умение, задаются в дарах этого умения.',
-  darkVisionStep: 30,
-  darkVisionMax: 300,
+  sensesHint:
+    'Тёмное зрение и другие чувства задаются модификатором «Тёмное зрение» в правках листа той особенности, которая их дарит. Страница вида и лист персонажа показывают вычисленное значение сами.',
 
   grantsTitle: 'Дары вида',
   grantsHint:
@@ -56,11 +53,75 @@ export const SPECIES_EDITOR_LABELS = {
   featureEffectsTitle: 'Эффекты умения',
   featureSpellsTitle: 'Заклинания умения',
   featureAdvanced: 'Механика, заклинания и эффекты',
-  featureFirst: 'Добавить первую особенность',
 
   effectsHint:
     'Активные эффекты вида в вокабуляре виртуального стола: бонусы, флаги, иммунитеты. Дары лист проставляет сам, а эффект меняет числа готовой формулой.',
 } as const;
+
+/** Подписи списка особенностей вида. */
+export const SPECIES_FEATURES_EDITOR = {
+  unnamed: 'Новая особенность',
+  add: 'Добавить особенность',
+  empty: 'У вида пока нет особенностей',
+  nameLabel: 'Название',
+  namePlaceholder: 'Введи название',
+  nameEngLabel: 'Название (англ.)',
+  nameEngPlaceholder: 'Введи английское название',
+  descriptionLabel: 'Описание',
+  descriptionPlaceholder: 'Введи описание',
+  addDescription: 'Добавить описание',
+  /** Подпись бейджа механики; следом идёт число заполненных блоков. */
+  mechanicsBadge: 'Механика: ',
+  collapse: 'Свернуть особенность',
+  expand: 'Развернуть особенность',
+  remove: 'Убрать особенность',
+  removeConfirmTitle: 'Убрать особенность?',
+  removeConfirmText:
+    'Особенность удалится из формы вместе со своей механикой, заклинаниями и эффектами. Пока запись не сохранена, изменение можно отменить, закрыв форму.',
+  removeConfirmCancel: 'Оставить',
+  removeConfirmApply: 'Убрать',
+} as const;
+
+/** Подписи редактора размеров вида. */
+export const SPECIES_SIZES_EDITOR = {
+  size: 'Размер',
+  heightFrom: 'Высота от',
+  heightFromPlaceholder: 'Введи минимальную высоту',
+  heightTo: 'Высота до',
+  heightToPlaceholder: 'Введи максимальную высоту',
+  feet: 'фт.',
+  add: 'Добавить размер',
+  empty: 'Размеры не указаны',
+  remove: 'Убрать размер',
+} as const;
+
+/** Подписи и настройки редактора скоростей вида. */
+export const SPECIES_SPEED_EDITOR = {
+  base: 'Скорость передвижения',
+  basePlaceholder: 'Введи скорость передвижения',
+  labels: {
+    fly: 'Скорость полета',
+    climb: 'Скорость лазания',
+    swim: 'Скорость плавания',
+  },
+  hover: 'Парит',
+  add: 'Добавить скорость',
+  remove: 'Убрать скорость',
+  /** Значение только что добавленной строки — как базовая скорость по умолчанию. */
+  defaultValue: 30,
+} as const;
+
+/** Подпись бейджа уровня в шапке свёрнутой особенности: приставка и хвост вокруг числа. */
+export const SPECIES_FEATURE_LEVEL_BADGE = {
+  prefix: 'С ',
+  suffix: ' уровня',
+} as const;
+
+/**
+ * Необязательные скорости вида — в порядке показа строк вкладки
+ * «Характеристики»; подписи к ним лежат в {@link SPECIES_SPEED_EDITOR}.
+ */
+export const SPECIES_OPTIONAL_SPEED_KINDS = ['fly', 'climb', 'swim'] as const;
 
 /** Границы уровня умения вида. */
 export const SPECIES_FEATURE_LEVEL = {
