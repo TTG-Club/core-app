@@ -4720,6 +4720,7 @@ export const SHEET_FEAT_CHOICE_LABELS: Partial<
   'damage-type': 'Выберите тип урона',
   'saving-throw': 'Выберите спасбросок',
   'weapon-mastery': 'Выберите оружейный приём',
+  'option': 'Выберите вариант',
 };
 
 /** Формы слова «характеристика» для подписи варианта повышения. */

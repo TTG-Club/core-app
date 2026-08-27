@@ -926,6 +926,31 @@ function toMechanicChoices(
       ];
     }
 
+    if (choice.type === 'OPTION') {
+      // Пул своего справочника не имеет: варианты перечисляет сама запись —
+      // благословение великана у голиафа, божественный порядок у жреца. Подпись
+      // берётся из снимка названия, а без него остаётся значение: пустой пул
+      // сделал бы шаг непроходимым.
+      const options = (choice.options ?? []).flatMap((option) =>
+        option.value
+          ? [{ value: option.value, name: option.name || option.value }]
+          : [],
+      );
+
+      return [
+        {
+          id,
+          kind: 'option',
+          label: label || SHEET_FEAT_CHOICE_LABELS.option || '',
+          count,
+          listed: options.map((option) => option.name),
+          optionValues: Object.fromEntries(
+            options.map((option) => [option.name, option.value]),
+          ),
+        },
+      ];
+    }
+
     if (choice.type === 'DAMAGE_TYPE') {
       // Пул — типы урона, перечисленные в механике («дробящий или рубящий» у
       // «Закалённой кожи»). Не перечислены — выбирать можно любой: так у «Дара

@@ -2307,7 +2307,8 @@ export type ClassChoiceKind =
   | 'saving-throw'
   | 'weapon-mastery'
   | 'ability-score'
-  | 'ability-variant';
+  | 'ability-variant'
+  | 'option';
 
 /**
  * Чем ограничен пул заклинаний выбора: пул собирается поиском по каталогу, а не
@@ -2375,8 +2376,9 @@ export interface ClassChoice {
   expertiseIfProficient?: boolean;
 
   /**
-   * Значения опций по подписи: пикер отдаёт название, а пулу заклинаний нужен
-   * url класса, чей список игрок назвал. Только для `kind: 'spell-list'`.
+   * Значения опций по подписи: пикер отдаёт название, а потребителю нужен ключ
+   * — url класса, чей список игрок назвал, либо ключ выбранного варианта. Для
+   * `kind: 'spell-list'` и `kind: 'option'`.
    */
   optionValues?: Record<string, string>;
 
