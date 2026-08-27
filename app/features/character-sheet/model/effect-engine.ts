@@ -19,6 +19,7 @@ import type { ActiveEffect, EffectChange } from '~active-effects/model';
 import type { ArmorDexterityMod, Character, RollMode } from './types';
 
 import {
+  buildSaveVsConditionFlag,
   EFFECT_CARRIER_ARMOR_CONDITION_PREFIX,
   EFFECT_DAMAGE_TYPE_OPTIONS,
   EFFECT_SKILL_OPTIONS,
@@ -56,6 +57,15 @@ export interface SheetRollContext {
    * преимущество только на такой спасбросок и молчит на спасброске от яда.
    */
   againstMagic?: boolean;
+
+  /**
+   * Состояние, которого спасбросок позволяет избежать или которое прекращает.
+   *
+   * Тоже признак ситуации, а не носителя: дварфийская стойкость даёт
+   * преимущество на спасбросок против отравления и молчит на спасброске от
+   * страха. Ключ состояния — из словаря эффектов (`poisoned`).
+   */
+  againstCondition?: string;
 
   /** Цель уже выбрана и у неё полный запас хитов. */
   targetIsFull?: boolean;
@@ -468,7 +478,8 @@ function hasAdvantageFlag(
   flags: ReadonlySet<string>,
   context: SheetRollContext,
 ): boolean {
-  const { kind, ability, skill, attackType, againstMagic } = context;
+  const { kind, ability, skill, attackType, againstMagic, againstCondition } =
+    context;
 
   if (kind === 'attack') {
     return (
@@ -491,6 +502,8 @@ function hasAdvantageFlag(
       flags.has('save.advantage')
       || (ability !== undefined && flags.has(`save.advantage.${ability}`))
       || (againstMagic === true && flags.has('save.advantage.vsMagic'))
+      || (againstCondition !== undefined
+        && flags.has(buildSaveVsConditionFlag('advantage', againstCondition)))
     );
   }
 
@@ -512,7 +525,8 @@ function hasDisadvantageFlag(
   flags: ReadonlySet<string>,
   context: SheetRollContext,
 ): boolean {
-  const { kind, ability, skill, attackType, againstMagic } = context;
+  const { kind, ability, skill, attackType, againstMagic, againstCondition } =
+    context;
 
   if (kind === 'attack') {
     return (
@@ -535,6 +549,10 @@ function hasDisadvantageFlag(
       flags.has('save.disadvantage')
       || (ability !== undefined && flags.has(`save.disadvantage.${ability}`))
       || (againstMagic === true && flags.has('save.disadvantage.vsMagic'))
+      || (againstCondition !== undefined
+        && flags.has(
+          buildSaveVsConditionFlag('disadvantage', againstCondition),
+        ))
     );
   }
 

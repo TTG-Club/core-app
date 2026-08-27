@@ -700,10 +700,17 @@
       // подмену, а в подменённом спасброске это уже другая характеристика.
       ability: row.ability,
       actionLabel: 'Бросить спасбросок',
-      // Источник спасброска на листе неизвестен, поэтому «против магии» здесь
-      // не применяется: выдать преимущество против яда по предмету «против
-      // заклинаний» хуже, чем не выдать вовсе.
       mode: getRollMode({ kind: 'savingThrow', ability: row.key }),
+      // Источник спасброска лист не знает — его называет игрок в модалке:
+      // выдать преимущество против яда по предмету «против заклинаний» хуже,
+      // чем спросить.
+      resolveMode: (source) =>
+        getRollMode({
+          kind: 'savingThrow',
+          ability: row.key,
+          againstMagic: source.againstMagic,
+          againstCondition: source.condition ?? undefined,
+        }),
     });
   }
 

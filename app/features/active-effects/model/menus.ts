@@ -20,6 +20,7 @@ import {
   EFFECT_FLAG_LABELS,
   EFFECT_TARGET_KEY_SUGGESTIONS,
   EFFECT_TARGET_TYPE_CONDITION_PREFIX,
+  SAVE_VS_CONDITION_FLAG_KEYS,
 } from './constants';
 
 /** Пункт меню флагов. */
@@ -47,6 +48,7 @@ const EFFECT_FLAG_GROUPS = [
   { key: 'attacksAgainst', label: 'Атаки по носителю' },
   { key: 'abilityCheck', label: 'Проверки характеристик' },
   { key: 'saves', label: 'Спасброски' },
+  { key: 'saveVsCondition', label: 'Спасброски против состояний' },
   { key: 'saveAutoFail', label: 'Автопровалы спасбросков' },
   { key: 'skills', label: 'Навыки' },
   { key: 'damageDefense', label: 'Защиты от урона' },
@@ -87,6 +89,12 @@ function getDamageDefenseKind(flagKey: string): string | undefined {
 function getFlagGroupKey(flagKey: string): string {
   if (flagKey.startsWith('save.autoFail.')) {
     return 'saveAutoFail';
+  }
+
+  // Раньше общей ветки спасбросков: приставка `save.` у них та же, а тридцать
+  // позиций в одном разделе с остальными не читаются.
+  if (SAVE_VS_CONDITION_FLAG_KEYS.has(flagKey)) {
+    return 'saveVsCondition';
   }
 
   if (flagKey.startsWith('save.')) {

@@ -494,6 +494,28 @@ function buildAbilityFlagLabels(
 }
 
 /**
+ * Собирает подписи флагов спасброска против состояния: преимущество и помеха
+ * задаются отдельно для каждого из пятнадцати состояний.
+ *
+ * Семейством, а не перечислением: так написана половина видов справочника
+ * («преимущество на спасброски, чтобы избежать состояния Отравлен»), и держать
+ * их списком значило бы дописывать его при каждом новом виде.
+ *
+ * @param keyPrefix приставка ключа флага.
+ * @param labelPrefix приставка подписи флага.
+ * @returns пары «ключ флага → подпись».
+ */
+function buildSaveVsConditionFlagLabels(
+  keyPrefix: string,
+  labelPrefix: string,
+): Array<[string, string]> {
+  return EFFECT_CONDITION_OPTIONS.map((condition) => [
+    `${keyPrefix}${condition.value.charAt(0).toUpperCase()}${condition.value.slice(1)}`,
+    `${labelPrefix}: ${condition.label}`,
+  ]);
+}
+
+/**
  * Собирает подписи понавыковых флагов: преимущество и помеха задаются отдельно
  * для каждого из восемнадцати навыков.
  *
@@ -589,6 +611,16 @@ export const EFFECT_FLAG_LABELS: Record<string, string> = Object.fromEntries([
   ...buildAbilityFlagLabels('save.disadvantage.', 'Помеха на спасброски'),
   ...buildAbilityFlagLabels('save.autoFail.', 'Автопровал спасбросков'),
 
+  // Спасброски против состояний
+  ...buildSaveVsConditionFlagLabels(
+    'save.advantage.vs',
+    'Преимущество на спасброски против состояния',
+  ),
+  ...buildSaveVsConditionFlagLabels(
+    'save.disadvantage.vs',
+    'Помеха на спасброски против состояния',
+  ),
+
   // Прочее
   ['speed.zero', 'Скорость равна нулю'],
   ['incapacitated', 'Недееспособен (нет действий и реакций)'],
@@ -601,6 +633,36 @@ export const EFFECT_FLAG_LABELS: Record<string, string> = Object.fromEntries([
   // Защиты от урона
   ...buildDamageDefenseFlagLabels(),
 ]);
+
+/**
+ * Ключи флагов спасброска против состояния — по ним меню отделяет их от прочих
+ * спасбросков: приставка `save.` у них общая, а список из тридцати позиций в
+ * одном разделе с остальными не читается.
+ */
+export const SAVE_VS_CONDITION_FLAG_KEYS: ReadonlySet<string> = new Set(
+  [
+    ...buildSaveVsConditionFlagLabels('save.advantage.vs', ''),
+    ...buildSaveVsConditionFlagLabels('save.disadvantage.vs', ''),
+  ].map(([key]) => key),
+);
+
+/**
+ * Ключ флага спасброска против состояния.
+ *
+ * Собирается здесь, а не у потребителя: строка обязана совпадать с ключом из
+ * библиотеки флагов, и второе место сборки разошлось бы с ней на первом же
+ * состоянии. Зеркало `buildSaveVsConditionFlag` системы VTTG.
+ *
+ * @param mode вид флага.
+ * @param condition ключ состояния (`poisoned`).
+ * @returns ключ флага.
+ */
+export function buildSaveVsConditionFlag(
+  mode: 'advantage' | 'disadvantage',
+  condition: string,
+): string {
+  return `save.${mode}.vs${condition.charAt(0).toUpperCase()}${condition.slice(1)}`;
+}
 
 /** Полная библиотека флагов для поля выбора. */
 export const EFFECT_FLAG_OPTIONS: Array<Option<string>> = Object.entries(

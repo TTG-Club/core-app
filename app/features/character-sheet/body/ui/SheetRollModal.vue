@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { AbilityKey, RollMode } from '../../model';
 
+  import { EFFECT_CONDITION_OPTIONS } from '~active-effects/model';
   import { useDiceRollHandler } from '~dice-roller/composables';
 
   import { useCharacterSheet } from '../../composables';
@@ -19,6 +20,15 @@
     ROLL_DICE_FACES_OPTIONS,
     ROLL_MODE_OPTIONS,
   } from '../../model';
+
+  /** Источник спасброска, названный игроком. */
+  interface SheetRollSource {
+    /** Спасбросок вызван заклинанием или иным магическим эффектом. */
+    againstMagic: boolean;
+
+    /** Состояние, которого спасбросок позволяет избежать; null — не выбрано. */
+    condition: string | null;
+  }
 
   interface RollModeButton {
     value: RollMode;
@@ -47,10 +57,20 @@
        * оружия). Игрок волен переключить его сам.
        */
       mode?: RollMode;
+
+      /**
+       * Пересчёт режима по названному источнику спасброска.
+       *
+       * Задан — модалка спрашивает, от чего спасаемся: лист источника не знает,
+       * а без него не срабатывают ни «против магии» мантии, ни преимущество
+       * вида против состояния. Не задан — строки нет, и это обычная проверка.
+       */
+      resolveMode?: (source: SheetRollSource) => RollMode;
     }>(),
     {
       actionLabel: ROLL_CHECK_ACTION_LABEL,
       mode: DEFAULT_ROLL_MODE,
+      resolveMode: undefined,
     },
   );
 
@@ -75,6 +95,41 @@
   );
 
   const draftDiceFaces = ref(DEFAULT_ROLL_DICE_FACES);
+
+  const draftAgainstMagic = ref(false);
+
+  const draftCondition = ref<string | null>(null);
+
+  /** Варианты состояний с пунктом «не выбрано»: спасбросок бывает и ни от чего. */
+  const conditionOptions = [
+    { value: '', label: 'Не выбрано' },
+    ...EFFECT_CONDITION_OPTIONS.map((condition) => ({
+      value: condition.value,
+      label: condition.label,
+    })),
+  ];
+
+  const draftConditionValue = computed({
+    get: () => draftCondition.value ?? '',
+    set: (value: string) => {
+      draftCondition.value = value || null;
+    },
+  });
+
+  // Источник называет игрок, поэтому режим пересчитывается по нему, а не берётся
+  // из пропа: до ответа лист не знает, «против магии» этот спасбросок или от яда
+  watch([draftAgainstMagic, draftCondition], () => {
+    const resolve = props.resolveMode;
+
+    if (!resolve) {
+      return;
+    }
+
+    rollMode.value = resolve({
+      againstMagic: draftAgainstMagic.value,
+      condition: draftCondition.value,
+    });
+  });
 
   const modifier = computed(() =>
     draftAbility.value === ROLL_ABILITY_AUTO
@@ -181,6 +236,36 @@
               :min="ROLL_BONUS_MIN"
               :max="ROLL_BONUS_MAX"
               class="w-full"
+            />
+          </UFormField>
+        </div>
+
+        <!-- Источник спасброска: лист его не знает, поэтому спрашивает —
+          от этого зависят «против магии» и преимущество против состояния -->
+        <div
+          v-if="resolveMode"
+          class="flex flex-col gap-4 sm:flex-row sm:items-end"
+        >
+          <UFormField
+            label="Против состояния"
+            help="Спасбросок, чтобы избежать состояния или прекратить его"
+            class="min-w-0 flex-1"
+          >
+            <USelect
+              v-model="draftConditionValue"
+              :items="conditionOptions"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField
+            label="Против магии"
+            help="Заклинание или иной магический эффект"
+            class="min-w-0 flex-1"
+          >
+            <USwitch
+              v-model="draftAgainstMagic"
+              label="Магический источник"
             />
           </UFormField>
         </div>
