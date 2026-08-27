@@ -1,18 +1,12 @@
 <script setup lang="ts">
   import type { TabsItem } from '@nuxt/ui';
 
-  import type { SpeciesCreate } from '~species/model';
+  import type { SpeciesCreate } from '../model';
 
   import { ActiveEffects } from '~active-effects/editor';
   import { EFFECT_ORIGIN } from '~active-effects/model';
   import { FeatGrantRows, FeatModifierRows } from '~feats/editor/ui';
   import { createFeatEditorRows, createFeatMechanics } from '~feats/model';
-  import {
-    normalizeLoadedSpecies,
-    SPECIES_EDITOR_LABELS,
-    SPECIES_EDITOR_TABS,
-    transformSpeciesBeforeSubmit,
-  } from '~species/model';
   import { SpeciesPreview } from '~species/preview';
   import { EditorBaseInfo } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
@@ -23,6 +17,12 @@
   import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
   import { WorkshopEditorFormControls } from '~workshop/revision/ui';
 
+  import {
+    normalizeLoadedSpecies,
+    SPECIES_EDITOR_LABELS,
+    SPECIES_EDITOR_TABS,
+    transformSpeciesBeforeSubmit,
+  } from '../model';
   import { SpeciesFeatures, SpeciesSizes, SpeciesSpeed } from './ui';
 
   /**

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { SpeciesCreate } from '~species/model';
+  import type { SpeciesCreate } from '../../model';
 
   import { isString } from 'es-toolkit';
 

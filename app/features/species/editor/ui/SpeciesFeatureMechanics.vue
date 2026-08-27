@@ -1,16 +1,16 @@
 <script setup lang="ts">
-  import type { SpeciesFeatureCreate } from '~species/model';
+  import type { SpeciesFeatureCreate } from '../../model';
 
   import { ActiveEffects } from '~active-effects/editor';
   import { EFFECT_ORIGIN } from '~active-effects/model';
   import { FeatGrantRows, FeatModifierRows } from '~feats/editor/ui';
   import { createFeatEditorRows } from '~feats/model';
+  import { InfoTooltip } from '~ui/tooltip';
+
   import {
     SPECIES_EDITOR_LABELS,
     SPECIES_INNATE_SPELL_EDITOR,
-  } from '~species/model';
-  import { InfoTooltip } from '~ui/tooltip';
-
+  } from '../../model';
   import SpeciesFeatureSpells from './SpeciesFeatureSpells.vue';
 
   /**

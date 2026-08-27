@@ -1,7 +1,9 @@
 <script setup lang="ts">
   import type { TabsItem } from '@nuxt/ui';
 
-  import type { CreateExperience, CreatureCreate } from '~bestiary/model';
+  import type { CreatureCreate } from '~bestiary/model';
+
+  import { z } from 'zod';
 
   import { DictionaryService } from '~/shared/api';
   import { ActiveEffects } from '~active-effects/editor';
@@ -41,6 +43,12 @@
     CreatureType,
   } from './ui';
 
+  /**
+   * Опыт существа в ответе `/raw`. Разбирается схемой, а не приводится типом:
+   * из всего блока нужно одно число, а ответ сервера здесь — `unknown`.
+   */
+  const loadedExperienceSchema = z.object({ value: z.number() });
+
   const { data: challengeRatings } = await useAsyncData(
     'dictionaries-challenge-rating',
     () => DictionaryService.challengeRating(),
@@ -58,10 +66,14 @@
   function normalizeLoaded(
     raw: Record<string, unknown>,
   ): Record<string, unknown> {
-    const experience = raw.experience as CreateExperience | undefined;
+    const experience = loadedExperienceSchema.safeParse(raw.experience);
+
+    if (!experience.success) {
+      return raw;
+    }
 
     const option = challengeRatings.value?.find(
-      (item) => item.value === experience?.value,
+      (item) => item.value === experience.data.value,
     );
 
     return option ? { ...raw, proficiencyBonus: option.pb } : raw;

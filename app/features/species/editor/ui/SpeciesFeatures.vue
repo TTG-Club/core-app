@@ -1,15 +1,15 @@
 <script setup lang="ts">
-  import type { SpeciesFeatureCreate } from '~species/model';
+  import type { SpeciesFeatureCreate } from '../../model';
 
   import { createFeatEditorRows, createFeatMechanics } from '~feats/model';
+  import { EditorArrayControls } from '~ui/editor';
+  import { MarkupEditor } from '~ui/markup-editor';
+
   import {
     SPECIES_EDITOR_LABELS,
     SPECIES_EDITOR_TABS,
     SPECIES_FEATURE_LEVEL,
-  } from '~species/model';
-  import { EditorArrayControls } from '~ui/editor';
-  import { MarkupEditor } from '~ui/markup-editor';
-
+  } from '../../model';
   import SpeciesFeatureMechanics from './SpeciesFeatureMechanics.vue';
 
   /**

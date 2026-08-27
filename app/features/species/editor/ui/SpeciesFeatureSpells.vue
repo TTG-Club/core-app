@@ -2,7 +2,8 @@
   import type { FeatGrantedSpellRef } from '~feats/model';
 
   import { FeatEntityRefRows } from '~feats/editor/ui';
-  import { SPECIES_INNATE_SPELL_EDITOR } from '~species/model';
+
+  import { SPECIES_INNATE_SPELL_EDITOR } from '../../model';
 
   /**
    * Заклинания, которые даёт умение вида.
