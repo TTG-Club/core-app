@@ -1,7 +1,24 @@
 import type { AbilityKey } from '~/shared/types';
+import type { ActiveEffect } from '~active-effects/model';
+import type { FeatEditorRows, FeatMechanics } from '~feats/model';
 import type { EditorBaseInfoState, EquipmentOptionCreate } from '~ui/editor';
 
 import type { ClassResourceRecovery } from './detail';
+
+/**
+ * Что колонка таблицы прогрессии означает для мастера повышения уровня.
+ *
+ * Зеркало `ClassTableColumnPurpose` из core-api. Колонка «Известные заговоры» и
+ * колонка «Скрытая атака» выглядят одинаково — подпись и значения по уровням, —
+ * но означают разное: по первой мастер спрашивает выбор заговоров, вторая только
+ * показывается. Угадывать назначение по подписи нельзя: на переведённом или
+ * самописном классе она любая.
+ */
+export type ClassTableColumnPurpose =
+  | 'NONE'
+  | 'CANTRIPS_KNOWN'
+  | 'SPELLS_KNOWN'
+  | 'PREPARED_SPELLS';
 
 export type AbilityDelimiter = 'AND' | 'OR';
 
@@ -49,6 +66,29 @@ export interface ClassFeatureCreate {
   options: Array<ClassFeatureOptionCreate>;
   abilityBonus?: ClassFeatureAbilityBonusCreate;
   skillChoice?: ClassFeatureSkillChoiceCreate;
+
+  /**
+   * Умение только информирует и в лист персонажа не попадает: строка таблицы
+   * прогрессии вроде «Подкласс» или «Улучшение характеристик» нужна в книге, но
+   * записью умения на листе она была бы шумом.
+   */
+  informationalOnly: boolean | undefined;
+
+  /**
+   * Дары умения моделью черты — той же, что лежит в core-api
+   * (`ClassFeature.mechanics`): набор даров у черты и умения класса один, и
+   * вторая копия тех же полей разошлась бы с первой.
+   */
+  mechanics: FeatMechanics | undefined;
+
+  /** Активные эффекты умения в вокабуляре VTTG. */
+  activeEffects: Array<ActiveEffect>;
+
+  /**
+   * Строки редактора даров умения. Форма правит их, а не блоки механики; перед
+   * отправкой из них пересобирается `mechanics`, а само поле обнуляется.
+   */
+  editorRows: FeatEditorRows | undefined;
 }
 
 export interface ClassFeatureAbilityBonusCreate {
@@ -66,6 +106,19 @@ export interface ClassColumnCreate {
   name: string;
   resourceRecovery: ClassResourceRecovery;
   scaling: Array<ClassColumnScalingCreate>;
+
+  /**
+   * Стабильный ключ колонки. Пусто — ключ выводится из подписи, как было до его
+   * появления; заполняют его, когда подпись переводят или меняют: по ключу лист
+   * хранит потраченный остаток ресурса, и перевод не должен обнулять счётчики.
+   */
+  key: string | undefined;
+
+  /** Краткая подпись для компактной плитки ресурса; пусто — берётся название. */
+  shortName: string | undefined;
+
+  /** Что колонка означает для мастера повышения уровня. */
+  purpose: ClassTableColumnPurpose | undefined;
 }
 
 export interface ArmorProficiencyCreate {
@@ -118,6 +171,35 @@ export interface ClassCreate extends EditorBaseInfoState {
   image: string | undefined;
   primaryCharacteristics: ClassPrimaryCharacteristicsCreate;
   abilityTemplate: AbilityTemplateCreate | undefined;
+
+  /**
+   * Характеристика, которой класс колдует.
+   *
+   * До её появления потребители выводили характеристику по каноническому ключу
+   * класса, и у самописного или переведённого класса она молча пропадала.
+   */
+  spellcastingAbility: AbilityKey | undefined;
+
+  /** Уровень класса, с которого работает заклинательство; пусто — с первого. */
+  spellcastingStartLevel: number | undefined;
+
+  /** Подпись группы подклассов: «Воинский архетип», «Магическая традиция». */
+  subclassLabel: string | undefined;
+
+  /** Уровень, на котором выбирается подкласс. */
+  subclassLevel: number | undefined;
+
+  /**
+   * Дары самого класса: то, что даёт взятие класса целиком и чему не нашлось
+   * места в отдельных полях владений.
+   */
+  mechanics: FeatMechanics | undefined;
+
+  /** Активные эффекты класса в вокабуляре VTTG. */
+  activeEffects: Array<ActiveEffect>;
+
+  /** Строки редактора даров класса; в теле запроса им места нет. */
+  editorRows: FeatEditorRows | undefined;
 }
 
 export type AbilityTemplateCreate = [

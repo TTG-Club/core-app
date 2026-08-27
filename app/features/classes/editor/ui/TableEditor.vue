@@ -3,7 +3,11 @@
 
   import { EditorArrayControls } from '~ui/editor';
 
-  import { CLASS_RESOURCE_RECOVERY_OPTIONS } from '../../model';
+  import {
+    CLASS_EDITOR_LABELS,
+    CLASS_RESOURCE_RECOVERY_OPTIONS,
+    CLASS_TABLE_COLUMN_PURPOSE_OPTIONS,
+  } from '../../model';
   import { TableColumnScaling } from './table';
 
   const state = defineModel<Array<ClassColumnCreate>>({ required: true });
@@ -13,7 +17,14 @@
   }
 
   function getEmptyColumn(): ClassColumnCreate {
-    return { name: '', resourceRecovery: 'NONE', scaling: [] };
+    return {
+      name: '',
+      resourceRecovery: 'NONE',
+      scaling: [],
+      key: undefined,
+      shortName: undefined,
+      purpose: 'NONE',
+    };
   }
 </script>
 
@@ -56,6 +67,43 @@
                 v-model="column.resourceRecovery"
                 :items="CLASS_RESOURCE_RECOVERY_OPTIONS"
                 class="w-full"
+              />
+            </UFormField>
+
+            <UFormField
+              class="col-span-full md:col-span-8"
+              :label="CLASS_EDITOR_LABELS.columnPurpose"
+              :help="CLASS_EDITOR_LABELS.columnPurposeHint"
+              name="purpose"
+            >
+              <USelect
+                v-model="column.purpose"
+                :items="CLASS_TABLE_COLUMN_PURPOSE_OPTIONS"
+                class="w-full"
+              />
+            </UFormField>
+
+            <UFormField
+              class="col-span-full md:col-span-8"
+              :label="CLASS_EDITOR_LABELS.columnShortName"
+              :help="CLASS_EDITOR_LABELS.columnShortNameHint"
+              name="shortName"
+            >
+              <UInput
+                v-model="column.shortName"
+                placeholder="Например: Ярость"
+              />
+            </UFormField>
+
+            <UFormField
+              class="col-span-full md:col-span-8"
+              :label="CLASS_EDITOR_LABELS.columnKey"
+              :help="CLASS_EDITOR_LABELS.columnKeyHint"
+              name="key"
+            >
+              <UInput
+                v-model="column.key"
+                placeholder="Например: rages"
               />
             </UFormField>
 

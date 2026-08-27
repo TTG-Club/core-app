@@ -110,7 +110,18 @@
       // Владения свой вид не выдаёт: навыки и языки остаются за классом и
       // предысторией.
       skills: { proficient: [], expertise: [] },
-      proficiencies: { languages: [] },
+      // Свой вид владений не описывает: игрок правит их на вкладке владений
+      // вручную, и подставлять за него пустой набор — это и есть «ничего»
+      proficiencies: {
+        armor: [],
+        weapons: [],
+        tools: [],
+        languages: [],
+        skills: [],
+        expertiseSkills: [],
+        weaponMasteries: [],
+        savingThrows: [],
+      },
     });
 
     emit('close', true);

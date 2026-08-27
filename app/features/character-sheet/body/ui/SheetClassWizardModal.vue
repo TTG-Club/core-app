@@ -40,7 +40,7 @@
     FIGHTING_STYLE_INVALID_RESPONSE_ERROR,
     getCharacterClasses,
     getChoiceSkillHints,
-    getClassFeatureChoice,
+    getClassFeatureChoices,
     getClassFeatureId,
     getClassMaxHitPoints,
     getClassSkillChoice,
@@ -470,7 +470,7 @@
       level: number;
       description: ClassSummary['features'][number]['description'];
       originLabel: string;
-      choiceControl: ClassChoice | null;
+      choiceControls: ClassChoice[];
       fightingStyleChoice: boolean;
     }> = [];
 
@@ -501,7 +501,7 @@
           description: feature.description,
           originLabel,
           fightingStyleChoice: feature.fightingStyleChoice,
-          choiceControl: getClassFeatureChoice(id, feature, skillNames.value),
+          choiceControls: getClassFeatureChoices(id, feature, skillNames.value),
         });
       }
     };
@@ -826,39 +826,34 @@
 
     const chosenTools = selections.value['class-tools'] ?? [];
 
-    // Выборы внутри умений: владение навыком, экспертиза и языки; выбранные
-    // значения также идут в текст умения, чтобы отображаться на листе.
-    const expertiseSkills: string[] = [];
-    const chosenLanguages: string[] = [];
     const featureChoices: Record<string, string> = { ...choices.value };
 
     for (const selection of fightingStyleFeatures) {
       featureChoices[selection.rowId] = selection.featName;
     }
 
-    for (const row of featureRows.value) {
-      const control = row.choiceControl;
+    // Ответы на выборы умений идут в текст умения — чтобы выбранное было видно
+    // на листе. Владения из этих ответов лист забирает не отсюда: их снимок
+    // ложится на саму запись умения, и журнал выдач ведёт её так же, как черту.
+    // Иначе одно и то же владение имело бы два хозяина, и снятие класса забрало
+    // бы его лишь наполовину.
+    const featureControls = featureRows.value.flatMap(
+      (row) => row.choiceControls,
+    );
 
-      if (!control) {
-        continue;
-      }
-
+    for (const control of featureControls) {
       const values = selections.value[control.id] ?? [];
 
-      if (!values.length) {
-        continue;
+      if (values.length) {
+        featureChoices[control.id] = values.join(', ');
       }
-
-      if (control.kind === 'skill-proficiency') {
-        proficientSkills.push(...values);
-      } else if (control.kind === 'skill-expertise') {
-        expertiseSkills.push(...values);
-      } else if (control.kind === 'language') {
-        chosenLanguages.push(...values);
-      }
-
-      featureChoices[control.id] = values.join(', ');
     }
+
+    // Ответы игрока, с которыми собирается снимок владений каждого умения
+    const featureAnswers = {
+      answers: selections.value,
+      proficientSkillNames: proficientSkillNames.value,
+    };
 
     const characterClass = {
       url: base.url,
@@ -890,13 +885,16 @@
         subclassDetail.value,
         level.value,
         featureChoices,
+        featureAnswers,
       ),
       ...fightingStyleFeatures.map((selection) => selection.feature),
     ];
 
+    // Навыки уровня класса: выборы умений сюда не идут — их владения ведёт
+    // снимок на самой записи умения
     const skills = {
       proficient: [...new Set(proficientSkills)],
-      expertise: [...new Set(expertiseSkills)],
+      expertise: [],
     };
 
     // Урезанный набор владений мультикласса справочник не отдаёт, поэтому
@@ -907,7 +905,8 @@
         characterClass,
         hitDie: base.hitDie,
         skills,
-        languages: chosenLanguages,
+        // Языки, названные в умениях, приходят снимком самой записи умения
+        languages: [],
         classResources: derivedResources.value,
         features,
       });
@@ -930,7 +929,8 @@
           matchedTools.value,
           resolveTools(chosenTools.map((name) => ({ name, url: null }))),
         ),
-        languages: chosenLanguages,
+        // Языки, названные в умениях, приходят снимком самой записи умения
+        languages: [],
       },
       skills,
       classResources: derivedResources.value,
@@ -1377,24 +1377,28 @@
               </div>
 
               <div
-                v-else-if="row.choiceControl"
-                class="flex flex-col gap-1"
+                v-else-if="row.choiceControls.length"
+                class="flex flex-col gap-3"
               >
-                <span class="text-xs text-muted">
-                  Выберите {{ choiceCount(row.choiceControl) }}
-                </span>
+                <div
+                  v-for="control in row.choiceControls"
+                  :key="control.id"
+                  class="flex flex-col gap-1"
+                >
+                  <span class="text-xs text-muted">
+                    {{ control.label || `Выберите ${choiceCount(control)}` }}
+                  </span>
 
-                <SheetChoiceSelect
-                  :model-value="selections[row.choiceControl.id] ?? []"
-                  :items="choiceOptions(row.choiceControl)"
-                  :hints="choiceHints(row.choiceControl)"
-                  :warning="SKILL_DUPLICATE_WARNING"
-                  :count="choiceCount(row.choiceControl)"
-                  :placeholder="`Выберите ${choiceCount(row.choiceControl)}`"
-                  @update:model-value="
-                    updateSelection(row.choiceControl, $event)
-                  "
-                />
+                  <SheetChoiceSelect
+                    :model-value="selections[control.id] ?? []"
+                    :items="choiceOptions(control)"
+                    :hints="choiceHints(control)"
+                    :warning="SKILL_DUPLICATE_WARNING"
+                    :count="choiceCount(control)"
+                    :placeholder="`Выберите ${choiceCount(control)}`"
+                    @update:model-value="updateSelection(control, $event)"
+                  />
+                </div>
               </div>
 
               <UInput

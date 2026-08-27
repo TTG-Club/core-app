@@ -221,6 +221,7 @@ import {
   CHARACTER_FILE_NAME_FALLBACK,
   CLASS_FEAT_CHOICE_ID_SEGMENTS,
   CLASS_FEATURE_ID_PREFIX,
+  CLASS_FIRST_LEVEL,
   CLASS_RESOURCE_ID_PREFIX,
   CLASS_SPELL_PROGRESSIONS,
   CLASS_SPELLCASTING_ABILITIES,
@@ -5883,6 +5884,109 @@ export function parseSizeOptionsFromText(sizeText: string): string[] {
 }
 
 /**
+ * Владения, которые вид и его происхождение выдают без выбора.
+ *
+ * Сводятся из двух мест: самой записи (её даёт выбор вида целиком — так устроены
+ * происхождения, у которых умений нет вовсе) и каждого умения, которое уже
+ * действует на текущем уровне персонажа.
+ *
+ * До появления структурных даров лист искал владения в прозе описания, и умение,
+ * где владение названо иначе, оставалось незамеченным. Разбор прозы остался
+ * рядом — он ловит выборы игрока, которых в дарах нет.
+ *
+ * @param species деталь вида.
+ * @param lineage деталь происхождения; null — происхождения нет.
+ * @param characterLevel суммарный уровень персонажа.
+ * @returns владения одним набором; пустые списки — вид ничего не выдаёт.
+ */
+export function collectSpeciesProficiencies(
+  species: SpeciesSummary,
+  lineage: SpeciesSummary | null,
+  characterLevel: number,
+): GrantedProficiencies {
+  const sources: Array<GrantedProficiencies | null> = [species.proficiencies];
+
+  const appendFeatures = (summary: SpeciesSummary | null): void => {
+    for (const feature of summary?.features ?? []) {
+      if ((feature.level ?? 1) > characterLevel) {
+        continue;
+      }
+
+      sources.push(feature.proficiencies);
+    }
+  };
+
+  appendFeatures(species);
+
+  if (lineage) {
+    sources.push(lineage.proficiencies);
+    appendFeatures(lineage);
+  }
+
+  return mergeGrantedProficiencies(sources);
+}
+
+/**
+ * Складывает наборы владений в один, отбрасывая повторы и пустые источники.
+ *
+ * @param sources наборы владений; null — источник ничего не выдал.
+ * @returns один набор владений.
+ */
+function mergeGrantedProficiencies(
+  sources: Array<GrantedProficiencies | null>,
+): GrantedProficiencies {
+  const filled = sources.filter((source): source is GrantedProficiencies =>
+    Boolean(source),
+  );
+
+  return {
+    armor: uniq(filled.flatMap((source) => source.armor)),
+    weapons: uniq(filled.flatMap((source) => source.weapons)),
+    languages: uniq(filled.flatMap((source) => source.languages)),
+    skills: uniq(filled.flatMap((source) => source.skills)),
+    expertiseSkills: uniq(filled.flatMap((source) => source.expertiseSkills)),
+    weaponMasteries: uniq(filled.flatMap((source) => source.weaponMasteries)),
+    savingThrows: uniq(filled.flatMap((source) => source.savingThrows)),
+    // Инструмент — объект со ссылкой, поэтому повторы снимаются по названию:
+    // одна и та же лютня из вида и из его происхождения — это одно владение
+    tools: uniqBy(
+      filled.flatMap((source) => source.tools),
+      (tool) => tool.name,
+    ),
+  };
+}
+
+/**
+ * Дистанция тёмного зрения вида и его происхождения.
+ *
+ * Сначала берётся поле записи: справочник хранит зрение числом, и это точнее
+ * любого разбора прозы. Разбор текста остался запасным вариантом для записей,
+ * у которых поле ещё не заполнено, — иначе они разом лишились бы зрения.
+ *
+ * Из двух источников берётся большее: происхождение зрение поднимает, а не
+ * заменяет.
+ *
+ * @param species деталь вида.
+ * @param lineage деталь происхождения; null — происхождения нет.
+ * @returns дистанция в футах; 0 — тёмного зрения нет.
+ */
+export function getSpeciesDarkvision(
+  species: SpeciesSummary,
+  lineage: SpeciesSummary | null,
+): number {
+  const declared = Math.max(species.darkVision ?? 0, lineage?.darkVision ?? 0);
+
+  if (declared > 0) {
+    return declared;
+  }
+
+  return getDarkvisionDistance([
+    ...species.features,
+    ...(lineage?.features ?? []),
+  ]);
+}
+
+/**
  * Дистанция тёмного зрения из особенностей вида: ищется особенность с
  * упоминанием тёмного зрения, из её текста берётся первое число с футами.
  *
@@ -7646,12 +7750,56 @@ export function buildCharacterFeatures(
         originName: summary.name,
         level: null,
         choice: choice || null,
+        // Пассивные прибавки считаются один раз, при выборе вида, — наравне с
+        // бонусами надетого снаряжения; условные проверяются по самому эффекту
+        // каждый раз заново, поэтому эффекты кладутся рядом, а не вместо
+        bonuses: toInventoryBonusesFromEffects(feature.activeEffects),
+        activeEffects: feature.activeEffects.length
+          ? [...feature.activeEffects]
+          : undefined,
       };
     });
 
   return [
+    ...buildSpeciesOwnEffectFeature(species),
     ...toFeatures(species, 'species'),
+    ...(lineage ? buildSpeciesOwnEffectFeature(lineage, 'lineage') : []),
     ...(lineage ? toFeatures(lineage, 'lineage') : []),
+  ];
+}
+
+/**
+ * Запись листа под эффекты самой записи вида или происхождения.
+ *
+ * Отдельной записью, а не приписыванием к первому умению: эффекты даёт выбор
+ * вида целиком, и у происхождений умений не бывает вовсе — приписать их было бы
+ * некуда. Записи нет, когда эффектов нет: пустая строка в списке особенностей
+ * была бы шумом.
+ *
+ * @param summary деталь вида или происхождения.
+ * @param origin происхождение записи; по умолчанию вид.
+ * @returns одна запись листа либо пустой список.
+ */
+function buildSpeciesOwnEffectFeature(
+  summary: SpeciesSummary,
+  origin: FeatureOrigin = 'species',
+): CharacterFeature[] {
+  if (summary.activeEffects.length === 0) {
+    return [];
+  }
+
+  return [
+    {
+      id: getCharacterFeatureId(origin, `${summary.url}:effects`),
+      name: summary.name,
+      description: [],
+      origin,
+      originName: summary.name,
+      level: null,
+      choice: null,
+      bonuses: toInventoryBonusesFromEffects(summary.activeEffects),
+      activeEffects: [...summary.activeEffects],
+    },
   ];
 }
 
@@ -9557,6 +9705,24 @@ export function toDescriptionNodes(node: RenderNode): FeatureDescriptionNode[] {
 }
 
 /**
+ * Ответы игрока на выборы умений класса — то, чего у самой записи справочника
+ * нет и быть не может.
+ *
+ * Ходит отдельным параметром, а не полем сводки: сводка приходит из каталога и
+ * одинакова у всех персонажей, а ответы свои у каждого.
+ */
+export interface ClassFeatureAnswers {
+  /** Ответы по id выбора; пусто — игрок ещё не отвечал. */
+  answers: Record<string, string[]>;
+
+  /**
+   * Навыки, которыми персонаж уже владеет. Нужны выбору, который превращается
+   * в компетентность, если владение уже есть.
+   */
+  proficientSkillNames: string[];
+}
+
+/**
  * Сборка классовых особенностей персонажа из деталей класса и подкласса.
  * Берутся особенности с уровнем не выше уровня персонажа: базовый класс даёт
  * особенности без пометки подкласса, подкласс — с пометкой. Дубли по ключу
@@ -9574,12 +9740,14 @@ export function buildClassFeatures(
   subclass: ClassSummary | null,
   level: number,
   choices: Record<string, string>,
+  answers?: ClassFeatureAnswers,
 ): CharacterFeature[] {
   return collectClassFeatures(
     base,
     subclass,
     (featureLevel) => featureLevel <= level,
     choices,
+    answers,
   );
 }
 
@@ -9599,12 +9767,14 @@ export function buildLevelClassFeatures(
   subclass: ClassSummary | null,
   level: number,
   choices: Record<string, string>,
+  answers?: ClassFeatureAnswers,
 ): CharacterFeature[] {
   return collectClassFeatures(
     base,
     subclass,
     (featureLevel) => featureLevel === level,
     choices,
+    answers,
   );
 }
 
@@ -9623,10 +9793,34 @@ function toCharacterFeature(
   summary: ClassFeatureSummary,
   originName: string,
   choices: Record<string, string>,
+  answers?: ClassFeatureAnswers,
 ): CharacterFeature {
   const id = getClassFeatureId(classUrl, summary.key);
 
   const choice = choices[id]?.trim();
+
+  // Владения из ответов игрока: инструменты, языки, приёмы и спасброски лист
+  // кладёт в свои списки, а не в текст умения. Разбор общий с чертой — вид
+  // выбора у них один и тот же
+  const chosen = answers
+    ? collectChosenProficiencies(
+        summary.choices,
+        answers.answers,
+        answers.proficientSkillNames,
+      )
+    : {};
+
+  const choiceAnswers = answers
+    ? pickChoiceAnswers(summary.choices, answers.answers)
+    : {};
+
+  // Заклинание умения считается от характеристики умения, если та задана:
+  // «Метка охотника» следопыта — от Мудрости, даже если класс колдует иначе
+  const featureSpells = (summary.spells ?? []).map((spell) =>
+    summary.spellcastingAbility
+      ? { ...spell, spellcastingAbility: summary.spellcastingAbility }
+      : spell,
+  );
 
   return {
     id,
@@ -9636,7 +9830,55 @@ function toCharacterFeature(
     originName,
     level: summary.level,
     choice: choice || null,
+    // Пассивные прибавки считаются один раз, при получении умения, — наравне с
+    // бонусами надетого снаряжения; условные проверяются по самому эффекту
+    // каждый раз заново, поэтому эффекты кладутся рядом, а не вместо
+    bonuses: toInventoryBonusesFromEffects(summary.activeEffects),
+    activeEffects: summary.activeEffects.length
+      ? [...summary.activeEffects]
+      : undefined,
+    // Снимок владений: по нему журнал выдач ведёт запись умения, а снятие
+    // класса забирает ровно выданное — так же, как у черты
+    proficiencies: withChosenProficiencies(summary.proficiencies, chosen),
+    spells: featureSpells.length ? featureSpells : null,
+    counters: summary.counters.length ? [...summary.counters] : undefined,
+    choiceAnswers: Object.keys(choiceAnswers).length
+      ? choiceAnswers
+      : undefined,
   };
+}
+
+/**
+ * Ответы игрока на выборы одной записи — снимком у самой записи.
+ *
+ * Ключом служит ключ выбора, а не его полный id: id несёт адрес записи, и на
+ * самой записи он был бы повторён в каждом ключе.
+ *
+ * @param featureChoices выборы записи.
+ * @param answers ответы игрока по id выбора.
+ * @returns ответы по ключу выбора; пусто — игрок не отвечал.
+ */
+function pickChoiceAnswers(
+  featureChoices: ClassChoice[],
+  answers: Record<string, string[]>,
+): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
+
+  for (const choice of featureChoices) {
+    const values = answers[choice.id];
+
+    if (!values?.length) {
+      continue;
+    }
+
+    // Ключ выбора — хвост id после адреса записи: у выбора из механики id
+    // собран как `<адрес записи>:<ключ>`
+    const key = choice.id.slice(choice.id.lastIndexOf(':') + 1);
+
+    result[key] = [...values];
+  }
+
+  return result;
 }
 
 /**
@@ -9655,6 +9897,7 @@ function collectClassFeatures(
   subclass: ClassSummary | null,
   matchesLevel: (featureLevel: number) => boolean,
   choices: Record<string, string>,
+  answers?: ClassFeatureAnswers,
 ): CharacterFeature[] {
   const seenKeys = new Set<string>();
   const features: CharacterFeature[] = [];
@@ -9669,13 +9912,18 @@ function collectClassFeatures(
         summary.isSubclass !== onlySubclass
         || !matchesLevel(summary.level)
         || seenKeys.has(summary.key)
+        // Умение-указатель («Подкласс», «Улучшение характеристик») нужно
+        // таблице прогрессии, а записью на листе было бы шумом
+        || summary.informationalOnly
       ) {
         continue;
       }
 
       seenKeys.add(summary.key);
 
-      features.push(toCharacterFeature(base.url, summary, originName, choices));
+      features.push(
+        toCharacterFeature(base.url, summary, originName, choices, answers),
+      );
     }
   };
 
@@ -9685,7 +9933,55 @@ function collectClassFeatures(
     append(subclass.features, subclass.name, true);
   }
 
-  return features;
+  return [
+    // Эффекты самого класса приходят с первым же его умением: они действуют,
+    // пока класс взят, и снимаются вместе с ним, как и умения
+    ...buildClassOwnEffectFeature(base, matchesLevel),
+    ...(subclass
+      ? buildClassOwnEffectFeature(subclass, matchesLevel, base)
+      : []),
+    ...features,
+  ];
+}
+
+/**
+ * Запись листа под эффекты самой записи класса или подкласса.
+ *
+ * Отдельной записью, а не приписыванием к первому умению: эффекты даёт взятие
+ * класса целиком, и приписать их одному умению значило бы соврать об источнике.
+ * Записи нет, когда эффектов нет.
+ *
+ * Появляется только на первом уровне класса: на каждом следующем она добавилась
+ * бы второй копией — идентификатор у неё один и тот же.
+ *
+ * @param summary деталь класса или подкласса.
+ * @param matchesLevel предикат уровня: по нему запись появляется ровно один раз.
+ * @param owner базовый класс, если запись собирается для подкласса: умения
+ *   подкласса лежат под адресом базового класса, и идентификатор тоже.
+ * @returns одна запись листа либо пустой список.
+ */
+function buildClassOwnEffectFeature(
+  summary: ClassSummary,
+  matchesLevel: (featureLevel: number) => boolean,
+  owner?: ClassSummary,
+): CharacterFeature[] {
+  if (summary.activeEffects.length === 0 || !matchesLevel(CLASS_FIRST_LEVEL)) {
+    return [];
+  }
+
+  return [
+    {
+      id: getClassFeatureId((owner ?? summary).url, `${summary.url}:effects`),
+      name: summary.name,
+      description: [],
+      origin: 'class',
+      originName: summary.name,
+      level: CLASS_FIRST_LEVEL,
+      choice: null,
+      bonuses: toInventoryBonusesFromEffects(summary.activeEffects),
+      activeEffects: [...summary.activeEffects],
+    },
+  ];
 }
 
 /**
@@ -9704,11 +10000,12 @@ export function buildSubclassFeatures(
   subclass: ClassSummary,
   level: number,
   choices: Record<string, string>,
+  answers?: ClassFeatureAnswers,
 ): CharacterFeature[] {
   return subclass.features
     .filter((summary) => summary.isSubclass && summary.level <= level)
     .map((summary) =>
-      toCharacterFeature(classUrl, summary, subclass.name, choices),
+      toCharacterFeature(classUrl, summary, subclass.name, choices, answers),
     );
 }
 
@@ -9764,9 +10061,9 @@ export function getLevelFeatureRows(
         originLabel,
         // Выбор черты рисуется своим блоком, поэтому текстовый выбор такому
         // умению не нужен — иначе под чертой висело бы пустое поле ввода.
-        choice: summary.abilityImprovement
-          ? null
-          : getClassFeatureChoice(id, summary, skillNames),
+        choices: summary.abilityImprovement
+          ? []
+          : getClassFeatureChoices(id, summary, skillNames),
         abilityImprovement: summary.abilityImprovement,
       });
     }
@@ -9803,13 +10100,7 @@ export function collectChoiceSelections(
   const languages: string[] = [];
   const featureChoices: Record<string, string> = {};
 
-  for (const row of rows) {
-    const choice = row.choice;
-
-    if (!choice) {
-      continue;
-    }
-
+  for (const choice of rows.flatMap((row) => row.choices)) {
     const values = selections[choice.id] ?? [];
 
     if (!values.length) {
@@ -10424,36 +10715,52 @@ export function detectFeatureChoice(
 }
 
 /**
- * Выбор внутри умения класса: структурный из справочника, а если его там нет —
- * распознанный по прозе описания. Структура точнее прозы (у неё явные пул и
- * количество), поэтому имеет приоритет; проза остаётся страховкой для умений,
- * которым выбор ещё не проставили в редакторе класса.
+ * Выборы внутри умения класса: структурные из справочника, а если их там нет —
+ * распознанные по прозе описания.
  *
- * @param featureId идентификатор умения (он же id выбора).
+ * Порядок источников — от точного к приблизительному. Механика умения знает и
+ * вид выбора, и пул, и количество; отдельное поле выбора навыков знает только
+ * навыки; проза не знает ничего и распознаётся по формулировкам. Первый
+ * непустой источник и выигрывает: смешивать их нельзя, иначе умение со
+ * структурой спросило бы то же самое дважды.
+ *
+ * @param featureId идентификатор умения (он же начало id выбора).
  * @param summary умение класса или подкласса.
  * @param skillNames имена всех навыков персонажа.
- * @returns выбор умения или null.
+ * @returns выборы умения; пусто — умение ни о чём не спрашивает.
  */
-export function getClassFeatureChoice(
+export function getClassFeatureChoices(
   featureId: string,
   summary: ClassFeatureSummary,
   skillNames: string[],
-): ClassChoice | null {
+): ClassChoice[] {
+  if (summary.choices.length > 0) {
+    return summary.choices;
+  }
+
   const skillChoice = summary.skillChoice;
 
   if (skillChoice) {
-    return {
-      id: featureId,
-      kind: 'skill-proficiency',
-      label: '',
-      count: skillChoice.count,
-      // Пустой пул в справочнике означает выбор из всех навыков: пустой
-      // `listed` резолвится всеми навыками листа в `resolveChoiceOptions`.
-      listed: skillChoice.skills,
-    };
+    return [
+      {
+        id: featureId,
+        kind: 'skill-proficiency',
+        label: '',
+        count: skillChoice.count,
+        // Пустой пул в справочнике означает выбор из всех навыков: пустой
+        // `listed` резолвится всеми навыками листа в `resolveChoiceOptions`.
+        listed: skillChoice.skills,
+      },
+    ];
   }
 
-  return detectFeatureChoice(featureId, summary.description, skillNames);
+  const detected = detectFeatureChoice(
+    featureId,
+    summary.description,
+    skillNames,
+  );
+
+  return detected ? [detected] : [];
 }
 
 /**

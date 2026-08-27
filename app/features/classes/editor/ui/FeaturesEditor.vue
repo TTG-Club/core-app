@@ -1,12 +1,15 @@
 <script setup lang="ts">
   import type { ClassFeatureCreate } from '../../model';
 
+  import { createFeatEditorRows, createFeatMechanics } from '~feats/model';
   import { EditorArrayControls } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectLevel } from '~ui/select';
 
+  import { CLASS_EDITOR_LABELS } from '../../model';
   import {
     FeatureAbilityBonus,
+    FeatureMechanics,
     FeatureOptions,
     FeatureScaling,
     FeatureSkillChoice,
@@ -63,6 +66,13 @@
         bonus: 0,
         upto: 25,
       },
+      informationalOnly: false,
+      // Механика и строки редактора здесь всегда объекты: загрузка сливает
+      // ответ сервера именно с этим состоянием, и недостающие блоки берутся
+      // отсюда
+      mechanics: createFeatMechanics(),
+      activeEffects: [],
+      editorRows: createFeatEditorRows(),
     };
   }
 </script>
@@ -173,6 +183,18 @@
             </UFormField>
 
             <UFormField
+              class="col-span-full md:col-span-6"
+              :label="CLASS_EDITOR_LABELS.featureInformationalOnly"
+              :help="CLASS_EDITOR_LABELS.featureInformationalOnlyHint"
+              name="informationalOnly"
+            >
+              <UCheckbox
+                v-model="feat.informationalOnly"
+                description="Да"
+              />
+            </UFormField>
+
+            <UFormField
               class="col-span-full"
               label="Описание"
               name="description"
@@ -199,6 +221,8 @@
               v-if="feat.level >= 20"
               v-model="feat.abilityBonus"
             />
+
+            <FeatureMechanics v-model="state[index]!" />
           </UForm>
         </UCard>
       </template>

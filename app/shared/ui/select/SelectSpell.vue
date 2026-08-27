@@ -16,15 +16,25 @@
   const props = withDefaults(
     defineProps<{
       disabled?: boolean;
+      multiple?: boolean;
       excludeUrls?: string[];
     }>(),
     {
       disabled: false,
+      multiple: false,
       excludeUrls: () => [],
     },
   );
 
-  const selectedSpellUrl = defineModel<string>({ default: '' });
+  const model = defineModel<string | Array<string>>({ default: '' });
+
+  /**
+   * Выбранное заклинание при одиночном выборе. При множественном дозагружать
+   * нечего: там поле работает добавлением и своё значение не хранит.
+   */
+  const selectedSpellUrl = computed<string>(() =>
+    typeof model.value === 'string' ? model.value : '',
+  );
 
   const spellSchema = z.object({
     url: z.string(),
@@ -158,9 +168,11 @@
     }
   }
 
-  /** Нормализует очистку Nuxt UI в пустой URL вместо `null`. */
-  function handleModelValueUpdate(value: string | null | undefined): void {
-    selectedSpellUrl.value = value ?? '';
+  /** Нормализует очистку Nuxt UI в пустое значение вместо `null`. */
+  function handleModelValueUpdate(
+    value: string | Array<string> | null | undefined,
+  ): void {
+    model.value = value ?? (props.multiple ? [] : '');
   }
 
   watch(debouncedSearchTerm, () => void loadSearchItems(), { immediate: true });
@@ -173,9 +185,10 @@
 <template>
   <USelectMenu
     v-model:search-term="searchTerm"
-    :model-value="selectedSpellUrl"
+    :model-value="model"
     :items="spellItems"
     :loading="isLoading"
+    :multiple
     :disabled
     :placeholder="SPELL_SELECT_CONFIG.placeholder"
     label-key="label"
