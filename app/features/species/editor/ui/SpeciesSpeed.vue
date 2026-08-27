@@ -1,162 +1,113 @@
 <script setup lang="ts">
-  import type { DropdownMenuItem } from '@nuxt/ui';
-
   import type { SpeciesCreateSpeed } from '../../model';
+
+  import { InfoTooltip } from '~ui/tooltip';
 
   import {
     SPECIES_OPTIONAL_SPEED_KINDS,
     SPECIES_SPEED_EDITOR,
   } from '../../model';
 
+  /**
+   * Скорости вида одной сеткой, как в форме вида системы D&D: ходьба и три
+   * необязательных способа передвижения видны сразу, пустой показывается нулём.
+   */
   const speed = defineModel<SpeciesCreateSpeed>({ required: true });
 
   type OptionalSpeedKind = (typeof SPECIES_OPTIONAL_SPEED_KINDS)[number];
 
   /**
-   * Есть ли у строки скорости переключатель «Парит».
+   * Значение поля необязательной скорости: пустая показывается нулём.
    *
-   * @param kind вид скорости строки.
-   * @returns `true` только у полёта — парение без полёта не имеет смысла.
+   * @param kind вид скорости.
+   * @returns дальность в футах либо 0.
    */
-  function isHoverKind(kind: OptionalSpeedKind): boolean {
-    return kind === 'fly';
+  function getSpeedValue(kind: OptionalSpeedKind): number {
+    return speed.value[kind] ?? 0;
   }
 
   /**
-   * Какие необязательные скорости показаны строками. Отдельное состояние, а не
-   * проверка значения: строка с очищенным полем не должна пропадать из формы
-   * посреди редактирования.
-   */
-  const visibleKinds = ref<Set<OptionalSpeedKind>>(new Set());
-
-  // Загрузка записи приходит позже монтирования формы, поэтому заполненные
-  // скорости раскрываются наблюдателем, а не разовой инициализацией. Цикла нет:
-  // наблюдатель только добавляет виды в набор и модель не меняет.
-  watch(
-    speed,
-    (value) => {
-      for (const kind of SPECIES_OPTIONAL_SPEED_KINDS) {
-        if (value[kind] != null) {
-          visibleKinds.value.add(kind);
-        }
-      }
-    },
-    { immediate: true },
-  );
-
-  const visibleRows = computed(() =>
-    SPECIES_OPTIONAL_SPEED_KINDS.filter((kind) => visibleKinds.value.has(kind)),
-  );
-
-  const hasHiddenKinds = computed(
-    () => visibleKinds.value.size < SPECIES_OPTIONAL_SPEED_KINDS.length,
-  );
-
-  /** Меню «Добавить скорость»: только ещё не показанные виды. */
-  const addMenuItems = computed<Array<Array<DropdownMenuItem>>>(() => [
-    SPECIES_OPTIONAL_SPEED_KINDS.filter(
-      (kind) => !visibleKinds.value.has(kind),
-    ).map((kind) => ({
-      label: SPECIES_SPEED_EDITOR.labels[kind],
-      onSelect: () => addSpeed(kind),
-    })),
-  ]);
-
-  /**
-   * Показывает строку скорости и заводит ей значение по умолчанию.
-   *
-   * @param kind вид скорости из меню «Добавить».
-   */
-  function addSpeed(kind: OptionalSpeedKind): void {
-    visibleKinds.value.add(kind);
-
-    speed.value = {
-      ...speed.value,
-      [kind]: SPECIES_SPEED_EDITOR.defaultValue,
-    };
-  }
-
-  /**
-   * Убирает строку скорости и очищает её значение. Вместе с полётом снимается и
+   * Записывает необязательную скорость. Ноль в поле — способа передвижения нет:
+   * в записи скорость остаётся пустой, а не нулём. Вместе с полётом снимается и
    * признак «Парит» — без полёта он не имеет смысла.
    *
-   * @param kind вид скорости строки.
+   * @param kind вид скорости.
+   * @param value значение поля.
    */
-  function removeSpeed(kind: OptionalSpeedKind): void {
-    visibleKinds.value.delete(kind);
+  function setSpeedValue(
+    kind: OptionalSpeedKind,
+    value: number | null | undefined,
+  ): void {
+    const next = typeof value === 'number' && value > 0 ? value : undefined;
 
     speed.value = {
       ...speed.value,
-      [kind]: undefined,
-      hover: isHoverKind(kind) ? false : speed.value.hover,
+      [kind]: next,
+      hover: kind === 'fly' && next === undefined ? false : speed.value.hover,
     };
   }
+
+  const hasFlight = computed(() => (speed.value.fly ?? 0) > 0);
 </script>
 
 <template>
-  <UForm
-    class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
-    attach
-    :state="speed"
-  >
-    <UFormField
-      class="col-span-full md:col-span-6"
-      :label="SPECIES_SPEED_EDITOR.base"
-      name="base"
+  <div class="col-span-full flex flex-col gap-3">
+    <InfoTooltip
+      :text="SPECIES_SPEED_EDITOR.titleHint"
+      icon="tabler:info-circle-filled"
+      class="text-sm font-medium text-highlighted"
     >
-      <UInputNumber
-        v-model="speed.base"
-        :placeholder="SPECIES_SPEED_EDITOR.basePlaceholder"
-        :min="0"
-      />
-    </UFormField>
+      <span class="flex items-center gap-2">
+        <UIcon
+          name="tabler:run"
+          class="size-4 text-primary"
+        />
 
-    <div class="col-span-full flex flex-col gap-2">
-      <div
-        v-for="kind in visibleRows"
-        :key="kind"
-        class="flex flex-wrap items-center gap-2 rounded-lg bg-elevated/40 p-2"
+        {{ SPECIES_SPEED_EDITOR.title }}
+      </span>
+    </InfoTooltip>
+
+    <UForm
+      class="grid grid-cols-2 gap-3 md:grid-cols-4"
+      attach
+      :state="speed"
+    >
+      <UFormField
+        :label="SPECIES_SPEED_EDITOR.labels.walk"
+        name="base"
       >
-        <span class="min-w-40 flex-1 truncate text-sm">
-          {{ SPECIES_SPEED_EDITOR.labels[kind] }}
-        </span>
-
         <UInputNumber
-          v-model="speed[kind]"
-          class="w-32"
+          v-model="speed.base"
           :min="0"
-          :aria-label="SPECIES_SPEED_EDITOR.labels[kind]"
+          :max="SPECIES_SPEED_EDITOR.max"
+          class="w-full"
         />
+      </UFormField>
 
-        <UCheckbox
-          v-if="isHoverKind(kind)"
-          v-model="speed.hover"
-          :label="SPECIES_SPEED_EDITOR.hover"
-        />
-
-        <UButton
-          icon="tabler:trash"
-          color="error"
-          variant="ghost"
-          size="xs"
-          :aria-label="SPECIES_SPEED_EDITOR.remove"
-          @click.left.exact.prevent="removeSpeed(kind)"
-        />
-      </div>
-
-      <UDropdownMenu
-        v-if="hasHiddenKinds"
-        :items="addMenuItems"
-        :content="{ align: 'start' }"
+      <UFormField
+        v-for="kind in SPECIES_OPTIONAL_SPEED_KINDS"
+        :key="kind"
+        :label="SPECIES_SPEED_EDITOR.labels[kind]"
+        :name="kind"
       >
-        <UButton
-          icon="tabler:plus"
-          :label="SPECIES_SPEED_EDITOR.add"
-          color="primary"
-          variant="soft"
-          block
+        <UInputNumber
+          :model-value="getSpeedValue(kind)"
+          :min="0"
+          :max="SPECIES_SPEED_EDITOR.max"
+          class="w-full"
+          @update:model-value="setSpeedValue(kind, $event)"
         />
-      </UDropdownMenu>
-    </div>
-  </UForm>
+      </UFormField>
+    </UForm>
+
+    <UCheckbox
+      v-if="hasFlight"
+      v-model="speed.hover"
+      :label="SPECIES_SPEED_EDITOR.hover"
+    />
+
+    <p class="text-xs text-dimmed">
+      {{ SPECIES_SPEED_EDITOR.levelHint }}
+    </p>
+  </div>
 </template>
