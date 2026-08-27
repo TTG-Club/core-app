@@ -409,6 +409,7 @@ import {
   VISION_KEY_BY_FEAT_SENSE,
   VISION_LABELS,
   VISION_ORDER,
+  VISION_UNLIMITED_LABEL,
   WEAPON_CATEGORY_LABELS,
   WEAPON_MATCH_KEYWORDS,
   WEAPON_PROFICIENCY_GROUPS,
@@ -4617,8 +4618,9 @@ export function getSwappedRollModifier(
 }
 
 /**
- * Строки зрения для подсказки: обычное зрение всегда, тёмное — только при
- * ненулевой дистанции.
+ * Строки зрения для подсказки: обычное зрение всегда (ноль у него — «без
+ * ограничений», а не отсутствие), остальные чувства — только при ненулевой
+ * дистанции.
  *
  * @param vision зрение персонажа.
  * @returns строки для подсказки у глазка на аватаре.
@@ -4626,11 +4628,21 @@ export function getSwappedRollModifier(
 export function getVisionRows(vision: CharacterVision): VisionRow[] {
   const unitLabel = SPEED_UNIT_SHORT_LABELS[vision.unit];
 
-  return VISION_ORDER.map((key) => ({
-    key,
-    label: VISION_LABELS[key],
-    formattedValue: vision[key] > 0 ? `${vision[key]} ${unitLabel}` : null,
-  })).filter((row) => row.key === 'normal' || row.formattedValue !== null);
+  return VISION_ORDER.map((key) => {
+    if (vision[key] > 0) {
+      return {
+        key,
+        label: VISION_LABELS[key],
+        formattedValue: `${vision[key]} ${unitLabel}`,
+      };
+    }
+
+    return {
+      key,
+      label: VISION_LABELS[key],
+      formattedValue: key === 'normal' ? VISION_UNLIMITED_LABEL : null,
+    };
+  }).filter((row) => row.formattedValue !== null);
 }
 
 /**
@@ -6097,18 +6109,19 @@ export function getSpeciesDarkvision(
  * Дистанция обычного зрения вида и его происхождения.
  *
  * Происхождение переопределяет вид: у него своя запись со своими свойствами,
- * как у скорости. Ни у кого не задано (пусто или ноль из формы) — null: лист
- * оставляет своё значение, а не сбрасывает его в ноль.
+ * как у скорости. Ноль — значение, а не пропуск: у вида, как и у токена VTTG,
+ * он означает «без ограничений». Ни у кого не задано — null: лист оставляет
+ * своё значение.
  *
  * @param species деталь вида.
  * @param lineage деталь происхождения; null — происхождения нет.
- * @returns дистанция в футах либо null, когда вид её не задаёт.
+ * @returns дистанция в футах (0 — без ограничений) либо null, когда вид её не задаёт.
  */
 export function getSpeciesVision(
   species: SpeciesSummary,
   lineage: SpeciesSummary | null,
 ): number | null {
-  return lineage?.vision || species.vision || null;
+  return lineage?.vision ?? species.vision ?? null;
 }
 
 /**

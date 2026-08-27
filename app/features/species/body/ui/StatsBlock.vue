@@ -12,9 +12,14 @@
     () => `${properties.darkVision} ${SPECIES_STATS_LABELS.feet}`,
   );
 
-  /** Обычное зрение с единицей измерения. */
-  const visionText = computed(
-    () => `${properties.vision} ${SPECIES_STATS_LABELS.feet}`,
+  /** Задано ли обычное зрение: ноль — значение («без ограничений»), а не пропуск. */
+  const hasVision = computed(() => properties.vision != null);
+
+  /** Обычное зрение с единицей измерения; ноль — «без ограничений». */
+  const visionText = computed(() =>
+    properties.vision
+      ? `${properties.vision} ${SPECIES_STATS_LABELS.feet}`
+      : SPECIES_STATS_LABELS.visionUnlimited,
   );
 </script>
 
@@ -43,7 +48,7 @@
     </div>
 
     <div
-      v-if="properties.vision"
+      v-if="hasVision"
       class="flex w-full min-w-full gap-0 px-4 py-1.5"
     >
       <span class="min-w-20 text-sm font-medium text-highlighted">

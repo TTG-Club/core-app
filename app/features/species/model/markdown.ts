@@ -22,12 +22,15 @@ export function getSpeciesMarkdown(species: SpeciesDetailResponse): string {
     ['Скорость', escapeMarkdown(speed)],
   ];
 
-  // Строки зрения появляются, только когда оно задано: у большинства видов
-  // его нет, и пустая строка в статблоке читалась бы как «ноль футов»
-  if (vision) {
+  // Обычное зрение выводится, когда задано; ноль — «без ограничений», а не
+  // пропуск. Тёмное — только при ненулевой дальности: у половины видов его
+  // нет, и пустая строка читалась бы как «ноль футов»
+  if (vision != null) {
     stats.push([
       SPECIES_STATS_LABELS.markdownVision,
-      `${vision} ${SPECIES_STATS_LABELS.feet}`,
+      vision
+        ? `${vision} ${SPECIES_STATS_LABELS.feet}`
+        : SPECIES_STATS_LABELS.visionUnlimited,
     ]);
   }
 

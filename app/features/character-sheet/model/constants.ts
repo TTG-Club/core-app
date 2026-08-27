@@ -1747,6 +1747,13 @@ export const VISION_LABELS: Record<VisionKey, string> = {
   truesight: 'Истинное зрение',
 };
 
+/**
+ * Подпись обычного зрения при нулевой дистанции. Ноль у обычного зрения — не
+ * «слепой», а «видит без предела»: та же трактовка, что у дальности зрения
+ * токена в VTTG и у записи вида в справочнике.
+ */
+export const VISION_UNLIMITED_LABEL = 'без ограничений';
+
 /** Порядок типов зрения в модалке и подсказке. */
 export const VISION_ORDER: VisionKey[] = [
   'normal',
@@ -1765,6 +1772,7 @@ export const VISION_ORDER: VisionKey[] = [
  */
 export const VISION_EDITOR_LABELS = {
   unit: 'Единицы',
+  normalHint: '0 — без ограничений',
   grantsTitle: 'Выдано особенностями:',
   effectiveHint:
     'Лист берёт большее из своего значения и выданного особенностями.',
