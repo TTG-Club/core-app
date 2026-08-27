@@ -2081,6 +2081,15 @@ export interface SpeciesFeatureSummary {
    */
   choices: ClassChoice[];
 
+  /**
+   * Постоянные модификаторы листа от умения (чувства, скорости, хиты, КД,
+   * защиты); null — умение лист не двигает. Той же моделью, что у черты.
+   */
+  modifiers: CharacterFeatureModifiers | null;
+
+  /** Ресурсы умения со счётчиком (`mechanics.counters`); пусто — их нет. */
+  counters: FeatCounter[];
+
   /** Активные эффекты умения — снимок с записи справочника. */
   activeEffects: ActiveEffect[];
 }
@@ -2125,6 +2134,15 @@ export interface SpeciesSummary {
 
   /** Выборы, которые предлагает сама запись вида или происхождения. */
   choices: ClassChoice[];
+
+  /**
+   * Постоянные модификаторы листа от самой записи; null — не двигает. Нужны
+   * прежде всего происхождениям: умений у них нет, и приписать правку некуда.
+   */
+  modifiers: CharacterFeatureModifiers | null;
+
+  /** Ресурсы самой записи со счётчиком; пусто — их нет. */
+  counters: FeatCounter[];
 
   /** Активные эффекты самой записи вида — снимок с записи справочника. */
   activeEffects: ActiveEffect[];

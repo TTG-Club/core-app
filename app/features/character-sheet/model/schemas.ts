@@ -240,11 +240,16 @@ const mechanicsSpellGrantSchema = z
   .nullable()
   .catch(null);
 
-/** Механика записи справочника в той части, которую лист читает у вида. */
+/**
+ * Механика записи справочника в той части, которую лист читает у вида: та же,
+ * что у черты, — владения, выборы, постоянные модификаторы и счётчики ресурсов.
+ */
 const speciesMechanicsSchema = z
   .object({
     proficiencies: mechanicsProficienciesSchema,
     choices: mechanicsChoicesSchema,
+    modifiers: featModifiersSchema,
+    counters: mechanicsCountersSchema,
   })
   .nullable()
   .catch(null);
@@ -374,6 +379,10 @@ function toSpeciesSummary(
       feature.mechanics?.choices ?? [],
       `${getCharacterFeatureId('species', detail.url)}:${feature.url}`,
     ),
+    // Модификаторы и счётчики — той же моделью, что у черты: лист применяет их
+    // одинаково, откуда бы они ни пришли
+    modifiers: feature.mechanics?.modifiers ?? null,
+    counters: toMechanicCounters(feature.mechanics?.counters ?? []),
     // Эффекты разбирает общая схема раздела: битый эффект отбрасывается
     // поштучно, а не роняет всё умение
     activeEffects: normalizeLoadedActiveEffects(feature.activeEffects),
@@ -403,6 +412,8 @@ function toSpeciesSummary(
       detail.mechanics?.choices ?? [],
       getCharacterFeatureId('species', detail.url),
     ),
+    modifiers: detail.mechanics?.modifiers ?? null,
+    counters: toMechanicCounters(detail.mechanics?.counters ?? []),
     activeEffects: normalizeLoadedActiveEffects(detail.activeEffects),
   };
 }

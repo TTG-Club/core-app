@@ -600,7 +600,12 @@
         truesight: character.value.vision.truesight,
         unit: 'feet',
       },
-      features: buildCharacterFeatures(detail, lineage, featureChoices),
+      features: buildCharacterFeatures(
+        detail,
+        lineage,
+        featureChoices,
+        character.value.level,
+      ),
       skills: {
         // Навыки из даров вида идут туда же, куда выбранные игроком: лист
         // ставит владение строке навыка, а не списку владений

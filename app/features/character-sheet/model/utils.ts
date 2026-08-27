@@ -65,6 +65,7 @@ import type {
   DamageRollSource,
   DistanceRowDraft,
   FeatAbilityBonusOption,
+  FeatCounter,
   FeatCounterScaling,
   FeatDefences,
   FeatGrantedSpeedKey,
@@ -7847,15 +7848,22 @@ export function getFeatUrlFromFeatureId(featureId: string): string | null {
  * Сборка особенностей персонажа из деталей вида и подвида. Выбор игрока
  * подставляется по идентификатору особенности (`origin:url`).
  *
+ * Модификаторы и счётчики умения кладутся в запись снимком, как у черты, — но
+ * только у умений, уже открытых по уровню: «Драконий полёт» с пятого уровня не
+ * должен давать скорость полёта на первом. Владения ведутся тем же правилом
+ * (см. `collectSpeciesProficiencies`).
+ *
  * @param species деталь вида.
  * @param lineage деталь подвида; null — подвида нет.
  * @param choices выборы игрока по идентификаторам особенностей.
+ * @param characterLevel уровень персонажа — по нему открываются умения.
  * @returns особенности персонажа для вкладки «Особенности».
  */
 export function buildCharacterFeatures(
   species: SpeciesSummary,
   lineage: SpeciesSummary | null,
   choices: Record<string, string>,
+  characterLevel: number,
 ): CharacterFeature[] {
   const toFeatures = (
     summary: SpeciesSummary,
@@ -7865,6 +7873,7 @@ export function buildCharacterFeatures(
       const id = getCharacterFeatureId(origin, feature.url);
 
       const choice = choices[id]?.trim();
+      const isUnlocked = (feature.level ?? 1) <= characterLevel;
 
       return {
         id,
@@ -7881,6 +7890,10 @@ export function buildCharacterFeatures(
         activeEffects: feature.activeEffects.length
           ? [...feature.activeEffects]
           : undefined,
+        ...withSpeciesMechanicsSnapshot(
+          isUnlocked ? feature.modifiers : null,
+          isUnlocked ? feature.counters : [],
+        ),
       };
     });
 
@@ -7893,11 +7906,31 @@ export function buildCharacterFeatures(
 }
 
 /**
- * Запись листа под эффекты самой записи вида или происхождения.
+ * Снимок механики для записи листа: поля пишутся, только когда есть что
+ * писать, — запись без модификаторов и ресурсов остаётся такой же, какой была
+ * до их появления, и снятие вида её не тронет.
  *
- * Отдельной записью, а не приписыванием к первому умению: эффекты даёт выбор
+ * @param modifiers постоянные модификаторы; null — нет.
+ * @param counters ресурсы со счётчиком; пусто — нет.
+ * @returns поля снимка для записи особенности.
+ */
+function withSpeciesMechanicsSnapshot(
+  modifiers: CharacterFeatureModifiers | null,
+  counters: FeatCounter[],
+): Pick<CharacterFeature, 'modifiers' | 'counters'> {
+  return {
+    ...(modifiers ? { modifiers } : {}),
+    ...(counters.length ? { counters: [...counters] } : {}),
+  };
+}
+
+/**
+ * Запись листа под дары самой записи вида или происхождения: эффекты,
+ * постоянные модификаторы и счётчики ресурсов.
+ *
+ * Отдельной записью, а не приписыванием к первому умению: эти дары даёт выбор
  * вида целиком, и у происхождений умений не бывает вовсе — приписать их было бы
- * некуда. Записи нет, когда эффектов нет: пустая строка в списке особенностей
+ * некуда. Записи нет, когда давать нечего: пустая строка в списке особенностей
  * была бы шумом.
  *
  * @param summary деталь вида или происхождения.
@@ -7908,7 +7941,11 @@ function buildSpeciesOwnEffectFeature(
   summary: SpeciesSummary,
   origin: FeatureOrigin = 'species',
 ): CharacterFeature[] {
-  if (summary.activeEffects.length === 0) {
+  if (
+    summary.activeEffects.length === 0
+    && !summary.modifiers
+    && summary.counters.length === 0
+  ) {
     return [];
   }
 
@@ -7922,7 +7959,10 @@ function buildSpeciesOwnEffectFeature(
       level: null,
       choice: null,
       bonuses: toInventoryBonusesFromEffects(summary.activeEffects),
-      activeEffects: [...summary.activeEffects],
+      activeEffects: summary.activeEffects.length
+        ? [...summary.activeEffects]
+        : undefined,
+      ...withSpeciesMechanicsSnapshot(summary.modifiers, summary.counters),
     },
   ];
 }

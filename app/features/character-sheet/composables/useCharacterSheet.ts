@@ -1510,43 +1510,52 @@ export function useCharacterSheet() {
     );
 
     // Смена вида заменяет только особенности вида и подвида; добавленные
-    // вручную (класс, без источника) сохраняются. Сверка черт (`withFeatModifiers`)
-    // здесь не нужна: черты остаются нетронутыми, а снимка механики у умений
-    // вида не бывает — его кладёт только `buildFeatFeature`.
+    // вручную (класс, без источника) сохраняются.
     const preservedFeatures = character.value.features.filter(
       (feature) => feature.origin !== 'species' && feature.origin !== 'lineage',
     );
 
-    character.value = {
-      ...character.value,
-      species: {
-        ...payload.species,
-        innateSpells: payload.species.innateSpells.map((innateSpell) => ({
-          ...innateSpell,
-          spell: { ...innateSpell.spell },
-        })),
-      },
-      size: payload.size,
-      speed: {
-        ...payload.speed,
-        values: { ...payload.speed.values },
-      },
-      vision: { ...payload.vision },
-      proficiencies: speciesProficiencies.proficiencies,
-      proficiencyGrants: speciesProficiencies.grants,
-      skills: applySkillProficiencies(
-        character.value.skills,
-        payload.skills.proficient,
-        payload.skills.expertise,
-      ),
-      features: [
-        ...payload.features.map((feature) => ({
-          ...feature,
-          description: [...feature.description],
-        })),
-        ...preservedFeatures,
-      ],
+    // Умения вида несут снимок механики, как черты: хиты, ресурсы и бонусы
+    // инициативы доводит та же сверка, что при смене черт, — иначе прибавка
+    // «Дварфийской выдержки» осталась бы от прежнего вида
+    const previous = {
+      features: character.value.features,
+      level: character.value.level,
     };
+
+    character.value = withFeatModifiers(
+      {
+        ...character.value,
+        species: {
+          ...payload.species,
+          innateSpells: payload.species.innateSpells.map((innateSpell) => ({
+            ...innateSpell,
+            spell: { ...innateSpell.spell },
+          })),
+        },
+        size: payload.size,
+        speed: {
+          ...payload.speed,
+          values: { ...payload.speed.values },
+        },
+        vision: { ...payload.vision },
+        proficiencies: speciesProficiencies.proficiencies,
+        proficiencyGrants: speciesProficiencies.grants,
+        skills: applySkillProficiencies(
+          character.value.skills,
+          payload.skills.proficient,
+          payload.skills.expertise,
+        ),
+        features: [
+          ...payload.features.map((feature) => ({
+            ...feature,
+            description: [...feature.description],
+          })),
+          ...preservedFeatures,
+        ],
+      },
+      previous,
+    );
   }
 
   /**
