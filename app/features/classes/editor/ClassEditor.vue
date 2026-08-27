@@ -17,7 +17,7 @@
   import { createFeatEditorRows, createFeatMechanics } from '~feats/model';
   import { EditorBaseInfo, StartingEquipmentEditor } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
-  import { SelectAbilities } from '~ui/select';
+  import { SelectAbilities, SelectCasterType } from '~ui/select';
   import { InfoTooltip } from '~ui/tooltip';
   import { UploadGallery, UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
@@ -169,14 +169,17 @@
     },
   });
 
+  // Порядок тот же, что у формы класса в системе D&D: владения перед
+  // заклинательством, таблица прогрессии перед умениями, дары (в системе —
+  // «Счётчики») перед снаряжением
   const tabItems: Array<TabsItem> = [
     { label: CLASS_EDITOR_TABS.main, slot: 'main' },
-    { label: CLASS_EDITOR_TABS.spellcasting, slot: 'spellcasting' },
     { label: CLASS_EDITOR_TABS.proficiencies, slot: 'proficiencies' },
-    { label: CLASS_EDITOR_TABS.equipment, slot: 'equipment' },
-    { label: CLASS_EDITOR_TABS.features, slot: 'features' },
+    { label: CLASS_EDITOR_TABS.spellcasting, slot: 'spellcasting' },
     { label: CLASS_EDITOR_TABS.table, slot: 'table' },
+    { label: CLASS_EDITOR_TABS.features, slot: 'features' },
     { label: CLASS_EDITOR_TABS.grants, slot: 'grants' },
+    { label: CLASS_EDITOR_TABS.equipment, slot: 'equipment' },
     { label: CLASS_EDITOR_TABS.effects, slot: 'effects' },
     { label: CLASS_EDITOR_TABS.images, slot: 'images' },
   ];
@@ -212,11 +215,44 @@
           <CharacteristicsSettings
             v-model:parent-url="state.parentUrl"
             v-model:hit-dice="state.hitDice"
-            v-model:caster-type="state.casterType"
             v-model:primary-characteristics="state.primaryCharacteristics"
             v-model:saving-throws="state.savingThrows"
             v-model:ability-template="state.abilityTemplate"
           />
+
+          <UCard variant="subtle">
+            <template #header>
+              <h2 class="truncate text-base text-highlighted">
+                {{ CLASS_EDITOR_LABELS.subclassesTitle }}
+              </h2>
+            </template>
+
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
+              <UFormField
+                class="col-span-full md:col-span-12"
+                :label="CLASS_EDITOR_LABELS.subclassLabel"
+                name="subclassLabel"
+              >
+                <UInput
+                  v-model="state.subclassLabel"
+                  :placeholder="CLASS_EDITOR_LABELS.subclassLabelPlaceholder"
+                />
+              </UFormField>
+
+              <UFormField
+                class="col-span-full md:col-span-12"
+                :label="CLASS_EDITOR_LABELS.subclassLevel"
+                :help="CLASS_EDITOR_LABELS.subclassLevelHint"
+                name="subclassLevel"
+              >
+                <UInputNumber
+                  v-model="state.subclassLevel"
+                  :min="CLASS_LEVEL_BOUNDS.min"
+                  :max="CLASS_LEVEL_BOUNDS.max"
+                />
+              </UFormField>
+            </div>
+          </UCard>
 
           <UCard variant="subtle">
             <template #header>
@@ -252,7 +288,15 @@
 
             <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
               <UFormField
-                class="col-span-full md:col-span-12"
+                class="col-span-full md:col-span-8"
+                :label="CLASS_EDITOR_LABELS.casterType"
+                name="casterType"
+              >
+                <SelectCasterType v-model="state.casterType" />
+              </UFormField>
+
+              <UFormField
+                class="col-span-full md:col-span-8"
                 :label="CLASS_EDITOR_LABELS.spellcastingAbility"
                 :help="CLASS_EDITOR_LABELS.spellcastingAbilityHint"
                 name="spellcastingAbility"
@@ -261,47 +305,13 @@
               </UFormField>
 
               <UFormField
-                class="col-span-full md:col-span-12"
+                class="col-span-full md:col-span-8"
                 :label="CLASS_EDITOR_LABELS.spellcastingStartLevel"
                 :help="CLASS_EDITOR_LABELS.spellcastingStartLevelHint"
                 name="spellcastingStartLevel"
               >
                 <UInputNumber
                   v-model="state.spellcastingStartLevel"
-                  :min="CLASS_LEVEL_BOUNDS.min"
-                  :max="CLASS_LEVEL_BOUNDS.max"
-                />
-              </UFormField>
-            </div>
-          </UCard>
-
-          <UCard variant="subtle">
-            <template #header>
-              <h2 class="truncate text-base text-highlighted">
-                {{ CLASS_EDITOR_LABELS.subclassesTitle }}
-              </h2>
-            </template>
-
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
-              <UFormField
-                class="col-span-full md:col-span-12"
-                :label="CLASS_EDITOR_LABELS.subclassLabel"
-                name="subclassLabel"
-              >
-                <UInput
-                  v-model="state.subclassLabel"
-                  :placeholder="CLASS_EDITOR_LABELS.subclassLabelPlaceholder"
-                />
-              </UFormField>
-
-              <UFormField
-                class="col-span-full md:col-span-12"
-                :label="CLASS_EDITOR_LABELS.subclassLevel"
-                :help="CLASS_EDITOR_LABELS.subclassLevelHint"
-                name="subclassLevel"
-              >
-                <UInputNumber
-                  v-model="state.subclassLevel"
                   :min="CLASS_LEVEL_BOUNDS.min"
                   :max="CLASS_LEVEL_BOUNDS.max"
                 />
