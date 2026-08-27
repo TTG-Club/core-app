@@ -136,21 +136,25 @@
 
   const featureRows = computed(() =>
     step.features.map((feature) => {
-      const options = feature.choice ? choiceOptions(feature.choice) : [];
+      // Каждый выбор умения тянет за собой свой пул, своё количество и свои
+      // пометки: считаются они здесь, чтобы шаблон остался декларативным
+      const controls = feature.choices.map((choice) => {
+        const options = choiceOptions(choice);
+        const requiredCount = getRequiredChoiceCount(choice, options);
 
-      const requiredCount = feature.choice
-        ? getRequiredChoiceCount(feature.choice, options)
-        : 0;
+        return {
+          choice,
+          options,
+          requiredCount,
+          hints: choiceHints(choice),
+          chooseLabel: `${LEVEL_UP_WIZARD_LABELS.chooseLabel} ${requiredCount}`,
+        };
+      });
 
       return {
         ...feature,
         badgeLabel: `${feature.originLabel} · ${feature.level} ур.`,
-        chooseLabel: feature.choice
-          ? `${LEVEL_UP_WIZARD_LABELS.chooseLabel} ${requiredCount}`
-          : '',
-        options,
-        requiredCount,
-        hints: feature.choice ? choiceHints(feature.choice) : {},
+        controls,
         featOptions: feature.abilityImprovement ? featOptions(feature.id) : [],
         selectedFeat: feature.abilityImprovement
           ? selectedFeat(feature.id)
@@ -304,24 +308,30 @@
         </div>
 
         <div
-          v-if="feature.choice"
-          class="flex flex-col gap-1"
+          v-if="feature.controls.length"
+          class="flex flex-col gap-3"
         >
-          <span class="text-xs text-muted">
-            {{ feature.chooseLabel }}
-          </span>
+          <div
+            v-for="control in feature.controls"
+            :key="control.choice.id"
+            class="flex flex-col gap-1"
+          >
+            <span class="text-xs text-muted">
+              {{ control.choice.label || control.chooseLabel }}
+            </span>
 
-          <SheetChoiceSelect
-            :model-value="draft.selections[feature.choice.id] ?? []"
-            :items="feature.options"
-            :hints="feature.hints"
-            :warning="SKILL_DUPLICATE_WARNING"
-            :count="feature.requiredCount"
-            :placeholder="feature.chooseLabel"
-            @update:model-value="
-              handleSelection(feature.choice, feature.requiredCount, $event)
-            "
-          />
+            <SheetChoiceSelect
+              :model-value="draft.selections[control.choice.id] ?? []"
+              :items="control.options"
+              :hints="control.hints"
+              :warning="SKILL_DUPLICATE_WARNING"
+              :count="control.requiredCount"
+              :placeholder="control.chooseLabel"
+              @update:model-value="
+                handleSelection(control.choice, control.requiredCount, $event)
+              "
+            />
+          </div>
         </div>
 
         <SheetLevelUpFeatChoice

@@ -975,24 +975,20 @@ export function useLevelUpWizard(): LevelUpWizard {
       return false;
     }
 
-    const hasIncompleteChoice = step.features.some((row) => {
-      const choice = row.choice;
+    const hasIncompleteChoice = step.features.some((row) =>
+      row.choices.some((choice) => {
+        const options = choiceOptions(choice);
 
-      if (!choice) {
-        return false;
-      }
+        if (!options.length) {
+          return false;
+        }
 
-      const options = choiceOptions(choice);
-
-      if (!options.length) {
-        return false;
-      }
-
-      return (
-        (draft.selections[choice.id] ?? []).length
-        < getRequiredChoiceCount(choice, options)
-      );
-    });
+        return (
+          (draft.selections[choice.id] ?? []).length
+          < getRequiredChoiceCount(choice, options)
+        );
+      }),
+    );
 
     if (hasIncompleteChoice || !areFeatChoicesComplete(step, draft)) {
       return false;
@@ -1099,8 +1095,19 @@ export function useLevelUpWizard(): LevelUpWizard {
 
     const rows = steps.value.flatMap((step) => step.features);
 
-    const { proficientSkills, expertiseSkills, languages, featureChoices } =
-      collectChoiceSelections(rows, allSelections.value);
+    // Из ответов берётся только текст выбора: владения ведёт снимок на самой
+    // записи умения — так же, как у черты. Два хозяина у одного владения
+    // означали бы, что снятие класса заберёт его лишь наполовину.
+    const { featureChoices } = collectChoiceSelections(
+      rows,
+      allSelections.value,
+    );
+
+    // Ответы игрока, с которыми собирается снимок владений каждого умения
+    const featureAnswers = {
+      answers: allSelections.value,
+      proficientSkillNames: proficientSkillNames.value,
+    };
 
     const choices = {
       ...allNotes.value,
@@ -1133,7 +1140,13 @@ export function useLevelUpWizard(): LevelUpWizard {
       const levelFeatures = drafts.value
         .filter((draft) => draft.classUrl === entry.entry.url)
         .flatMap((draft) =>
-          buildLevelClassFeatures(detail, subclass, draft.classLevel, choices),
+          buildLevelClassFeatures(
+            detail,
+            subclass,
+            draft.classLevel,
+            choices,
+            featureAnswers,
+          ),
         );
 
       const chosenSubclassUrl = selectedSubclasses.value[entry.entry.url];
@@ -1143,7 +1156,13 @@ export function useLevelUpWizard(): LevelUpWizard {
         ...(chosenSubclassUrl && subclass
           ? mergeCharacterFeatures(
               levelFeatures,
-              buildSubclassFeatures(entry.entry.url, subclass, level, choices),
+              buildSubclassFeatures(
+                entry.entry.url,
+                subclass,
+                level,
+                choices,
+                featureAnswers,
+              ),
             )
           : levelFeatures),
       );
@@ -1176,11 +1195,13 @@ export function useLevelUpWizard(): LevelUpWizard {
       classPatches,
       features: [...classFeatures, ...featFeatures],
       classResources,
+      // Навыки и языки, названные в умениях, приходят снимком самой записи
+      // умения: здесь их нет вовсе
       skills: {
-        proficient: [...new Set(proficientSkills)],
-        expertise: [...new Set(expertiseSkills)],
+        proficient: [],
+        expertise: [],
       },
-      languages,
+      languages: [],
       abilityIncreases: mergeAbilityIncreases(
         Object.values(allFeatChoices.value).map((choice) =>
           collectFeatAbilityIncreases(choice.abilities),
