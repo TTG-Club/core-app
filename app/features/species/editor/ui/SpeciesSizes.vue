@@ -3,79 +3,115 @@
 
   import { isString } from 'es-toolkit';
 
+  import { DictionaryService } from '~/shared/api';
   import { SelectSize } from '~ui/select';
 
   import { SPECIES_SIZES_EDITOR } from '../../model';
 
   type Sizes = SpeciesCreate['properties']['sizes'];
 
+  /**
+   * Размеры вида — как в форме системы D&D: набор выбирается одним
+   * мультиселектом, а рост задаётся строкой на каждый выбранный размер.
+   */
   const sizes = defineModel<Sizes>({
     default: () => [],
   });
 
-  const disabledKeys = computed(() =>
-    sizes.value.map((size) => size.type).filter((size) => isString(size)),
+  // Тот же ключ, что у SelectSize: словарь грузится один раз на всех
+  const { data: sizeOptions } = await useAsyncData(
+    'dictionaries-sizes',
+    () => DictionaryService.sizes(),
+    { dedupe: 'defer' },
   );
 
-  /** Заводит пустую строку размера в конце списка. */
-  function addSize(): void {
-    sizes.value = [
-      ...sizes.value,
-      {
-        type: undefined,
-        from: undefined,
-        to: undefined,
-      },
-    ];
+  const selectedTypes = computed(() =>
+    sizes.value.map((size) => size.type).filter((type) => isString(type)),
+  );
+
+  /**
+   * Подпись размера из словаря; словарь ещё не пришёл — показывается ключ.
+   *
+   * @param type ключ размера.
+   * @returns подпись для строки роста.
+   */
+  function getSizeLabel(type: string | undefined): string {
+    if (!type) {
+      return '';
+    }
+
+    return (
+      sizeOptions.value?.find((option) => option.value === type)?.label ?? type
+    );
   }
 
   /**
-   * Убирает строку размера.
+   * Пересобирает строки роста под выбранный набор размеров: уже введённый рост
+   * остаётся у своего размера, новому размеру заводится пустая строка.
    *
-   * @param index номер строки в списке.
+   * @param value выбранные ключи размеров из мультиселекта.
    */
-  function removeSize(index: number): void {
-    sizes.value = sizes.value.filter((_, position) => position !== index);
+  function handleTypesUpdate(value: string | Array<string> | undefined): void {
+    let types: Array<string> = [];
+
+    if (Array.isArray(value)) {
+      types = value;
+    } else if (value) {
+      types = [value];
+    }
+
+    const existing = new Map(
+      sizes.value
+        .filter((size) => isString(size.type))
+        .map((size) => [size.type, size]),
+    );
+
+    sizes.value = types.map(
+      (type) =>
+        existing.get(type) ?? {
+          type,
+          from: undefined,
+          to: undefined,
+        },
+    );
   }
 </script>
 
 <template>
-  <div class="col-span-full flex flex-col gap-2">
-    <p
-      v-if="!sizes.length"
-      class="rounded-lg border border-dashed border-default p-4 text-center text-xs text-dimmed italic"
-    >
-      {{ SPECIES_SIZES_EDITOR.empty }}
-    </p>
+  <UFormField
+    :label="SPECIES_SIZES_EDITOR.title"
+    :help="SPECIES_SIZES_EDITOR.hint"
+    name="properties.sizes"
+  >
+    <SelectSize
+      multiple
+      :model-value="selectedTypes"
+      @update:model-value="handleTypesUpdate"
+    />
+  </UFormField>
 
-    <UForm
+  <div
+    v-if="sizes.length"
+    class="flex flex-col gap-2 md:col-span-2"
+  >
+    <span class="text-xs text-dimmed">
+      {{ SPECIES_SIZES_EDITOR.heightsTitle }}
+    </span>
+
+    <div
       v-for="(size, index) in sizes"
-      :key="index"
-      class="grid grid-cols-1 gap-4 md:grid-cols-24"
-      attach
-      :state="size"
+      :key="size.type ?? index"
+      class="grid grid-cols-1 items-end gap-3 md:grid-cols-[minmax(6rem,1fr)_2fr_2fr]"
     >
-      <UFormField
-        name="type"
-        :label="SPECIES_SIZES_EDITOR.size"
-        class="col-span-full md:col-span-6"
-      >
-        <SelectSize
-          v-model="size.type"
-          :disabled-keys="disabledKeys"
-        />
-      </UFormField>
+      <span class="text-sm text-highlighted md:pb-2">
+        {{ getSizeLabel(size.type) }}
+      </span>
 
-      <UFormField
-        class="col-span-full md:col-span-8"
-        :label="SPECIES_SIZES_EDITOR.heightFrom"
-        name="from"
-      >
+      <UFormField :label="SPECIES_SIZES_EDITOR.heightFrom">
         <UFieldGroup>
           <UInputNumber
             v-model="size.from"
             :min="0"
-            :placeholder="SPECIES_SIZES_EDITOR.heightFromPlaceholder"
           />
 
           <UBadge
@@ -87,16 +123,11 @@
         </UFieldGroup>
       </UFormField>
 
-      <UFormField
-        :label="SPECIES_SIZES_EDITOR.heightTo"
-        name="to"
-        class="col-span-full md:col-span-8"
-      >
+      <UFormField :label="SPECIES_SIZES_EDITOR.heightTo">
         <UFieldGroup>
           <UInputNumber
             v-model="size.to"
             :min="0"
-            :placeholder="SPECIES_SIZES_EDITOR.heightToPlaceholder"
           />
 
           <UBadge
@@ -107,26 +138,10 @@
           </UBadge>
         </UFieldGroup>
       </UFormField>
+    </div>
 
-      <div class="col-span-full flex items-end pb-1 md:col-span-2">
-        <UButton
-          icon="tabler:trash"
-          color="error"
-          variant="ghost"
-          size="xs"
-          :aria-label="SPECIES_SIZES_EDITOR.remove"
-          @click.left.exact.prevent="removeSize(index)"
-        />
-      </div>
-    </UForm>
-
-    <UButton
-      icon="tabler:plus"
-      :label="SPECIES_SIZES_EDITOR.add"
-      color="primary"
-      variant="soft"
-      block
-      @click.left.exact.prevent="addSize"
-    />
+    <p class="text-xs text-dimmed">
+      {{ SPECIES_SIZES_EDITOR.heightsHint }}
+    </p>
   </div>
 </template>

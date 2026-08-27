@@ -1,12 +1,11 @@
 <script setup lang="ts">
   import type { SpeciesCreateSpeed } from '../../model';
 
-  import { InfoTooltip } from '~ui/tooltip';
-
   import {
     SPECIES_OPTIONAL_SPEED_KINDS,
     SPECIES_SPEED_EDITOR,
   } from '../../model';
+  import SpeciesEditorSection from './SpeciesEditorSection.vue';
 
   /**
    * Скорости вида одной сеткой, как в форме вида системы D&D: ходьба и три
@@ -51,22 +50,11 @@
 </script>
 
 <template>
-  <div class="col-span-full flex flex-col gap-3">
-    <InfoTooltip
-      :text="SPECIES_SPEED_EDITOR.titleHint"
-      icon="tabler:info-circle-filled"
-      class="text-sm font-medium text-highlighted"
-    >
-      <span class="flex items-center gap-2">
-        <UIcon
-          name="tabler:run"
-          class="size-4 text-primary"
-        />
-
-        {{ SPECIES_SPEED_EDITOR.title }}
-      </span>
-    </InfoTooltip>
-
+  <SpeciesEditorSection
+    :title="SPECIES_SPEED_EDITOR.title"
+    icon="tabler:run"
+    :hint="SPECIES_SPEED_EDITOR.titleHint"
+  >
     <UForm
       class="grid grid-cols-2 gap-3 md:grid-cols-4"
       attach
@@ -109,5 +97,5 @@
     <p class="text-xs text-dimmed">
       {{ SPECIES_SPEED_EDITOR.levelHint }}
     </p>
-  </div>
+  </SpeciesEditorSection>
 </template>

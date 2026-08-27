@@ -23,7 +23,13 @@
     SPECIES_EDITOR_TABS,
     transformSpeciesBeforeSubmit,
   } from '../model';
-  import { SpeciesFeatures, SpeciesSizes, SpeciesSpeed } from './ui';
+  import {
+    SpeciesEditorSection,
+    SpeciesFeatures,
+    SpeciesSizes,
+    SpeciesSpeed,
+    SpeciesVision,
+  } from './ui';
 
   /**
    * Пустой вид, с которым открывается форма создания. Механика и строки
@@ -164,36 +170,27 @@
         подпись самой вкладки -->
       <template #properties>
         <UCard variant="subtle">
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
-            <UFormField
-              class="col-span-full md:col-span-12"
-              :label="SPECIES_EDITOR_LABELS.creatureType"
-              name="properties.type"
+          <div class="flex flex-col gap-4">
+            <SpeciesEditorSection
+              :title="SPECIES_EDITOR_LABELS.creatureSectionTitle"
+              icon="tabler:user"
+              :hint="SPECIES_EDITOR_LABELS.creatureSectionHint"
             >
-              <SelectCreatureType v-model="state.properties.type" />
-            </UFormField>
+              <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <UFormField
+                  :label="SPECIES_EDITOR_LABELS.creatureType"
+                  name="properties.type"
+                >
+                  <SelectCreatureType v-model="state.properties.type" />
+                </UFormField>
 
-            <UFormField
-              class="col-span-full md:col-span-12"
-              :label="SPECIES_EDITOR_LABELS.vision"
-              :help="SPECIES_EDITOR_LABELS.visionHint"
-              name="properties.vision"
-            >
-              <UInputNumber
-                v-model="state.properties.vision"
-                :min="0"
-                :max="SPECIES_EDITOR_LABELS.visionMax"
-                :step="SPECIES_EDITOR_LABELS.visionStep"
-              />
-            </UFormField>
-
-            <p class="col-span-full text-sm text-dimmed">
-              {{ SPECIES_EDITOR_LABELS.sensesHint }}
-            </p>
-
-            <SpeciesSizes v-model="state.properties.sizes" />
+                <SpeciesSizes v-model="state.properties.sizes" />
+              </div>
+            </SpeciesEditorSection>
 
             <SpeciesSpeed v-model="state.properties.speed" />
+
+            <SpeciesVision v-model="state.properties.vision" />
           </div>
         </UCard>
       </template>
