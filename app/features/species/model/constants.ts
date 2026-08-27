@@ -70,7 +70,8 @@ export const SPECIES_FEATURES_EDITOR = {
   descriptionLabel: 'Описание',
   descriptionPlaceholder: 'Введи описание',
   addDescription: 'Добавить описание',
-  mechanicsBadge: 'Механика',
+  /** Подпись бейджа механики; следом идёт число заполненных блоков. */
+  mechanicsBadge: 'Механика: ',
   collapse: 'Свернуть особенность',
   expand: 'Развернуть особенность',
   remove: 'Убрать особенность',
@@ -109,6 +110,18 @@ export const SPECIES_SPEED_EDITOR = {
   /** Значение только что добавленной строки — как базовая скорость по умолчанию. */
   defaultValue: 30,
 } as const;
+
+/** Подпись бейджа уровня в шапке свёрнутой особенности: приставка и хвост вокруг числа. */
+export const SPECIES_FEATURE_LEVEL_BADGE = {
+  prefix: 'С ',
+  suffix: ' уровня',
+} as const;
+
+/**
+ * Необязательные скорости вида — в порядке показа строк вкладки
+ * «Характеристики»; подписи к ним лежат в {@link SPECIES_SPEED_EDITOR}.
+ */
+export const SPECIES_OPTIONAL_SPEED_KINDS = ['fly', 'climb', 'swim'] as const;
 
 /** Границы уровня умения вида. */
 export const SPECIES_FEATURE_LEVEL = {

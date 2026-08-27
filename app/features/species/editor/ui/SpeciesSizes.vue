@@ -18,7 +18,7 @@
   );
 
   /** Заводит пустую строку размера в конце списка. */
-  function addSize() {
+  function addSize(): void {
     sizes.value = [
       ...sizes.value,
       {
@@ -34,7 +34,7 @@
    *
    * @param index номер строки в списке.
    */
-  function removeSize(index: number) {
+  function removeSize(index: number): void {
     sizes.value = sizes.value.filter((_, position) => position !== index);
   }
 </script>

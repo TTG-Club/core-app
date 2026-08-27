@@ -81,6 +81,12 @@
     },
   });
 
+  /**
+   * Раскрыта ли особенность.
+   *
+   * @param index позиция особенности в списке.
+   * @returns `true`, когда тело строки развёрнуто.
+   */
   function isExpanded(index: number): boolean {
     return expanded.value.has(index);
   }
@@ -108,7 +114,12 @@
       : SPECIES_FEATURES_EDITOR.expand;
   }
 
-  function toggle(index: number) {
+  /**
+   * Разворачивает или сворачивает особенность.
+   *
+   * @param index позиция особенности в списке.
+   */
+  function toggleFeature(index: number): void {
     const next = new Set(expanded.value);
 
     if (!next.delete(index)) {
@@ -130,7 +141,7 @@
     const filledBlocksCount = getFeatureFilledBlocksCount(feature);
 
     return filledBlocksCount
-      ? `${SPECIES_FEATURES_EDITOR.mechanicsBadge}: ${filledBlocksCount}`
+      ? `${SPECIES_FEATURES_EDITOR.mechanicsBadge}${filledBlocksCount}`
       : undefined;
   }
 
@@ -147,11 +158,17 @@
     );
   }
 
-  function showDescription(index: number) {
+  /**
+   * Показывает поле описания у особенности без описания.
+   *
+   * @param index позиция особенности в списке.
+   */
+  function showDescription(index: number): void {
     withDescription.value = new Set([...withDescription.value, index]);
   }
 
-  function addFeature() {
+  /** Заводит пустую особенность в конце списка и сразу раскрывает её. */
+  function addFeature(): void {
     // Индекс считается ДО записи: `model.value` после присваивания ещё отдаёт
     // прежний массив — проп доедет только следующим тиком.
     const addedIndex = model.value.length;
@@ -162,11 +179,17 @@
     expanded.value = new Set([...expanded.value, addedIndex]);
   }
 
-  function askRemoveFeature(index: number) {
+  /**
+   * Запрашивает подтверждение удаления особенности.
+   *
+   * @param index позиция особенности в списке.
+   */
+  function askRemoveFeature(index: number): void {
     pendingRemoval.value = index;
   }
 
-  function confirmRemoveFeature() {
+  /** Удаляет особенность после подтверждения и пересдвигает раскрытые. */
+  function confirmRemoveFeature(): void {
     const index = pendingRemoval.value;
 
     pendingRemoval.value = undefined;
@@ -234,7 +257,7 @@
           variant="ghost"
           size="xs"
           :aria-label="getToggleLabel(featIndex)"
-          @click.left.exact.prevent="toggle(featIndex)"
+          @click.left.exact.prevent="toggleFeature(featIndex)"
         />
       </div>
 

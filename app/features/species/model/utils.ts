@@ -1,5 +1,7 @@
 import type { SpeciesFeatureCreate } from './types';
 
+import { SPECIES_FEATURE_LEVEL_BADGE } from './constants';
+
 /**
  * Сколько блоков механики умения заполнено: дары, правки листа, заклинания и
  * эффекты считаются блоками, а не строками. Числом подписывается свёрнутое
@@ -31,5 +33,9 @@ export function getFeatureFilledBlocksCount(
 export function getSpeciesFeatureLevelBadge(
   level: number | undefined,
 ): string | undefined {
-  return level !== undefined && level > 1 ? `С ${level} уровня` : undefined;
+  if (level === undefined || level <= 1) {
+    return undefined;
+  }
+
+  return `${SPECIES_FEATURE_LEVEL_BADGE.prefix}${level}${SPECIES_FEATURE_LEVEL_BADGE.suffix}`;
 }

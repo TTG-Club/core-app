@@ -3,14 +3,24 @@
 
   import type { SpeciesCreateSpeed } from '../../model';
 
-  import { SPECIES_SPEED_EDITOR } from '../../model';
+  import {
+    SPECIES_OPTIONAL_SPEED_KINDS,
+    SPECIES_SPEED_EDITOR,
+  } from '../../model';
 
   const speed = defineModel<SpeciesCreateSpeed>({ required: true });
 
-  /** Необязательные скорости — в порядке показа строк. */
-  const OPTIONAL_SPEED_KINDS = ['fly', 'climb', 'swim'] as const;
+  type OptionalSpeedKind = (typeof SPECIES_OPTIONAL_SPEED_KINDS)[number];
 
-  type OptionalSpeedKind = (typeof OPTIONAL_SPEED_KINDS)[number];
+  /**
+   * Есть ли у строки скорости переключатель «Парит».
+   *
+   * @param kind вид скорости строки.
+   * @returns `true` только у полёта — парение без полёта не имеет смысла.
+   */
+  function isHoverKind(kind: OptionalSpeedKind): boolean {
+    return kind === 'fly';
+  }
 
   /**
    * Какие необязательные скорости показаны строками. Отдельное состояние, а не
@@ -25,7 +35,7 @@
   watch(
     speed,
     (value) => {
-      for (const kind of OPTIONAL_SPEED_KINDS) {
+      for (const kind of SPECIES_OPTIONAL_SPEED_KINDS) {
         if (value[kind] != null) {
           visibleKinds.value.add(kind);
         }
@@ -35,21 +45,21 @@
   );
 
   const visibleRows = computed(() =>
-    OPTIONAL_SPEED_KINDS.filter((kind) => visibleKinds.value.has(kind)),
+    SPECIES_OPTIONAL_SPEED_KINDS.filter((kind) => visibleKinds.value.has(kind)),
   );
 
   const hasHiddenKinds = computed(
-    () => visibleKinds.value.size < OPTIONAL_SPEED_KINDS.length,
+    () => visibleKinds.value.size < SPECIES_OPTIONAL_SPEED_KINDS.length,
   );
 
   /** Меню «Добавить скорость»: только ещё не показанные виды. */
   const addMenuItems = computed<Array<Array<DropdownMenuItem>>>(() => [
-    OPTIONAL_SPEED_KINDS.filter((kind) => !visibleKinds.value.has(kind)).map(
-      (kind) => ({
-        label: SPECIES_SPEED_EDITOR.labels[kind],
-        onSelect: () => addSpeed(kind),
-      }),
-    ),
+    SPECIES_OPTIONAL_SPEED_KINDS.filter(
+      (kind) => !visibleKinds.value.has(kind),
+    ).map((kind) => ({
+      label: SPECIES_SPEED_EDITOR.labels[kind],
+      onSelect: () => addSpeed(kind),
+    })),
   ]);
 
   /**
@@ -57,7 +67,7 @@
    *
    * @param kind вид скорости из меню «Добавить».
    */
-  function addSpeed(kind: OptionalSpeedKind) {
+  function addSpeed(kind: OptionalSpeedKind): void {
     visibleKinds.value.add(kind);
 
     speed.value = {
@@ -72,13 +82,13 @@
    *
    * @param kind вид скорости строки.
    */
-  function removeSpeed(kind: OptionalSpeedKind) {
+  function removeSpeed(kind: OptionalSpeedKind): void {
     visibleKinds.value.delete(kind);
 
     speed.value = {
       ...speed.value,
       [kind]: undefined,
-      hover: kind === 'fly' ? false : speed.value.hover,
+      hover: isHoverKind(kind) ? false : speed.value.hover,
     };
   }
 </script>
@@ -119,7 +129,7 @@
         />
 
         <UCheckbox
-          v-if="kind === 'fly'"
+          v-if="isHoverKind(kind)"
           v-model="speed.hover"
           :label="SPECIES_SPEED_EDITOR.hover"
         />
