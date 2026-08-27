@@ -5,7 +5,11 @@
 
   import { ActiveEffects } from '~active-effects/editor';
   import { EFFECT_ORIGIN } from '~active-effects/model';
-  import { FeatGrantRows, FeatModifierRows } from '~feats/editor/ui';
+  import {
+    FeatCounterRows,
+    FeatGrantRows,
+    FeatModifierRows,
+  } from '~feats/editor/ui';
   import { createFeatEditorRows, createFeatMechanics } from '~feats/model';
   import { SpeciesPreview } from '~species/preview';
   import { EditorBaseInfo } from '~ui/editor';
@@ -236,6 +240,22 @@
               v-model="editorRows.modifiers"
               :rows="editorRows"
             />
+          </UCard>
+
+          <UCard variant="subtle">
+            <template #header>
+              <InfoTooltip
+                :text="SPECIES_EDITOR_LABELS.countersHint"
+                icon="tabler:info-circle-filled"
+                class="text-base text-highlighted"
+              >
+                <h2 class="truncate">
+                  {{ SPECIES_EDITOR_LABELS.countersTitle }}
+                </h2>
+              </InfoTooltip>
+            </template>
+
+            <FeatCounterRows v-model="editorRows.counters" />
           </UCard>
         </div>
       </template>

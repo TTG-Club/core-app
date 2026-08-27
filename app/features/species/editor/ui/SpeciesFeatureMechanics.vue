@@ -3,7 +3,11 @@
 
   import { ActiveEffects } from '~active-effects/editor';
   import { EFFECT_ORIGIN } from '~active-effects/model';
-  import { FeatGrantRows, FeatModifierRows } from '~feats/editor/ui';
+  import {
+    FeatCounterRows,
+    FeatGrantRows,
+    FeatModifierRows,
+  } from '~feats/editor/ui';
   import { createFeatEditorRows } from '~feats/model';
   import { InfoTooltip } from '~ui/tooltip';
 
@@ -101,6 +105,14 @@
             v-model="editorRows.modifiers"
             :rows="editorRows"
           />
+        </div>
+
+        <div class="grid gap-2">
+          <h3 class="truncate text-sm text-highlighted">
+            {{ SPECIES_EDITOR_LABELS.featureCountersTitle }}
+          </h3>
+
+          <FeatCounterRows v-model="editorRows.counters" />
         </div>
 
         <div class="grid gap-2">
