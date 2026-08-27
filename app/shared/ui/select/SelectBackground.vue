@@ -18,7 +18,9 @@
   // IMPORTANT:
   // USelectMenu при clearable может эмитить null.
   // Мы внизу нормализуем null -> undefined (а не даём ему попасть в model).
-  const model = defineModel<string | undefined>({ default: undefined });
+  const model = defineModel<string | Array<string> | undefined>({
+    default: undefined,
+  });
 
   const searchQuery = ref<string>('');
   const openedOnce = ref<boolean>(false);
@@ -88,8 +90,9 @@
       return;
     }
 
-    // Для single select берем первый элемент массива, если пришел массив
-    model.value = Array.isArray(value) ? value[0] : value;
+    // При одиночном выборе из массива берётся первая запись: `USelectMenu`
+    // отдаёт массив и там, где выбирают одно
+    model.value = multiple || !Array.isArray(value) ? value : value[0];
   }
 </script>
 

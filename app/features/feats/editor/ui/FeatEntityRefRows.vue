@@ -45,30 +45,38 @@
 
   const { getEntry } = useFeatRefDirectory(() => kind, urls);
 
-  /** Значение селекта-добавления: после выбора оно сбрасывается. */
-  const pickedUrl = ref<string>('');
+  /**
+   * Значение поля добавления: после выбора оно сбрасывается. Выбор
+   * множественный — список закрывается не после каждой записи, и отметить
+   * подряд несколько заклинаний можно за один заход.
+   */
+  const pickedUrls = ref<Array<string>>([]);
 
   /**
-   * Дописывает выбранную запись. Уже перечисленная пропускается: повтор ничего
+   * Дописывает выбранные записи. Уже перечисленные пропускаются: повтор ничего
    * не добавляет ни требованию, ни выдаче.
    *
-   * @param url ссылка выбранной записи.
+   * @param picked ссылки выбранных записей.
    */
-  function addRef(url: string | Array<string> | undefined) {
-    const picked = Array.isArray(url) ? url[0] : url;
+  function addRef(picked: string | Array<string> | undefined) {
+    const pickedList = Array.isArray(picked) ? picked : [picked];
 
-    if (picked && !urls.value.includes(picked)) {
+    const added = pickedList.flatMap((url) =>
+      url && !urls.value.includes(url) ? [url] : [],
+    );
+
+    if (added.length) {
       // Снимок названия пишется сразу: из него карточка черты собирает условие
       // («черта «Отмеченный драконом»»), а core-api имя ссылки не подставляет.
       // У записей, выбранных до этого, имени нет — там останется ссылка, пока
       // черту не пересохранят
       model.value = [
         ...model.value,
-        { url: picked, name: getEntry(picked)?.name },
+        ...added.map((url) => ({ url, name: getEntry(url)?.name })),
       ];
     }
 
-    pickedUrl.value = '';
+    pickedUrls.value = [];
   }
 
   /**
@@ -189,35 +197,40 @@
 
     <SelectFeat
       v-if="kind === 'FEAT'"
-      :model-value="pickedUrl"
+      :model-value="pickedUrls"
       :exclude-urls="urls"
       :categories="featCategories"
+      multiple
       @update:model-value="addRef"
     />
 
     <SelectClass
       v-else-if="kind === 'CLASS'"
-      :model-value="pickedUrl"
+      :model-value="pickedUrls"
       :excluded-values="urls"
+      multiple
       @update:model-value="addRef"
     />
 
     <SelectSpecies
       v-else-if="kind === 'SPECIES'"
-      :model-value="pickedUrl"
+      :model-value="pickedUrls"
+      multiple
       @update:model-value="addRef"
     />
 
     <SelectBackground
       v-else-if="kind === 'BACKGROUND'"
-      :model-value="pickedUrl"
+      :model-value="pickedUrls"
+      multiple
       @update:model-value="addRef"
     />
 
     <SelectSpell
       v-else-if="kind === 'SPELL'"
-      :model-value="pickedUrl"
+      :model-value="pickedUrls"
       :exclude-urls="urls"
+      multiple
       @update:model-value="addRef"
     />
   </div>
