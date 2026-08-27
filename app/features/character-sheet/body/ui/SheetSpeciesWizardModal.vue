@@ -24,6 +24,7 @@
     CUSTOM_SPECIES_LABELS,
     detectFeatureChoice,
     FEATURE_ORIGIN_LABELS,
+    filterChoicesByLevel,
     getCharacterFeatureId,
     getChoiceSkillHints,
     getOwnedWeaponNames,
@@ -262,7 +263,9 @@
     feature: SpeciesFeatureSummary,
   ): ClassChoice[] {
     if (feature.choices.length > 0) {
-      return feature.choices;
+      // Выбор со своим уровнем спрашивается, только когда персонаж дорос:
+      // умение вида приходит целиком, а часть его вопросов открывается позже
+      return filterChoicesByLevel(feature.choices, character.value.level);
     }
 
     const detected = detectFeatureChoice(

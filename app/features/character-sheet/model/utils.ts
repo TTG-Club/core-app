@@ -10144,9 +10144,18 @@ export function getLevelFeatureRows(
       const isRepeatedImprovement =
         summary.abilityImprovement && summary.scalingLevels.includes(level);
 
+      // Умение возвращается и на уровень, где открывается ещё один его выбор:
+      // компетентность плут получает на первом уровне и на шестом, а умение в
+      // книге одно — повтор описан строкой роста.
+      const hasChoiceAtLevel = summary.choices.some(
+        (choice) => choice.requiredLevel === level,
+      );
+
       if (
         summary.isSubclass !== onlySubclass
-        || (summary.level !== level && !isRepeatedImprovement)
+        || (summary.level !== level
+          && !isRepeatedImprovement
+          && !hasChoiceAtLevel)
       ) {
         continue;
       }
@@ -10155,7 +10164,8 @@ export function getLevelFeatureRows(
 
       // Каждый уровень улучшения характеристик — свой выбор, поэтому в
       // идентификатор строки идёт уровень: иначе выборы разных уровней
-      // затирали бы друг друга общим ключом умения.
+      // затирали бы друг друга общим ключом умения. Выборам со своим уровнем
+      // он уже вписан в их собственный id, и строке хватает общего.
       const id = summary.abilityImprovement ? `${baseId}:${level}` : baseId;
 
       rows.push({
@@ -10168,7 +10178,7 @@ export function getLevelFeatureRows(
         // умению не нужен — иначе под чертой висело бы пустое поле ввода.
         choices: summary.abilityImprovement
           ? []
-          : getClassFeatureChoices(id, summary, skillNames),
+          : getClassFeatureChoices(id, summary, skillNames, level),
         abilityImprovement: summary.abilityImprovement,
       });
     }
@@ -10820,6 +10830,30 @@ export function detectFeatureChoice(
 }
 
 /**
+ * Выборы, открытые к этому уровню.
+ *
+ * Выбор без своего уровня открыт всегда — так устроено большинство. Уровень не
+ * назван вовсе (мастер вида, окно черты) — отбирать нечем, и берутся все: там
+ * умение выдаётся целиком.
+ *
+ * @param choices выборы записи.
+ * @param level уровень персонажа; не задан — отбора нет.
+ * @returns выборы, которые можно спрашивать сейчас.
+ */
+export function filterChoicesByLevel(
+  choices: ClassChoice[],
+  level: number | undefined,
+): ClassChoice[] {
+  if (level === undefined) {
+    return choices;
+  }
+
+  return choices.filter(
+    (choice) => !choice.requiredLevel || choice.requiredLevel <= level,
+  );
+}
+
+/**
  * Выборы внутри умения класса: структурные из справочника, а если их там нет —
  * распознанные по прозе описания.
  *
@@ -10832,15 +10866,17 @@ export function detectFeatureChoice(
  * @param featureId идентификатор умения (он же начало id выбора).
  * @param summary умение класса или подкласса.
  * @param skillNames имена всех навыков персонажа.
+ * @param level уровень, на котором собирается строка; не задан — отбора нет.
  * @returns выборы умения; пусто — умение ни о чём не спрашивает.
  */
 export function getClassFeatureChoices(
   featureId: string,
   summary: ClassFeatureSummary,
   skillNames: string[],
+  level?: number,
 ): ClassChoice[] {
   if (summary.choices.length > 0) {
-    return summary.choices;
+    return filterChoicesByLevel(summary.choices, level);
   }
 
   const skillChoice = summary.skillChoice;

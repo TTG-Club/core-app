@@ -90,6 +90,9 @@ export interface FeatGrantRow {
   expertiseIfProficient: boolean;
   rechooseOnLongRest: boolean;
 
+  /** Уровень, с которого выбор открывается; не задан — сразу. */
+  requiredLevel: number | undefined;
+
   /**
    * Прибавка к характеристике. Задана — строка поднимает характеристику: в
    * режиме «выдать всё» перечисленные, в режиме выбора — ту, что назвал игрок
@@ -612,6 +615,7 @@ export function createGrantRow(
     onlyIfProficient: false,
     expertiseIfProficient: false,
     rechooseOnLongRest: false,
+    requiredLevel: undefined,
     abilityBonus: kind === 'ABILITY' ? 1 : undefined,
     abilityUpto: kind === 'ABILITY' ? 20 : undefined,
     fromChoiceKey: '',
@@ -812,6 +816,7 @@ function toChoiceGrantRow(choice: FeatChoice): FeatGrantRow | undefined {
     onlyIfProficient: choice.onlyIfProficient,
     expertiseIfProficient: choice.expertiseIfProficient,
     rechooseOnLongRest: choice.rechooseOnLongRest,
+    requiredLevel: choice.requiredLevel,
     abilityBonus: undefined,
     abilityUpto: undefined,
     fromChoiceKey: '',
@@ -1327,7 +1332,7 @@ export function toFeatEditorRows(
   return rows;
 }
 
-/** Общие поля выбора: подпись, количество, набор, пересмотр на отдыхе. */
+/** Общие поля выбора: подпись, количество, набор, отдых и уровень открытия. */
 function toBaseChoice(
   row: {
     label: string;
@@ -1335,6 +1340,7 @@ function toBaseChoice(
     countEqualsProficiencyBonus: boolean;
     options: Array<FeatChoiceOption>;
     rechooseOnLongRest: boolean;
+    requiredLevel?: number | undefined;
   },
   key: string,
   type: FeatChoiceType,
@@ -1358,6 +1364,7 @@ function toBaseChoice(
     grants: undefined,
     expertiseIfProficient: false,
     rechooseOnLongRest: row.rechooseOnLongRest,
+    requiredLevel: row.requiredLevel,
   };
 }
 
@@ -1377,6 +1384,7 @@ function createEmptyChoice(key: string, type: FeatChoiceType): FeatChoice {
     grants: undefined,
     expertiseIfProficient: false,
     rechooseOnLongRest: false,
+    requiredLevel: undefined,
   };
 }
 

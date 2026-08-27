@@ -160,6 +160,10 @@ const mechanicsChoicesSchema = z
       label: z.string().nullable().catch(null),
       count: z.coerce.number().nullable().catch(null),
       grants: z.string().nullable().catch(null),
+      // Уровень, с которого выбор открывается: умение спрашивает одно и то же
+      // не один раз — компетентность плута приходит на первом уровне и на
+      // шестом, и это две строки одной механики, а не два умения.
+      requiredLevel: z.coerce.number().min(1).max(20).nullable().catch(null),
       // Выбирать можно только то, чем персонаж ещё не владеет, и обратный
       // случай: владение превращает выбор в компетентность.
       onlyIfNotProficient: z.boolean().nullable().catch(null),
@@ -846,8 +850,37 @@ function toMechanicChoices(
   choices: FeatChoicesResponse,
   ownerId: string,
 ): ClassChoice[] {
-  return choices.flatMap<ClassChoice>((choice) => {
-    const id = `${ownerId}:${choice.key}`;
+  // Уровень открытия проставляется здесь, а не в каждой ветке разбора: он
+  // одинаков для любого вида выбора, и повтор в двенадцати местах разошёлся бы
+  // с собой при первой же правке
+  return choices.flatMap<ClassChoice>((choice) =>
+    buildMechanicChoices(choice, ownerId).map((entry) => ({
+      ...entry,
+      requiredLevel: choice.requiredLevel ?? null,
+    })),
+  );
+}
+
+/**
+ * Разбор одного выбора механики в выбор листа.
+ *
+ * @param source выбор из механики записи.
+ * @param ownerId идентификатор владельца даров.
+ * @returns выборы листа; пусто — вид выбора лист не спрашивает.
+ */
+function buildMechanicChoices(
+  source: FeatChoicesResponse[number],
+  ownerId: string,
+): ClassChoice[] {
+  return [source].flatMap<ClassChoice>((choice) => {
+    const requiredLevel = choice.requiredLevel ?? null;
+
+    // Уровень идёт в идентификатор: у компетентности плута первого и шестого
+    // уровня один ключ в механике, и общий id склеил бы два ответа в один
+    const id = requiredLevel
+      ? `${ownerId}:${choice.key}:${requiredLevel}`
+      : `${ownerId}:${choice.key}`;
+
     const count = Math.max(1, choice.count ?? 1);
     const label = choice.label?.trim() ?? '';
 

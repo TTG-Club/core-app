@@ -159,6 +159,16 @@ export interface FeatChoice {
 
   expertiseIfProficient: boolean;
   rechooseOnLongRest: boolean;
+
+  /**
+   * Уровень персонажа, с которого выбор открывается; `undefined` — сразу.
+   *
+   * Нужен умению, которое спрашивает одно и то же не один раз: компетентность
+   * плут получает на первом уровне и ещё раз на шестом, бард — на втором и на
+   * девятом. Второго умения под это в книге нет — повтор описан строкой роста,
+   * — поэтому уровень стоит у самого выбора.
+   */
+  requiredLevel: number | undefined;
 }
 
 /**
@@ -529,6 +539,7 @@ export function createFeatChoice(): FeatChoice {
     grants: 'PROFICIENCY',
     expertiseIfProficient: false,
     rechooseOnLongRest: false,
+    requiredLevel: undefined,
   };
 }
 

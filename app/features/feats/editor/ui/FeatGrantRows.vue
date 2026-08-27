@@ -346,11 +346,30 @@
               />
             </div>
 
-            <div class="flex flex-wrap items-center gap-4 md:col-span-full">
+            <div class="flex flex-wrap items-end gap-4 md:col-span-full">
               <UCheckbox
                 v-model="row.rechooseOnLongRest"
                 :label="FEAT_EDITOR_LABELS.rechooseOnLongRest"
               />
+
+              <UFormField class="w-40">
+                <template #label>
+                  <InfoTooltip
+                    :text="FEAT_EDITOR_LABELS.choiceRequiredLevelHint"
+                    icon="tabler:info-circle-filled"
+                  >
+                    <span>{{ FEAT_EDITOR_LABELS.choiceRequiredLevel }}</span>
+                  </InfoTooltip>
+                </template>
+
+                <UInputNumber
+                  v-model="row.requiredLevel"
+                  :min="1"
+                  :max="20"
+                  class="w-full"
+                  :aria-label="FEAT_EDITOR_LABELS.choiceRequiredLevel"
+                />
+              </UFormField>
             </div>
           </template>
 

@@ -501,7 +501,12 @@
           description: feature.description,
           originLabel,
           fightingStyleChoice: feature.fightingStyleChoice,
-          choiceControls: getClassFeatureChoices(id, feature, skillNames.value),
+          choiceControls: getClassFeatureChoices(
+            id,
+            feature,
+            skillNames.value,
+            level.value,
+          ),
         });
       }
     };

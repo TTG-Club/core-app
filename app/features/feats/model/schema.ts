@@ -95,6 +95,7 @@ const choiceSchema = z.object({
   grants: z.enum(['PROFICIENCY', 'EXPERTISE']).default('PROFICIENCY'),
   expertiseIfProficient: z.boolean().optional(),
   rechooseOnLongRest: z.boolean().optional(),
+  requiredLevel: z.number().optional(),
 });
 
 const hitPointsSchema = z.object({
@@ -313,6 +314,7 @@ function toFeatMechanicsState(
       grants: choice.grants,
       expertiseIfProficient: choice.expertiseIfProficient ?? false,
       rechooseOnLongRest: choice.rechooseOnLongRest ?? false,
+      requiredLevel: choice.requiredLevel,
     })),
     modifiers: {
       hitPoints: {
