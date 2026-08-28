@@ -641,7 +641,11 @@ modals), so its capabilities are listed here rather than squeezed into the table
   back on a short rest and all of them on a long one («Второе дыхание»).
   A class table column stops being a resource: the workshop no longer offers
   `resourceRecovery` on it, and `deriveClassResources` reads the old ones only
-  until their class is saved again.
+  until their class is saved again. A resource marked «Указать в таблице»
+  (`showInTable`) comes back as a table column instead — the reference derives
+  the per-level row from the resource's own steps or formula (`@prof`,
+  `@level`), so the numbers live in one place; a maximum that depends on an
+  ability modifier has no single row and gets no column.
 - Exhaustion sits in its own panel right below the health one
   (`SheetExhaustionPanel`): six steps, a click sets that level and a click on
   the current one drops it by one (`setExhaustion`, a play action — a locked

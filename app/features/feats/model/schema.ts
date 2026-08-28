@@ -172,6 +172,9 @@ const counterSchema = z.object({
   // Нижняя граница максимума появилась позже: у записей до неё поля нет — такой
   // ресурс считается одной формулой, как считался раньше
   min: z.number().optional(),
+  // Показ колонкой появился позже: у записей до него поля нет — такой ресурс
+  // в таблице не показывался, значит и не должен
+  showInTable: z.boolean().optional(),
   recovery: z
     .enum(['SHORT_REST', 'LONG_REST', 'SHORT_REST_ONE'])
     .default('LONG_REST'),
@@ -396,6 +399,7 @@ function toFeatMechanicsState(
       max: counter.max ?? '',
       scaling: counter.scaling ?? [],
       min: counter.min ?? 0,
+      showInTable: counter.showInTable ?? false,
       recovery: counter.recovery,
     })),
     feats: (parsed.feats ?? []).map((feat) => ({ ...feat })),

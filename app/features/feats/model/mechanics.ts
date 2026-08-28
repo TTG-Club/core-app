@@ -477,6 +477,17 @@ export interface FeatCounter {
    */
   min: number;
 
+  /**
+   * Показывать ресурс колонкой таблицы прогрессии класса.
+   *
+   * Ряд по уровням у ресурса уже задан — ступенями либо формулой, — и колонку
+   * книги справочник собирает из него сам: второй раз те же числа автор не
+   * набирает. Колонка выводится, только когда ряд считается от одного уровня
+   * (ступени, число, `@prof`, `@level`); у максимума по модификатору
+   * характеристики одинакового ряда для всех нет.
+   */
+  showInTable: boolean;
+
   recovery: FeatCounterRecovery;
 }
 
@@ -696,6 +707,7 @@ export function createFeatCounter(): FeatCounter {
     max: '@prof',
     scaling: [],
     min: 0,
+    showInTable: false,
     recovery: 'LONG_REST',
   };
 }

@@ -139,7 +139,7 @@
       </UFormField>
 
       <UFormField
-        class="md:col-span-8"
+        class="md:col-span-6"
         :label="texts.counterRecovery"
       >
         <USelect
@@ -148,6 +148,15 @@
           value-key="value"
         />
       </UFormField>
+
+      <!-- Ряд по уровням справочник соберёт сам: у ресурса он уже задан
+        ступенями либо формулой, и колонкой его набирают не второй раз -->
+      <div class="flex items-center md:col-span-2 md:pb-2">
+        <UCheckbox
+          v-model="counter.showInTable"
+          :label="texts.counterShowInTable"
+        />
+      </div>
 
       <div class="flex justify-end md:col-span-1">
         <UButton
