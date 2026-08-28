@@ -175,6 +175,7 @@ import {
   withFeatModifiers,
   withProficiencyGrant,
   withSavingThrowProficiencies,
+  withToggledFeatureEffect,
 } from '../model';
 
 /**
@@ -3333,6 +3334,34 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Выключение или включение эффекта умения, вида, класса или черты.
+   *
+   * Эффект остаётся в записи умения: удалить его нельзя — он приезжает из
+   * справочника вместе с самим умением, а вот отказаться от его действия игрок
+   * вправе (доспех отменяет «Защиту без доспехов»).
+   *
+   * @param featureId идентификатор особенности, которой принадлежит эффект.
+   * @param effectId идентификатор эффекта.
+   */
+  function toggleFeatureEffectDisabled(
+    featureId: string,
+    effectId: string,
+  ): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      features: withToggledFeatureEffect(
+        character.value.features,
+        featureId,
+        effectId,
+      ),
+    };
+  }
+
+  /**
    * Все эффекты, действующие на персонажа: свои и от надетого снаряжения.
    *
    * Эффекты предмета учитываются, только пока он надет, — как и его бонусы.
@@ -3591,6 +3620,7 @@ export function useCharacterSheet() {
     removeNote,
     removeSpell,
     updateActiveEffects,
+    toggleFeatureEffectDisabled,
     appliedActiveEffects,
     resolvedEffects,
     getRollMode,

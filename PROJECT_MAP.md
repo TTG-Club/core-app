@@ -465,7 +465,13 @@ modals), so its capabilities are listed here rather than squeezed into the table
   changes («while wearing armour») are re-checked on every read. Effects of the
   species or class record itself land as their own feature row rather than being
   pinned to the first feature — a lineage has no features at all, and a class
-  grants them by being taken; the class row appears only at its first level.
+  grants them by being taken; the class row appears only at its first level. The
+  «Эффекты» tab shows them in a block of their own («От умений и черт») beside
+  the sheet's own effects and the equipment ones: the effect's name, the record
+  that granted it and its description. They are neither editable nor removable —
+  they arrive with the record and leave with it — but each carries a switch, and
+  turning one off rebuilds that feature's frozen `bonuses` out of the effects
+  still enabled, so a disabled effect stops moving the sheet by either route.
 - The species wizard no longer reads darkvision, proficiencies and choices out of
   feature prose: `properties.darkVision`, `mechanics.proficiencies` and
   `mechanics.choices` (of the record and of every feature already in effect at the

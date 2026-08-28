@@ -27,9 +27,11 @@
     customEffects,
     conditionEffects,
     equipmentEffects,
+    featureEffects,
     isConditionActive,
     removeEffect,
     toggleEffectDisabled,
+    toggleFeatureEffectDisabled,
     toggleCondition,
   } = useSheetActiveEffects();
 
@@ -50,6 +52,41 @@
       // Состояние правится плиткой, а не формой: у него нет своих настроек.
       isCondition: effect.conditionKey !== undefined,
       rowClass: effect.disabled ? 'opacity-50 grayscale' : '',
+    })),
+  );
+
+  /** Строка эффекта умения: правится он только переключателем. */
+  interface FeatureEffectRow {
+    key: string;
+    featureId: string;
+    effectId: string;
+    name: string;
+    icon: string;
+    sourceName: string;
+    description: string;
+    disabled: boolean;
+    rowClass: string;
+  }
+
+  /**
+   * Строки эффектов умений, черт, вида и класса: правке они не подлежат —
+   * приезжают из справочника с самой записью, — поэтому в строке только
+   * источник, описание и переключатель.
+   */
+  const featureRows = computed<FeatureEffectRow[]>(() =>
+    featureEffects.value.map((entry) => ({
+      key: `${entry.featureId}:${entry.effect.id}`,
+      featureId: entry.featureId,
+      effectId: entry.effect.id,
+      name: entry.effect.name,
+      icon: entry.effect.icon || SHEET_EFFECT_FALLBACK_ICON,
+      sourceName: entry.sourceName,
+      description:
+        entry.effect.description
+        || describeActiveEffect(entry.effect)
+        || SHEET_EFFECT_LABELS.noDescription,
+      disabled: entry.effect.disabled,
+      rowClass: entry.effect.disabled ? 'opacity-50 grayscale' : '',
     })),
   );
 
@@ -84,6 +121,10 @@
 
   function handleEdit(effectId: string) {
     emit('edit-effect', effectId);
+  }
+
+  function handleToggleFeatureEffect(row: FeatureEffectRow) {
+    toggleFeatureEffectDisabled(row.featureId, row.effectId);
   }
 
   function handleToggleCondition(key: EffectConditionKey) {
@@ -192,6 +233,50 @@
             @click.left.exact.prevent="handleRemove(row.id)"
           />
         </div>
+      </div>
+    </section>
+
+    <!-- От умений и черт: снять нельзя, выключить можно -->
+    <section class="flex flex-col gap-2">
+      <h3 class="text-sm font-semibold text-highlighted">
+        {{ SHEET_EFFECT_LABELS.featureTitle }}
+      </h3>
+
+      <p
+        v-if="!featureRows.length"
+        class="rounded-lg border border-dashed border-default/60 px-3 py-4 text-sm text-muted"
+      >
+        {{ SHEET_EFFECT_LABELS.featureEmpty }}
+      </p>
+
+      <div
+        v-for="row in featureRows"
+        :key="row.key"
+        class="flex items-start gap-2 rounded-lg border border-default/50 bg-elevated/20 px-3 py-2"
+        :class="row.rowClass"
+      >
+        <UIcon
+          :name="row.icon"
+          class="mt-0.5 size-5 shrink-0 text-muted"
+        />
+
+        <div class="flex min-w-0 grow flex-col">
+          <span class="truncate text-sm font-medium text-highlighted">
+            {{ row.name }}
+          </span>
+
+          <span class="text-xs text-toned">{{ row.sourceName }}</span>
+
+          <span class="text-xs text-muted">{{ row.description }}</span>
+        </div>
+
+        <USwitch
+          :model-value="!row.disabled"
+          size="sm"
+          class="shrink-0"
+          :aria-label="SHEET_EFFECT_LABELS.toggle"
+          @update:model-value="handleToggleFeatureEffect(row)"
+        />
       </div>
     </section>
 

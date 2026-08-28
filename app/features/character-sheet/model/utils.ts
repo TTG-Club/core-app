@@ -7902,6 +7902,46 @@ export function matchesFeatureFilter(
 }
 
 /**
+ * Особенности с переключённым эффектом умения: эффект по идентификатору
+ * выключается или включается обратно.
+ *
+ * Снимок пассивных бонусов записи пересобирается по оставшимся включённым
+ * эффектам: числовые изменения лежат в записи отдельно от самого эффекта
+ * (считаются один раз, при получении умения), и без пересборки выключенный
+ * эффект продолжал бы двигать лист своими прибавками.
+ *
+ * @param features особенности персонажа.
+ * @param featureId идентификатор особенности, которой принадлежит эффект.
+ * @param effectId идентификатор переключаемого эффекта.
+ * @returns новый список особенностей.
+ */
+export function withToggledFeatureEffect(
+  features: CharacterFeature[],
+  featureId: string,
+  effectId: string,
+): CharacterFeature[] {
+  return features.map((feature) => {
+    if (feature.id !== featureId || !feature.activeEffects?.length) {
+      return feature;
+    }
+
+    const activeEffects = feature.activeEffects.map((effect) =>
+      effect.id === effectId
+        ? { ...effect, disabled: !effect.disabled }
+        : effect,
+    );
+
+    const bonuses = toInventoryBonusesFromEffects(activeEffects);
+
+    return {
+      ...feature,
+      activeEffects,
+      bonuses: bonuses.length ? bonuses : undefined,
+    };
+  });
+}
+
+/**
  * Идентификатор особенности персонажа по происхождению и URL особенности.
  *
  * @param origin происхождение особенности.

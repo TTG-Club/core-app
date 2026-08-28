@@ -1,17 +1,20 @@
 /**
- * Активные эффекты листа персонажа: свои, от снаряжения и состояния.
+ * Активные эффекты листа персонажа: свои, от умений, от снаряжения и состояния.
  *
  * Свои эффекты живут в документе персонажа и правятся игроком. Эффекты
  * снаряжения читаются у надетых предметов и правке не подлежат — они приезжают
- * со своей записью каталога. Состояния (Отравленный, Опутанный) — те же свои
- * эффекты, только собранные из шаблона состояния: у них задан `conditionKey`,
- * по нему их и отличают.
+ * со своей записью каталога; эффекты умений, черт, вида и класса лежат в самих
+ * записях особенностей и правятся так же мало, зато их можно выключить.
+ * Состояния (Отравленный, Опутанный) — те же свои эффекты, только собранные из
+ * шаблона состояния: у них задан `conditionKey`, по нему их и отличают.
  *
  * Зеркало `useEntityActiveEffects` из системы D&D, поэтому набор действий тот
  * же: сохранить, удалить, выключить, переключить состояние.
  */
 
 import type { ActiveEffect, EffectConditionKey } from '~active-effects/model';
+
+import type { CharacterFeature } from '../model';
 
 import {
   createEmptyActiveEffect,
@@ -21,12 +24,31 @@ import {
 import { useCharacterSheet } from './useCharacterSheet';
 
 /**
+ * Подпись источника эффекта умения: сперва запись, которая его дала, затем сама
+ * особенность. У записи под эффекты самого класса или вида название и источник
+ * совпадают — тогда подпись одна.
+ *
+ * @param feature особенность с эффектом.
+ * @returns подпись источника для строки списка.
+ */
+function getFeatureEffectSource(feature: CharacterFeature): string {
+  return feature.originName && feature.originName !== feature.name
+    ? `${feature.originName} · ${feature.name}`
+    : feature.name;
+}
+
+/**
  * Ведение активных эффектов листа.
  *
  * @returns свои эффекты, эффекты снаряжения, состояния и действия над ними.
  */
 export function useSheetActiveEffects() {
-  const { character, canEdit, updateActiveEffects } = useCharacterSheet();
+  const {
+    character,
+    canEdit,
+    updateActiveEffects,
+    toggleFeatureEffectDisabled,
+  } = useCharacterSheet();
 
   /** Свои эффекты персонажа — всё, что не собрано из шаблона состояния. */
   const customEffects = computed(() =>
@@ -64,6 +86,25 @@ export function useSheetActiveEffects() {
           .filter((effect) => !effect.disabled)
           .map((effect) => ({ effect, sourceName: item.name })),
       ),
+  );
+
+  /**
+   * Эффекты умений, черт, вида и класса — тем же списком, что и свои.
+   *
+   * Правке не подлежат: приезжают из справочника вместе с самой записью и
+   * снимаются только вместе с ней. Выключить их всё же можно — эффект «Защиты
+   * без доспехов» не нужен персонажу в доспехе, а само умение при этом
+   * остаётся на месте. Выключенные показываются наравне с включёнными: иначе
+   * вернуть их было бы нечем.
+   */
+  const featureEffects = computed(() =>
+    character.value.features.flatMap((feature) =>
+      (feature.activeEffects ?? []).map((effect) => ({
+        effect,
+        featureId: feature.id,
+        sourceName: getFeatureEffectSource(feature),
+      })),
+    ),
   );
 
   /**
@@ -169,10 +210,12 @@ export function useSheetActiveEffects() {
     conditionEffects,
     activeConditionKeys,
     equipmentEffects,
+    featureEffects,
     isConditionActive,
     saveEffect,
     removeEffect,
     toggleEffectDisabled,
+    toggleFeatureEffectDisabled,
     toggleCondition,
   };
 }

@@ -4573,6 +4573,8 @@ export const SHEET_EFFECT_LABELS = {
     + 'в режиме броска: преимущество, помеха, автопровал.',
   equipmentTitle: 'От снаряжения',
   equipmentEmpty: 'Надетое снаряжение эффектов не даёт',
+  featureTitle: 'От умений и черт',
+  featureEmpty: 'Умения, черты, вид и класс эффектов не дают',
   conditionsTitle: 'Состояния',
   add: 'Добавить эффект',
   edit: 'Редактировать эффект',
