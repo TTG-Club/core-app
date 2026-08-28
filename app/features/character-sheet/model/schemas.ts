@@ -13,6 +13,7 @@ import type {
   ClassOption,
   ClassSummary,
   ClassTableColumn,
+  CounterRecovery,
   FeatAbilityBonusOption,
   FeatCatalogItem,
   FeatCounter,
@@ -64,6 +65,7 @@ import {
   ABILITY_LABELS,
   ABILITY_ORDER,
   ABILITY_VARIANT_CHOICE_ID_SEGMENT,
+  API_SHORT_REST_ONE_RECOVERY,
   API_SHORT_REST_RECOVERY,
   ARMOR_GROUP_BY_API_CATEGORY,
   ARMOR_PROFICIENCY_GROUPS,
@@ -224,6 +226,8 @@ const mechanicsCountersSchema = z
         .array(z.object({ level: z.number(), max: z.number() }))
         .nullable()
         .catch(null),
+      // Нижняя граница максимума; у записей до неё поля нет
+      min: z.number().nullable().catch(null),
       recovery: z.string().nullable().catch(null),
     }),
   )
@@ -1370,13 +1374,32 @@ function toMechanicCounters(counters: FeatCountersResponse): FeatCounter[] {
         // Ступени приходят как есть: порядок задаёт справочник, а выбор нужной
         // делает лист по уровню персонажа
         scaling: counter.scaling ?? [],
-        recovery:
-          counter.recovery === API_SHORT_REST_RECOVERY
-            ? 'short-rest'
-            : 'long-rest',
+        // Отрицательная граница ничего не описывает: ресурса меньше чем на ноль
+        // зарядов не бывает
+        min: Math.max(0, counter.min ?? 0),
+        recovery: toCounterRecovery(counter.recovery),
       },
     ];
   });
+}
+
+/**
+ * Вид отката ресурса из механики справочника в вид листа.
+ *
+ * Неизвестное значение читается как продолжительный отдых — так
+ * восстанавливается большинство ресурсов.
+ *
+ * @param recovery откат из ответа справочника.
+ * @returns вид отката ресурса на листе.
+ */
+function toCounterRecovery(recovery: string | null): CounterRecovery {
+  if (recovery === API_SHORT_REST_RECOVERY) {
+    return 'short-rest';
+  }
+
+  return recovery === API_SHORT_REST_ONE_RECOVERY
+    ? 'short-rest-one'
+    : 'long-rest';
 }
 
 /**
@@ -2297,6 +2320,14 @@ const classDetailSchema = z.object({
   casterType: z.nativeEnum(CasterType).nullable().catch(null),
   table: z.array(classTableColumnSchema).catch([]),
   features: z.array(classFeatureSchema).catch([]),
+  // Дары самой записи класса: листу из них нужны ресурсы — ярость и очки
+  // чародейства заводят у класса целиком, а не у одного его умения.
+  mechanics: z
+    .object({
+      counters: mechanicsCountersSchema,
+    })
+    .nullable()
+    .catch(null),
   // Разбирается отдельной функцией: то же поле есть и у предыстории.
   startingEquipment: z.unknown().optional(),
   activeEffects: z.unknown().nullish(),
@@ -2396,6 +2427,7 @@ function toClassSummary(
     proficiencyText: detail.proficiency,
     table,
     features,
+    counters: toMechanicCounters(detail.mechanics?.counters ?? []),
     startingEquipment: toStartingEquipmentOptions(detail.startingEquipment),
     activeEffects: normalizeLoadedActiveEffects(detail.activeEffects),
   };

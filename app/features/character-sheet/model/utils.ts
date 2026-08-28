@@ -51,6 +51,7 @@ import type {
   ClassResourceRecoveryBadge,
   ClassSummary,
   ClassTableColumn,
+  CounterRecovery,
   CurrencyKey,
   CustomArmorType,
   CustomBonusClassSource,
@@ -231,6 +232,7 @@ import {
   CLASSES_LABEL_SEPARATOR,
   COINS_PER_WEIGHT_UNIT,
   CONDITION_LABELS,
+  COUNTER_SHORT_REST_ONE_AMOUNT,
   CREATURE_TYPE_LABELS,
   CURRENCY_AMOUNT_MAX,
   CURRENCY_AMOUNT_MIN,
@@ -5756,23 +5758,46 @@ export function getResourceMax(
     return resource.max;
   }
 
-  const { source, ability, offset, multiplier, scaling } = resource.maxRule;
+  const { source, ability, offset, multiplier, scaling, min } =
+    resource.maxRule;
 
   // Ступень старше источника: ряд, который формулой не пишется, задан ею же и
   // точнее любого выражения
   const scaled = getScaledCounterMax(scaling ?? [], character.level);
 
   if (scaled !== null) {
-    return scaled;
+    return withResourceMinimum(scaled, min);
   }
 
   const base = getResourceMaxBase(character, source, ability);
 
-  return clamp(
-    base * (multiplier ?? 1) + offset,
-    RESOURCE_COUNT_MIN,
-    RESOURCE_COUNT_MAX,
+  return withResourceMinimum(
+    clamp(
+      base * (multiplier ?? 1) + offset,
+      RESOURCE_COUNT_MIN,
+      RESOURCE_COUNT_MAX,
+    ),
+    min,
   );
+}
+
+/**
+ * Максимум с оглядкой на нижнюю границу правила.
+ *
+ * Граница подпирает расчёт снизу, а не складывается с ним: вдохновение барда
+ * равно модификатору Харизмы, но не меньше одного — с Харизмой +0 вдохновение
+ * одно, а с Харизмой +2 их два, а не три.
+ *
+ * @param max посчитанный максимум.
+ * @param min нижняя граница максимума; 0 или нет — границы нет.
+ * @returns максимум не ниже границы.
+ */
+function withResourceMinimum(max: number, min: number | undefined): number {
+  if (!min || min <= RESOURCE_COUNT_MIN) {
+    return max;
+  }
+
+  return Math.max(max, clamp(min, RESOURCE_COUNT_MIN, RESOURCE_COUNT_MAX));
 }
 
 /**
@@ -5845,7 +5870,7 @@ export function withFeatResources(
     (feature.counters ?? []).map((counter) => {
       // Ресурсу со ступенями формула не нужна вовсе, но правило нужно: без
       // него максимум замер бы числом и не вырос на следующем уровне
-      const maxRule = counter.scaling.length
+      const parsedRule = counter.scaling.length
         ? {
             source: 'fixed' as const,
             ability: RESOURCE_MAX_DEFAULT_ABILITY,
@@ -5853,6 +5878,13 @@ export function withFeatResources(
             scaling: counter.scaling,
           }
         : parseResourceMaxFormula(counter.max);
+
+      // Нижняя граница живёт в правиле: по нему максимум пересчитывается на
+      // каждом повышении уровня, и мимо правила она бы туда не попала
+      const maxRule =
+        parsedRule && counter.min > 0
+          ? { ...parsedRule, min: counter.min }
+          : parsedRule;
 
       const id = `${FEAT_RESOURCE_ID_PREFIX}${feature.id}:${counter.key}`;
 
@@ -5865,12 +5897,7 @@ export function withFeatResources(
         shortLabel:
           counter.shortName
           || counter.name.slice(0, RESOURCE_SHORT_LABEL_MAX_LENGTH),
-        // Ресурс восстанавливает ровно один вид отдыха — тот, что назван в
-        // механике; второй его не касается.
-        shortRest: {
-          mode: counter.recovery === 'short-rest' ? 'all' : 'none',
-          amount: RESOURCE_RECOVERY_AMOUNT_MIN,
-        },
+        shortRest: getCounterShortRestRule(counter.recovery),
         longRest: {
           // Короткий отдых в правилах короче продолжительного: ресурс,
           // восстанавливаемый коротким, продолжительным восстанавливается тоже.
@@ -5885,7 +5912,7 @@ export function withFeatResources(
       const max = maxRule
         ? getResourceMax(character, base)
         : clamp(
-            Number(counter.max) || 1,
+            Math.max(Number(counter.max) || 1, counter.min),
             RESOURCE_COUNT_MIN,
             RESOURCE_COUNT_MAX,
           );
@@ -5899,6 +5926,31 @@ export function withFeatResources(
   );
 
   return [...manual, ...fromFeatures];
+}
+
+/**
+ * Что возвращает ресурсу справочника короткий отдых.
+ *
+ * Продолжительный отдых возвращает ресурс целиком в любом случае — он в
+ * правилах длиннее короткого, — а короткий либо не возвращает ничего, либо
+ * возвращает всё, либо один заряд («Второе дыхание» и вдохновение барда правил
+ * 2024 года).
+ *
+ * @param recovery вид отката из механики справочника.
+ * @returns правило короткого отдыха.
+ */
+function getCounterShortRestRule(
+  recovery: CounterRecovery,
+): ResourceRecoveryRule {
+  if (recovery === 'short-rest') {
+    return { mode: 'all', amount: RESOURCE_RECOVERY_AMOUNT_MIN };
+  }
+
+  if (recovery === 'short-rest-one') {
+    return { mode: 'amount', amount: COUNTER_SHORT_REST_ONE_AMOUNT };
+  }
+
+  return { mode: 'none', amount: RESOURCE_RECOVERY_AMOUNT_MIN };
 }
 
 /**
@@ -10325,8 +10377,8 @@ function collectClassFeatures(
   }
 
   return [
-    // Эффекты самого класса приходят с первым же его умением: они действуют,
-    // пока класс взят, и снимаются вместе с ним, как и умения
+    // Эффекты и ресурсы самого класса приходят с первым же его умением: они
+    // действуют, пока класс взят, и снимаются вместе с ним, как и умения
     ...buildClassOwnEffectFeature(base, matchesLevel),
     ...(subclass
       ? buildClassOwnEffectFeature(subclass, matchesLevel, base)
@@ -10336,11 +10388,12 @@ function collectClassFeatures(
 }
 
 /**
- * Запись листа под эффекты самой записи класса или подкласса.
+ * Запись листа под дары самой записи класса или подкласса: эффекты и ресурсы
+ * со счётчиком.
  *
- * Отдельной записью, а не приписыванием к первому умению: эффекты даёт взятие
+ * Отдельной записью, а не приписыванием к первому умению: их даёт взятие
  * класса целиком, и приписать их одному умению значило бы соврать об источнике.
- * Записи нет, когда эффектов нет.
+ * Записи нет, когда давать нечего.
  *
  * Появляется только на первом уровне класса: на каждом следующем она добавилась
  * бы второй копией — идентификатор у неё один и тот же.
@@ -10356,7 +10409,10 @@ function buildClassOwnEffectFeature(
   matchesLevel: (featureLevel: number) => boolean,
   owner?: ClassSummary,
 ): CharacterFeature[] {
-  if (summary.activeEffects.length === 0 || !matchesLevel(CLASS_FIRST_LEVEL)) {
+  const hasGrants =
+    summary.activeEffects.length > 0 || summary.counters.length > 0;
+
+  if (!hasGrants || !matchesLevel(CLASS_FIRST_LEVEL)) {
     return [];
   }
 
@@ -10370,7 +10426,12 @@ function buildClassOwnEffectFeature(
       level: CLASS_FIRST_LEVEL,
       choice: null,
       bonuses: toInventoryBonusesFromEffects(summary.activeEffects),
-      activeEffects: [...summary.activeEffects],
+      activeEffects: summary.activeEffects.length
+        ? [...summary.activeEffects]
+        : undefined,
+      // Ресурсы кладутся в запись снимком, как у черты: панель ресурсов
+      // пересобирает их отсюда, а не ходит за ними в справочник
+      ...(summary.counters.length ? { counters: [...summary.counters] } : {}),
     },
   ];
 }

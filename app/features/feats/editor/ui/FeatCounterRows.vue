@@ -2,6 +2,8 @@
   import type { FeatCounterRow, FeatEditorLabelOverrides } from '../../model';
 
   import {
+    COUNTER_MINIMUM_MAX,
+    COUNTER_MINIMUM_MIN,
     createCounterRow,
     FEAT_COUNTER_RECOVERY_OPTIONS,
     getFeatEditorLabels,
@@ -96,7 +98,7 @@
       class="grid grid-cols-1 items-end gap-3 rounded-lg bg-elevated/40 p-2 md:grid-cols-24"
     >
       <UFormField
-        class="md:col-span-8"
+        class="md:col-span-6"
         :label="texts.counterName"
       >
         <UInput
@@ -106,14 +108,14 @@
       </UFormField>
 
       <UFormField
-        class="md:col-span-4"
+        class="md:col-span-3"
         :label="texts.counterShortName"
       >
         <UInput v-model="counter.shortName" />
       </UFormField>
 
       <UFormField
-        class="md:col-span-4"
+        class="md:col-span-3"
         :label="texts.counterMax"
       >
         <UInput
@@ -122,8 +124,22 @@
         />
       </UFormField>
 
+      <!-- Нижняя граница максимума: вдохновение барда равно модификатору
+        Харизмы, но с Харизмой +0 бард всё равно вдохновляет один раз -->
       <UFormField
-        class="md:col-span-7"
+        class="md:col-span-3"
+        :label="texts.counterMin"
+      >
+        <UInputNumber
+          v-model="counter.min"
+          :min="COUNTER_MINIMUM_MIN"
+          :max="COUNTER_MINIMUM_MAX"
+          class="w-full"
+        />
+      </UFormField>
+
+      <UFormField
+        class="md:col-span-8"
         :label="texts.counterRecovery"
       >
         <USelect

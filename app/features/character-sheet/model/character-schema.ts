@@ -203,7 +203,14 @@ const featCounterSchema = z.object({
     .array(z.object({ level: z.number(), max: z.number() }))
     .catch([])
     .default([]),
-  recovery: z.enum(['short-rest', 'long-rest']).catch('long-rest'),
+  // Нижняя граница максимума; у снимков до неё поля нет — такой ресурс
+  // считался одной формулой, ею и останется
+  min: z.coerce.number().catch(0).default(0),
+  // «Один заряд коротким, все продолжительным» появилось позже двух видов
+  // отдыха: у снимков до него такого отката нет
+  recovery: z
+    .enum(['short-rest', 'long-rest', 'short-rest-one'])
+    .catch('long-rest'),
 });
 
 /**
@@ -790,6 +797,9 @@ const resourceMaxRuleSchema = z.object({
     .array(z.object({ level: z.number(), max: z.number() }))
     .optional()
     .catch(undefined),
+  // Нижней границы у правил, сохранённых до неё, нет: такой ресурс считался
+  // одним источником с прибавкой, им и останется
+  min: z.coerce.number().optional().catch(undefined),
 });
 
 /**

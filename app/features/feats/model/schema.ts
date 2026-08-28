@@ -169,7 +169,12 @@ const counterSchema = z.object({
   shortName: z.string().optional(),
   max: z.string().optional(),
   scaling: z.array(counterScalingSchema).optional(),
-  recovery: z.enum(['SHORT_REST', 'LONG_REST']).default('LONG_REST'),
+  // Нижняя граница максимума появилась позже: у записей до неё поля нет — такой
+  // ресурс считается одной формулой, как считался раньше
+  min: z.number().optional(),
+  recovery: z
+    .enum(['SHORT_REST', 'LONG_REST', 'SHORT_REST_ONE'])
+    .default('LONG_REST'),
 });
 
 // Выдаваемое заклинание — та же ссылка плюс уровень, с которого оно доступно.
@@ -390,6 +395,7 @@ function toFeatMechanicsState(
       shortName: counter.shortName ?? '',
       max: counter.max ?? '',
       scaling: counter.scaling ?? [],
+      min: counter.min ?? 0,
       recovery: counter.recovery,
     })),
     feats: (parsed.feats ?? []).map((feat) => ({ ...feat })),

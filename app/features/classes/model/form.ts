@@ -1,7 +1,11 @@
 import type { ActiveEffect } from '~active-effects/model';
 import type { FeatEditorRows, FeatMechanics } from '~feats/model';
 
-import type { ClassCreate, ClassFeatureCreate } from './create';
+import type {
+  ClassColumnCreate,
+  ClassCreate,
+  ClassFeatureCreate,
+} from './create';
 
 import { z } from 'zod';
 
@@ -192,6 +196,27 @@ function transformFeature(feature: ClassFeatureCreate): ClassFeatureCreate {
 }
 
 /**
+ * Приводит колонку таблицы к полям, которые правит форма.
+ *
+ * Колонка собирается заново, а не копией с правками: у записи, сохранённой
+ * раньше, в ней лежат поля ресурса (`resourceRecovery`, `shortName`), формы у
+ * них больше нет, и копия увезла бы их назад. Ресурс класса теперь заводится
+ * строкой ресурса в дарах, и колонка, оставшаяся ресурсом, дала бы на листе
+ * второй такой же счётчик.
+ *
+ * @param column колонка из состояния формы.
+ * @returns колонка для тела запроса.
+ */
+function transformColumn(column: ClassColumnCreate): ClassColumnCreate {
+  return {
+    name: column.name,
+    scaling: column.scaling,
+    key: column.key,
+    purpose: column.purpose,
+  };
+}
+
+/**
  * Чистит состояние формы класса перед отправкой.
  *
  * @param state состояние формы.
@@ -201,6 +226,7 @@ export function transformClassBeforeSubmit(state: ClassCreate): ClassCreate {
   return {
     ...state,
     editorRows: undefined,
+    table: state.table.map(transformColumn),
     mechanics: buildMechanics(state),
     // Эффекты чистит общий нормализатор раздела: он же обслуживает черты,
     // заклинания и магические предметы, поэтому правило «что считать пустым»

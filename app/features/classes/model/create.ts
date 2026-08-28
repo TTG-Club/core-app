@@ -3,8 +3,6 @@ import type { ActiveEffect } from '~active-effects/model';
 import type { FeatEditorRows, FeatMechanics } from '~feats/model';
 import type { EditorBaseInfoState, EquipmentOptionCreate } from '~ui/editor';
 
-import type { ClassResourceRecovery } from './detail';
-
 /**
  * Что колонка таблицы прогрессии означает для мастера повышения уровня.
  *
@@ -104,20 +102,25 @@ export interface ClassColumnScalingCreate {
   value: string;
 }
 
+/**
+ * Колонка таблицы прогрессии.
+ *
+ * Ресурсом колонка больше не бывает: ярость, кости превосходства и применения
+ * «Второго дыхания» заводятся строкой ресурса в дарах класса или его умения —
+ * там у ресурса есть и формула максимума, и нижняя граница, и порция короткого
+ * отдыха, которых у колонки не было. Колонка осталась тем, чем и была в
+ * книге, — рядом значений по уровням.
+ */
 export interface ClassColumnCreate {
   name: string;
-  resourceRecovery: ClassResourceRecovery;
   scaling: Array<ClassColumnScalingCreate>;
 
   /**
    * Стабильный ключ колонки. Пусто — ключ выводится из подписи, как было до его
-   * появления; заполняют его, когда подпись переводят или меняют: по ключу лист
-   * хранит потраченный остаток ресурса, и перевод не должен обнулять счётчики.
+   * появления; заполняют его, когда подпись переводят или меняют: по ключу
+   * колонку узнаёт потребитель таблицы.
    */
   key: string | undefined;
-
-  /** Краткая подпись для компактной плитки ресурса; пусто — берётся название. */
-  shortName: string | undefined;
 
   /** Что колонка означает для мастера повышения уровня. */
   purpose: ClassTableColumnPurpose | undefined;

@@ -650,6 +650,12 @@ export const FEAT_RESOURCE_ID_PREFIX = 'feat:res:';
 /** Значение короткого отдыха в механике справочника. */
 export const API_SHORT_REST_RECOVERY = 'SHORT_REST';
 
+/**
+ * Значение «один заряд коротким отдыхом, все — продолжительным» в механике
+ * справочника: так восстанавливаются «Второе дыхание» и вдохновение барда.
+ */
+export const API_SHORT_REST_ONE_RECOVERY = 'SHORT_REST_ONE';
+
 /** Обозначение бонуса мастерства в формуле максимума ресурса. */
 export const RESOURCE_FORMULA_PROFICIENCY = '@prof';
 
@@ -710,6 +716,22 @@ export const RESOURCE_MAX_OFFSET_LABEL = 'Прибавка';
 /** Подпись поля характеристики, чей модификатор идёт в максимум. */
 export const RESOURCE_MAX_ABILITY_LABEL = 'Характеристика';
 
+/** Подпись поля нижней границы максимума. */
+export const RESOURCE_MAX_MINIMUM_LABEL = 'Минимум';
+
+/**
+ * Подсказка к нижней границе максимума: она подпирает расчёт снизу, а не
+ * складывается с ним.
+ */
+export const RESOURCE_MAX_MINIMUM_HINT =
+  'Сколько зарядов есть в любом случае: вдохновение барда равно модификатору Харизмы, но не меньше одного.';
+
+/** Наименьшая нижняя граница максимума: ноль — границы нет. */
+export const RESOURCE_MAX_MINIMUM_MIN = 0;
+
+/** Наибольшая нижняя граница максимума. */
+export const RESOURCE_MAX_MINIMUM_MAX = 20;
+
 /** Подпись строки, объясняющей посчитанный максимум. */
 export const RESOURCE_MAX_COMPUTED_LABEL = 'Сейчас максимум';
 
@@ -746,6 +768,13 @@ export const RESOURCE_COUNT_MAX = 99;
 
 /** Минимальное число зарядов, возвращаемых отдыхом. */
 export const RESOURCE_RECOVERY_AMOUNT_MIN = 1;
+
+/**
+ * Сколько зарядов возвращает короткий отдых ресурсу с откатом «один заряд
+ * коротким, все продолжительным»: ровно один — так написано у «Второго
+ * дыхания» и вдохновения барда.
+ */
+export const COUNTER_SHORT_REST_ONE_AMOUNT = 1;
 
 /** Максимальная длина короткой подписи ресурса. */
 export const RESOURCE_SHORT_LABEL_MAX_LENGTH = 4;

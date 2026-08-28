@@ -5,7 +5,6 @@
 
   import {
     CLASS_EDITOR_LABELS,
-    CLASS_RESOURCE_RECOVERY_OPTIONS,
     CLASS_TABLE_COLUMN_PURPOSE_OPTIONS,
   } from '../../model';
   import { TableColumnScaling } from './table';
@@ -19,10 +18,8 @@
   function getEmptyColumn(): ClassColumnCreate {
     return {
       name: '',
-      resourceRecovery: 'NONE',
       scaling: [],
       key: undefined,
-      shortName: undefined,
       purpose: 'NONE',
     };
   }
@@ -60,18 +57,6 @@
 
             <UFormField
               class="col-span-full md:col-span-8"
-              label="Восстановление ресурса"
-              name="resourceRecovery"
-            >
-              <USelect
-                v-model="column.resourceRecovery"
-                :items="CLASS_RESOURCE_RECOVERY_OPTIONS"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField
-              class="col-span-full md:col-span-8"
               :label="CLASS_EDITOR_LABELS.columnPurpose"
               :help="CLASS_EDITOR_LABELS.columnPurposeHint"
               name="purpose"
@@ -80,18 +65,6 @@
                 v-model="column.purpose"
                 :items="CLASS_TABLE_COLUMN_PURPOSE_OPTIONS"
                 class="w-full"
-              />
-            </UFormField>
-
-            <UFormField
-              class="col-span-full md:col-span-8"
-              :label="CLASS_EDITOR_LABELS.columnShortName"
-              :help="CLASS_EDITOR_LABELS.columnShortNameHint"
-              name="shortName"
-            >
-              <UInput
-                v-model="column.shortName"
-                placeholder="Например: Ярость"
               />
             </UFormField>
 

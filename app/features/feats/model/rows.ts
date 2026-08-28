@@ -744,6 +744,7 @@ export function createCounterRow(takenKeys: Array<string>): FeatCounterRow {
     shortName: '',
     max: '@prof',
     scaling: [],
+    min: 0,
     recovery: 'LONG_REST',
   };
 }
@@ -1952,6 +1953,9 @@ export function fromFeatEditorRows(
     scaling: row.scaling
       .filter((step) => step.level > 0 && step.max > 0)
       .sort((left, right) => left.level - right.level),
+    // Отрицательная нижняя граница ничего не описывает: ресурса меньше чем на
+    // ноль зарядов не бывает
+    min: Math.max(0, Math.trunc(row.min)),
     recovery: row.recovery,
   }));
 

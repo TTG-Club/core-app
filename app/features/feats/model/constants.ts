@@ -329,10 +329,20 @@ export function parseFeatSpellLevelValue(value: string): {
   return { mode: 'ANY', level: undefined };
 }
 
+/** Нижняя граница максимума ресурса: ноль — границы нет. */
+export const COUNTER_MINIMUM_MIN = 0;
+
+/** Наибольшая нижняя граница максимума: выше неё запас уже не «минимум». */
+export const COUNTER_MINIMUM_MAX = 20;
+
 /** Когда ресурс черты восстанавливается. */
 export const FEAT_COUNTER_RECOVERY_OPTIONS: Array<SelectOption> = [
   { value: 'SHORT_REST', label: 'Короткий отдых' },
   { value: 'LONG_REST', label: 'Продолжительный отдых' },
+  {
+    value: 'SHORT_REST_ONE',
+    label: 'Один заряд на коротком, все на продолжительном',
+  },
 ];
 
 /**
@@ -473,13 +483,16 @@ export const FEAT_EDITOR_LABELS = {
     + '«Максимум» так и пишут: @prof — бонус мастерства, @level — уровень '
     + 'персонажа, можно и просто число, а ещё умножить: @level * 5. Если ряд '
     + 'формулой не пишется — 4 кости с 3 уровня, 5 с 7, 6 с 15, — заводят '
-    + 'ступени: они старше формулы.',
+    + 'ступени: они старше формулы. «Минимум» подпирает формулу снизу: '
+    + 'вдохновение барда равно модификатору Харизмы, но не меньше одного, и с '
+    + 'Харизмой +0 бард всё равно вдохновляет один раз.',
   countersEmpty: 'Ресурсов нет.',
   addCounter: 'Добавить ресурс',
   counterName: 'Название',
   counterNamePlaceholder: 'Очки удачи',
   counterShortName: 'Кратко',
   counterMax: 'Максимум',
+  counterMin: 'Минимум',
   counterRecovery: 'Восстановление',
   counterScalingTitle: 'Ступени по уровням',
   counterScalingEmpty: 'Ступеней нет — максимум считается формулой.',
