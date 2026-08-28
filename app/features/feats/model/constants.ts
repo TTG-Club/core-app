@@ -329,6 +329,18 @@ export function parseFeatSpellLevelValue(value: string): {
   return { mode: 'ANY', level: undefined };
 }
 
+/** Наименьший уровень персонажа: с него начинается ступень роста. */
+export const CLASS_LEVEL_MIN = 1;
+
+/** Наибольший уровень персонажа: дальше таблица прогрессии не идёт. */
+export const CLASS_LEVEL_MAX = 20;
+
+/** Наименьшее количество в ступени роста выбора: ноль выбором не является. */
+export const CHOICE_COUNT_MIN = 1;
+
+/** Наибольшее количество в ступени роста выбора. */
+export const CHOICE_COUNT_MAX = 20;
+
 /** Нижняя граница максимума ресурса: ноль — границы нет. */
 export const COUNTER_MINIMUM_MIN = 0;
 
@@ -497,6 +509,20 @@ export const FEAT_EDITOR_LABELS = {
   counterShortName: 'Кратко',
   counterMax: 'Максимум',
   counterMin: 'Минимум',
+  choiceScalingTitle: 'Рост по уровням',
+  choiceScalingEmpty:
+    'Ступеней нет — количество не растёт и берётся из поля «Сколько».',
+  addChoiceScaling: 'Добавить ступень',
+  choiceScalingLevel: 'С уровня',
+  choiceScalingCount: 'Всего',
+  choiceShowInTable: 'Указать в таблице',
+  choiceShowInTableHint:
+    'Количество станет колонкой таблицы прогрессии класса: ряд по уровням '
+    + 'соберётся из ступеней — набирать его колонкой не нужно.',
+  choiceShortName: 'Подпись колонки',
+  choiceShortNameHint:
+    'Что писать в шапке таблицы: «Приёмы» вместо вопроса игроку. Пусто — '
+    + 'берётся подпись выбора.',
   counterShowInTable: 'Указать в таблице',
   counterShowInTableHint:
     'Ресурс станет колонкой таблицы прогрессии класса: ряд по уровням соберётся '

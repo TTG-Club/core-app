@@ -98,6 +98,13 @@ const choiceSchema = z.object({
   expertiseIfProficient: z.boolean().optional(),
   rechooseOnLongRest: z.boolean().optional(),
   requiredLevel: z.number().optional(),
+  // Ступени количества, показ колонкой и её подпись появились позже: у записей
+  // до них полей нет — такой выбор количество не растит и колонкой не рисуется
+  scaling: z
+    .array(z.object({ level: z.number(), count: z.number() }))
+    .optional(),
+  showInTable: z.boolean().optional(),
+  shortName: z.string().optional(),
 });
 
 const hitPointsSchema = z.object({
@@ -329,6 +336,9 @@ function toFeatMechanicsState(
       expertiseIfProficient: choice.expertiseIfProficient ?? false,
       rechooseOnLongRest: choice.rechooseOnLongRest ?? false,
       requiredLevel: choice.requiredLevel,
+      scaling: choice.scaling,
+      showInTable: choice.showInTable,
+      shortName: choice.shortName,
     })),
     modifiers: {
       hitPoints: {

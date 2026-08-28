@@ -10,6 +10,10 @@
   import { InfoTooltip } from '~ui/tooltip';
 
   import {
+    CHOICE_COUNT_MAX,
+    CHOICE_COUNT_MIN,
+    CLASS_LEVEL_MAX,
+    CLASS_LEVEL_MIN,
     createGrantRow,
     FEAT_CHOICE_GRANT_OPTIONS,
     FEAT_GRANT_KIND_LABELS,
@@ -210,6 +214,34 @@
       ...model.value,
       createGrantRow('SKILL', getTakenChoiceKeys(rows)),
     ];
+  }
+
+  /**
+   * Заводит ступень роста: следующая начинается уровнем позже последней и даёт
+   * на один выбор больше.
+   *
+   * @param row строка дара.
+   */
+  function addScaling(row: FeatGrantRow) {
+    const last = row.scaling.at(-1);
+
+    row.scaling = [
+      ...row.scaling,
+      {
+        level: Math.min(CLASS_LEVEL_MAX, (last?.level ?? 0) + 1),
+        count: Math.min(CHOICE_COUNT_MAX, (last?.count ?? row.count ?? 0) + 1),
+      },
+    ];
+  }
+
+  /**
+   * Убирает ступень роста.
+   *
+   * @param row строка дара.
+   * @param index номер ступени.
+   */
+  function removeScaling(row: FeatGrantRow, index: number) {
+    row.scaling = row.scaling.filter((_, position) => position !== index);
   }
 
   /**
@@ -441,6 +473,96 @@
                   :max="20"
                   class="w-full"
                   :aria-label="texts.choiceRequiredLevel"
+                />
+              </UFormField>
+            </div>
+
+            <!-- Рост по уровням: оружейных приёмов у воина три с первого уровня,
+              четыре с четвёртого, пять с десятого. Ступень называет, сколько
+              всего выбрано к этому уровню, а не сколько добавилось -->
+            <div class="flex flex-col gap-2 md:col-span-full">
+              <span class="text-xs font-medium text-muted">
+                {{ texts.choiceScalingTitle }}
+              </span>
+
+              <p
+                v-if="!row.scaling.length"
+                class="text-xs text-dimmed italic"
+              >
+                {{ texts.choiceScalingEmpty }}
+              </p>
+
+              <div
+                v-for="(step, stepIndex) in row.scaling"
+                :key="`${row.uid}-${stepIndex}`"
+                class="flex items-end gap-2"
+              >
+                <UFormField
+                  class="w-28"
+                  :label="texts.choiceScalingLevel"
+                >
+                  <UInputNumber
+                    v-model="step.level"
+                    :min="CLASS_LEVEL_MIN"
+                    :max="CLASS_LEVEL_MAX"
+                    class="w-full"
+                  />
+                </UFormField>
+
+                <UFormField
+                  class="w-28"
+                  :label="texts.choiceScalingCount"
+                >
+                  <UInputNumber
+                    v-model="step.count"
+                    :min="CHOICE_COUNT_MIN"
+                    :max="CHOICE_COUNT_MAX"
+                    class="w-full"
+                  />
+                </UFormField>
+
+                <UButton
+                  icon="tabler:trash"
+                  color="error"
+                  variant="ghost"
+                  size="xs"
+                  :aria-label="texts.choiceScalingTitle"
+                  @click.left.exact.prevent="removeScaling(row, stepIndex)"
+                />
+              </div>
+
+              <UButton
+                icon="tabler:plus"
+                :label="texts.addChoiceScaling"
+                color="neutral"
+                variant="soft"
+                size="xs"
+                class="self-start"
+                @click.left.exact.prevent="addScaling(row)"
+              />
+            </div>
+
+            <!-- Ряд по уровням справочник соберёт сам: у выбора он уже задан
+              ступенями, и колонкой его набирают не второй раз -->
+            <div
+              v-if="row.scaling.length"
+              class="flex flex-wrap items-end gap-4 md:col-span-full"
+            >
+              <UCheckbox
+                v-model="row.showInTable"
+                :label="texts.choiceShowInTable"
+                :description="texts.choiceShowInTableHint"
+              />
+
+              <UFormField
+                v-if="row.showInTable"
+                class="w-56"
+                :label="texts.choiceShortName"
+                :help="texts.choiceShortNameHint"
+              >
+                <UInput
+                  v-model="row.shortName"
+                  placeholder="Приёмы"
                 />
               </UFormField>
             </div>

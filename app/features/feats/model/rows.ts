@@ -6,6 +6,7 @@ import type {
   FeatChoice,
   FeatChoiceGrant,
   FeatChoiceOption,
+  FeatChoiceScaling,
   FeatChoiceType,
   FeatCounter,
   FeatDamageAffinity,
@@ -100,6 +101,18 @@ export interface FeatGrantRow {
 
   /** Уровень, с которого выбор открывается; не задан — сразу. */
   requiredLevel: number | undefined;
+
+  /**
+   * Ступени количества по уровням: сколько всего выбирают к каждому уровню.
+   * Пусто — количество не растёт и задано `count`.
+   */
+  scaling: Array<FeatChoiceScaling>;
+
+  /** Показывать количество колонкой таблицы прогрессии класса. */
+  showInTable: boolean;
+
+  /** Краткая подпись колонки таблицы; пусто — берётся подпись выбора. */
+  shortName: string;
 
   /**
    * Прибавка к характеристике. Задана — строка поднимает характеристику: в
@@ -638,6 +651,9 @@ export function createGrantRow(
     expertiseIfProficient: false,
     rechooseOnLongRest: false,
     requiredLevel: undefined,
+    scaling: [],
+    showInTable: false,
+    shortName: '',
     abilityBonus: kind === 'ABILITY' ? 1 : undefined,
     abilityUpto: kind === 'ABILITY' ? 20 : undefined,
     fromChoiceKey: '',
@@ -844,6 +860,9 @@ function toChoiceGrantRow(choice: FeatChoice): FeatGrantRow | undefined {
     expertiseIfProficient: choice.expertiseIfProficient,
     rechooseOnLongRest: choice.rechooseOnLongRest,
     requiredLevel: choice.requiredLevel,
+    scaling: (choice.scaling ?? []).map((step) => ({ ...step })),
+    showInTable: choice.showInTable ?? false,
+    shortName: choice.shortName ?? '',
     abilityBonus: undefined,
     abilityUpto: undefined,
     fromChoiceKey: '',
@@ -1373,10 +1392,19 @@ function toBaseChoice(
     options: Array<FeatChoiceOption>;
     rechooseOnLongRest: boolean;
     requiredLevel?: number | undefined;
+    scaling?: Array<FeatChoiceScaling>;
+    showInTable?: boolean;
+    shortName?: string;
   },
   key: string,
   type: FeatChoiceType,
 ): FeatChoice {
+  // Ступень без уровня или без количества ничего не описывает: у потребителя
+  // она превратилась бы в выбор ни из чего
+  const scaling = (row.scaling ?? [])
+    .filter((step) => step.level > 0 && step.count > 0)
+    .sort((left, right) => left.level - right.level);
+
   return {
     key,
     type,
@@ -1398,6 +1426,10 @@ function toBaseChoice(
     expertiseIfProficient: false,
     rechooseOnLongRest: row.rechooseOnLongRest,
     requiredLevel: row.requiredLevel,
+    scaling: scaling.length ? scaling : undefined,
+    // Колонка выводится из ступеней: без них показывать в таблице нечего
+    showInTable: scaling.length && row.showInTable ? true : undefined,
+    shortName: row.shortName?.trim() || undefined,
   };
 }
 
@@ -1417,6 +1449,9 @@ function createEmptyChoice(key: string, type: FeatChoiceType): FeatChoice {
     onlyIfProficient: false,
     grants: undefined,
     expertiseIfProficient: false,
+    scaling: undefined,
+    showInTable: undefined,
+    shortName: undefined,
     rechooseOnLongRest: false,
     requiredLevel: undefined,
   };

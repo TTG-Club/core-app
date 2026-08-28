@@ -168,6 +168,12 @@ const mechanicsChoicesSchema = z
       // не один раз — компетентность плута приходит на первом уровне и на
       // шестом, и это две строки одной механики, а не два умения.
       requiredLevel: z.coerce.number().min(1).max(20).nullable().catch(null),
+      // Ступени количества по уровням: сколько ВСЕГО выбрано к каждому уровню.
+      // У записей до их появления поля нет — количество не растёт.
+      scaling: z
+        .array(z.object({ level: z.number(), count: z.number() }))
+        .nullable()
+        .catch(null),
       // Выбирать можно только то, чем персонаж ещё не владеет, и обратный
       // случай: владение превращает выбор в компетентность.
       onlyIfNotProficient: z.boolean().nullable().catch(null),
@@ -877,11 +883,59 @@ function toMechanicChoices(
   // одинаков для любого вида выбора, и повтор в двенадцати местах разошёлся бы
   // с собой при первой же правке
   return choices.flatMap<ClassChoice>((choice) =>
-    buildMechanicChoices(choice, ownerId).map((entry) => ({
-      ...entry,
-      requiredLevel: choice.requiredLevel ?? null,
-    })),
+    toChoiceSteps(choice).flatMap((step) =>
+      buildMechanicChoices(
+        { ...choice, count: step.count, requiredLevel: step.level },
+        ownerId,
+      ).map((entry) => ({ ...entry, requiredLevel: step.level })),
+    ),
   );
+}
+
+/**
+ * Выбор по ступеням роста: на каждый уровень — свой вопрос и своя ПРИБАВКА.
+ *
+ * Ступень называет, сколько всего выбрано к её уровню, а спрашивать нужно
+ * разницу с предыдущей: оружейных приёмов у воина три с первого уровня и четыре
+ * с четвёртого, то есть на четвёртом игрок выбирает один новый, а не четыре
+ * заново. Уровень уходит в идентификатор выбора, поэтому ответы разных уровней
+ * не склеиваются.
+ *
+ * Без ступеней шаг один — сам выбор, как он и был до их появления.
+ *
+ * @param choice выбор из механики записи.
+ * @returns шаги выбора: уровень и сколько на нём выбирают.
+ */
+function toChoiceSteps(
+  choice: FeatChoicesResponse[number],
+): Array<{ level: number | null; count: number | null }> {
+  const steps = (choice.scaling ?? [])
+    .filter((step) => step.level > 0 && step.count > 0)
+    .sort((left, right) => left.level - right.level);
+
+  if (!steps.length) {
+    return [
+      { level: choice.requiredLevel ?? null, count: choice.count ?? null },
+    ];
+  }
+
+  const result: Array<{ level: number | null; count: number | null }> = [];
+
+  let previous = 0;
+
+  for (const step of steps) {
+    const added = step.count - previous;
+
+    previous = step.count;
+
+    // Ступень, не добавившая ничего, вопросом не становится: у неё нечего
+    // выбирать, а шаг мастера повышения уровня был бы пустым
+    if (added > 0) {
+      result.push({ level: step.level, count: added });
+    }
+  }
+
+  return result;
 }
 
 /**

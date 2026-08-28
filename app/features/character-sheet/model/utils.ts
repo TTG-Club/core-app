@@ -10525,7 +10525,7 @@ export function getLevelFeatureRows(
         // умению не нужен — иначе под чертой висело бы пустое поле ввода.
         choices: summary.abilityImprovement
           ? []
-          : getClassFeatureChoices(id, summary, skillNames, level),
+          : getLevelFeatureChoices(id, summary, skillNames, level),
         featChoices: getLevelFeatChoices(summary, level),
         // Черту без выбора умение выдаёт на своём уровне, а не на уровнях роста
         grantedFeatUrls:
@@ -11253,6 +11253,37 @@ export function getClassFeatureChoices(
   );
 
   return detected ? [detected] : [];
+}
+
+/**
+ * Выборы умения, которые спрашивают ИМЕННО на этом уровне.
+ *
+ * Мастер повышения уровня спрашивает шаг, а не всё накопленное: оружейных
+ * приёмов у воина четыре с четвёртого уровня, но выбирает он там один новый —
+ * три прежних уже выбраны. Поэтому выбор со своим уровнем берётся только на
+ * своём, а выбор без уровня — на том, где умение и получено.
+ *
+ * Мастеру создания персонажа нужно обратное — все шаги до текущего уровня
+ * разом, — и он берёт {@link getClassFeatureChoices} как есть.
+ *
+ * @param featureId идентификатор умения на листе.
+ * @param summary умение из ответа класса.
+ * @param skillNames названия навыков листа.
+ * @param level уровень, который берут сейчас.
+ * @returns выборы этого уровня.
+ */
+function getLevelFeatureChoices(
+  featureId: string,
+  summary: ClassFeatureSummary,
+  skillNames: string[],
+  level: number,
+): ClassChoice[] {
+  return getClassFeatureChoices(featureId, summary, skillNames, level).filter(
+    (choice) =>
+      choice.requiredLevel
+        ? choice.requiredLevel === level
+        : summary.level === level,
+  );
 }
 
 /**
