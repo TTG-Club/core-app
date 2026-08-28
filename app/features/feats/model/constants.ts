@@ -498,6 +498,9 @@ export const FEAT_EDITOR_LABELS = {
   counterMax: 'Максимум',
   counterMin: 'Минимум',
   counterShowInTable: 'Указать в таблице',
+  counterShowInTableHint:
+    'Ресурс станет колонкой таблицы прогрессии класса: ряд по уровням соберётся '
+    + 'из ступеней или формулы — набирать его колонкой не нужно.',
   counterRecovery: 'Восстановление',
   counterScalingTitle: 'Ступени по уровням',
   counterScalingEmpty: 'Ступеней нет — максимум считается формулой.',

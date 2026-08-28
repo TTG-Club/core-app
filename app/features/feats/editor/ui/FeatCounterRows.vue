@@ -115,7 +115,7 @@
       </UFormField>
 
       <UFormField
-        class="md:col-span-3"
+        class="md:col-span-4"
         :label="texts.counterMax"
       >
         <UInput
@@ -139,7 +139,7 @@
       </UFormField>
 
       <UFormField
-        class="md:col-span-6"
+        class="md:col-span-7"
         :label="texts.counterRecovery"
       >
         <USelect
@@ -149,15 +149,6 @@
         />
       </UFormField>
 
-      <!-- Ряд по уровням справочник соберёт сам: у ресурса он уже задан
-        ступенями либо формулой, и колонкой его набирают не второй раз -->
-      <div class="flex items-center md:col-span-2 md:pb-2">
-        <UCheckbox
-          v-model="counter.showInTable"
-          :label="texts.counterShowInTable"
-        />
-      </div>
-
       <div class="flex justify-end md:col-span-1">
         <UButton
           icon="tabler:trash"
@@ -166,6 +157,17 @@
           size="xs"
           :aria-label="counter.name || texts.countersTitle"
           @click.left.exact.prevent="removeCounter(index)"
+        />
+      </div>
+
+      <!-- Своей строкой, а не полем в ряду: подпись длинная, и в узкой колонке
+        она не читается. Ряд по уровням справочник соберёт сам — у ресурса он
+        уже задан ступенями либо формулой -->
+      <div class="md:col-span-24">
+        <UCheckbox
+          v-model="counter.showInTable"
+          :label="texts.counterShowInTable"
+          :description="texts.counterShowInTableHint"
         />
       </div>
 
