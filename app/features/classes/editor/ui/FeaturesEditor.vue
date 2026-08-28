@@ -294,7 +294,7 @@
             внутри: кнопка внутри кнопки недопустима -->
           <button
             type="button"
-            class="flex min-w-0 flex-1 items-center gap-2 text-left"
+            class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left"
             :aria-expanded="isExpanded(index)"
             @click.left.exact.prevent="toggleFeature(index)"
           >

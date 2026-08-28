@@ -73,7 +73,7 @@
         внутри кнопки недопустима -->
       <button
         type="button"
-        class="flex min-w-0 flex-1 items-center gap-2 text-left text-sm font-medium text-highlighted"
+        class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left text-sm font-medium text-highlighted"
         :aria-expanded="isOpen"
         @click.left.exact.prevent="toggle"
       >
