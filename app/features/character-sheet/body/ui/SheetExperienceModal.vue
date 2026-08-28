@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import type { StepperItem } from '@nuxt/ui';
 
-  import type { AbilityKey, HitPointsGainMode } from '../../model';
+  import type { AbilityKey, ClassChoice, HitPointsGainMode } from '../../model';
 
   import { useCharacterSheet, useLevelUpWizard } from '../../composables';
   import {
@@ -336,30 +336,30 @@
     setNote(stepIndex.value - 1, featureId, value);
   }
 
-  function handleFeat(featureId: string, featUrl: string) {
-    setFeatChoice(stepIndex.value - 1, featureId, featUrl);
+  function handleFeat(featureId: string, choiceId: string, featUrl: string) {
+    setFeatChoice(stepIndex.value - 1, featureId, choiceId, featUrl);
   }
 
   function handleFeatAbility(
-    featureId: string,
+    choiceId: string,
     payload: { slot: number; ability: AbilityKey | null },
   ) {
     setFeatAbility(
       stepIndex.value - 1,
-      featureId,
+      choiceId,
       payload.slot,
       payload.ability,
     );
   }
 
-  /** Черты, доступные умению текущего шага. */
-  function currentFeatOptions(featureId: string) {
-    return featOptions(stepIndex.value - 1, featureId);
+  /** Черты, доступные выбору черты на текущем шаге. */
+  function currentFeatOptions(choice: ClassChoice) {
+    return featOptions(stepIndex.value - 1, choice);
   }
 
-  /** Черта, выбранная в умении текущего шага. */
-  function currentSelectedFeat(featureId: string) {
-    return selectedFeat(stepIndex.value - 1, featureId);
+  /** Черта, выбранная в выборе текущего шага. */
+  function currentSelectedFeat(choiceId: string) {
+    return selectedFeat(stepIndex.value - 1, choiceId);
   }
 
   function handleSubclassSelect(subclassUrl: string | null) {

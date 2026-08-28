@@ -59,11 +59,11 @@
     /** Пометки опций пикера: навыки, которыми персонаж уже владеет. */
     choiceHints: (choice: ClassChoice) => Record<string, string>;
 
-    /** Черты, доступные в умении улучшения характеристик. */
-    featOptions: (featureId: string) => FeatSelectOption[];
+    /** Черты, доступные выбору черты в умении. */
+    featOptions: (choice: ClassChoice) => FeatSelectOption[];
 
-    /** Черта, выбранная в умении; null — выбора не было. */
-    selectedFeat: (featureId: string) => FeatSelectOption | null;
+    /** Черта, выбранная в выборе; null — выбора не было. */
+    selectedFeat: (choiceId: string) => FeatSelectOption | null;
 
     isFeatsLoading?: boolean;
 
@@ -76,9 +76,9 @@
     'roll': [];
     'update:selection': [choiceId: string, values: string[]];
     'update:note': [featureId: string, value: string];
-    'update:feat': [featureId: string, featUrl: string];
+    'update:feat': [featureId: string, choiceId: string, featUrl: string];
     'update:feat-ability': [
-      featureId: string,
+      choiceId: string,
       payload: { slot: number; ability: AbilityKey | null },
     ];
   }>();
@@ -151,15 +151,22 @@
         };
       });
 
+      // Выборы черты — боевой стиль, черта за повышение характеристик —
+      // спрашиваются пикером каталога черт, каждый со своим пулом
+      const featPickers = feature.featChoices.map((choice) => ({
+        choice,
+        options: featOptions(choice),
+        selected: selectedFeat(choice.id),
+        abilities: draft.featChoices[choice.id]?.abilities ?? [],
+      }));
+
       return {
         ...feature,
         badgeLabel: `${feature.originLabel} · ${feature.level} ур.`,
         controls,
-        featOptions: feature.abilityImprovement ? featOptions(feature.id) : [],
-        selectedFeat: feature.abilityImprovement
-          ? selectedFeat(feature.id)
-          : null,
-        featAbilities: draft.featChoices[feature.id]?.abilities ?? [],
+        featPickers,
+        // Свободный текст остаётся только умению без единого пикера
+        hasNote: controls.length === 0 && featPickers.length === 0,
       };
     }),
   );
@@ -187,15 +194,15 @@
     emit('update:note', featureId, value);
   }
 
-  function handleFeat(featureId: string, featUrl: string) {
-    emit('update:feat', featureId, featUrl);
+  function handleFeat(featureId: string, choiceId: string, featUrl: string) {
+    emit('update:feat', featureId, choiceId, featUrl);
   }
 
   function handleFeatAbility(
-    featureId: string,
+    choiceId: string,
     payload: { slot: number; ability: AbilityKey | null },
   ) {
-    emit('update:feat-ability', featureId, payload);
+    emit('update:feat-ability', choiceId, payload);
   }
 </script>
 
@@ -334,20 +341,27 @@
           </div>
         </div>
 
-        <SheetLevelUpFeatChoice
-          v-else-if="feature.abilityImprovement"
-          :options="feature.featOptions"
-          :selected="feature.selectedFeat"
-          :abilities="feature.featAbilities"
-          :scores="abilities"
-          :is-loading="isFeatsLoading"
-          :has-error="hasFeatsError"
-          @update:feat="handleFeat(feature.id, $event)"
-          @update:ability="handleFeatAbility(feature.id, $event)"
-        />
+        <div
+          v-if="feature.featPickers.length"
+          class="flex flex-col gap-3"
+        >
+          <SheetLevelUpFeatChoice
+            v-for="picker in feature.featPickers"
+            :key="picker.choice.id"
+            :title="picker.choice.label"
+            :options="picker.options"
+            :selected="picker.selected"
+            :abilities="picker.abilities"
+            :scores="abilities"
+            :is-loading="isFeatsLoading"
+            :has-error="hasFeatsError"
+            @update:feat="handleFeat(feature.id, picker.choice.id, $event)"
+            @update:ability="handleFeatAbility(picker.choice.id, $event)"
+          />
+        </div>
 
         <UInput
-          v-else
+          v-if="feature.hasNote"
           :model-value="draft.notes[feature.id] ?? ''"
           size="sm"
           :placeholder="LEVEL_UP_WIZARD_LABELS.featureChoicePlaceholder"

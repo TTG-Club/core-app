@@ -29,7 +29,8 @@ export type FeatChoiceType =
   | 'WEAPON'
   | 'WEAPON_MASTERY'
   | 'ARMOR'
-  | 'OPTION';
+  | 'OPTION'
+  | 'FEAT';
 
 /** Ссылка на сущность справочника: url и снимок названия. */
 export interface FeatEntityRef {
@@ -140,6 +141,17 @@ export interface FeatChoice {
   options: Array<FeatChoiceOption>;
   spellFilter: FeatSpellFilter | undefined;
   onlyIfNotProficient: boolean;
+
+  /**
+   * Категории черт, из которых выбирают, — только у выбора черты (`FEAT`).
+   * `undefined` — категория не ограничена либо выбор не про черты.
+   *
+   * Складывается с `options`: перечисленные черты сужают пул внутри категорий,
+   * а без перечисления пул — все черты названных категорий. Так «Боевой стиль»
+   * воина описывается одной категорией и не требует перечислять стили, которые
+   * ещё допишут в справочник.
+   */
+  featCategories: Array<string> | undefined;
 
   /**
    * Выбирать можно только то, чем персонаж уже владеет («Знаток» — навык, в
@@ -468,6 +480,15 @@ export interface FeatMechanics {
 
   /** Ресурсы черты со своим счётчиком на листе. */
   counters: Array<FeatCounter>;
+
+  /**
+   * Черты, которые выдаются без выбора, — ссылками на записи справочника.
+   *
+   * Необязательны по той же причине, что и `abilityBonuses`: блок есть только
+   * у умения класса, а у черты и вида его нет, и core-api падает на пустом
+   * списке — перед отправкой пустой блок опускается целиком.
+   */
+  feats?: Array<FeatEntityRef>;
 }
 
 /**
@@ -540,6 +561,7 @@ export function createFeatChoice(): FeatChoice {
     options: [],
     spellFilter: undefined,
     onlyIfNotProficient: false,
+    featCategories: undefined,
     onlyIfProficient: false,
     grants: 'PROFICIENCY',
     expertiseIfProficient: false,
@@ -697,5 +719,6 @@ export function createFeatMechanics(): FeatMechanics {
     spells: createFeatSpellGrant(),
     spellList: createFeatSpellList(),
     counters: [],
+    feats: [],
   };
 }

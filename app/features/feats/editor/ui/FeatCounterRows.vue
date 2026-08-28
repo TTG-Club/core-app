@@ -1,12 +1,12 @@
 <script setup lang="ts">
-  import type { FeatCounterRow } from '../../model';
+  import type { FeatCounterRow, FeatEditorLabelOverrides } from '../../model';
 
   import { InfoTooltip } from '~ui/tooltip';
 
   import {
     createCounterRow,
     FEAT_COUNTER_RECOVERY_OPTIONS,
-    FEAT_EDITOR_LABELS,
+    getFeatEditorLabels,
   } from '../../model';
 
   /**
@@ -16,6 +16,17 @@
    * привязан к бонусу мастерства и обязан расти вместе с ним («Удачливый»).
    */
   const model = defineModel<Array<FeatCounterRow>>({ required: true });
+
+  const { labels = {} } = defineProps<{
+    /**
+     * Подписи формы-владельца: чертой источник даров называет только форма
+     * черты, у умения класса и вида свои формулировки.
+     */
+    labels?: FeatEditorLabelOverrides;
+  }>();
+
+  /** Подписи с поправками формы-владельца. */
+  const texts = computed(() => getFeatEditorLabels(labels));
 
   /** Заводит ресурс со свободным ключом: занятый схлопнул бы два счётчика. */
   function addCounter() {
@@ -67,18 +78,18 @@
 <template>
   <div class="flex flex-col gap-2">
     <InfoTooltip
-      :text="FEAT_EDITOR_LABELS.countersHintDetails"
+      :text="texts.countersHintDetails"
       icon="tabler:info-circle-filled"
       class="text-sm text-dimmed"
     >
-      <span>{{ FEAT_EDITOR_LABELS.countersHint }}</span>
+      <span>{{ texts.countersHint }}</span>
     </InfoTooltip>
 
     <p
       v-if="!model.length"
       class="rounded-lg border border-dashed border-default p-4 text-center text-xs text-dimmed italic"
     >
-      {{ FEAT_EDITOR_LABELS.countersEmpty }}
+      {{ texts.countersEmpty }}
     </p>
 
     <div
@@ -88,24 +99,24 @@
     >
       <UFormField
         class="md:col-span-8"
-        :label="FEAT_EDITOR_LABELS.counterName"
+        :label="texts.counterName"
       >
         <UInput
           v-model="counter.name"
-          :placeholder="FEAT_EDITOR_LABELS.counterNamePlaceholder"
+          :placeholder="texts.counterNamePlaceholder"
         />
       </UFormField>
 
       <UFormField
         class="md:col-span-4"
-        :label="FEAT_EDITOR_LABELS.counterShortName"
+        :label="texts.counterShortName"
       >
         <UInput v-model="counter.shortName" />
       </UFormField>
 
       <UFormField
         class="md:col-span-4"
-        :label="FEAT_EDITOR_LABELS.counterMax"
+        :label="texts.counterMax"
       >
         <UInput
           v-model="counter.max"
@@ -115,7 +126,7 @@
 
       <UFormField
         class="md:col-span-7"
-        :label="FEAT_EDITOR_LABELS.counterRecovery"
+        :label="texts.counterRecovery"
       >
         <USelect
           v-model="counter.recovery"
@@ -130,7 +141,7 @@
           color="error"
           variant="ghost"
           size="xs"
-          :aria-label="counter.name || FEAT_EDITOR_LABELS.countersTitle"
+          :aria-label="counter.name || texts.countersTitle"
           @click.left.exact.prevent="removeCounter(index)"
         />
       </div>
@@ -139,14 +150,14 @@
         не пишется, и без них такой ресурс приходилось задавать одним числом -->
       <div class="flex flex-col gap-2 md:col-span-24">
         <span class="text-xs font-medium text-muted">
-          {{ FEAT_EDITOR_LABELS.counterScalingTitle }}
+          {{ texts.counterScalingTitle }}
         </span>
 
         <p
           v-if="!counter.scaling.length"
           class="text-xs text-dimmed italic"
         >
-          {{ FEAT_EDITOR_LABELS.counterScalingEmpty }}
+          {{ texts.counterScalingEmpty }}
         </p>
 
         <div
@@ -156,7 +167,7 @@
         >
           <UFormField
             class="w-28"
-            :label="FEAT_EDITOR_LABELS.counterScalingLevel"
+            :label="texts.counterScalingLevel"
           >
             <UInputNumber
               v-model="step.level"
@@ -168,7 +179,7 @@
 
           <UFormField
             class="w-28"
-            :label="FEAT_EDITOR_LABELS.counterScalingMax"
+            :label="texts.counterScalingMax"
           >
             <UInputNumber
               v-model="step.max"
@@ -182,14 +193,14 @@
             color="error"
             variant="ghost"
             size="xs"
-            :aria-label="FEAT_EDITOR_LABELS.counterScalingTitle"
+            :aria-label="texts.counterScalingTitle"
             @click.left.exact.prevent="removeScaling(counter, stepIndex)"
           />
         </div>
 
         <UButton
           icon="tabler:plus"
-          :label="FEAT_EDITOR_LABELS.addCounterScaling"
+          :label="texts.addCounterScaling"
           color="neutral"
           variant="soft"
           size="xs"
@@ -200,7 +211,7 @@
 
     <UButton
       icon="tabler:plus"
-      :label="FEAT_EDITOR_LABELS.addCounter"
+      :label="texts.addCounter"
       color="primary"
       variant="soft"
       block

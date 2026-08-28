@@ -43,16 +43,6 @@ export interface ClassFeatureOptionCreate {
   hideInSubclasses: boolean | undefined;
 }
 
-/**
- * Выбор владения навыками у самого умения: «Величие гения» паладина даёт один
- * навык из четырёх, и это не тот выбор, что лежит во владениях класса
- * (`proficiency.skill` — выбор при создании персонажа на 1 уровне).
- */
-export interface ClassFeatureSkillChoiceCreate {
-  count: number;
-  skills: Array<string>;
-}
-
 export interface ClassFeatureCreate {
   level: number;
   name: string;
@@ -60,12 +50,24 @@ export interface ClassFeatureCreate {
   description: string;
   additional: string;
   hideInSubclasses: boolean | undefined;
+
+  /**
+   * Умение даёт выбор черты за повышение характеристик и умение даёт выбор
+   * боевого стиля — флаги прежних лет. Форма их не показывает: и то, и другое
+   * описано строками даров (выбор черты нужной категории), а флаги выводятся
+   * из строк при сохранении — их читают потребители, не знающие о выборе черты.
+   */
   abilityImprovement: boolean | undefined;
   fightingStyleChoice: boolean | undefined;
+
   scaling: Array<ClassFeatureScalingCreate>;
   options: Array<ClassFeatureOptionCreate>;
+
+  /**
+   * Прибавка характеристик умением 20 уровня («Первобытный чемпион»). Своим
+   * блоком, а не строкой даров: у механики класса блока повышений нет.
+   */
   abilityBonus?: ClassFeatureAbilityBonusCreate;
-  skillChoice?: ClassFeatureSkillChoiceCreate;
 
   /**
    * Умение только информирует и в лист персонажа не попадает: строка таблицы

@@ -75,6 +75,7 @@ const choiceTypeSchema = z.enum([
   'WEAPON_MASTERY',
   'ARMOR',
   'OPTION',
+  'FEAT',
 ]);
 
 const choiceSchema = z.object({
@@ -86,6 +87,7 @@ const choiceSchema = z.object({
   countEqualsProficiencyBonus: z.boolean().optional(),
   options: z.array(choiceOptionSchema).optional(),
   spellFilter: spellFilterSchema.optional(),
+  featCategories: z.array(z.string()).optional(),
   onlyIfNotProficient: z.boolean().optional(),
   onlyIfProficient: z.boolean().optional(),
   // Единственное значение, которое разбор подставляет сам: слияние с начальным
@@ -206,6 +208,7 @@ const mechanicsSchema = z.object({
   spells: spellGrantSchema.optional(),
   spellList: spellListSchema.optional(),
   counters: z.array(counterSchema).optional(),
+  feats: z.array(entityRefSchema).optional(),
 });
 
 const prerequisiteDetailsSchema = z.object({
@@ -310,6 +313,9 @@ function toFeatMechanicsState(
           }
         : undefined,
       onlyIfNotProficient: choice.onlyIfNotProficient ?? false,
+      featCategories: choice.featCategories?.length
+        ? choice.featCategories
+        : undefined,
       onlyIfProficient: choice.onlyIfProficient ?? false,
       grants: choice.grants,
       expertiseIfProficient: choice.expertiseIfProficient ?? false,
@@ -386,6 +392,7 @@ function toFeatMechanicsState(
       scaling: counter.scaling ?? [],
       recovery: counter.recovery,
     })),
+    feats: (parsed.feats ?? []).map((feat) => ({ ...feat })),
   };
 }
 

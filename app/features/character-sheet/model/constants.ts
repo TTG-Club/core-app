@@ -2330,6 +2330,10 @@ export const FIGHTING_STYLE_CHOICE_LABEL =
 export const FIGHTING_STYLE_INVALID_RESPONSE_ERROR =
   'Сервер вернул некорректную черту боевого стиля';
 
+/** Ошибка: деталь черты, выбранной или выданной умением класса, не прошла разбор. */
+export const CLASS_FEAT_INVALID_RESPONSE_ERROR =
+  'Сервер вернул некорректную черту умения класса';
+
 /**
  * Сегмент идентификатора особенности с выбранным боевым стилем:
  * `class:{featureKey}:fighting-style:{featUrl}`. Префикс `class:` нужен, чтобы
@@ -2339,14 +2343,30 @@ export const FIGHTING_STYLE_INVALID_RESPONSE_ERROR =
 export const FIGHTING_STYLE_FEATURE_ID_SEGMENT = 'fighting-style';
 
 /**
- * Категории черт, недоступные при выборе за классовое улучшение характеристик:
- * черты происхождения даются предысторией, эпические — умением 19 уровня.
- * Список именно запрещающий: новая категория с бэка становится доступной сама.
+ * Категории черт, недоступные при выборе черты без ограничения категорий:
+ * черты происхождения даются предысторией, эпические — умением 19 уровня,
+ * боевые стили — своим умением. Список именно запрещающий: новая категория с
+ * бэка становится доступной сама. Умение, назвавшее категории явно, этим
+ * списком не ограничено.
  */
 export const ABILITY_IMPROVEMENT_EXCLUDED_FEAT_CATEGORIES = [
   'ORIGIN',
   'EPIC_BOON',
+  'FIGHTING_STYLE',
 ];
+
+/** Категория черт боевого стиля. */
+export const FIGHTING_STYLE_FEAT_CATEGORY = 'FIGHTING_STYLE';
+
+/** Категория общих черт — тех, что берут за повышение характеристик. */
+export const GENERAL_FEAT_CATEGORY = 'GENERAL';
+
+/**
+ * Хвосты идентификаторов выборов черты, которые лист заводит сам по флагам
+ * умения прежних лет: у записи с флагом, но без выбора черты в механике.
+ */
+export const LEGACY_FIGHTING_STYLE_CHOICE_KEY = 'fighting-style';
+export const LEGACY_ABILITY_IMPROVEMENT_CHOICE_KEY = 'ability-improvement';
 
 /** Предел характеристики для прибавок от черты (правило D&D 2024). */
 export const ABILITY_IMPROVEMENT_SCORE_MAX = 20;
@@ -2386,6 +2406,20 @@ export const ABILITY_IMPROVEMENT_LABELS = {
 export const ABILITY_IMPROVEMENT_FEATURE_ID_SEGMENT = 'ability-improvement';
 
 /**
+ * Сегмент идентификатора черты, выбранной в умении класса:
+ * `class:{featureKey}[:{level}]:feat:{featUrl}`. Один на все выборы черты —
+ * боевой стиль и черту за повышение характеристик мастер спрашивает одним
+ * пикером; прежние сегменты остались ради уже собранных листов.
+ */
+export const CLASS_FEAT_CHOICE_ID_SEGMENT = 'feat';
+
+/**
+ * Сегмент идентификатора черты, которую умение класса выдаёт без выбора:
+ * `class:{featureKey}:granted-feat:{featUrl}`.
+ */
+export const CLASS_GRANTED_FEAT_ID_SEGMENT = 'granted-feat';
+
+/**
  * Служебные сегменты идентификаторов черт, выданных классовыми умениями. По ним
  * из идентификатора достаётся url черты, поэтому такие черты считаются взятыми
  * и не предлагаются повторно.
@@ -2393,6 +2427,8 @@ export const ABILITY_IMPROVEMENT_FEATURE_ID_SEGMENT = 'ability-improvement';
 export const CLASS_FEAT_CHOICE_ID_SEGMENTS = [
   FIGHTING_STYLE_FEATURE_ID_SEGMENT,
   ABILITY_IMPROVEMENT_FEATURE_ID_SEGMENT,
+  CLASS_FEAT_CHOICE_ID_SEGMENT,
+  CLASS_GRANTED_FEAT_ID_SEGMENT,
 ];
 
 /** Эндпоинт фильтров черт — источник глобальной настройки источников. */
@@ -4729,6 +4765,7 @@ export const SHEET_FEAT_CHOICE_LABELS: Partial<
   'saving-throw': 'Выберите спасбросок',
   'weapon-mastery': 'Выберите оружейный приём',
   'option': 'Выберите вариант',
+  'feat': 'Выберите черту',
 };
 
 /** Формы слова «характеристика» для подписи варианта повышения. */

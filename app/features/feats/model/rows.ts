@@ -53,7 +53,8 @@ export type FeatGrantRowKind =
   | 'WEAPON_MASTERY'
   | 'ABILITY'
   | 'DAMAGE_TYPE'
-  | 'OPTION';
+  | 'OPTION'
+  | 'FEAT';
 
 /**
  * Как раздаётся: всё перечисленное сразу или игрок выбирает из набора. Это
@@ -77,6 +78,13 @@ export interface FeatGrantRow {
 
   /** Что выдаётся либо набор, из которого выбирают; пусто — любое значение. */
   options: Array<FeatChoiceOption>;
+
+  /**
+   * Категории черт, из которых выбирают; только у вида «Черта» в режиме выбора.
+   * Пусто — категория не ограничена. Складывается с набором: перечисленные
+   * черты сужают пул внутри категорий.
+   */
+  featCategories: Array<string>;
 
   /** Машинный ключ выбора: по нему лист помнит ответ игрока. Автору не виден. */
   key: string;
@@ -353,6 +361,7 @@ export const UNMIXABLE_GRANT_KINDS: Array<FeatGrantRowKind> = [
   'WEAPON_MASTERY',
   'WEAPON_CATEGORY',
   'OPTION',
+  'FEAT',
 ];
 
 /** Тип выбора, которым записывается вид дара. */
@@ -368,6 +377,7 @@ const CHOICE_TYPE_BY_GRANT_KIND: Record<FeatGrantRowKind, FeatChoiceType> = {
   ABILITY: 'ABILITY',
   DAMAGE_TYPE: 'DAMAGE_TYPE',
   OPTION: 'OPTION',
+  FEAT: 'FEAT',
 };
 
 /** Вид дара, которым читается тип выбора; у заклинаний вида дара нет. */
@@ -384,6 +394,7 @@ const GRANT_KIND_BY_CHOICE_TYPE: Partial<
   ABILITY: 'ABILITY',
   DAMAGE_TYPE: 'DAMAGE_TYPE',
   OPTION: 'OPTION',
+  FEAT: 'FEAT',
 };
 
 /** Типы выборов, живущих на вкладке «Заклинания». */
@@ -425,6 +436,7 @@ const CHOICE_KEY_BY_GRANT_KIND: Record<FeatGrantRowKind, string> = {
   ABILITY: 'ability',
   DAMAGE_TYPE: DAMAGE_TYPE_CHOICE_KEY,
   OPTION: 'option',
+  FEAT: 'feat',
 };
 
 /** Приставка машинного ключа ресурса черты. */
@@ -615,6 +627,7 @@ export function createGrantRow(
     kinds: [kind],
     mode: isChoiceOnly ? 'CHOICE' : 'ALL',
     options: [],
+    featCategories: [],
     key: getFreeFeatChoiceKey(CHOICE_KEY_BY_GRANT_KIND[kind], takenKeys),
     label: '',
     count: 1,
@@ -818,6 +831,7 @@ function toChoiceGrantRow(choice: FeatChoice): FeatGrantRow | undefined {
     kinds,
     mode: 'CHOICE',
     options: choice.options.map((option) => ({ ...option })),
+    featCategories: [...(choice.featCategories ?? [])],
     key: choice.key,
     label: choice.label,
     count: choice.count,
@@ -959,6 +973,9 @@ function toFixedGrantRows(mechanics: FeatMechanics): Array<FeatGrantRow> {
     ['TOOL', proficiencies.tools],
     ['WEAPON', proficiencies.weapons],
     ['WEAPON_MASTERY', proficiencies.weaponMasteries],
+    // Черты без выбора лежат не во владениях, а своим блоком: владением черта
+    // не является, но строкой дара читается так же — «выдать всё»
+    ['FEAT', mechanics.feats ?? []],
   ];
 
   for (const [kind, refs] of refGrants) {
@@ -1373,6 +1390,7 @@ function toBaseChoice(
       })),
     spellFilter: undefined,
     onlyIfNotProficient: false,
+    featCategories: undefined,
     onlyIfProficient: false,
     grants: undefined,
     expertiseIfProficient: false,
@@ -1393,6 +1411,7 @@ function createEmptyChoice(key: string, type: FeatChoiceType): FeatChoice {
     options: [],
     spellFilter: undefined,
     onlyIfNotProficient: false,
+    featCategories: undefined,
     onlyIfProficient: false,
     grants: undefined,
     expertiseIfProficient: false,
@@ -1533,6 +1552,12 @@ function toGrantChoice(row: FeatGrantRow, key: string): FeatChoice {
         : undefined,
     onlyIfNotProficient: isProficiency && row.onlyIfNotProficient,
     onlyIfProficient: isProficiency && row.onlyIfProficient,
+    // Категории есть только у выбора черты; пустой список не пишется — его
+    // отсутствие и значит «любая категория»
+    featCategories:
+      primary === 'FEAT' && row.featCategories.length
+        ? [...row.featCategories]
+        : undefined,
     // Исход по умолчанию не пишется: у записей до его появления поля нет, и
     // core-api читает его отсутствие как владение
     grants: isExpertise && row.grants === 'EXPERTISE' ? 'EXPERTISE' : undefined,
@@ -1598,6 +1623,10 @@ function applyFixedGrantRow(mechanics: FeatMechanics, row: FeatGrantRow): void {
       break;
     case 'WEAPON':
       proficiencies.weapons.push(...toRefs(row.options));
+
+      break;
+    case 'FEAT':
+      mechanics.feats = [...(mechanics.feats ?? []), ...toRefs(row.options)];
 
       break;
     default:

@@ -1,11 +1,15 @@
 <script setup lang="ts">
-  import type { FeatSpellListExpansion, FeatSpellListGroup } from '../../model';
+  import type {
+    FeatEditorLabelOverrides,
+    FeatSpellListExpansion,
+    FeatSpellListGroup,
+  } from '../../model';
 
   import { InfoTooltip } from '~ui/tooltip';
 
   import {
     createFeatSpellListGroup,
-    FEAT_EDITOR_LABELS,
+    getFeatEditorLabels,
     getFeatSpellCountLabel,
   } from '../../model';
   import FeatEntityRefRows from './FeatEntityRefRows.vue';
@@ -26,11 +30,22 @@
    */
   const model = defineModel<FeatSpellListExpansion>({ required: true });
 
+  const { labels = {} } = defineProps<{
+    /**
+     * Подписи формы-владельца: чертой источник даров называет только форма
+     * черты, у умения класса и вида свои формулировки.
+     */
+    labels?: FeatEditorLabelOverrides;
+  }>();
+
+  /** Подписи с поправками формы-владельца. */
+  const texts = computed(() => getFeatEditorLabels(labels));
+
   /** Заголовок списка: с какого уровня и сколько из него берут. */
   function getGroupTitle(group: FeatSpellListGroup): string {
     const level = group.requiredLevel
-      ? `${FEAT_EDITOR_LABELS.spellListFromLevelPrefix} ${group.requiredLevel} ${FEAT_EDITOR_LABELS.spellListFromLevelSuffix}`
-      : FEAT_EDITOR_LABELS.spellListFromStart;
+      ? `${texts.value.spellListFromLevelPrefix} ${group.requiredLevel} ${texts.value.spellListFromLevelSuffix}`
+      : texts.value.spellListFromStart;
 
     return `${level} — ${getFeatSpellCountLabel(group.count)}`;
   }
@@ -59,18 +74,18 @@
 <template>
   <div class="flex flex-col gap-3">
     <InfoTooltip
-      :text="FEAT_EDITOR_LABELS.spellListHintDetails"
+      :text="texts.spellListHintDetails"
       icon="tabler:info-circle-filled"
       class="text-sm text-dimmed"
     >
-      <span>{{ FEAT_EDITOR_LABELS.spellListHint }}</span>
+      <span>{{ texts.spellListHint }}</span>
     </InfoTooltip>
 
     <p
       v-if="!model.groups.length"
       class="rounded-lg border border-dashed border-default p-4 text-center text-xs text-dimmed italic"
     >
-      {{ FEAT_EDITOR_LABELS.spellListEmpty }}
+      {{ texts.spellListEmpty }}
     </p>
 
     <template
@@ -101,10 +116,10 @@
           <UFormField class="w-40">
             <template #label>
               <InfoTooltip
-                :text="FEAT_EDITOR_LABELS.spellListLevelHint"
+                :text="texts.spellListLevelHint"
                 icon="tabler:info-circle-filled"
               >
-                <span>{{ FEAT_EDITOR_LABELS.spellListLevel }}</span>
+                <span>{{ texts.spellListLevel }}</span>
               </InfoTooltip>
             </template>
 
@@ -112,17 +127,17 @@
               v-model="group.requiredLevel"
               :min="1"
               :max="20"
-              :placeholder="FEAT_EDITOR_LABELS.spellListLevelPlaceholder"
+              :placeholder="texts.spellListLevelPlaceholder"
             />
           </UFormField>
 
           <InfoTooltip
-            :text="FEAT_EDITOR_LABELS.spellListCountHint"
+            :text="texts.spellListCountHint"
             icon="tabler:info-circle-filled"
             class="mb-2"
           >
             <span class="sr-only">
-              {{ FEAT_EDITOR_LABELS.spellListCount }}
+              {{ texts.spellListCount }}
             </span>
           </InfoTooltip>
 
@@ -138,7 +153,7 @@
 
     <UButton
       icon="tabler:plus"
-      :label="FEAT_EDITOR_LABELS.addSpellList"
+      :label="texts.addSpellList"
       color="primary"
       variant="soft"
       block
@@ -151,12 +166,12 @@
       class="flex items-center"
     >
       <InfoTooltip
-        :text="FEAT_EDITOR_LABELS.spellListRequiresSpellcastingHint"
+        :text="texts.spellListRequiresSpellcastingHint"
         icon="tabler:info-circle-filled"
       >
         <UCheckbox
           v-model="model.requiresSpellcasting"
-          :label="FEAT_EDITOR_LABELS.spellListRequiresSpellcasting"
+          :label="texts.spellListRequiresSpellcasting"
         />
       </InfoTooltip>
     </div>

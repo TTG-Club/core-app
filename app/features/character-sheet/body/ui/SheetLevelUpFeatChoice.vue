@@ -11,6 +11,7 @@
   } from '../../model';
 
   const {
+    title = ABILITY_IMPROVEMENT_LABELS.featTitle,
     options,
     selected = null,
     abilities,
@@ -18,6 +19,9 @@
     isLoading = false,
     hasError = false,
   } = defineProps<{
+    /** Подпись выбора из записи умения; пусто — общая «Выберите черту». */
+    title?: string;
+
     /** Черты, доступные для выбора (уже отфильтрованы мастером). */
     options: FeatSelectOption[];
 
@@ -109,7 +113,7 @@
 <template>
   <div class="flex flex-col gap-2">
     <span class="text-xs text-muted">
-      {{ ABILITY_IMPROVEMENT_LABELS.featTitle }}
+      {{ title || ABILITY_IMPROVEMENT_LABELS.featTitle }}
     </span>
 
     <span

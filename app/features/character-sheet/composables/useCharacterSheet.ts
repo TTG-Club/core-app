@@ -1583,6 +1583,7 @@ export function useCharacterSheet() {
    * @param payload.classResources ресурсы класса из отмеченных колонок.
    * @param payload.features классовые особенности по уровню.
    * @param payload.startingEquipment выбранный вариант стартового снаряжения; null — не выдавать.
+   * @param payload.abilityIncreases прибавки к характеристикам от черт умений.
    */
   function setClass(payload: {
     // Запись выданного снаряжения ведёт сам лист, поэтому мастер её не
@@ -1600,6 +1601,12 @@ export function useCharacterSheet() {
     classResources: CharacterClassResource[];
     features: CharacterFeature[];
     startingEquipment: StartingEquipmentGrant | null;
+
+    /**
+     * Прибавки к характеристикам от черт, выбранных в умениях класса:
+     * «Улучшение характеристик» на уровнях выше первого. Пусто — прибавок нет.
+     */
+    abilityIncreases?: Partial<Record<AbilityKey, number>>;
   }): void {
     if (!ensureEditable()) {
       return;
@@ -1699,6 +1706,12 @@ export function useCharacterSheet() {
     character.value = withFeatModifiers(
       {
         ...character.value,
+        // Прибавки черт умений считаются в момент взятия, как в мастере
+        // повышения уровня; снятие класса их не откатывает — так же, как там
+        abilities: applyAbilityIncreases(
+          character.value.abilities,
+          payload.abilityIncreases ?? {},
+        ),
         characterClass: {
           ...characterClass,
           startingEquipment: startingEquipment.granted,
@@ -1770,6 +1783,7 @@ export function useCharacterSheet() {
    * @param payload.languages выбранные в умениях языки.
    * @param payload.classResources ресурсы класса из отмеченных колонок.
    * @param payload.features классовые особенности первого уровня.
+   * @param payload.abilityIncreases прибавки к характеристикам от черт умений.
    */
   function addClass(payload: {
     characterClass: Omit<CharacterClass, 'startingEquipment'>;
@@ -1778,6 +1792,9 @@ export function useCharacterSheet() {
     languages: string[];
     classResources: CharacterClassResource[];
     features: CharacterFeature[];
+
+    /** Прибавки к характеристикам от черт, выбранных в умениях класса. */
+    abilityIncreases?: Partial<Record<AbilityKey, number>>;
   }): void {
     if (!ensureEditable()) {
       return;
@@ -1850,6 +1867,10 @@ export function useCharacterSheet() {
     character.value = withFeatModifiers(
       {
         ...withLevels,
+        abilities: applyAbilityIncreases(
+          withLevels.abilities,
+          payload.abilityIncreases ?? {},
+        ),
         skills: applySkillProficiencies(
           withLevels.skills,
           payload.skills.proficient,
