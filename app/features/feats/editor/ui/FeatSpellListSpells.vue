@@ -28,8 +28,6 @@
    * следующие — на своих уровнях, и из каждой берут своё количество. Складывать
    * их в один список значило бы выдать всю таблицу с первого уровня.
    */
-  const model = defineModel<FeatSpellListExpansion>({ required: true });
-
   const { labels = {} } = defineProps<{
     /**
      * Подписи формы-владельца: чертой источник даров называет только форма
@@ -37,6 +35,8 @@
      */
     labels?: FeatEditorLabelOverrides;
   }>();
+
+  const model = defineModel<FeatSpellListExpansion>({ required: true });
 
   /** Подписи с поправками формы-владельца. */
   const texts = computed(() => getFeatEditorLabels(labels));

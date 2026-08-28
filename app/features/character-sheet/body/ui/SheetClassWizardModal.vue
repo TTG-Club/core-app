@@ -722,6 +722,17 @@
   }
 
   /**
+   * Выбранные характеристики по слотам прибавок черты; пусто — черта не
+   * выбрана либо прибавок не даёт.
+   *
+   * @param choiceId идентификатор выбора черты.
+   * @returns характеристики по слотам.
+   */
+  function featAbilities(choiceId: string): Array<AbilityKey | null> {
+    return featSelections.value[choiceId]?.abilities ?? [];
+  }
+
+  /**
    * Выбор черты в умении. Смена черты обнуляет выбранные характеристики: у
    * новой черты свой список и своё число прибавок.
    *
@@ -1590,7 +1601,7 @@
                   :title="choice.label"
                   :options="featOptions(choice)"
                   :selected="selectedFeat(choice.id)"
-                  :abilities="featSelections[choice.id]?.abilities ?? []"
+                  :abilities="featAbilities(choice.id)"
                   :scores="character.abilities"
                   :is-loading="isFeatsLoading"
                   :has-error="hasFeatsError"

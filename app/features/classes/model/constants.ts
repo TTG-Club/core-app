@@ -389,3 +389,18 @@ export const CLASS_LEVEL_BOUNDS = {
 
 /** Уровень, с которого у умения бывает прибавка характеристик «эпического» вида. */
 export const CLASS_ABILITY_BONUS_MIN_LEVEL = 20;
+
+/**
+ * Прибавка характеристик умением 20 уровня по умолчанию — как у «Первобытного
+ * чемпиона»: +4 к названным характеристикам, предел 24.
+ */
+export const CLASS_ABILITY_BONUS_DEFAULTS = {
+  bonus: 4,
+  upto: 24,
+} as const;
+
+/** Границы полей прибавки характеристик умением 20 уровня. */
+export const CLASS_ABILITY_BONUS_BOUNDS = {
+  bonus: { min: 1, max: 10 },
+  upto: { min: 20, max: 30 },
+} as const;

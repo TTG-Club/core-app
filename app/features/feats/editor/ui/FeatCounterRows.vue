@@ -15,8 +15,6 @@
    * Максимум формулой, а не числом, потому что у большинства таких запасов он
    * привязан к бонусу мастерства и обязан расти вместе с ним («Удачливый»).
    */
-  const model = defineModel<Array<FeatCounterRow>>({ required: true });
-
   const { labels = {} } = defineProps<{
     /**
      * Подписи формы-владельца: чертой источник даров называет только форма
@@ -24,6 +22,8 @@
      */
     labels?: FeatEditorLabelOverrides;
   }>();
+
+  const model = defineModel<Array<FeatCounterRow>>({ required: true });
 
   /** Подписи с поправками формы-владельца. */
   const texts = computed(() => getFeatEditorLabels(labels));

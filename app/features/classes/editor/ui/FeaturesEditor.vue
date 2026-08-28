@@ -9,6 +9,7 @@
   import {
     CLASS_ABILITY_BONUS_MIN_LEVEL,
     CLASS_FEATURES_EDITOR,
+    CLASS_LEVEL_BOUNDS,
     getClassFeatureFilledBlocksCount,
     getClassFeatureLevelBadge,
   } from '../../model';
@@ -69,7 +70,7 @@
    */
   function getEmptyFeature(): ClassFeatureCreate {
     return {
-      level: 1,
+      level: CLASS_LEVEL_BOUNDS.min,
       name: '',
       optionsName: undefined,
       description: '',

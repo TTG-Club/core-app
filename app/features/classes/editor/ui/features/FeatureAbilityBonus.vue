@@ -3,7 +3,11 @@
 
   import { SelectAbilities } from '~ui/select';
 
-  import { CLASS_FEATURES_EDITOR } from '../../../model';
+  import {
+    CLASS_ABILITY_BONUS_BOUNDS,
+    CLASS_ABILITY_BONUS_DEFAULTS,
+    CLASS_FEATURES_EDITOR,
+  } from '../../../model';
   import FeatureSection from './FeatureSection.vue';
 
   /**
@@ -19,7 +23,7 @@
 
   /** Заводит прибавку с пределом эпических умений. */
   function add() {
-    model.value = { abilities: [], bonus: 4, upto: 24 };
+    model.value = { abilities: [], ...CLASS_ABILITY_BONUS_DEFAULTS };
   }
 
   function remove() {
@@ -58,8 +62,8 @@
       >
         <UInputNumber
           v-model="model.bonus"
-          :min="1"
-          :max="10"
+          :min="CLASS_ABILITY_BONUS_BOUNDS.bonus.min"
+          :max="CLASS_ABILITY_BONUS_BOUNDS.bonus.max"
         />
       </UFormField>
 
@@ -70,8 +74,8 @@
       >
         <UInputNumber
           v-model="model.upto"
-          :min="20"
-          :max="30"
+          :min="CLASS_ABILITY_BONUS_BOUNDS.upto.min"
+          :max="CLASS_ABILITY_BONUS_BOUNDS.upto.max"
         />
       </UFormField>
 

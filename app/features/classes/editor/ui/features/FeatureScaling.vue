@@ -7,6 +7,7 @@
   import {
     CLASS_FEATURE_SCALING_EDITOR,
     CLASS_FEATURES_EDITOR,
+    CLASS_LEVEL_BOUNDS,
   } from '../../../model';
   import FeatureSection from './FeatureSection.vue';
 
@@ -32,7 +33,10 @@
     model.value = [
       ...model.value,
       {
-        level: Math.min(20, (last?.level ?? 1) + 1),
+        level: Math.min(
+          CLASS_LEVEL_BOUNDS.max,
+          (last?.level ?? CLASS_LEVEL_BOUNDS.min) + 1,
+        ),
         name: '',
         description: '',
         additional: '',

@@ -17,8 +17,6 @@
    * черты — и выданные, и выбранные игроком, — поэтому живёт своим блоком
    * (`FeatSpellcastingAbility`), а не рядом с одним из списков.
    */
-  const model = defineModel<FeatSpellGrant>({ required: true });
-
   const { labels = {} } = defineProps<{
     /**
      * Подписи формы-владельца: чертой источник даров называет только форма
@@ -26,6 +24,8 @@
      */
     labels?: FeatEditorLabelOverrides;
   }>();
+
+  const model = defineModel<FeatSpellGrant>({ required: true });
 
   /** Подписи с поправками формы-владельца. */
   const texts = computed(() => getFeatEditorLabels(labels));
