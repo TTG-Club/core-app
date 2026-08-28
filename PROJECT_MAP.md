@@ -879,7 +879,7 @@ imported via the auto-generated `~<domain>` alias (see
 | `rating`          | Star rating widget                                                                     |
 | `result`          | Status/result screen (404 / 403 / error / info)                                        |
 | `section`         | Section content + sidebar layout parts                                                 |
-| `select`          | Domain `USelectMenu` wrappers (41 `Select*.vue`, e.g. class, spell level, damage type) |
+| `select`          | Domain `USelectMenu` wrappers (41 `Select*.vue`, e.g. class, spell level, damage type); catalog-backed ones (items, spells, feats, species, backgrounds) open `CatalogPickerModal` instead — section filters on the left, paged list on the right |
 | `skeleton`        | Link skeleton loaders                                                                  |
 | `source-tag`      | Sourcebook source/group tag badge                                                      |
 | `tooltip`         | Info tooltip                                                                           |

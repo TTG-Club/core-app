@@ -1,126 +1,25 @@
 <script setup lang="ts">
-  import type { BackgroundSelectResponse } from '~backgrounds/model';
+  import { CATALOG_PICKER_SECTIONS, CATALOG_PICKER_TITLES } from './constants';
+  import SelectCatalogEntity from './SelectCatalogEntity.vue';
 
-  import { debounce } from 'es-toolkit';
-
-  interface BackgroundSelectItem {
-    label: string;
-    value: string;
-    description: string;
-    sourceLabel: string;
-  }
-
-  const { multiple = false, disabled } = defineProps<{
+  /** Выбор предысторий каталога окном с фильтрами раздела. */
+  const { multiple = false, disabled = false } = defineProps<{
     disabled?: boolean;
     multiple?: boolean;
   }>();
 
-  // IMPORTANT:
-  // USelectMenu при clearable может эмитить null.
-  // Мы внизу нормализуем null -> undefined (а не даём ему попасть в model).
   const model = defineModel<string | Array<string> | undefined>({
     default: undefined,
   });
-
-  const searchQuery = ref<string>('');
-  const openedOnce = ref<boolean>(false);
-
-  const { data, status, refresh } = await useAsyncData<
-    Array<BackgroundSelectItem>
-  >(
-    'backgrounds-select',
-    async () => {
-      const backgroundsLinks = await $fetch<Array<BackgroundSelectResponse>>(
-        '/api/v2/backgrounds/select',
-        {
-          method: 'get',
-          query: {
-            query: searchQuery.value || undefined,
-          },
-        },
-      );
-
-      return backgroundsLinks.map((backgroundLink) => ({
-        label: backgroundLink.name.rus,
-        value: backgroundLink.url,
-        description: backgroundLink.name.eng,
-        sourceLabel: backgroundLink.source.name.label,
-      }));
-    },
-    { dedupe: 'defer' },
-  );
-
-  async function handleDropdownOpening(state: boolean) {
-    if (!state || openedOnce.value) {
-      return;
-    }
-
-    openedOnce.value = true;
-    await refresh();
-  }
-
-  const debouncedRefresh = debounce(() => {
-    refresh();
-  }, 250);
-
-  onBeforeUnmount(() => {
-    debouncedRefresh.cancel();
-  });
-
-  function handleSearch(value: string) {
-    searchQuery.value = value;
-
-    if (!openedOnce.value) {
-      return;
-    }
-
-    debouncedRefresh();
-  }
-
-  function handleModelValueUpdate(value: string | string[]): void {
-    if (
-      value === null
-      || value === undefined
-      || value === ''
-      || (Array.isArray(value) && value.length === 0)
-    ) {
-      // нормализация "очистки" в undefined, без null или пустой строки
-      model.value = undefined;
-
-      return;
-    }
-
-    // При одиночном выборе из массива берётся первая запись: `USelectMenu`
-    // отдаёт массив и там, где выбирают одно
-    model.value = multiple || !Array.isArray(value) ? value : value[0];
-  }
 </script>
 
 <template>
-  <USelectMenu
-    :model-value="model"
-    :loading="status === 'pending'"
-    :items="data"
+  <SelectCatalogEntity
+    v-model="model"
+    :section="CATALOG_PICKER_SECTIONS.backgrounds"
+    :title="CATALOG_PICKER_TITLES.backgrounds"
     :multiple="multiple"
     :disabled="disabled"
     :placeholder="`Выбери предыстори${multiple ? 'и' : 'ю'}`"
-    label-key="label"
-    value-key="value"
-    ignore-filter
-    clearable
-    searchable
-    :ui="{ itemDescription: 'text-xs text-secondary' }"
-    @update:search-term="handleSearch"
-    @update:open="handleDropdownOpening"
-    @update:model-value="handleModelValueUpdate"
-  >
-    <template #item-trailing="{ item }">
-      <UBadge
-        variant="subtle"
-        color="neutral"
-      >
-        {{ item.sourceLabel }}
-      </UBadge>
-    </template>
-  </USelectMenu>
+  />
 </template>
