@@ -18,6 +18,8 @@ import {
   toFeatEditorRows,
 } from '~feats/model';
 
+import { getLegacyFeatureFlags, withLegacyFeatureRows } from './features';
+
 /**
  * Разбор загруженного класса и подготовка формы к отправке.
  *
@@ -33,8 +35,21 @@ interface MechanicsHolder {
   editorRows: FeatEditorRows | undefined;
 }
 
+/**
+ * Поля умения, которые форма не правит напрямую: флаги прежних лет и блок
+ * выбора навыков. Все они читаются в строки даров при загрузке
+ * (`withLegacyFeatureRows`) и выводятся из строк при сохранении.
+ */
 const featureSchema = z.object({
   informationalOnly: z.boolean().optional(),
+  abilityImprovement: z.boolean().nullish(),
+  fightingStyleChoice: z.boolean().nullish(),
+  skillChoice: z
+    .object({
+      count: z.number().optional(),
+      skills: z.array(z.string()).optional(),
+    })
+    .nullish(),
 });
 
 /**
@@ -95,19 +110,40 @@ function buildMechanics(holder: MechanicsHolder): FeatMechanics | undefined {
 /**
  * Приводит умение класса к структуре формы.
  *
+ * Флаги повышения характеристик и боевого стиля и блок выбора навыков читаются
+ * в строки даров: форма правит их только строками. Списки роста и вариантов
+ * приходят и пустыми, и пропущенными — форме нужны массивы.
+ *
  * @param raw сырое умение из ответа сервера.
  * @returns умение с разобранными дарами и эффектами.
  */
 function parseFeature(raw: unknown): Record<string, unknown> {
   const source = isRecord(raw) ? raw : {};
   const parsed = featureSchema.safeParse(source);
+  const holder = parseMechanicsHolder(source);
+
+  const legacy = parsed.success ? parsed.data : {};
+
+  const skillChoice = legacy.skillChoice
+    ? {
+        count: legacy.skillChoice.count ?? 1,
+        skills: legacy.skillChoice.skills ?? [],
+      }
+    : undefined;
 
   return {
     ...source,
-    informationalOnly: parsed.success
-      ? (parsed.data.informationalOnly ?? false)
-      : false,
-    ...parseMechanicsHolder(source),
+    informationalOnly: legacy.informationalOnly ?? false,
+    scaling: Array.isArray(source.scaling) ? source.scaling : [],
+    options: Array.isArray(source.options) ? source.options : [],
+    // Блок выбора навыков уехал в строки даров и в состоянии формы не живёт
+    skillChoice: undefined,
+    ...holder,
+    editorRows: withLegacyFeatureRows(holder.editorRows, {
+      abilityImprovement: legacy.abilityImprovement ?? false,
+      fightingStyleChoice: legacy.fightingStyleChoice ?? false,
+      skillChoice,
+    }),
   };
 }
 
@@ -131,12 +167,24 @@ export function normalizeLoadedClass(
  * Готовит умение класса к отправке: дары из строк, эффекты через общий
  * нормализатор, строки редактора наружу не уходят.
  *
+ * Флаги повышения характеристик и боевого стиля выводятся из строк даров: их
+ * читают потребители, не знающие о выборе черты в механике, и запись обязана
+ * говорить одно и то же обоими способами.
+ *
  * @param feature умение из состояния формы.
  * @returns умение для тела запроса.
  */
 function transformFeature(feature: ClassFeatureCreate): ClassFeatureCreate {
+  const flags = feature.editorRows
+    ? getLegacyFeatureFlags(feature.editorRows)
+    : {
+        abilityImprovement: feature.abilityImprovement ?? false,
+        fightingStyleChoice: feature.fightingStyleChoice ?? false,
+      };
+
   return {
     ...feature,
+    ...flags,
     mechanics: buildMechanics(feature),
     activeEffects: normalizeActiveEffects(feature.activeEffects),
     editorRows: undefined,

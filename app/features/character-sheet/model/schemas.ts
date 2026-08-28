@@ -89,6 +89,8 @@ import {
   getCharacterFeatureId,
   getClassFeatureId,
   getClassToolChoice,
+  getLegacyClassFeatChoices,
+  isAbilityImprovementFeatChoice,
   isAbilityImprovementFeature,
   parseAbilityKeys,
   parseApiAbilityKey,
@@ -181,6 +183,8 @@ const mechanicsChoicesSchema = z
         )
         .nullable()
         .catch(null),
+      // Категории черт у выбора черты; пусто — по правилу листа.
+      featCategories: z.array(z.string()).nullable().catch(null),
       // Пул заклинаний собирается поиском по каталогу, поэтому листу нужны сами
       // ограничения, а не готовый список.
       spellFilter: z
@@ -1097,6 +1101,23 @@ function buildMechanicChoices(
             option.name ? [option.name] : [],
           ),
           onlyOwnedWeapons: choice.onlyIfProficient ?? false,
+        },
+      ];
+    }
+
+    if (choice.type === 'FEAT') {
+      // Пул — каталог черт: категории и перечисленные url только сужают его,
+      // а сами черты пикер берёт из `/feats/select`
+      return [
+        {
+          id,
+          kind: 'feat',
+          label: label || SHEET_FEAT_CHOICE_LABELS.feat || '',
+          count,
+          listed: (choice.options ?? []).flatMap((option) =>
+            option.value ? [option.value] : [],
+          ),
+          featCategories: choice.featCategories ?? [],
         },
       ];
     }
@@ -2113,6 +2134,11 @@ const classFeatureSchema = z.object({
       choices: mechanicsChoicesSchema,
       counters: mechanicsCountersSchema,
       spells: mechanicsSpellGrantSchema,
+      // Черты без выбора — ссылками; деталь черты лист догружает сам
+      feats: z
+        .array(z.object({ url: z.string().catch('') }))
+        .nullable()
+        .catch(null),
     })
     .nullable()
     .catch(null),
@@ -2285,52 +2311,71 @@ const classDetailSchema = z.object({
 function toClassSummary(
   detail: z.infer<typeof classDetailSchema>,
 ): ClassSummary {
-  const features: ClassFeatureSummary[] = detail.features.map((feature) => ({
-    key: feature.key,
-    level: feature.level,
-    name: feature.name,
-    description: toDescriptionNodes(feature.description),
-    isSubclass: feature.isSubclass,
-    fightingStyleChoice: feature.fightingStyleChoice,
-    // Флага в ответе класса пока нет — тогда умение распознаётся по описанию,
-    // где «Улучшение характеристик» ссылается на одноимённую черту.
-    // Флаг приходит с бэка; распознавание по названию и описанию остаётся
-    // страховкой для записей, где он не проставлен.
-    abilityImprovement:
-      feature.abilityImprovement
-      || isAbilityImprovementFeature(feature.name, feature.description),
-    skillChoice: feature.skillChoice,
-    scalingLevels: (feature.scaling ?? [])
-      .map((entry) => entry.level)
-      .filter((entry) => entry > 0),
-    informationalOnly: feature.informationalOnly,
-    // Эффекты разбирает общая схема раздела: битый эффект отбрасывается
-    // поштучно, а не роняет всё умение
-    activeEffects: normalizeLoadedActiveEffects(feature.activeEffects),
-    proficiencies: feature.mechanics?.proficiencies
-      ? toGrantedProficiencies(feature.mechanics.proficiencies)
-      : null,
-    choices: withSpellClassChoice(
-      toMechanicChoices(
-        feature.mechanics?.choices ?? [],
-        getClassFeatureId(detail.url, feature.key),
+  const features: ClassFeatureSummary[] = detail.features.map((feature) => {
+    const featureId = getClassFeatureId(detail.url, feature.key);
+
+    const allChoices = withSpellClassChoice(
+      toMechanicChoices(feature.mechanics?.choices ?? [], featureId),
+      featureId,
+    );
+
+    // Выборы черты живут отдельно от остальных: их спрашивает пикер каталога
+    // черт, а у умения с флагами прежних лет они собираются по флагам, когда
+    // в механике выбора черты ещё нет
+    const featChoices = getLegacyClassFeatChoices(
+      featureId,
+      allChoices.filter((choice) => choice.kind === 'feat'),
+      {
+        fightingStyleChoice: feature.fightingStyleChoice,
+        // Флаг приходит с бэка; распознавание по названию и описанию остаётся
+        // страховкой для записей, где он не проставлен
+        abilityImprovement:
+          feature.abilityImprovement
+          || isAbilityImprovementFeature(feature.name, feature.description),
+      },
+    );
+
+    return {
+      key: feature.key,
+      level: feature.level,
+      name: feature.name,
+      description: toDescriptionNodes(feature.description),
+      isSubclass: feature.isSubclass,
+      fightingStyleChoice: feature.fightingStyleChoice,
+      // Умение даёт черту за повышение характеристик, если так сказано флагом,
+      // описанием либо выбором общей черты в механике
+      abilityImprovement: featChoices.some(isAbilityImprovementFeatChoice),
+      skillChoice: feature.skillChoice,
+      scalingLevels: (feature.scaling ?? [])
+        .map((entry) => entry.level)
+        .filter((entry) => entry > 0),
+      informationalOnly: feature.informationalOnly,
+      // Эффекты разбирает общая схема раздела: битый эффект отбрасывается
+      // поштучно, а не роняет всё умение
+      activeEffects: normalizeLoadedActiveEffects(feature.activeEffects),
+      proficiencies: feature.mechanics?.proficiencies
+        ? toGrantedProficiencies(feature.mechanics.proficiencies)
+        : null,
+      choices: allChoices.filter((choice) => choice.kind !== 'feat'),
+      featChoices,
+      grantedFeatUrls: (feature.mechanics?.feats ?? []).flatMap((feat) =>
+        feat.url ? [feat.url] : [],
       ),
-      getClassFeatureId(detail.url, feature.key),
-    ),
-    counters: toMechanicCounters(feature.mechanics?.counters ?? []),
-    // Умение либо держит заклинание подготовленным, либо оставляет подготовку
-    // игроку — как черта
-    spells: (feature.grantedSpells ?? []).length
-      ? (feature.grantedSpells ?? []).map((entry) => ({
-          ...toCharacterSpell(entry.spell),
-          prepared: feature.mechanics?.spells?.alwaysPrepared ?? false,
-          requiredLevel: entry.requiredLevel ?? undefined,
-        }))
-      : null,
-    spellcastingAbility: parseApiAbilityKey(
-      feature.mechanics?.spells?.spellcastingAbility ?? '',
-    ),
-  }));
+      counters: toMechanicCounters(feature.mechanics?.counters ?? []),
+      // Умение либо держит заклинание подготовленным, либо оставляет подготовку
+      // игроку — как черта
+      spells: (feature.grantedSpells ?? []).length
+        ? (feature.grantedSpells ?? []).map((entry) => ({
+            ...toCharacterSpell(entry.spell),
+            prepared: feature.mechanics?.spells?.alwaysPrepared ?? false,
+            requiredLevel: entry.requiredLevel ?? undefined,
+          }))
+        : null,
+      spellcastingAbility: parseApiAbilityKey(
+        feature.mechanics?.spells?.spellcastingAbility ?? '',
+      ),
+    };
+  });
 
   const table: ClassTableColumn[] = detail.table.map((column) => ({
     name: column.name,

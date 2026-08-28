@@ -2,6 +2,7 @@
   import type { DropdownMenuItem } from '@nuxt/ui';
 
   import type {
+    FeatEditorLabelOverrides,
     FeatEditorRows,
     FeatModifierRow,
     FeatModifierRowKind,
@@ -18,10 +19,10 @@
     createModifierRow,
     FEAT_DAMAGE_CHOICE_COUNT,
     FEAT_DAMAGE_DEFENSE_OPTIONS,
-    FEAT_EDITOR_LABELS,
     FEAT_MODIFIER_KIND_OPTIONS,
     FEAT_MODIFIER_LABELS,
     FEAT_MODIFIER_SOURCE_OPTIONS,
+    getFeatEditorLabels,
     getTakenChoiceKeys,
     hasModifierValue,
     isDamageDefenseChoiceRow,
@@ -35,10 +36,19 @@
    * на экране все чувства и все скорости сразу, и почти все поля в ней у
    * обычной черты пустовали.
    */
-  const { rows } = defineProps<{
+  const { rows, labels = {} } = defineProps<{
     /** Все строки редактора: из них берутся занятые ключи выборов. */
     rows: FeatEditorRows;
+
+    /**
+     * Подписи формы-владельца: чертой источник даров называет только форма
+     * черты, у умения класса и вида свои формулировки.
+     */
+    labels?: FeatEditorLabelOverrides;
   }>();
+
+  /** Подписи с поправками формы-владельца. */
+  const texts = computed(() => getFeatEditorLabels(labels));
 
   const model = defineModel<Array<FeatModifierRow>>({ required: true });
 
@@ -75,18 +85,18 @@
 <template>
   <div class="flex flex-col gap-2">
     <InfoTooltip
-      :text="FEAT_EDITOR_LABELS.modifiersHintDetails"
+      :text="texts.modifiersHintDetails"
       icon="tabler:info-circle-filled"
       class="text-sm text-dimmed"
     >
-      <span>{{ FEAT_EDITOR_LABELS.modifiersHint }}</span>
+      <span>{{ texts.modifiersHint }}</span>
     </InfoTooltip>
 
     <p
       v-if="!model.length"
       class="rounded-lg border border-dashed border-default p-4 text-center text-xs text-dimmed italic"
     >
-      {{ FEAT_EDITOR_LABELS.modifiersEmpty }}
+      {{ texts.modifiersEmpty }}
     </p>
 
     <div
@@ -103,18 +113,18 @@
           v-if="hasModifierValue(row.kind) && !row.equalsWalk"
           v-model="row.value"
           class="w-32"
-          :aria-label="FEAT_EDITOR_LABELS.modifierValue"
+          :aria-label="texts.modifierValue"
         />
 
         <UCheckbox
           v-if="supportsEqualsWalk(row.kind)"
           v-model="row.equalsWalk"
-          :label="FEAT_EDITOR_LABELS.equalsWalk"
+          :label="texts.equalsWalk"
         />
 
         <InfoTooltip
           v-if="row.kind === 'DAMAGE_DEFENSE'"
-          :text="FEAT_EDITOR_LABELS.damageTypeSourceHint"
+          :text="texts.damageTypeSourceHint"
           icon="tabler:info-circle-filled"
         >
           <USelect
@@ -122,7 +132,7 @@
             :items="FEAT_MODIFIER_SOURCE_OPTIONS"
             value-key="value"
             class="w-44"
-            :aria-label="FEAT_EDITOR_LABELS.damageTypeSource"
+            :aria-label="texts.damageTypeSource"
           />
         </InfoTooltip>
 
@@ -138,7 +148,7 @@
           :items="FEAT_DAMAGE_DEFENSE_OPTIONS"
           value-key="value"
           class="w-44"
-          :aria-label="FEAT_EDITOR_LABELS.defenseKind"
+          :aria-label="texts.defenseKind"
         />
 
         <SelectCondition
@@ -171,10 +181,10 @@
         <UFormField class="md:col-span-12">
           <template #label>
             <InfoTooltip
-              :text="FEAT_EDITOR_LABELS.damageTypesPoolHint"
+              :text="texts.damageTypesPoolHint"
               icon="tabler:info-circle-filled"
             >
-              <span>{{ FEAT_EDITOR_LABELS.damageTypesPool }}</span>
+              <span>{{ texts.damageTypesPool }}</span>
             </InfoTooltip>
           </template>
 
@@ -186,7 +196,7 @@
 
         <UFormField
           class="md:col-span-4"
-          :label="FEAT_EDITOR_LABELS.damageChoiceCount"
+          :label="texts.damageChoiceCount"
         >
           <UInputNumber
             v-model="row.count"
@@ -197,11 +207,11 @@
 
         <UFormField
           class="md:col-span-8"
-          :label="FEAT_EDITOR_LABELS.damageChoiceLabel"
+          :label="texts.damageChoiceLabel"
         >
           <UInput
             v-model="row.label"
-            :placeholder="FEAT_EDITOR_LABELS.damageChoiceLabelPlaceholder"
+            :placeholder="texts.damageChoiceLabelPlaceholder"
           />
         </UFormField>
       </div>
@@ -213,7 +223,7 @@
     >
       <UButton
         icon="tabler:plus"
-        :label="FEAT_EDITOR_LABELS.addModifier"
+        :label="texts.addModifier"
         color="primary"
         variant="soft"
         block

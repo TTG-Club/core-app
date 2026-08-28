@@ -3,6 +3,7 @@ import type {
   FeatAbilityBonus,
   FeatChoice,
   FeatCounter,
+  FeatEntityRef,
   FeatMechanics,
   FeatModifiers,
   FeatPrerequisiteDetails,
@@ -80,7 +81,21 @@ function buildChoices(choices: Array<FeatChoice>): Array<FeatChoice> {
       ...choice,
       key: choice.key.trim(),
       spellFilter: buildSpellFilter(choice.spellFilter),
+      // Категории бывают только у выбора черты и только непустыми: пустой
+      // список читается как «любая категория» и в JSONB не нужен
+      featCategories:
+        choice.type === 'FEAT' && choice.featCategories?.length
+          ? choice.featCategories
+          : undefined,
     }));
+}
+
+/**
+ * Готовит выдаваемые черты: ссылка без url — только что добавленная и
+ * незаполненная строка, отправлять её некуда.
+ */
+function buildFeats(feats: Array<FeatEntityRef>): Array<FeatEntityRef> {
+  return feats.filter((feat) => !!text(feat.url));
 }
 
 /** Готовит варианты повышения характеристик. */
@@ -225,6 +240,9 @@ export function buildFeatMechanics(
     // заклинательство» без списка ничего не описывает
     spellList: buildSpellList(mechanics.spellList) ?? createFeatSpellList(),
     counters: buildCounters(mechanics.counters),
+    // Пустой список не отправляется по той же причине, что и повышения: блок
+    // есть только у класса, и бэк отвечает 500 на `feats: []` у черты и вида
+    feats: orUndefinedList(buildFeats(mechanics.feats ?? [])),
   });
 }
 

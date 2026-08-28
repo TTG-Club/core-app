@@ -2,56 +2,75 @@
   import type { ClassFeatureCreate } from '../../model';
 
   import { createFeatEditorRows, createFeatMechanics } from '~feats/model';
-  import { EditorArrayControls } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectLevel } from '~ui/select';
+  import { InfoTooltip } from '~ui/tooltip';
 
-  import { CLASS_EDITOR_LABELS } from '../../model';
+  import {
+    CLASS_ABILITY_BONUS_MIN_LEVEL,
+    CLASS_FEATURES_EDITOR,
+    CLASS_LEVEL_BOUNDS,
+    getClassFeatureFilledBlocksCount,
+    getClassFeatureLevelBadge,
+  } from '../../model';
   import {
     FeatureAbilityBonus,
     FeatureMechanics,
     FeatureOptions,
     FeatureScaling,
-    FeatureSkillChoice,
   } from './features';
 
+  /** Бейдж в шапке свёрнутого умения. */
+  interface FeatureBadge {
+    key: string;
+    label: string;
+    color: 'primary' | 'neutral' | 'warning';
+  }
+
+  /**
+   * Умения класса списком свёрнутых строк — как особенности вида: у класса их
+   * до двух десятков, и развёрнутые все разом они не помещались в голове.
+   *
+   * Всё, что умение даёт листу персонажа, — дары, ресурсы, заклинания,
+   * эффекты — лежит у самого умения в свёрнутом блоке «Механика и эффекты».
+   * Выбор боевого стиля и черты за повышение характеристик там же, строками
+   * даров: отдельных галочек у умения больше нет.
+   */
   const { isSubclass = false } = defineProps<{
     isSubclass?: boolean;
   }>();
 
-  const state = defineModel<Array<ClassFeatureCreate>>({ required: true });
+  const model = defineModel<Array<ClassFeatureCreate>>({ required: true });
 
-  // Нормализует входящие данные: гарантирует наличие массива options у каждого умения.
-  // Необходимо для совместимости с данными API, где options может отсутствовать или приходить null.
-  // Guard предотвращает зацикливание: .map() всегда создаёт новый массив,
-  // поэтому без проверки повторное присвоение state.value бесконечно триггерит вотчер.
-  watch(
-    state,
-    (features) => {
-      const needsNormalization = features.some(
-        (feature) => feature.options === undefined || feature.options === null,
-      );
+  /**
+   * Раскрытые умения — по их индексу. Свой список, а не аккордеон: кнопка
+   * удаления обязана лежать РЯДОМ с раскрывающим триггером, а не внутри него,
+   * иначе удалить умение можно только развернув его.
+   */
+  const expanded = ref<Set<number>>(new Set());
 
-      if (!needsNormalization) {
-        return;
+  /** Индекс умения, удаление которого ждёт подтверждения. */
+  const pendingRemoval = ref<number | undefined>(undefined);
+
+  const isRemovalOpen = computed({
+    get: () => pendingRemoval.value !== undefined,
+    set: (open) => {
+      if (!open) {
+        pendingRemoval.value = undefined;
       }
-
-      state.value = features.map((feature) =>
-        feature.options !== undefined && feature.options !== null
-          ? feature
-          : { ...feature, options: [] },
-      );
     },
-    { immediate: true, deep: false },
-  );
+  });
 
-  function addEmptyFeature() {
-    state.value.push(getEmptyFeature());
-  }
-
+  /**
+   * Пустое умение. Механика и строки редактора здесь всегда объекты:
+   * загрузка сливает ответ сервера именно с этим состоянием, и недостающие
+   * блоки берутся отсюда.
+   *
+   * @returns новое умение формы.
+   */
   function getEmptyFeature(): ClassFeatureCreate {
     return {
-      level: 1,
+      level: CLASS_LEVEL_BOUNDS.min,
       name: '',
       optionsName: undefined,
       description: '',
@@ -61,180 +80,405 @@
       fightingStyleChoice: false,
       scaling: [],
       options: [],
-      abilityBonus: {
-        abilities: [],
-        bonus: 0,
-        upto: 25,
-      },
+      abilityBonus: undefined,
       informationalOnly: false,
-      // Механика и строки редактора здесь всегда объекты: загрузка сливает
-      // ответ сервера именно с этим состоянием, и недостающие блоки берутся
-      // отсюда
       mechanics: createFeatMechanics(),
       activeEffects: [],
       editorRows: createFeatEditorRows(),
     };
+  }
+
+  /**
+   * Пересдвигает индексы набора после удаления строки: без этого раскрытым
+   * оказалось бы соседнее умение.
+   *
+   * @param indexes набор индексов строк.
+   * @param removed индекс удалённой строки.
+   * @returns новый набор со сдвинутыми индексами.
+   */
+  function shiftIndexes(indexes: Set<number>, removed: number): Set<number> {
+    return new Set(
+      [...indexes]
+        .filter((position) => position !== removed)
+        .map((position) => (position > removed ? position - 1 : position)),
+    );
+  }
+
+  /**
+   * Раскрыто ли умение.
+   *
+   * @param index позиция умения в списке.
+   * @returns `true`, когда тело строки развёрнуто.
+   */
+  function isExpanded(index: number): boolean {
+    return expanded.value.has(index);
+  }
+
+  /**
+   * Значок кнопки свёртки. Функцией, а не вычисляемым свойством: состояние
+   * своё у каждой строки списка.
+   *
+   * @param index позиция умения в списке.
+   * @returns имя значка.
+   */
+  function getToggleIcon(index: number): string {
+    return isExpanded(index) ? 'tabler:chevron-up' : 'tabler:chevron-down';
+  }
+
+  /**
+   * Подпись кнопки свёртки для скринридера.
+   *
+   * @param index позиция умения в списке.
+   * @returns подпись действия.
+   */
+  function getToggleLabel(index: number): string {
+    return isExpanded(index)
+      ? CLASS_FEATURES_EDITOR.collapse
+      : CLASS_FEATURES_EDITOR.expand;
+  }
+
+  /**
+   * Разворачивает или сворачивает умение.
+   *
+   * @param index позиция умения в списке.
+   */
+  function toggleFeature(index: number): void {
+    const next = new Set(expanded.value);
+
+    if (!next.delete(index)) {
+      next.add(index);
+    }
+
+    expanded.value = next;
+  }
+
+  /**
+   * Бейджи шапки: что у умения заполнено, не разворачивая его.
+   *
+   * @param feature умение строки.
+   * @returns бейджи в порядке показа.
+   */
+  function getBadges(feature: ClassFeatureCreate): Array<FeatureBadge> {
+    const badges: Array<FeatureBadge> = [];
+    const filledBlocksCount = getClassFeatureFilledBlocksCount(feature);
+
+    if (filledBlocksCount) {
+      badges.push({
+        key: 'mechanics',
+        label: `${CLASS_FEATURES_EDITOR.mechanicsBadge}${filledBlocksCount}`,
+        color: 'primary',
+      });
+    }
+
+    if (feature.scaling.length) {
+      badges.push({
+        key: 'scaling',
+        label: `${CLASS_FEATURES_EDITOR.scalingBadge}${feature.scaling.length}`,
+        color: 'neutral',
+      });
+    }
+
+    if (feature.options.length) {
+      badges.push({
+        key: 'options',
+        label: `${CLASS_FEATURES_EDITOR.optionsBadge}${feature.options.length}`,
+        color: 'neutral',
+      });
+    }
+
+    if (feature.informationalOnly) {
+      badges.push({
+        key: 'informational',
+        label: CLASS_FEATURES_EDITOR.informationalBadge,
+        color: 'neutral',
+      });
+    }
+
+    if (feature.hideInSubclasses && !isSubclass) {
+      badges.push({
+        key: 'hidden',
+        label: CLASS_FEATURES_EDITOR.hiddenBadge,
+        color: 'warning',
+      });
+    }
+
+    return badges;
+  }
+
+  /**
+   * Показывать ли блок прибавки характеристик: он бывает только у умений
+   * последнего уровня.
+   *
+   * @param feature умение строки.
+   * @returns `true` — умение 20 уровня.
+   */
+  function hasAbilityBonusSection(feature: ClassFeatureCreate): boolean {
+    return feature.level >= CLASS_ABILITY_BONUS_MIN_LEVEL;
+  }
+
+  /** Заводит пустое умение в конце списка и сразу раскрывает его. */
+  function addFeature(): void {
+    // Индекс считается ДО записи: `model.value` после присваивания ещё отдаёт
+    // прежний массив — проп доедет только следующим тиком.
+    const addedIndex = model.value.length;
+
+    model.value = [...model.value, getEmptyFeature()];
+
+    expanded.value = new Set([...expanded.value, addedIndex]);
+  }
+
+  /**
+   * Запрашивает подтверждение удаления умения.
+   *
+   * @param index позиция умения в списке.
+   */
+  function askRemoveFeature(index: number): void {
+    pendingRemoval.value = index;
+  }
+
+  /** Удаляет умение после подтверждения и пересдвигает раскрытые. */
+  function confirmRemoveFeature(): void {
+    const index = pendingRemoval.value;
+
+    pendingRemoval.value = undefined;
+
+    if (index === undefined) {
+      return;
+    }
+
+    model.value = model.value.filter((_, position) => position !== index);
+    expanded.value = shiftIndexes(expanded.value, index);
   }
 </script>
 
 <template>
   <UCard variant="subtle">
     <template #header>
-      <h2 class="truncate text-base text-highlighted">Умения класса</h2>
+      <div class="flex items-center justify-between gap-2">
+        <InfoTooltip
+          :text="CLASS_FEATURES_EDITOR.hint"
+          icon="tabler:info-circle-filled"
+          class="min-w-0 text-base text-highlighted"
+        >
+          <h2 class="truncate">{{ CLASS_FEATURES_EDITOR.title }}</h2>
+        </InfoTooltip>
+
+        <UButton
+          icon="tabler:plus"
+          :label="CLASS_FEATURES_EDITOR.add"
+          color="primary"
+          variant="soft"
+          size="sm"
+          class="shrink-0"
+          @click.left.exact.prevent="addFeature"
+        />
+      </div>
     </template>
 
-    <div class="flex flex-col gap-4">
-      <template
-        v-for="(feat, index) in state"
-        :key="index"
+    <div class="flex flex-col gap-2">
+      <p
+        v-if="!model.length"
+        class="rounded-lg border border-dashed border-default p-6 text-center text-sm text-dimmed italic"
       >
-        <UCard variant="subtle">
+        {{ CLASS_FEATURES_EDITOR.empty }}
+      </p>
+
+      <div
+        v-for="(feature, index) in model"
+        :key="index"
+        class="rounded-lg border border-default bg-elevated/20"
+      >
+        <div class="flex items-center gap-2 px-3 py-2">
+          <UBadge
+            size="sm"
+            color="neutral"
+            variant="outline"
+            class="shrink-0 tabular-nums"
+          >
+            {{ getClassFeatureLevelBadge(feature.level) }}
+          </UBadge>
+
+          <span class="min-w-0 flex-1 truncate text-base">
+            {{ feature.name || CLASS_FEATURES_EDITOR.unnamed }}
+          </span>
+
+          <UBadge
+            v-for="badge in getBadges(feature)"
+            :key="badge.key"
+            size="sm"
+            :color="badge.color"
+            variant="subtle"
+            class="hidden shrink-0 md:inline-flex"
+          >
+            {{ badge.label }}
+          </UBadge>
+
+          <UButton
+            icon="tabler:trash"
+            color="error"
+            variant="ghost"
+            size="xs"
+            :aria-label="CLASS_FEATURES_EDITOR.remove"
+            @click.left.exact.prevent="askRemoveFeature(index)"
+          />
+
+          <UButton
+            :icon="getToggleIcon(index)"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            :aria-label="getToggleLabel(index)"
+            @click.left.exact.prevent="toggleFeature(index)"
+          />
+        </div>
+
+        <div
+          v-if="isExpanded(index)"
+          class="border-t border-default p-3"
+        >
           <UForm
-            class="grid grid-cols-1 gap-4 md:grid-cols-24"
+            class="grid grid-cols-1 gap-3 md:grid-cols-24"
             attach
-            :state="feat"
+            :state="feature"
           >
             <UFormField
-              class="col-span-full md:col-span-4"
-              label="Уровень"
+              class="md:col-span-4"
+              :label="CLASS_FEATURES_EDITOR.level"
               name="level"
             >
-              <SelectLevel v-model="feat.level" />
+              <SelectLevel v-model="feature.level" />
             </UFormField>
 
             <UFormField
-              :class="
-                isSubclass
-                  ? 'col-span-full md:col-span-12'
-                  : 'col-span-full md:col-span-8'
-              "
-              label="Название"
+              class="md:col-span-10"
+              :label="CLASS_FEATURES_EDITOR.name"
               name="name"
             >
               <UInput
-                v-model="feat.name"
-                placeholder="Название умения"
+                v-model="feature.name"
+                :placeholder="CLASS_FEATURES_EDITOR.namePlaceholder"
               />
             </UFormField>
 
             <UFormField
-              class="col-span-full md:col-span-8"
-              label="Название списка опций"
+              class="md:col-span-10"
               name="optionsName"
             >
+              <template #label>
+                <InfoTooltip
+                  :text="CLASS_FEATURES_EDITOR.optionsNameHint"
+                  icon="tabler:info-circle-filled"
+                >
+                  <span>{{ CLASS_FEATURES_EDITOR.optionsName }}</span>
+                </InfoTooltip>
+              </template>
+
               <UInput
-                v-model="feat.optionsName"
-                placeholder="Например, Манёвры"
+                v-model="feature.optionsName"
+                :placeholder="CLASS_FEATURES_EDITOR.optionsNamePlaceholder"
               />
             </UFormField>
 
-            <UFormField
-              v-if="!isSubclass"
-              class="col-span-full md:col-span-4"
-              label="Скрывать в подклассе?"
-              name="hideInSubclasses"
-            >
-              <UCheckbox
-                v-model="feat.hideInSubclasses"
-                description="Да"
-              />
-            </UFormField>
+            <div class="flex flex-wrap items-center gap-4 md:col-span-full">
+              <InfoTooltip
+                v-if="!isSubclass"
+                :text="CLASS_FEATURES_EDITOR.hideInSubclassesHint"
+                icon="tabler:info-circle-filled"
+              >
+                <UCheckbox
+                  v-model="feature.hideInSubclasses"
+                  :label="CLASS_FEATURES_EDITOR.hideInSubclasses"
+                />
+              </InfoTooltip>
 
-            <EditorArrayControls
-              v-model="state"
-              :item="feat"
-              :empty-object="getEmptyFeature()"
-              :index="index"
-              cols="8"
-              only-remove
-            />
+              <InfoTooltip
+                :text="CLASS_FEATURES_EDITOR.informationalOnlyHint"
+                icon="tabler:info-circle-filled"
+              >
+                <UCheckbox
+                  v-model="feature.informationalOnly"
+                  :label="CLASS_FEATURES_EDITOR.informationalOnly"
+                />
+              </InfoTooltip>
+            </div>
 
             <UFormField
-              class="col-span-full md:col-span-12"
-              label="Подсказка"
+              class="col-span-full"
+              :label="CLASS_FEATURES_EDITOR.additional"
               name="additional"
             >
               <UInput
-                v-model="feat.additional"
-                placeholder="Краткая подсказка"
-              />
-            </UFormField>
-
-            <UFormField
-              class="col-span-full md:col-span-6"
-              label="Увеличивает характеристики?"
-              name="abilityImprovement"
-            >
-              <UCheckbox
-                v-model="feat.abilityImprovement"
-                description="Да"
-              />
-            </UFormField>
-
-            <UFormField
-              class="col-span-full md:col-span-6"
-              label="Даёт выбор боевого стиля?"
-              name="fightingStyleChoice"
-            >
-              <UCheckbox
-                v-model="feat.fightingStyleChoice"
-                description="Да"
-              />
-            </UFormField>
-
-            <UFormField
-              class="col-span-full md:col-span-6"
-              :label="CLASS_EDITOR_LABELS.featureInformationalOnly"
-              :help="CLASS_EDITOR_LABELS.featureInformationalOnlyHint"
-              name="informationalOnly"
-            >
-              <UCheckbox
-                v-model="feat.informationalOnly"
-                description="Да"
+                v-model="feature.additional"
+                :placeholder="CLASS_FEATURES_EDITOR.additionalPlaceholder"
               />
             </UFormField>
 
             <UFormField
               class="col-span-full"
-              label="Описание"
+              :label="CLASS_FEATURES_EDITOR.description"
               name="description"
             >
               <MarkupEditor
-                v-model="feat.description"
-                placeholder="Описание умения"
+                v-model="feature.description"
+                :placeholder="CLASS_FEATURES_EDITOR.descriptionPlaceholder"
               />
             </UFormField>
 
             <FeatureScaling
-              v-model="feat.scaling"
+              v-model="feature.scaling"
               :is-subclass="isSubclass"
             />
 
             <FeatureOptions
-              v-model="feat.options"
+              v-model="feature.options"
               :is-subclass="isSubclass"
             />
 
-            <FeatureSkillChoice v-model="feat.skillChoice" />
+            <FeatureMechanics v-model="model[index]!" />
 
             <FeatureAbilityBonus
-              v-if="feat.level >= 20"
-              v-model="feat.abilityBonus"
+              v-if="hasAbilityBonusSection(feature)"
+              v-model="feature.abilityBonus"
             />
-
-            <FeatureMechanics v-model="state[index]!" />
           </UForm>
-        </UCard>
-      </template>
+        </div>
+      </div>
+
+      <UButton
+        v-if="model.length"
+        icon="tabler:plus"
+        :label="CLASS_FEATURES_EDITOR.add"
+        color="primary"
+        variant="soft"
+        block
+        @click.left.exact.prevent="addFeature"
+      />
     </div>
 
-    <div
-      v-if="!state.length"
-      class="grid place-items-center py-2"
+    <UModal
+      v-model:open="isRemovalOpen"
+      :title="CLASS_FEATURES_EDITOR.removeConfirmTitle"
+      :description="CLASS_FEATURES_EDITOR.removeConfirmText"
     >
-      <UButton @click.left.exact.prevent="addEmptyFeature">
-        Добавить умение
-      </UButton>
-    </div>
+      <template #footer>
+        <div class="flex w-full items-center justify-end gap-2">
+          <UButton
+            color="neutral"
+            variant="ghost"
+            @click.left.exact.prevent="isRemovalOpen = false"
+          >
+            {{ CLASS_FEATURES_EDITOR.removeConfirmCancel }}
+          </UButton>
+
+          <UButton
+            color="error"
+            icon="tabler:trash"
+            @click.left.exact.prevent="confirmRemoveFeature"
+          >
+            {{ CLASS_FEATURES_EDITOR.removeConfirmApply }}
+          </UButton>
+        </div>
+      </template>
+    </UModal>
   </UCard>
 </template>

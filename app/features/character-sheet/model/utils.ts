@@ -188,6 +188,7 @@ import {
   ABILITY_IMPROVEMENT_EXCLUDED_FEAT_CATEGORIES,
   ABILITY_IMPROVEMENT_FEAT_URL_PREFIX,
   ABILITY_IMPROVEMENT_FEATURE_NAMES,
+  ABILITY_IMPROVEMENT_LABELS,
   ABILITY_IMPROVEMENT_SCORE_MAX,
   ABILITY_KEY_BY_LABEL,
   ABILITY_LABELS,
@@ -287,9 +288,12 @@ import {
   FEAT_SPEED_EQUALS_WALK_KEYS,
   FEATURE_ORIGIN_GROUP_ORDER,
   FEATURE_ORIGIN_LABELS,
+  FIGHTING_STYLE_CHOICE_LABEL,
+  FIGHTING_STYLE_FEAT_CATEGORY,
   FILTER_CHIP_CLASS,
   FILTER_CHIP_IDLE_CLASS,
   FILTER_CHIP_SELECTED_CLASS,
+  GENERAL_FEAT_CATEGORY,
   HEAVY_WEAPON_ABILITY_MINIMUM,
   HIT_DICE_ROLL_COUNT,
   HIT_POINTS_LEVEL_GAIN_MIN,
@@ -318,6 +322,8 @@ import {
   ITEM_SPEED_BONUS_MAX,
   ITEM_SPEED_BONUS_MIN,
   ITEMS_DETAIL_BASE_PATH,
+  LEGACY_ABILITY_IMPROVEMENT_CHOICE_KEY,
+  LEGACY_FIGHTING_STYLE_CHOICE_KEY,
   LEVEL_MAX,
   LEVEL_MIN,
   LEVEL_XP_THRESHOLDS,
@@ -419,11 +425,14 @@ import {
   WEIGHT_DECIMALS,
 } from './constants';
 import {
+  collectAppliedEffects,
   getCharacterEffectFlags,
   getConditionalEffectBonus,
+  getSheetArmorState,
   isSpeedZeroedByEffects,
+  matchesArmorCondition,
 } from './effect-engine';
-import { toInventoryBonusesFromEffects } from './effects';
+import { parseEffectValue, toInventoryBonusesFromEffects } from './effects';
 import { DEFAULT_CHARACTER } from './mock';
 
 /**
@@ -3996,6 +4005,159 @@ function getArmorClassWithItemLimits(
     .reduce((total, entry) => applyInventoryBonus(total, entry.bonus), value);
 }
 
+/** Токен формулы эффекта — число или переменная листа. */
+function evaluateEffectFormulaToken(
+  character: Character,
+  token: string,
+): number | null {
+  if (/^\d+$/.test(token)) {
+    return Number(token);
+  }
+
+  if (token === RESOURCE_FORMULA_PROFICIENCY) {
+    return getCharacterProficiencyBonus(character);
+  }
+
+  if (token === RESOURCE_FORMULA_LEVEL) {
+    return character.level;
+  }
+
+  if (token.startsWith(RESOURCE_FORMULA_ABILITY_PREFIX)) {
+    const ability =
+      RESOURCE_FORMULA_ABILITIES[
+        token.slice(RESOURCE_FORMULA_ABILITY_PREFIX.length)
+      ];
+
+    return ability ? getAbilityModifier(character, ability) : null;
+  }
+
+  return null;
+}
+
+/**
+ * Значение формулы эффекта числом: сумма слагаемых, каждое — число или
+ * переменная листа (`@prof`, `@level`, `@mod.<аббревиатура>`) с множителем.
+ *
+ * Грамматика та же, что у максимума ресурса, только слагаемых сколько угодно:
+ * «Защита без доспехов» пишется как `10+@mod.dex+@mod.con`. Незнакомая
+ * переменная (`@mod.spell`, кость) делает формулу непонятной целиком — лист
+ * лучше не применит эффект, чем применит его с нулём вместо слагаемого.
+ *
+ * @param character персонаж.
+ * @param formula значение изменения эффекта.
+ * @returns число; null — формула листу непонятна.
+ */
+function evaluateEffectFormula(
+  character: Character,
+  formula: string,
+): number | null {
+  const compact = formula.toLowerCase().replaceAll(/\s+/g, '');
+
+  if (!compact) {
+    return null;
+  }
+
+  const terms = compact.match(/[+-]?[^+-]+/g);
+
+  if (!terms) {
+    return null;
+  }
+
+  let total = 0;
+
+  for (const term of terms) {
+    const sign = term.startsWith('-') ? -1 : 1;
+
+    let product = 1;
+
+    for (const factor of term.replace(/^[+-]/, '').split('*')) {
+      const value = evaluateEffectFormulaToken(character, factor);
+
+      if (value === null) {
+        return null;
+      }
+
+      product *= value;
+    }
+
+    total += sign * product;
+  }
+
+  return total;
+}
+
+/** Режимы изменения, которыми эффект задаёт КД тела целиком. */
+const ARMOR_CLASS_BODY_EFFECT_MODES: ReadonlySet<string> = new Set([
+  'override',
+  'upgrade',
+  'downgrade',
+]);
+
+/**
+ * КД тела, заданный активным эффектом: «Защита без доспехов» варвара и монаха,
+ * «Драконья стойкость» чародея — формула вместо `10 + Ловкость`, действующая
+ * при своём условии по доспеху.
+ *
+ * Берутся изменения `armorClass` в режимах замены: с условием по доспеху —
+ * когда условие выполнено, без условия — только с формулой: числовую замену
+ * без условия лист уже учёл пассивным бонусом записи. Изменения применяются в
+ * порядке приоритета, каждое поверх предыдущего.
+ *
+ * @param character персонаж.
+ * @param bodyArmorValue КД тела по надетой броне либо безброневой.
+ * @returns название эффекта и КД тела; null — ни один эффект КД не задал.
+ */
+function getArmorClassEffectBody(
+  character: Character,
+  bodyArmorValue: number,
+): { name: string; value: number } | null {
+  const armor = getSheetArmorState(character);
+
+  const applicable = collectAppliedEffects(character)
+    .filter((effect) => !effect.disabled && effect.effectTarget !== 'target')
+    .flatMap((effect) =>
+      effect.changes.map((change) => ({ name: effect.name, change })),
+    )
+    .filter(
+      ({ change }) =>
+        change.key === 'armorClass'
+        && ARMOR_CLASS_BODY_EFFECT_MODES.has(change.mode)
+        && (change.condition
+          ? matchesArmorCondition(change.condition, armor)
+          : parseEffectValue(change.value) === null),
+    )
+    .sort(
+      (left, right) =>
+        (left.change.priority ?? 0) - (right.change.priority ?? 0),
+    );
+
+  let value = bodyArmorValue;
+  let name: string | null = null;
+
+  for (const { name: effectName, change } of applicable) {
+    const resolved = evaluateEffectFormula(character, change.value);
+
+    if (resolved === null) {
+      continue;
+    }
+
+    let next = resolved;
+
+    if (change.mode === 'upgrade') {
+      next = Math.max(value, resolved);
+    } else if (change.mode === 'downgrade') {
+      next = Math.min(value, resolved);
+    }
+
+    if (next !== value) {
+      value = next;
+      name = effectName;
+    }
+  }
+
+  return name === null ? null : { name, value };
+}
+
 /**
  * Разбор итогового класса доспеха. В ручном режиме (`custom`) — базовое значение
  * плюс модификаторы выбранных характеристик. В автоматическом — по надетой
@@ -4104,6 +4266,18 @@ export function getArmorClassBreakdown(
       dexBonus = armorDexBonus;
       dexCapped = armorDexBonus < dexModifier;
     }
+  }
+
+  // Эффект с условием по доспеху задаёт КД тела целиком — «Защита без
+  // доспехов» варвара: 10 + Ловкость + Телосложение без брони. Ловкость в такой
+  // формуле уже учтена, поэтому отдельной строкой в разбор не идёт.
+  const effectBody = getArmorClassEffectBody(character, bodyArmorValue);
+
+  if (effectBody) {
+    bodyArmorName = effectBody.name;
+    bodyArmorValue = effectBody.value;
+    dexBonus = 0;
+    dexCapped = false;
   }
 
   // Щит: в зачёт идёт лучший из надетых (несколько щитов не складываются).
@@ -10246,11 +10420,15 @@ export function getLevelFeatureRows(
         level,
         description: [...summary.description],
         originLabel,
-        // Выбор черты рисуется своим блоком, поэтому текстовый выбор такому
+        // Выбор черты рисуется своим пикером, поэтому текстовый выбор такому
         // умению не нужен — иначе под чертой висело бы пустое поле ввода.
         choices: summary.abilityImprovement
           ? []
           : getClassFeatureChoices(id, summary, skillNames, level),
+        featChoices: getLevelFeatChoices(summary, level),
+        // Черту без выбора умение выдаёт на своём уровне, а не на уровнях роста
+        grantedFeatUrls:
+          summary.level === level ? [...summary.grantedFeatUrls] : [],
         abilityImprovement: summary.abilityImprovement,
       });
     }
@@ -11457,8 +11635,132 @@ export function isAbilityImprovementFeature(
 }
 
 /**
- * Опции черт, доступных за классовое улучшение характеристик: убираются черты
- * запрещённых категорий (происхождения и эпические), черты из отключённых в
+ * Выбор черты — боевой стиль: ограничен ровно категорией боевых стилей.
+ *
+ * @param choice выбор умения.
+ * @returns true — умение просит выбрать боевой стиль.
+ */
+export function isFightingStyleFeatChoice(choice: ClassChoice): boolean {
+  const categories = choice.featCategories ?? [];
+
+  return (
+    choice.kind === 'feat'
+    && categories.length === 1
+    && categories[0] === FIGHTING_STYLE_FEAT_CATEGORY
+  );
+}
+
+/**
+ * Выбор черты за повышение характеристик: выбор черты без ограничения
+ * категорий либо с общими чертами среди них — по правилам 2024 года
+ * «Улучшение характеристик» и есть общая черта.
+ *
+ * @param choice выбор умения.
+ * @returns true — умение просит выбрать черту за повышение характеристик.
+ */
+export function isAbilityImprovementFeatChoice(choice: ClassChoice): boolean {
+  const categories = choice.featCategories ?? [];
+
+  return (
+    choice.kind === 'feat'
+    && (categories.length === 0 || categories.includes(GENERAL_FEAT_CATEGORY))
+  );
+}
+
+/**
+ * Выборы черты умения с поправкой на флаги прежних лет: у записи, где выбор
+ * боевого стиля или черты отмечен флагом, а в механике выбора черты ещё нет,
+ * выбор собирается по флагу. Записи, сохранённые новой формой, несут выбор в
+ * механике, и флаг там ничего не добавляет — иначе умение спросило бы дважды.
+ *
+ * @param featureId идентификатор умения.
+ * @param featChoices выборы черты из механики умения.
+ * @param flags флаги умения из записи.
+ * @param flags.fightingStyleChoice умение даёт выбор боевого стиля.
+ * @param flags.abilityImprovement умение даёт черту за повышение характеристик.
+ * @returns выборы черты умения.
+ */
+export function getLegacyClassFeatChoices(
+  featureId: string,
+  featChoices: ClassChoice[],
+  flags: { fightingStyleChoice: boolean; abilityImprovement: boolean },
+): ClassChoice[] {
+  const result = [...featChoices];
+
+  if (flags.fightingStyleChoice && !result.some(isFightingStyleFeatChoice)) {
+    result.push({
+      id: `${featureId}:${LEGACY_FIGHTING_STYLE_CHOICE_KEY}`,
+      kind: 'feat',
+      label: FIGHTING_STYLE_CHOICE_LABEL,
+      count: 1,
+      listed: [],
+      featCategories: [FIGHTING_STYLE_FEAT_CATEGORY],
+    });
+  }
+
+  if (
+    flags.abilityImprovement
+    && !result.some(isAbilityImprovementFeatChoice)
+  ) {
+    result.push({
+      id: `${featureId}:${LEGACY_ABILITY_IMPROVEMENT_CHOICE_KEY}`,
+      kind: 'feat',
+      label: ABILITY_IMPROVEMENT_LABELS.featTitle,
+      count: 1,
+      listed: [],
+      featCategories: [],
+    });
+  }
+
+  return result;
+}
+
+/**
+ * Выборы черты умения на уровне: открытые по уровню, а у повторяющегося
+ * «Улучшения характеристик» — с уровнем в идентификаторе, иначе ответы разных
+ * уровней затирали бы друг друга.
+ *
+ * @param summary умение класса или подкласса.
+ * @param level уровень, на котором собираются выборы.
+ * @returns выборы черты этого уровня.
+ */
+export function getLevelFeatChoices(
+  summary: ClassFeatureSummary,
+  level: number,
+): ClassChoice[] {
+  return filterChoicesByLevel(summary.featChoices, level).map((choice) =>
+    summary.abilityImprovement
+      ? { ...choice, id: `${choice.id}:${level}` }
+      : choice,
+  );
+}
+
+/**
+ * Выборы черты умения на всех уровнях до указанного включительно: мастер
+ * класса собирает персонажа сразу на нужном уровне, и «Улучшение
+ * характеристик» спрашивает черту за каждый пройденный уровень роста.
+ *
+ * @param summary умение класса или подкласса.
+ * @param level уровень персонажа В ЭТОМ классе.
+ * @returns выборы черты по всем открытым уровням.
+ */
+export function getFeatChoicesUpToLevel(
+  summary: ClassFeatureSummary,
+  level: number,
+): ClassChoice[] {
+  if (!summary.abilityImprovement) {
+    return filterChoicesByLevel(summary.featChoices, level);
+  }
+
+  return [summary.level, ...summary.scalingLevels]
+    .filter((featureLevel) => featureLevel <= level)
+    .flatMap((featureLevel) => getLevelFeatChoices(summary, featureLevel));
+}
+
+/**
+ * Опции черт, доступных выбору черты в умении класса: пул сужается
+ * категориями и перечнем выбора, а без них — правилом листа (не черты
+ * происхождения, эпические и боевые стили); уходят черты из отключённых в
  * профиле источников и уже взятые на листе — кроме повторяемых, их можно брать
  * снова. Черта, уже выбранная на другом шаге мастера, из списка тоже уходит.
  *
@@ -11466,18 +11768,22 @@ export function isAbilityImprovementFeature(
  * Пустой список источников ограничения не накладывает.
  *
  * @param options все черты каталога.
+ * @param choice выбор черты умения; null — правило листа без сужений.
  * @param takenUrls url черт, уже взятых на листе или в мастере.
  * @param selectedUrl url черты, выбранной в этом же селекторе; '' — не выбрана.
  * @param selectedSourceIds источники, разрешённые настройкой профиля.
  * @returns черты, доступные для выбора.
  */
-export function getAbilityImprovementFeatOptions(
+export function getFeatChoiceOptions(
   options: FeatSelectOption[],
+  choice: ClassChoice | null,
   takenUrls: Set<string>,
   selectedUrl: string,
   selectedSourceIds: string[] = [],
 ): FeatSelectOption[] {
   const allowedSources = new Set(selectedSourceIds);
+  const listed = new Set(choice?.listed ?? []);
+  const categories = new Set(choice?.featCategories ?? []);
 
   return options.filter((option) => {
     // Выбранная здесь черта остаётся видимой, иначе селектор показал бы пустое
@@ -11486,7 +11792,16 @@ export function getAbilityImprovementFeatOptions(
       return true;
     }
 
-    if (
+    // Перечисленные черты — самый узкий пул: категории при них только справка
+    if (listed.size > 0) {
+      if (!listed.has(option.url)) {
+        return false;
+      }
+    } else if (categories.size > 0) {
+      if (!categories.has(option.category)) {
+        return false;
+      }
+    } else if (
       ABILITY_IMPROVEMENT_EXCLUDED_FEAT_CATEGORIES.includes(option.category)
     ) {
       return false;

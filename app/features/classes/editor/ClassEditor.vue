@@ -13,6 +13,7 @@
     FeatGrantedSpells,
     FeatGrantRows,
     FeatModifierRows,
+    FeatSpellListSpells,
   } from '~feats/editor/ui';
   import { createFeatEditorRows, createFeatMechanics } from '~feats/model';
   import { EditorBaseInfo, StartingEquipmentEditor } from '~ui/editor';
@@ -28,6 +29,7 @@
     CLASS_EDITOR_LABELS,
     CLASS_EDITOR_TABS,
     CLASS_LEVEL_BOUNDS,
+    CLASS_MECHANICS_LABELS,
     normalizeLoadedClass,
     transformClassBeforeSubmit,
   } from '../model';
@@ -147,7 +149,11 @@
     },
   });
 
-  /** Механика класса: из неё редактируются заклинания, минуя строки. */
+  /**
+   * Механика класса: из неё редактируются заклинания и расширение списка
+   * заклинаний, минуя строки, — на вкладке «Заклинательство», рядом с типом
+   * заклинателя: то и другое про магию класса.
+   */
   const mechanics = computed({
     get: () => state.value.mechanics ?? createFeatMechanics(),
     set: (value) => {
@@ -318,6 +324,46 @@
               </UFormField>
             </div>
           </UCard>
+
+          <!-- Заклинания класса живут рядом с заклинательством, а не среди
+            даров: автор ищет их там, где настраивает магию класса -->
+          <UCard variant="subtle">
+            <template #header>
+              <InfoTooltip
+                :text="CLASS_EDITOR_LABELS.spellcastingSpellsHint"
+                icon="tabler:info-circle-filled"
+                class="text-base text-highlighted"
+              >
+                <h2 class="truncate">
+                  {{ CLASS_EDITOR_LABELS.spellcastingSpellsTitle }}
+                </h2>
+              </InfoTooltip>
+            </template>
+
+            <FeatGrantedSpells
+              v-model="mechanics.spells"
+              :labels="CLASS_MECHANICS_LABELS"
+            />
+          </UCard>
+
+          <UCard variant="subtle">
+            <template #header>
+              <InfoTooltip
+                :text="CLASS_EDITOR_LABELS.spellListHint"
+                icon="tabler:info-circle-filled"
+                class="text-base text-highlighted"
+              >
+                <h2 class="truncate">
+                  {{ CLASS_EDITOR_LABELS.spellListTitle }}
+                </h2>
+              </InfoTooltip>
+            </template>
+
+            <FeatSpellListSpells
+              v-model="mechanics.spellList"
+              :labels="CLASS_MECHANICS_LABELS"
+            />
+          </UCard>
         </div>
       </template>
 
@@ -391,6 +437,7 @@
             <FeatGrantRows
               v-model="editorRows.grants"
               :rows="editorRows"
+              :labels="CLASS_MECHANICS_LABELS"
             />
           </UCard>
 
@@ -404,6 +451,7 @@
             <FeatModifierRows
               v-model="editorRows.modifiers"
               :rows="editorRows"
+              :labels="CLASS_MECHANICS_LABELS"
             />
           </UCard>
 
@@ -420,17 +468,10 @@
               </InfoTooltip>
             </template>
 
-            <FeatCounterRows v-model="editorRows.counters" />
-          </UCard>
-
-          <UCard variant="subtle">
-            <template #header>
-              <h2 class="truncate text-base text-highlighted">
-                {{ CLASS_EDITOR_LABELS.spellsTitle }}
-              </h2>
-            </template>
-
-            <FeatGrantedSpells v-model="mechanics.spells" />
+            <FeatCounterRows
+              v-model="editorRows.counters"
+              :labels="CLASS_MECHANICS_LABELS"
+            />
           </UCard>
         </div>
       </template>

@@ -1,15 +1,17 @@
 <script setup lang="ts">
   import type {
+    AbilityKey,
     CharacterFeature,
     CharacterInventoryItem,
     ClassChoice,
     ClassOption,
     ClassSummary,
+    FeatSelectOption,
+    LevelUpFeatChoice,
   } from '../../model';
 
   import { ClassDrawer } from '~classes/drawer';
   import { MarkupRender } from '~ui/markup';
-  import { SelectFeat } from '~ui/select';
 
   import {
     useCatalogSourceQuery,
@@ -17,27 +19,29 @@
     useToolCatalog,
   } from '../../composables';
   import {
+    ABILITY_IMPROVEMENT_LABELS,
     ABILITY_LABELS,
     buildClassFeatures,
     buildFeatFeature,
     buildStartingEquipmentItems,
+    CLASS_FEAT_CHOICE_ID_SEGMENT,
+    CLASS_FEAT_INVALID_RESPONSE_ERROR,
+    CLASS_GRANTED_FEAT_ID_SEGMENT,
     CLASS_SOURCES_ASYNC_DATA_KEY,
     CLASS_WIZARD_LABELS,
     CLASSES_DETAIL_BASE_PATH,
     CLASSES_FILTERS_PATH,
     CLASSES_SEARCH_PATH,
+    collectFeatAbilityIncreases,
     CUSTOM_CLASS_LABELS,
     deriveCantripsScaling,
     deriveClassResources,
     derivePreparedSpellsScaling,
     FEAT_SOURCES_ASYNC_DATA_KEY,
     FEATS_FILTERS_PATH,
+    FEATS_SELECT_PATH,
     FEATURE_ORIGIN_LABELS,
     fetchFeatDetail,
-    FIGHTING_STYLE_CHOICE_LABEL,
-    FIGHTING_STYLE_FEAT_CATEGORIES,
-    FIGHTING_STYLE_FEATURE_ID_SEGMENT,
-    FIGHTING_STYLE_INVALID_RESPONSE_ERROR,
     getCharacterClasses,
     getChoiceSkillHints,
     getClassFeatureChoices,
@@ -45,6 +49,9 @@
     getClassMaxHitPoints,
     getClassSkillChoice,
     getClassToolChoice,
+    getFeatChoiceOptions,
+    getFeatChoicesUpToLevel,
+    getFeatUrlFromFeatureId,
     getHitDieAverage,
     getLevelHitPointsGain,
     getMulticlassRequirementWarning,
@@ -56,9 +63,11 @@
     LANGUAGE_PROFICIENCY_GROUPS,
     matchClassProficiencies,
     matchToolProficiencies,
+    mergeAbilityIncreases,
     MULTICLASS_PROFICIENCY_LABELS,
     parseClassDetail,
     parseClassOptions,
+    parseFeatSelectOptions,
     resolveChoiceOptions,
     SHEET_SEARCH_LABELS,
     SKILL_DUPLICATE_WARNING,
@@ -68,18 +77,25 @@
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
   import SheetCustomClassModal from './SheetCustomClassModal.vue';
+  import SheetLevelUpFeatChoice from './SheetLevelUpFeatChoice.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
   import SheetStartingEquipmentChoice from './SheetStartingEquipmentChoice.vue';
 
   type WizardStep = 'class' | 'review';
 
-  /** Загруженная черта боевого стиля и умение класса, к которому она выбрана. */
-  interface FightingStyleSelection {
+  /**
+   * Загруженная черта умения класса — выбранная игроком (боевой стиль, черта за
+   * повышение характеристик) либо выданная умением без выбора.
+   */
+  interface ClassFeatSelection {
     /** Идентификатор строки умения класса (`class:{featureKey}`). */
     rowId: string;
 
-    /** Название черты — идёт в подпись выбора у самого умения. */
-    featName: string;
+    /**
+     * Название черты — идёт в подпись выбора у самого умения; у выданной без
+     * выбора не нужно: выбора не было.
+     */
+    featName: string | null;
 
     /** Готовая запись особенности для листа. */
     feature: CharacterFeature;
@@ -218,8 +234,27 @@
   /** Черновик выборов-селекторов по id выбора: id → выбранные значения. */
   const selections = ref<Record<string, string[]>>({});
 
-  /** Выбранные черты боевого стиля по id классового умения. */
-  const fightingStyleSelections = ref<Record<string, string>>({});
+  /** Выборы черт по идентификатору выбора умения. */
+  const featSelections = ref<Record<string, LevelUpFeatChoice>>({});
+
+  /** Каталог черт для выборов черты в умениях; грузится, когда они есть. */
+  const featCatalog = ref<FeatSelectOption[]>([]);
+
+  const isFeatsLoading = ref(false);
+
+  const hasFeatsError = ref(false);
+
+  /** Черты, уже взятые на листе: повторно не предлагаются. */
+  const takenFeatUrls = computed(
+    () =>
+      new Set(
+        character.value.features.flatMap((feature) => {
+          const url = getFeatUrlFromFeatureId(feature.id);
+
+          return url ? [url] : [];
+        }),
+      ),
+  );
 
   /** Метка выбранного варианта стартового снаряжения (или «не добавлять»). */
   const startingEquipmentLabel = ref(STARTING_EQUIPMENT_SKIP_VALUE);
@@ -471,7 +506,8 @@
       description: ClassSummary['features'][number]['description'];
       originLabel: string;
       choiceControls: ClassChoice[];
-      fightingStyleChoice: boolean;
+      featChoices: ClassChoice[];
+      grantedFeatUrls: string[];
     }> = [];
 
     const seenKeys = new Set<string>();
@@ -500,13 +536,16 @@
           level: feature.level,
           description: feature.description,
           originLabel,
-          fightingStyleChoice: feature.fightingStyleChoice,
           choiceControls: getClassFeatureChoices(
             id,
             feature,
             skillNames.value,
             level.value,
           ),
+          // Персонаж собирается сразу на нужном уровне: «Улучшение
+          // характеристик» спрашивает черту за каждый пройденный уровень роста
+          featChoices: getFeatChoicesUpToLevel(feature, level.value),
+          grantedFeatUrls: [...feature.grantedFeatUrls],
         });
       }
     };
@@ -582,13 +621,27 @@
 
   const isNextDisabled = computed(() => !selectedClass.value);
 
-  const isApplyDisabled = computed(
+  /**
+   * Все выборы черт отвечены, а у черт с прибавками заполнены характеристики.
+   * Сбой каталога требование снимает — иначе класс нельзя было бы применить.
+   */
+  const areFeatChoicesComplete = computed(
     () =>
-      isApplying.value
-      || featureRows.value.some(
-        (row) =>
-          row.fightingStyleChoice && !fightingStyleSelections.value[row.id],
-      ),
+      hasFeatsError.value
+      || featureRows.value
+        .flatMap((row) => row.featChoices)
+        .every((choice) => {
+          const selection = featSelections.value[choice.id];
+
+          return (
+            !!selection?.featUrl
+            && selection.abilities.every((ability) => ability !== null)
+          );
+        }),
+  );
+
+  const isApplyDisabled = computed(
+    () => isApplying.value || !areFeatChoicesComplete.value,
   );
 
   function showLoadError() {
@@ -599,12 +652,136 @@
     });
   }
 
-  function showFightingStyleError() {
+  function showFeatError() {
     toast.add({
       color: 'error',
       icon: 'tabler:alert-triangle',
-      title: 'Не удалось добавить выбранный боевой стиль',
+      title: ABILITY_IMPROVEMENT_LABELS.applyError,
     });
+  }
+
+  /**
+   * Каталог черт для выборов в умениях. Список берётся целиком с `/select`:
+   * только он отдаёт повторяемость и прибавки к характеристикам, а категории
+   * и уже взятые черты отбираются на клиенте — как в мастере повышения.
+   */
+  async function loadFeats(): Promise<void> {
+    isFeatsLoading.value = true;
+    hasFeatsError.value = false;
+
+    try {
+      const response = await $fetch<unknown>(FEATS_SELECT_PATH, {
+        method: 'GET',
+        retry: 0,
+      });
+
+      featCatalog.value = parseFeatSelectOptions(response);
+    } catch (error) {
+      consola.error(ABILITY_IMPROVEMENT_LABELS.applyErrorLog, error);
+      hasFeatsError.value = true;
+    } finally {
+      isFeatsLoading.value = false;
+    }
+  }
+
+  /**
+   * Черты, доступные выбору черты в умении: пул сужен категориями и перечнем
+   * выбора, уже взятыми чертами и выбранными в других умениях мастера.
+   *
+   * @param choice выбор черты умения.
+   * @returns черты для селектора.
+   */
+  function featOptions(choice: ClassChoice): FeatSelectOption[] {
+    const selectedUrl = featSelections.value[choice.id]?.featUrl ?? '';
+
+    const chosenElsewhere = Object.entries(featSelections.value)
+      .filter(([id, entry]) => id !== choice.id && entry.featUrl)
+      .map(([, entry]) => entry.featUrl);
+
+    return getFeatChoiceOptions(
+      featCatalog.value,
+      choice,
+      new Set([...takenFeatUrls.value, ...chosenElsewhere]),
+      selectedUrl,
+      featSourceIds.value,
+    );
+  }
+
+  /**
+   * Черта, выбранная в выборе умения.
+   *
+   * @param choiceId идентификатор выбора черты.
+   * @returns опция черты; null — выбора не было либо черта не из каталога.
+   */
+  function selectedFeat(choiceId: string): FeatSelectOption | null {
+    const featUrl = featSelections.value[choiceId]?.featUrl;
+
+    return featUrl
+      ? (featCatalog.value.find((feat) => feat.url === featUrl) ?? null)
+      : null;
+  }
+
+  /**
+   * Выбранные характеристики по слотам прибавок черты; пусто — черта не
+   * выбрана либо прибавок не даёт.
+   *
+   * @param choiceId идентификатор выбора черты.
+   * @returns характеристики по слотам.
+   */
+  function featAbilities(choiceId: string): Array<AbilityKey | null> {
+    return featSelections.value[choiceId]?.abilities ?? [];
+  }
+
+  /**
+   * Выбор черты в умении. Смена черты обнуляет выбранные характеристики: у
+   * новой черты свой список и своё число прибавок.
+   *
+   * @param rowId идентификатор строки умения.
+   * @param choiceId идентификатор выбора черты.
+   * @param featUrl url выбранной черты; '' — выбор снят.
+   */
+  function setFeatChoice(rowId: string, choiceId: string, featUrl: string) {
+    const option = featCatalog.value.find((feat) => feat.url === featUrl);
+
+    featSelections.value = {
+      ...featSelections.value,
+      [choiceId]: {
+        featureId: rowId,
+        featUrl,
+        abilities: Array.from<AbilityKey | null>({
+          length: option?.abilityIncreaseCount ?? 0,
+        }).fill(null),
+      },
+    };
+  }
+
+  /**
+   * Выбор характеристики в слоте прибавки выбранной черты.
+   *
+   * @param choiceId идентификатор выбора черты.
+   * @param payload номер слота и выбранная характеристика.
+   * @param payload.slot номер слота прибавки (с нуля).
+   * @param payload.ability выбранная характеристика; null — выбор снят.
+   */
+  function setFeatAbility(
+    choiceId: string,
+    payload: { slot: number; ability: AbilityKey | null },
+  ) {
+    const selection = featSelections.value[choiceId];
+
+    if (!selection) {
+      return;
+    }
+
+    featSelections.value = {
+      ...featSelections.value,
+      [choiceId]: {
+        ...selection,
+        abilities: selection.abilities.map((current, slot) =>
+          slot === payload.slot ? payload.ability : current,
+        ),
+      },
+    };
   }
 
   function findClassOption(classUrl: string): ClassOption | undefined {
@@ -727,7 +904,16 @@
 
       choices.value = {};
       selections.value = {};
-      fightingStyleSelections.value = {};
+      featSelections.value = {};
+
+      // Каталог черт нужен только классу с выбором черты до этого уровня:
+      // иначе лишний запрос на каждое открытие мастера
+      if (
+        featureRows.value.some((row) => row.featChoices.length > 0)
+        && !featCatalog.value.length
+      ) {
+        await loadFeats();
+      }
 
       // Первый вариант снаряжения предлагается по умолчанию: лист чаще всего
       // заполняется на создании персонажа, где набор класса нужен целиком.
@@ -749,37 +935,55 @@
   }
 
   /**
-   * Загружает выбранные черты боевого стиля и делает их классовыми записями,
-   * чтобы смена класса удаляла прежний выбор. Строки без выбора пропускаются:
-   * применение до полного выбора блокирует `isApplyDisabled`.
+   * Загружает черты умений — выбранные игроком и выданные без выбора — и
+   * делает их классовыми записями, чтобы смена класса удаляла их вместе с
+   * умением. Выборы без ответа сюда не попадают: применение до полного выбора
+   * блокирует `isApplyDisabled`.
    */
-  function buildFightingStyleFeatures(): Promise<
-    Array<FightingStyleSelection>
-  > {
-    const selectedRows: Array<{ rowId: string; featUrl: string }> = [];
+  function buildClassFeatFeatures(): Promise<Array<ClassFeatSelection>> {
+    const entries: Array<{
+      rowId: string;
+      featUrl: string;
+      segment: string;
+      chosen: boolean;
+    }> = [];
+
+    for (const selection of Object.values(featSelections.value)) {
+      if (selection.featUrl) {
+        entries.push({
+          rowId: selection.featureId,
+          featUrl: selection.featUrl,
+          segment: CLASS_FEAT_CHOICE_ID_SEGMENT,
+          chosen: true,
+        });
+      }
+    }
 
     for (const row of featureRows.value) {
-      const featUrl = fightingStyleSelections.value[row.id];
-
-      if (row.fightingStyleChoice && featUrl) {
-        selectedRows.push({ rowId: row.id, featUrl });
+      for (const featUrl of row.grantedFeatUrls) {
+        entries.push({
+          rowId: row.id,
+          featUrl,
+          segment: CLASS_GRANTED_FEAT_ID_SEGMENT,
+          chosen: false,
+        });
       }
     }
 
     return Promise.all(
-      selectedRows.map(async ({ rowId, featUrl }) => {
-        const summary = await fetchFeatDetail(featUrl);
+      entries.map(async (entry) => {
+        const summary = await fetchFeatDetail(entry.featUrl);
 
         if (!summary) {
-          throw new Error(FIGHTING_STYLE_INVALID_RESPONSE_ERROR);
+          throw new Error(CLASS_FEAT_INVALID_RESPONSE_ERROR);
         }
 
         return {
-          rowId,
-          featName: summary.name,
+          rowId: entry.rowId,
+          featName: entry.chosen ? summary.name : null,
           feature: {
             ...buildFeatFeature(summary),
-            id: `${rowId}:${FIGHTING_STYLE_FEATURE_ID_SEGMENT}:${summary.url}`,
+            id: `${entry.rowId}:${entry.segment}:${summary.url}`,
           },
         };
       }),
@@ -794,17 +998,25 @@
   async function applyClass(base: ClassSummary) {
     // Под `try` только загрузка черт: ошибка сети не должна выглядеть как сбой
     // применения класса, а применение ниже — синхронное и не бросает.
-    let fightingStyleFeatures: Array<FightingStyleSelection>;
+    let classFeatFeatures: Array<ClassFeatSelection>;
 
     try {
-      fightingStyleFeatures = await buildFightingStyleFeatures();
+      classFeatFeatures = await buildClassFeatFeatures();
     } catch (error) {
-      consola.error('Ошибка добавления боевого стиля:', error);
+      consola.error(ABILITY_IMPROVEMENT_LABELS.applyErrorLog, error);
 
-      showFightingStyleError();
+      showFeatError();
 
       return;
     }
+
+    // Прибавки черт с повышением характеристик считаются здесь же — как в
+    // мастере повышения уровня
+    const abilityIncreases = mergeAbilityIncreases(
+      Object.values(featSelections.value).map((selection) =>
+        collectFeatAbilityIncreases(selection.abilities),
+      ),
+    );
 
     // Предметы выбранного варианта снаряжения догружаются до применения; их
     // неудачные запросы гасятся внутри, поэтому шаг не бросает.
@@ -833,8 +1045,17 @@
 
     const featureChoices: Record<string, string> = { ...choices.value };
 
-    for (const selection of fightingStyleFeatures) {
-      featureChoices[selection.rowId] = selection.featName;
+    // У умения бывает не один выбор черты: подпись собирается из всех
+    for (const selection of classFeatFeatures) {
+      if (!selection.featName) {
+        continue;
+      }
+
+      const previous = featureChoices[selection.rowId];
+
+      featureChoices[selection.rowId] = previous
+        ? `${previous}, ${selection.featName}`
+        : selection.featName;
     }
 
     // Ответы на выборы умений идут в текст умения — чтобы выбранное было видно
@@ -892,7 +1113,7 @@
         featureChoices,
         featureAnswers,
       ),
-      ...fightingStyleFeatures.map((selection) => selection.feature),
+      ...classFeatFeatures.map((selection) => selection.feature),
     ];
 
     // Навыки уровня класса: выборы умений сюда не идут — их владения ведёт
@@ -914,6 +1135,7 @@
         languages: [],
         classResources: derivedResources.value,
         features,
+        abilityIncreases,
       });
 
       emit('close');
@@ -940,6 +1162,7 @@
       skills,
       classResources: derivedResources.value,
       features,
+      abilityIncreases,
       // Снаряжение применяется вместе с классом: лист сам снимет набор прошлого
       // выбора, поэтому повторный выбор класса не копит предметы и монеты.
       startingEquipment: startingEquipmentOption
@@ -1366,23 +1589,29 @@
                 </UBadge>
               </div>
 
+              <!-- Выборы черты — боевой стиль, черта за повышение
+                характеристик — тем же пикером, что в мастере повышения -->
               <div
-                v-if="row.fightingStyleChoice"
-                class="flex flex-col gap-1"
+                v-if="row.featChoices.length"
+                class="flex flex-col gap-3"
               >
-                <span class="text-xs text-muted">
-                  {{ FIGHTING_STYLE_CHOICE_LABEL }}
-                </span>
-
-                <SelectFeat
-                  v-model="fightingStyleSelections[row.id]"
-                  :categories="FIGHTING_STYLE_FEAT_CATEGORIES"
-                  :sources="featSourceIds"
+                <SheetLevelUpFeatChoice
+                  v-for="choice in row.featChoices"
+                  :key="choice.id"
+                  :title="choice.label"
+                  :options="featOptions(choice)"
+                  :selected="selectedFeat(choice.id)"
+                  :abilities="featAbilities(choice.id)"
+                  :scores="character.abilities"
+                  :is-loading="isFeatsLoading"
+                  :has-error="hasFeatsError"
+                  @update:feat="setFeatChoice(row.id, choice.id, $event)"
+                  @update:ability="setFeatAbility(choice.id, $event)"
                 />
               </div>
 
               <div
-                v-else-if="row.choiceControls.length"
+                v-if="row.choiceControls.length"
                 class="flex flex-col gap-3"
               >
                 <div
@@ -1407,7 +1636,7 @@
               </div>
 
               <UInput
-                v-else
+                v-if="!row.featChoices.length && !row.choiceControls.length"
                 v-model="choices[row.id]"
                 size="sm"
                 placeholder="Ваш выбор в умении (необязательно)"
