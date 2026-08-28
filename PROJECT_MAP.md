@@ -851,40 +851,40 @@ imported via the auto-generated `~<domain>` alias (see
 
 **UI Components Priority:** Nuxt UI → `shared/ui` → `features/*/ui`
 
-| Component         | Purpose                                                                                |
-| ----------------- | -------------------------------------------------------------------------------------- |
-| `action`          | Inline titled action block (markup)                                                    |
-| `affiliation`     | Comma-separated links to related entities (spell classes, feat backgrounds)            |
-| `animated-number` | Count-up animated number                                                               |
-| `card`            | Workshop entity card                                                                   |
-| `collapse`        | Collapsible / accordion primitive                                                      |
-| `copy-button`     | Copy-to-clipboard buttons: share link + copy entity as Markdown                        |
-| `damage-formula`  | VTTG damage/heal formula input & parts editor (spells, weapons, active effects)        |
-| `date-picker`     | Date/time picker input                                                                 |
-| `detail-pane`     | Wide-mode entity detail panel                                                          |
-| `drawer`          | Overlay drawer (+ header/body/title/actions, DrawerCollection)                         |
-| `editor`          | Workshop form controls (array/form controls, ability mastery)                          |
-| `gallery`         | LightGallery image viewer                                                              |
-| `grouped-list`    | Grouped/sorted entity grid list                                                        |
-| `icon`            | SVG icon / logo / loader / hamburger                                                   |
-| `image-crop`      | Square-crop editor modal for an uploaded image (move / resize the frame)               |
-| `input`           | URL input field                                                                        |
-| `kbd-shortcut`    | Keyboard shortcut hint display                                                         |
-| `link`            | Card & small entity links                                                              |
-| `markup`          | Custom `{@...}` markup parser/renderer + Homebrewery Markdown converter                |
-| `markup-editor`   | Tiptap markup WYSIWYG editor (+ insert panel/toolbar)                                  |
-| `page`            | Page grid / actions / result / legend scaffolding                                      |
-| `pagination`      | Page-number pagination control                                                         |
-| `placeholder`     | Dashed empty-state placeholder                                                         |
-| `rating`          | Star rating widget                                                                     |
-| `result`          | Status/result screen (404 / 403 / error / info)                                        |
-| `section`         | Section content + sidebar layout parts                                                 |
+| Component         | Purpose                                                                                                                                                                                                                                           |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `action`          | Inline titled action block (markup)                                                                                                                                                                                                               |
+| `affiliation`     | Comma-separated links to related entities (spell classes, feat backgrounds)                                                                                                                                                                       |
+| `animated-number` | Count-up animated number                                                                                                                                                                                                                          |
+| `card`            | Workshop entity card                                                                                                                                                                                                                              |
+| `collapse`        | Collapsible / accordion primitive                                                                                                                                                                                                                 |
+| `copy-button`     | Copy-to-clipboard buttons: share link + copy entity as Markdown                                                                                                                                                                                   |
+| `damage-formula`  | VTTG damage/heal formula input & parts editor (spells, weapons, active effects)                                                                                                                                                                   |
+| `date-picker`     | Date/time picker input                                                                                                                                                                                                                            |
+| `detail-pane`     | Wide-mode entity detail panel                                                                                                                                                                                                                     |
+| `drawer`          | Overlay drawer (+ header/body/title/actions, DrawerCollection)                                                                                                                                                                                    |
+| `editor`          | Workshop form controls (array/form controls, ability mastery)                                                                                                                                                                                     |
+| `gallery`         | LightGallery image viewer                                                                                                                                                                                                                         |
+| `grouped-list`    | Grouped/sorted entity grid list                                                                                                                                                                                                                   |
+| `icon`            | SVG icon / logo / loader / hamburger                                                                                                                                                                                                              |
+| `image-crop`      | Square-crop editor modal for an uploaded image (move / resize the frame)                                                                                                                                                                          |
+| `input`           | URL input field                                                                                                                                                                                                                                   |
+| `kbd-shortcut`    | Keyboard shortcut hint display                                                                                                                                                                                                                    |
+| `link`            | Card & small entity links                                                                                                                                                                                                                         |
+| `markup`          | Custom `{@...}` markup parser/renderer + Homebrewery Markdown converter                                                                                                                                                                           |
+| `markup-editor`   | Tiptap markup WYSIWYG editor (+ insert panel/toolbar)                                                                                                                                                                                             |
+| `page`            | Page grid / actions / result / legend scaffolding                                                                                                                                                                                                 |
+| `pagination`      | Page-number pagination control                                                                                                                                                                                                                    |
+| `placeholder`     | Dashed empty-state placeholder                                                                                                                                                                                                                    |
+| `rating`          | Star rating widget                                                                                                                                                                                                                                |
+| `result`          | Status/result screen (404 / 403 / error / info)                                                                                                                                                                                                   |
+| `section`         | Section content + sidebar layout parts                                                                                                                                                                                                            |
 | `select`          | Domain `USelectMenu` wrappers (41 `Select*.vue`, e.g. class, spell level, damage type); catalog-backed ones (items, spells, feats, species, backgrounds) open `CatalogPickerModal` instead — section filters on the left, paged list on the right |
-| `skeleton`        | Link skeleton loaders                                                                  |
-| `source-tag`      | Sourcebook source/group tag badge                                                      |
-| `tooltip`         | Info tooltip                                                                           |
-| `updates-dot`     | Unread-updates indicator dot                                                           |
-| `upload`          | Image & gallery upload widgets                                                         |
+| `skeleton`        | Link skeleton loaders                                                                                                                                                                                                                             |
+| `source-tag`      | Sourcebook source/group tag badge                                                                                                                                                                                                                 |
+| `tooltip`         | Info tooltip                                                                                                                                                                                                                                      |
+| `updates-dot`     | Unread-updates indicator dot                                                                                                                                                                                                                      |
+| `upload`          | Image & gallery upload widgets                                                                                                                                                                                                                    |
 
 ---
 

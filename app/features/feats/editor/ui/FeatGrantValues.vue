@@ -17,9 +17,11 @@
     SelectLanguage,
     SelectSkills,
     SelectWeaponCategory,
+    TOOL_ITEM_TYPES,
+    WEAPON_ITEM_TYPES,
   } from '~ui/select';
 
-  import { toUrlList } from '../../model';
+  import { FEAT_GRANT_VALUE_PLACEHOLDERS, toUrlList } from '../../model';
 
   /**
    * Значения строки дара: что выдаётся либо из чего выбирают.
@@ -43,6 +45,26 @@
   }>();
 
   const model = defineModel<Array<FeatChoiceOption>>({ required: true });
+
+  /**
+   * Категории каталога, которыми сужен набор предметов: оружие для оружия и
+   * приёма, инструменты для инструментов. Без этого поле про оружейный приём
+   * предлагало бы весь каталог — вплоть до амулетов и барабанов.
+   */
+  const itemTypes = computed<Array<string>>(() => {
+    if (kind === 'TOOL') {
+      return TOOL_ITEM_TYPES;
+    }
+
+    return WEAPON_ITEM_TYPES;
+  });
+
+  /** Подпись поля: она же объясняет, что именно выбирают. */
+  const itemPlaceholder = computed(() =>
+    kind === 'TOOL'
+      ? FEAT_GRANT_VALUE_PLACEHOLDERS.tools
+      : FEAT_GRANT_VALUE_PLACEHOLDERS.weapons,
+  );
 
   /** Отмеченные значения строки. */
   const values = computed<Array<string>>(() =>
@@ -165,11 +187,16 @@
       @update:model-value="setFeats"
     />
 
+    <!-- Оружейный приём выбирается ОРУЖИЕМ: приём — свойство самого оружия
+      («Подсечка» у длинного меча), отдельного списка приёмов у персонажа нет.
+      Поэтому набор сужен до оружия, а у инструментов — до инструментов -->
     <SelectItem
       v-else-if="
         kind === 'TOOL' || kind === 'WEAPON' || kind === 'WEAPON_MASTERY'
       "
       :model-value="values"
+      :item-types="itemTypes"
+      :placeholder="itemPlaceholder"
       multiple
       @select="setRefs"
     />

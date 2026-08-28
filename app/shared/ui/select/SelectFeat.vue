@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { CatalogPickerSection } from '~infrastructure/filter';
+
   import {
     CATALOG_PICKER_FEAT_CATEGORY_GROUP,
     CATALOG_PICKER_SECTIONS,
@@ -37,9 +39,9 @@
   const model = defineModel<string | Array<string>>();
 
   /** Закреплённый отбор поля: категории и источники, если они заданы. */
-  const section = computed(() => ({
+  const section = computed<CatalogPickerSection>(() => ({
     ...CATALOG_PICKER_SECTIONS.feats,
-    preset: () => ({
+    preset: (): Record<string, Array<string>> => ({
       ...(categories.length
         ? { [CATALOG_PICKER_FEAT_CATEGORY_GROUP]: categories }
         : {}),

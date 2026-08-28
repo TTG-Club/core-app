@@ -1,4 +1,5 @@
 export { default as CatalogPickerModal } from './CatalogPickerModal.vue';
+export * from './constants';
 export { default as SelectAbilities } from './SelectAbilities.vue';
 export { default as SelectAlignment } from './SelectAlignment.vue';
 export { default as SelectAmmunition } from './SelectAmmunition.vue';

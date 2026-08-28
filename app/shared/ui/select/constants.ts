@@ -110,3 +110,30 @@ export const CATALOG_PICKER_FEAT_CATEGORY_GROUP = 'category';
 
 /** Ключ группы фильтра с источниками: он одинаков во всех разделах. */
 export const CATALOG_PICKER_SOURCE_GROUP = 'source';
+
+/** Ключ группы фильтра предметов с категорией: им сужается набор поля. */
+export const CATALOG_PICKER_ITEM_TYPE_GROUP = 'itemType';
+
+/**
+ * Категории предметов, которые считаются оружием.
+ *
+ * Нужны полям про оружие и оружейные приёмы: приём берётся у самого оружия, и
+ * выбирать его среди амулетов и барабанов не из чего.
+ */
+export const WEAPON_ITEM_TYPES: Array<string> = [
+  'WEAPON',
+  'SIMPLE_WEAPON',
+  'MARTIAL_WEAPON',
+  'MELEE_WEAPON',
+  'RANGED_WEAPON',
+  'FIREARM',
+  'FUTURISTIC',
+];
+
+/** Категории предметов, которые считаются инструментами. */
+export const TOOL_ITEM_TYPES: Array<string> = [
+  'TOOL',
+  'ARTISAN_S_TOOLS',
+  'GAMING_SET',
+  'INSTRUMENT',
+];

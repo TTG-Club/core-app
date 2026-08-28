@@ -3,7 +3,8 @@
 
   import type { BackgroundToolChoice } from '../../model';
 
-  import { SelectItem } from '~ui/select';
+  import { FEAT_GRANT_VALUE_PLACEHOLDERS } from '~feats/model';
+  import { SelectItem, TOOL_ITEM_TYPES } from '~ui/select';
   import { InfoTooltip } from '~ui/tooltip';
 
   import { BACKGROUND_PARAMS_TAB_LABELS } from '../../model';
@@ -86,6 +87,8 @@
 
       <SelectItem
         :model-value="fixedUrls"
+        :item-types="TOOL_ITEM_TYPES"
+        :placeholder="FEAT_GRANT_VALUE_PLACEHOLDERS.tools"
         multiple
         @select="setFixed"
       />
@@ -110,6 +113,8 @@
     >
       <SelectItem
         :model-value="choiceUrls"
+        :item-types="TOOL_ITEM_TYPES"
+        :placeholder="FEAT_GRANT_VALUE_PLACEHOLDERS.tools"
         multiple
         @select="setChoiceFrom"
       />
