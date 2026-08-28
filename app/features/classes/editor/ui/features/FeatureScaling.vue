@@ -60,15 +60,10 @@
     :title="CLASS_FEATURES_EDITOR.scalingTitle"
     :hint="CLASS_FEATURES_EDITOR.scalingHint"
     :count="model.length"
+    :add-label="CLASS_FEATURES_EDITOR.addScaling"
+    @add="addRow"
   >
     <div class="flex flex-col gap-2">
-      <p
-        v-if="!model.length"
-        class="rounded-lg border border-dashed border-default p-4 text-center text-xs text-dimmed italic"
-      >
-        {{ CLASS_FEATURES_EDITOR.scalingEmpty }}
-      </p>
-
       <UForm
         v-for="(row, index) in model"
         :key="index"
@@ -137,15 +132,6 @@
           />
         </UFormField>
       </UForm>
-
-      <UButton
-        icon="tabler:plus"
-        :label="CLASS_FEATURES_EDITOR.addScaling"
-        color="primary"
-        variant="soft"
-        block
-        @click.left.exact.prevent="addRow"
-      />
     </div>
   </FeatureSection>
 </template>

@@ -115,13 +115,6 @@
 
 <template>
   <div class="flex w-full flex-col gap-1.5">
-    <p
-      v-if="!model.length"
-      class="text-xs text-dimmed italic"
-    >
-      {{ FEAT_REF_ROWS_LABELS.empty }}
-    </p>
-
     <div
       v-for="(reference, index) in model"
       :key="reference.url"

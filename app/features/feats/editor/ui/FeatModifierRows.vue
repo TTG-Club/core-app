@@ -29,6 +29,7 @@
     isFixedDamageDefenseRow,
     supportsEqualsWalk,
   } from '../../model';
+  import FeatRowsSection from './FeatRowsSection.vue';
 
   /**
    * Постоянные правки листа: одна строка — одна правка. Список видов живёт в
@@ -36,7 +37,11 @@
    * на экране все чувства и все скорости сразу, и почти все поля в ней у
    * обычной черты пустовали.
    */
-  const { rows, labels = {} } = defineProps<{
+  const {
+    rows,
+    labels = {},
+    title = undefined,
+  } = defineProps<{
     /** Все строки редактора: из них берутся занятые ключи выборов. */
     rows: FeatEditorRows;
 
@@ -45,12 +50,29 @@
      * черты, у умения класса и вида свои формулировки.
      */
     labels?: FeatEditorLabelOverrides;
+
+    /**
+     * Заголовок блока: с ним строки рисуются в рамке с кнопкой добавления в
+     * шапке. Пусто — форма-владелец рисует заголовок сама.
+     */
+    title?: string;
   }>();
 
   /** Подписи с поправками формы-владельца. */
   const texts = computed(() => getFeatEditorLabels(labels));
 
   const model = defineModel<Array<FeatModifierRow>>({ required: true });
+
+  /** Блок в рамке с заголовком: кнопка добавления живёт в его шапке. */
+  const isCompact = computed(() => Boolean(title));
+
+  /** Размер кнопки добавления: в шапке рамки она мельче, чем под списком. */
+  const addButtonSize = computed<'xs' | 'md'>(() =>
+    isCompact.value ? 'xs' : 'md',
+  );
+
+  /** В шапке кнопка не тянется и не сжимается, под списком — во всю ширину. */
+  const addButtonClass = computed(() => (isCompact.value ? 'shrink-0' : ''));
 
   /** Меню «Добавить модификатор»: все виды одним списком. */
   const addMenuItems = computed<Array<Array<DropdownMenuItem>>>(() => [
@@ -83,22 +105,13 @@
 </script>
 
 <template>
-  <div class="flex flex-col gap-2">
-    <InfoTooltip
-      :text="texts.modifiersHintDetails"
-      icon="tabler:info-circle-filled"
-      class="text-sm text-dimmed"
-    >
-      <span>{{ texts.modifiersHint }}</span>
-    </InfoTooltip>
-
-    <p
-      v-if="!model.length"
-      class="rounded-lg border border-dashed border-default p-4 text-center text-xs text-dimmed italic"
-    >
-      {{ texts.modifiersEmpty }}
-    </p>
-
+  <FeatRowsSection
+    :title="title"
+    :summary="texts.modifiersHint"
+    :hint="texts.modifiersHintDetails"
+    :empty="texts.modifiersEmpty"
+    :count="model.length"
+  >
     <div
       v-for="(row, index) in model"
       :key="row.uid"
@@ -217,17 +230,22 @@
       </div>
     </div>
 
-    <UDropdownMenu
-      :items="addMenuItems"
-      :content="{ align: 'start' }"
-    >
-      <UButton
-        icon="tabler:plus"
-        :label="texts.addModifier"
-        color="primary"
-        variant="soft"
-        block
-      />
-    </UDropdownMenu>
-  </div>
+    <!-- Кнопка добавления своя: вид модификатора выбирают меню, а не строкой -->
+    <template #add>
+      <UDropdownMenu
+        :items="addMenuItems"
+        :content="{ align: 'start' }"
+        :class="addButtonClass"
+      >
+        <UButton
+          icon="tabler:plus"
+          :label="texts.addModifier"
+          color="primary"
+          variant="soft"
+          :size="addButtonSize"
+          :block="!isCompact"
+        />
+      </UDropdownMenu>
+    </template>
+  </FeatRowsSection>
 </template>

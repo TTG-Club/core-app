@@ -6,6 +6,7 @@ export { default as FeatGrantValues } from './FeatGrantValues.vue';
 export { default as FeatModifierRows } from './FeatModifierRows.vue';
 export { default as FeatOptionRows } from './FeatOptionRows.vue';
 export { default as FeatPrerequisiteRows } from './FeatPrerequisiteRows.vue';
+export { default as FeatRowsSection } from './FeatRowsSection.vue';
 export { default as FeatRowsSeparator } from './FeatRowsSeparator.vue';
 export { default as FeatSpellcastingAbility } from './FeatSpellcastingAbility.vue';
 export { default as FeatSpellChoices } from './FeatSpellChoices.vue';

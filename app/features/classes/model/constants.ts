@@ -145,6 +145,8 @@ export const CLASS_FEATURES_EDITOR = {
   remove: 'Удалить умение',
   expand: 'Развернуть умение',
   collapse: 'Свернуть умение',
+  expandSection: 'Развернуть блок',
+  collapseSection: 'Свернуть блок',
   levelSuffix: 'ур.',
   mechanicsBadge: 'механика: ',
   informationalBadge: 'информирует',
@@ -173,14 +175,12 @@ export const CLASS_FEATURES_EDITOR = {
   scalingTitle: 'Рост по уровням',
   scalingHint:
     'Уровни, на которых умение повторяется или усиливается: «Улучшение характеристик» на 8, 12, 16 и 19 уровнях, дополнительная атака на 11-м. Каждая строка — отдельная запись на странице класса.',
-  scalingEmpty: 'Умение не растёт по уровням.',
   addScaling: 'Добавить уровень',
   removeScaling: 'Убрать уровень',
 
   optionsTitle: 'Варианты',
   optionsHint:
     'Список вариантов умения, из которых выбирают по ходу игры: манёвры, воззвания, метамагия. Варианты показываются на странице класса своим списком.',
-  optionsEmpty: 'Вариантов нет.',
   addOption: 'Добавить вариант',
   removeOption: 'Убрать вариант',
 

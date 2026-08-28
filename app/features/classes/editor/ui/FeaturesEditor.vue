@@ -289,29 +289,39 @@
         class="rounded-lg border border-default bg-elevated/20"
       >
         <div class="flex items-center gap-2 px-3 py-2">
-          <UBadge
-            size="sm"
-            color="neutral"
-            variant="outline"
-            class="shrink-0 tabular-nums"
+          <!-- Плашка разворачивает умение целиком: попадать значком в конце
+            строки приходилось прицельно. Кнопки лежат рядом с ней, а не
+            внутри: кнопка внутри кнопки недопустима -->
+          <button
+            type="button"
+            class="flex min-w-0 flex-1 items-center gap-2 text-left"
+            :aria-expanded="isExpanded(index)"
+            @click.left.exact.prevent="toggleFeature(index)"
           >
-            {{ getClassFeatureLevelBadge(feature.level) }}
-          </UBadge>
+            <UBadge
+              size="sm"
+              color="neutral"
+              variant="outline"
+              class="shrink-0 tabular-nums"
+            >
+              {{ getClassFeatureLevelBadge(feature.level) }}
+            </UBadge>
 
-          <span class="min-w-0 flex-1 truncate text-base">
-            {{ feature.name || CLASS_FEATURES_EDITOR.unnamed }}
-          </span>
+            <span class="min-w-0 flex-1 truncate text-base">
+              {{ feature.name || CLASS_FEATURES_EDITOR.unnamed }}
+            </span>
 
-          <UBadge
-            v-for="badge in getBadges(feature)"
-            :key="badge.key"
-            size="sm"
-            :color="badge.color"
-            variant="subtle"
-            class="hidden shrink-0 md:inline-flex"
-          >
-            {{ badge.label }}
-          </UBadge>
+            <UBadge
+              v-for="badge in getBadges(feature)"
+              :key="badge.key"
+              size="sm"
+              :color="badge.color"
+              variant="subtle"
+              class="hidden shrink-0 md:inline-flex"
+            >
+              {{ badge.label }}
+            </UBadge>
+          </button>
 
           <UButton
             icon="tabler:trash"

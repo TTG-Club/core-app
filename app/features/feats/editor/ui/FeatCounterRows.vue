@@ -1,13 +1,12 @@
 <script setup lang="ts">
   import type { FeatCounterRow, FeatEditorLabelOverrides } from '../../model';
 
-  import { InfoTooltip } from '~ui/tooltip';
-
   import {
     createCounterRow,
     FEAT_COUNTER_RECOVERY_OPTIONS,
     getFeatEditorLabels,
   } from '../../model';
+  import FeatRowsSection from './FeatRowsSection.vue';
 
   /**
    * Ресурсы черты: счётчик с максимумом-формулой и откатом от отдыха.
@@ -15,12 +14,18 @@
    * Максимум формулой, а не числом, потому что у большинства таких запасов он
    * привязан к бонусу мастерства и обязан расти вместе с ним («Удачливый»).
    */
-  const { labels = {} } = defineProps<{
+  const { labels = {}, title = undefined } = defineProps<{
     /**
      * Подписи формы-владельца: чертой источник даров называет только форма
      * черты, у умения класса и вида свои формулировки.
      */
     labels?: FeatEditorLabelOverrides;
+
+    /**
+     * Заголовок блока: с ним строки рисуются в рамке с кнопкой добавления в
+     * шапке. Пусто — форма-владелец рисует заголовок сама.
+     */
+    title?: string;
   }>();
 
   const model = defineModel<Array<FeatCounterRow>>({ required: true });
@@ -76,22 +81,15 @@
 </script>
 
 <template>
-  <div class="flex flex-col gap-2">
-    <InfoTooltip
-      :text="texts.countersHintDetails"
-      icon="tabler:info-circle-filled"
-      class="text-sm text-dimmed"
-    >
-      <span>{{ texts.countersHint }}</span>
-    </InfoTooltip>
-
-    <p
-      v-if="!model.length"
-      class="rounded-lg border border-dashed border-default p-4 text-center text-xs text-dimmed italic"
-    >
-      {{ texts.countersEmpty }}
-    </p>
-
+  <FeatRowsSection
+    :title="title"
+    :summary="texts.countersHint"
+    :hint="texts.countersHintDetails"
+    :empty="texts.countersEmpty"
+    :count="model.length"
+    :add-label="texts.addCounter"
+    @add="addCounter"
+  >
     <div
       v-for="(counter, index) in model"
       :key="counter.uid"
@@ -208,14 +206,5 @@
         />
       </div>
     </div>
-
-    <UButton
-      icon="tabler:plus"
-      :label="texts.addCounter"
-      color="primary"
-      variant="soft"
-      block
-      @click.left.exact.prevent="addCounter"
-    />
-  </div>
+  </FeatRowsSection>
 </template>

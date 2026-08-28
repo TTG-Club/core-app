@@ -62,74 +62,44 @@
     :hint="CLASS_FEATURES_EDITOR.mechanicsHint"
     :count="filledBlocksCount"
   >
-    <div class="grid gap-6">
-      <div class="grid gap-2">
-        <h3 class="truncate text-sm text-highlighted">
-          {{ CLASS_EDITOR_LABELS.featureGrantsTitle }}
-        </h3>
+    <div class="grid gap-3">
+      <FeatGrantRows
+        v-model="editorRows.grants"
+        :rows="editorRows"
+        :labels="CLASS_FEATURE_MECHANICS_LABELS"
+        :title="CLASS_EDITOR_LABELS.featureGrantsTitle"
+      />
 
-        <FeatGrantRows
-          v-model="editorRows.grants"
-          :rows="editorRows"
-          :labels="CLASS_FEATURE_MECHANICS_LABELS"
-        />
-      </div>
+      <FeatModifierRows
+        v-model="editorRows.modifiers"
+        :rows="editorRows"
+        :labels="CLASS_FEATURE_MECHANICS_LABELS"
+        :title="CLASS_EDITOR_LABELS.featureModifiersTitle"
+      />
 
-      <div class="grid gap-2">
-        <h3 class="truncate text-sm text-highlighted">
-          {{ CLASS_EDITOR_LABELS.featureModifiersTitle }}
-        </h3>
+      <FeatCounterRows
+        v-model="editorRows.counters"
+        :labels="CLASS_FEATURE_MECHANICS_LABELS"
+        :title="CLASS_EDITOR_LABELS.featureCountersTitle"
+      />
 
-        <FeatModifierRows
-          v-model="editorRows.modifiers"
-          :rows="editorRows"
-          :labels="CLASS_FEATURE_MECHANICS_LABELS"
-        />
-      </div>
+      <FeatGrantedSpells
+        v-model="mechanics.spells"
+        :labels="CLASS_FEATURE_MECHANICS_LABELS"
+        :title="CLASS_EDITOR_LABELS.featureSpellsTitle"
+      />
 
-      <div class="grid gap-2">
-        <h3 class="truncate text-sm text-highlighted">
-          {{ CLASS_EDITOR_LABELS.featureCountersTitle }}
-        </h3>
+      <FeatSpellListSpells
+        v-model="mechanics.spellList"
+        :labels="CLASS_FEATURE_MECHANICS_LABELS"
+        :title="CLASS_EDITOR_LABELS.featureSpellListTitle"
+      />
 
-        <FeatCounterRows
-          v-model="editorRows.counters"
-          :labels="CLASS_FEATURE_MECHANICS_LABELS"
-        />
-      </div>
-
-      <div class="grid gap-2">
-        <h3 class="truncate text-sm text-highlighted">
-          {{ CLASS_EDITOR_LABELS.featureSpellsTitle }}
-        </h3>
-
-        <FeatGrantedSpells
-          v-model="mechanics.spells"
-          :labels="CLASS_FEATURE_MECHANICS_LABELS"
-        />
-      </div>
-
-      <div class="grid gap-2">
-        <h3 class="truncate text-sm text-highlighted">
-          {{ CLASS_EDITOR_LABELS.featureSpellListTitle }}
-        </h3>
-
-        <FeatSpellListSpells
-          v-model="mechanics.spellList"
-          :labels="CLASS_FEATURE_MECHANICS_LABELS"
-        />
-      </div>
-
-      <div class="grid gap-2">
-        <h3 class="truncate text-sm text-highlighted">
-          {{ CLASS_EDITOR_LABELS.featureEffectsTitle }}
-        </h3>
-
-        <ActiveEffects
-          v-model="feature.activeEffects"
-          :origin="EFFECT_ORIGIN.feature"
-        />
-      </div>
+      <ActiveEffects
+        v-model="feature.activeEffects"
+        :origin="EFFECT_ORIGIN.feature"
+        :title="CLASS_EDITOR_LABELS.featureEffectsTitle"
+      />
     </div>
   </FeatureSection>
 </template>

@@ -27,6 +27,7 @@
   } from '../../model';
   import FeatGrantValues from './FeatGrantValues.vue';
   import FeatOptionRows from './FeatOptionRows.vue';
+  import FeatRowsSection from './FeatRowsSection.vue';
   import FeatRowsSeparator from './FeatRowsSeparator.vue';
 
   /**
@@ -37,7 +38,11 @@
    * Редактор общий для черты, умения класса, вида и предыстории: набор даров у
    * них один. Кто источник даров, форма-владелец называет своими подписями.
    */
-  const { rows, labels = {} } = defineProps<{
+  const {
+    rows,
+    labels = {},
+    title = undefined,
+  } = defineProps<{
     /** Все строки редактора: из них берутся занятые ключи выборов. */
     rows: FeatEditorRows;
 
@@ -46,6 +51,12 @@
      * черты, у умения класса и вида свои формулировки.
      */
     labels?: FeatEditorLabelOverrides;
+
+    /**
+     * Заголовок блока: с ним строки рисуются в рамке с кнопкой добавления в
+     * шапке. Пусто — форма-владелец рисует заголовок сама.
+     */
+    title?: string;
   }>();
 
   const model = defineModel<Array<FeatGrantRow>>({ required: true });
@@ -212,22 +223,15 @@
 </script>
 
 <template>
-  <div class="flex flex-col gap-3">
-    <InfoTooltip
-      :text="texts.grantsHintDetails"
-      icon="tabler:info-circle-filled"
-      class="text-sm text-dimmed"
-    >
-      <span>{{ texts.grantsHint }}</span>
-    </InfoTooltip>
-
-    <p
-      v-if="!model.length"
-      class="rounded-lg border border-dashed border-default p-4 text-center text-xs text-dimmed italic"
-    >
-      {{ texts.grantsEmpty }}
-    </p>
-
+  <FeatRowsSection
+    :title="title"
+    :summary="texts.grantsHint"
+    :hint="texts.grantsHintDetails"
+    :empty="texts.grantsEmpty"
+    :count="model.length"
+    :add-label="texts.addGrant"
+    @add="addRow"
+  >
     <template
       v-for="(row, index) in model"
       :key="row.uid"
@@ -477,14 +481,5 @@
         </div>
       </div>
     </template>
-
-    <UButton
-      icon="tabler:plus"
-      :label="texts.addGrant"
-      color="primary"
-      variant="soft"
-      block
-      @click.left.exact.prevent="addRow"
-    />
-  </div>
+  </FeatRowsSection>
 </template>

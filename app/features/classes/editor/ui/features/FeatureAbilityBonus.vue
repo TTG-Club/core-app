@@ -21,6 +21,17 @@
     required: true,
   });
 
+  /** Записей в блоке: прибавка у умения либо одна, либо её нет. */
+  const count = computed(() => (model.value ? 1 : 0));
+
+  /**
+   * Подпись кнопки добавления в шапке блока; пусто — прибавка уже задана, и
+   * добавлять нечего: она у умения одна.
+   */
+  const addLabel = computed(() =>
+    model.value ? undefined : CLASS_FEATURES_EDITOR.addAbilityBonus,
+  );
+
   /** Заводит прибавку с пределом эпических умений. */
   function add() {
     model.value = { abilities: [], ...CLASS_ABILITY_BONUS_DEFAULTS };
@@ -35,7 +46,9 @@
   <FeatureSection
     :title="CLASS_FEATURES_EDITOR.abilityBonusTitle"
     :hint="CLASS_FEATURES_EDITOR.abilityBonusHint"
-    :count="model ? 1 : 0"
+    :count="count"
+    :add-label="addLabel"
+    @add="add"
   >
     <UForm
       v-if="model"
@@ -90,15 +103,5 @@
         />
       </div>
     </UForm>
-
-    <UButton
-      v-else
-      icon="tabler:plus"
-      :label="CLASS_FEATURES_EDITOR.addAbilityBonus"
-      color="primary"
-      variant="soft"
-      block
-      @click.left.exact.prevent="add"
-    />
   </FeatureSection>
 </template>

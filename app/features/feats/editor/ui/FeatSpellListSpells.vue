@@ -13,6 +13,7 @@
     getFeatSpellCountLabel,
   } from '../../model';
   import FeatEntityRefRows from './FeatEntityRefRows.vue';
+  import FeatRowsSection from './FeatRowsSection.vue';
   import FeatRowsSeparator from './FeatRowsSeparator.vue';
   import FeatSpellCountField from './FeatSpellCountField.vue';
 
@@ -28,12 +29,18 @@
    * следующие — на своих уровнях, и из каждой берут своё количество. Складывать
    * их в один список значило бы выдать всю таблицу с первого уровня.
    */
-  const { labels = {} } = defineProps<{
+  const { labels = {}, title = undefined } = defineProps<{
     /**
      * Подписи формы-владельца: чертой источник даров называет только форма
      * черты, у умения класса и вида свои формулировки.
      */
     labels?: FeatEditorLabelOverrides;
+
+    /**
+     * Заголовок блока: с ним строки рисуются в рамке с кнопкой добавления в
+     * шапке. Пусто — форма-владелец рисует заголовок сама.
+     */
+    title?: string;
   }>();
 
   const model = defineModel<FeatSpellListExpansion>({ required: true });
@@ -72,22 +79,15 @@
 </script>
 
 <template>
-  <div class="flex flex-col gap-3">
-    <InfoTooltip
-      :text="texts.spellListHintDetails"
-      icon="tabler:info-circle-filled"
-      class="text-sm text-dimmed"
-    >
-      <span>{{ texts.spellListHint }}</span>
-    </InfoTooltip>
-
-    <p
-      v-if="!model.groups.length"
-      class="rounded-lg border border-dashed border-default p-4 text-center text-xs text-dimmed italic"
-    >
-      {{ texts.spellListEmpty }}
-    </p>
-
+  <FeatRowsSection
+    :title="title"
+    :summary="texts.spellListHint"
+    :hint="texts.spellListHintDetails"
+    :empty="texts.spellListEmpty"
+    :count="model.groups.length"
+    :add-label="texts.addSpellList"
+    @add="addGroup"
+  >
     <template
       v-for="(group, index) in model.groups"
       :key="index"
@@ -151,29 +151,22 @@
       </div>
     </template>
 
-    <UButton
-      icon="tabler:plus"
-      :label="texts.addSpellList"
-      color="primary"
-      variant="soft"
-      block
-      @click.left.exact.prevent="addGroup"
-    />
-
     <!-- Без заклинаний отметка ничего не описывает: расширять нечего -->
-    <div
-      v-if="model.groups.length"
-      class="flex items-center"
-    >
-      <InfoTooltip
-        :text="texts.spellListRequiresSpellcastingHint"
-        icon="tabler:info-circle-filled"
+    <template #footer>
+      <div
+        v-if="model.groups.length"
+        class="flex items-center"
       >
-        <UCheckbox
-          v-model="model.requiresSpellcasting"
-          :label="texts.spellListRequiresSpellcasting"
-        />
-      </InfoTooltip>
-    </div>
-  </div>
+        <InfoTooltip
+          :text="texts.spellListRequiresSpellcastingHint"
+          icon="tabler:info-circle-filled"
+        >
+          <UCheckbox
+            v-model="model.requiresSpellcasting"
+            :label="texts.spellListRequiresSpellcasting"
+          />
+        </InfoTooltip>
+      </div>
+    </template>
+  </FeatRowsSection>
 </template>

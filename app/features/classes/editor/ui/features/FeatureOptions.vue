@@ -55,15 +55,10 @@
     :title="CLASS_FEATURES_EDITOR.optionsTitle"
     :hint="CLASS_FEATURES_EDITOR.optionsHint"
     :count="model.length"
+    :add-label="CLASS_FEATURES_EDITOR.addOption"
+    @add="addRow"
   >
     <div class="flex flex-col gap-2">
-      <p
-        v-if="!model.length"
-        class="rounded-lg border border-dashed border-default p-4 text-center text-xs text-dimmed italic"
-      >
-        {{ CLASS_FEATURES_EDITOR.optionsEmpty }}
-      </p>
-
       <UForm
         v-for="(option, index) in model"
         :key="index"
@@ -154,15 +149,6 @@
           />
         </UFormField>
       </UForm>
-
-      <UButton
-        icon="tabler:plus"
-        :label="CLASS_FEATURES_EDITOR.addOption"
-        color="primary"
-        variant="soft"
-        block
-        @click.left.exact.prevent="addRow"
-      />
     </div>
   </FeatureSection>
 </template>

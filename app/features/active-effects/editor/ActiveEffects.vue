@@ -10,9 +10,17 @@
   import ActiveEffectItem from './ui/ActiveEffectItem.vue';
 
   // Источник задаёт редактор-хозяин: он же и знает, чем эффект выдан.
-  const { origin = EFFECT_ORIGIN.spell } = defineProps<{
-    origin?: EffectOrigin;
-  }>();
+  const { origin = EFFECT_ORIGIN.spell, title = ACTIVE_EFFECT_LABELS.title } =
+    defineProps<{
+      origin?: EffectOrigin;
+
+      /**
+       * Заголовок блока. Своим его называет редактор, у которого эффекты лежат
+       * не на своей вкладке, а внутри записи: у умения класса это «Эффекты
+       * умения» — рядом с дарами и ресурсами того же умения.
+       */
+      title?: string;
+    }>();
 
   const model = defineModel<Array<ActiveEffect>>({ default: () => [] });
 
@@ -34,6 +42,11 @@
       }
     },
   });
+
+  /** Без эффектов у карточки остаётся одна шапка: пустое тело места не занимает. */
+  const cardUi = computed(() =>
+    model.value.length ? {} : { body: 'p-0 sm:p-0' },
+  );
 
   function isExpanded(index: number): boolean {
     return expanded.value.has(index);
@@ -115,12 +128,15 @@
 </script>
 
 <template>
-  <UCard variant="subtle">
+  <UCard
+    variant="subtle"
+    :ui="cardUi"
+  >
     <template #header>
       <div class="flex items-center justify-between gap-2">
         <div class="flex min-w-0 flex-col">
           <h2 class="truncate text-base text-highlighted">
-            {{ ACTIVE_EFFECT_LABELS.title }}
+            {{ title }}
           </h2>
 
           <span class="text-xs text-muted">
@@ -139,15 +155,8 @@
       </div>
     </template>
 
-    <p
-      v-if="!model.length"
-      class="rounded-lg border border-dashed border-default p-6 text-center text-sm text-dimmed italic"
-    >
-      {{ ACTIVE_EFFECT_LABELS.empty }}
-    </p>
-
     <div
-      v-else
+      v-if="model.length"
       class="flex flex-col gap-3"
     >
       <div

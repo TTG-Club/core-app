@@ -9,6 +9,7 @@
 
   import { getFeatEditorLabels } from '../../model';
   import FeatEntityRefRows from './FeatEntityRefRows.vue';
+  import FeatRowsSection from './FeatRowsSection.vue';
 
   /**
    * Заклинания, которые черта даёт знать без выбора, и настройка подготовки.
@@ -17,12 +18,18 @@
    * черты — и выданные, и выбранные игроком, — поэтому живёт своим блоком
    * (`FeatSpellcastingAbility`), а не рядом с одним из списков.
    */
-  const { labels = {} } = defineProps<{
+  const { labels = {}, title = undefined } = defineProps<{
     /**
      * Подписи формы-владельца: чертой источник даров называет только форма
      * черты, у умения класса и вида свои формулировки.
      */
     labels?: FeatEditorLabelOverrides;
+
+    /**
+     * Заголовок блока: с ним строки рисуются в рамке с кнопкой добавления в
+     * шапке. Пусто — форма-владелец рисует заголовок сама.
+     */
+    title?: string;
   }>();
 
   const model = defineModel<FeatSpellGrant>({ required: true });
@@ -60,15 +67,12 @@
 </script>
 
 <template>
-  <div class="flex flex-col gap-3">
-    <InfoTooltip
-      :text="texts.grantedSpellsHint"
-      icon="tabler:info-circle-filled"
-      class="text-sm text-dimmed"
-    >
-      <span>{{ texts.grantedSpellsTitle }}</span>
-    </InfoTooltip>
-
+  <FeatRowsSection
+    :title="title"
+    :summary="texts.grantedSpellsTitle"
+    :hint="texts.grantedSpellsHint"
+    :count="model.spells.length"
+  >
     <FeatEntityRefRows
       v-model="model.spells"
       kind="SPELL"
@@ -112,5 +116,5 @@
         />
       </InfoTooltip>
     </div>
-  </div>
+  </FeatRowsSection>
 </template>
