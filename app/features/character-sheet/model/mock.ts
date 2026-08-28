@@ -213,6 +213,7 @@ export const DEFAULT_CHARACTER: Character = {
     armor: [],
     weapons: [],
     weaponMasteries: [],
+    masteryProperties: [],
     tools: [],
     languages: ['Общий'],
   },

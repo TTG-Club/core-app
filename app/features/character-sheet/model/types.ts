@@ -872,6 +872,13 @@ export interface CharacterProficiencies {
   /** Мастерство оружием (D&D 2024) — подмножество владения оружием. */
   weaponMasteries: string[];
 
+  /**
+   * Оружейные приёмы без привязки к оружию (D&D 2024): «Тактический мастер»
+   * воина владеет Толканием, Изнурением и Замедлением сам по себе — оружие,
+   * у которого такой приём есть, ему не нужно.
+   */
+  masteryProperties: string[];
+
   /** Инструменты. */
   tools: CharacterToolProficiency[];
 
@@ -895,6 +902,13 @@ export interface GrantedProficiencies {
    * игрок; в списке владений оно лежит отдельной группой.
    */
   weaponMasteries: string[];
+
+  /**
+   * Оружейные приёмы сами по себе — и выданные источником, и названные игроком:
+   * справочник у них свой, из восьми приёмов, поэтому набором их выдают так же
+   * легко, как и выбирают.
+   */
+  masteryProperties: string[];
 
   /**
    * Характеристики, спасброском которых наделил источник («Устойчивый»,
@@ -2412,6 +2426,7 @@ export type ClassChoiceKind =
   | 'spellcasting-ability'
   | 'saving-throw'
   | 'weapon-mastery'
+  | 'mastery-property'
   | 'ability-score'
   | 'ability-variant'
   | 'option'

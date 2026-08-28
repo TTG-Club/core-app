@@ -3666,6 +3666,32 @@ export const DAMAGE_TYPE_NAMES: string[] = DAMAGE_TYPE_OPTIONS.filter(
   (option) => option.value !== DAMAGE_TYPE_NONE,
 ).map((option) => option.label);
 
+/**
+ * Названия оружейных приёмов по ключам справочника.
+ *
+ * Списком, а не словарём с бэкенда: приёмов ровно восемь, и это правило D&D
+ * 2024, а не данные каталога — лист подписывает ими выбор так же, как типы
+ * урона и характеристики.
+ */
+export const WEAPON_MASTERY_PROPERTY_LABELS: Record<string, string> = {
+  CLEAVE: 'Прорубание',
+  GRAZE: 'Задевание',
+  NICK: 'Выпад',
+  PUSH: 'Толкание',
+  SAP: 'Изнурение',
+  SLOW: 'Замедление',
+  TOPPLE: 'Опрокидывание',
+  VEX: 'Подавление',
+};
+
+/**
+ * Названия всех оружейных приёмов. Ими подписан пул выбора, когда набор в
+ * механике не задан: «выберите любой приём» — это весь справочник.
+ */
+export const WEAPON_MASTERY_PROPERTY_NAMES: string[] = Object.values(
+  WEAPON_MASTERY_PROPERTY_LABELS,
+);
+
 /** Префикс тега типа урона в формулах заклинаний (`8к6@dmg.fire`). */
 export const SPELL_DAMAGE_TYPE_TAG_PREFIX = 'dmg.';
 
@@ -4794,7 +4820,8 @@ export const SHEET_FEAT_CHOICE_LABELS: Partial<
   'spell': 'Выберите заклинания',
   'damage-type': 'Выберите тип урона',
   'saving-throw': 'Выберите спасбросок',
-  'weapon-mastery': 'Выберите оружейный приём',
+  'weapon-mastery': 'Выберите оружие с приёмом',
+  'mastery-property': 'Выберите оружейный приём',
   'option': 'Выберите вариант',
   'feat': 'Выберите черту',
 };

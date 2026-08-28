@@ -120,6 +120,7 @@
         skills: [],
         expertiseSkills: [],
         weaponMasteries: [],
+        masteryProperties: [],
         savingThrows: [],
       },
     });

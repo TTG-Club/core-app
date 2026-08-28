@@ -28,6 +28,7 @@ export type FeatChoiceType =
   | 'SPELLCASTING_ABILITY'
   | 'WEAPON'
   | 'WEAPON_MASTERY'
+  | 'MASTERY_PROPERTY'
   | 'ARMOR'
   | 'OPTION'
   | 'FEAT';
@@ -333,6 +334,16 @@ export interface FeatProficiencyGrant {
    * имея владения видом, и наоборот.
    */
   weaponMasteries: Array<FeatEntityRef>;
+
+  /**
+   * Оружейные приёмы сами по себе, без привязки к оружию: «Тактический мастер»
+   * воина владеет Толканием, Изнурением и Замедлением независимо от того, у
+   * какого оружия такой приём есть.
+   *
+   * Ключами справочника приёмов (`PUSH`, `SAP`), а не ссылками на оружие: там
+   * значение — вид оружия, здесь — сам приём, и на листе это разные списки.
+   */
+  masteryProperties: Array<string>;
 
   /**
    * Спасброски, которыми черта даёт владеть без выбора: «Крепыш» выдаёт
@@ -730,6 +741,7 @@ export function createFeatProficiencyGrant(): FeatProficiencyGrant {
     weaponCategories: [],
     weapons: [],
     weaponMasteries: [],
+    masteryProperties: [],
     savingThrows: [],
     armorCategories: [],
     skills: [],

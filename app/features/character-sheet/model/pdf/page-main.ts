@@ -453,6 +453,10 @@ function drawProficienciesPanel(
       values: proficiencies.weaponMasteries,
     },
     {
+      label: PDF_LABELS.masteryProperties,
+      values: proficiencies.masteryProperties,
+    },
+    {
       label: PDF_LABELS.toolProficiency,
       values: getToolNames(proficiencies.tools),
     },

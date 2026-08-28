@@ -306,6 +306,7 @@ export const PDF_LABELS = {
   armorProficiency: 'Броня',
   weaponProficiency: 'Оружие',
   masteryProficiency: 'Мастерство',
+  masteryProperties: 'Оружейные приёмы',
   toolProficiency: 'Инструменты',
   languageProficiency: 'Языки',
   carried: 'Несёт',

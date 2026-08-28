@@ -638,6 +638,12 @@
             ...(chosenGrants.weaponMasteries ?? []),
           ]),
         ],
+        masteryProperties: [
+          ...new Set([
+            ...declaredProficiencies.masteryProperties,
+            ...(chosenGrants.masteryProperties ?? []),
+          ]),
+        ],
         savingThrows: [
           ...new Set([
             ...declaredProficiencies.savingThrows,

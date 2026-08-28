@@ -419,6 +419,7 @@ import {
   VISION_ORDER,
   VISION_UNLIMITED_LABEL,
   WEAPON_CATEGORY_LABELS,
+  WEAPON_MASTERY_PROPERTY_NAMES,
   WEAPON_MATCH_KEYWORDS,
   WEAPON_PROFICIENCY_GROUPS,
   WEAPON_TRAIT_AXES,
@@ -6290,6 +6291,9 @@ function mergeGrantedProficiencies(
     skills: uniq(filled.flatMap((source) => source.skills)),
     expertiseSkills: uniq(filled.flatMap((source) => source.expertiseSkills)),
     weaponMasteries: uniq(filled.flatMap((source) => source.weaponMasteries)),
+    masteryProperties: uniq(
+      filled.flatMap((source) => source.masteryProperties),
+    ),
     savingThrows: uniq(filled.flatMap((source) => source.savingThrows)),
     // Инструмент — объект со ссылкой, поэтому повторы снимаются по названию:
     // одна и та же лютня из вида и из его происхождения — это одно владение
@@ -8411,6 +8415,7 @@ function withChosenProficiencies(
     || chosen.languages?.length
     || chosen.tools?.length
     || chosen.weaponMasteries?.length
+    || chosen.masteryProperties?.length
     || chosen.savingThrows?.length,
   );
 
@@ -8426,6 +8431,7 @@ function withChosenProficiencies(
     skills: [],
     expertiseSkills: [],
     weaponMasteries: [],
+    masteryProperties: [],
     savingThrows: [],
   };
 
@@ -8436,6 +8442,10 @@ function withChosenProficiencies(
     languages: union(base.languages, chosen.languages ?? []),
     tools: dedupeToolProficiencies([...base.tools, ...(chosen.tools ?? [])]),
     weaponMasteries: union(base.weaponMasteries, chosen.weaponMasteries ?? []),
+    masteryProperties: union(
+      base.masteryProperties,
+      chosen.masteryProperties ?? [],
+    ),
     savingThrows: union(base.savingThrows, chosen.savingThrows ?? []),
   };
 }
@@ -8464,6 +8474,7 @@ export function collectChosenProficiencies(
   const languages: string[] = [];
   const tools: CharacterToolProficiency[] = [];
   const weaponMasteries: string[] = [];
+  const masteryProperties: string[] = [];
   const savingThrows: AbilityKey[] = [];
 
   for (const choice of choices) {
@@ -8475,6 +8486,12 @@ export function collectChosenProficiencies(
 
     if (choice.kind === 'weapon-mastery') {
       weaponMasteries.push(...values);
+
+      continue;
+    }
+
+    if (choice.kind === 'mastery-property') {
+      masteryProperties.push(...values);
 
       continue;
     }
@@ -8529,6 +8546,7 @@ export function collectChosenProficiencies(
     languages,
     tools,
     weaponMasteries,
+    masteryProperties,
     savingThrows,
   };
 }
@@ -8546,6 +8564,7 @@ function collectGrantedProficiencies(grants: ProficiencyGrant[]): {
   tools: Set<string>;
   languages: Set<string>;
   weaponMasteries: Set<string>;
+  masteryProperties: Set<string>;
 } {
   return {
     armor: new Set(grants.flatMap((grant) => grant.armor)),
@@ -8559,6 +8578,10 @@ function collectGrantedProficiencies(grants: ProficiencyGrant[]): {
     // Поля нет у записей журнала, снятых до появления мастерства в выдачах.
     weaponMasteries: new Set(
       grants.flatMap((grant) => grant.weaponMasteries ?? []),
+    ),
+    // Поля нет у записей журнала, снятых до появления приёмов без оружия.
+    masteryProperties: new Set(
+      grants.flatMap((grant) => grant.masteryProperties ?? []),
     ),
   };
 }
@@ -8615,6 +8638,11 @@ export function applyProficiencyGrants(
       proficiencies.weaponMasteries,
       before.weaponMasteries,
       after.weaponMasteries,
+    ),
+    masteryProperties: applyGrantedNames(
+      proficiencies.masteryProperties,
+      before.masteryProperties,
+      after.masteryProperties,
     ),
   };
 }
@@ -8782,6 +8810,7 @@ function hasGrantedProficiencies(granted: GrantedProficiencies): boolean {
     || granted.skills.length
     || granted.expertiseSkills.length
     || granted.weaponMasteries.length
+    || granted.masteryProperties.length
     || granted.savingThrows.length,
   );
 }
@@ -11350,6 +11379,12 @@ export function resolveChoiceOptions(
     const owned = new Set(context.proficientSavingThrowNames);
 
     return choice.listed.filter((name) => !owned.has(name));
+  }
+
+  if (choice.kind === 'mastery-property') {
+    // Пул — сами приёмы: их справочник свой, из восьми, и владение оружием
+    // здесь ни при чём.
+    return choice.listed.length ? choice.listed : WEAPON_MASTERY_PROPERTY_NAMES;
   }
 
   if (choice.kind === 'weapon-mastery') {

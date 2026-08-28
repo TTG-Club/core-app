@@ -84,6 +84,8 @@ import {
   STARTING_EQUIPMENT_DEFAULT_COIN_KEY,
   STARTING_EQUIPMENT_LABELS,
   WEAPON_GROUP_BY_API_CATEGORY,
+  WEAPON_MASTERY_PROPERTY_LABELS,
+  WEAPON_MASTERY_PROPERTY_NAMES,
   WEAPON_PROFICIENCY_GROUPS,
 } from './constants';
 import {
@@ -139,6 +141,7 @@ const mechanicsProficienciesSchema = z
     armorCategories: z.array(z.string()).nullable().catch(null),
     skills: z.array(z.string()).nullable().catch(null),
     languages: z.array(z.string()).nullable().catch(null),
+    masteryProperties: z.array(z.string()).nullable().catch(null),
     tools: z
       .array(
         z.object({
@@ -731,12 +734,23 @@ function toGrantedProficiencies(
     }),
   );
 
+  // Незнакомый приём отбрасывается по той же причине, что навык и язык: приёмов
+  // ровно восемь, и чужое значение — опечатка в данных.
+  const masteryProperties = uniq(
+    (proficiencies.masteryProperties ?? []).flatMap((mastery) => {
+      const name = WEAPON_MASTERY_PROPERTY_LABELS[mastery];
+
+      return name ? [name] : [];
+    }),
+  );
+
   if (
     !weapons.length
     && !armor.length
     && !tools.length
     && !skills.length
     && !languages.length
+    && !masteryProperties.length
   ) {
     return null;
   }
@@ -747,6 +761,7 @@ function toGrantedProficiencies(
     tools,
     languages,
     skills,
+    masteryProperties,
     // Компетентность без выбора черты не выдают: она приходит выбором игрока.
     expertiseSkills: [],
     weaponMasteries: [],
@@ -1159,6 +1174,27 @@ function buildMechanicChoices(
             option.name ? [option.name] : [],
           ),
           onlyOwnedWeapons: choice.onlyIfProficient ?? false,
+        },
+      ];
+    }
+
+    if (choice.type === 'MASTERY_PROPERTY') {
+      // Пул — сами приёмы, а не оружие: «Тактический мастер» подменяет приём
+      // своего оружия, и оружие тут ни при чём. Не перечислены — выбирать
+      // можно любой из восьми, иначе шаг стал бы непроходимым.
+      const listed = (choice.options ?? []).flatMap((option) => {
+        const name = WEAPON_MASTERY_PROPERTY_LABELS[option.value];
+
+        return name ? [name] : [];
+      });
+
+      return [
+        {
+          id,
+          kind: 'mastery-property',
+          label: label || SHEET_FEAT_CHOICE_LABELS['mastery-property'] || '',
+          count,
+          listed: listed.length ? listed : WEAPON_MASTERY_PROPERTY_NAMES,
         },
       ];
     }
