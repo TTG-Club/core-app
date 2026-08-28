@@ -108,6 +108,28 @@
     ];
   });
 
+  /**
+   * Приёмы без привязки к оружию: своей группой, а не значком на чипе оружия, —
+   * оружия у них и нет. Пустую группу не показываем: у большинства листов таких
+   * приёмов не бывает, и пустой заголовок только занимал бы место.
+   */
+  const masteryPropertyGroups = computed((): ProficiencyGroupView[] => {
+    if (!props.proficiencies.masteryProperties.length) {
+      return [];
+    }
+
+    return [
+      {
+        key: 'masteryProperties',
+        title: 'Оружейные приёмы',
+        items: props.proficiencies.masteryProperties.map((name) =>
+          toProficiencyChip(name),
+        ),
+        hasSettings: false,
+      },
+    ];
+  });
+
   const groups = computed((): ProficiencyGroupView[] => [
     {
       key: 'armor',
@@ -124,6 +146,7 @@
       items: weaponChips.value,
       hasSettings: true,
     },
+    ...masteryPropertyGroups.value,
     {
       key: 'tools',
       title: 'Инструменты',

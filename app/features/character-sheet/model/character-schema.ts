@@ -185,6 +185,9 @@ const grantedProficienciesSchema = z.object({
   // Мастерство оружием и спасброски пришли в выдачу последними: у записей без
   // полей их нет, и снятие источника их не тронет.
   weaponMasteries: z.array(z.string()).catch([]),
+  // Приёмы без привязки к оружию — самое позднее поле: у записей, сохранённых
+  // до него, приёмов нет, и снятие источника их не тронет.
+  masteryProperties: z.array(z.string()).catch([]),
   savingThrows: z.array(abilityKeySchema).catch([]),
 });
 
@@ -855,6 +858,7 @@ const proficienciesSchema = z
     armor: z.array(z.string()).catch([]),
     weapons: z.array(z.string()).catch([]),
     weaponMasteries: z.array(z.string()).catch([]),
+    masteryProperties: z.array(z.string()).catch([]),
     tools: z.array(toolProficiencySchema).catch([]),
     languages: z.array(z.string()).catch([]),
   })

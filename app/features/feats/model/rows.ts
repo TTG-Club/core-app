@@ -52,6 +52,7 @@ export type FeatGrantRowKind =
   | 'WEAPON_CATEGORY'
   | 'WEAPON'
   | 'WEAPON_MASTERY'
+  | 'MASTERY_PROPERTY'
   | 'ABILITY'
   | 'DAMAGE_TYPE'
   | 'OPTION'
@@ -340,6 +341,7 @@ export const PROFICIENCY_GRANT_KINDS: Array<FeatGrantRowKind> = [
   'WEAPON_CATEGORY',
   'WEAPON',
   'WEAPON_MASTERY',
+  'MASTERY_PROPERTY',
 ];
 
 /**
@@ -387,6 +389,7 @@ const CHOICE_TYPE_BY_GRANT_KIND: Record<FeatGrantRowKind, FeatChoiceType> = {
   WEAPON_CATEGORY: 'WEAPON',
   WEAPON: 'WEAPON',
   WEAPON_MASTERY: 'WEAPON_MASTERY',
+  MASTERY_PROPERTY: 'MASTERY_PROPERTY',
   ABILITY: 'ABILITY',
   DAMAGE_TYPE: 'DAMAGE_TYPE',
   OPTION: 'OPTION',
@@ -404,6 +407,7 @@ const GRANT_KIND_BY_CHOICE_TYPE: Partial<
   ARMOR: 'ARMOR',
   WEAPON: 'WEAPON',
   WEAPON_MASTERY: 'WEAPON_MASTERY',
+  MASTERY_PROPERTY: 'MASTERY_PROPERTY',
   ABILITY: 'ABILITY',
   DAMAGE_TYPE: 'DAMAGE_TYPE',
   OPTION: 'OPTION',
@@ -446,6 +450,7 @@ const CHOICE_KEY_BY_GRANT_KIND: Record<FeatGrantRowKind, string> = {
   WEAPON_CATEGORY: 'weapon',
   WEAPON: 'weapon',
   WEAPON_MASTERY: 'weapon-mastery',
+  MASTERY_PROPERTY: 'mastery-property',
   ABILITY: 'ability',
   DAMAGE_TYPE: DAMAGE_TYPE_CHOICE_KEY,
   OPTION: 'option',
@@ -982,6 +987,7 @@ function toFixedGrantRows(mechanics: FeatMechanics): Array<FeatGrantRow> {
     ['LANGUAGE', proficiencies.languages],
     ['ARMOR', proficiencies.armorCategories],
     ['WEAPON_CATEGORY', proficiencies.weaponCategories],
+    ['MASTERY_PROPERTY', proficiencies.masteryProperties],
   ];
 
   for (const [kind, values] of dictionaryGrants) {
@@ -1648,6 +1654,10 @@ function applyFixedGrantRow(mechanics: FeatMechanics, row: FeatGrantRow): void {
       break;
     case 'WEAPON_CATEGORY':
       proficiencies.weaponCategories.push(...values);
+
+      break;
+    case 'MASTERY_PROPERTY':
+      proficiencies.masteryProperties.push(...values);
 
       break;
     case 'WEAPON_MASTERY':

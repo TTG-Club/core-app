@@ -1686,6 +1686,7 @@ export function useCharacterSheet() {
         skills: [],
         expertiseSkills: [],
         weaponMasteries: [],
+        masteryProperties: [],
         savingThrows: [],
       },
     );
@@ -1849,6 +1850,7 @@ export function useCharacterSheet() {
         skills: [],
         expertiseSkills: [],
         weaponMasteries: [],
+        masteryProperties: [],
         savingThrows: [],
       },
     );
@@ -2072,6 +2074,7 @@ export function useCharacterSheet() {
         skills: [],
         expertiseSkills: [],
         weaponMasteries: [],
+        masteryProperties: [],
         savingThrows: [],
       },
     );
