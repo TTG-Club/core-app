@@ -211,7 +211,11 @@ export function buildFeatMechanics(
   mechanics: FeatMechanics,
 ): FeatMechanics | undefined {
   return orUndefined({
-    abilityBonuses: buildAbilityBonuses(mechanics.abilityBonuses),
+    // Пустой список не отправляется: у класса и вида блока нет, и бэк отвечает
+    // 500 на `abilityBonuses: []`
+    abilityBonuses: orUndefinedList(
+      buildAbilityBonuses(mechanics.abilityBonuses ?? []),
+    ),
     choices: buildChoices(mechanics.choices),
     modifiers: buildModifiers(mechanics.modifiers) ?? mechanics.modifiers,
     proficiencies:

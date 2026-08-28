@@ -615,8 +615,10 @@ const featDetailSchema = z.object({
   name: z.object({ rus: z.string().catch('') }),
   category: z.string().catch(''),
   description: descriptionNodesSchema,
-  // Эффекты разбирает своя схема раздела — здесь они `unknown`.
-  activeEffects: z.unknown(),
+  // Эффекты разбирает своя схема раздела — здесь они `unknown`. Ключ
+  // необязателен: без эффектов справочник его не отдаёт вовсе, а `unknown`
+  // в объекте Zod 4 обязателен — запись без эффектов не проходила бы разбор
+  activeEffects: z.unknown().optional(),
   mechanics: z
     .object({
       modifiers: featModifiersSchema,
@@ -1491,7 +1493,7 @@ const magicItemRawSchema = z
     // только оно, поэтому оно и остаётся запасным источником максимума.
     charges: z.coerce.number().nullable().catch(null),
     // Дополнительный урон магии; части урона разбирает общая схема редактора.
-    damageParts: z.unknown(),
+    damageParts: z.unknown().optional(),
     // Механика влияния на лист; записи до её появления приходят без блока.
     mechanics: z
       .object({
@@ -1509,8 +1511,9 @@ const magicItemRawSchema = z
           })
           .nullable()
           .catch(null),
-        // Активные эффекты разбирает своя схема раздела — здесь они `unknown`.
-        activeEffects: z.unknown(),
+        // Активные эффекты разбирает своя схема раздела — здесь они `unknown`;
+        // без эффектов ключа в ответе нет
+        activeEffects: z.unknown().optional(),
       })
       .nullable()
       .catch(null),
@@ -1631,8 +1634,10 @@ const itemDetailSchema = z.object({
   types: z.string().catch(''),
   cost: z.string().catch(''),
   weight: z.string().catch(''),
-  // Эффекты разбирает своя схема раздела — здесь они `unknown`.
-  activeEffects: z.unknown(),
+  // Эффекты разбирает своя схема раздела — здесь они `unknown`. Ключ
+  // необязателен: без эффектов справочник его не отдаёт вовсе, а `unknown`
+  // в объекте Zod 4 обязателен — запись без эффектов не проходила бы разбор
+  activeEffects: z.unknown().optional(),
 });
 
 /**
@@ -2267,7 +2272,7 @@ const classDetailSchema = z.object({
   table: z.array(classTableColumnSchema).catch([]),
   features: z.array(classFeatureSchema).catch([]),
   // Разбирается отдельной функцией: то же поле есть и у предыстории.
-  startingEquipment: z.unknown(),
+  startingEquipment: z.unknown().optional(),
   activeEffects: z.unknown().nullish(),
 });
 
@@ -2434,7 +2439,7 @@ const backgroundDetailSchema = z.object({
   // разметки (список вариантов «А)/Б)»), поэтому массивом строк не разбирается.
   equipment: descriptionNodesSchema,
   // Разбирается отдельной функцией: то же поле есть и у класса.
-  startingEquipment: z.unknown(),
+  startingEquipment: z.unknown().optional(),
 });
 
 /** Ссылки предыстории с непустой подписью — те, что лист может показать. */

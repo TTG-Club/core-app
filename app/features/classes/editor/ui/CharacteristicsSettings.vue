@@ -6,12 +6,7 @@
     ClassPrimaryCharacteristicsCreate,
   } from '../../model';
 
-  import {
-    SelectAbilities,
-    SelectCasterType,
-    SelectClass,
-    SelectDice,
-  } from '~ui/select';
+  import { SelectAbilities, SelectClass, SelectDice } from '~ui/select';
 
   import { AbilityTemplate, PrimaryCharacteristics } from './characteristics';
 
@@ -20,10 +15,6 @@
   });
 
   const hitDice = defineModel<string | undefined>('hitDice', {
-    required: true,
-  });
-
-  const casterType = defineModel<string | undefined>('casterType', {
     required: true,
   });
 
@@ -61,7 +52,7 @@
       </UFormField>
 
       <UFormField
-        class="col-span-full md:col-span-6"
+        class="col-span-full md:col-span-12"
         label="Кость хитов"
         name="hitDice"
       >
@@ -69,14 +60,6 @@
           v-model="hitDice"
           placeholder="Выбери кость хитов"
         />
-      </UFormField>
-
-      <UFormField
-        class="col-span-full md:col-span-6"
-        label="Тип заклинателя"
-        name="casterType"
-      >
-        <SelectCasterType v-model="casterType" />
       </UFormField>
 
       <PrimaryCharacteristics v-model="primaryCharacteristics" />

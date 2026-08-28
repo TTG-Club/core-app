@@ -40,6 +40,7 @@ export const CLASS_EDITOR_LABELS = {
   descriptionPlaceholder: 'Введи описание',
 
   spellcastingTitle: 'Заклинательство',
+  casterType: 'Тип заклинателя',
   spellcastingAbility: 'Заклинательная характеристика',
   spellcastingAbilityHint:
     'Чем класс колдует. Пусто — потребитель угадывает характеристику по ключу класса и у переведённого или самописного класса не находит её вовсе.',

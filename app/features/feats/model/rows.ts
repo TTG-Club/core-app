@@ -19,7 +19,7 @@ import type {
   FeatSpellGrant,
 } from './mechanics';
 
-import { isAbilityKey } from '~/shared/types';
+import { ABILITY_LABELS, isAbilityKey } from '~/shared/types';
 
 import {
   createFeatMechanics,
@@ -260,6 +260,12 @@ export interface FeatSpellChoiceBlock {
   /** Машинный ключ выбора класса: под ним лист хранит ответ игрока. */
   classChoiceKey: string;
 
+  /**
+   * Подпись выбора класса из записи. Форма её не правит, но и терять нельзя:
+   * лист показывает её игроку вместо машинного ключа.
+   */
+  classChoiceLabel: string;
+
   picks: Array<FeatSpellPickRow>;
 
   /**
@@ -271,6 +277,9 @@ export interface FeatSpellChoiceBlock {
 
   /** Машинный ключ выбора характеристики. */
   abilityChoiceKey: string;
+
+  /** Подпись выбора характеристики из записи — по той же причине, что у класса. */
+  abilityChoiceLabel: string;
 }
 
 /** Строка ресурса черты. */
@@ -647,9 +656,11 @@ export function createSpellChoiceBlock(): FeatSpellChoiceBlock {
   return {
     classes: [],
     classChoiceKey: SPELL_LIST_CHOICE_KEY,
+    classChoiceLabel: '',
     picks: [],
     abilityOptions: [],
     abilityChoiceKey: SPELLCASTING_ABILITY_CHOICE_KEY,
+    abilityChoiceLabel: '',
   };
 }
 
@@ -893,6 +904,7 @@ function toSpellChoiceBlock(
 
   if (classChoice) {
     block.classChoiceKey = classChoice.key || block.classChoiceKey;
+    block.classChoiceLabel = classChoice.label;
 
     block.classes = classChoice.options.map((option) => ({
       url: option.value,
@@ -910,6 +922,7 @@ function toSpellChoiceBlock(
 
   if (abilityChoice) {
     block.abilityChoiceKey = abilityChoice.key || block.abilityChoiceKey;
+    block.abilityChoiceLabel = abilityChoice.label;
 
     block.abilityOptions = abilityChoice.options
       .map((option) => option.value)
@@ -1304,7 +1317,7 @@ export function toFeatEditorRows(
     }
   }
 
-  for (const bonus of mechanics.abilityBonuses) {
+  for (const bonus of mechanics.abilityBonuses ?? []) {
     const linked = bonus.fromChoiceKey
       ? rows.grants.find((row) => row.key === bonus.fromChoiceKey)
       : undefined;
@@ -1453,6 +1466,7 @@ function toSpellChoices(
   if (classChoiceKey) {
     choices.push({
       ...createEmptyChoice(classChoiceKey, 'SPELL_LIST'),
+      label: block.classChoiceLabel.trim(),
       options: toClassOptions(classes),
     });
   }
@@ -1482,9 +1496,15 @@ function toSpellChoices(
   // Характеристика спрашивается последней: она относится ко всем заклинаниям
   // черты сразу, а не к какой-то одной порции
   if (abilityChoiceKey) {
+    // Названия вариантов — из справочника характеристик: их читает лист, а
+    // редактор хранит только ключи
     choices.push({
       ...createEmptyChoice(abilityChoiceKey, 'SPELLCASTING_ABILITY'),
-      options: block.abilityOptions.map((ability) => ({ value: ability })),
+      label: block.abilityChoiceLabel.trim(),
+      options: block.abilityOptions.map((ability) => ({
+        value: ability,
+        name: ABILITY_LABELS[ability],
+      })),
     });
   }
 
@@ -1796,6 +1816,9 @@ export function fromFeatEditorRows(
   base: FeatMechanics,
 ): { mechanics: FeatMechanics; prerequisiteDetails: FeatPrerequisiteDetails } {
   const mechanics = createFeatMechanics();
+  const abilityBonuses: Array<FeatAbilityBonus> = [];
+
+  mechanics.abilityBonuses = abilityBonuses;
 
   // Характеристика одна на все заклинания черты: заданную жёстко (ровно одну в
   // блоке) держит выдача заклинаний, выбор из нескольких — отдельный выбор
@@ -1838,7 +1861,7 @@ export function fromFeatEditorRows(
       const bonus = toAbilityBonus(row, row.fromChoiceKey.trim());
 
       if (bonus) {
-        mechanics.abilityBonuses.push(bonus);
+        abilityBonuses.push(bonus);
       }
 
       continue;
@@ -1858,7 +1881,7 @@ export function fromFeatEditorRows(
       const bonus = toAbilityBonus(row, key);
 
       if (bonus) {
-        mechanics.abilityBonuses.push(bonus);
+        abilityBonuses.push(bonus);
       }
     }
   }

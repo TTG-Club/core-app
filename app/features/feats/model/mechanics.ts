@@ -452,7 +452,12 @@ export interface FeatCounter {
 
 /** Механика черты целиком. */
 export interface FeatMechanics {
-  abilityBonuses: Array<FeatAbilityBonus>;
+  /**
+   * Варианты повышения характеристик. Необязательны: у класса и вида такого
+   * блока нет вовсе, и core-api падает на ПУСТОМ списке (setterless-свойство
+   * без значения) — перед отправкой пустой блок опускается целиком.
+   */
+  abilityBonuses?: Array<FeatAbilityBonus>;
   choices: Array<FeatChoice>;
   modifiers: FeatModifiers;
   proficiencies: FeatProficiencyGrant;
