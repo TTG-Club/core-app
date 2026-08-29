@@ -63,8 +63,17 @@
     /** Идентификатор умения-источника: по нему эффект выключают. */
     featureId: string | null;
 
-    /** Состояние правится плиткой, а не формой: своих настроек у него нет. */
-    isCondition: boolean;
+    /** Эффект можно выключить, не снимая: у снаряжения и этого нельзя. */
+    canToggle: boolean;
+
+    /**
+     * Эффект правится формой. Состояние — нет: его накладывают плиткой, и
+     * своих настроек у него не бывает.
+     */
+    canEdit: boolean;
+
+    /** Эффект можно снять с листа: только своё, чужое уйдёт с источником. */
+    canRemove: boolean;
   }
 
   /** Свои эффекты и состояния: для листа это одно и то же. */
@@ -83,7 +92,10 @@
       rowClass: effect.disabled ? 'opacity-50 grayscale' : '',
       effectId: effect.id,
       featureId: null,
-      isCondition: effect.conditionKey !== undefined,
+      canToggle: true,
+      // Состояние накладывают плиткой: формы у него нет, править нечего
+      canEdit: effect.conditionKey === undefined,
+      canRemove: true,
     })),
   );
 
@@ -103,7 +115,9 @@
       rowClass: entry.effect.disabled ? 'opacity-50 grayscale' : '',
       effectId: entry.effect.id,
       featureId: entry.featureId,
-      isCondition: false,
+      canToggle: true,
+      canEdit: false,
+      canRemove: false,
     })),
   );
 
@@ -123,7 +137,9 @@
       rowClass: '',
       effectId: null,
       featureId: null,
-      isCondition: false,
+      canToggle: false,
+      canEdit: false,
+      canRemove: false,
     })),
   );
 
@@ -231,12 +247,21 @@
     pickedSources.value.clear();
   }
 
+  /** Открывает форму нового эффекта. */
   function handleAdd() {
     emit('add-effect');
   }
 
-  function handleEdit(effectId: string) {
-    emit('edit-effect', effectId);
+  /**
+   * Правка своего эффекта. Идентификатор проверяется здесь, а не условием в
+   * шаблоне: у строки умения и снаряжения его нет.
+   *
+   * @param row строка списка.
+   */
+  function handleEdit(row: EffectRow) {
+    if (row.effectId) {
+      emit('edit-effect', row.effectId);
+    }
   }
 
   /**
@@ -257,6 +282,11 @@
     }
   }
 
+  /**
+   * Наложение или снятие состояния плиткой.
+   *
+   * @param key ключ состояния.
+   */
   function handleToggleCondition(key: EffectConditionKey) {
     toggleCondition(key);
   }
@@ -273,10 +303,18 @@
     },
   });
 
-  function handleRemove(effectId: string) {
-    removingEffectId.value = effectId;
+  /**
+   * Снятие своего эффекта: спрашиваем подтверждение, удаление безвозвратно.
+   *
+   * @param row строка списка.
+   */
+  function handleRemove(row: EffectRow) {
+    if (row.effectId) {
+      removingEffectId.value = row.effectId;
+    }
   }
 
+  /** Подтверждённое снятие эффекта. */
   function handleRemoveConfirm() {
     if (removingEffectId.value) {
       removeEffect(removingEffectId.value);
@@ -368,7 +406,7 @@
 
         <div class="flex shrink-0 items-center gap-1">
           <USwitch
-            v-if="row.sourceGroup !== 'equipment'"
+            v-if="row.canToggle"
             :model-value="!row.disabled"
             size="sm"
             :aria-label="SHEET_EFFECT_LABELS.toggle"
@@ -376,7 +414,7 @@
           />
 
           <UButton
-            v-if="row.sourceGroup === 'own' && !row.isCondition && row.effectId"
+            v-if="row.canEdit"
             icon="tabler:pencil"
             color="neutral"
             variant="ghost"
@@ -384,11 +422,11 @@
             square
             :class="editControlClass"
             :aria-label="SHEET_EFFECT_LABELS.edit"
-            @click.left.exact.prevent="handleEdit(row.effectId)"
+            @click.left.exact.prevent="handleEdit(row)"
           />
 
           <UButton
-            v-if="row.sourceGroup === 'own' && row.effectId"
+            v-if="row.canRemove"
             icon="tabler:trash"
             color="error"
             variant="ghost"
@@ -396,7 +434,7 @@
             square
             :class="editControlClass"
             :aria-label="SHEET_EFFECT_LABELS.remove"
-            @click.left.exact.prevent="handleRemove(row.effectId)"
+            @click.left.exact.prevent="handleRemove(row)"
           />
         </div>
       </div>

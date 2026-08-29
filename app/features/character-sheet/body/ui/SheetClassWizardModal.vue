@@ -659,6 +659,21 @@
   const REVIEW_SECTION_CLASS =
     'flex flex-col gap-2 rounded-lg border border-default/50 bg-elevated/20 p-3';
 
+  /** Подпись раздела умений с уровнем, до которого они набраны. */
+  const featuresSectionTitle = computed(() =>
+    CLASS_WIZARD_LABELS.features.replace('{level}', String(level.value)),
+  );
+
+  /**
+   * Спасброски строкой справочника, когда разобрать их по характеристикам не
+   * вышло; не разобрано и там — так и пишем.
+   */
+  const savingThrowsFallback = computed(
+    () =>
+      classDetail.value?.savingThrowsText
+      || CLASS_WIZARD_LABELS.savingThrowsUnknown,
+  );
+
   const reviewTab = ref<ClassWizardTab>('overview');
 
   /**
@@ -1514,10 +1529,7 @@
             v-else
             class="text-xs text-muted"
           >
-            Класс с подклассами разворачивается стрелкой — подкласс
-            необязателен. При применении кость хитов, хиты, спасброски,
-            владения, ресурсы, умения по текущему уровню и выбранный вариант
-            стартового снаряжения сразу заполнят лист.
+            {{ CLASS_WIZARD_LABELS.listHint }}
           </span>
         </template>
 
@@ -1531,7 +1543,9 @@
           />
 
           <div class="flex flex-wrap items-center gap-2 text-sm">
-            <span class="text-muted">Класс:</span>
+            <span class="text-muted">
+              {{ CLASS_WIZARD_LABELS.resultPrefix }}
+            </span>
 
             <span class="font-bold text-highlighted">{{ resultName }}</span>
           </div>
@@ -1560,7 +1574,7 @@
                     <span
                       class="text-[10px] font-bold tracking-wider text-muted uppercase"
                     >
-                      Кость хитов
+                      {{ CLASS_WIZARD_LABELS.hitDie }}
                     </span>
 
                     <span class="text-sm font-medium text-highlighted">
@@ -1572,7 +1586,7 @@
                     <span
                       class="text-[10px] font-bold tracking-wider text-muted uppercase"
                     >
-                      Хиты
+                      {{ CLASS_WIZARD_LABELS.hitPoints }}
                     </span>
 
                     <span class="text-sm font-medium text-highlighted">
@@ -1587,7 +1601,7 @@
                     <span
                       class="text-[10px] font-bold tracking-wider text-muted uppercase"
                     >
-                      Спасброски
+                      {{ CLASS_WIZARD_LABELS.savingThrows }}
                     </span>
 
                     <div class="flex flex-wrap gap-2">
@@ -1605,7 +1619,7 @@
                         v-if="!savingThrowLabels.length"
                         class="text-sm text-dimmed italic"
                       >
-                        {{ classDetail?.savingThrowsText || 'не распознаны' }}
+                        {{ savingThrowsFallback }}
                       </span>
                     </div>
                   </div>
@@ -1644,7 +1658,7 @@
                 <span
                   class="text-[10px] font-bold tracking-wider text-muted uppercase"
                 >
-                  Владения (распознаны, проверьте вручную)
+                  {{ CLASS_WIZARD_LABELS.proficiencies }}
                 </span>
 
                 <div class="flex flex-wrap gap-2">
@@ -1667,7 +1681,7 @@
                 <span
                   class="text-[10px] font-bold tracking-wider text-muted uppercase"
                 >
-                  Выборы владений
+                  {{ CLASS_WIZARD_LABELS.proficiencyChoices }}
                 </span>
 
                 <div
@@ -1704,7 +1718,7 @@
                 <span
                   class="text-[10px] font-bold tracking-wider text-muted uppercase"
                 >
-                  Умения (до {{ level }} уровня)
+                  {{ featuresSectionTitle }}
                 </span>
 
                 <div
@@ -1778,7 +1792,7 @@
                     v-if="!row.featChoices.length && !row.choiceControls.length"
                     v-model="choices[row.id]"
                     size="sm"
-                    placeholder="Ваш выбор в умении (необязательно)"
+                    :placeholder="CLASS_WIZARD_LABELS.featureNotePlaceholder"
                   />
 
                   <MarkupRender
