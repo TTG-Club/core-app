@@ -421,6 +421,7 @@ import {
   WEAPON_CATEGORY_LABELS,
   WEAPON_MASTERY_PROPERTY_NAMES,
   WEAPON_MATCH_KEYWORDS,
+  WEAPON_NAMES_BY_MASTERY_PROPERTY_NAME,
   WEAPON_PROFICIENCY_GROUPS,
   WEAPON_TRAIT_AXES,
   WEAPON_TRAIT_ITEMS,
@@ -8492,6 +8493,15 @@ export function collectChosenProficiencies(
 
     if (choice.kind === 'mastery-property') {
       masteryProperties.push(...values);
+
+      // Приём выбирают, а владеют им через оружие: назвав «Замедление», воин
+      // получает мастерство всем оружием с этим приёмом. Без этого выбор
+      // оставался бы строчкой в списке и ничего не отмечал.
+      weaponMasteries.push(
+        ...values.flatMap(
+          (name) => WEAPON_NAMES_BY_MASTERY_PROPERTY_NAME[name] ?? [],
+        ),
+      );
 
       continue;
     }
