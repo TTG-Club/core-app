@@ -28,6 +28,40 @@ export interface ClassFeatureScalingCreate {
   hideInSubclasses: boolean | undefined;
 }
 
+/**
+ * Ступень количества выбора вариантов: с какого уровня сколько выбирают ВСЕГО.
+ *
+ * Ступень называет итог, а не прибавку: воззваний у колдуна одно с первого
+ * уровня и три со второго — значит, на втором игрок выбирает два новых. Так же
+ * читается ступень выбора в механике (`FeatChoiceScaling`), и второе правило
+ * для того же смысла разошлось бы с первым.
+ */
+export interface ClassFeatureOptionsScalingCreate {
+  level: number;
+  count: number;
+}
+
+/**
+ * Настройка выбора из списка вариантов умения: воззвания колдуна, манёвры
+ * воина, метамагия чародея.
+ *
+ * Само наличие блока и означает, что список выбираемый: без него варианты
+ * остаются справкой на странице класса, и лист персонажа о них не спрашивает.
+ * Пул выбора — сами `options` умения, а доступность варианта по уровню задаёт
+ * его собственный `requiredClassLevel`: второго списка ради выбора автор не
+ * набирает.
+ */
+export interface ClassFeatureOptionsChoiceCreate {
+  /** Подпись выбора; пусто — название списка вариантов умения. */
+  label: string | undefined;
+
+  /** Сколько вариантов выбирают на уровне умения; пусто — один. */
+  count: number | undefined;
+
+  /** Ступени количества по уровням класса; пусто — количество не растёт. */
+  scaling: Array<ClassFeatureOptionsScalingCreate>;
+}
+
 export interface ClassFeatureOptionCreate {
   key?: string;
   name: {
@@ -60,6 +94,11 @@ export interface ClassFeatureCreate {
 
   scaling: Array<ClassFeatureScalingCreate>;
   options: Array<ClassFeatureOptionCreate>;
+
+  /**
+   * Настройка выбора из вариантов; `undefined` — список только справочный.
+   */
+  optionsChoice: ClassFeatureOptionsChoiceCreate | undefined;
 
   /**
    * Прибавка характеристик умением 20 уровня («Первобытный чемпион»). Своим

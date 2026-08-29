@@ -140,6 +140,8 @@ export const CLASS_FEATURES_EDITOR = {
   hiddenBadge: 'скрыто в подклассе',
   scalingBadge: 'рост: ',
   optionsBadge: 'вариантов: ',
+  optionsChoiceBadge: 'выбор: ',
+  optionsChoiceBadgeOf: 'из',
 
   level: 'Уровень',
   name: 'Название',
@@ -201,6 +203,41 @@ export const CLASS_FEATURE_SCALING_EDITOR = {
   additionalPlaceholder: 'Короткая подпись рядом с уровнем',
   description: 'Описание',
   descriptionPlaceholder: 'Что меняется на этом уровне',
+} as const;
+
+/** Подписи настройки выбора из вариантов умения. */
+export const CLASS_FEATURE_OPTIONS_CHOICE_EDITOR = {
+  selectable: 'Из списка выбирают',
+  selectableHint:
+    'Игрок берёт из списка столько вариантов, сколько указано ниже, и лист персонажа спрашивает его на нужном уровне. Без галочки варианты остаются справкой на странице класса.',
+  label: 'Подпись выбора',
+  labelPlaceholder: 'Пусто — название списка вариантов',
+  count: 'Сколько выбрать',
+  countHint:
+    'Сколько вариантов игрок берёт на уровне самого умения. Дальнейший рост задаётся ступенями.',
+  scalingTitle: 'Рост количества по уровням',
+  scalingHint:
+    'Ступень называет, сколько вариантов выбрано ВСЕГО к этому уровню, а не сколько добавилось: у колдуна одно воззвание с первого уровня и три со второго — значит, на втором он выбирает два новых.',
+  scalingEmpty:
+    'Количество не растёт — выбирают столько же, сколько на уровне умения.',
+  scalingLevel: 'Уровень',
+  scalingCount: 'Всего',
+  addScaling: 'Добавить ступень',
+  removeScaling: 'Убрать ступень',
+} as const;
+
+/** Границы количества выбираемых вариантов умения. */
+export const CLASS_OPTIONS_CHOICE_COUNT_BOUNDS = {
+  min: 1,
+  max: 20,
+} as const;
+
+/**
+ * Только что включённый выбор из вариантов: один вариант — так устроено
+ * большинство списков, а количество побольше автор поправит сам.
+ */
+export const CLASS_OPTIONS_CHOICE_DEFAULTS = {
+  count: 1,
 } as const;
 
 /** Подписи строки варианта умения. */

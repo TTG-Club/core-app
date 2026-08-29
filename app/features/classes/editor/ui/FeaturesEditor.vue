@@ -12,6 +12,7 @@
     CLASS_LEVEL_BOUNDS,
     getClassFeatureFilledBlocksCount,
     getClassFeatureLevelBadge,
+    getClassFeatureOptionsChoiceBadge,
   } from '../../model';
   import {
     FeatureAbilityBonus,
@@ -80,6 +81,7 @@
       fightingStyleChoice: false,
       scaling: [],
       options: [],
+      optionsChoice: undefined,
       abilityBonus: undefined,
       informationalOnly: false,
       mechanics: createFeatMechanics(),
@@ -179,11 +181,21 @@
     }
 
     if (feature.options.length) {
-      badges.push({
-        key: 'options',
-        label: `${CLASS_FEATURES_EDITOR.optionsBadge}${feature.options.length}`,
-        color: 'neutral',
-      });
+      // Выбираемый список читается по бейджу иначе, чем справочный: у первого
+      // важно, сколько из скольких берут, у второго — только длина списка
+      badges.push(
+        feature.optionsChoice
+          ? {
+              key: 'options',
+              label: getClassFeatureOptionsChoiceBadge(feature),
+              color: 'primary',
+            }
+          : {
+              key: 'options',
+              label: `${CLASS_FEATURES_EDITOR.optionsBadge}${feature.options.length}`,
+              color: 'neutral',
+            },
+      );
     }
 
     if (feature.informationalOnly) {
@@ -441,6 +453,7 @@
 
             <FeatureOptions
               v-model="feature.options"
+              v-model:choice="feature.optionsChoice"
               :is-subclass="isSubclass"
             />
 
