@@ -35,32 +35,17 @@
     };
   }
 
-  /**
-   * Пересдвигает индексы набора после удаления строки: без этого раскрытой
-   * оказалась бы соседка удалённой особенности.
-   *
-   * @param indexes набор индексов строк.
-   * @param removed индекс удалённой строки.
-   * @returns новый набор со сдвинутыми индексами.
-   */
-  function shiftIndexes(indexes: Set<number>, removed: number): Set<number> {
-    return new Set(
-      [...indexes]
-        .filter((position) => position !== removed)
-        .map((position) => (position > removed ? position - 1 : position)),
-    );
-  }
-
   const model = defineModel<Array<SpeciesFeatureCreate>>({
     default: () => [],
   });
 
-  /**
-   * Раскрытые особенности — по их индексу. Свой список, а не аккордеон: кнопка
-   * удаления обязана лежать РЯДОМ с раскрывающим триггером, а не внутри него,
-   * иначе удалить особенность можно только развернув её.
-   */
-  const expanded = ref<Set<number>>(new Set());
+  const {
+    isExpanded,
+    toggle: toggleFeature,
+    expand,
+    dropRow,
+    getToggleIcon,
+  } = useExpandedRows();
 
   /**
    * Особенности, которым автор явно добавил поле описания. Пустое поле у
@@ -82,27 +67,6 @@
   });
 
   /**
-   * Раскрыта ли особенность.
-   *
-   * @param index позиция особенности в списке.
-   * @returns `true`, когда тело строки развёрнуто.
-   */
-  function isExpanded(index: number): boolean {
-    return expanded.value.has(index);
-  }
-
-  /**
-   * Значок кнопки свёртки. Функцией, а не вычисляемым свойством: состояние
-   * своё у каждой строки списка.
-   *
-   * @param index позиция особенности в списке.
-   * @returns имя значка.
-   */
-  function getToggleIcon(index: number): string {
-    return isExpanded(index) ? 'tabler:chevron-up' : 'tabler:chevron-down';
-  }
-
-  /**
    * Подпись кнопки свёртки для скринридера.
    *
    * @param index позиция особенности в списке.
@@ -112,21 +76,6 @@
     return isExpanded(index)
       ? SPECIES_FEATURES_EDITOR.collapse
       : SPECIES_FEATURES_EDITOR.expand;
-  }
-
-  /**
-   * Разворачивает или сворачивает особенность.
-   *
-   * @param index позиция особенности в списке.
-   */
-  function toggleFeature(index: number): void {
-    const next = new Set(expanded.value);
-
-    if (!next.delete(index)) {
-      next.add(index);
-    }
-
-    expanded.value = next;
   }
 
   /**
@@ -176,7 +125,7 @@
     model.value = [...model.value, getEmptyFeature()];
 
     // Новая особенность сразу раскрыта: её всё равно тут же заполняют.
-    expanded.value = new Set([...expanded.value, addedIndex]);
+    expand(addedIndex);
   }
 
   /**
@@ -200,8 +149,12 @@
 
     model.value = model.value.filter((_, position) => position !== index);
 
-    expanded.value = shiftIndexes(expanded.value, index);
-    withDescription.value = shiftIndexes(withDescription.value, index);
+    dropRow(index);
+
+    withDescription.value = shiftIndexesAfterRemoval(
+      withDescription.value,
+      index,
+    );
   }
 </script>
 

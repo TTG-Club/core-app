@@ -24,12 +24,8 @@
 
   const model = defineModel<Array<ActiveEffect>>({ default: () => [] });
 
-  /**
-   * Раскрытые эффекты — по их индексу. Свой список, а не аккордеон: кнопка
-   * удаления обязана лежать РЯДОМ с раскрывающим триггером, а не внутри него,
-   * иначе удалить эффект можно только развернув его.
-   */
-  const expanded = ref<Set<number>>(new Set());
+  const { isExpanded, toggle, expand, dropRow, getToggleIcon } =
+    useExpandedRows();
 
   /** Индекс эффекта, удаление которого ждёт подтверждения. */
   const pendingRemoval = ref<number | undefined>(undefined);
@@ -48,21 +44,6 @@
     model.value.length ? {} : { body: 'p-0 sm:p-0' },
   );
 
-  function isExpanded(index: number): boolean {
-    return expanded.value.has(index);
-  }
-
-  /**
-   * Значок кнопки свёртки. Функцией, а не вычисляемым свойством: состояние
-   * своё у каждой строки списка.
-   *
-   * @param index позиция эффекта в списке.
-   * @returns имя значка.
-   */
-  function getToggleIcon(index: number): string {
-    return isExpanded(index) ? 'tabler:chevron-up' : 'tabler:chevron-down';
-  }
-
   /**
    * Подпись кнопки свёртки для скринридера.
    *
@@ -75,16 +56,6 @@
       : ACTIVE_EFFECT_LABELS.expand;
   }
 
-  function toggle(index: number) {
-    const next = new Set(expanded.value);
-
-    if (!next.delete(index)) {
-      next.add(index);
-    }
-
-    expanded.value = next;
-  }
-
   function addEffect() {
     // Индекс считается ДО записи: `model.value` после присваивания ещё отдаёт
     // прежний массив — проп доедет только следующим тиком.
@@ -93,7 +64,7 @@
     model.value = [...model.value, createEmptyActiveEffect(origin)];
 
     // Новый эффект сразу раскрыт: его всё равно тут же настраивают.
-    expanded.value = new Set([...expanded.value, addedIndex]);
+    expand(addedIndex);
   }
 
   function askRemoveEffect(index: number) {
@@ -113,11 +84,7 @@
 
     // Раскрытые сдвигаются вместе со списком: иначе после удаления
     // развернулся бы соседний эффект.
-    expanded.value = new Set(
-      [...expanded.value]
-        .filter((position) => position !== index)
-        .map((position) => (position > index ? position - 1 : position)),
-    );
+    dropRow(index);
   }
 
   function updateEffect(index: number, value: ActiveEffect) {
