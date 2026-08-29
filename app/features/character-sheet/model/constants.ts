@@ -2981,6 +2981,32 @@ export const BACKGROUND_WIZARD_TAB_LABELS: Record<BackgroundWizardTab, string> =
     equipment: 'Снаряжение',
   };
 
+/**
+ * Подписи разделов второго шага мастера класса.
+ *
+ * Шаг спрашивает сразу обо всём — хитах, владениях, снаряжении и умениях всех
+ * пройденных уровней, — и одной простынёй читается ещё хуже, чем у предыстории:
+ * умений у класса до двух десятков. Разделы показываются только те, о которых
+ * классу есть что сказать.
+ */
+export const CLASS_WIZARD_TAB_ORDER = [
+  'overview',
+  'proficiencies',
+  'equipment',
+  'features',
+] as const;
+
+/** Раздел второго шага мастера класса. */
+export type ClassWizardTab = (typeof CLASS_WIZARD_TAB_ORDER)[number];
+
+/** Подписи разделов; порядок вкладок задаёт `CLASS_WIZARD_TAB_ORDER`. */
+export const CLASS_WIZARD_TAB_LABELS: Record<ClassWizardTab, string> = {
+  overview: 'Основное',
+  proficiencies: 'Владения',
+  equipment: 'Снаряжение',
+  features: 'Умения',
+};
+
 /** Подписи мастера предыстории, не привязанные к разделам. */
 export const BACKGROUND_WIZARD_LABELS = {
   featChoice: 'Черта на выбор',

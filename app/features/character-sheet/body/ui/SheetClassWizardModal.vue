@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { TabsItem } from '@nuxt/ui';
+
   import type {
     AbilityKey,
     CharacterFeature,
@@ -6,6 +8,7 @@
     ClassChoice,
     ClassOption,
     ClassSummary,
+    ClassWizardTab,
     FeatSelectOption,
     LevelUpFeatChoice,
   } from '../../model';
@@ -29,6 +32,8 @@
     CLASS_GRANTED_FEAT_ID_SEGMENT,
     CLASS_SOURCES_ASYNC_DATA_KEY,
     CLASS_WIZARD_LABELS,
+    CLASS_WIZARD_TAB_LABELS,
+    CLASS_WIZARD_TAB_ORDER,
     CLASSES_DETAIL_BASE_PATH,
     CLASSES_FILTERS_PATH,
     CLASSES_SEARCH_PATH,
@@ -644,6 +649,134 @@
     () => isApplying.value || !areFeatChoicesComplete.value,
   );
 
+  // ── Разделы второго шага ─────────────────────────────────────
+
+  const reviewTab = ref<ClassWizardTab>('overview');
+
+  /**
+   * Умения, которые чего-то ждут от игрока, и остальные — только с описанием.
+   *
+   * Разделены, потому что до трети умений класса выбора не требуют вовсе, а
+   * места занимают столько же: у воина на первом уровне спрашивают про один
+   * боевой стиль, а листать приходится все пять карточек.
+   */
+  const choiceFeatureRows = computed(() =>
+    featureRows.value.filter(
+      (row) => row.featChoices.length || row.choiceControls.length,
+    ),
+  );
+
+  const infoFeatureRows = computed(() =>
+    featureRows.value.filter(
+      (row) => !row.featChoices.length && !row.choiceControls.length,
+    ),
+  );
+
+  /**
+   * Незакрытые выборы списка: по ним считается счётчик на вкладке.
+   *
+   * @param choices выборы раздела.
+   * @returns выборы, на которые ответов ещё не хватает.
+   */
+  function getPendingChoices(choices: ClassChoice[]): ClassChoice[] {
+    return choices.filter(
+      (choice) =>
+        (selections.value[choice.id]?.length ?? 0) < choiceCount(choice),
+    );
+  }
+
+  /**
+   * Незакрытые выборы черт: черта не названа либо у неё не заполнены прибавки.
+   * Сбой каталога счётчик обнуляет — там выбирать не из чего, и торопить не с
+   * чем (по той же причине снимается запрет применения).
+   */
+  const pendingFeatChoiceCount = computed(() => {
+    if (hasFeatsError.value) {
+      return 0;
+    }
+
+    const pending = featureRows.value
+      .flatMap((row) => row.featChoices)
+      .filter((choice) => {
+        const selection = featSelections.value[choice.id];
+
+        return !selection?.featUrl || selection.abilities.includes(null);
+      });
+
+    return pending.length;
+  });
+
+  /**
+   * Сколько ответов раздел ещё ждёт: их число висит на вкладке.
+   *
+   * Снаряжение не считается: вариант предвыбран, и «Не добавлять» тоже ответ.
+   */
+  const pendingByTab = computed<Record<ClassWizardTab, number>>(() => ({
+    overview: 0,
+    proficiencies: getPendingChoices(classChoices.value).length,
+    equipment: 0,
+    features:
+      pendingFeatChoiceCount.value
+      + getPendingChoices(
+        choiceFeatureRows.value.flatMap((row) => row.choiceControls),
+      ).length,
+  }));
+
+  /** Разделы, которым есть что показать: пустая вкладка только сбивает. */
+  const shownReviewTabs = computed<ClassWizardTab[]>(() =>
+    CLASS_WIZARD_TAB_ORDER.filter((tab) => {
+      if (tab === 'proficiencies') {
+        return Boolean(
+          multiclassProficiencyRows.value.length
+          || proficiencyChips.value.length
+          || classChoices.value.length,
+        );
+      }
+
+      if (tab === 'equipment') {
+        return startingEquipmentOptions.value.length > 0;
+      }
+
+      if (tab === 'features') {
+        return featureRows.value.length > 0;
+      }
+
+      return true;
+    }),
+  );
+
+  const reviewTabItems = computed<TabsItem[]>(() =>
+    shownReviewTabs.value.map((tab) => ({
+      value: tab,
+      label: CLASS_WIZARD_TAB_LABELS[tab],
+      // Число нерешённого — подсказка, куда идти: раздел с ним и заблокировал
+      // применение, а открыт может быть совсем другой
+      badge: pendingByTab.value[tab]
+        ? {
+            label: String(pendingByTab.value[tab]),
+            // На залитой акцентом открытой вкладке `warning` сливается с ней в
+            // тёмной теме — там счётчик нейтральный (см. мастер предыстории)
+            color: tab === reviewTab.value ? 'neutral' : 'warning',
+            variant: 'subtle',
+          }
+        : undefined,
+    })),
+  );
+
+  /**
+   * Переключение раздела. `UTabs` отдаёт значение строкой, поэтому раздел
+   * ищется среди своих же — так в состояние не попадёт чужое значение.
+   *
+   * @param value значение вкладки.
+   */
+  function handleReviewTabChange(value: string | number) {
+    const tab = shownReviewTabs.value.find((item) => item === value);
+
+    if (tab) {
+      reviewTab.value = tab;
+    }
+  }
+
   function showLoadError() {
     toast.add({
       color: 'error',
@@ -921,6 +1054,7 @@
         classDetail.value.startingEquipment[0]?.label
         ?? STARTING_EQUIPMENT_SKIP_VALUE;
 
+      reviewTab.value = shownReviewTabs.value[0] ?? 'overview';
       step.value = 'review';
     } catch (error) {
       consola.error('Ошибка загрузки класса:', error);
@@ -1422,238 +1556,309 @@
             <span class="font-bold text-highlighted">{{ resultName }}</span>
           </div>
 
-          <div class="flex flex-wrap gap-4">
-            <div class="flex flex-col gap-1">
-              <span
-                class="text-[10px] font-bold tracking-wider text-muted uppercase"
-              >
-                Кость хитов
-              </span>
-
-              <span class="text-sm font-medium text-highlighted">
-                {{ hitDieLabel }}
-              </span>
-            </div>
-
-            <div class="flex flex-col gap-1">
-              <span
-                class="text-[10px] font-bold tracking-wider text-muted uppercase"
-              >
-                Хиты
-              </span>
-
-              <span class="text-sm font-medium text-highlighted">
-                {{ maxHitPointsPreview }}
-              </span>
-            </div>
-
-            <div
-              v-if="!isAddMode"
-              class="flex flex-col gap-1"
-            >
-              <span
-                class="text-[10px] font-bold tracking-wider text-muted uppercase"
-              >
-                Спасброски
-              </span>
-
-              <div class="flex flex-wrap gap-1">
-                <UBadge
-                  v-for="label in savingThrowLabels"
-                  :key="label"
-                  size="sm"
-                  color="primary"
-                  variant="subtle"
-                >
-                  {{ label }}
-                </UBadge>
-
-                <span
-                  v-if="!savingThrowLabels.length"
-                  class="text-sm text-dimmed italic"
-                >
-                  {{ classDetail?.savingThrowsText || 'не распознаны' }}
-                </span>
-              </div>
-            </div>
+          <!-- Лента вкладок: подписи разделов не сокращаются, поэтому на узком
+            экране ряд не ужимается, а прокручивается -->
+          <div class="-mx-1 hidden-scrollbar overflow-x-auto px-1">
+            <UTabs
+              :items="reviewTabItems"
+              :model-value="reviewTab"
+              :content="false"
+              color="primary"
+              variant="pill"
+              :ui="{ list: 'w-max min-w-full', trigger: 'shrink-0' }"
+              @update:model-value="handleReviewTabChange"
+            />
           </div>
 
-          <div
-            v-if="multiclassProficiencyRows.length"
-            class="flex flex-col gap-2 rounded-md bg-elevated/40 p-3"
-          >
-            <span
-              class="text-[10px] font-bold tracking-wider text-muted uppercase"
-            >
-              {{ MULTICLASS_PROFICIENCY_LABELS.title }}
-            </span>
-
-            <span class="text-xs text-dimmed">
-              {{ MULTICLASS_PROFICIENCY_LABELS.hint }}
-            </span>
-
-            <div
-              v-for="row in multiclassProficiencyRows"
-              :key="row.key"
-              class="flex flex-col gap-0.5"
-            >
-              <span class="text-xs text-muted">{{ row.label }}</span>
-
-              <span class="text-sm text-toned">{{ row.value }}</span>
-            </div>
-          </div>
-
-          <div
-            v-else-if="proficiencyChips.length"
-            class="flex flex-col gap-1"
-          >
-            <span
-              class="text-[10px] font-bold tracking-wider text-muted uppercase"
-            >
-              Владения (распознаны, проверьте вручную)
-            </span>
-
-            <div class="flex flex-wrap gap-1">
-              <UBadge
-                v-for="chip in proficiencyChips"
-                :key="chip"
-                size="sm"
-                color="neutral"
-                variant="subtle"
-              >
-                {{ chip }}
-              </UBadge>
-            </div>
-          </div>
-
-          <div
-            v-if="classChoices.length"
-            class="flex flex-col gap-3"
-          >
-            <span
-              class="text-[10px] font-bold tracking-wider text-muted uppercase"
-            >
-              Выборы владений
-            </span>
-
-            <div
-              v-for="choice in classChoices"
-              :key="choice.id"
-              class="flex flex-col gap-1"
-            >
-              <span class="text-xs text-muted">
-                {{ choice.label }} (выберите {{ choiceCount(choice) }})
-              </span>
-
-              <SheetChoiceSelect
-                :model-value="selections[choice.id] ?? []"
-                :items="choiceOptions(choice)"
-                :hints="choiceHints(choice)"
-                :warning="SKILL_DUPLICATE_WARNING"
-                :count="choiceCount(choice)"
-                :placeholder="`Выберите ${choiceCount(choice)}`"
-                @update:model-value="updateSelection(choice, $event)"
-              />
-            </div>
-          </div>
-
-          <SheetStartingEquipmentChoice
-            v-if="startingEquipmentOptions.length"
-            v-model="startingEquipmentLabel"
-            :options="startingEquipmentOptions"
-          />
-
-          <div class="flex flex-col gap-2">
-            <span
-              class="text-[10px] font-bold tracking-wider text-muted uppercase"
-            >
-              Умения (до {{ level }} уровня)
-            </span>
-
-            <div
-              v-for="row in featureRows"
-              :key="row.id"
-              class="flex flex-col gap-2 rounded-lg border border-default/50 bg-elevated/20 p-3"
-            >
-              <div class="flex items-center justify-between gap-2">
-                <span class="text-sm font-bold text-highlighted">
-                  {{ row.name }}
-                </span>
-
-                <UBadge
-                  size="sm"
-                  color="neutral"
-                  variant="subtle"
-                >
-                  {{ row.originLabel }} · {{ row.level }} ур.
-                </UBadge>
-              </div>
-
-              <!-- Выборы черты — боевой стиль, черта за повышение
-                характеристик — тем же пикером, что в мастере повышения -->
-              <div
-                v-if="row.featChoices.length"
-                class="flex flex-col gap-3"
-              >
-                <SheetLevelUpFeatChoice
-                  v-for="choice in row.featChoices"
-                  :key="choice.id"
-                  :title="choice.label"
-                  :options="featOptions(choice)"
-                  :selected="selectedFeat(choice.id)"
-                  :abilities="featAbilities(choice.id)"
-                  :scores="character.abilities"
-                  :is-loading="isFeatsLoading"
-                  :has-error="hasFeatsError"
-                  @update:feat="setFeatChoice(row.id, choice.id, $event)"
-                  @update:ability="setFeatAbility(choice.id, $event)"
-                />
-              </div>
-
-              <div
-                v-if="row.choiceControls.length"
-                class="flex flex-col gap-3"
-              >
-                <div
-                  v-for="control in row.choiceControls"
-                  :key="control.id"
-                  class="flex flex-col gap-1"
-                >
-                  <span class="text-xs text-muted">
-                    {{ control.label || `Выберите ${choiceCount(control)}` }}
+          <!-- Высота раздела задана снизу: без неё модалка прыгала бы на
+            каждом переключении вкладки -->
+          <div class="flex min-h-56 flex-col gap-3">
+            <template v-if="reviewTab === 'overview'">
+              <div class="flex flex-wrap gap-4">
+                <div class="flex flex-col gap-1">
+                  <span
+                    class="text-[10px] font-bold tracking-wider text-muted uppercase"
+                  >
+                    Кость хитов
                   </span>
 
-                  <SheetChoiceSelect
-                    :model-value="selections[control.id] ?? []"
-                    :items="choiceOptions(control)"
-                    :hints="choiceHints(control)"
-                    :warning="SKILL_DUPLICATE_WARNING"
-                    :count="choiceCount(control)"
-                    :placeholder="`Выберите ${choiceCount(control)}`"
-                    @update:model-value="updateSelection(control, $event)"
-                  />
+                  <span class="text-sm font-medium text-highlighted">
+                    {{ hitDieLabel }}
+                  </span>
+                </div>
+
+                <div class="flex flex-col gap-1">
+                  <span
+                    class="text-[10px] font-bold tracking-wider text-muted uppercase"
+                  >
+                    Хиты
+                  </span>
+
+                  <span class="text-sm font-medium text-highlighted">
+                    {{ maxHitPointsPreview }}
+                  </span>
+                </div>
+
+                <div
+                  v-if="!isAddMode"
+                  class="flex flex-col gap-1"
+                >
+                  <span
+                    class="text-[10px] font-bold tracking-wider text-muted uppercase"
+                  >
+                    Спасброски
+                  </span>
+
+                  <div class="flex flex-wrap gap-1">
+                    <UBadge
+                      v-for="label in savingThrowLabels"
+                      :key="label"
+                      size="sm"
+                      color="primary"
+                      variant="subtle"
+                    >
+                      {{ label }}
+                    </UBadge>
+
+                    <span
+                      v-if="!savingThrowLabels.length"
+                      class="text-sm text-dimmed italic"
+                    >
+                      {{ classDetail?.savingThrowsText || 'не распознаны' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </template>
+
+            <template v-else-if="reviewTab === 'proficiencies'">
+              <div
+                v-if="multiclassProficiencyRows.length"
+                class="flex flex-col gap-2 rounded-md bg-elevated/40 p-3"
+              >
+                <span
+                  class="text-[10px] font-bold tracking-wider text-muted uppercase"
+                >
+                  {{ MULTICLASS_PROFICIENCY_LABELS.title }}
+                </span>
+
+                <span class="text-xs text-dimmed">
+                  {{ MULTICLASS_PROFICIENCY_LABELS.hint }}
+                </span>
+
+                <div
+                  v-for="row in multiclassProficiencyRows"
+                  :key="row.key"
+                  class="flex flex-col gap-0.5"
+                >
+                  <span class="text-xs text-muted">{{ row.label }}</span>
+
+                  <span class="text-sm text-toned">{{ row.value }}</span>
                 </div>
               </div>
 
-              <UInput
-                v-if="!row.featChoices.length && !row.choiceControls.length"
-                v-model="choices[row.id]"
-                size="sm"
-                placeholder="Ваш выбор в умении (необязательно)"
-              />
+              <div
+                v-else-if="proficiencyChips.length"
+                class="flex flex-col gap-1"
+              >
+                <span
+                  class="text-[10px] font-bold tracking-wider text-muted uppercase"
+                >
+                  Владения (распознаны, проверьте вручную)
+                </span>
 
-              <MarkupRender
-                :render-node="row.description"
-                class="text-sm"
-              />
-            </div>
+                <div class="flex flex-wrap gap-1">
+                  <UBadge
+                    v-for="chip in proficiencyChips"
+                    :key="chip"
+                    size="sm"
+                    color="neutral"
+                    variant="subtle"
+                  >
+                    {{ chip }}
+                  </UBadge>
+                </div>
+              </div>
 
-            <span
-              v-if="!featureRows.length"
-              class="text-xs text-dimmed italic"
-            >
-              Нет умений до текущего уровня
-            </span>
+              <div
+                v-if="classChoices.length"
+                class="flex flex-col gap-3"
+              >
+                <span
+                  class="text-[10px] font-bold tracking-wider text-muted uppercase"
+                >
+                  Выборы владений
+                </span>
+
+                <div
+                  v-for="choice in classChoices"
+                  :key="choice.id"
+                  class="flex flex-col gap-1"
+                >
+                  <span class="text-xs text-muted">
+                    {{ choice.label }} (выберите {{ choiceCount(choice) }})
+                  </span>
+
+                  <SheetChoiceSelect
+                    :model-value="selections[choice.id] ?? []"
+                    :items="choiceOptions(choice)"
+                    :hints="choiceHints(choice)"
+                    :warning="SKILL_DUPLICATE_WARNING"
+                    :count="choiceCount(choice)"
+                    :placeholder="`Выберите ${choiceCount(choice)}`"
+                    @update:model-value="updateSelection(choice, $event)"
+                  />
+                </div>
+              </div>
+            </template>
+
+            <template v-else-if="reviewTab === 'equipment'">
+              <SheetStartingEquipmentChoice
+                v-model="startingEquipmentLabel"
+                :options="startingEquipmentOptions"
+              />
+            </template>
+
+            <template v-else>
+              <div class="flex flex-col gap-2">
+                <span
+                  class="text-[10px] font-bold tracking-wider text-muted uppercase"
+                >
+                  Умения (до {{ level }} уровня)
+                </span>
+
+                <div
+                  v-for="row in choiceFeatureRows"
+                  :key="row.id"
+                  class="flex flex-col gap-2 rounded-lg border border-default/50 bg-elevated/20 p-3"
+                >
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="text-sm font-bold text-highlighted">
+                      {{ row.name }}
+                    </span>
+
+                    <UBadge
+                      size="sm"
+                      color="neutral"
+                      variant="subtle"
+                    >
+                      {{ row.originLabel }} · {{ row.level }} ур.
+                    </UBadge>
+                  </div>
+
+                  <!-- Выборы черты — боевой стиль, черта за повышение
+                характеристик — тем же пикером, что в мастере повышения -->
+                  <div
+                    v-if="row.featChoices.length"
+                    class="flex flex-col gap-3"
+                  >
+                    <SheetLevelUpFeatChoice
+                      v-for="choice in row.featChoices"
+                      :key="choice.id"
+                      :title="choice.label"
+                      :options="featOptions(choice)"
+                      :selected="selectedFeat(choice.id)"
+                      :abilities="featAbilities(choice.id)"
+                      :scores="character.abilities"
+                      :is-loading="isFeatsLoading"
+                      :has-error="hasFeatsError"
+                      @update:feat="setFeatChoice(row.id, choice.id, $event)"
+                      @update:ability="setFeatAbility(choice.id, $event)"
+                    />
+                  </div>
+
+                  <div
+                    v-if="row.choiceControls.length"
+                    class="flex flex-col gap-3"
+                  >
+                    <div
+                      v-for="control in row.choiceControls"
+                      :key="control.id"
+                      class="flex flex-col gap-1"
+                    >
+                      <span class="text-xs text-muted">
+                        {{
+                          control.label || `Выберите ${choiceCount(control)}`
+                        }}
+                      </span>
+
+                      <SheetChoiceSelect
+                        :model-value="selections[control.id] ?? []"
+                        :items="choiceOptions(control)"
+                        :hints="choiceHints(control)"
+                        :warning="SKILL_DUPLICATE_WARNING"
+                        :count="choiceCount(control)"
+                        :placeholder="`Выберите ${choiceCount(control)}`"
+                        @update:model-value="updateSelection(control, $event)"
+                      />
+                    </div>
+                  </div>
+
+                  <MarkupRender
+                    :render-node="row.description"
+                    class="text-sm"
+                  />
+                </div>
+
+                <!-- Умения без выбора — свёрнутым списком: читать их полезно, но
+              отвечать по ним нечего, и разворачивать простыню ради одного
+              боевого стиля не приходится -->
+                <UCollapsible
+                  v-if="infoFeatureRows.length"
+                  class="flex flex-col gap-2"
+                >
+                  <UButton
+                    :label="`Остальные умения (${infoFeatureRows.length})`"
+                    icon="tabler:list-details"
+                    trailing-icon="tabler:chevron-down"
+                    color="neutral"
+                    variant="subtle"
+                    size="sm"
+                    block
+                    class="group justify-between"
+                    :ui="{
+                      trailingIcon:
+                        'transition-transform duration-200 group-data-[state=open]:rotate-180',
+                    }"
+                  />
+
+                  <template #content>
+                    <div class="flex flex-col gap-2">
+                      <div
+                        v-for="row in infoFeatureRows"
+                        :key="row.id"
+                        class="flex flex-col gap-2 rounded-lg border border-default/50 bg-elevated/20 p-3"
+                      >
+                        <div class="flex items-center justify-between gap-2">
+                          <span class="text-sm font-bold text-highlighted">
+                            {{ row.name }}
+                          </span>
+
+                          <UBadge
+                            size="sm"
+                            color="neutral"
+                            variant="subtle"
+                          >
+                            {{ row.originLabel }} · {{ row.level }} ур.
+                          </UBadge>
+                        </div>
+
+                        <UInput
+                          v-model="choices[row.id]"
+                          size="sm"
+                          placeholder="Ваш выбор в умении (необязательно)"
+                        />
+
+                        <MarkupRender
+                          :render-node="row.description"
+                          class="text-sm"
+                        />
+                      </div>
+                    </div>
+                  </template>
+                </UCollapsible>
+              </div>
+            </template>
           </div>
         </template>
       </div>
