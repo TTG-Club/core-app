@@ -654,25 +654,6 @@
   const reviewTab = ref<ClassWizardTab>('overview');
 
   /**
-   * Умения, которые чего-то ждут от игрока, и остальные — только с описанием.
-   *
-   * Разделены, потому что до трети умений класса выбора не требуют вовсе, а
-   * места занимают столько же: у воина на первом уровне спрашивают про один
-   * боевой стиль, а листать приходится все пять карточек.
-   */
-  const choiceFeatureRows = computed(() =>
-    featureRows.value.filter(
-      (row) => row.featChoices.length || row.choiceControls.length,
-    ),
-  );
-
-  const infoFeatureRows = computed(() =>
-    featureRows.value.filter(
-      (row) => !row.featChoices.length && !row.choiceControls.length,
-    ),
-  );
-
-  /**
    * Незакрытые выборы списка: по ним считается счётчик на вкладке.
    *
    * @param choices выборы раздела.
@@ -712,27 +693,18 @@
    * Снаряжение не считается: вариант предвыбран, и «Не добавлять» тоже ответ.
    */
   const pendingByTab = computed<Record<ClassWizardTab, number>>(() => ({
-    overview: 0,
-    proficiencies: getPendingChoices(classChoices.value).length,
+    overview: getPendingChoices(classChoices.value).length,
     equipment: 0,
     features:
       pendingFeatChoiceCount.value
       + getPendingChoices(
-        choiceFeatureRows.value.flatMap((row) => row.choiceControls),
+        featureRows.value.flatMap((row) => row.choiceControls),
       ).length,
   }));
 
   /** Разделы, которым есть что показать: пустая вкладка только сбивает. */
   const shownReviewTabs = computed<ClassWizardTab[]>(() =>
     CLASS_WIZARD_TAB_ORDER.filter((tab) => {
-      if (tab === 'proficiencies') {
-        return Boolean(
-          multiclassProficiencyRows.value.length
-          || proficiencyChips.value.length
-          || classChoices.value.length,
-        );
-      }
-
       if (tab === 'equipment') {
         return startingEquipmentOptions.value.length > 0;
       }
@@ -770,7 +742,7 @@
    * @param value значение вкладки.
    */
   function handleReviewTabChange(value: string | number) {
-    const tab = shownReviewTabs.value.find((item) => item === value);
+    const tab = shownReviewTabs.value.find((shown) => shown === value);
 
     if (tab) {
       reviewTab.value = tab;
@@ -1609,11 +1581,11 @@
                     Спасброски
                   </span>
 
-                  <div class="flex flex-wrap gap-1">
+                  <div class="flex flex-wrap gap-2">
                     <UBadge
                       v-for="label in savingThrowLabels"
                       :key="label"
-                      size="sm"
+                      size="lg"
                       color="primary"
                       variant="subtle"
                     >
@@ -1629,9 +1601,7 @@
                   </div>
                 </div>
               </div>
-            </template>
 
-            <template v-else-if="reviewTab === 'proficiencies'">
               <div
                 v-if="multiclassProficiencyRows.length"
                 class="flex flex-col gap-2 rounded-md bg-elevated/40 p-3"
@@ -1667,11 +1637,11 @@
                   Владения (распознаны, проверьте вручную)
                 </span>
 
-                <div class="flex flex-wrap gap-1">
+                <div class="flex flex-wrap gap-2">
                   <UBadge
                     v-for="chip in proficiencyChips"
                     :key="chip"
-                    size="sm"
+                    size="lg"
                     color="neutral"
                     variant="subtle"
                   >
@@ -1728,7 +1698,7 @@
                 </span>
 
                 <div
-                  v-for="row in choiceFeatureRows"
+                  v-for="row in featureRows"
                   :key="row.id"
                   class="flex flex-col gap-2 rounded-lg border border-default/50 bg-elevated/20 p-3"
                 >
@@ -1794,69 +1764,18 @@
                     </div>
                   </div>
 
+                  <UInput
+                    v-if="!row.featChoices.length && !row.choiceControls.length"
+                    v-model="choices[row.id]"
+                    size="sm"
+                    placeholder="Ваш выбор в умении (необязательно)"
+                  />
+
                   <MarkupRender
                     :render-node="row.description"
                     class="text-sm"
                   />
                 </div>
-
-                <!-- Умения без выбора — свёрнутым списком: читать их полезно, но
-              отвечать по ним нечего, и разворачивать простыню ради одного
-              боевого стиля не приходится -->
-                <UCollapsible
-                  v-if="infoFeatureRows.length"
-                  class="flex flex-col gap-2"
-                >
-                  <UButton
-                    :label="`Остальные умения (${infoFeatureRows.length})`"
-                    icon="tabler:list-details"
-                    trailing-icon="tabler:chevron-down"
-                    color="neutral"
-                    variant="subtle"
-                    size="sm"
-                    block
-                    class="group justify-between"
-                    :ui="{
-                      trailingIcon:
-                        'transition-transform duration-200 group-data-[state=open]:rotate-180',
-                    }"
-                  />
-
-                  <template #content>
-                    <div class="flex flex-col gap-2">
-                      <div
-                        v-for="row in infoFeatureRows"
-                        :key="row.id"
-                        class="flex flex-col gap-2 rounded-lg border border-default/50 bg-elevated/20 p-3"
-                      >
-                        <div class="flex items-center justify-between gap-2">
-                          <span class="text-sm font-bold text-highlighted">
-                            {{ row.name }}
-                          </span>
-
-                          <UBadge
-                            size="sm"
-                            color="neutral"
-                            variant="subtle"
-                          >
-                            {{ row.originLabel }} · {{ row.level }} ур.
-                          </UBadge>
-                        </div>
-
-                        <UInput
-                          v-model="choices[row.id]"
-                          size="sm"
-                          placeholder="Ваш выбор в умении (необязательно)"
-                        />
-
-                        <MarkupRender
-                          :render-node="row.description"
-                          class="text-sm"
-                        />
-                      </div>
-                    </div>
-                  </template>
-                </UCollapsible>
               </div>
             </template>
           </div>

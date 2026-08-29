@@ -38,6 +38,7 @@ import type {
   PreparedKindLabels,
   PreparedSpellKind,
   ProficiencyBaseSource,
+  ProficiencyGroupKey,
   ResourceMaxSource,
   ResourceRecovery,
   ResourceRecoveryField,
@@ -2991,7 +2992,6 @@ export const BACKGROUND_WIZARD_TAB_LABELS: Record<BackgroundWizardTab, string> =
  */
 export const CLASS_WIZARD_TAB_ORDER = [
   'overview',
-  'proficiencies',
   'equipment',
   'features',
 ] as const;
@@ -2999,10 +2999,14 @@ export const CLASS_WIZARD_TAB_ORDER = [
 /** Раздел второго шага мастера класса. */
 export type ClassWizardTab = (typeof CLASS_WIZARD_TAB_ORDER)[number];
 
-/** Подписи разделов; порядок вкладок задаёт `CLASS_WIZARD_TAB_ORDER`. */
+/**
+ * Подписи разделов; порядок вкладок задаёт `CLASS_WIZARD_TAB_ORDER`.
+ *
+ * Владения живут в «Основном», а не своим разделом: хиты, спасброски и владения
+ * — это и есть то, чем класс наделяет сразу, и делить их вкладкой не на что.
+ */
 export const CLASS_WIZARD_TAB_LABELS: Record<ClassWizardTab, string> = {
   overview: 'Основное',
-  proficiencies: 'Владения',
   equipment: 'Снаряжение',
   features: 'Умения',
 };
@@ -3764,6 +3768,25 @@ export const WEAPON_NAMES_BY_MASTERY_PROPERTY: Record<
     'Ручной арбалет',
     'Ручной топор',
   ],
+};
+
+/**
+ * Заголовки групп панели владений.
+ *
+ * `weaponMasteries` своей группы не имеет — мастерство помечается значком на
+ * чипе оружия, — но ключ группы взят из владений листа, и запись нужна, чтобы
+ * набор оставался полным.
+ */
+export const SHEET_PROFICIENCY_GROUP_TITLES: Record<
+  ProficiencyGroupKey,
+  string
+> = {
+  armor: 'Снаряжение',
+  weapons: 'Оружие',
+  weaponMasteries: 'Мастерство оружия',
+  masteryProperties: 'Оружейные приёмы',
+  tools: 'Инструменты',
+  languages: 'Языки',
 };
 
 /**

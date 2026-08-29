@@ -12,6 +12,7 @@
     collapseProficiencies,
     LANGUAGE_PROFICIENCY_GROUPS,
     SHEET_EMPTY_LABELS,
+    SHEET_PROFICIENCY_GROUP_TITLES,
     SHEET_REVEAL_CONTROL_CLASS,
     SHEET_TOOL_LABELS,
     WEAPON_MASTERY_ICON,
@@ -121,7 +122,7 @@
     return [
       {
         key: 'masteryProperties',
-        title: 'Оружейные приёмы',
+        title: SHEET_PROFICIENCY_GROUP_TITLES.masteryProperties,
         items: props.proficiencies.masteryProperties.map((name) =>
           toProficiencyChip(name),
         ),
@@ -133,7 +134,7 @@
   const groups = computed((): ProficiencyGroupView[] => [
     {
       key: 'armor',
-      title: 'Снаряжение',
+      title: SHEET_PROFICIENCY_GROUP_TITLES.armor,
       items: collapseProficiencies(
         props.proficiencies.armor,
         ARMOR_PROFICIENCY_GROUPS,
@@ -142,14 +143,14 @@
     },
     {
       key: 'weapons',
-      title: 'Оружие',
+      title: SHEET_PROFICIENCY_GROUP_TITLES.weapons,
       items: weaponChips.value,
       hasSettings: true,
     },
     ...masteryPropertyGroups.value,
     {
       key: 'tools',
-      title: 'Инструменты',
+      title: SHEET_PROFICIENCY_GROUP_TITLES.tools,
       items: props.proficiencies.tools.map((tool) =>
         toProficiencyChip(tool.name, { url: tool.url }),
       ),
@@ -157,7 +158,7 @@
     },
     {
       key: 'languages',
-      title: 'Языки',
+      title: SHEET_PROFICIENCY_GROUP_TITLES.languages,
       items: collapseProficiencies(
         props.proficiencies.languages,
         LANGUAGE_PROFICIENCY_GROUPS,

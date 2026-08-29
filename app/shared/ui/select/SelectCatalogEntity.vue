@@ -103,6 +103,14 @@
   });
 
   /**
+   * Ширина кнопки: пустое поле она занимает целиком — других элементов в
+   * строке нет, — а рядом с чипами сжимается до своей короткой подписи.
+   */
+  const buttonWidthClass = computed(() =>
+    chips.value.length ? 'shrink-0' : 'grow',
+  );
+
+  /**
    * Записывает выбор окна: значение поля и снимок названий для чипов.
    *
    * @param entries выбранные записи каталога.
@@ -216,52 +224,50 @@
 </script>
 
 <template>
-  <div class="flex flex-col gap-2">
-    <div class="flex items-center gap-2">
-      <UButton
-        icon="tabler:list-search"
-        color="neutral"
-        variant="subtle"
-        class="min-w-0 grow justify-start"
-        :disabled="disabled"
-        :label="buttonLabel"
-        @click.left.exact.prevent="open"
-      />
+  <!-- Кнопка и выбранное — одной строкой: у поля с одной записью подпись и чип
+    занимали две строки подряд, хотя вместе они короче одной -->
+  <div class="flex flex-wrap items-center gap-2">
+    <UButton
+      icon="tabler:list-search"
+      color="neutral"
+      variant="subtle"
+      :class="buttonWidthClass"
+      class="min-w-0 justify-start"
+      :disabled="disabled"
+      :label="buttonLabel"
+      @click.left.exact.prevent="open"
+    />
+
+    <UBadge
+      v-for="entry in chips"
+      :key="entry.url"
+      color="neutral"
+      variant="subtle"
+      class="gap-1"
+    >
+      {{ entry.name }}
 
       <UButton
-        v-if="selectedUrls.length"
         icon="tabler:x"
         color="neutral"
         variant="ghost"
+        size="xs"
         :disabled="disabled"
-        :aria-label="CATALOG_PICKER_LABELS.clear"
-        @click.left.exact.prevent="apply([])"
+        :aria-label="`${CATALOG_PICKER_LABELS.remove}: ${entry.name}`"
+        @click.left.exact.prevent="remove(entry.url)"
       />
-    </div>
+    </UBadge>
 
-    <div
-      v-if="chips.length"
-      class="flex flex-wrap gap-1"
-    >
-      <UBadge
-        v-for="entry in chips"
-        :key="entry.url"
-        color="neutral"
-        variant="subtle"
-        class="gap-1"
-      >
-        {{ entry.name }}
-
-        <UButton
-          icon="tabler:x"
-          color="neutral"
-          variant="ghost"
-          size="xs"
-          :disabled="disabled"
-          :aria-label="`${CATALOG_PICKER_LABELS.remove}: ${entry.name}`"
-          @click.left.exact.prevent="remove(entry.url)"
-        />
-      </UBadge>
-    </div>
+    <!-- «Очистить» — только там, где записей бывает много: у одной он делал бы
+      ровно то же, что крестик на её же чипе -->
+    <UButton
+      v-if="multiple && selectedUrls.length > 1"
+      icon="tabler:x"
+      color="neutral"
+      variant="ghost"
+      :disabled="disabled"
+      :aria-label="CATALOG_PICKER_LABELS.clear"
+      @click.left.exact.prevent="apply([])"
+    />
   </div>
 </template>
