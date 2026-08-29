@@ -10257,7 +10257,30 @@ export function buildLevelClassFeatures(
     (featureLevel) => featureLevel === level,
     choices,
     answers,
+    // Умение пересобирается и на уровне, где открывается ещё одна ступень его
+    // выбора: воззвания колдун берёт умением первого уровня, а на втором
+    // выбирает ещё два — без пересборки ответу этого уровня некуда лечь.
+    // Мастер повышения уровня показывает такое умение по тому же правилу
+    // ({@link getLevelFeatureRows}).
+    (summary) =>
+      summary.level === level || hasFeatureChoiceAtLevel(summary, level),
   );
+}
+
+/**
+ * Открывается ли на этом уровне ступень выбора внутри умения: компетентность
+ * плут получает на первом уровне и на шестом, воззвания колдуна прибывают
+ * каждые несколько уровней, а умение в книге одно.
+ *
+ * @param summary умение класса или подкласса.
+ * @param level уровень, который берут сейчас.
+ * @returns `true` — на этом уровне умение о чём-то спрашивает.
+ */
+export function hasFeatureChoiceAtLevel(
+  summary: ClassFeatureSummary,
+  level: number,
+): boolean {
+  return summary.choices.some((choice) => choice.requiredLevel === level);
 }
 
 /**
@@ -10279,7 +10302,11 @@ function toCharacterFeature(
 ): CharacterFeature {
   const id = getClassFeatureId(classUrl, summary.key);
 
-  const choice = choices[id]?.trim();
+  // Ответ на выбор варианта показывается строкой умения: ни во владения, ни в
+  // заклинания вариант не попадает, и без неё взятое воззвание нигде бы не
+  // значилось. Свой текст мастера важнее — его игрок вписал руками
+  const choice =
+    choices[id]?.trim() || getOptionChoiceText(summary.choices, answers);
 
   // Владения из ответов игрока: инструменты, языки, приёмы и спасброски лист
   // кладёт в свои списки, а не в текст умения. Разбор общий с чертой — вид
@@ -10328,6 +10355,28 @@ function toCharacterFeature(
       ? choiceAnswers
       : undefined,
   };
+}
+
+/**
+ * Выбранные варианты умения одной строкой: воззвания, манёвры, метамагия.
+ *
+ * @param featureChoices выборы умения.
+ * @param answers ответы игрока; не заданы — строки нет.
+ * @returns строка выбранных вариантов; пусто — вариантов не выбирали.
+ */
+function getOptionChoiceText(
+  featureChoices: ClassChoice[],
+  answers: ClassFeatureAnswers | undefined,
+): string {
+  if (!answers) {
+    return '';
+  }
+
+  const values = featureChoices.flatMap((choice) =>
+    choice.kind === 'option' ? (answers.answers[choice.id] ?? []) : [],
+  );
+
+  return [...new Set(values)].join(', ');
 }
 
 /**
@@ -10380,6 +10429,7 @@ function collectClassFeatures(
   matchesLevel: (featureLevel: number) => boolean,
   choices: Record<string, string>,
   answers?: ClassFeatureAnswers,
+  matchesFeature?: (summary: ClassFeatureSummary) => boolean,
 ): CharacterFeature[] {
   const seenKeys = new Set<string>();
   const features: CharacterFeature[] = [];
@@ -10392,7 +10442,9 @@ function collectClassFeatures(
     for (const summary of summaries) {
       if (
         summary.isSubclass !== onlySubclass
-        || !matchesLevel(summary.level)
+        || !(matchesFeature
+          ? matchesFeature(summary)
+          : matchesLevel(summary.level))
         || seenKeys.has(summary.key)
         // Умение-указатель («Подкласс», «Улучшение характеристик») нужно
         // таблице прогрессии, а записью на листе было бы шумом
@@ -10501,6 +10553,55 @@ export function buildSubclassFeatures(
 }
 
 /**
+ * Ответы прошлых уровней по полным идентификаторам выборов.
+ *
+ * На записи умения ответ лежит коротким ключом (`pickChoiceAnswers`), а сборке
+ * умения нужен id выбора. Пересобранное на новом уровне умение заменяет прежнюю
+ * запись целиком, поэтому без прежних ответов оно потеряло бы и выбранное на
+ * прошлых уровнях: снимок владений и строка выбора собираются из ответов.
+ *
+ * Ответы текущего мастера прежние не затирают — игрок отвечает только за новую
+ * ступень.
+ *
+ * @param answers ответы игрока в текущем мастере по id выбора.
+ * @param storedFeatures особенности, уже лежащие на листе.
+ * @param classUrl адрес класса: по нему собирается идентификатор умения.
+ * @param summaries умения класса и подкласса из справочника.
+ * @returns ответы текущего мастера, дополненные прежними.
+ */
+export function withStoredFeatureAnswers(
+  answers: Record<string, string[]>,
+  storedFeatures: CharacterFeature[],
+  classUrl: string,
+  summaries: ClassFeatureSummary[],
+): Record<string, string[]> {
+  const storedById = new Map(
+    storedFeatures.map((feature) => [feature.id, feature.choiceAnswers]),
+  );
+
+  const result = { ...answers };
+
+  for (const summary of summaries) {
+    const stored = storedById.get(getClassFeatureId(classUrl, summary.key));
+
+    if (!stored) {
+      continue;
+    }
+
+    for (const choice of summary.choices) {
+      const key = choice.id.slice(choice.id.lastIndexOf(':') + 1);
+      const values = stored[key];
+
+      if (values?.length && !result[choice.id]?.length) {
+        result[choice.id] = [...values];
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
  * Строки карточек умений уровня для мастера повышения: к каждому умению
  * распознаётся выбор внутри описания (навык, компетентность, язык).
  *
@@ -10533,9 +10634,7 @@ export function getLevelFeatureRows(
       // Умение возвращается и на уровень, где открывается ещё один его выбор:
       // компетентность плут получает на первом уровне и на шестом, а умение в
       // книге одно — повтор описан строкой роста.
-      const hasChoiceAtLevel = summary.choices.some(
-        (choice) => choice.requiredLevel === level,
-      );
+      const hasChoiceAtLevel = hasFeatureChoiceAtLevel(summary, level);
 
       if (
         summary.isSubclass !== onlySubclass
@@ -11238,8 +11337,58 @@ export function filterChoicesByLevel(
     return choices;
   }
 
-  return choices.filter(
-    (choice) => !choice.requiredLevel || choice.requiredLevel <= level,
+  return choices
+    .filter((choice) => !choice.requiredLevel || choice.requiredLevel <= level)
+    .map((choice) => narrowOptionPool(choice, level));
+}
+
+/**
+ * Сужает пул вариантов уровнем персонажа: воззвание «для колдуна 5 уровня» на
+ * первом ещё не предлагают. У выборов без уровней вариантов пул не трогается.
+ *
+ * @param choice выбор из умения.
+ * @param level уровень класса, на котором собирается выбор.
+ * @returns выбор с пулом по уровню.
+ */
+function narrowOptionPool(choice: ClassChoice, level: number): ClassChoice {
+  const levels = choice.optionRequiredLevels;
+
+  if (!levels) {
+    return choice;
+  }
+
+  const listed = choice.listed.filter((name) => (levels[name] ?? 0) <= level);
+
+  return listed.length === choice.listed.length
+    ? choice
+    : { ...choice, listed };
+}
+
+/**
+ * Варианты, уже взятые на других ступенях того же списка: по правилам один и
+ * тот же вариант дважды не берут, и мастер их больше не предлагает. Ответ самой
+ * ступени не вычитается — иначе выбранное пропало бы из своего же пикера.
+ *
+ * @param choice выбор, для которого собирается пул.
+ * @param choices все выборы мастера.
+ * @param selections ответы игрока по идентификаторам выборов.
+ * @returns взятые варианты; пусто — выбор не из списка вариантов.
+ */
+export function getTakenOptionValues(
+  choice: ClassChoice,
+  choices: ClassChoice[],
+  selections: Record<string, string[]>,
+): string[] {
+  const poolKey = choice.poolKey;
+
+  if (!poolKey) {
+    return [];
+  }
+
+  return choices.flatMap((other) =>
+    other.poolKey === poolKey && other.id !== choice.id
+      ? (selections[other.id] ?? [])
+      : [],
   );
 }
 
@@ -11363,10 +11512,21 @@ export function resolveChoiceOptions(
     ];
   }
 
-  // Пул характеристик, вариантов повышения, списков заклинаний, типов урона и
-  // вариантов записи перечислен в самой механике черты, а пул заклинаний
-  // собирается поиском по каталогу и приходит уже готовым: и то, и другое лежит
-  // в `listed`. Без этой ветки они провалились бы в выбор инструмента ниже.
+  if (choice.kind === 'option') {
+    // Пул — варианты самой записи, уже суженные уровнем персонажа. Взятое на
+    // других ступенях списка вычитается: одно и то же воззвание по правилам
+    // дважды не берут
+    const taken = new Set(context.takenOptionValues ?? []);
+
+    return taken.size
+      ? choice.listed.filter((name) => !taken.has(name))
+      : choice.listed;
+  }
+
+  // Пул характеристик, вариантов повышения, списков заклинаний и типов урона
+  // перечислен в самой механике черты, а пул заклинаний собирается поиском по
+  // каталогу и приходит уже готовым: и то, и другое лежит в `listed`. Без этой
+  // ветки они провалились бы в выбор инструмента ниже.
   if (
     choice.kind === 'spellcasting-ability'
     || choice.kind === 'spell'
@@ -11374,7 +11534,6 @@ export function resolveChoiceOptions(
     || choice.kind === 'ability-score'
     || choice.kind === 'ability-variant'
     || choice.kind === 'damage-type'
-    || choice.kind === 'option'
   ) {
     return choice.listed;
   }

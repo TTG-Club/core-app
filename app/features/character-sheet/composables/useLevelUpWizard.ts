@@ -53,6 +53,7 @@ import {
   getOwnedWeaponNames,
   getRequiredChoiceCount,
   getSelectedCasterType,
+  getTakenOptionValues,
   getToolNames,
   LANGUAGE_PROFICIENCY_GROUPS,
   LEVEL_UP_WIZARD_LABELS,
@@ -63,6 +64,7 @@ import {
   parseFeatSelectOptions,
   resolveChoiceOptions,
   SUBCLASS_SELECTION_MIN_LEVEL,
+  withStoredFeatureAnswers,
 } from '../model';
 import { useLazyCatalogSourceQuery } from './useCatalogSourceQuery';
 import { useCharacterSheet } from './useCharacterSheet';
@@ -396,6 +398,32 @@ export function useLevelUpWizard(): LevelUpWizard {
             : 0,
       };
     }),
+  );
+
+  /** Все выборы мастера: по ним считается, что уже взято из общего списка. */
+  const allChoices = computed<ClassChoice[]>(() =>
+    steps.value.flatMap((step) => step.features.flatMap((row) => row.choices)),
+  );
+
+  /**
+   * Ответы мастера, дополненные ответами прошлых уровней с самих записей листа.
+   *
+   * Умение, у которого на этом уровне открывается ещё одна ступень выбора,
+   * пересобирается целиком и заменяет прежнюю запись: без прежних ответов оно
+   * потеряло бы и выбранное раньше — воззвания первого уровня у колдуна,
+   * оружейные приёмы первого уровня у воина.
+   */
+  const allAnswers = computed<Record<string, string[]>>(() =>
+    Object.values(loadedClasses.value).reduce<Record<string, string[]>>(
+      (result, loaded) =>
+        withStoredFeatureAnswers(
+          result,
+          character.value.features,
+          loaded.entry.url,
+          [...loaded.detail.features, ...(loaded.subclass?.features ?? [])],
+        ),
+      allSelections.value,
+    ),
   );
 
   /** Навыки, выбранные во владение в этом мастере, — опции для компетентности. */
@@ -874,6 +902,13 @@ export function useLevelUpWizard(): LevelUpWizard {
       proficientSavingThrowNames: character.value.savingThrows
         .filter((savingThrow) => savingThrow.proficient)
         .map((savingThrow) => ABILITY_LABELS[savingThrow.key]),
+      // Варианты, взятые на прошлых уровнях и на других ступенях этого мастера:
+      // одно и то же воззвание по правилам дважды не берут
+      takenOptionValues: getTakenOptionValues(
+        choice,
+        allChoices.value,
+        allAnswers.value,
+      ),
     });
   }
 
@@ -1132,9 +1167,11 @@ export function useLevelUpWizard(): LevelUpWizard {
       allSelections.value,
     );
 
-    // Ответы игрока, с которыми собирается снимок владений каждого умения
+    // Ответы игрока, с которыми собирается снимок владений каждого умения:
+    // вместе с ответами прошлых уровней — пересобранное умение заменяет запись
+    // целиком, и без них выбранное раньше пропало бы
     const featureAnswers = {
-      answers: allSelections.value,
+      answers: allAnswers.value,
       proficientSkillNames: proficientSkillNames.value,
     };
 

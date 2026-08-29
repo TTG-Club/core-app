@@ -4986,6 +4986,18 @@ export const ABILITY_COUNT_FORMS: [string, string, string] = [
 export const ABILITY_CHOICE_ID_SEGMENT = 'ability';
 export const ABILITY_VARIANT_CHOICE_ID_SEGMENT = 'ability-variant';
 
+/**
+ * Хвост идентификатора выбора из вариантов умения класса: `options` у выбора без
+ * ступеней и `options-<уровень>` у ступени. Выбор синтетический — ключа у него в
+ * записи нет, поэтому id собирает лист. Уровень через дефис, а не отдельным
+ * сегментом: хвостом id ответ ложится на запись умения, и `:2` совпал бы с
+ * ключом выбора механики того же уровня.
+ */
+export const OPTION_CHOICE_ID_SEGMENT = 'options';
+
+/** Сколько вариантов берут, когда справочник количества не назвал. */
+export const OPTION_CHOICE_DEFAULT_COUNT = 1;
+
 /** Размер выдачи пула заклинаний выбора: круг одного класса в неё умещается. */
 export const CHOICE_SPELL_POOL_SIZE = 200;
 
