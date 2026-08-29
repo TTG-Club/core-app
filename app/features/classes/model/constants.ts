@@ -254,6 +254,20 @@ export const CLASS_FEATURE_OPTIONS_EDITOR = {
   prerequisitePlaceholder: 'Например: 7 уровень, заклинание «Вызов страха»',
   description: 'Описание',
   descriptionPlaceholder: 'Описание варианта',
+  unnamed: 'Без названия',
+  expand: 'Развернуть вариант',
+  collapse: 'Свернуть вариант',
+  hiddenBadge: 'скрыт в подклассе',
+} as const;
+
+/**
+ * Бейдж уровня доступа варианта в шапке свёрнутой строки: «С 5 уровня». Не
+ * «5 ур.», как у умения: там уровень получения, а здесь — с какого уровня
+ * вариант вообще можно взять.
+ */
+export const CLASS_FEATURE_OPTION_LEVEL_BADGE = {
+  prefix: 'С ',
+  suffix: ' уровня',
 } as const;
 
 /**

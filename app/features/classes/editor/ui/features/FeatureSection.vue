@@ -67,13 +67,15 @@
   <div
     class="col-span-full overflow-hidden rounded-lg border border-default bg-elevated/20"
   >
-    <div class="flex items-center gap-2 px-3 py-2">
+    <div class="relative flex items-center gap-2 px-3 py-2">
       <!-- Шапка разворачивает блок целиком: попадать значком в конце строки
         приходилось прицельно. Кнопки лежат рядом с ней, а не внутри: кнопка
-        внутри кнопки недопустима -->
+        внутри кнопки недопустима, поэтому нажатие ловит накладка —
+        псевдоэлемент кнопки во всю шапку, — а сами кнопки подняты над
+        накладкой `relative` -->
       <button
         type="button"
-        class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left text-sm font-medium text-highlighted"
+        class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left text-sm font-medium text-highlighted before:absolute before:inset-0"
         :aria-expanded="isOpen"
         @click.left.exact.prevent="toggle"
       >
@@ -94,7 +96,7 @@
         v-if="hint"
         :text="hint"
         icon="tabler:info-circle-filled"
-        class="shrink-0 text-dimmed"
+        class="relative shrink-0 text-dimmed"
       />
 
       <UButton
@@ -104,7 +106,7 @@
         color="primary"
         variant="soft"
         size="xs"
-        class="shrink-0"
+        class="relative shrink-0"
         @click.left.exact.prevent="add"
       />
 
@@ -113,6 +115,7 @@
         color="neutral"
         variant="ghost"
         size="xs"
+        class="relative"
         :aria-label="toggleLabel"
         @click.left.exact.prevent="toggle"
       />

@@ -15,6 +15,7 @@
     CLASS_LEVEL_BOUNDS,
     CLASS_OPTIONS_CHOICE_COUNT_BOUNDS,
     CLASS_OPTIONS_CHOICE_DEFAULTS,
+    getClassFeatureOptionLevelBadge,
   } from '../../../model';
   import FeatureSection from './FeatureSection.vue';
 
@@ -37,6 +38,26 @@
   const choice = defineModel<ClassFeatureOptionsChoiceCreate | undefined>(
     'choice',
   );
+
+  const {
+    isExpanded,
+    toggle: toggleOption,
+    expand,
+    dropRow,
+    getToggleIcon,
+  } = useExpandedRows();
+
+  /**
+   * Подпись кнопки свёртки для скринридера.
+   *
+   * @param index позиция варианта в списке.
+   * @returns подпись действия.
+   */
+  function getToggleLabel(index: number): string {
+    return isExpanded(index)
+      ? CLASS_FEATURE_OPTIONS_EDITOR.collapse
+      : CLASS_FEATURE_OPTIONS_EDITOR.expand;
+  }
 
   /** Выбираемый ли список: настройка выбора у умения есть — значит, да. */
   const isSelectable = computed(() => choice.value !== undefined);
@@ -108,8 +129,12 @@
     };
   }
 
-  /** Заводит пустой вариант. */
+  /** Заводит пустой вариант в конце списка и сразу раскрывает его. */
   function addRow() {
+    // Индекс считается ДО записи: `model.value` после присваивания ещё отдаёт
+    // прежний массив — проп доедет только следующим тиком.
+    const addedIndex = model.value.length;
+
     model.value = [
       ...model.value,
       {
@@ -124,6 +149,8 @@
         hideInSubclasses: false,
       },
     ];
+
+    expand(addedIndex);
   }
 
   /**
@@ -133,6 +160,7 @@
    */
   function removeRow(index: number) {
     model.value = model.value.filter((_, position) => position !== index);
+    dropRow(index);
   }
 </script>
 
@@ -261,96 +289,152 @@
         </template>
       </div>
 
-      <UForm
+      <div
         v-for="(option, index) in model"
         :key="index"
-        class="grid grid-cols-1 gap-3 rounded-lg border border-default bg-elevated/40 p-3 md:grid-cols-24"
-        attach
-        :state="option"
+        class="rounded-lg border border-default bg-elevated/40"
       >
-        <UFormField
-          class="md:col-span-8"
-          :label="CLASS_FEATURE_OPTIONS_EDITOR.name"
-          name="name.rus"
-        >
-          <UInput
-            v-model="option.name.rus"
-            :placeholder="CLASS_FEATURE_OPTIONS_EDITOR.namePlaceholder"
-          />
-        </UFormField>
+        <!-- Плашка разворачивает вариант целиком: списки вариантов длинные —
+          у воина два десятка манёвров, — и развёрнутые все разом они заслоняют
+          саму настройку выбора. Кнопки лежат рядом с триггером, а не внутри:
+          кнопка внутри кнопки недопустима, поэтому нажатие ловит накладка —
+          псевдоэлемент кнопки во всю шапку, — а сами кнопки подняты над
+          накладкой `relative` -->
+        <div class="relative flex items-center gap-2 px-3 py-2">
+          <button
+            type="button"
+            class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left before:absolute before:inset-0"
+            :aria-expanded="isExpanded(index)"
+            @click.left.exact.prevent="toggleOption(index)"
+          >
+            <UBadge
+              v-if="getClassFeatureOptionLevelBadge(option.requiredClassLevel)"
+              size="sm"
+              color="neutral"
+              variant="outline"
+              class="shrink-0 tabular-nums"
+            >
+              {{ getClassFeatureOptionLevelBadge(option.requiredClassLevel) }}
+            </UBadge>
 
-        <UFormField
-          class="md:col-span-8"
-          :label="CLASS_FEATURE_OPTIONS_EDITOR.nameEng"
-          name="name.eng"
-        >
-          <UInput
-            v-model="option.name.eng"
-            :placeholder="CLASS_FEATURE_OPTIONS_EDITOR.nameEngPlaceholder"
-          />
-        </UFormField>
+            <span class="min-w-0 flex-1 truncate text-sm">
+              {{ option.name.rus || CLASS_FEATURE_OPTIONS_EDITOR.unnamed }}
+            </span>
 
-        <UFormField
-          class="md:col-span-4"
-          :label="CLASS_FEATURE_OPTIONS_EDITOR.level"
-          name="requiredClassLevel"
-        >
-          <SelectLevel v-model="option.requiredClassLevel" />
-        </UFormField>
-
-        <div
-          class="flex items-center justify-between gap-2 md:col-span-4 md:self-end md:pb-2"
-        >
-          <UCheckbox
-            v-if="!isSubclass"
-            v-model="option.hideInSubclasses"
-            :label="CLASS_FEATURE_OPTIONS_EDITOR.hideInSubclasses"
-          />
+            <UBadge
+              v-if="option.hideInSubclasses && !isSubclass"
+              size="sm"
+              color="warning"
+              variant="subtle"
+              class="hidden shrink-0 md:inline-flex"
+            >
+              {{ CLASS_FEATURE_OPTIONS_EDITOR.hiddenBadge }}
+            </UBadge>
+          </button>
 
           <UButton
             icon="tabler:trash"
             color="error"
             variant="ghost"
             size="xs"
-            class="ml-auto"
+            class="relative"
             :aria-label="CLASS_FEATURES_EDITOR.removeOption"
             @click.left.exact.prevent="removeRow(index)"
           />
+
+          <UButton
+            :icon="getToggleIcon(index)"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            class="relative"
+            :aria-label="getToggleLabel(index)"
+            @click.left.exact.prevent="toggleOption(index)"
+          />
         </div>
 
-        <UFormField
-          class="md:col-span-12"
-          :label="CLASS_FEATURE_OPTIONS_EDITOR.additional"
-          name="additional"
+        <UForm
+          v-if="isExpanded(index)"
+          class="grid grid-cols-1 gap-3 border-t border-default p-3 md:grid-cols-24"
+          attach
+          :state="option"
         >
-          <UInput
-            v-model="option.additional"
-            :placeholder="CLASS_FEATURE_OPTIONS_EDITOR.additionalPlaceholder"
-          />
-        </UFormField>
+          <UFormField
+            class="md:col-span-8"
+            :label="CLASS_FEATURE_OPTIONS_EDITOR.name"
+            name="name.rus"
+          >
+            <UInput
+              v-model="option.name.rus"
+              :placeholder="CLASS_FEATURE_OPTIONS_EDITOR.namePlaceholder"
+            />
+          </UFormField>
 
-        <UFormField
-          class="md:col-span-12"
-          :label="CLASS_FEATURE_OPTIONS_EDITOR.prerequisite"
-          name="prerequisite"
-        >
-          <UInput
-            v-model="option.prerequisite"
-            :placeholder="CLASS_FEATURE_OPTIONS_EDITOR.prerequisitePlaceholder"
-          />
-        </UFormField>
+          <UFormField
+            class="md:col-span-8"
+            :label="CLASS_FEATURE_OPTIONS_EDITOR.nameEng"
+            name="name.eng"
+          >
+            <UInput
+              v-model="option.name.eng"
+              :placeholder="CLASS_FEATURE_OPTIONS_EDITOR.nameEngPlaceholder"
+            />
+          </UFormField>
 
-        <UFormField
-          class="col-span-full"
-          :label="CLASS_FEATURE_OPTIONS_EDITOR.description"
-          name="description"
-        >
-          <MarkupEditor
-            v-model="option.description"
-            :placeholder="CLASS_FEATURE_OPTIONS_EDITOR.descriptionPlaceholder"
-          />
-        </UFormField>
-      </UForm>
+          <UFormField
+            class="md:col-span-4"
+            :label="CLASS_FEATURE_OPTIONS_EDITOR.level"
+            name="requiredClassLevel"
+          >
+            <SelectLevel v-model="option.requiredClassLevel" />
+          </UFormField>
+
+          <div
+            v-if="!isSubclass"
+            class="flex items-center gap-2 md:col-span-4 md:self-end md:pb-2"
+          >
+            <UCheckbox
+              v-model="option.hideInSubclasses"
+              :label="CLASS_FEATURE_OPTIONS_EDITOR.hideInSubclasses"
+            />
+          </div>
+
+          <UFormField
+            class="md:col-span-12"
+            :label="CLASS_FEATURE_OPTIONS_EDITOR.additional"
+            name="additional"
+          >
+            <UInput
+              v-model="option.additional"
+              :placeholder="CLASS_FEATURE_OPTIONS_EDITOR.additionalPlaceholder"
+            />
+          </UFormField>
+
+          <UFormField
+            class="md:col-span-12"
+            :label="CLASS_FEATURE_OPTIONS_EDITOR.prerequisite"
+            name="prerequisite"
+          >
+            <UInput
+              v-model="option.prerequisite"
+              :placeholder="
+                CLASS_FEATURE_OPTIONS_EDITOR.prerequisitePlaceholder
+              "
+            />
+          </UFormField>
+
+          <UFormField
+            class="col-span-full"
+            :label="CLASS_FEATURE_OPTIONS_EDITOR.description"
+            name="description"
+          >
+            <MarkupEditor
+              v-model="option.description"
+              :placeholder="CLASS_FEATURE_OPTIONS_EDITOR.descriptionPlaceholder"
+            />
+          </UFormField>
+        </UForm>
+      </div>
     </div>
   </FeatureSection>
 </template>
