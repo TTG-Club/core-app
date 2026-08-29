@@ -140,6 +140,8 @@ export const CLASS_FEATURES_EDITOR = {
   hiddenBadge: 'скрыто в подклассе',
   scalingBadge: 'рост: ',
   optionsBadge: 'вариантов: ',
+  optionsChoiceBadge: 'выбор: ',
+  optionsChoiceBadgeOf: 'из',
 
   level: 'Уровень',
   name: 'Название',
@@ -203,6 +205,41 @@ export const CLASS_FEATURE_SCALING_EDITOR = {
   descriptionPlaceholder: 'Что меняется на этом уровне',
 } as const;
 
+/** Подписи настройки выбора из вариантов умения. */
+export const CLASS_FEATURE_OPTIONS_CHOICE_EDITOR = {
+  selectable: 'Из списка выбирают',
+  selectableHint:
+    'Игрок берёт из списка столько вариантов, сколько указано ниже, и лист персонажа спрашивает его на нужном уровне. Без галочки варианты остаются справкой на странице класса.',
+  label: 'Подпись выбора',
+  labelPlaceholder: 'Пусто — название списка вариантов',
+  count: 'Сколько выбрать',
+  countHint:
+    'Сколько вариантов игрок берёт на уровне самого умения. Дальнейший рост задаётся ступенями.',
+  scalingTitle: 'Рост количества по уровням',
+  scalingHint:
+    'Ступень называет, сколько вариантов выбрано ВСЕГО к этому уровню, а не сколько добавилось: у колдуна одно воззвание с первого уровня и три со второго — значит, на втором он выбирает два новых.',
+  scalingEmpty:
+    'Количество не растёт — выбирают столько же, сколько на уровне умения.',
+  scalingLevel: 'Уровень',
+  scalingCount: 'Всего',
+  addScaling: 'Добавить ступень',
+  removeScaling: 'Убрать ступень',
+} as const;
+
+/** Границы количества выбираемых вариантов умения. */
+export const CLASS_OPTIONS_CHOICE_COUNT_BOUNDS = {
+  min: 1,
+  max: 20,
+} as const;
+
+/**
+ * Только что включённый выбор из вариантов: один вариант — так устроено
+ * большинство списков, а количество побольше автор поправит сам.
+ */
+export const CLASS_OPTIONS_CHOICE_DEFAULTS = {
+  count: 1,
+} as const;
+
 /** Подписи строки варианта умения. */
 export const CLASS_FEATURE_OPTIONS_EDITOR = {
   name: 'Название',
@@ -217,6 +254,20 @@ export const CLASS_FEATURE_OPTIONS_EDITOR = {
   prerequisitePlaceholder: 'Например: 7 уровень, заклинание «Вызов страха»',
   description: 'Описание',
   descriptionPlaceholder: 'Описание варианта',
+  unnamed: 'Без названия',
+  expand: 'Развернуть вариант',
+  collapse: 'Свернуть вариант',
+  hiddenBadge: 'скрыт в подклассе',
+} as const;
+
+/**
+ * Бейдж уровня доступа варианта в шапке свёрнутой строки: «С 5 уровня». Не
+ * «5 ур.», как у умения: там уровень получения, а здесь — с какого уровня
+ * вариант вообще можно взять.
+ */
+export const CLASS_FEATURE_OPTION_LEVEL_BADGE = {
+  prefix: 'С ',
+  suffix: ' уровня',
 } as const;
 
 /**

@@ -77,6 +77,8 @@ import {
   FEAT_SPELL_CLASS_CHOICE_KEY,
   INVENTORY_QUANTITY_MAX,
   LANGUAGE_NAME_BY_API_KEY,
+  OPTION_CHOICE_DEFAULT_COUNT,
+  OPTION_CHOICE_ID_SEGMENT,
   SHEET_FEAT_CHOICE_LABELS,
   SHEET_FEAT_MODAL_LABELS,
   SKILL_NAME_BY_API_KEY,
@@ -908,6 +910,16 @@ function toMechanicChoices(
 }
 
 /**
+ * Что нужно знать о выборе, чтобы разложить его по ступеням: одинаково у выбора
+ * в механике записи и у выбора из вариантов умения класса.
+ */
+interface ChoiceStepsSource {
+  scaling?: Array<{ level: number; count: number }> | null;
+  count?: number | null;
+  requiredLevel?: number | null;
+}
+
+/**
  * Выбор по ступеням роста: на каждый уровень — свой вопрос и своя ПРИБАВКА.
  *
  * Ступень называет, сколько всего выбрано к её уровню, а спрашивать нужно
@@ -922,7 +934,7 @@ function toMechanicChoices(
  * @returns шаги выбора: уровень и сколько на нём выбирают.
  */
 function toChoiceSteps(
-  choice: FeatChoicesResponse[number],
+  choice: ChoiceStepsSource,
 ): Array<{ level: number | null; count: number | null }> {
   const steps = (choice.scaling ?? [])
     .filter((step) => step.level > 0 && step.count > 0)
@@ -2217,11 +2229,49 @@ const renderNodeSchema = z
   .custom<RenderNode>((value) => value !== undefined)
   .catch('');
 
+/**
+ * Схема варианта умения: пул выбора собирается из подписей, а уровень варианта
+ * сужает пул — воззвание «для колдуна 5 уровня» на первом ещё не предлагают.
+ */
+const classFeatureOptionSchema = z.object({
+  key: z.string().catch(''),
+  name: z
+    .object({
+      rus: z.string().catch(''),
+      eng: z.string().catch(''),
+    })
+    .catch({ rus: '', eng: '' }),
+  requiredClassLevel: z.coerce.number().nullable().catch(null),
+});
+
+/**
+ * Схема настройки выбора из вариантов умения. Поля нет у справочных списков —
+ * такие варианты только показываются на странице класса.
+ */
+const classFeatureOptionsChoiceSchema = z
+  .object({
+    label: z.string().nullish(),
+    count: z.coerce.number().nullish(),
+    scaling: z
+      .array(
+        z.object({
+          level: z.coerce.number().catch(0),
+          count: z.coerce.number().catch(0),
+        }),
+      )
+      .nullish(),
+  })
+  .nullable()
+  .catch(null);
+
 /** Схема особенности класса в детальном ответе. */
 const classFeatureSchema = z.object({
   key: z.string().catch(''),
   level: z.coerce.number().catch(1),
   name: z.string().catch(''),
+  optionsName: z.string().nullish(),
+  options: z.array(classFeatureOptionSchema).nullable().catch(null),
+  optionsChoice: classFeatureOptionsChoiceSchema,
   description: renderNodeSchema,
   isSubclass: z.boolean().catch(false),
   fightingStyleChoice: z.boolean().catch(false),
@@ -2382,6 +2432,102 @@ function toStartingEquipmentOptions(input: unknown): StartingEquipmentOption[] {
   );
 }
 
+/**
+ * Выбор из списка вариантов умения: воззвания колдуна, манёвры воина,
+ * метамагия чародея.
+ *
+ * Пул — сами варианты умения, а не второй список в механике: варианты уже
+ * набраны для страницы класса, и копия разошлась бы с ними при первой правке.
+ * Уровень варианта сужает пул на низких уровнях класса, а количество растёт
+ * ступенями — тем же разбором, что у выбора в механике: ступень называет, сколько
+ * выбрано ВСЕГО к её уровню, а спрашивается разница с предыдущей.
+ *
+ * Справочный список выбором не становится: без настройки варианты только
+ * показываются на странице класса, как и было до её появления.
+ *
+ * @param feature умение из детального ответа класса.
+ * @param featureId идентификатор умения на листе.
+ * @returns ступени выбора; пусто — список справочный либо пуст.
+ */
+function toFeatureOptionChoices(
+  feature: z.infer<typeof classFeatureSchema>,
+  featureId: string,
+): ClassChoice[] {
+  const choice = feature.optionsChoice;
+
+  if (!choice) {
+    return [];
+  }
+
+  // Подпись варианта и есть значение пикера, а ключ нужен потребителю ответа:
+  // вариант без подписи выбрать нельзя, поэтому такие в пул не идут
+  const options = (feature.options ?? []).flatMap((option) => {
+    const name = option.name.rus || option.name.eng;
+
+    return name
+      ? [
+          {
+            name,
+            value: option.key || name,
+            level: option.requiredClassLevel ?? 0,
+          },
+        ]
+      : [];
+  });
+
+  if (!options.length) {
+    return [];
+  }
+
+  const label =
+    choice.label?.trim()
+    || feature.optionsName?.trim()
+    || SHEET_FEAT_CHOICE_LABELS.option
+    || '';
+
+  // Ключ списка общий у всех ступеней: по нему мастер не предлагает второй раз
+  // то, что игрок уже взял на предыдущей ступени
+  const poolKey = `${featureId}:${OPTION_CHOICE_ID_SEGMENT}`;
+
+  const listed = options.map((option) => option.name);
+
+  const optionValues = Object.fromEntries(
+    options.map((option) => [option.name, option.value]),
+  );
+
+  const optionRequiredLevels = Object.fromEntries(
+    options.flatMap((option) =>
+      option.level > 0 ? [[option.name, option.level]] : [],
+    ),
+  );
+
+  return toChoiceSteps(choice).flatMap((step) => {
+    const count = step.count ?? OPTION_CHOICE_DEFAULT_COUNT;
+
+    if (count <= 0) {
+      return [];
+    }
+
+    return [
+      {
+        // Уровень ступени уходит в идентификатор: иначе ответы разных уровней
+        // склеились бы в один. Через дефис, а не двоеточие: на записи умения
+        // ответ лежит хвостом идентификатора, и уровень отдельным сегментом
+        // совпал бы с ключом выбора механики того же уровня
+        id: step.level ? `${poolKey}-${step.level}` : poolKey,
+        kind: 'option',
+        label,
+        count,
+        listed,
+        optionValues,
+        optionRequiredLevels,
+        poolKey,
+        requiredLevel: step.level,
+      },
+    ];
+  });
+}
+
 /** Схема детального ответа класса или подкласса (нужные листу поля). */
 const classDetailSchema = z.object({
   url: z.string(),
@@ -2435,10 +2581,15 @@ function toClassSummary(
   const features: ClassFeatureSummary[] = detail.features.map((feature) => {
     const featureId = getClassFeatureId(detail.url, feature.key);
 
-    const allChoices = withSpellClassChoice(
-      toMechanicChoices(feature.mechanics?.choices ?? [], featureId),
-      featureId,
-    );
+    const allChoices = [
+      ...withSpellClassChoice(
+        toMechanicChoices(feature.mechanics?.choices ?? [], featureId),
+        featureId,
+      ),
+      // Выбор из вариантов умения идёт рядом с выборами механики, а не вместо
+      // них: умение может и выдавать владение, и давать выбрать манёвр
+      ...toFeatureOptionChoices(feature, featureId),
+    ];
 
     // Выборы черты живут отдельно от остальных: их спрашивает пикер каталога
     // черт, а у умения с флагами прежних лет они собираются по флагам, когда

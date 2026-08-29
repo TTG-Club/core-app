@@ -6,7 +6,9 @@ import { createGrantRow, getTakenChoiceKeys } from '~feats/model';
 
 import {
   ABILITY_IMPROVEMENT_FEAT_CATEGORIES,
+  CLASS_FEATURE_OPTION_LEVEL_BADGE,
   CLASS_FEATURES_EDITOR,
+  CLASS_OPTIONS_CHOICE_DEFAULTS,
   FIGHTING_STYLE_FEAT_CATEGORY,
   GENERAL_FEAT_CATEGORY,
   LEGACY_FEATURE_ROWS,
@@ -171,6 +173,49 @@ export function getClassFeatureFilledBlocksCount(
     feature.mechanics?.spellList.groups.length ?? 0,
     feature.activeEffects.length,
   ].filter(Boolean).length;
+}
+
+/**
+ * Подпись бейджа выбираемого списка вариантов: сколько из скольких берут и до
+ * скольких это число дорастает. Справочный список бейджа с выбором не получает
+ * — там важна только длина списка.
+ *
+ * @param feature умение из состояния формы.
+ * @returns подпись бейджа; пусто — список только справочный.
+ */
+export function getClassFeatureOptionsChoiceBadge(
+  feature: ClassFeatureCreate,
+): string {
+  const choice = feature.optionsChoice;
+
+  if (!choice) {
+    return '';
+  }
+
+  const steps = choice.scaling.map((step) => step.count);
+
+  const start = choice.count ?? steps[0] ?? CLASS_OPTIONS_CHOICE_DEFAULTS.count;
+  const total = Math.max(start, ...steps);
+  const range = total > start ? `${start}–${total}` : `${start}`;
+
+  return `${CLASS_FEATURES_EDITOR.optionsChoiceBadge}${range} ${CLASS_FEATURES_EDITOR.optionsChoiceBadgeOf} ${feature.options.length}`;
+}
+
+/**
+ * Подпись уровня в шапке свёрнутого варианта: с какого уровня класса вариант
+ * доступен.
+ *
+ * @param level уровень доступа варианта.
+ * @returns подпись бейджа; `undefined` — вариант доступен сразу, и бейджа нет.
+ */
+export function getClassFeatureOptionLevelBadge(
+  level: number | undefined,
+): string | undefined {
+  if (!level) {
+    return undefined;
+  }
+
+  return `${CLASS_FEATURE_OPTION_LEVEL_BADGE.prefix}${level}${CLASS_FEATURE_OPTION_LEVEL_BADGE.suffix}`;
 }
 
 /**

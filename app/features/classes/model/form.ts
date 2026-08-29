@@ -5,6 +5,7 @@ import type {
   ClassColumnCreate,
   ClassCreate,
   ClassFeatureCreate,
+  ClassFeatureOptionsChoiceCreate,
 } from './create';
 
 import { z } from 'zod';
@@ -55,6 +56,70 @@ const featureSchema = z.object({
     })
     .nullish(),
 });
+
+/**
+ * Настройка выбора из вариантов умения. Поля нет у записей, сохранённых до её
+ * появления, и у умений, список вариантов которых остаётся справочным.
+ */
+const optionsChoiceSchema = z.object({
+  label: z.string().nullish(),
+  count: z.coerce.number().nullish(),
+  scaling: z
+    .array(
+      z.object({
+        level: z.coerce.number(),
+        count: z.coerce.number(),
+      }),
+    )
+    .nullish(),
+});
+
+/**
+ * Разбирает настройку выбора из вариантов умения.
+ *
+ * @param raw сырое значение из ответа сервера.
+ * @returns настройка выбора; `undefined` — список только справочный.
+ */
+function parseOptionsChoice(
+  raw: unknown,
+): ClassFeatureOptionsChoiceCreate | undefined {
+  const parsed = optionsChoiceSchema.safeParse(raw);
+
+  if (!parsed.success) {
+    return undefined;
+  }
+
+  return {
+    label: parsed.data.label ?? undefined,
+    count: parsed.data.count ?? undefined,
+    scaling: (parsed.data.scaling ?? []).map((step) => ({
+      level: step.level,
+      count: step.count,
+    })),
+  };
+}
+
+/**
+ * Готовит настройку выбора к отправке: пустая подпись и пустые ступени в теле
+ * запроса не нужны, а сама настройка уходит целиком — по её наличию потребитель
+ * и отличает выбираемый список от справочного.
+ *
+ * @param choice настройка выбора из состояния формы.
+ * @returns настройка для тела запроса.
+ */
+function transformOptionsChoice(
+  choice: ClassFeatureOptionsChoiceCreate | undefined,
+): ClassFeatureOptionsChoiceCreate | undefined {
+  if (!choice) {
+    return undefined;
+  }
+
+  return {
+    label: choice.label?.trim() || undefined,
+    count: choice.count,
+    scaling: choice.scaling.filter((step) => step.level > 0 && step.count > 0),
+  };
+}
 
 /**
  * Проверяет, что значение — объект: у полей, которые схема не описывает
@@ -140,6 +205,7 @@ function parseFeature(raw: unknown): Record<string, unknown> {
     informationalOnly: legacy.informationalOnly ?? false,
     scaling: Array.isArray(source.scaling) ? source.scaling : [],
     options: Array.isArray(source.options) ? source.options : [],
+    optionsChoice: parseOptionsChoice(source.optionsChoice),
     // Блок выбора навыков уехал в строки даров и в состоянии формы не живёт
     skillChoice: undefined,
     ...holder,
@@ -189,6 +255,7 @@ function transformFeature(feature: ClassFeatureCreate): ClassFeatureCreate {
   return {
     ...feature,
     ...flags,
+    optionsChoice: transformOptionsChoice(feature.optionsChoice),
     mechanics: buildMechanics(feature),
     activeEffects: normalizeActiveEffects(feature.activeEffects),
     editorRows: undefined,

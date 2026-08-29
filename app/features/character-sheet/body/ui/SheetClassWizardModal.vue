@@ -63,6 +63,7 @@
     getOwnedWeaponNames,
     getRequiredChoiceCount,
     getSelectedCasterType,
+    getTakenOptionValues,
     getToolNames,
     getUnmetMulticlassRequirements,
     LANGUAGE_PROFICIENCY_GROUPS,
@@ -458,45 +459,6 @@
     ].filter((choice): choice is ClassChoice => choice !== null);
   });
 
-  /** Опции пикера выбора в зависимости от его типа. */
-  function choiceOptions(choice: ClassChoice): string[] {
-    return resolveChoiceOptions(choice, {
-      skillNames: skillNames.value,
-      proficientSkillNames: proficientSkillNames.value,
-      chosenProficientSkills: selections.value['class-skills'] ?? [],
-      knownLanguages: character.value.proficiencies.languages,
-      knownTools: getToolNames(character.value.proficiencies.tools),
-      allLanguages: allLanguages.value,
-      // Опции выбора инструмента — из каталога сайта, сузженные до групп,
-      // названных в прозе («один вид ремесленных инструментов»).
-      allTools: getToolNamesForGroups(choice.toolGroups),
-      // Пул оружейного приёма — оружие во владении: приём даётся только
-      // знакомому оружию.
-      ownedWeaponNames: getOwnedWeaponNames(character.value),
-      proficientSavingThrowNames: character.value.savingThrows
-        .filter((savingThrow) => savingThrow.proficient)
-        .map((savingThrow) => ABILITY_LABELS[savingThrow.key]),
-    });
-  }
-
-  /** Пометки опций: навыки, которыми персонаж уже владеет. */
-  function choiceHints(choice: ClassChoice): Record<string, string> {
-    return getChoiceSkillHints(choice, character.value.skills);
-  }
-
-  /** Требуемое число опций: не больше, чем доступно в списке выбора. */
-  function choiceCount(choice: ClassChoice): number {
-    return getRequiredChoiceCount(choice, choiceOptions(choice));
-  }
-
-  /** Обновление выбора с ограничением по требуемому количеству. */
-  function updateSelection(choice: ClassChoice, values: string[]): void {
-    selections.value = {
-      ...selections.value,
-      [choice.id]: values.slice(0, choiceCount(choice)),
-    };
-  }
-
   const featureRows = computed(() => {
     const base = classDetail.value;
 
@@ -567,6 +529,58 @@
 
     return rows;
   });
+
+  /** Все выборы мастера: по ним считается, что уже взято из общего списка. */
+  const allChoices = computed<ClassChoice[]>(() => [
+    ...classChoices.value,
+    ...featureRows.value.flatMap((row) => row.choiceControls),
+  ]);
+
+  /** Опции пикера выбора в зависимости от его типа. */
+  function choiceOptions(choice: ClassChoice): string[] {
+    return resolveChoiceOptions(choice, {
+      skillNames: skillNames.value,
+      proficientSkillNames: proficientSkillNames.value,
+      chosenProficientSkills: selections.value['class-skills'] ?? [],
+      knownLanguages: character.value.proficiencies.languages,
+      knownTools: getToolNames(character.value.proficiencies.tools),
+      allLanguages: allLanguages.value,
+      // Опции выбора инструмента — из каталога сайта, сузженные до групп,
+      // названных в прозе («один вид ремесленных инструментов»).
+      allTools: getToolNamesForGroups(choice.toolGroups),
+      // Пул оружейного приёма — оружие во владении: приём даётся только
+      // знакомому оружию.
+      ownedWeaponNames: getOwnedWeaponNames(character.value),
+      proficientSavingThrowNames: character.value.savingThrows
+        .filter((savingThrow) => savingThrow.proficient)
+        .map((savingThrow) => ABILITY_LABELS[savingThrow.key]),
+      // Варианты, взятые на других ступенях того же списка: одно и то же
+      // воззвание по правилам дважды не берут
+      takenOptionValues: getTakenOptionValues(
+        choice,
+        allChoices.value,
+        selections.value,
+      ),
+    });
+  }
+
+  /** Пометки опций: навыки, которыми персонаж уже владеет. */
+  function choiceHints(choice: ClassChoice): Record<string, string> {
+    return getChoiceSkillHints(choice, character.value.skills);
+  }
+
+  /** Требуемое число опций: не больше, чем доступно в списке выбора. */
+  function choiceCount(choice: ClassChoice): number {
+    return getRequiredChoiceCount(choice, choiceOptions(choice));
+  }
+
+  /** Обновление выбора с ограничением по требуемому количеству. */
+  function updateSelection(choice: ClassChoice, values: string[]): void {
+    selections.value = {
+      ...selections.value,
+      [choice.id]: values.slice(0, choiceCount(choice)),
+    };
+  }
 
   /**
    * Требование мультиклассирования: 13 в ключевых характеристиках класса

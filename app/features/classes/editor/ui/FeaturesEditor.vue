@@ -12,6 +12,7 @@
     CLASS_LEVEL_BOUNDS,
     getClassFeatureFilledBlocksCount,
     getClassFeatureLevelBadge,
+    getClassFeatureOptionsChoiceBadge,
   } from '../../model';
   import {
     FeatureAbilityBonus,
@@ -42,12 +43,13 @@
 
   const model = defineModel<Array<ClassFeatureCreate>>({ required: true });
 
-  /**
-   * Раскрытые умения — по их индексу. Свой список, а не аккордеон: кнопка
-   * удаления обязана лежать РЯДОМ с раскрывающим триггером, а не внутри него,
-   * иначе удалить умение можно только развернув его.
-   */
-  const expanded = ref<Set<number>>(new Set());
+  const {
+    isExpanded,
+    toggle: toggleFeature,
+    expand,
+    dropRow,
+    getToggleIcon,
+  } = useExpandedRows();
 
   /** Индекс умения, удаление которого ждёт подтверждения. */
   const pendingRemoval = ref<number | undefined>(undefined);
@@ -80,49 +82,13 @@
       fightingStyleChoice: false,
       scaling: [],
       options: [],
+      optionsChoice: undefined,
       abilityBonus: undefined,
       informationalOnly: false,
       mechanics: createFeatMechanics(),
       activeEffects: [],
       editorRows: createFeatEditorRows(),
     };
-  }
-
-  /**
-   * Пересдвигает индексы набора после удаления строки: без этого раскрытым
-   * оказалось бы соседнее умение.
-   *
-   * @param indexes набор индексов строк.
-   * @param removed индекс удалённой строки.
-   * @returns новый набор со сдвинутыми индексами.
-   */
-  function shiftIndexes(indexes: Set<number>, removed: number): Set<number> {
-    return new Set(
-      [...indexes]
-        .filter((position) => position !== removed)
-        .map((position) => (position > removed ? position - 1 : position)),
-    );
-  }
-
-  /**
-   * Раскрыто ли умение.
-   *
-   * @param index позиция умения в списке.
-   * @returns `true`, когда тело строки развёрнуто.
-   */
-  function isExpanded(index: number): boolean {
-    return expanded.value.has(index);
-  }
-
-  /**
-   * Значок кнопки свёртки. Функцией, а не вычисляемым свойством: состояние
-   * своё у каждой строки списка.
-   *
-   * @param index позиция умения в списке.
-   * @returns имя значка.
-   */
-  function getToggleIcon(index: number): string {
-    return isExpanded(index) ? 'tabler:chevron-up' : 'tabler:chevron-down';
   }
 
   /**
@@ -135,21 +101,6 @@
     return isExpanded(index)
       ? CLASS_FEATURES_EDITOR.collapse
       : CLASS_FEATURES_EDITOR.expand;
-  }
-
-  /**
-   * Разворачивает или сворачивает умение.
-   *
-   * @param index позиция умения в списке.
-   */
-  function toggleFeature(index: number): void {
-    const next = new Set(expanded.value);
-
-    if (!next.delete(index)) {
-      next.add(index);
-    }
-
-    expanded.value = next;
   }
 
   /**
@@ -179,11 +130,21 @@
     }
 
     if (feature.options.length) {
-      badges.push({
-        key: 'options',
-        label: `${CLASS_FEATURES_EDITOR.optionsBadge}${feature.options.length}`,
-        color: 'neutral',
-      });
+      // Выбираемый список читается по бейджу иначе, чем справочный: у первого
+      // важно, сколько из скольких берут, у второго — только длина списка
+      badges.push(
+        feature.optionsChoice
+          ? {
+              key: 'options',
+              label: getClassFeatureOptionsChoiceBadge(feature),
+              color: 'primary',
+            }
+          : {
+              key: 'options',
+              label: `${CLASS_FEATURES_EDITOR.optionsBadge}${feature.options.length}`,
+              color: 'neutral',
+            },
+      );
     }
 
     if (feature.informationalOnly) {
@@ -224,7 +185,7 @@
 
     model.value = [...model.value, getEmptyFeature()];
 
-    expanded.value = new Set([...expanded.value, addedIndex]);
+    expand(addedIndex);
   }
 
   /**
@@ -247,7 +208,7 @@
     }
 
     model.value = model.value.filter((_, position) => position !== index);
-    expanded.value = shiftIndexes(expanded.value, index);
+    dropRow(index);
   }
 </script>
 
@@ -288,13 +249,15 @@
         :key="index"
         class="rounded-lg border border-default bg-elevated/20"
       >
-        <div class="flex items-center gap-2 px-3 py-2">
+        <div class="relative flex items-center gap-2 px-3 py-2">
           <!-- Плашка разворачивает умение целиком: попадать значком в конце
             строки приходилось прицельно. Кнопки лежат рядом с ней, а не
-            внутри: кнопка внутри кнопки недопустима -->
+            внутри: кнопка внутри кнопки недопустима, поэтому нажатие ловит
+            накладка — псевдоэлемент кнопки во всю шапку, — а сами кнопки
+            подняты над накладкой `relative` -->
           <button
             type="button"
-            class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left"
+            class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left before:absolute before:inset-0"
             :aria-expanded="isExpanded(index)"
             @click.left.exact.prevent="toggleFeature(index)"
           >
@@ -328,6 +291,7 @@
             color="error"
             variant="ghost"
             size="xs"
+            class="relative"
             :aria-label="CLASS_FEATURES_EDITOR.remove"
             @click.left.exact.prevent="askRemoveFeature(index)"
           />
@@ -337,6 +301,7 @@
             color="neutral"
             variant="ghost"
             size="xs"
+            class="relative"
             :aria-label="getToggleLabel(index)"
             @click.left.exact.prevent="toggleFeature(index)"
           />
@@ -441,6 +406,7 @@
 
             <FeatureOptions
               v-model="feature.options"
+              v-model:choice="feature.optionsChoice"
               :is-subclass="isSubclass"
             />
 
