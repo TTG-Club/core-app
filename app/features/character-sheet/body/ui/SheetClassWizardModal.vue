@@ -651,6 +651,14 @@
 
   // ── Разделы второго шага ─────────────────────────────────────
 
+  /**
+   * Оформление блока внутри раздела. Хиты, владения и выборы шли подряд без
+   * рамок и сливались в одну простыню, хотя это три разных разговора; рамка та
+   * же, что у карточек умений ниже, — по ней раздел и читается блоками.
+   */
+  const REVIEW_SECTION_CLASS =
+    'flex flex-col gap-2 rounded-lg border border-default/50 bg-elevated/20 p-3';
+
   const reviewTab = ref<ClassWizardTab>('overview');
 
   /**
@@ -1546,65 +1554,67 @@
             каждом переключении вкладки -->
           <div class="flex min-h-56 flex-col gap-3">
             <template v-if="reviewTab === 'overview'">
-              <div class="flex flex-wrap gap-4">
-                <div class="flex flex-col gap-1">
-                  <span
-                    class="text-[10px] font-bold tracking-wider text-muted uppercase"
-                  >
-                    Кость хитов
-                  </span>
-
-                  <span class="text-sm font-medium text-highlighted">
-                    {{ hitDieLabel }}
-                  </span>
-                </div>
-
-                <div class="flex flex-col gap-1">
-                  <span
-                    class="text-[10px] font-bold tracking-wider text-muted uppercase"
-                  >
-                    Хиты
-                  </span>
-
-                  <span class="text-sm font-medium text-highlighted">
-                    {{ maxHitPointsPreview }}
-                  </span>
-                </div>
-
-                <div
-                  v-if="!isAddMode"
-                  class="flex flex-col gap-1"
-                >
-                  <span
-                    class="text-[10px] font-bold tracking-wider text-muted uppercase"
-                  >
-                    Спасброски
-                  </span>
-
-                  <div class="flex flex-wrap gap-2">
-                    <UBadge
-                      v-for="label in savingThrowLabels"
-                      :key="label"
-                      size="lg"
-                      color="primary"
-                      variant="subtle"
-                    >
-                      {{ label }}
-                    </UBadge>
-
+              <div :class="REVIEW_SECTION_CLASS">
+                <div class="flex flex-wrap gap-4">
+                  <div class="flex flex-col gap-1">
                     <span
-                      v-if="!savingThrowLabels.length"
-                      class="text-sm text-dimmed italic"
+                      class="text-[10px] font-bold tracking-wider text-muted uppercase"
                     >
-                      {{ classDetail?.savingThrowsText || 'не распознаны' }}
+                      Кость хитов
                     </span>
+
+                    <span class="text-sm font-medium text-highlighted">
+                      {{ hitDieLabel }}
+                    </span>
+                  </div>
+
+                  <div class="flex flex-col gap-1">
+                    <span
+                      class="text-[10px] font-bold tracking-wider text-muted uppercase"
+                    >
+                      Хиты
+                    </span>
+
+                    <span class="text-sm font-medium text-highlighted">
+                      {{ maxHitPointsPreview }}
+                    </span>
+                  </div>
+
+                  <div
+                    v-if="!isAddMode"
+                    class="flex flex-col gap-1"
+                  >
+                    <span
+                      class="text-[10px] font-bold tracking-wider text-muted uppercase"
+                    >
+                      Спасброски
+                    </span>
+
+                    <div class="flex flex-wrap gap-2">
+                      <UBadge
+                        v-for="label in savingThrowLabels"
+                        :key="label"
+                        size="lg"
+                        color="primary"
+                        variant="subtle"
+                      >
+                        {{ label }}
+                      </UBadge>
+
+                      <span
+                        v-if="!savingThrowLabels.length"
+                        class="text-sm text-dimmed italic"
+                      >
+                        {{ classDetail?.savingThrowsText || 'не распознаны' }}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               <div
                 v-if="multiclassProficiencyRows.length"
-                class="flex flex-col gap-2 rounded-md bg-elevated/40 p-3"
+                :class="REVIEW_SECTION_CLASS"
               >
                 <span
                   class="text-[10px] font-bold tracking-wider text-muted uppercase"
@@ -1629,7 +1639,7 @@
 
               <div
                 v-else-if="proficiencyChips.length"
-                class="flex flex-col gap-1"
+                :class="REVIEW_SECTION_CLASS"
               >
                 <span
                   class="text-[10px] font-bold tracking-wider text-muted uppercase"
@@ -1652,7 +1662,7 @@
 
               <div
                 v-if="classChoices.length"
-                class="flex flex-col gap-3"
+                :class="REVIEW_SECTION_CLASS"
               >
                 <span
                   class="text-[10px] font-bold tracking-wider text-muted uppercase"

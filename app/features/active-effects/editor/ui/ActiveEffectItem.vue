@@ -41,6 +41,14 @@
   import EffectDamageParts from './EffectDamageParts.vue';
   import EffectFlags from './EffectFlags.vue';
 
+  const { hideCombat = false } = defineProps<{
+    /**
+     * Скрыть вкладку «Боевая механика»: лист персонажа её не применяет, и
+     * заполнять там нечего.
+     */
+    hideCombat?: boolean;
+  }>();
+
   const model = defineModel<ActiveEffect>({ required: true });
 
   // Заполняет форму данными стандартного состояния D&D 5e, сохраняя id и
@@ -86,10 +94,24 @@
     model.value = { ...model.value, description: generatedDescription.value };
   }
 
-  const tabItems = [
-    { label: ACTIVE_EFFECT_LABELS.tabGeneral, slot: 'general' as const },
-    { label: ACTIVE_EFFECT_LABELS.tabCombat, slot: 'combat' as const },
-  ];
+  /**
+   * Боевая механика — броски, ауры и триггеры — считается мастерским
+   * инструментом: лист персонажа её не применяет, и вкладка там только сбивает.
+   */
+  const tabItems = computed(() => {
+    const items = [
+      { label: ACTIVE_EFFECT_LABELS.tabGeneral, slot: 'general' as const },
+    ];
+
+    if (hideCombat) {
+      return items;
+    }
+
+    return [
+      ...items,
+      { label: ACTIVE_EFFECT_LABELS.tabCombat, slot: 'combat' as const },
+    ];
+  });
 
   const hasDurationValue = computed(() =>
     EFFECT_DURATION_WITH_VALUE.includes(model.value.duration.type),

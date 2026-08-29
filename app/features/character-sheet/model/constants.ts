@@ -4655,7 +4655,7 @@ export const SHEET_TAB_EMPTY_LABELS: Record<
   equipment: 'Инвентарь пуст',
   spells: 'Книга заклинаний пуста',
   features: 'Нет особенностей',
-  effects: 'Нет наложенных эффектов',
+  effects: 'Эффектов нет — ни наложенных, ни от умений и снаряжения',
   notes: 'Нет заметок',
 };
 
@@ -4734,14 +4734,6 @@ export const LEVEL_UP_WIZARD_LABELS: Record<
 
 /** Подписи вкладки «Эффекты». */
 export const SHEET_EFFECT_LABELS = {
-  ownTitle: 'Наложенные эффекты',
-  ownEmpty:
-    'Нет наложенных эффектов. Добавьте эффект или состояние — лист учтёт их '
-    + 'в режиме броска: преимущество, помеха, автопровал.',
-  equipmentTitle: 'От снаряжения',
-  equipmentEmpty: 'Надетое снаряжение эффектов не даёт',
-  featureTitle: 'От умений и черт',
-  featureEmpty: 'Умения, черты, вид и класс эффектов не дают',
   conditionsTitle: 'Состояния',
   add: 'Добавить эффект',
   edit: 'Редактировать эффект',
@@ -4760,6 +4752,35 @@ export const SHEET_EFFECT_LABELS = {
 
 /** Иконка эффекта, у которого своя не задана. */
 export const SHEET_EFFECT_FALLBACK_ICON = 'tabler:sparkles';
+
+/**
+ * Откуда эффект пришёл на лист. Тремя списками подряд они читались плохо: у
+ * пустого листа это три пустые рамки подряд, а у заполненного одно и то же
+ * приходится искать в трёх местах. Список один, а источник — чип отбора.
+ */
+export const EFFECT_SOURCE_GROUP_ORDER = [
+  'own',
+  'feature',
+  'equipment',
+] as const;
+
+/** Источник эффекта на листе. */
+export type EffectSourceGroup = (typeof EFFECT_SOURCE_GROUP_ORDER)[number];
+
+/** Подписи источников: ими же подписаны чипы отбора. */
+export const EFFECT_SOURCE_GROUP_LABELS: Record<EffectSourceGroup, string> = {
+  own: 'Наложенные',
+  feature: 'Умения и черты',
+  equipment: 'Снаряжение',
+};
+
+/** Пояснения к чипам отбора: чем этот источник отличается от прочих. */
+export const EFFECT_SOURCE_GROUP_HINTS: Record<EffectSourceGroup, string> = {
+  own: 'Состояния и свои эффекты — их накладывают и снимают вручную',
+  feature:
+    'Приходят с умением, чертой, видом или классом — снять нельзя, можно выключить',
+  equipment: 'Дают надетые предметы — снимаются вместе с предметом',
+};
 
 /** Подписи вкладки «Заметки» и модалки заметки. */
 export const SHEET_NOTE_LABELS: Record<

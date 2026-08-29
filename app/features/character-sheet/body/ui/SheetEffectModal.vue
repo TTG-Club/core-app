@@ -51,7 +51,10 @@
     :ui="{ content: 'sm:max-w-5xl' }"
   >
     <template #body>
-      <ActiveEffectItem v-model="draft" />
+      <ActiveEffectItem
+        v-model="draft"
+        hide-combat
+      />
     </template>
 
     <template #footer>
