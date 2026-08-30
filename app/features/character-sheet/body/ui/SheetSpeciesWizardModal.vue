@@ -21,6 +21,7 @@
     buildCharacterFeatures,
     collectChosenProficiencies,
     collectSpeciesProficiencies,
+    CURRENT_SELECTION_LABELS,
     CUSTOM_SPECIES_LABELS,
     detectFeatureChoice,
     FEATURE_ORIGIN_LABELS,
@@ -47,6 +48,7 @@
     unionToolProficiencies,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
+  import SheetCurrentSelectionPanel from './SheetCurrentSelectionPanel.vue';
   import SheetCustomSpeciesModal from './SheetCustomSpeciesModal.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
 
@@ -81,7 +83,7 @@
 
   const overlay = useOverlay();
 
-  const { character, setSpecies } = useCharacterSheet();
+  const { character, setSpecies, removeSpecies } = useCharacterSheet();
 
   // Дровер описания вида с сайта; без destroyOnClose — повторный open()
   // после закрытия иначе падает («Overlay not found»).
@@ -656,6 +658,26 @@
     emit('close');
   }
 
+  /** Название уже взятого вида с подвидом; пусто — вида на листе нет. */
+  const currentSpeciesLabel = computed(() => {
+    const species = character.value.species;
+
+    if (!species) {
+      return '';
+    }
+
+    return species.lineageName
+      ? `${species.name} (${species.lineageName})`
+      : species.name;
+  });
+
+  /** Снимает вид и закрывает мастер: брать новый взамен необязательно. */
+  function handleRemoveSpecies() {
+    removeSpecies();
+
+    emit('close');
+  }
+
   function handleCancel() {
     emit('close');
   }
@@ -669,6 +691,19 @@
     <template #body>
       <div class="flex min-h-48 flex-col gap-4">
         <template v-if="step === 'species'">
+          <!-- Что уже взято и как это снять: выбирать новый вид взамен
+          необязательно -->
+          <SheetCurrentSelectionPanel
+            v-if="currentSpeciesLabel"
+            :title="CURRENT_SELECTION_LABELS.species.title"
+            :name="currentSpeciesLabel"
+            :remove-label="CURRENT_SELECTION_LABELS.species.remove"
+            :remove-description="
+              CURRENT_SELECTION_LABELS.species.removeDescription
+            "
+            @remove="handleRemoveSpecies"
+          />
+
           <SheetSearchInput
             v-model="searchTerm"
             :placeholder="SHEET_SEARCH_LABELS.byNamePlaceholder"

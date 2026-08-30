@@ -15,6 +15,7 @@ export { default as SheetClassResourcesPanel } from './SheetClassResourcesPanel.
 export { default as SheetClassWizardModal } from './SheetClassWizardModal.vue';
 export { default as SheetCurrencyModal } from './SheetCurrencyModal.vue';
 export { default as SheetCurrencyRow } from './SheetCurrencyRow.vue';
+export { default as SheetCurrentSelectionPanel } from './SheetCurrentSelectionPanel.vue';
 export { default as SheetCustomBackgroundModal } from './SheetCustomBackgroundModal.vue';
 export { default as SheetCustomBonusRows } from './SheetCustomBonusRows.vue';
 export { default as SheetCustomBonusSection } from './SheetCustomBonusSection.vue';

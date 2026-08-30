@@ -1,6 +1,7 @@
 import type { DropdownMenuItem } from '@nuxt/ui';
 
 import type { AbilityKey as ApiAbilityKey, Level } from '~/shared/types';
+import type { FeatureOptionEntry } from '~classes/model';
 import type { MagicItemBonuses } from '~magic-items/model';
 import type { RenderNode } from '~ui/markup';
 
@@ -288,6 +289,7 @@ import {
   FEAT_GRANTED_SPEED_KEYS,
   FEAT_RESOURCE_ID_PREFIX,
   FEAT_SPEED_EQUALS_WALK_KEYS,
+  FEATURE_OPTION_ID_SEGMENT,
   FEATURE_ORIGIN_GROUP_ORDER,
   FEATURE_ORIGIN_LABELS,
   FIGHTING_STYLE_CHOICE_LABEL,
@@ -370,6 +372,7 @@ import {
   ROLL_MODE_DICE_SUFFIX,
   SAVING_THROW_PROFICIENCY_LABELS,
   SHEET_ABILITY_SETTINGS_LABELS,
+  SHEET_CHOICE_OPTIONS_LABELS,
   SHEET_COPY_LIMIT_HINT,
   SHEET_DOWNLOAD_JSON_LABEL,
   SHEET_DOWNLOAD_PDF_HINT,
@@ -2316,28 +2319,34 @@ function getStartingEquipmentItemName(item: StartingEquipmentItem): string {
 }
 
 /**
- * Подпись варианта стартового снаряжения: предметы с количеством и монеты в
- * конце — ровно то, что попадёт на лист при выборе этого варианта.
+ * Подпись позиции варианта стартового снаряжения с количеством
+ * («Кинжал ×2»): ею подписан отдельный предмет в карточке варианта.
+ *
+ * @param item позиция варианта стартового снаряжения.
+ * @returns название с количеством, если его больше одного.
+ */
+export function getStartingEquipmentItemLabel(
+  item: StartingEquipmentItem,
+): string {
+  const name = getStartingEquipmentItemName(item);
+
+  return item.quantity > 1
+    ? `${name} ${STARTING_EQUIPMENT_LABELS.quantityPrefix}${item.quantity}`
+    : name;
+}
+
+/**
+ * Подпись монет варианта стартового снаряжения («100 ЗМ»).
  *
  * @param option вариант стартового снаряжения.
- * @returns перечисление через запятую.
+ * @returns подпись монет; пусто — монет вариант не даёт.
  */
-export function getStartingEquipmentSummary(
+export function getStartingEquipmentCoinsLabel(
   option: StartingEquipmentOption,
 ): string {
-  const parts = option.items.map((item) => {
-    const name = getStartingEquipmentItemName(item);
-
-    return item.quantity > 1
-      ? `${name} ${STARTING_EQUIPMENT_LABELS.quantityPrefix}${item.quantity}`
-      : name;
-  });
-
-  if (option.coins > 0) {
-    parts.push(`${option.coins} ${CURRENCY_LABELS[option.coinKey]}`);
-  }
-
-  return parts.join(', ') || STARTING_EQUIPMENT_LABELS.emptyOptionDescription;
+  return option.coins > 0
+    ? `${option.coins} ${CURRENCY_LABELS[option.coinKey]}`
+    : '';
 }
 
 /**
@@ -8718,7 +8727,7 @@ function isRevoked(
  * @param next журнал выдач после изменения.
  * @returns навыки с уровнями, согласованными с журналом.
  */
-function applyGrantedSkills(
+export function applyGrantedSkills(
   skills: CharacterSkill[],
   previous: ProficiencyGrant[],
   next: ProficiencyGrant[],
@@ -10380,6 +10389,66 @@ function getOptionChoiceText(
 }
 
 /**
+ * Записи листа под выбранные варианты умения: воззвание колдуна, метамагия
+ * чародея, манёвр мастера боевых искусств.
+ *
+ * Отдельной записью, а не одной строкой выбора у самого умения: у варианта своё
+ * описание с правилами, и в списке особенностей игрок читает именно его. Запись
+ * лежит под идентификатором умения, поэтому снятие класса забирает и её.
+ *
+ * @param classUrl URL класса, который даёт умение.
+ * @param summary умение класса или подкласса.
+ * @param originName название источника — класса или подкласса.
+ * @param answers ответы игрока; не заданы — вариантов не выбирали.
+ * @returns записи выбранных вариантов; пусто — выбора не было.
+ */
+function buildFeatureOptionFeatures(
+  classUrl: string,
+  summary: ClassFeatureSummary,
+  originName: string,
+  answers: ClassFeatureAnswers | undefined,
+): CharacterFeature[] {
+  if (!answers) {
+    return [];
+  }
+
+  // Один и тот же вариант на разных ступенях выбора даёт одну запись
+  const chosen = new Map<string, FeatureOptionEntry>();
+
+  for (const choice of summary.choices) {
+    if (choice.kind !== 'option') {
+      continue;
+    }
+
+    for (const value of answers.answers[choice.id] ?? []) {
+      const detail = choice.optionDetails?.find(
+        (entry) => entry.name === value,
+      );
+
+      // Вариант, которого нет в записи класса, записью не заводится: кроме
+      // названия, о нём нечего сказать, а оно и так стоит строкой у умения
+      if (detail && !chosen.has(detail.key)) {
+        chosen.set(detail.key, detail);
+      }
+    }
+  }
+
+  const featureId = getClassFeatureId(classUrl, summary.key);
+
+  return [...chosen.values()].map((detail) => ({
+    id: `${featureId}:${FEATURE_OPTION_ID_SEGMENT}:${detail.key}`,
+    name: detail.name,
+    description: toDescriptionNodes(detail.description),
+    origin: 'class',
+    originName,
+    // Уровень варианта, а не умения: снижение уровня забирает воззвание,
+    // которое стало доступно только на снимаемом уровне
+    level: detail.requiredClassLevel || summary.level,
+    choice: null,
+  }));
+}
+
+/**
  * Ответы игрока на выборы одной записи — снимком у самой записи.
  *
  * Ключом служит ключ выбора, а не его полный id: id несёт адрес записи, и на
@@ -10457,6 +10526,8 @@ function collectClassFeatures(
 
       features.push(
         toCharacterFeature(base.url, summary, originName, choices, answers),
+        // Выбранные варианты идут отдельными записями следом за своим умением
+        ...buildFeatureOptionFeatures(base.url, summary, originName, answers),
       );
     }
   };
@@ -10547,9 +10618,10 @@ export function buildSubclassFeatures(
 ): CharacterFeature[] {
   return subclass.features
     .filter((summary) => summary.isSubclass && summary.level <= level)
-    .map((summary) =>
+    .flatMap((summary) => [
       toCharacterFeature(classUrl, summary, subclass.name, choices, answers),
-    );
+      ...buildFeatureOptionFeatures(classUrl, summary, subclass.name, answers),
+    ]);
 }
 
 /**
@@ -11771,6 +11843,25 @@ export function getRequiredChoiceCount(
   options: string[],
 ): number {
   return Math.min(choice.count, options.length);
+}
+
+/**
+ * Подпись о ходе выбора для шапки списка описаний вариантов: в длинном списке
+ * воззваний игрок иначе не видит, сколько ему ещё осталось взять.
+ *
+ * @param selectedCount сколько вариантов уже выбрано.
+ * @param requiredCount сколько нужно выбрать; 0 — предела нет.
+ * @returns строка вида «Выбрано 1 из 2»; без предела — «Выбрано 1».
+ */
+export function getChoiceSelectionSummary(
+  selectedCount: number,
+  requiredCount: number,
+): string {
+  const { chosen, of } = SHEET_CHOICE_OPTIONS_LABELS;
+
+  return requiredCount > 0
+    ? `${chosen} ${selectedCount} ${of} ${requiredCount}`
+    : `${chosen} ${selectedCount}`;
 }
 
 /**
