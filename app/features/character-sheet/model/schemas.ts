@@ -2242,6 +2242,11 @@ const classFeatureOptionSchema = z.object({
     })
     .catch({ rus: '', eng: '' }),
   requiredClassLevel: z.coerce.number().nullable().catch(null),
+  // Описание варианта читается прямо в мастере: воззвание выбирают по тому, что
+  // оно даёт, а одни названия об этом не говорят
+  description: renderNodeSchema,
+  additional: renderNodeSchema,
+  prerequisite: renderNodeSchema,
 });
 
 /**
@@ -2470,6 +2475,15 @@ function toFeatureOptionChoices(
             name,
             value: option.key || name,
             level: option.requiredClassLevel ?? 0,
+            detail: {
+              key: option.key || name,
+              name,
+              nameEng: option.name.eng,
+              description: option.description,
+              additional: option.additional,
+              prerequisite: option.prerequisite,
+              requiredClassLevel: option.requiredClassLevel ?? 0,
+            },
           },
         ]
       : [];
@@ -2501,6 +2515,8 @@ function toFeatureOptionChoices(
     ),
   );
 
+  const optionDetails = options.map((option) => option.detail);
+
   return toChoiceSteps(choice).flatMap((step) => {
     const count = step.count ?? OPTION_CHOICE_DEFAULT_COUNT;
 
@@ -2521,6 +2537,7 @@ function toFeatureOptionChoices(
         listed,
         optionValues,
         optionRequiredLevels,
+        optionDetails,
         poolKey,
         requiredLevel: step.level,
       },

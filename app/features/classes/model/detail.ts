@@ -103,6 +103,32 @@ export interface ClassFeatureOption {
   hideInSubclasses?: boolean;
 }
 
+/**
+ * Вариант умения для показа списком с описаниями: и на странице класса, и в
+ * мастере листа персонажа. Плоский вид записи справочника — лист собирает такие
+ * же записи из своего разбора детали класса, где типов ответа API уже нет.
+ */
+export interface FeatureOptionEntry {
+  /** Ключ записи справочника; пусто — вместо него берётся название. */
+  key: string;
+
+  /** Название варианта — оно же значение пикера в мастере листа. */
+  name: string;
+
+  nameEng: string;
+
+  description: RenderNode;
+
+  /** Уточнение под названием (курсивом); пусто — его нет. */
+  additional: RenderNode;
+
+  /** Необходимые условия варианта; пусто — их нет. */
+  prerequisite: RenderNode;
+
+  /** Уровень класса, с которого вариант доступен; 0 — доступен сразу. */
+  requiredClassLevel: number;
+}
+
 export interface ClassProficiency {
   armor: string;
   weapon: string;

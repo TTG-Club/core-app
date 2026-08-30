@@ -40,6 +40,7 @@
     CLASSES_SEARCH_PATH,
     collectChosenProficiencies,
     computeAbilityBonuses,
+    CURRENT_SELECTION_LABELS,
     CUSTOM_BACKGROUND_LABELS,
     FEATS_DETAIL_BASE_PATH,
     getChoiceSpellClassUrls,
@@ -63,6 +64,7 @@
     withSpellListClassNames,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
+  import SheetCurrentSelectionPanel from './SheetCurrentSelectionPanel.vue';
   import SheetCustomBackgroundModal from './SheetCustomBackgroundModal.vue';
   import SheetFeatSpellsPicker from './SheetFeatSpellsPicker.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
@@ -78,7 +80,7 @@
 
   const overlay = useOverlay();
 
-  const { character, setBackground } = useCharacterSheet();
+  const { character, setBackground, removeBackground } = useCharacterSheet();
 
   // Дроверы описаний с сайта; без destroyOnClose — повторный open() после
   // закрытия иначе падает («Overlay not found»).
@@ -986,6 +988,18 @@
     }
   }
 
+  /** Название уже взятой предыстории; пусто — её на листе нет. */
+  const currentBackgroundLabel = computed(
+    () => character.value.characterBackground?.name ?? '',
+  );
+
+  /** Снимает предысторию и закрывает мастер: брать новую взамен необязательно. */
+  function handleRemoveBackground() {
+    removeBackground();
+
+    emit('close');
+  }
+
   function handleCancel() {
     emit('close');
   }
@@ -999,6 +1013,19 @@
     <template #body>
       <div class="flex min-h-48 flex-col gap-4">
         <template v-if="step === 'background'">
+          <!-- Что уже взято и как это снять: выбирать новую предысторию взамен
+          необязательно -->
+          <SheetCurrentSelectionPanel
+            v-if="currentBackgroundLabel"
+            :title="CURRENT_SELECTION_LABELS.background.title"
+            :name="currentBackgroundLabel"
+            :remove-label="CURRENT_SELECTION_LABELS.background.remove"
+            :remove-description="
+              CURRENT_SELECTION_LABELS.background.removeDescription
+            "
+            @remove="handleRemoveBackground"
+          />
+
           <SheetSearchInput
             v-model="searchTerm"
             :placeholder="SHEET_SEARCH_LABELS.byNamePlaceholder"

@@ -574,6 +574,27 @@
     return getRequiredChoiceCount(choice, choiceOptions(choice));
   }
 
+  /**
+   * Подпись пикера с требуемым числом значений («Выберите 2»): ею подписан и
+   * сам выбор, и пустой селектор.
+   *
+   * @param choice выбор мастера.
+   * @returns подпись выбора.
+   */
+  function chooseLabel(choice: ClassChoice): string {
+    return `${CLASS_WIZARD_LABELS.chooseLabel} ${choiceCount(choice)}`;
+  }
+
+  /**
+   * То же в скобках после подписи выбора («Владение навыками (выберите 2)»).
+   *
+   * @param choice выбор мастера.
+   * @returns подсказка о количестве.
+   */
+  function chooseHint(choice: ClassChoice): string {
+    return `${CLASS_WIZARD_LABELS.chooseHint} ${choiceCount(choice)}`;
+  }
+
   /** Обновление выбора с ограничением по требуемому количеству. */
   function updateSelection(choice: ClassChoice, values: string[]): void {
     selections.value = {
@@ -640,29 +661,6 @@
 
   const isNextDisabled = computed(() => !selectedClass.value);
 
-  /**
-   * Все выборы черт отвечены, а у черт с прибавками заполнены характеристики.
-   * Сбой каталога требование снимает — иначе класс нельзя было бы применить.
-   */
-  const areFeatChoicesComplete = computed(
-    () =>
-      hasFeatsError.value
-      || featureRows.value
-        .flatMap((row) => row.featChoices)
-        .every((choice) => {
-          const selection = featSelections.value[choice.id];
-
-          return (
-            !!selection?.featUrl
-            && selection.abilities.every((ability) => ability !== null)
-          );
-        }),
-  );
-
-  const isApplyDisabled = computed(
-    () => isApplying.value || !areFeatChoicesComplete.value,
-  );
-
   // ── Разделы второго шага ─────────────────────────────────────
 
   /**
@@ -705,24 +703,83 @@
 
   /**
    * Незакрытые выборы черт: черта не названа либо у неё не заполнены прибавки.
-   * Сбой каталога счётчик обнуляет — там выбирать не из чего, и торопить не с
-   * чем (по той же причине снимается запрет применения).
+   * Сбой каталога выбор снимает — там выбирать не из чего, и торопить не с чем
+   * (по той же причине снимается запрет применения).
+   *
+   * @param choices выборы черты одного умения или всего мастера.
+   * @returns выборы, на которые ответов ещё не хватает.
    */
-  const pendingFeatChoiceCount = computed(() => {
+  function getPendingFeatChoices(choices: ClassChoice[]): ClassChoice[] {
     if (hasFeatsError.value) {
-      return 0;
+      return [];
     }
 
-    const pending = featureRows.value
-      .flatMap((row) => row.featChoices)
-      .filter((choice) => {
-        const selection = featSelections.value[choice.id];
+    return choices.filter((choice) => {
+      const selection = featSelections.value[choice.id];
 
-        return !selection?.featUrl || selection.abilities.includes(null);
-      });
+      return !selection?.featUrl || selection.abilities.includes(null);
+    });
+  }
 
-    return pending.length;
-  });
+  const pendingFeatChoiceCount = computed(
+    () =>
+      getPendingFeatChoices(featureRows.value.flatMap((row) => row.featChoices))
+        .length,
+  );
+
+  /**
+   * Сколько ответов ждёт каждое умение: по нему у свёрнутой карточки висит
+   * бейдж, и видно, какое умение разворачивать.
+   */
+  const pendingByFeatureRow = computed<Record<string, number>>(() =>
+    Object.fromEntries(
+      featureRows.value.map((row) => [
+        row.id,
+        getPendingChoices(row.choiceControls).length
+          + getPendingFeatChoices(row.featChoices).length,
+      ]),
+    ),
+  );
+
+  /**
+   * Раскрытые карточки умений по их идентификаторам. Своим набором, а не
+   * аккордеоном: игрок сравнивает умения между собой. Идентификаторами, а не
+   * номерами строк: смена класса, подкласса и уровня пересобирает список.
+   */
+  const expandedFeatureRows = ref<string[]>([]);
+
+  /**
+   * Раскрыта ли карточка умения.
+   *
+   * @param rowId идентификатор строки умения.
+   * @returns true — тело карточки видно.
+   */
+  function isFeatureRowExpanded(rowId: string): boolean {
+    return expandedFeatureRows.value.includes(rowId);
+  }
+
+  /**
+   * Разворачивает или сворачивает карточку умения.
+   *
+   * @param rowId идентификатор строки умения.
+   */
+  function toggleFeatureRow(rowId: string): void {
+    expandedFeatureRows.value = isFeatureRowExpanded(rowId)
+      ? expandedFeatureRows.value.filter((id) => id !== rowId)
+      : [...expandedFeatureRows.value, rowId];
+  }
+
+  /**
+   * Значок свёртки карточки умения.
+   *
+   * @param rowId идентификатор строки умения.
+   * @returns имя значка.
+   */
+  function getFeatureRowIcon(rowId: string): string {
+    return isFeatureRowExpanded(rowId)
+      ? 'tabler:chevron-up'
+      : 'tabler:chevron-down';
+  }
 
   /**
    * Сколько ответов раздел ещё ждёт: их число висит на вкладке.
@@ -738,6 +795,25 @@
         featureRows.value.flatMap((row) => row.choiceControls),
       ).length,
   }));
+
+  /** Сколько ответов мастер ещё ждёт во всех разделах вместе. */
+  const pendingChoiceCount = computed(() =>
+    CLASS_WIZARD_TAB_ORDER.reduce(
+      (total, tab) => total + pendingByTab.value[tab],
+      0,
+    ),
+  );
+
+  /**
+   * Применять рано, пока хоть один выбор не закрыт: владение навыками, черта за
+   * повышение характеристик, вариант умения. Считается по тем же счётчикам, что
+   * висят на вкладках, — по ним и видно, где недоотвечено (так же ведёт себя
+   * мастер предыстории). Сбой каталога черт требование с них снимает: выбирать
+   * там не из чего, и класс иначе было бы не применить.
+   */
+  const isApplyDisabled = computed(
+    () => isApplying.value || pendingChoiceCount.value > 0,
+  );
 
   /** Разделы, которым есть что показать: пустая вкладка только сбивает. */
   const shownReviewTabs = computed<ClassWizardTab[]>(() =>
@@ -1343,9 +1419,12 @@
 </script>
 
 <template>
+  <!-- Окно шире обычной модалки листа (`sm:max-w-2xl`, 672px) на 200px: во
+  втором шаге у класса разделы с бейджами выборов и карточками умений, и в
+  стандартной ширине подписи вариантов ломались на две строки -->
   <UModal
     :title="modalTitle"
-    :ui="{ content: 'sm:max-w-2xl' }"
+    :ui="{ content: 'sm:max-w-218' }"
   >
     <template #body>
       <div class="flex min-h-48 flex-col gap-4">
@@ -1704,7 +1783,7 @@
                   class="flex flex-col gap-1"
                 >
                   <span class="text-xs text-muted">
-                    {{ choice.label }} (выберите {{ choiceCount(choice) }})
+                    {{ choice.label }} ({{ chooseHint(choice) }})
                   </span>
 
                   <SheetChoiceSelect
@@ -1713,7 +1792,7 @@
                     :hints="choiceHints(choice)"
                     :warning="SKILL_DUPLICATE_WARNING"
                     :count="choiceCount(choice)"
-                    :placeholder="`Выберите ${choiceCount(choice)}`"
+                    :placeholder="chooseLabel(choice)"
                     @update:model-value="updateSelection(choice, $event)"
                   />
                 </div>
@@ -1735,84 +1814,124 @@
                   {{ featuresSectionTitle }}
                 </span>
 
+                <span class="text-xs text-dimmed">
+                  {{ CLASS_WIZARD_LABELS.featureToggleHint }}
+                </span>
+
                 <div
                   v-for="row in featureRows"
                   :key="row.id"
-                  class="flex flex-col gap-2 rounded-lg border border-default/50 bg-elevated/20 p-3"
+                  class="flex flex-col rounded-lg border border-default/50 bg-elevated/20"
                 >
-                  <div class="flex items-center justify-between gap-2">
-                    <span class="text-sm font-bold text-highlighted">
+                  <!-- Умения свёрнуты: их много, а разговор идёт о немногих —
+                  тех, что о чём-то спрашивают. На них висит бейдж.
+
+                  Отступы шапки принадлежат самой кнопке, а не карточке: иначе
+                  вокруг заголовка оставалась бы неактивная рамка, и нажатие
+                  мимо строки ничего не разворачивало -->
+                  <button
+                    type="button"
+                    class="flex w-full cursor-pointer flex-wrap items-center gap-2 rounded-lg p-3 text-left transition-colors hover:bg-elevated/40"
+                    :aria-expanded="isFeatureRowExpanded(row.id)"
+                    @click.left.exact.prevent="toggleFeatureRow(row.id)"
+                  >
+                    <UIcon
+                      :name="getFeatureRowIcon(row.id)"
+                      class="size-4 shrink-0 text-muted"
+                    />
+
+                    <span
+                      class="min-w-0 grow text-sm font-bold text-highlighted"
+                    >
                       {{ row.name }}
                     </span>
+
+                    <UBadge
+                      v-if="pendingByFeatureRow[row.id]"
+                      size="sm"
+                      color="warning"
+                      variant="subtle"
+                      class="shrink-0"
+                    >
+                      {{ CLASS_WIZARD_LABELS.featurePendingBadge }}
+                    </UBadge>
 
                     <UBadge
                       size="sm"
                       color="neutral"
                       variant="subtle"
+                      class="shrink-0"
                     >
                       {{ row.originLabel }} · {{ row.level }} ур.
                     </UBadge>
-                  </div>
+                  </button>
 
-                  <!-- Выборы черты — боевой стиль, черта за повышение
+                  <div
+                    v-if="isFeatureRowExpanded(row.id)"
+                    class="flex flex-col gap-2 px-3 pb-3"
+                  >
+                    <!-- Выборы черты — боевой стиль, черта за повышение
                 характеристик — тем же пикером, что в мастере повышения -->
-                  <div
-                    v-if="row.featChoices.length"
-                    class="flex flex-col gap-3"
-                  >
-                    <SheetLevelUpFeatChoice
-                      v-for="choice in row.featChoices"
-                      :key="choice.id"
-                      :title="choice.label"
-                      :options="featOptions(choice)"
-                      :selected="selectedFeat(choice.id)"
-                      :abilities="featAbilities(choice.id)"
-                      :scores="character.abilities"
-                      :is-loading="isFeatsLoading"
-                      :has-error="hasFeatsError"
-                      @update:feat="setFeatChoice(row.id, choice.id, $event)"
-                      @update:ability="setFeatAbility(choice.id, $event)"
-                    />
-                  </div>
-
-                  <div
-                    v-if="row.choiceControls.length"
-                    class="flex flex-col gap-3"
-                  >
                     <div
-                      v-for="control in row.choiceControls"
-                      :key="control.id"
-                      class="flex flex-col gap-1"
+                      v-if="row.featChoices.length"
+                      class="flex flex-col gap-3"
                     >
-                      <span class="text-xs text-muted">
-                        {{
-                          control.label || `Выберите ${choiceCount(control)}`
-                        }}
-                      </span>
-
-                      <SheetChoiceSelect
-                        :model-value="selections[control.id] ?? []"
-                        :items="choiceOptions(control)"
-                        :hints="choiceHints(control)"
-                        :warning="SKILL_DUPLICATE_WARNING"
-                        :count="choiceCount(control)"
-                        :placeholder="`Выберите ${choiceCount(control)}`"
-                        @update:model-value="updateSelection(control, $event)"
+                      <SheetLevelUpFeatChoice
+                        v-for="choice in row.featChoices"
+                        :key="choice.id"
+                        :title="choice.label"
+                        :options="featOptions(choice)"
+                        :selected="selectedFeat(choice.id)"
+                        :abilities="featAbilities(choice.id)"
+                        :scores="character.abilities"
+                        :is-loading="isFeatsLoading"
+                        :has-error="hasFeatsError"
+                        @update:feat="setFeatChoice(row.id, choice.id, $event)"
+                        @update:ability="setFeatAbility(choice.id, $event)"
                       />
                     </div>
+
+                    <div
+                      v-if="row.choiceControls.length"
+                      class="flex flex-col gap-3"
+                    >
+                      <div
+                        v-for="control in row.choiceControls"
+                        :key="control.id"
+                        class="flex flex-col gap-1"
+                      >
+                        <span class="text-xs text-muted">
+                          {{ control.label || chooseLabel(control) }}
+                        </span>
+
+                        <SheetChoiceSelect
+                          :model-value="selections[control.id] ?? []"
+                          :items="choiceOptions(control)"
+                          :hints="choiceHints(control)"
+                          :warning="SKILL_DUPLICATE_WARNING"
+                          :count="choiceCount(control)"
+                          :placeholder="chooseLabel(control)"
+                          :option-details="control.optionDetails"
+                          :option-details-title="control.label"
+                          @update:model-value="updateSelection(control, $event)"
+                        />
+                      </div>
+                    </div>
+
+                    <UInput
+                      v-if="
+                        !row.featChoices.length && !row.choiceControls.length
+                      "
+                      v-model="choices[row.id]"
+                      size="sm"
+                      :placeholder="CLASS_WIZARD_LABELS.featureNotePlaceholder"
+                    />
+
+                    <MarkupRender
+                      :render-node="row.description"
+                      class="text-sm"
+                    />
                   </div>
-
-                  <UInput
-                    v-if="!row.featChoices.length && !row.choiceControls.length"
-                    v-model="choices[row.id]"
-                    size="sm"
-                    :placeholder="CLASS_WIZARD_LABELS.featureNotePlaceholder"
-                  />
-
-                  <MarkupRender
-                    :render-node="row.description"
-                    class="text-sm"
-                  />
                 </div>
               </div>
             </template>

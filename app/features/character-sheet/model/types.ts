@@ -1,5 +1,9 @@
 import type { ActiveEffect } from '~active-effects/model';
-import type { CasterType, ClassResourceRecovery } from '~classes/model';
+import type {
+  CasterType,
+  ClassResourceRecovery,
+  FeatureOptionEntry,
+} from '~classes/model';
 import type { MagicItemBonuses } from '~magic-items/model';
 import type { MarkerNode, SimpleTextNode } from '~ui/markup';
 
@@ -2518,6 +2522,13 @@ export interface ClassChoice {
    * колдуна 5 уровня» на первом ещё не предлагают. Только для `kind: 'option'`.
    */
   optionRequiredLevels?: Record<string, number>;
+
+  /**
+   * Описания вариантов из записи класса: игрок выбирает воззвание, читая, что
+   * оно даёт, а не по одному названию. Пусто — описаний в записи нет. Только
+   * для `kind: 'option'`.
+   */
+  optionDetails?: FeatureOptionEntry[];
 
   /**
    * Выбирать можно только оружие, которым персонаж владеет («Мастер оружия»

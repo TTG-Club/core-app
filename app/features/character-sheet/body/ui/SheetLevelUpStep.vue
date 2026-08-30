@@ -141,13 +141,17 @@
       const controls = feature.choices.map((choice) => {
         const options = choiceOptions(choice);
         const requiredCount = getRequiredChoiceCount(choice, options);
+        const chooseLabel = `${LEVEL_UP_WIZARD_LABELS.chooseLabel} ${requiredCount}`;
 
         return {
           choice,
           options,
           requiredCount,
           hints: choiceHints(choice),
-          chooseLabel: `${LEVEL_UP_WIZARD_LABELS.chooseLabel} ${requiredCount}`,
+          chooseLabel,
+          // Заголовок просмотра описаний вариантов: подпись выбора, а её нет —
+          // общее «Выберите столько-то»
+          detailsTitle: choice.label || chooseLabel,
         };
       });
 
@@ -334,6 +338,8 @@
               :warning="SKILL_DUPLICATE_WARNING"
               :count="control.requiredCount"
               :placeholder="control.chooseLabel"
+              :option-details="control.choice.optionDetails"
+              :option-details-title="control.detailsTitle"
               @update:model-value="
                 handleSelection(control.choice, control.requiredCount, $event)
               "
