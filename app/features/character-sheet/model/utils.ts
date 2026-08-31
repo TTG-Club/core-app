@@ -11456,9 +11456,16 @@ function narrowOptionPool(choice: ClassChoice, level: number): ClassChoice {
  * тот же вариант дважды не берут, и мастер их больше не предлагает. Ответ самой
  * ступени не вычитается — иначе выбранное пропало бы из своего же пикера.
  *
+ * Ступени ищутся и среди выборов мастера, и среди ответов: мастер повышения
+ * уровня показывает только ступень своего уровня, и взятого на прошлых уровнях
+ * в его выборах нет — оно лежит в ответах под id своей ступени
+ * (`<список>` и `<список>-<уровень>`, см. `toFeatureOptionChoices`). Без этого
+ * воззвание первого уровня предлагалось бы на втором заново.
+ *
  * @param choice выбор, для которого собирается пул.
  * @param choices все выборы мастера.
- * @param selections ответы игрока по идентификаторам выборов.
+ * @param selections ответы игрока по идентификаторам выборов; у мастера
+ *   повышения уровня — вместе с ответами прошлых уровней с записей листа.
  * @returns взятые варианты; пусто — выбор не из списка вариантов.
  */
 export function getTakenOptionValues(
@@ -11472,11 +11479,18 @@ export function getTakenOptionValues(
     return [];
   }
 
-  return choices.flatMap((other) =>
-    other.poolKey === poolKey && other.id !== choice.id
-      ? (selections[other.id] ?? [])
-      : [],
-  );
+  const stepIds = new Set<string>([
+    ...choices
+      .filter((other) => other.poolKey === poolKey)
+      .map((other) => other.id),
+    ...Object.keys(selections).filter(
+      (id) => id === poolKey || id.startsWith(`${poolKey}-`),
+    ),
+  ]);
+
+  stepIds.delete(choice.id);
+
+  return [...stepIds].flatMap((id) => selections[id] ?? []);
 }
 
 /**
