@@ -1,6 +1,6 @@
 import type { FeatEditorLabelOverrides } from '~feats/model';
 
-import type { ClassMechanicsTitles, ClassTableColumnPurpose } from './create';
+import type { ClassTableColumnPurpose } from './create';
 
 /**
  * Минимальное значение ключевой характеристики, необходимое для взятия уровня
@@ -431,6 +431,25 @@ export const CLASS_FEATURE_MECHANICS_LABELS: FeatEditorLabelOverrides = {
     'Список расширяется, только если у персонажа есть «Использование '
     + 'заклинаний» или «Магия договора». Выключено — расширяется всегда.',
 };
+
+/**
+ * Подписи блока «Механика и эффекты»: одна форма обслуживает и умение, и его
+ * вариант, а называть источник даров в подписях нужно по-разному.
+ */
+export interface ClassMechanicsTitles {
+  /** Заголовок свёрнутого блока целиком. */
+  section: string;
+
+  /** Пояснение к блоку по наведению на значок в шапке. */
+  sectionHint: string;
+
+  grants: string;
+  modifiers: string;
+  counters: string;
+  spells: string;
+  spellList: string;
+  effects: string;
+}
 
 /**
  * Подписи блока «Механика и эффекты» у самого умения.

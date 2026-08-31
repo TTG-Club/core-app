@@ -58,6 +58,7 @@
     getCharacterClasses,
     getChoiceSkillHints,
     getChosenFeatureOptionKeys,
+    getChosenOptionFeatUrls,
     getChosenProficientSkills,
     getClassFeatureChoices,
     getClassFeatureId,
@@ -559,9 +560,7 @@
           ),
           grantedFeatUrls: [
             ...feature.grantedFeatUrls,
-            ...feature.optionGrants
-              .filter((grants) => chosenOptionKeys.has(grants.key))
-              .flatMap((grants) => grants.grantedFeatUrls),
+            ...getChosenOptionFeatUrls(feature, chosenOptionKeys),
           ],
           abilityImprovement: feature.abilityImprovement,
           improvementChoices: feature.abilityImprovement

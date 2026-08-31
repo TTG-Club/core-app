@@ -22,7 +22,7 @@
     CLASS_OPTIONS_CHOICE_DEFAULTS,
     getClassFeatureOptionLevelBadge,
     getClassFeatureOptionRemoveDescription,
-    getClassMechanicsFilledBlocksCount,
+    getClassOptionMechanicsBadge,
   } from '../../../model';
   import FeatureMechanics from './FeatureMechanics.vue';
 
@@ -46,6 +46,14 @@
     'choice',
   );
 
+  /**
+   * Оформление прилипшей шапки раскрытого варианта: у варианта своя механика на
+   * несколько экранов, и вдвоём с шапкой умения они держат на виду весь путь —
+   * «Воззвания → Мучительная кара». Отступ сверху — под шапку умения.
+   */
+  const PINNED_HEADER_CLASS =
+    'sticky top-10 z-10 rounded-t-lg border-b border-default bg-elevated';
+
   const {
     isExpanded,
     toggle: toggleOption,
@@ -53,6 +61,17 @@
     dropRow,
     getToggleIcon,
   } = useExpandedRows();
+
+  /**
+   * Оформление шапки варианта: прилипает только шапка раскрытого — списку из
+   * двух десятков свёрнутых манёвров это лишь мешало бы.
+   *
+   * @param index позиция варианта в списке.
+   * @returns классы шапки; пусто — вариант свёрнут.
+   */
+  function getHeaderClass(index: number): string {
+    return isExpanded(index) ? PINNED_HEADER_CLASS : '';
+  }
 
   /**
    * Подпись кнопки свёртки для скринридера.
@@ -359,16 +378,9 @@
           кнопка внутри кнопки недопустима, поэтому нажатие ловит накладка —
           псевдоэлемент кнопки во всю шапку, — а сами кнопки подняты над
           накладкой `relative` -->
-        <!-- Шапка раскрытого варианта прилипает под шапкой своего умения:
-          у варианта своя механика на несколько экранов, и вдвоём они держат
-          на виду весь путь — «Воззвания → Мучительная кара» -->
         <div
           class="relative flex min-h-10 items-center gap-2 px-3 py-2"
-          :class="
-            isExpanded(index)
-              ? 'sticky top-10 z-10 rounded-t-lg border-b border-default bg-elevated'
-              : ''
-          "
+          :class="getHeaderClass(index)"
         >
           <button
             type="button"
@@ -391,14 +403,13 @@
             </span>
 
             <UBadge
-              v-if="getClassMechanicsFilledBlocksCount(option)"
+              v-if="getClassOptionMechanicsBadge(option)"
               size="sm"
               color="primary"
               variant="subtle"
               class="shrink-0 tabular-nums"
             >
-              {{ CLASS_FEATURE_OPTIONS_EDITOR.mechanicsBadge
-              }}{{ getClassMechanicsFilledBlocksCount(option) }}
+              {{ getClassOptionMechanicsBadge(option) }}
             </UBadge>
 
             <UBadge

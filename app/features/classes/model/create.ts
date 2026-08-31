@@ -63,25 +63,6 @@ export interface ClassFeatureOptionsChoiceCreate {
 }
 
 /**
- * Подписи блока «Механика и эффекты»: одна форма обслуживает и умение, и его
- * вариант, а называть источник даров в подписях нужно по-разному.
- */
-export interface ClassMechanicsTitles {
-  /** Заголовок свёрнутого блока целиком. */
-  section: string;
-
-  /** Пояснение к блоку по наведению на значок в шапке. */
-  sectionHint: string;
-
-  grants: string;
-  modifiers: string;
-  counters: string;
-  spells: string;
-  spellList: string;
-  effects: string;
-}
-
-/**
  * Носитель даров: и умение класса, и его вариант.
  *
  * Одной моделью, потому что и то, и другое делает с листом персонажа одно и то
@@ -234,7 +215,8 @@ export interface ClassPrimaryCharacteristicsCreate {
   delimiter: AbilityDelimiter | undefined;
 }
 
-export interface ClassCreate extends EditorBaseInfoState {
+export interface ClassCreate
+  extends EditorBaseInfoState, ClassMechanicsHolderCreate {
   gallery: Array<string>;
   description: string | undefined;
   parentUrl: string | undefined;
@@ -267,18 +249,6 @@ export interface ClassCreate extends EditorBaseInfoState {
 
   /** Уровень, на котором выбирается подкласс. */
   subclassLevel: number | undefined;
-
-  /**
-   * Дары самого класса: то, что даёт взятие класса целиком и чему не нашлось
-   * места в отдельных полях владений.
-   */
-  mechanics: FeatMechanics | undefined;
-
-  /** Активные эффекты класса в вокабуляре VTTG. */
-  activeEffects: Array<ActiveEffect>;
-
-  /** Строки редактора даров класса; в теле запроса им места нет. */
-  editorRows: FeatEditorRows | undefined;
 }
 
 export type AbilityTemplateCreate = [

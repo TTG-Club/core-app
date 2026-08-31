@@ -45,6 +45,14 @@
 
   const model = defineModel<Array<ClassFeatureCreate>>({ required: true });
 
+  /**
+   * Оформление прилипшей шапки раскрытого умения: механика умения длиннее
+   * экрана, и без неё на глубине не видно, чьё это умение. Шапка варианта
+   * прилипает под ней — вместе они и есть путь.
+   */
+  const PINNED_HEADER_CLASS =
+    'sticky top-0 z-20 rounded-t-lg border-b border-default bg-elevated';
+
   const {
     isExpanded,
     toggle: toggleFeature,
@@ -52,6 +60,17 @@
     dropRow,
     getToggleIcon,
   } = useExpandedRows();
+
+  /**
+   * Оформление шапки умения: прилипает только шапка раскрытого — списку из двух
+   * десятков свёрнутых строк это лишь мешало бы.
+   *
+   * @param index позиция умения в списке.
+   * @returns классы шапки; пусто — умение свёрнуто.
+   */
+  function getHeaderClass(index: number): string {
+    return isExpanded(index) ? PINNED_HEADER_CLASS : '';
+  }
 
   /** Индекс умения, удаление которого ждёт подтверждения. */
   const pendingRemoval = ref<number | undefined>(undefined);
@@ -256,16 +275,9 @@
         :key="index"
         class="rounded-lg border border-default bg-elevated/20 transition-colors focus-within:border-primary/60"
       >
-        <!-- Шапка раскрытого умения прилипает к верху окна: механика умения
-          длиннее экрана, и без неё на глубине не видно, чьё это умение.
-          Шапка варианта прилипает под ней — вместе они и есть путь -->
         <div
           class="relative flex min-h-10 items-center gap-2 px-3 py-2"
-          :class="
-            isExpanded(index)
-              ? 'sticky top-0 z-20 rounded-t-lg border-b border-default bg-elevated'
-              : ''
-          "
+          :class="getHeaderClass(index)"
         >
           <!-- Плашка разворачивает умение целиком: попадать значком в конце
             строки приходилось прицельно. Кнопки лежат рядом с ней, а не

@@ -47,7 +47,6 @@ import type {
   CharacterVision,
   ChoiceOptionContext,
   ClassChoice,
-  ClassFeatureOptionGrants,
   ClassFeatureRow,
   ClassFeatureSummary,
   ClassOption,
@@ -10577,7 +10576,7 @@ export function getChosenFeatureOptionKeys(
  * @param chosenOptionKeys ключи выбранных вариантов.
  * @returns выборы самого умения и выбранных вариантов.
  */
-export function withoutUnchosenOptionChoices(
+function withoutUnchosenOptionChoices(
   choices: ClassChoice[],
   chosenOptionKeys: ReadonlySet<string>,
 ): ClassChoice[] {
@@ -10587,19 +10586,22 @@ export function withoutUnchosenOptionChoices(
 }
 
 /**
- * Дары выбранных вариантов умения.
+ * Черты, которые выдают выбранные варианты умения.
+ *
+ * Мастер класса и мастер повышения уровня добавляют их так же, как черты самого
+ * умения: запись черты заводится на листе своей строкой.
  *
  * @param summary умение класса или подкласса.
  * @param chosenOptionKeys ключи выбранных вариантов.
- * @returns дары в порядке записи класса.
+ * @returns url черт в порядке записи класса.
  */
-function getChosenOptionGrants(
+export function getChosenOptionFeatUrls(
   summary: ClassFeatureSummary,
   chosenOptionKeys: ReadonlySet<string>,
-): ClassFeatureOptionGrants[] {
-  return summary.optionGrants.filter((grants) =>
-    chosenOptionKeys.has(grants.key),
-  );
+): string[] {
+  return summary.optionGrants
+    .filter((grants) => chosenOptionKeys.has(grants.key))
+    .flatMap((grants) => grants.grantedFeatUrls);
 }
 
 /**
@@ -11000,9 +11002,7 @@ export function getLevelFeatureRows(
           summary.level === level
             ? [
                 ...summary.grantedFeatUrls,
-                ...getChosenOptionGrants(summary, chosenOptionKeys).flatMap(
-                  (grants) => grants.grantedFeatUrls,
-                ),
+                ...getChosenOptionFeatUrls(summary, chosenOptionKeys),
               ]
             : [],
         abilityImprovement: summary.abilityImprovement,

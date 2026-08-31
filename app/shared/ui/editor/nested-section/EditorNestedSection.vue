@@ -55,11 +55,17 @@
    * телефоне меньше — вложенных дорожек бывает три подряд, и на широком отступе
    * полям не осталось бы ширины.
    */
-  const railClass =
+  const RAIL_CLASS =
     'ml-2 flex flex-col gap-2 border-l-2 border-default pl-2 transition-colors group-focus-within/section:border-primary/60 sm:pl-3';
 
   /** Общая раскладка шапки: подпись занимает строку, кнопки жмутся вправо. */
-  const headingClass = 'flex min-w-0 flex-1 items-center gap-2 text-left';
+  const HEADING_CLASS = 'flex min-w-0 flex-1 items-center gap-2 text-left';
+
+  /**
+   * Шапка сворачиваемого раздела — она же кнопка свёртки: нажатие ловит
+   * накладка во всю строку, а не один значок.
+   */
+  const TRIGGER_CLASS = `${HEADING_CLASS} cursor-pointer before:absolute before:inset-0`;
 
   const isOpen = ref(false);
 
@@ -82,40 +88,40 @@
 </script>
 
 <template>
-  <DefineTitle>
-    <!-- Значок стоит перед подписью, а не в конце строки: от него вниз уходит
-      дорожка, и вместе они читаются как одна ветка. У несворачиваемого раздела
-      на его месте пустота — подписи разделов стоят в столбик -->
-    <UIcon
-      v-if="collapsible"
-      :name="toggleIcon"
-      class="size-4 shrink-0 text-dimmed transition-colors group-focus-within/section:text-primary"
-    />
-
-    <span
-      v-else
-      class="size-4 shrink-0"
-      aria-hidden="true"
-    />
-
-    <span
-      class="min-w-0 truncate text-sm font-medium text-muted transition-colors group-focus-within/section:text-highlighted"
-    >
-      {{ title }}
-    </span>
-
-    <UBadge
-      v-if="count"
-      size="sm"
-      color="primary"
-      variant="subtle"
-      class="shrink-0 tabular-nums"
-    >
-      {{ count }}
-    </UBadge>
-  </DefineTitle>
-
   <section class="group/section col-span-full flex flex-col gap-2">
+    <DefineTitle>
+      <!-- Значок стоит перед подписью, а не в конце строки: от него вниз уходит
+        дорожка, и вместе они читаются как одна ветка. У несворачиваемого раздела
+        на его месте пустота — подписи разделов стоят в столбик -->
+      <UIcon
+        v-if="collapsible"
+        :name="toggleIcon"
+        class="size-4 shrink-0 text-dimmed transition-colors group-focus-within/section:text-primary"
+      />
+
+      <span
+        v-else
+        class="size-4 shrink-0"
+        aria-hidden="true"
+      />
+
+      <span
+        class="min-w-0 truncate text-sm font-medium text-muted transition-colors group-focus-within/section:text-highlighted"
+      >
+        {{ title }}
+      </span>
+
+      <UBadge
+        v-if="count"
+        size="sm"
+        color="primary"
+        variant="subtle"
+        class="shrink-0 tabular-nums"
+      >
+        {{ count }}
+      </UBadge>
+    </DefineTitle>
+
     <div class="relative flex min-h-7 items-center gap-2">
       <!-- Нажатие по всей шапке ловит накладка — псевдоэлемент кнопки во всю
         строку: попадать в один значок приходилось прицельно. Кнопки справа
@@ -123,7 +129,7 @@
       <button
         v-if="collapsible"
         type="button"
-        :class="[headingClass, 'cursor-pointer before:absolute before:inset-0']"
+        :class="TRIGGER_CLASS"
         :aria-expanded="isOpen"
         @click.left.exact.prevent="toggle"
       >
@@ -132,7 +138,7 @@
 
       <div
         v-else
-        :class="headingClass"
+        :class="HEADING_CLASS"
       >
         <ReuseTitle />
       </div>
@@ -165,7 +171,7 @@
       v-model:open="isOpen"
     >
       <template #content>
-        <div :class="railClass">
+        <div :class="RAIL_CLASS">
           <slot />
         </div>
       </template>
@@ -173,7 +179,7 @@
 
     <div
       v-else
-      :class="railClass"
+      :class="RAIL_CLASS"
     >
       <slot />
     </div>

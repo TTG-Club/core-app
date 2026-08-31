@@ -1,6 +1,10 @@
 import type { FeatEditorRows, FeatGrantRow } from '~feats/model';
 
-import type { ClassFeatureCreate, ClassMechanicsHolderCreate } from './create';
+import type {
+  ClassFeatureCreate,
+  ClassFeatureOptionCreate,
+  ClassMechanicsHolderCreate,
+} from './create';
 
 import { createGrantRow, getTakenChoiceKeys } from '~feats/model';
 
@@ -8,6 +12,7 @@ import {
   ABILITY_IMPROVEMENT_FEAT_CATEGORIES,
   CLASS_FEATURE_OPTION_LEVEL_BADGE,
   CLASS_FEATURE_OPTION_REMOVE_CONFIRM,
+  CLASS_FEATURE_OPTIONS_EDITOR,
   CLASS_FEATURES_EDITOR,
   CLASS_OPTIONS_CHOICE_DEFAULTS,
   FIGHTING_STYLE_FEAT_CATEGORY,
@@ -200,6 +205,26 @@ export function getClassFeatureOptionsChoiceBadge(
   const range = total > start ? `${start}–${total}` : `${start}`;
 
   return `${CLASS_FEATURES_EDITOR.optionsChoiceBadge}${range} ${CLASS_FEATURES_EDITOR.optionsChoiceBadgeOf} ${feature.options.length}`;
+}
+
+/**
+ * Подпись бейджа механики варианта: сколько блоков механики у него заполнено.
+ * Список вариантов свёрнут строками, и без бейджа автор не видит, у какого из
+ * них есть своя механика.
+ *
+ * @param option вариант умения из состояния формы.
+ * @returns подпись бейджа; пусто — своей механики у варианта нет.
+ */
+export function getClassOptionMechanicsBadge(
+  option: ClassFeatureOptionCreate,
+): string {
+  const filledBlocksCount = getClassMechanicsFilledBlocksCount(option);
+
+  if (!filledBlocksCount) {
+    return '';
+  }
+
+  return `${CLASS_FEATURE_OPTIONS_EDITOR.mechanicsBadge}${filledBlocksCount}`;
 }
 
 /**

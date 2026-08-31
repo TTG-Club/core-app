@@ -7,6 +7,7 @@ import type {
   ClassFeatureCreate,
   ClassFeatureOptionCreate,
   ClassFeatureOptionsChoiceCreate,
+  ClassMechanicsHolderCreate,
 } from './create';
 
 import { z } from 'zod';
@@ -34,12 +35,6 @@ import { getLegacyFeatureFlags, withLegacyFeatureRows } from './features';
  * подставить значения, а отсеять чужое — недостающее дозаполняет слияние с
  * начальным состоянием формы внутри `useWorkshopForm`.
  */
-
-/** Носитель даров: и сама запись класса, и любое его умение. */
-interface MechanicsHolder {
-  mechanics: FeatMechanics | undefined;
-  editorRows: FeatEditorRows | undefined;
-}
 
 /**
  * Поля умения, которые форма не правит напрямую: флаги прежних лет и блок
@@ -166,7 +161,9 @@ function parseMechanicsHolder(raw: unknown): {
  * @param holder механика и строки одного носителя даров.
  * @returns готовая к отправке механика; `undefined` — даров нет.
  */
-function buildMechanics(holder: MechanicsHolder): FeatMechanics | undefined {
+function buildMechanics(
+  holder: ClassMechanicsHolderCreate,
+): FeatMechanics | undefined {
   const built = holder.editorRows
     ? fromFeatEditorRows(
         holder.editorRows,
