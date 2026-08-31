@@ -28,6 +28,7 @@
     filterChoicesByLevel,
     getCharacterFeatureId,
     getChoiceSkillHints,
+    getChosenProficientSkills,
     getOwnedWeaponNames,
     getRequiredChoiceCount,
     getSpeciesDarkvision,
@@ -346,11 +347,9 @@
     return rows;
   });
 
-  const chosenProficientSkills = computed(() =>
-    featureRows.value
-      .flatMap((row) => row.choiceControls)
-      .filter((control) => control.kind === 'skill-proficiency')
-      .flatMap((control) => selections.value[control.id] ?? []),
+  /** Все выборы мастера: по ним считается, что уже выбрано во владение. */
+  const allChoices = computed<ClassChoice[]>(() =>
+    featureRows.value.flatMap((row) => row.choiceControls),
   );
 
   /** Опции пикера выбора в зависимости от его типа. */
@@ -358,7 +357,11 @@
     return resolveChoiceOptions(choice, {
       skillNames: skillNames.value,
       proficientSkillNames: proficientSkillNames.value,
-      chosenProficientSkills: chosenProficientSkills.value,
+      chosenProficientSkills: getChosenProficientSkills(
+        allChoices.value,
+        selections.value,
+        choice.id,
+      ),
       knownLanguages: character.value.proficiencies.languages,
       knownTools: getToolNames(character.value.proficiencies.tools),
       allLanguages: allLanguages.value,

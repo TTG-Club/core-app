@@ -57,6 +57,7 @@
     getAbilityImprovementSpent,
     getCharacterClasses,
     getChoiceSkillHints,
+    getChosenProficientSkills,
     getClassFeatureChoices,
     getClassFeatureId,
     getClassMaxHitPoints,
@@ -581,7 +582,14 @@
     return resolveChoiceOptions(choice, {
       skillNames: skillNames.value,
       proficientSkillNames: proficientSkillNames.value,
-      chosenProficientSkills: selections.value['class-skills'] ?? [],
+      // Навыки, уже выбранные в мастере: и в выборе класса, и в выборах умений.
+      // Свой ответ выбор не вычитает — иначе выбранное пропадало бы из
+      // собственного списка.
+      chosenProficientSkills: getChosenProficientSkills(
+        allChoices.value,
+        selections.value,
+        choice.id,
+      ),
       knownLanguages: character.value.proficiencies.languages,
       knownTools: getToolNames(character.value.proficiencies.tools),
       allLanguages: allLanguages.value,

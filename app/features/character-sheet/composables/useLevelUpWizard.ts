@@ -54,6 +54,7 @@ import {
   getAbilityImprovementSpent,
   getCharacterClasses,
   getChoiceSkillHints,
+  getChosenProficientSkills,
   getEffectiveAbilities,
   getFeatChoiceOptions,
   getFeatUrlFromFeatureId,
@@ -533,15 +534,6 @@ export function useLevelUpWizard(): LevelUpWizard {
         ),
       allSelections.value,
     ),
-  );
-
-  /** Навыки, выбранные во владение в этом мастере, — опции для компетентности. */
-  const chosenProficientSkills = computed(
-    () =>
-      collectChoiceSelections(
-        steps.value.flatMap((step) => step.features),
-        allSelections.value,
-      ).proficientSkills,
   );
 
   /** Подсказка о неудачной загрузке справочника класса. */
@@ -1130,7 +1122,11 @@ export function useLevelUpWizard(): LevelUpWizard {
     return resolveChoiceOptions(choice, {
       skillNames: skillNames.value,
       proficientSkillNames: proficientSkillNames.value,
-      chosenProficientSkills: chosenProficientSkills.value,
+      chosenProficientSkills: getChosenProficientSkills(
+        allChoices.value,
+        allSelections.value,
+        choice.id,
+      ),
       knownLanguages: character.value.proficiencies.languages,
       knownTools: getToolNames(character.value.proficiencies.tools),
       allLanguages: allLanguages.value,

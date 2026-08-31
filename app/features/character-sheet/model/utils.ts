@@ -11697,6 +11697,33 @@ function getLevelFeatureChoices(
 }
 
 /**
+ * Навыки, выбранные во владение в мастере: пул выбора компетентности и вычет
+ * для выбора навыка, которым персонаж ещё не владеет.
+ *
+ * Ответ самого выбора не учитывается. «Первобытное знание» варвара просит
+ * навык, которым персонаж не владеет, и свой же ответ вычёркивал выбранный
+ * навык из собственного списка сразу после клика: выбор выглядел потерянным, а
+ * снять его было нечем.
+ *
+ * @param choices выборы мастера.
+ * @param selections ответы игрока по идентификаторам выборов.
+ * @param exceptChoiceId идентификатор выбора, чьи ответы не учитываются.
+ * @returns навыки, выбранные во владение остальными выборами мастера.
+ */
+export function getChosenProficientSkills(
+  choices: ClassChoice[],
+  selections: Record<string, string[]>,
+  exceptChoiceId: string,
+): string[] {
+  return choices
+    .filter(
+      (choice) =>
+        choice.kind === 'skill-proficiency' && choice.id !== exceptChoiceId,
+    )
+    .flatMap((choice) => selections[choice.id] ?? []);
+}
+
+/**
  * Опции пикера выбора в зависимости от его типа. Единая логика для визардов
  * класса и вида.
  *
