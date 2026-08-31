@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { ActiveEffect, EffectOrigin } from '../model';
 
+  import { EditorNestedSection } from '~ui/editor';
+
   import {
     ACTIVE_EFFECT_LABELS,
     createEmptyActiveEffect,
@@ -10,19 +12,36 @@
   import ActiveEffectItem from './ui/ActiveEffectItem.vue';
 
   // Источник задаёт редактор-хозяин: он же и знает, чем эффект выдан.
-  const { origin = EFFECT_ORIGIN.spell, title = ACTIVE_EFFECT_LABELS.title } =
-    defineProps<{
-      origin?: EffectOrigin;
+  const {
+    origin = EFFECT_ORIGIN.spell,
+    title = ACTIVE_EFFECT_LABELS.title,
+    nested = false,
+  } = defineProps<{
+    origin?: EffectOrigin;
 
-      /**
-       * Заголовок блока. Своим его называет редактор, у которого эффекты лежат
-       * не на своей вкладке, а внутри записи: у умения класса это «Эффекты
-       * умения» — рядом с дарами и ресурсами того же умения.
-       */
-      title?: string;
-    }>();
+    /**
+     * Заголовок блока. Своим его называет редактор, у которого эффекты лежат
+     * не на своей вкладке, а внутри записи: у умения класса это «Эффекты
+     * умения» — рядом с дарами и ресурсами того же умения.
+     */
+    title?: string;
+
+    /**
+     * Эффекты лежат внутри записи, а не на своей вкладке формы. Тогда блок
+     * рисуется разделом на дорожке — как соседние блоки механики: карточка
+     * среди них была бы седьмой вложенной рамкой подряд.
+     */
+    nested?: boolean;
+  }>();
 
   const model = defineModel<Array<ActiveEffect>>({ default: () => [] });
+
+  /**
+   * Список эффектов один на оба вида блока — карточку своей вкладки и раздел
+   * внутри записи. Через переиспользуемый шаблон, а не копией: разойдясь, копии
+   * перестали бы редактировать эффект одинаково.
+   */
+  const [DefineEffects, ReuseEffects] = createReusableTemplate();
 
   const { isExpanded, toggle, expand, dropRow, getToggleIcon } =
     useExpandedRows();
@@ -95,33 +114,7 @@
 </script>
 
 <template>
-  <UCard
-    variant="subtle"
-    :ui="cardUi"
-  >
-    <template #header>
-      <div class="flex items-center justify-between gap-2">
-        <div class="flex min-w-0 flex-col">
-          <h2 class="truncate text-base text-highlighted">
-            {{ title }}
-          </h2>
-
-          <span class="text-xs text-muted">
-            {{ ACTIVE_EFFECT_LABELS.subtitle }}
-          </span>
-        </div>
-
-        <UButton
-          icon="tabler:plus"
-          size="sm"
-          variant="subtle"
-          @click.left.exact.prevent="addEffect"
-        >
-          {{ ACTIVE_EFFECT_LABELS.add }}
-        </UButton>
-      </div>
-    </template>
-
+  <DefineEffects>
     <div
       v-if="model.length"
       class="flex flex-col gap-3"
@@ -171,31 +164,74 @@
         </div>
       </div>
     </div>
+  </DefineEffects>
 
-    <UModal
-      v-model:open="isRemovalOpen"
-      :title="ACTIVE_EFFECT_LABELS.removeConfirmTitle"
-      :description="ACTIVE_EFFECT_LABELS.removeConfirmText"
-    >
-      <template #footer>
-        <div class="flex w-full items-center justify-end gap-2">
-          <UButton
-            color="neutral"
-            variant="ghost"
-            @click.left.exact.prevent="isRemovalOpen = false"
-          >
-            {{ ACTIVE_EFFECT_LABELS.removeConfirmCancel }}
-          </UButton>
+  <EditorNestedSection
+    v-if="nested"
+    :title="title"
+    :hint="ACTIVE_EFFECT_LABELS.subtitle"
+    :count="model.length"
+    :add-label="ACTIVE_EFFECT_LABELS.add"
+    :collapsible="false"
+    @add="addEffect"
+  >
+    <ReuseEffects />
+  </EditorNestedSection>
 
-          <UButton
-            color="error"
-            icon="tabler:trash"
-            @click.left.exact.prevent="confirmRemoveEffect"
-          >
-            {{ ACTIVE_EFFECT_LABELS.removeConfirmApply }}
-          </UButton>
+  <UCard
+    v-else
+    variant="subtle"
+    :ui="cardUi"
+  >
+    <template #header>
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex min-w-0 flex-col">
+          <h2 class="truncate text-base text-highlighted">
+            {{ title }}
+          </h2>
+
+          <span class="text-xs text-muted">
+            {{ ACTIVE_EFFECT_LABELS.subtitle }}
+          </span>
         </div>
-      </template>
-    </UModal>
+
+        <UButton
+          icon="tabler:plus"
+          size="sm"
+          variant="subtle"
+          @click.left.exact.prevent="addEffect"
+        >
+          {{ ACTIVE_EFFECT_LABELS.add }}
+        </UButton>
+      </div>
+    </template>
+
+    <ReuseEffects />
   </UCard>
+
+  <UModal
+    v-model:open="isRemovalOpen"
+    :title="ACTIVE_EFFECT_LABELS.removeConfirmTitle"
+    :description="ACTIVE_EFFECT_LABELS.removeConfirmText"
+  >
+    <template #footer>
+      <div class="flex w-full items-center justify-end gap-2">
+        <UButton
+          color="neutral"
+          variant="ghost"
+          @click.left.exact.prevent="isRemovalOpen = false"
+        >
+          {{ ACTIVE_EFFECT_LABELS.removeConfirmCancel }}
+        </UButton>
+
+        <UButton
+          color="error"
+          icon="tabler:trash"
+          @click.left.exact.prevent="confirmRemoveEffect"
+        >
+          {{ ACTIVE_EFFECT_LABELS.removeConfirmApply }}
+        </UButton>
+      </div>
+    </template>
+  </UModal>
 </template>

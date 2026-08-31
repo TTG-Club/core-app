@@ -6,6 +6,7 @@
 
   import { createFeatEditorRows, createFeatMechanics } from '~feats/model';
   import { ConfirmDialog } from '~initiative/ui-kit';
+  import { EditorNestedSection } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectLevel } from '~ui/select';
   import { InfoTooltip } from '~ui/tooltip';
@@ -24,7 +25,6 @@
     getClassMechanicsFilledBlocksCount,
   } from '../../../model';
   import FeatureMechanics from './FeatureMechanics.vue';
-  import FeatureSection from './FeatureSection.vue';
 
   /**
    * Варианты умения: манёвры, воззвания, метамагия — список, из которого
@@ -224,7 +224,7 @@
 </script>
 
 <template>
-  <FeatureSection
+  <EditorNestedSection
     :title="CLASS_FEATURES_EDITOR.optionsTitle"
     :hint="CLASS_FEATURES_EDITOR.optionsHint"
     :count="model.length"
@@ -235,7 +235,7 @@
       <!-- Настройка выбора идёт перед списком: сначала автор решает, выбирают
         из списка или он только справочный, и лишь потом набирает варианты -->
       <div
-        class="flex flex-col gap-3 rounded-lg border border-default bg-elevated/40 p-3"
+        class="flex flex-col gap-3 rounded-lg border border-dashed border-default p-3"
       >
         <InfoTooltip
           :text="CLASS_FEATURE_OPTIONS_CHOICE_EDITOR.selectableHint"
@@ -351,7 +351,7 @@
       <div
         v-for="(option, index) in model"
         :key="index"
-        class="rounded-lg border border-default bg-elevated/40"
+        class="rounded-lg border border-default bg-elevated/40 transition-colors focus-within:border-primary/60"
       >
         <!-- Плашка разворачивает вариант целиком: списки вариантов длинные —
           у воина два десятка манёвров, — и развёрнутые все разом они заслоняют
@@ -359,7 +359,17 @@
           кнопка внутри кнопки недопустима, поэтому нажатие ловит накладка —
           псевдоэлемент кнопки во всю шапку, — а сами кнопки подняты над
           накладкой `relative` -->
-        <div class="relative flex items-center gap-2 px-3 py-2">
+        <!-- Шапка раскрытого варианта прилипает под шапкой своего умения:
+          у варианта своя механика на несколько экранов, и вдвоём они держат
+          на виду весь путь — «Воззвания → Мучительная кара» -->
+        <div
+          class="relative flex min-h-10 items-center gap-2 px-3 py-2"
+          :class="
+            isExpanded(index)
+              ? 'sticky top-10 z-10 rounded-t-lg border-b border-default bg-elevated'
+              : ''
+          "
+        >
           <button
             type="button"
             class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left before:absolute before:inset-0"
@@ -435,7 +445,7 @@
 
         <UForm
           v-if="isExpanded(index)"
-          class="grid grid-cols-1 gap-3 border-t border-default p-3 md:grid-cols-24"
+          class="grid grid-cols-1 gap-3 p-3 md:grid-cols-24"
           attach
           :state="option"
         >
@@ -550,5 +560,5 @@
       confirm-icon="tabler:trash"
       @confirm="confirmRemoveRow"
     />
-  </FeatureSection>
+  </EditorNestedSection>
 </template>

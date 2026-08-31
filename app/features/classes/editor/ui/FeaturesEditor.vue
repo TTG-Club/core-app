@@ -215,7 +215,12 @@
 </script>
 
 <template>
-  <UCard variant="subtle">
+  <!-- Карточка не обрезает содержимое: `overflow-hidden` темы отменяет
+    прилипание шапок раскрытых умений и вариантов внутри неё -->
+  <UCard
+    variant="subtle"
+    :ui="{ root: 'overflow-visible' }"
+  >
     <template #header>
       <div class="flex items-center justify-between gap-2">
         <InfoTooltip
@@ -249,9 +254,19 @@
       <div
         v-for="(feature, index) in model"
         :key="index"
-        class="rounded-lg border border-default bg-elevated/20"
+        class="rounded-lg border border-default bg-elevated/20 transition-colors focus-within:border-primary/60"
       >
-        <div class="relative flex items-center gap-2 px-3 py-2">
+        <!-- Шапка раскрытого умения прилипает к верху окна: механика умения
+          длиннее экрана, и без неё на глубине не видно, чьё это умение.
+          Шапка варианта прилипает под ней — вместе они и есть путь -->
+        <div
+          class="relative flex min-h-10 items-center gap-2 px-3 py-2"
+          :class="
+            isExpanded(index)
+              ? 'sticky top-0 z-20 rounded-t-lg border-b border-default bg-elevated'
+              : ''
+          "
+        >
           <!-- Плашка разворачивает умение целиком: попадать значком в конце
             строки приходилось прицельно. Кнопки лежат рядом с ней, а не
             внутри: кнопка внутри кнопки недопустима, поэтому нажатие ловит
@@ -311,7 +326,7 @@
 
         <div
           v-if="isExpanded(index)"
-          class="border-t border-default p-3"
+          class="p-3"
         >
           <UForm
             class="grid grid-cols-1 gap-3 md:grid-cols-24"

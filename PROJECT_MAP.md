@@ -503,6 +503,16 @@ modals), so its capabilities are listed here rather than squeezed into the table
   also becomes a sheet record of its own carrying the option's description, and
   the same descriptions open in the shared `FeatureOptionsDrawer` — the class
   page and both wizards render it.
+- Depth in the class editor is drawn with two visual languages, not seven
+  identical frames: a BOX is a list object (feature, option, grant row, effect)
+  and a RAIL — `EditorNestedSection`, a line running down from the collapse
+  chevron — is a section inside it («Варианты», «Механика и эффекты», «Дары»).
+  Nesting is read by counting rails, and while the caret is inside a field every
+  rail and box above it is highlighted, so the path to it lights up on its own.
+  The headers of an expanded feature and of an expanded option stick to the top
+  of the window (`top-0` and `top-10`), which keeps «Воззвания → Мучительная
+  кара» in view while editing mechanics several screens deep; that is why the
+  features card has to opt out of the card theme's `overflow-hidden`.
 - An option carries the same mechanics block as the feature that owns it
   (`mechanics` + `activeEffects`): proficiencies, sheet modifiers, resources,
   granted spells, spell-list expansion and effects. They land on the option's own
@@ -884,7 +894,7 @@ imported via the auto-generated `~<domain>` alias (see
 | `date-picker`     | Date/time picker input                                                                                                                                                                                                                            |
 | `detail-pane`     | Wide-mode entity detail panel                                                                                                                                                                                                                     |
 | `drawer`          | Overlay drawer (+ header/body/title/actions, DrawerCollection)                                                                                                                                                                                    |
-| `editor`          | Workshop form controls (array/form controls, ability mastery)                                                                                                                                                                                     |
+| `editor`          | Workshop form controls (array/form controls, ability mastery, `EditorNestedSection` — the nesting rail)                                                                                                                                                                                     |
 | `gallery`         | LightGallery image viewer                                                                                                                                                                                                                         |
 | `grouped-list`    | Grouped/sorted entity grid list                                                                                                                                                                                                                   |
 | `icon`            | SVG icon / logo / loader / hamburger                                                                                                                                                                                                              |

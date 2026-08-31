@@ -1,11 +1,12 @@
 <script setup lang="ts">
+  import { EditorNestedSection } from '~ui/editor';
   import { InfoTooltip } from '~ui/tooltip';
 
   /**
-   * Рамка блока строк механики: заголовок, кнопка добавления рядом с ним и сами
-   * строки внутри рамки.
+   * Блок строк механики: заголовок, кнопка добавления рядом с ним и сами строки
+   * на дорожке под ним.
    *
-   * Рамка включается заголовком. Она нужна там, где блоков подряд много — в
+   * Заголовок включает вид разделом. Он нужен там, где блоков подряд много — в
    * механике умения класса их шесть, — и подпись «строк нет» с кнопкой во всю
    * ширину растягивали пустое умение на несколько экранов, а границы блоков
    * приходилось угадывать по заголовкам. Без заголовка блок рисуется как
@@ -49,50 +50,26 @@
 </script>
 
 <template>
-  <section
+  <EditorNestedSection
     v-if="title"
-    class="flex flex-col gap-3 rounded-lg border border-default bg-elevated/20 p-3"
+    :title="title"
+    :hint="hintText"
+    :count="count"
+    :add-label="addLabel"
+    :collapsible="false"
+    @add="emit('add')"
   >
-    <div class="flex items-center gap-2">
-      <h3 class="min-w-0 flex-1 truncate text-sm font-medium text-highlighted">
-        {{ title }}
-      </h3>
-
-      <InfoTooltip
-        v-if="hintText"
-        :text="hintText"
-        icon="tabler:info-circle-filled"
-        class="shrink-0 text-dimmed"
-      />
-
-      <UBadge
-        v-if="count"
-        size="sm"
-        color="primary"
-        variant="subtle"
-        class="shrink-0 tabular-nums"
-      >
-        {{ count }}
-      </UBadge>
-
-      <slot name="add">
-        <UButton
-          v-if="addLabel"
-          icon="tabler:plus"
-          :label="addLabel"
-          color="primary"
-          variant="soft"
-          size="xs"
-          class="shrink-0"
-          @click.left.exact.prevent="emit('add')"
-        />
-      </slot>
-    </div>
+    <template
+      v-if="$slots.add"
+      #actions
+    >
+      <slot name="add" />
+    </template>
 
     <slot />
 
     <slot name="footer" />
-  </section>
+  </EditorNestedSection>
 
   <div
     v-else

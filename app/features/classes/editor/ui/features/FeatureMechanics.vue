@@ -16,9 +16,9 @@
     FeatSpellListSpells,
   } from '~feats/editor/ui';
   import { createFeatEditorRows, createFeatMechanics } from '~feats/model';
+  import { EditorNestedSection } from '~ui/editor';
 
   import { getClassMechanicsFilledBlocksCount } from '../../../model';
-  import FeatureSection from './FeatureSection.vue';
 
   /**
    * Механика и эффекты одного носителя даров: что он делает на листе
@@ -68,7 +68,7 @@
 </script>
 
 <template>
-  <FeatureSection
+  <EditorNestedSection
     :title="titles.section"
     :hint="titles.sectionHint"
     :count="filledBlocksCount"
@@ -108,9 +108,10 @@
 
       <ActiveEffects
         v-model="holder.activeEffects"
+        nested
         :origin="EFFECT_ORIGIN.feature"
         :title="titles.effects"
       />
     </div>
-  </FeatureSection>
+  </EditorNestedSection>
 </template>
