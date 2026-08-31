@@ -34,6 +34,7 @@ import {
   getExhaustionEffects,
   getHitDicePools,
   getInitiativeBonus,
+  getMaxHitPoints,
   getPrimarySpeed,
   getResourceMax,
   getResourceRecoverySummary,
@@ -679,7 +680,10 @@ function drawHealthPanel(
           label: PDF_LABELS.currentHits,
           value: String(character.health.current),
         },
-        { label: PDF_LABELS.maxHits, value: String(character.health.max) },
+        {
+          label: PDF_LABELS.maxHits,
+          value: String(getMaxHitPoints(character)),
+        },
         {
           label: PDF_LABELS.temporaryHits,
           value: String(character.health.temporary),

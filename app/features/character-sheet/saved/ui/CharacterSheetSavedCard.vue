@@ -12,6 +12,7 @@
     downloadCharacterJson,
     getClassesDisplayLabel,
     getDisplayLevel,
+    getMaxHitPoints,
     getSavedSheetActionMenuItems,
     getSpeciesDisplayName,
     SAVED_SHEETS_LABELS,
@@ -82,6 +83,11 @@
 
   const levelValue = computed(() =>
     sheet.data ? getDisplayLevel(sheet.data) : null,
+  );
+
+  // Максимум с прибавками — тот же, что показывает сам лист.
+  const maxHitPoints = computed(() =>
+    sheet.data ? getMaxHitPoints(sheet.data) : 0,
   );
 
   const { isExporting, exportToPdf } = useCharacterSheetPdf();
@@ -233,8 +239,8 @@
           />
 
           <span class="truncate">
-            Хиты: {{ sheet.data.health.current }} /
-            {{ sheet.data.health.max }} · Уровень: {{ levelValue }}
+            Хиты: {{ sheet.data.health.current }} / {{ maxHitPoints }} ·
+            Уровень: {{ levelValue }}
           </span>
         </span>
       </div>

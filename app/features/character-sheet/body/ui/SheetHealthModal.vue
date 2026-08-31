@@ -1,12 +1,15 @@
 <script setup lang="ts">
   import { useCharacterSheet } from '../../composables';
   import {
+    getMaxHitPoints,
+    getMaxHitPointsHint,
     HIT_DICE_COUNT_MAX,
     HIT_DICE_COUNT_MIN,
     HIT_DIE_OPTIONS,
     HIT_POINT_STEP_BUTTONS,
     HIT_POINTS_MAX,
     HIT_POINTS_MIN,
+    MAX_HIT_POINTS_LABELS,
   } from '../../model';
 
   const emit = defineEmits<{
@@ -25,6 +28,21 @@
     character.value.extraHitDice.map((hitDie) => ({ ...hitDie })),
   );
 
+  // Правится записанный максимум, а лист показывает его с прибавками: разбор
+  // объясняет разницу прямо под полем — как подсказка на плитке характеристики.
+  const draftCharacter = computed(() => ({
+    ...character.value,
+    health: { ...character.value.health, max: draftHealth.value.max },
+  }));
+
+  const maxHitPointsTotal = computed(() =>
+    getMaxHitPoints(draftCharacter.value),
+  );
+
+  const maxHitPointsHint = computed(() =>
+    getMaxHitPointsHint(draftCharacter.value),
+  );
+
   /**
    * Быстрое изменение текущих хитов в редакторе: значение ограничивается
    * диапазоном [0, макс].
@@ -33,7 +51,7 @@
    */
   function adjustCurrent(step: number): void {
     draftHealth.value.current = Math.min(
-      draftHealth.value.max,
+      maxHitPointsTotal.value,
       Math.max(HIT_POINTS_MIN, draftHealth.value.current + step),
     );
   }
@@ -114,6 +132,19 @@
               :max="HIT_POINTS_MAX"
             />
           </div>
+        </div>
+
+        <!-- Записанный максимум правится здесь, а лист показывает его с
+          прибавками: без разбора числа расходились бы молча -->
+        <div
+          v-if="maxHitPointsHint"
+          class="flex flex-wrap items-baseline justify-between gap-x-2 rounded-lg bg-elevated/40 px-3 py-2"
+        >
+          <span class="text-xs text-muted">
+            {{ MAX_HIT_POINTS_LABELS.totalTitle }}: {{ maxHitPointsTotal }}
+          </span>
+
+          <span class="text-xs text-dimmed">{{ maxHitPointsHint }}</span>
         </div>
 
         <!-- Быстрые шаги урона/лечения для текущих хитов. -->

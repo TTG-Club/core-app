@@ -1,7 +1,12 @@
 <script setup lang="ts">
   import type { StepperItem } from '@nuxt/ui';
 
-  import type { AbilityKey, ClassChoice, HitPointsGainMode } from '../../model';
+  import type {
+    AbilityImprovementMode,
+    AbilityKey,
+    ClassChoice,
+    HitPointsGainMode,
+  } from '../../model';
 
   import { useCharacterSheet, useLevelUpWizard } from '../../composables';
   import {
@@ -15,9 +20,11 @@
     getLevelHitPointsLoss,
     LEVEL_MAX,
     LEVEL_MIN,
+    LEVEL_SHORT_SUFFIX,
     LEVEL_UP_HIT_POINTS_LABELS,
     LEVEL_UP_WIZARD_LABELS,
   } from '../../model';
+  import SheetAbilityImprovementChoice from './SheetAbilityImprovementChoice.vue';
   import SheetLevelUpStep from './SheetLevelUpStep.vue';
   import SheetLevelUpSubclassPicker from './SheetLevelUpSubclassPicker.vue';
 
@@ -32,7 +39,9 @@
 
   const {
     steps,
+    wizardSteps,
     drafts,
+    abilityScoresFor,
     isLoading,
     hasLoadError,
     subclassOptions,
@@ -49,6 +58,10 @@
     setNote,
     setFeatChoice,
     setFeatAbility,
+    abilityImprovement,
+    setAbilityImprovementMode,
+    stepAbilityImprovement,
+    resetAbilityImprovement,
     selectSubclass,
     choiceOptions,
     choiceHints,
@@ -182,21 +195,72 @@
     () => draftLevel.value > character.value.level && !hasClass.value,
   );
 
-  const currentStep = computed(() => steps.value[stepIndex.value - 1] ?? null);
-
-  const currentDraft = computed(
-    () => drafts.value[stepIndex.value - 1] ?? null,
+  /** Показываемый шаг: уровень либо его повышение характеристик. */
+  const currentView = computed(
+    () => wizardSteps.value[stepIndex.value - 1] ?? null,
   );
 
+  /** Номер черновика (и шага уровня), к которому относится показываемый шаг. */
+  const currentDraftIndex = computed(() => currentView.value?.draftIndex ?? -1);
+
+  const currentStep = computed(
+    () => steps.value[currentDraftIndex.value] ?? null,
+  );
+
+  const currentDraft = computed(
+    () => drafts.value[currentDraftIndex.value] ?? null,
+  );
+
+  const isAbilitiesView = computed(
+    () => currentView.value?.key === 'abilities',
+  );
+
+  /**
+   * Повышения характеристик показываемого шага: у уровня их обычно одно, но
+   * умение подкласса может дать своё — тогда блоков будет два.
+   */
+  const abilityImprovementBlocks = computed(() => {
+    const step = currentStep.value;
+
+    if (!step || !isAbilitiesView.value) {
+      return [];
+    }
+
+    return step.features
+      .filter((feature) => feature.abilityImprovement)
+      .flatMap((feature) =>
+        feature.featChoices.map((choice) => {
+          const improvement = abilityImprovement(
+            currentDraftIndex.value,
+            choice.id,
+          );
+
+          return {
+            id: choice.id,
+            scores: abilityScoresFor(choice.id),
+            title: choice.label || feature.name,
+            badgeLabel: `${feature.originLabel} · ${feature.level} ${LEVEL_SHORT_SUFFIX}`,
+            mode: improvement.mode,
+            increases: improvement.increases,
+            featOptions: featOptions(currentDraftIndex.value, choice),
+            selectedFeat: selectedFeat(currentDraftIndex.value, choice.id),
+            featAbilities:
+              currentDraft.value?.featChoices[choice.id]?.abilities ?? [],
+            featureId: feature.id,
+          };
+        }),
+      );
+  });
+
   const isLastStep = computed(
-    () => isStepsMode.value && stepIndex.value === steps.value.length,
+    () => isStepsMode.value && stepIndex.value === wizardSteps.value.length,
   );
 
   const stepperItems = computed<StepperItem[]>(() => [
     { value: 0, title: LEVEL_UP_WIZARD_LABELS.progressStep },
-    ...steps.value.map((step) => ({
-      value: step.index + 1,
-      title: `${step.level} ур.`,
+    ...wizardSteps.value.map((step, index) => ({
+      value: index + 1,
+      title: step.title,
     })),
   ]);
 
@@ -321,23 +385,23 @@
   }
 
   function handleGainMode(mode: HitPointsGainMode) {
-    setGainMode(stepIndex.value - 1, mode);
+    setGainMode(currentDraftIndex.value, mode);
   }
 
   function handleRoll() {
-    rollHitDie(stepIndex.value - 1);
+    rollHitDie(currentDraftIndex.value);
   }
 
   function handleSelection(choiceId: string, values: string[]) {
-    setSelection(stepIndex.value - 1, choiceId, values);
+    setSelection(currentDraftIndex.value, choiceId, values);
   }
 
   function handleNote(featureId: string, value: string) {
-    setNote(stepIndex.value - 1, featureId, value);
+    setNote(currentDraftIndex.value, featureId, value);
   }
 
   function handleFeat(featureId: string, choiceId: string, featUrl: string) {
-    setFeatChoice(stepIndex.value - 1, featureId, choiceId, featUrl);
+    setFeatChoice(currentDraftIndex.value, featureId, choiceId, featUrl);
   }
 
   function handleFeatAbility(
@@ -345,26 +409,68 @@
     payload: { slot: number; ability: AbilityKey | null },
   ) {
     setFeatAbility(
-      stepIndex.value - 1,
+      currentDraftIndex.value,
       choiceId,
       payload.slot,
       payload.ability,
     );
   }
 
+  /**
+   * Смена режима повышения характеристик на шаге.
+   *
+   * @param choiceId идентификатор выбора черты повышения.
+   * @param mode выбранный режим.
+   */
+  function handleImprovementMode(
+    choiceId: string,
+    mode: AbilityImprovementMode,
+  ) {
+    setAbilityImprovementMode(currentDraftIndex.value, choiceId, mode);
+  }
+
+  /**
+   * Шаг ± у характеристики в режиме прибавок.
+   *
+   * @param choiceId идентификатор выбора черты повышения.
+   * @param payload характеристика и шаг изменения.
+   * @param payload.ability ключ характеристики.
+   * @param payload.delta шаг изменения.
+   */
+  function handleImprovementStep(
+    choiceId: string,
+    payload: { ability: AbilityKey; delta: number },
+  ) {
+    stepAbilityImprovement(
+      currentDraftIndex.value,
+      choiceId,
+      payload.ability,
+      payload.delta,
+    );
+  }
+
+  /**
+   * Сброс разложенных прибавок повышения.
+   *
+   * @param choiceId идентификатор выбора черты повышения.
+   */
+  function handleImprovementReset(choiceId: string) {
+    resetAbilityImprovement(currentDraftIndex.value, choiceId);
+  }
+
   /** Черты, доступные выбору черты на текущем шаге. */
   function currentFeatOptions(choice: ClassChoice) {
-    return featOptions(stepIndex.value - 1, choice);
+    return featOptions(currentDraftIndex.value, choice);
   }
 
   /** Черта, выбранная в выборе текущего шага. */
   function currentSelectedFeat(choiceId: string) {
-    return selectedFeat(stepIndex.value - 1, choiceId);
+    return selectedFeat(currentDraftIndex.value, choiceId);
   }
 
   function handleSubclassSelect(subclassUrl: string | null) {
     if (subclassUrl) {
-      void selectSubclass(stepIndex.value - 1, subclassUrl);
+      void selectSubclass(currentDraftIndex.value, subclassUrl);
     }
   }
 
@@ -604,6 +710,33 @@
           </template>
         </template>
 
+        <!-- Повышение характеристик — своим шагом: уровень остаётся
+          компактным, а прибавки и черта вместо них спрашиваются целиком -->
+        <div
+          v-else-if="isAbilitiesView"
+          class="flex flex-col gap-3"
+        >
+          <SheetAbilityImprovementChoice
+            v-for="block in abilityImprovementBlocks"
+            :key="block.id"
+            :title="block.title"
+            :badge-label="block.badgeLabel"
+            :mode="block.mode"
+            :increases="block.increases"
+            :scores="block.scores"
+            :feat-options="block.featOptions"
+            :selected-feat="block.selectedFeat"
+            :feat-abilities="block.featAbilities"
+            :is-feats-loading="isFeatsLoading"
+            :has-feats-error="hasFeatsError"
+            @update:mode="handleImprovementMode(block.id, $event)"
+            @step="handleImprovementStep(block.id, $event)"
+            @update:feat="handleFeat(block.featureId, block.id, $event)"
+            @update:feat-ability="handleFeatAbility(block.id, $event)"
+            @reset="handleImprovementReset(block.id)"
+          />
+        </div>
+
         <SheetLevelUpStep
           v-else-if="currentStep && currentDraft"
           :step="currentStep"
@@ -629,8 +762,8 @@
             #subclass
           >
             <SheetLevelUpSubclassPicker
-              :model-value="selectedSubclassUrl(stepIndex - 1)"
-              :options="subclassOptions(stepIndex - 1)"
+              :model-value="selectedSubclassUrl(currentDraftIndex)"
+              :options="subclassOptions(currentDraftIndex)"
               :is-loading="isSubclassLoading"
               :has-error="hasSubclassError"
               @update:model-value="handleSubclassSelect"

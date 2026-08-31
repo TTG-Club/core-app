@@ -121,6 +121,8 @@
     featDefences,
     hasFeatDefences,
     formattedProficiencyBonus,
+    maxHitPoints,
+    maxHitPointsHint,
     initiativeBonus,
     formattedInitiative,
     armorClassValue,
@@ -1193,6 +1195,8 @@
 
             <SheetHealthPanel
               :health="character.health"
+              :max-hit-points="maxHitPoints"
+              :max-hit-points-hint="maxHitPointsHint"
               :hit-dice="character.hitDice"
               :extra-hit-dice="character.extraHitDice"
               class="max-sm:order-1 max-sm:col-span-full"

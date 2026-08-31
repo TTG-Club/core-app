@@ -134,45 +134,54 @@
       `${LEVEL_UP_HIT_POINTS_LABELS.constitutionTitle}: ${formattedConstitutionModifier.value} ${LEVEL_UP_HIT_POINTS_LABELS.perLevelSuffix}`,
   );
 
+  // Повышение характеристик спрашивается своим шагом, поэтому среди карточек
+  // уровня его строки нет: иначе выбор был бы в двух местах сразу. Строка без
+  // единого выбора остаётся здесь — своего шага у неё не будет, а описание
+  // умения игрок прочесть должен.
   const featureRows = computed(() =>
-    step.features.map((feature) => {
-      // Каждый выбор умения тянет за собой свой пул, своё количество и свои
-      // пометки: считаются они здесь, чтобы шаблон остался декларативным
-      const controls = feature.choices.map((choice) => {
-        const options = choiceOptions(choice);
-        const requiredCount = getRequiredChoiceCount(choice, options);
-        const chooseLabel = `${LEVEL_UP_WIZARD_LABELS.chooseLabel} ${requiredCount}`;
+    step.features
+      .filter(
+        (feature) =>
+          !feature.abilityImprovement || feature.featChoices.length === 0,
+      )
+      .map((feature) => {
+        // Каждый выбор умения тянет за собой свой пул, своё количество и свои
+        // пометки: считаются они здесь, чтобы шаблон остался декларативным
+        const controls = feature.choices.map((choice) => {
+          const options = choiceOptions(choice);
+          const requiredCount = getRequiredChoiceCount(choice, options);
+          const chooseLabel = `${LEVEL_UP_WIZARD_LABELS.chooseLabel} ${requiredCount}`;
+
+          return {
+            choice,
+            options,
+            requiredCount,
+            hints: choiceHints(choice),
+            chooseLabel,
+            // Заголовок просмотра описаний вариантов: подпись выбора, а её нет —
+            // общее «Выберите столько-то»
+            detailsTitle: choice.label || chooseLabel,
+          };
+        });
+
+        // Выборы черты — боевой стиль и подобные — спрашиваются пикером каталога
+        // черт, каждый со своим пулом
+        const featPickers = feature.featChoices.map((choice) => ({
+          choice,
+          options: featOptions(choice),
+          selected: selectedFeat(choice.id),
+          abilities: draft.featChoices[choice.id]?.abilities ?? [],
+        }));
 
         return {
-          choice,
-          options,
-          requiredCount,
-          hints: choiceHints(choice),
-          chooseLabel,
-          // Заголовок просмотра описаний вариантов: подпись выбора, а её нет —
-          // общее «Выберите столько-то»
-          detailsTitle: choice.label || chooseLabel,
+          ...feature,
+          badgeLabel: `${feature.originLabel} · ${feature.level} ур.`,
+          controls,
+          featPickers,
+          // Свободный текст остаётся только умению без единого пикера
+          hasNote: controls.length === 0 && featPickers.length === 0,
         };
-      });
-
-      // Выборы черты — боевой стиль, черта за повышение характеристик —
-      // спрашиваются пикером каталога черт, каждый со своим пулом
-      const featPickers = feature.featChoices.map((choice) => ({
-        choice,
-        options: featOptions(choice),
-        selected: selectedFeat(choice.id),
-        abilities: draft.featChoices[choice.id]?.abilities ?? [],
-      }));
-
-      return {
-        ...feature,
-        badgeLabel: `${feature.originLabel} · ${feature.level} ур.`,
-        controls,
-        featPickers,
-        // Свободный текст остаётся только умению без единого пикера
-        hasNote: controls.length === 0 && featPickers.length === 0,
-      };
-    }),
+      }),
   );
 
   /** Способ прироста из радиогруппы: контрол отдаёт значение нетипизированным. */

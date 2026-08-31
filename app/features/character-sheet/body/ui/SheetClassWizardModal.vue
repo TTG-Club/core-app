@@ -2,7 +2,9 @@
   import type { TabsItem } from '@nuxt/ui';
 
   import type {
+    AbilityImprovementMode,
     AbilityKey,
+    CharacterAbilities,
     CharacterFeature,
     CharacterInventoryItem,
     ClassChoice,
@@ -10,8 +12,11 @@
     ClassSummary,
     ClassWizardTab,
     FeatSelectOption,
+    LevelUpAbilityImprovement,
     LevelUpFeatChoice,
   } from '../../model';
+
+  import { omit } from 'es-toolkit';
 
   import { ClassDrawer } from '~classes/drawer';
   import { MarkupRender } from '~ui/markup';
@@ -24,6 +29,7 @@
   import {
     ABILITY_IMPROVEMENT_LABELS,
     ABILITY_LABELS,
+    buildAbilityImprovementFeature,
     buildClassFeatures,
     buildFeatFeature,
     buildStartingEquipmentItems,
@@ -39,6 +45,7 @@
     CLASSES_SEARCH_PATH,
     collectFeatAbilityIncreases,
     CUSTOM_CLASS_LABELS,
+    DEFAULT_ABILITY_IMPROVEMENT,
     deriveCantripsScaling,
     deriveClassResources,
     derivePreparedSpellsScaling,
@@ -47,6 +54,7 @@
     FEATS_SELECT_PATH,
     FEATURE_ORIGIN_LABELS,
     fetchFeatDetail,
+    getAbilityImprovementSpent,
     getCharacterClasses,
     getChoiceSkillHints,
     getClassFeatureChoices,
@@ -54,10 +62,12 @@
     getClassMaxHitPoints,
     getClassSkillChoice,
     getClassToolChoice,
+    getEffectiveAbilities,
     getFeatChoiceOptions,
     getFeatChoicesUpToLevel,
     getFeatUrlFromFeatureId,
     getHitDieAverage,
+    getLevelFeatChoices,
     getLevelHitPointsGain,
     getMulticlassRequirementWarning,
     getOwnedWeaponNames,
@@ -66,7 +76,10 @@
     getTakenOptionValues,
     getToolNames,
     getUnmetMulticlassRequirements,
+    isAbilityImprovementComplete,
+    isAbilityImprovementFeatChoice,
     LANGUAGE_PROFICIENCY_GROUPS,
+    LEVEL_SHORT_SUFFIX,
     matchClassProficiencies,
     matchToolProficiencies,
     mergeAbilityIncreases,
@@ -80,7 +93,10 @@
     STARTING_EQUIPMENT_SKIP_VALUE,
     SUBCLASS_SELECTION_MIN_LEVEL,
     unionToolProficiencies,
+    withAbilityImprovementStep,
+    withPendingAbilityIncreases,
   } from '../../model';
+  import SheetAbilityImprovementChoice from './SheetAbilityImprovementChoice.vue';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
   import SheetCustomClassModal from './SheetCustomClassModal.vue';
   import SheetLevelUpFeatChoice from './SheetLevelUpFeatChoice.vue';
@@ -242,6 +258,11 @@
 
   /** Выборы черт по идентификатору выбора умения. */
   const featSelections = ref<Record<string, LevelUpFeatChoice>>({});
+
+  /** Ответы на повышения характеристик по идентификатору их выбора черты. */
+  const abilityImprovements = ref<Record<string, LevelUpAbilityImprovement>>(
+    {},
+  );
 
   /** Каталог черт для выборов черты в умениях; грузится, когда они есть. */
   const featCatalog = ref<FeatSelectOption[]>([]);
@@ -475,6 +496,16 @@
       choiceControls: ClassChoice[];
       featChoices: ClassChoice[];
       grantedFeatUrls: string[];
+
+      /** Умение даёт повышение характеристик — его спрашивает свой раздел. */
+      abilityImprovement: boolean;
+
+      /**
+       * Повышения умения по уровням: персонаж собирается сразу на нужном
+       * уровне, и «Улучшение характеристик» спрашивает своё за каждый
+       * пройденный уровень роста.
+       */
+      improvementChoices: Array<{ level: number; choices: ClassChoice[] }>;
     }> = [];
 
     const seenKeys = new Set<string>();
@@ -510,9 +541,18 @@
             level.value,
           ),
           // Персонаж собирается сразу на нужном уровне: «Улучшение
-          // характеристик» спрашивает черту за каждый пройденный уровень роста
+          // характеристик» спрашивает своё за каждый пройденный уровень роста
           featChoices: getFeatChoicesUpToLevel(feature, level.value),
           grantedFeatUrls: [...feature.grantedFeatUrls],
+          abilityImprovement: feature.abilityImprovement,
+          improvementChoices: feature.abilityImprovement
+            ? [feature.level, ...feature.scalingLevels]
+                .filter((featureLevel) => featureLevel <= level.value)
+                .map((featureLevel) => ({
+                  level: featureLevel,
+                  choices: getLevelFeatChoices(feature, featureLevel),
+                }))
+            : [],
         });
       }
     };
@@ -714,7 +754,19 @@
       return [];
     }
 
+    // Выборы повышения характеристик считает свой раздел: там у них два режима,
+    // и требовать черту в режиме прибавок значило бы запереть применение.
+    const improvementChoiceIds = new Set(
+      featureRows.value
+        .filter((row) => row.abilityImprovement)
+        .flatMap((row) => row.featChoices.map((choice) => choice.id)),
+    );
+
     return choices.filter((choice) => {
+      if (improvementChoiceIds.has(choice.id)) {
+        return false;
+      }
+
       const selection = featSelections.value[choice.id];
 
       return !selection?.featUrl || selection.abilities.includes(null);
@@ -725,6 +777,79 @@
     () =>
       getPendingFeatChoices(featureRows.value.flatMap((row) => row.featChoices))
         .length,
+  );
+
+  /** Итоговые характеристики персонажа — от них считаются прибавки и предел. */
+  const abilityScores = computed(() => getEffectiveAbilities(character.value));
+
+  /**
+   * Характеристики, от которых считается предел одного повышения: к итоговым
+   * прибавляется всё, что уже разложено другими повышениями и выбранными
+   * чертами мастера. Персонаж собирается сразу на нужном уровне, и без этого
+   * повышения 4, 8 и 12 уровней подняли бы одну характеристику выше предела.
+   *
+   * @param choiceId идентификатор выбора, для которого считается предел.
+   * @returns характеристики с прибавками мастера.
+   */
+  function abilityScoresFor(choiceId: string): CharacterAbilities {
+    return withPendingAbilityIncreases(abilityScores.value, [
+      ...Object.entries(abilityImprovements.value)
+        .filter(
+          ([id, improvement]) =>
+            id !== choiceId && improvement.mode === 'abilities',
+        )
+        .map(([, improvement]) => improvement.increases),
+      ...Object.entries(featSelections.value)
+        .filter(([id]) => id !== choiceId)
+        .map(([, selection]) =>
+          collectFeatAbilityIncreases(selection.abilities),
+        ),
+    ]);
+  }
+
+  /**
+   * Блоки раздела «Характеристики»: по блоку на каждое повышение, которое даёт
+   * взятый уровень. Спрашиваются отдельным разделом, а не в карточке умения:
+   * повышений у высокого уровня несколько, и в карточке они терялись бы.
+   */
+  const abilityImprovementBlocks = computed(() =>
+    featureRows.value
+      .filter((row) => row.abilityImprovement)
+      .flatMap((row) =>
+        row.improvementChoices.flatMap((improvement) =>
+          improvement.choices.map((choice) => ({
+            id: choice.id,
+            choice,
+            scores: abilityScoresFor(choice.id),
+            featureRowId: `${row.id}:${improvement.level}`,
+            level: improvement.level,
+            title: choice.label || row.name,
+            badgeLabel: `${row.originLabel} · ${improvement.level} ${LEVEL_SHORT_SUFFIX}`,
+            improvement:
+              abilityImprovements.value[choice.id]
+              ?? DEFAULT_ABILITY_IMPROVEMENT,
+          })),
+        ),
+      ),
+  );
+
+  /**
+   * Незакрытые повышения характеристик: их число висит на своей вкладке. Сбой
+   * каталога черт требование к черте снимает — выбирать там не из чего.
+   */
+  const pendingAbilityImprovementCount = computed(
+    () =>
+      abilityImprovementBlocks.value.filter((block) => {
+        if (block.improvement.mode === 'feat' && hasFeatsError.value) {
+          return false;
+        }
+
+        return !isAbilityImprovementComplete(
+          block.improvement,
+          featSelections.value[block.id],
+          block.scores,
+        );
+      }).length,
   );
 
   /**
@@ -794,6 +919,7 @@
       + getPendingChoices(
         featureRows.value.flatMap((row) => row.choiceControls),
       ).length,
+    abilities: pendingAbilityImprovementCount.value,
   }));
 
   /** Сколько ответов мастер ещё ждёт во всех разделах вместе. */
@@ -824,6 +950,10 @@
 
       if (tab === 'features') {
         return featureRows.value.length > 0;
+      }
+
+      if (tab === 'abilities') {
+        return abilityImprovementBlocks.value.length > 0;
       }
 
       return true;
@@ -922,6 +1052,9 @@
       new Set([...takenFeatUrls.value, ...chosenElsewhere]),
       selectedUrl,
       featSourceIds.value,
+      // У выбора за повышение характеристик сама черта «Улучшение
+      // характеристик» из пула уходит: её прибавки — это режим раздела.
+      isAbilityImprovementFeatChoice(choice),
     );
   }
 
@@ -999,6 +1132,89 @@
           slot === payload.slot ? payload.ability : current,
         ),
       },
+    };
+  }
+
+  /**
+   * Смена режима повышения. Прежний ответ снимается целиком: прибавки и черта —
+   * это два ответа на один выбор, и оставленный второй уехал бы на лист вместе
+   * с первым.
+   *
+   * @param choiceId идентификатор выбора черты повышения.
+   * @param mode новый режим.
+   */
+  function setAbilityImprovementMode(
+    choiceId: string,
+    mode: AbilityImprovementMode,
+  ) {
+    featSelections.value = omit(featSelections.value, [choiceId]);
+
+    abilityImprovements.value = {
+      ...abilityImprovements.value,
+      [choiceId]: { mode, increases: {} },
+    };
+  }
+
+  /**
+   * Шаг ± у характеристики в режиме прибавок.
+   *
+   * @param choiceId идентификатор выбора черты повышения.
+   * @param payload характеристика и шаг изменения.
+   * @param payload.ability ключ характеристики.
+   * @param payload.delta шаг изменения (+1 или −1).
+   */
+  function stepAbilityImprovement(
+    choiceId: string,
+    payload: { ability: AbilityKey; delta: number },
+  ) {
+    const current =
+      abilityImprovements.value[choiceId] ?? DEFAULT_ABILITY_IMPROVEMENT;
+
+    abilityImprovements.value = {
+      ...abilityImprovements.value,
+      [choiceId]: {
+        ...current,
+        increases: withAbilityImprovementStep(
+          abilityScoresFor(choiceId),
+          current.increases,
+          payload.ability,
+          payload.delta,
+        ),
+      },
+    };
+  }
+
+  /**
+   * Выбор черты вместо повышения характеристик: черта ложится под запись того
+   * же уровня, что и прибавки, — снятие класса заберёт её вместе с умением.
+   *
+   * @param block блок повышения характеристик.
+   * @param block.id идентификатор выбора черты повышения.
+   * @param block.featureRowId идентификатор строки умения с уровнем.
+   * @param featUrl url выбранной черты; '' — выбор снят.
+   */
+  function setImprovementFeat(
+    block: { id: string; featureRowId: string },
+    featUrl: string,
+  ) {
+    setFeatChoice(block.featureRowId, block.id, featUrl);
+  }
+
+  /**
+   * Сброс разложенных прибавок повышения.
+   *
+   * @param choiceId идентификатор выбора черты повышения.
+   */
+  function resetAbilityImprovement(choiceId: string) {
+    const current = abilityImprovements.value[choiceId];
+
+    if (!current) {
+      return;
+    }
+
+    abilityImprovements.value = {
+      ...abilityImprovements.value,
+      [choiceId]: { ...current, increases: {} },
     };
   }
 
@@ -1123,6 +1339,7 @@
       choices.value = {};
       selections.value = {};
       featSelections.value = {};
+      abilityImprovements.value = {};
 
       // Каталог черт нужен только классу с выбором черты до этого уровня:
       // иначе лишний запрос на каждое открытие мастера
@@ -1333,6 +1550,22 @@
         featureAnswers,
       ),
       ...classFeatFeatures.map((selection) => selection.feature),
+      // Взятые повышения характеристик: прибавка приезжает на лист эффектом,
+      // который видно во вкладке «Эффекты» и можно выключить
+      ...abilityImprovementBlocks.value
+        .filter(
+          (block) =>
+            block.improvement.mode === 'abilities'
+            && getAbilityImprovementSpent(block.improvement.increases) > 0,
+        )
+        .map((block) =>
+          buildAbilityImprovementFeature({
+            featureRowId: block.featureRowId,
+            className: base.name,
+            classLevel: block.level,
+            increases: block.improvement.increases,
+          }),
+        ),
     ];
 
     // Навыки уровня класса: выборы умений сюда не идут — их владения ведёт
@@ -1806,7 +2039,7 @@
               />
             </template>
 
-            <template v-else>
+            <template v-else-if="reviewTab === 'features'">
               <div class="flex flex-col gap-2">
                 <span
                   class="text-[10px] font-bold tracking-wider text-muted uppercase"
@@ -1870,10 +2103,11 @@
                     v-if="isFeatureRowExpanded(row.id)"
                     class="flex flex-col gap-2 px-3 pb-3"
                   >
-                    <!-- Выборы черты — боевой стиль, черта за повышение
-                характеристик — тем же пикером, что в мастере повышения -->
+                    <!-- Выборы черты — боевой стиль и подобные — тем же
+                пикером, что в мастере повышения. Выборы повышения
+                характеристик спрашивает свой раздел -->
                     <div
-                      v-if="row.featChoices.length"
+                      v-if="row.featChoices.length && !row.abilityImprovement"
                       class="flex flex-col gap-3"
                     >
                       <SheetLevelUpFeatChoice
@@ -1933,6 +2167,32 @@
                     />
                   </div>
                 </div>
+              </div>
+            </template>
+
+            <!-- Повышения характеристик — своим разделом: у высокого уровня их
+              несколько, и в карточках умений они терялись бы -->
+            <template v-else>
+              <div class="flex flex-col gap-3">
+                <SheetAbilityImprovementChoice
+                  v-for="block in abilityImprovementBlocks"
+                  :key="block.id"
+                  :title="block.title"
+                  :badge-label="block.badgeLabel"
+                  :mode="block.improvement.mode"
+                  :increases="block.improvement.increases"
+                  :scores="block.scores"
+                  :feat-options="featOptions(block.choice)"
+                  :selected-feat="selectedFeat(block.id)"
+                  :feat-abilities="featAbilities(block.id)"
+                  :is-feats-loading="isFeatsLoading"
+                  :has-feats-error="hasFeatsError"
+                  @update:mode="setAbilityImprovementMode(block.id, $event)"
+                  @step="stepAbilityImprovement(block.id, $event)"
+                  @update:feat="setImprovementFeat(block, $event)"
+                  @update:feat-ability="setFeatAbility(block.id, $event)"
+                  @reset="resetAbilityImprovement(block.id)"
+                />
               </div>
             </template>
           </div>

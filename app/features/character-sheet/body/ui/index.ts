@@ -1,4 +1,5 @@
 export { default as SheetAbilitiesRow } from './SheetAbilitiesRow.vue';
+export { default as SheetAbilityImprovementChoice } from './SheetAbilityImprovementChoice.vue';
 export { default as SheetAbilityModal } from './SheetAbilityModal.vue';
 export { default as SheetAbilityScoresModal } from './SheetAbilityScoresModal.vue';
 export { default as SheetAbilityTile } from './SheetAbilityTile.vue';
@@ -32,6 +33,7 @@ export { default as SheetEquipmentTab } from './SheetEquipmentTab.vue';
 export { default as SheetExhaustionPanel } from './SheetExhaustionPanel.vue';
 export { default as SheetExperienceModal } from './SheetExperienceModal.vue';
 export { default as SheetFeatAddModal } from './SheetFeatAddModal.vue';
+export { default as SheetFeatPickModal } from './SheetFeatPickModal.vue';
 export { default as SheetFeatSpellsModal } from './SheetFeatSpellsModal.vue';
 export { default as SheetFeatSpellsPicker } from './SheetFeatSpellsPicker.vue';
 export { default as SheetFeatureAddModal } from './SheetFeatureAddModal.vue';

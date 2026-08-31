@@ -1,6 +1,7 @@
 import type { DropdownMenuItem } from '@nuxt/ui';
 
 import type { AbilityKey as ApiAbilityKey, Level } from '~/shared/types';
+import type { ActiveEffect } from '~active-effects/model';
 import type { FeatureOptionEntry } from '~classes/model';
 import type { MagicItemBonuses } from '~magic-items/model';
 import type { RenderNode } from '~ui/markup';
@@ -103,6 +104,8 @@ import type {
   InventoryWeapon,
   InventoryWeaponDamage,
   ItemSummary,
+  LevelUpAbilityImprovement,
+  LevelUpFeatChoice,
   LevelUpHitPointsGain,
   MagicItemCatalogGroup,
   MagicItemCatalogGrouping,
@@ -153,6 +156,7 @@ import {
   capitalize,
   clamp,
   mapValues,
+  omit,
   round,
   union,
   uniq,
@@ -187,11 +191,16 @@ import {
 import {
   ABILITY_CHOICE_ID_SEGMENT,
   ABILITY_COUNT_FORMS,
+  ABILITY_IMPROVEMENT_EFFECT_ICON,
   ABILITY_IMPROVEMENT_EXCLUDED_FEAT_CATEGORIES,
   ABILITY_IMPROVEMENT_FEAT_URL_PREFIX,
+  ABILITY_IMPROVEMENT_FEATURE_NAME,
   ABILITY_IMPROVEMENT_FEATURE_NAMES,
   ABILITY_IMPROVEMENT_LABELS,
+  ABILITY_IMPROVEMENT_POINTS,
+  ABILITY_IMPROVEMENT_POINTS_PER_ABILITY,
   ABILITY_IMPROVEMENT_SCORE_MAX,
+  ABILITY_INCREASE_FEATURE_ID_SEGMENT,
   ABILITY_KEY_BY_LABEL,
   ABILITY_LABELS,
   ABILITY_ORDER,
@@ -330,11 +339,13 @@ import {
   LEGACY_FIGHTING_STYLE_CHOICE_KEY,
   LEVEL_MAX,
   LEVEL_MIN,
+  LEVEL_SHORT_SUFFIX,
   LEVEL_XP_THRESHOLDS,
   MAGIC_ITEM_ARTIFACT_COST_LABEL,
   MAGIC_ITEM_CATALOG_EMPTY_GROUP_LABELS,
   MAGIC_ITEM_RARITY_COSTS,
   MAGIC_ITEMS_DETAIL_BASE_PATH,
+  MAX_HIT_POINTS_LABELS,
   MULTICLASS_ABILITY_REQUIREMENT,
   MULTICLASS_REQUIREMENT_WARNING_PREFIX,
   NEW_CUSTOM_BONUS,
@@ -2874,6 +2885,7 @@ export function getInventoryBonusTargetGroups(
         toInventoryBonusTargetOption('initiative', ''),
         toInventoryBonusTargetOption('spell-save-dc', ''),
         toInventoryBonusTargetOption('spell-attack', ''),
+        toInventoryBonusTargetOption('hit-points-max', ''),
       ],
     },
   ];
@@ -5332,6 +5344,115 @@ export function adjustHealthForConstitution(
       amount: Math.max(HIT_POINTS_LEVEL_GAIN_MIN, gain.amount + modifierDelta),
     })),
   };
+}
+
+/** Цель бонуса «максимум хитов» — общая у эффектов и своих бонусов предметов. */
+const MAX_HIT_POINTS_BONUS_TARGETS: InventoryBonusTarget[] = [
+  { kind: 'hit-points-max' },
+];
+
+/**
+ * Прибавка к максимуму хитов от итогового Телосложения.
+ *
+ * Записанный максимум посчитан по записанному значению Телосложения (его и
+ * двигает {@link adjustHealthForConstitution}), а всё, что поднимает
+ * характеристику сверху — эффект повышения, умение, надетый предмет, свой
+ * бонус, — входит в максимум на каждом уровне и снимается вместе с собой.
+ *
+ * @param character персонаж.
+ * @returns прибавка к максимуму хитов; 0 — итоговое Телосложение равно записанному.
+ */
+export function getConstitutionHitPointsBonus(character: Character): number {
+  const modifierDelta =
+    getModifier(getEffectiveAbilityScore(character, 'constitution'))
+    - getModifier(character.abilities.constitution);
+
+  return modifierDelta * character.level;
+}
+
+/**
+ * Максимум хитов с прибавками: записанный максимум, поправка на итоговое
+ * Телосложение и адресные бонусы к самому максимуму (амулет здоровья, эффект с
+ * изменением `hitPoints.max`).
+ *
+ * Незаполненное здоровье (нулевой максимум) не трогается — прибавлять не к чему,
+ * как и в {@link adjustHealthForConstitution}.
+ *
+ * @param character персонаж.
+ * @returns итоговый максимум хитов.
+ */
+export function getMaxHitPoints(character: Character): number {
+  const recorded = character.health.max;
+
+  if (recorded <= 0) {
+    return recorded;
+  }
+
+  return Math.max(
+    0,
+    getInventoryBonusTotal(
+      character,
+      MAX_HIT_POINTS_BONUS_TARGETS,
+      recorded + getConstitutionHitPointsBonus(character),
+    ),
+  );
+}
+
+/**
+ * Разбор максимума хитов на слагаемые: записанный максимум, поправка на
+ * Телосложение и каждый предмет или умение поимённо.
+ *
+ * @param character персонаж.
+ * @returns слагаемые максимума хитов в порядке подсчёта.
+ */
+export function getMaxHitPointsBreakdown(
+  character: Character,
+): BonusBreakdownPart[] {
+  const constitutionBonus = getConstitutionHitPointsBonus(character);
+
+  return [
+    {
+      id: 'recorded',
+      label: MAX_HIT_POINTS_LABELS.breakdownRecorded,
+      formattedValue: String(character.health.max),
+    },
+    ...(constitutionBonus === 0
+      ? []
+      : [
+          {
+            id: 'constitution',
+            label: MAX_HIT_POINTS_LABELS.breakdownConstitution,
+            formattedValue: getFormattedBonus(constitutionBonus),
+          },
+        ]),
+    ...getInventoryBonusSources(
+      character,
+      MAX_HIT_POINTS_BONUS_TARGETS,
+      character.health.max + constitutionBonus,
+    ).map((source) => ({
+      id: source.id,
+      label: source.name,
+      formattedValue: getFormattedBonus(source.value),
+    })),
+  ];
+}
+
+/**
+ * Подсказка к максимуму хитов: без разбора не понять, почему на панели одно
+ * число, а в настройке здоровья другое. Максимум без прибавок объяснять
+ * нечего — у него `null`.
+ *
+ * @param character персонаж.
+ * @returns разбор максимума строкой или null.
+ */
+export function getMaxHitPointsHint(character: Character): string | null {
+  if (getMaxHitPoints(character) === character.health.max) {
+    return null;
+  }
+
+  return getMaxHitPointsBreakdown(character)
+    .map((part) => `${part.label} ${part.formattedValue}`)
+    .join(' · ');
 }
 
 /**
@@ -12233,6 +12354,10 @@ export function getFeatChoicesUpToLevel(
  * @param takenUrls url черт, уже взятых на листе или в мастере.
  * @param selectedUrl url черты, выбранной в этом же селекторе; '' — не выбрана.
  * @param selectedSourceIds источники, разрешённые настройкой профиля.
+ * @param excludeAbilityImprovement убрать из пула саму черту «Улучшение
+ *   характеристик»: на шаге повышения прибавки выбираются отдельным режимом, и
+ *   в списке черт эта черта была бы вторым способом сделать то же самое.
+ *   Названная умением явным перечнем черта остаётся — там пул задан записью.
  * @returns черты, доступные для выбора.
  */
 export function getFeatChoiceOptions(
@@ -12241,6 +12366,7 @@ export function getFeatChoiceOptions(
   takenUrls: Set<string>,
   selectedUrl: string,
   selectedSourceIds: string[] = [],
+  excludeAbilityImprovement = false,
 ): FeatSelectOption[] {
   const allowedSources = new Set(selectedSourceIds);
   const listed = new Set(choice?.listed ?? []);
@@ -12251,6 +12377,14 @@ export function getFeatChoiceOptions(
     // значение вместо сделанного выбора.
     if (option.url === selectedUrl) {
       return true;
+    }
+
+    if (
+      excludeAbilityImprovement
+      && listed.size === 0
+      && option.url.startsWith(ABILITY_IMPROVEMENT_FEAT_URL_PREFIX)
+    ) {
+      return false;
     }
 
     // Перечисленные черты — самый узкий пул: категории при них только справка
@@ -12575,6 +12709,234 @@ export function computeAbilityBonuses(
   }
 
   return bonuses;
+}
+
+/**
+ * Сколько очков повышения уже разложено.
+ *
+ * @param increases прибавки по характеристикам.
+ * @returns сумма прибавок.
+ */
+export function getAbilityImprovementSpent(
+  increases: Partial<Record<AbilityKey, number>>,
+): number {
+  return ABILITY_ORDER.reduce((total, key) => total + (increases[key] ?? 0), 0);
+}
+
+/**
+ * Характеристики с учётом прибавок, уже разложенных в самом мастере: повышение
+ * сразу на несколько уровней иначе позволило бы поднять одну характеристику
+ * выше предела — каждое повышение считало бы предел по одному и тому же
+ * исходному значению.
+ *
+ * Потолок здесь не применяется: значение служит основой для подсчёта остатка до
+ * предела, и обрезанное дало бы остаток там, где его уже нет.
+ *
+ * @param scores итоговые характеристики персонажа.
+ * @param increases прибавки, разложенные в мастере.
+ * @returns характеристики с прибавками мастера.
+ */
+export function withPendingAbilityIncreases(
+  scores: CharacterAbilities,
+  increases: Partial<Record<AbilityKey, number>>[],
+): CharacterAbilities {
+  const pending = mergeAbilityIncreases(increases);
+
+  return mapValues(scores, (score, key) => score + (pending[key] ?? 0));
+}
+
+/**
+ * Сколько очков повышения игрок обязан разложить.
+ *
+ * Обычно это все два очка правила, но характеристикам, упёршимся в предел,
+ * прибавлять нечего: требовать полного расклада там значило бы запереть шаг.
+ *
+ * @param scores итоговые значения характеристик персонажа.
+ * @returns требуемое число очков; 0 — поднимать нечего.
+ */
+export function getAbilityImprovementRequiredPoints(
+  scores: Record<AbilityKey, number>,
+): number {
+  const headroom = ABILITY_ORDER.reduce(
+    (total, key) =>
+      total
+      + Math.min(
+        ABILITY_IMPROVEMENT_POINTS_PER_ABILITY,
+        getAbilityIncreaseHeadroom(scores[key]),
+      ),
+    0,
+  );
+
+  return Math.min(ABILITY_IMPROVEMENT_POINTS, headroom);
+}
+
+/**
+ * Можно ли добавить ещё +1 к характеристике: очки не кончились, в одну
+ * характеристику ушло меньше двух и предел не достигнут.
+ *
+ * @param scores итоговые значения характеристик персонажа.
+ * @param increases уже разложенные прибавки.
+ * @param ability ключ характеристики.
+ * @returns true — прибавку можно добавить.
+ */
+export function canIncreaseAbilityImprovement(
+  scores: Record<AbilityKey, number>,
+  increases: Partial<Record<AbilityKey, number>>,
+  ability: AbilityKey,
+): boolean {
+  const increase = increases[ability] ?? 0;
+
+  return (
+    getAbilityImprovementSpent(increases)
+      < getAbilityImprovementRequiredPoints(scores)
+    && increase < ABILITY_IMPROVEMENT_POINTS_PER_ABILITY
+    && getAbilityIncreaseHeadroom(scores[ability] + increase) > 0
+  );
+}
+
+/**
+ * Отвечено ли повышение характеристик: в режиме прибавок разложены все очки, в
+ * режиме черты выбрана черта и заполнены все её слоты прибавок.
+ *
+ * @param improvement ответ игрока на повышение.
+ * @param featChoice выбор черты того же повышения; не задан — черта не выбрана.
+ * @param scores итоговые значения характеристик персонажа.
+ * @returns true — повышение отвечено полностью.
+ */
+export function isAbilityImprovementComplete(
+  improvement: LevelUpAbilityImprovement,
+  featChoice: LevelUpFeatChoice | undefined,
+  scores: Record<AbilityKey, number>,
+): boolean {
+  if (improvement.mode === 'feat') {
+    return Boolean(
+      featChoice?.featUrl
+      && featChoice.abilities.every((ability) => ability !== null),
+    );
+  }
+
+  return (
+    getAbilityImprovementSpent(improvement.increases)
+    >= getAbilityImprovementRequiredPoints(scores)
+  );
+}
+
+/**
+ * Прибавки повышения после нажатия ± у характеристики: значение не уходит ниже
+ * нуля и не поднимается сверх дозволенного, а обнулённая прибавка из набора
+ * убирается — пустая запись означала бы выбранную характеристику без прибавки.
+ *
+ * @param scores итоговые значения характеристик персонажа.
+ * @param increases уже разложенные прибавки.
+ * @param ability ключ характеристики.
+ * @param delta шаг изменения (+1 или −1).
+ * @returns новые прибавки; те же самые — шаг недопустим.
+ */
+export function withAbilityImprovementStep(
+  scores: Record<AbilityKey, number>,
+  increases: Partial<Record<AbilityKey, number>>,
+  ability: AbilityKey,
+  delta: number,
+): Partial<Record<AbilityKey, number>> {
+  const increase = increases[ability] ?? 0;
+
+  if (delta > 0) {
+    return canIncreaseAbilityImprovement(scores, increases, ability)
+      ? { ...increases, [ability]: increase + 1 }
+      : increases;
+  }
+
+  if (increase <= 0) {
+    return increases;
+  }
+
+  // Обнулённая прибавка убирается из набора целиком: запись со значением 0
+  // означала бы выбранную характеристику без прибавки.
+  return increase === 1
+    ? omit(increases, [ability])
+    : { ...increases, [ability]: increase - 1 };
+}
+
+/**
+ * Подпись прибавок повышения характеристик: «Сила +1, Ловкость +1». По ней
+ * запись листа показывает, что игрок выбрал, а эффект — что он даёт.
+ *
+ * @param increases прибавки по характеристикам.
+ * @returns подпись прибавок; '' — прибавок нет.
+ */
+export function getAbilityIncreasesLabel(
+  increases: Partial<Record<AbilityKey, number>>,
+): string {
+  return ABILITY_ORDER.filter((key) => (increases[key] ?? 0) > 0)
+    .map((key) => `${ABILITY_LABELS[key]} +${increases[key]}`)
+    .join(', ');
+}
+
+/**
+ * Запись листа о взятом повышении характеристик.
+ *
+ * Прибавка идёт активным эффектом, а не вписывается в записанное значение
+ * характеристики: так игрок видит во вкладке «Эффекты», на каком уровне и что
+ * именно поднято, и может это выключить — как любой другой эффект. Считает
+ * прибавку общий путь пассивных бонусов (`getActiveInventoryBonusEntries`),
+ * поэтому рядом с эффектом лежит и его снимок бонусов.
+ *
+ * Идентификатор строится от строки умения, а та у повышения уже содержит
+ * уровень, поэтому у каждого повышения своя запись — и снятие уровня забирает
+ * ровно его прибавку.
+ *
+ * @param options параметры записи.
+ * @param options.featureRowId идентификатор строки умения с повышением.
+ * @param options.className название класса — подпись источника.
+ * @param options.classLevel уровень В КЛАССЕ, на котором взято повышение.
+ * @param options.increases прибавки по характеристикам.
+ * @returns особенность персонажа с эффектом повышения.
+ */
+export function buildAbilityImprovementFeature(options: {
+  featureRowId: string;
+  className: string;
+  classLevel: number;
+  increases: Partial<Record<AbilityKey, number>>;
+}): CharacterFeature {
+  const { featureRowId, className, classLevel, increases } = options;
+
+  const id = `${featureRowId}:${ABILITY_INCREASE_FEATURE_ID_SEGMENT}`;
+  const label = getAbilityIncreasesLabel(increases);
+
+  const effect: ActiveEffect = {
+    // Идентификатор устойчив: повторное применение того же повышения не
+    // заводит второй эффект поверх первого.
+    id: `${id}:effect`,
+    name: `${ABILITY_IMPROVEMENT_FEATURE_NAME} (${className}, ${classLevel} ${LEVEL_SHORT_SUFFIX})`,
+    description: label,
+    icon: ABILITY_IMPROVEMENT_EFFECT_ICON,
+    disabled: false,
+    origin: 'feature',
+    transfer: false,
+    duration: { type: 'permanent' },
+    changes: ABILITY_ORDER.filter((key) => (increases[key] ?? 0) > 0).map(
+      (key) => ({
+        key: `ability.${key}`,
+        mode: 'add',
+        value: String(increases[key]),
+        priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
+      }),
+    ),
+    flags: [],
+    effectTarget: 'self',
+  };
+
+  return {
+    id,
+    name: ABILITY_IMPROVEMENT_FEATURE_NAME,
+    description: [label],
+    origin: 'class',
+    originName: className,
+    level: classLevel,
+    choice: label,
+    bonuses: toInventoryBonusesFromEffects([effect]),
+    activeEffects: [effect],
+  };
 }
 
 /**

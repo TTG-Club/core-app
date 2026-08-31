@@ -36,6 +36,7 @@ const EFFECT_FIXED_TARGETS: Record<string, InventoryBonusTarget> = {
   'initiative': { kind: 'initiative' },
   'spellSaveDC': { kind: 'spell-save-dc' },
   'attack.spell': { kind: 'spell-attack' },
+  'hitPoints.max': { kind: 'hit-points-max' },
 };
 
 /**

@@ -30,6 +30,7 @@ import type {
   InventoryMagicState,
   InventoryStatRollKind,
   LanguageProficiencyGroup,
+  LevelUpAbilityImprovement,
   MagicItemCatalogGrouping,
   MagicItemCatalogItem,
   MagicItemCatalogSorting,
@@ -1998,6 +1999,17 @@ export const LEVEL_UP_HIT_POINTS_LABELS: Record<
     'Прирост хитов за снимаемые уровни не записан (лист собран до его учёта), поэтому максимум не изменится — поправьте его в настройке здоровья при необходимости.',
 };
 
+/**
+ * Подписи разбора максимума хитов: записанный максимум посчитан по записанному
+ * Телосложению, а эффекты, снаряжение и свои бонусы двигают его сверху — без
+ * разбора игрок не поймёт, почему в настройке здоровья другое число.
+ */
+export const MAX_HIT_POINTS_LABELS = {
+  breakdownRecorded: 'Записано',
+  breakdownConstitution: 'Телосложение',
+  totalTitle: 'Итог с прибавками',
+};
+
 /** Подпись ячеек заклинаний договора колдуна в списке того, что вернёт отдых. */
 export const PACT_SPELL_SLOTS_LABEL = 'Ячейки заклинаний договора';
 
@@ -2426,6 +2438,53 @@ export const ABILITY_IMPROVEMENT_LABELS = {
   applyErrorLog: 'Ошибка добавления черты за улучшение характеристик:',
   maxHint: `Характеристика не поднимается выше ${ABILITY_IMPROVEMENT_SCORE_MAX}`,
 };
+
+/** Сколько очков раскладывает одно повышение характеристик (правило 2024 года). */
+export const ABILITY_IMPROVEMENT_POINTS = 2;
+
+/**
+ * Ответ на повышение характеристик по умолчанию: прибавки, ещё не разложенные.
+ * Общий у обоих мастеров — иначе каждый заводил бы свой и они разошлись бы.
+ */
+export const DEFAULT_ABILITY_IMPROVEMENT: LevelUpAbilityImprovement = {
+  mode: 'abilities',
+  increases: {},
+};
+
+/** Сколько очков одно повышение кладёт в одну характеристику максимум. */
+export const ABILITY_IMPROVEMENT_POINTS_PER_ABILITY = 2;
+
+/** Шаг раскладки очков: правило прибавляет и убавляет по одному очку. */
+export const ABILITY_IMPROVEMENT_STEP = 1;
+
+/** Подписи шага повышения характеристик — общие у мастера уровня и мастера класса. */
+export const ABILITY_IMPROVEMENT_STEP_LABELS = {
+  title: 'Повышение характеристик',
+  stepTitle: 'Характеристики',
+  modeAbilities: 'Повысить характеристики',
+  modeFeat: 'Взять черту',
+  distributeHint: '+2 к одной характеристике или +1 к двум',
+  decrease: 'Убавить прибавку',
+  increase: 'Добавить прибавку',
+  pointsRemaining: 'Осталось очков',
+  reset: 'Сбросить прибавки',
+  featHint: 'Черта берётся вместо повышения характеристик',
+  maxedHint: `Все характеристики уже на пределе (${ABILITY_IMPROVEMENT_SCORE_MAX}) — остаётся взять черту`,
+};
+
+/** Название записи листа о взятом повышении характеристик. */
+export const ABILITY_IMPROVEMENT_FEATURE_NAME = 'Повышение характеристик';
+
+/** Иконка эффекта повышения характеристик. */
+export const ABILITY_IMPROVEMENT_EFFECT_ICON = 'tabler:trending-up';
+
+/**
+ * Сегмент идентификатора записи о повышении характеристик:
+ * `class:{classUrl}:{featureKey}:{level}:ability-increase`. Уровень приезжает из
+ * идентификатора строки умения, поэтому у каждого повышения своя запись, и
+ * снятие уровня забирает ровно его прибавку.
+ */
+export const ABILITY_INCREASE_FEATURE_ID_SEGMENT = 'ability-increase';
 
 /**
  * Сегмент идентификатора особенности с чертой, выбранной за улучшение
@@ -3042,6 +3101,7 @@ export const CLASS_WIZARD_TAB_ORDER = [
   'overview',
   'equipment',
   'features',
+  'abilities',
 ] as const;
 
 /** Раздел второго шага мастера класса. */
@@ -3057,6 +3117,7 @@ export const CLASS_WIZARD_TAB_LABELS: Record<ClassWizardTab, string> = {
   overview: 'Основное',
   equipment: 'Снаряжение',
   features: 'Умения',
+  abilities: 'Характеристики',
 };
 
 /** Подписи мастера предыстории, не привязанные к разделам. */
@@ -4098,7 +4159,8 @@ export const INVENTORY_BONUS_TARGET_LABELS: Record<
   | 'armor-class'
   | 'initiative'
   | 'spell-attack'
-  | 'spell-save-dc',
+  | 'spell-save-dc'
+  | 'hit-points-max',
   string
 > = {
   'all-saving-throws': 'Все спасброски',
@@ -4107,6 +4169,7 @@ export const INVENTORY_BONUS_TARGET_LABELS: Record<
   'spell-save-dc': 'Сложность заклинаний',
   'spell-attack': 'Атака заклинанием',
   'initiative': 'Инициатива',
+  'hit-points-max': 'Максимум хитов',
 };
 
 /**
@@ -4952,6 +5015,21 @@ export const SHEET_FEAT_MODAL_LABELS = {
     'Выбирать пока не из чего: компетентность дают в навыке, которым персонаж уже владеет. Выберите класс или предысторию, затем добавьте черту.',
   descriptionTooltip: 'Открыть описание черты',
   abilityVariantLabel: 'Как повысить характеристики',
+} as const;
+
+/**
+ * Подписи окна выбора черты. Черту выбирают списком в окне, а не селектором:
+ * у пула бывает под сотню записей, и описание каждой читают прямо оттуда —
+ * тем же порядком, что и заклинания черты.
+ */
+export const SHEET_FEAT_PICK_LABELS = {
+  choose: 'Выбрать черту',
+  change: 'Изменить черту',
+  notChosen: 'Черта не выбрана',
+  empty: 'Черт по этим условиям не нашлось',
+  apply: 'Выбрать',
+  cancel: 'Отмена',
+  clearHint: 'Нажатие по выбранной черте снимает выбор',
 } as const;
 
 /** Подписи окна «от какой характеристики считается заклинание». */

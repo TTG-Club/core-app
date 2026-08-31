@@ -103,6 +103,8 @@ import {
   getFeatDefences,
   getInitiativeBonus,
   getInventoryWeight,
+  getMaxHitPoints,
+  getMaxHitPointsHint,
   getNextLevelExperience,
   getPreparedSpellsLimitDescription,
   getProficiencySourceId,
@@ -355,6 +357,13 @@ export function useCharacterSheet() {
   const formattedProficiencyBonus = computed(() =>
     getFormattedBonus(getCharacterProficiencyBonus(character.value)),
   );
+
+  // Максимум хитов листа считается с прибавками (повышение характеристик,
+  // умения, снаряжение), а правится записанный — поэтому наружу уходит
+  // отдельное производное значение, а не `character.health.max`.
+  const maxHitPoints = computed(() => getMaxHitPoints(character.value));
+
+  const maxHitPointsHint = computed(() => getMaxHitPointsHint(character.value));
 
   // Бонус инициативы нужен и плиткой, и модалкой броска, поэтому наружу уходит
   // и число, и его подпись.
@@ -1255,6 +1264,10 @@ export function useCharacterSheet() {
    * Установка здоровья: текущие хиты не превышают максимум, значения не ниже
    * нуля.
    *
+   * Правится записанный максимум, а предел текущих хитов берётся итоговый: с
+   * прибавками повышения характеристик и снаряжения он выше записанного, и
+   * обрезать по записанному значило бы отнимать хиты, которые лист показывает.
+   *
    * @param health новое здоровье персонажа.
    */
   function setHealth(health: CharacterHealth): void {
@@ -1264,12 +1277,17 @@ export function useCharacterSheet() {
 
     const max = Math.max(0, health.max);
 
+    const limit = getMaxHitPoints({
+      ...character.value,
+      health: { ...health, max },
+    });
+
     character.value = {
       ...character.value,
       health: {
         ...health,
         max,
-        current: clamp(health.current, 0, max),
+        current: clamp(health.current, 0, limit),
         temporary: Math.max(0, health.temporary),
       },
     };
@@ -1289,13 +1307,11 @@ export function useCharacterSheet() {
       return;
     }
 
-    const { max } = character.value.health;
-
     character.value = {
       ...character.value,
       health: {
         ...character.value.health,
-        current: clamp(Math.trunc(current), 0, max),
+        current: clamp(Math.trunc(current), 0, maxHitPoints.value),
         temporary: Math.max(0, Math.trunc(temporary)),
       },
     };
@@ -1385,7 +1401,7 @@ export function useCharacterSheet() {
         current: clamp(
           health.current + Math.max(0, Math.trunc(restored)),
           0,
-          health.max,
+          maxHitPoints.value,
         ),
       },
     };
@@ -1458,7 +1474,7 @@ export function useCharacterSheet() {
       extraHitDice: restoredDice.extraHitDice,
       health: {
         ...character.value.health,
-        current: character.value.health.max,
+        current: maxHitPoints.value,
         temporary: 0,
         exhaustion: Math.max(
           EXHAUSTION_LEVEL_MIN,
@@ -1706,7 +1722,7 @@ export function useCharacterSheet() {
       ),
     ];
 
-    const maxHitPoints = levelGains.reduce(
+    const recordedMaxHitPoints = levelGains.reduce(
       (total, gain) => total + gain.amount,
       0,
     );
@@ -1808,8 +1824,8 @@ export function useCharacterSheet() {
         ),
         health: {
           ...character.value.health,
-          max: maxHitPoints,
-          current: maxHitPoints,
+          max: recordedMaxHitPoints,
+          current: recordedMaxHitPoints,
           levelGains,
         },
         proficiencies: classProficiencies.proficiencies,
@@ -3704,6 +3720,8 @@ export function useCharacterSheet() {
     skillRows,
     skillGroups,
     formattedProficiencyBonus,
+    maxHitPoints,
+    maxHitPointsHint,
     initiativeBonus,
     formattedInitiative,
     effectiveSpeed,

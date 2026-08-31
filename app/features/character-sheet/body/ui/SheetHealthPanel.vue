@@ -10,6 +10,13 @@
 
   const props = defineProps<{
     health: CharacterHealth;
+
+    /** Максимум хитов с прибавками — панель показывает именно его. */
+    maxHitPoints: number;
+
+    /** Разбор максимума для подсказки; null — прибавок нет. */
+    maxHitPointsHint: string | null;
+
     hitDice: CharacterHitDie[];
     extraHitDice: CharacterExtraHitDie[];
   }>();
@@ -20,6 +27,12 @@
 
   const hitDiceTotals = computed(() =>
     getHitDiceTotals(props.hitDice, props.extraHitDice),
+  );
+
+  // Максимум с прибавкой выделен цветом: так видно, что число не совпадает с
+  // записанным в настройке здоровья.
+  const maxClass = computed(() =>
+    props.maxHitPointsHint ? 'text-primary' : 'text-muted',
   );
 </script>
 
@@ -46,9 +59,17 @@
         <span class="flex flex-col items-center">
           <span class="text-[10px] text-muted uppercase">Всего</span>
 
-          <span class="mt-1 text-lg leading-none font-medium text-muted">
-            / {{ health.max }}
-          </span>
+          <UTooltip
+            :text="maxHitPointsHint ?? ''"
+            :disabled="!maxHitPointsHint"
+          >
+            <span
+              class="mt-1 text-lg leading-none font-medium"
+              :class="maxClass"
+            >
+              / {{ maxHitPoints }}
+            </span>
+          </UTooltip>
         </span>
 
         <span class="flex flex-col items-end">

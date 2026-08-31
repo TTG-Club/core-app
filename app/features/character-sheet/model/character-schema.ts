@@ -350,6 +350,7 @@ const inventoryBonusSchema = z
       'spell-save-dc',
       'spell-attack',
       'initiative',
+      'hit-points-max',
     ]),
     key: z.string().catch(''),
     value: z.coerce.number().catch(0),
