@@ -7,6 +7,7 @@ import { createGrantRow, getTakenChoiceKeys } from '~feats/model';
 import {
   ABILITY_IMPROVEMENT_FEAT_CATEGORIES,
   CLASS_FEATURE_OPTION_LEVEL_BADGE,
+  CLASS_FEATURE_OPTION_REMOVE_CONFIRM,
   CLASS_FEATURES_EDITOR,
   CLASS_OPTIONS_CHOICE_DEFAULTS,
   FIGHTING_STYLE_FEAT_CATEGORY,
@@ -216,6 +217,22 @@ export function getClassFeatureOptionLevelBadge(
   }
 
   return `${CLASS_FEATURE_OPTION_LEVEL_BADGE.prefix}${level}${CLASS_FEATURE_OPTION_LEVEL_BADGE.suffix}`;
+}
+
+/**
+ * Текст подтверждения удаления варианта умения.
+ *
+ * @param name название варианта; пусто — вариант ещё не назван.
+ * @returns вопрос с названием варианта, если оно есть.
+ */
+export function getClassFeatureOptionRemoveDescription(name: string): string {
+  const trimmed = name.trim();
+
+  const subject = trimmed
+    ? `«${trimmed}» ${CLASS_FEATURE_OPTION_REMOVE_CONFIRM.named}`
+    : CLASS_FEATURE_OPTION_REMOVE_CONFIRM.unnamed;
+
+  return `${subject}${CLASS_FEATURE_OPTION_REMOVE_CONFIRM.suffix}`;
 }
 
 /**

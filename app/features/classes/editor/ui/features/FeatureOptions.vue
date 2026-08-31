@@ -4,6 +4,7 @@
     ClassFeatureOptionsChoiceCreate,
   } from '../../../model';
 
+  import { ConfirmDialog } from '~initiative/ui-kit';
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectLevel } from '~ui/select';
   import { InfoTooltip } from '~ui/tooltip';
@@ -16,6 +17,7 @@
     CLASS_OPTIONS_CHOICE_COUNT_BOUNDS,
     CLASS_OPTIONS_CHOICE_DEFAULTS,
     getClassFeatureOptionLevelBadge,
+    getClassFeatureOptionRemoveDescription,
   } from '../../../model';
   import FeatureSection from './FeatureSection.vue';
 
@@ -161,12 +163,50 @@
     expand(addedIndex);
   }
 
+  /** Номер варианта, удаление которого ждёт подтверждения. */
+  const pendingRemoval = ref<number | undefined>(undefined);
+
+  const isRemovalOpen = computed({
+    get: () => pendingRemoval.value !== undefined,
+    set: (open) => {
+      if (!open) {
+        pendingRemoval.value = undefined;
+      }
+    },
+  });
+
+  /** Вопрос диалога: он называет вариант, который вот-вот исчезнет. */
+  const removalDescription = computed(() => {
+    const option =
+      pendingRemoval.value === undefined
+        ? undefined
+        : model.value[pendingRemoval.value];
+
+    return getClassFeatureOptionRemoveDescription(
+      option?.name.rus || option?.name.eng || '',
+    );
+  });
+
   /**
-   * Убирает вариант.
+   * Спрашивает подтверждение удаления: описание варианта набирают руками, и
+   * промах по кнопке рядом со свёрткой уносил бы его без спроса.
    *
    * @param index номер строки в списке.
    */
-  function removeRow(index: number) {
+  function askRemoveRow(index: number) {
+    pendingRemoval.value = index;
+  }
+
+  /** Убирает вариант, удаление которого подтвердили. */
+  function confirmRemoveRow() {
+    const index = pendingRemoval.value;
+
+    pendingRemoval.value = undefined;
+
+    if (index === undefined) {
+      return;
+    }
+
     model.value = model.value.filter((_, position) => position !== index);
     dropRow(index);
   }
@@ -357,7 +397,7 @@
             size="xs"
             class="relative"
             :aria-label="CLASS_FEATURES_EDITOR.removeOption"
-            @click.left.exact.prevent="removeRow(index)"
+            @click.left.exact.prevent="askRemoveRow(index)"
           />
 
           <UButton
@@ -468,5 +508,16 @@
         </UForm>
       </div>
     </div>
+
+    <ConfirmDialog
+      v-model:open="isRemovalOpen"
+      :title="CLASS_FEATURE_OPTIONS_EDITOR.removeConfirmTitle"
+      :description="removalDescription"
+      :confirm-label="CLASS_FEATURE_OPTIONS_EDITOR.removeConfirmApply"
+      :cancel-label="CLASS_FEATURE_OPTIONS_EDITOR.removeConfirmCancel"
+      confirm-color="error"
+      confirm-icon="tabler:trash"
+      @confirm="confirmRemoveRow"
+    />
   </FeatureSection>
 </template>
