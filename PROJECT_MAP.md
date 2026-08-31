@@ -503,6 +503,15 @@ modals), so its capabilities are listed here rather than squeezed into the table
   also becomes a sheet record of its own carrying the option's description, and
   the same descriptions open in the shared `FeatureOptionsDrawer` — the class
   page and both wizards render it.
+- An option carries the same mechanics block as the feature that owns it
+  (`mechanics` + `activeEffects`): proficiencies, sheet modifiers, resources,
+  granted spells, spell-list expansion and effects. They land on the option's own
+  sheet record, so the features list shows which invocation granted a
+  proficiency, and removing the class takes the record away with its feature.
+  Questions an option asks («выбери навык» of a manoeuvre) are marked with its
+  key and appear in the wizards only once the option itself is taken — an answer
+  left over from an option the player dropped never reaches the grant ledger.
+  A reference list asks nothing, so its options' questions are not built at all.
 - A class feature flagged `informationalOnly` («Подкласс волшебника») never
   becomes a sheet record: the progression table needs the line, the sheet does
   not.
