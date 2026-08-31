@@ -57,6 +57,8 @@
     getAbilityImprovementSpent,
     getCharacterClasses,
     getChoiceSkillHints,
+    getChosenFeatureOptionKeys,
+    getChosenOptionFeatUrls,
     getChosenProficientSkills,
     getClassFeatureChoices,
     getClassFeatureId,
@@ -529,6 +531,13 @@
 
         const id = getClassFeatureId(base.url, feature.key);
 
+        // Вопросы и черты взятых вариантов идут строкой их умения: пока манёвр
+        // не выбран, его «выбери навык» спрашивать не о чем
+        const chosenOptionKeys = getChosenFeatureOptionKeys(
+          feature.choices,
+          selections.value,
+        );
+
         rows.push({
           id,
           name: feature.name,
@@ -540,18 +549,30 @@
             feature,
             skillNames.value,
             level.value,
+            chosenOptionKeys,
           ),
           // Персонаж собирается сразу на нужном уровне: «Улучшение
           // характеристик» спрашивает своё за каждый пройденный уровень роста
-          featChoices: getFeatChoicesUpToLevel(feature, level.value),
-          grantedFeatUrls: [...feature.grantedFeatUrls],
+          featChoices: getFeatChoicesUpToLevel(
+            feature,
+            level.value,
+            chosenOptionKeys,
+          ),
+          grantedFeatUrls: [
+            ...feature.grantedFeatUrls,
+            ...getChosenOptionFeatUrls(feature, chosenOptionKeys),
+          ],
           abilityImprovement: feature.abilityImprovement,
           improvementChoices: feature.abilityImprovement
             ? [feature.level, ...feature.scalingLevels]
                 .filter((featureLevel) => featureLevel <= level.value)
                 .map((featureLevel) => ({
                   level: featureLevel,
-                  choices: getLevelFeatChoices(feature, featureLevel),
+                  choices: getLevelFeatChoices(
+                    feature,
+                    featureLevel,
+                    chosenOptionKeys,
+                  ),
                 }))
             : [],
         });

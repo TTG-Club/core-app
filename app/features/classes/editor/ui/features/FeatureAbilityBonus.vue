@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { ClassFeatureAbilityBonusCreate } from '../../../model';
 
+  import { EditorNestedSection } from '~ui/editor';
   import { SelectAbilities } from '~ui/select';
 
   import {
@@ -8,7 +9,6 @@
     CLASS_ABILITY_BONUS_DEFAULTS,
     CLASS_FEATURES_EDITOR,
   } from '../../../model';
-  import FeatureSection from './FeatureSection.vue';
 
   /**
    * Прибавка характеристик умением 20 уровня — «Первобытный чемпион»
@@ -43,7 +43,7 @@
 </script>
 
 <template>
-  <FeatureSection
+  <EditorNestedSection
     :title="CLASS_FEATURES_EDITOR.abilityBonusTitle"
     :hint="CLASS_FEATURES_EDITOR.abilityBonusHint"
     :count="count"
@@ -103,5 +103,5 @@
         />
       </div>
     </UForm>
-  </FeatureSection>
+  </EditorNestedSection>
 </template>

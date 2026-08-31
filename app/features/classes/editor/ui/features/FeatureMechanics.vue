@@ -1,5 +1,10 @@
 <script setup lang="ts">
-  import type { ClassFeatureCreate } from '../../../model';
+  import type { FeatEditorLabelOverrides } from '~feats/model';
+
+  import type {
+    ClassMechanicsHolderCreate,
+    ClassMechanicsTitles,
+  } from '../../../model';
 
   import { ActiveEffects } from '~active-effects/editor';
   import { EFFECT_ORIGIN } from '~active-effects/model';
@@ -11,95 +16,102 @@
     FeatSpellListSpells,
   } from '~feats/editor/ui';
   import { createFeatEditorRows, createFeatMechanics } from '~feats/model';
+  import { EditorNestedSection } from '~ui/editor';
 
-  import {
-    CLASS_EDITOR_LABELS,
-    CLASS_FEATURE_MECHANICS_LABELS,
-    CLASS_FEATURES_EDITOR,
-    getClassFeatureFilledBlocksCount,
-  } from '../../../model';
-  import FeatureSection from './FeatureSection.vue';
+  import { getClassMechanicsFilledBlocksCount } from '../../../model';
 
   /**
-   * Механика и эффекты одного умения класса: что умение делает на листе
-   * персонажа. Выбор боевого стиля и черты за повышение характеристик тоже
-   * здесь — строками даров «Черта → дать выбрать», как у черты и вида.
+   * Механика и эффекты одного носителя даров: что он делает на листе
+   * персонажа. Одной формой у умения класса и у его варианта — набор даров у
+   * них один, и вторая форма для того же смысла разошлась бы с первой.
+   *
+   * Выбор боевого стиля и черты за повышение характеристик тоже здесь —
+   * строками даров «Черта → дать выбрать», как у черты и вида.
    *
    * Свёрнутым блоком, а не полями рядом с описанием: у большинства умений
    * механики нет вовсе, а развёрнутая она заслоняла бы список умений.
    */
-  const feature = defineModel<ClassFeatureCreate>({ required: true });
+  const { titles, labels } = defineProps<{
+    /** Подписи блоков: источник даров у умения и у варианта называется по-разному. */
+    titles: ClassMechanicsTitles;
+
+    /** Поправки к подписям редакторов механики — они общие с чертой. */
+    labels: FeatEditorLabelOverrides;
+  }>();
+
+  const holder = defineModel<ClassMechanicsHolderCreate>({ required: true });
 
   /**
-   * Строки редактора даров умения. В типе они необязательны — перед отправкой
+   * Строки редактора даров. В типе они необязательны — перед отправкой
    * механика пересобирается из них, а сами строки выбрасываются, — поэтому
-   * шаблону нужен непустой объект. Пустых здесь не бывает: и новое умение, и
-   * загруженное приходят со строками.
+   * шаблону нужен непустой объект. Пустых здесь не бывает: и новая запись, и
+   * загруженная приходят со строками.
    */
   const editorRows = computed({
-    get: () => feature.value.editorRows ?? createFeatEditorRows(),
+    get: () => holder.value.editorRows ?? createFeatEditorRows(),
     set: (value) => {
-      feature.value.editorRows = value;
+      holder.value.editorRows = value;
     },
   });
 
-  /** Механика умения: из неё редактируются заклинания, минуя строки. */
+  /** Механика: из неё редактируются заклинания, минуя строки. */
   const mechanics = computed({
-    get: () => feature.value.mechanics ?? createFeatMechanics(),
+    get: () => holder.value.mechanics ?? createFeatMechanics(),
     set: (value) => {
-      feature.value.mechanics = value;
+      holder.value.mechanics = value;
     },
   });
 
   const filledBlocksCount = computed(() =>
-    getClassFeatureFilledBlocksCount(feature.value),
+    getClassMechanicsFilledBlocksCount(holder.value),
   );
 </script>
 
 <template>
-  <FeatureSection
-    :title="CLASS_FEATURES_EDITOR.mechanicsTitle"
-    :hint="CLASS_FEATURES_EDITOR.mechanicsHint"
+  <EditorNestedSection
+    :title="titles.section"
+    :hint="titles.sectionHint"
     :count="filledBlocksCount"
   >
     <div class="grid gap-3">
       <FeatGrantRows
         v-model="editorRows.grants"
         :rows="editorRows"
-        :labels="CLASS_FEATURE_MECHANICS_LABELS"
-        :title="CLASS_EDITOR_LABELS.featureGrantsTitle"
+        :labels="labels"
+        :title="titles.grants"
       />
 
       <FeatModifierRows
         v-model="editorRows.modifiers"
         :rows="editorRows"
-        :labels="CLASS_FEATURE_MECHANICS_LABELS"
-        :title="CLASS_EDITOR_LABELS.featureModifiersTitle"
+        :labels="labels"
+        :title="titles.modifiers"
       />
 
       <FeatCounterRows
         v-model="editorRows.counters"
-        :labels="CLASS_FEATURE_MECHANICS_LABELS"
-        :title="CLASS_EDITOR_LABELS.featureCountersTitle"
+        :labels="labels"
+        :title="titles.counters"
       />
 
       <FeatGrantedSpells
         v-model="mechanics.spells"
-        :labels="CLASS_FEATURE_MECHANICS_LABELS"
-        :title="CLASS_EDITOR_LABELS.featureSpellsTitle"
+        :labels="labels"
+        :title="titles.spells"
       />
 
       <FeatSpellListSpells
         v-model="mechanics.spellList"
-        :labels="CLASS_FEATURE_MECHANICS_LABELS"
-        :title="CLASS_EDITOR_LABELS.featureSpellListTitle"
+        :labels="labels"
+        :title="titles.spellList"
       />
 
       <ActiveEffects
-        v-model="feature.activeEffects"
+        v-model="holder.activeEffects"
+        nested
         :origin="EFFECT_ORIGIN.feature"
-        :title="CLASS_EDITOR_LABELS.featureEffectsTitle"
+        :title="titles.effects"
       />
     </div>
-  </FeatureSection>
+  </EditorNestedSection>
 </template>

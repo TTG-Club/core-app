@@ -62,7 +62,31 @@ export interface ClassFeatureOptionsChoiceCreate {
   scaling: Array<ClassFeatureOptionsScalingCreate>;
 }
 
-export interface ClassFeatureOptionCreate {
+/**
+ * Носитель даров: и умение класса, и его вариант.
+ *
+ * Одной моделью, потому что и то, и другое делает с листом персонажа одно и то
+ * же — выдаёт владения, заводит ресурс, даёт заклинание, — и вторая копия тех же
+ * полей разошлась бы с первой при первой же правке.
+ */
+export interface ClassMechanicsHolderCreate {
+  /**
+   * Дары моделью черты — той же, что лежит в core-api: набор даров у черты,
+   * умения класса и его варианта один.
+   */
+  mechanics: FeatMechanics | undefined;
+
+  /** Активные эффекты в вокабуляре VTTG. */
+  activeEffects: Array<ActiveEffect>;
+
+  /**
+   * Строки редактора даров. Форма правит их, а не блоки механики; перед
+   * отправкой из них пересобирается `mechanics`, а само поле обнуляется.
+   */
+  editorRows: FeatEditorRows | undefined;
+}
+
+export interface ClassFeatureOptionCreate extends ClassMechanicsHolderCreate {
   key?: string;
   name: {
     rus: string;
@@ -83,7 +107,7 @@ export interface ClassFeatureOptionCreate {
   repeatable: boolean | undefined;
 }
 
-export interface ClassFeatureCreate {
+export interface ClassFeatureCreate extends ClassMechanicsHolderCreate {
   level: number;
   name: string;
   optionsName: string | undefined;
@@ -120,22 +144,6 @@ export interface ClassFeatureCreate {
    * записью умения на листе она была бы шумом.
    */
   informationalOnly: boolean | undefined;
-
-  /**
-   * Дары умения моделью черты — той же, что лежит в core-api
-   * (`ClassFeature.mechanics`): набор даров у черты и умения класса один, и
-   * вторая копия тех же полей разошлась бы с первой.
-   */
-  mechanics: FeatMechanics | undefined;
-
-  /** Активные эффекты умения в вокабуляре VTTG. */
-  activeEffects: Array<ActiveEffect>;
-
-  /**
-   * Строки редактора даров умения. Форма правит их, а не блоки механики; перед
-   * отправкой из них пересобирается `mechanics`, а само поле обнуляется.
-   */
-  editorRows: FeatEditorRows | undefined;
 }
 
 export interface ClassFeatureAbilityBonusCreate {
@@ -207,7 +215,8 @@ export interface ClassPrimaryCharacteristicsCreate {
   delimiter: AbilityDelimiter | undefined;
 }
 
-export interface ClassCreate extends EditorBaseInfoState {
+export interface ClassCreate
+  extends EditorBaseInfoState, ClassMechanicsHolderCreate {
   gallery: Array<string>;
   description: string | undefined;
   parentUrl: string | undefined;
@@ -240,18 +249,6 @@ export interface ClassCreate extends EditorBaseInfoState {
 
   /** Уровень, на котором выбирается подкласс. */
   subclassLevel: number | undefined;
-
-  /**
-   * Дары самого класса: то, что даёт взятие класса целиком и чему не нашлось
-   * места в отдельных полях владений.
-   */
-  mechanics: FeatMechanics | undefined;
-
-  /** Активные эффекты класса в вокабуляре VTTG. */
-  activeEffects: Array<ActiveEffect>;
-
-  /** Строки редактора даров класса; в теле запроса им места нет. */
-  editorRows: FeatEditorRows | undefined;
 }
 
 export type AbilityTemplateCreate = [

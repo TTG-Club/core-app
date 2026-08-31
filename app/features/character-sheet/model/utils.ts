@@ -10439,19 +10439,31 @@ function toCharacterFeature(
   const choice =
     choices[id]?.trim() || getOptionChoiceText(summary.choices, answers);
 
+  // Вопросы невыбранных вариантов умения к делу не относятся: пока манёвр не
+  // взят, его «выбери навык» ничего не даёт, а оставшийся от прежнего выбора
+  // ответ выдал бы владение от варианта, от которого игрок уже отказался
+  const activeChoices = answers
+    ? withoutUnchosenOptionChoices(
+        summary.choices,
+        getChosenFeatureOptionKeys(summary.choices, answers.answers),
+      )
+    : summary.choices;
+
   // Владения из ответов игрока: инструменты, языки, приёмы и спасброски лист
   // кладёт в свои списки, а не в текст умения. Разбор общий с чертой — вид
   // выбора у них один и тот же
   const chosen = answers
     ? collectChosenProficiencies(
-        summary.choices,
+        activeChoices,
         answers.answers,
         answers.proficientSkillNames,
       )
     : {};
 
+  // Ответы всех выборов, включая вопросы взятых вариантов: по ним умение,
+  // пересобранное на следующем уровне, возвращает выбранное раньше
   const choiceAnswers = answers
-    ? pickChoiceAnswers(summary.choices, answers.answers)
+    ? pickChoiceAnswers(activeChoices, answers.answers)
     : {};
 
   // Заклинание умения считается от характеристики умения, если та задана:
@@ -10525,6 +10537,74 @@ function getOptionChoiceText(
 }
 
 /**
+ * Ключи вариантов умения, которые игрок выбрал.
+ *
+ * Пикер отдаёт подпись варианта, а ключ нужен всем, кто ищет по нему дары: их
+ * перевод лежит в самом выборе (`optionValues`).
+ *
+ * @param featureChoices выборы умения.
+ * @param answers ответы игрока по идентификаторам выборов.
+ * @returns ключи выбранных вариантов.
+ */
+export function getChosenFeatureOptionKeys(
+  featureChoices: ClassChoice[],
+  answers: Record<string, string[]>,
+): Set<string> {
+  const keys = new Set<string>();
+
+  for (const choice of featureChoices) {
+    if (choice.kind !== 'option') {
+      continue;
+    }
+
+    for (const value of answers[choice.id] ?? []) {
+      keys.add(choice.optionValues?.[value] ?? value);
+    }
+  }
+
+  return keys;
+}
+
+/**
+ * Выборы умения без вопросов невыбранных вариантов.
+ *
+ * У варианта своя механика, и «выбери навык» манёвра спрашивают, только когда
+ * сам манёвр взят: иначе мастер задал бы вопросы всех двух десятков вариантов
+ * сразу, а лист применил бы ответ варианта, от которого игрок уже отказался.
+ *
+ * @param choices выборы умения.
+ * @param chosenOptionKeys ключи выбранных вариантов.
+ * @returns выборы самого умения и выбранных вариантов.
+ */
+function withoutUnchosenOptionChoices(
+  choices: ClassChoice[],
+  chosenOptionKeys: ReadonlySet<string>,
+): ClassChoice[] {
+  return choices.filter(
+    (choice) => !choice.optionKey || chosenOptionKeys.has(choice.optionKey),
+  );
+}
+
+/**
+ * Черты, которые выдают выбранные варианты умения.
+ *
+ * Мастер класса и мастер повышения уровня добавляют их так же, как черты самого
+ * умения: запись черты заводится на листе своей строкой.
+ *
+ * @param summary умение класса или подкласса.
+ * @param chosenOptionKeys ключи выбранных вариантов.
+ * @returns url черт в порядке записи класса.
+ */
+export function getChosenOptionFeatUrls(
+  summary: ClassFeatureSummary,
+  chosenOptionKeys: ReadonlySet<string>,
+): string[] {
+  return summary.optionGrants
+    .filter((grants) => chosenOptionKeys.has(grants.key))
+    .flatMap((grants) => grants.grantedFeatUrls);
+}
+
+/**
  * Записи листа под выбранные варианты умения: воззвание колдуна, метамагия
  * чародея, манёвр мастера боевых искусств.
  *
@@ -10571,17 +10651,45 @@ function buildFeatureOptionFeatures(
 
   const featureId = getClassFeatureId(classUrl, summary.key);
 
-  return [...chosen.values()].map((detail) => ({
-    id: `${featureId}:${FEATURE_OPTION_ID_SEGMENT}:${detail.key}`,
-    name: detail.name,
-    description: toDescriptionNodes(detail.description),
-    origin: 'class',
-    originName,
-    // Уровень варианта, а не умения: снижение уровня забирает воззвание,
-    // которое стало доступно только на снимаемом уровне
-    level: detail.requiredClassLevel || summary.level,
-    choice: null,
-  }));
+  // Дары варианта по его ключу: владения, ресурсы, заклинания и эффекты ложатся
+  // на запись самого варианта, а не умения, — снятие класса забирает обе, но в
+  // списке особенностей игрок видит, что именно дало владение
+  const grantsByKey = new Map(
+    summary.optionGrants.map((grants) => [grants.key, grants]),
+  );
+
+  return [...chosen.values()].map((detail) => {
+    const grants = grantsByKey.get(detail.key);
+
+    // Заклинание варианта считается от его характеристики, если та задана, — как
+    // у умения и у черты
+    const spells = (grants?.spells ?? []).map((spell) =>
+      grants?.spellcastingAbility
+        ? { ...spell, spellcastingAbility: grants.spellcastingAbility }
+        : spell,
+    );
+
+    const activeEffects = grants?.activeEffects ?? [];
+
+    return {
+      id: `${featureId}:${FEATURE_OPTION_ID_SEGMENT}:${detail.key}`,
+      name: detail.name,
+      description: toDescriptionNodes(detail.description),
+      origin: 'class',
+      originName,
+      // Уровень варианта, а не умения: снижение уровня забирает воззвание,
+      // которое стало доступно только на снимаемом уровне
+      level: detail.requiredClassLevel || summary.level,
+      choice: null,
+      // Пассивные прибавки считаются один раз, при взятии варианта, — наравне с
+      // бонусами надетого снаряжения; условные проверяются по самому эффекту
+      bonuses: toInventoryBonusesFromEffects(activeEffects),
+      activeEffects: activeEffects.length ? [...activeEffects] : undefined,
+      proficiencies: grants?.proficiencies ?? null,
+      spells: spells.length ? spells : null,
+      counters: grants?.counters.length ? [...grants.counters] : undefined,
+    };
+  });
 }
 
 /**
@@ -10817,6 +10925,8 @@ export function withStoredFeatureAnswers(
  * @param subclass деталь подкласса; null — подкласс не выбран.
  * @param level уровень, умения которого нужны.
  * @param skillNames имена навыков персонажа.
+ * @param answers ответы игрока: по ним умение показывает вопросы и дары
+ *   выбранных вариантов. Не заданы — вариантов ещё не выбирали.
  * @returns строки умений этого уровня.
  */
 export function getLevelFeatureRows(
@@ -10824,6 +10934,7 @@ export function getLevelFeatureRows(
   subclass: ClassSummary | null,
   level: number,
   skillNames: string[],
+  answers: Record<string, string[]> = {},
 ): ClassFeatureRow[] {
   const rows: ClassFeatureRow[] = [];
 
@@ -10855,6 +10966,13 @@ export function getLevelFeatureRows(
 
       const baseId = getClassFeatureId(base.url, summary.key);
 
+      // Вопросы и черты взятых вариантов идут строкой их умения: выбирают
+      // вариант там же, и отдельной карточки у него нет
+      const chosenOptionKeys = getChosenFeatureOptionKeys(
+        summary.choices,
+        answers,
+      );
+
       // Каждый уровень улучшения характеристик — свой выбор, поэтому в
       // идентификатор строки идёт уровень: иначе выборы разных уровней
       // затирали бы друг друга общим ключом умения. Выборам со своим уровнем
@@ -10871,11 +10989,22 @@ export function getLevelFeatureRows(
         // умению не нужен — иначе под чертой висело бы пустое поле ввода.
         choices: summary.abilityImprovement
           ? []
-          : getLevelFeatureChoices(id, summary, skillNames, level),
-        featChoices: getLevelFeatChoices(summary, level),
+          : getLevelFeatureChoices(
+              id,
+              summary,
+              skillNames,
+              level,
+              chosenOptionKeys,
+            ),
+        featChoices: getLevelFeatChoices(summary, level, chosenOptionKeys),
         // Черту без выбора умение выдаёт на своём уровне, а не на уровнях роста
         grantedFeatUrls:
-          summary.level === level ? [...summary.grantedFeatUrls] : [],
+          summary.level === level
+            ? [
+                ...summary.grantedFeatUrls,
+                ...getChosenOptionFeatUrls(summary, chosenOptionKeys),
+              ]
+            : [],
         abilityImprovement: summary.abilityImprovement,
       });
     }
@@ -11628,6 +11757,8 @@ export function getTakenOptionValues(
  * @param summary умение класса или подкласса.
  * @param skillNames имена всех навыков персонажа.
  * @param level уровень, на котором собирается строка; не задан — отбора нет.
+ * @param chosenOptionKeys ключи выбранных вариантов умения: вопросы своей
+ *   механики задаёт только взятый вариант. Не заданы — вопросов вариантов нет.
  * @returns выборы умения; пусто — умение ни о чём не спрашивает.
  */
 export function getClassFeatureChoices(
@@ -11635,9 +11766,13 @@ export function getClassFeatureChoices(
   summary: ClassFeatureSummary,
   skillNames: string[],
   level?: number,
+  chosenOptionKeys: ReadonlySet<string> = new Set<string>(),
 ): ClassChoice[] {
   if (summary.choices.length > 0) {
-    return filterChoicesByLevel(summary.choices, level);
+    return filterChoicesByLevel(
+      withoutUnchosenOptionChoices(summary.choices, chosenOptionKeys),
+      level,
+    );
   }
 
   const skillChoice = summary.skillChoice;
@@ -11687,12 +11822,18 @@ function getLevelFeatureChoices(
   summary: ClassFeatureSummary,
   skillNames: string[],
   level: number,
+  chosenOptionKeys?: ReadonlySet<string>,
 ): ClassChoice[] {
-  return getClassFeatureChoices(featureId, summary, skillNames, level).filter(
-    (choice) =>
-      choice.requiredLevel
-        ? choice.requiredLevel === level
-        : summary.level === level,
+  return getClassFeatureChoices(
+    featureId,
+    summary,
+    skillNames,
+    level,
+    chosenOptionKeys,
+  ).filter((choice) =>
+    choice.requiredLevel
+      ? choice.requiredLevel === level
+      : summary.level === level,
   );
 }
 
@@ -12336,8 +12477,12 @@ export function getLegacyClassFeatChoices(
 export function getLevelFeatChoices(
   summary: ClassFeatureSummary,
   level: number,
+  chosenOptionKeys: ReadonlySet<string> = new Set<string>(),
 ): ClassChoice[] {
-  return filterChoicesByLevel(summary.featChoices, level).map((choice) =>
+  return filterChoicesByLevel(
+    withoutUnchosenOptionChoices(summary.featChoices, chosenOptionKeys),
+    level,
+  ).map((choice) =>
     summary.abilityImprovement
       ? { ...choice, id: `${choice.id}:${level}` }
       : choice,
@@ -12356,14 +12501,20 @@ export function getLevelFeatChoices(
 export function getFeatChoicesUpToLevel(
   summary: ClassFeatureSummary,
   level: number,
+  chosenOptionKeys: ReadonlySet<string> = new Set<string>(),
 ): ClassChoice[] {
   if (!summary.abilityImprovement) {
-    return filterChoicesByLevel(summary.featChoices, level);
+    return filterChoicesByLevel(
+      withoutUnchosenOptionChoices(summary.featChoices, chosenOptionKeys),
+      level,
+    );
   }
 
   return [summary.level, ...summary.scalingLevels]
     .filter((featureLevel) => featureLevel <= level)
-    .flatMap((featureLevel) => getLevelFeatChoices(summary, featureLevel));
+    .flatMap((featureLevel) =>
+      getLevelFeatChoices(summary, featureLevel, chosenOptionKeys),
+    );
 }
 
 /**

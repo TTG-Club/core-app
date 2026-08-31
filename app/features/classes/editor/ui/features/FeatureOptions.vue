@@ -4,7 +4,9 @@
     ClassFeatureOptionsChoiceCreate,
   } from '../../../model';
 
+  import { createFeatEditorRows, createFeatMechanics } from '~feats/model';
   import { ConfirmDialog } from '~initiative/ui-kit';
+  import { EditorNestedSection } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectLevel } from '~ui/select';
   import { InfoTooltip } from '~ui/tooltip';
@@ -14,12 +16,15 @@
     CLASS_FEATURE_OPTIONS_EDITOR,
     CLASS_FEATURES_EDITOR,
     CLASS_LEVEL_BOUNDS,
+    CLASS_OPTION_MECHANICS_LABELS,
+    CLASS_OPTION_MECHANICS_TITLES,
     CLASS_OPTIONS_CHOICE_COUNT_BOUNDS,
     CLASS_OPTIONS_CHOICE_DEFAULTS,
     getClassFeatureOptionLevelBadge,
     getClassFeatureOptionRemoveDescription,
+    getClassOptionMechanicsBadge,
   } from '../../../model';
-  import FeatureSection from './FeatureSection.vue';
+  import FeatureMechanics from './FeatureMechanics.vue';
 
   /**
    * Варианты умения: манёвры, воззвания, метамагия — список, из которого
@@ -41,6 +46,14 @@
     'choice',
   );
 
+  /**
+   * Оформление прилипшей шапки раскрытого варианта: у варианта своя механика на
+   * несколько экранов, и вдвоём с шапкой умения они держат на виду весь путь —
+   * «Воззвания → Мучительная кара». Отступ сверху — под шапку умения.
+   */
+  const PINNED_HEADER_CLASS =
+    'sticky top-10 z-10 rounded-t-lg border-b border-default bg-elevated';
+
   const {
     isExpanded,
     toggle: toggleOption,
@@ -48,6 +61,17 @@
     dropRow,
     getToggleIcon,
   } = useExpandedRows();
+
+  /**
+   * Оформление шапки варианта: прилипает только шапка раскрытого — списку из
+   * двух десятков свёрнутых манёвров это лишь мешало бы.
+   *
+   * @param index позиция варианта в списке.
+   * @returns классы шапки; пусто — вариант свёрнут.
+   */
+  function getHeaderClass(index: number): string {
+    return isExpanded(index) ? PINNED_HEADER_CLASS : '';
+  }
 
   /**
    * Подпись кнопки свёртки для скринридера.
@@ -157,6 +181,12 @@
         requiredClassLevel: undefined,
         hideInSubclasses: false,
         repeatable: false,
+        // Механика и строки редактора здесь всегда объекты: загрузка сливает
+        // ответ сервера именно с этим состоянием, и недостающие блоки берутся
+        // отсюда
+        mechanics: createFeatMechanics(),
+        activeEffects: [],
+        editorRows: createFeatEditorRows(),
       },
     ];
 
@@ -213,7 +243,7 @@
 </script>
 
 <template>
-  <FeatureSection
+  <EditorNestedSection
     :title="CLASS_FEATURES_EDITOR.optionsTitle"
     :hint="CLASS_FEATURES_EDITOR.optionsHint"
     :count="model.length"
@@ -224,7 +254,7 @@
       <!-- Настройка выбора идёт перед списком: сначала автор решает, выбирают
         из списка или он только справочный, и лишь потом набирает варианты -->
       <div
-        class="flex flex-col gap-3 rounded-lg border border-default bg-elevated/40 p-3"
+        class="flex flex-col gap-3 rounded-lg border border-dashed border-default p-3"
       >
         <InfoTooltip
           :text="CLASS_FEATURE_OPTIONS_CHOICE_EDITOR.selectableHint"
@@ -340,7 +370,7 @@
       <div
         v-for="(option, index) in model"
         :key="index"
-        class="rounded-lg border border-default bg-elevated/40"
+        class="rounded-lg border border-default bg-elevated/40 transition-colors focus-within:border-primary/60"
       >
         <!-- Плашка разворачивает вариант целиком: списки вариантов длинные —
           у воина два десятка манёвров, — и развёрнутые все разом они заслоняют
@@ -348,7 +378,10 @@
           кнопка внутри кнопки недопустима, поэтому нажатие ловит накладка —
           псевдоэлемент кнопки во всю шапку, — а сами кнопки подняты над
           накладкой `relative` -->
-        <div class="relative flex items-center gap-2 px-3 py-2">
+        <div
+          class="relative flex min-h-10 items-center gap-2 px-3 py-2"
+          :class="getHeaderClass(index)"
+        >
           <button
             type="button"
             class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-left before:absolute before:inset-0"
@@ -368,6 +401,16 @@
             <span class="min-w-0 flex-1 truncate text-sm">
               {{ option.name.rus || CLASS_FEATURE_OPTIONS_EDITOR.unnamed }}
             </span>
+
+            <UBadge
+              v-if="getClassOptionMechanicsBadge(option)"
+              size="sm"
+              color="primary"
+              variant="subtle"
+              class="shrink-0 tabular-nums"
+            >
+              {{ getClassOptionMechanicsBadge(option) }}
+            </UBadge>
 
             <UBadge
               v-if="option.repeatable && isSelectable"
@@ -413,7 +456,7 @@
 
         <UForm
           v-if="isExpanded(index)"
-          class="grid grid-cols-1 gap-3 border-t border-default p-3 md:grid-cols-24"
+          class="grid grid-cols-1 gap-3 p-3 md:grid-cols-24"
           attach
           :state="option"
         >
@@ -505,6 +548,15 @@
               :placeholder="CLASS_FEATURE_OPTIONS_EDITOR.descriptionPlaceholder"
             />
           </UFormField>
+
+          <!-- Механика варианта той же формой, что у умения: воззвание выдаёт
+            заклинание, манёвр — владение приёмом, и лист персонажа применяет
+            их одинаково, откуда бы они ни пришли -->
+          <FeatureMechanics
+            v-model="model[index]!"
+            :titles="CLASS_OPTION_MECHANICS_TITLES"
+            :labels="CLASS_OPTION_MECHANICS_LABELS"
+          />
         </UForm>
       </div>
     </div>
@@ -519,5 +571,5 @@
       confirm-icon="tabler:trash"
       @confirm="confirmRemoveRow"
     />
-  </FeatureSection>
+  </EditorNestedSection>
 </template>

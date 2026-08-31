@@ -5,7 +5,9 @@ import type {
   ClassColumnCreate,
   ClassCreate,
   ClassFeatureCreate,
+  ClassFeatureOptionCreate,
   ClassFeatureOptionsChoiceCreate,
+  ClassMechanicsHolderCreate,
 } from './create';
 
 import { z } from 'zod';
@@ -33,12 +35,6 @@ import { getLegacyFeatureFlags, withLegacyFeatureRows } from './features';
  * подставить значения, а отсеять чужое — недостающее дозаполняет слияние с
  * начальным состоянием формы внутри `useWorkshopForm`.
  */
-
-/** Носитель даров: и сама запись класса, и любое его умение. */
-interface MechanicsHolder {
-  mechanics: FeatMechanics | undefined;
-  editorRows: FeatEditorRows | undefined;
-}
 
 /**
  * Поля умения, которые форма не правит напрямую: флаги прежних лет и блок
@@ -165,7 +161,9 @@ function parseMechanicsHolder(raw: unknown): {
  * @param holder механика и строки одного носителя даров.
  * @returns готовая к отправке механика; `undefined` — даров нет.
  */
-function buildMechanics(holder: MechanicsHolder): FeatMechanics | undefined {
+function buildMechanics(
+  holder: ClassMechanicsHolderCreate,
+): FeatMechanics | undefined {
   const built = holder.editorRows
     ? fromFeatEditorRows(
         holder.editorRows,
@@ -174,6 +172,22 @@ function buildMechanics(holder: MechanicsHolder): FeatMechanics | undefined {
     : holder.mechanics;
 
   return built ? buildFeatMechanics(built) : undefined;
+}
+
+/**
+ * Приводит вариант умения к структуре формы: дары и эффекты у него те же, что у
+ * самого умения, и разбирает их тот же разборщик.
+ *
+ * @param raw сырой вариант из ответа сервера.
+ * @returns вариант с разобранными дарами и эффектами.
+ */
+function parseFeatureOption(raw: unknown): Record<string, unknown> {
+  const source = isRecord(raw) ? raw : {};
+
+  return {
+    ...source,
+    ...parseMechanicsHolder(source),
+  };
 }
 
 /**
@@ -204,7 +218,9 @@ function parseFeature(raw: unknown): Record<string, unknown> {
     ...source,
     informationalOnly: legacy.informationalOnly ?? false,
     scaling: Array.isArray(source.scaling) ? source.scaling : [],
-    options: Array.isArray(source.options) ? source.options : [],
+    options: Array.isArray(source.options)
+      ? source.options.map(parseFeatureOption)
+      : [],
     optionsChoice: parseOptionsChoice(source.optionsChoice),
     // Блок выбора навыков уехал в строки даров и в состоянии формы не живёт
     skillChoice: undefined,
@@ -234,6 +250,24 @@ export function normalizeLoadedClass(
 }
 
 /**
+ * Готовит вариант умения к отправке — так же, как само умение: дары из строк,
+ * эффекты через общий нормализатор, строки редактора наружу не уходят.
+ *
+ * @param option вариант из состояния формы.
+ * @returns вариант для тела запроса.
+ */
+function transformFeatureOption(
+  option: ClassFeatureOptionCreate,
+): ClassFeatureOptionCreate {
+  return {
+    ...option,
+    mechanics: buildMechanics(option),
+    activeEffects: normalizeActiveEffects(option.activeEffects),
+    editorRows: undefined,
+  };
+}
+
+/**
  * Готовит умение класса к отправке: дары из строк, эффекты через общий
  * нормализатор, строки редактора наружу не уходят.
  *
@@ -255,6 +289,7 @@ function transformFeature(feature: ClassFeatureCreate): ClassFeatureCreate {
   return {
     ...feature,
     ...flags,
+    options: feature.options.map(transformFeatureOption),
     optionsChoice: transformOptionsChoice(feature.optionsChoice),
     mechanics: buildMechanics(feature),
     activeEffects: normalizeActiveEffects(feature.activeEffects),

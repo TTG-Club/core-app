@@ -8,11 +8,13 @@
 
   import {
     CLASS_ABILITY_BONUS_MIN_LEVEL,
+    CLASS_FEATURE_MECHANICS_LABELS,
+    CLASS_FEATURE_MECHANICS_TITLES,
     CLASS_FEATURES_EDITOR,
     CLASS_LEVEL_BOUNDS,
-    getClassFeatureFilledBlocksCount,
     getClassFeatureLevelBadge,
     getClassFeatureOptionsChoiceBadge,
+    getClassMechanicsFilledBlocksCount,
   } from '../../model';
   import {
     FeatureAbilityBonus,
@@ -43,6 +45,14 @@
 
   const model = defineModel<Array<ClassFeatureCreate>>({ required: true });
 
+  /**
+   * Оформление прилипшей шапки раскрытого умения: механика умения длиннее
+   * экрана, и без неё на глубине не видно, чьё это умение. Шапка варианта
+   * прилипает под ней — вместе они и есть путь.
+   */
+  const PINNED_HEADER_CLASS =
+    'sticky top-0 z-20 rounded-t-lg border-b border-default bg-elevated';
+
   const {
     isExpanded,
     toggle: toggleFeature,
@@ -50,6 +60,17 @@
     dropRow,
     getToggleIcon,
   } = useExpandedRows();
+
+  /**
+   * Оформление шапки умения: прилипает только шапка раскрытого — списку из двух
+   * десятков свёрнутых строк это лишь мешало бы.
+   *
+   * @param index позиция умения в списке.
+   * @returns классы шапки; пусто — умение свёрнуто.
+   */
+  function getHeaderClass(index: number): string {
+    return isExpanded(index) ? PINNED_HEADER_CLASS : '';
+  }
 
   /** Индекс умения, удаление которого ждёт подтверждения. */
   const pendingRemoval = ref<number | undefined>(undefined);
@@ -111,7 +132,7 @@
    */
   function getBadges(feature: ClassFeatureCreate): Array<FeatureBadge> {
     const badges: Array<FeatureBadge> = [];
-    const filledBlocksCount = getClassFeatureFilledBlocksCount(feature);
+    const filledBlocksCount = getClassMechanicsFilledBlocksCount(feature);
 
     if (filledBlocksCount) {
       badges.push({
@@ -213,7 +234,12 @@
 </script>
 
 <template>
-  <UCard variant="subtle">
+  <!-- Карточка не обрезает содержимое: `overflow-hidden` темы отменяет
+    прилипание шапок раскрытых умений и вариантов внутри неё -->
+  <UCard
+    variant="subtle"
+    :ui="{ root: 'overflow-visible' }"
+  >
     <template #header>
       <div class="flex items-center justify-between gap-2">
         <InfoTooltip
@@ -247,9 +273,12 @@
       <div
         v-for="(feature, index) in model"
         :key="index"
-        class="rounded-lg border border-default bg-elevated/20"
+        class="rounded-lg border border-default bg-elevated/20 transition-colors focus-within:border-primary/60"
       >
-        <div class="relative flex items-center gap-2 px-3 py-2">
+        <div
+          class="relative flex min-h-10 items-center gap-2 px-3 py-2"
+          :class="getHeaderClass(index)"
+        >
           <!-- Плашка разворачивает умение целиком: попадать значком в конце
             строки приходилось прицельно. Кнопки лежат рядом с ней, а не
             внутри: кнопка внутри кнопки недопустима, поэтому нажатие ловит
@@ -309,7 +338,7 @@
 
         <div
           v-if="isExpanded(index)"
-          class="border-t border-default p-3"
+          class="p-3"
         >
           <UForm
             class="grid grid-cols-1 gap-3 md:grid-cols-24"
@@ -410,7 +439,11 @@
               :is-subclass="isSubclass"
             />
 
-            <FeatureMechanics v-model="model[index]!" />
+            <FeatureMechanics
+              v-model="model[index]!"
+              :titles="CLASS_FEATURE_MECHANICS_TITLES"
+              :labels="CLASS_FEATURE_MECHANICS_LABELS"
+            />
 
             <FeatureAbilityBonus
               v-if="hasAbilityBonusSection(feature)"

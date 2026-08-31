@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { ClassFeatureScalingCreate } from '../../../model';
 
+  import { EditorNestedSection } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectLevel } from '~ui/select';
 
@@ -9,7 +10,6 @@
     CLASS_FEATURES_EDITOR,
     CLASS_LEVEL_BOUNDS,
   } from '../../../model';
-  import FeatureSection from './FeatureSection.vue';
 
   /**
    * Рост умения по уровням: одна строка — один уровень, на котором умение
@@ -56,7 +56,7 @@
 </script>
 
 <template>
-  <FeatureSection
+  <EditorNestedSection
     :title="CLASS_FEATURES_EDITOR.scalingTitle"
     :hint="CLASS_FEATURES_EDITOR.scalingHint"
     :count="model.length"
@@ -133,5 +133,5 @@
         </UFormField>
       </UForm>
     </div>
-  </FeatureSection>
+  </EditorNestedSection>
 </template>

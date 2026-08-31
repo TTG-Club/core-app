@@ -9,6 +9,7 @@ import type {
   CharacterSpell,
   CharacterToolProficiency,
   ClassChoice,
+  ClassFeatureOptionGrants,
   ClassFeatureSummary,
   ClassOption,
   ClassSummary,
@@ -2230,6 +2231,25 @@ const renderNodeSchema = z
   .catch('');
 
 /**
+ * Схема механики: одинакова у умения класса и у его варианта — набор даров у них
+ * один, и лист применяет их одним и тем же кодом.
+ */
+const classMechanicsSchema = z
+  .object({
+    proficiencies: mechanicsProficienciesSchema,
+    choices: mechanicsChoicesSchema,
+    counters: mechanicsCountersSchema,
+    spells: mechanicsSpellGrantSchema,
+    // Черты без выбора — ссылками; деталь черты лист догружает сам
+    feats: z
+      .array(z.object({ url: z.string().catch('') }))
+      .nullable()
+      .catch(null),
+  })
+  .nullable()
+  .catch(null);
+
+/**
  * Схема варианта умения: пул выбора собирается из подписей, а уровень варианта
  * сужает пул — воззвание «для колдуна 5 уровня» на первом ещё не предлагают.
  */
@@ -2250,6 +2270,11 @@ const classFeatureOptionSchema = z.object({
   description: renderNodeSchema,
   additional: renderNodeSchema,
   prerequisite: renderNodeSchema,
+  // Дары варианта той же моделью, что у умения: воззвание выдаёт заклинание,
+  // манёвр — владение приёмом. Действуют, только пока вариант выбран
+  mechanics: classMechanicsSchema,
+  activeEffects: z.unknown().nullish(),
+  grantedSpells: z.array(featGrantedSpellSchema).nullable().catch(null),
 });
 
 /**
@@ -2299,20 +2324,7 @@ const classFeatureSchema = z.object({
     .catch(null),
   informationalOnly: z.boolean().catch(false),
   activeEffects: z.unknown().nullish(),
-  mechanics: z
-    .object({
-      proficiencies: mechanicsProficienciesSchema,
-      choices: mechanicsChoicesSchema,
-      counters: mechanicsCountersSchema,
-      spells: mechanicsSpellGrantSchema,
-      // Черты без выбора — ссылками; деталь черты лист догружает сам
-      feats: z
-        .array(z.object({ url: z.string().catch('') }))
-        .nullable()
-        .catch(null),
-    })
-    .nullable()
-    .catch(null),
+  mechanics: classMechanicsSchema,
   grantedSpells: z.array(featGrantedSpellSchema).nullable().catch(null),
 });
 
@@ -2557,6 +2569,130 @@ function toFeatureOptionChoices(
   });
 }
 
+/**
+ * Ключ варианта умения: он и есть ответ потребителя, а вариант без ключа
+ * узнаётся по названию — так же, как в пуле выбора.
+ *
+ * @param option разобранный вариант умения.
+ * @returns ключ варианта; пусто — вариант нечем назвать.
+ */
+function getFeatureOptionKey(
+  option: z.infer<typeof classFeatureOptionSchema>,
+): string {
+  return option.key || option.name.rus || option.name.eng;
+}
+
+/**
+ * Дары вариантов умения: то, что вариант делает с листом, когда его выбрали.
+ *
+ * Собираются для ВСЕХ вариантов записи, а не только для выбранных: разбор
+ * справочника не знает, что игрок возьмёт, — отбирает выбранное сборка записей
+ * листа по ответам.
+ *
+ * @param feature умение из детального ответа класса.
+ * @returns дары по вариантам; пусто — своей механики нет ни у одного.
+ */
+function toFeatureOptionGrants(
+  feature: z.infer<typeof classFeatureSchema>,
+): ClassFeatureOptionGrants[] {
+  return (feature.options ?? []).flatMap((option) => {
+    const key = getFeatureOptionKey(option);
+    const name = option.name.rus || option.name.eng;
+
+    const activeEffects = normalizeLoadedActiveEffects(option.activeEffects);
+    const spells = option.grantedSpells ?? [];
+    const counters = toMechanicCounters(option.mechanics?.counters ?? []);
+
+    const grantedFeatUrls = (option.mechanics?.feats ?? []).flatMap((feat) =>
+      feat.url ? [feat.url] : [],
+    );
+
+    const proficiencies = option.mechanics?.proficiencies
+      ? toGrantedProficiencies(option.mechanics.proficiencies)
+      : null;
+
+    const hasGrants =
+      Boolean(proficiencies)
+      || activeEffects.length > 0
+      || spells.length > 0
+      || counters.length > 0
+      || grantedFeatUrls.length > 0;
+
+    if (!key || !hasGrants) {
+      return [];
+    }
+
+    return [
+      {
+        key,
+        name,
+        proficiencies,
+        counters,
+        // Вариант либо держит заклинание подготовленным, либо оставляет
+        // подготовку игроку — как умение и как черта
+        spells: spells.length
+          ? spells.map((entry) => ({
+              ...toCharacterSpell(entry.spell),
+              prepared: option.mechanics?.spells?.alwaysPrepared ?? false,
+              requiredLevel: entry.requiredLevel ?? undefined,
+            }))
+          : null,
+        spellcastingAbility: parseApiAbilityKey(
+          option.mechanics?.spells?.spellcastingAbility ?? '',
+        ),
+        activeEffects,
+        grantedFeatUrls,
+      },
+    ];
+  });
+}
+
+/**
+ * Вопросы, которые задаёт механика самих вариантов умения: манёвр «Оценка» даёт
+ * выбрать навык, а спрашивают его, только когда манёвр взят.
+ *
+ * Помечены ключом варианта ({@link ClassChoice.optionKey}) — по нему сборка
+ * листа и мастера отбирают вопросы выбранных вариантов. Идентификатор собран
+ * так, что его хвост несёт и вариант, и ключ выбора: на записи умения ответ
+ * лежит хвостом идентификатора, и один только ключ выбора совпал бы с вопросом
+ * самого умения.
+ *
+ * @param feature умение из детального ответа класса.
+ * @param featureId идентификатор умения на листе.
+ * @returns вопросы вариантов; пусто — ни один вариант ни о чём не спрашивает.
+ */
+function toFeatureOptionMechanicChoices(
+  feature: z.infer<typeof classFeatureSchema>,
+  featureId: string,
+): ClassChoice[] {
+  // Справочный список вариантов лист не спрашивает вовсе, и вопросы его
+  // вариантов задавать некому: они так и остались бы без ответа
+  if (!feature.optionsChoice) {
+    return [];
+  }
+
+  return (feature.options ?? []).flatMap((option) => {
+    const key = getFeatureOptionKey(option);
+    const choices = option.mechanics?.choices ?? [];
+
+    if (!key || !choices.length) {
+      return [];
+    }
+
+    const name = option.name.rus || option.name.eng;
+    const prefix = `${featureId}:${OPTION_CHOICE_ID_SEGMENT}-${key}-`;
+
+    return toMechanicChoices(choices, featureId).map((choice) => ({
+      ...choice,
+      id: `${prefix}${choice.id.slice(featureId.length + 1)}`,
+      // Вопрос стоит строкой умения, рядом с его собственными: без названия
+      // варианта игрок не поймёт, чей это «Владение навыком»
+      label: name ? `${name}: ${choice.label}` : choice.label,
+      optionKey: key,
+    }));
+  });
+}
+
 /** Схема детального ответа класса или подкласса (нужные листу поля). */
 const classDetailSchema = z.object({
   url: z.string(),
@@ -2618,6 +2754,9 @@ function toClassSummary(
       // Выбор из вариантов умения идёт рядом с выборами механики, а не вместо
       // них: умение может и выдавать владение, и давать выбрать манёвр
       ...toFeatureOptionChoices(feature, featureId),
+      // Вопросы самих вариантов: спрашиваются, только когда вариант выбран, —
+      // отбирает их сборка листа по пометке `optionKey`
+      ...toFeatureOptionMechanicChoices(feature, featureId),
     ];
 
     // Выборы черты живут отдельно от остальных: их спрашивает пикер каталога
@@ -2675,6 +2814,7 @@ function toClassSummary(
       spellcastingAbility: parseApiAbilityKey(
         feature.mechanics?.spells?.spellcastingAbility ?? '',
       ),
+      optionGrants: toFeatureOptionGrants(feature),
     };
   });
 

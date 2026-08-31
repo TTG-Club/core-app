@@ -1,6 +1,10 @@
 import type { FeatEditorRows, FeatGrantRow } from '~feats/model';
 
-import type { ClassFeatureCreate } from './create';
+import type {
+  ClassFeatureCreate,
+  ClassFeatureOptionCreate,
+  ClassMechanicsHolderCreate,
+} from './create';
 
 import { createGrantRow, getTakenChoiceKeys } from '~feats/model';
 
@@ -8,6 +12,7 @@ import {
   ABILITY_IMPROVEMENT_FEAT_CATEGORIES,
   CLASS_FEATURE_OPTION_LEVEL_BADGE,
   CLASS_FEATURE_OPTION_REMOVE_CONFIRM,
+  CLASS_FEATURE_OPTIONS_EDITOR,
   CLASS_FEATURES_EDITOR,
   CLASS_OPTIONS_CHOICE_DEFAULTS,
   FIGHTING_STYLE_FEAT_CATEGORY,
@@ -157,22 +162,22 @@ export function withLegacyFeatureRows(
 }
 
 /**
- * Сколько блоков механики умения заполнено. Список умений длинный, а механика
- * свёрнута: без пометки автор не видит, какие умения настроены.
+ * Сколько блоков механики заполнено у умения или его варианта. Списки длинные,
+ * а механика свёрнута: без пометки автор не видит, что настроено.
  *
- * @param feature умение из состояния формы.
+ * @param holder умение или вариант из состояния формы.
  * @returns число заполненных блоков.
  */
-export function getClassFeatureFilledBlocksCount(
-  feature: ClassFeatureCreate,
+export function getClassMechanicsFilledBlocksCount(
+  holder: ClassMechanicsHolderCreate,
 ): number {
   return [
-    feature.editorRows?.grants.length ?? 0,
-    feature.editorRows?.modifiers.length ?? 0,
-    feature.editorRows?.counters.length ?? 0,
-    feature.mechanics?.spells.spells.length ?? 0,
-    feature.mechanics?.spellList.groups.length ?? 0,
-    feature.activeEffects.length,
+    holder.editorRows?.grants.length ?? 0,
+    holder.editorRows?.modifiers.length ?? 0,
+    holder.editorRows?.counters.length ?? 0,
+    holder.mechanics?.spells.spells.length ?? 0,
+    holder.mechanics?.spellList.groups.length ?? 0,
+    holder.activeEffects.length,
   ].filter(Boolean).length;
 }
 
@@ -200,6 +205,26 @@ export function getClassFeatureOptionsChoiceBadge(
   const range = total > start ? `${start}–${total}` : `${start}`;
 
   return `${CLASS_FEATURES_EDITOR.optionsChoiceBadge}${range} ${CLASS_FEATURES_EDITOR.optionsChoiceBadgeOf} ${feature.options.length}`;
+}
+
+/**
+ * Подпись бейджа механики варианта: сколько блоков механики у него заполнено.
+ * Список вариантов свёрнут строками, и без бейджа автор не видит, у какого из
+ * них есть своя механика.
+ *
+ * @param option вариант умения из состояния формы.
+ * @returns подпись бейджа; пусто — своей механики у варианта нет.
+ */
+export function getClassOptionMechanicsBadge(
+  option: ClassFeatureOptionCreate,
+): string {
+  const filledBlocksCount = getClassMechanicsFilledBlocksCount(option);
+
+  if (!filledBlocksCount) {
+    return '';
+  }
+
+  return `${CLASS_FEATURE_OPTIONS_EDITOR.mechanicsBadge}${filledBlocksCount}`;
 }
 
 /**
