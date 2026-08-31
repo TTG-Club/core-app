@@ -1,6 +1,6 @@
 import type { FeatEditorLabelOverrides } from '~feats/model';
 
-import type { ClassTableColumnPurpose } from './create';
+import type { ClassMechanicsTitles, ClassTableColumnPurpose } from './create';
 
 /**
  * Минимальное значение ключевой характеристики, необходимое для взятия уровня
@@ -262,6 +262,7 @@ export const CLASS_FEATURE_OPTIONS_EDITOR = {
   collapse: 'Свернуть вариант',
   hiddenBadge: 'скрыт в подклассе',
   repeatableBadge: 'повторно',
+  mechanicsBadge: 'механика: ',
   removeConfirmTitle: 'Удалить вариант?',
   removeConfirmCancel: 'Оставить',
   removeConfirmApply: 'Удалить',
@@ -429,6 +430,76 @@ export const CLASS_FEATURE_MECHANICS_LABELS: FeatEditorLabelOverrides = {
   spellListRequiresSpellcastingHint:
     'Список расширяется, только если у персонажа есть «Использование '
     + 'заклинаний» или «Магия договора». Выключено — расширяется всегда.',
+};
+
+/**
+ * Подписи блока «Механика и эффекты» у самого умения.
+ */
+export const CLASS_FEATURE_MECHANICS_TITLES: ClassMechanicsTitles = {
+  section: CLASS_FEATURES_EDITOR.mechanicsTitle,
+  sectionHint: CLASS_FEATURES_EDITOR.mechanicsHint,
+  grants: CLASS_EDITOR_LABELS.featureGrantsTitle,
+  modifiers: CLASS_EDITOR_LABELS.featureModifiersTitle,
+  counters: CLASS_EDITOR_LABELS.featureCountersTitle,
+  spells: CLASS_EDITOR_LABELS.featureSpellsTitle,
+  spellList: CLASS_EDITOR_LABELS.featureSpellListTitle,
+  effects: CLASS_EDITOR_LABELS.featureEffectsTitle,
+};
+
+/**
+ * Подписи того же блока у ВАРИАНТА умения: источник даров здесь вариант, а не
+ * умение, и подписи умения врали бы об источнике.
+ */
+export const CLASS_OPTION_MECHANICS_TITLES: ClassMechanicsTitles = {
+  section: 'Механика и эффекты варианта',
+  sectionHint:
+    'Что делает с листом персонажа сам вариант, когда игрок его выбрал: '
+    + 'выдаёт владения и заклинания, даёт выбрать навык или черту, заводит '
+    + 'ресурс со счётчиком или меняет числа листа эффектом. Невыбранный '
+    + 'вариант листу ничего не даёт.',
+  grants: 'Дары варианта',
+  modifiers: 'Правки листа от варианта',
+  counters: 'Ресурсы варианта',
+  spells: 'Заклинания варианта',
+  spellList: 'Расширение списка заклинаний вариантом',
+  effects: 'Эффекты варианта',
+};
+
+/**
+ * Подписи редакторов механики для даров ВАРИАНТА умения. Отличий от умения
+ * немного, поэтому берутся его подписи, а переписано только то, где источник
+ * даров назван словом: остальное — те же правила и те же примеры.
+ */
+export const CLASS_OPTION_MECHANICS_LABELS: FeatEditorLabelOverrides = {
+  ...CLASS_FEATURE_MECHANICS_LABELS,
+  grantsHint: 'Одна строка — одно, что даёт вариант.',
+  grantsHintDetails:
+    'Например: манёвр «Оценка» даёт выбрать навык — строка «Навык → дать '
+    + 'выбрать → 1» с набором. Воззвание «Взгляд дьявола» даёт тёмное зрение — '
+    + 'это правка листа, а не дар. Даётся вариант один раз, поэтому уровень у '
+    + 'выбора здесь обычно не нужен.',
+  grantsEmpty: 'Дары варианта не заданы.',
+  choiceRequiredLevelHint:
+    'Уровень класса, с которого спрашивают этот выбор. Пусто — с уровня, на '
+    + 'котором вариант взяли.',
+  modifiersHint: 'То, что вариант меняет на листе навсегда.',
+  modifiersHintDetails:
+    'Например: воззвание «Взгляд дьявола» — тёмное зрение на 120 футов. Если '
+    + 'прибавка работает не всегда, её место в «Эффектах варианта»: там у '
+    + 'эффекта есть условие.',
+  countersHint:
+    'Запас варианта, который тратится и восстанавливается на отдыхе.',
+  grantedSpellsHint:
+    'Заклинания, которые вариант даёт знать сразу: воззвание «Маска многих '
+    + 'лиц» даёт «Маскировку». Круг и школу лист берёт из справочника.',
+  grantedSpellsEmpty: 'Вариант не даёт заклинаний без выбора.',
+  spellListHint:
+    'Заклинания, которые вариант добавляет в список класса: персонаж может их '
+    + 'подготовить наравне с классовыми.',
+  spellListEmpty: 'Вариант список заклинаний не расширяет.',
+  spellListLevelHint:
+    'Уровень класса, с которого открывается ЭТОТ список. Пусто — с уровня, на '
+    + 'котором вариант взяли.',
 };
 
 /** Значения назначения колонки таблицы прогрессии. */

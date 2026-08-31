@@ -442,6 +442,27 @@ export function useLevelUpWizard(): LevelUpWizard {
     ),
   );
 
+  /**
+   * Ответы мастера, дополненные ответами прошлых уровней с самих записей листа.
+   *
+   * Умение, у которого на этом уровне открывается ещё одна ступень выбора,
+   * пересобирается целиком и заменяет прежнюю запись: без прежних ответов оно
+   * потеряло бы и выбранное раньше — воззвания первого уровня у колдуна,
+   * оружейные приёмы первого уровня у воина.
+   */
+  const allAnswers = computed<Record<string, string[]>>(() =>
+    Object.values(loadedClasses.value).reduce<Record<string, string[]>>(
+      (result, loaded) =>
+        withStoredFeatureAnswers(
+          result,
+          character.value.features,
+          loaded.entry.url,
+          [...loaded.detail.features, ...(loaded.subclass?.features ?? [])],
+        ),
+      allSelections.value,
+    ),
+  );
+
   const steps = computed<LevelUpStepView[]>(() =>
     drafts.value.map((draft, index) => {
       const loaded = loadedClasses.value[draft.classUrl];
@@ -461,6 +482,7 @@ export function useLevelUpWizard(): LevelUpWizard {
               loaded.subclass,
               draft.classLevel,
               skillNames.value,
+              allAnswers.value,
             )
           : [],
         isSubclassStep: draft.classLevel === loaded?.subclassStepLevel,
@@ -513,27 +535,6 @@ export function useLevelUpWizard(): LevelUpWizard {
   /** Все выборы мастера: по ним считается, что уже взято из общего списка. */
   const allChoices = computed<ClassChoice[]>(() =>
     steps.value.flatMap((step) => step.features.flatMap((row) => row.choices)),
-  );
-
-  /**
-   * Ответы мастера, дополненные ответами прошлых уровней с самих записей листа.
-   *
-   * Умение, у которого на этом уровне открывается ещё одна ступень выбора,
-   * пересобирается целиком и заменяет прежнюю запись: без прежних ответов оно
-   * потеряло бы и выбранное раньше — воззвания первого уровня у колдуна,
-   * оружейные приёмы первого уровня у воина.
-   */
-  const allAnswers = computed<Record<string, string[]>>(() =>
-    Object.values(loadedClasses.value).reduce<Record<string, string[]>>(
-      (result, loaded) =>
-        withStoredFeatureAnswers(
-          result,
-          character.value.features,
-          loaded.entry.url,
-          [...loaded.detail.features, ...(loaded.subclass?.features ?? [])],
-        ),
-      allSelections.value,
-    ),
   );
 
   /** Подсказка о неудачной загрузке справочника класса. */

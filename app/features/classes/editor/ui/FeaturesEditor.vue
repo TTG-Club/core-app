@@ -8,11 +8,13 @@
 
   import {
     CLASS_ABILITY_BONUS_MIN_LEVEL,
+    CLASS_FEATURE_MECHANICS_LABELS,
+    CLASS_FEATURE_MECHANICS_TITLES,
     CLASS_FEATURES_EDITOR,
     CLASS_LEVEL_BOUNDS,
-    getClassFeatureFilledBlocksCount,
     getClassFeatureLevelBadge,
     getClassFeatureOptionsChoiceBadge,
+    getClassMechanicsFilledBlocksCount,
   } from '../../model';
   import {
     FeatureAbilityBonus,
@@ -111,7 +113,7 @@
    */
   function getBadges(feature: ClassFeatureCreate): Array<FeatureBadge> {
     const badges: Array<FeatureBadge> = [];
-    const filledBlocksCount = getClassFeatureFilledBlocksCount(feature);
+    const filledBlocksCount = getClassMechanicsFilledBlocksCount(feature);
 
     if (filledBlocksCount) {
       badges.push({
@@ -410,7 +412,11 @@
               :is-subclass="isSubclass"
             />
 
-            <FeatureMechanics v-model="model[index]!" />
+            <FeatureMechanics
+              v-model="model[index]!"
+              :titles="CLASS_FEATURE_MECHANICS_TITLES"
+              :labels="CLASS_FEATURE_MECHANICS_LABELS"
+            />
 
             <FeatureAbilityBonus
               v-if="hasAbilityBonusSection(feature)"

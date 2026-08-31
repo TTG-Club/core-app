@@ -1,6 +1,6 @@
 import type { FeatEditorRows, FeatGrantRow } from '~feats/model';
 
-import type { ClassFeatureCreate } from './create';
+import type { ClassFeatureCreate, ClassMechanicsHolderCreate } from './create';
 
 import { createGrantRow, getTakenChoiceKeys } from '~feats/model';
 
@@ -157,22 +157,22 @@ export function withLegacyFeatureRows(
 }
 
 /**
- * Сколько блоков механики умения заполнено. Список умений длинный, а механика
- * свёрнута: без пометки автор не видит, какие умения настроены.
+ * Сколько блоков механики заполнено у умения или его варианта. Списки длинные,
+ * а механика свёрнута: без пометки автор не видит, что настроено.
  *
- * @param feature умение из состояния формы.
+ * @param holder умение или вариант из состояния формы.
  * @returns число заполненных блоков.
  */
-export function getClassFeatureFilledBlocksCount(
-  feature: ClassFeatureCreate,
+export function getClassMechanicsFilledBlocksCount(
+  holder: ClassMechanicsHolderCreate,
 ): number {
   return [
-    feature.editorRows?.grants.length ?? 0,
-    feature.editorRows?.modifiers.length ?? 0,
-    feature.editorRows?.counters.length ?? 0,
-    feature.mechanics?.spells.spells.length ?? 0,
-    feature.mechanics?.spellList.groups.length ?? 0,
-    feature.activeEffects.length,
+    holder.editorRows?.grants.length ?? 0,
+    holder.editorRows?.modifiers.length ?? 0,
+    holder.editorRows?.counters.length ?? 0,
+    holder.mechanics?.spells.spells.length ?? 0,
+    holder.mechanics?.spellList.groups.length ?? 0,
+    holder.activeEffects.length,
   ].filter(Boolean).length;
 }
 

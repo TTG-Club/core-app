@@ -5,6 +5,7 @@ import type {
   ClassColumnCreate,
   ClassCreate,
   ClassFeatureCreate,
+  ClassFeatureOptionCreate,
   ClassFeatureOptionsChoiceCreate,
 } from './create';
 
@@ -177,6 +178,22 @@ function buildMechanics(holder: MechanicsHolder): FeatMechanics | undefined {
 }
 
 /**
+ * Приводит вариант умения к структуре формы: дары и эффекты у него те же, что у
+ * самого умения, и разбирает их тот же разборщик.
+ *
+ * @param raw сырой вариант из ответа сервера.
+ * @returns вариант с разобранными дарами и эффектами.
+ */
+function parseFeatureOption(raw: unknown): Record<string, unknown> {
+  const source = isRecord(raw) ? raw : {};
+
+  return {
+    ...source,
+    ...parseMechanicsHolder(source),
+  };
+}
+
+/**
  * Приводит умение класса к структуре формы.
  *
  * Флаги повышения характеристик и боевого стиля и блок выбора навыков читаются
@@ -204,7 +221,9 @@ function parseFeature(raw: unknown): Record<string, unknown> {
     ...source,
     informationalOnly: legacy.informationalOnly ?? false,
     scaling: Array.isArray(source.scaling) ? source.scaling : [],
-    options: Array.isArray(source.options) ? source.options : [],
+    options: Array.isArray(source.options)
+      ? source.options.map(parseFeatureOption)
+      : [],
     optionsChoice: parseOptionsChoice(source.optionsChoice),
     // Блок выбора навыков уехал в строки даров и в состоянии формы не живёт
     skillChoice: undefined,
@@ -234,6 +253,24 @@ export function normalizeLoadedClass(
 }
 
 /**
+ * Готовит вариант умения к отправке — так же, как само умение: дары из строк,
+ * эффекты через общий нормализатор, строки редактора наружу не уходят.
+ *
+ * @param option вариант из состояния формы.
+ * @returns вариант для тела запроса.
+ */
+function transformFeatureOption(
+  option: ClassFeatureOptionCreate,
+): ClassFeatureOptionCreate {
+  return {
+    ...option,
+    mechanics: buildMechanics(option),
+    activeEffects: normalizeActiveEffects(option.activeEffects),
+    editorRows: undefined,
+  };
+}
+
+/**
  * Готовит умение класса к отправке: дары из строк, эффекты через общий
  * нормализатор, строки редактора наружу не уходят.
  *
@@ -255,6 +292,7 @@ function transformFeature(feature: ClassFeatureCreate): ClassFeatureCreate {
   return {
     ...feature,
     ...flags,
+    options: feature.options.map(transformFeatureOption),
     optionsChoice: transformOptionsChoice(feature.optionsChoice),
     mechanics: buildMechanics(feature),
     activeEffects: normalizeActiveEffects(feature.activeEffects),

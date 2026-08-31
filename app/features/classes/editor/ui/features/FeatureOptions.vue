@@ -4,6 +4,7 @@
     ClassFeatureOptionsChoiceCreate,
   } from '../../../model';
 
+  import { createFeatEditorRows, createFeatMechanics } from '~feats/model';
   import { ConfirmDialog } from '~initiative/ui-kit';
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectLevel } from '~ui/select';
@@ -14,11 +15,15 @@
     CLASS_FEATURE_OPTIONS_EDITOR,
     CLASS_FEATURES_EDITOR,
     CLASS_LEVEL_BOUNDS,
+    CLASS_OPTION_MECHANICS_LABELS,
+    CLASS_OPTION_MECHANICS_TITLES,
     CLASS_OPTIONS_CHOICE_COUNT_BOUNDS,
     CLASS_OPTIONS_CHOICE_DEFAULTS,
     getClassFeatureOptionLevelBadge,
     getClassFeatureOptionRemoveDescription,
+    getClassMechanicsFilledBlocksCount,
   } from '../../../model';
+  import FeatureMechanics from './FeatureMechanics.vue';
   import FeatureSection from './FeatureSection.vue';
 
   /**
@@ -157,6 +162,12 @@
         requiredClassLevel: undefined,
         hideInSubclasses: false,
         repeatable: false,
+        // Механика и строки редактора здесь всегда объекты: загрузка сливает
+        // ответ сервера именно с этим состоянием, и недостающие блоки берутся
+        // отсюда
+        mechanics: createFeatMechanics(),
+        activeEffects: [],
+        editorRows: createFeatEditorRows(),
       },
     ];
 
@@ -370,6 +381,17 @@
             </span>
 
             <UBadge
+              v-if="getClassMechanicsFilledBlocksCount(option)"
+              size="sm"
+              color="primary"
+              variant="subtle"
+              class="shrink-0 tabular-nums"
+            >
+              {{ CLASS_FEATURE_OPTIONS_EDITOR.mechanicsBadge
+              }}{{ getClassMechanicsFilledBlocksCount(option) }}
+            </UBadge>
+
+            <UBadge
               v-if="option.repeatable && isSelectable"
               size="sm"
               color="info"
@@ -505,6 +527,15 @@
               :placeholder="CLASS_FEATURE_OPTIONS_EDITOR.descriptionPlaceholder"
             />
           </UFormField>
+
+          <!-- Механика варианта той же формой, что у умения: воззвание выдаёт
+            заклинание, манёвр — владение приёмом, и лист персонажа применяет
+            их одинаково, откуда бы они ни пришли -->
+          <FeatureMechanics
+            v-model="model[index]!"
+            :titles="CLASS_OPTION_MECHANICS_TITLES"
+            :labels="CLASS_OPTION_MECHANICS_LABELS"
+          />
         </UForm>
       </div>
     </div>
