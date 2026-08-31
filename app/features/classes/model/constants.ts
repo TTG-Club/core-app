@@ -248,6 +248,9 @@ export const CLASS_FEATURE_OPTIONS_EDITOR = {
   nameEngPlaceholder: 'English name',
   level: 'С уровня',
   hideInSubclasses: 'Скрывать в подклассе',
+  repeatable: 'Можно взять повторно',
+  repeatableHint:
+    'Лист персонажа предложит вариант снова, даже если игрок уже его брал. Без галочки взятый вариант из следующего выбора уходит.',
   additional: 'Подсказка',
   additionalPlaceholder: 'Короткая подпись',
   prerequisite: 'Требования',
@@ -258,6 +261,7 @@ export const CLASS_FEATURE_OPTIONS_EDITOR = {
   expand: 'Развернуть вариант',
   collapse: 'Свернуть вариант',
   hiddenBadge: 'скрыт в подклассе',
+  repeatableBadge: 'повторно',
 } as const;
 
 /**

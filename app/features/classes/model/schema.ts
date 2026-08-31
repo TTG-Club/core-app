@@ -98,6 +98,7 @@ const classFeatureOptionSchema: z.ZodType<ClassFeatureOption> = z.object({
   prerequisite: renderNodeSchema.optional(),
   requiredClassLevel: levelSchema.optional(),
   hideInSubclasses: z.boolean().optional(),
+  repeatable: z.boolean().optional(),
 });
 
 const classFeatureSchema: z.ZodType<ClassFeature> = z.object({
