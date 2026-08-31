@@ -101,6 +101,9 @@ export interface ClassFeatureOption {
   prerequisite?: RenderNode;
   requiredClassLevel?: Level;
   hideInSubclasses?: boolean;
+
+  /** Вариант берут повторно; не задано — берут один раз. */
+  repeatable?: boolean;
 }
 
 /**
@@ -127,6 +130,12 @@ export interface FeatureOptionEntry {
 
   /** Уровень класса, с которого вариант доступен; 0 — доступен сразу. */
   requiredClassLevel: number;
+
+  /**
+   * Вариант берут повторно: в мастере листа он остаётся в списке и после того,
+   * как игрок его взял. Не задано — берут один раз.
+   */
+  repeatable?: boolean;
 }
 
 export interface ClassProficiency {

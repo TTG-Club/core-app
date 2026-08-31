@@ -194,6 +194,17 @@
               </p>
             </div>
 
+            <!-- Пометка повторяемости объясняет, почему вариант остался в
+              списке после того, как его взяли на прошлом уровне -->
+            <UBadge
+              v-if="card.repeatable"
+              color="info"
+              variant="subtle"
+              size="sm"
+            >
+              {{ FEATURE_OPTIONS_LABELS.repeatable }}
+            </UBadge>
+
             <UBadge
               v-if="card.levelLabel"
               color="neutral"

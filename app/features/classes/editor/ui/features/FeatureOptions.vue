@@ -66,6 +66,13 @@
   const scaling = computed(() => choice.value?.scaling ?? []);
 
   /**
+   * Есть ли у варианта галочки. Повторяемость спрашивается только у выбираемого
+   * списка — справочный лист персонажа не предлагает, и повторять там нечего, —
+   * а скрытие в подклассе задаёт только сам класс.
+   */
+  const hasOptionFlags = computed(() => isSelectable.value || !isSubclass);
+
+  /**
    * Включает и выключает выбор. Настройка снимается целиком: по её наличию
    * потребители и отличают выбираемый список от справочного, и оставленный
    * рядом с выключенной галочкой счёт спросил бы игрока в листе.
@@ -147,6 +154,7 @@
         prerequisite: undefined,
         requiredClassLevel: undefined,
         hideInSubclasses: false,
+        repeatable: false,
       },
     ];
 
@@ -322,6 +330,16 @@
             </span>
 
             <UBadge
+              v-if="option.repeatable && isSelectable"
+              size="sm"
+              color="info"
+              variant="subtle"
+              class="hidden shrink-0 md:inline-flex"
+            >
+              {{ CLASS_FEATURE_OPTIONS_EDITOR.repeatableBadge }}
+            </UBadge>
+
+            <UBadge
               v-if="option.hideInSubclasses && !isSubclass"
               size="sm"
               color="warning"
@@ -360,7 +378,7 @@
           :state="option"
         >
           <UFormField
-            class="md:col-span-8"
+            class="md:col-span-10"
             :label="CLASS_FEATURE_OPTIONS_EDITOR.name"
             name="name.rus"
           >
@@ -371,7 +389,7 @@
           </UFormField>
 
           <UFormField
-            class="md:col-span-8"
+            class="md:col-span-10"
             :label="CLASS_FEATURE_OPTIONS_EDITOR.nameEng"
             name="name.eng"
           >
@@ -389,11 +407,25 @@
             <SelectLevel v-model="option.requiredClassLevel" />
           </UFormField>
 
+          <!-- Галочки своим рядом: в колонке рядом с названиями их подписи
+            переносились по слогам, а вместе они читаются одним списком -->
           <div
-            v-if="!isSubclass"
-            class="flex items-center gap-2 md:col-span-4 md:self-end md:pb-2"
+            v-if="hasOptionFlags"
+            class="col-span-full flex flex-wrap items-center gap-x-6 gap-y-2"
           >
+            <InfoTooltip
+              v-if="isSelectable"
+              :text="CLASS_FEATURE_OPTIONS_EDITOR.repeatableHint"
+              icon="tabler:info-circle-filled"
+            >
+              <UCheckbox
+                v-model="option.repeatable"
+                :label="CLASS_FEATURE_OPTIONS_EDITOR.repeatable"
+              />
+            </InfoTooltip>
+
             <UCheckbox
+              v-if="!isSubclass"
               v-model="option.hideInSubclasses"
               :label="CLASS_FEATURE_OPTIONS_EDITOR.hideInSubclasses"
             />

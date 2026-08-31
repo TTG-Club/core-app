@@ -73,6 +73,14 @@ export interface ClassFeatureOptionCreate {
   prerequisite: string | undefined;
   requiredClassLevel: number | undefined;
   hideInSubclasses: boolean | undefined;
+
+  /**
+   * Вариант берут повторно: на следующей ступени выбора он снова в списке, хотя
+   * игрок его уже брал. Без галочки взятый вариант из списка уходит — по
+   * правилам одно и то же воззвание дважды не берут, и в списке он бы только
+   * путал.
+   */
+  repeatable: boolean | undefined;
 }
 
 export interface ClassFeatureCreate {

@@ -45,6 +45,7 @@
       additional: option.additional ?? '',
       prerequisite: option.prerequisite ?? '',
       requiredClassLevel: option.requiredClassLevel ?? 0,
+      repeatable: option.repeatable,
     })),
   );
 

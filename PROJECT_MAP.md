@@ -491,6 +491,18 @@ modals), so its capabilities are listed here rather than squeezed into the table
   would mean removing the class takes the grant back only halfway. A feature's
   counter reaches the resource panel and its granted spell reaches the spellbook
   through the paths feats already use.
+- A feature's own list of options (warlock invocations, battle-master manoeuvres,
+  sorcerer metamagic) is asked by the wizards only when the record carries
+  `optionsChoice`; without it the list stays a reference on the class page, as it
+  was before the field existed. The pool is the feature's `options` themselves —
+  no second list — narrowed by each option's `requiredClassLevel`, and the count
+  grows in steps that name the total to a level, so the wizard asks the
+  difference from the previous step. An option taken on one step leaves the pool
+  of the others unless it is marked `repeatable`: a repeatable one stays in the
+  list and the feature line shows its multiplicity («Инфузия ×2»). Every answer
+  also becomes a sheet record of its own carrying the option's description, and
+  the same descriptions open in the shared `FeatureOptionsDrawer` — the class
+  page and both wizards render it.
 - A class feature flagged `informationalOnly` («Подкласс волшебника») never
   becomes a sheet record: the progression table needs the line, the sheet does
   not.

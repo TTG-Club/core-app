@@ -339,6 +339,7 @@ import {
   MULTICLASS_REQUIREMENT_WARNING_PREFIX,
   NEW_CUSTOM_BONUS,
   NEW_CUSTOM_INVENTORY_ITEM,
+  OPTION_CHOICE_REPEAT_PREFIX,
   ORIGIN_FEAT_CATEGORY,
   PACT_SPELL_SLOT_LABEL,
   PACT_SPELL_SLOTS_LABEL,
@@ -10369,6 +10370,10 @@ function toCharacterFeature(
 /**
  * Выбранные варианты умения одной строкой: воззвания, манёвры, метамагия.
  *
+ * Повторяемый вариант берут на нескольких ступенях, и в строке он идёт один раз
+ * с кратностью («Инфузия ×2»): дважды подряд то же название читалось бы как
+ * ошибка, а без кратности второй выбор пропал бы из строки вовсе.
+ *
  * @param featureChoices выборы умения.
  * @param answers ответы игрока; не заданы — строки нет.
  * @returns строка выбранных вариантов; пусто — вариантов не выбирали.
@@ -10385,7 +10390,17 @@ function getOptionChoiceText(
     choice.kind === 'option' ? (answers.answers[choice.id] ?? []) : [],
   );
 
-  return [...new Set(values)].join(', ');
+  const optionCounts = new Map<string, number>();
+
+  for (const value of values) {
+    optionCounts.set(value, (optionCounts.get(value) ?? 0) + 1);
+  }
+
+  return [...optionCounts.entries()]
+    .map(([value, count]) =>
+      count > 1 ? `${value} ${OPTION_CHOICE_REPEAT_PREFIX}${count}` : value,
+    )
+    .join(', ');
 }
 
 /**
@@ -11587,8 +11602,13 @@ export function resolveChoiceOptions(
   if (choice.kind === 'option') {
     // Пул — варианты самой записи, уже суженные уровнем персонажа. Взятое на
     // других ступенях списка вычитается: одно и то же воззвание по правилам
-    // дважды не берут
-    const taken = new Set(context.takenOptionValues ?? []);
+    // дважды не берут. Помеченный автором вариант — исключение: его берут
+    // повторно, и из списка он не уходит
+    const repeatable = new Set(choice.repeatableOptions ?? []);
+
+    const taken = new Set(
+      (context.takenOptionValues ?? []).filter((name) => !repeatable.has(name)),
+    );
 
     return taken.size
       ? choice.listed.filter((name) => !taken.has(name))

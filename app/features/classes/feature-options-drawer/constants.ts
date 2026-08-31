@@ -7,4 +7,5 @@ export const FEATURE_OPTIONS_LABELS = {
   select: 'Выбрать',
   selected: 'Выбрано',
   clearSearch: 'Очистить поиск',
+  repeatable: 'Можно взять повторно',
 } as const;

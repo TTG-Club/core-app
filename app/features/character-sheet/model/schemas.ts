@@ -2242,6 +2242,9 @@ const classFeatureOptionSchema = z.object({
     })
     .catch({ rus: '', eng: '' }),
   requiredClassLevel: z.coerce.number().nullable().catch(null),
+  // Вариант, который берут повторно, остаётся в списке и после того, как игрок
+  // его взял: без пометки взятое из следующего выбора уходит
+  repeatable: z.boolean().catch(false),
   // Описание варианта читается прямо в мастере: воззвание выбирают по тому, что
   // оно даёт, а одни названия об этом не говорят
   description: renderNodeSchema,
@@ -2475,6 +2478,7 @@ function toFeatureOptionChoices(
             name,
             value: option.key || name,
             level: option.requiredClassLevel ?? 0,
+            repeatable: option.repeatable,
             detail: {
               key: option.key || name,
               name,
@@ -2483,6 +2487,7 @@ function toFeatureOptionChoices(
               additional: option.additional,
               prerequisite: option.prerequisite,
               requiredClassLevel: option.requiredClassLevel ?? 0,
+              repeatable: option.repeatable,
             },
           },
         ]
@@ -2515,6 +2520,12 @@ function toFeatureOptionChoices(
     ),
   );
 
+  // Варианты, которые берут повторно: их не вычитает из пула ни одна ступень —
+  // взятое воззвание из списка уходит, а взятая инфузия остаётся
+  const repeatableOptions = options.flatMap((option) =>
+    option.repeatable ? [option.name] : [],
+  );
+
   const optionDetails = options.map((option) => option.detail);
 
   return toChoiceSteps(choice).flatMap((step) => {
@@ -2537,6 +2548,7 @@ function toFeatureOptionChoices(
         listed,
         optionValues,
         optionRequiredLevels,
+        repeatableOptions,
         optionDetails,
         poolKey,
         requiredLevel: step.level,
