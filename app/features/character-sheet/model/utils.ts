@@ -10673,7 +10673,10 @@ function buildFeatureOptionFeatures(
 
     return {
       id: `${featureId}:${FEATURE_OPTION_ID_SEGMENT}:${detail.key}`,
-      name: detail.name,
+      // Название умения впереди варианта: в списке особенностей «Договор
+      // гримуара» сам по себе не говорит, откуда он взялся, а рядом с другими
+      // записями класса теряется совсем
+      name: `${summary.name}: ${detail.name}`,
       description: toDescriptionNodes(detail.description),
       origin: 'class',
       originName,
