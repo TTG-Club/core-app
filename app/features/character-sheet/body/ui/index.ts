@@ -1,4 +1,5 @@
 export { default as SheetAbilitiesRow } from './SheetAbilitiesRow.vue';
+export { default as SheetAbilityImprovementChoice } from './SheetAbilityImprovementChoice.vue';
 export { default as SheetAbilityModal } from './SheetAbilityModal.vue';
 export { default as SheetAbilityScoresModal } from './SheetAbilityScoresModal.vue';
 export { default as SheetAbilityTile } from './SheetAbilityTile.vue';
@@ -15,6 +16,7 @@ export { default as SheetClassResourcesPanel } from './SheetClassResourcesPanel.
 export { default as SheetClassWizardModal } from './SheetClassWizardModal.vue';
 export { default as SheetCurrencyModal } from './SheetCurrencyModal.vue';
 export { default as SheetCurrencyRow } from './SheetCurrencyRow.vue';
+export { default as SheetCurrentSelectionPanel } from './SheetCurrentSelectionPanel.vue';
 export { default as SheetCustomBackgroundModal } from './SheetCustomBackgroundModal.vue';
 export { default as SheetCustomBonusRows } from './SheetCustomBonusRows.vue';
 export { default as SheetCustomBonusSection } from './SheetCustomBonusSection.vue';
@@ -25,10 +27,13 @@ export { default as SheetCustomSpellModal } from './SheetCustomSpellModal.vue';
 export { default as SheetDamageModal } from './SheetDamageModal.vue';
 export { default as SheetDefencesPanel } from './SheetDefencesPanel.vue';
 export { default as SheetDistanceRows } from './SheetDistanceRows.vue';
+export { default as SheetEffectModal } from './SheetEffectModal.vue';
+export { default as SheetEffectsTab } from './SheetEffectsTab.vue';
 export { default as SheetEquipmentTab } from './SheetEquipmentTab.vue';
 export { default as SheetExhaustionPanel } from './SheetExhaustionPanel.vue';
 export { default as SheetExperienceModal } from './SheetExperienceModal.vue';
 export { default as SheetFeatAddModal } from './SheetFeatAddModal.vue';
+export { default as SheetFeatPickModal } from './SheetFeatPickModal.vue';
 export { default as SheetFeatSpellsModal } from './SheetFeatSpellsModal.vue';
 export { default as SheetFeatSpellsPicker } from './SheetFeatSpellsPicker.vue';
 export { default as SheetFeatureAddModal } from './SheetFeatureAddModal.vue';

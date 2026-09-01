@@ -12,7 +12,6 @@
     getCarryingCapacityBreakdown,
     getCarryingCapacityMultiplierLabel,
     getCarryingCapacitySizeOptions,
-    getFormattedBonus,
     WEIGHT_UNIT_LABEL,
   } from '../../model';
 

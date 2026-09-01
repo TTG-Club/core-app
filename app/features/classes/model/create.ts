@@ -1,7 +1,22 @@
 import type { AbilityKey } from '~/shared/types';
+import type { ActiveEffect } from '~active-effects/model';
+import type { FeatEditorRows, FeatMechanics } from '~feats/model';
 import type { EditorBaseInfoState, EquipmentOptionCreate } from '~ui/editor';
 
-import type { ClassResourceRecovery } from './detail';
+/**
+ * Что колонка таблицы прогрессии означает для мастера повышения уровня.
+ *
+ * Зеркало `ClassTableColumnPurpose` из core-api. Колонка «Известные заговоры» и
+ * колонка «Скрытая атака» выглядят одинаково — подпись и значения по уровням, —
+ * но означают разное: по первой мастер спрашивает выбор заговоров, вторая только
+ * показывается. Угадывать назначение по подписи нельзя: на переведённом или
+ * самописном классе она любая.
+ */
+export type ClassTableColumnPurpose =
+  | 'NONE'
+  | 'CANTRIPS_KNOWN'
+  | 'SPELLS_KNOWN'
+  | 'PREPARED_SPELLS';
 
 export type AbilityDelimiter = 'AND' | 'OR';
 
@@ -13,7 +28,65 @@ export interface ClassFeatureScalingCreate {
   hideInSubclasses: boolean | undefined;
 }
 
-export interface ClassFeatureOptionCreate {
+/**
+ * Ступень количества выбора вариантов: с какого уровня сколько выбирают ВСЕГО.
+ *
+ * Ступень называет итог, а не прибавку: воззваний у колдуна одно с первого
+ * уровня и три со второго — значит, на втором игрок выбирает два новых. Так же
+ * читается ступень выбора в механике (`FeatChoiceScaling`), и второе правило
+ * для того же смысла разошлось бы с первым.
+ */
+export interface ClassFeatureOptionsScalingCreate {
+  level: number;
+  count: number;
+}
+
+/**
+ * Настройка выбора из списка вариантов умения: воззвания колдуна, манёвры
+ * воина, метамагия чародея.
+ *
+ * Само наличие блока и означает, что список выбираемый: без него варианты
+ * остаются справкой на странице класса, и лист персонажа о них не спрашивает.
+ * Пул выбора — сами `options` умения, а доступность варианта по уровню задаёт
+ * его собственный `requiredClassLevel`: второго списка ради выбора автор не
+ * набирает.
+ */
+export interface ClassFeatureOptionsChoiceCreate {
+  /** Подпись выбора; пусто — название списка вариантов умения. */
+  label: string | undefined;
+
+  /** Сколько вариантов выбирают на уровне умения; пусто — один. */
+  count: number | undefined;
+
+  /** Ступени количества по уровням класса; пусто — количество не растёт. */
+  scaling: Array<ClassFeatureOptionsScalingCreate>;
+}
+
+/**
+ * Носитель даров: и умение класса, и его вариант.
+ *
+ * Одной моделью, потому что и то, и другое делает с листом персонажа одно и то
+ * же — выдаёт владения, заводит ресурс, даёт заклинание, — и вторая копия тех же
+ * полей разошлась бы с первой при первой же правке.
+ */
+export interface ClassMechanicsHolderCreate {
+  /**
+   * Дары моделью черты — той же, что лежит в core-api: набор даров у черты,
+   * умения класса и его варианта один.
+   */
+  mechanics: FeatMechanics | undefined;
+
+  /** Активные эффекты в вокабуляре VTTG. */
+  activeEffects: Array<ActiveEffect>;
+
+  /**
+   * Строки редактора даров. Форма правит их, а не блоки механики; перед
+   * отправкой из них пересобирается `mechanics`, а само поле обнуляется.
+   */
+  editorRows: FeatEditorRows | undefined;
+}
+
+export interface ClassFeatureOptionCreate extends ClassMechanicsHolderCreate {
   key?: string;
   name: {
     rus: string;
@@ -24,31 +97,53 @@ export interface ClassFeatureOptionCreate {
   prerequisite: string | undefined;
   requiredClassLevel: number | undefined;
   hideInSubclasses: boolean | undefined;
+
+  /**
+   * Вариант берут повторно: на следующей ступени выбора он снова в списке, хотя
+   * игрок его уже брал. Без галочки взятый вариант из списка уходит — по
+   * правилам одно и то же воззвание дважды не берут, и в списке он бы только
+   * путал.
+   */
+  repeatable: boolean | undefined;
 }
 
-/**
- * Выбор владения навыками у самого умения: «Величие гения» паладина даёт один
- * навык из четырёх, и это не тот выбор, что лежит во владениях класса
- * (`proficiency.skill` — выбор при создании персонажа на 1 уровне).
- */
-export interface ClassFeatureSkillChoiceCreate {
-  count: number;
-  skills: Array<string>;
-}
-
-export interface ClassFeatureCreate {
+export interface ClassFeatureCreate extends ClassMechanicsHolderCreate {
   level: number;
   name: string;
   optionsName: string | undefined;
   description: string;
   additional: string;
   hideInSubclasses: boolean | undefined;
+
+  /**
+   * Умение даёт выбор черты за повышение характеристик и умение даёт выбор
+   * боевого стиля — флаги прежних лет. Форма их не показывает: и то, и другое
+   * описано строками даров (выбор черты нужной категории), а флаги выводятся
+   * из строк при сохранении — их читают потребители, не знающие о выборе черты.
+   */
   abilityImprovement: boolean | undefined;
   fightingStyleChoice: boolean | undefined;
+
   scaling: Array<ClassFeatureScalingCreate>;
   options: Array<ClassFeatureOptionCreate>;
+
+  /**
+   * Настройка выбора из вариантов; `undefined` — список только справочный.
+   */
+  optionsChoice: ClassFeatureOptionsChoiceCreate | undefined;
+
+  /**
+   * Прибавка характеристик умением 20 уровня («Первобытный чемпион»). Своим
+   * блоком, а не строкой даров: у механики класса блока повышений нет.
+   */
   abilityBonus?: ClassFeatureAbilityBonusCreate;
-  skillChoice?: ClassFeatureSkillChoiceCreate;
+
+  /**
+   * Умение только информирует и в лист персонажа не попадает: строка таблицы
+   * прогрессии вроде «Подкласс» или «Улучшение характеристик» нужна в книге, но
+   * записью умения на листе она была бы шумом.
+   */
+  informationalOnly: boolean | undefined;
 }
 
 export interface ClassFeatureAbilityBonusCreate {
@@ -62,10 +157,28 @@ export interface ClassColumnScalingCreate {
   value: string;
 }
 
+/**
+ * Колонка таблицы прогрессии.
+ *
+ * Ресурсом колонка больше не бывает: ярость, кости превосходства и применения
+ * «Второго дыхания» заводятся строкой ресурса в дарах класса или его умения —
+ * там у ресурса есть и формула максимума, и нижняя граница, и порция короткого
+ * отдыха, которых у колонки не было. Колонка осталась тем, чем и была в
+ * книге, — рядом значений по уровням.
+ */
 export interface ClassColumnCreate {
   name: string;
-  resourceRecovery: ClassResourceRecovery;
   scaling: Array<ClassColumnScalingCreate>;
+
+  /**
+   * Стабильный ключ колонки. Пусто — ключ выводится из подписи, как было до его
+   * появления; заполняют его, когда подпись переводят или меняют: по ключу
+   * колонку узнаёт потребитель таблицы.
+   */
+  key: string | undefined;
+
+  /** Что колонка означает для мастера повышения уровня. */
+  purpose: ClassTableColumnPurpose | undefined;
 }
 
 export interface ArmorProficiencyCreate {
@@ -102,7 +215,8 @@ export interface ClassPrimaryCharacteristicsCreate {
   delimiter: AbilityDelimiter | undefined;
 }
 
-export interface ClassCreate extends EditorBaseInfoState {
+export interface ClassCreate
+  extends EditorBaseInfoState, ClassMechanicsHolderCreate {
   gallery: Array<string>;
   description: string | undefined;
   parentUrl: string | undefined;
@@ -118,6 +232,23 @@ export interface ClassCreate extends EditorBaseInfoState {
   image: string | undefined;
   primaryCharacteristics: ClassPrimaryCharacteristicsCreate;
   abilityTemplate: AbilityTemplateCreate | undefined;
+
+  /**
+   * Характеристика, которой класс колдует.
+   *
+   * До её появления потребители выводили характеристику по каноническому ключу
+   * класса, и у самописного или переведённого класса она молча пропадала.
+   */
+  spellcastingAbility: AbilityKey | undefined;
+
+  /** Уровень класса, с которого работает заклинательство; пусто — с первого. */
+  spellcastingStartLevel: number | undefined;
+
+  /** Подпись группы подклассов: «Воинский архетип», «Магическая традиция». */
+  subclassLabel: string | undefined;
+
+  /** Уровень, на котором выбирается подкласс. */
+  subclassLevel: number | undefined;
 }
 
 export type AbilityTemplateCreate = [

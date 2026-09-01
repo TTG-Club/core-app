@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { SpellComponents, SpellMaterialComponent } from '~spells/model';
 
+  import { SPELL_USAGE_LABELS } from '~spells/model';
+
   const components = defineModel<SpellComponents>({
     required: true,
   });
@@ -29,12 +31,6 @@
 </script>
 
 <template>
-  <div class="col-span-full mt-4 flex flex-col gap-2 sm:flex-row sm:gap-4">
-    <p class="shrink-0 text-lg">Компоненты</p>
-
-    <USeparator />
-  </div>
-
   <UForm
     class="col-span-full grid grid-cols-24 gap-4"
     attach
@@ -44,7 +40,7 @@
       <UFormField name="v">
         <UCheckbox
           v-model="components.v"
-          label="Вербальный компонент"
+          :label="SPELL_USAGE_LABELS.verbal"
         />
       </UFormField>
     </div>
@@ -53,7 +49,7 @@
       <UFormField name="s">
         <UCheckbox
           v-model="components.s"
-          label="Соматический компонент"
+          :label="SPELL_USAGE_LABELS.somatic"
         />
       </UFormField>
     </div>
@@ -62,7 +58,7 @@
       <UFormField>
         <UCheckbox
           :model-value="!!components.m"
-          label="Материальный компонент"
+          :label="SPELL_USAGE_LABELS.material"
           @update:model-value="updateUseMaterialComponent"
         />
       </UFormField>
@@ -71,12 +67,12 @@
     <template v-if="components.m">
       <UFormField
         class="col-span-full"
-        label="Список материалов"
+        :label="SPELL_USAGE_LABELS.materialList"
         name="m.text"
       >
         <UInput
           v-model="components.m.text"
-          placeholder="Введи список материалов"
+          :placeholder="SPELL_USAGE_LABELS.materialListPlaceholder"
         />
       </UFormField>
 
@@ -87,7 +83,7 @@
         <UCheckbox
           v-model="components.m.withCost"
           :disabled="!components.m.text"
-          label="Материалы имеют цену"
+          :label="SPELL_USAGE_LABELS.materialWithCost"
         />
       </UFormField>
 
@@ -98,7 +94,7 @@
         <UCheckbox
           v-model="components.m.consumable"
           :disabled="!components.m.text"
-          label="Материалы расходуются"
+          :label="SPELL_USAGE_LABELS.materialConsumable"
         />
       </UFormField>
     </template>

@@ -28,8 +28,10 @@ export type FeatChoiceType =
   | 'SPELLCASTING_ABILITY'
   | 'WEAPON'
   | 'WEAPON_MASTERY'
+  | 'MASTERY_PROPERTY'
   | 'ARMOR'
-  | 'OPTION';
+  | 'OPTION'
+  | 'FEAT';
 
 /** Ссылка на сущность справочника: url и снимок названия. */
 export interface FeatEntityRef {
@@ -88,6 +90,15 @@ export interface FeatChoiceOption {
   name?: string;
 }
 
+/** Ступень количества выбора: с какого уровня сколько выбирают ВСЕГО. */
+export interface FeatChoiceScaling {
+  /** Уровень персонажа, с которого действует ступень. */
+  level: number;
+
+  /** Сколько всего выбрано к этому уровню, а не сколько добавилось. */
+  count: number;
+}
+
 /**
  * Чем ограничен выбор заклинания или заговора.
  *
@@ -142,6 +153,17 @@ export interface FeatChoice {
   onlyIfNotProficient: boolean;
 
   /**
+   * Категории черт, из которых выбирают, — только у выбора черты (`FEAT`).
+   * `undefined` — категория не ограничена либо выбор не про черты.
+   *
+   * Складывается с `options`: перечисленные черты сужают пул внутри категорий,
+   * а без перечисления пул — все черты названных категорий. Так «Боевой стиль»
+   * воина описывается одной категорией и не требует перечислять стили, которые
+   * ещё допишут в справочник.
+   */
+  featCategories: Array<string> | undefined;
+
+  /**
    * Выбирать можно только то, чем персонаж уже владеет («Знаток» — навык, в
    * котором есть владение). Обратен `onlyIfNotProficient`: вместе они оставляют
    * пустой пул, поэтому форма даёт отметить только один из двух.
@@ -159,6 +181,44 @@ export interface FeatChoice {
 
   expertiseIfProficient: boolean;
   rechooseOnLongRest: boolean;
+
+  /**
+   * Уровень персонажа, с которого выбор открывается; `undefined` — сразу.
+   *
+   * Нужен умению, которое спрашивает одно и то же не один раз: компетентность
+   * плут получает на первом уровне и ещё раз на шестом, бард — на втором и на
+   * девятом. Второго умения под это в книге нет — повтор описан строкой роста,
+   * — поэтому уровень стоит у самого выбора.
+   */
+  requiredLevel: number | undefined;
+
+  /**
+   * Ступени количества по уровням; пусто — количество не растёт и задано
+   * `count`.
+   *
+   * Ступень называет, сколько всего выбрано К ЭТОМУ уровню, а не сколько
+   * добавилось: оружейных приёмов у воина три с первого уровня, четыре с
+   * четвёртого, пять с десятого и шесть с шестнадцатого. Так же ряд читается в
+   * книге, и так же его показывает колонка таблицы.
+   */
+  scaling: Array<FeatChoiceScaling> | undefined;
+
+  /**
+   * Показывать количество колонкой таблицы прогрессии класса.
+   *
+   * Ряд по уровням у выбора уже задан ступенями, и колонкой его не набирают
+   * второй раз — она собирается из них. Работает только у выбора со
+   * ступенями: у количества, не зависящего от уровня, ряда нет.
+   */
+  showInTable: boolean | undefined;
+
+  /**
+   * Краткая подпись колонки таблицы; пусто — берётся подпись выбора.
+   *
+   * Своя, потому что подпись выбора — это вопрос игроку («Выберите оружейный
+   * приём»), а в шапке таблицы нужно существительное («Приёмы»).
+   */
+  shortName: string | undefined;
 }
 
 /**
@@ -274,6 +334,16 @@ export interface FeatProficiencyGrant {
    * имея владения видом, и наоборот.
    */
   weaponMasteries: Array<FeatEntityRef>;
+
+  /**
+   * Оружейные приёмы сами по себе, без привязки к оружию: «Тактический мастер»
+   * воина владеет Толканием, Изнурением и Замедлением независимо от того, у
+   * какого оружия такой приём есть.
+   *
+   * Ключами справочника приёмов (`PUSH`, `SAP`), а не ссылками на оружие: там
+   * значение — вид оружия, здесь — сам приём, и на листе это разные списки.
+   */
+  masteryProperties: Array<string>;
 
   /**
    * Спасброски, которыми черта даёт владеть без выбора: «Крепыш» выдаёт
@@ -400,8 +470,15 @@ export interface FeatSpellListExpansion {
   requiresSpellcasting: boolean;
 }
 
-/** Каким отдыхом восстанавливается ресурс. */
-export type FeatCounterRecovery = 'SHORT_REST' | 'LONG_REST';
+/**
+ * Каким отдыхом восстанавливается ресурс.
+ *
+ * Короткий отдых в правилах короче продолжительного, поэтому ресурс, который
+ * вернул короткий, возвращает и продолжительный: `SHORT_REST` и
+ * `SHORT_REST_ONE` различаются только порцией короткого отдыха — целиком или
+ * один заряд («Второе дыхание» и «Вдохновение барда» правил 2024 года).
+ */
+export type FeatCounterRecovery = 'SHORT_REST' | 'LONG_REST' | 'SHORT_REST_ONE';
 
 /**
  * Ресурс черты со счётчиком: очки удачи «Удачливого», применения «Целителя».
@@ -410,6 +487,15 @@ export type FeatCounterRecovery = 'SHORT_REST' | 'LONG_REST';
  * к бонусу мастерства и обязан расти вместе с ним («Удачливый» даёт очков удачи
  * столько же, сколько бонус мастерства).
  */
+/** Ступень максимума ресурса: с какого уровня сколько зарядов. */
+export interface FeatCounterScaling {
+  /** Уровень персонажа, с которого действует ступень. */
+  level: number;
+
+  /** Максимум зарядов на этой ступени. */
+  max: number;
+}
+
 export interface FeatCounter {
   /** Стабильный ключ: по нему лист хранит потраченный остаток. */
   key: string;
@@ -418,12 +504,49 @@ export interface FeatCounter {
   shortName: string;
   /** Формула максимума: число, `@prof`, `@level`, `@mod.<abbr>`. */
   max: string;
+
+  /**
+   * Ступени максимума по уровням; пусто — максимум задан формулой.
+   *
+   * Нужны ресурсу, ряд которого формулой не пишется: костей превосходства
+   * мастера боевых искусств четыре с третьего уровня, пять с седьмого и шесть
+   * с пятнадцатого. Заполнены обе формы — старшей считается ступень.
+   */
+  scaling: Array<FeatCounterScaling>;
+
+  /**
+   * Нижняя граница максимума: сколько зарядов у ресурса есть в любом случае;
+   * 0 — границы нет.
+   *
+   * Нужна ресурсам, чей максимум считается модификатором характеристики:
+   * вдохновение барда равно модификатору Харизмы, но не меньше одного, и с
+   * Харизмой +0 бард всё равно вдохновляет один раз. С формулой не
+   * складывается, а подпирает её снизу.
+   */
+  min: number;
+
+  /**
+   * Показывать ресурс колонкой таблицы прогрессии класса.
+   *
+   * Ряд по уровням у ресурса уже задан — ступенями либо формулой, — и колонку
+   * книги справочник собирает из него сам: второй раз те же числа автор не
+   * набирает. Колонка выводится, только когда ряд считается от одного уровня
+   * (ступени, число, `@prof`, `@level`); у максимума по модификатору
+   * характеристики одинакового ряда для всех нет.
+   */
+  showInTable: boolean;
+
   recovery: FeatCounterRecovery;
 }
 
 /** Механика черты целиком. */
 export interface FeatMechanics {
-  abilityBonuses: Array<FeatAbilityBonus>;
+  /**
+   * Варианты повышения характеристик. Необязательны: у класса и вида такого
+   * блока нет вовсе, и core-api падает на ПУСТОМ списке (setterless-свойство
+   * без значения) — перед отправкой пустой блок опускается целиком.
+   */
+  abilityBonuses?: Array<FeatAbilityBonus>;
   choices: Array<FeatChoice>;
   modifiers: FeatModifiers;
   proficiencies: FeatProficiencyGrant;
@@ -434,6 +557,15 @@ export interface FeatMechanics {
 
   /** Ресурсы черты со своим счётчиком на листе. */
   counters: Array<FeatCounter>;
+
+  /**
+   * Черты, которые выдаются без выбора, — ссылками на записи справочника.
+   *
+   * Необязательны по той же причине, что и `abilityBonuses`: блок есть только
+   * у умения класса, а у черты и вида его нет, и core-api падает на пустом
+   * списке — перед отправкой пустой блок опускается целиком.
+   */
+  feats?: Array<FeatEntityRef>;
 }
 
 /**
@@ -506,10 +638,15 @@ export function createFeatChoice(): FeatChoice {
     options: [],
     spellFilter: undefined,
     onlyIfNotProficient: false,
+    featCategories: undefined,
     onlyIfProficient: false,
     grants: 'PROFICIENCY',
     expertiseIfProficient: false,
     rechooseOnLongRest: false,
+    requiredLevel: undefined,
+    scaling: undefined,
+    showInTable: undefined,
+    shortName: undefined,
   };
 }
 
@@ -604,6 +741,7 @@ export function createFeatProficiencyGrant(): FeatProficiencyGrant {
     weaponCategories: [],
     weapons: [],
     weaponMasteries: [],
+    masteryProperties: [],
     savingThrows: [],
     armorCategories: [],
     skills: [],
@@ -619,6 +757,9 @@ export function createFeatCounter(): FeatCounter {
     name: '',
     shortName: '',
     max: '@prof',
+    scaling: [],
+    min: 0,
+    showInTable: false,
     recovery: 'LONG_REST',
   };
 }
@@ -661,5 +802,6 @@ export function createFeatMechanics(): FeatMechanics {
     spells: createFeatSpellGrant(),
     spellList: createFeatSpellList(),
     counters: [],
+    feats: [],
   };
 }

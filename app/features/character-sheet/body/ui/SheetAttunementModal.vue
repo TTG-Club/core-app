@@ -10,7 +10,6 @@
     ATTUNEMENT_MIN,
     CUSTOM_BONUS_FORMAT_OPTIONS,
     getAttunementBreakdown,
-    getFormattedBonus,
   } from '../../model';
 
   const emit = defineEmits<{

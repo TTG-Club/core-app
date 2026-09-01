@@ -87,8 +87,20 @@ export function useWorkshopForm<T extends { url: string }>(
   const router = useRouter();
   const { isAdmin } = useUserRoles();
 
-  const state = useState<T>(_options.getInitialState);
-  const previousState = useState<T>(_options.getInitialState);
+  // Ключ состояния — свой у каждого раздела. Без него `useState` выводит ключ из
+  // места вызова, а место вызова у всех форм мастерской одно — эта строка: вид,
+  // класс и существо делили один объект. При переходе между формами следующая
+  // успевала отрисоваться на состоянии предыдущей и падала на чужой форме
+  // («Cannot read properties of undefined»), а сброс до своей приходил только
+  // асинхронно, ниже.
+  const stateKey = `workshop-form:${_options.actionUrl}`;
+
+  const state = useState<T>(stateKey, _options.getInitialState);
+
+  const previousState = useState<T>(
+    `${stateKey}:previous`,
+    _options.getInitialState,
+  );
 
   /**
    * Подставляет нормализованный снимок ревизии в текущее состояние формы.
@@ -176,9 +188,10 @@ export function useWorkshopForm<T extends { url: string }>(
       }
     } else {
       // Режим создания: `state`/`previousState` живут в useState всю сессию SPA,
-      // поэтому форма может держать данные предыдущей открытой записи. Явно
-      // сбрасываем к начальному состоянию — иначе «Создать» открывается
-      // предзаполненным прошлой записью (в edit-режиме это делает загрузка /raw).
+      // поэтому форма может держать данные предыдущей открытой записи ТОГО ЖЕ
+      // раздела. Явно сбрасываем к начальному состоянию — иначе «Создать»
+      // открывается предзаполненным прошлой записью (в edit-режиме это делает
+      // загрузка /raw).
       const initialState = _options.getInitialState();
 
       state.value = initialState;

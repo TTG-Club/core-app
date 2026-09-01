@@ -12,7 +12,6 @@
   import { MarkupRender } from '~ui/markup';
 
   import {
-    getFormattedBonus,
     getHitDieAverage,
     getHitDieLabel,
     getLevelHitPointsGain,
@@ -60,11 +59,11 @@
     /** Пометки опций пикера: навыки, которыми персонаж уже владеет. */
     choiceHints: (choice: ClassChoice) => Record<string, string>;
 
-    /** Черты, доступные в умении улучшения характеристик. */
-    featOptions: (featureId: string) => FeatSelectOption[];
+    /** Черты, доступные выбору черты в умении. */
+    featOptions: (choice: ClassChoice) => FeatSelectOption[];
 
-    /** Черта, выбранная в умении; null — выбора не было. */
-    selectedFeat: (featureId: string) => FeatSelectOption | null;
+    /** Черта, выбранная в выборе; null — выбора не было. */
+    selectedFeat: (choiceId: string) => FeatSelectOption | null;
 
     isFeatsLoading?: boolean;
 
@@ -77,9 +76,9 @@
     'roll': [];
     'update:selection': [choiceId: string, values: string[]];
     'update:note': [featureId: string, value: string];
-    'update:feat': [featureId: string, featUrl: string];
+    'update:feat': [featureId: string, choiceId: string, featUrl: string];
     'update:feat-ability': [
-      featureId: string,
+      choiceId: string,
       payload: { slot: number; ability: AbilityKey | null },
     ];
   }>();
@@ -135,30 +134,54 @@
       `${LEVEL_UP_HIT_POINTS_LABELS.constitutionTitle}: ${formattedConstitutionModifier.value} ${LEVEL_UP_HIT_POINTS_LABELS.perLevelSuffix}`,
   );
 
+  // Повышение характеристик спрашивается своим шагом, поэтому среди карточек
+  // уровня его строки нет: иначе выбор был бы в двух местах сразу. Строка без
+  // единого выбора остаётся здесь — своего шага у неё не будет, а описание
+  // умения игрок прочесть должен.
   const featureRows = computed(() =>
-    step.features.map((feature) => {
-      const options = feature.choice ? choiceOptions(feature.choice) : [];
+    step.features
+      .filter(
+        (feature) =>
+          !feature.abilityImprovement || feature.featChoices.length === 0,
+      )
+      .map((feature) => {
+        // Каждый выбор умения тянет за собой свой пул, своё количество и свои
+        // пометки: считаются они здесь, чтобы шаблон остался декларативным
+        const controls = feature.choices.map((choice) => {
+          const options = choiceOptions(choice);
+          const requiredCount = getRequiredChoiceCount(choice, options);
+          const chooseLabel = `${LEVEL_UP_WIZARD_LABELS.chooseLabel} ${requiredCount}`;
 
-      const requiredCount = feature.choice
-        ? getRequiredChoiceCount(feature.choice, options)
-        : 0;
+          return {
+            choice,
+            options,
+            requiredCount,
+            hints: choiceHints(choice),
+            chooseLabel,
+            // Заголовок просмотра описаний вариантов: подпись выбора, а её нет —
+            // общее «Выберите столько-то»
+            detailsTitle: choice.label || chooseLabel,
+          };
+        });
 
-      return {
-        ...feature,
-        badgeLabel: `${feature.originLabel} · ${feature.level} ур.`,
-        chooseLabel: feature.choice
-          ? `${LEVEL_UP_WIZARD_LABELS.chooseLabel} ${requiredCount}`
-          : '',
-        options,
-        requiredCount,
-        hints: feature.choice ? choiceHints(feature.choice) : {},
-        featOptions: feature.abilityImprovement ? featOptions(feature.id) : [],
-        selectedFeat: feature.abilityImprovement
-          ? selectedFeat(feature.id)
-          : null,
-        featAbilities: draft.featChoices[feature.id]?.abilities ?? [],
-      };
-    }),
+        // Выборы черты — боевой стиль и подобные — спрашиваются пикером каталога
+        // черт, каждый со своим пулом
+        const featPickers = feature.featChoices.map((choice) => ({
+          choice,
+          options: featOptions(choice),
+          selected: selectedFeat(choice.id),
+          abilities: draft.featChoices[choice.id]?.abilities ?? [],
+        }));
+
+        return {
+          ...feature,
+          badgeLabel: `${feature.originLabel} · ${feature.level} ур.`,
+          controls,
+          featPickers,
+          // Свободный текст остаётся только умению без единого пикера
+          hasNote: controls.length === 0 && featPickers.length === 0,
+        };
+      }),
   );
 
   /** Способ прироста из радиогруппы: контрол отдаёт значение нетипизированным. */
@@ -184,15 +207,15 @@
     emit('update:note', featureId, value);
   }
 
-  function handleFeat(featureId: string, featUrl: string) {
-    emit('update:feat', featureId, featUrl);
+  function handleFeat(featureId: string, choiceId: string, featUrl: string) {
+    emit('update:feat', featureId, choiceId, featUrl);
   }
 
   function handleFeatAbility(
-    featureId: string,
+    choiceId: string,
     payload: { slot: number; ability: AbilityKey | null },
   ) {
-    emit('update:feat-ability', featureId, payload);
+    emit('update:feat-ability', choiceId, payload);
   }
 </script>
 
@@ -305,40 +328,55 @@
         </div>
 
         <div
-          v-if="feature.choice"
-          class="flex flex-col gap-1"
+          v-if="feature.controls.length"
+          class="flex flex-col gap-3"
         >
-          <span class="text-xs text-muted">
-            {{ feature.chooseLabel }}
-          </span>
+          <div
+            v-for="control in feature.controls"
+            :key="control.choice.id"
+            class="flex flex-col gap-1"
+          >
+            <span class="text-xs text-muted">
+              {{ control.choice.label || control.chooseLabel }}
+            </span>
 
-          <SheetChoiceSelect
-            :model-value="draft.selections[feature.choice.id] ?? []"
-            :items="feature.options"
-            :hints="feature.hints"
-            :warning="SKILL_DUPLICATE_WARNING"
-            :count="feature.requiredCount"
-            :placeholder="feature.chooseLabel"
-            @update:model-value="
-              handleSelection(feature.choice, feature.requiredCount, $event)
-            "
+            <SheetChoiceSelect
+              :model-value="draft.selections[control.choice.id] ?? []"
+              :items="control.options"
+              :hints="control.hints"
+              :warning="SKILL_DUPLICATE_WARNING"
+              :count="control.requiredCount"
+              :placeholder="control.chooseLabel"
+              :option-details="control.choice.optionDetails"
+              :option-details-title="control.detailsTitle"
+              @update:model-value="
+                handleSelection(control.choice, control.requiredCount, $event)
+              "
+            />
+          </div>
+        </div>
+
+        <div
+          v-if="feature.featPickers.length"
+          class="flex flex-col gap-3"
+        >
+          <SheetLevelUpFeatChoice
+            v-for="picker in feature.featPickers"
+            :key="picker.choice.id"
+            :title="picker.choice.label"
+            :options="picker.options"
+            :selected="picker.selected"
+            :abilities="picker.abilities"
+            :scores="abilities"
+            :is-loading="isFeatsLoading"
+            :has-error="hasFeatsError"
+            @update:feat="handleFeat(feature.id, picker.choice.id, $event)"
+            @update:ability="handleFeatAbility(picker.choice.id, $event)"
           />
         </div>
 
-        <SheetLevelUpFeatChoice
-          v-else-if="feature.abilityImprovement"
-          :options="feature.featOptions"
-          :selected="feature.selectedFeat"
-          :abilities="feature.featAbilities"
-          :scores="abilities"
-          :is-loading="isFeatsLoading"
-          :has-error="hasFeatsError"
-          @update:feat="handleFeat(feature.id, $event)"
-          @update:ability="handleFeatAbility(feature.id, $event)"
-        />
-
         <UInput
-          v-else
+          v-if="feature.hasNote"
           :model-value="draft.notes[feature.id] ?? ''"
           size="sm"
           :placeholder="LEVEL_UP_WIZARD_LABELS.featureChoicePlaceholder"

@@ -13,7 +13,6 @@
     DEFAULT_ARMOR_CLASS_ABILITY,
     getArmorClassBreakdown,
     getArmorDexCappedLabel,
-    getFormattedBonus,
     getUnarmoredArmorClassLabel,
     toSelectedAbilityKeys,
   } from '../../model';
@@ -93,7 +92,8 @@
     () =>
       !draftCustom.value
       || breakdown.value.extraAbilities.length > 0
-      || breakdown.value.featBonus !== 0,
+      || breakdown.value.featBonus !== 0
+      || breakdown.value.effectBonus !== 0,
   );
 
   function handleAbilities(value: unknown): void {
@@ -258,6 +258,21 @@
 
           <span class="text-toned">
             {{ getFormattedBonus(breakdown.featBonus) }}
+          </span>
+        </div>
+
+        <!-- Своей строкой, а не в «Чертах»: прибавку эффектом даёт и черта, и
+             надетый предмет — «Наручи защиты» под подписью «Черты» сбивали бы. -->
+        <div
+          v-if="breakdown.effectBonus !== 0"
+          class="flex items-center justify-between gap-4 text-sm"
+        >
+          <span class="text-toned">
+            {{ ARMOR_CLASS_LABELS.effectTitle }}
+          </span>
+
+          <span class="text-toned">
+            {{ getFormattedBonus(breakdown.effectBonus) }}
           </span>
         </div>
 

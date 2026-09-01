@@ -12,6 +12,7 @@
     collapseProficiencies,
     LANGUAGE_PROFICIENCY_GROUPS,
     SHEET_EMPTY_LABELS,
+    SHEET_PROFICIENCY_GROUP_TITLES,
     SHEET_REVEAL_CONTROL_CLASS,
     SHEET_TOOL_LABELS,
     WEAPON_MASTERY_ICON,
@@ -108,10 +109,32 @@
     ];
   });
 
+  /**
+   * Приёмы без привязки к оружию: своей группой, а не значком на чипе оружия, —
+   * оружия у них и нет. Пустую группу не показываем: у большинства листов таких
+   * приёмов не бывает, и пустой заголовок только занимал бы место.
+   */
+  const masteryPropertyGroups = computed((): ProficiencyGroupView[] => {
+    if (!props.proficiencies.masteryProperties.length) {
+      return [];
+    }
+
+    return [
+      {
+        key: 'masteryProperties',
+        title: SHEET_PROFICIENCY_GROUP_TITLES.masteryProperties,
+        items: props.proficiencies.masteryProperties.map((name) =>
+          toProficiencyChip(name),
+        ),
+        hasSettings: false,
+      },
+    ];
+  });
+
   const groups = computed((): ProficiencyGroupView[] => [
     {
       key: 'armor',
-      title: 'Снаряжение',
+      title: SHEET_PROFICIENCY_GROUP_TITLES.armor,
       items: collapseProficiencies(
         props.proficiencies.armor,
         ARMOR_PROFICIENCY_GROUPS,
@@ -120,13 +143,14 @@
     },
     {
       key: 'weapons',
-      title: 'Оружие',
+      title: SHEET_PROFICIENCY_GROUP_TITLES.weapons,
       items: weaponChips.value,
       hasSettings: true,
     },
+    ...masteryPropertyGroups.value,
     {
       key: 'tools',
-      title: 'Инструменты',
+      title: SHEET_PROFICIENCY_GROUP_TITLES.tools,
       items: props.proficiencies.tools.map((tool) =>
         toProficiencyChip(tool.name, { url: tool.url }),
       ),
@@ -134,7 +158,7 @@
     },
     {
       key: 'languages',
-      title: 'Языки',
+      title: SHEET_PROFICIENCY_GROUP_TITLES.languages,
       items: collapseProficiencies(
         props.proficiencies.languages,
         LANGUAGE_PROFICIENCY_GROUPS,

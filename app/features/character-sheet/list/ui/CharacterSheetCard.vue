@@ -16,6 +16,7 @@
     downloadCharacterJson,
     getClassesDisplayLabel,
     getDisplayLevel,
+    getMaxHitPoints,
     getSheetActionMenuItems,
     getSpeciesDisplayName,
     SHEET_EMPTY_LABELS,
@@ -93,6 +94,9 @@
   );
 
   const levelValue = computed(() => getDisplayLevel(character));
+
+  // Максимум с прибавками — тот же, что показывает сам лист.
+  const maxHitPoints = computed(() => getMaxHitPoints(character));
 
   const settingsModal = overlay.create(SheetSettingsModal, {
     props: {
@@ -225,8 +229,8 @@
           />
 
           <span class="truncate">
-            Хиты: {{ character.health.current }} / {{ character.health.max }} ·
-            Уровень: {{ levelValue }}
+            Хиты: {{ character.health.current }} / {{ maxHitPoints }} · Уровень:
+            {{ levelValue }}
           </span>
         </span>
       </div>

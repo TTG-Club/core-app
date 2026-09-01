@@ -23,10 +23,12 @@
   import {
     ABILITY_LABELS,
     ARMOR_PROFICIENCY_GROUPS,
+    combineRollModes,
     EMPTY_DAMAGE_ROLL_SOURCE,
     findCharacterSpell,
     getAbilityCheckValue,
     getAvailableInnateSpells,
+    getSkillKeyByName,
     getWeaponAttackBonus,
     getWeaponAttackRollMode,
     getWeaponDamageSource,
@@ -50,6 +52,7 @@
     SheetCustomSpellModal,
     SheetDamageModal,
     SheetDefencesPanel,
+    SheetEffectModal,
     SheetExhaustionPanel,
     SheetExperienceModal,
     SheetFeatAddModal,
@@ -118,6 +121,8 @@
     featDefences,
     hasFeatDefences,
     formattedProficiencyBonus,
+    maxHitPoints,
+    maxHitPointsHint,
     initiativeBonus,
     formattedInitiative,
     armorClassValue,
@@ -153,6 +158,7 @@
     removeSpell,
     toggleInspiration,
     downloadCharacter,
+    getRollMode,
   } = useCharacterSheet();
 
   // Действия над листом целиком (копия и удаление) живут в общем состоянии
@@ -431,6 +437,14 @@
     },
   });
 
+  // Одна модалка на добавление и правку своего эффекта — тем же приёмом, что и
+  // заметка: пустой идентификатор означает новую запись.
+  const effectModal = overlay.create(SheetEffectModal, {
+    props: {
+      effectId: null,
+    },
+  });
+
   // Одна модалка на все приметы: поле, с которого начали правку, получает
   // курсор — null означает вход карандашом, без выделенного поля.
   const personalityModal = overlay.create(SheetPersonalityModal, {
@@ -676,6 +690,7 @@
       modifier: initiativeBonus.value,
       ability: 'dexterity',
       actionLabel: 'Бросить инициативу',
+      mode: getRollMode({ kind: 'initiative' }),
     });
   }
 
@@ -687,6 +702,17 @@
       // подмену, а в подменённом спасброске это уже другая характеристика.
       ability: row.ability,
       actionLabel: 'Бросить спасбросок',
+      mode: getRollMode({ kind: 'savingThrow', ability: row.key }),
+      // Источник спасброска лист не знает — его называет игрок в модалке:
+      // выдать преимущество против яда по предмету «против заклинаний» хуже,
+      // чем спросить.
+      resolveMode: (source) =>
+        getRollMode({
+          kind: 'savingThrow',
+          ability: row.key,
+          againstMagic: source.againstMagic,
+          againstCondition: source.condition ?? undefined,
+        }),
     });
   }
 
@@ -695,6 +721,12 @@
       title: `Проверка: ${row.name}`,
       modifier: row.value,
       ability: row.ability,
+      mode: getRollMode({
+        kind: 'skill',
+        ability: row.ability,
+        // Свой навык игрока в словаре эффектов не значится — флагов у него нет.
+        skill: getSkillKeyByName(row.name),
+      }),
     });
   }
 
@@ -719,9 +751,16 @@
       modifier: attack.value,
       ability: attack.ability,
       actionLabel: 'Бросить атаку',
-      // Тяжёлое оружие не по руке бьёт с помехой (правила 2024): модалка
-      // открывается сразу в этом режиме, но игрок волен его сменить.
-      mode: getWeaponAttackRollMode(attack),
+      // Режим дают два независимых источника: помеха тяжёлого оружия не по руке
+      // (правила 2024) и активные эффекты — Опутанный бьёт с помехой. Свести их
+      // можно только правилом 5e, поэтому не «или», а `combineRollModes`.
+      mode: combineRollModes(
+        getWeaponAttackRollMode(attack),
+        getRollMode({
+          kind: 'attack',
+          attackType: inventoryItem.weapon.ranged ? 'ranged' : 'melee',
+        }),
+      ),
     });
   }
 
@@ -826,6 +865,22 @@
     }
 
     featureEditModal.open({ featureId });
+  }
+
+  function handleEffectAdd() {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    effectModal.open({ effectId: null });
+  }
+
+  function handleEffectEdit(effectId: string) {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    effectModal.open({ effectId });
   }
 
   function handleNoteAdd() {
@@ -1140,6 +1195,8 @@
 
             <SheetHealthPanel
               :health="character.health"
+              :max-hit-points="maxHitPoints"
+              :max-hit-points-hint="maxHitPointsHint"
               :hit-dice="character.hitDice"
               :extra-hit-dice="character.extraHitDice"
               class="max-sm:order-1 max-sm:col-span-full"
@@ -1278,6 +1335,8 @@
           @roll-item-attack="handleItemAttackRoll"
           @roll-item-damage="handleItemDamageRoll"
           @edit-feature="handleFeatureEdit"
+          @add-effect="handleEffectAdd"
+          @edit-effect="handleEffectEdit"
           @add-note="handleNoteAdd"
           @edit-note="handleNoteEdit"
           @remove-note="removeNote"

@@ -1,10 +1,15 @@
 <script setup lang="ts">
-  import type { FeatEntityRef, FeatSpellGrant } from '../../model';
+  import type {
+    FeatEditorLabelOverrides,
+    FeatEntityRef,
+    FeatSpellGrant,
+  } from '../../model';
 
   import { InfoTooltip } from '~ui/tooltip';
 
-  import { FEAT_EDITOR_LABELS } from '../../model';
+  import { getFeatEditorLabels } from '../../model';
   import FeatEntityRefRows from './FeatEntityRefRows.vue';
+  import FeatRowsSection from './FeatRowsSection.vue';
 
   /**
    * Заклинания, которые черта даёт знать без выбора, и настройка подготовки.
@@ -13,7 +18,24 @@
    * черты — и выданные, и выбранные игроком, — поэтому живёт своим блоком
    * (`FeatSpellcastingAbility`), а не рядом с одним из списков.
    */
+  const { labels = {}, title = undefined } = defineProps<{
+    /**
+     * Подписи формы-владельца: чертой источник даров называет только форма
+     * черты, у умения класса и вида свои формулировки.
+     */
+    labels?: FeatEditorLabelOverrides;
+
+    /**
+     * Заголовок блока: с ним строки рисуются в рамке с кнопкой добавления в
+     * шапке. Пусто — форма-владелец рисует заголовок сама.
+     */
+    title?: string;
+  }>();
+
   const model = defineModel<FeatSpellGrant>({ required: true });
+
+  /** Подписи с поправками формы-владельца. */
+  const texts = computed(() => getFeatEditorLabels(labels));
 
   /**
    * Уровень строки. Слот отдаёт ссылку из общего списка, поэтому уровень
@@ -45,15 +67,12 @@
 </script>
 
 <template>
-  <div class="flex flex-col gap-3">
-    <InfoTooltip
-      :text="FEAT_EDITOR_LABELS.grantedSpellsHint"
-      icon="tabler:info-circle-filled"
-      class="text-sm text-dimmed"
-    >
-      <span>{{ FEAT_EDITOR_LABELS.grantedSpellsTitle }}</span>
-    </InfoTooltip>
-
+  <FeatRowsSection
+    :title="title"
+    :summary="texts.grantedSpellsTitle"
+    :hint="texts.grantedSpellsHint"
+    :count="model.spells.length"
+  >
     <FeatEntityRefRows
       v-model="model.spells"
       kind="SPELL"
@@ -62,11 +81,11 @@
         всегда сразу, а по достижении уровня персонажа -->
       <template #row="{ entry }">
         <InfoTooltip
-          :text="FEAT_EDITOR_LABELS.grantedSpellLevelHint"
+          :text="texts.grantedSpellLevelHint"
           icon="tabler:info-circle-filled"
           class="shrink-0 text-xs text-dimmed"
         >
-          <span>{{ FEAT_EDITOR_LABELS.grantedSpellLevel }}</span>
+          <span>{{ texts.grantedSpellLevel }}</span>
         </InfoTooltip>
 
         <UInputNumber
@@ -75,8 +94,8 @@
           :max="20"
           size="sm"
           class="w-32 shrink-0"
-          :placeholder="FEAT_EDITOR_LABELS.grantedSpellLevelPlaceholder"
-          :aria-label="FEAT_EDITOR_LABELS.grantedSpellLevel"
+          :placeholder="texts.grantedSpellLevelPlaceholder"
+          :aria-label="texts.grantedSpellLevel"
           @update:model-value="setRequiredLevel(entry, $event)"
         />
       </template>
@@ -88,14 +107,14 @@
       class="flex items-center"
     >
       <InfoTooltip
-        :text="FEAT_EDITOR_LABELS.alwaysPreparedHint"
+        :text="texts.alwaysPreparedHint"
         icon="tabler:info-circle-filled"
       >
         <UCheckbox
           v-model="model.alwaysPrepared"
-          :label="FEAT_EDITOR_LABELS.alwaysPrepared"
+          :label="texts.alwaysPrepared"
         />
       </InfoTooltip>
     </div>
-  </div>
+  </FeatRowsSection>
 </template>

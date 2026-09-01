@@ -5,29 +5,49 @@
     ActiveEffect,
     EffectAbility,
     EffectAreaTrigger,
+    EffectAttackTrigger,
     EffectAuraTarget,
+    EffectConditionKey,
     EffectConditionTemplate,
     EffectDamagePart,
     EffectSaveOutcome,
     EffectSaveTiming,
+    EffectTurnAnchor,
+    EffectTurnTiming,
   } from '../../model';
 
   import {
+    ACTIVE_EFFECT_LABELS,
     DEFAULT_EFFECT_AURA,
     DEFAULT_EFFECT_SAVE,
+    describeActiveEffect,
     EFFECT_ABILITY_OPTIONS,
     EFFECT_AREA_TRIGGER_OPTIONS,
     EFFECT_AURA_TARGET_OPTIONS,
+    EFFECT_CONDITION_OPTIONS,
     EFFECT_CONDITION_TEMPLATES,
+    EFFECT_CONSUME_ON_NONE,
+    EFFECT_CONSUME_ON_OPTIONS,
     EFFECT_DURATION_OPTIONS,
     EFFECT_DURATION_WITH_VALUE,
+    EFFECT_ORIGIN,
     EFFECT_SAVE_OUTCOME_OPTIONS,
     EFFECT_SAVE_TIMING_OPTIONS,
     EFFECT_TARGET_OPTIONS,
+    EFFECT_TURN_ANCHOR_OPTIONS,
+    EFFECT_TURN_TIMING_OPTIONS,
   } from '../../model';
   import EffectChanges from './EffectChanges.vue';
   import EffectDamageParts from './EffectDamageParts.vue';
   import EffectFlags from './EffectFlags.vue';
+
+  const { hideCombat = false } = defineProps<{
+    /**
+     * Скрыть вкладку «Боевая механика»: лист персонажа её не применяет, и
+     * заполнять там нечего.
+     */
+    hideCombat?: boolean;
+  }>();
 
   const model = defineModel<ActiveEffect>({ required: true });
 
@@ -39,11 +59,14 @@
       name: template.name,
       icon: template.icon,
       description: template.description,
-      origin: 'condition',
+      origin: EFFECT_ORIGIN.condition,
       disabled: false,
       conditionKey: template.key,
       changes: template.changes.map((change) => ({ ...change })),
       flags: [...template.flags],
+      conditionImmunities: template.conditionImmunities
+        ? [...template.conditionImmunities]
+        : undefined,
       duration: { type: 'special' },
       aura: undefined,
     };
@@ -59,14 +82,70 @@
     ],
   );
 
-  const tabItems = [
-    { label: 'Основное', slot: 'general' as const },
-    { label: 'Боевая механика', slot: 'combat' as const },
-  ];
+  /**
+   * Описание, собранное из текущих настроек эффекта. Пустое — описывать нечего,
+   * и кнопка «Сгенерировать» гасится.
+   */
+  const generatedDescription = computed(() =>
+    describeActiveEffect(model.value),
+  );
+
+  function applyGeneratedDescription() {
+    model.value = { ...model.value, description: generatedDescription.value };
+  }
+
+  /**
+   * Боевая механика — броски, ауры и триггеры — считается мастерским
+   * инструментом: лист персонажа её не применяет, и вкладка там только сбивает.
+   */
+  const tabItems = computed(() => {
+    const items = [
+      { label: ACTIVE_EFFECT_LABELS.tabGeneral, slot: 'general' as const },
+    ];
+
+    if (hideCombat) {
+      return items;
+    }
+
+    return [
+      ...items,
+      { label: ACTIVE_EFFECT_LABELS.tabCombat, slot: 'combat' as const },
+    ];
+  });
 
   const hasDurationValue = computed(() =>
     EFFECT_DURATION_WITH_VALUE.includes(model.value.duration.type),
   );
+
+  /** Точная «ходовая» длительность: до начала/конца хода носителя либо кастера. */
+  const isTurnDuration = computed(() => model.value.duration.type === 'turn');
+
+  const turnAnchor = computed<EffectTurnAnchor>({
+    get: () => model.value.duration.turnAnchor ?? 'carrier',
+    set: (value) => {
+      model.value.duration.turnAnchor = value;
+    },
+  });
+
+  const turnTiming = computed<EffectTurnTiming>({
+    get: () => model.value.duration.turnTiming ?? 'end',
+    set: (value) => {
+      model.value.duration.turnTiming = value;
+    },
+  });
+
+  /** Одноразовость на броске атаки: «нет» хранится как пустое поле. */
+  const consumeOn = computed<
+    EffectAttackTrigger | typeof EFFECT_CONSUME_ON_NONE
+  >({
+    get: () => model.value.consumeOn ?? EFFECT_CONSUME_ON_NONE,
+    set: (value) => {
+      model.value.consumeOn =
+        value === 'carrierAttack' || value === 'attackOnCarrier'
+          ? value
+          : undefined;
+    },
+  });
 
   // Инвертированный флаг для переключателя «Активен» (хранится как disabled).
   const isActive = computed({
@@ -117,11 +196,11 @@
   const areaTriggerDescription = computed(() => {
     switch (areaTrigger.value) {
       case 'enter':
-        return 'Разовая нагрузка (урон/статус) в момент входа в область/ауру. Срабатывает на каждый вход.';
+        return ACTIVE_EFFECT_LABELS.areaTriggerEnterHint;
       case 'exit':
-        return 'Разовая нагрузка (урон/статус) в момент выхода из области/ауры.';
+        return ACTIVE_EFFECT_LABELS.areaTriggerExitHint;
       default:
-        return 'Эффект висит на цели, пока она внутри области/ауры, и снимается при выходе.';
+        return ACTIVE_EFFECT_LABELS.areaTriggerStayHint;
     }
   });
 
@@ -161,10 +240,35 @@
     },
   });
 
+  // «Даже при успехе» и «только при успехе» — взаимоисключающие: вместе они не
+  // читаются, и движок всё равно выбрал бы одно.
   const applyOnSuccess = computed({
     get: () => model.value.applyOnSuccess === true,
     set: (value) => {
       model.value.applyOnSuccess = value ? true : undefined;
+
+      if (value) {
+        model.value.applyOnSuccessOnly = undefined;
+      }
+    },
+  });
+
+  const applyOnSuccessOnly = computed({
+    get: () => model.value.applyOnSuccessOnly === true,
+    set: (value) => {
+      model.value.applyOnSuccessOnly = value ? true : undefined;
+
+      if (value) {
+        model.value.applyOnSuccess = undefined;
+      }
+    },
+  });
+
+  // --- Иммунитет к состояниям ---
+  const conditionImmunities = computed<Array<EffectConditionKey>>({
+    get: () => model.value.conditionImmunities ?? [],
+    set: (keys) => {
+      model.value.conditionImmunities = keys.length > 0 ? keys : undefined;
     },
   });
 
@@ -264,7 +368,7 @@
           >
             <UButton
               icon="tabler:template"
-              label="Шаблон состояния"
+              :label="ACTIVE_EFFECT_LABELS.conditionTemplate"
               color="neutral"
               variant="outline"
               size="xs"
@@ -272,33 +376,63 @@
           </UDropdownMenu>
 
           <span class="text-xs text-dimmed italic">
-            Заполнит форму данными стандартного состояния D&D 5e
+            {{ ACTIVE_EFFECT_LABELS.conditionTemplateHint }}
           </span>
         </div>
 
         <UFormField
-          label="Название"
+          :label="ACTIVE_EFFECT_LABELS.name"
           class="col-span-full md:col-span-10"
         >
           <UInput
             v-model="model.name"
-            placeholder="Название эффекта"
+            :placeholder="ACTIVE_EFFECT_LABELS.namePlaceholder"
           />
         </UFormField>
 
         <UFormField
-          label="Иконка"
+          :label="ACTIVE_EFFECT_LABELS.icon"
           class="col-span-full md:col-span-14"
         >
           <UInput
             v-model="model.icon"
-            placeholder="Напр.: tabler:sparkles"
+            :placeholder="ACTIVE_EFFECT_LABELS.iconPlaceholder"
           />
         </UFormField>
 
         <UFormField
-          label="Цель эффекта"
-          class="col-span-12 md:col-span-5"
+          class="col-span-full"
+          name="description"
+        >
+          <template #label>
+            <div class="flex w-full items-center justify-between gap-2">
+              <span>{{ ACTIVE_EFFECT_LABELS.description }}</span>
+
+              <UButton
+                icon="tabler:wand"
+                size="xs"
+                variant="outline"
+                color="neutral"
+                :disabled="!generatedDescription"
+                :title="ACTIVE_EFFECT_LABELS.generateHint"
+                @click.left.exact.prevent="applyGeneratedDescription"
+              >
+                {{ ACTIVE_EFFECT_LABELS.generate }}
+              </UButton>
+            </div>
+          </template>
+
+          <UTextarea
+            v-model="model.description"
+            :rows="2"
+            autoresize
+            :placeholder="ACTIVE_EFFECT_LABELS.descriptionPlaceholder"
+          />
+        </UFormField>
+
+        <UFormField
+          :label="ACTIVE_EFFECT_LABELS.effectTarget"
+          class="col-span-full md:col-span-8"
         >
           <USelect
             :model-value="model.effectTarget ?? 'self'"
@@ -309,30 +443,39 @@
           />
         </UFormField>
 
-        <UFormField
-          label="Аура"
-          class="col-span-6 flex items-center md:col-span-3"
-        >
-          <USwitch v-model="isAura" />
-        </UFormField>
+        <!--
+          Подпись принадлежит самому переключателю, а не обёртке поля: у
+          `UFormField` подпись и контрол становятся соседями по флексу, и
+          длинная подпись отжимает тумблер тем сильнее, чем она длиннее —
+          «Перенос при экипировке» уезжал от своего тумблера на две строки.
 
-        <UFormField
-          label="Активен"
-          class="col-span-6 flex items-center md:col-span-3"
+          Коробка встаёт в одну строку с «Целью эффекта» и прижимается к её
+          низу: у поля сверху своя подпись (20px) с отступом (4px), поэтому по
+          верху они не сошлись бы. Своя высота в высоту контрола `md` (32px)
+          ставит тумблеры ровно по центру селекта, а не по его нижнему краю.
+        -->
+        <div
+          class="col-span-full flex flex-wrap items-center gap-x-8 gap-y-3 md:col-span-16 md:min-h-8 md:self-end"
         >
-          <USwitch v-model="isActive" />
-        </UFormField>
+          <USwitch
+            v-model="isActive"
+            :label="ACTIVE_EFFECT_LABELS.active"
+          />
 
-        <UFormField
-          label="Перенос при экипировке"
-          class="col-span-full flex items-center md:col-span-5"
-        >
-          <USwitch v-model="model.transfer" />
-        </UFormField>
+          <USwitch
+            v-model="isAura"
+            :label="ACTIVE_EFFECT_LABELS.aura"
+          />
+
+          <USwitch
+            v-model="model.transfer"
+            :label="ACTIVE_EFFECT_LABELS.transfer"
+          />
+        </div>
 
         <!-- Длительность -->
         <UFormField
-          label="Длительность"
+          :label="ACTIVE_EFFECT_LABELS.duration"
           class="col-span-full md:col-span-8"
         >
           <USelect
@@ -344,7 +487,7 @@
 
         <UFormField
           v-if="hasDurationValue"
-          label="Количество"
+          :label="ACTIVE_EFFECT_LABELS.durationValue"
           class="col-span-full md:col-span-4"
         >
           <UInputNumber
@@ -353,10 +496,46 @@
           />
         </UFormField>
 
+        <!-- Точная «ходовая» длительность: момент и чей ход -->
+        <template v-if="isTurnDuration">
+          <UFormField
+            :label="ACTIVE_EFFECT_LABELS.durationTurn"
+            :help="ACTIVE_EFFECT_LABELS.durationTurnHint"
+            class="col-span-full md:col-span-8"
+          >
+            <div class="flex w-full items-center gap-2">
+              <USelect
+                v-model="turnTiming"
+                :items="EFFECT_TURN_TIMING_OPTIONS"
+                class="flex-1"
+              />
+
+              <USelect
+                v-model="turnAnchor"
+                :items="EFFECT_TURN_ANCHOR_OPTIONS"
+                class="flex-1"
+              />
+            </div>
+          </UFormField>
+        </template>
+
+        <!-- Одноразовость на броске атаки -->
+        <UFormField
+          :label="ACTIVE_EFFECT_LABELS.consumeOn"
+          :help="ACTIVE_EFFECT_LABELS.consumeOnHint"
+          class="col-span-full md:col-span-12"
+        >
+          <USelect
+            v-model="consumeOn"
+            :items="EFFECT_CONSUME_ON_OPTIONS"
+            class="w-full"
+          />
+        </UFormField>
+
         <!-- Аура -->
         <template v-if="isAura && model.aura">
           <UFormField
-            label="Радиус ауры (фт)"
+            :label="ACTIVE_EFFECT_LABELS.auraRadius"
             class="col-span-full md:col-span-5"
           >
             <UInputNumber
@@ -367,7 +546,7 @@
           </UFormField>
 
           <UFormField
-            label="Цель ауры"
+            :label="ACTIVE_EFFECT_LABELS.auraTarget"
             class="col-span-full md:col-span-7"
           >
             <USelect
@@ -380,14 +559,14 @@
           <UFormField class="col-span-full flex items-end md:col-span-6">
             <UCheckbox
               v-model="model.aura.applyToSelf"
-              label="К источнику"
+              :label="ACTIVE_EFFECT_LABELS.auraApplyToSelf"
             />
           </UFormField>
 
           <UFormField class="col-span-full flex items-end md:col-span-6">
             <UCheckbox
               v-model="model.aura.visible"
-              label="Круг на сцене"
+              :label="ACTIVE_EFFECT_LABELS.auraVisible"
             />
           </UFormField>
         </template>
@@ -406,16 +585,15 @@
     <template #combat>
       <div class="flex flex-col gap-3 pt-2">
         <p class="text-xs text-dimmed italic">
-          Срабатывает при наложении эффекта на цель (напр. при попадании
-          атакой). Для само-баффов можно оставить пустым.
+          {{ ACTIVE_EFFECT_LABELS.combatHint }}
         </p>
 
         <!-- Триггер ауры -->
         <div
           v-if="isAura"
-          class="rounded-lg border border-muted bg-elevated/30 p-3"
+          class="rounded-lg border border-default bg-elevated/30 p-3"
         >
-          <UFormField label="Триггер ауры">
+          <UFormField :label="ACTIVE_EFFECT_LABELS.areaTrigger">
             <USelect
               v-model="areaTrigger"
               :items="EFFECT_AREA_TRIGGER_OPTIONS"
@@ -429,16 +607,15 @@
         </div>
 
         <!-- Спасбросок при наложении -->
-        <div class="rounded-lg border border-muted bg-elevated/30 p-3">
+        <div class="rounded-lg border border-default bg-elevated/30 p-3">
           <UCheckbox
             v-model="hasApplySave"
-            label="Спасбросок при наложении"
+            :label="ACTIVE_EFFECT_LABELS.applySave"
             :ui="{ label: 'font-medium' }"
           />
 
           <p class="mt-1.5 text-xs text-muted">
-            При попадании цель совершает спасбросок — от результата зависят
-            статус и урон ниже.
+            {{ ACTIVE_EFFECT_LABELS.applySaveHint }}
           </p>
 
           <div
@@ -446,7 +623,7 @@
             class="mt-3 grid grid-cols-24 gap-3 border-t border-default/40 pt-3"
           >
             <UFormField
-              label="Характеристика"
+              :label="ACTIVE_EFFECT_LABELS.ability"
               class="col-span-full md:col-span-8"
             >
               <USelect
@@ -457,7 +634,7 @@
             </UFormField>
 
             <UFormField
-              label="Сложность (DC)"
+              :label="ACTIVE_EFFECT_LABELS.saveDc"
               class="col-span-full md:col-span-8"
             >
               <UInputNumber
@@ -467,7 +644,7 @@
             </UFormField>
 
             <UFormField
-              label="При успехе"
+              :label="ACTIVE_EFFECT_LABELS.saveEffect"
               class="col-span-full md:col-span-8"
             >
               <USelect
@@ -481,20 +658,28 @@
           <div class="mt-3 border-t border-default/40 pt-3">
             <UCheckbox
               v-model="applyOnSuccess"
-              label="Накладывать эффект даже при успешном спасе"
+              :label="ACTIVE_EFFECT_LABELS.applyOnSuccess"
             />
 
             <p class="mt-1.5 text-xs text-muted">
-              Состояние повиснет на цели, даже если она прошла спасбросок (свой
-              выше или спасбросок области у действия). Урон при успехе — по
-              правилу «При успехе».
+              {{ ACTIVE_EFFECT_LABELS.applyOnSuccessHint }}
+            </p>
+
+            <UCheckbox
+              v-model="applyOnSuccessOnly"
+              class="mt-3"
+              :label="ACTIVE_EFFECT_LABELS.applyOnSuccessOnly"
+            />
+
+            <p class="mt-1.5 text-xs text-muted">
+              {{ ACTIVE_EFFECT_LABELS.applyOnSuccessOnlyHint }}
             </p>
           </div>
         </div>
 
         <!-- Урон при наложении -->
         <div
-          class="space-y-2 rounded-lg border border-muted bg-elevated/30 p-3"
+          class="space-y-2 rounded-lg border border-default bg-elevated/30 p-3"
         >
           <div class="flex items-center gap-2">
             <UIcon
@@ -502,28 +687,28 @@
               class="size-4 text-warning"
             />
 
-            <span class="text-sm font-medium">Урон при наложении</span>
+            <span class="text-sm font-medium">
+              {{ ACTIVE_EFFECT_LABELS.damageTitle }}
+            </span>
           </div>
 
           <p class="text-xs text-muted">
-            Наносится цели при наложении. Если включён спасбросок выше — урон
-            гейтится им (на успехе: нет урона либо половина).
+            {{ ACTIVE_EFFECT_LABELS.damageHint }}
           </p>
 
           <EffectDamageParts v-model="damageParts" />
         </div>
 
         <!-- Периодический спасбросок -->
-        <div class="rounded-lg border border-muted bg-elevated/30 p-3">
+        <div class="rounded-lg border border-default bg-elevated/30 p-3">
           <UCheckbox
             v-model="hasRecurringSave"
-            label="Периодический спасбросок снимает эффект"
+            :label="ACTIVE_EFFECT_LABELS.recurringSave"
             :ui="{ label: 'font-medium' }"
           />
 
           <p class="mt-1.5 text-xs text-muted">
-            Пока эффект активен, цель повторяет спасбросок и при успехе
-            сбрасывает его досрочно.
+            {{ ACTIVE_EFFECT_LABELS.recurringSaveHint }}
           </p>
 
           <div
@@ -531,7 +716,7 @@
             class="mt-3 grid grid-cols-24 gap-3 border-t border-default/40 pt-3"
           >
             <UFormField
-              label="Характеристика"
+              :label="ACTIVE_EFFECT_LABELS.ability"
               class="col-span-full md:col-span-8"
             >
               <USelect
@@ -542,7 +727,7 @@
             </UFormField>
 
             <UFormField
-              label="Сложность (DC)"
+              :label="ACTIVE_EFFECT_LABELS.saveDc"
               class="col-span-full md:col-span-8"
             >
               <UInputNumber
@@ -552,7 +737,7 @@
             </UFormField>
 
             <UFormField
-              label="Когда"
+              :label="ACTIVE_EFFECT_LABELS.recurringWhen"
               class="col-span-full md:col-span-8"
             >
               <USelect
@@ -565,23 +750,22 @@
         </div>
 
         <!-- Периодический урон (DoT) -->
-        <div class="rounded-lg border border-muted bg-elevated/30 p-3">
+        <div class="rounded-lg border border-default bg-elevated/30 p-3">
           <UCheckbox
             v-model="hasRecurringDamage"
-            label="Периодический урон (каждый ход)"
+            :label="ACTIVE_EFFECT_LABELS.recurringDamage"
             :ui="{ label: 'font-medium' }"
           />
 
           <p class="mt-1.5 text-xs text-muted">
-            Пока эффект висит на цели, наносит урон каждый ход (напр.
-            «Горение»). Тикает в бою при смене хода.
+            {{ ACTIVE_EFFECT_LABELS.recurringDamageHint }}
           </p>
 
           <div
             v-if="hasRecurringDamage"
             class="mt-3 flex flex-col gap-3 border-t border-default/40 pt-3"
           >
-            <UFormField label="Когда наносится">
+            <UFormField :label="ACTIVE_EFFECT_LABELS.recurringDamageWhen">
               <USelect
                 v-model="recurringDamageTiming"
                 :items="EFFECT_SAVE_TIMING_OPTIONS"
@@ -591,6 +775,34 @@
 
             <EffectDamageParts v-model="recurringDamageParts" />
           </div>
+        </div>
+
+        <!-- Иммунитет к состояниям -->
+        <div class="rounded-lg border border-default bg-elevated/30 p-3">
+          <div class="flex items-center gap-2">
+            <UIcon
+              name="tabler:shield-check"
+              class="size-4 text-success"
+            />
+
+            <span class="text-sm font-medium">
+              {{ ACTIVE_EFFECT_LABELS.conditionImmunities }}
+            </span>
+          </div>
+
+          <p class="mt-1.5 text-xs text-muted">
+            {{ ACTIVE_EFFECT_LABELS.conditionImmunitiesHint }}
+          </p>
+
+          <USelectMenu
+            v-model="conditionImmunities"
+            :items="EFFECT_CONDITION_OPTIONS"
+            label-key="label"
+            value-key="value"
+            multiple
+            class="mt-3 w-full"
+            :placeholder="ACTIVE_EFFECT_LABELS.conditionImmunitiesPlaceholder"
+          />
         </div>
       </div>
     </template>

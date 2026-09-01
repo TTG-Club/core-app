@@ -1,12 +1,10 @@
 <script setup lang="ts">
-  import type {
-    MagicItemCreate,
-    MagicItemDetailResponse,
-  } from '~magic-items/model';
+  import type { MagicItemCreate, MagicItemDetailResponse } from '../model';
 
-  import { MagicItemBody } from '~magic-items/body';
-  import { getMagicItemMarkdown } from '~magic-items/model';
   import { UiDrawer } from '~ui/drawer';
+
+  import { MagicItemBody } from '../body';
+  import { getMagicItemMarkdown } from '../model';
 
   const opened = defineModel<boolean>('open', { required: true });
 

@@ -1,11 +1,24 @@
 <script setup lang="ts">
   import type { BackgroundDetailResponse } from '~backgrounds/model';
 
+  import {
+    getBackgroundFeatNode,
+    getBackgroundToolNodes,
+  } from '~backgrounds/model';
+
   import { DescriptionsBlock, StatsBlock } from './ui';
 
-  defineProps<{
+  const { background } = defineProps<{
     background: BackgroundDetailResponse;
   }>();
+
+  /** Черта: названная предысторией либо список на выбор игрока. */
+  const featNode = computed<string>(() => getBackgroundFeatNode(background));
+
+  /** Владение инструментами: ссылки мастерской либо прежний свободный текст. */
+  const toolNodes = computed<Array<string>>(() =>
+    getBackgroundToolNodes(background),
+  );
 </script>
 
 <template>
@@ -17,9 +30,9 @@
       >
         <StatsBlock
           :ability-scores="background.abilityScores"
-          :feat="background.feat"
+          :feat="featNode"
           :skill-proficiencies="background.skillProficiencies"
-          :tool-proficiency="background.toolProficiency"
+          :tool-proficiency="toolNodes"
           :equipment="background.equipment"
         />
       </div>

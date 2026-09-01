@@ -3,7 +3,10 @@
 
   import { EditorArrayControls } from '~ui/editor';
 
-  import { CLASS_RESOURCE_RECOVERY_OPTIONS } from '../../model';
+  import {
+    CLASS_EDITOR_LABELS,
+    CLASS_TABLE_COLUMN_PURPOSE_OPTIONS,
+  } from '../../model';
   import { TableColumnScaling } from './table';
 
   const state = defineModel<Array<ClassColumnCreate>>({ required: true });
@@ -13,7 +16,12 @@
   }
 
   function getEmptyColumn(): ClassColumnCreate {
-    return { name: '', resourceRecovery: 'NONE', scaling: [] };
+    return {
+      name: '',
+      scaling: [],
+      key: undefined,
+      purpose: 'NONE',
+    };
   }
 </script>
 
@@ -49,13 +57,26 @@
 
             <UFormField
               class="col-span-full md:col-span-8"
-              label="Восстановление ресурса"
-              name="resourceRecovery"
+              :label="CLASS_EDITOR_LABELS.columnPurpose"
+              :help="CLASS_EDITOR_LABELS.columnPurposeHint"
+              name="purpose"
             >
               <USelect
-                v-model="column.resourceRecovery"
-                :items="CLASS_RESOURCE_RECOVERY_OPTIONS"
+                v-model="column.purpose"
+                :items="CLASS_TABLE_COLUMN_PURPOSE_OPTIONS"
                 class="w-full"
+              />
+            </UFormField>
+
+            <UFormField
+              class="col-span-full md:col-span-8"
+              :label="CLASS_EDITOR_LABELS.columnKey"
+              :help="CLASS_EDITOR_LABELS.columnKeyHint"
+              name="key"
+            >
+              <UInput
+                v-model="column.key"
+                placeholder="Например: rages"
               />
             </UFormField>
 

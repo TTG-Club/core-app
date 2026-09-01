@@ -22,6 +22,7 @@ export { useCharacterSheetSaved } from './useCharacterSheetSaved';
 export { useCharacterSheetShare } from './useCharacterSheetShare';
 export { useFeatChoiceSpells } from './useFeatChoiceSpells';
 export { useLevelUpWizard } from './useLevelUpWizard';
+export { useSheetActiveEffects } from './useSheetActiveEffects';
 export { useSheetAvatar } from './useSheetAvatar';
 export { useSpellCatalogSearch } from './useSpellCatalogSearch';
 export { useSpellDamage } from './useSpellDamage';

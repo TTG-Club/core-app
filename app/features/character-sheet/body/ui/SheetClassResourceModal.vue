@@ -11,6 +11,10 @@
     RESOURCE_MAX_AMOUNT_LABEL,
     RESOURCE_MAX_COMPUTED_LABEL,
     RESOURCE_MAX_DEFAULT_ABILITY,
+    RESOURCE_MAX_MINIMUM_HINT,
+    RESOURCE_MAX_MINIMUM_LABEL,
+    RESOURCE_MAX_MINIMUM_MAX,
+    RESOURCE_MAX_MINIMUM_MIN,
     RESOURCE_MAX_OFFSET_LABEL,
     RESOURCE_MAX_OFFSET_MAX,
     RESOURCE_MAX_OFFSET_MIN,
@@ -64,6 +68,19 @@
   );
 
   /**
+   * Нижняя граница максимума. Правило может её не знать — у ресурсов, заведённых
+   * до её появления, поля нет, — поэтому пустая читается как «границы нет».
+   */
+  const minimum = computed({
+    get: () => draftResource.value.maxRule?.min ?? RESOURCE_MAX_MINIMUM_MIN,
+    set: (value: number) => {
+      if (draftResource.value.maxRule) {
+        draftResource.value.maxRule.min = value;
+      }
+    },
+  });
+
+  /**
    * Смена источника максимума. «Своё число» убирает правило целиком — иначе
    * запись хранила бы правило, которое ни на что не влияет.
    *
@@ -81,6 +98,9 @@
       ability:
         draftResource.value.maxRule?.ability ?? RESOURCE_MAX_DEFAULT_ABILITY,
       offset: draftResource.value.maxRule?.offset ?? 0,
+      // Нижняя граница пережидает смену источника: она описывает сам ресурс, а
+      // не то, от чего считается его максимум
+      min: draftResource.value.maxRule?.min ?? RESOURCE_MAX_MINIMUM_MIN,
     };
   }
 
@@ -212,8 +232,27 @@
             />
           </div>
 
+          <!-- Нижняя граница подпирает расчёт снизу: вдохновение барда равно
+            модификатору Харизмы, но с Харизмой +0 оно всё равно одно -->
+          <div class="flex w-28 shrink-0 flex-col gap-1">
+            <span class="text-[10px] font-bold text-muted uppercase">
+              {{ RESOURCE_MAX_MINIMUM_LABEL }}
+            </span>
+
+            <UInputNumber
+              v-model="minimum"
+              :min="RESOURCE_MAX_MINIMUM_MIN"
+              :max="RESOURCE_MAX_MINIMUM_MAX"
+              :aria-label="RESOURCE_MAX_MINIMUM_LABEL"
+            />
+          </div>
+
           <p class="grow text-xs text-muted">
             {{ RESOURCE_MAX_COMPUTED_LABEL }}: {{ computedMax }}
+          </p>
+
+          <p class="w-full text-xs text-dimmed">
+            {{ RESOURCE_MAX_MINIMUM_HINT }}
           </p>
         </div>
 

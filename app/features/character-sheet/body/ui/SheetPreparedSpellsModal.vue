@@ -3,7 +3,6 @@
 
   import { useCharacterSheet } from '../../composables';
   import {
-    getFormattedBonus,
     getPreparedSpellsBreakdown,
     PREPARED_KIND_LABELS,
     PREPARED_SPELLS_BONUS_MAX,

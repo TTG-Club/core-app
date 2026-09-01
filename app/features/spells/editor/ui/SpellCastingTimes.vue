@@ -4,6 +4,7 @@
   import { isString } from 'es-toolkit';
 
   import { DictionaryService } from '~/shared/api';
+  import { SPELL_USAGE_LABELS } from '~spells/model';
   import { EditorArrayControls } from '~ui/editor';
 
   const times = defineModel<Array<SpellCastingTime>>({
@@ -82,12 +83,6 @@
 </script>
 
 <template>
-  <div class="col-span-full mt-4 flex flex-col gap-2 sm:flex-row sm:gap-4">
-    <p class="shrink-0 text-lg sm:w-1/5">Время накладывания</p>
-
-    <USeparator />
-  </div>
-
   <UForm
     v-for="(time, index) in times"
     :key="index"
@@ -97,7 +92,7 @@
   >
     <UFormField
       class="col-span-full md:col-span-6 xl:col-span-4"
-      label="Время накладывания"
+      :label="SPELL_USAGE_LABELS.amount"
       name="value"
     >
       <UInput
@@ -105,21 +100,21 @@
         type="number"
         :disabled="isValueDisabled(time.unit)"
         :min="0"
-        placeholder="Введи значение"
+        :placeholder="SPELL_USAGE_LABELS.amountPlaceholder"
         clearable
       />
     </UFormField>
 
     <UFormField
       class="col-span-full md:col-span-6 xl:col-span-4"
-      label="Единица времени"
+      :label="SPELL_USAGE_LABELS.timeUnit"
       name="unit"
     >
       <USelect
         v-model="time.unit"
         :loading="status === 'pending'"
         :items="units || []"
-        placeholder="Выбери из списка"
+        :placeholder="SPELL_USAGE_LABELS.unitPlaceholder"
         searchable
         clearable
         @update:model-value="updateUnit($event, index)"
@@ -128,12 +123,12 @@
 
     <UFormField
       class="col-span-full xl:col-span-10"
-      label="Собственное значение"
+      :label="SPELL_USAGE_LABELS.custom"
       name="custom"
     >
       <UInput
         v-model="time.custom"
-        placeholder="Введи значение"
+        :placeholder="SPELL_USAGE_LABELS.amountPlaceholder"
         clearable
       />
     </UFormField>

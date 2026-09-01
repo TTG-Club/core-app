@@ -3,6 +3,7 @@
     CharacterInnateSpell,
     ClassChoice,
     FeatureDescriptionNode,
+    SpeciesFeatureSummary,
     SpeciesOption,
     SpeciesSummary,
   } from '../../model';
@@ -18,14 +19,20 @@
   import {
     ABILITY_LABELS,
     buildCharacterFeatures,
+    collectChosenProficiencies,
+    collectSpeciesProficiencies,
+    CURRENT_SELECTION_LABELS,
     CUSTOM_SPECIES_LABELS,
     detectFeatureChoice,
     FEATURE_ORIGIN_LABELS,
+    filterChoicesByLevel,
     getCharacterFeatureId,
     getChoiceSkillHints,
-    getDarkvisionDistance,
+    getChosenProficientSkills,
     getOwnedWeaponNames,
     getRequiredChoiceCount,
+    getSpeciesDarkvision,
+    getSpeciesVision,
     getToolNames,
     LANGUAGE_PROFICIENCY_GROUPS,
     parseSizeOptionsFromText,
@@ -39,8 +46,10 @@
     SPECIES_DETAIL_BASE_PATH,
     SPECIES_FILTERS_PATH,
     SPECIES_SEARCH_PATH,
+    unionToolProficiencies,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
+  import SheetCurrentSelectionPanel from './SheetCurrentSelectionPanel.vue';
   import SheetCustomSpeciesModal from './SheetCustomSpeciesModal.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
 
@@ -75,7 +84,7 @@
 
   const overlay = useOverlay();
 
-  const { character, setSpecies } = useCharacterSheet();
+  const { character, setSpecies, removeSpecies } = useCharacterSheet();
 
   // Дровер описания вида с сайта; без destroyOnClose — повторный open()
   // после закрытия иначе падает («Overlay not found»).
@@ -243,18 +252,59 @@
       : speciesDetail.value.name;
   });
 
+  /**
+   * Выборы умения: структурные из справочника, а без них — распознанные по
+   * прозе описания. Структура точнее прозы (у неё явные вид, пул и количество),
+   * поэтому имеет приоритет; проза остаётся страховкой для умений, которым
+   * выбор ещё не проставили в форме вида.
+   *
+   * @param id идентификатор умения на листе.
+   * @param feature умение вида или происхождения.
+   * @returns выборы умения; пусто — умение ни о чём не спрашивает.
+   */
+  function featureChoiceControls(
+    id: string,
+    feature: SpeciesFeatureSummary,
+  ): ClassChoice[] {
+    if (feature.choices.length > 0) {
+      // Выбор со своим уровнем спрашивается, только когда персонаж дорос:
+      // умение вида приходит целиком, а часть его вопросов открывается позже
+      return filterChoicesByLevel(feature.choices, character.value.level);
+    }
+
+    const detected = detectFeatureChoice(
+      id,
+      feature.description,
+      skillNames.value,
+    );
+
+    return detected ? [detected] : [];
+  }
+
   const featureRows = computed(() => {
     const rows: Array<{
       id: string;
       name: string;
       description: FeatureDescriptionNode[];
       originLabel: string;
-      choiceControl: ClassChoice | null;
+      choiceControls: ClassChoice[];
     }> = [];
 
     const detail = speciesDetail.value;
 
     if (detail) {
+      // Выборы самой записи вида: у происхождений умений не бывает, и спросить
+      // их было бы негде. Своей строкой, потому что и дают их не умения
+      if (detail.choices.length > 0) {
+        rows.push({
+          id: getCharacterFeatureId('species', detail.url),
+          name: detail.name,
+          description: [],
+          originLabel: `${FEATURE_ORIGIN_LABELS.species}: ${detail.name}`,
+          choiceControls: detail.choices,
+        });
+      }
+
       for (const feature of detail.features) {
         const id = getCharacterFeatureId('species', feature.url);
 
@@ -263,11 +313,7 @@
           name: feature.name,
           description: feature.description,
           originLabel: `${FEATURE_ORIGIN_LABELS.species}: ${detail.name}`,
-          choiceControl: detectFeatureChoice(
-            id,
-            feature.description,
-            skillNames.value,
-          ),
+          choiceControls: featureChoiceControls(id, feature),
         });
       }
     }
@@ -275,6 +321,16 @@
     const lineage = selectedLineage.value;
 
     if (lineage) {
+      if (lineage.choices.length > 0) {
+        rows.push({
+          id: getCharacterFeatureId('lineage', lineage.url),
+          name: lineage.name,
+          description: [],
+          originLabel: `${FEATURE_ORIGIN_LABELS.lineage}: ${lineage.name}`,
+          choiceControls: lineage.choices,
+        });
+      }
+
       for (const feature of lineage.features) {
         const id = getCharacterFeatureId('lineage', feature.url);
 
@@ -283,11 +339,7 @@
           name: feature.name,
           description: feature.description,
           originLabel: `${FEATURE_ORIGIN_LABELS.lineage}: ${lineage.name}`,
-          choiceControl: detectFeatureChoice(
-            id,
-            feature.description,
-            skillNames.value,
-          ),
+          choiceControls: featureChoiceControls(id, feature),
         });
       }
     }
@@ -295,10 +347,9 @@
     return rows;
   });
 
-  const chosenProficientSkills = computed(() =>
-    featureRows.value
-      .filter((row) => row.choiceControl?.kind === 'skill-proficiency')
-      .flatMap((row) => selections.value[row.id] ?? []),
+  /** Все выборы мастера: по ним считается, что уже выбрано во владение. */
+  const allChoices = computed<ClassChoice[]>(() =>
+    featureRows.value.flatMap((row) => row.choiceControls),
   );
 
   /** Опции пикера выбора в зависимости от его типа. */
@@ -306,7 +357,11 @@
     return resolveChoiceOptions(choice, {
       skillNames: skillNames.value,
       proficientSkillNames: proficientSkillNames.value,
-      chosenProficientSkills: chosenProficientSkills.value,
+      chosenProficientSkills: getChosenProficientSkills(
+        allChoices.value,
+        selections.value,
+        choice.id,
+      ),
       knownLanguages: character.value.proficiencies.languages,
       knownTools: getToolNames(character.value.proficiencies.tools),
       allLanguages: allLanguages.value,
@@ -481,11 +536,6 @@
 
     const lineage = selectedLineage.value;
 
-    const allFeatureSummaries = [
-      ...detail.features,
-      ...(lineage?.features ?? []),
-    ];
-
     // Сбор выборов-селекторов: навыки (владение/экспертиза) и языки; выбранные
     // значения также идут в текст особенности, чтобы отображаться на листе.
     const proficientSkills: string[] = [];
@@ -493,13 +543,11 @@
     const chosenLanguages: string[] = [];
     const featureChoices: Record<string, string> = { ...choices.value };
 
-    for (const row of featureRows.value) {
-      const control = row.choiceControl;
+    const featureControls = featureRows.value.flatMap(
+      (row) => row.choiceControls,
+    );
 
-      if (!control) {
-        continue;
-      }
-
+    for (const control of featureControls) {
       const values = selections.value[control.id] ?? [];
 
       if (!values.length) {
@@ -510,12 +558,29 @@
         proficientSkills.push(...values);
       } else if (control.kind === 'skill-expertise') {
         expertiseSkills.push(...values);
-      } else {
+      } else if (control.kind === 'language') {
         chosenLanguages.push(...values);
       }
 
       featureChoices[control.id] = values.join(', ');
     }
+
+    // Инструменты, приёмы и владения спасбросками из ответов: их лист кладёт в
+    // свои списки владений, а не в текст умения. Разбор ответов общий с чертой —
+    // вид выбора у них один и тот же
+    const chosenGrants = collectChosenProficiencies(
+      featureControls,
+      selections.value,
+      proficientSkillNames.value,
+    );
+
+    // Дары, заявленные записью вида и её умениями: до них лист искал владения
+    // в прозе описания и умение с непривычной формулировкой пропускал
+    const declaredProficiencies = collectSpeciesProficiencies(
+      detail,
+      lineage,
+      character.value.level,
+    );
 
     setSpecies({
       species: {
@@ -531,22 +596,87 @@
       size: sizeChoice.value ?? null,
       speed: parseSpeedFromText(effectiveSpeedText.value),
       vision: {
-        normal: character.value.vision.normal,
-        darkvision: getDarkvisionDistance(allFeatureSummaries),
+        // Вид задаёт обычное зрение — берём его; иначе оставляем своё
+        normal:
+          getSpeciesVision(detail, lineage) ?? character.value.vision.normal,
+        darkvision: getSpeciesDarkvision(detail, lineage),
         blindsight: character.value.vision.blindsight,
         tremorsense: character.value.vision.tremorsense,
         truesight: character.value.vision.truesight,
         unit: 'feet',
       },
-      features: buildCharacterFeatures(detail, lineage, featureChoices),
+      features: buildCharacterFeatures(
+        detail,
+        lineage,
+        featureChoices,
+        character.value.level,
+      ),
       skills: {
-        proficient: [...new Set(proficientSkills)],
-        expertise: [...new Set(expertiseSkills)],
+        // Навыки из даров вида идут туда же, куда выбранные игроком: лист
+        // ставит владение строке навыка, а не списку владений
+        proficient: [
+          ...new Set([...declaredProficiencies.skills, ...proficientSkills]),
+        ],
+        expertise: [
+          ...new Set([
+            ...declaredProficiencies.expertiseSkills,
+            ...expertiseSkills,
+          ]),
+        ],
       },
       proficiencies: {
-        languages: [...new Set(chosenLanguages)],
+        ...declaredProficiencies,
+        languages: [
+          ...new Set([
+            ...declaredProficiencies.languages,
+            ...(chosenGrants.languages ?? []),
+            ...chosenLanguages,
+          ]),
+        ],
+        tools: unionToolProficiencies(
+          declaredProficiencies.tools,
+          chosenGrants.tools ?? [],
+        ),
+        weaponMasteries: [
+          ...new Set([
+            ...declaredProficiencies.weaponMasteries,
+            ...(chosenGrants.weaponMasteries ?? []),
+          ]),
+        ],
+        masteryProperties: [
+          ...new Set([
+            ...declaredProficiencies.masteryProperties,
+            ...(chosenGrants.masteryProperties ?? []),
+          ]),
+        ],
+        savingThrows: [
+          ...new Set([
+            ...declaredProficiencies.savingThrows,
+            ...(chosenGrants.savingThrows ?? []),
+          ]),
+        ],
       },
     });
+
+    emit('close');
+  }
+
+  /** Название уже взятого вида с подвидом; пусто — вида на листе нет. */
+  const currentSpeciesLabel = computed(() => {
+    const species = character.value.species;
+
+    if (!species) {
+      return '';
+    }
+
+    return species.lineageName
+      ? `${species.name} (${species.lineageName})`
+      : species.name;
+  });
+
+  /** Снимает вид и закрывает мастер: брать новый взамен необязательно. */
+  function handleRemoveSpecies() {
+    removeSpecies();
 
     emit('close');
   }
@@ -564,6 +694,19 @@
     <template #body>
       <div class="flex min-h-48 flex-col gap-4">
         <template v-if="step === 'species'">
+          <!-- Что уже взято и как это снять: выбирать новый вид взамен
+          необязательно -->
+          <SheetCurrentSelectionPanel
+            v-if="currentSpeciesLabel"
+            :title="CURRENT_SELECTION_LABELS.species.title"
+            :name="currentSpeciesLabel"
+            :remove-label="CURRENT_SELECTION_LABELS.species.remove"
+            :remove-description="
+              CURRENT_SELECTION_LABELS.species.removeDescription
+            "
+            @remove="handleRemoveSpecies"
+          />
+
           <SheetSearchInput
             v-model="searchTerm"
             :placeholder="SHEET_SEARCH_LABELS.byNamePlaceholder"
@@ -771,24 +914,28 @@
               </div>
 
               <div
-                v-if="row.choiceControl"
-                class="flex flex-col gap-1"
+                v-if="row.choiceControls.length"
+                class="flex flex-col gap-3"
               >
-                <span class="text-xs text-muted">
-                  Выберите {{ choiceCount(row.choiceControl) }}
-                </span>
+                <div
+                  v-for="control in row.choiceControls"
+                  :key="control.id"
+                  class="flex flex-col gap-1"
+                >
+                  <span class="text-xs text-muted">
+                    {{ control.label || `Выберите ${choiceCount(control)}` }}
+                  </span>
 
-                <SheetChoiceSelect
-                  :model-value="selections[row.choiceControl.id] ?? []"
-                  :items="choiceOptions(row.choiceControl)"
-                  :hints="choiceHints(row.choiceControl)"
-                  :warning="SKILL_DUPLICATE_WARNING"
-                  :count="choiceCount(row.choiceControl)"
-                  :placeholder="`Выберите ${choiceCount(row.choiceControl)}`"
-                  @update:model-value="
-                    updateSelection(row.choiceControl, $event)
-                  "
-                />
+                  <SheetChoiceSelect
+                    :model-value="selections[control.id] ?? []"
+                    :items="choiceOptions(control)"
+                    :hints="choiceHints(control)"
+                    :warning="SKILL_DUPLICATE_WARNING"
+                    :count="choiceCount(control)"
+                    :placeholder="`Выберите ${choiceCount(control)}`"
+                    @update:model-value="updateSelection(control, $event)"
+                  />
+                </div>
               </div>
 
               <UInput

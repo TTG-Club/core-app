@@ -6,7 +6,7 @@
     close: [];
   }>();
 
-  const { character, setHitPoints } = useCharacterSheet();
+  const { character, maxHitPoints, setHitPoints } = useCharacterSheet();
 
   const health = computed(() => character.value.health);
 
@@ -16,7 +16,10 @@
       return 'text-error';
     }
 
-    if (health.value.max > 0 && health.value.current * 2 <= health.value.max) {
+    if (
+      maxHitPoints.value > 0
+      && health.value.current * 2 <= maxHitPoints.value
+    ) {
       return 'text-warning';
     }
 
@@ -96,7 +99,7 @@
           </span>
 
           <span class="pb-1 text-xl leading-none text-muted">
-            / {{ health.max }}
+            / {{ maxHitPoints }}
           </span>
 
           <span

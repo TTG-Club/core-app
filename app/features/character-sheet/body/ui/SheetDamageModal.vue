@@ -17,7 +17,6 @@
     DEFAULT_DAMAGE_DICE_FACES,
     getAbilityModifier,
     getDamageFormula,
-    getFormattedBonus,
     parseDamageNotation,
     ROLL_ABILITY_AUTO,
     ROLL_ABILITY_OPTIONS,

@@ -9,6 +9,7 @@
 
   import { useCharacterSheet } from '../../composables';
   import {
+    getEffectiveAbilityScore,
     getHitDicePools,
     getHitDieFormula,
     getHitDieLabel,
@@ -25,7 +26,8 @@
     close: [];
   }>();
 
-  const { character, spendHitDice, completeShortRest } = useCharacterSheet();
+  const { character, maxHitPoints, spendHitDice, completeShortRest } =
+    useCharacterSheet();
 
   // Кости хитов катятся напрямую роллером: результат каждой кости нужен здесь,
   // чтобы прибавить модификатор Телосложения и поднять хиты.
@@ -43,7 +45,10 @@
       return 'text-error';
     }
 
-    if (health.value.max > 0 && health.value.current * 2 <= health.value.max) {
+    if (
+      maxHitPoints.value > 0
+      && health.value.current * 2 <= maxHitPoints.value
+    ) {
       return 'text-warning';
     }
 
@@ -52,12 +57,18 @@
 
   const isZeroHitPoints = computed(() => health.value.current <= 0);
 
+  // Кость хитов восстанавливает хиты с модификатором ИТОГОВОГО Телосложения:
+  // прибавка повышения характеристик и снаряжения работает и здесь.
+  const constitutionScore = computed(() =>
+    getEffectiveAbilityScore(character.value, 'constitution'),
+  );
+
   const constitutionModifier = computed(() =>
-    getModifier(character.value.abilities.constitution),
+    getModifier(constitutionScore.value),
   );
 
   const formattedConstitutionModifier = computed(() =>
-    getFormattedModifier(character.value.abilities.constitution),
+    getFormattedModifier(constitutionScore.value),
   );
 
   const hitDicePools = computed(() =>
@@ -254,7 +265,7 @@
                 </span>
 
                 <span class="text-sm leading-none text-muted">
-                  / {{ health.max }}
+                  / {{ maxHitPoints }}
                 </span>
 
                 <span

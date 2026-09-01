@@ -1,5 +1,13 @@
 <script setup lang="ts">
-  import { SHEET_CHOICE_BADGE_MAX_OPTIONS } from '../../model';
+  import type { FeatureOptionEntry } from '~classes/model';
+
+  import { FeatureOptionsDrawer } from '~classes/feature-options-drawer';
+
+  import {
+    getChoiceSelectionSummary,
+    SHEET_CHOICE_BADGE_MAX_OPTIONS,
+    SHEET_CHOICE_OPTIONS_LABELS,
+  } from '../../model';
 
   /** Опция списка с пометкой того, что выбор у персонажа уже есть. */
   interface ChoiceItem {
@@ -21,6 +29,8 @@
     count = 0,
     hints = {},
     items,
+    optionDetails = [],
+    optionDetailsTitle = '',
     placeholder = '',
     warning = '',
   } = defineProps<{
@@ -36,6 +46,15 @@
 
     /** Предупреждение под списком, если выбрана помеченная опция. */
     warning?: string;
+
+    /**
+     * Описания вариантов из записи справочника: с ними у выбора появляется
+     * кнопка просмотра, где вариант читают и берут. Пусто — кнопки нет.
+     */
+    optionDetails?: FeatureOptionEntry[];
+
+    /** Заголовок просмотра описаний; пусто — общая подпись. */
+    optionDetailsTitle?: string;
   }>();
 
   const model = defineModel<string[]>({ default: () => [] });
@@ -124,6 +143,66 @@
     () => Boolean(warning) && model.value.some((name) => hints[name]),
   );
 
+  const isOptionDetailsAvailable = computed(() => optionDetails.length > 0);
+
+  const isOptionDetailsOpened = ref(false);
+
+  /**
+   * Варианты для просмотра — ровно те, что предлагает пикер: описания идут из
+   * записи класса, а вариант без описания остаётся в списке одним названием.
+   */
+  const optionDetailEntries = computed<FeatureOptionEntry[]>(() =>
+    options.value.map((option) => {
+      const detail = optionDetails.find((entry) => entry.name === option.value);
+
+      return (
+        detail ?? {
+          key: option.value,
+          name: option.value,
+          nameEng: '',
+          description: '',
+          additional: '',
+          prerequisite: '',
+          requiredClassLevel: 0,
+        }
+      );
+    }),
+  );
+
+  /** Варианты, которые в просмотре взять нельзя: предел выбора уже набран. */
+  const disabledOptionNames = computed(() =>
+    badges.value.filter((badge) => badge.disabled).map((badge) => badge.value),
+  );
+
+  const optionDetailsSummary = computed(() =>
+    getChoiceSelectionSummary(model.value.length, count),
+  );
+
+  const optionDetailsHeading = computed(
+    () => optionDetailsTitle || SHEET_CHOICE_OPTIONS_LABELS.button,
+  );
+
+  /**
+   * Открывает просмотр описаний вариантов.
+   */
+  function openOptionDetails() {
+    isOptionDetailsOpened.value = true;
+  }
+
+  /**
+   * Переключает вариант, выбранный в просмотре описаний: правила у выбора те
+   * же, что у бейджей, поэтому ответ считает та же функция.
+   *
+   * @param name название варианта.
+   */
+  function handleOptionDetailToggle(name: string) {
+    const badge = badges.value.find((entry) => entry.value === name);
+
+    if (badge) {
+      toggleBadge(badge);
+    }
+  }
+
   // Пометка опции одна и та же в обоих селектах, а слот у каждого свой.
   const [DefineHintBadge, ReuseHintBadge] = createReusableTemplate<{
     hint: string;
@@ -146,8 +225,20 @@
     <!-- Короткий набор: все варианты на виду, выбранный залит цветом -->
     <div
       v-if="isBadgeMode"
-      class="flex flex-wrap gap-2"
+      class="flex flex-wrap items-center gap-2"
     >
+      <!-- Кнопка описаний открывает ряд вариантов: её читают до того, как
+      выбирать, а в хвосте ряда она уезжала на отдельную строку -->
+      <UButton
+        v-if="isOptionDetailsAvailable"
+        size="sm"
+        icon="tabler:list-search"
+        color="neutral"
+        variant="ghost"
+        :label="SHEET_CHOICE_OPTIONS_LABELS.button"
+        @click.left.exact.prevent="openOptionDetails"
+      />
+
       <UBadge
         v-for="badge in badges"
         :key="badge.value"
@@ -172,34 +263,57 @@
       </UBadge>
     </div>
 
-    <USelectMenu
-      v-else-if="isMultiple"
-      v-model="model"
-      :items="options"
-      :placeholder="placeholder"
-      label-key="label"
-      value-key="value"
-      multiple
-      searchable
-    >
-      <template #item-trailing="{ item }">
-        <ReuseHintBadge :hint="item.hint" />
-      </template>
-    </USelectMenu>
-
-    <USelectMenu
+    <div
       v-else
-      v-model="singleValue"
-      :items="options"
-      :placeholder="placeholder"
-      label-key="label"
-      value-key="value"
-      searchable
+      class="flex items-center gap-2"
     >
-      <template #item-trailing="{ item }">
-        <ReuseHintBadge :hint="item.hint" />
-      </template>
-    </USelectMenu>
+      <USelectMenu
+        v-if="isMultiple"
+        v-model="model"
+        :items="options"
+        :placeholder="placeholder"
+        label-key="label"
+        value-key="value"
+        multiple
+        searchable
+        class="min-w-0 grow"
+      >
+        <template #item-trailing="{ item }">
+          <ReuseHintBadge :hint="item.hint" />
+        </template>
+      </USelectMenu>
+
+      <USelectMenu
+        v-else
+        v-model="singleValue"
+        :items="options"
+        :placeholder="placeholder"
+        label-key="label"
+        value-key="value"
+        searchable
+        class="min-w-0 grow"
+      >
+        <template #item-trailing="{ item }">
+          <ReuseHintBadge :hint="item.hint" />
+        </template>
+      </USelectMenu>
+
+      <UTooltip
+        v-if="isOptionDetailsAvailable"
+        :text="SHEET_CHOICE_OPTIONS_LABELS.button"
+      >
+        <UButton
+          icon="tabler:list-search"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          square
+          class="shrink-0"
+          :aria-label="SHEET_CHOICE_OPTIONS_LABELS.ariaLabel"
+          @click.left.exact.prevent="openOptionDetails"
+        />
+      </UTooltip>
+    </div>
 
     <span
       v-if="isWarningVisible"
@@ -207,5 +321,17 @@
     >
       {{ warning }}
     </span>
+
+    <FeatureOptionsDrawer
+      v-if="isOptionDetailsAvailable"
+      v-model="isOptionDetailsOpened"
+      :options="optionDetailEntries"
+      :title="optionDetailsHeading"
+      :summary="optionDetailsSummary"
+      :selected-names="model"
+      :disabled-names="disabledOptionNames"
+      selectable
+      @toggle="handleOptionDetailToggle"
+    />
   </div>
 </template>

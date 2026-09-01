@@ -19,7 +19,6 @@
     ARMOR_DEXTERITY_HINT_LABELS,
     CUSTOM_INVENTORY_BADGE_HINT,
     getAbilityModifier,
-    getFormattedBonus,
     getHeavyWeaponHint,
     getInventoryEquipIcon,
     getInventoryItemBonusLabels,
@@ -465,6 +464,12 @@
     if (attack.weaponBonus !== 0) {
       tooltipParts.push(
         getBonusPart(INVENTORY_STAT_HINT_LABELS.weapon, attack.weaponBonus),
+      );
+    }
+
+    if (attack.effectBonus !== 0) {
+      tooltipParts.push(
+        getBonusPart(INVENTORY_STAT_HINT_LABELS.effects, attack.effectBonus),
       );
     }
 

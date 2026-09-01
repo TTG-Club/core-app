@@ -33,6 +33,7 @@
     SHEET_TABS_SCROLL_STEP_RATIO,
     SHEET_TABS_SWIPE_THRESHOLD,
   } from '../../model';
+  import SheetEffectsTab from './SheetEffectsTab.vue';
   import SheetEquipmentTab from './SheetEquipmentTab.vue';
   import SheetFeaturesTab from './SheetFeaturesTab.vue';
   import SheetNotesTab from './SheetNotesTab.vue';
@@ -95,6 +96,8 @@
     'add-note': [];
     'edit-note': [noteId: string];
     'remove-note': [noteId: string];
+    'add-effect': [];
+    'edit-effect': [effectId: string];
     'edit-personality': [field: PersonalityFieldKey | null];
     'edit-personality-description': [];
     'edit-background': [];
@@ -254,6 +257,14 @@
 
   function handleFeatureRemove(featureId: string) {
     emit('remove-feature', featureId);
+  }
+
+  function handleEffectAdd() {
+    emit('add-effect');
+  }
+
+  function handleEffectEdit(effectId: string) {
+    emit('edit-effect', effectId);
   }
 
   function handleNoteAdd() {
@@ -972,6 +983,12 @@
             @add-feat="handleFeatAdd"
             @edit-feature="handleFeatureEdit"
             @remove-feature="handleFeatureRemove"
+          />
+
+          <SheetEffectsTab
+            v-else-if="activeSlot === 'effects'"
+            @add-effect="handleEffectAdd"
+            @edit-effect="handleEffectEdit"
           />
 
           <SheetPersonalityTab

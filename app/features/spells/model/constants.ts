@@ -1,7 +1,8 @@
 import type {
-  SpellDamageFormulaTarget,
+  SpellDeliveryType,
   SpellSaveEffect,
   SpellTargetType,
+  SpellUsesRecovery,
 } from './create';
 
 interface SpellSelectOption<Value extends string> {
@@ -40,10 +41,167 @@ export const SPELL_EFFECT_LABELS = {
   saveEffect: 'При успехе',
   saveEffectPlaceholder: 'Выбери эффект',
   conditions: 'Состояния',
+  deliveryType: 'Способ применения',
+  deliveryTypePlaceholder: 'По типу атаки и дистанции',
+  deliveryTypeHint:
+    'Способ применения — чем заклинание достаёт цель: рукопашная и '
+    + 'дальнобойная добавляют бросок атаки, «Касание» требует досягаемости, '
+    + '«На себя» включает автопопадание. «Тип цели» — про другое: во что '
+    + 'заклинание нацелено.',
+  attackBonus: 'Бонус к атаке',
+  attackBonusHint:
+    'Фиксированная прибавка сверх характеристики (напр. +1 от магии)',
+  scalingTargets: 'Доп. целей за круг',
+  scalingTargetsHint: 'На сколько растёт число целей за каждый круг выше',
   areaOfEffect: 'Область воздействия',
   areaValue1: 'Радиус/длина',
   areaValue2: 'Высота/ширина',
   areaValuePlaceholder: 'Значение',
+} as const;
+
+/**
+ * Вкладки формы заклинания. Порядок повторяет форму системы: чем заклинание
+ * является → как применяется → что делает в бою → что оставляет после себя.
+ */
+export const SPELL_EDITOR_TABS = {
+  main: 'Основное',
+  usage: 'Применение',
+  combat: 'Бой',
+  effects: 'Эффекты',
+} as const;
+
+/**
+ * Заголовки карточек формы. Держатся здесь, а не в разметке: одна и та же
+ * подпись стоит и на карточке, и в подсказке соседнего поля.
+ */
+export const SPELL_EDITOR_SECTIONS = {
+  basics: 'Характеристики заклинания',
+  description: 'Описание',
+  affiliations: 'Принадлежность',
+  castingTime: 'Время накладывания',
+  range: 'Дистанция',
+  components: 'Компоненты (V, S, M)',
+  componentsHint:
+    'V — вербальный (речь), S — соматический (жесты), M — материальный '
+    + '(предмет). Компонент с указанной стоимостью нельзя заменить фокусом.',
+  duration: 'Длительность',
+  uses: 'Заряды (откат от отдыха)',
+  usesHint:
+    'Для врождённой магии и заклинаний существ: ограниченное число применений '
+    + 'с восстановлением от отдыха. Обычные ячейки заклинателя настраиваются '
+    + 'классом и здесь не задаются.',
+  targeting: 'Цель и попадание',
+  projectiles: 'Снаряды',
+  damage: 'Урон и лечение',
+  savingThrow: 'Спасбросок и состояния',
+} as const;
+
+/** Подписи блока зарядов. */
+export const SPELL_USES_LABELS = {
+  enable: 'Ограниченное число применений',
+  max: 'Максимум зарядов',
+  recovery: 'Восстановление',
+  atWillHint: 'По желанию: заряды не расходуются, максимум не нужен.',
+} as const;
+
+/** Способы восстановления зарядов — зеркало `SPELL_USES_RECOVERY_OPTIONS` VTTG. */
+export const SPELL_USES_RECOVERY_OPTIONS: Array<
+  SpellSelectOption<SpellUsesRecovery>
+> = [
+  { label: 'По желанию', value: 'atWill' },
+  { label: 'Короткий отдых', value: 'shortRest' },
+  { label: 'Продолжительный отдых', value: 'longRest' },
+];
+
+/**
+ * Способы применения заклинания — зеркало `DELIVERY_TYPE_OPTIONS` из VTTG./**
+ * Способы применения заклинания — зеркало `DELIVERY_TYPE_OPTIONS` из VTTG.
+ * Не задан — потребитель выводит способ по типу атаки и единице дистанции,
+ * как выводил до появления поля.
+ */
+export const SPELL_DELIVERY_TYPE_OPTIONS: Array<
+  SpellSelectOption<SpellDeliveryType>
+> = [
+  { label: 'Дальнобойная атака', value: 'ranged' },
+  { label: 'Рукопашная атака', value: 'melee' },
+  { label: 'На себя', value: 'self' },
+  { label: 'Касание', value: 'touch' },
+  { label: 'Зрение', value: 'sight' },
+  { label: 'Нет', value: 'none' },
+];
+
+/** Способы применения с броском атаки — только им нужен бонус к атаке. */
+export const SPELL_ATTACK_DELIVERY_TYPES: SpellDeliveryType[] = [
+  'ranged',
+  'melee',
+];
+
+/** Подписи полей вкладки «Основное». */
+export const SPELL_MAIN_TAB_LABELS = {
+  level: 'Уровень заклинания',
+  school: 'Школа',
+  additionalType: 'Подшкола',
+  additionalTypePlaceholder: 'Подшкола',
+  description: 'Описание',
+  descriptionPlaceholder: 'Введи описание',
+  upper: 'На более высоких уровнях',
+} as const;
+
+/** Подписи блока принадлежности заклинания. */
+export const SPELL_AFFILIATION_LABELS = {
+  classes: 'Классы',
+  subclasses: 'Подклассы',
+  species: 'Виды',
+  lineages: 'Происхождения',
+  feats: 'Черта',
+} as const;
+
+/**
+ * Подписи полей вкладки «Применение». Заголовки блоков живут в
+ * `SPELL_EDITOR_SECTIONS`, здесь — только поля внутри них.
+ */
+export const SPELL_USAGE_LABELS = {
+  amount: 'Количество',
+  amountPlaceholder: 'Введи значение',
+  timeUnit: 'Единица времени',
+  unitPlaceholder: 'Выбери из списка',
+  custom: 'Собственное значение',
+  rangeValue: 'Значение',
+  rangeUnit: 'Тип дистанции',
+  concentration: 'Концентрация',
+  verbal: 'Вербальный компонент',
+  somatic: 'Соматический компонент',
+  material: 'Материальный компонент',
+  materialList: 'Список материалов',
+  materialListPlaceholder: 'Введи список материалов',
+  materialWithCost: 'Материалы имеют цену',
+  materialConsumable: 'Материалы расходуются',
+} as const;
+
+/** Подписи блока масштабирования заклинания. */
+export const SPELL_SCALING_LABELS = {
+  title: 'Масштабирование',
+  hint: 'Усиление при трате ячейки выше круга заклинания.',
+  cantripTitle: 'Масштабирование заговора',
+  cantripHint:
+    'Усиление с ростом уровня персонажа — ячейки заговоры не тратят.',
+  enable: 'Усиление на высших кругах',
+  additionalDice: 'Доп. урон за каждый круг',
+  additionalDicePlaceholder: '1к6',
+  description: 'Описание усиления',
+  descriptionPlaceholder: 'Например: урон увеличивается на 1к6 за круг',
+  fallbackHint:
+    'Не заполнено — потребитель разберёт текст «На более высоких уровнях», '
+    + 'как разбирал раньше.',
+  cantripTiersHint:
+    'Поуровневые тиры: с каждого порога уровня персонажа весь набор частей '
+    + 'урона заменяется целиком. До первого тира работают базовые части выше.',
+  tierLevel: 'С уровня персонажа',
+  tierLevelPlaceholder: '5',
+  tierRemove: 'Удалить тир',
+  tierAdd: 'Добавить уровень',
+  tierPartAdd: 'Добавить часть',
+  tierPartsEmpty: 'У тира нет частей — он ничего не заменит.',
 } as const;
 
 /**
@@ -73,6 +231,24 @@ export const SPELL_SAVE_EFFECT_OPTIONS: Array<
   { label: 'Особый', value: 'SPECIAL' },
 ];
 
+/** Подписи снарядного режима заклинания. */
+export const SPELL_PROJECTILE_LABELS = {
+  enable: 'Снаряды (отдельный бросок на каждый)',
+  count: 'Базовое число снарядов',
+  countPlaceholder: 'Число снарядов',
+  perSlotLevel: 'Доп. снарядов за круг выше базового',
+  perSlotLevelPlaceholder: '0',
+  distribution: 'Распределение по целям',
+  tiersHint:
+    'Пороги уровня персонажа: начиная с указанного уровня число снарядов '
+    + 'заменяется целиком (напр. 2 на 5-м, 3 на 11-м, 4 на 17-м).',
+  tierLevel: 'С уровня персонажа',
+  tierLevelPlaceholder: 'Уровень',
+  tierCount: 'Снарядов',
+  tierRemove: 'Удалить порог',
+  tierAdd: 'Добавить порог',
+} as const;
+
 /**
  * Режимы распределения снарядов по целям для радио-группы. `any` — дефолт
  * «свободно», в `SpellProjectiles.targetDistribution` не пишется. Зеркало
@@ -96,83 +272,17 @@ export const SPELL_PROJECTILE_DISTRIBUTION_OPTIONS = [
   },
 ] as const;
 
-/** Ключ `FAIR` — прежнее имя огненного урона: встречается в данных до переименования. */
-export const SPELL_DAMAGE_TYPE_TAGS: Record<string, string> = {
-  ACID: 'dmg.acid',
-  BLUDGEONING: 'dmg.bludgeoning',
-  COLD: 'dmg.cold',
-  FAIR: 'dmg.fire',
-  FIRE: 'dmg.fire',
-  FORCE: 'dmg.force',
-  LIGHTNING: 'dmg.lightning',
-  NECROTIC: 'dmg.necrotic',
-  PIERCING: 'dmg.piercing',
-  POISON: 'dmg.poison',
-  PSYCHIC: 'dmg.psychic',
-  RADIANT: 'dmg.radiant',
-  SLASHING: 'dmg.slashing',
-  THUNDER: 'dmg.thunder',
-};
+/**
+ * Текст на месте пустого списка частей урона. Свой у каждого раздела: общий
+ * редактор частей знает про урон, но не про то, чем ещё носитель может
+ * обходиться вместо него.
+ */
+export const SPELL_DAMAGE_PART_EMPTY =
+  'Урона и лечения нет. Заклинание может обходиться без них — например, '
+  + 'накладывать состояние или менять числа активным эффектом.';
 
 export const SPELL_HEALING_TYPE_TAGS: Record<string, string> = {
   HEALING: 'heal',
   TEMPORARY_HIT: 'heal.temp',
   TEMPORARY_HITPOINTS: 'heal.temp',
 };
-
-export const SPELL_DAMAGE_FORMULA_HEALING_TAGS = [
-  { label: 'Лечение', value: 'heal' },
-  { label: 'Временные ХП', value: 'heal.temp' },
-];
-
-export const SPELL_DAMAGE_FORMULA_DICE = [
-  { label: 'к4', value: 4 },
-  { label: 'к6', value: 6 },
-  { label: 'к8', value: 8 },
-  { label: 'к10', value: 10 },
-  { label: 'к12', value: 12 },
-  { label: 'к20', value: 20 },
-];
-
-export const SPELL_DAMAGE_FORMULA_SEPARATOR = '+';
-
-export const SPELL_DAMAGE_FORMULA_CONDITION_TAGS = [
-  { label: 'Полное HP', value: 'target.full' },
-  { label: 'Неполное HP', value: 'target.notFull' },
-];
-
-export const SPELL_DAMAGE_FORMULA_MODIFIER_TAGS = [
-  { label: 'Заклинание', value: 'mod.spell' },
-  { label: 'Сила', value: 'mod.str' },
-  { label: 'Ловкость', value: 'mod.dex' },
-  { label: 'Телосложение', value: 'mod.con' },
-  { label: 'Интеллект', value: 'mod.int' },
-  { label: 'Мудрость', value: 'mod.wis' },
-  { label: 'Харизма', value: 'mod.cha' },
-  { label: 'Мастерство', value: 'prof' },
-  { label: 'Уровень', value: 'level' },
-];
-
-/**
- * Цель части урона. Значения — словарь VTTG (`DamagePartTarget`); в формулу
- * они не пишутся, а хранятся в `SpellEffect.damageFormulaTargets`.
- */
-export const SPELL_DAMAGE_FORMULA_TARGET_OPTIONS: Array<
-  SpellSelectOption<SpellDamageFormulaTarget>
-> = [
-  { label: 'Выбранная цель', value: 'selected' },
-  { label: 'На себя', value: 'self' },
-  { label: 'Указать отдельно', value: 'choose' },
-];
-
-export const SPELL_DAMAGE_FORMULA_TOOLS = [
-  { label: 'Кости', value: 'dice' },
-  { label: 'Тип урона', value: 'damage-type' },
-  { label: 'Лечение', value: 'healing' },
-  { label: 'Условия', value: 'condition' },
-  { label: 'Добавить мод', value: 'modifier' },
-];
-
-export const DEFAULT_SPELL_DAMAGE_FORMULA_TOOL = 'modifier';
-export const DEFAULT_SPELL_DAMAGE_FORMULA_TARGET: SpellDamageFormulaTarget =
-  'selected';

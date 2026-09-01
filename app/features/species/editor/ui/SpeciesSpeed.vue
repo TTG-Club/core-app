@@ -1,76 +1,101 @@
 <script setup lang="ts">
-  import type { SpeciesCreateSpeed } from '~species/model';
+  import type { SpeciesCreateSpeed } from '../../model';
 
+  import {
+    SPECIES_OPTIONAL_SPEED_KINDS,
+    SPECIES_SPEED_EDITOR,
+  } from '../../model';
+  import SpeciesEditorSection from './SpeciesEditorSection.vue';
+
+  /**
+   * Скорости вида одной сеткой, как в форме вида системы D&D: ходьба и три
+   * необязательных способа передвижения видны сразу, пустой показывается нулём.
+   */
   const speed = defineModel<SpeciesCreateSpeed>({ required: true });
+
+  type OptionalSpeedKind = (typeof SPECIES_OPTIONAL_SPEED_KINDS)[number];
+
+  /**
+   * Значение поля необязательной скорости: пустая показывается нулём.
+   *
+   * @param kind вид скорости.
+   * @returns дальность в футах либо 0.
+   */
+  function getSpeedValue(kind: OptionalSpeedKind): number {
+    return speed.value[kind] ?? 0;
+  }
+
+  /**
+   * Записывает необязательную скорость. Ноль в поле — способа передвижения нет:
+   * в записи скорость остаётся пустой, а не нулём. Вместе с полётом снимается и
+   * признак «Парит» — без полёта он не имеет смысла.
+   *
+   * @param kind вид скорости.
+   * @param value значение поля.
+   */
+  function setSpeedValue(
+    kind: OptionalSpeedKind,
+    value: number | null | undefined,
+  ): void {
+    const next = typeof value === 'number' && value > 0 ? value : undefined;
+
+    speed.value = {
+      ...speed.value,
+      [kind]: next,
+      hover: kind === 'fly' && next === undefined ? false : speed.value.hover,
+    };
+  }
+
+  const hasFlight = computed(() => (speed.value.fly ?? 0) > 0);
 </script>
 
 <template>
-  <UForm
-    class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
-    attach
-    :state="speed"
+  <SpeciesEditorSection
+    :title="SPECIES_SPEED_EDITOR.title"
+    icon="tabler:run"
+    :hint="SPECIES_SPEED_EDITOR.titleHint"
   >
-    <UFormField
-      class="col-span-full md:col-span-6"
-      label="Скорость передвижения"
-      name="base"
-    >
-      <UInputNumber
-        v-model="speed.base"
-        placeholder="Введи скорость передвижения"
-        :min="0"
-      />
-    </UFormField>
-
-    <div
-      class="col-span-full grid grid-cols-1 gap-4 md:col-span-6 md:grid-cols-12"
+    <UForm
+      class="grid grid-cols-2 gap-3 md:grid-cols-4"
+      attach
+      :state="speed"
     >
       <UFormField
-        class="col-span-full md:col-span-8"
-        label="Скорость полета"
-        name="fly"
+        :label="SPECIES_SPEED_EDITOR.labels.walk"
+        name="base"
       >
         <UInputNumber
-          v-model="speed.fly"
-          placeholder="Введи скорость полета"
+          v-model="speed.base"
           :min="0"
+          :max="SPECIES_SPEED_EDITOR.max"
+          class="w-full"
         />
       </UFormField>
 
       <UFormField
-        class="col-span-full md:col-span-4"
-        label="Парит"
-        name="hover"
+        v-for="kind in SPECIES_OPTIONAL_SPEED_KINDS"
+        :key="kind"
+        :label="SPECIES_SPEED_EDITOR.labels[kind]"
+        :name="kind"
       >
-        <UCheckbox
-          v-model="speed.hover"
-          label="Да"
+        <UInputNumber
+          :model-value="getSpeedValue(kind)"
+          :min="0"
+          :max="SPECIES_SPEED_EDITOR.max"
+          class="w-full"
+          @update:model-value="setSpeedValue(kind, $event)"
         />
       </UFormField>
-    </div>
+    </UForm>
 
-    <UFormField
-      class="col-span-full md:col-span-6"
-      label="Скорость лазания"
-      name="climb"
-    >
-      <UInputNumber
-        v-model="speed.climb"
-        placeholder="Введи скорость лазания"
-        :min="0"
-      />
-    </UFormField>
+    <UCheckbox
+      v-if="hasFlight"
+      v-model="speed.hover"
+      :label="SPECIES_SPEED_EDITOR.hover"
+    />
 
-    <UFormField
-      class="col-span-full md:col-span-6"
-      label="Скорость плавания"
-      name="swim"
-    >
-      <UInputNumber
-        v-model="speed.swim"
-        placeholder="Введи скорость плавания"
-        :min="0"
-      />
-    </UFormField>
-  </UForm>
+    <p class="text-xs text-dimmed">
+      {{ SPECIES_SPEED_EDITOR.levelHint }}
+    </p>
+  </SpeciesEditorSection>
 </template>

@@ -3,6 +3,7 @@ import type {
   FeatAbilityBonus,
   FeatChoice,
   FeatCounter,
+  FeatEntityRef,
   FeatMechanics,
   FeatModifiers,
   FeatPrerequisiteDetails,
@@ -11,6 +12,8 @@ import type {
   FeatSpellGrant,
   FeatSpellListExpansion,
 } from './mechanics';
+
+import { normalizeActiveEffects } from '~active-effects/model';
 
 import { createFeatMechanics, createFeatSpellList } from './mechanics';
 import { fromFeatEditorRows } from './rows';
@@ -78,7 +81,21 @@ function buildChoices(choices: Array<FeatChoice>): Array<FeatChoice> {
       ...choice,
       key: choice.key.trim(),
       spellFilter: buildSpellFilter(choice.spellFilter),
+      // Категории бывают только у выбора черты и только непустыми: пустой
+      // список читается как «любая категория» и в JSONB не нужен
+      featCategories:
+        choice.type === 'FEAT' && choice.featCategories?.length
+          ? choice.featCategories
+          : undefined,
     }));
+}
+
+/**
+ * Готовит выдаваемые черты: ссылка без url — только что добавленная и
+ * незаполненная строка, отправлять её некуда.
+ */
+function buildFeats(feats: Array<FeatEntityRef>): Array<FeatEntityRef> {
+  return feats.filter((feat) => !!text(feat.url));
 }
 
 /** Готовит варианты повышения характеристик. */
@@ -195,10 +212,25 @@ function buildCounters(counters: Array<FeatCounter>): Array<FeatCounter> {
     }));
 }
 
-/** Готовит механику целиком. */
-function buildMechanics(mechanics: FeatMechanics): FeatMechanics | undefined {
+/**
+ * Готовит механику целиком: пустые блоки и выключенные флаги в JSONB не пишутся —
+ * они только мешают читать данные.
+ *
+ * Экспортируется ради предыстории: она хранит расширенные дары той же моделью и
+ * чистит их перед отправкой теми же правилами.
+ *
+ * @param mechanics механика из состояния формы.
+ * @returns механика без пустых блоков; `undefined` — записывать нечего.
+ */
+export function buildFeatMechanics(
+  mechanics: FeatMechanics,
+): FeatMechanics | undefined {
   return orUndefined({
-    abilityBonuses: buildAbilityBonuses(mechanics.abilityBonuses),
+    // Пустой список не отправляется: у класса и вида блока нет, и бэк отвечает
+    // 500 на `abilityBonuses: []`
+    abilityBonuses: orUndefinedList(
+      buildAbilityBonuses(mechanics.abilityBonuses ?? []),
+    ),
     choices: buildChoices(mechanics.choices),
     modifiers: buildModifiers(mechanics.modifiers) ?? mechanics.modifiers,
     proficiencies:
@@ -208,6 +240,9 @@ function buildMechanics(mechanics: FeatMechanics): FeatMechanics | undefined {
     // заклинательство» без списка ничего не описывает
     spellList: buildSpellList(mechanics.spellList) ?? createFeatSpellList(),
     counters: buildCounters(mechanics.counters),
+    // Пустой список не отправляется по той же причине, что и повышения: блок
+    // есть только у класса, и бэк отвечает 500 на `feats: []` у черты и вида
+    feats: orUndefinedList(buildFeats(mechanics.feats ?? [])),
   });
 }
 
@@ -250,6 +285,9 @@ export function transformFeatBeforeSubmit(state: FeatCreate): FeatCreate {
   return {
     ...state,
     editorRows: undefined,
+    // Эффекты чистит общий нормализатор раздела: он же обслуживает заклинания
+    // и магические предметы, поэтому правило «что считать пустым» одно на всех
+    activeEffects: normalizeActiveEffects(state.activeEffects),
     // Плоскую проекцию характеристик core-api пересобирает из
     // `mechanics.abilityBonuses` сам и в теле запроса её больше не ждёт
     abilities: undefined,
@@ -257,6 +295,8 @@ export function transformFeatBeforeSubmit(state: FeatCreate): FeatCreate {
     prerequisiteDetails: built.prerequisiteDetails
       ? buildPrerequisiteDetails(built.prerequisiteDetails)
       : undefined,
-    mechanics: built.mechanics ? buildMechanics(built.mechanics) : undefined,
+    mechanics: built.mechanics
+      ? buildFeatMechanics(built.mechanics)
+      : undefined,
   };
 }
