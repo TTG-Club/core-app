@@ -26,8 +26,6 @@ import {
   splitConditionParts,
 } from '~active-effects/model';
 
-import { parseEffectValue } from './effects';
-
 /** Вид броска, для которого подбирается режим. */
 export type SheetRollKind =
   | 'abilityCheck'
@@ -206,43 +204,6 @@ function matchesArmorConditionPart(
   }
 
   return armor.category === kind;
-}
-
-/**
- * Живая прибавка от условных изменений эффектов по одному ключу.
- *
- * Отдельно от `toInventoryBonusesFromEffects`: та считает бонусы ОДИН РАЗ, в
- * момент добавления записи на лист, и замороженная в ней условная прибавка не
- * ушла бы при снятии доспеха. Здесь условие проверяется каждый раз заново.
- *
- * Считаются только условия о носителе: условие о броске («цель ранена») листу
- * проверить нечем — ни цели, ни оружия в руке у него нет.
- *
- * @param character персонаж.
- * @param targetKey ключ изменения (`armorClass`, `initiative` и подобные).
- * @returns суммарная прибавка; ноль — подходящих изменений нет.
- */
-export function getConditionalEffectBonus(
-  character: Character,
-  targetKey: string,
-): number {
-  const armor = getSheetArmorState(character);
-
-  return collectAppliedEffects(character)
-    .filter((effect) => !effect.disabled && effect.effectTarget !== 'target')
-    .flatMap((effect) => effect.changes)
-    .filter(
-      (change) =>
-        change.key === targetKey
-        && change.mode === 'add'
-        && change.condition !== undefined
-        && matchesArmorCondition(change.condition, armor),
-    )
-    .reduce((total, change) => {
-      const parsed = parseEffectValue(change.value);
-
-      return parsed === null ? total : total + parsed;
-    }, 0);
 }
 
 /**

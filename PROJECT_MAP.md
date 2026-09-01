@@ -436,13 +436,23 @@ modals), so its capabilities are listed here rather than squeezed into the table
   flags. A record with no structure renders no block at all.
 - Everything else a magic item does to the sheet comes from the workshop's
   «Активные эффекты» block (`mechanics.activeEffects`). `model/effects.ts`
-  translates each numeric change into an `InventoryItemBonus` when the item is
-  added, so the sheet keeps working offline off its own snapshot: `ability.*`,
+  translates each plain numeric change into an `InventoryItemBonus` when the item
+  is added, so the sheet keeps working offline off its own snapshot: `ability.*`,
   `save.*`, `skill.*` (the VTTG camelCase id is mapped through
   `SKILL_NAME_BY_API_KEY`), `movement.*`, `armorClass`, `initiative`,
-  `spellSaveDC` and `attack.spell` reach their targets; changes with a condition,
-  formula values (`@…`), the `multiply` / `custom` modes, flags, auras, damage
-  parts and keys the sheet has no target for are dropped, as are disabled effects
+  `spellSaveDC`, `attack.spell`, `attack.melee` / `attack.ranged`,
+  `proficiencyBonus` and `hitPoints.max` reach their targets. What a snapshot
+  cannot carry is computed on every read instead of being dropped
+  (`getLiveEffectBonusEntries`): changes with a carrier condition («while wearing
+  armour») and formula values (`@mod.*`, `@prof`, `@level`), both in `add` mode
+  only — the value-setting modes with a formula belong to the AC body
+  (`getArmorClassEffectBody`). A formula that names the very value being computed
+  cannot loop: the target already in progress gets no live bonuses. Senses
+  (`sense.darkvision` and friends) join the sheet's vision through
+  `getVisionGrants`, and an effect's `conditionImmunities` reach the defences
+  panel. Still dropped: the `multiply` / `custom` modes, auras, damage parts,
+  conditions the sheet cannot evaluate (`roll.*`, `target.*`), the `@mod.spell` /
+  `@speed.*` tokens and keys the sheet has no target for, as are disabled effects
   and effects aimed at someone else. The `transfer` flag is not read — the
   sheet's own gate (the item's activation condition, and attunement where the
   item asks for it) plays that role. A bonus therefore carries a `mode` (`add` / `override` / `upgrade` /
@@ -452,9 +462,12 @@ modals), so its capabilities are listed here rather than squeezed into the table
   `getBaseSkillValue`) and equipment takes it from there, so a headband of
   intellect raises Intelligence to 19 while a written 20 stays untouched. The
   breakdown rows come out of the same fold, so each item is credited with what it
-  actually changed. AC is the exception in shape only: `add` rows keep flowing
-  through the «best armour wins» comparison, and the value-setting modes are
-  applied to the finished number (`getArmorClassWithItemLimits`). Bonuses saved
+  actually changed. AC is the exception in shape only: an item's `add` rows keep
+  flowing through the «best armour wins» comparison and the flat item term, the
+  value-setting modes are applied to the finished number
+  (`getArmorClassWithItemLimits`), and everything else — live rows from any
+  record plus the plain rows of features and of the sheet's own effects — is
+  summed into the «Эффекты» line of the breakdown. Bonuses saved
   before the modes existed read as plain `add`, and an item already sitting on a
   sheet keeps its old snapshot — effects added in the workshop later need the
   item re-added.
@@ -462,7 +475,10 @@ modals), so its capabilities are listed here rather than squeezed into the table
   «Активные эффекты» of their own. They ride onto the sheet with the record:
   passive changes are frozen into the feature's `bonuses` (the same shape
   equipment uses), while the effects themselves stay on the record so conditional
-  changes («while wearing armour») are re-checked on every read. Effects of the
+  and formula changes are re-checked on every read. The sheet's own effects
+  (`Character.activeEffects`, the «Эффекты» tab and the conditions grid) are a
+  third source of the very same bonuses: nothing freezes them, so their changes
+  are translated on every read. Effects of the
   species or class record itself land as their own feature row rather than being
   pinned to the first feature — a lineage has no features at all, and a class
   grants them by being taken; the class row appears only at its first level. The

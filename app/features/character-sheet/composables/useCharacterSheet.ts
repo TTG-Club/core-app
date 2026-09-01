@@ -98,6 +98,7 @@ import {
   getClampedClassLevels,
   getClampedInteger,
   getClassLevelHitPoints,
+  getEffectConditionImmunities,
   getEffectDamageDefences,
   getEffectiveSpeed,
   getFeatDefences,
@@ -397,6 +398,10 @@ export function useCharacterSheet() {
       vulnerabilities: union(
         granted.vulnerabilities,
         fromEffects.vulnerabilities,
+      ),
+      conditionImmunities: union(
+        granted.conditionImmunities,
+        getEffectConditionImmunities(character.value),
       ),
     };
   });

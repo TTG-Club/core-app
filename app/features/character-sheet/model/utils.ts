@@ -1,11 +1,12 @@
 import type { DropdownMenuItem } from '@nuxt/ui';
 
 import type { AbilityKey as ApiAbilityKey, Level } from '~/shared/types';
-import type { ActiveEffect } from '~active-effects/model';
+import type { ActiveEffect, EffectChange } from '~active-effects/model';
 import type { FeatureOptionEntry } from '~classes/model';
 import type { MagicItemBonuses } from '~magic-items/model';
 import type { RenderNode } from '~ui/markup';
 
+import type { SheetArmorState } from './effect-engine';
 import type {
   AbilityBonusMode,
   AbilityKey,
@@ -446,12 +447,16 @@ import {
 import {
   collectAppliedEffects,
   getCharacterEffectFlags,
-  getConditionalEffectBonus,
   getSheetArmorState,
   isSpeedZeroedByEffects,
   matchesArmorCondition,
 } from './effect-engine';
-import { parseEffectValue, toInventoryBonusesFromEffects } from './effects';
+import {
+  getEffectBonusTarget,
+  isSelfAppliedEffect,
+  parseEffectValue,
+  toInventoryBonusesFromEffects,
+} from './effects';
 import { DEFAULT_CHARACTER } from './mock';
 
 /**
@@ -479,25 +484,30 @@ export function getBaseProficiencyBonus(character: Character): number {
 }
 
 /**
- * Бонус мастерства листа: основа плюс свои бонусы из настроек. Считать бонус
- * мастерства персонажа нужно именно так — везде, где он участвует.
+ * Бонус мастерства листа: основа, свои бонусы из настроек и прибавки записей
+ * (камень Иоуна мастерства, эффект умения). Считать бонус мастерства персонажа
+ * нужно именно так — везде, где он участвует.
  *
- * Записи вида «бонус мастерства» здесь пропускаются: сам себе слагаемым он быть
- * не может, а без отбора подсчёт ушёл бы в бесконечную рекурсию. В остальных
- * целях (инициатива, навыки, спасброски) такие записи работают как обычно.
+ * Свои записи вида «бонус мастерства» здесь пропускаются: сам себе слагаемым он
+ * быть не может, а без отбора подсчёт ушёл бы в бесконечную рекурсию. В
+ * остальных целях (инициатива, навыки, спасброски) такие записи работают как
+ * обычно. Формулу эффекта с `@prof` от той же петли бережёт отбор целей в
+ * {@link getLiveEffectBonusEntries}.
  *
  * @param character персонаж.
  * @returns итоговый бонус мастерства.
  */
 export function getCharacterProficiencyBonus(character: Character): number {
-  return (
+  return getInventoryBonusTotal(
+    character,
+    [{ kind: 'proficiency-bonus' }],
     getBaseProficiencyBonus(character)
-    + getCustomBonusesValue(
-      character,
-      character.settings.customProficiencyBonuses.filter(
-        (bonus) => bonus.kind !== 'proficiency',
+      + getCustomBonusesValue(
+        character,
+        character.settings.customProficiencyBonuses.filter(
+          (bonus) => bonus.kind !== 'proficiency',
+        ),
       ),
-    )
   );
 }
 
@@ -616,12 +626,28 @@ function applyInventoryBonus(value: number, bonus: InventoryItemBonus): number {
 }
 
 /**
- * Источник пассивного бонуса в разборе значения: предмет или черта.
- * Идентификатор нужен, чтобы сложить вклад одного источника в одну строку.
+ * Источник пассивного бонуса в разборе значения: предмет, умение или свой
+ * эффект листа. Идентификатор нужен, чтобы сложить вклад одного источника в
+ * одну строку, а вид — там, где источники считаются по-разному: плоские
+ * прибавки предметов класс доспеха складывает своим путём.
  */
 interface PassiveBonusSource {
   id: string;
   name: string;
+  kind: 'item' | 'feature' | 'effect';
+}
+
+/** Пассивный бонус вместе с источником и способом подсчёта. */
+interface PassiveBonusEntry {
+  source: PassiveBonusSource;
+  bonus: InventoryItemBonus;
+
+  /**
+   * Бонус посчитан на лету (условие или формула), а не взят из снимка записи.
+   * По нему класс доспеха отличает прибавки, которые он ещё не сложил своим
+   * путём, от уже учтённых снимков предметов.
+   */
+  live: boolean;
 }
 
 /**
@@ -629,10 +655,12 @@ interface PassiveBonusSource {
  * равном — в порядке источников. Порядок важен только режимам, доводящим
  * значение до заданного: прибавкам он безразличен.
  *
- * Источников два: работающее снаряжение и черты. И то, и другое мастерская
- * описывает активными эффектами, а лист переводит их числовые изменения в
- * бонусы одного вида — значит, и считаться они должны одной цепочкой, иначе
- * «повысить до 19» от черты и от предмета спорили бы каждый со своим итогом.
+ * Источников три: работающее снаряжение, умения листа и свои эффекты игрока.
+ * Все трое мастерская (или сам игрок) описывает активными эффектами, а лист
+ * переводит их изменения в бонусы одного вида — значит, и считаться они должны
+ * одной цепочкой, иначе «повысить до 19» от умения и от предмета спорили бы
+ * каждый со своим итогом. К снимкам записей добавляются живые бонусы: условия и
+ * формулы, которые снимок унести не может.
  *
  * @param character персонаж.
  * @param targets цели подсчёта.
@@ -641,34 +669,231 @@ interface PassiveBonusSource {
 function getActiveInventoryBonusEntries(
   character: Character,
   targets: InventoryBonusTarget[],
-): Array<{ source: PassiveBonusSource; bonus: InventoryItemBonus }> {
+): PassiveBonusEntry[] {
   const matchesTarget = (bonus: InventoryItemBonus): boolean =>
     targets.some((target) =>
       isMatchingBonus(bonus, target.kind, target.key ?? ''),
     );
 
-  const itemEntries = character.inventory
+  const itemEntries: PassiveBonusEntry[] = character.inventory
     .filter(isActiveBonusItem)
     .flatMap((item) =>
-      item.bonuses
-        .filter(matchesTarget)
-        .map((bonus) => ({ source: { id: item.id, name: item.name }, bonus })),
+      item.bonuses.filter(matchesTarget).map((bonus) => ({
+        source: { id: item.id, name: item.name, kind: 'item' },
+        bonus,
+        live: false,
+      })),
     );
 
   // Черта работает всегда: снимать её, как надетый предмет, нечем — потому
   // условия работы у неё и нет.
-  const featureEntries = character.features.flatMap((feature) =>
-    (feature.bonuses ?? []).filter(matchesTarget).map((bonus) => ({
-      source: { id: feature.id, name: feature.name },
-      bonus,
-    })),
+  const featureEntries: PassiveBonusEntry[] = character.features.flatMap(
+    (feature) =>
+      (feature.bonuses ?? []).filter(matchesTarget).map((bonus) => ({
+        source: { id: feature.id, name: feature.name, kind: 'feature' },
+        bonus,
+        live: false,
+      })),
   );
 
-  return [...itemEntries, ...featureEntries].sort(
+  // Свои эффекты листа: снимка бонусов у них нет и быть не может — игрок правит
+  // эффект прямо на листе, — поэтому изменения переводятся в бонусы здесь же.
+  // Выключенный эффект отсеивает сам перевод.
+  const effectEntries: PassiveBonusEntry[] = character.activeEffects.flatMap(
+    (effect) =>
+      toInventoryBonusesFromEffects([effect])
+        .filter(matchesTarget)
+        .map((bonus) => ({
+          source: { id: effect.id, name: effect.name, kind: 'effect' },
+          bonus,
+          live: false,
+        })),
+  );
+
+  return [
+    ...itemEntries,
+    ...featureEntries,
+    ...effectEntries,
+    ...getLiveEffectBonusEntries(character, targets),
+  ].sort(
     (first, second) =>
       getInventoryBonusPriority(first.bonus)
       - getInventoryBonusPriority(second.bonus),
   );
+}
+
+/** Запись листа вместе с её активными эффектами. */
+interface EffectCarrier {
+  source: PassiveBonusSource;
+  effects: ActiveEffect[];
+}
+
+/**
+ * Записи листа, чьи активные эффекты действуют прямо сейчас: свои эффекты,
+ * умения и надетое снаряжение. Умение работает, пока оно на листе, предмет —
+ * пока надет; своими эффектами распоряжается сам игрок.
+ *
+ * @param character персонаж.
+ * @returns носители эффектов с подписью источника.
+ */
+function getEffectCarriers(character: Character): EffectCarrier[] {
+  // Свой эффект листа сам себе источник: записи, от которой он пришёл, у него
+  // нет — игрок завёл его руками или наложил состояние.
+  const ownCarriers: EffectCarrier[] = character.activeEffects.map(
+    (effect) => ({
+      source: { id: effect.id, name: effect.name, kind: 'effect' },
+      effects: [effect],
+    }),
+  );
+
+  const featureCarriers: EffectCarrier[] = character.features.map(
+    (feature) => ({
+      source: { id: feature.id, name: feature.name, kind: 'feature' },
+      effects: feature.activeEffects ?? [],
+    }),
+  );
+
+  const itemCarriers: EffectCarrier[] = character.inventory
+    .filter((item) => item.equipped)
+    .map((item) => ({
+      source: { id: item.id, name: item.name, kind: 'item' },
+      effects: item.activeEffects ?? [],
+    }));
+
+  return [...ownCarriers, ...featureCarriers, ...itemCarriers];
+}
+
+/**
+ * Цели, которые лист считает прямо сейчас. Формула эффекта умеет сослаться на
+ * значение листа (`ability.strength` от `@mod.str`, КД от `@mod.int`), а оно
+ * снова спросит живые бонусы — петлю обрываем по цели: та, что уже в счёте,
+ * живых прибавок не получает. Множество живёт между вызовами, но не переживает
+ * их: расчёт синхронный, и к возврату оно пусто.
+ */
+const LIVE_BONUS_TARGETS_IN_PROGRESS = new Set<string>();
+
+/**
+ * Опознание цели в защите от петли: вид и ключ вместе — прибавка к Силе не
+ * должна закрывать счёт Ловкости.
+ *
+ * @param target цель подсчёта.
+ * @returns строковый ключ цели.
+ */
+function getBonusTargetId(target: InventoryBonusTarget): string {
+  return `${target.kind}:${target.key ?? ''}`;
+}
+
+/** Значения листа, нужные, чтобы разобрать изменение эффекта. */
+interface EffectComputeContext {
+  character: Character;
+  armor: SheetArmorState;
+}
+
+/** Тот же контекст для живого бонуса: считаются только запрошенные цели. */
+interface LiveBonusContext extends EffectComputeContext {
+  wantedTargetIds: ReadonlySet<string>;
+}
+
+/**
+ * Живой бонус из одного изменения эффекта — сосед `toInventoryBonus` из
+ * `effects.ts`: тот делает снимок, этот считает то, что снимку не по силам.
+ *
+ * Берутся только изменения режима «добавить»: замену значения формулой у класса
+ * доспеха считает {@link getArmorClassEffectBody} — она заменяет КД ТЕЛА, а не
+ * доводит итог, и второй раз тем же числом её считать нельзя.
+ *
+ * @param context значения листа, нужные для подсчёта.
+ * @param change изменение эффекта.
+ * @param id идентификатор строки бонуса.
+ * @returns бонус листа; null — изменение считает не этот путь.
+ */
+function toLiveEffectBonus(
+  context: LiveBonusContext,
+  change: EffectChange,
+  id: string,
+): InventoryItemBonus | null {
+  const target = getEffectBonusTarget(change.key);
+
+  if (
+    !target
+    || change.mode !== 'add'
+    || !context.wantedTargetIds.has(getBonusTargetId(target))
+  ) {
+    return null;
+  }
+
+  // Числовое изменение без условия лист уже унёс в снимок бонусов записи —
+  // здесь остаётся то, что снимок выразить не может.
+  const applies = change.condition
+    ? matchesArmorCondition(change.condition, context.armor)
+    : parseEffectValue(change.value) === null;
+
+  const value = applies
+    ? evaluateEffectFormula(context.character, change.value)
+    : null;
+
+  if (value === null || value === 0) {
+    return null;
+  }
+
+  return {
+    id,
+    kind: target.kind,
+    key: target.key ?? '',
+    value,
+    mode: 'add',
+    priority: change.priority,
+  };
+}
+
+/**
+ * Бонусы, которые снимок записи унести не мог: изменения с условием (его
+ * проверяют каждый раз заново — прибавка обязана уйти при снятии доспеха) и с
+ * формулой (её значение меняется вместе с характеристиками листа).
+ *
+ * Условия считаются только о носителе: условие о броске («цель ранена») листу
+ * проверить нечем — ни цели, ни оружия в руке у него нет.
+ *
+ * @param character персонаж.
+ * @param targets цели подсчёта.
+ * @returns живые бонусы с источниками.
+ */
+function getLiveEffectBonusEntries(
+  character: Character,
+  targets: InventoryBonusTarget[],
+): PassiveBonusEntry[] {
+  const targetIds = targets.map(getBonusTargetId);
+
+  if (targetIds.some((id) => LIVE_BONUS_TARGETS_IN_PROGRESS.has(id))) {
+    return [];
+  }
+
+  for (const id of targetIds) {
+    LIVE_BONUS_TARGETS_IN_PROGRESS.add(id);
+  }
+
+  const context: LiveBonusContext = {
+    character,
+    armor: getSheetArmorState(character),
+    wantedTargetIds: new Set(targetIds),
+  };
+
+  try {
+    return getEffectCarriers(character).flatMap(({ source, effects }) =>
+      effects.filter(isSelfAppliedEffect).flatMap((effect) =>
+        effect.changes
+          .map((change, index) =>
+            toLiveEffectBonus(context, change, `${effect.id}:${index}`),
+          )
+          .filter((bonus) => bonus !== null)
+          .map((bonus) => ({ source, bonus, live: true })),
+      ),
+    );
+  } finally {
+    for (const id of targetIds) {
+      LIVE_BONUS_TARGETS_IN_PROGRESS.delete(id);
+    }
+  }
 }
 
 /**
@@ -682,9 +907,9 @@ function getInventoryBonusPriority(bonus: InventoryItemBonus): number {
 }
 
 /**
- * Значение цели после всех прибавок работающего снаряжения. Основу лист считает
- * сам (записанная характеристика, модификатор с владением, скорость), а
- * снаряжение доводит её до итога.
+ * Значение цели после всех прибавок записей листа. Основу лист считает сам
+ * (записанная характеристика, модификатор с владением, скорость), а снаряжение,
+ * умения и активные эффекты доводят её до итога.
  *
  * @param character персонаж.
  * @param targets цели подсчёта.
@@ -704,14 +929,15 @@ export function getInventoryBonusTotal(
 
 /**
  * Источники, меняющие значение цели, — строками разбора: без них итог не
- * сходится ни с характеристикой, ни с владением. Вклад источника считается по
- * шагам той же свёртки, поэтому повязка интеллекта показывает не «19», а
- * ровно то, на сколько она подняла характеристику.
+ * сходится ни с характеристикой, ни с владением. Источником бывает предмет,
+ * умение и свой эффект листа; вклад считается по шагам той же свёртки, поэтому
+ * повязка интеллекта показывает не «19», а ровно то, на сколько она подняла
+ * характеристику.
  *
  * @param character персонаж.
  * @param targets цели подсчёта.
- * @param base значение до снаряжения.
- * @returns вклады предметов; пустой список — таких предметов нет.
+ * @param base значение до прибавок записей.
+ * @returns вклады источников; пустой список — таких записей нет.
  */
 export function getInventoryBonusSources(
   character: Character,
@@ -778,13 +1004,12 @@ export function getInventorySavingThrowTotal(
 }
 
 /**
- * Вклады предметов в спасбросок: адресные и общие вместе, в одном списке
- * разбора.
+ * Вклады записей в спасбросок: адресные и общие вместе, в одном списке разбора.
  *
  * @param character персонаж.
  * @param ability характеристика спасброска.
- * @param base значение спасброска до снаряжения.
- * @returns вклады предметов в спасбросок.
+ * @param base значение спасброска до прибавок записей.
+ * @returns вклады источников в спасбросок.
  */
 export function getInventorySavingThrowSources(
   character: Character,
@@ -2885,6 +3110,9 @@ export function getInventoryBonusTargetGroups(
         toInventoryBonusTargetOption('initiative', ''),
         toInventoryBonusTargetOption('spell-save-dc', ''),
         toInventoryBonusTargetOption('spell-attack', ''),
+        toInventoryBonusTargetOption('melee-attack', ''),
+        toInventoryBonusTargetOption('ranged-attack', ''),
+        toInventoryBonusTargetOption('proficiency-bonus', ''),
         toInventoryBonusTargetOption('hit-points-max', ''),
       ],
     },
@@ -4112,6 +4340,27 @@ function evaluateEffectFormula(
   return total;
 }
 
+/**
+ * Прибавки к классу доспеха от активных эффектов — одной строкой разбора.
+ *
+ * Идут сюда живые бонусы (условие или формула) от кого угодно и числовые от
+ * умений и своих эффектов листа. Числовые прибавки предметов сюда не идут:
+ * их лист уже сложил — надбавка брони участвует в зачёте «лучшая броня», а
+ * плащ и кольцо защиты дают плоский `itemBonus`.
+ *
+ * @param character персонаж.
+ * @returns суммарная прибавка; 0 — подходящих эффектов нет.
+ */
+function getArmorClassEffectBonus(character: Character): number {
+  return getActiveInventoryBonusEntries(character, [{ kind: 'armor-class' }])
+    .filter(
+      (entry) =>
+        getInventoryBonusMode(entry.bonus) === 'add'
+        && (entry.live || entry.source.kind !== 'item'),
+    )
+    .reduce((total, entry) => total + entry.bonus.value, 0);
+}
+
 /** Режимы изменения, которыми эффект задаёт КД тела целиком. */
 const ARMOR_CLASS_BODY_EFFECT_MODES: ReadonlySet<string> = new Set([
   'override',
@@ -4207,15 +4456,16 @@ export function getArmorClassBreakdown(
   // основа КД.
   const featBonus = getFeatArmorClassBonus(character.features);
 
-  // Условные прибавки эффектов считаются отдельной строкой: источником бывает и
-  // черта, и надетый предмет, и в строке «Черты» прибавка от наручей вводила бы
-  // в заблуждение. Считается каждый раз заново — чтобы уйти при снятии доспеха.
-  const conditionalBonus = getConditionalEffectBonus(character, 'armorClass');
+  // Прибавки эффектов считаются отдельной строкой: источником бывает и черта, и
+  // надетый предмет, и в строке «Черты» прибавка от наручей вводила бы в
+  // заблуждение. Живая часть (формулы и условия) считается каждый раз заново —
+  // чтобы уйти при снятии доспеха и сойтись с текущим модификатором.
+  const effectBonus = getArmorClassEffectBonus(character);
 
   if (custom) {
     const value = abilityBonuses.reduce(
       (total, bonus) => total + bonus.modifier,
-      base + featBonus + conditionalBonus,
+      base + featBonus + effectBonus,
     );
 
     return {
@@ -4230,7 +4480,7 @@ export function getArmorClassBreakdown(
       shieldBonus: 0,
       itemBonus: 0,
       featBonus,
-      conditionalBonus,
+      effectBonus,
       extraAbilities: abilityBonuses,
     };
   }
@@ -4335,7 +4585,7 @@ export function getArmorClassBreakdown(
         + shieldBonus
         + itemBonus
         + featBonus
-        + conditionalBonus
+        + effectBonus
         + extraBonus,
     ),
     custom: false,
@@ -4350,7 +4600,7 @@ export function getArmorClassBreakdown(
     shieldBonus,
     itemBonus,
     featBonus,
-    conditionalBonus,
+    effectBonus,
     extraAbilities,
   };
 }
@@ -4502,17 +4752,27 @@ export function getWeaponAttackBonus(
     ? getCharacterProficiencyBonus(character)
     : 0;
 
-  const value =
+  const base =
     proficiencyBonus
     + getAbilityModifier(character, ability)
     + weapon.attackBonus
     - getExhaustionD20Penalty(character);
+
+  // Прибавки к самому броску атаки (эффект «+1 к рукопашным атакам», свой бонус
+  // записи) идут поверх слагаемых разбора: в бонус оружия им нельзя — тот про
+  // сам предмет в руке и показывается своей строкой.
+  const value = getInventoryBonusTotal(
+    character,
+    [{ kind: weapon.ranged ? 'ranged-attack' : 'melee-attack' }],
+    base,
+  );
 
   return {
     value,
     ability,
     weaponBonus: weapon.attackBonus,
     proficiencyBonus,
+    effectBonus: value - base,
     heavyAbility: getHeavyWeaponAbility(character, weapon),
   };
 }
@@ -9084,17 +9344,18 @@ function toVisionDistance(range: number, unit: SpeedUnit): number {
 }
 
 /**
- * Чувства, выданные особенностями листа: от какой записи и на какую дистанцию.
+ * Чувства, выданные листу: от какой записи и на какую дистанцию. Считаются и
+ * снимки механики особенностей, и активные эффекты записей.
  *
  * Нужны там, где одного итогового числа мало: в редакторе зрения игрок правит
  * своё значение и должен видеть, что дистанция на листе больше не потому, что
- * поле врёт, а потому что чувство пришло от черты.
+ * поле врёт, а потому что чувство пришло от черты или надетого предмета.
  *
  * @param character персонаж.
  * @returns выданные чувства в порядке записей особенностей.
  */
 export function getVisionGrants(character: Character): VisionGrant[] {
-  return character.features.flatMap((feature) =>
+  const featureGrants = character.features.flatMap((feature) =>
     (feature.modifiers?.senses ?? []).flatMap((sense) => {
       const key = sense.type ? VISION_KEY_BY_FEAT_SENSE[sense.type] : undefined;
 
@@ -9110,6 +9371,109 @@ export function getVisionGrants(character: Character): VisionGrant[] {
         },
       ];
     }),
+  );
+
+  return [...featureGrants, ...getEffectVisionGrants(character)];
+}
+
+/**
+ * Иммунитеты к состояниям, выданные активными эффектами.
+ *
+ * У эффекта для них своё поле, а не флаг: им и пользуются мастерская («Кольцо
+ * свободы действий») и шаблоны состояний (Окаменевший даёт иммунитет к
+ * Отравлению). Ключи словаря эффектов строчные, а подписи листа лежат по кодам
+ * справочника — отсюда приведение к верхнему регистру.
+ *
+ * @param character персонаж.
+ * @returns подписи состояний; пустой список — таких эффектов нет.
+ */
+export function getEffectConditionImmunities(character: Character): string[] {
+  return uniq(
+    collectAppliedEffects(character)
+      .filter(isSelfAppliedEffect)
+      .flatMap((effect) => effect.conditionImmunities ?? [])
+      .flatMap((key) => {
+        const label = CONDITION_LABELS[key.toUpperCase()];
+
+        return label ? [label] : [];
+      }),
+  );
+}
+
+/**
+ * Ключ чувства в словаре эффектов → тип зрения листа. Телепатии в зрении листа
+ * нет: она не дистанция обзора, а способ общения, и показывать её в блоке
+ * зрения было бы неверно.
+ */
+const VISION_KEY_BY_EFFECT_SENSE: Record<string, VisionKey> = {
+  'sense.darkvision': 'darkvision',
+  'sense.blindsight': 'blindsight',
+  'sense.tremorsense': 'tremorsense',
+  'sense.truesight': 'truesight',
+};
+
+/**
+ * Чувство, выданное одним изменением эффекта.
+ *
+ * @param context значения листа, нужные для разбора.
+ * @param change изменение эффекта.
+ * @param sourceName подпись записи-носителя.
+ * @returns выданное чувство; null — изменение не про чувство листа либо его
+ *   условие сейчас не выполнено.
+ */
+function toEffectVisionGrant(
+  context: EffectComputeContext,
+  change: EffectChange,
+  sourceName: string,
+): VisionGrant | null {
+  const key = VISION_KEY_BY_EFFECT_SENSE[change.key];
+
+  if (
+    !key
+    || (change.condition
+      && !matchesArmorCondition(change.condition, context.armor))
+  ) {
+    return null;
+  }
+
+  const range = evaluateEffectFormula(context.character, change.value);
+
+  if (range === null || range <= 0) {
+    return null;
+  }
+
+  return {
+    key,
+    source: sourceName,
+    distance: toVisionDistance(range, context.character.vision.unit),
+  };
+}
+
+/**
+ * Чувства, выданные активными эффектами: очки ночного видения дают тёмное
+ * зрение, пока надеты, — у магического предмета это единственный способ его
+ * записать, своего поля чувств в его механике нет.
+ *
+ * Режим изменения здесь не смотрят: чувство задаётся дистанцией, а лист берёт
+ * большее из своего и выданного — тем же правилом, что и у черт.
+ *
+ * @param character персонаж.
+ * @returns выданные чувства в порядке записей-носителей.
+ */
+function getEffectVisionGrants(character: Character): VisionGrant[] {
+  const context: EffectComputeContext = {
+    character,
+    armor: getSheetArmorState(character),
+  };
+
+  return getEffectCarriers(character).flatMap(({ source, effects }) =>
+    effects
+      .filter(isSelfAppliedEffect)
+      .flatMap((effect) =>
+        effect.changes
+          .map((change) => toEffectVisionGrant(context, change, source.name))
+          .filter((grant) => grant !== null),
+      ),
   );
 }
 

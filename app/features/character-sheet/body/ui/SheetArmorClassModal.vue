@@ -93,7 +93,7 @@
       !draftCustom.value
       || breakdown.value.extraAbilities.length > 0
       || breakdown.value.featBonus !== 0
-      || breakdown.value.conditionalBonus !== 0,
+      || breakdown.value.effectBonus !== 0,
   );
 
   function handleAbilities(value: unknown): void {
@@ -261,18 +261,18 @@
           </span>
         </div>
 
-        <!-- Своей строкой, а не в «Чертах»: условную прибавку даёт и черта, и
+        <!-- Своей строкой, а не в «Чертах»: прибавку эффектом даёт и черта, и
              надетый предмет — «Наручи защиты» под подписью «Черты» сбивали бы. -->
         <div
-          v-if="breakdown.conditionalBonus !== 0"
+          v-if="breakdown.effectBonus !== 0"
           class="flex items-center justify-between gap-4 text-sm"
         >
           <span class="text-toned">
-            {{ ARMOR_CLASS_LABELS.conditionalTitle }}
+            {{ ARMOR_CLASS_LABELS.effectTitle }}
           </span>
 
           <span class="text-toned">
-            {{ getFormattedBonus(breakdown.conditionalBonus) }}
+            {{ getFormattedBonus(breakdown.effectBonus) }}
           </span>
         </div>
 

@@ -467,6 +467,12 @@
       );
     }
 
+    if (attack.effectBonus !== 0) {
+      tooltipParts.push(
+        getBonusPart(INVENTORY_STAT_HINT_LABELS.effects, attack.effectBonus),
+      );
+    }
+
     const proficiencyHint = hasWeaponProficiency.value
       ? ''
       : ` · ${INVENTORY_STAT_HINT_LABELS.noProficiency}`;

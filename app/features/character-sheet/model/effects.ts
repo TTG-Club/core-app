@@ -36,6 +36,9 @@ const EFFECT_FIXED_TARGETS: Record<string, InventoryBonusTarget> = {
   'initiative': { kind: 'initiative' },
   'spellSaveDC': { kind: 'spell-save-dc' },
   'attack.spell': { kind: 'spell-attack' },
+  'attack.melee': { kind: 'melee-attack' },
+  'attack.ranged': { kind: 'ranged-attack' },
+  'proficiencyBonus': { kind: 'proficiency-bonus' },
   'hitPoints.max': { kind: 'hit-points-max' },
 };
 
@@ -107,6 +110,40 @@ export function parseEffectValue(value: string): number | null {
 }
 
 /**
+ * Действует ли эффект на владельца записи прямо сейчас.
+ *
+ * Выключенный пропускается целиком, как и нацеленный на кого-то другого и аура:
+ * лист считает только то, что запись даёт своему владельцу, — ауру и чужую цель
+ * отыгрывает виртуальный стол.
+ *
+ * @param effect активный эффект записи.
+ * @returns true — эффект работает на владельца.
+ */
+export function isSelfAppliedEffect(effect: ActiveEffect): boolean {
+  return !effect.disabled && effect.effectTarget !== 'target' && !effect.aura;
+}
+
+/**
+ * Цель бонуса листа по ключу изменения эффекта.
+ *
+ * @param key ключ изменения (`armorClass`, `ability.strength`).
+ * @returns цель бонуса; null — такой цели лист не считает.
+ */
+export function getEffectBonusTarget(key: string): InventoryBonusTarget | null {
+  return EFFECT_BONUS_TARGETS[key] ?? null;
+}
+
+/**
+ * Режим бонуса листа по режиму изменения эффекта.
+ *
+ * @param mode режим изменения.
+ * @returns режим бонуса; null — такого режима лист не считает.
+ */
+export function getEffectBonusMode(mode: string): InventoryBonusMode | null {
+  return EFFECT_BONUS_MODES[mode] ?? null;
+}
+
+/**
  * Бонус листа из одного изменения эффекта.
  *
  * @param change изменение эффекта.
@@ -117,14 +154,14 @@ function toInventoryBonus(
   change: EffectChange,
   id: string,
 ): InventoryItemBonus | null {
-  // Условие («roll.hasAdvantage === true») лист вычислить не может: такое
-  // изменение работает не всегда, а пассивный бонус — всегда.
+  // Условие («без доспеха», «цель ранена») в снимок не унести: оно проверяется
+  // каждый раз заново, этим занят живой путь бонусов эффектов.
   if (change.condition) {
     return null;
   }
 
-  const target = EFFECT_BONUS_TARGETS[change.key];
-  const mode = EFFECT_BONUS_MODES[change.mode];
+  const target = getEffectBonusTarget(change.key);
+  const mode = getEffectBonusMode(change.mode);
   const value = parseEffectValue(change.value);
 
   if (!target || !mode || value === null) {
@@ -150,10 +187,9 @@ function toInventoryBonus(
 /**
  * Пассивные бонусы предмета из его активных эффектов.
  *
- * Отключённый эффект пропускается целиком, как и нацеленный на кого-то другого:
- * лист считает только то, что предмет даёт своему владельцу. Признак переноса
- * при экипировке (`transfer`) здесь не смотрят — у листа для этого своё
- * условие: бонусы даёт надетый предмет, а требующий настройки — настроенный.
+ * Признак переноса при экипировке (`transfer`) здесь не смотрят — у листа для
+ * этого своё условие: бонусы даёт надетый предмет, а требующий настройки —
+ * настроенный.
  *
  * @param effects активные эффекты магического предмета.
  * @returns бонусы для записи инвентаря; пустой список — считать нечего.
@@ -162,10 +198,7 @@ export function toInventoryBonusesFromEffects(
   effects: ActiveEffect[],
 ): InventoryItemBonus[] {
   return effects
-    .filter(
-      (effect) =>
-        !effect.disabled && effect.effectTarget !== 'target' && !effect.aura,
-    )
+    .filter(isSelfAppliedEffect)
     .flatMap((effect) =>
       effect.changes
         .map((change, index) =>

@@ -883,7 +883,7 @@ export const ARMOR_CLASS_LABELS: Record<
   | 'shieldTitle'
   | 'itemTitle'
   | 'featTitle'
-  | 'conditionalTitle'
+  | 'effectTitle'
   | 'totalTitle'
   | 'equipmentHint',
   string
@@ -920,7 +920,7 @@ export const ARMOR_CLASS_LABELS: Record<
   shieldTitle: 'Щит',
   itemTitle: 'Магические предметы',
   featTitle: 'Черты',
-  conditionalTitle: 'Эффекты по условию',
+  effectTitle: 'Эффекты',
   totalTitle: 'Итоговый КД',
   equipmentHint:
     'Надевайте доспехи и щит на вкладке «Снаряжение» — в зачёт идёт доспех с наибольшим КД, щит складывается сверху.',
@@ -1804,9 +1804,9 @@ export const VISION_ORDER: VisionKey[] = [
 export const VISION_EDITOR_LABELS = {
   unit: 'Единицы',
   normalHint: '0 — без ограничений',
-  grantsTitle: 'Выдано особенностями:',
+  grantsTitle: 'Выдано особенностями и снаряжением:',
   effectiveHint:
-    'Лист берёт большее из своего значения и выданного особенностями.',
+    'Лист берёт большее из своего значения и выданного особенностями, эффектами и надетым снаряжением.',
 };
 
 /** Минимальная дистанция зрения. */
@@ -3692,6 +3692,9 @@ export const INVENTORY_STAT_HINT_LABELS = {
   /** Слагаемое собственного бонуса оружия — общее для атаки и урона. */
   weapon: 'оружие',
 
+  /** Слагаемое прибавки от эффектов и своих бонусов записей. */
+  effects: 'эффекты',
+
   /**
    * Хвост разбора атаки, когда владения этим оружием нет: без пояснения
    * пропавший бонус мастерства выглядит ошибкой подсчёта.
@@ -4160,6 +4163,9 @@ export const INVENTORY_BONUS_TARGET_LABELS: Record<
   | 'initiative'
   | 'spell-attack'
   | 'spell-save-dc'
+  | 'melee-attack'
+  | 'ranged-attack'
+  | 'proficiency-bonus'
   | 'hit-points-max',
   string
 > = {
@@ -4168,6 +4174,9 @@ export const INVENTORY_BONUS_TARGET_LABELS: Record<
   'armor-class': 'Класс доспеха',
   'spell-save-dc': 'Сложность заклинаний',
   'spell-attack': 'Атака заклинанием',
+  'melee-attack': 'Атака рукопашным оружием',
+  'ranged-attack': 'Атака дальнобойным оружием',
+  'proficiency-bonus': 'Бонус мастерства',
   'initiative': 'Инициатива',
   'hit-points-max': 'Максимум хитов',
 };
