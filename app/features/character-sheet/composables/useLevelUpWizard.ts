@@ -1100,16 +1100,28 @@ export function useLevelUpWizard(): LevelUpWizard {
     }
   }
 
-  /** Снятие выборов и подписей, умений которых больше нет среди шагов. */
+  /**
+   * Снятие ответов, вопросов которых больше нет среди шагов: смена подкласса
+   * уносит его умения, а с ними и выбранное в них.
+   *
+   * Ответы пикеров лежат под идентификатором ВЫБОРА (`<умение>:<ключ>`), а
+   * подписи — под идентификатором умения, поэтому наборов ключей два. Один на
+   * оба словаря вычищал ответы выборов до единого: выбор подкласса на третьем
+   * уровне забирал воззвания, выбранные шагом раньше.
+   */
   function pruneSelections(): void {
-    const knownIds = new Set(
-      steps.value.flatMap((step) => step.features.map((row) => row.id)),
+    const rows = steps.value.flatMap((step) => step.features);
+
+    const knownFeatureIds = new Set(rows.map((row) => row.id));
+
+    const knownChoiceIds = new Set(
+      rows.flatMap((row) => row.choices.map((choice) => choice.id)),
     );
 
     drafts.value = drafts.value.map((draft) => ({
       ...draft,
-      selections: pickKnownEntries(draft.selections, knownIds),
-      notes: pickKnownEntries(draft.notes, knownIds),
+      selections: pickKnownEntries(draft.selections, knownChoiceIds),
+      notes: pickKnownEntries(draft.notes, knownFeatureIds),
     }));
   }
 
