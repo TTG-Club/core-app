@@ -29,10 +29,14 @@ import { CasterType } from './detail';
 import { getClassProficiencyBonus } from './mechanics';
 import {
   FULL_CASTER_SPELL_SLOTS,
+  getPactMagicLevel,
+  getPactMagicRowLabel,
+  getPactSpellSlotsByLevel,
   HALF_CASTER_SPELL_SLOTS,
   MULTICLASS_SPELL_SLOTS,
   PACT_CASTER_SPELL_SLOTS_COUNT,
   PACT_CASTER_SPELL_SLOTS_LEVEL,
+  SPELL_SLOT_LEVELS,
   THIRD_CASTER_SPELL_SLOTS,
 } from './spell-slots';
 
@@ -256,47 +260,49 @@ function getClassByLevel(
 }
 
 /**
- * Ячейки заклинаний сборки — однострочной таблицей от уровня заклинателя.
- * У сборки без заклинателей её нет вовсе.
+ * Ячейки заклинаний сборки — таблицей по кругам: строка общих ячеек от уровня
+ * заклинателя и, если в сборке есть колдун, отдельная строка ячеек Магии
+ * договора — они в общий уровень не входят. У сборки без заклинателей таблицы
+ * нет вовсе.
  */
 function getMulticlassSlotsTable(detail: MulticlassDetailResponse): string {
+  const rows: string[][] = [];
+
   const spellcastingLevel = LEVELS.find(
     (level) => level === detail.spellcastingLevel,
   );
 
-  if (spellcastingLevel === undefined) {
-    return '';
-  }
-
-  if (detail.casterType === CasterType.PACT) {
-    return toSlotsTable(PACT_SLOT_COLUMNS, spellcastingLevel, [
-      String(PACT_CASTER_SPELL_SLOTS_COUNT[spellcastingLevel]),
-      String(PACT_CASTER_SPELL_SLOTS_LEVEL[spellcastingLevel]),
+  if (
+    detail.casterType === CasterType.MULTICLASS
+    && spellcastingLevel !== undefined
+  ) {
+    rows.push([
+      String(spellcastingLevel),
+      ...MULTICLASS_SPELL_SLOTS[spellcastingLevel].map(toSlotCell),
     ]);
   }
 
-  if (detail.casterType !== CasterType.MULTICLASS) {
+  const pactMagicLevel = LEVELS.find(
+    (level) => level === getPactMagicLevel(detail.multiclass),
+  );
+
+  if (pactMagicLevel !== undefined) {
+    rows.push([
+      escapeMarkdownCell(getPactMagicRowLabel(detail.multiclass)),
+      ...getPactSpellSlotsByLevel(pactMagicLevel).map(toSlotCell),
+    ]);
+  }
+
+  if (rows.length === 0) {
     return '';
   }
 
-  const slots = MULTICLASS_SPELL_SLOTS[spellcastingLevel];
-
-  return toSlotsTable(
-    range(1, slots.length + 1).map(toSlotColumn),
-    spellcastingLevel,
-    slots.map(toSlotCell),
-  );
-}
-
-/** Однострочная таблица ячеек: слева уровень заклинателя, справа значения. */
-function toSlotsTable(
-  columns: MarkdownColumn[],
-  spellcastingLevel: Level,
-  cells: string[],
-): string {
   return buildMarkdownTable(
-    [{ label: CLASS_LABELS.spellcasterLevel, align: 'left' }, ...columns],
-    [[String(spellcastingLevel), ...cells]],
+    [
+      { label: CLASS_LABELS.spellcasterLevel, align: 'left' },
+      ...SPELL_SLOT_LEVELS.map(toSlotColumn),
+    ],
+    rows,
   );
 }
 

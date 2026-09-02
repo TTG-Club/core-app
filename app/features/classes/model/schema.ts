@@ -143,6 +143,7 @@ const classInMulticlassSchema: z.ZodType<ClassInMulticlass> = z.object({
   subclass: z.string().optional(),
   level: z.number(),
   hitDice: z.string().optional(),
+  casterType: z.nativeEnum(CasterType).optional(),
 });
 
 const multiclassDetailResponseSchema: z.ZodType<MulticlassDetailResponse> =

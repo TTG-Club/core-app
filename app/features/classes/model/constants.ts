@@ -13,6 +13,12 @@ export const MULTICLASS_ABILITY_REQUIREMENT = 13;
  */
 export const MULTICLASS_REQUIREMENT_HINT = `Чтобы взять уровень в этом классе вдобавок к уже имеющемуся, нужно значение ${MULTICLASS_ABILITY_REQUIREMENT} в его ключевых характеристиках`;
 
+/**
+ * Подпись ячеек Магии договора: в таблице ячеек мультикласса они идут
+ * отдельной строкой от общих.
+ */
+export const PACT_MAGIC_LABEL = 'Магия договора';
+
 /** Категория черт боевого стиля в справочнике черт. */
 export const FIGHTING_STYLE_FEAT_CATEGORY = 'FIGHTING_STYLE';
 
