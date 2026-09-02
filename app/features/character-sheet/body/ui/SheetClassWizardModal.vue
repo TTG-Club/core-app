@@ -74,13 +74,13 @@
     getLevelFeatChoices,
     getLevelHitPointsGain,
     getMulticlassRequirementWarning,
-    getOwnedWeaponNames,
     getRequiredChoiceCount,
     getSelectedCasterType,
     getSpellChoicesKey,
     getTakenOptionValues,
     getToolNames,
     getUnmetMulticlassRequirements,
+    getWeaponNamesForProficiencies,
     isAbilityImprovementComplete,
     isAbilityImprovementFeatChoice,
     LANGUAGE_PROFICIENCY_GROUPS,
@@ -439,6 +439,21 @@
       : [],
   );
 
+  /**
+   * Оружие, из которого выбирают оружейный приём: владения листа вместе с теми,
+   * что даёт сам класс.
+   *
+   * Владения класса на лист ещё не легли — их кладёт применение мастера, — а
+   * приём воин выбирает уже на первом уровне: без них пул был бы пуст, и выбор
+   * висел бы «Выберите 0».
+   */
+  const ownedWeaponNames = computed(() =>
+    getWeaponNamesForProficiencies([
+      ...character.value.proficiencies.weapons,
+      ...matchedProficiencies.value.weapons,
+    ]),
+  );
+
   const proficiencyChips = computed(() => [
     ...matchedProficiencies.value.armor,
     ...matchedProficiencies.value.weapons,
@@ -657,8 +672,9 @@
       // названных в прозе («один вид ремесленных инструментов»).
       allTools: getToolNamesForGroups(choice.toolGroups),
       // Пул оружейного приёма — оружие во владении: приём даётся только
-      // знакомому оружию.
-      ownedWeaponNames: getOwnedWeaponNames(character.value),
+      // знакомому оружию. Владения берущегося класса считаются своими: на
+      // листе их ещё нет, а приём он даёт здесь же.
+      ownedWeaponNames: ownedWeaponNames.value,
       proficientSavingThrowNames: character.value.savingThrows
         .filter((savingThrow) => savingThrow.proficient)
         .map((savingThrow) => ABILITY_LABELS[savingThrow.key]),

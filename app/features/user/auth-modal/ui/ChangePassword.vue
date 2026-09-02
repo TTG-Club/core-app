@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { ApiFetchError } from '~/shared/types';
+
   const emit = defineEmits<{
     (event: 'switch:sign-in'): void;
   }>();
@@ -9,18 +11,20 @@
     email: '',
   });
 
-  const { execute, status, error } = useFetch(
+  const { execute, status, error } = useFetch<
+    void,
+    ApiFetchError,
     '/api/auth/password/reset-request',
-    {
-      body: computed(() => ({
-        email: state.email,
-      })),
-      immediate: false,
-      method: 'POST',
-      retry: false,
-      watch: false,
-    },
-  );
+    'POST'
+  >('/api/auth/password/reset-request', {
+    body: computed(() => ({
+      email: state.email,
+    })),
+    immediate: false,
+    method: 'POST',
+    retry: false,
+    watch: false,
+  });
 
   const inProgress = computed(() => status.value === 'pending');
   const success = computed(() => status.value === 'success');

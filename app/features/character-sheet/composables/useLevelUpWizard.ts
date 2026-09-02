@@ -7,6 +7,7 @@ import type {
   CharacterClass,
   CharacterClassResource,
   CharacterFeature,
+  CharacterSpell,
   ClassChoice,
   ClassFeatureRow,
   ClassOption,
@@ -21,6 +22,7 @@ import type {
   LevelUpStepView,
   LevelUpTarget,
   LevelUpWizardStep,
+  SpellCatalogItem,
 } from '../model';
 
 import { omit } from 'es-toolkit';
@@ -66,6 +68,7 @@ import {
   getOwnedWeaponNames,
   getRequiredChoiceCount,
   getSelectedCasterType,
+  getSpellChoicesKey,
   getTakenOptionValues,
   getToolNames,
   isAbilityImprovementComplete,
@@ -81,11 +84,13 @@ import {
   resolveChoiceOptions,
   SUBCLASS_SELECTION_MIN_LEVEL,
   withAbilityImprovementStep,
+  withChosenFeatureSpells,
   withPendingAbilityIncreases,
   withStoredFeatureAnswers,
 } from '../model';
 import { useLazyCatalogSourceQuery } from './useCatalogSourceQuery';
 import { useCharacterSheet } from './useCharacterSheet';
+import { useChoiceSpellPools } from './useChoiceSpellPools';
 import { useToolCatalog } from './useToolCatalog';
 
 /** Загруженные справочные данные класса, взятые в мастере. */
@@ -304,6 +309,12 @@ interface LevelUpWizard {
 
   selectSubclass: (index: number, subclassUrl: string) => Promise<void>;
   choiceOptions: (choice: ClassChoice) => string[];
+
+  /**
+   * Пул заклинаний выбора: его показывает окно выбора заклинаний. Пусто — пул
+   * ещё грузится либо выбор спрашивает не заклинание.
+   */
+  spellPool: (choice: ClassChoice) => SpellCatalogItem[];
 
   /** Пометки опций пикера: навыки, которыми персонаж уже владеет. */
   choiceHints: (choice: ClassChoice) => Record<string, string>;
@@ -536,6 +547,58 @@ export function useLevelUpWizard(): LevelUpWizard {
   const allChoices = computed<ClassChoice[]>(() =>
     steps.value.flatMap((step) => step.features.flatMap((row) => row.choices)),
   );
+
+  /**
+   * Ответы пикеров одним словарём: пулы заклинаний их и читают, и чистят, а
+   * лежат ответы по черновикам шагов — каждый со своими ключами. Ключей, за
+   * которыми нет ни одного шага, запись не заводит: ответ без своего шага
+   * мастеру некуда показать.
+   */
+  const spellAnswers = computed<Record<string, string[]>>({
+    get: () => allSelections.value,
+    set: (next) => {
+      drafts.value = drafts.value.map((draft) => ({
+        ...draft,
+        selections: Object.fromEntries(
+          Object.entries(draft.selections).map(([id, values]) => [
+            id,
+            next[id] ?? values,
+          ]),
+        ),
+      }));
+    },
+  });
+
+  // Пул заклинаний собирается поиском по каталогу, а не лежит в записи класса:
+  // «Таинственный арканум» колдуна просит заклинание своего круга из списка
+  // колдуна, и перечень в самом умении устарел бы при первом же пополнении
+  // справочника
+  const {
+    getPool: spellPool,
+    getSpellOptions,
+    collectChosenSpells,
+    load: loadSpellPools,
+  } = useChoiceSpellPools({
+    sources: () => [{ choices: allChoices.value }],
+    answers: spellAnswers,
+  });
+
+  /**
+   * Примета выборов заклинаний, которые мастер спрашивает сейчас: шаги
+   * собираются уже после загрузки классов, а выбор приходит ещё и вместе с
+   * подклассом, взятым прямо здесь, — поэтому пул догружается по её смене, а не
+   * один раз на загрузке.
+   */
+  const spellChoicesKey = computed(() => getSpellChoicesKey(allChoices.value));
+
+  // Цикла нет: обработчик правит только пулы заклинаний, а примета считается по
+  // выборам мастера — от загруженного пула она не меняется.
+  watch(spellChoicesKey, handleSpellChoicesChange);
+
+  /** Догружает пулы заклинаний под выборы, которые мастер спрашивает сейчас. */
+  function handleSpellChoicesChange(): void {
+    void loadSpellPools();
+  }
 
   /** Подсказка о неудачной загрузке справочника класса. */
   function showLoadError(): void {
@@ -1132,6 +1195,12 @@ export function useLevelUpWizard(): LevelUpWizard {
    * @returns опции для селектора.
    */
   function choiceOptions(choice: ClassChoice): string[] {
+    // Заклинания приходят загруженным пулом, а не резолвятся по типу выбора: в
+    // самой записи класса их нет.
+    if (choice.kind === 'spell') {
+      return getSpellOptions(choice);
+    }
+
     return resolveChoiceOptions(choice, {
       skillNames: skillNames.value,
       proficientSkillNames: proficientSkillNames.value,
@@ -1510,6 +1579,23 @@ export function useLevelUpWizard(): LevelUpWizard {
 
     const rows = steps.value.flatMap((step) => step.features);
 
+    // Выбранные заклинания — на записи своих умений: лист ведёт их наравне с
+    // выданными умением, и снятие класса забирает их вместе с ним.
+    //
+    // Складываются по всем шагам, а не берутся с последнего: «Таинственный
+    // арканум» просит заклинание на 11, 13, 15 и 17 уровнях, а запись умения у
+    // всех четырёх одна.
+    const chosenSpellsByFeature = rows.reduce<Record<string, CharacterSpell[]>>(
+      (result, row) => ({
+        ...result,
+        [row.id]: [
+          ...(result[row.id] ?? []),
+          ...collectChosenSpells({ choices: row.choices }),
+        ],
+      }),
+      {},
+    );
+
     // Из ответов берётся только текст выбора: владения ведёт снимок на самой
     // записи умения — так же, как у черты. Два хозяина у одного владения
     // означали бы, что снятие класса заберёт его лишь наполовину.
@@ -1610,11 +1696,14 @@ export function useLevelUpWizard(): LevelUpWizard {
         amount: step.hitPointsGain,
       })),
       classPatches,
-      features: [
-        ...classFeatures,
-        ...featFeatures,
-        ...buildAbilityImprovementFeatures(),
-      ],
+      features: withChosenFeatureSpells(
+        [
+          ...classFeatures,
+          ...featFeatures,
+          ...buildAbilityImprovementFeatures(),
+        ],
+        chosenSpellsByFeature,
+      ),
       classResources,
       // Навыки и языки, названные в умениях, приходят снимком самой записи
       // умения: здесь их нет вовсе
@@ -1658,6 +1747,7 @@ export function useLevelUpWizard(): LevelUpWizard {
     resetAbilityImprovement,
     selectSubclass,
     choiceOptions,
+    spellPool,
     choiceHints,
     featOptions,
     selectedFeat,

@@ -4687,6 +4687,31 @@ function getProficientWeaponNames(character: Character): Set<string> {
 }
 
 /**
+ * Названия видов оружия по записям владения — как они записаны в каталоге:
+ * запись «вся группа» стоит за все виды своей категории, остальные идут как
+ * есть.
+ *
+ * Отдельно от {@link getOwnedWeaponNames}, потому что мастер класса спрашивает
+ * оружейный приём ДО того, как класс лёг на лист: владения там берутся не с
+ * персонажа, а из записи класса, которую только выбирают.
+ *
+ * @param entries записи владения оружием.
+ * @returns названия видов оружия, без повторов.
+ */
+export function getWeaponNamesForProficiencies(entries: string[]): string[] {
+  return uniq(
+    entries.flatMap((entry) => {
+      const group = WEAPON_PROFICIENCY_GROUPS.find(
+        (candidate) =>
+          normalizeCatalogName(candidate.all) === normalizeCatalogName(entry),
+      );
+
+      return group?.items ?? [entry];
+    }),
+  );
+}
+
+/**
  * Названия видов оружия, которыми персонаж владеет, — как они записаны в
  * каталоге. Из них выбирается оружейный приём: приём даётся только знакомому
  * оружию, а запись «вся группа» стоит за все виды своей категории.
@@ -4698,16 +4723,7 @@ function getProficientWeaponNames(character: Character): Set<string> {
  * @returns названия видов оружия во владении, без повторов.
  */
 export function getOwnedWeaponNames(character: Character): string[] {
-  return uniq(
-    character.proficiencies.weapons.flatMap((entry) => {
-      const group = WEAPON_PROFICIENCY_GROUPS.find(
-        (candidate) =>
-          normalizeCatalogName(candidate.all) === normalizeCatalogName(entry),
-      );
-
-      return group?.items ?? [entry];
-    }),
-  );
+  return getWeaponNamesForProficiencies(character.proficiencies.weapons);
 }
 
 /**
