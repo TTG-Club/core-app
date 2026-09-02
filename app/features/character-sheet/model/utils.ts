@@ -138,6 +138,7 @@ import type {
   SpellcastingClassRow,
   SpellCatalogPreset,
   SpellDamage,
+  SpellDamageFormulas,
   SpellSlotCircle,
   SpellSlotKind,
   SpellSlotRow,
@@ -7229,20 +7230,44 @@ function getSpellDamageExpression(
 }
 
 /**
+ * Формулы урона заклинания на уровне персонажа: у заговора набор формул с
+ * порогового уровня заменяется целиком (5, 11 и 17 в правилах), поэтому берётся
+ * наибольший подходящий тир, а не базовые формулы.
+ *
+ * @param damage урон заклинания из справочника.
+ * @param characterLevel общий уровень персонажа.
+ * @returns формулы урона, действующие на этом уровне.
+ */
+function getSpellDamageFormulasByLevel(
+  damage: SpellDamageFormulas,
+  characterLevel: number,
+): string[] {
+  // Тиры отсортированы по возрастанию уровня: последний подходящий и есть
+  // действующий.
+  const tier = damage.cantripTiers.findLast(
+    (cantripTier) => cantripTier.level <= characterLevel,
+  );
+
+  return tier?.formulas ?? damage.base;
+}
+
+/**
  * Броски урона заклинания из формул справочника. Одна запись справочника может
  * описывать несколько взаимоисключающих бросков (кость зависит от состояния
  * цели) — каждый становится отдельной плиткой. Лечение и формулы с
  * неподдерживаемыми тегами пропускаются: плитка урона о них не говорит.
  *
- * @param damageFormulas формулы урона заклинания из справочника.
+ * @param spellDamage урон заклинания из справочника (с тирами заговора).
  * @param spellAbilityModifier модификатор заклинательной характеристики.
+ * @param characterLevel общий уровень персонажа: по нему растёт урон заговора.
  * @returns броски урона в порядке справочника; пусто — урона у заклинания нет.
  */
 export function getSpellDamage(
-  damageFormulas: string[],
+  spellDamage: SpellDamageFormulas,
   spellAbilityModifier: number,
+  characterLevel: number,
 ): SpellDamage[] {
-  return damageFormulas
+  return getSpellDamageFormulasByLevel(spellDamage, characterLevel)
     .flatMap((damageFormula) =>
       damageFormula.split(SPELL_DAMAGE_VARIANT_SEPARATOR),
     )

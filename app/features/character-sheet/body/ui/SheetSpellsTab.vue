@@ -125,13 +125,15 @@
 
   // Пополнение книги, правка и удаление заклинаний меняют лист: без прав кнопки
   // прячутся, а ряды заклинаний и шапка вкладки остаются на прежних местах.
-  const { editControlClass } = useCharacterSheet();
+  const { character, editControlClass } = useCharacterSheet();
 
   // Урон заклинаний живёт в справочнике, а не в листе: подгружаем его для всей
-  // вкладки — и для книги, и для врождённых заклинаний вида.
+  // вкладки — и для книги, и для врождённых заклинаний вида. Уровень персонажа
+  // нужен заговорам: их урон растёт от него, а не от круга ячейки.
   const { getDamage } = useSpellDamage(
     () => [...props.spells, ...props.innateSpells],
     () => props.spellcasting.abilityModifier,
+    () => character.value.level,
   );
 
   const addMenuItems = getSpellsAddMenuItems({
