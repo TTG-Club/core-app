@@ -1,12 +1,19 @@
 <script setup lang="ts">
   import type {
+    AbilityKey,
+    CharacterFeature,
     CharacterInnateSpell,
     ClassChoice,
+    FeatSelectOption,
     FeatureDescriptionNode,
+    FeatureOrigin,
+    LevelUpFeatChoice,
     SpeciesFeatureSummary,
     SpeciesOption,
     SpeciesSummary,
   } from '../../model';
+
+  import { partition } from 'es-toolkit';
 
   import { SpeciesDrawer } from '~species/drawer';
   import { MarkupRender } from '~ui/markup';
@@ -14,27 +21,40 @@
   import {
     useCatalogSourceQuery,
     useCharacterSheet,
+    useLazyCatalogSourceQuery,
     useToolCatalog,
   } from '../../composables';
   import {
+    ABILITY_IMPROVEMENT_LABELS,
     ABILITY_LABELS,
     buildCharacterFeatures,
+    buildFeatFeature,
+    CLASS_FEAT_CHOICE_ID_SEGMENT,
     collectChosenProficiencies,
+    collectFeatAbilityIncreases,
     collectSpeciesProficiencies,
     CURRENT_SELECTION_LABELS,
     CUSTOM_SPECIES_LABELS,
     detectFeatureChoice,
+    FEAT_SOURCES_ASYNC_DATA_KEY,
+    FEATS_FILTERS_PATH,
+    FEATS_SELECT_PATH,
     FEATURE_ORIGIN_LABELS,
+    fetchFeatDetail,
     filterChoicesByLevel,
     getCharacterFeatureId,
     getChoiceSkillHints,
     getChosenProficientSkills,
+    getFeatChoiceOptions,
+    getFeatUrlFromFeatureId,
     getOwnedWeaponNames,
     getRequiredChoiceCount,
     getSpeciesDarkvision,
     getSpeciesVision,
     getToolNames,
     LANGUAGE_PROFICIENCY_GROUPS,
+    ORIGIN_FEAT_ACQUISITION_LEVEL,
+    parseFeatSelectOptions,
     parseSizeOptionsFromText,
     parseSpeciesDetail,
     parseSpeciesLineages,
@@ -44,6 +64,7 @@
     SHEET_SEARCH_LABELS,
     SKILL_DUPLICATE_WARNING,
     SPECIES_DETAIL_BASE_PATH,
+    SPECIES_FEAT_INVALID_RESPONSE_ERROR,
     SPECIES_FILTERS_PATH,
     SPECIES_SEARCH_PATH,
     unionToolProficiencies,
@@ -51,9 +72,42 @@
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
   import SheetCurrentSelectionPanel from './SheetCurrentSelectionPanel.vue';
   import SheetCustomSpeciesModal from './SheetCustomSpeciesModal.vue';
+  import SheetLevelUpFeatChoice from './SheetLevelUpFeatChoice.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
 
   type WizardStep = 'species' | 'features';
+
+  /** Загруженная черта, выбранная в умении вида или подвида. */
+  interface SpeciesFeatSelection {
+    /** Идентификатор строки умения (`species:{featureUrl}`). */
+    rowId: string;
+
+    /** Название черты — идёт в подпись выбора у самого умения. */
+    featName: string;
+
+    /** Готовая запись особенности для листа. */
+    feature: CharacterFeature;
+  }
+
+  /**
+   * Разносит выборы умения по пикерам: черту выбирают окном каталога, всё
+   * остальное — селектами. Пул черты — весь раздел сайта, и в `listed` у неё
+   * лежат url, а не названия: селектом её не показать.
+   *
+   * @param choices выборы умения.
+   * @returns выборы селектов и выборы черты.
+   */
+  function splitFeatChoices(choices: ClassChoice[]): {
+    choiceControls: ClassChoice[];
+    featChoices: ClassChoice[];
+  } {
+    const [featChoices, choiceControls] = partition(
+      choices,
+      (choice) => choice.kind === 'feat',
+    );
+
+    return { choiceControls, featChoices };
+  }
 
   /** Объединяет заклинания вида и происхождения, сохраняя самый ранний уровень открытия. */
   function mergeInnateSpells(
@@ -155,12 +209,42 @@
 
   const isStepLoading = ref(false);
 
+  const isApplying = shallowRef(false);
+
   const sizeChoice = ref<string | undefined>();
 
   const choices = ref<Record<string, string>>({});
 
   /** Черновик выборов-селекторов по id выбора: id → выбранные значения. */
   const selections = ref<Record<string, string[]>>({});
+
+  /** Выборы черты по идентификатору выбора умения вида. */
+  const featSelections = ref<Record<string, LevelUpFeatChoice>>({});
+
+  /** Каталог черт для выборов черты в умениях; грузится, когда они есть. */
+  const featCatalog = ref<FeatSelectOption[]>([]);
+
+  const isFeatsLoading = ref(false);
+
+  const hasFeatsError = ref(false);
+
+  // Источники черт — та же глобальная настройка профиля, что у остальных
+  // каталогов. Лениво: `/feats/select` по источникам не фильтрует, отбор идёт
+  // на клиенте, и виду без выбора черты эти фильтры не нужны вовсе.
+  const { selectedSourceIds: featSourceIds, load: loadFeatSources } =
+    useLazyCatalogSourceQuery(FEAT_SOURCES_ASYNC_DATA_KEY, FEATS_FILTERS_PATH);
+
+  /** Черты, уже взятые на листе: повторно не предлагаются. */
+  const takenFeatUrls = computed(
+    () =>
+      new Set(
+        character.value.features.flatMap((feature) => {
+          const url = getFeatUrlFromFeatureId(feature.id);
+
+          return url ? [url] : [];
+        }),
+      ),
+  );
 
   const skillNames = computed(() =>
     character.value.skills.map((skill) => skill.name),
@@ -286,8 +370,11 @@
       id: string;
       name: string;
       description: FeatureDescriptionNode[];
+      origin: FeatureOrigin;
+      originName: string;
       originLabel: string;
       choiceControls: ClassChoice[];
+      featChoices: ClassChoice[];
     }> = [];
 
     const detail = speciesDetail.value;
@@ -300,8 +387,10 @@
           id: getCharacterFeatureId('species', detail.url),
           name: detail.name,
           description: [],
+          origin: 'species',
+          originName: detail.name,
           originLabel: `${FEATURE_ORIGIN_LABELS.species}: ${detail.name}`,
-          choiceControls: detail.choices,
+          ...splitFeatChoices(detail.choices),
         });
       }
 
@@ -312,8 +401,10 @@
           id,
           name: feature.name,
           description: feature.description,
+          origin: 'species',
+          originName: detail.name,
           originLabel: `${FEATURE_ORIGIN_LABELS.species}: ${detail.name}`,
-          choiceControls: featureChoiceControls(id, feature),
+          ...splitFeatChoices(featureChoiceControls(id, feature)),
         });
       }
     }
@@ -326,8 +417,10 @@
           id: getCharacterFeatureId('lineage', lineage.url),
           name: lineage.name,
           description: [],
+          origin: 'lineage',
+          originName: lineage.name,
           originLabel: `${FEATURE_ORIGIN_LABELS.lineage}: ${lineage.name}`,
-          choiceControls: lineage.choices,
+          ...splitFeatChoices(lineage.choices),
         });
       }
 
@@ -338,8 +431,10 @@
           id,
           name: feature.name,
           description: feature.description,
+          origin: 'lineage',
+          originName: lineage.name,
           originLabel: `${FEATURE_ORIGIN_LABELS.lineage}: ${lineage.name}`,
-          choiceControls: featureChoiceControls(id, feature),
+          ...splitFeatChoices(featureChoiceControls(id, feature)),
         });
       }
     }
@@ -350,6 +445,11 @@
   /** Все выборы мастера: по ним считается, что уже выбрано во владение. */
   const allChoices = computed<ClassChoice[]>(() =>
     featureRows.value.flatMap((row) => row.choiceControls),
+  );
+
+  /** Есть ли у вида выбор черты: по нему грузится каталог черт. */
+  const hasFeatChoices = computed(() =>
+    featureRows.value.some((row) => row.featChoices.length > 0),
   );
 
   /** Опции пикера выбора в зависимости от его типа. */
@@ -393,6 +493,130 @@
     };
   }
 
+  /**
+   * Каталог черт для выборов в умениях вида. Список берётся целиком с
+   * `/select`: только он отдаёт повторяемость и прибавки к характеристикам, а
+   * категории и уже взятые черты отбираются на клиенте — как в мастере класса.
+   */
+  async function loadFeats(): Promise<void> {
+    isFeatsLoading.value = true;
+    hasFeatsError.value = false;
+
+    try {
+      const [response] = await Promise.all([
+        $fetch<unknown>(FEATS_SELECT_PATH, { method: 'GET', retry: 0 }),
+        loadFeatSources(),
+      ]);
+
+      featCatalog.value = parseFeatSelectOptions(response);
+    } catch (error) {
+      consola.error(ABILITY_IMPROVEMENT_LABELS.applyErrorLog, error);
+      hasFeatsError.value = true;
+    } finally {
+      isFeatsLoading.value = false;
+    }
+  }
+
+  /**
+   * Черты, доступные выбору черты в умении вида: пул сужен категориями и
+   * перечнем выбора, уже взятыми чертами и выбранными в других умениях мастера.
+   *
+   * @param choice выбор черты умения.
+   * @returns черты для пикера.
+   */
+  function featOptions(choice: ClassChoice): FeatSelectOption[] {
+    const selectedUrl = featSelections.value[choice.id]?.featUrl ?? '';
+
+    const chosenElsewhere = Object.entries(featSelections.value)
+      .filter(([id, entry]) => id !== choice.id && entry.featUrl)
+      .map(([, entry]) => entry.featUrl);
+
+    return getFeatChoiceOptions(
+      featCatalog.value,
+      choice,
+      new Set([...takenFeatUrls.value, ...chosenElsewhere]),
+      selectedUrl,
+      featSourceIds.value,
+    );
+  }
+
+  /**
+   * Черта, выбранная в выборе умения.
+   *
+   * @param choiceId идентификатор выбора черты.
+   * @returns опция черты; null — выбора не было либо черта не из каталога.
+   */
+  function selectedFeat(choiceId: string): FeatSelectOption | null {
+    const featUrl = featSelections.value[choiceId]?.featUrl;
+
+    return featUrl
+      ? (featCatalog.value.find((feat) => feat.url === featUrl) ?? null)
+      : null;
+  }
+
+  /**
+   * Выбранные характеристики по слотам прибавок черты; пусто — черта не
+   * выбрана либо прибавок не даёт.
+   *
+   * @param choiceId идентификатор выбора черты.
+   * @returns характеристики по слотам.
+   */
+  function featAbilities(choiceId: string): Array<AbilityKey | null> {
+    return featSelections.value[choiceId]?.abilities ?? [];
+  }
+
+  /**
+   * Выбор черты в умении. Смена черты обнуляет выбранные характеристики: у
+   * новой черты свой список и своё число прибавок.
+   *
+   * @param rowId идентификатор строки умения.
+   * @param choiceId идентификатор выбора черты.
+   * @param featUrl url выбранной черты; '' — выбор снят.
+   */
+  function setFeatChoice(rowId: string, choiceId: string, featUrl: string) {
+    const option = featCatalog.value.find((feat) => feat.url === featUrl);
+
+    featSelections.value = {
+      ...featSelections.value,
+      [choiceId]: {
+        featureId: rowId,
+        featUrl,
+        abilities: Array.from<AbilityKey | null>({
+          length: option?.abilityIncreaseCount ?? 0,
+        }).fill(null),
+      },
+    };
+  }
+
+  /**
+   * Выбор характеристики в слоте прибавки выбранной черты.
+   *
+   * @param choiceId идентификатор выбора черты.
+   * @param payload номер слота и выбранная характеристика.
+   * @param payload.slot номер слота прибавки (с нуля).
+   * @param payload.ability выбранная характеристика; null — выбор снят.
+   */
+  function setFeatAbility(
+    choiceId: string,
+    payload: { slot: number; ability: AbilityKey | null },
+  ) {
+    const selection = featSelections.value[choiceId];
+
+    if (!selection) {
+      return;
+    }
+
+    featSelections.value = {
+      ...featSelections.value,
+      [choiceId]: {
+        ...selection,
+        abilities: selection.abilities.map((current, slot) =>
+          slot === payload.slot ? payload.ability : current,
+        ),
+      },
+    };
+  }
+
   const isNextDisabled = computed(() => {
     if (!selectedOption.value) {
       return true;
@@ -406,6 +630,15 @@
       color: 'error',
       icon: 'tabler:alert-triangle',
       title: 'Не удалось загрузить данные вида',
+    });
+  }
+
+  /** Тост о том, что выбранную черту не удалось догрузить перед применением. */
+  function showFeatError() {
+    toast.add({
+      color: 'error',
+      icon: 'tabler:alert-triangle',
+      title: ABILITY_IMPROVEMENT_LABELS.applyError,
     });
   }
 
@@ -513,7 +746,15 @@
 
       choices.value = {};
       selections.value = {};
+      featSelections.value = {};
       sizeChoice.value = sizeOptions.value[0];
+
+      // Каталог черт нужен только виду с выбором черты: иначе лишний запрос на
+      // каждое открытие мастера
+      if (hasFeatChoices.value && !featCatalog.value.length) {
+        await loadFeats();
+      }
+
       step.value = 'features';
     } catch (error) {
       consola.error('Ошибка загрузки вида:', error);
@@ -527,11 +768,77 @@
     step.value = 'species';
   }
 
-  function handleApply() {
+  /**
+   * Загружает черты, выбранные в умениях вида, и делает их записями листа.
+   * Происхождение у записи вида или подвида — тогда смена вида забирает черту
+   * вместе с умением, которое её дало.
+   *
+   * @returns записи выбранных черт; пусто — черту нигде не выбрали.
+   */
+  function buildSpeciesFeatFeatures(): Promise<SpeciesFeatSelection[]> {
+    const entries = featureRows.value.flatMap((row) =>
+      row.featChoices.flatMap((choice) => {
+        const selection = featSelections.value[choice.id];
+
+        return selection?.featUrl ? [{ row, choice, selection }] : [];
+      }),
+    );
+
+    return Promise.all(
+      entries.map(async ({ row, choice, selection }) => {
+        const summary = await fetchFeatDetail(selection.featUrl);
+
+        if (!summary) {
+          throw new Error(SPECIES_FEAT_INVALID_RESPONSE_ERROR);
+        }
+
+        return {
+          rowId: row.id,
+          featName: summary.name,
+          feature: {
+            ...buildFeatFeature(summary, {
+              // Черта вида даётся вместе с умением: у большинства это первый
+              // уровень, а от уровня взятия считается прибавка «Крепкого»
+              level: choice.requiredLevel || ORIGIN_FEAT_ACQUISITION_LEVEL,
+              origin: row.origin,
+              originName: row.originName,
+              abilityIncreases: collectFeatAbilityIncreases(
+                selection.abilities,
+              ),
+            }),
+            id: `${row.id}:${CLASS_FEAT_CHOICE_ID_SEGMENT}:${summary.url}`,
+          },
+        };
+      }),
+    );
+  }
+
+  /**
+   * Применяет вид к листу: сперва догружает выбранные черты, затем одним
+   * обновлением кладёт вид, его умения, владения и записи черт.
+   */
+  async function handleApply() {
     const detail = speciesDetail.value;
 
-    if (!detail) {
+    if (!detail || isApplying.value) {
       return;
+    }
+
+    // Под `try` только загрузка черт: ошибка сети не должна выглядеть как сбой
+    // применения вида, а применение ниже — синхронное и не бросает.
+    let featFeatures: SpeciesFeatSelection[];
+
+    isApplying.value = true;
+
+    try {
+      featFeatures = await buildSpeciesFeatFeatures();
+    } catch (error) {
+      consola.error(ABILITY_IMPROVEMENT_LABELS.applyErrorLog, error);
+      showFeatError();
+
+      return;
+    } finally {
+      isApplying.value = false;
     }
 
     const lineage = selectedLineage.value;
@@ -563,6 +870,16 @@
       }
 
       featureChoices[control.id] = values.join(', ');
+    }
+
+    // Названия выбранных черт — в подпись самого умения: на листе видно, что
+    // именно дала «Универсальность»
+    for (const selection of featFeatures) {
+      const previous = featureChoices[selection.rowId];
+
+      featureChoices[selection.rowId] = previous
+        ? `${previous}, ${selection.featName}`
+        : selection.featName;
     }
 
     // Инструменты, приёмы и владения спасбросками из ответов: их лист кладёт в
@@ -605,12 +922,15 @@
         truesight: character.value.vision.truesight,
         unit: 'feet',
       },
-      features: buildCharacterFeatures(
-        detail,
-        lineage,
-        featureChoices,
-        character.value.level,
-      ),
+      features: [
+        ...buildCharacterFeatures(
+          detail,
+          lineage,
+          featureChoices,
+          character.value.level,
+        ),
+        ...featFeatures.map((selection) => selection.feature),
+      ],
       skills: {
         // Навыки из даров вида идут туда же, куда выбранные игроком: лист
         // ставит владение строке навыка, а не списку владений
@@ -913,6 +1233,28 @@
                 </UBadge>
               </div>
 
+              <!-- Черту выбирают окном каталога: пул бывает под сотню
+              записей, и описание каждой читают прямо оттуда — тем же порядком,
+              что в мастере класса -->
+              <div
+                v-if="row.featChoices.length"
+                class="flex flex-col gap-3"
+              >
+                <SheetLevelUpFeatChoice
+                  v-for="choice in row.featChoices"
+                  :key="choice.id"
+                  :title="choice.label"
+                  :options="featOptions(choice)"
+                  :selected="selectedFeat(choice.id)"
+                  :abilities="featAbilities(choice.id)"
+                  :scores="character.abilities"
+                  :is-loading="isFeatsLoading"
+                  :has-error="hasFeatsError"
+                  @update:feat="setFeatChoice(row.id, choice.id, $event)"
+                  @update:ability="setFeatAbility(choice.id, $event)"
+                />
+              </div>
+
               <div
                 v-if="row.choiceControls.length"
                 class="flex flex-col gap-3"
@@ -938,8 +1280,10 @@
                 </div>
               </div>
 
+              <!-- Свободная строка — умению, которое ни о чём не спрашивает:
+              игрок записывает в неё свой выбор сам -->
               <UInput
-                v-else
+                v-if="!row.choiceControls.length && !row.featChoices.length"
                 v-model="choices[row.id]"
                 size="sm"
                 placeholder="Ваш выбор в особенности (необязательно)"
@@ -994,6 +1338,7 @@
             v-if="step === 'features'"
             label="Применить"
             color="primary"
+            :loading="isApplying"
             @click.left.exact.prevent="handleApply"
           />
 

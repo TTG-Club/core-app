@@ -495,6 +495,18 @@ modals), so its capabilities are listed here rather than squeezed into the table
   for entries that have no structure yet. Skills granted this way go to the skill
   rows, not to the proficiency list; the record's own choices get their own row —
   a lineage has no features to hang them on.
+- A feat a species feature asks for («Универсальность» of the human wants an
+  origin feat) is picked in the species wizard the same way the class and
+  level-up wizards pick one: `SheetLevelUpFeatChoice` opens `SheetFeatPickModal`
+  — a searchable list of the catalog with a description drawer — because the pool
+  is the whole feats section and the mechanics carry urls, not names. A `feat`
+  choice therefore never reaches the plain select: `resolveChoiceOptions` returns
+  an empty pool for it instead of falling through to the tool branch, which is
+  what used to offer alchemist's supplies in place of a feat. The chosen feat
+  becomes a sheet record of its own whose origin is the species (or the lineage),
+  so removing the species takes it away with the feature that granted it, and
+  whose id keeps the `:feat:` segment, so it counts as taken and is not offered
+  twice.
 - A class feature carries the same mechanics a feat does — grants, choices,
   counters, granted spells, a spellcasting ability — and both the class wizard and
   the level-up wizard ask **every** choice a feature declares, not one: expertise

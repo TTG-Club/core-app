@@ -8519,10 +8519,10 @@ export function getTotalClassLevel(classes: CharacterClass[]): number {
  * Извлекает url черты из идентификатора особенности. Обычная черта — `feat:url`,
  * повторяемая — `feat:url:uuid` (у каждой копии свой суффикс). Url черты не
  * содержит двоеточий, поэтому берём сегмент между первым и вторым `:`.
- * Черты, выданные классовым умением, лежат под классовым идентификатором
- * (`class:{featureKey}:fighting-style:{url}`, `class:{featureKey}:{level}:ability-improvement:{url}`)
- * — иначе их копии не удалялись бы вместе с умением, — поэтому url берётся из
- * хвоста после служебного сегмента.
+ * Черты, выданные умением записи, лежат под идентификатором самой записи
+ * (`class:{featureKey}:fighting-style:{url}`, `class:{featureKey}:{level}:ability-improvement:{url}`,
+ * `species:{featureUrl}:feat:{url}`) — иначе их копии не удалялись бы вместе с
+ * умением, — поэтому url берётся из хвоста после служебного сегмента.
  *
  * @param featureId идентификатор особенности.
  * @returns url черты или null, если особенность — не черта.
@@ -12419,6 +12419,14 @@ export function resolveChoiceOptions(
     const known = new Set(context.knownLanguages);
 
     return context.allLanguages.filter((name) => !known.has(name));
+  }
+
+  // Черта выбирается своим пикером каталога, а не селектом: в `listed` у неё
+  // лежат url, а не названия. Пустой список — сигнал вызывающему, что выбор
+  // ему не по зубам; без этой ветки он проваливался в инструменты ниже, и
+  // «Универсальность» человека предлагала инструменты алхимика вместо черты.
+  if (choice.kind === 'feat') {
+    return [];
   }
 
   const knownTools = new Set(context.knownTools);
