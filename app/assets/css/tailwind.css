@@ -54,6 +54,17 @@
 
 body {
   @apply bg-muted bg-linear-(--color-bg-main-gradient) bg-cover bg-fixed bg-no-repeat scheme-light dark:scheme-dark svifty7:scheme-dark;
+
+  /* Светлая тема кладёт поверх градиента плитку бумажной фактуры (`--paper-texture` из colors/light.scss).
+     Правило вне слоёв, поэтому перекрывает утилиты `bg-linear-*`, `bg-cover` и `bg-no-repeat` выше. */
+  html.light & {
+    background-image:
+      var(--paper-texture), linear-gradient(var(--color-bg-main-gradient));
+    background-repeat: repeat, no-repeat;
+    background-size:
+      720px 720px,
+      cover;
+  }
 }
 
 :root {
