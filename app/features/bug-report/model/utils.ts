@@ -5,6 +5,8 @@ import type {
   ParsedSelection,
 } from './types';
 
+import { getNodeText, parse, toMarkupSource } from '~ui/markup';
+
 import { ADMIN_BUGS_FILTER_ALL } from './constants';
 
 /**
@@ -55,6 +57,34 @@ export function parseSelectedText(selectedText: string): ParsedSelection {
     after: '',
     hasSelection: false,
   };
+}
+
+/**
+ * Приводит сохранённое описание баг-репорта к абзацам-исходникам для `MarkupRender`.
+ *
+ * Описание хранится строкой: новые репорты — исходником разметки `{@...}` из
+ * редактора (абзацы разделены пустой строкой), старые — обычным текстом, а
+ * JSON-строку AST на всякий случай разворачивает `toMarkupSource`. Каждый абзац
+ * рендер разбирает сам: блочные маркеры (заголовок, список, цитата) рисуются
+ * блоками, остальное — обычным абзацем текста.
+ *
+ * @param description Сохранённое описание баг-репорта.
+ */
+export function toBugReportDescriptionBlocks(description: string): string[] {
+  return toMarkupSource(description)
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter((paragraph) => paragraph.length > 0);
+}
+
+/**
+ * Текст описания без маркеров разметки — для порогов по длине (свернуть/раскрыть),
+ * чтобы служебные символы `{@...}` не считались за текст.
+ *
+ * @param description Сохранённое описание баг-репорта.
+ */
+export function getBugReportDescriptionText(description: string): string {
+  return getNodeText(parse(toMarkupSource(description)));
 }
 
 /**

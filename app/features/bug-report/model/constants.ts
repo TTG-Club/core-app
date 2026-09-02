@@ -225,6 +225,15 @@ export const BUG_REPORT_SUBMIT_ERROR_TITLE = 'Ошибка отправки';
 export const BUG_REPORT_SUBMIT_ERROR_DESC =
   'Не удалось отправить баг-репорт. Пожалуйста, попробуйте позже.';
 
+/** Placeholder поля описания проблемы в форме отправки */
+export const BUG_REPORT_DESCRIPTION_PLACEHOLDER = 'Опишите, что произошло...';
+
+/** Максимальная длина описания вместе с разметкой (ограничение API и колонки в базе) */
+export const BUG_REPORT_DESCRIPTION_MAX_LENGTH = 2000;
+
+/** Ошибка валидации: описание длиннее лимита API */
+export const BUG_REPORT_DESCRIPTION_TOO_LONG_ERROR = `Описание вместе с разметкой не должно превышать ${BUG_REPORT_DESCRIPTION_MAX_LENGTH} символов`;
+
 /** Успешный заголовок обновления статуса */
 export const BUG_REPORT_STATUS_UPDATE_SUCCESS_TITLE = 'Статус обновлен';
 

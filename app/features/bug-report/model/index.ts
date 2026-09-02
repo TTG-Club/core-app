@@ -64,6 +64,9 @@ export {
   BUG_REPORT_COPY_ID_TITLE,
   BUG_REPORT_CREATED_AT_TITLE,
   BUG_REPORT_DATE_FORMAT,
+  BUG_REPORT_DESCRIPTION_MAX_LENGTH,
+  BUG_REPORT_DESCRIPTION_PLACEHOLDER,
+  BUG_REPORT_DESCRIPTION_TOO_LONG_ERROR,
   BUG_REPORT_DETAIL_DATE_FORMAT,
   BUG_REPORT_MY_API_URL,
   BUG_REPORT_MY_COUNT_API_URL,
@@ -143,6 +146,8 @@ export {
 export {
   applyBugStatusPatch,
   buildLoginFilterOptions,
+  getBugReportDescriptionText,
   parseSelectedText,
   toAdminBugFilterApiValue,
+  toBugReportDescriptionBlocks,
 } from './utils';
