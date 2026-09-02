@@ -11,7 +11,7 @@
   import {
     useCatalogSourceQuery,
     useCharacterSheet,
-    useFeatChoiceSpells,
+    useChoiceSpellPools,
     useToolCatalog,
   } from '../../composables';
   import {
@@ -268,8 +268,8 @@
     getSpellOptions,
     collectChosenSpells,
     load: loadSpellPools,
-  } = useFeatChoiceSpells({
-    summaries: () => loadedSummaries.value,
+  } = useChoiceSpellPools({
+    sources: () => loadedSummaries.value,
     answers: choiceAnswers,
   });
 

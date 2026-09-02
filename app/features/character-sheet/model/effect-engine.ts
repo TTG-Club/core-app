@@ -273,6 +273,58 @@ export function getCharacterEffectFlags(
 }
 
 /**
+ * Флаг помехи на проверки Скрытности.
+ *
+ * Помеха шумного доспеха выражается тем же флагом, что и помеха от эффекта, —
+ * тогда правило 5e «преимущество и помеха гасят друг друга» срабатывает само,
+ * без второго сложения режимов через `combineRollModes`.
+ */
+const STEALTH_DISADVANTAGE_FLAG = 'skill.stealth.disadvantage';
+
+/**
+ * Мешает ли надетый доспех прятаться.
+ *
+ * Помеха приходит полем справочника (`armor.stealth`), а не эффектом: отмечать
+ * её эффектом у каждого шумного доспеха значило бы держать одно правило в двух
+ * местах. В зачёт идёт любой надетый доспех с пометкой, а не лучший по КД, —
+ * помеху даёт сам факт того, что доспех на персонаже.
+ *
+ * @param character персонаж.
+ * @returns признак помехи на проверки Скрытности от снаряжения.
+ */
+export function hasArmorStealthDisadvantage(character: Character): boolean {
+  return character.inventory.some(
+    (inventoryItem) =>
+      inventoryItem.equipped
+      && inventoryItem.quantity > 0
+      && inventoryItem.armor?.stealthDisadvantage === true,
+  );
+}
+
+/**
+ * Флаги броска персонажа: разобранные из эффектов и те, что дают правила
+ * снаряжения.
+ *
+ * Отдельно от {@link resolveSheetEffects}: список эффектов листа показывает
+ * именно эффекты, а помеха доспеха эффектом не является и в нём не должна
+ * появляться.
+ *
+ * @param character персонаж.
+ * @param effectFlags безусловные флаги, разобранные из активных эффектов.
+ * @returns флаги, по которым выбирается режим броска.
+ */
+export function getSheetRollFlags(
+  character: Character,
+  effectFlags: ReadonlySet<string>,
+): ReadonlySet<string> {
+  if (!hasArmorStealthDisadvantage(character)) {
+    return effectFlags;
+  }
+
+  return new Set([...effectFlags, STEALTH_DISADVANTAGE_FLAG]);
+}
+
+/**
  * Обнулена ли скорость персонажа эффектом.
  *
  * Флаг `speed.zero` ставят Схваченный, Опутанный, Парализованный, Окаменевший и

@@ -1,94 +1,104 @@
+/*
+ * Светлая тема «пергамент и бордо» — по мотивам светлой темы ruleholder.com.
+ *
+ * Опорные цвета оригинала: страница #f1ebe8, карточка #f8f4f1,
+ * приподнятая поверхность #fffaf4, бежевая подложка #efe6d8, чернила #191813,
+ * приглушённый текст #6d6257, бордюр #dfd5c7 и золотистый бордюр #c9b891,
+ * бордовый акцент #5a0507 (ссылки, заголовки, кнопки), золото #e6bd6b.
+ */
 html.light {
-  /* Primary — кожано-коричневый (книжный переплёт) */
-  --color-primary-50: oklch(0.95 0.02 65);
-  --color-primary-100: oklch(0.9 0.04 65);
-  --color-primary-200: oklch(0.8 0.06 65);
-  --color-primary-300: oklch(0.7 0.08 65);
-  --color-primary-400: oklch(0.65 0.09 65);
-  --color-primary-500: oklch(0.6 0.1 65);
-  --color-primary-600: oklch(0.55 0.1 65);
-  --color-primary-700: oklch(0.5 0.095 65);
-  --color-primary-800: oklch(0.45 0.085 65);
-  --color-primary-900: oklch(0.4 0.075 65);
-  --color-primary-950: oklch(0.35 0.06 65);
+  /* Primary — бордо страницы правил (акцент, ссылки, кнопки) */
+  --color-primary-50: oklch(0.965 0.015 30);
+  --color-primary-100: oklch(0.92 0.035 29);
+  --color-primary-200: oklch(0.85 0.065 28);
+  --color-primary-300: oklch(0.72 0.11 28);
+  --color-primary-400: oklch(0.52 0.16 28);
+  --color-primary-500: oklch(0.36 0.13 27);
+  --color-primary-600: oklch(0.3 0.116 27); /* #5a0507 */
+  --color-primary-700: oklch(0.26 0.1 27);
+  --color-primary-800: oklch(0.22 0.085 27);
+  --color-primary-900: oklch(0.19 0.07 27);
+  --color-primary-950: oklch(0.16 0.055 27);
 
-  /* Red — приглушённый кирпично-чернильный */
-  --color-red-50: oklch(0.95 0.02 28);
-  --color-red-100: oklch(0.9 0.035 28);
-  --color-red-200: oklch(0.8 0.06 28);
-  --color-red-300: oklch(0.7 0.08 28);
-  --color-red-400: oklch(0.65 0.1 28);
-  --color-red-500: oklch(0.6 0.11 28);
-  --color-red-600: oklch(0.55 0.11 28);
-  --color-red-700: oklch(0.5 0.115 28);
-  --color-red-800: oklch(0.45 0.12 28);
-  --color-red-900: oklch(0.4 0.11 28);
-  --color-red-950: oklch(0.35 0.09 28);
+  /* Red — чистый красный ошибок и чудовищ, чтобы не путался с бордовым акцентом */
+  --color-red-50: oklch(0.965 0.02 25);
+  --color-red-100: oklch(0.92 0.045 26);
+  --color-red-200: oklch(0.85 0.08 27);
+  --color-red-300: oklch(0.74 0.13 28);
+  --color-red-400: oklch(0.62 0.17 29);
+  --color-red-500: oklch(0.52 0.18 29); /* #b42318 */
+  --color-red-600: oklch(0.46 0.175 28); /* #a50d0d */
+  --color-red-700: oklch(0.41 0.16 27);
+  --color-red-800: oklch(0.36 0.14 26);
+  --color-red-900: oklch(0.31 0.12 25);
+  --color-red-950: oklch(0.26 0.1 25);
 
-  /* Yellow — охра / горчичная краска */
-  --color-yellow-50: oklch(0.95 0.02 82);
-  --color-yellow-100: oklch(0.9 0.04 82);
-  --color-yellow-200: oklch(0.8 0.06 82);
-  --color-yellow-300: oklch(0.7 0.07 82);
-  --color-yellow-400: oklch(0.65 0.09 82);
-  --color-yellow-500: oklch(0.6 0.1 82);
-  --color-yellow-600: oklch(0.55 0.1 82);
-  --color-yellow-700: oklch(0.5 0.09 82);
-  --color-yellow-800: oklch(0.45 0.08 82);
-  --color-yellow-900: oklch(0.4 0.07 82);
-  --color-yellow-950: oklch(0.35 0.06 82);
+  /* Yellow — золото обреза страницы */
+  --color-yellow-50: oklch(0.97 0.02 85);
+  --color-yellow-100: oklch(0.93 0.045 85);
+  --color-yellow-200: oklch(0.88 0.08 84);
+  --color-yellow-300: oklch(0.82 0.11 83); /* #e6bd6b */
+  --color-yellow-400: oklch(0.71 0.115 84);
+  --color-yellow-500: oklch(
+    0.62 0.105 85
+  ); /* чуть темнее #ad8f4e ради контраста текста */
+  --color-yellow-600: oklch(0.58 0.1 86);
+  --color-yellow-700: oklch(0.51 0.095 86);
+  --color-yellow-800: oklch(0.45 0.09 86);
+  --color-yellow-900: oklch(0.39 0.08 86);
+  --color-yellow-950: oklch(0.33 0.07 86);
 
-  /* Green — приглушённая шалфейно-оливковая печать */
-  --color-green-50: oklch(0.95 0.02 140);
-  --color-green-100: oklch(0.9 0.035 140);
-  --color-green-200: oklch(0.8 0.06 140);
-  --color-green-300: oklch(0.75 0.075 140);
-  --color-green-400: oklch(0.7 0.09 140);
-  --color-green-500: oklch(0.65 0.1 140);
-  --color-green-600: oklch(0.6 0.1 140);
-  --color-green-700: oklch(0.55 0.095 140);
-  --color-green-800: oklch(0.5 0.09 140);
-  --color-green-900: oklch(0.45 0.08 140);
-  --color-green-950: oklch(0.4 0.07 140);
+  /* Green — глубокая зелень действий и навыков */
+  --color-green-50: oklch(0.965 0.02 150);
+  --color-green-100: oklch(0.92 0.04 150);
+  --color-green-200: oklch(0.85 0.07 151);
+  --color-green-300: oklch(0.76 0.095 152);
+  --color-green-400: oklch(0.66 0.11 153);
+  --color-green-500: oklch(0.53 0.115 154);
+  --color-green-600: oklch(0.49 0.11 155);
+  --color-green-700: oklch(0.42 0.1 155); /* #075c33 */
+  --color-green-800: oklch(0.37 0.09 155);
+  --color-green-900: oklch(0.32 0.08 155);
+  --color-green-950: oklch(0.27 0.07 155);
 
-  /* Blue — приглушённый грифельно-чернильный */
-  --color-blue-50: oklch(0.95 0.02 250);
-  --color-blue-100: oklch(0.9 0.035 250);
-  --color-blue-200: oklch(0.8 0.06 250);
-  --color-blue-300: oklch(0.7 0.08 250);
-  --color-blue-400: oklch(0.65 0.09 250);
-  --color-blue-500: oklch(0.6 0.1 250);
-  --color-blue-600: oklch(0.55 0.1 250);
-  --color-blue-700: oklch(0.5 0.1 250);
-  --color-blue-800: oklch(0.45 0.1 250);
-  --color-blue-900: oklch(0.4 0.09 250);
-  --color-blue-950: oklch(0.35 0.08 250);
+  /* Blue — синие чернила ссылок на общие термины */
+  --color-blue-50: oklch(0.965 0.015 255);
+  --color-blue-100: oklch(0.92 0.035 255);
+  --color-blue-200: oklch(0.85 0.065 256);
+  --color-blue-300: oklch(0.75 0.1 257);
+  --color-blue-400: oklch(0.62 0.14 258);
+  --color-blue-500: oklch(0.5 0.16 259); /* #1d5fbf */
+  --color-blue-600: oklch(0.44 0.145 257); /* #0b4f9f */
+  --color-blue-700: oklch(0.39 0.12 255);
+  --color-blue-800: oklch(0.34 0.1 254);
+  --color-blue-900: oklch(0.3 0.085 253);
+  --color-blue-950: oklch(0.26 0.07 253);
 
-  /* Gray — тёплый сепия-серый (каркас, бордеры) */
-  --color-gray-50: oklch(0.98 0.004 85);
-  --color-gray-100: oklch(0.9 0.008 85);
-  --color-gray-200: oklch(0.8 0.012 85);
-  --color-gray-300: oklch(0.7 0.016 85);
-  --color-gray-400: oklch(0.6 0.018 85);
-  --color-gray-500: oklch(0.55 0.018 85);
-  --color-gray-600: oklch(0.5 0.018 85);
-  --color-gray-700: oklch(0.45 0.018 85);
-  --color-gray-800: oklch(0.4 0.016 85);
-  --color-gray-900: oklch(0.35 0.014 85);
-  --color-gray-950: oklch(0.3 0.012 85);
+  /* Gray — песочно-золотистый каркас (бордюры, вторичный текст) */
+  --color-gray-50: oklch(0.965 0.012 78);
+  --color-gray-100: oklch(0.877 0.022 76); /* #dfd5c7 */
+  --color-gray-200: oklch(0.83 0.04 82);
+  --color-gray-300: oklch(0.787 0.056 87); /* #c9b891 */
+  --color-gray-400: oklch(0.62 0.04 76);
+  --color-gray-500: oklch(0.56 0.035 74);
+  --color-gray-600: oklch(0.5 0.03 70);
+  --color-gray-700: oklch(0.44 0.028 68);
+  --color-gray-800: oklch(0.38 0.024 66);
+  --color-gray-900: oklch(0.32 0.02 64);
+  --color-gray-950: oklch(0.26 0.016 62);
 
-  /* Neutral — тёплые сепия-чернила (текст) */
-  --color-neutral-50: oklch(0.96 0.006 80);
-  --color-neutral-100: oklch(0.92 0.012 80);
-  --color-neutral-200: oklch(0.85 0.016 78);
-  --color-neutral-300: oklch(0.78 0.02 78);
-  --color-neutral-400: oklch(0.68 0.022 76);
-  --color-neutral-500: oklch(0.6 0.022 75);
-  --color-neutral-600: oklch(0.52 0.024 74);
-  --color-neutral-700: oklch(0.44 0.026 72);
-  --color-neutral-800: oklch(0.36 0.028 70);
-  --color-neutral-900: oklch(0.3 0.028 68);
-  --color-neutral-950: oklch(0.25 0.026 66);
+  /* Neutral — тёплые чернила (текст) */
+  --color-neutral-50: oklch(0.975 0.008 75);
+  --color-neutral-100: oklch(0.94 0.012 75);
+  --color-neutral-200: oklch(0.87 0.018 74);
+  --color-neutral-300: oklch(0.78 0.022 73);
+  --color-neutral-400: oklch(0.66 0.028 71);
+  --color-neutral-500: oklch(0.59 0.033 70); /* #8a7a68 */
+  --color-neutral-600: oklch(0.5 0.024 67); /* #6d6257 */
+  --color-neutral-700: oklch(0.42 0.026 60);
+  --color-neutral-800: oklch(0.33 0.028 50);
+  --color-neutral-900: oklch(0.24 0.02 50);
+  --color-neutral-950: oklch(0.2 0.012 80); /* #191813 */
 
   /* UI Primary */
   --ui-color-primary-50: var(--color-primary-50);
@@ -183,34 +193,52 @@ html.light {
 
   /* Nuxt UI variables */
   --ui-text-dimmed: var(--color-gray-400); /* выцветшие чернила */
-  --ui-text-muted: var(--color-neutral-600); /* приглушённый текст */
+  --ui-text-muted: var(--color-neutral-600); /* приглушённый текст #6d6257 */
   --ui-text-toned: var(--color-neutral-700); /* вторичный текст */
   --ui-text: var(--color-neutral-900); /* основные чернила */
-  --ui-text-highlighted: var(--color-neutral-950); /* насыщенные чернила */
-  --ui-text-inverted: var(--color-neutral-100); /* светлый текст на тёмном */
-  --ui-bg: oklch(0.95 0.022 85); /* бумага */
-  --ui-bg-muted: oklch(0.97 0.018 85); /* светлая бумага */
-  --ui-bg-elevated: oklch(0.925 0.026 85); /* затенённая страница */
-  --ui-bg-accented: oklch(0.86 0.032 84); /* бежевый акцент */
-  --ui-bg-inverted: var(--color-neutral-500); /* инверсия */
-  --ui-border: var(--color-gray-100); /* тёплый бордюр */
+  --ui-text-highlighted: var(
+    --color-neutral-950
+  ); /* чернила заголовков #191813 */
+  --ui-text-inverted: oklch(
+    0.964 0.015 90
+  ); /* тёплый белый на бордовом и чернильном #f7f3e8 */
+  --ui-bg: oklch(
+    0.987 0.01 73
+  ); /* приподнятая поверхность: модалки, выпадашки, мелкие карточки #fffaf4 */
+  --ui-bg-muted: oklch(0.969 0.006 60); /* карточка и сайдбар #f8f4f1 */
+  --ui-bg-elevated: oklch(0.93 0.02 79); /* бежевая подложка панелей #efe6d8 */
+  --ui-bg-accented: oklch(0.89 0.04 84); /* песочные поля ввода #eadbbd */
+  --ui-bg-inverted: var(
+    --color-neutral-950
+  ); /* чернильная плашка, как шапка ruleholder */
+  --ui-border: var(--color-gray-100); /* бордюр карточек #dfd5c7 */
   --ui-border-muted: var(--color-gray-50);
-  --ui-border-accented: var(--color-gray-300);
-  --ui-border-inverted: var(--color-neutral-500);
+  --ui-border-accented: var(--color-gray-300); /* золотистый бордюр #c9b891 */
+  --ui-border-inverted: var(--color-neutral-800);
 
+  /* Страница: пергамент #f1ebe8 с едва заметным высветлением кверху; от `--ui-bg` отвязана,
+   * потому что поверхности модалок и меню светлее самой страницы */
+  --color-bg-main-gradient:
+    to top, oklch(0.944 0.008 49) 0%, oklch(0.944 0.008 49) 40%,
+    oklch(0.955 0.009 55) 100%;
+
+  /* Фактура бумаги поверх градиента (ruleholder кладёт parchment.jpg; здесь тот же
+   * эффект даёт плитка облачного шума без картинки). Как она накладывается —
+   * в правиле `body` в tailwind.css. */
+  --paper-texture: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='720' height='720'%3E%3Cfilter id='p' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.008' numOctaves='3' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.16 0 0 0 0 0.12 0 0 0 0 0.07 0.06 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E");
+
+  /* Всплывающие меню — приподнятая поверхность #fffaf4 */
   --color-bg-menu:
-    135deg, oklch(0.965 0.02 86 / 0.65), oklch(0.94 0.024 86 / 0.65);
+    135deg, oklch(0.987 0.01 73 / 0.85), oklch(0.965 0.012 68 / 0.85);
 
-  --color-hover: oklch(0.25 0.04 70 / 0.07);
-  --color-link: oklch(
-    0.5 0.14 245
-  ); /* холодные чернила — контраст к тёплой бумаге */
+  --color-hover: oklch(0.3 0.116 27 / 0.08); /* бордовая дымка при наведении */
+  --color-link: var(--color-primary-500); /* ссылки бордовые, как и акцент */
 
   /* Logo — тема плоская: верх и низ каждого градиента совпадают */
-  --color-logo-stroke-top: oklch(0.325 0.007 95.278);
-  --color-logo-stroke-bottom: oklch(0.325 0.007 95.278);
-  --color-logo-dice-top: oklch(0.325 0.007 95.278);
-  --color-logo-dice-bottom: oklch(0.325 0.007 95.278);
-  --color-logo-tree-top: oklch(0.537 0.146 30.314);
-  --color-logo-tree-bottom: oklch(0.537 0.146 30.314);
+  --color-logo-stroke-top: var(--color-neutral-900);
+  --color-logo-stroke-bottom: var(--color-neutral-900);
+  --color-logo-dice-top: var(--color-neutral-900);
+  --color-logo-dice-bottom: var(--color-neutral-900);
+  --color-logo-tree-top: var(--color-primary-500);
+  --color-logo-tree-bottom: var(--color-primary-500);
 }

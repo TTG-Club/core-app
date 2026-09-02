@@ -10,6 +10,7 @@ import type {
   CharacterSheetListPage,
   CharacterSpellcasting,
   FeatureDescriptionNode,
+  InventoryArmor,
   ResourceRecovery,
   ResourceRecoveryMode,
   ResourceRecoveryRule,
@@ -32,6 +33,7 @@ import {
   INVENTORY_QUANTITY_MAX,
   INVENTORY_QUANTITY_MIN,
   LEGACY_NOTE_ID,
+  LEGACY_STEALTH_DISADVANTAGE_ARMOR_URLS,
   LEVEL_MAX,
   LEVEL_MIN,
   NEW_CUSTOM_BONUS,
@@ -908,9 +910,41 @@ const inventoryArmorSchema = z
     baseArmorClass: z.coerce.number().catch(0),
     dexterityMod: z.enum(['full', 'capped', 'none']).catch('full'),
     shield: z.boolean().catch(false),
+    // Помеха Скрытности появилась в записи позже: `undefined` — снимок старый,
+    // и помеху приходится восстанавливать по каталогу (см. `withArmorStealth`).
+    stealthDisadvantage: z.boolean().optional().catch(undefined),
   })
   .nullable()
   .catch(null);
+
+/**
+ * Снимок доспеха с проставленной помехой Скрытности.
+ *
+ * У листов, сохранённых до появления помехи в записи, поля нет, а вывести его
+ * из самого снимка нельзя: там только КД, правило Ловкости и признак щита, по
+ * которым стёганый доспех (помеха есть) неотличим от кожаного (помехи нет).
+ * Поэтому старым записям помеха возвращается по url каталожного доспеха; у
+ * своих предметов игрока url пустой, и помехи у них не было изначально.
+ *
+ * @param armor снимок доспеха записи; null — предмет не доспех.
+ * @param url url предмета в каталоге; '' — свой предмет игрока.
+ * @returns снимок доспеха, у которого помеха задана всегда.
+ */
+function withArmorStealth(
+  armor: z.output<typeof inventoryArmorSchema>,
+  url: string,
+): InventoryArmor | null {
+  if (!armor) {
+    return null;
+  }
+
+  return {
+    ...armor,
+    stealthDisadvantage:
+      armor.stealthDisadvantage
+      ?? LEGACY_STEALTH_DISADVANTAGE_ARMOR_URLS.has(url),
+  };
+}
 
 const inventoryWeaponDamageSchema = z
   .object({
@@ -1061,7 +1095,7 @@ const personalitySchema = z
   })
   .catch(() => ({ ...DEFAULT_CHARACTER.personality }));
 
-const inventoryItemSchema = z.object({
+const inventoryItemBaseSchema = z.object({
   id: z.string(),
   url: z.string().catch(''),
   name: z.string().catch(''),
@@ -1105,6 +1139,15 @@ const inventoryItemSchema = z.object({
   // живёт в разделе-источнике, а не в листе.
   description: z.array(descriptionNodeSchema).optional().catch(undefined),
 });
+
+// Помеху Скрытности снимок листа мог не унести, а восстанавливается она по url
+// предмета — то есть уже за пределами схемы самого доспеха.
+const inventoryItemSchema = inventoryItemBaseSchema.transform(
+  (inventoryItem) => ({
+    ...inventoryItem,
+    armor: withArmorStealth(inventoryItem.armor, inventoryItem.url),
+  }),
+);
 
 /**
  * Форма листа сразу после разбора схемой: классы могут быть без уровня, среди

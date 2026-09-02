@@ -6,6 +6,8 @@
     ParsedSelection,
   } from '../../model';
 
+  import { MarkupRender } from '~ui/markup';
+
   import {
     BUG_REPORT_ANONYMOUS_USER,
     BUG_REPORT_ANONYMOUS_USER_GENITIVE,
@@ -27,6 +29,7 @@
     getAdminBugStatusApiUrl,
     getBugReportStatusColor,
     parseSelectedText,
+    toBugReportDescriptionBlocks,
   } from '../../model';
 
   /**
@@ -58,6 +61,11 @@
   const isSavingComment = ref(false);
 
   const { format } = useDayjs();
+
+  /** Абзацы описания для рендера разметки: новые репорты — с оформлением, старые — текст. */
+  const descriptionBlocks = computed(() =>
+    toBugReportDescriptionBlocks(props.bugReport.description),
+  );
 
   /**
    * Форматированная дата последнего изменения статуса.
@@ -390,10 +398,12 @@
         Описание проблемы
       </div>
 
+      <!-- whitespace-pre-wrap сохраняет переносы строк старых репортов (обычный
+           текст); у блоков разметки убираем нижний отступ последнего -->
       <div
-        class="rounded-xl border border-default bg-default/20 p-4 text-sm leading-relaxed break-words whitespace-pre-wrap text-highlighted"
+        class="rounded-xl border border-default bg-default/20 p-4 text-sm leading-relaxed break-words whitespace-pre-wrap text-highlighted [&>*:last-child]:mb-0"
       >
-        {{ bugReport.description }}
+        <MarkupRender :render-node="descriptionBlocks" />
       </div>
     </div>
 

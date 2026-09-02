@@ -51,6 +51,9 @@ export const ADMIN_BUGS_API_URL = '/api/admin/bugs';
 /** URL API получения количества баг-репортов по каждому статусу (админка) */
 export const ADMIN_BUGS_COUNT_BY_STATUS_API_URL = `${ADMIN_BUGS_API_URL}/count-by-status`;
 
+/** URL API значений для фильтров списка: логины авторов и менявших статус (админка) */
+export const ADMIN_BUGS_FILTER_OPTIONS_API_URL = `${ADMIN_BUGS_API_URL}/filter-options`;
+
 /**
  * Платформа-источник бага. Реэкспорт из `#shared/consts`: идентичность сайта —
  * общее знание, её нельзя разнести по константам двух фич.
@@ -94,7 +97,7 @@ export const ADMIN_BUGS_CONFIGURE_LABEL = 'Посмотреть';
 
 /** Описание раздела админки баг-репортов */
 export const ADMIN_BUGS_PAGE_DESCRIPTION =
-  'Просмотр списка сообщений об ошибках, фильтрация по статусу и платформе.';
+  'Просмотр списка сообщений об ошибках, фильтрация по статусу, платформе, автору и тому, кто менял статус.';
 
 /** Текст при пустом списке баг-репортов */
 export const ADMIN_BUGS_EMPTY_TEXT = 'Баг-репорты не найдены';
@@ -116,6 +119,9 @@ export const ADMIN_BUGS_DETAIL_EMPTY_TEXT =
 /** Ключ кеша сводки количества баг-репортов по статусам в админке */
 export const ADMIN_BUGS_STATUS_COUNTS_DATA_KEY = 'admin-bugs-status-counts';
 
+/** Ключ кеша значений для фильтров списка (логины) в админке */
+export const ADMIN_BUGS_FILTER_OPTIONS_DATA_KEY = 'admin-bugs-filter-options';
+
 /** Ключ кеша баг-репорта, догруженного по ID из ссылки, в админке */
 export const ADMIN_BUG_SELECTED_DATA_KEY = 'admin-bug-selected';
 
@@ -127,6 +133,18 @@ export const ADMIN_BUGS_STATUS_ALL_LABEL = 'Все статусы';
 
 /** Значение фильтра "Все платформы" */
 export const ADMIN_BUGS_PLATFORM_ALL_LABEL = 'Все платформы';
+
+/** Значение фильтра «Все авторы» */
+export const ADMIN_BUGS_AUTHOR_ALL_LABEL = 'Все авторы';
+
+/**
+ * Значение фильтра «Все исполнители». Исполнитель — тот, кто последним менял
+ * статус репорта: вместе с фильтром по статусу «Исправлен» это и есть «кто исправил».
+ */
+export const ADMIN_BUGS_RESOLVER_ALL_LABEL = 'Все исполнители';
+
+/** Подсказка в поле поиска выпадающих списков авторов и исполнителей */
+export const ADMIN_BUGS_LOGIN_SEARCH_PLACEHOLDER = 'Поиск по логину…';
 
 /** Мапа русских названий для статусов баг-репортов */
 export const BUG_REPORT_STATUS_LABELS: Record<BugReportStatus, string> = {
@@ -207,6 +225,15 @@ export const BUG_REPORT_SUBMIT_ERROR_TITLE = 'Ошибка отправки';
 export const BUG_REPORT_SUBMIT_ERROR_DESC =
   'Не удалось отправить баг-репорт. Пожалуйста, попробуйте позже.';
 
+/** Placeholder поля описания проблемы в форме отправки */
+export const BUG_REPORT_DESCRIPTION_PLACEHOLDER = 'Опишите, что произошло...';
+
+/** Максимальная длина описания вместе с разметкой (ограничение API и колонки в базе) */
+export const BUG_REPORT_DESCRIPTION_MAX_LENGTH = 2000;
+
+/** Ошибка валидации: описание длиннее лимита API */
+export const BUG_REPORT_DESCRIPTION_TOO_LONG_ERROR = `Описание вместе с разметкой не должно превышать ${BUG_REPORT_DESCRIPTION_MAX_LENGTH} символов`;
+
 /** Успешный заголовок обновления статуса */
 export const BUG_REPORT_STATUS_UPDATE_SUCCESS_TITLE = 'Статус обновлен';
 
@@ -222,7 +249,7 @@ export const BUG_REPORT_STATUS_COMMENT_PLACEHOLDER =
 /** Максимальная длина комментария (ограничение API) */
 export const BUG_REPORT_STATUS_COMMENT_MAX_LENGTH = 2000;
 
-/** Значение фильтра "Все" для статуса/платформы */
+/** Значение фильтра «Все» для статуса, платформы, автора и исполнителя */
 export const ADMIN_BUGS_FILTER_ALL = 'ALL';
 
 /** Ключ URL-параметра с фильтром по статусу */
@@ -230,6 +257,12 @@ export const ADMIN_BUGS_STATUS_QUERY_KEY = 'status';
 
 /** Ключ URL-параметра с фильтром по платформе */
 export const ADMIN_BUGS_PLATFORM_QUERY_KEY = 'platform';
+
+/** Ключ URL-параметра с фильтром по логину автора */
+export const ADMIN_BUGS_AUTHOR_QUERY_KEY = 'author';
+
+/** Ключ URL-параметра с фильтром по логину исполнителя (кто менял статус) */
+export const ADMIN_BUGS_RESOLVER_QUERY_KEY = 'resolver';
 
 /** Ключ URL-параметра с идентификатором открытого баг-репорта */
 export const ADMIN_BUGS_ID_QUERY_KEY = 'id';

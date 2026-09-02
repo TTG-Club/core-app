@@ -7,6 +7,7 @@ import { z } from '~/utils/zod';
 import {
   CATALOG_PICKER_PAGE_SIZE,
   CATALOG_PICKER_SEARCH_DEBOUNCE_MS,
+  CATALOG_PICKER_SELECT_ALL_LIMIT,
 } from '../model';
 import { parseFilter } from '../schema';
 import { buildSearchQuery, getGroupItems, hasTouchedItem } from '../utils';
@@ -329,6 +330,32 @@ export function useCatalogPicker(section: CatalogPickerSection) {
     }
   }
 
+  /**
+   * Отдаёт всю выдачу под текущий отбор одним запросом.
+   *
+   * Нужна кнопке «Выбрать все»: отметить надо всё, что нашёл отбор, а в списке
+   * лежит лишь загруженный прокруткой кусок.
+   *
+   * @returns записи выдачи и признак того, что её обрезал предел.
+   */
+  async function fetchAllEntries(): Promise<{
+    entries: Array<CatalogPickerEntry>;
+    isLimitReached: boolean;
+  }> {
+    const response = await $fetch<unknown>(section.searchPath, {
+      method: 'GET',
+      query: { ...buildQuery(0), size: CATALOG_PICKER_SELECT_ALL_LIMIT },
+      retry: 0,
+    });
+
+    const foundEntries = parseEntries(response);
+
+    return {
+      entries: foundEntries,
+      isLimitReached: foundEntries.length >= CATALOG_PICKER_SELECT_ALL_LIMIT,
+    };
+  }
+
   /** Повторяет неудавшуюся загрузку: первую страницу либо подгрузку хвоста. */
   async function retryLoad(): Promise<void> {
     if (!entries.value.length) {
@@ -373,6 +400,7 @@ export function useCatalogPicker(section: CatalogPickerSection) {
     requestKey,
     reload,
     loadNextPage,
+    fetchAllEntries,
     retryLoad,
     applyFilterGroups,
     resetFilters,

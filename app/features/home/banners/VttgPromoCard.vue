@@ -24,7 +24,9 @@
     </div>
 
     <div class="relative z-10 flex flex-col items-start gap-1.5">
-      <span class="text-[10px] font-bold tracking-wider text-primary uppercase">
+      <span
+        class="vttg-promo__accent text-[10px] font-bold tracking-wider uppercase"
+      >
         {{ VTTG_PROMO_CARD.eyebrow }}
       </span>
 
@@ -37,7 +39,7 @@
       </p>
 
       <span
-        class="mt-1 inline-flex items-center gap-1.5 text-sm font-medium text-primary"
+        class="vttg-promo__accent mt-1 inline-flex items-center gap-1.5 text-sm font-medium"
       >
         {{ VTTG_PROMO_CARD.linkLabel }}
 
@@ -60,6 +62,12 @@
     box-shadow:
       0 12px 30px -12px rgb(0 0 0 / 60%),
       0 0 20px -8px color-mix(in oklch, var(--ui-primary) 30%, transparent);
+  }
+
+  /* Подпись и ссылка лежат на тёмной картинке во всех темах, поэтому
+     берут золото VTTG, а не акцент темы: бордовый на чёрном не читается. */
+  .vttg-promo__accent {
+    color: var(--vttg-gold);
   }
 
   .vttg-promo__bg {

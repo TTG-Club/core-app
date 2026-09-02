@@ -138,6 +138,7 @@ import type {
   SpellcastingClassRow,
   SpellCatalogPreset,
   SpellDamage,
+  SpellDamageFormulas,
   SpellSlotCircle,
   SpellSlotKind,
   SpellSlotRow,
@@ -3294,7 +3295,8 @@ function getCustomInventoryTypesLabel(draft: CustomInventoryItemDraft): string {
 
 /**
  * Параметры доспеха из значений формы: КД и правило Ловкости берутся из типа
- * доспеха. null — вид предмета не «Доспех».
+ * доспеха, помеху Скрытности игрок отмечает сам. null — вид предмета не
+ * «Доспех».
  *
  * @param draft значения формы своего предмета.
  * @returns параметры доспеха или null.
@@ -3316,6 +3318,7 @@ function getCustomInventoryArmor(
     ),
     dexterityMod,
     shield,
+    stealthDisadvantage: draft.stealthDisadvantage,
   };
 }
 
@@ -3802,6 +3805,9 @@ export function getCustomInventoryItemDraft(
     armorType: getCustomArmorType(armor),
     baseArmorClass:
       armor?.baseArmorClass ?? NEW_CUSTOM_INVENTORY_ITEM.baseArmorClass,
+    stealthDisadvantage:
+      armor?.stealthDisadvantage
+      ?? NEW_CUSTOM_INVENTORY_ITEM.stealthDisadvantage,
     weaponCategory:
       weapon?.category ?? NEW_CUSTOM_INVENTORY_ITEM.weaponCategory,
     ranged: weapon?.ranged ?? NEW_CUSTOM_INVENTORY_ITEM.ranged,
@@ -7224,20 +7230,44 @@ function getSpellDamageExpression(
 }
 
 /**
+ * Формулы урона заклинания на уровне персонажа: у заговора набор формул с
+ * порогового уровня заменяется целиком (5, 11 и 17 в правилах), поэтому берётся
+ * наибольший подходящий тир, а не базовые формулы.
+ *
+ * @param damage урон заклинания из справочника.
+ * @param characterLevel общий уровень персонажа.
+ * @returns формулы урона, действующие на этом уровне.
+ */
+function getSpellDamageFormulasByLevel(
+  damage: SpellDamageFormulas,
+  characterLevel: number,
+): string[] {
+  // Тиры отсортированы по возрастанию уровня: последний подходящий и есть
+  // действующий.
+  const tier = damage.cantripTiers.findLast(
+    (cantripTier) => cantripTier.level <= characterLevel,
+  );
+
+  return tier?.formulas ?? damage.base;
+}
+
+/**
  * Броски урона заклинания из формул справочника. Одна запись справочника может
  * описывать несколько взаимоисключающих бросков (кость зависит от состояния
  * цели) — каждый становится отдельной плиткой. Лечение и формулы с
  * неподдерживаемыми тегами пропускаются: плитка урона о них не говорит.
  *
- * @param damageFormulas формулы урона заклинания из справочника.
+ * @param spellDamage урон заклинания из справочника (с тирами заговора).
  * @param spellAbilityModifier модификатор заклинательной характеристики.
+ * @param characterLevel общий уровень персонажа: по нему растёт урон заговора.
  * @returns броски урона в порядке справочника; пусто — урона у заклинания нет.
  */
 export function getSpellDamage(
-  damageFormulas: string[],
+  spellDamage: SpellDamageFormulas,
   spellAbilityModifier: number,
+  characterLevel: number,
 ): SpellDamage[] {
-  return damageFormulas
+  return getSpellDamageFormulasByLevel(spellDamage, characterLevel)
     .flatMap((damageFormula) =>
       damageFormula.split(SPELL_DAMAGE_VARIANT_SEPARATOR),
     )
@@ -8489,10 +8519,10 @@ export function getTotalClassLevel(classes: CharacterClass[]): number {
  * Извлекает url черты из идентификатора особенности. Обычная черта — `feat:url`,
  * повторяемая — `feat:url:uuid` (у каждой копии свой суффикс). Url черты не
  * содержит двоеточий, поэтому берём сегмент между первым и вторым `:`.
- * Черты, выданные классовым умением, лежат под классовым идентификатором
- * (`class:{featureKey}:fighting-style:{url}`, `class:{featureKey}:{level}:ability-improvement:{url}`)
- * — иначе их копии не удалялись бы вместе с умением, — поэтому url берётся из
- * хвоста после служебного сегмента.
+ * Черты, выданные умением записи, лежат под идентификатором самой записи
+ * (`class:{featureKey}:fighting-style:{url}`, `class:{featureKey}:{level}:ability-improvement:{url}`,
+ * `species:{featureUrl}:feat:{url}`) — иначе их копии не удалялись бы вместе с
+ * умением, — поэтому url берётся из хвоста после служебного сегмента.
  *
  * @param featureId идентификатор особенности.
  * @returns url черты или null, если особенность — не черта.
@@ -10729,6 +10759,59 @@ export function buildClassFeatures(
 }
 
 /**
+ * Примета выборов заклинаний записи: их идентификаторы одной строкой.
+ *
+ * Выбор заклинания появляется вместе со взятым вариантом умения («Маг»
+ * первобытного порядка друида), поэтому пул грузится по его появлению, а не
+ * один раз на загрузке записи. Наблюдать за самими выборами нечем: список
+ * пересобирается на каждый ответ игрока, и вотчер по нему срабатывал бы
+ * вхолостую — строка же меняется только вместе с набором выборов.
+ *
+ * @param choices выборы, которые мастер спрашивает сейчас.
+ * @returns строка-примета; пусто — выборов заклинаний нет.
+ */
+export function getSpellChoicesKey(choices: ClassChoice[]): string {
+  return choices
+    .filter((choice) => choice.kind === 'spell')
+    .map((choice) => choice.id)
+    .join('|');
+}
+
+/**
+ * Записи умений с заклинаниями, которые игрок выбрал в их выборах.
+ *
+ * Заклинание кладётся на саму запись умения, а не в общий список листа:
+ * дополнительный заговор «Мага» персонаж знает, пока у него есть первобытный
+ * порядок друида, — снятие класса забирает заговор вместе с умением, как и
+ * выданное умением заклинание. Места среди подготовленных такой заговор не
+ * занимает: лист ведёт его наравне с врождённым заклинанием вида.
+ *
+ * @param features записи умений листа.
+ * @param spellsByFeatureId выбранные заклинания по идентификатору умения.
+ * @returns записи умений с добавленными заклинаниями.
+ */
+export function withChosenFeatureSpells(
+  features: CharacterFeature[],
+  spellsByFeatureId: Record<string, CharacterSpell[]>,
+): CharacterFeature[] {
+  return features.map((feature) => {
+    const granted = feature.spells ?? [];
+
+    const known = new Set(granted.map((spell) => spell.url));
+
+    // Заклинание, которое умение и так выдаёт, вторым разом не заводится:
+    // выбрать его игрок может, а записей в списке всё равно одна
+    const added = (spellsByFeatureId[feature.id] ?? []).filter(
+      (spell) => !known.has(spell.url),
+    );
+
+    return added.length
+      ? { ...feature, spells: [...granted, ...added] }
+      : feature;
+  });
+}
+
+/**
  * Классовые особенности ровно указанного уровня: базовый класс даёт свои,
  * выбранный подкласс — свои. Нужны мастеру повышения уровня, который выдаёт
  * умения по шагу на уровень.
@@ -12336,6 +12419,14 @@ export function resolveChoiceOptions(
     const known = new Set(context.knownLanguages);
 
     return context.allLanguages.filter((name) => !known.has(name));
+  }
+
+  // Черта выбирается своим пикером каталога, а не селектом: в `listed` у неё
+  // лежат url, а не названия. Пустой список — сигнал вызывающему, что выбор
+  // ему не по зубам; без этой ветки он проваливался в инструменты ниже, и
+  // «Универсальность» человека предлагала инструменты алхимика вместо черты.
+  if (choice.kind === 'feat') {
+    return [];
   }
 
   const knownTools = new Set(context.knownTools);

@@ -37,6 +37,7 @@ import type {
   SpeciesOption,
   SpeciesSummary,
   SpellCatalogItem,
+  SpellDamageFormulas,
   StartingEquipmentItem,
   StartingEquipmentOption,
 } from './types';
@@ -1828,7 +1829,8 @@ const ARMOR_DEXTERITY_MOD_MAP: Record<ArmorRawDexterityMod, ArmorDexterityMod> =
 /**
  * Схема «сырого» ответа предмета `GET /api/v2/item/{url}/raw` в части доспеха.
  * Форма — как у формы редактора предметов (`ArmorCreate`): объект `armor` с
- * числовым КД и правилом Ловкости; у не-доспехов приходит null.
+ * числовым КД, правилом Ловкости и пометкой помехи Скрытности; у не-доспехов
+ * приходит null.
  */
 const itemRawArmorSchema = z
   .object({
@@ -1837,6 +1839,7 @@ const itemRawArmorSchema = z
         category: z.string().catch(''),
         armorClass: z.coerce.number().catch(0),
         mod: z.enum(['PLUS', 'PLUS_MAX_2', 'NONE']).catch('PLUS'),
+        stealth: z.boolean().catch(false),
       })
       .nullable()
       .catch(null),
@@ -1877,6 +1880,7 @@ export function parseItemArmor(
     baseArmorClass: armor.armorClass,
     dexterityMod: ARMOR_DEXTERITY_MOD_MAP[armor.mod],
     shield: isShieldArmor(armor.category, item),
+    stealthDisadvantage: armor.stealth,
   };
 }
 
@@ -3157,15 +3161,29 @@ function getSpellComponentsText(components: SpellComponentsResponse): string {
   return parts.join(', ');
 }
 
+/** Схема тира масштабирования заговора: уровень персонажа и его набор частей. */
+const spellRawCantripScalingTierSchema = z
+  .object({
+    level: z.number().catch(0),
+    parts: z
+      .array(z.object({ formula: z.string().catch('') }).catch({ formula: '' }))
+      .catch([]),
+  })
+  .catch({ level: 0, parts: [] });
+
 /**
  * Схема «сырого» ответа заклинания в части урона: формулы вида `8к6@dmg.fire`
- * лежат в блоке воздействия, который публичная деталь не отдаёт.
+ * лежат в блоке воздействия, который публичная деталь не отдаёт. Там же лежат
+ * тиры масштабирования заговора — урон заговора растёт с уровнем персонажа.
  */
 const spellRawDamageSchema = z
   .object({
     effect: z
       .object({
         damageFormulas: z.array(z.string()).catch([]),
+        cantripScalingTiers: z
+          .array(spellRawCantripScalingTierSchema)
+          .catch([]),
       })
       .nullable()
       .catch(null),
@@ -3174,14 +3192,30 @@ const spellRawDamageSchema = z
 
 /**
  * Валидация «сырого» ответа `GET /api/v2/spells/{url}/raw` в части урона.
- * Неожиданный ответ даёт пустой список, а не исключение: заклинание просто
+ * Неожиданный ответ даёт пустой урон, а не исключение: заклинание просто
  * останется без плитки урона.
  *
+ * Тиры без уровня и без единой формулы отбрасываются, остальные сортируются по
+ * уровню: потребитель берёт наибольший подходящий и на несортированном списке
+ * ошибётся.
+ *
  * @param input сырой ответ заклинания.
- * @returns формулы урона из справочника.
+ * @returns формулы урона из справочника с тирами заговора.
  */
-export function parseSpellDamageFormulas(input: unknown): string[] {
-  return spellRawDamageSchema.parse(input).effect?.damageFormulas ?? [];
+export function parseSpellDamageFormulas(input: unknown): SpellDamageFormulas {
+  const effect = spellRawDamageSchema.parse(input).effect;
+
+  const cantripTiers = (effect?.cantripScalingTiers ?? [])
+    .map((tier) => ({
+      level: tier.level,
+      formulas: tier.parts
+        .map((part) => part.formula.trim())
+        .filter((formula) => formula.length > 0),
+    }))
+    .filter((tier) => tier.level > 0 && tier.formulas.length > 0)
+    .sort((left, right) => left.level - right.level);
+
+  return { base: effect?.damageFormulas ?? [], cantripTiers };
 }
 
 /**

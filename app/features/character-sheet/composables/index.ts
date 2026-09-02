@@ -20,7 +20,7 @@ export { useCharacterSheetLoader } from './useCharacterSheetLoader';
 export { useCharacterSheetPdf } from './useCharacterSheetPdf';
 export { useCharacterSheetSaved } from './useCharacterSheetSaved';
 export { useCharacterSheetShare } from './useCharacterSheetShare';
-export { useFeatChoiceSpells } from './useFeatChoiceSpells';
+export { useChoiceSpellPools } from './useChoiceSpellPools';
 export { useLevelUpWizard } from './useLevelUpWizard';
 export { useSheetActiveEffects } from './useSheetActiveEffects';
 export { useSheetAvatar } from './useSheetAvatar';

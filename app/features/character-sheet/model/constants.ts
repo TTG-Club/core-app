@@ -861,6 +861,9 @@ export const ARMOR_DEXTERITY_HINT_LABELS: Record<ArmorDexterityMod, string> = {
   none: ' (без модификатора Ловкости)',
 };
 
+/** Хвост подсказки доспеха, в котором проверки Скрытности идут с помехой. */
+export const ARMOR_STEALTH_HINT_LABEL = '; помеха на Скрытность';
+
 /** Подписи модалки настройки класса доспеха. */
 export const ARMOR_CLASS_LABELS: Record<
   | 'title'
@@ -2376,6 +2379,10 @@ export const FIGHTING_STYLE_INVALID_RESPONSE_ERROR =
 export const CLASS_FEAT_INVALID_RESPONSE_ERROR =
   'Сервер вернул некорректную черту умения класса';
 
+/** Ошибка: деталь черты, выбранной в умении вида, не прошла разбор. */
+export const SPECIES_FEAT_INVALID_RESPONSE_ERROR =
+  'Сервер вернул некорректную черту умения вида';
+
 /**
  * Сегмент идентификатора особенности с выбранным боевым стилем:
  * `class:{featureKey}:fighting-style:{featUrl}`. Префикс `class:` нужен, чтобы
@@ -2495,10 +2502,11 @@ export const ABILITY_INCREASE_FEATURE_ID_SEGMENT = 'ability-increase';
 export const ABILITY_IMPROVEMENT_FEATURE_ID_SEGMENT = 'ability-improvement';
 
 /**
- * Сегмент идентификатора черты, выбранной в умении класса:
- * `class:{featureKey}[:{level}]:feat:{featUrl}`. Один на все выборы черты —
- * боевой стиль и черту за повышение характеристик мастер спрашивает одним
- * пикером; прежние сегменты остались ради уже собранных листов.
+ * Сегмент идентификатора черты, выбранной в умении записи:
+ * `class:{featureKey}[:{level}]:feat:{featUrl}`, у вида —
+ * `species:{featureUrl}:feat:{featUrl}`. Один на все выборы черты — боевой
+ * стиль и черту за повышение характеристик мастер спрашивает одним пикером;
+ * прежние сегменты остались ради уже собранных листов.
  */
 export const CLASS_FEAT_CHOICE_ID_SEGMENT = 'feat';
 
@@ -2509,9 +2517,9 @@ export const CLASS_FEAT_CHOICE_ID_SEGMENT = 'feat';
 export const CLASS_GRANTED_FEAT_ID_SEGMENT = 'granted-feat';
 
 /**
- * Служебные сегменты идентификаторов черт, выданных классовыми умениями. По ним
- * из идентификатора достаётся url черты, поэтому такие черты считаются взятыми
- * и не предлагаются повторно.
+ * Служебные сегменты идентификаторов черт, выданных умениями записи — класса
+ * или вида. По ним из идентификатора достаётся url черты, поэтому такие черты
+ * считаются взятыми и не предлагаются повторно.
  */
 export const CLASS_FEAT_CHOICE_ID_SEGMENTS = [
   FIGHTING_STYLE_FEATURE_ID_SEGMENT,
@@ -4249,6 +4257,25 @@ export const INVENTORY_CHARGES_MIN = 0;
 /** Максимум зарядов предмета. */
 export const INVENTORY_CHARGES_MAX = 99;
 
+/**
+ * Каталожные доспехи, в которых Скрытность идёт с помехой, — для листов,
+ * сохранённых до того, как помеха попала в запись предмета. Снимок доспеха
+ * такого листа хранит только КД, правило Ловкости и признак щита, а по ним
+ * стёганый доспех (помеха есть) неотличим от кожаного (помехи нет), поэтому
+ * восстанавливать помеху приходится по url каталожной записи. Набор
+ * канонический — это все доспехи PHB с пометкой «Помеха на Скрытность».
+ */
+export const LEGACY_STEALTH_DISADVANTAGE_ARMOR_URLS: ReadonlySet<string> =
+  new Set([
+    'padded-armor-phb',
+    'scale-mail-phb',
+    'half-plate-armor-phb',
+    'ring-mail-phb',
+    'chain-mail-phb',
+    'splint-armor-phb',
+    'plate-armor-phb',
+  ]);
+
 /** Заготовка формы своего предмета (значения по умолчанию). */
 export const NEW_CUSTOM_INVENTORY_ITEM: CustomInventoryItemDraft = {
   kind: 'weapon',
@@ -4259,6 +4286,7 @@ export const NEW_CUSTOM_INVENTORY_ITEM: CustomInventoryItemDraft = {
   quantity: 1,
   armorType: 'light',
   baseArmorClass: 11,
+  stealthDisadvantage: false,
   weaponCategory: 'simple',
   ranged: false,
   finesse: false,
@@ -4301,6 +4329,7 @@ export const CUSTOM_ITEM_FIELD_LABELS = {
   attackBonusHint:
     'Бонус мастерства и модификатор характеристики лист добавит сам — здесь только собственный бонус оружия (например, «+1» у магического).',
   armorType: 'Тип доспеха',
+  armorStealthDisadvantage: 'Помеха на Скрытность',
 
   /** Продолжение подсказки типа доспеха: что делать с ним на листе. */
   armorHint:

@@ -5,9 +5,10 @@ import type {
 } from '@nuxt/ui';
 import type { Editor } from '@tiptap/vue-3';
 
-import type { MarkupTag } from './tags';
+import type { MarkupEditorPreset, MarkupTag } from './tags';
 
 import {
+  BASIC_TAG_KEYS,
   BLOCK_TAGS,
   INLINE_TAGS,
   INTERACTIVE_TAGS,
@@ -30,6 +31,8 @@ export interface ToolbarHandlers {
 
 /** Кнопка-переключатель форматирующей марки: имя марки (из marks.ts) + вид. */
 interface MarkButton {
+  /** Ключ одноимённого тега из FORMAT_TAGS — по нему кнопка попадает в пресет. */
+  key: string;
   mark: string;
   icon: string;
   label: string;
@@ -55,31 +58,65 @@ const MARK_KBDS = new Map<string, string[]>(
 );
 
 /**
- * Подсказка кнопки с хоткеем. Штатная тема UTooltip рисует точку-разделитель
- * перед клавишами (`not-first-of-type:before:content-['·']` на слоте kbds) —
- * убираем её: текст и клавиши и так разделены gap'ом контейнера подсказки.
+ * Класс z-index телепортируемых слоёв тулбара (выпадающие списки и подсказки).
+ * Reka рисует их в `body` с `z-index: auto`, поэтому внутри модалки, поднятой
+ * над сайдбаром (`z-100` у BugReportModal), меню заголовков оказывалось ПОД
+ * модалкой и не кликалось. Слой выше любой модалки, но ниже всплывашек сайдбара
+ * (180–200 в SidebarPopover).
+ */
+export const TOOLBAR_LAYER_CLASS = 'z-110';
+
+/**
+ * Подсказка кнопки тулбара (с хоткеем или без). Штатная тема UTooltip рисует
+ * точку-разделитель перед клавишами (`not-first-of-type:before:content-['·']`
+ * на слоте kbds) — убираем её: текст и клавиши и так разделены gap'ом
+ * контейнера подсказки. Слой подсказки — см. TOOLBAR_LAYER_CLASS.
  */
 function kbdTooltip(text: string, kbds?: string[]): TooltipProps {
   return {
     text,
     kbds,
-    ui: { kbds: 'not-first-of-type:before:content-none' },
+    ui: {
+      content: TOOLBAR_LAYER_CLASS,
+      kbds: 'not-first-of-type:before:content-none',
+    },
   };
 }
 
 /** Кнопки форматирования в порядке отображения (имена марок — из FORMAT_SPECS). */
 const FORMAT_MARK_ITEMS: MarkButton[] = [
-  { mark: 'ttgBold', icon: 'tabler:bold', label: 'Жирный' },
-  { mark: 'ttgItalic', icon: 'tabler:italic', label: 'Курсив' },
-  { mark: 'ttgUnderline', icon: 'tabler:underline', label: 'Подчёркнутый' },
-  { mark: 'ttgStrike', icon: 'tabler:strikethrough', label: 'Зачёркнутый' },
+  { key: 'bold', mark: 'ttgBold', icon: 'tabler:bold', label: 'Жирный' },
+  { key: 'italic', mark: 'ttgItalic', icon: 'tabler:italic', label: 'Курсив' },
   {
+    key: 'underline',
+    mark: 'ttgUnderline',
+    icon: 'tabler:underline',
+    label: 'Подчёркнутый',
+  },
+  {
+    key: 'strike',
+    mark: 'ttgStrike',
+    icon: 'tabler:strikethrough',
+    label: 'Зачёркнутый',
+  },
+  {
+    key: 'superscript',
     mark: 'ttgSuperscript',
     icon: 'tabler:superscript',
     label: 'Верхний индекс',
   },
-  { mark: 'ttgSubscript', icon: 'tabler:subscript', label: 'Нижний индекс' },
-  { mark: 'ttgHighlight', icon: 'tabler:highlight', label: 'Выделение' },
+  {
+    key: 'subscript',
+    mark: 'ttgSubscript',
+    icon: 'tabler:subscript',
+    label: 'Нижний индекс',
+  },
+  {
+    key: 'highlight',
+    mark: 'ttgHighlight',
+    icon: 'tabler:highlight',
+    label: 'Выделение',
+  },
 ];
 
 /**
@@ -178,7 +215,7 @@ function tagItem(
 ): EditorToolbarItem {
   return {
     icon: tag.icon,
-    tooltip: { text: tag.label },
+    tooltip: kbdTooltip(tag.label),
     onClick: () => insertTag(editor, tag, isBlock),
   };
 }
@@ -255,7 +292,7 @@ function inlineItem(
   if (tag.key === 'link') {
     return {
       icon: tag.icon,
-      tooltip: { text: tag.label },
+      tooltip: kbdTooltip(tag.label),
       onClick: () => handlers.onLink(tag),
     };
   }
@@ -275,7 +312,7 @@ function interactiveItem(
   if (tag.key === 'dice') {
     return {
       icon: tag.icon,
-      tooltip: { text: tag.label },
+      tooltip: kbdTooltip(tag.label),
       onClick: () => handlers.onDice(tag),
     };
   }
@@ -290,7 +327,8 @@ function interactiveItem(
 function sectionDropdown(handlers: ToolbarHandlers): EditorToolbarItem {
   return {
     icon: 'tabler:external-link',
-    tooltip: { text: 'Ссылка на раздел' },
+    tooltip: kbdTooltip('Ссылка на раздел'),
+    ui: { content: TOOLBAR_LAYER_CLASS },
     items: SECTION_TAGS.map((tag) => ({
       label: tag.label,
       icon: tag.icon,
@@ -385,8 +423,9 @@ function headingDropdown(editor: Editor): EditorToolbarItem {
 
   return {
     'icon': 'tabler:heading',
-    'tooltip': { text: 'Заголовок' },
+    'tooltip': kbdTooltip('Заголовок'),
     'aria-label': 'Заголовок',
+    'ui': { content: TOOLBAR_LAYER_CLASS },
     'items': [
       levelItem(1),
       levelItem(2),
@@ -422,8 +461,9 @@ function alignDropdown(editor: Editor): EditorToolbarItem {
 
   return {
     'icon': 'tabler:align-left',
-    'tooltip': { text: 'Выравнивание' },
+    'tooltip': kbdTooltip('Выравнивание'),
     'aria-label': 'Выравнивание',
+    'ui': { content: TOOLBAR_LAYER_CLASS },
     'items': [
       alignItem('left', 'По левому краю', 'tabler:align-left'),
       alignItem('center', 'По центру', 'tabler:align-center'),
@@ -440,7 +480,7 @@ function alignDropdown(editor: Editor): EditorToolbarItem {
 function separatorItem(editor: Editor, tag: MarkupTag): EditorToolbarItem {
   return {
     icon: tag.icon,
-    tooltip: { text: tag.label },
+    tooltip: kbdTooltip(tag.label),
     onClick: () => {
       const { to } = editor.state.selection;
 
@@ -474,8 +514,9 @@ function tableDropdown(
 
   return {
     icon: 'tabler:table',
-    tooltip: { text: 'Таблица' },
+    tooltip: kbdTooltip('Таблица'),
     active: editor.isActive('table'),
+    ui: { content: TOOLBAR_LAYER_CLASS },
     items: [
       {
         label: 'Вставить таблицу',
@@ -576,15 +617,36 @@ function blockItem(
  * тип блока (заголовок «H» + выравнивание) → блочные теги (списки/цитата/
  * разделитель/таблица) → инлайновые/интерактивные теги → ссылки на разделы.
  *
+ * Базовый пресет оставляет только оформление текста (см. BASIC_TAG_KEYS): без
+ * выравнивания, доменных вставок и ссылок на разделы.
+ *
  * @param editor - Экземпляр TipTap из слота UEditor
+ * @param handlers - Колбэки панелей ввода (раздел/ссылка/кубик/подпись таблицы)
+ * @param preset - Набор кнопок: полный или базовый
  * @returns Массив групп пунктов тулбара
  */
 export function buildToolbarItems(
   editor: Editor,
   handlers: ToolbarHandlers,
+  preset: MarkupEditorPreset = 'full',
 ): EditorToolbarItem[][] {
   // Заголовки собраны в headingDropdown, поэтому из блочной группы их убираем.
   const blockTags = BLOCK_TAGS.filter((tag) => !tag.key.startsWith('heading-'));
+
+  if (preset === 'basic') {
+    return [
+      FORMAT_MARK_ITEMS.filter((item) => BASIC_TAG_KEYS.has(item.key)).map(
+        (item) => markItem(editor, item),
+      ),
+      [headingDropdown(editor)],
+      blockTags
+        .filter((tag) => BASIC_TAG_KEYS.has(tag.key))
+        .map((tag) => blockItem(editor, tag, handlers)),
+      INLINE_TAGS.filter((tag) => BASIC_TAG_KEYS.has(tag.key)).map((tag) =>
+        inlineItem(editor, tag, handlers),
+      ),
+    ];
+  }
 
   return [
     FORMAT_MARK_ITEMS.map((item) => markItem(editor, item)),

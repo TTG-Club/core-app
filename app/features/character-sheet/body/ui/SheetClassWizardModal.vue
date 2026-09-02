@@ -24,6 +24,7 @@
   import {
     useCatalogSourceQuery,
     useCharacterSheet,
+    useChoiceSpellPools,
     useToolCatalog,
   } from '../../composables';
   import {
@@ -76,6 +77,7 @@
     getOwnedWeaponNames,
     getRequiredChoiceCount,
     getSelectedCasterType,
+    getSpellChoicesKey,
     getTakenOptionValues,
     getToolNames,
     getUnmetMulticlassRequirements,
@@ -97,11 +99,13 @@
     SUBCLASS_SELECTION_MIN_LEVEL,
     unionToolProficiencies,
     withAbilityImprovementStep,
+    withChosenFeatureSpells,
     withPendingAbilityIncreases,
   } from '../../model';
   import SheetAbilityImprovementChoice from './SheetAbilityImprovementChoice.vue';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
   import SheetCustomClassModal from './SheetCustomClassModal.vue';
+  import SheetFeatSpellsPicker from './SheetFeatSpellsPicker.vue';
   import SheetLevelUpFeatChoice from './SheetLevelUpFeatChoice.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
   import SheetStartingEquipmentChoice from './SheetStartingEquipmentChoice.vue';
@@ -598,8 +602,43 @@
     ...featureRows.value.flatMap((row) => row.choiceControls),
   ]);
 
+  // Пул заклинаний собирается поиском по каталогу, а не лежит в записи класса:
+  // «Маг» первобытного порядка друида даёт заговор из списка друида, и весь
+  // список в умении устарел бы при первом же пополнении справочника
+  const {
+    getPool: getSpellPool,
+    getSpellOptions,
+    collectChosenSpells,
+    load: loadSpellPools,
+  } = useChoiceSpellPools({
+    sources: () => [{ choices: allChoices.value }],
+    answers: selections,
+  });
+
+  /**
+   * Примета выборов заклинаний, которые мастер спрашивает сейчас: выбор
+   * приходит вместе со взятым вариантом умения, поэтому пул догружается по его
+   * появлению, а не один раз на загрузке класса.
+   */
+  const spellChoicesKey = computed(() => getSpellChoicesKey(allChoices.value));
+
+  // Цикла нет: обработчик правит только пулы заклинаний, а примета считается по
+  // выборам мастера — от загруженного пула она не меняется.
+  watch(spellChoicesKey, handleSpellChoicesChange);
+
+  /** Догружает пулы заклинаний под выборы, которые мастер спрашивает сейчас. */
+  function handleSpellChoicesChange(): void {
+    void loadSpellPools();
+  }
+
   /** Опции пикера выбора в зависимости от его типа. */
   function choiceOptions(choice: ClassChoice): string[] {
+    // Заклинания приходят загруженным пулом, а не резолвятся по типу выбора:
+    // в самой записи класса их нет.
+    if (choice.kind === 'spell') {
+      return getSpellOptions(choice);
+    }
+
     return resolveChoiceOptions(choice, {
       skillNames: skillNames.value,
       proficientSkillNames: proficientSkillNames.value,
@@ -652,6 +691,17 @@
    */
   function chooseLabel(choice: ClassChoice): string {
     return `${CLASS_WIZARD_LABELS.chooseLabel} ${choiceCount(choice)}`;
+  }
+
+  /**
+   * Заголовок выбора: своя подпись из записи класса, а без неё — «Выберите N».
+   * Ею подписан и сам выбор, и окно выбора заклинаний.
+   *
+   * @param choice выбор мастера.
+   * @returns заголовок выбора.
+   */
+  function choiceTitle(choice: ClassChoice): string {
+    return choice.label || chooseLabel(choice);
   }
 
   /**
@@ -1570,32 +1620,44 @@
       ]),
     };
 
-    const features = [
-      ...buildClassFeatures(
-        base,
-        subclassDetail.value,
-        level.value,
-        featureChoices,
-        featureAnswers,
-      ),
-      ...classFeatFeatures.map((selection) => selection.feature),
-      // Взятые повышения характеристик: прибавка приезжает на лист эффектом,
-      // который видно во вкладке «Эффекты» и можно выключить
-      ...abilityImprovementBlocks.value
-        .filter(
-          (block) =>
-            block.improvement.mode === 'abilities'
-            && getAbilityImprovementSpent(block.improvement.increases) > 0,
-        )
-        .map((block) =>
-          buildAbilityImprovementFeature({
-            featureRowId: block.featureRowId,
-            className: base.name,
-            classLevel: block.level,
-            increases: block.improvement.increases,
-          }),
+    // Выбранные заклинания — на записи своих умений: лист ведёт их наравне с
+    // выданными умением, и снятие класса забирает их вместе с ним
+    const chosenSpellsByFeature = Object.fromEntries(
+      featureRows.value.map((row) => [
+        row.id,
+        collectChosenSpells({ choices: row.choiceControls }),
+      ]),
+    );
+
+    const features = withChosenFeatureSpells(
+      [
+        ...buildClassFeatures(
+          base,
+          subclassDetail.value,
+          level.value,
+          featureChoices,
+          featureAnswers,
         ),
-    ];
+        ...classFeatFeatures.map((selection) => selection.feature),
+        // Взятые повышения характеристик: прибавка приезжает на лист эффектом,
+        // который видно во вкладке «Эффекты» и можно выключить
+        ...abilityImprovementBlocks.value
+          .filter(
+            (block) =>
+              block.improvement.mode === 'abilities'
+              && getAbilityImprovementSpent(block.improvement.increases) > 0,
+          )
+          .map((block) =>
+            buildAbilityImprovementFeature({
+              featureRowId: block.featureRowId,
+              className: base.name,
+              classLevel: block.level,
+              increases: block.improvement.increases,
+            }),
+          ),
+      ],
+      chosenSpellsByFeature,
+    );
 
     // Навыки уровня класса: выборы умений сюда не идут — их владения ведёт
     // снимок на самой записи умения
@@ -2164,10 +2226,23 @@
                         class="flex flex-col gap-1"
                       >
                         <span class="text-xs text-muted">
-                          {{ control.label || chooseLabel(control) }}
+                          {{ choiceTitle(control) }}
                         </span>
 
+                        <!-- Заклинания выбирают своим окном: пул бывает и на
+                          сотню записей, а выбранные должны остаться на виду,
+                          чтобы их можно было убрать -->
+                        <SheetFeatSpellsPicker
+                          v-if="control.kind === 'spell'"
+                          :model-value="selections[control.id] ?? []"
+                          :items="getSpellPool(control)"
+                          :count="choiceCount(control)"
+                          :label="choiceTitle(control)"
+                          @update:model-value="updateSelection(control, $event)"
+                        />
+
                         <SheetChoiceSelect
+                          v-else
                           :model-value="selections[control.id] ?? []"
                           :items="choiceOptions(control)"
                           :hints="choiceHints(control)"

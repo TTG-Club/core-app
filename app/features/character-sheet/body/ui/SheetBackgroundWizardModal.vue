@@ -20,7 +20,7 @@
   import {
     useCatalogSourceQuery,
     useCharacterSheet,
-    useFeatChoiceSpells,
+    useChoiceSpellPools,
     useToolCatalog,
   } from '../../composables';
   import {
@@ -617,10 +617,10 @@
     getSpellOptions,
     collectChosenSpells,
     load: loadSpellPools,
-  } = useFeatChoiceSpells({
+  } = useChoiceSpellPools({
     // Обе сводки сразу: заклинание бывает и у черты происхождения, и у самой
     // предыстории, а пул грузится одним проходом по выборам
-    summaries: () =>
+    sources: () =>
       [featSummary.value, ownGrants.value].filter(
         (summary): summary is FeatSummary => !!summary,
       ),

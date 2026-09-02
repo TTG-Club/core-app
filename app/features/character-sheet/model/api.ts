@@ -12,6 +12,7 @@ import type {
   SavedCharacterSheet,
   SavedCharacterSheetListPage,
   SpellCatalogItem,
+  SpellDamageFormulas,
   StartingEquipmentOption,
 } from './types';
 
@@ -388,16 +389,17 @@ export async function fetchCatalogSpellDetail(
 }
 
 /**
- * Формулы урона каталожного заклинания. Публичная деталь их не отдаёт — как и
- * боевые числа предметов, они лежат в «сыром» ответе раздела. Отказ запроса не
- * ломает вкладку: заклинание останется без плитки урона.
+ * Формулы урона каталожного заклинания вместе с тирами масштабирования
+ * заговора. Публичная деталь их не отдаёт — как и боевые числа предметов, они
+ * лежат в «сыром» ответе раздела. Отказ запроса не ломает вкладку: заклинание
+ * останется без плитки урона.
  *
  * @param spellUrl слаг заклинания в каталоге.
- * @returns формулы урона; пустой список — урона нет или он не загрузился.
+ * @returns урон заклинания; пустые формулы — урона нет или он не загрузился.
  */
 export async function fetchSpellDamageFormulas(
   spellUrl: string,
-): Promise<string[]> {
+): Promise<SpellDamageFormulas> {
   try {
     const response = await $fetch<unknown>(
       `${SPELLS_DETAIL_BASE_PATH}/${spellUrl}/${SPELLS_RAW_DETAIL_PATH_SUFFIX}`,
@@ -406,7 +408,7 @@ export async function fetchSpellDamageFormulas(
 
     return parseSpellDamageFormulas(response);
   } catch {
-    return [];
+    return { base: [], cantripTiers: [] };
   }
 }
 

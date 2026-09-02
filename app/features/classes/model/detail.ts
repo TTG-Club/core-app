@@ -164,6 +164,13 @@ export interface ClassInMulticlass {
   subclass?: string;
   level: number;
   hitDice?: string;
+
+  /**
+   * Тип заклинателя отрезка: свой у класса-заклинателя, иначе подкласса. По
+   * `PACT` уровень Магии договора считается отдельно от общего уровня
+   * заклинателя. Пусто — бэкенд ещё не отдаёт поле.
+   */
+  casterType?: CasterType;
 }
 
 export enum CasterType {
