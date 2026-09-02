@@ -5,6 +5,9 @@ export const MATERIAL_COUNTER_RESET_DATA_KEY = 'material-counter-reset-cache';
 
 export const ONLINE_COUNTER_DATA_KEY = 'visitors-counter';
 
+/** Ключ useAsyncData счётчика листов персонажей на главной */
+export const SHEET_COUNTER_DATA_KEY = 'character-sheet-counter';
+
 /** Заголовок блока статистики */
 export const MATERIAL_COUNTER_TITLE = 'Статистика онлайн';
 
@@ -15,5 +18,5 @@ export const MATERIAL_COUNTER_DESCRIPTION =
 /** Подпись счётчика материалов */
 export const MATERIAL_COUNTER_LABEL_MATERIALS = 'Материалов';
 
-/** Подпись счётчика посетителей */
-export const MATERIAL_COUNTER_LABEL_VISITORS = 'Авантюристов';
+/** Подпись счётчика листов персонажей */
+export const MATERIAL_COUNTER_LABEL_SHEETS = 'Персонажей';
