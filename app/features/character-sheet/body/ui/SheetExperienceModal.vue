@@ -64,6 +64,7 @@
     resetAbilityImprovement,
     selectSubclass,
     choiceOptions,
+    spellPool,
     choiceHints,
     featOptions,
     selectedFeat,
@@ -745,6 +746,7 @@
           :constitution-modifier="constitutionModifier"
           :abilities="character.abilities"
           :choice-options="choiceOptions"
+          :spell-pool="spellPool"
           :choice-hints="choiceHints"
           :feat-options="currentFeatOptions"
           :selected-feat="currentSelectedFeat"

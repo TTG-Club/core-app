@@ -303,6 +303,11 @@ export default defineNuxtConfig({
 
     build: {
       minify: 'esbuild',
+      // Vite 8 (приехал с Nuxt 4.5) по умолчанию минифицирует CSS через
+      // lightningcss, а тот падает на нашей сборке с `SyntaxError: Invalid
+      // state` без указания файла и строки. Держим прежний минификатор —
+      // тот же, что и для JS выше.
+      cssMinify: 'esbuild',
       cssCodeSplit: false,
       reportCompressedSize: false,
       chunkSizeWarningLimit: 1000,

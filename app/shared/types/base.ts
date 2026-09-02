@@ -1,3 +1,4 @@
+import type { NuxtError } from '#app';
 import type { Filter } from '~infrastructure/filter/types';
 
 export interface NameResponse {
@@ -50,3 +51,10 @@ export type Level =
   | 18
   | 19
   | 20;
+
+/**
+ * Ошибка серверных ручек `/api/**`: в теле приходит текст сообщения, который
+ * показываем пользователю. Указывается вторым дженериком `useFetch`, иначе
+ * `error.data` выводится как `unknown`.
+ */
+export type ApiFetchError = NuxtError<{ message?: string }>;
