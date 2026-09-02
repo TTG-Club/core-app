@@ -17,6 +17,7 @@
   import {
     ABILITY_LABELS,
     ARMOR_DEXTERITY_HINT_LABELS,
+    ARMOR_STEALTH_HINT_LABEL,
     CUSTOM_INVENTORY_BADGE_HINT,
     getAbilityModifier,
     getHeavyWeaponHint,
@@ -379,13 +380,21 @@
     isMissing.value ? 'text-error' : 'text-default',
   );
 
-  /** Плитка класса доспеха: сколько КД даёт предмет (щит — бонусом). */
+  /**
+   * Плитка класса доспеха: сколько КД даёт предмет (щит — бонусом). Помеха на
+   * Скрытность дописывается в подсказку — по ней видно, откуда она берётся,
+   * когда модалка броска открывается с помехой.
+   */
   function getArmorStat(armor: InventoryArmor): ItemStat {
+    const stealthHint = armor.stealthDisadvantage
+      ? ARMOR_STEALTH_HINT_LABEL
+      : '';
+
     if (armor.shield) {
       return {
         label: INVENTORY_STAT_LABELS.armorClass,
         value: `+${armor.baseArmorClass}`,
-        tooltip: `Щит: +${armor.baseArmorClass} к классу доспеха`,
+        tooltip: `Щит: +${armor.baseArmorClass} к классу доспеха${stealthHint}`,
         accent: true,
       };
     }
@@ -393,7 +402,7 @@
     return {
       label: INVENTORY_STAT_LABELS.armorClass,
       value: String(armor.baseArmorClass),
-      tooltip: `Класс доспеха ${armor.baseArmorClass}${ARMOR_DEXTERITY_HINT_LABELS[armor.dexterityMod]}`,
+      tooltip: `Класс доспеха ${armor.baseArmorClass}${ARMOR_DEXTERITY_HINT_LABELS[armor.dexterityMod]}${stealthHint}`,
       accent: true,
     };
   }

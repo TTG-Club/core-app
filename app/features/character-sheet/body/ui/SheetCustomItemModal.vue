@@ -103,6 +103,8 @@
 
   const draftArmorClass = ref(initialDraft.baseArmorClass);
 
+  const draftStealthDisadvantage = ref(initialDraft.stealthDisadvantage);
+
   const draftWeaponCategory = ref<WeaponCategory>(initialDraft.weaponCategory);
 
   const draftRanged = ref(initialDraft.ranged);
@@ -293,6 +295,7 @@
       quantity: draftQuantity.value,
       armorType: draftArmorType.value,
       baseArmorClass: draftArmorClass.value,
+      stealthDisadvantage: draftStealthDisadvantage.value,
       weaponCategory: draftWeaponCategory.value,
       ranged: draftRanged.value,
       finesse: draftFinesse.value,
@@ -624,6 +627,14 @@
                   />
                 </div>
               </div>
+
+              <!-- Помеха идёт не от типа доспеха, а от самого доспеха: она
+                есть у стёганого (лёгкий) и нет у шкурного (средний), — поэтому
+                отдельная отметка, а не правило типа -->
+              <UCheckbox
+                v-model="draftStealthDisadvantage"
+                :label="CUSTOM_ITEM_FIELD_LABELS.armorStealthDisadvantage"
+              />
 
               <span class="text-xs text-dimmed">{{ armorHint }}</span>
             </div>

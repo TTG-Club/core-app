@@ -661,6 +661,17 @@ modals), so its capabilities are listed here rather than squeezed into the table
   in the PDF attack table, and the row is marked with a «Двумя руками» badge.
   Weapons added before the second roll was stored do not offer the switch until
   they are added from the catalog again.
+- Armour that hampers hiding (`armor.stealth` of the workshop form — plate, half
+  plate, chain mail and the rest) opens the Stealth check with disadvantage
+  already set. It reaches the roll as the ordinary `skill.stealth.disadvantage`
+  flag (`getSheetRollFlags`), so advantage from any effect cancels it by the 5e
+  rule instead of stacking, and every equipped suit counts — unlike AC, where
+  only the best one does. The AC tile's tooltip names the disadvantage, and the
+  homebrew item form carries its own checkbox so editing a copy of a catalogue
+  suit does not silently drop it. Sheets saved before the field existed keep a
+  snapshot that cannot tell padded armour (disadvantage) from leather (none), so
+  the seven PHB suits are restored by catalogue url on load
+  (`LEGACY_STEALTH_DISADVANTAGE_ARMOR_URLS`).
 - Spell damage rolled from the same kind of tile on the spells tab. The formulas
   (`8к6@dmg.fire`) are not stored in the sheet: `composables/useSpellDamage.ts`
   pulls them from the spell `/raw` response on demand and caches them per app,

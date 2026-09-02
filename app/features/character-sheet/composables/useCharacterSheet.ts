@@ -111,6 +111,7 @@ import {
   getProficiencySourceId,
   getResourceMax,
   getSavingThrowRows,
+  getSheetRollFlags,
   getSheetRollMode,
   getSkillRowGroups,
   getSkillRows,
@@ -3530,13 +3531,22 @@ export function useCharacterSheet() {
   );
 
   /**
+   * Флаги, по которым выбирается режим броска: разобранные из эффектов плюс
+   * правила снаряжения — помеху Скрытности шумный доспех несёт своим полем
+   * справочника, а не эффектом.
+   */
+  const rollFlags = computed(() =>
+    getSheetRollFlags(character.value, resolvedEffects.value.flags),
+  );
+
+  /**
    * Режим броска по флагам персонажа.
    *
    * @param context обстоятельства броска.
    * @returns режим броска: обычный, с преимуществом или с помехой.
    */
   function getRollMode(context: SheetRollContext): RollMode {
-    return getSheetRollMode(resolvedEffects.value.flags, context);
+    return getSheetRollMode(rollFlags.value, context);
   }
 
   /**

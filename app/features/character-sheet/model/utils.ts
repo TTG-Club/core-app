@@ -3294,7 +3294,8 @@ function getCustomInventoryTypesLabel(draft: CustomInventoryItemDraft): string {
 
 /**
  * Параметры доспеха из значений формы: КД и правило Ловкости берутся из типа
- * доспеха. null — вид предмета не «Доспех».
+ * доспеха, помеху Скрытности игрок отмечает сам. null — вид предмета не
+ * «Доспех».
  *
  * @param draft значения формы своего предмета.
  * @returns параметры доспеха или null.
@@ -3316,6 +3317,7 @@ function getCustomInventoryArmor(
     ),
     dexterityMod,
     shield,
+    stealthDisadvantage: draft.stealthDisadvantage,
   };
 }
 
@@ -3802,6 +3804,9 @@ export function getCustomInventoryItemDraft(
     armorType: getCustomArmorType(armor),
     baseArmorClass:
       armor?.baseArmorClass ?? NEW_CUSTOM_INVENTORY_ITEM.baseArmorClass,
+    stealthDisadvantage:
+      armor?.stealthDisadvantage
+      ?? NEW_CUSTOM_INVENTORY_ITEM.stealthDisadvantage,
     weaponCategory:
       weapon?.category ?? NEW_CUSTOM_INVENTORY_ITEM.weaponCategory,
     ranged: weapon?.ranged ?? NEW_CUSTOM_INVENTORY_ITEM.ranged,

@@ -1828,7 +1828,8 @@ const ARMOR_DEXTERITY_MOD_MAP: Record<ArmorRawDexterityMod, ArmorDexterityMod> =
 /**
  * Схема «сырого» ответа предмета `GET /api/v2/item/{url}/raw` в части доспеха.
  * Форма — как у формы редактора предметов (`ArmorCreate`): объект `armor` с
- * числовым КД и правилом Ловкости; у не-доспехов приходит null.
+ * числовым КД, правилом Ловкости и пометкой помехи Скрытности; у не-доспехов
+ * приходит null.
  */
 const itemRawArmorSchema = z
   .object({
@@ -1837,6 +1838,7 @@ const itemRawArmorSchema = z
         category: z.string().catch(''),
         armorClass: z.coerce.number().catch(0),
         mod: z.enum(['PLUS', 'PLUS_MAX_2', 'NONE']).catch('PLUS'),
+        stealth: z.boolean().catch(false),
       })
       .nullable()
       .catch(null),
@@ -1877,6 +1879,7 @@ export function parseItemArmor(
     baseArmorClass: armor.armorClass,
     dexterityMod: ARMOR_DEXTERITY_MOD_MAP[armor.mod],
     shield: isShieldArmor(armor.category, item),
+    stealthDisadvantage: armor.stealth,
   };
 }
 
