@@ -33,15 +33,42 @@ export const CATALOG_PICKER_LABELS = {
   errorTitle: 'Список не загрузился',
   errorSubtitle: 'Проверьте соединение и попробуйте ещё раз',
   retry: 'Повторить',
-  chosen: 'Выбрано',
   remove: 'Убрать',
   cancel: 'Отмена',
   save: 'Готово',
   open: 'Выбрать',
   change: 'Изменить',
   clear: 'Очистить',
+  allTab: 'Все',
+  selectedTab: 'Выбранные',
   empty: 'Ничего не выбрано',
+  emptySelectedSubtitle: 'Отметьте нужное на вкладке «Все»',
+  emptySelectedSearchSubtitle: 'Среди выбранного такого нет',
+  selectAll: 'Все',
+  selectAllAction: 'Выбрать все',
+  unselectAllAction: 'Снять все',
+  selectAllLimitTitle: 'Выбрано не всё',
+  selectAllLimitSubtitle:
+    'Отбор нашёл записей больше, чем можно отметить разом. Сузьте фильтры и '
+    + 'повторите.',
+  selectAllErrorTitle: 'Не удалось отметить все',
+  showMore: 'Показать ещё',
+  collapse: 'Свернуть',
 } as const;
+
+/** Стрелки кнопки, которая разворачивает и сворачивает остаток чипов. */
+export const CATALOG_PICKER_EXPAND_ICONS = {
+  expand: 'tabler:chevron-down',
+  collapse: 'tabler:chevron-up',
+} as const;
+
+/**
+ * Сколько чипов выбранного поле показывает, пока их не развернули.
+ *
+ * Полю списка заклинаний умения набирают и по сотне записей: без предела чипы
+ * выстраивались бы в стену на весь экран, а форма под ними терялась.
+ */
+export const CATALOG_PICKER_CHIPS_LIMIT = 6;
 
 /**
  * Насколько близко к концу списка нужно прокрутить, чтобы подгрузилась

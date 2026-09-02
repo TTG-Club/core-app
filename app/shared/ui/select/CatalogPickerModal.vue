@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { TabsItem } from '@nuxt/ui';
+
   import type {
     CatalogPickerEntry,
     CatalogPickerSection,
@@ -40,7 +42,7 @@
     excludeUrls?: Array<string>;
   }>();
 
-  /** Уже выбранные записи: отмечены в списке и лежат в подвале окна. */
+  /** Уже выбранные записи: отмечены в списке и собраны отдельной вкладкой. */
   const selected = defineModel<Array<CatalogPickerEntry>>({ required: true });
 
   const emit = defineEmits<{
@@ -56,9 +58,11 @@
     isLoadingFirstPage,
     isLoadingMore,
     hasLoadError,
+    hasNextPage,
     requestKey,
     reload,
     loadNextPage,
+    fetchAllEntries,
     retryLoad,
     applyFilterGroups,
     resetFilters,
@@ -89,20 +93,157 @@
     ),
   );
 
+  const toast = useToast();
+
   const isFilterDrawerOpened = ref(false);
 
+  /** Прокручиваемый список: его же прокрутка подгружает хвост выдачи. */
+  const listElement = useTemplateRef<HTMLElement>('listElement');
+
+  /** Что показывает список: весь раздел или уже отмеченное. */
+  type PickerView = 'all' | 'selected';
+
+  const activeView = ref<PickerView>('all');
+
+  /** Отмеченное показывается вкладкой; у одиночного выбора её нет. */
+  const isSelectedView = computed(
+    () => multiple && activeView.value === 'selected',
+  );
+
+  /** Вкладки списка. Число на второй — единственный счётчик набранного. */
+  const viewTabItems = computed<Array<TabsItem>>(() => [
+    { value: 'all', label: CATALOG_PICKER_LABELS.allTab },
+    {
+      value: 'selected',
+      label: CATALOG_PICKER_LABELS.selectedTab,
+      badge: {
+        label: String(draft.value.length),
+        color: 'neutral',
+        variant: 'subtle',
+      },
+    },
+  ]);
+
+  /**
+   * Отмеченное, отобранное тем же поиском: набранную сотню глазами не
+   * разобрать, а серверный поиск про черновик не знает — он ищет по разделу.
+   */
+  const selectedEntries = computed(() => {
+    const term = searchTerm.value.trim().toLowerCase();
+
+    if (!term) {
+      return draft.value;
+    }
+
+    return draft.value.filter(
+      (entry) =>
+        entry.name.toLowerCase().includes(term)
+        || entry.nameEng.toLowerCase().includes(term),
+    );
+  });
+
+  /** Записи открытой вкладки. */
+  const displayedEntries = computed(() =>
+    isSelectedView.value ? selectedEntries.value : visibleEntries.value,
+  );
+
   /** Пустая выдача при законченной загрузке: искать больше нечего. */
-  const isEmpty = computed(
-    () =>
+  const isEmpty = computed(() => {
+    if (isSelectedView.value) {
+      return selectedEntries.value.length === 0;
+    }
+
+    return (
       !isLoadingFirstPage.value
       && !hasLoadError.value
-      && visibleEntries.value.length === 0,
+      && visibleEntries.value.length === 0
+    );
+  });
+
+  const isSelectingAll = ref(false);
+
+  /**
+   * Слаги выдачи, отмеченные галочкой «Все».
+   *
+   * Хвост выдачи в списке не лежит, а снять галочкой нужно ровно то, что она
+   * поставила: по загруженным строкам этого не восстановить.
+   */
+  const coveredUrls = ref<Set<string>>(new Set());
+
+  /** Отмечена ли вся выдача отбора. */
+  const isAllSelected = computed(() => {
+    if (coveredUrls.value.size) {
+      return [...coveredUrls.value].every((url) => selectedUrls.value.has(url));
+    }
+
+    return (
+      !hasNextPage.value
+      && visibleEntries.value.length > 0
+      && visibleEntries.value.every((entry) =>
+        selectedUrls.value.has(entry.url),
+      )
+    );
+  });
+
+  /** Состояние галочки «Все»: отмечено целиком, частично или пусто. */
+  const allCheckboxValue = computed<boolean | 'indeterminate'>(() => {
+    if (isAllSelected.value) {
+      return true;
+    }
+
+    const hasSelectedInList = visibleEntries.value.some((entry) =>
+      selectedUrls.value.has(entry.url),
+    );
+
+    return hasSelectedInList ? 'indeterminate' : false;
+  });
+
+  const toggleAllAriaLabel = computed(() =>
+    isAllSelected.value
+      ? CATALOG_PICKER_LABELS.unselectAllAction
+      : CATALOG_PICKER_LABELS.selectAllAction,
   );
+
+  const isToggleAllDisabled = computed(
+    () =>
+      isSelectingAll.value
+      || isLoadingFirstPage.value
+      || hasLoadError.value
+      || !visibleEntries.value.length,
+  );
+
+  const emptyTitle = computed(() =>
+    isSelectedView.value
+      ? CATALOG_PICKER_LABELS.empty
+      : CATALOG_PICKER_LABELS.emptyTitle,
+  );
+
+  const emptySubtitle = computed(() => {
+    if (!isSelectedView.value) {
+      return CATALOG_PICKER_LABELS.emptySubtitle;
+    }
+
+    return searchTerm.value.trim()
+      ? CATALOG_PICKER_LABELS.emptySelectedSearchSubtitle
+      : CATALOG_PICKER_LABELS.emptySelectedSubtitle;
+  });
+
+  /**
+   * Перезапрашивает выдачу под изменившийся отбор.
+   *
+   * Заодно забывает отметки галочки «Все»: они относились к прежнему отбору, а
+   * к новому отношения не имеют.
+   */
+  function handleRequestChange(): void {
+    coveredUrls.value = new Set();
+
+    void reload();
+  }
 
   // Выдача перезапрашивается на смену запроса или фильтров: ключ собран из них
   // же, поэтому лишних заходов нет — иммутабельные правки фильтра меняют ссылки
   // чаще, чем содержимое.
-  watch(requestKey, () => void reload(), { immediate: true });
+  watch(requestKey, handleRequestChange, { immediate: true });
 
   /**
    * Отмечает или снимает запись. У одиночного выбора отметка сразу закрывает
@@ -124,12 +265,100 @@
   }
 
   /**
-   * Убирает запись из выбранного по чипу в подвале.
+   * Переключает вкладку списка. `UTabs` отдаёт значение строкой, поэтому оно
+   * сверяется со своими — чужое в состояние не попадёт.
    *
-   * @param url слаг записи.
+   * @param value значение вкладки.
    */
-  function remove(url: string): void {
-    draft.value = draft.value.filter((entry) => entry.url !== url);
+  function handleViewChange(value: string | number): void {
+    activeView.value = value === 'selected' ? 'selected' : 'all';
+
+    // Прокрутка у вкладок общая: без сброса «Выбранные» открывались бы с
+    // середины — там, где остановились в выдаче раздела
+    if (listElement.value) {
+      listElement.value.scrollTop = 0;
+    }
+  }
+
+  /**
+   * Отмечает всю выдачу под текущий отбор.
+   *
+   * Берётся не список на экране, а вся выдача: прокруткой в нём лежат первые
+   * страницы, и отбор из полусотни записей пришлось бы домечать вручную.
+   */
+  async function selectAll(): Promise<void> {
+    const requestedKey = requestKey.value;
+
+    isSelectingAll.value = true;
+
+    try {
+      const { entries: foundEntries, isLimitReached } = await fetchAllEntries();
+
+      // Отбор успели сменить, пока шёл запрос: пришедшая выдача уже не та, что
+      // на экране, и отмечать её нельзя
+      if (requestKey.value !== requestedKey) {
+        return;
+      }
+
+      const selectable = foundEntries.filter(
+        (entry) => !excluded.value.has(entry.url),
+      );
+
+      const additions = selectable.filter(
+        (entry) => !selectedUrls.value.has(entry.url),
+      );
+
+      draft.value = [
+        ...draft.value,
+        ...additions.map((entry) => ({ ...entry })),
+      ];
+
+      coveredUrls.value = new Set(selectable.map((entry) => entry.url));
+
+      if (isLimitReached) {
+        toast.add({
+          title: CATALOG_PICKER_LABELS.selectAllLimitTitle,
+          description: CATALOG_PICKER_LABELS.selectAllLimitSubtitle,
+          color: 'warning',
+        });
+      }
+    } catch {
+      toast.add({
+        title: CATALOG_PICKER_LABELS.selectAllErrorTitle,
+        description: CATALOG_PICKER_LABELS.errorSubtitle,
+        color: 'error',
+      });
+    } finally {
+      isSelectingAll.value = false;
+    }
+  }
+
+  /** Снимает выбор со всей выдачи отбора — ровно с того, что отметила галочка. */
+  function unselectAll(): void {
+    const urls = coveredUrls.value.size
+      ? coveredUrls.value
+      : new Set(visibleEntries.value.map((entry) => entry.url));
+
+    draft.value = draft.value.filter((entry) => !urls.has(entry.url));
+    coveredUrls.value = new Set();
+  }
+
+  /**
+   * Отмечает всю выдачу отбора или снимает её же — как галочка в шапке таблицы.
+   */
+  async function toggleAll(): Promise<void> {
+    if (isAllSelected.value) {
+      unselectAll();
+
+      return;
+    }
+
+    await selectAll();
+  }
+
+  /** Снимает весь выбор: набранную сотню снимать по одной записи нечем. */
+  function clearDraft(): void {
+    draft.value = [];
   }
 
   /**
@@ -140,7 +369,7 @@
   function handleScroll(event: Event): void {
     const target = event.target;
 
-    if (!(target instanceof HTMLElement)) {
+    if (isSelectedView.value || !(target instanceof HTMLElement)) {
       return;
     }
 
@@ -159,12 +388,16 @@
   function handleFilterSave(groups: FilterGroups): void {
     applyFilterGroups(groups);
     isFilterDrawerOpened.value = false;
+    // Фильтры отбирают раздел, а не черновик: правку видно только на вкладке
+    // «Все», и оставаться на «Выбранных» после неё незачем
+    activeView.value = 'all';
   }
 
   /** Сбрасывает фильтры к тому, какими их отдал раздел. */
   function handleFilterReset(): void {
     resetFilters();
     isFilterDrawerOpened.value = false;
+    activeView.value = 'all';
   }
 
   /** Сохранение: выбранное уходит в поле формы. */
@@ -221,12 +454,60 @@
             autofocus
           />
 
+          <!-- Отмеченное — соседней вкладкой, а не полосой чипов под списком:
+            чипы росли с каждым выбором и отжимали список до пары строк, а
+            набирают сюда и по сотне записей -->
           <div
+            v-if="multiple"
+            class="flex items-center gap-2"
+          >
+            <!-- Отбор сузили — берут его целиком: галочка отмечает всю выдачу и
+              тем же нажатием её снимает, как в шапке таблицы -->
+            <UButton
+              v-if="!isSelectedView"
+              color="neutral"
+              variant="subtle"
+              size="sm"
+              class="shrink-0"
+              :disabled="isToggleAllDisabled"
+              :aria-label="toggleAllAriaLabel"
+              :label="CATALOG_PICKER_LABELS.selectAll"
+              @click.left.exact.prevent="toggleAll"
+            >
+              <template #leading>
+                <UIcon
+                  v-if="isSelectingAll"
+                  name="tabler:loader-2"
+                  class="size-4 animate-spin"
+                />
+
+                <UCheckbox
+                  v-else
+                  :model-value="allCheckboxValue"
+                  tabindex="-1"
+                  class="pointer-events-none"
+                />
+              </template>
+            </UButton>
+
+            <UTabs
+              :items="viewTabItems"
+              :model-value="activeView"
+              :content="false"
+              size="sm"
+              class="min-w-0 grow"
+              :ui="{ list: 'w-full' }"
+              @update:model-value="handleViewChange"
+            />
+          </div>
+
+          <div
+            ref="listElement"
             class="min-h-0 grow overflow-y-auto rounded-md border border-default"
             @scroll="handleScroll"
           >
             <div
-              v-if="isLoadingFirstPage"
+              v-if="isLoadingFirstPage && !isSelectedView"
               class="grid place-items-center p-6"
             >
               <UIcon
@@ -236,9 +517,9 @@
             </div>
 
             <UiResult
-              v-else-if="hasLoadError"
+              v-else-if="hasLoadError && !isSelectedView"
               :title="CATALOG_PICKER_LABELS.errorTitle"
-              :subtitle="CATALOG_PICKER_LABELS.errorSubtitle"
+              :sub-title="CATALOG_PICKER_LABELS.errorSubtitle"
             >
               <UButton
                 color="neutral"
@@ -250,8 +531,8 @@
 
             <UiResult
               v-else-if="isEmpty"
-              :title="CATALOG_PICKER_LABELS.emptyTitle"
-              :subtitle="CATALOG_PICKER_LABELS.emptySubtitle"
+              :title="emptyTitle"
+              :sub-title="emptySubtitle"
             />
 
             <ul
@@ -259,7 +540,7 @@
               class="divide-y divide-default"
             >
               <li
-                v-for="entry in visibleEntries"
+                v-for="entry in displayedEntries"
                 :key="entry.url"
               >
                 <button
@@ -303,7 +584,7 @@
             </ul>
 
             <div
-              v-if="isLoadingMore"
+              v-if="isLoadingMore && !isSelectedView"
               class="grid place-items-center py-3"
             >
               <UIcon
@@ -311,32 +592,6 @@
                 class="size-5 animate-spin text-dimmed"
               />
             </div>
-          </div>
-
-          <!-- Выбранное перед глазами: в длинном списке отметки уезжают вверх,
-            и без чипов непонятно, что уже набрано -->
-          <div
-            v-if="multiple && draft.length"
-            class="flex flex-wrap gap-1"
-          >
-            <UBadge
-              v-for="entry in draft"
-              :key="entry.url"
-              color="neutral"
-              variant="subtle"
-              class="gap-1"
-            >
-              {{ entry.name }}
-
-              <UButton
-                icon="tabler:x"
-                color="neutral"
-                variant="ghost"
-                size="xs"
-                :aria-label="`${CATALOG_PICKER_LABELS.remove}: ${entry.name}`"
-                @click.left.exact.prevent="remove(entry.url)"
-              />
-            </UBadge>
           </div>
         </div>
       </div>
@@ -352,11 +607,18 @@
 
     <template #footer>
       <div class="flex w-full items-center justify-between gap-2">
-        <span class="text-xs text-dimmed">
-          {{
-            multiple ? `${CATALOG_PICKER_LABELS.chosen}: ${draft.length}` : ''
-          }}
-        </span>
+        <!-- Счётчик выбранного переехал на вкладку, а место занял сброс: снимать
+          набранную сотню по одной записи нечем -->
+        <UButton
+          v-if="multiple && draft.length"
+          icon="tabler:x"
+          color="neutral"
+          variant="ghost"
+          :label="CATALOG_PICKER_LABELS.clear"
+          @click.left.exact.prevent="clearDraft"
+        />
+
+        <span v-else />
 
         <div class="flex gap-2">
           <UButton

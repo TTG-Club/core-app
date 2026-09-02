@@ -7,7 +7,11 @@
   import { z } from '~/utils/zod';
 
   import CatalogPickerModal from './CatalogPickerModal.vue';
-  import { CATALOG_PICKER_LABELS } from './constants';
+  import {
+    CATALOG_PICKER_CHIPS_LIMIT,
+    CATALOG_PICKER_EXPAND_ICONS,
+    CATALOG_PICKER_LABELS,
+  } from './constants';
 
   /**
    * Поле выбора записи каталога: чипы выбранного и кнопка, открывающая окно с
@@ -92,6 +96,41 @@
       nameEng: '',
       source: '',
     })),
+  );
+
+  /**
+   * Показаны ли все чипы. Поле списка заклинаний умения набирают сотнями:
+   * без предела чипы занимали экран целиком, и форма под ними терялась.
+   */
+  const isExpanded = ref(false);
+
+  const visibleChips = computed(() =>
+    isExpanded.value || chips.value.length <= CATALOG_PICKER_CHIPS_LIMIT
+      ? chips.value
+      : chips.value.slice(0, CATALOG_PICKER_CHIPS_LIMIT),
+  );
+
+  /** Сколько чипов спрятано; ноль — спрятанных нет. */
+  const hiddenCount = computed(
+    () => chips.value.length - visibleChips.value.length,
+  );
+
+  const expandLabel = computed(() =>
+    hiddenCount.value
+      ? `${CATALOG_PICKER_LABELS.showMore} ${hiddenCount.value}`
+      : CATALOG_PICKER_LABELS.collapse,
+  );
+
+  /** Стрелка кнопки: вниз — есть что показать, вверх — всё уже показано. */
+  const expandIcon = computed(() =>
+    hiddenCount.value
+      ? CATALOG_PICKER_EXPAND_ICONS.expand
+      : CATALOG_PICKER_EXPAND_ICONS.collapse,
+  );
+
+  /** Показывать ли кнопку разворота: свёрнутых чипов нет — она не нужна. */
+  const isExpandShown = computed(
+    () => chips.value.length > CATALOG_PICKER_CHIPS_LIMIT,
   );
 
   const buttonLabel = computed(() => {
@@ -215,6 +254,11 @@
   // запросить одно и то же дважды.
   watch(selectedUrls, () => void loadMissingNames(), { immediate: true });
 
+  /** Разворачивает и сворачивает остаток чипов. */
+  function toggleExpanded(): void {
+    isExpanded.value = !isExpanded.value;
+  }
+
   /** Убирает запись из выбранного. */
   function remove(url: string): void {
     const rest = chips.value.filter((entry) => entry.url !== url);
@@ -239,7 +283,7 @@
     />
 
     <UBadge
-      v-for="entry in chips"
+      v-for="entry in visibleChips"
       :key="entry.url"
       color="neutral"
       variant="subtle"
@@ -257,6 +301,19 @@
         @click.left.exact.prevent="remove(entry.url)"
       />
     </UBadge>
+
+    <!-- Остаток прячется за кнопкой: сотня чипов подряд читается как стена, а
+      состав выбора смотрят на вкладке «Выбранные» в окне -->
+    <UButton
+      v-if="isExpandShown"
+      color="neutral"
+      variant="subtle"
+      size="xs"
+      :trailing-icon="expandIcon"
+      :disabled="disabled"
+      :label="expandLabel"
+      @click.left.exact.prevent="toggleExpanded"
+    />
 
     <!-- «Очистить» — только там, где записей бывает много: у одной он делал бы
       ровно то же, что крестик на её же чипе -->
