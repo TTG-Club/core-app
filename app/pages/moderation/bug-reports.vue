@@ -1,8 +1,10 @@
 <script setup lang="ts">
-  import type { WritableComputedRef } from 'vue';
+  import type { MaybeRefOrGetter, WritableComputedRef } from 'vue';
 
   import type {
+    AdminBugFilterOption,
     BugCountByStatusResponse,
+    BugReportFilterOptionsResponse,
     BugReportResponse,
     BugReportStatus,
     BugReportStatusUpdatePayload,
@@ -17,6 +19,8 @@
   import {
     ADMIN_BUG_SELECTED_DATA_KEY,
     ADMIN_BUGS_API_URL,
+    ADMIN_BUGS_AUTHOR_ALL_LABEL,
+    ADMIN_BUGS_AUTHOR_QUERY_KEY,
     ADMIN_BUGS_COUNT_BY_STATUS_API_URL,
     ADMIN_BUGS_DEFAULT_PAGE_SIZE,
     ADMIN_BUGS_DEFAULT_SORT,
@@ -24,13 +28,18 @@
     ADMIN_BUGS_DETAIL_EMPTY_TITLE,
     ADMIN_BUGS_EMPTY_TEXT,
     ADMIN_BUGS_FILTER_ALL,
+    ADMIN_BUGS_FILTER_OPTIONS_API_URL,
+    ADMIN_BUGS_FILTER_OPTIONS_DATA_KEY,
     ADMIN_BUGS_ID_QUERY_KEY,
     ADMIN_BUGS_LAYOUT_TITLE,
     ADMIN_BUGS_LOAD_ERROR_TEXT,
+    ADMIN_BUGS_LOGIN_SEARCH_PLACEHOLDER,
     ADMIN_BUGS_PAGE_DESCRIPTION,
     ADMIN_BUGS_PAGE_TITLE,
     ADMIN_BUGS_PLATFORM_ALL_LABEL,
     ADMIN_BUGS_PLATFORM_QUERY_KEY,
+    ADMIN_BUGS_RESOLVER_ALL_LABEL,
+    ADMIN_BUGS_RESOLVER_QUERY_KEY,
     ADMIN_BUGS_RETRY_LABEL,
     ADMIN_BUGS_STAT_TOTAL_LABEL,
     ADMIN_BUGS_STATUS_ALL_LABEL,
@@ -41,8 +50,10 @@
     BUG_REPORT_PLATFORM_LABELS,
     BUG_REPORT_STATUS_LABELS,
     BUG_REPORT_STATUSES,
+    buildLoginFilterOptions,
     getAdminBugApiUrl,
     getBugReportStatusColor,
+    toAdminBugFilterApiValue,
   } from '~bug-report/model';
   import { UiPagination } from '~ui/pagination';
 
@@ -54,30 +65,51 @@
 
   const route = useRoute();
   const router = useRouter();
+  const requestFetch = useRequestFetch();
 
   const currentPage = ref(1);
   const itemsPerPage = ADMIN_BUGS_DEFAULT_PAGE_SIZE;
+
+  // Логины для выпадающих списков авторов и исполнителей. Загружаются до
+  // создания фильтров: значение фильтра из адреса сверяется с этим списком
+  const { data: filterOptions, refresh: refreshFilterOptions } =
+    await useAsyncData<BugReportFilterOptionsResponse>(
+      ADMIN_BUGS_FILTER_OPTIONS_DATA_KEY,
+      () =>
+        requestFetch<BugReportFilterOptionsResponse>(
+          ADMIN_BUGS_FILTER_OPTIONS_API_URL,
+        ),
+    );
+
+  const authorLogins = computed(() => filterOptions.value?.userLogins ?? []);
+
+  const resolverLogins = computed(
+    () => filterOptions.value?.statusUpdatedByLogins ?? [],
+  );
 
   /**
    * Создает вычисляемый фильтр, синхронизированный с URL query.
    *
    * Значение из адреса принимается, только если оно есть среди допустимых:
    * иначе произвольная строка (`?status=foo`) ушла бы в API, где Spring не
-   * сможет привести её к enum и ответит ошибкой на весь список.
+   * сможет привести её к enum и ответит ошибкой на весь список. Для логинов
+   * список допустимых приходит с сервера: неизвестный логин из адреса тоже
+   * сбрасывается в «все», чтобы селект не показывал значение вне своих пунктов.
    *
    * @param queryKey Ключ параметра в URL query.
-   * @param allowedValues Допустимые значения фильтра.
+   * @param allowedValues Допустимые значения фильтра (могут быть реактивными).
    */
   function createQueryFilter(
     queryKey: string,
-    allowedValues: ReadonlyArray<string>,
+    allowedValues: MaybeRefOrGetter<ReadonlyArray<string>>,
   ): WritableComputedRef<string> {
     return computed({
       get: () => {
         const queryValue = route.query[queryKey];
 
         return typeof queryValue === 'string'
-          && allowedValues.includes(queryValue)
+          && queryValue
+          && toValue(allowedValues).includes(queryValue)
           ? queryValue
           : ADMIN_BUGS_FILTER_ALL;
       },
@@ -103,6 +135,16 @@
     SOURCE_PLATFORMS,
   );
 
+  const authorFilter = createQueryFilter(
+    ADMIN_BUGS_AUTHOR_QUERY_KEY,
+    authorLogins,
+  );
+
+  const resolverFilter = createQueryFilter(
+    ADMIN_BUGS_RESOLVER_QUERY_KEY,
+    resolverLogins,
+  );
+
   // Синхронизация выбранного ID бага с URL query
   const selectedBugId = computed({
     get: () => {
@@ -120,14 +162,8 @@
     },
   });
 
-  /** Пункт селекта-фильтра: подпись и значение. */
-  interface FilterOption {
-    label: string;
-    value: string;
-  }
-
   // Опции фильтров не зависят от состояния страницы — считаются один раз
-  const statusOptions: FilterOption[] = [
+  const statusOptions: AdminBugFilterOption[] = [
     { label: ADMIN_BUGS_STATUS_ALL_LABEL, value: ADMIN_BUGS_FILTER_ALL },
     ...BUG_REPORT_STATUSES.map((status) => ({
       label: BUG_REPORT_STATUS_LABELS[status],
@@ -135,7 +171,7 @@
     })),
   ];
 
-  const platformOptions: FilterOption[] = [
+  const platformOptions: AdminBugFilterOption[] = [
     { label: ADMIN_BUGS_PLATFORM_ALL_LABEL, value: ADMIN_BUGS_FILTER_ALL },
     ...SOURCE_PLATFORMS.map((platform) => ({
       label: BUG_REPORT_PLATFORM_LABELS[platform],
@@ -143,13 +179,23 @@
     })),
   ];
 
+  // Списки логинов приходят с сервера и могут обновиться, поэтому вычисляемые
+  const authorOptions = computed(() =>
+    buildLoginFilterOptions(ADMIN_BUGS_AUTHOR_ALL_LABEL, authorLogins.value),
+  );
+
+  const resolverOptions = computed(() =>
+    buildLoginFilterOptions(
+      ADMIN_BUGS_RESOLVER_ALL_LABEL,
+      resolverLogins.value,
+    ),
+  );
+
   // Сброс страницы и выделения при изменении фильтров
-  watch([statusFilter, platformFilter], () => {
+  watch([statusFilter, platformFilter, authorFilter, resolverFilter], () => {
     currentPage.value = 1;
     selectedBugId.value = null;
   });
-
-  const requestFetch = useRequestFetch();
 
   // Запрос баг-репортов с учетом пагинации и фильтров
   const {
@@ -165,19 +211,21 @@
           page: currentPage.value - 1,
           size: itemsPerPage,
           sort: ADMIN_BUGS_DEFAULT_SORT,
-          status:
-            statusFilter.value === ADMIN_BUGS_FILTER_ALL
-              ? undefined
-              : statusFilter.value,
-          sourcePlatform:
-            platformFilter.value === ADMIN_BUGS_FILTER_ALL
-              ? undefined
-              : platformFilter.value,
+          status: toAdminBugFilterApiValue(statusFilter.value),
+          sourcePlatform: toAdminBugFilterApiValue(platformFilter.value),
+          userLogin: toAdminBugFilterApiValue(authorFilter.value),
+          statusUpdatedBy: toAdminBugFilterApiValue(resolverFilter.value),
         },
       });
     },
     {
-      watch: [currentPage, statusFilter, platformFilter],
+      watch: [
+        currentPage,
+        statusFilter,
+        platformFilter,
+        authorFilter,
+        resolverFilter,
+      ],
     },
   );
 
@@ -191,8 +239,9 @@
     void refreshBugs();
   }
 
-  // Сводка по статусам зависит только от платформы: цифры должны совпадать со
-  // списком, но не схлопываться до одного статуса при фильтрации по статусу
+  // Сводка по статусам зависит от всех фильтров, кроме статуса: цифры должны
+  // совпадать со списком, но не схлопываться до одного статуса при фильтрации
+  // по статусу
   const { data: statusCounts, refresh: refreshStatusCounts } =
     await useAsyncData<BugCountByStatusResponse[]>(
       ADMIN_BUGS_STATUS_COUNTS_DATA_KEY,
@@ -201,15 +250,14 @@
           ADMIN_BUGS_COUNT_BY_STATUS_API_URL,
           {
             query: {
-              sourcePlatform:
-                platformFilter.value === ADMIN_BUGS_FILTER_ALL
-                  ? undefined
-                  : platformFilter.value,
+              sourcePlatform: toAdminBugFilterApiValue(platformFilter.value),
+              userLogin: toAdminBugFilterApiValue(authorFilter.value),
+              statusUpdatedBy: toAdminBugFilterApiValue(resolverFilter.value),
             },
           },
         ),
       {
-        watch: [platformFilter],
+        watch: [platformFilter, authorFilter, resolverFilter],
       },
     );
 
@@ -348,8 +396,10 @@
    * @param payload Данные об обновлении статуса.
    */
   function handleBugStatusUpdate(payload: BugReportStatusUpdatePayload): void {
-    // Статус сменился — сводка по статусам устарела
+    // Статус сменился — сводка по статусам устарела, а в списке исполнителей
+    // мог появиться новый логин
     void refreshStatusCounts();
+    void refreshFilterOptions();
 
     // Баг, догруженный по ID, обновляем отдельно — в списке его может не быть
     const loadedBug = fetchedSelectedBug.value;
@@ -452,6 +502,30 @@
             <USelectMenu
               v-model="platformFilter"
               :items="platformOptions"
+              value-key="value"
+              label-key="label"
+              class="w-full"
+            />
+
+            <!-- Фильтр по автору -->
+            <USelectMenu
+              v-model="authorFilter"
+              :items="authorOptions"
+              :search-input="{
+                placeholder: ADMIN_BUGS_LOGIN_SEARCH_PLACEHOLDER,
+              }"
+              value-key="value"
+              label-key="label"
+              class="w-full"
+            />
+
+            <!-- Фильтр по исполнителю: кто последним менял статус -->
+            <USelectMenu
+              v-model="resolverFilter"
+              :items="resolverOptions"
+              :search-input="{
+                placeholder: ADMIN_BUGS_LOGIN_SEARCH_PLACEHOLDER,
+              }"
               value-key="value"
               label-key="label"
               class="w-full"

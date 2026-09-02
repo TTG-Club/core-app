@@ -1,7 +1,9 @@
 export type {
+  AdminBugFilterOption,
   BrushColor,
   BugCountByStatusResponse,
   BugReportCreateRequest,
+  BugReportFilterOptionsResponse,
   BugReportResponse,
   BugReportStatsResponse,
   BugReportStatus,
@@ -22,6 +24,8 @@ export type {
 export {
   ADMIN_BUG_SELECTED_DATA_KEY,
   ADMIN_BUGS_API_URL,
+  ADMIN_BUGS_AUTHOR_ALL_LABEL,
+  ADMIN_BUGS_AUTHOR_QUERY_KEY,
   ADMIN_BUGS_CONFIGURE_LABEL,
   ADMIN_BUGS_COUNT_BY_STATUS_API_URL,
   ADMIN_BUGS_DEFAULT_PAGE_SIZE,
@@ -30,14 +34,19 @@ export {
   ADMIN_BUGS_DETAIL_EMPTY_TITLE,
   ADMIN_BUGS_EMPTY_TEXT,
   ADMIN_BUGS_FILTER_ALL,
+  ADMIN_BUGS_FILTER_OPTIONS_API_URL,
+  ADMIN_BUGS_FILTER_OPTIONS_DATA_KEY,
   ADMIN_BUGS_ID_QUERY_KEY,
   ADMIN_BUGS_LAYOUT_TITLE,
   ADMIN_BUGS_LOAD_ERROR_TEXT,
+  ADMIN_BUGS_LOGIN_SEARCH_PLACEHOLDER,
   ADMIN_BUGS_NAVIGATION_LABEL,
   ADMIN_BUGS_PAGE_DESCRIPTION,
   ADMIN_BUGS_PAGE_TITLE,
   ADMIN_BUGS_PLATFORM_ALL_LABEL,
   ADMIN_BUGS_PLATFORM_QUERY_KEY,
+  ADMIN_BUGS_RESOLVER_ALL_LABEL,
+  ADMIN_BUGS_RESOLVER_QUERY_KEY,
   ADMIN_BUGS_RETRY_LABEL,
   ADMIN_BUGS_STAT_TOTAL_LABEL,
   ADMIN_BUGS_STATUS_ALL_LABEL,
@@ -131,4 +140,9 @@ export {
   SOURCE_PLATFORM,
 } from './constants';
 
-export { applyBugStatusPatch, parseSelectedText } from './utils';
+export {
+  applyBugStatusPatch,
+  buildLoginFilterOptions,
+  parseSelectedText,
+  toAdminBugFilterApiValue,
+} from './utils';

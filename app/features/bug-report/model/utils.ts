@@ -1,8 +1,11 @@
 import type {
+  AdminBugFilterOption,
   BugReportResponse,
   BugReportStatusUpdatePayload,
   ParsedSelection,
 } from './types';
+
+import { ADMIN_BUGS_FILTER_ALL } from './constants';
 
 /**
  * Возвращает копию баг-репорта с применёнными полями обновления статуса.
@@ -52,4 +55,32 @@ export function parseSelectedText(selectedText: string): ParsedSelection {
     after: '',
     hasSelection: false,
   };
+}
+
+/**
+ * Значение фильтра админки баг-репортов для API: пункт «все» означает
+ * отсутствие параметра.
+ *
+ * @param filterValue Текущее значение фильтра.
+ */
+export function toAdminBugFilterApiValue(
+  filterValue: string,
+): string | undefined {
+  return filterValue === ADMIN_BUGS_FILTER_ALL ? undefined : filterValue;
+}
+
+/**
+ * Пункты выпадающего списка логинов для фильтра админки: «все» и сами логины.
+ *
+ * @param allLabel Подпись пункта «все».
+ * @param logins Логины с сервера.
+ */
+export function buildLoginFilterOptions(
+  allLabel: string,
+  logins: ReadonlyArray<string>,
+): AdminBugFilterOption[] {
+  return [
+    { label: allLabel, value: ADMIN_BUGS_FILTER_ALL },
+    ...logins.map((login) => ({ label: login, value: login })),
+  ];
 }

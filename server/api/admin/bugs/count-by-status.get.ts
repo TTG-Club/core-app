@@ -13,6 +13,8 @@ const COUNT_PAGE_SIZE = 1;
 
 const countQuerySchema = z.object({
   sourcePlatform: z.enum(SOURCE_PLATFORMS).optional(),
+  userLogin: z.string().optional(),
+  statusUpdatedBy: z.string().optional(),
 });
 
 const countPageSchema = z.object({
@@ -25,9 +27,9 @@ const countPageSchema = z.object({
  * Проверяет права пользователя (требуется ADMIN или MODERATOR) и параллельно
  * спрашивает у микросервиса количество багов по каждому статусу: отдельной ручки
  * со сводкой по всем пользователям он не отдаёт, поэтому считаем по
- * `totalElements` отфильтрованного списка. Необязательный `sourcePlatform`
- * сужает сводку до одной платформы — чтобы цифры совпадали со списком под теми
- * же фильтрами.
+ * `totalElements` отфильтрованного списка. Необязательные `sourcePlatform`,
+ * `userLogin` и `statusUpdatedBy` сужают сводку так же, как список, — чтобы
+ * цифры совпадали с ним под теми же фильтрами.
  */
 export default defineEventHandler(async (event) => {
   const user = await getUserFromToken(event);
@@ -57,6 +59,8 @@ export default defineEventHandler(async (event) => {
             query: {
               status,
               sourcePlatform: parsedQuery.data.sourcePlatform,
+              userLogin: parsedQuery.data.userLogin,
+              statusUpdatedBy: parsedQuery.data.statusUpdatedBy,
               page: 0,
               size: COUNT_PAGE_SIZE,
             },

@@ -252,6 +252,24 @@ export interface BugCountByStatusResponse {
   count: number;
 }
 
+/** Значения для фильтров списка баг-репортов в админке */
+export interface BugReportFilterOptionsResponse {
+  /** Логины авторов баг-репортов (без анонимов), по алфавиту */
+  userLogins: string[];
+
+  /** Логины пользователей, менявших статус баг-репортов, по алфавиту */
+  statusUpdatedByLogins: string[];
+}
+
+/** Пункт селекта-фильтра в админке баг-репортов */
+export interface AdminBugFilterOption {
+  /** Подпись пункта */
+  label: string;
+
+  /** Значение пункта: код статуса или платформы, логин либо «все» */
+  value: string;
+}
+
 /** Пользователь и количество решённых багов */
 export interface BugReportUserFixedCount {
   /** Отображаемое имя пользователя (логин, если имя не задано) */
