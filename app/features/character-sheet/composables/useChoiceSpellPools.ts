@@ -1,17 +1,21 @@
 import type { MaybeRefOrGetter, Ref } from 'vue';
 
-import type {
-  CharacterSpell,
-  ClassChoice,
-  FeatSummary,
-  SpellCatalogItem,
-} from '../model';
+import type { CharacterSpell, ClassChoice, SpellCatalogItem } from '../model';
 
 import { fetchChoiceSpells, getChoiceSpellClassUrls } from '../model';
 
-interface FeatChoiceSpellsOptions {
-  /** Черты, чьи выборы заклинаний собираются. */
-  summaries: MaybeRefOrGetter<FeatSummary[]>;
+/**
+ * Запись, чьи выборы спрашивают заклинания: черта, дары предыстории, умение
+ * класса. Кроме самих выборов, о записи здесь ничего не нужно — иначе умение
+ * класса пришлось бы выдавать за черту.
+ */
+interface ChoiceSpellSource {
+  choices: ClassChoice[];
+}
+
+interface ChoiceSpellPoolsOptions {
+  /** Записи, чьи выборы заклинаний собираются. */
+  sources: MaybeRefOrGetter<ChoiceSpellSource[]>;
 
   /**
    * Ответы игрока по id выбора. Composable их и читает, и чистит: названный
@@ -25,10 +29,13 @@ interface FeatChoiceSpellsOptions {
    * предыстория «Мудрец» даёт «Посвящённого в магию (Волшебник)» и за игрока
    * уже ответила.
    */
-  resolveClassUrls?: (choice: ClassChoice, summary: FeatSummary) => string[];
+  resolveClassUrls?: (
+    choice: ClassChoice,
+    source: ChoiceSpellSource,
+  ) => string[];
 }
 
-interface FeatChoiceSpells {
+interface ChoiceSpellPools {
   /** Заклинания пула по id выбора. */
   pools: Ref<Record<string, SpellCatalogItem[]>>;
 
@@ -39,33 +46,33 @@ interface FeatChoiceSpells {
   getSpellOptions: (choice: ClassChoice) => string[];
 
   /** Заклинания, выбранные игроком, записями листа. */
-  collectChosenSpells: (summary: FeatSummary) => CharacterSpell[];
+  collectChosenSpells: (source: ChoiceSpellSource) => CharacterSpell[];
 
   /** Перезапрашивает пулы всех выборов заклинаний. */
   load: () => Promise<void>;
 }
 
-/** Выбор заклинания из выборов черты. */
-function getSpellChoices(summary: FeatSummary): ClassChoice[] {
-  return summary.choices.filter((choice) => choice.kind === 'spell');
+/** Выбор заклинания из выборов записи. */
+function getSpellChoices(source: ChoiceSpellSource): ClassChoice[] {
+  return source.choices.filter((choice) => choice.kind === 'spell');
 }
 
 /**
  * Ответы игрока на выборы списка класса: по ним собираются пулы, и их смена
  * пулы перезапрашивает.
  *
- * @param summaries черты.
+ * @param sources записи с выборами.
  * @param answers ответы игрока по id выбора.
  * @returns ответ по id выбора списка.
  */
 function getClassAnswers(
-  summaries: FeatSummary[],
+  sources: ChoiceSpellSource[],
   answers: Record<string, string[]>,
 ): Record<string, string> {
   const result: Record<string, string> = {};
 
-  for (const summary of summaries) {
-    for (const choice of summary.choices) {
+  for (const source of sources) {
+    for (const choice of source.choices) {
       if (choice.kind === 'spell-list') {
         result[choice.id] = (answers[choice.id] ?? []).join(',');
       }
@@ -76,46 +83,50 @@ function getClassAnswers(
 }
 
 /**
- * Пулы заклинаний для выборов черты.
+ * Пулы заклинаний для выборов записи справочника.
  *
- * Пул собирается поиском по каталогу, а не хранится в самой черте: заклинаний
+ * Пул собирается поиском по каталогу, а не хранится в самой записи: заклинаний
  * слишком много, и перечень устарел бы при первом же пополнении справочника.
- * Один код на все окна, где черту берут: и модалка черт, и визард предыстории
- * спрашивают одно и то же и одинаково сужают пул по названному классу.
+ * Один код на все окна, где такой выбор спрашивают: модалка черт, визарды
+ * предыстории и класса спрашивают одно и то же и одинаково сужают пул по
+ * названному классу.
  *
- * @param options черты, ответы игрока и способ сузить пул.
+ * @param options записи с выборами, ответы игрока и способ сузить пул.
  * @returns пулы заклинаний и работа с ними.
  */
-export function useFeatChoiceSpells(
-  options: FeatChoiceSpellsOptions,
-): FeatChoiceSpells {
-  const { summaries, answers, resolveClassUrls } = options;
+export function useChoiceSpellPools(
+  options: ChoiceSpellPoolsOptions,
+): ChoiceSpellPools {
+  const { sources, answers, resolveClassUrls } = options;
 
   const pools = ref<Record<string, SpellCatalogItem[]>>({});
 
-  /** Классы пула: названные источником черты либо выбранные игроком. */
-  function getClassUrls(choice: ClassChoice, summary: FeatSummary): string[] {
+  /** Классы пула: названные источником записи либо выбранные игроком. */
+  function getClassUrls(
+    choice: ClassChoice,
+    source: ChoiceSpellSource,
+  ): string[] {
     if (resolveClassUrls) {
-      return resolveClassUrls(choice, summary);
+      return resolveClassUrls(choice, source);
     }
 
-    return getChoiceSpellClassUrls(choice, summary.choices, answers.value);
+    return getChoiceSpellClassUrls(choice, source.choices, answers.value);
   }
 
-  /** Перезапрашивает пулы всех выборов заклинаний загруженных черт. */
+  /** Перезапрашивает пулы всех выборов заклинаний загруженных записей. */
   async function load(): Promise<void> {
-    const requests = toValue(summaries).flatMap((summary) =>
-      getSpellChoices(summary).flatMap((choice) =>
+    const requests = toValue(sources).flatMap((source) =>
+      getSpellChoices(source).flatMap((choice) =>
         choice.spellFilter
-          ? [{ summary, choice, filter: choice.spellFilter }]
+          ? [{ source, choice, filter: choice.spellFilter }]
           : [],
       ),
     );
 
     const loaded = await Promise.all(
-      requests.map(async ({ summary, choice, filter }) => ({
+      requests.map(async ({ source, choice, filter }) => ({
         id: choice.id,
-        spells: await fetchChoiceSpells(filter, getClassUrls(choice, summary)),
+        spells: await fetchChoiceSpells(filter, getClassUrls(choice, source)),
       })),
     );
 
@@ -125,7 +136,7 @@ export function useFeatChoiceSpells(
   }
 
   const classAnswers = computed(() =>
-    getClassAnswers(toValue(summaries), answers.value),
+    getClassAnswers(toValue(sources), answers.value),
   );
 
   // Цикла нет: обработчик правит ответы только выборов заклинаний, а ключ
@@ -140,23 +151,23 @@ export function useFeatChoiceSpells(
     }
 
     // Пул сменился — прежде выбранные заклинания к нему уже не относятся.
-    // Чистятся только выборы той черты, чей класс назвали заново: у второй
-    // черты в списке ответ остаётся.
+    // Чистятся только выборы той записи, чей класс назвали заново: у второй
+    // записи в списке ответ остаётся.
     const cleared = { ...answers.value };
 
-    for (const summary of toValue(summaries)) {
-      for (const choice of getSpellChoices(summary)) {
+    for (const source of toValue(sources)) {
+      for (const choice of getSpellChoices(source)) {
         const key = choice.spellFilter?.classesFromChoiceKey;
 
-        const source = key
-          ? summary.choices.find(
+        const listChoice = key
+          ? source.choices.find(
               (candidate) =>
                 candidate.kind === 'spell-list'
                 && candidate.id.endsWith(`:${key}`),
             )
           : undefined;
 
-        if (source && changed.has(source.id)) {
+        if (listChoice && changed.has(listChoice.id)) {
           cleared[choice.id] = [];
         }
       }
@@ -191,17 +202,17 @@ export function useFeatChoiceSpells(
    * Заклинания, выбранные игроком: пул хранит записи каталога, а ответы —
    * названия, поэтому выбранное сверяется по названию.
    *
-   * @param summary деталь черты.
+   * @param source запись с выборами.
    * @returns выбранные заклинания записями листа.
    */
-  function collectChosenSpells(summary: FeatSummary): CharacterSpell[] {
-    return getSpellChoices(summary).flatMap((choice) => {
+  function collectChosenSpells(source: ChoiceSpellSource): CharacterSpell[] {
+    return getSpellChoices(source).flatMap((choice) => {
       const chosen = new Set(answers.value[choice.id] ?? []);
 
       return (
         getPool(choice)
           .filter((spell) => chosen.has(spell.name))
-          // Заклинание черты подготовлено сразу и места среди подготовленных
+          // Заклинание записи подготовлено сразу и места среди подготовленных
           // не занимает — как врождённое заклинание вида.
           .map((spell) => ({ ...spell, prepared: true }))
       );

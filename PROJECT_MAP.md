@@ -507,6 +507,19 @@ modals), so its capabilities are listed here rather than squeezed into the table
   would mean removing the class takes the grant back only halfway. A feature's
   counter reaches the resource panel and its granted spell reaches the spellbook
   through the paths feats already use.
+- A spell or cantrip a class feature — or one of its options — asks for is picked
+  in the class wizard exactly as a feat asks for one: `SheetFeatSpellsPicker`
+  opens the pool as a modal list with a search, and the pool itself is a catalog
+  search (`useChoiceSpellPools` → `fetchChoiceSpells`) narrowed by the class and
+  the circle the mechanics name, because the reference stores no list of its own.
+  Such a question arrives with the option that owns it («Маг» of the druid's
+  primal order grants an extra druid cantrip), so the wizard reloads the pools
+  whenever the set of spell questions changes (`getSpellChoicesKey`) rather than
+  once per class. The answer lands on the feature record
+  (`withChosenFeatureSpells`), which puts it under «Врождённые и от черт» on the
+  spells tab, keeps it out of the prepared count and takes it away with the
+  class. The level-up and species wizards do not load these pools yet, so there
+  the same question still shows an empty list.
 - A feature's own list of options (warlock invocations, battle-master manoeuvres,
   sorcerer metamagic) is asked by the wizards only when the record carries
   `optionsChoice`; without it the list stays a reference on the class page, as it
