@@ -7,6 +7,7 @@
     HitPointsGainMode,
     LevelUpStepDraft,
     LevelUpStepView,
+    SpellCatalogItem,
   } from '../../model';
 
   import { MarkupRender } from '~ui/markup';
@@ -24,6 +25,7 @@
     SKILL_DUPLICATE_WARNING,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
+  import SheetFeatSpellsPicker from './SheetFeatSpellsPicker.vue';
   import SheetLevelUpFeatChoice from './SheetLevelUpFeatChoice.vue';
 
   const {
@@ -33,6 +35,7 @@
     constitutionModifier,
     abilities,
     choiceOptions,
+    spellPool,
     choiceHints,
     featOptions,
     selectedFeat,
@@ -55,6 +58,9 @@
 
     /** Опции пикера для выбора внутри умения. */
     choiceOptions: (choice: ClassChoice) => string[];
+
+    /** Пул заклинаний выбора: его показывает окно выбора заклинаний. */
+    spellPool: (choice: ClassChoice) => SpellCatalogItem[];
 
     /** Пометки опций пикера: навыки, которыми персонаж уже владеет. */
     choiceHints: (choice: ClassChoice) => Record<string, string>;
@@ -158,6 +164,10 @@
             requiredCount,
             hints: choiceHints(choice),
             chooseLabel,
+            // Заклинания выбирают окном каталога, а не селектом, поэтому у их
+            // выбора при списке опций есть ещё и сам пул: окну нужны записи, а
+            // не одни названия
+            spellItems: spellPool(choice),
             // Заголовок просмотра описаний вариантов: подпись выбора, а её нет —
             // общее «Выберите столько-то»
             detailsTitle: choice.label || chooseLabel,
@@ -340,7 +350,22 @@
               {{ control.choice.label || control.chooseLabel }}
             </span>
 
+            <!-- Заклинания выбирают своим окном: пул бывает и на сотню
+              записей, а выбранные должны остаться на виду, чтобы их можно было
+              убрать -->
+            <SheetFeatSpellsPicker
+              v-if="control.choice.kind === 'spell'"
+              :model-value="draft.selections[control.choice.id] ?? []"
+              :items="control.spellItems"
+              :count="control.requiredCount"
+              :label="control.detailsTitle"
+              @update:model-value="
+                handleSelection(control.choice, control.requiredCount, $event)
+              "
+            />
+
             <SheetChoiceSelect
+              v-else
               :model-value="draft.selections[control.choice.id] ?? []"
               :items="control.options"
               :hints="control.hints"

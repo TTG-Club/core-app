@@ -21,6 +21,7 @@
   import {
     useCatalogSourceQuery,
     useCharacterSheet,
+    useChoiceSpellPools,
     useLazyCatalogSourceQuery,
     useToolCatalog,
   } from '../../composables';
@@ -51,6 +52,7 @@
     getRequiredChoiceCount,
     getSpeciesDarkvision,
     getSpeciesVision,
+    getSpellChoicesKey,
     getToolNames,
     LANGUAGE_PROFICIENCY_GROUPS,
     ORIGIN_FEAT_ACQUISITION_LEVEL,
@@ -67,11 +69,14 @@
     SPECIES_FEAT_INVALID_RESPONSE_ERROR,
     SPECIES_FILTERS_PATH,
     SPECIES_SEARCH_PATH,
+    SPECIES_WIZARD_LABELS,
     unionToolProficiencies,
+    withChosenFeatureSpells,
   } from '../../model';
   import SheetChoiceSelect from './SheetChoiceSelect.vue';
   import SheetCurrentSelectionPanel from './SheetCurrentSelectionPanel.vue';
   import SheetCustomSpeciesModal from './SheetCustomSpeciesModal.vue';
+  import SheetFeatSpellsPicker from './SheetFeatSpellsPicker.vue';
   import SheetLevelUpFeatChoice from './SheetLevelUpFeatChoice.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
 
@@ -447,6 +452,35 @@
     featureRows.value.flatMap((row) => row.choiceControls),
   );
 
+  // Пул заклинаний собирается поиском по каталогу, а не лежит в записи вида:
+  // умение, дающее заговор из списка волшебника, перечислило бы весь список, и
+  // тот устарел бы при первом же пополнении справочника
+  const {
+    getPool: getSpellPool,
+    getSpellOptions,
+    collectChosenSpells,
+    load: loadSpellPools,
+  } = useChoiceSpellPools({
+    sources: () =>
+      featureRows.value.map((row) => ({ choices: row.choiceControls })),
+    answers: selections,
+  });
+
+  /**
+   * Примета выборов заклинаний, которые мастер спрашивает сейчас: они приходят
+   * вместе с выбранным видом и подвидом, поэтому пул догружается по её смене.
+   */
+  const spellChoicesKey = computed(() => getSpellChoicesKey(allChoices.value));
+
+  // Цикла нет: обработчик правит только пулы заклинаний, а примета считается по
+  // выборам мастера — от загруженного пула она не меняется.
+  watch(spellChoicesKey, handleSpellChoicesChange);
+
+  /** Догружает пулы заклинаний под выборы, которые мастер спрашивает сейчас. */
+  function handleSpellChoicesChange(): void {
+    void loadSpellPools();
+  }
+
   /** Есть ли у вида выбор черты: по нему грузится каталог черт. */
   const hasFeatChoices = computed(() =>
     featureRows.value.some((row) => row.featChoices.length > 0),
@@ -454,6 +488,12 @@
 
   /** Опции пикера выбора в зависимости от его типа. */
   function choiceOptions(choice: ClassChoice): string[] {
+    // Заклинания приходят загруженным пулом, а не резолвятся по типу выбора: в
+    // самой записи вида их нет.
+    if (choice.kind === 'spell') {
+      return getSpellOptions(choice);
+    }
+
     return resolveChoiceOptions(choice, {
       skillNames: skillNames.value,
       proficientSkillNames: proficientSkillNames.value,
@@ -483,6 +523,27 @@
   /** Требуемое число опций: не больше, чем доступно в списке выбора. */
   function choiceCount(choice: ClassChoice): number {
     return getRequiredChoiceCount(choice, choiceOptions(choice));
+  }
+
+  /**
+   * Подсказка пустого пикера: сколько значений он ждёт («Выберите 2»).
+   *
+   * @param choice выбор умения.
+   * @returns подпись с требуемым числом значений.
+   */
+  function choosePlaceholder(choice: ClassChoice): string {
+    return `${SPECIES_WIZARD_LABELS.chooseLabel} ${choiceCount(choice)}`;
+  }
+
+  /**
+   * Заголовок выбора: своя подпись из записи вида, а без неё — «Выберите N».
+   * Ею подписан и сам выбор, и окно выбора заклинаний.
+   *
+   * @param choice выбор умения.
+   * @returns заголовок выбора.
+   */
+  function chooseLabel(choice: ClassChoice): string {
+    return choice.label || choosePlaceholder(choice);
   }
 
   /** Обновление выбора с ограничением по требуемому количеству. */
@@ -922,15 +983,26 @@
         truesight: character.value.vision.truesight,
         unit: 'feet',
       },
-      features: [
-        ...buildCharacterFeatures(
-          detail,
-          lineage,
-          featureChoices,
-          character.value.level,
+      // Выбранные заклинания — на записи своих умений: лист ведёт их наравне
+      // с врождёнными заклинаниями вида, и снятие вида забирает их вместе с
+      // умением
+      features: withChosenFeatureSpells(
+        [
+          ...buildCharacterFeatures(
+            detail,
+            lineage,
+            featureChoices,
+            character.value.level,
+          ),
+          ...featFeatures.map((selection) => selection.feature),
+        ],
+        Object.fromEntries(
+          featureRows.value.map((row) => [
+            row.id,
+            collectChosenSpells({ choices: row.choiceControls }),
+          ]),
         ),
-        ...featFeatures.map((selection) => selection.feature),
-      ],
+      ),
       skills: {
         // Навыки из даров вида идут туда же, куда выбранные игроком: лист
         // ставит владение строке навыка, а не списку владений
@@ -1265,16 +1337,29 @@
                   class="flex flex-col gap-1"
                 >
                   <span class="text-xs text-muted">
-                    {{ control.label || `Выберите ${choiceCount(control)}` }}
+                    {{ chooseLabel(control) }}
                   </span>
 
+                  <!-- Заклинания выбирают своим окном: пул бывает и на сотню
+                    записей, а выбранные должны остаться на виду, чтобы их можно
+                    было убрать -->
+                  <SheetFeatSpellsPicker
+                    v-if="control.kind === 'spell'"
+                    :model-value="selections[control.id] ?? []"
+                    :items="getSpellPool(control)"
+                    :count="choiceCount(control)"
+                    :label="chooseLabel(control)"
+                    @update:model-value="updateSelection(control, $event)"
+                  />
+
                   <SheetChoiceSelect
+                    v-else
                     :model-value="selections[control.id] ?? []"
                     :items="choiceOptions(control)"
                     :hints="choiceHints(control)"
                     :warning="SKILL_DUPLICATE_WARNING"
                     :count="choiceCount(control)"
-                    :placeholder="`Выберите ${choiceCount(control)}`"
+                    :placeholder="choosePlaceholder(control)"
                     @update:model-value="updateSelection(control, $event)"
                   />
                 </div>
@@ -1286,7 +1371,7 @@
                 v-if="!row.choiceControls.length && !row.featChoices.length"
                 v-model="choices[row.id]"
                 size="sm"
-                placeholder="Ваш выбор в особенности (необязательно)"
+                :placeholder="SPECIES_WIZARD_LABELS.featureChoicePlaceholder"
               />
 
               <MarkupRender

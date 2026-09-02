@@ -3184,6 +3184,15 @@ export const CUSTOM_SPECIES_DEFAULT_SPEED = 30;
 /** Дистанция новой строки зрения своего вида по умолчанию, футы. */
 export const CUSTOM_SPECIES_DEFAULT_VISION = 60;
 
+/** Подписи мастера вида. */
+export const SPECIES_WIZARD_LABELS = {
+  /** Подсказка пикера: сколько значений он ждёт («Выберите 2»). */
+  chooseLabel: 'Выберите',
+
+  /** Подсказка поля свободного выбора в умении без распознанного пикера. */
+  featureChoicePlaceholder: 'Ваш выбор в особенности (необязательно)',
+} as const;
+
 /** Подписи формы своего вида. */
 export const CUSTOM_SPECIES_LABELS = {
   openButton: 'Свой вид',
