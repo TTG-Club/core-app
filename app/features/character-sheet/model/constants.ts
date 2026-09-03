@@ -2435,8 +2435,12 @@ export const ABILITY_IMPROVEMENT_FEAT_URL_PREFIX = 'ability-score-improvement';
 /** Тексты выбора черты за улучшение характеристик в мастере повышения уровня. */
 export const ABILITY_IMPROVEMENT_LABELS = {
   featTitle: 'Выберите черту',
+  featExplanation: 'Черта берётся из каталога: описание каждой — в окне выбора',
   featPlaceholder: 'Выбери черту',
   abilitiesTitle: 'Улучшение характеристик',
+  abilitySlotTitle: 'Характеристика для +1',
+  abilitySlotExplanation:
+    'Черта повышает одну характеристику на 1 — среди тех, что она разрешает',
   abilityPlaceholder: 'Выбери характеристику',
   previewTooltip: 'Открыть описание черты',
   previewAriaLabel: 'Описание выбранной черты',
@@ -2980,6 +2984,7 @@ export const CLASS_WIZARD_LABELS = {
   savingThrowsUnknown: 'не распознаны',
   proficiencies: 'Владения (распознаны, проверьте вручную)',
   proficiencyChoices: 'Выборы владений',
+  classChoiceExplanation: 'Класс даёт это владение на выбор при взятии',
   /** Подпись раздела умений; `{level}` — уровень, до которого они набраны. */
   features: 'Умения (до {level} уровня)',
   featureNotePlaceholder: 'Ваш выбор в умении (необязательно)',
@@ -3132,6 +3137,10 @@ export const CLASS_WIZARD_TAB_LABELS: Record<ClassWizardTab, string> = {
 export const BACKGROUND_WIZARD_LABELS = {
   featChoice: 'Черта на выбор',
   featChoicePlaceholder: 'Выбери черту',
+
+  /** Подписи слотов прибавок в режиме «+2 и +1». */
+  abilityPlusTwo: 'Характеристика для +2',
+  abilityPlusOne: 'Характеристика для +1',
 } as const;
 
 /** Подписи формы своей предыстории. */
@@ -4862,10 +4871,42 @@ export const LEVEL_UP_WIZARD_LABELS: Record<
   | 'totalLevel'
   | 'skipPreparation'
   | 'skipPreparationHint'
-  | 'stepClassPrefix',
+  | 'skipPreparationIdleHint'
+  | 'stepClassPrefix'
+  | 'modalTitle'
+  | 'modalTitleLevelUp'
+  | 'progressStepSubtitle'
+  | 'levelWord'
+  | 'hitPointsShort'
+  | 'levelStepSubtitleEmpty'
+  | 'subclassExplanation'
+  | 'subclassChosenBadge'
+  | 'railAriaLabel'
+  | 'pendingBadgeAriaLabel'
+  | 'featureDescriptionTitle'
+  | 'experienceTitle'
+  | 'currentExperience'
+  | 'additionalExperience'
+  | 'totalExperience',
   string
 > = {
   progressStep: 'Уровень и опыт',
+  modalTitle: 'Опыт и уровень',
+  modalTitleLevelUp: 'Повышение уровня',
+  progressStepSubtitle: 'Опыт и уровни классов',
+  levelWord: 'уровень',
+  hitPointsShort: 'хиты',
+  levelStepSubtitleEmpty: 'Умений на этом уровне нет',
+  subclassExplanation:
+    'На этом уровне класс выбирает подкласс: его умения добавятся к умениям класса',
+  subclassChosenBadge: 'Подкласс',
+  railAriaLabel: 'Шаги повышения уровня',
+  pendingBadgeAriaLabel: 'Не сделано выборов',
+  featureDescriptionTitle: 'Описание умения',
+  experienceTitle: 'Опыт',
+  currentExperience: 'Текущий опыт',
+  additionalExperience: 'Добавить опыт',
+  totalExperience: 'Итого опыта',
   levelStepTitle: 'Уровень',
   levelStepDescription: 'Прирост хитов и умения этого уровня',
   featuresTitle: 'Умения уровня',
@@ -4893,6 +4934,8 @@ export const LEVEL_UP_WIZARD_LABELS: Record<
   skipPreparation: 'Пропустить подготовку',
   skipPreparationHint:
     'Уровень поднимется сразу, без выбора умений и броска на хиты: максимум вырастет на среднее значение кости класса. Умения новых уровней при этом не добавятся — их можно взять позже, выбрав класс заново.',
+  skipPreparationIdleHint:
+    'Пропускать пока нечего: поднимите уровень класса, и подготовку можно будет пропустить.',
   stepClassPrefix: 'Класс',
 };
 
@@ -5064,21 +5107,6 @@ export const SHEET_FEAT_MODAL_LABELS = {
   abilityVariantLabel: 'Как повысить характеристики',
 } as const;
 
-/**
- * Подписи окна выбора черты. Черту выбирают списком в окне, а не селектором:
- * у пула бывает под сотню записей, и описание каждой читают прямо оттуда —
- * тем же порядком, что и заклинания черты.
- */
-export const SHEET_FEAT_PICK_LABELS = {
-  choose: 'Выбрать черту',
-  change: 'Изменить черту',
-  notChosen: 'Черта не выбрана',
-  empty: 'Черт по этим условиям не нашлось',
-  apply: 'Выбрать',
-  cancel: 'Отмена',
-  clearHint: 'Нажатие по выбранной черте снимает выбор',
-} as const;
-
 /** Подписи окна «от какой характеристики считается заклинание». */
 export const SHEET_SPELL_ABILITY_LABELS = {
   menu: 'Заклинательная характеристика',
@@ -5089,19 +5117,6 @@ export const SHEET_SPELL_ABILITY_LABELS = {
   autoUnknown: 'От класса (не определена)',
   save: 'Сохранить',
   cancel: 'Отмена',
-} as const;
-
-/** Подписи окна выбора заклинаний черты. */
-export const SHEET_FEAT_SPELLS_LABELS = {
-  add: 'Добавить',
-  apply: 'Добавить',
-  cancel: 'Отмена',
-  chosen: 'Выбрано',
-  rest: 'Осталось выбрать',
-  enough: 'Выбрано столько, сколько даёт черта',
-  empty: 'Заклинаний по этим условиям не нашлось',
-  remove: 'Убрать заклинание',
-  none: 'Заклинания ещё не выбраны',
 } as const;
 
 /**
@@ -5116,14 +5131,94 @@ export const SHEET_CHOICE_OPTIONS_LABELS = {
 } as const;
 
 /**
- * Сколько вариантов выбора ещё показывать бейджами, а не выпадающим списком.
- *
- * Короткий набор — класс списка заклинаний, заклинательная характеристика — в
- * списке прячется: игрок не видит, из чего выбирает, пока не откроет его. Длинный
- * (навыки, языки, заклинания) бейджами не показать — ряд занял бы весь экран, и
- * искать в нём нечем.
+ * Подписи единого пикера выбора: поле с выбранным в карточке умения и окно со
+ * списком, поиском и описанием варианта. Один набор на все выборы листа —
+ * навыки, заклинания, черты, подклассы, варианты умений.
  */
-export const SHEET_CHOICE_BADGE_MAX_OPTIONS = 12;
+export const SHEET_CHOICE_PICKER_LABELS = {
+  choose: 'Выбрать',
+  change: 'Изменить',
+  save: 'Сохранить',
+  cancel: 'Отмена',
+  clear: 'Снять выбор',
+  allTab: 'Все',
+  selectedTab: 'Выбранные',
+  notChosen: 'Ещё не выбрано',
+  remove: 'Убрать из выбранного',
+  loading: 'Список вариантов загружается…',
+  loadError: 'Не удалось загрузить список вариантов',
+  retry: 'Повторить',
+  noOptions: 'Вариантов для выбора нет',
+  empty: 'По запросу ничего не найдено',
+  searchPlaceholder: 'Поиск по названию',
+  detailTooltip: 'Показать описание',
+  detailAriaLabel: 'Описание варианта',
+  detailPlaceholder: 'Нажмите на вариант в списке, чтобы прочитать описание',
+  noDetail: 'У этого варианта нет описания',
+  detailError: 'Не удалось загрузить описание',
+  detailOpen: 'Открыть полное описание',
+  abilityMaxed: 'на пределе',
+} as const;
+
+/**
+ * Пояснения к выбору по его виду: почему игрок здесь и сейчас что-то выбирает.
+ * Подпись выбора из записи говорит «Выберите заклинание 6 круга», а не откуда
+ * оно и что даёт — эту строку пикер показывает под заголовком.
+ */
+export const SHEET_CHOICE_EXPLANATION_LABELS: Record<ClassChoiceKind, string> =
+  {
+    'skill-proficiency': 'Умение даёт владение навыком на выбор',
+    'skill-expertise':
+      'Умение даёт компетентность в навыке, которым персонаж уже владеет',
+    'language': 'Умение даёт язык на выбор',
+    'tool': 'Умение даёт владение инструментом на выбор',
+    'damage-type': 'Умение даёт защиту от типа урона на выбор',
+    'spell': 'Умение даёт заклинание на выбор',
+    'spell-list': 'Умение даёт заклинания из списка класса на выбор',
+    'spellcasting-ability':
+      'От выбранной характеристики считаются заклинания умения',
+    'saving-throw': 'Умение даёт владение спасброском на выбор',
+    'weapon-mastery': 'Умение даёт оружейный приём для оружия во владении',
+    'mastery-property': 'Умение даёт оружейный приём на выбор',
+    'ability-score': 'Умение повышает характеристику на выбор',
+    'ability-variant': 'Умение предлагает, как повысить характеристики',
+    'option': 'Умение даёт вариант на выбор',
+    'feat': 'Умение даёт черту на выбор',
+  };
+
+/**
+ * Части пояснения к выбору заклинания: «Умение даёт заклинание 6 круга из
+ * списка класса Колдун на выбор». Собирается из фильтра пула, потому что
+ * подпись выбора в записи бывает и пустой.
+ */
+export const SHEET_CHOICE_SPELL_EXPLANATION = {
+  prefix: 'Умение даёт',
+  cantrip: 'заговор',
+  spell: 'заклинание',
+  maxLevelPrefix: 'не выше',
+  levelSuffix: 'круга',
+  classPrefix: 'из списка класса',
+  suffix: 'на выбор',
+} as const;
+
+/**
+ * Оформление раздела в мастерах листа: рамка карточки, общая у мастера класса и
+ * мастера повышения уровня, — по ней разделы читаются блоками, а не сплошной
+ * простынёй.
+ */
+export const SHEET_WIZARD_SECTION_CLASS =
+  'flex flex-col gap-2 rounded-lg border border-default/50 bg-elevated/20 p-3';
+
+/** Заголовок раздела в мастерах листа: капителью, как легенда панели. */
+export const SHEET_WIZARD_SECTION_TITLE_CLASS =
+  'text-[10px] font-bold tracking-wider text-muted uppercase';
+
+/**
+ * Карточка умения в мастерах листа: та же рамка, что у раздела, но без
+ * внутренних отступов — шапка-кнопка занимает карточку целиком.
+ */
+export const SHEET_WIZARD_FEATURE_CARD_CLASS =
+  'flex flex-col rounded-lg border border-default/50 bg-elevated/20';
 
 /**
  * Ключ выбора класса, который лист заводит сам, когда в записи черты его нет:

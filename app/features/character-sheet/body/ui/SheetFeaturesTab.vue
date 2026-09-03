@@ -5,6 +5,7 @@
     FeatureTabFilter,
   } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
   import { ConfirmDialog } from '~initiative/ui-kit';
   import { MarkupRender } from '~ui/markup';
 
@@ -294,7 +295,7 @@
         >
           <UButton
             icon="tabler:plus"
-            label="Добавить"
+            :label="ACTION_LABELS.add"
             color="neutral"
             variant="ghost"
             size="sm"

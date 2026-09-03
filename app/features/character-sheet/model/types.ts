@@ -5,7 +5,7 @@ import type {
   FeatureOptionEntry,
 } from '~classes/model';
 import type { MagicItemBonuses } from '~magic-items/model';
-import type { MarkerNode, SimpleTextNode } from '~ui/markup';
+import type { MarkerNode, RenderNode, SimpleTextNode } from '~ui/markup';
 
 // Начало значения источника «уровень класса» берётся из констант домена, чтобы
 // префикс жил в одном месте: импорт типовой, поэтому кольца в сборке нет —
@@ -2243,6 +2243,10 @@ export interface SpeciesSummary {
 export interface ClassOption {
   url: string;
   name: string;
+
+  /** Английское название: подстрочник в списке выбора подкласса. */
+  nameEng: string;
+
   sourceLabel: string;
 
   /** Есть ли у класса подклассы (строку можно развернуть). */
@@ -2706,6 +2710,98 @@ export interface ChoiceOptionContext {
   takenOptionValues?: string[];
 }
 
+/**
+ * Откуда единый пикер берёт описание варианта: запись каталога по url (её тело
+ * рисует свой компонент раздела) либо готовая разметка из записи справочника —
+ * у воззвания или манёвра своей страницы нет.
+ */
+export type SheetChoiceOptionDetail =
+  | { kind: 'spell' | 'feat' | 'item' | 'class'; url: string }
+  | {
+      kind: 'markup';
+      description: RenderNode;
+      prerequisite?: RenderNode;
+      additional?: RenderNode;
+    };
+
+/**
+ * Вариант единого пикера выбора. `value` — ровно то, что ложится в ответ:
+ * название у навыков, инструментов, вариантов умения и заклинаний, url у черт и
+ * подклассов. Пикер значений не переписывает, поэтому старые листы читаются как
+ * прежде.
+ */
+export interface SheetChoiceOption {
+  value: string;
+
+  label: string;
+
+  /** Подстрочник: английское название, школа, категория. */
+  sublabel?: string;
+
+  /** Короткие пометки строки: круг, источник, «повторно». */
+  badges?: string[];
+
+  /** Пометка о том, что выбор у персонажа уже есть («владеет»). */
+  hint?: string;
+
+  /** Заголовок группы списка: «6 круг», категория черты. Пусто — без групп. */
+  group?: string;
+
+  /** Вариант виден, но взять его нельзя: не хватает уровня или предела. */
+  disabled?: boolean;
+
+  detail?: SheetChoiceOptionDetail;
+}
+
+/**
+ * Готовность пула вариантов. Пул заклинаний собирается поиском по каталогу, и
+ * пока он в пути, пикер не должен ни считать выбор выполненным, ни обещать
+ * «Выберите 0».
+ */
+export type SheetChoicePoolStatus = 'ready' | 'loading' | 'error';
+
+/**
+ * Откуда выбор: умение, его источник и уровень. Из этого складывается
+ * подзаголовок окна выбора — игрок видит, какое умение и на каком уровне
+ * спрашивает.
+ */
+export interface SheetChoiceOrigin {
+  featureName: string;
+
+  /** Подпись источника умения: «Класс: Колдун», «Подкласс: Исчадие». */
+  originLabel: string;
+
+  /** Уровень, на котором спрашивают; null — уровень не при чём (черта, вид). */
+  level: number | null;
+}
+
+/**
+ * Выбор записи, готовый к показу единым пикером: варианты, сколько выбрать,
+ * подписи поля и окна. Собирается одной функцией для всех мастеров листа.
+ */
+export interface SheetChoiceControl {
+  choice: ClassChoice;
+
+  options: SheetChoiceOption[];
+
+  /** Сколько нужно выбрать с учётом длины пула; 0 — без предела. */
+  requiredCount: number;
+
+  status: SheetChoicePoolStatus;
+
+  /** Заголовок поля — подпись выбора из записи либо подпись по виду. */
+  title: string;
+
+  /** Пояснение, что именно и почему выбирают: «Умение даёт выбрать…». */
+  explanation: string;
+
+  /** Заголовок окна выбора. */
+  modalTitle: string;
+
+  /** Подзаголовок окна: откуда выбор и сколько выбрать. */
+  modalSubtitle: string;
+}
+
 /** Строка умения класса в карточке визарда. */
 export interface ClassFeatureRow {
   /** Идентификатор умения на листе (`class:<key>`). */
@@ -2814,8 +2910,35 @@ export interface LevelUpWizardStep {
   /** Общий уровень персонажа после этого уровня. */
   level: number;
 
-  /** Подпись шага в степпере. */
+  /** Подпись шага в рельсе шагов. */
   title: string;
+
+  /** Что внутри шага: «хиты · Таинственный арканум». */
+  subtitle: string;
+}
+
+/** Состояние шага в рельсе мастера. */
+export type LevelUpRailItemState = 'done' | 'current' | 'upcoming';
+
+/** Пункт рельсы шагов мастера повышения уровня. */
+export interface LevelUpRailItem {
+  /** Номер шага в окне: 0 — уровень и опыт, дальше — шаги мастера. */
+  value: number;
+
+  title: string;
+
+  subtitle: string;
+
+  /** Сколько выборов на шаге ещё не сделано; 0 — шаг закрыт. */
+  pending: number;
+
+  state: LevelUpRailItemState;
+
+  /** Шаг вложен в предыдущий: повышение характеристик своего уровня. */
+  nested: boolean;
+
+  /** На шаг можно перейти прямо из рельсы. */
+  reachable: boolean;
 }
 
 /** Повышение уровня в одном классе: с какого уровня на какой. */

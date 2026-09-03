@@ -10,6 +10,7 @@
     SpellDamageRoll,
   } from '../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
   import { ConfirmDialog } from '~initiative/ui-kit';
 
   import {
@@ -1363,7 +1364,7 @@
         v-model:open="isRemoveOpen"
         title="Удалить лист персонажа?"
         :description="removeDescription"
-        confirm-label="Удалить"
+        :confirm-label="ACTION_LABELS.remove"
         confirm-color="error"
         confirm-icon="tabler:trash"
         :loading="isMutating"

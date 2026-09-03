@@ -8,6 +8,8 @@
     FeatureDescriptionNode,
     FeatureOrigin,
     LevelUpFeatChoice,
+    SheetChoiceControl,
+    SheetChoiceOrigin,
     SpeciesFeatureSummary,
     SpeciesOption,
     SpeciesSummary,
@@ -15,6 +17,7 @@
 
   import { partition } from 'es-toolkit';
 
+  import { ACTION_LABELS } from '~/shared/consts';
   import { SpeciesDrawer } from '~species/drawer';
   import { MarkupRender } from '~ui/markup';
 
@@ -29,6 +32,7 @@
     ABILITY_IMPROVEMENT_LABELS,
     ABILITY_LABELS,
     buildCharacterFeatures,
+    buildChoiceControl,
     buildFeatFeature,
     CLASS_FEAT_CHOICE_ID_SEGMENT,
     collectChosenProficiencies,
@@ -44,12 +48,12 @@
     fetchFeatDetail,
     filterChoicesByLevel,
     getCharacterFeatureId,
+    getChoiceModalSubtitle,
     getChoiceSkillHints,
     getChosenProficientSkills,
     getFeatChoiceOptions,
     getFeatUrlFromFeatureId,
     getOwnedWeaponNames,
-    getRequiredChoiceCount,
     getSpeciesDarkvision,
     getSpeciesVision,
     getSpellChoicesKey,
@@ -73,11 +77,10 @@
     unionToolProficiencies,
     withChosenFeatureSpells,
   } from '../../model';
-  import SheetChoiceSelect from './SheetChoiceSelect.vue';
+  import SheetChoicePickerField from './SheetChoicePickerField.vue';
   import SheetCurrentSelectionPanel from './SheetCurrentSelectionPanel.vue';
   import SheetCustomSpeciesModal from './SheetCustomSpeciesModal.vue';
-  import SheetFeatSpellsPicker from './SheetFeatSpellsPicker.vue';
-  import SheetLevelUpFeatChoice from './SheetLevelUpFeatChoice.vue';
+  import SheetFeatChoiceField from './SheetFeatChoiceField.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
 
   type WizardStep = 'species' | 'features';
@@ -268,7 +271,11 @@
   // Инструменты виды не выдают (`detectFeatureChoice` их не распознаёт), но
   // контекст резолва выборов общий — список тянем из каталога сайта, а не из
   // своего перечня.
-  const { getToolNamesForGroups, load: loadToolCatalog } = useToolCatalog();
+  const {
+    getToolNamesForGroups,
+    catalogItems: toolCatalogItems,
+    load: loadToolCatalog,
+  } = useToolCatalog();
 
   void loadToolCatalog();
 
@@ -458,8 +465,10 @@
   const {
     getPool: getSpellPool,
     getSpellOptions,
+    getStatus: getSpellPoolStatus,
     collectChosenSpells,
     load: loadSpellPools,
+    retry: retrySpellPool,
   } = useChoiceSpellPools({
     sources: () =>
       featureRows.value.map((row) => ({ choices: row.choiceControls })),
@@ -520,38 +529,86 @@
     return getChoiceSkillHints(choice, character.value.skills);
   }
 
-  /** Требуемое число опций: не больше, чем доступно в списке выбора. */
+  /**
+   * Выбор для единого пикера: варианты, готовность пула, подписи поля и окна.
+   *
+   * @param choice выбор умения.
+   * @param origin умение и его источник — для подзаголовка окна.
+   * @returns выбор для пикера.
+   */
+  function choiceControl(
+    choice: ClassChoice,
+    origin?: SheetChoiceOrigin,
+  ): SheetChoiceControl {
+    return buildChoiceControl(choice, {
+      names: choiceOptions(choice),
+      hints: choiceHints(choice),
+      spellPool: getSpellPool(choice),
+      status: choice.kind === 'spell' ? getSpellPoolStatus(choice) : 'ready',
+      toolEntries: toolCatalogItems.value,
+      origin,
+    });
+  }
+
+  /**
+   * Откуда выбор строки умения: у вида уровня нет, и в подзаголовке окна
+   * остаются источник и название умения.
+   *
+   * @param row строка умения.
+   * @returns источник выбора.
+   */
+  function rowOrigin(row: {
+    name: string;
+    originLabel: string;
+  }): SheetChoiceOrigin {
+    return { featureName: row.name, originLabel: row.originLabel, level: null };
+  }
+
+  /**
+   * Выборы умений единым пикером по идентификаторам строк. Отдельным
+   * computed, а не полем строки: пикер считает пул по всем выборам мастера, а
+   * те собираются из самих строк — поле замкнуло бы круг.
+   */
+  const featureRowControls = computed<Record<string, SheetChoiceControl[]>>(
+    () =>
+      Object.fromEntries(
+        featureRows.value.map((row) => [
+          row.id,
+          row.choiceControls.map((choice) =>
+            choiceControl(choice, rowOrigin(row)),
+          ),
+        ]),
+      ),
+  );
+
+  /** Подзаголовки окон выбора черты по идентификаторам строк умений. */
+  const featureRowModalSubtitles = computed<Record<string, string>>(() =>
+    Object.fromEntries(
+      featureRows.value.map((row) => [
+        row.id,
+        getChoiceModalSubtitle(rowOrigin(row), 1),
+      ]),
+    ),
+  );
+
+  /** Требуемое число опций с учётом готовности пула. */
   function choiceCount(choice: ClassChoice): number {
-    return getRequiredChoiceCount(choice, choiceOptions(choice));
-  }
-
-  /**
-   * Подсказка пустого пикера: сколько значений он ждёт («Выберите 2»).
-   *
-   * @param choice выбор умения.
-   * @returns подпись с требуемым числом значений.
-   */
-  function choosePlaceholder(choice: ClassChoice): string {
-    return `${SPECIES_WIZARD_LABELS.chooseLabel} ${choiceCount(choice)}`;
-  }
-
-  /**
-   * Заголовок выбора: своя подпись из записи вида, а без неё — «Выберите N».
-   * Ею подписан и сам выбор, и окно выбора заклинаний.
-   *
-   * @param choice выбор умения.
-   * @returns заголовок выбора.
-   */
-  function chooseLabel(choice: ClassChoice): string {
-    return choice.label || choosePlaceholder(choice);
+    return choiceControl(choice).requiredCount;
   }
 
   /** Обновление выбора с ограничением по требуемому количеству. */
   function updateSelection(choice: ClassChoice, values: string[]): void {
+    const count = choiceCount(choice);
+
     selections.value = {
       ...selections.value,
-      [choice.id]: values.slice(0, choiceCount(choice)),
+      [choice.id]: count > 0 ? values.slice(0, count) : values,
     };
+  }
+
+  /** Пул заклинаний выбора не загрузился — запросить его заново. */
+  function handleSpellPoolRetry(choice: ClassChoice): void {
+    void retrySpellPool(choice);
   }
 
   /**
@@ -1305,65 +1362,38 @@
                 </UBadge>
               </div>
 
-              <!-- Черту выбирают окном каталога: пул бывает под сотню
-              записей, и описание каждой читают прямо оттуда — тем же порядком,
-              что в мастере класса -->
-              <div
-                v-if="row.featChoices.length"
-                class="flex flex-col gap-3"
-              >
-                <SheetLevelUpFeatChoice
-                  v-for="choice in row.featChoices"
-                  :key="choice.id"
-                  :title="choice.label"
-                  :options="featOptions(choice)"
-                  :selected="selectedFeat(choice.id)"
-                  :abilities="featAbilities(choice.id)"
-                  :scores="character.abilities"
-                  :is-loading="isFeatsLoading"
-                  :has-error="hasFeatsError"
-                  @update:feat="setFeatChoice(row.id, choice.id, $event)"
-                  @update:ability="setFeatAbility(choice.id, $event)"
-                />
-              </div>
+              <!-- Черту выбирают тем же полем, что в мастере класса: пул
+              бывает под сотню записей, и описание каждой читают в окне -->
+              <SheetFeatChoiceField
+                v-for="choice in row.featChoices"
+                :key="choice.id"
+                :title="choice.label"
+                :modal-subtitle="featureRowModalSubtitles[row.id]"
+                :options="featOptions(choice)"
+                :selected="selectedFeat(choice.id)"
+                :abilities="featAbilities(choice.id)"
+                :scores="character.abilities"
+                :is-loading="isFeatsLoading"
+                :has-error="hasFeatsError"
+                @update:feat="setFeatChoice(row.id, choice.id, $event)"
+                @update:ability="setFeatAbility(choice.id, $event)"
+              />
 
-              <div
-                v-if="row.choiceControls.length"
-                class="flex flex-col gap-3"
-              >
-                <div
-                  v-for="control in row.choiceControls"
-                  :key="control.id"
-                  class="flex flex-col gap-1"
-                >
-                  <span class="text-xs text-muted">
-                    {{ chooseLabel(control) }}
-                  </span>
-
-                  <!-- Заклинания выбирают своим окном: пул бывает и на сотню
-                    записей, а выбранные должны остаться на виду, чтобы их можно
-                    было убрать -->
-                  <SheetFeatSpellsPicker
-                    v-if="control.kind === 'spell'"
-                    :model-value="selections[control.id] ?? []"
-                    :items="getSpellPool(control)"
-                    :count="choiceCount(control)"
-                    :label="chooseLabel(control)"
-                    @update:model-value="updateSelection(control, $event)"
-                  />
-
-                  <SheetChoiceSelect
-                    v-else
-                    :model-value="selections[control.id] ?? []"
-                    :items="choiceOptions(control)"
-                    :hints="choiceHints(control)"
-                    :warning="SKILL_DUPLICATE_WARNING"
-                    :count="choiceCount(control)"
-                    :placeholder="choosePlaceholder(control)"
-                    @update:model-value="updateSelection(control, $event)"
-                  />
-                </div>
-              </div>
+              <SheetChoicePickerField
+                v-for="control in featureRowControls[row.id]"
+                :key="control.choice.id"
+                :title="control.title"
+                :explanation="control.explanation"
+                :modal-title="control.modalTitle"
+                :modal-subtitle="control.modalSubtitle"
+                :options="control.options"
+                :count="control.requiredCount"
+                :status="control.status"
+                :warning="SKILL_DUPLICATE_WARNING"
+                :model-value="selections[control.choice.id] ?? []"
+                @update:model-value="updateSelection(control.choice, $event)"
+                @retry="handleSpellPoolRetry(control.choice)"
+              />
 
               <!-- Свободная строка — умению, которое ни о чём не спрашивает:
               игрок записывает в неё свой выбор сам -->
@@ -1395,7 +1425,7 @@
       <div class="flex w-full flex-wrap items-center justify-between gap-2">
         <UButton
           v-if="step === 'features'"
-          label="Назад"
+          :label="ACTION_LABELS.back"
           icon="tabler:arrow-left"
           color="neutral"
           variant="ghost"
@@ -1413,7 +1443,7 @@
 
         <div class="ml-auto flex gap-2">
           <UButton
-            label="Отмена"
+            :label="ACTION_LABELS.cancel"
             color="neutral"
             variant="ghost"
             @click.left.exact.prevent="handleCancel"
@@ -1421,7 +1451,7 @@
 
           <UButton
             v-if="step === 'features'"
-            label="Применить"
+            :label="ACTION_LABELS.apply"
             color="primary"
             :loading="isApplying"
             @click.left.exact.prevent="handleApply"
@@ -1429,7 +1459,7 @@
 
           <UButton
             v-else
-            label="Далее"
+            :label="ACTION_LABELS.next"
             icon="tabler:arrow-right"
             color="primary"
             :loading="isStepLoading"

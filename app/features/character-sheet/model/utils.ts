@@ -127,6 +127,10 @@ import type {
   ResourceRecoveryRule,
   RollMode,
   SavingThrowRow,
+  SheetChoiceControl,
+  SheetChoiceOption,
+  SheetChoiceOrigin,
+  SheetChoicePoolStatus,
   SkillRow,
   SkillRowGroup,
   SpeciesFeatureSummary,
@@ -136,6 +140,7 @@ import type {
   SpeedUnit,
   SpellcastingBreakdown,
   SpellcastingClassRow,
+  SpellCatalogItem,
   SpellCatalogPreset,
   SpellDamage,
   SpellDamageFormulas,
@@ -235,6 +240,7 @@ import {
   CARRYING_CAPACITY_SIZE_MULTIPLIERS,
   CATALOG_COPY_MENU_LABEL,
   CHARACTER_FILE_NAME_FALLBACK,
+  CHOICE_SELECT_PLACEHOLDER,
   CLASS_FEAT_CHOICE_ID_SEGMENTS,
   CLASS_FEATURE_ID_PREFIX,
   CLASS_FIRST_LEVEL,
@@ -342,6 +348,7 @@ import {
   LEVEL_MAX,
   LEVEL_MIN,
   LEVEL_SHORT_SUFFIX,
+  LEVEL_UP_WIZARD_LABELS,
   LEVEL_XP_THRESHOLDS,
   MAGIC_ITEM_ARTIFACT_COST_LABEL,
   MAGIC_ITEM_CATALOG_EMPTY_GROUP_LABELS,
@@ -386,11 +393,15 @@ import {
   ROLL_MODE_DICE_SUFFIX,
   SAVING_THROW_PROFICIENCY_LABELS,
   SHEET_ABILITY_SETTINGS_LABELS,
+  SHEET_CHOICE_EXPLANATION_LABELS,
   SHEET_CHOICE_OPTIONS_LABELS,
+  SHEET_CHOICE_PICKER_LABELS,
+  SHEET_CHOICE_SPELL_EXPLANATION,
   SHEET_COPY_LIMIT_HINT,
   SHEET_DOWNLOAD_JSON_LABEL,
   SHEET_DOWNLOAD_PDF_HINT,
   SHEET_DOWNLOAD_PDF_LABEL,
+  SHEET_FEAT_CHOICE_LABELS,
   SHEET_PDF_MIME_TYPE,
   SHEET_PERSONALITY_LABELS,
   SHEET_PLURAL_FORMS,
@@ -12695,6 +12706,391 @@ export function getChoiceSkillHints(
   skills: CharacterSkill[],
 ): Record<string, string> {
   return choice.kind === 'skill-proficiency' ? getOwnedSkillHints(skills) : {};
+}
+
+/**
+ * Подпись поля выбора: «Выберите 2»; без предела — просто «Выберите».
+ *
+ * @param count сколько нужно выбрать; 0 — без предела.
+ * @returns подпись.
+ */
+export function getChoiceChooseLabel(count: number): string {
+  return count > 0
+    ? `${CHOICE_SELECT_PLACEHOLDER} ${count}`
+    : CHOICE_SELECT_PLACEHOLDER;
+}
+
+/**
+ * Сколько вариантов требует выбор с учётом готовности пула.
+ *
+ * Готовый пул ограничивает требование своей длиной — как и раньше, иначе
+ * завышенное в прозе число запирало бы шаг. Пул в пути или не загрузившийся
+ * длины не имеет: требование остаётся полным, чтобы игрок не прошёл шаг с
+ * «Выберите 0» и без заклинания, которое ему положено.
+ *
+ * @param choice распознанный выбор.
+ * @param optionCount сколько вариантов в пуле.
+ * @param status готовность пула.
+ * @returns требуемое число вариантов.
+ */
+export function getChoiceRequiredCount(
+  choice: ClassChoice,
+  optionCount: number,
+  status: SheetChoicePoolStatus = 'ready',
+): number {
+  return status === 'ready'
+    ? Math.min(choice.count, optionCount)
+    : choice.count;
+}
+
+/**
+ * Варианты пикера из пула заклинаний: по кругам, внутри круга по алфавиту.
+ * Значение — название: так ответы выбора заклинания хранились и до пикера.
+ *
+ * @param pool заклинания пула.
+ * @returns варианты пикера с описанием по url заклинания.
+ */
+export function toSpellPickerOptions(
+  pool: SpellCatalogItem[],
+): SheetChoiceOption[] {
+  return [...pool]
+    .sort(
+      (left, right) =>
+        left.level - right.level || left.name.localeCompare(right.name, 'ru'),
+    )
+    .map((spell) => ({
+      value: spell.name,
+      label: spell.name,
+      sublabel: spell.school,
+      group: getSpellGroupLabel(spell.level),
+      detail: { kind: 'spell', url: spell.url },
+    }));
+}
+
+/**
+ * Варианты пикера из пула черт. Значение — url: по нему черта догружается из
+ * справочника при применении.
+ *
+ * @param options черты пула.
+ * @returns варианты пикера с описанием по url черты.
+ */
+export function toFeatPickerOptions(
+  options: FeatSelectOption[],
+): SheetChoiceOption[] {
+  return [...options]
+    .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
+    .map((feat) => ({
+      value: feat.url,
+      label: feat.name,
+      badges: feat.sourceLabel ? [feat.sourceLabel] : [],
+      detail: { kind: 'feat', url: feat.url },
+    }));
+}
+
+/**
+ * Варианты пикера из подклассов, разрешённых источниками профиля.
+ *
+ * @param options подклассы.
+ * @returns варианты пикера с описанием по url подкласса.
+ */
+export function toSubclassPickerOptions(
+  options: ClassOption[],
+): SheetChoiceOption[] {
+  return options.map((option) => ({
+    value: option.url,
+    label: option.name,
+    // Английское название второй строкой: одноимённые подклассы разных книг
+    // различаются им так же, как бейджем источника
+    sublabel: option.nameEng,
+    badges: option.sourceLabel ? [option.sourceLabel] : [],
+    detail: { kind: 'class', url: option.url },
+  }));
+}
+
+/**
+ * Варианты пикера для слота прибавки черты: характеристики, среди которых
+ * черта раскладывает +1. Упёршаяся в предел остаётся в списке, но недоступна —
+ * иначе выбор молча пропал бы при применении.
+ *
+ * @param scores итоговые характеристики персонажа.
+ * @param allowed характеристики, которые черта разрешает; пусто — любые.
+ * @returns варианты пикера.
+ */
+export function toAbilityPickerOptions(
+  scores: Record<AbilityKey, number>,
+  allowed: AbilityKey[],
+): SheetChoiceOption[] {
+  const keys = allowed.length > 0 ? allowed : ABILITY_ORDER;
+
+  return keys.map((key) => {
+    const score = scores[key];
+
+    const isMaxed = getAbilityIncreaseHeadroom(score) === 0;
+
+    return {
+      value: key,
+      label: ABILITY_LABELS[key],
+      sublabel: isMaxed
+        ? `${score} — ${SHEET_CHOICE_PICKER_LABELS.abilityMaxed}`
+        : `${score} → ${score + 1}`,
+      disabled: isMaxed,
+    };
+  });
+}
+
+/**
+ * Варианты пикера из одних названий: список навыков или инструментов homebrew-
+ * формы, где записи справочника за выбором нет.
+ *
+ * @param names названия вариантов.
+ * @param hints пометки по названиям.
+ * @returns варианты пикера.
+ */
+export function toNamedPickerOptions(
+  names: string[],
+  hints: Record<string, string> = {},
+): SheetChoiceOption[] {
+  return names.map((name) => ({
+    value: name,
+    label: name,
+    ...(hints[name] ? { hint: hints[name] } : {}),
+  }));
+}
+
+/** Чем дополняются варианты пикера, кроме самих названий. */
+export interface ChoicePickerOptionsInput {
+  /** Пометки по названиям: навык, которым персонаж уже владеет. */
+  hints?: Record<string, string>;
+
+  /** Пул заклинаний выбора — у `kind: 'spell'` варианты берутся из него. */
+  spellPool?: SpellCatalogItem[];
+
+  /** Инструменты каталога: по ним у выбора инструмента появляется описание. */
+  toolEntries?: ToolCatalogEntry[];
+}
+
+/**
+ * Поля варианта, которые зависят от вида выбора: описание варианта умения из
+ * записи класса, описание инструмента по записи каталога.
+ *
+ * @param choice распознанный выбор.
+ * @param name название варианта.
+ * @param input дополнения к вариантам.
+ * @returns поля варианта сверх названия; пусто — вариант без описания.
+ */
+function getChoicePickerOptionExtras(
+  choice: ClassChoice,
+  name: string,
+  input: ChoicePickerOptionsInput,
+): Partial<SheetChoiceOption> {
+  if (choice.kind === 'option') {
+    const entry = (choice.optionDetails ?? []).find(
+      (candidate) => candidate.name === name,
+    );
+
+    if (!entry) {
+      return {};
+    }
+
+    // Пометок «можно взять повторно» и «с 2 уровня» в строке нет: список
+    // вариантов и так показан только тот, что игроку доступен, а условия
+    // варианта разобраны в его описании
+    return {
+      sublabel: entry.nameEng,
+      detail: {
+        kind: 'markup',
+        description: entry.description,
+        prerequisite: entry.prerequisite,
+        additional: entry.additional,
+      },
+    };
+  }
+
+  if (choice.kind === 'tool') {
+    const url = (input.toolEntries ?? []).find(
+      (entry) => entry.name === name,
+    )?.url;
+
+    return url ? { detail: { kind: 'item', url } } : {};
+  }
+
+  return {};
+}
+
+/**
+ * Варианты единого пикера для выбора записи.
+ *
+ * Названия приходят из `resolveChoiceOptions` — пикер их не переписывает,
+ * значение варианта равно названию, как хранится ответ. Заклинания —
+ * исключение: их пул собирается поиском и приходит записями каталога, а не
+ * названиями.
+ *
+ * @param choice распознанный выбор.
+ * @param names названия вариантов.
+ * @param input дополнения: пометки, пул заклинаний, каталог инструментов.
+ * @returns варианты пикера.
+ */
+export function toChoicePickerOptions(
+  choice: ClassChoice,
+  names: string[],
+  input: ChoicePickerOptionsInput = {},
+): SheetChoiceOption[] {
+  if (choice.kind === 'spell') {
+    return toSpellPickerOptions(input.spellPool ?? []);
+  }
+
+  const hints = input.hints ?? {};
+
+  return names.map((name) => ({
+    value: name,
+    label: name,
+    ...(hints[name] ? { hint: hints[name] } : {}),
+    ...getChoicePickerOptionExtras(choice, name, input),
+  }));
+}
+
+/**
+ * Пояснение к выбору заклинания по фильтру пула: «Умение даёт заклинание
+ * 6 круга из списка класса Колдун на выбор».
+ *
+ * @param choice выбор заклинания.
+ * @returns пояснение.
+ */
+function getSpellChoiceExplanation(choice: ClassChoice): string {
+  const filter = choice.spellFilter;
+
+  const {
+    prefix,
+    cantrip,
+    spell,
+    maxLevelPrefix,
+    levelSuffix,
+    classPrefix,
+    suffix,
+  } = SHEET_CHOICE_SPELL_EXPLANATION;
+
+  const subject = (() => {
+    if (!filter) {
+      return spell;
+    }
+
+    if (filter.level === 0) {
+      return cantrip;
+    }
+
+    if (filter.level !== null) {
+      return `${spell} ${filter.level} ${levelSuffix}`;
+    }
+
+    if (filter.maxLevel !== null) {
+      return `${spell} ${maxLevelPrefix} ${filter.maxLevel} ${levelSuffix}`;
+    }
+
+    return spell;
+  })();
+
+  const classNames = (filter?.classes ?? [])
+    .map((characterClass) => characterClass.name)
+    .filter(Boolean);
+
+  const source = classNames.length
+    ? ` ${classPrefix} ${classNames.join(', ')}`
+    : '';
+
+  return `${prefix} ${subject}${source} ${suffix}`;
+}
+
+/**
+ * Пояснение к выбору: почему игрок здесь и сейчас что-то выбирает. У выбора
+ * заклинания складывается из фильтра пула, у остальных — подпись по виду.
+ *
+ * @param choice распознанный выбор.
+ * @returns пояснение под заголовком поля.
+ */
+export function getChoiceExplanation(choice: ClassChoice): string {
+  return choice.kind === 'spell'
+    ? getSpellChoiceExplanation(choice)
+    : SHEET_CHOICE_EXPLANATION_LABELS[choice.kind];
+}
+
+/**
+ * Подзаголовок окна выбора: откуда выбор и сколько выбрать —
+ * «Класс: Колдун · 11 уровень · Таинственный арканум · выберите 1».
+ *
+ * @param origin умение, его источник и уровень; не задано — только счёт.
+ * @param requiredCount сколько нужно выбрать; 0 — без предела.
+ * @returns подзаголовок.
+ */
+export function getChoiceModalSubtitle(
+  origin: SheetChoiceOrigin | undefined,
+  requiredCount: number,
+): string {
+  const originParts = origin
+    ? [
+        origin.level
+          ? `${origin.originLabel} · ${origin.level} ${LEVEL_UP_WIZARD_LABELS.levelWord}`
+          : origin.originLabel,
+        origin.featureName,
+      ]
+    : [];
+
+  return [...originParts, getChoiceChooseLabel(requiredCount).toLowerCase()]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+/** Из чего собирается выбор для единого пикера. */
+export interface ChoiceControlInput extends ChoicePickerOptionsInput {
+  /** Названия вариантов из `resolveChoiceOptions`. */
+  names: string[];
+
+  /** Готовность пула; не задана — пул готов. */
+  status?: SheetChoicePoolStatus;
+
+  /** Откуда выбор — для подзаголовка окна. */
+  origin?: SheetChoiceOrigin;
+
+  /**
+   * Своё пояснение вместо подписи по виду выбора: владения самого класса даёт
+   * не умение, и «Умение даёт…» там сбивало бы с толку.
+   */
+  explanation?: string;
+}
+
+/**
+ * Выбор записи, готовый к показу единым пикером. Одна сборка на все мастера
+ * листа: у каждого был свой набор помощников для подписи, счёта и опций, и они
+ * расходились при каждой правке.
+ *
+ * @param choice распознанный выбор.
+ * @param input названия, готовность пула, дополнения и источник выбора.
+ * @returns выбор для пикера.
+ */
+export function buildChoiceControl(
+  choice: ClassChoice,
+  input: ChoiceControlInput,
+): SheetChoiceControl {
+  const status = input.status ?? 'ready';
+
+  const options = toChoicePickerOptions(choice, input.names, input);
+
+  const requiredCount = getChoiceRequiredCount(choice, options.length, status);
+
+  const title =
+    choice.label
+    || SHEET_FEAT_CHOICE_LABELS[choice.kind]
+    || getChoiceChooseLabel(requiredCount);
+
+  return {
+    choice,
+    options,
+    requiredCount,
+    status,
+    title,
+    explanation: input.explanation ?? getChoiceExplanation(choice),
+    modalTitle: title,
+    modalSubtitle: getChoiceModalSubtitle(input.origin, requiredCount),
+  };
 }
 
 /**

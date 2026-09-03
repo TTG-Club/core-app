@@ -7,6 +7,8 @@
     ProficiencyBaseSource,
   } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
+
   import { useCharacterSheetList } from '../../composables';
   import {
     ABILITY_LABELS,
@@ -387,14 +389,14 @@
     <template #footer>
       <div class="flex w-full justify-end gap-2">
         <UButton
-          label="Отмена"
+          :label="ACTION_LABELS.cancel"
           color="neutral"
           variant="ghost"
           @click.left.exact.prevent="handleCancel"
         />
 
         <UButton
-          label="Применить"
+          :label="ACTION_LABELS.apply"
           color="primary"
           :loading="isSaving"
           @click.left.exact.prevent="handleApply"

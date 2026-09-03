@@ -2175,7 +2175,10 @@ export function parseSpeciesLineages(input: unknown): SpeciesSummary[] {
 /** Схема ссылки на класс/подкласс из поиска. Валидируем нужные листу поля. */
 const classLinkSchema = z.object({
   url: z.string(),
-  name: z.object({ rus: z.string().catch('') }),
+  name: z.object({
+    rus: z.string().catch(''),
+    eng: z.string().catch(''),
+  }),
   source: z
     .object({
       name: z.object({ label: z.string().catch('') }).catch({ label: '' }),
@@ -2210,6 +2213,7 @@ export function parseClassOptions(
   return list.map((classLink) => ({
     url: classLink.url,
     name: classLink.name.rus,
+    nameEng: classLink.name.eng,
     sourceLabel: classLink.source.name.label,
     hasSubclasses: forceNoSubclasses ? false : classLink.hasSubclasses,
   }));

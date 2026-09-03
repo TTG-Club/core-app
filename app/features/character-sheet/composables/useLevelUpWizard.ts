@@ -22,7 +22,8 @@ import type {
   LevelUpStepView,
   LevelUpTarget,
   LevelUpWizardStep,
-  SpellCatalogItem,
+  SheetChoiceControl,
+  SheetChoiceOrigin,
 } from '../model';
 
 import { omit } from 'es-toolkit';
@@ -34,6 +35,7 @@ import {
   ABILITY_IMPROVEMENT_STEP_LABELS,
   ABILITY_LABELS,
   buildAbilityImprovementFeature,
+  buildChoiceControl,
   buildFeatFeature,
   buildLevelClassFeatures,
   buildSubclassFeatures,
@@ -66,7 +68,6 @@ import {
   getLevelFeatureRows,
   getLevelHitPointsGain,
   getOwnedWeaponNames,
-  getRequiredChoiceCount,
   getSelectedCasterType,
   getSpellChoicesKey,
   getTakenOptionValues,
@@ -74,7 +75,6 @@ import {
   isAbilityImprovementComplete,
   isAbilityImprovementFeatChoice,
   LANGUAGE_PROFICIENCY_GROUPS,
-  LEVEL_SHORT_SUFFIX,
   LEVEL_UP_WIZARD_LABELS,
   mergeAbilityIncreases,
   mergeCharacterFeatures,
@@ -308,16 +308,24 @@ interface LevelUpWizard {
   resetAbilityImprovement: (index: number, choiceId: string) => void;
 
   selectSubclass: (index: number, subclassUrl: string) => Promise<void>;
-  choiceOptions: (choice: ClassChoice) => string[];
 
   /**
-   * Пул заклинаний выбора: его показывает окно выбора заклинаний. Пусто — пул
-   * ещё грузится либо выбор спрашивает не заклинание.
+   * Выбор умения для единого пикера: варианты, готовность пула заклинаний,
+   * подписи поля и окна.
    */
-  spellPool: (choice: ClassChoice) => SpellCatalogItem[];
+  choiceControl: (
+    choice: ClassChoice,
+    origin?: SheetChoiceOrigin,
+  ) => SheetChoiceControl;
 
-  /** Пометки опций пикера: навыки, которыми персонаж уже владеет. */
-  choiceHints: (choice: ClassChoice) => Record<string, string>;
+  /** Сколько выборов умения на шаге ещё не сделано — бейдж карточки. */
+  getFeatureRowPendingCount: (
+    row: ClassFeatureRow,
+    draft: LevelUpStepDraft,
+  ) => number;
+
+  /** Перезапрашивает пул заклинаний выбора после сбоя. */
+  retrySpellPool: (choice: ClassChoice) => Promise<void>;
 
   /** Черты, доступные выбору черты в умении шага. */
   featOptions: (index: number, choice: ClassChoice) => FeatSelectOption[];
@@ -326,6 +334,9 @@ interface LevelUpWizard {
   selectedFeat: (index: number, choiceId: string) => FeatSelectOption | null;
 
   isStepValid: (index: number) => boolean;
+
+  /** Сколько выборов шага в порядке показа ещё не сделано — бейдж рельсы. */
+  getStepPendingCount: (index: number) => number;
 
   /**
    * Сборка итога мастера: догружает описания выбранных черт, поэтому
@@ -413,7 +424,11 @@ export function useLevelUpWizard(): LevelUpWizard {
   // Инструменты умения уровня не выдают (`detectFeatureChoice` их не
   // распознаёт), но контекст резолва выборов общий — список берём из каталога
   // сайта, своего перечня инструментов у листа нет.
-  const { getToolNamesForGroups, load: loadToolCatalog } = useToolCatalog();
+  const {
+    getToolNamesForGroups,
+    catalogItems: toolCatalogItems,
+    load: loadToolCatalog,
+  } = useToolCatalog();
 
   void loadToolCatalog();
 
@@ -517,11 +532,35 @@ export function useLevelUpWizard(): LevelUpWizard {
    */
   const wizardSteps = computed<LevelUpWizardStep[]>(() =>
     steps.value.flatMap((step) => {
+      // Подпись шага — класс и уровень В КЛАССЕ: у мультикласса «Колдун ·
+      // 3 уровень» говорит больше, чем общий пятый
+      const levelTitle = `${step.className} · ${step.classLevel} ${LEVEL_UP_WIZARD_LABELS.levelWord}`;
+
+      // Повышение характеристик спрашивается своим шагом, и среди умений
+      // уровня его строка не значится
+      const featureNames = step.features
+        .filter(
+          (feature) =>
+            !feature.abilityImprovement || feature.featChoices.length === 0,
+        )
+        .map((feature) => feature.name);
+
+      const contents = [
+        ...(step.hitDie > 0 ? [LEVEL_UP_WIZARD_LABELS.hitPointsShort] : []),
+        ...(step.isSubclassStep
+          ? [LEVEL_UP_WIZARD_LABELS.subclassTitle.toLowerCase()]
+          : []),
+        ...featureNames,
+      ];
+
       const levelStep: LevelUpWizardStep = {
         key: 'level',
         draftIndex: step.index,
         level: step.level,
-        title: `${step.level} ${LEVEL_SHORT_SUFFIX}`,
+        title: levelTitle,
+        subtitle: contents.length
+          ? contents.join(' · ')
+          : LEVEL_UP_WIZARD_LABELS.levelStepSubtitleEmpty,
       };
 
       if (getAbilityImprovementChoices(step).length === 0) {
@@ -534,7 +573,8 @@ export function useLevelUpWizard(): LevelUpWizard {
           key: 'abilities',
           draftIndex: step.index,
           level: step.level,
-          title: ABILITY_IMPROVEMENT_STEP_LABELS.stepTitle,
+          title: ABILITY_IMPROVEMENT_STEP_LABELS.title,
+          subtitle: levelTitle,
         },
       ];
     }),
@@ -576,8 +616,10 @@ export function useLevelUpWizard(): LevelUpWizard {
   const {
     getPool: spellPool,
     getSpellOptions,
+    getStatus: spellPoolStatus,
     collectChosenSpells,
     load: loadSpellPools,
+    retry: retrySpellPool,
   } = useChoiceSpellPools({
     sources: () => [{ choices: allChoices.value }],
     answers: spellAnswers,
@@ -1240,6 +1282,29 @@ export function useLevelUpWizard(): LevelUpWizard {
   }
 
   /**
+   * Выбор умения для единого пикера: варианты, готовность пула, подписи поля
+   * и окна. Заклинания приходят пулом со своей готовностью — пока пул в пути,
+   * выбор не считается ни выполненным, ни пустым.
+   *
+   * @param choice распознанный выбор внутри умения.
+   * @param origin умение, его источник и уровень — для подзаголовка окна.
+   * @returns выбор для пикера.
+   */
+  function choiceControl(
+    choice: ClassChoice,
+    origin?: SheetChoiceOrigin,
+  ): SheetChoiceControl {
+    return buildChoiceControl(choice, {
+      names: choiceOptions(choice),
+      hints: choiceHints(choice),
+      spellPool: spellPool(choice),
+      status: choice.kind === 'spell' ? spellPoolStatus(choice) : 'ready',
+      toolEntries: toolCatalogItems.value,
+      origin,
+    });
+  }
+
+  /**
    * Черты, доступные выбору черты в умении шага: из каталога уходят черты вне
    * категорий и списка выбора, уже взятые на листе и выбранные на других
    * шагах мастера.
@@ -1290,21 +1355,21 @@ export function useLevelUpWizard(): LevelUpWizard {
   }
 
   /**
-   * Готовность выборов черт на шаге: у каждого выбора черты в умениях уровня
+   * Незаполненные выборы черт на шаге: у каждого выбора черты в умениях уровня
    * должна быть выбрана черта, а у черты с прибавками — заполнены все слоты
    * характеристик. Неудачная загрузка каталога требование снимает — иначе шаг
    * стал бы тупиком.
    *
    * @param step шаг мастера.
    * @param draft черновик шага.
-   * @returns true — все выборы черт заполнены.
+   * @returns сколько выборов черт ещё не заполнено.
    */
-  function areFeatChoicesComplete(
+  function getIncompleteFeatChoiceCount(
     step: LevelUpStepView,
     draft: LevelUpStepDraft,
-  ): boolean {
+  ): number {
     if (hasFeatsError.value) {
-      return true;
+      return 0;
     }
 
     // Выборы повышения характеристик проверяет свой шаг: на шаге уровня их
@@ -1313,118 +1378,156 @@ export function useLevelUpWizard(): LevelUpWizard {
       getAbilityImprovementChoices(step).map((choice) => choice.id),
     );
 
-    return step.features
+    const incomplete = step.features
       .flatMap((row) => row.featChoices)
       .filter((featChoice) => !improvementChoiceIds.has(featChoice.id))
-      .every((featChoice) => {
+      .filter((featChoice) => {
         const choice = draft.featChoices[featChoice.id];
 
         if (!choice?.featUrl) {
-          return false;
+          return true;
         }
 
-        return choice.abilities.every((ability) => ability !== null);
+        return choice.abilities.includes(null);
       });
+
+    return incomplete.length;
   }
 
   /**
-   * Готовность шага повышения характеристик: у каждого его выбора разложены
-   * прибавки либо взята черта со всеми слотами. Неудачная загрузка каталога
-   * требование к черте снимает — иначе шаг стал бы тупиком.
+   * Незакрытые выборы шага повышения характеристик: у каждого его выбора должны
+   * быть разложены прибавки либо взята черта со всеми слотами. Неудачная
+   * загрузка каталога требование к черте снимает — иначе шаг стал бы тупиком.
    *
    * @param index номер шага уровня.
-   * @returns true — можно идти дальше.
+   * @returns сколько повышений ещё не закрыто.
    */
-  function isAbilityImprovementStepValid(index: number): boolean {
+  function getAbilityImprovementPendingCount(index: number): number {
     const step = steps.value[index];
 
     const draft = drafts.value[index];
 
     if (!step || !draft) {
-      return false;
+      return 0;
     }
 
-    return getAbilityImprovementChoices(step).every((choice) => {
+    return getAbilityImprovementChoices(step).filter((choice) => {
       const improvement = abilityImprovement(index, choice.id);
 
       if (improvement.mode === 'feat' && hasFeatsError.value) {
-        return true;
+        return false;
       }
 
-      return isAbilityImprovementComplete(
+      return !isAbilityImprovementComplete(
         improvement,
         draft.featChoices[choice.id],
         abilityScoresFor(choice.id),
       );
-    });
+    }).length;
   }
 
   /**
-   * Готовность шага уровня: в режиме броска кость должна быть брошена, у
-   * распознанных выборов должно быть нужное число значений (пустой список опций
-   * требование снимает — иначе шаг стал бы тупиком), выборы черт заполнены, а на
-   * шаге подкласса подкласс обязателен, если список подклассов загрузился
-   * непустым.
+   * Незакрытые выборы одного умения на шаге: по ним карточка умения и рельса
+   * показывают счётчик.
+   *
+   * Пул заклинаний в пути или не загрузился — выбор не закрыт: иначе игрок
+   * прошёл бы шаг с «Выберите 0» и без заклинания, которое ему положено. Пустой
+   * готовый пул требование снимает — так у выбора оружейного приёма без оружия
+   * во владении шаг не становится тупиком.
+   *
+   * @param row строка умения.
+   * @param draft черновик шага.
+   * @returns сколько выборов умения ещё не сделано.
+   */
+  function getFeatureRowPendingCount(
+    row: ClassFeatureRow,
+    draft: LevelUpStepDraft,
+  ): number {
+    return row.choices.filter((choice) => {
+      const control = choiceControl(choice);
+
+      if (control.status !== 'ready') {
+        return true;
+      }
+
+      if (!control.options.length) {
+        return false;
+      }
+
+      return (draft.selections[choice.id] ?? []).length < control.requiredCount;
+    }).length;
+  }
+
+  /**
+   * Незакрытые выборы шага уровня: бросок кости хитов в режиме броска, выборы
+   * умений, выборы черт и подкласс на шаге подкласса (если список подклассов
+   * загрузился непустым).
    *
    * @param index номер шага уровня.
-   * @returns true — можно идти дальше.
+   * @returns сколько выборов ещё не сделано; 0 — можно идти дальше.
    */
-  function isLevelStepValid(index: number): boolean {
+  function getLevelStepPendingCount(index: number): number {
     const step = steps.value[index];
 
     const draft = drafts.value[index];
 
     if (!step || !draft) {
-      return false;
+      return 0;
     }
 
-    if (step.hitDie > 0 && draft.gainMode === 'roll' && !draft.roll) {
-      return false;
-    }
+    const rollPending =
+      step.hitDie > 0 && draft.gainMode === 'roll' && !draft.roll ? 1 : 0;
 
-    const hasIncompleteChoice = step.features.some((row) =>
-      row.choices.some((choice) => {
-        const options = choiceOptions(choice);
-
-        if (!options.length) {
-          return false;
-        }
-
-        return (
-          (draft.selections[choice.id] ?? []).length
-          < getRequiredChoiceCount(choice, options)
-        );
-      }),
+    const choicesPending = step.features.reduce(
+      (total, row) => total + getFeatureRowPendingCount(row, draft),
+      0,
     );
 
-    if (hasIncompleteChoice || !areFeatChoicesComplete(step, draft)) {
-      return false;
-    }
-
-    return !(
+    const subclassPending =
       step.isSubclassStep
       && subclassOptions(index).length > 0
       && !selectedSubclassUrl(index)
+        ? 1
+        : 0;
+
+    return (
+      rollPending
+      + choicesPending
+      + getIncompleteFeatChoiceCount(step, draft)
+      + subclassPending
     );
   }
 
   /**
-   * Готовность шага в порядке показа: уровень и его повышение характеристик
-   * проверяются каждый своим правилом.
+   * Незакрытые выборы шага в порядке показа: уровень и его повышение
+   * характеристик считаются каждый своим правилом.
+   *
+   * @param viewIndex номер шага среди показываемых.
+   * @returns сколько выборов ещё не сделано; 0 — шаг закрыт.
+   */
+  function getStepPendingCount(viewIndex: number): number {
+    const view = wizardSteps.value[viewIndex];
+
+    if (!view) {
+      return 0;
+    }
+
+    return view.key === 'abilities'
+      ? getAbilityImprovementPendingCount(view.draftIndex)
+      : getLevelStepPendingCount(view.draftIndex);
+  }
+
+  /**
+   * Готовность шага в порядке показа.
    *
    * @param viewIndex номер шага среди показываемых.
    * @returns true — можно идти дальше.
    */
   function isStepValid(viewIndex: number): boolean {
-    const view = wizardSteps.value[viewIndex];
-
-    if (!view) {
-      return false;
-    }
-
-    return view.key === 'abilities'
-      ? isAbilityImprovementStepValid(view.draftIndex)
-      : isLevelStepValid(view.draftIndex);
+    return (
+      wizardSteps.value[viewIndex] !== undefined
+      && getStepPendingCount(viewIndex) === 0
+    );
   }
 
   /**
@@ -1746,12 +1849,13 @@ export function useLevelUpWizard(): LevelUpWizard {
     stepAbilityImprovement,
     resetAbilityImprovement,
     selectSubclass,
-    choiceOptions,
-    spellPool,
-    choiceHints,
+    choiceControl,
+    getFeatureRowPendingCount,
+    retrySpellPool,
     featOptions,
     selectedFeat,
     isStepValid,
+    getStepPendingCount,
     buildPayload,
   };
 }

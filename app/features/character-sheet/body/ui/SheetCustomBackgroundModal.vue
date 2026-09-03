@@ -6,6 +6,7 @@
     FeatSelectOption,
   } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
   import { FeatDrawer } from '~feats/drawer';
 
   import {
@@ -34,8 +35,9 @@
     ORIGIN_FEAT_ACQUISITION_LEVEL,
     parseFeatSelectOptions,
     SKILL_DUPLICATE_WARNING,
+    toNamedPickerOptions,
   } from '../../model';
-  import SheetChoiceSelect from './SheetChoiceSelect.vue';
+  import SheetChoicePickerField from './SheetChoicePickerField.vue';
 
   const emit = defineEmits<{
     /** `true` — своя предыстория применена к листу. */
@@ -100,6 +102,14 @@
   );
 
   const toolNames = computed(() => getToolNamesForGroups());
+
+  const skillPickerOptions = computed(() =>
+    toNamedPickerOptions(skillNames.value, ownedSkillHints.value),
+  );
+
+  const toolPickerOptions = computed(() =>
+    toNamedPickerOptions(toolNames.value),
+  );
 
   /** Подписи слотов прибавок текущего режима: их число и задаёт число слотов. */
   const abilitySlotLabels = computed(
@@ -372,42 +382,35 @@
           </div>
         </div>
 
-        <div class="flex flex-col gap-1">
-          <span
-            class="text-[10px] font-bold tracking-wider text-muted uppercase"
-          >
-            {{ CUSTOM_BACKGROUND_LABELS.skillsTitle }}
-          </span>
+        <SheetChoicePickerField
+          v-model="draftSkills"
+          :title="CUSTOM_BACKGROUND_LABELS.skillsTitle"
+          :explanation="CUSTOM_BACKGROUND_LABELS.skillsPlaceholder"
+          :options="skillPickerOptions"
+          :warning="SKILL_DUPLICATE_WARNING"
+          :count="CUSTOM_BACKGROUND_SKILL_COUNT"
+        />
 
-          <SheetChoiceSelect
-            v-model="draftSkills"
-            :items="skillNames"
-            :hints="ownedSkillHints"
-            :warning="SKILL_DUPLICATE_WARNING"
-            :count="CUSTOM_BACKGROUND_SKILL_COUNT"
-            :placeholder="CUSTOM_BACKGROUND_LABELS.skillsPlaceholder"
-          />
-        </div>
+        <SheetChoicePickerField
+          v-if="!isToolCatalogEmpty"
+          v-model="draftTools"
+          :title="CUSTOM_BACKGROUND_LABELS.toolTitle"
+          :explanation="CUSTOM_BACKGROUND_LABELS.toolPlaceholder"
+          :options="toolPickerOptions"
+          :count="CUSTOM_BACKGROUND_TOOL_COUNT"
+        />
 
-        <div class="flex flex-col gap-1">
+        <div
+          v-else
+          class="flex flex-col gap-1"
+        >
           <span
             class="text-[10px] font-bold tracking-wider text-muted uppercase"
           >
             {{ CUSTOM_BACKGROUND_LABELS.toolTitle }}
           </span>
 
-          <SheetChoiceSelect
-            v-if="!isToolCatalogEmpty"
-            v-model="draftTools"
-            :items="toolNames"
-            :count="CUSTOM_BACKGROUND_TOOL_COUNT"
-            :placeholder="CUSTOM_BACKGROUND_LABELS.toolPlaceholder"
-          />
-
-          <span
-            v-else
-            class="text-sm text-dimmed italic"
-          >
+          <span class="text-sm text-dimmed italic">
             {{ CUSTOM_BACKGROUND_LABELS.toolEmpty }}
           </span>
         </div>
@@ -469,7 +472,7 @@
     <template #footer>
       <div class="flex w-full justify-end gap-2">
         <UButton
-          label="Отмена"
+          :label="ACTION_LABELS.cancel"
           color="neutral"
           variant="ghost"
           @click.left.exact.prevent="handleCancel"

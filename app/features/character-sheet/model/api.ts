@@ -509,12 +509,14 @@ export async function deleteSavedCharacterSheet(
  *
  * @param filter ограничения пула из механики черты.
  * @param classUrls классы, из списков которых идёт выбор; пусто — без сужения.
- * @returns заклинания пула; пустой список — ответ не разобрался или пуст.
+ * @returns заклинания пула; null — запрос не удался. Сбой отличается от пустого
+ *   пула нарочно: пустой пул снимает требование выбора, а сбой — нет, иначе
+ *   игрок прошёл бы шаг без заклинания, которое ему положено.
  */
 export async function fetchChoiceSpells(
   filter: FeatSpellChoiceFilter,
   classUrls: string[],
-): Promise<SpellCatalogItem[]> {
+): Promise<SpellCatalogItem[] | null> {
   const query: Record<string, unknown> = {
     page: 0,
     size: CHOICE_SPELL_POOL_SIZE,
@@ -541,7 +543,7 @@ export async function fetchChoiceSpells(
   } catch (error) {
     consola.error('Ошибка загрузки пула заклинаний черты:', error);
 
-    return [];
+    return null;
   }
 }
 

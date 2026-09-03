@@ -32,7 +32,7 @@ core-app/
 │   ├── plugins/                    # anchorScroll, dayjs, online-heartbeat, scrollBehavior, scrollbarWidth
 │   ├── shared/                     # 🔧 Global shared layer (FSD-style)
 │   │   ├── api/                    # Typed API fetchers (dictionaries/select-options)
-│   │   ├── consts/                 # Global constants (levels, layout-width, theme, fetch-status)
+│   │   ├── consts/                 # Global constants (levels, layout-width, theme, fetch-status, button action labels)
 │   │   ├── enums/                  # Enums (comparison, …)
 │   │   ├── types/                  # base, wiki, user, subscription, upload, composable, abilities, dictionaries
 │   │   ├── ui/                     # 🎨 UI Kit (28 components)
@@ -190,6 +190,11 @@ modals), so its capabilities are listed here rather than squeezed into the table
   replaces all six values outright: level-up ability increases are baked into
   `abilities` and kept in no separate ledger, so they cannot be carried over —
   the modal says so before applying.
+- The class wizard asks everything in one review step split into «Основное /
+  Снаряжение / Умения / Характеристики» tabs, each carrying the number of
+  answers it still waits for. The button on the right walks the tabs («Далее»)
+  and turns into «Применить» only on the last one, where it stays disabled
+  until every counter is zero.
 - The class and background wizards also hand out the starting equipment. The
   reference `startingEquipment` field carries the official options («А», «Б»,
   «В») as structured item lists plus coins, so the review step shows them as a
@@ -266,13 +271,40 @@ modals), so its capabilities are listed here rather than squeezed into the table
   «Пропустить подготовку» — the level is applied straight away through
   `setClassLevels` with average hit points and no feature steps. Applied
   atomically by `applyLevelUp`, which keeps spent hit dice and class resources.
-- Every skill picker (`SheetChoiceSelect` in the class / species / background
-  wizards, in level-up features and in the homebrew class / background modals)
-  marks skills the character already has with a `SKILL_OWNED_HINTS` badge and
-  shows `SKILL_DUPLICATE_WARNING` once such a skill is picked again: under the
-  2024 rules a duplicate proficiency grants nothing and never turns into
-  Expertise. It stays selectable on purpose — a DM may still run the 2014
-  «take another proficiency instead» rule.
+  The modal is as wide as the catalog pickers (`sm:max-w-5xl`): on the left a
+  rail of steps (`SheetLevelUpStepsRail` — «Уровень и опыт», then «Колдун ·
+  11 уровень» with what the step contains and a warning badge with the number
+  of choices still open; ability improvements nest under their level; on
+  narrow screens the rail folds into a swipeable strip of chips), on the right
+  the step in section cards (`SHEET_WIZARD_SECTION_CLASS`: hit points,
+  subclass, feature cards with an origin badge and a pending badge). The rail
+  lists the levels ahead from the moment they are typed in — before «Далее»
+  builds the real steps it shows one unreachable item per gained level — and
+  each column scrolls on its own, so a long feature description never carries
+  the list of steps away. The rail only goes backwards; «Далее» checks the step
+  through `getStepPendingCount`.
+- Every choice a record asks for — skills, tools, languages, invocations,
+  spells, feats, subclasses, ability slots of a feat — is asked by the same
+  picker: `SheetChoicePickerField` (title, an explanation of what the feature
+  grants and why, chosen values as chips, a «Выбрать» button) opens
+  `SheetChoicePickerModal` (search, groups, «Все | Выбранные» tabs, a counter).
+  A row is two buttons side by side. Where the options have descriptions, the
+  window is `sm:max-w-4xl` and keeps a `SheetChoiceDetailPane` on the right
+  (spell / feat / item / class body by url or the option's own markup): the
+  name opens the description there, the check mark alone picks the option, and
+  the description stays readable even when the limit is reached. Where there is
+  nothing to describe (skills, languages, abilities) or the pane is switched off
+  (`hide-detail-pane` for subclasses), the window narrows to `sm:max-w-lg`, the
+  name picks the option and the neighbouring button opens the section drawer —
+  the same on narrow screens, where the pane is hidden anyway. Options are
+  built once for all wizards by `buildChoiceControl` → `toChoicePickerOptions`
+  (`SheetChoiceOption`: `value` stays the stored answer — a name for skills,
+  tools, options and spells, a url for feats and subclasses). Skills the
+  character already has carry a `SKILL_OWNED_HINTS` badge and trigger
+  `SKILL_DUPLICATE_WARNING` once picked again: under the 2024 rules a duplicate
+  proficiency grants nothing and never turns into Expertise. It stays
+  selectable on purpose — a DM may still run the 2014 «take another
+  proficiency instead» rule.
 - Debounced autosave, a server-side limit of active sheets, soft delete with
   restore history, and copy — `model/api.ts` covers
   `POST|GET|PUT|DELETE /…/{id}` plus `/{id}/restore` and `/{id}/share`.
@@ -497,9 +529,9 @@ modals), so its capabilities are listed here rather than squeezed into the table
   a lineage has no features to hang them on.
 - A feat a species feature asks for («Универсальность» of the human wants an
   origin feat) is picked in the species wizard the same way the class and
-  level-up wizards pick one: `SheetLevelUpFeatChoice` opens `SheetFeatPickModal`
-  — a searchable list of the catalog with a description drawer — because the pool
-  is the whole feats section and the mechanics carry urls, not names. A `feat`
+  level-up wizards pick one: `SheetFeatChoiceField` (the unified picker with the
+  feat pool and one more field per ability slot of the chosen feat) — because
+  the pool is the whole feats section and the mechanics carry urls, not names. A `feat`
   choice therefore never reaches the plain select: `resolveChoiceOptions` returns
   an empty pool for it instead of falling through to the tool branch, which is
   what used to offer alchemist's supplies in place of a feat. The chosen feat
@@ -520,18 +552,24 @@ modals), so its capabilities are listed here rather than squeezed into the table
   counter reaches the resource panel and its granted spell reaches the spellbook
   through the paths feats already use.
 - A spell or cantrip a class feature — or one of its options — asks for is picked
-  in the class wizard exactly as a feat asks for one: `SheetFeatSpellsPicker`
-  opens the pool as a modal list with a search, and the pool itself is a catalog
-  search (`useChoiceSpellPools` → `fetchChoiceSpells`) narrowed by the class and
-  the circle the mechanics name, because the reference stores no list of its own.
-  Such a question arrives with the option that owns it («Маг» of the druid's
-  primal order grants an extra druid cantrip), so the wizard reloads the pools
-  whenever the set of spell questions changes (`getSpellChoicesKey`) rather than
-  once per class. The answer lands on the feature record
+  in every wizard exactly as a feat asks for one: the unified picker shows the
+  pool grouped by circle with the spell body in the detail pane, and the pool
+  itself is a catalog search (`useChoiceSpellPools` → `fetchChoiceSpells`)
+  narrowed by the class and the circle the mechanics name, because the
+  reference stores no list of its own. Such a question arrives with the option
+  that owns it («Маг» of the druid's primal order grants an extra druid
+  cantrip), so the wizard reloads the pools whenever the set of spell questions
+  changes (`getSpellChoicesKey`) rather than once per class. The pool carries a
+  status (`getStatus`: loading / ready / error): while it is loading or failed
+  the choice counts as pending and the field shows «Загрузка списка…» or
+  «Не удалось загрузить — Повторить» (`retry`), so a step can no longer pass
+  with «Выберите 0» and no spell («Таинственный арканум» of the warlock used
+  to do that). The answer lands on the feature record
   (`withChosenFeatureSpells`), which puts it under «Врождённые и от черт» on the
   spells tab, keeps it out of the prepared count and takes it away with the
-  class. The level-up and species wizards do not load these pools yet, so there
-  the same question still shows an empty list.
+  class. Data caveat: the four arcanum choices of `warlock-phb` need
+  `requiredLevel` 11/13/15/17 in the reference, otherwise all four are asked at
+  level 11 and none later.
 - A feature's own list of options (warlock invocations, battle-master manoeuvres,
   sorcerer metamagic) is asked by the wizards only when the record carries
   `optionsChoice`; without it the list stays a reference on the class page, as it

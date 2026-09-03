@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { DictionaryService } from '~/shared/api';
+  import { ACTION_LABELS } from '~/shared/consts';
   import { SelectSize } from '~ui/select';
 
   import { useCharacterSheet } from '../../composables';
@@ -57,7 +58,7 @@
     <template #footer>
       <div class="flex w-full items-center justify-between gap-2">
         <UButton
-          label="Сбросить"
+          :label="ACTION_LABELS.reset"
           color="neutral"
           variant="ghost"
           @click.left.exact.prevent="handleReset"
@@ -65,14 +66,14 @@
 
         <div class="flex gap-2">
           <UButton
-            label="Отмена"
+            :label="ACTION_LABELS.cancel"
             color="neutral"
             variant="ghost"
             @click.left.exact.prevent="handleCancel"
           />
 
           <UButton
-            label="Применить"
+            :label="ACTION_LABELS.apply"
             color="primary"
             @click.left.exact.prevent="handleApply"
           />
