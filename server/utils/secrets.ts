@@ -6,6 +6,7 @@ export function getSecrets() {
     subscriber: getSubscriberSecrets(),
     bugReport: getBugReportSecrets(),
     comments: getCommentsSecrets(),
+    findGame: getFindGameSecrets(),
   };
 }
 
@@ -89,6 +90,31 @@ export function getSubscriberSecrets() {
 
   return {
     url,
+  };
+}
+
+/**
+ * Возвращает настройки сервиса поиска игр (find-game-api).
+ *
+ * Это отдельный сервис со своим адресом: общий прокси `/api/**` уводит
+ * незнакомые пути в core-api, поэтому у поиска игр свой префикс
+ * (`FIND_GAME_API_PREFIX`) и своя переменная `NITRO_FIND_GAME_API_URL`.
+ * Сервис принимает тот же SSO-JWT пользователя, что и core-api, поэтому
+ * достаточно базового URL — токен прокидывается обычным прокси-механизмом.
+ *
+ * Как и у остальных внешних сервисов, отсутствие переменной — ошибка
+ * конфигурации: молчаливый откат на core-api дал бы 404 на каждом запросе
+ * раздела, и причину пришлось бы искать в чужих логах.
+ */
+export function getFindGameSecrets() {
+  const { NITRO_FIND_GAME_API_URL: url = '' } = process.env;
+
+  if (!url) {
+    throw new Error('[FIND-GAME] Variables are not set');
+  }
+
+  return {
+    url: url.replace(/\/+$/, ''),
   };
 }
 
