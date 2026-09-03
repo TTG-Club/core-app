@@ -36,6 +36,7 @@ import {
 
 import { useInitiativeStorage } from './useInitiativeStorage';
 import { useSheetHitPointsSync } from './useSheetHitPointsSync';
+import { useTrackerChanges } from './useTrackerChanges';
 
 /**
  * Состояние одного трекера и все действия над ним.
@@ -48,6 +49,8 @@ import { useSheetHitPointsSync } from './useSheetHitPointsSync';
  * маршрута без размонтирования компонента).
  */
 export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
+  const { publish } = useTrackerChanges();
+
   const toast = useToast();
   const { keyForTracker, clearSlot } = useInitiativeStorage();
 
@@ -294,6 +297,11 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
 
     try {
       tracker.value = await fetchTracker(trackerId.value, accessKey.value);
+
+      // Загрузка объявляется наравне с действиями: подписчику нужно текущее
+      // состояние боя, а не только его изменения. Прежнего состояния у неё нет
+      // — и пересказывать в ней нечего.
+      publish({ previous: null, next: tracker.value });
     } catch (error) {
       handleAccessError(error);
       loadError.value = error;
@@ -315,7 +323,13 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
     isMutating.value = true;
 
     try {
+      const previous = tracker.value;
+
       tracker.value = await action();
+
+      // За боем следят и те, кому в трекер входа нет: изменение объявляется
+      // наружу, а пересказывает его подписчик — например, чат комнаты.
+      publish({ previous, next: tracker.value });
 
       return true;
     } catch (error) {

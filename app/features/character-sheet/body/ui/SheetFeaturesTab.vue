@@ -6,9 +6,9 @@
   } from '../../model';
 
   import { ConfirmDialog } from '~initiative/ui-kit';
-  import { MarkupRender } from '~ui/markup';
+  import { MarkupRender, serializeMarkup } from '~ui/markup';
 
-  import { useCharacterSheet } from '../../composables';
+  import { useCharacterSheet, useSheetTextSink } from '../../composables';
   import {
     FEATURE_ORIGIN_GROUP_HINTS,
     FEATURE_ORIGIN_LABELS,
@@ -40,6 +40,18 @@
   // Добавление, правка и удаление особенностей меняют лист: без прав кнопка
   // «Добавить» прячется, а строчные кнопки правки и вовсе не разъезжаются.
   const { canEdit, editControlClass } = useCharacterSheet();
+
+  // За столом текст особенности зачитывают вслух: кнопка кладёт его в чат
+  // комнаты. Вне комнаты отправлять некуда — её и не показываем.
+  const { hasSink: canShare, share } = useSheetTextSink();
+
+  /**
+   * Отправляет текст особенности в чат комнаты.
+   * @param feature Особенность из списка.
+   */
+  function handleShare(feature: CharacterFeature): void {
+    share({ title: feature.name, text: serializeMarkup(feature.description) });
+  }
 
   const addMenuItems = getFeaturesAddMenuItems({
     onAddFeature: () => emit('add-feature'),
@@ -136,11 +148,12 @@
   const ROW_ACTIONS_INNER_CLASS = `flex items-center gap-2.5 overflow-hidden pl-2 opacity-0 transition-opacity duration-200 group-hover/feature:opacity-100 focus-within:opacity-100 ${SHEET_REVEAL_CONTROL_CLASS}`;
 
   /**
-   * Без прав на правку (лист чужой или заперт замком) колонка не разъезжается
-   * вовсе: раздвигать строку ради пустоты на месте спрятанных кнопок незачем.
+   * Колонка разъезжается, только если в ней что-то есть: без прав на правку
+   * (лист чужой или заперт замком) в ней остаётся разве что отправка в чат, а
+   * вне комнаты — ничего вовсе, и раздвигать строку ради пустоты незачем.
    */
   const rowActionsClass = computed(() =>
-    canEdit.value
+    canEdit.value || canShare.value
       ? `${ROW_ACTIONS_CLASS} ${ROW_ACTIONS_REVEAL_CLASS}`
       : ROW_ACTIONS_CLASS,
   );
@@ -353,6 +366,17 @@
 
           <div :class="rowActionsClass">
             <div :class="ROW_ACTIONS_INNER_CLASS">
+              <UButton
+                v-if="canShare && feature.hasDescription"
+                icon="tabler:message-2-share"
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                square
+                :aria-label="`Отправить в чат: ${feature.name}`"
+                @click.left.exact.prevent="handleShare(feature)"
+              />
+
               <UButton
                 icon="tabler:pencil"
                 color="neutral"

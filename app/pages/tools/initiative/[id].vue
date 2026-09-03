@@ -1,9 +1,23 @@
 <script setup lang="ts">
   import { INITIATIVE_TOOL_TITLE } from '~initiative/model';
   import { InitiativeTrackerWorkspace } from '~initiative/workspace';
+  import { useNexusFightBroadcast } from '~nexus/composables';
 
   const route = useRoute();
   const id = computed(() => String(route.params.id));
+
+  /**
+   * Комната, из которой открыли бой. Войти в трекер может только тот, кто
+   * ведёт игру, поэтому остальные следят за боем по ленте комнаты — и
+   * пересказывает им ход боя эта страница.
+   */
+  const nexusId = computed(() => {
+    const value = route.query.nexus;
+
+    return typeof value === 'string' && value ? value : null;
+  });
+
+  useNexusFightBroadcast(nexusId);
 
   // Приватные/эфемерные страницы конкретного трекера не индексируем.
   useSeoMeta({

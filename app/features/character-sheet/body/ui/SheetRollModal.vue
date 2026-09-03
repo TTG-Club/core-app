@@ -42,6 +42,12 @@
       /** Надпись на кнопке броска. */
       actionLabel?: string;
 
+      /** Чем бросают: оружие, навык, характеристика. Уходит в чат комнаты. */
+      subject?: string;
+
+      /** Что за бросок: «Атака», «Проверка навыка». Уходит в чат комнаты. */
+      kind?: string;
+
       /**
        * Режим броска по правилам — им модалка открывается (помеха тяжёлого
        * оружия). Игрок волен переключить его сам.
@@ -51,6 +57,8 @@
     {
       actionLabel: ROLL_CHECK_ACTION_LABEL,
       mode: DEFAULT_ROLL_MODE,
+      subject: undefined,
+      kind: undefined,
     },
   );
 
@@ -121,7 +129,7 @@
   }
 
   function handleRollClick() {
-    handleRoll(formula.value);
+    handleRoll(formula.value, { subject: props.subject, label: props.kind });
     emit('close');
   }
 </script>

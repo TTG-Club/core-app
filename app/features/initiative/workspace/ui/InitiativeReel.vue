@@ -1,7 +1,6 @@
 <script setup lang="ts">
-  import type { ParticipantColor, TrackerParticipant } from '~initiative/model';
+  import type { ParticipantColor, ReelParticipant } from '~initiative/model';
 
-  import { useParticipantAvatars } from '~initiative/composables';
   import {
     DEFAULT_PARTICIPANT_COLOR,
     PARTICIPANT_COLOR_CLASS,
@@ -13,12 +12,31 @@
     currentParticipantId = undefined,
     round,
   } = defineProps<{
-    participants: Array<TrackerParticipant>;
+    participants: Array<ReelParticipant>;
     currentParticipantId?: string;
     round: number;
   }>();
 
-  const { avatarFor, dropAvatar } = useParticipantAvatars(() => participants);
+  /** Токены с битой картинкой: показываем им иконку по типу. */
+  const brokenAvatars = ref(new Set<string>());
+
+  /**
+   * Картинка токена или `undefined` — картинки нет либо она не загрузилась.
+   * @param participant Боец из ленты.
+   */
+  function avatarFor(participant: ReelParticipant): string | undefined {
+    return brokenAvatars.value.has(participant.id)
+      ? undefined
+      : participant.avatarUrl;
+  }
+
+  /**
+   * Гасит битую картинку (по `@error` у `<img>`).
+   * @param participant Боец из ленты.
+   */
+  function dropAvatar(participant: ReelParticipant): void {
+    brokenAvatars.value = new Set(brokenAvatars.value).add(participant.id);
+  }
 
   /** Шаг между центрами соседних токенов, px. */
   const STEP = 96;
@@ -30,7 +48,7 @@
     kind: 'token';
     key: string;
     column: number;
-    participant: TrackerParticipant;
+    participant: ReelParticipant;
     isCurrent: boolean;
   }
 
@@ -133,7 +151,7 @@
     };
   }
 
-  function typeIcon(participant: TrackerParticipant): string {
+  function typeIcon(participant: ReelParticipant): string {
     return PARTICIPANT_TYPE_ICON[participant.type];
   }
 

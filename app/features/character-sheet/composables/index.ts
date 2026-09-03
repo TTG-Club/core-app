@@ -2,6 +2,7 @@ export type {
   SheetLoaderOptions,
   SheetLoadStatus,
 } from './useCharacterSheetLoader';
+export type { SharedSheetText, SheetTextSink } from './useSheetTextSink';
 
 export {
   useCatalogSourceQuery,
@@ -23,6 +24,7 @@ export { useCharacterSheetShare } from './useCharacterSheetShare';
 export { useFeatChoiceSpells } from './useFeatChoiceSpells';
 export { useLevelUpWizard } from './useLevelUpWizard';
 export { useSheetAvatar } from './useSheetAvatar';
+export { useSheetTextSink } from './useSheetTextSink';
 export { useSpellCatalogSearch } from './useSpellCatalogSearch';
 export { useSpellDamage } from './useSpellDamage';
 export { useToolCatalog } from './useToolCatalog';
