@@ -13,6 +13,7 @@
     FeatGrantedSpells,
     FeatGrantRows,
     FeatModifierRows,
+    FeatSpellChoices,
     FeatSpellListSpells,
   } from '~feats/editor/ui';
   import { createFeatEditorRows, createFeatMechanics } from '~feats/model';
@@ -27,6 +28,11 @@
    *
    * Выбор боевого стиля и черты за повышение характеристик тоже здесь —
    * строками даров «Черта → дать выбрать», как у черты и вида.
+   *
+   * Заклинания на выбор — своим блоком: строки редактора разбирают их из
+   * механики всегда, но раньше блок их не показывал, и настройка
+   * «Таинственного арканума» жила в записи невидимкой — ни увидеть, ни
+   * поправить, хотя лист персонажа её читал.
    *
    * Свёрнутым блоком, а не полями рядом с описанием: у большинства умений
    * механики нет вовсе, а развёрнутая она заслоняла бы список умений.
@@ -98,6 +104,13 @@
         v-model="mechanics.spells"
         :labels="labels"
         :title="titles.spells"
+      />
+
+      <FeatSpellChoices
+        v-model="editorRows.spellChoice"
+        :rows="editorRows"
+        :labels="labels"
+        :title="titles.spellChoices"
       />
 
       <FeatSpellListSpells

@@ -8,6 +8,12 @@
 
   const props = defineProps<{
     url: string;
+
+    /**
+     * Скрывает переходы к классу и подклассам: дровер открыт предпросмотром
+     * из листа персонажа, и уводить из него некуда.
+     */
+    hideNavigation?: boolean;
   }>();
 
   defineEmits<{
@@ -74,6 +80,7 @@
     <ClassBody
       v-if="detail"
       :detail="detail"
+      :hide-navigation="props.hideNavigation"
       navigate-in-place
       @navigate="handleNavigate"
     />

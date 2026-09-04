@@ -53,6 +53,7 @@ import {
 import {
   buildStartingEquipmentItem,
   getInventoryItemDetailPath,
+  uniqueSpellsByName,
 } from './utils';
 
 /**
@@ -509,12 +510,14 @@ export async function deleteSavedCharacterSheet(
  *
  * @param filter ограничения пула из механики черты.
  * @param classUrls классы, из списков которых идёт выбор; пусто — без сужения.
- * @returns заклинания пула; пустой список — ответ не разобрался или пуст.
+ * @returns заклинания пула; null — запрос не удался. Сбой отличается от пустого
+ *   пула нарочно: пустой пул снимает требование выбора, а сбой — нет, иначе
+ *   игрок прошёл бы шаг без заклинания, которое ему положено.
  */
 export async function fetchChoiceSpells(
   filter: FeatSpellChoiceFilter,
   classUrls: string[],
-): Promise<SpellCatalogItem[]> {
+): Promise<SpellCatalogItem[] | null> {
   const query: Record<string, unknown> = {
     page: 0,
     size: CHOICE_SPELL_POOL_SIZE,
@@ -537,11 +540,45 @@ export async function fetchChoiceSpells(
       retry: 0,
     });
 
-    return parseSpellCatalog(response);
+    // Одноимённые записи каталога схлопываются: ответ выбора хранится
+    // названием, и две «Дружбы» отмечались бы в пикере и ложились на лист вместе
+    return uniqueSpellsByName(parseSpellCatalog(response));
   } catch (error) {
     consola.error('Ошибка загрузки пула заклинаний черты:', error);
 
-    return [];
+    return null;
+  }
+}
+
+/**
+ * Заклинания перечисленного пула — записями каталога по их url.
+ *
+ * Запись перечисляет пул ссылками со снимком названия, а пикеру и листу нужны
+ * круг и школа, поэтому каждое заклинание догружается деталью. Списки такие
+ * короткие («выберите одно из трёх»), и запрос на запись дешевле новой ручки.
+ *
+ * @param urls url заклинаний в порядке записи.
+ * @returns заклинания каталога в том же порядке; null — хоть один запрос не
+ *   удался: неполный пул выглядел бы как пул, из которого что-то убрали.
+ */
+export async function fetchSpellsByUrls(
+  urls: string[],
+): Promise<SpellCatalogItem[] | null> {
+  try {
+    const details = await Promise.all(
+      urls.map((url) =>
+        $fetch<unknown>(`${SPELLS_DETAIL_BASE_PATH}/${url}`, {
+          method: 'GET',
+          retry: 0,
+        }),
+      ),
+    );
+
+    return parseSpellCatalog(details);
+  } catch (error) {
+    consola.error('Ошибка загрузки перечисленных заклинаний выбора:', error);
+
+    return null;
   }
 }
 

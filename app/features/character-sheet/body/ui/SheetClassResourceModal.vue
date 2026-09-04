@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { CharacterClassResource, ResourceMaxSource } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
+
   import { useCharacterSheet } from '../../composables';
   import {
     ABILITY_OPTIONS,
@@ -300,14 +302,14 @@
     <template #footer>
       <div class="flex w-full justify-end gap-2">
         <UButton
-          label="Отмена"
+          :label="ACTION_LABELS.cancel"
           color="neutral"
           variant="ghost"
           @click.left.exact.prevent="handleCancel"
         />
 
         <UButton
-          label="Сохранить"
+          :label="ACTION_LABELS.save"
           color="primary"
           :disabled="isSaveDisabled"
           @click.left.exact.prevent="handleSave"

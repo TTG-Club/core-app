@@ -10,6 +10,7 @@
     SpellTabFilter,
   } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
   import { SpellDrawer } from '~spells/drawer';
   import { MarkupRender } from '~ui/markup';
 
@@ -800,7 +801,7 @@
           стоит напротив плиток, на узком — в конце строки с переносом -->
         <UButton
           icon="tabler:plus"
-          label="Добавить"
+          :label="ACTION_LABELS.add"
           color="neutral"
           variant="ghost"
           size="sm"

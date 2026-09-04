@@ -13,6 +13,7 @@
     FeatGrantedSpells,
     FeatGrantRows,
     FeatModifierRows,
+    FeatSpellChoices,
     FeatSpellListSpells,
   } from '~feats/editor/ui';
   import { createFeatEditorRows, createFeatMechanics } from '~feats/model';
@@ -342,6 +343,26 @@
 
             <FeatGrantedSpells
               v-model="mechanics.spells"
+              :labels="CLASS_MECHANICS_LABELS"
+            />
+          </UCard>
+
+          <UCard variant="subtle">
+            <template #header>
+              <InfoTooltip
+                :text="CLASS_EDITOR_LABELS.spellChoicesHint"
+                icon="tabler:info-circle-filled"
+                class="text-base text-highlighted"
+              >
+                <h2 class="truncate">
+                  {{ CLASS_EDITOR_LABELS.spellChoicesTitle }}
+                </h2>
+              </InfoTooltip>
+            </template>
+
+            <FeatSpellChoices
+              v-model="editorRows.spellChoice"
+              :rows="editorRows"
               :labels="CLASS_MECHANICS_LABELS"
             />
           </UCard>

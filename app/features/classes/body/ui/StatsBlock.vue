@@ -59,7 +59,12 @@
         v-if="multiclassRequirement"
         class="flex min-w-0 flex-col gap-1 px-4 py-1.5"
       >
-        <InfoTooltip :text="MULTICLASS_REQUIREMENT_HINT">
+        <!-- Подпись длинная и переносится: значок идёт следом за текстом,
+          иначе он уезжал к правому краю ячейки и там ужимался -->
+        <InfoTooltip
+          :text="MULTICLASS_REQUIREMENT_HINT"
+          inline
+        >
           <span class="text-sm font-medium text-highlighted">
             Требования для мультиклассирования:
           </span>
@@ -72,7 +77,7 @@
         v-if="props.hitDice"
         class="flex min-w-0 flex-col gap-1 px-4 py-1.5"
       >
-        <InfoTooltip>
+        <InfoTooltip inline>
           <span class="text-sm font-medium text-highlighted">
             Кость Хитов:
           </span>

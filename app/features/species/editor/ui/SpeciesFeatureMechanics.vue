@@ -7,14 +7,17 @@
     FeatCounterRows,
     FeatGrantRows,
     FeatModifierRows,
+    FeatSpellChoices,
+    FeatSpellListSpells,
   } from '~feats/editor/ui';
-  import { createFeatEditorRows } from '~feats/model';
+  import { createFeatEditorRows, createFeatMechanics } from '~feats/model';
   import { InfoTooltip } from '~ui/tooltip';
 
   import {
     getFeatureFilledBlocksCount,
     SPECIES_EDITOR_LABELS,
     SPECIES_INNATE_SPELL_EDITOR,
+    SPECIES_MECHANICS_LABELS,
   } from '../../model';
   import SpeciesFeatureSpells from './SpeciesFeatureSpells.vue';
 
@@ -41,6 +44,14 @@
     get: () => feature.value.editorRows ?? createFeatEditorRows(),
     set: (value) => {
       feature.value.editorRows = value;
+    },
+  });
+
+  /** Механика: из неё редактируется расширение списка заклинаний, минуя строки. */
+  const mechanics = computed({
+    get: () => feature.value.mechanics ?? createFeatMechanics(),
+    set: (value) => {
+      feature.value.mechanics = value;
     },
   });
 
@@ -113,6 +124,31 @@
           </h3>
 
           <FeatCounterRows v-model="editorRows.counters" />
+        </div>
+
+        <!-- Выбор заклинаний игроком и расширение списка — те же блоки, что у
+          черты и умения класса: без них настройка жила бы в записи невидимкой -->
+        <div class="grid gap-2">
+          <h3 class="truncate text-sm text-highlighted">
+            {{ SPECIES_EDITOR_LABELS.featureSpellChoicesTitle }}
+          </h3>
+
+          <FeatSpellChoices
+            v-model="editorRows.spellChoice"
+            :rows="editorRows"
+            :labels="SPECIES_MECHANICS_LABELS"
+          />
+        </div>
+
+        <div class="grid gap-2">
+          <h3 class="truncate text-sm text-highlighted">
+            {{ SPECIES_EDITOR_LABELS.featureSpellListTitle }}
+          </h3>
+
+          <FeatSpellListSpells
+            v-model="mechanics.spellList"
+            :labels="SPECIES_MECHANICS_LABELS"
+          />
         </div>
 
         <div class="grid gap-2">

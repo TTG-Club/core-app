@@ -227,7 +227,10 @@ export default defineAppConfig({
       slots: {
         content: 'w-2xl overflow-hidden max-md:rounded-none',
         container: 'gap-0 p-0',
-        header: 'bg-default sticky top-0 p-4 z-1',
+        // shrink-0 обязателен: шапка — flex-элемент рядом с телом, у которого
+        // min-height по содержимому. На длинной записи (таблица класса) тело
+        // ужимало шапку до её min-h-8, и заголовок обрезался сверху
+        header: 'bg-default sticky top-0 z-1 shrink-0 p-4',
         body: 'px-4 pb-4',
         overlay: 'bg-elevated/45 cursor-pointer',
         handle: 'cursor-grab active:cursor-grabbing',

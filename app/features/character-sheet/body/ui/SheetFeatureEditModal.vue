@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { FeatureOrigin } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
   import { MarkupEditor } from '~ui/markup-editor';
 
   import { useCharacterSheet } from '../../composables';
@@ -163,14 +164,14 @@
     <template #footer>
       <div class="flex w-full justify-end gap-2">
         <UButton
-          label="Отмена"
+          :label="ACTION_LABELS.cancel"
           color="neutral"
           variant="ghost"
           @click.left.exact.prevent="handleCancel"
         />
 
         <UButton
-          label="Сохранить"
+          :label="ACTION_LABELS.save"
           color="primary"
           :disabled="isApplyDisabled"
           @click.left.exact.prevent="handleApply"

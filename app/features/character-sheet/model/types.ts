@@ -3,9 +3,10 @@ import type {
   CasterType,
   ClassResourceRecovery,
   FeatureOptionEntry,
+  FeatureOptionGrantedSpell,
 } from '~classes/model';
 import type { MagicItemBonuses } from '~magic-items/model';
-import type { MarkerNode, SimpleTextNode } from '~ui/markup';
+import type { MarkerNode, RenderNode, SimpleTextNode } from '~ui/markup';
 
 // Начало значения источника «уровень класса» берётся из констант домена, чтобы
 // префикс жил в одном месте: импорт типовой, поэтому кольца в сборке нет —
@@ -1362,6 +1363,26 @@ export interface CharacterFeatureModifiers {
   initiativeProficiencyBonus?: boolean;
 }
 
+/**
+ * Расширение списка заклинаний от записи: заклинания, которые персонаж МОЖЕТ
+ * выучить или подготовить сверх списка своего класса, — заклинания домена
+ * жреца, таблица «Заклинания метки». Не знание: в книгу они попадают только
+ * руками игрока через окно добавления заклинаний.
+ */
+export interface CharacterFeatureSpellList {
+  /**
+   * Список открыт, только если у персонажа есть заклинательство: так написано у
+   * черт метки дракона. `false` — открыт всегда.
+   */
+  requiresSpellcasting: boolean;
+
+  /**
+   * Заклинания списка; `requiredLevel` — уровень персонажа, с которого запись
+   * открывается, без него — сразу.
+   */
+  spells: CharacterSpell[];
+}
+
 /** Особенность персонажа (из вида, подвида, класса или своя). */
 export interface CharacterFeature {
   id: string;
@@ -1430,6 +1451,13 @@ export interface CharacterFeature {
    * возвращает вручную, а снятие черты забирает заклинание вместе с записью.
    */
   spells?: CharacterSpell[] | null;
+
+  /**
+   * Расширение списка заклинаний от записи — снимок; null или нет поля — запись
+   * список не расширяет. Отдельно от `spells`: то знание, это доступность, и
+   * окно добавления заклинаний показывает эти записи рядом с классовыми.
+   */
+  spellList?: CharacterFeatureSpellList | null;
 
   /**
    * Ответы игрока на выборы черты по ключу выбора: «Посвящённый в магию» помнит
@@ -1587,11 +1615,11 @@ export interface FeatSummary {
    *
    * Отдельно от {@link FeatSummary.spells}, потому что это другая механика:
    * выданное заклинание черта держит готовым, а заклинание списка персонаж
-   * готовит сам — потому эти записи и приходят неподготовленными. Уровень
-   * доступа списка едет на каждой записи: список пополняется сам, когда
-   * персонаж дорастёт.
+   * лишь может выучить или подготовить. Уровень доступа списка едет на каждой
+   * записи: список пополняется сам, когда персонаж дорастёт. Null — черта
+   * список не расширяет.
    */
-  spellListSpells: CharacterSpell[] | null;
+  spellList: CharacterFeatureSpellList | null;
 
   /**
    * Характеристика заклинаний черты из `mechanics.spells.spellcastingAbility`;
@@ -2183,6 +2211,9 @@ export interface SpeciesFeatureSummary {
 
   /** Активные эффекты умения — снимок с записи справочника. */
   activeEffects: ActiveEffect[];
+
+  /** Расширение списка заклинаний умением; null — умение его не расширяет. */
+  spellList: CharacterFeatureSpellList | null;
 }
 
 /** Деталь вида или подвида из ответа API (нужные листу поля). */
@@ -2237,12 +2268,19 @@ export interface SpeciesSummary {
 
   /** Активные эффекты самой записи вида — снимок с записи справочника. */
   activeEffects: ActiveEffect[];
+
+  /** Расширение списка заклинаний самой записью; null — записи нечем расширять. */
+  spellList: CharacterFeatureSpellList | null;
 }
 
 /** Опция класса в списке визарда (аналог `SpeciesOption`). */
 export interface ClassOption {
   url: string;
   name: string;
+
+  /** Английское название: подстрочник в списке выбора подкласса. */
+  nameEng: string;
+
   sourceLabel: string;
 
   /** Есть ли у класса подклассы (строку можно развернуть). */
@@ -2349,6 +2387,14 @@ export interface ClassFeatureSummary {
   spellcastingAbility: AbilityKey | null;
 
   /**
+   * Расширение списка заклинаний из `spellListGroups` детали класса; null —
+   * умение список не расширяет. Заклинания домена и клятвы по правилам 2024
+   * выдаются готовыми ({@link ClassFeatureSummary.spells}), а сюда попадает то,
+   * что персонаж лишь может подготовить.
+   */
+  spellList: CharacterFeatureSpellList | null;
+
+  /**
    * Дары вариантов умения по ключу варианта: воззвание колдуна выдаёт
    * заклинание, манёвр — владение приёмом.
    *
@@ -2381,6 +2427,9 @@ export interface ClassFeatureOptionGrants {
 
   /** Характеристика заклинаний варианта; null — считаются от класса. */
   spellcastingAbility: AbilityKey | null;
+
+  /** Расширение списка заклинаний вариантом; null — вариант его не расширяет. */
+  spellList: CharacterFeatureSpellList | null;
 
   /** Активные эффекты варианта — снимок с записи справочника. */
   activeEffects: ActiveEffect[];
@@ -2482,6 +2531,30 @@ export interface ClassSummary {
   table: ClassTableColumn[];
 
   features: ClassFeatureSummary[];
+
+  /**
+   * Выборы, которые задаёт сама запись класса, а не её умение: заговор на выбор
+   * при взятии класса. Пусто — класс ни о чём не спрашивает.
+   */
+  choices: ClassChoice[];
+
+  /**
+   * Заклинания, которые даёт сама запись класса; null — не даёт. Круг и школу
+   * подставляет core-api по ссылкам механики.
+   */
+  spells: CharacterSpell[] | null;
+
+  /**
+   * Характеристика заклинаний класса из `mechanics.spells.spellcastingAbility`;
+   * null — класс её не задаёт, и заклинания считаются от него самого.
+   */
+  spellcastingAbility: AbilityKey | null;
+
+  /**
+   * Расширение списка заклинаний самой записью класса; null — не расширяет.
+   * Не выдача: персонаж эти заклинания лишь может выучить или подготовить.
+   */
+  spellList: CharacterFeatureSpellList | null;
 
   /**
    * Ресурсы со счётчиком из даров самой записи класса
@@ -2638,6 +2711,13 @@ export interface ClassChoice {
   featCategories?: string[];
 
   /**
+   * Перечисленные заклинания — пул выбора, заданный записью, а не поиском по
+   * каталогу: «выберите одно из этих трёх». Круг и школа догружаются по url.
+   * Пусто — пул собирается поиском по `spellFilter`. Только для `kind: 'spell'`.
+   */
+  listedSpells?: Array<{ url: string; name: string }>;
+
+  /**
    * Уровень персонажа, с которого выбор открывается; null — сразу.
    *
    * По нему мастер повышения уровня спрашивает одно и то же умение дважды:
@@ -2704,6 +2784,101 @@ export interface ChoiceOptionContext {
    * Только для `kind: 'option'`.
    */
   takenOptionValues?: string[];
+}
+
+/**
+ * Откуда единый пикер берёт описание варианта: запись каталога по url (её тело
+ * рисует свой компонент раздела) либо готовая разметка из записи справочника —
+ * у воззвания или манёвра своей страницы нет.
+ */
+export type SheetChoiceOptionDetail =
+  | { kind: 'spell' | 'feat' | 'item' | 'class'; url: string }
+  | {
+      kind: 'markup';
+      description: RenderNode;
+      prerequisite?: RenderNode;
+      additional?: RenderNode;
+
+      /** Заклинания, которые вариант выдаёт без выбора; пусто — не выдаёт. */
+      grantedSpells?: FeatureOptionGrantedSpell[];
+    };
+
+/**
+ * Вариант единого пикера выбора. `value` — ровно то, что ложится в ответ:
+ * название у навыков, инструментов, вариантов умения и заклинаний, url у черт и
+ * подклассов. Пикер значений не переписывает, поэтому старые листы читаются как
+ * прежде.
+ */
+export interface SheetChoiceOption {
+  value: string;
+
+  label: string;
+
+  /** Подстрочник: английское название, школа, категория. */
+  sublabel?: string;
+
+  /** Короткие пометки строки: круг, источник, «повторно». */
+  badges?: string[];
+
+  /** Пометка о том, что выбор у персонажа уже есть («владеет»). */
+  hint?: string;
+
+  /** Заголовок группы списка: «6 круг», категория черты. Пусто — без групп. */
+  group?: string;
+
+  /** Вариант виден, но взять его нельзя: не хватает уровня или предела. */
+  disabled?: boolean;
+
+  detail?: SheetChoiceOptionDetail;
+}
+
+/**
+ * Готовность пула вариантов. Пул заклинаний собирается поиском по каталогу, и
+ * пока он в пути, пикер не должен ни считать выбор выполненным, ни обещать
+ * «Выберите 0».
+ */
+export type SheetChoicePoolStatus = 'ready' | 'loading' | 'error';
+
+/**
+ * Откуда выбор: умение, его источник и уровень. Из этого складывается
+ * подзаголовок окна выбора — игрок видит, какое умение и на каком уровне
+ * спрашивает.
+ */
+export interface SheetChoiceOrigin {
+  featureName: string;
+
+  /** Подпись источника умения: «Класс: Колдун», «Подкласс: Исчадие». */
+  originLabel: string;
+
+  /** Уровень, на котором спрашивают; null — уровень не при чём (черта, вид). */
+  level: number | null;
+}
+
+/**
+ * Выбор записи, готовый к показу единым пикером: варианты, сколько выбрать,
+ * подписи поля и окна. Собирается одной функцией для всех мастеров листа.
+ */
+export interface SheetChoiceControl {
+  choice: ClassChoice;
+
+  options: SheetChoiceOption[];
+
+  /** Сколько нужно выбрать с учётом длины пула; 0 — без предела. */
+  requiredCount: number;
+
+  status: SheetChoicePoolStatus;
+
+  /** Заголовок поля — подпись выбора из записи либо подпись по виду. */
+  title: string;
+
+  /** Пояснение, что именно и почему выбирают: «Умение даёт выбрать…». */
+  explanation: string;
+
+  /** Заголовок окна выбора. */
+  modalTitle: string;
+
+  /** Подзаголовок окна: откуда выбор и сколько выбрать. */
+  modalSubtitle: string;
 }
 
 /** Строка умения класса в карточке визарда. */
@@ -2814,8 +2989,35 @@ export interface LevelUpWizardStep {
   /** Общий уровень персонажа после этого уровня. */
   level: number;
 
-  /** Подпись шага в степпере. */
+  /** Подпись шага в рельсе шагов. */
   title: string;
+
+  /** Что внутри шага: «хиты · Таинственный арканум». */
+  subtitle: string;
+}
+
+/** Состояние шага в рельсе мастера. */
+export type LevelUpRailItemState = 'done' | 'current' | 'upcoming';
+
+/** Пункт рельсы шагов мастера повышения уровня. */
+export interface LevelUpRailItem {
+  /** Номер шага в окне: 0 — уровень и опыт, дальше — шаги мастера. */
+  value: number;
+
+  title: string;
+
+  subtitle: string;
+
+  /** Сколько выборов на шаге ещё не сделано; 0 — шаг закрыт. */
+  pending: number;
+
+  state: LevelUpRailItemState;
+
+  /** Шаг вложен в предыдущий: повышение характеристик своего уровня. */
+  nested: boolean;
+
+  /** На шаг можно перейти прямо из рельсы. */
+  reachable: boolean;
 }
 
 /** Повышение уровня в одном классе: с какого уровня на какой. */

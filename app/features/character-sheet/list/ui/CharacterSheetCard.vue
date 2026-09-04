@@ -3,6 +3,7 @@
 
   import type { Character } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
   import { ConfirmDialog } from '~initiative/ui-kit';
 
   import { SheetSettingsModal, SheetShareModal } from '../../body/ui';
@@ -266,7 +267,7 @@
       v-model:open="isDeleteOpen"
       title="Удалить лист персонажа?"
       :description="`Лист «${character.name}» переедет в историю — его можно будет восстановить.`"
-      confirm-label="Удалить"
+      :confirm-label="ACTION_LABELS.remove"
       confirm-color="error"
       confirm-icon="tabler:trash"
       @confirm="confirmRemove"

@@ -204,7 +204,9 @@ const spellGrantSchema = z.object({
 
 const spellListGroupSchema = z.object({
   requiredLevel: z.number().optional(),
-  count: z.string().optional(),
+  // Прежнее поле «сколько берут» читается и молча отбрасывается: расширение
+  // списка не спрашивает количество, а «выбрать N из перечисленных» стало
+  // режимом выбора заклинаний
   spells: z.array(entityRefSchema).optional(),
 });
 
@@ -267,13 +269,12 @@ function toSpellListGroups(
   if (parsed?.groups?.length) {
     return parsed.groups.map((group) => ({
       requiredLevel: group.requiredLevel,
-      count: group.count ?? '',
       spells: group.spells ?? [],
     }));
   }
 
   if (parsed?.spells?.length) {
-    return [{ requiredLevel: undefined, count: '', spells: parsed.spells }];
+    return [{ requiredLevel: undefined, spells: parsed.spells }];
   }
 
   return [];
