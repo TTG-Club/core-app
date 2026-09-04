@@ -28,7 +28,8 @@
     EMPTY_DAMAGE_ROLL_SOURCE,
     findCharacterSpell,
     getAbilityCheckValue,
-    getAvailableInnateSpells,
+    getClassGrantedSpells,
+    getInnateSpells,
     getSkillKeyByName,
     getWeaponAttackBonus,
     getWeaponAttackRollMode,
@@ -817,7 +818,13 @@
   }
 
   const availableInnateSpells = computed(() =>
-    getAvailableInnateSpells(character.value),
+    getInnateSpells(character.value),
+  );
+
+  // Заклинания классовых умений идут своим списком: во вкладке они встают в
+  // круги книги, а не в группу врождённых
+  const classGrantedSpells = computed(() =>
+    getClassGrantedSpells(character.value),
   );
 
   function handleClassEdit() {
@@ -1304,6 +1311,7 @@
           :features="character.features"
           :spells="character.spells"
           :innate-spells="availableInnateSpells"
+          :class-spells="classGrantedSpells"
           :spellcasting="spellcastingBreakdown"
           :spell-slots="spellSlotRows"
           :has-main-tab="!isWide"
