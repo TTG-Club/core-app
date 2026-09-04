@@ -324,6 +324,10 @@ const spellSchema = z.object({
   concentration: z.boolean().optional(),
   ritual: z.boolean().optional(),
   prepared: z.boolean().optional().catch(undefined),
+  // Держит ли выдавшая запись заклинание подготовленным: `false` — подготовку
+  // ставит игрок, и она занимает место среди подготовленных. Нет поля —
+  // запись легла на лист до появления флага, такая держит подготовленным
+  alwaysPrepared: z.boolean().optional().catch(undefined),
   // Уровень доступа выданного чертой заклинания; у записей до него поля нет —
   // такое заклинание доступно с момента взятия черты
   requiredLevel: z.coerce.number().optional().catch(undefined),

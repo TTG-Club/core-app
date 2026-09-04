@@ -348,6 +348,36 @@ const speciesInnateSpellSchema = z.object({
 });
 
 /**
+ * Выданное заклинание записью листа: чертой, умением класса, его вариантом либо
+ * самим классом — форма у всех одна.
+ *
+ * Подготовка задаётся у группы выдачи, а нет её у группы — у записи целиком:
+ * запись либо держит заклинание готовым («вы всегда можете накладывать его»),
+ * либо оставляет подготовку игроку. Во втором случае заклинание приходит
+ * неподготовленным и занимает место среди подготовленных — так «весь список
+ * класса» друида готовится наравне с книгой.
+ *
+ * @param entry заклинание группы выдачи из детали записи.
+ * @param featureAlwaysPrepared подготовка, заданная у записи целиком.
+ * @returns заклинание для записи листа.
+ */
+function toGrantedCharacterSpell(
+  entry: z.infer<typeof featGrantedSpellSchema>,
+  featureAlwaysPrepared: boolean,
+): CharacterSpell {
+  const alwaysPrepared = entry.alwaysPrepared ?? featureAlwaysPrepared;
+
+  return {
+    ...toCharacterSpell(entry.spell),
+    alwaysPrepared,
+    prepared: alwaysPrepared,
+    requiredLevel: entry.requiredLevel ?? undefined,
+    limitedBySlots: entry.limitedBySlots ?? undefined,
+    ...toGrantedSpellAbility(entry.spellcastingAbility),
+  };
+}
+
+/**
  * Выдаваемое чертой заклинание: запись справочника и уровень, с которого оно
  * доступно. Форма та же, что у врождённых заклинаний вида, но уровень здесь
  * необязателен — пустой читается как «с момента взятия черты», и так же
@@ -1510,13 +1540,7 @@ export function parseFeatDetail(input: unknown): FeatSummary | null {
     // Уровень доступа едет вместе с записью: заклинание с ним попадёт на лист
     // только когда персонаж дорастёт (см. `getAvailableInnateSpells`)
     spells: granted.length
-      ? granted.map((entry) => ({
-          ...toCharacterSpell(entry.spell),
-          prepared: entry.alwaysPrepared ?? prepared,
-          requiredLevel: entry.requiredLevel ?? undefined,
-          limitedBySlots: entry.limitedBySlots ?? undefined,
-          ...toGrantedSpellAbility(entry.spellcastingAbility),
-        }))
+      ? granted.map((entry) => toGrantedCharacterSpell(entry, prepared))
       : null,
     spellList,
     spellcastingAbility,
@@ -2744,16 +2768,12 @@ function toFeatureOptionGrants(
         // Вариант либо держит заклинание подготовленным, либо оставляет
         // подготовку игроку — как умение и как черта
         spells: spells.length
-          ? spells.map((entry) => ({
-              ...toCharacterSpell(entry.spell),
-              prepared:
-                entry.alwaysPrepared
-                ?? option.mechanics?.spells?.alwaysPrepared
-                ?? false,
-              requiredLevel: entry.requiredLevel ?? undefined,
-              limitedBySlots: entry.limitedBySlots ?? undefined,
-              ...toGrantedSpellAbility(entry.spellcastingAbility),
-            }))
+          ? spells.map((entry) =>
+              toGrantedCharacterSpell(
+                entry,
+                option.mechanics?.spells?.alwaysPrepared ?? false,
+              ),
+            )
           : null,
         spellcastingAbility: parseApiAbilityKey(
           option.mechanics?.spells?.spellcastingAbility ?? '',
@@ -2937,16 +2957,12 @@ function toClassSummary(
       // Умение либо держит заклинание подготовленным, либо оставляет подготовку
       // игроку — как черта
       spells: (feature.grantedSpells ?? []).length
-        ? (feature.grantedSpells ?? []).map((entry) => ({
-            ...toCharacterSpell(entry.spell),
-            prepared:
-              entry.alwaysPrepared
-              ?? feature.mechanics?.spells?.alwaysPrepared
-              ?? false,
-            requiredLevel: entry.requiredLevel ?? undefined,
-            limitedBySlots: entry.limitedBySlots ?? undefined,
-            ...toGrantedSpellAbility(entry.spellcastingAbility),
-          }))
+        ? (feature.grantedSpells ?? []).map((entry) =>
+            toGrantedCharacterSpell(
+              entry,
+              feature.mechanics?.spells?.alwaysPrepared ?? false,
+            ),
+          )
         : null,
       spellcastingAbility: parseApiAbilityKey(
         feature.mechanics?.spells?.spellcastingAbility ?? '',
@@ -2987,16 +3003,12 @@ function toClassSummary(
     ),
     // Заклинания класса — той же формой, что у умения: круг подставил core-api
     spells: classGrantedSpells.length
-      ? classGrantedSpells.map((entry) => ({
-          ...toCharacterSpell(entry.spell),
-          prepared:
-            entry.alwaysPrepared
-            ?? detail.mechanics?.spells?.alwaysPrepared
-            ?? false,
-          requiredLevel: entry.requiredLevel ?? undefined,
-          limitedBySlots: entry.limitedBySlots ?? undefined,
-          ...toGrantedSpellAbility(entry.spellcastingAbility),
-        }))
+      ? classGrantedSpells.map((entry) =>
+          toGrantedCharacterSpell(
+            entry,
+            detail.mechanics?.spells?.alwaysPrepared ?? false,
+          ),
+        )
       : null,
     spellcastingAbility: parseApiAbilityKey(
       detail.mechanics?.spells?.spellcastingAbility ?? '',
