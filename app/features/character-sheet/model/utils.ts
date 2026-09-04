@@ -6874,7 +6874,13 @@ export function matchesSpellFilter(
   spell: CharacterSpell,
   filter: SpellTabFilter,
 ): boolean {
-  if (filter.preparedOnly && !spell.prepared) {
+  // Заговор подготовки не требует и доступен всегда, поэтому из списка его не
+  // убирает и отбор «Подготовленные»
+  if (
+    filter.preparedOnly
+    && !spell.prepared
+    && getSpellPreparedKind(spell) !== 'cantrips'
+  ) {
     return false;
   }
 
@@ -7236,13 +7242,12 @@ export function isCustomSpell(spell: CharacterSpell): boolean {
 }
 
 /**
- * К какому счётчику подготовки относится заклинание: заговоры считаются
- * отдельно от заклинаний кругов — их число задаёт своя колонка таблицы класса.
- * Считается так и книга персонажа, и выдача, которую игрок готовит сам
- * (см. `takesPreparationSpace`).
+ * К какому счётчику относится заклинание: круги 1 и выше персонаж
+ * подготавливает, а заговоры знает — подготовка их не касается, и колонка
+ * «Заговоры» таблицы класса говорит, сколько заговоров он может знать.
  *
  * @param spell заклинание листа.
- * @returns вид подготовки заклинания.
+ * @returns вид счёта заклинания.
  */
 export function getSpellPreparedKind(spell: CharacterSpell): PreparedSpellKind {
   return spell.level === CANTRIP_SPELL_LEVEL ? 'cantrips' : 'spells';
@@ -8078,50 +8083,59 @@ function getPreparedSpellsAtLevel(
 }
 
 /**
- * Сколько заклинаний этого вида отмечено подготовленными.
+ * Сколько набрано по этому счётчику: у заклинаний кругов 1+ — отмечено
+ * подготовленными, у заговоров — известно персонажу.
  *
- * Считается книга персонажа и та выдача, которую игрок готовит сам («весь
- * список класса» друида): выдача с отметкой «Подготавливать не нужно» держит
- * заклинание готовым сама и места среди подготовленных не занимает. Выданное
- * заклинание, заведённое ещё и в книге, считается один раз — вкладка показывает
- * его одной строкой (см. `getClassGrantedSpells`).
+ * Подготовленными считаются книга персонажа и та выдача, которую игрок готовит
+ * сам («весь список класса» друида): выдача с отметкой «Подготавливать не
+ * нужно» держит заклинание готовым сама и места среди подготовленных не
+ * занимает. Заговоры подготовки не требуют вовсе — считается сам факт, что
+ * персонаж их знает, откуда бы заговор ни пришёл.
+ *
+ * Одно и то же заклинание считается один раз: выданное заклинание, заведённое
+ * ещё и в книге, вкладка показывает одной строкой (см. `getClassGrantedSpells`).
+ * Отбор по уровню и кругам делает сборка выдачи — заклинание, до которого
+ * персонаж ещё не дорос, на листе не стоит.
  *
  * @param character персонаж.
- * @param kind вид подготовки: заклинания книги либо заговоры.
- * @returns число отмеченных подготовленными.
+ * @param kind вид счёта: заклинания кругов 1+ либо заговоры.
+ * @returns набранное число.
  */
-function countPreparedSpells(
+function countSpellsOfKind(
   character: Character,
   kind: PreparedSpellKind,
 ): number {
   const bookUrls = new Set(character.spells.map((spell) => spell.url));
 
-  const bookCount = character.spells.filter(
-    (spell) => spell.prepared && getSpellPreparedKind(spell) === kind,
-  ).length;
+  const bookSpells = character.spells.filter(
+    (spell) => getSpellPreparedKind(spell) === kind,
+  );
 
-  // Отбор по уровню и кругам делает сборка выдачи: заклинание, до которого
-  // персонаж ещё не дорос, на листе не стоит и подготовку не занимает
-  const grantedCount = getAvailableInnateSpells(character).filter(
-    (spell) =>
-      takesPreparationSpace(spell)
-      && spell.prepared
-      && !bookUrls.has(spell.url)
-      && getSpellPreparedKind(spell) === kind,
-  ).length;
+  const grantedSpells = getAvailableInnateSpells(character).filter(
+    (spell) => !bookUrls.has(spell.url) && getSpellPreparedKind(spell) === kind,
+  );
 
-  return bookCount + grantedCount;
+  if (kind === 'cantrips') {
+    return bookSpells.length + grantedSpells.length;
+  }
+
+  return (
+    bookSpells.filter((spell) => spell.prepared).length
+    + grantedSpells.filter(
+      (spell) => takesPreparationSpace(spell) && spell.prepared,
+    ).length
+  );
 }
 
 /**
- * Разбор числа подготовленных заклинаний (или заговоров — у них свой счётчик и
- * своя колонка таблицы класса): сколько их даёт таблица класса на текущем
- * уровне, какой бонус к этому числу задан вручную и какое значение выходит
- * итогом. Своё число выключает подсчёт по классу целиком (бонус к нему не
- * прибавляется).
+ * Разбор числа подготовленных заклинаний (или известных заговоров — у них своя
+ * колонка таблицы класса и свой счётчик): сколько их даёт таблица класса на
+ * текущем уровне, какой бонус к этому числу задан вручную и какое значение
+ * выходит итогом. Своё число выключает подсчёт по классу целиком (бонус к нему
+ * не прибавляется).
  *
  * @param character персонаж.
- * @param kind вид подготовки: заклинания книги либо заговоры.
+ * @param kind вид счёта: заклинания кругов 1+ либо заговоры.
  * @returns разбор для блока вкладки и модалки настройки.
  */
 export function getPreparedSpellsBreakdown(
@@ -8167,7 +8181,7 @@ export function getPreparedSpellsBreakdown(
 
   return {
     value: customValue ?? autoValue,
-    count: countPreparedSpells(character, kind),
+    count: countSpellsOfKind(character, kind),
     classValue,
     custom: custom !== null,
     bonus,
@@ -8175,12 +8189,12 @@ export function getPreparedSpellsBreakdown(
 }
 
 /**
- * Значение блока подготовленных заклинаний: сколько отмечено из того, сколько
- * можно держать («4 / 17»). Предел неизвестен — вместо числа прочерк: пометить
- * при этом можно сколько угодно.
+ * Значение плитки: сколько набрано из того, сколько можно («4 / 17») —
+ * подготовлено заклинаний либо известно заговоров. Предел неизвестен — вместо
+ * числа прочерк: набрать при этом можно сколько угодно.
  *
- * @param prepared разбор числа подготовленных заклинаний.
- * @returns строка блока вкладки заклинаний.
+ * @param prepared разбор числа.
+ * @returns строка плитки вкладки заклинаний.
  */
 export function getPreparedSpellsValue(
   prepared: PreparedSpellsBreakdown,
@@ -8194,11 +8208,11 @@ export function getPreparedSpellsValue(
 }
 
 /**
- * Начало подсказки блока подготовленных: сколько отмечено и сколько держать
- * можно. Предел неизвестен — вместо числа прочерк.
+ * Начало подсказки плитки: сколько набрано и сколько можно. Предел неизвестен —
+ * вместо числа прочерк.
  *
- * @param prepared разбор числа подготовленных.
- * @param kind вид подготовки: заклинания книги либо заговоры.
+ * @param prepared разбор числа.
+ * @param kind вид счёта: заклинания кругов 1+ либо заговоры.
  * @returns строка вида «Подготовлено заклинаний: 4 из 17».
  */
 export function getPreparedSpellsCountHint(
@@ -8214,11 +8228,11 @@ export function getPreparedSpellsCountHint(
 }
 
 /**
- * Подсказка плитки подготовки: сколько отмечено и откуда взялось число — из
- * таблицы класса (с бонусом, если он задан) либо указано вручную.
+ * Подсказка плитки: сколько набрано и откуда взялось число — из таблицы класса
+ * (с бонусом, если он задан) либо указано вручную.
  *
- * @param prepared разбор числа подготовленных.
- * @param kind вид подготовки: заклинания книги либо заговоры.
+ * @param prepared разбор числа.
+ * @param kind вид счёта: заклинания кругов 1+ либо заговоры.
  * @returns текст подсказки плитки шапки вкладки.
  */
 export function getPreparedSpellsHint(
@@ -8247,17 +8261,14 @@ export function getPreparedSpellsHint(
 }
 
 /**
- * Описание предупреждения о достигнутом пределе подготовленных.
+ * Описание предупреждения о достигнутом пределе подготовленных. Предел есть
+ * только у заклинаний кругов 1+: заговоры подготовки не требуют.
  *
  * @param limit сколько можно держать подготовленными.
- * @param kind вид подготовки: заклинания книги либо заговоры.
  * @returns текст тоста.
  */
-export function getPreparedSpellsLimitDescription(
-  limit: number,
-  kind: PreparedSpellKind,
-): string {
-  const { statFull } = PREPARED_KIND_LABELS[kind];
+export function getPreparedSpellsLimitDescription(limit: number): string {
+  const { statFull } = PREPARED_KIND_LABELS.spells;
 
   return `Подготовлено ${limit} из ${limit} — снимите подготовку с другой записи или измените число в блоке «${statFull}».`;
 }
@@ -11015,8 +11026,9 @@ export function getSpellChoicesKey(choices: ClassChoice[]): string {
  * Заклинание кладётся на саму запись умения, а не в общий список листа:
  * дополнительный заговор «Мага» персонаж знает, пока у него есть первобытный
  * порядок друида, — снятие класса забирает заговор вместе с умением, как и
- * выданное умением заклинание. Места среди подготовленных такой заговор не
- * занимает: лист ведёт его наравне с врождённым заклинанием вида.
+ * выданное умением заклинание. Выбранное заклинание персонаж знает, но готовит
+ * сам: пометку ставит игрок, и она занимает место среди подготовленных
+ * (см. `takesPreparationSpace`).
  *
  * @param features записи умений листа.
  * @param spellsByFeatureId выбранные заклинания по идентификатору умения.

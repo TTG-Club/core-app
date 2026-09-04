@@ -138,9 +138,9 @@ import {
   mergeCharacterFeatures,
   mergeClassResources,
   normalizeResourceRecoveryRule,
-  PREPARED_KIND_LABELS,
   PREPARED_SPELLS_BONUS_MAX,
   PREPARED_SPELLS_BONUS_MIN,
+  PREPARED_SPELLS_LIMIT_TOAST_TITLE,
   PREPARED_SPELLS_MAX,
   PREPARED_SPELLS_MIN,
   removeClassFeatures,
@@ -2505,12 +2505,12 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Установка настройки числа подготовленных заклинаний либо заговоров (у них
+   * Установка числа подготовленных заклинаний либо известных заговоров (у них
    * свой счётчик): своё число выключает подсчёт по таблице класса, бонус
    * прибавляется к числу класса.
    *
-   * @param prepared новая настройка подготовленных.
-   * @param kind вид подготовки: заклинания книги либо заговоры.
+   * @param prepared новая настройка счётчика.
+   * @param kind вид счёта: заклинания кругов 1+ либо заговоры.
    */
   function setPreparedSpells(
     prepared: CharacterPreparedSpells,
@@ -2553,18 +2553,18 @@ export function useCharacterSheet() {
    * почему этого не произошло. Предел неизвестен (класс его не даёт, своё число
    * не задано) — пометок сколько угодно.
    *
-   * Заговоры смотрят на свой предел, заклинания кругов — на свой.
+   * Заговор подготовки не требует: предел его не касается, а плитка «Заговоры»
+   * считает известные.
    *
    * @param spell заклинание, которое помечают подготовленным.
    * @returns true — пометку можно ставить.
    */
   function ensurePreparationSpace(spell: CharacterSpell): boolean {
-    const kind = getSpellPreparedKind(spell);
+    if (getSpellPreparedKind(spell) === 'cantrips') {
+      return true;
+    }
 
-    const { value: limit, count } =
-      kind === 'cantrips'
-        ? spellcastingBreakdown.value.preparedCantrips
-        : spellcastingBreakdown.value.prepared;
+    const { value: limit, count } = spellcastingBreakdown.value.prepared;
 
     if (limit === null || count < limit) {
       return true;
@@ -2573,8 +2573,8 @@ export function useCharacterSheet() {
     toast.add({
       color: 'warning',
       icon: 'tabler:wand',
-      title: PREPARED_KIND_LABELS[kind].limitToastTitle,
-      description: getPreparedSpellsLimitDescription(limit, kind),
+      title: PREPARED_SPELLS_LIMIT_TOAST_TITLE,
+      description: getPreparedSpellsLimitDescription(limit),
     });
 
     return false;

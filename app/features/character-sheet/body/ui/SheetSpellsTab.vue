@@ -63,6 +63,12 @@
     /** Заклинание подготовлено: квадрат горит тёплым. */
     isPrepared: boolean;
 
+    /**
+     * Квадрат переключает подготовку: у заговоров он остаётся меткой, а не
+     * кнопкой — подготовки они не требуют.
+     */
+    interactive: boolean;
+
     /** Классы оформления квадрата. */
     iconClass: string;
 
@@ -108,8 +114,9 @@
 
     /**
      * Заклинания, выданные умениями класса: в списке они стоят в своём круге
-     * наравне с книгой, а живут по правилам врождённых — всегда подготовлены и
-     * места среди подготовленных не занимают.
+     * наравне с книгой. Выдача с отметкой «Подготавливать не нужно» приходит
+     * подготовленной и места среди подготовленных не занимает, остальную
+     * готовит игрок (см. `takesPreparationSpace`).
      */
     classSpells: CharacterSpell[];
 
@@ -212,9 +219,9 @@
   }
 
   /**
-   * Плитки подготовки в шапке вкладки: заклинания книги и заговоры считаются
-   * порознь — у каждого своя колонка таблицы класса и свой предел, поэтому и
-   * плитки идут отдельные.
+   * Плитки счёта в шапке вкладки: заклинания кругов 1+ персонаж
+   * подготавливает, а заговоры знает — у каждого своя колонка таблицы класса,
+   * поэтому и плитки идут отдельные.
    */
   const preparedStats = computed(() =>
     PREPARED_KINDS.map((kind) => {
@@ -240,16 +247,13 @@
   );
 
   /**
-   * Предел выбран целиком: пометить ещё одну запись этого вида уже нельзя.
+   * Предел выбран целиком: подготовить ещё одно заклинание уже нельзя. Заговоры
+   * предела подготовки не знают — они всегда доступны.
    *
-   * @param kind вид подготовки: заклинания книги либо заговоры.
    * @returns true — предел достигнут.
    */
-  function isPreparedLimitReached(kind: PreparedSpellKind): boolean {
-    const { value, count } =
-      kind === 'cantrips'
-        ? props.spellcasting.preparedCantrips
-        : props.spellcasting.prepared;
+  function isPreparedLimitReached(): boolean {
+    const { value, count } = props.spellcasting.prepared;
 
     return value !== null && count >= value;
   }
@@ -505,6 +509,18 @@
     spell: CharacterSpell,
     granted: boolean,
   ): PreparedIconState {
+    // Заговор всегда доступен: подготовки он не требует ни по одному классу, а
+    // колонка «Заговоры» таблицы класса говорит, сколько их можно знать
+    if (getSpellPreparedKind(spell) === 'cantrips') {
+      return {
+        isPrepared: true,
+        interactive: false,
+        iconClass: PREPARED_ICON_CLASS,
+        tooltip: PREPARED_SPELL_TOGGLE_LABELS.cantrip,
+        ariaLabel: `${PREPARED_SPELL_TOGGLE_LABELS.cantrip}: ${spell.name}`,
+      };
+    }
+
     const isPrepared = Boolean(spell.prepared);
 
     const label = isPrepared
@@ -521,6 +537,7 @@
     if (granted && !takesPreparationSpace(spell)) {
       return {
         isPrepared,
+        interactive: true,
         iconClass,
         tooltip: `${label}. ${PREPARED_SPELL_TOGGLE_LABELS.innate}`,
         ariaLabel: `${label}: ${spell.name}`,
@@ -529,12 +546,12 @@
 
     return {
       isPrepared,
+      interactive: true,
       iconClass,
       // Предел выбран целиком — значок остаётся нажимаемым: подсказка и
       // предупреждение объясняют отказ понятнее, чем погашенная кнопка.
-      // Заговоры смотрят на свой предел, заклинания книги — на свой.
       tooltip:
-        !isPrepared && isPreparedLimitReached(getSpellPreparedKind(spell))
+        !isPrepared && isPreparedLimitReached()
           ? `${label}. ${PREPARED_SPELL_TOGGLE_LABELS.limit}`
           : label,
       ariaLabel: `${label}: ${spell.name}`,
@@ -989,9 +1006,11 @@
           <div class="relative flex items-center gap-3 p-3">
             <!-- Значок заклинания — переключатель подготовки: нажатие метит
               заклинание подготовленным, повторное — снимает пометку. Горит при
-              этом только сам квадрат, строка остаётся обычной -->
+              этом только сам квадрат, строка остаётся обычной. У заговора
+              квадрат ничего не переключает: подготовки заговор не требует -->
             <UTooltip :text="spell.preparedIcon.tooltip">
               <button
+                v-if="spell.preparedIcon.interactive"
                 type="button"
                 :class="[
                   SPELL_ICON_CLASS,
@@ -1007,6 +1026,17 @@
                   class="size-5"
                 />
               </button>
+
+              <span
+                v-else
+                :class="[SPELL_ICON_CLASS, spell.preparedIcon.iconClass]"
+                :aria-label="spell.preparedIcon.ariaLabel"
+              >
+                <UIcon
+                  name="tabler:wand"
+                  class="size-5"
+                />
+              </span>
             </UTooltip>
 
             <button
