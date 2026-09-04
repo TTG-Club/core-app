@@ -20,6 +20,7 @@
 
   import {
     SHEET_DEFAULT_TAB,
+    SHEET_INVENTORY_TABS_LABELS,
     SHEET_MAIN_TAB,
     SHEET_TABS,
     SHEET_TABS_AXIS_LOCK_THRESHOLD,
@@ -882,7 +883,7 @@
           size="xs"
           square
           class="absolute top-1/2 left-0 z-10 -translate-y-1/2"
-          aria-label="Прокрутить вкладки влево"
+          :aria-label="SHEET_INVENTORY_TABS_LABELS.scrollLeft"
           @click.left.exact.prevent="handleScrollLeft"
         />
       </Transition>
@@ -896,7 +897,7 @@
           size="xs"
           square
           class="absolute top-1/2 right-0 z-10 -translate-y-1/2"
-          aria-label="Прокрутить вкладки вправо"
+          :aria-label="SHEET_INVENTORY_TABS_LABELS.scrollRight"
           @click.left.exact.prevent="handleScrollRight"
         />
       </Transition>

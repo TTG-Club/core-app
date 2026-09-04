@@ -148,7 +148,7 @@
             :key="tile.key"
             type="button"
             class="flex cursor-pointer flex-col gap-0.5 rounded-lg border border-default/50 bg-elevated/20 px-3 py-2 text-left transition-colors hover:border-primary/60 hover:bg-elevated/40"
-            :aria-label="`Изменить: ${tile.label}`"
+            :aria-label="`${SHEET_PERSONALITY_LABELS.editAppearanceTile}: ${tile.label}`"
             @click.left.exact.prevent="handleFieldEdit(tile.key)"
           >
             <span

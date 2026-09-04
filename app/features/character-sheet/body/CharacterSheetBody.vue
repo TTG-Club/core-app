@@ -36,6 +36,8 @@
     getWeaponDamageSource,
     isProficientWeapon,
     LANGUAGE_PROFICIENCY_GROUPS,
+    SHEET_BODY_LABELS,
+    SHEET_REMOVE_CONFIRM_TITLE,
   } from '../model';
   import CharacterSheetSkeleton from './CharacterSheetSkeleton.vue';
   import {
@@ -1187,16 +1189,16 @@
           <div class="flex flex-col gap-4 max-sm:contents">
             <div class="grid grid-cols-2 gap-4 max-sm:contents">
               <SheetStatTile
-                label="Мастерство"
+                :label="SHEET_BODY_LABELS.proficiencyBonus"
                 :value="formattedProficiencyBonus"
               />
 
               <SheetStatTile
-                label="Класс доспеха"
-                short-label="КД"
+                :label="SHEET_BODY_LABELS.armorClass"
+                :short-label="SHEET_BODY_LABELS.armorClassShort"
                 :value="armorClassValue"
                 interactive
-                press-label="Настроить класс доспеха"
+                :press-label="SHEET_BODY_LABELS.armorClassPress"
                 @press="handleArmorClassEdit"
               />
             </div>
@@ -1251,7 +1253,7 @@
               />
 
               <SheetStatTile
-                label="Инициатива"
+                :label="SHEET_BODY_LABELS.initiative"
                 :value="formattedInitiative"
                 interactive
                 @press="handleInitiativeRoll"
@@ -1370,7 +1372,7 @@
 
       <ConfirmDialog
         v-model:open="isRemoveOpen"
-        title="Удалить лист персонажа?"
+        :title="SHEET_REMOVE_CONFIRM_TITLE"
         :description="removeDescription"
         :confirm-label="ACTION_LABELS.remove"
         confirm-color="error"

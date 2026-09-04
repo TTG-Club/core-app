@@ -84,6 +84,7 @@
     getMulticlassRequirementWarning,
     getSelectedCasterType,
     getSpellChoicesKey,
+    getSubclassAvailableHint,
     getTakenOptionValues,
     getToolNames,
     getUnmetMulticlassRequirements,
@@ -100,6 +101,7 @@
     parseClassOptions,
     parseFeatSelectOptions,
     resolveChoiceOptions,
+    SHEET_CLASS_WIZARD_LIST_LABELS,
     SHEET_SEARCH_LABELS,
     SHEET_WIZARD_FEATURE_CARD_CLASS,
     SHEET_WIZARD_SECTION_CLASS,
@@ -1921,7 +1923,7 @@
                   size="xs"
                   square
                   class="relative z-10 shrink-0"
-                  :aria-label="`Показать подклассы: ${row.name}`"
+                  :aria-label="`${SHEET_CLASS_WIZARD_LIST_LABELS.expandAria}: ${row.name}`"
                   :ui="{
                     leadingIcon: `transition-transform ${row.chevronClass}`,
                   }"
@@ -1936,7 +1938,7 @@
                 <button
                   type="button"
                   class="flex min-w-0 grow cursor-pointer items-center gap-2 py-2 pr-1 text-left"
-                  :aria-label="`Выбрать класс: ${row.name}`"
+                  :aria-label="`${SHEET_CLASS_WIZARD_LIST_LABELS.pickAria}: ${row.name}`"
                   @click.left.exact.prevent="handleClassSelect(row.url)"
                 >
                   <span
@@ -1956,7 +1958,7 @@
                   {{ row.sourceLabel }}
                 </UBadge>
 
-                <UTooltip text="Открыть описание класса">
+                <UTooltip :text="SHEET_CLASS_WIZARD_LIST_LABELS.preview">
                   <UButton
                     icon="tabler:layout-sidebar-right-expand"
                     color="neutral"
@@ -1964,7 +1966,7 @@
                     size="xs"
                     square
                     class="relative z-10 shrink-0"
-                    :aria-label="`Описание класса: ${row.name}`"
+                    :aria-label="`${SHEET_CLASS_WIZARD_LIST_LABELS.previewAria}: ${row.name}`"
                     @click.left.exact.prevent="handlePreview(row.url)"
                   />
                 </UTooltip>
@@ -1989,7 +1991,7 @@
                     class="size-3.5 animate-spin"
                   />
 
-                  Загрузка подклассов…
+                  {{ CLASS_WIZARD_LABELS.subclassesLoading }}
                 </span>
 
                 <div
@@ -2002,7 +2004,7 @@
                     v-if="subclass.isSelectable"
                     type="button"
                     class="flex min-w-0 grow cursor-pointer items-center px-3 py-1.5 text-left after:absolute after:inset-0 after:cursor-pointer"
-                    :aria-label="`Выбрать подкласс: ${subclass.name}`"
+                    :aria-label="`${SHEET_CLASS_WIZARD_LIST_LABELS.subclassPickAria}: ${subclass.name}`"
                     @click.left.exact.prevent="
                       handleSubclassClick(row.url, subclass.url)
                     "
@@ -2031,7 +2033,9 @@
                     {{ subclass.sourceLabel }}
                   </UBadge>
 
-                  <UTooltip text="Открыть описание подкласса">
+                  <UTooltip
+                    :text="SHEET_CLASS_WIZARD_LIST_LABELS.subclassPreview"
+                  >
                     <UButton
                       icon="tabler:layout-sidebar-right-expand"
                       color="neutral"
@@ -2039,7 +2043,7 @@
                       size="xs"
                       square
                       class="relative z-10 shrink-0"
-                      :aria-label="`Описание подкласса: ${subclass.name}`"
+                      :aria-label="`${SHEET_CLASS_WIZARD_LIST_LABELS.subclassPreviewAria}: ${subclass.name}`"
                       @click.left.exact.prevent="handlePreview(subclass.url)"
                     />
                   </UTooltip>
@@ -2055,7 +2059,7 @@
                   v-if="!subclassAvailable && row.subclasses.length"
                   class="px-3 py-1 text-xs text-dimmed italic"
                 >
-                  Подкласс доступен с {{ SUBCLASS_SELECTION_MIN_LEVEL }} уровня
+                  {{ getSubclassAvailableHint(SUBCLASS_SELECTION_MIN_LEVEL) }}
                 </span>
               </div>
             </template>
@@ -2064,7 +2068,7 @@
               v-if="!displayRows.length"
               class="px-3 py-6 text-center text-sm text-dimmed"
             >
-              Ничего не найдено
+              {{ CLASS_WIZARD_LABELS.empty }}
             </span>
           </div>
 

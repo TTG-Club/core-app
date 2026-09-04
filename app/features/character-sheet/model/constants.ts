@@ -3030,6 +3030,9 @@ export const CLASS_WIZARD_LABELS = {
 
   /** Подсказка о том, что карточка умения разворачивается нажатием. */
   featureToggleHint: 'Умения свёрнуты — нажмите на умение, чтобы раскрыть его.',
+
+  subclassesLoading: 'Загрузка подклассов…',
+  empty: 'Ничего не найдено',
 } as const;
 
 /** Сокращение уровня в подписях («3 ур.»). */
@@ -3165,6 +3168,25 @@ export const CLASS_WIZARD_TAB_LABELS: Record<ClassWizardTab, string> = {
 
 /** Подписи мастера предыстории, не привязанные к разделам. */
 export const BACKGROUND_WIZARD_LABELS = {
+  title: 'Выбор предыстории',
+  pickAria: 'Выбрать предысторию',
+  preview: 'Открыть описание предыстории',
+  previewAria: 'Описание предыстории',
+  empty: 'Ничего не найдено',
+  listHint:
+    'При применении навыки, инструмент, черта происхождения, прибавки к '
+    + 'характеристикам и выбранный вариант стартового снаряжения сразу заполнят '
+    + 'лист.',
+  resultPrefix: 'Предыстория:',
+  abilitiesPrefix: 'Предыстория повышает:',
+  skills: 'Навыки (будут добавлены)',
+  skillsUnknown: 'не распознаны',
+  tool: 'Инструмент',
+  toolEmpty: 'нет',
+  featPreview: 'Открыть описание черты',
+  featPreviewAria: 'Описание черты',
+  featNoChoices: 'Черта ни о чём не спрашивает — она добавится как есть.',
+  equipmentReference: 'Снаряжение (справка)',
   featChoice: 'Черта на выбор',
   featChoicePlaceholder: 'Выбери черту',
 
@@ -3225,6 +3247,24 @@ export const CUSTOM_SPECIES_DEFAULT_VISION = 60;
 
 /** Подписи мастера вида. */
 export const SPECIES_WIZARD_LABELS = {
+  title: 'Выбор вида',
+  pickAria: 'Выбрать вид',
+  preview: 'Открыть описание вида',
+  previewAria: 'Описание вида',
+  lineagesLoading: 'Загрузка подвидов…',
+  lineagePickAria: 'Выбрать подвид',
+  lineagePreview: 'Открыть описание подвида',
+  lineagePreviewAria: 'Описание подвида',
+  empty: 'Ничего не найдено',
+  listHint:
+    'Вид с подвидами разворачивается стрелкой — выберите конкретный подвид. '
+    + 'При применении скорость, зрение, размер и особенности сразу заполнят '
+    + 'лист.',
+  resultPrefix: 'Вид:',
+  size: 'Размер',
+  features: 'Особенности',
+  featuresEmpty: 'У вида нет описанных особенностей',
+
   /** Подсказка пикера: сколько значений он ждёт («Выберите 2»). */
   chooseLabel: 'Выберите',
 
@@ -5031,7 +5071,10 @@ export const SHEET_NOTE_LABELS: Record<
   | 'untitled'
   | 'legacyTitle'
   | 'addAction'
-  | 'saveAction',
+  | 'saveAction'
+  | 'openAria'
+  | 'editAria'
+  | 'removeAria',
   string
 > = {
   add: 'Добавить заметку',
@@ -5045,6 +5088,9 @@ export const SHEET_NOTE_LABELS: Record<
   contentPlaceholder: 'Заметки о персонаже, зацепки, цели, союзники…',
   untitled: 'Без названия',
   legacyTitle: 'Заметки',
+  openAria: 'Заметка',
+  editAria: 'Редактировать заметку',
+  removeAria: 'Удалить заметку',
 };
 
 /** Свободные поля вкладки «Личность» — порядок плиток и полей формы. */
@@ -5072,6 +5118,7 @@ export const SHEET_PERSONALITY_LABELS = {
   alignmentField: 'Мировоззрение',
   alignmentUnknown: 'Записано на листе (в справочнике такого нет):',
   editAppearance: 'Изменить приметы',
+  editAppearanceTile: 'Изменить',
   appearanceModalTitle: 'Приметы персонажа',
   backgroundTitle: 'Предыстория',
   backgroundHint: 'Подставляется с листа: меняется вместе с выбором в шапке',
@@ -5135,6 +5182,85 @@ export const SHEET_FEAT_MODAL_LABELS = {
     'Выбирать пока не из чего: компетентность дают в навыке, которым персонаж уже владеет. Выберите класс или предысторию, затем добавьте черту.',
   descriptionTooltip: 'Открыть описание черты',
   abilityVariantLabel: 'Как повысить характеристики',
+  title: 'Добавление черт',
+  listError: 'Не удалось загрузить черты',
+  pickAria: 'Выбрать черту',
+  descriptionAria: 'Описание черты',
+  repeatable: 'Можно взять несколько раз',
+  alreadyAdded: 'Уже добавлена',
+  empty: 'Ничего не найдено',
+} as const;
+
+/** Общие подписи окон добавления из каталога: отбор и пустой список. */
+export const SHEET_CATALOG_MODAL_LABELS = {
+  filter: 'Фильтр',
+  allFilters: 'Все фильтры',
+  resetFilters: 'Сбросить фильтры',
+  empty: 'Ничего не найдено',
+  alreadyAdded: 'Уже добавлен',
+} as const;
+
+/** Подписи окна добавления предметов. */
+export const SHEET_ITEM_ADD_LABELS = {
+  title: 'Добавление предметов',
+  filtersTitle: 'Фильтры предметов',
+  listError: 'Не удалось загрузить предметы',
+  pickAria: 'Выбрать предмет',
+  preview: 'Открыть описание предмета',
+  previewAria: 'Описание предмета',
+} as const;
+
+/** Подписи окна добавления магических предметов. */
+export const SHEET_MAGIC_ITEM_ADD_MODAL_LABELS = {
+  title: 'Добавление магических предметов',
+  filtersTitle: 'Фильтры магических предметов',
+  listError: 'Не удалось загрузить магические предметы',
+  pickAria: 'Выбрать магический предмет',
+  preview: 'Открыть описание магического предмета',
+  previewAria: 'Описание магического предмета',
+} as const;
+
+/** Подписи окна мастера класса: список классов и подклассов. */
+export const SHEET_CLASS_WIZARD_LIST_LABELS = {
+  expandAria: 'Показать подклассы',
+  pickAria: 'Выбрать класс',
+  preview: 'Открыть описание класса',
+  previewAria: 'Описание класса',
+  subclassPickAria: 'Выбрать подкласс',
+  subclassPreview: 'Открыть описание подкласса',
+  subclassPreviewAria: 'Описание подкласса',
+} as const;
+
+/** Подписи ленты вкладок инвентаря. */
+export const SHEET_INVENTORY_TABS_LABELS = {
+  scrollLeft: 'Прокрутить вкладки влево',
+  scrollRight: 'Прокрутить вкладки вправо',
+} as const;
+
+/** Подписи строки заклинания на вкладке заклинаний. */
+export const SHEET_SPELL_ROW_LABELS = {
+  custom: 'Своё',
+  concentration: 'Концентрация',
+  concentrationShort: 'К',
+  ritual: 'Ритуал',
+  ritualShort: 'Р',
+  menuAria: 'Действия с заклинанием',
+  emptyDescription: 'Описание не заполнено',
+} as const;
+
+/** Подписи окна очков здоровья и костей хитов. */
+export const SHEET_HEALTH_MODAL_LABELS = {
+  title: 'Очки здоровья и кости хитов',
+  current: 'Сейчас',
+  max: 'Всего',
+  temporary: 'Врем.',
+  quickTitle: 'Текущие',
+  quickStep: 'Изменить текущие хиты на',
+  classDiceTitle: 'Кости хитов (из классов)',
+  extraDiceTitle: 'Дополнительные кости хитов',
+  die: 'Кость',
+  removeDie: 'Удалить кость хитов',
+  diceEmpty: 'Нет костей хитов',
 } as const;
 
 /** Подписи окна «от какой характеристики считается заклинание». */
@@ -5195,14 +5321,25 @@ export const SHEET_CHOICE_PICKER_LABELS = {
 export const SHEET_SPELL_ADD_LABELS = {
   /** Группа заклинаний, доступных сверх списка класса: от умений, черт, вида. */
   expandedGroup: 'Доступны от умений и черт',
+
+  title: 'Добавление заклинаний',
+  filtersTitle: 'Фильтры заклинаний',
+  listError: 'Не удалось загрузить заклинания',
+  level: 'Уровень',
+  levelChipAria: 'Уровень',
+  properties: 'Свойства',
+  characterClass: 'Класс',
+  pickAria: 'Выбрать заклинание',
+  preview: 'Открыть описание заклинания',
+  previewAria: 'Описание заклинания',
 } as const;
 
-/** Служебный круг группы «доступны от умений и черт»: у настоящих кругов ≥ 0. */
+/** Служебный уровень группы «доступны от умений и черт»: у настоящих уровней ≥ 0. */
 export const SHEET_SPELL_ADD_EXPANDED_GROUP_LEVEL = -1;
 
 /**
  * Пояснения к выбору по его виду: почему игрок здесь и сейчас что-то выбирает.
- * Подпись выбора из записи говорит «Выберите заклинание 6 круга», а не откуда
+ * Подпись выбора из записи говорит «Выберите заклинание 6 уровня», а не откуда
  * оно и что даёт — эту строку пикер показывает под заголовком.
  */
 export const SHEET_CHOICE_EXPLANATION_LABELS: Record<ClassChoiceKind, string> =
@@ -5227,7 +5364,7 @@ export const SHEET_CHOICE_EXPLANATION_LABELS: Record<ClassChoiceKind, string> =
   };
 
 /**
- * Части пояснения к выбору заклинания: «Умение даёт заклинание 6 круга из
+ * Части пояснения к выбору заклинания: «Умение даёт заклинание 6 уровня из
  * списка класса Колдун на выбор». Собирается из фильтра пула, потому что
  * подпись выбора в записи бывает и пустой.
  */
@@ -5236,7 +5373,7 @@ export const SHEET_CHOICE_SPELL_EXPLANATION = {
   cantrip: 'заговор',
   spell: 'заклинание',
   maxLevelPrefix: 'не выше',
-  levelSuffix: 'круга',
+  levelSuffix: 'уровня',
   classPrefix: 'из списка класса',
   listedSuffix: 'из перечисленных в записи',
   suffix: 'на выбор',
@@ -5326,8 +5463,260 @@ export const OPTION_CHOICE_REPEAT_PREFIX = '×';
  */
 export const FEATURE_OPTION_ID_SEGMENT = 'option';
 
-/** Размер выдачи пула заклинаний выбора: круг одного класса в неё умещается. */
+/** Размер выдачи пула заклинаний выбора: уровень одного класса в неё умещается. */
 export const CHOICE_SPELL_POOL_SIZE = 200;
 
 /** Подсказка пикера выбора: сколько значений нужно отметить. */
 export const CHOICE_SELECT_PLACEHOLDER = 'Выберите';
+
+/** Подписи формы своего заклинания листа. */
+export const SHEET_CUSTOM_SPELL_LABELS = {
+  name: 'Название',
+  namePlaceholder: 'Название заклинания',
+  level: 'Уровень',
+  school: 'Школа магии',
+  schoolPlaceholder: 'Не выбрана',
+  concentration: 'Концентрация',
+  ritual: 'Ритуал',
+  description: 'Описание',
+  descriptionPlaceholder: 'Опиши заклинание',
+} as const;
+
+/** Подписи форм особенности листа: добавление и правка делят поля. */
+export const SHEET_FEATURE_FORM_LABELS = {
+  addTitle: 'Новая особенность',
+  editTitle: 'Редактирование особенности',
+  name: 'Название',
+  namePlaceholder: 'Название особенности',
+  origin: 'Источник',
+  choice: 'Выбор',
+  choicePlaceholder: 'Например: красный дракон',
+  description: 'Описание',
+  descriptionPlaceholder: 'Опиши особенность',
+} as const;
+
+/** Подписи модалки имени персонажа. */
+export const SHEET_NAME_MODAL_LABELS = {
+  title: 'Имя персонажа',
+  field: 'Имя',
+  placeholder: 'Введите имя персонажа',
+} as const;
+
+/** Подписи модалки размера персонажа. */
+export const SHEET_SIZE_MODAL_LABELS = {
+  title: 'Размер персонажа',
+  field: 'Размер',
+} as const;
+
+/** Заголовок модалки чувств персонажа. */
+export const SHEET_VISION_MODAL_TITLE = 'Зрение';
+
+/** Подпись плитки передвижения для скринридера. */
+export const SHEET_SPEED_TILE_ARIA_LABEL = 'Настроить передвижение';
+
+/** Подпись строки валюты для скринридера. */
+export const SHEET_CURRENCY_ROW_ARIA_LABEL = 'Редактировать валюту';
+
+/** Приставки подписей плитки характеристики для скринридера. */
+export const SHEET_ABILITY_TILE_ARIA_PREFIXES = {
+  check: 'Проверка',
+  decrease: 'Уменьшить значение',
+  increase: 'Увеличить значение',
+} as const;
+
+/** Подписи действий с изображением персонажа. */
+export const SHEET_AVATAR_LABELS = {
+  add: 'Добавить изображение',
+  addAria: 'Добавить изображение персонажа',
+  replace: 'Заменить изображение',
+  replaceAria: 'Заменить изображение персонажа',
+  remove: 'Удалить изображение',
+  removeAria: 'Удалить изображение персонажа',
+  revealAria: 'Показать действия с изображением персонажа',
+} as const;
+
+/** Подписи блока ресурсов класса для скринридера. */
+export const SHEET_CLASS_RESOURCES_PANEL_LABELS = {
+  settings: 'Настроить ресурсы класса',
+  spend: 'Потратить',
+  restore: 'Восстановить',
+} as const;
+
+/** Приставки подписей строки особенности для скринридера. */
+export const SHEET_FEATURE_ROW_ARIA_PREFIXES = {
+  edit: 'Редактировать особенность',
+  remove: 'Удалить особенность',
+} as const;
+
+/** Подписи блока владений: настройка группы и значок оружейного приёма. */
+export const SHEET_PROFICIENCIES_PANEL_LABELS = {
+  settings: 'Настроить',
+  mastery: 'Мастерство',
+} as const;
+
+/** Подписи блока спасбросков. */
+export const SHEET_SAVING_THROWS_PANEL_LABELS = {
+  title: 'Спасброски',
+  roll: 'Спасбросок',
+} as const;
+
+/** Подписи блока навыков. */
+export const SHEET_SKILLS_PANEL_LABELS = {
+  title: 'Навыки',
+  proficiency: 'Владение навыком',
+  roll: 'Проверка',
+} as const;
+
+/** Подписи блока здоровья. */
+export const SHEET_HEALTH_PANEL_LABELS = {
+  title: 'Здоровье',
+  settings: 'Настроить очки здоровья и кости хитов',
+  current: 'Сейчас',
+  max: 'Всего',
+  temporary: 'Врем.',
+  hitDice: 'Кости хитов',
+} as const;
+
+/** Подпись значка надетого предмета. */
+export const INVENTORY_EQUIPPED_BADGE_LABEL = 'Надет';
+
+/** Подпись значка своего предмета. */
+export const INVENTORY_CUSTOM_BADGE_LABEL = 'Свой';
+
+/** Значение строки предмета, у которого нет описания. */
+export const INVENTORY_EMPTY_DESCRIPTION_LABEL = 'Описание не заполнено';
+
+/** Приставки подписей строки предмета для скринридера. */
+export const INVENTORY_ROW_ARIA_PREFIXES = {
+  decrease: 'Уменьшить количество',
+  increase: 'Увеличить количество',
+  menu: 'Действия с предметом',
+} as const;
+
+/** Подпись скелетона листа для скринридера. */
+export const SHEET_SKELETON_LOADING_LABEL = 'Лист персонажа загружается';
+
+/** Подписи окна быстрой правки хитов. */
+export const SHEET_HEALTH_QUICK_LABELS = {
+  title: 'Хиты',
+  expression: 'Точное значение, + или −',
+  expressionPlaceholder: 'напр. -7, +3 или 20',
+  expressionAria: 'Новое значение хитов или сдвиг',
+  done: 'Готово',
+} as const;
+
+/** Подписи окна владения и мастерства оружием. */
+export const SHEET_WEAPON_PROFICIENCIES_LABELS = {
+  title: 'Владение и мастерство оружием',
+  proficiency: 'Владение',
+  mastery: 'Мастерство',
+} as const;
+
+/** Подписи окна броска урона. */
+export const SHEET_DAMAGE_MODAL_LABELS = {
+  formula: 'Формула',
+  dice: 'Кости урона',
+  removeDie: 'Убрать кость урона',
+  addDie: 'Добавить кость',
+  ability: 'Характеристика',
+  bonus: 'Доп. бонус',
+} as const;
+
+/** Подписи окна валюты. */
+export const SHEET_CURRENCY_MODAL_LABELS = {
+  title: 'Валюта',
+  customTitle: 'Свои валюты',
+  add: 'Добавить валюту',
+  name: 'Название',
+  namePlaceholder: 'Например, Драконьи чешуйки',
+  remove: 'Удалить валюту',
+  shortLabel: 'Сокр.',
+  shortLabelPlaceholder: 'ДЧ',
+  amount: 'Количество',
+} as const;
+
+/** Подписи полей окна ресурса класса. */
+export const SHEET_CLASS_RESOURCE_MODAL_LABELS = {
+  name: 'Название',
+  shortLabel: 'Кратко',
+  current: 'Сейчас',
+  max: 'Максимум',
+  recovery: 'Восстановление',
+  recoveryAmount: 'Сколько зарядов вернёт отдых',
+} as const;
+
+/** Подписи заглушек дровера листа. */
+export const SHEET_DRAWER_LABELS = {
+  notFoundTitle: 'Лист не найден',
+  errorTitle: 'Не удалось загрузить лист',
+} as const;
+
+/** Подписи списка листов персонажа. */
+export const SHEET_LIST_LABELS = {
+  ownTitle: 'Ваши персонажи',
+  loadErrorTitle: 'Не удалось загрузить листы персонажей',
+  refresh: 'Обновить',
+  historyTitle: 'История листов',
+  restore: 'Восстановить',
+  create: 'Создать лист',
+  createAria: 'Создать лист персонажа',
+} as const;
+
+/** Подписи карточки листа в списке — своей и сохранённой по ссылке. */
+export const SHEET_CARD_LABELS = {
+  hitPoints: 'Хиты',
+  hitPointsHint: 'Хиты: сейчас / всего',
+  level: 'Уровень',
+  menuAria: 'Действия с листом',
+  savedMenuAria: 'Действия с сохранённым листом',
+} as const;
+
+/** Заголовок подтверждения удаления листа персонажа. */
+export const SHEET_REMOVE_CONFIRM_TITLE = 'Удалить лист персонажа?';
+
+/** Подписи плиток листа персонажа. */
+export const SHEET_BODY_LABELS = {
+  proficiencyBonus: 'Мастерство',
+  armorClass: 'Класс доспеха',
+  armorClassShort: 'КД',
+  armorClassPress: 'Настроить класс доспеха',
+  initiative: 'Инициатива',
+} as const;
+
+/** Подписи шапки листа персонажа. */
+export const SHEET_HEADER_LABELS = {
+  vision: 'Настроить зрение',
+  name: 'Изменить имя персонажа',
+  species: 'Выбрать вид персонажа',
+  characterClass: 'Выбрать класс персонажа',
+  background: 'Выбрать предысторию персонажа',
+  progress: 'Настроить опыт и уровень',
+  levelPrefix: 'Уровень',
+  menu: 'Действия с листом',
+  inspiration: 'Вдохновение',
+} as const;
+
+/** Подписи окна броска проверки и спасброска. */
+export const SHEET_ROLL_MODAL_LABELS = {
+  formula: 'Формула',
+  ability: 'Характеристика',
+  dice: 'Кость',
+  bonus: 'Доп. бонус',
+  condition: 'Против состояния',
+  conditionHelp: 'Спасбросок, чтобы избежать состояния или прекратить его',
+  againstMagic: 'Против магии',
+  againstMagicHelp: 'Заклинание или иной магический эффект',
+  magicSource: 'Магический источник',
+  mode: 'Режим броска',
+} as const;
+
+/** Подписи окна заклинательной характеристики. */
+export const SHEET_SPELLCASTING_MODAL_LABELS = {
+  ability: 'Характеристика',
+  autoPrefix: 'Определяется по классу',
+  abilityModifier: 'Модификатор характеристики',
+  proficiencyBonus: 'Бонус мастерства',
+  formulaHint:
+    `Сложность спасброска = ${SPELL_SAVE_DC_BASE} + бонус мастерства + `
+    + 'модификатор характеристики. Бонус атаки — то же без базового значения.',
+} as const;

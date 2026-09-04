@@ -1137,7 +1137,7 @@
 
 <template>
   <UModal
-    title="Выбор вида"
+    :title="SPECIES_WIZARD_LABELS.title"
     :ui="{ content: 'sm:max-w-2xl' }"
   >
     <template #body>
@@ -1186,7 +1186,7 @@
                 <button
                   type="button"
                   class="flex min-w-0 grow cursor-pointer items-center gap-2 px-3 py-2 text-left after:absolute after:inset-0 after:cursor-pointer"
-                  :aria-label="`Выбрать вид: ${row.name}`"
+                  :aria-label="`${SPECIES_WIZARD_LABELS.pickAria}: ${row.name}`"
                   @click.left.exact.prevent="handleSpeciesRowClick(row.url)"
                 >
                   <UIcon
@@ -1218,7 +1218,7 @@
                   {{ row.sourceLabel }}
                 </UBadge>
 
-                <UTooltip text="Открыть описание вида">
+                <UTooltip :text="SPECIES_WIZARD_LABELS.preview">
                   <UButton
                     icon="tabler:layout-sidebar-right-expand"
                     color="neutral"
@@ -1226,7 +1226,7 @@
                     size="xs"
                     square
                     class="relative z-10 shrink-0"
-                    :aria-label="`Описание вида: ${row.name}`"
+                    :aria-label="`${SPECIES_WIZARD_LABELS.previewAria}: ${row.name}`"
                     @click.left.exact.prevent="handlePreview(row.url)"
                   />
                 </UTooltip>
@@ -1251,7 +1251,7 @@
                     class="size-3.5 animate-spin"
                   />
 
-                  Загрузка подвидов…
+                  {{ SPECIES_WIZARD_LABELS.lineagesLoading }}
                 </span>
 
                 <div
@@ -1263,7 +1263,7 @@
                   <button
                     type="button"
                     class="flex min-w-0 grow cursor-pointer items-center px-3 py-1.5 text-left after:absolute after:inset-0 after:cursor-pointer"
-                    :aria-label="`Выбрать подвид: ${lineage.name}`"
+                    :aria-label="`${SPECIES_WIZARD_LABELS.lineagePickAria}: ${lineage.name}`"
                     @click.left.exact.prevent="
                       handleLineageClick(row.url, lineage.url)
                     "
@@ -1273,7 +1273,7 @@
                     </span>
                   </button>
 
-                  <UTooltip text="Открыть описание подвида">
+                  <UTooltip :text="SPECIES_WIZARD_LABELS.lineagePreview">
                     <UButton
                       icon="tabler:layout-sidebar-right-expand"
                       color="neutral"
@@ -1281,7 +1281,7 @@
                       size="xs"
                       square
                       class="relative z-10 shrink-0"
-                      :aria-label="`Описание подвида: ${lineage.name}`"
+                      :aria-label="`${SPECIES_WIZARD_LABELS.lineagePreviewAria}: ${lineage.name}`"
                       @click.left.exact.prevent="handlePreview(lineage.url)"
                     />
                   </UTooltip>
@@ -1299,20 +1299,20 @@
               v-if="!displayRows.length"
               class="px-3 py-6 text-center text-sm text-dimmed"
             >
-              Ничего не найдено
+              {{ SPECIES_WIZARD_LABELS.empty }}
             </span>
           </div>
 
           <span class="text-xs text-muted">
-            Вид с подвидами разворачивается стрелкой — выберите конкретный
-            подвид. При применении скорость, зрение, размер и особенности сразу
-            заполнят лист.
+            {{ SPECIES_WIZARD_LABELS.listHint }}
           </span>
         </template>
 
         <template v-else>
           <div class="flex flex-wrap items-center gap-2 text-sm">
-            <span class="text-muted">Вид:</span>
+            <span class="text-muted">
+              {{ SPECIES_WIZARD_LABELS.resultPrefix }}
+            </span>
 
             <span class="font-bold text-highlighted">{{ resultName }}</span>
           </div>
@@ -1324,7 +1324,7 @@
             <span
               class="text-[10px] font-bold tracking-wider text-muted uppercase"
             >
-              Размер
+              {{ SPECIES_WIZARD_LABELS.size }}
             </span>
 
             <URadioGroup
@@ -1340,7 +1340,7 @@
             <span
               class="text-[10px] font-bold tracking-wider text-muted uppercase"
             >
-              Особенности
+              {{ SPECIES_WIZARD_LABELS.features }}
             </span>
 
             <div
@@ -1414,7 +1414,7 @@
               v-if="!featureRows.length"
               class="text-xs text-dimmed italic"
             >
-              У вида нет описанных особенностей
+              {{ SPECIES_WIZARD_LABELS.featuresEmpty }}
             </span>
           </div>
         </template>

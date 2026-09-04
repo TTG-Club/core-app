@@ -29,6 +29,7 @@
     RESOURCE_RECOVERY_LABELS,
     RESOURCE_RECOVERY_MODE_OPTIONS,
     RESOURCE_SHORT_LABEL_MAX_LENGTH,
+    SHEET_CLASS_RESOURCE_MODAL_LABELS,
     toClassResourceDraft,
   } from '../../model';
 
@@ -137,7 +138,7 @@
         <div class="flex items-end gap-3">
           <div class="flex min-w-0 grow flex-col gap-1">
             <span class="text-[10px] font-bold text-muted uppercase">
-              Название
+              {{ SHEET_CLASS_RESOURCE_MODAL_LABELS.name }}
             </span>
 
             <UInput
@@ -149,7 +150,7 @@
 
           <div class="flex w-24 shrink-0 flex-col gap-1">
             <span class="text-[10px] font-bold text-muted uppercase">
-              Кратко
+              {{ SHEET_CLASS_RESOURCE_MODAL_LABELS.shortLabel }}
             </span>
 
             <UInput
@@ -163,7 +164,7 @@
         <div class="flex flex-wrap items-end gap-3">
           <div class="flex w-28 shrink-0 flex-col gap-1">
             <span class="text-[10px] font-bold text-muted uppercase">
-              Сейчас
+              {{ SHEET_CLASS_RESOURCE_MODAL_LABELS.current }}
             </span>
 
             <UInputNumber
@@ -175,7 +176,7 @@
 
           <div class="flex min-w-40 grow flex-col gap-1">
             <span class="text-[10px] font-bold text-muted uppercase">
-              Максимум
+              {{ SHEET_CLASS_RESOURCE_MODAL_LABELS.max }}
             </span>
 
             <USelect
@@ -260,7 +261,7 @@
 
         <div class="flex flex-col gap-2">
           <span class="text-[10px] font-bold text-muted uppercase">
-            Восстановление
+            {{ SHEET_CLASS_RESOURCE_MODAL_LABELS.recovery }}
           </span>
 
           <div class="grid gap-2 sm:grid-cols-2">
@@ -283,7 +284,7 @@
               <USelect
                 v-model="draftResource[field.key].mode"
                 :items="RESOURCE_RECOVERY_MODE_OPTIONS"
-                :aria-label="`Восстановление: ${RESOURCE_RECOVERY_LABELS[field.rest]}`"
+                :aria-label="`${SHEET_CLASS_RESOURCE_MODAL_LABELS.recovery}: ${RESOURCE_RECOVERY_LABELS[field.rest]}`"
               />
 
               <UInputNumber
@@ -291,7 +292,7 @@
                 v-model="draftResource[field.key].amount"
                 :min="RESOURCE_RECOVERY_AMOUNT_MIN"
                 :max="RESOURCE_COUNT_MAX"
-                :aria-label="`Сколько зарядов вернёт отдых: ${RESOURCE_RECOVERY_LABELS[field.rest]}`"
+                :aria-label="`${SHEET_CLASS_RESOURCE_MODAL_LABELS.recoveryAmount}: ${RESOURCE_RECOVERY_LABELS[field.rest]}`"
               />
             </div>
           </div>

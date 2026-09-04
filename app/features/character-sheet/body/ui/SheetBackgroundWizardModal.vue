@@ -1151,7 +1151,7 @@
 
 <template>
   <UModal
-    title="Выбор предыстории"
+    :title="BACKGROUND_WIZARD_LABELS.title"
     :ui="{ content: 'sm:max-w-2xl' }"
   >
     <template #body>
@@ -1198,7 +1198,7 @@
               <button
                 type="button"
                 class="flex min-w-0 grow cursor-pointer items-center gap-2 px-3 py-2 text-left after:absolute after:inset-0 after:cursor-pointer"
-                :aria-label="`Выбрать предысторию: ${row.name}`"
+                :aria-label="`${BACKGROUND_WIZARD_LABELS.pickAria}: ${row.name}`"
                 @click.left.exact.prevent="handleBackgroundSelect(row.url)"
               >
                 <span
@@ -1227,7 +1227,7 @@
                 {{ row.sourceLabel }}
               </UBadge>
 
-              <UTooltip text="Открыть описание предыстории">
+              <UTooltip :text="BACKGROUND_WIZARD_LABELS.preview">
                 <UButton
                   icon="tabler:layout-sidebar-right-expand"
                   color="neutral"
@@ -1235,7 +1235,7 @@
                   size="xs"
                   square
                   class="relative z-10 shrink-0"
-                  :aria-label="`Описание предыстории: ${row.name}`"
+                  :aria-label="`${BACKGROUND_WIZARD_LABELS.previewAria}: ${row.name}`"
                   @click.left.exact.prevent="handlePreview(row.url)"
                 />
               </UTooltip>
@@ -1251,33 +1251,33 @@
               v-if="!displayRows.length"
               class="px-3 py-6 text-center text-sm text-dimmed"
             >
-              Ничего не найдено
+              {{ BACKGROUND_WIZARD_LABELS.empty }}
             </span>
           </div>
 
           <span class="text-xs text-muted">
-            При применении навыки, инструмент, черта происхождения, прибавки к
-            характеристикам и выбранный вариант стартового снаряжения сразу
-            заполнят лист.
+            {{ BACKGROUND_WIZARD_LABELS.listHint }}
           </span>
         </template>
 
         <template v-else-if="backgroundDetail">
           <div class="flex flex-wrap items-center gap-2 text-sm">
-            <span class="text-muted">Предыстория:</span>
+            <span class="text-muted">
+              {{ BACKGROUND_WIZARD_LABELS.resultPrefix }}
+            </span>
 
             <span class="font-bold text-highlighted">
               {{ backgroundDetail.name }}
             </span>
 
-            <UTooltip text="Открыть описание предыстории">
+            <UTooltip :text="BACKGROUND_WIZARD_LABELS.preview">
               <UButton
                 icon="tabler:layout-sidebar-right-expand"
                 color="neutral"
                 variant="ghost"
                 size="xs"
                 square
-                :aria-label="`Описание предыстории: ${backgroundDetail.name}`"
+                :aria-label="`${BACKGROUND_WIZARD_LABELS.previewAria}: ${backgroundDetail.name}`"
                 @click.left.exact.prevent="handleDetailPreview"
               />
             </UTooltip>
@@ -1305,7 +1305,8 @@
                 v-if="backgroundDetail.abilitiesText"
                 class="text-sm text-muted"
               >
-                Предыстория повышает: {{ backgroundDetail.abilitiesText }}
+                {{ BACKGROUND_WIZARD_LABELS.abilitiesPrefix }}
+                {{ backgroundDetail.abilitiesText }}
               </span>
 
               <URadioGroup
@@ -1357,7 +1358,7 @@
                 <span
                   class="text-[10px] font-bold tracking-wider text-muted uppercase"
                 >
-                  Навыки (будут добавлены)
+                  {{ BACKGROUND_WIZARD_LABELS.skills }}
                 </span>
 
                 <div class="flex flex-wrap gap-2">
@@ -1375,7 +1376,10 @@
                     v-if="!backgroundDetail.skills.length"
                     class="text-sm text-dimmed italic"
                   >
-                    {{ backgroundDetail.skillsText || 'не распознаны' }}
+                    {{
+                      backgroundDetail.skillsText
+                      || BACKGROUND_WIZARD_LABELS.skillsUnknown
+                    }}
                   </span>
                 </div>
               </div>
@@ -1384,7 +1388,7 @@
                 <span
                   class="text-[10px] font-bold tracking-wider text-muted uppercase"
                 >
-                  Инструмент
+                  {{ BACKGROUND_WIZARD_LABELS.tool }}
                 </span>
 
                 <SheetChoicePickerField
@@ -1420,7 +1424,7 @@
                     v-if="!backgroundDetail.toolFixed.length"
                     class="text-sm text-dimmed italic"
                   >
-                    нет
+                    {{ BACKGROUND_WIZARD_LABELS.toolEmpty }}
                   </span>
                 </div>
               </div>
@@ -1469,14 +1473,14 @@
                   </span>
                 </span>
 
-                <UTooltip text="Открыть описание черты">
+                <UTooltip :text="BACKGROUND_WIZARD_LABELS.featPreview">
                   <UButton
                     icon="tabler:layout-sidebar-right-expand"
                     color="neutral"
                     variant="ghost"
                     size="xs"
                     square
-                    aria-label="Описание черты"
+                    :aria-label="BACKGROUND_WIZARD_LABELS.featPreviewAria"
                     @click.left.exact.prevent="handleBackgroundFeatPreview"
                   />
                 </UTooltip>
@@ -1503,7 +1507,7 @@
                 v-if="!featChoices.length"
                 class="text-sm text-dimmed italic"
               >
-                Черта ни о чём не спрашивает — она добавится как есть.
+                {{ BACKGROUND_WIZARD_LABELS.featNoChoices }}
               </span>
             </template>
 
@@ -1521,7 +1525,7 @@
                 <span
                   class="text-[10px] font-bold tracking-wider text-muted uppercase"
                 >
-                  Снаряжение (справка)
+                  {{ BACKGROUND_WIZARD_LABELS.equipmentReference }}
                 </span>
 
                 <MarkupRender

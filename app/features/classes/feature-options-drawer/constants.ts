@@ -10,5 +10,5 @@ export const FEATURE_OPTIONS_LABELS = {
   repeatable: 'Можно взять повторно',
   grantedSpells: 'Даёт заклинания',
   cantrip: 'заговор',
-  spellLevelSuffix: 'круг',
+  spellLevelSuffix: '-й уровень',
 } as const;

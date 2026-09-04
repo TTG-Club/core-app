@@ -9,7 +9,7 @@
   const model = defineModel<number | Array<number>>();
 
   const items = range(0, 10).map((level) => ({
-    label: !level ? 'Заговор' : `${level} круг`,
+    label: !level ? 'Заговор' : `${level}-й уровень`,
     value: level,
   }));
 </script>

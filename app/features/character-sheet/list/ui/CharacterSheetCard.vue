@@ -19,10 +19,13 @@
     getDisplayLevel,
     getMaxHitPoints,
     getSheetActionMenuItems,
+    getSheetRemoveDescription,
     getSpeciesDisplayName,
+    SHEET_CARD_LABELS,
     SHEET_EMPTY_LABELS,
     SHEET_OPEN_IN_PANEL_LABEL,
     SHEET_OPEN_ON_PAGE_LABEL,
+    SHEET_REMOVE_CONFIRM_TITLE,
   } from '../../model';
 
   const {
@@ -230,7 +233,8 @@
           />
 
           <span class="truncate">
-            Хиты: {{ character.health.current }} / {{ maxHitPoints }} · Уровень:
+            {{ SHEET_CARD_LABELS.hitPoints }}: {{ character.health.current }} /
+            {{ maxHitPoints }} · {{ SHEET_CARD_LABELS.level }}:
             {{ levelValue }}
           </span>
         </span>
@@ -258,15 +262,15 @@
           variant="soft"
           square
           :disabled
-          aria-label="Действия с листом"
+          :aria-label="SHEET_CARD_LABELS.menuAria"
         />
       </UDropdownMenu>
     </div>
 
     <ConfirmDialog
       v-model:open="isDeleteOpen"
-      title="Удалить лист персонажа?"
-      :description="`Лист «${character.name}» переедет в историю — его можно будет восстановить.`"
+      :title="SHEET_REMOVE_CONFIRM_TITLE"
+      :description="getSheetRemoveDescription(character.name)"
       :confirm-label="ACTION_LABELS.remove"
       confirm-color="error"
       confirm-icon="tabler:trash"

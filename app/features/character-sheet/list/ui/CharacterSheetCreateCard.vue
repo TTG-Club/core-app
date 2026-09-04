@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import { SHEET_LIST_LABELS } from '../../model';
+
   const { disabled = false, loading = false } = defineProps<{
     /** Заблокировать создание (мутация списка в процессе). */
     disabled?: boolean;
@@ -24,7 +26,7 @@
     type="button"
     class="group flex min-h-20 w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-default bg-elevated/40 p-3 text-muted transition-all hover:border-primary hover:bg-primary/5 hover:text-primary disabled:pointer-events-none disabled:opacity-60"
     :disabled="disabled || loading"
-    aria-label="Создать лист персонажа"
+    :aria-label="SHEET_LIST_LABELS.createAria"
     @click.left.exact.prevent="emit('create')"
   >
     <UIcon
@@ -33,6 +35,6 @@
       :class="{ 'animate-spin': loading }"
     />
 
-    <span class="text-sm font-medium"> Создать лист </span>
+    <span class="text-sm font-medium">{{ SHEET_LIST_LABELS.create }}</span>
   </button>
 </template>

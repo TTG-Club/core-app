@@ -1,6 +1,9 @@
 <script setup lang="ts">
   import { useCharacterSheet } from '../../composables';
-  import { HIT_POINT_STEP_BUTTONS } from '../../model';
+  import {
+    HIT_POINT_STEP_BUTTONS,
+    SHEET_HEALTH_QUICK_LABELS,
+  } from '../../model';
 
   const emit = defineEmits<{
     close: [];
@@ -86,7 +89,7 @@
 </script>
 
 <template>
-  <UModal title="Хиты">
+  <UModal :title="SHEET_HEALTH_QUICK_LABELS.title">
     <template #body>
       <div class="flex flex-col gap-4">
         <!-- Живое значение: меняется сразу при быстрых шагах и вводе. -->
@@ -126,7 +129,7 @@
 
         <div class="flex items-center gap-2">
           <span class="shrink-0 text-xs text-muted">
-            Точное значение, + или −
+            {{ SHEET_HEALTH_QUICK_LABELS.expression }}
           </span>
 
           <div class="h-px flex-1 bg-default" />
@@ -137,9 +140,9 @@
           <UInput
             v-model="expression"
             class="flex-1"
-            placeholder="напр. -7, +3 или 20"
+            :placeholder="SHEET_HEALTH_QUICK_LABELS.expressionPlaceholder"
             :ui="{ base: 'text-center' }"
-            aria-label="Новое значение хитов или сдвиг"
+            :aria-label="SHEET_HEALTH_QUICK_LABELS.expressionAria"
             @keydown.enter.prevent="applyExpression"
           />
 
@@ -157,7 +160,7 @@
     <template #footer>
       <div class="flex w-full justify-end">
         <UButton
-          label="Готово"
+          :label="SHEET_HEALTH_QUICK_LABELS.done"
           color="primary"
           @click.left.exact.prevent="emit('close')"
         />

@@ -12,6 +12,7 @@
     collapseProficiencies,
     LANGUAGE_PROFICIENCY_GROUPS,
     SHEET_EMPTY_LABELS,
+    SHEET_PROFICIENCIES_PANEL_LABELS,
     SHEET_PROFICIENCY_GROUP_TITLES,
     SHEET_REVEAL_CONTROL_CLASS,
     SHEET_TOOL_LABELS,
@@ -184,7 +185,7 @@
             v-if="group.hasSettings"
             type="button"
             class="group/header flex w-full cursor-pointer items-center justify-between gap-2 rounded-md px-3 py-1.5 text-left transition-colors hover:bg-accented/50"
-            :aria-label="`Настроить: ${group.title}`"
+            :aria-label="`${SHEET_PROFICIENCIES_PANEL_LABELS.settings}: ${group.title}`"
             @click.left.exact.prevent="emit('edit', group.key)"
           >
             <span class="leading-none">{{ group.title }}</span>
@@ -219,7 +220,7 @@
             <template #trailing>
               <UTooltip
                 v-if="chip.hasMastery"
-                text="Мастерство"
+                :text="SHEET_PROFICIENCIES_PANEL_LABELS.mastery"
               >
                 <UIcon
                   :name="WEAPON_MASTERY_ICON"

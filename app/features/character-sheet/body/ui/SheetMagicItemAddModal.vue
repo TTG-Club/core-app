@@ -35,6 +35,8 @@
     MAGIC_ITEMS_FILTERS_PATH,
     MAGIC_ITEMS_SEARCH_PATH,
     parseMagicItemCatalog,
+    SHEET_CATALOG_MODAL_LABELS,
+    SHEET_MAGIC_ITEM_ADD_MODAL_LABELS,
   } from '../../model';
   import SheetSearchInput from './SheetSearchInput.vue';
 
@@ -385,7 +387,7 @@
 
 <template>
   <UModal
-    title="Добавление магических предметов"
+    :title="SHEET_MAGIC_ITEM_ADD_MODAL_LABELS.title"
     :ui="{ content: 'sm:max-w-3xl' }"
   >
     <template #body>
@@ -402,7 +404,7 @@
 
           <UButton
             icon="tabler:filter"
-            label="Фильтр"
+            :label="SHEET_CATALOG_MODAL_LABELS.filter"
             color="neutral"
             variant="subtle"
             size="sm"
@@ -429,7 +431,7 @@
 
           <UTooltip
             v-if="hasActiveFilters"
-            text="Сбросить фильтры"
+            :text="SHEET_CATALOG_MODAL_LABELS.resetFilters"
           >
             <UButton
               icon="tabler:filter-off"
@@ -437,7 +439,7 @@
               variant="ghost"
               size="sm"
               square
-              aria-label="Сбросить фильтры"
+              :aria-label="SHEET_CATALOG_MODAL_LABELS.resetFilters"
               @click.left.exact.prevent="resetFilters"
             />
           </UTooltip>
@@ -455,7 +457,7 @@
           <div class="flex shrink-0 items-center gap-1">
             <UButton
               icon="tabler:filter"
-              label="Все фильтры"
+              :label="SHEET_CATALOG_MODAL_LABELS.allFilters"
               color="neutral"
               variant="subtle"
               size="sm"
@@ -467,7 +469,7 @@
 
             <UTooltip
               v-if="hasActiveFilters"
-              text="Сбросить фильтры"
+              :text="SHEET_CATALOG_MODAL_LABELS.resetFilters"
             >
               <UButton
                 icon="tabler:filter-off"
@@ -475,7 +477,7 @@
                 variant="ghost"
                 size="sm"
                 square
-                aria-label="Сбросить фильтры"
+                :aria-label="SHEET_CATALOG_MODAL_LABELS.resetFilters"
                 @click.left.exact.prevent="resetFilters"
               />
             </UTooltip>
@@ -516,7 +518,7 @@
               v-else-if="isListError"
               class="flex grow items-center justify-center py-10 text-sm text-dimmed"
             >
-              Не удалось загрузить магические предметы
+              {{ SHEET_MAGIC_ITEM_ADD_MODAL_LABELS.listError }}
             </div>
 
             <template v-else>
@@ -549,7 +551,7 @@
                     class="flex min-w-0 grow items-center gap-2 px-3 py-1.5 text-left after:absolute after:inset-0"
                     :class="catalogRow.cursorClass"
                     :disabled="catalogRow.isAdded"
-                    :aria-label="`Выбрать магический предмет: ${catalogRow.name}`"
+                    :aria-label="`${SHEET_MAGIC_ITEM_ADD_MODAL_LABELS.pickAria}: ${catalogRow.name}`"
                     @click.left.exact.prevent="toggleMagicItem(catalogRow)"
                   >
                     <span class="truncate text-sm font-medium text-highlighted">
@@ -574,7 +576,7 @@
                     {{ catalogRow.sourceLabel }}
                   </UBadge>
 
-                  <UTooltip text="Открыть описание магического предмета">
+                  <UTooltip :text="SHEET_MAGIC_ITEM_ADD_MODAL_LABELS.preview">
                     <UButton
                       icon="tabler:layout-sidebar-right-expand"
                       color="neutral"
@@ -582,14 +584,14 @@
                       size="xs"
                       square
                       class="relative z-10 shrink-0"
-                      :aria-label="`Описание магического предмета: ${catalogRow.name}`"
+                      :aria-label="`${SHEET_MAGIC_ITEM_ADD_MODAL_LABELS.previewAria}: ${catalogRow.name}`"
                       @click.left.exact.prevent="handlePreview(catalogRow.url)"
                     />
                   </UTooltip>
 
                   <UTooltip
                     v-if="catalogRow.isAdded"
-                    text="Уже добавлен"
+                    :text="SHEET_CATALOG_MODAL_LABELS.alreadyAdded"
                   >
                     <UIcon
                       name="tabler:check"
@@ -609,7 +611,7 @@
                 v-if="!displayGroups.length"
                 class="px-3 py-6 text-center text-sm text-dimmed"
               >
-                Ничего не найдено
+                {{ SHEET_CATALOG_MODAL_LABELS.empty }}
               </span>
             </template>
           </div>
@@ -622,7 +624,7 @@
       <FilterDrawer
         v-if="filterGroups.length"
         v-model="isFilterDrawerOpened"
-        title="Фильтры магических предметов"
+        :title="SHEET_MAGIC_ITEM_ADD_MODAL_LABELS.filtersTitle"
         :groups="filterGroups"
         @save="handleFilterDrawerSave"
         @reset="handleFilterDrawerReset"

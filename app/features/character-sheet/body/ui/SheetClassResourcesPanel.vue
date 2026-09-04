@@ -6,6 +6,7 @@
     getResourceMax,
     getResourceRecoveryBadges,
     RESOURCES_TITLE,
+    SHEET_CLASS_RESOURCES_PANEL_LABELS,
     SHEET_EMPTY_LABELS,
     SHEET_TITLE_ACTION_CLASS,
     SHEET_TITLE_ACTION_REVEAL_CLASS,
@@ -91,7 +92,7 @@
           SHEET_TITLE_ACTION_REVEAL_CLASS,
           editControlClass,
         ]"
-        aria-label="Настроить ресурсы класса"
+        :aria-label="SHEET_CLASS_RESOURCES_PANEL_LABELS.settings"
         @click.left.exact.prevent="handleEditClick"
       >
         <UIcon
@@ -124,7 +125,7 @@
             square
             :class="gameControlClass"
             :disabled="row.isMinusDisabled"
-            :aria-label="`Потратить: ${row.name}`"
+            :aria-label="`${SHEET_CLASS_RESOURCES_PANEL_LABELS.spend}: ${row.name}`"
             @click.left.exact.prevent="handleAdjust(row.id, -1)"
           />
 
@@ -141,7 +142,7 @@
             square
             :class="gameControlClass"
             :disabled="row.isPlusDisabled"
-            :aria-label="`Восстановить: ${row.name}`"
+            :aria-label="`${SHEET_CLASS_RESOURCES_PANEL_LABELS.restore}: ${row.name}`"
             @click.left.exact.prevent="handleAdjust(row.id, 1)"
           />
 
