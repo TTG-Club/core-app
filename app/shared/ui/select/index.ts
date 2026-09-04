@@ -10,6 +10,7 @@ export { default as SelectCasterType } from './SelectCasterType.vue';
 export { default as SelectCatalogEntity } from './SelectCatalogEntity.vue';
 export { default as SelectChallengeRating } from './SelectChallengeRating.vue';
 export { default as SelectClass } from './SelectClass.vue';
+export { default as SelectClassCatalog } from './SelectClassCatalog.vue';
 export { default as SelectComparison } from './SelectComparison.vue';
 export { default as SelectCondition } from './SelectCondition.vue';
 export { default as SelectCreatureType } from './SelectCreatureType.vue';

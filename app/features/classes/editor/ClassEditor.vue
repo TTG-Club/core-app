@@ -342,7 +342,7 @@
             </template>
 
             <FeatGrantedSpells
-              v-model="mechanics.spells"
+              v-model="editorRows.grantedSpells"
               :labels="CLASS_MECHANICS_LABELS"
             />
           </UCard>

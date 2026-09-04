@@ -1,6 +1,7 @@
 import type { RenderNode } from '~ui/markup';
 
 import type {
+  AbilityKey,
   ArmorDexterityMod,
   BackgroundOption,
   BackgroundSummary,
@@ -323,6 +324,24 @@ function toCharacterSpell(
   };
 }
 
+/**
+ * Характеристика заклинания из группы выдачи — полем записи листа.
+ *
+ * Полем, а не значением: пустая характеристика означает «группа её не задаёт»,
+ * и записать её `undefined` нельзя — она затёрла бы характеристику, которую
+ * лист проставит выше (ответом игрока либо характеристикой записи).
+ *
+ * @param value характеристика группы, как её отдал справочник.
+ * @returns поле для записи заклинания; пустой объект — группа её не задаёт.
+ */
+function toGrantedSpellAbility(value: string | null | undefined): {
+  spellcastingAbility?: AbilityKey;
+} {
+  const ability = parseApiAbilityKey(value ?? '');
+
+  return ability ? { spellcastingAbility: ability } : {};
+}
+
 const speciesInnateSpellSchema = z.object({
   spell: catalogSpellSchema,
   requiredLevel: z.coerce.number().min(1).max(20).catch(1),
@@ -338,12 +357,27 @@ const featGrantedSpellSchema = z.union([
   z.object({
     spell: catalogSpellSchema,
     requiredLevel: z.coerce.number().min(1).max(20).nullish().catch(null),
+    // Круг ограничен ячейками персонажа: сервер такую границу поставить не может
+    // — он не знает ни классов персонажа, ни его уровня, — поэтому список
+    // приезжает целиком, а круги отбирает лист
+    limitedBySlots: z.boolean().nullish().catch(null),
+    // Характеристика и подготовка — у группы выдачи, в которой стоит
+    // заклинание: один набор может считаться от одной характеристики, другой от
+    // другой. Пусто — берутся у записи целиком
+    spellcastingAbility: z.string().nullish().catch(null),
+    alwaysPrepared: z.boolean().nullish().catch(null),
   }),
   // Ответ до появления уровней: заклинание лежало в списке без обёртки. Разбор
   // держит обе формы, потому что фронт и бэк выкатываются порознь: без этого
   // сайт со свежим разбором и ещё не обновлённым бэком молча перестал бы
   // выдавать заклинания черт — весь список отбросил бы `.catch(null)` ниже.
-  catalogSpellSchema.transform((spell) => ({ spell, requiredLevel: null })),
+  catalogSpellSchema.transform((spell) => ({
+    spell,
+    requiredLevel: null,
+    limitedBySlots: null,
+    spellcastingAbility: null,
+    alwaysPrepared: null,
+  })),
 ]);
 
 /**
@@ -1478,8 +1512,10 @@ export function parseFeatDetail(input: unknown): FeatSummary | null {
     spells: granted.length
       ? granted.map((entry) => ({
           ...toCharacterSpell(entry.spell),
-          prepared,
+          prepared: entry.alwaysPrepared ?? prepared,
           requiredLevel: entry.requiredLevel ?? undefined,
+          limitedBySlots: entry.limitedBySlots ?? undefined,
+          ...toGrantedSpellAbility(entry.spellcastingAbility),
         }))
       : null,
     spellList,
@@ -2710,8 +2746,13 @@ function toFeatureOptionGrants(
         spells: spells.length
           ? spells.map((entry) => ({
               ...toCharacterSpell(entry.spell),
-              prepared: option.mechanics?.spells?.alwaysPrepared ?? false,
+              prepared:
+                entry.alwaysPrepared
+                ?? option.mechanics?.spells?.alwaysPrepared
+                ?? false,
               requiredLevel: entry.requiredLevel ?? undefined,
+              limitedBySlots: entry.limitedBySlots ?? undefined,
+              ...toGrantedSpellAbility(entry.spellcastingAbility),
             }))
           : null,
         spellcastingAbility: parseApiAbilityKey(
@@ -2898,8 +2939,13 @@ function toClassSummary(
       spells: (feature.grantedSpells ?? []).length
         ? (feature.grantedSpells ?? []).map((entry) => ({
             ...toCharacterSpell(entry.spell),
-            prepared: feature.mechanics?.spells?.alwaysPrepared ?? false,
+            prepared:
+              entry.alwaysPrepared
+              ?? feature.mechanics?.spells?.alwaysPrepared
+              ?? false,
             requiredLevel: entry.requiredLevel ?? undefined,
+            limitedBySlots: entry.limitedBySlots ?? undefined,
+            ...toGrantedSpellAbility(entry.spellcastingAbility),
           }))
         : null,
       spellcastingAbility: parseApiAbilityKey(
@@ -2943,8 +2989,13 @@ function toClassSummary(
     spells: classGrantedSpells.length
       ? classGrantedSpells.map((entry) => ({
           ...toCharacterSpell(entry.spell),
-          prepared: detail.mechanics?.spells?.alwaysPrepared ?? false,
+          prepared:
+            entry.alwaysPrepared
+            ?? detail.mechanics?.spells?.alwaysPrepared
+            ?? false,
           requiredLevel: entry.requiredLevel ?? undefined,
+          limitedBySlots: entry.limitedBySlots ?? undefined,
+          ...toGrantedSpellAbility(entry.spellcastingAbility),
         }))
       : null,
     spellcastingAbility: parseApiAbilityKey(

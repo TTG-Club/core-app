@@ -8,11 +8,13 @@ import type {
   FeatChoiceOption,
   FeatChoiceScaling,
   FeatChoiceType,
+  FeatClassSpellListGrant,
   FeatCounter,
   FeatDamageAffinity,
   FeatDamageDefenseChoice,
   FeatDamageDefenseKind,
   FeatEntityRef,
+  FeatGrantedSpellRef,
   FeatMechanics,
   FeatModifiers,
   FeatPrerequisiteDetails,
@@ -290,6 +292,75 @@ export interface FeatSpellPickRow {
 }
 
 /**
+ * Откуда группа выдачи берёт заклинания: `LIST` — перечисленные автором,
+ * `CLASS_LIST` — весь список названного класса.
+ */
+export type FeatGrantedSpellSource = 'LIST' | 'CLASS_LIST';
+
+/**
+ * Как задан круг у группы «весь список класса».
+ *
+ * `SLOTS` есть только здесь, а не у порции выбора: выбирает игрок сам и видит круг
+ * в списке, а выдача сыплется на лист молча — и «все заклинания друида» без границы
+ * дали бы девятый круг на первом уровне.
+ */
+export type FeatGrantedSpellLevelMode = FeatSpellLevelMode | 'SLOTS';
+
+/**
+ * Группа выдачи заклинаний: своя ступень уровня и свой источник.
+ *
+ * Групп несколько, и это НЕ «или»: каждая открывается на своём уровне и
+ * складывается с предыдущими — заклинания домена приходят на 3, 5, 7 уровнях.
+ *
+ * В механике группы не хранятся: перечисленные схлопываются в общий список
+ * (`FeatSpellGrant.spells`, у каждой ссылки свой `requiredLevel`), списки классов
+ * ложатся в `FeatSpellGrant.classLists`. Так любая уже сохранённая запись читается
+ * как группы без миграции, и ни один потребитель прежней формы не ломается.
+ */
+export interface FeatGrantedSpellGroupRow {
+  uid: string;
+
+  /**
+   * Уровень персонажа, с которого группа выдаётся; не задан — сразу при взятии
+   * записи.
+   */
+  requiredLevel: number | undefined;
+
+  source: FeatGrantedSpellSource;
+
+  /** Перечисленные заклинания — при `source: 'LIST'`; иначе пусто. */
+  spells: Array<FeatEntityRef>;
+
+  /** Классы, чьи списки выдаются, — при `source: 'CLASS_LIST'`; иначе пусто. */
+  classes: Array<FeatEntityRef>;
+
+  /** Как ограничен круг списка класса; у перечисленных круг свой у каждой записи. */
+  mode: FeatGrantedSpellLevelMode;
+
+  /** Круг: точный при `EXACT`, наибольший при `UP_TO`; иначе не задан. */
+  level: number | undefined;
+
+  /**
+   * Характеристика, от которой считаются заклинания группы; не задана — берётся
+   * выше: ответом игрока, характеристикой записи либо характеристикой класса.
+   */
+  spellcastingAbility: AbilityKey | undefined;
+
+  /** Заклинания группы не занимают подготовку. */
+  alwaysPrepared: boolean;
+}
+
+/**
+ * Выдача заклинаний целиком.
+ *
+ * Блоком, а не голым списком групп: у блока свои заголовок и кнопка добавления, а
+ * форме-владельцу удобнее держать одну ссылку, чем две.
+ */
+export interface FeatGrantedSpellBlock {
+  groups: Array<FeatGrantedSpellGroupRow>;
+}
+
+/**
  * Выбор заклинаний черты целиком.
  *
  * Блок, а не список строк: класс и заклинательная характеристика общие для всех
@@ -336,6 +407,13 @@ export interface FeatCounterRow extends FeatCounter {
 /** Механика черты в том виде, в каком её правит форма. */
 export interface FeatEditorRows {
   grants: Array<FeatGrantRow>;
+
+  /**
+   * Выдача заклинаний группами. Строками, а не механикой напрямую: у группы есть
+   * уровень и источник, а в механике они разложены по двум плоским полям.
+   */
+  grantedSpells: FeatGrantedSpellBlock;
+
   spellChoice: FeatSpellChoiceBlock;
   modifiers: Array<FeatModifierRow>;
   prerequisites: Array<FeatPrerequisiteRow>;
@@ -712,6 +790,31 @@ export function createSpellPickRow(takenKeys: Array<string>): FeatSpellPickRow {
   };
 }
 
+/**
+ * Новая группа выдачи. По умолчанию перечисление: список класса заводят реже, и
+ * автору проще снять галочку, чем каждый раз переключать источник обратно.
+ */
+export function createGrantedSpellGroupRow(): FeatGrantedSpellGroupRow {
+  return {
+    uid: nextRowUid('granted-spell'),
+    requiredLevel: undefined,
+    source: 'LIST',
+    spells: [],
+    classes: [],
+    mode: 'ANY',
+    level: undefined,
+    spellcastingAbility: undefined,
+    alwaysPrepared: false,
+  };
+}
+
+/** Пустая выдача заклинаний: запись их не даёт. */
+export function createGrantedSpellBlock(): FeatGrantedSpellBlock {
+  return {
+    groups: [],
+  };
+}
+
 /** Пустой выбор заклинаний: черта заклинаний не даёт. */
 export function createSpellChoiceBlock(): FeatSpellChoiceBlock {
   return {
@@ -802,6 +905,7 @@ export function createCounterRow(takenKeys: Array<string>): FeatCounterRow {
 export function createFeatEditorRows(): FeatEditorRows {
   return {
     grants: [],
+    grantedSpells: createGrantedSpellBlock(),
     spellChoice: createSpellChoiceBlock(),
     modifiers: [],
     prerequisites: [],
@@ -1360,6 +1464,129 @@ function toPrerequisiteRows(
 }
 
 /**
+ * Группы выдачи из механики.
+ *
+ * Перечисленные ссылки группируются по уровню открытия: в механике они лежат плоским
+ * списком, и группа — это и есть ступень «что приходит на этом уровне». Порядок
+ * ступеней — порядок первого появления уровня в списке, чтобы правка не
+ * перетасовывала форму. Списки классов идут следом, каждый своей группой.
+ *
+ * @param grant блок выдачи из механики.
+ * @returns блок строк редактора.
+ */
+function toGrantedSpellBlock(grant: FeatSpellGrant): FeatGrantedSpellBlock {
+  const block = createGrantedSpellBlock();
+
+  const listed = new Map<string, FeatGrantedSpellGroupRow>();
+
+  for (const spell of grant.spells) {
+    // Ключ карты — уровень числом: «сразу» и «с первого» — одно и то же, и двумя
+    // ступенями они выглядели бы как разные
+    const level =
+      spell.requiredLevel && spell.requiredLevel > 1 ? spell.requiredLevel : 1;
+
+    // Характеристика и подготовка входят в ключ: заклинания, которые считаются
+    // от разных характеристик, — разные группы, даже если приходят на одном
+    // уровне. Сложи их в одну — и настройка одного стёрла бы настройку другого
+    const ability = spell.spellcastingAbility ?? '';
+    const prepared = spell.alwaysPrepared ?? grant.alwaysPrepared;
+    const key = `${level}:${ability}:${prepared}`;
+
+    let group = listed.get(key);
+
+    if (!group) {
+      group = createGrantedSpellGroupRow();
+      group.requiredLevel = level > 1 ? level : undefined;
+      group.spellcastingAbility = spell.spellcastingAbility;
+      group.alwaysPrepared = prepared;
+      listed.set(key, group);
+      block.groups.push(group);
+    }
+
+    group.spells.push({ url: spell.url, name: spell.name });
+  }
+
+  for (const classList of grant.classLists) {
+    const group = createGrantedSpellGroupRow();
+
+    group.source = 'CLASS_LIST';
+    group.requiredLevel = classList.requiredLevel;
+    group.classes = classList.classes.map((reference) => ({ ...reference }));
+    group.spellcastingAbility = classList.spellcastingAbility;
+    group.alwaysPrepared = classList.alwaysPrepared ?? grant.alwaysPrepared;
+
+    if (classList.maxLevelFromSlots) {
+      group.mode = 'SLOTS';
+    } else if (classList.level !== undefined) {
+      group.mode = 'EXACT';
+      group.level = classList.level;
+    } else if (classList.maxLevel !== undefined) {
+      group.mode = 'UP_TO';
+      group.level = classList.maxLevel;
+    }
+
+    block.groups.push(group);
+  }
+
+  return block;
+}
+
+/**
+ * Механика выдачи из групп редактора: обратный ход {@link toGrantedSpellBlock}.
+ *
+ * Перечисленные группы схлопываются в общий список — уровень группы проставляется
+ * каждой её ссылке, — а списки классов уезжают своим полем. Две перечисляющие группы
+ * с одним уровнем при следующей загрузке сольются в одну: выдают они одно и то же, и
+ * различать их не по чему.
+ *
+ * @param block блок строк редактора.
+ * @param base блок механики формы: из него берётся заклинательная характеристика.
+ * @returns блок выдачи для механики.
+ */
+function fromGrantedSpellBlock(
+  block: FeatGrantedSpellBlock,
+  base: FeatSpellGrant,
+): FeatSpellGrant {
+  const spells: Array<FeatGrantedSpellRef> = [];
+  const classLists: Array<FeatClassSpellListGrant> = [];
+
+  for (const group of block.groups) {
+    if (group.source === 'CLASS_LIST') {
+      classLists.push({
+        requiredLevel: group.requiredLevel,
+        classes: group.classes.map((reference) => ({ ...reference })),
+        level: group.mode === 'EXACT' ? group.level : undefined,
+        maxLevel: group.mode === 'UP_TO' ? group.level : undefined,
+        maxLevelFromSlots: group.mode === 'SLOTS' ? true : undefined,
+        spellcastingAbility: group.spellcastingAbility,
+        // Отметка пишется всегда, а не только взведённая: у записи есть своя,
+        // прежняя, и пропуск снятой отметки означал бы «как у записи» — то есть
+        // ровно обратное тому, что снял автор
+        alwaysPrepared: group.alwaysPrepared,
+      });
+
+      continue;
+    }
+
+    for (const spell of group.spells) {
+      spells.push({
+        url: spell.url,
+        name: spell.name,
+        requiredLevel: group.requiredLevel,
+        spellcastingAbility: group.spellcastingAbility,
+        alwaysPrepared: group.alwaysPrepared,
+      });
+    }
+  }
+
+  return {
+    ...base,
+    spells,
+    classLists,
+  };
+}
+
+/**
  * Разбирает механику и предусловие черты на строки редактора.
  *
  * @param mechanics механика черты.
@@ -1382,6 +1609,7 @@ export function toFeatEditorRows(
 
   rows.grants = toFixedGrantRows(mechanics);
 
+  rows.grantedSpells = toGrantedSpellBlock(mechanics.spells);
   rows.spellChoice = toSpellChoiceBlock(mechanics.choices, mechanics.spells);
 
   for (const choice of mechanics.choices) {
@@ -1959,13 +2187,13 @@ export function fromFeatEditorRows(
 
   // Характеристика одна на все заклинания черты: заданную жёстко (ровно одну в
   // блоке) держит выдача заклинаний, выбор из нескольких — отдельный выбор
-  mechanics.spells = {
+  mechanics.spells = fromGrantedSpellBlock(rows.grantedSpells, {
     ...base.spells,
     spellcastingAbility:
       rows.spellChoice.abilityOptions.length === 1
         ? rows.spellChoice.abilityOptions[0]
         : undefined,
-  };
+  });
 
   mechanics.spellList = base.spellList;
 

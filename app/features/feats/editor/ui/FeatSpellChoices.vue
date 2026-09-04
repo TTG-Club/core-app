@@ -6,10 +6,8 @@
     FeatSpellPickRow,
   } from '../../model';
 
-  import { SelectClass } from '~ui/select';
   import { InfoTooltip } from '~ui/tooltip';
 
-  import { useFeatRefDirectory } from '../../composable';
   import {
     CHOICE_COUNT_MIN,
     CLASS_LEVEL_MAX,
@@ -22,8 +20,6 @@
     getTakenChoiceKeys,
     parseFeatSpellLevelValue,
     SPELL_PICK_COUNT_MAX,
-    toEntityRefUrls,
-    toUrlList,
   } from '../../model';
   import FeatEntityRefRows from './FeatEntityRefRows.vue';
   import FeatRowsSection from './FeatRowsSection.vue';
@@ -73,11 +69,6 @@
   /** Подписи с поправками формы-владельца. */
   const texts = computed(() => getFeatEditorLabels(labels));
 
-  /** Url выбранных классов: по ним справочник отдаёт снимки названий. */
-  const classUrls = computed<Array<string>>(() =>
-    toEntityRefUrls(model.value.classes),
-  );
-
   /**
    * Списки классов спрашиваются, только пока есть порция с поиском по кругу:
    * они и есть её фильтр, а хранятся внутри самой порции. У записи, где все
@@ -87,31 +78,6 @@
   const isClassesShown = computed(() =>
     model.value.picks.some((pick) => pick.source === 'FILTER'),
   );
-
-  const { getEntry: getClassEntry } = useFeatRefDirectory('CLASS', classUrls);
-
-  /**
-   * Записывает классы, из списков которых игрок выбирает.
-   *
-   * Снимок названия обязателен: лист персонажа показывает варианты выбора
-   * подписями, а по одной ссылке он покажет игроку слаг «wizard-phb».
-   * Известное название держится за ссылкой — справочник мог ещё не ответить.
-   *
-   * @param urls url выбранных классов.
-   */
-  function setClasses(urls: string | Array<string> | undefined) {
-    const known = new Map(
-      model.value.classes.map((reference) => [reference.url, reference.name]),
-    );
-
-    model.value = {
-      ...model.value,
-      classes: toUrlList(urls).map((url) => ({
-        url,
-        name: getClassEntry(url)?.name ?? known.get(url),
-      })),
-    };
-  }
 
   /**
    * Строка берёт пул из перечисленных заклинаний, а не поиском по кругу.
@@ -190,19 +156,11 @@
         </InfoTooltip>
       </template>
 
-      <SelectClass
-        :model-value="classUrls"
-        multiple
-        @update:model-value="setClasses"
+      <FeatEntityRefRows
+        v-model="model.classes"
+        kind="CLASS"
       />
     </UFormField>
-
-    <p
-      v-if="!model.picks.length"
-      class="rounded-lg border border-dashed border-default p-4 text-center text-xs text-dimmed italic"
-    >
-      {{ texts.spellChoicesEmpty }}
-    </p>
 
     <div
       v-for="(row, index) in model.picks"

@@ -176,7 +176,9 @@ export function getClassMechanicsFilledBlocksCount(
     holder.editorRows?.modifiers.length ?? 0,
     holder.editorRows?.counters.length ?? 0,
     holder.editorRows?.spellChoice.picks.length ?? 0,
-    holder.mechanics?.spells.spells.length ?? 0,
+    // Выдача считается по строкам, а не по механике: механику форма
+    // пересобирает только при сохранении, и бейдж не замечал бы правок
+    holder.editorRows?.grantedSpells.groups.length ?? 0,
     holder.mechanics?.spellList.groups.length ?? 0,
     holder.activeEffects.length,
   ].filter(Boolean).length;

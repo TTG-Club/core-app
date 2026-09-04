@@ -6987,6 +6987,12 @@ export function getClassGrantedSpells(character: Character): CharacterSpell[] {
  * @returns заклинания вне книги с пометкой «от класса».
  */
 function collectGrantedSpells(character: Character): GrantedSpellEntry[] {
+  // Наибольший круг, который персонаж способен наложить: им ограничена выдача
+  // «весь список класса, не выше доступного круга». Ноль, а не «ничего»: заговор
+  // ячейки не тратит, и персонажу без заклинательства он всё равно доступен —
+  // так же считает и система VTTG (`getMaxSpellSlotLevel`)
+  const maxSpellLevel = Math.max(...getAvailableSpellLevels(character), 0);
+
   const granted: GrantedSpellEntry[] = [
     ...(character.species?.innateSpells ?? [])
       .filter((innateSpell) => innateSpell.requiredLevel <= character.level)
@@ -6996,8 +7002,12 @@ function collectGrantedSpells(character: Character): GrantedSpellEntry[] {
     // должен пополняться сам, когда персонаж дорастёт
     ...getFeatureGrantedSpells(character.features).filter(
       (entry) =>
-        !entry.spell.requiredLevel
-        || entry.spell.requiredLevel <= character.level,
+        (!entry.spell.requiredLevel
+          || entry.spell.requiredLevel <= character.level)
+        // Список класса «не выше доступного круга» приезжает целиком: круг
+        // растёт вместе с персонажем, и снимок числом замёрз бы на том уровне,
+        // на котором заклинания легли на лист
+        && (!entry.spell.limitedBySlots || entry.spell.level <= maxSpellLevel),
     ),
   ];
 
@@ -8927,9 +8937,15 @@ export function buildFeatFeature(
   // приходят от одной черты, ею же названной характеристикой и считаются.
   // Расширение списка сюда не идёт: это доступность, а не знание — оно лежит
   // отдельным снимком и показывается в окне добавления заклинаний.
+  //
+  // Заклинание, у которого характеристика уже своя, её и оставляет: её назвала
+  // группа выдачи, а группа старше записи — ради того она и заводится, чтобы
+  // один набор заклинаний считался не так, как другой.
   const featureSpells = uniqBy(
     [...(summary.spells ?? []), ...spells].map((spell) =>
-      spellcastingAbility ? { ...spell, spellcastingAbility } : spell,
+      spellcastingAbility && !spell.spellcastingAbility
+        ? { ...spell, spellcastingAbility }
+        : spell,
     ),
     (spell) => spell.url,
   );

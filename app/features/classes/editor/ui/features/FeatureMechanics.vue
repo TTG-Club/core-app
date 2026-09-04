@@ -101,7 +101,7 @@
       />
 
       <FeatGrantedSpells
-        v-model="mechanics.spells"
+        v-model="editorRows.grantedSpells"
         :labels="labels"
         :title="titles.spells"
       />
