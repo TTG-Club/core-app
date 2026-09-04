@@ -79,7 +79,13 @@
   );
 
   const costOptions = toChipOptions(GAME_COST_TYPES, GAME_COST_TYPE_LABELS);
-  const statusOptions = toChipOptions(GAME_STATUSES, GAME_STATUS_LABELS);
+
+  // Отменённая игра в выдачу не попадает вовсе: отбор по ней дал бы пустой
+  // каталог, а не «покажи отменённые».
+  const statusOptions = toChipOptions(
+    GAME_STATUSES.filter((status) => status !== 'CANCELLED'),
+    GAME_STATUS_LABELS,
+  );
 
   /** Значение фильтра кроссплея для каждого варианта переключателя. */
   const CROSSPLAY_CHOICE_VALUES: Record<string, boolean> = {

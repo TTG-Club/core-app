@@ -18,7 +18,6 @@
     GAME_SESSION_STATUS_ICONS,
     GAME_SESSION_STATUS_TIMELINE_CLASSES,
     SESSION_DETAIL_TITLE,
-    SESSION_OPEN_DATE_BADGE,
     SESSION_TIMELINE_DATE_FORMATS,
     SESSION_TIMELINE_EMPTY_DESCRIPTION,
     SESSION_TIMELINE_EMPTY_TITLE,
@@ -27,7 +26,6 @@
     SESSION_TIMELINE_NEAREST_LABEL,
     SESSION_TIMELINE_NEXT_LABEL,
     SESSION_TIMELINE_NOW_BADGE,
-    SESSION_TIMELINE_OPEN_DATE_TITLE,
     SESSION_TIMELINE_OUTSIDE_PREFIX,
     SESSION_TIMELINE_PREV_LABEL,
     SESSION_TIMELINE_SCALE_LABEL,
@@ -120,10 +118,6 @@
       .filter((session) => !!session.startsAt)
       .map((session) => ({ session, at: $dayjs(session.startsAt).valueOf() }))
       .sort((left, right) => left.at - right.at),
-  );
-
-  const openDateSessions = computed(() =>
-    sessions.filter((session) => !session.startsAt),
   );
 
   const nearestAt = computed(() =>
@@ -398,29 +392,6 @@
         :label="SESSION_TIMELINE_NEAREST_LABEL"
         @click.left.exact.prevent="goNearest"
       />
-    </div>
-
-    <!-- Набор с открытой датой на оси не стоит: момента у него ещё нет -->
-    <div
-      v-if="openDateSessions.length"
-      class="flex flex-col gap-1.5"
-    >
-      <span class="text-sm text-muted">
-        {{ SESSION_TIMELINE_OPEN_DATE_TITLE }}
-      </span>
-
-      <div class="flex flex-wrap gap-2">
-        <UButton
-          v-for="session in openDateSessions"
-          :key="session.id"
-          size="sm"
-          color="neutral"
-          variant="subtle"
-          icon="tabler:calendar-question"
-          :label="`${session.title} · ${SESSION_OPEN_DATE_BADGE}`"
-          @click.left.exact.prevent="openDetail(session)"
-        />
-      </div>
     </div>
 
     <!-- Карточка живёт в дровере: поповер у точки оси упирался в край экрана,

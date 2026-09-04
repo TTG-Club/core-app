@@ -38,8 +38,9 @@
     SESSION_SERIES_START_LABEL,
     SESSION_SERIES_TITLE,
     SESSION_SERIES_WEEKDAYS_LABEL,
+    SESSION_TIME_END_LABEL,
     SESSION_TIME_RANGE_HINT,
-    SESSION_TIME_RANGE_LABEL,
+    SESSION_TIME_START_LABEL,
     SESSION_TIMEZONE_HINT_PREFIX,
     SESSION_TITLE_LABEL,
     SESSION_TITLE_MAX_LENGTH,
@@ -82,10 +83,11 @@
   const priceCurrency = ref(SESSION_DEFAULT_CURRENCY);
   const paymentType = ref<SessionPaymentType | null>(null);
 
-  const timeRange = shallowRef<{ start: Time; end: Time }>({
-    start: new Time(19, 0),
-    end: new Time(23, 0),
-  });
+  // Два поля вместо диапазона: диапазон не принимает конец раньше начала, а
+  // ночная сессия ровно такая — «с 19:00 до 01:00».
+  // shallowRef: у `Time` приватные поля, и разворачивание ref их теряет.
+  const startTime = shallowRef(new Time(19, 0));
+  const endTime = shallowRef(new Time(23, 0));
 
   const weekdayOptions = SESSION_WEEKDAYS.map((value) => ({
     value,
@@ -167,8 +169,8 @@
 
   const durationMinutes = computed(() =>
     durationBetween(
-      timeRange.value.start.hour * 60 + timeRange.value.start.minute,
-      timeRange.value.end.hour * 60 + timeRange.value.end.minute,
+      startTime.value.hour * 60 + startTime.value.minute,
+      endTime.value.hour * 60 + endTime.value.minute,
     ),
   );
 
@@ -210,10 +212,29 @@
     priceAmount.value = null;
     priceCurrency.value = SESSION_DEFAULT_CURRENCY;
     paymentType.value = null;
-    timeRange.value = { start: new Time(19, 0), end: new Time(23, 0) };
+    startTime.value = new Time(19, 0);
+    endTime.value = new Time(23, 0);
   });
 
   /** Закрывает окно без создания серии. */
+  /**
+   * Отмечает или снимает день недели.
+   * @param weekday День недели серии.
+   */
+  function toggleWeekday(weekday: SessionWeekday): void {
+    weekdays.value = weekdays.value.includes(weekday)
+      ? weekdays.value.filter((picked) => picked !== weekday)
+      : [...weekdays.value, weekday];
+  }
+
+  /**
+   * Отмечен ли день недели: по этому же признаку кнопка меняет вид.
+   * @param weekday День недели серии.
+   */
+  function isWeekdayPicked(weekday: SessionWeekday): boolean {
+    return weekdays.value.includes(weekday);
+  }
+
   function cancel(): void {
     isOpen.value = false;
   }
@@ -232,7 +253,7 @@
       return;
     }
 
-    const { start } = timeRange.value;
+    const start = startTime.value;
 
     const request: CreateGameSessionSeriesRequest = {
       title: title.value.trim(),
@@ -290,14 +311,10 @@
               v-for="option in weekdayOptions"
               :key="option.value"
               size="sm"
-              :color="weekdays.includes(option.value) ? 'primary' : 'neutral'"
-              :variant="weekdays.includes(option.value) ? 'solid' : 'subtle'"
+              :color="isWeekdayPicked(option.value) ? 'primary' : 'neutral'"
+              :variant="isWeekdayPicked(option.value) ? 'solid' : 'subtle'"
               :label="option.label"
-              @click.left.exact.prevent="
-                weekdays = weekdays.includes(option.value)
-                  ? weekdays.filter((day) => day !== option.value)
-                  : [...weekdays, option.value]
-              "
+              @click.left.exact.prevent="toggleWeekday(option.value)"
             />
           </div>
         </UFormField>
@@ -315,13 +332,22 @@
           </UFormField>
 
           <UFormField
-            :label="SESSION_TIME_RANGE_LABEL"
+            :label="SESSION_TIME_START_LABEL"
             :hint="timezoneHint"
+          >
+            <UInputTime
+              v-model="startTime"
+              :hour-cycle="24"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField
+            :label="SESSION_TIME_END_LABEL"
             :description="SESSION_TIME_RANGE_HINT"
           >
             <UInputTime
-              v-model="timeRange"
-              range
+              v-model="endTime"
               :hour-cycle="24"
               class="w-full"
             />

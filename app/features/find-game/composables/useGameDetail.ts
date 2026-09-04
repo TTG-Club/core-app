@@ -13,6 +13,7 @@ import {
   cancelGame,
   cancelGameSession,
   closeGame,
+  closeGameRecruitment,
   completeGameSession,
   copyGameSession,
   createGameRegistration,
@@ -23,9 +24,9 @@ import {
   fetchGameSessions,
   fetchOwnGameRegistration,
   fetchOwnSessionParticipation,
+  openGameRecruitment,
   raiseGame,
   resolveGameViewerAbilities,
-  scheduleGameSession,
   startGameSession,
   updateSessionAttendance,
   withdrawGameRegistration,
@@ -290,20 +291,6 @@ export function useGameDetail(
   }
 
   /**
-   * Назначает дату набору с открытой датой.
-   * @param sessionId Идентификатор сессии.
-   * @param startsAt Начало сессии в ISO-формате.
-   */
-  async function scheduleSession(
-    sessionId: string,
-    startsAt: string,
-  ): Promise<void> {
-    await scheduleGameSession(currentGameId.value, sessionId, startsAt);
-
-    await refreshSessions();
-  }
-
-  /**
    * Завершает сессию игры.
    * @param sessionId Идентификатор сессии.
    */
@@ -347,6 +334,20 @@ export function useGameDetail(
     await refreshGame();
   }
 
+  /** Закрывает набор досрочно: группа собрана. */
+  async function closeRecruitment(): Promise<void> {
+    await closeGameRecruitment(currentGameId.value);
+
+    await refreshGame();
+  }
+
+  /** Открывает набор снова. */
+  async function openRecruitment(): Promise<void> {
+    await openGameRecruitment(currentGameId.value);
+
+    await refreshGame();
+  }
+
   /** Поднимает игру в начало каталога. */
   async function raise(): Promise<void> {
     await raiseGame(currentGameId.value);
@@ -385,15 +386,16 @@ export function useGameDetail(
     cancelSession,
     changeAttendance,
     close,
+    closeRecruitment,
     completeSession,
     duplicateSession,
+    openRecruitment,
     raise,
     refreshAll,
     refreshGame,
     refreshOwnRegistrations,
     refreshSessions,
     remove,
-    scheduleSession,
     startSession,
     withdrawFromGame,
   };

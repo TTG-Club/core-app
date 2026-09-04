@@ -22,7 +22,6 @@
 
   const emit = defineEmits<{
     changed: [];
-    message: [playerId: string];
   }>();
 
   const toast = useToast();
@@ -178,7 +177,6 @@
             :busy="isBusy"
             @approve="approve"
             @reject="askReject"
-            @message="emit('message', $event)"
           />
         </div>
       </div>

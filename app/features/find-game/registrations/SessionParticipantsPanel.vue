@@ -5,7 +5,6 @@
 
   import { useParticipantNames } from '../composables';
   import {
-    CHAT_PRIVATE_OPEN_LABEL,
     fetchSessionParticipants,
     FIND_GAME_UNKNOWN_ERROR_MESSAGE,
     getFindGameErrorMessage,
@@ -37,7 +36,6 @@
 
   const emit = defineEmits<{
     changed: [];
-    message: [playerId: string];
   }>();
 
   const toast = useToast();
@@ -210,18 +208,6 @@
             </div>
 
             <div class="flex flex-wrap gap-2">
-              <UButton
-                size="sm"
-                color="neutral"
-                variant="subtle"
-                icon="tabler:message-circle"
-                :disabled="isBusy"
-                :label="CHAT_PRIVATE_OPEN_LABEL"
-                @click.left.exact.prevent="
-                  emit('message', participant.playerId)
-                "
-              />
-
               <UButton
                 v-if="showPayment"
                 size="sm"

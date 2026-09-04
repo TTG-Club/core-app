@@ -367,7 +367,6 @@ import {
   SHEET_PERSONALITY_LABELS,
   SHEET_PLURAL_FORMS,
   SHEET_SAVE_SHARED_LABELS,
-  SHEET_SEND_TO_CHAT_MENU_LABEL,
   SHEET_SHARE_ACTIVE_HINT,
   SHEET_SPEED_LABELS,
   SHEET_SPELL_ABILITY_LABELS,
@@ -11911,12 +11910,6 @@ export interface SheetEntryMenuOptions {
    */
   onCopy?: () => void;
 
-  /**
-   * Отправка текста записи в чат игровой комнаты; не передан — пункта нет
-   * (комната не открыта либо у записи нет описания).
-   */
-  onSendToChat?: () => void;
-
   onRemove: () => void;
 }
 
@@ -11948,14 +11941,6 @@ function getSheetEntryMenuItems(
       label: CATALOG_COPY_MENU_LABEL,
       icon: 'tabler:copy',
       onSelect: options.onCopy,
-    });
-  }
-
-  if (options.onSendToChat) {
-    items.push({
-      label: SHEET_SEND_TO_CHAT_MENU_LABEL,
-      icon: 'tabler:message-2-share',
-      onSelect: options.onSendToChat,
     });
   }
 

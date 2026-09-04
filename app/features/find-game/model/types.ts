@@ -1,6 +1,5 @@
 import type {
   APPLY_SOURCES,
-  CHAT_EVENT_TYPES,
   GAME_COST_TYPES,
   GAME_DURATION_TYPES,
   GAME_SESSION_STATUSES,
@@ -26,7 +25,6 @@ export type GameVisibility = (typeof GAME_VISIBILITIES)[number];
 export type GameStatus = (typeof GAME_STATUSES)[number];
 export type GameSessionStatus = (typeof GAME_SESSION_STATUSES)[number];
 export type SessionPaymentType = (typeof SESSION_PAYMENT_TYPES)[number];
-export type ChatEventType = (typeof CHAT_EVENT_TYPES)[number];
 export type ProfileGender = (typeof PROFILE_GENDERS)[number];
 export type RegistrationDecision = (typeof REGISTRATION_DECISIONS)[number];
 export type SessionTimelineScale = (typeof SESSION_TIMELINE_SCALES)[number];
@@ -38,6 +36,32 @@ export type SessionRegistrationStatus =
 export type SessionAttendanceStatus =
   (typeof SESSION_ATTENDANCE_STATUSES)[number];
 
+/** Город из справочника сервиса. */
+export interface CityOption {
+  name: string;
+  /** Область или штат; `null` — город известен без уточнения. */
+  region: string | null;
+  country: string;
+}
+
+/**
+ * Мастер глазами того, кто выбирает игру: что он о себе написал и что у него
+ * было раньше.
+ */
+export interface MasterPublicProfile {
+  userId: string;
+
+  /** Рассказ о себе; `null` — мастер его не писал. */
+  about: string | null;
+
+  /** Стаж за столом, лет; `null` — не указан. */
+  tabletopExperienceYears: number | null;
+  recruitingGames: number;
+  closedGames: number;
+  cancelledGames: number;
+  completedSessions: number;
+}
+
 /** Игра из выдачи find-game-api. */
 export interface Game {
   id: string;
@@ -46,12 +70,24 @@ export interface Game {
   system: GameSystem;
   imageUrl: string | null;
   virtualTableUrl: string | null;
+
+  /** Разговор с мастером: открыт всем, кто смотрит объявление. */
+  masterChatUrl: string | null;
+
+  /**
+   * Чат самой игры. Приходит только мастеру и принятым игрокам — остальным
+   * его не отдаёт сервис, поэтому здесь он просто пуст.
+   */
+  gameChatUrl: string | null;
   genre: string | null;
   description: string;
   requirements: string;
   allowedSources: Array<string>;
   type: GameType;
   city: string | null;
+
+  /** Где именно собираются: клуб, антикафе, чей-то стол. Только у офлайна. */
+  venue: string | null;
   playersToStart: number;
   maxPlayers: number;
   /**
@@ -69,6 +105,12 @@ export interface Game {
   startingLevel: number;
   crossplayAllowed: boolean;
   status: GameStatus;
+
+  /**
+   * Мастер закрыл набор досрочно. Полный стол закрыт и без этой отметки: там
+   * нет свободного места.
+   */
+  recruitmentClosed: boolean;
   durationType: GameDurationType;
   costType: GameCostType;
   visibility: GameVisibility;
@@ -140,12 +182,15 @@ export interface CreateGameRequest {
   system: GameSystem;
   imageUrl?: string;
   virtualTableUrl?: string;
+  masterChatUrl?: string;
+  gameChatUrl?: string;
   genre?: string;
   description: string;
   requirements: string;
   allowedSources?: Array<string>;
   type: GameType;
   city?: string;
+  venue?: string;
   playersToStart: number;
   maxPlayers: number;
   minAge?: number;
@@ -169,12 +214,15 @@ export interface GameFormState {
   system: GameSystem;
   imageUrl: string;
   virtualTableUrl: string;
+  masterChatUrl: string;
+  gameChatUrl: string;
   genre: string;
   description: string;
   requirements: string;
   allowedSources: Array<string>;
   type: GameType;
   city: string;
+  venue: string;
   playersToStart: number;
   maxPlayers: number;
   minAge: number | null;
@@ -207,8 +255,7 @@ export interface GameSession {
 /** Тело создания сессии. */
 export interface CreateGameSessionRequest {
   title: string;
-  /** Без даты — набор с открытой датой. */
-  startsAt?: string;
+  startsAt: string;
   estimatedDurationMinutes?: number;
   priceAmount?: number;
   priceCurrency?: string;
@@ -246,17 +293,11 @@ export interface CopyGameSessionRequest {
   startsAt?: string;
 }
 
-/** Тело назначения даты сессии, объявленной с открытой датой. */
-export interface ScheduleGameSessionRequest {
-  startsAt: string;
-}
-
 /** Состояние формы сессии. */
 export interface SessionFormState {
   title: string;
   startsAt: string;
   /** Набор с открытой датой — время назначается после сбора игроков. */
-  hasOpenDate: boolean;
   /** Сессия платной игры, проводимая бесплатно. */
   isFree: boolean;
   estimatedDurationMinutes: number | null;
@@ -348,102 +389,6 @@ export interface FindGameProfileFormState {
   playerAbout: string;
 }
 
-/** Результат серверного броска. */
-export interface ChatDiceRoll {
-  expression: string;
-  results: Array<number>;
-  modifier: number;
-  total: number;
-  label: string | null;
-}
-
-/** Применение заклинания в чате. */
-export interface ChatSpellCast {
-  /** Слаг заклинания в справочнике сайта; может отсутствовать у ручного ввода. */
-  spellId: string | null;
-  name: string;
-  level: number | null;
-  target: string | null;
-}
-
-/** Событие чата в том виде, в каком его показывает лента. */
-export interface ChatEvent {
-  id: string;
-  gameId: string;
-  sessionId: string | null;
-  authorId: string;
-  clientMessageId: string;
-  type: ChatEventType;
-  text: string | null;
-  diceRoll: ChatDiceRoll | null;
-  spellCast: ChatSpellCast | null;
-  createdAt: string;
-}
-
-/**
- * Событие ленты: либо подтверждённое сервером, либо ещё летящее.
- * Оптимистичная запись живёт до ответа сервера и заменяется по
- * `clientMessageId`.
- */
-export interface ChatFeedEvent extends ChatEvent {
-  /** `true`, пока сервер не подтвердил отправку. */
-  pending: boolean;
-  /** `true`, если отправка провалилась и событие можно отправить повторно. */
-  failed: boolean;
-  /**
-   * Исходный черновик неподтверждённой отправки. Нужен и повтору, и показу:
-   * результат броска считает сервер, поэтому до ответа в ленте нечего
-   * показать, кроме самого выражения из черновика. У подтверждённых
-   * сервером событий — `null`.
-   */
-  draft: ChatEventDraft | null;
-}
-
-/** Бросок в отправляемом событии: клиент передаёт только выражение. */
-export interface DiceRollDraft {
-  expression: string;
-  label?: string;
-}
-
-/** Заклинание в отправляемом событии. */
-export interface SpellCastDraft {
-  /** Слаг заклинания в справочнике сайта. */
-  spellId?: string;
-  name: string;
-  level?: number;
-  target?: string;
-}
-
-/** Тело отправки события чата. */
-export interface CreateChatEventRequest {
-  clientMessageId: string;
-  type: ChatEventType;
-  text?: string;
-  diceRoll?: DiceRollDraft;
-  spellCast?: SpellCastDraft;
-}
-
-/** Черновик сообщения — то, что отдаёт форма отправки. */
-export type ChatEventDraft = Omit<CreateChatEventRequest, 'clientMessageId'>;
-
-/** Состояние SSE-подписки. */
-export type ChatConnectionStatus =
-  | 'connecting'
-  | 'connected'
-  | 'reconnecting'
-  | 'disconnected';
-
-/** Адрес ленты: общий чат игры (`sessionId === null`) или чат сессии. */
-export interface ChatRoom {
-  gameId: string;
-  sessionId: string | null;
-  /**
-   * Собеседник мастера в личной переписке. Заполнен только у неё; у общего
-   * чата игры и у чатов сессий пуст.
-   */
-  playerId: string | null;
-}
-
 /** RFC 7807 ProblemDetail сервиса. */
 export interface FindGameProblemDetail {
   type: string | null;
@@ -475,6 +420,11 @@ export interface GameViewerAbilities {
   canCloseGame: boolean;
   /** Мастер может отметить игру несостоявшейся. */
   canCancelGame: boolean;
+  /** Мастер может закрыть набор досрочно: группа собрана, места ещё есть. */
+  canCloseRecruitment: boolean;
+
+  /** Мастер может открыть набор снова: свободное место есть. */
+  canOpenRecruitment: boolean;
   canRaiseGame: boolean;
   canDeleteGame: boolean;
   /** Можно подать заявку: игрок вошёл, не мастер и ещё не подавал. */
@@ -485,12 +435,6 @@ export interface GameViewerAbilities {
   isPending: boolean;
   /** Заявка отклонена мастером. */
   isRejected: boolean;
-  canUseGameChat: boolean;
-  /**
-   * Есть доступ в игровую комнату: мастеру и подавшим заявку. Отдельно от
-   * чата, потому что чат из игры уходит, а комната остаётся.
-   */
-  canOpenNexus: boolean;
   /** Нужно войти, чтобы что-то делать в этой игре. */
   needsSignIn: boolean;
 }

@@ -1,4 +1,4 @@
-import type { LocationQuery } from 'vue-router';
+import type { LocationQuery, LocationQueryRaw } from 'vue-router';
 
 import { describe, expect, it } from 'vitest';
 
@@ -11,6 +11,24 @@ import {
   serializeGameFilterToQuery,
   toGameSearchQuery,
 } from '~find-game/model';
+
+/**
+ * Приводит собранные параметры к тому виду, в каком их отдаёт маршрут: в
+ * адресе всё становится строкой, и обратный разбор работает именно с этим.
+ *
+ * @param query Параметры, собранные из фильтра.
+ */
+function toRouteQuery(query: LocationQueryRaw): LocationQuery {
+  const entries = Object.entries(query).map(([key, value]) => {
+    if (Array.isArray(value)) {
+      return [key, value.map((item) => (item == null ? null : String(item)))];
+    }
+
+    return [key, value == null ? null : String(value)];
+  });
+
+  return Object.fromEntries(entries);
+}
 
 describe('чтение фильтра из адреса', () => {
   it('пустой адрес даёт пустой фильтр', () => {
@@ -171,11 +189,11 @@ describe('запись фильтра в адрес', () => {
     filter.minAge = 18;
     filter.maxAge = 40;
 
-    const query = serializeGameFilterToQuery(filter, 4);
-    const restored = parseGameFilterFromQuery(query as LocationQuery);
+    const query = toRouteQuery(serializeGameFilterToQuery(filter, 4));
+    const restored = parseGameFilterFromQuery(query);
 
     expect(restored).toEqual(filter);
-    expect(parseCatalogPageFromQuery(query as LocationQuery)).toBe(4);
+    expect(parseCatalogPageFromQuery(query)).toBe(4);
   });
 });
 

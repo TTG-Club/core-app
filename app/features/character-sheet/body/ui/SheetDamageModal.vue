@@ -33,15 +33,11 @@
       /** Разбор броска урона: кости, бонусы и характеристика по отдельности. */
       damage: DamageRollSource;
 
-      /** Чем бьют: оружие или заклинание. Уходит в чат комнаты. */
-      subject?: string;
-
       /** Надпись на кнопке броска. */
       actionLabel?: string;
     }>(),
     {
       actionLabel: DAMAGE_ROLL_ACTION_LABEL,
-      subject: undefined,
     },
   );
 
@@ -160,19 +156,8 @@
     );
   }
 
-  // Тип урона важен не меньше числа: сопротивление к рубящему меняет исход,
-  // и в ленте это должно быть видно рядом с результатом.
-  const damageLabel = computed(() =>
-    props.damage.typeLabel
-      ? `Урон, ${props.damage.typeLabel.toLowerCase()}`
-      : 'Урон',
-  );
-
   function handleRollClick() {
-    handleRoll(formula.value, {
-      subject: props.subject,
-      label: damageLabel.value,
-    });
+    handleRoll(formula.value);
 
     emit('close', true);
   }

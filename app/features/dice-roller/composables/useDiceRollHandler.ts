@@ -1,17 +1,11 @@
 import { inject } from 'vue';
 
-import { useDiceRoller, useDiceRollerState, useDiceRollSink } from '.';
+import { useDiceRoller, useDiceRollerState } from '.';
 import {
   extractDiceRollDetails,
   extractRollValue,
   formatDiceDetailsSummary,
 } from '../utils';
-
-/** Подписи броска: чем бросали и что это за бросок. */
-export interface RollMeta {
-  subject?: string;
-  label?: string;
-}
 
 /**
  * Composable для обработки бросков кубов.
@@ -34,18 +28,12 @@ export function useDiceRollHandler() {
 
   const tableId = inject<string | undefined>('dice-roller:table-id', undefined);
 
-  // Куда бросок уходит помимо истории: открытая игровая комната показывает
-  // его своей группе.
-  const { broadcast } = useDiceRollSink();
-
   /**
    * Обрабатывает бросок кубов по указанной нотации.
    *
    * @param notation - Нотация броска (например, "1d20", "2d6+3")
-   * @param meta - Чем бросали и что за бросок: подписи идут в игровую комнату,
-   *   где по одной формуле не понять, атака это или урон
    */
-  function handleRoll(notation: string, meta?: RollMeta) {
+  function handleRoll(notation: string) {
     if (!notation || notation.trim().length === 0) {
       return;
     }
@@ -108,14 +96,6 @@ export function useDiceRollHandler() {
 
     if (Number.isFinite(numericValue)) {
       notifyTableRoll(Math.round(numericValue), tableId);
-
-      broadcast({
-        notation,
-        total: Math.round(numericValue),
-        details: rollDetails,
-        subject: meta?.subject,
-        label: meta?.label,
-      });
     }
   }
 

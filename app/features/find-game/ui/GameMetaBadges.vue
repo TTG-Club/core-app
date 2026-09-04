@@ -7,6 +7,8 @@
     GAME_COST_TYPE_LABELS,
     GAME_CROSSPLAY_LABEL,
     GAME_DURATION_TYPE_LABELS,
+    GAME_RECRUITMENT_CLOSED_BADGE,
+    GAME_RECRUITMENT_FULL_BADGE,
     GAME_STATUS_COLORS,
     GAME_STATUS_LABELS,
     GAME_SYSTEM_LABELS,
@@ -16,6 +18,7 @@
     getGameFormatLabel,
     getGamePlayersLabel,
     getGameStartingLevelLabel,
+    isGameRecruitmentClosed,
   } from '../model';
 
   /** Значок в списке: ключ нужен только рендеру. */
@@ -42,6 +45,20 @@
         label: GAME_STATUS_LABELS[game.status],
         color: GAME_STATUS_COLORS[game.status],
       });
+
+      // Закрытый набор виден только своим — в поиске такой игры нет, —
+      // поэтому пометка идёт рядом со статусом, а не в общем ряду условий.
+      if (isGameRecruitmentClosed(game)) {
+        items.push({
+          key: 'recruitment',
+          label:
+            game.takenSeats >= game.maxPlayers
+              ? GAME_RECRUITMENT_FULL_BADGE
+              : GAME_RECRUITMENT_CLOSED_BADGE,
+          icon: 'tabler:user-off',
+          color: 'warning',
+        });
+      }
 
       if (game.visibility === 'PRIVATE') {
         items.push({

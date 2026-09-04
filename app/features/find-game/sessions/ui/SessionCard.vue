@@ -22,10 +22,8 @@
     SESSION_COMPLETE_LABEL,
     SESSION_COPY_LABEL,
     SESSION_DATE_FORMAT,
-    SESSION_OPEN_DATE_BADGE,
     SESSION_PARTICIPANTS_COUNT_LABEL,
     SESSION_PARTICIPANTS_LABEL,
-    SESSION_SCHEDULE_LABEL,
     SESSION_START_LABEL,
   } from '../../model';
 
@@ -61,12 +59,11 @@
     resolveSessionAbilities(session, game, participant, abilities),
   );
 
-  // У набора с открытой датой времени ещё нет: вместо даты показываем, что
-  // мастер назначит её позже.
+  // Дата у сессии есть всегда: набор идёт в самой игре, а встреча
+  // назначается на время. Пустая дата встречается только у записей, заведённых
+  // до этого правила.
   const startsAtLabel = computed(() =>
-    session.startsAt
-      ? format(session.startsAt, SESSION_DATE_FORMAT)
-      : SESSION_OPEN_DATE_BADGE,
+    session.startsAt ? format(session.startsAt, SESSION_DATE_FORMAT) : '',
   );
 
   const durationLabel = computed(() =>
@@ -219,17 +216,6 @@
         icon="tabler:clipboard-list"
         :label="SESSION_PARTICIPANTS_LABEL"
         @click.left.exact.prevent="emit('open-participants', session.id)"
-      />
-
-      <UButton
-        v-if="sessionAbilities.canSchedule"
-        size="sm"
-        color="neutral"
-        variant="subtle"
-        icon="tabler:calendar-plus"
-        :disabled="busy"
-        :label="SESSION_SCHEDULE_LABEL"
-        @click.left.exact.prevent="emit('schedule', session)"
       />
 
       <UButton

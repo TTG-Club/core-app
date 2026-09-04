@@ -6,14 +6,12 @@ import {
   fetchGame,
   fetchGameSessions,
   fetchOwnGameRegistration,
-  getChatStreamUrl,
   getFindGameErrorMessage,
   getFindGameStatus,
 } from '~find-game/model';
 
 const INVITE_CODE = '33333333-3333-4333-8333-333333333333';
 const GAME_ID = '11111111-1111-4111-8111-111111111111';
-const SESSION_ID = '44444444-4444-4444-8444-444444444444';
 
 /** Один вызов `$fetch`: путь и параметры, с которыми он ушёл. */
 interface FetchCall {
@@ -179,28 +177,6 @@ describe('разбор отказа сервиса', () => {
     expect(getFindGameErrorMessage(error)).toBe(
       'У мастера уже есть незавершённая игра',
     );
-  });
-});
-
-describe('адрес SSE-ленты', () => {
-  it('общий чат игры', () => {
-    expect(getChatStreamUrl({ gameId: GAME_ID, sessionId: null })).toBe(
-      `/api/find-game/games/${GAME_ID}/chat/stream`,
-    );
-  });
-
-  it('чат отдельной сессии', () => {
-    expect(getChatStreamUrl({ gameId: GAME_ID, sessionId: SESSION_ID })).toBe(
-      `/api/find-game/games/${GAME_ID}/sessions/${SESSION_ID}/chat/stream`,
-    );
-  });
-
-  it('токен в адрес не попадает — путь свой, cookie доедет сама', () => {
-    const url = getChatStreamUrl({ gameId: GAME_ID, sessionId: null });
-
-    expect(url.startsWith('/api/find-game/')).toBe(true);
-    expect(url).not.toContain('token');
-    expect(url).not.toContain('?');
   });
 });
 

@@ -34,7 +34,6 @@
     SESSION_CREATE_LABEL,
     SESSION_CREATED_TOAST,
     SESSION_LIST_VIEW_LABEL,
-    SESSION_SCHEDULED_TOAST,
     SESSION_SERIES_CREATED_TOAST,
     SESSION_SERIES_LABEL,
     SESSION_STARTED_TOAST,
@@ -55,7 +54,6 @@
     SessionCard,
     SessionCopyModal,
     SessionFormModal,
-    SessionScheduleModal,
     SessionSeriesModal,
     SessionTimeline,
   } from './ui';
@@ -75,7 +73,6 @@
     copySession,
 
     changeAttendance,
-    scheduleSession,
     completeSession,
     cancelSession,
     startSession,
@@ -102,7 +99,6 @@
       sessionId: string,
       status: SessionAttendanceStatus,
     ) => Promise<void>;
-    scheduleSession: (sessionId: string, startsAt: string) => Promise<void>;
     completeSession: (sessionId: string) => Promise<void>;
     cancelSession: (sessionId: string) => Promise<void>;
     startSession: (sessionId: string) => Promise<void>;
@@ -110,7 +106,6 @@
   }>();
 
   const emit = defineEmits<{
-    message: [playerId: string];
     refresh: [];
   }>();
 
@@ -153,7 +148,6 @@
   const isSeriesOpen = ref(false);
   const isBusy = ref(false);
   const copySource = ref<GameSession | null>(null);
-  const scheduleSource = ref<GameSession | null>(null);
   const completeTarget = ref<GameSession | null>(null);
   const cancelTarget = ref<GameSession | null>(null);
   const participantsSessionId = ref<string | null>(null);
@@ -182,15 +176,6 @@
     set: (opened: boolean) => {
       if (!opened) {
         cancelTarget.value = null;
-      }
-    },
-  });
-
-  const isScheduleOpen = computed({
-    get: () => !!scheduleSource.value,
-    set: (opened: boolean) => {
-      if (!opened) {
-        scheduleSource.value = null;
       }
     },
   });
@@ -378,32 +363,6 @@
   }
 
   /**
-   * Открывает форму назначения даты.
-   * @param session Сессия с открытой датой.
-   */
-  function openSchedule(session: GameSession): void {
-    scheduleSource.value = session;
-  }
-
-  /**
-   * Назначает дату сессии.
-   * @param sessionId Идентификатор сессии.
-   * @param startsAt Начало сессии в ISO-формате.
-   */
-  async function handleSchedule(
-    sessionId: string,
-    startsAt: string,
-  ): Promise<void> {
-    const scheduled = await runAction(SESSION_SCHEDULED_TOAST, () =>
-      scheduleSession(sessionId, startsAt),
-    );
-
-    if (scheduled) {
-      scheduleSource.value = null;
-    }
-  }
-
-  /**
    * Собственное участие в сессии; `null` — пользователь не в составе.
    * @param sessionId Идентификатор сессии.
    */
@@ -536,7 +495,6 @@
       @attend="handleAttend"
       @copy="openCopy"
       @open-participants="openParticipants"
-      @schedule="openSchedule"
       @complete="askComplete"
       @start="handleStart"
       @cancel="askCancel"
@@ -557,7 +515,6 @@
         @attend="handleAttend"
         @copy="openCopy"
         @open-participants="openParticipants"
-        @schedule="openSchedule"
         @complete="askComplete"
         @start="handleStart"
         @cancel="askCancel"
@@ -637,19 +594,11 @@
       </template>
     </UModal>
 
-    <SessionScheduleModal
-      v-model:open="isScheduleOpen"
-      :session="scheduleSource"
-      :loading="isBusy"
-      @submit="handleSchedule"
-    />
-
     <SessionParticipantsPanel
       v-model:open="isParticipantsOpen"
       :game="game"
       :session="participantsSession"
       @changed="emit('refresh')"
-      @message="emit('message', $event)"
     />
   </section>
 </template>

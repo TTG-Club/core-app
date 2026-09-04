@@ -1,3 +1,4 @@
+/** Настройки всех внешних сервисов сайта разом. */
 export function getSecrets() {
   return {
     s3: getS3Secrets(),
@@ -15,7 +16,7 @@ interface AuthSecrets {
   url: string;
 }
 
-// Получение секретов S3
+/** Настройки хранилища S3: без любой из переменных загрузка не работает. */
 export function getS3Secrets() {
   const {
     NITRO_S3_ENDPOINT: endpoint = '',
@@ -38,7 +39,7 @@ export function getS3Secrets() {
   };
 }
 
-// Получение секретов API
+/** Настройки core-api: адрес и токены межсервисного доступа. */
 export function getApiSecrets() {
   const {
     NITRO_API_URL: url = '',
@@ -160,7 +161,7 @@ export interface MailSecrets {
 const IMPLICIT_TLS_PORT = 465;
 
 /**
- * Достаёт «голый» адрес из значения заголовка From: `"TTG" &lt;a@b.ru&gt;` → `a@b.ru`.
+ * Достаёт «голый» адрес из значения заголовка From: `"TTG" <a@b.ru>` → `a@b.ru`.
  * Нужен для конверта письма и Reply-To — там имя отправителя недопустимо.
  *
  * @param from значение заголовка From

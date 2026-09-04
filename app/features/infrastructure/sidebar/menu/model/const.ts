@@ -13,7 +13,6 @@ import {
   GAMES_NAVIGATION_LABEL,
   GAMES_ROUTE,
 } from '~find-game/model';
-import { NEXUS_NAVIGATION_LABEL, NEXUS_ROUTE } from '~nexus/model';
 
 export const MENU_SECTIONS: Array<MenuSection> = [
   {
@@ -134,11 +133,6 @@ export const MENU_SECTIONS: Array<MenuSection> = [
       {
         href: FIND_GAME_PROFILE_ROUTE,
         label: FIND_GAME_PROFILE_NAVIGATION_LABEL,
-        roles: [Role.USER],
-      },
-      {
-        href: NEXUS_ROUTE,
-        label: NEXUS_NAVIGATION_LABEL,
         roles: [Role.USER],
       },
     ],

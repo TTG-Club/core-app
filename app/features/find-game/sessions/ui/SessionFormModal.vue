@@ -21,19 +21,19 @@
     SESSION_CURRENCY_PLACEHOLDER,
     SESSION_DATE_LABEL,
     SESSION_DEFAULT_CURRENCY,
+    SESSION_DEFAULT_PAYMENT_TYPE,
     SESSION_FREE_HINT,
     SESSION_FREE_SESSION_HINT,
     SESSION_FREE_SESSION_LABEL,
-    SESSION_OPEN_DATE_HINT,
-    SESSION_OPEN_DATE_LABEL,
     SESSION_PAID_HINT,
     SESSION_PAYMENT_TYPE_LABEL,
     SESSION_PAYMENT_TYPE_LABELS,
     SESSION_PAYMENT_TYPES,
     SESSION_PRICE_LABEL,
     SESSION_PRICE_MIN,
+    SESSION_TIME_END_LABEL,
     SESSION_TIME_RANGE_HINT,
-    SESSION_TIME_RANGE_LABEL,
+    SESSION_TIME_START_LABEL,
     SESSION_TIMEZONE_HINT_PREFIX,
     SESSION_TITLE_LABEL,
     SESSION_TITLE_MAX_LENGTH,
@@ -57,12 +57,11 @@
     return {
       title: '',
       startsAt: getDefaultSessionDate(),
-      hasOpenDate: false,
       isFree: false,
       estimatedDurationMinutes: null,
       priceAmount: null,
       priceCurrency: SESSION_DEFAULT_CURRENCY,
-      paymentType: null,
+      paymentType: SESSION_DEFAULT_PAYMENT_TYPE,
     };
   }
 
@@ -76,10 +75,11 @@
    * Границы встречи. Мастер называет их временем — «с семи до одиннадцати», —
    * а сервису уходит начало и длительность.
    */
-  const timeRange = shallowRef<{ start: Time; end: Time }>({
-    start: new Time(19, 0),
-    end: new Time(23, 0),
-  });
+  // Два поля вместо диапазона: диапазон не принимает конец раньше начала, а
+  // ночная сессия ровно такая — «с 19:00 до 01:00».
+  // shallowRef: у `Time` приватные поля, и разворачивание ref их теряет.
+  const startTime = shallowRef(new Time(19, 0));
+  const endTime = shallowRef(new Time(23, 0));
 
   const paymentTypeOptions = SESSION_PAYMENT_TYPES.map((value) => ({
     value,
@@ -106,7 +106,7 @@
   // Дата и время живут порознь: время задаётся диапазоном, и склеивать их
   // обратно в одно поле пришлось бы только ради формата `datetime-local`.
   const startsAtIso = computed(() => {
-    const { start } = timeRange.value;
+    const start = startTime.value;
     const time = `${pad(start.hour)}:${pad(start.minute)}`;
 
     return form.value.startsAt
@@ -114,10 +114,12 @@
       : null;
   });
 
+  // Конец раньше начала считается как переход через полночь: длительность
+  // берётся через сутки вперёд.
   const durationMinutes = computed(() =>
     durationBetween(
-      timeRange.value.start.hour * 60 + timeRange.value.start.minute,
-      timeRange.value.end.hour * 60 + timeRange.value.end.minute,
+      startTime.value.hour * 60 + startTime.value.minute,
+      endTime.value.hour * 60 + endTime.value.minute,
     ),
   );
 
@@ -152,7 +154,7 @@
   const isValid = computed(
     () =>
       !!form.value.title.trim()
-      && (form.value.hasOpenDate || !!startsAtIso.value)
+      && !!startsAtIso.value
       && isPriceValid.value
       && isCurrencyValid.value
       && (!isPaid.value || !!form.value.paymentType),
@@ -165,23 +167,24 @@
 
   /**
    * Собирает тело запроса. У бесплатной игры платёжные поля не отправляются
-   * вовсе — сервис отвергает запрос, в котором они заданы. Дата не уходит у
-   * набора с открытой датой.
+   * вовсе — сервис отвергает запрос, в котором они заданы.
    */
   function submit(): void {
     if (!isValid.value) {
       return;
     }
 
+    const startsAt = startsAtIso.value;
+
+    // Проверка формы это уже гарантирует; здесь она нужна типу поля.
+    if (!startsAt) {
+      return;
+    }
+
     const request: CreateGameSessionRequest = {
       title: form.value.title.trim(),
+      startsAt,
     };
-
-    // У набора с открытой датой поле не уходит вовсе: сервис понимает его
-    // отсутствие как «время назначу позже».
-    if (!form.value.hasOpenDate && startsAtIso.value) {
-      request.startsAt = startsAtIso.value;
-    }
 
     if (durationMinutes.value) {
       request.estimatedDurationMinutes = durationMinutes.value;
@@ -203,7 +206,8 @@
   watch(isOpen, (opened) => {
     if (opened) {
       form.value = createEmptyForm();
-      timeRange.value = { start: new Time(19, 0), end: new Time(23, 0) };
+      startTime.value = new Time(19, 0);
+      endTime.value = new Time(23, 0);
     }
   });
 </script>
@@ -231,26 +235,33 @@
         <div class="grid gap-3 sm:grid-cols-2">
           <UFormField
             :label="SESSION_DATE_LABEL"
-            :required="!form.hasOpenDate"
+            required
           >
             <UInput
               v-model="form.startsAt"
               type="date"
-              :disabled="form.hasOpenDate"
               class="w-full"
             />
           </UFormField>
 
           <UFormField
-            :label="SESSION_TIME_RANGE_LABEL"
+            :label="SESSION_TIME_START_LABEL"
             :hint="timezoneHint"
+          >
+            <UInputTime
+              v-model="startTime"
+              :hour-cycle="24"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField
+            :label="SESSION_TIME_END_LABEL"
             :description="SESSION_TIME_RANGE_HINT"
           >
             <UInputTime
-              v-model="timeRange"
-              range
+              v-model="endTime"
               :hour-cycle="24"
-              :disabled="form.hasOpenDate"
               class="w-full"
             />
           </UFormField>
@@ -261,12 +272,6 @@
           v-model="form.isFree"
           :label="SESSION_FREE_SESSION_LABEL"
           :description="SESSION_FREE_SESSION_HINT"
-        />
-
-        <UCheckbox
-          v-model="form.hasOpenDate"
-          :label="SESSION_OPEN_DATE_LABEL"
-          :description="SESSION_OPEN_DATE_HINT"
         />
 
         <div

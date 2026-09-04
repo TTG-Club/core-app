@@ -6,6 +6,8 @@
     CATALOG_RETRY_LABEL,
     GAME_CATALOG_GRID_COLUMNS,
     GAME_CATALOG_SKELETON_COUNT,
+    GAME_STATUS_LABELS,
+    GAME_STATUSES,
     GAMES_CREATE_NAVIGATION_LABEL,
     GAMES_CREATE_ROUTE,
     GAMES_MY_NAVIGATION_LABEL,
@@ -14,6 +16,8 @@
     MY_GAMES_EMPTY_DESCRIPTION,
     MY_GAMES_EMPTY_TITLE,
     MY_GAMES_ERROR_TITLE,
+    MY_GAMES_STATUS_ALL_LABEL,
+    MY_GAMES_STATUS_HINT,
   } from '~find-game/model';
   import { NotificationsBell } from '~find-game/notifications';
   import { PageGrid } from '~ui/page';
@@ -37,8 +41,35 @@
     pageSize,
     refresh,
     status,
+    statuses,
     totalGames,
   } = useMyGames();
+
+  /**
+   * Ряд отбора: «Активные» — всё, кроме отменённых, дальше по одному
+   * состоянию. Отменённые лежат за отдельным чипом: они не состоялись, и в
+   * общем списке только мешают.
+   */
+  // «Все, кроме отменённых» — тоже вариант отбора, и своё значение ему нужно:
+  // пустую строку список выбора не принимает.
+  const ACTIVE_STATUSES = 'ACTIVE';
+
+  const statusItems = computed(() => [
+    { label: MY_GAMES_STATUS_ALL_LABEL, value: ACTIVE_STATUSES },
+    ...GAME_STATUSES.map((value) => ({
+      label: GAME_STATUS_LABELS[value],
+      value,
+    })),
+  ]);
+
+  const pickedStatus = computed({
+    get: () => statuses.value[0] ?? ACTIVE_STATUSES,
+    set: (value: string) => {
+      const picked = GAME_STATUSES.find((status) => status === value);
+
+      statuses.value = picked ? [picked] : [];
+    },
+  });
 
   // Пагинация Nuxt UI считает страницы с единицы, сервис — с нуля.
   const humanPage = computed({
@@ -81,6 +112,15 @@
 
     <template #default>
       <div class="flex flex-col gap-4">
+        <UFormField :hint="MY_GAMES_STATUS_HINT">
+          <USelect
+            v-model="pickedStatus"
+            :items="statusItems"
+            value-key="value"
+            class="w-52"
+          />
+        </UFormField>
+
         <PageGrid
           v-if="isLoading"
           :columns="GAME_CATALOG_GRID_COLUMNS"

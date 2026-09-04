@@ -1,18 +1,9 @@
-import type {
-  ChatDiceRoll,
-  ChatFeedEvent,
-  ChatRoom,
-  Game,
-  GameSession,
-} from './types';
+import type { Game, GameSession } from './types';
 
 import {
-  CHAT_AUTHOR_GROUP_GAP,
-  GAME_COST_TYPE_LABELS,
   GAME_TYPE_LABELS,
   GAMES_ROUTE,
   INVITE_CODE_QUERY_KEY,
-  PRIVATE_CHAT_ROOM_PREFIX,
   SESSION_PAYMENT_TYPE_LABELS,
 } from './constants';
 
@@ -36,24 +27,6 @@ export function getGameFormatLabel(game: Game): string {
 }
 
 /**
- * Ключ ленты личной переписки с мастером.
- * @param playerId Идентификатор игрока.
- */
-export function getPrivateChatRoomKey(playerId: string): string {
-  return `${PRIVATE_CHAT_ROOM_PREFIX}${playerId}`;
-}
-
-/**
- * Игрок, чья это личная переписка; `null` — ключ не от неё.
- * @param roomKey Ключ активной ленты.
- */
-export function getPrivateChatPlayerId(roomKey: string): string | null {
-  return roomKey.startsWith(PRIVATE_CHAT_ROOM_PREFIX)
-    ? roomKey.slice(PRIVATE_CHAT_ROOM_PREFIX.length)
-    : null;
-}
-
-/**
  * Расшифровка занятости мест. Числа с карточки убраны — остались только
  * значки, и вслух они сами по себе ничего не значат, поэтому подпись несёт
  * и занятость, и порог старта. Она же показывается по наведению.
@@ -73,6 +46,27 @@ export function getGameSeatsHint(game: Game): string {
   }
 
   return parts.join(', ');
+}
+
+/**
+ * Занятость числом — для большого состава, где значки игроков уже не
+ * читаются и не рисуются. Ряд мест не должен оставаться пустым: без него
+ * непонятно, набрана группа или нет.
+ *
+ * @param game Игра.
+ */
+export function getGameSeatsCounter(game: Game): string {
+  return `${game.takenSeats} / ${game.maxPlayers}`;
+}
+
+/**
+ * Закрыт ли набор в игру. Полный стол закрыт и без отметки мастера: свободного
+ * места в нём нет, и заявку туда всё равно не примут.
+ *
+ * @param game Игра.
+ */
+export function isGameRecruitmentClosed(game: Game): boolean {
+  return game.recruitmentClosed || game.takenSeats >= game.maxPlayers;
 }
 
 /**
@@ -108,15 +102,6 @@ export function getGameAgeLabel(game: Game): string | null {
   }
 
   return null;
-}
-
-/**
- * Подпись платности игры. Конкретная сумма задаётся у каждой сессии отдельно,
- * поэтому у самой игры показывается только тип стоимости.
- * @param game Игра.
- */
-export function getGameCostLabel(game: Game): string {
-  return GAME_COST_TYPE_LABELS[game.costType];
 }
 
 /**
@@ -165,6 +150,37 @@ export function getSessionDurationLabel(minutes: number | null): string | null {
   const hoursLabel = `${hours} ${getPlural(hours, ['час', 'часа', 'часов'])}`;
 
   return rest ? `${hoursLabel} ${rest} мин` : hoursLabel;
+}
+
+/** Миллисекунд в минуте — для перевода паузы ожидания. */
+const MILLIS_IN_MINUTE = 60_000;
+
+/**
+ * Сколько ждать до следующей попытки: «через 5 часов», «через 12 минут».
+ *
+ * Сервис отвечает моментом, с которого попытка снова разрешена, но человеку
+ * нужен не момент, а срок: дату из отказа читать неудобно, тем более в UTC.
+ *
+ * @param availableAt Момент, с которого попытка снова разрешена.
+ * @returns Подпись срока; `null` — ждать уже нечего.
+ */
+export function getWaitLabel(availableAt: string): string | null {
+  const millis = new Date(availableAt).getTime() - Date.now();
+
+  if (!Number.isFinite(millis) || millis <= 0) {
+    return null;
+  }
+
+  // Округляем вверх: «через 0 минут» на живой паузе выглядит обманом.
+  const minutes = Math.ceil(millis / MILLIS_IN_MINUTE);
+
+  if (minutes < MINUTES_IN_HOUR) {
+    return `${minutes} ${getPlural(minutes, ['минуту', 'минуты', 'минут'])}`;
+  }
+
+  const hours = Math.ceil(minutes / MINUTES_IN_HOUR);
+
+  return `${hours} ${getPlural(hours, ['час', 'часа', 'часов'])}`;
 }
 
 /**
@@ -279,90 +295,4 @@ export function fromLocalDateTimeInput(value: string): string | null {
   const date = new Date(value);
 
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
-}
-
-/**
- * Ленты чата совпадают.
- * @param first Первая лента.
- * @param second Вторая лента.
- */
-export function isSameChatRoom(first: ChatRoom, second: ChatRoom): boolean {
-  return first.gameId === second.gameId && first.sessionId === second.sessionId;
-}
-
-/**
- * Короткая запись броска: выражение, выпавшие значения и модификатор.
- * Итог сервер уже посчитал, поэтому здесь ничего не складывается заново.
- * @param roll Результат броска.
- */
-export function getDiceRollBreakdown(roll: ChatDiceRoll): string {
-  const values = roll.results.join(' + ');
-
-  if (!roll.modifier) {
-    return values;
-  }
-
-  const sign = roll.modifier > 0 ? '+' : '−';
-
-  return `${values} ${sign} ${Math.abs(roll.modifier)}`;
-}
-
-/**
- * Начинается ли новая группа сообщений: у другого автора или после большой
- * паузы. Группировка чисто визуальная — она не меняет порядок событий.
- * @param event Текущее событие ленты.
- * @param previous Предыдущее событие ленты.
- */
-export function startsNewAuthorGroup(
-  event: ChatFeedEvent,
-  previous: ChatFeedEvent | undefined,
-): boolean {
-  if (!previous || previous.authorId !== event.authorId) {
-    return true;
-  }
-
-  const gap =
-    new Date(event.createdAt).getTime()
-    - new Date(previous.createdAt).getTime();
-
-  return !Number.isFinite(gap) || gap > CHAT_AUTHOR_GROUP_GAP;
-}
-
-/**
- * День события в виде `YYYY-MM-DD` по местному времени — ключ разделителя дат
- * в ленте.
- * @param isoDate Дата события в ISO-формате.
- */
-export function getChatDayKey(isoDate: string): string {
-  const date = new Date(isoDate);
-
-  if (Number.isNaN(date.getTime())) {
-    return '';
-  }
-
-  const month = `${date.getMonth() + 1}`.padStart(2, '0');
-  const day = `${date.getDate()}`.padStart(2, '0');
-
-  return `${date.getFullYear()}-${month}-${day}`;
-}
-
-/**
- * Сортирует события по времени, а при совпадении — по идентификатору.
- * Второй ключ нужен, чтобы события одной миллисекунды не менялись местами
- * между догрузкой истории и приходом их же по подписке.
- * @param first Первое событие.
- * @param second Второе событие.
- */
-export function compareChatEvents(
-  first: ChatFeedEvent,
-  second: ChatFeedEvent,
-): number {
-  const byTime =
-    new Date(first.createdAt).getTime() - new Date(second.createdAt).getTime();
-
-  if (byTime) {
-    return byTime;
-  }
-
-  return first.id.localeCompare(second.id);
 }

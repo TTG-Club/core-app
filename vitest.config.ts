@@ -19,7 +19,6 @@ export default defineConfig({
       '~find-game': fileURLToPath(
         new URL('./app/features/find-game', import.meta.url),
       ),
-      '~nexus': fileURLToPath(new URL('./app/features/nexus', import.meta.url)),
       '~initiative': fileURLToPath(
         new URL('./app/features/initiative', import.meta.url),
       ),

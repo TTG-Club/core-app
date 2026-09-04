@@ -6,6 +6,7 @@
   import { MarkupEditor } from '~ui/markup-editor';
   import { UploadImage } from '~ui/upload';
 
+  import { useCityDictionary } from '../composables';
   import {
     CANCEL_LABEL,
     createGame,
@@ -29,11 +30,17 @@
     GAME_FIELD_DESCRIPTION_LABEL,
     GAME_FIELD_DESCRIPTION_PLACEHOLDER,
     GAME_FIELD_DURATION_LABEL,
+    GAME_FIELD_GAME_CHAT_HINT,
+    GAME_FIELD_GAME_CHAT_LABEL,
+    GAME_FIELD_GAME_CHAT_PLACEHOLDER,
     GAME_FIELD_GENRE_HINT,
     GAME_FIELD_GENRE_LABEL,
     GAME_FIELD_GENRE_PLACEHOLDER,
     GAME_FIELD_IMAGE_HINT,
     GAME_FIELD_IMAGE_LABEL,
+    GAME_FIELD_MASTER_CHAT_HINT,
+    GAME_FIELD_MASTER_CHAT_LABEL,
+    GAME_FIELD_MASTER_CHAT_PLACEHOLDER,
     GAME_FIELD_MAX_AGE_LABEL,
     GAME_FIELD_MAX_PLAYERS_HINT,
     GAME_FIELD_MAX_PLAYERS_LABEL,
@@ -46,6 +53,9 @@
     GAME_FIELD_TITLE_LABEL,
     GAME_FIELD_TITLE_PLACEHOLDER,
     GAME_FIELD_TYPE_LABEL,
+    GAME_FIELD_VENUE_HINT,
+    GAME_FIELD_VENUE_LABEL,
+    GAME_FIELD_VENUE_PLACEHOLDER,
     GAME_FIELD_VIRTUAL_TABLE_LABEL,
     GAME_FIELD_VIRTUAL_TABLE_PLACEHOLDER,
     GAME_FIELD_VISIBILITY_HINT,
@@ -74,6 +84,7 @@
     GAME_TYPE_LABELS,
     GAME_TYPES,
     GAME_URL_MAX_LENGTH,
+    GAME_VENUE_MAX_LENGTH,
     GAME_VISIBILITIES,
     GAME_VISIBILITY_LABELS,
     GAMES_ROUTE,
@@ -114,12 +125,15 @@
       system: 'DND_2024',
       imageUrl: '',
       virtualTableUrl: '',
+      masterChatUrl: '',
+      gameChatUrl: '',
       genre: '',
       description: '',
       requirements: '',
       allowedSources: [],
       type: 'ONLINE',
       city: '',
+      venue: '',
       playersToStart: 3,
       maxPlayers: 5,
       minAge: null,
@@ -143,12 +157,17 @@
       system: source.system,
       imageUrl: source.imageUrl ?? '',
       virtualTableUrl: source.virtualTableUrl ?? '',
+      masterChatUrl: source.masterChatUrl ?? '',
+      // Чужой чат игры сервис не отдаёт, но форму открывает только мастер:
+      // ему приходит и он.
+      gameChatUrl: source.gameChatUrl ?? '',
       genre: source.genre ?? '',
       description: source.description,
       requirements: source.requirements,
       allowedSources: [...source.allowedSources],
       type: source.type,
       city: source.city ?? '',
+      venue: source.venue ?? '',
       playersToStart: source.playersToStart,
       maxPlayers: source.maxPlayers,
       minAge: source.minAge,
@@ -194,6 +213,27 @@
   }
 
   /** Жанры из «Руководства Мастера» плюс уже выбранный, если он свой. */
+  const citySearch = ref('');
+
+  const { cityNames, isLoading: areCitiesLoading } =
+    useCityDictionary(citySearch);
+
+  // Выбранный город остаётся в списке, даже когда подсказки уже про другое:
+  // иначе выбор пропадал бы из поля при следующем наборе.
+  const cityItems = computed(() => [
+    ...new Set(
+      form.value.city ? [form.value.city, ...cityNames.value] : cityNames.value,
+    ),
+  ]);
+
+  /**
+   * Ставит город, которого не нашлось в справочнике.
+   * @param value Название города.
+   */
+  function addCity(value: string): void {
+    form.value.city = value.trim().slice(0, GAME_CITY_MAX_LENGTH);
+  }
+
   const genreItems = computed(() => [
     ...new Set(
       form.value.genre
@@ -284,6 +324,14 @@
       request.virtualTableUrl = state.virtualTableUrl.trim();
     }
 
+    if (state.masterChatUrl.trim()) {
+      request.masterChatUrl = state.masterChatUrl.trim();
+    }
+
+    if (state.gameChatUrl.trim()) {
+      request.gameChatUrl = state.gameChatUrl.trim();
+    }
+
     if (state.genre.trim()) {
       request.genre = state.genre.trim();
     }
@@ -294,6 +342,12 @@
 
     if (isOffline.value && state.city.trim()) {
       request.city = state.city.trim();
+    }
+
+    // Место встречи уходит только у офлайна: сервис отвечает 400 на адрес
+    // стола в онлайн-игре.
+    if (isOffline.value && state.venue.trim()) {
+      request.venue = state.venue.trim();
     }
 
     if (state.minAge !== null) {
@@ -438,6 +492,34 @@
         />
       </UFormField>
 
+      <!-- Разговоры группы живут там, где она привыкла: чат с мастером
+        открыт всем, чат игры — только принятым -->
+      <UFormField
+        :label="GAME_FIELD_MASTER_CHAT_LABEL"
+        :description="GAME_FIELD_MASTER_CHAT_HINT"
+      >
+        <UInput
+          v-model="form.masterChatUrl"
+          type="url"
+          :maxlength="GAME_URL_MAX_LENGTH"
+          :placeholder="GAME_FIELD_MASTER_CHAT_PLACEHOLDER"
+          class="w-full"
+        />
+      </UFormField>
+
+      <UFormField
+        :label="GAME_FIELD_GAME_CHAT_LABEL"
+        :description="GAME_FIELD_GAME_CHAT_HINT"
+      >
+        <UInput
+          v-model="form.gameChatUrl"
+          type="url"
+          :maxlength="GAME_URL_MAX_LENGTH"
+          :placeholder="GAME_FIELD_GAME_CHAT_PLACEHOLDER"
+          class="w-full"
+        />
+      </UFormField>
+
       <UFormField
         :label="GAME_FIELD_DESCRIPTION_LABEL"
         required
@@ -481,15 +563,39 @@
           />
         </UFormField>
 
+        <!-- Город выбирается из справочника: иначе фильтр каталога
+          рассыпается на «Санкт-Петербург», «СПб» и «спб». Своего города в
+          списке может не оказаться — тогда его вписывают руками -->
         <UFormField
           v-if="isOffline"
           :label="GAME_FIELD_CITY_LABEL"
           :hint="GAME_FIELD_CITY_HINT"
         >
-          <UInput
+          <USelectMenu
             v-model="form.city"
-            :maxlength="GAME_CITY_MAX_LENGTH"
+            v-model:search-term="citySearch"
+            :items="cityItems"
+            :loading="areCitiesLoading"
+            ignore-filter
+            create-item
             :placeholder="GAME_FIELD_CITY_PLACEHOLDER"
+            class="w-full"
+            @create="addCity"
+          />
+        </UFormField>
+
+        <!-- Города игроку мало: по нему видно, доедет ли он вообще, а по
+          месту — как добираться -->
+        <UFormField
+          v-if="isOffline"
+          :label="GAME_FIELD_VENUE_LABEL"
+          :hint="GAME_FIELD_VENUE_HINT"
+          class="sm:col-span-2"
+        >
+          <UInput
+            v-model="form.venue"
+            :maxlength="GAME_VENUE_MAX_LENGTH"
+            :placeholder="GAME_FIELD_VENUE_PLACEHOLDER"
             class="w-full"
           />
         </UFormField>

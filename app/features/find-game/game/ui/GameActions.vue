@@ -13,6 +13,8 @@
     GAME_DELETE_LABEL,
     GAME_EDIT_LABEL,
     GAME_RAISE_LABEL,
+    GAME_RECRUITMENT_CLOSE_LABEL,
+    GAME_RECRUITMENT_OPEN_LABEL,
     GAMES_EDIT_ROUTE_SUFFIX,
     GAMES_ROUTE,
   } from '../../model';
@@ -34,10 +36,12 @@
   );
 
   const emit = defineEmits<{
-    cancel: [];
-    close: [];
-    raise: [];
-    remove: [reason: string];
+    'cancel': [];
+    'close': [];
+    'close-recruitment': [];
+    'open-recruitment': [];
+    'raise': [];
+    'remove': [reason: string];
   }>();
 
   const isCloseConfirmOpen = ref(false);
@@ -97,6 +101,36 @@
         variant="ghost"
         icon="tabler:pencil"
         :aria-label="GAME_EDIT_LABEL"
+      />
+    </UTooltip>
+
+    <!-- Набор закрывают, когда группа собрана: объявление уходит из
+      поиска, а у мастера и принятых игра остаётся -->
+    <UTooltip
+      v-if="abilities.canCloseRecruitment"
+      :text="GAME_RECRUITMENT_CLOSE_LABEL"
+    >
+      <UButton
+        color="neutral"
+        variant="ghost"
+        icon="tabler:user-off"
+        :disabled="busy"
+        :aria-label="GAME_RECRUITMENT_CLOSE_LABEL"
+        @click.left.exact.prevent="emit('close-recruitment')"
+      />
+    </UTooltip>
+
+    <UTooltip
+      v-if="abilities.canOpenRecruitment"
+      :text="GAME_RECRUITMENT_OPEN_LABEL"
+    >
+      <UButton
+        color="neutral"
+        variant="ghost"
+        icon="tabler:user-plus"
+        :disabled="busy"
+        :aria-label="GAME_RECRUITMENT_OPEN_LABEL"
+        @click.left.exact.prevent="emit('open-recruitment')"
       />
     </UTooltip>
 

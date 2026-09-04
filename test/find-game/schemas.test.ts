@@ -1,14 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-  parseChatEvent,
-  parseChatEvents,
-  parseChatEventSafe,
+  getGameSeatsCounter,
+  parseCities,
   parseFindGameProfile,
   parseGame,
   parseGameRegistration,
   parseGameSessions,
   parseGamesPage,
+  parseMasterProfile,
   parseProblemDetail,
   parseSessionParticipant,
 } from '~find-game/model';
@@ -93,6 +93,91 @@ describe('разбор игры', () => {
   it('без идентификатора игра не разбирается', () => {
     expect(() => parseGame(gameResponse({ id: undefined }))).toThrow();
   });
+
+  it('несёт ссылки на разговоры', () => {
+    const game = parseGame(
+      gameResponse({
+        masterChatUrl: 'https://t.me/master',
+        gameChatUrl: 'https://t.me/+strahd-party',
+      }),
+    );
+
+    expect(game.masterChatUrl).toBe('https://t.me/master');
+    expect(game.gameChatUrl).toBe('https://t.me/+strahd-party');
+  });
+
+  it('оставляет чат игры пустым, когда сервис его не отдал', () => {
+    // Чат игры принадлежит принятым игрокам: остальным сервис поля не
+    // присылает вовсе, и ссылки в объявлении просто нет.
+    const game = parseGame(gameResponse({ gameChatUrl: undefined }));
+
+    expect(game.gameChatUrl).toBeNull();
+  });
+});
+
+describe('профиль мастера', () => {
+  it('разбирает рассказ о себе и счётчики игр', () => {
+    const profile = parseMasterProfile({
+      userId: '55555555-5555-4555-8555-555555555555',
+      about: 'Вожу с 2015 года',
+      tabletopExperienceYears: 10,
+      recruitingGames: 2,
+      closedGames: 7,
+      cancelledGames: 1,
+      completedSessions: 34,
+    });
+
+    expect(profile.about).toBe('Вожу с 2015 года');
+    expect(profile.tabletopExperienceYears).toBe(10);
+    expect(profile.recruitingGames).toBe(2);
+    expect(profile.completedSessions).toBe(34);
+  });
+
+  it('переживает мастера без рассказа о себе', () => {
+    // Мастер водит, ничего о себе не написав: счётчики всё равно нужны.
+    const profile = parseMasterProfile({
+      userId: '55555555-5555-4555-8555-555555555555',
+      recruitingGames: 1,
+    });
+
+    expect(profile.about).toBeNull();
+    expect(profile.tabletopExperienceYears).toBeNull();
+    expect(profile.closedGames).toBe(0);
+  });
+});
+
+describe('справочник городов', () => {
+  it('разбирает подсказки', () => {
+    const cities = parseCities([
+      { name: 'Москва', region: null, country: 'Россия' },
+      {
+        name: 'Ростов-на-Дону',
+        region: 'Ростовская область',
+        country: 'Россия',
+      },
+    ]);
+
+    expect(cities).toEqual([
+      { name: 'Москва', region: null, country: 'Россия' },
+      {
+        name: 'Ростов-на-Дону',
+        region: 'Ростовская область',
+        country: 'Россия',
+      },
+    ]);
+  });
+
+  it('выкидывает битую подсказку, а не весь список', () => {
+    // Из-за одной записи без названия список подсказок пропадать не должен.
+    const cities = parseCities([{ country: 'Россия' }, { name: 'Казань' }]);
+
+    expect(cities).toHaveLength(1);
+    expect(cities[0]?.name).toBe('Казань');
+  });
+
+  it('переживает ответ не массивом', () => {
+    expect(parseCities(null)).toEqual([]);
+  });
 });
 
 describe('занятость мест', () => {
@@ -110,6 +195,16 @@ describe('занятость мест', () => {
 
     expect(game.takenSeats).toBe(0);
     expect(game.approvedSeats).toBe(0);
+  });
+
+  it('у большого состава читается счётчиком', () => {
+    // Пятнадцать значков в карточке не читаются и не рисуются — но пустой ряд
+    // мест не говорит ничего, набрана группа или нет.
+    const game = parseGame(
+      gameResponse({ maxPlayers: 15, takenSeats: 3, approvedSeats: 2 }),
+    );
+
+    expect(getGameSeatsCounter(game)).toBe('3 / 15');
   });
 });
 
@@ -390,91 +485,6 @@ describe('разбор профиля', () => {
     expect(profile.birthYear).toBeNull();
     expect(profile.gender).toBeNull();
     expect(profile.masterAbout).toBe('');
-  });
-});
-
-describe('разбор событий чата', () => {
-  const base = {
-    id: 'event-1',
-    gameId: 'game-1',
-    sessionId: null,
-    authorId: 'author-1',
-    clientMessageId: 'client-1',
-    createdAt: '2026-08-26T12:00:00Z',
-  };
-
-  it('читает текстовое событие', () => {
-    const event = parseChatEvent({
-      ...base,
-      type: 'TEXT',
-      text: 'Открываю дверь',
-      payload: null,
-    });
-
-    expect(event.type).toBe('TEXT');
-    expect(event.text).toBe('Открываю дверь');
-    expect(event.diceRoll).toBeNull();
-  });
-
-  it('читает готовый результат броска, ничего не пересчитывая', () => {
-    const event = parseChatEvent({
-      ...base,
-      type: 'DICE_ROLL',
-      text: null,
-      payload: {
-        expression: '2d20+5',
-        results: [12, 18],
-        modifier: 5,
-        total: 35,
-        label: 'Внимательность',
-      },
-    });
-
-    // Итог берётся с сервера как есть: клиент броски не считает.
-    expect(event.diceRoll?.total).toBe(35);
-    expect(event.diceRoll?.results).toEqual([12, 18]);
-    expect(event.diceRoll?.label).toBe('Внимательность');
-  });
-
-  it('читает применение заклинания вместе со слагом справочника', () => {
-    const event = parseChatEvent({
-      ...base,
-      type: 'SPELL_CAST',
-      text: null,
-      payload: {
-        spellId: 'magic-missile',
-        name: 'Волшебная стрела',
-        level: 1,
-        target: 'Гоблин',
-      },
-    });
-
-    expect(event.spellCast?.spellId).toBe('magic-missile');
-    expect(event.spellCast?.level).toBe(1);
-    expect(event.spellCast?.target).toBe('Гоблин');
-  });
-
-  it('битый кадр подписки не роняет ленту, а отбрасывается', () => {
-    const warn = vi.spyOn(consola, 'warn').mockImplementation(() => undefined);
-
-    expect(parseChatEventSafe({ id: null })).toBeNull();
-    expect(warn).toHaveBeenCalled();
-
-    warn.mockRestore();
-  });
-
-  it('история разбирается поэлементно', () => {
-    const warn = vi.spyOn(consola, 'warn').mockImplementation(() => undefined);
-
-    const events = parseChatEvents([
-      { ...base, type: 'TEXT', text: 'Первое', payload: null },
-      { broken: true },
-      { ...base, id: 'event-2', type: 'TEXT', text: 'Второе', payload: null },
-    ]);
-
-    expect(events).toHaveLength(2);
-
-    warn.mockRestore();
   });
 });
 

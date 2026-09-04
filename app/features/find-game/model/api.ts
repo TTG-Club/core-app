@@ -1,8 +1,6 @@
 import type {
-  ChatEvent,
-  ChatRoom,
+  CityOption,
   CopyGameSessionRequest,
-  CreateChatEventRequest,
   CreateGameRegistrationRequest,
   CreateGameRequest,
   CreateGameSessionRequest,
@@ -14,6 +12,8 @@ import type {
   GameRegistration,
   GameSearchFilter,
   GameSession,
+  GameStatus,
+  MasterPublicProfile,
   ParticipantName,
   RegistrationDecision,
   SessionAttendanceStatus,
@@ -27,19 +27,20 @@ import { StatusCodes } from 'http-status-codes';
 import { FetchError } from 'ofetch';
 
 import {
-  CHAT_HISTORY_PAGE_SIZE,
+  CITIES_API_PATH,
   DISPLAY_NAMES_BY_IDS_API_PATH,
   DISPLAY_NAMES_LOOKUP_MAX,
   FIND_GAME_PROFILE_API_PATH,
   FIND_GAME_UNKNOWN_ERROR_MESSAGE,
   GAMES_API_PATH,
+  MASTER_PROFILE_API_PATH,
   NOTIFICATIONS_API_PATH,
+  RETRY_AFTER_PREFIX,
 } from './constants';
 import { toGameSearchQuery } from './filters';
 import {
   createGameRequestSchema,
-  parseChatEvent,
-  parseChatEvents,
+  parseCities,
   parseFindGameProfile,
   parseGame,
   parseGameRegistration,
@@ -47,6 +48,7 @@ import {
   parseGameSession,
   parseGameSessions,
   parseGamesPage,
+  parseMasterProfile,
   parseNotification,
   parseNotificationsPage,
   parseParticipantNames,
@@ -55,6 +57,7 @@ import {
   parseSessionParticipants,
   parseUnreadNotifications,
 } from './schemas';
+import { getWaitLabel } from './utils';
 
 /* ------------------------------------------------------------------ */
 /* Ошибки                                                              */
@@ -77,7 +80,7 @@ export function getFindGameStatus(error: unknown): number | undefined {
  * готовый русский текст лежит в `detail`.
  * @param error Пойманная ошибка.
  */
-export function getFindGameProblem(error: unknown): FindGameProblemDetail {
+function getFindGameProblem(error: unknown): FindGameProblemDetail {
   if (error instanceof FetchError) {
     return parseProblemDetail(error.data);
   }
@@ -95,6 +98,16 @@ export function getFindGameErrorMessage(
   fallback: string = FIND_GAME_UNKNOWN_ERROR_MESSAGE,
 ): string {
   const problem = getFindGameProblem(error);
+
+  // Отказ по норме попыток сервис объясняет моментом «можно с такого-то
+  // времени». Человеку нужен срок, а не дата в UTC.
+  if (problem.availableAt) {
+    const wait = getWaitLabel(problem.availableAt);
+
+    if (wait) {
+      return `${RETRY_AFTER_PREFIX} ${wait}`;
+    }
+  }
 
   if (problem.detail) {
     return problem.detail;
@@ -146,39 +159,6 @@ function participantsPath(gameId: string, sessionId: string): string {
   return `${sessionsPath(gameId)}/${sessionId}/participants`;
 }
 
-/**
- * Путь ленты чата: общей у игры, отдельной у сессии или личной переписки
- * игрока с мастером.
- * @param room Адрес ленты.
- * @param suffix Хвост пути: `events` или `stream`.
- */
-function chatPath(room: ChatRoom, suffix: string): string {
-  return `${chatBasePath(room)}/chat/${suffix}`;
-}
-
-/** Комната ленты: личная переписка, сессия или игра целиком. */
-function chatBasePath(room: ChatRoom): string {
-  if (room.playerId) {
-    return `${gamePath(room.gameId)}/players/${room.playerId}`;
-  }
-
-  if (room.sessionId) {
-    return `${sessionsPath(room.gameId)}/${room.sessionId}`;
-  }
-
-  return gamePath(room.gameId);
-}
-
-/**
- * Адрес SSE-ленты чата. Путь same-origin, поэтому браузер сам приложит cookie
- * сессии, а Nitro превратит её в `Authorization` для сервиса — токен в адрес
- * не попадает.
- * @param room Адрес ленты.
- */
-export function getChatStreamUrl(room: ChatRoom): string {
-  return chatPath(room, 'stream');
-}
-
 /* ------------------------------------------------------------------ */
 /* Игры                                                                */
 /* ------------------------------------------------------------------ */
@@ -213,10 +193,13 @@ export async function fetchGames(
 export async function fetchMyGames(
   page: number,
   size: number,
+  statuses: ReadonlyArray<GameStatus> = [],
 ): Promise<SpringPage<Game>> {
   const response = await $fetch(`${GAMES_API_PATH}/my`, {
     method: 'GET',
-    query: { page, size },
+    // Без отбора сервис не отдаёт отменённые: они не состоялись, и в общем
+    // списке своих игр им место только по прямому запросу.
+    query: { page, size, ...(statuses.length ? { status: statuses } : {}) },
     retry: 0,
   });
 
@@ -304,6 +287,63 @@ export async function closeGame(gameId: string): Promise<void> {
  */
 export async function raiseGame(gameId: string): Promise<Game> {
   const response = await $fetch(`${gamePath(gameId)}/raise`, {
+    method: 'PATCH',
+    retry: 0,
+  });
+
+  return parseGame(response);
+}
+
+/**
+ * Публичный профиль мастера: рассказ о себе и счётчики его игр.
+ * @param masterId Идентификатор мастера.
+ */
+export async function fetchMasterProfile(
+  masterId: string,
+): Promise<MasterPublicProfile> {
+  const response = await $fetch(`${MASTER_PROFILE_API_PATH}/${masterId}`, {
+    retry: 0,
+  });
+
+  return parseMasterProfile(response);
+}
+
+/**
+ * Подсказки городов из справочника сервиса.
+ *
+ * Пустой запрос отдаёт крупнейшие города — с них и начинают выбор.
+ *
+ * @param query Начало названия города.
+ */
+export async function fetchCities(query: string): Promise<Array<CityOption>> {
+  const response = await $fetch(CITIES_API_PATH, {
+    query: query ? { q: query } : undefined,
+    retry: 0,
+  });
+
+  return parseCities(response);
+}
+
+/**
+ * Закрывает набор в игру досрочно: группа собрана, и новые заявки мастеру не
+ * нужны. Сервис отвечает 400, пока не набран минимум для старта.
+ * @param gameId Идентификатор игры.
+ */
+export async function closeGameRecruitment(gameId: string): Promise<Game> {
+  const response = await $fetch(`${gamePath(gameId)}/recruitment/close`, {
+    method: 'PATCH',
+    retry: 0,
+  });
+
+  return parseGame(response);
+}
+
+/**
+ * Открывает набор снова. Сервис отвечает 400, если свободных мест нет.
+ * @param gameId Идентификатор игры.
+ */
+export async function openGameRecruitment(gameId: string): Promise<Game> {
+  const response = await $fetch(`${gamePath(gameId)}/recruitment/open`, {
     method: 'PATCH',
     retry: 0,
   });
@@ -403,29 +443,6 @@ export async function copyGameSession(
   const response = await $fetch(
     `${sessionsPath(gameId)}/${sourceSessionId}/copy`,
     { method: 'POST', body: request, retry: 0 },
-  );
-
-  return parseGameSession(response);
-}
-
-/**
- * Назначает дату сессии, объявленной с открытой датой.
- *
- * Один раз: уже назначенное время сервис переносить не даёт — игроки под него
- * подстроились.
- *
- * @param gameId Идентификатор игры.
- * @param sessionId Идентификатор сессии.
- * @param startsAt Начало сессии в ISO-формате.
- */
-export async function scheduleGameSession(
-  gameId: string,
-  sessionId: string,
-  startsAt: string,
-): Promise<GameSession> {
-  const response = await $fetch(
-    `${sessionsPath(gameId)}/${sessionId}/schedule`,
-    { method: 'PATCH', body: { startsAt }, retry: 0 },
   );
 
   return parseGameSession(response);
@@ -771,50 +788,6 @@ export async function updateFindGameProfile(
   });
 
   return parseFindGameProfile(response);
-}
-
-/* ------------------------------------------------------------------ */
-/* Чат                                                                 */
-/* ------------------------------------------------------------------ */
-
-/**
- * История ленты в хронологическом порядке. Для предыдущей страницы передаётся
- * `before`, равный `createdAt` самого раннего уже загруженного события.
- * @param room Адрес ленты.
- * @param before Верхняя граница выборки.
- * @param limit Размер страницы.
- */
-export async function fetchChatHistory(
-  room: ChatRoom,
-  before: string | null = null,
-  limit: number = CHAT_HISTORY_PAGE_SIZE,
-): Promise<Array<ChatEvent>> {
-  const response = await $fetch(chatPath(room, 'events'), {
-    method: 'GET',
-    query: { before: before || undefined, limit },
-    retry: 0,
-  });
-
-  return parseChatEvents(response);
-}
-
-/**
- * Отправляет событие в ленту. `clientMessageId` делает повтор безопасным:
- * сервис вернёт уже сохранённое событие вместо дубликата.
- * @param room Адрес ленты.
- * @param request Тело события.
- */
-export async function sendChatEvent(
-  room: ChatRoom,
-  request: CreateChatEventRequest,
-): Promise<ChatEvent> {
-  const response = await $fetch(chatPath(room, 'events'), {
-    method: 'POST',
-    body: request,
-    retry: 0,
-  });
-
-  return parseChatEvent(response);
 }
 
 /* ------------------------------------------------------------------ */

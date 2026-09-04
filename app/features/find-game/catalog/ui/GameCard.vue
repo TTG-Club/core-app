@@ -3,6 +3,7 @@
 
   import type { Game } from '../../model';
 
+  import { useMasterProfileDrawer } from '../../composables';
   import {
     GAME_CARD_BADGE_LIMIT,
     GAME_COST_TYPE_LABELS,
@@ -15,7 +16,9 @@
     GAME_VISIBILITY_LABELS,
     getGameFormatLabel,
     getGameRoute,
+    getGameSeatsCounter,
     getGameSeatsHint,
+    MASTER_PROFILE_OPEN_HINT,
   } from '../../model';
   import { GameCover } from '../../ui';
 
@@ -101,8 +104,8 @@
    * различаются видом: подтверждённое мастером место — залитый цветной
    * значок, место с неразобранной заявкой — цветной контурный, свободное до
    * минимума для старта — контурный, свободное сверх минимума — контурный
-   * приглушённый. У игр с очень большим составом значки не читаются, и ряд
-   * не рисуется вовсе.
+   * приглушённый. У игр с очень большим составом значки не читаются, и
+   * вместо них встаёт счётчик.
    */
   const seats = computed(() => {
     if (game.maxPlayers > GAME_SEATS_MAX_ICONS) {
@@ -132,6 +135,15 @@
   });
 
   const seatsHint = computed(() => getGameSeatsHint(game));
+
+  const seatsCounter = computed(() => getGameSeatsCounter(game));
+
+  const { open: openProfile } = useMasterProfileDrawer();
+
+  /** Открывает профиль мастера этой игры. */
+  function openMasterProfile(): void {
+    openProfile(game.masterId, masterName);
+  }
 </script>
 
 <!--
@@ -202,22 +214,50 @@
       <span class="flex h-5 items-baseline gap-1 text-sm leading-5">
         <span class="font-semibold text-toned">{{ GAME_MASTER_LABEL }}:</span>
 
-        <span class="line-clamp-1 text-muted">{{ masterName }}</span>
+        <!-- Имя ведёт в профиль мастера, а не в игру: карточка целиком и так
+          открывает объявление -->
+        <ULink
+          as="button"
+          type="button"
+          class="line-clamp-1 text-left text-primary"
+          :title="MASTER_PROFILE_OPEN_HINT"
+          @click.left.exact.prevent.stop="openMasterProfile"
+        >
+          {{ masterName }}
+        </ULink>
       </span>
 
-      <div
-        class="flex h-5 items-center gap-1"
-        :title="seatsHint"
-        :aria-label="seatsHint"
-      >
-        <UIcon
-          v-for="seat in seats"
-          :key="seat.index"
-          :name="seat.icon"
-          class="size-4"
-          :class="seat.tone"
-        />
-      </div>
+      <!-- Значки сами по себе ничего не говорят вслух, поэтому расшифровка
+        занятости идёт и подсказкой, и `aria-label` -->
+      <UTooltip :text="seatsHint">
+        <div
+          class="flex h-5 w-fit items-center gap-1"
+          :aria-label="seatsHint"
+        >
+          <template v-if="seats.length">
+            <UIcon
+              v-for="seat in seats"
+              :key="seat.index"
+              :name="seat.icon"
+              class="size-4"
+              :class="seat.tone"
+            />
+          </template>
+
+          <!-- Большой состав значками не читается, но пустой ряд мест не
+            говорит ничего: набрана группа или нет — видно по счётчику -->
+          <template v-else>
+            <UIcon
+              name="tabler:users"
+              class="size-4 text-muted"
+            />
+
+            <span class="text-sm leading-5 text-muted tabular-nums">
+              {{ seatsCounter }}
+            </span>
+          </template>
+        </div>
+      </UTooltip>
     </div>
   </UCard>
 </template>

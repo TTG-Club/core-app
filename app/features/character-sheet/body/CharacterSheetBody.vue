@@ -500,8 +500,6 @@
   function handleAbilityRoll(abilityKey: AbilityKey) {
     rollModal.open({
       title: `Проверка: ${ABILITY_LABELS[abilityKey]}`,
-      subject: ABILITY_LABELS[abilityKey],
-      kind: 'Проверка характеристики',
       modifier: getAbilityCheckValue(character.value, abilityKey),
       ability: abilityKey,
     });
@@ -675,7 +673,6 @@
   function handleInitiativeRoll() {
     rollModal.open({
       title: 'Инициатива',
-      kind: 'Инициатива',
       modifier: initiativeBonus.value,
       ability: 'dexterity',
       actionLabel: 'Бросить инициативу',
@@ -685,8 +682,6 @@
   function handleSavingThrowRoll(row: SavingThrowRow) {
     rollModal.open({
       title: `Спасбросок: ${ABILITY_LABELS[row.key]}`,
-      subject: ABILITY_LABELS[row.key],
-      kind: 'Спасбросок',
       modifier: row.value,
       // Характеристика строки, а не самого спасброска: от неё модалка считает
       // подмену, а в подменённом спасброске это уже другая характеристика.
@@ -698,8 +693,6 @@
   function handleSkillRoll(row: SkillRow) {
     rollModal.open({
       title: `Проверка: ${row.name}`,
-      subject: `Проверка навыка ${row.name}`,
-      kind: 'Результат',
       modifier: row.value,
       ability: row.ability,
     });
@@ -723,8 +716,6 @@
 
     rollModal.open({
       title: `Атака: ${inventoryItem.name}`,
-      subject: inventoryItem.name,
-      kind: 'Атака',
       modifier: attack.value,
       ability: attack.ability,
       actionLabel: 'Бросить атаку',
@@ -749,7 +740,6 @@
 
     damageModal.open({
       title: `Урон: ${inventoryItem.name}`,
-      subject: inventoryItem.name,
       damage,
     });
   }
@@ -763,7 +753,6 @@
   async function handleSpellDamageRoll(roll: SpellDamageRoll) {
     const isRolled = await damageModal.open({
       title: roll.title,
-      subject: roll.title,
       damage: roll.damage,
     }).result;
 

@@ -4,7 +4,6 @@
   import { CharacterSheetDrawer } from '~character-sheet/drawer';
 
   import {
-    CHAT_PRIVATE_OPEN_LABEL,
     REGISTRATION_APPROVE_LABEL,
     REGISTRATION_CHARACTER_SHEET_LABEL,
     REGISTRATION_EXCLUDE_HINT,
@@ -33,7 +32,6 @@
   const emit = defineEmits<{
     approve: [registrationId: string];
     reject: [registrationId: string];
-    message: [playerId: string];
   }>();
 
   const overlay = useOverlay();
@@ -169,16 +167,6 @@
         :label="REGISTRATION_EXCLUDE_LABEL"
         :title="REGISTRATION_EXCLUDE_HINT"
         @click.left.exact.prevent="emit('reject', registration.id)"
-      />
-
-      <UButton
-        size="sm"
-        color="neutral"
-        variant="subtle"
-        icon="tabler:message-circle"
-        :disabled="busy"
-        :label="CHAT_PRIVATE_OPEN_LABEL"
-        @click.left.exact.prevent="emit('message', registration.playerId)"
       />
     </div>
   </div>

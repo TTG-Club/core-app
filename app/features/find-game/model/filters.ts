@@ -20,7 +20,7 @@ import {
 } from './constants';
 
 /** Ключ страницы в адресе каталога. */
-export const CATALOG_PAGE_QUERY_KEY = 'page';
+const CATALOG_PAGE_QUERY_KEY = 'page';
 
 /**
  * Значение параметра адреса. Отсутствующий ключ даёт `undefined`, поэтому он

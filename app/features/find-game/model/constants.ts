@@ -38,6 +38,12 @@ export const GAMES_API_PATH = `${FIND_GAME_API_PREFIX}/games`;
 /** Профиль Мастера и Игрока. */
 export const FIND_GAME_PROFILE_API_PATH = `${FIND_GAME_API_PREFIX}/profiles/me`;
 
+/** Публичный профиль мастера: его читают прямо с карточки игры. */
+export const MASTER_PROFILE_API_PATH = `${FIND_GAME_API_PREFIX}/profiles/masters`;
+
+/** Справочник городов: подсказки для поля города и фильтра каталога. */
+export const CITIES_API_PATH = `${FIND_GAME_API_PREFIX}/cities`;
+
 export const NOTIFICATIONS_API_PATH = `${FIND_GAME_API_PREFIX}/notifications`;
 
 /** Резолв «UUID -> отображаемое имя» в core-api. */
@@ -86,6 +92,9 @@ export const SESSION_ATTENDANCE_STATUSES = [
 ] as const;
 
 export const SESSION_PAYMENT_TYPES = ['PREPAYMENT', 'POSTPAYMENT'] as const;
+
+/** Условие оплаты по умолчанию: за столом чаще собирают после игры. */
+export const SESSION_DEFAULT_PAYMENT_TYPE = 'POSTPAYMENT';
 
 /** Дни недели серии в порядке недели: сервис ждёт имена `DayOfWeek`. */
 export const SESSION_WEEKDAYS = [
@@ -147,14 +156,6 @@ export const NOTIFICATIONS_EMPTY_DESCRIPTION =
 
 export const NOTIFICATIONS_READ_ALL_LABEL = 'Прочитать всё';
 export const NOTIFICATIONS_PAGE_SIZE = 30;
-
-// SYSTEM пишет сервис: старт и завершение сессии. Участник его не отправляет.
-export const CHAT_EVENT_TYPES = [
-  'TEXT',
-  'DICE_ROLL',
-  'SPELL_CAST',
-  'SYSTEM',
-] as const;
 
 export const PROFILE_GENDERS = [
   'MALE',
@@ -295,6 +296,7 @@ export const GAME_GENRE_MAX_LENGTH = 100;
 export const GAME_DESCRIPTION_MAX_LENGTH = 20_000;
 export const GAME_REQUIREMENTS_MAX_LENGTH = 10_000;
 export const GAME_CITY_MAX_LENGTH = 120;
+export const GAME_VENUE_MAX_LENGTH = 300;
 export const GAME_ALLOWED_SOURCE_MAX_LENGTH = 120;
 export const GAME_ALLOWED_SOURCES_MAX_COUNT = 50;
 export const GAME_PLAYERS_MIN = 1;
@@ -314,44 +316,15 @@ export const GAME_DELETION_REASON_MAX_LENGTH = 1000;
 
 export const SESSION_TITLE_MAX_LENGTH = 150;
 export const SESSION_PRICE_MIN = 0.01;
-export const SESSION_PRICE_MAX_FRACTION_DIGITS = 2;
 export const SESSION_CURRENCY_PATTERN = /^[A-Z]{3}$/;
-export const SESSION_DURATION_MIN_MINUTES = 1;
-
 export const CHARACTER_SHEET_URL_MAX_LENGTH = 2048;
 export const CHARACTER_NAME_MAX_LENGTH = 100;
-
-export const CHAT_TEXT_MAX_LENGTH = 4000;
-export const CHAT_DICE_EXPRESSION_MAX_LENGTH = 40;
-export const CHAT_DICE_LABEL_MAX_LENGTH = 200;
-export const CHAT_SPELL_ID_MAX_LENGTH = 100;
-export const CHAT_SPELL_NAME_MAX_LENGTH = 200;
-export const CHAT_SPELL_TARGET_MAX_LENGTH = 300;
-export const CHAT_SPELL_LEVEL_MIN = 0;
-export const CHAT_SPELL_LEVEL_MAX = 9;
 
 export const PROFILE_BIRTH_YEAR_MIN = 1900;
 export const PROFILE_BIRTH_YEAR_MAX = 2100;
 export const PROFILE_EXPERIENCE_MIN = 0;
 export const PROFILE_EXPERIENCE_MAX = 100;
 export const PROFILE_ABOUT_MAX_LENGTH = 5000;
-
-/**
- * Формат выражения броска ровно такой же, как у сервиса: `NdM`, `NdM+K`,
- * `NdM-K`. Проверяем на клиенте, чтобы не гонять заведомо неверный запрос,
- * но результат броска всегда считает сервер.
- */
-export const CHAT_DICE_EXPRESSION_PATTERN =
-  /^(\d{1,3})d(\d{1,4})([+-]\d{1,4})?$/i;
-
-export const CHAT_DICE_COUNT_MIN = 1;
-export const CHAT_DICE_COUNT_MAX = 100;
-export const CHAT_DIE_SIDES_MIN = 2;
-export const CHAT_DIE_SIDES_MAX = 1000;
-
-/** Кубы для быстрых кнопок в форме броска. */
-export const CHAT_QUICK_DICE = [4, 6, 8, 10, 12, 20] as const;
-
 /* ------------------------------------------------------------------ */
 /* Размеры страниц и лимиты запросов                                   */
 /* ------------------------------------------------------------------ */
@@ -379,7 +352,6 @@ export const GAME_CARD_BADGE_LIMIT = 4;
  * перестают читаться, и остаётся только счётчик.
  */
 export const GAME_SEATS_MAX_ICONS = 8;
-export const CHAT_HISTORY_PAGE_SIZE = 50;
 
 /** Максимум идентификаторов в одном запросе отображаемых имён (лимит core-api). */
 export const DISPLAY_NAMES_LOOKUP_MAX = 200;
@@ -389,23 +361,18 @@ export const DISPLAY_NAMES_LOOKUP_MAX = 200;
 /* ------------------------------------------------------------------ */
 
 /** Задержка первой попытки переподключения SSE, мс. */
-export const CHAT_RECONNECT_BASE_DELAY = 1000;
 
 /** Потолок задержки переподключения, мс: дальше расти нет смысла. */
-export const CHAT_RECONNECT_MAX_DELAY = 30_000;
 
 /** Сколько попыток переподключения делаем, прежде чем сдаться и ждать команды. */
-export const CHAT_RECONNECT_MAX_ATTEMPTS = 8;
 
 /**
  * Насколько близко к концу ленты должен быть пользователь, чтобы новое событие
  * прокрутило список само. Дальше — не трогаем прокрутку и показываем счётчик
  * непрочитанных.
  */
-export const CHAT_AUTOSCROLL_THRESHOLD_PX = 120;
 
 /** Разрыв между сообщениями одного автора, после которого группа начинается заново, мс. */
-export const CHAT_AUTHOR_GROUP_GAP = 5 * 60 * 1000;
 
 /* ------------------------------------------------------------------ */
 /* Тексты интерфейса                                                   */
@@ -430,20 +397,6 @@ export const FIND_GAME_FORBIDDEN_MESSAGE =
 
 export const FIND_GAME_NOT_FOUND_MESSAGE =
   'Игра не найдена или доступна только по приглашению.';
-
-export const CHAT_CONNECTION_LABELS = {
-  connecting: 'Подключение…',
-  connected: 'На связи',
-  reconnecting: 'Переподключение…',
-  disconnected: 'Нет связи',
-} as const;
-
-export const CHAT_CONNECTION_COLORS = {
-  connecting: 'warning',
-  connected: 'success',
-  reconnecting: 'warning',
-  disconnected: 'error',
-} as const;
 
 /** Имя-заглушка, когда core-api не вернул отображаемое имя участника. */
 export const UNKNOWN_PARTICIPANT_NAME = 'Участник';
@@ -493,22 +446,18 @@ export const GAME_REQUIREMENTS_TITLE = 'Требования к игрокам';
 export const GAME_ALLOWED_SOURCES_TITLE = 'Допустимые источники';
 export const GAME_VIRTUAL_TABLE_LABEL = 'Виртуальный стол';
 export const GAME_MASTER_LABEL = 'Мастер';
+
+/* Профиль мастера. */
+export const MASTER_PROFILE_TITLE = 'Профиль мастера';
+export const MASTER_PROFILE_ABOUT_EMPTY = 'Мастер о себе пока не рассказал';
+export const MASTER_PROFILE_EXPERIENCE_LABEL = 'За столом';
+export const MASTER_PROFILE_RECRUITING_LABEL = 'В наборе';
+export const MASTER_PROFILE_CLOSED_LABEL = 'Завершено игр';
+export const MASTER_PROFILE_CANCELLED_LABEL = 'Отменено игр';
+export const MASTER_PROFILE_SESSIONS_LABEL = 'Проведено встреч';
+export const MASTER_PROFILE_ERROR_TITLE = 'Не удалось загрузить профиль';
+export const MASTER_PROFILE_OPEN_HINT = 'Открыть профиль мастера';
 export const GAME_SESSIONS_TITLE = 'Календарь сессий';
-export const GAME_CHAT_TITLE = 'Чат';
-export const CHAT_OPEN_LABEL = 'Открыть чат';
-export const CHAT_CLOSE_LABEL = 'Закрыть чат';
-export const CHAT_CLOSE_SESSION_LABEL = 'Закрыть чат сессии';
-
-/**
- * Приставка ключа личной переписки. Ключ ленты живёт в адресе страницы рядом
- * с идентификаторами сессий, поэтому личную комнату отличает приставка.
- */
-export const PRIVATE_CHAT_ROOM_PREFIX = 'player:';
-
-export const CHAT_MASTER_TAB_LABEL = 'Мастер';
-export const CHAT_PRIVATE_OPEN_LABEL = 'Написать';
-
-export const CHAT_PRIVATE_HINT = 'Переписка видна только вам и мастеру игры.';
 
 export const GAME_GUEST_NOTICE_TITLE = 'Войдите, чтобы участвовать';
 export const GAME_GUEST_NOTICE_DESCRIPTION =
@@ -534,6 +483,9 @@ export const GAME_CANCEL_CONFIRM_DESCRIPTION =
 
 export const GAME_CANCELLED_TOAST = 'Игра отменена';
 
+/** Начало сообщения об исчерпанной норме попыток. */
+export const RETRY_AFTER_PREFIX = 'Попробуйте снова через';
+
 export const GAME_RAISE_LABEL = 'Поднять в каталоге';
 export const GAME_RAISED_TOAST = 'Игра поднята в каталоге';
 
@@ -545,7 +497,6 @@ export const GAME_DELETE_REASON_LABEL = 'Причина';
 export const GAME_DELETE_REASON_PLACEHOLDER = 'Нарушение правил сообщества';
 export const GAME_DELETED_TOAST = 'Игра скрыта';
 
-export const CONFIRM_LABEL = 'Подтвердить';
 export const CANCEL_LABEL = 'Отмена';
 export const SAVE_LABEL = 'Сохранить';
 
@@ -556,7 +507,6 @@ export const GAMES_EDIT_ROUTE_SUFFIX = 'edit';
 export const GAME_FORM_TITLE = 'Новая игра';
 export const GAME_FORM_EDIT_TITLE = 'Редактирование игры';
 export const GAME_FORM_SUBMIT_LABEL = 'Опубликовать';
-export const GAME_FORM_SAVE_LABEL = 'Сохранить изменения';
 export const GAME_EDIT_LABEL = 'Редактировать';
 export const GAME_FORM_CREATED_TOAST = 'Игра опубликована';
 export const GAME_FORM_UPDATED_TOAST = 'Изменения сохранены';
@@ -619,6 +569,27 @@ export const GAME_IMAGE_MAX_SIZE = '1024';
 export const GAME_FIELD_VIRTUAL_TABLE_LABEL = 'Виртуальный стол';
 export const GAME_FIELD_VIRTUAL_TABLE_PLACEHOLDER =
   'https://vtt.example.org/games/curse-of-strahd';
+export const GAME_FIELD_MASTER_CHAT_LABEL = 'Чат с мастером';
+export const GAME_FIELD_MASTER_CHAT_HINT =
+  'Ссылку видит любой, кто открыл объявление';
+export const GAME_FIELD_MASTER_CHAT_PLACEHOLDER = 'https://t.me/master';
+export const GAME_FIELD_GAME_CHAT_LABEL = 'Чат игры';
+export const GAME_FIELD_GAME_CHAT_HINT =
+  'Ссылку видят только принятые игроки: подавшему заявку она не откроется';
+export const GAME_FIELD_GAME_CHAT_PLACEHOLDER = 'https://t.me/+strahd-party';
+
+/* Набор в игру. */
+export const GAME_RECRUITMENT_CLOSE_LABEL = 'Закрыть набор';
+export const GAME_RECRUITMENT_OPEN_LABEL = 'Открыть набор';
+export const GAME_RECRUITMENT_CLOSED_BADGE = 'Набор закрыт';
+export const GAME_RECRUITMENT_FULL_BADGE = 'Мест нет';
+export const GAME_RECRUITMENT_CLOSED_TOAST = 'Набор закрыт';
+export const GAME_RECRUITMENT_OPENED_TOAST = 'Набор открыт';
+
+/** Подпись ссылки на разговор в самом объявлении. */
+export const GAME_MASTER_CHAT_LINK_LABEL = 'Написать мастеру';
+export const GAME_CHAT_LINK_LABEL = 'Чат игры';
+
 export const GAME_FIELD_DESCRIPTION_LABEL = 'Описание';
 export const GAME_FIELD_DESCRIPTION_PLACEHOLDER =
   'О чём игра, какой тон и чего ждать игрокам.';
@@ -630,14 +601,14 @@ export const GAME_SOURCES_TITLE = 'Источники';
 export const GAME_SOURCES_PICK_LABEL = 'Выбрать источники';
 
 export const GAME_SOURCES_EMPTY_LABEL = 'Не ограничены — подойдёт любая книга';
-export const GAME_FIELD_SOURCES_PLACEHOLDER = 'Выберите книги';
-
-export const GAME_FIELD_SOURCES_HINT =
-  'Из справочника сайта; недостающую книгу можно вписать';
 export const GAME_FIELD_TYPE_LABEL = 'Формат';
 export const GAME_FIELD_CITY_LABEL = 'Город';
-export const GAME_FIELD_CITY_PLACEHOLDER = 'Кишинёв';
+export const GAME_FIELD_CITY_PLACEHOLDER = 'Москва';
 export const GAME_FIELD_CITY_HINT = 'Только для игр вживую.';
+export const GAME_FIELD_VENUE_LABEL = 'Место проведения';
+export const GAME_VENUE_LABEL = 'Место';
+export const GAME_FIELD_VENUE_HINT = 'Клуб, антикафе или чей-то стол.';
+export const GAME_FIELD_VENUE_PLACEHOLDER = 'Клуб «Кубик», Пятницкая 12';
 export const GAME_FIELD_DURATION_LABEL = 'Длительность';
 export const GAME_FIELD_COST_LABEL = 'Стоимость';
 export const GAME_FIELD_COST_HINT =
@@ -664,6 +635,14 @@ export const GAME_FORM_LIMIT_HINT =
 /* Подписи раздела «Мои игры». */
 // Список собирает и свои игры, и чужие, куда пользователь записался,
 // поэтому пустой экран зовёт и создать стол, и найти чужой.
+/** Отбор своих игр по состоянию: «все» — всё, кроме отменённых. */
+/** Подсказка у пометки: почему в меню горит точка. */
+export const MY_GAMES_UPDATES_HINT = 'Есть новости в ваших играх';
+
+export const MY_GAMES_STATUS_ALL_LABEL = 'Активные';
+export const MY_GAMES_STATUS_HINT =
+  'Отменённые игры показываются только по отбору';
+
 export const MY_GAMES_EMPTY_TITLE = 'Пока ни одной игры';
 export const MY_GAMES_EMPTY_DESCRIPTION =
   'Опубликуйте свою игру или подайте заявку в чужую — она появится здесь.';
@@ -727,8 +706,10 @@ export const SESSION_DATE_LABEL = 'Дата';
  * Время встречи мастер задаёт границами, а не длительностью: он думает
  * «с семи до одиннадцати», а не «четыре часа».
  */
-export const SESSION_TIME_RANGE_LABEL = 'Время: начало и конец';
-export const SESSION_TIME_RANGE_HINT = 'Конец необязателен';
+export const SESSION_TIME_START_LABEL = 'Начало';
+export const SESSION_TIME_END_LABEL = 'Конец';
+export const SESSION_TIME_RANGE_HINT =
+  'Конец раньше начала — сессия заканчивается на следующий день';
 
 /**
  * Формат времени сессии со смещением часового пояса. Игроки собираются из
@@ -739,20 +720,6 @@ export const SESSION_DATE_FORMAT = 'LLL ([UTC]Z)';
 
 export const SESSION_TIMEZONE_HINT_PREFIX = 'Время в вашем часовом поясе';
 
-/* Набор с открытой датой. */
-export const SESSION_OPEN_DATE_LABEL = 'Дата пока не определена';
-
-export const SESSION_OPEN_DATE_HINT =
-  'Наберёте игроков — назначите время. До этого сессия показывается без даты.';
-
-export const SESSION_OPEN_DATE_BADGE = 'Дата не назначена';
-export const SESSION_SCHEDULE_LABEL = 'Назначить дату';
-export const SESSION_SCHEDULE_TITLE = 'Назначение даты сессии';
-
-export const SESSION_SCHEDULE_DESCRIPTION =
-  'Дату можно назначить один раз: игроки подстроятся под неё, и позже она уже не переносится.';
-
-export const SESSION_SCHEDULED_TOAST = 'Дата сессии назначена';
 export const SESSION_START_LABEL = 'Начать';
 export const SESSION_STARTED_TOAST = 'Сессия начата';
 export const SESSION_COMPLETE_LABEL = 'Завершить';
@@ -880,7 +847,6 @@ export const SESSION_TIMELINE_NOW_BADGE = 'Сейчас';
 export const SESSION_TIMELINE_EMPTY_TITLE = 'В этом периоде сессий нет';
 export const SESSION_TIMELINE_EMPTY_DESCRIPTION =
   'Смените масштаб, перелистните период или перейдите к ближайшей сессии.';
-export const SESSION_TIMELINE_OPEN_DATE_TITLE = 'Без даты';
 export const SESSION_DETAIL_TITLE = 'Сессия';
 export const SESSION_TIMELINE_OUTSIDE_PREFIX = 'Вне периода';
 
@@ -905,8 +871,6 @@ export const APPLY_TITLE = 'Заявка на сессию';
 export const APPLY_CHARACTER_SHEET_LABEL = 'Ссылка на лист персонажа';
 export const APPLY_CHARACTER_SHEET_PLACEHOLDER =
   'https://ttg.club/tools/character-sheet';
-export const APPLY_CHARACTER_SHEET_HINT = 'Необязательно.';
-
 /* Чем игрок представляет персонажа в заявке. */
 export const APPLY_SOURCES = ['SHEET', 'LINK', 'NAME'] as const;
 
@@ -931,11 +895,6 @@ export const APPLY_CHARACTER_NAME_PLACEHOLDER = 'Тассельхоф Непос
 export const APPLY_SHARE_FAILED_MESSAGE =
   'Не удалось открыть доступ к листу по ссылке';
 export const APPLY_WITHDRAW_LABEL = 'Отозвать заявку';
-export const APPLY_WITHDRAW_TITLE = 'Отзыв заявки';
-
-export const APPLY_WITHDRAW_DESCRIPTION =
-  'Заявка исчезнет из списка мастера. Подать её заново можно будет в любой момент, пока сессия запланирована.';
-
 export const APPLY_WITHDRAWN_TOAST = 'Заявка отозвана';
 
 export const APPLY_SENT_TOAST = 'Заявка отправлена';
@@ -974,54 +933,3 @@ export const CATALOG_RETRY_LABEL = 'Повторить';
 
 /** Параметр приглашения в адресе приватной игры. */
 export const INVITE_CODE_QUERY_KEY = 'inviteCode';
-
-/** Ключ активного чата в адресе страницы игры. */
-export const CHAT_ROOM_QUERY_KEY = 'chat';
-
-/** Значение `CHAT_ROOM_QUERY_KEY` для общего чата игры. */
-export const GAME_CHAT_ROOM_KEY = 'game';
-
-/* Подписи чата. */
-export const CHAT_GENERAL_TAB_LABEL = 'Общий';
-export const CHAT_LOCKED_TITLE = 'Чат недоступен';
-export const CHAT_LOCKED_DESCRIPTION =
-  'Чат открыт мастеру и игрокам с принятой заявкой.';
-export const CHAT_EMPTY_TITLE = 'Пока ни одного сообщения';
-export const CHAT_EMPTY_DESCRIPTION = 'Напишите первым.';
-export const CHAT_LOAD_OLDER_LABEL = 'Показать предыдущие';
-export const CHAT_RECONNECT_LABEL = 'Подключиться заново';
-export const CHAT_UNREAD_LABEL = 'Новые сообщения';
-export const CHAT_RETRY_LABEL = 'Отправить ещё раз';
-export const CHAT_SENDING_LABEL = 'Отправляется…';
-export const CHAT_FAILED_LABEL = 'Не отправлено';
-
-export const CHAT_TEXT_TAB_LABEL = 'Сообщение';
-export const CHAT_DICE_TAB_LABEL = 'Бросок';
-export const CHAT_SPELL_TAB_LABEL = 'Заклинание';
-
-export const CHAT_TEXT_PLACEHOLDER = 'Enter — отправить, Shift+Enter — перенос';
-export const CHAT_SEND_LABEL = 'Отправить';
-
-export const CHAT_DICE_EXPRESSION_LABEL = 'Выражение';
-export const CHAT_DICE_EXPRESSION_PLACEHOLDER = '2d20+5';
-export const CHAT_DICE_EXPRESSION_HINT = 'Формат: NdM, NdM+K или NdM-K';
-export const CHAT_DICE_LABEL_LABEL = 'Подпись';
-export const CHAT_DICE_LABEL_PLACEHOLDER = 'Внимательность';
-export const CHAT_DICE_ROLL_LABEL = 'Бросить';
-export const CHAT_DICE_SERVER_HINT = 'Результат считает сервер.';
-export const CHAT_DICE_TOTAL_LABEL = 'Итого';
-
-export const CHAT_SPELL_SEARCH_LABEL = 'Заклинание';
-export const CHAT_SPELL_SEARCH_PLACEHOLDER = 'Начните вводить название';
-export const CHAT_SPELL_TARGET_LABEL = 'Цель';
-export const CHAT_SPELL_TARGET_PLACEHOLDER = 'Гоблин';
-export const CHAT_SPELL_CAST_LABEL = 'Применить';
-export const CHAT_SPELL_EMPTY_LABEL = 'Ничего не нашлось';
-export const CHAT_SPELL_CANTRIP_LABEL = 'Заговор';
-export const CHAT_SPELL_OPEN_LABEL = 'Открыть заклинание';
-
-/** Пауза перед запросом справочника заклинаний при вводе, мс. */
-export const CHAT_SPELL_SEARCH_DEBOUNCE = 300;
-
-/** Сколько заклинаний показываем в подсказках выбора. */
-export const CHAT_SPELL_SEARCH_LIMIT = 20;

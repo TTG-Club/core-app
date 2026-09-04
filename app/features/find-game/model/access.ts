@@ -34,9 +34,7 @@ export interface SessionAbilities {
   /** Можно отметить присутствие. */
   canChangeAttendance: boolean;
   /** Есть доступ к чату сессии. */
-  canUseSessionChat: boolean;
   /** Мастер может назначить дату набору с открытой датой. */
-  canSchedule: boolean;
   /** Мастер может завершить сессию. */
   canComplete: boolean;
   /** Мастер может отметить сессию несостоявшейся. */
@@ -93,9 +91,6 @@ export function resolveGameViewerAbilities(
   const isMaster = role === 'master';
   const isApprovedPlayer = registration?.status === 'APPROVED';
   const isSignedIn = !!userId;
-  // Общий чат и личная переписка открыты уже по поданной заявке: до решения
-  // мастера игроку есть о чём с ним говорить, а отклонённому там нечего.
-  const hasApplied = !!registration && registration.status !== 'REJECTED';
 
   const canModerate =
     roles.includes(Role.ADMIN) || roles.includes(Role.MODERATOR);
@@ -116,6 +111,21 @@ export function resolveGameViewerAbilities(
       isMaster && game?.status !== 'CLOSED' && game?.status !== 'CANCELLED',
     canCancelGame:
       isMaster && game?.status !== 'CLOSED' && game?.status !== 'CANCELLED',
+    // Набор закрывают, когда мастеру хватает принятых. Совсем пустую игру
+    // закрывать нечем: объявление исчезло бы из поиска, ничего не собрав.
+    // Полный стол закрыт и так — закрывать его отметкой незачем.
+    canCloseRecruitment:
+      isMaster
+      && !!game
+      && !game.recruitmentClosed
+      && game.approvedSeats > 0
+      && game.takenSeats < game.maxPlayers,
+    // Открыть набор снова можно, пока есть свободное место.
+    canOpenRecruitment:
+      isMaster
+      && !!game
+      && game.recruitmentClosed
+      && game.takenSeats < game.maxPlayers,
     // Поднять можно только открытую публичную игру.
     canRaiseGame:
       isMaster && game?.visibility === 'PUBLIC' && game?.status === 'OPEN',
@@ -128,11 +138,6 @@ export function resolveGameViewerAbilities(
     canWithdraw: registration?.status === 'PENDING',
     isPending: registration?.status === 'PENDING',
     isRejected: registration?.status === 'REJECTED',
-    canUseGameChat: isMaster || hasApplied,
-    // Комната игры открыта тем же, кому и общий чат: мастеру и подавшим
-    // заявку. Отдельное имя, потому что чат из игры уходит, а комната
-    // остаётся.
-    canOpenNexus: isMaster || hasApplied,
     needsSignIn: !isSignedIn,
   };
 }
@@ -169,16 +174,6 @@ export function resolveSessionAbilities(
       isParticipant
       && session.status !== 'COMPLETED'
       && session.status !== 'CANCELLED',
-    // Чат сессии открывается с её началом и остаётся доступным после
-    // закрытия: до старта игрокам нечего обсуждать, а история нужна.
-    canUseSessionChat:
-      (abilities.isMaster || isParticipant) && session.status !== 'SCHEDULED',
-    // Дата назначается один раз: у сессии с уже назначенным временем сервис
-    // отвергает повторное назначение.
-    canSchedule:
-      abilities.isMaster
-      && session.startsAt === null
-      && session.status === 'SCHEDULED',
     canComplete: abilities.isMaster && !isSessionClosed,
     canCancel: abilities.isMaster && !isSessionClosed,
     canStart: abilities.isMaster && session.status === 'SCHEDULED',

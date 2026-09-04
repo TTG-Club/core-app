@@ -32,10 +32,10 @@ describe('переписывание пути в find-game-api', () => {
     ).toBe('/api/v1/games/game-1?inviteCode=code-1');
   });
 
-  it('путь SSE-ленты переписывается так же', () => {
+  it('вложенный путь переписывается так же', () => {
     expect(
-      getFindGameUpstreamPath('/api/find-game/games/game-1/chat/stream'),
-    ).toBe('/api/v1/games/game-1/chat/stream');
+      getFindGameUpstreamPath('/api/find-game/games/game-1/sessions'),
+    ).toBe('/api/v1/games/game-1/sessions');
   });
 
   it('сам префикс без хвоста тоже обслуживается', () => {

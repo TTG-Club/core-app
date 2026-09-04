@@ -20,8 +20,10 @@ import { getNodeText, parse, toMarkupSource } from '~ui/markup';
  *
  * @param description Описание игры из ответа сервиса.
  */
-export function toGameMarkup(description: string): RenderNode | RenderNode[] {
-  return parse(toMarkupSource(description));
+export function toGameMarkup(description: string): RenderNode {
+  // Разбор отдаёт список узлов верхнего уровня; `flat` сводит его к плоскому
+  // массиву — ровно той форме, которую `RenderNode` и допускает.
+  return parse(toMarkupSource(description)).flat();
 }
 
 /**
@@ -32,5 +34,5 @@ export function toGameMarkup(description: string): RenderNode | RenderNode[] {
  * @param description Описание игры из ответа сервиса.
  */
 export function getGameDescriptionText(description: string): string {
-  return getNodeText(toGameMarkup(description) as RenderNode);
+  return getNodeText(toGameMarkup(description));
 }

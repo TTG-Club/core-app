@@ -8,6 +8,12 @@
   } from '~character-sheet/model';
   import { MY_COMMENTS_UPDATES_HINT } from '~comments/model';
   import { useMyCommentUpdates } from '~comments/my';
+  import { useFindGameNotifications } from '~find-game/composables';
+  import {
+    GAMES_MY_NAVIGATION_LABEL,
+    GAMES_MY_ROUTE,
+    MY_GAMES_UPDATES_HINT,
+  } from '~find-game/model';
   import {
     MODERATION_PANEL_ICON,
     MODERATION_PANEL_TITLE,
@@ -53,6 +59,12 @@
 
   const commentUpdates = userTokenCookie.value ? useMyCommentUpdates() : null;
 
+  // Уведомления игр читает и колокольчик раздела: композабл общий, поэтому
+  // второго запроса от меню не будет.
+  const gameNotifications = userTokenCookie.value
+    ? useFindGameNotifications()
+    : null;
+
   const hasBugReportUpdates = computed(
     () => bugReportUpdates?.hasUpdates.value ?? false,
   );
@@ -61,9 +73,18 @@
     () => commentUpdates?.hasUpdates.value ?? false,
   );
 
-  /** Точка на шлеме одна на весь профиль — зажечь её может любая новость. */
   const hasProfileUpdates = computed(
     () => hasBugReportUpdates.value || hasCommentUpdates.value,
+  );
+
+  /** Новости в играх: заявка, решение мастера, изменение встречи. */
+  const hasGameUpdates = computed(
+    () => (gameNotifications?.unread.value ?? 0) > 0,
+  );
+
+  /** Точка на шлеме одна на всё меню — зажечь её может любая новость. */
+  const hasAnyUpdates = computed(
+    () => hasProfileUpdates.value || hasGameUpdates.value,
   );
 
   // Подсказка называет всё, что ждёт в профиле: точка одна, а поводов может
@@ -150,7 +171,7 @@
       <!-- Точка на шлеме — единственный намёк снаружи профиля, что там ждут
         ответ команды или ответ на комментарий: иначе о них узнают случайно -->
       <UChip
-        :show="hasProfileUpdates"
+        :show="hasAnyUpdates"
         color="primary"
         size="md"
       >
@@ -209,6 +230,27 @@
               @click.left.exact="closeMenu"
             >
               {{ CHARACTER_SHEET_LIST_TITLE }}
+            </UButton>
+
+            <!-- Короткий путь к своим играм: новости по ним ждут именно
+              здесь, а из шапки до раздела было не добраться -->
+            <UButton
+              icon="tabler:dice"
+              color="neutral"
+              variant="ghost"
+              class="w-full"
+              size="lg"
+              :to="GAMES_MY_ROUTE"
+              @click.left.exact="closeMenu"
+            >
+              <span class="flex items-center gap-2">
+                {{ GAMES_MY_NAVIGATION_LABEL }}
+
+                <UpdatesDot
+                  v-if="hasGameUpdates"
+                  :title="MY_GAMES_UPDATES_HINT"
+                />
+              </span>
             </UButton>
 
             <UButton

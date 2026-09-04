@@ -11,13 +11,9 @@
   } from '../../model';
 
   import { SpellDrawer } from '~spells/drawer';
-  import { MarkupRender, serializeMarkup } from '~ui/markup';
+  import { MarkupRender } from '~ui/markup';
 
-  import {
-    useCharacterSheet,
-    useSheetTextSink,
-    useSpellDamage,
-  } from '../../composables';
+  import { useCharacterSheet, useSpellDamage } from '../../composables';
   import {
     ABILITY_LABELS,
     CANTRIP_SPELL_LEVEL,
@@ -130,25 +126,6 @@
   // Пополнение книги, правка и удаление заклинаний меняют лист: без прав кнопки
   // прячутся, а ряды заклинаний и шапка вкладки остаются на прежних местах.
   const { editControlClass } = useCharacterSheet();
-
-  // За столом описание заклинания зачитывают вслух: пункт меню кладёт его в
-  // чат комнаты. Вне комнаты отправлять некуда, а у каталожной записи описание
-  // приходит из раздела и в листе его нет — в обоих случаях пункта не будет.
-  const { hasSink: canShare, share } = useSheetTextSink();
-
-  /**
-   * Обработчик отправки заклинания в чат; `undefined` — отправлять нечего.
-   * @param spell Заклинание из книги.
-   */
-  function getShareHandler(spell: CharacterSpell): (() => void) | undefined {
-    const text = serializeMarkup(spell.description ?? []);
-
-    if (!canShare.value || !text) {
-      return undefined;
-    }
-
-    return () => share({ title: spell.name, text });
-  }
 
   // Урон заклинаний живёт в справочнике, а не в листе: подгружаем его для всей
   // вкладки — и для книги, и для врождённых заклинаний вида.
@@ -615,14 +592,12 @@
               ? getInnateSpellMenuItems({
                   onCopy: () => emit('copy-innate-spell', spell.url),
                   onRemove: () => emit('remove-innate-spell', spell.url),
-                  onSendToChat: getShareHandler(spell),
                   // Характеристика правится и у врождённого заклинания: копия в
                   // книгу ради одной характеристики оторвала бы запись от вида
                   onSpellcastingAbility: () =>
                     emit('edit-spell-ability', spell.url),
                 })
               : getSpellMenuItems({
-                  onSendToChat: getShareHandler(spell),
                   onEdit: isCustom
                     ? () => emit('edit-spell', spell.url)
                     : undefined,

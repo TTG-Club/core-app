@@ -4382,12 +4382,6 @@ export const INVENTORY_REMOVE_CONFIRM_LABEL = 'Убрать';
  */
 export const INVENTORY_REMOVE_MENU_LABEL = 'Убрать из снаряжения';
 
-/**
- * Отправка текста записи в чат игровой комнаты: за столом описание зачитывают
- * вслух, а здесь его кладут в чат, чтобы группа прочитала сама.
- */
-export const SHEET_SEND_TO_CHAT_MENU_LABEL = 'Отправить в чат';
-
 /** То же для строки заклинания: убирается оно из книги заклинаний. */
 export const SPELL_REMOVE_MENU_LABEL = 'Убрать из книги';
 

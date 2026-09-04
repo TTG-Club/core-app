@@ -5,6 +5,5 @@ export * from './useInitiativeStorage';
 export * from './useParticipantAvatars';
 export * from './useSheetHitPointsSync';
 export * from './useSheetPlayerOptions';
-export * from './useTrackerChanges';
 export * from './useTrackerList';
 export * from './useTrackerWorkspace';

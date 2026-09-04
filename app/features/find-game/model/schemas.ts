@@ -1,13 +1,12 @@
 import type {
-  ChatDiceRoll,
-  ChatEvent,
-  ChatSpellCast,
+  CityOption,
   FindGameNotification,
   FindGameProblemDetail,
   FindGameUserProfile,
   Game,
   GameRegistration,
   GameSession,
+  MasterPublicProfile,
   SessionParticipant,
   SpringPage,
 } from './types';
@@ -15,16 +14,6 @@ import type {
 import { z } from '~/utils/zod';
 
 import {
-  CHAT_DICE_EXPRESSION_MAX_LENGTH,
-  CHAT_DICE_EXPRESSION_PATTERN,
-  CHAT_DICE_LABEL_MAX_LENGTH,
-  CHAT_EVENT_TYPES,
-  CHAT_SPELL_ID_MAX_LENGTH,
-  CHAT_SPELL_LEVEL_MAX,
-  CHAT_SPELL_LEVEL_MIN,
-  CHAT_SPELL_NAME_MAX_LENGTH,
-  CHAT_SPELL_TARGET_MAX_LENGTH,
-  CHAT_TEXT_MAX_LENGTH,
   GAME_AGE_MAX,
   GAME_AGE_MIN,
   GAME_ALLOWED_SOURCE_MAX_LENGTH,
@@ -45,6 +34,7 @@ import {
   GAME_TITLE_MAX_LENGTH,
   GAME_TYPES,
   GAME_URL_MAX_LENGTH,
+  GAME_VENUE_MAX_LENGTH,
   GAME_VISIBILITIES,
   NOTIFICATION_TYPES,
   PROFILE_ABOUT_MAX_LENGTH,
@@ -56,7 +46,6 @@ import {
   SESSION_ATTENDANCE_STATUSES,
   SESSION_PAYMENT_TYPES,
   SESSION_REGISTRATION_STATUSES,
-  SESSION_TITLE_MAX_LENGTH,
 } from './constants';
 
 /* ------------------------------------------------------------------ */
@@ -109,6 +98,73 @@ const uuidSchema = z.string().min(1);
 const decimalSchema = z.coerce.number().finite();
 
 /* ------------------------------------------------------------------ */
+/* Профиль мастера                                                     */
+/* ------------------------------------------------------------------ */
+
+const masterProfileResponseSchema = z.object({
+  userId: uuidSchema,
+  about: z.string().nullish().catch(null),
+  tabletopExperienceYears: z.coerce.number().int().nullish().catch(null),
+  recruitingGames: z.coerce.number().int().catch(0),
+  closedGames: z.coerce.number().int().catch(0),
+  cancelledGames: z.coerce.number().int().catch(0),
+  completedSessions: z.coerce.number().int().catch(0),
+});
+
+/**
+ * Разбирает публичный профиль мастера.
+ * @param input Сырой ответ сервиса.
+ */
+export function parseMasterProfile(input: unknown): MasterPublicProfile {
+  const parsed = masterProfileResponseSchema.parse(input);
+
+  return {
+    userId: parsed.userId,
+    about: parsed.about ?? null,
+    tabletopExperienceYears: parsed.tabletopExperienceYears ?? null,
+    recruitingGames: parsed.recruitingGames,
+    closedGames: parsed.closedGames,
+    cancelledGames: parsed.cancelledGames,
+    completedSessions: parsed.completedSessions,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Справочник городов                                                  */
+/* ------------------------------------------------------------------ */
+
+const cityResponseSchema = z.object({
+  name: z.string().min(1),
+  region: z.string().nullish().catch(null),
+  country: z.string().catch(''),
+});
+
+/**
+ * Разбирает подсказки городов. Битая запись выкидывается по одной: из-за неё
+ * список подсказок не должен пропадать целиком.
+ * @param input Сырой массив из ответа сервиса.
+ */
+export function parseCities(input: unknown): Array<CityOption> {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input.flatMap((item) => {
+    const parsed = cityResponseSchema.safeParse(item);
+
+    return parsed.success
+      ? [
+          {
+            name: parsed.data.name,
+            region: parsed.data.region ?? null,
+            country: parsed.data.country,
+          },
+        ]
+      : [];
+  });
+}
+
+/* ------------------------------------------------------------------ */
 /* Игра                                                                */
 /* ------------------------------------------------------------------ */
 
@@ -120,12 +176,15 @@ const gameResponseSchema = z.object({
   system: z.enum(GAME_SYSTEMS).catch('DND_2024'),
   imageUrl: z.string().nullish().catch(null),
   virtualTableUrl: z.string().nullish().catch(null),
+  masterChatUrl: z.string().nullish().catch(null),
+  gameChatUrl: z.string().nullish().catch(null),
   genre: z.string().nullish().catch(null),
   description: z.string().catch(''),
   requirements: z.string().catch(''),
   allowedSources: z.array(z.string()).nullish().catch(null),
   type: z.enum(GAME_TYPES).catch('ONLINE'),
   city: z.string().nullish().catch(null),
+  venue: z.string().nullish().catch(null),
   playersToStart: z.coerce.number().int().catch(GAME_PLAYERS_MIN),
   maxPlayers: z.coerce.number().int().catch(GAME_PLAYERS_MIN),
   // Занятые места ближайшей сессии. Сборки сервиса без этого подсчёта поля
@@ -136,6 +195,7 @@ const gameResponseSchema = z.object({
   maxAge: z.coerce.number().int().nullish().catch(null),
   startingLevel: z.coerce.number().int().catch(GAME_STARTING_LEVEL_MIN),
   crossplayAllowed: z.boolean().catch(false),
+  recruitmentClosed: z.boolean().catch(false),
   status: z.enum(GAME_STATUSES).catch('OPEN'),
   durationType: z.enum(GAME_DURATION_TYPES).catch('CAMPAIGN'),
   costType: z.enum(GAME_COST_TYPES).catch('FREE'),
@@ -162,12 +222,15 @@ function toGame(parsed: z.infer<typeof gameResponseSchema>): Game {
     system: parsed.system,
     imageUrl: parsed.imageUrl ?? null,
     virtualTableUrl: parsed.virtualTableUrl ?? null,
+    masterChatUrl: parsed.masterChatUrl ?? null,
+    gameChatUrl: parsed.gameChatUrl ?? null,
     genre: parsed.genre ?? null,
     description: parsed.description,
     requirements: parsed.requirements,
     allowedSources: parsed.allowedSources ?? [],
     type: parsed.type,
     city: parsed.city ?? null,
+    venue: parsed.venue ?? null,
     playersToStart: parsed.playersToStart,
     maxPlayers: parsed.maxPlayers,
     takenSeats: parsed.takenSeats ?? 0,
@@ -176,6 +239,7 @@ function toGame(parsed: z.infer<typeof gameResponseSchema>): Game {
     maxAge: parsed.maxAge ?? null,
     startingLevel: parsed.startingLevel,
     crossplayAllowed: parsed.crossplayAllowed,
+    recruitmentClosed: parsed.recruitmentClosed,
     status: parsed.status,
     durationType: parsed.durationType,
     costType: parsed.costType,
@@ -614,145 +678,6 @@ export function parseFindGameProfile(input: unknown): FindGameUserProfile {
 }
 
 /* ------------------------------------------------------------------ */
-/* Чат                                                                 */
-/* ------------------------------------------------------------------ */
-
-/**
- * Полезная нагрузка броска. Сервер уже посчитал результат, клиент только
- * показывает: значения кубов, модификатор и итог приходят готовыми.
- */
-const diceRollPayloadSchema = z.object({
-  expression: z.string().catch(''),
-  results: z.array(z.coerce.number()).catch([]),
-  modifier: z.coerce.number().catch(0),
-  total: z.coerce.number().catch(0),
-  label: z.string().nullish().catch(null),
-});
-
-const spellCastPayloadSchema = z.object({
-  spellId: z.string().nullish().catch(null),
-  name: z.string().catch(''),
-  level: z.coerce.number().int().nullish().catch(null),
-  target: z.string().nullish().catch(null),
-});
-
-const chatEventResponseSchema = z.object({
-  id: uuidSchema,
-  gameId: uuidSchema,
-  sessionId: z.string().nullish().catch(null),
-  authorId: uuidSchema,
-  clientMessageId: z.string().catch(''),
-  type: z.enum(CHAT_EVENT_TYPES).catch('TEXT'),
-  text: z.string().nullish().catch(null),
-  payload: z.unknown().nullish(),
-  createdAt: instantSchema,
-});
-
-/**
- * Достаёт бросок из общего поля `payload`: сервис кладёт туда и бросок, и
- * заклинание, различая их типом события.
- * @param payload Сырое содержимое `payload`.
- */
-function toDiceRoll(payload: unknown): ChatDiceRoll | null {
-  const parsed = diceRollPayloadSchema.safeParse(payload);
-
-  if (!parsed.success) {
-    return null;
-  }
-
-  return {
-    expression: parsed.data.expression,
-    results: parsed.data.results,
-    modifier: parsed.data.modifier,
-    total: parsed.data.total,
-    label: parsed.data.label ?? null,
-  };
-}
-
-/**
- * Достаёт применение заклинания из общего поля `payload`.
- * @param payload Сырое содержимое `payload`.
- */
-function toSpellCast(payload: unknown): ChatSpellCast | null {
-  const parsed = spellCastPayloadSchema.safeParse(payload);
-
-  if (!parsed.success || !parsed.data.name) {
-    return null;
-  }
-
-  return {
-    spellId: parsed.data.spellId ?? null,
-    name: parsed.data.name,
-    level: parsed.data.level ?? null,
-    target: parsed.data.target ?? null,
-  };
-}
-
-/**
- * Приводит разобранный ответ к доменному событию чата.
- * @param parsed Результат разбора ответа сервиса.
- */
-function toChatEvent(
-  parsed: z.infer<typeof chatEventResponseSchema>,
-): ChatEvent {
-  return {
-    id: parsed.id,
-    gameId: parsed.gameId,
-    sessionId: parsed.sessionId ?? null,
-    authorId: parsed.authorId,
-    clientMessageId: parsed.clientMessageId,
-    type: parsed.type,
-    text: parsed.text ?? null,
-    diceRoll: parsed.type === 'DICE_ROLL' ? toDiceRoll(parsed.payload) : null,
-    spellCast:
-      parsed.type === 'SPELL_CAST' ? toSpellCast(parsed.payload) : null,
-    createdAt: parsed.createdAt,
-  };
-}
-
-/**
- * Разбирает одно событие чата.
- * @param input Сырой ответ сервиса.
- */
-export function parseChatEvent(input: unknown): ChatEvent {
-  return toChatEvent(chatEventResponseSchema.parse(input));
-}
-
-/**
- * Разбирает событие из SSE-кадра. В отличие от `parseChatEvent` не бросает:
- * битый кадр не должен рвать живую подписку, поэтому возвращается `null`,
- * а лента просто не показывает эту запись.
- * @param input Сырое значение из `data` SSE-кадра.
- */
-export function parseChatEventSafe(input: unknown): ChatEvent | null {
-  const parsed = chatEventResponseSchema.safeParse(input);
-
-  if (!parsed.success) {
-    consola.warn('[find-game] Событие чата не прошло разбор:', input);
-
-    return null;
-  }
-
-  return toChatEvent(parsed.data);
-}
-
-/**
- * Разбирает историю чата, отсеивая битые события поштучно.
- * @param input Сырой массив из ответа сервиса.
- */
-export function parseChatEvents(input: unknown): Array<ChatEvent> {
-  if (!Array.isArray(input)) {
-    return [];
-  }
-
-  return input.flatMap((item) => {
-    const event = parseChatEventSafe(item);
-
-    return event ? [event] : [];
-  });
-}
-
-/* ------------------------------------------------------------------ */
 /* Тела запросов                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -772,6 +697,8 @@ export const createGameRequestSchema = z
     system: z.enum(GAME_SYSTEMS),
     imageUrl: optionalTrimmed(GAME_URL_MAX_LENGTH),
     virtualTableUrl: optionalTrimmed(GAME_URL_MAX_LENGTH),
+    masterChatUrl: optionalTrimmed(GAME_URL_MAX_LENGTH),
+    gameChatUrl: optionalTrimmed(GAME_URL_MAX_LENGTH),
     genre: optionalTrimmed(GAME_GENRE_MAX_LENGTH),
     description: z.string().trim().min(1).max(GAME_DESCRIPTION_MAX_LENGTH),
     requirements: z.string().trim().min(1).max(GAME_REQUIREMENTS_MAX_LENGTH),
@@ -781,6 +708,7 @@ export const createGameRequestSchema = z
       .optional(),
     type: z.enum(GAME_TYPES),
     city: optionalTrimmed(GAME_CITY_MAX_LENGTH),
+    venue: optionalTrimmed(GAME_VENUE_MAX_LENGTH),
     playersToStart: z
       .number()
       .int()
@@ -836,36 +764,6 @@ export const createGameRequestSchema = z
     }
   });
 
-export const chatTextSchema = z
-  .string()
-  .trim()
-  .min(1)
-  .max(CHAT_TEXT_MAX_LENGTH);
-
-export const chatDiceExpressionSchema = z
-  .string()
-  .trim()
-  .min(1)
-  .max(CHAT_DICE_EXPRESSION_MAX_LENGTH)
-  .transform((value) => value.replaceAll(' ', '').toLowerCase())
-  .refine((value) => CHAT_DICE_EXPRESSION_PATTERN.test(value), {
-    message: 'Формат броска: NdM, NdM+K или NdM-K',
-  });
-
-export const chatDiceLabelSchema = optionalTrimmed(CHAT_DICE_LABEL_MAX_LENGTH);
-
-export const chatSpellCastSchema = z.object({
-  spellId: optionalTrimmed(CHAT_SPELL_ID_MAX_LENGTH),
-  name: z.string().trim().min(1).max(CHAT_SPELL_NAME_MAX_LENGTH),
-  level: z
-    .number()
-    .int()
-    .min(CHAT_SPELL_LEVEL_MIN)
-    .max(CHAT_SPELL_LEVEL_MAX)
-    .optional(),
-  target: optionalTrimmed(CHAT_SPELL_TARGET_MAX_LENGTH),
-});
-
 export const findGameProfileRequestSchema = z.object({
   birthYear: z
     .number()
@@ -883,12 +781,6 @@ export const findGameProfileRequestSchema = z.object({
   master: z.object({ about: z.string().max(PROFILE_ABOUT_MAX_LENGTH) }),
   player: z.object({ about: z.string().max(PROFILE_ABOUT_MAX_LENGTH) }),
 });
-
-export const sessionTitleSchema = z
-  .string()
-  .trim()
-  .min(1)
-  .max(SESSION_TITLE_MAX_LENGTH);
 
 /* ------------------------------------------------------------------ */
 /* ProblemDetail                                                       */

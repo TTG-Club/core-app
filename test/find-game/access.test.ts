@@ -27,6 +27,8 @@ function makeGame(overrides: Partial<Game> = {}): Game {
     system: 'DND_2024',
     imageUrl: null,
     virtualTableUrl: null,
+    masterChatUrl: null,
+    gameChatUrl: null,
     genre: null,
     description: 'Описание',
     requirements: 'Требования',
@@ -42,6 +44,7 @@ function makeGame(overrides: Partial<Game> = {}): Game {
     startingLevel: 1,
     crossplayAllowed: false,
     status: 'OPEN',
+    recruitmentClosed: false,
     durationType: 'CAMPAIGN',
     costType: 'PAID',
     visibility: 'PUBLIC',
@@ -277,41 +280,45 @@ describe('права мастера на игру', () => {
   });
 });
 
-describe('общий чат игры', () => {
-  const game = makeGame();
+describe('набор в игру', () => {
+  /** Игра, где принято `approvedSeats` игроков из пяти мест. */
+  function gathered(
+    approvedSeats: number,
+    overrides: Partial<Game> = {},
+  ): Game {
+    return makeGame({
+      approvedSeats,
+      takenSeats: approvedSeats,
+      ...overrides,
+    });
+  }
 
-  it('открыт уже подавшему заявку', () => {
-    // До решения мастера игроку есть о чём с ним говорить.
-    expect(viewerOf(game, makeRegistration()).canUseGameChat).toBe(true);
+  it('закрывается досрочно с первым принятым игроком', () => {
+    expect(masterOf(gathered(1)).canCloseRecruitment).toBe(true);
   });
 
-  it('закрыт тому, кто заявку не подавал или получил отказ', () => {
-    expect(viewerOf(game, null).canUseGameChat).toBe(false);
-
-    expect(
-      viewerOf(game, makeRegistration({ status: 'REJECTED' })).canUseGameChat,
-    ).toBe(false);
+  it('не закрывается, пока никого не приняли', () => {
+    // Объявление без единого игрока исчезло бы из поиска, ничего не собрав.
+    expect(masterOf(gathered(0)).canCloseRecruitment).toBe(false);
   });
 
-  it('мастеру открыт всегда', () => {
-    expect(masterOf(game).canUseGameChat).toBe(true);
-  });
-});
-
-describe('игровая комната', () => {
-  const game = makeGame();
-
-  it('открыта мастеру и подавшему заявку', () => {
-    expect(masterOf(game).canOpenNexus).toBe(true);
-    expect(viewerOf(game, makeRegistration()).canOpenNexus).toBe(true);
+  it('полный стол закрывать нечем — он закрыт сам', () => {
+    expect(masterOf(gathered(5)).canCloseRecruitment).toBe(false);
+    expect(masterOf(gathered(5)).canOpenRecruitment).toBe(false);
   });
 
-  it('закрыта постороннему и получившему отказ', () => {
-    expect(viewerOf(game, null).canOpenNexus).toBe(false);
+  it('открывается снова, пока есть свободное место', () => {
+    const closed = gathered(3, { recruitmentClosed: true });
 
-    expect(
-      viewerOf(game, makeRegistration({ status: 'REJECTED' })).canOpenNexus,
-    ).toBe(false);
+    expect(masterOf(closed).canOpenRecruitment).toBe(true);
+    expect(masterOf(closed).canCloseRecruitment).toBe(false);
+  });
+
+  it('набором управляет только мастер', () => {
+    const closed = gathered(3, { recruitmentClosed: true });
+
+    expect(viewerOf(gathered(3), null).canCloseRecruitment).toBe(false);
+    expect(viewerOf(closed, null).canOpenRecruitment).toBe(false);
   });
 });
 
@@ -364,63 +371,6 @@ describe('участие во встрече', () => {
   });
 });
 
-describe('чат сессии по её состоянию', () => {
-  const game = makeGame();
-
-  it('запланированная сессия чат ещё не открывает', () => {
-    // До начала игрокам нечего обсуждать, а состав может смениться.
-    const master = resolveSessionAbilities(
-      makeSession(),
-      game,
-      null,
-      masterOf(game),
-    );
-
-    const player = resolveSessionAbilities(
-      makeSession(),
-      game,
-      makeParticipant(),
-      viewerOf(game, makeRegistration({ status: 'APPROVED' })),
-    );
-
-    expect(master.canUseSessionChat).toBe(false);
-    expect(player.canUseSessionChat).toBe(false);
-  });
-
-  it('идущая, завершённая и отменённая сессия чат открывают', () => {
-    // История переписки нужна и после того, как встреча закончилась.
-    for (const status of ['IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const) {
-      const master = resolveSessionAbilities(
-        makeSession({ status }),
-        game,
-        null,
-        masterOf(game),
-      );
-
-      const player = resolveSessionAbilities(
-        makeSession({ status }),
-        game,
-        makeParticipant(),
-        viewerOf(game, makeRegistration({ status: 'APPROVED' })),
-      );
-
-      expect(master.canUseSessionChat).toBe(true);
-      expect(player.canUseSessionChat).toBe(true);
-    }
-  });
-
-  it('посторонний в чат идущей сессии не попадает', () => {
-    const abilities = resolveSessionAbilities(
-      makeSession({ status: 'IN_PROGRESS' }),
-      game,
-      null,
-      viewerOf(game, null),
-    );
-
-    expect(abilities.canUseSessionChat).toBe(false);
-  });
-});
-
 describe('состояния сессии у мастера', () => {
   const game = makeGame();
 
@@ -466,22 +416,6 @@ describe('состояния сессии у мастера', () => {
     }
   });
 
-  it('дату назначают один раз и только набору с открытой датой', () => {
-    expect(
-      resolveSessionAbilities(
-        makeSession({ startsAt: null }),
-        game,
-        null,
-        masterOf(game),
-      ).canSchedule,
-    ).toBe(true);
-
-    expect(
-      resolveSessionAbilities(makeSession(), game, null, masterOf(game))
-        .canSchedule,
-    ).toBe(false);
-  });
-
   it('игрок состояние сессии не меняет', () => {
     const abilities = resolveSessionAbilities(
       makeSession(),
@@ -493,6 +427,5 @@ describe('состояния сессии у мастера', () => {
     expect(abilities.canStart).toBe(false);
     expect(abilities.canComplete).toBe(false);
     expect(abilities.canCancel).toBe(false);
-    expect(abilities.canSchedule).toBe(false);
   });
 });

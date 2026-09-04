@@ -17,6 +17,8 @@
     GAME_GUEST_NOTICE_DESCRIPTION,
     GAME_GUEST_NOTICE_TITLE,
     GAME_RAISED_TOAST,
+    GAME_RECRUITMENT_CLOSED_TOAST,
+    GAME_RECRUITMENT_OPENED_TOAST,
     GAME_SIGN_IN_LABEL,
     GAMES_NAVIGATION_LABEL,
     GAMES_ROUTE,
@@ -31,11 +33,6 @@
   import { GameRegistrationsPanel } from '~find-game/registrations';
   import { GameSessions } from '~find-game/sessions';
   import { getGameDescriptionText } from '~find-game/ui';
-  import {
-    fetchGameNexus,
-    getNexusRoute,
-    NEXUS_OPEN_LABEL,
-  } from '~nexus/model';
   import { UiResult } from '~ui/result';
 
   const route = useRoute();
@@ -67,6 +64,7 @@
     cancel,
     cancelSession,
     close,
+    closeRecruitment,
     completeSession,
     duplicateSession,
     game,
@@ -74,20 +72,19 @@
     gameStatus,
     isGameLoading,
     areSessionsLoading,
+    openRecruitment,
     ownParticipationBySession,
     ownRegistration,
     raise,
     refreshAll,
     refreshOwnParticipations,
     remove,
-    scheduleSession,
     sessions,
     startSession,
     withdrawFromGame,
   } = useGameDetail(gameId, inviteCode);
 
   const isBusy = ref(false);
-  const isOpeningNexus = ref(false);
 
   const isNotFound = computed(
     () => getFindGameStatus(gameError.value) === StatusCodes.NOT_FOUND,
@@ -171,6 +168,16 @@
     runAction(GAME_RAISED_TOAST, raise);
   }
 
+  /** Закрывает набор: объявление уходит из поиска, игра у своих остаётся. */
+  function handleCloseRecruitment(): void {
+    runAction(GAME_RECRUITMENT_CLOSED_TOAST, closeRecruitment);
+  }
+
+  /** Открывает набор снова. */
+  function handleOpenRecruitment(): void {
+    runAction(GAME_RECRUITMENT_OPENED_TOAST, openRecruitment);
+  }
+
   /**
    * Скрывает игру мягким удалением и возвращает в каталог: страницы больше нет.
    * @param reason Причина для административного аудита.
@@ -216,29 +223,6 @@
   ): Promise<void> {
     await duplicateSession(...args);
     await refreshOwnParticipations();
-  }
-
-  /**
-   * Открывает комнату игры. Сервис заводит её при первом входе, поэтому
-   * ссылки на неё заранее нет — она узнаётся этим же запросом.
-   */
-  async function openNexus(): Promise<void> {
-    isOpeningNexus.value = true;
-
-    try {
-      const nexus = await fetchGameNexus(gameId.value);
-
-      await navigateTo(getNexusRoute(nexus.id));
-    } catch (error) {
-      toast.add({
-        title: FIND_GAME_UNKNOWN_ERROR_MESSAGE,
-        description: getFindGameErrorMessage(error),
-        color: 'error',
-        icon: 'tabler:alert-triangle',
-      });
-    } finally {
-      isOpeningNexus.value = false;
-    }
   }
 
   /**
@@ -298,6 +282,8 @@
         :game-id="game.id"
         :busy="isBusy"
         @close="handleClose"
+        @close-recruitment="handleCloseRecruitment"
+        @open-recruitment="handleOpenRecruitment"
         @cancel="handleCancel"
         @raise="handleRaise"
         @remove="handleRemove"
@@ -436,7 +422,6 @@
             :create-session-series="handleCreateSeries"
             :copy-session="handleCopySession"
             :change-attendance="changeAttendance"
-            :schedule-session="scheduleSession"
             :complete-session="completeSession"
             :cancel-session="cancelSession"
             :start-session="startSession"
@@ -455,17 +440,6 @@
             v-model:open="isRegistrationsOpen"
             :game="game"
             @changed="handleRegistrationsChanged"
-          />
-
-          <!-- Комната игры живёт под её адресом: попасть в неё можно только
-            отсюда и только подавшим заявку -->
-          <UButton
-            v-if="abilities.canOpenNexus"
-            class="self-start"
-            icon="tabler:door-enter"
-            :loading="isOpeningNexus"
-            :label="NEXUS_OPEN_LABEL"
-            @click.left.exact.prevent="openNexus"
           />
         </template>
       </div>
