@@ -239,7 +239,10 @@ function pushInnateSpellFeature(
     description: '',
     level: level > 1 ? level : undefined,
     grantedSpells: [],
-    mechanics: undefined,
+    // Пустой, а не `undefined`: блоки механики правятся прямо в ней, и без
+    // объекта правки уходили бы во временный. На отправку это не влияет —
+    // пустая механика из неё же и пересобирается.
+    mechanics: createFeatMechanics(),
     activeEffects: [],
     editorRows: toFeatEditorRows(
       createFeatMechanics(),

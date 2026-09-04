@@ -17,7 +17,7 @@
     getAbilityImprovementRequiredPoints,
     getAbilityImprovementSpent,
   } from '../../model';
-  import SheetLevelUpFeatChoice from './SheetLevelUpFeatChoice.vue';
+  import SheetFeatChoiceField from './SheetFeatChoiceField.vue';
 
   /** Кнопка переключателя режима: подпись и её вид в текущем режиме. */
   interface ModeButton {
@@ -332,7 +332,8 @@
         {{ ABILITY_IMPROVEMENT_STEP_LABELS.featHint }}
       </span>
 
-      <SheetLevelUpFeatChoice
+      <SheetFeatChoiceField
+        :modal-subtitle="badgeLabel"
         :options="featOptions"
         :selected="selectedFeat"
         :abilities="featAbilities"

@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { WeaponProficiencyGroup } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
+
   import { useCharacterSheet } from '../../composables';
   import {
     WEAPON_GROUP_TITLE_CLASSES,
@@ -231,14 +233,14 @@
     <template #footer>
       <div class="flex w-full justify-end gap-2">
         <UButton
-          label="Отмена"
+          :label="ACTION_LABELS.cancel"
           color="neutral"
           variant="ghost"
           @click.left.exact.prevent="handleCancel"
         />
 
         <UButton
-          label="Применить"
+          :label="ACTION_LABELS.apply"
           color="primary"
           @click.left.exact.prevent="handleApply"
         />

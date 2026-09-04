@@ -3,6 +3,8 @@
 
   import type { Character, SheetSaveStatus } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
+
   import {
     getClassesDisplayLabel,
     getEffectiveVision,
@@ -524,7 +526,7 @@
             color="neutral"
             variant="ghost"
             square
-            aria-label="Закрыть"
+            :aria-label="ACTION_LABELS.close"
             @click.left.exact.prevent="emit('close')"
           />
         </UTooltip>

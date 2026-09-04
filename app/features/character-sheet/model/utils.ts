@@ -29,6 +29,7 @@ import type {
   CharacterExtraHitDie,
   CharacterFeature,
   CharacterFeatureModifiers,
+  CharacterFeatureSpellList,
   CharacterHealth,
   CharacterHitDie,
   CharacterInventoryGroup,
@@ -127,6 +128,10 @@ import type {
   ResourceRecoveryRule,
   RollMode,
   SavingThrowRow,
+  SheetChoiceControl,
+  SheetChoiceOption,
+  SheetChoiceOrigin,
+  SheetChoicePoolStatus,
   SkillRow,
   SkillRowGroup,
   SpeciesFeatureSummary,
@@ -136,6 +141,7 @@ import type {
   SpeedUnit,
   SpellcastingBreakdown,
   SpellcastingClassRow,
+  SpellCatalogItem,
   SpellCatalogPreset,
   SpellDamage,
   SpellDamageFormulas,
@@ -235,6 +241,7 @@ import {
   CARRYING_CAPACITY_SIZE_MULTIPLIERS,
   CATALOG_COPY_MENU_LABEL,
   CHARACTER_FILE_NAME_FALLBACK,
+  CHOICE_SELECT_PLACEHOLDER,
   CLASS_FEAT_CHOICE_ID_SEGMENTS,
   CLASS_FEATURE_ID_PREFIX,
   CLASS_FIRST_LEVEL,
@@ -342,6 +349,7 @@ import {
   LEVEL_MAX,
   LEVEL_MIN,
   LEVEL_SHORT_SUFFIX,
+  LEVEL_UP_WIZARD_LABELS,
   LEVEL_XP_THRESHOLDS,
   MAGIC_ITEM_ARTIFACT_COST_LABEL,
   MAGIC_ITEM_CATALOG_EMPTY_GROUP_LABELS,
@@ -386,11 +394,15 @@ import {
   ROLL_MODE_DICE_SUFFIX,
   SAVING_THROW_PROFICIENCY_LABELS,
   SHEET_ABILITY_SETTINGS_LABELS,
+  SHEET_CHOICE_EXPLANATION_LABELS,
   SHEET_CHOICE_OPTIONS_LABELS,
+  SHEET_CHOICE_PICKER_LABELS,
+  SHEET_CHOICE_SPELL_EXPLANATION,
   SHEET_COPY_LIMIT_HINT,
   SHEET_DOWNLOAD_JSON_LABEL,
   SHEET_DOWNLOAD_PDF_HINT,
   SHEET_DOWNLOAD_PDF_LABEL,
+  SHEET_FEAT_CHOICE_LABELS,
   SHEET_PDF_MIME_TYPE,
   SHEET_PERSONALITY_LABELS,
   SHEET_PLURAL_FORMS,
@@ -6951,6 +6963,39 @@ function getFeatureSpells(features: CharacterFeature[]): CharacterSpell[] {
 }
 
 /**
+ * Заклинания, доступные персонажу сверх списка его класса: расширения списка
+ * от умений класса, вариантов, черт, вида и предыстории, уже открытые по
+ * уровню. Персонаж их не знает — окно добавления заклинаний показывает их
+ * рядом с классовыми, и в книгу они попадают руками игрока.
+ *
+ * Список с отметкой «нужно заклинательство» открыт, только когда персонажу
+ * доступен хотя бы один круг заклинаний: так написано у черт метки дракона.
+ * Одно и то же заклинание из двух записей идёт один раз.
+ *
+ * @param character персонаж листа.
+ * @returns заклинания расширенного списка.
+ */
+export function getExpandedSpellListSpells(
+  character: Character,
+): CharacterSpell[] {
+  const hasSpellcasting = getAvailableSpellLevels(character).length > 0;
+
+  const spells = character.features.flatMap((feature) => {
+    const spellList = feature.spellList;
+
+    if (!spellList || (spellList.requiresSpellcasting && !hasSpellcasting)) {
+      return [];
+    }
+
+    return spellList.spells.filter(
+      (spell) => !spell.requiredLevel || spell.requiredLevel <= character.level,
+    );
+  });
+
+  return uniqBy(spells, (spell) => spell.url);
+}
+
+/**
  * Ищет заклинание в записях особенностей: по нему правка выбирает, куда писать
  * — в вид или в запись черты.
  *
@@ -8611,6 +8656,9 @@ export function buildCharacterFeatures(
         activeEffects: feature.activeEffects.length
           ? [...feature.activeEffects]
           : undefined,
+        // Список открывается не раньше самого умения: «с 3 уровня» у умения
+        // относится и к его заклинаниям
+        spellList: withSpellListMinimumLevel(feature.spellList, feature.level),
         ...withSpeciesMechanicsSnapshot(
           isUnlocked ? feature.modifiers : null,
           isUnlocked ? feature.counters : [],
@@ -8666,6 +8714,7 @@ function buildSpeciesOwnEffectFeature(
     summary.activeEffects.length === 0
     && !summary.modifiers
     && summary.counters.length === 0
+    && !summary.spellList
   ) {
     return [];
   }
@@ -8683,9 +8732,39 @@ function buildSpeciesOwnEffectFeature(
       activeEffects: summary.activeEffects.length
         ? [...summary.activeEffects]
         : undefined,
+      spellList: summary.spellList ?? undefined,
       ...withSpeciesMechanicsSnapshot(summary.modifiers, summary.counters),
     },
   ];
+}
+
+/**
+ * Расширение списка с нижней границей уровня: заклинание без своего уровня
+ * открывается вместе с умением, а не раньше него.
+ *
+ * @param spellList расширение списка умения; null — его нет.
+ * @param featureLevel уровень, с которого действует умение; null — с первого.
+ * @returns снимок расширения; undefined — записывать нечего.
+ */
+function withSpellListMinimumLevel(
+  spellList: CharacterFeatureSpellList | null,
+  featureLevel: number | null,
+): CharacterFeatureSpellList | undefined {
+  if (!spellList) {
+    return undefined;
+  }
+
+  if (!featureLevel || featureLevel <= 1) {
+    return spellList;
+  }
+
+  return {
+    ...spellList,
+    spells: spellList.spells.map((spell) => ({
+      ...spell,
+      requiredLevel: Math.max(spell.requiredLevel ?? 1, featureLevel),
+    })),
+  };
 }
 
 /**
@@ -8776,18 +8855,12 @@ export function buildFeatFeature(
   // на листе само по себе, и искать по нему черту, чтобы посчитать его атаку,
   // лист не должен.
   //
-  // Выбранные игроком заклинания и заклинания списка лежат там же, где
-  // выдаваемые чертой: все они приходят от одной черты, ею же названной
-  // характеристикой и считаются.
+  // Выбранные игроком заклинания лежат там же, где выдаваемые чертой: все они
+  // приходят от одной черты, ею же названной характеристикой и считаются.
+  // Расширение списка сюда не идёт: это доступность, а не знание — оно лежит
+  // отдельным снимком и показывается в окне добавления заклинаний.
   const featureSpells = uniqBy(
-    [
-      ...(summary.spells ?? []),
-      ...spells,
-      // Заклинания списка идут последними: то же заклинание, выданное чертой,
-      // остаётся выданным — оно готово всегда, а из списка его пришлось бы
-      // готовить.
-      ...(summary.spellListSpells ?? []),
-    ].map((spell) =>
+    [...(summary.spells ?? []), ...spells].map((spell) =>
       spellcastingAbility ? { ...spell, spellcastingAbility } : spell,
     ),
     (spell) => spell.url,
@@ -8819,6 +8892,8 @@ export function buildFeatFeature(
     // Копия списка: подготовку игрок снимает прямо в записи, и делить её с
     // деталью справочника, из которой собрана черта, нельзя.
     spells: featureSpells.length ? featureSpells : null,
+    // Снимок расширения списка; черта без него пишется без поля
+    spellList: summary.spellList ?? undefined,
     // Пустой набор не пишется: у черты без выборов запись остаётся такой же,
     // какой была до их появления.
     choiceAnswers: Object.keys(choiceAnswers).length
@@ -10956,6 +11031,7 @@ function toCharacterFeature(
     // класса забирает ровно выданное — так же, как у черты
     proficiencies: withChosenProficiencies(summary.proficiencies, chosen),
     spells: featureSpells.length ? featureSpells : null,
+    spellList: summary.spellList ?? undefined,
     counters: summary.counters.length ? [...summary.counters] : undefined,
     choiceAnswers: Object.keys(choiceAnswers).length
       ? choiceAnswers
@@ -11153,6 +11229,7 @@ function buildFeatureOptionFeatures(
       activeEffects: activeEffects.length ? [...activeEffects] : undefined,
       proficiencies: grants?.proficiencies ?? null,
       spells: spells.length ? spells : null,
+      spellList: grants?.spellList ?? undefined,
       counters: grants?.counters.length ? [...grants.counters] : undefined,
     };
   });
@@ -11282,15 +11359,35 @@ function buildClassOwnEffectFeature(
   owner?: ClassSummary,
 ): CharacterFeature[] {
   const hasGrants =
-    summary.activeEffects.length > 0 || summary.counters.length > 0;
+    summary.activeEffects.length > 0
+    || summary.counters.length > 0
+    || (summary.spells?.length ?? 0) > 0
+    || summary.spellList !== null
+    || summary.choices.length > 0;
 
-  if (!hasGrants || !matchesLevel(CLASS_FIRST_LEVEL)) {
+  // Запись появляется на первом уровне класса и возвращается на уровне, где у
+  // класса открывается ещё один его выбор: заклинание, выбранное там, ложится
+  // именно на неё. Без второго условия мастер повышения спросил бы игрока, а
+  // положить выбранное было бы некуда
+  const opensChoice = summary.choices.some(
+    (choice) => choice.requiredLevel && matchesLevel(choice.requiredLevel),
+  );
+
+  if (!hasGrants || !(matchesLevel(CLASS_FIRST_LEVEL) || opensChoice)) {
     return [];
   }
 
+  // Заклинание класса считается от характеристики класса, если та задана, — как
+  // у умения и у черты
+  const spells = (summary.spells ?? []).map((spell) =>
+    summary.spellcastingAbility
+      ? { ...spell, spellcastingAbility: summary.spellcastingAbility }
+      : spell,
+  );
+
   return [
     {
-      id: getClassFeatureId((owner ?? summary).url, `${summary.url}:effects`),
+      id: getClassOwnGrantsFeatureId((owner ?? summary).url, summary.url),
       name: summary.name,
       description: [],
       origin: 'class',
@@ -11301,11 +11398,32 @@ function buildClassOwnEffectFeature(
       activeEffects: summary.activeEffects.length
         ? [...summary.activeEffects]
         : undefined,
+      // Заклинания класса лежат на этой же записи: снятие класса забирает их
+      // вместе с ней, как заклинания умения — вместе с умением
+      spells: spells.length ? spells : null,
+      spellList: summary.spellList ?? undefined,
       // Ресурсы кладутся в запись снимком, как у черты: панель ресурсов
       // пересобирает их отсюда, а не ходит за ними в справочник
       ...(summary.counters.length ? { counters: [...summary.counters] } : {}),
     },
   ];
+}
+
+/**
+ * Идентификатор записи листа под дары самой записи класса или подкласса.
+ *
+ * Своей функцией, потому что его должен знать и мастер класса: выбранные при
+ * взятии класса заклинания ложатся именно на эту запись.
+ *
+ * @param ownerUrl URL базового класса — под ним лежат и умения подкласса.
+ * @param summaryUrl URL самой записи; не задан — тот же класс.
+ * @returns идентификатор записи листа.
+ */
+export function getClassOwnGrantsFeatureId(
+  ownerUrl: string,
+  summaryUrl: string = ownerUrl,
+): string {
+  return getClassFeatureId(ownerUrl, `${summaryUrl}:effects`);
 }
 
 /**
@@ -11482,7 +11600,69 @@ export function getLevelFeatureRows(
     append(subclass.features, `Подкласс: ${subclass.name}`, true);
   }
 
+  // Выборы самой записи класса, открывшиеся ровно на этом уровне: класс даёт
+  // заклинание не только умением. Своей строкой, потому что и дают их не
+  // умения, — как у вида, где выборы записи стоят отдельно от умений
+  rows.push(
+    ...toClassOwnChoiceRows(
+      base,
+      base,
+      level,
+      `${FEATURE_ORIGIN_LABELS.class}: ${base.name}`,
+    ),
+    ...(subclass
+      ? toClassOwnChoiceRows(
+          base,
+          subclass,
+          level,
+          `Подкласс: ${subclass.name}`,
+        )
+      : []),
+  );
+
   return rows;
+}
+
+/**
+ * Строка мастера повышения под выборы самой записи класса или подкласса.
+ *
+ * Спрашиваются только те, чей уровень открытия совпадает с берущимся: выборы
+ * без уровня задаются один раз, при взятии класса, и повторять их на каждом
+ * уровне значило бы спрашивать одно и то же снова.
+ *
+ * @param owner базовый класс — под его адресом лежит запись даров.
+ * @param summary сама запись: класс либо его подкласс.
+ * @param level уровень, который берут сейчас.
+ * @param originLabel подпись источника для карточки.
+ * @returns одна строка либо пустой список.
+ */
+function toClassOwnChoiceRows(
+  owner: ClassSummary,
+  summary: ClassSummary,
+  level: number,
+  originLabel: string,
+): ClassFeatureRow[] {
+  const choices = summary.choices.filter(
+    (choice) => choice.requiredLevel === level,
+  );
+
+  if (!choices.length) {
+    return [];
+  }
+
+  return [
+    {
+      id: getClassOwnGrantsFeatureId(owner.url, summary.url),
+      name: summary.name,
+      level,
+      description: [],
+      originLabel,
+      choices,
+      featChoices: [],
+      grantedFeatUrls: [],
+      abilityImprovement: false,
+    },
+  ];
 }
 
 /**
@@ -12695,6 +12875,416 @@ export function getChoiceSkillHints(
   skills: CharacterSkill[],
 ): Record<string, string> {
   return choice.kind === 'skill-proficiency' ? getOwnedSkillHints(skills) : {};
+}
+
+/**
+ * Подпись поля выбора: «Выберите 2»; без предела — просто «Выберите».
+ *
+ * @param count сколько нужно выбрать; 0 — без предела.
+ * @returns подпись.
+ */
+export function getChoiceChooseLabel(count: number): string {
+  return count > 0
+    ? `${CHOICE_SELECT_PLACEHOLDER} ${count}`
+    : CHOICE_SELECT_PLACEHOLDER;
+}
+
+/**
+ * Сколько вариантов требует выбор с учётом готовности пула.
+ *
+ * Готовый пул ограничивает требование своей длиной — как и раньше, иначе
+ * завышенное в прозе число запирало бы шаг. Пул в пути или не загрузившийся
+ * длины не имеет: требование остаётся полным, чтобы игрок не прошёл шаг с
+ * «Выберите 0» и без заклинания, которое ему положено.
+ *
+ * @param choice распознанный выбор.
+ * @param optionCount сколько вариантов в пуле.
+ * @param status готовность пула.
+ * @returns требуемое число вариантов.
+ */
+export function getChoiceRequiredCount(
+  choice: ClassChoice,
+  optionCount: number,
+  status: SheetChoicePoolStatus = 'ready',
+): number {
+  return status === 'ready'
+    ? Math.min(choice.count, optionCount)
+    : choice.count;
+}
+
+/**
+ * Пул заклинаний без одноимённых записей: остаётся первая по порядку пула.
+ *
+ * Ответ выбора заклинания хранится названием, а не url, поэтому две записи
+ * каталога с одним названием (`friends` и `friends-phb` на деве) отмечались бы
+ * в пикере вместе и обе ложились бы на лист. Вторую запись выбрать всё равно
+ * нельзя — по названию она от первой неотличима.
+ *
+ * @param pool заклинания пула из поиска по каталогу.
+ * @returns пул без повторов названий.
+ */
+export function uniqueSpellsByName(
+  pool: SpellCatalogItem[],
+): SpellCatalogItem[] {
+  return uniqBy(pool, (spell) => spell.name);
+}
+
+/**
+ * Варианты пикера из пула заклинаний: по кругам, внутри круга по алфавиту.
+ * Значение — название: так ответы выбора заклинания хранились и до пикера.
+ *
+ * @param pool заклинания пула.
+ * @returns варианты пикера с описанием по url заклинания.
+ */
+export function toSpellPickerOptions(
+  pool: SpellCatalogItem[],
+): SheetChoiceOption[] {
+  return [...pool]
+    .sort(
+      (left, right) =>
+        left.level - right.level || left.name.localeCompare(right.name, 'ru'),
+    )
+    .map((spell) => ({
+      value: spell.name,
+      label: spell.name,
+      sublabel: spell.school,
+      group: getSpellGroupLabel(spell.level),
+      detail: { kind: 'spell', url: spell.url },
+    }));
+}
+
+/**
+ * Варианты пикера из пула черт. Значение — url: по нему черта догружается из
+ * справочника при применении.
+ *
+ * @param options черты пула.
+ * @returns варианты пикера с описанием по url черты.
+ */
+export function toFeatPickerOptions(
+  options: FeatSelectOption[],
+): SheetChoiceOption[] {
+  return [...options]
+    .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
+    .map((feat) => ({
+      value: feat.url,
+      label: feat.name,
+      badges: feat.sourceLabel ? [feat.sourceLabel] : [],
+      detail: { kind: 'feat', url: feat.url },
+    }));
+}
+
+/**
+ * Варианты пикера из подклассов, разрешённых источниками профиля.
+ *
+ * @param options подклассы.
+ * @returns варианты пикера с описанием по url подкласса.
+ */
+export function toSubclassPickerOptions(
+  options: ClassOption[],
+): SheetChoiceOption[] {
+  return options.map((option) => ({
+    value: option.url,
+    label: option.name,
+    // Английское название второй строкой: одноимённые подклассы разных книг
+    // различаются им так же, как бейджем источника
+    sublabel: option.nameEng,
+    badges: option.sourceLabel ? [option.sourceLabel] : [],
+    detail: { kind: 'class', url: option.url },
+  }));
+}
+
+/**
+ * Варианты пикера для слота прибавки черты: характеристики, среди которых
+ * черта раскладывает +1. Упёршаяся в предел остаётся в списке, но недоступна —
+ * иначе выбор молча пропал бы при применении.
+ *
+ * @param scores итоговые характеристики персонажа.
+ * @param allowed характеристики, которые черта разрешает; пусто — любые.
+ * @returns варианты пикера.
+ */
+export function toAbilityPickerOptions(
+  scores: Record<AbilityKey, number>,
+  allowed: AbilityKey[],
+): SheetChoiceOption[] {
+  const keys = allowed.length > 0 ? allowed : ABILITY_ORDER;
+
+  return keys.map((key) => {
+    const score = scores[key];
+
+    const isMaxed = getAbilityIncreaseHeadroom(score) === 0;
+
+    return {
+      value: key,
+      label: ABILITY_LABELS[key],
+      sublabel: isMaxed
+        ? `${score} — ${SHEET_CHOICE_PICKER_LABELS.abilityMaxed}`
+        : `${score} → ${score + 1}`,
+      disabled: isMaxed,
+    };
+  });
+}
+
+/**
+ * Варианты пикера из одних названий: список навыков или инструментов homebrew-
+ * формы, где записи справочника за выбором нет.
+ *
+ * @param names названия вариантов.
+ * @param hints пометки по названиям.
+ * @returns варианты пикера.
+ */
+export function toNamedPickerOptions(
+  names: string[],
+  hints: Record<string, string> = {},
+): SheetChoiceOption[] {
+  return names.map((name) => ({
+    value: name,
+    label: name,
+    ...(hints[name] ? { hint: hints[name] } : {}),
+  }));
+}
+
+/** Чем дополняются варианты пикера, кроме самих названий. */
+export interface ChoicePickerOptionsInput {
+  /** Пометки по названиям: навык, которым персонаж уже владеет. */
+  hints?: Record<string, string>;
+
+  /** Пул заклинаний выбора — у `kind: 'spell'` варианты берутся из него. */
+  spellPool?: SpellCatalogItem[];
+
+  /** Инструменты каталога: по ним у выбора инструмента появляется описание. */
+  toolEntries?: ToolCatalogEntry[];
+}
+
+/**
+ * Поля варианта, которые зависят от вида выбора: описание варианта умения из
+ * записи класса, описание инструмента по записи каталога.
+ *
+ * @param choice распознанный выбор.
+ * @param name название варианта.
+ * @param input дополнения к вариантам.
+ * @returns поля варианта сверх названия; пусто — вариант без описания.
+ */
+function getChoicePickerOptionExtras(
+  choice: ClassChoice,
+  name: string,
+  input: ChoicePickerOptionsInput,
+): Partial<SheetChoiceOption> {
+  if (choice.kind === 'option') {
+    const entry = (choice.optionDetails ?? []).find(
+      (candidate) => candidate.name === name,
+    );
+
+    if (!entry) {
+      return {};
+    }
+
+    // Пометок «можно взять повторно» и «с 2 уровня» в строке нет: список
+    // вариантов и так показан только тот, что игроку доступен, а условия
+    // варианта разобраны в его описании
+    return {
+      sublabel: entry.nameEng,
+      detail: {
+        kind: 'markup',
+        description: entry.description,
+        prerequisite: entry.prerequisite,
+        additional: entry.additional,
+        grantedSpells: entry.grantedSpells,
+      },
+    };
+  }
+
+  if (choice.kind === 'tool') {
+    const url = (input.toolEntries ?? []).find(
+      (entry) => entry.name === name,
+    )?.url;
+
+    return url ? { detail: { kind: 'item', url } } : {};
+  }
+
+  return {};
+}
+
+/**
+ * Варианты единого пикера для выбора записи.
+ *
+ * Названия приходят из `resolveChoiceOptions` — пикер их не переписывает,
+ * значение варианта равно названию, как хранится ответ. Заклинания —
+ * исключение: их пул собирается поиском и приходит записями каталога, а не
+ * названиями.
+ *
+ * @param choice распознанный выбор.
+ * @param names названия вариантов.
+ * @param input дополнения: пометки, пул заклинаний, каталог инструментов.
+ * @returns варианты пикера.
+ */
+export function toChoicePickerOptions(
+  choice: ClassChoice,
+  names: string[],
+  input: ChoicePickerOptionsInput = {},
+): SheetChoiceOption[] {
+  if (choice.kind === 'spell') {
+    return toSpellPickerOptions(input.spellPool ?? []);
+  }
+
+  const hints = input.hints ?? {};
+
+  return names.map((name) => ({
+    value: name,
+    label: name,
+    ...(hints[name] ? { hint: hints[name] } : {}),
+    ...getChoicePickerOptionExtras(choice, name, input),
+  }));
+}
+
+/**
+ * Пояснение к выбору заклинания по фильтру пула: «Умение даёт заклинание
+ * 6 круга из списка класса Колдун на выбор».
+ *
+ * @param choice выбор заклинания.
+ * @returns пояснение.
+ */
+function getSpellChoiceExplanation(choice: ClassChoice): string {
+  const filter = choice.spellFilter;
+
+  const {
+    prefix,
+    cantrip,
+    spell,
+    maxLevelPrefix,
+    levelSuffix,
+    classPrefix,
+    listedSuffix,
+    suffix,
+  } = SHEET_CHOICE_SPELL_EXPLANATION;
+
+  // Перечисленный пул: круг и класс у каждого заклинания свои, и говорить о
+  // них нечего — игрок выбирает из того, что записал автор
+  if (choice.listedSpells?.length) {
+    return `${prefix} ${spell} ${listedSuffix} ${suffix}`;
+  }
+
+  const subject = (() => {
+    if (!filter) {
+      return spell;
+    }
+
+    if (filter.level === 0) {
+      return cantrip;
+    }
+
+    if (filter.level !== null) {
+      return `${spell} ${filter.level} ${levelSuffix}`;
+    }
+
+    if (filter.maxLevel !== null) {
+      return `${spell} ${maxLevelPrefix} ${filter.maxLevel} ${levelSuffix}`;
+    }
+
+    return spell;
+  })();
+
+  const classNames = (filter?.classes ?? [])
+    .map((characterClass) => characterClass.name)
+    .filter(Boolean);
+
+  const source = classNames.length
+    ? ` ${classPrefix} ${classNames.join(', ')}`
+    : '';
+
+  return `${prefix} ${subject}${source} ${suffix}`;
+}
+
+/**
+ * Пояснение к выбору: почему игрок здесь и сейчас что-то выбирает. У выбора
+ * заклинания складывается из фильтра пула, у остальных — подпись по виду.
+ *
+ * @param choice распознанный выбор.
+ * @returns пояснение под заголовком поля.
+ */
+export function getChoiceExplanation(choice: ClassChoice): string {
+  return choice.kind === 'spell'
+    ? getSpellChoiceExplanation(choice)
+    : SHEET_CHOICE_EXPLANATION_LABELS[choice.kind];
+}
+
+/**
+ * Подзаголовок окна выбора: откуда выбор и сколько выбрать —
+ * «Класс: Колдун · 11 уровень · Таинственный арканум · выберите 1».
+ *
+ * @param origin умение, его источник и уровень; не задано — только счёт.
+ * @param requiredCount сколько нужно выбрать; 0 — без предела.
+ * @returns подзаголовок.
+ */
+export function getChoiceModalSubtitle(
+  origin: SheetChoiceOrigin | undefined,
+  requiredCount: number,
+): string {
+  const originParts = origin
+    ? [
+        origin.level
+          ? `${origin.originLabel} · ${origin.level} ${LEVEL_UP_WIZARD_LABELS.levelWord}`
+          : origin.originLabel,
+        origin.featureName,
+      ]
+    : [];
+
+  return [...originParts, getChoiceChooseLabel(requiredCount).toLowerCase()]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+/** Из чего собирается выбор для единого пикера. */
+export interface ChoiceControlInput extends ChoicePickerOptionsInput {
+  /** Названия вариантов из `resolveChoiceOptions`. */
+  names: string[];
+
+  /** Готовность пула; не задана — пул готов. */
+  status?: SheetChoicePoolStatus;
+
+  /** Откуда выбор — для подзаголовка окна. */
+  origin?: SheetChoiceOrigin;
+
+  /**
+   * Своё пояснение вместо подписи по виду выбора: владения самого класса даёт
+   * не умение, и «Умение даёт…» там сбивало бы с толку.
+   */
+  explanation?: string;
+}
+
+/**
+ * Выбор записи, готовый к показу единым пикером. Одна сборка на все мастера
+ * листа: у каждого был свой набор помощников для подписи, счёта и опций, и они
+ * расходились при каждой правке.
+ *
+ * @param choice распознанный выбор.
+ * @param input названия, готовность пула, дополнения и источник выбора.
+ * @returns выбор для пикера.
+ */
+export function buildChoiceControl(
+  choice: ClassChoice,
+  input: ChoiceControlInput,
+): SheetChoiceControl {
+  const status = input.status ?? 'ready';
+
+  const options = toChoicePickerOptions(choice, input.names, input);
+
+  const requiredCount = getChoiceRequiredCount(choice, options.length, status);
+
+  const title =
+    choice.label
+    || SHEET_FEAT_CHOICE_LABELS[choice.kind]
+    || getChoiceChooseLabel(requiredCount);
+
+  return {
+    choice,
+    options,
+    requiredCount,
+    status,
+    title,
+    explanation: input.explanation ?? getChoiceExplanation(choice),
+    modalTitle: title,
+    modalSubtitle: getChoiceModalSubtitle(input.origin, requiredCount),
+  };
 }
 
 /**

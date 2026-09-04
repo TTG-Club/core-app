@@ -175,6 +175,7 @@ export function getClassMechanicsFilledBlocksCount(
     holder.editorRows?.grants.length ?? 0,
     holder.editorRows?.modifiers.length ?? 0,
     holder.editorRows?.counters.length ?? 0,
+    holder.editorRows?.spellChoice.picks.length ?? 0,
     holder.mechanics?.spells.spells.length ?? 0,
     holder.mechanics?.spellList.groups.length ?? 0,
     holder.activeEffects.length,

@@ -8,6 +8,7 @@
     MagicItemCatalogItem,
   } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
   import {
     buildSearchQuery,
     FilterDrawer,
@@ -634,14 +635,14 @@
 
         <div class="flex gap-2">
           <UButton
-            label="Отмена"
+            :label="ACTION_LABELS.cancel"
             color="neutral"
             variant="ghost"
             @click.left.exact.prevent="handleCancel"
           />
 
           <UButton
-            label="Добавить"
+            :label="ACTION_LABELS.add"
             color="primary"
             :loading="isApplying"
             :disabled="isApplyDisabled"

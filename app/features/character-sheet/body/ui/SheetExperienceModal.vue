@@ -1,12 +1,15 @@
 <script setup lang="ts">
-  import type { StepperItem } from '@nuxt/ui';
-
   import type {
     AbilityImprovementMode,
     AbilityKey,
     ClassChoice,
+    ClassFeatureRow,
     HitPointsGainMode,
+    LevelUpRailItem,
+    LevelUpRailItemState,
   } from '../../model';
+
+  import { ACTION_LABELS } from '~/shared/consts';
 
   import { useCharacterSheet, useLevelUpWizard } from '../../composables';
   import {
@@ -20,13 +23,32 @@
     getLevelHitPointsLoss,
     LEVEL_MAX,
     LEVEL_MIN,
-    LEVEL_SHORT_SUFFIX,
     LEVEL_UP_HIT_POINTS_LABELS,
     LEVEL_UP_WIZARD_LABELS,
+    SHEET_WIZARD_SECTION_CLASS,
+    SHEET_WIZARD_SECTION_TITLE_CLASS,
   } from '../../model';
   import SheetAbilityImprovementChoice from './SheetAbilityImprovementChoice.vue';
   import SheetLevelUpStep from './SheetLevelUpStep.vue';
-  import SheetLevelUpSubclassPicker from './SheetLevelUpSubclassPicker.vue';
+  import SheetLevelUpStepsRail from './SheetLevelUpStepsRail.vue';
+
+  /**
+   * Состояние пункта рельсы относительно текущего шага.
+   *
+   * @param value номер пункта.
+   * @param current номер текущего шага.
+   * @returns пройден, текущий или впереди.
+   */
+  function getRailItemState(
+    value: number,
+    current: number,
+  ): LevelUpRailItemState {
+    if (value < current) {
+      return 'done';
+    }
+
+    return value === current ? 'current' : 'upcoming';
+  }
 
   const emit = defineEmits<{
     close: [];
@@ -63,12 +85,13 @@
     stepAbilityImprovement,
     resetAbilityImprovement,
     selectSubclass,
-    choiceOptions,
-    spellPool,
-    choiceHints,
+    choiceControl,
+    getFeatureRowPendingCount,
+    retrySpellPool,
     featOptions,
     selectedFeat,
     isStepValid,
+    getStepPendingCount,
     buildPayload,
   } = useLevelUpWizard();
 
@@ -192,6 +215,15 @@
     () => levelsGained.value > 0 && hasClass.value && !skipPreparation.value,
   );
 
+  /** Пропускать подготовку есть что: уровень действительно растёт. */
+  const isSkipPreparationAvailable = computed(() => levelsGained.value > 0);
+
+  const skipPreparationHint = computed(() =>
+    isSkipPreparationAvailable.value
+      ? LEVEL_UP_WIZARD_LABELS.skipPreparationHint
+      : LEVEL_UP_WIZARD_LABELS.skipPreparationIdleHint,
+  );
+
   const isNoClassHintVisible = computed(
     () => draftLevel.value > character.value.level && !hasClass.value,
   );
@@ -240,7 +272,7 @@
             id: choice.id,
             scores: abilityScoresFor(choice.id),
             title: choice.label || feature.name,
-            badgeLabel: `${feature.originLabel} · ${feature.level} ${LEVEL_SHORT_SUFFIX}`,
+            badgeLabel: `${feature.originLabel} · ${feature.level} ${LEVEL_UP_WIZARD_LABELS.levelWord}`,
             mode: improvement.mode,
             increases: improvement.increases,
             featOptions: featOptions(currentDraftIndex.value, choice),
@@ -257,13 +289,120 @@
     () => isStepsMode.value && stepIndex.value === wizardSteps.value.length,
   );
 
-  const stepperItems = computed<StepperItem[]>(() => [
-    { value: 0, title: LEVEL_UP_WIZARD_LABELS.progressStep },
-    ...wizardSteps.value.map((step, index) => ({
-      value: index + 1,
-      title: step.title,
-    })),
-  ]);
+  /**
+   * Что ждёт впереди, пока шаги ещё не собраны: по пункту на каждый уровень
+   * из набранных. Умения уровня и повышения характеристик здесь не значатся —
+   * они известны только после загрузки классов, — но игрок сразу видит, из
+   * скольких шагов состоит подготовка, а не пустую рельсу до «Далее».
+   */
+  const previewRailItems = computed<LevelUpRailItem[]>(() => {
+    if (wizardSteps.value.length > 0) {
+      return [];
+    }
+
+    return targets.value.flatMap((target) => {
+      const name =
+        classes.value.find(
+          (characterClass) => characterClass.url === target.classUrl,
+        )?.name ?? '';
+
+      return Array.from(
+        { length: target.to - target.from },
+        (_, offset): LevelUpRailItem => ({
+          value: -(offset + 1),
+          title: `${name} · ${target.from + offset + 1} ${LEVEL_UP_WIZARD_LABELS.levelWord}`,
+          subtitle: '',
+          pending: 0,
+          state: 'upcoming',
+          nested: false,
+          reachable: false,
+        }),
+      );
+    });
+  });
+
+  /**
+   * Пункты рельсы шагов: уровень и опыт, дальше — шаги мастера с подписью
+   * класса и уровня, содержимым и счётчиком незакрытых выборов. Из рельсы
+   * ходят только назад: вперёд ведёт «Далее» с проверкой шага.
+   */
+  const railItems = computed<LevelUpRailItem[]>(() => {
+    const current = stepIndex.value;
+
+    return [
+      {
+        value: 0,
+        title: LEVEL_UP_WIZARD_LABELS.progressStep,
+        subtitle: LEVEL_UP_WIZARD_LABELS.progressStepSubtitle,
+        pending: 0,
+        state: current === 0 ? 'current' : 'done',
+        nested: false,
+        reachable: true,
+      },
+      ...wizardSteps.value.map((step, index): LevelUpRailItem => {
+        const value = index + 1;
+
+        return {
+          value,
+          title: step.title,
+          subtitle: step.subtitle,
+          pending: getStepPendingCount(index),
+          state: getRailItemState(value, current),
+          nested: step.key === 'abilities',
+          reachable: value <= current,
+        };
+      }),
+      ...previewRailItems.value,
+    ];
+  });
+
+  /** Заголовок окна: при росте уровня — про повышение, иначе про опыт. */
+  const modalTitle = computed(() =>
+    levelsGained.value > 0
+      ? LEVEL_UP_WIZARD_LABELS.modalTitleLevelUp
+      : LEVEL_UP_WIZARD_LABELS.modalTitle,
+  );
+
+  /**
+   * Подзаголовок окна: текущий уровень каждого класса, а у того, чей уровень
+   * правят, — «10 → 11». Строка стоит на месте с открытия окна: раньше она
+   * появлялась только с первым набранным уровнем, и шапка дёргалась на каждое
+   * нажатие «плюс».
+   */
+  const modalDescription = computed(() => {
+    if (!hasClass.value) {
+      const level = character.value.level;
+
+      const title = LEVEL_UP_WIZARD_LABELS.levelStepTitle;
+
+      return draftLevel.value === level
+        ? `${title} ${level}`
+        : `${title} ${level} → ${draftLevel.value}`;
+    }
+
+    return classes.value
+      .map((characterClass) => {
+        const name =
+          classRows.value.find((row) => row.url === characterClass.url)?.name
+          ?? '';
+
+        const level = characterClass.level;
+
+        const draft = draftClassLevels.value[characterClass.url] ?? level;
+
+        return draft === level
+          ? `${name} ${level}`
+          : `${name} ${level} → ${draft}`;
+      })
+      .join(', ');
+  });
+
+  /** Незакрытые выборы одного умения текущего шага — для карточек умений. */
+  function currentFeatureRowPendingCount(row: ClassFeatureRow): number {
+    const draft = currentDraft.value;
+
+    return draft ? getFeatureRowPendingCount(row, draft) : 0;
+  }
 
   /**
    * Прирост хитов без мастера («Пропустить подготовку», сбой загрузки): среднее
@@ -374,11 +513,16 @@
     stepIndex.value = Math.max(0, stepIndex.value - 1);
   }
 
-  /** Степпер водит только назад: вперёд пускает проверка шага в «Далее». */
-  function handleStepperUpdate(value: string | number | undefined) {
-    if (typeof value === 'number' && value < stepIndex.value) {
+  /** Рельса водит только назад: вперёд пускает проверка шага в «Далее». */
+  function handleRailSelect(value: number) {
+    if (value < stepIndex.value) {
       stepIndex.value = value;
     }
+  }
+
+  /** Пул заклинаний выбора не загрузился — запросить его заново. */
+  function handleSpellPoolRetry(choice: ClassChoice) {
+    void retrySpellPool(choice);
   }
 
   function handleClassLevel(classUrl: string, level: number) {
@@ -469,6 +613,19 @@
     return selectedFeat(currentDraftIndex.value, choiceId);
   }
 
+  /** Подклассы текущего шага, разрешённые источниками профиля. */
+  const currentSubclassOptions = computed(() =>
+    currentDraftIndex.value >= 0
+      ? subclassOptions(currentDraftIndex.value)
+      : [],
+  );
+
+  const currentSubclassUrl = computed(() =>
+    currentDraftIndex.value >= 0
+      ? selectedSubclassUrl(currentDraftIndex.value)
+      : null,
+  );
+
   function handleSubclassSelect(subclassUrl: string | null) {
     if (subclassUrl) {
       void selectSubclass(currentDraftIndex.value, subclassUrl);
@@ -528,150 +685,176 @@
 </script>
 
 <template>
+  <!-- Окно шире обычной модалки листа: слева рельса шагов, справа карточки
+    уровня с полями выбора — в стандартной ширине им было бы тесно -->
   <UModal
-    title="Опыт и уровень"
-    :ui="{ content: 'sm:max-w-2xl' }"
+    :title="modalTitle"
+    :description="modalDescription"
+    :ui="{ content: 'sm:max-w-5xl' }"
   >
     <template #body>
-      <div class="flex flex-col gap-3">
-        <div
-          v-if="isWizardAvailable"
-          class="overflow-x-auto"
-        >
-          <UStepper
-            :model-value="stepIndex"
-            :items="stepperItems"
-            size="xs"
-            color="primary"
-            linear
-            @update:model-value="handleStepperUpdate"
-          />
-        </div>
+      <!-- Рельса и содержимое шага прокручиваются каждое своим столбцом:
+        длинное описание умения не должно уводить список шагов из виду -->
+      <div class="flex flex-col gap-4 md:max-h-[70dvh] md:flex-row md:gap-6">
+        <!-- Рельса стоит на месте с первого открытия: пока уровень не поднят,
+          в ней один пункт «Уровень и опыт», а не пустота — окно не должно
+          перекладываться на каждое нажатие «плюс» -->
+        <SheetLevelUpStepsRail
+          v-if="hasClass"
+          :items="railItems"
+          :model-value="stepIndex"
+          class="shrink-0 md:min-h-0 md:w-60 md:overflow-y-auto md:pr-1"
+          @update:model-value="handleRailSelect"
+        />
 
-        <template v-if="!isStepsMode">
-          <template v-if="hasClass">
-            <span
-              class="text-[10px] font-bold tracking-wider text-muted uppercase"
+        <div
+          class="flex min-w-0 grow flex-col gap-3 md:min-h-96 md:overflow-y-auto md:pr-1"
+        >
+          <template v-if="!isStepsMode">
+            <div
+              v-if="hasClass"
+              :class="SHEET_WIZARD_SECTION_CLASS"
             >
-              {{ LEVEL_UP_WIZARD_LABELS.classLevelsTitle }}
+              <span :class="SHEET_WIZARD_SECTION_TITLE_CLASS">
+                {{ LEVEL_UP_WIZARD_LABELS.classLevelsTitle }}
+              </span>
+
+              <div
+                v-for="row in classRows"
+                :key="row.url"
+                class="flex items-center justify-between gap-4"
+              >
+                <span class="min-w-0 truncate text-sm text-toned">
+                  {{ row.name }}
+                </span>
+
+                <UInputNumber
+                  :model-value="draftClassLevels[row.url]"
+                  :min="LEVEL_MIN"
+                  :max="row.max"
+                  class="w-40 shrink-0"
+                  @update:model-value="handleClassLevel(row.url, $event)"
+                />
+              </div>
+
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-muted">
+                  {{ LEVEL_UP_WIZARD_LABELS.totalLevel }}
+                </span>
+
+                <span class="font-bold text-highlighted">
+                  {{ draftTotalLevel }}
+                </span>
+              </div>
+
+              <span class="text-xs text-dimmed">
+                {{ LEVEL_UP_WIZARD_LABELS.classLevelsHint }}
+              </span>
+            </div>
+
+            <div
+              v-else
+              :class="SHEET_WIZARD_SECTION_CLASS"
+            >
+              <span :class="SHEET_WIZARD_SECTION_TITLE_CLASS">
+                {{ LEVEL_UP_WIZARD_LABELS.levelStepTitle }}
+              </span>
+
+              <div class="flex items-center justify-between gap-4">
+                <span class="text-sm text-toned">
+                  {{ LEVEL_UP_WIZARD_LABELS.levelStepTitle }}
+                </span>
+
+                <UInputNumber
+                  v-model="draftLevel"
+                  :min="LEVEL_MIN"
+                  :max="LEVEL_MAX"
+                  class="w-40"
+                />
+              </div>
+            </div>
+
+            <div :class="SHEET_WIZARD_SECTION_CLASS">
+              <span :class="SHEET_WIZARD_SECTION_TITLE_CLASS">
+                {{ LEVEL_UP_WIZARD_LABELS.experienceTitle }}
+              </span>
+
+              <div class="flex items-center justify-between gap-4">
+                <span class="text-sm text-toned">
+                  {{ LEVEL_UP_WIZARD_LABELS.currentExperience }}
+                </span>
+
+                <UInputNumber
+                  v-model="draftExperience"
+                  :min="0"
+                  :max="EXPERIENCE_MAX"
+                  class="w-40"
+                />
+              </div>
+
+              <div class="flex items-center justify-between gap-4">
+                <span class="text-sm text-toned">
+                  {{ LEVEL_UP_WIZARD_LABELS.additionalExperience }}
+                </span>
+
+                <UInputNumber
+                  v-model="draftAdditionalExperience"
+                  :min="-EXPERIENCE_MAX"
+                  :max="EXPERIENCE_MAX"
+                  class="w-40"
+                />
+              </div>
+
+              <div class="flex items-center justify-between text-sm">
+                <span class="text-muted">
+                  {{ LEVEL_UP_WIZARD_LABELS.totalExperience }}
+                </span>
+
+                <span class="font-bold text-highlighted">{{
+                  totalExperience
+                }}</span>
+              </div>
+            </div>
+
+            <!-- Пропуск подготовки: уровень поднимается сразу, без шагов
+              мастера. Блок стоит на месте всегда, пока класс есть: он
+              появлялся с первым набранным уровнем и пропадал обратно, и окно
+              дёргалось на каждое нажатие «плюс». Пропускать нечего — галочка
+              просто недоступна -->
+            <div
+              v-if="hasClass"
+              :class="SHEET_WIZARD_SECTION_CLASS"
+            >
+              <UCheckbox
+                v-model="skipPreparation"
+                :disabled="!isSkipPreparationAvailable"
+                :label="LEVEL_UP_WIZARD_LABELS.skipPreparation"
+              />
+
+              <span class="text-xs text-dimmed">
+                {{ skipPreparationHint }}
+              </span>
+            </div>
+
+            <span
+              v-if="isNoClassHintVisible"
+              class="text-xs text-dimmed"
+            >
+              {{ LEVEL_UP_WIZARD_LABELS.noClassHint }}
+            </span>
+
+            <span
+              v-if="hasLoadError"
+              class="text-xs text-primary"
+            >
+              {{ LEVEL_UP_WIZARD_LABELS.loadError }}
             </span>
 
             <div
-              v-for="row in classRows"
-              :key="row.url"
-              class="flex items-center justify-between gap-4"
+              v-if="isLevelDownSectionVisible"
+              :class="SHEET_WIZARD_SECTION_CLASS"
             >
-              <span class="min-w-0 truncate text-sm text-toned">
-                {{ row.name }}
-              </span>
-
-              <UInputNumber
-                :model-value="draftClassLevels[row.url]"
-                :min="LEVEL_MIN"
-                :max="row.max"
-                class="w-40 shrink-0"
-                @update:model-value="handleClassLevel(row.url, $event)"
-              />
-            </div>
-
-            <div class="flex items-center justify-between text-sm">
-              <span class="text-muted">
-                {{ LEVEL_UP_WIZARD_LABELS.totalLevel }}
-              </span>
-
-              <span class="font-bold text-highlighted">
-                {{ draftTotalLevel }}
-              </span>
-            </div>
-
-            <span class="text-xs text-dimmed">
-              {{ LEVEL_UP_WIZARD_LABELS.classLevelsHint }}
-            </span>
-          </template>
-
-          <div
-            v-else
-            class="flex items-center justify-between gap-4"
-          >
-            <span class="text-sm text-toned">Уровень</span>
-
-            <UInputNumber
-              v-model="draftLevel"
-              :min="LEVEL_MIN"
-              :max="LEVEL_MAX"
-              class="w-40"
-            />
-          </div>
-
-          <USeparator class="my-1" />
-
-          <div class="flex items-center justify-between gap-4">
-            <span class="text-sm text-toned">Текущий опыт</span>
-
-            <UInputNumber
-              v-model="draftExperience"
-              :min="0"
-              :max="EXPERIENCE_MAX"
-              class="w-40"
-            />
-          </div>
-
-          <div class="flex items-center justify-between gap-4">
-            <span class="text-sm text-toned">Добавить опыт</span>
-
-            <UInputNumber
-              v-model="draftAdditionalExperience"
-              :min="-EXPERIENCE_MAX"
-              :max="EXPERIENCE_MAX"
-              class="w-40"
-            />
-          </div>
-
-          <div class="flex items-center justify-between text-sm">
-            <span class="text-muted">Итого опыта</span>
-
-            <span class="font-bold text-highlighted">{{
-              totalExperience
-            }}</span>
-          </div>
-
-          <!-- Пропуск подготовки: уровень поднимается сразу, без шагов мастера.
-            Показываем только когда шаги вообще были бы — при понижении уровня
-            и без класса пропускать нечего -->
-          <template v-if="levelsGained > 0 && hasClass">
-            <USeparator class="my-1" />
-
-            <UCheckbox
-              v-model="skipPreparation"
-              :label="LEVEL_UP_WIZARD_LABELS.skipPreparation"
-            />
-
-            <span class="text-xs text-dimmed">
-              {{ LEVEL_UP_WIZARD_LABELS.skipPreparationHint }}
-            </span>
-          </template>
-
-          <span
-            v-if="isNoClassHintVisible"
-            class="text-xs text-dimmed"
-          >
-            {{ LEVEL_UP_WIZARD_LABELS.noClassHint }}
-          </span>
-
-          <span
-            v-if="hasLoadError"
-            class="text-xs text-primary"
-          >
-            {{ LEVEL_UP_WIZARD_LABELS.loadError }}
-          </span>
-
-          <template v-if="isLevelDownSectionVisible">
-            <USeparator class="my-1" />
-
-            <div class="flex flex-col gap-2">
-              <span
-                class="text-[10px] font-bold tracking-wider text-muted uppercase"
-              >
+              <span :class="SHEET_WIZARD_SECTION_TITLE_CLASS">
                 {{ LEVEL_UP_HIT_POINTS_LABELS.levelDownTitle }}
               </span>
 
@@ -693,9 +876,7 @@
               </span>
 
               <template v-if="isRemovedFeaturesVisible">
-                <span
-                  class="text-[10px] font-bold tracking-wider text-muted uppercase"
-                >
+                <span :class="SHEET_WIZARD_SECTION_TITLE_CLASS">
                   {{ LEVEL_UP_HIT_POINTS_LABELS.levelDownFeaturesTitle }}
                 </span>
 
@@ -709,69 +890,61 @@
               </template>
             </div>
           </template>
-        </template>
 
-        <!-- Повышение характеристик — своим шагом: уровень остаётся
-          компактным, а прибавки и черта вместо них спрашиваются целиком -->
-        <div
-          v-else-if="isAbilitiesView"
-          class="flex flex-col gap-3"
-        >
-          <SheetAbilityImprovementChoice
-            v-for="block in abilityImprovementBlocks"
-            :key="block.id"
-            :title="block.title"
-            :badge-label="block.badgeLabel"
-            :mode="block.mode"
-            :increases="block.increases"
-            :scores="block.scores"
-            :feat-options="block.featOptions"
-            :selected-feat="block.selectedFeat"
-            :feat-abilities="block.featAbilities"
+          <!-- Повышение характеристик — своим шагом: уровень остаётся
+            компактным, а прибавки и черта вместо них спрашиваются целиком -->
+          <div
+            v-else-if="isAbilitiesView"
+            class="flex flex-col gap-3"
+          >
+            <SheetAbilityImprovementChoice
+              v-for="block in abilityImprovementBlocks"
+              :key="block.id"
+              :title="block.title"
+              :badge-label="block.badgeLabel"
+              :mode="block.mode"
+              :increases="block.increases"
+              :scores="block.scores"
+              :feat-options="block.featOptions"
+              :selected-feat="block.selectedFeat"
+              :feat-abilities="block.featAbilities"
+              :is-feats-loading="isFeatsLoading"
+              :has-feats-error="hasFeatsError"
+              @update:mode="handleImprovementMode(block.id, $event)"
+              @step="handleImprovementStep(block.id, $event)"
+              @update:feat="handleFeat(block.featureId, block.id, $event)"
+              @update:feat-ability="handleFeatAbility(block.id, $event)"
+              @reset="handleImprovementReset(block.id)"
+            />
+          </div>
+
+          <SheetLevelUpStep
+            v-else-if="currentStep && currentDraft"
+            :step="currentStep"
+            :draft="currentDraft"
+            :hit-die="currentStep.hitDie"
+            :constitution-modifier="constitutionModifier"
+            :abilities="character.abilities"
+            :choice-control="choiceControl"
+            :feature-row-pending-count="currentFeatureRowPendingCount"
+            :feat-options="currentFeatOptions"
+            :selected-feat="currentSelectedFeat"
             :is-feats-loading="isFeatsLoading"
             :has-feats-error="hasFeatsError"
-            @update:mode="handleImprovementMode(block.id, $event)"
-            @step="handleImprovementStep(block.id, $event)"
-            @update:feat="handleFeat(block.featureId, block.id, $event)"
-            @update:feat-ability="handleFeatAbility(block.id, $event)"
-            @reset="handleImprovementReset(block.id)"
+            :subclass-options="currentSubclassOptions"
+            :selected-subclass-url="currentSubclassUrl"
+            :is-subclass-loading="isSubclassLoading"
+            :has-subclass-error="hasSubclassError"
+            @update:gain-mode="handleGainMode"
+            @roll="handleRoll"
+            @update:selection="handleSelection"
+            @update:note="handleNote"
+            @update:feat="handleFeat"
+            @update:feat-ability="handleFeatAbility"
+            @retry-spell-pool="handleSpellPoolRetry"
+            @update:subclass="handleSubclassSelect"
           />
         </div>
-
-        <SheetLevelUpStep
-          v-else-if="currentStep && currentDraft"
-          :step="currentStep"
-          :draft="currentDraft"
-          :hit-die="currentStep.hitDie"
-          :constitution-modifier="constitutionModifier"
-          :abilities="character.abilities"
-          :choice-options="choiceOptions"
-          :spell-pool="spellPool"
-          :choice-hints="choiceHints"
-          :feat-options="currentFeatOptions"
-          :selected-feat="currentSelectedFeat"
-          :is-feats-loading="isFeatsLoading"
-          :has-feats-error="hasFeatsError"
-          @update:gain-mode="handleGainMode"
-          @roll="handleRoll"
-          @update:selection="handleSelection"
-          @update:note="handleNote"
-          @update:feat="handleFeat"
-          @update:feat-ability="handleFeatAbility"
-        >
-          <template
-            v-if="currentStep.isSubclassStep"
-            #subclass
-          >
-            <SheetLevelUpSubclassPicker
-              :model-value="selectedSubclassUrl(currentDraftIndex)"
-              :options="subclassOptions(currentDraftIndex)"
-              :is-loading="isSubclassLoading"
-              :has-error="hasSubclassError"
-              @update:model-value="handleSubclassSelect"
-            />
-          </template>
-        </SheetLevelUpStep>
       </div>
     </template>
 
@@ -790,7 +963,7 @@
 
         <div class="flex gap-2">
           <UButton
-            label="Отмена"
+            :label="ACTION_LABELS.cancel"
             color="neutral"
             variant="ghost"
             @click.left.exact.prevent="handleCancel"

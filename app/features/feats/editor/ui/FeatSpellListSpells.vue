@@ -8,26 +8,27 @@
   import { InfoTooltip } from '~ui/tooltip';
 
   import {
+    CLASS_LEVEL_MAX,
+    CLASS_LEVEL_MIN,
     createFeatSpellListGroup,
     getFeatEditorLabels,
-    getFeatSpellCountLabel,
   } from '../../model';
   import FeatEntityRefRows from './FeatEntityRefRows.vue';
   import FeatRowsSection from './FeatRowsSection.vue';
   import FeatRowsSeparator from './FeatRowsSeparator.vue';
-  import FeatSpellCountField from './FeatSpellCountField.vue';
 
   /**
    * Заклинания, которые черта добавляет в список заклинаний класса — таблица
    * «Заклинания метки».
    *
    * Отдельным блоком от выдачи, потому что это другая механика: выданное
-   * заклинание персонаж знает и накладывает, а отсюда — только берёт себе,
-   * потратив подготовку и ячейку.
+   * заклинание персонаж знает и накладывает, а отсюда он лишь может выучить или
+   * подготовить, как любое заклинание своего класса. Количества здесь нет:
+   * «выбрать N из перечисленных» — это выбор заклинаний с перечисленным пулом.
    *
    * Списков несколько: у метки дракона первая пачка открывается сразу, а
-   * следующие — на своих уровнях, и из каждой берут своё количество. Складывать
-   * их в один список значило бы выдать всю таблицу с первого уровня.
+   * следующие — на своих уровнях. Складывать их в один список значило бы
+   * открыть всю таблицу с первого уровня.
    */
   const { labels = {}, title = undefined } = defineProps<{
     /**
@@ -48,13 +49,11 @@
   /** Подписи с поправками формы-владельца. */
   const texts = computed(() => getFeatEditorLabels(labels));
 
-  /** Заголовок списка: с какого уровня и сколько из него берут. */
+  /** Заголовок списка: с какого уровня он открывается. */
   function getGroupTitle(group: FeatSpellListGroup): string {
-    const level = group.requiredLevel
+    return group.requiredLevel
       ? `${texts.value.spellListFromLevelPrefix} ${group.requiredLevel} ${texts.value.spellListFromLevelSuffix}`
       : texts.value.spellListFromStart;
-
-    return `${level} — ${getFeatSpellCountLabel(group.count)}`;
   }
 
   /** Заводит пустой список: уровень и количество автор задаёт сам. */
@@ -125,23 +124,11 @@
 
             <UInputNumber
               v-model="group.requiredLevel"
-              :min="1"
-              :max="20"
+              :min="CLASS_LEVEL_MIN"
+              :max="CLASS_LEVEL_MAX"
               :placeholder="texts.spellListLevelPlaceholder"
             />
           </UFormField>
-
-          <InfoTooltip
-            :text="texts.spellListCountHint"
-            icon="tabler:info-circle-filled"
-            class="mb-2"
-          >
-            <span class="sr-only">
-              {{ texts.spellListCount }}
-            </span>
-          </InfoTooltip>
-
-          <FeatSpellCountField v-model="group.count" />
         </div>
 
         <FeatEntityRefRows

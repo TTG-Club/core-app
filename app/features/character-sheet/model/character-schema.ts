@@ -397,6 +397,16 @@ const featureSchema = z.object({
   // Подготовку игрок снимает и возвращает прямо здесь, поэтому список хранится
   // в самой записи, а не пересобирается из справочника.
   spells: z.array(spellSchema).nullable().optional().catch(undefined),
+  // Расширение списка заклинаний записью — снимок; у записей до его появления
+  // поля нет, и такая запись список не расширяет, пока её не возьмут заново.
+  spellList: z
+    .object({
+      requiresSpellcasting: z.boolean().catch(false),
+      spells: z.array(spellSchema).catch([]),
+    })
+    .nullable()
+    .optional()
+    .catch(undefined),
   // Ответы игрока на выборы черты по ключу выбора; у записей до их появления
   // поля нет.
   choiceAnswers: z

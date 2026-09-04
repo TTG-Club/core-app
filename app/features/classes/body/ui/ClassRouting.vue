@@ -17,12 +17,19 @@
     hasSpells = false,
     navigateInPlace = false,
     inSplit = false,
+    hideNavigation = false,
   } = defineProps<{
     url: string;
     name: NameResponse;
     parent?: ClassLinkResponse;
     hasDescription?: boolean;
     hasSpells?: boolean;
+
+    /**
+     * Скрывает переходы к классу и его подклассам: в предпросмотре из листа
+     * персонажа они уводят от того, ради чего описание открыли.
+     */
+    hideNavigation?: boolean;
     /**
      * Включает inline-навигацию: подкласс/класс переключаются
      * внутри текущего контейнера (drawer) без перехода на отдельную страницу.
@@ -171,6 +178,7 @@
 <template>
   <div class="flex w-auto flex-wrap gap-2">
     <UButton
+      v-if="!hideNavigation"
       :to="
         isInlineNavigation ? undefined : `/classes/${parent ? parent.url : url}`
       "
@@ -187,6 +195,7 @@
     </UButton>
 
     <UPopover
+      v-if="!hideNavigation"
       v-model:open="popoverOpen"
       :ui="{ content: 'p-0' }"
       modal

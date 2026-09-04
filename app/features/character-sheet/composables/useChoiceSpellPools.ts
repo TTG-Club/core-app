@@ -1,8 +1,17 @@
 import type { MaybeRefOrGetter, Ref } from 'vue';
 
-import type { CharacterSpell, ClassChoice, SpellCatalogItem } from '../model';
+import type {
+  CharacterSpell,
+  ClassChoice,
+  SheetChoicePoolStatus,
+  SpellCatalogItem,
+} from '../model';
 
-import { fetchChoiceSpells, getChoiceSpellClassUrls } from '../model';
+import {
+  fetchChoiceSpells,
+  fetchSpellsByUrls,
+  getChoiceSpellClassUrls,
+} from '../model';
 
 /**
  * Запись, чьи выборы спрашивают заклинания: черта, дары предыстории, умение
@@ -45,16 +54,43 @@ interface ChoiceSpellPools {
   /** Названия заклинаний пула — опции пикера выбора. */
   getSpellOptions: (choice: ClassChoice) => string[];
 
+  /**
+   * Готовность пула одного выбора: пока он в пути или не загрузился, выбор
+   * нельзя считать выполненным.
+   */
+  getStatus: (choice: ClassChoice) => SheetChoicePoolStatus;
+
   /** Заклинания, выбранные игроком, записями листа. */
   collectChosenSpells: (source: ChoiceSpellSource) => CharacterSpell[];
 
   /** Перезапрашивает пулы всех выборов заклинаний. */
   load: () => Promise<void>;
+
+  /** Перезапрашивает пул одного выбора после сбоя. */
+  retry: (choice: ClassChoice) => Promise<void>;
+}
+
+/** Запрос пула одного выбора: сам выбор и запись, которой он принадлежит. */
+interface PoolRequest {
+  source: ChoiceSpellSource;
+  choice: ClassChoice;
 }
 
 /** Выбор заклинания из выборов записи. */
 function getSpellChoices(source: ChoiceSpellSource): ClassChoice[] {
   return source.choices.filter((choice) => choice.kind === 'spell');
+}
+
+/**
+ * Есть ли у выбора, откуда собрать пул: фильтр для поиска по каталогу либо
+ * перечисленные записью заклинания. Без того и другого запрашивать нечего, и
+ * пул считается готовым пустым.
+ *
+ * @param choice выбор заклинания.
+ * @returns `true` — пул есть откуда взять.
+ */
+function hasPoolSource(choice: ClassChoice): boolean {
+  return Boolean(choice.spellFilter) || Boolean(choice.listedSpells?.length);
 }
 
 /**
@@ -101,6 +137,13 @@ export function useChoiceSpellPools(
 
   const pools = ref<Record<string, SpellCatalogItem[]>>({});
 
+  /**
+   * Готовность пулов по id выбора. Выбора нет в словаре — пул ещё не
+   * запрашивали: для выбора с фильтром это «в пути» (запрос вот-вот уйдёт), а
+   * без фильтра запрашивать нечего, и пул считается готовым пустым.
+   */
+  const statuses = ref<Record<string, SheetChoicePoolStatus>>({});
+
   /** Классы пула: названные источником записи либо выбранные игроком. */
   function getClassUrls(
     choice: ClassChoice,
@@ -113,26 +156,120 @@ export function useChoiceSpellPools(
     return getChoiceSpellClassUrls(choice, source.choices, answers.value);
   }
 
-  /** Перезапрашивает пулы всех выборов заклинаний загруженных записей. */
-  async function load(): Promise<void> {
-    const requests = toValue(sources).flatMap((source) =>
+  /**
+   * Выборы заклинаний, чей пул есть откуда взять: поиском по фильтру либо по
+   * перечисленным в записи url.
+   */
+  function getPoolRequests(): PoolRequest[] {
+    return toValue(sources).flatMap((source) =>
       getSpellChoices(source).flatMap((choice) =>
-        choice.spellFilter
-          ? [{ source, choice, filter: choice.spellFilter }]
-          : [],
+        hasPoolSource(choice) ? [{ source, choice }] : [],
       ),
     );
+  }
 
-    const loaded = await Promise.all(
-      requests.map(async ({ source, choice, filter }) => ({
-        id: choice.id,
-        spells: await fetchChoiceSpells(filter, getClassUrls(choice, source)),
-      })),
-    );
+  /**
+   * Заклинания пула выбора: перечисленный записью — по её url, остальные —
+   * поиском по каталогу.
+   *
+   * @param request выбор и его запись.
+   * @returns заклинания пула; null — запрос не удался, пусто — брать неоткуда.
+   */
+  function fetchPoolSpells(
+    request: PoolRequest,
+  ): Promise<SpellCatalogItem[] | null> {
+    const { source, choice } = request;
 
+    const listedUrls = choice.listedSpells?.map((spell) => spell.url) ?? [];
+
+    if (listedUrls.length) {
+      return fetchSpellsByUrls(listedUrls);
+    }
+
+    const filter = choice.spellFilter;
+
+    return filter
+      ? fetchChoiceSpells(filter, getClassUrls(choice, source))
+      : Promise.resolve([]);
+  }
+
+  /**
+   * Запрашивает пул одного выбора и записывает его вместе с готовностью. Сбой
+   * оставляет прежний пул на месте: перезапрос после ошибки иначе начинал бы с
+   * пустого списка и мигал бы им.
+   *
+   * @param request выбор и его запись.
+   */
+  async function loadPool(request: PoolRequest): Promise<void> {
+    const { choice } = request;
+
+    if (!hasPoolSource(choice)) {
+      return;
+    }
+
+    statuses.value = { ...statuses.value, [choice.id]: 'loading' };
+
+    const spells = await fetchPoolSpells(request);
+
+    if (spells === null) {
+      statuses.value = { ...statuses.value, [choice.id]: 'error' };
+
+      return;
+    }
+
+    pools.value = { ...pools.value, [choice.id]: spells };
+    statuses.value = { ...statuses.value, [choice.id]: 'ready' };
+  }
+
+  /** Перезапрашивает пулы всех выборов заклинаний загруженных записей. */
+  async function load(): Promise<void> {
+    const requests = getPoolRequests();
+
+    const requestedIds = new Set(requests.map(({ choice }) => choice.id));
+
+    // Пулы выборов, которых больше не спрашивают, уходят вместе с их
+    // готовностью — иначе словари росли бы с каждым переключением подкласса
     pools.value = Object.fromEntries(
-      loaded.map((pool) => [pool.id, pool.spells]),
+      Object.entries(pools.value).filter(([id]) => requestedIds.has(id)),
     );
+
+    statuses.value = Object.fromEntries(
+      Object.entries(statuses.value).filter(([id]) => requestedIds.has(id)),
+    );
+
+    await Promise.all(requests.map((request) => loadPool(request)));
+  }
+
+  /**
+   * Перезапрашивает пул одного выбора: кнопка «Повторить» в поле выбора после
+   * сбоя загрузки.
+   *
+   * @param choice выбор заклинания.
+   */
+  async function retry(choice: ClassChoice): Promise<void> {
+    const request = getPoolRequests().find(
+      (candidate) => candidate.choice.id === choice.id,
+    );
+
+    if (request) {
+      await loadPool(request);
+    }
+  }
+
+  /**
+   * Готовность пула выбора.
+   *
+   * @param choice выбор заклинания.
+   * @returns статус пула; у выбора без фильтра пул пуст и готов.
+   */
+  function getStatus(choice: ClassChoice): SheetChoicePoolStatus {
+    const status = statuses.value[choice.id];
+
+    if (status) {
+      return status;
+    }
+
+    return hasPoolSource(choice) ? 'loading' : 'ready';
   }
 
   const classAnswers = computed(() =>
@@ -223,7 +360,9 @@ export function useChoiceSpellPools(
     pools,
     getPool,
     getSpellOptions,
+    getStatus,
     collectChosenSpells,
     load,
+    retry,
   };
 }

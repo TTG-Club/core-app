@@ -3,30 +3,46 @@
     AbilityKey,
     CharacterAbilities,
     ClassChoice,
+    ClassFeatureRow,
+    ClassOption,
     FeatSelectOption,
     HitPointsGainMode,
     LevelUpStepDraft,
     LevelUpStepView,
-    SpellCatalogItem,
+    SheetChoiceControl,
+    SheetChoiceOrigin,
   } from '../../model';
 
   import { MarkupRender } from '~ui/markup';
 
   import {
+    ABILITY_IMPROVEMENT_LABELS,
+    getChoiceModalSubtitle,
     getHitDieAverage,
     getHitDieLabel,
     getLevelHitPointsGain,
-    getRequiredChoiceCount,
     HIT_POINTS_GAIN_MODE_LABELS,
     isHitPointsGainMode,
-    LEVEL_SHORT_SUFFIX,
     LEVEL_UP_HIT_POINTS_LABELS,
     LEVEL_UP_WIZARD_LABELS,
+    SHEET_WIZARD_FEATURE_CARD_CLASS,
+    SHEET_WIZARD_SECTION_CLASS,
+    SHEET_WIZARD_SECTION_TITLE_CLASS,
     SKILL_DUPLICATE_WARNING,
+    toSubclassPickerOptions,
   } from '../../model';
-  import SheetChoiceSelect from './SheetChoiceSelect.vue';
-  import SheetFeatSpellsPicker from './SheetFeatSpellsPicker.vue';
-  import SheetLevelUpFeatChoice from './SheetLevelUpFeatChoice.vue';
+  import SheetChoicePickerField from './SheetChoicePickerField.vue';
+  import SheetFeatChoiceField from './SheetFeatChoiceField.vue';
+
+  /** Выбор черты внутри умения с пулом и ответом игрока. */
+  interface FeatPicker {
+    choice: ClassChoice;
+    title: string;
+    modalSubtitle: string;
+    options: FeatSelectOption[];
+    selected: FeatSelectOption | null;
+    abilities: (AbilityKey | null)[];
+  }
 
   const {
     step,
@@ -34,13 +50,16 @@
     hitDie,
     constitutionModifier,
     abilities,
-    choiceOptions,
-    spellPool,
-    choiceHints,
+    choiceControl,
+    featureRowPendingCount,
     featOptions,
     selectedFeat,
     isFeatsLoading = false,
     hasFeatsError = false,
+    subclassOptions,
+    selectedSubclassUrl = null,
+    isSubclassLoading = false,
+    hasSubclassError = false,
   } = defineProps<{
     /** Шаг мастера: уровень, его умения и прирост хитов. */
     step: LevelUpStepView;
@@ -56,14 +75,14 @@
     /** Текущие характеристики персонажа (для предела прибавок в чертах). */
     abilities: CharacterAbilities;
 
-    /** Опции пикера для выбора внутри умения. */
-    choiceOptions: (choice: ClassChoice) => string[];
+    /** Выбор умения для единого пикера: варианты, готовность, подписи. */
+    choiceControl: (
+      choice: ClassChoice,
+      origin: SheetChoiceOrigin,
+    ) => SheetChoiceControl;
 
-    /** Пул заклинаний выбора: его показывает окно выбора заклинаний. */
-    spellPool: (choice: ClassChoice) => SpellCatalogItem[];
-
-    /** Пометки опций пикера: навыки, которыми персонаж уже владеет. */
-    choiceHints: (choice: ClassChoice) => Record<string, string>;
+    /** Сколько выборов умения на этом шаге ещё не сделано. */
+    featureRowPendingCount: (row: ClassFeatureRow) => number;
 
     /** Черты, доступные выбору черты в умении. */
     featOptions: (choice: ClassChoice) => FeatSelectOption[];
@@ -75,6 +94,17 @@
 
     /** Каталог черт загрузить не удалось. */
     hasFeatsError?: boolean;
+
+    /** Подклассы, разрешённые источниками профиля (на шаге подкласса). */
+    subclassOptions: ClassOption[];
+
+    /** Url выбранного подкласса; null — ещё не выбран. */
+    selectedSubclassUrl?: string | null;
+
+    isSubclassLoading?: boolean;
+
+    /** Список подклассов загрузить не удалось — выбор можно сделать позже. */
+    hasSubclassError?: boolean;
   }>();
 
   const emit = defineEmits<{
@@ -87,7 +117,21 @@
       choiceId: string,
       payload: { slot: number; ability: AbilityKey | null },
     ];
+    'retry-spell-pool': [choice: ClassChoice];
+    'update:subclass': [subclassUrl: string | null];
   }>();
+
+  const stepTitle = computed(
+    () =>
+      `${step.className} · ${step.classLevel} ${LEVEL_UP_WIZARD_LABELS.levelWord}`,
+  );
+
+  /** Общий уровень персонажа отличается от уровня в классе — у мультикласса. */
+  const totalLevelLabel = computed(() =>
+    step.level !== step.classLevel
+      ? `${LEVEL_UP_WIZARD_LABELS.totalLevel}: ${step.level}`
+      : '',
+  );
 
   const formattedConstitutionModifier = computed(() =>
     getFormattedBonus(constitutionModifier),
@@ -140,6 +184,50 @@
       `${LEVEL_UP_HIT_POINTS_LABELS.constitutionTitle}: ${formattedConstitutionModifier.value} ${LEVEL_UP_HIT_POINTS_LABELS.perLevelSuffix}`,
   );
 
+  /** Подкласс — своим полем пикера: список бывает на десяток записей с описаниями. */
+  const subclassPickerOptions = computed(() =>
+    toSubclassPickerOptions(subclassOptions),
+  );
+
+  const subclassValues = computed(() =>
+    selectedSubclassUrl ? [selectedSubclassUrl] : [],
+  );
+
+  const subclassStatus = computed(() =>
+    isSubclassLoading ? 'loading' : 'ready',
+  );
+
+  const subclassModalSubtitle = computed(() =>
+    getChoiceModalSubtitle(
+      {
+        featureName: LEVEL_UP_WIZARD_LABELS.subclassTitle,
+        originLabel: step.className,
+        level: step.classLevel,
+      },
+      1,
+    ),
+  );
+
+  /** Умения, свёрнутые игроком: по умолчанию все карточки раскрыты. */
+  const collapsedFeatureIds = ref(new Set<string>());
+
+  /**
+   * Незаполненные выборы черт умения: без черты либо с пустым слотом
+   * характеристики. Сбой каталога черт требование снимает — как в мастере.
+   *
+   * @param pickers выборы черт умения.
+   * @returns сколько выборов черт ещё не заполнено.
+   */
+  function getPendingFeatPickerCount(pickers: FeatPicker[]): number {
+    if (hasFeatsError) {
+      return 0;
+    }
+
+    return pickers.filter(
+      (picker) => !picker.selected || picker.abilities.includes(null),
+    ).length;
+  }
+
   // Повышение характеристик спрашивается своим шагом, поэтому среди карточек
   // уровня его строки нет: иначе выбор был бы в двух местах сразу. Строка без
   // единого выбора остаётся здесь — своего шага у неё не будет, а описание
@@ -151,48 +239,64 @@
           !feature.abilityImprovement || feature.featChoices.length === 0,
       )
       .map((feature) => {
-        // Каждый выбор умения тянет за собой свой пул, своё количество и свои
-        // пометки: считаются они здесь, чтобы шаблон остался декларативным
-        const controls = feature.choices.map((choice) => {
-          const options = choiceOptions(choice);
-          const requiredCount = getRequiredChoiceCount(choice, options);
-          const chooseLabel = `${LEVEL_UP_WIZARD_LABELS.chooseLabel} ${requiredCount}`;
+        const origin: SheetChoiceOrigin = {
+          featureName: feature.name,
+          originLabel: feature.originLabel,
+          level: feature.level,
+        };
 
-          return {
-            choice,
-            options,
-            requiredCount,
-            hints: choiceHints(choice),
-            chooseLabel,
-            // Заклинания выбирают окном каталога, а не селектом, поэтому у их
-            // выбора при списке опций есть ещё и сам пул: окну нужны записи, а
-            // не одни названия
-            spellItems: spellPool(choice),
-            // Заголовок просмотра описаний вариантов: подпись выбора, а её нет —
-            // общее «Выберите столько-то»
-            detailsTitle: choice.label || chooseLabel,
-          };
-        });
+        // Каждый выбор умения собирается единым пикером: варианты, готовность
+        // пула, подписи поля и окна считаются здесь, чтобы шаблон остался
+        // декларативным
+        const controls = feature.choices.map((choice) =>
+          choiceControl(choice, origin),
+        );
 
-        // Выборы черты — боевой стиль и подобные — спрашиваются пикером каталога
-        // черт, каждый со своим пулом
-        const featPickers = feature.featChoices.map((choice) => ({
+        // Выборы черты — боевой стиль и подобные — спрашиваются тем же полем с
+        // пулом каталога черт
+        const featPickers: FeatPicker[] = feature.featChoices.map((choice) => ({
           choice,
+          title: choice.label || ABILITY_IMPROVEMENT_LABELS.featTitle,
+          modalSubtitle: getChoiceModalSubtitle(origin, 1),
           options: featOptions(choice),
           selected: selectedFeat(choice.id),
           abilities: draft.featChoices[choice.id]?.abilities ?? [],
         }));
 
+        const pending =
+          featureRowPendingCount(feature)
+          + getPendingFeatPickerCount(featPickers);
+
+        const isExpanded = !collapsedFeatureIds.value.has(feature.id);
+
         return {
           ...feature,
-          badgeLabel: `${feature.originLabel} · ${feature.level} ур.`,
+          badgeLabel: `${feature.originLabel} · ${feature.level} ${LEVEL_UP_WIZARD_LABELS.levelWord}`,
           controls,
           featPickers,
+          pending,
+          isExpanded,
+          chevronIcon: isExpanded ? 'tabler:chevron-up' : 'tabler:chevron-down',
           // Свободный текст остаётся только умению без единого пикера
           hasNote: controls.length === 0 && featPickers.length === 0,
         };
       }),
   );
+
+  /**
+   * Сворачивает или раскрывает карточку умения.
+   *
+   * @param featureId идентификатор умения.
+   */
+  function toggleFeature(featureId: string) {
+    if (collapsedFeatureIds.value.has(featureId)) {
+      collapsedFeatureIds.value.delete(featureId);
+
+      return;
+    }
+
+    collapsedFeatureIds.value.add(featureId);
+  }
 
   /** Способ прироста из радиогруппы: контрол отдаёт значение нетипизированным. */
   function handleGainMode(value: unknown) {
@@ -205,12 +309,18 @@
     emit('roll');
   }
 
-  function handleSelection(
-    choice: ClassChoice,
-    requiredCount: number,
-    values: string[],
-  ) {
-    emit('update:selection', choice.id, values.slice(0, requiredCount));
+  function handleSelection(control: SheetChoiceControl, values: string[]) {
+    emit(
+      'update:selection',
+      control.choice.id,
+      control.requiredCount > 0
+        ? values.slice(0, control.requiredCount)
+        : values,
+    );
+  }
+
+  function handleSpellPoolRetry(choice: ClassChoice) {
+    emit('retry-spell-pool', choice);
   }
 
   function handleNote(featureId: string, value: string) {
@@ -227,33 +337,33 @@
   ) {
     emit('update:feat-ability', choiceId, payload);
   }
+
+  function handleSubclass(values: string[]) {
+    emit('update:subclass', values[0] ?? null);
+  }
 </script>
 
 <template>
   <div class="flex flex-col gap-4">
     <!-- У мультикласса шаги разных классов идут подряд, поэтому у каждого
       подписано, чей это уровень -->
-    <div
-      v-if="step.className"
-      class="flex flex-wrap items-baseline gap-x-2 text-sm"
-    >
-      <span class="text-muted"
-        >{{ LEVEL_UP_WIZARD_LABELS.stepClassPrefix }}:</span
+    <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+      <h3 class="text-base font-bold text-highlighted">{{ stepTitle }}</h3>
+
+      <span
+        v-if="totalLevelLabel"
+        class="text-xs text-dimmed"
       >
-
-      <span class="font-bold text-highlighted">{{ step.className }}</span>
-
-      <span class="text-xs text-dimmed">
-        {{ step.classLevel }} {{ LEVEL_SHORT_SUFFIX }}
+        {{ totalLevelLabel }}
       </span>
     </div>
 
     <div
       v-if="isHitPointsVisible"
-      class="flex flex-col gap-2"
+      :class="SHEET_WIZARD_SECTION_CLASS"
     >
       <div class="flex flex-wrap items-baseline justify-between gap-x-2">
-        <span class="text-[10px] font-bold tracking-wider text-muted uppercase">
+        <span :class="SHEET_WIZARD_SECTION_TITLE_CLASS">
           {{ LEVEL_UP_HIT_POINTS_LABELS.title }}
         </span>
 
@@ -311,84 +421,112 @@
       </div>
     </div>
 
-    <slot name="subclass" />
+    <div
+      v-if="step.isSubclassStep"
+      :class="SHEET_WIZARD_SECTION_CLASS"
+    >
+      <span :class="SHEET_WIZARD_SECTION_TITLE_CLASS">
+        {{ LEVEL_UP_WIZARD_LABELS.subclassTitle }}
+      </span>
+
+      <span
+        v-if="hasSubclassError"
+        class="text-xs text-primary"
+      >
+        {{ LEVEL_UP_WIZARD_LABELS.subclassError }}
+      </span>
+
+      <!-- Описание подкласса — только дровером: в панели рядом со списком
+        таблица класса всё равно не читается -->
+      <SheetChoicePickerField
+        v-else
+        :title="LEVEL_UP_WIZARD_LABELS.subclassTitle"
+        :explanation="LEVEL_UP_WIZARD_LABELS.subclassExplanation"
+        :modal-subtitle="subclassModalSubtitle"
+        :options="subclassPickerOptions"
+        :count="1"
+        :status="subclassStatus"
+        hide-detail-pane
+        :model-value="subclassValues"
+        @update:model-value="handleSubclass"
+      />
+
+      <span class="text-xs text-dimmed">
+        {{ LEVEL_UP_WIZARD_LABELS.subclassHint }}
+      </span>
+    </div>
 
     <div class="flex flex-col gap-2">
-      <span class="text-[10px] font-bold tracking-wider text-muted uppercase">
+      <span :class="SHEET_WIZARD_SECTION_TITLE_CLASS">
         {{ LEVEL_UP_WIZARD_LABELS.featuresTitle }}
       </span>
 
       <div
         v-for="feature in featureRows"
         :key="feature.id"
-        class="flex flex-col gap-2 rounded-lg border border-default/50 bg-elevated/20 p-3"
+        :class="SHEET_WIZARD_FEATURE_CARD_CLASS"
       >
-        <div class="flex items-center justify-between gap-2">
-          <span class="text-sm font-bold text-highlighted">
+        <button
+          type="button"
+          class="flex w-full cursor-pointer flex-wrap items-center gap-2 rounded-lg p-3 text-left transition-colors hover:bg-elevated/40"
+          :aria-expanded="feature.isExpanded"
+          @click.left.exact.prevent="toggleFeature(feature.id)"
+        >
+          <UIcon
+            :name="feature.chevronIcon"
+            class="size-4 shrink-0 text-muted"
+          />
+
+          <span class="min-w-0 grow text-sm font-bold text-highlighted">
             {{ feature.name }}
           </span>
+
+          <UBadge
+            v-if="feature.pending"
+            size="sm"
+            color="warning"
+            variant="subtle"
+            class="shrink-0"
+            :aria-label="`${LEVEL_UP_WIZARD_LABELS.pendingBadgeAriaLabel}: ${feature.pending}`"
+          >
+            {{ feature.pending }}
+          </UBadge>
 
           <UBadge
             size="sm"
             color="neutral"
             variant="subtle"
+            class="shrink-0"
           >
             {{ feature.badgeLabel }}
           </UBadge>
-        </div>
+        </button>
 
         <div
-          v-if="feature.controls.length"
-          class="flex flex-col gap-3"
+          v-if="feature.isExpanded"
+          class="flex flex-col gap-3 border-t border-default/50 p-3"
         >
-          <div
+          <SheetChoicePickerField
             v-for="control in feature.controls"
             :key="control.choice.id"
-            class="flex flex-col gap-1"
-          >
-            <span class="text-xs text-muted">
-              {{ control.choice.label || control.chooseLabel }}
-            </span>
+            :title="control.title"
+            :explanation="control.explanation"
+            :modal-title="control.modalTitle"
+            :modal-subtitle="control.modalSubtitle"
+            :options="control.options"
+            :count="control.requiredCount"
+            :status="control.status"
+            :warning="SKILL_DUPLICATE_WARNING"
+            :model-value="draft.selections[control.choice.id] ?? []"
+            @update:model-value="handleSelection(control, $event)"
+            @retry="handleSpellPoolRetry(control.choice)"
+          />
 
-            <!-- Заклинания выбирают своим окном: пул бывает и на сотню
-              записей, а выбранные должны остаться на виду, чтобы их можно было
-              убрать -->
-            <SheetFeatSpellsPicker
-              v-if="control.choice.kind === 'spell'"
-              :model-value="draft.selections[control.choice.id] ?? []"
-              :items="control.spellItems"
-              :count="control.requiredCount"
-              :label="control.detailsTitle"
-              @update:model-value="
-                handleSelection(control.choice, control.requiredCount, $event)
-              "
-            />
-
-            <SheetChoiceSelect
-              v-else
-              :model-value="draft.selections[control.choice.id] ?? []"
-              :items="control.options"
-              :hints="control.hints"
-              :warning="SKILL_DUPLICATE_WARNING"
-              :count="control.requiredCount"
-              :placeholder="control.chooseLabel"
-              :option-details="control.choice.optionDetails"
-              :option-details-title="control.detailsTitle"
-              @update:model-value="
-                handleSelection(control.choice, control.requiredCount, $event)
-              "
-            />
-          </div>
-        </div>
-
-        <div
-          v-if="feature.featPickers.length"
-          class="flex flex-col gap-3"
-        >
-          <SheetLevelUpFeatChoice
+          <SheetFeatChoiceField
             v-for="picker in feature.featPickers"
             :key="picker.choice.id"
-            :title="picker.choice.label"
+            :title="picker.title"
+            :modal-subtitle="picker.modalSubtitle"
             :options="picker.options"
             :selected="picker.selected"
             :abilities="picker.abilities"
@@ -398,20 +536,26 @@
             @update:feat="handleFeat(feature.id, picker.choice.id, $event)"
             @update:ability="handleFeatAbility(picker.choice.id, $event)"
           />
+
+          <UInput
+            v-if="feature.hasNote"
+            :model-value="draft.notes[feature.id] ?? ''"
+            size="sm"
+            :placeholder="LEVEL_UP_WIZARD_LABELS.featureChoicePlaceholder"
+            @update:model-value="handleNote(feature.id, String($event))"
+          />
+
+          <div class="flex flex-col gap-1">
+            <span :class="SHEET_WIZARD_SECTION_TITLE_CLASS">
+              {{ LEVEL_UP_WIZARD_LABELS.featureDescriptionTitle }}
+            </span>
+
+            <MarkupRender
+              :render-node="feature.description"
+              class="text-sm"
+            />
+          </div>
         </div>
-
-        <UInput
-          v-if="feature.hasNote"
-          :model-value="draft.notes[feature.id] ?? ''"
-          size="sm"
-          :placeholder="LEVEL_UP_WIZARD_LABELS.featureChoicePlaceholder"
-          @update:model-value="handleNote(feature.id, String($event))"
-        />
-
-        <MarkupRender
-          :render-node="feature.description"
-          class="text-sm"
-        />
       </div>
 
       <span

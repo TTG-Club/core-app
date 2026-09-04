@@ -185,7 +185,6 @@ function buildSpellList(
   const groups = spellList.groups
     .map((group) => ({
       ...group,
-      count: text(group.count) ?? '',
       spells: group.spells.filter((spell) => !!text(spell.url)),
     }))
     .filter((group) => group.spells.length > 0);
