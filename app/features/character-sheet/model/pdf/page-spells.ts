@@ -7,7 +7,8 @@ import {
   RESOURCE_RECOVERY_LABELS,
 } from '../constants';
 import {
-  getAvailableInnateSpells,
+  getClassGrantedSpells,
+  getInnateSpells,
   getSpellGroups,
   getSpellLevelLabel,
   getSpellSlotCircles,
@@ -151,9 +152,20 @@ export function drawSpellsPage(
   character: Character,
 ): void {
   const slotRows = getSpellSlotRows(character);
-  const innateSpells = getAvailableInnateSpells(character);
+  const innateSpells = getInnateSpells(character);
 
-  if (!character.spells.length && !innateSpells.length && !slotRows.length) {
+  // Заклинания классовых умений идут в кругах вместе с книгой — как на листе.
+  // Уже заведённое в книге вторым рядом не печатается
+  const bookUrls = new Set(character.spells.map((spell) => spell.url));
+
+  const bookSpells = [
+    ...character.spells,
+    ...getClassGrantedSpells(character).filter(
+      (spell) => !bookUrls.has(spell.url),
+    ),
+  ];
+
+  if (!bookSpells.length && !innateSpells.length && !slotRows.length) {
     return;
   }
 
@@ -165,7 +177,7 @@ export function drawSpellsPage(
 
   drawSpellSlots(context, character, flow);
 
-  if (!character.spells.length && !innateSpells.length) {
+  if (!bookSpells.length && !innateSpells.length) {
     return;
   }
 
@@ -186,7 +198,7 @@ export function drawSpellsPage(
         ]
       : []),
     ...getSpellGroups(
-      character.spells,
+      bookSpells,
       slotRows.map((row) => row.level),
     ),
   ];

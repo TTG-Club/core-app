@@ -6915,12 +6915,27 @@ export function getSpellGroups(
   }));
 }
 
+/** Заклинание вне книги персонажа вместе с пометкой происхождения. */
+interface GrantedSpellEntry {
+  spell: CharacterSpell;
+
+  /**
+   * Заклинание выдало умение класса: место ему в круге книги, а не в группе
+   * врождённых.
+   */
+  fromClass: boolean;
+}
+
 /**
  * Возвращает заклинания, которые персонаж знает вне книги: врождённые
  * заклинания вида, уже открытые на текущем уровне, и заклинания, выдаваемые
- * чертами. Место среди подготовленных они не занимают — счётчик смотрит только
- * на книгу персонажа, — а подготовку игрок снимает и возвращает вручную,
- * поэтому запись без флага считается подготовленной.
+ * чертами и умениями класса. Место среди подготовленных они не занимают —
+ * счётчик смотрит только на книгу персонажа, — а подготовку игрок снимает и
+ * возвращает вручную, поэтому запись без флага считается подготовленной.
+ *
+ * Список общий: во вкладке заклинания стоят в разных группах
+ * (см. `getInnateSpells` и `getClassGrantedSpells`), а вот справочнику и
+ * выгрузке важны все разом.
  *
  * Одно и то же заклинание может прийти дважды (вид и черта, две черты): в
  * списке ему место одно, и остаётся первая запись — правки достаются ей.
@@ -6931,35 +6946,86 @@ export function getSpellGroups(
 export function getAvailableInnateSpells(
   character: Character,
 ): CharacterSpell[] {
-  const granted = [
+  return collectGrantedSpells(character).map((entry) => entry.spell);
+}
+
+/**
+ * Заклинания вне книги, которые вкладка ведёт отдельной группой: врождённые
+ * заклинания вида и заклинания черт. Классовые сюда не идут — им место в кругах
+ * книги (см. `getClassGrantedSpells`).
+ *
+ * @param character персонаж листа.
+ * @returns врождённые заклинания вида и заклинания черт.
+ */
+export function getInnateSpells(character: Character): CharacterSpell[] {
+  return collectGrantedSpells(character)
+    .filter((entry) => !entry.fromClass)
+    .map((entry) => entry.spell);
+}
+
+/**
+ * Заклинания, выданные умениями класса — выдачей либо выбором игрока
+ * (заговоры волшебника). Хранятся они на записи умения (снятие класса забирает
+ * их с собой), но в списке стоят в своём круге наравне с книгой: игрок ищет
+ * заговор среди заговоров, а не среди врождённых.
+ *
+ * @param character персонаж листа.
+ * @returns заклинания классовых умений.
+ */
+export function getClassGrantedSpells(character: Character): CharacterSpell[] {
+  return collectGrantedSpells(character)
+    .filter((entry) => entry.fromClass)
+    .map((entry) => entry.spell);
+}
+
+/**
+ * Сбор всех заклинаний вне книги с пометкой происхождения: группа во вкладке у
+ * классовых заклинаний своя, а дубли отбрасываются по всем источникам разом —
+ * иначе одно и то же заклинание встало бы в две группы.
+ *
+ * @param character персонаж листа.
+ * @returns заклинания вне книги с пометкой «от класса».
+ */
+function collectGrantedSpells(character: Character): GrantedSpellEntry[] {
+  const granted: GrantedSpellEntry[] = [
     ...(character.species?.innateSpells ?? [])
       .filter((innateSpell) => innateSpell.requiredLevel <= character.level)
-      .map((innateSpell) => innateSpell.spell),
+      .map((innateSpell) => ({ spell: innateSpell.spell, fromClass: false })),
     // Часть заклинаний черты открывается по уровням («Малое восстановление»
     // метки дракона — с третьего). Отбор здесь, а не при взятии черты: список
     // должен пополняться сам, когда персонаж дорастёт
-    ...getFeatureSpells(character.features).filter(
-      (spell) => !spell.requiredLevel || spell.requiredLevel <= character.level,
+    ...getFeatureGrantedSpells(character.features).filter(
+      (entry) =>
+        !entry.spell.requiredLevel
+        || entry.spell.requiredLevel <= character.level,
     ),
   ];
 
-  return uniqBy(granted, (spell) => spell.url).map((spell) => ({
-    ...spell,
-    prepared: isInnateSpellPrepared(spell),
+  return uniqBy(granted, (entry) => entry.spell.url).map((entry) => ({
+    ...entry,
+    spell: { ...entry.spell, prepared: isInnateSpellPrepared(entry.spell) },
   }));
 }
 
 /**
- * Заклинания, лежащие в записях особенностей персонажа.
+ * Заклинания, лежащие в записях особенностей персонажа, с пометкой
+ * происхождения.
  *
- * Происхождение записи не проверяется: заклинания кладёт себе только черта, но
- * если их начнёт выдавать классовое умение, список подхватит и его.
+ * Заклинания кладут себе и черта, и умение класса, и умение вида — разница
+ * только в том, в какую группу вкладки заклинание потом встанет.
  *
  * @param features особенности персонажа.
  * @returns заклинания всех записей подряд.
  */
-function getFeatureSpells(features: CharacterFeature[]): CharacterSpell[] {
-  return features.flatMap((feature) => feature.spells ?? []);
+function getFeatureGrantedSpells(
+  features: CharacterFeature[],
+): GrantedSpellEntry[] {
+  return features.flatMap((feature) =>
+    (feature.spells ?? []).map((spell) => ({
+      spell,
+      fromClass: feature.origin === 'class',
+    })),
+  );
 }
 
 /**
@@ -7007,7 +7073,9 @@ export function findFeatureSpell(
   features: CharacterFeature[],
   spellUrl: string,
 ): CharacterSpell | undefined {
-  return getFeatureSpells(features).find((spell) => spell.url === spellUrl);
+  return getFeatureGrantedSpells(features).find(
+    (entry) => entry.spell.url === spellUrl,
+  )?.spell;
 }
 
 /**
