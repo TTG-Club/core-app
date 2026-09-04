@@ -421,9 +421,8 @@ export function useLevelUpWizard(): LevelUpWizard {
     LANGUAGE_PROFICIENCY_GROUPS.flatMap((group) => group.items),
   );
 
-  // Инструменты умения уровня не выдают (`detectFeatureChoice` их не
-  // распознаёт), но контекст резолва выборов общий — список берём из каталога
-  // сайта, своего перечня инструментов у листа нет.
+  // Инструменты умения уровня не выдают, но контекст резолва выборов общий —
+  // список берём из каталога сайта, своего перечня инструментов у листа нет.
   const {
     getToolNamesForGroups,
     catalogItems: toolCatalogItems,
@@ -507,7 +506,6 @@ export function useLevelUpWizard(): LevelUpWizard {
               loaded.detail,
               loaded.subclass,
               draft.classLevel,
-              skillNames.value,
               allAnswers.value,
             )
           : [],

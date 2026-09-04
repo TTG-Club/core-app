@@ -42,6 +42,7 @@
     CLASS_FEAT_CHOICE_ID_SEGMENT,
     CLASS_FEAT_INVALID_RESPONSE_ERROR,
     CLASS_GRANTED_FEAT_ID_SEGMENT,
+    CLASS_SKILLS_CHOICE_ID,
     CLASS_SOURCES_ASYNC_DATA_KEY,
     CLASS_WIZARD_LABELS,
     CLASS_WIZARD_TAB_LABELS,
@@ -428,25 +429,59 @@
     );
   });
 
+  /**
+   * Владения, заявленные справочником структурой: категории брони и оружия,
+   * спасброски, навыки и языки. Разбор текста остаётся только там, где
+   * справочник и сам хранит текст, — у инструментов и приписки к категориям.
+   */
+  const declaredProficiencies = computed(
+    () => classDetail.value?.proficiencies ?? null,
+  );
+
   const savingThrowLabels = computed(() =>
     (classDetail.value?.savingThrows ?? []).map((key) => ABILITY_LABELS[key]),
   );
 
-  const matchedProficiencies = computed(() =>
-    classDetail.value
-      ? matchClassProficiencies(classDetail.value.proficiencyText)
-      : { armor: [], weapons: [] },
-  );
+  const matchedProficiencies = computed(() => {
+    const detail = classDetail.value;
 
-  // Фиксированные инструменты класса сверяются с каталогом сайта: найденное
-  // получает ссылку, ненайденное остаётся своим инструментом игрока.
+    if (!detail) {
+      return { armor: [], weapons: [] };
+    }
+
+    const declared = declaredProficiencies.value;
+
+    if (!declared) {
+      return matchClassProficiencies(detail.proficiencyText);
+    }
+
+    // Категории приходят структурой, а приписка к ним — свободным текстом
+    // («воинское оружие со свойством Фехтовальное»): её и разбираем, потому что
+    // текст она и в справочнике. Уточнённая группа даётся подходящими видами.
+    const custom = matchClassProficiencies({
+      armor: detail.proficiencyCustom.armor,
+      weapon: detail.proficiencyCustom.weapon,
+    });
+
+    return {
+      armor: [...new Set([...declared.armor, ...custom.armor])],
+      weapons: [...new Set([...declared.weapons, ...custom.weapons])],
+    };
+  });
+
+  // Инструменты справочник хранит строкой даже структурой владений, поэтому их
+  // по-прежнему сверяет с каталогом сайта разбор текста: найденное получает
+  // ссылку, ненайденное остаётся своим инструментом игрока.
   const matchedTools = computed(() =>
-    classDetail.value
-      ? matchToolProficiencies(
-          classDetail.value.proficiencyText.tool,
-          toolCatalogItems.value,
-        )
-      : [],
+    unionToolProficiencies(
+      declaredProficiencies.value?.tools ?? [],
+      classDetail.value
+        ? matchToolProficiencies(
+            classDetail.value.proficiencyText.tool,
+            toolCatalogItems.value,
+          )
+        : [],
+    ),
   );
 
   /**
@@ -509,10 +544,20 @@
     // Владения второго класса лист не выдаёт (урезанного набора справочник не
     // отдаёт), поэтому и выбирать их в мастере добавления нечего. Выборы
     // механики это не касается: заклинания класс даёт и при мультиклассе.
+    //
+    // Навыки спрашивает структура справочника (`skillChoice`); проза остаётся
+    // запасным источником, пока бэкенд структуру не отдаёт. Инструменты
+    // справочник хранит строкой, и они разбираются из неё всегда.
     const proficiencyChoices = isAddMode.value
       ? []
       : [
-          getClassSkillChoice(base.proficiencyText.skill, skillNames.value),
+          base.skillChoice
+            ?? (base.proficiencies
+              ? null
+              : getClassSkillChoice(
+                  base.proficiencyText.skill,
+                  skillNames.value,
+                )),
           getClassToolChoice(base.proficiencyText.tool),
         ].filter((choice): choice is ClassChoice => choice !== null);
 
@@ -623,7 +668,6 @@
           choiceControls: getClassFeatureChoices(
             id,
             feature,
-            skillNames.value,
             level.value,
             chosenOptionKeys,
           ),
@@ -1662,15 +1706,15 @@
         ? await buildStartingEquipmentItems(startingEquipmentOption)
         : [];
 
-    const matched = matchClassProficiencies(base.proficiencyText);
+    const matched = matchedProficiencies.value;
 
     // Выбор владения навыками (уровень класса).
     const skillsChoice = classChoices.value.find(
-      (choice) => choice.id === 'class-skills',
+      (choice) => choice.id === CLASS_SKILLS_CHOICE_ID,
     );
 
     const proficientSkills: string[] = skillsChoice
-      ? (selections.value['class-skills'] ?? []).slice(
+      ? (selections.value[CLASS_SKILLS_CHOICE_ID] ?? []).slice(
           0,
           choiceCount(skillsChoice),
         )
@@ -1795,9 +1839,15 @@
     );
 
     // Навыки уровня класса: выборы умений сюда не идут — их владения ведёт
-    // снимок на самой записи умения
+    // снимок на самой записи умения. Названные механикой навыки идут сюда же:
+    // выдача без выбора и выбор игрока для листа — одно и то же владение.
     const skills = {
-      proficient: [...new Set(proficientSkills)],
+      proficient: [
+        ...new Set([
+          ...(declaredProficiencies.value?.skills ?? []),
+          ...proficientSkills,
+        ]),
+      ],
       expertise: [],
     };
 
@@ -1834,8 +1884,9 @@
           matchedTools.value,
           resolveTools(chosenTools.map((name) => ({ name, url: null }))),
         ),
-        // Языки, названные в умениях, приходят снимком самой записи умения
-        languages: [],
+        // Языки самой записи класса — только заявленные механикой: названные в
+        // умениях приходят снимком самой записи умения
+        languages: declaredProficiencies.value?.languages ?? [],
       },
       skills,
       classResources: derivedResources.value,

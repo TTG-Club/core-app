@@ -2359,6 +2359,15 @@ export const FEATS_DETAIL_BASE_PATH = '/api/v2/feats';
 export const FIGHTING_STYLE_FEAT_CATEGORIES = ['FIGHTING_STYLE'];
 
 /**
+ * Идентификатор выбора владения навыками класса: под ним лежит ответ игрока и
+ * его же читает применение мастера.
+ */
+export const CLASS_SKILLS_CHOICE_ID = 'class-skills';
+
+/** Заголовок пикера выбора навыков класса. */
+export const CLASS_SKILLS_CHOICE_LABEL = 'Владение навыками';
+
+/**
  * Идентификатор выбора инструмента предыстории: под ним лежит ответ игрока и
  * его же читает применение — у предыстории такой выбор один.
  */
@@ -4559,6 +4568,19 @@ export const EMPTY_DAMAGE_ROLL_SOURCE: DamageRollSource = {
   ability: null,
   abilityModifierCount: 0,
   typeLabel: '',
+};
+
+/**
+ * Размеры справочника к подписям листа: запись вида хранит размер константой
+ * (`MEDIUM`), а лист — названием.
+ */
+export const SIZE_LABEL_BY_API_KEY: Record<string, string> = {
+  TINY: 'Крошечный',
+  SMALL: 'Маленький',
+  MEDIUM: 'Средний',
+  LARGE: 'Большой',
+  HUGE: 'Огромный',
+  GARGANTUAN: 'Громадный',
 };
 
 /** Слова размеров для разбора строки размера вида. */

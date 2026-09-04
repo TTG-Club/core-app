@@ -40,7 +40,6 @@
     collectSpeciesProficiencies,
     CURRENT_SELECTION_LABELS,
     CUSTOM_SPECIES_LABELS,
-    detectFeatureChoice,
     FEAT_SOURCES_ASYNC_DATA_KEY,
     FEATS_FILTERS_PATH,
     FEATS_SELECT_PATH,
@@ -268,9 +267,8 @@
     LANGUAGE_PROFICIENCY_GROUPS.flatMap((group) => group.items),
   );
 
-  // Инструменты виды не выдают (`detectFeatureChoice` их не распознаёт), но
-  // контекст резолва выборов общий — список тянем из каталога сайта, а не из
-  // своего перечня.
+  // Инструменты виды не выдают, но контекст резолва выборов общий — список
+  // тянем из каталога сайта, а не из своего перечня.
   const {
     getToolNamesForGroups,
     catalogItems: toolCatalogItems,
@@ -332,8 +330,26 @@
       selectedLineage.value?.speedText || speciesDetail.value?.speedText || '',
   );
 
-  const sizeOptions = computed(() =>
-    parseSizeOptionsFromText(effectiveSizeText.value),
+  /**
+   * Размеры на выбор: структура справочника, а без неё — разбор строки размера
+   * (пока бэкенд структуру не отдаёт). Подвид приоритетнее базового вида.
+   */
+  const sizeOptions = computed(() => {
+    const declared = selectedLineage.value?.sizeOptions.length
+      ? selectedLineage.value.sizeOptions
+      : (speciesDetail.value?.sizeOptions ?? []);
+
+    return declared.length
+      ? declared
+      : parseSizeOptionsFromText(effectiveSizeText.value);
+  });
+
+  /** Скорости вида: структура справочника, а без неё — разбор строки. */
+  const effectiveSpeed = computed(
+    () =>
+      selectedLineage.value?.speed
+      ?? speciesDetail.value?.speed
+      ?? parseSpeedFromText(effectiveSpeedText.value),
   );
 
   const showSizeChoice = computed(() => sizeOptions.value.length > 1);
@@ -349,32 +365,19 @@
   });
 
   /**
-   * Выборы умения: структурные из справочника, а без них — распознанные по
-   * прозе описания. Структура точнее прозы (у неё явные вид, пул и количество),
-   * поэтому имеет приоритет; проза остаётся страховкой для умений, которым
-   * выбор ещё не проставили в форме вида.
+   * Выборы умения — только те, что записаны в справочнике вида. Описание не
+   * разбирается: умение, которому выбор не проставили в форме вида, ни о чём
+   * не спрашивает.
    *
-   * @param id идентификатор умения на листе.
    * @param feature умение вида или происхождения.
    * @returns выборы умения; пусто — умение ни о чём не спрашивает.
    */
   function featureChoiceControls(
-    id: string,
     feature: SpeciesFeatureSummary,
   ): ClassChoice[] {
-    if (feature.choices.length > 0) {
-      // Выбор со своим уровнем спрашивается, только когда персонаж дорос:
-      // умение вида приходит целиком, а часть его вопросов открывается позже
-      return filterChoicesByLevel(feature.choices, character.value.level);
-    }
-
-    const detected = detectFeatureChoice(
-      id,
-      feature.description,
-      skillNames.value,
-    );
-
-    return detected ? [detected] : [];
+    // Выбор со своим уровнем спрашивается, только когда персонаж дорос:
+    // умение вида приходит целиком, а часть его вопросов открывается позже
+    return filterChoicesByLevel(feature.choices, character.value.level);
   }
 
   const featureRows = computed(() => {
@@ -416,7 +419,7 @@
           origin: 'species',
           originName: detail.name,
           originLabel: `${FEATURE_ORIGIN_LABELS.species}: ${detail.name}`,
-          ...splitFeatChoices(featureChoiceControls(id, feature)),
+          ...splitFeatChoices(featureChoiceControls(feature)),
         });
       }
     }
@@ -446,7 +449,7 @@
           origin: 'lineage',
           originName: lineage.name,
           originLabel: `${FEATURE_ORIGIN_LABELS.lineage}: ${lineage.name}`,
-          ...splitFeatChoices(featureChoiceControls(id, feature)),
+          ...splitFeatChoices(featureChoiceControls(feature)),
         });
       }
     }
@@ -1029,7 +1032,7 @@
         ),
       },
       size: sizeChoice.value ?? null,
-      speed: parseSpeedFromText(effectiveSpeedText.value),
+      speed: effectiveSpeed.value,
       vision: {
         // Вид задаёт обычное зрение — берём его; иначе оставляем своё
         normal:
