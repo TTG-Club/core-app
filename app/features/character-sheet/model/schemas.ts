@@ -75,6 +75,7 @@ import {
   BACKGROUND_TOOL_CHOICE_ID,
   BACKGROUND_TOOL_CHOICE_LABEL,
   CANTRIP_SPELL_LEVEL,
+  CLASS_OWN_GRANTS_KEY,
   CURRENCY_KEYS_BY_LABEL,
   DAMAGE_TYPE_NAMES,
   FEAT_SPELL_CLASS_CHOICE_KEY,
@@ -2798,14 +2799,22 @@ const classDetailSchema = z.object({
   casterType: z.nativeEnum(CasterType).nullable().catch(null),
   table: z.array(classTableColumnSchema).catch([]),
   features: z.array(classFeatureSchema).catch([]),
-  // Дары самой записи класса: листу из них нужны ресурсы — ярость и очки
-  // чародейства заводят у класса целиком, а не у одного его умения.
+  // Дары самой записи класса: ресурсы (ярость и очки чародейства заводят у
+  // класса целиком), выборы игрока при взятии класса, выдача заклинаний и
+  // расширение списка — всё то же, что у умения, только источник другой.
   mechanics: z
     .object({
       counters: mechanicsCountersSchema,
+      choices: mechanicsChoicesSchema,
+      spells: mechanicsSpellGrantSchema,
+      spellList: mechanicsSpellListSchema,
     })
     .nullable()
     .catch(null),
+  // Заклинания и списки расширения самой записи класса с данными справочника:
+  // в механике лежат одни ссылки, а листу нужен круг
+  grantedSpells: z.array(featGrantedSpellSchema).nullable().catch(null),
+  spellListGroups: z.array(featSpellListGroupSchema).nullable().catch(null),
   // Разбирается отдельной функцией: то же поле есть и у предыстории.
   startingEquipment: z.unknown().optional(),
   activeEffects: z.unknown().nullish(),
@@ -2820,6 +2829,11 @@ const classDetailSchema = z.object({
 function toClassSummary(
   detail: z.infer<typeof classDetailSchema>,
 ): ClassSummary {
+  // Владелец выборов самой записи класса: по нему собран идентификатор ответа
+  const classOwnerId = getClassFeatureId(detail.url, CLASS_OWN_GRANTS_KEY);
+
+  const classGrantedSpells = detail.grantedSpells ?? [];
+
   const features: ClassFeatureSummary[] = detail.features.map((feature) => {
     const featureId = getClassFeatureId(detail.url, feature.key);
 
@@ -2918,6 +2932,28 @@ function toClassSummary(
     proficiencyText: detail.proficiency,
     table,
     features,
+    // Выборы самой записи класса: «Договор гримуара» задают у умения, а вот
+    // заговор, который даёт взятие класса, — у класса целиком. Владелец у них
+    // свой, чтобы ответы не смешались с ответами одноимённого выбора умения
+    choices: withSpellClassChoice(
+      toMechanicChoices(detail.mechanics?.choices ?? [], classOwnerId),
+      classOwnerId,
+    ),
+    // Заклинания класса — той же формой, что у умения: круг подставил core-api
+    spells: classGrantedSpells.length
+      ? classGrantedSpells.map((entry) => ({
+          ...toCharacterSpell(entry.spell),
+          prepared: detail.mechanics?.spells?.alwaysPrepared ?? false,
+          requiredLevel: entry.requiredLevel ?? undefined,
+        }))
+      : null,
+    spellcastingAbility: parseApiAbilityKey(
+      detail.mechanics?.spells?.spellcastingAbility ?? '',
+    ),
+    spellList: toSpellListSnapshot(
+      detail.spellListGroups ?? [],
+      detail.mechanics?.spellList?.requiresSpellcasting ?? false,
+    ),
     counters: toMechanicCounters(detail.mechanics?.counters ?? []),
     startingEquipment: toStartingEquipmentOptions(detail.startingEquipment),
     activeEffects: normalizeLoadedActiveEffects(detail.activeEffects),

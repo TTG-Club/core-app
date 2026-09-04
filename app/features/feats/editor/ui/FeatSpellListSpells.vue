@@ -7,7 +7,12 @@
 
   import { InfoTooltip } from '~ui/tooltip';
 
-  import { createFeatSpellListGroup, getFeatEditorLabels } from '../../model';
+  import {
+    CLASS_LEVEL_MAX,
+    CLASS_LEVEL_MIN,
+    createFeatSpellListGroup,
+    getFeatEditorLabels,
+  } from '../../model';
   import FeatEntityRefRows from './FeatEntityRefRows.vue';
   import FeatRowsSection from './FeatRowsSection.vue';
   import FeatRowsSeparator from './FeatRowsSeparator.vue';
@@ -119,8 +124,8 @@
 
             <UInputNumber
               v-model="group.requiredLevel"
-              :min="1"
-              :max="20"
+              :min="CLASS_LEVEL_MIN"
+              :max="CLASS_LEVEL_MAX"
               :placeholder="texts.spellListLevelPlaceholder"
             />
           </UFormField>

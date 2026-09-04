@@ -1688,6 +1688,20 @@ export function useLevelUpWizard(): LevelUpWizard {
     // Складываются по всем шагам, а не берутся с последнего: «Таинственный
     // арканум» просит заклинание на 11, 13, 15 и 17 уровнях, а запись умения у
     // всех четырёх одна.
+    // Заклинания, уже лежащие на записях листа: запись, которую уровень
+    // пересобирает, заменяет прежнюю целиком, и без них заклинание, выбранное
+    // на прошлом уровне, пропало бы — «Таинственный арканум» на 13 уровне
+    // потерял бы заклинание 6 круга, взятое на 11
+    const storedSpellsByFeature = character.value.features.reduce<
+      Record<string, CharacterSpell[]>
+    >(
+      (result, feature) =>
+        feature.spells?.length
+          ? { ...result, [feature.id]: [...feature.spells] }
+          : result,
+      {},
+    );
+
     const chosenSpellsByFeature = rows.reduce<Record<string, CharacterSpell[]>>(
       (result, row) => ({
         ...result,
@@ -1696,7 +1710,7 @@ export function useLevelUpWizard(): LevelUpWizard {
           ...collectChosenSpells({ choices: row.choices }),
         ],
       }),
-      {},
+      storedSpellsByFeature,
     );
 
     // Из ответов берётся только текст выбора: владения ведёт снимок на самой

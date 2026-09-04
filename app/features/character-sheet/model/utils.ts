@@ -11359,15 +11359,35 @@ function buildClassOwnEffectFeature(
   owner?: ClassSummary,
 ): CharacterFeature[] {
   const hasGrants =
-    summary.activeEffects.length > 0 || summary.counters.length > 0;
+    summary.activeEffects.length > 0
+    || summary.counters.length > 0
+    || (summary.spells?.length ?? 0) > 0
+    || summary.spellList !== null
+    || summary.choices.length > 0;
 
-  if (!hasGrants || !matchesLevel(CLASS_FIRST_LEVEL)) {
+  // Запись появляется на первом уровне класса и возвращается на уровне, где у
+  // класса открывается ещё один его выбор: заклинание, выбранное там, ложится
+  // именно на неё. Без второго условия мастер повышения спросил бы игрока, а
+  // положить выбранное было бы некуда
+  const opensChoice = summary.choices.some(
+    (choice) => choice.requiredLevel && matchesLevel(choice.requiredLevel),
+  );
+
+  if (!hasGrants || !(matchesLevel(CLASS_FIRST_LEVEL) || opensChoice)) {
     return [];
   }
 
+  // Заклинание класса считается от характеристики класса, если та задана, — как
+  // у умения и у черты
+  const spells = (summary.spells ?? []).map((spell) =>
+    summary.spellcastingAbility
+      ? { ...spell, spellcastingAbility: summary.spellcastingAbility }
+      : spell,
+  );
+
   return [
     {
-      id: getClassFeatureId((owner ?? summary).url, `${summary.url}:effects`),
+      id: getClassOwnGrantsFeatureId((owner ?? summary).url, summary.url),
       name: summary.name,
       description: [],
       origin: 'class',
@@ -11378,11 +11398,32 @@ function buildClassOwnEffectFeature(
       activeEffects: summary.activeEffects.length
         ? [...summary.activeEffects]
         : undefined,
+      // Заклинания класса лежат на этой же записи: снятие класса забирает их
+      // вместе с ней, как заклинания умения — вместе с умением
+      spells: spells.length ? spells : null,
+      spellList: summary.spellList ?? undefined,
       // Ресурсы кладутся в запись снимком, как у черты: панель ресурсов
       // пересобирает их отсюда, а не ходит за ними в справочник
       ...(summary.counters.length ? { counters: [...summary.counters] } : {}),
     },
   ];
+}
+
+/**
+ * Идентификатор записи листа под дары самой записи класса или подкласса.
+ *
+ * Своей функцией, потому что его должен знать и мастер класса: выбранные при
+ * взятии класса заклинания ложатся именно на эту запись.
+ *
+ * @param ownerUrl URL базового класса — под ним лежат и умения подкласса.
+ * @param summaryUrl URL самой записи; не задан — тот же класс.
+ * @returns идентификатор записи листа.
+ */
+export function getClassOwnGrantsFeatureId(
+  ownerUrl: string,
+  summaryUrl: string = ownerUrl,
+): string {
+  return getClassFeatureId(ownerUrl, `${summaryUrl}:effects`);
 }
 
 /**
@@ -11559,7 +11600,69 @@ export function getLevelFeatureRows(
     append(subclass.features, `Подкласс: ${subclass.name}`, true);
   }
 
+  // Выборы самой записи класса, открывшиеся ровно на этом уровне: класс даёт
+  // заклинание не только умением. Своей строкой, потому что и дают их не
+  // умения, — как у вида, где выборы записи стоят отдельно от умений
+  rows.push(
+    ...toClassOwnChoiceRows(
+      base,
+      base,
+      level,
+      `${FEATURE_ORIGIN_LABELS.class}: ${base.name}`,
+    ),
+    ...(subclass
+      ? toClassOwnChoiceRows(
+          base,
+          subclass,
+          level,
+          `Подкласс: ${subclass.name}`,
+        )
+      : []),
+  );
+
   return rows;
+}
+
+/**
+ * Строка мастера повышения под выборы самой записи класса или подкласса.
+ *
+ * Спрашиваются только те, чей уровень открытия совпадает с берущимся: выборы
+ * без уровня задаются один раз, при взятии класса, и повторять их на каждом
+ * уровне значило бы спрашивать одно и то же снова.
+ *
+ * @param owner базовый класс — под его адресом лежит запись даров.
+ * @param summary сама запись: класс либо его подкласс.
+ * @param level уровень, который берут сейчас.
+ * @param originLabel подпись источника для карточки.
+ * @returns одна строка либо пустой список.
+ */
+function toClassOwnChoiceRows(
+  owner: ClassSummary,
+  summary: ClassSummary,
+  level: number,
+  originLabel: string,
+): ClassFeatureRow[] {
+  const choices = summary.choices.filter(
+    (choice) => choice.requiredLevel === level,
+  );
+
+  if (!choices.length) {
+    return [];
+  }
+
+  return [
+    {
+      id: getClassOwnGrantsFeatureId(owner.url, summary.url),
+      name: summary.name,
+      level,
+      description: [],
+      originLabel,
+      choices,
+      featChoices: [],
+      grantedFeatUrls: [],
+      abilityImprovement: false,
+    },
+  ];
 }
 
 /**

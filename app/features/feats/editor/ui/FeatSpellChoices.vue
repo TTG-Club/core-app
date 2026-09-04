@@ -11,6 +11,9 @@
 
   import { useFeatRefDirectory } from '../../composable';
   import {
+    CHOICE_COUNT_MIN,
+    CLASS_LEVEL_MAX,
+    CLASS_LEVEL_MIN,
     createSpellPickRow,
     FEAT_SPELL_LEVEL_OPTIONS,
     FEAT_SPELL_PICK_SOURCE_OPTIONS,
@@ -18,6 +21,7 @@
     getFeatSpellLevelValue,
     getTakenChoiceKeys,
     parseFeatSpellLevelValue,
+    SPELL_PICK_COUNT_MAX,
     toEntityRefUrls,
     toUrlList,
   } from '../../model';
@@ -72,6 +76,16 @@
   /** Url выбранных классов: по ним справочник отдаёт снимки названий. */
   const classUrls = computed<Array<string>>(() =>
     toEntityRefUrls(model.value.classes),
+  );
+
+  /**
+   * Списки классов спрашиваются, только пока есть порция с поиском по кругу:
+   * они и есть её фильтр, а хранятся внутри самой порции. У записи, где все
+   * порции перечисляют заклинания, классам негде лежать — поле сохранило бы
+   * выбранное только до перезагрузки формы.
+   */
+  const isClassesShown = computed(() =>
+    model.value.picks.some((pick) => pick.source === 'FILTER'),
   );
 
   const { getEntry: getClassEntry } = useFeatRefDirectory('CLASS', classUrls);
@@ -166,7 +180,7 @@
     :add-label="texts.addSpellChoice"
     @add="addRow"
   >
-    <UFormField>
+    <UFormField v-if="isClassesShown">
       <template #label>
         <InfoTooltip
           :text="texts.spellChoiceClassesHint"
@@ -240,8 +254,8 @@
       >
         <UInputNumber
           v-model="row.count"
-          :min="1"
-          :max="10"
+          :min="CHOICE_COUNT_MIN"
+          :max="SPELL_PICK_COUNT_MAX"
           :disabled="row.countEqualsProficiencyBonus"
         />
       </UFormField>
@@ -261,8 +275,8 @@
 
         <UInputNumber
           v-model="row.requiredLevel"
-          :min="1"
-          :max="20"
+          :min="CLASS_LEVEL_MIN"
+          :max="CLASS_LEVEL_MAX"
           :aria-label="texts.choiceRequiredLevel"
         />
       </UFormField>

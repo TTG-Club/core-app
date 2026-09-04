@@ -7,6 +7,7 @@
     CharacterAbilities,
     CharacterFeature,
     CharacterInventoryItem,
+    CharacterSpell,
     ClassChoice,
     ClassOption,
     ClassSummary,
@@ -59,6 +60,7 @@
     FEATS_SELECT_PATH,
     FEATURE_ORIGIN_LABELS,
     fetchFeatDetail,
+    filterChoicesByLevel,
     getAbilityImprovementSpent,
     getCharacterClasses,
     getChoiceModalSubtitle,
@@ -69,6 +71,7 @@
     getClassFeatureChoices,
     getClassFeatureId,
     getClassMaxHitPoints,
+    getClassOwnGrantsFeatureId,
     getClassSkillChoice,
     getClassToolChoice,
     getEffectiveAbilities,
@@ -491,20 +494,33 @@
     ),
   );
 
-  // Выборы уровня класса (владение навыками/инструментами) из прозы владений.
+  // Выборы уровня класса: владения навыками и инструментами из прозы плюс то,
+  // о чём спрашивает механика самой записи класса и подкласса, — заговор на
+  // выбор при взятии класса задают у класса целиком, а не у одного умения.
   const classChoices = computed<ClassChoice[]>(() => {
     const base = classDetail.value;
 
-    // Владения второго класса лист не выдаёт (урезанного набора справочник не
-    // отдаёт), поэтому и выбирать их в мастере добавления нечего.
-    if (!base || isAddMode.value) {
+    if (!base) {
       return [];
     }
 
+    // Владения второго класса лист не выдаёт (урезанного набора справочник не
+    // отдаёт), поэтому и выбирать их в мастере добавления нечего. Выборы
+    // механики это не касается: заклинания класс даёт и при мультиклассе.
+    const proficiencyChoices = isAddMode.value
+      ? []
+      : [
+          getClassSkillChoice(base.proficiencyText.skill, skillNames.value),
+          getClassToolChoice(base.proficiencyText.tool),
+        ].filter((choice): choice is ClassChoice => choice !== null);
+
+    // Выбор со своим уровнем открытия спрашивается, когда персонаж дорос: на
+    // остальных уровнях его задаёт мастер повышения
     return [
-      getClassSkillChoice(base.proficiencyText.skill, skillNames.value),
-      getClassToolChoice(base.proficiencyText.tool),
-    ].filter((choice): choice is ClassChoice => choice !== null);
+      ...proficiencyChoices,
+      ...filterChoicesByLevel(base.choices, level.value),
+      ...filterChoicesByLevel(subclassDetail.value?.choices ?? [], level.value),
+    ];
   });
 
   const featureRows = computed(() => {
@@ -752,21 +768,29 @@
     });
   }
 
-  /** Источник выборов самого класса — владения навыками и инструментами. */
+  /** Источник выборов самого класса — владения и заклинания при взятии. */
   const classChoiceOrigin = computed<SheetChoiceOrigin>(() => ({
-    featureName: CLASS_WIZARD_LABELS.proficiencyChoices,
+    featureName: CLASS_WIZARD_LABELS.classOwnChoices,
     originLabel: `${FEATURE_ORIGIN_LABELS.class}: ${classDetail.value?.name ?? ''}`,
     level: null,
   }));
 
-  /** Выборы самого класса единым пикером: владения навыками и инструментами. */
+  /**
+   * Выборы самого класса единым пикером. Пояснение подменяется только у
+   * владений: у выбора заклинания оно собирается из фильтра пула и говорит,
+   * какого круга и из чьего списка заклинание, — это точнее общей фразы.
+   */
   const classChoiceControls = computed(() =>
-    classChoices.value.map((choice) => ({
-      ...choiceControl(choice, classChoiceOrigin.value),
-      // Владения даёт сам класс, а не умение — пояснение по виду выбора
-      // говорило бы про умение
-      explanation: CLASS_WIZARD_LABELS.classChoiceExplanation,
-    })),
+    classChoices.value.map((choice) => {
+      const control = choiceControl(choice, classChoiceOrigin.value);
+
+      return choice.kind === 'spell'
+        ? control
+        : {
+            ...control,
+            explanation: CLASS_WIZARD_LABELS.classChoiceExplanation,
+          };
+    }),
   );
 
   /**
@@ -1715,13 +1739,28 @@
     };
 
     // Выбранные заклинания — на записи своих умений: лист ведёт их наравне с
-    // выданными умением, и снятие класса забирает их вместе с ним
-    const chosenSpellsByFeature = Object.fromEntries(
-      featureRows.value.map((row) => [
-        row.id,
-        collectChosenSpells({ choices: row.choiceControls }),
-      ]),
-    );
+    // выданными умением, и снятие класса забирает их вместе с ним. Заклинания,
+    // выбранные в выборах самого класса, ложатся на запись даров класса — ту
+    // же, что несёт его эффекты и ресурсы
+    const chosenSpellsByFeature: Record<string, CharacterSpell[]> = {
+      ...Object.fromEntries(
+        featureRows.value.map((row) => [
+          row.id,
+          collectChosenSpells({ choices: row.choiceControls }),
+        ]),
+      ),
+      [getClassOwnGrantsFeatureId(base.url)]: collectChosenSpells({
+        choices: base.choices,
+      }),
+      ...(subclassDetail.value
+        ? {
+            [getClassOwnGrantsFeatureId(base.url, subclassDetail.value.url)]:
+              collectChosenSpells({
+                choices: subclassDetail.value.choices,
+              }),
+          }
+        : {}),
+    };
 
     const features = withChosenFeatureSpells(
       [
@@ -2192,7 +2231,7 @@
                 <span
                   class="text-[10px] font-bold tracking-wider text-muted uppercase"
                 >
-                  {{ CLASS_WIZARD_LABELS.proficiencyChoices }}
+                  {{ CLASS_WIZARD_LABELS.classOwnChoices }}
                 </span>
 
                 <SheetChoicePickerField
