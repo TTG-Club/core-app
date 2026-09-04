@@ -17,6 +17,7 @@
     getSpeciesDisplayName,
     SAVED_SHEETS_LABELS,
     SHARED_DETAIL_QUERY_PREFIX,
+    SHEET_CARD_LABELS,
     SHEET_EMPTY_LABELS,
   } from '../../model';
 
@@ -231,7 +232,7 @@
         <span
           v-if="sheet.data"
           class="mt-0.5 flex items-center gap-1 text-xs text-muted"
-          title="Хиты: сейчас / всего"
+          :title="SHEET_CARD_LABELS.hitPointsHint"
         >
           <UIcon
             name="tabler:heart"
@@ -239,8 +240,9 @@
           />
 
           <span class="truncate">
-            Хиты: {{ sheet.data.health.current }} / {{ maxHitPoints }} ·
-            Уровень: {{ levelValue }}
+            {{ SHEET_CARD_LABELS.hitPoints }}: {{ sheet.data.health.current }} /
+            {{ maxHitPoints }} · {{ SHEET_CARD_LABELS.level }}:
+            {{ levelValue }}
           </span>
         </span>
       </div>
@@ -266,7 +268,7 @@
           variant="soft"
           square
           :disabled
-          aria-label="Действия с сохранённым листом"
+          :aria-label="SHEET_CARD_LABELS.savedMenuAria"
         />
       </UDropdownMenu>
     </div>

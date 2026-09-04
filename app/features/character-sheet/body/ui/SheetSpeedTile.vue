@@ -1,7 +1,11 @@
 <script setup lang="ts">
   import type { CharacterSpeed } from '../../model';
 
-  import { getPrimarySpeed, getSpeedRows } from '../../model';
+  import {
+    getPrimarySpeed,
+    getSpeedRows,
+    SHEET_SPEED_TILE_ARIA_LABEL,
+  } from '../../model';
   import SheetPanel from './SheetPanel.vue';
 
   const props = defineProps<{
@@ -28,7 +32,7 @@
       <button
         type="button"
         class="flex w-full cursor-pointer items-center justify-center pt-1 after:absolute after:inset-0 after:cursor-pointer"
-        aria-label="Настроить передвижение"
+        :aria-label="SHEET_SPEED_TILE_ARIA_LABEL"
         @click.left.exact.prevent="emit('edit')"
       >
         <span class="text-2xl leading-none font-bold text-highlighted">

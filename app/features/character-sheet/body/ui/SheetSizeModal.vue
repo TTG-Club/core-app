@@ -4,6 +4,7 @@
   import { SelectSize } from '~ui/select';
 
   import { useCharacterSheet } from '../../composables';
+  import { SHEET_SIZE_MODAL_LABELS } from '../../model';
 
   const emit = defineEmits<{
     close: [];
@@ -43,10 +44,12 @@
 </script>
 
 <template>
-  <UModal title="Размер персонажа">
+  <UModal :title="SHEET_SIZE_MODAL_LABELS.title">
     <template #body>
       <div class="flex items-center justify-between gap-4">
-        <span class="text-sm text-toned">Размер</span>
+        <span class="text-sm text-toned">{{
+          SHEET_SIZE_MODAL_LABELS.field
+        }}</span>
 
         <SelectSize
           v-model="draftValue"

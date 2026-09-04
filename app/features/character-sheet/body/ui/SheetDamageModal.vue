@@ -23,6 +23,7 @@
     ROLL_BONUS_MAX,
     ROLL_BONUS_MIN,
     ROLL_DICE_FACES_OPTIONS,
+    SHEET_DAMAGE_MODAL_LABELS,
   } from '../../model';
 
   const props = withDefaults(
@@ -172,7 +173,7 @@
           <span
             class="text-[10px] font-bold tracking-wider text-muted uppercase"
           >
-            Формула
+            {{ SHEET_DAMAGE_MODAL_LABELS.formula }}
           </span>
 
           <span class="font-mono text-2xl font-bold text-highlighted">
@@ -188,7 +189,7 @@
           <span
             class="text-[10px] font-bold tracking-wider text-muted uppercase"
           >
-            Кости урона
+            {{ SHEET_DAMAGE_MODAL_LABELS.dice }}
           </span>
 
           <div
@@ -214,13 +215,13 @@
               color="neutral"
               variant="ghost"
               :disabled="!canRemoveDice"
-              aria-label="Убрать кость урона"
+              :aria-label="SHEET_DAMAGE_MODAL_LABELS.removeDie"
               @click.left.exact.prevent="handleDiceRemove(diceIndex)"
             />
           </div>
 
           <UButton
-            label="Добавить кость"
+            :label="SHEET_DAMAGE_MODAL_LABELS.addDie"
             icon="tabler:plus"
             color="neutral"
             variant="outline"
@@ -235,7 +236,7 @@
         <div class="flex flex-col gap-4 sm:flex-row">
           <UFormField
             v-if="canSwapAbility"
-            label="Характеристика"
+            :label="SHEET_DAMAGE_MODAL_LABELS.ability"
             :help="abilityHelp"
             class="min-w-0 flex-1"
           >
@@ -247,7 +248,7 @@
           </UFormField>
 
           <UFormField
-            label="Доп. бонус"
+            :label="SHEET_DAMAGE_MODAL_LABELS.bonus"
             :help="bonusHelp"
             class="min-w-0 flex-1"
           >

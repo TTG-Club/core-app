@@ -6,6 +6,7 @@
   import { useCharacterSheet } from '../../composables';
   import {
     getVisionGrants,
+    SHEET_VISION_MODAL_TITLE,
     SPEED_UNIT_OPTIONS,
     SPEED_UNIT_SHORT_LABELS,
     VISION_DISTANCE_MAX,
@@ -88,7 +89,7 @@
 </script>
 
 <template>
-  <UModal title="Зрение">
+  <UModal :title="SHEET_VISION_MODAL_TITLE">
     <template #body>
       <div class="flex flex-col gap-3">
         <div

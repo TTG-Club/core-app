@@ -19,6 +19,7 @@
     ROLL_CHECK_ACTION_LABEL,
     ROLL_DICE_FACES_OPTIONS,
     ROLL_MODE_OPTIONS,
+    SHEET_ROLL_MODAL_LABELS,
   } from '../../model';
 
   /** Источник спасброска, названный игроком. */
@@ -191,7 +192,7 @@
           <span
             class="text-[10px] font-bold tracking-wider text-muted uppercase"
           >
-            Формула
+            {{ SHEET_ROLL_MODAL_LABELS.formula }}
           </span>
 
           <span class="font-mono text-2xl font-bold text-highlighted">
@@ -203,7 +204,7 @@
           складываются друг под друга -->
         <div class="flex flex-col gap-4 sm:flex-row">
           <UFormField
-            label="Характеристика"
+            :label="SHEET_ROLL_MODAL_LABELS.ability"
             :help="abilityHelp"
             class="min-w-0 flex-1"
           >
@@ -215,7 +216,7 @@
           </UFormField>
 
           <UFormField
-            label="Кость"
+            :label="SHEET_ROLL_MODAL_LABELS.dice"
             :help="diceHelp"
             class="min-w-0 flex-1"
           >
@@ -227,7 +228,7 @@
           </UFormField>
 
           <UFormField
-            label="Доп. бонус"
+            :label="SHEET_ROLL_MODAL_LABELS.bonus"
             :help="bonusHelp"
             class="min-w-0 flex-1"
           >
@@ -247,8 +248,8 @@
           class="flex flex-col gap-4 sm:flex-row sm:items-end"
         >
           <UFormField
-            label="Против состояния"
-            help="Спасбросок, чтобы избежать состояния или прекратить его"
+            :label="SHEET_ROLL_MODAL_LABELS.condition"
+            :help="SHEET_ROLL_MODAL_LABELS.conditionHelp"
             class="min-w-0 flex-1"
           >
             <USelect
@@ -259,13 +260,13 @@
           </UFormField>
 
           <UFormField
-            label="Против магии"
-            help="Заклинание или иной магический эффект"
+            :label="SHEET_ROLL_MODAL_LABELS.againstMagic"
+            :help="SHEET_ROLL_MODAL_LABELS.againstMagicHelp"
             class="min-w-0 flex-1"
           >
             <USwitch
               v-model="draftAgainstMagic"
-              label="Магический источник"
+              :label="SHEET_ROLL_MODAL_LABELS.magicSource"
             />
           </UFormField>
         </div>
@@ -274,7 +275,7 @@
           <span
             class="text-[10px] font-bold tracking-wider text-muted uppercase"
           >
-            Режим броска
+            {{ SHEET_ROLL_MODAL_LABELS.mode }}
           </span>
 
           <div class="grid grid-cols-3 gap-2">

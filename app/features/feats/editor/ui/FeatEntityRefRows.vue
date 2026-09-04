@@ -11,7 +11,7 @@
   } from '~ui/select';
 
   import { useFeatRefDirectory } from '../../composable';
-  import { FEAT_REF_ROWS_LABELS, getFeatSpellCircleLabel } from '../../model';
+  import { FEAT_REF_ROWS_LABELS, getFeatSpellLevelLabel } from '../../model';
 
   /**
    * Список ссылок на записи справочника: требуемые черта, класс, вид и
@@ -100,16 +100,16 @@
   }
 
   /**
-   * Подпись круга заклинания; пусто — у записи круга нет либо справочник ещё
+   * Подпись уровня заклинания; пусто — у записи уровня нет либо справочник ещё
    * не ответил.
    *
    * @param reference ссылка строки.
-   * @returns подпись круга.
+   * @returns подпись уровня.
    */
-  function getCircleLabel(reference: FeatEntityRef): string {
+  function getLevelLabel(reference: FeatEntityRef): string {
     const level = getEntry(reference.url)?.level;
 
-    return level === undefined ? '' : getFeatSpellCircleLabel(level);
+    return level === undefined ? '' : getFeatSpellLevelLabel(level);
   }
 </script>
 
@@ -137,16 +137,16 @@
         {{ getLabel(reference) }}
       </span>
 
-      <!-- Круг заклинания: в механику он не пишется, показан для справки —
+      <!-- Уровень заклинания: в механику он не пишется, показан для справки —
         по нему страница черты разбивает таблицу «Заклинания метки» -->
       <UBadge
-        v-if="getCircleLabel(reference)"
+        v-if="getLevelLabel(reference)"
         color="neutral"
         variant="subtle"
         size="sm"
         class="shrink-0"
       >
-        {{ getCircleLabel(reference) }}
+        {{ getLevelLabel(reference) }}
       </UBadge>
 
       <UBadge

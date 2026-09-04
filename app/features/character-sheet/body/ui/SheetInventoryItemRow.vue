@@ -36,12 +36,16 @@
     INVENTORY_CATEGORY_ICONS,
     INVENTORY_CHARGES_HINT_LABELS,
     INVENTORY_CHARGES_SPEND_LABEL,
+    INVENTORY_CUSTOM_BADGE_LABEL,
+    INVENTORY_EMPTY_DESCRIPTION_LABEL,
     INVENTORY_EQUIP_ACTION_LABELS,
+    INVENTORY_EQUIPPED_BADGE_LABEL,
     INVENTORY_HEAVY_BADGE_LABEL,
     INVENTORY_MISSING_BADGE_HINT,
     INVENTORY_MISSING_BADGE_LABEL,
     INVENTORY_QUANTITY_MIN,
     INVENTORY_ROLL_KIND_LABELS,
+    INVENTORY_ROW_ARIA_PREFIXES,
     INVENTORY_STAT_HINT_LABELS,
     INVENTORY_STAT_LABELS,
     INVENTORY_TWO_HANDED_BADGE_HINT,
@@ -705,7 +709,7 @@
               size="sm"
               class="shrink-0"
             >
-              Надет
+              {{ INVENTORY_EQUIPPED_BADGE_LABEL }}
             </UBadge>
 
             <!-- Настройка и включение стоят рядом с «Надет»: это состояния
@@ -811,7 +815,7 @@
                 variant="subtle"
                 class="relative z-10 shrink-0"
               >
-                Свой
+                {{ INVENTORY_CUSTOM_BADGE_LABEL }}
               </UBadge>
             </UTooltip>
           </span>
@@ -898,7 +902,7 @@
           square
           :class="gameControlClass"
           :disabled="isDecreaseDisabled"
-          :aria-label="`Уменьшить количество: ${inventoryItem.name}`"
+          :aria-label="`${INVENTORY_ROW_ARIA_PREFIXES.decrease}: ${inventoryItem.name}`"
           @click.left.exact.prevent="handleDecrease"
         />
 
@@ -916,7 +920,7 @@
           size="xs"
           square
           :class="gameControlClass"
-          :aria-label="`Увеличить количество: ${inventoryItem.name}`"
+          :aria-label="`${INVENTORY_ROW_ARIA_PREFIXES.increase}: ${inventoryItem.name}`"
           @click.left.exact.prevent="handleIncrease"
         />
 
@@ -933,7 +937,7 @@
             size="xs"
             square
             :class="editControlClass"
-            :aria-label="`Действия с предметом: ${inventoryItem.name}`"
+            :aria-label="`${INVENTORY_ROW_ARIA_PREFIXES.menu}: ${inventoryItem.name}`"
           />
         </UDropdownMenu>
       </div>
@@ -983,7 +987,7 @@
         v-else
         class="text-xs text-dimmed"
       >
-        Описание не заполнено
+        {{ INVENTORY_EMPTY_DESCRIPTION_LABEL }}
       </span>
     </div>
   </div>

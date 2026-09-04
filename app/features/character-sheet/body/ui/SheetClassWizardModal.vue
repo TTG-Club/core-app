@@ -42,6 +42,7 @@
     CLASS_FEAT_CHOICE_ID_SEGMENT,
     CLASS_FEAT_INVALID_RESPONSE_ERROR,
     CLASS_GRANTED_FEAT_ID_SEGMENT,
+    CLASS_SKILLS_CHOICE_ID,
     CLASS_SOURCES_ASYNC_DATA_KEY,
     CLASS_WIZARD_LABELS,
     CLASS_WIZARD_TAB_LABELS,
@@ -84,6 +85,7 @@
     getMulticlassRequirementWarning,
     getSelectedCasterType,
     getSpellChoicesKey,
+    getSubclassAvailableHint,
     getTakenOptionValues,
     getToolNames,
     getUnmetMulticlassRequirements,
@@ -100,6 +102,7 @@
     parseClassOptions,
     parseFeatSelectOptions,
     resolveChoiceOptions,
+    SHEET_CLASS_WIZARD_LIST_LABELS,
     SHEET_SEARCH_LABELS,
     SHEET_WIZARD_FEATURE_CARD_CLASS,
     SHEET_WIZARD_SECTION_CLASS,
@@ -426,25 +429,59 @@
     );
   });
 
+  /**
+   * Владения, заявленные справочником структурой: категории брони и оружия,
+   * спасброски, навыки и языки. Разбор текста остаётся только там, где
+   * справочник и сам хранит текст, — у инструментов и приписки к категориям.
+   */
+  const declaredProficiencies = computed(
+    () => classDetail.value?.proficiencies ?? null,
+  );
+
   const savingThrowLabels = computed(() =>
     (classDetail.value?.savingThrows ?? []).map((key) => ABILITY_LABELS[key]),
   );
 
-  const matchedProficiencies = computed(() =>
-    classDetail.value
-      ? matchClassProficiencies(classDetail.value.proficiencyText)
-      : { armor: [], weapons: [] },
-  );
+  const matchedProficiencies = computed(() => {
+    const detail = classDetail.value;
 
-  // Фиксированные инструменты класса сверяются с каталогом сайта: найденное
-  // получает ссылку, ненайденное остаётся своим инструментом игрока.
+    if (!detail) {
+      return { armor: [], weapons: [] };
+    }
+
+    const declared = declaredProficiencies.value;
+
+    if (!declared) {
+      return matchClassProficiencies(detail.proficiencyText);
+    }
+
+    // Категории приходят структурой, а приписка к ним — свободным текстом
+    // («воинское оружие со свойством Фехтовальное»): её и разбираем, потому что
+    // текст она и в справочнике. Уточнённая группа даётся подходящими видами.
+    const custom = matchClassProficiencies({
+      armor: detail.proficiencyCustom.armor,
+      weapon: detail.proficiencyCustom.weapon,
+    });
+
+    return {
+      armor: [...new Set([...declared.armor, ...custom.armor])],
+      weapons: [...new Set([...declared.weapons, ...custom.weapons])],
+    };
+  });
+
+  // Инструменты справочник хранит строкой даже структурой владений, поэтому их
+  // по-прежнему сверяет с каталогом сайта разбор текста: найденное получает
+  // ссылку, ненайденное остаётся своим инструментом игрока.
   const matchedTools = computed(() =>
-    classDetail.value
-      ? matchToolProficiencies(
-          classDetail.value.proficiencyText.tool,
-          toolCatalogItems.value,
-        )
-      : [],
+    unionToolProficiencies(
+      declaredProficiencies.value?.tools ?? [],
+      classDetail.value
+        ? matchToolProficiencies(
+            classDetail.value.proficiencyText.tool,
+            toolCatalogItems.value,
+          )
+        : [],
+    ),
   );
 
   /**
@@ -507,10 +544,20 @@
     // Владения второго класса лист не выдаёт (урезанного набора справочник не
     // отдаёт), поэтому и выбирать их в мастере добавления нечего. Выборы
     // механики это не касается: заклинания класс даёт и при мультиклассе.
+    //
+    // Навыки спрашивает структура справочника (`skillChoice`); проза остаётся
+    // запасным источником, пока бэкенд структуру не отдаёт. Инструменты
+    // справочник хранит строкой, и они разбираются из неё всегда.
     const proficiencyChoices = isAddMode.value
       ? []
       : [
-          getClassSkillChoice(base.proficiencyText.skill, skillNames.value),
+          base.skillChoice
+            ?? (base.proficiencies
+              ? null
+              : getClassSkillChoice(
+                  base.proficiencyText.skill,
+                  skillNames.value,
+                )),
           getClassToolChoice(base.proficiencyText.tool),
         ].filter((choice): choice is ClassChoice => choice !== null);
 
@@ -621,7 +668,6 @@
           choiceControls: getClassFeatureChoices(
             id,
             feature,
-            skillNames.value,
             level.value,
             chosenOptionKeys,
           ),
@@ -1660,15 +1706,15 @@
         ? await buildStartingEquipmentItems(startingEquipmentOption)
         : [];
 
-    const matched = matchClassProficiencies(base.proficiencyText);
+    const matched = matchedProficiencies.value;
 
     // Выбор владения навыками (уровень класса).
     const skillsChoice = classChoices.value.find(
-      (choice) => choice.id === 'class-skills',
+      (choice) => choice.id === CLASS_SKILLS_CHOICE_ID,
     );
 
     const proficientSkills: string[] = skillsChoice
-      ? (selections.value['class-skills'] ?? []).slice(
+      ? (selections.value[CLASS_SKILLS_CHOICE_ID] ?? []).slice(
           0,
           choiceCount(skillsChoice),
         )
@@ -1793,9 +1839,15 @@
     );
 
     // Навыки уровня класса: выборы умений сюда не идут — их владения ведёт
-    // снимок на самой записи умения
+    // снимок на самой записи умения. Названные механикой навыки идут сюда же:
+    // выдача без выбора и выбор игрока для листа — одно и то же владение.
     const skills = {
-      proficient: [...new Set(proficientSkills)],
+      proficient: [
+        ...new Set([
+          ...(declaredProficiencies.value?.skills ?? []),
+          ...proficientSkills,
+        ]),
+      ],
       expertise: [],
     };
 
@@ -1832,8 +1884,9 @@
           matchedTools.value,
           resolveTools(chosenTools.map((name) => ({ name, url: null }))),
         ),
-        // Языки, названные в умениях, приходят снимком самой записи умения
-        languages: [],
+        // Языки самой записи класса — только заявленные механикой: названные в
+        // умениях приходят снимком самой записи умения
+        languages: declaredProficiencies.value?.languages ?? [],
       },
       skills,
       classResources: derivedResources.value,
@@ -1921,7 +1974,7 @@
                   size="xs"
                   square
                   class="relative z-10 shrink-0"
-                  :aria-label="`Показать подклассы: ${row.name}`"
+                  :aria-label="`${SHEET_CLASS_WIZARD_LIST_LABELS.expandAria}: ${row.name}`"
                   :ui="{
                     leadingIcon: `transition-transform ${row.chevronClass}`,
                   }"
@@ -1936,7 +1989,7 @@
                 <button
                   type="button"
                   class="flex min-w-0 grow cursor-pointer items-center gap-2 py-2 pr-1 text-left"
-                  :aria-label="`Выбрать класс: ${row.name}`"
+                  :aria-label="`${SHEET_CLASS_WIZARD_LIST_LABELS.pickAria}: ${row.name}`"
                   @click.left.exact.prevent="handleClassSelect(row.url)"
                 >
                   <span
@@ -1956,7 +2009,7 @@
                   {{ row.sourceLabel }}
                 </UBadge>
 
-                <UTooltip text="Открыть описание класса">
+                <UTooltip :text="SHEET_CLASS_WIZARD_LIST_LABELS.preview">
                   <UButton
                     icon="tabler:layout-sidebar-right-expand"
                     color="neutral"
@@ -1964,7 +2017,7 @@
                     size="xs"
                     square
                     class="relative z-10 shrink-0"
-                    :aria-label="`Описание класса: ${row.name}`"
+                    :aria-label="`${SHEET_CLASS_WIZARD_LIST_LABELS.previewAria}: ${row.name}`"
                     @click.left.exact.prevent="handlePreview(row.url)"
                   />
                 </UTooltip>
@@ -1989,7 +2042,7 @@
                     class="size-3.5 animate-spin"
                   />
 
-                  Загрузка подклассов…
+                  {{ CLASS_WIZARD_LABELS.subclassesLoading }}
                 </span>
 
                 <div
@@ -2002,7 +2055,7 @@
                     v-if="subclass.isSelectable"
                     type="button"
                     class="flex min-w-0 grow cursor-pointer items-center px-3 py-1.5 text-left after:absolute after:inset-0 after:cursor-pointer"
-                    :aria-label="`Выбрать подкласс: ${subclass.name}`"
+                    :aria-label="`${SHEET_CLASS_WIZARD_LIST_LABELS.subclassPickAria}: ${subclass.name}`"
                     @click.left.exact.prevent="
                       handleSubclassClick(row.url, subclass.url)
                     "
@@ -2031,7 +2084,9 @@
                     {{ subclass.sourceLabel }}
                   </UBadge>
 
-                  <UTooltip text="Открыть описание подкласса">
+                  <UTooltip
+                    :text="SHEET_CLASS_WIZARD_LIST_LABELS.subclassPreview"
+                  >
                     <UButton
                       icon="tabler:layout-sidebar-right-expand"
                       color="neutral"
@@ -2039,7 +2094,7 @@
                       size="xs"
                       square
                       class="relative z-10 shrink-0"
-                      :aria-label="`Описание подкласса: ${subclass.name}`"
+                      :aria-label="`${SHEET_CLASS_WIZARD_LIST_LABELS.subclassPreviewAria}: ${subclass.name}`"
                       @click.left.exact.prevent="handlePreview(subclass.url)"
                     />
                   </UTooltip>
@@ -2055,7 +2110,7 @@
                   v-if="!subclassAvailable && row.subclasses.length"
                   class="px-3 py-1 text-xs text-dimmed italic"
                 >
-                  Подкласс доступен с {{ SUBCLASS_SELECTION_MIN_LEVEL }} уровня
+                  {{ getSubclassAvailableHint(SUBCLASS_SELECTION_MIN_LEVEL) }}
                 </span>
               </div>
             </template>
@@ -2064,7 +2119,7 @@
               v-if="!displayRows.length"
               class="px-3 py-6 text-center text-sm text-dimmed"
             >
-              Ничего не найдено
+              {{ CLASS_WIZARD_LABELS.empty }}
             </span>
           </div>
 

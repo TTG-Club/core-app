@@ -65,14 +65,14 @@
   }
 
   /**
-   * Подпись выданного заклинания с кругом.
+   * Подпись выданного заклинания с уровнем.
    *
    * @param spell заклинание варианта.
-   * @returns подпись вида «Поиск фамильяра (1 круг)».
+   * @returns подпись вида «Поиск фамильяра (1-й уровень)».
    */
   function getGrantedSpellLabel(spell: FeatureOptionGrantedSpell): string {
     const level = spell.level
-      ? `${spell.level} ${FEATURE_OPTIONS_LABELS.spellLevelSuffix}`
+      ? `${spell.level}${FEATURE_OPTIONS_LABELS.spellLevelSuffix}`
       : FEATURE_OPTIONS_LABELS.cantrip;
 
     return `${spell.name} (${level})`;

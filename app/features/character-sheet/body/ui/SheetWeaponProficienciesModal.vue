@@ -5,6 +5,7 @@
 
   import { useCharacterSheet } from '../../composables';
   import {
+    SHEET_WEAPON_PROFICIENCIES_LABELS,
     WEAPON_GROUP_TITLE_CLASSES,
     WEAPON_MASTERY_ICON,
     WEAPON_PROFICIENCY_GROUPS,
@@ -149,7 +150,7 @@
 
 <template>
   <UModal
-    title="Владение и мастерство оружием"
+    :title="SHEET_WEAPON_PROFICIENCIES_LABELS.title"
     :ui="{ content: 'sm:max-w-3xl' }"
   >
     <template #body>
@@ -172,7 +173,7 @@
             <span />
 
             <UTooltip
-              text="Владение"
+              :text="SHEET_WEAPON_PROFICIENCIES_LABELS.proficiency"
               class="justify-self-center"
             >
               <UIcon
@@ -182,7 +183,7 @@
             </UTooltip>
 
             <UTooltip
-              text="Мастерство"
+              :text="SHEET_WEAPON_PROFICIENCIES_LABELS.mastery"
               class="justify-self-center"
             >
               <UIcon
@@ -213,7 +214,7 @@
               <UCheckbox
                 class="justify-self-center"
                 :model-value="row.isProficient"
-                :aria-label="`Владение: ${row.name}`"
+                :aria-label="`${SHEET_WEAPON_PROFICIENCIES_LABELS.proficiency}: ${row.name}`"
                 @update:model-value="toggleProficiency(row.name)"
               />
 
@@ -221,7 +222,7 @@
                 class="justify-self-center"
                 :model-value="row.isMastered"
                 :disabled="!row.isProficient"
-                :aria-label="`Мастерство: ${row.name}`"
+                :aria-label="`${SHEET_WEAPON_PROFICIENCIES_LABELS.mastery}: ${row.name}`"
                 @update:model-value="toggleMastery(row.name)"
               />
             </template>

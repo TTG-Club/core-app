@@ -6,6 +6,7 @@
     ABILITY_SCORE_MAX,
     ABILITY_SCORE_MIN,
     SHEET_ABILITY_SETTINGS_LABELS,
+    SHEET_ABILITY_TILE_ARIA_PREFIXES,
     SHEET_TITLE_ACTION_CLASS,
     SHEET_TITLE_ACTION_REVEAL_CLASS,
   } from '../../model';
@@ -149,7 +150,7 @@
       <button
         type="button"
         class="flex w-full cursor-pointer items-center justify-center pt-1 pb-2 after:absolute after:inset-0 after:cursor-pointer"
-        :aria-label="`Проверка: ${abilityRow.label}`"
+        :aria-label="`${SHEET_ABILITY_TILE_ARIA_PREFIXES.check}: ${abilityRow.label}`"
         @click.left.exact.prevent="handleRollClick"
       >
         <span class="text-3xl leading-none font-bold text-highlighted">
@@ -172,7 +173,7 @@
           square
           :disabled="isDecreaseDisabled"
           :class="[ADJUST_BUTTON_CLASSES, editControlClass]"
-          :aria-label="`Уменьшить значение: ${abilityRow.label}`"
+          :aria-label="`${SHEET_ABILITY_TILE_ARIA_PREFIXES.decrease}: ${abilityRow.label}`"
           @click.left.exact.prevent.stop="emit('adjust', -1)"
         />
 
@@ -191,7 +192,7 @@
           square
           :disabled="isIncreaseDisabled"
           :class="[ADJUST_BUTTON_CLASSES, editControlClass]"
-          :aria-label="`Увеличить значение: ${abilityRow.label}`"
+          :aria-label="`${SHEET_ABILITY_TILE_ARIA_PREFIXES.increase}: ${abilityRow.label}`"
           @click.left.exact.prevent.stop="emit('adjust', 1)"
         />
       </div>

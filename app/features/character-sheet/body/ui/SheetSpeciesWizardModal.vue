@@ -40,7 +40,6 @@
     collectSpeciesProficiencies,
     CURRENT_SELECTION_LABELS,
     CUSTOM_SPECIES_LABELS,
-    detectFeatureChoice,
     FEAT_SOURCES_ASYNC_DATA_KEY,
     FEATS_FILTERS_PATH,
     FEATS_SELECT_PATH,
@@ -268,9 +267,8 @@
     LANGUAGE_PROFICIENCY_GROUPS.flatMap((group) => group.items),
   );
 
-  // Инструменты виды не выдают (`detectFeatureChoice` их не распознаёт), но
-  // контекст резолва выборов общий — список тянем из каталога сайта, а не из
-  // своего перечня.
+  // Инструменты виды не выдают, но контекст резолва выборов общий — список
+  // тянем из каталога сайта, а не из своего перечня.
   const {
     getToolNamesForGroups,
     catalogItems: toolCatalogItems,
@@ -332,8 +330,26 @@
       selectedLineage.value?.speedText || speciesDetail.value?.speedText || '',
   );
 
-  const sizeOptions = computed(() =>
-    parseSizeOptionsFromText(effectiveSizeText.value),
+  /**
+   * Размеры на выбор: структура справочника, а без неё — разбор строки размера
+   * (пока бэкенд структуру не отдаёт). Подвид приоритетнее базового вида.
+   */
+  const sizeOptions = computed(() => {
+    const declared = selectedLineage.value?.sizeOptions.length
+      ? selectedLineage.value.sizeOptions
+      : (speciesDetail.value?.sizeOptions ?? []);
+
+    return declared.length
+      ? declared
+      : parseSizeOptionsFromText(effectiveSizeText.value);
+  });
+
+  /** Скорости вида: структура справочника, а без неё — разбор строки. */
+  const effectiveSpeed = computed(
+    () =>
+      selectedLineage.value?.speed
+      ?? speciesDetail.value?.speed
+      ?? parseSpeedFromText(effectiveSpeedText.value),
   );
 
   const showSizeChoice = computed(() => sizeOptions.value.length > 1);
@@ -349,32 +365,19 @@
   });
 
   /**
-   * Выборы умения: структурные из справочника, а без них — распознанные по
-   * прозе описания. Структура точнее прозы (у неё явные вид, пул и количество),
-   * поэтому имеет приоритет; проза остаётся страховкой для умений, которым
-   * выбор ещё не проставили в форме вида.
+   * Выборы умения — только те, что записаны в справочнике вида. Описание не
+   * разбирается: умение, которому выбор не проставили в форме вида, ни о чём
+   * не спрашивает.
    *
-   * @param id идентификатор умения на листе.
    * @param feature умение вида или происхождения.
    * @returns выборы умения; пусто — умение ни о чём не спрашивает.
    */
   function featureChoiceControls(
-    id: string,
     feature: SpeciesFeatureSummary,
   ): ClassChoice[] {
-    if (feature.choices.length > 0) {
-      // Выбор со своим уровнем спрашивается, только когда персонаж дорос:
-      // умение вида приходит целиком, а часть его вопросов открывается позже
-      return filterChoicesByLevel(feature.choices, character.value.level);
-    }
-
-    const detected = detectFeatureChoice(
-      id,
-      feature.description,
-      skillNames.value,
-    );
-
-    return detected ? [detected] : [];
+    // Выбор со своим уровнем спрашивается, только когда персонаж дорос:
+    // умение вида приходит целиком, а часть его вопросов открывается позже
+    return filterChoicesByLevel(feature.choices, character.value.level);
   }
 
   const featureRows = computed(() => {
@@ -416,7 +419,7 @@
           origin: 'species',
           originName: detail.name,
           originLabel: `${FEATURE_ORIGIN_LABELS.species}: ${detail.name}`,
-          ...splitFeatChoices(featureChoiceControls(id, feature)),
+          ...splitFeatChoices(featureChoiceControls(feature)),
         });
       }
     }
@@ -446,7 +449,7 @@
           origin: 'lineage',
           originName: lineage.name,
           originLabel: `${FEATURE_ORIGIN_LABELS.lineage}: ${lineage.name}`,
-          ...splitFeatChoices(featureChoiceControls(id, feature)),
+          ...splitFeatChoices(featureChoiceControls(feature)),
         });
       }
     }
@@ -1029,7 +1032,7 @@
         ),
       },
       size: sizeChoice.value ?? null,
-      speed: parseSpeedFromText(effectiveSpeedText.value),
+      speed: effectiveSpeed.value,
       vision: {
         // Вид задаёт обычное зрение — берём его; иначе оставляем своё
         normal:
@@ -1137,7 +1140,7 @@
 
 <template>
   <UModal
-    title="Выбор вида"
+    :title="SPECIES_WIZARD_LABELS.title"
     :ui="{ content: 'sm:max-w-2xl' }"
   >
     <template #body>
@@ -1186,7 +1189,7 @@
                 <button
                   type="button"
                   class="flex min-w-0 grow cursor-pointer items-center gap-2 px-3 py-2 text-left after:absolute after:inset-0 after:cursor-pointer"
-                  :aria-label="`Выбрать вид: ${row.name}`"
+                  :aria-label="`${SPECIES_WIZARD_LABELS.pickAria}: ${row.name}`"
                   @click.left.exact.prevent="handleSpeciesRowClick(row.url)"
                 >
                   <UIcon
@@ -1218,7 +1221,7 @@
                   {{ row.sourceLabel }}
                 </UBadge>
 
-                <UTooltip text="Открыть описание вида">
+                <UTooltip :text="SPECIES_WIZARD_LABELS.preview">
                   <UButton
                     icon="tabler:layout-sidebar-right-expand"
                     color="neutral"
@@ -1226,7 +1229,7 @@
                     size="xs"
                     square
                     class="relative z-10 shrink-0"
-                    :aria-label="`Описание вида: ${row.name}`"
+                    :aria-label="`${SPECIES_WIZARD_LABELS.previewAria}: ${row.name}`"
                     @click.left.exact.prevent="handlePreview(row.url)"
                   />
                 </UTooltip>
@@ -1251,7 +1254,7 @@
                     class="size-3.5 animate-spin"
                   />
 
-                  Загрузка подвидов…
+                  {{ SPECIES_WIZARD_LABELS.lineagesLoading }}
                 </span>
 
                 <div
@@ -1263,7 +1266,7 @@
                   <button
                     type="button"
                     class="flex min-w-0 grow cursor-pointer items-center px-3 py-1.5 text-left after:absolute after:inset-0 after:cursor-pointer"
-                    :aria-label="`Выбрать подвид: ${lineage.name}`"
+                    :aria-label="`${SPECIES_WIZARD_LABELS.lineagePickAria}: ${lineage.name}`"
                     @click.left.exact.prevent="
                       handleLineageClick(row.url, lineage.url)
                     "
@@ -1273,7 +1276,7 @@
                     </span>
                   </button>
 
-                  <UTooltip text="Открыть описание подвида">
+                  <UTooltip :text="SPECIES_WIZARD_LABELS.lineagePreview">
                     <UButton
                       icon="tabler:layout-sidebar-right-expand"
                       color="neutral"
@@ -1281,7 +1284,7 @@
                       size="xs"
                       square
                       class="relative z-10 shrink-0"
-                      :aria-label="`Описание подвида: ${lineage.name}`"
+                      :aria-label="`${SPECIES_WIZARD_LABELS.lineagePreviewAria}: ${lineage.name}`"
                       @click.left.exact.prevent="handlePreview(lineage.url)"
                     />
                   </UTooltip>
@@ -1299,20 +1302,20 @@
               v-if="!displayRows.length"
               class="px-3 py-6 text-center text-sm text-dimmed"
             >
-              Ничего не найдено
+              {{ SPECIES_WIZARD_LABELS.empty }}
             </span>
           </div>
 
           <span class="text-xs text-muted">
-            Вид с подвидами разворачивается стрелкой — выберите конкретный
-            подвид. При применении скорость, зрение, размер и особенности сразу
-            заполнят лист.
+            {{ SPECIES_WIZARD_LABELS.listHint }}
           </span>
         </template>
 
         <template v-else>
           <div class="flex flex-wrap items-center gap-2 text-sm">
-            <span class="text-muted">Вид:</span>
+            <span class="text-muted">
+              {{ SPECIES_WIZARD_LABELS.resultPrefix }}
+            </span>
 
             <span class="font-bold text-highlighted">{{ resultName }}</span>
           </div>
@@ -1324,7 +1327,7 @@
             <span
               class="text-[10px] font-bold tracking-wider text-muted uppercase"
             >
-              Размер
+              {{ SPECIES_WIZARD_LABELS.size }}
             </span>
 
             <URadioGroup
@@ -1340,7 +1343,7 @@
             <span
               class="text-[10px] font-bold tracking-wider text-muted uppercase"
             >
-              Особенности
+              {{ SPECIES_WIZARD_LABELS.features }}
             </span>
 
             <div
@@ -1414,7 +1417,7 @@
               v-if="!featureRows.length"
               class="text-xs text-dimmed italic"
             >
-              У вида нет описанных особенностей
+              {{ SPECIES_WIZARD_LABELS.featuresEmpty }}
             </span>
           </div>
         </template>

@@ -580,7 +580,7 @@
 
 <template>
   <UModal
-    title="Добавление черт"
+    :title="SHEET_FEAT_MODAL_LABELS.title"
     :ui="{ content: 'sm:max-w-2xl' }"
   >
     <template #body>
@@ -651,7 +651,7 @@
           v-else-if="isListError"
           class="flex grow items-center justify-center py-10 text-sm text-dimmed"
         >
-          Не удалось загрузить черты
+          {{ SHEET_FEAT_MODAL_LABELS.listError }}
         </div>
 
         <div
@@ -684,7 +684,7 @@
                 class="flex min-w-0 grow items-center gap-2 px-3 py-1.5 text-left after:absolute after:inset-0"
                 :class="feat.cursorClass"
                 :disabled="feat.isAdded"
-                :aria-label="`Выбрать черту: ${feat.name}`"
+                :aria-label="`${SHEET_FEAT_MODAL_LABELS.pickAria}: ${feat.name}`"
                 @click.left.exact.prevent="toggleFeat(feat)"
               >
                 <span class="truncate text-sm font-medium text-highlighted">
@@ -710,14 +710,14 @@
                   size="xs"
                   square
                   class="relative z-10 shrink-0"
-                  :aria-label="`Описание черты: ${feat.name}`"
+                  :aria-label="`${SHEET_FEAT_MODAL_LABELS.descriptionAria}: ${feat.name}`"
                   @click.left.exact.prevent="handlePreview(feat.url)"
                 />
               </UTooltip>
 
               <UTooltip
                 v-if="feat.repeatability"
-                text="Можно взять несколько раз"
+                :text="SHEET_FEAT_MODAL_LABELS.repeatable"
               >
                 <span
                   class="relative z-10 flex shrink-0 items-center gap-0.5 text-muted"
@@ -738,7 +738,7 @@
 
               <UTooltip
                 v-else-if="feat.isAdded"
-                text="Уже добавлена"
+                :text="SHEET_FEAT_MODAL_LABELS.alreadyAdded"
               >
                 <UIcon
                   name="tabler:check"
@@ -758,7 +758,7 @@
             v-if="!displayGroups.length"
             class="px-3 py-6 text-center text-sm text-dimmed"
           >
-            Ничего не найдено
+            {{ SHEET_FEAT_MODAL_LABELS.empty }}
           </span>
         </div>
       </div>

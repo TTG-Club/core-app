@@ -5,7 +5,11 @@
   import { MarkupEditor } from '~ui/markup-editor';
 
   import { useCharacterSheet } from '../../composables';
-  import { FEATURE_ORIGIN_OPTIONS, parseStoredMarkupNodes } from '../../model';
+  import {
+    FEATURE_ORIGIN_OPTIONS,
+    parseStoredMarkupNodes,
+    SHEET_FEATURE_FORM_LABELS,
+  } from '../../model';
 
   const emit = defineEmits<{
     close: [];
@@ -61,7 +65,7 @@
 
 <template>
   <UModal
-    title="Новая особенность"
+    :title="SHEET_FEATURE_FORM_LABELS.addTitle"
     :ui="{ content: 'sm:max-w-2xl' }"
   >
     <template #body>
@@ -69,18 +73,18 @@
         <div class="flex items-end gap-3">
           <div class="flex min-w-0 grow flex-col gap-1">
             <span class="text-[10px] font-bold text-muted uppercase">
-              Название
+              {{ SHEET_FEATURE_FORM_LABELS.name }}
             </span>
 
             <UInput
               v-model="draftName"
-              placeholder="Название особенности"
+              :placeholder="SHEET_FEATURE_FORM_LABELS.namePlaceholder"
             />
           </div>
 
           <div class="flex w-40 shrink-0 flex-col gap-1">
             <span class="text-[10px] font-bold text-muted uppercase">
-              Источник
+              {{ SHEET_FEATURE_FORM_LABELS.origin }}
             </span>
 
             <USelect
@@ -92,12 +96,12 @@
 
         <div class="flex flex-col gap-1">
           <span class="text-[10px] font-bold text-muted uppercase">
-            Описание
+            {{ SHEET_FEATURE_FORM_LABELS.description }}
           </span>
 
           <MarkupEditor
             v-model="draftDescription"
-            placeholder="Опиши особенность"
+            :placeholder="SHEET_FEATURE_FORM_LABELS.descriptionPlaceholder"
           />
         </div>
       </div>

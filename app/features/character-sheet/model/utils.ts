@@ -6662,8 +6662,7 @@ export function parseSizeOptionsFromText(sizeText: string): string[] {
  * действует на текущем уровне персонажа.
  *
  * До появления структурных даров лист искал владения в прозе описания, и умение,
- * где владение названо иначе, оставалось незамеченным. Разбор прозы остался
- * рядом — он ловит выборы игрока, которых в дарах нет.
+ * где владение названо иначе, оставалось незамеченным.
  *
  * @param species деталь вида.
  * @param lineage деталь происхождения; null — происхождения нет.
@@ -6811,30 +6810,62 @@ export function getDarkvisionDistance(
 }
 
 /**
- * Подпись круга заклинания для строки списка.
+ * Подсказка о том, с какого уровня в классе открывается выбор подкласса.
  *
- * @param level круг заклинания; 0 — заговор.
- * @returns подпись круга (например, «Заговор» или «3 круг»).
+ * @param level минимальный уровень в классе.
+ * @returns текст подсказки.
+ */
+export function getSubclassAvailableHint(level: number): string {
+  return `Подкласс доступен с ${level} уровня`;
+}
+
+/**
+ * Подсказка о достигнутом пределе своих листов: сколько их можно держать и что
+ * делать дальше.
+ *
+ * @param limit предел числа листов.
+ * @returns текст подсказки.
+ */
+export function getSheetsLimitReachedHint(limit: number): string {
+  return `Достигнут лимит ${limit} листов — удалите один, чтобы создать новый.`;
+}
+
+/**
+ * Пояснение диалога удаления листа: лист не пропадает совсем, а уезжает в
+ * историю.
+ *
+ * @param name имя персонажа.
+ * @returns текст пояснения.
+ */
+export function getSheetRemoveDescription(name: string): string {
+  return `Лист «${name}» переедет в историю — его можно будет восстановить.`;
+}
+
+/**
+ * Подпись уровня заклинания для строки списка.
+ *
+ * @param level уровень заклинания; 0 — заговор.
+ * @returns подпись уровня (например, «Заговор» или «3-й уровень»).
  */
 export function getSpellLevelLabel(level: number): string {
-  return level === 0 ? 'Заговор' : `${level} круг`;
+  return level === 0 ? 'Заговор' : `${level}-й уровень`;
 }
 
 /**
- * Подпись группы заклинаний одного круга для разделителя списка.
+ * Подпись группы заклинаний одного уровня для разделителя списка.
  *
- * @param level круг заклинания; 0 — заговоры.
- * @returns подпись группы (например, «Заговоры» или «3 круг»).
+ * @param level уровень заклинания; 0 — заговоры.
+ * @returns подпись группы (например, «Заговоры» или «Уровень 3»).
  */
 export function getSpellGroupLabel(level: number): string {
-  return level === 0 ? 'Заговоры' : `${level} круг`;
+  return level === 0 ? 'Заговоры' : `Уровень ${level}`;
 }
 
 /**
- * Пояснение к предупреждению о потраченных ячейках круга: бросок при этом
+ * Пояснение к предупреждению о потраченных ячейках уровня: бросок при этом
  * состоялся, поэтому текст говорит, что именно осталось несделанным.
  *
- * @param level круг заклинания.
+ * @param level уровень заклинания.
  * @returns описание для тоста.
  */
 export function getSpellSlotsEmptyDescription(level: number): string {
@@ -11655,13 +11686,12 @@ export function withStoredFeatureAnswers(
 }
 
 /**
- * Строки карточек умений уровня для мастера повышения: к каждому умению
- * распознаётся выбор внутри описания (навык, компетентность, язык).
+ * Строки карточек умений уровня для мастера повышения: у каждого умения — его
+ * выборы из справочника (навык, компетентность, язык, вариант умения).
  *
  * @param base деталь базового класса.
  * @param subclass деталь подкласса; null — подкласс не выбран.
  * @param level уровень, умения которого нужны.
- * @param skillNames имена навыков персонажа.
  * @param answers ответы игрока: по ним умение показывает вопросы и дары
  *   выбранных вариантов. Не заданы — вариантов ещё не выбирали.
  * @returns строки умений этого уровня.
@@ -11670,7 +11700,6 @@ export function getLevelFeatureRows(
   base: ClassSummary,
   subclass: ClassSummary | null,
   level: number,
-  skillNames: string[],
   answers: Record<string, string[]> = {},
 ): ClassFeatureRow[] {
   const rows: ClassFeatureRow[] = [];
@@ -11726,13 +11755,7 @@ export function getLevelFeatureRows(
         // умению не нужен — иначе под чертой висело бы пустое поле ввода.
         choices: summary.abilityImprovement
           ? []
-          : getLevelFeatureChoices(
-              id,
-              summary,
-              skillNames,
-              level,
-              chosenOptionKeys,
-            ),
+          : getLevelFeatureChoices(id, summary, level, chosenOptionKeys),
         featChoices: getLevelFeatChoices(summary, level, chosenOptionKeys),
         // Черту без выбора умение выдаёт на своём уровне, а не на уровнях роста
         grantedFeatUrls:
@@ -12231,23 +12254,6 @@ export function parseChoiceCount(text: string): number {
 }
 
 /**
- * Количество из фразы о выдаче: берётся последнее числительное, то есть
- * ближайшее к предмету выдачи. У «Благословения знаний» жреца фраза начинается
- * с инструментов («владение одним типом инструментов… и двумя из следующих
- * навыков»), и первое числительное описывает инструменты, а не навыки.
- *
- * @param text отрезок фразы до предмета выдачи.
- * @returns распознанное количество.
- */
-export function parseTrailingChoiceCount(text: string): number {
-  const match = [...text.matchAll(new RegExp(CHOICE_COUNT_SOURCE, 'gi'))].at(
-    -1,
-  );
-
-  return match ? getMatchedChoiceCount(match) : 1;
-}
-
-/**
  * Выбор владения навыками из прозы `proficiency.skill` («Выберите N навыка из…»
  * или «Выберите любые N навыка»). Перечисленные навыки распознаются по вхождению
  * известных названий; «любые» — опции резолвятся всеми навыками в визарде.
@@ -12331,127 +12337,6 @@ export function getClassToolChoice(
     listed: [],
     toolGroups,
   };
-}
-
-/** Корень слова «компетентность»: от него отсчитывается количество навыков. */
-const EXPERTISE_KEYWORD = 'компетентност';
-
-/**
- * Компетентность как выдача умения («вы получаете компетентность»), а не
- * упоминание слова в прозе: у «Острого словца» барда компетентность — фигура
- * речи («подрывать уверенность и компетентность других»), и распознанный выбор
- * требовал бы 60 навыков (число приезжало из «в пределах 60 фт.»).
- */
-const EXPERTISE_GRANT_PATTERN = new RegExp(
-  `(?:получ|приобрет)\\p{L}*\\s+${EXPERTISE_KEYWORD}`,
-  'u',
-);
-
-/** Корень слова «владение»: одно из условий выдачи владения навыком. */
-const PROFICIENCY_KEYWORD = 'владени';
-
-/** Корень слова «навык»: предмет выдачи, которым заканчивается фраза. */
-const SKILL_KEYWORD = 'навык';
-
-/** Корень слова «выбор»: выдача должна быть выбором, а не фиксированной. */
-const CHOICE_KEYWORD = 'выбор';
-
-/** Максимум символов между глаголом выдачи и словом «навык» внутри фразы. */
-const SKILL_GRANT_SPAN = 160;
-
-/**
- * Глаголы выдачи: «получаете», «приобретаете» и все формы выбора — «выберите»,
- * «на выбор», «выбираете», «можете выбрать». Формы выбора расходятся по корню
- * («выбер» и «выбра»), и без второй из них «Шёпот мёртвых» плута («вы можете
- * выбрать одно владение навыком») переставал считаться выбором.
- */
-const GRANT_VERB_SOURCE = String.raw`получ|приобрет|выб(?:[еои]р|ра)`;
-
-/**
- * Фраза о выдаче владения навыком: глагол выдачи или выбора, а следом «навык»
- * в пределах одного предложения (точка фразу обрывает). Одних лишь слов
- * «навык», «владение» и «выбор» где угодно в описании мало: «Дикая форма»
- * друида говорит «вы также сохраняете владение навыками», слово «выбор»
- * приезжает из соседнего абзаца про известные формы — и визард просил выбрать
- * два произвольных навыка из восемнадцати на втором уровне.
- *
- * Начало фразы служит и якорем количества: у «Величия гения» паладина (Клятва
- * благородных гениев) описание открывается формулой доспеха («базовый КД равен
- * 10 + …»), и счёт по всему описанию требовал 10 навыков при четырёх
- * перечисленных — шаг визарда становился непроходимым.
- */
-const SKILL_GRANT_PATTERN = new RegExp(
-  `(?:${GRANT_VERB_SOURCE})[^.]{0,${SKILL_GRANT_SPAN}}?${SKILL_KEYWORD}`,
-  'u',
-);
-
-/**
- * Распознавание выбора внутри особенности класса или вида: компетентность
- * (экспертиза), владение навыком на выбор или язык на выбор. Иначе — null
- * (особенность остаётся со свободным текстовым выбором). Инструменты здесь не
- * распознаются: у классов они идут из владений (`proficiency.tool`), а в тексте
- * особенностей «инструмент» часто упоминается как фокусировка заклинателя.
- *
- * @param featureId идентификатор особенности (он же id выбора).
- * @param description описание особенности (узлы разметки или строки).
- * @param skillNames имена всех навыков персонажа (для списка навыков в выборе).
- * @returns выбор особенности или null.
- */
-export function detectFeatureChoice(
-  featureId: string,
-  description: RenderNode | RenderNode[],
-  skillNames: string[],
-): ClassChoice | null {
-  const rawText = getNodeText(description);
-
-  const text = rawText.toLowerCase().replaceAll('ё', 'е');
-
-  // Количество считается от первого упоминания компетентности, а не от самой
-  // выдачи: у следопыта число стоит до неё («Выберите одно из ваших владений
-  // навыком… Вы получаете компетентность»).
-  if (EXPERTISE_GRANT_PATTERN.test(text)) {
-    return {
-      id: featureId,
-      kind: 'skill-expertise',
-      label: '',
-      count: parseChoiceCount(text.slice(text.indexOf(EXPERTISE_KEYWORD))),
-      listed: [],
-    };
-  }
-
-  if (
-    text.includes(SKILL_KEYWORD)
-    && text.includes(PROFICIENCY_KEYWORD)
-    && text.includes(CHOICE_KEYWORD)
-  ) {
-    const grant = SKILL_GRANT_PATTERN.exec(text);
-
-    if (grant) {
-      // Количество ищется до предмета выдачи: дальше идёт перечень навыков, а в
-      // нём числительные встречаются в названиях и ссылках.
-      const phrase = grant[0].slice(0, -SKILL_KEYWORD.length);
-
-      return {
-        id: featureId,
-        kind: 'skill-proficiency',
-        label: '',
-        count: parseTrailingChoiceCount(phrase),
-        listed: skillNames.filter((name) => rawText.includes(name)),
-      };
-    }
-  }
-
-  if (text.includes('язык') && text.includes('выбор')) {
-    return {
-      id: featureId,
-      kind: 'language',
-      label: '',
-      count: parseChoiceCount(text),
-      listed: [],
-    };
-  }
-
-  return null;
 }
 
 /**
@@ -12543,18 +12428,16 @@ export function getTakenOptionValues(
 }
 
 /**
- * Выборы внутри умения класса: структурные из справочника, а если их там нет —
- * распознанные по прозе описания.
+ * Выборы внутри умения класса: только то, что записано в справочнике.
  *
- * Порядок источников — от точного к приблизительному. Механика умения знает и
- * вид выбора, и пул, и количество; отдельное поле выбора навыков знает только
- * навыки; проза не знает ничего и распознаётся по формулировкам. Первый
- * непустой источник и выигрывает: смешивать их нельзя, иначе умение со
- * структурой спросило бы то же самое дважды.
+ * Источников два, оба структурные: механика умения знает и вид выбора, и пул,
+ * и количество, а legacy-поле выбора навыков знает одни навыки. Первый
+ * непустой и выигрывает: смешивать их нельзя, иначе умение со структурой
+ * спросило бы то же самое дважды. Описание умения не разбирается вовсе —
+ * умение, у которого выбор не заведён в мастерской, ни о чём не спрашивает.
  *
  * @param featureId идентификатор умения (он же начало id выбора).
  * @param summary умение класса или подкласса.
- * @param skillNames имена всех навыков персонажа.
  * @param level уровень, на котором собирается строка; не задан — отбора нет.
  * @param chosenOptionKeys ключи выбранных вариантов умения: вопросы своей
  *   механики задаёт только взятый вариант. Не заданы — вопросов вариантов нет.
@@ -12563,7 +12446,6 @@ export function getTakenOptionValues(
 export function getClassFeatureChoices(
   featureId: string,
   summary: ClassFeatureSummary,
-  skillNames: string[],
   level?: number,
   chosenOptionKeys: ReadonlySet<string> = new Set<string>(),
 ): ClassChoice[] {
@@ -12576,27 +12458,21 @@ export function getClassFeatureChoices(
 
   const skillChoice = summary.skillChoice;
 
-  if (skillChoice) {
-    return [
-      {
-        id: featureId,
-        kind: 'skill-proficiency',
-        label: '',
-        count: skillChoice.count,
-        // Пустой пул в справочнике означает выбор из всех навыков: пустой
-        // `listed` резолвится всеми навыками листа в `resolveChoiceOptions`.
-        listed: skillChoice.skills,
-      },
-    ];
+  if (!skillChoice) {
+    return [];
   }
 
-  const detected = detectFeatureChoice(
-    featureId,
-    summary.description,
-    skillNames,
-  );
-
-  return detected ? [detected] : [];
+  return [
+    {
+      id: featureId,
+      kind: 'skill-proficiency',
+      label: '',
+      count: skillChoice.count,
+      // Пустой пул в справочнике означает выбор из всех навыков: пустой
+      // `listed` резолвится всеми навыками листа в `resolveChoiceOptions`.
+      listed: skillChoice.skills,
+    },
+  ];
 }
 
 /**
@@ -12612,21 +12488,18 @@ export function getClassFeatureChoices(
  *
  * @param featureId идентификатор умения на листе.
  * @param summary умение из ответа класса.
- * @param skillNames названия навыков листа.
  * @param level уровень, который берут сейчас.
  * @returns выборы этого уровня.
  */
 function getLevelFeatureChoices(
   featureId: string,
   summary: ClassFeatureSummary,
-  skillNames: string[],
   level: number,
   chosenOptionKeys?: ReadonlySet<string>,
 ): ClassChoice[] {
   return getClassFeatureChoices(
     featureId,
     summary,
-    skillNames,
     level,
     chosenOptionKeys,
   ).filter((choice) =>
@@ -13291,7 +13164,7 @@ export function toChoicePickerOptions(
 
 /**
  * Пояснение к выбору заклинания по фильтру пула: «Умение даёт заклинание
- * 6 круга из списка класса Колдун на выбор».
+ * 6 уровня из списка класса Колдун на выбор».
  *
  * @param choice выбор заклинания.
  * @returns пояснение.
@@ -13310,7 +13183,7 @@ function getSpellChoiceExplanation(choice: ClassChoice): string {
     suffix,
   } = SHEET_CHOICE_SPELL_EXPLANATION;
 
-  // Перечисленный пул: круг и класс у каждого заклинания свои, и говорить о
+  // Перечисленный пул: уровень и класс у каждого заклинания свои, и говорить о
   // них нечего — игрок выбирает из того, что записал автор
   if (choice.listedSpells?.length) {
     return `${prefix} ${spell} ${listedSuffix} ${suffix}`;

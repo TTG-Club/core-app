@@ -2,6 +2,7 @@
   import { ACTION_LABELS } from '~/shared/consts';
 
   import { useCharacterSheet } from '../../composables';
+  import { SHEET_NAME_MODAL_LABELS } from '../../model';
 
   const emit = defineEmits<{
     close: [];
@@ -24,12 +25,12 @@
 </script>
 
 <template>
-  <UModal title="Имя персонажа">
+  <UModal :title="SHEET_NAME_MODAL_LABELS.title">
     <template #body>
-      <UFormField label="Имя">
+      <UFormField :label="SHEET_NAME_MODAL_LABELS.field">
         <UInput
           v-model="draftName"
-          placeholder="Введите имя персонажа"
+          :placeholder="SHEET_NAME_MODAL_LABELS.placeholder"
           class="w-full"
         />
       </UFormField>

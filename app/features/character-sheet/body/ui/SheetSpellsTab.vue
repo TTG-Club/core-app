@@ -45,6 +45,7 @@
     SHEET_HEADER_STAT_CLASS,
     SHEET_ROLL_HINT_LABEL,
     SHEET_SPELL_ABILITY_LABELS,
+    SHEET_SPELL_ROW_LABELS,
     SHEET_STATIC_STAT_CLASS,
     SHEET_TAB_EMPTY_LABELS,
     SPELL_DAMAGE_ROLL_HINT_LABEL,
@@ -362,8 +363,8 @@
   );
 
   /**
-   * Чипы кругов, которые есть в списке: сам чип — номер круга, у заговоров
-   * вместо номера сокращение. Полную подпись («Заговоры», «3 круг»)
+   * Чипы уровней, которые есть в списке: сам чип — номер уровня, у заговоров
+   * вместо номера сокращение. Полную подпись («Заговоры», «Уровень 3»)
    * показывает подсказка по наведению.
    */
   const levelChips = computed(() =>
@@ -911,10 +912,10 @@
         </button>
       </UTooltip>
 
-      <!-- Круги — числами, как в каталоге заклинаний: подписью целиком
-        («Заговоры», «3 круг») ряд бы не поместился на узком листе, поэтому
-        она уходит в подсказку. Круги набираются по одному, повторное нажатие
-        снимает круг с отбора -->
+      <!-- Уровни — числами, как в каталоге заклинаний: подписью целиком
+        («Заговоры», «Уровень 3») ряд бы не поместился на узком листе, поэтому
+        она уходит в подсказку. Уровни набираются по одному, повторное нажатие
+        снимает уровень с отбора -->
       <template v-if="hasLevelChips">
         <UTooltip
           v-for="levelChip in levelChips"
@@ -1134,13 +1135,13 @@
                 variant="subtle"
                 class="relative z-10 shrink-0"
               >
-                Своё
+                {{ SHEET_SPELL_ROW_LABELS.custom }}
               </UBadge>
             </UTooltip>
 
             <UTooltip
               v-if="spell.concentration"
-              text="Концентрация"
+              :text="SHEET_SPELL_ROW_LABELS.concentration"
             >
               <UBadge
                 size="sm"
@@ -1148,13 +1149,13 @@
                 variant="subtle"
                 class="relative z-10 shrink-0"
               >
-                К
+                {{ SHEET_SPELL_ROW_LABELS.concentrationShort }}
               </UBadge>
             </UTooltip>
 
             <UTooltip
               v-if="spell.ritual"
-              text="Ритуал"
+              :text="SHEET_SPELL_ROW_LABELS.ritual"
             >
               <UBadge
                 size="sm"
@@ -1162,7 +1163,7 @@
                 variant="subtle"
                 class="relative z-10 shrink-0"
               >
-                Р
+                {{ SHEET_SPELL_ROW_LABELS.ritualShort }}
               </UBadge>
             </UTooltip>
 
@@ -1181,7 +1182,7 @@
                 square
                 class="relative z-10 shrink-0"
                 :class="editControlClass"
-                :aria-label="`Действия с заклинанием: ${spell.name}`"
+                :aria-label="`${SHEET_SPELL_ROW_LABELS.menuAria}: ${spell.name}`"
               />
             </UDropdownMenu>
 
@@ -1222,7 +1223,7 @@
               v-else-if="!spell.statRows.length"
               class="text-xs text-dimmed"
             >
-              Описание не заполнено
+              {{ SHEET_SPELL_ROW_LABELS.emptyDescription }}
             </span>
           </div>
         </div>

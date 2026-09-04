@@ -51,8 +51,8 @@ export const SPELL_EFFECT_LABELS = {
   attackBonus: 'Бонус к атаке',
   attackBonusHint:
     'Фиксированная прибавка сверх характеристики (напр. +1 от магии)',
-  scalingTargets: 'Доп. целей за круг',
-  scalingTargetsHint: 'На сколько растёт число целей за каждый круг выше',
+  scalingTargets: 'Доп. целей за уровень',
+  scalingTargetsHint: 'На сколько растёт число целей за каждый уровень выше',
   areaOfEffect: 'Область воздействия',
   areaValue1: 'Радиус/длина',
   areaValue2: 'Высота/ширина',
@@ -181,15 +181,15 @@ export const SPELL_USAGE_LABELS = {
 /** Подписи блока масштабирования заклинания. */
 export const SPELL_SCALING_LABELS = {
   title: 'Масштабирование',
-  hint: 'Усиление при трате ячейки выше круга заклинания.',
+  hint: 'Усиление при трате ячейки выше уровня заклинания.',
   cantripTitle: 'Масштабирование заговора',
   cantripHint:
     'Усиление с ростом уровня персонажа — ячейки заговоры не тратят.',
-  enable: 'Усиление на высших кругах',
-  additionalDice: 'Доп. урон за каждый круг',
+  enable: 'Усиление на высших уровнях',
+  additionalDice: 'Доп. урон за каждый уровень',
   additionalDicePlaceholder: '1к6',
   description: 'Описание усиления',
-  descriptionPlaceholder: 'Например: урон увеличивается на 1к6 за круг',
+  descriptionPlaceholder: 'Например: урон увеличивается на 1к6 за уровень',
   fallbackHint:
     'Не заполнено — потребитель разберёт текст «На более высоких уровнях», '
     + 'как разбирал раньше.',
@@ -236,7 +236,7 @@ export const SPELL_PROJECTILE_LABELS = {
   enable: 'Снаряды (отдельный бросок на каждый)',
   count: 'Базовое число снарядов',
   countPlaceholder: 'Число снарядов',
-  perSlotLevel: 'Доп. снарядов за круг выше базового',
+  perSlotLevel: 'Доп. снарядов за уровень выше базового',
   perSlotLevelPlaceholder: '0',
   distribution: 'Распределение по целям',
   tiersHint:

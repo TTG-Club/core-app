@@ -8,6 +8,7 @@ import type {
   CatalogSpellDetail,
   CharacterFeatureSpellList,
   CharacterInnateSpell,
+  CharacterSpeed,
   CharacterSpell,
   CharacterToolProficiency,
   ClassChoice,
@@ -44,7 +45,7 @@ import type {
   StartingEquipmentOption,
 } from './types';
 
-import { clamp, uniq } from 'es-toolkit';
+import { clamp, uniq, uniqBy } from 'es-toolkit';
 
 import { z } from '~/utils/zod';
 import { normalizeLoadedActiveEffects } from '~active-effects/model';
@@ -77,6 +78,8 @@ import {
   BACKGROUND_TOOL_CHOICE_LABEL,
   CANTRIP_SPELL_LEVEL,
   CLASS_OWN_GRANTS_KEY,
+  CLASS_SKILLS_CHOICE_ID,
+  CLASS_SKILLS_CHOICE_LABEL,
   CURRENCY_KEYS_BY_LABEL,
   DAMAGE_TYPE_NAMES,
   FEAT_SPELL_CLASS_CHOICE_KEY,
@@ -86,6 +89,7 @@ import {
   OPTION_CHOICE_ID_SEGMENT,
   SHEET_FEAT_CHOICE_LABELS,
   SHEET_FEAT_MODAL_LABELS,
+  SIZE_LABEL_BY_API_KEY,
   SKILL_NAME_BY_API_KEY,
   SPELL_COMPONENT_LABELS,
   STARTING_EQUIPMENT_DEFAULT_COIN_KEY,
@@ -135,6 +139,19 @@ const speciesSearchResponseSchema = z
   .catch([]);
 
 /**
+ * Владение категориями словаря с припиской свободным текстом: так справочник
+ * хранит броню и оружие класса. Приписка — единственное, что остаётся текстом
+ * («воинское оружие со свойством Фехтовальное»), категории приходят кодами.
+ */
+const proficiencyCategoriesSchema = z
+  .object({
+    category: z.array(z.string()).nullable().catch(null),
+    custom: z.string().nullable().catch(null),
+  })
+  .nullish()
+  .catch(null);
+
+/**
  * Владения, выдаваемые механикой записи справочника, — черты, вида, умения
  * класса. Схема одна на всех: блок в core-api общий, и вторая копия тех же
  * полей разошлась бы с первой.
@@ -145,7 +162,19 @@ const speciesSearchResponseSchema = z
 const mechanicsProficienciesSchema = z
   .object({
     weaponCategories: z.array(z.string()).nullable().catch(null),
+    // Виды оружия поимённо: класс выдаёт не только категории («Простое
+    // оружие»), но и отдельные виды — у монаха это короткие мечи.
+    weapons: z
+      .array(
+        z.object({
+          url: z.string().catch(''),
+          name: z.string().catch(''),
+        }),
+      )
+      .nullable()
+      .catch(null),
     armorCategories: z.array(z.string()).nullable().catch(null),
+    savingThrows: z.array(z.string()).nullable().catch(null),
     skills: z.array(z.string()).nullable().catch(null),
     languages: z.array(z.string()).nullable().catch(null),
     masteryProperties: z.array(z.string()).nullable().catch(null),
@@ -450,10 +479,39 @@ const speciesDetailSchema = z.object({
     .object({
       size: z.string().catch(''),
       speed: z.string().catch(''),
+      // Те же размер и скорость структурой; строки выше собраны из них же и
+      // остаются для показа. Ключей нет — бэкенд структуру ещё не отдаёт.
+      sizes: z
+        .array(
+          z.object({
+            type: z.string().catch(''),
+            from: z.coerce.number().nullish().catch(null),
+            to: z.coerce.number().nullish().catch(null),
+          }),
+        )
+        .nullish()
+        .catch(null),
+      movement: z
+        .object({
+          base: z.coerce.number().catch(0),
+          fly: z.coerce.number().nullish().catch(null),
+          climb: z.coerce.number().nullish().catch(null),
+          swim: z.coerce.number().nullish().catch(null),
+          hover: z.boolean().nullish().catch(null),
+        })
+        .nullish()
+        .catch(null),
       darkVision: z.coerce.number().nullish().catch(null),
       vision: z.coerce.number().nullish().catch(null),
     })
-    .catch({ size: '', speed: '', darkVision: null, vision: null }),
+    .catch({
+      size: '',
+      speed: '',
+      sizes: null,
+      movement: null,
+      darkVision: null,
+      vision: null,
+    }),
   features: z.array(speciesFeatureSchema).catch([]),
   innateSpells: z.array(speciesInnateSpellSchema).catch([]),
   mechanics: speciesMechanicsSchema,
@@ -463,6 +521,42 @@ const speciesDetailSchema = z.object({
 
 /** Ответ списка подвидов: массив детальных ответов. */
 const speciesLineagesResponseSchema = z.array(speciesDetailSchema).catch([]);
+
+/**
+ * Скорости вида из структуры справочника. Единица у справочника одна — футы;
+ * копание записи вида не знает вовсе.
+ *
+ * @param movement скорости записи числами; null — структуры в ответе нет.
+ * @returns скорости листа либо null.
+ */
+function toSpeciesSpeed(
+  movement:
+    | {
+        base: number;
+        fly?: number | null;
+        climb?: number | null;
+        swim?: number | null;
+        hover?: boolean | null;
+      }
+    | null
+    | undefined,
+): CharacterSpeed | null {
+  if (!movement) {
+    return null;
+  }
+
+  return {
+    values: {
+      walk: movement.base,
+      fly: movement.fly ?? 0,
+      climb: movement.climb ?? 0,
+      swim: movement.swim ?? 0,
+      burrow: 0,
+    },
+    hover: movement.hover ?? false,
+    unit: 'feet',
+  };
+}
 
 /**
  * Приведение детального ответа вида к полям, нужным листу персонажа.
@@ -511,6 +605,13 @@ function toSpeciesSummary(
     hasLineages: detail.hasLineages,
     sizeText: detail.properties.size,
     speedText: detail.properties.speed,
+    // Размеры и скорость структурой; пусто — мастер разбирает строки выше.
+    sizeOptions: (detail.properties.sizes ?? []).flatMap((size) => {
+      const label = SIZE_LABEL_BY_API_KEY[size.type];
+
+      return label ? [label] : [];
+    }),
+    speed: toSpeciesSpeed(detail.properties.movement),
     darkVision: detail.properties.darkVision ?? null,
     vision: detail.properties.vision ?? null,
     features,
@@ -770,6 +871,48 @@ type FeatProficienciesResponse = NonNullable<
 >;
 
 /**
+ * Категории доспехов справочника к записям владения листа («вся лёгкая броня»).
+ * Незнакомая категория отбрасывается: списки справочника и листа сошлись.
+ *
+ * @param categories категории доспехов из ответа.
+ * @returns названия групп владения.
+ */
+function toArmorGroupNames(categories: string[]): string[] {
+  return uniq(
+    categories.flatMap((category) => {
+      const key = ARMOR_GROUP_BY_API_CATEGORY[category];
+
+      const group = ARMOR_PROFICIENCY_GROUPS.find(
+        (candidate) => candidate.key === key,
+      );
+
+      return group ? [group.all] : [];
+    }),
+  );
+}
+
+/**
+ * Категории оружия справочника к записям владения листа («всё простое оружие»).
+ * Незнакомая категория отбрасывается по той же причине, что и у доспехов.
+ *
+ * @param categories категории оружия из ответа.
+ * @returns названия групп владения.
+ */
+function toWeaponGroupNames(categories: string[]): string[] {
+  return uniq(
+    categories.flatMap((category) => {
+      const key = WEAPON_GROUP_BY_API_CATEGORY[category];
+
+      const group = WEAPON_PROFICIENCY_GROUPS.find(
+        (candidate) => candidate.key === key,
+      );
+
+      return group ? [group.all] : [];
+    }),
+  );
+}
+
+/**
  * Перевод владений черты из справочника в записи листа: категории оружия и
  * доспехов становятся записями «вся группа» (одна на группу — обе половины
  * воинского оружия дают одну запись), инструменты — владениями со ссылкой на
@@ -782,29 +925,16 @@ type FeatProficienciesResponse = NonNullable<
 function toGrantedProficiencies(
   proficiencies: FeatProficienciesResponse,
 ): GrantedProficiencies | null {
-  const weapons = uniq(
-    (proficiencies.weaponCategories ?? []).flatMap((category) => {
-      const key = WEAPON_GROUP_BY_API_CATEGORY[category];
+  const weapons = uniq([
+    ...toWeaponGroupNames(proficiencies.weaponCategories ?? []),
+    // Вид оружия поимённо ложится в тот же список владений: лист держит их
+    // названиями, и группа с отдельным видом соседствуют там на равных.
+    ...(proficiencies.weapons ?? []).flatMap((weapon) =>
+      weapon.name ? [weapon.name] : [],
+    ),
+  ]);
 
-      const group = WEAPON_PROFICIENCY_GROUPS.find(
-        (candidate) => candidate.key === key,
-      );
-
-      return group ? [group.all] : [];
-    }),
-  );
-
-  const armor = uniq(
-    (proficiencies.armorCategories ?? []).flatMap((category) => {
-      const key = ARMOR_GROUP_BY_API_CATEGORY[category];
-
-      const group = ARMOR_PROFICIENCY_GROUPS.find(
-        (candidate) => candidate.key === key,
-      );
-
-      return group ? [group.all] : [];
-    }),
-  );
+  const armor = toArmorGroupNames(proficiencies.armorCategories ?? []);
 
   // Инструмент без названия показать нечем, а без ссылки — можно: у своих
   // инструментов её и не бывает.
@@ -842,6 +972,16 @@ function toGrantedProficiencies(
     }),
   );
 
+  // Незнакомая характеристика отбрасывается: спасбросков шесть, и чужое
+  // значение — опечатка в данных.
+  const savingThrows = uniq(
+    (proficiencies.savingThrows ?? []).flatMap((ability) => {
+      const key = parseApiAbilityKey(ability);
+
+      return key ? [key] : [];
+    }),
+  );
+
   if (
     !weapons.length
     && !armor.length
@@ -849,6 +989,7 @@ function toGrantedProficiencies(
     && !skills.length
     && !languages.length
     && !masteryProperties.length
+    && !savingThrows.length
   ) {
     return null;
   }
@@ -860,10 +1001,10 @@ function toGrantedProficiencies(
     languages,
     skills,
     masteryProperties,
+    savingThrows,
     // Компетентность без выбора черты не выдают: она приходит выбором игрока.
     expertiseSkills: [],
     weaponMasteries: [],
-    savingThrows: [],
   };
 }
 
@@ -2432,8 +2573,8 @@ const classFeatureSchema = z.object({
   isSubclass: z.boolean().catch(false),
   fightingStyleChoice: z.boolean().catch(false),
   abilityImprovement: z.boolean().catch(false),
-  // Структурный выбор владения навыками у самого умения. Заполнен не везде:
-  // где его нет, выбор по-прежнему распознаётся по прозе описания.
+  // Legacy-выбор владения навыками у самого умения: у новых записей то же
+  // самое лежит в дарах механики (`choices`).
   skillChoice: z
     .object({
       count: z.coerce.number().catch(1),
@@ -2853,18 +2994,43 @@ const classDetailSchema = z.object({
       weapon: z.string().catch(''),
       tool: z.string().catch(''),
       skill: z.string().catch(''),
+      // Те же владения структурой, как их хранит справочник: строки выше
+      // собраны из неё же и остаются для показа человеку. Ключей нет — отвечает
+      // бэкенд, который структуру ещё не отдаёт, и лист читает строки.
+      armorData: proficiencyCategoriesSchema,
+      weaponData: proficiencyCategoriesSchema,
+      skillData: z
+        .object({
+          count: z.coerce.number().catch(0),
+          skills: z.array(z.string()).nullable().catch(null),
+        })
+        .nullish()
+        .catch(null),
     })
-    .catch({ armor: '', weapon: '', tool: '', skill: '' }),
+    .catch({
+      armor: '',
+      weapon: '',
+      tool: '',
+      skill: '',
+      armorData: null,
+      weaponData: null,
+      skillData: null,
+    }),
+  // Спасброски характеристиками словаря; строка `savingThrows` — та же выдача
+  // для показа.
+  savingThrowAbilities: z.array(z.string()).nullish().catch(null),
   // Тип заклинательства класса; незнакомое значение приводится к null — ячеек
   // такому классу лист не даст.
   casterType: z.nativeEnum(CasterType).nullable().catch(null),
   table: z.array(classTableColumnSchema).catch([]),
   features: z.array(classFeatureSchema).catch([]),
-  // Дары самой записи класса: ресурсы (ярость и очки чародейства заводят у
-  // класса целиком), выборы игрока при взятии класса, выдача заклинаний и
-  // расширение списка — всё то же, что у умения, только источник другой.
+  // Дары самой записи класса: владения (броня, оружие, инструменты,
+  // спасброски, навыки), ресурсы (ярость и очки чародейства заводят у класса
+  // целиком), выборы игрока при взятии класса, выдача заклинаний и расширение
+  // списка — всё то же, что у умения, только источник другой.
   mechanics: z
     .object({
+      proficiencies: mechanicsProficienciesSchema,
       counters: mechanicsCountersSchema,
       choices: mechanicsChoicesSchema,
       spells: mechanicsSpellGrantSchema,
@@ -2981,6 +3147,13 @@ function toClassSummary(
     scaling: column.scaling,
   }));
 
+  const declaredProficiencies = mergeDeclaredProficiencies([
+    toClassDeclaredProficiencies(detail),
+    detail.mechanics?.proficiencies
+      ? toGrantedProficiencies(detail.mechanics.proficiencies)
+      : null,
+  ]);
+
   return {
     url: detail.url,
     name: detail.name.rus,
@@ -2989,9 +3162,21 @@ function toClassSummary(
     hitDie: detail.hitDice.maxValue,
     hitDieLabel: detail.hitDice.label,
     savingThrowsText: detail.savingThrows,
-    savingThrows: parseAbilityKeys(detail.savingThrows),
+    savingThrows: declaredProficiencies?.savingThrows.length
+      ? declaredProficiencies.savingThrows
+      : parseAbilityKeys(detail.savingThrows),
     primaryCharacteristics: detail.primaryCharacteristics,
     proficiencyText: detail.proficiency,
+    // Приписка к владению свободным текстом: категориями выразимо не всё
+    // («воинское оружие со свойством Фехтовальное»), и в справочнике она текст.
+    proficiencyCustom: {
+      armor: detail.proficiency.armorData?.custom ?? '',
+      weapon: detail.proficiency.weaponData?.custom ?? '',
+    },
+    // Владения, заявленные справочником: поля владений класса и дары механики
+    // самой записи. Ни того, ни другого нет — null, и мастер берёт прозу.
+    proficiencies: declaredProficiencies,
+    skillChoice: toClassSkillChoice(detail.proficiency.skillData),
     table,
     features,
     // Выборы самой записи класса: «Договор гримуара» задают у умения, а вот
@@ -3020,6 +3205,121 @@ function toClassSummary(
     counters: toMechanicCounters(detail.mechanics?.counters ?? []),
     startingEquipment: toStartingEquipmentOptions(detail.startingEquipment),
     activeEffects: normalizeLoadedActiveEffects(detail.activeEffects),
+  };
+}
+
+/**
+ * Складывает наборы владений записи класса в один: поля владений справочника и
+ * дары механики самой записи. Оба пусты — null, и мастер берёт прозу.
+ *
+ * @param sources наборы владений; null — источник ничего не заявил.
+ * @returns один набор владений либо null.
+ */
+function mergeDeclaredProficiencies(
+  sources: Array<GrantedProficiencies | null>,
+): GrantedProficiencies | null {
+  const filled = sources.filter((source): source is GrantedProficiencies =>
+    Boolean(source),
+  );
+
+  if (!filled.length) {
+    return null;
+  }
+
+  return {
+    armor: uniq(filled.flatMap((source) => source.armor)),
+    weapons: uniq(filled.flatMap((source) => source.weapons)),
+    tools: uniqBy(
+      filled.flatMap((source) => source.tools),
+      (tool) => tool.name,
+    ),
+    languages: uniq(filled.flatMap((source) => source.languages)),
+    skills: uniq(filled.flatMap((source) => source.skills)),
+    masteryProperties: uniq(
+      filled.flatMap((source) => source.masteryProperties),
+    ),
+    savingThrows: uniq(filled.flatMap((source) => source.savingThrows)),
+    expertiseSkills: uniq(filled.flatMap((source) => source.expertiseSkills)),
+    weaponMasteries: uniq(filled.flatMap((source) => source.weaponMasteries)),
+  };
+}
+
+/**
+ * Владения класса, заявленные справочником структурой: категории брони и оружия
+ * и спасброски. Инструменты и приписка свободным текстом сюда не идут — их
+ * справочник хранит строкой, и разбирает их мастер.
+ *
+ * @param detail разобранный детальный ответ класса.
+ * @returns набор владений; null — структуры в ответе нет (старый бэкенд).
+ */
+function toClassDeclaredProficiencies(
+  detail: z.infer<typeof classDetailSchema>,
+): GrantedProficiencies | null {
+  const armor = toArmorGroupNames(detail.proficiency.armorData?.category ?? []);
+
+  const weapons = toWeaponGroupNames(
+    detail.proficiency.weaponData?.category ?? [],
+  );
+
+  const savingThrows = uniq(
+    (detail.savingThrowAbilities ?? []).flatMap((ability) => {
+      const key = parseApiAbilityKey(ability);
+
+      return key ? [key] : [];
+    }),
+  );
+
+  if (!armor.length && !weapons.length && !savingThrows.length) {
+    return null;
+  }
+
+  return {
+    armor,
+    weapons,
+    savingThrows,
+    tools: [],
+    languages: [],
+    skills: [],
+    masteryProperties: [],
+    expertiseSkills: [],
+    weaponMasteries: [],
+  };
+}
+
+/**
+ * Выбор владения навыками, заявленный справочником: сколько навыков и из какого
+ * пула. Пул из всех восемнадцати означает «любые» — лист резолвит пустой список
+ * всеми навыками сам.
+ *
+ * @param skillData структурный выбор навыков из ответа.
+ * @returns выбор навыков; null — справочник его не задал.
+ */
+function toClassSkillChoice(
+  skillData: z.infer<typeof classDetailSchema>['proficiency']['skillData'],
+): ClassChoice | null {
+  if (!skillData || skillData.count <= 0) {
+    return null;
+  }
+
+  const listed = uniq(
+    (skillData.skills ?? []).flatMap((skill) => {
+      const name = SKILL_NAME_BY_API_KEY[skill];
+
+      return name ? [name] : [];
+    }),
+  );
+
+  // Пул из всех навыков справочника означает «любые»: лист резолвит пустой
+  // список всеми навыками сам, и перечислять их незачем.
+  const isEverySkill =
+    listed.length === Object.keys(SKILL_NAME_BY_API_KEY).length;
+
+  return {
+    id: CLASS_SKILLS_CHOICE_ID,
+    kind: 'skill-proficiency',
+    label: CLASS_SKILLS_CHOICE_LABEL,
+    count: skillData.count,
+    listed: isEverySkill ? [] : listed,
   };
 }
 
