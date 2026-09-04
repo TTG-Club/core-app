@@ -3,6 +3,7 @@ import type {
   CasterType,
   ClassResourceRecovery,
   FeatureOptionEntry,
+  FeatureOptionGrantedSpell,
 } from '~classes/model';
 import type { MagicItemBonuses } from '~magic-items/model';
 import type { MarkerNode, RenderNode, SimpleTextNode } from '~ui/markup';
@@ -1362,6 +1363,26 @@ export interface CharacterFeatureModifiers {
   initiativeProficiencyBonus?: boolean;
 }
 
+/**
+ * Расширение списка заклинаний от записи: заклинания, которые персонаж МОЖЕТ
+ * выучить или подготовить сверх списка своего класса, — заклинания домена
+ * жреца, таблица «Заклинания метки». Не знание: в книгу они попадают только
+ * руками игрока через окно добавления заклинаний.
+ */
+export interface CharacterFeatureSpellList {
+  /**
+   * Список открыт, только если у персонажа есть заклинательство: так написано у
+   * черт метки дракона. `false` — открыт всегда.
+   */
+  requiresSpellcasting: boolean;
+
+  /**
+   * Заклинания списка; `requiredLevel` — уровень персонажа, с которого запись
+   * открывается, без него — сразу.
+   */
+  spells: CharacterSpell[];
+}
+
 /** Особенность персонажа (из вида, подвида, класса или своя). */
 export interface CharacterFeature {
   id: string;
@@ -1430,6 +1451,13 @@ export interface CharacterFeature {
    * возвращает вручную, а снятие черты забирает заклинание вместе с записью.
    */
   spells?: CharacterSpell[] | null;
+
+  /**
+   * Расширение списка заклинаний от записи — снимок; null или нет поля — запись
+   * список не расширяет. Отдельно от `spells`: то знание, это доступность, и
+   * окно добавления заклинаний показывает эти записи рядом с классовыми.
+   */
+  spellList?: CharacterFeatureSpellList | null;
 
   /**
    * Ответы игрока на выборы черты по ключу выбора: «Посвящённый в магию» помнит
@@ -1587,11 +1615,11 @@ export interface FeatSummary {
    *
    * Отдельно от {@link FeatSummary.spells}, потому что это другая механика:
    * выданное заклинание черта держит готовым, а заклинание списка персонаж
-   * готовит сам — потому эти записи и приходят неподготовленными. Уровень
-   * доступа списка едет на каждой записи: список пополняется сам, когда
-   * персонаж дорастёт.
+   * лишь может выучить или подготовить. Уровень доступа списка едет на каждой
+   * записи: список пополняется сам, когда персонаж дорастёт. Null — черта
+   * список не расширяет.
    */
-  spellListSpells: CharacterSpell[] | null;
+  spellList: CharacterFeatureSpellList | null;
 
   /**
    * Характеристика заклинаний черты из `mechanics.spells.spellcastingAbility`;
@@ -2183,6 +2211,9 @@ export interface SpeciesFeatureSummary {
 
   /** Активные эффекты умения — снимок с записи справочника. */
   activeEffects: ActiveEffect[];
+
+  /** Расширение списка заклинаний умением; null — умение его не расширяет. */
+  spellList: CharacterFeatureSpellList | null;
 }
 
 /** Деталь вида или подвида из ответа API (нужные листу поля). */
@@ -2237,6 +2268,9 @@ export interface SpeciesSummary {
 
   /** Активные эффекты самой записи вида — снимок с записи справочника. */
   activeEffects: ActiveEffect[];
+
+  /** Расширение списка заклинаний самой записью; null — записи нечем расширять. */
+  spellList: CharacterFeatureSpellList | null;
 }
 
 /** Опция класса в списке визарда (аналог `SpeciesOption`). */
@@ -2353,6 +2387,14 @@ export interface ClassFeatureSummary {
   spellcastingAbility: AbilityKey | null;
 
   /**
+   * Расширение списка заклинаний из `spellListGroups` детали класса; null —
+   * умение список не расширяет. Заклинания домена и клятвы по правилам 2024
+   * выдаются готовыми ({@link ClassFeatureSummary.spells}), а сюда попадает то,
+   * что персонаж лишь может подготовить.
+   */
+  spellList: CharacterFeatureSpellList | null;
+
+  /**
    * Дары вариантов умения по ключу варианта: воззвание колдуна выдаёт
    * заклинание, манёвр — владение приёмом.
    *
@@ -2385,6 +2427,9 @@ export interface ClassFeatureOptionGrants {
 
   /** Характеристика заклинаний варианта; null — считаются от класса. */
   spellcastingAbility: AbilityKey | null;
+
+  /** Расширение списка заклинаний вариантом; null — вариант его не расширяет. */
+  spellList: CharacterFeatureSpellList | null;
 
   /** Активные эффекты варианта — снимок с записи справочника. */
   activeEffects: ActiveEffect[];
@@ -2642,6 +2687,13 @@ export interface ClassChoice {
   featCategories?: string[];
 
   /**
+   * Перечисленные заклинания — пул выбора, заданный записью, а не поиском по
+   * каталогу: «выберите одно из этих трёх». Круг и школа догружаются по url.
+   * Пусто — пул собирается поиском по `spellFilter`. Только для `kind: 'spell'`.
+   */
+  listedSpells?: Array<{ url: string; name: string }>;
+
+  /**
    * Уровень персонажа, с которого выбор открывается; null — сразу.
    *
    * По нему мастер повышения уровня спрашивает одно и то же умение дважды:
@@ -2722,6 +2774,9 @@ export type SheetChoiceOptionDetail =
       description: RenderNode;
       prerequisite?: RenderNode;
       additional?: RenderNode;
+
+      /** Заклинания, которые вариант выдаёт без выбора; пусто — не выдаёт. */
+      grantedSpells?: FeatureOptionGrantedSpell[];
     };
 
 /**

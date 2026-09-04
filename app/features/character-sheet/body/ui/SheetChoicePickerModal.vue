@@ -254,6 +254,7 @@
         additional: detail.additional ?? '',
         prerequisite: detail.prerequisite ?? '',
         requiredClassLevel: 0,
+        grantedSpells: detail.grantedSpells,
       },
     ];
   });

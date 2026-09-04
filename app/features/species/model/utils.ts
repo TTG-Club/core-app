@@ -18,6 +18,8 @@ export function getFeatureFilledBlocksCount(
     feature.editorRows?.grants.length ?? 0,
     feature.editorRows?.modifiers.length ?? 0,
     feature.editorRows?.counters.length ?? 0,
+    feature.editorRows?.spellChoice.picks.length ?? 0,
+    feature.mechanics?.spellList.groups.length ?? 0,
     feature.grantedSpells.length,
     feature.activeEffects.length,
   ].filter(Boolean).length;

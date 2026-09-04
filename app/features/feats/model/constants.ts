@@ -8,12 +8,10 @@ import type {
   FeatModifierRowSource,
   FeatPrerequisiteRowKind,
   FeatSpellLevelMode,
+  FeatSpellPickSource,
 } from './rows';
 
 import { range } from 'es-toolkit';
-
-// Перечисление приходит значением: по нему строятся карты подписей и формул
-import { ABILITY_KEYS, AbilityKey } from '~/shared/types';
 
 /** Значение селекта круга «любой круг»: круг фильтром не ограничен. */
 const FEAT_SPELL_ANY_LEVEL_VALUE = 'ANY';
@@ -604,36 +602,27 @@ export const FEAT_EDITOR_LABELS = {
 
   spellListTitle: 'Заклинания списка',
   spellListHint:
-    'Заклинания, которые персонаж берёт себе сам, — таблица «Заклинания метки».',
+    'Заклинания, которые черта добавляет в список класса персонажа, — таблица '
+    + '«Заклинания метки».',
   spellListLevel: 'С уровня',
   spellListLevelPlaceholder: 'сразу',
   spellListLevelHint:
     'Уровень персонажа, с которого открывается ЭТОТ список. Пусто — сразу при '
     + 'взятии черты. Одна пачка приходит с первого уровня, следующая с пятого — '
     + 'это два списка, а не один: иначе персонаж получил бы всю таблицу сразу.',
-  spellListCount: 'Сколько берут',
-  spellListCountValue: 'Штук',
-  spellListCountAbility: 'Характеристика',
-  spellListCountFormula: 'Формула',
-  spellListCountFormulaPlaceholder: '@level',
-  spellListCountHint:
-    'Сколько заклинаний из этого списка персонаж берёт себе. Числом — «два '
-    + 'заклинания»; бонусом мастерства или модификатором характеристики — если '
-    + 'по книге количество растёт вместе с персонажем. «Весь список» — берёт '
-    + 'все, ничего не выбирая. Формула та же, что у ресурсов и активных '
-    + 'эффектов: лист умеет её считать сам.',
   addSpellList: 'Добавить список',
   spellListFromLevelPrefix: 'с',
   spellListFromLevelSuffix: 'уровня',
   spellListFromStart: 'сразу',
   spellListHintDetails:
-    'Это НЕ выдача. Выданное заклинание персонаж знает и накладывает сразу; '
-    + 'заклинание отсюда он выбирает себе сам и тратит на него подготовку и '
-    + 'ячейку. Если свалить их в одну кучу, «Метка исцеления» выдаст девять '
-    + 'готовых заклинаний вместо двух. Каждый список открывается на своём '
-    + 'уровне и отдаёт своё количество — по ним лист персонажа и спросит игрока. '
-    + 'Круг заклинания указывать не надо: он берётся из самой записи и показан '
-    + 'бейджем, по нему же таблица на странице разбивается на круги.',
+    'Это НЕ выдача и НЕ выбор. Выданное заклинание персонаж знает и накладывает '
+    + 'сразу; заклинание отсюда он лишь может выучить или подготовить, как любое '
+    + 'из списка своего класса, — на листе оно появится в окне добавления '
+    + 'заклинаний рядом с классовыми. Если свалить их в одну кучу, «Метка '
+    + 'исцеления» выдаст всю таблицу готовыми заклинаниями. Каждый список '
+    + 'открывается на своём уровне и складывается с предыдущими. «Выберите N из '
+    + 'этих заклинаний» — не сюда, а в выбор заклинаний с перечисленным пулом. '
+    + 'Круг указывать не надо: он берётся из самой записи и показан бейджем.',
   spellListEmpty: 'Черта не расширяет список заклинаний.',
   spellListRequiresSpellcasting:
     'Нужно умение «Использование заклинаний» или «Магия договора»',
@@ -651,8 +640,10 @@ export const FEAT_EDITOR_LABELS = {
     'Так устроен «Посвящённый в магию»: из списка одного класса игрок берёт '
     + 'два заговора и одно заклинание первого круга. Список классов один на все '
     + 'строки: если классов несколько, лист персонажа сперва спросит класс, а '
-    + 'потом даст выбрать из его списка все строки сразу. Выбранное ложится в '
-    + 'книгу так же, как выданное чертой без выбора.',
+    + 'потом даст выбрать из его списка все строки сразу. Строка может вместо '
+    + 'круга и списков классов перечислять конкретные заклинания — тогда игрок '
+    + 'выбирает только из них. Выбранное ложится в книгу так же, как выданное '
+    + 'чертой без выбора.',
   spellChoicesEmpty: 'Игрок заклинания не выбирает.',
   addSpellChoice: 'Добавить заклинания',
   removeSpellChoice: 'Убрать строку выбора',
@@ -666,6 +657,16 @@ export const FEAT_EDITOR_LABELS = {
   spellChoiceCount: 'Сколько',
   spellChoiceLabel: 'Подпись для игрока',
   spellChoiceLabelPlaceholder: 'Например: Выберите два заговора',
+  spellChoiceSource: 'Откуда выбирают',
+  spellChoiceSourceHint:
+    '«По кругу и спискам классов» — пул собирается поиском по справочнику: все '
+    + 'заклинания названного круга из списков выбранных классов, и сам '
+    + 'пополняется с каталогом. «Из перечисленных заклинаний» — игрок выбирает '
+    + 'ровно из тех записей, что добавлены ниже; круг и класс у них свои.',
+  spellChoiceSourceFilter: 'По кругу и спискам классов',
+  spellChoiceSourceList: 'Из перечисленных заклинаний',
+  spellChoiceLevelFromRecord: 'по записям',
+  spellChoiceListSpells: 'Заклинания, из которых выбирают',
 
   spellcastingAbilityTitle: 'Заклинательная характеристика',
   spellcastingAbility: 'Из каких характеристик',
@@ -702,141 +703,13 @@ export function getFeatEditorLabels(
   return { ...FEAT_EDITOR_LABELS, ...overrides };
 }
 
-/**
- * Названия характеристик в родительном падеже: «модификатор Мудрости». В
- * справочнике характеристик они лежат в именительном, а склонять на лету
- * нечем — шесть подписей проще перечислить.
- */
-const ABILITY_GENITIVE_LABELS: Record<AbilityKey, string> = {
-  [AbilityKey.STRENGTH]: 'Силы',
-  [AbilityKey.DEXTERITY]: 'Ловкости',
-  [AbilityKey.CONSTITUTION]: 'Телосложения',
-  [AbilityKey.INTELLIGENCE]: 'Интеллекта',
-  [AbilityKey.WISDOM]: 'Мудрости',
-  [AbilityKey.CHARISMA]: 'Харизмы',
-};
-
-/**
- * Чем задано количество заклинаний, которые игрок берёт из списка.
- *
- * Хранится всё одной формулой ({@link FeatSpellListGroup.count}); вид нужен
- * только форме — по нему она решает, какое поле показать рядом с селектом.
- */
-export type FeatSpellCountKind =
-  | 'ALL'
-  | 'FIXED'
-  | 'PROFICIENCY_BONUS'
-  | 'ABILITY_MODIFIER'
-  | 'FORMULA';
-
-/** Формула бонуса мастерства — та же, что понимает лист персонажа. */
-export const FEAT_PROFICIENCY_BONUS_FORMULA = '@prof';
-
-/** Приставка формулы модификатора характеристики. */
-export const FEAT_ABILITY_MODIFIER_PREFIX = '@mod.';
-
-/**
- * Сокращения характеристик в формулах. Своя карта, а не `AbilityShortKey`:
- * там у Харизмы `chr`, а формулы листа и активных эффектов знают только `cha`.
- */
-export const FEAT_ABILITY_FORMULA_ABBREVIATIONS: Record<AbilityKey, string> = {
-  [AbilityKey.STRENGTH]: 'str',
-  [AbilityKey.DEXTERITY]: 'dex',
-  [AbilityKey.CONSTITUTION]: 'con',
-  [AbilityKey.INTELLIGENCE]: 'int',
-  [AbilityKey.WISDOM]: 'wis',
-  [AbilityKey.CHARISMA]: 'cha',
-};
-
-/** Виды количества как варианты селекта. */
-export const FEAT_SPELL_COUNT_KIND_OPTIONS: Array<
-  SelectOption & { value: FeatSpellCountKind }
+/** Откуда строка выбора заклинаний берёт пул — варианты селекта. */
+export const FEAT_SPELL_PICK_SOURCE_OPTIONS: Array<
+  SelectOption & { value: FeatSpellPickSource }
 > = [
-  { value: 'ALL', label: 'Весь список' },
-  { value: 'FIXED', label: 'Число' },
-  { value: 'PROFICIENCY_BONUS', label: 'Бонус мастерства' },
-  { value: 'ABILITY_MODIFIER', label: 'Модификатор характеристики' },
-  { value: 'FORMULA', label: 'Своя формула' },
+  { value: 'FILTER', label: FEAT_EDITOR_LABELS.spellChoiceSourceFilter },
+  { value: 'LIST', label: FEAT_EDITOR_LABELS.spellChoiceSourceList },
 ];
-
-/**
- * Вид количества по записанной формуле.
- *
- * @param count формула количества; пусто — весь список.
- * @returns вид, под который форма подберёт поле.
- */
-export function getFeatSpellCountKind(count: string): FeatSpellCountKind {
-  const trimmed = count.trim();
-
-  if (!trimmed) {
-    return 'ALL';
-  }
-
-  if (trimmed === FEAT_PROFICIENCY_BONUS_FORMULA) {
-    return 'PROFICIENCY_BONUS';
-  }
-
-  if (trimmed.startsWith(FEAT_ABILITY_MODIFIER_PREFIX)) {
-    return 'ABILITY_MODIFIER';
-  }
-
-  // Незнакомую формулу правят как текст: подставив вместо неё число, форма
-  // потеряла бы то, что автор написал руками
-  return /^\d+$/.test(trimmed) ? 'FIXED' : 'FORMULA';
-}
-
-/**
- * Характеристика, чей модификатор задаёт количество.
- *
- * @param count формула количества.
- * @returns характеристика; `undefined` — формула не про модификатор.
- */
-export function getFeatSpellCountAbility(
-  count: string,
-): AbilityKey | undefined {
-  const abbreviation = count.trim().slice(FEAT_ABILITY_MODIFIER_PREFIX.length);
-
-  return ABILITY_KEYS.find(
-    (key) => FEAT_ABILITY_FORMULA_ABBREVIATIONS[key] === abbreviation,
-  );
-}
-
-/** Подписи количества для сводки и страницы черты. */
-const FEAT_SPELL_COUNT_TEXT = {
-  all: 'весь список',
-  prefix: 'выберите',
-  proficiencyBonus: 'столько, каков бонус мастерства',
-  abilityModifierPrefix: 'столько, каков модификатор',
-} as const;
-
-/**
- * Количество заклинаний словами: «выберите 2», «выберите столько, каков бонус
- * мастерства».
- *
- * @param count формула количества; пусто — весь список.
- * @returns подпись количества.
- */
-export function getFeatSpellCountLabel(count: string): string {
-  const kind = getFeatSpellCountKind(count);
-
-  if (kind === 'ALL') {
-    return FEAT_SPELL_COUNT_TEXT.all;
-  }
-
-  if (kind === 'PROFICIENCY_BONUS') {
-    return `${FEAT_SPELL_COUNT_TEXT.prefix} ${FEAT_SPELL_COUNT_TEXT.proficiencyBonus}`;
-  }
-
-  if (kind === 'ABILITY_MODIFIER') {
-    const ability = getFeatSpellCountAbility(count);
-
-    return ability
-      ? `${FEAT_SPELL_COUNT_TEXT.prefix} ${FEAT_SPELL_COUNT_TEXT.abilityModifierPrefix} ${ABILITY_GENITIVE_LABELS[ability]}`
-      : `${FEAT_SPELL_COUNT_TEXT.prefix} ${count.trim()}`;
-  }
-
-  return `${FEAT_SPELL_COUNT_TEXT.prefix} ${count.trim()}`;
-}
 
 /** Подпись заговора: круга у него нет. */
 const FEAT_CANTRIP_LABEL = 'Заговор';

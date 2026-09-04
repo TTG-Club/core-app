@@ -10,5 +10,4 @@ export { default as FeatRowsSection } from './FeatRowsSection.vue';
 export { default as FeatRowsSeparator } from './FeatRowsSeparator.vue';
 export { default as FeatSpellcastingAbility } from './FeatSpellcastingAbility.vue';
 export { default as FeatSpellChoices } from './FeatSpellChoices.vue';
-export { default as FeatSpellCountField } from './FeatSpellCountField.vue';
 export { default as FeatSpellListSpells } from './FeatSpellListSpells.vue';

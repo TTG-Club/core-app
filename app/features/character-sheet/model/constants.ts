@@ -5158,7 +5158,17 @@ export const SHEET_CHOICE_PICKER_LABELS = {
   detailError: 'Не удалось загрузить описание',
   detailOpen: 'Открыть полное описание',
   abilityMaxed: 'на пределе',
+  grantedSpells: 'Даёт заклинания',
 } as const;
+
+/** Подписи окна добавления заклинаний в книгу. */
+export const SHEET_SPELL_ADD_LABELS = {
+  /** Группа заклинаний, доступных сверх списка класса: от умений, черт, вида. */
+  expandedGroup: 'Доступны от умений и черт',
+} as const;
+
+/** Служебный круг группы «доступны от умений и черт»: у настоящих кругов ≥ 0. */
+export const SHEET_SPELL_ADD_EXPANDED_GROUP_LEVEL = -1;
 
 /**
  * Пояснения к выбору по его виду: почему игрок здесь и сейчас что-то выбирает.
@@ -5198,6 +5208,7 @@ export const SHEET_CHOICE_SPELL_EXPLANATION = {
   maxLevelPrefix: 'не выше',
   levelSuffix: 'круга',
   classPrefix: 'из списка класса',
+  listedSuffix: 'из перечисленных в записи',
   suffix: 'на выбор',
 } as const;
 

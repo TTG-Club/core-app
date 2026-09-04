@@ -16,6 +16,7 @@
   import {
     CLASSES_DETAIL_BASE_PATH,
     FEATS_DETAIL_BASE_PATH,
+    getSpellLevelLabel,
     ITEMS_DETAIL_BASE_PATH,
     SHEET_CHOICE_PICKER_LABELS,
     SPELLS_DETAIL_BASE_PATH,
@@ -45,6 +46,14 @@
 
   const markupDetail = computed(() =>
     detail.value?.kind === 'markup' ? detail.value : null,
+  );
+
+  /** Заклинания, которые вариант выдаёт без выбора, с подписью круга. */
+  const grantedSpells = computed(() =>
+    (markupDetail.value?.grantedSpells ?? []).map((spell) => ({
+      ...spell,
+      levelLabel: getSpellLevelLabel(spell.level),
+    })),
   );
 
   const catalogDetail = computed(() =>
@@ -215,6 +224,35 @@
       </p>
 
       <template v-else-if="markupDetail">
+        <!-- Дары варианта — до описания: «Договор цепи» выдаёт «Поиск
+          фамильяра», и это игроку важнее прозы правил -->
+        <div
+          v-if="grantedSpells.length"
+          class="flex flex-col gap-1.5 rounded-md border border-default bg-elevated/40 p-2.5"
+        >
+          <span class="text-xs font-medium text-muted">
+            {{ SHEET_CHOICE_PICKER_LABELS.grantedSpells }}
+          </span>
+
+          <ul class="flex flex-col gap-1">
+            <li
+              v-for="spell in grantedSpells"
+              :key="spell.url"
+              class="flex items-center gap-2 text-sm text-highlighted"
+            >
+              <UBadge
+                size="sm"
+                color="neutral"
+                variant="subtle"
+              >
+                {{ spell.levelLabel }}
+              </UBadge>
+
+              <span>{{ spell.name }}</span>
+            </li>
+          </ul>
+        </div>
+
         <div
           v-if="markupDetail.prerequisite"
           class="border-l-2 border-default pl-3 text-sm text-muted"

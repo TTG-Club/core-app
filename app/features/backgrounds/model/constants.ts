@@ -71,5 +71,6 @@ export const BACKGROUND_GRANTS_TAB_LABELS = {
     + 'черты: языки, защиты, чувства и выборы игрока.',
   grantedSpellsTitle: 'Выдаваемые заклинания',
   spellChoicesTitle: 'Выбор заклинаний игроком',
+  spellListTitle: 'Расширение списка заклинаний',
   spellcastingAbilityTitle: 'Заклинательная характеристика',
 } as const;

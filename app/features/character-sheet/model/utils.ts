@@ -29,6 +29,7 @@ import type {
   CharacterExtraHitDie,
   CharacterFeature,
   CharacterFeatureModifiers,
+  CharacterFeatureSpellList,
   CharacterHealth,
   CharacterHitDie,
   CharacterInventoryGroup,
@@ -6962,6 +6963,39 @@ function getFeatureSpells(features: CharacterFeature[]): CharacterSpell[] {
 }
 
 /**
+ * Заклинания, доступные персонажу сверх списка его класса: расширения списка
+ * от умений класса, вариантов, черт, вида и предыстории, уже открытые по
+ * уровню. Персонаж их не знает — окно добавления заклинаний показывает их
+ * рядом с классовыми, и в книгу они попадают руками игрока.
+ *
+ * Список с отметкой «нужно заклинательство» открыт, только когда персонажу
+ * доступен хотя бы один круг заклинаний: так написано у черт метки дракона.
+ * Одно и то же заклинание из двух записей идёт один раз.
+ *
+ * @param character персонаж листа.
+ * @returns заклинания расширенного списка.
+ */
+export function getExpandedSpellListSpells(
+  character: Character,
+): CharacterSpell[] {
+  const hasSpellcasting = getAvailableSpellLevels(character).length > 0;
+
+  const spells = character.features.flatMap((feature) => {
+    const spellList = feature.spellList;
+
+    if (!spellList || (spellList.requiresSpellcasting && !hasSpellcasting)) {
+      return [];
+    }
+
+    return spellList.spells.filter(
+      (spell) => !spell.requiredLevel || spell.requiredLevel <= character.level,
+    );
+  });
+
+  return uniqBy(spells, (spell) => spell.url);
+}
+
+/**
  * Ищет заклинание в записях особенностей: по нему правка выбирает, куда писать
  * — в вид или в запись черты.
  *
@@ -8622,6 +8656,9 @@ export function buildCharacterFeatures(
         activeEffects: feature.activeEffects.length
           ? [...feature.activeEffects]
           : undefined,
+        // Список открывается не раньше самого умения: «с 3 уровня» у умения
+        // относится и к его заклинаниям
+        spellList: withSpellListMinimumLevel(feature.spellList, feature.level),
         ...withSpeciesMechanicsSnapshot(
           isUnlocked ? feature.modifiers : null,
           isUnlocked ? feature.counters : [],
@@ -8677,6 +8714,7 @@ function buildSpeciesOwnEffectFeature(
     summary.activeEffects.length === 0
     && !summary.modifiers
     && summary.counters.length === 0
+    && !summary.spellList
   ) {
     return [];
   }
@@ -8694,9 +8732,39 @@ function buildSpeciesOwnEffectFeature(
       activeEffects: summary.activeEffects.length
         ? [...summary.activeEffects]
         : undefined,
+      spellList: summary.spellList ?? undefined,
       ...withSpeciesMechanicsSnapshot(summary.modifiers, summary.counters),
     },
   ];
+}
+
+/**
+ * Расширение списка с нижней границей уровня: заклинание без своего уровня
+ * открывается вместе с умением, а не раньше него.
+ *
+ * @param spellList расширение списка умения; null — его нет.
+ * @param featureLevel уровень, с которого действует умение; null — с первого.
+ * @returns снимок расширения; undefined — записывать нечего.
+ */
+function withSpellListMinimumLevel(
+  spellList: CharacterFeatureSpellList | null,
+  featureLevel: number | null,
+): CharacterFeatureSpellList | undefined {
+  if (!spellList) {
+    return undefined;
+  }
+
+  if (!featureLevel || featureLevel <= 1) {
+    return spellList;
+  }
+
+  return {
+    ...spellList,
+    spells: spellList.spells.map((spell) => ({
+      ...spell,
+      requiredLevel: Math.max(spell.requiredLevel ?? 1, featureLevel),
+    })),
+  };
 }
 
 /**
@@ -8787,18 +8855,12 @@ export function buildFeatFeature(
   // на листе само по себе, и искать по нему черту, чтобы посчитать его атаку,
   // лист не должен.
   //
-  // Выбранные игроком заклинания и заклинания списка лежат там же, где
-  // выдаваемые чертой: все они приходят от одной черты, ею же названной
-  // характеристикой и считаются.
+  // Выбранные игроком заклинания лежат там же, где выдаваемые чертой: все они
+  // приходят от одной черты, ею же названной характеристикой и считаются.
+  // Расширение списка сюда не идёт: это доступность, а не знание — оно лежит
+  // отдельным снимком и показывается в окне добавления заклинаний.
   const featureSpells = uniqBy(
-    [
-      ...(summary.spells ?? []),
-      ...spells,
-      // Заклинания списка идут последними: то же заклинание, выданное чертой,
-      // остаётся выданным — оно готово всегда, а из списка его пришлось бы
-      // готовить.
-      ...(summary.spellListSpells ?? []),
-    ].map((spell) =>
+    [...(summary.spells ?? []), ...spells].map((spell) =>
       spellcastingAbility ? { ...spell, spellcastingAbility } : spell,
     ),
     (spell) => spell.url,
@@ -8830,6 +8892,8 @@ export function buildFeatFeature(
     // Копия списка: подготовку игрок снимает прямо в записи, и делить её с
     // деталью справочника, из которой собрана черта, нельзя.
     spells: featureSpells.length ? featureSpells : null,
+    // Снимок расширения списка; черта без него пишется без поля
+    spellList: summary.spellList ?? undefined,
     // Пустой набор не пишется: у черты без выборов запись остаётся такой же,
     // какой была до их появления.
     choiceAnswers: Object.keys(choiceAnswers).length
@@ -10967,6 +11031,7 @@ function toCharacterFeature(
     // класса забирает ровно выданное — так же, как у черты
     proficiencies: withChosenProficiencies(summary.proficiencies, chosen),
     spells: featureSpells.length ? featureSpells : null,
+    spellList: summary.spellList ?? undefined,
     counters: summary.counters.length ? [...summary.counters] : undefined,
     choiceAnswers: Object.keys(choiceAnswers).length
       ? choiceAnswers
@@ -11164,6 +11229,7 @@ function buildFeatureOptionFeatures(
       activeEffects: activeEffects.length ? [...activeEffects] : undefined,
       proficiencies: grants?.proficiencies ?? null,
       spells: spells.length ? spells : null,
+      spellList: grants?.spellList ?? undefined,
       counters: grants?.counters.length ? [...grants.counters] : undefined,
     };
   });
@@ -12744,6 +12810,23 @@ export function getChoiceRequiredCount(
 }
 
 /**
+ * Пул заклинаний без одноимённых записей: остаётся первая по порядку пула.
+ *
+ * Ответ выбора заклинания хранится названием, а не url, поэтому две записи
+ * каталога с одним названием (`friends` и `friends-phb` на деве) отмечались бы
+ * в пикере вместе и обе ложились бы на лист. Вторую запись выбрать всё равно
+ * нельзя — по названию она от первой неотличима.
+ *
+ * @param pool заклинания пула из поиска по каталогу.
+ * @returns пул без повторов названий.
+ */
+export function uniqueSpellsByName(
+  pool: SpellCatalogItem[],
+): SpellCatalogItem[] {
+  return uniqBy(pool, (spell) => spell.name);
+}
+
+/**
  * Варианты пикера из пула заклинаний: по кругам, внутри круга по алфавиту.
  * Значение — название: так ответы выбора заклинания хранились и до пикера.
  *
@@ -12902,6 +12985,7 @@ function getChoicePickerOptionExtras(
         description: entry.description,
         prerequisite: entry.prerequisite,
         additional: entry.additional,
+        grantedSpells: entry.grantedSpells,
       },
     };
   }
@@ -12966,8 +13050,15 @@ function getSpellChoiceExplanation(choice: ClassChoice): string {
     maxLevelPrefix,
     levelSuffix,
     classPrefix,
+    listedSuffix,
     suffix,
   } = SHEET_CHOICE_SPELL_EXPLANATION;
+
+  // Перечисленный пул: круг и класс у каждого заклинания свои, и говорить о
+  // них нечего — игрок выбирает из того, что записал автор
+  if (choice.listedSpells?.length) {
+    return `${prefix} ${spell} ${listedSuffix} ${suffix}`;
+  }
 
   const subject = (() => {
     if (!filter) {

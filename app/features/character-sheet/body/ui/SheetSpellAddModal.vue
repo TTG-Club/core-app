@@ -9,10 +9,13 @@
 
   import { useCharacterSheet, useSpellCatalogSearch } from '../../composables';
   import {
+    getExpandedSpellListSpells,
     getFilterChipClass,
     getSpellCatalogPreset,
     getSpellGroupLabel,
     isCustomSpell,
+    SHEET_SPELL_ADD_EXPANDED_GROUP_LEVEL,
+    SHEET_SPELL_ADD_LABELS,
     SPELL_CATALOG_LOAD_MORE_DISTANCE,
     SPELL_LEVELS,
   } from '../../model';
@@ -180,11 +183,61 @@
     spells: Array<SpellCatalogItem & { isSelected: boolean; rowClass: string }>;
   }
 
+  /**
+   * Заклинания, доступные сверх списка класса, — расширения от умений, черт и
+   * вида. Персонаж их не знает, но выучить или подготовить может, поэтому они
+   * идут отдельной группой над каталогом. Поиск и выбранные круги их сужают
+   * так же, как каталог; класс — нет: смысл расширения именно в том, что оно
+   * не из списка класса. Уже показанное каталогом второй раз не идёт.
+   */
+  const expandedGroup = computed<SpellCatalogGroup | null>(() => {
+    const catalogUrls = new Set(spells.value.map((spell) => spell.url));
+    const search = searchTerm.value.trim().toLocaleLowerCase();
+
+    const rows = getExpandedSpellListSpells(character.value)
+      .filter((spell) => !catalogUrls.has(spell.url))
+      .filter(
+        (spell) =>
+          !selectedLevels.value.size || selectedLevels.value.has(spell.level),
+      )
+      .filter(
+        (spell) => !search || spell.name.toLocaleLowerCase().includes(search),
+      )
+      .map((spell) => {
+        const isSelected = draftSpells.value.has(spell.url);
+
+        return {
+          ...spell,
+          concentration: spell.concentration ?? false,
+          ritual: spell.ritual ?? false,
+          isSelected,
+          rowClass: isSelected ? 'bg-elevated' : '',
+        };
+      })
+      .sort(
+        (left, right) =>
+          left.level - right.level || left.name.localeCompare(right.name, 'ru'),
+      );
+
+    return rows.length
+      ? {
+          level: SHEET_SPELL_ADD_EXPANDED_GROUP_LEVEL,
+          label: SHEET_SPELL_ADD_LABELS.expandedGroup,
+          spells: rows,
+        }
+      : null;
+  });
+
   // Сервер отдаёт заклинания в порядке групп кругов (grouping=LEVEL),
   // поэтому пересортировка не нужна; Map сливает заклинания одного круга
-  // из соседних страниц в единственную группу.
+  // из соседних страниц в единственную группу. Расширенный список — первой
+  // группой: он про этого персонажа, а не про каталог целиком.
   const displayGroups = computed(() => {
     const groupsByLevel = new Map<number, SpellCatalogGroup>();
+
+    if (expandedGroup.value) {
+      groupsByLevel.set(expandedGroup.value.level, expandedGroup.value);
+    }
 
     for (const spell of spells.value) {
       const isSelected = draftSpells.value.has(spell.url);

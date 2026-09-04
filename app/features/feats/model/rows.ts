@@ -242,6 +242,12 @@ export interface FeatPrerequisiteRow {
 export type FeatSpellLevelMode = 'ANY' | 'EXACT' | 'UP_TO';
 
 /**
+ * Откуда порция берёт пул: `FILTER` — поиском по справочнику по кругу и спискам
+ * классов блока, `LIST` — ровно из перечисленных заклинаний.
+ */
+export type FeatSpellPickSource = 'FILTER' | 'LIST';
+
+/**
  * Порция заклинаний, которую игрок берёт: «два заговора», «одно заклинание
  * первого круга».
  *
@@ -263,6 +269,24 @@ export interface FeatSpellPickRow {
   count: number | undefined;
   countEqualsProficiencyBonus: boolean;
   label: string;
+
+  /**
+   * Уровень персонажа, с которого спрашивают порцию; не задан — сразу при
+   * взятии записи. Нужен умению, которое спрашивает порции на разных уровнях:
+   * «Таинственный арканум» колдуна даёт заклинание 6 круга на 11 уровне,
+   * 7 круга — на 13, и без уровня лист задал бы все вопросы разом.
+   */
+  requiredLevel: number | undefined;
+
+  /**
+   * Откуда пул. «Таинственный арканум» ищет по кругу и списку колдуна; умение
+   * «выберите одно из этих трёх заклинаний» перечисляет их — круг и списки
+   * классов у такой порции не спрашиваются, они у каждой записи свои.
+   */
+  source: FeatSpellPickSource;
+
+  /** Перечисленные заклинания — пул порции при `source: 'LIST'`; иначе пусто. */
+  spells: Array<FeatEntityRef>;
 }
 
 /**
@@ -682,6 +706,9 @@ export function createSpellPickRow(takenKeys: Array<string>): FeatSpellPickRow {
     count: 1,
     countEqualsProficiencyBonus: false,
     label: '',
+    requiredLevel: undefined,
+    source: 'FILTER',
+    spells: [],
   };
 }
 
@@ -903,6 +930,15 @@ function toSpellPickRow(choice: FeatChoice): FeatSpellPickRow {
     mode = 'UP_TO';
   }
 
+  // Перечисленные заклинания лежат в наборе значений выбора: значение — url
+  // записи, имя — снимок названия из редактора
+  const spells = choice.options
+    .filter((option) => !!option.value.trim())
+    .map((option) => ({
+      url: option.value.trim(),
+      ...(option.name ? { name: option.name } : {}),
+    }));
+
   return {
     uid: nextRowUid('spell-pick'),
     key: choice.key,
@@ -911,6 +947,9 @@ function toSpellPickRow(choice: FeatChoice): FeatSpellPickRow {
     count: choice.count,
     countEqualsProficiencyBonus: choice.countEqualsProficiencyBonus,
     label: choice.label,
+    requiredLevel: choice.requiredLevel,
+    source: spells.length ? 'LIST' : 'FILTER',
+    spells,
   };
 }
 
@@ -1511,10 +1550,13 @@ function toSpellChoices(
     return free;
   };
 
-  // Класс спрашивается только ради заклинаний: без единой строки выбора он
-  // ничего не сужает, и игроку пришлось бы отвечать впустую
+  // Класс спрашивается только ради заклинаний, которые ищут по его списку: без
+  // единой такой строки он ничего не сужает, и игроку пришлось бы отвечать
+  // впустую. Порции с перечисленными заклинаниями списка класса не читают
+  const hasFilterPicks = block.picks.some((pick) => pick.source === 'FILTER');
+
   const classChoiceKey =
-    classes.length > 1 && block.picks.length
+    classes.length > 1 && hasFilterPicks
       ? takeKey(block.classChoiceKey, SPELL_LIST_CHOICE_KEY)
       : '';
 
@@ -1534,24 +1576,43 @@ function toSpellChoices(
   }
 
   for (const pick of block.picks) {
-    const isCantrip = pick.mode === 'EXACT' && pick.level === CANTRIP_LEVEL;
+    const isList = pick.source === 'LIST';
+
+    // У перечисленных заклинаний круг свой у каждой записи, поэтому порция
+    // пишется общим типом SPELL, даже если в ней одни заговоры
+    const isCantrip =
+      !isList && pick.mode === 'EXACT' && pick.level === CANTRIP_LEVEL;
 
     const key = takeKey(
       pick.key,
       isCantrip ? CANTRIP_PICK_KEY_PREFIX : SPELL_PICK_KEY_PREFIX,
     );
 
+    // Перечисленные заклинания — набором значений выбора, как черты у выбора
+    // черты: значение — url, имя — снимок названия для подписи
+    const listed = pick.spells
+      .filter((spell) => !!spell.url.trim())
+      .map((spell) => ({
+        value: spell.url.trim(),
+        ...(spell.name ? { name: spell.name } : {}),
+      }));
+
     choices.push({
       ...createEmptyChoice(key, isCantrip ? 'CANTRIP' : 'SPELL'),
       label: pick.label.trim(),
       count: pick.count,
       countEqualsProficiencyBonus: pick.countEqualsProficiencyBonus,
-      spellFilter: {
-        level: pick.mode === 'EXACT' ? pick.level : undefined,
-        maxLevel: pick.mode === 'UP_TO' ? pick.level : undefined,
-        classes,
-        classesFromChoiceKey: classChoiceKey,
-      },
+      requiredLevel: pick.requiredLevel,
+      options: isList ? listed : [],
+      // Фильтра у перечисленного пула нет: круг и класс берутся из записей
+      spellFilter: isList
+        ? undefined
+        : {
+            level: pick.mode === 'EXACT' ? pick.level : undefined,
+            maxLevel: pick.mode === 'UP_TO' ? pick.level : undefined,
+            classes,
+            classesFromChoiceKey: classChoiceKey,
+          },
     });
   }
 

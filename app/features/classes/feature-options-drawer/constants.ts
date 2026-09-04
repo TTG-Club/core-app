@@ -8,4 +8,7 @@ export const FEATURE_OPTIONS_LABELS = {
   selected: 'Выбрано',
   clearSearch: 'Очистить поиск',
   repeatable: 'Можно взять повторно',
+  grantedSpells: 'Даёт заклинания',
+  cantrip: 'заговор',
+  spellLevelSuffix: 'круг',
 } as const;

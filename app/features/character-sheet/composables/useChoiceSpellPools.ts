@@ -7,7 +7,11 @@ import type {
   SpellCatalogItem,
 } from '../model';
 
-import { fetchChoiceSpells, getChoiceSpellClassUrls } from '../model';
+import {
+  fetchChoiceSpells,
+  fetchSpellsByUrls,
+  getChoiceSpellClassUrls,
+} from '../model';
 
 /**
  * Запись, чьи выборы спрашивают заклинания: черта, дары предыстории, умение
@@ -78,6 +82,18 @@ function getSpellChoices(source: ChoiceSpellSource): ClassChoice[] {
 }
 
 /**
+ * Есть ли у выбора, откуда собрать пул: фильтр для поиска по каталогу либо
+ * перечисленные записью заклинания. Без того и другого запрашивать нечего, и
+ * пул считается готовым пустым.
+ *
+ * @param choice выбор заклинания.
+ * @returns `true` — пул есть откуда взять.
+ */
+function hasPoolSource(choice: ClassChoice): boolean {
+  return Boolean(choice.spellFilter) || Boolean(choice.listedSpells?.length);
+}
+
+/**
  * Ответы игрока на выборы списка класса: по ним собираются пулы, и их смена
  * пулы перезапрашивает.
  *
@@ -140,13 +156,41 @@ export function useChoiceSpellPools(
     return getChoiceSpellClassUrls(choice, source.choices, answers.value);
   }
 
-  /** Выборы заклинаний с фильтром пула: только у них есть что запрашивать. */
+  /**
+   * Выборы заклинаний, чей пул есть откуда взять: поиском по фильтру либо по
+   * перечисленным в записи url.
+   */
   function getPoolRequests(): PoolRequest[] {
     return toValue(sources).flatMap((source) =>
       getSpellChoices(source).flatMap((choice) =>
-        choice.spellFilter ? [{ source, choice }] : [],
+        hasPoolSource(choice) ? [{ source, choice }] : [],
       ),
     );
+  }
+
+  /**
+   * Заклинания пула выбора: перечисленный записью — по её url, остальные —
+   * поиском по каталогу.
+   *
+   * @param request выбор и его запись.
+   * @returns заклинания пула; null — запрос не удался, пусто — брать неоткуда.
+   */
+  function fetchPoolSpells(
+    request: PoolRequest,
+  ): Promise<SpellCatalogItem[] | null> {
+    const { source, choice } = request;
+
+    const listedUrls = choice.listedSpells?.map((spell) => spell.url) ?? [];
+
+    if (listedUrls.length) {
+      return fetchSpellsByUrls(listedUrls);
+    }
+
+    const filter = choice.spellFilter;
+
+    return filter
+      ? fetchChoiceSpells(filter, getClassUrls(choice, source))
+      : Promise.resolve([]);
   }
 
   /**
@@ -157,20 +201,15 @@ export function useChoiceSpellPools(
    * @param request выбор и его запись.
    */
   async function loadPool(request: PoolRequest): Promise<void> {
-    const { source, choice } = request;
+    const { choice } = request;
 
-    const filter = choice.spellFilter;
-
-    if (!filter) {
+    if (!hasPoolSource(choice)) {
       return;
     }
 
     statuses.value = { ...statuses.value, [choice.id]: 'loading' };
 
-    const spells = await fetchChoiceSpells(
-      filter,
-      getClassUrls(choice, source),
-    );
+    const spells = await fetchPoolSpells(request);
 
     if (spells === null) {
       statuses.value = { ...statuses.value, [choice.id]: 'error' };
@@ -230,7 +269,7 @@ export function useChoiceSpellPools(
       return status;
     }
 
-    return choice.spellFilter ? 'loading' : 'ready';
+    return hasPoolSource(choice) ? 'loading' : 'ready';
   }
 
   const classAnswers = computed(() =>

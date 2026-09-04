@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { FeatureOptionEntry } from '../model';
+  import type { FeatureOptionEntry, FeatureOptionGrantedSpell } from '../model';
 
   import { getNodeText, MarkupRender } from '~ui/markup';
 
@@ -9,6 +9,9 @@
   interface OptionCard extends FeatureOptionEntry {
     searchText: string;
     levelLabel: string;
+
+    /** Выданные вариантом заклинания с кругом: «Поиск фамильяра (1 круг)». */
+    grantedSpellLabels: string[];
     isSelected: boolean;
     isDisabled: boolean;
     buttonLabel: string;
@@ -61,6 +64,20 @@
     return value.trim().toLocaleLowerCase();
   }
 
+  /**
+   * Подпись выданного заклинания с кругом.
+   *
+   * @param spell заклинание варианта.
+   * @returns подпись вида «Поиск фамильяра (1 круг)».
+   */
+  function getGrantedSpellLabel(spell: FeatureOptionGrantedSpell): string {
+    const level = spell.level
+      ? `${spell.level} ${FEATURE_OPTIONS_LABELS.spellLevelSuffix}`
+      : FEATURE_OPTIONS_LABELS.cantrip;
+
+    return `${spell.name} (${level})`;
+  }
+
   const cards = computed<OptionCard[]>(() =>
     options.map((option) => {
       const isSelected = selectedNames.includes(option.name);
@@ -80,6 +97,9 @@
         levelLabel: option.requiredClassLevel
           ? `${option.requiredClassLevel}${FEATURE_OPTIONS_LABELS.levelSuffix}`
           : '',
+        grantedSpellLabels: (option.grantedSpells ?? []).map(
+          getGrantedSpellLabel,
+        ),
         isSelected,
         isDisabled,
         buttonLabel: isSelected
@@ -225,6 +245,27 @@
               @click.left.exact.prevent="handleToggle(card)"
             />
           </header>
+
+          <!-- Дары варианта — до описания: что вариант выдаёт, игроку важнее
+            прозы правил -->
+          <div
+            v-if="card.grantedSpellLabels.length"
+            class="mb-3 flex flex-wrap items-center gap-1.5 text-sm"
+          >
+            <span class="text-muted">
+              {{ FEATURE_OPTIONS_LABELS.grantedSpells }}:
+            </span>
+
+            <UBadge
+              v-for="label in card.grantedSpellLabels"
+              :key="label"
+              color="primary"
+              variant="subtle"
+              size="sm"
+            >
+              {{ label }}
+            </UBadge>
+          </div>
 
           <div
             v-if="card.prerequisite"

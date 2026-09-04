@@ -11,6 +11,7 @@
     FeatGrantRows,
     FeatSpellcastingAbility,
     FeatSpellChoices,
+    FeatSpellListSpells,
   } from '~feats/editor/ui';
   import {
     createFeatEditorRows,
@@ -347,6 +348,16 @@
             </template>
 
             <FeatGrantedSpells v-model="mechanics.spells" />
+          </UCard>
+
+          <UCard variant="subtle">
+            <template #header>
+              <h2 class="truncate text-base text-highlighted">
+                {{ BACKGROUND_GRANTS_TAB_LABELS.spellListTitle }}
+              </h2>
+            </template>
+
+            <FeatSpellListSpells v-model="mechanics.spellList" />
           </UCard>
 
           <UCard variant="subtle">
