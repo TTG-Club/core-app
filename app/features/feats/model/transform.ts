@@ -151,18 +151,26 @@ function buildProficiencies(
  * Готовит выдаваемые заклинания.
  *
  * Заклинание без ссылки отправлять некуда — так выглядит пустая строка, только
- * что добавленная в списке. Остальные поля блока без заклинаний бессмысленны:
- * заклинательной характеристике не к чему применяться, поэтому блок целиком
- * уходит пустым.
+ * что добавленная в списке. Группа «весь список класса» без единого класса — та
+ * же пустая строка: выдавать по ней нечего. Остальные поля блока без заклинаний
+ * бессмысленны: заклинательной характеристике не к чему применяться, поэтому
+ * блок целиком уходит пустым.
  */
 function buildSpells(spells: FeatSpellGrant): FeatSpellGrant | undefined {
   const granted = spells.spells.filter((spell) => !!text(spell.url));
 
-  if (!granted.length) {
+  const classLists = spells.classLists
+    .map((classList) => ({
+      ...classList,
+      classes: classList.classes.filter((reference) => !!text(reference.url)),
+    }))
+    .filter((classList) => classList.classes.length > 0);
+
+  if (!granted.length && !classLists.length) {
     return undefined;
   }
 
-  return { ...spells, spells: granted };
+  return { ...spells, spells: granted, classLists };
 }
 
 /**

@@ -138,9 +138,9 @@ import {
   mergeCharacterFeatures,
   mergeClassResources,
   normalizeResourceRecoveryRule,
-  PREPARED_KIND_LABELS,
   PREPARED_SPELLS_BONUS_MAX,
   PREPARED_SPELLS_BONUS_MIN,
+  PREPARED_SPELLS_LIMIT_TOAST_TITLE,
   PREPARED_SPELLS_MAX,
   PREPARED_SPELLS_MIN,
   removeClassFeatures,
@@ -165,6 +165,7 @@ import {
   SPELL_COPY_TOAST_TITLE,
   SPELL_SLOTS_EMPTY_TOAST_TITLE,
   syncClassHitDice,
+  takesPreparationSpace,
   toCopiedInventoryItem,
   toCopiedSpell,
   toCustomInventoryItem,
@@ -2504,12 +2505,12 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Установка настройки числа подготовленных заклинаний либо заговоров (у них
+   * Установка числа подготовленных заклинаний либо известных заговоров (у них
    * свой счётчик): своё число выключает подсчёт по таблице класса, бонус
    * прибавляется к числу класса.
    *
-   * @param prepared новая настройка подготовленных.
-   * @param kind вид подготовки: заклинания книги либо заговоры.
+   * @param prepared новая настройка счётчика.
+   * @param kind вид счёта: заклинания кругов 1+ либо заговоры.
    */
   function setPreparedSpells(
     prepared: CharacterPreparedSpells,
@@ -2547,6 +2548,39 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Есть ли место под ещё одну пометку подготовки. Предел уже выбран — молча
+   * пропустить нельзя: игрок ждёт, что значок загорится, и должен узнать,
+   * почему этого не произошло. Предел неизвестен (класс его не даёт, своё число
+   * не задано) — пометок сколько угодно.
+   *
+   * Заговор подготовки не требует: предел его не касается, а плитка «Заговоры»
+   * считает известные.
+   *
+   * @param spell заклинание, которое помечают подготовленным.
+   * @returns true — пометку можно ставить.
+   */
+  function ensurePreparationSpace(spell: CharacterSpell): boolean {
+    if (getSpellPreparedKind(spell) === 'cantrips') {
+      return true;
+    }
+
+    const { value: limit, count } = spellcastingBreakdown.value.prepared;
+
+    if (limit === null || count < limit) {
+      return true;
+    }
+
+    toast.add({
+      color: 'warning',
+      icon: 'tabler:wand',
+      title: PREPARED_SPELLS_LIMIT_TOAST_TITLE,
+      description: getPreparedSpellsLimitDescription(limit),
+    });
+
+    return false;
+  }
+
+  /**
    * Пометка заклинания подготовленным по нажатию на его значок (как надевание
    * доспеха в снаряжении). Больше числа из блока подготовки пометить нельзя —
    * лишнее нажатие предупреждает и ничего не меняет. Предел неизвестен (класс
@@ -2571,23 +2605,7 @@ export function useCharacterSheet() {
       return;
     }
 
-    const kind = getSpellPreparedKind(currentSpell);
-
-    const { value: limit, count } =
-      kind === 'cantrips'
-        ? spellcastingBreakdown.value.preparedCantrips
-        : spellcastingBreakdown.value.prepared;
-
-    // Предел уже выбран: молча пропустить нельзя — игрок ждёт, что значок
-    // загорится, и должен узнать, почему этого не произошло.
-    if (!currentSpell.prepared && limit !== null && count >= limit) {
-      toast.add({
-        color: 'warning',
-        icon: 'tabler:wand',
-        title: PREPARED_KIND_LABELS[kind].limitToastTitle,
-        description: getPreparedSpellsLimitDescription(limit, kind),
-      });
-
+    if (!currentSpell.prepared && !ensurePreparationSpace(currentSpell)) {
       return;
     }
 
@@ -2809,8 +2827,10 @@ export function useCharacterSheet() {
         detail,
       ),
       // В книге заклинание уже считается подготовленным наравне с остальными:
-      // пометка записи вне книги сюда не едет, иначе копия перебрала бы предел.
+      // пометка записи вне книги сюда не едет, иначе копия перебрала бы предел,
+      // а подготовку книги игрок ставит сам — правило выдачи копии ни к чему.
       prepared: undefined,
+      alwaysPrepared: undefined,
     };
 
     const withoutGranted = withoutGrantedSpell(granted.kind, spellUrl);
@@ -2851,13 +2871,15 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Снятие и возврат подготовки врождённого заклинания. Такое заклинание
-   * подготовлено сразу и места среди подготовленных не занимает, поэтому
-   * предел здесь не проверяется — снять пометку игрок может, чтобы отметить
-   * потраченное на день применение.
+   * Снятие и возврат подготовки заклинания вне книги. Заклинание, которое
+   * выдача держит готовым, подготовлено сразу и места среди подготовленных не
+   * занимает — предел его не касается, а снять пометку игрок может, чтобы
+   * отметить потраченное на день применение. Заклинание, которое персонаж лишь
+   * знает («весь список класса» друида), игрок готовит сам, и предел ему такой
+   * же, как книге.
    * Игровое действие: запертый лист его разрешает, чужой — нет.
    *
-   * @param spellUrl URL врождённого заклинания.
+   * @param spellUrl URL заклинания вне книги.
    */
   function toggleInnateSpellPrepared(spellUrl: string): void {
     if (!ensureOwnSheet()) {
@@ -2874,6 +2896,16 @@ export function useCharacterSheet() {
     }
 
     const prepared = !isInnateSpellPrepared(granted.spell);
+
+    // Предел касается только той выдачи, которую игрок готовит сам: заклинание,
+    // выданное готовым, места среди подготовленных не занимает.
+    if (
+      prepared
+      && takesPreparationSpace(granted.spell)
+      && !ensurePreparationSpace(granted.spell)
+    ) {
+      return;
+    }
 
     if (granted.kind === 'feature') {
       character.value = {

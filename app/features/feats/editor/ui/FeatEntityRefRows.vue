@@ -4,7 +4,7 @@
 
   import {
     SelectBackground,
-    SelectClass,
+    SelectClassCatalog,
     SelectFeat,
     SelectSpecies,
     SelectSpell,
@@ -197,10 +197,10 @@
       @update:model-value="addRef"
     />
 
-    <SelectClass
+    <SelectClassCatalog
       v-else-if="kind === 'CLASS'"
       :model-value="pickedUrls"
-      :excluded-values="urls"
+      :exclude-urls="urls"
       multiple
       @update:model-value="addRef"
     />

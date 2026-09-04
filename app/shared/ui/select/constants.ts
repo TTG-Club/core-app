@@ -114,12 +114,32 @@ export const CATALOG_PICKER_SECTIONS = {
     filtersKey: 'catalog-picker:background-filters',
     detailPath: '/api/v2/backgrounds',
   },
+  // Без `detailPath`: деталь класса — самый большой ответ каталога (умения,
+  // таблица, подклассы), а окну нужно от неё одно название. Выдача поиска
+  // отдаёт все классы разом, и догружать по одному нечего
+  classes: {
+    searchPath: '/api/v2/classes/search',
+    filtersPath: '/api/v2/classes/filters',
+    filtersKey: 'catalog-picker:class-filters',
+  },
   magicItems: {
     searchPath: '/api/v2/magic-items/search',
     filtersPath: '/api/v2/magic-items/filters',
     filtersKey: 'catalog-picker:magic-item-filters',
     detailPath: '/api/v2/magic-items',
   },
+} as const;
+
+/**
+ * Подписи пустого поля выбора классов: до открытия окна автор видит только их.
+ *
+ * Своей константой, а не строкой в шаблоне: подписи живут в `constants.ts`, а
+ * склейка в шаблоне («Выбери класс» + «ы») ещё и прятала бы одну из них от
+ * поиска по проекту.
+ */
+export const SELECT_CLASS_PLACEHOLDERS = {
+  single: 'Выбери класс',
+  multiple: 'Выбери классы',
 } as const;
 
 /** Заголовки окна выбора по разделам. */
@@ -130,6 +150,7 @@ export const CATALOG_PICKER_TITLES = {
   species: 'Виды',
   backgrounds: 'Предыстории',
   magicItems: 'Магические предметы',
+  classes: 'Классы',
 } as const;
 
 /** Ключ группы фильтра черт с категориями: им сужается набор поля. */

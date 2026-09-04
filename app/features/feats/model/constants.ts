@@ -2,6 +2,8 @@ import type { SelectOption } from '~/shared/types';
 
 import type { FeatDamageDefenseKind } from './mechanics';
 import type {
+  FeatGrantedSpellLevelMode,
+  FeatGrantedSpellSource,
   FeatGrantRowKind,
   FeatGrantRowMode,
   FeatModifierRowKind,
@@ -334,6 +336,71 @@ export function parseFeatSpellLevelValue(value: string): {
   return { mode: 'ANY', level: undefined };
 }
 
+/**
+ * Круг «по ячейкам»: граница берётся из ячеек заклинаний персонажа.
+ *
+ * Только у выдачи списка класса: игрок, выбирающий заклинание сам, видит круг в
+ * списке и лишнего не возьмёт, а выдача сыплется на лист молча — и «все заклинания
+ * друида» без границы дали бы девятый круг на первом уровне.
+ */
+const FEAT_SPELL_SLOTS_LEVEL_VALUE = 'SLOTS';
+
+/**
+ * Варианты круга для группы «весь список класса».
+ *
+ * Те же, что у порции выбора, плюс «по ячейкам»: круг такой группы не задан числом,
+ * а растёт вместе с персонажем, и посчитать его может только лист.
+ */
+export const FEAT_GRANTED_SPELL_LEVEL_OPTIONS: Array<SelectOption> = [
+  { value: FEAT_SPELL_ANY_LEVEL_VALUE, label: 'Любой круг' },
+  {
+    value: FEAT_SPELL_SLOTS_LEVEL_VALUE,
+    label: 'Не выше доступного круга',
+  },
+  ...FEAT_SPELL_LEVEL_OPTIONS.filter(
+    (option) => option.value !== FEAT_SPELL_ANY_LEVEL_VALUE,
+  ),
+];
+
+/**
+ * Значение селекта круга по группе выдачи.
+ *
+ * @param mode как задан круг.
+ * @param level круг группы; у «любого» и «по ячейкам» его нет.
+ * @returns значение селекта.
+ */
+export function getFeatGrantedSpellLevelValue(
+  mode: FeatGrantedSpellLevelMode,
+  level: number | undefined,
+): string {
+  return mode === 'SLOTS'
+    ? FEAT_SPELL_SLOTS_LEVEL_VALUE
+    : getFeatSpellLevelValue(mode, level);
+}
+
+/**
+ * Круг группы выдачи по значению селекта.
+ *
+ * @param value значение селекта.
+ * @returns вид ограничения и круг.
+ */
+export function parseFeatGrantedSpellLevelValue(value: string): {
+  mode: FeatGrantedSpellLevelMode;
+  level: number | undefined;
+} {
+  return value === FEAT_SPELL_SLOTS_LEVEL_VALUE
+    ? { mode: 'SLOTS', level: undefined }
+    : parseFeatSpellLevelValue(value);
+}
+
+/** Откуда группа выдачи берёт заклинания — пункты селекта строки. */
+export const FEAT_GRANTED_SPELL_SOURCE_OPTIONS: Array<
+  SelectOption & { value: FeatGrantedSpellSource }
+> = [
+  { value: 'LIST', label: 'Перечисленные' },
+  { value: 'CLASS_LIST', label: 'Весь список класса' },
+];
+
 /** Наименьший уровень персонажа: с него начинается ступень роста. */
 export const CLASS_LEVEL_MIN = 1;
 
@@ -601,10 +668,42 @@ export const FEAT_EDITOR_LABELS = {
   grantedSpellLevel: 'С уровня',
   grantedSpellLevelPlaceholder: 'сразу',
   grantedSpellLevelHint:
-    'Уровень ПЕРСОНАЖА, с которого заклинание приходит. Пусто — сразу при '
+    'Уровень ПЕРСОНАЖА, с которого приходит ЭТА группа. Пусто — сразу при '
     + 'взятии черты. У «Метки исцеления» «Лечение ран» есть с первого уровня, а '
-    + '«Малое восстановление» — только с третьего. Не путать с кругом '
-    + 'заклинания: круг показан бейджем и берётся из самой записи.',
+    + '«Малое восстановление» — только с третьего: это две группы, а не одна. '
+    + 'Не путать с кругом заклинания: круг показан бейджем и берётся из самой '
+    + 'записи.',
+  addGrantedSpellGroup: 'Добавить группу',
+  removeGrantedSpellGroup: 'Удалить группу',
+  grantedSpellGroupSource: 'Что выдаётся',
+  grantedSpellGroupSourceHint:
+    'Перечисленные — вот эти заклинания и никакие другие. Весь список класса — '
+    + 'всё, что доступно классу в справочнике: список собирается при выдаче, '
+    + 'поэтому новое заклинание класса достанется новым персонажам само, без '
+    + 'правки записи.',
+  grantedSpellGroupClasses: 'Списки классов',
+  grantedSpellGroupClassesHint:
+    'Чьи списки заклинаний выдаются. Несколько классов складываются: это не '
+    + 'выбор игрока, а объединение списков.',
+  grantedSpellGroupLevel: 'Круг',
+  grantedSpellGroupLevelHint:
+    'Какого круга заклинания брать из списка. «Не выше доступного круга» — '
+    + 'граница берётся из ячеек персонажа и растёт вместе с ним: друид знает '
+    + 'свой список ровно до того круга, который способен наложить. Без '
+    + 'ограничения персонаж получит и заклинания 9 круга на первом уровне.',
+  grantedSpellGroupLevelFromRecord: 'из записи',
+  grantedSpellGroupFromLevelPrefix: 'с',
+  grantedSpellGroupFromLevelSuffix: 'уровня',
+  grantedSpellGroupFromStart: 'сразу',
+  grantedSpellGroupTitleSeparator: ' — ',
+  grantedSpellGroupClassListTitle: 'Весь список класса',
+  grantedSpellGroupListTitle: 'Перечисленные',
+  grantedSpellGroupAbility: 'Характеристика',
+  grantedSpellGroupAbilityHint:
+    'От какой характеристики считаются Сл и атака ЭТИХ заклинаний. Пусто — от '
+    + 'класса, чья это магия. У группы, а не у записи целиком: один набор '
+    + 'заклинаний может считаться от одной характеристики, другой — от другой.',
+  grantedSpellGroupAbilityPlaceholder: 'От класса',
 
   spellListTitle: 'Заклинания списка',
   spellListHint:
@@ -635,10 +734,11 @@ export const FEAT_EDITOR_LABELS = {
   spellListRequiresSpellcastingHint:
     'Так написано у всех черт метки дракона: без своего заклинательства '
     + 'расширять нечего. Выключено — список расширяется всегда.',
-  alwaysPrepared: 'Готовить не нужно',
+  alwaysPrepared: 'Подготавливать не нужно',
   alwaysPreparedHint:
-    'По умолчанию выданное чертой заклинание ложится в книгу наравне с '
-    + 'остальными и занимает подготовку.',
+    'По умолчанию выданное заклинание ложится в книгу наравне с остальными и '
+    + 'занимает подготовку. Отметка у группы: заклинания домена всегда '
+    + 'подготовлены, а выданное тем же умением сверх них подготовку занимает.',
 
   spellChoicesTitle: 'Выбор заклинаний',
   spellChoicesHint: 'Заклинания, которые игрок выбирает сам при взятии черты.',
@@ -650,7 +750,6 @@ export const FEAT_EDITOR_LABELS = {
     + 'круга и списков классов перечислять конкретные заклинания — тогда игрок '
     + 'выбирает только из них. Выбранное ложится в книгу так же, как выданное '
     + 'чертой без выбора.',
-  spellChoicesEmpty: 'Игрок заклинания не выбирает.',
   addSpellChoice: 'Добавить заклинания',
   removeSpellChoice: 'Убрать строку выбора',
   spellChoiceClasses: 'Списки классов',
@@ -676,13 +775,15 @@ export const FEAT_EDITOR_LABELS = {
   spellChoiceLevelFromRecord: 'по записям',
   spellChoiceListSpells: 'Заклинания, из которых выбирают',
 
-  spellcastingAbilityTitle: 'Заклинательная характеристика',
+  spellcastingAbilityTitle: 'Характеристика заклинаний на выбор',
   spellcastingAbility: 'Из каких характеристик',
   spellcastingAbilityHint:
-    'От неё считаются и модификатор атаки, и Сл спасброска заклинаний черты — '
-    + 'и выданных, и выбранных игроком. Пусто — лист возьмёт характеристику '
-    + 'того класса, чья это магия. Одна — она и будет; несколько — лист даст '
-    + 'игроку выбрать одну из них.',
+    'От неё считаются модификатор атаки и Сл спасброска заклинаний, которые '
+    + 'игрок ВЫБИРАЕТ. Пусто — лист возьмёт характеристику того класса, чья это '
+    + 'магия. Одна — она и будет; несколько — лист даст игроку выбрать одну из '
+    + 'них («Посвящённый в магию»). У выданных заклинаний характеристика своя у '
+    + 'каждой группы выдачи — там один набор может считаться от одной '
+    + 'характеристики, другой от другой.',
   spellcastingAbilityPlaceholder: 'От класса',
 };
 

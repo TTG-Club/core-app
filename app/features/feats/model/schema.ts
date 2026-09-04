@@ -194,10 +194,29 @@ const counterSchema = z.object({
 // «доступно с момента взятия».
 const grantedSpellRefSchema = entityRefSchema.extend({
   requiredLevel: z.number().optional(),
+  // Характеристика и подготовка — у группы, в которой стоит заклинание: один
+  // набор заклинаний записи может считаться от одной характеристики, другой — от
+  // другой. Пусто — берётся у записи целиком
+  spellcastingAbility: abilityKeySchema.optional(),
+  alwaysPrepared: z.boolean().optional(),
+});
+
+// Список класса, выдаваемый целиком: правило, а не перечень заклинаний. Круг
+// задан теми же двумя полями, что у фильтра выбора, плюс отметка «по ячейкам» —
+// её граница известна только листу, у которого посчитаны ячейки персонажа
+const classSpellListGrantSchema = z.object({
+  requiredLevel: z.number().optional(),
+  classes: z.array(entityRefSchema).optional(),
+  level: z.number().optional(),
+  maxLevel: z.number().optional(),
+  maxLevelFromSlots: z.boolean().optional(),
+  spellcastingAbility: abilityKeySchema.optional(),
+  alwaysPrepared: z.boolean().optional(),
 });
 
 const spellGrantSchema = z.object({
   spells: z.array(grantedSpellRefSchema).optional(),
+  classLists: z.array(classSpellListGrantSchema).optional(),
   spellcastingAbility: abilityKeySchema.optional(),
   alwaysPrepared: z.boolean().optional(),
 });
@@ -397,6 +416,17 @@ function toFeatMechanicsState(
         url: spell.url,
         name: spell.name,
         requiredLevel: spell.requiredLevel,
+        spellcastingAbility: spell.spellcastingAbility,
+        alwaysPrepared: spell.alwaysPrepared,
+      })),
+      classLists: (parsed.spells?.classLists ?? []).map((classList) => ({
+        requiredLevel: classList.requiredLevel,
+        classes: classList.classes ?? [],
+        level: classList.level,
+        maxLevel: classList.maxLevel,
+        maxLevelFromSlots: classList.maxLevelFromSlots,
+        spellcastingAbility: classList.spellcastingAbility,
+        alwaysPrepared: classList.alwaysPrepared,
       })),
       spellcastingAbility: parsed.spells?.spellcastingAbility,
       alwaysPrepared: parsed.spells?.alwaysPrepared ?? false,
