@@ -18,6 +18,7 @@
   import {
     ABILITY_LABELS,
     CANTRIP_SPELL_LEVEL,
+    CLASS_SPELL_BADGE,
     CUSTOM_SPELL_BADGE_HINT,
     getFilterChipClass,
     getInnateSpellMenuItems,
@@ -100,7 +101,17 @@
 
   const props = defineProps<{
     spells: CharacterSpell[];
+
+    /** Заклинания вида и черт: они идут отдельной группой над кругами книги. */
     innateSpells: CharacterSpell[];
+
+    /**
+     * Заклинания, выданные умениями класса: в списке они стоят в своём круге
+     * наравне с книгой, а живут по правилам врождённых — всегда подготовлены и
+     * места среди подготовленных не занимают.
+     */
+    classSpells: CharacterSpell[];
+
     spellcasting: SpellcastingBreakdown;
 
     /** Ячейки заклинаний по кругам; пусто — класс ячеек не даёт. */
@@ -129,10 +140,10 @@
   const { character, editControlClass } = useCharacterSheet();
 
   // Урон заклинаний живёт в справочнике, а не в листе: подгружаем его для всей
-  // вкладки — и для книги, и для врождённых заклинаний вида. Уровень персонажа
+  // вкладки — и для книги, и для заклинаний вне её. Уровень персонажа
   // нужен заговорам: их урон растёт от него, а не от круга ячейки.
   const { getDamage } = useSpellDamage(
-    () => [...props.spells, ...props.innateSpells],
+    () => [...props.spells, ...props.innateSpells, ...props.classSpells],
     () => props.spellcasting.abilityModifier,
     () => character.value.level,
   );
@@ -282,6 +293,15 @@
     return rowsByLevel;
   });
 
+  /** У персонажа есть хоть одно заклинание: книги, вида, черты или класса. */
+  const hasAnySpells = computed(() =>
+    Boolean(
+      props.spells.length
+      || props.innateSpells.length
+      || props.classSpells.length,
+    ),
+  );
+
   /** Отмечен чип «Подготовленные». */
   const isPreparedOnlyPicked = ref(false);
 
@@ -291,18 +311,16 @@
   /** Круги, которые вкладка уже показывает: по ним и отбирают. */
   const availableLevels = computed(() =>
     getSpellListLevels(
-      [...props.spells, ...props.innateSpells],
+      [...props.spells, ...props.innateSpells, ...props.classSpells],
       props.spellSlots.map((row) => row.level),
     ),
   );
 
   /**
-   * Пометка подготовки есть и у книги персонажа, и у врождённых заклинаний:
-   * пока список пуст, помечать нечего — чипа отбора нет.
+   * Пометка подготовки есть и у книги персонажа, и у заклинаний вне её: пока
+   * список пуст, помечать нечего — чипа отбора нет.
    */
-  const isPreparedFilterAvailable = computed(
-    () => props.spells.length > 0 || props.innateSpells.length > 0,
-  );
+  const isPreparedFilterAvailable = computed(() => hasAnySpells.value);
 
   /** Кругов больше одного — есть между чем выбирать. */
   const hasLevelChips = computed(() => availableLevels.value.length > 1);
@@ -330,7 +348,7 @@
    */
   const hasFilterControls = computed(
     () =>
-      Boolean(props.spells.length || props.innateSpells.length)
+      hasAnySpells.value
       && (isPreparedFilterAvailable.value || hasLevelChips.value),
   );
 
@@ -478,12 +496,13 @@
    * поэтому здесь же его подсказка, подпись для скринридера и цвет.
    *
    * @param spell заклинание строки.
-   * @param innate заклинание из группы врождённых.
+   * @param granted заклинание выдано записью листа — видом, чертой или умением
+   * класса: подготовка у таких своя.
    * @returns состояние значка для шаблона строки.
    */
   function getPreparedIconState(
     spell: CharacterSpell,
-    innate: boolean,
+    granted: boolean,
   ): PreparedIconState {
     const isPrepared = Boolean(spell.prepared);
 
@@ -493,10 +512,10 @@
 
     const iconClass = isPrepared ? PREPARED_ICON_CLASS : UNPREPARED_ICON_CLASS;
 
-    // Врождённое заклинание приходит подготовленным и в предел не входит:
+    // Выданное заклинание приходит подготовленным и в предел не входит:
     // значок только снимает и возвращает пометку, а подсказка напоминает, что
     // места среди подготовленных такое заклинание не занимает.
-    if (innate) {
+    if (granted) {
       return {
         isPrepared,
         iconClass,
@@ -519,11 +538,36 @@
     };
   }
 
+  /**
+   * Заклинания классовых умений, встающие в круги: то, что игрок уже завёл в
+   * книге руками, вторым рядом не показывается — правки и удаление достаются
+   * записи книги.
+   */
+  const groupedClassSpells = computed(() => {
+    const bookUrls = new Set(props.spells.map((spell) => spell.url));
+
+    return props.classSpells.filter(
+      (spell) =>
+        !bookUrls.has(spell.url)
+        && matchesSpellFilter(spell, spellFilter.value),
+    );
+  });
+
+  /** URL заклинаний класса, стоящих в кругах: по ним строка узнаёт себя. */
+  const classSpellUrls = computed(
+    () => new Set(groupedClassSpells.value.map((spell) => spell.url)),
+  );
+
   const displayGroups = computed(() => {
+    // Заклинания класса идут в круги вместе с книгой: заговор волшебника игрок
+    // ищет среди заговоров, а не в отдельной группе
     const regularGroups = getSpellGroups(
-      props.spells.filter((spell) =>
-        matchesSpellFilter(spell, spellFilter.value),
-      ),
+      [
+        ...props.spells.filter((spell) =>
+          matchesSpellFilter(spell, spellFilter.value),
+        ),
+        ...groupedClassSpells.value,
+      ],
       groupSlotLevels.value,
     ).map((group) => ({ ...group, innate: false }));
 
@@ -578,20 +622,28 @@
           const isCustom = isCustomSpell(spell);
           const isExpanded = isCustom && expandedUrls.value.has(spell.url);
 
+          // Заклинание класса стоит в круге, а ведётся как врождённое: и
+          // пометка подготовки, и меню строки у них общие
+          const isClassGranted =
+            !group.innate && classSpellUrls.value.has(spell.url);
+
+          const isGranted = group.innate || isClassGranted;
+
           return {
             ...spell,
             isCustom,
             isExpanded,
-            isInnate: group.innate,
+            isInnate: isGranted,
+            isClassGranted,
             // Подготовку переключает значок строки — как надевание доспеха в
             // снаряжении. У врождённых заклинаний пометка стоит сразу и в
             // предел подготовленных не входит, снять её значок тоже даёт.
-            preparedIcon: getPreparedIconState(spell, group.innate),
+            preparedIcon: getPreparedIconState(spell, isGranted),
             // Действия строки — те же, что и у предмета снаряжения: своё
             // заклинание правится формой листа, каталожное сначала копируется в
             // лист, а убирается из книги и то, и другое. Врождённое правится
             // так же — через копию, только уезжает она в книгу заклинаний.
-            menuItems: group.innate
+            menuItems: isGranted
               ? getInnateSpellMenuItems({
                   onCopy: () => emit('copy-innate-spell', spell.url),
                   onRemove: () => emit('remove-innate-spell', spell.url),
@@ -638,7 +690,7 @@
    * не подошло; '' — списку есть что показать.
    */
   const emptyLabel = computed(() => {
-    if (!props.spells.length && !props.innateSpells.length) {
+    if (!hasAnySpells.value) {
       return SHEET_TAB_EMPTY_LABELS.spells;
     }
 
@@ -1022,6 +1074,22 @@
                 </button>
               </UTooltip>
             </div>
+
+            <!-- Заклинание от умения класса стоит в общем круге: без значка
+              строка ничем не отличалась бы от книги, а живёт она иначе -->
+            <UTooltip
+              v-if="spell.isClassGranted"
+              :text="CLASS_SPELL_BADGE.hint"
+            >
+              <UBadge
+                size="sm"
+                color="neutral"
+                variant="subtle"
+                class="relative z-10 shrink-0"
+              >
+                {{ CLASS_SPELL_BADGE.label }}
+              </UBadge>
+            </UTooltip>
 
             <UTooltip
               v-if="spell.isCustom"

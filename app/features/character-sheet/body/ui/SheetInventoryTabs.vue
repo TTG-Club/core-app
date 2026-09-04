@@ -51,7 +51,13 @@
     attunement: AttunementBreakdown;
     features: CharacterFeature[];
     spells: CharacterSpell[];
+
+    /** Заклинания вида и черт: у вкладки заклинаний под них своя группа. */
     innateSpells: CharacterSpell[];
+
+    /** Заклинания умений класса: во вкладке они стоят в кругах книги. */
+    classSpells: CharacterSpell[];
+
     spellcasting: SpellcastingBreakdown;
 
     /** Ячейки заклинаний по кругам; пусто — класс ячеек не даёт. */
@@ -958,6 +964,7 @@
             v-else-if="activeSlot === 'spells'"
             :spells="spells"
             :innate-spells="innateSpells"
+            :class-spells="classSpells"
             :spellcasting="spellcasting"
             :spell-slots="spellSlots"
             @add-spell="handleSpellAdd"
