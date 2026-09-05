@@ -3,7 +3,11 @@
 
   import { UiResult } from '~ui/result';
 
-  import { useGameRegistrations, useParticipantNames } from '../composables';
+  import {
+    useGameRegistrations,
+    useParticipantNames,
+    usePlayerReputations,
+  } from '../composables';
   import {
     FIND_GAME_UNKNOWN_ERROR_MESSAGE,
     GAME_APPROVED_PLAYERS_LABEL,
@@ -44,6 +48,12 @@
 
   const { approvedRegistrations, isLoading, registrations, review, status } =
     useGameRegistrations(requestedGameId);
+
+  // Репутацию читает только мастер игры и только пока игрок в неё просится —
+  // ровно тот случай, в котором открыта эта панель.
+  const { getPlayerReputation } = usePlayerReputations(requestedGameId, () =>
+    registrations.value.map((registration) => registration.playerId),
+  );
 
   const isBusy = ref(false);
 
@@ -173,6 +183,8 @@
             :key="registration.id"
             :registration="registration"
             :player-name="getParticipantName(registration.playerId)"
+            :reputation="getPlayerReputation(registration.playerId)"
+            :game-id="game.id"
             :is-full="isFull"
             :busy="isBusy"
             @approve="approve"

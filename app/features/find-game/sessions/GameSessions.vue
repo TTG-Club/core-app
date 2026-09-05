@@ -54,6 +54,7 @@
     SessionCard,
     SessionCopyModal,
     SessionFormModal,
+    SessionReviewModal,
     SessionSeriesModal,
     SessionTimeline,
   } from './ui';
@@ -151,6 +152,7 @@
   const completeTarget = ref<GameSession | null>(null);
   const cancelTarget = ref<GameSession | null>(null);
   const participantsSessionId = ref<string | null>(null);
+  const reviewTarget = ref<GameSession | null>(null);
 
   const isCopyOpen = computed({
     get: () => !!copySource.value,
@@ -185,6 +187,15 @@
     set: (opened: boolean) => {
       if (!opened) {
         participantsSessionId.value = null;
+      }
+    },
+  });
+
+  const isReviewOpen = computed({
+    get: () => !!reviewTarget.value,
+    set: (opened: boolean) => {
+      if (!opened) {
+        reviewTarget.value = null;
       }
     },
   });
@@ -385,6 +396,14 @@
   }
 
   /**
+   * Открывает оценку встречи.
+   * @param session Завершённая встреча.
+   */
+  function openReview(session: GameSession): void {
+    reviewTarget.value = session;
+  }
+
+  /**
    * Открывает состав сессии.
    * @param sessionId Идентификатор сессии.
    */
@@ -498,6 +517,7 @@
       @complete="askComplete"
       @start="handleStart"
       @cancel="askCancel"
+      @review="openReview"
     />
 
     <div
@@ -518,6 +538,7 @@
         @complete="askComplete"
         @start="handleStart"
         @cancel="askCancel"
+        @review="openReview"
       />
     </div>
 
@@ -593,6 +614,13 @@
         </div>
       </template>
     </UModal>
+
+    <SessionReviewModal
+      v-model:open="isReviewOpen"
+      :game="game"
+      :session="reviewTarget"
+      :abilities="abilities"
+    />
 
     <SessionParticipantsPanel
       v-model:open="isParticipantsOpen"

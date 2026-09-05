@@ -9,6 +9,8 @@ import type {
 
 import { Role } from '~/shared/types';
 
+import { isSessionReviewable } from './utils';
+
 /** Что определяет права текущего пользователя на странице игры. */
 export interface GameViewerContext {
   game: Game | null;
@@ -41,6 +43,12 @@ export interface SessionAbilities {
   canCancel: boolean;
   /** Мастер может перевести сессию в «идёт». */
   canStart: boolean;
+
+  /**
+   * Можно оценить участников встречи: она закрыта, окно ещё не вышло, и
+   * пользователь в ней участвовал.
+   */
+  canReview: boolean;
 }
 
 /**
@@ -177,5 +185,10 @@ export function resolveSessionAbilities(
     canComplete: abilities.isMaster && !isSessionClosed,
     canCancel: abilities.isMaster && !isSessionClosed,
     canStart: abilities.isMaster && session.status === 'SCHEDULED',
+    // Мастеру пустой стол оценивать некого, игроку — оценивать нечего, если
+    // его во встрече не было.
+    canReview:
+      isSessionReviewable(session)
+      && (abilities.isMaster ? participantCount > 0 : isParticipant),
   };
 }

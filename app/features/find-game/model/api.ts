@@ -5,9 +5,11 @@ import type {
   CreateGameRequest,
   CreateGameSessionRequest,
   CreateGameSessionSeriesRequest,
+  CreateSessionReviewRequest,
   FindGameNotification,
   FindGameProblemDetail,
   FindGameUserProfile,
+  Follow,
   Game,
   GameRegistration,
   GameSearchFilter,
@@ -16,8 +18,10 @@ import type {
   MasterPublicProfile,
   ParticipantName,
   RegistrationDecision,
+  Reputation,
   SessionAttendanceStatus,
   SessionParticipant,
+  SessionReview,
   SpringPage,
   UpdateFindGameProfileRequest,
   UpdateGameRequest,
@@ -27,14 +31,18 @@ import { StatusCodes } from 'http-status-codes';
 import { FetchError } from 'ofetch';
 
 import {
+  BOOKMARKED_PLAYERS_API_PATH,
   CITIES_API_PATH,
   DISPLAY_NAMES_BY_IDS_API_PATH,
   DISPLAY_NAMES_LOOKUP_MAX,
   FIND_GAME_PROFILE_API_PATH,
   FIND_GAME_UNKNOWN_ERROR_MESSAGE,
+  FOLLOWED_MASTERS_API_PATH,
   GAMES_API_PATH,
   MASTER_PROFILE_API_PATH,
   NOTIFICATIONS_API_PATH,
+  OWN_REPUTATION_API_PATH,
+  PLAYER_BOOKMARK_API_PATH,
   RETRY_AFTER_PREFIX,
 } from './constants';
 import { toGameSearchQuery } from './filters';
@@ -42,6 +50,7 @@ import {
   createGameRequestSchema,
   parseCities,
   parseFindGameProfile,
+  parseFollows,
   parseGame,
   parseGameRegistration,
   parseGameRegistrations,
@@ -53,8 +62,11 @@ import {
   parseNotificationsPage,
   parseParticipantNames,
   parseProblemDetail,
+  parseReputation,
   parseSessionParticipant,
   parseSessionParticipants,
+  parseSessionReview,
+  parseSessionReviews,
   parseUnreadNotifications,
 } from './schemas';
 import { getWaitLabel } from './utils';
@@ -306,6 +318,192 @@ export async function fetchMasterProfile(
   });
 
   return parseMasterProfile(response);
+}
+
+/**
+ * Отзывы о мастере: их читают в его профиле до всякой заявки.
+ * @param masterId Идентификатор мастера.
+ */
+export async function fetchMasterReviews(
+  masterId: string,
+): Promise<Array<SessionReview>> {
+  const response = await $fetch(
+    `${MASTER_PROFILE_API_PATH}/${masterId}/reviews`,
+    {
+      retry: 0,
+    },
+  );
+
+  return parseSessionReviews(response);
+}
+
+/**
+ * Своя репутация игрока: доля оценок без текстов и авторов.
+ *
+ * Игрок знает, где стоит, но не идёт выяснять отношения с конкретным
+ * мастером — иначе отзывы стали бы осторожными и бесполезными.
+ */
+export async function fetchOwnReputation(): Promise<Reputation> {
+  const response = await $fetch(OWN_REPUTATION_API_PATH, { retry: 0 });
+
+  return parseReputation(response);
+}
+
+/**
+ * Ставит оценку участнику завершённой встречи; повторная правит свою же.
+ *
+ * Пока не ответила вторая сторона, оценка видна только автору — иначе
+ * увидевший первым отвечал бы тем же.
+ *
+ * @param gameId Идентификатор игры.
+ * @param sessionId Идентификатор встречи.
+ * @param request Кого и как оценили.
+ */
+export async function submitSessionReview(
+  gameId: string,
+  sessionId: string,
+  request: CreateSessionReviewRequest,
+): Promise<SessionReview> {
+  const response = await $fetch(
+    `${GAMES_API_PATH}/${gameId}/sessions/${sessionId}/reviews`,
+    { method: 'POST', body: request, retry: 0 },
+  );
+
+  return parseSessionReview(response);
+}
+
+/**
+ * Оценки встречи глазами пользователя: свои — всегда, чужие о нём — как
+ * только пара раскрыта.
+ *
+ * @param gameId Идентификатор игры.
+ * @param sessionId Идентификатор встречи.
+ */
+export async function fetchSessionReviews(
+  gameId: string,
+  sessionId: string,
+): Promise<Array<SessionReview>> {
+  const response = await $fetch(
+    `${GAMES_API_PATH}/${gameId}/sessions/${sessionId}/reviews`,
+    { retry: 0 },
+  );
+
+  return parseSessionReviews(response);
+}
+
+/**
+ * Репутация игрока для мастера, разбирающего его заявку. Сервис отдаёт её
+ * только мастеру игры и только пока игрок в неё просится.
+ *
+ * @param gameId Идентификатор игры.
+ * @param playerId Идентификатор игрока.
+ */
+export async function fetchPlayerReputation(
+  gameId: string,
+  playerId: string,
+): Promise<Reputation> {
+  const response = await $fetch(
+    `${GAMES_API_PATH}/${gameId}/players/${playerId}/reputation`,
+    { retry: 0 },
+  );
+
+  return parseReputation(response);
+}
+
+/**
+ * Отзывы об игроке для мастера, разбирающего его заявку.
+ * @param gameId Идентификатор игры.
+ * @param playerId Идентификатор игрока.
+ */
+export async function fetchPlayerReviews(
+  gameId: string,
+  playerId: string,
+): Promise<Array<SessionReview>> {
+  const response = await $fetch(
+    `${GAMES_API_PATH}/${gameId}/players/${playerId}/reviews`,
+    { retry: 0 },
+  );
+
+  return parseSessionReviews(response);
+}
+
+/**
+ * Отмечает мастера: его новые игры будут приходить уведомлением.
+ * @param masterId Идентификатор мастера.
+ */
+export async function followMaster(masterId: string): Promise<void> {
+  await $fetch(`${MASTER_PROFILE_API_PATH}/${masterId}/follow`, {
+    method: 'PUT',
+    retry: 0,
+  });
+}
+
+/**
+ * Снимает отметку с мастера.
+ * @param masterId Идентификатор мастера.
+ */
+export async function unfollowMaster(masterId: string): Promise<void> {
+  await $fetch(`${MASTER_PROFILE_API_PATH}/${masterId}/follow`, {
+    method: 'DELETE',
+    retry: 0,
+  });
+}
+
+/**
+ * Отмечает игрока, чтобы звать его в свои игры. Сервис принимает отметку
+ * только о том, кто уже просился в игру этого мастера.
+ * @param playerId Идентификатор игрока.
+ */
+export async function bookmarkPlayer(playerId: string): Promise<void> {
+  await $fetch(`${PLAYER_BOOKMARK_API_PATH}/${playerId}/bookmark`, {
+    method: 'PUT',
+    retry: 0,
+  });
+}
+
+/**
+ * Снимает отметку с игрока.
+ * @param playerId Идентификатор игрока.
+ */
+export async function unbookmarkPlayer(playerId: string): Promise<void> {
+  await $fetch(`${PLAYER_BOOKMARK_API_PATH}/${playerId}/bookmark`, {
+    method: 'DELETE',
+    retry: 0,
+  });
+}
+
+/** Отмеченные мастера — свежие сверху. */
+export async function fetchFollowedMasters(): Promise<Array<Follow>> {
+  const response = await $fetch(FOLLOWED_MASTERS_API_PATH, { retry: 0 });
+
+  return parseFollows(response);
+}
+
+/** Отмеченные игроки — свежие сверху. */
+export async function fetchBookmarkedPlayers(): Promise<Array<Follow>> {
+  const response = await $fetch(BOOKMARKED_PLAYERS_API_PATH, { retry: 0 });
+
+  return parseFollows(response);
+}
+
+/**
+ * Зовёт отмеченного игрока в свою игру.
+ *
+ * Приглашение — уведомление со ссылкой, а не место в составе: заявку игрок
+ * подаёт сам.
+ *
+ * @param gameId Идентификатор игры.
+ * @param playerId Идентификатор игрока.
+ */
+export async function invitePlayer(
+  gameId: string,
+  playerId: string,
+): Promise<void> {
+  await $fetch(`${GAMES_API_PATH}/${gameId}/invites`, {
+    method: 'POST',
+    body: { playerId },
+    retry: 0,
+  });
 }
 
 /**

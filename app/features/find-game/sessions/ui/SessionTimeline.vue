@@ -81,6 +81,7 @@
     'complete': [session: GameSession];
     'start': [session: GameSession];
     'schedule': [session: GameSession];
+    'review': [session: GameSession];
   }>();
 
   const { $dayjs, format } = useDayjs();
@@ -417,6 +418,7 @@
           @complete="closeAnd(() => emit('complete', $event))"
           @start="closeAnd(() => emit('start', $event))"
           @cancel="closeAnd(() => emit('cancel', $event))"
+          @review="closeAnd(() => emit('review', $event))"
         />
       </template>
     </USlideover>

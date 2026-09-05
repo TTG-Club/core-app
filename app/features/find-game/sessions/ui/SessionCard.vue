@@ -16,6 +16,7 @@
     PAYMENT_PAID_LABEL,
     PAYMENT_UNPAID_LABEL,
     resolveSessionAbilities,
+    REVIEW_OPEN_LABEL,
     SESSION_ATTENDANCE_STATUS_LABELS,
     SESSION_ATTENDANCE_STATUSES,
     SESSION_CANCEL_LABEL,
@@ -51,6 +52,7 @@
     'complete': [session: GameSession];
     'start': [session: GameSession];
     'schedule': [session: GameSession];
+    'review': [session: GameSession];
   }>();
 
   const { format } = useDayjs();
@@ -250,6 +252,18 @@
         :disabled="busy"
         :label="SESSION_COMPLETE_LABEL"
         @click.left.exact.prevent="emit('complete', session)"
+      />
+
+      <!-- Оценки ставят по свежей памяти: кнопка живёт ровно столько,
+        сколько открыто окно на оценку -->
+      <UButton
+        v-if="sessionAbilities.canReview"
+        size="sm"
+        color="primary"
+        variant="subtle"
+        icon="tabler:thumb-up"
+        :label="REVIEW_OPEN_LABEL"
+        @click.left.exact.prevent="emit('review', session)"
       />
 
       <UButton

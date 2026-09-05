@@ -1,9 +1,11 @@
-import type { Game, GameSession } from './types';
+import type { Game, GameSession, Reputation } from './types';
 
 import {
   GAME_TYPE_LABELS,
   GAMES_ROUTE,
   INVITE_CODE_QUERY_KEY,
+  REPUTATION_EMPTY_LABEL,
+  REVIEW_WINDOW_DAYS,
   SESSION_PAYMENT_TYPE_LABELS,
 } from './constants';
 
@@ -181,6 +183,46 @@ export function getWaitLabel(availableAt: string): string | null {
   const hours = Math.ceil(minutes / MINUTES_IN_HOUR);
 
   return `${hours} ${getPlural(hours, ['час', 'часа', 'часов'])}`;
+}
+
+/** Миллисекунд в сутках — для окна на оценку встречи. */
+const MILLIS_IN_DAY = 24 * MINUTES_IN_HOUR * MILLIS_IN_MINUTE;
+
+/**
+ * Подпись репутации: «11 из 12 сыграли бы снова».
+ *
+ * Доля, а не средний балл: оценка бинарная, и доля читается точнее любого
+ * числа с запятой.
+ *
+ * @param reputation Репутация участника; `null` — ещё не загружена.
+ */
+export function getReputationLabel(reputation: Reputation | null): string {
+  if (!reputation || reputation.total <= 0) {
+    return REPUTATION_EMPTY_LABEL;
+  }
+
+  return `${reputation.recommended} из ${reputation.total} сыграли бы снова`;
+}
+
+/**
+ * Открыто ли окно на оценку встречи.
+ *
+ * Считается по отметке завершения — той же, по которой окно закрывает сервис.
+ * Встречи, закрытые до появления оценок, отметки не имеют и оценке не
+ * подлежат.
+ *
+ * @param session Встреча.
+ */
+export function isSessionReviewable(session: GameSession): boolean {
+  if (session.status !== 'COMPLETED' || !session.completedAt) {
+    return false;
+  }
+
+  const closesAt =
+    new Date(session.completedAt).getTime()
+    + REVIEW_WINDOW_DAYS * MILLIS_IN_DAY;
+
+  return Number.isFinite(closesAt) && closesAt > Date.now();
 }
 
 /**

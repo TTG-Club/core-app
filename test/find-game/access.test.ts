@@ -68,6 +68,7 @@ function makeSession(overrides: Partial<GameSession> = {}): GameSession {
     priceAmount: 15,
     priceCurrency: 'EUR',
     paymentType: 'PREPAYMENT',
+    completedAt: null,
     registeredPlayerIds: [],
     ...overrides,
   };
@@ -427,5 +428,109 @@ describe('состояния сессии у мастера', () => {
     expect(abilities.canStart).toBe(false);
     expect(abilities.canComplete).toBe(false);
     expect(abilities.canCancel).toBe(false);
+  });
+});
+
+describe('оценка встречи', () => {
+  const game = makeGame();
+  const dayMillis = 24 * 60 * 60 * 1000;
+
+  /**
+   * Встреча, закрытая заданное число дней назад.
+   * @param daysAgo Сколько дней прошло с закрытия.
+   */
+  function completedDaysAgo(daysAgo: number): GameSession {
+    return makeSession({
+      status: 'COMPLETED',
+      completedAt: new Date(Date.now() - daysAgo * dayMillis).toISOString(),
+      registeredPlayerIds: [PLAYER_ID],
+    });
+  }
+
+  it('мастер оценивает свежую встречу с игроками', () => {
+    const abilities = resolveSessionAbilities(
+      completedDaysAgo(1),
+      game,
+      null,
+      masterOf(game),
+    );
+
+    expect(abilities.canReview).toBe(true);
+  });
+
+  it('игрок оценивает встречу, в которой был', () => {
+    const abilities = resolveSessionAbilities(
+      completedDaysAgo(1),
+      game,
+      makeParticipant(),
+      viewerOf(game, makeRegistration({ status: 'APPROVED' })),
+    );
+
+    expect(abilities.canReview).toBe(true);
+  });
+
+  it('не участвовавший не оценивает', () => {
+    // Оценку ставит тот, кто был за столом, — иначе она ни о чём.
+    const abilities = resolveSessionAbilities(
+      completedDaysAgo(1),
+      game,
+      null,
+      viewerOf(game, makeRegistration({ status: 'REJECTED' })),
+    );
+
+    expect(abilities.canReview).toBe(false);
+  });
+
+  it('незакрытую встречу не оценивают', () => {
+    const abilities = resolveSessionAbilities(
+      makeSession({ status: 'IN_PROGRESS', registeredPlayerIds: [PLAYER_ID] }),
+      game,
+      null,
+      masterOf(game),
+    );
+
+    expect(abilities.canReview).toBe(false);
+  });
+
+  it('через две недели окно закрыто', () => {
+    const abilities = resolveSessionAbilities(
+      completedDaysAgo(20),
+      game,
+      null,
+      masterOf(game),
+    );
+
+    expect(abilities.canReview).toBe(false);
+  });
+
+  it('мастеру пустого стола оценивать некого', () => {
+    const abilities = resolveSessionAbilities(
+      makeSession({
+        status: 'COMPLETED',
+        completedAt: new Date().toISOString(),
+        registeredPlayerIds: [],
+      }),
+      game,
+      null,
+      masterOf(game),
+    );
+
+    expect(abilities.canReview).toBe(false);
+  });
+
+  it('встреча без отметки закрытия оценке не подлежит', () => {
+    // Такие остались от времён до оценок: отсчитывать окно не от чего.
+    const abilities = resolveSessionAbilities(
+      makeSession({
+        status: 'COMPLETED',
+        completedAt: null,
+        registeredPlayerIds: [PLAYER_ID],
+      }),
+      game,
+      null,
+      masterOf(game),
+    );
+
+    expect(abilities.canReview).toBe(false);
   });
 });

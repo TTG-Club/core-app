@@ -10,6 +10,7 @@ import type {
   NOTIFICATION_TYPES,
   PROFILE_GENDERS,
   REGISTRATION_DECISIONS,
+  REVIEW_KINDS,
   SESSION_ATTENDANCE_STATUSES,
   SESSION_PAYMENT_TYPES,
   SESSION_REGISTRATION_STATUSES,
@@ -60,6 +61,60 @@ export interface MasterPublicProfile {
   closedGames: number;
   cancelledGames: number;
   completedSessions: number;
+
+  /** Сколько игроков сыграли бы с ним снова. */
+  recommended: number;
+
+  /** Сколько всего раскрытых оценок. */
+  reviews: number;
+}
+
+/** Кто кого оценил: игрок мастера или мастер игрока. */
+export type ReviewKind = (typeof REVIEW_KINDS)[number];
+
+/**
+ * Вердикт одного участника встречи о другом.
+ *
+ * Оценка бинарная — «сыграл бы снова» или нет: на малых числах это честнее
+ * пятизвёздочной шкалы, которая быстро схлопывается в сплошные пятёрки.
+ */
+export interface SessionReview {
+  id: string;
+  sessionId: string;
+  gameId: string;
+  authorId: string;
+  targetId: string;
+  kind: ReviewKind;
+  recommended: boolean;
+
+  /** Текст отзыва; `null` — оценку поставили молча. */
+  comment: string | null;
+  createdAt: string;
+}
+
+/**
+ * Отметка в своём списке: отмеченный мастер или отмеченный игрок.
+ *
+ * Имени здесь нет — сервис поиска игр знает только идентификатор, а имена
+ * принадлежат core-api.
+ */
+export interface Follow {
+  userId: string;
+  createdAt: string;
+}
+
+/** Репутация участника: сколько людей сыграли бы с ним снова. */
+export interface Reputation {
+  userId: string;
+  recommended: number;
+  total: number;
+}
+
+/** Тело оценки участника встречи. */
+export interface CreateSessionReviewRequest {
+  targetId: string;
+  recommended: boolean;
+  comment?: string;
 }
 
 /** Игра из выдачи find-game-api. */
@@ -249,6 +304,12 @@ export interface GameSession {
   priceAmount: number | null;
   priceCurrency: string | null;
   paymentType: SessionPaymentType | null;
+
+  /**
+   * Когда мастер закрыл встречу. От неё считается окно на оценку; `null` —
+   * встреча ещё не завершена или закрыта до появления оценок.
+   */
+  completedAt: string | null;
   registeredPlayerIds: Array<string>;
 }
 

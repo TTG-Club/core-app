@@ -3,7 +3,13 @@
   import { GameCard, GameCardSkeleton } from '~find-game/catalog';
   import { useMyGames, useParticipantNames } from '~find-game/composables';
   import {
+    BookmarkedPlayersPanel,
+    FollowedMastersPanel,
+  } from '~find-game/follows';
+  import {
+    BOOKMARKED_PLAYERS_TAB_LABEL,
     CATALOG_RETRY_LABEL,
+    FOLLOWED_MASTERS_TAB_LABEL,
     GAME_CATALOG_GRID_COLUMNS,
     GAME_CATALOG_SKELETON_COUNT,
     GAME_STATUS_LABELS,
@@ -18,6 +24,7 @@
     MY_GAMES_ERROR_TITLE,
     MY_GAMES_STATUS_ALL_LABEL,
     MY_GAMES_STATUS_HINT,
+    MY_GAMES_TAB_LABEL,
   } from '~find-game/model';
   import { NotificationsBell } from '~find-game/notifications';
   import { PageGrid } from '~ui/page';
@@ -81,6 +88,27 @@
 
   const isError = computed(() => status.value === 'error');
 
+  /**
+   * Вкладки раздела: свои игры и два списка отметок. Отметки живут здесь, а
+   * не в профиле: игрока отмечают, чтобы позвать в игру, а мастера — чтобы не
+   * пропустить его новую.
+   */
+  const tabItems = [
+    { value: 'games', label: MY_GAMES_TAB_LABEL, icon: 'tabler:cards' },
+    {
+      value: 'masters',
+      label: FOLLOWED_MASTERS_TAB_LABEL,
+      icon: 'tabler:bookmark',
+    },
+    {
+      value: 'players',
+      label: BOOKMARKED_PLAYERS_TAB_LABEL,
+      icon: 'tabler:star',
+    },
+  ];
+
+  const tab = ref('games');
+
   const { getParticipantName, resolveNames } = useParticipantNames();
 
   // Имена мастеров живут в core-api, поэтому резолвятся отдельно и сразу на
@@ -112,71 +140,84 @@
 
     <template #default>
       <div class="flex flex-col gap-4">
-        <UFormField :hint="MY_GAMES_STATUS_HINT">
-          <USelect
-            v-model="pickedStatus"
-            :items="statusItems"
-            value-key="value"
-            class="w-52"
-          />
-        </UFormField>
+        <UTabs
+          v-model="tab"
+          :items="tabItems"
+          :content="false"
+          class="w-full"
+        />
 
-        <PageGrid
-          v-if="isLoading"
-          :columns="GAME_CATALOG_GRID_COLUMNS"
-        >
-          <GameCardSkeleton
-            v-for="index in GAME_CATALOG_SKELETON_COUNT"
-            :key="index"
-          />
-        </PageGrid>
+        <FollowedMastersPanel v-if="tab === 'masters'" />
 
-        <UiResult
-          v-else-if="isError"
-          status="error"
-          :title="MY_GAMES_ERROR_TITLE"
-          :sub-title="getFindGameErrorMessage(error)"
-        >
-          <template #extra>
-            <UButton
-              :label="CATALOG_RETRY_LABEL"
-              @click.left.exact.prevent="refresh()"
-            />
-          </template>
-        </UiResult>
-
-        <UiResult
-          v-else-if="isEmpty"
-          status="info"
-          :title="MY_GAMES_EMPTY_TITLE"
-          :sub-title="MY_GAMES_EMPTY_DESCRIPTION"
-        >
-          <template #extra>
-            <UButton
-              :to="GAMES_CREATE_ROUTE"
-              icon="tabler:plus"
-              :label="GAMES_CREATE_NAVIGATION_LABEL"
-            />
-          </template>
-        </UiResult>
+        <BookmarkedPlayersPanel v-else-if="tab === 'players'" />
 
         <template v-else>
-          <PageGrid :columns="GAME_CATALOG_GRID_COLUMNS">
-            <GameCard
-              v-for="game in games"
-              :key="game.id"
-              :game="game"
-              :master-name="getParticipantName(game.masterId)"
-              show-status
+          <UFormField :hint="MY_GAMES_STATUS_HINT">
+            <USelect
+              v-model="pickedStatus"
+              :items="statusItems"
+              value-key="value"
+              class="w-52"
+            />
+          </UFormField>
+
+          <PageGrid
+            v-if="isLoading"
+            :columns="GAME_CATALOG_GRID_COLUMNS"
+          >
+            <GameCardSkeleton
+              v-for="index in GAME_CATALOG_SKELETON_COUNT"
+              :key="index"
             />
           </PageGrid>
 
-          <UiPagination
-            v-if="totalGames > pageSize"
-            v-model:page="humanPage"
-            :total="totalGames"
-            :items-per-page="pageSize"
-          />
+          <UiResult
+            v-else-if="isError"
+            status="error"
+            :title="MY_GAMES_ERROR_TITLE"
+            :sub-title="getFindGameErrorMessage(error)"
+          >
+            <template #extra>
+              <UButton
+                :label="CATALOG_RETRY_LABEL"
+                @click.left.exact.prevent="refresh()"
+              />
+            </template>
+          </UiResult>
+
+          <UiResult
+            v-else-if="isEmpty"
+            status="info"
+            :title="MY_GAMES_EMPTY_TITLE"
+            :sub-title="MY_GAMES_EMPTY_DESCRIPTION"
+          >
+            <template #extra>
+              <UButton
+                :to="GAMES_CREATE_ROUTE"
+                icon="tabler:plus"
+                :label="GAMES_CREATE_NAVIGATION_LABEL"
+              />
+            </template>
+          </UiResult>
+
+          <template v-else>
+            <PageGrid :columns="GAME_CATALOG_GRID_COLUMNS">
+              <GameCard
+                v-for="game in games"
+                :key="game.id"
+                :game="game"
+                :master-name="getParticipantName(game.masterId)"
+                show-status
+              />
+            </PageGrid>
+
+            <UiPagination
+              v-if="totalGames > pageSize"
+              v-model:page="humanPage"
+              :total="totalGames"
+              :items-per-page="pageSize"
+            />
+          </template>
         </template>
       </div>
     </template>

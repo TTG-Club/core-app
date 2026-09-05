@@ -3,11 +3,14 @@ import type {
   FindGameNotification,
   FindGameProblemDetail,
   FindGameUserProfile,
+  Follow,
   Game,
   GameRegistration,
   GameSession,
   MasterPublicProfile,
+  Reputation,
   SessionParticipant,
+  SessionReview,
   SpringPage,
 } from './types';
 
@@ -43,6 +46,7 @@ import {
   PROFILE_EXPERIENCE_MAX,
   PROFILE_EXPERIENCE_MIN,
   PROFILE_GENDERS,
+  REVIEW_KINDS,
   SESSION_ATTENDANCE_STATUSES,
   SESSION_PAYMENT_TYPES,
   SESSION_REGISTRATION_STATUSES,
@@ -109,6 +113,8 @@ const masterProfileResponseSchema = z.object({
   closedGames: z.coerce.number().int().catch(0),
   cancelledGames: z.coerce.number().int().catch(0),
   completedSessions: z.coerce.number().int().catch(0),
+  recommended: z.coerce.number().int().catch(0),
+  reviews: z.coerce.number().int().catch(0),
 });
 
 /**
@@ -126,7 +132,120 @@ export function parseMasterProfile(input: unknown): MasterPublicProfile {
     closedGames: parsed.closedGames,
     cancelledGames: parsed.cancelledGames,
     completedSessions: parsed.completedSessions,
+    recommended: parsed.recommended,
+    reviews: parsed.reviews,
   };
+}
+
+/* ------------------------------------------------------------------ */
+/* Оценки за встречу                                                   */
+/* ------------------------------------------------------------------ */
+
+const sessionReviewResponseSchema = z.object({
+  id: uuidSchema,
+  sessionId: uuidSchema,
+  gameId: uuidSchema,
+  authorId: uuidSchema,
+  targetId: uuidSchema,
+  kind: z.enum(REVIEW_KINDS).catch('MASTER_REVIEW'),
+  recommended: z.boolean().catch(false),
+  comment: z.string().nullish().catch(null),
+  createdAt: instantSchema,
+});
+
+const reputationResponseSchema = z.object({
+  userId: uuidSchema,
+  recommended: z.coerce.number().int().catch(0),
+  total: z.coerce.number().int().catch(0),
+});
+
+/**
+ * Приводит разобранный ответ к доменной оценке.
+ * @param parsed Результат разбора ответа сервиса.
+ */
+function toSessionReview(
+  parsed: z.infer<typeof sessionReviewResponseSchema>,
+): SessionReview {
+  return {
+    id: parsed.id,
+    sessionId: parsed.sessionId,
+    gameId: parsed.gameId,
+    authorId: parsed.authorId,
+    targetId: parsed.targetId,
+    kind: parsed.kind,
+    recommended: parsed.recommended,
+    comment: parsed.comment ?? null,
+    createdAt: parsed.createdAt,
+  };
+}
+
+/**
+ * Разбирает одну оценку.
+ * @param input Сырой ответ сервиса.
+ */
+export function parseSessionReview(input: unknown): SessionReview {
+  return toSessionReview(sessionReviewResponseSchema.parse(input));
+}
+
+/**
+ * Разбирает список оценок, отсеивая битые записи поштучно.
+ * @param input Сырой массив из ответа сервиса.
+ */
+export function parseSessionReviews(input: unknown): Array<SessionReview> {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input.flatMap((item) => {
+    const parsed = sessionReviewResponseSchema.safeParse(item);
+
+    if (!parsed.success) {
+      consola.warn('[find-game] Оценка не прошла разбор:', item);
+
+      return [];
+    }
+
+    return [toSessionReview(parsed.data)];
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Отметки участников                                                  */
+/* ------------------------------------------------------------------ */
+
+const followResponseSchema = z.object({
+  userId: uuidSchema,
+  createdAt: instantSchema,
+});
+
+/**
+ * Разбирает список отметок, отсеивая битые записи поштучно.
+ * @param input Сырой массив из ответа сервиса.
+ */
+export function parseFollows(input: unknown): Array<Follow> {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input.flatMap((item) => {
+    const parsed = followResponseSchema.safeParse(item);
+
+    if (!parsed.success) {
+      consola.warn('[find-game] Отметка не прошла разбор:', item);
+
+      return [];
+    }
+
+    return [parsed.data];
+  });
+}
+
+/**
+ * Разбирает репутацию участника.
+ * @param input Сырой ответ сервиса.
+ */
+export function parseReputation(input: unknown): Reputation {
+  return reputationResponseSchema.parse(input);
 }
 
 /* ------------------------------------------------------------------ */
@@ -369,6 +488,8 @@ const gameSessionResponseSchema = z.object({
   priceAmount: decimalSchema.nullish().catch(null),
   priceCurrency: z.string().nullish().catch(null),
   paymentType: z.enum(SESSION_PAYMENT_TYPES).nullish().catch(null),
+  // Приходит только у завершённых встреч: от неё считается окно на оценку.
+  completedAt: nullableInstantSchema,
   registeredPlayerIds: z.array(z.string()).nullish().catch(null),
 });
 
@@ -389,6 +510,7 @@ function toGameSession(
     priceAmount: parsed.priceAmount ?? null,
     priceCurrency: parsed.priceCurrency ?? null,
     paymentType: parsed.paymentType ?? null,
+    completedAt: parsed.completedAt,
     registeredPlayerIds: parsed.registeredPlayerIds ?? [],
   };
 }

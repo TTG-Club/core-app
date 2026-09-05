@@ -55,6 +55,18 @@ export const DISPLAY_NAMES_BY_IDS_API_PATH = '/api/user/display-names/by-ids';
  */
 export const SOURCES_SEARCH_PATH = '/api/v2/source/search';
 
+/** Своя репутация игрока: доля оценок без текстов и авторов. */
+export const OWN_REPUTATION_API_PATH = `${FIND_GAME_API_PREFIX}/profiles/me/reputation`;
+
+/** Отмеченные мастера: их новые игры приходят уведомлением. */
+export const FOLLOWED_MASTERS_API_PATH = `${FIND_GAME_API_PREFIX}/profiles/me/follows/masters`;
+
+/** Отмеченные игроки: их мастер зовёт в свои игры. */
+export const BOOKMARKED_PLAYERS_API_PATH = `${FIND_GAME_API_PREFIX}/profiles/me/follows/players`;
+
+/** Отметка о конкретном игроке. */
+export const PLAYER_BOOKMARK_API_PATH = `${FIND_GAME_API_PREFIX}/profiles/players`;
+
 /* ------------------------------------------------------------------ */
 /* Перечисления сервиса                                                */
 /* ------------------------------------------------------------------ */
@@ -128,6 +140,8 @@ export const NOTIFICATION_TYPES = [
   'SESSION_STARTED',
   'SESSION_COMPLETED',
   'SESSION_CANCELLED',
+  'MASTER_PUBLISHED_GAME',
+  'GAME_INVITE',
 ] as const;
 
 export const NOTIFICATION_TEXTS = {
@@ -137,6 +151,8 @@ export const NOTIFICATION_TEXTS = {
   SESSION_SCHEDULED: 'Назначена дата сессии',
   SESSION_STARTED: 'Сессия началась',
   SESSION_COMPLETED: 'Сессия завершена',
+  MASTER_PUBLISHED_GAME: 'Отмеченный мастер объявил игру',
+  GAME_INVITE: 'Мастер зовёт вас в игру',
 } as const;
 
 export const NOTIFICATION_ICONS = {
@@ -146,6 +162,8 @@ export const NOTIFICATION_ICONS = {
   SESSION_SCHEDULED: 'tabler:calendar-check',
   SESSION_STARTED: 'tabler:player-play',
   SESSION_COMPLETED: 'tabler:flag-check',
+  MASTER_PUBLISHED_GAME: 'tabler:bookmark',
+  GAME_INVITE: 'tabler:mail',
 } as const;
 
 export const NOTIFICATIONS_TITLE = 'Уведомления';
@@ -457,6 +475,107 @@ export const MASTER_PROFILE_CANCELLED_LABEL = 'Отменено игр';
 export const MASTER_PROFILE_SESSIONS_LABEL = 'Проведено встреч';
 export const MASTER_PROFILE_ERROR_TITLE = 'Не удалось загрузить профиль';
 export const MASTER_PROFILE_OPEN_HINT = 'Открыть профиль мастера';
+export const MASTER_PROFILE_REVIEWS_TITLE = 'Отзывы игроков';
+
+/* ------------------------------------------------------------------ */
+/* Отметки участников                                                  */
+/* ------------------------------------------------------------------ */
+
+export const FOLLOW_MASTER_LABEL = 'Отслеживать';
+export const FOLLOW_MASTER_ACTIVE_LABEL = 'Отслеживаю';
+
+export const FOLLOW_MASTER_HINT =
+  'Новые игры этого мастера будут приходить уведомлением';
+
+export const FOLLOW_MASTER_ADDED_TOAST = 'Мастер отмечен';
+export const FOLLOW_MASTER_REMOVED_TOAST = 'Отметка снята';
+
+export const BOOKMARK_PLAYER_LABEL = 'Отметить игрока';
+export const BOOKMARK_PLAYER_ACTIVE_LABEL = 'Отмечен';
+
+export const BOOKMARK_PLAYER_HINT =
+  'Отмеченного игрока можно позвать в следующую игру';
+
+export const BOOKMARK_PLAYER_ADDED_TOAST = 'Игрок отмечен';
+export const BOOKMARK_PLAYER_REMOVED_TOAST = 'Отметка снята';
+
+export const FOLLOWED_MASTERS_TAB_LABEL = 'Мои мастера';
+export const BOOKMARKED_PLAYERS_TAB_LABEL = 'Мои игроки';
+export const MY_GAMES_TAB_LABEL = 'Игры';
+
+export const FOLLOWED_MASTERS_EMPTY_TITLE = 'Отмеченных мастеров нет';
+
+export const FOLLOWED_MASTERS_EMPTY_DESCRIPTION =
+  'Откройте профиль мастера в объявлении и отметьте его — новые игры придут уведомлением.';
+
+export const BOOKMARKED_PLAYERS_EMPTY_TITLE = 'Отмеченных игроков нет';
+
+export const BOOKMARKED_PLAYERS_EMPTY_DESCRIPTION =
+  'Отметить игрока можно в заявках на вашу игру — потом его будет легко позвать в следующую.';
+
+export const INVITE_PLAYER_LABEL = 'Позвать в игру';
+export const INVITE_PLAYER_TITLE = 'Приглашение в игру';
+
+export const INVITE_PLAYER_DESCRIPTION =
+  'Игрок получит уведомление со ссылкой и подаст заявку сам.';
+
+export const INVITE_GAME_LABEL = 'Игра';
+export const INVITE_GAME_PLACEHOLDER = 'Выберите игру с открытым набором';
+export const INVITE_SENT_TOAST = 'Приглашение отправлено';
+export const INVITE_NO_GAMES_HINT = 'Нет игр с открытым набором';
+
+/* ------------------------------------------------------------------ */
+/* Оценки за встречу                                                   */
+/* ------------------------------------------------------------------ */
+
+/** Кто кого оценил: игрок мастера или мастер игрока. */
+export const REVIEW_KINDS = ['MASTER_REVIEW', 'PLAYER_REVIEW'] as const;
+
+/**
+ * Сколько дней после встречи её можно оценить. Ровно столько же держит окно
+ * сервис: позже он отвечает отказом.
+ */
+export const REVIEW_WINDOW_DAYS = 14;
+
+export const REVIEW_COMMENT_MAX_LENGTH = 2000;
+
+export const REVIEW_TITLE = 'Оценка встречи';
+export const REVIEW_OPEN_LABEL = 'Оценить встречу';
+export const REVIEW_SUBMIT_LABEL = 'Сохранить';
+export const REVIEW_UP_LABEL = 'Сыграл бы снова';
+export const REVIEW_DOWN_LABEL = 'Больше не сяду';
+export const REVIEW_COMMENT_LABEL = 'Отзыв';
+export const REVIEW_COMMENT_PLACEHOLDER = 'Необязательно: как прошла встреча';
+export const REVIEW_SAVED_TOAST = 'Оценка сохранена';
+export const REVIEW_VERDICT_REQUIRED = 'Выберите оценку';
+
+/** Почему чужая оценка ещё не видна: пара раскрывается разом. */
+export const REVIEW_HIDDEN_HINT =
+  'Оценка второй стороны откроется, когда ответят оба';
+
+export const REVIEW_WINDOW_HINT = `Оценить встречу можно в течение ${REVIEW_WINDOW_DAYS} дней после её завершения`;
+
+export const REVIEW_EMPTY_PARTICIPANTS =
+  'Во встрече не было других участников — оценивать некого';
+
+export const REVIEWS_EMPTY_TITLE = 'Отзывов пока нет';
+
+export const REVIEWS_EMPTY_DESCRIPTION =
+  'Они появятся, когда игроки оценят проведённые встречи';
+
+export const REPUTATION_EMPTY_LABEL = 'Пока без оценок';
+export const REPUTATION_ERROR_LABEL = 'Репутация недоступна';
+export const PLAYER_REPUTATION_LABEL = 'Репутация игрока';
+export const PLAYER_REVIEWS_TITLE = 'Отзывы мастеров';
+export const PLAYER_REVIEWS_OPEN_LABEL = 'Отзывы мастеров';
+export const OWN_REPUTATION_TITLE = 'Ваша репутация игрока';
+
+/**
+ * Своя репутация показывается без текстов и авторов: игрок знает, где стоит,
+ * но не идёт выяснять отношения с конкретным мастером.
+ */
+export const OWN_REPUTATION_HINT =
+  'Мастера видят эту долю, когда разбирают вашу заявку. Кто именно и что написал — не показывается.';
 export const GAME_SESSIONS_TITLE = 'Календарь сессий';
 
 export const GAME_GUEST_NOTICE_TITLE = 'Войдите, чтобы участвовать';

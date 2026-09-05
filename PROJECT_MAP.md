@@ -742,9 +742,9 @@ modals), so its capabilities are listed here rather than squeezed into the table
 
 ### 🎲 Games (matchmaking & play)
 
-| Domain      | Purpose                                                                                                                                                                                                                                                                                                                                                  | Sub-features                                                                                                                                                  |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `find-game` | Finding and running games via the external **find-game-api**: public catalog (`/games`), game page with sessions & registrations (`/games/[gameId]`, private games by `inviteCode`), master's own games (`/games/my`, filtered by status) and game creation (`/games/create`), master/game chat links, venue and city dictionary, recruitment open/close | `model` (Zod schemas, filters ↔ URL, role abilities), `composables`, `catalog`, `form`, `game`, `sessions`, `registrations`, `notifications`, `profile`, `ui` |
+| Domain      | Purpose                                                                                                                                                                                                                                                                                                                                                                                                               | Sub-features                                                                                                                                                             |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `find-game` | Finding and running games via the external **find-game-api**: public catalog (`/games`), game page with sessions & registrations (`/games/[gameId]`, private games by `inviteCode`), master's own games (`/games/my`, filtered by status) and game creation (`/games/create`), master/game chat links, venue and city dictionary, recruitment open/close, mutual reviews after a completed session, follows & invites | `model` (Zod schemas, filters ↔ URL, role abilities), `composables`, `catalog`, `form`, `game`, `sessions`, `registrations`, `follows`, `notifications`, `profile`, `ui` |
 
 > **Own service, own route.** The shared `/api/**` proxy sends unknown paths to
 > core-api, so find-game-api has its own same-origin prefix
@@ -759,6 +759,24 @@ modals), so its capabilities are listed here rather than squeezed into the table
 > opens in a popover on its point. The card list stays behind a view toggle for
 > going through a long backlog. Open-date sessions have no point on the axis and
 > sit in a separate row underneath.
+>
+> **Marks go one way.** A player marks a master from the profile drawer and
+> gets a notification for every public game that master publishes; a master
+> marks a player from the applications list and can then invite them into a
+> game with open recruitment. Both lists are tabs on `/games/my`. An invite is
+> a notification with a link — the player still applies themselves, and the
+> master still approves. A player can only be marked by a master whose game
+> they applied to, so the invite never becomes a way to message a stranger by
+> UUID.
+>
+> **Reviews are mutual and blind.** After a completed session players rate the
+> master and the master rates each player — thumbs up/down plus an optional
+> comment, inside a 14-day window. A verdict stays visible only to its author
+> until the other side answers (or the window closes), so nobody answers in
+> kind. Master reviews are public in the master drawer; player reviews are
+> readable only by the master of a game the player is applying to, and the
+> player sees just their own share («11 из 12 сыграли бы снова») in the game
+> profile.
 >
 > **Names come from core-api.** find-game-api stores only user UUIDs (`sub`),
 > so masters and players are resolved through

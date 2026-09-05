@@ -5,7 +5,11 @@
   import { useFindGameProfile } from '../composables';
   import {
     CATALOG_RETRY_LABEL,
+    fetchOwnReputation,
     getFindGameErrorMessage,
+    getReputationLabel,
+    OWN_REPUTATION_HINT,
+    OWN_REPUTATION_TITLE,
     PROFILE_ABOUT_HINT,
     PROFILE_ABOUT_MAX_LENGTH,
     PROFILE_BIRTH_YEAR_LABEL,
@@ -52,6 +56,18 @@
     value,
     label: PROFILE_GENDER_LABELS[value],
   }));
+
+  // Своя репутация приходит без текстов и авторов: игрок знает, где стоит, но
+  // не идёт выяснять отношения с конкретным мастером.
+  const { data: reputation } = useAsyncData(
+    'find-game-own-reputation',
+    () => fetchOwnReputation(),
+    { server: false, deep: false },
+  );
+
+  const reputationLabel = computed(() =>
+    getReputationLabel(reputation.value ?? null),
+  );
 
   const isError = computed(() => status.value === 'error');
 
@@ -165,6 +181,26 @@
         <h3 class="font-medium text-highlighted">
           {{ PROFILE_PLAYER_SECTION }}
         </h3>
+
+        <div class="flex flex-col gap-1.5 rounded-lg border border-default p-3">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-sm font-medium text-highlighted">
+              {{ OWN_REPUTATION_TITLE }}
+            </span>
+
+            <UBadge
+              :color="
+                reputation && reputation.total > 0 ? 'success' : 'neutral'
+              "
+              variant="subtle"
+              size="sm"
+              icon="tabler:thumb-up"
+              :label="reputationLabel"
+            />
+          </div>
+
+          <p class="text-sm text-muted">{{ OWN_REPUTATION_HINT }}</p>
+        </div>
 
         <UFormField :label="PROFILE_PLAYER_ABOUT_LABEL">
           <UTextarea
