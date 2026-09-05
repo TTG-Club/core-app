@@ -28,6 +28,7 @@
   import {
     useCatalogSourceQuery,
     useCharacterSheet,
+    useChoiceHints,
     useChoiceSpellPools,
     useToolCatalog,
   } from '../../composables';
@@ -65,7 +66,6 @@
     getAbilityImprovementSpent,
     getCharacterClasses,
     getChoiceModalSubtitle,
-    getChoiceSkillHints,
     getChosenFeatureOptionKeys,
     getChosenOptionFeatUrls,
     getChosenProficientSkills,
@@ -106,7 +106,6 @@
     SHEET_SEARCH_LABELS,
     SHEET_WIZARD_FEATURE_CARD_CLASS,
     SHEET_WIZARD_SECTION_CLASS,
-    SKILL_DUPLICATE_WARNING,
     STARTING_EQUIPMENT_SKIP_VALUE,
     SUBCLASS_SELECTION_MIN_LEVEL,
     unionToolProficiencies,
@@ -786,10 +785,14 @@
     });
   }
 
-  /** Пометки опций: навыки, которыми персонаж уже владеет. */
-  function choiceHints(choice: ClassChoice): Record<string, string> {
-    return getChoiceSkillHints(choice, character.value.skills);
-  }
+  /**
+   * Пометки опций: навыки, которыми персонаж уже владеет, и заклинания,
+   * которые он уже знает.
+   */
+  const { getHints: choiceHints } = useChoiceHints({
+    choices: allChoices,
+    selections,
+  });
 
   /**
    * Выбор для единого пикера: варианты, готовность пула, подписи поля и окна.
@@ -2299,7 +2302,7 @@
                   :options="control.options"
                   :count="control.requiredCount"
                   :status="control.status"
-                  :warning="SKILL_DUPLICATE_WARNING"
+                  :warning="control.warning"
                   :model-value="selections[control.choice.id] ?? []"
                   @update:model-value="updateSelection(control.choice, $event)"
                 />
@@ -2405,7 +2408,7 @@
                       :options="control.options"
                       :count="control.requiredCount"
                       :status="control.status"
-                      :warning="SKILL_DUPLICATE_WARNING"
+                      :warning="control.warning"
                       :model-value="selections[control.choice.id] ?? []"
                       @update:model-value="
                         updateSelection(control.choice, $event)

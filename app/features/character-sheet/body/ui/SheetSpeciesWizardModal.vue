@@ -24,6 +24,7 @@
   import {
     useCatalogSourceQuery,
     useCharacterSheet,
+    useChoiceHints,
     useChoiceSpellPools,
     useLazyCatalogSourceQuery,
     useToolCatalog,
@@ -48,7 +49,6 @@
     filterChoicesByLevel,
     getCharacterFeatureId,
     getChoiceModalSubtitle,
-    getChoiceSkillHints,
     getChosenProficientSkills,
     getFeatChoiceOptions,
     getFeatUrlFromFeatureId,
@@ -67,7 +67,6 @@
     parseSpeedFromText,
     resolveChoiceOptions,
     SHEET_SEARCH_LABELS,
-    SKILL_DUPLICATE_WARNING,
     SPECIES_DETAIL_BASE_PATH,
     SPECIES_FEAT_INVALID_RESPONSE_ERROR,
     SPECIES_FILTERS_PATH,
@@ -527,10 +526,14 @@
     });
   }
 
-  /** Пометки опций: навыки, которыми персонаж уже владеет. */
-  function choiceHints(choice: ClassChoice): Record<string, string> {
-    return getChoiceSkillHints(choice, character.value.skills);
-  }
+  /**
+   * Пометки опций: навыки, которыми персонаж уже владеет, и заклинания,
+   * которые он уже знает.
+   */
+  const { getHints: choiceHints } = useChoiceHints({
+    choices: allChoices,
+    selections,
+  });
 
   /**
    * Выбор для единого пикера: варианты, готовность пула, подписи поля и окна.
@@ -1392,7 +1395,7 @@
                 :options="control.options"
                 :count="control.requiredCount"
                 :status="control.status"
-                :warning="SKILL_DUPLICATE_WARNING"
+                :warning="control.warning"
                 :model-value="selections[control.choice.id] ?? []"
                 @update:model-value="updateSelection(control.choice, $event)"
                 @retry="handleSpellPoolRetry(control.choice)"
