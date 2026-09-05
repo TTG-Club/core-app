@@ -5,13 +5,21 @@ import { errors } from 'jose';
 
 import { Role } from '~/shared/types';
 
+/**
+ * Пользователь из токена запроса.
+ *
+ * Истёкший токен и битый различаются ответом: первый лечится входом заново,
+ * второй — ошибка запроса, и повторять его бессмысленно.
+ *
+ * @param event Событие H3.
+ */
 export function getUserFromToken(event: H3Event) {
   const token = getTokenFromRequest(event);
 
   try {
     return verifyJwt(token);
-  } catch (err) {
-    if (err instanceof errors.JWTExpired) {
+  } catch (error) {
+    if (error instanceof errors.JWTExpired) {
       throw createError(getErrorResponse(StatusCodes.UNAUTHORIZED));
     }
 
@@ -19,6 +27,13 @@ export function getUserFromToken(event: H3Event) {
   }
 }
 
+/**
+ * Может ли пользователь распоряжаться чужой записью: своей — всегда, чужой —
+ * только с ролью администратора или модератора.
+ *
+ * @param event Событие H3.
+ * @param username Владелец записи.
+ */
 export async function isUserHasAccess(
   event: H3Event,
   username: string | undefined,

@@ -159,6 +159,7 @@
 
   function handleRollClick() {
     handleRoll(formula.value);
+
     emit('close', true);
   }
 </script>

@@ -40,7 +40,7 @@ export default defineEventHandler<Request, Promise<S3UploadResponse>>(
       }
 
       section = query?.section;
-    } catch (err) {
+    } catch (error) {
       throw createError(
         getErrorResponse(StatusCodes.BAD_REQUEST, {
           message: 'Максимальный размер имеет неверный формат',
@@ -81,11 +81,11 @@ export default defineEventHandler<Request, Promise<S3UploadResponse>>(
         getFileForUpload(section, username, file),
         maxSize,
       );
-    } catch (err) {
-      consola.error(err);
+    } catch (error) {
+      consola.error(error);
 
-      if (err instanceof H3Error) {
-        throw err;
+      if (error instanceof H3Error) {
+        throw error;
       }
 
       throw createError(getErrorResponse(StatusCodes.INTERNAL_SERVER_ERROR));

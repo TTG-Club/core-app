@@ -781,7 +781,10 @@
       return;
     }
 
-    damageModal.open({ title: `Урон: ${inventoryItem.name}`, damage });
+    damageModal.open({
+      title: `Урон: ${inventoryItem.name}`,
+      damage,
+    });
   }
 
   /**
