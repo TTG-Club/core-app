@@ -3,7 +3,8 @@
 > **Purpose:** Online D&D 5e reference **and toolset** — reference content
 > (species, classes, spells, bestiary, magic items, items, feats, backgrounds,
 > glossary, sources), interactive tools (tokenator, dice roller, ability
-> calculator, initiative tracker, character sheet), news/articles publishing,
+> calculator, dice calculator, initiative tracker, character sheet),
+> news/articles publishing,
 > page discussions, user accounts & subscriptions, admin & moderation, and a
 > VTTG virtual-tabletop landing.
 > **⚠️ ATTENTION:** This file contains only the domain map and project
@@ -92,9 +93,59 @@ core-app/
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `tokenator`       | Canvas VTT token generator (`/tokenator`): mask/frame/tint/text/3D lighting, export. Dexie (IndexedDB) + Pinia store                                                                                          | `canvas`, `controls`, `preview`, `model`, `composables`                                                                                  |
 | `dice-roller`     | Dice-notation roller w/ crit detection + history; float/sidebar toggle, inline links, modal                                                                                                                   | `modal`, `float-button`, `sidebar-button`, `link`, `composables`, `model` (+ legacy `const.ts` / `types.ts` / `utils.ts` at domain root) |
-| `calculator`      | Character-math tools container (`/calculators/abilities`)                                                                                                                                                     | `abilities` — ability-score calc (Point Buy / Standard Array / Random Roll)                                                              |
+| `calculator`      | Character-math tools container (`/calculators/abilities`, `/tools/dice-calculator`)                                                                                                                           | `abilities` — ability-score calc (Point Buy / Standard Array / Random Roll); `dice` — roll calculator with probability analysis          |
 | `initiative`      | Initiative tracker (`/tools/initiative[/:id]`): participants, HP/AC editing, bestiary lookup, players from character sheets (own + saved shared, see below); anonymous slot in localStorage + `X-Tracker-Key` | `list`, `workspace`, `ui-kit`, `composables`, `model`                                                                                    |
 | `character-sheet` | D&D 2024 character sheet (`/tools/character-sheet[/:id]`; the list page is public and shows a sign-in prompt to guests, creating/saving needs an account) — see the breakdown below                           | `body`, `list`, `controls`, `drawer`, `composables`, `model`                                                                             |
+
+#### `calculator/dice`: formula syntax and probability
+
+`/tools/dice-calculator` has its own formula parser (`model/tokenizer.ts` +
+`model/parser.ts`), separate from the `dice-roller` domain, which uses the
+`@ttg-club/dice-roller-parser` package. The two are **not** interchangeable, and
+this one cannot be replaced by the package: it adds checks against a target
+(`d20 + 6 СЛ 15`, with `КД`/`AC`/`DC` aliases) and damage that depends on the
+outcome (`* (2d6 + 3) crit (4d6 + 3)`, `save half`), and it exposes the AST that
+`model/distribution.ts` needs to compute probabilities — the package offers
+neither. Both accept `+ - * /` and Cyrillic `к` as a synonym for `d`; the
+modifier notation differs (`kh`/`kl`/`r` here, `вх`/`вл`/`ул`/`ух`/`пр`/`пб`
+there).
+
+Arithmetic is integer throughout: division rounds down (`model/operators.ts`),
+matching the D&D rule and the halving done by `save half`. A literal `/ 0` is
+rejected while parsing; a divisor that only evaluates to zero yields zero, so
+neither the result nor the histogram can catch an `Infinity`.
+
+`save half` is written from the target's point of view: the d20 roll **is** the
+saving throw, so meeting the DC halves the damage and failing it deals the full
+amount. This is the opposite of an attack against AC, where a miss deals nothing
+at all.
+
+A critical hit doubles the damage dice by default, so a plain
+`(d20 + 5 КД 15) * (2d6 + 3)` already handles a natural 20 correctly. The
+optional `crit (…)` clause overrides that, and exists only for crit damage that
+is not simply doubled dice (brutal critical and friends).
+
+Four toggles — advantage, disadvantage, critical damage and resistance — change
+the roll without touching the text in the input. The critical toggle means "this
+hit crits": on a formula with a check it makes every hit deal the crit damage
+(the `crit (…)` clause if declared, doubled dice otherwise) and copies that into
+the crit branch too, so a natural 20 cannot double what is already doubled; on a
+plain damage formula it simply doubles the dice. `useDiceCalculator` parses the
+formula, rewrites the tree (`model/roll.ts` for the modes, `model/transform.ts`
+for crit and resistance, in that order: crit doubles the dice, then resistance
+halves the total), and records which toggles applied. Since the input still
+shows the original formula, `createRollLabel` is what explains the difference —
+it appends `· преимущество · крит. урон · сопротивление` to the result caption,
+and the same string keys the analysis cache. Advantage and disadvantage are
+hidden unless the formula holds a lone d20 for them to change; crit and
+resistance apply to anything, so they sit ahead of the modes and never move.
+
+Probabilities come from `model/distribution.ts`. Formulas without checks are
+computed exactly (convolution for plain sums, a CDF shortcut for `kh1`/`kl1`,
+full enumeration for wider `kh`/`kl`), falling back to 60 000 sampled rolls when
+the exact space would be too large. Formulas with checks are always sampled,
+because the outcome of the check decides which dice are rolled next; the samples
+are split into miss / hit / crit so the histogram can stack them.
 
 #### `initiative`: players from character sheets
 
