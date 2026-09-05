@@ -1,6 +1,10 @@
 import type { MaybeRefOrGetter, Ref } from 'vue';
 
-import type { CharacterSpell, SpellDamage } from '../model';
+import type {
+  CharacterSpell,
+  SpellDamage,
+  SpellDamageFormulas,
+} from '../model';
 
 import {
   fetchSpellDamageFormulas,
@@ -33,15 +37,17 @@ const requestedSpellUrls = new Set<string>();
  *
  * @param spells заклинания, которым нужен урон (книга и врождённые).
  * @param spellAbilityModifier модификатор заклинательной характеристики.
+ * @param characterLevel общий уровень персонажа: по нему растёт урон заговоров.
  * @returns доступ к разобранным броскам урона по URL заклинания.
  */
 export function useSpellDamage(
   spells: MaybeRefOrGetter<CharacterSpell[]>,
   spellAbilityModifier: MaybeRefOrGetter<number>,
+  characterLevel: MaybeRefOrGetter<number>,
 ): SpellDamageCatalog {
-  // Формулы кэшируются как есть: модификатор характеристики подставляется при
-  // разборе, поэтому его смена не требует новых запросов.
-  const damageFormulas: Ref<Record<string, string[]>> = useState(
+  // Формулы кэшируются как есть: модификатор характеристики и уровень персонажа
+  // подставляются при разборе, поэтому их смена не требует новых запросов.
+  const damageFormulas: Ref<Record<string, SpellDamageFormulas>> = useState(
     SPELL_DAMAGE_STATE_KEY,
     () => ({}),
   );
@@ -84,10 +90,14 @@ export function useSpellDamage(
    * @returns броски урона; пусто — урона нет либо справочник ещё не ответил.
    */
   function getDamage(spellUrl: string): SpellDamage[] {
-    const formulas = damageFormulas.value[spellUrl];
+    const damage = damageFormulas.value[spellUrl];
 
-    return formulas?.length
-      ? getSpellDamage(formulas, toValue(spellAbilityModifier))
+    return damage
+      ? getSpellDamage(
+          damage,
+          toValue(spellAbilityModifier),
+          toValue(characterLevel),
+        )
       : [];
   }
 

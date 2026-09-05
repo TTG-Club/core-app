@@ -215,7 +215,7 @@
               </h2>
             </template>
 
-            <FeatGrantedSpells v-model="mechanics.spells" />
+            <FeatGrantedSpells v-model="editorRows.grantedSpells" />
           </UCard>
 
           <UCard variant="subtle">

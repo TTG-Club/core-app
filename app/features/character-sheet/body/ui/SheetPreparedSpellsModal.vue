@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { CharacterPreparedSpells, PreparedSpellKind } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
+
   import { useCharacterSheet } from '../../composables';
   import {
     getPreparedSpellsBreakdown,
@@ -14,7 +16,10 @@
   } from '../../model';
 
   const props = defineProps<{
-    /** Что настраивается: заклинания книги либо заговоры (свой счётчик). */
+    /**
+     * Что настраивается: сколько заклинаний кругов 1+ можно держать
+     * подготовленными либо сколько заговоров персонаж может знать.
+     */
     kind: PreparedSpellKind;
   }>();
 
@@ -160,7 +165,7 @@
         <USeparator class="my-1" />
 
         <div class="flex items-center justify-between text-sm">
-          <span class="text-muted">{{ PREPARED_SPELLS_LABELS.total }}</span>
+          <span class="text-muted">{{ kindLabels.total }}</span>
 
           <span class="flex items-baseline gap-2">
             <span
@@ -181,14 +186,14 @@
     <template #footer>
       <div class="flex w-full justify-end gap-2">
         <UButton
-          label="Отмена"
+          :label="ACTION_LABELS.cancel"
           color="neutral"
           variant="ghost"
           @click.left.exact.prevent="handleCancel"
         />
 
         <UButton
-          label="Применить"
+          :label="ACTION_LABELS.apply"
           color="primary"
           @click.left.exact.prevent="handleApply"
         />

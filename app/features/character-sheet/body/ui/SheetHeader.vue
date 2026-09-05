@@ -3,6 +3,8 @@
 
   import type { Character, SheetSaveStatus } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
+
   import {
     getClassesDisplayLabel,
     getEffectiveVision,
@@ -12,6 +14,7 @@
     LONG_REST_LABELS,
     SHEET_COPY_LIMIT_HINT,
     SHEET_EMPTY_LABELS,
+    SHEET_HEADER_LABELS,
     SHEET_OPEN_ON_PAGE_LABEL,
     SHEET_READONLY_LABELS,
     SHEET_SAVE_LINK_LIMIT_HINT,
@@ -256,7 +259,7 @@
               size="xs"
               square
               class="rounded-full"
-              aria-label="Настроить зрение"
+              :aria-label="SHEET_HEADER_LABELS.vision"
               @click.left.exact.prevent="emit('edit-vision')"
             />
           </span>
@@ -319,7 +322,7 @@
       <button
         type="button"
         class="max-w-full cursor-pointer truncate text-center text-3xl font-bold tracking-wide text-highlighted transition-colors hover:text-primary @2xl:max-w-fit @2xl:text-left"
-        aria-label="Изменить имя персонажа"
+        :aria-label="SHEET_HEADER_LABELS.name"
         @click.left.exact.prevent="emit('edit-name')"
       >
         {{ character.name }}
@@ -331,7 +334,7 @@
         <button
           type="button"
           class="cursor-pointer rounded px-1 transition-colors hover:bg-elevated/60 hover:text-primary"
-          aria-label="Выбрать вид персонажа"
+          :aria-label="SHEET_HEADER_LABELS.species"
           @click.left.exact.prevent="emit('edit-species')"
         >
           {{ speciesLabel }}
@@ -342,7 +345,7 @@
         <button
           type="button"
           class="cursor-pointer rounded px-1 transition-colors hover:bg-elevated/60 hover:text-primary"
-          aria-label="Выбрать класс персонажа"
+          :aria-label="SHEET_HEADER_LABELS.characterClass"
           @click.left.exact.prevent="emit('edit-class')"
         >
           {{ classLabel }}
@@ -353,7 +356,7 @@
         <button
           type="button"
           class="cursor-pointer truncate rounded px-1 transition-colors hover:bg-elevated/60 hover:text-primary"
-          aria-label="Выбрать предысторию персонажа"
+          :aria-label="SHEET_HEADER_LABELS.background"
           @click.left.exact.prevent="emit('edit-background')"
         >
           {{ backgroundLabel }}
@@ -363,11 +366,12 @@
       <button
         type="button"
         class="mt-2 flex w-full cursor-pointer items-center gap-3 rounded p-1 text-xs text-toned transition-colors hover:bg-elevated/40 @5xl:max-w-lg"
-        aria-label="Настроить опыт и уровень"
+        :aria-label="SHEET_HEADER_LABELS.progress"
         @click.left.exact.prevent="emit('edit-progress')"
       >
         <span class="shrink-0"
-          ><span class="hidden @5xl:inline">Уровень </span
+          ><span class="hidden @5xl:inline"
+            >{{ SHEET_HEADER_LABELS.levelPrefix }}&nbsp;</span
           >{{ character.level }}</span
         >
 
@@ -397,7 +401,8 @@
         </span>
 
         <span class="shrink-0"
-          ><span class="hidden @5xl:inline">Уровень </span
+          ><span class="hidden @5xl:inline"
+            >{{ SHEET_HEADER_LABELS.levelPrefix }}&nbsp;</span
           >{{ character.level + 1 }}</span
         >
       </button>
@@ -497,7 +502,7 @@
             color="neutral"
             variant="ghost"
             square
-            aria-label="Действия с листом"
+            :aria-label="SHEET_HEADER_LABELS.menu"
           />
         </UDropdownMenu>
 
@@ -517,14 +522,14 @@
 
         <UTooltip
           v-if="canClose"
-          text="Закрыть"
+          :text="ACTION_LABELS.close"
         >
           <UButton
             icon="tabler:x"
             color="neutral"
             variant="ghost"
             square
-            aria-label="Закрыть"
+            :aria-label="ACTION_LABELS.close"
             @click.left.exact.prevent="emit('close')"
           />
         </UTooltip>
@@ -534,7 +539,7 @@
         <UTooltip :text="inspirationTooltip">
           <UButton
             icon="tabler:sparkles"
-            label="Вдохновение"
+            :label="SHEET_HEADER_LABELS.inspiration"
             color="primary"
             :variant="inspirationVariant"
             class="@max-5xl:hidden"
@@ -553,7 +558,7 @@
             class="@5xl:hidden"
             :class="inspirationClass"
             :aria-pressed="character.inspiration"
-            aria-label="Вдохновение"
+            :aria-label="SHEET_HEADER_LABELS.inspiration"
             @click.left.exact.prevent="emit('toggle-inspiration')"
           />
         </UTooltip>

@@ -92,7 +92,7 @@
             type="button"
             class="flex min-w-0 grow cursor-pointer items-center text-left after:absolute after:inset-0 after:cursor-pointer"
             :aria-expanded="note.isExpanded"
-            :aria-label="`Заметка: ${note.title}`"
+            :aria-label="`${SHEET_NOTE_LABELS.openAria}: ${note.title}`"
             @click.left.exact.prevent="toggleNote(note.id)"
           >
             <span class="grow truncate text-sm font-medium text-highlighted">
@@ -108,7 +108,7 @@
             square
             class="relative z-10 shrink-0 opacity-0 transition-opacity group-hover/note:opacity-100 focus-visible:opacity-100"
             :class="[SHEET_REVEAL_CONTROL_CLASS, editControlClass]"
-            :aria-label="`Редактировать заметку: ${note.title}`"
+            :aria-label="`${SHEET_NOTE_LABELS.editAria}: ${note.title}`"
             @click.left.exact.prevent="handleEdit(note.id)"
           />
 
@@ -120,7 +120,7 @@
             square
             class="relative z-10 shrink-0 opacity-0 transition-opacity group-hover/note:opacity-100 focus-visible:opacity-100"
             :class="[SHEET_REVEAL_CONTROL_CLASS, editControlClass]"
-            :aria-label="`Удалить заметку: ${note.title}`"
+            :aria-label="`${SHEET_NOTE_LABELS.removeAria}: ${note.title}`"
             @click.left.exact.prevent="handleRemove(note.id)"
           />
 

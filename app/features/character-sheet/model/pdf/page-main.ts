@@ -34,6 +34,7 @@ import {
   getExhaustionEffects,
   getHitDicePools,
   getInitiativeBonus,
+  getMaxHitPoints,
   getPrimarySpeed,
   getResourceMax,
   getResourceRecoverySummary,
@@ -453,6 +454,10 @@ function drawProficienciesPanel(
       values: proficiencies.weaponMasteries,
     },
     {
+      label: PDF_LABELS.masteryProperties,
+      values: proficiencies.masteryProperties,
+    },
+    {
       label: PDF_LABELS.toolProficiency,
       values: getToolNames(proficiencies.tools),
     },
@@ -675,7 +680,10 @@ function drawHealthPanel(
           label: PDF_LABELS.currentHits,
           value: String(character.health.current),
         },
-        { label: PDF_LABELS.maxHits, value: String(character.health.max) },
+        {
+          label: PDF_LABELS.maxHits,
+          value: String(getMaxHitPoints(character)),
+        },
         {
           label: PDF_LABELS.temporaryHits,
           value: String(character.health.temporary),

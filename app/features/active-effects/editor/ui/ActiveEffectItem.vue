@@ -41,6 +41,14 @@
   import EffectDamageParts from './EffectDamageParts.vue';
   import EffectFlags from './EffectFlags.vue';
 
+  const { hideCombat = false } = defineProps<{
+    /**
+     * Скрыть вкладку «Боевая механика»: лист персонажа её не применяет, и
+     * заполнять там нечего.
+     */
+    hideCombat?: boolean;
+  }>();
+
   const model = defineModel<ActiveEffect>({ required: true });
 
   // Заполняет форму данными стандартного состояния D&D 5e, сохраняя id и
@@ -86,10 +94,24 @@
     model.value = { ...model.value, description: generatedDescription.value };
   }
 
-  const tabItems = [
-    { label: ACTIVE_EFFECT_LABELS.tabGeneral, slot: 'general' as const },
-    { label: ACTIVE_EFFECT_LABELS.tabCombat, slot: 'combat' as const },
-  ];
+  /**
+   * Боевая механика — броски, ауры и триггеры — считается мастерским
+   * инструментом: лист персонажа её не применяет, и вкладка там только сбивает.
+   */
+  const tabItems = computed(() => {
+    const items = [
+      { label: ACTIVE_EFFECT_LABELS.tabGeneral, slot: 'general' as const },
+    ];
+
+    if (hideCombat) {
+      return items;
+    }
+
+    return [
+      ...items,
+      { label: ACTIVE_EFFECT_LABELS.tabCombat, slot: 'combat' as const },
+    ];
+  });
 
   const hasDurationValue = computed(() =>
     EFFECT_DURATION_WITH_VALUE.includes(model.value.duration.type),
@@ -410,7 +432,7 @@
 
         <UFormField
           :label="ACTIVE_EFFECT_LABELS.effectTarget"
-          class="col-span-12 md:col-span-5"
+          class="col-span-full md:col-span-8"
         >
           <USelect
             :model-value="model.effectTarget ?? 'self'"
@@ -421,26 +443,35 @@
           />
         </UFormField>
 
-        <UFormField
-          :label="ACTIVE_EFFECT_LABELS.aura"
-          class="col-span-6 flex items-center md:col-span-3"
-        >
-          <USwitch v-model="isAura" />
-        </UFormField>
+        <!--
+          Подпись принадлежит самому переключателю, а не обёртке поля: у
+          `UFormField` подпись и контрол становятся соседями по флексу, и
+          длинная подпись отжимает тумблер тем сильнее, чем она длиннее —
+          «Перенос при экипировке» уезжал от своего тумблера на две строки.
 
-        <UFormField
-          :label="ACTIVE_EFFECT_LABELS.active"
-          class="col-span-6 flex items-center md:col-span-3"
+          Коробка встаёт в одну строку с «Целью эффекта» и прижимается к её
+          низу: у поля сверху своя подпись (20px) с отступом (4px), поэтому по
+          верху они не сошлись бы. Своя высота в высоту контрола `md` (32px)
+          ставит тумблеры ровно по центру селекта, а не по его нижнему краю.
+        -->
+        <div
+          class="col-span-full flex flex-wrap items-center gap-x-8 gap-y-3 md:col-span-16 md:min-h-8 md:self-end"
         >
-          <USwitch v-model="isActive" />
-        </UFormField>
+          <USwitch
+            v-model="isActive"
+            :label="ACTIVE_EFFECT_LABELS.active"
+          />
 
-        <UFormField
-          :label="ACTIVE_EFFECT_LABELS.transfer"
-          class="col-span-full flex items-center md:col-span-5"
-        >
-          <USwitch v-model="model.transfer" />
-        </UFormField>
+          <USwitch
+            v-model="isAura"
+            :label="ACTIVE_EFFECT_LABELS.aura"
+          />
+
+          <USwitch
+            v-model="model.transfer"
+            :label="ACTIVE_EFFECT_LABELS.transfer"
+          />
+        </div>
 
         <!-- Длительность -->
         <UFormField

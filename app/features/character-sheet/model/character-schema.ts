@@ -10,6 +10,7 @@ import type {
   CharacterSheetListPage,
   CharacterSpellcasting,
   FeatureDescriptionNode,
+  InventoryArmor,
   ResourceRecovery,
   ResourceRecoveryMode,
   ResourceRecoveryRule,
@@ -20,6 +21,7 @@ import type {
 import { clamp } from 'es-toolkit';
 
 import { z } from '~/utils/zod';
+import { normalizeLoadedActiveEffects } from '~active-effects/model';
 import { CasterType } from '~classes/model';
 
 import {
@@ -31,6 +33,7 @@ import {
   INVENTORY_QUANTITY_MAX,
   INVENTORY_QUANTITY_MIN,
   LEGACY_NOTE_ID,
+  LEGACY_STEALTH_DISADVANTAGE_ARMOR_URLS,
   LEVEL_MAX,
   LEVEL_MIN,
   NEW_CUSTOM_BONUS,
@@ -184,6 +187,9 @@ const grantedProficienciesSchema = z.object({
   // Мастерство оружием и спасброски пришли в выдачу последними: у записей без
   // полей их нет, и снятие источника их не тронет.
   weaponMasteries: z.array(z.string()).catch([]),
+  // Приёмы без привязки к оружию — самое позднее поле: у записей, сохранённых
+  // до него, приёмов нет, и снятие источника их не тронет.
+  masteryProperties: z.array(z.string()).catch([]),
   savingThrows: z.array(abilityKeySchema).catch([]),
 });
 
@@ -196,7 +202,20 @@ const featCounterSchema = z.object({
   name: z.string().catch(''),
   shortName: z.string().catch(''),
   max: z.string().catch(''),
-  recovery: z.enum(['short-rest', 'long-rest']).catch('long-rest'),
+  // Ступени максимума; у снимков, сделанных до них, поля нет — такой ресурс
+  // считался формулой, ею и останется
+  scaling: z
+    .array(z.object({ level: z.number(), max: z.number() }))
+    .catch([])
+    .default([]),
+  // Нижняя граница максимума; у снимков до неё поля нет — такой ресурс
+  // считался одной формулой, ею и останется
+  min: z.coerce.number().catch(0).default(0),
+  // «Один заряд коротким, все продолжительным» появилось позже двух видов
+  // отдыха: у снимков до него такого отката нет
+  recovery: z
+    .enum(['short-rest', 'long-rest', 'short-rest-one'])
+    .catch('long-rest'),
 });
 
 /**
@@ -305,9 +324,16 @@ const spellSchema = z.object({
   concentration: z.boolean().optional(),
   ritual: z.boolean().optional(),
   prepared: z.boolean().optional().catch(undefined),
+  // Держит ли выдавшая запись заклинание подготовленным: `false` — подготовку
+  // ставит игрок, и она занимает место среди подготовленных. Нет поля —
+  // запись легла на лист до появления флага, такая держит подготовленным
+  alwaysPrepared: z.boolean().optional().catch(undefined),
   // Уровень доступа выданного чертой заклинания; у записей до него поля нет —
   // такое заклинание доступно с момента взятия черты
   requiredLevel: z.coerce.number().optional().catch(undefined),
+  // Заклинание пришло из группы «весь список класса, не выше доступного круга»:
+  // список лежит на записи целиком, а круги лист отбирает каждый раз заново
+  limitedBySlots: z.boolean().optional().catch(undefined),
   // Своя характеристика заклинания: её ставит черта, давшая заклинание. Нет
   // поля — заклинание считается от характеристики класса
   spellcastingAbility: abilityKeySchema.optional().catch(undefined),
@@ -332,7 +358,11 @@ const inventoryBonusSchema = z
       'armor-class',
       'spell-save-dc',
       'spell-attack',
+      'melee-attack',
+      'ranged-attack',
+      'proficiency-bonus',
       'initiative',
+      'hit-points-max',
     ]),
     key: z.string().catch(''),
     value: z.coerce.number().catch(0),
@@ -374,6 +404,16 @@ const featureSchema = z.object({
   // Подготовку игрок снимает и возвращает прямо здесь, поэтому список хранится
   // в самой записи, а не пересобирается из справочника.
   spells: z.array(spellSchema).nullable().optional().catch(undefined),
+  // Расширение списка заклинаний записью — снимок; у записей до его появления
+  // поля нет, и такая запись список не расширяет, пока её не возьмут заново.
+  spellList: z
+    .object({
+      requiresSpellcasting: z.boolean().catch(false),
+      spells: z.array(spellSchema).catch([]),
+    })
+    .nullable()
+    .optional()
+    .catch(undefined),
   // Ответы игрока на выборы черты по ключу выбора; у записей до их появления
   // поля нет.
   choiceAnswers: z
@@ -393,6 +433,13 @@ const featureSchema = z.object({
   // Снимок пассивных бонусов черты из её активных эффектов; у записей до их
   // появления поля нет — такая черта лист не двигала.
   bonuses: inventoryBonusesSchema.optional().catch(undefined),
+  // Эффекты умения целиком: у листов, сохранённых до их появления, поля нет, и
+  // умение считается по одним бонусам, как считалось раньше.
+  activeEffects: z
+    .unknown()
+    .transform((raw) => normalizeLoadedActiveEffects(raw))
+    .optional()
+    .catch(undefined),
 });
 
 const speciesSchema = z
@@ -769,6 +816,16 @@ const resourceMaxRuleSchema = z.object({
   source: z.enum(['fixed', 'proficiency', 'ability', 'level']).catch('fixed'),
   ability: abilityKeySchema.catch(RESOURCE_MAX_DEFAULT_ABILITY),
   offset: z.coerce.number().catch(0),
+  // Множителя и ступеней у правил, сохранённых до них, нет: такой ресурс
+  // считался источником с прибавкой, ею и останется
+  multiplier: z.coerce.number().optional().catch(undefined),
+  scaling: z
+    .array(z.object({ level: z.number(), max: z.number() }))
+    .optional()
+    .catch(undefined),
+  // Нижней границы у правил, сохранённых до неё, нет: такой ресурс считался
+  // одним источником с прибавкой, им и останется
+  min: z.coerce.number().optional().catch(undefined),
 });
 
 /**
@@ -824,6 +881,7 @@ const proficienciesSchema = z
     armor: z.array(z.string()).catch([]),
     weapons: z.array(z.string()).catch([]),
     weaponMasteries: z.array(z.string()).catch([]),
+    masteryProperties: z.array(z.string()).catch([]),
     tools: z.array(toolProficiencySchema).catch([]),
     languages: z.array(z.string()).catch([]),
   })
@@ -869,9 +927,41 @@ const inventoryArmorSchema = z
     baseArmorClass: z.coerce.number().catch(0),
     dexterityMod: z.enum(['full', 'capped', 'none']).catch('full'),
     shield: z.boolean().catch(false),
+    // Помеха Скрытности появилась в записи позже: `undefined` — снимок старый,
+    // и помеху приходится восстанавливать по каталогу (см. `withArmorStealth`).
+    stealthDisadvantage: z.boolean().optional().catch(undefined),
   })
   .nullable()
   .catch(null);
+
+/**
+ * Снимок доспеха с проставленной помехой Скрытности.
+ *
+ * У листов, сохранённых до появления помехи в записи, поля нет, а вывести его
+ * из самого снимка нельзя: там только КД, правило Ловкости и признак щита, по
+ * которым стёганый доспех (помеха есть) неотличим от кожаного (помехи нет).
+ * Поэтому старым записям помеха возвращается по url каталожного доспеха; у
+ * своих предметов игрока url пустой, и помехи у них не было изначально.
+ *
+ * @param armor снимок доспеха записи; null — предмет не доспех.
+ * @param url url предмета в каталоге; '' — свой предмет игрока.
+ * @returns снимок доспеха, у которого помеха задана всегда.
+ */
+function withArmorStealth(
+  armor: z.output<typeof inventoryArmorSchema>,
+  url: string,
+): InventoryArmor | null {
+  if (!armor) {
+    return null;
+  }
+
+  return {
+    ...armor,
+    stealthDisadvantage:
+      armor.stealthDisadvantage
+      ?? LEGACY_STEALTH_DISADVANTAGE_ARMOR_URLS.has(url),
+  };
+}
 
 const inventoryWeaponDamageSchema = z
   .object({
@@ -1022,7 +1112,7 @@ const personalitySchema = z
   })
   .catch(() => ({ ...DEFAULT_CHARACTER.personality }));
 
-const inventoryItemSchema = z.object({
+const inventoryItemBaseSchema = z.object({
   id: z.string(),
   url: z.string().catch(''),
   name: z.string().catch(''),
@@ -1046,6 +1136,12 @@ const inventoryItemSchema = z.object({
   equipped: z.boolean().catch(false),
   twoHanded: z.boolean().catch(false),
   bonuses: inventoryBonusesSchema,
+  // Эффекты предмета целиком: у листов, сохранённых до их появления, поля нет,
+  // и лист считает предмет по одним бонусам, как считал раньше.
+  activeEffects: z
+    .unknown()
+    .transform((raw) => normalizeLoadedActiveEffects(raw))
+    .catch([]),
   // Состояние магии; у листов до его появления — настройки нет, предмет
   // выключен, зарядов не заведено.
   requiresAttunement: z.boolean().catch(false),
@@ -1060,6 +1156,15 @@ const inventoryItemSchema = z.object({
   // живёт в разделе-источнике, а не в листе.
   description: z.array(descriptionNodeSchema).optional().catch(undefined),
 });
+
+// Помеху Скрытности снимок листа мог не унести, а восстанавливается она по url
+// предмета — то есть уже за пределами схемы самого доспеха.
+const inventoryItemSchema = inventoryItemBaseSchema.transform(
+  (inventoryItem) => ({
+    ...inventoryItem,
+    armor: withArmorStealth(inventoryItem.armor, inventoryItem.url),
+  }),
+);
 
 /**
  * Форма листа сразу после разбора схемой: классы могут быть без уровня, среди
@@ -1254,6 +1359,12 @@ const characterSchema = z
     attunement: attunementSchema,
     notes: notesSchema,
     personality: personalitySchema,
+    // Разбирается общим нормализатором домена эффектов: он же чинит записи,
+    // сохранённые до переезда типа урона в токен формулы.
+    activeEffects: z
+      .unknown()
+      .transform((raw) => normalizeLoadedActiveEffects(raw))
+      .catch([]),
     settings: settingsSchema,
   })
   // Легаси-список владений спасбросками уходит из документа, как только тот

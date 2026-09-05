@@ -6,7 +6,11 @@
 
   import type { CommunityRatingPeriod } from './model';
 
-  import { ADMIN_USERS_ROUTE } from '~admin/users/model';
+  import {
+    ADMIN_SHEET_STATS_API_URL,
+    parseAdminCharacterSheetStats,
+  } from '~admin/character-sheets/model';
+  import { ADMIN_DASHBOARD_ROUTE } from '~admin/navigation/model';
   import { BUG_REPORT_STATS_API_URL } from '~bug-report/model';
   import {
     MATERIAL_COUNTER_API_URL,
@@ -14,10 +18,10 @@
     MATERIAL_COUNTER_DATA_KEY,
     MATERIAL_COUNTER_DESCRIPTION,
     MATERIAL_COUNTER_LABEL_MATERIALS,
-    MATERIAL_COUNTER_LABEL_VISITORS,
+    MATERIAL_COUNTER_LABEL_SHEETS,
     MATERIAL_COUNTER_RESET_DATA_KEY,
     MATERIAL_COUNTER_TITLE,
-    ONLINE_COUNTER_DATA_KEY,
+    SHEET_COUNTER_DATA_KEY,
   } from '~home/counters/model';
   import { MODERATION_BUGS_ROUTE } from '~moderation/model';
   import { AnimatedNumber } from '~ui/animated-number';
@@ -25,17 +29,21 @@
   import {
     COMMUNITY_BUG_STATS_DATA_KEY,
     COMMUNITY_EMPTY_MONTH_TEXT,
+    COMMUNITY_EMPTY_SLOT_TEXTS,
     COMMUNITY_LABEL_FIXED,
     COMMUNITY_PERIOD_DEFAULT,
     COMMUNITY_PERIOD_OPTIONS,
     COMMUNITY_REFRESH_INTERVAL_MS,
+    COMMUNITY_ROW_STAGGER_MS,
     COMMUNITY_TOP_LABEL,
+    COMMUNITY_TOP_SIZE,
     COMMUNITY_TOP_TOOLTIP,
     COMMUNITY_TROPHY_COLOR,
   } from './model';
 
   const { isAdmin, canManageBugReports } = useUserRoles();
   const router = useRouter();
+  const requestFetch = useRequestFetch();
 
   // Материалы и сброс кеша
   const {
@@ -64,10 +72,19 @@
     },
   );
 
-  // Онлайн-счётчик пишется плагином online-heartbeat, здесь только читаем
-  const visitorsCounter = useState<number | null>(
-    ONLINE_COUNTER_DATA_KEY,
-    () => null,
+  // Листы персонажей всех пользователей: та же ручка, что у карточки в
+  // админ-дашборде; на главной показываем total — все созданные листы, включая
+  // удалённые, а не только активные.
+  // requestFetch, а не $fetch: на SSR он пробрасывает cookie входящего запроса,
+  // иначе серверный запрос уходит без авторизации и ответ на странице не появится.
+  const {
+    data: sheetStats,
+    refresh: refreshSheetStats,
+    status: sheetStatsStatus,
+  } = await useAsyncData(SHEET_COUNTER_DATA_KEY, async () =>
+    parseAdminCharacterSheetStats(
+      await requestFetch<unknown>(ADMIN_SHEET_STATS_API_URL),
+    ),
   );
 
   // Статистика баг-репортов и топ охотников
@@ -83,16 +100,21 @@
     () =>
       materialsStatus.value === 'pending'
       || resetStatus.value === 'pending'
+      || sheetStatsStatus.value === 'pending'
       || bugStatsStatus.value === 'pending',
   );
 
   const materialsValue = computed(() => materialsCounter.value ?? 0);
-  const visitorsValue = computed(() => visitorsCounter.value ?? 0);
+  const sheetsValue = computed(() => sheetStats.value?.total ?? 0);
 
-  // Значения ещё не получены с бэка (null) — показываем загрузку, а не «0»
-  const isMaterialsLoading = computed(() => materialsCounter.value === null);
-  const isVisitorsLoading = computed(() => visitorsCounter.value === null);
-  const isFixedLoading = computed(() => bugStats.value === null);
+  // Значение ещё не получено или запрос упал — показываем скелетон, а не «0».
+  // В Nuxt 4 data у useAsyncData до ответа и после ошибки = undefined (не null).
+  const isMaterialsLoading = computed(
+    () => materialsCounter.value === undefined,
+  );
+
+  const isSheetsLoading = computed(() => sheetStats.value === undefined);
+  const isFixedLoading = computed(() => bugStats.value === undefined);
   const fixedCount = computed(() => bugStats.value?.fixedCount ?? 0);
   const topFixers = computed(() => bugStats.value?.topFixers ?? []);
 
@@ -130,17 +152,48 @@
         isWinner: index === 0,
         displayIndex: index + 1,
         rowStyle: {
-          animationDelay: `${index * 80}ms`,
+          animationDelay: `${index * COMMUNITY_ROW_STAGGER_MS}ms`,
         },
         barClass: isTopThree ? 'bg-success-500/8' : 'bg-success-500/4',
         barStyle: {
           width: `${(fixer.fixed / maxValue) * 100}%`,
-          animationDelay: `${300 + index * 80}ms`,
+          animationDelay: `${300 + index * COMMUNITY_ROW_STAGGER_MS}ms`,
         },
         badgeColor: isTopThree ? ('success' as const) : ('neutral' as const),
         textClass: isTopThree ? 'font-semibold text-default' : 'text-muted',
       };
     });
+  });
+
+  /**
+   * Свободные позиции рейтинга: в начале месяца охотников меньше десяти,
+   * и хвост списка дорисовывается заглушками, чтобы блок не выглядел пустым.
+   * Подпись берётся по порядку среди пустых строк, задержка анимации
+   * продолжает лесенку настоящих строк.
+   */
+  const emptySlots = computed(() => {
+    const filledCount = activeFixers.value.length;
+
+    const slots: Array<{
+      displayIndex: number;
+      label: string;
+      rowStyle: { animationDelay: string };
+    }> = [];
+
+    for (let i = filledCount; i < COMMUNITY_TOP_SIZE; i++) {
+      const emptyOffset = i - filledCount;
+
+      slots.push({
+        displayIndex: i + 1,
+        label:
+          COMMUNITY_EMPTY_SLOT_TEXTS[
+            emptyOffset % COMMUNITY_EMPTY_SLOT_TEXTS.length
+          ] ?? '',
+        rowStyle: { animationDelay: `${i * COMMUNITY_ROW_STAGGER_MS}ms` },
+      });
+    }
+
+    return slots;
   });
 
   /** Классы кликабельного стата исправленных багов (для админа/модератора) */
@@ -149,21 +202,21 @@
       canManageBugReports.value,
   }));
 
-  /** Классы кликабельного стата авантюристов (для админа) */
-  const visitorsTileClass = computed(() => ({
+  /** Классы кликабельного стата листов персонажей (для админа) */
+  const sheetsTileClass = computed(() => ({
     'cursor-pointer transition-colors hover:bg-default/80': isAdmin.value,
   }));
 
   /**
-   * Переход к управлению пользователями (для админа) — шорткат из статистики
-   * туда, где авантюристов видно поимённо.
+   * Переход в админ-дашборд (для админа) — там та же статистика листов
+   * с разбивкой на активные и всего.
    */
-  function handleVisitorsClick(): void {
+  function handleSheetsClick(): void {
     if (!isAdmin.value) {
       return;
     }
 
-    router.push(ADMIN_USERS_ROUTE);
+    router.push(ADMIN_DASHBOARD_ROUTE);
   }
 
   /**
@@ -183,15 +236,24 @@
     });
   }
 
-  /** Сброс кеша материалов и обновление всей статистики (для админа) */
-  function handleRefresh(): void {
-    resetCache();
+  /**
+   * Живые показатели: листы и баг-репорты бэк не кэширует, их можно опрашивать
+   * регулярно. Материалы кэшируются на бэке, их обновляет только сброс кеша.
+   */
+  function refreshLiveStats(): void {
+    refreshSheetStats();
     refreshBugStats();
   }
 
-  /** Автообновление статистики на клиенте */
+  /** Сброс кеша материалов и обновление всей статистики (для админа) */
+  function handleRefresh(): void {
+    resetCache();
+    refreshLiveStats();
+  }
+
+  /** Автообновление живых показателей на клиенте */
   onMounted(() => {
-    useIntervalFn(() => refreshBugStats(), COMMUNITY_REFRESH_INTERVAL_MS);
+    useIntervalFn(refreshLiveStats, COMMUNITY_REFRESH_INTERVAL_MS);
   });
 </script>
 
@@ -234,24 +296,24 @@
     <div class="grid grid-cols-1 gap-2 min-[420px]:grid-cols-3">
       <div
         class="flex flex-col rounded-lg border border-default bg-default/50 px-3 py-2.5"
-        :class="visitorsTileClass"
-        @click.left.exact.prevent="handleVisitorsClick"
+        :class="sheetsTileClass"
+        @click.left.exact.prevent="handleSheetsClick"
       >
         <span
           class="text-[10px] font-medium tracking-wider text-muted uppercase"
         >
-          {{ MATERIAL_COUNTER_LABEL_VISITORS }}
+          {{ MATERIAL_COUNTER_LABEL_SHEETS }}
         </span>
 
         <USkeleton
-          v-if="isVisitorsLoading"
+          v-if="isSheetsLoading"
           class="mt-0.5 h-5 w-10"
         />
 
         <AnimatedNumber
           v-else
           class="text-lg leading-tight font-bold text-success-400"
-          :value="visitorsValue"
+          :value="sheetsValue"
         />
       </div>
 
@@ -353,7 +415,7 @@
         <div
           v-for="fixer in decoratedTopFixers"
           :key="fixer.name"
-          class="fixer-row group relative flex items-center gap-2 rounded-lg px-2.5 py-1.5"
+          class="fixer-row group relative flex items-center gap-2 rounded-lg border border-transparent px-2.5 py-1.5"
           :style="fixer.rowStyle"
         >
           <!-- Полоска прогресса на фоне строки -->
@@ -398,6 +460,26 @@
             size="sm"
             class="relative z-1 tabular-nums"
           />
+        </div>
+
+        <!-- Свободные позиции до полного топ-10. Пунктир — принятый в проекте
+             язык «места пока нет»; рамка прозрачна у настоящих строк, чтобы
+             высота заглушки совпадала с ними. -->
+        <div
+          v-for="slot in emptySlots"
+          :key="slot.displayIndex"
+          class="fixer-row flex items-center gap-2 rounded-lg border border-dashed border-default px-2.5 py-1.5"
+          :style="slot.rowStyle"
+        >
+          <div class="flex w-5 shrink-0 items-center justify-center">
+            <span class="text-xs font-semibold text-dimmed tabular-nums">
+              {{ slot.displayIndex }}
+            </span>
+          </div>
+
+          <span class="flex-1 truncate text-sm text-dimmed italic">
+            {{ slot.label }}
+          </span>
         </div>
       </div>
 

@@ -1,37 +1,52 @@
 import type { ComputedRef, Ref } from 'vue';
 
 import type {
+  AbilityImprovementMode,
   AbilityKey,
+  CharacterAbilities,
   CharacterClass,
   CharacterClassResource,
   CharacterFeature,
+  CharacterSpell,
   ClassChoice,
+  ClassFeatureRow,
   ClassOption,
   ClassSummary,
   FeatSelectOption,
   HitPointsGainMode,
+  LevelUpAbilityImprovement,
   LevelUpClassPatch,
   LevelUpFeatChoice,
   LevelUpPayload,
   LevelUpStepDraft,
   LevelUpStepView,
   LevelUpTarget,
+  LevelUpWizardStep,
+  SheetChoiceControl,
+  SheetChoiceOrigin,
 } from '../model';
+
+import { omit } from 'es-toolkit';
 
 import { useDiceRoller } from '~dice-roller/composables';
 
 import {
-  ABILITY_IMPROVEMENT_FEATURE_ID_SEGMENT,
   ABILITY_IMPROVEMENT_LABELS,
+  ABILITY_IMPROVEMENT_STEP_LABELS,
   ABILITY_LABELS,
+  buildAbilityImprovementFeature,
+  buildChoiceControl,
   buildFeatFeature,
   buildLevelClassFeatures,
   buildSubclassFeatures,
+  CLASS_FEAT_CHOICE_ID_SEGMENT,
+  CLASS_GRANTED_FEAT_ID_SEGMENT,
   CLASS_SOURCES_ASYNC_DATA_KEY,
   CLASSES_DETAIL_BASE_PATH,
   CLASSES_FILTERS_PATH,
   collectChoiceSelections,
   collectFeatAbilityIncreases,
+  DEFAULT_ABILITY_IMPROVEMENT,
   deriveCantripsScaling,
   deriveClassResources,
   derivePreparedSpellsScaling,
@@ -40,9 +55,11 @@ import {
   FEATS_SELECT_PATH,
   fetchFeatDetail,
   filterClassOptionsBySources,
-  getAbilityImprovementFeatOptions,
+  getAbilityImprovementSpent,
   getCharacterClasses,
-  getChoiceSkillHints,
+  getChosenProficientSkills,
+  getEffectiveAbilities,
+  getFeatChoiceOptions,
   getFeatUrlFromFeatureId,
   getHitDieFormula,
   getHitDieLabel,
@@ -50,9 +67,12 @@ import {
   getLevelFeatureRows,
   getLevelHitPointsGain,
   getOwnedWeaponNames,
-  getRequiredChoiceCount,
   getSelectedCasterType,
+  getSpellChoicesKey,
+  getTakenOptionValues,
   getToolNames,
+  isAbilityImprovementComplete,
+  isAbilityImprovementFeatChoice,
   LANGUAGE_PROFICIENCY_GROUPS,
   LEVEL_UP_WIZARD_LABELS,
   mergeAbilityIncreases,
@@ -62,9 +82,15 @@ import {
   parseFeatSelectOptions,
   resolveChoiceOptions,
   SUBCLASS_SELECTION_MIN_LEVEL,
+  withAbilityImprovementStep,
+  withChosenFeatureSpells,
+  withPendingAbilityIncreases,
+  withStoredFeatureAnswers,
 } from '../model';
 import { useLazyCatalogSourceQuery } from './useCatalogSourceQuery';
 import { useCharacterSheet } from './useCharacterSheet';
+import { useChoiceHints } from './useChoiceHints';
+import { useChoiceSpellPools } from './useChoiceSpellPools';
 import { useToolCatalog } from './useToolCatalog';
 
 /** Загруженные справочные данные класса, взятые в мастере. */
@@ -123,6 +149,7 @@ function buildLevelDrafts(
         selections: {},
         notes: {},
         featChoices: {},
+        abilityImprovements: {},
       });
     }
   }
@@ -174,12 +201,45 @@ function getTargetsKey(targets: LevelUpTarget[]): string {
     .join('|');
 }
 
+/**
+ * Строки умений уровня с повышением характеристик: их выборы спрашиваются
+ * отдельным шагом, а не карточкой умения среди остальных.
+ *
+ * @param step шаг мастера.
+ * @returns строки повышения характеристик; пусто — уровень их не даёт.
+ */
+function getAbilityImprovementRows(step: LevelUpStepView): ClassFeatureRow[] {
+  return step.features.filter((row) => row.abilityImprovement);
+}
+
+/**
+ * Выборы черты повышения характеристик на шаге: у каждого свой ответ игрока.
+ *
+ * @param step шаг мастера.
+ * @returns выборы черты строк повышения.
+ */
+function getAbilityImprovementChoices(step: LevelUpStepView): ClassChoice[] {
+  return getAbilityImprovementRows(step).flatMap((row) => row.featChoices);
+}
+
 interface LevelUpWizard {
   /** Шаги мастера: по одному на каждый взятый уровень. */
   steps: ComputedRef<LevelUpStepView[]>;
 
+  /**
+   * Шаги в порядке показа: уровень, а следом — его повышение характеристик,
+   * если уровень его даёт.
+   */
+  wizardSteps: ComputedRef<LevelUpWizardStep[]>;
+
   /** Черновики шагов: состояние контролов уровня (правятся только экшенами). */
   drafts: ComputedRef<LevelUpStepDraft[]>;
+
+  /**
+   * Характеристики, от которых считается предел повышения: итоговые плюс всё,
+   * что уже разложено в мастере другими повышениями и чертами.
+   */
+  abilityScoresFor: (choiceId: string) => CharacterAbilities;
 
   /** Идёт загрузка деталей классов. */
   isLoading: Ref<boolean>;
@@ -210,26 +270,73 @@ interface LevelUpWizard {
   rollHitDie: (index: number) => void;
   setSelection: (index: number, choiceId: string, values: string[]) => void;
   setNote: (index: number, featureId: string, value: string) => void;
-  setFeatChoice: (index: number, featureId: string, featUrl: string) => void;
-  setFeatAbility: (
+  setFeatChoice: (
     index: number,
     featureId: string,
+    choiceId: string,
+    featUrl: string,
+  ) => void;
+  setFeatAbility: (
+    index: number,
+    choiceId: string,
     slot: number,
     ability: AbilityKey | null,
   ) => void;
+
+  /** Ответ на повышение характеристик шага; не задан — режим прибавок без прибавок. */
+  abilityImprovement: (
+    index: number,
+    choiceId: string,
+  ) => LevelUpAbilityImprovement;
+
+  /** Смена режима повышения: прибавки к характеристикам или черта вместо них. */
+  setAbilityImprovementMode: (
+    index: number,
+    choiceId: string,
+    mode: AbilityImprovementMode,
+  ) => void;
+
+  /** Шаг ± у характеристики в режиме прибавок. */
+  stepAbilityImprovement: (
+    index: number,
+    choiceId: string,
+    ability: AbilityKey,
+    delta: number,
+  ) => void;
+
+  /** Сброс разложенных прибавок повышения. */
+  resetAbilityImprovement: (index: number, choiceId: string) => void;
+
   selectSubclass: (index: number, subclassUrl: string) => Promise<void>;
-  choiceOptions: (choice: ClassChoice) => string[];
 
-  /** Пометки опций пикера: навыки, которыми персонаж уже владеет. */
-  choiceHints: (choice: ClassChoice) => Record<string, string>;
+  /**
+   * Выбор умения для единого пикера: варианты, готовность пула заклинаний,
+   * подписи поля и окна.
+   */
+  choiceControl: (
+    choice: ClassChoice,
+    origin?: SheetChoiceOrigin,
+  ) => SheetChoiceControl;
 
-  /** Черты, доступные для выбора в умении шага. */
-  featOptions: (index: number, featureId: string) => FeatSelectOption[];
+  /** Сколько выборов умения на шаге ещё не сделано — бейдж карточки. */
+  getFeatureRowPendingCount: (
+    row: ClassFeatureRow,
+    draft: LevelUpStepDraft,
+  ) => number;
 
-  /** Выбранная в умении черта; null — выбора не было либо черта неизвестна. */
-  selectedFeat: (index: number, featureId: string) => FeatSelectOption | null;
+  /** Перезапрашивает пул заклинаний выбора после сбоя. */
+  retrySpellPool: (choice: ClassChoice) => Promise<void>;
+
+  /** Черты, доступные выбору черты в умении шага. */
+  featOptions: (index: number, choice: ClassChoice) => FeatSelectOption[];
+
+  /** Выбранная черта; null — выбора не было либо черта неизвестна. */
+  selectedFeat: (index: number, choiceId: string) => FeatSelectOption | null;
 
   isStepValid: (index: number) => boolean;
+
+  /** Сколько выборов шага в порядке показа ещё не сделано — бейдж рельсы. */
+  getStepPendingCount: (index: number) => number;
 
   /**
    * Сборка итога мастера: догружает описания выбранных черт, поэтому
@@ -314,10 +421,13 @@ export function useLevelUpWizard(): LevelUpWizard {
     LANGUAGE_PROFICIENCY_GROUPS.flatMap((group) => group.items),
   );
 
-  // Инструменты умения уровня не выдают (`detectFeatureChoice` их не
-  // распознаёт), но контекст резолва выборов общий — список берём из каталога
-  // сайта, своего перечня инструментов у листа нет.
-  const { getToolNamesForGroups, load: loadToolCatalog } = useToolCatalog();
+  // Инструменты умения уровня не выдают, но контекст резолва выборов общий —
+  // список берём из каталога сайта, своего перечня инструментов у листа нет.
+  const {
+    getToolNamesForGroups,
+    catalogItems: toolCatalogItems,
+    load: loadToolCatalog,
+  } = useToolCatalog();
 
   void loadToolCatalog();
 
@@ -357,6 +467,27 @@ export function useLevelUpWizard(): LevelUpWizard {
     ),
   );
 
+  /**
+   * Ответы мастера, дополненные ответами прошлых уровней с самих записей листа.
+   *
+   * Умение, у которого на этом уровне открывается ещё одна ступень выбора,
+   * пересобирается целиком и заменяет прежнюю запись: без прежних ответов оно
+   * потеряло бы и выбранное раньше — воззвания первого уровня у колдуна,
+   * оружейные приёмы первого уровня у воина.
+   */
+  const allAnswers = computed<Record<string, string[]>>(() =>
+    Object.values(loadedClasses.value).reduce<Record<string, string[]>>(
+      (result, loaded) =>
+        withStoredFeatureAnswers(
+          result,
+          character.value.features,
+          loaded.entry.url,
+          [...loaded.detail.features, ...(loaded.subclass?.features ?? [])],
+        ),
+      allSelections.value,
+    ),
+  );
+
   const steps = computed<LevelUpStepView[]>(() =>
     drafts.value.map((draft, index) => {
       const loaded = loadedClasses.value[draft.classUrl];
@@ -375,7 +506,7 @@ export function useLevelUpWizard(): LevelUpWizard {
               loaded.detail,
               loaded.subclass,
               draft.classLevel,
-              skillNames.value,
+              allAnswers.value,
             )
           : [],
         isSubclassStep: draft.classLevel === loaded?.subclassStepLevel,
@@ -392,14 +523,132 @@ export function useLevelUpWizard(): LevelUpWizard {
     }),
   );
 
-  /** Навыки, выбранные во владение в этом мастере, — опции для компетентности. */
-  const chosenProficientSkills = computed(
-    () =>
-      collectChoiceSelections(
-        steps.value.flatMap((step) => step.features),
-        allSelections.value,
-      ).proficientSkills,
+  /**
+   * Шаги в порядке показа: повышение характеристик идёт своим шагом сразу за
+   * уровнем, который его дал, — так карточки умений уровня остаются
+   * компактными, а повышение спрашивается целиком и на виду.
+   */
+  const wizardSteps = computed<LevelUpWizardStep[]>(() =>
+    steps.value.flatMap((step) => {
+      // Подпись шага — класс и уровень В КЛАССЕ: у мультикласса «Колдун ·
+      // 3 уровень» говорит больше, чем общий пятый
+      const levelTitle = `${step.className} · ${step.classLevel} ${LEVEL_UP_WIZARD_LABELS.levelWord}`;
+
+      // Повышение характеристик спрашивается своим шагом, и среди умений
+      // уровня его строка не значится
+      const featureNames = step.features
+        .filter(
+          (feature) =>
+            !feature.abilityImprovement || feature.featChoices.length === 0,
+        )
+        .map((feature) => feature.name);
+
+      const contents = [
+        ...(step.hitDie > 0 ? [LEVEL_UP_WIZARD_LABELS.hitPointsShort] : []),
+        ...(step.isSubclassStep
+          ? [LEVEL_UP_WIZARD_LABELS.subclassTitle.toLowerCase()]
+          : []),
+        ...featureNames,
+      ];
+
+      const levelStep: LevelUpWizardStep = {
+        key: 'level',
+        draftIndex: step.index,
+        level: step.level,
+        title: levelTitle,
+        subtitle: contents.length
+          ? contents.join(' · ')
+          : LEVEL_UP_WIZARD_LABELS.levelStepSubtitleEmpty,
+      };
+
+      if (getAbilityImprovementChoices(step).length === 0) {
+        return [levelStep];
+      }
+
+      return [
+        levelStep,
+        {
+          key: 'abilities',
+          draftIndex: step.index,
+          level: step.level,
+          title: ABILITY_IMPROVEMENT_STEP_LABELS.title,
+          subtitle: levelTitle,
+        },
+      ];
+    }),
   );
+
+  /** Итоговые характеристики персонажа: от них считаются прибавки и предел. */
+  const abilityScores = computed(() => getEffectiveAbilities(character.value));
+
+  /** Все выборы мастера: по ним считается, что уже взято из общего списка. */
+  const allChoices = computed<ClassChoice[]>(() =>
+    steps.value.flatMap((step) => step.features.flatMap((row) => row.choices)),
+  );
+
+  /**
+   * Ответы пикеров одним словарём: пулы заклинаний их и читают, и чистят, а
+   * лежат ответы по черновикам шагов — каждый со своими ключами. Ключей, за
+   * которыми нет ни одного шага, запись не заводит: ответ без своего шага
+   * мастеру некуда показать.
+   */
+  const spellAnswers = computed<Record<string, string[]>>({
+    get: () => allSelections.value,
+    set: (next) => {
+      drafts.value = drafts.value.map((draft) => ({
+        ...draft,
+        selections: Object.fromEntries(
+          Object.entries(draft.selections).map(([id, values]) => [
+            id,
+            next[id] ?? values,
+          ]),
+        ),
+      }));
+    },
+  });
+
+  // Пул заклинаний собирается поиском по каталогу, а не лежит в записи класса:
+  // «Таинственный арканум» колдуна просит заклинание своего круга из списка
+  // колдуна, и перечень в самом умении устарел бы при первом же пополнении
+  // справочника
+  const {
+    getPool: spellPool,
+    getSpellOptions,
+    getStatus: spellPoolStatus,
+    collectChosenSpells,
+    load: loadSpellPools,
+    retry: retrySpellPool,
+  } = useChoiceSpellPools({
+    sources: () => [{ choices: allChoices.value }],
+    answers: spellAnswers,
+  });
+
+  /**
+   * Пометки опций пикера: навыки, которыми персонаж уже владеет, и заклинания,
+   * которые он уже знает — выбранное на прошлых уровнях остаётся в пуле и без
+   * пометки предлагалось бы заново.
+   */
+  const { getHints: choiceHints } = useChoiceHints({
+    choices: allChoices,
+    selections: allAnswers,
+  });
+
+  /**
+   * Примета выборов заклинаний, которые мастер спрашивает сейчас: шаги
+   * собираются уже после загрузки классов, а выбор приходит ещё и вместе с
+   * подклассом, взятым прямо здесь, — поэтому пул догружается по её смене, а не
+   * один раз на загрузке.
+   */
+  const spellChoicesKey = computed(() => getSpellChoicesKey(allChoices.value));
+
+  // Цикла нет: обработчик правит только пулы заклинаний, а примета считается по
+  // выборам мастера — от загруженного пула она не меняется.
+  watch(spellChoicesKey, handleSpellChoicesChange);
+
+  /** Догружает пулы заклинаний под выборы, которые мастер спрашивает сейчас. */
+  function handleSpellChoicesChange(): void {
+    void loadSpellPools();
+  }
 
   /** Подсказка о неудачной загрузке справочника класса. */
   function showLoadError(): void {
@@ -555,10 +804,11 @@ export function useLevelUpWizard(): LevelUpWizard {
       drafts.value = buildLevelDrafts(growing, character.value.level);
       preparedKey.value = key;
 
-      // Каталог черт нужен только когда взятые уровни дают улучшение
-      // характеристик: иначе лишний запрос на каждое повышение.
+      // Каталог черт нужен только когда взятые уровни дают выбор черты —
+      // боевой стиль, черту за повышение характеристик: иначе лишний запрос
+      // на каждое повышение.
       const hasFeatChoice = steps.value.some((step) =>
-        step.features.some((row) => row.abilityImprovement),
+        step.features.some((row) => row.featChoices.length > 0),
       );
 
       if (hasFeatChoice) {
@@ -681,16 +931,18 @@ export function useLevelUpWizard(): LevelUpWizard {
   }
 
   /**
-   * Выбор черты за улучшение характеристик. Смена черты обнуляет выбранные
-   * характеристики: у новой черты свой список и своё число прибавок.
+   * Выбор черты в умении. Смена черты обнуляет выбранные характеристики: у
+   * новой черты свой список и своё число прибавок.
    *
    * @param index номер шага.
    * @param featureId идентификатор классового умения.
+   * @param choiceId идентификатор выбора черты внутри умения.
    * @param featUrl url выбранной черты; '' — выбор снят.
    */
   function setFeatChoice(
     index: number,
     featureId: string,
+    choiceId: string,
     featUrl: string,
   ): void {
     const draft = drafts.value[index];
@@ -704,7 +956,8 @@ export function useLevelUpWizard(): LevelUpWizard {
     updateDraft(index, {
       featChoices: {
         ...draft.featChoices,
-        [featureId]: {
+        [choiceId]: {
+          featureId,
           featUrl,
           abilities: Array.from<AbilityKey | null>({
             length: option?.abilityIncreaseCount ?? 0,
@@ -718,19 +971,19 @@ export function useLevelUpWizard(): LevelUpWizard {
    * Выбор характеристики в слоте прибавки выбранной черты.
    *
    * @param index номер шага.
-   * @param featureId идентификатор классового умения.
+   * @param choiceId идентификатор выбора черты.
    * @param slot номер слота прибавки (с нуля).
    * @param ability выбранная характеристика; null — выбор снят.
    */
   function setFeatAbility(
     index: number,
-    featureId: string,
+    choiceId: string,
     slot: number,
     ability: AbilityKey | null,
   ): void {
     const draft = drafts.value[index];
 
-    const choice = draft?.featChoices[featureId];
+    const choice = draft?.featChoices[choiceId];
 
     if (!draft || !choice) {
       return;
@@ -739,12 +992,142 @@ export function useLevelUpWizard(): LevelUpWizard {
     updateDraft(index, {
       featChoices: {
         ...draft.featChoices,
-        [featureId]: {
+        [choiceId]: {
           ...choice,
           abilities: choice.abilities.map((current, currentSlot) =>
             currentSlot === slot ? ability : current,
           ),
         },
+      },
+    });
+  }
+
+  /**
+   * Характеристики, от которых считается предел одного повышения: к итоговым
+   * прибавляется всё, что уже разложено в мастере другими повышениями и
+   * выбранными чертами. Без этого повышение сразу на несколько уровней подняло
+   * бы одну характеристику выше предела.
+   *
+   * @param choiceId идентификатор выбора, для которого считается предел.
+   * @returns характеристики с прибавками мастера.
+   */
+  function abilityScoresFor(choiceId: string): CharacterAbilities {
+    return withPendingAbilityIncreases(abilityScores.value, [
+      ...drafts.value.flatMap((draft) =>
+        Object.entries(draft.abilityImprovements)
+          .filter(
+            ([id, improvement]) =>
+              id !== choiceId && improvement.mode === 'abilities',
+          )
+          .map(([, improvement]) => improvement.increases),
+      ),
+      ...Object.entries(allFeatChoices.value)
+        .filter(([id]) => id !== choiceId)
+        .map(([, choice]) => collectFeatAbilityIncreases(choice.abilities)),
+    ]);
+  }
+
+  /**
+   * Ответ на повышение характеристик шага.
+   *
+   * @param index номер шага.
+   * @param choiceId идентификатор выбора черты повышения.
+   * @returns ответ игрока; по умолчанию — режим прибавок без прибавок.
+   */
+  function abilityImprovement(
+    index: number,
+    choiceId: string,
+  ): LevelUpAbilityImprovement {
+    return (
+      drafts.value[index]?.abilityImprovements[choiceId]
+      ?? DEFAULT_ABILITY_IMPROVEMENT
+    );
+  }
+
+  /**
+   * Смена режима повышения. Прежний ответ снимается целиком: прибавки и черта
+   * — это два ответа на один и тот же выбор, и оставленный второй уехал бы на
+   * лист вместе с первым.
+   *
+   * @param index номер шага.
+   * @param choiceId идентификатор выбора черты повышения.
+   * @param mode новый режим.
+   */
+  function setAbilityImprovementMode(
+    index: number,
+    choiceId: string,
+    mode: AbilityImprovementMode,
+  ): void {
+    const draft = drafts.value[index];
+
+    if (!draft) {
+      return;
+    }
+
+    updateDraft(index, {
+      featChoices: omit(draft.featChoices, [choiceId]),
+      abilityImprovements: {
+        ...draft.abilityImprovements,
+        [choiceId]: { mode, increases: {} },
+      },
+    });
+  }
+
+  /**
+   * Шаг ± у характеристики в режиме прибавок.
+   *
+   * @param index номер шага.
+   * @param choiceId идентификатор выбора черты повышения.
+   * @param ability ключ характеристики.
+   * @param delta шаг изменения (+1 или −1).
+   */
+  function stepAbilityImprovement(
+    index: number,
+    choiceId: string,
+    ability: AbilityKey,
+    delta: number,
+  ): void {
+    const draft = drafts.value[index];
+
+    if (!draft) {
+      return;
+    }
+
+    const current = abilityImprovement(index, choiceId);
+
+    updateDraft(index, {
+      abilityImprovements: {
+        ...draft.abilityImprovements,
+        [choiceId]: {
+          ...current,
+          increases: withAbilityImprovementStep(
+            abilityScoresFor(choiceId),
+            current.increases,
+            ability,
+            delta,
+          ),
+        },
+      },
+    });
+  }
+
+  /**
+   * Сброс разложенных прибавок повышения.
+   *
+   * @param index номер шага.
+   * @param choiceId идентификатор выбора черты повышения.
+   */
+  function resetAbilityImprovement(index: number, choiceId: string): void {
+    const draft = drafts.value[index];
+
+    if (!draft) {
+      return;
+    }
+
+    updateDraft(index, {
+      abilityImprovements: {
+        ...draft.abilityImprovements,
+        [choiceId]: { ...abilityImprovement(index, choiceId), increases: {} },
       },
     });
   }
@@ -830,16 +1213,28 @@ export function useLevelUpWizard(): LevelUpWizard {
     }
   }
 
-  /** Снятие выборов и подписей, умений которых больше нет среди шагов. */
+  /**
+   * Снятие ответов, вопросов которых больше нет среди шагов: смена подкласса
+   * уносит его умения, а с ними и выбранное в них.
+   *
+   * Ответы пикеров лежат под идентификатором ВЫБОРА (`<умение>:<ключ>`), а
+   * подписи — под идентификатором умения, поэтому наборов ключей два. Один на
+   * оба словаря вычищал ответы выборов до единого: выбор подкласса на третьем
+   * уровне забирал воззвания, выбранные шагом раньше.
+   */
   function pruneSelections(): void {
-    const knownIds = new Set(
-      steps.value.flatMap((step) => step.features.map((row) => row.id)),
+    const rows = steps.value.flatMap((step) => step.features);
+
+    const knownFeatureIds = new Set(rows.map((row) => row.id));
+
+    const knownChoiceIds = new Set(
+      rows.flatMap((row) => row.choices.map((choice) => choice.id)),
     );
 
     drafts.value = drafts.value.map((draft) => ({
       ...draft,
-      selections: pickKnownEntries(draft.selections, knownIds),
-      notes: pickKnownEntries(draft.notes, knownIds),
+      selections: pickKnownEntries(draft.selections, knownChoiceIds),
+      notes: pickKnownEntries(draft.notes, knownFeatureIds),
     }));
   }
 
@@ -850,10 +1245,20 @@ export function useLevelUpWizard(): LevelUpWizard {
    * @returns опции для селектора.
    */
   function choiceOptions(choice: ClassChoice): string[] {
+    // Заклинания приходят загруженным пулом, а не резолвятся по типу выбора: в
+    // самой записи класса их нет.
+    if (choice.kind === 'spell') {
+      return getSpellOptions(choice);
+    }
+
     return resolveChoiceOptions(choice, {
       skillNames: skillNames.value,
       proficientSkillNames: proficientSkillNames.value,
-      chosenProficientSkills: chosenProficientSkills.value,
+      chosenProficientSkills: getChosenProficientSkills(
+        allChoices.value,
+        allSelections.value,
+        choice.id,
+      ),
       knownLanguages: character.value.proficiencies.languages,
       knownTools: getToolNames(character.value.proficiencies.tools),
       allLanguages: allLanguages.value,
@@ -864,41 +1269,66 @@ export function useLevelUpWizard(): LevelUpWizard {
       proficientSavingThrowNames: character.value.savingThrows
         .filter((savingThrow) => savingThrow.proficient)
         .map((savingThrow) => ABILITY_LABELS[savingThrow.key]),
+      // Варианты, взятые на прошлых уровнях и на других ступенях этого мастера:
+      // одно и то же воззвание по правилам дважды не берут
+      takenOptionValues: getTakenOptionValues(
+        choice,
+        allChoices.value,
+        allAnswers.value,
+      ),
     });
   }
 
   /**
-   * Пометки опций пикера: навыки, которыми персонаж уже владеет.
+   * Выбор умения для единого пикера: варианты, готовность пула, подписи поля
+   * и окна. Заклинания приходят пулом со своей готовностью — пока пул в пути,
+   * выбор не считается ни выполненным, ни пустым.
    *
    * @param choice распознанный выбор внутри умения.
-   * @returns пометки по названиям опций выбора.
+   * @param origin умение, его источник и уровень — для подзаголовка окна.
+   * @returns выбор для пикера.
    */
-  function choiceHints(choice: ClassChoice): Record<string, string> {
-    return getChoiceSkillHints(choice, character.value.skills);
+  function choiceControl(
+    choice: ClassChoice,
+    origin?: SheetChoiceOrigin,
+  ): SheetChoiceControl {
+    return buildChoiceControl(choice, {
+      names: choiceOptions(choice),
+      hints: choiceHints(choice),
+      spellPool: spellPool(choice),
+      status: choice.kind === 'spell' ? spellPoolStatus(choice) : 'ready',
+      toolEntries: toolCatalogItems.value,
+      origin,
+    });
   }
 
   /**
-   * Черты, доступные в умении шага: из каталога уходят черты запрещённых
-   * категорий, уже взятые на листе и выбранные на других шагах мастера.
+   * Черты, доступные выбору черты в умении шага: из каталога уходят черты вне
+   * категорий и списка выбора, уже взятые на листе и выбранные на других
+   * шагах мастера.
    *
    * @param index номер шага.
-   * @param featureId идентификатор классового умения.
+   * @param choice выбор черты внутри умения.
    * @returns черты для селектора.
    */
-  function featOptions(index: number, featureId: string): FeatSelectOption[] {
-    const selectedUrl = drafts.value[index]?.featChoices[featureId]?.featUrl;
+  function featOptions(index: number, choice: ClassChoice): FeatSelectOption[] {
+    const selectedUrl = drafts.value[index]?.featChoices[choice.id]?.featUrl;
 
-    // Черты, занятые другими умениями этого же мастера, тоже недоступны:
+    // Черты, занятые другими выборами этого же мастера, тоже недоступны:
     // повышение на несколько уровней даёт выбор не по одному разу.
     const chosenElsewhere = Object.entries(allFeatChoices.value)
-      .filter(([id, choice]) => id !== featureId && choice.featUrl)
-      .map(([, choice]) => choice.featUrl);
+      .filter(([id, entry]) => id !== choice.id && entry.featUrl)
+      .map(([, entry]) => entry.featUrl);
 
-    return getAbilityImprovementFeatOptions(
+    return getFeatChoiceOptions(
       featCatalog.value,
+      choice,
       new Set([...takenFeatUrls.value, ...chosenElsewhere]),
       selectedUrl ?? '',
       selectedFeatSourceIds.value,
+      // У выбора за повышение характеристик сама черта «Улучшение
+      // характеристик» из пула уходит: её прибавки — это режим шага.
+      isAbilityImprovementFeatChoice(choice),
     );
   }
 
@@ -906,14 +1336,14 @@ export function useLevelUpWizard(): LevelUpWizard {
    * Черта, выбранная в умении шага.
    *
    * @param index номер шага.
-   * @param featureId идентификатор классового умения.
+   * @param choiceId идентификатор выбора черты.
    * @returns опция черты; null — выбора не было либо черта не из каталога.
    */
   function selectedFeat(
     index: number,
-    featureId: string,
+    choiceId: string,
   ): FeatSelectOption | null {
-    const featUrl = drafts.value[index]?.featChoices[featureId]?.featUrl;
+    const featUrl = drafts.value[index]?.featChoices[choiceId]?.featUrl;
 
     if (!featUrl) {
       return null;
@@ -923,93 +1353,187 @@ export function useLevelUpWizard(): LevelUpWizard {
   }
 
   /**
-   * Готовность выборов черт на шаге: у каждого умения улучшения характеристик
+   * Незаполненные выборы черт на шаге: у каждого выбора черты в умениях уровня
    * должна быть выбрана черта, а у черты с прибавками — заполнены все слоты
    * характеристик. Неудачная загрузка каталога требование снимает — иначе шаг
    * стал бы тупиком.
    *
    * @param step шаг мастера.
    * @param draft черновик шага.
-   * @returns true — все выборы черт заполнены.
+   * @returns сколько выборов черт ещё не заполнено.
    */
-  function areFeatChoicesComplete(
+  function getIncompleteFeatChoiceCount(
     step: LevelUpStepView,
     draft: LevelUpStepDraft,
-  ): boolean {
+  ): number {
     if (hasFeatsError.value) {
-      return true;
+      return 0;
     }
 
-    return step.features
-      .filter((row) => row.abilityImprovement)
-      .every((row) => {
-        const choice = draft.featChoices[row.id];
+    // Выборы повышения характеристик проверяет свой шаг: на шаге уровня их
+    // карточек нет вовсе, и требовать там черту значило бы запереть уровень.
+    const improvementChoiceIds = new Set(
+      getAbilityImprovementChoices(step).map((choice) => choice.id),
+    );
+
+    const incomplete = step.features
+      .flatMap((row) => row.featChoices)
+      .filter((featChoice) => !improvementChoiceIds.has(featChoice.id))
+      .filter((featChoice) => {
+        const choice = draft.featChoices[featChoice.id];
 
         if (!choice?.featUrl) {
-          return false;
+          return true;
         }
 
-        return choice.abilities.every((ability) => ability !== null);
+        return choice.abilities.includes(null);
       });
+
+    return incomplete.length;
   }
 
   /**
-   * Готовность шага: в режиме броска кость должна быть брошена, у распознанных
-   * выборов должно быть нужное число значений (пустой список опций требование
-   * снимает — иначе шаг стал бы тупиком), выборы черт заполнены, а на шаге
-   * подкласса подкласс обязателен, если список подклассов загрузился непустым.
+   * Незакрытые выборы шага повышения характеристик: у каждого его выбора должны
+   * быть разложены прибавки либо взята черта со всеми слотами. Неудачная
+   * загрузка каталога требование к черте снимает — иначе шаг стал бы тупиком.
    *
-   * @param index номер шага.
-   * @returns true — можно идти дальше.
+   * @param index номер шага уровня.
+   * @returns сколько повышений ещё не закрыто.
    */
-  function isStepValid(index: number): boolean {
+  function getAbilityImprovementPendingCount(index: number): number {
     const step = steps.value[index];
 
     const draft = drafts.value[index];
 
     if (!step || !draft) {
-      return false;
+      return 0;
     }
 
-    if (step.hitDie > 0 && draft.gainMode === 'roll' && !draft.roll) {
-      return false;
-    }
+    return getAbilityImprovementChoices(step).filter((choice) => {
+      const improvement = abilityImprovement(index, choice.id);
 
-    const hasIncompleteChoice = step.features.some((row) => {
-      const choice = row.choice;
-
-      if (!choice) {
+      if (improvement.mode === 'feat' && hasFeatsError.value) {
         return false;
       }
 
-      const options = choiceOptions(choice);
-
-      if (!options.length) {
-        return false;
-      }
-
-      return (
-        (draft.selections[choice.id] ?? []).length
-        < getRequiredChoiceCount(choice, options)
+      return !isAbilityImprovementComplete(
+        improvement,
+        draft.featChoices[choice.id],
+        abilityScoresFor(choice.id),
       );
-    });
+    }).length;
+  }
 
-    if (hasIncompleteChoice || !areFeatChoicesComplete(step, draft)) {
-      return false;
+  /**
+   * Незакрытые выборы одного умения на шаге: по ним карточка умения и рельса
+   * показывают счётчик.
+   *
+   * Пул заклинаний в пути или не загрузился — выбор не закрыт: иначе игрок
+   * прошёл бы шаг с «Выберите 0» и без заклинания, которое ему положено. Пустой
+   * готовый пул требование снимает — так у выбора оружейного приёма без оружия
+   * во владении шаг не становится тупиком.
+   *
+   * @param row строка умения.
+   * @param draft черновик шага.
+   * @returns сколько выборов умения ещё не сделано.
+   */
+  function getFeatureRowPendingCount(
+    row: ClassFeatureRow,
+    draft: LevelUpStepDraft,
+  ): number {
+    return row.choices.filter((choice) => {
+      const control = choiceControl(choice);
+
+      if (control.status !== 'ready') {
+        return true;
+      }
+
+      if (!control.options.length) {
+        return false;
+      }
+
+      return (draft.selections[choice.id] ?? []).length < control.requiredCount;
+    }).length;
+  }
+
+  /**
+   * Незакрытые выборы шага уровня: бросок кости хитов в режиме броска, выборы
+   * умений, выборы черт и подкласс на шаге подкласса (если список подклассов
+   * загрузился непустым).
+   *
+   * @param index номер шага уровня.
+   * @returns сколько выборов ещё не сделано; 0 — можно идти дальше.
+   */
+  function getLevelStepPendingCount(index: number): number {
+    const step = steps.value[index];
+
+    const draft = drafts.value[index];
+
+    if (!step || !draft) {
+      return 0;
     }
 
-    return !(
+    const rollPending =
+      step.hitDie > 0 && draft.gainMode === 'roll' && !draft.roll ? 1 : 0;
+
+    const choicesPending = step.features.reduce(
+      (total, row) => total + getFeatureRowPendingCount(row, draft),
+      0,
+    );
+
+    const subclassPending =
       step.isSubclassStep
       && subclassOptions(index).length > 0
       && !selectedSubclassUrl(index)
+        ? 1
+        : 0;
+
+    return (
+      rollPending
+      + choicesPending
+      + getIncompleteFeatChoiceCount(step, draft)
+      + subclassPending
     );
   }
 
   /**
-   * Особенности выбранных за улучшение характеристик черт: описание черты
-   * догружается из справочника (в каталоге `/select` его нет). Идентификатор
-   * привязан к классовому умению, поэтому снятие уровня забирает черту вместе
-   * с умением, а повторный выбор той же черты на другом уровне не схлопывается.
+   * Незакрытые выборы шага в порядке показа: уровень и его повышение
+   * характеристик считаются каждый своим правилом.
+   *
+   * @param viewIndex номер шага среди показываемых.
+   * @returns сколько выборов ещё не сделано; 0 — шаг закрыт.
+   */
+  function getStepPendingCount(viewIndex: number): number {
+    const view = wizardSteps.value[viewIndex];
+
+    if (!view) {
+      return 0;
+    }
+
+    return view.key === 'abilities'
+      ? getAbilityImprovementPendingCount(view.draftIndex)
+      : getLevelStepPendingCount(view.draftIndex);
+  }
+
+  /**
+   * Готовность шага в порядке показа.
+   *
+   * @param viewIndex номер шага среди показываемых.
+   * @returns true — можно идти дальше.
+   */
+  function isStepValid(viewIndex: number): boolean {
+    return (
+      wizardSteps.value[viewIndex] !== undefined
+      && getStepPendingCount(viewIndex) === 0
+    );
+  }
+
+  /**
+   * Особенности черт, выбранных в умениях и выданных ими без выбора: описание
+   * черты догружается из справочника (в каталоге `/select` его нет).
+   * Идентификатор привязан к классовому умению, поэтому снятие уровня забирает
+   * черту вместе с умением, а повторный выбор той же черты на другом уровне
+   * не схлопывается.
    *
    * @returns особенности черт и подписи выбора по идентификаторам умений.
    */
@@ -1019,15 +1543,26 @@ export function useLevelUpWizard(): LevelUpWizard {
   }> {
     // Уровень берётся из шага, на котором сделан выбор: по нему снятие уровня
     // забирает черту вместе с давшим её умением.
-    const entries = drafts.value.flatMap((draft) =>
-      Object.entries(draft.featChoices)
-        .filter(([, choice]) => choice.featUrl)
-        .map(([featureId, choice]) => ({
-          featureId,
+    const entries = drafts.value.flatMap((draft, index) => [
+      ...Object.values(draft.featChoices)
+        .filter((choice) => choice.featUrl)
+        .map((choice) => ({
+          featureId: choice.featureId,
           featUrl: choice.featUrl,
           level: draft.classLevel,
+          segment: CLASS_FEAT_CHOICE_ID_SEGMENT,
         })),
-    );
+      // Черты без выбора умение выдаёт на своём уровне — как черту
+      // происхождения предыстория
+      ...(steps.value[index]?.features ?? []).flatMap((row) =>
+        row.grantedFeatUrls.map((featUrl) => ({
+          featureId: row.id,
+          featUrl,
+          level: draft.classLevel,
+          segment: CLASS_GRANTED_FEAT_ID_SEGMENT,
+        })),
+      ),
+    ]);
 
     const summaries = await Promise.all(
       entries.map((entry) => fetchFeatDetail(entry.featUrl)),
@@ -1045,14 +1580,60 @@ export function useLevelUpWizard(): LevelUpWizard {
 
       features.push({
         ...buildFeatFeature(summary),
-        id: `${entry.featureId}:${ABILITY_IMPROVEMENT_FEATURE_ID_SEGMENT}:${summary.url}`,
+        id: `${entry.featureId}:${entry.segment}:${summary.url}`,
         level: entry.level,
       });
 
-      choiceLabels[entry.featureId] = summary.name;
+      // У умения бывает не один выбор черты: подпись собирается из всех
+      const previous = choiceLabels[entry.featureId];
+
+      choiceLabels[entry.featureId] = previous
+        ? `${previous}, ${summary.name}`
+        : summary.name;
     }
 
     return { features, choiceLabels };
+  }
+
+  /**
+   * Записи листа о взятых повышениях характеристик: по записи на каждое
+   * повышение, где игрок разложил прибавки. Режим черты сюда не идёт — черта
+   * приезжает своим путём, вместе с остальными выборами умений.
+   *
+   * @returns особенности с эффектами повышения; пусто — повышений не было.
+   */
+  function buildAbilityImprovementFeatures(): CharacterFeature[] {
+    return drafts.value.flatMap((draft, index) => {
+      const step = steps.value[index];
+
+      if (!step) {
+        return [];
+      }
+
+      const className = loadedClasses.value[draft.classUrl]?.entry.name ?? '';
+
+      return getAbilityImprovementRows(step).flatMap((row) =>
+        row.featChoices.flatMap((choice) => {
+          const improvement = draft.abilityImprovements[choice.id];
+
+          if (
+            improvement?.mode !== 'abilities'
+            || getAbilityImprovementSpent(improvement.increases) === 0
+          ) {
+            return [];
+          }
+
+          return [
+            buildAbilityImprovementFeature({
+              featureRowId: row.id,
+              className,
+              classLevel: draft.classLevel,
+              increases: improvement.increases,
+            }),
+          ];
+        }),
+      );
+    });
   }
 
   /**
@@ -1099,8 +1680,52 @@ export function useLevelUpWizard(): LevelUpWizard {
 
     const rows = steps.value.flatMap((step) => step.features);
 
-    const { proficientSkills, expertiseSkills, languages, featureChoices } =
-      collectChoiceSelections(rows, allSelections.value);
+    // Выбранные заклинания — на записи своих умений: лист ведёт их наравне с
+    // выданными умением, и снятие класса забирает их вместе с ним.
+    //
+    // Складываются по всем шагам, а не берутся с последнего: «Таинственный
+    // арканум» просит заклинание на 11, 13, 15 и 17 уровнях, а запись умения у
+    // всех четырёх одна.
+    // Заклинания, уже лежащие на записях листа: запись, которую уровень
+    // пересобирает, заменяет прежнюю целиком, и без них заклинание, выбранное
+    // на прошлом уровне, пропало бы — «Таинственный арканум» на 13 уровне
+    // потерял бы заклинание 6 круга, взятое на 11
+    const storedSpellsByFeature = character.value.features.reduce<
+      Record<string, CharacterSpell[]>
+    >(
+      (result, feature) =>
+        feature.spells?.length
+          ? { ...result, [feature.id]: [...feature.spells] }
+          : result,
+      {},
+    );
+
+    const chosenSpellsByFeature = rows.reduce<Record<string, CharacterSpell[]>>(
+      (result, row) => ({
+        ...result,
+        [row.id]: [
+          ...(result[row.id] ?? []),
+          ...collectChosenSpells({ choices: row.choices }),
+        ],
+      }),
+      storedSpellsByFeature,
+    );
+
+    // Из ответов берётся только текст выбора: владения ведёт снимок на самой
+    // записи умения — так же, как у черты. Два хозяина у одного владения
+    // означали бы, что снятие класса заберёт его лишь наполовину.
+    const { featureChoices } = collectChoiceSelections(
+      rows,
+      allSelections.value,
+    );
+
+    // Ответы игрока, с которыми собирается снимок владений каждого умения:
+    // вместе с ответами прошлых уровней — пересобранное умение заменяет запись
+    // целиком, и без них выбранное раньше пропало бы
+    const featureAnswers = {
+      answers: allAnswers.value,
+      proficientSkillNames: proficientSkillNames.value,
+    };
 
     const choices = {
       ...allNotes.value,
@@ -1133,7 +1758,13 @@ export function useLevelUpWizard(): LevelUpWizard {
       const levelFeatures = drafts.value
         .filter((draft) => draft.classUrl === entry.entry.url)
         .flatMap((draft) =>
-          buildLevelClassFeatures(detail, subclass, draft.classLevel, choices),
+          buildLevelClassFeatures(
+            detail,
+            subclass,
+            draft.classLevel,
+            choices,
+            featureAnswers,
+          ),
         );
 
       const chosenSubclassUrl = selectedSubclasses.value[entry.entry.url];
@@ -1143,7 +1774,13 @@ export function useLevelUpWizard(): LevelUpWizard {
         ...(chosenSubclassUrl && subclass
           ? mergeCharacterFeatures(
               levelFeatures,
-              buildSubclassFeatures(entry.entry.url, subclass, level, choices),
+              buildSubclassFeatures(
+                entry.entry.url,
+                subclass,
+                level,
+                choices,
+                featureAnswers,
+              ),
             )
           : levelFeatures),
       );
@@ -1174,13 +1811,22 @@ export function useLevelUpWizard(): LevelUpWizard {
         amount: step.hitPointsGain,
       })),
       classPatches,
-      features: [...classFeatures, ...featFeatures],
+      features: withChosenFeatureSpells(
+        [
+          ...classFeatures,
+          ...featFeatures,
+          ...buildAbilityImprovementFeatures(),
+        ],
+        chosenSpellsByFeature,
+      ),
       classResources,
+      // Навыки и языки, названные в умениях, приходят снимком самой записи
+      // умения: здесь их нет вовсе
       skills: {
-        proficient: [...new Set(proficientSkills)],
-        expertise: [...new Set(expertiseSkills)],
+        proficient: [],
+        expertise: [],
       },
-      languages,
+      languages: [],
       abilityIncreases: mergeAbilityIncreases(
         Object.values(allFeatChoices.value).map((choice) =>
           collectFeatAbilityIncreases(choice.abilities),
@@ -1191,7 +1837,9 @@ export function useLevelUpWizard(): LevelUpWizard {
 
   return {
     steps,
+    wizardSteps,
     drafts: computed(() => drafts.value),
+    abilityScoresFor,
     isLoading,
     hasLoadError,
     subclassOptions,
@@ -1208,12 +1856,18 @@ export function useLevelUpWizard(): LevelUpWizard {
     setNote,
     setFeatChoice,
     setFeatAbility,
+    abilityImprovement,
+    setAbilityImprovementMode,
+    stepAbilityImprovement,
+    resetAbilityImprovement,
     selectSubclass,
-    choiceOptions,
-    choiceHints,
+    choiceControl,
+    getFeatureRowPendingCount,
+    retrySpellPool,
     featOptions,
     selectedFeat,
     isStepValid,
+    getStepPendingCount,
     buildPayload,
   };
 }

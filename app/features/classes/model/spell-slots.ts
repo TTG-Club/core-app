@@ -1,9 +1,23 @@
 import type { Level } from '~/shared/types';
 
+import type { ClassInMulticlass } from './detail';
+
+import { PACT_MAGIC_LABEL } from './constants';
+import { CasterType } from './detail';
+
 /**
  * Таблицы ячеек заклинаний по правилам D&D (2024). Живут в модели домена:
  * ими пользуется и таблица прогрессии класса, и лист персонажа.
  */
+
+/** Круги ячеек общей таблицы мультикласса — колонки с первого по девятый. */
+export const SPELL_SLOT_LEVELS: Array<number> = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+/** Класс с Магией договора в сборке и его суммарный уровень. */
+export interface PactMagicClass {
+  className: string;
+  level: number;
+}
 
 export const FULL_CASTER_SPELL_SLOTS: Record<Level, number[]> = {
   1: [2, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -143,3 +157,80 @@ export const MULTICLASS_SPELL_SLOTS: Record<Level, number[]> = {
   19: [4, 3, 3, 3, 3, 2, 1, 1, 1],
   20: [4, 3, 3, 3, 3, 2, 2, 1, 1],
 } as const;
+
+/**
+ * Классы с Магией договора в сборке мультикласса с их суммарными уровнями:
+ * класс, взятый несколькими отрезками, считается один раз.
+ *
+ * @param multiclass - Отрезки сборки с бэкенда
+ * @returns Классы-заклинатели договора; пусто — колдуна в сборке нет
+ */
+export function getPactMagicClasses(
+  multiclass: Array<ClassInMulticlass> | undefined,
+): Array<PactMagicClass> {
+  const levelByClass = new Map<string, number>();
+
+  for (const segment of multiclass ?? []) {
+    if (segment.casterType !== CasterType.PACT) {
+      continue;
+    }
+
+    levelByClass.set(
+      segment.class,
+      (levelByClass.get(segment.class) ?? 0) + segment.level,
+    );
+  }
+
+  return [...levelByClass].map(([className, level]) => ({ className, level }));
+}
+
+/**
+ * Уровень Магии договора сборки. По правилам 2024 года уровни колдуна не входят
+ * в общий уровень заклинателя: ячейки договора считаются по ним отдельно, по
+ * таблице колдуна, и восстанавливаются коротким отдыхом.
+ *
+ * @param multiclass - Отрезки сборки с бэкенда
+ * @returns Суммарный уровень классов с Магией договора; 0 — их в сборке нет
+ */
+export function getPactMagicLevel(
+  multiclass: Array<ClassInMulticlass> | undefined,
+): number {
+  return getPactMagicClasses(multiclass).reduce(
+    (total, pactMagicClass) => total + pactMagicClass.level,
+    0,
+  );
+}
+
+/**
+ * Подпись строки ячеек договора в таблице ячеек: «Магия договора (Колдун 1)».
+ *
+ * @param multiclass - Отрезки сборки с бэкенда
+ * @returns Подпись с классами договора и их уровнями
+ */
+export function getPactMagicRowLabel(
+  multiclass: Array<ClassInMulticlass> | undefined,
+): string {
+  const classes = getPactMagicClasses(multiclass)
+    .map(
+      (pactMagicClass) => `${pactMagicClass.className} ${pactMagicClass.level}`,
+    )
+    .join(', ');
+
+  return classes ? `${PACT_MAGIC_LABEL} (${classes})` : PACT_MAGIC_LABEL;
+}
+
+/**
+ * Ячейки Магии договора в раскладке общей таблицы: все ячейки одного круга, в
+ * остальных кругах нули.
+ *
+ * @param pactMagicLevel - Уровень Магии договора
+ * @returns Число ячеек по кругам с первого по девятый
+ */
+export function getPactSpellSlotsByLevel(pactMagicLevel: Level): number[] {
+  const slotLevel = PACT_CASTER_SPELL_SLOTS_LEVEL[pactMagicLevel];
+  const slotCount = PACT_CASTER_SPELL_SLOTS_COUNT[pactMagicLevel];
+
+  return SPELL_SLOT_LEVELS.map((spellSlotLevel) =>
+    spellSlotLevel === slotLevel ? slotCount : 0,
+  );
+}

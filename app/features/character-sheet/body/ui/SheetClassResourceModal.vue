@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { CharacterClassResource, ResourceMaxSource } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
+
   import { useCharacterSheet } from '../../composables';
   import {
     ABILITY_OPTIONS,
@@ -11,6 +13,10 @@
     RESOURCE_MAX_AMOUNT_LABEL,
     RESOURCE_MAX_COMPUTED_LABEL,
     RESOURCE_MAX_DEFAULT_ABILITY,
+    RESOURCE_MAX_MINIMUM_HINT,
+    RESOURCE_MAX_MINIMUM_LABEL,
+    RESOURCE_MAX_MINIMUM_MAX,
+    RESOURCE_MAX_MINIMUM_MIN,
     RESOURCE_MAX_OFFSET_LABEL,
     RESOURCE_MAX_OFFSET_MAX,
     RESOURCE_MAX_OFFSET_MIN,
@@ -23,6 +29,7 @@
     RESOURCE_RECOVERY_LABELS,
     RESOURCE_RECOVERY_MODE_OPTIONS,
     RESOURCE_SHORT_LABEL_MAX_LENGTH,
+    SHEET_CLASS_RESOURCE_MODAL_LABELS,
     toClassResourceDraft,
   } from '../../model';
 
@@ -64,6 +71,19 @@
   );
 
   /**
+   * Нижняя граница максимума. Правило может её не знать — у ресурсов, заведённых
+   * до её появления, поля нет, — поэтому пустая читается как «границы нет».
+   */
+  const minimum = computed({
+    get: () => draftResource.value.maxRule?.min ?? RESOURCE_MAX_MINIMUM_MIN,
+    set: (value: number) => {
+      if (draftResource.value.maxRule) {
+        draftResource.value.maxRule.min = value;
+      }
+    },
+  });
+
+  /**
    * Смена источника максимума. «Своё число» убирает правило целиком — иначе
    * запись хранила бы правило, которое ни на что не влияет.
    *
@@ -81,6 +101,9 @@
       ability:
         draftResource.value.maxRule?.ability ?? RESOURCE_MAX_DEFAULT_ABILITY,
       offset: draftResource.value.maxRule?.offset ?? 0,
+      // Нижняя граница пережидает смену источника: она описывает сам ресурс, а
+      // не то, от чего считается его максимум
+      min: draftResource.value.maxRule?.min ?? RESOURCE_MAX_MINIMUM_MIN,
     };
   }
 
@@ -115,7 +138,7 @@
         <div class="flex items-end gap-3">
           <div class="flex min-w-0 grow flex-col gap-1">
             <span class="text-[10px] font-bold text-muted uppercase">
-              Название
+              {{ SHEET_CLASS_RESOURCE_MODAL_LABELS.name }}
             </span>
 
             <UInput
@@ -127,7 +150,7 @@
 
           <div class="flex w-24 shrink-0 flex-col gap-1">
             <span class="text-[10px] font-bold text-muted uppercase">
-              Кратко
+              {{ SHEET_CLASS_RESOURCE_MODAL_LABELS.shortLabel }}
             </span>
 
             <UInput
@@ -141,7 +164,7 @@
         <div class="flex flex-wrap items-end gap-3">
           <div class="flex w-28 shrink-0 flex-col gap-1">
             <span class="text-[10px] font-bold text-muted uppercase">
-              Сейчас
+              {{ SHEET_CLASS_RESOURCE_MODAL_LABELS.current }}
             </span>
 
             <UInputNumber
@@ -153,7 +176,7 @@
 
           <div class="flex min-w-40 grow flex-col gap-1">
             <span class="text-[10px] font-bold text-muted uppercase">
-              Максимум
+              {{ SHEET_CLASS_RESOURCE_MODAL_LABELS.max }}
             </span>
 
             <USelect
@@ -212,14 +235,33 @@
             />
           </div>
 
+          <!-- Нижняя граница подпирает расчёт снизу: вдохновение барда равно
+            модификатору Харизмы, но с Харизмой +0 оно всё равно одно -->
+          <div class="flex w-28 shrink-0 flex-col gap-1">
+            <span class="text-[10px] font-bold text-muted uppercase">
+              {{ RESOURCE_MAX_MINIMUM_LABEL }}
+            </span>
+
+            <UInputNumber
+              v-model="minimum"
+              :min="RESOURCE_MAX_MINIMUM_MIN"
+              :max="RESOURCE_MAX_MINIMUM_MAX"
+              :aria-label="RESOURCE_MAX_MINIMUM_LABEL"
+            />
+          </div>
+
           <p class="grow text-xs text-muted">
             {{ RESOURCE_MAX_COMPUTED_LABEL }}: {{ computedMax }}
+          </p>
+
+          <p class="w-full text-xs text-dimmed">
+            {{ RESOURCE_MAX_MINIMUM_HINT }}
           </p>
         </div>
 
         <div class="flex flex-col gap-2">
           <span class="text-[10px] font-bold text-muted uppercase">
-            Восстановление
+            {{ SHEET_CLASS_RESOURCE_MODAL_LABELS.recovery }}
           </span>
 
           <div class="grid gap-2 sm:grid-cols-2">
@@ -242,7 +284,7 @@
               <USelect
                 v-model="draftResource[field.key].mode"
                 :items="RESOURCE_RECOVERY_MODE_OPTIONS"
-                :aria-label="`Восстановление: ${RESOURCE_RECOVERY_LABELS[field.rest]}`"
+                :aria-label="`${SHEET_CLASS_RESOURCE_MODAL_LABELS.recovery}: ${RESOURCE_RECOVERY_LABELS[field.rest]}`"
               />
 
               <UInputNumber
@@ -250,7 +292,7 @@
                 v-model="draftResource[field.key].amount"
                 :min="RESOURCE_RECOVERY_AMOUNT_MIN"
                 :max="RESOURCE_COUNT_MAX"
-                :aria-label="`Сколько зарядов вернёт отдых: ${RESOURCE_RECOVERY_LABELS[field.rest]}`"
+                :aria-label="`${SHEET_CLASS_RESOURCE_MODAL_LABELS.recoveryAmount}: ${RESOURCE_RECOVERY_LABELS[field.rest]}`"
               />
             </div>
           </div>
@@ -261,14 +303,14 @@
     <template #footer>
       <div class="flex w-full justify-end gap-2">
         <UButton
-          label="Отмена"
+          :label="ACTION_LABELS.cancel"
           color="neutral"
           variant="ghost"
           @click.left.exact.prevent="handleCancel"
         />
 
         <UButton
-          label="Сохранить"
+          :label="ACTION_LABELS.save"
           color="primary"
           :disabled="isSaveDisabled"
           @click.left.exact.prevent="handleSave"

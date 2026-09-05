@@ -11,6 +11,9 @@ import {
 } from '~admin/users/model';
 import { ARTICLES_ADMIN_ROUTE } from '~articles/model';
 
+/** Маршрут главной страницы админ-панели (дашборд со статистикой) */
+export const ADMIN_DASHBOARD_ROUTE = '/admin';
+
 /**
  * Элементы главной навигации админ-панели
  */
@@ -18,7 +21,7 @@ export const ADMIN_NAVIGATION_ITEMS: NavigationItem[] = [
   {
     label: 'Главная',
     icon: 'tabler:home',
-    to: '/admin',
+    to: ADMIN_DASHBOARD_ROUTE,
   },
   {
     label: 'Токенатор',

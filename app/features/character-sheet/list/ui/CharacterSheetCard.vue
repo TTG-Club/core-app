@@ -3,6 +3,7 @@
 
   import type { Character } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
   import { ConfirmDialog } from '~initiative/ui-kit';
 
   import { SheetSettingsModal, SheetShareModal } from '../../body/ui';
@@ -16,11 +17,15 @@
     downloadCharacterJson,
     getClassesDisplayLabel,
     getDisplayLevel,
+    getMaxHitPoints,
     getSheetActionMenuItems,
+    getSheetRemoveDescription,
     getSpeciesDisplayName,
+    SHEET_CARD_LABELS,
     SHEET_EMPTY_LABELS,
     SHEET_OPEN_IN_PANEL_LABEL,
     SHEET_OPEN_ON_PAGE_LABEL,
+    SHEET_REMOVE_CONFIRM_TITLE,
   } from '../../model';
 
   const {
@@ -93,6 +98,9 @@
   );
 
   const levelValue = computed(() => getDisplayLevel(character));
+
+  // Максимум с прибавками — тот же, что показывает сам лист.
+  const maxHitPoints = computed(() => getMaxHitPoints(character));
 
   const settingsModal = overlay.create(SheetSettingsModal, {
     props: {
@@ -225,8 +233,9 @@
           />
 
           <span class="truncate">
-            Хиты: {{ character.health.current }} / {{ character.health.max }} ·
-            Уровень: {{ levelValue }}
+            {{ SHEET_CARD_LABELS.hitPoints }}: {{ character.health.current }} /
+            {{ maxHitPoints }} · {{ SHEET_CARD_LABELS.level }}:
+            {{ levelValue }}
           </span>
         </span>
       </div>
@@ -253,16 +262,16 @@
           variant="soft"
           square
           :disabled
-          aria-label="Действия с листом"
+          :aria-label="SHEET_CARD_LABELS.menuAria"
         />
       </UDropdownMenu>
     </div>
 
     <ConfirmDialog
       v-model:open="isDeleteOpen"
-      title="Удалить лист персонажа?"
-      :description="`Лист «${character.name}» переедет в историю — его можно будет восстановить.`"
-      confirm-label="Удалить"
+      :title="SHEET_REMOVE_CONFIRM_TITLE"
+      :description="getSheetRemoveDescription(character.name)"
+      :confirm-label="ACTION_LABELS.remove"
       confirm-color="error"
       confirm-icon="tabler:trash"
       @confirm="confirmRemove"

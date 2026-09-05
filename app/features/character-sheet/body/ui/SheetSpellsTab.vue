@@ -10,6 +10,7 @@
     SpellTabFilter,
   } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
   import { SpellDrawer } from '~spells/drawer';
   import { MarkupRender } from '~ui/markup';
 
@@ -17,6 +18,7 @@
   import {
     ABILITY_LABELS,
     CANTRIP_SPELL_LEVEL,
+    CLASS_SPELL_BADGE,
     CUSTOM_SPELL_BADGE_HINT,
     getFilterChipClass,
     getInnateSpellMenuItems,
@@ -43,6 +45,7 @@
     SHEET_HEADER_STAT_CLASS,
     SHEET_ROLL_HINT_LABEL,
     SHEET_SPELL_ABILITY_LABELS,
+    SHEET_SPELL_ROW_LABELS,
     SHEET_STATIC_STAT_CLASS,
     SHEET_TAB_EMPTY_LABELS,
     SPELL_DAMAGE_ROLL_HINT_LABEL,
@@ -53,12 +56,19 @@
     SPELL_SLOTS_LABEL,
     SPELLCASTING_STAT_LABELS,
     SPELLCASTING_TILE_LABELS,
+    takesPreparationSpace,
   } from '../../model';
 
   /** Состояние квадрата со значком заклинания в строке. */
   interface PreparedIconState {
     /** Заклинание подготовлено: квадрат горит тёплым. */
     isPrepared: boolean;
+
+    /**
+     * Квадрат переключает подготовку: у заговоров он остаётся меткой, а не
+     * кнопкой — подготовки они не требуют.
+     */
+    interactive: boolean;
 
     /** Классы оформления квадрата. */
     iconClass: string;
@@ -99,7 +109,18 @@
 
   const props = defineProps<{
     spells: CharacterSpell[];
+
+    /** Заклинания вида и черт: они идут отдельной группой над кругами книги. */
     innateSpells: CharacterSpell[];
+
+    /**
+     * Заклинания, выданные умениями класса: в списке они стоят в своём круге
+     * наравне с книгой. Выдача с отметкой «Подготавливать не нужно» приходит
+     * подготовленной и места среди подготовленных не занимает, остальную
+     * готовит игрок (см. `takesPreparationSpace`).
+     */
+    classSpells: CharacterSpell[];
+
     spellcasting: SpellcastingBreakdown;
 
     /** Ячейки заклинаний по кругам; пусто — класс ячеек не даёт. */
@@ -125,13 +146,15 @@
 
   // Пополнение книги, правка и удаление заклинаний меняют лист: без прав кнопки
   // прячутся, а ряды заклинаний и шапка вкладки остаются на прежних местах.
-  const { editControlClass } = useCharacterSheet();
+  const { character, editControlClass } = useCharacterSheet();
 
   // Урон заклинаний живёт в справочнике, а не в листе: подгружаем его для всей
-  // вкладки — и для книги, и для врождённых заклинаний вида.
+  // вкладки — и для книги, и для заклинаний вне её. Уровень персонажа
+  // нужен заговорам: их урон растёт от него, а не от круга ячейки.
   const { getDamage } = useSpellDamage(
-    () => [...props.spells, ...props.innateSpells],
+    () => [...props.spells, ...props.innateSpells, ...props.classSpells],
     () => props.spellcasting.abilityModifier,
+    () => character.value.level,
   );
 
   const addMenuItems = getSpellsAddMenuItems({
@@ -197,9 +220,9 @@
   }
 
   /**
-   * Плитки подготовки в шапке вкладки: заклинания книги и заговоры считаются
-   * порознь — у каждого своя колонка таблицы класса и свой предел, поэтому и
-   * плитки идут отдельные.
+   * Плитки счёта в шапке вкладки: заклинания кругов 1+ персонаж
+   * подготавливает, а заговоры знает — у каждого своя колонка таблицы класса,
+   * поэтому и плитки идут отдельные.
    */
   const preparedStats = computed(() =>
     PREPARED_KINDS.map((kind) => {
@@ -225,16 +248,13 @@
   );
 
   /**
-   * Предел выбран целиком: пометить ещё одну запись этого вида уже нельзя.
+   * Предел выбран целиком: подготовить ещё одно заклинание уже нельзя. Заговоры
+   * предела подготовки не знают — они всегда доступны.
    *
-   * @param kind вид подготовки: заклинания книги либо заговоры.
    * @returns true — предел достигнут.
    */
-  function isPreparedLimitReached(kind: PreparedSpellKind): boolean {
-    const { value, count } =
-      kind === 'cantrips'
-        ? props.spellcasting.preparedCantrips
-        : props.spellcasting.prepared;
+  function isPreparedLimitReached(): boolean {
+    const { value, count } = props.spellcasting.prepared;
 
     return value !== null && count >= value;
   }
@@ -279,6 +299,15 @@
     return rowsByLevel;
   });
 
+  /** У персонажа есть хоть одно заклинание: книги, вида, черты или класса. */
+  const hasAnySpells = computed(() =>
+    Boolean(
+      props.spells.length
+      || props.innateSpells.length
+      || props.classSpells.length,
+    ),
+  );
+
   /** Отмечен чип «Подготовленные». */
   const isPreparedOnlyPicked = ref(false);
 
@@ -288,18 +317,16 @@
   /** Круги, которые вкладка уже показывает: по ним и отбирают. */
   const availableLevels = computed(() =>
     getSpellListLevels(
-      [...props.spells, ...props.innateSpells],
+      [...props.spells, ...props.innateSpells, ...props.classSpells],
       props.spellSlots.map((row) => row.level),
     ),
   );
 
   /**
-   * Пометка подготовки есть и у книги персонажа, и у врождённых заклинаний:
-   * пока список пуст, помечать нечего — чипа отбора нет.
+   * Пометка подготовки есть и у книги персонажа, и у заклинаний вне её: пока
+   * список пуст, помечать нечего — чипа отбора нет.
    */
-  const isPreparedFilterAvailable = computed(
-    () => props.spells.length > 0 || props.innateSpells.length > 0,
-  );
+  const isPreparedFilterAvailable = computed(() => hasAnySpells.value);
 
   /** Кругов больше одного — есть между чем выбирать. */
   const hasLevelChips = computed(() => availableLevels.value.length > 1);
@@ -327,7 +354,7 @@
    */
   const hasFilterControls = computed(
     () =>
-      Boolean(props.spells.length || props.innateSpells.length)
+      hasAnySpells.value
       && (isPreparedFilterAvailable.value || hasLevelChips.value),
   );
 
@@ -336,8 +363,8 @@
   );
 
   /**
-   * Чипы кругов, которые есть в списке: сам чип — номер круга, у заговоров
-   * вместо номера сокращение. Полную подпись («Заговоры», «3 круг»)
+   * Чипы уровней, которые есть в списке: сам чип — номер уровня, у заговоров
+   * вместо номера сокращение. Полную подпись («Заговоры», «Уровень 3»)
    * показывает подсказка по наведению.
    */
   const levelChips = computed(() =>
@@ -475,13 +502,28 @@
    * поэтому здесь же его подсказка, подпись для скринридера и цвет.
    *
    * @param spell заклинание строки.
-   * @param innate заклинание из группы врождённых.
+   * @param granted заклинание выдано записью листа — видом, чертой или умением
+   * класса: подготовка у таких своя.
+   * @param countsInLimit пометка занимает место среди подготовленных класса.
    * @returns состояние значка для шаблона строки.
    */
   function getPreparedIconState(
     spell: CharacterSpell,
-    innate: boolean,
+    granted: boolean,
+    countsInLimit: boolean,
   ): PreparedIconState {
+    // Заговор всегда доступен: подготовки он не требует ни по одному классу, а
+    // колонка «Заговоры» таблицы класса говорит, сколько их можно знать
+    if (getSpellPreparedKind(spell) === 'cantrips') {
+      return {
+        isPrepared: true,
+        interactive: false,
+        iconClass: PREPARED_ICON_CLASS,
+        tooltip: PREPARED_SPELL_TOGGLE_LABELS.cantrip,
+        ariaLabel: `${PREPARED_SPELL_TOGGLE_LABELS.cantrip}: ${spell.name}`,
+      };
+    }
+
     const isPrepared = Boolean(spell.prepared);
 
     const label = isPrepared
@@ -490,12 +532,16 @@
 
     const iconClass = isPrepared ? PREPARED_ICON_CLASS : UNPREPARED_ICON_CLASS;
 
-    // Врождённое заклинание приходит подготовленным и в предел не входит:
-    // значок только снимает и возвращает пометку, а подсказка напоминает, что
-    // места среди подготовленных такое заклинание не занимает.
-    if (innate) {
+    // Выданное заклинание в предел не входит: значок только снимает и
+    // возвращает пометку, а подсказка напоминает, что места среди
+    // подготовленных такое заклинание не занимает. Так идут и выдача, готовая
+    // сама, и заклинание черты или вида — его персонаж готовит сверх колонки
+    // класса. Выдача умения класса без отметки «Подготавливать не нужно» («весь
+    // список класса» друида) готовится игроком — у неё подсказка и предел книги.
+    if (granted && !countsInLimit) {
       return {
         isPrepared,
+        interactive: true,
         iconClass,
         tooltip: `${label}. ${PREPARED_SPELL_TOGGLE_LABELS.innate}`,
         ariaLabel: `${label}: ${spell.name}`,
@@ -504,23 +550,48 @@
 
     return {
       isPrepared,
+      interactive: true,
       iconClass,
       // Предел выбран целиком — значок остаётся нажимаемым: подсказка и
       // предупреждение объясняют отказ понятнее, чем погашенная кнопка.
-      // Заговоры смотрят на свой предел, заклинания книги — на свой.
       tooltip:
-        !isPrepared && isPreparedLimitReached(getSpellPreparedKind(spell))
+        !isPrepared && isPreparedLimitReached()
           ? `${label}. ${PREPARED_SPELL_TOGGLE_LABELS.limit}`
           : label,
       ariaLabel: `${label}: ${spell.name}`,
     };
   }
 
+  /**
+   * Заклинания классовых умений, встающие в круги: то, что игрок уже завёл в
+   * книге руками, вторым рядом не показывается — правки и удаление достаются
+   * записи книги.
+   */
+  const groupedClassSpells = computed(() => {
+    const bookUrls = new Set(props.spells.map((spell) => spell.url));
+
+    return props.classSpells.filter(
+      (spell) =>
+        !bookUrls.has(spell.url)
+        && matchesSpellFilter(spell, spellFilter.value),
+    );
+  });
+
+  /** URL заклинаний класса, стоящих в кругах: по ним строка узнаёт себя. */
+  const classSpellUrls = computed(
+    () => new Set(groupedClassSpells.value.map((spell) => spell.url)),
+  );
+
   const displayGroups = computed(() => {
+    // Заклинания класса идут в круги вместе с книгой: заговор волшебника игрок
+    // ищет среди заговоров, а не в отдельной группе
     const regularGroups = getSpellGroups(
-      props.spells.filter((spell) =>
-        matchesSpellFilter(spell, spellFilter.value),
-      ),
+      [
+        ...props.spells.filter((spell) =>
+          matchesSpellFilter(spell, spellFilter.value),
+        ),
+        ...groupedClassSpells.value,
+      ],
       groupSlotLevels.value,
     ).map((group) => ({ ...group, innate: false }));
 
@@ -575,20 +646,36 @@
           const isCustom = isCustomSpell(spell);
           const isExpanded = isCustom && expandedUrls.value.has(spell.url);
 
+          // Заклинание класса стоит в круге, а ведётся как врождённое: и
+          // пометка подготовки, и меню строки у них общие
+          const isClassGranted =
+            !group.innate && classSpellUrls.value.has(spell.url);
+
+          const isGranted = group.innate || isClassGranted;
+
+          // Предел подготовки задаёт таблица класса, поэтому держат его книга
+          // персонажа и выдача умений класса, которую игрок готовит сам.
+          // Заклинание черты или вида персонаж получает сверх колонки — в счёт
+          // плитки оно не идёт (см. `countSpellsOfKind`), значит и предела не
+          // знает.
+          const countsInLimit =
+            !group.innate && (!isClassGranted || takesPreparationSpace(spell));
+
           return {
             ...spell,
             isCustom,
             isExpanded,
-            isInnate: group.innate,
+            isInnate: isGranted,
+            isClassGranted,
             // Подготовку переключает значок строки — как надевание доспеха в
             // снаряжении. У врождённых заклинаний пометка стоит сразу и в
             // предел подготовленных не входит, снять её значок тоже даёт.
-            preparedIcon: getPreparedIconState(spell, group.innate),
+            preparedIcon: getPreparedIconState(spell, isGranted, countsInLimit),
             // Действия строки — те же, что и у предмета снаряжения: своё
             // заклинание правится формой листа, каталожное сначала копируется в
             // лист, а убирается из книги и то, и другое. Врождённое правится
             // так же — через копию, только уезжает она в книгу заклинаний.
-            menuItems: group.innate
+            menuItems: isGranted
               ? getInnateSpellMenuItems({
                   onCopy: () => emit('copy-innate-spell', spell.url),
                   onRemove: () => emit('remove-innate-spell', spell.url),
@@ -635,7 +722,7 @@
    * не подошло; '' — списку есть что показать.
    */
   const emptyLabel = computed(() => {
-    if (!props.spells.length && !props.innateSpells.length) {
+    if (!hasAnySpells.value) {
       return SHEET_TAB_EMPTY_LABELS.spells;
     }
 
@@ -798,7 +885,7 @@
           стоит напротив плиток, на узком — в конце строки с переносом -->
         <UButton
           icon="tabler:plus"
-          label="Добавить"
+          :label="ACTION_LABELS.add"
           color="neutral"
           variant="ghost"
           size="sm"
@@ -836,10 +923,10 @@
         </button>
       </UTooltip>
 
-      <!-- Круги — числами, как в каталоге заклинаний: подписью целиком
-        («Заговоры», «3 круг») ряд бы не поместился на узком листе, поэтому
-        она уходит в подсказку. Круги набираются по одному, повторное нажатие
-        снимает круг с отбора -->
+      <!-- Уровни — числами, как в каталоге заклинаний: подписью целиком
+        («Заговоры», «Уровень 3») ряд бы не поместился на узком листе, поэтому
+        она уходит в подсказку. Уровни набираются по одному, повторное нажатие
+        снимает уровень с отбора -->
       <template v-if="hasLevelChips">
         <UTooltip
           v-for="levelChip in levelChips"
@@ -931,9 +1018,11 @@
           <div class="relative flex items-center gap-3 p-3">
             <!-- Значок заклинания — переключатель подготовки: нажатие метит
               заклинание подготовленным, повторное — снимает пометку. Горит при
-              этом только сам квадрат, строка остаётся обычной -->
+              этом только сам квадрат, строка остаётся обычной. У заговора
+              квадрат ничего не переключает: подготовки заговор не требует -->
             <UTooltip :text="spell.preparedIcon.tooltip">
               <button
+                v-if="spell.preparedIcon.interactive"
                 type="button"
                 :class="[
                   SPELL_ICON_CLASS,
@@ -949,6 +1038,17 @@
                   class="size-5"
                 />
               </button>
+
+              <span
+                v-else
+                :class="[SPELL_ICON_CLASS, spell.preparedIcon.iconClass]"
+                :aria-label="spell.preparedIcon.ariaLabel"
+              >
+                <UIcon
+                  name="tabler:wand"
+                  class="size-5"
+                />
+              </span>
             </UTooltip>
 
             <button
@@ -1020,6 +1120,22 @@
               </UTooltip>
             </div>
 
+            <!-- Заклинание от умения класса стоит в общем круге: без значка
+              строка ничем не отличалась бы от книги, а живёт она иначе -->
+            <UTooltip
+              v-if="spell.isClassGranted"
+              :text="CLASS_SPELL_BADGE.hint"
+            >
+              <UBadge
+                size="sm"
+                color="neutral"
+                variant="subtle"
+                class="relative z-10 shrink-0"
+              >
+                {{ CLASS_SPELL_BADGE.label }}
+              </UBadge>
+            </UTooltip>
+
             <UTooltip
               v-if="spell.isCustom"
               :text="CUSTOM_SPELL_BADGE_HINT"
@@ -1030,13 +1146,13 @@
                 variant="subtle"
                 class="relative z-10 shrink-0"
               >
-                Своё
+                {{ SHEET_SPELL_ROW_LABELS.custom }}
               </UBadge>
             </UTooltip>
 
             <UTooltip
               v-if="spell.concentration"
-              text="Концентрация"
+              :text="SHEET_SPELL_ROW_LABELS.concentration"
             >
               <UBadge
                 size="sm"
@@ -1044,13 +1160,13 @@
                 variant="subtle"
                 class="relative z-10 shrink-0"
               >
-                К
+                {{ SHEET_SPELL_ROW_LABELS.concentrationShort }}
               </UBadge>
             </UTooltip>
 
             <UTooltip
               v-if="spell.ritual"
-              text="Ритуал"
+              :text="SHEET_SPELL_ROW_LABELS.ritual"
             >
               <UBadge
                 size="sm"
@@ -1058,7 +1174,7 @@
                 variant="subtle"
                 class="relative z-10 shrink-0"
               >
-                Р
+                {{ SHEET_SPELL_ROW_LABELS.ritualShort }}
               </UBadge>
             </UTooltip>
 
@@ -1077,7 +1193,7 @@
                 square
                 class="relative z-10 shrink-0"
                 :class="editControlClass"
-                :aria-label="`Действия с заклинанием: ${spell.name}`"
+                :aria-label="`${SHEET_SPELL_ROW_LABELS.menuAria}: ${spell.name}`"
               />
             </UDropdownMenu>
 
@@ -1118,7 +1234,7 @@
               v-else-if="!spell.statRows.length"
               class="text-xs text-dimmed"
             >
-              Описание не заполнено
+              {{ SHEET_SPELL_ROW_LABELS.emptyDescription }}
             </span>
           </div>
         </div>

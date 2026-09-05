@@ -1,33 +1,65 @@
 <script setup lang="ts">
   import type {
+    AbilityKey,
+    CharacterFeature,
     CharacterInnateSpell,
     ClassChoice,
+    FeatSelectOption,
     FeatureDescriptionNode,
+    FeatureOrigin,
+    LevelUpFeatChoice,
+    SheetChoiceControl,
+    SheetChoiceOrigin,
+    SpeciesFeatureSummary,
     SpeciesOption,
     SpeciesSummary,
   } from '../../model';
 
+  import { partition } from 'es-toolkit';
+
+  import { ACTION_LABELS } from '~/shared/consts';
   import { SpeciesDrawer } from '~species/drawer';
   import { MarkupRender } from '~ui/markup';
 
   import {
     useCatalogSourceQuery,
     useCharacterSheet,
+    useChoiceHints,
+    useChoiceSpellPools,
+    useLazyCatalogSourceQuery,
     useToolCatalog,
   } from '../../composables';
   import {
+    ABILITY_IMPROVEMENT_LABELS,
     ABILITY_LABELS,
     buildCharacterFeatures,
+    buildChoiceControl,
+    buildFeatFeature,
+    CLASS_FEAT_CHOICE_ID_SEGMENT,
+    collectChosenProficiencies,
+    collectFeatAbilityIncreases,
+    collectSpeciesProficiencies,
+    CURRENT_SELECTION_LABELS,
     CUSTOM_SPECIES_LABELS,
-    detectFeatureChoice,
+    FEAT_SOURCES_ASYNC_DATA_KEY,
+    FEATS_FILTERS_PATH,
+    FEATS_SELECT_PATH,
     FEATURE_ORIGIN_LABELS,
+    fetchFeatDetail,
+    filterChoicesByLevel,
     getCharacterFeatureId,
-    getChoiceSkillHints,
-    getDarkvisionDistance,
+    getChoiceModalSubtitle,
+    getChosenProficientSkills,
+    getFeatChoiceOptions,
+    getFeatUrlFromFeatureId,
     getOwnedWeaponNames,
-    getRequiredChoiceCount,
+    getSpeciesDarkvision,
+    getSpeciesVision,
+    getSpellChoicesKey,
     getToolNames,
     LANGUAGE_PROFICIENCY_GROUPS,
+    ORIGIN_FEAT_ACQUISITION_LEVEL,
+    parseFeatSelectOptions,
     parseSizeOptionsFromText,
     parseSpeciesDetail,
     parseSpeciesLineages,
@@ -35,16 +67,53 @@
     parseSpeedFromText,
     resolveChoiceOptions,
     SHEET_SEARCH_LABELS,
-    SKILL_DUPLICATE_WARNING,
     SPECIES_DETAIL_BASE_PATH,
+    SPECIES_FEAT_INVALID_RESPONSE_ERROR,
     SPECIES_FILTERS_PATH,
     SPECIES_SEARCH_PATH,
+    SPECIES_WIZARD_LABELS,
+    unionToolProficiencies,
+    withChosenFeatureSpells,
   } from '../../model';
-  import SheetChoiceSelect from './SheetChoiceSelect.vue';
+  import SheetChoicePickerField from './SheetChoicePickerField.vue';
+  import SheetCurrentSelectionPanel from './SheetCurrentSelectionPanel.vue';
   import SheetCustomSpeciesModal from './SheetCustomSpeciesModal.vue';
+  import SheetFeatChoiceField from './SheetFeatChoiceField.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
 
   type WizardStep = 'species' | 'features';
+
+  /** Загруженная черта, выбранная в умении вида или подвида. */
+  interface SpeciesFeatSelection {
+    /** Идентификатор строки умения (`species:{featureUrl}`). */
+    rowId: string;
+
+    /** Название черты — идёт в подпись выбора у самого умения. */
+    featName: string;
+
+    /** Готовая запись особенности для листа. */
+    feature: CharacterFeature;
+  }
+
+  /**
+   * Разносит выборы умения по пикерам: черту выбирают окном каталога, всё
+   * остальное — селектами. Пул черты — весь раздел сайта, и в `listed` у неё
+   * лежат url, а не названия: селектом её не показать.
+   *
+   * @param choices выборы умения.
+   * @returns выборы селектов и выборы черты.
+   */
+  function splitFeatChoices(choices: ClassChoice[]): {
+    choiceControls: ClassChoice[];
+    featChoices: ClassChoice[];
+  } {
+    const [featChoices, choiceControls] = partition(
+      choices,
+      (choice) => choice.kind === 'feat',
+    );
+
+    return { choiceControls, featChoices };
+  }
 
   /** Объединяет заклинания вида и происхождения, сохраняя самый ранний уровень открытия. */
   function mergeInnateSpells(
@@ -75,7 +144,7 @@
 
   const overlay = useOverlay();
 
-  const { character, setSpecies } = useCharacterSheet();
+  const { character, setSpecies, removeSpecies } = useCharacterSheet();
 
   // Дровер описания вида с сайта; без destroyOnClose — повторный open()
   // после закрытия иначе падает («Overlay not found»).
@@ -146,12 +215,42 @@
 
   const isStepLoading = ref(false);
 
+  const isApplying = shallowRef(false);
+
   const sizeChoice = ref<string | undefined>();
 
   const choices = ref<Record<string, string>>({});
 
   /** Черновик выборов-селекторов по id выбора: id → выбранные значения. */
   const selections = ref<Record<string, string[]>>({});
+
+  /** Выборы черты по идентификатору выбора умения вида. */
+  const featSelections = ref<Record<string, LevelUpFeatChoice>>({});
+
+  /** Каталог черт для выборов черты в умениях; грузится, когда они есть. */
+  const featCatalog = ref<FeatSelectOption[]>([]);
+
+  const isFeatsLoading = ref(false);
+
+  const hasFeatsError = ref(false);
+
+  // Источники черт — та же глобальная настройка профиля, что у остальных
+  // каталогов. Лениво: `/feats/select` по источникам не фильтрует, отбор идёт
+  // на клиенте, и виду без выбора черты эти фильтры не нужны вовсе.
+  const { selectedSourceIds: featSourceIds, load: loadFeatSources } =
+    useLazyCatalogSourceQuery(FEAT_SOURCES_ASYNC_DATA_KEY, FEATS_FILTERS_PATH);
+
+  /** Черты, уже взятые на листе: повторно не предлагаются. */
+  const takenFeatUrls = computed(
+    () =>
+      new Set(
+        character.value.features.flatMap((feature) => {
+          const url = getFeatUrlFromFeatureId(feature.id);
+
+          return url ? [url] : [];
+        }),
+      ),
+  );
 
   const skillNames = computed(() =>
     character.value.skills.map((skill) => skill.name),
@@ -167,10 +266,13 @@
     LANGUAGE_PROFICIENCY_GROUPS.flatMap((group) => group.items),
   );
 
-  // Инструменты виды не выдают (`detectFeatureChoice` их не распознаёт), но
-  // контекст резолва выборов общий — список тянем из каталога сайта, а не из
-  // своего перечня.
-  const { getToolNamesForGroups, load: loadToolCatalog } = useToolCatalog();
+  // Инструменты виды не выдают, но контекст резолва выборов общий — список
+  // тянем из каталога сайта, а не из своего перечня.
+  const {
+    getToolNamesForGroups,
+    catalogItems: toolCatalogItems,
+    load: loadToolCatalog,
+  } = useToolCatalog();
 
   void loadToolCatalog();
 
@@ -227,8 +329,26 @@
       selectedLineage.value?.speedText || speciesDetail.value?.speedText || '',
   );
 
-  const sizeOptions = computed(() =>
-    parseSizeOptionsFromText(effectiveSizeText.value),
+  /**
+   * Размеры на выбор: структура справочника, а без неё — разбор строки размера
+   * (пока бэкенд структуру не отдаёт). Подвид приоритетнее базового вида.
+   */
+  const sizeOptions = computed(() => {
+    const declared = selectedLineage.value?.sizeOptions.length
+      ? selectedLineage.value.sizeOptions
+      : (speciesDetail.value?.sizeOptions ?? []);
+
+    return declared.length
+      ? declared
+      : parseSizeOptionsFromText(effectiveSizeText.value);
+  });
+
+  /** Скорости вида: структура справочника, а без неё — разбор строки. */
+  const effectiveSpeed = computed(
+    () =>
+      selectedLineage.value?.speed
+      ?? speciesDetail.value?.speed
+      ?? parseSpeedFromText(effectiveSpeedText.value),
   );
 
   const showSizeChoice = computed(() => sizeOptions.value.length > 1);
@@ -243,18 +363,51 @@
       : speciesDetail.value.name;
   });
 
+  /**
+   * Выборы умения — только те, что записаны в справочнике вида. Описание не
+   * разбирается: умение, которому выбор не проставили в форме вида, ни о чём
+   * не спрашивает.
+   *
+   * @param feature умение вида или происхождения.
+   * @returns выборы умения; пусто — умение ни о чём не спрашивает.
+   */
+  function featureChoiceControls(
+    feature: SpeciesFeatureSummary,
+  ): ClassChoice[] {
+    // Выбор со своим уровнем спрашивается, только когда персонаж дорос:
+    // умение вида приходит целиком, а часть его вопросов открывается позже
+    return filterChoicesByLevel(feature.choices, character.value.level);
+  }
+
   const featureRows = computed(() => {
     const rows: Array<{
       id: string;
       name: string;
       description: FeatureDescriptionNode[];
+      origin: FeatureOrigin;
+      originName: string;
       originLabel: string;
-      choiceControl: ClassChoice | null;
+      choiceControls: ClassChoice[];
+      featChoices: ClassChoice[];
     }> = [];
 
     const detail = speciesDetail.value;
 
     if (detail) {
+      // Выборы самой записи вида: у происхождений умений не бывает, и спросить
+      // их было бы негде. Своей строкой, потому что и дают их не умения
+      if (detail.choices.length > 0) {
+        rows.push({
+          id: getCharacterFeatureId('species', detail.url),
+          name: detail.name,
+          description: [],
+          origin: 'species',
+          originName: detail.name,
+          originLabel: `${FEATURE_ORIGIN_LABELS.species}: ${detail.name}`,
+          ...splitFeatChoices(detail.choices),
+        });
+      }
+
       for (const feature of detail.features) {
         const id = getCharacterFeatureId('species', feature.url);
 
@@ -262,12 +415,10 @@
           id,
           name: feature.name,
           description: feature.description,
+          origin: 'species',
+          originName: detail.name,
           originLabel: `${FEATURE_ORIGIN_LABELS.species}: ${detail.name}`,
-          choiceControl: detectFeatureChoice(
-            id,
-            feature.description,
-            skillNames.value,
-          ),
+          ...splitFeatChoices(featureChoiceControls(feature)),
         });
       }
     }
@@ -275,6 +426,18 @@
     const lineage = selectedLineage.value;
 
     if (lineage) {
+      if (lineage.choices.length > 0) {
+        rows.push({
+          id: getCharacterFeatureId('lineage', lineage.url),
+          name: lineage.name,
+          description: [],
+          origin: 'lineage',
+          originName: lineage.name,
+          originLabel: `${FEATURE_ORIGIN_LABELS.lineage}: ${lineage.name}`,
+          ...splitFeatChoices(lineage.choices),
+        });
+      }
+
       for (const feature of lineage.features) {
         const id = getCharacterFeatureId('lineage', feature.url);
 
@@ -282,12 +445,10 @@
           id,
           name: feature.name,
           description: feature.description,
+          origin: 'lineage',
+          originName: lineage.name,
           originLabel: `${FEATURE_ORIGIN_LABELS.lineage}: ${lineage.name}`,
-          choiceControl: detectFeatureChoice(
-            id,
-            feature.description,
-            skillNames.value,
-          ),
+          ...splitFeatChoices(featureChoiceControls(feature)),
         });
       }
     }
@@ -295,18 +456,63 @@
     return rows;
   });
 
-  const chosenProficientSkills = computed(() =>
-    featureRows.value
-      .filter((row) => row.choiceControl?.kind === 'skill-proficiency')
-      .flatMap((row) => selections.value[row.id] ?? []),
+  /** Все выборы мастера: по ним считается, что уже выбрано во владение. */
+  const allChoices = computed<ClassChoice[]>(() =>
+    featureRows.value.flatMap((row) => row.choiceControls),
+  );
+
+  // Пул заклинаний собирается поиском по каталогу, а не лежит в записи вида:
+  // умение, дающее заговор из списка волшебника, перечислило бы весь список, и
+  // тот устарел бы при первом же пополнении справочника
+  const {
+    getPool: getSpellPool,
+    getSpellOptions,
+    getStatus: getSpellPoolStatus,
+    collectChosenSpells,
+    load: loadSpellPools,
+    retry: retrySpellPool,
+  } = useChoiceSpellPools({
+    sources: () =>
+      featureRows.value.map((row) => ({ choices: row.choiceControls })),
+    answers: selections,
+  });
+
+  /**
+   * Примета выборов заклинаний, которые мастер спрашивает сейчас: они приходят
+   * вместе с выбранным видом и подвидом, поэтому пул догружается по её смене.
+   */
+  const spellChoicesKey = computed(() => getSpellChoicesKey(allChoices.value));
+
+  // Цикла нет: обработчик правит только пулы заклинаний, а примета считается по
+  // выборам мастера — от загруженного пула она не меняется.
+  watch(spellChoicesKey, handleSpellChoicesChange);
+
+  /** Догружает пулы заклинаний под выборы, которые мастер спрашивает сейчас. */
+  function handleSpellChoicesChange(): void {
+    void loadSpellPools();
+  }
+
+  /** Есть ли у вида выбор черты: по нему грузится каталог черт. */
+  const hasFeatChoices = computed(() =>
+    featureRows.value.some((row) => row.featChoices.length > 0),
   );
 
   /** Опции пикера выбора в зависимости от его типа. */
   function choiceOptions(choice: ClassChoice): string[] {
+    // Заклинания приходят загруженным пулом, а не резолвятся по типу выбора: в
+    // самой записи вида их нет.
+    if (choice.kind === 'spell') {
+      return getSpellOptions(choice);
+    }
+
     return resolveChoiceOptions(choice, {
       skillNames: skillNames.value,
       proficientSkillNames: proficientSkillNames.value,
-      chosenProficientSkills: chosenProficientSkills.value,
+      chosenProficientSkills: getChosenProficientSkills(
+        allChoices.value,
+        selections.value,
+        choice.id,
+      ),
       knownLanguages: character.value.proficiencies.languages,
       knownTools: getToolNames(character.value.proficiencies.tools),
       allLanguages: allLanguages.value,
@@ -320,21 +526,218 @@
     });
   }
 
-  /** Пометки опций: навыки, которыми персонаж уже владеет. */
-  function choiceHints(choice: ClassChoice): Record<string, string> {
-    return getChoiceSkillHints(choice, character.value.skills);
+  /**
+   * Пометки опций: навыки, которыми персонаж уже владеет, и заклинания,
+   * которые он уже знает.
+   */
+  const { getHints: choiceHints } = useChoiceHints({
+    choices: allChoices,
+    selections,
+  });
+
+  /**
+   * Выбор для единого пикера: варианты, готовность пула, подписи поля и окна.
+   *
+   * @param choice выбор умения.
+   * @param origin умение и его источник — для подзаголовка окна.
+   * @returns выбор для пикера.
+   */
+  function choiceControl(
+    choice: ClassChoice,
+    origin?: SheetChoiceOrigin,
+  ): SheetChoiceControl {
+    return buildChoiceControl(choice, {
+      names: choiceOptions(choice),
+      hints: choiceHints(choice),
+      spellPool: getSpellPool(choice),
+      status: choice.kind === 'spell' ? getSpellPoolStatus(choice) : 'ready',
+      toolEntries: toolCatalogItems.value,
+      origin,
+    });
   }
 
-  /** Требуемое число опций: не больше, чем доступно в списке выбора. */
+  /**
+   * Откуда выбор строки умения: у вида уровня нет, и в подзаголовке окна
+   * остаются источник и название умения.
+   *
+   * @param row строка умения.
+   * @returns источник выбора.
+   */
+  function rowOrigin(row: {
+    name: string;
+    originLabel: string;
+  }): SheetChoiceOrigin {
+    return { featureName: row.name, originLabel: row.originLabel, level: null };
+  }
+
+  /**
+   * Выборы умений единым пикером по идентификаторам строк. Отдельным
+   * computed, а не полем строки: пикер считает пул по всем выборам мастера, а
+   * те собираются из самих строк — поле замкнуло бы круг.
+   */
+  const featureRowControls = computed<Record<string, SheetChoiceControl[]>>(
+    () =>
+      Object.fromEntries(
+        featureRows.value.map((row) => [
+          row.id,
+          row.choiceControls.map((choice) =>
+            choiceControl(choice, rowOrigin(row)),
+          ),
+        ]),
+      ),
+  );
+
+  /** Подзаголовки окон выбора черты по идентификаторам строк умений. */
+  const featureRowModalSubtitles = computed<Record<string, string>>(() =>
+    Object.fromEntries(
+      featureRows.value.map((row) => [
+        row.id,
+        getChoiceModalSubtitle(rowOrigin(row), 1),
+      ]),
+    ),
+  );
+
+  /** Требуемое число опций с учётом готовности пула. */
   function choiceCount(choice: ClassChoice): number {
-    return getRequiredChoiceCount(choice, choiceOptions(choice));
+    return choiceControl(choice).requiredCount;
   }
 
   /** Обновление выбора с ограничением по требуемому количеству. */
   function updateSelection(choice: ClassChoice, values: string[]): void {
+    const count = choiceCount(choice);
+
     selections.value = {
       ...selections.value,
-      [choice.id]: values.slice(0, choiceCount(choice)),
+      [choice.id]: count > 0 ? values.slice(0, count) : values,
+    };
+  }
+
+  /** Пул заклинаний выбора не загрузился — запросить его заново. */
+  function handleSpellPoolRetry(choice: ClassChoice): void {
+    void retrySpellPool(choice);
+  }
+
+  /**
+   * Каталог черт для выборов в умениях вида. Список берётся целиком с
+   * `/select`: только он отдаёт повторяемость и прибавки к характеристикам, а
+   * категории и уже взятые черты отбираются на клиенте — как в мастере класса.
+   */
+  async function loadFeats(): Promise<void> {
+    isFeatsLoading.value = true;
+    hasFeatsError.value = false;
+
+    try {
+      const [response] = await Promise.all([
+        $fetch<unknown>(FEATS_SELECT_PATH, { method: 'GET', retry: 0 }),
+        loadFeatSources(),
+      ]);
+
+      featCatalog.value = parseFeatSelectOptions(response);
+    } catch (error) {
+      consola.error(ABILITY_IMPROVEMENT_LABELS.applyErrorLog, error);
+      hasFeatsError.value = true;
+    } finally {
+      isFeatsLoading.value = false;
+    }
+  }
+
+  /**
+   * Черты, доступные выбору черты в умении вида: пул сужен категориями и
+   * перечнем выбора, уже взятыми чертами и выбранными в других умениях мастера.
+   *
+   * @param choice выбор черты умения.
+   * @returns черты для пикера.
+   */
+  function featOptions(choice: ClassChoice): FeatSelectOption[] {
+    const selectedUrl = featSelections.value[choice.id]?.featUrl ?? '';
+
+    const chosenElsewhere = Object.entries(featSelections.value)
+      .filter(([id, entry]) => id !== choice.id && entry.featUrl)
+      .map(([, entry]) => entry.featUrl);
+
+    return getFeatChoiceOptions(
+      featCatalog.value,
+      choice,
+      new Set([...takenFeatUrls.value, ...chosenElsewhere]),
+      selectedUrl,
+      featSourceIds.value,
+    );
+  }
+
+  /**
+   * Черта, выбранная в выборе умения.
+   *
+   * @param choiceId идентификатор выбора черты.
+   * @returns опция черты; null — выбора не было либо черта не из каталога.
+   */
+  function selectedFeat(choiceId: string): FeatSelectOption | null {
+    const featUrl = featSelections.value[choiceId]?.featUrl;
+
+    return featUrl
+      ? (featCatalog.value.find((feat) => feat.url === featUrl) ?? null)
+      : null;
+  }
+
+  /**
+   * Выбранные характеристики по слотам прибавок черты; пусто — черта не
+   * выбрана либо прибавок не даёт.
+   *
+   * @param choiceId идентификатор выбора черты.
+   * @returns характеристики по слотам.
+   */
+  function featAbilities(choiceId: string): Array<AbilityKey | null> {
+    return featSelections.value[choiceId]?.abilities ?? [];
+  }
+
+  /**
+   * Выбор черты в умении. Смена черты обнуляет выбранные характеристики: у
+   * новой черты свой список и своё число прибавок.
+   *
+   * @param rowId идентификатор строки умения.
+   * @param choiceId идентификатор выбора черты.
+   * @param featUrl url выбранной черты; '' — выбор снят.
+   */
+  function setFeatChoice(rowId: string, choiceId: string, featUrl: string) {
+    const option = featCatalog.value.find((feat) => feat.url === featUrl);
+
+    featSelections.value = {
+      ...featSelections.value,
+      [choiceId]: {
+        featureId: rowId,
+        featUrl,
+        abilities: Array.from<AbilityKey | null>({
+          length: option?.abilityIncreaseCount ?? 0,
+        }).fill(null),
+      },
+    };
+  }
+
+  /**
+   * Выбор характеристики в слоте прибавки выбранной черты.
+   *
+   * @param choiceId идентификатор выбора черты.
+   * @param payload номер слота и выбранная характеристика.
+   * @param payload.slot номер слота прибавки (с нуля).
+   * @param payload.ability выбранная характеристика; null — выбор снят.
+   */
+  function setFeatAbility(
+    choiceId: string,
+    payload: { slot: number; ability: AbilityKey | null },
+  ) {
+    const selection = featSelections.value[choiceId];
+
+    if (!selection) {
+      return;
+    }
+
+    featSelections.value = {
+      ...featSelections.value,
+      [choiceId]: {
+        ...selection,
+        abilities: selection.abilities.map((current, slot) =>
+          slot === payload.slot ? payload.ability : current,
+        ),
+      },
     };
   }
 
@@ -351,6 +754,15 @@
       color: 'error',
       icon: 'tabler:alert-triangle',
       title: 'Не удалось загрузить данные вида',
+    });
+  }
+
+  /** Тост о том, что выбранную черту не удалось догрузить перед применением. */
+  function showFeatError() {
+    toast.add({
+      color: 'error',
+      icon: 'tabler:alert-triangle',
+      title: ABILITY_IMPROVEMENT_LABELS.applyError,
     });
   }
 
@@ -458,7 +870,15 @@
 
       choices.value = {};
       selections.value = {};
+      featSelections.value = {};
       sizeChoice.value = sizeOptions.value[0];
+
+      // Каталог черт нужен только виду с выбором черты: иначе лишний запрос на
+      // каждое открытие мастера
+      if (hasFeatChoices.value && !featCatalog.value.length) {
+        await loadFeats();
+      }
+
       step.value = 'features';
     } catch (error) {
       consola.error('Ошибка загрузки вида:', error);
@@ -472,19 +892,80 @@
     step.value = 'species';
   }
 
-  function handleApply() {
+  /**
+   * Загружает черты, выбранные в умениях вида, и делает их записями листа.
+   * Происхождение у записи вида или подвида — тогда смена вида забирает черту
+   * вместе с умением, которое её дало.
+   *
+   * @returns записи выбранных черт; пусто — черту нигде не выбрали.
+   */
+  function buildSpeciesFeatFeatures(): Promise<SpeciesFeatSelection[]> {
+    const entries = featureRows.value.flatMap((row) =>
+      row.featChoices.flatMap((choice) => {
+        const selection = featSelections.value[choice.id];
+
+        return selection?.featUrl ? [{ row, choice, selection }] : [];
+      }),
+    );
+
+    return Promise.all(
+      entries.map(async ({ row, choice, selection }) => {
+        const summary = await fetchFeatDetail(selection.featUrl);
+
+        if (!summary) {
+          throw new Error(SPECIES_FEAT_INVALID_RESPONSE_ERROR);
+        }
+
+        return {
+          rowId: row.id,
+          featName: summary.name,
+          feature: {
+            ...buildFeatFeature(summary, {
+              // Черта вида даётся вместе с умением: у большинства это первый
+              // уровень, а от уровня взятия считается прибавка «Крепкого»
+              level: choice.requiredLevel || ORIGIN_FEAT_ACQUISITION_LEVEL,
+              origin: row.origin,
+              originName: row.originName,
+              abilityIncreases: collectFeatAbilityIncreases(
+                selection.abilities,
+              ),
+            }),
+            id: `${row.id}:${CLASS_FEAT_CHOICE_ID_SEGMENT}:${summary.url}`,
+          },
+        };
+      }),
+    );
+  }
+
+  /**
+   * Применяет вид к листу: сперва догружает выбранные черты, затем одним
+   * обновлением кладёт вид, его умения, владения и записи черт.
+   */
+  async function handleApply() {
     const detail = speciesDetail.value;
 
-    if (!detail) {
+    if (!detail || isApplying.value) {
       return;
     }
 
-    const lineage = selectedLineage.value;
+    // Под `try` только загрузка черт: ошибка сети не должна выглядеть как сбой
+    // применения вида, а применение ниже — синхронное и не бросает.
+    let featFeatures: SpeciesFeatSelection[];
 
-    const allFeatureSummaries = [
-      ...detail.features,
-      ...(lineage?.features ?? []),
-    ];
+    isApplying.value = true;
+
+    try {
+      featFeatures = await buildSpeciesFeatFeatures();
+    } catch (error) {
+      consola.error(ABILITY_IMPROVEMENT_LABELS.applyErrorLog, error);
+      showFeatError();
+
+      return;
+    } finally {
+      isApplying.value = false;
+    }
+
+    const lineage = selectedLineage.value;
 
     // Сбор выборов-селекторов: навыки (владение/экспертиза) и языки; выбранные
     // значения также идут в текст особенности, чтобы отображаться на листе.
@@ -493,13 +974,11 @@
     const chosenLanguages: string[] = [];
     const featureChoices: Record<string, string> = { ...choices.value };
 
-    for (const row of featureRows.value) {
-      const control = row.choiceControl;
+    const featureControls = featureRows.value.flatMap(
+      (row) => row.choiceControls,
+    );
 
-      if (!control) {
-        continue;
-      }
-
+    for (const control of featureControls) {
       const values = selections.value[control.id] ?? [];
 
       if (!values.length) {
@@ -510,12 +989,39 @@
         proficientSkills.push(...values);
       } else if (control.kind === 'skill-expertise') {
         expertiseSkills.push(...values);
-      } else {
+      } else if (control.kind === 'language') {
         chosenLanguages.push(...values);
       }
 
       featureChoices[control.id] = values.join(', ');
     }
+
+    // Названия выбранных черт — в подпись самого умения: на листе видно, что
+    // именно дала «Универсальность»
+    for (const selection of featFeatures) {
+      const previous = featureChoices[selection.rowId];
+
+      featureChoices[selection.rowId] = previous
+        ? `${previous}, ${selection.featName}`
+        : selection.featName;
+    }
+
+    // Инструменты, приёмы и владения спасбросками из ответов: их лист кладёт в
+    // свои списки владений, а не в текст умения. Разбор ответов общий с чертой —
+    // вид выбора у них один и тот же
+    const chosenGrants = collectChosenProficiencies(
+      featureControls,
+      selections.value,
+      proficientSkillNames.value,
+    );
+
+    // Дары, заявленные записью вида и её умениями: до них лист искал владения
+    // в прозе описания и умение с непривычной формулировкой пропускал
+    const declaredProficiencies = collectSpeciesProficiencies(
+      detail,
+      lineage,
+      character.value.level,
+    );
 
     setSpecies({
       species: {
@@ -529,24 +1035,103 @@
         ),
       },
       size: sizeChoice.value ?? null,
-      speed: parseSpeedFromText(effectiveSpeedText.value),
+      speed: effectiveSpeed.value,
       vision: {
-        normal: character.value.vision.normal,
-        darkvision: getDarkvisionDistance(allFeatureSummaries),
+        // Вид задаёт обычное зрение — берём его; иначе оставляем своё
+        normal:
+          getSpeciesVision(detail, lineage) ?? character.value.vision.normal,
+        darkvision: getSpeciesDarkvision(detail, lineage),
         blindsight: character.value.vision.blindsight,
         tremorsense: character.value.vision.tremorsense,
         truesight: character.value.vision.truesight,
         unit: 'feet',
       },
-      features: buildCharacterFeatures(detail, lineage, featureChoices),
+      // Выбранные заклинания — на записи своих умений: лист ведёт их наравне
+      // с врождёнными заклинаниями вида, и снятие вида забирает их вместе с
+      // умением
+      features: withChosenFeatureSpells(
+        [
+          ...buildCharacterFeatures(
+            detail,
+            lineage,
+            featureChoices,
+            character.value.level,
+          ),
+          ...featFeatures.map((selection) => selection.feature),
+        ],
+        Object.fromEntries(
+          featureRows.value.map((row) => [
+            row.id,
+            collectChosenSpells({ choices: row.choiceControls }),
+          ]),
+        ),
+      ),
       skills: {
-        proficient: [...new Set(proficientSkills)],
-        expertise: [...new Set(expertiseSkills)],
+        // Навыки из даров вида идут туда же, куда выбранные игроком: лист
+        // ставит владение строке навыка, а не списку владений
+        proficient: [
+          ...new Set([...declaredProficiencies.skills, ...proficientSkills]),
+        ],
+        expertise: [
+          ...new Set([
+            ...declaredProficiencies.expertiseSkills,
+            ...expertiseSkills,
+          ]),
+        ],
       },
       proficiencies: {
-        languages: [...new Set(chosenLanguages)],
+        ...declaredProficiencies,
+        languages: [
+          ...new Set([
+            ...declaredProficiencies.languages,
+            ...(chosenGrants.languages ?? []),
+            ...chosenLanguages,
+          ]),
+        ],
+        tools: unionToolProficiencies(
+          declaredProficiencies.tools,
+          chosenGrants.tools ?? [],
+        ),
+        weaponMasteries: [
+          ...new Set([
+            ...declaredProficiencies.weaponMasteries,
+            ...(chosenGrants.weaponMasteries ?? []),
+          ]),
+        ],
+        masteryProperties: [
+          ...new Set([
+            ...declaredProficiencies.masteryProperties,
+            ...(chosenGrants.masteryProperties ?? []),
+          ]),
+        ],
+        savingThrows: [
+          ...new Set([
+            ...declaredProficiencies.savingThrows,
+            ...(chosenGrants.savingThrows ?? []),
+          ]),
+        ],
       },
     });
+
+    emit('close');
+  }
+
+  /** Название уже взятого вида с подвидом; пусто — вида на листе нет. */
+  const currentSpeciesLabel = computed(() => {
+    const species = character.value.species;
+
+    if (!species) {
+      return '';
+    }
+
+    return species.lineageName
+      ? `${species.name} (${species.lineageName})`
+      : species.name;
+  });
+
+  /** Снимает вид и закрывает мастер: брать новый взамен необязательно. */
+  function handleRemoveSpecies() {
+    removeSpecies();
 
     emit('close');
   }
@@ -558,12 +1143,25 @@
 
 <template>
   <UModal
-    title="Выбор вида"
+    :title="SPECIES_WIZARD_LABELS.title"
     :ui="{ content: 'sm:max-w-2xl' }"
   >
     <template #body>
       <div class="flex min-h-48 flex-col gap-4">
         <template v-if="step === 'species'">
+          <!-- Что уже взято и как это снять: выбирать новый вид взамен
+          необязательно -->
+          <SheetCurrentSelectionPanel
+            v-if="currentSpeciesLabel"
+            :title="CURRENT_SELECTION_LABELS.species.title"
+            :name="currentSpeciesLabel"
+            :remove-label="CURRENT_SELECTION_LABELS.species.remove"
+            :remove-description="
+              CURRENT_SELECTION_LABELS.species.removeDescription
+            "
+            @remove="handleRemoveSpecies"
+          />
+
           <SheetSearchInput
             v-model="searchTerm"
             :placeholder="SHEET_SEARCH_LABELS.byNamePlaceholder"
@@ -594,7 +1192,7 @@
                 <button
                   type="button"
                   class="flex min-w-0 grow cursor-pointer items-center gap-2 px-3 py-2 text-left after:absolute after:inset-0 after:cursor-pointer"
-                  :aria-label="`Выбрать вид: ${row.name}`"
+                  :aria-label="`${SPECIES_WIZARD_LABELS.pickAria}: ${row.name}`"
                   @click.left.exact.prevent="handleSpeciesRowClick(row.url)"
                 >
                   <UIcon
@@ -626,7 +1224,7 @@
                   {{ row.sourceLabel }}
                 </UBadge>
 
-                <UTooltip text="Открыть описание вида">
+                <UTooltip :text="SPECIES_WIZARD_LABELS.preview">
                   <UButton
                     icon="tabler:layout-sidebar-right-expand"
                     color="neutral"
@@ -634,7 +1232,7 @@
                     size="xs"
                     square
                     class="relative z-10 shrink-0"
-                    :aria-label="`Описание вида: ${row.name}`"
+                    :aria-label="`${SPECIES_WIZARD_LABELS.previewAria}: ${row.name}`"
                     @click.left.exact.prevent="handlePreview(row.url)"
                   />
                 </UTooltip>
@@ -659,7 +1257,7 @@
                     class="size-3.5 animate-spin"
                   />
 
-                  Загрузка подвидов…
+                  {{ SPECIES_WIZARD_LABELS.lineagesLoading }}
                 </span>
 
                 <div
@@ -671,7 +1269,7 @@
                   <button
                     type="button"
                     class="flex min-w-0 grow cursor-pointer items-center px-3 py-1.5 text-left after:absolute after:inset-0 after:cursor-pointer"
-                    :aria-label="`Выбрать подвид: ${lineage.name}`"
+                    :aria-label="`${SPECIES_WIZARD_LABELS.lineagePickAria}: ${lineage.name}`"
                     @click.left.exact.prevent="
                       handleLineageClick(row.url, lineage.url)
                     "
@@ -681,7 +1279,7 @@
                     </span>
                   </button>
 
-                  <UTooltip text="Открыть описание подвида">
+                  <UTooltip :text="SPECIES_WIZARD_LABELS.lineagePreview">
                     <UButton
                       icon="tabler:layout-sidebar-right-expand"
                       color="neutral"
@@ -689,7 +1287,7 @@
                       size="xs"
                       square
                       class="relative z-10 shrink-0"
-                      :aria-label="`Описание подвида: ${lineage.name}`"
+                      :aria-label="`${SPECIES_WIZARD_LABELS.lineagePreviewAria}: ${lineage.name}`"
                       @click.left.exact.prevent="handlePreview(lineage.url)"
                     />
                   </UTooltip>
@@ -707,20 +1305,20 @@
               v-if="!displayRows.length"
               class="px-3 py-6 text-center text-sm text-dimmed"
             >
-              Ничего не найдено
+              {{ SPECIES_WIZARD_LABELS.empty }}
             </span>
           </div>
 
           <span class="text-xs text-muted">
-            Вид с подвидами разворачивается стрелкой — выберите конкретный
-            подвид. При применении скорость, зрение, размер и особенности сразу
-            заполнят лист.
+            {{ SPECIES_WIZARD_LABELS.listHint }}
           </span>
         </template>
 
         <template v-else>
           <div class="flex flex-wrap items-center gap-2 text-sm">
-            <span class="text-muted">Вид:</span>
+            <span class="text-muted">
+              {{ SPECIES_WIZARD_LABELS.resultPrefix }}
+            </span>
 
             <span class="font-bold text-highlighted">{{ resultName }}</span>
           </div>
@@ -732,7 +1330,7 @@
             <span
               class="text-[10px] font-bold tracking-wider text-muted uppercase"
             >
-              Размер
+              {{ SPECIES_WIZARD_LABELS.size }}
             </span>
 
             <URadioGroup
@@ -748,7 +1346,7 @@
             <span
               class="text-[10px] font-bold tracking-wider text-muted uppercase"
             >
-              Особенности
+              {{ SPECIES_WIZARD_LABELS.features }}
             </span>
 
             <div
@@ -770,32 +1368,46 @@
                 </UBadge>
               </div>
 
-              <div
-                v-if="row.choiceControl"
-                class="flex flex-col gap-1"
-              >
-                <span class="text-xs text-muted">
-                  Выберите {{ choiceCount(row.choiceControl) }}
-                </span>
+              <!-- Черту выбирают тем же полем, что в мастере класса: пул
+              бывает под сотню записей, и описание каждой читают в окне -->
+              <SheetFeatChoiceField
+                v-for="choice in row.featChoices"
+                :key="choice.id"
+                :title="choice.label"
+                :modal-subtitle="featureRowModalSubtitles[row.id]"
+                :options="featOptions(choice)"
+                :selected="selectedFeat(choice.id)"
+                :abilities="featAbilities(choice.id)"
+                :scores="character.abilities"
+                :is-loading="isFeatsLoading"
+                :has-error="hasFeatsError"
+                @update:feat="setFeatChoice(row.id, choice.id, $event)"
+                @update:ability="setFeatAbility(choice.id, $event)"
+              />
 
-                <SheetChoiceSelect
-                  :model-value="selections[row.choiceControl.id] ?? []"
-                  :items="choiceOptions(row.choiceControl)"
-                  :hints="choiceHints(row.choiceControl)"
-                  :warning="SKILL_DUPLICATE_WARNING"
-                  :count="choiceCount(row.choiceControl)"
-                  :placeholder="`Выберите ${choiceCount(row.choiceControl)}`"
-                  @update:model-value="
-                    updateSelection(row.choiceControl, $event)
-                  "
-                />
-              </div>
+              <SheetChoicePickerField
+                v-for="control in featureRowControls[row.id]"
+                :key="control.choice.id"
+                :title="control.title"
+                :explanation="control.explanation"
+                :modal-title="control.modalTitle"
+                :modal-subtitle="control.modalSubtitle"
+                :options="control.options"
+                :count="control.requiredCount"
+                :status="control.status"
+                :warning="control.warning"
+                :model-value="selections[control.choice.id] ?? []"
+                @update:model-value="updateSelection(control.choice, $event)"
+                @retry="handleSpellPoolRetry(control.choice)"
+              />
 
+              <!-- Свободная строка — умению, которое ни о чём не спрашивает:
+              игрок записывает в неё свой выбор сам -->
               <UInput
-                v-else
+                v-if="!row.choiceControls.length && !row.featChoices.length"
                 v-model="choices[row.id]"
                 size="sm"
-                placeholder="Ваш выбор в особенности (необязательно)"
+                :placeholder="SPECIES_WIZARD_LABELS.featureChoicePlaceholder"
               />
 
               <MarkupRender
@@ -808,7 +1420,7 @@
               v-if="!featureRows.length"
               class="text-xs text-dimmed italic"
             >
-              У вида нет описанных особенностей
+              {{ SPECIES_WIZARD_LABELS.featuresEmpty }}
             </span>
           </div>
         </template>
@@ -819,7 +1431,7 @@
       <div class="flex w-full flex-wrap items-center justify-between gap-2">
         <UButton
           v-if="step === 'features'"
-          label="Назад"
+          :label="ACTION_LABELS.back"
           icon="tabler:arrow-left"
           color="neutral"
           variant="ghost"
@@ -837,7 +1449,7 @@
 
         <div class="ml-auto flex gap-2">
           <UButton
-            label="Отмена"
+            :label="ACTION_LABELS.cancel"
             color="neutral"
             variant="ghost"
             @click.left.exact.prevent="handleCancel"
@@ -845,14 +1457,15 @@
 
           <UButton
             v-if="step === 'features'"
-            label="Применить"
+            :label="ACTION_LABELS.apply"
             color="primary"
+            :loading="isApplying"
             @click.left.exact.prevent="handleApply"
           />
 
           <UButton
             v-else
-            label="Далее"
+            :label="ACTION_LABELS.next"
             icon="tabler:arrow-right"
             color="primary"
             :loading="isStepLoading"

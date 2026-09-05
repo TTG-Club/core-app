@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { CharacterClassResource } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
+
   import { useCharacterSheet } from '../../composables';
   import {
     CLASS_RESOURCE_MODAL_TITLES,
@@ -136,7 +138,7 @@
 
           <UButton
             icon="tabler:plus"
-            label="Добавить"
+            :label="ACTION_LABELS.add"
             color="neutral"
             variant="ghost"
             size="xs"
@@ -233,14 +235,14 @@
     <template #footer>
       <div class="flex w-full justify-end gap-2">
         <UButton
-          label="Отмена"
+          :label="ACTION_LABELS.cancel"
           color="neutral"
           variant="ghost"
           @click.left.exact.prevent="handleCancel"
         />
 
         <UButton
-          label="Применить"
+          :label="ACTION_LABELS.apply"
           color="primary"
           @click.left.exact.prevent="handleApply"
         />

@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { CharacterCurrency, CharacterCustomCurrency } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
+
   import { useCharacterSheet } from '../../composables';
   import {
     CURRENCY_AMOUNT_MAX,
@@ -11,6 +13,7 @@
     CUSTOM_CURRENCY_LABEL_MAX_LENGTH,
     CUSTOM_CURRENCY_NAME_MAX_LENGTH,
     NEW_CUSTOM_CURRENCY,
+    SHEET_CURRENCY_MODAL_LABELS,
     SHEET_EMPTY_LABELS,
   } from '../../model';
 
@@ -65,7 +68,7 @@
 </script>
 
 <template>
-  <UModal title="Валюта">
+  <UModal :title="SHEET_CURRENCY_MODAL_LABELS.title">
     <template #body>
       <div class="flex flex-col gap-5">
         <div class="flex flex-col gap-2">
@@ -93,13 +96,14 @@
 
         <div class="flex flex-col gap-3">
           <div class="flex items-center justify-between">
-            <span class="text-sm text-muted"
-              >Свои валюты · {{ customCountLabel }}</span
-            >
+            <span class="text-sm text-muted">
+              {{ SHEET_CURRENCY_MODAL_LABELS.customTitle }} ·
+              {{ customCountLabel }}
+            </span>
 
             <UButton
               icon="tabler:plus"
-              label="Добавить валюту"
+              :label="SHEET_CURRENCY_MODAL_LABELS.add"
               color="neutral"
               variant="ghost"
               size="xs"
@@ -115,12 +119,12 @@
             <div class="flex items-end gap-3">
               <div class="flex min-w-0 grow flex-col gap-1">
                 <span class="text-[10px] font-bold text-muted uppercase">
-                  Название
+                  {{ SHEET_CURRENCY_MODAL_LABELS.name }}
                 </span>
 
                 <UInput
                   v-model="customCurrency.name"
-                  placeholder="Например, Драконьи чешуйки"
+                  :placeholder="SHEET_CURRENCY_MODAL_LABELS.namePlaceholder"
                   :maxlength="CUSTOM_CURRENCY_NAME_MAX_LENGTH"
                 />
               </div>
@@ -131,7 +135,7 @@
                 variant="ghost"
                 size="xs"
                 square
-                aria-label="Удалить валюту"
+                :aria-label="SHEET_CURRENCY_MODAL_LABELS.remove"
                 @click.left.exact.prevent="
                   handleRemoveCustomCurrency(customCurrency.id)
                 "
@@ -141,19 +145,21 @@
             <div class="flex items-end gap-3">
               <div class="flex w-24 shrink-0 flex-col gap-1">
                 <span class="text-[10px] font-bold text-muted uppercase">
-                  Сокр.
+                  {{ SHEET_CURRENCY_MODAL_LABELS.shortLabel }}
                 </span>
 
                 <UInput
                   v-model="customCurrency.label"
-                  placeholder="ДЧ"
+                  :placeholder="
+                    SHEET_CURRENCY_MODAL_LABELS.shortLabelPlaceholder
+                  "
                   :maxlength="CUSTOM_CURRENCY_LABEL_MAX_LENGTH"
                 />
               </div>
 
               <div class="flex min-w-0 grow flex-col gap-1">
                 <span class="text-[10px] font-bold text-muted uppercase">
-                  Количество
+                  {{ SHEET_CURRENCY_MODAL_LABELS.amount }}
                 </span>
 
                 <UInputNumber
@@ -178,14 +184,14 @@
     <template #footer>
       <div class="flex w-full justify-end gap-2">
         <UButton
-          label="Отмена"
+          :label="ACTION_LABELS.cancel"
           color="neutral"
           variant="ghost"
           @click.left.exact.prevent="handleCancel"
         />
 
         <UButton
-          label="Применить"
+          :label="ACTION_LABELS.apply"
           color="primary"
           @click.left.exact.prevent="handleApply"
         />

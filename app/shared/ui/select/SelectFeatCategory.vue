@@ -1,11 +1,14 @@
 <script setup lang="ts">
   import { DictionaryService } from '~/shared/api';
 
-  const { disabled } = defineProps<{
+  const { disabled = false, multiple = false } = defineProps<{
     disabled?: boolean;
+
+    /** Несколько категорий сразу: так задаётся пул выбора черты в механике. */
+    multiple?: boolean;
   }>();
 
-  const model = defineModel<string>();
+  const model = defineModel<string | Array<string>>();
 
   const { data, status, refresh } = await useAsyncData(
     'dictionaries-feat-categories',
@@ -28,6 +31,7 @@
     :loading="status === 'pending'"
     :items="data || []"
     :disabled="disabled"
+    :multiple="multiple"
     placeholder="Выбери категорию черты"
     searchable
     clearable

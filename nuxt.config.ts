@@ -15,7 +15,7 @@ const application = {
     'TTG Club — сайт, посвященный DnD 5-й редакции. Тут можно найти: расы, происхождения, классы, заклинания, бестиарий, снаряжение, магические предметы и инструменты для облегчения игры как игрокам, так и мастерам — все в одном месте.',
   favicons: [48, 72, 96, 128, 192, 384, 512],
   themeColor: {
-    light: 'oklch(0.98 0.02 80.0)',
+    light: 'oklch(0.944 0.008 49.0)',
     dark: 'oklch(0.245 0.02 270.0)',
     svifty7: 'oklch(0.30 0.006 75.0)',
   },
@@ -303,6 +303,11 @@ export default defineNuxtConfig({
 
     build: {
       minify: 'esbuild',
+      // Vite 8 (приехал с Nuxt 4.5) по умолчанию минифицирует CSS через
+      // lightningcss, а тот падает на нашей сборке с `SyntaxError: Invalid
+      // state` без указания файла и строки. Держим прежний минификатор —
+      // тот же, что и для JS выше.
+      cssMinify: 'esbuild',
       cssCodeSplit: false,
       reportCompressedSize: false,
       chunkSizeWarningLimit: 1000,
@@ -327,7 +332,6 @@ export default defineNuxtConfig({
         '@tiptap/pm/history': 'prosemirror-history',
         '@tiptap/pm/inputrules': 'prosemirror-inputrules',
         '@tiptap/pm/dropcursor': 'prosemirror-dropcursor',
-        '@tiptap/pm/trailing-node': 'prosemirror-trailing-node',
       },
       // Единственный инстанс каждого prosemirror-пакета на все пути импорта.
       dedupe: [
@@ -343,7 +347,6 @@ export default defineNuxtConfig({
         'prosemirror-history',
         'prosemirror-inputrules',
         'prosemirror-dropcursor',
-        'prosemirror-trailing-node',
       ],
     },
 

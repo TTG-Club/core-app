@@ -1,19 +1,25 @@
 <script setup lang="ts">
   import type {
+    FeatEditorLabelOverrides,
     FeatEditorRows,
     FeatGrantRow,
     FeatGrantRowKind,
   } from '../../model';
 
+  import { SelectFeatCategory } from '~ui/select';
   import { InfoTooltip } from '~ui/tooltip';
 
   import {
+    CHOICE_COUNT_MAX,
+    CHOICE_COUNT_MIN,
+    CLASS_LEVEL_MAX,
+    CLASS_LEVEL_MIN,
     createGrantRow,
     FEAT_CHOICE_GRANT_OPTIONS,
-    FEAT_EDITOR_LABELS,
     FEAT_GRANT_KIND_LABELS,
     FEAT_GRANT_KIND_OPTIONS,
     FEAT_GRANT_MODE_OPTIONS,
+    getFeatEditorLabels,
     getPrimaryGrantKind,
     getTakenChoiceKeys,
     hasGrantKind,
@@ -25,42 +31,75 @@
   } from '../../model';
   import FeatGrantValues from './FeatGrantValues.vue';
   import FeatOptionRows from './FeatOptionRows.vue';
+  import FeatRowsSection from './FeatRowsSection.vue';
   import FeatRowsSeparator from './FeatRowsSeparator.vue';
 
   /**
-   * Дары черты: одна строка — одно, что черта даёт. Режим строки решает,
-   * выдаётся ли перечисленное сразу или игрок выбирает из набора: механика у
-   * этого одна, и разводить их по разным спискам значило бы дважды описывать
-   * одно и то же.
+   * Дары: одна строка — одно, что даётся. Режим строки решает, выдаётся ли
+   * перечисленное сразу или игрок выбирает из набора: механика у этого одна,
+   * и разводить их по разным спискам значило бы дважды описывать одно и то же.
+   *
+   * Редактор общий для черты, умения класса, вида и предыстории: набор даров у
+   * них один. Кто источник даров, форма-владелец называет своими подписями.
    */
-  const { rows } = defineProps<{
+  const {
+    rows,
+    labels = {},
+    title = undefined,
+  } = defineProps<{
     /** Все строки редактора: из них берутся занятые ключи выборов. */
     rows: FeatEditorRows;
+
+    /**
+     * Подписи формы-владельца: чертой источник даров называет только форма
+     * черты, у умения класса и вида свои формулировки.
+     */
+    labels?: FeatEditorLabelOverrides;
+
+    /**
+     * Заголовок блока: с ним строки рисуются в рамке с кнопкой добавления в
+     * шапке. Пусто — форма-владелец рисует заголовок сама.
+     */
+    title?: string;
   }>();
 
   const model = defineModel<Array<FeatGrantRow>>({ required: true });
+
+  /** Подписи с поправками формы-владельца. */
+  const texts = computed(() => getFeatEditorLabels(labels));
 
   /** У строки один вид со своим справочником — набор правит селект вида. */
   function hasDictionary(row: FeatGrantRow): boolean {
     return row.kinds.length === 1 && getPrimaryGrantKind(row) !== 'OPTION';
   }
 
+  /** Строка выдаёт черту: у неё свой пул — категории каталога черт. */
+  function isFeatRow(row: FeatGrantRow): boolean {
+    return row.kinds.length === 1 && getPrimaryGrantKind(row) === 'FEAT';
+  }
+
   /** Пояснение к набору строки: у каждого случая своё. */
   function getPoolHint(row: FeatGrantRow): string {
     if (row.kinds.length > 1) {
-      return FEAT_EDITOR_LABELS.poolMixedHint;
+      return texts.value.poolMixedHint;
+    }
+
+    if (isFeatRow(row)) {
+      return row.mode === 'ALL'
+        ? texts.value.featValuesHint
+        : texts.value.featPoolHint;
     }
 
     return hasDictionary(row)
-      ? FEAT_EDITOR_LABELS.poolHint
-      : FEAT_EDITOR_LABELS.poolCustomHint;
+      ? texts.value.poolHint
+      : texts.value.poolCustomHint;
   }
 
   /** Отмеченные виды одной строкой: несколько читаются как «или». */
   function getKindsLabel(row: FeatGrantRow): string {
     return row.kinds
       .map((kind) => FEAT_GRANT_KIND_LABELS[kind])
-      .join(FEAT_EDITOR_LABELS.kindSeparator);
+      .join(texts.value.kindSeparator);
   }
 
   /** Заголовок строки: что даётся и как. */
@@ -90,6 +129,11 @@
 
     row.options = [];
 
+    // Категории черт имеют смысл только у выбора черты
+    if (!hasGrantKind(row, 'FEAT')) {
+      row.featCategories = [];
+    }
+
     // Выдать «навык или инструмент» нечем: несколько видов — это всегда выбор
     if (isChoiceOnlyGrantRow(row)) {
       row.mode = 'CHOICE';
@@ -107,6 +151,26 @@
       row.abilityBonus = undefined;
       row.abilityUpto = undefined;
     }
+  }
+
+  /**
+   * Записывает категории черт выбора. Перечисленные черты сбрасываются: они
+   * выбирались в прежних категориях, и в новых их могло бы не быть.
+   *
+   * @param row строка дара.
+   * @param categories отмеченные категории.
+   */
+  function setFeatCategories(
+    row: FeatGrantRow,
+    categories: string | Array<string> | undefined,
+  ) {
+    if (Array.isArray(categories)) {
+      row.featCategories = categories;
+    } else {
+      row.featCategories = categories ? [categories] : [];
+    }
+
+    row.options = [];
   }
 
   /**
@@ -153,6 +217,34 @@
   }
 
   /**
+   * Заводит ступень роста: следующая начинается уровнем позже последней и даёт
+   * на один выбор больше.
+   *
+   * @param row строка дара.
+   */
+  function addScaling(row: FeatGrantRow) {
+    const last = row.scaling.at(-1);
+
+    row.scaling = [
+      ...row.scaling,
+      {
+        level: Math.min(CLASS_LEVEL_MAX, (last?.level ?? 0) + 1),
+        count: Math.min(CHOICE_COUNT_MAX, (last?.count ?? row.count ?? 0) + 1),
+      },
+    ];
+  }
+
+  /**
+   * Убирает ступень роста.
+   *
+   * @param row строка дара.
+   * @param index номер ступени.
+   */
+  function removeScaling(row: FeatGrantRow, index: number) {
+    row.scaling = row.scaling.filter((_, position) => position !== index);
+  }
+
+  /**
    * Убирает строку дара.
    *
    * @param index номер строки в списке.
@@ -163,22 +255,15 @@
 </script>
 
 <template>
-  <div class="flex flex-col gap-3">
-    <InfoTooltip
-      :text="FEAT_EDITOR_LABELS.grantsHintDetails"
-      icon="tabler:info-circle-filled"
-      class="text-sm text-dimmed"
-    >
-      <span>{{ FEAT_EDITOR_LABELS.grantsHint }}</span>
-    </InfoTooltip>
-
-    <p
-      v-if="!model.length"
-      class="rounded-lg border border-dashed border-default p-4 text-center text-xs text-dimmed italic"
-    >
-      {{ FEAT_EDITOR_LABELS.grantsEmpty }}
-    </p>
-
+  <FeatRowsSection
+    :title="title"
+    :summary="texts.grantsHint"
+    :hint="texts.grantsHintDetails"
+    :empty="texts.grantsEmpty"
+    :count="model.length"
+    :add-label="texts.addGrant"
+    @add="addRow"
+  >
     <template
       v-for="(row, index) in model"
       :key="row.uid"
@@ -207,10 +292,10 @@
           <UFormField class="md:col-span-10">
             <template #label>
               <InfoTooltip
-                :text="FEAT_EDITOR_LABELS.kindHint"
+                :text="texts.kindHint"
                 icon="tabler:info-circle-filled"
               >
-                <span>{{ FEAT_EDITOR_LABELS.kind }}</span>
+                <span>{{ texts.kind }}</span>
               </InfoTooltip>
             </template>
 
@@ -229,10 +314,10 @@
           <UFormField class="md:col-span-6">
             <template #label>
               <InfoTooltip
-                :text="FEAT_EDITOR_LABELS.modeHint"
+                :text="texts.modeHint"
                 icon="tabler:info-circle-filled"
               >
-                <span>{{ FEAT_EDITOR_LABELS.mode }}</span>
+                <span>{{ texts.mode }}</span>
               </InfoTooltip>
             </template>
 
@@ -247,7 +332,7 @@
           <UFormField
             v-if="row.mode === 'CHOICE'"
             class="md:col-span-4"
-            :label="FEAT_EDITOR_LABELS.count"
+            :label="texts.count"
           >
             <UInputNumber
               v-model="row.count"
@@ -262,15 +347,38 @@
             class="flex items-center md:col-span-4 md:self-end md:pb-2"
           >
             <InfoTooltip
-              :text="FEAT_EDITOR_LABELS.countEqualsProficiencyBonusHint"
+              :text="texts.countEqualsProficiencyBonusHint"
               icon="tabler:info-circle-filled"
             >
               <UCheckbox
                 v-model="row.countEqualsProficiencyBonus"
-                :label="FEAT_EDITOR_LABELS.countEqualsProficiencyBonus"
+                :label="texts.countEqualsProficiencyBonus"
               />
             </InfoTooltip>
           </div>
+
+          <!-- Категории черт: пул выбора черты задаётся ими, а перечисление
+            ниже только сужает его. У выдачи без выбора категорий нет —
+            выдаются перечисленные черты -->
+          <UFormField
+            v-if="isFeatRow(row) && row.mode === 'CHOICE'"
+            class="md:col-span-full"
+          >
+            <template #label>
+              <InfoTooltip
+                :text="texts.featCategoriesHint"
+                icon="tabler:info-circle-filled"
+              >
+                <span>{{ texts.featCategories }}</span>
+              </InfoTooltip>
+            </template>
+
+            <SelectFeatCategory
+              :model-value="row.featCategories"
+              multiple
+              @update:model-value="setFeatCategories(row, $event)"
+            />
+          </UFormField>
 
           <UFormField class="md:col-span-full">
             <template #label>
@@ -279,11 +387,7 @@
                 icon="tabler:info-circle-filled"
               >
                 <span>
-                  {{
-                    row.mode === 'ALL'
-                      ? FEAT_EDITOR_LABELS.values
-                      : FEAT_EDITOR_LABELS.pool
-                  }}
+                  {{ row.mode === 'ALL' ? texts.values : texts.pool }}
                 </span>
               </InfoTooltip>
             </template>
@@ -292,6 +396,7 @@
               v-if="hasDictionary(row)"
               v-model="row.options"
               :kind="getPrimaryGrantKind(row)"
+              :feat-categories="row.featCategories"
             />
 
             <FeatOptionRows
@@ -303,18 +408,18 @@
           <template v-if="row.mode === 'CHOICE'">
             <UFormField
               class="md:col-span-full"
-              :label="FEAT_EDITOR_LABELS.label"
+              :label="texts.label"
             >
               <UInput
                 v-model="row.label"
-                :placeholder="FEAT_EDITOR_LABELS.labelPlaceholder"
+                :placeholder="texts.labelPlaceholder"
               />
             </UFormField>
 
             <UFormField
               v-if="isExpertiseGrantRow(row)"
               class="md:col-span-6"
-              :label="FEAT_EDITOR_LABELS.grants"
+              :label="texts.grants"
             >
               <USelect
                 v-model="row.grants"
@@ -329,28 +434,137 @@
             >
               <UCheckbox
                 :model-value="row.onlyIfNotProficient"
-                :label="FEAT_EDITOR_LABELS.onlyIfNotProficient"
+                :label="texts.onlyIfNotProficient"
                 @update:model-value="toggleOnlyIfNotProficient(row, $event)"
               />
 
               <UCheckbox
                 :model-value="row.onlyIfProficient"
-                :label="FEAT_EDITOR_LABELS.onlyIfProficient"
+                :label="texts.onlyIfProficient"
                 @update:model-value="toggleOnlyIfProficient(row, $event)"
               />
 
               <UCheckbox
                 v-if="isExpertiseGrantRow(row)"
                 v-model="row.expertiseIfProficient"
-                :label="FEAT_EDITOR_LABELS.expertiseIfProficient"
+                :label="texts.expertiseIfProficient"
               />
             </div>
 
-            <div class="flex flex-wrap items-center gap-4 md:col-span-full">
+            <div class="flex flex-wrap items-end gap-4 md:col-span-full">
               <UCheckbox
                 v-model="row.rechooseOnLongRest"
-                :label="FEAT_EDITOR_LABELS.rechooseOnLongRest"
+                :label="texts.rechooseOnLongRest"
               />
+
+              <UFormField class="w-40">
+                <template #label>
+                  <InfoTooltip
+                    :text="texts.choiceRequiredLevelHint"
+                    icon="tabler:info-circle-filled"
+                  >
+                    <span>{{ texts.choiceRequiredLevel }}</span>
+                  </InfoTooltip>
+                </template>
+
+                <UInputNumber
+                  v-model="row.requiredLevel"
+                  :min="1"
+                  :max="20"
+                  class="w-full"
+                  :aria-label="texts.choiceRequiredLevel"
+                />
+              </UFormField>
+            </div>
+
+            <!-- Рост по уровням: оружейных приёмов у воина три с первого уровня,
+              четыре с четвёртого, пять с десятого. Ступень называет, сколько
+              всего выбрано к этому уровню, а не сколько добавилось -->
+            <div class="flex flex-col gap-2 md:col-span-full">
+              <span class="text-xs font-medium text-muted">
+                {{ texts.choiceScalingTitle }}
+              </span>
+
+              <p
+                v-if="!row.scaling.length"
+                class="text-xs text-dimmed italic"
+              >
+                {{ texts.choiceScalingEmpty }}
+              </p>
+
+              <div
+                v-for="(step, stepIndex) in row.scaling"
+                :key="`${row.uid}-${stepIndex}`"
+                class="flex items-end gap-2"
+              >
+                <UFormField
+                  class="w-28"
+                  :label="texts.choiceScalingLevel"
+                >
+                  <UInputNumber
+                    v-model="step.level"
+                    :min="CLASS_LEVEL_MIN"
+                    :max="CLASS_LEVEL_MAX"
+                    class="w-full"
+                  />
+                </UFormField>
+
+                <UFormField
+                  class="w-28"
+                  :label="texts.choiceScalingCount"
+                >
+                  <UInputNumber
+                    v-model="step.count"
+                    :min="CHOICE_COUNT_MIN"
+                    :max="CHOICE_COUNT_MAX"
+                    class="w-full"
+                  />
+                </UFormField>
+
+                <UButton
+                  icon="tabler:trash"
+                  color="error"
+                  variant="ghost"
+                  size="xs"
+                  :aria-label="texts.choiceScalingTitle"
+                  @click.left.exact.prevent="removeScaling(row, stepIndex)"
+                />
+              </div>
+
+              <UButton
+                icon="tabler:plus"
+                :label="texts.addChoiceScaling"
+                color="neutral"
+                variant="soft"
+                size="xs"
+                class="self-start"
+                @click.left.exact.prevent="addScaling(row)"
+              />
+            </div>
+
+            <!-- Ряд по уровням справочник соберёт сам: у выбора он уже задан
+              ступенями, и колонкой его набирают не второй раз -->
+            <div
+              v-if="row.scaling.length"
+              class="flex flex-wrap items-end gap-4 md:col-span-full"
+            >
+              <UCheckbox
+                v-model="row.showInTable"
+                :label="texts.choiceShowInTable"
+                :description="texts.choiceShowInTableHint"
+              />
+
+              <UFormField
+                v-if="row.showInTable"
+                class="w-56"
+                :label="texts.choiceShortName"
+                :help="texts.choiceShortNameHint"
+              >
+                <UInput
+                  v-model="row.shortName"
+                  placeholder="Приёмы"
+                />
+              </UFormField>
             </div>
           </template>
 
@@ -362,7 +576,7 @@
           >
             <UFormField
               class="md:col-span-5"
-              :label="FEAT_EDITOR_LABELS.abilityBonus"
+              :label="texts.abilityBonus"
             >
               <UInputNumber
                 v-model="row.abilityBonus"
@@ -373,7 +587,7 @@
 
             <UFormField
               class="md:col-span-5"
-              :label="FEAT_EDITOR_LABELS.abilityUpto"
+              :label="texts.abilityUpto"
             >
               <UInputNumber
                 v-model="row.abilityUpto"
@@ -383,20 +597,11 @@
             </UFormField>
 
             <p class="text-xs text-dimmed md:col-span-full">
-              {{ FEAT_EDITOR_LABELS.abilityHint }}
+              {{ texts.abilityHint }}
             </p>
           </template>
         </div>
       </div>
     </template>
-
-    <UButton
-      icon="tabler:plus"
-      :label="FEAT_EDITOR_LABELS.addGrant"
-      color="primary"
-      variant="soft"
-      block
-      @click.left.exact.prevent="addRow"
-    />
-  </div>
+  </FeatRowsSection>
 </template>

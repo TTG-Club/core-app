@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { AbilityKey } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
+
   import { useCharacterSheet } from '../../composables';
   import {
     ABILITY_LABELS,
@@ -10,7 +12,7 @@
     getClassSpellcastingAbility,
     getSpellAttackBonus,
     getSpellSaveDc,
-    SPELL_SAVE_DC_BASE,
+    SHEET_SPELLCASTING_MODAL_LABELS,
     SPELLCASTING_ABILITY_AUTO,
     SPELLCASTING_ABILITY_OPTIONS,
     SPELLCASTING_MODAL_TITLE,
@@ -151,7 +153,9 @@
     <template #body>
       <div class="flex flex-col gap-3">
         <div class="flex items-center justify-between gap-4">
-          <span class="text-sm text-toned">Характеристика</span>
+          <span class="text-sm text-toned">
+            {{ SHEET_SPELLCASTING_MODAL_LABELS.ability }}
+          </span>
 
           <USelect
             v-model="draftAbility"
@@ -164,19 +168,24 @@
           v-if="isAuto"
           class="text-xs text-dimmed"
         >
-          Определяется по классу: {{ autoAbilityLabel }}
+          {{ SHEET_SPELLCASTING_MODAL_LABELS.autoPrefix }}:
+          {{ autoAbilityLabel }}
         </p>
 
         <USeparator class="my-1" />
 
         <div class="flex items-center justify-between gap-4 text-sm">
-          <span class="text-toned">Модификатор характеристики</span>
+          <span class="text-toned">
+            {{ SHEET_SPELLCASTING_MODAL_LABELS.abilityModifier }}
+          </span>
 
           <span class="text-toned">{{ abilityModifierLabel }}</span>
         </div>
 
         <div class="flex items-center justify-between gap-4 text-sm">
-          <span class="text-toned">Бонус мастерства</span>
+          <span class="text-toned">
+            {{ SHEET_SPELLCASTING_MODAL_LABELS.proficiencyBonus }}
+          </span>
 
           <span class="text-toned">{{ formattedProficiencyBonus }}</span>
         </div>
@@ -216,8 +225,7 @@
         </div>
 
         <p class="text-xs text-dimmed">
-          Сложность спасброска = {{ SPELL_SAVE_DC_BASE }} + бонус мастерства +
-          модификатор характеристики. Бонус атаки — то же без базового значения.
+          {{ SHEET_SPELLCASTING_MODAL_LABELS.formulaHint }}
         </p>
       </div>
     </template>
@@ -225,14 +233,14 @@
     <template #footer>
       <div class="flex w-full justify-end gap-2">
         <UButton
-          label="Отмена"
+          :label="ACTION_LABELS.cancel"
           color="neutral"
           variant="ghost"
           @click.left.exact.prevent="handleCancel"
         />
 
         <UButton
-          label="Применить"
+          :label="ACTION_LABELS.apply"
           color="primary"
           @click.left.exact.prevent="handleApply"
         />

@@ -1,7 +1,12 @@
 <script setup lang="ts">
   import type { CharacterCurrency, CharacterCustomCurrency } from '../../model';
 
-  import { CURRENCY_LABELS, CURRENCY_NAMES, CURRENCY_ORDER } from '../../model';
+  import {
+    CURRENCY_LABELS,
+    CURRENCY_NAMES,
+    CURRENCY_ORDER,
+    SHEET_CURRENCY_ROW_ARIA_LABEL,
+  } from '../../model';
 
   const props = defineProps<{
     currency: CharacterCurrency;
@@ -35,7 +40,7 @@
   <div
     role="button"
     tabindex="0"
-    aria-label="Редактировать валюту"
+    :aria-label="SHEET_CURRENCY_ROW_ARIA_LABEL"
     class="flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-lg border border-default/50 bg-elevated/20 px-4 py-2 transition-colors hover:border-default hover:bg-elevated/40"
     @click.left.exact.prevent="emit('edit')"
     @keydown.enter.prevent="emit('edit')"

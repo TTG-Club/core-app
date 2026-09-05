@@ -1,3 +1,4 @@
+import type { ActiveEffect } from '~active-effects/model';
 import type { EditorBaseInfoState } from '~ui/editor';
 
 import { AbilityKey, AbilityShortKey } from '~/shared/types';
@@ -29,6 +30,17 @@ export interface CreatureCreate extends EditorBaseInfoState {
   legendary: LegendaryActions;
   lair: CreatureLair;
   section: CreateSection;
+
+  /**
+   * Активные эффекты существа в вокабуляре VTTG — та же модель, что у черты,
+   * заклинания и предмета.
+   *
+   * Статблок описывает существо числами, а эффект — то, чем существо постоянно
+   * отличается от своих чисел или что оно накладывает: аура, врождённое
+   * состояние, защита с условием. На виртуальном столе такой эффект уезжает на
+   * токен как есть.
+   */
+  activeEffects: Array<ActiveEffect>;
 }
 
 export interface CreatureDefenses {
@@ -325,6 +337,7 @@ export function getInitialState(): CreatureCreate {
       description: '',
       ending: '',
     },
+    activeEffects: [],
     section: {
       name: {
         rus: '',

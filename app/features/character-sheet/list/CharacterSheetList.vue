@@ -9,7 +9,9 @@
     CHARACTER_SHEET_ROUTE,
     getSheetsCountTooltip,
     getSheetsHistoryTooltip,
+    getSheetsLimitReachedHint,
     getSheetsSubscriptionHint,
+    SHEET_LIST_LABELS,
   } from '../model';
   import { CharacterSheetSavedList } from '../saved';
   import {
@@ -130,7 +132,7 @@
       class="flex flex-col gap-2"
     >
       <span class="text-xs font-medium tracking-wide text-muted uppercase">
-        Ваши персонажи
+        {{ SHEET_LIST_LABELS.ownTitle }}
       </span>
 
       <PageGrid :columns="2">
@@ -145,11 +147,13 @@
     <UiResult
       v-else-if="loadErrorMessage"
       status="error"
-      title="Не удалось загрузить листы персонажей"
+      :title="SHEET_LIST_LABELS.loadErrorTitle"
       :sub-title="loadErrorMessage"
     >
       <template #extra>
-        <UButton @click.left.exact.prevent="load"> Обновить </UButton>
+        <UButton @click.left.exact.prevent="load">
+          {{ SHEET_LIST_LABELS.refresh }}
+        </UButton>
       </template>
     </UiResult>
 
@@ -157,7 +161,7 @@
       <section class="flex flex-col gap-2">
         <div class="flex items-center gap-2">
           <span class="text-xs font-medium tracking-wide text-muted uppercase">
-            Ваши персонажи
+            {{ SHEET_LIST_LABELS.ownTitle }}
           </span>
 
           <span class="flex items-center gap-1 text-xs tabular-nums">
@@ -199,8 +203,7 @@
 
         <template v-if="isLimitReached">
           <p class="text-xs text-muted">
-            Достигнут лимит {{ limit }} листов — удалите один, чтобы создать
-            новый.
+            {{ getSheetsLimitReachedHint(limit) }}
           </p>
 
           <SheetLimitHint
@@ -232,7 +235,7 @@
           class="justify-between text-muted"
         >
           <span class="flex items-center gap-1.5">
-            История листов ({{ historyCountLabel }})
+            {{ SHEET_LIST_LABELS.historyTitle }} ({{ historyCountLabel }})
 
             <UTooltip :text="historyTooltip">
               <UIcon
@@ -273,7 +276,7 @@
                 :loading="isMutating"
                 @click.left.exact.prevent="restore(sheet.id)"
               >
-                Восстановить
+                {{ SHEET_LIST_LABELS.restore }}
               </UButton>
             </div>
           </div>

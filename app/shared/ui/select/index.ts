@@ -1,3 +1,5 @@
+export { default as CatalogPickerModal } from './CatalogPickerModal.vue';
+export * from './constants';
 export { default as SelectAbilities } from './SelectAbilities.vue';
 export { default as SelectAlignment } from './SelectAlignment.vue';
 export { default as SelectAmmunition } from './SelectAmmunition.vue';
@@ -5,8 +7,10 @@ export { default as SelectArmorCategory } from './SelectArmorCategory.vue';
 export { default as SelectAttackType } from './SelectAttackType.vue';
 export { default as SelectBackground } from './SelectBackground.vue';
 export { default as SelectCasterType } from './SelectCasterType.vue';
+export { default as SelectCatalogEntity } from './SelectCatalogEntity.vue';
 export { default as SelectChallengeRating } from './SelectChallengeRating.vue';
 export { default as SelectClass } from './SelectClass.vue';
+export { default as SelectClassCatalog } from './SelectClassCatalog.vue';
 export { default as SelectComparison } from './SelectComparison.vue';
 export { default as SelectCondition } from './SelectCondition.vue';
 export { default as SelectCreatureType } from './SelectCreatureType.vue';

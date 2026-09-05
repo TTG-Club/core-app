@@ -9,6 +9,9 @@
 
   import { StatsBlock } from './ui';
 
+  /** Умение вида в ответе детали: описание приходит разметкой. */
+  type SpeciesFeature = NonNullable<SpeciesDetailResponse['features']>[number];
+
   const {
     species,
     hideGallery = false,
@@ -32,6 +35,32 @@
     });
   }
 
+  /**
+   * Умения, которым есть что показать.
+   *
+   * Умение без описания — это одна механика: дары, заклинания или эффекты. Их
+   * применяет лист персонажа, а на странице от такого умения остался бы пустой
+   * раскрывающийся блок с одним заголовком.
+   */
+  const visibleFeatures = computed(() =>
+    (species.features ?? []).filter((feature) => hasDescription(feature)),
+  );
+
+  /**
+   * Есть ли у умения описание. Описание приходит разметкой: пустое — это и
+   * пустая строка, и пустой список узлов.
+   *
+   * @param feature умение вида.
+   * @returns признак непустого описания.
+   */
+  function hasDescription(feature: SpeciesFeature): boolean {
+    const { description } = feature;
+
+    return Array.isArray(description)
+      ? description.length > 0
+      : Boolean(description);
+  }
+
   const activeFeatures = ref<Array<string>>([]);
 
   watch(
@@ -41,13 +70,9 @@
         return;
       }
 
-      if (!value.features) {
-        activeFeatures.value = [];
-
-        return;
-      }
-
-      activeFeatures.value = value.features.map((feature) => feature.url);
+      activeFeatures.value = visibleFeatures.value.map(
+        (feature) => feature.url,
+      );
     },
     {
       immediate: true,
@@ -87,9 +112,9 @@
           />
         </div>
 
-        <template v-if="species.features">
+        <template v-if="visibleFeatures.length">
           <UiCollapse
-            v-for="feature in species.features"
+            v-for="feature in visibleFeatures"
             :id="feature.url"
             :key="feature.url"
             default-open

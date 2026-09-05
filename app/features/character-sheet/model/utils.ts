@@ -1,9 +1,12 @@
 import type { DropdownMenuItem } from '@nuxt/ui';
 
 import type { AbilityKey as ApiAbilityKey, Level } from '~/shared/types';
+import type { ActiveEffect, EffectChange } from '~active-effects/model';
+import type { FeatureOptionEntry } from '~classes/model';
 import type { MagicItemBonuses } from '~magic-items/model';
 import type { RenderNode } from '~ui/markup';
 
+import type { SheetArmorState } from './effect-engine';
 import type {
   AbilityBonusMode,
   AbilityKey,
@@ -26,6 +29,7 @@ import type {
   CharacterExtraHitDie,
   CharacterFeature,
   CharacterFeatureModifiers,
+  CharacterFeatureSpellList,
   CharacterHealth,
   CharacterHitDie,
   CharacterInventoryGroup,
@@ -51,6 +55,7 @@ import type {
   ClassResourceRecoveryBadge,
   ClassSummary,
   ClassTableColumn,
+  CounterRecovery,
   CurrencyKey,
   CustomArmorType,
   CustomBonusClassSource,
@@ -65,6 +70,8 @@ import type {
   DamageRollSource,
   DistanceRowDraft,
   FeatAbilityBonusOption,
+  FeatCounter,
+  FeatCounterScaling,
   FeatDefences,
   FeatGrantedSpeedKey,
   FeatSelectOption,
@@ -99,6 +106,8 @@ import type {
   InventoryWeapon,
   InventoryWeaponDamage,
   ItemSummary,
+  LevelUpAbilityImprovement,
+  LevelUpFeatChoice,
   LevelUpHitPointsGain,
   MagicItemCatalogGroup,
   MagicItemCatalogGrouping,
@@ -119,6 +128,10 @@ import type {
   ResourceRecoveryRule,
   RollMode,
   SavingThrowRow,
+  SheetChoiceControl,
+  SheetChoiceOption,
+  SheetChoiceOrigin,
+  SheetChoicePoolStatus,
   SkillRow,
   SkillRowGroup,
   SpeciesFeatureSummary,
@@ -128,8 +141,10 @@ import type {
   SpeedUnit,
   SpellcastingBreakdown,
   SpellcastingClassRow,
+  SpellCatalogItem,
   SpellCatalogPreset,
   SpellDamage,
+  SpellDamageFormulas,
   SpellSlotCircle,
   SpellSlotKind,
   SpellSlotRow,
@@ -149,6 +164,7 @@ import {
   capitalize,
   clamp,
   mapValues,
+  omit,
   round,
   union,
   uniq,
@@ -183,10 +199,16 @@ import {
 import {
   ABILITY_CHOICE_ID_SEGMENT,
   ABILITY_COUNT_FORMS,
+  ABILITY_IMPROVEMENT_EFFECT_ICON,
   ABILITY_IMPROVEMENT_EXCLUDED_FEAT_CATEGORIES,
   ABILITY_IMPROVEMENT_FEAT_URL_PREFIX,
+  ABILITY_IMPROVEMENT_FEATURE_NAME,
   ABILITY_IMPROVEMENT_FEATURE_NAMES,
+  ABILITY_IMPROVEMENT_LABELS,
+  ABILITY_IMPROVEMENT_POINTS,
+  ABILITY_IMPROVEMENT_POINTS_PER_ABILITY,
   ABILITY_IMPROVEMENT_SCORE_MAX,
+  ABILITY_INCREASE_FEATURE_ID_SEGMENT,
   ABILITY_KEY_BY_LABEL,
   ABILITY_LABELS,
   ABILITY_ORDER,
@@ -219,14 +241,17 @@ import {
   CARRYING_CAPACITY_SIZE_MULTIPLIERS,
   CATALOG_COPY_MENU_LABEL,
   CHARACTER_FILE_NAME_FALLBACK,
+  CHOICE_SELECT_PLACEHOLDER,
   CLASS_FEAT_CHOICE_ID_SEGMENTS,
   CLASS_FEATURE_ID_PREFIX,
+  CLASS_FIRST_LEVEL,
   CLASS_RESOURCE_ID_PREFIX,
   CLASS_SPELL_PROGRESSIONS,
   CLASS_SPELLCASTING_ABILITIES,
   CLASSES_LABEL_SEPARATOR,
   COINS_PER_WEIGHT_UNIT,
   CONDITION_LABELS,
+  COUNTER_SHORT_REST_ONE_AMOUNT,
   CREATURE_TYPE_LABELS,
   CURRENCY_AMOUNT_MAX,
   CURRENCY_AMOUNT_MIN,
@@ -282,11 +307,15 @@ import {
   FEAT_GRANTED_SPEED_KEYS,
   FEAT_RESOURCE_ID_PREFIX,
   FEAT_SPEED_EQUALS_WALK_KEYS,
+  FEATURE_OPTION_ID_SEGMENT,
   FEATURE_ORIGIN_GROUP_ORDER,
   FEATURE_ORIGIN_LABELS,
+  FIGHTING_STYLE_CHOICE_LABEL,
+  FIGHTING_STYLE_FEAT_CATEGORY,
   FILTER_CHIP_CLASS,
   FILTER_CHIP_IDLE_CLASS,
   FILTER_CHIP_SELECTED_CLASS,
+  GENERAL_FEAT_CATEGORY,
   HEAVY_WEAPON_ABILITY_MINIMUM,
   HIT_DICE_ROLL_COUNT,
   HIT_POINTS_LEVEL_GAIN_MIN,
@@ -315,17 +344,23 @@ import {
   ITEM_SPEED_BONUS_MAX,
   ITEM_SPEED_BONUS_MIN,
   ITEMS_DETAIL_BASE_PATH,
+  LEGACY_ABILITY_IMPROVEMENT_CHOICE_KEY,
+  LEGACY_FIGHTING_STYLE_CHOICE_KEY,
   LEVEL_MAX,
   LEVEL_MIN,
+  LEVEL_SHORT_SUFFIX,
+  LEVEL_UP_WIZARD_LABELS,
   LEVEL_XP_THRESHOLDS,
   MAGIC_ITEM_ARTIFACT_COST_LABEL,
   MAGIC_ITEM_CATALOG_EMPTY_GROUP_LABELS,
   MAGIC_ITEM_RARITY_COSTS,
   MAGIC_ITEMS_DETAIL_BASE_PATH,
+  MAX_HIT_POINTS_LABELS,
   MULTICLASS_ABILITY_REQUIREMENT,
   MULTICLASS_REQUIREMENT_WARNING_PREFIX,
   NEW_CUSTOM_BONUS,
   NEW_CUSTOM_INVENTORY_ITEM,
+  OPTION_CHOICE_REPEAT_PREFIX,
   ORIGIN_FEAT_CATEGORY,
   PACT_SPELL_SLOT_LABEL,
   PACT_SPELL_SLOTS_LABEL,
@@ -359,10 +394,15 @@ import {
   ROLL_MODE_DICE_SUFFIX,
   SAVING_THROW_PROFICIENCY_LABELS,
   SHEET_ABILITY_SETTINGS_LABELS,
+  SHEET_CHOICE_EXPLANATION_LABELS,
+  SHEET_CHOICE_OPTIONS_LABELS,
+  SHEET_CHOICE_PICKER_LABELS,
+  SHEET_CHOICE_SPELL_EXPLANATION,
   SHEET_COPY_LIMIT_HINT,
   SHEET_DOWNLOAD_JSON_LABEL,
   SHEET_DOWNLOAD_PDF_HINT,
   SHEET_DOWNLOAD_PDF_LABEL,
+  SHEET_FEAT_CHOICE_LABELS,
   SHEET_PDF_MIME_TYPE,
   SHEET_PERSONALITY_LABELS,
   SHEET_PLURAL_FORMS,
@@ -372,6 +412,7 @@ import {
   SHEET_SPELL_ABILITY_LABELS,
   SHEET_UNARMORED_LABEL,
   SIZE_LABEL_WORDS,
+  SKILL_DUPLICATE_WARNING,
   SKILL_GROUP_ALL_KEY,
   SKILL_OWNED_HINTS,
   SKILL_PROFICIENCY_LABELS,
@@ -391,6 +432,8 @@ import {
   SPELL_DAMAGE_TYPE_SEPARATOR,
   SPELL_DAMAGE_TYPE_TAG_LABELS,
   SPELL_DAMAGE_TYPE_TAG_PREFIX,
+  SPELL_DUPLICATE_WARNING,
+  SPELL_OWNED_HINTS,
   SPELL_REMOVE_MENU_LABEL,
   SPELL_SAVE_DC_BASE,
   SPELL_SLOT_FREE_LABEL,
@@ -406,15 +449,30 @@ import {
   VISION_KEY_BY_FEAT_SENSE,
   VISION_LABELS,
   VISION_ORDER,
+  VISION_UNLIMITED_LABEL,
   WEAPON_CATEGORY_LABELS,
+  WEAPON_MASTERY_PROPERTY_NAMES,
   WEAPON_MATCH_KEYWORDS,
+  WEAPON_NAMES_BY_MASTERY_PROPERTY_NAME,
   WEAPON_PROFICIENCY_GROUPS,
   WEAPON_TRAIT_AXES,
   WEAPON_TRAIT_ITEMS,
   WEAPON_TRAIT_MATCH_KEYWORDS,
   WEIGHT_DECIMALS,
 } from './constants';
-import { toInventoryBonusesFromEffects } from './effects';
+import {
+  collectAppliedEffects,
+  getCharacterEffectFlags,
+  getSheetArmorState,
+  isSpeedZeroedByEffects,
+  matchesArmorCondition,
+} from './effect-engine';
+import {
+  getEffectBonusTarget,
+  isSelfAppliedEffect,
+  parseEffectValue,
+  toInventoryBonusesFromEffects,
+} from './effects';
 import { DEFAULT_CHARACTER } from './mock';
 
 /**
@@ -442,25 +500,30 @@ export function getBaseProficiencyBonus(character: Character): number {
 }
 
 /**
- * Бонус мастерства листа: основа плюс свои бонусы из настроек. Считать бонус
- * мастерства персонажа нужно именно так — везде, где он участвует.
+ * Бонус мастерства листа: основа, свои бонусы из настроек и прибавки записей
+ * (камень Иоуна мастерства, эффект умения). Считать бонус мастерства персонажа
+ * нужно именно так — везде, где он участвует.
  *
- * Записи вида «бонус мастерства» здесь пропускаются: сам себе слагаемым он быть
- * не может, а без отбора подсчёт ушёл бы в бесконечную рекурсию. В остальных
- * целях (инициатива, навыки, спасброски) такие записи работают как обычно.
+ * Свои записи вида «бонус мастерства» здесь пропускаются: сам себе слагаемым он
+ * быть не может, а без отбора подсчёт ушёл бы в бесконечную рекурсию. В
+ * остальных целях (инициатива, навыки, спасброски) такие записи работают как
+ * обычно. Формулу эффекта с `@prof` от той же петли бережёт отбор целей в
+ * {@link getLiveEffectBonusEntries}.
  *
  * @param character персонаж.
  * @returns итоговый бонус мастерства.
  */
 export function getCharacterProficiencyBonus(character: Character): number {
-  return (
+  return getInventoryBonusTotal(
+    character,
+    [{ kind: 'proficiency-bonus' }],
     getBaseProficiencyBonus(character)
-    + getCustomBonusesValue(
-      character,
-      character.settings.customProficiencyBonuses.filter(
-        (bonus) => bonus.kind !== 'proficiency',
+      + getCustomBonusesValue(
+        character,
+        character.settings.customProficiencyBonuses.filter(
+          (bonus) => bonus.kind !== 'proficiency',
+        ),
       ),
-    )
   );
 }
 
@@ -579,12 +642,28 @@ function applyInventoryBonus(value: number, bonus: InventoryItemBonus): number {
 }
 
 /**
- * Источник пассивного бонуса в разборе значения: предмет или черта.
- * Идентификатор нужен, чтобы сложить вклад одного источника в одну строку.
+ * Источник пассивного бонуса в разборе значения: предмет, умение или свой
+ * эффект листа. Идентификатор нужен, чтобы сложить вклад одного источника в
+ * одну строку, а вид — там, где источники считаются по-разному: плоские
+ * прибавки предметов класс доспеха складывает своим путём.
  */
 interface PassiveBonusSource {
   id: string;
   name: string;
+  kind: 'item' | 'feature' | 'effect';
+}
+
+/** Пассивный бонус вместе с источником и способом подсчёта. */
+interface PassiveBonusEntry {
+  source: PassiveBonusSource;
+  bonus: InventoryItemBonus;
+
+  /**
+   * Бонус посчитан на лету (условие или формула), а не взят из снимка записи.
+   * По нему класс доспеха отличает прибавки, которые он ещё не сложил своим
+   * путём, от уже учтённых снимков предметов.
+   */
+  live: boolean;
 }
 
 /**
@@ -592,10 +671,12 @@ interface PassiveBonusSource {
  * равном — в порядке источников. Порядок важен только режимам, доводящим
  * значение до заданного: прибавкам он безразличен.
  *
- * Источников два: работающее снаряжение и черты. И то, и другое мастерская
- * описывает активными эффектами, а лист переводит их числовые изменения в
- * бонусы одного вида — значит, и считаться они должны одной цепочкой, иначе
- * «повысить до 19» от черты и от предмета спорили бы каждый со своим итогом.
+ * Источников три: работающее снаряжение, умения листа и свои эффекты игрока.
+ * Все трое мастерская (или сам игрок) описывает активными эффектами, а лист
+ * переводит их изменения в бонусы одного вида — значит, и считаться они должны
+ * одной цепочкой, иначе «повысить до 19» от умения и от предмета спорили бы
+ * каждый со своим итогом. К снимкам записей добавляются живые бонусы: условия и
+ * формулы, которые снимок унести не может.
  *
  * @param character персонаж.
  * @param targets цели подсчёта.
@@ -604,34 +685,231 @@ interface PassiveBonusSource {
 function getActiveInventoryBonusEntries(
   character: Character,
   targets: InventoryBonusTarget[],
-): Array<{ source: PassiveBonusSource; bonus: InventoryItemBonus }> {
+): PassiveBonusEntry[] {
   const matchesTarget = (bonus: InventoryItemBonus): boolean =>
     targets.some((target) =>
       isMatchingBonus(bonus, target.kind, target.key ?? ''),
     );
 
-  const itemEntries = character.inventory
+  const itemEntries: PassiveBonusEntry[] = character.inventory
     .filter(isActiveBonusItem)
     .flatMap((item) =>
-      item.bonuses
-        .filter(matchesTarget)
-        .map((bonus) => ({ source: { id: item.id, name: item.name }, bonus })),
+      item.bonuses.filter(matchesTarget).map((bonus) => ({
+        source: { id: item.id, name: item.name, kind: 'item' },
+        bonus,
+        live: false,
+      })),
     );
 
   // Черта работает всегда: снимать её, как надетый предмет, нечем — потому
   // условия работы у неё и нет.
-  const featureEntries = character.features.flatMap((feature) =>
-    (feature.bonuses ?? []).filter(matchesTarget).map((bonus) => ({
-      source: { id: feature.id, name: feature.name },
-      bonus,
-    })),
+  const featureEntries: PassiveBonusEntry[] = character.features.flatMap(
+    (feature) =>
+      (feature.bonuses ?? []).filter(matchesTarget).map((bonus) => ({
+        source: { id: feature.id, name: feature.name, kind: 'feature' },
+        bonus,
+        live: false,
+      })),
   );
 
-  return [...itemEntries, ...featureEntries].sort(
+  // Свои эффекты листа: снимка бонусов у них нет и быть не может — игрок правит
+  // эффект прямо на листе, — поэтому изменения переводятся в бонусы здесь же.
+  // Выключенный эффект отсеивает сам перевод.
+  const effectEntries: PassiveBonusEntry[] = character.activeEffects.flatMap(
+    (effect) =>
+      toInventoryBonusesFromEffects([effect])
+        .filter(matchesTarget)
+        .map((bonus) => ({
+          source: { id: effect.id, name: effect.name, kind: 'effect' },
+          bonus,
+          live: false,
+        })),
+  );
+
+  return [
+    ...itemEntries,
+    ...featureEntries,
+    ...effectEntries,
+    ...getLiveEffectBonusEntries(character, targets),
+  ].sort(
     (first, second) =>
       getInventoryBonusPriority(first.bonus)
       - getInventoryBonusPriority(second.bonus),
   );
+}
+
+/** Запись листа вместе с её активными эффектами. */
+interface EffectCarrier {
+  source: PassiveBonusSource;
+  effects: ActiveEffect[];
+}
+
+/**
+ * Записи листа, чьи активные эффекты действуют прямо сейчас: свои эффекты,
+ * умения и надетое снаряжение. Умение работает, пока оно на листе, предмет —
+ * пока надет; своими эффектами распоряжается сам игрок.
+ *
+ * @param character персонаж.
+ * @returns носители эффектов с подписью источника.
+ */
+function getEffectCarriers(character: Character): EffectCarrier[] {
+  // Свой эффект листа сам себе источник: записи, от которой он пришёл, у него
+  // нет — игрок завёл его руками или наложил состояние.
+  const ownCarriers: EffectCarrier[] = character.activeEffects.map(
+    (effect) => ({
+      source: { id: effect.id, name: effect.name, kind: 'effect' },
+      effects: [effect],
+    }),
+  );
+
+  const featureCarriers: EffectCarrier[] = character.features.map(
+    (feature) => ({
+      source: { id: feature.id, name: feature.name, kind: 'feature' },
+      effects: feature.activeEffects ?? [],
+    }),
+  );
+
+  const itemCarriers: EffectCarrier[] = character.inventory
+    .filter((item) => item.equipped)
+    .map((item) => ({
+      source: { id: item.id, name: item.name, kind: 'item' },
+      effects: item.activeEffects ?? [],
+    }));
+
+  return [...ownCarriers, ...featureCarriers, ...itemCarriers];
+}
+
+/**
+ * Цели, которые лист считает прямо сейчас. Формула эффекта умеет сослаться на
+ * значение листа (`ability.strength` от `@mod.str`, КД от `@mod.int`), а оно
+ * снова спросит живые бонусы — петлю обрываем по цели: та, что уже в счёте,
+ * живых прибавок не получает. Множество живёт между вызовами, но не переживает
+ * их: расчёт синхронный, и к возврату оно пусто.
+ */
+const LIVE_BONUS_TARGETS_IN_PROGRESS = new Set<string>();
+
+/**
+ * Опознание цели в защите от петли: вид и ключ вместе — прибавка к Силе не
+ * должна закрывать счёт Ловкости.
+ *
+ * @param target цель подсчёта.
+ * @returns строковый ключ цели.
+ */
+function getBonusTargetId(target: InventoryBonusTarget): string {
+  return `${target.kind}:${target.key ?? ''}`;
+}
+
+/** Значения листа, нужные, чтобы разобрать изменение эффекта. */
+interface EffectComputeContext {
+  character: Character;
+  armor: SheetArmorState;
+}
+
+/** Тот же контекст для живого бонуса: считаются только запрошенные цели. */
+interface LiveBonusContext extends EffectComputeContext {
+  wantedTargetIds: ReadonlySet<string>;
+}
+
+/**
+ * Живой бонус из одного изменения эффекта — сосед `toInventoryBonus` из
+ * `effects.ts`: тот делает снимок, этот считает то, что снимку не по силам.
+ *
+ * Берутся только изменения режима «добавить»: замену значения формулой у класса
+ * доспеха считает {@link getArmorClassEffectBody} — она заменяет КД ТЕЛА, а не
+ * доводит итог, и второй раз тем же числом её считать нельзя.
+ *
+ * @param context значения листа, нужные для подсчёта.
+ * @param change изменение эффекта.
+ * @param id идентификатор строки бонуса.
+ * @returns бонус листа; null — изменение считает не этот путь.
+ */
+function toLiveEffectBonus(
+  context: LiveBonusContext,
+  change: EffectChange,
+  id: string,
+): InventoryItemBonus | null {
+  const target = getEffectBonusTarget(change.key);
+
+  if (
+    !target
+    || change.mode !== 'add'
+    || !context.wantedTargetIds.has(getBonusTargetId(target))
+  ) {
+    return null;
+  }
+
+  // Числовое изменение без условия лист уже унёс в снимок бонусов записи —
+  // здесь остаётся то, что снимок выразить не может.
+  const applies = change.condition
+    ? matchesArmorCondition(change.condition, context.armor)
+    : parseEffectValue(change.value) === null;
+
+  const value = applies
+    ? evaluateEffectFormula(context.character, change.value)
+    : null;
+
+  if (value === null || value === 0) {
+    return null;
+  }
+
+  return {
+    id,
+    kind: target.kind,
+    key: target.key ?? '',
+    value,
+    mode: 'add',
+    priority: change.priority,
+  };
+}
+
+/**
+ * Бонусы, которые снимок записи унести не мог: изменения с условием (его
+ * проверяют каждый раз заново — прибавка обязана уйти при снятии доспеха) и с
+ * формулой (её значение меняется вместе с характеристиками листа).
+ *
+ * Условия считаются только о носителе: условие о броске («цель ранена») листу
+ * проверить нечем — ни цели, ни оружия в руке у него нет.
+ *
+ * @param character персонаж.
+ * @param targets цели подсчёта.
+ * @returns живые бонусы с источниками.
+ */
+function getLiveEffectBonusEntries(
+  character: Character,
+  targets: InventoryBonusTarget[],
+): PassiveBonusEntry[] {
+  const targetIds = targets.map(getBonusTargetId);
+
+  if (targetIds.some((id) => LIVE_BONUS_TARGETS_IN_PROGRESS.has(id))) {
+    return [];
+  }
+
+  for (const id of targetIds) {
+    LIVE_BONUS_TARGETS_IN_PROGRESS.add(id);
+  }
+
+  const context: LiveBonusContext = {
+    character,
+    armor: getSheetArmorState(character),
+    wantedTargetIds: new Set(targetIds),
+  };
+
+  try {
+    return getEffectCarriers(character).flatMap(({ source, effects }) =>
+      effects.filter(isSelfAppliedEffect).flatMap((effect) =>
+        effect.changes
+          .map((change, index) =>
+            toLiveEffectBonus(context, change, `${effect.id}:${index}`),
+          )
+          .filter((bonus) => bonus !== null)
+          .map((bonus) => ({ source, bonus, live: true })),
+      ),
+    );
+  } finally {
+    for (const id of targetIds) {
+      LIVE_BONUS_TARGETS_IN_PROGRESS.delete(id);
+    }
+  }
 }
 
 /**
@@ -645,9 +923,9 @@ function getInventoryBonusPriority(bonus: InventoryItemBonus): number {
 }
 
 /**
- * Значение цели после всех прибавок работающего снаряжения. Основу лист считает
- * сам (записанная характеристика, модификатор с владением, скорость), а
- * снаряжение доводит её до итога.
+ * Значение цели после всех прибавок записей листа. Основу лист считает сам
+ * (записанная характеристика, модификатор с владением, скорость), а снаряжение,
+ * умения и активные эффекты доводят её до итога.
  *
  * @param character персонаж.
  * @param targets цели подсчёта.
@@ -667,14 +945,15 @@ export function getInventoryBonusTotal(
 
 /**
  * Источники, меняющие значение цели, — строками разбора: без них итог не
- * сходится ни с характеристикой, ни с владением. Вклад источника считается по
- * шагам той же свёртки, поэтому повязка интеллекта показывает не «19», а
- * ровно то, на сколько она подняла характеристику.
+ * сходится ни с характеристикой, ни с владением. Источником бывает предмет,
+ * умение и свой эффект листа; вклад считается по шагам той же свёртки, поэтому
+ * повязка интеллекта показывает не «19», а ровно то, на сколько она подняла
+ * характеристику.
  *
  * @param character персонаж.
  * @param targets цели подсчёта.
- * @param base значение до снаряжения.
- * @returns вклады предметов; пустой список — таких предметов нет.
+ * @param base значение до прибавок записей.
+ * @returns вклады источников; пустой список — таких записей нет.
  */
 export function getInventoryBonusSources(
   character: Character,
@@ -741,13 +1020,12 @@ export function getInventorySavingThrowTotal(
 }
 
 /**
- * Вклады предметов в спасбросок: адресные и общие вместе, в одном списке
- * разбора.
+ * Вклады записей в спасбросок: адресные и общие вместе, в одном списке разбора.
  *
  * @param character персонаж.
  * @param ability характеристика спасброска.
- * @param base значение спасброска до снаряжения.
- * @returns вклады предметов в спасбросок.
+ * @param base значение спасброска до прибавок записей.
+ * @returns вклады источников в спасбросок.
  */
 export function getInventorySavingThrowSources(
   character: Character,
@@ -2050,6 +2328,8 @@ export function buildInventoryItem(
     // Влияние предмета на лист мастерская описывает активными эффектами — теми
     // же, что у магического предмета: лист берёт из них числовые изменения.
     bonuses: toInventoryBonusesFromEffects(summary.activeEffects),
+    // Эффекты остаются и целиком: флаги режима броска в бонус не превращаются.
+    activeEffects: summary.activeEffects,
     // Настройка и заряды бывают только у магии — раздел «Предметы» их не знает.
     ...DEFAULT_INVENTORY_MAGIC_STATE,
   };
@@ -2264,6 +2544,8 @@ export function buildMagicItemInventoryItem(
     // Остальное влияние на лист мастерская описывает активными эффектами: лист
     // берёт из них числовые изменения своих значений.
     bonuses: toInventoryBonusesFromEffects(summary?.activeEffects ?? []),
+    // Эффекты остаются и целиком: флаги режима броска в бонус не превращаются.
+    activeEffects: summary?.activeEffects ?? [],
     ...DEFAULT_INVENTORY_MAGIC_STATE,
     // Настройка — свойство предмета: настроиться игрок решает сам, но
     // предлагать это лист должен только там, где настройка вообще нужна.
@@ -2290,28 +2572,34 @@ function getStartingEquipmentItemName(item: StartingEquipmentItem): string {
 }
 
 /**
- * Подпись варианта стартового снаряжения: предметы с количеством и монеты в
- * конце — ровно то, что попадёт на лист при выборе этого варианта.
+ * Подпись позиции варианта стартового снаряжения с количеством
+ * («Кинжал ×2»): ею подписан отдельный предмет в карточке варианта.
+ *
+ * @param item позиция варианта стартового снаряжения.
+ * @returns название с количеством, если его больше одного.
+ */
+export function getStartingEquipmentItemLabel(
+  item: StartingEquipmentItem,
+): string {
+  const name = getStartingEquipmentItemName(item);
+
+  return item.quantity > 1
+    ? `${name} ${STARTING_EQUIPMENT_LABELS.quantityPrefix}${item.quantity}`
+    : name;
+}
+
+/**
+ * Подпись монет варианта стартового снаряжения («100 ЗМ»).
  *
  * @param option вариант стартового снаряжения.
- * @returns перечисление через запятую.
+ * @returns подпись монет; пусто — монет вариант не даёт.
  */
-export function getStartingEquipmentSummary(
+export function getStartingEquipmentCoinsLabel(
   option: StartingEquipmentOption,
 ): string {
-  const parts = option.items.map((item) => {
-    const name = getStartingEquipmentItemName(item);
-
-    return item.quantity > 1
-      ? `${name} ${STARTING_EQUIPMENT_LABELS.quantityPrefix}${item.quantity}`
-      : name;
-  });
-
-  if (option.coins > 0) {
-    parts.push(`${option.coins} ${CURRENCY_LABELS[option.coinKey]}`);
-  }
-
-  return parts.join(', ') || STARTING_EQUIPMENT_LABELS.emptyOptionDescription;
+  return option.coins > 0
+    ? `${option.coins} ${CURRENCY_LABELS[option.coinKey]}`
+    : '';
 }
 
 /**
@@ -2838,6 +3126,10 @@ export function getInventoryBonusTargetGroups(
         toInventoryBonusTargetOption('initiative', ''),
         toInventoryBonusTargetOption('spell-save-dc', ''),
         toInventoryBonusTargetOption('spell-attack', ''),
+        toInventoryBonusTargetOption('melee-attack', ''),
+        toInventoryBonusTargetOption('ranged-attack', ''),
+        toInventoryBonusTargetOption('proficiency-bonus', ''),
+        toInventoryBonusTargetOption('hit-points-max', ''),
       ],
     },
   ];
@@ -3018,7 +3310,8 @@ function getCustomInventoryTypesLabel(draft: CustomInventoryItemDraft): string {
 
 /**
  * Параметры доспеха из значений формы: КД и правило Ловкости берутся из типа
- * доспеха. null — вид предмета не «Доспех».
+ * доспеха, помеху Скрытности игрок отмечает сам. null — вид предмета не
+ * «Доспех».
  *
  * @param draft значения формы своего предмета.
  * @returns параметры доспеха или null.
@@ -3040,6 +3333,7 @@ function getCustomInventoryArmor(
     ),
     dexterityMod,
     shield,
+    stealthDisadvantage: draft.stealthDisadvantage,
   };
 }
 
@@ -3526,6 +3820,9 @@ export function getCustomInventoryItemDraft(
     armorType: getCustomArmorType(armor),
     baseArmorClass:
       armor?.baseArmorClass ?? NEW_CUSTOM_INVENTORY_ITEM.baseArmorClass,
+    stealthDisadvantage:
+      armor?.stealthDisadvantage
+      ?? NEW_CUSTOM_INVENTORY_ITEM.stealthDisadvantage,
     weaponCategory:
       weapon?.category ?? NEW_CUSTOM_INVENTORY_ITEM.weaponCategory,
     ranged: weapon?.ranged ?? NEW_CUSTOM_INVENTORY_ITEM.ranged,
@@ -3983,6 +4280,180 @@ function getArmorClassWithItemLimits(
     .reduce((total, entry) => applyInventoryBonus(total, entry.bonus), value);
 }
 
+/** Токен формулы эффекта — число или переменная листа. */
+function evaluateEffectFormulaToken(
+  character: Character,
+  token: string,
+): number | null {
+  if (/^\d+$/.test(token)) {
+    return Number(token);
+  }
+
+  if (token === RESOURCE_FORMULA_PROFICIENCY) {
+    return getCharacterProficiencyBonus(character);
+  }
+
+  if (token === RESOURCE_FORMULA_LEVEL) {
+    return character.level;
+  }
+
+  if (token.startsWith(RESOURCE_FORMULA_ABILITY_PREFIX)) {
+    const ability =
+      RESOURCE_FORMULA_ABILITIES[
+        token.slice(RESOURCE_FORMULA_ABILITY_PREFIX.length)
+      ];
+
+    return ability ? getAbilityModifier(character, ability) : null;
+  }
+
+  return null;
+}
+
+/**
+ * Значение формулы эффекта числом: сумма слагаемых, каждое — число или
+ * переменная листа (`@prof`, `@level`, `@mod.<аббревиатура>`) с множителем.
+ *
+ * Грамматика та же, что у максимума ресурса, только слагаемых сколько угодно:
+ * «Защита без доспехов» пишется как `10+@mod.dex+@mod.con`. Незнакомая
+ * переменная (`@mod.spell`, кость) делает формулу непонятной целиком — лист
+ * лучше не применит эффект, чем применит его с нулём вместо слагаемого.
+ *
+ * @param character персонаж.
+ * @param formula значение изменения эффекта.
+ * @returns число; null — формула листу непонятна.
+ */
+function evaluateEffectFormula(
+  character: Character,
+  formula: string,
+): number | null {
+  const compact = formula.toLowerCase().replaceAll(/\s+/g, '');
+
+  if (!compact) {
+    return null;
+  }
+
+  const terms = compact.match(/[+-]?[^+-]+/g);
+
+  if (!terms) {
+    return null;
+  }
+
+  let total = 0;
+
+  for (const term of terms) {
+    const sign = term.startsWith('-') ? -1 : 1;
+
+    let product = 1;
+
+    for (const factor of term.replace(/^[+-]/, '').split('*')) {
+      const value = evaluateEffectFormulaToken(character, factor);
+
+      if (value === null) {
+        return null;
+      }
+
+      product *= value;
+    }
+
+    total += sign * product;
+  }
+
+  return total;
+}
+
+/**
+ * Прибавки к классу доспеха от активных эффектов — одной строкой разбора.
+ *
+ * Идут сюда живые бонусы (условие или формула) от кого угодно и числовые от
+ * умений и своих эффектов листа. Числовые прибавки предметов сюда не идут:
+ * их лист уже сложил — надбавка брони участвует в зачёте «лучшая броня», а
+ * плащ и кольцо защиты дают плоский `itemBonus`.
+ *
+ * @param character персонаж.
+ * @returns суммарная прибавка; 0 — подходящих эффектов нет.
+ */
+function getArmorClassEffectBonus(character: Character): number {
+  return getActiveInventoryBonusEntries(character, [{ kind: 'armor-class' }])
+    .filter(
+      (entry) =>
+        getInventoryBonusMode(entry.bonus) === 'add'
+        && (entry.live || entry.source.kind !== 'item'),
+    )
+    .reduce((total, entry) => total + entry.bonus.value, 0);
+}
+
+/** Режимы изменения, которыми эффект задаёт КД тела целиком. */
+const ARMOR_CLASS_BODY_EFFECT_MODES: ReadonlySet<string> = new Set([
+  'override',
+  'upgrade',
+  'downgrade',
+]);
+
+/**
+ * КД тела, заданный активным эффектом: «Защита без доспехов» варвара и монаха,
+ * «Драконья стойкость» чародея — формула вместо `10 + Ловкость`, действующая
+ * при своём условии по доспеху.
+ *
+ * Берутся изменения `armorClass` в режимах замены: с условием по доспеху —
+ * когда условие выполнено, без условия — только с формулой: числовую замену
+ * без условия лист уже учёл пассивным бонусом записи. Изменения применяются в
+ * порядке приоритета, каждое поверх предыдущего.
+ *
+ * @param character персонаж.
+ * @param bodyArmorValue КД тела по надетой броне либо безброневой.
+ * @returns название эффекта и КД тела; null — ни один эффект КД не задал.
+ */
+function getArmorClassEffectBody(
+  character: Character,
+  bodyArmorValue: number,
+): { name: string; value: number } | null {
+  const armor = getSheetArmorState(character);
+
+  const applicable = collectAppliedEffects(character)
+    .filter((effect) => !effect.disabled && effect.effectTarget !== 'target')
+    .flatMap((effect) =>
+      effect.changes.map((change) => ({ name: effect.name, change })),
+    )
+    .filter(
+      ({ change }) =>
+        change.key === 'armorClass'
+        && ARMOR_CLASS_BODY_EFFECT_MODES.has(change.mode)
+        && (change.condition
+          ? matchesArmorCondition(change.condition, armor)
+          : parseEffectValue(change.value) === null),
+    )
+    .sort(
+      (left, right) =>
+        (left.change.priority ?? 0) - (right.change.priority ?? 0),
+    );
+
+  let value = bodyArmorValue;
+  let name: string | null = null;
+
+  for (const { name: effectName, change } of applicable) {
+    const resolved = evaluateEffectFormula(character, change.value);
+
+    if (resolved === null) {
+      continue;
+    }
+
+    let next = resolved;
+
+    if (change.mode === 'upgrade') {
+      next = Math.max(value, resolved);
+    } else if (change.mode === 'downgrade') {
+      next = Math.min(value, resolved);
+    }
+
+    if (next !== value) {
+      value = next;
+      name = effectName;
+    }
+  }
+
+  return name === null ? null : { name, value };
+}
+
 /**
  * Разбор итогового класса доспеха. В ручном режиме (`custom`) — базовое значение
  * плюс модификаторы выбранных характеристик. В автоматическом — по надетой
@@ -4003,14 +4474,19 @@ export function getArmorClassBreakdown(
   const abilityBonuses = getArmorClassAbilityBonuses(character, abilities);
 
   // Прибавка черт идёт и в ручной режим: она не зависит от того, откуда взята
-  // основа КД. Условные прибавки («Оборона» — только в доспехе) в механику не
-  // попадают и остаются в описании черты.
+  // основа КД.
   const featBonus = getFeatArmorClassBonus(character.features);
+
+  // Прибавки эффектов считаются отдельной строкой: источником бывает и черта, и
+  // надетый предмет, и в строке «Черты» прибавка от наручей вводила бы в
+  // заблуждение. Живая часть (формулы и условия) считается каждый раз заново —
+  // чтобы уйти при снятии доспеха и сойтись с текущим модификатором.
+  const effectBonus = getArmorClassEffectBonus(character);
 
   if (custom) {
     const value = abilityBonuses.reduce(
       (total, bonus) => total + bonus.modifier,
-      base + featBonus,
+      base + featBonus + effectBonus,
     );
 
     return {
@@ -4025,6 +4501,7 @@ export function getArmorClassBreakdown(
       shieldBonus: 0,
       itemBonus: 0,
       featBonus,
+      effectBonus,
       extraAbilities: abilityBonuses,
     };
   }
@@ -4088,6 +4565,18 @@ export function getArmorClassBreakdown(
     }
   }
 
+  // Эффект с условием по доспеху задаёт КД тела целиком — «Защита без
+  // доспехов» варвара: 10 + Ловкость + Телосложение без брони. Ловкость в такой
+  // формуле уже учтена, поэтому отдельной строкой в разбор не идёт.
+  const effectBody = getArmorClassEffectBody(character, bodyArmorValue);
+
+  if (effectBody) {
+    bodyArmorName = effectBody.name;
+    bodyArmorValue = effectBody.value;
+    dexBonus = 0;
+    dexCapped = false;
+  }
+
   // Щит: в зачёт идёт лучший из надетых (несколько щитов не складываются).
   let shieldBonus = 0;
 
@@ -4113,7 +4602,12 @@ export function getArmorClassBreakdown(
   return {
     value: getArmorClassWithItemLimits(
       character,
-      bodyArmorValue + shieldBonus + itemBonus + featBonus + extraBonus,
+      bodyArmorValue
+        + shieldBonus
+        + itemBonus
+        + featBonus
+        + effectBonus
+        + extraBonus,
     ),
     custom: false,
     bodyArmorName,
@@ -4127,6 +4621,7 @@ export function getArmorClassBreakdown(
     shieldBonus,
     itemBonus,
     featBonus,
+    effectBonus,
     extraAbilities,
   };
 }
@@ -4207,6 +4702,31 @@ function getProficientWeaponNames(character: Character): Set<string> {
 }
 
 /**
+ * Названия видов оружия по записям владения — как они записаны в каталоге:
+ * запись «вся группа» стоит за все виды своей категории, остальные идут как
+ * есть.
+ *
+ * Отдельно от {@link getOwnedWeaponNames}, потому что мастер класса спрашивает
+ * оружейный приём ДО того, как класс лёг на лист: владения там берутся не с
+ * персонажа, а из записи класса, которую только выбирают.
+ *
+ * @param entries записи владения оружием.
+ * @returns названия видов оружия, без повторов.
+ */
+export function getWeaponNamesForProficiencies(entries: string[]): string[] {
+  return uniq(
+    entries.flatMap((entry) => {
+      const group = WEAPON_PROFICIENCY_GROUPS.find(
+        (candidate) =>
+          normalizeCatalogName(candidate.all) === normalizeCatalogName(entry),
+      );
+
+      return group?.items ?? [entry];
+    }),
+  );
+}
+
+/**
  * Названия видов оружия, которыми персонаж владеет, — как они записаны в
  * каталоге. Из них выбирается оружейный приём: приём даётся только знакомому
  * оружию, а запись «вся группа» стоит за все виды своей категории.
@@ -4218,16 +4738,7 @@ function getProficientWeaponNames(character: Character): Set<string> {
  * @returns названия видов оружия во владении, без повторов.
  */
 export function getOwnedWeaponNames(character: Character): string[] {
-  return uniq(
-    character.proficiencies.weapons.flatMap((entry) => {
-      const group = WEAPON_PROFICIENCY_GROUPS.find(
-        (candidate) =>
-          normalizeCatalogName(candidate.all) === normalizeCatalogName(entry),
-      );
-
-      return group?.items ?? [entry];
-    }),
-  );
+  return getWeaponNamesForProficiencies(character.proficiencies.weapons);
 }
 
 /**
@@ -4278,17 +4789,27 @@ export function getWeaponAttackBonus(
     ? getCharacterProficiencyBonus(character)
     : 0;
 
-  const value =
+  const base =
     proficiencyBonus
     + getAbilityModifier(character, ability)
     + weapon.attackBonus
     - getExhaustionD20Penalty(character);
+
+  // Прибавки к самому броску атаки (эффект «+1 к рукопашным атакам», свой бонус
+  // записи) идут поверх слагаемых разбора: в бонус оружия им нельзя — тот про
+  // сам предмет в руке и показывается своей строкой.
+  const value = getInventoryBonusTotal(
+    character,
+    [{ kind: weapon.ranged ? 'ranged-attack' : 'melee-attack' }],
+    base,
+  );
 
   return {
     value,
     ability,
     weaponBonus: weapon.attackBonus,
     proficiencyBonus,
+    effectBonus: value - base,
     heavyAbility: getHeavyWeaponAbility(character, weapon),
   };
 }
@@ -4594,8 +5115,9 @@ export function getSwappedRollModifier(
 }
 
 /**
- * Строки зрения для подсказки: обычное зрение всегда, тёмное — только при
- * ненулевой дистанции.
+ * Строки зрения для подсказки: обычное зрение всегда (ноль у него — «без
+ * ограничений», а не отсутствие), остальные чувства — только при ненулевой
+ * дистанции.
  *
  * @param vision зрение персонажа.
  * @returns строки для подсказки у глазка на аватаре.
@@ -4603,11 +5125,21 @@ export function getSwappedRollModifier(
 export function getVisionRows(vision: CharacterVision): VisionRow[] {
   const unitLabel = SPEED_UNIT_SHORT_LABELS[vision.unit];
 
-  return VISION_ORDER.map((key) => ({
-    key,
-    label: VISION_LABELS[key],
-    formattedValue: vision[key] > 0 ? `${vision[key]} ${unitLabel}` : null,
-  })).filter((row) => row.key === 'normal' || row.formattedValue !== null);
+  return VISION_ORDER.map((key) => {
+    if (vision[key] > 0) {
+      return {
+        key,
+        label: VISION_LABELS[key],
+        formattedValue: `${vision[key]} ${unitLabel}`,
+      };
+    }
+
+    return {
+      key,
+      label: VISION_LABELS[key],
+      formattedValue: key === 'normal' ? VISION_UNLIMITED_LABEL : null,
+    };
+  }).filter((row) => row.formattedValue !== null);
 }
 
 /**
@@ -5111,6 +5643,115 @@ export function adjustHealthForConstitution(
   };
 }
 
+/** Цель бонуса «максимум хитов» — общая у эффектов и своих бонусов предметов. */
+const MAX_HIT_POINTS_BONUS_TARGETS: InventoryBonusTarget[] = [
+  { kind: 'hit-points-max' },
+];
+
+/**
+ * Прибавка к максимуму хитов от итогового Телосложения.
+ *
+ * Записанный максимум посчитан по записанному значению Телосложения (его и
+ * двигает {@link adjustHealthForConstitution}), а всё, что поднимает
+ * характеристику сверху — эффект повышения, умение, надетый предмет, свой
+ * бонус, — входит в максимум на каждом уровне и снимается вместе с собой.
+ *
+ * @param character персонаж.
+ * @returns прибавка к максимуму хитов; 0 — итоговое Телосложение равно записанному.
+ */
+export function getConstitutionHitPointsBonus(character: Character): number {
+  const modifierDelta =
+    getModifier(getEffectiveAbilityScore(character, 'constitution'))
+    - getModifier(character.abilities.constitution);
+
+  return modifierDelta * character.level;
+}
+
+/**
+ * Максимум хитов с прибавками: записанный максимум, поправка на итоговое
+ * Телосложение и адресные бонусы к самому максимуму (амулет здоровья, эффект с
+ * изменением `hitPoints.max`).
+ *
+ * Незаполненное здоровье (нулевой максимум) не трогается — прибавлять не к чему,
+ * как и в {@link adjustHealthForConstitution}.
+ *
+ * @param character персонаж.
+ * @returns итоговый максимум хитов.
+ */
+export function getMaxHitPoints(character: Character): number {
+  const recorded = character.health.max;
+
+  if (recorded <= 0) {
+    return recorded;
+  }
+
+  return Math.max(
+    0,
+    getInventoryBonusTotal(
+      character,
+      MAX_HIT_POINTS_BONUS_TARGETS,
+      recorded + getConstitutionHitPointsBonus(character),
+    ),
+  );
+}
+
+/**
+ * Разбор максимума хитов на слагаемые: записанный максимум, поправка на
+ * Телосложение и каждый предмет или умение поимённо.
+ *
+ * @param character персонаж.
+ * @returns слагаемые максимума хитов в порядке подсчёта.
+ */
+export function getMaxHitPointsBreakdown(
+  character: Character,
+): BonusBreakdownPart[] {
+  const constitutionBonus = getConstitutionHitPointsBonus(character);
+
+  return [
+    {
+      id: 'recorded',
+      label: MAX_HIT_POINTS_LABELS.breakdownRecorded,
+      formattedValue: String(character.health.max),
+    },
+    ...(constitutionBonus === 0
+      ? []
+      : [
+          {
+            id: 'constitution',
+            label: MAX_HIT_POINTS_LABELS.breakdownConstitution,
+            formattedValue: getFormattedBonus(constitutionBonus),
+          },
+        ]),
+    ...getInventoryBonusSources(
+      character,
+      MAX_HIT_POINTS_BONUS_TARGETS,
+      character.health.max + constitutionBonus,
+    ).map((source) => ({
+      id: source.id,
+      label: source.name,
+      formattedValue: getFormattedBonus(source.value),
+    })),
+  ];
+}
+
+/**
+ * Подсказка к максимуму хитов: без разбора не понять, почему на панели одно
+ * число, а в настройке здоровья другое. Максимум без прибавок объяснять
+ * нечего — у него `null`.
+ *
+ * @param character персонаж.
+ * @returns разбор максимума строкой или null.
+ */
+export function getMaxHitPointsHint(character: Character): string | null {
+  if (getMaxHitPoints(character) === character.health.max) {
+    return null;
+  }
+
+  return getMaxHitPointsBreakdown(character)
+    .map((part) => `${part.label} ${part.formattedValue}`)
+    .join(' · ');
+}
+
 /**
  * Что даёт уровень истощения по правилам 2024 года: каждый уровень снижает все
  * проверки к20 на 2 и все скорости на 5 футов, шестой уровень — смертельный.
@@ -5206,6 +5847,15 @@ export function getExhaustionSpeedPenalty(character: Character): number {
  * @returns скорости с применённым истощением.
  */
 export function getEffectiveSpeed(character: Character): CharacterSpeed {
+  // Обнулённая скорость — не штраф, а ноль: ни прибавка предмета, ни своя
+  // прибавка игрока её не поднимают, поэтому проверка идёт до всех расчётов.
+  if (isSpeedZeroedByEffects(getCharacterEffectFlags(character))) {
+    return {
+      ...character.speed,
+      values: mapValues(character.speed.values, () => 0),
+    };
+  }
+
   const penalty = getExhaustionSpeedPenalty(character);
 
   const featSpeed = getFeatSpeedModifiers(
@@ -5368,12 +6018,51 @@ export function toClassResourceDraft(
   };
 }
 
+/** Целое число без знака — им записаны и своё число максимума, и множитель. */
+const NUMBER_PATTERN = /^\d+$/;
+
+/**
+ * Источник максимума и его множитель, отделённые от формулы.
+ *
+ * Множитель ищется отдельно от источника по той же причине, что и смещение: у
+ * общего разбора всей строки они перетягивают друг у друга пробелы и знак.
+ * Записать его можно с любой стороны — «5 × уровень» и «уровень × 5» читаются
+ * одинаково.
+ *
+ * @param base часть формулы без смещения.
+ * @returns источник без множителя и сам множитель (нет — единица).
+ */
+function splitResourceMaxMultiplier(base: string): {
+  source: string;
+  multiplier: number;
+} {
+  const parts = base.split('*');
+
+  const left = parts[0]?.trim() ?? '';
+  const right = parts[1]?.trim() ?? '';
+
+  if (parts.length !== 2 || !left || !right) {
+    return { source: base, multiplier: 1 };
+  }
+
+  if (NUMBER_PATTERN.test(right)) {
+    return { source: left, multiplier: Number(right) };
+  }
+
+  if (NUMBER_PATTERN.test(left)) {
+    return { source: right, multiplier: Number(left) };
+  }
+
+  return { source: base, multiplier: 1 };
+}
+
 /**
  * Разбор формулы максимума из механики справочника в правило листа.
  *
  * Грамматика та же, что у механики черт: число, `@prof`, `@level` или
- * `@mod.<аббревиатура>`, любое из них со смещением (`@prof - 1`). Разбирается
- * один раз при взятии черты — дальше на листе живёт уже правило.
+ * `@mod.<аббревиатура>`, любое из них с множителем (`@level * 5`) и смещением
+ * (`@prof - 1`). Разбирается один раз при взятии черты — дальше на листе живёт
+ * уже правило.
  *
  * @param formula формула максимума; пустая строка — правила нет.
  * @returns правило максимума; null — формула пуста или непонятна.
@@ -5396,7 +6085,12 @@ export function parseResourceMaxFormula(
     ? Number(offsetMatch[2]) * (offsetMatch[1] === '-' ? -1 : 1)
     : 0;
 
-  const base = trimmed.slice(0, offsetMatch?.index ?? trimmed.length).trim();
+  const withMultiplier = trimmed
+    .slice(0, offsetMatch?.index ?? trimmed.length)
+    .trim();
+
+  const { source: base, multiplier } =
+    splitResourceMaxMultiplier(withMultiplier);
 
   if (!base) {
     // Формула из одного числа: «10» разобралось как смещение без источника.
@@ -5409,7 +6103,7 @@ export function parseResourceMaxFormula(
     return {
       source: 'fixed',
       ability: RESOURCE_MAX_DEFAULT_ABILITY,
-      offset: Number(base) + offset,
+      offset: Number(base) * multiplier + offset,
     };
   }
 
@@ -5418,11 +6112,17 @@ export function parseResourceMaxFormula(
       source: 'proficiency',
       ability: RESOURCE_MAX_DEFAULT_ABILITY,
       offset,
+      multiplier,
     };
   }
 
   if (base === RESOURCE_FORMULA_LEVEL) {
-    return { source: 'level', ability: RESOURCE_MAX_DEFAULT_ABILITY, offset };
+    return {
+      source: 'level',
+      ability: RESOURCE_MAX_DEFAULT_ABILITY,
+      offset,
+      multiplier,
+    };
   }
 
   if (base.startsWith(RESOURCE_FORMULA_ABILITY_PREFIX)) {
@@ -5431,10 +6131,42 @@ export function parseResourceMaxFormula(
         base.slice(RESOURCE_FORMULA_ABILITY_PREFIX.length)
       ];
 
-    return ability ? { source: 'ability', ability, offset } : null;
+    return ability ? { source: 'ability', ability, offset, multiplier } : null;
   }
 
   return null;
+}
+
+/**
+ * Максимум ресурса по ступеням: берётся старшая ступень, до которой персонаж
+ * дорос.
+ *
+ * Ступени старше формулы, потому что описывают ряд, который формулой не
+ * пишется: костей превосходства мастера боевых искусств четыре с третьего
+ * уровня, пять с седьмого и шесть с пятнадцатого. До первой ступени ресурса
+ * нет вовсе — там `null`, и лист берёт формулу либо число.
+ *
+ * @param scaling ступени максимума.
+ * @param level уровень персонажа.
+ * @returns максимум зарядов; null — ступеней нет либо персонаж не дорос.
+ */
+function getScaledCounterMax(
+  scaling: FeatCounterScaling[],
+  level: number,
+): number | null {
+  let best: number | null = null;
+  let bestLevel = 0;
+
+  for (const step of scaling) {
+    if (step.level <= level && step.level >= bestLevel) {
+      bestLevel = step.level;
+      best = step.max;
+    }
+  }
+
+  return best === null
+    ? null
+    : clamp(best, RESOURCE_COUNT_MIN, RESOURCE_COUNT_MAX);
 }
 
 /**
@@ -5456,11 +6188,46 @@ export function getResourceMax(
     return resource.max;
   }
 
-  const { source, ability, offset } = resource.maxRule;
+  const { source, ability, offset, multiplier, scaling, min } =
+    resource.maxRule;
+
+  // Ступень старше источника: ряд, который формулой не пишется, задан ею же и
+  // точнее любого выражения
+  const scaled = getScaledCounterMax(scaling ?? [], character.level);
+
+  if (scaled !== null) {
+    return withResourceMinimum(scaled, min);
+  }
 
   const base = getResourceMaxBase(character, source, ability);
 
-  return clamp(base + offset, RESOURCE_COUNT_MIN, RESOURCE_COUNT_MAX);
+  return withResourceMinimum(
+    clamp(
+      base * (multiplier ?? 1) + offset,
+      RESOURCE_COUNT_MIN,
+      RESOURCE_COUNT_MAX,
+    ),
+    min,
+  );
+}
+
+/**
+ * Максимум с оглядкой на нижнюю границу правила.
+ *
+ * Граница подпирает расчёт снизу, а не складывается с ним: вдохновение барда
+ * равно модификатору Харизмы, но не меньше одного — с Харизмой +0 вдохновение
+ * одно, а с Харизмой +2 их два, а не три.
+ *
+ * @param max посчитанный максимум.
+ * @param min нижняя граница максимума; 0 или нет — границы нет.
+ * @returns максимум не ниже границы.
+ */
+function withResourceMinimum(max: number, min: number | undefined): number {
+  if (!min || min <= RESOURCE_COUNT_MIN) {
+    return max;
+  }
+
+  return Math.max(max, clamp(min, RESOURCE_COUNT_MIN, RESOURCE_COUNT_MAX));
 }
 
 /**
@@ -5531,7 +6298,24 @@ export function withFeatResources(
 
   const fromFeatures = features.flatMap<CharacterClassResource>((feature) =>
     (feature.counters ?? []).map((counter) => {
-      const maxRule = parseResourceMaxFormula(counter.max);
+      // Ресурсу со ступенями формула не нужна вовсе, но правило нужно: без
+      // него максимум замер бы числом и не вырос на следующем уровне
+      const parsedRule = counter.scaling.length
+        ? {
+            source: 'fixed' as const,
+            ability: RESOURCE_MAX_DEFAULT_ABILITY,
+            offset: 0,
+            scaling: counter.scaling,
+          }
+        : parseResourceMaxFormula(counter.max);
+
+      // Нижняя граница живёт в правиле: по нему максимум пересчитывается на
+      // каждом повышении уровня, и мимо правила она бы туда не попала
+      const maxRule =
+        parsedRule && counter.min > 0
+          ? { ...parsedRule, min: counter.min }
+          : parsedRule;
+
       const id = `${FEAT_RESOURCE_ID_PREFIX}${feature.id}:${counter.key}`;
 
       const base: CharacterClassResource = {
@@ -5543,12 +6327,7 @@ export function withFeatResources(
         shortLabel:
           counter.shortName
           || counter.name.slice(0, RESOURCE_SHORT_LABEL_MAX_LENGTH),
-        // Ресурс восстанавливает ровно один вид отдыха — тот, что назван в
-        // механике; второй его не касается.
-        shortRest: {
-          mode: counter.recovery === 'short-rest' ? 'all' : 'none',
-          amount: RESOURCE_RECOVERY_AMOUNT_MIN,
-        },
+        shortRest: getCounterShortRestRule(counter.recovery),
         longRest: {
           // Короткий отдых в правилах короче продолжительного: ресурс,
           // восстанавливаемый коротким, продолжительным восстанавливается тоже.
@@ -5563,7 +6342,7 @@ export function withFeatResources(
       const max = maxRule
         ? getResourceMax(character, base)
         : clamp(
-            Number(counter.max) || 1,
+            Math.max(Number(counter.max) || 1, counter.min),
             RESOURCE_COUNT_MIN,
             RESOURCE_COUNT_MAX,
           );
@@ -5577,6 +6356,31 @@ export function withFeatResources(
   );
 
   return [...manual, ...fromFeatures];
+}
+
+/**
+ * Что возвращает ресурсу справочника короткий отдых.
+ *
+ * Продолжительный отдых возвращает ресурс целиком в любом случае — он в
+ * правилах длиннее короткого, — а короткий либо не возвращает ничего, либо
+ * возвращает всё, либо один заряд («Второе дыхание» и вдохновение барда правил
+ * 2024 года).
+ *
+ * @param recovery вид отката из механики справочника.
+ * @returns правило короткого отдыха.
+ */
+function getCounterShortRestRule(
+  recovery: CounterRecovery,
+): ResourceRecoveryRule {
+  if (recovery === 'short-rest') {
+    return { mode: 'all', amount: RESOURCE_RECOVERY_AMOUNT_MIN };
+  }
+
+  if (recovery === 'short-rest-one') {
+    return { mode: 'amount', amount: COUNTER_SHORT_REST_ONE_AMOUNT };
+  }
+
+  return { mode: 'none', amount: RESOURCE_RECOVERY_AMOUNT_MIN };
 }
 
 /**
@@ -5854,6 +6658,131 @@ export function parseSizeOptionsFromText(sizeText: string): string[] {
 }
 
 /**
+ * Владения, которые вид и его происхождение выдают без выбора.
+ *
+ * Сводятся из двух мест: самой записи (её даёт выбор вида целиком — так устроены
+ * происхождения, у которых умений нет вовсе) и каждого умения, которое уже
+ * действует на текущем уровне персонажа.
+ *
+ * До появления структурных даров лист искал владения в прозе описания, и умение,
+ * где владение названо иначе, оставалось незамеченным.
+ *
+ * @param species деталь вида.
+ * @param lineage деталь происхождения; null — происхождения нет.
+ * @param characterLevel суммарный уровень персонажа.
+ * @returns владения одним набором; пустые списки — вид ничего не выдаёт.
+ */
+export function collectSpeciesProficiencies(
+  species: SpeciesSummary,
+  lineage: SpeciesSummary | null,
+  characterLevel: number,
+): GrantedProficiencies {
+  const sources: Array<GrantedProficiencies | null> = [species.proficiencies];
+
+  const appendFeatures = (summary: SpeciesSummary | null): void => {
+    for (const feature of summary?.features ?? []) {
+      if ((feature.level ?? 1) > characterLevel) {
+        continue;
+      }
+
+      sources.push(feature.proficiencies);
+    }
+  };
+
+  appendFeatures(species);
+
+  if (lineage) {
+    sources.push(lineage.proficiencies);
+    appendFeatures(lineage);
+  }
+
+  return mergeGrantedProficiencies(sources);
+}
+
+/**
+ * Складывает наборы владений в один, отбрасывая повторы и пустые источники.
+ *
+ * @param sources наборы владений; null — источник ничего не выдал.
+ * @returns один набор владений.
+ */
+function mergeGrantedProficiencies(
+  sources: Array<GrantedProficiencies | null>,
+): GrantedProficiencies {
+  const filled = sources.filter((source): source is GrantedProficiencies =>
+    Boolean(source),
+  );
+
+  return {
+    armor: uniq(filled.flatMap((source) => source.armor)),
+    weapons: uniq(filled.flatMap((source) => source.weapons)),
+    languages: uniq(filled.flatMap((source) => source.languages)),
+    skills: uniq(filled.flatMap((source) => source.skills)),
+    expertiseSkills: uniq(filled.flatMap((source) => source.expertiseSkills)),
+    weaponMasteries: uniq(filled.flatMap((source) => source.weaponMasteries)),
+    masteryProperties: uniq(
+      filled.flatMap((source) => source.masteryProperties),
+    ),
+    savingThrows: uniq(filled.flatMap((source) => source.savingThrows)),
+    // Инструмент — объект со ссылкой, поэтому повторы снимаются по названию:
+    // одна и та же лютня из вида и из его происхождения — это одно владение
+    tools: uniqBy(
+      filled.flatMap((source) => source.tools),
+      (tool) => tool.name,
+    ),
+  };
+}
+
+/**
+ * Дистанция тёмного зрения вида и его происхождения.
+ *
+ * Сначала берётся поле детали: бэк вычисляет его из механики особенностей
+ * (своих и родительских), и это точнее любого разбора прозы. Разбор текста
+ * остался страховкой для записей, у чьих особенностей механика не заполнена, —
+ * иначе они разом лишились бы зрения.
+ *
+ * Из двух источников берётся большее: происхождение зрение поднимает, а не
+ * заменяет.
+ *
+ * @param species деталь вида.
+ * @param lineage деталь происхождения; null — происхождения нет.
+ * @returns дистанция в футах; 0 — тёмного зрения нет.
+ */
+export function getSpeciesDarkvision(
+  species: SpeciesSummary,
+  lineage: SpeciesSummary | null,
+): number {
+  const declared = Math.max(species.darkVision ?? 0, lineage?.darkVision ?? 0);
+
+  if (declared > 0) {
+    return declared;
+  }
+
+  return getDarkvisionDistance([
+    ...species.features,
+    ...(lineage?.features ?? []),
+  ]);
+}
+
+/**
+ * Дистанция обычного зрения вида и его происхождения.
+ *
+ * Происхождение переопределяет вид: у него своя запись со своими свойствами,
+ * как у скорости. Ноль — значение, а не пропуск: у вида, как и у токена VTTG,
+ * он означает «без ограничений». Ни у кого не задано — null: лист оставляет
+ * своё значение.
+ *
+ * @param species деталь вида.
+ * @param lineage деталь происхождения; null — происхождения нет.
+ * @returns дистанция в футах (0 — без ограничений) либо null, когда вид её не задаёт.
+ */
+export function getSpeciesVision(
+  species: SpeciesSummary,
+  lineage: SpeciesSummary | null,
+): number | null {
+  return lineage?.vision ?? species.vision ?? null;
+}
+
+/**
  * Дистанция тёмного зрения из особенностей вида: ищется особенность с
  * упоминанием тёмного зрения, из её текста берётся первое число с футами.
  *
@@ -5884,30 +6813,62 @@ export function getDarkvisionDistance(
 }
 
 /**
- * Подпись круга заклинания для строки списка.
+ * Подсказка о том, с какого уровня в классе открывается выбор подкласса.
  *
- * @param level круг заклинания; 0 — заговор.
- * @returns подпись круга (например, «Заговор» или «3 круг»).
+ * @param level минимальный уровень в классе.
+ * @returns текст подсказки.
+ */
+export function getSubclassAvailableHint(level: number): string {
+  return `Подкласс доступен с ${level} уровня`;
+}
+
+/**
+ * Подсказка о достигнутом пределе своих листов: сколько их можно держать и что
+ * делать дальше.
+ *
+ * @param limit предел числа листов.
+ * @returns текст подсказки.
+ */
+export function getSheetsLimitReachedHint(limit: number): string {
+  return `Достигнут лимит ${limit} листов — удалите один, чтобы создать новый.`;
+}
+
+/**
+ * Пояснение диалога удаления листа: лист не пропадает совсем, а уезжает в
+ * историю.
+ *
+ * @param name имя персонажа.
+ * @returns текст пояснения.
+ */
+export function getSheetRemoveDescription(name: string): string {
+  return `Лист «${name}» переедет в историю — его можно будет восстановить.`;
+}
+
+/**
+ * Подпись уровня заклинания для строки списка.
+ *
+ * @param level уровень заклинания; 0 — заговор.
+ * @returns подпись уровня (например, «Заговор» или «3-й уровень»).
  */
 export function getSpellLevelLabel(level: number): string {
-  return level === 0 ? 'Заговор' : `${level} круг`;
+  return level === 0 ? 'Заговор' : `${level}-й уровень`;
 }
 
 /**
- * Подпись группы заклинаний одного круга для разделителя списка.
+ * Подпись группы заклинаний одного уровня для разделителя списка.
  *
- * @param level круг заклинания; 0 — заговоры.
- * @returns подпись группы (например, «Заговоры» или «3 круг»).
+ * @param level уровень заклинания; 0 — заговоры.
+ * @returns подпись группы (например, «Заговоры» или «Уровень 3»).
  */
 export function getSpellGroupLabel(level: number): string {
-  return level === 0 ? 'Заговоры' : `${level} круг`;
+  return level === 0 ? 'Заговоры' : `Уровень ${level}`;
 }
 
 /**
- * Пояснение к предупреждению о потраченных ячейках круга: бросок при этом
+ * Пояснение к предупреждению о потраченных ячейках уровня: бросок при этом
  * состоялся, поэтому текст говорит, что именно осталось несделанным.
  *
- * @param level круг заклинания.
+ * @param level уровень заклинания.
  * @returns описание для тоста.
  */
 export function getSpellSlotsEmptyDescription(level: number): string {
@@ -5947,7 +6908,13 @@ export function matchesSpellFilter(
   spell: CharacterSpell,
   filter: SpellTabFilter,
 ): boolean {
-  if (filter.preparedOnly && !spell.prepared) {
+  // Заговор подготовки не требует и доступен всегда, поэтому из списка его не
+  // убирает и отбор «Подготовленные»
+  if (
+    filter.preparedOnly
+    && !spell.prepared
+    && getSpellPreparedKind(spell) !== 'cantrips'
+  ) {
     return false;
   }
 
@@ -5988,12 +6955,29 @@ export function getSpellGroups(
   }));
 }
 
+/** Заклинание вне книги персонажа вместе с пометкой происхождения. */
+interface GrantedSpellEntry {
+  spell: CharacterSpell;
+
+  /**
+   * Заклинание выдало умение класса: место ему в круге книги, а не в группе
+   * врождённых.
+   */
+  fromClass: boolean;
+}
+
 /**
  * Возвращает заклинания, которые персонаж знает вне книги: врождённые
  * заклинания вида, уже открытые на текущем уровне, и заклинания, выдаваемые
- * чертами. Место среди подготовленных они не занимают — счётчик смотрит только
- * на книгу персонажа, — а подготовку игрок снимает и возвращает вручную,
- * поэтому запись без флага считается подготовленной.
+ * чертами и умениями класса. Выдача, которая держит заклинание готовым, места
+ * среди подготовленных не занимает, а подготовку игрок снимает и возвращает
+ * вручную, поэтому запись без флага считается подготовленной; выдача без такой
+ * отметки («весь список класса» друида) считается счётчиком наравне с книгой
+ * (см. `takesPreparationSpace`).
+ *
+ * Список общий: во вкладке заклинания стоят в разных группах
+ * (см. `getInnateSpells` и `getClassGrantedSpells`), а вот справочнику и
+ * выгрузке важны все разом.
  *
  * Одно и то же заклинание может прийти дважды (вид и черта, две черты): в
  * списке ему место одно, и остаётся первая запись — правки достаются ей.
@@ -6004,35 +6988,145 @@ export function getSpellGroups(
 export function getAvailableInnateSpells(
   character: Character,
 ): CharacterSpell[] {
-  const granted = [
+  return collectGrantedSpells(character).map((entry) => entry.spell);
+}
+
+/**
+ * Заклинания вне книги, которые вкладка ведёт отдельной группой: врождённые
+ * заклинания вида и заклинания черт. Классовые сюда не идут — им место в кругах
+ * книги (см. `getClassGrantedSpells`).
+ *
+ * @param character персонаж листа.
+ * @returns врождённые заклинания вида и заклинания черт.
+ */
+export function getInnateSpells(character: Character): CharacterSpell[] {
+  return collectGrantedSpells(character)
+    .filter((entry) => !entry.fromClass)
+    .map((entry) => entry.spell);
+}
+
+/**
+ * Заклинания, выданные умениями класса — выдачей либо выбором игрока
+ * (заговоры волшебника). Хранятся они на записи умения (снятие класса забирает
+ * их с собой), но в списке стоят в своём круге наравне с книгой: игрок ищет
+ * заговор среди заговоров, а не среди врождённых.
+ *
+ * @param character персонаж листа.
+ * @returns заклинания классовых умений.
+ */
+export function getClassGrantedSpells(character: Character): CharacterSpell[] {
+  return collectGrantedSpells(character)
+    .filter((entry) => entry.fromClass)
+    .map((entry) => entry.spell);
+}
+
+/**
+ * Названия заклинаний, которые персонаж уже знает: книга, заклинания записей
+ * (умение класса, черта) и врождённые заклинания вида. Ими пикер помечает
+ * варианты выбора — одно и то же заклинание дважды не учат, и повторный выбор
+ * пропал бы впустую.
+ *
+ * @param character персонаж листа.
+ * @returns названия известных заклинаний.
+ */
+export function getKnownSpellNames(character: Character): string[] {
+  return [
+    ...character.spells,
+    ...collectGrantedSpells(character).map((entry) => entry.spell),
+  ].map((spell) => spell.name);
+}
+
+/**
+ * Сбор всех заклинаний вне книги с пометкой происхождения: группа во вкладке у
+ * классовых заклинаний своя, а дубли отбрасываются по всем источникам разом —
+ * иначе одно и то же заклинание встало бы в две группы.
+ *
+ * @param character персонаж листа.
+ * @returns заклинания вне книги с пометкой «от класса».
+ */
+function collectGrantedSpells(character: Character): GrantedSpellEntry[] {
+  // Наибольший круг, который персонаж способен наложить: им ограничена выдача
+  // «весь список класса, не выше доступного круга». Ноль, а не «ничего»: заговор
+  // ячейки не тратит, и персонажу без заклинательства он всё равно доступен —
+  // так же считает и система VTTG (`getMaxSpellSlotLevel`)
+  const maxSpellLevel = Math.max(...getAvailableSpellLevels(character), 0);
+
+  const granted: GrantedSpellEntry[] = [
     ...(character.species?.innateSpells ?? [])
       .filter((innateSpell) => innateSpell.requiredLevel <= character.level)
-      .map((innateSpell) => innateSpell.spell),
+      .map((innateSpell) => ({ spell: innateSpell.spell, fromClass: false })),
     // Часть заклинаний черты открывается по уровням («Малое восстановление»
     // метки дракона — с третьего). Отбор здесь, а не при взятии черты: список
     // должен пополняться сам, когда персонаж дорастёт
-    ...getFeatureSpells(character.features).filter(
-      (spell) => !spell.requiredLevel || spell.requiredLevel <= character.level,
+    ...getFeatureGrantedSpells(character.features).filter(
+      (entry) =>
+        (!entry.spell.requiredLevel
+          || entry.spell.requiredLevel <= character.level)
+        // Список класса «не выше доступного круга» приезжает целиком: круг
+        // растёт вместе с персонажем, и снимок числом замёрз бы на том уровне,
+        // на котором заклинания легли на лист
+        && (!entry.spell.limitedBySlots || entry.spell.level <= maxSpellLevel),
     ),
   ];
 
-  return uniqBy(granted, (spell) => spell.url).map((spell) => ({
-    ...spell,
-    prepared: isInnateSpellPrepared(spell),
+  return uniqBy(granted, (entry) => entry.spell.url).map((entry) => ({
+    ...entry,
+    spell: { ...entry.spell, prepared: isInnateSpellPrepared(entry.spell) },
   }));
 }
 
 /**
- * Заклинания, лежащие в записях особенностей персонажа.
+ * Заклинания, лежащие в записях особенностей персонажа, с пометкой
+ * происхождения.
  *
- * Происхождение записи не проверяется: заклинания кладёт себе только черта, но
- * если их начнёт выдавать классовое умение, список подхватит и его.
+ * Заклинания кладут себе и черта, и умение класса, и умение вида — разница
+ * только в том, в какую группу вкладки заклинание потом встанет.
  *
  * @param features особенности персонажа.
  * @returns заклинания всех записей подряд.
  */
-function getFeatureSpells(features: CharacterFeature[]): CharacterSpell[] {
-  return features.flatMap((feature) => feature.spells ?? []);
+function getFeatureGrantedSpells(
+  features: CharacterFeature[],
+): GrantedSpellEntry[] {
+  return features.flatMap((feature) =>
+    (feature.spells ?? []).map((spell) => ({
+      spell,
+      fromClass: feature.origin === 'class',
+    })),
+  );
+}
+
+/**
+ * Заклинания, доступные персонажу сверх списка его класса: расширения списка
+ * от умений класса, вариантов, черт, вида и предыстории, уже открытые по
+ * уровню. Персонаж их не знает — окно добавления заклинаний показывает их
+ * рядом с классовыми, и в книгу они попадают руками игрока.
+ *
+ * Список с отметкой «нужно заклинательство» открыт, только когда персонажу
+ * доступен хотя бы один круг заклинаний: так написано у черт метки дракона.
+ * Одно и то же заклинание из двух записей идёт один раз.
+ *
+ * @param character персонаж листа.
+ * @returns заклинания расширенного списка.
+ */
+export function getExpandedSpellListSpells(
+  character: Character,
+): CharacterSpell[] {
+  const hasSpellcasting = getAvailableSpellLevels(character).length > 0;
+
+  const spells = character.features.flatMap((feature) => {
+    const spellList = feature.spellList;
+
+    if (!spellList || (spellList.requiresSpellcasting && !hasSpellcasting)) {
+      return [];
+    }
+
+    return spellList.spells.filter(
+      (spell) => !spell.requiredLevel || spell.requiredLevel <= character.level,
+    );
+  });
+
+  return uniqBy(spells, (spell) => spell.url);
 }
 
 /**
@@ -6047,7 +7141,9 @@ export function findFeatureSpell(
   features: CharacterFeature[],
   spellUrl: string,
 ): CharacterSpell | undefined {
-  return getFeatureSpells(features).find((spell) => spell.url === spellUrl);
+  return getFeatureGrantedSpells(features).find(
+    (entry) => entry.spell.url === spellUrl,
+  )?.spell;
 }
 
 /**
@@ -6152,14 +7248,61 @@ export function setFeatureSpellcastingAbility(
 }
 
 /**
- * Подготовлено ли врождённое заклинание: флага нет — подготовлено (лист мог
- * быть сохранён до появления пометки, да и новая запись приходит готовой).
+ * Занимает ли выданное заклинание место среди подготовленных: выдача с
+ * отметкой «Подготавливать не нужно» держит заклинание готовым сама (заклинания
+ * домена, врождённые заклинания вида), а без неё персонаж заклинание лишь
+ * знает — готовит его игрок, и пометка считается наравне с книгой (так друид
+ * получает весь свой список).
  *
- * @param spell врождённое заклинание вида.
+ * Флага нет — запись легла на лист до его появления: такая держит подготовку
+ * сама, как лист вёл себя раньше.
+ *
+ * @param spell заклинание вне книги персонажа.
+ * @returns true — пометка занимает место среди подготовленных.
+ */
+export function takesPreparationSpace(spell: CharacterSpell): boolean {
+  return spell.alwaysPrepared === false;
+}
+
+/**
+ * Идёт ли выданное заклинание в счёт подготовленных заклинаний класса — и,
+ * значит, держит ли его предел из таблицы класса.
+ *
+ * Предел и счётчик читают одну и ту же колонку, поэтому и правило у них одно:
+ * место занимают книга персонажа и выдача умений класса, которую игрок готовит
+ * сам («весь список класса» друида). Заклинание черты или вида персонаж
+ * получает сверх колонки — ни в счёт, ни под предел оно не идёт
+ * (см. `countSpellsOfKind`).
+ *
+ * @param character персонаж листа.
+ * @param spell заклинание вне книги персонажа.
+ * @returns true — пометка занимает место среди подготовленных класса.
+ */
+export function countsInClassPreparedLimit(
+  character: Character,
+  spell: CharacterSpell,
+): boolean {
+  return (
+    takesPreparationSpace(spell)
+    && getClassGrantedSpells(character).some(
+      (classSpell) => classSpell.url === spell.url,
+    )
+  );
+}
+
+/**
+ * Подготовлено ли заклинание вне книги: выдача, которая держит подготовку сама,
+ * без флага считается подготовленной (лист мог быть сохранён до появления
+ * пометки, да и новая запись приходит готовой), а заклинание, которое игрок
+ * готовит сам, — наоборот: подготовлено, только пока пометка стоит.
+ *
+ * @param spell врождённое либо выданное заклинание.
  * @returns true — заклинание подготовлено.
  */
 export function isInnateSpellPrepared(spell: CharacterSpell): boolean {
-  return spell.prepared !== false;
+  return takesPreparationSpace(spell)
+    ? spell.prepared === true
+    : spell.prepared !== false;
 }
 
 /**
@@ -6175,13 +7318,12 @@ export function isCustomSpell(spell: CharacterSpell): boolean {
 }
 
 /**
- * К какому счётчику подготовки относится заклинание книги: заговоры считаются
- * отдельно от заклинаний кругов — их число задаёт своя колонка таблицы класса.
- * Врождённые заклинания вида в книге персонажа не лежат, подготовка их не
- * касается.
+ * К какому счётчику относится заклинание: круги 1 и выше персонаж
+ * подготавливает, а заговоры знает — подготовка их не касается, и колонка
+ * «Заговоры» таблицы класса говорит, сколько заговоров он может знать.
  *
- * @param spell заклинание книги персонажа.
- * @returns вид подготовки заклинания.
+ * @param spell заклинание листа.
+ * @returns вид счёта заклинания.
  */
 export function getSpellPreparedKind(spell: CharacterSpell): PreparedSpellKind {
   return spell.level === CANTRIP_SPELL_LEVEL ? 'cantrips' : 'spells';
@@ -6331,20 +7473,44 @@ function getSpellDamageExpression(
 }
 
 /**
+ * Формулы урона заклинания на уровне персонажа: у заговора набор формул с
+ * порогового уровня заменяется целиком (5, 11 и 17 в правилах), поэтому берётся
+ * наибольший подходящий тир, а не базовые формулы.
+ *
+ * @param damage урон заклинания из справочника.
+ * @param characterLevel общий уровень персонажа.
+ * @returns формулы урона, действующие на этом уровне.
+ */
+function getSpellDamageFormulasByLevel(
+  damage: SpellDamageFormulas,
+  characterLevel: number,
+): string[] {
+  // Тиры отсортированы по возрастанию уровня: последний подходящий и есть
+  // действующий.
+  const tier = damage.cantripTiers.findLast(
+    (cantripTier) => cantripTier.level <= characterLevel,
+  );
+
+  return tier?.formulas ?? damage.base;
+}
+
+/**
  * Броски урона заклинания из формул справочника. Одна запись справочника может
  * описывать несколько взаимоисключающих бросков (кость зависит от состояния
  * цели) — каждый становится отдельной плиткой. Лечение и формулы с
  * неподдерживаемыми тегами пропускаются: плитка урона о них не говорит.
  *
- * @param damageFormulas формулы урона заклинания из справочника.
+ * @param spellDamage урон заклинания из справочника (с тирами заговора).
  * @param spellAbilityModifier модификатор заклинательной характеристики.
+ * @param characterLevel общий уровень персонажа: по нему растёт урон заговора.
  * @returns броски урона в порядке справочника; пусто — урона у заклинания нет.
  */
 export function getSpellDamage(
-  damageFormulas: string[],
+  spellDamage: SpellDamageFormulas,
   spellAbilityModifier: number,
+  characterLevel: number,
 ): SpellDamage[] {
-  return damageFormulas
+  return getSpellDamageFormulasByLevel(spellDamage, characterLevel)
     .flatMap((damageFormula) =>
       damageFormula.split(SPELL_DAMAGE_VARIANT_SEPARATOR),
     )
@@ -6993,14 +8159,64 @@ function getPreparedSpellsAtLevel(
 }
 
 /**
- * Разбор числа подготовленных заклинаний (или заговоров — у них свой счётчик и
- * своя колонка таблицы класса): сколько их даёт таблица класса на текущем
- * уровне, какой бонус к этому числу задан вручную и какое значение выходит
- * итогом. Своё число выключает подсчёт по классу целиком (бонус к нему не
- * прибавляется).
+ * Сколько набрано по этому счётчику: у заклинаний кругов 1+ — отмечено
+ * подготовленными, у заговоров — известно персонажу.
+ *
+ * Счёт ведут колонки таблицы класса, поэтому в него идёт только то, что даёт
+ * сам класс: книга персонажа и выдача его умений. Заговор вида и заклинание
+ * черты («Посвящённый в магию» от предыстории) персонаж получает сверх колонок
+ * — в пул класса они не входят, иначе черта съедала бы заговоры колдуна.
+ *
+ * Подготовленными считаются книга персонажа и та выдача, которую игрок готовит
+ * сам («весь список класса» друида): выдача с отметкой «Подготавливать не
+ * нужно» держит заклинание готовым сама и места среди подготовленных не
+ * занимает. Заговоры подготовки не требуют вовсе — считается сам факт, что
+ * персонаж их знает.
+ *
+ * Одно и то же заклинание считается один раз: выданное заклинание, заведённое
+ * ещё и в книге, вкладка показывает одной строкой (см. `getClassGrantedSpells`).
+ * Отбор по уровню и кругам делает сборка выдачи — заклинание, до которого
+ * персонаж ещё не дорос, на листе не стоит.
  *
  * @param character персонаж.
- * @param kind вид подготовки: заклинания книги либо заговоры.
+ * @param kind вид счёта: заклинания кругов 1+ либо заговоры.
+ * @returns набранное число.
+ */
+function countSpellsOfKind(
+  character: Character,
+  kind: PreparedSpellKind,
+): number {
+  const bookUrls = new Set(character.spells.map((spell) => spell.url));
+
+  const bookSpells = character.spells.filter(
+    (spell) => getSpellPreparedKind(spell) === kind,
+  );
+
+  const grantedSpells = getClassGrantedSpells(character).filter(
+    (spell) => !bookUrls.has(spell.url) && getSpellPreparedKind(spell) === kind,
+  );
+
+  if (kind === 'cantrips') {
+    return bookSpells.length + grantedSpells.length;
+  }
+
+  return (
+    bookSpells.filter((spell) => spell.prepared).length
+    + grantedSpells.filter(
+      (spell) => takesPreparationSpace(spell) && spell.prepared,
+    ).length
+  );
+}
+
+/**
+ * Разбор числа подготовленных заклинаний (или известных заговоров — у них своя
+ * колонка таблицы класса и свой счётчик): сколько их даёт таблица класса на
+ * текущем уровне, какой бонус к этому числу задан вручную и какое значение
+ * выходит итогом. Своё число выключает подсчёт по классу целиком (бонус к нему
+ * не прибавляется).
+ *
+ * @param character персонаж.
+ * @param kind вид счёта: заклинания кругов 1+ либо заговоры.
  * @returns разбор для блока вкладки и модалки настройки.
  */
 export function getPreparedSpellsBreakdown(
@@ -7046,9 +8262,7 @@ export function getPreparedSpellsBreakdown(
 
   return {
     value: customValue ?? autoValue,
-    count: character.spells.filter(
-      (spell) => spell.prepared && getSpellPreparedKind(spell) === kind,
-    ).length,
+    count: countSpellsOfKind(character, kind),
     classValue,
     custom: custom !== null,
     bonus,
@@ -7056,12 +8270,12 @@ export function getPreparedSpellsBreakdown(
 }
 
 /**
- * Значение блока подготовленных заклинаний: сколько отмечено из того, сколько
- * можно держать («4 / 17»). Предел неизвестен — вместо числа прочерк: пометить
- * при этом можно сколько угодно.
+ * Значение плитки: сколько набрано из того, сколько можно («4 / 17») —
+ * подготовлено заклинаний либо известно заговоров. Предел неизвестен — вместо
+ * числа прочерк: набрать при этом можно сколько угодно.
  *
- * @param prepared разбор числа подготовленных заклинаний.
- * @returns строка блока вкладки заклинаний.
+ * @param prepared разбор числа.
+ * @returns строка плитки вкладки заклинаний.
  */
 export function getPreparedSpellsValue(
   prepared: PreparedSpellsBreakdown,
@@ -7075,11 +8289,11 @@ export function getPreparedSpellsValue(
 }
 
 /**
- * Начало подсказки блока подготовленных: сколько отмечено и сколько держать
- * можно. Предел неизвестен — вместо числа прочерк.
+ * Начало подсказки плитки: сколько набрано и сколько можно. Предел неизвестен —
+ * вместо числа прочерк.
  *
- * @param prepared разбор числа подготовленных.
- * @param kind вид подготовки: заклинания книги либо заговоры.
+ * @param prepared разбор числа.
+ * @param kind вид счёта: заклинания кругов 1+ либо заговоры.
  * @returns строка вида «Подготовлено заклинаний: 4 из 17».
  */
 export function getPreparedSpellsCountHint(
@@ -7095,11 +8309,11 @@ export function getPreparedSpellsCountHint(
 }
 
 /**
- * Подсказка плитки подготовки: сколько отмечено и откуда взялось число — из
- * таблицы класса (с бонусом, если он задан) либо указано вручную.
+ * Подсказка плитки: сколько набрано и откуда взялось число — из таблицы класса
+ * (с бонусом, если он задан) либо указано вручную.
  *
- * @param prepared разбор числа подготовленных.
- * @param kind вид подготовки: заклинания книги либо заговоры.
+ * @param prepared разбор числа.
+ * @param kind вид счёта: заклинания кругов 1+ либо заговоры.
  * @returns текст подсказки плитки шапки вкладки.
  */
 export function getPreparedSpellsHint(
@@ -7128,17 +8342,14 @@ export function getPreparedSpellsHint(
 }
 
 /**
- * Описание предупреждения о достигнутом пределе подготовленных.
+ * Описание предупреждения о достигнутом пределе подготовленных. Предел есть
+ * только у заклинаний кругов 1+: заговоры подготовки не требуют.
  *
  * @param limit сколько можно держать подготовленными.
- * @param kind вид подготовки: заклинания книги либо заговоры.
  * @returns текст тоста.
  */
-export function getPreparedSpellsLimitDescription(
-  limit: number,
-  kind: PreparedSpellKind,
-): string {
-  const { statFull } = PREPARED_KIND_LABELS[kind];
+export function getPreparedSpellsLimitDescription(limit: number): string {
+  const { statFull } = PREPARED_KIND_LABELS.spells;
 
   return `Подготовлено ${limit} из ${limit} — снимите подготовку с другой записи или измените число в блоке «${statFull}».`;
 }
@@ -7457,6 +8668,46 @@ export function matchesFeatureFilter(
 }
 
 /**
+ * Особенности с переключённым эффектом умения: эффект по идентификатору
+ * выключается или включается обратно.
+ *
+ * Снимок пассивных бонусов записи пересобирается по оставшимся включённым
+ * эффектам: числовые изменения лежат в записи отдельно от самого эффекта
+ * (считаются один раз, при получении умения), и без пересборки выключенный
+ * эффект продолжал бы двигать лист своими прибавками.
+ *
+ * @param features особенности персонажа.
+ * @param featureId идентификатор особенности, которой принадлежит эффект.
+ * @param effectId идентификатор переключаемого эффекта.
+ * @returns новый список особенностей.
+ */
+export function withToggledFeatureEffect(
+  features: CharacterFeature[],
+  featureId: string,
+  effectId: string,
+): CharacterFeature[] {
+  return features.map((feature) => {
+    if (feature.id !== featureId || !feature.activeEffects?.length) {
+      return feature;
+    }
+
+    const activeEffects = feature.activeEffects.map((effect) =>
+      effect.id === effectId
+        ? { ...effect, disabled: !effect.disabled }
+        : effect,
+    );
+
+    const bonuses = toInventoryBonusesFromEffects(activeEffects);
+
+    return {
+      ...feature,
+      activeEffects,
+      bonuses: bonuses.length ? bonuses : undefined,
+    };
+  });
+}
+
+/**
  * Идентификатор особенности персонажа по происхождению и URL особенности.
  *
  * @param origin происхождение особенности.
@@ -7556,10 +8807,10 @@ export function getTotalClassLevel(classes: CharacterClass[]): number {
  * Извлекает url черты из идентификатора особенности. Обычная черта — `feat:url`,
  * повторяемая — `feat:url:uuid` (у каждой копии свой суффикс). Url черты не
  * содержит двоеточий, поэтому берём сегмент между первым и вторым `:`.
- * Черты, выданные классовым умением, лежат под классовым идентификатором
- * (`class:{featureKey}:fighting-style:{url}`, `class:{featureKey}:{level}:ability-improvement:{url}`)
- * — иначе их копии не удалялись бы вместе с умением, — поэтому url берётся из
- * хвоста после служебного сегмента.
+ * Черты, выданные умением записи, лежат под идентификатором самой записи
+ * (`class:{featureKey}:fighting-style:{url}`, `class:{featureKey}:{level}:ability-improvement:{url}`,
+ * `species:{featureUrl}:feat:{url}`) — иначе их копии не удалялись бы вместе с
+ * умением, — поэтому url берётся из хвоста после служебного сегмента.
  *
  * @param featureId идентификатор особенности.
  * @returns url черты или null, если особенность — не черта.
@@ -7590,15 +8841,22 @@ export function getFeatUrlFromFeatureId(featureId: string): string | null {
  * Сборка особенностей персонажа из деталей вида и подвида. Выбор игрока
  * подставляется по идентификатору особенности (`origin:url`).
  *
+ * Модификаторы и счётчики умения кладутся в запись снимком, как у черты, — но
+ * только у умений, уже открытых по уровню: «Драконий полёт» с пятого уровня не
+ * должен давать скорость полёта на первом. Владения ведутся тем же правилом
+ * (см. `collectSpeciesProficiencies`).
+ *
  * @param species деталь вида.
  * @param lineage деталь подвида; null — подвида нет.
  * @param choices выборы игрока по идентификаторам особенностей.
+ * @param characterLevel уровень персонажа — по нему открываются умения.
  * @returns особенности персонажа для вкладки «Особенности».
  */
 export function buildCharacterFeatures(
   species: SpeciesSummary,
   lineage: SpeciesSummary | null,
   choices: Record<string, string>,
+  characterLevel: number,
 ): CharacterFeature[] {
   const toFeatures = (
     summary: SpeciesSummary,
@@ -7608,6 +8866,7 @@ export function buildCharacterFeatures(
       const id = getCharacterFeatureId(origin, feature.url);
 
       const choice = choices[id]?.trim();
+      const isUnlocked = (feature.level ?? 1) <= characterLevel;
 
       return {
         id,
@@ -7617,13 +8876,122 @@ export function buildCharacterFeatures(
         originName: summary.name,
         level: null,
         choice: choice || null,
+        // Пассивные прибавки считаются один раз, при выборе вида, — наравне с
+        // бонусами надетого снаряжения; условные проверяются по самому эффекту
+        // каждый раз заново, поэтому эффекты кладутся рядом, а не вместо
+        bonuses: toInventoryBonusesFromEffects(feature.activeEffects),
+        activeEffects: feature.activeEffects.length
+          ? [...feature.activeEffects]
+          : undefined,
+        // Список открывается не раньше самого умения: «с 3 уровня» у умения
+        // относится и к его заклинаниям
+        spellList: withSpellListMinimumLevel(feature.spellList, feature.level),
+        ...withSpeciesMechanicsSnapshot(
+          isUnlocked ? feature.modifiers : null,
+          isUnlocked ? feature.counters : [],
+        ),
       };
     });
 
   return [
+    ...buildSpeciesOwnEffectFeature(species),
     ...toFeatures(species, 'species'),
+    ...(lineage ? buildSpeciesOwnEffectFeature(lineage, 'lineage') : []),
     ...(lineage ? toFeatures(lineage, 'lineage') : []),
   ];
+}
+
+/**
+ * Снимок механики для записи листа: поля пишутся, только когда есть что
+ * писать, — запись без модификаторов и ресурсов остаётся такой же, какой была
+ * до их появления, и снятие вида её не тронет.
+ *
+ * @param modifiers постоянные модификаторы; null — нет.
+ * @param counters ресурсы со счётчиком; пусто — нет.
+ * @returns поля снимка для записи особенности.
+ */
+function withSpeciesMechanicsSnapshot(
+  modifiers: CharacterFeatureModifiers | null,
+  counters: FeatCounter[],
+): Pick<CharacterFeature, 'modifiers' | 'counters'> {
+  return {
+    ...(modifiers ? { modifiers } : {}),
+    ...(counters.length ? { counters: [...counters] } : {}),
+  };
+}
+
+/**
+ * Запись листа под дары самой записи вида или происхождения: эффекты,
+ * постоянные модификаторы и счётчики ресурсов.
+ *
+ * Отдельной записью, а не приписыванием к первому умению: эти дары даёт выбор
+ * вида целиком, и у происхождений умений не бывает вовсе — приписать их было бы
+ * некуда. Записи нет, когда давать нечего: пустая строка в списке особенностей
+ * была бы шумом.
+ *
+ * @param summary деталь вида или происхождения.
+ * @param origin происхождение записи; по умолчанию вид.
+ * @returns одна запись листа либо пустой список.
+ */
+function buildSpeciesOwnEffectFeature(
+  summary: SpeciesSummary,
+  origin: FeatureOrigin = 'species',
+): CharacterFeature[] {
+  if (
+    summary.activeEffects.length === 0
+    && !summary.modifiers
+    && summary.counters.length === 0
+    && !summary.spellList
+  ) {
+    return [];
+  }
+
+  return [
+    {
+      id: getCharacterFeatureId(origin, `${summary.url}:effects`),
+      name: summary.name,
+      description: [],
+      origin,
+      originName: summary.name,
+      level: null,
+      choice: null,
+      bonuses: toInventoryBonusesFromEffects(summary.activeEffects),
+      activeEffects: summary.activeEffects.length
+        ? [...summary.activeEffects]
+        : undefined,
+      spellList: summary.spellList ?? undefined,
+      ...withSpeciesMechanicsSnapshot(summary.modifiers, summary.counters),
+    },
+  ];
+}
+
+/**
+ * Расширение списка с нижней границей уровня: заклинание без своего уровня
+ * открывается вместе с умением, а не раньше него.
+ *
+ * @param spellList расширение списка умения; null — его нет.
+ * @param featureLevel уровень, с которого действует умение; null — с первого.
+ * @returns снимок расширения; undefined — записывать нечего.
+ */
+function withSpellListMinimumLevel(
+  spellList: CharacterFeatureSpellList | null,
+  featureLevel: number | null,
+): CharacterFeatureSpellList | undefined {
+  if (!spellList) {
+    return undefined;
+  }
+
+  if (!featureLevel || featureLevel <= 1) {
+    return spellList;
+  }
+
+  return {
+    ...spellList,
+    spells: spellList.spells.map((spell) => ({
+      ...spell,
+      requiredLevel: Math.max(spell.requiredLevel ?? 1, featureLevel),
+    })),
+  };
 }
 
 /**
@@ -7714,19 +9082,19 @@ export function buildFeatFeature(
   // на листе само по себе, и искать по нему черту, чтобы посчитать его атаку,
   // лист не должен.
   //
-  // Выбранные игроком заклинания и заклинания списка лежат там же, где
-  // выдаваемые чертой: все они приходят от одной черты, ею же названной
-  // характеристикой и считаются.
+  // Выбранные игроком заклинания лежат там же, где выдаваемые чертой: все они
+  // приходят от одной черты, ею же названной характеристикой и считаются.
+  // Расширение списка сюда не идёт: это доступность, а не знание — оно лежит
+  // отдельным снимком и показывается в окне добавления заклинаний.
+  //
+  // Заклинание, у которого характеристика уже своя, её и оставляет: её назвала
+  // группа выдачи, а группа старше записи — ради того она и заводится, чтобы
+  // один набор заклинаний считался не так, как другой.
   const featureSpells = uniqBy(
-    [
-      ...(summary.spells ?? []),
-      ...spells,
-      // Заклинания списка идут последними: то же заклинание, выданное чертой,
-      // остаётся выданным — оно готово всегда, а из списка его пришлось бы
-      // готовить.
-      ...(summary.spellListSpells ?? []),
-    ].map((spell) =>
-      spellcastingAbility ? { ...spell, spellcastingAbility } : spell,
+    [...(summary.spells ?? []), ...spells].map((spell) =>
+      spellcastingAbility && !spell.spellcastingAbility
+        ? { ...spell, spellcastingAbility }
+        : spell,
     ),
     (spell) => spell.url,
   );
@@ -7746,6 +9114,10 @@ export function buildFeatFeature(
     // Снимок пассивных бонусов из активных эффектов черты. Черта без них
     // пишется без поля — такая запись лист не двигает, как и раньше.
     bonuses: featureBonuses.length ? featureBonuses : undefined,
+    // Эффекты остаются и целиком: условная прибавка бонусом не выражается.
+    activeEffects: summary.activeEffects.length
+      ? [...summary.activeEffects]
+      : undefined,
     proficiencies: withChosenProficiencies(
       summary.proficiencies,
       proficiencies,
@@ -7753,6 +9125,8 @@ export function buildFeatFeature(
     // Копия списка: подготовку игрок снимает прямо в записи, и делить её с
     // деталью справочника, из которой собрана черта, нельзя.
     spells: featureSpells.length ? featureSpells : null,
+    // Снимок расширения списка; черта без него пишется без поля
+    spellList: summary.spellList ?? undefined,
     // Пустой набор не пишется: у черты без выборов запись остаётся такой же,
     // какой была до их появления.
     choiceAnswers: Object.keys(choiceAnswers).length
@@ -7787,6 +9161,7 @@ function withChosenProficiencies(
     || chosen.languages?.length
     || chosen.tools?.length
     || chosen.weaponMasteries?.length
+    || chosen.masteryProperties?.length
     || chosen.savingThrows?.length,
   );
 
@@ -7802,6 +9177,7 @@ function withChosenProficiencies(
     skills: [],
     expertiseSkills: [],
     weaponMasteries: [],
+    masteryProperties: [],
     savingThrows: [],
   };
 
@@ -7812,6 +9188,10 @@ function withChosenProficiencies(
     languages: union(base.languages, chosen.languages ?? []),
     tools: dedupeToolProficiencies([...base.tools, ...(chosen.tools ?? [])]),
     weaponMasteries: union(base.weaponMasteries, chosen.weaponMasteries ?? []),
+    masteryProperties: union(
+      base.masteryProperties,
+      chosen.masteryProperties ?? [],
+    ),
     savingThrows: union(base.savingThrows, chosen.savingThrows ?? []),
   };
 }
@@ -7840,6 +9220,7 @@ export function collectChosenProficiencies(
   const languages: string[] = [];
   const tools: CharacterToolProficiency[] = [];
   const weaponMasteries: string[] = [];
+  const masteryProperties: string[] = [];
   const savingThrows: AbilityKey[] = [];
 
   for (const choice of choices) {
@@ -7851,6 +9232,21 @@ export function collectChosenProficiencies(
 
     if (choice.kind === 'weapon-mastery') {
       weaponMasteries.push(...values);
+
+      continue;
+    }
+
+    if (choice.kind === 'mastery-property') {
+      masteryProperties.push(...values);
+
+      // Приём выбирают, а владеют им через оружие: назвав «Замедление», воин
+      // получает мастерство всем оружием с этим приёмом. Без этого выбор
+      // оставался бы строчкой в списке и ничего не отмечал.
+      weaponMasteries.push(
+        ...values.flatMap(
+          (name) => WEAPON_NAMES_BY_MASTERY_PROPERTY_NAME[name] ?? [],
+        ),
+      );
 
       continue;
     }
@@ -7905,6 +9301,7 @@ export function collectChosenProficiencies(
     languages,
     tools,
     weaponMasteries,
+    masteryProperties,
     savingThrows,
   };
 }
@@ -7922,6 +9319,7 @@ function collectGrantedProficiencies(grants: ProficiencyGrant[]): {
   tools: Set<string>;
   languages: Set<string>;
   weaponMasteries: Set<string>;
+  masteryProperties: Set<string>;
 } {
   return {
     armor: new Set(grants.flatMap((grant) => grant.armor)),
@@ -7935,6 +9333,10 @@ function collectGrantedProficiencies(grants: ProficiencyGrant[]): {
     // Поля нет у записей журнала, снятых до появления мастерства в выдачах.
     weaponMasteries: new Set(
       grants.flatMap((grant) => grant.weaponMasteries ?? []),
+    ),
+    // Поля нет у записей журнала, снятых до появления приёмов без оружия.
+    masteryProperties: new Set(
+      grants.flatMap((grant) => grant.masteryProperties ?? []),
     ),
   };
 }
@@ -7991,6 +9393,11 @@ export function applyProficiencyGrants(
       proficiencies.weaponMasteries,
       before.weaponMasteries,
       after.weaponMasteries,
+    ),
+    masteryProperties: applyGrantedNames(
+      proficiencies.masteryProperties,
+      before.masteryProperties,
+      after.masteryProperties,
     ),
   };
 }
@@ -8056,7 +9463,7 @@ function isRevoked(
  * @param next журнал выдач после изменения.
  * @returns навыки с уровнями, согласованными с журналом.
  */
-function applyGrantedSkills(
+export function applyGrantedSkills(
   skills: CharacterSkill[],
   previous: ProficiencyGrant[],
   next: ProficiencyGrant[],
@@ -8158,6 +9565,7 @@ function hasGrantedProficiencies(granted: GrantedProficiencies): boolean {
     || granted.skills.length
     || granted.expertiseSkills.length
     || granted.weaponMasteries.length
+    || granted.masteryProperties.length
     || granted.savingThrows.length,
   );
 }
@@ -8290,17 +9698,18 @@ function toVisionDistance(range: number, unit: SpeedUnit): number {
 }
 
 /**
- * Чувства, выданные особенностями листа: от какой записи и на какую дистанцию.
+ * Чувства, выданные листу: от какой записи и на какую дистанцию. Считаются и
+ * снимки механики особенностей, и активные эффекты записей.
  *
  * Нужны там, где одного итогового числа мало: в редакторе зрения игрок правит
  * своё значение и должен видеть, что дистанция на листе больше не потому, что
- * поле врёт, а потому что чувство пришло от черты.
+ * поле врёт, а потому что чувство пришло от черты или надетого предмета.
  *
  * @param character персонаж.
  * @returns выданные чувства в порядке записей особенностей.
  */
 export function getVisionGrants(character: Character): VisionGrant[] {
-  return character.features.flatMap((feature) =>
+  const featureGrants = character.features.flatMap((feature) =>
     (feature.modifiers?.senses ?? []).flatMap((sense) => {
       const key = sense.type ? VISION_KEY_BY_FEAT_SENSE[sense.type] : undefined;
 
@@ -8316,6 +9725,109 @@ export function getVisionGrants(character: Character): VisionGrant[] {
         },
       ];
     }),
+  );
+
+  return [...featureGrants, ...getEffectVisionGrants(character)];
+}
+
+/**
+ * Иммунитеты к состояниям, выданные активными эффектами.
+ *
+ * У эффекта для них своё поле, а не флаг: им и пользуются мастерская («Кольцо
+ * свободы действий») и шаблоны состояний (Окаменевший даёт иммунитет к
+ * Отравлению). Ключи словаря эффектов строчные, а подписи листа лежат по кодам
+ * справочника — отсюда приведение к верхнему регистру.
+ *
+ * @param character персонаж.
+ * @returns подписи состояний; пустой список — таких эффектов нет.
+ */
+export function getEffectConditionImmunities(character: Character): string[] {
+  return uniq(
+    collectAppliedEffects(character)
+      .filter(isSelfAppliedEffect)
+      .flatMap((effect) => effect.conditionImmunities ?? [])
+      .flatMap((key) => {
+        const label = CONDITION_LABELS[key.toUpperCase()];
+
+        return label ? [label] : [];
+      }),
+  );
+}
+
+/**
+ * Ключ чувства в словаре эффектов → тип зрения листа. Телепатии в зрении листа
+ * нет: она не дистанция обзора, а способ общения, и показывать её в блоке
+ * зрения было бы неверно.
+ */
+const VISION_KEY_BY_EFFECT_SENSE: Record<string, VisionKey> = {
+  'sense.darkvision': 'darkvision',
+  'sense.blindsight': 'blindsight',
+  'sense.tremorsense': 'tremorsense',
+  'sense.truesight': 'truesight',
+};
+
+/**
+ * Чувство, выданное одним изменением эффекта.
+ *
+ * @param context значения листа, нужные для разбора.
+ * @param change изменение эффекта.
+ * @param sourceName подпись записи-носителя.
+ * @returns выданное чувство; null — изменение не про чувство листа либо его
+ *   условие сейчас не выполнено.
+ */
+function toEffectVisionGrant(
+  context: EffectComputeContext,
+  change: EffectChange,
+  sourceName: string,
+): VisionGrant | null {
+  const key = VISION_KEY_BY_EFFECT_SENSE[change.key];
+
+  if (
+    !key
+    || (change.condition
+      && !matchesArmorCondition(change.condition, context.armor))
+  ) {
+    return null;
+  }
+
+  const range = evaluateEffectFormula(context.character, change.value);
+
+  if (range === null || range <= 0) {
+    return null;
+  }
+
+  return {
+    key,
+    source: sourceName,
+    distance: toVisionDistance(range, context.character.vision.unit),
+  };
+}
+
+/**
+ * Чувства, выданные активными эффектами: очки ночного видения дают тёмное
+ * зрение, пока надеты, — у магического предмета это единственный способ его
+ * записать, своего поля чувств в его механике нет.
+ *
+ * Режим изменения здесь не смотрят: чувство задаётся дистанцией, а лист берёт
+ * большее из своего и выданного — тем же правилом, что и у черт.
+ *
+ * @param character персонаж.
+ * @returns выданные чувства в порядке записей-носителей.
+ */
+function getEffectVisionGrants(character: Character): VisionGrant[] {
+  const context: EffectComputeContext = {
+    character,
+    armor: getSheetArmorState(character),
+  };
+
+  return getEffectCarriers(character).flatMap(({ source, effects }) =>
+    effects
+      .filter(isSelfAppliedEffect)
+      .flatMap((effect) =>
+        effect.changes
+          .map((change) => toEffectVisionGrant(context, change, source.name))
+          .filter((grant) => grant !== null),
+      ),
   );
 }
 
@@ -9524,6 +11036,24 @@ export function toDescriptionNodes(node: RenderNode): FeatureDescriptionNode[] {
 }
 
 /**
+ * Ответы игрока на выборы умений класса — то, чего у самой записи справочника
+ * нет и быть не может.
+ *
+ * Ходит отдельным параметром, а не полем сводки: сводка приходит из каталога и
+ * одинакова у всех персонажей, а ответы свои у каждого.
+ */
+export interface ClassFeatureAnswers {
+  /** Ответы по id выбора; пусто — игрок ещё не отвечал. */
+  answers: Record<string, string[]>;
+
+  /**
+   * Навыки, которыми персонаж уже владеет. Нужны выбору, который превращается
+   * в компетентность, если владение уже есть.
+   */
+  proficientSkillNames: string[];
+}
+
+/**
  * Сборка классовых особенностей персонажа из деталей класса и подкласса.
  * Берутся особенности с уровнем не выше уровня персонажа: базовый класс даёт
  * особенности без пометки подкласса, подкласс — с пометкой. Дубли по ключу
@@ -9541,13 +11071,69 @@ export function buildClassFeatures(
   subclass: ClassSummary | null,
   level: number,
   choices: Record<string, string>,
+  answers?: ClassFeatureAnswers,
 ): CharacterFeature[] {
   return collectClassFeatures(
     base,
     subclass,
     (featureLevel) => featureLevel <= level,
     choices,
+    answers,
   );
+}
+
+/**
+ * Примета выборов заклинаний записи: их идентификаторы одной строкой.
+ *
+ * Выбор заклинания появляется вместе со взятым вариантом умения («Маг»
+ * первобытного порядка друида), поэтому пул грузится по его появлению, а не
+ * один раз на загрузке записи. Наблюдать за самими выборами нечем: список
+ * пересобирается на каждый ответ игрока, и вотчер по нему срабатывал бы
+ * вхолостую — строка же меняется только вместе с набором выборов.
+ *
+ * @param choices выборы, которые мастер спрашивает сейчас.
+ * @returns строка-примета; пусто — выборов заклинаний нет.
+ */
+export function getSpellChoicesKey(choices: ClassChoice[]): string {
+  return choices
+    .filter((choice) => choice.kind === 'spell')
+    .map((choice) => choice.id)
+    .join('|');
+}
+
+/**
+ * Записи умений с заклинаниями, которые игрок выбрал в их выборах.
+ *
+ * Заклинание кладётся на саму запись умения, а не в общий список листа:
+ * дополнительный заговор «Мага» персонаж знает, пока у него есть первобытный
+ * порядок друида, — снятие класса забирает заговор вместе с умением, как и
+ * выданное умением заклинание. Выбранное заклинание персонаж знает, но готовит
+ * сам: пометку ставит игрок, и она занимает место среди подготовленных
+ * (см. `takesPreparationSpace`).
+ *
+ * @param features записи умений листа.
+ * @param spellsByFeatureId выбранные заклинания по идентификатору умения.
+ * @returns записи умений с добавленными заклинаниями.
+ */
+export function withChosenFeatureSpells(
+  features: CharacterFeature[],
+  spellsByFeatureId: Record<string, CharacterSpell[]>,
+): CharacterFeature[] {
+  return features.map((feature) => {
+    const granted = feature.spells ?? [];
+
+    const known = new Set(granted.map((spell) => spell.url));
+
+    // Заклинание, которое умение и так выдаёт, вторым разом не заводится:
+    // выбрать его игрок может, а записей в списке всё равно одна
+    const added = (spellsByFeatureId[feature.id] ?? []).filter(
+      (spell) => !known.has(spell.url),
+    );
+
+    return added.length
+      ? { ...feature, spells: [...granted, ...added] }
+      : feature;
+  });
 }
 
 /**
@@ -9566,13 +11152,38 @@ export function buildLevelClassFeatures(
   subclass: ClassSummary | null,
   level: number,
   choices: Record<string, string>,
+  answers?: ClassFeatureAnswers,
 ): CharacterFeature[] {
   return collectClassFeatures(
     base,
     subclass,
     (featureLevel) => featureLevel === level,
     choices,
+    answers,
+    // Умение пересобирается и на уровне, где открывается ещё одна ступень его
+    // выбора: воззвания колдун берёт умением первого уровня, а на втором
+    // выбирает ещё два — без пересборки ответу этого уровня некуда лечь.
+    // Мастер повышения уровня показывает такое умение по тому же правилу
+    // ({@link getLevelFeatureRows}).
+    (summary) =>
+      summary.level === level || hasFeatureChoiceAtLevel(summary, level),
   );
+}
+
+/**
+ * Открывается ли на этом уровне ступень выбора внутри умения: компетентность
+ * плут получает на первом уровне и на шестом, воззвания колдуна прибывают
+ * каждые несколько уровней, а умение в книге одно.
+ *
+ * @param summary умение класса или подкласса.
+ * @param level уровень, который берут сейчас.
+ * @returns `true` — на этом уровне умение о чём-то спрашивает.
+ */
+export function hasFeatureChoiceAtLevel(
+  summary: ClassFeatureSummary,
+  level: number,
+): boolean {
+  return summary.choices.some((choice) => choice.requiredLevel === level);
 }
 
 /**
@@ -9590,10 +11201,50 @@ function toCharacterFeature(
   summary: ClassFeatureSummary,
   originName: string,
   choices: Record<string, string>,
+  answers?: ClassFeatureAnswers,
 ): CharacterFeature {
   const id = getClassFeatureId(classUrl, summary.key);
 
-  const choice = choices[id]?.trim();
+  // Ответ на выбор варианта показывается строкой умения: ни во владения, ни в
+  // заклинания вариант не попадает, и без неё взятое воззвание нигде бы не
+  // значилось. Свой текст мастера важнее — его игрок вписал руками
+  const choice =
+    choices[id]?.trim() || getOptionChoiceText(summary.choices, answers);
+
+  // Вопросы невыбранных вариантов умения к делу не относятся: пока манёвр не
+  // взят, его «выбери навык» ничего не даёт, а оставшийся от прежнего выбора
+  // ответ выдал бы владение от варианта, от которого игрок уже отказался
+  const activeChoices = answers
+    ? withoutUnchosenOptionChoices(
+        summary.choices,
+        getChosenFeatureOptionKeys(summary.choices, answers.answers),
+      )
+    : summary.choices;
+
+  // Владения из ответов игрока: инструменты, языки, приёмы и спасброски лист
+  // кладёт в свои списки, а не в текст умения. Разбор общий с чертой — вид
+  // выбора у них один и тот же
+  const chosen = answers
+    ? collectChosenProficiencies(
+        activeChoices,
+        answers.answers,
+        answers.proficientSkillNames,
+      )
+    : {};
+
+  // Ответы всех выборов, включая вопросы взятых вариантов: по ним умение,
+  // пересобранное на следующем уровне, возвращает выбранное раньше
+  const choiceAnswers = answers
+    ? pickChoiceAnswers(activeChoices, answers.answers)
+    : {};
+
+  // Заклинание умения считается от характеристики умения, если та задана:
+  // «Метка охотника» следопыта — от Мудрости, даже если класс колдует иначе
+  const featureSpells = (summary.spells ?? []).map((spell) =>
+    summary.spellcastingAbility
+      ? { ...spell, spellcastingAbility: summary.spellcastingAbility }
+      : spell,
+  );
 
   return {
     id,
@@ -9603,7 +11254,308 @@ function toCharacterFeature(
     originName,
     level: summary.level,
     choice: choice || null,
+    // Пассивные прибавки считаются один раз, при получении умения, — наравне с
+    // бонусами надетого снаряжения; условные проверяются по самому эффекту
+    // каждый раз заново, поэтому эффекты кладутся рядом, а не вместо
+    bonuses: toInventoryBonusesFromEffects(summary.activeEffects),
+    activeEffects: summary.activeEffects.length
+      ? [...summary.activeEffects]
+      : undefined,
+    // Снимок владений: по нему журнал выдач ведёт запись умения, а снятие
+    // класса забирает ровно выданное — так же, как у черты
+    proficiencies: withChosenProficiencies(summary.proficiencies, chosen),
+    spells: featureSpells.length ? featureSpells : null,
+    spellList: summary.spellList ?? undefined,
+    counters: summary.counters.length ? [...summary.counters] : undefined,
+    choiceAnswers: Object.keys(choiceAnswers).length
+      ? choiceAnswers
+      : undefined,
   };
+}
+
+/**
+ * Выбранные варианты умения одной строкой: воззвания, манёвры, метамагия.
+ *
+ * Повторяемый вариант берут на нескольких ступенях, и в строке он идёт один раз
+ * с кратностью («Инфузия ×2»): дважды подряд то же название читалось бы как
+ * ошибка, а без кратности второй выбор пропал бы из строки вовсе.
+ *
+ * @param featureChoices выборы умения.
+ * @param answers ответы игрока; не заданы — строки нет.
+ * @returns строка выбранных вариантов; пусто — вариантов не выбирали.
+ */
+function getOptionChoiceText(
+  featureChoices: ClassChoice[],
+  answers: ClassFeatureAnswers | undefined,
+): string {
+  if (!answers) {
+    return '';
+  }
+
+  const values = featureChoices.flatMap((choice) =>
+    choice.kind === 'option' ? (answers.answers[choice.id] ?? []) : [],
+  );
+
+  const optionCounts = new Map<string, number>();
+
+  for (const value of values) {
+    optionCounts.set(value, (optionCounts.get(value) ?? 0) + 1);
+  }
+
+  return [...optionCounts.entries()]
+    .map(([value, count]) =>
+      count > 1 ? `${value} ${OPTION_CHOICE_REPEAT_PREFIX}${count}` : value,
+    )
+    .join(', ');
+}
+
+/**
+ * Ключи вариантов умения, которые игрок выбрал.
+ *
+ * Пикер отдаёт подпись варианта, а ключ нужен всем, кто ищет по нему дары: их
+ * перевод лежит в самом выборе (`optionValues`).
+ *
+ * @param featureChoices выборы умения.
+ * @param answers ответы игрока по идентификаторам выборов.
+ * @returns ключи выбранных вариантов.
+ */
+export function getChosenFeatureOptionKeys(
+  featureChoices: ClassChoice[],
+  answers: Record<string, string[]>,
+): Set<string> {
+  const keys = new Set<string>();
+
+  for (const choice of featureChoices) {
+    if (choice.kind !== 'option') {
+      continue;
+    }
+
+    for (const value of answers[choice.id] ?? []) {
+      keys.add(choice.optionValues?.[value] ?? value);
+    }
+  }
+
+  return keys;
+}
+
+/**
+ * Уровни, на которых игрок взял варианты умения: ключ варианта — уровни его
+ * ступеней выбора.
+ *
+ * У ступени уровень вписан в идентификатор (`…:options-5`), а ступень без
+ * уровня спрашивается на уровне самого умения. Повторяемый вариант берут не
+ * один раз, поэтому уровней список: «Уроки первородных» колдун берёт и на
+ * втором уровне, и на девятом, и черту происхождения даёт каждое взятие.
+ *
+ * Ключи всех уровней сразу ({@link getChosenFeatureOptionKeys}) годятся там,
+ * где вопрос задаётся один раз, — мастер повышения спрашивает поуровнево, и
+ * взятое раньше воззвание переспрашивалось бы на каждой следующей прибавке.
+ *
+ * @param summary умение класса или подкласса.
+ * @param answers ответы игрока по идентификаторам выборов.
+ * @returns уровни взятия по ключам вариантов.
+ */
+function getOptionTakenLevels(
+  summary: ClassFeatureSummary,
+  answers: Record<string, string[]>,
+): Map<string, number[]> {
+  const takenLevels = new Map<string, number[]>();
+
+  for (const choice of summary.choices) {
+    if (choice.kind !== 'option') {
+      continue;
+    }
+
+    const level = choice.requiredLevel ?? summary.level;
+
+    for (const key of getChosenFeatureOptionKeys([choice], answers)) {
+      takenLevels.set(key, [...(takenLevels.get(key) ?? []), level]);
+    }
+  }
+
+  return takenLevels;
+}
+
+/**
+ * Ключи вариантов умения, взятых ровно на этом уровне.
+ *
+ * @param takenLevels уровни взятия по ключам вариантов.
+ * @param level уровень, который берут сейчас.
+ * @returns ключи вариантов, взятых на этом уровне.
+ */
+function getLevelChosenOptionKeys(
+  takenLevels: ReadonlyMap<string, number[]>,
+  level: number,
+): Set<string> {
+  return new Set(
+    [...takenLevels]
+      .filter(([, levels]) => levels.includes(level))
+      .map(([key]) => key),
+  );
+}
+
+/**
+ * Выборы умения без вопросов невыбранных вариантов.
+ *
+ * У варианта своя механика, и «выбери навык» манёвра спрашивают, только когда
+ * сам манёвр взят: иначе мастер задал бы вопросы всех двух десятков вариантов
+ * сразу, а лист применил бы ответ варианта, от которого игрок уже отказался.
+ *
+ * @param choices выборы умения.
+ * @param chosenOptionKeys ключи выбранных вариантов.
+ * @returns выборы самого умения и выбранных вариантов.
+ */
+function withoutUnchosenOptionChoices(
+  choices: ClassChoice[],
+  chosenOptionKeys: ReadonlySet<string>,
+): ClassChoice[] {
+  return choices.filter(
+    (choice) => !choice.optionKey || chosenOptionKeys.has(choice.optionKey),
+  );
+}
+
+/**
+ * Черты, которые выдают выбранные варианты умения.
+ *
+ * Мастер класса и мастер повышения уровня добавляют их так же, как черты самого
+ * умения: запись черты заводится на листе своей строкой.
+ *
+ * @param summary умение класса или подкласса.
+ * @param chosenOptionKeys ключи выбранных вариантов.
+ * @returns url черт в порядке записи класса.
+ */
+export function getChosenOptionFeatUrls(
+  summary: ClassFeatureSummary,
+  chosenOptionKeys: ReadonlySet<string>,
+): string[] {
+  return summary.optionGrants
+    .filter((grants) => chosenOptionKeys.has(grants.key))
+    .flatMap((grants) => grants.grantedFeatUrls);
+}
+
+/**
+ * Записи листа под выбранные варианты умения: воззвание колдуна, метамагия
+ * чародея, манёвр мастера боевых искусств.
+ *
+ * Отдельной записью, а не одной строкой выбора у самого умения: у варианта своё
+ * описание с правилами, и в списке особенностей игрок читает именно его. Запись
+ * лежит под идентификатором умения, поэтому снятие класса забирает и её.
+ *
+ * @param classUrl URL класса, который даёт умение.
+ * @param summary умение класса или подкласса.
+ * @param originName название источника — класса или подкласса.
+ * @param answers ответы игрока; не заданы — вариантов не выбирали.
+ * @returns записи выбранных вариантов; пусто — выбора не было.
+ */
+function buildFeatureOptionFeatures(
+  classUrl: string,
+  summary: ClassFeatureSummary,
+  originName: string,
+  answers: ClassFeatureAnswers | undefined,
+): CharacterFeature[] {
+  if (!answers) {
+    return [];
+  }
+
+  // Один и тот же вариант на разных ступенях выбора даёт одну запись
+  const chosen = new Map<string, FeatureOptionEntry>();
+
+  for (const choice of summary.choices) {
+    if (choice.kind !== 'option') {
+      continue;
+    }
+
+    for (const value of answers.answers[choice.id] ?? []) {
+      const detail = choice.optionDetails?.find(
+        (entry) => entry.name === value,
+      );
+
+      // Вариант, которого нет в записи класса, записью не заводится: кроме
+      // названия, о нём нечего сказать, а оно и так стоит строкой у умения
+      if (detail && !chosen.has(detail.key)) {
+        chosen.set(detail.key, detail);
+      }
+    }
+  }
+
+  const featureId = getClassFeatureId(classUrl, summary.key);
+
+  // Дары варианта по его ключу: владения, ресурсы, заклинания и эффекты ложатся
+  // на запись самого варианта, а не умения, — снятие класса забирает обе, но в
+  // списке особенностей игрок видит, что именно дало владение
+  const grantsByKey = new Map(
+    summary.optionGrants.map((grants) => [grants.key, grants]),
+  );
+
+  return [...chosen.values()].map((detail) => {
+    const grants = grantsByKey.get(detail.key);
+
+    // Заклинание варианта считается от его характеристики, если та задана, — как
+    // у умения и у черты
+    const spells = (grants?.spells ?? []).map((spell) =>
+      grants?.spellcastingAbility
+        ? { ...spell, spellcastingAbility: grants.spellcastingAbility }
+        : spell,
+    );
+
+    const activeEffects = grants?.activeEffects ?? [];
+
+    return {
+      id: `${featureId}:${FEATURE_OPTION_ID_SEGMENT}:${detail.key}`,
+      // Название умения впереди варианта: в списке особенностей «Договор
+      // гримуара» сам по себе не говорит, откуда он взялся, а рядом с другими
+      // записями класса теряется совсем
+      name: `${summary.name}: ${detail.name}`,
+      description: toDescriptionNodes(detail.description),
+      origin: 'class',
+      originName,
+      // Уровень варианта, а не умения: снижение уровня забирает воззвание,
+      // которое стало доступно только на снимаемом уровне
+      level: detail.requiredClassLevel || summary.level,
+      choice: null,
+      // Пассивные прибавки считаются один раз, при взятии варианта, — наравне с
+      // бонусами надетого снаряжения; условные проверяются по самому эффекту
+      bonuses: toInventoryBonusesFromEffects(activeEffects),
+      activeEffects: activeEffects.length ? [...activeEffects] : undefined,
+      proficiencies: grants?.proficiencies ?? null,
+      spells: spells.length ? spells : null,
+      spellList: grants?.spellList ?? undefined,
+      counters: grants?.counters.length ? [...grants.counters] : undefined,
+    };
+  });
+}
+
+/**
+ * Ответы игрока на выборы одной записи — снимком у самой записи.
+ *
+ * Ключом служит ключ выбора, а не его полный id: id несёт адрес записи, и на
+ * самой записи он был бы повторён в каждом ключе.
+ *
+ * @param featureChoices выборы записи.
+ * @param answers ответы игрока по id выбора.
+ * @returns ответы по ключу выбора; пусто — игрок не отвечал.
+ */
+function pickChoiceAnswers(
+  featureChoices: ClassChoice[],
+  answers: Record<string, string[]>,
+): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
+
+  for (const choice of featureChoices) {
+    const values = answers[choice.id];
+
+    if (!values?.length) {
+      continue;
+    }
+
+    // Ключ выбора — хвост id после адреса записи: у выбора из механики id
+    // собран как `<адрес записи>:<ключ>`
+    const key = choice.id.slice(choice.id.lastIndexOf(':') + 1);
+
+    result[key] = [...values];
+  }
+
+  return result;
 }
 
 /**
@@ -9622,6 +11574,8 @@ function collectClassFeatures(
   subclass: ClassSummary | null,
   matchesLevel: (featureLevel: number) => boolean,
   choices: Record<string, string>,
+  answers?: ClassFeatureAnswers,
+  matchesFeature?: (summary: ClassFeatureSummary) => boolean,
 ): CharacterFeature[] {
   const seenKeys = new Set<string>();
   const features: CharacterFeature[] = [];
@@ -9634,15 +11588,24 @@ function collectClassFeatures(
     for (const summary of summaries) {
       if (
         summary.isSubclass !== onlySubclass
-        || !matchesLevel(summary.level)
+        || !(matchesFeature
+          ? matchesFeature(summary)
+          : matchesLevel(summary.level))
         || seenKeys.has(summary.key)
+        // Умение-указатель («Подкласс», «Улучшение характеристик») нужно
+        // таблице прогрессии, а записью на листе было бы шумом
+        || summary.informationalOnly
       ) {
         continue;
       }
 
       seenKeys.add(summary.key);
 
-      features.push(toCharacterFeature(base.url, summary, originName, choices));
+      features.push(
+        toCharacterFeature(base.url, summary, originName, choices, answers),
+        // Выбранные варианты идут отдельными записями следом за своим умением
+        ...buildFeatureOptionFeatures(base.url, summary, originName, answers),
+      );
     }
   };
 
@@ -9652,7 +11615,105 @@ function collectClassFeatures(
     append(subclass.features, subclass.name, true);
   }
 
-  return features;
+  return [
+    // Эффекты и ресурсы самого класса приходят с первым же его умением: они
+    // действуют, пока класс взят, и снимаются вместе с ним, как и умения
+    ...buildClassOwnEffectFeature(base, matchesLevel),
+    ...(subclass
+      ? buildClassOwnEffectFeature(subclass, matchesLevel, base)
+      : []),
+    ...features,
+  ];
+}
+
+/**
+ * Запись листа под дары самой записи класса или подкласса: эффекты и ресурсы
+ * со счётчиком.
+ *
+ * Отдельной записью, а не приписыванием к первому умению: их даёт взятие
+ * класса целиком, и приписать их одному умению значило бы соврать об источнике.
+ * Записи нет, когда давать нечего.
+ *
+ * Появляется только на первом уровне класса: на каждом следующем она добавилась
+ * бы второй копией — идентификатор у неё один и тот же.
+ *
+ * @param summary деталь класса или подкласса.
+ * @param matchesLevel предикат уровня: по нему запись появляется ровно один раз.
+ * @param owner базовый класс, если запись собирается для подкласса: умения
+ *   подкласса лежат под адресом базового класса, и идентификатор тоже.
+ * @returns одна запись листа либо пустой список.
+ */
+function buildClassOwnEffectFeature(
+  summary: ClassSummary,
+  matchesLevel: (featureLevel: number) => boolean,
+  owner?: ClassSummary,
+): CharacterFeature[] {
+  const hasGrants =
+    summary.activeEffects.length > 0
+    || summary.counters.length > 0
+    || (summary.spells?.length ?? 0) > 0
+    || summary.spellList !== null
+    || summary.choices.length > 0;
+
+  // Запись появляется на первом уровне класса и возвращается на уровне, где у
+  // класса открывается ещё один его выбор: заклинание, выбранное там, ложится
+  // именно на неё. Без второго условия мастер повышения спросил бы игрока, а
+  // положить выбранное было бы некуда
+  const opensChoice = summary.choices.some(
+    (choice) => choice.requiredLevel && matchesLevel(choice.requiredLevel),
+  );
+
+  if (!hasGrants || !(matchesLevel(CLASS_FIRST_LEVEL) || opensChoice)) {
+    return [];
+  }
+
+  // Заклинание класса считается от характеристики класса, если та задана, — как
+  // у умения и у черты
+  const spells = (summary.spells ?? []).map((spell) =>
+    summary.spellcastingAbility
+      ? { ...spell, spellcastingAbility: summary.spellcastingAbility }
+      : spell,
+  );
+
+  return [
+    {
+      id: getClassOwnGrantsFeatureId((owner ?? summary).url, summary.url),
+      name: summary.name,
+      description: [],
+      origin: 'class',
+      originName: summary.name,
+      level: CLASS_FIRST_LEVEL,
+      choice: null,
+      bonuses: toInventoryBonusesFromEffects(summary.activeEffects),
+      activeEffects: summary.activeEffects.length
+        ? [...summary.activeEffects]
+        : undefined,
+      // Заклинания класса лежат на этой же записи: снятие класса забирает их
+      // вместе с ней, как заклинания умения — вместе с умением
+      spells: spells.length ? spells : null,
+      spellList: summary.spellList ?? undefined,
+      // Ресурсы кладутся в запись снимком, как у черты: панель ресурсов
+      // пересобирает их отсюда, а не ходит за ними в справочник
+      ...(summary.counters.length ? { counters: [...summary.counters] } : {}),
+    },
+  ];
+}
+
+/**
+ * Идентификатор записи листа под дары самой записи класса или подкласса.
+ *
+ * Своей функцией, потому что его должен знать и мастер класса: выбранные при
+ * взятии класса заклинания ложатся именно на эту запись.
+ *
+ * @param ownerUrl URL базового класса — под ним лежат и умения подкласса.
+ * @param summaryUrl URL самой записи; не задан — тот же класс.
+ * @returns идентификатор записи листа.
+ */
+export function getClassOwnGrantsFeatureId(
+  ownerUrl: string,
+  summaryUrl: string = ownerUrl,
+): string {
+  return getClassFeatureId(ownerUrl, `${summaryUrl}:effects`);
 }
 
 /**
@@ -9671,29 +11732,81 @@ export function buildSubclassFeatures(
   subclass: ClassSummary,
   level: number,
   choices: Record<string, string>,
+  answers?: ClassFeatureAnswers,
 ): CharacterFeature[] {
   return subclass.features
     .filter((summary) => summary.isSubclass && summary.level <= level)
-    .map((summary) =>
-      toCharacterFeature(classUrl, summary, subclass.name, choices),
-    );
+    .flatMap((summary) => [
+      toCharacterFeature(classUrl, summary, subclass.name, choices, answers),
+      ...buildFeatureOptionFeatures(classUrl, summary, subclass.name, answers),
+    ]);
 }
 
 /**
- * Строки карточек умений уровня для мастера повышения: к каждому умению
- * распознаётся выбор внутри описания (навык, компетентность, язык).
+ * Ответы прошлых уровней по полным идентификаторам выборов.
+ *
+ * На записи умения ответ лежит коротким ключом (`pickChoiceAnswers`), а сборке
+ * умения нужен id выбора. Пересобранное на новом уровне умение заменяет прежнюю
+ * запись целиком, поэтому без прежних ответов оно потеряло бы и выбранное на
+ * прошлых уровнях: снимок владений и строка выбора собираются из ответов.
+ *
+ * Ответы текущего мастера прежние не затирают — игрок отвечает только за новую
+ * ступень.
+ *
+ * @param answers ответы игрока в текущем мастере по id выбора.
+ * @param storedFeatures особенности, уже лежащие на листе.
+ * @param classUrl адрес класса: по нему собирается идентификатор умения.
+ * @param summaries умения класса и подкласса из справочника.
+ * @returns ответы текущего мастера, дополненные прежними.
+ */
+export function withStoredFeatureAnswers(
+  answers: Record<string, string[]>,
+  storedFeatures: CharacterFeature[],
+  classUrl: string,
+  summaries: ClassFeatureSummary[],
+): Record<string, string[]> {
+  const storedById = new Map(
+    storedFeatures.map((feature) => [feature.id, feature.choiceAnswers]),
+  );
+
+  const result = { ...answers };
+
+  for (const summary of summaries) {
+    const stored = storedById.get(getClassFeatureId(classUrl, summary.key));
+
+    if (!stored) {
+      continue;
+    }
+
+    for (const choice of summary.choices) {
+      const key = choice.id.slice(choice.id.lastIndexOf(':') + 1);
+      const values = stored[key];
+
+      if (values?.length && !result[choice.id]?.length) {
+        result[choice.id] = [...values];
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Строки карточек умений уровня для мастера повышения: у каждого умения — его
+ * выборы из справочника (навык, компетентность, язык, вариант умения).
  *
  * @param base деталь базового класса.
  * @param subclass деталь подкласса; null — подкласс не выбран.
  * @param level уровень, умения которого нужны.
- * @param skillNames имена навыков персонажа.
+ * @param answers ответы игрока: по ним умение показывает вопросы и дары
+ *   выбранных вариантов. Не заданы — вариантов ещё не выбирали.
  * @returns строки умений этого уровня.
  */
 export function getLevelFeatureRows(
   base: ClassSummary,
   subclass: ClassSummary | null,
   level: number,
-  skillNames: string[],
+  answers: Record<string, string[]> = {},
 ): ClassFeatureRow[] {
   const rows: ClassFeatureRow[] = [];
 
@@ -9709,18 +11822,45 @@ export function getLevelFeatureRows(
       const isRepeatedImprovement =
         summary.abilityImprovement && summary.scalingLevels.includes(level);
 
+      // Умение возвращается и на уровень, где открывается ещё один его выбор:
+      // компетентность плут получает на первом уровне и на шестом, а умение в
+      // книге одно — повтор описан строкой роста.
+      const hasChoiceAtLevel = hasFeatureChoiceAtLevel(summary, level);
+
       if (
         summary.isSubclass !== onlySubclass
-        || (summary.level !== level && !isRepeatedImprovement)
+        || (summary.level !== level
+          && !isRepeatedImprovement
+          && !hasChoiceAtLevel)
       ) {
         continue;
       }
 
       const baseId = getClassFeatureId(base.url, summary.key);
 
+      // Вопросы и черты взятых вариантов идут строкой их умения: выбирают
+      // вариант там же, и отдельной карточки у него нет
+      const chosenOptionKeys = getChosenFeatureOptionKeys(
+        summary.choices,
+        answers,
+      );
+
+      // Вопросы и черты варианта относятся к уровню, где вариант взяли: у
+      // мастера каждый уровень со своим набором ответов, и вопрос без уровня
+      // спрашивался бы заново на каждой ступени выбора. «Уроки первородных»
+      // колдуна так выдавали черту происхождения на каждой прибавке воззваний,
+      // а не один раз.
+      const optionTakenLevels = getOptionTakenLevels(summary, answers);
+
+      const levelChosenOptionKeys = getLevelChosenOptionKeys(
+        optionTakenLevels,
+        level,
+      );
+
       // Каждый уровень улучшения характеристик — свой выбор, поэтому в
       // идентификатор строки идёт уровень: иначе выборы разных уровней
-      // затирали бы друг друга общим ключом умения.
+      // затирали бы друг друга общим ключом умения. Выборам со своим уровнем
+      // он уже вписан в их собственный id, и строке хватает общего.
       const id = summary.abilityImprovement ? `${baseId}:${level}` : baseId;
 
       rows.push({
@@ -9729,11 +11869,26 @@ export function getLevelFeatureRows(
         level,
         description: [...summary.description],
         originLabel,
-        // Выбор черты рисуется своим блоком, поэтому текстовый выбор такому
+        // Выбор черты рисуется своим пикером, поэтому текстовый выбор такому
         // умению не нужен — иначе под чертой висело бы пустое поле ввода.
-        choice: summary.abilityImprovement
-          ? null
-          : getClassFeatureChoice(id, summary, skillNames),
+        choices: summary.abilityImprovement
+          ? []
+          : getLevelFeatureChoices(
+              id,
+              summary,
+              level,
+              chosenOptionKeys,
+              optionTakenLevels,
+            ),
+        featChoices: getLevelFeatChoices(summary, level, levelChosenOptionKeys),
+        grantedFeatUrls: [
+          // Черту без выбора умение выдаёт на своём уровне, а не на уровнях
+          // роста: там оно только прибавляет выборов
+          ...(summary.level === level ? summary.grantedFeatUrls : []),
+          // Черту варианта — на уровне, где вариант взяли: воззвание с готовой
+          // чертой берут и на пятом уровне, а умение своё уже отдало на первом
+          ...getChosenOptionFeatUrls(summary, levelChosenOptionKeys),
+        ],
         abilityImprovement: summary.abilityImprovement,
       });
     }
@@ -9745,7 +11900,69 @@ export function getLevelFeatureRows(
     append(subclass.features, `Подкласс: ${subclass.name}`, true);
   }
 
+  // Выборы самой записи класса, открывшиеся ровно на этом уровне: класс даёт
+  // заклинание не только умением. Своей строкой, потому что и дают их не
+  // умения, — как у вида, где выборы записи стоят отдельно от умений
+  rows.push(
+    ...toClassOwnChoiceRows(
+      base,
+      base,
+      level,
+      `${FEATURE_ORIGIN_LABELS.class}: ${base.name}`,
+    ),
+    ...(subclass
+      ? toClassOwnChoiceRows(
+          base,
+          subclass,
+          level,
+          `Подкласс: ${subclass.name}`,
+        )
+      : []),
+  );
+
   return rows;
+}
+
+/**
+ * Строка мастера повышения под выборы самой записи класса или подкласса.
+ *
+ * Спрашиваются только те, чей уровень открытия совпадает с берущимся: выборы
+ * без уровня задаются один раз, при взятии класса, и повторять их на каждом
+ * уровне значило бы спрашивать одно и то же снова.
+ *
+ * @param owner базовый класс — под его адресом лежит запись даров.
+ * @param summary сама запись: класс либо его подкласс.
+ * @param level уровень, который берут сейчас.
+ * @param originLabel подпись источника для карточки.
+ * @returns одна строка либо пустой список.
+ */
+function toClassOwnChoiceRows(
+  owner: ClassSummary,
+  summary: ClassSummary,
+  level: number,
+  originLabel: string,
+): ClassFeatureRow[] {
+  const choices = summary.choices.filter(
+    (choice) => choice.requiredLevel === level,
+  );
+
+  if (!choices.length) {
+    return [];
+  }
+
+  return [
+    {
+      id: getClassOwnGrantsFeatureId(owner.url, summary.url),
+      name: summary.name,
+      level,
+      description: [],
+      originLabel,
+      choices,
+      featChoices: [],
+      grantedFeatUrls: [],
+      abilityImprovement: false,
+    },
+  ];
 }
 
 /**
@@ -9770,13 +11987,7 @@ export function collectChoiceSelections(
   const languages: string[] = [];
   const featureChoices: Record<string, string> = {};
 
-  for (const row of rows) {
-    const choice = row.choice;
-
-    if (!choice) {
-      continue;
-    }
-
+  for (const choice of rows.flatMap((row) => row.choices)) {
     const values = selections[choice.id] ?? [];
 
     if (!values.length) {
@@ -10167,23 +12378,6 @@ export function parseChoiceCount(text: string): number {
 }
 
 /**
- * Количество из фразы о выдаче: берётся последнее числительное, то есть
- * ближайшее к предмету выдачи. У «Благословения знаний» жреца фраза начинается
- * с инструментов («владение одним типом инструментов… и двумя из следующих
- * навыков»), и первое числительное описывает инструменты, а не навыки.
- *
- * @param text отрезок фразы до предмета выдачи.
- * @returns распознанное количество.
- */
-export function parseTrailingChoiceCount(text: string): number {
-  const match = [...text.matchAll(new RegExp(CHOICE_COUNT_SOURCE, 'gi'))].at(
-    -1,
-  );
-
-  return match ? getMatchedChoiceCount(match) : 1;
-}
-
-/**
  * Выбор владения навыками из прозы `proficiency.skill` («Выберите N навыка из…»
  * или «Выберите любые N навыка»). Перечисленные навыки распознаются по вхождению
  * известных названий; «любые» — опции резолвятся всеми навыками в визарде.
@@ -10269,147 +12463,131 @@ export function getClassToolChoice(
   };
 }
 
-/** Корень слова «компетентность»: от него отсчитывается количество навыков. */
-const EXPERTISE_KEYWORD = 'компетентност';
-
 /**
- * Компетентность как выдача умения («вы получаете компетентность»), а не
- * упоминание слова в прозе: у «Острого словца» барда компетентность — фигура
- * речи («подрывать уверенность и компетентность других»), и распознанный выбор
- * требовал бы 60 навыков (число приезжало из «в пределах 60 фт.»).
- */
-const EXPERTISE_GRANT_PATTERN = new RegExp(
-  `(?:получ|приобрет)\\p{L}*\\s+${EXPERTISE_KEYWORD}`,
-  'u',
-);
-
-/** Корень слова «владение»: одно из условий выдачи владения навыком. */
-const PROFICIENCY_KEYWORD = 'владени';
-
-/** Корень слова «навык»: предмет выдачи, которым заканчивается фраза. */
-const SKILL_KEYWORD = 'навык';
-
-/** Корень слова «выбор»: выдача должна быть выбором, а не фиксированной. */
-const CHOICE_KEYWORD = 'выбор';
-
-/** Максимум символов между глаголом выдачи и словом «навык» внутри фразы. */
-const SKILL_GRANT_SPAN = 160;
-
-/**
- * Глаголы выдачи: «получаете», «приобретаете» и все формы выбора — «выберите»,
- * «на выбор», «выбираете», «можете выбрать». Формы выбора расходятся по корню
- * («выбер» и «выбра»), и без второй из них «Шёпот мёртвых» плута («вы можете
- * выбрать одно владение навыком») переставал считаться выбором.
- */
-const GRANT_VERB_SOURCE = String.raw`получ|приобрет|выб(?:[еои]р|ра)`;
-
-/**
- * Фраза о выдаче владения навыком: глагол выдачи или выбора, а следом «навык»
- * в пределах одного предложения (точка фразу обрывает). Одних лишь слов
- * «навык», «владение» и «выбор» где угодно в описании мало: «Дикая форма»
- * друида говорит «вы также сохраняете владение навыками», слово «выбор»
- * приезжает из соседнего абзаца про известные формы — и визард просил выбрать
- * два произвольных навыка из восемнадцати на втором уровне.
+ * Выборы, открытые к этому уровню.
  *
- * Начало фразы служит и якорем количества: у «Величия гения» паладина (Клятва
- * благородных гениев) описание открывается формулой доспеха («базовый КД равен
- * 10 + …»), и счёт по всему описанию требовал 10 навыков при четырёх
- * перечисленных — шаг визарда становился непроходимым.
- */
-const SKILL_GRANT_PATTERN = new RegExp(
-  `(?:${GRANT_VERB_SOURCE})[^.]{0,${SKILL_GRANT_SPAN}}?${SKILL_KEYWORD}`,
-  'u',
-);
-
-/**
- * Распознавание выбора внутри особенности класса или вида: компетентность
- * (экспертиза), владение навыком на выбор или язык на выбор. Иначе — null
- * (особенность остаётся со свободным текстовым выбором). Инструменты здесь не
- * распознаются: у классов они идут из владений (`proficiency.tool`), а в тексте
- * особенностей «инструмент» часто упоминается как фокусировка заклинателя.
+ * Выбор без своего уровня открыт всегда — так устроено большинство. Уровень не
+ * назван вовсе (мастер вида, окно черты) — отбирать нечем, и берутся все: там
+ * умение выдаётся целиком.
  *
- * @param featureId идентификатор особенности (он же id выбора).
- * @param description описание особенности (узлы разметки или строки).
- * @param skillNames имена всех навыков персонажа (для списка навыков в выборе).
- * @returns выбор особенности или null.
+ * @param choices выборы записи.
+ * @param level уровень персонажа; не задан — отбора нет.
+ * @returns выборы, которые можно спрашивать сейчас.
  */
-export function detectFeatureChoice(
-  featureId: string,
-  description: RenderNode | RenderNode[],
-  skillNames: string[],
-): ClassChoice | null {
-  const rawText = getNodeText(description);
-
-  const text = rawText.toLowerCase().replaceAll('ё', 'е');
-
-  // Количество считается от первого упоминания компетентности, а не от самой
-  // выдачи: у следопыта число стоит до неё («Выберите одно из ваших владений
-  // навыком… Вы получаете компетентность»).
-  if (EXPERTISE_GRANT_PATTERN.test(text)) {
-    return {
-      id: featureId,
-      kind: 'skill-expertise',
-      label: '',
-      count: parseChoiceCount(text.slice(text.indexOf(EXPERTISE_KEYWORD))),
-      listed: [],
-    };
+export function filterChoicesByLevel(
+  choices: ClassChoice[],
+  level: number | undefined,
+): ClassChoice[] {
+  if (level === undefined) {
+    return choices;
   }
 
-  if (
-    text.includes(SKILL_KEYWORD)
-    && text.includes(PROFICIENCY_KEYWORD)
-    && text.includes(CHOICE_KEYWORD)
-  ) {
-    const grant = SKILL_GRANT_PATTERN.exec(text);
-
-    if (grant) {
-      // Количество ищется до предмета выдачи: дальше идёт перечень навыков, а в
-      // нём числительные встречаются в названиях и ссылках.
-      const phrase = grant[0].slice(0, -SKILL_KEYWORD.length);
-
-      return {
-        id: featureId,
-        kind: 'skill-proficiency',
-        label: '',
-        count: parseTrailingChoiceCount(phrase),
-        listed: skillNames.filter((name) => rawText.includes(name)),
-      };
-    }
-  }
-
-  if (text.includes('язык') && text.includes('выбор')) {
-    return {
-      id: featureId,
-      kind: 'language',
-      label: '',
-      count: parseChoiceCount(text),
-      listed: [],
-    };
-  }
-
-  return null;
+  return choices
+    .filter((choice) => !choice.requiredLevel || choice.requiredLevel <= level)
+    .map((choice) => narrowOptionPool(choice, level));
 }
 
 /**
- * Выбор внутри умения класса: структурный из справочника, а если его там нет —
- * распознанный по прозе описания. Структура точнее прозы (у неё явные пул и
- * количество), поэтому имеет приоритет; проза остаётся страховкой для умений,
- * которым выбор ещё не проставили в редакторе класса.
+ * Сужает пул вариантов уровнем персонажа: воззвание «для колдуна 5 уровня» на
+ * первом ещё не предлагают. У выборов без уровней вариантов пул не трогается.
  *
- * @param featureId идентификатор умения (он же id выбора).
- * @param summary умение класса или подкласса.
- * @param skillNames имена всех навыков персонажа.
- * @returns выбор умения или null.
+ * @param choice выбор из умения.
+ * @param level уровень класса, на котором собирается выбор.
+ * @returns выбор с пулом по уровню.
  */
-export function getClassFeatureChoice(
+function narrowOptionPool(choice: ClassChoice, level: number): ClassChoice {
+  const levels = choice.optionRequiredLevels;
+
+  if (!levels) {
+    return choice;
+  }
+
+  const listed = choice.listed.filter((name) => (levels[name] ?? 0) <= level);
+
+  return listed.length === choice.listed.length
+    ? choice
+    : { ...choice, listed };
+}
+
+/**
+ * Варианты, уже взятые на других ступенях того же списка: по правилам один и
+ * тот же вариант дважды не берут, и мастер их больше не предлагает. Ответ самой
+ * ступени не вычитается — иначе выбранное пропало бы из своего же пикера.
+ *
+ * Ступени ищутся и среди выборов мастера, и среди ответов: мастер повышения
+ * уровня показывает только ступень своего уровня, и взятого на прошлых уровнях
+ * в его выборах нет — оно лежит в ответах под id своей ступени
+ * (`<список>` и `<список>-<уровень>`, см. `toFeatureOptionChoices`). Без этого
+ * воззвание первого уровня предлагалось бы на втором заново.
+ *
+ * @param choice выбор, для которого собирается пул.
+ * @param choices все выборы мастера.
+ * @param selections ответы игрока по идентификаторам выборов; у мастера
+ *   повышения уровня — вместе с ответами прошлых уровней с записей листа.
+ * @returns взятые варианты; пусто — выбор не из списка вариантов.
+ */
+export function getTakenOptionValues(
+  choice: ClassChoice,
+  choices: ClassChoice[],
+  selections: Record<string, string[]>,
+): string[] {
+  const poolKey = choice.poolKey;
+
+  if (!poolKey) {
+    return [];
+  }
+
+  const stepIds = new Set<string>([
+    ...choices
+      .filter((other) => other.poolKey === poolKey)
+      .map((other) => other.id),
+    ...Object.keys(selections).filter(
+      (id) => id === poolKey || id.startsWith(`${poolKey}-`),
+    ),
+  ]);
+
+  stepIds.delete(choice.id);
+
+  return [...stepIds].flatMap((id) => selections[id] ?? []);
+}
+
+/**
+ * Выборы внутри умения класса: только то, что записано в справочнике.
+ *
+ * Источников два, оба структурные: механика умения знает и вид выбора, и пул,
+ * и количество, а legacy-поле выбора навыков знает одни навыки. Первый
+ * непустой и выигрывает: смешивать их нельзя, иначе умение со структурой
+ * спросило бы то же самое дважды. Описание умения не разбирается вовсе —
+ * умение, у которого выбор не заведён в мастерской, ни о чём не спрашивает.
+ *
+ * @param featureId идентификатор умения (он же начало id выбора).
+ * @param summary умение класса или подкласса.
+ * @param level уровень, на котором собирается строка; не задан — отбора нет.
+ * @param chosenOptionKeys ключи выбранных вариантов умения: вопросы своей
+ *   механики задаёт только взятый вариант. Не заданы — вопросов вариантов нет.
+ * @returns выборы умения; пусто — умение ни о чём не спрашивает.
+ */
+export function getClassFeatureChoices(
   featureId: string,
   summary: ClassFeatureSummary,
-  skillNames: string[],
-): ClassChoice | null {
+  level?: number,
+  chosenOptionKeys: ReadonlySet<string> = new Set<string>(),
+): ClassChoice[] {
+  if (summary.choices.length > 0) {
+    return filterChoicesByLevel(
+      withoutUnchosenOptionChoices(summary.choices, chosenOptionKeys),
+      level,
+    );
+  }
+
   const skillChoice = summary.skillChoice;
 
-  if (skillChoice) {
-    return {
+  if (!skillChoice) {
+    return [];
+  }
+
+  return [
+    {
       id: featureId,
       kind: 'skill-proficiency',
       label: '',
@@ -10417,10 +12595,87 @@ export function getClassFeatureChoice(
       // Пустой пул в справочнике означает выбор из всех навыков: пустой
       // `listed` резолвится всеми навыками листа в `resolveChoiceOptions`.
       listed: skillChoice.skills,
-    };
-  }
+    },
+  ];
+}
 
-  return detectFeatureChoice(featureId, summary.description, skillNames);
+/**
+ * Выборы умения, которые спрашивают ИМЕННО на этом уровне.
+ *
+ * Мастер повышения уровня спрашивает шаг, а не всё накопленное: оружейных
+ * приёмов у воина четыре с четвёртого уровня, но выбирает он там один новый —
+ * три прежних уже выбраны. Поэтому выбор со своим уровнем берётся только на
+ * своём, а выбор без уровня — на том, где умение и получено.
+ *
+ * Мастеру создания персонажа нужно обратное — все шаги до текущего уровня
+ * разом, — и он берёт {@link getClassFeatureChoices} как есть.
+ *
+ * Вопрос варианта уровень получает от самого варианта: «Договор гримуара»
+ * просит заговоры там, где воззвание взяли, а не на первом уровне колдуна,
+ * который к пятому давно пройден. Свой уровень вопроса при этом не забыт — он
+ * говорит, когда вопрос вообще открывается, поэтому спрашивают на позднем из
+ * двух.
+ *
+ * @param featureId идентификатор умения на листе.
+ * @param summary умение из ответа класса.
+ * @param level уровень, который берут сейчас.
+ * @param chosenOptionKeys ключи вариантов, выбранных на любом уровне: по ним
+ *   отсеиваются вопросы вариантов, от которых игрок отказался.
+ * @param optionTakenLevels уровни взятия по ключам вариантов.
+ * @returns выборы этого уровня.
+ */
+function getLevelFeatureChoices(
+  featureId: string,
+  summary: ClassFeatureSummary,
+  level: number,
+  chosenOptionKeys: ReadonlySet<string>,
+  optionTakenLevels: ReadonlyMap<string, number[]>,
+): ClassChoice[] {
+  return getClassFeatureChoices(
+    featureId,
+    summary,
+    level,
+    chosenOptionKeys,
+  ).filter((choice) => {
+    if (choice.optionKey) {
+      const openLevel = choice.requiredLevel ?? 0;
+
+      return (optionTakenLevels.get(choice.optionKey) ?? []).some(
+        (takenLevel) => Math.max(takenLevel, openLevel) === level,
+      );
+    }
+
+    return choice.requiredLevel
+      ? choice.requiredLevel === level
+      : summary.level === level;
+  });
+}
+
+/**
+ * Навыки, выбранные во владение в мастере: пул выбора компетентности и вычет
+ * для выбора навыка, которым персонаж ещё не владеет.
+ *
+ * Ответ самого выбора не учитывается. «Первобытное знание» варвара просит
+ * навык, которым персонаж не владеет, и свой же ответ вычёркивал выбранный
+ * навык из собственного списка сразу после клика: выбор выглядел потерянным, а
+ * снять его было нечем.
+ *
+ * @param choices выборы мастера.
+ * @param selections ответы игрока по идентификаторам выборов.
+ * @param exceptChoiceId идентификатор выбора, чьи ответы не учитываются.
+ * @returns навыки, выбранные во владение остальными выборами мастера.
+ */
+export function getChosenProficientSkills(
+  choices: ClassChoice[],
+  selections: Record<string, string[]>,
+  exceptChoiceId: string,
+): string[] {
+  return choices
+    .filter(
+      (choice) =>
+        choice.kind === 'skill-proficiency' && choice.id !== exceptChoiceId,
+    )
+    .flatMap((choice) => selections[choice.id] ?? []);
 }
 
 /**
@@ -10461,6 +12716,22 @@ export function resolveChoiceOptions(
     ];
   }
 
+  if (choice.kind === 'option') {
+    // Пул — варианты самой записи, уже суженные уровнем персонажа. Взятое на
+    // других ступенях списка вычитается: одно и то же воззвание по правилам
+    // дважды не берут. Помеченный автором вариант — исключение: его берут
+    // повторно, и из списка он не уходит
+    const repeatable = new Set(choice.repeatableOptions ?? []);
+
+    const taken = new Set(
+      (context.takenOptionValues ?? []).filter((name) => !repeatable.has(name)),
+    );
+
+    return taken.size
+      ? choice.listed.filter((name) => !taken.has(name))
+      : choice.listed;
+  }
+
   // Пул характеристик, вариантов повышения, списков заклинаний и типов урона
   // перечислен в самой механике черты, а пул заклинаний собирается поиском по
   // каталогу и приходит уже готовым: и то, и другое лежит в `listed`. Без этой
@@ -10488,6 +12759,12 @@ export function resolveChoiceOptions(
     return choice.listed.filter((name) => !owned.has(name));
   }
 
+  if (choice.kind === 'mastery-property') {
+    // Пул — сами приёмы: их справочник свой, из восьми, и владение оружием
+    // здесь ни при чём.
+    return choice.listed.length ? choice.listed : WEAPON_MASTERY_PROPERTY_NAMES;
+  }
+
   if (choice.kind === 'weapon-mastery') {
     const listed = choice.listed.length
       ? choice.listed
@@ -10506,6 +12783,14 @@ export function resolveChoiceOptions(
     const known = new Set(context.knownLanguages);
 
     return context.allLanguages.filter((name) => !known.has(name));
+  }
+
+  // Черта выбирается своим пикером каталога, а не селектом: в `listed` у неё
+  // лежат url, а не названия. Пустой список — сигнал вызывающему, что выбор
+  // ему не по зубам; без этой ветки он проваливался в инструменты ниже, и
+  // «Универсальность» человека предлагала инструменты алхимика вместо черты.
+  if (choice.kind === 'feat') {
+    return [];
   }
 
   const knownTools = new Set(context.knownTools);
@@ -10706,6 +12991,25 @@ export function getRequiredChoiceCount(
 }
 
 /**
+ * Подпись о ходе выбора для шапки списка описаний вариантов: в длинном списке
+ * воззваний игрок иначе не видит, сколько ему ещё осталось взять.
+ *
+ * @param selectedCount сколько вариантов уже выбрано.
+ * @param requiredCount сколько нужно выбрать; 0 — предела нет.
+ * @returns строка вида «Выбрано 1 из 2»; без предела — «Выбрано 1».
+ */
+export function getChoiceSelectionSummary(
+  selectedCount: number,
+  requiredCount: number,
+): string {
+  const { chosen, of } = SHEET_CHOICE_OPTIONS_LABELS;
+
+  return requiredCount > 0
+    ? `${chosen} ${selectedCount} ${of} ${requiredCount}`
+    : `${chosen} ${selectedCount}`;
+}
+
+/**
  * Пометки навыков, которыми персонаж уже владеет: название навыка → подпись для
  * списка выбора. По правилам 2024 повторное владение ничего не даёт (бонус
  * мастерства не складывается) и компетенцию не выдаёт, поэтому такие навыки
@@ -10734,11 +13038,530 @@ export function getOwnedSkillHints(
  * @param skills навыки персонажа.
  * @returns пометки по названиям опций выбора.
  */
-export function getChoiceSkillHints(
+function getChoiceSkillHints(
   choice: ClassChoice,
   skills: CharacterSkill[],
 ): Record<string, string> {
   return choice.kind === 'skill-proficiency' ? getOwnedSkillHints(skills) : {};
+}
+
+/**
+ * Одна и та же пометка на все названия: словарь пометок собирается из двух
+ * таких наборов.
+ *
+ * @param names названия вариантов.
+ * @param hint пометка.
+ * @returns пометки по названиям.
+ */
+function toSameHints(names: string[], hint: string): Record<string, string> {
+  return Object.fromEntries(names.map((name) => [name, hint]));
+}
+
+/**
+ * Пометки вариантов выбора заклинания: заклинание уже есть у персонажа либо
+ * его берёт другой выбор того же мастера. Известное перекрывает выбранное:
+ * заклинание из книги остаётся известным, даже если его отметили ещё где-то.
+ *
+ * @param knownSpellNames названия заклинаний, известных персонажу.
+ * @param chosenSpellNames названия заклинаний, взятых другими выборами мастера.
+ * @returns пометки по названиям заклинаний.
+ */
+function getSpellChoiceHints(
+  knownSpellNames: string[],
+  chosenSpellNames: string[],
+): Record<string, string> {
+  return {
+    ...toSameHints(chosenSpellNames, SPELL_OWNED_HINTS.chosen),
+    ...toSameHints(knownSpellNames, SPELL_OWNED_HINTS.known),
+  };
+}
+
+/** Из чего складываются пометки вариантов выбора. */
+export interface ChoiceHintsInput {
+  /** Навыки персонажа: у выбора владения помечаются уже имеющиеся. */
+  skills: CharacterSkill[];
+
+  /** Названия заклинаний, которые персонаж уже знает. */
+  knownSpellNames: string[];
+
+  /** Названия заклинаний, взятых другими выборами того же мастера. */
+  chosenSpellNames: string[];
+}
+
+/**
+ * Пометки опций пикера: навыки, которыми персонаж уже владеет, и заклинания,
+ * которые он уже знает. Опции выбора компетенции и так собраны из навыков с
+ * владением, а известные языки и инструменты `resolveChoiceOptions` вырезает
+ * из списка — заклинание же из пула не убирается: пул собирается поиском по
+ * каталогу, и вырезанное молча уменьшило бы список, ничего не объяснив.
+ *
+ * @param choice распознанный выбор.
+ * @param input навыки персонажа и известные заклинания.
+ * @returns пометки по названиям опций выбора.
+ */
+export function getChoiceHints(
+  choice: ClassChoice,
+  input: ChoiceHintsInput,
+): Record<string, string> {
+  if (choice.kind === 'spell') {
+    return getSpellChoiceHints(input.knownSpellNames, input.chosenSpellNames);
+  }
+
+  return getChoiceSkillHints(choice, input.skills);
+}
+
+/**
+ * Заклинания, взятые другими выборами того же мастера: повышение сразу на
+ * несколько уровней спрашивает заклинания не по одному разу, и одно и то же
+ * заклинание в двух выборах ляжет на лист единственной записью. Ответ самого
+ * выбора не считается — иначе выбранное здесь помечалось бы «уже выбрано».
+ *
+ * @param choice выбор, для которого собираются пометки.
+ * @param choices все выборы мастера.
+ * @param selections ответы игрока по идентификаторам выборов.
+ * @returns названия заклинаний других выборов.
+ */
+export function getChosenSpellNames(
+  choice: ClassChoice,
+  choices: ClassChoice[],
+  selections: Record<string, string[]>,
+): string[] {
+  return choices
+    .filter((other) => other.kind === 'spell' && other.id !== choice.id)
+    .flatMap((other) => selections[other.id] ?? []);
+}
+
+/**
+ * Подпись поля выбора: «Выберите 2»; без предела — просто «Выберите».
+ *
+ * @param count сколько нужно выбрать; 0 — без предела.
+ * @returns подпись.
+ */
+export function getChoiceChooseLabel(count: number): string {
+  return count > 0
+    ? `${CHOICE_SELECT_PLACEHOLDER} ${count}`
+    : CHOICE_SELECT_PLACEHOLDER;
+}
+
+/**
+ * Сколько вариантов требует выбор с учётом готовности пула.
+ *
+ * Готовый пул ограничивает требование своей длиной — как и раньше, иначе
+ * завышенное в прозе число запирало бы шаг. Пул в пути или не загрузившийся
+ * длины не имеет: требование остаётся полным, чтобы игрок не прошёл шаг с
+ * «Выберите 0» и без заклинания, которое ему положено.
+ *
+ * @param choice распознанный выбор.
+ * @param optionCount сколько вариантов в пуле.
+ * @param status готовность пула.
+ * @returns требуемое число вариантов.
+ */
+export function getChoiceRequiredCount(
+  choice: ClassChoice,
+  optionCount: number,
+  status: SheetChoicePoolStatus = 'ready',
+): number {
+  return status === 'ready'
+    ? Math.min(choice.count, optionCount)
+    : choice.count;
+}
+
+/**
+ * Пул заклинаний без одноимённых записей: остаётся первая по порядку пула.
+ *
+ * Ответ выбора заклинания хранится названием, а не url, поэтому две записи
+ * каталога с одним названием (`friends` и `friends-phb` на деве) отмечались бы
+ * в пикере вместе и обе ложились бы на лист. Вторую запись выбрать всё равно
+ * нельзя — по названию она от первой неотличима.
+ *
+ * @param pool заклинания пула из поиска по каталогу.
+ * @returns пул без повторов названий.
+ */
+export function uniqueSpellsByName(
+  pool: SpellCatalogItem[],
+): SpellCatalogItem[] {
+  return uniqBy(pool, (spell) => spell.name);
+}
+
+/**
+ * Варианты пикера из пула заклинаний: по кругам, внутри круга по алфавиту.
+ * Значение — название: так ответы выбора заклинания хранились и до пикера.
+ *
+ * @param pool заклинания пула.
+ * @param hints пометки по названиям: «уже известно», «уже выбрано».
+ * @returns варианты пикера с описанием по url заклинания.
+ */
+export function toSpellPickerOptions(
+  pool: SpellCatalogItem[],
+  hints: Record<string, string> = {},
+): SheetChoiceOption[] {
+  return [...pool]
+    .sort(
+      (left, right) =>
+        left.level - right.level || left.name.localeCompare(right.name, 'ru'),
+    )
+    .map((spell) => ({
+      value: spell.name,
+      label: spell.name,
+      sublabel: spell.school,
+      group: getSpellGroupLabel(spell.level),
+      ...(hints[spell.name] ? { hint: hints[spell.name] } : {}),
+      detail: { kind: 'spell', url: spell.url },
+    }));
+}
+
+/**
+ * Варианты пикера из пула черт. Значение — url: по нему черта догружается из
+ * справочника при применении.
+ *
+ * @param options черты пула.
+ * @returns варианты пикера с описанием по url черты.
+ */
+export function toFeatPickerOptions(
+  options: FeatSelectOption[],
+): SheetChoiceOption[] {
+  return [...options]
+    .sort((left, right) => left.name.localeCompare(right.name, 'ru'))
+    .map((feat) => ({
+      value: feat.url,
+      label: feat.name,
+      badges: feat.sourceLabel ? [feat.sourceLabel] : [],
+      detail: { kind: 'feat', url: feat.url },
+    }));
+}
+
+/**
+ * Варианты пикера из подклассов, разрешённых источниками профиля.
+ *
+ * @param options подклассы.
+ * @returns варианты пикера с описанием по url подкласса.
+ */
+export function toSubclassPickerOptions(
+  options: ClassOption[],
+): SheetChoiceOption[] {
+  return options.map((option) => ({
+    value: option.url,
+    label: option.name,
+    // Английское название второй строкой: одноимённые подклассы разных книг
+    // различаются им так же, как бейджем источника
+    sublabel: option.nameEng,
+    badges: option.sourceLabel ? [option.sourceLabel] : [],
+    detail: { kind: 'class', url: option.url },
+  }));
+}
+
+/**
+ * Варианты пикера для слота прибавки черты: характеристики, среди которых
+ * черта раскладывает +1. Упёршаяся в предел остаётся в списке, но недоступна —
+ * иначе выбор молча пропал бы при применении.
+ *
+ * @param scores итоговые характеристики персонажа.
+ * @param allowed характеристики, которые черта разрешает; пусто — любые.
+ * @returns варианты пикера.
+ */
+export function toAbilityPickerOptions(
+  scores: Record<AbilityKey, number>,
+  allowed: AbilityKey[],
+): SheetChoiceOption[] {
+  const keys = allowed.length > 0 ? allowed : ABILITY_ORDER;
+
+  return keys.map((key) => {
+    const score = scores[key];
+
+    const isMaxed = getAbilityIncreaseHeadroom(score) === 0;
+
+    return {
+      value: key,
+      label: ABILITY_LABELS[key],
+      sublabel: isMaxed
+        ? `${score} — ${SHEET_CHOICE_PICKER_LABELS.abilityMaxed}`
+        : `${score} → ${score + 1}`,
+      disabled: isMaxed,
+    };
+  });
+}
+
+/**
+ * Варианты пикера из одних названий: список навыков или инструментов homebrew-
+ * формы, где записи справочника за выбором нет.
+ *
+ * @param names названия вариантов.
+ * @param hints пометки по названиям.
+ * @returns варианты пикера.
+ */
+export function toNamedPickerOptions(
+  names: string[],
+  hints: Record<string, string> = {},
+): SheetChoiceOption[] {
+  return names.map((name) => ({
+    value: name,
+    label: name,
+    ...(hints[name] ? { hint: hints[name] } : {}),
+  }));
+}
+
+/** Чем дополняются варианты пикера, кроме самих названий. */
+export interface ChoicePickerOptionsInput {
+  /**
+   * Пометки по названиям: навык, которым персонаж уже владеет, заклинание,
+   * которое он уже знает.
+   */
+  hints?: Record<string, string>;
+
+  /** Пул заклинаний выбора — у `kind: 'spell'` варианты берутся из него. */
+  spellPool?: SpellCatalogItem[];
+
+  /** Инструменты каталога: по ним у выбора инструмента появляется описание. */
+  toolEntries?: ToolCatalogEntry[];
+}
+
+/**
+ * Поля варианта, которые зависят от вида выбора: описание варианта умения из
+ * записи класса, описание инструмента по записи каталога.
+ *
+ * @param choice распознанный выбор.
+ * @param name название варианта.
+ * @param input дополнения к вариантам.
+ * @returns поля варианта сверх названия; пусто — вариант без описания.
+ */
+function getChoicePickerOptionExtras(
+  choice: ClassChoice,
+  name: string,
+  input: ChoicePickerOptionsInput,
+): Partial<SheetChoiceOption> {
+  if (choice.kind === 'option') {
+    const entry = (choice.optionDetails ?? []).find(
+      (candidate) => candidate.name === name,
+    );
+
+    if (!entry) {
+      return {};
+    }
+
+    // Пометок «можно взять повторно» и «с 2 уровня» в строке нет: список
+    // вариантов и так показан только тот, что игроку доступен, а условия
+    // варианта разобраны в его описании
+    return {
+      sublabel: entry.nameEng,
+      detail: {
+        kind: 'markup',
+        description: entry.description,
+        prerequisite: entry.prerequisite,
+        additional: entry.additional,
+        grantedSpells: entry.grantedSpells,
+      },
+    };
+  }
+
+  if (choice.kind === 'tool') {
+    const url = (input.toolEntries ?? []).find(
+      (entry) => entry.name === name,
+    )?.url;
+
+    return url ? { detail: { kind: 'item', url } } : {};
+  }
+
+  return {};
+}
+
+/**
+ * Варианты единого пикера для выбора записи.
+ *
+ * Названия приходят из `resolveChoiceOptions` — пикер их не переписывает,
+ * значение варианта равно названию, как хранится ответ. Заклинания —
+ * исключение: их пул собирается поиском и приходит записями каталога, а не
+ * названиями.
+ *
+ * @param choice распознанный выбор.
+ * @param names названия вариантов.
+ * @param input дополнения: пометки, пул заклинаний, каталог инструментов.
+ * @returns варианты пикера.
+ */
+export function toChoicePickerOptions(
+  choice: ClassChoice,
+  names: string[],
+  input: ChoicePickerOptionsInput = {},
+): SheetChoiceOption[] {
+  if (choice.kind === 'spell') {
+    return toSpellPickerOptions(input.spellPool ?? [], input.hints ?? {});
+  }
+
+  const hints = input.hints ?? {};
+
+  return names.map((name) => ({
+    value: name,
+    label: name,
+    ...(hints[name] ? { hint: hints[name] } : {}),
+    ...getChoicePickerOptionExtras(choice, name, input),
+  }));
+}
+
+/**
+ * Пояснение к выбору заклинания по фильтру пула: «Умение даёт заклинание
+ * 6 уровня из списка класса Колдун на выбор».
+ *
+ * @param choice выбор заклинания.
+ * @returns пояснение.
+ */
+function getSpellChoiceExplanation(choice: ClassChoice): string {
+  const filter = choice.spellFilter;
+
+  const {
+    prefix,
+    cantrip,
+    spell,
+    maxLevelPrefix,
+    levelSuffix,
+    classPrefix,
+    listedSuffix,
+    suffix,
+  } = SHEET_CHOICE_SPELL_EXPLANATION;
+
+  // Перечисленный пул: уровень и класс у каждого заклинания свои, и говорить о
+  // них нечего — игрок выбирает из того, что записал автор
+  if (choice.listedSpells?.length) {
+    return `${prefix} ${spell} ${listedSuffix} ${suffix}`;
+  }
+
+  const subject = (() => {
+    if (!filter) {
+      return spell;
+    }
+
+    if (filter.level === 0) {
+      return cantrip;
+    }
+
+    if (filter.level !== null) {
+      return `${spell} ${filter.level} ${levelSuffix}`;
+    }
+
+    if (filter.maxLevel !== null) {
+      return `${spell} ${maxLevelPrefix} ${filter.maxLevel} ${levelSuffix}`;
+    }
+
+    return spell;
+  })();
+
+  const classNames = (filter?.classes ?? [])
+    .map((characterClass) => characterClass.name)
+    .filter(Boolean);
+
+  const source = classNames.length
+    ? ` ${classPrefix} ${classNames.join(', ')}`
+    : '';
+
+  return `${prefix} ${subject}${source} ${suffix}`;
+}
+
+/**
+ * Пояснение к выбору: почему игрок здесь и сейчас что-то выбирает. У выбора
+ * заклинания складывается из фильтра пула, у остальных — подпись по виду.
+ *
+ * @param choice распознанный выбор.
+ * @returns пояснение под заголовком поля.
+ */
+export function getChoiceExplanation(choice: ClassChoice): string {
+  return choice.kind === 'spell'
+    ? getSpellChoiceExplanation(choice)
+    : SHEET_CHOICE_EXPLANATION_LABELS[choice.kind];
+}
+
+/**
+ * Подзаголовок окна выбора: откуда выбор и сколько выбрать —
+ * «Класс: Колдун · 11 уровень · Таинственный арканум · выберите 1».
+ *
+ * @param origin умение, его источник и уровень; не задано — только счёт.
+ * @param requiredCount сколько нужно выбрать; 0 — без предела.
+ * @returns подзаголовок.
+ */
+export function getChoiceModalSubtitle(
+  origin: SheetChoiceOrigin | undefined,
+  requiredCount: number,
+): string {
+  const originParts = origin
+    ? [
+        origin.level
+          ? `${origin.originLabel} · ${origin.level} ${LEVEL_UP_WIZARD_LABELS.levelWord}`
+          : origin.originLabel,
+        origin.featureName,
+      ]
+    : [];
+
+  return [...originParts, getChoiceChooseLabel(requiredCount).toLowerCase()]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+/** Из чего собирается выбор для единого пикера. */
+export interface ChoiceControlInput extends ChoicePickerOptionsInput {
+  /** Названия вариантов из `resolveChoiceOptions`. */
+  names: string[];
+
+  /** Готовность пула; не задана — пул готов. */
+  status?: SheetChoicePoolStatus;
+
+  /** Откуда выбор — для подзаголовка окна. */
+  origin?: SheetChoiceOrigin;
+
+  /**
+   * Своё пояснение вместо подписи по виду выбора: владения самого класса даёт
+   * не умение, и «Умение даёт…» там сбивало бы с толку.
+   */
+  explanation?: string;
+}
+
+/**
+ * Выбор записи, готовый к показу единым пикером. Одна сборка на все мастера
+ * листа: у каждого был свой набор помощников для подписи, счёта и опций, и они
+ * расходились при каждой правке.
+ *
+ * @param choice распознанный выбор.
+ * @param input названия, готовность пула, дополнения и источник выбора.
+ * @returns выбор для пикера.
+ */
+/**
+ * Предупреждение под полем выбора о повторе: и владение навыком, и знание
+ * заклинания второй раз ничего персонажу не добавляют. Показывает его поле —
+ * и только когда игрок отметил помеченный вариант.
+ *
+ * @param choice распознанный выбор.
+ * @returns предупреждение; пусто — повторить в этом выборе нечего.
+ */
+function getChoiceDuplicateWarning(choice: ClassChoice): string {
+  if (choice.kind === 'spell') {
+    return SPELL_DUPLICATE_WARNING;
+  }
+
+  return choice.kind === 'skill-proficiency' ? SKILL_DUPLICATE_WARNING : '';
+}
+
+export function buildChoiceControl(
+  choice: ClassChoice,
+  input: ChoiceControlInput,
+): SheetChoiceControl {
+  const status = input.status ?? 'ready';
+
+  const options = toChoicePickerOptions(choice, input.names, input);
+
+  const requiredCount = getChoiceRequiredCount(choice, options.length, status);
+
+  const title =
+    choice.label
+    || SHEET_FEAT_CHOICE_LABELS[choice.kind]
+    || getChoiceChooseLabel(requiredCount);
+
+  return {
+    choice,
+    options,
+    requiredCount,
+    status,
+    title,
+    explanation: input.explanation ?? getChoiceExplanation(choice),
+    modalTitle: title,
+    modalSubtitle: getChoiceModalSubtitle(input.origin, requiredCount),
+    warning: getChoiceDuplicateWarning(choice),
+  };
 }
 
 /**
@@ -10903,8 +13726,142 @@ export function isAbilityImprovementFeature(
 }
 
 /**
- * Опции черт, доступных за классовое улучшение характеристик: убираются черты
- * запрещённых категорий (происхождения и эпические), черты из отключённых в
+ * Выбор черты — боевой стиль: ограничен ровно категорией боевых стилей.
+ *
+ * @param choice выбор умения.
+ * @returns true — умение просит выбрать боевой стиль.
+ */
+export function isFightingStyleFeatChoice(choice: ClassChoice): boolean {
+  const categories = choice.featCategories ?? [];
+
+  return (
+    choice.kind === 'feat'
+    && categories.length === 1
+    && categories[0] === FIGHTING_STYLE_FEAT_CATEGORY
+  );
+}
+
+/**
+ * Выбор черты за повышение характеристик: выбор черты без ограничения
+ * категорий либо с общими чертами среди них — по правилам 2024 года
+ * «Улучшение характеристик» и есть общая черта.
+ *
+ * @param choice выбор умения.
+ * @returns true — умение просит выбрать черту за повышение характеристик.
+ */
+export function isAbilityImprovementFeatChoice(choice: ClassChoice): boolean {
+  const categories = choice.featCategories ?? [];
+
+  return (
+    choice.kind === 'feat'
+    && (categories.length === 0 || categories.includes(GENERAL_FEAT_CATEGORY))
+  );
+}
+
+/**
+ * Выборы черты умения с поправкой на флаги прежних лет: у записи, где выбор
+ * боевого стиля или черты отмечен флагом, а в механике выбора черты ещё нет,
+ * выбор собирается по флагу. Записи, сохранённые новой формой, несут выбор в
+ * механике, и флаг там ничего не добавляет — иначе умение спросило бы дважды.
+ *
+ * @param featureId идентификатор умения.
+ * @param featChoices выборы черты из механики умения.
+ * @param flags флаги умения из записи.
+ * @param flags.fightingStyleChoice умение даёт выбор боевого стиля.
+ * @param flags.abilityImprovement умение даёт черту за повышение характеристик.
+ * @returns выборы черты умения.
+ */
+export function getLegacyClassFeatChoices(
+  featureId: string,
+  featChoices: ClassChoice[],
+  flags: { fightingStyleChoice: boolean; abilityImprovement: boolean },
+): ClassChoice[] {
+  const result = [...featChoices];
+
+  if (flags.fightingStyleChoice && !result.some(isFightingStyleFeatChoice)) {
+    result.push({
+      id: `${featureId}:${LEGACY_FIGHTING_STYLE_CHOICE_KEY}`,
+      kind: 'feat',
+      label: FIGHTING_STYLE_CHOICE_LABEL,
+      count: 1,
+      listed: [],
+      featCategories: [FIGHTING_STYLE_FEAT_CATEGORY],
+    });
+  }
+
+  if (
+    flags.abilityImprovement
+    && !result.some(isAbilityImprovementFeatChoice)
+  ) {
+    result.push({
+      id: `${featureId}:${LEGACY_ABILITY_IMPROVEMENT_CHOICE_KEY}`,
+      kind: 'feat',
+      label: ABILITY_IMPROVEMENT_LABELS.featTitle,
+      count: 1,
+      listed: [],
+      featCategories: [],
+    });
+  }
+
+  return result;
+}
+
+/**
+ * Выборы черты умения на уровне: открытые по уровню, а у повторяющегося
+ * «Улучшения характеристик» — с уровнем в идентификаторе, иначе ответы разных
+ * уровней затирали бы друг друга.
+ *
+ * @param summary умение класса или подкласса.
+ * @param level уровень, на котором собираются выборы.
+ * @returns выборы черты этого уровня.
+ */
+export function getLevelFeatChoices(
+  summary: ClassFeatureSummary,
+  level: number,
+  chosenOptionKeys: ReadonlySet<string> = new Set<string>(),
+): ClassChoice[] {
+  return filterChoicesByLevel(
+    withoutUnchosenOptionChoices(summary.featChoices, chosenOptionKeys),
+    level,
+  ).map((choice) =>
+    summary.abilityImprovement
+      ? { ...choice, id: `${choice.id}:${level}` }
+      : choice,
+  );
+}
+
+/**
+ * Выборы черты умения на всех уровнях до указанного включительно: мастер
+ * класса собирает персонажа сразу на нужном уровне, и «Улучшение
+ * характеристик» спрашивает черту за каждый пройденный уровень роста.
+ *
+ * @param summary умение класса или подкласса.
+ * @param level уровень персонажа В ЭТОМ классе.
+ * @returns выборы черты по всем открытым уровням.
+ */
+export function getFeatChoicesUpToLevel(
+  summary: ClassFeatureSummary,
+  level: number,
+  chosenOptionKeys: ReadonlySet<string> = new Set<string>(),
+): ClassChoice[] {
+  if (!summary.abilityImprovement) {
+    return filterChoicesByLevel(
+      withoutUnchosenOptionChoices(summary.featChoices, chosenOptionKeys),
+      level,
+    );
+  }
+
+  return [summary.level, ...summary.scalingLevels]
+    .filter((featureLevel) => featureLevel <= level)
+    .flatMap((featureLevel) =>
+      getLevelFeatChoices(summary, featureLevel, chosenOptionKeys),
+    );
+}
+
+/**
+ * Опции черт, доступных выбору черты в умении класса: пул сужается
+ * категориями и перечнем выбора, а без них — правилом листа (не черты
+ * происхождения, эпические и боевые стили); уходят черты из отключённых в
  * профиле источников и уже взятые на листе — кроме повторяемых, их можно брать
  * снова. Черта, уже выбранная на другом шаге мастера, из списка тоже уходит.
  *
@@ -10912,18 +13869,27 @@ export function isAbilityImprovementFeature(
  * Пустой список источников ограничения не накладывает.
  *
  * @param options все черты каталога.
+ * @param choice выбор черты умения; null — правило листа без сужений.
  * @param takenUrls url черт, уже взятых на листе или в мастере.
  * @param selectedUrl url черты, выбранной в этом же селекторе; '' — не выбрана.
  * @param selectedSourceIds источники, разрешённые настройкой профиля.
+ * @param excludeAbilityImprovement убрать из пула саму черту «Улучшение
+ *   характеристик»: на шаге повышения прибавки выбираются отдельным режимом, и
+ *   в списке черт эта черта была бы вторым способом сделать то же самое.
+ *   Названная умением явным перечнем черта остаётся — там пул задан записью.
  * @returns черты, доступные для выбора.
  */
-export function getAbilityImprovementFeatOptions(
+export function getFeatChoiceOptions(
   options: FeatSelectOption[],
+  choice: ClassChoice | null,
   takenUrls: Set<string>,
   selectedUrl: string,
   selectedSourceIds: string[] = [],
+  excludeAbilityImprovement = false,
 ): FeatSelectOption[] {
   const allowedSources = new Set(selectedSourceIds);
+  const listed = new Set(choice?.listed ?? []);
+  const categories = new Set(choice?.featCategories ?? []);
 
   return options.filter((option) => {
     // Выбранная здесь черта остаётся видимой, иначе селектор показал бы пустое
@@ -10933,6 +13899,23 @@ export function getAbilityImprovementFeatOptions(
     }
 
     if (
+      excludeAbilityImprovement
+      && listed.size === 0
+      && option.url.startsWith(ABILITY_IMPROVEMENT_FEAT_URL_PREFIX)
+    ) {
+      return false;
+    }
+
+    // Перечисленные черты — самый узкий пул: категории при них только справка
+    if (listed.size > 0) {
+      if (!listed.has(option.url)) {
+        return false;
+      }
+    } else if (categories.size > 0) {
+      if (!categories.has(option.category)) {
+        return false;
+      }
+    } else if (
       ABILITY_IMPROVEMENT_EXCLUDED_FEAT_CATEGORIES.includes(option.category)
     ) {
       return false;
@@ -11245,6 +14228,234 @@ export function computeAbilityBonuses(
   }
 
   return bonuses;
+}
+
+/**
+ * Сколько очков повышения уже разложено.
+ *
+ * @param increases прибавки по характеристикам.
+ * @returns сумма прибавок.
+ */
+export function getAbilityImprovementSpent(
+  increases: Partial<Record<AbilityKey, number>>,
+): number {
+  return ABILITY_ORDER.reduce((total, key) => total + (increases[key] ?? 0), 0);
+}
+
+/**
+ * Характеристики с учётом прибавок, уже разложенных в самом мастере: повышение
+ * сразу на несколько уровней иначе позволило бы поднять одну характеристику
+ * выше предела — каждое повышение считало бы предел по одному и тому же
+ * исходному значению.
+ *
+ * Потолок здесь не применяется: значение служит основой для подсчёта остатка до
+ * предела, и обрезанное дало бы остаток там, где его уже нет.
+ *
+ * @param scores итоговые характеристики персонажа.
+ * @param increases прибавки, разложенные в мастере.
+ * @returns характеристики с прибавками мастера.
+ */
+export function withPendingAbilityIncreases(
+  scores: CharacterAbilities,
+  increases: Partial<Record<AbilityKey, number>>[],
+): CharacterAbilities {
+  const pending = mergeAbilityIncreases(increases);
+
+  return mapValues(scores, (score, key) => score + (pending[key] ?? 0));
+}
+
+/**
+ * Сколько очков повышения игрок обязан разложить.
+ *
+ * Обычно это все два очка правила, но характеристикам, упёршимся в предел,
+ * прибавлять нечего: требовать полного расклада там значило бы запереть шаг.
+ *
+ * @param scores итоговые значения характеристик персонажа.
+ * @returns требуемое число очков; 0 — поднимать нечего.
+ */
+export function getAbilityImprovementRequiredPoints(
+  scores: Record<AbilityKey, number>,
+): number {
+  const headroom = ABILITY_ORDER.reduce(
+    (total, key) =>
+      total
+      + Math.min(
+        ABILITY_IMPROVEMENT_POINTS_PER_ABILITY,
+        getAbilityIncreaseHeadroom(scores[key]),
+      ),
+    0,
+  );
+
+  return Math.min(ABILITY_IMPROVEMENT_POINTS, headroom);
+}
+
+/**
+ * Можно ли добавить ещё +1 к характеристике: очки не кончились, в одну
+ * характеристику ушло меньше двух и предел не достигнут.
+ *
+ * @param scores итоговые значения характеристик персонажа.
+ * @param increases уже разложенные прибавки.
+ * @param ability ключ характеристики.
+ * @returns true — прибавку можно добавить.
+ */
+export function canIncreaseAbilityImprovement(
+  scores: Record<AbilityKey, number>,
+  increases: Partial<Record<AbilityKey, number>>,
+  ability: AbilityKey,
+): boolean {
+  const increase = increases[ability] ?? 0;
+
+  return (
+    getAbilityImprovementSpent(increases)
+      < getAbilityImprovementRequiredPoints(scores)
+    && increase < ABILITY_IMPROVEMENT_POINTS_PER_ABILITY
+    && getAbilityIncreaseHeadroom(scores[ability] + increase) > 0
+  );
+}
+
+/**
+ * Отвечено ли повышение характеристик: в режиме прибавок разложены все очки, в
+ * режиме черты выбрана черта и заполнены все её слоты прибавок.
+ *
+ * @param improvement ответ игрока на повышение.
+ * @param featChoice выбор черты того же повышения; не задан — черта не выбрана.
+ * @param scores итоговые значения характеристик персонажа.
+ * @returns true — повышение отвечено полностью.
+ */
+export function isAbilityImprovementComplete(
+  improvement: LevelUpAbilityImprovement,
+  featChoice: LevelUpFeatChoice | undefined,
+  scores: Record<AbilityKey, number>,
+): boolean {
+  if (improvement.mode === 'feat') {
+    return Boolean(
+      featChoice?.featUrl
+      && featChoice.abilities.every((ability) => ability !== null),
+    );
+  }
+
+  return (
+    getAbilityImprovementSpent(improvement.increases)
+    >= getAbilityImprovementRequiredPoints(scores)
+  );
+}
+
+/**
+ * Прибавки повышения после нажатия ± у характеристики: значение не уходит ниже
+ * нуля и не поднимается сверх дозволенного, а обнулённая прибавка из набора
+ * убирается — пустая запись означала бы выбранную характеристику без прибавки.
+ *
+ * @param scores итоговые значения характеристик персонажа.
+ * @param increases уже разложенные прибавки.
+ * @param ability ключ характеристики.
+ * @param delta шаг изменения (+1 или −1).
+ * @returns новые прибавки; те же самые — шаг недопустим.
+ */
+export function withAbilityImprovementStep(
+  scores: Record<AbilityKey, number>,
+  increases: Partial<Record<AbilityKey, number>>,
+  ability: AbilityKey,
+  delta: number,
+): Partial<Record<AbilityKey, number>> {
+  const increase = increases[ability] ?? 0;
+
+  if (delta > 0) {
+    return canIncreaseAbilityImprovement(scores, increases, ability)
+      ? { ...increases, [ability]: increase + 1 }
+      : increases;
+  }
+
+  if (increase <= 0) {
+    return increases;
+  }
+
+  // Обнулённая прибавка убирается из набора целиком: запись со значением 0
+  // означала бы выбранную характеристику без прибавки.
+  return increase === 1
+    ? omit(increases, [ability])
+    : { ...increases, [ability]: increase - 1 };
+}
+
+/**
+ * Подпись прибавок повышения характеристик: «Сила +1, Ловкость +1». По ней
+ * запись листа показывает, что игрок выбрал, а эффект — что он даёт.
+ *
+ * @param increases прибавки по характеристикам.
+ * @returns подпись прибавок; '' — прибавок нет.
+ */
+export function getAbilityIncreasesLabel(
+  increases: Partial<Record<AbilityKey, number>>,
+): string {
+  return ABILITY_ORDER.filter((key) => (increases[key] ?? 0) > 0)
+    .map((key) => `${ABILITY_LABELS[key]} +${increases[key]}`)
+    .join(', ');
+}
+
+/**
+ * Запись листа о взятом повышении характеристик.
+ *
+ * Прибавка идёт активным эффектом, а не вписывается в записанное значение
+ * характеристики: так игрок видит во вкладке «Эффекты», на каком уровне и что
+ * именно поднято, и может это выключить — как любой другой эффект. Считает
+ * прибавку общий путь пассивных бонусов (`getActiveInventoryBonusEntries`),
+ * поэтому рядом с эффектом лежит и его снимок бонусов.
+ *
+ * Идентификатор строится от строки умения, а та у повышения уже содержит
+ * уровень, поэтому у каждого повышения своя запись — и снятие уровня забирает
+ * ровно его прибавку.
+ *
+ * @param options параметры записи.
+ * @param options.featureRowId идентификатор строки умения с повышением.
+ * @param options.className название класса — подпись источника.
+ * @param options.classLevel уровень В КЛАССЕ, на котором взято повышение.
+ * @param options.increases прибавки по характеристикам.
+ * @returns особенность персонажа с эффектом повышения.
+ */
+export function buildAbilityImprovementFeature(options: {
+  featureRowId: string;
+  className: string;
+  classLevel: number;
+  increases: Partial<Record<AbilityKey, number>>;
+}): CharacterFeature {
+  const { featureRowId, className, classLevel, increases } = options;
+
+  const id = `${featureRowId}:${ABILITY_INCREASE_FEATURE_ID_SEGMENT}`;
+  const label = getAbilityIncreasesLabel(increases);
+
+  const effect: ActiveEffect = {
+    // Идентификатор устойчив: повторное применение того же повышения не
+    // заводит второй эффект поверх первого.
+    id: `${id}:effect`,
+    name: `${ABILITY_IMPROVEMENT_FEATURE_NAME} (${className}, ${classLevel} ${LEVEL_SHORT_SUFFIX})`,
+    description: label,
+    icon: ABILITY_IMPROVEMENT_EFFECT_ICON,
+    disabled: false,
+    origin: 'feature',
+    transfer: false,
+    duration: { type: 'permanent' },
+    changes: ABILITY_ORDER.filter((key) => (increases[key] ?? 0) > 0).map(
+      (key) => ({
+        key: `ability.${key}`,
+        mode: 'add',
+        value: String(increases[key]),
+        priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
+      }),
+    ),
+    flags: [],
+    effectTarget: 'self',
+  };
+
+  return {
+    id,
+    name: ABILITY_IMPROVEMENT_FEATURE_NAME,
+    description: [label],
+    origin: 'class',
+    originName: className,
+    level: classLevel,
+    choice: label,
+    bonuses: toInventoryBonusesFromEffects([effect]),
+    activeEffects: [effect],
+  };
 }
 
 /**

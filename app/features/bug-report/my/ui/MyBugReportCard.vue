@@ -3,9 +3,12 @@
 
   import { useIntersectionObserver, useTimeoutFn } from '@vueuse/core';
 
+  import { MarkupRender } from '~ui/markup';
+
   import {
     BUG_REPORT_PLATFORM_LABELS,
     BUG_REPORT_STATUS_LABELS,
+    getBugReportDescriptionText,
     getBugReportStatusColor,
     MY_BUGS_CHANGE_COMMENT_LABEL,
     MY_BUGS_CHANGE_GENERIC_LABEL,
@@ -24,6 +27,7 @@
     MY_BUGS_STATUS_UPDATED_AT_LABEL,
     MY_BUGS_URL_TITLE,
     parseSelectedText,
+    toBugReportDescriptionBlocks,
   } from '../../model';
 
   /** Оформление карточки с непросмотренным изменением статуса. */
@@ -87,11 +91,21 @@
       || !!props.bugReport.screenshotUrl,
   );
 
+  /** Абзацы описания для рендера разметки: новые репорты — с оформлением, старые — текст. */
+  const descriptionBlocks = computed(() =>
+    toBugReportDescriptionBlocks(props.bugReport.description),
+  );
+
+  // Порог раскрытия считаем по тексту без маркеров `{@...}`, иначе короткое, но
+  // оформленное описание предлагало бы раскрыть «ничего».
+  const descriptionText = computed(() =>
+    getBugReportDescriptionText(props.bugReport.description),
+  );
+
   const canExpand = computed(
     () =>
       hasDetails.value
-      || props.bugReport.description.length
-        > MY_BUGS_DESCRIPTION_PREVIEW_LENGTH,
+      || descriptionText.value.length > MY_BUGS_DESCRIPTION_PREVIEW_LENGTH,
   );
 
   const cardClass = computed(() =>
@@ -211,13 +225,14 @@
         </span>
       </div>
 
-      <!-- Описание проблемы -->
-      <p
-        class="text-sm leading-relaxed break-words whitespace-pre-wrap text-highlighted"
+      <!-- Описание проблемы. whitespace-pre-wrap сохраняет переносы строк старых
+           репортов (обычный текст); у блоков разметки убираем отступ последнего -->
+      <div
+        class="text-sm leading-relaxed break-words whitespace-pre-wrap text-highlighted [&>*:last-child]:mb-0"
         :class="descriptionClass"
       >
-        {{ bugReport.description }}
-      </p>
+        <MarkupRender :render-node="descriptionBlocks" />
+      </div>
 
       <!-- Ответ команды: виден всегда, ради него пользователь и заходит -->
       <div

@@ -4,14 +4,14 @@
 
   import {
     SelectBackground,
-    SelectClass,
+    SelectClassCatalog,
     SelectFeat,
     SelectSpecies,
     SelectSpell,
   } from '~ui/select';
 
   import { useFeatRefDirectory } from '../../composable';
-  import { FEAT_REF_ROWS_LABELS, getFeatSpellCircleLabel } from '../../model';
+  import { FEAT_REF_ROWS_LABELS, getFeatSpellLevelLabel } from '../../model';
 
   /**
    * Список ссылок на записи справочника: требуемые черта, класс, вид и
@@ -45,30 +45,38 @@
 
   const { getEntry } = useFeatRefDirectory(() => kind, urls);
 
-  /** Значение селекта-добавления: после выбора оно сбрасывается. */
-  const pickedUrl = ref<string>('');
+  /**
+   * Значение поля добавления: после выбора оно сбрасывается. Выбор
+   * множественный — список закрывается не после каждой записи, и отметить
+   * подряд несколько заклинаний можно за один заход.
+   */
+  const pickedUrls = ref<Array<string>>([]);
 
   /**
-   * Дописывает выбранную запись. Уже перечисленная пропускается: повтор ничего
+   * Дописывает выбранные записи. Уже перечисленные пропускаются: повтор ничего
    * не добавляет ни требованию, ни выдаче.
    *
-   * @param url ссылка выбранной записи.
+   * @param picked ссылки выбранных записей.
    */
-  function addRef(url: string | Array<string> | undefined) {
-    const picked = Array.isArray(url) ? url[0] : url;
+  function addRef(picked: string | Array<string> | undefined) {
+    const pickedList = Array.isArray(picked) ? picked : [picked];
 
-    if (picked && !urls.value.includes(picked)) {
+    const added = pickedList.flatMap((url) =>
+      url && !urls.value.includes(url) ? [url] : [],
+    );
+
+    if (added.length) {
       // Снимок названия пишется сразу: из него карточка черты собирает условие
       // («черта «Отмеченный драконом»»), а core-api имя ссылки не подставляет.
       // У записей, выбранных до этого, имени нет — там останется ссылка, пока
       // черту не пересохранят
       model.value = [
         ...model.value,
-        { url: picked, name: getEntry(picked)?.name },
+        ...added.map((url) => ({ url, name: getEntry(url)?.name })),
       ];
     }
 
-    pickedUrl.value = '';
+    pickedUrls.value = [];
   }
 
   /**
@@ -92,28 +100,21 @@
   }
 
   /**
-   * Подпись круга заклинания; пусто — у записи круга нет либо справочник ещё
+   * Подпись уровня заклинания; пусто — у записи уровня нет либо справочник ещё
    * не ответил.
    *
    * @param reference ссылка строки.
-   * @returns подпись круга.
+   * @returns подпись уровня.
    */
-  function getCircleLabel(reference: FeatEntityRef): string {
+  function getLevelLabel(reference: FeatEntityRef): string {
     const level = getEntry(reference.url)?.level;
 
-    return level === undefined ? '' : getFeatSpellCircleLabel(level);
+    return level === undefined ? '' : getFeatSpellLevelLabel(level);
   }
 </script>
 
 <template>
   <div class="flex w-full flex-col gap-1.5">
-    <p
-      v-if="!model.length"
-      class="text-xs text-dimmed italic"
-    >
-      {{ FEAT_REF_ROWS_LABELS.empty }}
-    </p>
-
     <div
       v-for="(reference, index) in model"
       :key="reference.url"
@@ -136,16 +137,16 @@
         {{ getLabel(reference) }}
       </span>
 
-      <!-- Круг заклинания: в механику он не пишется, показан для справки —
+      <!-- Уровень заклинания: в механику он не пишется, показан для справки —
         по нему страница черты разбивает таблицу «Заклинания метки» -->
       <UBadge
-        v-if="getCircleLabel(reference)"
+        v-if="getLevelLabel(reference)"
         color="neutral"
         variant="subtle"
         size="sm"
         class="shrink-0"
       >
-        {{ getCircleLabel(reference) }}
+        {{ getLevelLabel(reference) }}
       </UBadge>
 
       <UBadge
@@ -189,35 +190,40 @@
 
     <SelectFeat
       v-if="kind === 'FEAT'"
-      :model-value="pickedUrl"
+      :model-value="pickedUrls"
       :exclude-urls="urls"
       :categories="featCategories"
+      multiple
       @update:model-value="addRef"
     />
 
-    <SelectClass
+    <SelectClassCatalog
       v-else-if="kind === 'CLASS'"
-      :model-value="pickedUrl"
-      :excluded-values="urls"
+      :model-value="pickedUrls"
+      :exclude-urls="urls"
+      multiple
       @update:model-value="addRef"
     />
 
     <SelectSpecies
       v-else-if="kind === 'SPECIES'"
-      :model-value="pickedUrl"
+      :model-value="pickedUrls"
+      multiple
       @update:model-value="addRef"
     />
 
     <SelectBackground
       v-else-if="kind === 'BACKGROUND'"
-      :model-value="pickedUrl"
+      :model-value="pickedUrls"
+      multiple
       @update:model-value="addRef"
     />
 
     <SelectSpell
       v-else-if="kind === 'SPELL'"
-      :model-value="pickedUrl"
+      :model-value="pickedUrls"
       :exclude-urls="urls"
+      multiple
       @update:model-value="addRef"
     />
   </div>

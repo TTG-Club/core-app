@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { AbilityKey } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
+
   import { useCharacterSheet } from '../../composables';
   import {
     ABILITY_LABELS,
@@ -92,7 +94,8 @@
     () =>
       !draftCustom.value
       || breakdown.value.extraAbilities.length > 0
-      || breakdown.value.featBonus !== 0,
+      || breakdown.value.featBonus !== 0
+      || breakdown.value.effectBonus !== 0,
   );
 
   function handleAbilities(value: unknown): void {
@@ -260,6 +263,21 @@
           </span>
         </div>
 
+        <!-- Своей строкой, а не в «Чертах»: прибавку эффектом даёт и черта, и
+             надетый предмет — «Наручи защиты» под подписью «Черты» сбивали бы. -->
+        <div
+          v-if="breakdown.effectBonus !== 0"
+          class="flex items-center justify-between gap-4 text-sm"
+        >
+          <span class="text-toned">
+            {{ ARMOR_CLASS_LABELS.effectTitle }}
+          </span>
+
+          <span class="text-toned">
+            {{ getFormattedBonus(breakdown.effectBonus) }}
+          </span>
+        </div>
+
         <div
           v-for="bonus in breakdown.extraAbilities"
           :key="bonus.ability"
@@ -294,14 +312,14 @@
     <template #footer>
       <div class="flex w-full justify-end gap-2">
         <UButton
-          label="Отмена"
+          :label="ACTION_LABELS.cancel"
           color="neutral"
           variant="ghost"
           @click.left.exact.prevent="handleCancel"
         />
 
         <UButton
-          label="Применить"
+          :label="ACTION_LABELS.apply"
           color="primary"
           @click.left.exact.prevent="handleApply"
         />

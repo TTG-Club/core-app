@@ -73,8 +73,10 @@ const choiceTypeSchema = z.enum([
   'SPELLCASTING_ABILITY',
   'WEAPON',
   'WEAPON_MASTERY',
+  'MASTERY_PROPERTY',
   'ARMOR',
   'OPTION',
+  'FEAT',
 ]);
 
 const choiceSchema = z.object({
@@ -86,6 +88,7 @@ const choiceSchema = z.object({
   countEqualsProficiencyBonus: z.boolean().optional(),
   options: z.array(choiceOptionSchema).optional(),
   spellFilter: spellFilterSchema.optional(),
+  featCategories: z.array(z.string()).optional(),
   onlyIfNotProficient: z.boolean().optional(),
   onlyIfProficient: z.boolean().optional(),
   // Единственное значение, которое разбор подставляет сам: слияние с начальным
@@ -95,6 +98,14 @@ const choiceSchema = z.object({
   grants: z.enum(['PROFICIENCY', 'EXPERTISE']).default('PROFICIENCY'),
   expertiseIfProficient: z.boolean().optional(),
   rechooseOnLongRest: z.boolean().optional(),
+  requiredLevel: z.number().optional(),
+  // Ступени количества, показ колонкой и её подпись появились позже: у записей
+  // до них полей нет — такой выбор количество не растит и колонкой не рисуется
+  scaling: z
+    .array(z.object({ level: z.number(), count: z.number() }))
+    .optional(),
+  showInTable: z.boolean().optional(),
+  shortName: z.string().optional(),
 });
 
 const hitPointsSchema = z.object({
@@ -148,6 +159,7 @@ const proficiencyGrantSchema = z.object({
   weaponCategories: z.array(z.string()).optional(),
   weapons: z.array(entityRefSchema).optional(),
   weaponMasteries: z.array(entityRefSchema).optional(),
+  masteryProperties: z.array(z.string()).optional(),
   savingThrows: z.array(abilityKeySchema).optional(),
   armorCategories: z.array(z.string()).optional(),
   skills: z.array(z.string()).optional(),
@@ -155,12 +167,26 @@ const proficiencyGrantSchema = z.object({
   tools: z.array(entityRefSchema).optional(),
 });
 
+const counterScalingSchema = z.object({
+  level: z.number(),
+  max: z.number(),
+});
+
 const counterSchema = z.object({
   key: z.string().optional(),
   name: z.string().optional(),
   shortName: z.string().optional(),
   max: z.string().optional(),
-  recovery: z.enum(['SHORT_REST', 'LONG_REST']).default('LONG_REST'),
+  scaling: z.array(counterScalingSchema).optional(),
+  // Нижняя граница максимума появилась позже: у записей до неё поля нет — такой
+  // ресурс считается одной формулой, как считался раньше
+  min: z.number().optional(),
+  // Показ колонкой появился позже: у записей до него поля нет — такой ресурс
+  // в таблице не показывался, значит и не должен
+  showInTable: z.boolean().optional(),
+  recovery: z
+    .enum(['SHORT_REST', 'LONG_REST', 'SHORT_REST_ONE'])
+    .default('LONG_REST'),
 });
 
 // Выдаваемое заклинание — та же ссылка плюс уровень, с которого оно доступно.
@@ -168,17 +194,38 @@ const counterSchema = z.object({
 // «доступно с момента взятия».
 const grantedSpellRefSchema = entityRefSchema.extend({
   requiredLevel: z.number().optional(),
+  // Характеристика и подготовка — у группы, в которой стоит заклинание: один
+  // набор заклинаний записи может считаться от одной характеристики, другой — от
+  // другой. Пусто — берётся у записи целиком
+  spellcastingAbility: abilityKeySchema.optional(),
+  alwaysPrepared: z.boolean().optional(),
+});
+
+// Список класса, выдаваемый целиком: правило, а не перечень заклинаний. Круг
+// задан теми же двумя полями, что у фильтра выбора, плюс отметка «по ячейкам» —
+// её граница известна только листу, у которого посчитаны ячейки персонажа
+const classSpellListGrantSchema = z.object({
+  requiredLevel: z.number().optional(),
+  classes: z.array(entityRefSchema).optional(),
+  level: z.number().optional(),
+  maxLevel: z.number().optional(),
+  maxLevelFromSlots: z.boolean().optional(),
+  spellcastingAbility: abilityKeySchema.optional(),
+  alwaysPrepared: z.boolean().optional(),
 });
 
 const spellGrantSchema = z.object({
   spells: z.array(grantedSpellRefSchema).optional(),
+  classLists: z.array(classSpellListGrantSchema).optional(),
   spellcastingAbility: abilityKeySchema.optional(),
   alwaysPrepared: z.boolean().optional(),
 });
 
 const spellListGroupSchema = z.object({
   requiredLevel: z.number().optional(),
-  count: z.string().optional(),
+  // Прежнее поле «сколько берут» читается и молча отбрасывается: расширение
+  // списка не спрашивает количество, а «выбрать N из перечисленных» стало
+  // режимом выбора заклинаний
   spells: z.array(entityRefSchema).optional(),
 });
 
@@ -199,6 +246,7 @@ const mechanicsSchema = z.object({
   spells: spellGrantSchema.optional(),
   spellList: spellListSchema.optional(),
   counters: z.array(counterSchema).optional(),
+  feats: z.array(entityRefSchema).optional(),
 });
 
 const prerequisiteDetailsSchema = z.object({
@@ -240,13 +288,12 @@ function toSpellListGroups(
   if (parsed?.groups?.length) {
     return parsed.groups.map((group) => ({
       requiredLevel: group.requiredLevel,
-      count: group.count ?? '',
       spells: group.spells ?? [],
     }));
   }
 
   if (parsed?.spells?.length) {
-    return [{ requiredLevel: undefined, count: '', spells: parsed.spells }];
+    return [{ requiredLevel: undefined, spells: parsed.spells }];
   }
 
   return [];
@@ -303,10 +350,17 @@ function toFeatMechanicsState(
           }
         : undefined,
       onlyIfNotProficient: choice.onlyIfNotProficient ?? false,
+      featCategories: choice.featCategories?.length
+        ? choice.featCategories
+        : undefined,
       onlyIfProficient: choice.onlyIfProficient ?? false,
       grants: choice.grants,
       expertiseIfProficient: choice.expertiseIfProficient ?? false,
       rechooseOnLongRest: choice.rechooseOnLongRest ?? false,
+      requiredLevel: choice.requiredLevel,
+      scaling: choice.scaling,
+      showInTable: choice.showInTable,
+      shortName: choice.shortName,
     })),
     modifiers: {
       hitPoints: {
@@ -350,6 +404,7 @@ function toFeatMechanicsState(
       weaponCategories: parsed.proficiencies?.weaponCategories ?? [],
       weapons: parsed.proficiencies?.weapons ?? [],
       weaponMasteries: parsed.proficiencies?.weaponMasteries ?? [],
+      masteryProperties: parsed.proficiencies?.masteryProperties ?? [],
       savingThrows: parsed.proficiencies?.savingThrows ?? [],
       armorCategories: parsed.proficiencies?.armorCategories ?? [],
       skills: parsed.proficiencies?.skills ?? [],
@@ -361,6 +416,17 @@ function toFeatMechanicsState(
         url: spell.url,
         name: spell.name,
         requiredLevel: spell.requiredLevel,
+        spellcastingAbility: spell.spellcastingAbility,
+        alwaysPrepared: spell.alwaysPrepared,
+      })),
+      classLists: (parsed.spells?.classLists ?? []).map((classList) => ({
+        requiredLevel: classList.requiredLevel,
+        classes: classList.classes ?? [],
+        level: classList.level,
+        maxLevel: classList.maxLevel,
+        maxLevelFromSlots: classList.maxLevelFromSlots,
+        spellcastingAbility: classList.spellcastingAbility,
+        alwaysPrepared: classList.alwaysPrepared,
       })),
       spellcastingAbility: parsed.spells?.spellcastingAbility,
       alwaysPrepared: parsed.spells?.alwaysPrepared ?? false,
@@ -375,8 +441,12 @@ function toFeatMechanicsState(
       name: counter.name ?? '',
       shortName: counter.shortName ?? '',
       max: counter.max ?? '',
+      scaling: counter.scaling ?? [],
+      min: counter.min ?? 0,
+      showInTable: counter.showInTable ?? false,
       recovery: counter.recovery,
     })),
+    feats: (parsed.feats ?? []).map((feat) => ({ ...feat })),
   };
 }
 

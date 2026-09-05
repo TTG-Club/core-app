@@ -17,6 +17,7 @@
   import {
     ABILITY_LABELS,
     ARMOR_DEXTERITY_HINT_LABELS,
+    ARMOR_STEALTH_HINT_LABEL,
     CUSTOM_INVENTORY_BADGE_HINT,
     getAbilityModifier,
     getHeavyWeaponHint,
@@ -35,12 +36,16 @@
     INVENTORY_CATEGORY_ICONS,
     INVENTORY_CHARGES_HINT_LABELS,
     INVENTORY_CHARGES_SPEND_LABEL,
+    INVENTORY_CUSTOM_BADGE_LABEL,
+    INVENTORY_EMPTY_DESCRIPTION_LABEL,
     INVENTORY_EQUIP_ACTION_LABELS,
+    INVENTORY_EQUIPPED_BADGE_LABEL,
     INVENTORY_HEAVY_BADGE_LABEL,
     INVENTORY_MISSING_BADGE_HINT,
     INVENTORY_MISSING_BADGE_LABEL,
     INVENTORY_QUANTITY_MIN,
     INVENTORY_ROLL_KIND_LABELS,
+    INVENTORY_ROW_ARIA_PREFIXES,
     INVENTORY_STAT_HINT_LABELS,
     INVENTORY_STAT_LABELS,
     INVENTORY_TWO_HANDED_BADGE_HINT,
@@ -379,13 +384,21 @@
     isMissing.value ? 'text-error' : 'text-default',
   );
 
-  /** Плитка класса доспеха: сколько КД даёт предмет (щит — бонусом). */
+  /**
+   * Плитка класса доспеха: сколько КД даёт предмет (щит — бонусом). Помеха на
+   * Скрытность дописывается в подсказку — по ней видно, откуда она берётся,
+   * когда модалка броска открывается с помехой.
+   */
   function getArmorStat(armor: InventoryArmor): ItemStat {
+    const stealthHint = armor.stealthDisadvantage
+      ? ARMOR_STEALTH_HINT_LABEL
+      : '';
+
     if (armor.shield) {
       return {
         label: INVENTORY_STAT_LABELS.armorClass,
         value: `+${armor.baseArmorClass}`,
-        tooltip: `Щит: +${armor.baseArmorClass} к классу доспеха`,
+        tooltip: `Щит: +${armor.baseArmorClass} к классу доспеха${stealthHint}`,
         accent: true,
       };
     }
@@ -393,7 +406,7 @@
     return {
       label: INVENTORY_STAT_LABELS.armorClass,
       value: String(armor.baseArmorClass),
-      tooltip: `Класс доспеха ${armor.baseArmorClass}${ARMOR_DEXTERITY_HINT_LABELS[armor.dexterityMod]}`,
+      tooltip: `Класс доспеха ${armor.baseArmorClass}${ARMOR_DEXTERITY_HINT_LABELS[armor.dexterityMod]}${stealthHint}`,
       accent: true,
     };
   }
@@ -464,6 +477,12 @@
     if (attack.weaponBonus !== 0) {
       tooltipParts.push(
         getBonusPart(INVENTORY_STAT_HINT_LABELS.weapon, attack.weaponBonus),
+      );
+    }
+
+    if (attack.effectBonus !== 0) {
+      tooltipParts.push(
+        getBonusPart(INVENTORY_STAT_HINT_LABELS.effects, attack.effectBonus),
       );
     }
 
@@ -690,7 +709,7 @@
               size="sm"
               class="shrink-0"
             >
-              Надет
+              {{ INVENTORY_EQUIPPED_BADGE_LABEL }}
             </UBadge>
 
             <!-- Настройка и включение стоят рядом с «Надет»: это состояния
@@ -796,7 +815,7 @@
                 variant="subtle"
                 class="relative z-10 shrink-0"
               >
-                Свой
+                {{ INVENTORY_CUSTOM_BADGE_LABEL }}
               </UBadge>
             </UTooltip>
           </span>
@@ -883,7 +902,7 @@
           square
           :class="gameControlClass"
           :disabled="isDecreaseDisabled"
-          :aria-label="`Уменьшить количество: ${inventoryItem.name}`"
+          :aria-label="`${INVENTORY_ROW_ARIA_PREFIXES.decrease}: ${inventoryItem.name}`"
           @click.left.exact.prevent="handleDecrease"
         />
 
@@ -901,7 +920,7 @@
           size="xs"
           square
           :class="gameControlClass"
-          :aria-label="`Увеличить количество: ${inventoryItem.name}`"
+          :aria-label="`${INVENTORY_ROW_ARIA_PREFIXES.increase}: ${inventoryItem.name}`"
           @click.left.exact.prevent="handleIncrease"
         />
 
@@ -918,7 +937,7 @@
             size="xs"
             square
             :class="editControlClass"
-            :aria-label="`Действия с предметом: ${inventoryItem.name}`"
+            :aria-label="`${INVENTORY_ROW_ARIA_PREFIXES.menu}: ${inventoryItem.name}`"
           />
         </UDropdownMenu>
       </div>
@@ -968,7 +987,7 @@
         v-else
         class="text-xs text-dimmed"
       >
-        Описание не заполнено
+        {{ INVENTORY_EMPTY_DESCRIPTION_LABEL }}
       </span>
     </div>
   </div>

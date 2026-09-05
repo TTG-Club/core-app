@@ -3,6 +3,7 @@ import type {
   FeatAbilityBonus,
   FeatChoice,
   FeatCounter,
+  FeatEntityRef,
   FeatMechanics,
   FeatModifiers,
   FeatPrerequisiteDetails,
@@ -80,7 +81,21 @@ function buildChoices(choices: Array<FeatChoice>): Array<FeatChoice> {
       ...choice,
       key: choice.key.trim(),
       spellFilter: buildSpellFilter(choice.spellFilter),
+      // Категории бывают только у выбора черты и только непустыми: пустой
+      // список читается как «любая категория» и в JSONB не нужен
+      featCategories:
+        choice.type === 'FEAT' && choice.featCategories?.length
+          ? choice.featCategories
+          : undefined,
     }));
+}
+
+/**
+ * Готовит выдаваемые черты: ссылка без url — только что добавленная и
+ * незаполненная строка, отправлять её некуда.
+ */
+function buildFeats(feats: Array<FeatEntityRef>): Array<FeatEntityRef> {
+  return feats.filter((feat) => !!text(feat.url));
 }
 
 /** Готовит варианты повышения характеристик. */
@@ -136,18 +151,26 @@ function buildProficiencies(
  * Готовит выдаваемые заклинания.
  *
  * Заклинание без ссылки отправлять некуда — так выглядит пустая строка, только
- * что добавленная в списке. Остальные поля блока без заклинаний бессмысленны:
- * заклинательной характеристике не к чему применяться, поэтому блок целиком
- * уходит пустым.
+ * что добавленная в списке. Группа «весь список класса» без единого класса — та
+ * же пустая строка: выдавать по ней нечего. Остальные поля блока без заклинаний
+ * бессмысленны: заклинательной характеристике не к чему применяться, поэтому
+ * блок целиком уходит пустым.
  */
 function buildSpells(spells: FeatSpellGrant): FeatSpellGrant | undefined {
   const granted = spells.spells.filter((spell) => !!text(spell.url));
 
-  if (!granted.length) {
+  const classLists = spells.classLists
+    .map((classList) => ({
+      ...classList,
+      classes: classList.classes.filter((reference) => !!text(reference.url)),
+    }))
+    .filter((classList) => classList.classes.length > 0);
+
+  if (!granted.length && !classLists.length) {
     return undefined;
   }
 
-  return { ...spells, spells: granted };
+  return { ...spells, spells: granted, classLists };
 }
 
 /**
@@ -170,7 +193,6 @@ function buildSpellList(
   const groups = spellList.groups
     .map((group) => ({
       ...group,
-      count: text(group.count) ?? '',
       spells: group.spells.filter((spell) => !!text(spell.url)),
     }))
     .filter((group) => group.spells.length > 0);
@@ -211,7 +233,11 @@ export function buildFeatMechanics(
   mechanics: FeatMechanics,
 ): FeatMechanics | undefined {
   return orUndefined({
-    abilityBonuses: buildAbilityBonuses(mechanics.abilityBonuses),
+    // Пустой список не отправляется: у класса и вида блока нет, и бэк отвечает
+    // 500 на `abilityBonuses: []`
+    abilityBonuses: orUndefinedList(
+      buildAbilityBonuses(mechanics.abilityBonuses ?? []),
+    ),
     choices: buildChoices(mechanics.choices),
     modifiers: buildModifiers(mechanics.modifiers) ?? mechanics.modifiers,
     proficiencies:
@@ -221,6 +247,9 @@ export function buildFeatMechanics(
     // заклинательство» без списка ничего не описывает
     spellList: buildSpellList(mechanics.spellList) ?? createFeatSpellList(),
     counters: buildCounters(mechanics.counters),
+    // Пустой список не отправляется по той же причине, что и повышения: блок
+    // есть только у класса, и бэк отвечает 500 на `feats: []` у черты и вида
+    feats: orUndefinedList(buildFeats(mechanics.feats ?? [])),
   });
 }
 

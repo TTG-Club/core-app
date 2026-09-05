@@ -209,6 +209,32 @@ export const EFFECT_DAMAGE_TYPE_OPTIONS: Array<Option<string>> = [
   { label: 'Психический', value: 'psychic' },
 ];
 
+/**
+ * Навыки D&D 5e — зеркало `SKILLS_LABELS` из системы. Один список на всё, что
+ * про навыки: и ключи изменений (`skill.<навык>`), и флаги преимущества с
+ * помехой. Второй перечень разъехался бы с первым при первом переименовании.
+ */
+export const EFFECT_SKILL_OPTIONS: Array<Option<string>> = [
+  { value: 'acrobatics', label: 'Акробатика' },
+  { value: 'investigation', label: 'Анализ' },
+  { value: 'arcana', label: 'Аркана' },
+  { value: 'athletics', label: 'Атлетика' },
+  { value: 'perception', label: 'Внимательность' },
+  { value: 'survival', label: 'Выживание' },
+  { value: 'performance', label: 'Выступление' },
+  { value: 'intimidation', label: 'Запугивание' },
+  { value: 'history', label: 'История' },
+  { value: 'sleightOfHand', label: 'Ловкость рук' },
+  { value: 'medicine', label: 'Медицина' },
+  { value: 'deception', label: 'Обман' },
+  { value: 'nature', label: 'Природа' },
+  { value: 'insight', label: 'Проницательность' },
+  { value: 'religion', label: 'Религия' },
+  { value: 'stealth', label: 'Скрытность' },
+  { value: 'persuasion', label: 'Убеждение' },
+  { value: 'animalHandling', label: 'Уход за животными' },
+];
+
 /** Цель части урона эффекта. */
 export const EFFECT_DAMAGE_TARGET_OPTIONS: Array<
   Option<EffectDamagePartTarget>
@@ -271,25 +297,13 @@ export const EFFECT_TARGET_KEY_SUGGESTIONS: Array<Option<string>> = [
   { value: 'damage.ranged', label: 'Урон: дальнобойное оружие' },
   { value: 'damage.spell', label: 'Урон: заклинание' },
 
-  // Навыки
-  { value: 'skill.acrobatics', label: 'Навык (Акробатика)' },
-  { value: 'skill.animalHandling', label: 'Навык (Уход за животными)' },
-  { value: 'skill.arcana', label: 'Навык (Аркана)' },
-  { value: 'skill.athletics', label: 'Навык (Атлетика)' },
-  { value: 'skill.deception', label: 'Навык (Обман)' },
-  { value: 'skill.history', label: 'Навык (История)' },
-  { value: 'skill.insight', label: 'Навык (Проницательность)' },
-  { value: 'skill.investigation', label: 'Навык (Анализ)' },
-  { value: 'skill.intimidation', label: 'Навык (Запугивание)' },
-  { value: 'skill.medicine', label: 'Навык (Медицина)' },
-  { value: 'skill.nature', label: 'Навык (Природа)' },
-  { value: 'skill.perception', label: 'Навык (Внимательность)' },
-  { value: 'skill.performance', label: 'Навык (Выступление)' },
-  { value: 'skill.persuasion', label: 'Навык (Убеждение)' },
-  { value: 'skill.religion', label: 'Навык (Религия)' },
-  { value: 'skill.sleightOfHand', label: 'Навык (Ловкость рук)' },
-  { value: 'skill.stealth', label: 'Навык (Скрытность)' },
-  { value: 'skill.survival', label: 'Навык (Выживание)' },
+  // Навыки — из общего списка, чтобы ключ и флаг навыка не разъехались
+  ...EFFECT_SKILL_OPTIONS.map(
+    (skill): Option<string> => ({
+      value: `skill.${skill.value}`,
+      label: `Навык (${skill.label})`,
+    }),
+  ),
 ];
 
 /** Библиотека значений/формул (для поля change.value). */
@@ -341,6 +355,51 @@ export const EFFECT_CARRIER_TYPE_CONDITION_PREFIX = 'self.creatureType === ';
 
 /** Приставка условий по типу ЦЕЛИ. */
 export const EFFECT_TARGET_TYPE_CONDITION_PREFIX = 'target.creatureType === ';
+
+/**
+ * Разделитель условий, соединённых «и»: `self.armor === "none" && ...`.
+ *
+ * Это не выражение и не шаг к нему: каждая часть остаётся строкой из закрытого
+ * перечня, а `&&` только позволяет требовать нескольких условий разом — «нет
+ * доспеха И нет щита» у наручей защиты. Другой связки (`||`, отрицания,
+ * скобок) намеренно нет: разбирать их пришлось бы парсером.
+ */
+export const EFFECT_CONDITION_AND_SEPARATOR = '&&';
+
+/**
+ * Части составного условия.
+ *
+ * Одиночное условие — тоже список, из одного элемента: так весь дальнейший
+ * разбор работает единообразно, без ветки «а если разделителя нет».
+ *
+ * @param condition условие изменения.
+ * @returns непустые части, каждая обрезана по краям.
+ */
+export function splitConditionParts(condition: string): string[] {
+  return condition
+    .split(EFFECT_CONDITION_AND_SEPARATOR)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+}
+
+/** Приставка условия по надетому доспеху носителя. */
+export const EFFECT_CARRIER_ARMOR_CONDITION_PREFIX = 'self.armor === ';
+
+/**
+ * Условия по доспеху носителя — зеркало семейства `self.armor` из системы D&D.
+ *
+ * Считаются по самому листу, без броска: прибавка с таким условием попадает в
+ * постоянные числа, и +1 к КД «Обороны» видно в блоке защиты.
+ */
+export const EFFECT_ARMOR_CONDITION_OPTIONS: Array<Option<string>> = [
+  { value: 'any', label: 'в доспехе (любом)' },
+  { value: 'none', label: 'без доспеха' },
+  { value: 'light', label: 'в лёгком доспехе' },
+  { value: 'medium', label: 'в среднем доспехе' },
+  { value: 'heavy', label: 'в тяжёлом доспехе' },
+  { value: 'shield', label: 'со щитом' },
+  { value: 'noShield', label: 'без щита' },
+];
 
 /**
  * Собирает условия по типу существа: движок сверяет тип носителя или цели с
@@ -401,6 +460,12 @@ export const EFFECT_CONDITION_EXPR_SUGGESTIONS: Array<Option<string>> = [
     'Носитель',
   ),
   ...buildCreatureTypeConditions(EFFECT_TARGET_TYPE_CONDITION_PREFIX, 'Цель'),
+  ...EFFECT_ARMOR_CONDITION_OPTIONS.map(
+    (armor): Option<string> => ({
+      value: `${EFFECT_CARRIER_ARMOR_CONDITION_PREFIX}"${armor.value}"`,
+      label: `Носитель: ${armor.label}`,
+    }),
+  ),
 ];
 
 /** Виды защит от урона: приставка ключа флага и подпись. */
@@ -425,6 +490,46 @@ function buildAbilityFlagLabels(
   return EFFECT_ABILITY_OPTIONS.map((ability) => [
     `${keyPrefix}${ability.value}`,
     `${labelPrefix}: ${ability.label}`,
+  ]);
+}
+
+/**
+ * Собирает подписи флагов спасброска против состояния: преимущество и помеха
+ * задаются отдельно для каждого из пятнадцати состояний.
+ *
+ * Семейством, а не перечислением: так написана половина видов справочника
+ * («преимущество на спасброски, чтобы избежать состояния Отравлен»), и держать
+ * их списком значило бы дописывать его при каждом новом виде.
+ *
+ * @param keyPrefix приставка ключа флага.
+ * @param labelPrefix приставка подписи флага.
+ * @returns пары «ключ флага → подпись».
+ */
+function buildSaveVsConditionFlagLabels(
+  keyPrefix: string,
+  labelPrefix: string,
+): Array<[string, string]> {
+  return EFFECT_CONDITION_OPTIONS.map((condition) => [
+    `${keyPrefix}${condition.value.charAt(0).toUpperCase()}${condition.value.slice(1)}`,
+    `${labelPrefix}: ${condition.label}`,
+  ]);
+}
+
+/**
+ * Собирает подписи понавыковых флагов: преимущество и помеха задаются отдельно
+ * для каждого из восемнадцати навыков.
+ *
+ * @param keySuffix окончание ключа флага (`.advantage` либо `.disadvantage`).
+ * @param labelPrefix приставка подписи флага.
+ * @returns пары «ключ флага → подпись».
+ */
+function buildSkillFlagLabels(
+  keySuffix: string,
+  labelPrefix: string,
+): Array<[string, string]> {
+  return EFFECT_SKILL_OPTIONS.map((skill): [string, string] => [
+    `skill.${skill.value}${keySuffix}`,
+    `${labelPrefix}: ${skill.label}`,
   ]);
 }
 
@@ -488,14 +593,33 @@ export const EFFECT_FLAG_LABELS: Record<string, string> = Object.fromEntries([
   ...buildAbilityFlagLabels('abilityCheck.disadvantage.', 'Помеха на проверки'),
 
   // Навыки
-  ['skill.stealth.disadvantage', 'Помеха на проверки: Скрытность'],
+  ...buildSkillFlagLabels('.advantage', 'Преимущество на проверки'),
+  ...buildSkillFlagLabels('.disadvantage', 'Помеха на проверки'),
 
   // Спасброски
   ['save.advantage', 'Преимущество на ВСЕ спасброски'],
   ['save.disadvantage', 'Помеха на ВСЕ спасброски'],
+  [
+    'save.advantage.vsMagic',
+    'Преимущество на спасброски против заклинаний и магических эффектов',
+  ],
+  [
+    'save.disadvantage.vsMagic',
+    'Помеха на спасброски против заклинаний и магических эффектов',
+  ],
   ...buildAbilityFlagLabels('save.advantage.', 'Преимущество на спасброски'),
   ...buildAbilityFlagLabels('save.disadvantage.', 'Помеха на спасброски'),
   ...buildAbilityFlagLabels('save.autoFail.', 'Автопровал спасбросков'),
+
+  // Спасброски против состояний
+  ...buildSaveVsConditionFlagLabels(
+    'save.advantage.vs',
+    'Преимущество на спасброски против состояния',
+  ),
+  ...buildSaveVsConditionFlagLabels(
+    'save.disadvantage.vs',
+    'Помеха на спасброски против состояния',
+  ),
 
   // Прочее
   ['speed.zero', 'Скорость равна нулю'],
@@ -509,6 +633,36 @@ export const EFFECT_FLAG_LABELS: Record<string, string> = Object.fromEntries([
   // Защиты от урона
   ...buildDamageDefenseFlagLabels(),
 ]);
+
+/**
+ * Ключи флагов спасброска против состояния — по ним меню отделяет их от прочих
+ * спасбросков: приставка `save.` у них общая, а список из тридцати позиций в
+ * одном разделе с остальными не читается.
+ */
+export const SAVE_VS_CONDITION_FLAG_KEYS: ReadonlySet<string> = new Set(
+  [
+    ...buildSaveVsConditionFlagLabels('save.advantage.vs', ''),
+    ...buildSaveVsConditionFlagLabels('save.disadvantage.vs', ''),
+  ].map(([key]) => key),
+);
+
+/**
+ * Ключ флага спасброска против состояния.
+ *
+ * Собирается здесь, а не у потребителя: строка обязана совпадать с ключом из
+ * библиотеки флагов, и второе место сборки разошлось бы с ней на первом же
+ * состоянии. Зеркало `buildSaveVsConditionFlag` системы VTTG.
+ *
+ * @param mode вид флага.
+ * @param condition ключ состояния (`poisoned`).
+ * @returns ключ флага.
+ */
+export function buildSaveVsConditionFlag(
+  mode: 'advantage' | 'disadvantage',
+  condition: string,
+): string {
+  return `save.${mode}.vs${condition.charAt(0).toUpperCase()}${condition.slice(1)}`;
+}
 
 /** Полная библиотека флагов для поля выбора. */
 export const EFFECT_FLAG_OPTIONS: Array<Option<string>> = Object.entries(
@@ -727,10 +881,6 @@ export const ACTIVE_EFFECT_LABELS = {
   title: 'Активные эффекты',
   subtitle:
     'Считаются листом персонажа на сайте и переносятся в виртуальный стол VTTG',
-  empty:
-    'Нет активных эффектов. Добавь эффект, чтобы запись меняла числа на листе '
-    + 'персонажа — класс доспеха, спасброски, характеристики — или накладывала '
-    + 'состояния и ауры в VTTG.',
   add: 'Добавить эффект',
   remove: 'Удалить эффект',
   unnamed: 'Эффект без названия',

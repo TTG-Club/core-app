@@ -32,7 +32,7 @@ core-app/
 │   ├── plugins/                    # anchorScroll, dayjs, online-heartbeat, scrollBehavior, scrollbarWidth
 │   ├── shared/                     # 🔧 Global shared layer (FSD-style)
 │   │   ├── api/                    # Typed API fetchers (dictionaries/select-options)
-│   │   ├── consts/                 # Global constants (levels, layout-width, theme, fetch-status)
+│   │   ├── consts/                 # Global constants (levels, layout-width, theme, fetch-status, button action labels)
 │   │   ├── enums/                  # Enums (comparison, …)
 │   │   ├── types/                  # base, wiki, user, subscription, upload, composable, abilities, dictionaries
 │   │   ├── ui/                     # 🎨 UI Kit (28 components)
@@ -73,18 +73,18 @@ core-app/
 > **Endpoint exceptions:** `items` and `sources` call the API in the singular —
 > `/api/v2/item/…` and `/api/v2/source/…`, not the domain folder name.
 
-| Domain        | Purpose                                            | Notable extras                                                                                                                                                                         |
-| ------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `species`     | Races/species with nested lineages (sub-races)     | `lineages`, `lineages-drawer`                                                                                                                                                          |
-| `classes`     | Classes, subclasses & multiclass builder           | `multiclass-drawer`, `subclasses-drawer` (body = Class + Multiclass)                                                                                                                   |
-| `spells`      | Spells; class-grouped infinite-scroll list         | `groups`, `composable` (class pagination), `legend`                                                                                                                                    |
-| `bestiary`    | Creatures grouped by challenge rating; stat blocks | `composable` (CR group order)                                                                                                                                                          |
-| `magic-items` | Magic items grouped by rarity                      | `composable` (rarity order), `legend` (attunement); editor split into «Основное / Свойства / Применение / Эффекты» tabs, magic's own damage uses the shared `~ui/damage-formula` parts |
-| `backgrounds` | Character backgrounds                              | —                                                                                                                                                                                      |
-| `feats`       | Feats                                              | —                                                                                                                                                                                      |
-| `glossary`    | Rules terms / glossary                             | —                                                                                                                                                                                      |
-| `items`       | Mundane items: weapons, armor, tools, gear         | editor switches sub-form by `category`; weapon damage uses the shared `~ui/damage-formula` parts, legacy dice kept in sync on the «Совместимость» tab                                  |
-| `sources`     | Source books (publisher/translation, tags)         | model layer is named `types/` (not `model/`)                                                                                                                                           |
+| Domain        | Purpose                                            | Notable extras                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `species`     | Races/species with nested lineages (sub-races)     | `lineages`, `lineages-drawer`; editor split into «Основное / Характеристики / Умения / Дары / Заклинания / Эффекты / Изображения» tabs, grants reuse the feat row editors                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `classes`     | Classes, subclasses & multiclass builder           | `multiclass-drawer`, `subclasses-drawer` (body = Class + Multiclass); editor split into nine tabs, features are collapsed rows (scaling, options, mechanics and effects in sections under each feature); fighting style and ASI are `FEAT` grant rows, the legacy flags are derived on save (`model/features.ts`); class spells and spell-list expansion live on the «Заклинательство» tab; class resources are counter rows on «Дары» (of the class or of a feature), not table columns; the multiclass spell-slot table shows a warlock's Pact Magic as its own highlighted row (levels summed from the segments whose `casterType` is `PACT` in `POST /api/v2/multiclass` — they never enter `spellcastingLevel`) |
+| `spells`      | Spells; class-grouped infinite-scroll list         | `groups`, `composable` (class pagination), `legend`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `bestiary`    | Creatures grouped by challenge rating; stat blocks | `composable` (CR group order); editor split into «Основное / Статблок / Действия / Эффекты / Изображения» tabs                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `magic-items` | Magic items grouped by rarity                      | `composable` (rarity order), `legend` (attunement); editor split into «Основное / Свойства / Применение / Эффекты» tabs, magic's own damage uses the shared `~ui/damage-formula` parts                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `backgrounds` | Character backgrounds                              | —                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `feats`       | Feats                                              | —                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `glossary`    | Rules terms / glossary                             | —                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `items`       | Mundane items: weapons, armor, tools, gear         | editor switches sub-form by `category`; weapon damage uses the shared `~ui/damage-formula` parts, legacy dice kept in sync on the «Совместимость» tab                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `sources`     | Source books (publisher/translation, tags)         | model layer is named `types/` (not `model/`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 
 ### 🛠️ Interactive tools
 
@@ -190,6 +190,11 @@ modals), so its capabilities are listed here rather than squeezed into the table
   replaces all six values outright: level-up ability increases are baked into
   `abilities` and kept in no separate ledger, so they cannot be carried over —
   the modal says so before applying.
+- The class wizard asks everything in one review step split into «Основное /
+  Снаряжение / Умения / Характеристики» tabs, each carrying the number of
+  answers it still waits for. The button on the right walks the tabs («Далее»)
+  and turns into «Применить» only on the last one, where it stays disabled
+  until every counter is zero.
 - The class and background wizards also hand out the starting equipment. The
   reference `startingEquipment` field carries the official options («А», «Б»,
   «В») as structured item lists plus coins, so the review step shows them as a
@@ -266,13 +271,40 @@ modals), so its capabilities are listed here rather than squeezed into the table
   «Пропустить подготовку» — the level is applied straight away through
   `setClassLevels` with average hit points and no feature steps. Applied
   atomically by `applyLevelUp`, which keeps spent hit dice and class resources.
-- Every skill picker (`SheetChoiceSelect` in the class / species / background
-  wizards, in level-up features and in the homebrew class / background modals)
-  marks skills the character already has with a `SKILL_OWNED_HINTS` badge and
-  shows `SKILL_DUPLICATE_WARNING` once such a skill is picked again: under the
-  2024 rules a duplicate proficiency grants nothing and never turns into
-  Expertise. It stays selectable on purpose — a DM may still run the 2014
-  «take another proficiency instead» rule.
+  The modal is as wide as the catalog pickers (`sm:max-w-5xl`): on the left a
+  rail of steps (`SheetLevelUpStepsRail` — «Уровень и опыт», then «Колдун ·
+  11 уровень» with what the step contains and a warning badge with the number
+  of choices still open; ability improvements nest under their level; on
+  narrow screens the rail folds into a swipeable strip of chips), on the right
+  the step in section cards (`SHEET_WIZARD_SECTION_CLASS`: hit points,
+  subclass, feature cards with an origin badge and a pending badge). The rail
+  lists the levels ahead from the moment they are typed in — before «Далее»
+  builds the real steps it shows one unreachable item per gained level — and
+  each column scrolls on its own, so a long feature description never carries
+  the list of steps away. The rail only goes backwards; «Далее» checks the step
+  through `getStepPendingCount`.
+- Every choice a record asks for — skills, tools, languages, invocations,
+  spells, feats, subclasses, ability slots of a feat — is asked by the same
+  picker: `SheetChoicePickerField` (title, an explanation of what the feature
+  grants and why, chosen values as chips, a «Выбрать» button) opens
+  `SheetChoicePickerModal` (search, groups, «Все | Выбранные» tabs, a counter).
+  A row is two buttons side by side. Where the options have descriptions, the
+  window is `sm:max-w-4xl` and keeps a `SheetChoiceDetailPane` on the right
+  (spell / feat / item / class body by url or the option's own markup): the
+  name opens the description there, the check mark alone picks the option, and
+  the description stays readable even when the limit is reached. Where there is
+  nothing to describe (skills, languages, abilities) or the pane is switched off
+  (`hide-detail-pane` for subclasses), the window narrows to `sm:max-w-lg`, the
+  name picks the option and the neighbouring button opens the section drawer —
+  the same on narrow screens, where the pane is hidden anyway. Options are
+  built once for all wizards by `buildChoiceControl` → `toChoicePickerOptions`
+  (`SheetChoiceOption`: `value` stays the stored answer — a name for skills,
+  tools, options and spells, a url for feats and subclasses). Skills the
+  character already has carry a `SKILL_OWNED_HINTS` badge and trigger
+  `SKILL_DUPLICATE_WARNING` once picked again: under the 2024 rules a duplicate
+  proficiency grants nothing and never turns into Expertise. It stays
+  selectable on purpose — a DM may still run the 2014 «take another
+  proficiency instead» rule.
 - Debounced autosave, a server-side limit of active sheets, soft delete with
   restore history, and copy — `model/api.ts` covers
   `POST|GET|PUT|DELETE /…/{id}` plus `/{id}/restore` and `/{id}/share`.
@@ -436,13 +468,23 @@ modals), so its capabilities are listed here rather than squeezed into the table
   flags. A record with no structure renders no block at all.
 - Everything else a magic item does to the sheet comes from the workshop's
   «Активные эффекты» block (`mechanics.activeEffects`). `model/effects.ts`
-  translates each numeric change into an `InventoryItemBonus` when the item is
-  added, so the sheet keeps working offline off its own snapshot: `ability.*`,
+  translates each plain numeric change into an `InventoryItemBonus` when the item
+  is added, so the sheet keeps working offline off its own snapshot: `ability.*`,
   `save.*`, `skill.*` (the VTTG camelCase id is mapped through
   `SKILL_NAME_BY_API_KEY`), `movement.*`, `armorClass`, `initiative`,
-  `spellSaveDC` and `attack.spell` reach their targets; changes with a condition,
-  formula values (`@…`), the `multiply` / `custom` modes, flags, auras, damage
-  parts and keys the sheet has no target for are dropped, as are disabled effects
+  `spellSaveDC`, `attack.spell`, `attack.melee` / `attack.ranged`,
+  `proficiencyBonus` and `hitPoints.max` reach their targets. What a snapshot
+  cannot carry is computed on every read instead of being dropped
+  (`getLiveEffectBonusEntries`): changes with a carrier condition («while wearing
+  armour») and formula values (`@mod.*`, `@prof`, `@level`), both in `add` mode
+  only — the value-setting modes with a formula belong to the AC body
+  (`getArmorClassEffectBody`). A formula that names the very value being computed
+  cannot loop: the target already in progress gets no live bonuses. Senses
+  (`sense.darkvision` and friends) join the sheet's vision through
+  `getVisionGrants`, and an effect's `conditionImmunities` reach the defences
+  panel. Still dropped: the `multiply` / `custom` modes, auras, damage parts,
+  conditions the sheet cannot evaluate (`roll.*`, `target.*`), the `@mod.spell` /
+  `@speed.*` tokens and keys the sheet has no target for, as are disabled effects
   and effects aimed at someone else. The `transfer` flag is not read — the
   sheet's own gate (the item's activation condition, and attunement where the
   item asks for it) plays that role. A bonus therefore carries a `mode` (`add` / `override` / `upgrade` /
@@ -452,12 +494,116 @@ modals), so its capabilities are listed here rather than squeezed into the table
   `getBaseSkillValue`) and equipment takes it from there, so a headband of
   intellect raises Intelligence to 19 while a written 20 stays untouched. The
   breakdown rows come out of the same fold, so each item is credited with what it
-  actually changed. AC is the exception in shape only: `add` rows keep flowing
-  through the «best armour wins» comparison, and the value-setting modes are
-  applied to the finished number (`getArmorClassWithItemLimits`). Bonuses saved
+  actually changed. AC is the exception in shape only: an item's `add` rows keep
+  flowing through the «best armour wins» comparison and the flat item term, the
+  value-setting modes are applied to the finished number
+  (`getArmorClassWithItemLimits`), and everything else — live rows from any
+  record plus the plain rows of features and of the sheet's own effects — is
+  summed into the «Эффекты» line of the breakdown. Bonuses saved
   before the modes existed read as plain `add`, and an item already sitting on a
   sheet keeps its old snapshot — effects added in the workshop later need the
   item re-added.
+- Species, lineages, classes, subclasses and their features may each carry
+  «Активные эффекты» of their own. They ride onto the sheet with the record:
+  passive changes are frozen into the feature's `bonuses` (the same shape
+  equipment uses), while the effects themselves stay on the record so conditional
+  and formula changes are re-checked on every read. The sheet's own effects
+  (`Character.activeEffects`, the «Эффекты» tab and the conditions grid) are a
+  third source of the very same bonuses: nothing freezes them, so their changes
+  are translated on every read. Effects of the
+  species or class record itself land as their own feature row rather than being
+  pinned to the first feature — a lineage has no features at all, and a class
+  grants them by being taken; the class row appears only at its first level. The
+  «Эффекты» tab shows them in a block of their own («От умений и черт») beside
+  the sheet's own effects and the equipment ones: the effect's name, the record
+  that granted it and its description. They are neither editable nor removable —
+  they arrive with the record and leave with it — but each carries a switch, and
+  turning one off rebuilds that feature's frozen `bonuses` out of the effects
+  still enabled, so a disabled effect stops moving the sheet by either route.
+- The species wizard no longer reads darkvision, proficiencies and choices out of
+  feature prose: `properties.darkVision`, `mechanics.proficiencies` and
+  `mechanics.choices` (of the record and of every feature already in effect at the
+  character's level) are used instead, with the prose parse left as the fallback
+  for entries that have no structure yet. Skills granted this way go to the skill
+  rows, not to the proficiency list; the record's own choices get their own row —
+  a lineage has no features to hang them on.
+- A feat a species feature asks for («Универсальность» of the human wants an
+  origin feat) is picked in the species wizard the same way the class and
+  level-up wizards pick one: `SheetFeatChoiceField` (the unified picker with the
+  feat pool and one more field per ability slot of the chosen feat) — because
+  the pool is the whole feats section and the mechanics carry urls, not names. A `feat`
+  choice therefore never reaches the plain select: `resolveChoiceOptions` returns
+  an empty pool for it instead of falling through to the tool branch, which is
+  what used to offer alchemist's supplies in place of a feat. The chosen feat
+  becomes a sheet record of its own whose origin is the species (or the lineage),
+  so removing the species takes it away with the feature that granted it, and
+  whose id keeps the `:feat:` segment, so it counts as taken and is not offered
+  twice.
+- A class feature carries the same mechanics a feat does — grants, choices,
+  counters, granted spells, a spellcasting ability — and both the class wizard and
+  the level-up wizard ask **every** choice a feature declares, not one: expertise
+  wants two skills, a subclass feature may want a skill and a language. The parse
+  is literally the feat's (`toMechanicChoices`, `collectChosenProficiencies`): the
+  `MechanicChoice` model in core-api is shared, so a second copy would drift.
+  Answers land as a snapshot on the feature record — the grant ledger owns them
+  from there, exactly as with a feat, which is why the wizard no longer puts
+  feature-choice skills and languages into the `setClass` payload: two owners
+  would mean removing the class takes the grant back only halfway. A feature's
+  counter reaches the resource panel and its granted spell reaches the spellbook
+  through the paths feats already use.
+- A spell or cantrip a class feature — or one of its options — asks for is picked
+  in every wizard exactly as a feat asks for one: the unified picker shows the
+  pool grouped by circle with the spell body in the detail pane, and the pool
+  itself is a catalog search (`useChoiceSpellPools` → `fetchChoiceSpells`)
+  narrowed by the class and the circle the mechanics name, because the
+  reference stores no list of its own. Such a question arrives with the option
+  that owns it («Маг» of the druid's primal order grants an extra druid
+  cantrip), so the wizard reloads the pools whenever the set of spell questions
+  changes (`getSpellChoicesKey`) rather than once per class. The pool carries a
+  status (`getStatus`: loading / ready / error): while it is loading or failed
+  the choice counts as pending and the field shows «Загрузка списка…» or
+  «Не удалось загрузить — Повторить» (`retry`), so a step can no longer pass
+  with «Выберите 0» and no spell («Таинственный арканум» of the warlock used
+  to do that). The answer lands on the feature record
+  (`withChosenFeatureSpells`), which puts it under «Врождённые и от черт» on the
+  spells tab, keeps it out of the prepared count and takes it away with the
+  class. Data caveat: the four arcanum choices of `warlock-phb` need
+  `requiredLevel` 11/13/15/17 in the reference, otherwise all four are asked at
+  level 11 and none later.
+- A feature's own list of options (warlock invocations, battle-master manoeuvres,
+  sorcerer metamagic) is asked by the wizards only when the record carries
+  `optionsChoice`; without it the list stays a reference on the class page, as it
+  was before the field existed. The pool is the feature's `options` themselves —
+  no second list — narrowed by each option's `requiredClassLevel`, and the count
+  grows in steps that name the total to a level, so the wizard asks the
+  difference from the previous step. An option taken on one step leaves the pool
+  of the others unless it is marked `repeatable`: a repeatable one stays in the
+  list and the feature line shows its multiplicity («Инфузия ×2»). Every answer
+  also becomes a sheet record of its own carrying the option's description, and
+  the same descriptions open in the shared `FeatureOptionsDrawer` — the class
+  page and both wizards render it.
+- Depth in the class editor is drawn with two visual languages, not seven
+  identical frames: a BOX is a list object (feature, option, grant row, effect)
+  and a RAIL — `EditorNestedSection`, a line running down from the collapse
+  chevron — is a section inside it («Варианты», «Механика и эффекты», «Дары»).
+  Nesting is read by counting rails, and while the caret is inside a field every
+  rail and box above it is highlighted, so the path to it lights up on its own.
+  The headers of an expanded feature and of an expanded option stick to the top
+  of the window (`top-0` and `top-10`), which keeps «Воззвания → Мучительная
+  кара» in view while editing mechanics several screens deep; that is why the
+  features card has to opt out of the card theme's `overflow-hidden`.
+- An option carries the same mechanics block as the feature that owns it
+  (`mechanics` + `activeEffects`): proficiencies, sheet modifiers, resources,
+  granted spells, spell-list expansion and effects. They land on the option's own
+  sheet record, so the features list shows which invocation granted a
+  proficiency, and removing the class takes the record away with its feature.
+  Questions an option asks («выбери навык» of a manoeuvre) are marked with its
+  key and appear in the wizards only once the option itself is taken — an answer
+  left over from an option the player dropped never reaches the grant ledger.
+  A reference list asks nothing, so its options' questions are not built at all.
+- A class feature flagged `informationalOnly` («Подкласс волшебника») never
+  becomes a sheet record: the progression table needs the line, the sheet does
+  not.
 - The «Добавить заклинание» catalog opens preset to what the character can
   actually learn: the class chip is picked by the class slug (the same id the
   `className` filter group uses) and the level chips cover every circle the
@@ -578,6 +724,17 @@ modals), so its capabilities are listed here rather than squeezed into the table
   in the PDF attack table, and the row is marked with a «Двумя руками» badge.
   Weapons added before the second roll was stored do not offer the switch until
   they are added from the catalog again.
+- Armour that hampers hiding (`armor.stealth` of the workshop form — plate, half
+  plate, chain mail and the rest) opens the Stealth check with disadvantage
+  already set. It reaches the roll as the ordinary `skill.stealth.disadvantage`
+  flag (`getSheetRollFlags`), so advantage from any effect cancels it by the 5e
+  rule instead of stacking, and every equipped suit counts — unlike AC, where
+  only the best one does. The AC tile's tooltip names the disadvantage, and the
+  homebrew item form carries its own checkbox so editing a copy of a catalogue
+  suit does not silently drop it. Sheets saved before the field existed keep a
+  snapshot that cannot tell padded armour (disadvantage) from leather (none), so
+  the seven PHB suits are restored by catalogue url on load
+  (`LEGACY_STEALTH_DISADVANTAGE_ARMOR_URLS`).
 - Spell damage rolled from the same kind of tile on the spells tab. The formulas
   (`8к6@dmg.fire`) are not stored in the sheet: `composables/useSpellDamage.ts`
   pulls them from the spell `/raw` response on demand and caches them per app,
@@ -589,15 +746,27 @@ modals), so its capabilities are listed here rather than squeezed into the table
   points, spell slots, feature counters and every spent Hit Point Die (the 2024
   rules return all of them, not half), and removes one Exhaustion level. The
   shared `SheetHitDiceSelect` picks which dice.
-- The resources panel («Ресурсы») holds three kinds at once: the ones derived
-  from a class table, the ones a feat brought in, and the player's own. A own
-  resource can tie its maximum to the sheet instead of a fixed number —
-  proficiency bonus, an ability modifier or the character level, each with a
-  signed offset («бонус мастерства минус один» of «Слабокровный»). The rule is
-  stored (`maxRule`), the number is not: `getResourceMax` computes it on every
-  read, so the maximum grows with the character on the panel, on rest and in the
-  PDF alike. Feat resources parse the reference formula (`@prof`, `@level`,
-  `@mod.<abbr>`) into the same rule through `parseResourceMaxFormula`.
+- The resources panel («Ресурсы») holds three kinds at once: the ones the
+  reference declares (a class, its feature, a species or a feat — all through
+  `mechanics.counters`), the ones derived from a class table, and the player's
+  own. A own resource can tie its maximum to the sheet instead of a fixed
+  number — proficiency bonus, an ability modifier or the character level, each
+  with a signed offset («бонус мастерства минус один» of «Слабокровный») and a
+  floor (`min`) that props the result up without adding to it: Bardic
+  Inspiration equals the Charisma modifier but never drops below one. The rule
+  is stored (`maxRule`), the number is not: `getResourceMax` computes it on
+  every read, so the maximum grows with the character on the panel, on rest and
+  in the PDF alike. Reference resources parse the formula (`@prof`, `@level`,
+  `@mod.<abbr>`) into the same rule through `parseResourceMaxFormula`, and their
+  recovery becomes a rest rule per rest kind — `SHORT_REST_ONE` means one charge
+  back on a short rest and all of them on a long one («Второе дыхание»).
+  A class table column stops being a resource: the workshop no longer offers
+  `resourceRecovery` on it, and `deriveClassResources` reads the old ones only
+  until their class is saved again. A resource marked «Указать в таблице»
+  (`showInTable`) comes back as a table column instead — the reference derives
+  the per-level row from the resource's own steps or formula (`@prof`,
+  `@level`), so the numbers live in one place; a maximum that depends on an
+  ability modifier has no single row and gets no column.
 - Exhaustion sits in its own panel right below the health one
   (`SheetExhaustionPanel`): six steps, a click sets that level and a click on
   the current one drops it by one (`setExhaustion`, a play action — a locked
@@ -731,14 +900,14 @@ modals), so its capabilities are listed here rather than squeezed into the table
 
 ### 📰 Content & publishing
 
-| Domain           | Purpose                                                                                                                                                        | Sub-features                                                                                                                                                                                                                                                               |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `articles`       | News/article publishing (`NEWS`/`ARTICLE`; draft·active·scheduled·link-access flags); markup content. Public `/articles`, `/news`                              | `admin`, `body`, `card`, `drawer`, `editor`, `link`, `listing`, `preview`, `model`                                                                                                                                                                                         |
-| `home`           | Landing-page building blocks composed on `pages/index.vue`                                                                                                     | `news`, `articles` (separate index block from `news`), `sections`, `banners` (VTTG promo card above the tools block), `tools` (compact tools card, role-gated items), `community`, `counters`, `greetings`, `recent-changes`, `background`, `social-links`, `link-to-5e14` |
-| `workshop`       | Content-creation admin (`/workshop/*`, ADMIN or MODERATOR): reusable form engine + section entry cards + revision history                                      | `composable` (`useWorkshopForm`), `section`, `revision`                                                                                                                                                                                                                    |
-| `active-effects` | Shared «Активные эффекты» editor in the VTTG vocabulary — one model + one form for every section that changes sheet numbers: spells, feats, magic items, items | `editor` (`ActiveEffects` card, per-effect tabs, changes/flags/damage parts), `model` (types & Zod, change & flag menus, PHB 2024 condition templates, `describeActiveEffect`)                                                                                             |
-| `roadmap`        | Project roadmap (`/roadmap`): feature cards with community ratings + admin editor                                                                              | `feature`, `detail`, `editor`, `preview`, `types`                                                                                                                                                                                                                          |
-| `comments`       | Threaded discussions on wiki & article pages via external **comments-service**; public read, auth to post, soft-delete tombstones, reports                     | `section` (page block + feed), `admin` (moderation rows), `my` (own comments + replies to them in profile), `recent` (site-wide feed on `/comments`), `composables`, `model`                                                                                               |
+| Domain           | Purpose                                                                                                                                                                                                                                                                                                     | Sub-features                                                                                                                                                                                                                                                               |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `articles`       | News/article publishing (`NEWS`/`ARTICLE`; draft·active·scheduled·link-access flags); markup content. Public `/articles`, `/news`                                                                                                                                                                           | `admin`, `body`, `card`, `drawer`, `editor`, `link`, `listing`, `preview`, `model`                                                                                                                                                                                         |
+| `home`           | Landing-page building blocks composed on `pages/index.vue`                                                                                                                                                                                                                                                  | `news`, `articles` (separate index block from `news`), `sections`, `banners` (VTTG promo card above the tools block), `tools` (compact tools card, role-gated items), `community`, `counters`, `greetings`, `recent-changes`, `background`, `social-links`, `link-to-5e14` |
+| `workshop`       | Content-creation admin (`/workshop/*`, ADMIN or MODERATOR): reusable form engine + section entry cards + revision history. `useWorkshopForm` keys its `useState` by `actionUrl` — without a key every section would share one state object, and a form would briefly render on the previous section's shape | `composable` (`useWorkshopForm`), `section`, `revision`                                                                                                                                                                                                                    |
+| `active-effects` | Shared «Активные эффекты» editor in the VTTG vocabulary — one model + one form for every section that changes sheet numbers: spells, feats, magic items, items, backgrounds, species, classes and creatures                                                                                                 | `editor` (`ActiveEffects` card, per-effect tabs, changes/flags/damage parts), `model` (types & Zod, change & flag menus, PHB 2024 condition templates, `describeActiveEffect`)                                                                                             |
+| `roadmap`        | Project roadmap (`/roadmap`): feature cards with community ratings + admin editor                                                                                                                                                                                                                           | `feature`, `detail`, `editor`, `preview`, `types`                                                                                                                                                                                                                          |
+| `comments`       | Threaded discussions on wiki & article pages via external **comments-service**; public read, auth to post, soft-delete tombstones, reports                                                                                                                                                                  | `section` (page block + feed), `admin` (moderation rows), `my` (own comments + replies to them in profile), `recent` (site-wide feed on `/comments`), `composables`, `model`                                                                                               |
 
 ### 🎲 Games (matchmaking & play)
 
@@ -789,7 +958,7 @@ modals), so its capabilities are listed here rather than squeezed into the table
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `admin`      | Admin panel (`/admin`, ADMIN-only): dashboard tiles, top nav, live presence, character-sheet counts, personas, subscriptions & promo codes, bulk code mailing (`/admin/mailing`), users. Pages also cover article CRUD (`articles/admin`) and tokenator frame upload/ordering | `character-sheets`, `dashboard`, `mailing`, `navigation`, `online`, `personas`, `subscriptions`, `users` |
 | `moderation` | Moderator panel (`/moderation`, ADMIN or MODERATOR): dashboard routing to bug triage & comment moderation                                                                                                                                                                     | `model` (routes + dashboard labels)                                                                      |
-| `bug-report` | Bug reporting (screenshot + annotate + text-selection → submit) + admin triage/rating + author's own reports in profile                                                                                                                                                       | `modal`, `selection`, `sidebar-button`, `admin`, `my`, `composables`, `model`                            |
+| `bug-report` | Bug reporting (screenshot + annotate + text-selection + formatted description → submit) + admin triage/rating + author's own reports in profile                                                                                                                               | `modal`, `selection`, `sidebar-button`, `admin`, `my`, `composables`, `model`                            |
 
 ### 👤 User & account
 
@@ -846,40 +1015,40 @@ imported via the auto-generated `~<domain>` alias (see
 
 **UI Components Priority:** Nuxt UI → `shared/ui` → `features/*/ui`
 
-| Component         | Purpose                                                                                |
-| ----------------- | -------------------------------------------------------------------------------------- |
-| `action`          | Inline titled action block (markup)                                                    |
-| `affiliation`     | Comma-separated links to related entities (spell classes, feat backgrounds)            |
-| `animated-number` | Count-up animated number                                                               |
-| `card`            | Workshop entity card                                                                   |
-| `collapse`        | Collapsible / accordion primitive                                                      |
-| `copy-button`     | Copy-to-clipboard buttons: share link + copy entity as Markdown                        |
-| `damage-formula`  | VTTG damage/heal formula input & parts editor (spells, weapons, active effects)        |
-| `date-picker`     | Date/time picker input                                                                 |
-| `detail-pane`     | Wide-mode entity detail panel                                                          |
-| `drawer`          | Overlay drawer (+ header/body/title/actions, DrawerCollection)                         |
-| `editor`          | Workshop form controls (array/form controls, ability mastery)                          |
-| `gallery`         | LightGallery image viewer                                                              |
-| `grouped-list`    | Grouped/sorted entity grid list                                                        |
-| `icon`            | SVG icon / logo / loader / hamburger                                                   |
-| `image-crop`      | Square-crop editor modal for an uploaded image (move / resize the frame)               |
-| `input`           | URL input field                                                                        |
-| `kbd-shortcut`    | Keyboard shortcut hint display                                                         |
-| `link`            | Card & small entity links                                                              |
-| `markup`          | Custom `{@...}` markup parser/renderer + Homebrewery Markdown converter                |
-| `markup-editor`   | Tiptap markup WYSIWYG editor (+ insert panel/toolbar)                                  |
-| `page`            | Page grid / actions / result / legend scaffolding                                      |
-| `pagination`      | Page-number pagination control                                                         |
-| `placeholder`     | Dashed empty-state placeholder                                                         |
-| `rating`          | Star rating widget                                                                     |
-| `result`          | Status/result screen (404 / 403 / error / info)                                        |
-| `section`         | Section content + sidebar layout parts                                                 |
-| `select`          | Domain `USelectMenu` wrappers (41 `Select*.vue`, e.g. class, spell level, damage type) |
-| `skeleton`        | Link skeleton loaders                                                                  |
-| `source-tag`      | Sourcebook source/group tag badge                                                      |
-| `tooltip`         | Info tooltip                                                                           |
-| `updates-dot`     | Unread-updates indicator dot                                                           |
-| `upload`          | Image & gallery upload widgets                                                         |
+| Component         | Purpose                                                                                                                                                                                                                                           |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `action`          | Inline titled action block (markup)                                                                                                                                                                                                               |
+| `affiliation`     | Comma-separated links to related entities (spell classes, feat backgrounds)                                                                                                                                                                       |
+| `animated-number` | Count-up animated number                                                                                                                                                                                                                          |
+| `card`            | Workshop entity card                                                                                                                                                                                                                              |
+| `collapse`        | Collapsible / accordion primitive                                                                                                                                                                                                                 |
+| `copy-button`     | Copy-to-clipboard buttons: share link + copy entity as Markdown                                                                                                                                                                                   |
+| `damage-formula`  | VTTG damage/heal formula input & parts editor (spells, weapons, active effects)                                                                                                                                                                   |
+| `date-picker`     | Date/time picker input                                                                                                                                                                                                                            |
+| `detail-pane`     | Wide-mode entity detail panel                                                                                                                                                                                                                     |
+| `drawer`          | Overlay drawer (+ header/body/title/actions, DrawerCollection)                                                                                                                                                                                    |
+| `editor`          | Workshop form controls (array/form controls, ability mastery, `EditorNestedSection` — the nesting rail)                                                                                                                                           |
+| `gallery`         | LightGallery image viewer                                                                                                                                                                                                                         |
+| `grouped-list`    | Grouped/sorted entity grid list                                                                                                                                                                                                                   |
+| `icon`            | SVG icon / logo / loader / hamburger                                                                                                                                                                                                              |
+| `image-crop`      | Square-crop editor modal for an uploaded image (move / resize the frame)                                                                                                                                                                          |
+| `input`           | URL input field                                                                                                                                                                                                                                   |
+| `kbd-shortcut`    | Keyboard shortcut hint display                                                                                                                                                                                                                    |
+| `link`            | Card & small entity links                                                                                                                                                                                                                         |
+| `markup`          | Custom `{@...}` markup parser/renderer + Homebrewery Markdown converter                                                                                                                                                                           |
+| `markup-editor`   | Tiptap markup WYSIWYG editor (+ insert panel/toolbar, `preset` full/basic)                                                                                                                                                                        |
+| `page`            | Page grid / actions / result / legend scaffolding                                                                                                                                                                                                 |
+| `pagination`      | Page-number pagination control                                                                                                                                                                                                                    |
+| `placeholder`     | Dashed empty-state placeholder                                                                                                                                                                                                                    |
+| `rating`          | Star rating widget                                                                                                                                                                                                                                |
+| `result`          | Status/result screen (404 / 403 / error / info)                                                                                                                                                                                                   |
+| `section`         | Section content + sidebar layout parts                                                                                                                                                                                                            |
+| `select`          | Domain `USelectMenu` wrappers (41 `Select*.vue`, e.g. class, spell level, damage type); catalog-backed ones (items, spells, feats, species, backgrounds) open `CatalogPickerModal` instead — section filters on the left, paged list on the right |
+| `skeleton`        | Link skeleton loaders                                                                                                                                                                                                                             |
+| `source-tag`      | Sourcebook source/group tag badge                                                                                                                                                                                                                 |
+| `tooltip`         | Info tooltip                                                                                                                                                                                                                                      |
+| `updates-dot`     | Unread-updates indicator dot                                                                                                                                                                                                                      |
+| `upload`          | Image & gallery upload widgets                                                                                                                                                                                                                    |
 
 ---
 
@@ -919,7 +1088,7 @@ uploads and presence.
 | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `api/[...].ts`                          | Catch-all proxy (`getProxyPath`) → `subscriber-service` for `/api/subscriptions` & `/api/rewards`, `comments-service` for `/api/v1/comments`, otherwise `core-api`                                                                                                                                                                                                                |
 | `api/auth/*`                            | Sign-in/up, logout, me, email confirm, password reset/change, roles, admin users — proxied to **auth-service**                                                                                                                                                                                                                                                                    |
-| `api/admin/*`                           | Admin bug list/status, subscription grant/revoke/codes, comment hide/restore by author — ADMIN-gated proxies to bug-report, subscriber & comments services (the last via `X-Service-Token` internal API, not the user JWT)                                                                                                                                                        |
+| `api/admin/*`                           | Admin bug list/status/filter options (author & status-updater logins), subscription grant/revoke/codes, comment hide/restore by author — ADMIN-gated proxies to bug-report, subscriber & comments services (the last via `X-Service-Token` internal API, not the user JWT)                                                                                                        |
 | `api/admin/mailing/*`                   | Bulk promo-code mailing (ADMIN-only): issues one code per address through the subscriber admin API and sends a personal letter over SMTP (`utils/mailer`, `utils/mailingTemplate`, SMTP env shared with auth-service: `SPRING_MAIL_*` + `APP_MAIL_FROM`); `test` sends a sample letter without issuing a code                                                                     |
 | `api/bug-report*`                       | Create report (streams multipart), public stats, my count-by-status, my reports list + updates summary (both strip `statusUpdatedBy`/`userLogin`/`sessionId` via a Zod allow-list) → external **bug-report** service                                                                                                                                                              |
 | `api/user/comments/sync-name`           | Best-effort display-name sync: reads the name from core-api, then renames the author's comments through the comments internal API, scoped by `SOURCE_PLATFORM`                                                                                                                                                                                                                    |

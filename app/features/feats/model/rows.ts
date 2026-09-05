@@ -6,12 +6,15 @@ import type {
   FeatChoice,
   FeatChoiceGrant,
   FeatChoiceOption,
+  FeatChoiceScaling,
   FeatChoiceType,
+  FeatClassSpellListGrant,
   FeatCounter,
   FeatDamageAffinity,
   FeatDamageDefenseChoice,
   FeatDamageDefenseKind,
   FeatEntityRef,
+  FeatGrantedSpellRef,
   FeatMechanics,
   FeatModifiers,
   FeatPrerequisiteDetails,
@@ -19,7 +22,7 @@ import type {
   FeatSpellGrant,
 } from './mechanics';
 
-import { isAbilityKey } from '~/shared/types';
+import { ABILITY_LABELS, isAbilityKey } from '~/shared/types';
 
 import {
   createFeatMechanics,
@@ -51,9 +54,11 @@ export type FeatGrantRowKind =
   | 'WEAPON_CATEGORY'
   | 'WEAPON'
   | 'WEAPON_MASTERY'
+  | 'MASTERY_PROPERTY'
   | 'ABILITY'
   | 'DAMAGE_TYPE'
-  | 'OPTION';
+  | 'OPTION'
+  | 'FEAT';
 
 /**
  * Как раздаётся: всё перечисленное сразу или игрок выбирает из набора. Это
@@ -78,6 +83,13 @@ export interface FeatGrantRow {
   /** Что выдаётся либо набор, из которого выбирают; пусто — любое значение. */
   options: Array<FeatChoiceOption>;
 
+  /**
+   * Категории черт, из которых выбирают; только у вида «Черта» в режиме выбора.
+   * Пусто — категория не ограничена. Складывается с набором: перечисленные
+   * черты сужают пул внутри категорий.
+   */
+  featCategories: Array<string>;
+
   /** Машинный ключ выбора: по нему лист помнит ответ игрока. Автору не виден. */
   key: string;
 
@@ -89,6 +101,21 @@ export interface FeatGrantRow {
   onlyIfProficient: boolean;
   expertiseIfProficient: boolean;
   rechooseOnLongRest: boolean;
+
+  /** Уровень, с которого выбор открывается; не задан — сразу. */
+  requiredLevel: number | undefined;
+
+  /**
+   * Ступени количества по уровням: сколько всего выбирают к каждому уровню.
+   * Пусто — количество не растёт и задано `count`.
+   */
+  scaling: Array<FeatChoiceScaling>;
+
+  /** Показывать количество колонкой таблицы прогрессии класса. */
+  showInTable: boolean;
+
+  /** Краткая подпись колонки таблицы; пусто — берётся подпись выбора. */
+  shortName: string;
 
   /**
    * Прибавка к характеристике. Задана — строка поднимает характеристику: в
@@ -217,6 +244,12 @@ export interface FeatPrerequisiteRow {
 export type FeatSpellLevelMode = 'ANY' | 'EXACT' | 'UP_TO';
 
 /**
+ * Откуда порция берёт пул: `FILTER` — поиском по справочнику по кругу и спискам
+ * классов блока, `LIST` — ровно из перечисленных заклинаний.
+ */
+export type FeatSpellPickSource = 'FILTER' | 'LIST';
+
+/**
  * Порция заклинаний, которую игрок берёт: «два заговора», «одно заклинание
  * первого круга».
  *
@@ -238,6 +271,93 @@ export interface FeatSpellPickRow {
   count: number | undefined;
   countEqualsProficiencyBonus: boolean;
   label: string;
+
+  /**
+   * Уровень персонажа, с которого спрашивают порцию; не задан — сразу при
+   * взятии записи. Нужен умению, которое спрашивает порции на разных уровнях:
+   * «Таинственный арканум» колдуна даёт заклинание 6 круга на 11 уровне,
+   * 7 круга — на 13, и без уровня лист задал бы все вопросы разом.
+   */
+  requiredLevel: number | undefined;
+
+  /**
+   * Откуда пул. «Таинственный арканум» ищет по кругу и списку колдуна; умение
+   * «выберите одно из этих трёх заклинаний» перечисляет их — круг и списки
+   * классов у такой порции не спрашиваются, они у каждой записи свои.
+   */
+  source: FeatSpellPickSource;
+
+  /** Перечисленные заклинания — пул порции при `source: 'LIST'`; иначе пусто. */
+  spells: Array<FeatEntityRef>;
+}
+
+/**
+ * Откуда группа выдачи берёт заклинания: `LIST` — перечисленные автором,
+ * `CLASS_LIST` — весь список названного класса.
+ */
+export type FeatGrantedSpellSource = 'LIST' | 'CLASS_LIST';
+
+/**
+ * Как задан круг у группы «весь список класса».
+ *
+ * `SLOTS` есть только здесь, а не у порции выбора: выбирает игрок сам и видит круг
+ * в списке, а выдача сыплется на лист молча — и «все заклинания друида» без границы
+ * дали бы девятый круг на первом уровне.
+ */
+export type FeatGrantedSpellLevelMode = FeatSpellLevelMode | 'SLOTS';
+
+/**
+ * Группа выдачи заклинаний: своя ступень уровня и свой источник.
+ *
+ * Групп несколько, и это НЕ «или»: каждая открывается на своём уровне и
+ * складывается с предыдущими — заклинания домена приходят на 3, 5, 7 уровнях.
+ *
+ * В механике группы не хранятся: перечисленные схлопываются в общий список
+ * (`FeatSpellGrant.spells`, у каждой ссылки свой `requiredLevel`), списки классов
+ * ложатся в `FeatSpellGrant.classLists`. Так любая уже сохранённая запись читается
+ * как группы без миграции, и ни один потребитель прежней формы не ломается.
+ */
+export interface FeatGrantedSpellGroupRow {
+  uid: string;
+
+  /**
+   * Уровень персонажа, с которого группа выдаётся; не задан — сразу при взятии
+   * записи.
+   */
+  requiredLevel: number | undefined;
+
+  source: FeatGrantedSpellSource;
+
+  /** Перечисленные заклинания — при `source: 'LIST'`; иначе пусто. */
+  spells: Array<FeatEntityRef>;
+
+  /** Классы, чьи списки выдаются, — при `source: 'CLASS_LIST'`; иначе пусто. */
+  classes: Array<FeatEntityRef>;
+
+  /** Как ограничен круг списка класса; у перечисленных круг свой у каждой записи. */
+  mode: FeatGrantedSpellLevelMode;
+
+  /** Круг: точный при `EXACT`, наибольший при `UP_TO`; иначе не задан. */
+  level: number | undefined;
+
+  /**
+   * Характеристика, от которой считаются заклинания группы; не задана — берётся
+   * выше: ответом игрока, характеристикой записи либо характеристикой класса.
+   */
+  spellcastingAbility: AbilityKey | undefined;
+
+  /** Заклинания группы не занимают подготовку. */
+  alwaysPrepared: boolean;
+}
+
+/**
+ * Выдача заклинаний целиком.
+ *
+ * Блоком, а не голым списком групп: у блока свои заголовок и кнопка добавления, а
+ * форме-владельцу удобнее держать одну ссылку, чем две.
+ */
+export interface FeatGrantedSpellBlock {
+  groups: Array<FeatGrantedSpellGroupRow>;
 }
 
 /**
@@ -257,6 +377,12 @@ export interface FeatSpellChoiceBlock {
   /** Машинный ключ выбора класса: под ним лист хранит ответ игрока. */
   classChoiceKey: string;
 
+  /**
+   * Подпись выбора класса из записи. Форма её не правит, но и терять нельзя:
+   * лист показывает её игроку вместо машинного ключа.
+   */
+  classChoiceLabel: string;
+
   picks: Array<FeatSpellPickRow>;
 
   /**
@@ -268,6 +394,9 @@ export interface FeatSpellChoiceBlock {
 
   /** Машинный ключ выбора характеристики. */
   abilityChoiceKey: string;
+
+  /** Подпись выбора характеристики из записи — по той же причине, что у класса. */
+  abilityChoiceLabel: string;
 }
 
 /** Строка ресурса черты. */
@@ -278,6 +407,13 @@ export interface FeatCounterRow extends FeatCounter {
 /** Механика черты в том виде, в каком её правит форма. */
 export interface FeatEditorRows {
   grants: Array<FeatGrantRow>;
+
+  /**
+   * Выдача заклинаний группами. Строками, а не механикой напрямую: у группы есть
+   * уровень и источник, а в механике они разложены по двум плоским полям.
+   */
+  grantedSpells: FeatGrantedSpellBlock;
+
   spellChoice: FeatSpellChoiceBlock;
   modifiers: Array<FeatModifierRow>;
   prerequisites: Array<FeatPrerequisiteRow>;
@@ -307,6 +443,7 @@ export const PROFICIENCY_GRANT_KINDS: Array<FeatGrantRowKind> = [
   'WEAPON_CATEGORY',
   'WEAPON',
   'WEAPON_MASTERY',
+  'MASTERY_PROPERTY',
 ];
 
 /**
@@ -341,6 +478,7 @@ export const UNMIXABLE_GRANT_KINDS: Array<FeatGrantRowKind> = [
   'WEAPON_MASTERY',
   'WEAPON_CATEGORY',
   'OPTION',
+  'FEAT',
 ];
 
 /** Тип выбора, которым записывается вид дара. */
@@ -353,9 +491,11 @@ const CHOICE_TYPE_BY_GRANT_KIND: Record<FeatGrantRowKind, FeatChoiceType> = {
   WEAPON_CATEGORY: 'WEAPON',
   WEAPON: 'WEAPON',
   WEAPON_MASTERY: 'WEAPON_MASTERY',
+  MASTERY_PROPERTY: 'MASTERY_PROPERTY',
   ABILITY: 'ABILITY',
   DAMAGE_TYPE: 'DAMAGE_TYPE',
   OPTION: 'OPTION',
+  FEAT: 'FEAT',
 };
 
 /** Вид дара, которым читается тип выбора; у заклинаний вида дара нет. */
@@ -369,9 +509,11 @@ const GRANT_KIND_BY_CHOICE_TYPE: Partial<
   ARMOR: 'ARMOR',
   WEAPON: 'WEAPON',
   WEAPON_MASTERY: 'WEAPON_MASTERY',
+  MASTERY_PROPERTY: 'MASTERY_PROPERTY',
   ABILITY: 'ABILITY',
   DAMAGE_TYPE: 'DAMAGE_TYPE',
   OPTION: 'OPTION',
+  FEAT: 'FEAT',
 };
 
 /** Типы выборов, живущих на вкладке «Заклинания». */
@@ -410,9 +552,11 @@ const CHOICE_KEY_BY_GRANT_KIND: Record<FeatGrantRowKind, string> = {
   WEAPON_CATEGORY: 'weapon',
   WEAPON: 'weapon',
   WEAPON_MASTERY: 'weapon-mastery',
+  MASTERY_PROPERTY: 'mastery-property',
   ABILITY: 'ability',
   DAMAGE_TYPE: DAMAGE_TYPE_CHOICE_KEY,
   OPTION: 'option',
+  FEAT: 'feat',
 };
 
 /** Приставка машинного ключа ресурса черты. */
@@ -603,6 +747,7 @@ export function createGrantRow(
     kinds: [kind],
     mode: isChoiceOnly ? 'CHOICE' : 'ALL',
     options: [],
+    featCategories: [],
     key: getFreeFeatChoiceKey(CHOICE_KEY_BY_GRANT_KIND[kind], takenKeys),
     label: '',
     count: 1,
@@ -612,6 +757,10 @@ export function createGrantRow(
     onlyIfProficient: false,
     expertiseIfProficient: false,
     rechooseOnLongRest: false,
+    requiredLevel: undefined,
+    scaling: [],
+    showInTable: false,
+    shortName: '',
     abilityBonus: kind === 'ABILITY' ? 1 : undefined,
     abilityUpto: kind === 'ABILITY' ? 20 : undefined,
     fromChoiceKey: '',
@@ -635,6 +784,34 @@ export function createSpellPickRow(takenKeys: Array<string>): FeatSpellPickRow {
     count: 1,
     countEqualsProficiencyBonus: false,
     label: '',
+    requiredLevel: undefined,
+    source: 'FILTER',
+    spells: [],
+  };
+}
+
+/**
+ * Новая группа выдачи. По умолчанию перечисление: список класса заводят реже, и
+ * автору проще снять галочку, чем каждый раз переключать источник обратно.
+ */
+export function createGrantedSpellGroupRow(): FeatGrantedSpellGroupRow {
+  return {
+    uid: nextRowUid('granted-spell'),
+    requiredLevel: undefined,
+    source: 'LIST',
+    spells: [],
+    classes: [],
+    mode: 'ANY',
+    level: undefined,
+    spellcastingAbility: undefined,
+    alwaysPrepared: false,
+  };
+}
+
+/** Пустая выдача заклинаний: запись их не даёт. */
+export function createGrantedSpellBlock(): FeatGrantedSpellBlock {
+  return {
+    groups: [],
   };
 }
 
@@ -643,9 +820,11 @@ export function createSpellChoiceBlock(): FeatSpellChoiceBlock {
   return {
     classes: [],
     classChoiceKey: SPELL_LIST_CHOICE_KEY,
+    classChoiceLabel: '',
     picks: [],
     abilityOptions: [],
     abilityChoiceKey: SPELLCASTING_ABILITY_CHOICE_KEY,
+    abilityChoiceLabel: '',
   };
 }
 
@@ -715,6 +894,9 @@ export function createCounterRow(takenKeys: Array<string>): FeatCounterRow {
     name: '',
     shortName: '',
     max: '@prof',
+    scaling: [],
+    min: 0,
+    showInTable: false,
     recovery: 'LONG_REST',
   };
 }
@@ -723,6 +905,7 @@ export function createCounterRow(takenKeys: Array<string>): FeatCounterRow {
 export function createFeatEditorRows(): FeatEditorRows {
   return {
     grants: [],
+    grantedSpells: createGrantedSpellBlock(),
     spellChoice: createSpellChoiceBlock(),
     modifiers: [],
     prerequisites: [],
@@ -802,6 +985,7 @@ function toChoiceGrantRow(choice: FeatChoice): FeatGrantRow | undefined {
     kinds,
     mode: 'CHOICE',
     options: choice.options.map((option) => ({ ...option })),
+    featCategories: [...(choice.featCategories ?? [])],
     key: choice.key,
     label: choice.label,
     count: choice.count,
@@ -811,6 +995,10 @@ function toChoiceGrantRow(choice: FeatChoice): FeatGrantRow | undefined {
     onlyIfProficient: choice.onlyIfProficient,
     expertiseIfProficient: choice.expertiseIfProficient,
     rechooseOnLongRest: choice.rechooseOnLongRest,
+    requiredLevel: choice.requiredLevel,
+    scaling: (choice.scaling ?? []).map((step) => ({ ...step })),
+    showInTable: choice.showInTable ?? false,
+    shortName: choice.shortName ?? '',
     abilityBonus: undefined,
     abilityUpto: undefined,
     fromChoiceKey: '',
@@ -846,6 +1034,15 @@ function toSpellPickRow(choice: FeatChoice): FeatSpellPickRow {
     mode = 'UP_TO';
   }
 
+  // Перечисленные заклинания лежат в наборе значений выбора: значение — url
+  // записи, имя — снимок названия из редактора
+  const spells = choice.options
+    .filter((option) => !!option.value.trim())
+    .map((option) => ({
+      url: option.value.trim(),
+      ...(option.name ? { name: option.name } : {}),
+    }));
+
   return {
     uid: nextRowUid('spell-pick'),
     key: choice.key,
@@ -854,6 +1051,9 @@ function toSpellPickRow(choice: FeatChoice): FeatSpellPickRow {
     count: choice.count,
     countEqualsProficiencyBonus: choice.countEqualsProficiencyBonus,
     label: choice.label,
+    requiredLevel: choice.requiredLevel,
+    source: spells.length ? 'LIST' : 'FILTER',
+    spells,
   };
 }
 
@@ -887,6 +1087,7 @@ function toSpellChoiceBlock(
 
   if (classChoice) {
     block.classChoiceKey = classChoice.key || block.classChoiceKey;
+    block.classChoiceLabel = classChoice.label;
 
     block.classes = classChoice.options.map((option) => ({
       url: option.value,
@@ -904,6 +1105,7 @@ function toSpellChoiceBlock(
 
   if (abilityChoice) {
     block.abilityChoiceKey = abilityChoice.key || block.abilityChoiceKey;
+    block.abilityChoiceLabel = abilityChoice.label;
 
     block.abilityOptions = abilityChoice.options
       .map((option) => option.value)
@@ -928,6 +1130,7 @@ function toFixedGrantRows(mechanics: FeatMechanics): Array<FeatGrantRow> {
     ['LANGUAGE', proficiencies.languages],
     ['ARMOR', proficiencies.armorCategories],
     ['WEAPON_CATEGORY', proficiencies.weaponCategories],
+    ['MASTERY_PROPERTY', proficiencies.masteryProperties],
   ];
 
   for (const [kind, values] of dictionaryGrants) {
@@ -940,6 +1143,9 @@ function toFixedGrantRows(mechanics: FeatMechanics): Array<FeatGrantRow> {
     ['TOOL', proficiencies.tools],
     ['WEAPON', proficiencies.weapons],
     ['WEAPON_MASTERY', proficiencies.weaponMasteries],
+    // Черты без выбора лежат не во владениях, а своим блоком: владением черта
+    // не является, но строкой дара читается так же — «выдать всё»
+    ['FEAT', mechanics.feats ?? []],
   ];
 
   for (const [kind, refs] of refGrants) {
@@ -1258,6 +1464,129 @@ function toPrerequisiteRows(
 }
 
 /**
+ * Группы выдачи из механики.
+ *
+ * Перечисленные ссылки группируются по уровню открытия: в механике они лежат плоским
+ * списком, и группа — это и есть ступень «что приходит на этом уровне». Порядок
+ * ступеней — порядок первого появления уровня в списке, чтобы правка не
+ * перетасовывала форму. Списки классов идут следом, каждый своей группой.
+ *
+ * @param grant блок выдачи из механики.
+ * @returns блок строк редактора.
+ */
+function toGrantedSpellBlock(grant: FeatSpellGrant): FeatGrantedSpellBlock {
+  const block = createGrantedSpellBlock();
+
+  const listed = new Map<string, FeatGrantedSpellGroupRow>();
+
+  for (const spell of grant.spells) {
+    // Ключ карты — уровень числом: «сразу» и «с первого» — одно и то же, и двумя
+    // ступенями они выглядели бы как разные
+    const level =
+      spell.requiredLevel && spell.requiredLevel > 1 ? spell.requiredLevel : 1;
+
+    // Характеристика и подготовка входят в ключ: заклинания, которые считаются
+    // от разных характеристик, — разные группы, даже если приходят на одном
+    // уровне. Сложи их в одну — и настройка одного стёрла бы настройку другого
+    const ability = spell.spellcastingAbility ?? '';
+    const prepared = spell.alwaysPrepared ?? grant.alwaysPrepared;
+    const key = `${level}:${ability}:${prepared}`;
+
+    let group = listed.get(key);
+
+    if (!group) {
+      group = createGrantedSpellGroupRow();
+      group.requiredLevel = level > 1 ? level : undefined;
+      group.spellcastingAbility = spell.spellcastingAbility;
+      group.alwaysPrepared = prepared;
+      listed.set(key, group);
+      block.groups.push(group);
+    }
+
+    group.spells.push({ url: spell.url, name: spell.name });
+  }
+
+  for (const classList of grant.classLists) {
+    const group = createGrantedSpellGroupRow();
+
+    group.source = 'CLASS_LIST';
+    group.requiredLevel = classList.requiredLevel;
+    group.classes = classList.classes.map((reference) => ({ ...reference }));
+    group.spellcastingAbility = classList.spellcastingAbility;
+    group.alwaysPrepared = classList.alwaysPrepared ?? grant.alwaysPrepared;
+
+    if (classList.maxLevelFromSlots) {
+      group.mode = 'SLOTS';
+    } else if (classList.level !== undefined) {
+      group.mode = 'EXACT';
+      group.level = classList.level;
+    } else if (classList.maxLevel !== undefined) {
+      group.mode = 'UP_TO';
+      group.level = classList.maxLevel;
+    }
+
+    block.groups.push(group);
+  }
+
+  return block;
+}
+
+/**
+ * Механика выдачи из групп редактора: обратный ход {@link toGrantedSpellBlock}.
+ *
+ * Перечисленные группы схлопываются в общий список — уровень группы проставляется
+ * каждой её ссылке, — а списки классов уезжают своим полем. Две перечисляющие группы
+ * с одним уровнем при следующей загрузке сольются в одну: выдают они одно и то же, и
+ * различать их не по чему.
+ *
+ * @param block блок строк редактора.
+ * @param base блок механики формы: из него берётся заклинательная характеристика.
+ * @returns блок выдачи для механики.
+ */
+function fromGrantedSpellBlock(
+  block: FeatGrantedSpellBlock,
+  base: FeatSpellGrant,
+): FeatSpellGrant {
+  const spells: Array<FeatGrantedSpellRef> = [];
+  const classLists: Array<FeatClassSpellListGrant> = [];
+
+  for (const group of block.groups) {
+    if (group.source === 'CLASS_LIST') {
+      classLists.push({
+        requiredLevel: group.requiredLevel,
+        classes: group.classes.map((reference) => ({ ...reference })),
+        level: group.mode === 'EXACT' ? group.level : undefined,
+        maxLevel: group.mode === 'UP_TO' ? group.level : undefined,
+        maxLevelFromSlots: group.mode === 'SLOTS' ? true : undefined,
+        spellcastingAbility: group.spellcastingAbility,
+        // Отметка пишется всегда, а не только взведённая: у записи есть своя,
+        // прежняя, и пропуск снятой отметки означал бы «как у записи» — то есть
+        // ровно обратное тому, что снял автор
+        alwaysPrepared: group.alwaysPrepared,
+      });
+
+      continue;
+    }
+
+    for (const spell of group.spells) {
+      spells.push({
+        url: spell.url,
+        name: spell.name,
+        requiredLevel: group.requiredLevel,
+        spellcastingAbility: group.spellcastingAbility,
+        alwaysPrepared: group.alwaysPrepared,
+      });
+    }
+  }
+
+  return {
+    ...base,
+    spells,
+    classLists,
+  };
+}
+
+/**
  * Разбирает механику и предусловие черты на строки редактора.
  *
  * @param mechanics механика черты.
@@ -1280,6 +1609,7 @@ export function toFeatEditorRows(
 
   rows.grants = toFixedGrantRows(mechanics);
 
+  rows.grantedSpells = toGrantedSpellBlock(mechanics.spells);
   rows.spellChoice = toSpellChoiceBlock(mechanics.choices, mechanics.spells);
 
   for (const choice of mechanics.choices) {
@@ -1298,7 +1628,7 @@ export function toFeatEditorRows(
     }
   }
 
-  for (const bonus of mechanics.abilityBonuses) {
+  for (const bonus of mechanics.abilityBonuses ?? []) {
     const linked = bonus.fromChoiceKey
       ? rows.grants.find((row) => row.key === bonus.fromChoiceKey)
       : undefined;
@@ -1326,7 +1656,7 @@ export function toFeatEditorRows(
   return rows;
 }
 
-/** Общие поля выбора: подпись, количество, набор, пересмотр на отдыхе. */
+/** Общие поля выбора: подпись, количество, набор, отдых и уровень открытия. */
 function toBaseChoice(
   row: {
     label: string;
@@ -1334,10 +1664,20 @@ function toBaseChoice(
     countEqualsProficiencyBonus: boolean;
     options: Array<FeatChoiceOption>;
     rechooseOnLongRest: boolean;
+    requiredLevel?: number | undefined;
+    scaling?: Array<FeatChoiceScaling>;
+    showInTable?: boolean;
+    shortName?: string;
   },
   key: string,
   type: FeatChoiceType,
 ): FeatChoice {
+  // Ступень без уровня или без количества ничего не описывает: у потребителя
+  // она превратилась бы в выбор ни из чего
+  const scaling = (row.scaling ?? [])
+    .filter((step) => step.level > 0 && step.count > 0)
+    .sort((left, right) => left.level - right.level);
+
   return {
     key,
     type,
@@ -1353,10 +1693,16 @@ function toBaseChoice(
       })),
     spellFilter: undefined,
     onlyIfNotProficient: false,
+    featCategories: undefined,
     onlyIfProficient: false,
     grants: undefined,
     expertiseIfProficient: false,
     rechooseOnLongRest: row.rechooseOnLongRest,
+    requiredLevel: row.requiredLevel,
+    scaling: scaling.length ? scaling : undefined,
+    // Колонка выводится из ступеней: без них показывать в таблице нечего
+    showInTable: scaling.length && row.showInTable ? true : undefined,
+    shortName: row.shortName?.trim() || undefined,
   };
 }
 
@@ -1372,10 +1718,15 @@ function createEmptyChoice(key: string, type: FeatChoiceType): FeatChoice {
     options: [],
     spellFilter: undefined,
     onlyIfNotProficient: false,
+    featCategories: undefined,
     onlyIfProficient: false,
     grants: undefined,
     expertiseIfProficient: false,
+    scaling: undefined,
+    showInTable: undefined,
+    shortName: undefined,
     rechooseOnLongRest: false,
+    requiredLevel: undefined,
   };
 }
 
@@ -1427,10 +1778,13 @@ function toSpellChoices(
     return free;
   };
 
-  // Класс спрашивается только ради заклинаний: без единой строки выбора он
-  // ничего не сужает, и игроку пришлось бы отвечать впустую
+  // Класс спрашивается только ради заклинаний, которые ищут по его списку: без
+  // единой такой строки он ничего не сужает, и игроку пришлось бы отвечать
+  // впустую. Порции с перечисленными заклинаниями списка класса не читают
+  const hasFilterPicks = block.picks.some((pick) => pick.source === 'FILTER');
+
   const classChoiceKey =
-    classes.length > 1 && block.picks.length
+    classes.length > 1 && hasFilterPicks
       ? takeKey(block.classChoiceKey, SPELL_LIST_CHOICE_KEY)
       : '';
 
@@ -1444,38 +1798,64 @@ function toSpellChoices(
   if (classChoiceKey) {
     choices.push({
       ...createEmptyChoice(classChoiceKey, 'SPELL_LIST'),
+      label: block.classChoiceLabel.trim(),
       options: toClassOptions(classes),
     });
   }
 
   for (const pick of block.picks) {
-    const isCantrip = pick.mode === 'EXACT' && pick.level === CANTRIP_LEVEL;
+    const isList = pick.source === 'LIST';
+
+    // У перечисленных заклинаний круг свой у каждой записи, поэтому порция
+    // пишется общим типом SPELL, даже если в ней одни заговоры
+    const isCantrip =
+      !isList && pick.mode === 'EXACT' && pick.level === CANTRIP_LEVEL;
 
     const key = takeKey(
       pick.key,
       isCantrip ? CANTRIP_PICK_KEY_PREFIX : SPELL_PICK_KEY_PREFIX,
     );
 
+    // Перечисленные заклинания — набором значений выбора, как черты у выбора
+    // черты: значение — url, имя — снимок названия для подписи
+    const listed = pick.spells
+      .filter((spell) => !!spell.url.trim())
+      .map((spell) => ({
+        value: spell.url.trim(),
+        ...(spell.name ? { name: spell.name } : {}),
+      }));
+
     choices.push({
       ...createEmptyChoice(key, isCantrip ? 'CANTRIP' : 'SPELL'),
       label: pick.label.trim(),
       count: pick.count,
       countEqualsProficiencyBonus: pick.countEqualsProficiencyBonus,
-      spellFilter: {
-        level: pick.mode === 'EXACT' ? pick.level : undefined,
-        maxLevel: pick.mode === 'UP_TO' ? pick.level : undefined,
-        classes,
-        classesFromChoiceKey: classChoiceKey,
-      },
+      requiredLevel: pick.requiredLevel,
+      options: isList ? listed : [],
+      // Фильтра у перечисленного пула нет: круг и класс берутся из записей
+      spellFilter: isList
+        ? undefined
+        : {
+            level: pick.mode === 'EXACT' ? pick.level : undefined,
+            maxLevel: pick.mode === 'UP_TO' ? pick.level : undefined,
+            classes,
+            classesFromChoiceKey: classChoiceKey,
+          },
     });
   }
 
   // Характеристика спрашивается последней: она относится ко всем заклинаниям
   // черты сразу, а не к какой-то одной порции
   if (abilityChoiceKey) {
+    // Названия вариантов — из справочника характеристик: их читает лист, а
+    // редактор хранит только ключи
     choices.push({
       ...createEmptyChoice(abilityChoiceKey, 'SPELLCASTING_ABILITY'),
-      options: block.abilityOptions.map((ability) => ({ value: ability })),
+      label: block.abilityChoiceLabel.trim(),
+      options: block.abilityOptions.map((ability) => ({
+        value: ability,
+        name: ABILITY_LABELS[ability],
+      })),
     });
   }
 
@@ -1504,6 +1884,12 @@ function toGrantChoice(row: FeatGrantRow, key: string): FeatChoice {
         : undefined,
     onlyIfNotProficient: isProficiency && row.onlyIfNotProficient,
     onlyIfProficient: isProficiency && row.onlyIfProficient,
+    // Категории есть только у выбора черты; пустой список не пишется — его
+    // отсутствие и значит «любая категория»
+    featCategories:
+      primary === 'FEAT' && row.featCategories.length
+        ? [...row.featCategories]
+        : undefined,
     // Исход по умолчанию не пишется: у записей до его появления поля нет, и
     // core-api читает его отсутствие как владение
     grants: isExpertise && row.grants === 'EXPERTISE' ? 'EXPERTISE' : undefined,
@@ -1559,6 +1945,10 @@ function applyFixedGrantRow(mechanics: FeatMechanics, row: FeatGrantRow): void {
       proficiencies.weaponCategories.push(...values);
 
       break;
+    case 'MASTERY_PROPERTY':
+      proficiencies.masteryProperties.push(...values);
+
+      break;
     case 'WEAPON_MASTERY':
       proficiencies.weaponMasteries.push(...toRefs(row.options));
 
@@ -1569,6 +1959,10 @@ function applyFixedGrantRow(mechanics: FeatMechanics, row: FeatGrantRow): void {
       break;
     case 'WEAPON':
       proficiencies.weapons.push(...toRefs(row.options));
+
+      break;
+    case 'FEAT':
+      mechanics.feats = [...(mechanics.feats ?? []), ...toRefs(row.options)];
 
       break;
     default:
@@ -1787,16 +2181,19 @@ export function fromFeatEditorRows(
   base: FeatMechanics,
 ): { mechanics: FeatMechanics; prerequisiteDetails: FeatPrerequisiteDetails } {
   const mechanics = createFeatMechanics();
+  const abilityBonuses: Array<FeatAbilityBonus> = [];
+
+  mechanics.abilityBonuses = abilityBonuses;
 
   // Характеристика одна на все заклинания черты: заданную жёстко (ровно одну в
   // блоке) держит выдача заклинаний, выбор из нескольких — отдельный выбор
-  mechanics.spells = {
+  mechanics.spells = fromGrantedSpellBlock(rows.grantedSpells, {
     ...base.spells,
     spellcastingAbility:
       rows.spellChoice.abilityOptions.length === 1
         ? rows.spellChoice.abilityOptions[0]
         : undefined,
-  };
+  });
 
   mechanics.spellList = base.spellList;
 
@@ -1829,7 +2226,7 @@ export function fromFeatEditorRows(
       const bonus = toAbilityBonus(row, row.fromChoiceKey.trim());
 
       if (bonus) {
-        mechanics.abilityBonuses.push(bonus);
+        abilityBonuses.push(bonus);
       }
 
       continue;
@@ -1849,7 +2246,7 @@ export function fromFeatEditorRows(
       const bonus = toAbilityBonus(row, key);
 
       if (bonus) {
-        mechanics.abilityBonuses.push(bonus);
+        abilityBonuses.push(bonus);
       }
     }
   }
@@ -1886,6 +2283,15 @@ export function fromFeatEditorRows(
     name: row.name.trim(),
     shortName: row.shortName.trim(),
     max: row.max.trim(),
+    // Ступень без уровня или без максимума ничего не описывает: у потребителя
+    // она превратилась бы в ресурс на ноль зарядов
+    scaling: row.scaling
+      .filter((step) => step.level > 0 && step.max > 0)
+      .sort((left, right) => left.level - right.level),
+    // Отрицательная нижняя граница ничего не описывает: ресурса меньше чем на
+    // ноль зарядов не бывает
+    min: Math.max(0, Math.trunc(row.min)),
+    showInTable: row.showInTable,
     recovery: row.recovery,
   }));
 

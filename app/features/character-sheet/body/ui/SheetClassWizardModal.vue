@@ -1,85 +1,140 @@
 <script setup lang="ts">
+  import type { TabsItem } from '@nuxt/ui';
+
   import type {
+    AbilityImprovementMode,
+    AbilityKey,
+    CharacterAbilities,
     CharacterFeature,
     CharacterInventoryItem,
+    CharacterSpell,
     ClassChoice,
     ClassOption,
     ClassSummary,
+    ClassWizardTab,
+    FeatSelectOption,
+    LevelUpAbilityImprovement,
+    LevelUpFeatChoice,
+    SheetChoiceControl,
+    SheetChoiceOrigin,
   } from '../../model';
 
+  import { omit } from 'es-toolkit';
+
+  import { ACTION_LABELS } from '~/shared/consts';
   import { ClassDrawer } from '~classes/drawer';
   import { MarkupRender } from '~ui/markup';
-  import { SelectFeat } from '~ui/select';
 
   import {
     useCatalogSourceQuery,
     useCharacterSheet,
+    useChoiceHints,
+    useChoiceSpellPools,
     useToolCatalog,
   } from '../../composables';
   import {
+    ABILITY_IMPROVEMENT_LABELS,
     ABILITY_LABELS,
+    buildAbilityImprovementFeature,
+    buildChoiceControl,
     buildClassFeatures,
     buildFeatFeature,
     buildStartingEquipmentItems,
+    CLASS_FEAT_CHOICE_ID_SEGMENT,
+    CLASS_FEAT_INVALID_RESPONSE_ERROR,
+    CLASS_GRANTED_FEAT_ID_SEGMENT,
+    CLASS_SKILLS_CHOICE_ID,
     CLASS_SOURCES_ASYNC_DATA_KEY,
     CLASS_WIZARD_LABELS,
+    CLASS_WIZARD_TAB_LABELS,
+    CLASS_WIZARD_TAB_ORDER,
     CLASSES_DETAIL_BASE_PATH,
     CLASSES_FILTERS_PATH,
     CLASSES_SEARCH_PATH,
+    collectFeatAbilityIncreases,
     CUSTOM_CLASS_LABELS,
+    DEFAULT_ABILITY_IMPROVEMENT,
     deriveCantripsScaling,
     deriveClassResources,
     derivePreparedSpellsScaling,
     FEAT_SOURCES_ASYNC_DATA_KEY,
     FEATS_FILTERS_PATH,
+    FEATS_SELECT_PATH,
     FEATURE_ORIGIN_LABELS,
     fetchFeatDetail,
-    FIGHTING_STYLE_CHOICE_LABEL,
-    FIGHTING_STYLE_FEAT_CATEGORIES,
-    FIGHTING_STYLE_FEATURE_ID_SEGMENT,
-    FIGHTING_STYLE_INVALID_RESPONSE_ERROR,
+    filterChoicesByLevel,
+    getAbilityImprovementSpent,
     getCharacterClasses,
-    getChoiceSkillHints,
-    getClassFeatureChoice,
+    getChoiceModalSubtitle,
+    getChosenFeatureOptionKeys,
+    getChosenOptionFeatUrls,
+    getChosenProficientSkills,
+    getClassFeatureChoices,
     getClassFeatureId,
     getClassMaxHitPoints,
+    getClassOwnGrantsFeatureId,
     getClassSkillChoice,
     getClassToolChoice,
+    getEffectiveAbilities,
+    getFeatChoiceOptions,
+    getFeatChoicesUpToLevel,
+    getFeatUrlFromFeatureId,
     getHitDieAverage,
+    getLevelFeatChoices,
     getLevelHitPointsGain,
     getMulticlassRequirementWarning,
-    getOwnedWeaponNames,
-    getRequiredChoiceCount,
     getSelectedCasterType,
+    getSpellChoicesKey,
+    getSubclassAvailableHint,
+    getTakenOptionValues,
     getToolNames,
     getUnmetMulticlassRequirements,
+    getWeaponNamesForProficiencies,
+    isAbilityImprovementComplete,
+    isAbilityImprovementFeatChoice,
     LANGUAGE_PROFICIENCY_GROUPS,
+    LEVEL_UP_WIZARD_LABELS,
     matchClassProficiencies,
     matchToolProficiencies,
+    mergeAbilityIncreases,
     MULTICLASS_PROFICIENCY_LABELS,
     parseClassDetail,
     parseClassOptions,
+    parseFeatSelectOptions,
     resolveChoiceOptions,
+    SHEET_CLASS_WIZARD_LIST_LABELS,
     SHEET_SEARCH_LABELS,
-    SKILL_DUPLICATE_WARNING,
+    SHEET_WIZARD_FEATURE_CARD_CLASS,
+    SHEET_WIZARD_SECTION_CLASS,
     STARTING_EQUIPMENT_SKIP_VALUE,
     SUBCLASS_SELECTION_MIN_LEVEL,
     unionToolProficiencies,
+    withAbilityImprovementStep,
+    withChosenFeatureSpells,
+    withPendingAbilityIncreases,
   } from '../../model';
-  import SheetChoiceSelect from './SheetChoiceSelect.vue';
+  import SheetAbilityImprovementChoice from './SheetAbilityImprovementChoice.vue';
+  import SheetChoicePickerField from './SheetChoicePickerField.vue';
   import SheetCustomClassModal from './SheetCustomClassModal.vue';
+  import SheetFeatChoiceField from './SheetFeatChoiceField.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
   import SheetStartingEquipmentChoice from './SheetStartingEquipmentChoice.vue';
 
   type WizardStep = 'class' | 'review';
 
-  /** Загруженная черта боевого стиля и умение класса, к которому она выбрана. */
-  interface FightingStyleSelection {
+  /**
+   * Загруженная черта умения класса — выбранная игроком (боевой стиль, черта за
+   * повышение характеристик) либо выданная умением без выбора.
+   */
+  interface ClassFeatSelection {
     /** Идентификатор строки умения класса (`class:{featureKey}`). */
     rowId: string;
 
-    /** Название черты — идёт в подпись выбора у самого умения. */
-    featName: string;
+    /**
+     * Название черты — идёт в подпись выбора у самого умения; у выданной без
+     * выбора не нужно: выбора не было.
+     */
+    featName: string | null;
 
     /** Готовая запись особенности для листа. */
     feature: CharacterFeature;
@@ -218,8 +273,32 @@
   /** Черновик выборов-селекторов по id выбора: id → выбранные значения. */
   const selections = ref<Record<string, string[]>>({});
 
-  /** Выбранные черты боевого стиля по id классового умения. */
-  const fightingStyleSelections = ref<Record<string, string>>({});
+  /** Выборы черт по идентификатору выбора умения. */
+  const featSelections = ref<Record<string, LevelUpFeatChoice>>({});
+
+  /** Ответы на повышения характеристик по идентификатору их выбора черты. */
+  const abilityImprovements = ref<Record<string, LevelUpAbilityImprovement>>(
+    {},
+  );
+
+  /** Каталог черт для выборов черты в умениях; грузится, когда они есть. */
+  const featCatalog = ref<FeatSelectOption[]>([]);
+
+  const isFeatsLoading = ref(false);
+
+  const hasFeatsError = ref(false);
+
+  /** Черты, уже взятые на листе: повторно не предлагаются. */
+  const takenFeatUrls = computed(
+    () =>
+      new Set(
+        character.value.features.flatMap((feature) => {
+          const url = getFeatUrlFromFeatureId(feature.id);
+
+          return url ? [url] : [];
+        }),
+      ),
+  );
 
   /** Метка выбранного варианта стартового снаряжения (или «не добавлять»). */
   const startingEquipmentLabel = ref(STARTING_EQUIPMENT_SKIP_VALUE);
@@ -349,25 +428,74 @@
     );
   });
 
+  /**
+   * Владения, заявленные справочником структурой: категории брони и оружия,
+   * спасброски, навыки и языки. Разбор текста остаётся только там, где
+   * справочник и сам хранит текст, — у инструментов и приписки к категориям.
+   */
+  const declaredProficiencies = computed(
+    () => classDetail.value?.proficiencies ?? null,
+  );
+
   const savingThrowLabels = computed(() =>
     (classDetail.value?.savingThrows ?? []).map((key) => ABILITY_LABELS[key]),
   );
 
-  const matchedProficiencies = computed(() =>
-    classDetail.value
-      ? matchClassProficiencies(classDetail.value.proficiencyText)
-      : { armor: [], weapons: [] },
+  const matchedProficiencies = computed(() => {
+    const detail = classDetail.value;
+
+    if (!detail) {
+      return { armor: [], weapons: [] };
+    }
+
+    const declared = declaredProficiencies.value;
+
+    if (!declared) {
+      return matchClassProficiencies(detail.proficiencyText);
+    }
+
+    // Категории приходят структурой, а приписка к ним — свободным текстом
+    // («воинское оружие со свойством Фехтовальное»): её и разбираем, потому что
+    // текст она и в справочнике. Уточнённая группа даётся подходящими видами.
+    const custom = matchClassProficiencies({
+      armor: detail.proficiencyCustom.armor,
+      weapon: detail.proficiencyCustom.weapon,
+    });
+
+    return {
+      armor: [...new Set([...declared.armor, ...custom.armor])],
+      weapons: [...new Set([...declared.weapons, ...custom.weapons])],
+    };
+  });
+
+  // Инструменты справочник хранит строкой даже структурой владений, поэтому их
+  // по-прежнему сверяет с каталогом сайта разбор текста: найденное получает
+  // ссылку, ненайденное остаётся своим инструментом игрока.
+  const matchedTools = computed(() =>
+    unionToolProficiencies(
+      declaredProficiencies.value?.tools ?? [],
+      classDetail.value
+        ? matchToolProficiencies(
+            classDetail.value.proficiencyText.tool,
+            toolCatalogItems.value,
+          )
+        : [],
+    ),
   );
 
-  // Фиксированные инструменты класса сверяются с каталогом сайта: найденное
-  // получает ссылку, ненайденное остаётся своим инструментом игрока.
-  const matchedTools = computed(() =>
-    classDetail.value
-      ? matchToolProficiencies(
-          classDetail.value.proficiencyText.tool,
-          toolCatalogItems.value,
-        )
-      : [],
+  /**
+   * Оружие, из которого выбирают оружейный приём: владения листа вместе с теми,
+   * что даёт сам класс.
+   *
+   * Владения класса на лист ещё не легли — их кладёт применение мастера, — а
+   * приём воин выбирает уже на первом уровне: без них пул был бы пуст, и выбор
+   * висел бы «Выберите 0».
+   */
+  const ownedWeaponNames = computed(() =>
+    getWeaponNamesForProficiencies([
+      ...character.value.proficiencies.weapons,
+      ...matchedProficiencies.value.weapons,
+    ]),
   );
 
   const proficiencyChips = computed(() => [
@@ -402,60 +530,44 @@
     ),
   );
 
-  // Выборы уровня класса (владение навыками/инструментами) из прозы владений.
+  // Выборы уровня класса: владения навыками и инструментами из прозы плюс то,
+  // о чём спрашивает механика самой записи класса и подкласса, — заговор на
+  // выбор при взятии класса задают у класса целиком, а не у одного умения.
   const classChoices = computed<ClassChoice[]>(() => {
     const base = classDetail.value;
 
-    // Владения второго класса лист не выдаёт (урезанного набора справочник не
-    // отдаёт), поэтому и выбирать их в мастере добавления нечего.
-    if (!base || isAddMode.value) {
+    if (!base) {
       return [];
     }
 
+    // Владения второго класса лист не выдаёт (урезанного набора справочник не
+    // отдаёт), поэтому и выбирать их в мастере добавления нечего. Выборы
+    // механики это не касается: заклинания класс даёт и при мультиклассе.
+    //
+    // Навыки спрашивает структура справочника (`skillChoice`); проза остаётся
+    // запасным источником, пока бэкенд структуру не отдаёт. Инструменты
+    // справочник хранит строкой, и они разбираются из неё всегда.
+    const proficiencyChoices = isAddMode.value
+      ? []
+      : [
+          base.skillChoice
+            ?? (base.proficiencies
+              ? null
+              : getClassSkillChoice(
+                  base.proficiencyText.skill,
+                  skillNames.value,
+                )),
+          getClassToolChoice(base.proficiencyText.tool),
+        ].filter((choice): choice is ClassChoice => choice !== null);
+
+    // Выбор со своим уровнем открытия спрашивается, когда персонаж дорос: на
+    // остальных уровнях его задаёт мастер повышения
     return [
-      getClassSkillChoice(base.proficiencyText.skill, skillNames.value),
-      getClassToolChoice(base.proficiencyText.tool),
-    ].filter((choice): choice is ClassChoice => choice !== null);
+      ...proficiencyChoices,
+      ...filterChoicesByLevel(base.choices, level.value),
+      ...filterChoicesByLevel(subclassDetail.value?.choices ?? [], level.value),
+    ];
   });
-
-  /** Опции пикера выбора в зависимости от его типа. */
-  function choiceOptions(choice: ClassChoice): string[] {
-    return resolveChoiceOptions(choice, {
-      skillNames: skillNames.value,
-      proficientSkillNames: proficientSkillNames.value,
-      chosenProficientSkills: selections.value['class-skills'] ?? [],
-      knownLanguages: character.value.proficiencies.languages,
-      knownTools: getToolNames(character.value.proficiencies.tools),
-      allLanguages: allLanguages.value,
-      // Опции выбора инструмента — из каталога сайта, сузженные до групп,
-      // названных в прозе («один вид ремесленных инструментов»).
-      allTools: getToolNamesForGroups(choice.toolGroups),
-      // Пул оружейного приёма — оружие во владении: приём даётся только
-      // знакомому оружию.
-      ownedWeaponNames: getOwnedWeaponNames(character.value),
-      proficientSavingThrowNames: character.value.savingThrows
-        .filter((savingThrow) => savingThrow.proficient)
-        .map((savingThrow) => ABILITY_LABELS[savingThrow.key]),
-    });
-  }
-
-  /** Пометки опций: навыки, которыми персонаж уже владеет. */
-  function choiceHints(choice: ClassChoice): Record<string, string> {
-    return getChoiceSkillHints(choice, character.value.skills);
-  }
-
-  /** Требуемое число опций: не больше, чем доступно в списке выбора. */
-  function choiceCount(choice: ClassChoice): number {
-    return getRequiredChoiceCount(choice, choiceOptions(choice));
-  }
-
-  /** Обновление выбора с ограничением по требуемому количеству. */
-  function updateSelection(choice: ClassChoice, values: string[]): void {
-    selections.value = {
-      ...selections.value,
-      [choice.id]: values.slice(0, choiceCount(choice)),
-    };
-  }
 
   const featureRows = computed(() => {
     const base = classDetail.value;
@@ -470,8 +582,36 @@
       level: number;
       description: ClassSummary['features'][number]['description'];
       originLabel: string;
-      choiceControl: ClassChoice | null;
-      fightingStyleChoice: boolean;
+
+      /** Бейдж карточки: источник и уровень умения. */
+      badgeLabel: string;
+
+      /** Откуда выбор — для подзаголовка окна пикера. */
+      origin: SheetChoiceOrigin;
+
+      /** Подзаголовок окна выбора черты умения. */
+      modalSubtitle: string;
+
+      choiceControls: ClassChoice[];
+      featChoices: ClassChoice[];
+
+      /**
+       * Выборы черт, которые спрашивает сама карточка: у повышения
+       * характеристик свой раздел, и в карточке его черта не спрашивается.
+       */
+      visibleFeatChoices: ClassChoice[];
+
+      grantedFeatUrls: string[];
+
+      /** Умение даёт повышение характеристик — его спрашивает свой раздел. */
+      abilityImprovement: boolean;
+
+      /**
+       * Повышения умения по уровням: персонаж собирается сразу на нужном
+       * уровне, и «Улучшение характеристик» спрашивает своё за каждый
+       * пройденный уровень роста.
+       */
+      improvementChoices: Array<{ level: number; choices: ClassChoice[] }>;
     }> = [];
 
     const seenKeys = new Set<string>();
@@ -494,14 +634,61 @@
 
         const id = getClassFeatureId(base.url, feature.key);
 
+        // Вопросы и черты взятых вариантов идут строкой их умения: пока манёвр
+        // не выбран, его «выбери навык» спрашивать не о чем
+        const chosenOptionKeys = getChosenFeatureOptionKeys(
+          feature.choices,
+          selections.value,
+        );
+
+        const origin: SheetChoiceOrigin = {
+          featureName: feature.name,
+          originLabel,
+          level: feature.level,
+        };
+
+        // Персонаж собирается сразу на нужном уровне: «Улучшение
+        // характеристик» спрашивает своё за каждый пройденный уровень роста
+        const featChoices = getFeatChoicesUpToLevel(
+          feature,
+          level.value,
+          chosenOptionKeys,
+        );
+
         rows.push({
           id,
           name: feature.name,
           level: feature.level,
           description: feature.description,
           originLabel,
-          fightingStyleChoice: feature.fightingStyleChoice,
-          choiceControl: getClassFeatureChoice(id, feature, skillNames.value),
+          badgeLabel: `${originLabel} · ${feature.level} ${LEVEL_UP_WIZARD_LABELS.levelWord}`,
+          origin,
+          modalSubtitle: getChoiceModalSubtitle(origin, 1),
+          choiceControls: getClassFeatureChoices(
+            id,
+            feature,
+            level.value,
+            chosenOptionKeys,
+          ),
+          featChoices,
+          visibleFeatChoices: feature.abilityImprovement ? [] : featChoices,
+          grantedFeatUrls: [
+            ...feature.grantedFeatUrls,
+            ...getChosenOptionFeatUrls(feature, chosenOptionKeys),
+          ],
+          abilityImprovement: feature.abilityImprovement,
+          improvementChoices: feature.abilityImprovement
+            ? [feature.level, ...feature.scalingLevels]
+                .filter((featureLevel) => featureLevel <= level.value)
+                .map((featureLevel) => ({
+                  level: featureLevel,
+                  choices: getLevelFeatChoices(
+                    feature,
+                    featureLevel,
+                    chosenOptionKeys,
+                  ),
+                }))
+            : [],
         });
       }
     };
@@ -518,6 +705,177 @@
 
     return rows;
   });
+
+  /** Все выборы мастера: по ним считается, что уже взято из общего списка. */
+  const allChoices = computed<ClassChoice[]>(() => [
+    ...classChoices.value,
+    ...featureRows.value.flatMap((row) => row.choiceControls),
+  ]);
+
+  // Пул заклинаний собирается поиском по каталогу, а не лежит в записи класса:
+  // «Маг» первобытного порядка друида даёт заговор из списка друида, и весь
+  // список в умении устарел бы при первом же пополнении справочника
+  const {
+    getPool: getSpellPool,
+    getSpellOptions,
+    getStatus: getSpellPoolStatus,
+    collectChosenSpells,
+    load: loadSpellPools,
+    retry: retrySpellPool,
+  } = useChoiceSpellPools({
+    sources: () => [{ choices: allChoices.value }],
+    answers: selections,
+  });
+
+  /**
+   * Примета выборов заклинаний, которые мастер спрашивает сейчас: выбор
+   * приходит вместе со взятым вариантом умения, поэтому пул догружается по его
+   * появлению, а не один раз на загрузке класса.
+   */
+  const spellChoicesKey = computed(() => getSpellChoicesKey(allChoices.value));
+
+  // Цикла нет: обработчик правит только пулы заклинаний, а примета считается по
+  // выборам мастера — от загруженного пула она не меняется.
+  watch(spellChoicesKey, handleSpellChoicesChange);
+
+  /** Догружает пулы заклинаний под выборы, которые мастер спрашивает сейчас. */
+  function handleSpellChoicesChange(): void {
+    void loadSpellPools();
+  }
+
+  /** Опции пикера выбора в зависимости от его типа. */
+  function choiceOptions(choice: ClassChoice): string[] {
+    // Заклинания приходят загруженным пулом, а не резолвятся по типу выбора:
+    // в самой записи класса их нет.
+    if (choice.kind === 'spell') {
+      return getSpellOptions(choice);
+    }
+
+    return resolveChoiceOptions(choice, {
+      skillNames: skillNames.value,
+      proficientSkillNames: proficientSkillNames.value,
+      // Навыки, уже выбранные в мастере: и в выборе класса, и в выборах умений.
+      // Свой ответ выбор не вычитает — иначе выбранное пропадало бы из
+      // собственного списка.
+      chosenProficientSkills: getChosenProficientSkills(
+        allChoices.value,
+        selections.value,
+        choice.id,
+      ),
+      knownLanguages: character.value.proficiencies.languages,
+      knownTools: getToolNames(character.value.proficiencies.tools),
+      allLanguages: allLanguages.value,
+      // Опции выбора инструмента — из каталога сайта, сузженные до групп,
+      // названных в прозе («один вид ремесленных инструментов»).
+      allTools: getToolNamesForGroups(choice.toolGroups),
+      // Пул оружейного приёма — оружие во владении: приём даётся только
+      // знакомому оружию. Владения берущегося класса считаются своими: на
+      // листе их ещё нет, а приём он даёт здесь же.
+      ownedWeaponNames: ownedWeaponNames.value,
+      proficientSavingThrowNames: character.value.savingThrows
+        .filter((savingThrow) => savingThrow.proficient)
+        .map((savingThrow) => ABILITY_LABELS[savingThrow.key]),
+      // Варианты, взятые на других ступенях того же списка: одно и то же
+      // воззвание по правилам дважды не берут
+      takenOptionValues: getTakenOptionValues(
+        choice,
+        allChoices.value,
+        selections.value,
+      ),
+    });
+  }
+
+  /**
+   * Пометки опций: навыки, которыми персонаж уже владеет, и заклинания,
+   * которые он уже знает.
+   */
+  const { getHints: choiceHints } = useChoiceHints({
+    choices: allChoices,
+    selections,
+  });
+
+  /**
+   * Выбор для единого пикера: варианты, готовность пула, подписи поля и окна.
+   * Заклинания приходят пулом со своей готовностью — пока пул в пути, выбор
+   * не считается ни выполненным, ни пустым.
+   *
+   * @param choice выбор мастера.
+   * @param origin умение и его источник — для подзаголовка окна.
+   * @returns выбор для пикера.
+   */
+  function choiceControl(
+    choice: ClassChoice,
+    origin?: SheetChoiceOrigin,
+  ): SheetChoiceControl {
+    return buildChoiceControl(choice, {
+      names: choiceOptions(choice),
+      hints: choiceHints(choice),
+      spellPool: getSpellPool(choice),
+      status: choice.kind === 'spell' ? getSpellPoolStatus(choice) : 'ready',
+      toolEntries: toolCatalogItems.value,
+      origin,
+    });
+  }
+
+  /** Источник выборов самого класса — владения и заклинания при взятии. */
+  const classChoiceOrigin = computed<SheetChoiceOrigin>(() => ({
+    featureName: CLASS_WIZARD_LABELS.classOwnChoices,
+    originLabel: `${FEATURE_ORIGIN_LABELS.class}: ${classDetail.value?.name ?? ''}`,
+    level: null,
+  }));
+
+  /**
+   * Выборы самого класса единым пикером. Пояснение подменяется только у
+   * владений: у выбора заклинания оно собирается из фильтра пула и говорит,
+   * какого круга и из чьего списка заклинание, — это точнее общей фразы.
+   */
+  const classChoiceControls = computed(() =>
+    classChoices.value.map((choice) => {
+      const control = choiceControl(choice, classChoiceOrigin.value);
+
+      return choice.kind === 'spell'
+        ? control
+        : {
+            ...control,
+            explanation: CLASS_WIZARD_LABELS.classChoiceExplanation,
+          };
+    }),
+  );
+
+  /**
+   * Выборы умений единым пикером по идентификаторам строк. Отдельным
+   * computed, а не полем строки: пикер считает пул по всем выборам мастера, а
+   * те собираются из самих строк — поле замкнуло бы круг.
+   */
+  const featureRowControls = computed<Record<string, SheetChoiceControl[]>>(
+    () =>
+      Object.fromEntries(
+        featureRows.value.map((row) => [
+          row.id,
+          row.choiceControls.map((choice) => choiceControl(choice, row.origin)),
+        ]),
+      ),
+  );
+
+  /** Требуемое число опций с учётом готовности пула. */
+  function choiceCount(choice: ClassChoice): number {
+    return choiceControl(choice).requiredCount;
+  }
+
+  /** Обновление выбора с ограничением по требуемому количеству. */
+  function updateSelection(choice: ClassChoice, values: string[]): void {
+    const count = choiceCount(choice);
+
+    selections.value = {
+      ...selections.value,
+      [choice.id]: count > 0 ? values.slice(0, count) : values,
+    };
+  }
+
+  /** Пул заклинаний выбора не загрузился — запросить его заново. */
+  function handleSpellPoolRetry(choice: ClassChoice): void {
+    void retrySpellPool(choice);
+  }
 
   /**
    * Требование мультиклассирования: 13 в ключевых характеристиках класса
@@ -577,14 +935,308 @@
 
   const isNextDisabled = computed(() => !selectedClass.value);
 
-  const isApplyDisabled = computed(
+  // ── Разделы второго шага ─────────────────────────────────────
+
+  /** Подпись раздела умений с уровнем, до которого они набраны. */
+  const featuresSectionTitle = computed(() =>
+    CLASS_WIZARD_LABELS.features.replace('{level}', String(level.value)),
+  );
+
+  /**
+   * Спасброски строкой справочника, когда разобрать их по характеристикам не
+   * вышло; не разобрано и там — так и пишем.
+   */
+  const savingThrowsFallback = computed(
     () =>
-      isApplying.value
-      || featureRows.value.some(
-        (row) =>
-          row.fightingStyleChoice && !fightingStyleSelections.value[row.id],
+      classDetail.value?.savingThrowsText
+      || CLASS_WIZARD_LABELS.savingThrowsUnknown,
+  );
+
+  const reviewTab = ref<ClassWizardTab>('overview');
+
+  /**
+   * Незакрытые выборы списка: по ним считается счётчик на вкладке.
+   *
+   * @param choices выборы раздела.
+   * @returns выборы, на которые ответов ещё не хватает.
+   */
+  function getPendingChoices(choices: ClassChoice[]): ClassChoice[] {
+    return choices.filter(
+      (choice) =>
+        (selections.value[choice.id]?.length ?? 0) < choiceCount(choice),
+    );
+  }
+
+  /**
+   * Незакрытые выборы черт: черта не названа либо у неё не заполнены прибавки.
+   * Сбой каталога выбор снимает — там выбирать не из чего, и торопить не с чем
+   * (по той же причине снимается запрет применения).
+   *
+   * @param choices выборы черты одного умения или всего мастера.
+   * @returns выборы, на которые ответов ещё не хватает.
+   */
+  function getPendingFeatChoices(choices: ClassChoice[]): ClassChoice[] {
+    if (hasFeatsError.value) {
+      return [];
+    }
+
+    // Выборы повышения характеристик считает свой раздел: там у них два режима,
+    // и требовать черту в режиме прибавок значило бы запереть применение.
+    const improvementChoiceIds = new Set(
+      featureRows.value
+        .filter((row) => row.abilityImprovement)
+        .flatMap((row) => row.featChoices.map((choice) => choice.id)),
+    );
+
+    return choices.filter((choice) => {
+      if (improvementChoiceIds.has(choice.id)) {
+        return false;
+      }
+
+      const selection = featSelections.value[choice.id];
+
+      return !selection?.featUrl || selection.abilities.includes(null);
+    });
+  }
+
+  const pendingFeatChoiceCount = computed(
+    () =>
+      getPendingFeatChoices(featureRows.value.flatMap((row) => row.featChoices))
+        .length,
+  );
+
+  /** Итоговые характеристики персонажа — от них считаются прибавки и предел. */
+  const abilityScores = computed(() => getEffectiveAbilities(character.value));
+
+  /**
+   * Характеристики, от которых считается предел одного повышения: к итоговым
+   * прибавляется всё, что уже разложено другими повышениями и выбранными
+   * чертами мастера. Персонаж собирается сразу на нужном уровне, и без этого
+   * повышения 4, 8 и 12 уровней подняли бы одну характеристику выше предела.
+   *
+   * @param choiceId идентификатор выбора, для которого считается предел.
+   * @returns характеристики с прибавками мастера.
+   */
+  function abilityScoresFor(choiceId: string): CharacterAbilities {
+    return withPendingAbilityIncreases(abilityScores.value, [
+      ...Object.entries(abilityImprovements.value)
+        .filter(
+          ([id, improvement]) =>
+            id !== choiceId && improvement.mode === 'abilities',
+        )
+        .map(([, improvement]) => improvement.increases),
+      ...Object.entries(featSelections.value)
+        .filter(([id]) => id !== choiceId)
+        .map(([, selection]) =>
+          collectFeatAbilityIncreases(selection.abilities),
+        ),
+    ]);
+  }
+
+  /**
+   * Блоки раздела «Характеристики»: по блоку на каждое повышение, которое даёт
+   * взятый уровень. Спрашиваются отдельным разделом, а не в карточке умения:
+   * повышений у высокого уровня несколько, и в карточке они терялись бы.
+   */
+  const abilityImprovementBlocks = computed(() =>
+    featureRows.value
+      .filter((row) => row.abilityImprovement)
+      .flatMap((row) =>
+        row.improvementChoices.flatMap((improvement) =>
+          improvement.choices.map((choice) => ({
+            id: choice.id,
+            choice,
+            scores: abilityScoresFor(choice.id),
+            featureRowId: `${row.id}:${improvement.level}`,
+            level: improvement.level,
+            title: choice.label || row.name,
+            badgeLabel: `${row.originLabel} · ${improvement.level} ${LEVEL_UP_WIZARD_LABELS.levelWord}`,
+            improvement:
+              abilityImprovements.value[choice.id]
+              ?? DEFAULT_ABILITY_IMPROVEMENT,
+          })),
+        ),
       ),
   );
+
+  /**
+   * Незакрытые повышения характеристик: их число висит на своей вкладке. Сбой
+   * каталога черт требование к черте снимает — выбирать там не из чего.
+   */
+  const pendingAbilityImprovementCount = computed(
+    () =>
+      abilityImprovementBlocks.value.filter((block) => {
+        if (block.improvement.mode === 'feat' && hasFeatsError.value) {
+          return false;
+        }
+
+        return !isAbilityImprovementComplete(
+          block.improvement,
+          featSelections.value[block.id],
+          block.scores,
+        );
+      }).length,
+  );
+
+  /**
+   * Сколько ответов ждёт каждое умение: по нему у свёрнутой карточки висит
+   * бейдж, и видно, какое умение разворачивать.
+   */
+  const pendingByFeatureRow = computed<Record<string, number>>(() =>
+    Object.fromEntries(
+      featureRows.value.map((row) => [
+        row.id,
+        getPendingChoices(row.choiceControls).length
+          + getPendingFeatChoices(row.featChoices).length,
+      ]),
+    ),
+  );
+
+  /**
+   * Раскрытые карточки умений по их идентификаторам. Своим набором, а не
+   * аккордеоном: игрок сравнивает умения между собой. Идентификаторами, а не
+   * номерами строк: смена класса, подкласса и уровня пересобирает список.
+   */
+  const expandedFeatureRows = ref<string[]>([]);
+
+  /**
+   * Раскрыта ли карточка умения.
+   *
+   * @param rowId идентификатор строки умения.
+   * @returns true — тело карточки видно.
+   */
+  function isFeatureRowExpanded(rowId: string): boolean {
+    return expandedFeatureRows.value.includes(rowId);
+  }
+
+  /**
+   * Разворачивает или сворачивает карточку умения.
+   *
+   * @param rowId идентификатор строки умения.
+   */
+  function toggleFeatureRow(rowId: string): void {
+    expandedFeatureRows.value = isFeatureRowExpanded(rowId)
+      ? expandedFeatureRows.value.filter((id) => id !== rowId)
+      : [...expandedFeatureRows.value, rowId];
+  }
+
+  /**
+   * Значок свёртки карточки умения.
+   *
+   * @param rowId идентификатор строки умения.
+   * @returns имя значка.
+   */
+  function getFeatureRowIcon(rowId: string): string {
+    return isFeatureRowExpanded(rowId)
+      ? 'tabler:chevron-up'
+      : 'tabler:chevron-down';
+  }
+
+  /**
+   * Сколько ответов раздел ещё ждёт: их число висит на вкладке.
+   *
+   * Снаряжение не считается: вариант предвыбран, и «Не добавлять» тоже ответ.
+   */
+  const pendingByTab = computed<Record<ClassWizardTab, number>>(() => ({
+    overview: getPendingChoices(classChoices.value).length,
+    equipment: 0,
+    features:
+      pendingFeatChoiceCount.value
+      + getPendingChoices(
+        featureRows.value.flatMap((row) => row.choiceControls),
+      ).length,
+    abilities: pendingAbilityImprovementCount.value,
+  }));
+
+  /** Сколько ответов мастер ещё ждёт во всех разделах вместе. */
+  const pendingChoiceCount = computed(() =>
+    CLASS_WIZARD_TAB_ORDER.reduce(
+      (total, tab) => total + pendingByTab.value[tab],
+      0,
+    ),
+  );
+
+  /**
+   * Применять рано, пока хоть один выбор не закрыт: владение навыками, черта за
+   * повышение характеристик, вариант умения. Считается по тем же счётчикам, что
+   * висят на вкладках, — по ним и видно, где недоотвечено (так же ведёт себя
+   * мастер предыстории). Сбой каталога черт требование с них снимает: выбирать
+   * там не из чего, и класс иначе было бы не применить.
+   */
+  const isApplyDisabled = computed(
+    () => isApplying.value || pendingChoiceCount.value > 0,
+  );
+
+  /** Разделы, которым есть что показать: пустая вкладка только сбивает. */
+  const shownReviewTabs = computed<ClassWizardTab[]>(() =>
+    CLASS_WIZARD_TAB_ORDER.filter((tab) => {
+      if (tab === 'equipment') {
+        return startingEquipmentOptions.value.length > 0;
+      }
+
+      if (tab === 'features') {
+        return featureRows.value.length > 0;
+      }
+
+      if (tab === 'abilities') {
+        return abilityImprovementBlocks.value.length > 0;
+      }
+
+      return true;
+    }),
+  );
+
+  const reviewTabItems = computed<TabsItem[]>(() =>
+    shownReviewTabs.value.map((tab) => ({
+      value: tab,
+      label: CLASS_WIZARD_TAB_LABELS[tab],
+      // Число нерешённого — подсказка, куда идти: раздел с ним и заблокировал
+      // применение, а открыт может быть совсем другой
+      badge: pendingByTab.value[tab]
+        ? {
+            label: String(pendingByTab.value[tab]),
+            // На залитой акцентом открытой вкладке `warning` сливается с ней в
+            // тёмной теме — там счётчик нейтральный (см. мастер предыстории)
+            color: tab === reviewTab.value ? 'neutral' : 'warning',
+            variant: 'subtle',
+          }
+        : undefined,
+    })),
+  );
+
+  /**
+   * Переключение раздела. `UTabs` отдаёт значение строкой, поэтому раздел
+   * ищется среди своих же — так в состояние не попадёт чужое значение.
+   *
+   * @param value значение вкладки.
+   */
+  function handleReviewTabChange(value: string | number) {
+    const tab = shownReviewTabs.value.find((shown) => shown === value);
+
+    if (tab) {
+      reviewTab.value = tab;
+    }
+  }
+
+  /**
+   * Разделы — те же шаги мастера: кнопка справа ведёт по ним вперёд и только на
+   * последнем становится «Применить». Иначе игрок нажимал «Применить» с первой
+   * вкладки, не открыв остальные, и упирался в заблокированную кнопку, не видя,
+   * где именно недоотвечено.
+   */
+  const isLastReviewTab = computed(
+    () => shownReviewTabs.value.at(-1) === reviewTab.value,
+  );
+
+  /** Переход на следующий раздел кнопкой «Далее». */
+  function handleReviewNext() {
+    const nextTab =
+      shownReviewTabs.value[shownReviewTabs.value.indexOf(reviewTab.value) + 1];
+
+    if (nextTab) {
+      reviewTab.value = nextTab;
+    }
+  }
 
   function showLoadError() {
     toast.add({
@@ -594,12 +1246,222 @@
     });
   }
 
-  function showFightingStyleError() {
+  function showFeatError() {
     toast.add({
       color: 'error',
       icon: 'tabler:alert-triangle',
-      title: 'Не удалось добавить выбранный боевой стиль',
+      title: ABILITY_IMPROVEMENT_LABELS.applyError,
     });
+  }
+
+  /**
+   * Каталог черт для выборов в умениях. Список берётся целиком с `/select`:
+   * только он отдаёт повторяемость и прибавки к характеристикам, а категории
+   * и уже взятые черты отбираются на клиенте — как в мастере повышения.
+   */
+  async function loadFeats(): Promise<void> {
+    isFeatsLoading.value = true;
+    hasFeatsError.value = false;
+
+    try {
+      const response = await $fetch<unknown>(FEATS_SELECT_PATH, {
+        method: 'GET',
+        retry: 0,
+      });
+
+      featCatalog.value = parseFeatSelectOptions(response);
+    } catch (error) {
+      consola.error(ABILITY_IMPROVEMENT_LABELS.applyErrorLog, error);
+      hasFeatsError.value = true;
+    } finally {
+      isFeatsLoading.value = false;
+    }
+  }
+
+  /**
+   * Черты, доступные выбору черты в умении: пул сужен категориями и перечнем
+   * выбора, уже взятыми чертами и выбранными в других умениях мастера.
+   *
+   * @param choice выбор черты умения.
+   * @returns черты для селектора.
+   */
+  function featOptions(choice: ClassChoice): FeatSelectOption[] {
+    const selectedUrl = featSelections.value[choice.id]?.featUrl ?? '';
+
+    const chosenElsewhere = Object.entries(featSelections.value)
+      .filter(([id, entry]) => id !== choice.id && entry.featUrl)
+      .map(([, entry]) => entry.featUrl);
+
+    return getFeatChoiceOptions(
+      featCatalog.value,
+      choice,
+      new Set([...takenFeatUrls.value, ...chosenElsewhere]),
+      selectedUrl,
+      featSourceIds.value,
+      // У выбора за повышение характеристик сама черта «Улучшение
+      // характеристик» из пула уходит: её прибавки — это режим раздела.
+      isAbilityImprovementFeatChoice(choice),
+    );
+  }
+
+  /**
+   * Черта, выбранная в выборе умения.
+   *
+   * @param choiceId идентификатор выбора черты.
+   * @returns опция черты; null — выбора не было либо черта не из каталога.
+   */
+  function selectedFeat(choiceId: string): FeatSelectOption | null {
+    const featUrl = featSelections.value[choiceId]?.featUrl;
+
+    return featUrl
+      ? (featCatalog.value.find((feat) => feat.url === featUrl) ?? null)
+      : null;
+  }
+
+  /**
+   * Выбранные характеристики по слотам прибавок черты; пусто — черта не
+   * выбрана либо прибавок не даёт.
+   *
+   * @param choiceId идентификатор выбора черты.
+   * @returns характеристики по слотам.
+   */
+  function featAbilities(choiceId: string): Array<AbilityKey | null> {
+    return featSelections.value[choiceId]?.abilities ?? [];
+  }
+
+  /**
+   * Выбор черты в умении. Смена черты обнуляет выбранные характеристики: у
+   * новой черты свой список и своё число прибавок.
+   *
+   * @param rowId идентификатор строки умения.
+   * @param choiceId идентификатор выбора черты.
+   * @param featUrl url выбранной черты; '' — выбор снят.
+   */
+  function setFeatChoice(rowId: string, choiceId: string, featUrl: string) {
+    const option = featCatalog.value.find((feat) => feat.url === featUrl);
+
+    featSelections.value = {
+      ...featSelections.value,
+      [choiceId]: {
+        featureId: rowId,
+        featUrl,
+        abilities: Array.from<AbilityKey | null>({
+          length: option?.abilityIncreaseCount ?? 0,
+        }).fill(null),
+      },
+    };
+  }
+
+  /**
+   * Выбор характеристики в слоте прибавки выбранной черты.
+   *
+   * @param choiceId идентификатор выбора черты.
+   * @param payload номер слота и выбранная характеристика.
+   * @param payload.slot номер слота прибавки (с нуля).
+   * @param payload.ability выбранная характеристика; null — выбор снят.
+   */
+  function setFeatAbility(
+    choiceId: string,
+    payload: { slot: number; ability: AbilityKey | null },
+  ) {
+    const selection = featSelections.value[choiceId];
+
+    if (!selection) {
+      return;
+    }
+
+    featSelections.value = {
+      ...featSelections.value,
+      [choiceId]: {
+        ...selection,
+        abilities: selection.abilities.map((current, slot) =>
+          slot === payload.slot ? payload.ability : current,
+        ),
+      },
+    };
+  }
+
+  /**
+   * Смена режима повышения. Прежний ответ снимается целиком: прибавки и черта —
+   * это два ответа на один выбор, и оставленный второй уехал бы на лист вместе
+   * с первым.
+   *
+   * @param choiceId идентификатор выбора черты повышения.
+   * @param mode новый режим.
+   */
+  function setAbilityImprovementMode(
+    choiceId: string,
+    mode: AbilityImprovementMode,
+  ) {
+    featSelections.value = omit(featSelections.value, [choiceId]);
+
+    abilityImprovements.value = {
+      ...abilityImprovements.value,
+      [choiceId]: { mode, increases: {} },
+    };
+  }
+
+  /**
+   * Шаг ± у характеристики в режиме прибавок.
+   *
+   * @param choiceId идентификатор выбора черты повышения.
+   * @param payload характеристика и шаг изменения.
+   * @param payload.ability ключ характеристики.
+   * @param payload.delta шаг изменения (+1 или −1).
+   */
+  function stepAbilityImprovement(
+    choiceId: string,
+    payload: { ability: AbilityKey; delta: number },
+  ) {
+    const current =
+      abilityImprovements.value[choiceId] ?? DEFAULT_ABILITY_IMPROVEMENT;
+
+    abilityImprovements.value = {
+      ...abilityImprovements.value,
+      [choiceId]: {
+        ...current,
+        increases: withAbilityImprovementStep(
+          abilityScoresFor(choiceId),
+          current.increases,
+          payload.ability,
+          payload.delta,
+        ),
+      },
+    };
+  }
+
+  /**
+   * Выбор черты вместо повышения характеристик: черта ложится под запись того
+   * же уровня, что и прибавки, — снятие класса заберёт её вместе с умением.
+   *
+   * @param block блок повышения характеристик.
+   * @param block.id идентификатор выбора черты повышения.
+   * @param block.featureRowId идентификатор строки умения с уровнем.
+   * @param featUrl url выбранной черты; '' — выбор снят.
+   */
+  function setImprovementFeat(
+    block: { id: string; featureRowId: string },
+    featUrl: string,
+  ) {
+    setFeatChoice(block.featureRowId, block.id, featUrl);
+  }
+
+  /**
+   * Сброс разложенных прибавок повышения.
+   *
+   * @param choiceId идентификатор выбора черты повышения.
+   */
+  function resetAbilityImprovement(choiceId: string) {
+    const current = abilityImprovements.value[choiceId];
+
+    if (!current) {
+      return;
+    }
+
+    abilityImprovements.value = {
+      ...abilityImprovements.value,
+      [choiceId]: { ...current, increases: {} },
+    };
   }
 
   function findClassOption(classUrl: string): ClassOption | undefined {
@@ -722,7 +1584,17 @@
 
       choices.value = {};
       selections.value = {};
-      fightingStyleSelections.value = {};
+      featSelections.value = {};
+      abilityImprovements.value = {};
+
+      // Каталог черт нужен только классу с выбором черты до этого уровня:
+      // иначе лишний запрос на каждое открытие мастера
+      if (
+        featureRows.value.some((row) => row.featChoices.length > 0)
+        && !featCatalog.value.length
+      ) {
+        await loadFeats();
+      }
 
       // Первый вариант снаряжения предлагается по умолчанию: лист чаще всего
       // заполняется на создании персонажа, где набор класса нужен целиком.
@@ -730,6 +1602,7 @@
         classDetail.value.startingEquipment[0]?.label
         ?? STARTING_EQUIPMENT_SKIP_VALUE;
 
+      reviewTab.value = shownReviewTabs.value[0] ?? 'overview';
       step.value = 'review';
     } catch (error) {
       consola.error('Ошибка загрузки класса:', error);
@@ -744,37 +1617,55 @@
   }
 
   /**
-   * Загружает выбранные черты боевого стиля и делает их классовыми записями,
-   * чтобы смена класса удаляла прежний выбор. Строки без выбора пропускаются:
-   * применение до полного выбора блокирует `isApplyDisabled`.
+   * Загружает черты умений — выбранные игроком и выданные без выбора — и
+   * делает их классовыми записями, чтобы смена класса удаляла их вместе с
+   * умением. Выборы без ответа сюда не попадают: применение до полного выбора
+   * блокирует `isApplyDisabled`.
    */
-  function buildFightingStyleFeatures(): Promise<
-    Array<FightingStyleSelection>
-  > {
-    const selectedRows: Array<{ rowId: string; featUrl: string }> = [];
+  function buildClassFeatFeatures(): Promise<Array<ClassFeatSelection>> {
+    const entries: Array<{
+      rowId: string;
+      featUrl: string;
+      segment: string;
+      chosen: boolean;
+    }> = [];
+
+    for (const selection of Object.values(featSelections.value)) {
+      if (selection.featUrl) {
+        entries.push({
+          rowId: selection.featureId,
+          featUrl: selection.featUrl,
+          segment: CLASS_FEAT_CHOICE_ID_SEGMENT,
+          chosen: true,
+        });
+      }
+    }
 
     for (const row of featureRows.value) {
-      const featUrl = fightingStyleSelections.value[row.id];
-
-      if (row.fightingStyleChoice && featUrl) {
-        selectedRows.push({ rowId: row.id, featUrl });
+      for (const featUrl of row.grantedFeatUrls) {
+        entries.push({
+          rowId: row.id,
+          featUrl,
+          segment: CLASS_GRANTED_FEAT_ID_SEGMENT,
+          chosen: false,
+        });
       }
     }
 
     return Promise.all(
-      selectedRows.map(async ({ rowId, featUrl }) => {
-        const summary = await fetchFeatDetail(featUrl);
+      entries.map(async (entry) => {
+        const summary = await fetchFeatDetail(entry.featUrl);
 
         if (!summary) {
-          throw new Error(FIGHTING_STYLE_INVALID_RESPONSE_ERROR);
+          throw new Error(CLASS_FEAT_INVALID_RESPONSE_ERROR);
         }
 
         return {
-          rowId,
-          featName: summary.name,
+          rowId: entry.rowId,
+          featName: entry.chosen ? summary.name : null,
           feature: {
             ...buildFeatFeature(summary),
-            id: `${rowId}:${FIGHTING_STYLE_FEATURE_ID_SEGMENT}:${summary.url}`,
+            id: `${entry.rowId}:${entry.segment}:${summary.url}`,
           },
         };
       }),
@@ -789,17 +1680,25 @@
   async function applyClass(base: ClassSummary) {
     // Под `try` только загрузка черт: ошибка сети не должна выглядеть как сбой
     // применения класса, а применение ниже — синхронное и не бросает.
-    let fightingStyleFeatures: Array<FightingStyleSelection>;
+    let classFeatFeatures: Array<ClassFeatSelection>;
 
     try {
-      fightingStyleFeatures = await buildFightingStyleFeatures();
+      classFeatFeatures = await buildClassFeatFeatures();
     } catch (error) {
-      consola.error('Ошибка добавления боевого стиля:', error);
+      consola.error(ABILITY_IMPROVEMENT_LABELS.applyErrorLog, error);
 
-      showFightingStyleError();
+      showFeatError();
 
       return;
     }
+
+    // Прибавки черт с повышением характеристик считаются здесь же — как в
+    // мастере повышения уровня
+    const abilityIncreases = mergeAbilityIncreases(
+      Object.values(featSelections.value).map((selection) =>
+        collectFeatAbilityIncreases(selection.abilities),
+      ),
+    );
 
     // Предметы выбранного варианта снаряжения догружаются до применения; их
     // неудачные запросы гасятся внутри, поэтому шаг не бросает.
@@ -810,15 +1709,15 @@
         ? await buildStartingEquipmentItems(startingEquipmentOption)
         : [];
 
-    const matched = matchClassProficiencies(base.proficiencyText);
+    const matched = matchedProficiencies.value;
 
     // Выбор владения навыками (уровень класса).
     const skillsChoice = classChoices.value.find(
-      (choice) => choice.id === 'class-skills',
+      (choice) => choice.id === CLASS_SKILLS_CHOICE_ID,
     );
 
     const proficientSkills: string[] = skillsChoice
-      ? (selections.value['class-skills'] ?? []).slice(
+      ? (selections.value[CLASS_SKILLS_CHOICE_ID] ?? []).slice(
           0,
           choiceCount(skillsChoice),
         )
@@ -826,39 +1725,43 @@
 
     const chosenTools = selections.value['class-tools'] ?? [];
 
-    // Выборы внутри умений: владение навыком, экспертиза и языки; выбранные
-    // значения также идут в текст умения, чтобы отображаться на листе.
-    const expertiseSkills: string[] = [];
-    const chosenLanguages: string[] = [];
     const featureChoices: Record<string, string> = { ...choices.value };
 
-    for (const selection of fightingStyleFeatures) {
-      featureChoices[selection.rowId] = selection.featName;
-    }
-
-    for (const row of featureRows.value) {
-      const control = row.choiceControl;
-
-      if (!control) {
+    // У умения бывает не один выбор черты: подпись собирается из всех
+    for (const selection of classFeatFeatures) {
+      if (!selection.featName) {
         continue;
       }
 
+      const previous = featureChoices[selection.rowId];
+
+      featureChoices[selection.rowId] = previous
+        ? `${previous}, ${selection.featName}`
+        : selection.featName;
+    }
+
+    // Ответы на выборы умений идут в текст умения — чтобы выбранное было видно
+    // на листе. Владения из этих ответов лист забирает не отсюда: их снимок
+    // ложится на саму запись умения, и журнал выдач ведёт её так же, как черту.
+    // Иначе одно и то же владение имело бы два хозяина, и снятие класса забрало
+    // бы его лишь наполовину.
+    const featureControls = featureRows.value.flatMap(
+      (row) => row.choiceControls,
+    );
+
+    for (const control of featureControls) {
       const values = selections.value[control.id] ?? [];
 
-      if (!values.length) {
-        continue;
+      if (values.length) {
+        featureChoices[control.id] = values.join(', ');
       }
-
-      if (control.kind === 'skill-proficiency') {
-        proficientSkills.push(...values);
-      } else if (control.kind === 'skill-expertise') {
-        expertiseSkills.push(...values);
-      } else if (control.kind === 'language') {
-        chosenLanguages.push(...values);
-      }
-
-      featureChoices[control.id] = values.join(', ');
     }
+
+    // Ответы игрока, с которыми собирается снимок владений каждого умения
+    const featureAnswers = {
+      answers: selections.value,
+      proficientSkillNames: proficientSkillNames.value,
+    };
 
     const characterClass = {
       url: base.url,
@@ -884,19 +1787,71 @@
       ]),
     };
 
-    const features = [
-      ...buildClassFeatures(
-        base,
-        subclassDetail.value,
-        level.value,
-        featureChoices,
+    // Выбранные заклинания — на записи своих умений: лист ведёт их наравне с
+    // выданными умением, и снятие класса забирает их вместе с ним. Заклинания,
+    // выбранные в выборах самого класса, ложатся на запись даров класса — ту
+    // же, что несёт его эффекты и ресурсы
+    const chosenSpellsByFeature: Record<string, CharacterSpell[]> = {
+      ...Object.fromEntries(
+        featureRows.value.map((row) => [
+          row.id,
+          collectChosenSpells({ choices: row.choiceControls }),
+        ]),
       ),
-      ...fightingStyleFeatures.map((selection) => selection.feature),
-    ];
+      [getClassOwnGrantsFeatureId(base.url)]: collectChosenSpells({
+        choices: base.choices,
+      }),
+      ...(subclassDetail.value
+        ? {
+            [getClassOwnGrantsFeatureId(base.url, subclassDetail.value.url)]:
+              collectChosenSpells({
+                choices: subclassDetail.value.choices,
+              }),
+          }
+        : {}),
+    };
 
+    const features = withChosenFeatureSpells(
+      [
+        ...buildClassFeatures(
+          base,
+          subclassDetail.value,
+          level.value,
+          featureChoices,
+          featureAnswers,
+        ),
+        ...classFeatFeatures.map((selection) => selection.feature),
+        // Взятые повышения характеристик: прибавка приезжает на лист эффектом,
+        // который видно во вкладке «Эффекты» и можно выключить
+        ...abilityImprovementBlocks.value
+          .filter(
+            (block) =>
+              block.improvement.mode === 'abilities'
+              && getAbilityImprovementSpent(block.improvement.increases) > 0,
+          )
+          .map((block) =>
+            buildAbilityImprovementFeature({
+              featureRowId: block.featureRowId,
+              className: base.name,
+              classLevel: block.level,
+              increases: block.improvement.increases,
+            }),
+          ),
+      ],
+      chosenSpellsByFeature,
+    );
+
+    // Навыки уровня класса: выборы умений сюда не идут — их владения ведёт
+    // снимок на самой записи умения. Названные механикой навыки идут сюда же:
+    // выдача без выбора и выбор игрока для листа — одно и то же владение.
     const skills = {
-      proficient: [...new Set(proficientSkills)],
-      expertise: [...new Set(expertiseSkills)],
+      proficient: [
+        ...new Set([
+          ...(declaredProficiencies.value?.skills ?? []),
+          ...proficientSkills,
+        ]),
+      ],
+      expertise: [],
     };
 
     // Урезанный набор владений мультикласса справочник не отдаёт, поэтому
@@ -907,9 +1862,11 @@
         characterClass,
         hitDie: base.hitDie,
         skills,
-        languages: chosenLanguages,
+        // Языки, названные в умениях, приходят снимком самой записи умения
+        languages: [],
         classResources: derivedResources.value,
         features,
+        abilityIncreases,
       });
 
       emit('close');
@@ -930,11 +1887,14 @@
           matchedTools.value,
           resolveTools(chosenTools.map((name) => ({ name, url: null }))),
         ),
-        languages: chosenLanguages,
+        // Языки самой записи класса — только заявленные механикой: названные в
+        // умениях приходят снимком самой записи умения
+        languages: declaredProficiencies.value?.languages ?? [],
       },
       skills,
       classResources: derivedResources.value,
       features,
+      abilityIncreases,
       // Снаряжение применяется вместе с классом: лист сам снимет набор прошлого
       // выбора, поэтому повторный выбор класса не копит предметы и монеты.
       startingEquipment: startingEquipmentOption
@@ -972,9 +1932,12 @@
 </script>
 
 <template>
+  <!-- Окно шире обычной модалки листа (`sm:max-w-2xl`, 672px) на 200px: во
+  втором шаге у класса разделы с бейджами выборов и карточками умений, и в
+  стандартной ширине подписи вариантов ломались на две строки -->
   <UModal
     :title="modalTitle"
-    :ui="{ content: 'sm:max-w-2xl' }"
+    :ui="{ content: 'sm:max-w-218' }"
   >
     <template #body>
       <div class="flex min-h-48 flex-col gap-4">
@@ -1014,7 +1977,7 @@
                   size="xs"
                   square
                   class="relative z-10 shrink-0"
-                  :aria-label="`Показать подклассы: ${row.name}`"
+                  :aria-label="`${SHEET_CLASS_WIZARD_LIST_LABELS.expandAria}: ${row.name}`"
                   :ui="{
                     leadingIcon: `transition-transform ${row.chevronClass}`,
                   }"
@@ -1029,7 +1992,7 @@
                 <button
                   type="button"
                   class="flex min-w-0 grow cursor-pointer items-center gap-2 py-2 pr-1 text-left"
-                  :aria-label="`Выбрать класс: ${row.name}`"
+                  :aria-label="`${SHEET_CLASS_WIZARD_LIST_LABELS.pickAria}: ${row.name}`"
                   @click.left.exact.prevent="handleClassSelect(row.url)"
                 >
                   <span
@@ -1049,7 +2012,7 @@
                   {{ row.sourceLabel }}
                 </UBadge>
 
-                <UTooltip text="Открыть описание класса">
+                <UTooltip :text="SHEET_CLASS_WIZARD_LIST_LABELS.preview">
                   <UButton
                     icon="tabler:layout-sidebar-right-expand"
                     color="neutral"
@@ -1057,7 +2020,7 @@
                     size="xs"
                     square
                     class="relative z-10 shrink-0"
-                    :aria-label="`Описание класса: ${row.name}`"
+                    :aria-label="`${SHEET_CLASS_WIZARD_LIST_LABELS.previewAria}: ${row.name}`"
                     @click.left.exact.prevent="handlePreview(row.url)"
                   />
                 </UTooltip>
@@ -1082,7 +2045,7 @@
                     class="size-3.5 animate-spin"
                   />
 
-                  Загрузка подклассов…
+                  {{ CLASS_WIZARD_LABELS.subclassesLoading }}
                 </span>
 
                 <div
@@ -1095,7 +2058,7 @@
                     v-if="subclass.isSelectable"
                     type="button"
                     class="flex min-w-0 grow cursor-pointer items-center px-3 py-1.5 text-left after:absolute after:inset-0 after:cursor-pointer"
-                    :aria-label="`Выбрать подкласс: ${subclass.name}`"
+                    :aria-label="`${SHEET_CLASS_WIZARD_LIST_LABELS.subclassPickAria}: ${subclass.name}`"
                     @click.left.exact.prevent="
                       handleSubclassClick(row.url, subclass.url)
                     "
@@ -1124,7 +2087,9 @@
                     {{ subclass.sourceLabel }}
                   </UBadge>
 
-                  <UTooltip text="Открыть описание подкласса">
+                  <UTooltip
+                    :text="SHEET_CLASS_WIZARD_LIST_LABELS.subclassPreview"
+                  >
                     <UButton
                       icon="tabler:layout-sidebar-right-expand"
                       color="neutral"
@@ -1132,7 +2097,7 @@
                       size="xs"
                       square
                       class="relative z-10 shrink-0"
-                      :aria-label="`Описание подкласса: ${subclass.name}`"
+                      :aria-label="`${SHEET_CLASS_WIZARD_LIST_LABELS.subclassPreviewAria}: ${subclass.name}`"
                       @click.left.exact.prevent="handlePreview(subclass.url)"
                     />
                   </UTooltip>
@@ -1148,7 +2113,7 @@
                   v-if="!subclassAvailable && row.subclasses.length"
                   class="px-3 py-1 text-xs text-dimmed italic"
                 >
-                  Подкласс доступен с {{ SUBCLASS_SELECTION_MIN_LEVEL }} уровня
+                  {{ getSubclassAvailableHint(SUBCLASS_SELECTION_MIN_LEVEL) }}
                 </span>
               </div>
             </template>
@@ -1157,7 +2122,7 @@
               v-if="!displayRows.length"
               class="px-3 py-6 text-center text-sm text-dimmed"
             >
-              Ничего не найдено
+              {{ CLASS_WIZARD_LABELS.empty }}
             </span>
           </div>
 
@@ -1172,10 +2137,7 @@
             v-else
             class="text-xs text-muted"
           >
-            Класс с подклассами разворачивается стрелкой — подкласс
-            необязателен. При применении кость хитов, хиты, спасброски,
-            владения, ресурсы, умения по текущему уровню и выбранный вариант
-            стартового снаряжения сразу заполнят лист.
+            {{ CLASS_WIZARD_LABELS.listHint }}
           </span>
         </template>
 
@@ -1189,233 +2151,314 @@
           />
 
           <div class="flex flex-wrap items-center gap-2 text-sm">
-            <span class="text-muted">Класс:</span>
+            <span class="text-muted">
+              {{ CLASS_WIZARD_LABELS.resultPrefix }}
+            </span>
 
             <span class="font-bold text-highlighted">{{ resultName }}</span>
           </div>
 
-          <div class="flex flex-wrap gap-4">
-            <div class="flex flex-col gap-1">
-              <span
-                class="text-[10px] font-bold tracking-wider text-muted uppercase"
+          <!-- Лента вкладок: подписи разделов не сокращаются, поэтому на узком
+            экране ряд не ужимается, а прокручивается -->
+          <div class="-mx-1 hidden-scrollbar overflow-x-auto px-1">
+            <UTabs
+              :items="reviewTabItems"
+              :model-value="reviewTab"
+              :content="false"
+              color="primary"
+              variant="pill"
+              :ui="{ list: 'w-max min-w-full', trigger: 'shrink-0' }"
+              @update:model-value="handleReviewTabChange"
+            />
+          </div>
+
+          <!-- Высота раздела задана снизу: без неё модалка прыгала бы на
+            каждом переключении вкладки -->
+          <div class="flex min-h-56 flex-col gap-3">
+            <template v-if="reviewTab === 'overview'">
+              <div :class="SHEET_WIZARD_SECTION_CLASS">
+                <div class="flex flex-wrap gap-4">
+                  <div class="flex flex-col gap-1">
+                    <span
+                      class="text-[10px] font-bold tracking-wider text-muted uppercase"
+                    >
+                      {{ CLASS_WIZARD_LABELS.hitDie }}
+                    </span>
+
+                    <span class="text-sm font-medium text-highlighted">
+                      {{ hitDieLabel }}
+                    </span>
+                  </div>
+
+                  <div class="flex flex-col gap-1">
+                    <span
+                      class="text-[10px] font-bold tracking-wider text-muted uppercase"
+                    >
+                      {{ CLASS_WIZARD_LABELS.hitPoints }}
+                    </span>
+
+                    <span class="text-sm font-medium text-highlighted">
+                      {{ maxHitPointsPreview }}
+                    </span>
+                  </div>
+
+                  <div
+                    v-if="!isAddMode"
+                    class="flex flex-col gap-1"
+                  >
+                    <span
+                      class="text-[10px] font-bold tracking-wider text-muted uppercase"
+                    >
+                      {{ CLASS_WIZARD_LABELS.savingThrows }}
+                    </span>
+
+                    <div class="flex flex-wrap gap-2">
+                      <UBadge
+                        v-for="label in savingThrowLabels"
+                        :key="label"
+                        size="lg"
+                        color="primary"
+                        variant="subtle"
+                      >
+                        {{ label }}
+                      </UBadge>
+
+                      <span
+                        v-if="!savingThrowLabels.length"
+                        class="text-sm text-dimmed italic"
+                      >
+                        {{ savingThrowsFallback }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                v-if="multiclassProficiencyRows.length"
+                :class="SHEET_WIZARD_SECTION_CLASS"
               >
-                Кость хитов
-              </span>
-
-              <span class="text-sm font-medium text-highlighted">
-                {{ hitDieLabel }}
-              </span>
-            </div>
-
-            <div class="flex flex-col gap-1">
-              <span
-                class="text-[10px] font-bold tracking-wider text-muted uppercase"
-              >
-                Хиты
-              </span>
-
-              <span class="text-sm font-medium text-highlighted">
-                {{ maxHitPointsPreview }}
-              </span>
-            </div>
-
-            <div
-              v-if="!isAddMode"
-              class="flex flex-col gap-1"
-            >
-              <span
-                class="text-[10px] font-bold tracking-wider text-muted uppercase"
-              >
-                Спасброски
-              </span>
-
-              <div class="flex flex-wrap gap-1">
-                <UBadge
-                  v-for="label in savingThrowLabels"
-                  :key="label"
-                  size="sm"
-                  color="primary"
-                  variant="subtle"
-                >
-                  {{ label }}
-                </UBadge>
-
                 <span
-                  v-if="!savingThrowLabels.length"
-                  class="text-sm text-dimmed italic"
+                  class="text-[10px] font-bold tracking-wider text-muted uppercase"
                 >
-                  {{ classDetail?.savingThrowsText || 'не распознаны' }}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div
-            v-if="multiclassProficiencyRows.length"
-            class="flex flex-col gap-2 rounded-md bg-elevated/40 p-3"
-          >
-            <span
-              class="text-[10px] font-bold tracking-wider text-muted uppercase"
-            >
-              {{ MULTICLASS_PROFICIENCY_LABELS.title }}
-            </span>
-
-            <span class="text-xs text-dimmed">
-              {{ MULTICLASS_PROFICIENCY_LABELS.hint }}
-            </span>
-
-            <div
-              v-for="row in multiclassProficiencyRows"
-              :key="row.key"
-              class="flex flex-col gap-0.5"
-            >
-              <span class="text-xs text-muted">{{ row.label }}</span>
-
-              <span class="text-sm text-toned">{{ row.value }}</span>
-            </div>
-          </div>
-
-          <div
-            v-else-if="proficiencyChips.length"
-            class="flex flex-col gap-1"
-          >
-            <span
-              class="text-[10px] font-bold tracking-wider text-muted uppercase"
-            >
-              Владения (распознаны, проверьте вручную)
-            </span>
-
-            <div class="flex flex-wrap gap-1">
-              <UBadge
-                v-for="chip in proficiencyChips"
-                :key="chip"
-                size="sm"
-                color="neutral"
-                variant="subtle"
-              >
-                {{ chip }}
-              </UBadge>
-            </div>
-          </div>
-
-          <div
-            v-if="classChoices.length"
-            class="flex flex-col gap-3"
-          >
-            <span
-              class="text-[10px] font-bold tracking-wider text-muted uppercase"
-            >
-              Выборы владений
-            </span>
-
-            <div
-              v-for="choice in classChoices"
-              :key="choice.id"
-              class="flex flex-col gap-1"
-            >
-              <span class="text-xs text-muted">
-                {{ choice.label }} (выберите {{ choiceCount(choice) }})
-              </span>
-
-              <SheetChoiceSelect
-                :model-value="selections[choice.id] ?? []"
-                :items="choiceOptions(choice)"
-                :hints="choiceHints(choice)"
-                :warning="SKILL_DUPLICATE_WARNING"
-                :count="choiceCount(choice)"
-                :placeholder="`Выберите ${choiceCount(choice)}`"
-                @update:model-value="updateSelection(choice, $event)"
-              />
-            </div>
-          </div>
-
-          <SheetStartingEquipmentChoice
-            v-if="startingEquipmentOptions.length"
-            v-model="startingEquipmentLabel"
-            :options="startingEquipmentOptions"
-          />
-
-          <div class="flex flex-col gap-2">
-            <span
-              class="text-[10px] font-bold tracking-wider text-muted uppercase"
-            >
-              Умения (до {{ level }} уровня)
-            </span>
-
-            <div
-              v-for="row in featureRows"
-              :key="row.id"
-              class="flex flex-col gap-2 rounded-lg border border-default/50 bg-elevated/20 p-3"
-            >
-              <div class="flex items-center justify-between gap-2">
-                <span class="text-sm font-bold text-highlighted">
-                  {{ row.name }}
+                  {{ MULTICLASS_PROFICIENCY_LABELS.title }}
                 </span>
 
-                <UBadge
-                  size="sm"
-                  color="neutral"
-                  variant="subtle"
+                <span class="text-xs text-dimmed">
+                  {{ MULTICLASS_PROFICIENCY_LABELS.hint }}
+                </span>
+
+                <div
+                  v-for="row in multiclassProficiencyRows"
+                  :key="row.key"
+                  class="flex flex-col gap-0.5"
                 >
-                  {{ row.originLabel }} · {{ row.level }} ур.
-                </UBadge>
+                  <span class="text-xs text-muted">{{ row.label }}</span>
+
+                  <span class="text-sm text-toned">{{ row.value }}</span>
+                </div>
               </div>
 
               <div
-                v-if="row.fightingStyleChoice"
-                class="flex flex-col gap-1"
+                v-else-if="proficiencyChips.length"
+                :class="SHEET_WIZARD_SECTION_CLASS"
               >
-                <span class="text-xs text-muted">
-                  {{ FIGHTING_STYLE_CHOICE_LABEL }}
+                <span
+                  class="text-[10px] font-bold tracking-wider text-muted uppercase"
+                >
+                  {{ CLASS_WIZARD_LABELS.proficiencies }}
                 </span>
 
-                <SelectFeat
-                  v-model="fightingStyleSelections[row.id]"
-                  :categories="FIGHTING_STYLE_FEAT_CATEGORIES"
-                  :sources="featSourceIds"
-                />
+                <div class="flex flex-wrap gap-2">
+                  <UBadge
+                    v-for="chip in proficiencyChips"
+                    :key="chip"
+                    size="lg"
+                    color="neutral"
+                    variant="subtle"
+                  >
+                    {{ chip }}
+                  </UBadge>
+                </div>
               </div>
 
               <div
-                v-else-if="row.choiceControl"
-                class="flex flex-col gap-1"
+                v-if="classChoices.length"
+                :class="SHEET_WIZARD_SECTION_CLASS"
               >
-                <span class="text-xs text-muted">
-                  Выберите {{ choiceCount(row.choiceControl) }}
+                <span
+                  class="text-[10px] font-bold tracking-wider text-muted uppercase"
+                >
+                  {{ CLASS_WIZARD_LABELS.classOwnChoices }}
                 </span>
 
-                <SheetChoiceSelect
-                  :model-value="selections[row.choiceControl.id] ?? []"
-                  :items="choiceOptions(row.choiceControl)"
-                  :hints="choiceHints(row.choiceControl)"
-                  :warning="SKILL_DUPLICATE_WARNING"
-                  :count="choiceCount(row.choiceControl)"
-                  :placeholder="`Выберите ${choiceCount(row.choiceControl)}`"
-                  @update:model-value="
-                    updateSelection(row.choiceControl, $event)
-                  "
+                <SheetChoicePickerField
+                  v-for="control in classChoiceControls"
+                  :key="control.choice.id"
+                  :title="control.title"
+                  :explanation="control.explanation"
+                  :modal-title="control.modalTitle"
+                  :modal-subtitle="control.modalSubtitle"
+                  :options="control.options"
+                  :count="control.requiredCount"
+                  :status="control.status"
+                  :warning="control.warning"
+                  :model-value="selections[control.choice.id] ?? []"
+                  @update:model-value="updateSelection(control.choice, $event)"
                 />
               </div>
+            </template>
 
-              <UInput
-                v-else
-                v-model="choices[row.id]"
-                size="sm"
-                placeholder="Ваш выбор в умении (необязательно)"
+            <template v-else-if="reviewTab === 'equipment'">
+              <SheetStartingEquipmentChoice
+                v-model="startingEquipmentLabel"
+                :options="startingEquipmentOptions"
               />
+            </template>
 
-              <MarkupRender
-                :render-node="row.description"
-                class="text-sm"
-              />
-            </div>
+            <template v-else-if="reviewTab === 'features'">
+              <div class="flex flex-col gap-2">
+                <span
+                  class="text-[10px] font-bold tracking-wider text-muted uppercase"
+                >
+                  {{ featuresSectionTitle }}
+                </span>
 
-            <span
-              v-if="!featureRows.length"
-              class="text-xs text-dimmed italic"
-            >
-              Нет умений до текущего уровня
-            </span>
+                <span class="text-xs text-dimmed">
+                  {{ CLASS_WIZARD_LABELS.featureToggleHint }}
+                </span>
+
+                <div
+                  v-for="row in featureRows"
+                  :key="row.id"
+                  :class="SHEET_WIZARD_FEATURE_CARD_CLASS"
+                >
+                  <!-- Умения свёрнуты: их много, а разговор идёт о немногих —
+                  тех, что о чём-то спрашивают. На них висит бейдж.
+
+                  Отступы шапки принадлежат самой кнопке, а не карточке: иначе
+                  вокруг заголовка оставалась бы неактивная рамка, и нажатие
+                  мимо строки ничего не разворачивало -->
+                  <button
+                    type="button"
+                    class="flex w-full cursor-pointer flex-wrap items-center gap-2 rounded-lg p-3 text-left transition-colors hover:bg-elevated/40"
+                    :aria-expanded="isFeatureRowExpanded(row.id)"
+                    @click.left.exact.prevent="toggleFeatureRow(row.id)"
+                  >
+                    <UIcon
+                      :name="getFeatureRowIcon(row.id)"
+                      class="size-4 shrink-0 text-muted"
+                    />
+
+                    <span
+                      class="min-w-0 grow text-sm font-bold text-highlighted"
+                    >
+                      {{ row.name }}
+                    </span>
+
+                    <UBadge
+                      v-if="pendingByFeatureRow[row.id]"
+                      size="sm"
+                      color="warning"
+                      variant="subtle"
+                      class="shrink-0"
+                    >
+                      {{ CLASS_WIZARD_LABELS.featurePendingBadge }}
+                    </UBadge>
+
+                    <UBadge
+                      size="sm"
+                      color="neutral"
+                      variant="subtle"
+                      class="shrink-0"
+                    >
+                      {{ row.badgeLabel }}
+                    </UBadge>
+                  </button>
+
+                  <div
+                    v-if="isFeatureRowExpanded(row.id)"
+                    class="flex flex-col gap-3 border-t border-default/50 p-3"
+                  >
+                    <!-- Выборы черты — боевой стиль и подобные — тем же
+                полем, что в мастере повышения. Выборы повышения
+                характеристик спрашивает свой раздел -->
+                    <SheetFeatChoiceField
+                      v-for="choice in row.visibleFeatChoices"
+                      :key="choice.id"
+                      :title="choice.label"
+                      :modal-subtitle="row.modalSubtitle"
+                      :options="featOptions(choice)"
+                      :selected="selectedFeat(choice.id)"
+                      :abilities="featAbilities(choice.id)"
+                      :scores="character.abilities"
+                      :is-loading="isFeatsLoading"
+                      :has-error="hasFeatsError"
+                      @update:feat="setFeatChoice(row.id, choice.id, $event)"
+                      @update:ability="setFeatAbility(choice.id, $event)"
+                    />
+
+                    <SheetChoicePickerField
+                      v-for="control in featureRowControls[row.id]"
+                      :key="control.choice.id"
+                      :title="control.title"
+                      :explanation="control.explanation"
+                      :modal-title="control.modalTitle"
+                      :modal-subtitle="control.modalSubtitle"
+                      :options="control.options"
+                      :count="control.requiredCount"
+                      :status="control.status"
+                      :warning="control.warning"
+                      :model-value="selections[control.choice.id] ?? []"
+                      @update:model-value="
+                        updateSelection(control.choice, $event)
+                      "
+                      @retry="handleSpellPoolRetry(control.choice)"
+                    />
+
+                    <UInput
+                      v-if="
+                        !row.featChoices.length && !row.choiceControls.length
+                      "
+                      v-model="choices[row.id]"
+                      size="sm"
+                      :placeholder="CLASS_WIZARD_LABELS.featureNotePlaceholder"
+                    />
+
+                    <MarkupRender
+                      :render-node="row.description"
+                      class="text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            </template>
+
+            <!-- Повышения характеристик — своим разделом: у высокого уровня их
+              несколько, и в карточках умений они терялись бы -->
+            <template v-else>
+              <div class="flex flex-col gap-3">
+                <SheetAbilityImprovementChoice
+                  v-for="block in abilityImprovementBlocks"
+                  :key="block.id"
+                  :title="block.title"
+                  :badge-label="block.badgeLabel"
+                  :mode="block.improvement.mode"
+                  :increases="block.improvement.increases"
+                  :scores="block.scores"
+                  :feat-options="featOptions(block.choice)"
+                  :selected-feat="selectedFeat(block.id)"
+                  :feat-abilities="featAbilities(block.id)"
+                  :is-feats-loading="isFeatsLoading"
+                  :has-feats-error="hasFeatsError"
+                  @update:mode="setAbilityImprovementMode(block.id, $event)"
+                  @step="stepAbilityImprovement(block.id, $event)"
+                  @update:feat="setImprovementFeat(block, $event)"
+                  @update:feat-ability="setFeatAbility(block.id, $event)"
+                  @reset="resetAbilityImprovement(block.id)"
+                />
+              </div>
+            </template>
           </div>
         </template>
       </div>
@@ -1425,7 +2468,7 @@
       <div class="flex w-full flex-wrap items-center justify-between gap-2">
         <UButton
           v-if="step === 'review'"
-          label="Назад"
+          :label="ACTION_LABELS.back"
           icon="tabler:arrow-left"
           color="neutral"
           variant="ghost"
@@ -1443,15 +2486,15 @@
 
         <div class="ml-auto flex gap-2">
           <UButton
-            label="Отмена"
+            :label="ACTION_LABELS.cancel"
             color="neutral"
             variant="ghost"
             @click.left.exact.prevent="handleCancel"
           />
 
           <UButton
-            v-if="step === 'review'"
-            label="Применить"
+            v-if="step === 'review' && isLastReviewTab"
+            :label="ACTION_LABELS.apply"
             color="primary"
             :loading="isApplying"
             :disabled="isApplyDisabled"
@@ -1459,8 +2502,16 @@
           />
 
           <UButton
+            v-else-if="step === 'review'"
+            :label="ACTION_LABELS.next"
+            icon="tabler:arrow-right"
+            color="primary"
+            @click.left.exact.prevent="handleReviewNext"
+          />
+
+          <UButton
             v-else
-            label="Далее"
+            :label="ACTION_LABELS.next"
             icon="tabler:arrow-right"
             color="primary"
             :loading="isStepLoading"

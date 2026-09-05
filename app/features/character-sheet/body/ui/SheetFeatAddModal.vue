@@ -4,18 +4,22 @@
     FeatCatalogItem,
     FeatSummary,
     GrantedProficiencies,
+    SheetChoiceControl,
   } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
   import { FeatDrawer } from '~feats/drawer';
 
   import {
     useCatalogSourceQuery,
     useCharacterSheet,
-    useFeatChoiceSpells,
+    useChoiceHints,
+    useChoiceSpellPools,
     useToolCatalog,
   } from '../../composables';
   import {
     ABILITY_LABELS,
+    buildChoiceControl,
     buildFeatFeature,
     CLASSES_SEARCH_PATH,
     collectChosenProficiencies,
@@ -23,12 +27,12 @@
     FEATS_FILTERS_PATH,
     FEATS_SEARCH_PATH,
     FEATS_SELECT_PATH,
+    FEATURE_ORIGIN_LABELS,
     fetchFeatDetail,
     getFeatAbilityIncreases,
     getFeatSpellcastingAbility,
     getFeatUrlFromFeatureId,
     getOwnedWeaponNames,
-    getRequiredChoiceCount,
     getVisibleFeatChoices,
     LANGUAGE_PROFICIENCY_GROUPS,
     parseClassOptions,
@@ -39,8 +43,7 @@
     SHEET_SEARCH_LABELS,
     withSpellListClassNames,
   } from '../../model';
-  import SheetChoiceSelect from './SheetChoiceSelect.vue';
-  import SheetFeatSpellsPicker from './SheetFeatSpellsPicker.vue';
+  import SheetChoicePickerField from './SheetChoicePickerField.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
 
   const emit = defineEmits<{
@@ -266,16 +269,22 @@
     pools: spellPools,
     getPool: getSpellPool,
     getSpellOptions,
+    getStatus: getSpellPoolStatus,
     collectChosenSpells,
     load: loadSpellPools,
-  } = useFeatChoiceSpells({
-    summaries: () => loadedSummaries.value,
+    retry: retrySpellPool,
+  } = useChoiceSpellPools({
+    sources: () => loadedSummaries.value,
     answers: choiceAnswers,
   });
 
   // Каталог инструментов грузится фоном: выбор инструмента появляется только на
   // втором шаге, а список черт не должен ждать ещё один запрос при открытии.
-  const { getToolNamesForGroups, load: loadToolCatalog } = useToolCatalog();
+  const {
+    getToolNamesForGroups,
+    catalogItems: toolCatalogItems,
+    load: loadToolCatalog,
+  } = useToolCatalog();
 
   void loadToolCatalog();
 
@@ -316,6 +325,16 @@
   }
 
   /**
+   * Пометки опций: заклинания, которые персонаж уже знает. Черта спрашивает
+   * заклинания и не по одному разу («Посвящённый в магию» просит два заговора
+   * и заклинание первого круга), поэтому взятое соседним выбором тоже видно.
+   */
+  const { getHints: choiceHints } = useChoiceHints({
+    choices: () => loadedSummaries.value.flatMap((summary) => summary.choices),
+    selections: choiceAnswers,
+  });
+
+  /**
    * Классы каталога: в механике черты списки заклинаний перечислены ссылками, а
    * снимка названия у них может не быть — тогда игрок увидел бы слаг. Ключ
    * общий с визардом предыстории, поэтому запрос на оба окна один.
@@ -333,24 +352,54 @@
     { server: false, default: () => [] },
   );
 
+  /** Строка выбора черты: сам выбор и его вид для единого пикера. */
+  interface ChoiceRow {
+    choice: ClassChoice;
+    featName: string;
+    options: string[];
+    control: SheetChoiceControl;
+  }
+
   /** Выборы одной черты: её название стоит над ними один раз. */
   interface ChoiceGroup {
     featName: string;
-    rows: Array<{ choice: ClassChoice; featName: string; options: string[] }>;
+    rows: ChoiceRow[];
   }
 
   /** Черты, которые о чём-то спрашивают, — по ним и строится шаг выбора. */
-  const choiceRows = computed(() =>
+  const choiceRows = computed<ChoiceRow[]>(() =>
     loadedSummaries.value.flatMap((summary) =>
       getVisibleFeatChoices(summary.choices, choiceAnswers.value)
         .map((choice) => withSpellListClassNames(choice, classOptions.value))
-        .map((choice) => ({
-          choice,
-          featName: summary.name,
-          options: choiceOptions(choice),
-        })),
+        .map((choice) => {
+          const options = choiceOptions(choice);
+
+          return {
+            choice,
+            featName: summary.name,
+            options,
+            control: buildChoiceControl(choice, {
+              names: options,
+              hints: choiceHints(choice),
+              spellPool: getSpellPool(choice),
+              status:
+                choice.kind === 'spell' ? getSpellPoolStatus(choice) : 'ready',
+              toolEntries: toolCatalogItems.value,
+              origin: {
+                featureName: summary.name,
+                originLabel: FEATURE_ORIGIN_LABELS.feat,
+                level: null,
+              },
+            }),
+          };
+        }),
     ),
   );
+
+  /** Пул заклинаний выбора не загрузился — запросить его заново. */
+  function handleSpellPoolRetry(choice: ClassChoice): void {
+    void retrySpellPool(choice);
+  }
 
   /**
    * Выборы, сгруппированные по черте: название черты стоит над её выборами
@@ -389,7 +438,7 @@
     choiceRows.value.every(
       (row) =>
         (choiceAnswers.value[row.choice.id]?.length ?? 0)
-        >= getRequiredChoiceCount(row.choice, row.options),
+        >= row.control.requiredCount,
     ),
   );
 
@@ -543,7 +592,7 @@
 
 <template>
   <UModal
-    title="Добавление черт"
+    :title="SHEET_FEAT_MODAL_LABELS.title"
     :ui="{ content: 'sm:max-w-2xl' }"
   >
     <template #body>
@@ -567,33 +616,20 @@
             {{ group.featName }}
           </span>
 
-          <div
+          <SheetChoicePickerField
             v-for="row in group.rows"
             :key="row.choice.id"
-            class="flex flex-col gap-1"
-          >
-            <span class="text-sm text-toned">{{ row.choice.label }}</span>
-
-            <!-- Заклинания выбирают своим окном: пул бывает и на сотню записей,
-              а выбранные должны остаться на виду, чтобы их можно было убрать -->
-            <SheetFeatSpellsPicker
-              v-if="row.choice.kind === 'spell'"
-              v-model="choiceAnswers[row.choice.id]"
-              :items="getSpellPool(row.choice)"
-              :count="row.choice.count"
-              :label="row.choice.label"
-            />
-
-            <SheetChoiceSelect
-              v-else
-              v-model="choiceAnswers[row.choice.id]"
-              :items="row.options"
-              :count="row.choice.count"
-              :placeholder="
-                row.choice.label || SHEET_FEAT_MODAL_LABELS.choicePlaceholder
-              "
-            />
-          </div>
+            v-model="choiceAnswers[row.choice.id]"
+            :title="row.control.title"
+            :explanation="row.control.explanation"
+            :modal-title="row.control.modalTitle"
+            :modal-subtitle="row.control.modalSubtitle"
+            :options="row.control.options"
+            :count="row.control.requiredCount"
+            :status="row.control.status"
+            :warning="row.control.warning"
+            @retry="handleSpellPoolRetry(row.choice)"
+          />
         </div>
 
         <p
@@ -628,7 +664,7 @@
           v-else-if="isListError"
           class="flex grow items-center justify-center py-10 text-sm text-dimmed"
         >
-          Не удалось загрузить черты
+          {{ SHEET_FEAT_MODAL_LABELS.listError }}
         </div>
 
         <div
@@ -661,7 +697,7 @@
                 class="flex min-w-0 grow items-center gap-2 px-3 py-1.5 text-left after:absolute after:inset-0"
                 :class="feat.cursorClass"
                 :disabled="feat.isAdded"
-                :aria-label="`Выбрать черту: ${feat.name}`"
+                :aria-label="`${SHEET_FEAT_MODAL_LABELS.pickAria}: ${feat.name}`"
                 @click.left.exact.prevent="toggleFeat(feat)"
               >
                 <span class="truncate text-sm font-medium text-highlighted">
@@ -687,14 +723,14 @@
                   size="xs"
                   square
                   class="relative z-10 shrink-0"
-                  :aria-label="`Описание черты: ${feat.name}`"
+                  :aria-label="`${SHEET_FEAT_MODAL_LABELS.descriptionAria}: ${feat.name}`"
                   @click.left.exact.prevent="handlePreview(feat.url)"
                 />
               </UTooltip>
 
               <UTooltip
                 v-if="feat.repeatability"
-                text="Можно взять несколько раз"
+                :text="SHEET_FEAT_MODAL_LABELS.repeatable"
               >
                 <span
                   class="relative z-10 flex shrink-0 items-center gap-0.5 text-muted"
@@ -715,7 +751,7 @@
 
               <UTooltip
                 v-else-if="feat.isAdded"
-                text="Уже добавлена"
+                :text="SHEET_FEAT_MODAL_LABELS.alreadyAdded"
               >
                 <UIcon
                   name="tabler:check"
@@ -735,7 +771,7 @@
             v-if="!displayGroups.length"
             class="px-3 py-6 text-center text-sm text-dimmed"
           >
-            Ничего не найдено
+            {{ SHEET_FEAT_MODAL_LABELS.empty }}
           </span>
         </div>
       </div>
@@ -750,14 +786,14 @@
           class="flex gap-2"
         >
           <UButton
-            label="Назад"
+            :label="ACTION_LABELS.back"
             color="neutral"
             variant="ghost"
             @click.left.exact.prevent="handleChoiceBack"
           />
 
           <UButton
-            label="Применить"
+            :label="ACTION_LABELS.apply"
             color="primary"
             :disabled="!isChoiceComplete"
             @click.left.exact.prevent="applyLoadedFeats"
@@ -769,14 +805,14 @@
           class="flex gap-2"
         >
           <UButton
-            label="Отмена"
+            :label="ACTION_LABELS.cancel"
             color="neutral"
             variant="ghost"
             @click.left.exact.prevent="handleCancel"
           />
 
           <UButton
-            label="Добавить"
+            :label="ACTION_LABELS.add"
             color="primary"
             :loading="isApplying"
             :disabled="isApplyDisabled"
