@@ -73,6 +73,7 @@ import {
   CARRYING_CAPACITY_MIN,
   CATALOG_COPY_TOAST_DESCRIPTION,
   collectAppliedEffects,
+  countsInClassPreparedLimit,
   CURRENCY_AMOUNT_MAX,
   CURRENCY_AMOUNT_MIN,
   CUSTOM_INVENTORY_URL_PREFIX,
@@ -165,7 +166,6 @@ import {
   SPELL_COPY_TOAST_TITLE,
   SPELL_SLOTS_EMPTY_TOAST_TITLE,
   syncClassHitDice,
-  takesPreparationSpace,
   toCopiedInventoryItem,
   toCopiedSpell,
   toCustomInventoryItem,
@@ -2897,11 +2897,13 @@ export function useCharacterSheet() {
 
     const prepared = !isInnateSpellPrepared(granted.spell);
 
-    // Предел касается только той выдачи, которую игрок готовит сам: заклинание,
-    // выданное готовым, места среди подготовленных не занимает.
+    // Предел касается только той выдачи умений класса, которую игрок готовит
+    // сам: заклинание, выданное готовым, места среди подготовленных не
+    // занимает, а заклинание черты или вида персонаж готовит сверх колонки
+    // класса — предел его не держит, как не считает и плитка.
     if (
       prepared
-      && takesPreparationSpace(granted.spell)
+      && countsInClassPreparedLimit(character.value, granted.spell)
       && !ensurePreparationSpace(granted.spell)
     ) {
       return;

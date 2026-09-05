@@ -7265,6 +7265,32 @@ export function takesPreparationSpace(spell: CharacterSpell): boolean {
 }
 
 /**
+ * Идёт ли выданное заклинание в счёт подготовленных заклинаний класса — и,
+ * значит, держит ли его предел из таблицы класса.
+ *
+ * Предел и счётчик читают одну и ту же колонку, поэтому и правило у них одно:
+ * место занимают книга персонажа и выдача умений класса, которую игрок готовит
+ * сам («весь список класса» друида). Заклинание черты или вида персонаж
+ * получает сверх колонки — ни в счёт, ни под предел оно не идёт
+ * (см. `countSpellsOfKind`).
+ *
+ * @param character персонаж листа.
+ * @param spell заклинание вне книги персонажа.
+ * @returns true — пометка занимает место среди подготовленных класса.
+ */
+export function countsInClassPreparedLimit(
+  character: Character,
+  spell: CharacterSpell,
+): boolean {
+  return (
+    takesPreparationSpace(spell)
+    && getClassGrantedSpells(character).some(
+      (classSpell) => classSpell.url === spell.url,
+    )
+  );
+}
+
+/**
  * Подготовлено ли заклинание вне книги: выдача, которая держит подготовку сама,
  * без флага считается подготовленной (лист мог быть сохранён до появления
  * пометки, да и новая запись приходит готовой), а заклинание, которое игрок
@@ -8136,11 +8162,16 @@ function getPreparedSpellsAtLevel(
  * Сколько набрано по этому счётчику: у заклинаний кругов 1+ — отмечено
  * подготовленными, у заговоров — известно персонажу.
  *
+ * Счёт ведут колонки таблицы класса, поэтому в него идёт только то, что даёт
+ * сам класс: книга персонажа и выдача его умений. Заговор вида и заклинание
+ * черты («Посвящённый в магию» от предыстории) персонаж получает сверх колонок
+ * — в пул класса они не входят, иначе черта съедала бы заговоры колдуна.
+ *
  * Подготовленными считаются книга персонажа и та выдача, которую игрок готовит
  * сам («весь список класса» друида): выдача с отметкой «Подготавливать не
  * нужно» держит заклинание готовым сама и места среди подготовленных не
  * занимает. Заговоры подготовки не требуют вовсе — считается сам факт, что
- * персонаж их знает, откуда бы заговор ни пришёл.
+ * персонаж их знает.
  *
  * Одно и то же заклинание считается один раз: выданное заклинание, заведённое
  * ещё и в книге, вкладка показывает одной строкой (см. `getClassGrantedSpells`).
@@ -8161,7 +8192,7 @@ function countSpellsOfKind(
     (spell) => getSpellPreparedKind(spell) === kind,
   );
 
-  const grantedSpells = getAvailableInnateSpells(character).filter(
+  const grantedSpells = getClassGrantedSpells(character).filter(
     (spell) => !bookUrls.has(spell.url) && getSpellPreparedKind(spell) === kind,
   );
 
@@ -11308,6 +11339,62 @@ export function getChosenFeatureOptionKeys(
 }
 
 /**
+ * Уровни, на которых игрок взял варианты умения: ключ варианта — уровни его
+ * ступеней выбора.
+ *
+ * У ступени уровень вписан в идентификатор (`…:options-5`), а ступень без
+ * уровня спрашивается на уровне самого умения. Повторяемый вариант берут не
+ * один раз, поэтому уровней список: «Уроки первородных» колдун берёт и на
+ * втором уровне, и на девятом, и черту происхождения даёт каждое взятие.
+ *
+ * Ключи всех уровней сразу ({@link getChosenFeatureOptionKeys}) годятся там,
+ * где вопрос задаётся один раз, — мастер повышения спрашивает поуровнево, и
+ * взятое раньше воззвание переспрашивалось бы на каждой следующей прибавке.
+ *
+ * @param summary умение класса или подкласса.
+ * @param answers ответы игрока по идентификаторам выборов.
+ * @returns уровни взятия по ключам вариантов.
+ */
+function getOptionTakenLevels(
+  summary: ClassFeatureSummary,
+  answers: Record<string, string[]>,
+): Map<string, number[]> {
+  const takenLevels = new Map<string, number[]>();
+
+  for (const choice of summary.choices) {
+    if (choice.kind !== 'option') {
+      continue;
+    }
+
+    const level = choice.requiredLevel ?? summary.level;
+
+    for (const key of getChosenFeatureOptionKeys([choice], answers)) {
+      takenLevels.set(key, [...(takenLevels.get(key) ?? []), level]);
+    }
+  }
+
+  return takenLevels;
+}
+
+/**
+ * Ключи вариантов умения, взятых ровно на этом уровне.
+ *
+ * @param takenLevels уровни взятия по ключам вариантов.
+ * @param level уровень, который берут сейчас.
+ * @returns ключи вариантов, взятых на этом уровне.
+ */
+function getLevelChosenOptionKeys(
+  takenLevels: ReadonlyMap<string, number[]>,
+  level: number,
+): Set<string> {
+  return new Set(
+    [...takenLevels]
+      .filter(([, levels]) => levels.includes(level))
+      .map(([key]) => key),
+  );
+}
+
+/**
  * Выборы умения без вопросов невыбранных вариантов.
  *
  * У варианта своя механика, и «выбери навык» манёвра спрашивают, только когда
@@ -11758,6 +11845,18 @@ export function getLevelFeatureRows(
         answers,
       );
 
+      // Вопросы и черты варианта относятся к уровню, где вариант взяли: у
+      // мастера каждый уровень со своим набором ответов, и вопрос без уровня
+      // спрашивался бы заново на каждой ступени выбора. «Уроки первородных»
+      // колдуна так выдавали черту происхождения на каждой прибавке воззваний,
+      // а не один раз.
+      const optionTakenLevels = getOptionTakenLevels(summary, answers);
+
+      const levelChosenOptionKeys = getLevelChosenOptionKeys(
+        optionTakenLevels,
+        level,
+      );
+
       // Каждый уровень улучшения характеристик — свой выбор, поэтому в
       // идентификатор строки идёт уровень: иначе выборы разных уровней
       // затирали бы друг друга общим ключом умения. Выборам со своим уровнем
@@ -11774,16 +11873,22 @@ export function getLevelFeatureRows(
         // умению не нужен — иначе под чертой висело бы пустое поле ввода.
         choices: summary.abilityImprovement
           ? []
-          : getLevelFeatureChoices(id, summary, level, chosenOptionKeys),
-        featChoices: getLevelFeatChoices(summary, level, chosenOptionKeys),
-        // Черту без выбора умение выдаёт на своём уровне, а не на уровнях роста
-        grantedFeatUrls:
-          summary.level === level
-            ? [
-                ...summary.grantedFeatUrls,
-                ...getChosenOptionFeatUrls(summary, chosenOptionKeys),
-              ]
-            : [],
+          : getLevelFeatureChoices(
+              id,
+              summary,
+              level,
+              chosenOptionKeys,
+              optionTakenLevels,
+            ),
+        featChoices: getLevelFeatChoices(summary, level, levelChosenOptionKeys),
+        grantedFeatUrls: [
+          // Черту без выбора умение выдаёт на своём уровне, а не на уровнях
+          // роста: там оно только прибавляет выборов
+          ...(summary.level === level ? summary.grantedFeatUrls : []),
+          // Черту варианта — на уровне, где вариант взяли: воззвание с готовой
+          // чертой берут и на пятом уровне, а умение своё уже отдало на первом
+          ...getChosenOptionFeatUrls(summary, levelChosenOptionKeys),
+        ],
         abilityImprovement: summary.abilityImprovement,
       });
     }
@@ -12505,27 +12610,45 @@ export function getClassFeatureChoices(
  * Мастеру создания персонажа нужно обратное — все шаги до текущего уровня
  * разом, — и он берёт {@link getClassFeatureChoices} как есть.
  *
+ * Вопрос варианта уровень получает от самого варианта: «Договор гримуара»
+ * просит заговоры там, где воззвание взяли, а не на первом уровне колдуна,
+ * который к пятому давно пройден. Свой уровень вопроса при этом не забыт — он
+ * говорит, когда вопрос вообще открывается, поэтому спрашивают на позднем из
+ * двух.
+ *
  * @param featureId идентификатор умения на листе.
  * @param summary умение из ответа класса.
  * @param level уровень, который берут сейчас.
+ * @param chosenOptionKeys ключи вариантов, выбранных на любом уровне: по ним
+ *   отсеиваются вопросы вариантов, от которых игрок отказался.
+ * @param optionTakenLevels уровни взятия по ключам вариантов.
  * @returns выборы этого уровня.
  */
 function getLevelFeatureChoices(
   featureId: string,
   summary: ClassFeatureSummary,
   level: number,
-  chosenOptionKeys?: ReadonlySet<string>,
+  chosenOptionKeys: ReadonlySet<string>,
+  optionTakenLevels: ReadonlyMap<string, number[]>,
 ): ClassChoice[] {
   return getClassFeatureChoices(
     featureId,
     summary,
     level,
     chosenOptionKeys,
-  ).filter((choice) =>
-    choice.requiredLevel
+  ).filter((choice) => {
+    if (choice.optionKey) {
+      const openLevel = choice.requiredLevel ?? 0;
+
+      return (optionTakenLevels.get(choice.optionKey) ?? []).some(
+        (takenLevel) => Math.max(takenLevel, openLevel) === level,
+      );
+    }
+
+    return choice.requiredLevel
       ? choice.requiredLevel === level
-      : summary.level === level,
-  );
+      : summary.level === level;
+  });
 }
 
 /**
