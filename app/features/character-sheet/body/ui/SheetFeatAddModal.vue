@@ -13,6 +13,7 @@
   import {
     useCatalogSourceQuery,
     useCharacterSheet,
+    useChoiceHints,
     useChoiceSpellPools,
     useToolCatalog,
   } from '../../composables';
@@ -324,6 +325,16 @@
   }
 
   /**
+   * Пометки опций: заклинания, которые персонаж уже знает. Черта спрашивает
+   * заклинания и не по одному разу («Посвящённый в магию» просит два заговора
+   * и заклинание первого круга), поэтому взятое соседним выбором тоже видно.
+   */
+  const { getHints: choiceHints } = useChoiceHints({
+    choices: () => loadedSummaries.value.flatMap((summary) => summary.choices),
+    selections: choiceAnswers,
+  });
+
+  /**
    * Классы каталога: в механике черты списки заклинаний перечислены ссылками, а
    * снимка названия у них может не быть — тогда игрок увидел бы слаг. Ключ
    * общий с визардом предыстории, поэтому запрос на оба окна один.
@@ -369,6 +380,7 @@
             options,
             control: buildChoiceControl(choice, {
               names: options,
+              hints: choiceHints(choice),
               spellPool: getSpellPool(choice),
               status:
                 choice.kind === 'spell' ? getSpellPoolStatus(choice) : 'ready',
@@ -615,6 +627,7 @@
             :options="row.control.options"
             :count="row.control.requiredCount"
             :status="row.control.status"
+            :warning="row.control.warning"
             @retry="handleSpellPoolRetry(row.choice)"
           />
         </div>

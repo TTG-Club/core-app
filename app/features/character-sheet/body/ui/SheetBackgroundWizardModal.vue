@@ -24,6 +24,7 @@
   import {
     useCatalogSourceQuery,
     useCharacterSheet,
+    useChoiceHints,
     useChoiceSpellPools,
     useToolCatalog,
   } from '../../composables';
@@ -661,6 +662,16 @@
     });
   }
 
+  /**
+   * Пометки опций: заклинания, которые персонаж уже знает. Выбор спрашивает и
+   * черта происхождения, и сама предыстория, поэтому взятое соседним выбором
+   * тоже помечается.
+   */
+  const { getHints: choiceHints } = useChoiceHints({
+    choices: () => [...grantChoices.value, ...featChoices.value],
+    selections,
+  });
+
   /** Источник выборов самой предыстории — для подзаголовка окна пикера. */
   const backgroundOrigin = computed<SheetChoiceOrigin>(() => ({
     featureName: backgroundDetail.value?.name ?? '',
@@ -688,6 +699,7 @@
   ): SheetChoiceControl {
     return buildChoiceControl(choice, {
       names: choiceOptions(choice),
+      hints: choiceHints(choice),
       spellPool: getSpellPool(choice),
       status: choice.kind === 'spell' ? getSpellPoolStatus(choice) : 'ready',
       toolEntries: toolCatalogItems.value,
@@ -1400,6 +1412,7 @@
                   :options="toolChoiceControl.options"
                   :count="toolChoiceControl.requiredCount"
                   :status="toolChoiceControl.status"
+                  :warning="toolChoiceControl.warning"
                   :model-value="selections[BACKGROUND_TOOL_CHOICE_ID] ?? []"
                   @update:model-value="
                     updateSelection(toolChoiceControl.choice, $event)
@@ -1441,6 +1454,7 @@
                 :options="control.options"
                 :count="control.requiredCount"
                 :status="control.status"
+                :warning="control.warning"
                 :model-value="selections[control.choice.id] ?? []"
                 @update:model-value="updateSelection(control.choice, $event)"
                 @retry="handleSpellPoolRetry(control.choice)"
@@ -1498,6 +1512,7 @@
                 :options="control.options"
                 :count="control.requiredCount"
                 :status="control.status"
+                :warning="control.warning"
                 :model-value="selections[control.choice.id] ?? []"
                 @update:model-value="updateSelection(control.choice, $event)"
                 @retry="handleSpellPoolRetry(control.choice)"

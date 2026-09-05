@@ -412,6 +412,7 @@ import {
   SHEET_SPELL_ABILITY_LABELS,
   SHEET_UNARMORED_LABEL,
   SIZE_LABEL_WORDS,
+  SKILL_DUPLICATE_WARNING,
   SKILL_GROUP_ALL_KEY,
   SKILL_OWNED_HINTS,
   SKILL_PROFICIENCY_LABELS,
@@ -431,6 +432,8 @@ import {
   SPELL_DAMAGE_TYPE_SEPARATOR,
   SPELL_DAMAGE_TYPE_TAG_LABELS,
   SPELL_DAMAGE_TYPE_TAG_PREFIX,
+  SPELL_DUPLICATE_WARNING,
+  SPELL_OWNED_HINTS,
   SPELL_REMOVE_MENU_LABEL,
   SPELL_SAVE_DC_BASE,
   SPELL_SLOT_FREE_LABEL,
@@ -7018,6 +7021,22 @@ export function getClassGrantedSpells(character: Character): CharacterSpell[] {
 }
 
 /**
+ * Названия заклинаний, которые персонаж уже знает: книга, заклинания записей
+ * (умение класса, черта) и врождённые заклинания вида. Ими пикер помечает
+ * варианты выбора — одно и то же заклинание дважды не учат, и повторный выбор
+ * пропал бы впустую.
+ *
+ * @param character персонаж листа.
+ * @returns названия известных заклинаний.
+ */
+export function getKnownSpellNames(character: Character): string[] {
+  return [
+    ...character.spells,
+    ...collectGrantedSpells(character).map((entry) => entry.spell),
+  ].map((spell) => spell.name);
+}
+
+/**
  * Сбор всех заклинаний вне книги с пометкой происхождения: группа во вкладке у
  * классовых заклинаний своя, а дубли отбрасываются по всем источникам разом —
  * иначе одно и то же заклинание встало бы в две группы.
@@ -12896,11 +12915,97 @@ export function getOwnedSkillHints(
  * @param skills навыки персонажа.
  * @returns пометки по названиям опций выбора.
  */
-export function getChoiceSkillHints(
+function getChoiceSkillHints(
   choice: ClassChoice,
   skills: CharacterSkill[],
 ): Record<string, string> {
   return choice.kind === 'skill-proficiency' ? getOwnedSkillHints(skills) : {};
+}
+
+/**
+ * Одна и та же пометка на все названия: словарь пометок собирается из двух
+ * таких наборов.
+ *
+ * @param names названия вариантов.
+ * @param hint пометка.
+ * @returns пометки по названиям.
+ */
+function toSameHints(names: string[], hint: string): Record<string, string> {
+  return Object.fromEntries(names.map((name) => [name, hint]));
+}
+
+/**
+ * Пометки вариантов выбора заклинания: заклинание уже есть у персонажа либо
+ * его берёт другой выбор того же мастера. Известное перекрывает выбранное:
+ * заклинание из книги остаётся известным, даже если его отметили ещё где-то.
+ *
+ * @param knownSpellNames названия заклинаний, известных персонажу.
+ * @param chosenSpellNames названия заклинаний, взятых другими выборами мастера.
+ * @returns пометки по названиям заклинаний.
+ */
+function getSpellChoiceHints(
+  knownSpellNames: string[],
+  chosenSpellNames: string[],
+): Record<string, string> {
+  return {
+    ...toSameHints(chosenSpellNames, SPELL_OWNED_HINTS.chosen),
+    ...toSameHints(knownSpellNames, SPELL_OWNED_HINTS.known),
+  };
+}
+
+/** Из чего складываются пометки вариантов выбора. */
+export interface ChoiceHintsInput {
+  /** Навыки персонажа: у выбора владения помечаются уже имеющиеся. */
+  skills: CharacterSkill[];
+
+  /** Названия заклинаний, которые персонаж уже знает. */
+  knownSpellNames: string[];
+
+  /** Названия заклинаний, взятых другими выборами того же мастера. */
+  chosenSpellNames: string[];
+}
+
+/**
+ * Пометки опций пикера: навыки, которыми персонаж уже владеет, и заклинания,
+ * которые он уже знает. Опции выбора компетенции и так собраны из навыков с
+ * владением, а известные языки и инструменты `resolveChoiceOptions` вырезает
+ * из списка — заклинание же из пула не убирается: пул собирается поиском по
+ * каталогу, и вырезанное молча уменьшило бы список, ничего не объяснив.
+ *
+ * @param choice распознанный выбор.
+ * @param input навыки персонажа и известные заклинания.
+ * @returns пометки по названиям опций выбора.
+ */
+export function getChoiceHints(
+  choice: ClassChoice,
+  input: ChoiceHintsInput,
+): Record<string, string> {
+  if (choice.kind === 'spell') {
+    return getSpellChoiceHints(input.knownSpellNames, input.chosenSpellNames);
+  }
+
+  return getChoiceSkillHints(choice, input.skills);
+}
+
+/**
+ * Заклинания, взятые другими выборами того же мастера: повышение сразу на
+ * несколько уровней спрашивает заклинания не по одному разу, и одно и то же
+ * заклинание в двух выборах ляжет на лист единственной записью. Ответ самого
+ * выбора не считается — иначе выбранное здесь помечалось бы «уже выбрано».
+ *
+ * @param choice выбор, для которого собираются пометки.
+ * @param choices все выборы мастера.
+ * @param selections ответы игрока по идентификаторам выборов.
+ * @returns названия заклинаний других выборов.
+ */
+export function getChosenSpellNames(
+  choice: ClassChoice,
+  choices: ClassChoice[],
+  selections: Record<string, string[]>,
+): string[] {
+  return choices
+    .filter((other) => other.kind === 'spell' && other.id !== choice.id)
+    .flatMap((other) => selections[other.id] ?? []);
 }
 
 /**
@@ -12960,10 +13065,12 @@ export function uniqueSpellsByName(
  * Значение — название: так ответы выбора заклинания хранились и до пикера.
  *
  * @param pool заклинания пула.
+ * @param hints пометки по названиям: «уже известно», «уже выбрано».
  * @returns варианты пикера с описанием по url заклинания.
  */
 export function toSpellPickerOptions(
   pool: SpellCatalogItem[],
+  hints: Record<string, string> = {},
 ): SheetChoiceOption[] {
   return [...pool]
     .sort(
@@ -12975,6 +13082,7 @@ export function toSpellPickerOptions(
       label: spell.name,
       sublabel: spell.school,
       group: getSpellGroupLabel(spell.level),
+      ...(hints[spell.name] ? { hint: hints[spell.name] } : {}),
       detail: { kind: 'spell', url: spell.url },
     }));
 }
@@ -13071,7 +13179,10 @@ export function toNamedPickerOptions(
 
 /** Чем дополняются варианты пикера, кроме самих названий. */
 export interface ChoicePickerOptionsInput {
-  /** Пометки по названиям: навык, которым персонаж уже владеет. */
+  /**
+   * Пометки по названиям: навык, которым персонаж уже владеет, заклинание,
+   * которое он уже знает.
+   */
   hints?: Record<string, string>;
 
   /** Пул заклинаний выбора — у `kind: 'spell'` варианты берутся из него. */
@@ -13149,7 +13260,7 @@ export function toChoicePickerOptions(
   input: ChoicePickerOptionsInput = {},
 ): SheetChoiceOption[] {
   if (choice.kind === 'spell') {
-    return toSpellPickerOptions(input.spellPool ?? []);
+    return toSpellPickerOptions(input.spellPool ?? [], input.hints ?? {});
   }
 
   const hints = input.hints ?? {};
@@ -13286,6 +13397,22 @@ export interface ChoiceControlInput extends ChoicePickerOptionsInput {
  * @param input названия, готовность пула, дополнения и источник выбора.
  * @returns выбор для пикера.
  */
+/**
+ * Предупреждение под полем выбора о повторе: и владение навыком, и знание
+ * заклинания второй раз ничего персонажу не добавляют. Показывает его поле —
+ * и только когда игрок отметил помеченный вариант.
+ *
+ * @param choice распознанный выбор.
+ * @returns предупреждение; пусто — повторить в этом выборе нечего.
+ */
+function getChoiceDuplicateWarning(choice: ClassChoice): string {
+  if (choice.kind === 'spell') {
+    return SPELL_DUPLICATE_WARNING;
+  }
+
+  return choice.kind === 'skill-proficiency' ? SKILL_DUPLICATE_WARNING : '';
+}
+
 export function buildChoiceControl(
   choice: ClassChoice,
   input: ChoiceControlInput,
@@ -13310,6 +13437,7 @@ export function buildChoiceControl(
     explanation: input.explanation ?? getChoiceExplanation(choice),
     modalTitle: title,
     modalSubtitle: getChoiceModalSubtitle(input.origin, requiredCount),
+    warning: getChoiceDuplicateWarning(choice),
   };
 }
 

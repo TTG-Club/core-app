@@ -332,7 +332,6 @@ export default defineNuxtConfig({
         '@tiptap/pm/history': 'prosemirror-history',
         '@tiptap/pm/inputrules': 'prosemirror-inputrules',
         '@tiptap/pm/dropcursor': 'prosemirror-dropcursor',
-        '@tiptap/pm/trailing-node': 'prosemirror-trailing-node',
       },
       // Единственный инстанс каждого prosemirror-пакета на все пути импорта.
       dedupe: [
@@ -348,7 +347,6 @@ export default defineNuxtConfig({
         'prosemirror-history',
         'prosemirror-inputrules',
         'prosemirror-dropcursor',
-        'prosemirror-trailing-node',
       ],
     },
 

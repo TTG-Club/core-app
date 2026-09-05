@@ -28,7 +28,6 @@
     SHEET_WIZARD_FEATURE_CARD_CLASS,
     SHEET_WIZARD_SECTION_CLASS,
     SHEET_WIZARD_SECTION_TITLE_CLASS,
-    SKILL_DUPLICATE_WARNING,
     toSubclassPickerOptions,
   } from '../../model';
   import SheetChoicePickerField from './SheetChoicePickerField.vue';
@@ -516,7 +515,7 @@
             :options="control.options"
             :count="control.requiredCount"
             :status="control.status"
-            :warning="SKILL_DUPLICATE_WARNING"
+            :warning="control.warning"
             :model-value="draft.selections[control.choice.id] ?? []"
             @update:model-value="handleSelection(control, $event)"
             @retry="handleSpellPoolRetry(control.choice)"

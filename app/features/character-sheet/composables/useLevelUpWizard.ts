@@ -57,7 +57,6 @@ import {
   filterClassOptionsBySources,
   getAbilityImprovementSpent,
   getCharacterClasses,
-  getChoiceSkillHints,
   getChosenProficientSkills,
   getEffectiveAbilities,
   getFeatChoiceOptions,
@@ -90,6 +89,7 @@ import {
 } from '../model';
 import { useLazyCatalogSourceQuery } from './useCatalogSourceQuery';
 import { useCharacterSheet } from './useCharacterSheet';
+import { useChoiceHints } from './useChoiceHints';
 import { useChoiceSpellPools } from './useChoiceSpellPools';
 import { useToolCatalog } from './useToolCatalog';
 
@@ -621,6 +621,16 @@ export function useLevelUpWizard(): LevelUpWizard {
   } = useChoiceSpellPools({
     sources: () => [{ choices: allChoices.value }],
     answers: spellAnswers,
+  });
+
+  /**
+   * Пометки опций пикера: навыки, которыми персонаж уже владеет, и заклинания,
+   * которые он уже знает — выбранное на прошлых уровнях остаётся в пуле и без
+   * пометки предлагалось бы заново.
+   */
+  const { getHints: choiceHints } = useChoiceHints({
+    choices: allChoices,
+    selections: allAnswers,
   });
 
   /**
@@ -1267,16 +1277,6 @@ export function useLevelUpWizard(): LevelUpWizard {
         allAnswers.value,
       ),
     });
-  }
-
-  /**
-   * Пометки опций пикера: навыки, которыми персонаж уже владеет.
-   *
-   * @param choice распознанный выбор внутри умения.
-   * @returns пометки по названиям опций выбора.
-   */
-  function choiceHints(choice: ClassChoice): Record<string, string> {
-    return getChoiceSkillHints(choice, character.value.skills);
   }
 
   /**
