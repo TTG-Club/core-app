@@ -29,6 +29,7 @@ export { default as SelectMastery } from './SelectMastery.vue';
 export { default as SelectNotificationType } from './SelectNotificationType.vue';
 export { default as SelectOptional } from './SelectOptional.vue';
 export { default as SelectRangeType } from './SelectRangeType.vue';
+export { default as SelectRecharge } from './SelectRecharge.vue';
 export { default as SelectSize } from './SelectSize.vue';
 export { default as SelectSkill } from './SelectSkills.vue';
 export { default as SelectSkills } from './SelectSkills.vue';

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { ActiveEffect, EffectOrigin } from '../model';
+  import type { ActiveEffect, EffectOrigin, EffectTarget } from '../model';
 
   import { EditorNestedSection } from '~ui/editor';
 
@@ -16,8 +16,16 @@
     origin = EFFECT_ORIGIN.spell,
     title = ACTIVE_EFFECT_LABELS.title,
     nested = false,
+    defaultTarget = 'self',
   } = defineProps<{
     origin?: EffectOrigin;
+
+    /**
+     * На кого нацелен новый эффект. У носителя, который описывает эффектом сам
+     * себя, это он сам; у действия существа — цель: укус накладывает Отравление
+     * на укушенного, а не на кусающего.
+     */
+    defaultTarget?: EffectTarget;
 
     /**
      * Заголовок блока. Своим его называет редактор, у которого эффекты лежат
@@ -80,7 +88,10 @@
     // прежний массив — проп доедет только следующим тиком.
     const addedIndex = model.value.length;
 
-    model.value = [...model.value, createEmptyActiveEffect(origin)];
+    model.value = [
+      ...model.value,
+      createEmptyActiveEffect(origin, defaultTarget),
+    ];
 
     // Новый эффект сразу раскрыт: его всё равно тут же настраивают.
     expand(addedIndex);

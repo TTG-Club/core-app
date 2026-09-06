@@ -1,33 +1,12 @@
 <script setup lang="ts">
-  import type { CreateAction, CreatureLair } from '~bestiary/model';
+  import type { CreatureLair } from '~bestiary/model';
 
-  import { EditorArrayControls } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
 
-  function getEmpty(): CreateAction {
-    return {
-      name: {
-        rus: '',
-        eng: '',
-      },
-      description: '',
-      attackType: '',
-      savingThrows: [],
-      damageTypes: [],
-      recharge: undefined,
-      restrictionOfUse: undefined,
-    };
-  }
+  import { CREATURE_ACTION_ADD_LABELS } from '../constants';
+  import { CreatureActionList } from './action';
 
   const model = defineModel<CreatureLair>({ required: true });
-
-  function isLastAction(index: number) {
-    return index === model.value.effects.length - 1;
-  }
-
-  function addAction(index: number) {
-    model.value.effects.splice(index, 0, getEmpty());
-  }
 </script>
 
 <template>
@@ -69,70 +48,11 @@
         </UFormField>
       </UForm>
 
-      <template
-        v-for="(effect, effectIndex) in model.effects"
-        :key="effectIndex"
-      >
-        <UForm
-          class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
-          attach
-          :state="effect"
-        >
-          <UFormField
-            class="col-span-full md:col-span-8"
-            label="Название"
-            name="name.rus"
-          >
-            <UInput
-              v-model="effect.name.rus"
-              placeholder="Введи название"
-            />
-          </UFormField>
-
-          <UFormField
-            class="col-span-full md:col-span-8"
-            label="Название (англ.)"
-            name="name.eng"
-          >
-            <UInput
-              v-model="effect.name.eng"
-              placeholder="Введи английское название"
-            />
-          </UFormField>
-
-          <EditorArrayControls
-            v-model="model.effects"
-            :item="effect"
-            :empty-object="getEmpty()"
-            :index="effectIndex"
-            cols="8"
-            only-remove
-          />
-
-          <UFormField
-            class="col-span-full md:col-span-24"
-            label="Описание"
-            name="description"
-            :ui="{ root: 'w-full', container: 'w-full' }"
-          >
-            <MarkupEditor
-              v-model="effect.description"
-              placeholder="Введи описание"
-            />
-          </UFormField>
-        </UForm>
-
-        <USeparator v-if="!isLastAction(effectIndex)" />
-      </template>
-
-      <div
-        v-if="!model.effects.length"
-        class="col-span-full flex justify-center"
-      >
-        <UButton @click.left.exact.prevent="addAction(0)">
-          Добавить первый
-        </UButton>
-      </div>
+      <CreatureActionList
+        v-model="model.effects"
+        :add-label="CREATURE_ACTION_ADD_LABELS.lair"
+        path="lair.effects"
+      />
 
       <UForm
         class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"

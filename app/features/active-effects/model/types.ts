@@ -273,10 +273,15 @@ function generateEffectId(): string {
  * Создаёт пустой активный эффект с дефолтами VTTG.
  *
  * @param origin чем эффект выдан; по умолчанию заклинанием.
+ * @param defaultTarget на кого эффект нацелен изначально. У носителя, который
+ *   эффектом описывает сам себя (черта, вид, предмет), это он сам; у действия
+ *   существа — цель: укус накладывает Отравление на укушенного, и с `self`
+ *   оркестратор VTTG не считает эффект предназначенным цели.
  * @returns новый эффект.
  */
 export function createEmptyActiveEffect(
   origin: EffectOrigin = EFFECT_ORIGIN.spell,
+  defaultTarget: EffectTarget = 'self',
 ): ActiveEffect {
   return {
     id: generateEffectId(),
@@ -289,7 +294,7 @@ export function createEmptyActiveEffect(
     duration: { type: 'permanent' },
     changes: [],
     flags: [],
-    effectTarget: 'self',
+    effectTarget: defaultTarget,
   };
 }
 

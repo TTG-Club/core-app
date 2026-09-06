@@ -1,7 +1,14 @@
 import type { ActiveEffect } from '~active-effects/model';
 import type { EditorBaseInfoState } from '~ui/editor';
 
+import type { CreatureActionEffect } from './action';
+
 import { AbilityKey, AbilityShortKey } from '~/shared/types';
+
+import {
+  createEmptyCreatureActionEffect,
+  normalizeCreatureActionEffect,
+} from './action';
 
 export interface CreatureCreate extends EditorBaseInfoState {
   description: string; // описание маркап
@@ -175,30 +182,56 @@ export interface CreatureSenses {
   passivePerception: number;
 }
 
-export interface CreateTrait {
-  name: {
-    rus: string;
-    eng: string;
-  };
-  description: string;
-}
-
+/**
+ * Запись боевого блока существа: умение, действие, бонусное действие, реакция,
+ * легендарное действие или эффект логова.
+ *
+ * Тип один на все шесть списков: у них одинаковый набор полей, а разное —
+ * только заголовок списка и место в форме.
+ */
 export interface CreateAction {
   name: {
     rus: string;
     eng: string;
   };
   description: string;
-  attackType: string;
-  savingThrows: Array<SavingThrow>;
-  damageTypes: Array<string>;
   recharge: string | undefined;
-  restrictionOfUse: string | undefined;
+  effect: CreatureActionEffect;
 }
 
-export interface SavingThrow {
-  ability: string;
-  dc: string;
+/** Умение существа — та же запись, что и действие. */
+export type CreateTrait = CreateAction;
+
+/**
+ * Готовит записи боевого блока к отправке.
+ *
+ * @param actions записи из формы.
+ * @returns записи для запроса.
+ */
+export function normalizeCreatureActions(
+  actions: Array<CreateAction>,
+): Array<CreateAction> {
+  return actions.map((action) => ({
+    ...action,
+    effect: normalizeCreatureActionEffect(action.effect),
+  }));
+}
+
+/**
+ * Создаёт пустую запись боевого блока.
+ *
+ * @returns запись без названия, описания и механики.
+ */
+export function createEmptyCreatureAction(): CreateAction {
+  return {
+    name: {
+      rus: '',
+      eng: '',
+    },
+    description: '',
+    recharge: undefined,
+    effect: createEmptyCreatureActionEffect(),
+  };
 }
 
 export function getInitialState(): CreatureCreate {

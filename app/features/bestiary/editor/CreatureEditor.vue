@@ -7,8 +7,12 @@
 
   import { DictionaryService } from '~/shared/api';
   import { ActiveEffects } from '~active-effects/editor';
-  import { EFFECT_ORIGIN } from '~active-effects/model';
-  import { getInitialState } from '~bestiary/model';
+  import { EFFECT_ORIGIN, normalizeActiveEffects } from '~active-effects/model';
+  import {
+    getInitialState,
+    normalizeCreatureActions,
+    normalizeLoadedCreatureActions,
+  } from '~bestiary/model';
   import { CreaturePreview } from '~bestiary/preview';
   import { EditorBaseInfo } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
@@ -39,7 +43,6 @@
     CreatureSize,
     CreatureSkills,
     CreatureSpeed,
-    CreatureTrait,
     CreatureType,
   } from './ui';
 
@@ -48,6 +51,24 @@
    * из всего блока нужно одно число, а ответ сервера здесь — `unknown`.
    */
   const loadedExperienceSchema = z.object({ value: z.number() });
+
+  /** Блок легендарных действий из `/raw`: разбирается только список записей. */
+  const loadedLegendarySchema = z
+    .record(z.string(), z.unknown())
+    .catch({})
+    .transform((legendary) => ({
+      ...legendary,
+      actions: normalizeLoadedCreatureActions(legendary.actions),
+    }));
+
+  /** Блок логова из `/raw`: разбирается только список эффектов. */
+  const loadedLairSchema = z
+    .record(z.string(), z.unknown())
+    .catch({})
+    .transform((lair) => ({
+      ...lair,
+      effects: normalizeLoadedCreatureActions(lair.effects),
+    }));
 
   const { data: challengeRatings } = await useAsyncData(
     'dictionaries-challenge-rating',
@@ -66,17 +87,29 @@
   function normalizeLoaded(
     raw: Record<string, unknown>,
   ): Record<string, unknown> {
+    // Механику разбирают все шесть списков боевого блока: без этого поля формы
+    // остались бы пустыми, а сохранение стёрло бы уже заведённые числа.
+    const result: Record<string, unknown> = {
+      ...raw,
+      traits: normalizeLoadedCreatureActions(raw.traits),
+      actions: normalizeLoadedCreatureActions(raw.actions),
+      bonusActions: normalizeLoadedCreatureActions(raw.bonusActions),
+      reactions: normalizeLoadedCreatureActions(raw.reactions),
+      legendary: loadedLegendarySchema.parse(raw.legendary),
+      lair: loadedLairSchema.parse(raw.lair),
+    };
+
     const experience = loadedExperienceSchema.safeParse(raw.experience);
 
     if (!experience.success) {
-      return raw;
+      return result;
     }
 
     const option = challengeRatings.value?.find(
       (item) => item.value === experience.data.value,
     );
 
-    return option ? { ...raw, proficiencyBonus: option.pb } : raw;
+    return option ? { ...result, proficiencyBonus: option.pb } : result;
   }
 
   const { state, submitState, onError, onSubmit, revisionControl } =
@@ -85,6 +118,22 @@
       getInitialState,
       normalizeLoaded,
       revisionEntityType: REVISION_ENTITY_TYPES.CREATURE,
+      transformBeforeSubmit: (formState) => ({
+        ...formState,
+        traits: normalizeCreatureActions(formState.traits),
+        actions: normalizeCreatureActions(formState.actions),
+        bonusActions: normalizeCreatureActions(formState.bonusActions),
+        reactions: normalizeCreatureActions(formState.reactions),
+        legendary: {
+          ...formState.legendary,
+          actions: normalizeCreatureActions(formState.legendary.actions),
+        },
+        lair: {
+          ...formState.lair,
+          effects: normalizeCreatureActions(formState.lair.effects),
+        },
+        activeEffects: normalizeActiveEffects(formState.activeEffects),
+      }),
     });
 
   const tabItems: Array<TabsItem> = [
@@ -274,7 +323,10 @@
       <!-- ДЕЙСТВИЯ -->
       <template #actions>
         <div class="grid grid-cols-1 gap-6 md:grid-cols-24">
-          <CreatureTrait v-model="state.traits" />
+          <CreatureAction
+            v-model="state.traits"
+            name="traits"
+          />
 
           <CreatureAction
             v-model="state.actions"
