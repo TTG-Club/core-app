@@ -318,6 +318,10 @@ export const EFFECT_VALUE_SUGGESTIONS: Array<Option<string>> = [
   { value: '@mod.cha', label: 'Модификатор Харизмы' },
   { value: '@prof', label: 'Бонус мастерства (@prof)' },
   { value: '@level', label: 'Уровень персонажа (@level)' },
+  {
+    value: '@classLevel',
+    label: 'Уровень в классе умения (@classLevel; у своего эффекта — общий)',
+  },
 
   // Скорости листа: ими задаётся «полёт равен скорости ходьбы»
   { value: '@speed.walk', label: 'Скорость ходьбы листа' },

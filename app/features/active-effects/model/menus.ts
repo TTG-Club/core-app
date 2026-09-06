@@ -309,9 +309,15 @@ const EFFECT_MODIFIER_READY_PRESETS: EffectModifierPreset[] = [
   },
   {
     key: 'hitPoints.max',
-    label: 'Максимум хитов: за каждый уровень',
+    label: 'Максимум хитов: за каждый уровень персонажа',
     mode: 'add',
     value: '@level',
+  },
+  {
+    key: 'hitPoints.max',
+    label: 'Максимум хитов: за каждый уровень класса',
+    mode: 'add',
+    value: '@classLevel',
   },
   {
     key: 'movement.fly',

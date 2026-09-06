@@ -51,6 +51,7 @@ export const DAMAGE_FORMULA_MODIFIER_TAGS: Array<DamageFormulaTag> = [
   { label: 'Харизма (@mod.cha)', value: 'mod.cha' },
   { label: 'Мастерство (@prof)', value: 'prof' },
   { label: 'Уровень (@level)', value: 'level' },
+  { label: 'Уровень в классе (@classLevel)', value: 'classLevel' },
 ];
 
 /**
