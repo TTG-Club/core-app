@@ -813,7 +813,9 @@ const resourceRecoveryRuleSchema = z.object({
  * такой ресурс останется с записанным максимумом, а не обнулится.
  */
 const resourceMaxRuleSchema = z.object({
-  source: z.enum(['fixed', 'proficiency', 'ability', 'level']).catch('fixed'),
+  source: z
+    .enum(['fixed', 'proficiency', 'ability', 'level', 'class-level'])
+    .catch('fixed'),
   ability: abilityKeySchema.catch(RESOURCE_MAX_DEFAULT_ABILITY),
   offset: z.coerce.number().catch(0),
   // Множителя и ступеней у правил, сохранённых до них, нет: такой ресурс

@@ -380,6 +380,7 @@ import {
   RESOURCE_COUNT_MIN,
   RESOURCE_FORMULA_ABILITIES,
   RESOURCE_FORMULA_ABILITY_PREFIX,
+  RESOURCE_FORMULA_CLASS_LEVEL,
   RESOURCE_FORMULA_LEVEL,
   RESOURCE_FORMULA_PROFICIENCY,
   RESOURCE_MAX_DEFAULT_ABILITY,
@@ -742,6 +743,12 @@ function getActiveInventoryBonusEntries(
 interface EffectCarrier {
   source: PassiveBonusSource;
   effects: ActiveEffect[];
+
+  /**
+   * Уровень в классе, выдавшем запись, — значение `@classLevel` в формулах её
+   * эффектов. У записей без класса-владельца равен суммарному уровню.
+   */
+  classLevel: number;
 }
 
 /**
@@ -759,6 +766,7 @@ function getEffectCarriers(character: Character): EffectCarrier[] {
     (effect) => ({
       source: { id: effect.id, name: effect.name, kind: 'effect' },
       effects: [effect],
+      classLevel: character.level,
     }),
   );
 
@@ -766,6 +774,10 @@ function getEffectCarriers(character: Character): EffectCarrier[] {
     (feature) => ({
       source: { id: feature.id, name: feature.name, kind: 'feature' },
       effects: feature.activeEffects ?? [],
+      // Умение класса считает `@classLevel` по своему классу: «Драконья
+      // устойчивость» чародея 3 / плута 3 прибавляет к максимуму хитов три, а
+      // не шесть. У черты и умения вида класса-владельца нет — там суммарный
+      classLevel: getOwnerClassLevel(character, feature.id),
     }),
   );
 
@@ -774,6 +786,7 @@ function getEffectCarriers(character: Character): EffectCarrier[] {
     .map((item) => ({
       source: { id: item.id, name: item.name, kind: 'item' },
       effects: item.activeEffects ?? [],
+      classLevel: character.level,
     }));
 
   return [...ownCarriers, ...featureCarriers, ...itemCarriers];
@@ -821,12 +834,14 @@ interface LiveBonusContext extends EffectComputeContext {
  * @param context значения листа, нужные для подсчёта.
  * @param change изменение эффекта.
  * @param id идентификатор строки бонуса.
+ * @param classLevel уровень в классе записи-носителя — значение `@classLevel`.
  * @returns бонус листа; null — изменение считает не этот путь.
  */
 function toLiveEffectBonus(
   context: LiveBonusContext,
   change: EffectChange,
   id: string,
+  classLevel: number,
 ): InventoryItemBonus | null {
   const target = getEffectBonusTarget(change.key);
 
@@ -845,7 +860,7 @@ function toLiveEffectBonus(
     : parseEffectValue(change.value) === null;
 
   const value = applies
-    ? evaluateEffectFormula(context.character, change.value)
+    ? evaluateEffectFormula(context.character, change.value, classLevel)
     : null;
 
   if (value === null || value === 0) {
@@ -895,15 +910,21 @@ function getLiveEffectBonusEntries(
   };
 
   try {
-    return getEffectCarriers(character).flatMap(({ source, effects }) =>
-      effects.filter(isSelfAppliedEffect).flatMap((effect) =>
-        effect.changes
-          .map((change, index) =>
-            toLiveEffectBonus(context, change, `${effect.id}:${index}`),
-          )
-          .filter((bonus) => bonus !== null)
-          .map((bonus) => ({ source, bonus, live: true })),
-      ),
+    return getEffectCarriers(character).flatMap(
+      ({ source, effects, classLevel }) =>
+        effects.filter(isSelfAppliedEffect).flatMap((effect) =>
+          effect.changes
+            .map((change, index) =>
+              toLiveEffectBonus(
+                context,
+                change,
+                `${effect.id}:${index}`,
+                classLevel,
+              ),
+            )
+            .filter((bonus) => bonus !== null)
+            .map((bonus) => ({ source, bonus, live: true })),
+        ),
     );
   } finally {
     for (const id of targetIds) {
@@ -4280,10 +4301,18 @@ function getArmorClassWithItemLimits(
     .reduce((total, entry) => applyInventoryBonus(total, entry.bonus), value);
 }
 
-/** Токен формулы эффекта — число или переменная листа. */
+/**
+ * Токен формулы эффекта — число или переменная листа.
+ *
+ * @param character персонаж.
+ * @param token токен формулы в нижнем регистре.
+ * @param classLevel уровень в классе, выдавшем эффект, — значение `@classLevel`.
+ * @returns число; null — переменная листу незнакома.
+ */
 function evaluateEffectFormulaToken(
   character: Character,
   token: string,
+  classLevel: number,
 ): number | null {
   if (/^\d+$/.test(token)) {
     return Number(token);
@@ -4295,6 +4324,10 @@ function evaluateEffectFormulaToken(
 
   if (token === RESOURCE_FORMULA_LEVEL) {
     return character.level;
+  }
+
+  if (token === RESOURCE_FORMULA_CLASS_LEVEL) {
+    return classLevel;
   }
 
   if (token.startsWith(RESOURCE_FORMULA_ABILITY_PREFIX)) {
@@ -4311,7 +4344,8 @@ function evaluateEffectFormulaToken(
 
 /**
  * Значение формулы эффекта числом: сумма слагаемых, каждое — число или
- * переменная листа (`@prof`, `@level`, `@mod.<аббревиатура>`) с множителем.
+ * переменная листа (`@prof`, `@level`, `@classLevel`, `@mod.<аббревиатура>`) с
+ * множителем.
  *
  * Грамматика та же, что у максимума ресурса, только слагаемых сколько угодно:
  * «Защита без доспехов» пишется как `10+@mod.dex+@mod.con`. Незнакомая
@@ -4320,11 +4354,15 @@ function evaluateEffectFormulaToken(
  *
  * @param character персонаж.
  * @param formula значение изменения эффекта.
+ * @param classLevel уровень в классе, выдавшем эффект; не задан — суммарный
+ *   уровень персонажа: у своего эффекта листа, предмета, вида и черты класса
+ *   нет, и `@classLevel` читается у них как `@level`.
  * @returns число; null — формула листу непонятна.
  */
 function evaluateEffectFormula(
   character: Character,
   formula: string,
+  classLevel: number = character.level,
 ): number | null {
   const compact = formula.toLowerCase().replaceAll(/\s+/g, '');
 
@@ -4346,7 +4384,7 @@ function evaluateEffectFormula(
     let product = 1;
 
     for (const factor of term.replace(/^[+-]/, '').split('*')) {
-      const value = evaluateEffectFormulaToken(character, factor);
+      const value = evaluateEffectFormulaToken(character, factor, classLevel);
 
       if (value === null) {
         return null;
@@ -4409,10 +4447,21 @@ function getArmorClassEffectBody(
 ): { name: string; value: number } | null {
   const armor = getSheetArmorState(character);
 
-  const applicable = collectAppliedEffects(character)
-    .filter((effect) => !effect.disabled && effect.effectTarget !== 'target')
-    .flatMap((effect) =>
-      effect.changes.map((change) => ({ name: effect.name, change })),
+  // Носителями, а не одним списком эффектов: КД тела монах и чародей задают
+  // формулой умения класса, и `@classLevel` в ней считается по своему классу.
+  const applicable = getEffectCarriers(character)
+    .flatMap(({ effects, classLevel }) =>
+      effects
+        .filter(
+          (effect) => !effect.disabled && effect.effectTarget !== 'target',
+        )
+        .flatMap((effect) =>
+          effect.changes.map((change) => ({
+            name: effect.name,
+            change,
+            classLevel,
+          })),
+        ),
     )
     .filter(
       ({ change }) =>
@@ -4430,8 +4479,8 @@ function getArmorClassEffectBody(
   let value = bodyArmorValue;
   let name: string | null = null;
 
-  for (const { name: effectName, change } of applicable) {
-    const resolved = evaluateEffectFormula(character, change.value);
+  for (const { name: effectName, change, classLevel } of applicable) {
+    const resolved = evaluateEffectFormula(character, change.value, classLevel);
 
     if (resolved === null) {
       continue;
@@ -6059,10 +6108,10 @@ function splitResourceMaxMultiplier(base: string): {
 /**
  * Разбор формулы максимума из механики справочника в правило листа.
  *
- * Грамматика та же, что у механики черт: число, `@prof`, `@level` или
- * `@mod.<аббревиатура>`, любое из них с множителем (`@level * 5`) и смещением
- * (`@prof - 1`). Разбирается один раз при взятии черты — дальше на листе живёт
- * уже правило.
+ * Грамматика та же, что у механики черт: число, `@prof`, `@level`,
+ * `@classLevel` или `@mod.<аббревиатура>`, любое из них с множителем
+ * (`@classLevel * 5`) и смещением (`@prof - 1`). Разбирается один раз при
+ * взятии записи — дальше на листе живёт уже правило.
  *
  * @param formula формула максимума; пустая строка — правила нет.
  * @returns правило максимума; null — формула пуста или непонятна.
@@ -6119,6 +6168,15 @@ export function parseResourceMaxFormula(
   if (base === RESOURCE_FORMULA_LEVEL) {
     return {
       source: 'level',
+      ability: RESOURCE_MAX_DEFAULT_ABILITY,
+      offset,
+      multiplier,
+    };
+  }
+
+  if (base === RESOURCE_FORMULA_CLASS_LEVEL) {
+    return {
+      source: 'class-level',
       ability: RESOURCE_MAX_DEFAULT_ABILITY,
       offset,
       multiplier,
@@ -6199,7 +6257,14 @@ export function getResourceMax(
     return withResourceMinimum(scaled, min);
   }
 
-  const base = getResourceMaxBase(character, source, ability);
+  const base = getResourceMaxBase(
+    character,
+    source,
+    ability,
+    // Класс-владелец опознаётся по идентификатору ресурса: очки чародейства
+    // считаются от уровня В ЧАРОДЕЕ, а не от суммы уровней мультикласса
+    getOwnerClassLevel(character, resource.id),
+  );
 
   return withResourceMinimum(
     clamp(
@@ -6237,12 +6302,14 @@ function withResourceMinimum(max: number, min: number | undefined): number {
  * @param character персонаж.
  * @param source источник максимума.
  * @param ability характеристика источника `ability`.
+ * @param classLevel уровень в классе-владельце ресурса.
  * @returns значение источника.
  */
 function getResourceMaxBase(
   character: Character,
   source: ResourceMaxSource,
   ability: AbilityKey,
+  classLevel: number,
 ): number {
   if (source === 'proficiency') {
     return getProficiencyBonus(character.level);
@@ -6250,6 +6317,10 @@ function getResourceMaxBase(
 
   if (source === 'level') {
     return character.level;
+  }
+
+  if (source === 'class-level') {
+    return classLevel;
   }
 
   if (source === 'ability') {
@@ -8774,6 +8845,71 @@ export function getClassResourceId(
 }
 
 /**
+ * URL класса, которому принадлежит запись листа; null — класса-владельца у неё
+ * нет (черта, вид, предмет, запись игрока).
+ *
+ * Читается из идентификатора, а не из отдельного поля записи: url класса и так
+ * зашит в него — умение лежит под `class:<url>:<ключ>`, ресурс такого умения —
+ * под `feat:res:class:<url>:…`, своя колонка таблицы — под `class:res:<url>:…`.
+ * Отдельное поле пришлось бы заполнять при каждой пересборке, а листы,
+ * сохранённые до него, остались бы без владельца.
+ *
+ * @param entryId идентификатор записи листа или её ресурса.
+ * @returns url класса-владельца; null — записи класс не выдавал.
+ */
+export function getOwnerClassUrl(entryId: string): string | null {
+  const id = entryId.startsWith(FEAT_RESOURCE_ID_PREFIX)
+    ? entryId.slice(FEAT_RESOURCE_ID_PREFIX.length)
+    : entryId;
+
+  // Приставка ресурса класса длиннее приставки умения и начинается с неё же,
+  // поэтому проверяется первой: иначе классом стало бы служебное «res».
+  const prefix = id.startsWith(CLASS_RESOURCE_ID_PREFIX)
+    ? CLASS_RESOURCE_ID_PREFIX
+    : CLASS_FEATURE_ID_PREFIX;
+
+  if (!id.startsWith(prefix)) {
+    return null;
+  }
+
+  // Разбор тот же, что у `toScopedClassId` в схеме листа, только наоборот: там
+  // url класса в идентификатор приписывают, здесь — читают.
+  const [classUrl = ''] = id.slice(prefix.length).split(':');
+
+  return classUrl || null;
+}
+
+/**
+ * Уровень В КЛАССЕ, выдавшем запись листа, — значение токена `@classLevel` в
+ * формулах справочника.
+ *
+ * Записи без класса-владельца берут суммарный уровень персонажа: у своего
+ * эффекта листа, предмета, вида и черты уровня в классе нет, и `@classLevel`
+ * читается у них как `@level`. Тем же читается уровень пропавшего класса —
+ * мультикласс могли снять уже после того, как запись легла на лист.
+ *
+ * @param character персонаж.
+ * @param entryId идентификатор записи листа или её ресурса.
+ * @returns уровень в классе-владельце; суммарный уровень — владельца нет.
+ */
+export function getOwnerClassLevel(
+  character: Character,
+  entryId: string,
+): number {
+  const classUrl = getOwnerClassUrl(entryId);
+
+  if (!classUrl) {
+    return character.level;
+  }
+
+  return (
+    getCharacterClasses(character).find(
+      (characterClass) => characterClass.url === classUrl,
+    )?.level ?? character.level
+  );
+}
+
+/**
  * Классы персонажа по порядку: основной, затем дополнительные. Мультиклассовые
  * подсчёты (уровень, ячейки, кости хитов) ходят только через эту функцию, чтобы
  * не разбираться с «основной плюс остальные» на каждом месте.
@@ -9772,6 +9908,7 @@ const VISION_KEY_BY_EFFECT_SENSE: Record<string, VisionKey> = {
  * @param context значения листа, нужные для разбора.
  * @param change изменение эффекта.
  * @param sourceName подпись записи-носителя.
+ * @param classLevel уровень в классе записи-носителя — значение `@classLevel`.
  * @returns выданное чувство; null — изменение не про чувство листа либо его
  *   условие сейчас не выполнено.
  */
@@ -9779,6 +9916,7 @@ function toEffectVisionGrant(
   context: EffectComputeContext,
   change: EffectChange,
   sourceName: string,
+  classLevel: number,
 ): VisionGrant | null {
   const key = VISION_KEY_BY_EFFECT_SENSE[change.key];
 
@@ -9790,7 +9928,11 @@ function toEffectVisionGrant(
     return null;
   }
 
-  const range = evaluateEffectFormula(context.character, change.value);
+  const range = evaluateEffectFormula(
+    context.character,
+    change.value,
+    classLevel,
+  );
 
   if (range === null || range <= 0) {
     return null;
@@ -9820,14 +9962,17 @@ function getEffectVisionGrants(character: Character): VisionGrant[] {
     armor: getSheetArmorState(character),
   };
 
-  return getEffectCarriers(character).flatMap(({ source, effects }) =>
-    effects
-      .filter(isSelfAppliedEffect)
-      .flatMap((effect) =>
-        effect.changes
-          .map((change) => toEffectVisionGrant(context, change, source.name))
-          .filter((grant) => grant !== null),
-      ),
+  return getEffectCarriers(character).flatMap(
+    ({ source, effects, classLevel }) =>
+      effects
+        .filter(isSelfAppliedEffect)
+        .flatMap((effect) =>
+          effect.changes
+            .map((change) =>
+              toEffectVisionGrant(context, change, source.name, classLevel),
+            )
+            .filter((grant) => grant !== null),
+        ),
   );
 }
 
