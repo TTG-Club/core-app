@@ -35,6 +35,7 @@
     CreatureDefenses,
     CreatureHit,
     CreatureInitiative,
+    CreatureInventory,
     CreatureLair,
     CreatureLanguages,
     CreatureLegendaryActions,
@@ -139,6 +140,8 @@
   const tabItems: Array<TabsItem> = [
     { label: CREATURE_EDITOR_TABS.main, slot: 'main' },
     { label: CREATURE_EDITOR_TABS.statblock, slot: 'statblock' },
+    { label: CREATURE_EDITOR_TABS.inventory, slot: 'inventory' },
+    { label: CREATURE_EDITOR_TABS.traits, slot: 'traits' },
     { label: CREATURE_EDITOR_TABS.actions, slot: 'actions' },
     { label: CREATURE_EDITOR_TABS.effects, slot: 'effects' },
     { label: CREATURE_EDITOR_TABS.images, slot: 'images' },
@@ -283,25 +286,6 @@
             :proficiency-bonus="state.proficiencyBonus"
           />
 
-          <UCard
-            variant="subtle"
-            class="col-span-full"
-          >
-            <template #header>
-              <h2 class="truncate text-base text-highlighted">Снаряжение</h2>
-            </template>
-
-            <UFormField
-              class="col-span-full md:col-span-13"
-              name="ac.text"
-            >
-              <UInput
-                v-model="state.equipments"
-                placeholder="Введи снаряжение"
-              />
-            </UFormField>
-          </UCard>
-
           <CreatureDefenses v-model="state.defenses" />
 
           <CreatureSenses
@@ -320,14 +304,30 @@
         </div>
       </template>
 
-      <!-- ДЕЙСТВИЯ -->
-      <template #actions>
+      <!-- ИНВЕНТАРЬ -->
+      <template #inventory>
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-24">
+          <CreatureInventory
+            v-model="state.inventory"
+            v-model:text="state.inventoryText"
+            v-model:legacy-equipments="state.equipments"
+          />
+        </div>
+      </template>
+
+      <!-- ОСОБЕННОСТИ -->
+      <template #traits>
         <div class="grid grid-cols-1 gap-6 md:grid-cols-24">
           <CreatureAction
             v-model="state.traits"
             name="traits"
           />
+        </div>
+      </template>
 
+      <!-- ДЕЙСТВИЯ -->
+      <template #actions>
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-24">
           <CreatureAction
             v-model="state.actions"
             name="actions"

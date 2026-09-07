@@ -1,19 +1,43 @@
-import type { CreatureSaveEffect } from '~bestiary/model';
+import type { CreatureInventorySection, CreatureSaveEffect } from '../model';
 
 export const CREATURE_IMAGE_SECTION_TITLE = 'Изображения';
+
+/** Наименьшее количество позиции инвентаря: ноль предметов — это их отсутствие. */
+export const MIN_CREATURE_INVENTORY_QUANTITY = 1;
+
+/** Справочники, из которых берут позицию инвентаря. */
+export const CREATURE_INVENTORY_SECTION_OPTIONS: Array<{
+  label: string;
+  value: CreatureInventorySection;
+}> = [
+  { label: 'Предмет', value: 'items' },
+  { label: 'Магический предмет', value: 'magic-items' },
+];
+
+/** Подписи блока инвентаря существа. */
+export const CREATURE_INVENTORY_EDITOR = {
+  title: 'Инвентарь',
+  section: 'Справочник',
+  item: 'Предмет',
+  quantity: 'Количество',
+  quantityPlaceholder: '1',
+  description: 'Уточнение',
+  descriptionPlaceholder: 'Например: по выбору мастера',
+  addItem: 'Добавить предмет',
+  text: 'Строка инвентаря',
+  textPlaceholder: 'Введи снаряжение строкой',
+  textHelp:
+    'Идёт рядом с предметами: количества словами и то, чему карточки на сайте нет.',
+  legacy: 'Снаряжение (устаревшее)',
+  legacyPlaceholder: 'Введи снаряжение',
+  legacyHelp:
+    'Поле старого импорта. Показывается на карточке, только пока не заполнены '
+    + 'предметы и строка инвентаря.',
+} as const;
 
 export const CREATURE_GALLERY_FIELD_LABEL = 'Галерея';
 
 export const CREATURE_UPLOAD_SECTION = 'bestiary';
-
-/** Вкладки формы существа — в порядке показа. */
-export const CREATURE_EDITOR_TABS = {
-  main: 'Основное',
-  statblock: 'Статблок',
-  actions: 'Действия',
-  effects: 'Эффекты',
-  images: CREATURE_IMAGE_SECTION_TITLE,
-} as const;
 
 /** Заголовки списков боевого блока. */
 export const CREATURE_ACTION_LIST_TITLES = {
@@ -23,6 +47,17 @@ export const CREATURE_ACTION_LIST_TITLES = {
   reactions: 'Реакции',
   legendary: 'Легендарные действия',
   lair: 'Эффекты логова',
+} as const;
+
+/** Вкладки формы существа — в порядке показа. */
+export const CREATURE_EDITOR_TABS = {
+  main: 'Основное',
+  statblock: 'Статблок',
+  inventory: CREATURE_INVENTORY_EDITOR.title,
+  traits: CREATURE_ACTION_LIST_TITLES.traits,
+  actions: 'Действия',
+  effects: 'Эффекты',
+  images: CREATURE_IMAGE_SECTION_TITLE,
 } as const;
 
 /** Подписи кнопки добавления — в единственном числе, как просит русская фраза. */

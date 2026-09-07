@@ -24,6 +24,7 @@ export { default as SelectItem } from './SelectItem.vue';
 export { default as SelectLanguage } from './SelectLanguage.vue';
 export { default as SelectLevel } from './SelectLevel.vue';
 export { default as SelectLineage } from './SelectLineage.vue';
+export { default as SelectMagicItem } from './SelectMagicItem.vue';
 export { default as SelectMagicSchool } from './SelectMagicSchool.vue';
 export { default as SelectMastery } from './SelectMastery.vue';
 export { default as SelectNotificationType } from './SelectNotificationType.vue';

@@ -25,6 +25,8 @@
       'abilities',
       'skills',
       'equipments',
+      'inventory',
+      'inventoryText',
       'vulnerability',
       'resistance',
       'immunity',

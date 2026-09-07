@@ -10,6 +10,34 @@ import {
   normalizeCreatureActionEffect,
 } from './action';
 
+/**
+ * Раздел карточки предмета. Справочника два — обычные предметы и магические, —
+ * а слаг у них общего вида: без раздела ни ссылку построить, ни название
+ * обновить.
+ */
+export type CreatureInventorySection = 'items' | 'magic-items';
+
+/** Позиция инвентаря существа — карточка предмета с сайта. */
+export interface CreatureInventoryItem {
+  section: CreatureInventorySection;
+  url: string | undefined;
+  /** Название на момент выбора: карточку могли переименовать */
+  name: string | undefined;
+  quantity: number | undefined;
+  description: string | undefined;
+}
+
+/** Пустая строка инвентаря — для добавления и для сравнения на пустоту. */
+export function getEmptyCreatureInventoryItem(): CreatureInventoryItem {
+  return {
+    section: 'items',
+    url: undefined,
+    name: undefined,
+    quantity: undefined,
+    description: undefined,
+  };
+}
+
 export interface CreatureCreate extends EditorBaseInfoState {
   description: string; // описание маркап
   image: string | undefined;
@@ -25,7 +53,10 @@ export interface CreatureCreate extends EditorBaseInfoState {
   abilities: CreateAbilities;
   skills: Array<CreateSkill>;
   defenses: CreatureDefenses;
+  /** Снаряжение строкой — поле старого импорта, запасной вид для показа */
   equipments: string | undefined;
+  inventory: Array<CreatureInventoryItem>;
+  inventoryText: string | undefined;
   senses: CreatureSenses;
   languages: CreatureLanguages;
   proficiencyBonus: number;
@@ -335,6 +366,8 @@ export function getInitialState(): CreatureCreate {
       },
     },
     equipments: undefined,
+    inventory: [],
+    inventoryText: undefined,
     senses: {
       darkvision: undefined,
       unimpeded: undefined,

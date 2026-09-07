@@ -4,6 +4,7 @@ export { default as CreatureAction } from './CreatureAction.vue';
 export { default as CreatureChallengeRating } from './CreatureChallengeRating.vue';
 export { default as CreatureHit } from './CreatureHit.vue';
 export { default as CreatureInitiative } from './CreatureInitiative.vue';
+export { default as CreatureInventory } from './CreatureInventory.vue';
 export { default as CreatureLair } from './CreatureLair.vue';
 export { default as CreatureLanguages } from './CreatureLanguages.vue';
 export { default as CreatureLegendaryActions } from './CreatureLegendaryActions.vue';
