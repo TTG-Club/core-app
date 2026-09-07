@@ -2,6 +2,7 @@
   import type { CreatureActionEffect } from '~bestiary/model';
 
   import { DictionaryService } from '~/shared/api';
+  import { getCreatureActionCombatFilledCount } from '~bestiary/model';
   import { DamageParts } from '~ui/damage-formula';
   import { EditorNestedSection } from '~ui/editor';
   import {
@@ -68,6 +69,15 @@
    */
   const hasSave = computed(() => saveAbility.value !== undefined);
 
+  /**
+   * Сколько частей механики заполнено — числом в шапке раздела. Раздел
+   * сворачивается вместе с записью, и без бейджа заведённая механика ничем не
+   * отличалась бы от пустой.
+   */
+  const filledCount = computed(() =>
+    getCreatureActionCombatFilledCount(model.value),
+  );
+
   /** Второе значение области: только у линии (ширина) и цилиндра (высота). */
   const areaSecondLabel = computed(() => {
     const type = model.value.areaOfEffect.type;
@@ -84,6 +94,7 @@
   <EditorNestedSection
     :title="CREATURE_ACTION_SECTIONS.combat"
     :hint="CREATURE_ACTION_SECTIONS.combatHint"
+    :count="filledCount"
   >
     <div class="grid grid-cols-24 gap-4">
       <UFormField

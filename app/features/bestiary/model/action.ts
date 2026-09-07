@@ -269,3 +269,33 @@ export function normalizeCreatureActionEffect(
     activeEffects: normalizeActiveEffects(effect.activeEffects),
   };
 }
+
+/**
+ * Считает заполненные части боевой механики записи.
+ *
+ * Числом в бейдже свёрнутый раздел «Бой» отвечает на единственный вопрос,
+ * который к нему есть у свёрнутого вида: заведена ли механика вообще и сколько
+ * её сторон описано. Считаются стороны, а не поля: дистанция ближнего боя и две
+ * дальности — одна и та же «дальность», и три бейджа вместо одного ничего бы не
+ * уточнили.
+ *
+ * @param effect механика записи.
+ * @returns сколько частей механики заполнено; ноль — механики нет.
+ */
+export function getCreatureActionCombatFilledCount(
+  effect: CreatureActionEffect | undefined,
+): number {
+  if (!effect) {
+    return 0;
+  }
+
+  return [
+    effect.attackType !== undefined || effect.attackBonus !== undefined,
+    effect.reach !== undefined
+      || effect.rangeNormal !== undefined
+      || effect.rangeLong !== undefined,
+    effect.savingThrows.some((save) => save.ability !== undefined),
+    Boolean(effect.areaOfEffect.type),
+    effect.damageParts.some((part) => part.formula.trim().length > 0),
+  ].filter(Boolean).length;
+}

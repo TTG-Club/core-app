@@ -47,6 +47,20 @@ export const CREATURE_ACTION_SECTIONS = {
     + 'летит в цель, а не на само существо.',
 } as const;
 
+/** Подписи свёрнутой строки записи боевого блока. */
+export const CREATURE_ACTION_ENTRY = {
+  unnamed: 'Новая запись',
+  combatBadge: 'Бой: ',
+  effectsBadge: 'Эффекты: ',
+  removeConfirmTitle: 'Удалить запись?',
+  removeConfirmText:
+    'Запись удалится из формы вместе с описанием, боевой механикой и '
+    + 'эффектами. Пока существо не сохранено, изменение можно отменить, '
+    + 'закрыв форму.',
+  removeConfirmCancel: 'Оставить',
+  removeConfirmApply: 'Удалить',
+} as const;
+
 /** Подписи полей записи боевого блока. */
 export const CREATURE_ACTION_LABELS = {
   nameRus: 'Название',
@@ -75,7 +89,6 @@ export const CREATURE_ACTION_LABELS = {
   areaSize: 'Радиус или длина, фт',
   areaWidth: 'Ширина, фт',
   areaHeight: 'Высота, фт',
-  controls: 'Управление',
   remove: 'Удалить запись',
 } as const;
 
