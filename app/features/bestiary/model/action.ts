@@ -172,13 +172,46 @@ export function parseLoadedCreatureActionEffect(
   };
 }
 
+/** Тип атаки старой формы записи: лежал полем `attack` рядом с описанием. */
+const legacyAttackSchema = z.string().nullish().catch(null);
+
+/**
+ * Поднимает тип атаки старой формы записи в механику.
+ *
+ * До появления `effect` тип атаки лежал полем `attack` на самой записи. Так он
+ * и остался в снимках ревизий, снятых раньше, — а восстановление ревизии идёт
+ * через тот же разбор, что и `/raw`. Не подними мы его здесь, восстановленная
+ * старая ревизия потеряла бы тип атаки. Поле `attack` при этом остаётся на
+ * месте: пока бэкенд не обновлён, читает он именно его.
+ *
+ * @param record запись боевого блока из «сырого» ответа.
+ * @param effect уже разобранная механика записи.
+ * @returns механика с типом атаки — своим или поднятым из старого поля.
+ */
+function withLegacyAttackType(
+  record: Record<string, unknown>,
+  effect: CreatureActionEffect,
+): CreatureActionEffect {
+  if (effect.attackType) {
+    return effect;
+  }
+
+  const legacy = legacyAttackSchema.parse(record.attack);
+  const attackType = ATTACK_TYPES.find((type) => type === legacy);
+
+  return attackType ? { ...effect, attackType } : effect;
+}
+
 /** Запись боевого блока из «сырого» ответа: всё, кроме механики, как есть. */
 const loadedActionSchema = z
   .record(z.string(), z.unknown())
   .catch({})
   .transform((record) => ({
     ...record,
-    effect: parseLoadedCreatureActionEffect(record.effect),
+    effect: withLegacyAttackType(
+      record,
+      parseLoadedCreatureActionEffect(record.effect),
+    ),
   }));
 
 /**
