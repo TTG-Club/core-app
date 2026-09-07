@@ -178,6 +178,18 @@ export const ADMIN_BUGS_RESOLVER_ALL_LABEL = 'Все исполнители';
 /** Подсказка в поле поиска выпадающих списков авторов и исполнителей */
 export const ADMIN_BUGS_LOGIN_SEARCH_PLACEHOLDER = 'Поиск по логину…';
 
+/** Подпись кнопки, открывающей фильтры списка на узких экранах */
+export const ADMIN_BUGS_FILTERS_BUTTON_LABEL = 'Фильтры';
+
+/** Заголовок шторки с фильтрами списка */
+export const ADMIN_BUGS_FILTERS_DRAWER_TITLE = 'Фильтры баг-репортов';
+
+/** Подпись кнопки сброса всех фильтров списка */
+export const ADMIN_BUGS_FILTERS_RESET_LABEL = 'Сбросить';
+
+/** Подпись кнопки, закрывающей шторку фильтров */
+export const ADMIN_BUGS_FILTERS_APPLY_LABEL = 'Показать';
+
 /** Мапа русских названий для статусов баг-репортов */
 export const BUG_REPORT_STATUS_LABELS: Record<BugReportStatus, string> = {
   NEW: 'Новый',
