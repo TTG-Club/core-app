@@ -3,6 +3,7 @@
 
   import { EditorArrayControls } from '~ui/editor';
   import { SelectItem, SelectMagicItem } from '~ui/select';
+  import { InfoTooltip } from '~ui/tooltip';
 
   import { getEmptyCreatureInventoryItem } from '../../model';
   import {
@@ -124,10 +125,17 @@
 
         <UFormField
           class="col-span-full md:col-span-5"
-          :label="CREATURE_INVENTORY_EDITOR.description"
           name="description"
-          :help="CREATURE_INVENTORY_EDITOR.descriptionHelp"
         >
+          <template #label>
+            <InfoTooltip
+              :text="CREATURE_INVENTORY_EDITOR.descriptionHelp"
+              icon="tabler:info-circle-filled"
+            >
+              <span>{{ CREATURE_INVENTORY_EDITOR.description }}</span>
+            </InfoTooltip>
+          </template>
+
           <UInput
             v-model="inventoryItem.description"
             :placeholder="CREATURE_INVENTORY_EDITOR.descriptionPlaceholder"
@@ -140,6 +148,7 @@
           :empty-object="getEmptyCreatureInventoryItem()"
           :index="index"
           cols="4"
+          allow-remove-last
         />
       </UForm>
 
@@ -155,10 +164,17 @@
 
       <UFormField
         class="col-span-full"
-        :label="CREATURE_INVENTORY_EDITOR.text"
         name="inventoryText"
-        :help="CREATURE_INVENTORY_EDITOR.textHelp"
       >
+        <template #label>
+          <InfoTooltip
+            :text="CREATURE_INVENTORY_EDITOR.textHelp"
+            icon="tabler:info-circle-filled"
+          >
+            <span>{{ CREATURE_INVENTORY_EDITOR.text }}</span>
+          </InfoTooltip>
+        </template>
+
         <UInput
           v-model="text"
           :placeholder="CREATURE_INVENTORY_EDITOR.textPlaceholder"
@@ -167,10 +183,17 @@
 
       <UFormField
         class="col-span-full"
-        :label="CREATURE_INVENTORY_EDITOR.legacy"
         name="equipments"
-        :help="CREATURE_INVENTORY_EDITOR.legacyHelp"
       >
+        <template #label>
+          <InfoTooltip
+            :text="CREATURE_INVENTORY_EDITOR.legacyHelp"
+            icon="tabler:info-circle-filled"
+          >
+            <span>{{ CREATURE_INVENTORY_EDITOR.legacy }}</span>
+          </InfoTooltip>
+        </template>
+
         <UInput
           v-model="legacyEquipments"
           :placeholder="CREATURE_INVENTORY_EDITOR.legacyPlaceholder"
