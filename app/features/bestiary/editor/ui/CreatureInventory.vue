@@ -126,6 +126,7 @@
           class="col-span-full md:col-span-5"
           :label="CREATURE_INVENTORY_EDITOR.description"
           name="description"
+          :help="CREATURE_INVENTORY_EDITOR.descriptionHelp"
         >
           <UInput
             v-model="inventoryItem.description"

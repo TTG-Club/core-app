@@ -22,7 +22,10 @@ export const CREATURE_INVENTORY_EDITOR = {
   quantity: 'Количество',
   quantityPlaceholder: '1',
   description: 'Уточнение',
-  descriptionPlaceholder: 'Например: по выбору мастера',
+  descriptionPlaceholder: 'Например: из золота',
+  descriptionHelp:
+    'Приписка к предмету: показывается в скобках после названия — «Меч (из '
+    + 'золота)».',
   addItem: 'Добавить предмет',
   text: 'Строка инвентаря',
   textPlaceholder: 'Введи снаряжение строкой',

@@ -143,12 +143,22 @@ function getStats(creature: CreatureDetailResponse): MarkdownStat[] {
 }
 
 /**
- * Инвентарь строкой: позиции с количеством и свободная строка через точку с
- * запятой. Ссылки в выгрузке не нужны — это текст для чтения.
+ * Инвентарь строкой: позиции с количеством и уточнением, а следом свободная
+ * строка через точку с запятой. Ссылки в выгрузке не нужны — это текст для
+ * чтения, а уточнение нужно: «Меч (из золота)» без него теряет смысл.
  */
 function toInventory(creature: CreatureDetailResponse): string {
   const entries = getCreatureInventoryEntries(creature.inventory).map((entry) =>
-    formatCreatureInventoryLabel(escapeMarkdown(entry.name), entry.quantity),
+    joinStat(
+      [
+        formatCreatureInventoryLabel(
+          escapeMarkdown(entry.name),
+          entry.quantity,
+        ),
+        toParenthesized(escapeMarkdown(entry.description)),
+      ],
+      ' ',
+    ),
   );
 
   return joinStat(
