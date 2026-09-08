@@ -1,11 +1,10 @@
 <script setup lang="ts">
-  import type { CreateAction } from '~bestiary/model';
+  import type { CreateAction } from '../../../model';
 
   import {
     createEmptyCreatureAction,
     getCreatureActionCombatFilledCount,
-  } from '~bestiary/model';
-
+  } from '../../../model';
   import {
     CREATURE_ACTION_ENTRY,
     CREATURE_ACTION_LABELS,
@@ -237,9 +236,12 @@
         />
       </div>
 
+      <!-- Сетка в 24 колонки только с планшета: её 23 отступа по 16px дают
+        полу в 368px, и на телефоне запись вылезала за край карточки. Поля
+        записи и так знают мобильную ширину (`col-span-full`) -->
       <div
         v-if="isExpanded(actionIndex)"
-        class="grid grid-cols-24 gap-4 border-t border-default p-3"
+        class="grid grid-cols-1 gap-4 border-t border-default p-3 md:grid-cols-24"
       >
         <CreatureActionEntry
           :model-value="row.action"

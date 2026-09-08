@@ -1,8 +1,7 @@
 <script setup lang="ts">
-  import type { CreatureActionEffect } from '~bestiary/model';
+  import type { CreatureActionEffect } from '../../../model';
 
   import { DictionaryService } from '~/shared/api';
-  import { getCreatureActionCombatFilledCount } from '~bestiary/model';
   import { DamageParts } from '~ui/damage-formula';
   import { EditorNestedSection } from '~ui/editor';
   import {
@@ -11,6 +10,7 @@
     SelectSpellArea,
   } from '~ui/select';
 
+  import { getCreatureActionCombatFilledCount } from '../../../model';
   import {
     CREATURE_ACTION_LABELS,
     CREATURE_ACTION_SECTIONS,
@@ -96,7 +96,8 @@
     :hint="CREATURE_ACTION_SECTIONS.combatHint"
     :count="filledCount"
   >
-    <div class="grid grid-cols-24 gap-4">
+    <!-- Сетка в 24 колонки только с планшета — см. `CreatureActionList` -->
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
       <UFormField
         class="col-span-full md:col-span-8"
         :label="CREATURE_ACTION_LABELS.attackType"
