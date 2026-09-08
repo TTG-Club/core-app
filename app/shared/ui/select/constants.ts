@@ -1,3 +1,5 @@
+import { MAGIC_ITEM_FILTER_RANGE_ORDERS } from '~magic-items/model';
+
 export const SELECT_DROPDOWN_DEBOUNCE_MS = 250;
 
 export const ITEMS_SEARCH_ENDPOINT = '/api/v2/item/search';
@@ -128,6 +130,7 @@ export const CATALOG_PICKER_SECTIONS = {
   magicItems: {
     searchPath: '/api/v2/magic-items/search',
     filtersPath: '/api/v2/magic-items/filters',
+    filterRangeOrders: MAGIC_ITEM_FILTER_RANGE_ORDERS,
     filtersKey: 'catalog-picker:magic-item-filters',
     detailPath: '/api/v2/magic-items',
     previewSection: 'magic-items',
