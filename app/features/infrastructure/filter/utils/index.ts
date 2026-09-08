@@ -5,4 +5,5 @@ export * from './filterParser';
 export * from './filterSearch';
 export * from './getFilterKey';
 export * from './getGroupItems';
+export * from './range';
 export * from './selection';

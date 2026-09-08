@@ -1,4 +1,4 @@
-import type { Filter } from './types';
+import type { Filter, FilterRangeOrders } from './types';
 
 import { z } from 'zod';
 
@@ -45,11 +45,20 @@ const filterSchema = z.object({
  * поля вроде `relations` отбрасываются через `catch`, чтобы каскад не падал с
  * TypeError. При полностью некорректном payload возвращает пустой фильтр.
  */
-export function parseFilter(payload: unknown): Filter {
+export function parseFilter(
+  payload: unknown,
+  rangeOrders?: FilterRangeOrders,
+): Filter {
   const result = filterSchema.safeParse(payload);
 
   if (result.success) {
-    return result.data;
+    return {
+      ...result.data,
+      filters: result.data.filters.map((group) => ({
+        ...group,
+        rangeOrder: rangeOrders?.[group.key],
+      })),
+    };
   }
 
   consola.error('[useFilter] Некорректные данные фильтра:', result.error);

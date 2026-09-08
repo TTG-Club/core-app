@@ -9,6 +9,11 @@ interface Option<Value extends string> {
   value: Value;
 }
 
+/** Порядок редкости для диапазона; специальные значения выбираются отдельно. */
+export const MAGIC_ITEM_FILTER_RANGE_ORDERS = {
+  rarity: ['COMMON', 'UNCOMMON', 'RARE', 'VERY_RARE', 'LEGENDARY', 'ARTIFACT'],
+};
+
 /** Бонус магического предмета отсутствует: поле не заполнено. */
 export const MAGIC_ITEM_BONUS_NONE = 0;
 

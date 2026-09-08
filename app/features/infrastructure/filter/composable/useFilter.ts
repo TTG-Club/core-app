@@ -1,4 +1,4 @@
-import type { Filter } from '../types';
+import type { Filter, FilterRangeOrders } from '../types';
 
 import { isEqual } from 'es-toolkit';
 
@@ -13,7 +13,12 @@ import {
   normalizeDependentSelections,
 } from '../utils';
 
-export async function useFilter(key: string, url: string) {
+/** Загружает фильтры каталога и синхронизирует их выбор с URL. */
+export async function useFilter(
+  key: string,
+  url: string,
+  rangeOrders?: FilterRangeOrders,
+) {
   const route = useRoute();
   const router = useRouter();
 
@@ -39,7 +44,7 @@ export async function useFilter(key: string, url: string) {
   // Внешние данные API не доверенные: валидируем/санитизируем один раз на
   // изменение ответа, чтобы каскад работал с проверенными дефолтами.
   const validatedDefaults = computed(() =>
-    defaults.value ? parseFilter(defaults.value) : undefined,
+    defaults.value ? parseFilter(defaults.value, rangeOrders) : undefined,
   );
 
   const isPending = computed(() => status.value === 'pending');
