@@ -95,6 +95,11 @@
 
   const toast = useToast();
 
+  const { openPreview } = useCatalogPreview();
+
+  /** Раздел предпросмотра; пусто — карточку этого раздела дровером не открыть. */
+  const previewSection = computed(() => section.previewSection);
+
   const isFilterDrawerOpened = ref(false);
 
   /** Прокручиваемый список: его же прокрутка подгружает хвост выдачи. */
@@ -244,6 +249,21 @@
   // же, поэтому лишних заходов нет — иммутабельные правки фильтра меняют ссылки
   // чаще, чем содержимое.
   watch(requestKey, handleRequestChange, { immediate: true });
+
+  /**
+   * Открывает карточку записи дровером поверх окна: по названию со ссылкой на
+   * источник не понять, тот ли это предмет, а уходить из формы за описанием
+   * нельзя — выбор пропал бы вместе с окном.
+   *
+   * @param url слаг записи.
+   */
+  function handlePreview(url: string): void {
+    if (!previewSection.value) {
+      return;
+    }
+
+    openPreview(previewSection.value, url);
+  }
 
   /**
    * Отмечает или снимает запись. У одиночного выбора отметка сразу закрывает
@@ -542,13 +562,16 @@
               <li
                 v-for="entry in displayedEntries"
                 :key="entry.url"
+                class="relative flex items-center transition-colors hover:bg-elevated/50"
+                :class="
+                  selectedUrls.has(entry.url) ? 'bg-elevated/60' : undefined
+                "
               >
+                <!-- Отметка занимает всю строку (`after`), а кнопка описания
+                  лежит поверх неё: вложить одну кнопку в другую нельзя -->
                 <button
                   type="button"
-                  class="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-elevated/50"
-                  :class="
-                    selectedUrls.has(entry.url) ? 'bg-elevated/60' : undefined
-                  "
+                  class="flex min-w-0 grow items-center gap-3 px-3 py-2 text-left after:absolute after:inset-0"
                   @click.left.exact.prevent="toggle(entry)"
                 >
                   <UCheckbox
@@ -580,6 +603,24 @@
                     {{ entry.source }}
                   </UBadge>
                 </button>
+
+                <!-- Описание рядом с отметкой: по названию и источнику не
+                  понять, тот ли это предмет, а выбирают вслепую -->
+                <UTooltip
+                  v-if="previewSection"
+                  :text="CATALOG_PICKER_LABELS.preview"
+                >
+                  <UButton
+                    icon="tabler:layout-sidebar-right-expand"
+                    color="neutral"
+                    variant="ghost"
+                    size="xs"
+                    square
+                    class="relative z-10 mr-2 shrink-0"
+                    :aria-label="`${CATALOG_PICKER_LABELS.previewAria}: ${entry.name}`"
+                    @click.left.exact.prevent="handlePreview(entry.url)"
+                  />
+                </UTooltip>
               </li>
             </ul>
 

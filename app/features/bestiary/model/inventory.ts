@@ -9,12 +9,14 @@ export interface CreatureInventoryEntry {
   name: string;
   quantity: number | undefined;
   description: string | undefined;
-  /** Ссылка на карточку предмета; без слага её не построить. */
-  link: string | undefined;
+  /** Раздел карточки: он же первый сегмент её адреса и выбор дровера. */
+  section: CreatureInventorySection;
+  /** Слаг карточки предмета; без него позиция остаётся текстом. */
+  url: string | undefined;
 }
 
 /**
- * Позиции инвентаря для показа: карточка, ссылка на неё и количество.
+ * Позиции инвентаря для показа: карточка, её раздел со слагом и количество.
  * Позиция без названия — пустая строка формы, показывать по ней нечего.
  *
  * @param inventory - инвентарь существа из ответа карточки
@@ -29,9 +31,8 @@ export function getCreatureInventoryEntries(
             name: inventoryItem.name,
             quantity: inventoryItem.quantity,
             description: inventoryItem.description,
-            link: inventoryItem.url
-              ? `/${inventoryItem.section ?? DEFAULT_INVENTORY_SECTION}/${inventoryItem.url}`
-              : undefined,
+            section: inventoryItem.section ?? DEFAULT_INVENTORY_SECTION,
+            url: inventoryItem.url,
           },
         ]
       : [],
