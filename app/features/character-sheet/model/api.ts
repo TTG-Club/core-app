@@ -158,14 +158,21 @@ export async function createCharacterSheet(
  *
  * @param id идентификатор листа.
  * @param data актуальный персонаж листа.
+ * @param options настройки отправки.
+ * @param options.keepalive запрос должен пережить закрытие страницы. Браузер
+ *   отклоняет такой запрос с телом больше 64 КиБ, поэтому флаг ставит только
+ *   автосохранение и только после проверки размера
+ *   (см. `SHEET_KEEPALIVE_MAX_BYTES`).
  */
 export async function updateCharacterSheet(
   id: string,
   data: Character,
+  options: { keepalive?: boolean } = {},
 ): Promise<void> {
   await $fetch(`${CHARACTER_SHEET_API_PATH}/${id}`, {
     method: 'PUT',
     body: { name: data.name, data },
+    keepalive: options.keepalive,
     retry: 0,
   });
 }

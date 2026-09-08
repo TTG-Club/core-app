@@ -1,9 +1,14 @@
 <script setup lang="ts">
-  import type { CreatureDetailResponse } from '~bestiary/model';
+  import type { CreatureDetailResponse } from '../../../model';
 
+  import { ULink } from '#components';
   import { DiceRollerLink } from '~dice-roller/link';
   import { MarkupRender } from '~ui/markup';
 
+  import {
+    formatCreatureInventoryLabel,
+    getCreatureInventoryEntries,
+  } from '../../../model';
   import { CreatureAbilitiesTable } from './ui';
 
   type Props = Pick<
@@ -14,6 +19,8 @@
       Partial<CreatureDetailResponse>,
       | 'skills'
       | 'equipments'
+      | 'inventory'
+      | 'inventoryText'
       | 'vulnerability'
       | 'resistance'
       | 'immunity'
@@ -21,7 +28,29 @@
       | 'languages'
     >;
 
-  defineProps<Props>();
+  const { equipments, inventory, inventoryText } = defineProps<Props>();
+
+  /** Позиции инвентаря для показа: подпись с количеством и ссылка на карточку. */
+  const inventoryEntries = computed(() =>
+    getCreatureInventoryEntries(inventory).map((entry) => ({
+      label: formatCreatureInventoryLabel(entry.name, entry.quantity),
+      note: entry.description,
+      to: entry.link,
+    })),
+  );
+
+  /** Инвентарь заведён — показываем его. */
+  const hasInventory = computed(
+    () => inventoryEntries.value.length > 0 || Boolean(inventoryText),
+  );
+
+  /**
+   * Снаряжение строкой старого импорта — запасной вид для существ, которым
+   * инвентарь ещё не завели: иначе одно и то же было бы написано дважды.
+   */
+  const legacyEquipments = computed(() =>
+    hasInventory.value ? '' : (equipments ?? ''),
+  );
 </script>
 
 <template>
@@ -90,12 +119,46 @@
     </div>
 
     <div
-      v-if="equipments"
+      v-if="hasInventory"
+      :class="$style.item"
+    >
+      <span :class="$style.name">Инвентарь: </span>
+
+      <span>
+        <template
+          v-for="(entry, index) in inventoryEntries"
+          :key="index"
+        >
+          <template v-if="index">, </template>
+
+          <ULink
+            v-if="entry.to"
+            :to="entry.to"
+          >
+            {{ entry.label }}
+          </ULink>
+
+          <template v-else>{{ entry.label }}</template>
+
+          <template v-if="entry.note"> ({{ entry.note }})</template>
+        </template>
+
+        <template v-if="inventoryEntries.length && inventoryText">; </template>
+
+        <MarkupRender
+          v-if="inventoryText"
+          :render-node="inventoryText"
+        />
+      </span>
+    </div>
+
+    <div
+      v-if="legacyEquipments"
       :class="$style.item"
     >
       <span :class="$style.name">Снаряжение: </span>
 
-      <MarkupRender :render-node="equipments" />
+      <MarkupRender :render-node="legacyEquipments" />
     </div>
 
     <div

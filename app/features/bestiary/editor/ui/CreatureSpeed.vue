@@ -1,8 +1,9 @@
 <script setup lang="ts">
-  import type { CreateSpeed, CreateSpeeds } from '~bestiary/model';
+  import type { CreateSpeed, CreateSpeeds } from '../../model';
 
-  import { SpeedType } from '~bestiary/model';
   import { EditorArrayControls } from '~ui/editor';
+
+  import { SpeedType } from '../../model';
 
   const model = defineModel<CreateSpeeds>({
     required: true,

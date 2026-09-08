@@ -260,26 +260,25 @@ export const DEFAULT_EFFECT_CHANGE_PRIORITY = 20;
 /** Иконка эффекта по умолчанию. */
 export const DEFAULT_EFFECT_ICON = 'tabler:sparkles';
 
-/** Генерирует уникальный id эффекта. */
-function generateEffectId(): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return `effect-${crypto.randomUUID()}`;
-  }
-
-  return `effect-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
+/** Приставка ключа эффекта: по ней в данных видно, чей это ключ. */
+const EFFECT_ID_PREFIX = 'effect';
 
 /**
  * Создаёт пустой активный эффект с дефолтами VTTG.
  *
  * @param origin чем эффект выдан; по умолчанию заклинанием.
+ * @param defaultTarget на кого эффект нацелен изначально. У носителя, который
+ *   эффектом описывает сам себя (черта, вид, предмет), это он сам; у действия
+ *   существа — цель: укус накладывает Отравление на укушенного, и с `self`
+ *   оркестратор VTTG не считает эффект предназначенным цели.
  * @returns новый эффект.
  */
 export function createEmptyActiveEffect(
   origin: EffectOrigin = EFFECT_ORIGIN.spell,
+  defaultTarget: EffectTarget = 'self',
 ): ActiveEffect {
   return {
-    id: generateEffectId(),
+    id: createEntityId(EFFECT_ID_PREFIX),
     name: 'Новый эффект',
     description: '',
     icon: DEFAULT_EFFECT_ICON,
@@ -289,7 +288,7 @@ export function createEmptyActiveEffect(
     duration: { type: 'permanent' },
     changes: [],
     flags: [],
-    effectTarget: 'self',
+    effectTarget: defaultTarget,
   };
 }
 

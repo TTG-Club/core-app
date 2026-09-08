@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CreateExperience } from '~bestiary/model';
+  import type { CreateExperience } from '../../model';
 
   import { SelectChallengeRating } from '~ui/select';
 

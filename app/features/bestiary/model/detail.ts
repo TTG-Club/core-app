@@ -1,5 +1,16 @@
 import type { SourceResponse } from '~/shared/types';
 
+import type { CreatureInventorySection } from './create';
+
+/** Позиция инвентаря существа в ответе карточки. */
+export interface CreatureInventoryItemResponse {
+  section?: CreatureInventorySection;
+  url?: string;
+  name?: string;
+  quantity?: number;
+  description?: string;
+}
+
 export interface CreatureDetailResponse {
   url: string;
   name: {
@@ -23,6 +34,8 @@ export interface CreatureDetailResponse {
   abilities: CreatureAbilitiesResponse;
   skills?: Array<Skill>;
   equipments?: string;
+  inventory?: Array<CreatureInventoryItemResponse>;
+  inventoryText?: string;
   vulnerability?: string;
   resistance?: string;
   immunity?: string;

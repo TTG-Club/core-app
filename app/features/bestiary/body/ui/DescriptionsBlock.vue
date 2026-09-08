@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CreatureDetailResponse } from '~bestiary/model';
+  import type { CreatureDetailResponse } from '../../model';
 
   import { MarkupRender } from '~ui/markup';
 

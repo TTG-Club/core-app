@@ -1,15 +1,13 @@
 <script setup lang="ts">
   import type { TabsItem } from '@nuxt/ui';
 
-  import type { CreatureCreate } from '~bestiary/model';
+  import type { CreatureCreate } from '../model';
 
   import { z } from 'zod';
 
   import { DictionaryService } from '~/shared/api';
   import { ActiveEffects } from '~active-effects/editor';
-  import { EFFECT_ORIGIN } from '~active-effects/model';
-  import { getInitialState } from '~bestiary/model';
-  import { CreaturePreview } from '~bestiary/preview';
+  import { EFFECT_ORIGIN, normalizeActiveEffects } from '~active-effects/model';
   import { EditorBaseInfo } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectAlignment } from '~ui/select';
@@ -18,6 +16,14 @@
   import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
   import { WorkshopEditorFormControls } from '~workshop/revision/ui';
 
+  import {
+    getInitialState,
+    normalizeCreatureActions,
+    normalizeCreatureSpellcasting,
+    normalizeLoadedCreatureActions,
+    normalizeLoadedCreatureSpellcasting,
+  } from '../model';
+  import { CreaturePreview } from '../preview';
   import {
     CREATURE_EDITOR_TABS,
     CREATURE_GALLERY_FIELD_LABEL,
@@ -31,6 +37,7 @@
     CreatureDefenses,
     CreatureHit,
     CreatureInitiative,
+    CreatureInventory,
     CreatureLair,
     CreatureLanguages,
     CreatureLegendaryActions,
@@ -39,7 +46,7 @@
     CreatureSize,
     CreatureSkills,
     CreatureSpeed,
-    CreatureTrait,
+    CreatureSpellcasting,
     CreatureType,
   } from './ui';
 
@@ -48,6 +55,24 @@
    * из всего блока нужно одно число, а ответ сервера здесь — `unknown`.
    */
   const loadedExperienceSchema = z.object({ value: z.number() });
+
+  /** Блок легендарных действий из `/raw`: разбирается только список записей. */
+  const loadedLegendarySchema = z
+    .record(z.string(), z.unknown())
+    .catch({})
+    .transform((legendary) => ({
+      ...legendary,
+      actions: normalizeLoadedCreatureActions(legendary.actions),
+    }));
+
+  /** Блок логова из `/raw`: разбирается только список эффектов. */
+  const loadedLairSchema = z
+    .record(z.string(), z.unknown())
+    .catch({})
+    .transform((lair) => ({
+      ...lair,
+      effects: normalizeLoadedCreatureActions(lair.effects),
+    }));
 
   const { data: challengeRatings } = await useAsyncData(
     'dictionaries-challenge-rating',
@@ -66,17 +91,30 @@
   function normalizeLoaded(
     raw: Record<string, unknown>,
   ): Record<string, unknown> {
+    // Механику разбирают все шесть списков боевого блока: без этого поля формы
+    // остались бы пустыми, а сохранение стёрло бы уже заведённые числа.
+    const result: Record<string, unknown> = {
+      ...raw,
+      traits: normalizeLoadedCreatureActions(raw.traits),
+      actions: normalizeLoadedCreatureActions(raw.actions),
+      bonusActions: normalizeLoadedCreatureActions(raw.bonusActions),
+      reactions: normalizeLoadedCreatureActions(raw.reactions),
+      legendary: loadedLegendarySchema.parse(raw.legendary),
+      lair: loadedLairSchema.parse(raw.lair),
+      spellcasting: normalizeLoadedCreatureSpellcasting(raw.spellcasting),
+    };
+
     const experience = loadedExperienceSchema.safeParse(raw.experience);
 
     if (!experience.success) {
-      return raw;
+      return result;
     }
 
     const option = challengeRatings.value?.find(
       (item) => item.value === experience.data.value,
     );
 
-    return option ? { ...raw, proficiencyBonus: option.pb } : raw;
+    return option ? { ...result, proficiencyBonus: option.pb } : result;
   }
 
   const { state, submitState, onError, onSubmit, revisionControl } =
@@ -85,11 +123,45 @@
       getInitialState,
       normalizeLoaded,
       revisionEntityType: REVISION_ENTITY_TYPES.CREATURE,
+      transformBeforeSubmit: (formState) => ({
+        ...formState,
+        traits: normalizeCreatureActions(formState.traits),
+        actions: normalizeCreatureActions(formState.actions),
+        bonusActions: normalizeCreatureActions(formState.bonusActions),
+        reactions: normalizeCreatureActions(formState.reactions),
+        legendary: {
+          ...formState.legendary,
+          actions: normalizeCreatureActions(formState.legendary.actions),
+        },
+        lair: {
+          ...formState.lair,
+          effects: normalizeCreatureActions(formState.lair.effects),
+        },
+        spellcasting: normalizeCreatureSpellcasting(formState.spellcasting),
+        activeEffects: normalizeActiveEffects(formState.activeEffects),
+      }),
     });
+
+  /**
+   * Лента вкладок: прокручивается по горизонтали, полоса прокрутки скрыта.
+   * Своей константой, а не объектом в шаблоне: строка длинная, и в атрибуте
+   * `:ui` её было не прочитать.
+   */
+  const TAB_LIST_CLASS =
+    'mb-6 max-w-full overflow-x-auto overscroll-x-contain hidden-scrollbar';
+
+  /**
+   * Вкладка не ужимается под ширину ленты: без этого восемь подписей делили
+   * экран телефона поровну и от каждой оставалась одна буква с многоточием.
+   */
+  const TAB_TRIGGER_CLASS = 'shrink-0';
 
   const tabItems: Array<TabsItem> = [
     { label: CREATURE_EDITOR_TABS.main, slot: 'main' },
     { label: CREATURE_EDITOR_TABS.statblock, slot: 'statblock' },
+    { label: CREATURE_EDITOR_TABS.inventory, slot: 'inventory' },
+    { label: CREATURE_EDITOR_TABS.spells, slot: 'spells' },
+    { label: CREATURE_EDITOR_TABS.traits, slot: 'traits' },
     { label: CREATURE_EDITOR_TABS.actions, slot: 'actions' },
     { label: CREATURE_EDITOR_TABS.effects, slot: 'effects' },
     { label: CREATURE_EDITOR_TABS.images, slot: 'images' },
@@ -110,11 +182,17 @@
 
     <!-- Вкладки не размонтируются: поля скрытых вкладок остаются в форме, и
       сохранение видит их наравне с открытой -->
+    <!-- Лента вкладок прокручивается, а не переносится: восемь подписей
+      целиком не влезают даже в планшет, а список без прокрутки распирал форму
+      до 811px и на телефоне за экран уезжала вся страница, а не только он.
+      `min-w-0` обязателен: ячейка сетки по умолчанию не ужимается ниже своего
+      содержимого, и лента продолжала бы задавать ширину всей формы -->
     <UTabs
       :items="tabItems"
       variant="pill"
+      class="min-w-0"
       :unmount-on-hide="false"
-      :ui="{ list: 'mb-6' }"
+      :ui="{ list: TAB_LIST_CLASS, trigger: TAB_TRIGGER_CLASS }"
     >
       <!-- ОСНОВНОЕ -->
       <template #main>
@@ -234,25 +312,6 @@
             :proficiency-bonus="state.proficiencyBonus"
           />
 
-          <UCard
-            variant="subtle"
-            class="col-span-full"
-          >
-            <template #header>
-              <h2 class="truncate text-base text-highlighted">Снаряжение</h2>
-            </template>
-
-            <UFormField
-              class="col-span-full md:col-span-13"
-              name="ac.text"
-            >
-              <UInput
-                v-model="state.equipments"
-                placeholder="Введи снаряжение"
-              />
-            </UFormField>
-          </UCard>
-
           <CreatureDefenses v-model="state.defenses" />
 
           <CreatureSenses
@@ -271,11 +330,37 @@
         </div>
       </template>
 
+      <!-- ИНВЕНТАРЬ -->
+      <template #inventory>
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-24">
+          <CreatureInventory
+            v-model="state.inventory"
+            v-model:text="state.inventoryText"
+            v-model:legacy-equipments="state.equipments"
+          />
+        </div>
+      </template>
+
+      <!-- ЗАКЛИНАНИЯ -->
+      <template #spells>
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-24">
+          <CreatureSpellcasting v-model="state.spellcasting" />
+        </div>
+      </template>
+
+      <!-- ОСОБЕННОСТИ -->
+      <template #traits>
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-24">
+          <CreatureAction
+            v-model="state.traits"
+            name="traits"
+          />
+        </div>
+      </template>
+
       <!-- ДЕЙСТВИЯ -->
       <template #actions>
         <div class="grid grid-cols-1 gap-6 md:grid-cols-24">
-          <CreatureTrait v-model="state.traits" />
-
           <CreatureAction
             v-model="state.actions"
             name="actions"
