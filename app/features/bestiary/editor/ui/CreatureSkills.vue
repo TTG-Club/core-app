@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CreateAbilities, CreateSkill } from '~bestiary/model';
+  import type { CreateAbilities, CreateSkill } from '../../model';
 
   import { DictionaryService } from '~/shared/api';
   import { getAbilityInfo } from '~/shared/types';

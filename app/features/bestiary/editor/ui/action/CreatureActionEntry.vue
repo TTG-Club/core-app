@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CreateAction } from '~bestiary/model';
+  import type { CreateAction } from '../../../model';
 
   import { ActiveEffects } from '~active-effects/editor';
   import { EFFECT_ORIGIN } from '~active-effects/model';

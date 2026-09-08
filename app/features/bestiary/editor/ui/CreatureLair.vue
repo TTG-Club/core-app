@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CreatureLair } from '~bestiary/model';
+  import type { CreatureLair } from '../../model';
 
   import { MarkupEditor } from '~ui/markup-editor';
 

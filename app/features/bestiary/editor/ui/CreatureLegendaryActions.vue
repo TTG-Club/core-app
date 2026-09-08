@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { LegendaryActions } from '~bestiary/model';
+  import type { LegendaryActions } from '../../model';
 
   import { MarkupEditor } from '~ui/markup-editor';
 

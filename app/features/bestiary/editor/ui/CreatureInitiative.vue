@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CreateAbility, CreateInitiative } from '~bestiary/model';
+  import type { CreateAbility, CreateInitiative } from '../../model';
 
   import { SelectMastery } from '~ui/select';
   import { watchDerivedField } from '~workshop/composable';

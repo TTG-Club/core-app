@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CreateAction } from '~bestiary/model';
+  import type { CreateAction } from '../../model';
 
   import {
     CREATURE_ACTION_ADD_LABELS,
