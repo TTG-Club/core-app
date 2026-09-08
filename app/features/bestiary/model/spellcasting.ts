@@ -1,7 +1,7 @@
 import { AbilityKey } from '~/shared/types';
 
 /**
- * Как ограничены применения порции заклинаний.
+ * Как ограничены применения группы заклинаний.
  *
  * Существо в редакции 2024 ячеек не тратит: у него либо заклинание «по
  * желанию», либо счётчик применений. Счётчик бывает двух смыслов, и путать их
@@ -23,10 +23,10 @@ export type CreatureSpellUsageMode =
   | 'RECHARGE'
   | 'CONSTANT';
 
-/** Какой отдых возвращает применения порции. */
+/** Какой отдых возвращает применения группы. */
 export type CreatureSpellRestKind = 'SHORT' | 'LONG';
 
-/** Заклинание порции: ссылка на карточку сайта и оговорки статблока. */
+/** Заклинание группы: ссылка на карточку сайта и оговорки статблока. */
 export interface CreatureSpellRef {
   /** Слаг карточки заклинания. */
   url: string | undefined;
@@ -47,7 +47,7 @@ export interface CreatureSpellRef {
   note: string | undefined;
 }
 
-/** Порция блока: список заклинаний под одним ограничением применений. */
+/** Группа блока: список заклинаний под одним ограничением применений. */
 export interface CreatureSpellGroup {
   mode: CreatureSpellUsageMode;
 
@@ -60,7 +60,7 @@ export interface CreatureSpellGroup {
   /** Значение словаря перезарядки («5-6»); только у режима перезарядки. */
   recharge: string | undefined;
 
-  /** Своя подпись порции вместо выведенной из режима. */
+  /** Своя подпись группы вместо выведенной из режима. */
   label: string | undefined;
 
   spells: Array<CreatureSpellRef>;
@@ -68,7 +68,7 @@ export interface CreatureSpellGroup {
 
 /**
  * Блок заклинаний существа: одна заклинательная характеристика, одна Сл и один
- * набор порций.
+ * набор групп.
  *
  * Блоков бывает несколько, и параметры у них разные: у зелёной карги «Магия
  * шабаша» считается от Интеллекта со Сл 11, а собственное «Использование
@@ -128,9 +128,9 @@ const REST_MODES: ReadonlySet<CreatureSpellUsageMode> = new Set([
 ]);
 
 /**
- * Число применений спрашивается у этой порции.
+ * Число применений спрашивается у этой группы.
  *
- * @param mode режим порции.
+ * @param mode режим группы.
  * @returns `true` — поле количества показывается.
  */
 export function isCreatureSpellCountMode(
@@ -140,16 +140,16 @@ export function isCreatureSpellCountMode(
 }
 
 /**
- * Вид отдыха спрашивается у этой порции.
+ * Вид отдыха спрашивается у этой группы.
  *
- * @param mode режим порции.
+ * @param mode режим группы.
  * @returns `true` — поле отдыха показывается.
  */
 export function isCreatureSpellRestMode(mode: CreatureSpellUsageMode): boolean {
   return REST_MODES.has(mode);
 }
 
-/** Пустая строка заклинания порции. */
+/** Пустая строка заклинания группы. */
 export function createEmptyCreatureSpellRef(): CreatureSpellRef {
   return {
     url: undefined,
@@ -159,7 +159,7 @@ export function createEmptyCreatureSpellRef(): CreatureSpellRef {
   };
 }
 
-/** Пустая порция: по умолчанию «по желанию» — самый частый режим в книгах. */
+/** Пустая группа: по умолчанию «по желанию» — самый частый режим в книгах. */
 export function createEmptyCreatureSpellGroup(): CreatureSpellGroup {
   return {
     mode: 'AT_WILL',
@@ -199,9 +199,9 @@ export function createEmptyCreatureSpellcastingBlock(): CreatureSpellcastingBloc
  * Готовит блоки заклинаний к отправке.
  *
  * Чистится только заведомый мусор: строки без слага (по ним ни VTTG заклинание
- * не найдёт, ни форма его не покажет) и поля, не относящиеся к режиму порции —
- * иначе у порции «по желанию» уехало бы количество, оставшееся от прежнего
- * режима. Пустые блоки и порции не выбрасываются: их оставляют
+ * не найдёт, ни форма его не покажет) и поля, не относящиеся к режиму группы —
+ * иначе у группы «по желанию» уехало бы количество, оставшееся от прежнего
+ * режима. Пустые блоки и группы не выбрасываются: их оставляют
  * недозаполненными между заходами, как и записи боевого блока.
  *
  * @param blocks блоки из формы.
@@ -259,7 +259,7 @@ const loadedSpellRefSchema = z
     }),
   );
 
-/** Порция из «сырого» ответа. */
+/** Группа из «сырого» ответа. */
 const loadedSpellGroupSchema = z
   .object({
     mode: z.string().nullish().catch(null),
@@ -333,7 +333,7 @@ const loadedSpellcastingSchema = z
  * Разбирает блоки заклинаний из ответа `/raw`.
  *
  * Схемой, а не приведением типа: ответ сервера здесь `unknown`, а форме нужны
- * настоящие массивы и значения перечислений — иначе `v-model` порции упёрся бы
+ * настоящие массивы и значения перечислений — иначе `v-model` группы упёрся бы
  * в `undefined`, а чужой режим молча остался бы в записи.
  *
  * @param raw значение поля `spellcasting` «сырого» ответа.
@@ -345,7 +345,7 @@ export function normalizeLoadedCreatureSpellcasting(
   return loadedSpellcastingSchema.parse(raw) ?? [];
 }
 
-/** Подписи режимов порции — в порядке показа в списке. */
+/** Подписи режимов группы — в порядке показа в списке. */
 export const CREATURE_SPELL_USAGE_MODE_OPTIONS: Array<{
   label: string;
   value: CreatureSpellUsageMode;
@@ -368,7 +368,7 @@ export const CREATURE_SPELL_REST_OPTIONS: Array<{
   { label: 'Продолжительный отдых', value: 'LONG' },
 ];
 
-/** Части выведенной подписи порции — так же, как заголовки в книгах. */
+/** Части выведенной подписи группы — так же, как заголовки в книгах. */
 const GROUP_LABEL_PARTS = {
   atWill: 'По желанию',
   constant: 'Постоянно активно',
@@ -378,14 +378,14 @@ const GROUP_LABEL_PARTS = {
   perLongRest: 'за продолжительный отдых',
   each: 'каждое',
   pool: 'на весь список',
-  unset: 'Порция без числа применений',
+  unset: 'Группа без числа применений',
 } as const;
 
 /**
- * Хвост подписи порции со счётчиком: за какой промежуток возвращаются
+ * Хвост подписи группы со счётчиком: за какой промежуток возвращаются
  * применения. У режимов «за отдых» промежуток зависит ещё и от вида отдыха.
  *
- * @param group порция.
+ * @param group группа.
  * @returns подпись промежутка.
  */
 function getGroupPeriodLabel(group: CreatureSpellGroup): string {
@@ -399,11 +399,11 @@ function getGroupPeriodLabel(group: CreatureSpellGroup): string {
 }
 
 /**
- * Подпись порции: своя, если автор её задал, иначе выведенная из режима —
- * «2 в день, каждое». По ней свёрнутая порция читается, как заголовок в книге.
+ * Подпись группы: своя, если автор её задал, иначе выведенная из режима —
+ * «2 в день, каждое». По ней свёрнутая группа читается, как заголовок в книге.
  *
- * @param group порция.
- * @returns подпись шапки порции.
+ * @param group группа.
+ * @returns подпись шапки группы.
  */
 export function getCreatureSpellGroupLabel(group: CreatureSpellGroup): string {
   if (group.label) {
