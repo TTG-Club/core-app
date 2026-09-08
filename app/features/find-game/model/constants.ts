@@ -1,5 +1,32 @@
 import { FIND_GAME_API_PREFIX } from '#shared/consts';
 
+export const GAME_LEAVE_LABEL = 'Выйти из игры';
+export const GAME_LEAVE_DESCRIPTION =
+  'Вы покинете состав игры и незавершённые сессии. История сыгранных встреч сохранится.';
+export const GAME_LEFT_TOAST = 'Вы вышли из игры';
+export const GAME_OWN_CARD_LABEL = 'Вы';
+export const GAME_PARTICIPANTS_PRIVATE_HINT =
+  'Карточки других участников появятся после принятия вашей заявки.';
+
+export const GAME_DETAIL_TABS = [
+  {
+    label: 'Участники',
+    icon: 'tabler:users',
+    slot: 'participants',
+    value: 'participants',
+  },
+  {
+    label: 'Сессии',
+    icon: 'tabler:calendar-event',
+    slot: 'sessions',
+    value: 'sessions',
+  },
+];
+
+export const SESSION_START_IN_PAST_ERROR =
+  'Дата и время начала сессии должны быть в будущем';
+export const SESSION_VALIDATION_CLOCK_INTERVAL = 1000;
+
 /* ------------------------------------------------------------------ */
 /* Маршруты сайта                                                      */
 /* ------------------------------------------------------------------ */
@@ -427,13 +454,21 @@ export const GAME_OPEN_LABEL = 'Открыть игру';
 
 /* Подсказки трёхпозиционного чипа фильтра. */
 export const FILTER_CHIP_NEUTRAL_HINT = 'Не важно — нажмите, чтобы искать это';
-export const FILTER_CHIP_INCLUDED_HINT = 'Ищем это — нажмите, чтобы исключить';
+export const FILTER_CHIP_EXCLUDE_LABEL = 'Исключать';
+export const SESSION_AGENDA_LABELS = {
+  today: 'Сегодня',
+  week: 'На этой неделе',
+  later: 'Позже',
+  past: 'Прошедшие встречи',
+  unscheduled: 'Дата согласуется',
+};
+export const FILTER_CHIP_INCLUDED_HINT = 'Включено в поиск';
 export const FILTER_CHIP_EXCLUDED_HINT = 'Исключено — нажмите, чтобы сбросить';
 
 /* Подписи панели фильтров каталога. */
 export const CATALOG_FILTERS_TITLE = 'Фильтры';
 export const CATALOG_FILTERS_DESCRIPTION =
-  'Нажимайте на значения: первое нажатие добавляет условие, второе — исключает.';
+  'Выберите условия и нажмите «Показать игры». Для исключения значений включите «Исключать». Закрытие панели отменяет неприменённые изменения.';
 export const CATALOG_FILTERS_RESET_LABEL = 'Сбросить';
 export const CATALOG_FILTERS_APPLY_LABEL = 'Показать игры';
 export const CATALOG_FILTER_SYSTEM_LABEL = 'Система';
@@ -442,7 +477,7 @@ export const CATALOG_FILTER_DURATION_LABEL = 'Длительность';
 export const CATALOG_FILTER_COST_LABEL = 'Стоимость';
 export const CATALOG_FILTER_STATUS_LABEL = 'Статус набора';
 export const CATALOG_FILTER_CITY_LABEL = 'Города';
-export const CATALOG_FILTER_CITY_PLACEHOLDER = 'Город и Enter';
+export const CATALOG_FILTER_CITY_PLACEHOLDER = 'Найдите и выберите город';
 export const CATALOG_FILTER_CITY_EXCLUDE_LABEL = 'Исключить города';
 export const CATALOG_FILTER_CROSSPLAY_LABEL = 'Кросспол';
 export const CATALOG_FILTER_MIN_AGE_LABEL = 'Возраст от';
@@ -640,7 +675,31 @@ export const GAME_EDIT_COST_LOCKED_HINT =
 export const GAME_EDIT_VISIBILITY_HINT =
   'При переходе в приватную игру выдаётся новая ссылка-приглашение, при возврате в публичную прежняя перестаёт работать.';
 export const GAME_FORM_MAIN_SECTION = 'Об игре';
-export const GAME_FORM_FORMAT_SECTION = 'Формат и условия';
+export const GAME_FORM_FORMAT_SECTION = 'Формат и участники';
+export const GAME_FORM_ADDITIONAL_SECTION = 'Дополнительно: ссылки и чаты';
+export const GAME_FORM_UNSAVED_WARNING =
+  'Изменения не сохранены. Покинуть форму?';
+export const GAME_FORM_REQUIRED_ERROR = 'Заполните это поле';
+export const GAME_FORM_LEAVE_TITLE = 'Несохранённые изменения';
+export const GAME_FORM_LEAVE_LABEL = 'Выйти без сохранения';
+export const GAME_FORM_STAY_LABEL = 'Продолжить редактирование';
+export const SESSION_AGENDA_CLOCK_INTERVAL = 60_000;
+export const GAME_NEXT_SESSION_FALLBACK = 'Время согласуется';
+export const GAME_NEXT_SESSION_LOADING_LABEL = 'Время встречи…';
+export const GAME_PRICE_PENDING_LABEL = 'Стоимость уточняется';
+export const GAME_PRICE_PER_SESSION_LABEL = 'за встречу';
+export const GAME_FREE_SEATS_LABEL = 'Свободно мест';
+export const MY_GAMES_OVERVIEW_SIZE = 4;
+export const MY_GAMES_UPCOMING_LABEL = 'Ближайшие встречи';
+export const MY_GAMES_ATTENTION_LABEL = 'Требуют внимания';
+export const MY_GAMES_UPCOMING_EMPTY = 'Назначенных встреч пока нет';
+export const MY_GAMES_ATTENTION_EMPTY =
+  'Нет ожидающих заявок и встреч без даты';
+export const MY_GAMES_ATTENTION_ACTION =
+  'Разобрать заявки или назначить встречу';
+export const MY_GAMES_PLAYING_LABEL = 'Участвую';
+export const MY_GAMES_HOSTING_LABEL = 'Веду';
+export const MY_GAMES_APPLICATIONS_LABEL = 'Мои заявки';
 export const GAME_FORM_PLAYERS_SECTION = 'Игроки';
 
 export const GAME_FIELD_TITLE_LABEL = 'Название';

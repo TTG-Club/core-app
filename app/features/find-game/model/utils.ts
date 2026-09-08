@@ -1,6 +1,10 @@
-import type { Game, GameSession, Reputation } from './types';
+import type { Game, GameSession, NextGameSession, Reputation } from './types';
 
 import {
+  GAME_COST_TYPE_LABELS,
+  GAME_NEXT_SESSION_FALLBACK,
+  GAME_PRICE_PENDING_LABEL,
+  GAME_PRICE_PER_SESSION_LABEL,
   GAME_TYPE_LABELS,
   GAMES_ROUTE,
   INVITE_CODE_QUERY_KEY,
@@ -12,6 +16,53 @@ import {
 /** Сколько минут в часе — для разбивки длительности сессии. */
 const MINUTES_IN_HOUR = 60;
 const MINUTES_IN_DAY = 24 * MINUTES_IN_HOUR;
+const MILLIS_IN_MINUTE = 60_000;
+
+/** Показывает начало и ожидаемое окончание в часовом поясе читателя. */
+export function getNextSessionLabel(
+  session: NextGameSession | null,
+  timeZone?: string,
+): string {
+  if (!session?.startsAt) {
+    return GAME_NEXT_SESSION_FALLBACK;
+  }
+
+  const start = new Date(session.startsAt);
+
+  const formatter = new Intl.DateTimeFormat('ru-RU', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZoneName: 'short',
+    timeZone,
+  });
+
+  if (!session.estimatedDurationMinutes) {
+    return formatter.format(start);
+  }
+
+  const end = new Date(
+    start.getTime() + session.estimatedDurationMinutes * MILLIS_IN_MINUTE,
+  );
+
+  return formatter.formatRange(start, end);
+}
+
+/** Цена ближайшей встречи; отсутствие цены не означает бесплатную игру. */
+export function getGameCardPriceLabel(game: Game): string {
+  if (game.costType === 'FREE') {
+    return GAME_COST_TYPE_LABELS.FREE;
+  }
+
+  const session = game.nextSession;
+
+  if (session?.priceAmount == null || !session.priceCurrency) {
+    return GAME_PRICE_PENDING_LABEL;
+  }
+
+  return `${session.priceAmount.toLocaleString('ru-RU')} ${session.priceCurrency} / ${GAME_PRICE_PER_SESSION_LABEL}`;
+}
 
 /**
  * Подпись формата игры. У офлайн-игры к формату добавляется город: без него
@@ -153,9 +204,6 @@ export function getSessionDurationLabel(minutes: number | null): string | null {
 
   return rest ? `${hoursLabel} ${rest} мин` : hoursLabel;
 }
-
-/** Миллисекунд в минуте — для перевода паузы ожидания. */
-const MILLIS_IN_MINUTE = 60_000;
 
 /**
  * Сколько ждать до следующей попытки: «через 5 часов», «через 12 минут».
@@ -337,4 +385,12 @@ export function fromLocalDateTimeInput(value: string): string | null {
   const date = new Date(value);
 
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+/** Проверяет, что начало сессии строго позже текущего момента с учётом часового пояса. */
+export function isFutureSessionStart(
+  startsAt: string | null,
+  currentTime: number,
+): boolean {
+  return !!startsAt && Date.parse(startsAt) > currentTime;
 }

@@ -141,9 +141,8 @@ export function resolveGameViewerAbilities(
     // Заявка подаётся один раз на игру: повторную сервис отвергает, а мастер
     // в собственную игру не записывается.
     canApply: isSignedIn && !isMaster && !registration,
-    // Отозвать можно только неразобранную: принятое место согласовано, и
-    // тихий уход подвёл бы группу.
-    canWithdraw: registration?.status === 'PENDING',
+    // Принятый игрок может выйти из состава, ожидающий — отозвать заявку.
+    canWithdraw: registration?.status === 'PENDING' || isApprovedPlayer,
     isPending: registration?.status === 'PENDING',
     isRejected: registration?.status === 'REJECTED',
     needsSignIn: !isSignedIn,

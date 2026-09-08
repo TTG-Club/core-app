@@ -52,6 +52,13 @@ import {
   SESSION_REGISTRATION_STATUSES,
 } from './constants';
 
+export const gameParticipantsSchema = z.array(
+  z.object({
+    playerId: z.string().uuid(),
+    characterName: z.string().nullable(),
+  }),
+);
+
 /* ------------------------------------------------------------------ */
 /* Примитивы                                                           */
 /* ------------------------------------------------------------------ */
@@ -287,7 +294,17 @@ export function parseCities(input: unknown): Array<CityOption> {
 /* Игра                                                                */
 /* ------------------------------------------------------------------ */
 
+const nextGameSessionSchema = z.object({
+  id: uuidSchema,
+  startsAt: z.string().datetime({ offset: true }).nullable(),
+  estimatedDurationMinutes: z.number().int().positive().nullable(),
+  priceAmount: decimalSchema.nullable(),
+  priceCurrency: z.string().length(3).nullable(),
+});
+
 const gameResponseSchema = z.object({
+  nextSession: nextGameSessionSchema.nullish(),
+  myRegistrationStatus: z.enum(SESSION_REGISTRATION_STATUSES).nullish(),
   // Без идентификаторов запись бесполезна: по ним строятся ссылки и права.
   id: uuidSchema,
   masterId: uuidSchema,
@@ -335,6 +352,8 @@ const gameResponseSchema = z.object({
  */
 function toGame(parsed: z.infer<typeof gameResponseSchema>): Game {
   return {
+    nextSession: parsed.nextSession ?? null,
+    myRegistrationStatus: parsed.myRegistrationStatus ?? null,
     id: parsed.id,
     masterId: parsed.masterId,
     title: parsed.title,

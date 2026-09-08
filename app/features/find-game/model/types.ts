@@ -24,6 +24,22 @@ export type GameDurationType = (typeof GAME_DURATION_TYPES)[number];
 export type GameCostType = (typeof GAME_COST_TYPES)[number];
 export type GameVisibility = (typeof GAME_VISIBILITIES)[number];
 export type GameStatus = (typeof GAME_STATUSES)[number];
+export type GamePersonalRole =
+  | 'ALL'
+  | 'PLAYER'
+  | 'MASTER'
+  | 'APPLICATIONS'
+  | 'UPCOMING'
+  | 'ATTENTION';
+
+/** Общедоступные сведения о ближайшей встрече. */
+export interface NextGameSession {
+  id: string;
+  startsAt: string | null;
+  estimatedDurationMinutes: number | null;
+  priceAmount: number | null;
+  priceCurrency: string | null;
+}
 export type GameSessionStatus = (typeof GAME_SESSION_STATUSES)[number];
 export type SessionPaymentType = (typeof SESSION_PAYMENT_TYPES)[number];
 export type ProfileGender = (typeof PROFILE_GENDERS)[number];
@@ -119,6 +135,8 @@ export interface CreateSessionReviewRequest {
 
 /** Игра из выдачи find-game-api. */
 export interface Game {
+  nextSession: NextGameSession | null;
+  myRegistrationStatus: SessionRegistrationStatus | null;
   id: string;
   masterId: string;
   title: string;
@@ -522,4 +540,9 @@ export interface FindGameNotification {
 export interface ParticipantName {
   userId: string;
   displayName: string;
+}
+/** Краткая карточка участника без приватных данных заявки. */
+export interface GameParticipant {
+  playerId: string;
+  characterName: string | null;
 }

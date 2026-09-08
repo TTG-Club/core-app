@@ -14,11 +14,8 @@
     getFindGameErrorMessage,
     REGISTRATION_REVIEWED_TOAST,
     REGISTRATIONS_EMPTY_TITLE,
-    SESSION_REGISTRATIONS_LABEL,
   } from '../model';
   import { RegistrationRejectModal, RegistrationRow } from './ui';
-
-  const isOpen = defineModel<boolean>('open', { required: true });
 
   const { game } = defineProps<{
     game: Game;
@@ -42,9 +39,7 @@
     },
   });
 
-  // Пока панель закрыта, запрашивать нечего: заявки подтягиваются ровно на
-  // её открытие.
-  const requestedGameId = computed(() => (isOpen.value ? game.id : null));
+  const requestedGameId = computed(() => game.id);
 
   const { approvedRegistrations, isLoading, registrations, review, status } =
     useGameRegistrations(requestedGameId);
@@ -141,59 +136,51 @@
 </script>
 
 <template>
-  <USlideover
-    v-model:open="isOpen"
-    :title="SESSION_REGISTRATIONS_LABEL"
-    :description="game.title"
-  >
-    <template #body>
-      <div class="flex flex-col gap-3">
-        <UBadge
-          :color="isFull ? 'warning' : 'neutral'"
-          variant="subtle"
-          size="sm"
-          icon="tabler:users"
-          class="self-start"
-          :label="fillLabel"
-        />
+  <div class="flex flex-col gap-3">
+    <UBadge
+      :color="isFull ? 'warning' : 'neutral'"
+      variant="subtle"
+      size="sm"
+      icon="tabler:users"
+      class="self-start"
+      :label="fillLabel"
+    />
 
-        <div
-          v-if="isLoading"
-          class="flex flex-col gap-2"
-        >
-          <USkeleton
-            v-for="index in 3"
-            :key="index"
-            class="h-24 w-full rounded-md"
-          />
-        </div>
+    <div
+      v-if="isLoading"
+      class="flex flex-col gap-2"
+    >
+      <USkeleton
+        v-for="index in 3"
+        :key="index"
+        class="h-24 w-full rounded-md"
+      />
+    </div>
 
-        <UiResult
-          v-else-if="isEmpty"
-          status="info"
-          :title="REGISTRATIONS_EMPTY_TITLE"
-        />
+    <UiResult
+      v-else-if="isEmpty"
+      status="info"
+      :title="REGISTRATIONS_EMPTY_TITLE"
+    />
 
-        <div
-          v-else
-          class="flex flex-col gap-2"
-        >
-          <RegistrationRow
-            v-for="registration in registrations"
-            :key="registration.id"
-            :registration="registration"
-            :player-name="getParticipantName(registration.playerId)"
-            :reputation="getPlayerReputation(registration.playerId)"
-            :game-id="game.id"
-            :is-full="isFull"
-            :busy="isBusy"
-            @approve="approve"
-            @reject="askReject"
-          />
-        </div>
-      </div>
-    </template>
-  </USlideover>
+    <div
+      v-else
+      class="grid items-start gap-3 md:grid-cols-2 xl:grid-cols-3"
+    >
+      <RegistrationRow
+        v-for="registration in registrations"
+        :key="registration.id"
+        :registration="registration"
+        :player-name="getParticipantName(registration.playerId)"
+        :reputation="getPlayerReputation(registration.playerId)"
+        :game-id="game.id"
+        :is-full="isFull"
+        :busy="isBusy"
+        @approve="approve"
+        @reject="askReject"
+      />
+    </div>
+  </div>
 
   <RegistrationRejectModal
     v-model:open="isRejectOpen"

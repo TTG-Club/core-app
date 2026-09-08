@@ -11,6 +11,8 @@ import type {
   FindGameUserProfile,
   Follow,
   Game,
+  GameParticipant,
+  GamePersonalRole,
   GameRegistration,
   GameSearchFilter,
   GameSession,
@@ -48,6 +50,7 @@ import {
 import { toGameSearchQuery } from './filters';
 import {
   createGameRequestSchema,
+  gameParticipantsSchema,
   parseCities,
   parseFindGameProfile,
   parseFollows,
@@ -206,12 +209,18 @@ export async function fetchMyGames(
   page: number,
   size: number,
   statuses: ReadonlyArray<GameStatus> = [],
+  role: GamePersonalRole = 'ALL',
 ): Promise<SpringPage<Game>> {
   const response = await $fetch(`${GAMES_API_PATH}/my`, {
     method: 'GET',
     // Без отбора сервис не отдаёт отменённые: они не состоялись, и в общем
     // списке своих игр им место только по прямому запросу.
-    query: { page, size, ...(statuses.length ? { status: statuses } : {}) },
+    query: {
+      page,
+      size,
+      role,
+      ...(statuses.length ? { status: statuses } : {}),
+    },
     retry: 0,
   });
 
@@ -811,8 +820,7 @@ export async function fetchOwnGameRegistration(
 }
 
 /**
- * Отзывает собственную заявку. Принятую так не отозвать: место согласовано,
- * и об уходе договариваются с мастером.
+ * Отзывает собственную заявку или выводит принятого игрока из состава игры.
  *
  * @param gameId Идентификатор игры.
  */
@@ -836,6 +844,21 @@ export async function fetchGameRegistrations(
   });
 
   return parseGameRegistrations(response);
+}
+
+/** Загружает состав для принятого игрока, не раскрывая приватные сведения заявок. */
+export async function fetchGameParticipants(
+  gameId: string,
+): Promise<GameParticipant[]> {
+  const response: unknown = await $fetch(
+    `${registrationsPath(gameId)}/participants`,
+    {
+      method: 'GET',
+      retry: 0,
+    },
+  );
+
+  return gameParticipantsSchema.parse(response);
 }
 
 /**

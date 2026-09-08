@@ -233,7 +233,8 @@ export function useGameDetail(
   async function withdrawFromGame(): Promise<void> {
     await withdrawGameRegistration(currentGameId.value);
 
-    await Promise.all([refreshSessions(), refreshOwnRegistrations()]);
+    await refreshAll();
+    await refreshOwnParticipations();
   }
 
   /**

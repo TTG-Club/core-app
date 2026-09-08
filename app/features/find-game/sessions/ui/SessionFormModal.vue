@@ -13,6 +13,7 @@
     durationBetween,
     fromLocalDateTimeInput,
     getDefaultSessionDate,
+    isFutureSessionStart,
     SESSION_CREATE_LABEL,
     SESSION_CREATE_TITLE,
     SESSION_CURRENCIES,
@@ -31,6 +32,7 @@
     SESSION_PAYMENT_TYPES,
     SESSION_PRICE_LABEL,
     SESSION_PRICE_MIN,
+    SESSION_START_IN_PAST_ERROR,
     SESSION_TIME_END_LABEL,
     SESSION_TIME_RANGE_HINT,
     SESSION_TIME_START_LABEL,
@@ -38,6 +40,7 @@
     SESSION_TITLE_LABEL,
     SESSION_TITLE_MAX_LENGTH,
     SESSION_TITLE_PLACEHOLDER,
+    SESSION_VALIDATION_CLOCK_INTERVAL,
   } from '../../model';
 
   const isOpen = defineModel<boolean>('open', { required: true });
@@ -66,6 +69,7 @@
   }
 
   const form = ref<SessionFormState>(createEmptyForm());
+  const currentTime = useNow({ interval: SESSION_VALIDATION_CLOCK_INTERVAL });
 
   // Платная игра не обязана быть платной целиком, поэтому платёжные поля
   // показываются, только пока мастер не объявил сессию бесплатной.
@@ -151,10 +155,20 @@
         && form.value.priceAmount >= SESSION_PRICE_MIN),
   );
 
+  const isStartValid = computed(() =>
+    isFutureSessionStart(startsAtIso.value, currentTime.value.getTime()),
+  );
+
+  const startError = computed(() =>
+    startsAtIso.value && !isStartValid.value
+      ? SESSION_START_IN_PAST_ERROR
+      : undefined,
+  );
+
   const isValid = computed(
     () =>
       !!form.value.title.trim()
-      && !!startsAtIso.value
+      && isStartValid.value
       && isPriceValid.value
       && isCurrencyValid.value
       && (!isPaid.value || !!form.value.paymentType),
@@ -170,6 +184,9 @@
    * вовсе — сервис отвергает запрос, в котором они заданы.
    */
   function submit(): void {
+    // Повторная проверка закрывает промежуток между тиками часов и отправкой.
+    currentTime.value = new Date();
+
     if (!isValid.value) {
       return;
     }
@@ -235,6 +252,7 @@
         <div class="grid gap-3 sm:grid-cols-2">
           <UFormField
             :label="SESSION_DATE_LABEL"
+            :error="startError"
             required
           >
             <UInput

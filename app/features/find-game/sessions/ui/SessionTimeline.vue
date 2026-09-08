@@ -100,7 +100,31 @@
 
   // Пока период не листали, он показывает ближайшую сессию, а не «сегодня»:
   // у кампании раз в две недели сегодня чаще всего пусто.
-  const anchor = ref<number | null>(null);
+  const route = useRoute();
+  const router = useRouter();
+
+  const anchor = computed<number | null>({
+    get: () => {
+      const query = route.query.sessionAnchor;
+
+      if (typeof query !== 'string' || !query) {
+        return null;
+      }
+
+      const timestamp = Date.parse(query);
+
+      return Number.isFinite(timestamp) ? timestamp : null;
+    },
+    set: (timestamp) => {
+      void router.replace({
+        query: {
+          ...route.query,
+          sessionAnchor:
+            timestamp === null ? undefined : new Date(timestamp).toISOString(),
+        },
+      });
+    },
+  });
 
   /** Открытая карточка встречи; `null` — дровер закрыт. */
   const detailSession = ref<GameSession | null>(null);

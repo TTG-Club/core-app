@@ -1,6 +1,12 @@
 <script setup lang="ts">
+  import type { GamePersonalRole } from '~find-game/model';
+
   import { Role } from '~/shared/types';
-  import { GameCard, GameCardSkeleton } from '~find-game/catalog';
+  import {
+    GameCard,
+    GameCardSkeleton,
+    MyGamesOverview,
+  } from '~find-game/catalog';
   import { useMyGames, useParticipantNames } from '~find-game/composables';
   import {
     BookmarkedPlayersPanel,
@@ -19,12 +25,14 @@
     GAMES_MY_NAVIGATION_LABEL,
     GAMES_ROUTE,
     getFindGameErrorMessage,
+    MY_GAMES_APPLICATIONS_LABEL,
     MY_GAMES_EMPTY_DESCRIPTION,
     MY_GAMES_EMPTY_TITLE,
     MY_GAMES_ERROR_TITLE,
+    MY_GAMES_HOSTING_LABEL,
+    MY_GAMES_PLAYING_LABEL,
     MY_GAMES_STATUS_ALL_LABEL,
     MY_GAMES_STATUS_HINT,
-    MY_GAMES_TAB_LABEL,
   } from '~find-game/model';
   import { NotificationsBell } from '~find-game/notifications';
   import { PageGrid } from '~ui/page';
@@ -39,6 +47,31 @@
     title: GAMES_MY_NAVIGATION_LABEL,
   });
 
+  const route = useRoute();
+  const router = useRouter();
+
+  const tab = computed({
+    get: () =>
+      typeof route.query.tab === 'string' && route.query.tab
+        ? route.query.tab
+        : 'playing',
+    set: (value: string) => {
+      void router.replace({ query: { ...route.query, tab: value } });
+    },
+  });
+
+  const personalRole = computed<GamePersonalRole>(() => {
+    if (tab.value === 'hosting') {
+      return 'MASTER';
+    }
+
+    if (tab.value === 'applications') {
+      return 'APPLICATIONS';
+    }
+
+    return 'PLAYER';
+  });
+
   const {
     error,
     games,
@@ -50,7 +83,7 @@
     status,
     statuses,
     totalGames,
-  } = useMyGames();
+  } = useMyGames(personalRole);
 
   /**
    * Ряд отбора: «Активные» — всё, кроме отменённых, дальше по одному
@@ -94,7 +127,13 @@
    * пропустить его новую.
    */
   const tabItems = [
-    { value: 'games', label: MY_GAMES_TAB_LABEL, icon: 'tabler:cards' },
+    { value: 'playing', label: MY_GAMES_PLAYING_LABEL, icon: 'tabler:users' },
+    { value: 'hosting', label: MY_GAMES_HOSTING_LABEL, icon: 'tabler:cards' },
+    {
+      value: 'applications',
+      label: MY_GAMES_APPLICATIONS_LABEL,
+      icon: 'tabler:send',
+    },
     {
       value: 'masters',
       label: FOLLOWED_MASTERS_TAB_LABEL,
@@ -106,8 +145,6 @@
       icon: 'tabler:star',
     },
   ];
-
-  const tab = ref('games');
 
   const { getParticipantName, resolveNames } = useParticipantNames();
 
@@ -140,10 +177,13 @@
 
     <template #default>
       <div class="flex flex-col gap-4">
+        <MyGamesOverview />
+
         <UTabs
           v-model="tab"
           :items="tabItems"
           :content="false"
+          :ui="{ list: 'flex-wrap' }"
           class="w-full"
         />
 

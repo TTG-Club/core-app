@@ -9,6 +9,7 @@
     GAME_COST_TYPE_LABELS,
     GAME_DURATION_TYPE_LABELS,
     GAME_MASTER_LABEL,
+    GAME_NEXT_SESSION_LOADING_LABEL,
     GAME_SEATS_MAX_ICONS,
     GAME_STATUS_COLORS,
     GAME_STATUS_LABELS,
@@ -18,7 +19,9 @@
     getGameRoute,
     getGameSeatsCounter,
     getGameSeatsHint,
+    getNextSessionLabel,
     MASTER_PROFILE_OPEN_HINT,
+    SESSION_REGISTRATION_STATUS_LABELS,
   } from '../../model';
   import { GameCover } from '../../ui';
 
@@ -43,6 +46,20 @@
   const gameRoute = computed(() => getGameRoute(game.id));
 
   const isFree = computed(() => game.costType === 'FREE');
+  const isMounted = useMounted();
+
+  // Часовой пояс браузера может отличаться от серверного: локальное время считаем после гидратации.
+  const nextSessionLabel = computed(() =>
+    isMounted.value
+      ? getNextSessionLabel(game.nextSession)
+      : GAME_NEXT_SESSION_LOADING_LABEL,
+  );
+
+  const registrationLabel = computed(() =>
+    showStatus && game.myRegistrationStatus
+      ? SESSION_REGISTRATION_STATUS_LABELS[game.myRegistrationStatus]
+      : null,
+  );
 
   /**
    * Значки карточки. Их ровно столько, сколько влезает в две строки: карточка
@@ -207,6 +224,22 @@
         variant="subtle"
         size="sm"
         :label="badge.label"
+      />
+    </div>
+
+    <div class="flex flex-col gap-1 text-sm text-toned">
+      <span class="flex items-start gap-2"
+        ><UIcon
+          name="tabler:calendar-event"
+          class="mt-0.5 size-4 shrink-0"
+        />{{ nextSessionLabel }}</span
+      >
+
+      <UBadge
+        v-if="registrationLabel"
+        :label="registrationLabel"
+        variant="subtle"
+        class="w-fit"
       />
     </div>
 

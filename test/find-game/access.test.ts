@@ -22,6 +22,9 @@ const GAME_ID = 'game-1';
 function makeGame(overrides: Partial<Game> = {}): Game {
   return {
     id: GAME_ID,
+    nextSession: null,
+    myRegistrationStatus: null,
+    venue: null,
     masterId: MASTER_ID,
     title: 'Игра',
     system: 'DND_2024',
@@ -210,13 +213,12 @@ describe('заявка в игру', () => {
     expect(abilities.needsSignIn).toBe(true);
   });
 
-  it('отозвать можно только неразобранную', () => {
-    // Принятое место согласовано, и тихий уход подвёл бы группу.
+  it('ожидающий может отозвать заявку, а принятый — выйти из игры', () => {
     expect(viewerOf(game, makeRegistration()).canWithdraw).toBe(true);
 
     expect(
       viewerOf(game, makeRegistration({ status: 'APPROVED' })).canWithdraw,
-    ).toBe(false);
+    ).toBe(true);
 
     expect(
       viewerOf(game, makeRegistration({ status: 'REJECTED' })).canWithdraw,

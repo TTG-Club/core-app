@@ -7,15 +7,16 @@
   import {
     APPLY_LABEL,
     APPLY_SENT_TOAST,
-    APPLY_WITHDRAW_LABEL,
     APPLY_WITHDRAWN_TOAST,
     FIND_GAME_NOT_FOUND_MESSAGE,
     FIND_GAME_UNKNOWN_ERROR_MESSAGE,
     GAME_CANCELLED_TOAST,
     GAME_CLOSED_TOAST,
     GAME_DELETED_TOAST,
+    GAME_DETAIL_TABS,
     GAME_GUEST_NOTICE_DESCRIPTION,
     GAME_GUEST_NOTICE_TITLE,
+    GAME_LEFT_TOAST,
     GAME_RAISED_TOAST,
     GAME_RECRUITMENT_CLOSED_TOAST,
     GAME_RECRUITMENT_OPENED_TOAST,
@@ -28,9 +29,11 @@
     REGISTRATION_REJECTED_REASON_TITLE,
     SESSION_REGISTRATION_STATUS_COLORS,
     SESSION_REGISTRATION_STATUS_LABELS,
-    SESSION_REGISTRATIONS_LABEL,
   } from '~find-game/model';
-  import { GameRegistrationsPanel } from '~find-game/registrations';
+  import {
+    GameParticipantCards,
+    GameRegistrationsPanel,
+  } from '~find-game/registrations';
   import { GameSessions } from '~find-game/sessions';
   import { getGameDescriptionText } from '~find-game/ui';
   import { UiResult } from '~ui/result';
@@ -235,7 +238,6 @@
   }
 
   const isApplyOpen = ref(false);
-  const isRegistrationsOpen = ref(false);
 
   /** Открывает окно заявки в игру. */
   function openApply(): void {
@@ -260,12 +262,12 @@
 
   /** Отзывает собственную заявку. */
   function handleWithdraw(): void {
-    runAction(APPLY_WITHDRAWN_TOAST, withdrawFromGame);
-  }
-
-  /** Открывает разбор заявок игры. */
-  function openRegistrations(): void {
-    isRegistrationsOpen.value = true;
+    runAction(
+      abilities.value.isApprovedPlayer
+        ? GAME_LEFT_TOAST
+        : APPLY_WITHDRAWN_TOAST,
+      withdrawFromGame,
+    );
   }
 </script>
 
@@ -370,25 +372,6 @@
               @click.left.exact.prevent="openApply"
             />
 
-            <UButton
-              v-if="abilities.canWithdraw"
-              color="neutral"
-              variant="subtle"
-              icon="tabler:arrow-back-up"
-              :disabled="isBusy"
-              :label="APPLY_WITHDRAW_LABEL"
-              @click.left.exact.prevent="handleWithdraw"
-            />
-
-            <UButton
-              v-if="abilities.canReviewRegistrations"
-              color="neutral"
-              variant="subtle"
-              icon="tabler:clipboard-list"
-              :label="SESSION_REGISTRATIONS_LABEL"
-              @click.left.exact.prevent="openRegistrations"
-            />
-
             <UBadge
               v-if="ownRegistration"
               :color="
@@ -413,33 +396,54 @@
             :description="ownRegistration.rejectionReason"
           />
 
-          <GameSessions
-            :game="game"
-            :sessions="sessions"
-            :abilities="abilities"
-            :participation-by-session="ownParticipationBySession"
-            :create-session="handleCreateSession"
-            :create-session-series="handleCreateSeries"
-            :copy-session="handleCopySession"
-            :change-attendance="changeAttendance"
-            :complete-session="completeSession"
-            :cancel-session="cancelSession"
-            :start-session="startSession"
-            :loading="areSessionsLoading"
-            @refresh="handleRegistrationsChanged"
-          />
+          <UTabs
+            :key="game.id"
+            :items="GAME_DETAIL_TABS"
+            :default-value="GAME_DETAIL_TABS[0]?.value"
+            variant="link"
+            :unmount-on-hide="false"
+            :ui="{ list: 'justify-start', content: 'pt-5' }"
+          >
+            <template #participants>
+              <GameRegistrationsPanel
+                v-if="abilities.canReviewRegistrations"
+                :game="game"
+                @changed="handleRegistrationsChanged"
+              />
+
+              <GameParticipantCards
+                v-else
+                :game-id="game.id"
+                :own-registration="ownRegistration"
+                :busy="isBusy"
+                @withdraw="handleWithdraw"
+              />
+            </template>
+
+            <template #sessions>
+              <GameSessions
+                :game="game"
+                :sessions="sessions"
+                :abilities="abilities"
+                :participation-by-session="ownParticipationBySession"
+                :create-session="handleCreateSession"
+                :create-session-series="handleCreateSeries"
+                :copy-session="handleCopySession"
+                :change-attendance="changeAttendance"
+                :complete-session="completeSession"
+                :cancel-session="cancelSession"
+                :start-session="startSession"
+                :loading="areSessionsLoading"
+                @refresh="handleRegistrationsChanged"
+              />
+            </template>
+          </UTabs>
 
           <GameApplyModal
             v-model:open="isApplyOpen"
             :game="game"
             :loading="isBusy"
             @submit="handleApply"
-          />
-
-          <GameRegistrationsPanel
-            v-model:open="isRegistrationsOpen"
-            :game="game"
-            @changed="handleRegistrationsChanged"
           />
         </template>
       </div>
