@@ -260,14 +260,8 @@ export const DEFAULT_EFFECT_CHANGE_PRIORITY = 20;
 /** Иконка эффекта по умолчанию. */
 export const DEFAULT_EFFECT_ICON = 'tabler:sparkles';
 
-/** Генерирует уникальный id эффекта. */
-function generateEffectId(): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return `effect-${crypto.randomUUID()}`;
-  }
-
-  return `effect-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
+/** Приставка ключа эффекта: по ней в данных видно, чей это ключ. */
+const EFFECT_ID_PREFIX = 'effect';
 
 /**
  * Создаёт пустой активный эффект с дефолтами VTTG.
@@ -284,7 +278,7 @@ export function createEmptyActiveEffect(
   defaultTarget: EffectTarget = 'self',
 ): ActiveEffect {
   return {
-    id: generateEffectId(),
+    id: createEntityId(EFFECT_ID_PREFIX),
     name: 'Новый эффект',
     description: '',
     icon: DEFAULT_EFFECT_ICON,

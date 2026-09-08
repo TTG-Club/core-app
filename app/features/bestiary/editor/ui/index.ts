@@ -15,3 +15,4 @@ export { default as CreatureSkills } from './CreatureSkills.vue';
 export { default as CreatureSpeed } from './CreatureSpeed.vue';
 export { default as CreatureType } from './CreatureType.vue';
 export * from './defenses';
+export * from './spellcasting';

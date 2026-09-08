@@ -1,4 +1,8 @@
-import type { CreatureInventorySection, CreatureSaveEffect } from '../model';
+import type {
+  CreatureInventorySection,
+  CreatureSaveEffect,
+  CreatureSpellRestKind,
+} from '../model';
 
 export const CREATURE_IMAGE_SECTION_TITLE = 'Изображения';
 
@@ -52,11 +56,113 @@ export const CREATURE_ACTION_LIST_TITLES = {
   lair: 'Эффекты логова',
 } as const;
 
+/** Подписи блока заклинаний существа. */
+export const CREATURE_SPELLCASTING_EDITOR = {
+  title: 'Заклинания',
+  hint:
+    'Блоки заводятся руками и на карточку сайта не выводятся: они уезжают на '
+    + 'виртуальный стол, где у существа своя вкладка заклинаний.',
+  addBlock: 'Добавить блок',
+  empty:
+    'Блоков нет. Блок — это один набор заклинаний с общей заклинательной '
+    + 'характеристикой и Сл.',
+  unnamed: 'Новый блок',
+  groupsBadgeIcon: 'tabler:list-details',
+  groupsBadgeTitle: 'Порций в блоке',
+  spellsBadgeIcon: 'tabler:sparkles',
+  spellsBadgeTitle: 'Заклинаний в блоке',
+  removeBlock: 'Удалить блок',
+  removeConfirmTitle: 'Удалить блок заклинаний?',
+  removeConfirmText:
+    'Блок удалится вместе с порциями и списками заклинаний. Пока существо не '
+    + 'сохранено, изменение можно отменить, закрыв форму.',
+  removeConfirmCancel: 'Оставить',
+  removeConfirmApply: 'Удалить',
+  name: 'Название блока',
+  namePlaceholder: 'Например: Использование заклинаний',
+  ability: 'Заклинательная характеристика',
+  abilityPlaceholder: 'Выбери характеристику',
+  saveDc: 'Сл спасброска',
+  saveDcPlaceholder: '13',
+  saveDcHint:
+    'Плоское число: у существа Сл не выводится из характеристики и бонуса '
+    + 'мастерства.',
+  attackBonus: 'Бонус атаки',
+  attackBonusPlaceholder: '5',
+  attackBonusHint: 'Тоже плоское число — так же, как бонус атаки у действий.',
+  components: 'Компоненты не требуются',
+  componentsHint:
+    'Отметь те, без которых существо накладывает заклинания блока: «без '
+    + 'материальных компонентов», «без компонентов заклинания».',
+  componentVerbal: 'Вербальные',
+  componentSomatic: 'Соматические',
+  componentMaterial: 'Материальные',
+  note: 'Условие блока',
+  notePlaceholder:
+    'Например: находясь в пределах 30 футов от двух союзных карг',
+  noteHint:
+    'Оговорка, при которой блок работает. Числами её не выразить, а терять '
+    + 'нельзя — уезжает в выгрузку как есть.',
+  groups: 'Порции',
+  groupsHint:
+    'Порция — это список заклинаний под одним ограничением применений: «По '
+    + 'желанию», «1 в день, каждое», «1 в день, на весь список».',
+  addGroup: 'Добавить порцию',
+  removeGroup: 'Удалить порцию',
+  mode: 'Ограничение применений',
+  count: 'Применений',
+  countPlaceholder: '2',
+  countEachHint:
+    'Столько применений у КАЖДОГО заклинания порции — заголовок «2/день '
+    + 'каждое».',
+  countPoolHint:
+    'Столько применений на ВСЮ порцию, вместе взятую, — заголовок «2/день».',
+  rest: 'Возвращает применения',
+  recharge: 'Перезарядка',
+  groupLabel: 'Своя подпись',
+  groupLabelPlaceholder: 'Оставь пустым — соберётся из ограничения',
+  spells: 'Заклинания порции',
+  spellsEmpty: 'Заклинаний нет. Выбери их в справочнике ниже.',
+  spellCastLevel: 'Круг',
+  spellCastLevelHint:
+    'Круг, которым существо накладывает заклинание: «(версия 6 уровня)». '
+    + 'Пусто — заклинание идёт своим кругом.',
+  spellNote: 'Оговорка',
+  spellNotePlaceholder: 'Например: только на себя',
+  spellRemove: 'Убрать заклинание',
+  spellMissing: 'Не найдено',
+  spellMissingHint:
+    'Заклинания с такой ссылкой в справочнике нет — на виртуальный стол оно '
+    + 'не уедет.',
+  spellOpen: 'Открыть карточку в новой вкладке',
+} as const;
+
+/**
+ * Путь списка блоков в состоянии формы существа. Из него собирается путь блока
+ * для вложенной формы: без него имена полей блока считались бы от корня, и
+ * поле `name` блока совпало бы с названием самого существа.
+ */
+export const SPELLCASTING_FIELD_PATH = 'spellcasting';
+
+/** Наименьшее число применений: ноль применений — это их отсутствие. */
+export const MIN_CREATURE_SPELL_COUNT = 1;
+
+/**
+ * Отдых, который подставляется порции «за отдых». Продолжительный: короткий
+ * отдых в статблоках 2024 встречается единично.
+ */
+export const DEFAULT_CREATURE_SPELL_REST: CreatureSpellRestKind = 'LONG';
+
+/** Границы круга, которым существо накладывает заклинание. */
+export const CREATURE_SPELL_CAST_LEVEL_MIN = 1;
+export const CREATURE_SPELL_CAST_LEVEL_MAX = 9;
+
 /** Вкладки формы существа — в порядке показа. */
 export const CREATURE_EDITOR_TABS = {
   main: 'Основное',
   statblock: 'Статблок',
   inventory: CREATURE_INVENTORY_EDITOR.title,
+  spells: CREATURE_SPELLCASTING_EDITOR.title,
   traits: CREATURE_ACTION_LIST_TITLES.traits,
   actions: 'Действия',
   effects: 'Эффекты',

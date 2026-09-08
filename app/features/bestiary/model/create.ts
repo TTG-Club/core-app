@@ -2,6 +2,7 @@ import type { ActiveEffect } from '~active-effects/model';
 import type { EditorBaseInfoState } from '~ui/editor';
 
 import type { CreatureActionEffect } from './action';
+import type { CreatureSpellcastingBlock } from './spellcasting';
 
 import { AbilityKey, AbilityShortKey } from '~/shared/types';
 
@@ -68,6 +69,13 @@ export interface CreatureCreate extends EditorBaseInfoState {
   legendary: LegendaryActions;
   lair: CreatureLair;
   section: CreateSection;
+
+  /**
+   * Заклинания существа блоками. Ни на карточке сайта, ни в выгрузке markdown
+   * они не показываются: статблок описывает заклинания текстом записи, а блоки
+   * заведены ради виртуального стола — там у существа своя вкладка заклинаний.
+   */
+  spellcasting: Array<CreatureSpellcastingBlock>;
 
   /**
    * Активные эффекты существа в вокабуляре VTTG — та же модель, что у черты,
@@ -403,6 +411,7 @@ export function getInitialState(): CreatureCreate {
       description: '',
       ending: '',
     },
+    spellcasting: [],
     activeEffects: [],
     section: {
       name: {

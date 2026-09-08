@@ -1,19 +1,13 @@
 <script setup lang="ts">
   import type { TabsItem } from '@nuxt/ui';
 
-  import type { CreatureCreate } from '~bestiary/model';
+  import type { CreatureCreate } from '../model';
 
   import { z } from 'zod';
 
   import { DictionaryService } from '~/shared/api';
   import { ActiveEffects } from '~active-effects/editor';
   import { EFFECT_ORIGIN, normalizeActiveEffects } from '~active-effects/model';
-  import {
-    getInitialState,
-    normalizeCreatureActions,
-    normalizeLoadedCreatureActions,
-  } from '~bestiary/model';
-  import { CreaturePreview } from '~bestiary/preview';
   import { EditorBaseInfo } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectAlignment } from '~ui/select';
@@ -22,6 +16,14 @@
   import { REVISION_ENTITY_TYPES } from '~workshop/revision/model';
   import { WorkshopEditorFormControls } from '~workshop/revision/ui';
 
+  import {
+    getInitialState,
+    normalizeCreatureActions,
+    normalizeCreatureSpellcasting,
+    normalizeLoadedCreatureActions,
+    normalizeLoadedCreatureSpellcasting,
+  } from '../model';
+  import { CreaturePreview } from '../preview';
   import {
     CREATURE_EDITOR_TABS,
     CREATURE_GALLERY_FIELD_LABEL,
@@ -44,6 +46,7 @@
     CreatureSize,
     CreatureSkills,
     CreatureSpeed,
+    CreatureSpellcasting,
     CreatureType,
   } from './ui';
 
@@ -98,6 +101,7 @@
       reactions: normalizeLoadedCreatureActions(raw.reactions),
       legendary: loadedLegendarySchema.parse(raw.legendary),
       lair: loadedLairSchema.parse(raw.lair),
+      spellcasting: normalizeLoadedCreatureSpellcasting(raw.spellcasting),
     };
 
     const experience = loadedExperienceSchema.safeParse(raw.experience);
@@ -133,14 +137,30 @@
           ...formState.lair,
           effects: normalizeCreatureActions(formState.lair.effects),
         },
+        spellcasting: normalizeCreatureSpellcasting(formState.spellcasting),
         activeEffects: normalizeActiveEffects(formState.activeEffects),
       }),
     });
+
+  /**
+   * Лента вкладок: прокручивается по горизонтали, полоса прокрутки скрыта.
+   * Своей константой, а не объектом в шаблоне: строка длинная, и в атрибуте
+   * `:ui` её было не прочитать.
+   */
+  const TAB_LIST_CLASS =
+    'mb-6 max-w-full overflow-x-auto overscroll-x-contain hidden-scrollbar';
+
+  /**
+   * Вкладка не ужимается под ширину ленты: без этого восемь подписей делили
+   * экран телефона поровну и от каждой оставалась одна буква с многоточием.
+   */
+  const TAB_TRIGGER_CLASS = 'shrink-0';
 
   const tabItems: Array<TabsItem> = [
     { label: CREATURE_EDITOR_TABS.main, slot: 'main' },
     { label: CREATURE_EDITOR_TABS.statblock, slot: 'statblock' },
     { label: CREATURE_EDITOR_TABS.inventory, slot: 'inventory' },
+    { label: CREATURE_EDITOR_TABS.spells, slot: 'spells' },
     { label: CREATURE_EDITOR_TABS.traits, slot: 'traits' },
     { label: CREATURE_EDITOR_TABS.actions, slot: 'actions' },
     { label: CREATURE_EDITOR_TABS.effects, slot: 'effects' },
@@ -162,11 +182,17 @@
 
     <!-- Вкладки не размонтируются: поля скрытых вкладок остаются в форме, и
       сохранение видит их наравне с открытой -->
+    <!-- Лента вкладок прокручивается, а не переносится: восемь подписей
+      целиком не влезают даже в планшет, а список без прокрутки распирал форму
+      до 811px и на телефоне за экран уезжала вся страница, а не только он.
+      `min-w-0` обязателен: ячейка сетки по умолчанию не ужимается ниже своего
+      содержимого, и лента продолжала бы задавать ширину всей формы -->
     <UTabs
       :items="tabItems"
       variant="pill"
+      class="min-w-0"
       :unmount-on-hide="false"
-      :ui="{ list: 'mb-6' }"
+      :ui="{ list: TAB_LIST_CLASS, trigger: TAB_TRIGGER_CLASS }"
     >
       <!-- ОСНОВНОЕ -->
       <template #main>
@@ -312,6 +338,13 @@
             v-model:text="state.inventoryText"
             v-model:legacy-equipments="state.equipments"
           />
+        </div>
+      </template>
+
+      <!-- ЗАКЛИНАНИЯ -->
+      <template #spells>
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-24">
+          <CreatureSpellcasting v-model="state.spellcasting" />
         </div>
       </template>
 
