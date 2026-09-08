@@ -1,7 +1,6 @@
 <script setup lang="ts">
   import type { CreatureDetailResponse } from '../../../model';
 
-  import { ULink } from '#components';
   import { DiceRollerLink } from '~dice-roller/link';
   import { MarkupRender } from '~ui/markup';
 
@@ -9,7 +8,7 @@
     formatCreatureInventoryLabel,
     getCreatureInventoryEntries,
   } from '../../../model';
-  import { CreatureAbilitiesTable } from './ui';
+  import { CreatureAbilitiesTable, CreatureInventoryLink } from './ui';
 
   type Props = Pick<
     CreatureDetailResponse,
@@ -30,12 +29,13 @@
 
   const { equipments, inventory, inventoryText } = defineProps<Props>();
 
-  /** Позиции инвентаря для показа: подпись с количеством и ссылка на карточку. */
+  /** Позиции инвентаря для показа: подпись с количеством и адрес карточки. */
   const inventoryEntries = computed(() =>
     getCreatureInventoryEntries(inventory).map((entry) => ({
       label: formatCreatureInventoryLabel(entry.name, entry.quantity),
       note: entry.description,
-      to: entry.link,
+      section: entry.section,
+      url: entry.url,
     })),
   );
 
@@ -131,12 +131,12 @@
         >
           <template v-if="index">, </template>
 
-          <ULink
-            v-if="entry.to"
-            :to="entry.to"
-          >
-            {{ entry.label }}
-          </ULink>
+          <CreatureInventoryLink
+            v-if="entry.url"
+            :section="entry.section"
+            :url="entry.url"
+            :label="entry.label"
+          />
 
           <template v-else>{{ entry.label }}</template>
 

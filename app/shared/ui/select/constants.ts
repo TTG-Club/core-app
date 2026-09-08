@@ -54,6 +54,8 @@ export const CATALOG_PICKER_LABELS = {
   selectAllErrorTitle: 'Не удалось отметить все',
   showMore: 'Показать ещё',
   collapse: 'Свернуть',
+  preview: 'Открыть описание',
+  previewAria: 'Описание',
 } as const;
 
 /** Стрелки кнопки, которая разворачивает и сворачивает остаток чипов. */
@@ -89,6 +91,7 @@ export const CATALOG_PICKER_SECTIONS = {
     filtersPath: '/api/v2/item/filters',
     filtersKey: 'catalog-picker:item-filters',
     detailPath: '/api/v2/item',
+    previewSection: 'items',
   },
   spells: {
     searchPath: '/api/v2/spells/search',
@@ -127,6 +130,7 @@ export const CATALOG_PICKER_SECTIONS = {
     filtersPath: '/api/v2/magic-items/filters',
     filtersKey: 'catalog-picker:magic-item-filters',
     detailPath: '/api/v2/magic-items',
+    previewSection: 'magic-items',
   },
 } as const;
 

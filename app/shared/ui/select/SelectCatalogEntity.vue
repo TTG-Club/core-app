@@ -62,6 +62,11 @@
 
   const overlay = useOverlay();
 
+  const { openPreview } = useCatalogPreview();
+
+  /** Раздел предпросмотра; пусто — карточку этого раздела дровером не открыть. */
+  const previewSection = computed(() => section.previewSection);
+
   /**
    * Названия выбранных записей по слагу. Пополняется выбором в окне и остаётся
    * между открытиями: у формы, загруженной с сервера, в значении одни слаги, и
@@ -259,6 +264,20 @@
     isExpanded.value = !isExpanded.value;
   }
 
+  /**
+   * Открывает карточку выбранной записи дровером: по чипу видно одно название,
+   * а свойства предмета смотрят, не уходя из формы.
+   *
+   * @param url слаг записи.
+   */
+  function handlePreview(url: string): void {
+    if (!previewSection.value) {
+      return;
+    }
+
+    openPreview(previewSection.value, url);
+  }
+
   /** Убирает запись из выбранного. */
   function remove(url: string): void {
     const rest = chips.value.filter((entry) => entry.url !== url);
@@ -289,7 +308,23 @@
       variant="subtle"
       class="gap-1"
     >
-      {{ entry.name }}
+      <!-- Название чипа открывает карточку: выбрав предмет, автор сверяет его
+        свойства прямо в форме, а не уходит за ними в раздел -->
+      <UTooltip
+        v-if="previewSection"
+        :text="CATALOG_PICKER_LABELS.preview"
+      >
+        <button
+          type="button"
+          class="cursor-pointer hover:underline"
+          :aria-label="`${CATALOG_PICKER_LABELS.previewAria}: ${entry.name}`"
+          @click.left.exact.prevent="handlePreview(entry.url)"
+        >
+          {{ entry.name }}
+        </button>
+      </UTooltip>
+
+      <template v-else>{{ entry.name }}</template>
 
       <UButton
         icon="tabler:x"
