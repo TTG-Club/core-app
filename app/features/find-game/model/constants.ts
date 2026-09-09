@@ -369,13 +369,6 @@ export const GAME_CATALOG_SKELETON_COUNT = GAME_CATALOG_PAGE_SIZE;
 export const MY_GAMES_PAGE_SIZE = GAME_CATALOG_PAGE_SIZE;
 
 /**
- * Сколько значков помещается в карточку каталога. Карточка одной высоты у
- * всех игр, и на значки в ней отведено ровно две строки; остальное мастер
- * и игрок видят на странице игры.
- */
-export const GAME_CARD_BADGE_LIMIT = 4;
-
-/**
  * До скольких мест занятость рисуется значками игроков. Дальше значки
  * перестают читаться, и остаётся только счётчик.
  */
@@ -460,6 +453,9 @@ export const GAME_REQUIREMENTS_TITLE = 'Требования к игрокам';
 export const GAME_ALLOWED_SOURCES_TITLE = 'Допустимые источники';
 export const GAME_VIRTUAL_TABLE_LABEL = 'Виртуальный стол';
 export const GAME_MASTER_LABEL = 'Мастер';
+
+/** Подпись ряда мест в карточке каталога: без неё значки игроков немы. */
+export const GAME_SEATS_LABEL = 'Места';
 
 /* Профиль мастера. */
 export const MASTER_PROFILE_TITLE = 'Профиль мастера';

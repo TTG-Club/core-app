@@ -17,6 +17,7 @@
     CATALOG_RETRY_LABEL,
     GAME_CATALOG_GRID_COLUMNS,
     GAME_CATALOG_SKELETON_COUNT,
+    getGamesFoundLabel,
   } from '../model';
   import { GameCard, GameCardSkeleton, GameCatalogFilters } from './ui';
 
@@ -41,6 +42,17 @@
   const humanPage = useHumanPage(page);
 
   const isError = computed(() => status.value === 'error');
+
+  /**
+   * Счётчик найденного над выдачей: по нему видно, что отбор сработал, и
+   * сколько ещё игр лежит на других страницах. Пока выдачи нет — и пока она
+   * грузится — счётчик не показывается: он мигал бы прежним числом.
+   */
+  const foundLabel = computed(() =>
+    isLoading.value || isError.value || !totalGames.value
+      ? null
+      : getGamesFoundLabel(totalGames.value),
+  );
 
   const { getParticipantName, watchParticipantNames } = useParticipantNames();
 
@@ -85,6 +97,13 @@
         :label="CATALOG_FILTERS_RESET_LABEL"
         @click.left.exact.prevent="resetFilter"
       />
+
+      <span
+        v-if="foundLabel"
+        class="ml-auto text-sm text-muted tabular-nums"
+      >
+        {{ foundLabel }}
+      </span>
     </div>
 
     <GameCatalogFilters
@@ -97,6 +116,7 @@
     <PageGrid
       v-if="isLoading"
       :columns="GAME_CATALOG_GRID_COLUMNS"
+      gap="wide"
     >
       <GameCardSkeleton
         v-for="index in GAME_CATALOG_SKELETON_COUNT"
@@ -134,7 +154,10 @@
     </UiResult>
 
     <template v-else>
-      <PageGrid :columns="GAME_CATALOG_GRID_COLUMNS">
+      <PageGrid
+        :columns="GAME_CATALOG_GRID_COLUMNS"
+        gap="wide"
+      >
         <GameCard
           v-for="game in games"
           :key="game.id"

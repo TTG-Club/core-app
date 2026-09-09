@@ -158,6 +158,7 @@
           <PageGrid
             v-if="isLoading"
             :columns="GAME_CATALOG_GRID_COLUMNS"
+            gap="wide"
           >
             <GameCardSkeleton
               v-for="index in GAME_CATALOG_SKELETON_COUNT"
@@ -195,7 +196,10 @@
           </UiResult>
 
           <template v-else>
-            <PageGrid :columns="GAME_CATALOG_GRID_COLUMNS">
+            <PageGrid
+              :columns="GAME_CATALOG_GRID_COLUMNS"
+              gap="wide"
+            >
               <GameCard
                 v-for="game in games"
                 :key="game.id"

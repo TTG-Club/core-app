@@ -32,9 +32,14 @@
   );
 </script>
 
+<!--
+  Скругление задаёт тот, кто вставляет обложку: в карточке каталога она лежит
+  вплотную к краям и скругляется только сверху, а на странице игры и в форме
+  стоит отдельным блоком.
+-->
 <template>
   <div
-    class="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-md bg-elevated"
+    class="relative flex aspect-video w-full items-center justify-center overflow-hidden bg-linear-to-br from-elevated via-elevated to-primary/15"
   >
     <img
       v-if="!showPlaceholder && imageUrl"
@@ -46,10 +51,23 @@
       @error="handleLoadError"
     />
 
-    <UIcon
-      v-else
-      :name="placeholderIcon"
-      class="size-10 text-dimmed"
-    />
+    <!-- Заглушка оформлена как знак формата игры, а не как пустое место:
+      обложки нет у большинства игр, и ряд серых прямоугольников читался бы
+      сломанной вёрсткой. Точечная сетка даёт фактуру, по которой заглушка
+      не путается с не загрузившейся картинкой -->
+    <template v-else>
+      <div
+        class="absolute inset-0 bg-[radial-gradient(currentColor_1px,transparent_1px)] bg-size-[14px_14px] text-muted opacity-15"
+      />
+
+      <div
+        class="relative grid size-16 place-items-center rounded-full bg-default/60 ring-1 ring-default"
+      >
+        <UIcon
+          :name="placeholderIcon"
+          class="size-8 text-dimmed"
+        />
+      </div>
+    </template>
   </div>
 </template>

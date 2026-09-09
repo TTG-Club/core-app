@@ -40,6 +40,7 @@
         :image-url="game.imageUrl"
         :alt="game.title"
         :game-type="game.type"
+        class="rounded-lg"
       />
 
       <div class="flex flex-col gap-3">

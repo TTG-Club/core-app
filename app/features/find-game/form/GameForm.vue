@@ -476,7 +476,7 @@
               :image-url="form.imageUrl || null"
               :alt="form.title"
               :game-type="form.type"
-              class="max-w-80"
+              class="max-w-80 rounded-lg"
             />
           </template>
         </UploadImage>
