@@ -20,7 +20,10 @@ const MILLIS_IN_MINUTE = 60_000;
 
 /** Показывает начало и ожидаемое окончание в часовом поясе читателя. */
 export function getNextSessionLabel(
-  session: NextGameSession | null,
+  session: Pick<
+    NextGameSession,
+    'startsAt' | 'estimatedDurationMinutes'
+  > | null,
   timeZone?: string,
 ): string {
   if (!session?.startsAt) {

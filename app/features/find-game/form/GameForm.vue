@@ -19,6 +19,7 @@
     GAME_CITY_MAX_LENGTH,
     GAME_COST_TYPE_LABELS,
     GAME_COST_TYPES,
+    GAME_DEFAULT_ONLINE_PLATFORM,
     GAME_DURATION_TYPE_LABELS,
     GAME_DURATION_TYPES,
     GAME_EDIT_COST_LOCKED_HINT,
@@ -48,6 +49,7 @@
     GAME_FIELD_MAX_PLAYERS_HINT,
     GAME_FIELD_MAX_PLAYERS_LABEL,
     GAME_FIELD_MIN_AGE_LABEL,
+    GAME_FIELD_ONLINE_PLATFORM_LABEL,
     GAME_FIELD_PLAYERS_TO_START_LABEL,
     GAME_FIELD_REQUIREMENTS_LABEL,
     GAME_FIELD_REQUIREMENTS_PLACEHOLDER,
@@ -81,6 +83,8 @@
     GAME_GENRE_SUGGESTIONS,
     GAME_IMAGE_MAX_SIZE,
     GAME_IMAGE_SECTION,
+    GAME_ONLINE_PLATFORM_LABELS,
+    GAME_ONLINE_PLATFORMS,
     GAME_PLAYERS_MAX,
     GAME_PLAYERS_MIN,
     GAME_REQUIREMENTS_MAX_LENGTH,
@@ -133,6 +137,7 @@
       system: 'DND_2024',
       imageUrl: '',
       virtualTableUrl: '',
+      onlinePlatform: GAME_DEFAULT_ONLINE_PLATFORM,
       masterChatUrl: '',
       gameChatUrl: '',
       genre: '',
@@ -165,6 +170,7 @@
       system: source.system,
       imageUrl: source.imageUrl ?? '',
       virtualTableUrl: source.virtualTableUrl ?? '',
+      onlinePlatform: source.onlinePlatform ?? GAME_DEFAULT_ONLINE_PLATFORM,
       masterChatUrl: source.masterChatUrl ?? '',
       // Чужой чат игры сервис не отдаёт, но форму открывает только мастер:
       // ему приходит и он.
@@ -350,6 +356,11 @@
   const systemItems = toSelectItems(GAME_SYSTEMS, GAME_SYSTEM_LABELS);
   const typeItems = toSelectItems(GAME_TYPES, GAME_TYPE_LABELS);
 
+  const onlinePlatformItems = toSelectItems(
+    GAME_ONLINE_PLATFORMS,
+    GAME_ONLINE_PLATFORM_LABELS,
+  );
+
   const durationItems = toSelectItems(
     GAME_DURATION_TYPES,
     GAME_DURATION_TYPE_LABELS,
@@ -365,6 +376,7 @@
   // Город сервис принимает только у офлайн-игры, поэтому поле и появляется
   // только там — иначе форма отправила бы заведомо отвергаемый запрос.
   const isOffline = computed(() => form.value.type === 'OFFLINE');
+  const isOnline = computed(() => form.value.type === 'ONLINE');
 
   // Сервис отвергает смену платности у игры с сессиями, поэтому выбор гаснет
   // заранее и объясняет почему.
@@ -409,6 +421,10 @@
 
     if (state.virtualTableUrl.trim()) {
       request.virtualTableUrl = state.virtualTableUrl.trim();
+    }
+
+    if (state.type === 'ONLINE') {
+      request.onlinePlatform = state.onlinePlatform;
     }
 
     if (state.masterChatUrl.trim()) {
@@ -622,6 +638,19 @@
             <USelect
               v-model="form.type"
               :items="typeItems"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField
+            v-if="isOnline"
+            name="onlinePlatform"
+            :label="GAME_FIELD_ONLINE_PLATFORM_LABEL"
+            required
+          >
+            <USelect
+              v-model="form.onlinePlatform"
+              :items="onlinePlatformItems"
               class="w-full"
             />
           </UFormField>

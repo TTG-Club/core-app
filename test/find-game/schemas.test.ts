@@ -22,6 +22,7 @@ function gameResponse(overrides: Record<string, unknown> = {}) {
     system: 'DND_2024',
     imageUrl: null,
     virtualTableUrl: null,
+    onlinePlatform: null,
     genre: 'Готическое фэнтези',
     description: 'Кампания',
     requirements: 'Совершеннолетние',
@@ -46,6 +47,21 @@ function gameResponse(overrides: Record<string, unknown> = {}) {
 }
 
 describe('разбор игры', () => {
+  it('читает платформу и поддерживает старые ответы без неё', () => {
+    expect(
+      parseGame(gameResponse({ onlinePlatform: 'VTTG' })).onlinePlatform,
+    ).toBe('VTTG');
+
+    expect(
+      parseGame(gameResponse({ onlinePlatform: undefined })).onlinePlatform,
+    ).toBeNull();
+
+    expect(
+      parseGame(gameResponse({ onlinePlatform: 'NEW_PLATFORM' }))
+        .onlinePlatform,
+    ).toBeNull();
+  });
+
   it('приводит ответ сервиса к доменной игре', () => {
     const game = parseGame(gameResponse());
 

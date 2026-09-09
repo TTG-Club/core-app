@@ -8,8 +8,10 @@
     GAME_ALLOWED_SOURCES_TITLE,
     GAME_CHAT_LINK_LABEL,
     GAME_DESCRIPTION_TITLE,
+    GAME_FIELD_ONLINE_PLATFORM_LABEL,
     GAME_MASTER_CHAT_LINK_LABEL,
     GAME_MASTER_LABEL,
+    GAME_ONLINE_PLATFORM_LABELS,
     GAME_REQUIREMENTS_TITLE,
     GAME_VENUE_LABEL,
     GAME_VIRTUAL_TABLE_LABEL,
@@ -24,6 +26,12 @@
   }>();
 
   const descriptionNodes = computed(() => toGameMarkup(game.description));
+
+  const onlinePlatformLabel = computed(() =>
+    game.type === 'ONLINE' && game.onlinePlatform
+      ? GAME_ONLINE_PLATFORM_LABELS[game.onlinePlatform]
+      : null,
+  );
 
   const { open: openProfile } = useMasterProfileDrawer();
 
@@ -56,6 +64,13 @@
         />
 
         <div class="flex flex-wrap items-center gap-3 text-sm">
+          <span
+            v-if="onlinePlatformLabel"
+            class="text-toned"
+          >
+            {{ GAME_FIELD_ONLINE_PLATFORM_LABEL }}: {{ onlinePlatformLabel }}
+          </span>
+
           <!-- Имя ведёт в профиль: перед заявкой игрок хочет понять, с кем
             садится за стол -->
           <span class="flex items-center gap-1.5 text-toned">

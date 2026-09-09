@@ -21,7 +21,24 @@ export const GAME_DETAIL_TABS = [
     slot: 'sessions',
     value: 'sessions',
   },
+  {
+    label: 'Финансы',
+    icon: 'tabler:wallet',
+    slot: 'finance',
+    value: 'finance',
+  },
 ];
+
+export const GAME_FINANCE_TITLE = 'Финансы игры';
+export const GAME_FINANCE_EMPTY = 'У игры пока нет финансовых операций';
+export const GAME_FINANCE_TOP_UP = 'Внести депозит';
+export const GAME_FINANCE_BALANCE = 'Баланс';
+export const GAME_FINANCE_DEBT = 'Долг';
+export const GAME_FINANCE_PAY = 'Оплатить с баланса';
+export const GAME_FINANCE_CLAIM = 'Я оплатил';
+export const GAME_FINANCE_PENDING = 'Ожидает подтверждения';
+export const GAME_FINANCE_CONFIRM = 'Подтвердить оплату';
+export const GAME_FINANCE_AMOUNT = 'Сумма';
 
 export const SESSION_START_IN_PAST_ERROR =
   'Дата и время начала сессии должны быть в будущем';
@@ -102,6 +119,38 @@ export const GAME_SYSTEMS = ['DND_2024', 'DND_2014'] as const;
 
 export const GAME_TYPES = ['ONLINE', 'TEXT', 'OFFLINE'] as const;
 
+export const GAME_ONLINE_PLATFORMS = [
+  'VTTG',
+  'FOUNDRY_VTT',
+  'ROLL20',
+  'FANTASY_GROUNDS',
+  'OWLBEAR_RODEO',
+  'TALESPIRE',
+  'TABLETOP_SIMULATOR',
+  'THEATER_OF_MIND',
+  'DISCORD',
+  'DIVINITY_OS2',
+  'ZOOM',
+  'QUESTBOARD',
+] as const;
+
+export const GAME_DEFAULT_ONLINE_PLATFORM = 'VTTG';
+export const GAME_FIELD_ONLINE_PLATFORM_LABEL = 'Платформа для онлайн-вождения';
+export const GAME_ONLINE_PLATFORM_LABELS = {
+  VTTG: 'VTTG',
+  FOUNDRY_VTT: 'Foundry VTT',
+  ROLL20: 'Roll20',
+  FANTASY_GROUNDS: 'Fantasy Grounds',
+  OWLBEAR_RODEO: 'Owlbear Rodeo',
+  TALESPIRE: 'Talespire',
+  TABLETOP_SIMULATOR: 'Tabletop Simulator',
+  THEATER_OF_MIND: 'Театр разума',
+  DISCORD: 'Discord',
+  DIVINITY_OS2: 'Divinity OS2',
+  ZOOM: 'Zoom',
+  QUESTBOARD: 'Questboard',
+};
+
 export const GAME_DURATION_TYPES = ['ONE_SHOT', 'CAMPAIGN'] as const;
 
 export const GAME_COST_TYPES = ['FREE', 'PAID'] as const;
@@ -126,6 +175,7 @@ export const SESSION_REGISTRATION_STATUSES = [
 ] as const;
 
 export const SESSION_ATTENDANCE_STATUSES = [
+  'UNMARKED',
   'ATTENDING',
   'NOT_ATTENDING',
 ] as const;
@@ -268,9 +318,25 @@ export const SESSION_REGISTRATION_STATUS_LABELS = {
 } as const;
 
 export const SESSION_ATTENDANCE_STATUS_LABELS = {
-  ATTENDING: 'Буду',
-  NOT_ATTENDING: 'Не буду',
+  UNMARKED: 'Не отмечено',
+  ATTENDING: 'Присутствую',
+  NOT_ATTENDING: 'Отсутствую',
 } as const;
+
+export const SESSION_ATTENDANCE_ICONS = {
+  UNMARKED: 'tabler:help',
+  ATTENDING: 'tabler:check',
+  NOT_ATTENDING: 'tabler:x',
+} as const;
+export const SESSION_ATTENDANCE_COLORS = {
+  UNMARKED: 'neutral',
+  ATTENDING: 'success',
+  NOT_ATTENDING: 'error',
+} as const;
+export const GAME_PARTICIPANTS_ERROR_TITLE = 'Не удалось загрузить участников';
+export const GAME_PARTICIPANTS_REFRESH_LABEL = 'Обновить отметки';
+export const GAME_NO_PLANNED_SESSION_LABEL = 'Нет запланированной сессии';
+export const GAME_NEAREST_SESSION_LABEL = 'Ближайшая сессия';
 
 export const SESSION_PAYMENT_TYPE_LABELS = {
   PREPAYMENT: 'Предоплата',

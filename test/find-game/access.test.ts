@@ -30,6 +30,7 @@ function makeGame(overrides: Partial<Game> = {}): Game {
     system: 'DND_2024',
     imageUrl: null,
     virtualTableUrl: null,
+    onlinePlatform: null,
     masterChatUrl: null,
     gameChatUrl: null,
     genre: null,

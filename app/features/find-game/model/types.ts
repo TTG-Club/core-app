@@ -2,6 +2,7 @@ import type {
   APPLY_SOURCES,
   GAME_COST_TYPES,
   GAME_DURATION_TYPES,
+  GAME_ONLINE_PLATFORMS,
   GAME_SESSION_STATUSES,
   GAME_STATUSES,
   GAME_SYSTEMS,
@@ -20,6 +21,7 @@ import type {
 
 export type GameSystem = (typeof GAME_SYSTEMS)[number];
 export type GameType = (typeof GAME_TYPES)[number];
+export type GameOnlinePlatform = (typeof GAME_ONLINE_PLATFORMS)[number];
 export type GameDurationType = (typeof GAME_DURATION_TYPES)[number];
 export type GameCostType = (typeof GAME_COST_TYPES)[number];
 export type GameVisibility = (typeof GAME_VISIBILITIES)[number];
@@ -133,6 +135,39 @@ export interface CreateSessionReviewRequest {
   comment?: string;
 }
 
+export interface GameFinanceEntry {
+  id: string;
+  sessionId: string | null;
+  amount: number;
+  currency: string;
+  kind: string;
+  comment: string | null;
+  createdAt: string;
+}
+
+export interface GameFinanceBill {
+  sessionId: string;
+  title: string;
+  startsAt: string | null;
+  currency: string;
+  amount: number;
+  remaining: number;
+  claimed: number;
+  finalized: boolean;
+  exempt: boolean;
+}
+
+export interface GameFinanceAccount {
+  playerId: string;
+  balances: Record<string, number>;
+  entries: Array<GameFinanceEntry>;
+  bills: Array<GameFinanceBill>;
+}
+
+export interface GameFinance {
+  accounts: Array<GameFinanceAccount>;
+}
+
 /** Игра из выдачи find-game-api. */
 export interface Game {
   nextSession: NextGameSession | null;
@@ -143,6 +178,7 @@ export interface Game {
   system: GameSystem;
   imageUrl: string | null;
   virtualTableUrl: string | null;
+  onlinePlatform: GameOnlinePlatform | null;
 
   /** Разговор с мастером: открыт всем, кто смотрит объявление. */
   masterChatUrl: string | null;
@@ -255,6 +291,7 @@ export interface CreateGameRequest {
   system: GameSystem;
   imageUrl?: string;
   virtualTableUrl?: string;
+  onlinePlatform?: GameOnlinePlatform;
   masterChatUrl?: string;
   gameChatUrl?: string;
   genre?: string;
@@ -287,6 +324,7 @@ export interface GameFormState {
   system: GameSystem;
   imageUrl: string;
   virtualTableUrl: string;
+  onlinePlatform: GameOnlinePlatform;
   masterChatUrl: string;
   gameChatUrl: string;
   genre: string;
@@ -545,4 +583,10 @@ export interface ParticipantName {
 export interface GameParticipant {
   playerId: string;
   characterName: string | null;
+  nextSession: {
+    id: string;
+    startsAt: string;
+    estimatedDurationMinutes: number | null;
+    attendanceStatus: SessionAttendanceStatus;
+  } | null;
 }

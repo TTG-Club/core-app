@@ -26,6 +26,7 @@ import {
   GAME_DESCRIPTION_MAX_LENGTH,
   GAME_DURATION_TYPES,
   GAME_GENRE_MAX_LENGTH,
+  GAME_ONLINE_PLATFORMS,
   GAME_PLAYERS_MAX,
   GAME_PLAYERS_MIN,
   GAME_REQUIREMENTS_MAX_LENGTH,
@@ -56,6 +57,14 @@ export const gameParticipantsSchema = z.array(
   z.object({
     playerId: z.string().uuid(),
     characterName: z.string().nullable(),
+    nextSession: z
+      .object({
+        id: z.string().uuid(),
+        startsAt: z.string().datetime({ offset: true }),
+        estimatedDurationMinutes: z.number().int().positive().nullable(),
+        attendanceStatus: z.enum(SESSION_ATTENDANCE_STATUSES),
+      })
+      .nullable(),
   }),
 );
 
@@ -312,6 +321,7 @@ const gameResponseSchema = z.object({
   system: z.enum(GAME_SYSTEMS).catch('DND_2024'),
   imageUrl: z.string().nullish().catch(null),
   virtualTableUrl: z.string().nullish().catch(null),
+  onlinePlatform: z.enum(GAME_ONLINE_PLATFORMS).nullish().catch(null),
   masterChatUrl: z.string().nullish().catch(null),
   gameChatUrl: z.string().nullish().catch(null),
   genre: z.string().nullish().catch(null),
@@ -360,6 +370,7 @@ function toGame(parsed: z.infer<typeof gameResponseSchema>): Game {
     system: parsed.system,
     imageUrl: parsed.imageUrl ?? null,
     virtualTableUrl: parsed.virtualTableUrl ?? null,
+    onlinePlatform: parsed.onlinePlatform ?? null,
     masterChatUrl: parsed.masterChatUrl ?? null,
     gameChatUrl: parsed.gameChatUrl ?? null,
     genre: parsed.genre ?? null,
@@ -654,7 +665,7 @@ function toSessionParticipant(
     id: parsed.id,
     sessionId: parsed.sessionId,
     playerId: parsed.playerId,
-    attendanceStatus: parsed.attendanceStatus ?? null,
+    attendanceStatus: parsed.attendanceStatus ?? 'UNMARKED',
     paid: parsed.paid,
     paidAt: parsed.paidAt,
     createdAt: parsed.createdAt,
@@ -838,6 +849,7 @@ export const createGameRequestSchema = z
     system: z.enum(GAME_SYSTEMS),
     imageUrl: optionalTrimmed(GAME_URL_MAX_LENGTH),
     virtualTableUrl: optionalTrimmed(GAME_URL_MAX_LENGTH),
+    onlinePlatform: z.enum(GAME_ONLINE_PLATFORMS).optional(),
     masterChatUrl: optionalTrimmed(GAME_URL_MAX_LENGTH),
     gameChatUrl: optionalTrimmed(GAME_URL_MAX_LENGTH),
     genre: optionalTrimmed(GAME_GENRE_MAX_LENGTH),

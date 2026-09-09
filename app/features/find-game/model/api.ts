@@ -11,6 +11,7 @@ import type {
   FindGameUserProfile,
   Follow,
   Game,
+  GameFinance,
   GameParticipant,
   GamePersonalRole,
   GameRegistration,
@@ -975,6 +976,79 @@ export async function updateParticipantPayment(
   );
 
   return parseSessionParticipant(response);
+}
+
+/** Финансы всех участников доступны только мастеру платной игры. */
+export async function fetchGameFinance(gameId: string): Promise<GameFinance> {
+  return await $fetch(`${GAMES_API_PATH}/${gameId}/finance`, { retry: 0 });
+}
+
+/** Личный счёт игрока не раскрывает сведения остальных участников. */
+export async function fetchOwnGameFinance(
+  gameId: string,
+): Promise<GameFinance> {
+  return await $fetch(`${GAMES_API_PATH}/${gameId}/finance/me`, { retry: 0 });
+}
+
+/** Пополнение счёта у мастера. */
+export async function topUpGameAccount(
+  gameId: string,
+  playerId: string,
+  amount: number,
+  currency: string,
+): Promise<void> {
+  await $fetch(
+    `${GAMES_API_PATH}/${gameId}/finance/players/${playerId}/entries`,
+    {
+      method: 'POST',
+      body: {
+        operationId: crypto.randomUUID(),
+        amount,
+        currency,
+        kind: 'TOP_UP',
+      },
+      retry: 0,
+    },
+  );
+}
+
+/** Игрок резервирует стоимость встречи из доступного депозита. */
+export async function paySessionFromBalance(
+  gameId: string,
+  sessionId: string,
+): Promise<void> {
+  await $fetch(
+    `${GAMES_API_PATH}/${gameId}/finance/sessions/${sessionId}/balance`,
+    { method: 'POST', retry: 0 },
+  );
+}
+
+/** Игрок сообщает мастеру о внешнем переводе. */
+export async function claimSessionPayment(
+  gameId: string,
+  sessionId: string,
+): Promise<void> {
+  await $fetch(
+    `${GAMES_API_PATH}/${gameId}/finance/sessions/${sessionId}/claim`,
+    { method: 'POST', retry: 0 },
+  );
+}
+
+/** Мастер подтверждает или отклоняет заявленную оплату. */
+export async function confirmSessionPayment(
+  gameId: string,
+  sessionId: string,
+  playerId: string,
+  confirmed: boolean,
+): Promise<void> {
+  await $fetch(
+    `${GAMES_API_PATH}/${gameId}/finance/sessions/${sessionId}/players/${playerId}/confirmation`,
+    {
+      method: 'POST',
+      query: { confirmed },
+      retry: 0,
+    },
+  );
 }
 
 /* ------------------------------------------------------------------ */

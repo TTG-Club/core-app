@@ -31,6 +31,7 @@
     SESSION_REGISTRATION_STATUS_LABELS,
   } from '~find-game/model';
   import {
+    GameFinancePanel,
     GameParticipantCards,
     GameRegistrationsPanel,
   } from '~find-game/registrations';
@@ -97,6 +98,12 @@
 
   const masterName = computed(() =>
     game.value ? getParticipantName(game.value.masterId) : '',
+  );
+
+  const detailTabs = computed(() =>
+    abilities.value.canReviewRegistrations && game.value?.costType === 'PAID'
+      ? GAME_DETAIL_TABS
+      : GAME_DETAIL_TABS.filter((tab) => tab.value !== 'finance'),
   );
 
   /**
@@ -398,8 +405,8 @@
 
           <UTabs
             :key="game.id"
-            :items="GAME_DETAIL_TABS"
-            :default-value="GAME_DETAIL_TABS[0]?.value"
+            :items="detailTabs"
+            :default-value="detailTabs[0]?.value"
             variant="link"
             :unmount-on-hide="false"
             :ui="{ list: 'justify-start', content: 'pt-5' }"
@@ -414,7 +421,9 @@
               <GameParticipantCards
                 v-else
                 :game-id="game.id"
+                :game="game"
                 :own-registration="ownRegistration"
+                :change-attendance="changeAttendance"
                 :busy="isBusy"
                 @withdraw="handleWithdraw"
               />
@@ -436,6 +445,10 @@
                 :loading="areSessionsLoading"
                 @refresh="handleRegistrationsChanged"
               />
+            </template>
+
+            <template #finance>
+              <GameFinancePanel :game="game" />
             </template>
           </UTabs>
 
