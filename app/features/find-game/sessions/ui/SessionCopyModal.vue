@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { CopyGameSessionRequest, GameSession } from '../../model';
 
+  import { UiModalActions } from '~ui/modal-actions';
+
   import {
     CANCEL_LABEL,
     fromLocalDateTimeInput,
@@ -108,23 +110,15 @@
     </template>
 
     <template #footer>
-      <div class="flex w-full justify-end gap-2">
-        <UButton
-          variant="ghost"
-          color="neutral"
-          :disabled="loading"
-          :label="CANCEL_LABEL"
-          @click.left.exact.prevent="cancel"
-        />
-
-        <UButton
-          icon="tabler:copy"
-          :loading="loading"
-          :disabled="!isValid"
-          :label="SESSION_COPY_LABEL"
-          @click.left.exact.prevent="submit"
-        />
-      </div>
+      <UiModalActions
+        :cancel-label="CANCEL_LABEL"
+        :submit-label="SESSION_COPY_LABEL"
+        submit-icon="tabler:copy"
+        :loading="loading"
+        :disabled="!isValid"
+        @cancel="cancel"
+        @submit="submit"
+      />
     </template>
   </UModal>
 </template>

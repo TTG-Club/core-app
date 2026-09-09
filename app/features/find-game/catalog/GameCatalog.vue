@@ -3,7 +3,11 @@
   import { UiPagination } from '~ui/pagination';
   import { UiResult } from '~ui/result';
 
-  import { useGameCatalog, useParticipantNames } from '../composables';
+  import {
+    useGameCatalog,
+    useHumanPage,
+    useParticipantNames,
+  } from '../composables';
   import {
     CATALOG_EMPTY_DESCRIPTION,
     CATALOG_EMPTY_TITLE,
@@ -34,27 +38,15 @@
 
   const isFiltersOpen = ref(false);
 
-  // Пагинация Nuxt UI считает страницы с единицы, сервис — с нуля.
-  const humanPage = computed({
-    get: () => page.value + 1,
-    set: (value: number) => {
-      page.value = Math.max(0, value - 1);
-    },
-  });
+  const humanPage = useHumanPage(page);
 
   const isError = computed(() => status.value === 'error');
 
-  const { getParticipantName, resolveNames } = useParticipantNames();
+  const { getParticipantName, watchParticipantNames } = useParticipantNames();
 
   // Имена мастеров живут в core-api, поэтому резолвятся отдельно и сразу на
   // всю страницу выдачи — по карточке на запрос было бы восемь запросов.
-  watch(
-    games,
-    (list) => {
-      void resolveNames(list.map((item) => item.masterId));
-    },
-    { immediate: true },
-  );
+  watchParticipantNames(() => games.value.map((game) => game.masterId));
 
   /** Открывает панель фильтров. */
   function openFilters(): void {

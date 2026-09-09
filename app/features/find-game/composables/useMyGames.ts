@@ -31,9 +31,16 @@ export function useMyGames() {
 
   // Смена отбора возвращает к первой странице: на третьей странице прежней
   // выдачи новый отбор показал бы пустоту.
-  watch(statuses, () => {
-    page.value = 0;
-  });
+  //
+  // `flush: 'sync'`: страница обнуляется в тот же тик, что и отбор, — иначе
+  // запрос успевал уйти со старым номером страницы, а следом сразу второй.
+  watch(
+    statuses,
+    () => {
+      page.value = 0;
+    },
+    { flush: 'sync' },
+  );
 
   const games = computed(() => gamesPage.value?.content ?? []);
   const totalGames = computed(() => gamesPage.value?.totalElements ?? 0);

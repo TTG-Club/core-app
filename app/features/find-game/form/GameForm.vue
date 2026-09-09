@@ -6,16 +6,17 @@
   import { MarkupEditor } from '~ui/markup-editor';
   import { UploadImage } from '~ui/upload';
 
-  import { useCityDictionary } from '../composables';
+  import { useCityDictionary, useFindGameToast } from '../composables';
   import {
     CANCEL_LABEL,
     createGame,
-    FIND_GAME_UNKNOWN_ERROR_MESSAGE,
     GAME_AGE_MAX,
     GAME_AGE_MIN,
     GAME_CITY_MAX_LENGTH,
     GAME_COST_TYPE_LABELS,
     GAME_COST_TYPES,
+    GAME_DEFAULT_MAX_PLAYERS,
+    GAME_DEFAULT_PLAYERS_TO_START,
     GAME_DURATION_TYPE_LABELS,
     GAME_DURATION_TYPES,
     GAME_EDIT_COST_LOCKED_HINT,
@@ -114,7 +115,7 @@
     saved: [game: Game];
   }>();
 
-  const toast = useToast();
+  const { showError, showSuccess } = useFindGameToast();
 
   const isEdit = computed(() => !!game);
 
@@ -134,11 +135,11 @@
       type: 'ONLINE',
       city: '',
       venue: '',
-      playersToStart: 3,
-      maxPlayers: 5,
+      playersToStart: GAME_DEFAULT_PLAYERS_TO_START,
+      maxPlayers: GAME_DEFAULT_MAX_PLAYERS,
       minAge: null,
       maxAge: null,
-      startingLevel: 1,
+      startingLevel: GAME_STARTING_LEVEL_MIN,
       crossplayAllowed: false,
       durationType: 'CAMPAIGN',
       costType: 'FREE',
@@ -273,6 +274,12 @@
   // заранее и объясняет почему.
   const isCostLocked = computed(() => isEdit.value && hasSessions);
 
+  // При правке видимость объясняется иначе: у опубликованной игры смена
+  // видимости уже влияет на выданные ссылки-приглашения.
+  const visibilityHint = computed(() =>
+    isEdit.value ? GAME_EDIT_VISIBILITY_HINT : GAME_FIELD_VISIBILITY_HINT,
+  );
+
   const playersError = computed(() =>
     form.value.playersToStart > form.value.maxPlayers
       ? GAME_FORM_PLAYERS_ERROR
@@ -378,11 +385,9 @@
         ? await updateGame(game.id, request)
         : await createGame(request);
 
-      toast.add({
-        title: isEdit.value ? GAME_FORM_UPDATED_TOAST : GAME_FORM_CREATED_TOAST,
-        color: 'success',
-        icon: 'tabler:check',
-      });
+      showSuccess(
+        isEdit.value ? GAME_FORM_UPDATED_TOAST : GAME_FORM_CREATED_TOAST,
+      );
 
       emit('saved', saved);
     } catch (error) {
@@ -394,12 +399,7 @@
 
       submitError.value = getFindGameErrorMessage(error);
 
-      toast.add({
-        title: FIND_GAME_UNKNOWN_ERROR_MESSAGE,
-        description: submitError.value,
-        color: 'error',
-        icon: 'tabler:alert-triangle',
-      });
+      showError(submitError.value);
     } finally {
       isSaving.value = false;
     }
@@ -631,7 +631,7 @@
 
       <UFormField
         :label="GAME_FIELD_VISIBILITY_LABEL"
-        :hint="isEdit ? GAME_EDIT_VISIBILITY_HINT : GAME_FIELD_VISIBILITY_HINT"
+        :hint="visibilityHint"
         required
       >
         <USelect

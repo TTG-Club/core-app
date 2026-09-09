@@ -8,7 +8,6 @@
     UpdateParticipantRequest,
   } from '~initiative/model';
 
-  import { useParticipantAvatars } from '~initiative/composables';
   import { ConfirmDialog } from '~initiative/ui-kit';
 
   import InitiativeReel from './InitiativeReel.vue';
@@ -146,22 +145,6 @@
     emit('remove-condition', id, key);
   }
 
-  const { avatarFor } = useParticipantAvatars(() => participants);
-
-  // Карусели участник трекера целиком не нужен: её показывают и по снимку боя
-  // в игровой комнате, поэтому она умеет ровно то, что рисует.
-  const reelParticipants = computed(() =>
-    participants.map((participant) => ({
-      id: participant.id,
-      type: participant.type,
-      name: participant.name,
-      dead: participant.dead,
-      initiativeTotal: participant.initiativeTotal,
-      color: participant.color,
-      avatarUrl: avatarFor(participant),
-    })),
-  );
-
   function confirmReset(): void {
     isResetOpen.value = false;
     emit('reset');
@@ -172,7 +155,7 @@
   <div class="flex flex-col gap-5">
     <InitiativeReel
       v-if="isActive"
-      :participants="reelParticipants"
+      :participants="participants"
       :current-participant-id="currentParticipantId"
       :round="round"
     />

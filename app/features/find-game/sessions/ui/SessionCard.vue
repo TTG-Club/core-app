@@ -38,7 +38,6 @@
     session: GameSession;
     game: Game;
     abilities: GameViewerAbilities;
-    /** Собственная заявка пользователя на эту сессию. */
     /** Собственное участие пользователя во встрече; `null` — не в составе. */
     participant?: SessionParticipant | null;
     busy?: boolean;
@@ -51,7 +50,6 @@
     'cancel': [session: GameSession];
     'complete': [session: GameSession];
     'start': [session: GameSession];
-    'schedule': [session: GameSession];
     'review': [session: GameSession];
   }>();
 
@@ -91,6 +89,10 @@
 
   const paymentLabel = computed(() =>
     participant?.paid ? PAYMENT_PAID_LABEL : PAYMENT_UNPAID_LABEL,
+  );
+
+  const paymentBadgeColor = computed(() =>
+    participant?.paid ? 'success' : 'neutral',
   );
 
   // Отметка оплаты имеет смысл только участнику платной игры.
@@ -174,7 +176,7 @@
 
       <UBadge
         v-if="showPaymentBadge"
-        :color="participant?.paid ? 'success' : 'neutral'"
+        :color="paymentBadgeColor"
         variant="subtle"
         size="sm"
         icon="tabler:receipt"

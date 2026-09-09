@@ -918,9 +918,9 @@ modals), so its capabilities are listed here rather than squeezed into the table
 > **Own service, own route.** The shared `/api/**` proxy sends unknown paths to
 > core-api, so find-game-api has its own same-origin prefix
 > (`FIND_GAME_API_PREFIX` = `/api/find-game/**` → upstream `/api/v1/**`) and its
-> own `NITRO_FIND_GAME_API_URL`. Chat SSE gets a dedicated streaming handler
-> (`server/utils/findGameProxy.ts`) that neither buffers the response nor leaves
-> the upstream subscription open after the client disconnects.
+> own `NITRO_FIND_GAME_API_URL` (`server/utils/findGameProxy.ts`). The handler
+> is bound to that prefix and rejects everything else, so it never becomes an
+> open proxy.
 >
 > **Schedule is a time axis.** Sessions render as a horizontal `UTimeline`
 > with a calendar-style scale (day / week / month / year), period paging and a
@@ -1120,6 +1120,8 @@ Access token in cookie `ttg-user-token`, refresh in httpOnly `ttg-user-refresh-t
 | `app/app.config.ts`       | Nuxt UI configuration (icons, variants)                                                                                                               |
 | `modules/auto-aliases.ts` | Generates `~<domain>` aliases from `app/features/`                                                                                                    |
 | `eslint.config.ts`        | ESLint (via @svifty7/eslint-config)                                                                                                                   |
+| `vitest.config.ts`        | Unit tests (`pnpm test`): pure domain modules only — no Nuxt runtime, project aliases and the few auto-imports come from `test/setup.ts`              |
+| `test/`                   | Unit tests themselves (`test/<domain>/*.test.ts`)                                                                                                     |
 | `stylelint.config.js`     | Stylelint (clean-order)                                                                                                                               |
 | `nano-staged.js`          | Pre-commit staged-file hooks (`simple-git-hooks`)                                                                                                     |
 | `Dockerfile`              | Production image built by the deploy workflow                                                                                                         |

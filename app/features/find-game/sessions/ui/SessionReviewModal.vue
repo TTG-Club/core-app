@@ -8,7 +8,7 @@
 
   import { UiResult } from '~ui/result';
 
-  import { useParticipantNames } from '../../composables';
+  import { useFindGameToast, useParticipantNames } from '../../composables';
   import {
     CANCEL_LABEL,
     fetchSessionReviews,
@@ -44,7 +44,7 @@
     abilities: GameViewerAbilities;
   }>();
 
-  const toast = useToast();
+  const { showError, showSuccess } = useFindGameToast();
   const { user } = useUser();
   const { getParticipantName, resolveNames } = useParticipantNames();
 
@@ -137,21 +137,37 @@
         savedTargets.value = [...savedTargets.value, targetId];
       }
 
-      toast.add({
-        title: REVIEW_SAVED_TOAST,
-        color: 'success',
-        icon: 'tabler:check',
-      });
+      showSuccess(REVIEW_SAVED_TOAST);
     } catch (error) {
-      toast.add({
-        title: FIND_GAME_UNKNOWN_ERROR_MESSAGE,
-        description: getFindGameErrorMessage(error),
-        color: 'error',
-        icon: 'tabler:alert-triangle',
-      });
+      showError(error);
     } finally {
       busyTargetId.value = null;
     }
+  }
+
+  /**
+   * Цвет кнопки вердикта: выбранная сторона загорается, вторая остаётся
+   * нейтральной. Функции, а не `computed`: пара кнопок своя у каждого
+   * участника встречи.
+   *
+   * @param targetId Кого оценивают.
+   * @param recommended Кнопка «сыграл бы снова» или «не сыграл бы».
+   */
+  function verdictButtonColor(targetId: string, recommended: boolean) {
+    if (verdicts.value[targetId] !== recommended) {
+      return 'neutral';
+    }
+
+    return recommended ? 'success' : 'error';
+  }
+
+  /**
+   * Заливка кнопки вердикта.
+   * @param targetId Кого оценивают.
+   * @param recommended Кнопка «сыграл бы снова» или «не сыграл бы».
+   */
+  function verdictButtonVariant(targetId: string, recommended: boolean) {
+    return verdicts.value[targetId] === recommended ? 'solid' : 'subtle';
   }
 
   /**
@@ -174,7 +190,7 @@
       comments.value = {};
       savedTargets.value = [];
       loadReviews();
-      resolveNames(targetIds.value);
+      void resolveNames(targetIds.value);
     },
     { immediate: true },
   );
@@ -239,8 +255,8 @@
               <UButton
                 size="sm"
                 icon="tabler:thumb-up"
-                :color="verdicts[targetId] === true ? 'success' : 'neutral'"
-                :variant="verdicts[targetId] === true ? 'solid' : 'subtle'"
+                :color="verdictButtonColor(targetId, true)"
+                :variant="verdictButtonVariant(targetId, true)"
                 :label="REVIEW_UP_LABEL"
                 @click.left.exact.prevent="setVerdict(targetId, true)"
               />
@@ -248,8 +264,8 @@
               <UButton
                 size="sm"
                 icon="tabler:thumb-down"
-                :color="verdicts[targetId] === false ? 'error' : 'neutral'"
-                :variant="verdicts[targetId] === false ? 'solid' : 'subtle'"
+                :color="verdictButtonColor(targetId, false)"
+                :variant="verdictButtonVariant(targetId, false)"
                 :label="REVIEW_DOWN_LABEL"
                 @click.left.exact.prevent="setVerdict(targetId, false)"
               />

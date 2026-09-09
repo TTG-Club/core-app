@@ -1,9 +1,10 @@
 <script setup lang="ts">
+  import { UiModalActions } from '~ui/modal-actions';
+
+  import { useFindGameToast } from '../../composables';
   import {
     CANCEL_LABEL,
     fetchMyGames,
-    FIND_GAME_UNKNOWN_ERROR_MESSAGE,
-    getFindGameErrorMessage,
     INVITE_GAME_LABEL,
     INVITE_GAME_PLACEHOLDER,
     INVITE_NO_GAMES_HINT,
@@ -30,7 +31,7 @@
     playerName: string;
   }>();
 
-  const toast = useToast();
+  const { showError, showSuccess } = useFindGameToast();
   const pickedGameId = ref<string>('');
   const isSending = ref(false);
 
@@ -56,6 +57,15 @@
 
   const isEmpty = computed(() => !isLoading.value && !gameItems.value.length);
 
+  // Подсказка появляется только когда звать некуда: у поля с играми она была
+  // бы шумом.
+  const gamesHint = computed(() => (isEmpty.value ? INVITE_NO_GAMES_HINT : ''));
+
+  /** Закрывает окно, не приглашая. */
+  function close(): void {
+    isOpen.value = false;
+  }
+
   /** Отправляет приглашение и закрывает окно. */
   async function submit(): Promise<void> {
     if (!playerId || !pickedGameId.value) {
@@ -67,20 +77,11 @@
     try {
       await invitePlayer(pickedGameId.value, playerId);
 
-      toast.add({
-        title: INVITE_SENT_TOAST,
-        color: 'success',
-        icon: 'tabler:check',
-      });
+      showSuccess(INVITE_SENT_TOAST);
 
       isOpen.value = false;
     } catch (error) {
-      toast.add({
-        title: FIND_GAME_UNKNOWN_ERROR_MESSAGE,
-        description: getFindGameErrorMessage(error),
-        color: 'error',
-        icon: 'tabler:alert-triangle',
-      });
+      showError(error);
     } finally {
       isSending.value = false;
     }
@@ -107,7 +108,7 @@
 
         <UFormField
           :label="INVITE_GAME_LABEL"
-          :hint="isEmpty ? INVITE_NO_GAMES_HINT : ''"
+          :hint="gamesHint"
         >
           <USelect
             v-model="pickedGameId"
@@ -123,23 +124,15 @@
     </template>
 
     <template #footer>
-      <div class="flex w-full justify-end gap-2">
-        <UButton
-          variant="ghost"
-          color="neutral"
-          :disabled="isSending"
-          :label="CANCEL_LABEL"
-          @click.left.exact.prevent="isOpen = false"
-        />
-
-        <UButton
-          icon="tabler:mail"
-          :loading="isSending"
-          :disabled="!pickedGameId"
-          :label="INVITE_PLAYER_LABEL"
-          @click.left.exact.prevent="submit"
-        />
-      </div>
+      <UiModalActions
+        :cancel-label="CANCEL_LABEL"
+        :submit-label="INVITE_PLAYER_LABEL"
+        submit-icon="tabler:mail"
+        :loading="isSending"
+        :disabled="!pickedGameId"
+        @cancel="close"
+        @submit="submit"
+      />
     </template>
   </UModal>
 </template>

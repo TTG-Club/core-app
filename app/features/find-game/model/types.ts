@@ -354,19 +354,6 @@ export interface CopyGameSessionRequest {
   startsAt?: string;
 }
 
-/** Состояние формы сессии. */
-export interface SessionFormState {
-  title: string;
-  startsAt: string;
-  /** Набор с открытой датой — время назначается после сбора игроков. */
-  /** Сессия платной игры, проводимая бесплатно. */
-  isFree: boolean;
-  estimatedDurationMinutes: number | null;
-  priceAmount: number | null;
-  priceCurrency: string;
-  paymentType: SessionPaymentType | null;
-}
-
 /**
  * Как игрок представляет персонажа в заявке: своим листом с сайта, чужой
  * ссылкой или просто именем.

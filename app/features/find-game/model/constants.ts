@@ -325,11 +325,21 @@ export const GAME_PLAYERS_MIN = 1;
  * чужой подписке форме игры незачем.
  */
 export const GAME_PLAYERS_MAX = 15;
-export const GAME_PLAYERS_FREE_MAX = 5;
+
+/** Тот же предел без подписки — он звучит только в подсказке поля. */
+const GAME_PLAYERS_FREE_MAX = 5;
+
 export const GAME_AGE_MIN = 0;
 export const GAME_AGE_MAX = 120;
 export const GAME_STARTING_LEVEL_MIN = 1;
 export const GAME_STARTING_LEVEL_MAX = 20;
+
+/**
+ * Стол новой игры по умолчанию: пятеро максимум, троих хватает для старта —
+ * самый ходовой размер группы, и мастеру остаётся поправить только своё.
+ */
+export const GAME_DEFAULT_MAX_PLAYERS = 5;
+export const GAME_DEFAULT_PLAYERS_TO_START = 3;
 export const GAME_DELETION_REASON_MAX_LENGTH = 1000;
 
 export const SESSION_TITLE_MAX_LENGTH = 150;
@@ -375,26 +385,12 @@ export const GAME_SEATS_MAX_ICONS = 8;
 export const DISPLAY_NAMES_LOOKUP_MAX = 200;
 
 /* ------------------------------------------------------------------ */
-/* Чат: подключение и поведение ленты                                  */
-/* ------------------------------------------------------------------ */
-
-/** Задержка первой попытки переподключения SSE, мс. */
-
-/** Потолок задержки переподключения, мс: дальше расти нет смысла. */
-
-/** Сколько попыток переподключения делаем, прежде чем сдаться и ждать команды. */
-
-/**
- * Насколько близко к концу ленты должен быть пользователь, чтобы новое событие
- * прокрутило список само. Дальше — не трогаем прокрутку и показываем счётчик
- * непрочитанных.
- */
-
-/** Разрыв между сообщениями одного автора, после которого группа начинается заново, мс. */
-
-/* ------------------------------------------------------------------ */
 /* Тексты интерфейса                                                   */
 /* ------------------------------------------------------------------ */
+
+/** Значки уведомлений раздела: один на успех, один на отказ. */
+export const FIND_GAME_TOAST_SUCCESS_ICON = 'tabler:check';
+export const FIND_GAME_TOAST_ERROR_ICON = 'tabler:alert-triangle';
 
 export const FIND_GAME_UNKNOWN_ERROR_MESSAGE =
   'Что-то пошло не так. Попробуйте ещё раз.';
@@ -503,6 +499,13 @@ export const FOLLOWED_MASTERS_TAB_LABEL = 'Мои мастера';
 export const BOOKMARKED_PLAYERS_TAB_LABEL = 'Мои игроки';
 export const MY_GAMES_TAB_LABEL = 'Игры';
 
+/** Вкладки раздела «Мои игры»: свои игры и два списка отметок. */
+export const MY_GAMES_TABS = {
+  GAMES: 'games',
+  MASTERS: 'masters',
+  PLAYERS: 'players',
+} as const;
+
 export const FOLLOWED_MASTERS_EMPTY_TITLE = 'Отмеченных мастеров нет';
 
 export const FOLLOWED_MASTERS_EMPTY_DESCRIPTION =
@@ -547,7 +550,6 @@ export const REVIEW_DOWN_LABEL = 'Больше не сяду';
 export const REVIEW_COMMENT_LABEL = 'Отзыв';
 export const REVIEW_COMMENT_PLACEHOLDER = 'Необязательно: как прошла встреча';
 export const REVIEW_SAVED_TOAST = 'Оценка сохранена';
-export const REVIEW_VERDICT_REQUIRED = 'Выберите оценку';
 
 /** Почему чужая оценка ещё не видна: пара раскрывается разом. */
 export const REVIEW_HIDDEN_HINT =
@@ -564,9 +566,6 @@ export const REVIEWS_EMPTY_DESCRIPTION =
   'Они появятся, когда игроки оценят проведённые встречи';
 
 export const REPUTATION_EMPTY_LABEL = 'Пока без оценок';
-export const REPUTATION_ERROR_LABEL = 'Репутация недоступна';
-export const PLAYER_REPUTATION_LABEL = 'Репутация игрока';
-export const PLAYER_REVIEWS_TITLE = 'Отзывы мастеров';
 export const PLAYER_REVIEWS_OPEN_LABEL = 'Отзывы мастеров';
 export const OWN_REPUTATION_TITLE = 'Ваша репутация игрока';
 
@@ -580,7 +579,7 @@ export const GAME_SESSIONS_TITLE = 'Календарь сессий';
 
 export const GAME_GUEST_NOTICE_TITLE = 'Войдите, чтобы участвовать';
 export const GAME_GUEST_NOTICE_DESCRIPTION =
-  'Список сессий, заявки и чат доступны после входа на сайт.';
+  'Список сессий и заявки доступны после входа на сайт.';
 export const GAME_SIGN_IN_LABEL = 'Войти';
 
 export const GAME_INVITE_TITLE = 'Ссылка-приглашение';
@@ -601,6 +600,20 @@ export const GAME_CANCEL_CONFIRM_DESCRIPTION =
   'Игра будет отмечена как несостоявшаяся, а её набор закроется. По завершённым играм видно, что мастер действительно провёл, поэтому отмена — отдельный исход. Вернуть игру в набор нельзя.';
 
 export const GAME_CANCELLED_TOAST = 'Игра отменена';
+
+/**
+ * Значок и цвет вердикта отзыва. Палец вверх и вниз читаются без подписи, а
+ * цвет отделяет один отзыв от другого в общем списке.
+ */
+export const REVIEW_VERDICT_ICON = {
+  positive: 'tabler:thumb-up',
+  negative: 'tabler:thumb-down',
+} as const;
+
+export const REVIEW_VERDICT_TEXT_CLASS = {
+  positive: 'text-success',
+  negative: 'text-error',
+} as const;
 
 /** Начало сообщения об исчерпанной норме попыток. */
 export const RETRY_AFTER_PREFIX = 'Попробуйте снова через';
@@ -754,10 +767,17 @@ export const GAME_FORM_LIMIT_HINT =
 /* Подписи раздела «Мои игры». */
 // Список собирает и свои игры, и чужие, куда пользователь записался,
 // поэтому пустой экран зовёт и создать стол, и найти чужой.
-/** Отбор своих игр по состоянию: «все» — всё, кроме отменённых. */
+
 /** Подсказка у пометки: почему в меню горит точка. */
 export const MY_GAMES_UPDATES_HINT = 'Есть новости в ваших играх';
 
+/**
+ * Значение варианта «все, кроме отменённых» в ряду отбора. Своё значение ему
+ * нужно потому, что пустую строку список выбора не принимает.
+ */
+export const MY_GAMES_STATUS_ALL_VALUE = 'ACTIVE';
+
+/** Отбор своих игр по состоянию: «все» — всё, кроме отменённых. */
 export const MY_GAMES_STATUS_ALL_LABEL = 'Активные';
 export const MY_GAMES_STATUS_HINT =
   'Отменённые игры показываются только по отбору';
@@ -803,6 +823,15 @@ export const SESSION_SERIES_HORIZON_UNIT_LABELS = {
   MONTHS: 'мес.',
 } as const;
 export const SESSION_SERIES_HORIZON_MAX = 52;
+
+/**
+ * Расписание серии по умолчанию: две единицы срока (то есть два месяца) и
+ * одна встреча в неделю. Мастер меняет их первым же движением, но пустая
+ * форма без дня недели не показала бы, сколько встреч выйдет.
+ */
+export const SESSION_SERIES_DEFAULT_HORIZON = 2;
+export const SESSION_SERIES_DEFAULT_HORIZON_UNIT = 'MONTHS';
+export const SESSION_SERIES_DEFAULT_WEEKDAYS = ['WEDNESDAY'] as const;
 export const SESSION_SERIES_PREVIEW_PREFIX = 'Будет создано встреч';
 export const SESSION_SERIES_EMPTY_HINT =
   'В выбранном промежутке нет ни одного подходящего дня.';
@@ -839,6 +868,17 @@ export const SESSION_DATE_FORMAT = 'LLL ([UTC]Z)';
 
 export const SESSION_TIMEZONE_HINT_PREFIX = 'Время в вашем часовом поясе';
 
+/** Минут в часе — для перевода времени встречи в длительность. */
+export const MINUTES_IN_HOUR = 60;
+
+/**
+ * Время встречи по умолчанию: вечер буднего дня, когда игра и собирается.
+ * Конец раньше начала считается переходом через полночь, поэтому ночная
+ * сессия задаётся теми же двумя полями.
+ */
+export const SESSION_DEFAULT_START_HOUR = 19;
+export const SESSION_DEFAULT_END_HOUR = 23;
+
 export const SESSION_START_LABEL = 'Начать';
 export const SESSION_STARTED_TOAST = 'Сессия начата';
 export const SESSION_COMPLETE_LABEL = 'Завершить';
@@ -856,14 +896,12 @@ export const SESSION_COMPLETE_DESCRIPTION =
 
 export const SESSION_COMPLETED_TOAST = 'Сессия завершена';
 
-/** Разумный потолок для одной сессии — сутки. */
-
-/** Верхняя граница поля минут: 60 и больше — это уже следующий час. */
-
-/** Шаг поля минут: за столом время планируют четвертями часа. */
 export const SESSION_PRICE_LABEL = 'Стоимость';
 export const SESSION_CURRENCY_LABEL = 'Валюта';
 export const SESSION_CURRENCY_PLACEHOLDER = 'Выберите валюту';
+
+/** Валюта по умолчанию: большинство игр на сайте считают в рублях. */
+export const SESSION_DEFAULT_CURRENCY = 'RUB';
 
 /**
  * Валюты оплаты сессии. Сервис принимает трёхбуквенный код ISO 4217, а
@@ -871,9 +909,6 @@ export const SESSION_CURRENCY_PLACEHOLDER = 'Выберите валюту';
  * мастер выбирает из списка. Список открытый: не хватает валюты — допишите
  * сюда, ограничение сервиса это не нарушит.
  */
-/** Валюта по умолчанию: большинство игр на сайте считают в рублях. */
-export const SESSION_DEFAULT_CURRENCY = 'RUB';
-
 export const SESSION_CURRENCIES = [
   { code: 'RUB', name: 'Российский рубль' },
   { code: 'BYN', name: 'Белорусский рубль' },

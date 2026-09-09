@@ -2,31 +2,31 @@
   import type {
     CreateGameSessionSeriesRequest,
     GameCostType,
-    SessionPaymentType,
     SessionWeekday,
   } from '../../model';
 
-  import { Time } from '@internationalized/date';
+  import { UiModalActions } from '~ui/modal-actions';
 
   import {
+    useSessionPaymentFields,
+    useSessionTimeRange,
+  } from '../../composables';
+  import {
     CANCEL_LABEL,
-    durationBetween,
     getDefaultSessionDate,
-    SESSION_CURRENCIES,
     SESSION_CURRENCY_LABEL,
-    SESSION_CURRENCY_PATTERN,
     SESSION_CURRENCY_PLACEHOLDER,
-    SESSION_DEFAULT_CURRENCY,
     SESSION_FREE_HINT,
     SESSION_FREE_SESSION_HINT,
     SESSION_FREE_SESSION_LABEL,
     SESSION_PAID_HINT,
     SESSION_PAYMENT_TYPE_LABEL,
-    SESSION_PAYMENT_TYPE_LABELS,
-    SESSION_PAYMENT_TYPES,
     SESSION_PRICE_LABEL,
     SESSION_PRICE_MIN,
     SESSION_SERIES_CREATE_LABEL,
+    SESSION_SERIES_DEFAULT_HORIZON,
+    SESSION_SERIES_DEFAULT_HORIZON_UNIT,
+    SESSION_SERIES_DEFAULT_WEEKDAYS,
     SESSION_SERIES_DESCRIPTION,
     SESSION_SERIES_EMPTY_HINT,
     SESSION_SERIES_HORIZON_LABEL,
@@ -41,7 +41,6 @@
     SESSION_TIME_END_LABEL,
     SESSION_TIME_RANGE_HINT,
     SESSION_TIME_START_LABEL,
-    SESSION_TIMEZONE_HINT_PREFIX,
     SESSION_TITLE_LABEL,
     SESSION_TITLE_MAX_LENGTH,
     SESSION_TITLE_PLACEHOLDER,
@@ -72,22 +71,38 @@
 
   const title = ref('');
   const startsOn = ref(getDefaultSessionDate());
-  const weekdays = ref<Array<SessionWeekday>>(['WEDNESDAY']);
-  const horizonAmount = ref(2);
 
-  const horizonUnit =
-    ref<(typeof SESSION_SERIES_HORIZON_UNITS)[number]>('MONTHS');
+  const weekdays = ref<Array<SessionWeekday>>([
+    ...SESSION_SERIES_DEFAULT_WEEKDAYS,
+  ]);
 
-  const isFree = ref(false);
-  const priceAmount = ref<number | null>(null);
-  const priceCurrency = ref(SESSION_DEFAULT_CURRENCY);
-  const paymentType = ref<SessionPaymentType | null>(null);
+  const horizonAmount = ref<number>(SESSION_SERIES_DEFAULT_HORIZON);
 
-  // Два поля вместо диапазона: диапазон не принимает конец раньше начала, а
-  // ночная сессия ровно такая — «с 19:00 до 01:00».
-  // shallowRef: у `Time` приватные поля, и разворачивание ref их теряет.
-  const startTime = shallowRef(new Time(19, 0));
-  const endTime = shallowRef(new Time(23, 0));
+  const horizonUnit = ref<(typeof SESSION_SERIES_HORIZON_UNITS)[number]>(
+    SESSION_SERIES_DEFAULT_HORIZON_UNIT,
+  );
+
+  const {
+    startTime,
+    endTime,
+    startTimeText,
+    durationMinutes,
+    timezoneHint,
+    reset: resetTimeRange,
+  } = useSessionTimeRange();
+
+  const {
+    isFree,
+    priceAmount,
+    priceCurrency,
+    paymentTypeChoice,
+    isPaid,
+    isValid: isPaymentValid,
+    currencyOptions,
+    paymentTypeOptions,
+    applyTo: applyPaymentFields,
+    reset: resetPaymentFields,
+  } = useSessionPaymentFields(() => costType);
 
   const weekdayOptions = SESSION_WEEKDAYS.map((value) => ({
     value,
@@ -98,30 +113,6 @@
     value,
     label: SESSION_SERIES_HORIZON_UNIT_LABELS[value],
   }));
-
-  const paymentTypeOptions = SESSION_PAYMENT_TYPES.map((value) => ({
-    value,
-    label: SESSION_PAYMENT_TYPE_LABELS[value],
-  }));
-
-  const currencyOptions: Array<{ value: string; label: string }> =
-    SESSION_CURRENCIES.map((currency) => ({
-      value: currency.code,
-      label: `${currency.code} — ${currency.name}`,
-    }));
-
-  const isPaid = computed(() => costType === 'PAID' && !isFree.value);
-
-  const paymentTypeChoice = computed({
-    get: () => paymentType.value ?? undefined,
-    set: (value: SessionPaymentType | undefined) => {
-      paymentType.value = value ?? null;
-    },
-  });
-
-  const timezoneHint = computed(
-    () => `${SESSION_TIMEZONE_HINT_PREFIX} (UTC${$dayjs().format('Z')})`,
-  );
 
   // Срок мастер называет неделями или месяцами, а сервису уходит последний
   // день: считать календарь удобнее там, где мастер его и задаёт.
@@ -167,21 +158,15 @@
     return count;
   });
 
-  const durationMinutes = computed(() =>
-    durationBetween(
-      startTime.value.hour * 60 + startTime.value.minute,
-      endTime.value.hour * 60 + endTime.value.minute,
-    ),
+  /** Подсказка окна: у платной серии речь о деньгах, у бесплатной — нет. */
+  const paymentHint = computed(() =>
+    isPaid.value ? SESSION_PAID_HINT : SESSION_FREE_HINT,
   );
 
-  const isCurrencyValid = computed(
-    () => !isPaid.value || SESSION_CURRENCY_PATTERN.test(priceCurrency.value),
-  );
-
-  const isPriceValid = computed(
-    () =>
-      !isPaid.value
-      || (priceAmount.value !== null && priceAmount.value >= SESSION_PRICE_MIN),
+  // Ноль встреч — это несостоявшееся расписание, а не просто число: цвет
+  // предупреждения объясняет, почему кнопка создания не сработает.
+  const plannedCountColor = computed(() =>
+    plannedCount.value > 0 ? 'neutral' : 'warning',
   );
 
   const isValid = computed(
@@ -191,9 +176,7 @@
       && weekdays.value.length > 0
       && plannedCount.value > 0
       && plannedCount.value <= SESSION_SERIES_MAX
-      && isPriceValid.value
-      && isCurrencyValid.value
-      && (!isPaid.value || !!paymentType.value),
+      && isPaymentValid.value,
   );
 
   // Форма живёт вместе со страницей: чистим её на каждом открытии, иначе
@@ -205,18 +188,13 @@
 
     title.value = '';
     startsOn.value = getDefaultSessionDate();
-    weekdays.value = ['WEDNESDAY'];
-    horizonAmount.value = 2;
-    horizonUnit.value = 'MONTHS';
-    isFree.value = false;
-    priceAmount.value = null;
-    priceCurrency.value = SESSION_DEFAULT_CURRENCY;
-    paymentType.value = null;
-    startTime.value = new Time(19, 0);
-    endTime.value = new Time(23, 0);
+    weekdays.value = [...SESSION_SERIES_DEFAULT_WEEKDAYS];
+    horizonAmount.value = SESSION_SERIES_DEFAULT_HORIZON;
+    horizonUnit.value = SESSION_SERIES_DEFAULT_HORIZON_UNIT;
+    resetTimeRange();
+    resetPaymentFields();
   });
 
-  /** Закрывает окно без создания серии. */
   /**
    * Отмечает или снимает день недели.
    * @param weekday День недели серии.
@@ -235,16 +213,27 @@
     return weekdays.value.includes(weekday);
   }
 
-  function cancel(): void {
-    isOpen.value = false;
+  /**
+   * Вид кнопки дня недели: отмеченный день залит. Функции, а не `computed`:
+   * кнопка своя у каждого дня.
+   *
+   * @param weekday День недели серии.
+   */
+  function weekdayButtonColor(weekday: SessionWeekday) {
+    return isWeekdayPicked(weekday) ? 'primary' : 'neutral';
   }
 
   /**
-   * Двузначное число для склейки времени.
-   * @param value Часы или минуты.
+   * Заливка кнопки дня недели.
+   * @param weekday День недели серии.
    */
-  function pad(value: number): string {
-    return `${value}`.padStart(2, '0');
+  function weekdayButtonVariant(weekday: SessionWeekday) {
+    return isWeekdayPicked(weekday) ? 'solid' : 'subtle';
+  }
+
+  /** Закрывает окно без создания серии. */
+  function cancel(): void {
+    isOpen.value = false;
   }
 
   /** Собирает тело запроса. */
@@ -253,14 +242,12 @@
       return;
     }
 
-    const start = startTime.value;
-
     const request: CreateGameSessionSeriesRequest = {
       title: title.value.trim(),
       startsOn: startsOn.value,
       until: until.value,
       daysOfWeek: [...weekdays.value],
-      timeOfDay: `${pad(start.hour)}:${pad(start.minute)}`,
+      timeOfDay: startTimeText.value,
       // Пояс берётся у браузера: расписание задаётся в том времени, в котором
       // мастер его и называет.
       zoneId: Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -270,11 +257,7 @@
       request.estimatedDurationMinutes = durationMinutes.value;
     }
 
-    if (isPaid.value && priceAmount.value !== null && paymentType.value) {
-      request.priceAmount = priceAmount.value;
-      request.priceCurrency = priceCurrency.value.toUpperCase();
-      request.paymentType = paymentType.value;
-    }
+    applyPaymentFields(request);
 
     emit('submit', request);
   }
@@ -284,7 +267,7 @@
   <UModal
     v-model:open="isOpen"
     :title="SESSION_SERIES_TITLE"
-    :description="isPaid ? SESSION_PAID_HINT : SESSION_FREE_HINT"
+    :description="paymentHint"
   >
     <template #body>
       <div class="flex flex-col gap-4">
@@ -311,8 +294,8 @@
               v-for="option in weekdayOptions"
               :key="option.value"
               size="sm"
-              :color="isWeekdayPicked(option.value) ? 'primary' : 'neutral'"
-              :variant="isWeekdayPicked(option.value) ? 'solid' : 'subtle'"
+              :color="weekdayButtonColor(option.value)"
+              :variant="weekdayButtonVariant(option.value)"
               :label="option.label"
               @click.left.exact.prevent="toggleWeekday(option.value)"
             />
@@ -373,7 +356,7 @@
         </UFormField>
 
         <UAlert
-          :color="plannedCount > 0 ? 'neutral' : 'warning'"
+          :color="plannedCountColor"
           variant="subtle"
           icon="tabler:calendar-repeat"
           :title="
@@ -434,23 +417,15 @@
     </template>
 
     <template #footer>
-      <div class="flex w-full justify-end gap-2">
-        <UButton
-          variant="ghost"
-          color="neutral"
-          :disabled="loading"
-          :label="CANCEL_LABEL"
-          @click.left.exact.prevent="cancel"
-        />
-
-        <UButton
-          icon="tabler:calendar-repeat"
-          :loading="loading"
-          :disabled="!isValid"
-          :label="SESSION_SERIES_CREATE_LABEL"
-          @click.left.exact.prevent="submit"
-        />
-      </div>
+      <UiModalActions
+        :cancel-label="CANCEL_LABEL"
+        :submit-label="SESSION_SERIES_CREATE_LABEL"
+        submit-icon="tabler:calendar-repeat"
+        :loading="loading"
+        :disabled="!isValid"
+        @cancel="cancel"
+        @submit="submit"
+      />
     </template>
   </UModal>
 </template>

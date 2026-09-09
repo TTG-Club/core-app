@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { GameRegistration } from '../../model';
 
+  import { UiModalActions } from '~ui/modal-actions';
+
   import {
     CANCEL_LABEL,
     REGISTRATION_EXCLUDE_LABEL,
@@ -55,6 +57,11 @@
     }
   });
 
+  /** Закрывает окно, не отправляя решения. */
+  function close(): void {
+    isOpen.value = false;
+  }
+
   /** Отправляет решение мастера. */
   function submit(): void {
     if (registration) {
@@ -86,23 +93,15 @@
     </template>
 
     <template #footer>
-      <div class="flex w-full justify-end gap-2">
-        <UButton
-          variant="ghost"
-          color="neutral"
-          :disabled="loading"
-          :label="CANCEL_LABEL"
-          @click.left.exact.prevent="isOpen = false"
-        />
-
-        <UButton
-          color="error"
-          icon="tabler:user-minus"
-          :loading="loading"
-          :label="submitLabel"
-          @click.left.exact.prevent="submit"
-        />
-      </div>
+      <UiModalActions
+        :cancel-label="CANCEL_LABEL"
+        :submit-label="submitLabel"
+        submit-icon="tabler:user-minus"
+        submit-color="error"
+        :loading="loading"
+        @cancel="close"
+        @submit="submit"
+      />
     </template>
   </UModal>
 </template>

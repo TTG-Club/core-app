@@ -1,7 +1,11 @@
 <script setup lang="ts">
   import { Role } from '~/shared/types';
   import { GameCard, GameCardSkeleton } from '~find-game/catalog';
-  import { useMyGames, useParticipantNames } from '~find-game/composables';
+  import {
+    useHumanPage,
+    useMyGames,
+    useParticipantNames,
+  } from '~find-game/composables';
   import {
     BookmarkedPlayersPanel,
     FollowedMastersPanel,
@@ -23,8 +27,10 @@
     MY_GAMES_EMPTY_TITLE,
     MY_GAMES_ERROR_TITLE,
     MY_GAMES_STATUS_ALL_LABEL,
+    MY_GAMES_STATUS_ALL_VALUE,
     MY_GAMES_STATUS_HINT,
     MY_GAMES_TAB_LABEL,
+    MY_GAMES_TABS,
   } from '~find-game/model';
   import { NotificationsBell } from '~find-game/notifications';
   import { PageGrid } from '~ui/page';
@@ -57,12 +63,8 @@
    * состоянию. Отменённые лежат за отдельным чипом: они не состоялись, и в
    * общем списке только мешают.
    */
-  // «Все, кроме отменённых» — тоже вариант отбора, и своё значение ему нужно:
-  // пустую строку список выбора не принимает.
-  const ACTIVE_STATUSES = 'ACTIVE';
-
   const statusItems = computed(() => [
-    { label: MY_GAMES_STATUS_ALL_LABEL, value: ACTIVE_STATUSES },
+    { label: MY_GAMES_STATUS_ALL_LABEL, value: MY_GAMES_STATUS_ALL_VALUE },
     ...GAME_STATUSES.map((value) => ({
       label: GAME_STATUS_LABELS[value],
       value,
@@ -70,7 +72,7 @@
   ]);
 
   const pickedStatus = computed({
-    get: () => statuses.value[0] ?? ACTIVE_STATUSES,
+    get: () => statuses.value[0] ?? MY_GAMES_STATUS_ALL_VALUE,
     set: (value: string) => {
       const picked = GAME_STATUSES.find((status) => status === value);
 
@@ -78,13 +80,7 @@
     },
   });
 
-  // Пагинация Nuxt UI считает страницы с единицы, сервис — с нуля.
-  const humanPage = computed({
-    get: () => page.value + 1,
-    set: (value: number) => {
-      page.value = Math.max(0, value - 1);
-    },
-  });
+  const humanPage = useHumanPage(page);
 
   const isError = computed(() => status.value === 'error');
 
@@ -94,32 +90,30 @@
    * пропустить его новую.
    */
   const tabItems = [
-    { value: 'games', label: MY_GAMES_TAB_LABEL, icon: 'tabler:cards' },
     {
-      value: 'masters',
+      value: MY_GAMES_TABS.GAMES,
+      label: MY_GAMES_TAB_LABEL,
+      icon: 'tabler:cards',
+    },
+    {
+      value: MY_GAMES_TABS.MASTERS,
       label: FOLLOWED_MASTERS_TAB_LABEL,
       icon: 'tabler:bookmark',
     },
     {
-      value: 'players',
+      value: MY_GAMES_TABS.PLAYERS,
       label: BOOKMARKED_PLAYERS_TAB_LABEL,
       icon: 'tabler:star',
     },
   ];
 
-  const tab = ref('games');
+  const tab = ref<string>(MY_GAMES_TABS.GAMES);
 
-  const { getParticipantName, resolveNames } = useParticipantNames();
+  const { getParticipantName, watchParticipantNames } = useParticipantNames();
 
   // Имена мастеров живут в core-api, поэтому резолвятся отдельно и сразу на
   // всю страницу выдачи — по карточке на запрос было бы восемь запросов.
-  watch(
-    games,
-    (list) => {
-      void resolveNames(list.map((item) => item.masterId));
-    },
-    { immediate: true },
-  );
+  watchParticipantNames(() => games.value.map((game) => game.masterId));
 </script>
 
 <template>
@@ -147,9 +141,9 @@
           class="w-full"
         />
 
-        <FollowedMastersPanel v-if="tab === 'masters'" />
+        <FollowedMastersPanel v-if="tab === MY_GAMES_TABS.MASTERS" />
 
-        <BookmarkedPlayersPanel v-else-if="tab === 'players'" />
+        <BookmarkedPlayersPanel v-else-if="tab === MY_GAMES_TABS.PLAYERS" />
 
         <template v-else>
           <UFormField :hint="MY_GAMES_STATUS_HINT">

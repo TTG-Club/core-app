@@ -4,14 +4,13 @@ import {
   bookmarkPlayer,
   fetchBookmarkedPlayers,
   fetchFollowedMasters,
-  FIND_GAME_UNKNOWN_ERROR_MESSAGE,
   FOLLOW_MASTER_ADDED_TOAST,
   FOLLOW_MASTER_REMOVED_TOAST,
   followMaster,
-  getFindGameErrorMessage,
   unbookmarkPlayer,
   unfollowMaster,
 } from '../model';
+import { useFindGameToast } from './useFindGameToast';
 
 /**
  * Отметки участников друг о друге.
@@ -26,7 +25,7 @@ import {
  */
 export const useFollows = createSharedComposable(() => {
   const { isLoggedIn } = useUser();
-  const toast = useToast();
+  const { showError, showSuccess } = useFindGameToast();
 
   const {
     data: masters,
@@ -85,18 +84,9 @@ export const useFollows = createSharedComposable(() => {
       await action();
       await refresh();
 
-      toast.add({
-        title: successTitle,
-        color: 'success',
-        icon: 'tabler:check',
-      });
+      showSuccess(successTitle);
     } catch (error) {
-      toast.add({
-        title: FIND_GAME_UNKNOWN_ERROR_MESSAGE,
-        description: getFindGameErrorMessage(error),
-        color: 'error',
-        icon: 'tabler:alert-triangle',
-      });
+      showError(error);
     } finally {
       busyUserId.value = null;
     }
@@ -157,8 +147,6 @@ export const useFollows = createSharedComposable(() => {
 
     isMasterFollowed,
     isPlayerBookmarked,
-    refreshMasters,
-    refreshPlayers,
     toggleMaster,
     togglePlayer,
   };

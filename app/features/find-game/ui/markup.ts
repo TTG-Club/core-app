@@ -1,7 +1,3 @@
-import type { RenderNode } from '~ui/markup';
-
-import { getNodeText, parse, toMarkupSource } from '~ui/markup';
-
 /**
  * Разметка описания игры.
  *
@@ -9,6 +5,10 @@ import { getNodeText, parse, toMarkupSource } from '~ui/markup';
  * сопоставляет типы с Vue-компонентами, поэтому разбор неотделим от UI.
  * В модели такой импорт утянул бы за собой Vue и рантайм Nuxt.
  */
+
+import type { RenderNode } from '~ui/markup';
+
+import { getNodeText, parse, toMarkupSource } from '~ui/markup';
 
 /**
  * Приводит описание игры к узлам разметки.

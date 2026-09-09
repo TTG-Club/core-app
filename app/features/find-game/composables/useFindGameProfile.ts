@@ -11,6 +11,7 @@ import {
   PROFILE_UNSAVED_CONFIRM,
   updateFindGameProfile,
 } from '../model';
+import { useFindGameToast } from './useFindGameToast';
 
 /**
  * Приводит профиль сервиса к состоянию формы.
@@ -49,7 +50,7 @@ function createEmptyFormState(): FindGameProfileFormState {
  * стороне сервиса, поэтому форма всегда открывается на готовых данных.
  */
 export function useFindGameProfile() {
-  const toast = useToast();
+  const { showError, showSuccess } = useFindGameToast();
 
   const form = ref<FindGameProfileFormState>(createEmptyFormState());
   const isSaving = ref(false);
@@ -114,22 +115,13 @@ export function useFindGameProfile() {
       form.value = { ...state };
       savedForm.value = { ...state };
 
-      toast.add({
-        title: PROFILE_SAVED_TITLE,
-        color: 'success',
-        icon: 'tabler:check',
-      });
+      showSuccess(PROFILE_SAVED_TITLE);
 
       return true;
     } catch (saveFailure) {
       saveError.value = getFindGameErrorMessage(saveFailure);
 
-      toast.add({
-        title: PROFILE_SAVE_ERROR_TITLE,
-        description: saveError.value,
-        color: 'error',
-        icon: 'tabler:alert-triangle',
-      });
+      showError(saveError.value, PROFILE_SAVE_ERROR_TITLE);
 
       return false;
     } finally {

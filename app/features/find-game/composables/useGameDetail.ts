@@ -70,7 +70,6 @@ export function useGameDetail(
   // видит приглашение войти.
   const {
     data: sessions,
-    error: sessionsError,
     status: sessionsStatus,
     refresh: refreshSessions,
   } = useAsyncData(
@@ -102,8 +101,7 @@ export function useGameDetail(
   /**
    * Собственная заявка в игру.
    *
-   * Одна на игру: из неё следует и состав, и доступ к чатам, и возможность
-   * отозваться. Вычислить статус по `registeredPlayerIds` сессии нельзя —
+   * Одна на игру: из неё следует и состав, и возможность отозваться. Вычислить статус по `registeredPlayerIds` сессии нельзя —
    * там только участники встречи, и `PENDING` от `REJECTED` по этому списку
    * не отличить. Мастеру запрос не нужен: он в собственную игру заявок не
    * подаёт.
@@ -176,7 +174,7 @@ export function useGameDetail(
   const ownParticipationBySession = computed(() => {
     const bySession = new Map<string, SessionParticipant>();
 
-    for (const participation of ownParticipations.value ?? []) {
+    for (const participation of ownParticipations.value) {
       bySession.set(participation.sessionId, participation);
     }
 
@@ -188,7 +186,7 @@ export function useGameDetail(
       game: game.value ?? null,
       userId: currentUserId.value,
       roles: roles.value ?? [],
-      registration: ownRegistration.value ?? null,
+      registration: ownRegistration.value,
     }),
   );
 
@@ -365,8 +363,8 @@ export function useGameDetail(
 
   return {
     game,
-    sessions: computed(() => sessions.value ?? []),
-    ownRegistration: computed(() => ownRegistration.value ?? null),
+    sessions,
+    ownRegistration,
     ownParticipationBySession,
     refreshOwnParticipations,
     abilities,
@@ -375,7 +373,6 @@ export function useGameDetail(
 
     gameError,
     gameStatus,
-    sessionsError,
     isGameLoading,
     areSessionsLoading,
 
@@ -392,9 +389,6 @@ export function useGameDetail(
     openRecruitment,
     raise,
     refreshAll,
-    refreshGame,
-    refreshOwnRegistrations,
-    refreshSessions,
     remove,
     startSession,
     withdrawFromGame,

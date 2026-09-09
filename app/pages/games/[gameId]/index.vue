@@ -1,7 +1,11 @@
 <script setup lang="ts">
   import { StatusCodes } from 'http-status-codes';
 
-  import { useGameDetail, useParticipantNames } from '~find-game/composables';
+  import {
+    useFindGameToast,
+    useGameDetail,
+    useParticipantNames,
+  } from '~find-game/composables';
   import { GameApplyModal } from '~find-game/form';
   import { GameActions, GameInviteCard, GameOverview } from '~find-game/game';
   import {
@@ -36,9 +40,9 @@
   import { UiResult } from '~ui/result';
 
   const route = useRoute();
-  const toast = useToast();
+  const { showError, showSuccess } = useFindGameToast();
 
-  const { getParticipantName, resolveNames } = useParticipantNames();
+  const { getParticipantName, watchParticipantNames } = useParticipantNames();
 
   const gameId = computed(() =>
     typeof route.params.gameId === 'string' ? route.params.gameId : '',
@@ -96,10 +100,6 @@
     game.value ? getParticipantName(game.value.masterId) : '',
   );
 
-  /**
-   * Сессии, чей чат открыт пользователю: мастеру — все, игроку — те, в
-   * состав которых он входит.
-   */
   useSeoMeta({
     title: () => game.value?.title ?? GAMES_NAVIGATION_LABEL,
     description: () =>
@@ -108,15 +108,7 @@
 
   // Мастера подписываем именем из core-api: сервис поиска игр имён не хранит,
   // а сырой UUID пользователю ничего не говорит.
-  watch(
-    game,
-    (loaded) => {
-      if (loaded) {
-        resolveNames([loaded.masterId]);
-      }
-    },
-    { immediate: true },
-  );
+  watchParticipantNames(() => (game.value ? [game.value.masterId] : []));
 
   /**
    * Выполняет действие мастера или модератора с уведомлением о результате.
@@ -132,20 +124,11 @@
     try {
       await action();
 
-      toast.add({
-        title: successTitle,
-        color: 'success',
-        icon: 'tabler:check',
-      });
+      showSuccess(successTitle);
 
       return true;
     } catch (error) {
-      toast.add({
-        title: FIND_GAME_UNKNOWN_ERROR_MESSAGE,
-        description: getFindGameErrorMessage(error),
-        color: 'error',
-        icon: 'tabler:alert-triangle',
-      });
+      showError(error);
 
       return false;
     } finally {

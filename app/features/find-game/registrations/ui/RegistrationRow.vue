@@ -14,6 +14,8 @@
     BOOKMARK_PLAYER_LABEL,
     fetchPlayerReviews,
     getReputationLabel,
+    getReviewVerdictIcon,
+    getReviewVerdictTextClass,
     PLAYER_REVIEWS_OPEN_LABEL,
     REGISTRATION_APPROVE_LABEL,
     REGISTRATION_CHARACTER_SHEET_LABEL,
@@ -100,16 +102,36 @@
 
   const reputationLabel = computed(() => getReputationLabel(reputation));
 
+  // Игрок без единой оценки отмечен спокойным цветом: зелёный значок у
+  // новичка читался бы как чужая рекомендация.
+  const reputationBadgeColor = computed(() =>
+    reputation && reputation.total > 0 ? 'success' : 'neutral',
+  );
+
   const { busyUserId, isPlayerBookmarked, togglePlayer } = useFollows();
 
   const isBookmarked = computed(() =>
     isPlayerBookmarked(registration.playerId),
   );
 
+  // Отмеченный игрок виден по залитой звезде: подписи у кнопки нет.
+  const bookmarkButtonColor = computed(() =>
+    isBookmarked.value ? 'primary' : 'neutral',
+  );
+
+  const bookmarkButtonIcon = computed(() =>
+    isBookmarked.value ? 'tabler:star-filled' : 'tabler:star',
+  );
+
   // Тексты отзывов подтягиваются по требованию: доля отвечает на вопрос
   // «брать ли», а подробности нужны, только когда мастер сомневается.
   const reviews = ref<Array<SessionReview>>([]);
   const areReviewsOpen = ref(false);
+
+  const reviewsToggleIcon = computed(() =>
+    areReviewsOpen.value ? 'tabler:chevron-up' : 'tabler:chevron-down',
+  );
+
   const areReviewsLoading = ref(false);
 
   /** Показывает отзывы мастеров об игроке, подгружая их при первом открытии. */
@@ -160,7 +182,7 @@
         <!-- Доля «сыграл бы снова» стоит рядом с решением: мастер принимает
           заявку, глядя на неё, а не на отдельной странице -->
         <UBadge
-          :color="reputation && reputation.total > 0 ? 'success' : 'neutral'"
+          :color="reputationBadgeColor"
           variant="subtle"
           size="sm"
           icon="tabler:thumb-up"
@@ -179,8 +201,8 @@
           <UButton
             size="sm"
             variant="ghost"
-            :color="isBookmarked ? 'primary' : 'neutral'"
-            :icon="isBookmarked ? 'tabler:star-filled' : 'tabler:star'"
+            :color="bookmarkButtonColor"
+            :icon="bookmarkButtonIcon"
             :loading="busyUserId === registration.playerId"
             :aria-label="
               isBookmarked
@@ -198,7 +220,7 @@
       variant="link"
       color="neutral"
       class="self-start p-0"
-      :icon="areReviewsOpen ? 'tabler:chevron-up' : 'tabler:chevron-down'"
+      :icon="reviewsToggleIcon"
       :loading="areReviewsLoading"
       :label="PLAYER_REVIEWS_OPEN_LABEL"
       @click.left.exact.prevent="toggleReviews"
@@ -224,9 +246,9 @@
           class="flex items-start gap-2 rounded-md bg-elevated p-2"
         >
           <UIcon
-            :name="review.recommended ? 'tabler:thumb-up' : 'tabler:thumb-down'"
+            :name="getReviewVerdictIcon(review.recommended)"
             class="mt-0.5 size-4 shrink-0"
-            :class="review.recommended ? 'text-success' : 'text-error'"
+            :class="getReviewVerdictTextClass(review.recommended)"
           />
 
           <span class="text-sm wrap-break-word text-toned">

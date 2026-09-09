@@ -32,9 +32,7 @@ export function useCityDictionary(term: MaybeRefOrGetter<string>) {
    * Названия для выбора. В игре хранится именно название: сервис держит город
    * строкой, и объявление читается без обращения к справочнику.
    */
-  const cityNames = computed(() =>
-    (cities.value ?? []).map((city) => city.name),
-  );
+  const cityNames = computed(() => cities.value.map((city) => city.name));
 
   return { cityNames, isLoading };
 }

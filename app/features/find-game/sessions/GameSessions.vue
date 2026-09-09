@@ -12,16 +12,16 @@
     SessionTimelineScale,
   } from '../model';
 
+  import { UiModalActions } from '~ui/modal-actions';
   import { UiResult } from '~ui/result';
 
+  import { useFindGameToast } from '../composables';
   import {
     ATTENDANCE_SAVED_TOAST,
     CANCEL_LABEL,
-    FIND_GAME_UNKNOWN_ERROR_MESSAGE,
     GAME_SESSION_STATUS_LABELS,
     GAME_SESSION_STATUSES,
     GAME_SESSIONS_TITLE,
-    getFindGameErrorMessage,
     SESSION_CANCEL_DESCRIPTION,
     SESSION_CANCEL_LABEL,
     SESSION_CANCEL_TITLE,
@@ -82,7 +82,6 @@
     game: Game;
     sessions: ReadonlyArray<GameSession>;
     abilities: GameViewerAbilities;
-    /** Собственные заявки пользователя по идентификатору сессии. */
     /**
      * Собственное участие по сессиям. Участие заводит сервис при приёме
      * заявки в игру — отдельной заявки на встречу больше нет.
@@ -110,7 +109,7 @@
     refresh: [];
   }>();
 
-  const toast = useToast();
+  const { showError, showSuccess } = useFindGameToast();
 
   // Показ ограничен состояниями: по умолчанию — только набор, остальное
   // мастер включает сам.
@@ -127,6 +126,23 @@
   // ней перерыв. Список остаётся для разбора накопившегося — в нём у всех
   // сессий сразу открыты действия.
   const isTimeline = ref(true);
+
+  /** Вид кнопок переключателя: выбранный горит основным цветом. */
+  const timelineButtonColor = computed(() =>
+    isTimeline.value ? 'primary' : 'neutral',
+  );
+
+  const timelineButtonVariant = computed(() =>
+    isTimeline.value ? 'solid' : 'subtle',
+  );
+
+  const cardsButtonColor = computed(() =>
+    isTimeline.value ? 'neutral' : 'primary',
+  );
+
+  const cardsButtonVariant = computed(() =>
+    isTimeline.value ? 'subtle' : 'solid',
+  );
 
   const timelineScale = ref<SessionTimelineScale>(
     SESSION_TIMELINE_DEFAULT_SCALE,
@@ -226,20 +242,11 @@
     try {
       await action();
 
-      toast.add({
-        title: successTitle,
-        color: 'success',
-        icon: 'tabler:check',
-      });
+      showSuccess(successTitle);
 
       return true;
     } catch (error) {
-      toast.add({
-        title: FIND_GAME_UNKNOWN_ERROR_MESSAGE,
-        description: getFindGameErrorMessage(error),
-        color: 'error',
-        icon: 'tabler:alert-triangle',
-      });
+      showError(error);
 
       return false;
     } finally {
@@ -356,6 +363,16 @@
     completeTarget.value = session;
   }
 
+  /** Закрывает подтверждение завершения, ничего не делая. */
+  function closeComplete(): void {
+    isCompleteOpen.value = false;
+  }
+
+  /** Закрывает подтверждение отмены, ничего не делая. */
+  function closeCancel(): void {
+    isCancelOpen.value = false;
+  }
+
   /** Завершает сессию после подтверждения. */
   async function handleComplete(): Promise<void> {
     const session = completeTarget.value;
@@ -428,8 +445,8 @@
         >
           <UTooltip :text="SESSION_TIMELINE_VIEW_LABEL">
             <UButton
-              :color="isTimeline ? 'primary' : 'neutral'"
-              :variant="isTimeline ? 'solid' : 'subtle'"
+              :color="timelineButtonColor"
+              :variant="timelineButtonVariant"
               icon="tabler:timeline-event"
               :aria-label="SESSION_TIMELINE_VIEW_LABEL"
               @click.left.exact.prevent="isTimeline = true"
@@ -438,8 +455,8 @@
 
           <UTooltip :text="SESSION_LIST_VIEW_LABEL">
             <UButton
-              :color="isTimeline ? 'neutral' : 'primary'"
-              :variant="isTimeline ? 'subtle' : 'solid'"
+              :color="cardsButtonColor"
+              :variant="cardsButtonVariant"
               icon="tabler:list"
               :aria-label="SESSION_LIST_VIEW_LABEL"
               @click.left.exact.prevent="isTimeline = false"
@@ -569,23 +586,15 @@
       :description="SESSION_COMPLETE_DESCRIPTION"
     >
       <template #footer>
-        <div class="flex w-full justify-end gap-2">
-          <UButton
-            variant="ghost"
-            color="neutral"
-            :disabled="isBusy"
-            :label="CANCEL_LABEL"
-            @click.left.exact.prevent="isCompleteOpen = false"
-          />
-
-          <UButton
-            color="error"
-            icon="tabler:flag-check"
-            :loading="isBusy"
-            :label="SESSION_COMPLETE_LABEL"
-            @click.left.exact.prevent="handleComplete"
-          />
-        </div>
+        <UiModalActions
+          :cancel-label="CANCEL_LABEL"
+          :submit-label="SESSION_COMPLETE_LABEL"
+          submit-icon="tabler:flag-check"
+          submit-color="error"
+          :loading="isBusy"
+          @cancel="closeComplete"
+          @submit="handleComplete"
+        />
       </template>
     </UModal>
 
@@ -595,23 +604,15 @@
       :description="SESSION_CANCEL_DESCRIPTION"
     >
       <template #footer>
-        <div class="flex w-full justify-end gap-2">
-          <UButton
-            variant="ghost"
-            color="neutral"
-            :disabled="isBusy"
-            :label="CANCEL_LABEL"
-            @click.left.exact.prevent="isCancelOpen = false"
-          />
-
-          <UButton
-            color="error"
-            icon="tabler:calendar-x"
-            :loading="isBusy"
-            :label="SESSION_CANCEL_LABEL"
-            @click.left.exact.prevent="handleCancel"
-          />
-        </div>
+        <UiModalActions
+          :cancel-label="CANCEL_LABEL"
+          :submit-label="SESSION_CANCEL_LABEL"
+          submit-icon="tabler:calendar-x"
+          submit-color="error"
+          :loading="isBusy"
+          @cancel="closeCancel"
+          @submit="handleCancel"
+        />
       </template>
     </UModal>
 

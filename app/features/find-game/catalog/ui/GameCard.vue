@@ -44,6 +44,13 @@
 
   const isFree = computed(() => game.costType === 'FREE');
 
+  /** Бесплатная игра отмечена спокойным цветом, платная — с монетой. */
+  const costBadgeColor = computed(() => (isFree.value ? 'success' : 'warning'));
+
+  const costBadgeIcon = computed(() =>
+    isFree.value ? undefined : 'tabler:coins',
+  );
+
   /**
    * Значки карточки. Их ровно столько, сколько влезает в две строки: карточка
    * одной высоты у всех игр, а лишнее видно на странице игры. Первыми идут
@@ -180,8 +187,8 @@
         class="absolute top-2 right-2"
         size="sm"
         variant="solid"
-        :color="isFree ? 'success' : 'warning'"
-        :icon="isFree ? undefined : 'tabler:coins'"
+        :color="costBadgeColor"
+        :icon="costBadgeIcon"
         :label="GAME_COST_TYPE_LABELS[game.costType]"
       />
     </ULink>

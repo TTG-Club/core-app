@@ -41,21 +41,9 @@ export function useGameRegistrations(gameId: MaybeRefOrGetter<string | null>) {
     },
   );
 
-  const pendingRegistrations = computed(() =>
-    (registrations.value ?? []).filter(
-      (registration) => registration.status === 'PENDING',
-    ),
-  );
-
   const approvedRegistrations = computed(() =>
-    (registrations.value ?? []).filter(
+    registrations.value.filter(
       (registration) => registration.status === 'APPROVED',
-    ),
-  );
-
-  const rejectedRegistrations = computed(() =>
-    (registrations.value ?? []).filter(
-      (registration) => registration.status === 'REJECTED',
     ),
   );
 
@@ -86,10 +74,8 @@ export function useGameRegistrations(gameId: MaybeRefOrGetter<string | null>) {
   }
 
   return {
-    registrations: computed(() => registrations.value ?? []),
+    registrations,
     approvedRegistrations,
-    pendingRegistrations,
-    rejectedRegistrations,
 
     error,
     isLoading,

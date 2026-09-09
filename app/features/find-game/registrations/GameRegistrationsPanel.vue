@@ -4,14 +4,13 @@
   import { UiResult } from '~ui/result';
 
   import {
+    useFindGameToast,
     useGameRegistrations,
     useParticipantNames,
     usePlayerReputations,
   } from '../composables';
   import {
-    FIND_GAME_UNKNOWN_ERROR_MESSAGE,
     GAME_APPROVED_PLAYERS_LABEL,
-    getFindGameErrorMessage,
     REGISTRATION_REVIEWED_TOAST,
     REGISTRATIONS_EMPTY_TITLE,
     SESSION_REGISTRATIONS_LABEL,
@@ -28,8 +27,8 @@
     changed: [];
   }>();
 
-  const toast = useToast();
-  const { getParticipantName, resolveNames } = useParticipantNames();
+  const { showError, showSuccess } = useFindGameToast();
+  const { getParticipantName, watchParticipantNames } = useParticipantNames();
 
   const rejectTarget = ref<GameRegistration | null>(null);
 
@@ -61,6 +60,11 @@
     () => approvedRegistrations.value.length >= game.maxPlayers,
   );
 
+  /** Полный стол помечен предупреждающим цветом: мест в нём больше нет. */
+  const seatsBadgeColor = computed(() =>
+    isFull.value ? 'warning' : 'neutral',
+  );
+
   const fillLabel = computed(
     () =>
       `${GAME_APPROVED_PLAYERS_LABEL}: ${approvedRegistrations.value.length} / ${game.maxPlayers}`,
@@ -72,12 +76,8 @@
 
   // Заявки приходят с идентификаторами игроков, а показать нужно имена: их
   // владелец — core-api.
-  watch(
-    registrations,
-    (list) => {
-      resolveNames(list.map((registration) => registration.playerId));
-    },
-    { immediate: true },
+  watchParticipantNames(() =>
+    registrations.value.map((registration) => registration.playerId),
   );
 
   /**
@@ -90,20 +90,11 @@
     try {
       await action();
 
-      toast.add({
-        title: REGISTRATION_REVIEWED_TOAST,
-        color: 'success',
-        icon: 'tabler:check',
-      });
+      showSuccess(REGISTRATION_REVIEWED_TOAST);
 
       emit('changed');
     } catch (error) {
-      toast.add({
-        title: FIND_GAME_UNKNOWN_ERROR_MESSAGE,
-        description: getFindGameErrorMessage(error),
-        color: 'error',
-        icon: 'tabler:alert-triangle',
-      });
+      showError(error);
     } finally {
       isBusy.value = false;
     }
@@ -149,7 +140,7 @@
     <template #body>
       <div class="flex flex-col gap-3">
         <UBadge
-          :color="isFull ? 'warning' : 'neutral'"
+          :color="seatsBadgeColor"
           variant="subtle"
           size="sm"
           icon="tabler:users"

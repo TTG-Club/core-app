@@ -1,3 +1,5 @@
+import type { MaybeRefOrGetter } from 'vue';
+
 import { fetchParticipantNames, UNKNOWN_PARTICIPANT_NAME } from '../model';
 
 /**
@@ -5,17 +7,17 @@ import { fetchParticipantNames, UNKNOWN_PARTICIPANT_NAME } from '../model';
  *
  * find-game-api хранит только идентификаторы (`sub` токена) и имён не знает
  * вовсе, поэтому они резолвятся в core-api — владельце этих данных. Без
- * резолва в списке игроков и в чате стоял бы сырой UUID.
+ * резолва в списке игроков стоял бы сырой UUID.
  *
  * `createSharedComposable`, а не `createGlobalState`: кэш имён нужен, пока
- * открыта страница игры с чатом, и должен умирать вместе с ней — держать его
- * в памяти сервера между запросами незачем.
+ * открыт раздел игр, и должен умирать вместе с ним — держать его в памяти
+ * сервера между запросами незачем.
  */
 export const useParticipantNames = createSharedComposable(() => {
   const nameByUserId = ref<Record<string, string>>({});
 
-  // Идентификаторы, по которым запрос уже ушёл: без этого каждое новое
-  // сообщение в чате отправляло бы повторный резолв того же автора.
+  // Идентификаторы, по которым запрос уже ушёл: без этого каждая перерисовка
+  // списка отправляла бы повторный резолв того же участника.
   const requested = new Set<string>();
 
   /**
@@ -57,6 +59,27 @@ export const useParticipantNames = createSharedComposable(() => {
   }
 
   /**
+   * Держит имена в актуальном состоянии: следит за списком идентификаторов и
+   * дорезолвивает те, которых ещё нет. Каждый список раздела — заявки, состав
+   * встречи, отметки, выдача каталога — приходит с одними идентификаторами, и
+   * без общего слежения каждый заводил бы собственный `watch` с той же
+   * оговоркой про core-api.
+   *
+   * @param userIdsSource Источник идентификаторов: ref, геттер или массив.
+   */
+  function watchParticipantNames(
+    userIdsSource: MaybeRefOrGetter<ReadonlyArray<string>>,
+  ): void {
+    watch(
+      () => toValue(userIdsSource),
+      (userIds) => {
+        void resolveNames(userIds);
+      },
+      { immediate: true },
+    );
+  }
+
+  /**
    * Имя участника. Пока имя не приехало (или у пользователя его нет),
    * показывается нейтральная подпись — сырой идентификатор пользователю
    * ничего не говорит.
@@ -67,9 +90,8 @@ export const useParticipantNames = createSharedComposable(() => {
   }
 
   return {
-    nameByUserId: readonly(nameByUserId),
-
     getParticipantName,
     resolveNames,
+    watchParticipantNames,
   };
 });

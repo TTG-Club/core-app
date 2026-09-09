@@ -115,7 +115,7 @@ export const useFindGameNotifications = createSharedComposable(() => {
     isLoading,
     notifications,
     status,
-    unread: computed(() => unread.value ?? 0),
+    unread: computed(() => unread.value),
 
     read,
     readAll,

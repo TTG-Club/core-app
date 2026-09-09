@@ -3,11 +3,9 @@
 
   import { UiResult } from '~ui/result';
 
-  import { useParticipantNames } from '../composables';
+  import { useFindGameToast, useParticipantNames } from '../composables';
   import {
     fetchSessionParticipants,
-    FIND_GAME_UNKNOWN_ERROR_MESSAGE,
-    getFindGameErrorMessage,
     PAYMENT_MARK_LABEL,
     PAYMENT_PAID_LABEL,
     PAYMENT_SAVED_TOAST,
@@ -38,8 +36,8 @@
     changed: [];
   }>();
 
-  const toast = useToast();
-  const { getParticipantName, resolveNames } = useParticipantNames();
+  const { showError, showSuccess } = useFindGameToast();
+  const { getParticipantName, watchParticipantNames } = useParticipantNames();
 
   // Пока панель закрыта, запрашивать нечего: состав подтягивается ровно на её
   // открытие.
@@ -87,15 +85,19 @@
 
   const showPayment = computed(() => game.costType === 'PAID');
 
+  /**
+   * Цвет отметки оплаты. Функция, а не `computed`: значок свой у каждой
+   * строки состава.
+   *
+   * @param participant Участник встречи.
+   */
+  function paymentBadgeColor(participant: SessionParticipant) {
+    return participant.paid ? 'success' : 'neutral';
+  }
+
   // Имена живут в core-api: сервис поиска игр знает только идентификаторы.
-  watch(
-    participants,
-    (list) => {
-      void resolveNames(
-        (list ?? []).map((participant) => participant.playerId),
-      );
-    },
-    { immediate: true },
+  watchParticipantNames(() =>
+    participants.value.map((participant) => participant.playerId),
   );
 
   /**
@@ -119,21 +121,12 @@
         !participant.paid,
       );
 
-      toast.add({
-        title: PAYMENT_SAVED_TOAST,
-        color: 'success',
-        icon: 'tabler:check',
-      });
+      showSuccess(PAYMENT_SAVED_TOAST);
 
       await refresh();
       emit('changed');
     } catch (error) {
-      toast.add({
-        title: FIND_GAME_UNKNOWN_ERROR_MESSAGE,
-        description: getFindGameErrorMessage(error),
-        color: 'error',
-        icon: 'tabler:alert-triangle',
-      });
+      showError(error);
     } finally {
       isBusy.value = false;
     }
@@ -196,7 +189,7 @@
 
                 <UBadge
                   v-if="showPayment"
-                  :color="participant.paid ? 'success' : 'neutral'"
+                  :color="paymentBadgeColor(participant)"
                   variant="subtle"
                   size="sm"
                   icon="tabler:receipt"

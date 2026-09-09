@@ -33,17 +33,6 @@ export const useSourceDictionary = createSharedComposable(() => {
   );
 
   /**
-   * Названия книг для выбора. В игре хранится именно название: сервис поиска
-   * игр держит источники простыми строками, и так список остаётся читаемым
-   * даже без обращения к справочнику.
-   */
-  const sourceNames = computed(() =>
-    [...new Set((sources.value ?? []).map((source) => source.name.rus))]
-      .filter(Boolean)
-      .sort((first, second) => first.localeCompare(second, 'ru')),
-  );
-
-  /**
    * Источники, разложенные по группам справочника — «Базовые», «Сеттинги»,
    * «Приключения», «3rd party». Тот же порядок и та же разбивка, что в
    * фильтрах остальных разделов сайта.
@@ -51,7 +40,7 @@ export const useSourceDictionary = createSharedComposable(() => {
   const sourceGroups = computed(() => {
     const groups = new Map<string, { name: string; sources: Array<string> }>();
 
-    for (const source of sources.value ?? []) {
+    for (const source of sources.value) {
       const name = source.name.rus;
       const group = source.source.group;
 
@@ -84,6 +73,5 @@ export const useSourceDictionary = createSharedComposable(() => {
     error,
     isLoading,
     sourceGroups,
-    sourceNames,
   };
 });

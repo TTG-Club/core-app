@@ -80,7 +80,6 @@
     'cancel': [session: GameSession];
     'complete': [session: GameSession];
     'start': [session: GameSession];
-    'schedule': [session: GameSession];
     'review': [session: GameSession];
   }>();
 
@@ -97,6 +96,42 @@
     value,
     label: SESSION_TIMELINE_SCALE_LABELS[value],
   }));
+
+  /**
+   * Вид кнопки масштаба: выбранный залит. Функции, а не `computed`: кнопка
+   * своя у каждого масштаба.
+   *
+   * @param option Масштаб оси.
+   */
+  function scaleButtonColor(option: SessionTimelineScale) {
+    return scale.value === option ? 'primary' : 'neutral';
+  }
+
+  /**
+   * Заливка кнопки масштаба.
+   * @param option Масштаб оси.
+   */
+  function scaleButtonVariant(option: SessionTimelineScale) {
+    return scale.value === option ? 'solid' : 'subtle';
+  }
+
+  /**
+   * Подсказка точки: она есть только у текущей встречи — остальным пояснять
+   * нечего.
+   *
+   * @param item Точка оси.
+   */
+  function tickTitle(item: SessionTimelineItem): string | undefined {
+    return item.current ? item.currentLabel : undefined;
+  }
+
+  /**
+   * Цвет подписи точки: текущая встреча выделена.
+   * @param item Точка оси.
+   */
+  function tickTextClass(item: SessionTimelineItem): string {
+    return item.current ? 'text-primary' : 'text-highlighted';
+  }
 
   // Пока период не листали, он показывает ближайшую сессию, а не «сегодня»:
   // у кампании раз в две недели сегодня чаще всего пусто.
@@ -316,8 +351,8 @@
         <UButton
           v-for="option in scaleOptions"
           :key="option.value"
-          :color="scale === option.value ? 'primary' : 'neutral'"
-          :variant="scale === option.value ? 'solid' : 'subtle'"
+          :color="scaleButtonColor(option.value)"
+          :variant="scaleButtonVariant(option.value)"
           :aria-label="`${SESSION_TIMELINE_SCALE_LABEL}: ${option.label}`"
           :label="option.label"
           @click.left.exact.prevent="scale = option.value"
@@ -354,7 +389,7 @@
           <button
             type="button"
             class="flex w-full flex-col rounded-md text-left transition hover:opacity-80"
-            :title="item.current ? item.currentLabel : undefined"
+            :title="tickTitle(item)"
             @click.left.exact.prevent="openDetail(item.session)"
           >
             <span class="text-xs/5 whitespace-nowrap text-dimmed">
@@ -363,7 +398,7 @@
 
             <span
               class="text-sm font-medium"
-              :class="item.current ? 'text-primary' : 'text-highlighted'"
+              :class="tickTextClass(item)"
             >
               {{ item.title }}
             </span>
@@ -414,7 +449,6 @@
           @attend="(id, status) => emit('attend', id, status)"
           @copy="closeAnd(() => emit('copy', $event))"
           @open-participants="closeAnd(() => emit('open-participants', $event))"
-          @schedule="closeAnd(() => emit('schedule', $event))"
           @complete="closeAnd(() => emit('complete', $event))"
           @start="closeAnd(() => emit('start', $event))"
           @cancel="closeAnd(() => emit('cancel', $event))"

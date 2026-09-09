@@ -26,6 +26,24 @@
   const isOpen = ref(false);
 
   /**
+   * Цвет строки уведомления: прочитанное гаснет. Функции, а не `computed`:
+   * строка своя у каждого уведомления ленты.
+   *
+   * @param notification Уведомление раздела.
+   */
+  function notificationTextClass(notification: FindGameNotification): string {
+    return notification.readAt ? 'text-muted' : 'text-default';
+  }
+
+  /**
+   * Цвет значка уведомления: у прочитанного он гаснет вместе со строкой.
+   * @param notification Уведомление раздела.
+   */
+  function notificationIconClass(notification: FindGameNotification): string {
+    return notification.readAt ? 'text-dimmed' : 'text-primary';
+  }
+
+  /**
    * Открывает игру и отмечает уведомление прочитанным: раз новость увидели,
    * держать её непрочитанной незачем.
    * @param notification Уведомление, по которому перешли.
@@ -117,13 +135,13 @@
               :key="notification.id"
               type="button"
               class="flex items-start gap-2 rounded-md p-2 text-left hover:bg-elevated"
-              :class="notification.readAt ? 'text-muted' : 'text-default'"
+              :class="notificationTextClass(notification)"
               @click.left.exact.prevent="open(notification)"
             >
               <UIcon
                 :name="NOTIFICATION_ICONS[notification.type]"
                 class="mt-0.5 size-4 shrink-0"
-                :class="notification.readAt ? 'text-dimmed' : 'text-primary'"
+                :class="notificationIconClass(notification)"
               />
 
               <span class="flex min-w-0 flex-col">

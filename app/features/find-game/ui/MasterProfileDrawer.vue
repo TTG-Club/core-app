@@ -11,6 +11,8 @@
     FOLLOW_MASTER_LABEL,
     getFindGameErrorMessage,
     getReputationLabel,
+    getReviewVerdictIcon,
+    getReviewVerdictTextClass,
     MASTER_PROFILE_ABOUT_EMPTY,
     MASTER_PROFILE_CANCELLED_LABEL,
     MASTER_PROFILE_CLOSED_LABEL,
@@ -65,6 +67,29 @@
   const { busyUserId, isMasterFollowed, toggleMaster } = useFollows();
 
   const isFollowed = computed(() => isMasterFollowed(masterId));
+
+  // Отмеченный мастер и его кнопка выглядят «включёнными»: это единственный
+  // признак того, что отметка уже стоит.
+  const followButtonColor = computed(() =>
+    isFollowed.value ? 'primary' : 'neutral',
+  );
+
+  const followButtonVariant = computed(() =>
+    isFollowed.value ? 'solid' : 'subtle',
+  );
+
+  const followButtonIcon = computed(() =>
+    isFollowed.value ? 'tabler:bookmark-filled' : 'tabler:bookmark',
+  );
+
+  const followButtonLabel = computed(() =>
+    isFollowed.value ? FOLLOW_MASTER_ACTIVE_LABEL : FOLLOW_MASTER_LABEL,
+  );
+
+  /** Мастер без единого отзыва отмечен спокойным цветом, а не «зелёным». */
+  const reviewsBadgeColor = computed(() =>
+    profile.value && profile.value.reviews > 0 ? 'success' : 'neutral',
+  );
 
   const isLoading = computed(
     () => status.value !== 'success' && status.value !== 'error',
@@ -161,7 +186,7 @@
 
           <UBadge
             v-if="profile"
-            :color="profile.reviews > 0 ? 'success' : 'neutral'"
+            :color="reviewsBadgeColor"
             variant="subtle"
             size="sm"
             icon="tabler:thumb-up"
@@ -176,11 +201,11 @@
       <UTooltip :text="FOLLOW_MASTER_HINT">
         <UButton
           block
-          :color="isFollowed ? 'primary' : 'neutral'"
-          :variant="isFollowed ? 'solid' : 'subtle'"
-          :icon="isFollowed ? 'tabler:bookmark-filled' : 'tabler:bookmark'"
+          :color="followButtonColor"
+          :variant="followButtonVariant"
+          :icon="followButtonIcon"
           :loading="busyUserId === masterId"
-          :label="isFollowed ? FOLLOW_MASTER_ACTIVE_LABEL : FOLLOW_MASTER_LABEL"
+          :label="followButtonLabel"
           @click.left.exact.prevent="toggleMaster(masterId)"
         />
       </UTooltip>
@@ -253,11 +278,9 @@
             >
               <div class="flex items-center justify-between gap-2">
                 <UIcon
-                  :name="
-                    review.recommended ? 'tabler:thumb-up' : 'tabler:thumb-down'
-                  "
+                  :name="getReviewVerdictIcon(review.recommended)"
                   class="size-5 shrink-0"
-                  :class="review.recommended ? 'text-success' : 'text-error'"
+                  :class="getReviewVerdictTextClass(review.recommended)"
                 />
 
                 <span class="text-xs text-muted">

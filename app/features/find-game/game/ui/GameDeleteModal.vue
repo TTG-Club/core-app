@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import { UiModalActions } from '~ui/modal-actions';
+
   import {
     CANCEL_LABEL,
     GAME_DELETE_CONFIRM_DESCRIPTION,
@@ -74,24 +76,16 @@
     </template>
 
     <template #footer>
-      <div class="flex w-full justify-end gap-2">
-        <UButton
-          variant="ghost"
-          color="neutral"
-          :disabled="loading"
-          :label="CANCEL_LABEL"
-          @click.left.exact.prevent="cancel"
-        />
-
-        <UButton
-          color="error"
-          icon="tabler:eye-off"
-          :loading="loading"
-          :disabled="!isValid"
-          :label="GAME_DELETE_LABEL"
-          @click.left.exact.prevent="confirm"
-        />
-      </div>
+      <UiModalActions
+        :cancel-label="CANCEL_LABEL"
+        :submit-label="GAME_DELETE_LABEL"
+        submit-icon="tabler:eye-off"
+        submit-color="error"
+        :loading="loading"
+        :disabled="!isValid"
+        @cancel="cancel"
+        @submit="confirm"
+      />
     </template>
   </UModal>
 </template>

@@ -9,7 +9,9 @@
     fetchCharacterSheetList,
     shareCharacterSheet,
   } from '~character-sheet/model';
+  import { UiModalActions } from '~ui/modal-actions';
 
+  import { useFindGameToast } from '../../composables';
   import {
     APPLY_CHARACTER_NAME_LABEL,
     APPLY_CHARACTER_NAME_PLACEHOLDER,
@@ -27,7 +29,6 @@
     CANCEL_LABEL,
     CHARACTER_NAME_MAX_LENGTH,
     CHARACTER_SHEET_URL_MAX_LENGTH,
-    FIND_GAME_UNKNOWN_ERROR_MESSAGE,
   } from '../../model';
   import { getSharedCharacterSheetLink } from '../../ui';
 
@@ -43,7 +44,7 @@
     submit: [request: CreateGameRegistrationRequest];
   }>();
 
-  const toast = useToast();
+  const { showError } = useFindGameToast();
 
   const source = ref<ApplySource>('SHEET');
   const sheetId = ref<string | undefined>();
@@ -73,7 +74,7 @@
   );
 
   const sheetItems = computed(() =>
-    (sheets.value ?? []).map((sheet) => ({
+    sheets.value.map((sheet) => ({
       value: sheet.id,
       label: sheet.name,
     })),
@@ -103,9 +104,7 @@
    * мастеру нужно открыть лист, а у закрытого листа токена ещё нет.
    */
   async function resolveOwnSheetLink(): Promise<string | null> {
-    const selected = (sheets.value ?? []).find(
-      (sheet) => sheet.id === sheetId.value,
-    );
+    const selected = sheets.value.find((sheet) => sheet.id === sheetId.value);
 
     if (!selected) {
       return null;
@@ -122,12 +121,7 @@
         await shareCharacterSheet(selected.id),
       );
     } catch {
-      toast.add({
-        title: FIND_GAME_UNKNOWN_ERROR_MESSAGE,
-        description: APPLY_SHARE_FAILED_MESSAGE,
-        color: 'error',
-        icon: 'tabler:alert-triangle',
-      });
+      showError(APPLY_SHARE_FAILED_MESSAGE);
 
       return null;
     } finally {
@@ -239,23 +233,15 @@
     </template>
 
     <template #footer>
-      <div class="flex w-full justify-end gap-2">
-        <UButton
-          variant="ghost"
-          color="neutral"
-          :disabled="loading || isSharing"
-          :label="CANCEL_LABEL"
-          @click.left.exact.prevent="cancel"
-        />
-
-        <UButton
-          icon="tabler:send"
-          :loading="loading || isSharing"
-          :disabled="!isValid"
-          :label="APPLY_LABEL"
-          @click.left.exact.prevent="submit"
-        />
-      </div>
+      <UiModalActions
+        :cancel-label="CANCEL_LABEL"
+        :submit-label="APPLY_LABEL"
+        submit-icon="tabler:send"
+        :loading="loading || isSharing"
+        :disabled="!isValid"
+        @cancel="cancel"
+        @submit="submit"
+      />
     </template>
   </UModal>
 </template>

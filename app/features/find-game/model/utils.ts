@@ -4,14 +4,17 @@ import {
   GAME_TYPE_LABELS,
   GAMES_ROUTE,
   INVITE_CODE_QUERY_KEY,
+  MINUTES_IN_HOUR,
   REPUTATION_EMPTY_LABEL,
+  REVIEW_VERDICT_ICON,
+  REVIEW_VERDICT_TEXT_CLASS,
   REVIEW_WINDOW_DAYS,
   SESSION_PAYMENT_TYPE_LABELS,
 } from './constants';
 
-/** Сколько минут в часе — для разбивки длительности сессии. */
-const MINUTES_IN_HOUR = 60;
-const MINUTES_IN_DAY = 24 * MINUTES_IN_HOUR;
+/** Часов в сутках — верхняя граница длительности встречи. */
+const HOURS_IN_DAY = 24;
+const MINUTES_IN_DAY = HOURS_IN_DAY * MINUTES_IN_HOUR;
 
 /**
  * Подпись формата игры. У офлайн-игры к формату добавляется город: без него
@@ -337,4 +340,24 @@ export function fromLocalDateTimeInput(value: string): string | null {
   const date = new Date(value);
 
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+/**
+ * Значок вердикта отзыва.
+ * @param recommended Сыграл бы автор с этим человеком снова.
+ */
+export function getReviewVerdictIcon(recommended: boolean): string {
+  return recommended
+    ? REVIEW_VERDICT_ICON.positive
+    : REVIEW_VERDICT_ICON.negative;
+}
+
+/**
+ * Цвет вердикта отзыва.
+ * @param recommended Сыграл бы автор с этим человеком снова.
+ */
+export function getReviewVerdictTextClass(recommended: boolean): string {
+  return recommended
+    ? REVIEW_VERDICT_TEXT_CLASS.positive
+    : REVIEW_VERDICT_TEXT_CLASS.negative;
 }

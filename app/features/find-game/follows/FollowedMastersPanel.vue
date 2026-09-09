@@ -21,18 +21,12 @@
    */
   const { busyUserId, masters, isMastersLoading, toggleMaster } = useFollows();
 
-  const { getParticipantName, resolveNames } = useParticipantNames();
+  const { getParticipantName, watchParticipantNames } = useParticipantNames();
   const masterDrawer = useMasterProfileDrawer();
 
   // Сервис поиска игр знает только идентификаторы: имена приезжают из core-api
   // и разом на весь список.
-  watch(
-    masters,
-    (list) => {
-      void resolveNames(list.map((follow) => follow.userId));
-    },
-    { immediate: true },
-  );
+  watchParticipantNames(() => masters.value.map((follow) => follow.userId));
 </script>
 
 <template>

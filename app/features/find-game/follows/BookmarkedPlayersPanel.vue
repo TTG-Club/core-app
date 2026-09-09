@@ -17,7 +17,7 @@
    */
   const { busyUserId, players, isPlayersLoading, togglePlayer } = useFollows();
 
-  const { getParticipantName, resolveNames } = useParticipantNames();
+  const { getParticipantName, watchParticipantNames } = useParticipantNames();
 
   const inviteTarget = ref<Follow | null>(null);
 
@@ -30,13 +30,7 @@
     },
   });
 
-  watch(
-    players,
-    (list) => {
-      void resolveNames(list.map((follow) => follow.userId));
-    },
-    { immediate: true },
-  );
+  watchParticipantNames(() => players.value.map((follow) => follow.userId));
 
   /**
    * Открывает приглашение игрока.

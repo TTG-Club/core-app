@@ -1,40 +1,31 @@
 <script setup lang="ts">
-  import type {
-    CreateGameSessionRequest,
-    GameCostType,
-    SessionFormState,
-    SessionPaymentType,
-  } from '../../model';
+  import type { CreateGameSessionRequest, GameCostType } from '../../model';
 
-  import { Time } from '@internationalized/date';
+  import { UiModalActions } from '~ui/modal-actions';
 
   import {
+    useSessionPaymentFields,
+    useSessionTimeRange,
+  } from '../../composables';
+  import {
     CANCEL_LABEL,
-    durationBetween,
     fromLocalDateTimeInput,
     getDefaultSessionDate,
     SESSION_CREATE_LABEL,
     SESSION_CREATE_TITLE,
-    SESSION_CURRENCIES,
     SESSION_CURRENCY_LABEL,
-    SESSION_CURRENCY_PATTERN,
     SESSION_CURRENCY_PLACEHOLDER,
     SESSION_DATE_LABEL,
-    SESSION_DEFAULT_CURRENCY,
-    SESSION_DEFAULT_PAYMENT_TYPE,
     SESSION_FREE_HINT,
     SESSION_FREE_SESSION_HINT,
     SESSION_FREE_SESSION_LABEL,
     SESSION_PAID_HINT,
     SESSION_PAYMENT_TYPE_LABEL,
-    SESSION_PAYMENT_TYPE_LABELS,
-    SESSION_PAYMENT_TYPES,
     SESSION_PRICE_LABEL,
     SESSION_PRICE_MIN,
     SESSION_TIME_END_LABEL,
     SESSION_TIME_RANGE_HINT,
     SESSION_TIME_START_LABEL,
-    SESSION_TIMEZONE_HINT_PREFIX,
     SESSION_TITLE_LABEL,
     SESSION_TITLE_MAX_LENGTH,
     SESSION_TITLE_PLACEHOLDER,
@@ -52,112 +43,48 @@
     submit: [request: CreateGameSessionRequest];
   }>();
 
-  /** Пустая форма новой сессии: дата — сегодняшняя, ближайший целый час. */
-  function createEmptyForm(): SessionFormState {
-    return {
-      title: '',
-      startsAt: getDefaultSessionDate(),
-      isFree: false,
-      estimatedDurationMinutes: null,
-      priceAmount: null,
-      priceCurrency: SESSION_DEFAULT_CURRENCY,
-      paymentType: SESSION_DEFAULT_PAYMENT_TYPE,
-    };
-  }
+  const title = ref('');
 
-  const form = ref<SessionFormState>(createEmptyForm());
+  /** Дата встречи: по умолчанию сегодняшняя. */
+  const startsAt = ref(getDefaultSessionDate());
 
-  // Платная игра не обязана быть платной целиком, поэтому платёжные поля
-  // показываются, только пока мастер не объявил сессию бесплатной.
-  const isPaid = computed(() => costType === 'PAID' && !form.value.isFree);
+  const {
+    startTime,
+    endTime,
+    startTimeText,
+    durationMinutes,
+    timezoneHint,
+    reset: resetTimeRange,
+  } = useSessionTimeRange();
 
-  /**
-   * Границы встречи. Мастер называет их временем — «с семи до одиннадцати», —
-   * а сервису уходит начало и длительность.
-   */
-  // Два поля вместо диапазона: диапазон не принимает конец раньше начала, а
-  // ночная сессия ровно такая — «с 19:00 до 01:00».
-  // shallowRef: у `Time` приватные поля, и разворачивание ref их теряет.
-  const startTime = shallowRef(new Time(19, 0));
-  const endTime = shallowRef(new Time(23, 0));
+  const {
+    isFree,
+    priceAmount,
+    priceCurrency,
+    paymentTypeChoice,
+    isPaid,
+    isValid: isPaymentValid,
+    currencyOptions,
+    paymentTypeOptions,
+    applyTo: applyPaymentFields,
+    reset: resetPaymentFields,
+  } = useSessionPaymentFields(() => costType);
 
-  const paymentTypeOptions = SESSION_PAYMENT_TYPES.map((value) => ({
-    value,
-    label: SESSION_PAYMENT_TYPE_LABELS[value],
-  }));
-
-  // В списке видно и код, и название: по коду мастер узнаёт валюту, по
-  // названию — находит её поиском.
-  const currencyOptions: Array<{ value: string; label: string }> =
-    SESSION_CURRENCIES.map((currency) => ({
-      value: currency.code,
-      label: `${currency.code} — ${currency.name}`,
-    }));
-
-  // USelect не принимает `null` как «ничего не выбрано», а в состоянии формы
-  // именно `null`: платёжные поля появляются только у платной игры.
-  const paymentTypeChoice = computed({
-    get: () => form.value.paymentType ?? undefined,
-    set: (value: SessionPaymentType | undefined) => {
-      form.value.paymentType = value ?? null;
-    },
-  });
-
-  // Дата и время живут порознь: время задаётся диапазоном, и склеивать их
+  // Дата и время живут порознь: время задаётся двумя полями, и склеивать их
   // обратно в одно поле пришлось бы только ради формата `datetime-local`.
-  const startsAtIso = computed(() => {
-    const start = startTime.value;
-    const time = `${pad(start.hour)}:${pad(start.minute)}`;
-
-    return form.value.startsAt
-      ? fromLocalDateTimeInput(`${form.value.startsAt}T${time}`)
-      : null;
-  });
-
-  // Конец раньше начала считается как переход через полночь: длительность
-  // берётся через сутки вперёд.
-  const durationMinutes = computed(() =>
-    durationBetween(
-      startTime.value.hour * 60 + startTime.value.minute,
-      endTime.value.hour * 60 + endTime.value.minute,
-    ),
-  );
-
-  /**
-   * Двузначное число для склейки времени.
-   * @param value Часы или минуты.
-   */
-  function pad(value: number): string {
-    return `${value}`.padStart(2, '0');
-  }
-
-  // Поле datetime-local принимает время в поясе мастера, а игрокам оно
-  // покажется в их собственном — смещение снимает разночтения.
-  const { $dayjs } = useDayjs();
-
-  const timezoneHint = computed(
-    () => `${SESSION_TIMEZONE_HINT_PREFIX} (UTC${$dayjs().format('Z')})`,
-  );
-
-  const isCurrencyValid = computed(
-    () =>
-      !isPaid.value || SESSION_CURRENCY_PATTERN.test(form.value.priceCurrency),
-  );
-
-  const isPriceValid = computed(
-    () =>
-      !isPaid.value
-      || (form.value.priceAmount !== null
-        && form.value.priceAmount >= SESSION_PRICE_MIN),
+  const startsAtIso = computed(() =>
+    startsAt.value
+      ? fromLocalDateTimeInput(`${startsAt.value}T${startTimeText.value}`)
+      : null,
   );
 
   const isValid = computed(
-    () =>
-      !!form.value.title.trim()
-      && !!startsAtIso.value
-      && isPriceValid.value
-      && isCurrencyValid.value
-      && (!isPaid.value || !!form.value.paymentType),
+    () => !!title.value.trim() && !!startsAtIso.value && isPaymentValid.value,
+  );
+
+  /** Подсказка окна: у платной встречи речь о деньгах, у бесплатной — нет. */
+  const paymentHint = computed(() =>
+    isPaid.value ? SESSION_PAID_HINT : SESSION_FREE_HINT,
   );
 
   /** Закрывает окно без создания сессии. */
@@ -165,38 +92,29 @@
     isOpen.value = false;
   }
 
-  /**
-   * Собирает тело запроса. У бесплатной игры платёжные поля не отправляются
-   * вовсе — сервис отвергает запрос, в котором они заданы.
-   */
+  /** Собирает тело запроса и отдаёт его странице игры. */
   function submit(): void {
     if (!isValid.value) {
       return;
     }
 
-    const startsAt = startsAtIso.value;
+    const startsAtValue = startsAtIso.value;
 
     // Проверка формы это уже гарантирует; здесь она нужна типу поля.
-    if (!startsAt) {
+    if (!startsAtValue) {
       return;
     }
 
     const request: CreateGameSessionRequest = {
-      title: form.value.title.trim(),
-      startsAt,
+      title: title.value.trim(),
+      startsAt: startsAtValue,
     };
 
     if (durationMinutes.value) {
       request.estimatedDurationMinutes = durationMinutes.value;
     }
 
-    const { priceAmount, paymentType } = form.value;
-
-    if (isPaid.value && priceAmount !== null && paymentType) {
-      request.priceAmount = priceAmount;
-      request.priceCurrency = form.value.priceCurrency.toUpperCase();
-      request.paymentType = paymentType;
-    }
+    applyPaymentFields(request);
 
     emit('submit', request);
   }
@@ -204,11 +122,14 @@
   // Форма живёт вместе со страницей: чистим её на каждом открытии, иначе
   // прошлая сессия подставится в следующую.
   watch(isOpen, (opened) => {
-    if (opened) {
-      form.value = createEmptyForm();
-      startTime.value = new Time(19, 0);
-      endTime.value = new Time(23, 0);
+    if (!opened) {
+      return;
     }
+
+    title.value = '';
+    startsAt.value = getDefaultSessionDate();
+    resetTimeRange();
+    resetPaymentFields();
   });
 </script>
 
@@ -216,7 +137,7 @@
   <UModal
     v-model:open="isOpen"
     :title="SESSION_CREATE_TITLE"
-    :description="isPaid ? SESSION_PAID_HINT : SESSION_FREE_HINT"
+    :description="paymentHint"
   >
     <template #body>
       <div class="flex flex-col gap-4">
@@ -225,7 +146,7 @@
           required
         >
           <UInput
-            v-model="form.title"
+            v-model="title"
             :maxlength="SESSION_TITLE_MAX_LENGTH"
             :placeholder="SESSION_TITLE_PLACEHOLDER"
             class="w-full"
@@ -238,7 +159,7 @@
             required
           >
             <UInput
-              v-model="form.startsAt"
+              v-model="startsAt"
               type="date"
               class="w-full"
             />
@@ -269,7 +190,7 @@
 
         <UCheckbox
           v-if="costType === 'PAID'"
-          v-model="form.isFree"
+          v-model="isFree"
           :label="SESSION_FREE_SESSION_LABEL"
           :description="SESSION_FREE_SESSION_HINT"
         />
@@ -283,7 +204,7 @@
             required
           >
             <UInputNumber
-              v-model="form.priceAmount"
+              v-model="priceAmount"
               :min="SESSION_PRICE_MIN"
               :step="SESSION_PRICE_MIN"
               class="w-full"
@@ -295,7 +216,7 @@
             required
           >
             <USelectMenu
-              v-model="form.priceCurrency"
+              v-model="priceCurrency"
               value-key="value"
               :items="currencyOptions"
               :placeholder="SESSION_CURRENCY_PLACEHOLDER"
@@ -318,23 +239,15 @@
     </template>
 
     <template #footer>
-      <div class="flex w-full justify-end gap-2">
-        <UButton
-          variant="ghost"
-          color="neutral"
-          :disabled="loading"
-          :label="CANCEL_LABEL"
-          @click.left.exact.prevent="cancel"
-        />
-
-        <UButton
-          icon="tabler:plus"
-          :loading="loading"
-          :disabled="!isValid"
-          :label="SESSION_CREATE_LABEL"
-          @click.left.exact.prevent="submit"
-        />
-      </div>
+      <UiModalActions
+        :cancel-label="CANCEL_LABEL"
+        :submit-label="SESSION_CREATE_LABEL"
+        submit-icon="tabler:plus"
+        :loading="loading"
+        :disabled="!isValid"
+        @cancel="cancel"
+        @submit="submit"
+      />
     </template>
   </UModal>
 </template>
