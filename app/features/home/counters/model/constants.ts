@@ -8,10 +8,6 @@ export const ONLINE_COUNTER_DATA_KEY = 'visitors-counter';
 /** Ключ useAsyncData счётчика листов персонажей на главной */
 export const SHEET_COUNTER_DATA_KEY = 'character-sheet-counter';
 
-/** Описание проекта TTG */
-export const MATERIAL_COUNTER_DESCRIPTION =
-  'TTG — твой проводник в мир Dungeons & Dragons, созданный сообществом для сообщества!';
-
 /** Подпись счётчика материалов */
 export const MATERIAL_COUNTER_LABEL_MATERIALS = 'Материалов';
 

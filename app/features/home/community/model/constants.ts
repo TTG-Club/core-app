@@ -4,17 +4,14 @@
  */
 export const COMMUNITY_BUG_STATS_DATA_KEY = 'bug-leaderboard-stats';
 
-/** Подпись блока сообщества */
-export const COMMUNITY_LABEL = 'Сообщество';
+/** Подпись блока рейтинга охотников */
+export const COMMUNITY_LABEL = 'Охотники за багами';
 
-/** Иконка блока сообщества */
-export const COMMUNITY_ICON = 'tabler:users-group';
+/** Иконка блока рейтинга охотников */
+export const COMMUNITY_ICON = 'tabler:bug';
 
 /** Цвет иконки кубка победителя */
 export const COMMUNITY_TROPHY_COLOR = 'var(--color-warning-400)';
-
-/** Подзаголовок рейтинга охотников */
-export const COMMUNITY_TOP_LABEL = 'Охотники за багами';
 
 /** Подсказка к рейтингу охотников */
 export const COMMUNITY_TOP_TOOLTIP =
@@ -38,6 +35,9 @@ export const COMMUNITY_PERIOD_DEFAULT: CommunityRatingPeriod = 'month';
 /** Заглушка, когда за текущий месяц ещё нет исправленных багов */
 export const COMMUNITY_EMPTY_MONTH_TEXT =
   'Пока никто не исправил багов в этом месяце';
+
+/** Заглушка, когда рейтинг пуст за оба периода (или статистика не пришла) */
+export const COMMUNITY_EMPTY_TEXT = 'Пока никто не исправил ни одного бага';
 
 /**
  * Размер рейтинга: бэк отдаёт топ-10, недостающие до этого числа позиции

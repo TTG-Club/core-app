@@ -4,19 +4,18 @@
   import type { CommunityRatingPeriod } from './model';
 
   import { BUG_REPORT_STATS_API_URL } from '~bug-report/model';
-  import { MATERIAL_COUNTER_DESCRIPTION } from '~home/counters/model';
   import { HomePanel } from '~home/ui-kit';
 
   import {
     COMMUNITY_BUG_STATS_DATA_KEY,
     COMMUNITY_EMPTY_MONTH_TEXT,
     COMMUNITY_EMPTY_SLOT_TEXTS,
+    COMMUNITY_EMPTY_TEXT,
     COMMUNITY_ICON,
     COMMUNITY_LABEL,
     COMMUNITY_PERIOD_DEFAULT,
     COMMUNITY_PERIOD_OPTIONS,
     COMMUNITY_ROW_STAGGER_MS,
-    COMMUNITY_TOP_LABEL,
     COMMUNITY_TOP_SIZE,
     COMMUNITY_TOP_TOOLTIP,
     COMMUNITY_TROPHY_COLOR,
@@ -116,33 +115,20 @@
   <HomePanel
     :label="COMMUNITY_LABEL"
     :icon="COMMUNITY_ICON"
-    body-class="flex flex-col gap-3 p-3"
+    body-class="flex flex-col gap-2 p-3"
   >
-    <!-- Тэглайн проекта: сами счётчики переехали в шапку главной -->
-    <p class="text-sm leading-normal text-toned">
-      {{ MATERIAL_COUNTER_DESCRIPTION }}
-    </p>
+    <!-- Подсказка про зачёт багов стоит в шапке панели: отдельного
+      подзаголовка у рейтинга больше нет, панель целиком про охотников -->
+    <template #actions>
+      <UTooltip :text="COMMUNITY_TOP_TOOLTIP">
+        <UIcon
+          name="tabler:help-circle-filled"
+          class="size-3.5 cursor-help text-dimmed transition-colors hover:text-default"
+        />
+      </UTooltip>
+    </template>
 
-    <!-- Рейтинг охотников за багами -->
-    <div
-      v-if="hasAnyFixers"
-      class="flex flex-col gap-2"
-    >
-      <div class="flex items-center gap-1">
-        <span
-          class="font-mono text-[11px] leading-none tracking-[0.18em] text-dimmed uppercase"
-        >
-          {{ COMMUNITY_TOP_LABEL }}
-        </span>
-
-        <UTooltip :text="COMMUNITY_TOP_TOOLTIP">
-          <UIcon
-            name="tabler:help-circle-filled"
-            class="size-3.5 cursor-help text-dimmed transition-colors hover:text-default"
-          />
-        </UTooltip>
-      </div>
-
+    <template v-if="hasAnyFixers">
       <!-- Переключатель периода: за текущий месяц / за всё время.
            :content="false" — используем табы только как переключатель,
            панели-контент рисуем сами ниже.
@@ -255,7 +241,16 @@
       >
         {{ COMMUNITY_EMPTY_MONTH_TEXT }}
       </p>
-    </div>
+    </template>
+
+    <!-- Рейтинга нет ни за один период (или статистика не пришла) — панель без
+      тэглайна осталась бы пустой, поэтому показываем заглушку -->
+    <p
+      v-else
+      class="rounded-lg border border-dashed border-default px-3 py-4 text-center text-xs text-muted"
+    >
+      {{ COMMUNITY_EMPTY_TEXT }}
+    </p>
   </HomePanel>
 </template>
 
