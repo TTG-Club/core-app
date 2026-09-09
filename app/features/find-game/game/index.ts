@@ -1,1 +1,6 @@
-export { GameActions, GameInviteCard, GameOverview } from './ui';
+export {
+  GameActions,
+  GameInviteCard,
+  GameOverview,
+  GameSummaryCard,
+} from './ui';

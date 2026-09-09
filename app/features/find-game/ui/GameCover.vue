@@ -61,7 +61,7 @@
       />
 
       <div
-        class="relative grid size-16 place-items-center rounded-full bg-default/60 ring-1 ring-default"
+        class="relative grid size-16 place-items-center rounded-full bg-accented/60 ring-1 ring-accented"
       >
         <UIcon
           :name="placeholderIcon"

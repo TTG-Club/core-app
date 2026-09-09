@@ -7,9 +7,15 @@
     useParticipantNames,
   } from '~find-game/composables';
   import { GameApplyModal } from '~find-game/form';
-  import { GameActions, GameInviteCard, GameOverview } from '~find-game/game';
+  import {
+    GameActions,
+    GameInviteCard,
+    GameOverview,
+    GameSummaryCard,
+  } from '~find-game/game';
   import {
     APPLY_LABEL,
+    APPLY_OWN_STATUS_LABEL,
     APPLY_SENT_TOAST,
     APPLY_WITHDRAW_LABEL,
     APPLY_WITHDRAWN_TOAST,
@@ -276,13 +282,19 @@
     <template #default>
       <div
         v-if="isGameLoading"
-        class="flex flex-col gap-4"
+        class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start"
       >
-        <USkeleton class="aspect-video w-full max-w-80 rounded-md" />
+        <div class="flex flex-col gap-4 lg:col-start-2 lg:row-start-1">
+          <USkeleton class="aspect-video w-full rounded-xl" />
 
-        <USkeleton class="h-6 w-1/2" />
+          <USkeleton class="h-56 w-full rounded-xl" />
+        </div>
 
-        <USkeleton class="h-24 w-full" />
+        <div class="flex flex-col gap-4 lg:col-start-1 lg:row-start-1">
+          <USkeleton class="h-48 w-full rounded-xl" />
+
+          <USkeleton class="h-64 w-full rounded-xl" />
+        </div>
       </div>
 
       <UiResult
@@ -313,118 +325,150 @@
         </template>
       </UiResult>
 
+      <!--
+        Страница объявления в два столбца: слева читают — описание, требования
+        и расписание, справа решают — обложка, условия, мастер и кнопка
+        заявки. На телефоне сводка идёт первой: сначала «что за игра и во
+        сколько», потом длинный текст.
+      -->
       <div
         v-else
-        class="flex flex-col gap-8"
+        class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start"
       >
-        <GameOverview
-          :game="game"
-          :master-name="masterName"
-        />
+        <div class="flex flex-col gap-4 lg:col-start-2 lg:row-start-1">
+          <GameSummaryCard
+            :game="game"
+            :master-name="masterName"
+          >
+            <template #actions>
+              <div
+                v-if="!abilities.needsSignIn"
+                class="flex flex-col gap-2 border-t border-default pt-4"
+              >
+                <UButton
+                  v-if="abilities.canApply"
+                  block
+                  icon="tabler:send"
+                  :disabled="isBusy"
+                  :label="APPLY_LABEL"
+                  @click.left.exact.prevent="openApply"
+                />
 
-        <GameInviteCard
-          v-if="game.inviteCode"
-          :game-id="game.id"
-          :invite-code="game.inviteCode"
-        />
+                <UButton
+                  v-if="abilities.canWithdraw"
+                  block
+                  color="neutral"
+                  variant="subtle"
+                  icon="tabler:arrow-back-up"
+                  :disabled="isBusy"
+                  :label="APPLY_WITHDRAW_LABEL"
+                  @click.left.exact.prevent="handleWithdraw"
+                />
 
-        <UiResult
-          v-if="abilities.needsSignIn"
-          status="info"
-          :title="GAME_GUEST_NOTICE_TITLE"
-          :sub-title="GAME_GUEST_NOTICE_DESCRIPTION"
-        >
-          <template #extra>
-            <UButton
-              to="/auth"
-              icon="tabler:login"
-              :label="GAME_SIGN_IN_LABEL"
-            />
-          </template>
-        </UiResult>
+                <UButton
+                  v-if="abilities.canReviewRegistrations"
+                  block
+                  color="neutral"
+                  variant="subtle"
+                  icon="tabler:clipboard-list"
+                  :label="SESSION_REGISTRATIONS_LABEL"
+                  @click.left.exact.prevent="openRegistrations"
+                />
 
-        <template v-else>
-          <div class="flex flex-wrap items-center gap-2">
-            <UButton
-              v-if="abilities.canApply"
-              icon="tabler:send"
-              :disabled="isBusy"
-              :label="APPLY_LABEL"
-              @click.left.exact.prevent="openApply"
-            />
+                <div
+                  v-if="ownRegistration"
+                  class="flex items-center justify-between gap-2 text-sm"
+                >
+                  <span class="text-muted">{{ APPLY_OWN_STATUS_LABEL }}</span>
 
-            <UButton
-              v-if="abilities.canWithdraw"
-              color="neutral"
-              variant="subtle"
-              icon="tabler:arrow-back-up"
-              :disabled="isBusy"
-              :label="APPLY_WITHDRAW_LABEL"
-              @click.left.exact.prevent="handleWithdraw"
-            />
+                  <UBadge
+                    :color="
+                      SESSION_REGISTRATION_STATUS_COLORS[ownRegistration.status]
+                    "
+                    variant="subtle"
+                    size="sm"
+                    :label="
+                      SESSION_REGISTRATION_STATUS_LABELS[ownRegistration.status]
+                    "
+                  />
+                </div>
 
-            <UButton
-              v-if="abilities.canReviewRegistrations"
-              color="neutral"
-              variant="subtle"
-              icon="tabler:clipboard-list"
-              :label="SESSION_REGISTRATIONS_LABEL"
-              @click.left.exact.prevent="openRegistrations"
-            />
+                <!-- Отказ без объяснений выглядит молчанием, поэтому названную
+                  мастером причину игрок видит рядом со статусом заявки -->
+                <UAlert
+                  v-if="ownRegistration?.rejectionReason"
+                  color="error"
+                  variant="subtle"
+                  icon="tabler:message-off"
+                  :title="REGISTRATION_REJECTED_REASON_TITLE"
+                  :description="ownRegistration.rejectionReason"
+                />
+              </div>
+            </template>
+          </GameSummaryCard>
 
-            <UBadge
-              v-if="ownRegistration"
-              :color="
-                SESSION_REGISTRATION_STATUS_COLORS[ownRegistration.status]
-              "
-              variant="subtle"
-              size="sm"
-              :label="
-                SESSION_REGISTRATION_STATUS_LABELS[ownRegistration.status]
-              "
-            />
+          <GameInviteCard
+            v-if="game.inviteCode"
+            :game-id="game.id"
+            :invite-code="game.inviteCode"
+          />
+        </div>
+
+        <div class="flex flex-col gap-4 lg:col-start-1 lg:row-start-1">
+          <GameOverview :game="game" />
+
+          <!-- Гостю расписание не отдаётся сервисом, поэтому на его месте
+            стоит приглашение войти: иначе непонятно, есть ли встречи вообще -->
+          <div
+            v-if="abilities.needsSignIn"
+            class="rounded-xl border border-default bg-elevated p-4 sm:p-5"
+          >
+            <UiResult
+              status="info"
+              :title="GAME_GUEST_NOTICE_TITLE"
+              :sub-title="GAME_GUEST_NOTICE_DESCRIPTION"
+            >
+              <template #extra>
+                <UButton
+                  to="/auth"
+                  icon="tabler:login"
+                  :label="GAME_SIGN_IN_LABEL"
+                />
+              </template>
+            </UiResult>
           </div>
 
-          <!-- Отказ без объяснений выглядит молчанием, поэтому названную
-            мастером причину игрок видит рядом со статусом заявки -->
-          <UAlert
-            v-if="ownRegistration?.rejectionReason"
-            color="error"
-            variant="subtle"
-            icon="tabler:message-off"
-            :title="REGISTRATION_REJECTED_REASON_TITLE"
-            :description="ownRegistration.rejectionReason"
-          />
+          <template v-else>
+            <GameSessions
+              :game="game"
+              :sessions="sessions"
+              :abilities="abilities"
+              :participation-by-session="ownParticipationBySession"
+              :create-session="handleCreateSession"
+              :create-session-series="handleCreateSeries"
+              :copy-session="handleCopySession"
+              :change-attendance="changeAttendance"
+              :complete-session="completeSession"
+              :cancel-session="cancelSession"
+              :start-session="startSession"
+              :loading="areSessionsLoading"
+              @refresh="handleRegistrationsChanged"
+            />
 
-          <GameSessions
-            :game="game"
-            :sessions="sessions"
-            :abilities="abilities"
-            :participation-by-session="ownParticipationBySession"
-            :create-session="handleCreateSession"
-            :create-session-series="handleCreateSeries"
-            :copy-session="handleCopySession"
-            :change-attendance="changeAttendance"
-            :complete-session="completeSession"
-            :cancel-session="cancelSession"
-            :start-session="startSession"
-            :loading="areSessionsLoading"
-            @refresh="handleRegistrationsChanged"
-          />
+            <GameApplyModal
+              v-model:open="isApplyOpen"
+              :game="game"
+              :loading="isBusy"
+              @submit="handleApply"
+            />
 
-          <GameApplyModal
-            v-model:open="isApplyOpen"
-            :game="game"
-            :loading="isBusy"
-            @submit="handleApply"
-          />
-
-          <GameRegistrationsPanel
-            v-model:open="isRegistrationsOpen"
-            :game="game"
-            @changed="handleRegistrationsChanged"
-          />
-        </template>
+            <GameRegistrationsPanel
+              v-model:open="isRegistrationsOpen"
+              :game="game"
+              @changed="handleRegistrationsChanged"
+            />
+          </template>
+        </div>
       </div>
     </template>
   </NuxtLayout>

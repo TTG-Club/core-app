@@ -429,12 +429,19 @@
   }
 </script>
 
+<!--
+  Расписание — отдельный блок страницы со своей шапкой: в ней и переключатель
+  вида, и отбор по состоянию, и создание встреч. На телефоне шапка разворачива-
+  ется в столбец, иначе отбор и кнопки мастера выдавливают заголовок.
+-->
 <template>
-  <section class="flex flex-col gap-3">
-    <div class="flex flex-wrap items-center justify-between gap-2">
-      <h3 class="text-lg font-semibold text-highlighted">
+  <section class="flex flex-col rounded-xl border border-default bg-elevated">
+    <div
+      class="flex flex-col gap-3 border-b border-default p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:p-5"
+    >
+      <h2 class="text-lg font-semibold text-highlighted">
         {{ GAME_SESSIONS_TITLE }}
-      </h3>
+      </h2>
 
       <div class="flex flex-wrap items-center gap-2">
         <!-- Вид переключается значками: подписи вытесняют фильтр на свою строку,
@@ -472,7 +479,7 @@
           :items="statusOptions"
           :placeholder="SESSIONS_FILTER_PLACEHOLDER"
           :aria-label="SESSIONS_FILTER_LABEL"
-          class="w-40"
+          class="w-full sm:w-44"
         />
 
         <UButton
@@ -495,59 +502,39 @@
       </div>
     </div>
 
-    <div
-      v-if="loading"
-      class="flex flex-col gap-2"
-    >
-      <USkeleton
-        v-for="index in 2"
-        :key="index"
-        class="h-32 w-full rounded-lg"
+    <div class="p-4 sm:p-5">
+      <div
+        v-if="loading"
+        class="flex flex-col gap-2"
+      >
+        <USkeleton
+          v-for="index in 2"
+          :key="index"
+          class="h-32 w-full rounded-lg"
+        />
+      </div>
+
+      <UiResult
+        v-else-if="isFilteredOut"
+        status="info"
+        :title="SESSIONS_EMPTY_FILTERED_TITLE"
+        :sub-title="SESSIONS_EMPTY_FILTERED_DESCRIPTION"
       />
-    </div>
 
-    <UiResult
-      v-else-if="isFilteredOut"
-      status="info"
-      :title="SESSIONS_EMPTY_FILTERED_TITLE"
-      :sub-title="SESSIONS_EMPTY_FILTERED_DESCRIPTION"
-    />
+      <UiResult
+        v-else-if="!sessions.length"
+        status="info"
+        :title="SESSIONS_EMPTY_TITLE"
+        :sub-title="emptyDescription"
+      />
 
-    <UiResult
-      v-else-if="!sessions.length"
-      status="info"
-      :title="SESSIONS_EMPTY_TITLE"
-      :sub-title="emptyDescription"
-    />
-
-    <SessionTimeline
-      v-else-if="isTimeline"
-      v-model:scale="timelineScale"
-      :sessions="visibleSessions"
-      :game="game"
-      :abilities="abilities"
-      :participation-by-session="participationBySession"
-      :busy="isBusy"
-      @attend="handleAttend"
-      @copy="openCopy"
-      @open-participants="openParticipants"
-      @complete="askComplete"
-      @start="handleStart"
-      @cancel="askCancel"
-      @review="openReview"
-    />
-
-    <div
-      v-else
-      class="flex flex-col gap-3"
-    >
-      <SessionCard
-        v-for="session in visibleSessions"
-        :key="session.id"
-        :session="session"
+      <SessionTimeline
+        v-else-if="isTimeline"
+        v-model:scale="timelineScale"
+        :sessions="visibleSessions"
         :game="game"
         :abilities="abilities"
-        :participant="participantOf(session.id)"
+        :participation-by-session="participationBySession"
         :busy="isBusy"
         @attend="handleAttend"
         @copy="openCopy"
@@ -557,6 +544,28 @@
         @cancel="askCancel"
         @review="openReview"
       />
+
+      <div
+        v-else
+        class="flex flex-col gap-3"
+      >
+        <SessionCard
+          v-for="session in visibleSessions"
+          :key="session.id"
+          :session="session"
+          :game="game"
+          :abilities="abilities"
+          :participant="participantOf(session.id)"
+          :busy="isBusy"
+          @attend="handleAttend"
+          @copy="openCopy"
+          @open-participants="openParticipants"
+          @complete="askComplete"
+          @start="handleStart"
+          @cancel="askCancel"
+          @review="openReview"
+        />
+      </div>
     </div>
 
     <SessionFormModal

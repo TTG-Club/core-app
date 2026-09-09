@@ -314,7 +314,9 @@
 
 <template>
   <div class="flex flex-col gap-3">
-    <div class="flex flex-wrap items-center justify-between gap-2">
+    <div
+      class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
+    >
       <div class="flex items-center gap-1">
         <UButton
           size="sm"
@@ -325,7 +327,9 @@
           @click.left.exact.prevent="shiftWindow(-1)"
         />
 
-        <span class="min-w-40 text-center font-medium text-highlighted">
+        <span
+          class="flex-auto text-center font-medium text-highlighted sm:min-w-40 sm:flex-none"
+        >
           {{ windowLabel }}
         </span>
 
@@ -372,7 +376,7 @@
       по вертикали, а ореол выходит за круг метки -->
     <div
       v-else
-      class="overflow-x-auto p-1.5"
+      class="overflow-x-auto rounded-lg border border-default p-3"
     >
       <!-- Клик по метке открывает ту же карточку, что и клик по подписи:
         целиться в мелкий кружок и промахиваться мимо мастеру незачем -->
@@ -440,7 +444,7 @@
       <template #body>
         <SessionCard
           v-if="detailSession"
-          class="rounded-none bg-transparent ring-0"
+          class="rounded-none border-0 bg-transparent"
           :session="detailSession"
           :game="game"
           :abilities="abilities"

@@ -408,9 +408,6 @@ export const FIND_GAME_NOT_FOUND_MESSAGE =
 /** Имя-заглушка, когда core-api не вернул отображаемое имя участника. */
 export const UNKNOWN_PARTICIPANT_NAME = 'Участник';
 
-/** Подпись разрешённого кроссплея в списке признаков игры. */
-export const GAME_CROSSPLAY_LABEL = 'Кросспол';
-
 /** Подпись кнопки перехода к странице игры. */
 export const GAME_OPEN_LABEL = 'Открыть игру';
 
@@ -456,6 +453,29 @@ export const GAME_MASTER_LABEL = 'Мастер';
 
 /** Подпись ряда мест в карточке каталога: без неё значки игроков немы. */
 export const GAME_SEATS_LABEL = 'Места';
+
+/**
+ * Подписи условий игры в сводке объявления. Одна строка — одно условие:
+ * списком «подпись — значение» они читаются быстрее, чем рядом одинаковых
+ * значков, где каждое приходится разбирать по слову.
+ */
+export const GAME_FACT_LABELS = {
+  format: 'Формат',
+  venue: 'Место встречи',
+  system: 'Система',
+  duration: 'Длительность',
+  genre: 'Жанр',
+  players: 'Игроки',
+  level: 'Стартовый уровень',
+  age: 'Возраст',
+  crossplay: 'Кросспол',
+} as const;
+
+/** Значение строки кроссплея: сама строка есть, только если он разрешён. */
+export const GAME_CROSSPLAY_ALLOWED_VALUE = 'Разрешён';
+
+/** Заголовок блока со ссылками на стол и разговоры игры. */
+export const GAME_LINKS_TITLE = 'Ссылки';
 
 /* Профиль мастера. */
 export const MASTER_PROFILE_TITLE = 'Профиль мастера';
@@ -734,7 +754,6 @@ export const GAME_FIELD_CITY_LABEL = 'Город';
 export const GAME_FIELD_CITY_PLACEHOLDER = 'Москва';
 export const GAME_FIELD_CITY_HINT = 'Только для игр вживую.';
 export const GAME_FIELD_VENUE_LABEL = 'Место проведения';
-export const GAME_VENUE_LABEL = 'Место';
 export const GAME_FIELD_VENUE_HINT = 'Клуб, антикафе или чей-то стол.';
 export const GAME_FIELD_VENUE_PLACEHOLDER = 'Клуб «Кубик», Пятницкая 12';
 export const GAME_FIELD_DURATION_LABEL = 'Длительность';
@@ -1045,6 +1064,9 @@ export const APPLY_CHARACTER_NAME_PLACEHOLDER = 'Тассельхоф Непос
 export const APPLY_SHARE_FAILED_MESSAGE =
   'Не удалось открыть доступ к листу по ссылке';
 export const APPLY_WITHDRAW_LABEL = 'Отозвать заявку';
+
+/** Подпись собственной заявки в сводке: значок статуса без неё нем. */
+export const APPLY_OWN_STATUS_LABEL = 'Ваша заявка';
 export const APPLY_WITHDRAWN_TOAST = 'Заявка отозвана';
 
 export const APPLY_SENT_TOAST = 'Заявка отправлена';

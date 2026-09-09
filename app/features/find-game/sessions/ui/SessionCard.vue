@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { ButtonProps } from '@nuxt/ui';
+
   import type {
     Game,
     GameSession,
@@ -101,6 +103,42 @@
   );
 
   /**
+   * Есть ли у зрителя действия над встречей: без них отделять линией нечего,
+   * а пустая линия читается сломанной вёрсткой.
+   */
+  const hasActions = computed(
+    () =>
+      abilities.canReviewRegistrations
+      || abilities.canCopySession
+      || sessionAbilities.value.canStart
+      || sessionAbilities.value.canComplete
+      || sessionAbilities.value.canReview
+      || sessionAbilities.value.canCancel,
+  );
+
+  /**
+   * Вид кнопки присутствия: выбранный ответ залит основным цветом. Функции, а
+   * не `computed`: кнопка своя у каждого варианта ответа.
+   *
+   * @param status Вариант ответа.
+   */
+  function attendanceButtonColor(
+    status: SessionAttendanceStatus,
+  ): ButtonProps['color'] {
+    return participant?.attendanceStatus === status ? 'primary' : 'neutral';
+  }
+
+  /**
+   * Заливка кнопки присутствия.
+   * @param status Вариант ответа.
+   */
+  function attendanceButtonVariant(
+    status: SessionAttendanceStatus,
+  ): ButtonProps['variant'] {
+    return participant?.attendanceStatus === status ? 'solid' : 'subtle';
+  }
+
+  /**
    * Меняет присутствие, если статус реально другой: сервис примет и повторный,
    * но лишний запрос ничего не даёт.
    * @param status Новый статус присутствия.
@@ -115,7 +153,9 @@
 </script>
 
 <template>
-  <UCard :ui="{ body: 'flex flex-col gap-3 p-4' }">
+  <div
+    class="flex flex-col gap-3 rounded-xl border border-default bg-accented p-4"
+  >
     <div class="flex flex-wrap items-start justify-between gap-2">
       <div class="flex min-w-0 flex-col gap-1">
         <h4 class="font-semibold text-highlighted">
@@ -197,21 +237,18 @@
           size="sm"
           :icon="option.icon"
           :label="option.label"
-          :color="
-            participant?.attendanceStatus === option.value
-              ? 'primary'
-              : 'neutral'
-          "
-          :variant="
-            participant?.attendanceStatus === option.value ? 'solid' : 'subtle'
-          "
+          :color="attendanceButtonColor(option.value)"
+          :variant="attendanceButtonVariant(option.value)"
           :disabled="busy"
           @click.left.exact.prevent="changeAttendance(option.value)"
         />
       </div>
     </div>
 
-    <div class="flex flex-wrap gap-2">
+    <div
+      v-if="hasActions"
+      class="flex flex-wrap gap-2 border-t border-default pt-3"
+    >
       <UButton
         v-if="abilities.canReviewRegistrations"
         size="sm"
@@ -279,5 +316,5 @@
         @click.left.exact.prevent="emit('cancel', session)"
       />
     </div>
-  </UCard>
+  </div>
 </template>
