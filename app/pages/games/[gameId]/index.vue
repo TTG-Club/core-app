@@ -34,6 +34,7 @@
     GAMES_ROUTE,
     getFindGameErrorMessage,
     getFindGameStatus,
+    getNearestSessionStart,
     INVITE_CODE_QUERY_KEY,
     REGISTRATION_REJECTED_REASON_TITLE,
     SESSION_REGISTRATION_STATUS_COLORS,
@@ -104,6 +105,15 @@
 
   const masterName = computed(() =>
     game.value ? getParticipantName(game.value.masterId) : '',
+  );
+
+  /**
+   * Ближайшая встреча для сводки. Своё поле игры сервис заполняет только в
+   * выдаче каталога, поэтому здесь дата считается по загруженному расписанию,
+   * а поле игры остаётся запасным путём — оно всё, что есть у гостя.
+   */
+  const nextSessionAt = computed(
+    () => getNearestSessionStart(sessions.value, Date.now()) ?? null,
   );
 
   useSeoMeta({
@@ -339,6 +349,7 @@
           <GameSummaryCard
             :game="game"
             :master-name="masterName"
+            :next-session-at="nextSessionAt"
           >
             <template #actions>
               <div

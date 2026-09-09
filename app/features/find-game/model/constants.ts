@@ -454,6 +454,27 @@ export const GAME_MASTER_LABEL = 'Мастер';
 /** Подпись ряда мест в карточке каталога: без неё значки игроков немы. */
 export const GAME_SEATS_LABEL = 'Места';
 
+/** Подпись ближайшей встречи: она же отвечает на вопрос «когда играем». */
+export const GAME_NEXT_SESSION_LABEL = 'Ближайшая встреча';
+
+/** Расписания ещё нет: у игры своей даты начала не бывает — она у встреч. */
+export const GAME_NEXT_SESSION_EMPTY = 'Дата не назначена';
+
+/**
+ * Короткая подпись даты для карточки каталога: рядом с «Мастер» и «Места»
+ * полное «Ближайшая встреча» отнимает у самой даты половину строки, и время
+ * уезжает в многоточие. Полная подпись остаётся в сводке объявления.
+ */
+export const GAME_NEXT_SESSION_SHORT_LABEL = 'Когда';
+
+/**
+ * Дата ближайшей встречи без года и часового пояса: год почти всегда текущий,
+ * а точное время смотрят в расписании. В карточке каталога месяц ещё и
+ * сокращается — там на строку отведено чуть больше двухсот точек.
+ */
+export const GAME_NEXT_SESSION_DATE_FORMAT = 'D MMMM, HH:mm';
+export const GAME_NEXT_SESSION_SHORT_DATE_FORMAT = 'D MMM, HH:mm';
+
 /**
  * Подписи условий игры в сводке объявления. Одна строка — одно условие:
  * списком «подпись — значение» они читаются быстрее, чем рядом одинаковых
@@ -671,6 +692,15 @@ export const GAME_EDIT_VISIBILITY_HINT =
 export const GAME_FORM_MAIN_SECTION = 'Об игре';
 export const GAME_FORM_FORMAT_SECTION = 'Формат и условия';
 export const GAME_FORM_PLAYERS_SECTION = 'Игроки';
+
+/**
+ * Почему публикация недоступна. Отключённая кнопка без объяснения читается
+ * поломкой: мастер не видит, что именно осталось заполнить.
+ */
+export const GAME_FORM_SUBMIT_HINT_UPLOADING = 'Дождитесь загрузки обложки';
+
+export const GAME_FORM_SUBMIT_HINT_REQUIRED =
+  'Заполните обязательные поля: название, описание и требования к игрокам';
 
 export const GAME_FIELD_TITLE_LABEL = 'Название';
 export const GAME_FIELD_TITLE_PLACEHOLDER = 'Проклятие Страда';

@@ -13,6 +13,9 @@
     GAME_LINKS_TITLE,
     GAME_MASTER_CHAT_LINK_LABEL,
     GAME_MASTER_LABEL,
+    GAME_NEXT_SESSION_DATE_FORMAT,
+    GAME_NEXT_SESSION_EMPTY,
+    GAME_NEXT_SESSION_LABEL,
     GAME_RECRUITMENT_CLOSED_BADGE,
     GAME_RECRUITMENT_FULL_BADGE,
     GAME_STATUS_COLORS,
@@ -52,10 +55,21 @@
     url: string;
   }
 
-  const { game, masterName } = defineProps<{
+  const {
+    game,
+    masterName,
+    nextSessionAt = null,
+  } = defineProps<{
     game: Game;
     /** Отображаемое имя мастера; UUID пользователю показывать нельзя. */
     masterName: string;
+    /**
+     * Начало ближайшей встречи из загруженного расписания. Считается снаружи:
+     * сервис заполняет ближайшую встречу только в выдаче каталога, а по одной
+     * игре отдаёт пустое поле — тогда дату видно лишь тому, кому сервис отдал
+     * и само расписание.
+     */
+    nextSessionAt?: string | null;
   }>();
 
   /**
@@ -103,12 +117,31 @@
     return items;
   });
 
+  const { format } = useDayjs();
+
+  /**
+   * Дата ближайшей встречи. Своей даты у игры нет — время назначается
+   * встречам; пока расписания нет, строка говорит об этом прямо.
+   */
+  const nextSessionValue = computed(() => {
+    const startsAt = nextSessionAt ?? game.nextSession?.startsAt;
+
+    return startsAt
+      ? format(startsAt, GAME_NEXT_SESSION_DATE_FORMAT)
+      : GAME_NEXT_SESSION_EMPTY;
+  });
+
   /**
    * Условия игры списком. Пустые условия строкой не занимают места: у онлайна
    * нет места встречи, у части игр — жанра и возрастных границ.
    */
   const facts = computed<Array<GameFact>>(() => {
     const items: Array<GameFact> = [
+      {
+        key: 'next-session',
+        label: GAME_NEXT_SESSION_LABEL,
+        value: nextSessionValue.value,
+      },
       {
         key: 'format',
         label: GAME_FACT_LABELS.format,

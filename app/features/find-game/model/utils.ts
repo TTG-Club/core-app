@@ -12,6 +12,7 @@ import {
   REVIEW_WINDOW_DAYS,
   SESSION_PAYMENT_TYPE_LABELS,
 } from './constants';
+import { findNearestMoment } from './timeline';
 
 /** Часов в сутках — верхняя граница длительности встречи. */
 const HOURS_IN_DAY = 24;
@@ -51,6 +52,34 @@ export function getGameFormatSummary(game: Game): string {
  */
 export function getGamesFoundLabel(total: number): string {
   return `Найдено ${total} ${getPlural(total, ['игра', 'игры', 'игр'])}`;
+}
+
+/**
+ * Начало ближайшей предстоящей встречи среди загруженных. Нужна там, где
+ * расписание уже на руках: сервис считает ближайшую встречу только для выдачи
+ * каталога, а в ответе по одной игре поле приходит пустым.
+ *
+ * @param sessions Сессии игры.
+ * @param from Момент отсчёта в миллисекундах.
+ */
+export function getNearestSessionStart(
+  sessions: ReadonlyArray<GameSession>,
+  from: number,
+): string | null {
+  const upcoming = sessions
+    .filter((session) => session.status === 'SCHEDULED' && session.startsAt)
+    .map((session) => ({
+      startsAt: session.startsAt as string,
+      at: new Date(session.startsAt as string).getTime(),
+    }))
+    .filter((entry) => Number.isFinite(entry.at) && entry.at >= from);
+
+  const nearest = findNearestMoment(
+    upcoming.map((entry) => entry.at),
+    from,
+  );
+
+  return upcoming.find((entry) => entry.at === nearest)?.startsAt ?? null;
 }
 
 /**

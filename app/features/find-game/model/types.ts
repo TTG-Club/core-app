@@ -117,6 +117,21 @@ export interface CreateSessionReviewRequest {
   comment?: string;
 }
 
+/**
+ * Ближайшая предстоящая встреча игры. Сервис отдаёт её вместе с самой игрой,
+ * поэтому дату видно и в каталоге, и в объявлении — без запроса расписания,
+ * которое гостю вообще не отдаётся.
+ */
+export interface GameNextSession {
+  id: string;
+
+  /** Начало встречи; `null` — набор с открытой датой. */
+  startsAt: string | null;
+  estimatedDurationMinutes: number | null;
+  priceAmount: number | null;
+  priceCurrency: string | null;
+}
+
 /** Игра из выдачи find-game-api. */
 export interface Game {
   id: string;
@@ -174,6 +189,11 @@ export interface Game {
    * создании игры и в собственной выдаче мастера.
    */
   inviteCode: string | null;
+  /**
+   * Ближайшая предстоящая встреча; `null` — расписания ещё нет. Считает её
+   * сам сервис: у игры своей даты начала нет, время назначается встречам.
+   */
+  nextSession: GameNextSession | null;
   createdAt: string;
   /**
    * Позиция в публичном списке: по ней сервис сортирует выдачу, и она же

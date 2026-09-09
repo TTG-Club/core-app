@@ -7,6 +7,9 @@
   import {
     GAME_COST_TYPE_LABELS,
     GAME_MASTER_LABEL,
+    GAME_NEXT_SESSION_EMPTY,
+    GAME_NEXT_SESSION_SHORT_DATE_FORMAT,
+    GAME_NEXT_SESSION_SHORT_LABEL,
     GAME_SEATS_LABEL,
     GAME_SEATS_MAX_ICONS,
     GAME_STATUS_COLORS,
@@ -90,6 +93,27 @@
 
     return items;
   });
+
+  const { format } = useDayjs();
+
+  /**
+   * Дата ближайшей встречи. Своей даты у игры нет — время назначается
+   * встречам, поэтому в карточке стоит ближайшая из них. Пока расписания нет,
+   * подпись говорит об этом прямо: пустая строка читалась бы потерянными
+   * данными.
+   */
+  const nextSessionLabel = computed(() => {
+    const startsAt = game.nextSession?.startsAt;
+
+    return startsAt
+      ? format(startsAt, GAME_NEXT_SESSION_SHORT_DATE_FORMAT)
+      : GAME_NEXT_SESSION_EMPTY;
+  });
+
+  /** Назначенная дата выделена, неназначенная приглушена. */
+  const nextSessionClass = computed(() =>
+    game.nextSession?.startsAt ? 'text-toned' : 'text-muted',
+  );
 
   /** Значок формата: он ведёт строку условий по нижнему краю обложки. */
   const formatIcon = computed(() => GAME_TYPE_ICONS[game.type]);
@@ -268,6 +292,24 @@
       <div
         class="mt-auto flex flex-col gap-1.5 border-t border-default pt-3 text-sm"
       >
+        <div class="flex items-center gap-1.5">
+          <UIcon
+            name="tabler:calendar-event"
+            class="size-4 shrink-0 text-muted"
+          />
+
+          <span class="shrink-0 text-muted"
+            >{{ GAME_NEXT_SESSION_SHORT_LABEL }}:</span
+          >
+
+          <span
+            class="truncate font-medium"
+            :class="nextSessionClass"
+          >
+            {{ nextSessionLabel }}
+          </span>
+        </div>
+
         <div class="flex items-center gap-1.5">
           <UIcon
             name="tabler:crown"

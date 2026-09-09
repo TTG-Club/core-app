@@ -287,6 +287,19 @@ export function parseCities(input: unknown): Array<CityOption> {
 /* Игра                                                                */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Ближайшая встреча в ответе об игре. Сборки сервиса без этого подсчёта поля
+ * не отдают, поэтому вся запись необязательна: карточка тогда показывает
+ * «дата не назначена», а не ломается.
+ */
+const nextSessionResponseSchema = z.object({
+  id: uuidSchema,
+  startsAt: nullableInstantSchema,
+  estimatedDurationMinutes: z.coerce.number().int().nullish().catch(null),
+  priceAmount: decimalSchema.nullish().catch(null),
+  priceCurrency: z.string().nullish().catch(null),
+});
+
 const gameResponseSchema = z.object({
   // Без идентификаторов запись бесполезна: по ним строятся ссылки и права.
   id: uuidSchema,
@@ -322,6 +335,7 @@ const gameResponseSchema = z.object({
   // Публичные ответы код приглашения вырезают — здесь он появляется только
   // при создании игры и в собственной выдаче мастера.
   inviteCode: z.string().nullish().catch(null),
+  nextSession: nextSessionResponseSchema.nullish().catch(null),
   createdAt: instantSchema,
   // Поле сборок сервиса с поднятием игр: на старой сборке его просто нет.
   listPositionAt: nullableInstantSchema,
@@ -364,6 +378,16 @@ function toGame(parsed: z.infer<typeof gameResponseSchema>): Game {
     costType: parsed.costType,
     visibility: parsed.visibility,
     inviteCode: parsed.inviteCode ?? null,
+    nextSession: parsed.nextSession
+      ? {
+          id: parsed.nextSession.id,
+          startsAt: parsed.nextSession.startsAt,
+          estimatedDurationMinutes:
+            parsed.nextSession.estimatedDurationMinutes ?? null,
+          priceAmount: parsed.nextSession.priceAmount ?? null,
+          priceCurrency: parsed.nextSession.priceCurrency ?? null,
+        }
+      : null,
     createdAt: parsed.createdAt,
     listPositionAt: parsed.listPositionAt,
     updatedAt: parsed.updatedAt,
