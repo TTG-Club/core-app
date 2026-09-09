@@ -22,6 +22,8 @@
     GAME_SESSION_STATUS_LABELS,
     GAME_SESSION_STATUSES,
     GAME_SESSIONS_TITLE,
+    groupSessionsByPeriod,
+    SESSION_AGENDA_CLOCK_INTERVAL,
     SESSION_CANCEL_DESCRIPTION,
     SESSION_CANCEL_LABEL,
     SESSION_CANCEL_TITLE,
@@ -38,6 +40,7 @@
     SESSION_SERIES_LABEL,
     SESSION_STARTED_TOAST,
     SESSION_TIMELINE_DEFAULT_SCALE,
+    SESSION_TIMELINE_SCALES,
     SESSION_TIMELINE_VIEW_LABEL,
     SESSIONS_DEFAULT_STATUSES,
     SESSIONS_EMPTY_FILTERED_DESCRIPTION,
@@ -111,11 +114,36 @@
 
   const { showError, showSuccess } = useFindGameToast();
 
+  const route = useRoute();
+  const router = useRouter();
+  const { isMobile } = useBreakpoints();
+  const { $dayjs } = useDayjs();
+  const now = useNow({ interval: SESSION_AGENDA_CLOCK_INTERVAL });
+
   // Показ ограничен состояниями: по умолчанию — только набор, остальное
   // мастер включает сам.
-  const statusFilter = ref<Array<GameSessionStatus>>([
-    ...SESSIONS_DEFAULT_STATUSES,
-  ]);
+  const statusFilter = computed<Array<GameSessionStatus>>({
+    get: () => {
+      const query = route.query.sessionStatuses;
+
+      if (query === 'all') {
+        return [];
+      }
+
+      const values = typeof query === 'string' && query ? query.split(',') : [];
+
+      const valid = GAME_SESSION_STATUSES.filter((status) =>
+        values.includes(status),
+      );
+
+      return valid.length ? valid : [...SESSIONS_DEFAULT_STATUSES];
+    },
+    set: (statuses) => {
+      void router.replace({
+        query: { ...route.query, sessionStatuses: statuses.join(',') || 'all' },
+      });
+    },
+  });
 
   const statusOptions = GAME_SESSION_STATUSES.map((value) => ({
     value,
@@ -125,7 +153,16 @@
   // Расписание читают по оси времени: так видно, когда игра идёт и когда в
   // ней перерыв. Список остаётся для разбора накопившегося — в нём у всех
   // сессий сразу открыты действия.
-  const isTimeline = ref(true);
+  const isTimeline = computed({
+    get: () =>
+      route.query.sessionView === 'timeline'
+      || (route.query.sessionView !== 'list' && !isMobile.value),
+    set: (timeline: boolean) => {
+      void router.replace({
+        query: { ...route.query, sessionView: timeline ? 'timeline' : 'list' },
+      });
+    },
+  });
 
   /** Вид кнопок переключателя: выбранный горит основным цветом. */
   const timelineButtonColor = computed(() =>
@@ -144,9 +181,15 @@
     isTimeline.value ? 'subtle' : 'solid',
   );
 
-  const timelineScale = ref<SessionTimelineScale>(
-    SESSION_TIMELINE_DEFAULT_SCALE,
-  );
+  const timelineScale = computed<SessionTimelineScale>({
+    get: () =>
+      SESSION_TIMELINE_SCALES.find(
+        (scale) => scale === route.query.sessionScale,
+      ) ?? SESSION_TIMELINE_DEFAULT_SCALE,
+    set: (scale) => {
+      void router.replace({ query: { ...route.query, sessionScale: scale } });
+    },
+  });
 
   const visibleSessions = computed(() =>
     statusFilter.value.length
@@ -155,6 +198,17 @@
         )
       : sessions,
   );
+
+  const agendaGroups = computed(() => {
+    const today = $dayjs(now.value).startOf('day');
+
+    return groupSessionsByPeriod(
+      visibleSessions.value,
+      today.valueOf(),
+      today.add(1, 'day').valueOf(),
+      today.startOf('week').add(1, 'week').valueOf(),
+    );
+  });
 
   // Сессии есть, но ни одна не подходит под фильтр — это другой пустой экран.
   const isFilteredOut = computed(
@@ -549,22 +603,30 @@
         v-else
         class="flex flex-col gap-3"
       >
-        <SessionCard
-          v-for="session in visibleSessions"
-          :key="session.id"
-          :session="session"
-          :game="game"
-          :abilities="abilities"
-          :participant="participantOf(session.id)"
-          :busy="isBusy"
-          @attend="handleAttend"
-          @copy="openCopy"
-          @open-participants="openParticipants"
-          @complete="askComplete"
-          @start="handleStart"
-          @cancel="askCancel"
-          @review="openReview"
-        />
+        <section
+          v-for="group in agendaGroups"
+          :key="group.key"
+          class="flex flex-col gap-3"
+        >
+          <h3 class="font-semibold text-highlighted">{{ group.label }}</h3>
+
+          <SessionCard
+            v-for="session in group.sessions"
+            :key="session.id"
+            :session="session"
+            :game="game"
+            :abilities="abilities"
+            :participant="participantOf(session.id)"
+            :busy="isBusy"
+            @attend="handleAttend"
+            @copy="openCopy"
+            @open-participants="openParticipants"
+            @complete="askComplete"
+            @start="handleStart"
+            @cancel="askCancel"
+            @review="openReview"
+          />
+        </section>
       </div>
     </div>
 

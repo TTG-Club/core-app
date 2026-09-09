@@ -2,6 +2,7 @@ import type {
   APPLY_SOURCES,
   GAME_COST_TYPES,
   GAME_DURATION_TYPES,
+  GAME_ONLINE_PLATFORMS,
   GAME_SESSION_STATUSES,
   GAME_STATUSES,
   GAME_SYSTEMS,
@@ -20,10 +21,33 @@ import type {
 
 export type GameSystem = (typeof GAME_SYSTEMS)[number];
 export type GameType = (typeof GAME_TYPES)[number];
+export type GameOnlinePlatform = (typeof GAME_ONLINE_PLATFORMS)[number];
 export type GameDurationType = (typeof GAME_DURATION_TYPES)[number];
 export type GameCostType = (typeof GAME_COST_TYPES)[number];
 export type GameVisibility = (typeof GAME_VISIBILITIES)[number];
 export type GameStatus = (typeof GAME_STATUSES)[number];
+export type GamePersonalRole =
+  | 'ALL'
+  | 'PLAYER'
+  | 'MASTER'
+  | 'APPLICATIONS'
+  | 'UPCOMING'
+  | 'ATTENTION';
+
+/**
+ * Общедоступные сведения о ближайшей предстоящей встрече игры. Сервис отдаёт
+ * их вместе с самой игрой, поэтому дату видно и в каталоге, и в объявлении —
+ * без запроса расписания, которое гостю вообще не отдаётся.
+ */
+export interface NextGameSession {
+  id: string;
+
+  /** Начало встречи; `null` — набор с открытой датой. */
+  startsAt: string | null;
+  estimatedDurationMinutes: number | null;
+  priceAmount: number | null;
+  priceCurrency: string | null;
+}
 export type GameSessionStatus = (typeof GAME_SESSION_STATUSES)[number];
 export type SessionPaymentType = (typeof SESSION_PAYMENT_TYPES)[number];
 export type ProfileGender = (typeof PROFILE_GENDERS)[number];
@@ -117,29 +141,49 @@ export interface CreateSessionReviewRequest {
   comment?: string;
 }
 
-/**
- * Ближайшая предстоящая встреча игры. Сервис отдаёт её вместе с самой игрой,
- * поэтому дату видно и в каталоге, и в объявлении — без запроса расписания,
- * которое гостю вообще не отдаётся.
- */
-export interface GameNextSession {
+export interface GameFinanceEntry {
   id: string;
+  sessionId: string | null;
+  amount: number;
+  currency: string;
+  kind: string;
+  comment: string | null;
+  createdAt: string;
+}
 
-  /** Начало встречи; `null` — набор с открытой датой. */
+export interface GameFinanceBill {
+  sessionId: string;
+  title: string;
   startsAt: string | null;
-  estimatedDurationMinutes: number | null;
-  priceAmount: number | null;
-  priceCurrency: string | null;
+  currency: string;
+  amount: number;
+  remaining: number;
+  claimed: number;
+  finalized: boolean;
+  exempt: boolean;
+}
+
+export interface GameFinanceAccount {
+  playerId: string;
+  balances: Record<string, number>;
+  entries: Array<GameFinanceEntry>;
+  bills: Array<GameFinanceBill>;
+}
+
+export interface GameFinance {
+  accounts: Array<GameFinanceAccount>;
 }
 
 /** Игра из выдачи find-game-api. */
 export interface Game {
+  myRegistrationStatus: SessionRegistrationStatus | null;
   id: string;
   masterId: string;
   title: string;
   system: GameSystem;
   imageUrl: string | null;
   virtualTableUrl: string | null;
+  onlinePlatform: GameOnlinePlatform | null;
 
   /** Разговор с мастером: открыт всем, кто смотрит объявление. */
   masterChatUrl: string | null;
@@ -193,7 +237,7 @@ export interface Game {
    * Ближайшая предстоящая встреча; `null` — расписания ещё нет. Считает её
    * сам сервис: у игры своей даты начала нет, время назначается встречам.
    */
-  nextSession: GameNextSession | null;
+  nextSession: NextGameSession | null;
   createdAt: string;
   /**
    * Позиция в публичном списке: по ней сервис сортирует выдачу, и она же
@@ -257,6 +301,7 @@ export interface CreateGameRequest {
   system: GameSystem;
   imageUrl?: string;
   virtualTableUrl?: string;
+  onlinePlatform?: GameOnlinePlatform;
   masterChatUrl?: string;
   gameChatUrl?: string;
   genre?: string;
@@ -289,6 +334,7 @@ export interface GameFormState {
   system: GameSystem;
   imageUrl: string;
   virtualTableUrl: string;
+  onlinePlatform: GameOnlinePlatform;
   masterChatUrl: string;
   gameChatUrl: string;
   genre: string;
@@ -529,4 +575,15 @@ export interface FindGameNotification {
 export interface ParticipantName {
   userId: string;
   displayName: string;
+}
+/** Краткая карточка участника без приватных данных заявки. */
+export interface GameParticipant {
+  playerId: string;
+  characterName: string | null;
+  nextSession: {
+    id: string;
+    startsAt: string;
+    estimatedDurationMinutes: number | null;
+    attendanceStatus: SessionAttendanceStatus;
+  } | null;
 }

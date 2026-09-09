@@ -165,14 +165,18 @@
 </script>
 
 <template>
-  <div class="flex flex-col gap-2 rounded-md border border-default p-3">
+  <div
+    class="flex min-w-0 flex-col gap-2 rounded-md border border-default bg-elevated/30 p-3 text-sm"
+  >
     <div class="flex flex-wrap items-center justify-between gap-2">
       <span class="flex min-w-0 flex-col">
-        <span class="font-medium text-highlighted">{{ playerName }}</span>
+        <span class="font-medium wrap-break-word text-highlighted">{{
+          playerName
+        }}</span>
 
         <span
           v-if="registration.characterName"
-          class="text-sm text-muted"
+          class="wrap-break-word text-muted"
         >
           {{ registration.characterName }}
         </span>

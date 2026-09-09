@@ -1,15 +1,17 @@
-import type { GameStatus } from '../model';
+import type { MaybeRefOrGetter } from 'vue';
+
+import type { GamePersonalRole, GameStatus } from '../model';
 
 import { fetchMyGames, MY_GAMES_PAGE_SIZE } from '../model';
 
 /**
- * Свои игры мастера: публичные и приватные, в любом статусе.
+ * Игры пользователя с серверным отбором по роли и статусу.
  *
  * Публичный поиск здесь не годится в принципе — приватные игры в него не
  * попадают, а закрытые мастеру всё равно нужно видеть, поэтому раздел ходит
  * в отдельный защищённый метод сервиса.
  */
-export function useMyGames() {
+export function useMyGames(role: MaybeRefOrGetter<GamePersonalRole> = 'ALL') {
   const page = ref(0);
 
   /**
@@ -24,9 +26,16 @@ export function useMyGames() {
     status,
     refresh,
   } = useAsyncData(
-    () => `find-game-my-games-${statuses.value.join(',')}`,
-    () => fetchMyGames(page.value, MY_GAMES_PAGE_SIZE, statuses.value),
-    { watch: [page, statuses], deep: false, server: false },
+    () =>
+      `find-game-my-games-${toValue(role)}-${page.value}-${statuses.value.join(',')}`,
+    () =>
+      fetchMyGames(
+        page.value,
+        MY_GAMES_PAGE_SIZE,
+        statuses.value,
+        toValue(role),
+      ),
+    { deep: false, server: false },
   );
 
   // Смена отбора возвращает к первой странице: на третьей странице прежней
@@ -35,7 +44,7 @@ export function useMyGames() {
   // `flush: 'sync'`: страница обнуляется в тот же тик, что и отбор, — иначе
   // запрос успевал уйти со старым номером страницы, а следом сразу второй.
   watch(
-    statuses,
+    [statuses, () => toValue(role)],
     () => {
       page.value = 0;
     },

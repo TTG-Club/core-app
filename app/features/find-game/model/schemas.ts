@@ -26,6 +26,7 @@ import {
   GAME_DESCRIPTION_MAX_LENGTH,
   GAME_DURATION_TYPES,
   GAME_GENRE_MAX_LENGTH,
+  GAME_ONLINE_PLATFORMS,
   GAME_PLAYERS_MAX,
   GAME_PLAYERS_MIN,
   GAME_REQUIREMENTS_MAX_LENGTH,
@@ -51,6 +52,21 @@ import {
   SESSION_PAYMENT_TYPES,
   SESSION_REGISTRATION_STATUSES,
 } from './constants';
+
+export const gameParticipantsSchema = z.array(
+  z.object({
+    playerId: z.string().uuid(),
+    characterName: z.string().nullable(),
+    nextSession: z
+      .object({
+        id: z.string().uuid(),
+        startsAt: z.string().datetime({ offset: true }),
+        estimatedDurationMinutes: z.number().int().positive().nullable(),
+        attendanceStatus: z.enum(SESSION_ATTENDANCE_STATUSES),
+      })
+      .nullable(),
+  }),
+);
 
 /* ------------------------------------------------------------------ */
 /* Примитивы                                                           */
@@ -290,17 +306,20 @@ export function parseCities(input: unknown): Array<CityOption> {
 /**
  * Ближайшая встреча в ответе об игре. Сборки сервиса без этого подсчёта поля
  * не отдают, поэтому вся запись необязательна: карточка тогда показывает
- * «дата не назначена», а не ломается.
+ * «дата не назначена», а не ломается. А вот испорченная дата запись роняет:
+ * по ней считается расписание, и подставлять вместо неё пустое место значит
+ * молча показывать не тот день.
  */
-const nextSessionResponseSchema = z.object({
+const nextGameSessionSchema = z.object({
   id: uuidSchema,
-  startsAt: nullableInstantSchema,
+  startsAt: z.string().datetime({ offset: true }).nullable(),
   estimatedDurationMinutes: z.coerce.number().int().nullish().catch(null),
   priceAmount: decimalSchema.nullish().catch(null),
   priceCurrency: z.string().nullish().catch(null),
 });
 
 const gameResponseSchema = z.object({
+  myRegistrationStatus: z.enum(SESSION_REGISTRATION_STATUSES).nullish(),
   // Без идентификаторов запись бесполезна: по ним строятся ссылки и права.
   id: uuidSchema,
   masterId: uuidSchema,
@@ -308,6 +327,7 @@ const gameResponseSchema = z.object({
   system: z.enum(GAME_SYSTEMS).catch('DND_2024'),
   imageUrl: z.string().nullish().catch(null),
   virtualTableUrl: z.string().nullish().catch(null),
+  onlinePlatform: z.enum(GAME_ONLINE_PLATFORMS).nullish().catch(null),
   masterChatUrl: z.string().nullish().catch(null),
   gameChatUrl: z.string().nullish().catch(null),
   genre: z.string().nullish().catch(null),
@@ -335,7 +355,7 @@ const gameResponseSchema = z.object({
   // Публичные ответы код приглашения вырезают — здесь он появляется только
   // при создании игры и в собственной выдаче мастера.
   inviteCode: z.string().nullish().catch(null),
-  nextSession: nextSessionResponseSchema.nullish().catch(null),
+  nextSession: nextGameSessionSchema.nullish(),
   createdAt: instantSchema,
   // Поле сборок сервиса с поднятием игр: на старой сборке его просто нет.
   listPositionAt: nullableInstantSchema,
@@ -349,12 +369,14 @@ const gameResponseSchema = z.object({
  */
 function toGame(parsed: z.infer<typeof gameResponseSchema>): Game {
   return {
+    myRegistrationStatus: parsed.myRegistrationStatus ?? null,
     id: parsed.id,
     masterId: parsed.masterId,
     title: parsed.title,
     system: parsed.system,
     imageUrl: parsed.imageUrl ?? null,
     virtualTableUrl: parsed.virtualTableUrl ?? null,
+    onlinePlatform: parsed.onlinePlatform ?? null,
     masterChatUrl: parsed.masterChatUrl ?? null,
     gameChatUrl: parsed.gameChatUrl ?? null,
     genre: parsed.genre ?? null,
@@ -659,7 +681,7 @@ function toSessionParticipant(
     id: parsed.id,
     sessionId: parsed.sessionId,
     playerId: parsed.playerId,
-    attendanceStatus: parsed.attendanceStatus ?? null,
+    attendanceStatus: parsed.attendanceStatus ?? 'UNMARKED',
     paid: parsed.paid,
     paidAt: parsed.paidAt,
     createdAt: parsed.createdAt,
@@ -843,6 +865,7 @@ export const createGameRequestSchema = z
     system: z.enum(GAME_SYSTEMS),
     imageUrl: optionalTrimmed(GAME_URL_MAX_LENGTH),
     virtualTableUrl: optionalTrimmed(GAME_URL_MAX_LENGTH),
+    onlinePlatform: z.enum(GAME_ONLINE_PLATFORMS).optional(),
     masterChatUrl: optionalTrimmed(GAME_URL_MAX_LENGTH),
     gameChatUrl: optionalTrimmed(GAME_URL_MAX_LENGTH),
     genre: optionalTrimmed(GAME_GENRE_MAX_LENGTH),

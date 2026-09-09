@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { FormError, FormErrorEvent } from '@nuxt/ui';
+
   import type { CreateGameRequest, Game, GameFormState } from '../model';
 
   import { StatusCodes } from 'http-status-codes';
@@ -10,12 +12,14 @@
   import {
     CANCEL_LABEL,
     createGame,
+    createGameRequestSchema,
     GAME_AGE_MAX,
     GAME_AGE_MIN,
     GAME_CITY_MAX_LENGTH,
     GAME_COST_TYPE_LABELS,
     GAME_COST_TYPES,
     GAME_DEFAULT_MAX_PLAYERS,
+    GAME_DEFAULT_ONLINE_PLATFORM,
     GAME_DEFAULT_PLAYERS_TO_START,
     GAME_DURATION_TYPE_LABELS,
     GAME_DURATION_TYPES,
@@ -46,6 +50,7 @@
     GAME_FIELD_MAX_PLAYERS_HINT,
     GAME_FIELD_MAX_PLAYERS_LABEL,
     GAME_FIELD_MIN_AGE_LABEL,
+    GAME_FIELD_ONLINE_PLATFORM_LABEL,
     GAME_FIELD_PLAYERS_TO_START_LABEL,
     GAME_FIELD_REQUIREMENTS_LABEL,
     GAME_FIELD_REQUIREMENTS_PLACEHOLDER,
@@ -64,19 +69,25 @@
     GAME_FORM_AGE_ERROR,
     GAME_FORM_CREATED_TOAST,
     GAME_FORM_FORMAT_SECTION,
+    GAME_FORM_LEAVE_LABEL,
+    GAME_FORM_LEAVE_TITLE,
     GAME_FORM_LIMIT_HINT,
     GAME_FORM_MAIN_SECTION,
     GAME_FORM_PLAYERS_ERROR,
     GAME_FORM_PLAYERS_SECTION,
-    GAME_FORM_SUBMIT_HINT_REQUIRED,
+    GAME_FORM_REQUIRED_ERROR,
+    GAME_FORM_STAY_LABEL,
     GAME_FORM_SUBMIT_HINT_UPLOADING,
     GAME_FORM_SUBMIT_LABEL,
+    GAME_FORM_UNSAVED_WARNING,
     GAME_FORM_UPDATED_TOAST,
     GAME_GENRE_MAX_LENGTH,
     GAME_GENRE_SUGGESTIONS,
     GAME_IMAGE_MAX_SIZE,
     GAME_IMAGE_SECTION,
     GAME_LINKS_TITLE,
+    GAME_ONLINE_PLATFORM_LABELS,
+    GAME_ONLINE_PLATFORMS,
     GAME_PLAYERS_MAX,
     GAME_PLAYERS_MIN,
     GAME_REQUIREMENTS_MAX_LENGTH,
@@ -129,6 +140,7 @@
       system: 'DND_2024',
       imageUrl: '',
       virtualTableUrl: '',
+      onlinePlatform: GAME_DEFAULT_ONLINE_PLATFORM,
       masterChatUrl: '',
       gameChatUrl: '',
       genre: '',
@@ -161,6 +173,7 @@
       system: source.system,
       imageUrl: source.imageUrl ?? '',
       virtualTableUrl: source.virtualTableUrl ?? '',
+      onlinePlatform: source.onlinePlatform ?? GAME_DEFAULT_ONLINE_PLATFORM,
       masterChatUrl: source.masterChatUrl ?? '',
       // Чужой чат игры сервис не отдаёт, но форму открывает только мастер:
       // ему приходит и он.
@@ -184,7 +197,9 @@
     };
   }
 
-  const form = ref<GameFormState>(game ? toFormState(game) : createEmptyForm());
+  const initialForm = game ? toFormState(game) : createEmptyForm();
+  const form = ref<GameFormState>(initialForm);
+  const savedSignature = ref(JSON.stringify(initialForm));
 
   const isSaving = ref(false);
   const submitError = ref<string | null>(null);
@@ -193,6 +208,96 @@
   // Пока файл жмётся и льётся в S3, публикацию держим закрытой: иначе игра
   // сохранится без «догоняющей» обложки.
   const isCoverUploading = ref(false);
+
+  const {
+    isRevealed: isLeaveDialogOpen,
+    reveal: revealLeave,
+    confirm: leaveForm,
+    cancel: stayInForm,
+  } = useConfirmDialog<void, void, void>();
+
+  const isDirty = computed(
+    () => JSON.stringify(form.value) !== savedSignature.value,
+  );
+
+  const formContainer = useTemplateRef<HTMLDivElement>('formContainer');
+
+  /** Предупреждает об уходе до сохранения формы. */
+  async function confirmLeave(): Promise<boolean> {
+    if (!isDirty.value && !isCoverUploading.value) {
+      return true;
+    }
+
+    if (isSaving.value) {
+      return false;
+    }
+
+    const result = await revealLeave();
+
+    return !result.isCanceled;
+  }
+
+  /** Закрытие диалога крестиком или Escape означает продолжение правки. */
+  function handleLeaveDialogOpen(open: boolean): void {
+    if (!open) {
+      stayInForm();
+    }
+  }
+
+  onBeforeRouteLeave(confirmLeave);
+  onBeforeRouteUpdate(confirmLeave);
+
+  useEventListener('beforeunload', (event: BeforeUnloadEvent) => {
+    if (isDirty.value || isCoverUploading.value) {
+      event.preventDefault();
+      event.returnValue = '';
+    }
+  });
+
+  /** Проверяет тот же запрос, который будет отправлен сервису. */
+  function validateForm(): Array<FormError> {
+    const result = createGameRequestSchema.safeParse(toRequest());
+
+    if (result.success) {
+      return [];
+    }
+
+    return result.error.issues.map((issue) => ({
+      name: issue.path.join('.'),
+      message:
+        issue.code === 'too_small' && issue.minimum === 1
+          ? GAME_FORM_REQUIRED_ERROR
+          : issue.message,
+    }));
+  }
+
+  /** Раскрывает раздел и фокусирует первое поле с ошибкой, включая редактор. */
+  async function handleValidationError(event: FormErrorEvent): Promise<void> {
+    const firstError = event.errors[0];
+
+    if (!firstError) {
+      return;
+    }
+
+    await nextTick();
+
+    const field = formContainer.value?.querySelector<HTMLElement>(
+      `[data-game-field="${firstError.name}"]`,
+    );
+
+    const details = field?.closest('details');
+
+    if (details) {
+      details.open = true;
+    }
+
+    const control =
+      field?.querySelector<HTMLElement>('[contenteditable="true"]')
+      ?? field?.querySelector<HTMLElement>('input, textarea, button');
+
+    control?.focus();
+    field?.scrollIntoView({ block: 'center' });
+  }
 
   // Мост undefined ↔ пустая строка: форма хранит адрес обложки строкой,
   // а UploadImage работает со `string | undefined`.
@@ -257,6 +362,11 @@
   const systemItems = toSelectItems(GAME_SYSTEMS, GAME_SYSTEM_LABELS);
   const typeItems = toSelectItems(GAME_TYPES, GAME_TYPE_LABELS);
 
+  const onlinePlatformItems = toSelectItems(
+    GAME_ONLINE_PLATFORMS,
+    GAME_ONLINE_PLATFORM_LABELS,
+  );
+
   const durationItems = toSelectItems(
     GAME_DURATION_TYPES,
     GAME_DURATION_TYPE_LABELS,
@@ -272,6 +382,7 @@
   // Город сервис принимает только у офлайн-игры, поэтому поле и появляется
   // только там — иначе форма отправила бы заведомо отвергаемый запрос.
   const isOffline = computed(() => form.value.type === 'OFFLINE');
+  const isOnline = computed(() => form.value.type === 'ONLINE');
 
   // Сервис отвергает смену платности у игры с сессиями, поэтому выбор гаснет
   // заранее и объясняет почему.
@@ -302,27 +413,14 @@
       : null;
   });
 
-  const isValid = computed(
-    () =>
-      !!form.value.title.trim()
-      && !!form.value.description.trim()
-      && !!form.value.requirements.trim()
-      && !playersError.value
-      && !ageError.value
-      && !isCoverUploading.value,
-  );
-
   /**
    * Почему кнопка публикации закрыта. Отключённая кнопка без объяснения
-   * читается поломкой, поэтому причина стоит рядом с ней.
+   * читается поломкой, поэтому причина стоит рядом с ней. Незаполненные поля
+   * кнопку не гасят — о них говорит проверка схемой при отправке.
    */
-  const submitHint = computed(() => {
-    if (isCoverUploading.value) {
-      return GAME_FORM_SUBMIT_HINT_UPLOADING;
-    }
-
-    return isValid.value ? null : GAME_FORM_SUBMIT_HINT_REQUIRED;
-  });
+  const submitHint = computed(() =>
+    isCoverUploading.value ? GAME_FORM_SUBMIT_HINT_UPLOADING : null,
+  );
 
   /** Собирает тело запроса: пустые необязательные поля не отправляются. */
   function toRequest(): CreateGameRequest {
@@ -349,6 +447,10 @@
 
     if (state.virtualTableUrl.trim()) {
       request.virtualTableUrl = state.virtualTableUrl.trim();
+    }
+
+    if (state.type === 'ONLINE') {
+      request.onlinePlatform = state.onlinePlatform;
     }
 
     if (state.masterChatUrl.trim()) {
@@ -390,7 +492,7 @@
 
   /** Публикует новую игру или сохраняет правки существующей. */
   async function submit(): Promise<void> {
-    if (!isValid.value) {
+    if (isSaving.value || isCoverUploading.value) {
       return;
     }
 
@@ -409,6 +511,7 @@
         isEdit.value ? GAME_FORM_UPDATED_TOAST : GAME_FORM_CREATED_TOAST,
       );
 
+      savedSignature.value = JSON.stringify(form.value);
       emit('saved', saved);
     } catch (error) {
       // Лимит незавершённых игр сервис отдаёт отдельным 409 — у него своя
@@ -433,362 +536,433 @@
   колонкой в том же порядке, действия — последними.
 -->
 <template>
-  <div class="flex flex-col gap-4">
-    <UAlert
-      v-if="isLimitReached"
-      color="warning"
-      variant="subtle"
-      icon="tabler:alert-triangle"
-      :title="submitError ?? ''"
-      :description="GAME_FORM_LIMIT_HINT"
-    />
+  <div ref="formContainer">
+    <UForm
+      :state="form"
+      :validate="validateForm"
+      class="flex flex-col gap-4"
+      @submit="submit"
+      @error="handleValidationError"
+    >
+      <UAlert
+        v-if="isLimitReached"
+        color="warning"
+        variant="subtle"
+        icon="tabler:alert-triangle"
+        :title="submitError ?? ''"
+        :description="GAME_FORM_LIMIT_HINT"
+      />
 
-    <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
-      <div class="flex flex-col gap-4 lg:col-start-1 lg:row-start-1">
-        <section
-          class="flex flex-col gap-4 rounded-xl border border-default bg-elevated p-4 sm:p-5"
-        >
-          <h2 class="text-lg font-semibold text-highlighted">
-            {{ GAME_FORM_MAIN_SECTION }}
-          </h2>
-
-          <UFormField
-            :label="GAME_FIELD_TITLE_LABEL"
-            required
+      <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
+        <div class="flex flex-col gap-4 lg:col-start-1 lg:row-start-1">
+          <section
+            class="flex flex-col gap-4 rounded-xl border border-default bg-elevated p-4 sm:p-5"
           >
-            <UInput
-              v-model="form.title"
-              :maxlength="GAME_TITLE_MAX_LENGTH"
-              :placeholder="GAME_FIELD_TITLE_PLACEHOLDER"
-              class="w-full"
-            />
-          </UFormField>
+            <h2 class="text-lg font-semibold text-highlighted">
+              {{ GAME_FORM_MAIN_SECTION }}
+            </h2>
 
-          <div class="grid gap-4 sm:grid-cols-2">
             <UFormField
-              :label="GAME_FIELD_SYSTEM_LABEL"
+              name="title"
+              data-game-field="title"
+              :label="GAME_FIELD_TITLE_LABEL"
               required
-            >
-              <USelect
-                v-model="form.system"
-                :items="systemItems"
-                class="w-full"
-              />
-            </UFormField>
-
-            <!-- Длинные пояснения идут под полем, а не справа от подписи: в
-              строке подписи они отрываются от самого поля -->
-            <UFormField
-              :label="GAME_FIELD_GENRE_LABEL"
-              :help="GAME_FIELD_GENRE_HINT"
-            >
-              <USelectMenu
-                v-model="form.genre"
-                :items="genreItems"
-                :placeholder="GAME_FIELD_GENRE_PLACEHOLDER"
-                create-item
-                class="w-full"
-                @create="addGenre"
-              />
-            </UFormField>
-          </div>
-
-          <UFormField
-            :label="GAME_FIELD_DESCRIPTION_LABEL"
-            required
-          >
-            <MarkupEditor
-              v-model="form.description"
-              :placeholder="GAME_FIELD_DESCRIPTION_PLACEHOLDER"
-            />
-          </UFormField>
-
-          <UFormField
-            :label="GAME_FIELD_REQUIREMENTS_LABEL"
-            required
-          >
-            <UTextarea
-              v-model="form.requirements"
-              :rows="3"
-              :maxlength="GAME_REQUIREMENTS_MAX_LENGTH"
-              :placeholder="GAME_FIELD_REQUIREMENTS_PLACEHOLDER"
-              class="w-full"
-            />
-          </UFormField>
-
-          <GameSourcesField v-model="form.allowedSources" />
-        </section>
-
-        <section
-          class="flex flex-col gap-4 rounded-xl border border-default bg-elevated p-4 sm:p-5"
-        >
-          <h2 class="text-lg font-semibold text-highlighted">
-            {{ GAME_FORM_FORMAT_SECTION }}
-          </h2>
-
-          <div class="grid gap-4 sm:grid-cols-2">
-            <UFormField
-              :label="GAME_FIELD_TYPE_LABEL"
-              required
-            >
-              <USelect
-                v-model="form.type"
-                :items="typeItems"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField
-              :label="GAME_FIELD_DURATION_LABEL"
-              required
-            >
-              <USelect
-                v-model="form.durationType"
-                :items="durationItems"
-                class="w-full"
-              />
-            </UFormField>
-
-            <!-- Город выбирается из справочника: иначе фильтр каталога
-              рассыпается на «Санкт-Петербург», «СПб» и «спб». Своего города в
-              списке может не оказаться — тогда его вписывают руками -->
-            <UFormField
-              v-if="isOffline"
-              :label="GAME_FIELD_CITY_LABEL"
-              :help="GAME_FIELD_CITY_HINT"
-            >
-              <USelectMenu
-                v-model="form.city"
-                v-model:search-term="citySearch"
-                :items="cityItems"
-                :loading="areCitiesLoading"
-                ignore-filter
-                create-item
-                :placeholder="GAME_FIELD_CITY_PLACEHOLDER"
-                class="w-full"
-                @create="addCity"
-              />
-            </UFormField>
-
-            <!-- Города игроку мало: по нему видно, доедет ли он вообще, а по
-              месту — как добираться -->
-            <UFormField
-              v-if="isOffline"
-              :label="GAME_FIELD_VENUE_LABEL"
-              :help="GAME_FIELD_VENUE_HINT"
             >
               <UInput
-                v-model="form.venue"
-                :maxlength="GAME_VENUE_MAX_LENGTH"
-                :placeholder="GAME_FIELD_VENUE_PLACEHOLDER"
+                v-model="form.title"
+                :maxlength="GAME_TITLE_MAX_LENGTH"
+                :placeholder="GAME_FIELD_TITLE_PLACEHOLDER"
                 class="w-full"
               />
             </UFormField>
 
-            <UFormField
-              :label="GAME_FIELD_COST_LABEL"
-              :help="costHint"
-              required
-            >
-              <USelect
-                v-model="form.costType"
-                :items="costItems"
-                :disabled="isCostLocked"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField
-              :label="GAME_FIELD_VISIBILITY_LABEL"
-              :help="visibilityHint"
-              required
-            >
-              <USelect
-                v-model="form.visibility"
-                :items="visibilityItems"
-                class="w-full"
-              />
-            </UFormField>
-          </div>
-        </section>
-
-        <section
-          class="flex flex-col gap-4 rounded-xl border border-default bg-elevated p-4 sm:p-5"
-        >
-          <h2 class="text-lg font-semibold text-highlighted">
-            {{ GAME_FORM_PLAYERS_SECTION }}
-          </h2>
-
-          <div class="grid gap-4 sm:grid-cols-2">
-            <UFormField
-              :label="GAME_FIELD_PLAYERS_TO_START_LABEL"
-              :error="playersError ?? undefined"
-              required
-            >
-              <UInputNumber
-                v-model="form.playersToStart"
-                :min="GAME_PLAYERS_MIN"
-                :max="GAME_PLAYERS_MAX"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField
-              :label="GAME_FIELD_MAX_PLAYERS_LABEL"
-              :help="GAME_FIELD_MAX_PLAYERS_HINT"
-              required
-            >
-              <UInputNumber
-                v-model="form.maxPlayers"
-                :min="GAME_PLAYERS_MIN"
-                :max="GAME_PLAYERS_MAX"
-                class="w-full"
-              />
-            </UFormField>
-          </div>
-
-          <div class="grid gap-4 sm:grid-cols-3">
-            <UFormField
-              :label="GAME_FIELD_MIN_AGE_LABEL"
-              :help="GAME_FIELD_AGE_HINT"
-              :error="ageError ?? undefined"
-            >
-              <UInputNumber
-                v-model="form.minAge"
-                :min="GAME_AGE_MIN"
-                :max="GAME_AGE_MAX"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField :label="GAME_FIELD_MAX_AGE_LABEL">
-              <UInputNumber
-                v-model="form.maxAge"
-                :min="GAME_AGE_MIN"
-                :max="GAME_AGE_MAX"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField
-              :label="GAME_FIELD_STARTING_LEVEL_LABEL"
-              required
-            >
-              <UInputNumber
-                v-model="form.startingLevel"
-                :min="GAME_STARTING_LEVEL_MIN"
-                :max="GAME_STARTING_LEVEL_MAX"
-                class="w-full"
-              />
-            </UFormField>
-          </div>
-
-          <UCheckbox
-            v-model="form.crossplayAllowed"
-            :label="GAME_FIELD_CROSSPLAY_LABEL"
-          />
-        </section>
-      </div>
-
-      <div class="flex flex-col gap-4 lg:col-start-2 lg:row-start-1">
-        <section
-          class="flex flex-col gap-4 rounded-xl border border-default bg-elevated p-4 sm:p-5"
-        >
-          <h2 class="text-lg font-semibold text-highlighted">
-            {{ GAME_FIELD_IMAGE_LABEL }}
-          </h2>
-
-          <UFormField :help="GAME_FIELD_IMAGE_HINT">
-            <UploadImage
-              v-model="coverImage"
-              v-model:uploading="isCoverUploading"
-              :section="GAME_IMAGE_SECTION"
-              :max-size="GAME_IMAGE_MAX_SIZE"
-            >
-              <template #preview>
-                <GameCover
-                  :image-url="form.imageUrl || null"
-                  :alt="form.title"
-                  :game-type="form.type"
-                  class="rounded-lg"
+            <div class="grid gap-4 sm:grid-cols-2">
+              <UFormField
+                :label="GAME_FIELD_SYSTEM_LABEL"
+                required
+              >
+                <USelect
+                  v-model="form.system"
+                  :items="systemItems"
+                  class="w-full"
                 />
-              </template>
-            </UploadImage>
-          </UFormField>
-        </section>
+              </UFormField>
 
-        <!-- Разговоры группы живут там, где она привыкла: чат с мастером
+              <!-- Длинные пояснения идут под полем, а не справа от подписи: в
+              строке подписи они отрываются от самого поля -->
+              <UFormField
+                :label="GAME_FIELD_GENRE_LABEL"
+                :help="GAME_FIELD_GENRE_HINT"
+              >
+                <USelectMenu
+                  v-model="form.genre"
+                  :items="genreItems"
+                  :placeholder="GAME_FIELD_GENRE_PLACEHOLDER"
+                  create-item
+                  class="w-full"
+                  @create="addGenre"
+                />
+              </UFormField>
+            </div>
+
+            <UFormField
+              name="description"
+              data-game-field="description"
+              :label="GAME_FIELD_DESCRIPTION_LABEL"
+              required
+            >
+              <MarkupEditor
+                v-model="form.description"
+                :placeholder="GAME_FIELD_DESCRIPTION_PLACEHOLDER"
+              />
+            </UFormField>
+
+            <UFormField
+              name="requirements"
+              data-game-field="requirements"
+              :label="GAME_FIELD_REQUIREMENTS_LABEL"
+              required
+            >
+              <UTextarea
+                v-model="form.requirements"
+                :rows="3"
+                :maxlength="GAME_REQUIREMENTS_MAX_LENGTH"
+                :placeholder="GAME_FIELD_REQUIREMENTS_PLACEHOLDER"
+                class="w-full"
+              />
+            </UFormField>
+
+            <GameSourcesField v-model="form.allowedSources" />
+          </section>
+
+          <section
+            class="flex flex-col gap-4 rounded-xl border border-default bg-elevated p-4 sm:p-5"
+          >
+            <h2 class="text-lg font-semibold text-highlighted">
+              {{ GAME_FORM_FORMAT_SECTION }}
+            </h2>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+              <UFormField
+                :label="GAME_FIELD_TYPE_LABEL"
+                required
+              >
+                <USelect
+                  v-model="form.type"
+                  :items="typeItems"
+                  class="w-full"
+                />
+              </UFormField>
+
+              <UFormField
+                v-if="isOnline"
+                name="onlinePlatform"
+                :label="GAME_FIELD_ONLINE_PLATFORM_LABEL"
+                required
+              >
+                <USelect
+                  v-model="form.onlinePlatform"
+                  :items="onlinePlatformItems"
+                  class="w-full"
+                />
+              </UFormField>
+
+              <UFormField
+                :label="GAME_FIELD_DURATION_LABEL"
+                required
+              >
+                <USelect
+                  v-model="form.durationType"
+                  :items="durationItems"
+                  class="w-full"
+                />
+              </UFormField>
+
+              <!-- Город выбирается из справочника: иначе фильтр каталога
+              рассыпается на «Санкт-Петербург», «СПб» и «спб». Своего города в
+              списке может не оказаться — тогда его вписывают руками -->
+              <UFormField
+                v-if="isOffline"
+                :label="GAME_FIELD_CITY_LABEL"
+                :help="GAME_FIELD_CITY_HINT"
+              >
+                <USelectMenu
+                  v-model="form.city"
+                  v-model:search-term="citySearch"
+                  :items="cityItems"
+                  :loading="areCitiesLoading"
+                  ignore-filter
+                  create-item
+                  :placeholder="GAME_FIELD_CITY_PLACEHOLDER"
+                  class="w-full"
+                  @create="addCity"
+                />
+              </UFormField>
+
+              <!-- Города игроку мало: по нему видно, доедет ли он вообще, а по
+              месту — как добираться -->
+              <UFormField
+                v-if="isOffline"
+                :label="GAME_FIELD_VENUE_LABEL"
+                :help="GAME_FIELD_VENUE_HINT"
+              >
+                <UInput
+                  v-model="form.venue"
+                  :maxlength="GAME_VENUE_MAX_LENGTH"
+                  :placeholder="GAME_FIELD_VENUE_PLACEHOLDER"
+                  class="w-full"
+                />
+              </UFormField>
+
+              <UFormField
+                :label="GAME_FIELD_COST_LABEL"
+                :help="costHint"
+                required
+              >
+                <USelect
+                  v-model="form.costType"
+                  :items="costItems"
+                  :disabled="isCostLocked"
+                  class="w-full"
+                />
+              </UFormField>
+
+              <UFormField
+                :label="GAME_FIELD_VISIBILITY_LABEL"
+                :help="visibilityHint"
+                required
+              >
+                <USelect
+                  v-model="form.visibility"
+                  :items="visibilityItems"
+                  class="w-full"
+                />
+              </UFormField>
+            </div>
+          </section>
+
+          <section
+            class="flex flex-col gap-4 rounded-xl border border-default bg-elevated p-4 sm:p-5"
+          >
+            <h2 class="text-lg font-semibold text-highlighted">
+              {{ GAME_FORM_PLAYERS_SECTION }}
+            </h2>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+              <UFormField
+                name="playersToStart"
+                data-game-field="playersToStart"
+                :label="GAME_FIELD_PLAYERS_TO_START_LABEL"
+                :error="playersError ?? undefined"
+                required
+              >
+                <UInputNumber
+                  v-model="form.playersToStart"
+                  :min="GAME_PLAYERS_MIN"
+                  :max="GAME_PLAYERS_MAX"
+                  class="w-full"
+                />
+              </UFormField>
+
+              <UFormField
+                name="maxPlayers"
+                data-game-field="maxPlayers"
+                :label="GAME_FIELD_MAX_PLAYERS_LABEL"
+                :help="GAME_FIELD_MAX_PLAYERS_HINT"
+                required
+              >
+                <UInputNumber
+                  v-model="form.maxPlayers"
+                  :min="GAME_PLAYERS_MIN"
+                  :max="GAME_PLAYERS_MAX"
+                  class="w-full"
+                />
+              </UFormField>
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-3">
+              <UFormField
+                name="minAge"
+                data-game-field="minAge"
+                :label="GAME_FIELD_MIN_AGE_LABEL"
+                :help="GAME_FIELD_AGE_HINT"
+                :error="ageError ?? undefined"
+              >
+                <UInputNumber
+                  v-model="form.minAge"
+                  :min="GAME_AGE_MIN"
+                  :max="GAME_AGE_MAX"
+                  class="w-full"
+                />
+              </UFormField>
+
+              <UFormField
+                name="maxAge"
+                data-game-field="maxAge"
+                :label="GAME_FIELD_MAX_AGE_LABEL"
+              >
+                <UInputNumber
+                  v-model="form.maxAge"
+                  :min="GAME_AGE_MIN"
+                  :max="GAME_AGE_MAX"
+                  class="w-full"
+                />
+              </UFormField>
+
+              <UFormField
+                name="startingLevel"
+                data-game-field="startingLevel"
+                :label="GAME_FIELD_STARTING_LEVEL_LABEL"
+                required
+              >
+                <UInputNumber
+                  v-model="form.startingLevel"
+                  :min="GAME_STARTING_LEVEL_MIN"
+                  :max="GAME_STARTING_LEVEL_MAX"
+                  class="w-full"
+                />
+              </UFormField>
+            </div>
+
+            <UCheckbox
+              v-model="form.crossplayAllowed"
+              :label="GAME_FIELD_CROSSPLAY_LABEL"
+            />
+          </section>
+        </div>
+
+        <div class="flex flex-col gap-4 lg:col-start-2 lg:row-start-1">
+          <section
+            class="flex flex-col gap-4 rounded-xl border border-default bg-elevated p-4 sm:p-5"
+          >
+            <h2 class="text-lg font-semibold text-highlighted">
+              {{ GAME_FIELD_IMAGE_LABEL }}
+            </h2>
+
+            <UFormField :help="GAME_FIELD_IMAGE_HINT">
+              <UploadImage
+                v-model="coverImage"
+                v-model:uploading="isCoverUploading"
+                :section="GAME_IMAGE_SECTION"
+                :max-size="GAME_IMAGE_MAX_SIZE"
+              >
+                <template #preview>
+                  <GameCover
+                    :image-url="form.imageUrl || null"
+                    :alt="form.title"
+                    :game-type="form.type"
+                    class="rounded-lg"
+                  />
+                </template>
+              </UploadImage>
+            </UFormField>
+          </section>
+
+          <!-- Разговоры группы живут там, где она привыкла: чат с мастером
           открыт всем, чат игры — только принятым -->
-        <section
-          class="flex flex-col gap-4 rounded-xl border border-default bg-elevated p-4 sm:p-5"
-        >
-          <h2 class="text-lg font-semibold text-highlighted">
-            {{ GAME_LINKS_TITLE }}
-          </h2>
-
-          <UFormField :label="GAME_FIELD_VIRTUAL_TABLE_LABEL">
-            <UInput
-              v-model="form.virtualTableUrl"
-              type="url"
-              :maxlength="GAME_URL_MAX_LENGTH"
-              :placeholder="GAME_FIELD_VIRTUAL_TABLE_PLACEHOLDER"
-              class="w-full"
-            />
-          </UFormField>
-
-          <UFormField
-            :label="GAME_FIELD_MASTER_CHAT_LABEL"
-            :help="GAME_FIELD_MASTER_CHAT_HINT"
+          <section
+            class="flex flex-col gap-4 rounded-xl border border-default bg-elevated p-4 sm:p-5"
           >
-            <UInput
-              v-model="form.masterChatUrl"
-              type="url"
-              :maxlength="GAME_URL_MAX_LENGTH"
-              :placeholder="GAME_FIELD_MASTER_CHAT_PLACEHOLDER"
-              class="w-full"
+            <h2 class="text-lg font-semibold text-highlighted">
+              {{ GAME_LINKS_TITLE }}
+            </h2>
+
+            <UFormField
+              name="virtualTableUrl"
+              data-game-field="virtualTableUrl"
+              :label="GAME_FIELD_VIRTUAL_TABLE_LABEL"
+            >
+              <UInput
+                v-model="form.virtualTableUrl"
+                type="url"
+                :maxlength="GAME_URL_MAX_LENGTH"
+                :placeholder="GAME_FIELD_VIRTUAL_TABLE_PLACEHOLDER"
+                class="w-full"
+              />
+            </UFormField>
+
+            <UFormField
+              name="masterChatUrl"
+              data-game-field="masterChatUrl"
+              :label="GAME_FIELD_MASTER_CHAT_LABEL"
+              :help="GAME_FIELD_MASTER_CHAT_HINT"
+            >
+              <UInput
+                v-model="form.masterChatUrl"
+                type="url"
+                :maxlength="GAME_URL_MAX_LENGTH"
+                :placeholder="GAME_FIELD_MASTER_CHAT_PLACEHOLDER"
+                class="w-full"
+              />
+            </UFormField>
+
+            <UFormField
+              name="gameChatUrl"
+              data-game-field="gameChatUrl"
+              :label="GAME_FIELD_GAME_CHAT_LABEL"
+              :help="GAME_FIELD_GAME_CHAT_HINT"
+            >
+              <UInput
+                v-model="form.gameChatUrl"
+                type="url"
+                :maxlength="GAME_URL_MAX_LENGTH"
+                :placeholder="GAME_FIELD_GAME_CHAT_PLACEHOLDER"
+                class="w-full"
+              />
+            </UFormField>
+          </section>
+
+          <div class="flex flex-col gap-2">
+            <UButton
+              block
+              type="submit"
+              icon="tabler:device-floppy"
+              :loading="isSaving"
+              :disabled="isCoverUploading"
+              :label="GAME_FORM_SUBMIT_LABEL"
             />
-          </UFormField>
 
-          <UFormField
-            :label="GAME_FIELD_GAME_CHAT_LABEL"
-            :help="GAME_FIELD_GAME_CHAT_HINT"
-          >
-            <UInput
-              v-model="form.gameChatUrl"
-              type="url"
-              :maxlength="GAME_URL_MAX_LENGTH"
-              :placeholder="GAME_FIELD_GAME_CHAT_PLACEHOLDER"
-              class="w-full"
+            <UButton
+              block
+              :to="GAMES_ROUTE"
+              color="neutral"
+              variant="ghost"
+              :label="CANCEL_LABEL"
             />
-          </UFormField>
-        </section>
 
-        <div class="flex flex-col gap-2">
-          <UButton
-            block
-            icon="tabler:device-floppy"
-            :loading="isSaving"
-            :disabled="!isValid"
-            :label="GAME_FORM_SUBMIT_LABEL"
-            @click.left.exact.prevent="submit"
-          />
-
-          <UButton
-            block
-            :to="GAMES_ROUTE"
-            color="neutral"
-            variant="ghost"
-            :label="CANCEL_LABEL"
-          />
-
-          <p
-            v-if="submitHint"
-            class="text-center text-xs text-muted"
-          >
-            {{ submitHint }}
-          </p>
+            <p
+              v-if="submitHint"
+              class="text-center text-xs text-muted"
+            >
+              {{ submitHint }}
+            </p>
+          </div>
         </div>
       </div>
-    </div>
+    </UForm>
+
+    <UModal
+      :open="isLeaveDialogOpen"
+      :title="GAME_FORM_LEAVE_TITLE"
+      :description="GAME_FORM_UNSAVED_WARNING"
+      @update:open="handleLeaveDialogOpen"
+    >
+      <template #footer>
+        <div class="flex flex-wrap justify-end gap-2">
+          <UButton
+            :label="GAME_FORM_STAY_LABEL"
+            color="neutral"
+            variant="subtle"
+            @click.left.exact.prevent="stayInForm()"
+          />
+
+          <UButton
+            :label="GAME_FORM_LEAVE_LABEL"
+            color="warning"
+            @click.left.exact.prevent="leaveForm()"
+          />
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>

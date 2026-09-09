@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { FilterSelection, GameSearchFilter } from '../../model';
 
+  import { useCityDictionary } from '../../composables';
   import {
     CATALOG_FILTER_CITY_EXCLUDE_LABEL,
     CATALOG_FILTER_CITY_LABEL,
@@ -17,6 +18,8 @@
     CATALOG_FILTERS_DESCRIPTION,
     CATALOG_FILTERS_RESET_LABEL,
     CATALOG_FILTERS_TITLE,
+    countActiveGameFilters,
+    createEmptyGameFilter,
     CROSSPLAY_FILTER_OPTIONS,
     GAME_AGE_MAX,
     GAME_AGE_MIN,
@@ -24,6 +27,7 @@
     GAME_COST_TYPES,
     GAME_DURATION_TYPE_LABELS,
     GAME_DURATION_TYPES,
+    GAME_FORM_AGE_ERROR,
     GAME_STATUS_LABELS,
     GAME_STATUSES,
     GAME_SYSTEM_LABELS,
@@ -38,13 +42,42 @@
 
   const isOpen = defineModel<boolean>('open', { required: true });
 
-  const { activeCount } = defineProps<{
-    activeCount: number;
-  }>();
+  const draft = ref<GameSearchFilter>(createEmptyGameFilter());
+  const draftCount = computed(() => countActiveGameFilters(draft.value));
 
-  const emit = defineEmits<{
-    reset: [];
-  }>();
+  const ageError = computed(() =>
+    draft.value.minAge !== null
+    && draft.value.maxAge !== null
+    && draft.value.minAge > draft.value.maxAge
+      ? GAME_FORM_AGE_ERROR
+      : undefined,
+  );
+
+  const citySearch = ref('');
+  const excludedCitySearch = ref('');
+  const { cityNames, isLoading: citiesLoading } = useCityDictionary(citySearch);
+
+  const { cityNames: excludedCityNames, isLoading: excludedCitiesLoading } =
+    useCityDictionary(excludedCitySearch);
+
+  const cityOptions = computed(() => [
+    ...new Set([...draft.value.city, ...cityNames.value]),
+  ]);
+
+  const excludedCityOptions = computed(() => [
+    ...new Set([...draft.value.excludeCity, ...excludedCityNames.value]),
+  ]);
+
+  // Поля заменяют массивы целиком: черновик не изменяет применённый фильтр.
+  watch(
+    isOpen,
+    (open) => {
+      if (open) {
+        draft.value = { ...filter.value };
+      }
+    },
+    { immediate: true },
+  );
 
   /**
    * Строит варианты чипов из перечисления и карты подписей: сервисные значения
@@ -100,19 +133,19 @@
    */
   const crossplayChoice = computed({
     get: () => {
-      if (filter.value.crossplayAllowed === true) {
+      if (draft.value.crossplayAllowed === true) {
         return 'allowed';
       }
 
-      if (filter.value.crossplayAllowed === false) {
+      if (draft.value.crossplayAllowed === false) {
         return 'forbidden';
       }
 
       return 'any';
     },
     set: (choice: string) => {
-      filter.value = {
-        ...filter.value,
+      draft.value = {
+        ...draft.value,
         crossplayAllowed: CROSSPLAY_CHOICE_VALUES[choice] ?? null,
       };
     },
@@ -130,9 +163,9 @@
   /** Двусторонняя привязка одного поля фильтра. */
   function createFilterField<Key extends keyof GameSearchFilter>(key: Key) {
     return computed({
-      get: () => filter.value[key],
+      get: () => draft.value[key],
       set: (value: GameSearchFilter[Key]) => {
-        filter.value = { ...filter.value, [key]: value };
+        draft.value = { ...draft.value, [key]: value };
       },
     });
   }
@@ -153,12 +186,12 @@
   ) {
     return computed<FilterSelection>({
       get: () => ({
-        included: readStringList(filter.value[includeKey]),
-        excluded: readStringList(filter.value[excludeKey]),
+        included: readStringList(draft.value[includeKey]),
+        excluded: readStringList(draft.value[excludeKey]),
       }),
       set: (value) => {
-        filter.value = {
-          ...filter.value,
+        draft.value = {
+          ...draft.value,
           [includeKey]: value.included,
           [excludeKey]: value.excluded,
         };
@@ -184,11 +217,16 @@
 
   /** Сбрасывает все условия подбора. */
   function handleReset(): void {
-    emit('reset');
+    draft.value = createEmptyGameFilter();
   }
 
-  /** Закрывает панель фильтров. */
+  /** Применяет весь черновик одним изменением и закрывает панель. */
   function handleApply(): void {
+    if (ageError.value) {
+      return;
+    }
+
+    filter.value = { ...draft.value };
     isOpen.value = false;
   }
 </script>
@@ -232,16 +270,26 @@
         />
 
         <UFormField :label="CATALOG_FILTER_CITY_LABEL">
-          <UInputTags
+          <USelectMenu
             v-model="cities"
+            v-model:search-term="citySearch"
+            :items="cityOptions"
+            :loading="citiesLoading"
+            multiple
+            ignore-filter
             :placeholder="CATALOG_FILTER_CITY_PLACEHOLDER"
             class="w-full"
           />
         </UFormField>
 
         <UFormField :label="CATALOG_FILTER_CITY_EXCLUDE_LABEL">
-          <UInputTags
+          <USelectMenu
             v-model="excludedCities"
+            v-model:search-term="excludedCitySearch"
+            :items="excludedCityOptions"
+            :loading="excludedCitiesLoading"
+            multiple
+            ignore-filter
             :placeholder="CATALOG_FILTER_CITY_PLACEHOLDER"
             class="w-full"
           />
@@ -256,7 +304,10 @@
         </UFormField>
 
         <div class="grid grid-cols-2 gap-3">
-          <UFormField :label="CATALOG_FILTER_MIN_AGE_LABEL">
+          <UFormField
+            :label="CATALOG_FILTER_MIN_AGE_LABEL"
+            :error="ageError"
+          >
             <UInputNumber
               v-model="minAge"
               :min="GAME_AGE_MIN"
@@ -283,7 +334,7 @@
           color="neutral"
           variant="subtle"
           icon="tabler:rotate"
-          :disabled="!activeCount"
+          :disabled="!draftCount"
           :label="CATALOG_FILTERS_RESET_LABEL"
           @click.left.exact.prevent="handleReset"
         />

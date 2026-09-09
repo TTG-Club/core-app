@@ -19,6 +19,7 @@
     PAYMENT_UNPAID_LABEL,
     resolveSessionAbilities,
     REVIEW_OPEN_LABEL,
+    SESSION_ATTENDANCE_ICONS,
     SESSION_ATTENDANCE_STATUS_LABELS,
     SESSION_ATTENDANCE_STATUSES,
     SESSION_CANCEL_LABEL,
@@ -82,7 +83,7 @@
   const attendanceOptions = SESSION_ATTENDANCE_STATUSES.map((value) => ({
     value,
     label: SESSION_ATTENDANCE_STATUS_LABELS[value],
-    icon: value === 'ATTENDING' ? 'tabler:check' : 'tabler:x',
+    icon: SESSION_ATTENDANCE_ICONS[value],
   }));
 
   const statusColor = computed(
@@ -230,7 +231,7 @@
     >
       <span class="text-sm text-muted">{{ ATTENDANCE_TITLE }}</span>
 
-      <div class="flex gap-2">
+      <div class="flex flex-wrap gap-2">
         <UButton
           v-for="option in attendanceOptions"
           :key="option.value"

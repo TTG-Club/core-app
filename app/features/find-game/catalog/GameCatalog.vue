@@ -109,8 +109,6 @@
     <GameCatalogFilters
       v-model="filter"
       v-model:open="isFiltersOpen"
-      :active-count="activeFilterCount"
-      @reset="resetFilter"
     />
 
     <PageGrid

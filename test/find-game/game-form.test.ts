@@ -38,6 +38,23 @@ function onlineGame(
 }
 
 describe('тело создания игры', () => {
+  it('сохраняет выбранную платформу онлайн-игры', () => {
+    const parsed = createGameRequestSchema.parse(
+      onlineGame({ onlinePlatform: 'FOUNDRY_VTT' }),
+    );
+
+    expect(parsed.onlinePlatform).toBe('FOUNDRY_VTT');
+  });
+
+  it('не принимает неизвестную платформу из формы', () => {
+    expect(() =>
+      createGameRequestSchema.parse({
+        ...onlineGame(),
+        onlinePlatform: 'UNKNOWN_PLATFORM',
+      }),
+    ).toThrow();
+  });
+
   it('минимальная онлайн-игра проходит проверку', () => {
     const parsed = createGameRequestSchema.parse(onlineGame());
 

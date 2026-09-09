@@ -22,6 +22,8 @@
     getGameSeatsCounter,
     getGameSeatsHint,
     MASTER_PROFILE_OPEN_HINT,
+    SESSION_REGISTRATION_STATUS_COLORS,
+    SESSION_REGISTRATION_STATUS_LABELS,
   } from '../../model';
   import { GameCover } from '../../ui';
 
@@ -88,6 +90,16 @@
         label: GAME_VISIBILITY_LABELS.PRIVATE,
         color: 'neutral',
         icon: 'tabler:lock',
+      });
+    }
+
+    // Своя заявка: в «Моих играх» игрок ищет в карточке в первую очередь то,
+    // разобрал её мастер или нет.
+    if (game.myRegistrationStatus) {
+      items.push({
+        key: 'registration',
+        label: SESSION_REGISTRATION_STATUS_LABELS[game.myRegistrationStatus],
+        color: SESSION_REGISTRATION_STATUS_COLORS[game.myRegistrationStatus],
       });
     }
 

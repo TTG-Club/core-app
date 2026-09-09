@@ -16,6 +16,7 @@
     GAME_NEXT_SESSION_DATE_FORMAT,
     GAME_NEXT_SESSION_EMPTY,
     GAME_NEXT_SESSION_LABEL,
+    GAME_ONLINE_PLATFORM_LABELS,
     GAME_RECRUITMENT_CLOSED_BADGE,
     GAME_RECRUITMENT_FULL_BADGE,
     GAME_STATUS_COLORS,
@@ -148,6 +149,14 @@
         value: getGameFormatLabel(game),
       },
     ];
+
+    if (game.type === 'ONLINE' && game.onlinePlatform) {
+      items.push({
+        key: 'platform',
+        label: GAME_FACT_LABELS.platform,
+        value: GAME_ONLINE_PLATFORM_LABELS[game.onlinePlatform],
+      });
+    }
 
     if (game.venue) {
       items.push({

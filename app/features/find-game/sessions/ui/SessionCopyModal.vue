@@ -7,14 +7,17 @@
     CANCEL_LABEL,
     fromLocalDateTimeInput,
     getDefaultSessionStart,
+    isFutureSessionStart,
     SESSION_COPY_DESCRIPTION,
     SESSION_COPY_LABEL,
     SESSION_COPY_TITLE,
     SESSION_COPY_TITLE_PLACEHOLDER,
+    SESSION_START_IN_PAST_ERROR,
     SESSION_STARTS_AT_LABEL,
     SESSION_TIMEZONE_HINT_PREFIX,
     SESSION_TITLE_LABEL,
     SESSION_TITLE_MAX_LENGTH,
+    SESSION_VALIDATION_CLOCK_INTERVAL,
   } from '../../model';
 
   const isOpen = defineModel<boolean>('open', { required: true });
@@ -31,6 +34,7 @@
 
   const title = ref('');
   const startsAt = ref('');
+  const currentTime = useNow({ interval: SESSION_VALIDATION_CLOCK_INTERVAL });
 
   const startsAtIso = computed(() => fromLocalDateTimeInput(startsAt.value));
 
@@ -42,7 +46,15 @@
     () => `${SESSION_TIMEZONE_HINT_PREFIX} (UTC${$dayjs().format('Z')})`,
   );
 
-  const isValid = computed(() => !!startsAtIso.value);
+  const isValid = computed(() =>
+    isFutureSessionStart(startsAtIso.value, currentTime.value.getTime()),
+  );
+
+  const startError = computed(() =>
+    startsAtIso.value && !isValid.value
+      ? SESSION_START_IN_PAST_ERROR
+      : undefined,
+  );
 
   /** Закрывает окно без копирования. */
   function cancel(): void {
@@ -54,7 +66,10 @@
    * название исходной сессии.
    */
   function submit(): void {
-    if (!source || !startsAtIso.value) {
+    // Повторная проверка закрывает промежуток между тиками часов и отправкой.
+    currentTime.value = new Date();
+
+    if (!source || !startsAtIso.value || !isValid.value) {
       return;
     }
 
@@ -97,6 +112,7 @@
 
         <UFormField
           :label="SESSION_STARTS_AT_LABEL"
+          :error="startError"
           :hint="timezoneHint"
           required
         >

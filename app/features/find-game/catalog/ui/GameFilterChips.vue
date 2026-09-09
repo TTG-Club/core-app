@@ -2,6 +2,7 @@
   import type { FilterSelection } from '../../model';
 
   import {
+    FILTER_CHIP_EXCLUDE_LABEL,
     FILTER_CHIP_EXCLUDED_HINT,
     FILTER_CHIP_INCLUDED_HINT,
     FILTER_CHIP_NEUTRAL_HINT,
@@ -25,6 +26,7 @@
    * перетирает первую.
    */
   const selection = defineModel<FilterSelection>({ required: true });
+  const excludeMode = ref(false);
 
   /**
    * Состояние значения: обычное, включено в поиск или исключено из него.
@@ -43,9 +45,7 @@
   }
 
   /**
-   * Один чип объединяет включение и исключение: нажатие переключает значение
-   * по кругу «не важно → нужно → не нужно». Так оба условия сервиса помещаются
-   * в один компактный ряд, а не в две отдельные формы.
+   * Переключает значение в выбранном режиме, удаляя противоположное условие.
    * @param value Значение фильтра.
    */
   function toggleChip(value: string): void {
@@ -57,7 +57,7 @@
       excluded: excluded.filter((item) => item !== value),
     };
 
-    if (state === 'neutral') {
+    if (!excludeMode.value && state !== 'included') {
       selection.value = {
         ...withoutValue,
         included: [...withoutValue.included, value],
@@ -66,7 +66,7 @@
       return;
     }
 
-    if (state === 'included') {
+    if (excludeMode.value && state !== 'excluded') {
       selection.value = {
         ...withoutValue,
         excluded: [...withoutValue.excluded, value],
@@ -124,6 +124,11 @@
     <legend class="mb-2 text-sm font-medium text-highlighted">
       {{ label }}
     </legend>
+
+    <UCheckbox
+      v-model="excludeMode"
+      :label="FILTER_CHIP_EXCLUDE_LABEL"
+    />
 
     <div class="flex flex-wrap gap-2">
       <UButton

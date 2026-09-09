@@ -11,6 +11,7 @@
     CANCEL_LABEL,
     fromLocalDateTimeInput,
     getDefaultSessionDate,
+    isFutureSessionStart,
     SESSION_CREATE_LABEL,
     SESSION_CREATE_TITLE,
     SESSION_CURRENCY_LABEL,
@@ -23,12 +24,14 @@
     SESSION_PAYMENT_TYPE_LABEL,
     SESSION_PRICE_LABEL,
     SESSION_PRICE_MIN,
+    SESSION_START_IN_PAST_ERROR,
     SESSION_TIME_END_LABEL,
     SESSION_TIME_RANGE_HINT,
     SESSION_TIME_START_LABEL,
     SESSION_TITLE_LABEL,
     SESSION_TITLE_MAX_LENGTH,
     SESSION_TITLE_PLACEHOLDER,
+    SESSION_VALIDATION_CLOCK_INTERVAL,
   } from '../../model';
 
   const isOpen = defineModel<boolean>('open', { required: true });
@@ -47,6 +50,8 @@
 
   /** Дата встречи: по умолчанию сегодняшняя. */
   const startsAt = ref(getDefaultSessionDate());
+
+  const currentTime = useNow({ interval: SESSION_VALIDATION_CLOCK_INTERVAL });
 
   const {
     startTime,
@@ -78,8 +83,19 @@
       : null,
   );
 
+  /** Встречу назначают на будущее: прошедшую дату сервис всё равно отвергнет. */
+  const isStartValid = computed(() =>
+    isFutureSessionStart(startsAtIso.value, currentTime.value.getTime()),
+  );
+
+  const startError = computed(() =>
+    startsAtIso.value && !isStartValid.value
+      ? SESSION_START_IN_PAST_ERROR
+      : undefined,
+  );
+
   const isValid = computed(
-    () => !!title.value.trim() && !!startsAtIso.value && isPaymentValid.value,
+    () => !!title.value.trim() && isStartValid.value && isPaymentValid.value,
   );
 
   /** Подсказка окна: у платной встречи речь о деньгах, у бесплатной — нет. */
@@ -94,6 +110,9 @@
 
   /** Собирает тело запроса и отдаёт его странице игры. */
   function submit(): void {
+    // Повторная проверка закрывает промежуток между тиками часов и отправкой.
+    currentTime.value = new Date();
+
     if (!isValid.value) {
       return;
     }
@@ -156,6 +175,7 @@
         <div class="grid gap-3 sm:grid-cols-2">
           <UFormField
             :label="SESSION_DATE_LABEL"
+            :error="startError"
             required
           >
             <UInput

@@ -11,6 +11,9 @@ import type {
   FindGameUserProfile,
   Follow,
   Game,
+  GameFinance,
+  GameParticipant,
+  GamePersonalRole,
   GameRegistration,
   GameSearchFilter,
   GameSession,
@@ -48,6 +51,7 @@ import {
 import { toGameSearchQuery } from './filters';
 import {
   createGameRequestSchema,
+  gameParticipantsSchema,
   parseCities,
   parseFindGameProfile,
   parseFollows,
@@ -206,12 +210,18 @@ export async function fetchMyGames(
   page: number,
   size: number,
   statuses: ReadonlyArray<GameStatus> = [],
+  role: GamePersonalRole = 'ALL',
 ): Promise<SpringPage<Game>> {
   const response = await $fetch(`${GAMES_API_PATH}/my`, {
     method: 'GET',
     // Без отбора сервис не отдаёт отменённые: они не состоялись, и в общем
     // списке своих игр им место только по прямому запросу.
-    query: { page, size, ...(statuses.length ? { status: statuses } : {}) },
+    query: {
+      page,
+      size,
+      role,
+      ...(statuses.length ? { status: statuses } : {}),
+    },
     retry: 0,
   });
 
@@ -811,8 +821,7 @@ export async function fetchOwnGameRegistration(
 }
 
 /**
- * Отзывает собственную заявку. Принятую так не отозвать: место согласовано,
- * и об уходе договариваются с мастером.
+ * Отзывает собственную заявку или выводит принятого игрока из состава игры.
  *
  * @param gameId Идентификатор игры.
  */
@@ -836,6 +845,21 @@ export async function fetchGameRegistrations(
   });
 
   return parseGameRegistrations(response);
+}
+
+/** Загружает состав для принятого игрока, не раскрывая приватные сведения заявок. */
+export async function fetchGameParticipants(
+  gameId: string,
+): Promise<GameParticipant[]> {
+  const response: unknown = await $fetch(
+    `${registrationsPath(gameId)}/participants`,
+    {
+      method: 'GET',
+      retry: 0,
+    },
+  );
+
+  return gameParticipantsSchema.parse(response);
 }
 
 /**
@@ -952,6 +976,79 @@ export async function updateParticipantPayment(
   );
 
   return parseSessionParticipant(response);
+}
+
+/** Финансы всех участников доступны только мастеру платной игры. */
+export async function fetchGameFinance(gameId: string): Promise<GameFinance> {
+  return await $fetch(`${GAMES_API_PATH}/${gameId}/finance`, { retry: 0 });
+}
+
+/** Личный счёт игрока не раскрывает сведения остальных участников. */
+export async function fetchOwnGameFinance(
+  gameId: string,
+): Promise<GameFinance> {
+  return await $fetch(`${GAMES_API_PATH}/${gameId}/finance/me`, { retry: 0 });
+}
+
+/** Пополнение счёта у мастера. */
+export async function topUpGameAccount(
+  gameId: string,
+  playerId: string,
+  amount: number,
+  currency: string,
+): Promise<void> {
+  await $fetch(
+    `${GAMES_API_PATH}/${gameId}/finance/players/${playerId}/entries`,
+    {
+      method: 'POST',
+      body: {
+        operationId: crypto.randomUUID(),
+        amount,
+        currency,
+        kind: 'TOP_UP',
+      },
+      retry: 0,
+    },
+  );
+}
+
+/** Игрок резервирует стоимость встречи из доступного депозита. */
+export async function paySessionFromBalance(
+  gameId: string,
+  sessionId: string,
+): Promise<void> {
+  await $fetch(
+    `${GAMES_API_PATH}/${gameId}/finance/sessions/${sessionId}/balance`,
+    { method: 'POST', retry: 0 },
+  );
+}
+
+/** Игрок сообщает мастеру о внешнем переводе. */
+export async function claimSessionPayment(
+  gameId: string,
+  sessionId: string,
+): Promise<void> {
+  await $fetch(
+    `${GAMES_API_PATH}/${gameId}/finance/sessions/${sessionId}/claim`,
+    { method: 'POST', retry: 0 },
+  );
+}
+
+/** Мастер подтверждает или отклоняет заявленную оплату. */
+export async function confirmSessionPayment(
+  gameId: string,
+  sessionId: string,
+  playerId: string,
+  confirmed: boolean,
+): Promise<void> {
+  await $fetch(
+    `${GAMES_API_PATH}/${gameId}/finance/sessions/${sessionId}/players/${playerId}/confirmation`,
+    {
+      method: 'POST',
+      query: { confirmed },
+      retry: 0,
+    },
+  );
 }
 
 /* ------------------------------------------------------------------ */
