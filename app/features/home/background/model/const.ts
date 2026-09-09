@@ -4,20 +4,22 @@
 export const PARTICLES_MIN_COUNT = 20;
 
 /**
- * Делитель для расчёта количества частиц на основе площади экрана
- * Формула: (ширина * высота) / PARTICLES_DENSITY_DIVIDER
+ * Делитель для расчёта количества частиц на основе площади экрана.
+ * Формула: (ширина * высота) / PARTICLES_DENSITY_DIVIDER.
+ * Частицы просвечивают сквозь матовые панели главной в размытии, поэтому их
+ * заметно больше и они крупнее, чем когда фон был виден только в промежутках.
  */
-export const PARTICLES_DENSITY_DIVIDER = 15000;
+export const PARTICLES_DENSITY_DIVIDER = 12000;
 
 /**
  * Минимальный размер частицы в пикселях
  */
-export const PARTICLE_SIZE_MIN = 0.5;
+export const PARTICLE_SIZE_MIN = 0.7;
 
 /**
  * Максимальный размер частицы в пикселях
  */
-export const PARTICLE_SIZE_MAX = 1.5;
+export const PARTICLE_SIZE_MAX = 2.2;
 
 /**
  * Минимальная скорость движения частицы по оси Y
@@ -32,9 +34,9 @@ export const PARTICLE_SPEED_MAX = 0.7;
 /**
  * Минимальная прозрачность частицы (0-1)
  */
-export const PARTICLE_OPACITY_MIN = 0.3;
+export const PARTICLE_OPACITY_MIN = 0.35;
 
 /**
  * Максимальная прозрачность частицы (0-1)
  */
-export const PARTICLE_OPACITY_MAX = 0.8;
+export const PARTICLE_OPACITY_MAX = 0.9;

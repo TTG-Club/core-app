@@ -2,6 +2,7 @@
   import { HomeGreetings } from '~home/greetings';
 
   import { useGlobalSearch } from '../composable';
+  import { SEARCH_PANEL_PLACEHOLDER, SEARCH_PANEL_SHORTCUT } from './model';
 
   const { open } = useGlobalSearch();
   const { isDesktop } = useDevice();
@@ -9,93 +10,81 @@
 
 <template>
   <div
-    class="relative z-10 flex w-full flex-col items-center gap-4 max-sm:mt-[3dvw] lg:w-2/3 xl:w-3/5"
+    class="relative z-10 flex w-full max-w-3xl flex-col items-center 2xl:max-w-4xl"
   >
     <HomeGreetings class="-z-1" />
 
-    <UButton
-      class="@container relative mb-6 rounded-full py-4 hover:bg-accented"
-      :class="$style.glowButton"
-      variant="subtle"
-      color="neutral"
-      size="xl"
-      block
+    <!--
+      Поле поиска, а не кнопка: так строка читается как то, во что можно
+      печатать. Клик и горячая клавиша всё так же открывают палитру поиска —
+      набор идёт уже в ней.
+    -->
+    <button
+      type="button"
+      :class="[
+        $style.field,
+        'group relative flex w-full cursor-pointer items-center gap-3',
+        'rounded-xl border border-accented bg-default px-4 py-3.5',
+        'text-left transition-colors duration-200',
+        'hover:border-primary/60 hover:bg-elevated',
+      ]"
       @click.left.exact.prevent="open"
     >
-      <span class="text-sm">
-        Нажмите тут
-        <span v-if="isDesktop">или <UKbd value="\">\</UKbd></span> для начала
-        поиска
+      <UIcon
+        name="tabler:search"
+        class="size-5 shrink-0 text-dimmed transition-colors group-hover:text-primary"
+      />
+
+      <span class="min-w-0 flex-1 truncate text-sm text-muted sm:text-base">
+        {{ SEARCH_PANEL_PLACEHOLDER }}
       </span>
-    </UButton>
+
+      <UKbd
+        v-if="isDesktop"
+        :value="SEARCH_PANEL_SHORTCUT"
+        class="shrink-0"
+      />
+    </button>
   </div>
 </template>
 
 <style module lang="scss">
-  .glowButton {
+  /* Вращающееся свечение по контуру поля — единственный «магический» штрих в
+     строгой шапке. Лежит под полем (z-index: -1) и не перехватывает клики.
+
+     ВАЖНО: заливка самого поля должна быть НЕПРОЗРАЧНОЙ (`bg-default`). Стоит
+     сделать её полупрозрачной — размытый градиент просвечивает внутрь и
+     превращается в грязное пятно под текстом; наружу должен выходить только
+     ореол за краями. */
+  .field {
     &:before {
       will-change: background;
       content: '';
 
       position: absolute;
       z-index: -1;
-      inset: 0;
+      inset: -3px;
 
       border-radius: inherit;
 
+      opacity: 0.5;
       background: conic-gradient(
         from var(--gradient-angle),
-        var(--ui-color-primary-100),
-        var(--ui-color-primary-200),
-        var(--ui-color-primary-300),
-        var(--ui-color-primary-400),
-        var(--ui-color-primary-500),
-        var(--ui-color-primary-600),
-        var(--ui-color-primary-700),
         var(--ui-color-primary-800),
-        var(--ui-color-primary-900),
-        var(--ui-color-primary-950),
-        var(--ui-color-primary-900),
-        var(--ui-color-primary-800),
-        var(--ui-color-primary-700),
-        var(--ui-color-primary-600),
-        var(--ui-color-primary-500),
         var(--ui-color-primary-400),
+        var(--ui-color-primary-700),
         var(--ui-color-primary-300),
-        var(--ui-color-primary-200),
-        var(--ui-color-primary-100)
+        var(--ui-color-primary-800)
       );
-      filter: blur(8px);
-      backdrop-filter: blur(8px);
+      filter: blur(7px);
 
-      animation: gradient-rotate 10s linear infinite;
+      transition: opacity 200ms ease;
+      animation: gradient-rotate 12s linear infinite;
     }
 
-    &:hover {
-      &:before {
-        background: conic-gradient(
-          from var(--gradient-angle),
-          var(--ui-color-secondary-100),
-          var(--ui-color-secondary-200),
-          var(--ui-color-secondary-300),
-          var(--ui-color-secondary-400),
-          var(--ui-color-secondary-500),
-          var(--ui-color-secondary-600),
-          var(--ui-color-secondary-700),
-          var(--ui-color-secondary-800),
-          var(--ui-color-secondary-900),
-          var(--ui-color-secondary-950),
-          var(--ui-color-secondary-900),
-          var(--ui-color-secondary-800),
-          var(--ui-color-secondary-700),
-          var(--ui-color-secondary-600),
-          var(--ui-color-secondary-500),
-          var(--ui-color-secondary-400),
-          var(--ui-color-secondary-300),
-          var(--ui-color-secondary-200),
-          var(--ui-color-secondary-100)
-        );
-      }
+    &:hover:before,
+    &:focus-visible:before {
+      opacity: 0.9;
     }
   }
 
@@ -109,8 +98,15 @@
     0% {
       --gradient-angle: 0deg;
     }
+
     100% {
       --gradient-angle: 360deg;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .field:before {
+      animation: none;
     }
   }
 </style>

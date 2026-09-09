@@ -1,1 +1,1 @@
-export { SOCIAL_LINKS } from './const';
+export * from './const';

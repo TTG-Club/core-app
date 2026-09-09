@@ -3,7 +3,7 @@
 
   import { MulticlassDrawer } from '~classes/multiclass-drawer';
 
-  import { HOME_TOOLS } from './model';
+  import { HOME_TOOLS, HOME_TOOLS_LABEL } from './model';
 
   const { user } = useUser();
 
@@ -50,55 +50,36 @@
 </script>
 
 <template>
-  <UCard
-    :ui="{
-      root: 'bg-muted',
-      header: 'p-3 sm:p-3',
-      body: 'p-2 sm:p-2',
-    }"
+  <!--
+    Инструменты вынесены из карточки в строку-ленту прямо под поиском: это
+    второй по важности сценарий после поиска, и в шапке они попадаются на глаза
+    первыми. На узком экране лента переносится по строкам, подписи не режем.
+  -->
+  <nav
+    :aria-label="HOME_TOOLS_LABEL"
+    class="flex flex-wrap items-center justify-center gap-2"
   >
-    <template #header>
-      <div class="flex items-center gap-2">
-        <UIcon
-          name="tabler:tools"
-          class="size-5 text-primary"
-        />
+    <component
+      :is="tool.to ? linkTag : 'button'"
+      v-for="tool in tools"
+      :key="tool.label"
+      :to="tool.to"
+      :type="tool.to ? undefined : 'button'"
+      :class="[
+        'group flex cursor-pointer items-center gap-2 no-underline',
+        'rounded-lg border border-default bg-muted/60 px-3 py-2',
+        'text-sm leading-none font-medium text-toned',
+        'transition-colors duration-200',
+        'hover:border-accented hover:bg-elevated hover:text-highlighted',
+      ]"
+      @click.left.exact="handleClick($event, tool)"
+    >
+      <UIcon
+        :name="tool.icon"
+        class="size-4.5 shrink-0 text-dimmed transition-colors group-hover:text-primary"
+      />
 
-        <h3 class="text-base leading-none font-medium">Инструменты</h3>
-      </div>
-    </template>
-
-    <div class="grid grid-cols-1 gap-1 sm:grid-cols-2">
-      <component
-        :is="tool.to ? linkTag : 'button'"
-        v-for="tool in tools"
-        :key="tool.label"
-        :to="tool.to"
-        :class="[
-          'group flex cursor-pointer items-center gap-3 rounded-lg p-2',
-          'text-left no-underline transition-colors hover:bg-elevated',
-        ]"
-        @click.left.exact="handleClick($event, tool)"
-      >
-        <span
-          :class="[
-            'flex size-9 shrink-0 items-center justify-center',
-            'rounded-lg bg-elevated text-primary',
-            'transition-colors group-hover:bg-accented',
-          ]"
-        >
-          <UIcon
-            :name="tool.icon"
-            class="size-5"
-          />
-        </span>
-
-        <span
-          class="text-sm leading-tight font-medium text-highlighted group-hover:text-primary"
-        >
-          {{ tool.label }}
-        </span>
-      </component>
-    </div>
-  </UCard>
+      {{ tool.label }}
+    </component>
+  </nav>
 </template>

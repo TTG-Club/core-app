@@ -6,6 +6,9 @@ import {
   INITIATIVE_TOOL_TITLE,
 } from '~initiative/model';
 
+/** Подпись ленты инструментов (используется как aria-label навигации) */
+export const HOME_TOOLS_LABEL = 'Инструменты';
+
 /** Инструменты блока на главной; порядок массива = порядок отображения */
 export const HOME_TOOLS: Array<HomeTool> = [
   {

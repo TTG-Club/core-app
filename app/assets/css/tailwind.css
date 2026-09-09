@@ -2,9 +2,17 @@
 @import '@nuxt/ui';
 
 @theme {
+  /* Ступень между 2xl и 2K: с неё лента главной раскладывается в три колонки —
+     раньше рельс получался слишком узким. */
+  --breakpoint-3xl: 1700px;
+
   --font-sans:
     'Open Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
     'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+  --font-mono:
+    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    'Liberation Mono', 'Courier New', monospace;
 
   --color-hover: var(--color-hover);
 }

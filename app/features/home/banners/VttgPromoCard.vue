@@ -1,14 +1,23 @@
 <script setup lang="ts">
+  import { HomeEyebrow } from '~home/ui-kit';
+
   import { VTTG_PROMO_CARD } from './model';
 </script>
 
 <template>
+  <!--
+    Витрина VTTG стоит в узкой правой колонке над соцсетями, поэтому текст
+    выстроен в столбец, а не в две колонки: на 400px подпись справа от
+    заголовка пришлось бы ломать по слогам. Единственный блок главной, который
+    держит цвет VTTG (золото), а не акцент темы — бордовый на тёмной картинке
+    не читается.
+  -->
   <NuxtLink
     :to="VTTG_PROMO_CARD.to"
     :class="[
       'vttg-promo group relative flex min-h-44 flex-col justify-end',
-      'overflow-hidden rounded-lg border border-default bg-muted p-4',
-      'no-underline shadow-lg',
+      'overflow-hidden rounded-xl border border-default bg-muted p-4',
+      'no-underline',
     ]"
   >
     <!-- Фон и затемнение -->
@@ -23,14 +32,13 @@
       <div class="vttg-promo__overlay absolute inset-0" />
     </div>
 
-    <div class="relative z-10 flex flex-col items-start gap-1.5">
-      <span
-        class="vttg-promo__accent text-[10px] font-bold tracking-wider uppercase"
-      >
-        {{ VTTG_PROMO_CARD.eyebrow }}
-      </span>
+    <div class="relative z-10 flex flex-col gap-2">
+      <HomeEyebrow
+        :label="VTTG_PROMO_CARD.eyebrow"
+        class="vttg-promo__accent"
+      />
 
-      <h3 class="text-lg leading-tight font-bold text-white">
+      <h3 class="text-2xl leading-none font-bold text-white">
         {{ VTTG_PROMO_CARD.title }}
       </h3>
 
@@ -58,10 +66,10 @@
   }
 
   .vttg-promo:hover {
-    border-color: color-mix(in oklch, var(--ui-primary) 45%, transparent);
+    border-color: color-mix(in oklch, var(--vttg-gold) 45%, transparent);
     box-shadow:
       0 12px 30px -12px rgb(0 0 0 / 60%),
-      0 0 20px -8px color-mix(in oklch, var(--ui-primary) 30%, transparent);
+      0 0 20px -8px color-mix(in oklch, var(--vttg-gold) 30%, transparent);
   }
 
   /* Подпись и ссылка лежат на тёмной картинке во всех темах, поэтому
@@ -89,6 +97,6 @@
         rgb(0 0 0 / 62%) 65%,
         rgb(0 0 0 / 30%) 100%
       ),
-      linear-gradient(to top, rgb(0 0 0 / 70%) 0%, rgb(0 0 0 / 15%) 100%);
+      linear-gradient(to top, rgb(0 0 0 / 82%) 0%, rgb(0 0 0 / 15%) 100%);
   }
 </style>
