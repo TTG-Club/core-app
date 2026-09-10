@@ -51,14 +51,18 @@
           :class="[$style.cell, { [$style.disabled]: link.disabled }]"
           class="border-t border-l border-default"
         >
-          <!-- alt пуст намеренно: картинка декоративная, раздел называет подпись -->
-          <img
-            :class="$style.img"
-            :src="link.img"
-            alt=""
+          <span
+            :class="$style.imageFrame"
             aria-hidden="true"
-            loading="lazy"
-          />
+          >
+            <!-- alt пуст намеренно: картинка декоративная, раздел называет подпись -->
+            <img
+              :class="$style.img"
+              :src="link.img"
+              alt=""
+              loading="lazy"
+            />
+          </span>
 
           <span :class="$style.badge">
             <UIcon
@@ -111,10 +115,13 @@
     &:hover {
       background-color: var(--color-hover);
 
-      .img {
-        transform: scale(1.06);
+      .imageFrame {
         opacity: 0.5;
         filter: grayscale(0) brightness(1);
+      }
+
+      .img {
+        transform: scale(1.06);
       }
 
       .badge {
@@ -144,31 +151,43 @@
   }
 
   /* Картинка — фактура, а не иллюстрация: обесцвечена, приглушена и растворена
-     слева, чтобы не лезть под подпись. Цвет набирает только под курсором. */
-  .img {
+     слева, чтобы не лезть под подпись. Цвет набирает только под курсором.
+
+     Вид (маска, фильтр, прозрачность) держит неподвижная рамка, а картинка
+     внутри только масштабируется и всё время живёт на своём слое
+     композитора. Разнесено после жалобы: когда курсор уходил с плитки,
+     справа на миг проступала пустая полоса. Масштабируемый слой без маски
+     и фильтра браузеру не нужно пересобирать ни в начале, ни в конце
+     анимации. */
+  .imageFrame {
     pointer-events: none;
 
     position: absolute;
-    top: 0;
-    right: 0;
-
-    display: block;
-
-    width: 100%;
-    height: 100%;
+    inset: 0;
 
     /* brightness сбивает пересветы: обесцвеченный огненный шар «Заклинаний»
        иначе превращается в белое пятно и перетягивает всю плиту на себя */
     opacity: 0.24;
-    object-fit: cover;
     filter: grayscale(1) brightness(0.85);
 
     mask-image: linear-gradient(to right, transparent 0%, #000 60%, #000 100%);
 
     transition:
       opacity 250ms ease,
-      filter 250ms ease,
-      transform 250ms ease;
+      filter 250ms ease;
+  }
+
+  .img {
+    will-change: transform;
+
+    display: block;
+
+    width: 100%;
+    height: 100%;
+
+    object-fit: cover;
+
+    transition: transform 250ms ease;
   }
 
   .badge {
