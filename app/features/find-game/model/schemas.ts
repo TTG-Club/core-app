@@ -6,6 +6,7 @@ import type {
   Follow,
   Game,
   GameRegistration,
+  GameReport,
   GameSession,
   MasterPublicProfile,
   Reputation,
@@ -29,6 +30,8 @@ import {
   GAME_ONLINE_PLATFORMS,
   GAME_PLAYERS_MAX,
   GAME_PLAYERS_MIN,
+  GAME_REPORT_MAX_DETAILS_LENGTH,
+  GAME_REPORT_REASONS,
   GAME_REQUIREMENTS_MAX_LENGTH,
   GAME_SESSION_STATUSES,
   GAME_STARTING_LEVEL_MAX,
@@ -518,6 +521,65 @@ const gamesPageSchema = createPageSchema(parseGameList);
 export function parseGamesPage(input: unknown): SpringPage<Game> {
   return gamesPageSchema.parse(input);
 }
+
+const gameReportResponseSchema = z.object({
+  id: uuidSchema,
+  gameId: uuidSchema,
+  gameTitle: z.string().catch(''),
+  gameDeleted: z.boolean().catch(false),
+  reporterId: uuidSchema,
+  reason: z.enum(GAME_REPORT_REASONS),
+  details: z.string().nullish().catch(null),
+  createdAt: instantSchema,
+});
+
+/** Разбирает одну запись очереди жалоб. */
+function toGameReport(
+  parsed: z.infer<typeof gameReportResponseSchema>,
+): GameReport {
+  return {
+    id: parsed.id,
+    gameId: parsed.gameId,
+    gameTitle: parsed.gameTitle,
+    gameDeleted: parsed.gameDeleted,
+    reporterId: parsed.reporterId,
+    reason: parsed.reason,
+    details: parsed.details ?? null,
+    createdAt: parsed.createdAt,
+  };
+}
+
+/** Разбирает жалобы по одной, не пряча всю очередь из-за битой записи. */
+function parseGameReportList(input: unknown): Array<GameReport> {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input.flatMap((report) => {
+    const parsed = gameReportResponseSchema.safeParse(report);
+
+    if (!parsed.success) {
+      consola.warn('[find-game] Жалоба на игру не прошла разбор:', report);
+
+      return [];
+    }
+
+    return [toGameReport(parsed.data)];
+  });
+}
+
+const gameReportsPageSchema = createPageSchema(parseGameReportList);
+
+/** Разбирает страницу жалоб на игры для панели модератора. */
+export function parseGameReportsPage(input: unknown): SpringPage<GameReport> {
+  return gameReportsPageSchema.parse(input);
+}
+
+/** Проверяет данные жалобы до отправки сервису. */
+export const createGameReportRequestSchema = z.object({
+  reason: z.enum(GAME_REPORT_REASONS),
+  details: z.string().trim().max(GAME_REPORT_MAX_DETAILS_LENGTH).nullable(),
+});
 
 /* ------------------------------------------------------------------ */
 /* Сессии                                                              */

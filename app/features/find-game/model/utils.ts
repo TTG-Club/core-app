@@ -137,6 +137,43 @@ export function getNearestSessionStart(
 }
 
 /**
+ * Ближайшая предстоящая сессия с указанной стоимостью. Пробная бесплатная
+ * встреча не скрывает цену следующей платной встречи в сводке игры.
+ *
+ * @param sessions Сессии игры.
+ * @param from Момент отсчёта в миллисекундах.
+ */
+export function getNearestPaidSession(
+  sessions: ReadonlyArray<GameSession>,
+  from: number,
+): GameSession | null {
+  // Время встречи считается сразу и дальше идёт рядом с сессией: проверка
+  // `startsAt !== null` в отдельном `filter` не сужает тип на следующем шаге
+  // цепочки, и `new Date(null)` осталось бы ошибкой типов.
+  const upcomingPaidSessions = sessions
+    .filter(
+      (session) =>
+        session.status === 'SCHEDULED'
+        && session.priceAmount !== null
+        && session.priceCurrency !== null,
+    )
+    .map((session) => ({
+      session,
+      startsAt:
+        session.startsAt === null
+          ? Number.NaN
+          : new Date(session.startsAt).getTime(),
+    }))
+    .filter(({ startsAt }) => Number.isFinite(startsAt) && startsAt >= from)
+    .toSorted(
+      (leftSession, rightSession) =>
+        leftSession.startsAt - rightSession.startsAt,
+    );
+
+  return upcomingPaidSessions[0]?.session ?? null;
+}
+
+/**
  * Расшифровка занятости мест. Значки игроков вслух сами по себе ничего не
  * значат, а счётчик рядом с ними молчит о пороге старта, поэтому подпись
  * несёт и занятость, и порог. Она же показывается по наведению.

@@ -30,8 +30,8 @@
     paySessionFromBalance,
     SESSION_ATTENDANCE_COLORS,
     SESSION_ATTENDANCE_ICONS,
+    SESSION_ATTENDANCE_MARK_STATUSES,
     SESSION_ATTENDANCE_STATUS_LABELS,
-    SESSION_ATTENDANCE_STATUSES,
     SESSION_REGISTRATION_STATUS_LABELS,
   } from '../model';
 
@@ -178,7 +178,7 @@
   }
 
   const attendanceOptions = computed(() =>
-    SESSION_ATTENDANCE_STATUSES.map((attendanceStatus) => ({
+    SESSION_ATTENDANCE_MARK_STATUSES.map((attendanceStatus) => ({
       value: attendanceStatus,
       label: SESSION_ATTENDANCE_STATUS_LABELS[attendanceStatus],
       icon: SESSION_ATTENDANCE_ICONS[attendanceStatus],

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { CreateGameReportRequest } from '~find-game/model';
+
   import { StatusCodes } from 'http-status-codes';
 
   import {
@@ -30,14 +32,18 @@
     GAME_RAISED_TOAST,
     GAME_RECRUITMENT_CLOSED_TOAST,
     GAME_RECRUITMENT_OPENED_TOAST,
+    GAME_REPORT_SENT_TOAST,
     GAME_SIGN_IN_LABEL,
     GAMES_NAVIGATION_LABEL,
     GAMES_ROUTE,
     getFindGameErrorMessage,
     getFindGameStatus,
+    getNearestPaidSession,
     getNearestSessionStart,
+    getSessionPriceLabel,
     INVITE_CODE_QUERY_KEY,
     REGISTRATION_REJECTED_REASON_TITLE,
+    reportGame,
     SESSION_REGISTRATION_STATUS_COLORS,
     SESSION_REGISTRATION_STATUS_LABELS,
   } from '~find-game/model';
@@ -126,6 +132,13 @@
     () => getNearestSessionStart(sessions.value, Date.now()) ?? null,
   );
 
+  /** Цена ближайшей платной встречи: пробная бесплатная её не подменяет. */
+  const nextPaidSessionPrice = computed(() => {
+    const session = getNearestPaidSession(sessions.value, Date.now());
+
+    return session ? getSessionPriceLabel(session) : null;
+  });
+
   useSeoMeta({
     title: () => game.value?.title ?? GAMES_NAVIGATION_LABEL,
     description: () =>
@@ -175,6 +188,19 @@
   /** Поднимает игру в каталоге. */
   function handleRaise(): void {
     runAction(GAME_RAISED_TOAST, raise);
+  }
+
+  /** Передаёт жалобу и сообщает об успешной постановке в очередь. */
+  function handleReport(request: CreateGameReportRequest): void {
+    const reportedGame = game.value;
+
+    if (!reportedGame) {
+      return;
+    }
+
+    runAction(GAME_REPORT_SENT_TOAST, () =>
+      reportGame(reportedGame.id, request),
+    );
   }
 
   /** Закрывает набор: объявление уходит из поиска, игра у своих остаётся. */
@@ -294,6 +320,7 @@
         @open-recruitment="handleOpenRecruitment"
         @cancel="handleCancel"
         @raise="handleRaise"
+        @report="handleReport"
         @remove="handleRemove"
       />
     </template>
@@ -359,6 +386,7 @@
             :game="game"
             :master-name="masterName"
             :next-session-at="nextSessionAt"
+            :next-paid-session-price="nextPaidSessionPrice"
           >
             <template #actions>
               <div

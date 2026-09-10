@@ -136,6 +136,7 @@ export function resolveGameViewerAbilities(
     canRaiseGame:
       isMaster && game?.visibility === 'PUBLIC' && game?.status === 'OPEN',
     canDeleteGame: canModerate,
+    canReportGame: isSignedIn && !isMaster,
     // Заявка подаётся один раз на игру: повторную сервис отвергает, а мастер
     // в собственную игру не записывается.
     canApply: isSignedIn && !isMaster && !registration,

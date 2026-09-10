@@ -20,8 +20,8 @@
     resolveSessionAbilities,
     REVIEW_OPEN_LABEL,
     SESSION_ATTENDANCE_ICONS,
+    SESSION_ATTENDANCE_MARK_STATUSES,
     SESSION_ATTENDANCE_STATUS_LABELS,
-    SESSION_ATTENDANCE_STATUSES,
     SESSION_CANCEL_LABEL,
     SESSION_COMPLETE_LABEL,
     SESSION_COPY_LABEL,
@@ -80,7 +80,7 @@
       `${SESSION_PARTICIPANTS_COUNT_LABEL}: ${sessionAbilities.value.participantCount} / ${game.maxPlayers}`,
   );
 
-  const attendanceOptions = SESSION_ATTENDANCE_STATUSES.map((value) => ({
+  const attendanceOptions = SESSION_ATTENDANCE_MARK_STATUSES.map((value) => ({
     value,
     label: SESSION_ATTENDANCE_STATUS_LABELS[value],
     icon: SESSION_ATTENDANCE_ICONS[value],

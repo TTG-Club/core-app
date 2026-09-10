@@ -3,7 +3,7 @@ import type { MaybeRefOrGetter } from 'vue';
 import type { GameCostType, SessionPaymentType } from '../model';
 
 import {
-  SESSION_CURRENCIES,
+  SESSION_CURRENCY_OPTIONS,
   SESSION_CURRENCY_PATTERN,
   SESSION_DEFAULT_CURRENCY,
   SESSION_DEFAULT_PAYMENT_TYPE,
@@ -27,15 +27,6 @@ interface SessionPaymentRequestFields {
 
 const paymentTypeOptions: Array<PaymentOption> = SESSION_PAYMENT_TYPES.map(
   (value) => ({ value, label: SESSION_PAYMENT_TYPE_LABELS[value] }),
-);
-
-// В списке видно и код, и название: по коду мастер узнаёт валюту, по
-// названию — находит её поиском.
-const currencyOptions: Array<PaymentOption> = SESSION_CURRENCIES.map(
-  (currency) => ({
-    value: currency.code,
-    label: `${currency.code} — ${currency.name}`,
-  }),
 );
 
 /**
@@ -123,7 +114,7 @@ export function useSessionPaymentFields(
     isPaid,
     isValid,
 
-    currencyOptions,
+    currencyOptions: SESSION_CURRENCY_OPTIONS,
     paymentTypeOptions,
 
     applyTo,

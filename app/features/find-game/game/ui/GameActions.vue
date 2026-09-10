@@ -1,5 +1,8 @@
 <script setup lang="ts">
-  import type { GameViewerAbilities } from '../../model';
+  import type {
+    CreateGameReportRequest,
+    GameViewerAbilities,
+  } from '../../model';
 
   import { ConfirmDialog } from '~initiative/ui-kit';
 
@@ -15,10 +18,12 @@
     GAME_RAISE_LABEL,
     GAME_RECRUITMENT_CLOSE_LABEL,
     GAME_RECRUITMENT_OPEN_LABEL,
+    GAME_REPORT_LABEL,
     GAMES_EDIT_ROUTE_SUFFIX,
     GAMES_ROUTE,
   } from '../../model';
   import GameDeleteModal from './GameDeleteModal.vue';
+  import GameReportModal from './GameReportModal.vue';
 
   const {
     abilities,
@@ -41,12 +46,14 @@
     'close-recruitment': [];
     'open-recruitment': [];
     'raise': [];
+    'report': [request: CreateGameReportRequest];
     'remove': [reason: string];
   }>();
 
   const isCloseConfirmOpen = ref(false);
   const isCancelConfirmOpen = ref(false);
   const isDeleteOpen = ref(false);
+  const isReportOpen = ref(false);
 
   /** Открывает подтверждение завершения игры. */
   function askToClose(): void {
@@ -82,6 +89,12 @@
   function confirmDelete(reason: string): void {
     isDeleteOpen.value = false;
     emit('remove', reason);
+  }
+
+  /** Передаёт жалобу странице игры и закрывает окно после отправки запроса. */
+  function submitReport(request: CreateGameReportRequest): void {
+    isReportOpen.value = false;
+    emit('report', request);
   }
 </script>
 
@@ -177,6 +190,20 @@
     </UTooltip>
 
     <UTooltip
+      v-if="abilities.canReportGame"
+      :text="GAME_REPORT_LABEL"
+    >
+      <UButton
+        color="neutral"
+        variant="ghost"
+        icon="tabler:flag"
+        :disabled="busy"
+        :aria-label="GAME_REPORT_LABEL"
+        @click.left.exact.prevent="isReportOpen = true"
+      />
+    </UTooltip>
+
+    <UTooltip
       v-if="abilities.canDeleteGame"
       :text="GAME_DELETE_LABEL"
     >
@@ -216,6 +243,12 @@
       v-model:open="isDeleteOpen"
       :loading="busy"
       @confirm="confirmDelete"
+    />
+
+    <GameReportModal
+      v-model:open="isReportOpen"
+      :loading="busy"
+      @submit="submitReport"
     />
   </div>
 </template>

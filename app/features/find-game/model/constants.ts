@@ -40,6 +40,60 @@ export const GAME_FINANCE_PENDING = 'Ожидает подтверждения';
 export const GAME_FINANCE_CONFIRM = 'Подтвердить оплату';
 export const GAME_FINANCE_AMOUNT = 'Сумма';
 
+/** Причины жалобы на объявление. */
+export const GAME_REPORT_REASONS = [
+  'ADVERTISING',
+  'SPAM',
+  'INAPPROPRIATE_IMAGE',
+  'OTHER',
+] as const;
+
+export const GAME_REPORT_REASON_LABELS = {
+  ADVERTISING: 'Реклама',
+  SPAM: 'Спам',
+  INAPPROPRIATE_IMAGE: 'Непристойное изображение',
+  OTHER: 'Другое нарушение',
+} as const;
+
+export const GAME_REPORT_LABEL = 'Пожаловаться';
+export const GAME_REPORT_TITLE = 'Жалоба на игру';
+export const GAME_REPORT_DESCRIPTION =
+  'Опишите нарушение — жалобу увидят только модераторы.';
+export const GAME_REPORT_REASON_LABEL = 'Причина';
+export const GAME_REPORT_DETAILS_LABEL = 'Комментарий';
+export const GAME_REPORT_DETAILS_PLACEHOLDER =
+  'Коротко поясните, что нарушает правила';
+export const GAME_REPORT_SUBMIT_LABEL = 'Отправить жалобу';
+export const GAME_REPORT_CANCEL_LABEL = 'Отмена';
+export const GAME_REPORT_SENT_TOAST = 'Жалоба отправлена';
+export const GAME_REPORT_MAX_DETAILS_LENGTH = 1000;
+export const GAME_REPORTS_API_PATH = `${FIND_GAME_API_PREFIX}/moderation/game-reports`;
+export const MODERATION_GAME_REPORTS_API_PATH = `${FIND_GAME_API_PREFIX}/moderation/games`;
+export const GAME_REPORTS_PAGE_SIZE = 20;
+export const GAME_REPORTS_TITLE = 'Жалобы на игры';
+export const GAME_REPORTS_EMPTY_TITLE = 'Жалоб пока нет';
+export const GAME_REPORTS_EMPTY_DESCRIPTION =
+  'Новые жалобы на объявления появятся здесь.';
+export const GAME_REPORTS_RETRY_LABEL = 'Повторить';
+export const GAME_REPORT_AUTHOR_LABEL = 'Отправил';
+export const GAME_REPORT_CREATED_LABEL = 'Получена';
+export const GAME_REPORT_HIDE_GAME_LABEL = 'Скрыть игру';
+export const GAME_REPORT_HIDE_ALL_MASTER_GAMES_LABEL =
+  'Скрыть все игры мастера';
+export const GAME_REPORT_HIDE_GAME_TITLE = 'Скрыть игру?';
+export const GAME_REPORT_HIDE_ALL_MASTER_GAMES_TITLE =
+  'Скрыть все игры мастера?';
+export const GAME_REPORT_HIDE_GAME_DESCRIPTION =
+  'Объявление исчезнет из каталога и будет недоступно по прямой ссылке.';
+export const GAME_REPORT_HIDE_ALL_MASTER_GAMES_DESCRIPTION =
+  'Все активные объявления этого мастера исчезнут из каталога. Отменить действие нельзя.';
+export const GAME_REPORT_HIDE_GAME_TOAST = 'Игра скрыта';
+export const GAME_REPORT_HIDE_ALL_MASTER_GAMES_TOAST =
+  'Все игры мастера скрыты';
+export const GAME_REPORT_DELETION_REASON =
+  'Скрыто модератором по жалобе на игру';
+export const GAME_REPORT_HIDDEN_BADGE = 'Игра скрыта';
+
 export const SESSION_START_IN_PAST_ERROR =
   'Дата и время начала сессии должны быть в будущем';
 export const SESSION_VALIDATION_CLOCK_INTERVAL = 1000;
@@ -176,6 +230,12 @@ export const SESSION_REGISTRATION_STATUSES = [
 
 export const SESSION_ATTENDANCE_STATUSES = [
   'UNMARKED',
+  'ATTENDING',
+  'NOT_ATTENDING',
+] as const;
+
+/** Варианты, которые игрок может поставить: исходное состояние не выбирается. */
+export const SESSION_ATTENDANCE_MARK_STATUSES = [
   'ATTENDING',
   'NOT_ATTENDING',
 ] as const;
@@ -318,7 +378,7 @@ export const SESSION_REGISTRATION_STATUS_LABELS = {
 } as const;
 
 export const SESSION_ATTENDANCE_STATUS_LABELS = {
-  UNMARKED: 'Не отмечено',
+  UNMARKED: 'Нет отметки',
   ATTENDING: 'Присутствую',
   NOT_ATTENDING: 'Отсутствую',
 } as const;
@@ -776,6 +836,12 @@ export const GAMES_EDIT_ROUTE_SUFFIX = 'edit';
 
 /* Подписи формы создания и редактирования игры. */
 export const GAME_FORM_TITLE = 'Новая игра';
+
+export const GAME_FORM_UNVERIFIED_EMAIL_TITLE = 'Подтвердите почту';
+
+export const GAME_FORM_UNVERIFIED_EMAIL_DESCRIPTION =
+  'Объявление об игре видят все, поэтому создать его можно только с подтверждённого адреса. Откройте ссылку из письма, которое сервис отправил при регистрации, и вернитесь на эту страницу.';
+
 export const GAME_FORM_EDIT_TITLE = 'Редактирование игры';
 export const GAME_FORM_SUBMIT_LABEL = 'Опубликовать';
 export const GAME_EDIT_LABEL = 'Редактировать';
@@ -803,6 +869,7 @@ export const GAME_FORM_STAY_LABEL = 'Продолжить редактирова
 export const SESSION_AGENDA_CLOCK_INTERVAL = 60_000;
 export const GAME_NEXT_SESSION_FALLBACK = 'Время согласуется';
 export const GAME_NEXT_SESSION_LOADING_LABEL = 'Время встречи…';
+export const GAME_NEXT_PAID_SESSION_PRICE_LABEL = 'Стоимость за сессию';
 export const GAME_PRICE_PENDING_LABEL = 'Стоимость уточняется';
 export const GAME_PRICE_PER_SESSION_LABEL = 'за встречу';
 export const GAME_FREE_SEATS_LABEL = 'Свободно мест';
@@ -1094,6 +1161,19 @@ export const SESSION_CURRENCIES = [
   { code: 'RSD', name: 'Сербский динар' },
   { code: 'TRY', name: 'Турецкая лира' },
 ] as const;
+
+/**
+ * Готовые варианты для списков выбора валюты: в подписи видно и код, и
+ * название — по коду мастер узнаёт валюту, по названию находит её поиском.
+ */
+export const SESSION_CURRENCY_OPTIONS: Array<{
+  value: string;
+  label: string;
+}> = SESSION_CURRENCIES.map((currency) => ({
+  value: currency.code,
+  label: `${currency.code} — ${currency.name}`,
+}));
+
 export const SESSION_PAYMENT_TYPE_LABEL = 'Оплата';
 export const SESSION_FREE_SESSION_LABEL = 'Эта сессия бесплатная';
 

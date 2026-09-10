@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { Game } from '../model';
+  import type { Game, GameFinanceAccount } from '../model';
 
   import { UiResult } from '~ui/result';
 
@@ -17,14 +17,28 @@
     GAME_FINANCE_TITLE,
     GAME_FINANCE_TOP_UP,
     getFindGameErrorMessage,
+    SESSION_CURRENCY_OPTIONS,
+    SESSION_CURRENCY_PLACEHOLDER,
     SESSION_DEFAULT_CURRENCY,
     topUpGameAccount,
   } from '../model';
+
+  /** Валюта депозита по умолчанию: та, в которой у игрока уже есть долг. */
+  function getDefaultDepositCurrency(account: GameFinanceAccount): string {
+    const debt = account.bills.find((bill) => bill.remaining > 0);
+
+    return (
+      debt?.currency
+      ?? Object.keys(account.balances)[0]
+      ?? SESSION_DEFAULT_CURRENCY
+    );
+  }
 
   const { game } = defineProps<{ game: Game }>();
   const toast = useToast();
   const { getParticipantName, resolveNames } = useParticipantNames();
   const depositAmounts = ref<Record<string, number>>({});
+  const depositCurrencies = ref<Record<string, string>>({});
   const isSaving = ref(false);
 
   const {
@@ -41,6 +55,16 @@
     finance,
     (value) => {
       void resolveNames(value.accounts.map((account) => account.playerId));
+
+      // Обновление списка не сбрасывает выбор мастера: валюту подставляем
+      // только тем счетам, где он её ещё не выбирал.
+      depositCurrencies.value = Object.fromEntries(
+        value.accounts.map((account) => [
+          account.playerId,
+          depositCurrencies.value[account.playerId]
+            ?? getDefaultDepositCurrency(account),
+        ]),
+      );
     },
     { immediate: true },
   );
@@ -54,8 +78,12 @@
   }
 
   /** Добавляет депозит указанному игроку и обновляет историю. */
-  async function addDeposit(playerId: string): Promise<void> {
+  async function addDeposit(account: GameFinanceAccount): Promise<void> {
+    const { playerId } = account;
     const amount = depositAmounts.value[playerId] ?? 0;
+
+    const currency =
+      depositCurrencies.value[playerId] ?? getDefaultDepositCurrency(account);
 
     if (amount <= 0) {
       return;
@@ -64,12 +92,7 @@
     isSaving.value = true;
 
     try {
-      await topUpGameAccount(
-        game.id,
-        playerId,
-        amount,
-        SESSION_DEFAULT_CURRENCY,
-      );
+      await topUpGameAccount(game.id, playerId, amount, currency);
 
       depositAmounts.value = { ...depositAmounts.value, [playerId]: 0 };
       await refresh();
@@ -170,7 +193,7 @@
             </span>
           </div>
 
-          <div class="flex gap-2">
+          <div class="flex flex-wrap gap-2">
             <UInput
               v-model.number="depositAmounts[account.playerId]"
               type="number"
@@ -180,13 +203,21 @@
               class="min-w-0 flex-1"
             />
 
+            <USelectMenu
+              v-model="depositCurrencies[account.playerId]"
+              value-key="value"
+              :items="SESSION_CURRENCY_OPTIONS"
+              :placeholder="SESSION_CURRENCY_PLACEHOLDER"
+              class="w-40"
+            />
+
             <UButton
               color="primary"
               variant="subtle"
               icon="tabler:plus"
               :loading="isSaving"
               :label="GAME_FINANCE_TOP_UP"
-              @click.left.exact.prevent="addDeposit(account.playerId)"
+              @click.left.exact.prevent="addDeposit(account)"
             />
           </div>
 

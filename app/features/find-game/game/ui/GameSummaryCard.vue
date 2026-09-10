@@ -13,6 +13,7 @@
     GAME_LINKS_TITLE,
     GAME_MASTER_CHAT_LINK_LABEL,
     GAME_MASTER_LABEL,
+    GAME_NEXT_PAID_SESSION_PRICE_LABEL,
     GAME_NEXT_SESSION_DATE_FORMAT,
     GAME_NEXT_SESSION_EMPTY,
     GAME_NEXT_SESSION_LABEL,
@@ -60,6 +61,7 @@
     game,
     masterName,
     nextSessionAt = null,
+    nextPaidSessionPrice = null,
   } = defineProps<{
     game: Game;
     /** Отображаемое имя мастера; UUID пользователю показывать нельзя. */
@@ -71,6 +73,8 @@
      * и само расписание.
      */
     nextSessionAt?: string | null;
+    /** Цена ближайшей платной сессии из открытого расписания игры. */
+    nextPaidSessionPrice?: string | null;
   }>();
 
   /**
@@ -149,6 +153,14 @@
         value: getGameFormatLabel(game),
       },
     ];
+
+    if (game.costType === 'PAID' && nextPaidSessionPrice) {
+      items.push({
+        key: 'next-paid-session-price',
+        label: GAME_NEXT_PAID_SESSION_PRICE_LABEL,
+        value: nextPaidSessionPrice,
+      });
+    }
 
     if (game.type === 'ONLINE' && game.onlinePlatform) {
       items.push({

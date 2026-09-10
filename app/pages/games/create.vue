@@ -6,10 +6,13 @@
   import { GameInviteCard } from '~find-game/game';
   import {
     GAME_FORM_TITLE,
+    GAME_FORM_UNVERIFIED_EMAIL_DESCRIPTION,
+    GAME_FORM_UNVERIFIED_EMAIL_TITLE,
     GAME_OPEN_LABEL,
     GAMES_ROUTE,
     getGameRoute,
   } from '~find-game/model';
+  import { UiResult } from '~ui/result';
 
   definePageMeta({
     auth: { roles: [Role.USER] },
@@ -25,6 +28,12 @@
    * публичного API его нет.
    */
   const createdPrivateGame = ref<Game | null>(null);
+
+  // Профиль перечитывает глобальный `auth`-middleware при каждом входе в
+  // раздел, поэтому подтверждение видно сразу после перехода по ссылке письма.
+  const { user } = useUser();
+
+  const isEmailVerified = computed(() => user.value?.emailVerified !== false);
 
   /**
    * Публичную игру открываем сразу, приватную — показываем со ссылкой.
@@ -48,8 +57,15 @@
     :back-to="GAMES_ROUTE"
   >
     <template #default>
+      <UiResult
+        v-if="!isEmailVerified"
+        status="warning"
+        :title="GAME_FORM_UNVERIFIED_EMAIL_TITLE"
+        :sub-title="GAME_FORM_UNVERIFIED_EMAIL_DESCRIPTION"
+      />
+
       <div
-        v-if="createdPrivateGame?.inviteCode"
+        v-else-if="createdPrivateGame?.inviteCode"
         class="flex flex-col gap-4"
       >
         <GameInviteCard

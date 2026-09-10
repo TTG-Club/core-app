@@ -2,6 +2,7 @@ import type {
   CityOption,
   CopyGameSessionRequest,
   CreateGameRegistrationRequest,
+  CreateGameReportRequest,
   CreateGameRequest,
   CreateGameSessionRequest,
   CreateGameSessionSeriesRequest,
@@ -15,6 +16,7 @@ import type {
   GameParticipant,
   GamePersonalRole,
   GameRegistration,
+  GameReport,
   GameSearchFilter,
   GameSession,
   GameStatus,
@@ -41,8 +43,10 @@ import {
   FIND_GAME_PROFILE_API_PATH,
   FIND_GAME_UNKNOWN_ERROR_MESSAGE,
   FOLLOWED_MASTERS_API_PATH,
+  GAME_REPORTS_API_PATH,
   GAMES_API_PATH,
   MASTER_PROFILE_API_PATH,
+  MODERATION_GAME_REPORTS_API_PATH,
   NOTIFICATIONS_API_PATH,
   OWN_REPUTATION_API_PATH,
   PLAYER_BOOKMARK_API_PATH,
@@ -50,6 +54,7 @@ import {
 } from './constants';
 import { toGameSearchQuery } from './filters';
 import {
+  createGameReportRequestSchema,
   createGameRequestSchema,
   gameParticipantsSchema,
   parseCities,
@@ -58,6 +63,7 @@ import {
   parseGame,
   parseGameRegistration,
   parseGameRegistrations,
+  parseGameReportsPage,
   parseGameSession,
   parseGameSessions,
   parseGamesPage,
@@ -164,6 +170,11 @@ function sessionsPath(gameId: string): string {
  */
 function registrationsPath(gameId: string): string {
   return `${gamePath(gameId)}/registrations`;
+}
+
+/** Путь жалоб на конкретную игру. */
+function gameReportsPath(gameId: string): string {
+  return `${gamePath(gameId)}/reports`;
 }
 
 /**
@@ -572,6 +583,49 @@ export async function deleteGame(
   await $fetch(gamePath(gameId), {
     method: 'DELETE',
     body: { reason },
+    retry: 0,
+  });
+}
+
+/** Отправляет жалобу на чужое объявление. */
+export async function reportGame(
+  gameId: string,
+  request: CreateGameReportRequest,
+): Promise<void> {
+  await $fetch(gameReportsPath(gameId), {
+    method: 'POST',
+    body: createGameReportRequestSchema.parse(request),
+    retry: 0,
+  });
+}
+
+/**
+ * Загружает очередь жалоб на объявления для модератора.
+ *
+ * @param page Номер страницы, считая с нуля.
+ * @param size Размер страницы.
+ * @param fetcher Запросчик страницы: на сервере нужен `useRequestFetch()`,
+ * иначе куки сессии не доедут до прокси и очередь придёт пустой с 401.
+ */
+export async function fetchGameReports(
+  page: number,
+  size: number,
+  fetcher: ReturnType<typeof useRequestFetch> = $fetch,
+): Promise<SpringPage<GameReport>> {
+  const response = await fetcher(GAME_REPORTS_API_PATH, {
+    query: { page, size },
+    retry: 0,
+  });
+
+  return parseGameReportsPage(response);
+}
+
+/** Скрывает все активные игры мастера, которому принадлежит указанная игра. */
+export async function deleteAllMasterGamesByReport(
+  gameId: string,
+): Promise<void> {
+  await $fetch(`${MODERATION_GAME_REPORTS_API_PATH}/${gameId}/master-games`, {
+    method: 'DELETE',
     retry: 0,
   });
 }

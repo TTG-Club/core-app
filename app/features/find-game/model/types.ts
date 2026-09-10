@@ -3,6 +3,7 @@ import type {
   GAME_COST_TYPES,
   GAME_DURATION_TYPES,
   GAME_ONLINE_PLATFORMS,
+  GAME_REPORT_REASONS,
   GAME_SESSION_STATUSES,
   GAME_STATUSES,
   GAME_SYSTEMS,
@@ -24,6 +25,7 @@ export type GameType = (typeof GAME_TYPES)[number];
 export type GameOnlinePlatform = (typeof GAME_ONLINE_PLATFORMS)[number];
 export type GameDurationType = (typeof GAME_DURATION_TYPES)[number];
 export type GameCostType = (typeof GAME_COST_TYPES)[number];
+export type GameReportReason = (typeof GAME_REPORT_REASONS)[number];
 export type GameVisibility = (typeof GAME_VISIBILITIES)[number];
 export type GameStatus = (typeof GAME_STATUSES)[number];
 export type GamePersonalRole =
@@ -172,6 +174,24 @@ export interface GameFinanceAccount {
 
 export interface GameFinance {
   accounts: Array<GameFinanceAccount>;
+}
+
+/** Данные, с которыми пользователь отправляет жалобу на объявление. */
+export interface CreateGameReportRequest {
+  reason: GameReportReason;
+  details: string | null;
+}
+
+/** Одна запись очереди жалоб, доступной модератору. */
+export interface GameReport {
+  id: string;
+  gameId: string;
+  gameTitle: string;
+  gameDeleted: boolean;
+  reporterId: string;
+  reason: GameReportReason;
+  details: string | null;
+  createdAt: string;
 }
 
 /** Игра из выдачи find-game-api. */
@@ -541,6 +561,8 @@ export interface GameViewerAbilities {
   canOpenRecruitment: boolean;
   canRaiseGame: boolean;
   canDeleteGame: boolean;
+  /** Пользователь может сообщить о чужой игре. */
+  canReportGame: boolean;
   /** Можно подать заявку: игрок вошёл, не мастер и ещё не подавал. */
   canApply: boolean;
   /** Можно отозвать свою неразобранную заявку. */
