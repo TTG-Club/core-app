@@ -206,6 +206,9 @@ html.dark {
   --color-hover: oklch(1 0 89.876 / 0.05);
   --color-link: var(--color-primary-300);
 
+  /* Клетка фона — шапка главной и PageBackdrop */
+  --color-backdrop-grid: var(--ui-border);
+
   /* SearchPanel */
   --color-searchanel-100: #87bfdb;
   --color-searchanel-200: #77abc8;

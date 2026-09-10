@@ -81,12 +81,12 @@
     background-image:
       repeating-linear-gradient(
         to right,
-        var(--ui-border) 0 1px,
+        var(--color-backdrop-grid) 0 1px,
         transparent 1px 96px
       ),
       repeating-linear-gradient(
         to bottom,
-        var(--ui-border) 0 1px,
+        var(--color-backdrop-grid) 0 1px,
         transparent 1px 96px
       );
 

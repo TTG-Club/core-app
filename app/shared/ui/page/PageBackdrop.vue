@@ -75,19 +75,19 @@
   .grid {
     position: absolute;
     inset: 0;
-    /* Вдвое тусклее цвета границ: клетка — фактура фона, а не разлиновка,
-       которая спорит с рамками блоков */
+    /* Вдвое тусклее цвета клетки из темы: клетка — фактура фона, а не
+       разлиновка, которая спорит с рамками блоков */
     opacity: 0.5;
     /* Два повтора с одним шагом дают квадратную клетку, а не полоски */
     background-image:
       repeating-linear-gradient(
         to right,
-        var(--ui-border) 0 1px,
+        var(--color-backdrop-grid) 0 1px,
         transparent 1px $cell
       ),
       repeating-linear-gradient(
         to bottom,
-        var(--ui-border) 0 1px,
+        var(--color-backdrop-grid) 0 1px,
         transparent 1px $cell
       );
 
