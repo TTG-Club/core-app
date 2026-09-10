@@ -1050,7 +1050,7 @@ export interface ToolCatalogGroup {
 
 /** Группа каталога языков в настройках владения. */
 export interface LanguageProficiencyGroup extends ProficiencyCatalogGroup {
-  key: 'standard' | 'rare' | 'exotic';
+  key: 'standard' | 'rare';
 }
 
 /** Выбранный вид персонажа. */
@@ -4187,6 +4187,12 @@ export interface Character {
 
 /** Статус автосохранения листа персонажа. */
 export type SheetSaveStatus = 'saved' | 'saving' | 'error';
+
+/**
+ * Почему чужой лист открыт только на просмотр: по ссылке «поделиться» или
+ * администратором — ему бэк отдаёт любой лист, но без ручек записи.
+ */
+export type SheetReadonlyReason = 'shared' | 'admin';
 
 /** Лист персонажа в списке пользователя. */
 export interface CharacterSheetListItem {

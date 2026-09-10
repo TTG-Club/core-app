@@ -40,14 +40,19 @@ export function getCreatureInventoryEntries(
 }
 
 /**
- * Позиция строкой: «Верёвка ×2». Единственный предмет числом не подписывают.
+ * Пояснение позиции для скобок после названия: «Копьё (6)», «Меч (2, из
+ * золота)». Единственный предмет числом не подписывают; без количества и
+ * уточнения пояснение пустое, и скобок нет вовсе.
  *
- * @param name - название позиции; выгрузка передаёт его уже экранированным
  * @param quantity - количество предметов
+ * @param description - уточнение позиции; выгрузка передаёт его уже
+ *   экранированным
  */
-export function formatCreatureInventoryLabel(
-  name: string,
+export function formatCreatureInventoryNote(
   quantity: number | undefined,
+  description: string | undefined,
 ): string {
-  return quantity && quantity > 1 ? `${name} ×${quantity}` : name;
+  return [quantity && quantity > 1 ? String(quantity) : undefined, description]
+    .filter(Boolean)
+    .join(', ');
 }

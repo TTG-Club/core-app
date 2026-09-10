@@ -6205,7 +6205,7 @@ export function parseResourceMaxFormula(
  * нет вовсе — там `null`, и лист берёт формулу либо число.
  *
  * @param scaling ступени максимума.
- * @param level уровень персонажа.
+ * @param level уровень в классе-владельце ресурса; у черты — уровень персонажа.
  * @returns максимум зарядов; null — ступеней нет либо персонаж не дорос.
  */
 function getScaledCounterMax(
@@ -6249,22 +6249,21 @@ export function getResourceMax(
   const { source, ability, offset, multiplier, scaling, min } =
     resource.maxRule;
 
+  // Класс-владелец опознаётся по идентификатору ресурса: очки чародейства
+  // считаются от уровня В ЧАРОДЕЕ, а не от суммы уровней мультикласса. Ступени
+  // справочник пишет в тех же уровнях класса — «Второе дыхание» у варвара 9 /
+  // воина 2 растёт по уровню воина.
+  const classLevel = getOwnerClassLevel(character, resource.id);
+
   // Ступень старше источника: ряд, который формулой не пишется, задан ею же и
   // точнее любого выражения
-  const scaled = getScaledCounterMax(scaling ?? [], character.level);
+  const scaled = getScaledCounterMax(scaling ?? [], classLevel);
 
   if (scaled !== null) {
     return withResourceMinimum(scaled, min);
   }
 
-  const base = getResourceMaxBase(
-    character,
-    source,
-    ability,
-    // Класс-владелец опознаётся по идентификатору ресурса: очки чародейства
-    // считаются от уровня В ЧАРОДЕЕ, а не от суммы уровней мультикласса
-    getOwnerClassLevel(character, resource.id),
-  );
+  const base = getResourceMaxBase(character, source, ability, classLevel);
 
   return withResourceMinimum(
     clamp(
@@ -13116,6 +13115,66 @@ export function withSpellListClassNames(
     listed: named.map(([label]) => label),
     optionValues: Object.fromEntries(named),
   };
+}
+
+/**
+ * Собственные выборы черты, взятой выбором черты в мастере («Универсальность»
+ * человека): список заклинаний, заклинательная характеристика, заговоры и всё
+ * прочее, о чём черта спрашивает сама.
+ *
+ * Повышения характеристик среди них нет: его спрашивают слоты поля выбора
+ * черты, и второй вопрос о том же дал бы прибавку дважды. Выбор списка
+ * заклинаний получает подписи классов из каталога (см. `withSpellListClassNames`).
+ *
+ * @param summary деталь выбранной черты.
+ * @param classes классы каталога.
+ * @returns выборы черты без повышения характеристик.
+ */
+export function getPickedFeatChoices(
+  summary: FeatSummary,
+  classes: ClassOption[],
+): ClassChoice[] {
+  return summary.choices
+    .filter(
+      (choice) =>
+        choice.kind !== 'ability-score' && choice.kind !== 'ability-variant',
+    )
+    .map((choice) => withSpellListClassNames(choice, classes));
+}
+
+/**
+ * Ответы игрока на выборы черты (или даров предыстории) по ключу выбора: id
+ * пикера — это `<источник>:<url>:<ключ>`, а в записи ответы лежат под самим
+ * ключом, потому что у повторяемой черты id записи получает ещё и уникальный
+ * суффикс.
+ *
+ * Выборы повышения характеристик пропускаются: их заводит сам лист, ключа
+ * выбора в механике у них нет, а ответ уходит в прибавки к характеристикам.
+ *
+ * @param choices выборы черты или даров предыстории.
+ * @param answers ответы игрока по id выбора.
+ * @returns ответы по ключу выбора.
+ */
+export function collectFeatChoiceAnswers(
+  choices: ClassChoice[],
+  answers: Record<string, string[]>,
+): Record<string, string[]> {
+  const answersByKey: Record<string, string[]> = {};
+
+  for (const choice of choices) {
+    if (choice.kind === 'ability-score' || choice.kind === 'ability-variant') {
+      continue;
+    }
+
+    const values = answers[choice.id] ?? [];
+    const key = choice.id.split(':').at(-1) ?? '';
+
+    if (key && values.length) {
+      answersByKey[key] = values;
+    }
+  }
+
+  return answersByKey;
 }
 
 /**
