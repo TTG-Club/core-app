@@ -1144,6 +1144,9 @@ export const SESSION_DEFAULT_START_HOUR = 19;
 export const SESSION_DEFAULT_END_HOUR = 23;
 
 export const SESSION_START_LABEL = 'Начать';
+
+export const SESSION_START_NEEDS_CONFIRMATION =
+  'Начать встречу можно, когда хотя бы один игрок подтвердит участие';
 export const SESSION_STARTED_TOAST = 'Сессия начата';
 export const SESSION_COMPLETE_LABEL = 'Завершить';
 export const SESSION_CANCEL_LABEL = 'Отменить';

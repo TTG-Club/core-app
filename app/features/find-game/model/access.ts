@@ -182,7 +182,12 @@ export function resolveSessionAbilities(
       && session.status !== 'CANCELLED',
     canComplete: abilities.isMaster && !isSessionClosed,
     canCancel: abilities.isMaster && !isSessionClosed,
-    canStart: abilities.isMaster && session.status === 'SCHEDULED',
+    // Встречу без единого подтверждения сервис не начнёт: так мастер не
+    // набивает себе счётчик сыгранных, начиная и закрывая её в одиночку.
+    canStart:
+      abilities.isMaster
+      && session.status === 'SCHEDULED'
+      && session.confirmedPlayerIds.length > 0,
     // Мастеру пустой стол оценивать некого, игроку — оценивать нечего, если
     // его во встрече не было.
     canReview:

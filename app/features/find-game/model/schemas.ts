@@ -599,6 +599,8 @@ const gameSessionResponseSchema = z.object({
   // Приходит только у завершённых встреч: от неё считается окно на оценку.
   completedAt: nullableInstantSchema,
   registeredPlayerIds: z.array(z.string()).nullish().catch(null),
+  // Приходит только мастеру и участникам: по нему видно, можно ли начинать.
+  confirmedPlayerIds: z.array(z.string()).nullish().catch(null),
 });
 
 /**
@@ -620,6 +622,7 @@ function toGameSession(
     paymentType: parsed.paymentType ?? null,
     completedAt: parsed.completedAt,
     registeredPlayerIds: parsed.registeredPlayerIds ?? [],
+    confirmedPlayerIds: parsed.confirmedPlayerIds ?? [],
   };
 }
 

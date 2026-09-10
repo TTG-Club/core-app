@@ -74,6 +74,9 @@ function makeSession(overrides: Partial<GameSession> = {}): GameSession {
     paymentType: 'PREPAYMENT',
     completedAt: null,
     registeredPlayerIds: [],
+    // По умолчанию участие подтверждено: без подтверждений встречу не начать,
+    // и проверка этого правила живёт в отдельном тесте.
+    confirmedPlayerIds: [PLAYER_ID],
     ...overrides,
   };
 }
@@ -419,6 +422,19 @@ describe('состояния сессии у мастера', () => {
         masterOf(game),
       ).canStart,
     ).toBe(false);
+  });
+
+  it('без подтверждённого участия встречу не начать', () => {
+    const abilities = resolveSessionAbilities(
+      makeSession({ confirmedPlayerIds: [] }),
+      game,
+      null,
+      masterOf(game),
+    );
+
+    // Сервис отвечает отказом, и кнопки быть не должно: иначе мастер набивал
+    // бы счётчик сыгранных встречами, на которые никто не пришёл.
+    expect(abilities.canStart).toBe(false);
   });
 
   it('закрыть можно всё, кроме уже закрытой', () => {

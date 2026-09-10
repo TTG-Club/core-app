@@ -52,3 +52,6 @@ export const CATALOG_PICKER_SEARCH_DEBOUNCE_MS = 300;
  * промах по кнопке без фильтров вытянул бы раздел целиком.
  */
 export const CATALOG_PICKER_SELECT_ALL_LIMIT = 1000;
+
+/** Подпись переключателя, отмечающего все показанные значения группы */
+export const FILTER_SELECT_ALL_LABEL = 'Выбрать все';
