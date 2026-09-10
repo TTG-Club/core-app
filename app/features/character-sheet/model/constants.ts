@@ -46,6 +46,7 @@ import type {
   ResourceRecoveryField,
   ResourceRecoveryMode,
   RollMode,
+  SheetReadonlyReason,
   SheetSaveStatus,
   SheetTab,
   SkillProficiencyLevel,
@@ -88,6 +89,12 @@ export const CHARACTER_SHEET_SHARED_API_PATH = `${CHARACTER_SHEET_API_PATH}/shar
 
 /** Эндпоинт чужих листов, сохранённых по ссылке. */
 export const CHARACTER_SHEET_SAVED_API_PATH = `${CHARACTER_SHEET_API_PATH}/saved`;
+
+/**
+ * Эндпоинт чтения любого листа администратором — например, по ссылке из
+ * баг-репорта. Только чтение: ручек записи в чужой лист на бэке нет.
+ */
+export const CHARACTER_SHEET_ADMIN_API_PATH = `${CHARACTER_SHEET_API_PATH}/admin`;
 
 /**
  * Префикс значения `?detail=` у листа, открытого по ссылке: за префиксом идёт токен, а не
@@ -226,11 +233,15 @@ export const SHEET_SAVE_STATUS_META: Record<
 export const SHEET_LOCKED_MESSAGE = 'Лист заблокирован от редактирования';
 
 /**
- * Сообщение при попытке правки листа, открытого по ссылке. Страховка на случай,
- * если редактирующее действие всё же вызвано: сервер такой запрос не примет.
+ * Сообщение при попытке правки чужого листа — по причине режима просмотра.
+ * Страховка на случай, если редактирующее действие всё же вызвано: сервер такой
+ * запрос не примет.
  */
-export const SHEET_READONLY_MESSAGE =
-  'Лист открыт по ссылке — доступен только просмотр';
+export const SHEET_READONLY_MESSAGES: Record<SheetReadonlyReason, string> = {
+  shared: 'Лист открыт по ссылке — доступен только просмотр',
+  admin:
+    'Чужой лист открыт с правами администратора — доступен только просмотр',
+};
 
 /**
  * Класс скрытия кнопки, недоступной без прав (шестерёнки, ±, карандаши, корзины,
@@ -286,10 +297,14 @@ export const SHEET_HEADER_STAT_CLASS = `${SHEET_STAT_TILE_CLASS} cursor-pointer 
  */
 export const SHEET_STATIC_STAT_CLASS = `${SHEET_STAT_TILE_CLASS} cursor-default`;
 
-/** Подпись и подсказка режима просмотра в шапке чужого листа. */
-export const SHEET_READONLY_LABELS: Record<'badge' | 'tooltip', string> = {
-  badge: 'Только просмотр',
-  tooltip: 'Лист открыт по ссылке: правки недоступны',
+/** Пометка режима просмотра в шапке чужого листа. */
+export const SHEET_READONLY_BADGE_LABEL = 'Только просмотр';
+
+/** Подсказка к пометке режима просмотра — по его причине. */
+export const SHEET_READONLY_TOOLTIPS: Record<SheetReadonlyReason, string> = {
+  shared: 'Лист открыт по ссылке: правки недоступны',
+  admin:
+    'Лист другого пользователя открыт с правами администратора: правки недоступны, но его можно скопировать к себе',
 };
 
 /**
@@ -411,7 +426,7 @@ export const SAVED_SHEETS_LABELS: Record<
   unavailable: 'Доступ к листу закрыт',
   unavailableHint:
     'Владелец отозвал ссылку или удалил лист. Попросите новую ссылку и сохраните её заново.',
-  readonlyBadge: 'Только просмотр',
+  readonlyBadge: SHEET_READONLY_BADGE_LABEL,
   open: SHEET_OPEN_IN_PANEL_LABEL,
   remove: 'Убрать',
   removeTitle: 'Убрать лист из сохранённых?',

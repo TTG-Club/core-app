@@ -58,9 +58,14 @@ export default defineEventHandler<Request, Promise<S3UploadResponse>>(
       throw createError(getErrorResponse(StatusCodes.FORBIDDEN));
     }
 
+    // Копия ложится в папку того, кто копирует, как и загрузка: администратор
+    // копирует к себе чужой лист, и файл его копии не должен оказаться среди
+    // файлов владельца исходника.
+    const { username: requesterUsername } = await getUserFromToken(event);
+
     const targetKey = getFileKey(
       section,
-      username,
+      requesterUsername,
       getSourceFilename(filename),
     );
 

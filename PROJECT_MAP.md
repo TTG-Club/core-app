@@ -897,6 +897,13 @@ modals), so its capabilities are listed here rather than squeezed into the table
   mode, right panel in wide mode via `?detail=shared:<token>`, «↗» to the shared
   page. A revoked or deleted sheet keeps a dimmed card explaining the loss
   instead of disappearing.
+- An ADMIN opens **any** sheet by id — e.g. from a bug-report link — with or
+  without a share link: when the own endpoint answers 403,
+  `useCharacterSheetLoader` re-reads the sheet through
+  `GET /…/character-sheet/admin/{id}` (read-only on the backend: no write
+  endpoints there) and switches it to the same view mode with
+  `readonlyReason: 'admin'` (own tooltip and toast texts). The admin can copy
+  the sheet to their own list; saving a link is not offered — there is no token.
 
 ### 📰 Content & publishing
 
@@ -1054,7 +1061,7 @@ uploads and presence.
 | `api/user/comments/sync-name`           | Best-effort display-name sync: reads the name from core-api, then renames the author's comments through the comments internal API, scoped by `SOURCE_PLATFORM`                                                                                                                                                                                                                    |
 | `api/online`, `routes/online/heartbeat` | Presence heartbeat + stats via **online-app**                                                                                                                                                                                                                                                                                                                                     |
 | `api/vttg/builds`, `domain/vttg`        | All VTTG builds: reads every manifest of the update channel (`runtimeConfig.vttg.updateBaseUrl`) — electron-updater `latest*.yml` for desktop, `latest-node-linux-*.json` / `latest-docker.json` for server — and returns version / size / download links per platform, cached by Nitro. A missing manifest (platform not released yet) yields an empty build instead of an error |
-| `domain/s3`, `routes/s3/*`              | S3 upload (image compression via sharp) / get / delete / copy (new key for a duplicated entity)                                                                                                                                                                                                                                                                                   |
+| `domain/s3`, `routes/s3/*`              | S3 upload (image compression via sharp) / get / delete / copy (new key for a duplicated entity, under the copying user's prefix)                                                                                                                                                                                                                                                  |
 | `routes/manifest.json`                  | Theme-aware PWA manifest from `runtimeConfig.pwa`                                                                                                                                                                                                                                                                                                                                 |
 | `middleware/`                           | `001` verify access JWT + silent single-flight refresh, `002` inject `Bearer` from cookie                                                                                                                                                                                                                                                                                         |
 | `utils/`                                | Service clients (auth / auth-admin / subscriber-admin / comments-admin / bug-report), `displayName` + `commentsRename`, `getUser` / `getTokenFromRequest`, `secrets` (env accessor), JWT (jose), proxy, error normalization, image compression                                                                                                                                    |

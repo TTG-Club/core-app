@@ -40,6 +40,7 @@ import type {
   PreparedSpellKind,
   ProficiencyGrant,
   RollMode,
+  SheetReadonlyReason,
   SheetRollContext,
   SpeedTypeKey,
   SpellSlotKind,
@@ -160,7 +161,7 @@ import {
   setFeatureSpellPrepared,
   SHEET_HIDDEN_CONTROL_CLASS,
   SHEET_LOCKED_MESSAGE,
-  SHEET_READONLY_MESSAGE,
+  SHEET_READONLY_MESSAGES,
   SKILL_PROFICIENCY_NEXT,
   sortAbilityKeys,
   SPELL_COPY_TOAST_TITLE,
@@ -235,11 +236,18 @@ export function useCharacterSheet() {
   const isLocked = useState<boolean>('character-sheet:locked', () => false);
 
   /**
-   * Лист открыт по ссылке «поделиться»: чужой зритель может только смотреть.
-   * В отличие от {@link isLocked} снять этот режим нельзя — ставит его загрузчик
-   * страницы просмотра, а на бэке ручек записи по ссылке попросту нет.
+   * Почему открытый лист чужой и доступен только на просмотр: открыт по ссылке
+   * «поделиться» или администратором. null — лист свой. В отличие от
+   * {@link isLocked} снять этот режим нельзя — ставит его загрузчик листа, а на
+   * бэке ручек записи в чужой лист попросту нет.
    */
-  const isReadonly = useState<boolean>('character-sheet:readonly', () => false);
+  const readonlyReason = useState<SheetReadonlyReason | null>(
+    'character-sheet:readonly-reason',
+    () => null,
+  );
+
+  /** Лист чужой: зритель может только смотреть (см. {@link readonlyReason}). */
+  const isReadonly = computed(() => readonlyReason.value !== null);
 
   /** Правки листа разрешены: лист свой и не заперт замком. */
   const canEdit = computed(() => !isReadonly.value && !isLocked.value);
@@ -286,8 +294,10 @@ export function useCharacterSheet() {
 
     toast.add({
       color: 'warning',
-      icon: isReadonly.value ? 'tabler:eye' : 'tabler:lock',
-      title: isReadonly.value ? SHEET_READONLY_MESSAGE : SHEET_LOCKED_MESSAGE,
+      icon: readonlyReason.value ? 'tabler:eye' : 'tabler:lock',
+      title: readonlyReason.value
+        ? SHEET_READONLY_MESSAGES[readonlyReason.value]
+        : SHEET_LOCKED_MESSAGE,
     });
 
     return false;
@@ -303,27 +313,27 @@ export function useCharacterSheet() {
    * @returns true, если лист свой.
    */
   function ensureOwnSheet(): boolean {
-    if (!isReadonly.value) {
+    if (!readonlyReason.value) {
       return true;
     }
 
     toast.add({
       color: 'warning',
       icon: 'tabler:eye',
-      title: SHEET_READONLY_MESSAGE,
+      title: SHEET_READONLY_MESSAGES[readonlyReason.value],
     });
 
     return false;
   }
 
   /**
-   * Перевод листа в режим просмотра по ссылке и обратно. Вызывает загрузчик:
-   * страница просмотра включает режим, свои страницы — выключают.
+   * Перевод листа в режим просмотра и обратно. Вызывает загрузчик: чужой лист
+   * (по ссылке или открытый администратором) включает режим, свой — выключает.
    *
-   * @param readonly включить ли режим «только просмотр».
+   * @param reason причина режима «только просмотр»; null — лист свой.
    */
-  function setReadonly(readonly: boolean): void {
-    isReadonly.value = readonly;
+  function setReadonly(reason: SheetReadonlyReason | null): void {
+    readonlyReason.value = reason;
   }
 
   /**
@@ -3760,6 +3770,8 @@ export function useCharacterSheet() {
   return {
     character,
     isLocked,
+    // Наружу — только на чтение: режим ставит загрузчик через `setReadonly`
+    readonlyReason: readonly(readonlyReason),
     isReadonly,
     canEdit,
     editControlClass,

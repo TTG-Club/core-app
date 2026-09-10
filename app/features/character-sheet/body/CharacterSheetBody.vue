@@ -115,6 +115,7 @@
   const {
     character,
     isLocked,
+    readonlyReason,
     isReadonly,
     toggleLock,
     ensureEditable,
@@ -187,6 +188,8 @@
 
   // Сохранить чужой лист к себе может только тот, у кого есть доступ к самому
   // инструменту: обе ручки закрыты авторизацией, анониму их показывать нечестно.
+  // Копия доступна с любого чужого листа — и по ссылке, и открытого
+  // администратором; закладка в «Другие листы» — только у листа по ссылке.
   const { isLoggedIn } = useUser();
 
   const {
@@ -196,10 +199,7 @@
     save: saveLink,
   } = useCharacterSheetSaved();
 
-  const canSaveShared = computed(
-    () =>
-      isReadonly.value && isLoggedIn.value && Boolean(viewedShareToken.value),
-  );
+  const canSaveShared = computed(() => isReadonly.value && isLoggedIn.value);
 
   const isLinkSaved = computed(() =>
     viewedShareToken.value ? isTokenSaved(viewedShareToken.value) : false,
@@ -245,14 +245,19 @@
   // единственная в разделе без гарда, профиль на ней догружается уже после
   // монтирования, и к первому рендеру роль ещё неизвестна.
   watch(
-    canSaveShared,
-    (saveShared) => {
+    [canSaveShared, readonlyReason],
+    ([saveShared, reason]) => {
       if (!saveShared) {
         return;
       }
 
       void ensureLoaded();
-      void ensureSavedLoaded();
+
+      // «Другие листы» хранят ссылки, а у листа, открытого администратором,
+      // ссылки нет — сохранять его туда нечем.
+      if (reason === 'shared') {
+        void ensureSavedLoaded();
+      }
     },
     { immediate: true },
   );
@@ -1135,7 +1140,7 @@
         :can-expand="canExpand"
         :can-close="canClose"
         :can-duplicate="canCreate"
-        :readonly="isReadonly"
+        :readonly-reason="readonlyReason"
         :shared="isShared"
         :save-status="headerSaveStatus"
         :pdf-loading="isPdfExporting"
