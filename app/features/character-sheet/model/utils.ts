@@ -13118,6 +13118,66 @@ export function withSpellListClassNames(
 }
 
 /**
+ * Собственные выборы черты, взятой выбором черты в мастере («Универсальность»
+ * человека): список заклинаний, заклинательная характеристика, заговоры и всё
+ * прочее, о чём черта спрашивает сама.
+ *
+ * Повышения характеристик среди них нет: его спрашивают слоты поля выбора
+ * черты, и второй вопрос о том же дал бы прибавку дважды. Выбор списка
+ * заклинаний получает подписи классов из каталога (см. `withSpellListClassNames`).
+ *
+ * @param summary деталь выбранной черты.
+ * @param classes классы каталога.
+ * @returns выборы черты без повышения характеристик.
+ */
+export function getPickedFeatChoices(
+  summary: FeatSummary,
+  classes: ClassOption[],
+): ClassChoice[] {
+  return summary.choices
+    .filter(
+      (choice) =>
+        choice.kind !== 'ability-score' && choice.kind !== 'ability-variant',
+    )
+    .map((choice) => withSpellListClassNames(choice, classes));
+}
+
+/**
+ * Ответы игрока на выборы черты (или даров предыстории) по ключу выбора: id
+ * пикера — это `<источник>:<url>:<ключ>`, а в записи ответы лежат под самим
+ * ключом, потому что у повторяемой черты id записи получает ещё и уникальный
+ * суффикс.
+ *
+ * Выборы повышения характеристик пропускаются: их заводит сам лист, ключа
+ * выбора в механике у них нет, а ответ уходит в прибавки к характеристикам.
+ *
+ * @param choices выборы черты или даров предыстории.
+ * @param answers ответы игрока по id выбора.
+ * @returns ответы по ключу выбора.
+ */
+export function collectFeatChoiceAnswers(
+  choices: ClassChoice[],
+  answers: Record<string, string[]>,
+): Record<string, string[]> {
+  const answersByKey: Record<string, string[]> = {};
+
+  for (const choice of choices) {
+    if (choice.kind === 'ability-score' || choice.kind === 'ability-variant') {
+      continue;
+    }
+
+    const values = answers[choice.id] ?? [];
+    const key = choice.id.split(':').at(-1) ?? '';
+
+    if (key && values.length) {
+      answersByKey[key] = values;
+    }
+  }
+
+  return answersByKey;
+}
+
+/**
  * Сколько опций требуется выбрать: распознанное из прозы количество не может
  * превышать длину списка. Количество приезжает из эвристики по тексту, и
  * завышенное число делало шаг визарда непроходимым — условие «выбрано меньше
