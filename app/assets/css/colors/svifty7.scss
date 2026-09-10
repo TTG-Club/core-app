@@ -204,10 +204,10 @@ html.svifty7 {
   --color-hover: oklch(0.976 0 89.876 / 0.09);
   --color-link: var(--color-primary-400);
 
-  /* Клетка фона — шапка главной и PageBackdrop. Вдвое прозрачнее границ:
-     бордюр у темы светлый и непрозрачный, и клетка его цвета выходила
-     вдвое контрастнее, чем в тёмной и светлой темах */
-  --color-backdrop-grid: color-mix(in oklch, var(--ui-border) 50%, transparent);
+  /* Клетка фона — шапка главной и PageBackdrop. Цвет границ на 35%: бордюр
+     у темы светлый и непрозрачный, клетка его цвета выходила вдвое
+     контрастнее, чем в тёмной и светлой темах, и тянула внимание на себя */
+  --color-backdrop-grid: color-mix(in oklch, var(--ui-border) 35%, transparent);
 
   // Logo — тема плоская: верх и низ каждого градиента совпадают
   --color-logo-stroke-top: oklch(0.66 0.07 84.542);
