@@ -13,6 +13,13 @@ interface MultiPartData {
   type?: string;
 }
 
+/**
+ * Приводит файл из формы к виду, в котором его принимает хранилище.
+ *
+ * @param section Раздел сайта, куда грузят файл.
+ * @param username Владелец файла.
+ * @param file Часть multipart-формы.
+ */
 export function getFileForUpload(
   section: string | undefined,
   username: string | undefined,
@@ -42,16 +49,24 @@ export function getFileForUpload(
   };
 }
 
+/**
+ * Ключ файла в хранилище: раздел, владелец и имя файла. Пустая часть — ошибка
+ * запроса: по такому ключу файл потом не найти.
+ *
+ * @param section Раздел сайта.
+ * @param username Владелец файла.
+ * @param filename Имя файла из формы.
+ */
 export function getFileKey(
   section: string | undefined,
   username: string | undefined,
   filename: string | undefined,
 ): string {
-  const _section = section?.trim();
-  const _username = username?.trim();
-  const _filename = filename?.trim();
+  const trimmedSection = section?.trim();
+  const trimmedUsername = username?.trim();
+  const trimmedFilename = filename?.trim();
 
-  if (!_section) {
+  if (!trimmedSection) {
     throw createError(
       getErrorResponse(StatusCodes.BAD_REQUEST, {
         message: 'Отсутствует название раздела',
@@ -59,7 +74,7 @@ export function getFileKey(
     );
   }
 
-  if (!_username) {
+  if (!trimmedUsername) {
     throw createError(
       getErrorResponse(StatusCodes.BAD_REQUEST, {
         message: 'Отсутствует имя пользователя',
@@ -67,9 +82,9 @@ export function getFileKey(
     );
   }
 
-  const sectionSlug = getSlug(_section);
-  const usernameSlug = getSlug(_username);
-  const filenameSlug = getFilenameSlug(_filename);
+  const sectionSlug = getSlug(trimmedSection);
+  const usernameSlug = getSlug(trimmedUsername);
+  const filenameSlug = getFilenameSlug(trimmedFilename);
 
   return `${sectionSlug}/${usernameSlug}/${filenameSlug}`;
 }

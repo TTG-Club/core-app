@@ -1,3 +1,4 @@
+/** Настройки всех внешних сервисов сайта разом. */
 export function getSecrets() {
   return {
     s3: getS3Secrets(),
@@ -6,6 +7,7 @@ export function getSecrets() {
     subscriber: getSubscriberSecrets(),
     bugReport: getBugReportSecrets(),
     comments: getCommentsSecrets(),
+    findGame: getFindGameSecrets(),
   };
 }
 
@@ -14,7 +16,7 @@ interface AuthSecrets {
   url: string;
 }
 
-// Получение секретов S3
+/** Настройки хранилища S3: без любой из переменных загрузка не работает. */
 export function getS3Secrets() {
   const {
     NITRO_S3_ENDPOINT: endpoint = '',
@@ -37,7 +39,7 @@ export function getS3Secrets() {
   };
 }
 
-// Получение секретов API
+/** Настройки core-api: адрес и токены межсервисного доступа. */
 export function getApiSecrets() {
   const {
     NITRO_API_URL: url = '',
@@ -93,6 +95,31 @@ export function getSubscriberSecrets() {
 }
 
 /**
+ * Возвращает настройки сервиса поиска игр (find-game-api).
+ *
+ * Это отдельный сервис со своим адресом: общий прокси `/api/**` уводит
+ * незнакомые пути в core-api, поэтому у поиска игр свой префикс
+ * (`FIND_GAME_API_PREFIX`) и своя переменная `NITRO_FIND_GAME_API_URL`.
+ * Сервис принимает тот же SSO-JWT пользователя, что и core-api, поэтому
+ * достаточно базового URL — токен прокидывается обычным прокси-механизмом.
+ *
+ * Как и у остальных внешних сервисов, отсутствие переменной — ошибка
+ * конфигурации: молчаливый откат на core-api дал бы 404 на каждом запросе
+ * раздела, и причину пришлось бы искать в чужих логах.
+ */
+export function getFindGameSecrets() {
+  const { NITRO_FIND_GAME_API_URL: url = '' } = process.env;
+
+  if (!url) {
+    throw new Error('[FIND-GAME] Variables are not set');
+  }
+
+  return {
+    url: url.replace(/\/+$/, ''),
+  };
+}
+
+/**
  * Возвращает настройки внешнего сервиса комментариев.
  * Сервис принимает тот же SSO-JWT пользователя, что и core-api, поэтому
  * публичному API достаточно базового URL — токен прокидывается обычным
@@ -134,7 +161,7 @@ export interface MailSecrets {
 const IMPLICIT_TLS_PORT = 465;
 
 /**
- * Достаёт «голый» адрес из значения заголовка From: `"TTG" &lt;a@b.ru&gt;` → `a@b.ru`.
+ * Достаёт «голый» адрес из значения заголовка From: `"TTG" <a@b.ru>` → `a@b.ru`.
  * Нужен для конверта письма и Reply-To — там имя отправителя недопустимо.
  *
  * @param from значение заголовка From

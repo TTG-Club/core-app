@@ -17,4 +17,9 @@ export interface UserProfile {
    */
   displayName: string | null;
   roles: string[];
+  /**
+   * Подтверждён ли адрес почты. Часть действий (создание игры) сервисы
+   * отдают только подтверждённому аккаунту.
+   */
+  emailVerified: boolean;
 }

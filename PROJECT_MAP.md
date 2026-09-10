@@ -916,20 +916,63 @@ modals), so its capabilities are listed here rather than squeezed into the table
 | `roadmap`        | Project roadmap (`/roadmap`): feature cards with community ratings + admin editor                                                                                                                                                                                                                           | `feature`, `detail`, `editor`, `preview`, `types`                                                                                                                                                                                                                          |
 | `comments`       | Threaded discussions on wiki & article pages via external **comments-service**; public read, auth to post, soft-delete tombstones, reports                                                                                                                                                                  | `section` (page block + feed), `admin` (moderation rows), `my` (own comments + replies to them in profile), `recent` (site-wide feed on `/comments`), `composables`, `model`                                                                                               |
 
+### 🎲 Games (matchmaking & play)
+
+| Domain      | Purpose                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Sub-features                                                                                                                                                                                                        |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `find-game` | Finding and running games via the external **find-game-api**: public catalog (`/games`), game page with sessions & registrations (`/games/[gameId]`, private games by `inviteCode`), master's own games (`/games/my`, filtered by status) and game creation (`/games/create`), master/game chat links, venue and city dictionary, recruitment open/close, mutual reviews after a completed session, follows & invites, per-game finances (deposits and debts per currency), game reports (a flag on the game page → moderator queue at `/moderation/game-reports`); creating a game requires a verified email | `model` (Zod schemas, filters ↔ URL, role abilities), `composables`, `catalog`, `form`, `game`, `sessions`, `registrations`, `follows`, `notifications`, `profile`, `admin` (moderator queue of game reports), `ui` |
+
+> **Own service, own route.** The shared `/api/**` proxy sends unknown paths to
+> core-api, so find-game-api has its own same-origin prefix
+> (`FIND_GAME_API_PREFIX` = `/api/find-game/**` → upstream `/api/v1/**`) and its
+> own `NITRO_FIND_GAME_API_URL` (`server/utils/findGameProxy.ts`). The handler
+> is bound to that prefix and rejects everything else, so it never becomes an
+> open proxy.
+>
+> **Schedule is a time axis.** Sessions render as a horizontal `UTimeline`
+> with a calendar-style scale (day / week / month / year), period paging and a
+> «Сегодня» reset; a session's own card — with every action it has in the list —
+> opens in a popover on its point. The card list stays behind a view toggle for
+> going through a long backlog. Open-date sessions have no point on the axis and
+> sit in a separate row underneath.
+>
+> **Marks go one way.** A player marks a master from the profile drawer and
+> gets a notification for every public game that master publishes; a master
+> marks a player from the applications list and can then invite them into a
+> game with open recruitment. Both lists are tabs on `/games/my`. An invite is
+> a notification with a link — the player still applies themselves, and the
+> master still approves. A player can only be marked by a master whose game
+> they applied to, so the invite never becomes a way to message a stranger by
+> UUID.
+>
+> **Reviews are mutual and blind.** After a completed session players rate the
+> master and the master rates each player — thumbs up/down plus an optional
+> comment, inside a 14-day window. A verdict stays visible only to its author
+> until the other side answers (or the window closes), so nobody answers in
+> kind. Master reviews are public in the master drawer; player reviews are
+> readable only by the master of a game the player is applying to, and the
+> player sees just their own share («11 из 12 сыграли бы снова») in the game
+> profile.
+>
+> **Names come from core-api.** find-game-api stores only user UUIDs (`sub`),
+> so masters and players are resolved through
+> `POST /api/user/display-names/by-ids`; a failed lookup degrades to a neutral
+> placeholder rather than showing a raw UUID.
+
 ### 🛡️ Admin & moderation
 
 | Domain       | Purpose                                                                                                                                                                                                                                                                       | Sub-features                                                                                             |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `admin`      | Admin panel (`/admin`, ADMIN-only): dashboard tiles, top nav, live presence, character-sheet counts, personas, subscriptions & promo codes, bulk code mailing (`/admin/mailing`), users. Pages also cover article CRUD (`articles/admin`) and tokenator frame upload/ordering | `character-sheets`, `dashboard`, `mailing`, `navigation`, `online`, `personas`, `subscriptions`, `users` |
-| `moderation` | Moderator panel (`/moderation`, ADMIN or MODERATOR): dashboard routing to bug triage & comment moderation                                                                                                                                                                     | `model` (routes + dashboard labels)                                                                      |
+| `moderation` | Moderator panel (`/moderation`, ADMIN or MODERATOR): dashboard routing to bug triage, comment moderation and game reports (`/moderation/game-reports`, rows from `find-game/admin`)                                                                                           | `model` (routes + dashboard labels)                                                                      |
 | `bug-report` | Bug reporting (screenshot + annotate + text-selection + formatted description → submit) + admin triage/rating + author's own reports in profile                                                                                                                               | `modal`, `selection`, `sidebar-button`, `admin`, `my`, `composables`, `model`                            |
 
 ### 👤 User & account
 
-| Domain    | Purpose                                                                                                                                                            | Sub-features                                                  |
-| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
-| `profile` | User cabinet (`/user/profile`, USER role; bare `/user` redirects there): tabbed account wired to subscription/rewards, display name instead of login in `settings` | `sidebar`, `general`, `activation`, `security`, `settings`    |
-| `user`    | Auth entry points in the app shell                                                                                                                                 | `auth-modal` (login/register), `helmet` (profile-helmet menu) |
+| Domain    | Purpose                                                                                                                                                                                                                        | Sub-features                                                  |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| `profile` | User cabinet (`/user/profile`, USER role; bare `/user` redirects there): tabbed account wired to subscription/rewards, display name instead of login in `settings`. The «Игровой профиль» tab is served by `find-game/profile` | `sidebar`, `general`, `activation`, `security`, `settings`    |
+| `user`    | Auth entry points in the app shell                                                                                                                                                                                             | `auth-modal` (login/register), `helmet` (profile-helmet menu) |
 
 > **Display name.** The name is owned by **core-api**, not by the JWT: the server
 > reads it via `server/utils/displayName.ts` and pushes it to comments through
@@ -1087,6 +1130,8 @@ Access token in cookie `ttg-user-token`, refresh in httpOnly `ttg-user-refresh-t
 | `app/app.config.ts`       | Nuxt UI configuration (icons, variants)                                                                                                               |
 | `modules/auto-aliases.ts` | Generates `~<domain>` aliases from `app/features/`                                                                                                    |
 | `eslint.config.ts`        | ESLint (via @svifty7/eslint-config)                                                                                                                   |
+| `vitest.config.ts`        | Unit tests (`pnpm test`): pure domain modules only — no Nuxt runtime, project aliases and the few auto-imports come from `test/setup.ts`              |
+| `test/`                   | Unit tests themselves (`test/<domain>/*.test.ts`)                                                                                                     |
 | `stylelint.config.js`     | Stylelint (clean-order)                                                                                                                               |
 | `nano-staged.js`          | Pre-commit staged-file hooks (`simple-git-hooks`)                                                                                                     |
 | `Dockerfile`              | Production image built by the deploy workflow                                                                                                         |

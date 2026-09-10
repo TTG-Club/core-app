@@ -1,0 +1,175 @@
+<script setup lang="ts">
+  import { PageGrid } from '~ui/page';
+  import { UiPagination } from '~ui/pagination';
+  import { UiResult } from '~ui/result';
+
+  import {
+    useGameCatalog,
+    useHumanPage,
+    useParticipantNames,
+  } from '../composables';
+  import {
+    CATALOG_EMPTY_DESCRIPTION,
+    CATALOG_EMPTY_TITLE,
+    CATALOG_ERROR_TITLE,
+    CATALOG_FILTERS_RESET_LABEL,
+    CATALOG_FILTERS_TITLE,
+    CATALOG_RETRY_LABEL,
+    GAME_CATALOG_GRID_COLUMNS,
+    GAME_CATALOG_SKELETON_COUNT,
+    getGamesFoundLabel,
+  } from '../model';
+  import { GameCard, GameCardSkeleton, GameCatalogFilters } from './ui';
+
+  const {
+    activeFilterCount,
+    error,
+    filter,
+    games,
+    hasActiveFilters,
+    isEmpty,
+    isLoading,
+    page,
+    pageSize,
+    refresh,
+    resetFilter,
+    status,
+    totalGames,
+  } = useGameCatalog();
+
+  const isFiltersOpen = ref(false);
+
+  const humanPage = useHumanPage(page);
+
+  const isError = computed(() => status.value === 'error');
+
+  /**
+   * Счётчик найденного над выдачей: по нему видно, что отбор сработал, и
+   * сколько ещё игр лежит на других страницах. Пока выдачи нет — и пока она
+   * грузится — счётчик не показывается: он мигал бы прежним числом.
+   */
+  const foundLabel = computed(() =>
+    isLoading.value || isError.value || !totalGames.value
+      ? null
+      : getGamesFoundLabel(totalGames.value),
+  );
+
+  const { getParticipantName, watchParticipantNames } = useParticipantNames();
+
+  // Имена мастеров живут в core-api, поэтому резолвятся отдельно и сразу на
+  // всю страницу выдачи — по карточке на запрос было бы восемь запросов.
+  watchParticipantNames(() => games.value.map((game) => game.masterId));
+
+  /** Открывает панель фильтров. */
+  function openFilters(): void {
+    isFiltersOpen.value = true;
+  }
+</script>
+
+<template>
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-wrap items-center gap-2">
+      <UButton
+        color="neutral"
+        variant="subtle"
+        icon="tabler:filter"
+        :label="CATALOG_FILTERS_TITLE"
+        @click.left.exact.prevent="openFilters"
+      >
+        <template
+          v-if="activeFilterCount"
+          #trailing
+        >
+          <UBadge
+            color="primary"
+            variant="solid"
+            size="sm"
+            :label="String(activeFilterCount)"
+          />
+        </template>
+      </UButton>
+
+      <UButton
+        v-if="hasActiveFilters"
+        color="neutral"
+        variant="ghost"
+        icon="tabler:rotate"
+        :label="CATALOG_FILTERS_RESET_LABEL"
+        @click.left.exact.prevent="resetFilter"
+      />
+
+      <span
+        v-if="foundLabel"
+        class="ml-auto text-sm text-muted tabular-nums"
+      >
+        {{ foundLabel }}
+      </span>
+    </div>
+
+    <GameCatalogFilters
+      v-model="filter"
+      v-model:open="isFiltersOpen"
+    />
+
+    <PageGrid
+      v-if="isLoading"
+      :columns="GAME_CATALOG_GRID_COLUMNS"
+      gap="wide"
+    >
+      <GameCardSkeleton
+        v-for="index in GAME_CATALOG_SKELETON_COUNT"
+        :key="index"
+      />
+    </PageGrid>
+
+    <UiResult
+      v-else-if="isError"
+      status="error"
+      :title="CATALOG_ERROR_TITLE"
+      :sub-title="error?.message"
+    >
+      <template #extra>
+        <UButton
+          :label="CATALOG_RETRY_LABEL"
+          @click.left.exact.prevent="refresh()"
+        />
+      </template>
+    </UiResult>
+
+    <UiResult
+      v-else-if="isEmpty"
+      status="info"
+      :title="CATALOG_EMPTY_TITLE"
+      :sub-title="CATALOG_EMPTY_DESCRIPTION"
+    >
+      <template #extra>
+        <UButton
+          v-if="hasActiveFilters"
+          :label="CATALOG_FILTERS_RESET_LABEL"
+          @click.left.exact.prevent="resetFilter"
+        />
+      </template>
+    </UiResult>
+
+    <template v-else>
+      <PageGrid
+        :columns="GAME_CATALOG_GRID_COLUMNS"
+        gap="wide"
+      >
+        <GameCard
+          v-for="game in games"
+          :key="game.id"
+          :game="game"
+          :master-name="getParticipantName(game.masterId)"
+        />
+      </PageGrid>
+
+      <UiPagination
+        v-if="totalGames > pageSize"
+        v-model:page="humanPage"
+        :total="totalGames"
+        :items-per-page="pageSize"
+      />
+    </template>
+  </div>
+</template>
