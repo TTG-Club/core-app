@@ -508,7 +508,18 @@ export const GAME_DEFAULT_PLAYERS_TO_START = 3;
 export const GAME_DELETION_REASON_MAX_LENGTH = 1000;
 
 export const SESSION_TITLE_MAX_LENGTH = 150;
-export const SESSION_PRICE_MIN = 0.01;
+
+/**
+ * Стоимость встречи задаётся целым числом: за стол берут круглую сумму, а
+ * копейки в цене — почти всегда описка на клавиатуре.
+ */
+export const SESSION_PRICE_MIN = 1;
+export const SESSION_PRICE_STEP = 1;
+
+/** Поле цены не показывает и не принимает дробную часть. */
+export const SESSION_PRICE_FORMAT: Intl.NumberFormatOptions = {
+  maximumFractionDigits: 0,
+};
 export const SESSION_CURRENCY_PATTERN = /^[A-Z]{3}$/;
 export const CHARACTER_SHEET_URL_MAX_LENGTH = 2048;
 export const CHARACTER_NAME_MAX_LENGTH = 100;
@@ -1190,7 +1201,7 @@ export const SESSION_CURRENCY_OPTIONS: Array<{
 }));
 
 export const SESSION_PAYMENT_TYPE_LABEL = 'Оплата';
-export const SESSION_FREE_SESSION_LABEL = 'Эта сессия бесплатная';
+export const SESSION_FREE_SESSION_LABEL = 'Бесплатно';
 
 export const SESSION_FREE_SESSION_HINT =
   'Знакомство или отработку можно провести без оплаты, даже если игра платная.';

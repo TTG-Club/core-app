@@ -67,10 +67,14 @@ export function useSessionPaymentFields(
     () => !isPaid.value || SESSION_CURRENCY_PATTERN.test(priceCurrency.value),
   );
 
+  // Дробную цену форма не принимает: поле шагает целыми, но число можно
+  // вписать и с клавиатуры, а «100,01» за стол никто не берёт.
   const isPriceValid = computed(
     () =>
       !isPaid.value
-      || (priceAmount.value !== null && priceAmount.value >= SESSION_PRICE_MIN),
+      || (priceAmount.value !== null
+        && Number.isInteger(priceAmount.value)
+        && priceAmount.value >= SESSION_PRICE_MIN),
   );
 
   /** Заполнены ли платёжные поля настолько, чтобы сервис принял запрос. */
