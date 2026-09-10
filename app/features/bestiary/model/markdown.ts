@@ -18,7 +18,7 @@ import {
 } from '~ui/markup';
 
 import {
-  formatCreatureInventoryLabel,
+  formatCreatureInventoryNote,
   getCreatureInventoryEntries,
 } from './inventory';
 
@@ -145,17 +145,19 @@ function getStats(creature: CreatureDetailResponse): MarkdownStat[] {
 /**
  * Инвентарь строкой: позиции с количеством и уточнением, а следом свободная
  * строка через точку с запятой. Ссылки в выгрузке не нужны — это текст для
- * чтения, а уточнение нужно: «Меч (из золота)» без него теряет смысл.
+ * чтения, а уточнение нужно: «Меч (2, из золота)» без него теряет смысл.
  */
 function toInventory(creature: CreatureDetailResponse): string {
   const entries = getCreatureInventoryEntries(creature.inventory).map((entry) =>
     joinStat(
       [
-        formatCreatureInventoryLabel(
-          escapeMarkdown(entry.name),
-          entry.quantity,
+        escapeMarkdown(entry.name),
+        toParenthesized(
+          formatCreatureInventoryNote(
+            entry.quantity,
+            escapeMarkdown(entry.description),
+          ),
         ),
-        toParenthesized(escapeMarkdown(entry.description)),
       ],
       ' ',
     ),
