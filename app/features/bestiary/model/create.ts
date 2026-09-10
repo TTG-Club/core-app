@@ -180,6 +180,18 @@ export interface CreateSpeed {
   hover?: boolean;
 }
 
+/**
+ * Пустая скорость вида — для добавления и для сравнения на пустоту. У полёта
+ * есть ещё отметка парения.
+ *
+ * @param type - вид скорости
+ */
+export function getEmptyCreatureSpeed(type: SpeedType): CreateSpeed {
+  return type === SpeedType.FLY
+    ? { value: 0, text: undefined, hover: false }
+    : { value: 0, text: undefined };
+}
+
 export type CreateAbilities = Record<AbilityShortKey, CreateAbility>;
 
 export interface CreateAbility {

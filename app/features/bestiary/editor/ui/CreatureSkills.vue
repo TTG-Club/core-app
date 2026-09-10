@@ -105,7 +105,6 @@
         >
           <UInputNumber
             v-model="item.bonus"
-            :precision="0"
             placeholder="Введи бонус"
             :min="-10"
             :max="10"

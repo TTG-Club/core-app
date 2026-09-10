@@ -150,7 +150,6 @@
               >
                 <UInput
                   v-model="state.cost"
-                  :precision="0"
                   :placeholder="ITEM_FORM_LABELS.costPlaceholder"
                   min="0"
                 />

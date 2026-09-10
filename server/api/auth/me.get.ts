@@ -22,5 +22,8 @@ export default defineEventHandler(async (event) => {
     id: tokenPayload.sub ?? null,
     roles: tokenPayload.roles,
     displayName,
+    // Молчание auth-service о подтверждении не запрещает действия: доступ
+    // всё равно решает сервис, а интерфейс лишь объясняет отказ заранее.
+    emailVerified: user.emailVerified ?? true,
   };
 });

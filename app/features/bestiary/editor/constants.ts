@@ -4,7 +4,37 @@ import type {
   CreatureSpellRestKind,
 } from '../model';
 
+import { SpeedType } from '../model';
+
 export const CREATURE_IMAGE_SECTION_TITLE = 'Изображения';
+
+/** Виды скорости существа в порядке статблока: ходьба первой. */
+export const CREATURE_SPEED_TYPES: Array<SpeedType> = Object.values(SpeedType);
+
+/** Виды скорости существа: подписи строк списка и кнопок добавления. */
+export const CREATURE_SPEED_TYPE_LABELS: Record<SpeedType, string> = {
+  [SpeedType.WALK]: 'Ходьба',
+  [SpeedType.FLY]: 'Полёт',
+  [SpeedType.SWIM]: 'Плавание',
+  [SpeedType.CLIMB]: 'Лазание',
+  [SpeedType.BURROW]: 'Копание',
+};
+
+/** Подписи и значки блока скоростей существа. */
+export const CREATURE_SPEED_EDITOR = {
+  title: 'Скорость',
+  unit: 'фт.',
+  hover: 'Парит',
+  text: 'Пояснение к скорости',
+  textPlaceholder: 'Пояснение, например: только в форме медведя',
+  add: 'Добавить скорость:',
+  addIcon: 'tabler:plus',
+  empty: 'Скоростей нет. Добавь нужные кнопками ниже.',
+  remove: 'Удалить скорость',
+  removeIcon: 'tabler:trash',
+  clear: 'Очистить скорость',
+  clearIcon: 'tabler:eraser',
+} as const;
 
 /** Наименьшее количество позиции инвентаря: ноль предметов — это их отсутствие. */
 export const MIN_CREATURE_INVENTORY_QUANTITY = 1;
