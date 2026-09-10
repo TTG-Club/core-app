@@ -23,6 +23,7 @@
     buildFeatFeature,
     CLASSES_SEARCH_PATH,
     collectChosenProficiencies,
+    collectFeatChoiceAnswers,
     FEAT_SOURCES_ASYNC_DATA_KEY,
     FEATS_FILTERS_PATH,
     FEATS_SEARCH_PATH,
@@ -467,40 +468,6 @@
   }
 
   /**
-   * Ответы игрока на выборы черты по ключу выбора: id пикера — это
-   * `feat:<url>:<ключ>`, а в записи ответы лежат под самим ключом, потому что у
-   * повторяемой черты id записи получает ещё и уникальный суффикс.
-   *
-   * @param summary деталь черты.
-   * @returns ответы по ключу выбора.
-   */
-  function collectChoiceAnswers(
-    summary: FeatSummary,
-  ): Record<string, string[]> {
-    const answers: Record<string, string[]> = {};
-
-    for (const choice of summary.choices) {
-      // Выборы повышения характеристик лист заводит сам, ключа выбора в
-      // механике у них нет — их ответ уходит в прибавки, а не в запись ответов.
-      if (
-        choice.kind === 'ability-score'
-        || choice.kind === 'ability-variant'
-      ) {
-        continue;
-      }
-
-      const values = choiceAnswers.value[choice.id] ?? [];
-      const key = choice.id.split(':').at(-1) ?? '';
-
-      if (key && values.length) {
-        answers[key] = values;
-      }
-    }
-
-    return answers;
-  }
-
-  /**
    * Собирает записи умений из загруженных деталей с ответами игрока и добавляет
    * их на лист.
    */
@@ -516,7 +483,10 @@
         // ответом и применит позже. Свалить всё в компетентность нельзя —
         // выбранная характеристика ушла бы в журнал выдач навыком.
         proficiencies: collectProficiencies(summary),
-        choiceAnswers: collectChoiceAnswers(summary),
+        choiceAnswers: collectFeatChoiceAnswers(
+          summary.choices,
+          choiceAnswers.value,
+        ),
         spells: collectChosenSpells(summary),
         // Названная игроком характеристика ложится на заклинания черты: от неё
         // считаются их атака и Сл спасброска

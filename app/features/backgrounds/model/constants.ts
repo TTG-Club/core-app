@@ -1,3 +1,5 @@
+import type { ItemType } from '~items/model';
+
 /** Подписи полей редактора предыстории. */
 export const BACKGROUND_EDITOR_LABELS = {
   featClass: 'Класс черты',
@@ -12,8 +14,35 @@ export const BACKGROUND_DETAIL_LABELS = {
   listSeparator: ', ',
   choiceSeparator: ' или ',
   toolChoicePrefix: 'На выбор',
+  toolCategoryJoiner: 'из',
   anyTool: 'любой инструмент',
 } as const;
+
+/**
+ * Категории инструментов раздела «Предметы», которыми выбор предыстории
+ * называется целиком: «На выбор 1 из инструментов ремесленника» вместо
+ * семнадцати названий через «или». Подпись — в родительном падеже, она идёт
+ * после «из».
+ */
+export const BACKGROUND_TOOL_CATEGORIES: Array<{
+  itemType: ItemType;
+  label: string;
+}> = [
+  { itemType: 'ARTISAN_S_TOOLS', label: 'инструментов ремесленника' },
+  { itemType: 'GAMING_SET', label: 'игровых наборов' },
+  { itemType: 'INSTRUMENT', label: 'музыкальных инструментов' },
+];
+
+/**
+ * Цена обобщённой карточки категории («Инструменты ремесленников»,
+ * «Музыкальный инструмент»): у конкретного инструмента цена своя. Обобщённую
+ * карточку в выбор не ставят, поэтому для «выбрана вся категория» она не
+ * нужна.
+ */
+export const GENERIC_ITEM_COST = 'варьируется';
+
+/** Страница раздела «Предметы»: ссылка категории ведёт туда с её фильтром. */
+export const ITEMS_SECTION_PATH = '/items';
 
 /** Вкладки редактора предыстории. */
 export const BACKGROUND_EDITOR_TABS = {

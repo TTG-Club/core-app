@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CreateExperience } from '~bestiary/model';
+  import type { CreateExperience } from '../../model';
 
   import { SelectChallengeRating } from '~ui/select';
 
@@ -42,7 +42,6 @@
       >
         <UInputNumber
           v-model="model.inLair"
-          :precision="0"
           :min="0"
           placeholder="Значение в логове"
         />

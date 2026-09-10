@@ -50,6 +50,7 @@
     sectionPath: '/bestiary',
     apiBasePath: '/api/v2/bestiary',
     items: bestiary,
+    hasMoreItems: hasNextPage,
   });
 
   const markdown = useEntityMarkdown(detailCreature, getCreatureMarkdown);

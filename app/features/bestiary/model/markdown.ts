@@ -17,6 +17,11 @@ import {
   toMarkdown,
 } from '~ui/markup';
 
+import {
+  formatCreatureInventoryNote,
+  getCreatureInventoryEntries,
+} from './inventory';
+
 /** Колонки таблицы характеристик — в порядке вывода. */
 const ABILITY_COLUMNS: MarkdownColumn[] = [
   { label: 'Хар.', align: 'left' },
@@ -87,6 +92,7 @@ export function getCreatureMarkdown(creature: CreatureDetailResponse): string {
 /** Строки блока свойств; пустые отбрасывает сборщик. */
 function getStats(creature: CreatureDetailResponse): MarkdownStat[] {
   const { initiative, hit } = creature;
+  const inventory = toInventory(creature);
 
   // Значения, кроме снаряжения, приходят сырой строкой из API и разметкой не
   // являются: звёздочка или бэктик в них уехали бы в Homebrewery как разметка.
@@ -126,11 +132,41 @@ function getStats(creature: CreatureDetailResponse): MarkdownStat[] {
     ['Уязвимости', escapeMarkdown(creature.vulnerability)],
     ['Сопротивления', escapeMarkdown(creature.resistance)],
     ['Иммунитеты', escapeMarkdown(creature.immunity)],
-    ['Снаряжение', toInlineValue(creature.equipments)],
+    ['Инвентарь', inventory],
+    // Снаряжение старого импорта — только пока не заведён инвентарь: иначе
+    // одно и то же было бы написано дважды.
+    ['Снаряжение', inventory ? '' : toInlineValue(creature.equipments)],
     ['Чувства', escapeMarkdown(creature.sense)],
     ['Языки', escapeMarkdown(creature.languages)],
     ['ПО', escapeMarkdown(creature.cr)],
   ];
+}
+
+/**
+ * Инвентарь строкой: позиции с количеством и уточнением, а следом свободная
+ * строка через точку с запятой. Ссылки в выгрузке не нужны — это текст для
+ * чтения, а уточнение нужно: «Меч (2, из золота)» без него теряет смысл.
+ */
+function toInventory(creature: CreatureDetailResponse): string {
+  const entries = getCreatureInventoryEntries(creature.inventory).map((entry) =>
+    joinStat(
+      [
+        escapeMarkdown(entry.name),
+        toParenthesized(
+          formatCreatureInventoryNote(
+            entry.quantity,
+            escapeMarkdown(entry.description),
+          ),
+        ),
+      ],
+      ' ',
+    ),
+  );
+
+  return joinStat(
+    [joinStat(entries), toInlineValue(creature.inventoryText)],
+    '; ',
+  );
 }
 
 /** Навык строкой «Скрытность +6». */

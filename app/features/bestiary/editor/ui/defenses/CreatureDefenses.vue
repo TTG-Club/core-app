@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CreatureDefenses } from '~bestiary/model';
+  import type { CreatureDefenses } from '../../../model';
 
   import {
     CreatureImmunities,

@@ -888,8 +888,6 @@ export const ACTIVE_EFFECT_LABELS = {
   add: 'Добавить эффект',
   remove: 'Удалить эффект',
   unnamed: 'Эффект без названия',
-  expand: 'Развернуть эффект',
-  collapse: 'Свернуть эффект',
   removeConfirmTitle: 'Удалить эффект?',
   removeConfirmText:
     'Эффект и все его настройки — модификаторы, флаги, урон — исчезнут из '

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CreateAbilities } from '~bestiary/model';
+  import type { CreateAbilities } from '../../model';
 
   import { ABILITIES } from '~/shared/types';
   import { SelectMastery } from '~ui/select';
@@ -45,7 +45,6 @@
           <UFieldGroup>
             <UInputNumber
               v-model="model[ability.shortKey].value"
-              :precision="0"
               :min="0"
               :max="30"
             />

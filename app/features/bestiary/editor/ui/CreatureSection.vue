@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CreateSection } from '~bestiary/model';
+  import type { CreateSection } from '../../model';
 
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectHabitat, SelectTreasure } from '~ui/select';

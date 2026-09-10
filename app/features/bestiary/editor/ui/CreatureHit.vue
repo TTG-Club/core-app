@@ -1,9 +1,5 @@
 <script setup lang="ts">
-  import type {
-    CreateAbility,
-    CreateHit,
-    CreatureSizes,
-  } from '~bestiary/model';
+  import type { CreateAbility, CreateHit, CreatureSizes } from '../../model';
 
   import { watchDerivedField } from '~workshop/composable';
 

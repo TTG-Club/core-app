@@ -1,5 +1,7 @@
 import type { LocationQuery } from 'vue-router';
 
+import type { CatalogPreviewSection } from '~/composables/useCatalogPreview';
+
 import type { Filter, FilterGroups } from '../types';
 
 import { z } from '~/utils/zod';
@@ -50,6 +52,13 @@ export interface CatalogPickerSection {
    * слаги, и без догрузки чип показывал бы «shield-phb».
    */
   detailPath?: string;
+
+  /**
+   * Раздел сайта для предпросмотра записи: `items`, `magic-items`. По нему поле
+   * и окно выбора открывают карточку дровером, не уводя из формы. Пусто —
+   * предпросмотра у раздела нет.
+   */
+  previewSection?: CatalogPreviewSection;
 
   /**
    * Закреплённый отбор: ключ группы фильтра → идентификаторы значений.

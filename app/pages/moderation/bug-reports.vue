@@ -30,6 +30,10 @@
     ADMIN_BUGS_FILTER_ALL,
     ADMIN_BUGS_FILTER_OPTIONS_API_URL,
     ADMIN_BUGS_FILTER_OPTIONS_DATA_KEY,
+    ADMIN_BUGS_FILTERS_APPLY_LABEL,
+    ADMIN_BUGS_FILTERS_BUTTON_LABEL,
+    ADMIN_BUGS_FILTERS_DRAWER_TITLE,
+    ADMIN_BUGS_FILTERS_RESET_LABEL,
     ADMIN_BUGS_ID_QUERY_KEY,
     ADMIN_BUGS_LAYOUT_TITLE,
     ADMIN_BUGS_LOAD_ERROR_TEXT,
@@ -196,6 +200,46 @@
     currentPage.value = 1;
     selectedBugId.value = null;
   });
+
+  /**
+   * Сколько фильтров отличаются от «все». Число стоит на кнопке, которая на
+   * узких экранах заменяет собой все четыре списка: иначе выбранный отбор был
+   * бы не виден, пока не откроешь шторку.
+   */
+  const activeFiltersCount = computed(
+    () =>
+      [
+        statusFilter.value,
+        platformFilter.value,
+        authorFilter.value,
+        resolverFilter.value,
+      ].filter((filterValue) => filterValue !== ADMIN_BUGS_FILTER_ALL).length,
+  );
+
+  /** Список отфильтрован хотя бы по одному признаку. */
+  const hasActiveFilters = computed(() => activeFiltersCount.value > 0);
+
+  /**
+   * Сбрасывает все фильтры разом. По одному их сбрасывать нельзя: соседние
+   * записи `route.query` в этот момент ещё старые, и каждый следующий вызов
+   * `replace` вернул бы в адрес только что убранный параметр.
+   */
+  function resetFilters(): void {
+    router.replace({
+      query: {
+        ...route.query,
+        [ADMIN_BUGS_STATUS_QUERY_KEY]: undefined,
+        [ADMIN_BUGS_PLATFORM_QUERY_KEY]: undefined,
+        [ADMIN_BUGS_AUTHOR_QUERY_KEY]: undefined,
+        [ADMIN_BUGS_RESOLVER_QUERY_KEY]: undefined,
+        [ADMIN_BUGS_ID_QUERY_KEY]: undefined,
+      },
+    });
+  }
+
+  // Сводка и списки фильтров показываются дважды — в боковой колонке и в шторке
+  const [DefineStatusSummary, ReuseStatusSummary] = createReusableTemplate();
+  const [DefineFilterFields, ReuseFilterFields] = createReusableTemplate();
 
   // Запрос баг-репортов с учетом пагинации и фильтров
   const {
@@ -431,14 +475,10 @@
     >
       <!-- Элементы управления (Фильтры) -->
       <template #controls>
-        <div class="flex flex-col gap-3">
-          <p class="text-xs leading-normal text-secondary">
-            {{ ADMIN_BUGS_PAGE_DESCRIPTION }}
-          </p>
-
-          <!-- Сводка по баг-репортам: всего и по каждому статусу (скрыта на мобильных) -->
+        <!-- Сводка по баг-репортам: всего и по каждому статусу -->
+        <DefineStatusSummary>
           <div
-            class="hidden overflow-hidden rounded-lg border border-default bg-elevated/50 lg:block"
+            class="overflow-hidden rounded-lg border border-default bg-elevated/50"
           >
             <button
               type="button"
@@ -487,7 +527,10 @@
               </button>
             </div>
           </div>
+        </DefineStatusSummary>
 
+        <!-- Списки фильтров: одни и те же в боковой колонке и в шторке -->
+        <DefineFilterFields>
           <div class="flex flex-col gap-2">
             <!-- Фильтр по статусу -->
             <USelectMenu
@@ -529,6 +572,93 @@
               value-key="value"
               label-key="label"
               class="w-full"
+            />
+          </div>
+        </DefineFilterFields>
+
+        <div class="flex flex-col gap-3">
+          <!-- Пояснение к разделу: на узких экранах место дороже -->
+          <p class="hidden text-xs leading-normal text-secondary lg:block">
+            {{ ADMIN_BUGS_PAGE_DESCRIPTION }}
+          </p>
+
+          <!-- Широкие экраны: сводка и фильтры прямо в боковой колонке -->
+          <div class="hidden flex-col gap-3 lg:flex">
+            <ReuseStatusSummary />
+
+            <ReuseFilterFields />
+          </div>
+
+          <!-- Узкие экраны: одна кнопка вместо четырёх списков -->
+          <div class="flex gap-2 lg:hidden">
+            <USlideover
+              :title="ADMIN_BUGS_FILTERS_DRAWER_TITLE"
+              :ui="{
+                content: 'w-full max-w-sm',
+              }"
+              class="flex-1"
+            >
+              <UButton
+                icon="tabler:filter"
+                :label="ADMIN_BUGS_FILTERS_BUTTON_LABEL"
+                color="neutral"
+                variant="subtle"
+                block
+              >
+                <template #trailing>
+                  <UBadge
+                    v-if="hasActiveFilters"
+                    color="primary"
+                    variant="solid"
+                    size="sm"
+                    class="tabular-nums"
+                  >
+                    {{ activeFiltersCount }}
+                  </UBadge>
+                </template>
+              </UButton>
+
+              <template #body>
+                <div class="flex flex-col gap-4">
+                  <ReuseStatusSummary />
+
+                  <ReuseFilterFields />
+                </div>
+              </template>
+
+              <!-- Фильтры применяются сразу, поэтому кнопка только закрывает -->
+              <template #footer="{ close }">
+                <div class="flex w-full gap-2">
+                  <UButton
+                    block
+                    class="flex-1"
+                    @click.left.exact.prevent="close"
+                  >
+                    {{ ADMIN_BUGS_FILTERS_APPLY_LABEL }} ({{ totalBugsCount }})
+                  </UButton>
+
+                  <UButton
+                    v-if="hasActiveFilters"
+                    variant="ghost"
+                    color="error"
+                    icon="tabler:trash"
+                    @click.left.exact.prevent="resetFilters"
+                  >
+                    {{ ADMIN_BUGS_FILTERS_RESET_LABEL }}
+                  </UButton>
+                </div>
+              </template>
+            </USlideover>
+
+            <UButton
+              v-if="hasActiveFilters"
+              icon="tabler:trash"
+              color="neutral"
+              variant="subtle"
+              :title="ADMIN_BUGS_FILTERS_RESET_LABEL"
+              :aria-label="ADMIN_BUGS_FILTERS_RESET_LABEL"
+              square
+              @click.left.exact.prevent="resetFilters"
             />
           </div>
         </div>

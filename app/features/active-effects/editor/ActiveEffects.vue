@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { ActiveEffect, EffectOrigin } from '../model';
+  import type { ActiveEffect, EffectOrigin, EffectTarget } from '../model';
 
   import { EditorNestedSection } from '~ui/editor';
 
@@ -16,8 +16,16 @@
     origin = EFFECT_ORIGIN.spell,
     title = ACTIVE_EFFECT_LABELS.title,
     nested = false,
+    defaultTarget = 'self',
   } = defineProps<{
     origin?: EffectOrigin;
+
+    /**
+     * На кого нацелен новый эффект. У носителя, который описывает эффектом сам
+     * себя, это он сам; у действия существа — цель: укус накладывает Отравление
+     * на укушенного, а не на кусающего.
+     */
+    defaultTarget?: EffectTarget;
 
     /**
      * Заголовок блока. Своим его называет редактор, у которого эффекты лежат
@@ -63,24 +71,15 @@
     model.value.length ? {} : { body: 'p-0 sm:p-0' },
   );
 
-  /**
-   * Подпись кнопки свёртки для скринридера.
-   *
-   * @param index позиция эффекта в списке.
-   * @returns подпись действия.
-   */
-  function getToggleLabel(index: number): string {
-    return isExpanded(index)
-      ? ACTIVE_EFFECT_LABELS.collapse
-      : ACTIVE_EFFECT_LABELS.expand;
-  }
-
   function addEffect() {
     // Индекс считается ДО записи: `model.value` после присваивания ещё отдаёт
     // прежний массив — проп доедет только следующим тиком.
     const addedIndex = model.value.length;
 
-    model.value = [...model.value, createEmptyActiveEffect(origin)];
+    model.value = [
+      ...model.value,
+      createEmptyActiveEffect(origin, defaultTarget),
+    ];
 
     // Новый эффект сразу раскрыт: его всё равно тут же настраивают.
     expand(addedIndex);
@@ -124,32 +123,42 @@
         :key="index"
         class="rounded-lg border border-default bg-elevated/20"
       >
-        <div class="flex items-center gap-2 px-3 py-2">
-          <UIcon
-            :name="effect.icon || DEFAULT_EFFECT_ICON"
-            class="size-5 shrink-0 text-primary"
-          />
+        <div
+          class="relative flex items-center gap-2 px-3 py-2 transition-colors hover:bg-elevated/40"
+        >
+          <!-- Нажатие ловит накладка во всю плашку — псевдоэлемент кнопки от
+            края до края: попадать в один значок приходилось прицельно. Значок
+            свёртки от накладки не поднят, поэтому и он разворачивает эффект.
+            Кнопка удаления поднята над ней `relative` -->
+          <button
+            type="button"
+            class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md before:absolute before:inset-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            :aria-expanded="isExpanded(index)"
+            @click.left.exact.prevent="toggle(index)"
+          >
+            <UIcon
+              :name="effect.icon || DEFAULT_EFFECT_ICON"
+              class="size-5 shrink-0 text-primary"
+            />
 
-          <span class="min-w-0 flex-1 truncate text-base">
-            {{ effect.name || ACTIVE_EFFECT_LABELS.unnamed }}
-          </span>
+            <span class="min-w-0 flex-1 truncate text-left text-base">
+              {{ effect.name || ACTIVE_EFFECT_LABELS.unnamed }}
+            </span>
+          </button>
 
           <UButton
             icon="tabler:trash"
             color="error"
             variant="ghost"
             size="xs"
+            class="relative shrink-0"
             :aria-label="ACTIVE_EFFECT_LABELS.remove"
             @click.left.exact.prevent="askRemoveEffect(index)"
           />
 
-          <UButton
-            :icon="getToggleIcon(index)"
-            color="neutral"
-            variant="ghost"
-            size="xs"
-            :aria-label="getToggleLabel(index)"
-            @click.left.exact.prevent="toggle(index)"
+          <UIcon
+            :name="getToggleIcon(index)"
+            class="size-4 shrink-0 text-dimmed"
           />
         </div>
 

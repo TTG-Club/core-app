@@ -1,33 +1,12 @@
 <script setup lang="ts">
-  import type { CreateAction, LegendaryActions } from '~bestiary/model';
+  import type { LegendaryActions } from '../../model';
 
-  import { EditorArrayControls } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
 
-  function getEmpty(): CreateAction {
-    return {
-      name: {
-        rus: '',
-        eng: '',
-      },
-      description: '',
-      attackType: '',
-      savingThrows: [],
-      damageTypes: [],
-      recharge: undefined,
-      restrictionOfUse: undefined,
-    };
-  }
+  import { CREATURE_ACTION_ADD_LABELS } from '../constants';
+  import { CreatureActionList } from './action';
 
   const model = defineModel<LegendaryActions>({ required: true });
-
-  function isLastAction(index: number) {
-    return index === model.value.actions.length - 1;
-  }
-
-  function addAction(index: number) {
-    model.value.actions.splice(index, 0, getEmpty());
-  }
 </script>
 
 <template>
@@ -82,70 +61,11 @@
         </UFormField>
       </UForm>
 
-      <template
-        v-for="(action, actionIndex) in model.actions"
-        :key="actionIndex"
-      >
-        <UForm
-          class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
-          attach
-          :state="action"
-        >
-          <UFormField
-            class="col-span-full md:col-span-8"
-            label="Название"
-            name="name.rus"
-          >
-            <UInput
-              v-model="action.name.rus"
-              placeholder="Введи название"
-            />
-          </UFormField>
-
-          <UFormField
-            class="col-span-full md:col-span-8"
-            label="Название (англ.)"
-            name="name.eng"
-          >
-            <UInput
-              v-model="action.name.eng"
-              placeholder="Введи английское название"
-            />
-          </UFormField>
-
-          <EditorArrayControls
-            v-model="model.actions"
-            :item="action"
-            :empty-object="getEmpty()"
-            :index="actionIndex"
-            cols="8"
-            only-remove
-          />
-
-          <UFormField
-            class="col-span-full md:col-span-24"
-            label="Описание"
-            name="description"
-            :ui="{ root: 'w-full', container: 'w-full' }"
-          >
-            <MarkupEditor
-              v-model="action.description"
-              placeholder="Введи описание"
-            />
-          </UFormField>
-        </UForm>
-
-        <USeparator v-if="!isLastAction(actionIndex)" />
-      </template>
-
-      <div
-        v-if="!model.actions.length"
-        class="col-span-full flex justify-center"
-      >
-        <UButton @click.left.exact.prevent="addAction(0)">
-          Добавить первое
-        </UButton>
-      </div>
+      <CreatureActionList
+        v-model="model.actions"
+        :add-label="CREATURE_ACTION_ADD_LABELS.legendary"
+        path="legendary.actions"
+      />
     </div>
   </UCard>
 </template>

@@ -8,16 +8,33 @@
     item,
     index,
     cols = 6,
+    onlyRemove = false,
+    allowRemoveLast = false,
   } = defineProps<{
     item: T;
     emptyObject: T;
     index: number;
     onlyRemove?: boolean;
     cols?: number | string;
+
+    /**
+     * Разрешить удалять и последнюю строку. Ставится списками, у которых есть
+     * свой пустой вид с кнопкой добавления: без него удаление последней строки
+     * оставило бы форму вовсе без способа завести новую.
+     */
+    allowRemoveLast?: boolean;
   }>();
 
   const isEmpty = computed(() => isEqual(item, emptyObject));
   const isLast = computed(() => index === model.value.length - 1);
+
+  /**
+   * Последнюю строку по умолчанию не удаляют, а очищают: иначе список остался
+   * бы пустым и без полей для ввода.
+   */
+  const canClear = computed(
+    () => isLast.value && !onlyRemove && !allowRemoveLast,
+  );
 
   const colsClass = computed(() => {
     const colsValue = String(cols);
@@ -59,7 +76,7 @@
       </UButton>
 
       <UButton
-        v-if="isLast && !onlyRemove"
+        v-if="canClear"
         :disabled="isEmpty"
         variant="subtle"
         color="error"

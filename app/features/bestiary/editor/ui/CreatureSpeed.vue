@@ -1,141 +1,198 @@
 <script setup lang="ts">
-  import type { CreateSpeed, CreateSpeeds } from '~bestiary/model';
+  import type { CreateSpeed, CreateSpeeds } from '../../model';
 
-  import { SpeedType } from '~bestiary/model';
-  import { EditorArrayControls } from '~ui/editor';
+  import { isEqual } from 'es-toolkit';
 
-  const model = defineModel<CreateSpeeds>({
-    required: true,
-  });
+  import { getEmptyCreatureSpeed, SpeedType } from '../../model';
+  import {
+    CREATURE_SPEED_EDITOR,
+    CREATURE_SPEED_TYPE_LABELS,
+    CREATURE_SPEED_TYPES,
+  } from '../constants';
 
-  function getEmpty(key: SpeedType) {
-    const empty: CreateSpeed = {
-      value: 0,
-      text: undefined,
-    };
+  /**
+   * Скорости существа одним списком: заведённые идут строками по видам, а
+   * пустые виды места не занимают — их добавляют кнопками под списком. Раньше
+   * каждый вид был своей карточкой, и существо с одной ходьбой занимало пять
+   * карточек, четыре из которых — одна кнопка «Добавить».
+   */
+  const model = defineModel<CreateSpeeds>({ required: true });
 
-    if (key === SpeedType.FLY) {
-      empty.hover = false;
-    }
+  /** Заведена хотя бы одна скорость: иначе вместо списка — подсказка. */
+  const hasSpeeds = computed(() =>
+    CREATURE_SPEED_TYPES.some((type) => model.value[type].length > 0),
+  );
 
-    return empty;
+  /**
+   * Скорость вида можно удалить. Единственную ходьбу не удаляют, а очищают:
+   * она есть у любого существа, и статблок начинается с неё.
+   *
+   * @param type - вид скорости
+   */
+  function isSpeedRemovable(type: SpeedType): boolean {
+    return type !== SpeedType.WALK || model.value[type].length > 1;
   }
 
-  function getDividerContent(key: SpeedType) {
-    switch (key) {
-      case SpeedType.FLY:
-        return 'Скорость полета';
-      case SpeedType.CLIMB:
-        return 'Скорость лазания';
-      case SpeedType.SWIM:
-        return 'Скорость плавания';
-      case SpeedType.BURROW:
-        return 'Скорость копания';
-      default:
-        return 'Скорость передвижения';
-    }
+  /**
+   * Скорость совпадает с пустой — очищать нечего.
+   *
+   * @param type - вид скорости
+   * @param speed - скорость из списка вида
+   */
+  function isSpeedEmpty(type: SpeedType, speed: CreateSpeed): boolean {
+    return isEqual(speed, getEmptyCreatureSpeed(type));
   }
 
-  function createFirstSpeed(key: SpeedType) {
-    if (!model.value[key]) {
-      model.value[key] = [];
-    }
-
-    model.value[key].push(getEmpty(key));
+  /**
+   * Добавляет скорость вида в конец его списка. Вторая скорость того же вида —
+   * обычное дело: «30 фт., 40 фт. в облике волка».
+   *
+   * @param type - вид скорости
+   */
+  function addSpeed(type: SpeedType): void {
+    model.value[type].push(getEmptyCreatureSpeed(type));
   }
 
-  function getSpeedTextFieldClass(key: SpeedType): string {
-    return key !== SpeedType.FLY
-      ? 'col-span-full md:col-span-14'
-      : 'col-span-full md:col-span-12';
+  /**
+   * Убирает скорость из списка её вида.
+   *
+   * @param type - вид скорости
+   * @param index - место скорости в списке вида
+   */
+  function removeSpeed(type: SpeedType, index: number): void {
+    model.value[type].splice(index, 1);
+  }
+
+  /**
+   * Сбрасывает скорость к пустой, не убирая строку.
+   *
+   * @param type - вид скорости
+   * @param index - место скорости в списке вида
+   */
+  function clearSpeed(type: SpeedType, index: number): void {
+    model.value[type].splice(index, 1, getEmptyCreatureSpeed(type));
   }
 </script>
 
 <template>
-  <template
-    v-for="key in SpeedType"
-    :key
+  <UCard
+    variant="subtle"
+    class="col-span-full"
   >
-    <UCard
-      variant="subtle"
-      class="col-span-full"
-    >
-      <template #header>
-        <h2 class="truncate text-base text-highlighted">
-          {{ getDividerContent(key) }}
-        </h2>
-      </template>
+    <template #header>
+      <h2 class="truncate text-base text-highlighted">
+        {{ CREATURE_SPEED_EDITOR.title }}
+      </h2>
+    </template>
 
-      <div class="grid gap-4">
-        <UForm
-          v-for="(item, index) in model[key]"
-          :key="index"
-          class="col-span-full grid grid-cols-1 gap-4 md:grid-cols-24"
-          attach
-          :state="item"
+    <div class="flex flex-col gap-4">
+      <!-- Колонки у строк общие (subgrid): пояснение начинается на одной линии
+        во всех строках, хотя отметка «Парит» есть только у полёта. На телефоне
+        строка переносится: пояснение с кнопкой уходят на вторую линию, а
+        подпись и число сужены, чтобы «Парит» поместился в первую -->
+      <div
+        v-if="hasSpeeds"
+        class="grid grid-cols-1 gap-3 md:grid-cols-[auto_auto_auto_minmax(0,1fr)_auto] md:items-center"
+      >
+        <template
+          v-for="type in CREATURE_SPEED_TYPES"
+          :key="type"
         >
-          <UFormField
-            class="col-span-full md:col-span-4"
-            label="Скорость"
-            :name="`${key}.${index}.value`"
+          <div
+            v-for="(speed, index) in model[type]"
+            :key="`${type}-${index}`"
+            class="flex flex-wrap items-center gap-x-3 gap-y-2 md:col-span-full md:grid md:grid-cols-subgrid"
           >
-            <UFieldGroup>
+            <span
+              class="w-20 shrink-0 text-sm font-medium text-highlighted md:w-auto"
+            >
+              {{ CREATURE_SPEED_TYPE_LABELS[type] }}
+            </span>
+
+            <UFieldGroup class="shrink-0">
               <UInputNumber
-                v-model="item.value"
-                :precision="0"
-                placeholder="Введи скорость"
+                v-model="speed.value"
                 :min="0"
+                :aria-label="CREATURE_SPEED_TYPE_LABELS[type]"
+                class="w-24 md:w-28"
               />
 
               <UBadge
                 color="neutral"
                 variant="subtle"
               >
-                фт.
+                {{ CREATURE_SPEED_EDITOR.unit }}
               </UBadge>
             </UFieldGroup>
-          </UFormField>
 
-          <UFormField
-            v-if="key === 'fly'"
-            class="col-span-full flex h-12 items-end md:col-span-2"
-            :name="`${key}.${index}.hover`"
-          >
             <UCheckbox
-              v-model="item.hover"
-              label="Парит"
+              v-if="type === SpeedType.FLY"
+              v-model="speed.hover"
+              :label="CREATURE_SPEED_EDITOR.hover"
+              class="shrink-0 md:col-start-3"
             />
-          </UFormField>
 
-          <UFormField
-            :class="getSpeedTextFieldClass(key)"
-            label="Пояснение к скорости"
-            :name="`${key}.${index}.text`"
-          >
-            <UInput
-              v-model="item.text"
-              placeholder="Например, только в форме медведя"
-            />
-          </UFormField>
+            <div class="flex basis-full items-center gap-3 md:contents">
+              <UInput
+                v-model="speed.text"
+                :placeholder="CREATURE_SPEED_EDITOR.textPlaceholder"
+                :aria-label="CREATURE_SPEED_EDITOR.text"
+                class="w-full min-w-0 md:col-start-4"
+              />
 
-          <EditorArrayControls
-            v-model="model[key]"
-            :only-remove="key !== SpeedType.WALK"
-            :empty-object="getEmpty(key)"
-            :index
-            :item
-          />
-        </UForm>
+              <UTooltip
+                v-if="isSpeedRemovable(type)"
+                :text="CREATURE_SPEED_EDITOR.remove"
+              >
+                <UButton
+                  :icon="CREATURE_SPEED_EDITOR.removeIcon"
+                  color="error"
+                  variant="ghost"
+                  class="shrink-0 md:col-start-5"
+                  :aria-label="CREATURE_SPEED_EDITOR.remove"
+                  @click.left.exact.prevent="removeSpeed(type, index)"
+                />
+              </UTooltip>
 
-        <div
-          v-if="!model[key]?.length"
-          class="col-span-full flex justify-center"
-        >
-          <UButton @click.left.exact.prevent="createFirstSpeed(key)">
-            Добавить
-          </UButton>
-        </div>
+              <UTooltip
+                v-else
+                :text="CREATURE_SPEED_EDITOR.clear"
+              >
+                <UButton
+                  :icon="CREATURE_SPEED_EDITOR.clearIcon"
+                  color="error"
+                  variant="ghost"
+                  class="shrink-0 md:col-start-5"
+                  :disabled="isSpeedEmpty(type, speed)"
+                  :aria-label="CREATURE_SPEED_EDITOR.clear"
+                  @click.left.exact.prevent="clearSpeed(type, index)"
+                />
+              </UTooltip>
+            </div>
+          </div>
+        </template>
       </div>
-    </UCard>
-  </template>
+
+      <p
+        v-else
+        class="text-sm text-muted"
+      >
+        {{ CREATURE_SPEED_EDITOR.empty }}
+      </p>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-sm text-muted">{{ CREATURE_SPEED_EDITOR.add }}</span>
+
+        <UButton
+          v-for="type in CREATURE_SPEED_TYPES"
+          :key="type"
+          :label="CREATURE_SPEED_TYPE_LABELS[type]"
+          :icon="CREATURE_SPEED_EDITOR.addIcon"
+          variant="subtle"
+          size="sm"
+          @click.left.exact.prevent="addSpeed(type)"
+        />
+      </div>
+    </div>
+  </UCard>
 </template>
