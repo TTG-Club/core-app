@@ -70,6 +70,11 @@ export type ArticleTelegramFormat = 'INSTANT_VIEW' | 'FULL_TEXT';
  *   работают `**жирный**`, `*курсив*` и маркеры `{@...}`;
  * - `publishToDiscord` — при сохранении продублировать новость в Discord через вебхук;
  * - `discordMention` — пинг в Discord-канале при публикации (учитывается при `publishToDiscord`);
+ * - `discordCompact` — компактный пост в Discord: вместо анонса и содержания уходит
+ *   `discordCompactText`, а в конце поста бэк сам добавляет ссылку на новость на сайте
+ *   (учитывается при `publishToDiscord`);
+ * - `discordCompactText` — текст компактного поста (учитывается при `discordCompact`). Обычный
+ *   текст, как у `telegramSummary`; пустой — в посте останутся заголовок и ссылка на сайт;
  * - `publishToVk` — при сохранении продублировать новость в сообщество ВКонтакте.
  */
 export interface ArticleRequest {
@@ -84,6 +89,8 @@ export interface ArticleRequest {
   telegramSummary: string;
   publishToDiscord: boolean;
   discordMention: ArticleDiscordMention;
+  discordCompact: boolean;
+  discordCompactText: string;
   publishToVk: boolean;
   title: string;
   previewImageUrl: string | null;
