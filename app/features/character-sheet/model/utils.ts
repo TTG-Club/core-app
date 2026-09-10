@@ -6205,7 +6205,7 @@ export function parseResourceMaxFormula(
  * нет вовсе — там `null`, и лист берёт формулу либо число.
  *
  * @param scaling ступени максимума.
- * @param level уровень персонажа.
+ * @param level уровень в классе-владельце ресурса; у черты — уровень персонажа.
  * @returns максимум зарядов; null — ступеней нет либо персонаж не дорос.
  */
 function getScaledCounterMax(
@@ -6249,22 +6249,21 @@ export function getResourceMax(
   const { source, ability, offset, multiplier, scaling, min } =
     resource.maxRule;
 
+  // Класс-владелец опознаётся по идентификатору ресурса: очки чародейства
+  // считаются от уровня В ЧАРОДЕЕ, а не от суммы уровней мультикласса. Ступени
+  // справочник пишет в тех же уровнях класса — «Второе дыхание» у варвара 9 /
+  // воина 2 растёт по уровню воина.
+  const classLevel = getOwnerClassLevel(character, resource.id);
+
   // Ступень старше источника: ряд, который формулой не пишется, задан ею же и
   // точнее любого выражения
-  const scaled = getScaledCounterMax(scaling ?? [], character.level);
+  const scaled = getScaledCounterMax(scaling ?? [], classLevel);
 
   if (scaled !== null) {
     return withResourceMinimum(scaled, min);
   }
 
-  const base = getResourceMaxBase(
-    character,
-    source,
-    ability,
-    // Класс-владелец опознаётся по идентификатору ресурса: очки чародейства
-    // считаются от уровня В ЧАРОДЕЕ, а не от суммы уровней мультикласса
-    getOwnerClassLevel(character, resource.id),
-  );
+  const base = getResourceMaxBase(character, source, ability, classLevel);
 
   return withResourceMinimum(
     clamp(
