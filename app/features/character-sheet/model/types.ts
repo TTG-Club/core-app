@@ -1050,7 +1050,7 @@ export interface ToolCatalogGroup {
 
 /** Группа каталога языков в настройках владения. */
 export interface LanguageProficiencyGroup extends ProficiencyCatalogGroup {
-  key: 'standard' | 'rare' | 'exotic';
+  key: 'standard' | 'rare';
 }
 
 /** Выбранный вид персонажа. */

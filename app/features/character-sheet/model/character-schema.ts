@@ -18,7 +18,7 @@ import type {
   SavedCharacterSheetListPage,
 } from './types';
 
-import { clamp } from 'es-toolkit';
+import { clamp, uniqBy } from 'es-toolkit';
 
 import { z } from '~/utils/zod';
 import { normalizeLoadedActiveEffects } from '~active-effects/model';
@@ -32,6 +32,7 @@ import {
   EXHAUSTION_LEVEL_MIN,
   INVENTORY_QUANTITY_MAX,
   INVENTORY_QUANTITY_MIN,
+  LEGACY_LANGUAGE_GROUPS,
   LEGACY_NOTE_ID,
   LEGACY_STEALTH_DISADVANTAGE_ARMOR_URLS,
   LEVEL_MAX,
@@ -42,6 +43,7 @@ import {
   SHEET_NOTE_LABELS,
 } from './constants';
 import { DEFAULT_CHARACTER } from './mock';
+import { normalizeCatalogName } from './utils';
 
 /**
  * Схема сохранённого персонажа. Каждое поле снабжено `catch`-дефолтом из
@@ -878,6 +880,33 @@ const classResourceSchema = z
     longRest: toResourceRecoveryRule(longRest, recovery, false),
   }));
 
+/**
+ * Языки листа без легаси-подписей «вся группа». Прежде окно владения языками при
+ * отмеченной целиком группе писало вместо языков одну подпись («Все редкие
+ * языки»), а состав групп с тех пор сменился на таблицы 2024. Подпись
+ * разворачивается в тот состав, что она означала при записи
+ * (`LEGACY_LANGUAGE_GROUPS`), — иначе у живых персонажей молча поменялись бы
+ * языки, а «Все экзотические языки» стали бы своим языком. Остальные записи,
+ * свои языки в том числе, остаются на своих местах. Повторы выпадают —
+ * остаётся первое вхождение: разворот может дать язык, который у персонажа уже
+ * записан отдельно.
+ *
+ * @param languages языки записи листа.
+ * @returns языки поимённо, без повторов.
+ */
+function toLanguagesWithoutLegacyGroups(languages: string[]): string[] {
+  const expanded = languages.flatMap((entry) => {
+    const legacyGroup = LEGACY_LANGUAGE_GROUPS.find(
+      (group) =>
+        normalizeCatalogName(group.all) === normalizeCatalogName(entry),
+    );
+
+    return legacyGroup?.items ?? [entry];
+  });
+
+  return uniqBy(expanded, (name) => normalizeCatalogName(name));
+}
+
 const proficienciesSchema = z
   .object({
     armor: z.array(z.string()).catch([]),
@@ -885,7 +914,10 @@ const proficienciesSchema = z
     weaponMasteries: z.array(z.string()).catch([]),
     masteryProperties: z.array(z.string()).catch([]),
     tools: z.array(toolProficiencySchema).catch([]),
-    languages: z.array(z.string()).catch([]),
+    languages: z
+      .array(z.string())
+      .catch([])
+      .transform(toLanguagesWithoutLegacyGroups),
   })
   .catch(() => structuredClone(DEFAULT_CHARACTER.proficiencies));
 
