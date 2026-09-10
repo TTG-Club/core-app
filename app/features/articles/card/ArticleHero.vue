@@ -2,8 +2,11 @@
   import type { ArticleShortResponse } from '../model';
 
   import {
+    ARTICLE_ADMIN_NEWS_LIST_LABEL,
+    ARTICLE_CREATE_NEWS_LABEL,
     ARTICLE_DATE_FORMAT,
     ARTICLE_FALLBACK_IMAGE,
+    ARTICLE_OPEN_PAGE_LABEL,
     ARTICLES_ADMIN_CREATE_ROUTE,
     ARTICLES_ADMIN_NEWS_ROUTE,
     getArticlePreviewText,
@@ -46,23 +49,74 @@
 </script>
 
 <template>
-  <div
-    class="group relative flex min-h-44 cursor-pointer flex-col justify-end overflow-hidden rounded-none text-white no-underline sm:min-h-52"
-    role="button"
-    tabindex="0"
-    @click="$emit('open')"
-    @keydown.enter.prevent="$emit('open')"
-    @keydown.space.prevent="$emit('open')"
-  >
-    <img
-      :src="coverImage"
-      :alt="article.title"
-      class="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-    />
+  <!--
+    Кнопки действий лежат рядом со ссылкой-обложкой, а не внутри неё: ссылка
+    внутри ссылки — невалидная разметка, и клик по кнопке пришлось бы глушить,
+    чтобы он не открывал дровер.
+  -->
+  <div class="group relative overflow-hidden">
+    <!--
+      Обычный клик открывает дровер, ctrl+click и средняя кнопка — страницу
+      записи (за это отвечает `.exact`). `custom` обязателен: у обычного
+      NuxtLink собственный переход RouterLink срабатывает раньше нашего
+      `.prevent`, и вместо дровера открывалась страница.
+    -->
+    <NuxtLink
+      v-slot="{ href }"
+      custom
+      :to="articleRoute"
+    >
+      <a
+        :href="href ?? undefined"
+        class="relative block text-white no-underline"
+        @click.left.exact.prevent="$emit('open')"
+      >
+        <img
+          :src="coverImage"
+          :alt="article.title"
+          class="aspect-16/10 w-full object-cover transition-transform duration-500 group-hover:scale-105 sm:aspect-2/1 xl:aspect-21/9"
+        />
 
-    <div
-      class="absolute inset-0 bg-linear-to-t from-black/90 via-black/60 to-black/20"
-    />
+        <div
+          aria-hidden="true"
+          class="absolute inset-0 bg-linear-to-t from-black/92 via-black/55 to-black/10"
+        />
+
+        <div
+          class="absolute inset-x-0 bottom-0 z-10 flex flex-col gap-2 p-4 sm:p-6"
+        >
+          <span
+            class="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] leading-none tracking-[0.16em] text-white/70 uppercase"
+          >
+            {{ article.typeName }}
+
+            <template v-if="publishedAt">
+              <span
+                aria-hidden="true"
+                class="text-white/40"
+              >
+                ·
+              </span>
+
+              {{ publishedAt }}
+            </template>
+          </span>
+
+          <h3
+            class="line-clamp-2 text-xl leading-tight font-semibold text-balance [text-shadow:0_2px_8px_#000000a0] sm:text-2xl xl:text-3xl"
+          >
+            {{ article.title }}
+          </h3>
+
+          <p
+            v-if="previewText"
+            class="line-clamp-2 max-w-3xl text-sm leading-snug text-white/80 [text-shadow:0_2px_6px_#00000090] sm:text-base"
+          >
+            {{ previewText }}
+          </p>
+        </div>
+      </a>
+    </NuxtLink>
 
     <div class="absolute top-2 right-2 z-20 flex items-center gap-1">
       <UButton
@@ -72,9 +126,7 @@
         variant="ghost"
         size="sm"
         :class="heroActionClass"
-        aria-label="Создать новость"
-        @click.stop
-        @keydown.stop
+        :aria-label="ARTICLE_CREATE_NEWS_LABEL"
       />
 
       <UButton
@@ -84,9 +136,7 @@
         variant="ghost"
         size="sm"
         :class="heroActionClass"
-        aria-label="Список новостей в админ-панели"
-        @click.stop
-        @keydown.stop
+        :aria-label="ARTICLE_ADMIN_NEWS_LIST_LABEL"
       />
 
       <UButton
@@ -95,32 +145,8 @@
         variant="ghost"
         size="sm"
         :class="heroActionClass"
-        :aria-label="`Открыть «${article.title}» на отдельной странице`"
-        @click.stop
-        @keydown.stop
+        :aria-label="ARTICLE_OPEN_PAGE_LABEL"
       />
-    </div>
-
-    <div class="relative z-10 flex flex-col gap-1 p-4 sm:p-5">
-      <span
-        v-if="publishedAt"
-        class="text-xs text-white/80"
-      >
-        {{ publishedAt }}
-      </span>
-
-      <h3
-        class="line-clamp-2 text-lg leading-tight font-bold [text-shadow:0_2px_4px_#0000006e] sm:text-xl"
-      >
-        {{ article.title }}
-      </h3>
-
-      <p
-        v-if="previewText"
-        class="line-clamp-2 text-sm leading-snug text-white/85 [text-shadow:0_2px_4px_#0000006e]"
-      >
-        {{ previewText }}
-      </p>
     </div>
   </div>
 </template>

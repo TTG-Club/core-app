@@ -200,7 +200,18 @@ export default defineNuxtConfig({
       fontshare: false,
     },
     priority: ['google', 'fontsource'],
-    families: [{ name: 'Open Sans' }],
+    families: [
+      { name: 'Open Sans' },
+      // Моноширинный шрифт микро-подписей и счётчиков на главной (и всех мест,
+      // где уже используется `font-mono`: коды, промо-коды, броски кубов).
+      // Кириллица нужна для подписей вида «МАТЕРИАЛОВ», латиница — для чисел
+      // и англоязычных названий; жирнее 600 нигде не требуется.
+      {
+        name: 'JetBrains Mono',
+        subsets: ['latin', 'cyrillic'],
+        weights: ['400', '500', '600'],
+      },
+    ],
   },
 
   image: {

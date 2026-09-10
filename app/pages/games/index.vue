@@ -8,6 +8,7 @@
     GAMES_NAVIGATION_LABEL,
   } from '~find-game/model';
   import { NotificationsBell } from '~find-game/notifications';
+  import { PageBackdrop } from '~ui/page';
 
   useSeoMeta({
     title: 'Поиск игр — D&D 5 (2024)',
@@ -44,6 +45,8 @@
     </template>
 
     <template #default>
+      <PageBackdrop />
+
       <GameCatalog />
     </template>
   </NuxtLayout>
