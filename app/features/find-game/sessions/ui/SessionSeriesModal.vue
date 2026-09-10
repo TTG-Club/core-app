@@ -21,8 +21,10 @@
     SESSION_FREE_SESSION_LABEL,
     SESSION_PAID_HINT,
     SESSION_PAYMENT_TYPE_LABEL,
+    SESSION_PRICE_FORMAT,
     SESSION_PRICE_LABEL,
     SESSION_PRICE_MIN,
+    SESSION_PRICE_STEP,
     SESSION_SERIES_CREATE_LABEL,
     SESSION_SERIES_DEFAULT_HORIZON,
     SESSION_SERIES_DEFAULT_HORIZON_UNIT,
@@ -384,6 +386,8 @@
             <UInputNumber
               v-model="priceAmount"
               :min="SESSION_PRICE_MIN"
+              :step="SESSION_PRICE_STEP"
+              :format-options="SESSION_PRICE_FORMAT"
               class="w-full"
             />
           </UFormField>

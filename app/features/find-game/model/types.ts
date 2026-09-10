@@ -401,6 +401,12 @@ export interface GameSession {
    */
   completedAt: string | null;
   registeredPlayerIds: Array<string>;
+
+  /**
+   * Кто подтвердил участие. Пока список пуст, сервис не даёт начать встречу:
+   * иначе счётчик сыгранных набивался бы пустыми сессиями.
+   */
+  confirmedPlayerIds: Array<string>;
 }
 
 /** Тело создания сессии. */

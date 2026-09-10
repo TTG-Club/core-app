@@ -29,6 +29,7 @@
     SESSION_PARTICIPANTS_COUNT_LABEL,
     SESSION_PARTICIPANTS_LABEL,
     SESSION_START_LABEL,
+    SESSION_START_NEEDS_CONFIRMATION,
   } from '../../model';
 
   const {
@@ -104,6 +105,18 @@
   );
 
   /**
+   * Объяснение вместо кнопки «Начать»: мастер иначе не поймёт, почему её нет.
+   * Показывается только владельцу и только у встречи, которую уже пора бы
+   * начать.
+   */
+  const showStartHint = computed(
+    () =>
+      abilities.isMaster
+      && session.status === 'SCHEDULED'
+      && session.confirmedPlayerIds.length === 0,
+  );
+
+  /**
    * Есть ли у зрителя действия над встречей: без них отделять линией нечего,
    * а пустая линия читается сломанной вёрсткой.
    */
@@ -114,7 +127,8 @@
       || sessionAbilities.value.canStart
       || sessionAbilities.value.canComplete
       || sessionAbilities.value.canReview
-      || sessionAbilities.value.canCancel,
+      || sessionAbilities.value.canCancel
+      || showStartHint.value,
   );
 
   /**
@@ -282,6 +296,13 @@
         :label="SESSION_START_LABEL"
         @click.left.exact.prevent="emit('start', session)"
       />
+
+      <span
+        v-else-if="showStartHint"
+        class="text-xs text-muted"
+      >
+        {{ SESSION_START_NEEDS_CONFIRMATION }}
+      </span>
 
       <UButton
         v-if="sessionAbilities.canComplete"
