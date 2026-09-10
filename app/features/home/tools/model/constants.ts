@@ -1,6 +1,7 @@
 import type { HomeTool } from './types';
 
 import { CHARACTER_SHEET_ROUTE } from '~character-sheet/model';
+import { GAMES_CATALOG_NAVIGATION_LABEL, GAMES_ROUTE } from '~find-game/model';
 import {
   INITIATIVE_TOOL_ROUTE,
   INITIATIVE_TOOL_TITLE,
@@ -35,5 +36,10 @@ export const HOME_TOOLS: Array<HomeTool> = [
     label: 'Лист персонажа',
     icon: 'tabler:id',
     to: CHARACTER_SHEET_ROUTE,
+  },
+  {
+    label: GAMES_CATALOG_NAVIGATION_LABEL,
+    icon: 'tabler:users-group',
+    to: GAMES_ROUTE,
   },
 ];

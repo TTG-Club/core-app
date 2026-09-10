@@ -364,6 +364,18 @@ export const GAME_COST_TYPE_LABELS = {
   PAID: 'Платно',
 } as const;
 
+/** Цвет значка стоимости: бесплатная игра — спокойным цветом, платная — предупреждающим. */
+export const GAME_COST_TYPE_COLORS = {
+  FREE: 'success',
+  PAID: 'warning',
+} as const;
+
+/** Иконка значка стоимости в карточке: монета только у платной игры. */
+export const GAME_COST_TYPE_ICONS = {
+  FREE: undefined,
+  PAID: 'tabler:coins',
+} as const;
+
 export const GAME_VISIBILITY_LABELS = {
   PUBLIC: 'Публичная',
   PRIVATE: 'По приглашению',
