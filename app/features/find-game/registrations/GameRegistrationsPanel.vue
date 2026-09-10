@@ -11,10 +11,22 @@
   } from '../composables';
   import {
     GAME_APPROVED_PLAYERS_LABEL,
+    REGISTRATION_FILTERS,
     REGISTRATION_REVIEWED_TOAST,
+    REGISTRATIONS_DEFAULT_FILTER,
     REGISTRATIONS_EMPTY_TITLE,
+    REGISTRATIONS_FILTER_EMPTY_TITLE,
+    REGISTRATIONS_FILTER_LABEL,
+    SESSION_REGISTRATION_STATUSES,
   } from '../model';
   import { RegistrationRejectModal, RegistrationRow } from './ui';
+
+  // `USelect` показывает подпись и хранит значение; состав статусов нужен
+  // только отбору и в список не идёт.
+  const filterItems = REGISTRATION_FILTERS.map(({ value, label }) => ({
+    value,
+    label,
+  }));
 
   const { game } = defineProps<{
     game: Game;
@@ -65,8 +77,29 @@
       `${GAME_APPROVED_PLAYERS_LABEL}: ${approvedRegistrations.value.length} / ${game.maxPlayers}`,
   );
 
+  const statusFilter = ref(REGISTRATIONS_DEFAULT_FILTER);
+
+  const visibleRegistrations = computed(() => {
+    const statuses =
+      REGISTRATION_FILTERS.find((option) => option.value === statusFilter.value)
+        ?.statuses ?? SESSION_REGISTRATION_STATUSES;
+
+    return registrations.value.filter((registration) =>
+      statuses.includes(registration.status),
+    );
+  });
+
   const isEmpty = computed(
     () => status.value === 'success' && !registrations.value.length,
+  );
+
+  // Пустой отбор объясняется отдельно: заявки в игре есть, просто не в этом
+  // состоянии, и предлагать «дождитесь заявок» здесь неверно.
+  const isFilterEmpty = computed(
+    () =>
+      status.value === 'success'
+      && registrations.value.length > 0
+      && !visibleRegistrations.value.length,
   );
 
   // Заявки приходят с идентификаторами игроков, а показать нужно имена: их
@@ -128,14 +161,25 @@
 
 <template>
   <div class="flex flex-col gap-3">
-    <UBadge
-      :color="seatsBadgeColor"
-      variant="subtle"
-      size="sm"
-      icon="tabler:users"
-      class="self-start"
-      :label="fillLabel"
-    />
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <UBadge
+        :color="seatsBadgeColor"
+        variant="subtle"
+        size="sm"
+        icon="tabler:users"
+        :label="fillLabel"
+      />
+
+      <USelect
+        v-model="statusFilter"
+        value-key="value"
+        icon="tabler:filter"
+        size="sm"
+        class="w-52"
+        :items="filterItems"
+        :aria-label="REGISTRATIONS_FILTER_LABEL"
+      />
+    </div>
 
     <div
       v-if="isLoading"
@@ -154,12 +198,18 @@
       :title="REGISTRATIONS_EMPTY_TITLE"
     />
 
+    <UiResult
+      v-else-if="isFilterEmpty"
+      status="info"
+      :title="REGISTRATIONS_FILTER_EMPTY_TITLE"
+    />
+
     <div
       v-else
       class="grid items-start gap-3 md:grid-cols-2 xl:grid-cols-3"
     >
       <RegistrationRow
-        v-for="registration in registrations"
+        v-for="registration in visibleRegistrations"
         :key="registration.id"
         :registration="registration"
         :player-name="getParticipantName(registration.playerId)"

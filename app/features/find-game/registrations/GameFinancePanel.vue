@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { Game, GameFinanceAccount } from '../model';
+  import type { Game, GameFinanceAccount, GameFinanceBill } from '../model';
 
   import { UiResult } from '~ui/result';
 
@@ -11,7 +11,7 @@
     GAME_FINANCE_AMOUNT,
     GAME_FINANCE_BALANCE,
     GAME_FINANCE_CONFIRM,
-    GAME_FINANCE_DEBT,
+    GAME_FINANCE_DEBT_DETAILS,
     GAME_FINANCE_EMPTY,
     GAME_FINANCE_PENDING,
     GAME_FINANCE_TITLE,
@@ -22,6 +22,57 @@
     SESSION_DEFAULT_CURRENCY,
     topUpGameAccount,
   } from '../model';
+
+  /** Готовый бейдж баланса по одной валюте: разные деньги не складываются. */
+  interface CurrencyBalance {
+    currency: string;
+    label: string;
+    color: 'error' | 'neutral';
+  }
+
+  /**
+   * Счёт игрока для карточки: в шапке стоит баланс по каждой валюте, а
+   * разбивка по встречам уезжает под спойлер — иначе карточка растёт с
+   * каждым долгом.
+   */
+  interface FinanceAccountView {
+    account: GameFinanceAccount;
+    balances: Array<CurrencyBalance>;
+    debtsLabel: string;
+    debtBills: Array<GameFinanceBill>;
+    claimedBills: Array<GameFinanceBill>;
+  }
+
+  /**
+   * Баланс по каждой валюте счёта с вычтенными долгами: отдельная строка
+   * долга рядом с нулевым балансом ничего не объясняет, а баланс со знаком
+   * минус сразу показывает, сколько игрок должен.
+   */
+  function getAccountBalances(
+    account: GameFinanceAccount,
+  ): Array<CurrencyBalance> {
+    const totals = new Map<string, number>(Object.entries(account.balances));
+
+    for (const bill of account.bills) {
+      if (bill.remaining > 0) {
+        totals.set(
+          bill.currency,
+          (totals.get(bill.currency) ?? 0) - bill.remaining,
+        );
+      }
+    }
+
+    return [...totals].map(([currency, amount]) => ({
+      currency,
+      label: `${GAME_FINANCE_BALANCE}: ${formatMoney(amount, currency)}`,
+      color: amount < 0 ? 'error' : 'neutral',
+    }));
+  }
+
+  /** Поворачивает стрелку спойлера, пока он раскрыт. */
+  function getToggleIconClass(isOpen: boolean): string {
+    return isOpen ? 'rotate-180 transition-transform' : 'transition-transform';
+  }
 
   /** Валюта депозита по умолчанию: та, в которой у игрока уже есть долг. */
   function getDefaultDepositCurrency(account: GameFinanceAccount): string {
@@ -67,6 +118,20 @@
       );
     },
     { immediate: true },
+  );
+
+  const accountViews = computed<Array<FinanceAccountView>>(() =>
+    finance.value.accounts.map((account) => {
+      const debtBills = account.bills.filter((bill) => bill.remaining > 0);
+
+      return {
+        account,
+        balances: getAccountBalances(account),
+        debtsLabel: `${GAME_FINANCE_DEBT_DETAILS} (${debtBills.length})`,
+        debtBills,
+        claimedBills: account.bills.filter((bill) => bill.claimed > 0),
+      };
+    }),
   );
 
   /** Форматирует отдельную валюту без смешивания балансов. */
@@ -158,44 +223,60 @@
       class="grid gap-3 lg:grid-cols-2"
     >
       <UCard
-        v-for="account in finance.accounts"
-        :key="account.playerId"
+        v-for="view in accountViews"
+        :key="view.account.playerId"
         :ui="{ body: 'p-4' }"
       >
         <div class="flex flex-col gap-3">
           <div class="flex items-center justify-between gap-3">
             <span class="font-medium text-highlighted">{{
-              getParticipantName(account.playerId)
+              getParticipantName(view.account.playerId)
             }}</span>
 
             <div class="flex flex-wrap justify-end gap-1">
               <UBadge
-                v-for="(balance, currency) in account.balances"
-                :key="currency"
-                color="neutral"
+                v-for="balance in view.balances"
+                :key="balance.currency"
                 variant="subtle"
-                :label="`${GAME_FINANCE_BALANCE}: ${formatMoney(balance, currency)}`"
+                :color="balance.color"
+                :label="balance.label"
               />
             </div>
           </div>
 
-          <div
-            v-if="account.bills.some((bill) => bill.remaining > 0)"
-            class="flex flex-col gap-1 text-sm"
+          <UCollapsible
+            v-if="view.debtBills.length > 0"
+            :ui="{ content: 'pt-2' }"
           >
-            <span
-              v-for="bill in account.bills.filter((bill) => bill.remaining > 0)"
-              :key="bill.sessionId"
-              class="text-error"
-            >
-              {{ GAME_FINANCE_DEBT }}: {{ bill.title }} —
-              {{ formatMoney(bill.remaining, bill.currency) }}
-            </span>
-          </div>
+            <template #default="{ open }">
+              <UButton
+                class="-ml-2 self-start"
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                trailing-icon="tabler:chevron-down"
+                :label="view.debtsLabel"
+                :ui="{ trailingIcon: getToggleIconClass(open) }"
+              />
+            </template>
+
+            <template #content>
+              <div class="flex flex-col gap-1 text-sm">
+                <span
+                  v-for="bill in view.debtBills"
+                  :key="bill.sessionId"
+                  class="text-error"
+                >
+                  {{ bill.title }} —
+                  {{ formatMoney(bill.remaining, bill.currency) }}
+                </span>
+              </div>
+            </template>
+          </UCollapsible>
 
           <div class="flex flex-wrap gap-2">
             <UInput
-              v-model.number="depositAmounts[account.playerId]"
+              v-model.number="depositAmounts[view.account.playerId]"
               type="number"
               min="0"
               step="0.01"
@@ -204,7 +285,7 @@
             />
 
             <USelectMenu
-              v-model="depositCurrencies[account.playerId]"
+              v-model="depositCurrencies[view.account.playerId]"
               value-key="value"
               :items="SESSION_CURRENCY_OPTIONS"
               :placeholder="SESSION_CURRENCY_PLACEHOLDER"
@@ -217,16 +298,16 @@
               icon="tabler:plus"
               :loading="isSaving"
               :label="GAME_FINANCE_TOP_UP"
-              @click.left.exact.prevent="addDeposit(account)"
+              @click.left.exact.prevent="addDeposit(view.account)"
             />
           </div>
 
           <div
-            v-if="account.bills.some((bill) => bill.claimed > 0)"
+            v-if="view.claimedBills.length > 0"
             class="flex flex-col gap-2 border-t border-default pt-3"
           >
             <div
-              v-for="bill in account.bills.filter((bill) => bill.claimed > 0)"
+              v-for="bill in view.claimedBills"
               :key="bill.sessionId"
               class="flex items-center justify-between gap-2 text-sm"
             >
@@ -240,7 +321,7 @@
                 :loading="isSaving"
                 :label="GAME_FINANCE_CONFIRM"
                 @click.left.exact.prevent="
-                  confirmPayment(bill.sessionId, account.playerId)
+                  confirmPayment(bill.sessionId, view.account.playerId)
                 "
               />
             </div>

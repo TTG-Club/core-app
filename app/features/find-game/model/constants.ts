@@ -34,6 +34,7 @@ export const GAME_FINANCE_EMPTY = 'У игры пока нет финансов�
 export const GAME_FINANCE_TOP_UP = 'Внести депозит';
 export const GAME_FINANCE_BALANCE = 'Баланс';
 export const GAME_FINANCE_DEBT = 'Долг';
+export const GAME_FINANCE_DEBT_DETAILS = 'Долги по встречам';
 export const GAME_FINANCE_PAY = 'Оплатить с баланса';
 export const GAME_FINANCE_CLAIM = 'Я оплатил';
 export const GAME_FINANCE_PENDING = 'Ожидает подтверждения';
@@ -273,10 +274,15 @@ export const SESSION_WEEKDAY_LABELS = {
 export const NOTIFICATION_TYPES = [
   'REGISTRATION_SUBMITTED',
   'REGISTRATION_APPROVED',
+  'REGISTRATION_REJECTED',
+  'REGISTRATION_WITHDRAWN',
+  'PLAYER_REMOVED',
   'SESSION_SCHEDULED',
   'SESSION_STARTED',
   'SESSION_COMPLETED',
   'SESSION_CANCELLED',
+  'GAME_CLOSED',
+  'GAME_CANCELLED',
   'MASTER_PUBLISHED_GAME',
   'GAME_INVITE',
 ] as const;
@@ -285,9 +291,14 @@ export const NOTIFICATION_TEXTS = {
   SESSION_CANCELLED: 'Сессия отменена',
   REGISTRATION_SUBMITTED: 'Новая заявка в сессию',
   REGISTRATION_APPROVED: 'Заявка принята',
-  SESSION_SCHEDULED: 'Назначена дата сессии',
+  REGISTRATION_REJECTED: 'Заявка отклонена',
+  REGISTRATION_WITHDRAWN: 'Игрок вышел из игры',
+  PLAYER_REMOVED: 'Мастер исключил вас из игры',
+  SESSION_SCHEDULED: 'Назначена новая встреча',
   SESSION_STARTED: 'Сессия началась',
   SESSION_COMPLETED: 'Сессия завершена',
+  GAME_CLOSED: 'Игра завершена',
+  GAME_CANCELLED: 'Игра отменена',
   MASTER_PUBLISHED_GAME: 'Отмеченный мастер объявил игру',
   GAME_INVITE: 'Мастер зовёт вас в игру',
 } as const;
@@ -296,9 +307,14 @@ export const NOTIFICATION_ICONS = {
   SESSION_CANCELLED: 'tabler:calendar-x',
   REGISTRATION_SUBMITTED: 'tabler:user-plus',
   REGISTRATION_APPROVED: 'tabler:user-check',
-  SESSION_SCHEDULED: 'tabler:calendar-check',
+  REGISTRATION_REJECTED: 'tabler:user-x',
+  REGISTRATION_WITHDRAWN: 'tabler:user-minus',
+  PLAYER_REMOVED: 'tabler:user-off',
+  SESSION_SCHEDULED: 'tabler:calendar-plus',
   SESSION_STARTED: 'tabler:player-play',
   SESSION_COMPLETED: 'tabler:flag-check',
+  GAME_CLOSED: 'tabler:circle-check',
+  GAME_CANCELLED: 'tabler:ban',
   MASTER_PUBLISHED_GAME: 'tabler:bookmark',
   GAME_INVITE: 'tabler:mail',
 } as const;
@@ -1261,6 +1277,33 @@ export const SESSIONS_EMPTY_MASTER_DESCRIPTION =
 export const SESSIONS_EMPTY_PLAYER_DESCRIPTION =
   'Мастер ещё не назначил ни одной сессии.';
 export const GAME_APPROVED_PLAYERS_LABEL = 'Принято игроков';
+
+/**
+ * Отборы состава на вкладке «Участники». Отклонённая заявка — это и отказ
+ * новичку, и исключение игрока мастером: обе остаются историей, но каждый
+ * день мастеру нужен живой состав, поэтому по умолчанию их не видно.
+ * Вышедшие сами исчезают сами: сервис удаляет их заявку.
+ */
+export const REGISTRATION_FILTERS: ReadonlyArray<{
+  value: string;
+  label: string;
+  statuses: ReadonlyArray<(typeof SESSION_REGISTRATION_STATUSES)[number]>;
+}> = [
+  {
+    value: 'ACTIVE',
+    label: 'В составе и заявки',
+    statuses: ['PENDING', 'APPROVED'],
+  },
+  { value: 'PENDING', label: 'На рассмотрении', statuses: ['PENDING'] },
+  { value: 'APPROVED', label: 'Принятые', statuses: ['APPROVED'] },
+  { value: 'REJECTED', label: 'Отклонённые', statuses: ['REJECTED'] },
+  { value: 'ALL', label: 'Все', statuses: SESSION_REGISTRATION_STATUSES },
+];
+
+export const REGISTRATIONS_DEFAULT_FILTER = 'ACTIVE';
+export const REGISTRATIONS_FILTER_LABEL = 'Показывать';
+
+export const REGISTRATIONS_FILTER_EMPTY_TITLE = 'Заявок в этом состоянии нет';
 export const SESSION_PARTICIPANTS_COUNT_LABEL = 'Участников';
 export const SESSION_REGISTRATIONS_LABEL = 'Заявки';
 export const SESSION_PARTICIPANTS_LABEL = 'Участники';
