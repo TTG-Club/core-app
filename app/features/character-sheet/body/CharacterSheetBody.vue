@@ -118,6 +118,7 @@
     isReadonly,
     toggleLock,
     ensureEditable,
+    ensureOwnSheet,
     abilityRows,
     savingThrowRows,
     skillGroups,
@@ -893,8 +894,9 @@
     effectModal.open({ effectId });
   }
 
+  // Заметки ведут по ходу игры, поэтому замок их не запирает — только чужой лист.
   function handleNoteAdd() {
-    if (!ensureEditable()) {
+    if (!ensureOwnSheet()) {
       return;
     }
 
@@ -902,7 +904,7 @@
   }
 
   function handleNoteEdit(noteId: string) {
-    if (!ensureEditable()) {
+    if (!ensureOwnSheet()) {
       return;
     }
 
