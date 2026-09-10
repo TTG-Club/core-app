@@ -32,12 +32,18 @@
     >
       <HomeCounters />
 
+      <!-- На 360px и уже заголовок ужат: в полный размер он разбивался на пять
+        строк. У подписи межстрочный интервал задан вместе с размером
+        (`/tight`): `text-lg` приносит свой интервал, а `leading-tight`
+        заголовка в Tailwind не наследуется -->
       <h1
-        class="max-w-4xl text-center text-3xl leading-tight font-semibold tracking-tight text-balance 3xl:text-5xl sm:text-4xl xl:text-[2.5rem]"
+        class="max-w-4xl text-center text-3xl leading-tight font-semibold tracking-tight text-balance max-xs:text-2xl 3xl:text-5xl sm:text-4xl xl:text-[2.5rem]"
       >
         <span class="block text-highlighted">{{ HOME_HERO_TITLE }}</span>
 
-        <span class="block text-muted">{{ HOME_HERO_SUBTITLE }}</span>
+        <span class="block text-muted max-xs:text-lg/tight">{{
+          HOME_HERO_SUBTITLE
+        }}</span>
       </h1>
 
       <!-- Персонаж с репликой живёт внутри SearchPanel — он выглядывает

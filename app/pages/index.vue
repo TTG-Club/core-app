@@ -39,8 +39,8 @@
       <!--
         Ниже xl все обёртки схлопываются в display:contents: блоки становятся
         прямыми флекс-элементами внешней колонки и выстраиваются одним потоком
-        в порядке order-*: Новости → VTTG → Новая игра → Статьи → Жизнь
-        сайта → Соцсети → Сообщество.
+        в порядке order-*: VTTG → Соцсети → Новости → Новая игра → Статьи →
+        Жизнь сайта → Сообщество.
 
         С xl лента делится на две половины, растянутые друг под друга
         (`items-stretch`). Слева столбец новостей и статей. Справа два ряда из
@@ -62,19 +62,19 @@
       -->
       <div class="flex w-full flex-col gap-3 xl:flex-row xl:items-stretch">
         <div class="contents xl:flex xl:w-1/2 xl:flex-col xl:gap-3">
-          <HomeNews class="order-0" />
+          <HomeNews class="order-2 xl:order-0" />
 
-          <HomeArticles class="order-3 xl:order-0" />
+          <HomeArticles class="order-4 xl:order-0" />
         </div>
 
         <div class="contents xl:flex xl:w-1/2 xl:flex-col xl:gap-3">
           <div class="contents xl:flex xl:flex-row xl:items-stretch xl:gap-3">
-            <HomeLatestGame class="order-2 xl:order-0 xl:w-1/2" />
+            <HomeLatestGame class="order-3 xl:order-0 xl:w-1/2" />
 
             <div class="contents xl:flex xl:w-1/2 xl:flex-col xl:gap-3">
-              <VttgPromoCard class="order-1 xl:order-0 xl:flex-1" />
+              <VttgPromoCard class="order-0 xl:flex-1" />
 
-              <SocialLinks class="order-5 xl:order-0" />
+              <SocialLinks class="order-1 xl:order-0" />
             </div>
           </div>
 
@@ -85,7 +85,7 @@
               обычного (скажем, новости не загрузились): без неё ленте
               досталась бы только шапка с подвалом -->
             <HomeActivity
-              class="order-4 xl:order-0 xl:min-h-80 xl:w-1/2 xl:self-stretch"
+              class="order-5 xl:order-0 xl:min-h-80 xl:w-1/2 xl:self-stretch"
             />
 
             <HomeCommunity class="order-6 xl:order-0 xl:w-1/2" />

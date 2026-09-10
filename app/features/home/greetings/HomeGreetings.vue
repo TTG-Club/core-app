@@ -94,11 +94,14 @@
 </script>
 
 <template>
+  <!-- На 360px и уже персонаж не помещается рядом с репликой: пузырь
+    сжимается так, что слова рвутся посередине, поэтому блок там не
+    показываем -->
   <div
     v-if="greeting"
     :class="[
       $style.root,
-      'mx-auto flex w-fit max-w-full items-end justify-center gap-2 px-2 sm:max-w-3xl sm:gap-3',
+      'mx-auto flex w-fit max-w-full items-end justify-center gap-2 px-2 max-xs:hidden sm:max-w-3xl sm:gap-3',
     ]"
   >
     <!-- Реплика слева от фигуры: текучая ширина, перенос текста, мягкий

@@ -6,6 +6,12 @@
      раньше рельс получался слишком узким. */
   --breakpoint-3xl: 1700px;
 
+  /* Самые узкие телефоны — 360px и уже: главная там ужимает заголовок, прячет
+     персонажа и ставит плитки разделов в столбец. `max-xs:` сравнивает строго
+     (`width < 361px`), поэтому граница на пиксель выше — иначе сами 360px
+     остались бы снаружи. */
+  --breakpoint-xs: 361px;
+
   --font-sans:
     'Open Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
     'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';

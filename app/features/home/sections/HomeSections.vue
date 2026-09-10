@@ -42,7 +42,7 @@
       -->
       <div
         :class="$style.grid"
-        class="-mt-px -ml-px grid h-full grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+        class="-mt-px -ml-px grid h-full grid-cols-2 max-xs:grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
       >
         <NuxtLink
           v-for="link in sections"
