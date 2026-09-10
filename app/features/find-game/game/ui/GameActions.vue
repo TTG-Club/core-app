@@ -91,7 +91,11 @@
     emit('remove', reason);
   }
 
-  /** Передаёт жалобу странице игры и закрывает окно после отправки запроса. */
+  /**
+   * Передаёт жалобу странице игры и сразу закрывает окно, не дожидаясь ответа:
+   * итог запроса страница покажет уведомлением.
+   * @param request Причина и комментарий жалобы.
+   */
   function submitReport(request: CreateGameReportRequest): void {
     isReportOpen.value = false;
     emit('report', request);

@@ -284,6 +284,33 @@ describe('права мастера на игру', () => {
   });
 });
 
+describe('жалоба на игру', () => {
+  const game = makeGame();
+
+  it('пожаловаться может вошедший пользователь на чужую игру', () => {
+    expect(viewerOf(game, null).canReportGame).toBe(true);
+
+    expect(
+      viewerOf(game, makeRegistration({ status: 'APPROVED' })).canReportGame,
+    ).toBe(true);
+  });
+
+  it('мастер на свою игру не жалуется', () => {
+    expect(masterOf(game).canReportGame).toBe(false);
+  });
+
+  it('гостю жалоба недоступна', () => {
+    expect(
+      resolveGameViewerAbilities({
+        game,
+        userId: null,
+        roles: [],
+        registration: null,
+      }).canReportGame,
+    ).toBe(false);
+  });
+});
+
 describe('набор в игру', () => {
   /** Игра, где принято `approvedSeats` игроков из пяти мест. */
   function gathered(

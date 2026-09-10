@@ -12,6 +12,7 @@
     GAME_FINANCE_BALANCE,
     GAME_FINANCE_CONFIRM,
     GAME_FINANCE_DEBT_DETAILS,
+    GAME_FINANCE_DESCRIPTION,
     GAME_FINANCE_EMPTY,
     GAME_FINANCE_PENDING,
     GAME_FINANCE_TITLE,
@@ -202,8 +203,7 @@
       </h2>
 
       <p class="text-sm text-muted">
-        Учёт авансов и долгов ведётся внутри игры; реальные платежи сервис не
-        обрабатывает.
+        {{ GAME_FINANCE_DESCRIPTION }}
       </p>
     </div>
 

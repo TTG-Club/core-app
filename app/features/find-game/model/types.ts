@@ -12,6 +12,7 @@ import type {
   NOTIFICATION_TYPES,
   PROFILE_GENDERS,
   REGISTRATION_DECISIONS,
+  REGISTRATION_FILTERS,
   REVIEW_KINDS,
   SESSION_ATTENDANCE_STATUSES,
   SESSION_PAYMENT_TYPES,
@@ -59,6 +60,9 @@ export type SessionWeekday = (typeof SESSION_WEEKDAYS)[number];
 
 export type SessionRegistrationStatus =
   (typeof SESSION_REGISTRATION_STATUSES)[number];
+
+/** Отбор заявок на вкладке «Участники». */
+export type RegistrationFilter = (typeof REGISTRATION_FILTERS)[number];
 
 export type SessionAttendanceStatus =
   (typeof SESSION_ATTENDANCE_STATUSES)[number];

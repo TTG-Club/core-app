@@ -1,5 +1,10 @@
 <script setup lang="ts">
-  import type { Game, GameRegistration } from '../model';
+  import type {
+    Game,
+    GameRegistration,
+    RegistrationFilter,
+    SessionRegistrationStatus,
+  } from '../model';
 
   import { UiResult } from '~ui/result';
 
@@ -11,21 +16,20 @@
   } from '../composables';
   import {
     GAME_APPROVED_PLAYERS_LABEL,
+    REGISTRATION_FILTER_LABELS,
+    REGISTRATION_FILTER_STATUSES,
     REGISTRATION_FILTERS,
     REGISTRATION_REVIEWED_TOAST,
     REGISTRATIONS_DEFAULT_FILTER,
     REGISTRATIONS_EMPTY_TITLE,
     REGISTRATIONS_FILTER_EMPTY_TITLE,
     REGISTRATIONS_FILTER_LABEL,
-    SESSION_REGISTRATION_STATUSES,
   } from '../model';
   import { RegistrationRejectModal, RegistrationRow } from './ui';
 
-  // `USelect` показывает подпись и хранит значение; состав статусов нужен
-  // только отбору и в список не идёт.
-  const filterItems = REGISTRATION_FILTERS.map(({ value, label }) => ({
-    value,
-    label,
+  const filterItems = REGISTRATION_FILTERS.map((filter) => ({
+    value: filter,
+    label: REGISTRATION_FILTER_LABELS[filter],
   }));
 
   const { game } = defineProps<{
@@ -77,12 +81,11 @@
       `${GAME_APPROVED_PLAYERS_LABEL}: ${approvedRegistrations.value.length} / ${game.maxPlayers}`,
   );
 
-  const statusFilter = ref(REGISTRATIONS_DEFAULT_FILTER);
+  const statusFilter = ref<RegistrationFilter>(REGISTRATIONS_DEFAULT_FILTER);
 
   const visibleRegistrations = computed(() => {
-    const statuses =
-      REGISTRATION_FILTERS.find((option) => option.value === statusFilter.value)
-        ?.statuses ?? SESSION_REGISTRATION_STATUSES;
+    const statuses: ReadonlyArray<SessionRegistrationStatus> =
+      REGISTRATION_FILTER_STATUSES[statusFilter.value];
 
     return registrations.value.filter((registration) =>
       statuses.includes(registration.status),

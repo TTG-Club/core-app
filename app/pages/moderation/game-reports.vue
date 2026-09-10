@@ -1,31 +1,27 @@
 <script setup lang="ts">
+  import { AdminGameReportRow } from '~find-game/admin';
   import {
     useFindGameToast,
     useParticipantNames,
   } from '~find-game/composables';
   import {
+    CATALOG_RETRY_LABEL,
     deleteAllMasterGamesByReport,
     deleteGame,
     fetchGameReports,
-    GAME_REPORT_AUTHOR_LABEL,
-    GAME_REPORT_CREATED_LABEL,
+    GAME_DELETE_CONFIRM_DESCRIPTION,
+    GAME_DELETE_CONFIRM_TITLE,
+    GAME_DELETE_LABEL,
+    GAME_DELETED_TOAST,
     GAME_REPORT_DELETION_REASON,
-    GAME_REPORT_HIDDEN_BADGE,
     GAME_REPORT_HIDE_ALL_MASTER_GAMES_DESCRIPTION,
     GAME_REPORT_HIDE_ALL_MASTER_GAMES_LABEL,
     GAME_REPORT_HIDE_ALL_MASTER_GAMES_TITLE,
     GAME_REPORT_HIDE_ALL_MASTER_GAMES_TOAST,
-    GAME_REPORT_HIDE_GAME_DESCRIPTION,
-    GAME_REPORT_HIDE_GAME_LABEL,
-    GAME_REPORT_HIDE_GAME_TITLE,
-    GAME_REPORT_HIDE_GAME_TOAST,
-    GAME_REPORT_REASON_LABELS,
     GAME_REPORTS_EMPTY_DESCRIPTION,
     GAME_REPORTS_EMPTY_TITLE,
     GAME_REPORTS_PAGE_SIZE,
-    GAME_REPORTS_RETRY_LABEL,
     GAME_REPORTS_TITLE,
-    GAMES_ROUTE,
     getFindGameErrorMessage,
   } from '~find-game/model';
   import { ConfirmDialog } from '~initiative/ui-kit';
@@ -35,7 +31,6 @@
   useSeoMeta({ title: GAME_REPORTS_TITLE });
 
   const requestFetch = useRequestFetch();
-  const { format } = useDayjs();
   const { showError, showSuccess } = useFindGameToast();
   const { getParticipantName, watchParticipantNames } = useParticipantNames();
   const currentPage = ref(1);
@@ -108,7 +103,7 @@
       );
 
       isHideGameOpen.value = false;
-      showSuccess(GAME_REPORT_HIDE_GAME_TOAST);
+      showSuccess(GAME_DELETED_TOAST);
       await refreshReports();
     } catch (error) {
       showError(error);
@@ -160,7 +155,7 @@
       >
         <template #extra>
           <UButton @click.left.exact.prevent="retry">
-            {{ GAME_REPORTS_RETRY_LABEL }}
+            {{ CATALOG_RETRY_LABEL }}
           </UButton>
         </template>
       </UiResult>
@@ -173,75 +168,15 @@
       />
 
       <template v-else>
-        <article
+        <AdminGameReportRow
           v-for="report in reports"
           :key="report.id"
-          class="flex flex-col gap-3 rounded-xl border border-default bg-elevated p-4"
-        >
-          <div class="flex flex-wrap items-start justify-between gap-2">
-            <div class="min-w-0">
-              <NuxtLink
-                :to="`${GAMES_ROUTE}/${report.gameId}`"
-                class="font-semibold text-highlighted hover:text-primary"
-              >
-                {{ report.gameTitle }}
-              </NuxtLink>
-
-              <p class="mt-1 text-sm text-muted">
-                {{ GAME_REPORT_AUTHOR_LABEL }}:
-                {{ getParticipantName(report.reporterId) }}
-              </p>
-            </div>
-
-            <UBadge
-              color="error"
-              variant="subtle"
-              :label="GAME_REPORT_REASON_LABELS[report.reason]"
-            />
-          </div>
-
-          <p
-            v-if="report.details"
-            class="text-sm whitespace-pre-line text-toned"
-          >
-            {{ report.details }}
-          </p>
-
-          <p class="text-xs text-muted">
-            {{ GAME_REPORT_CREATED_LABEL }}:
-            {{ format(report.createdAt, 'DD.MM.YYYY HH:mm') }}
-          </p>
-
-          <div class="flex flex-wrap gap-2">
-            <UBadge
-              v-if="report.gameDeleted"
-              color="neutral"
-              variant="subtle"
-              :label="GAME_REPORT_HIDDEN_BADGE"
-            />
-
-            <UButton
-              v-else
-              size="sm"
-              color="error"
-              variant="soft"
-              icon="tabler:eye-off"
-              :disabled="isRemoving"
-              :label="GAME_REPORT_HIDE_GAME_LABEL"
-              @click.left.exact.prevent="askToHideGame(report.id)"
-            />
-
-            <UButton
-              size="sm"
-              color="error"
-              variant="outline"
-              icon="tabler:ban"
-              :disabled="isRemoving"
-              :label="GAME_REPORT_HIDE_ALL_MASTER_GAMES_LABEL"
-              @click.left.exact.prevent="askToHideAllMasterGames(report.id)"
-            />
-          </div>
-        </article>
+          :report="report"
+          :reporter-name="getParticipantName(report.reporterId)"
+          :busy="isRemoving"
+          @hide-game="askToHideGame"
+          @hide-master-games="askToHideAllMasterGames"
+        />
 
         <UiPagination
           v-if="totalReports > GAME_REPORTS_PAGE_SIZE"
@@ -253,9 +188,9 @@
 
       <ConfirmDialog
         v-model:open="isHideGameOpen"
-        :title="GAME_REPORT_HIDE_GAME_TITLE"
-        :description="GAME_REPORT_HIDE_GAME_DESCRIPTION"
-        :confirm-label="GAME_REPORT_HIDE_GAME_LABEL"
+        :title="GAME_DELETE_CONFIRM_TITLE"
+        :description="GAME_DELETE_CONFIRM_DESCRIPTION"
+        :confirm-label="GAME_DELETE_LABEL"
         confirm-color="error"
         confirm-icon="tabler:eye-off"
         :loading="isRemoving"

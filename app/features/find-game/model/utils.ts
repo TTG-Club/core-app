@@ -109,6 +109,37 @@ export function getGamesFoundLabel(total: number): string {
 }
 
 /**
+ * Ближайшая предстоящая запланированная встреча среди загруженных, прошедшая
+ * дополнительный отбор.
+ *
+ * @param sessions Сессии игры.
+ * @param from Момент отсчёта в миллисекундах.
+ * @param isSuitable Дополнительное условие отбора встречи.
+ */
+function findNearestScheduledSession(
+  sessions: ReadonlyArray<GameSession>,
+  from: number,
+  isSuitable: (session: GameSession) => boolean = () => true,
+): GameSession | null {
+  // Время встречи считается сразу и дальше идёт рядом с сессией: проверка
+  // `startsAt` в отдельном `filter` не сужает тип на следующем шаге цепочки.
+  const upcoming = sessions
+    .filter((session) => session.status === 'SCHEDULED' && isSuitable(session))
+    .map((session) => ({
+      session,
+      at: session.startsAt ? new Date(session.startsAt).getTime() : Number.NaN,
+    }))
+    .filter((entry) => Number.isFinite(entry.at) && entry.at >= from);
+
+  const nearest = findNearestMoment(
+    upcoming.map((entry) => entry.at),
+    from,
+  );
+
+  return upcoming.find((entry) => entry.at === nearest)?.session ?? null;
+}
+
+/**
  * Начало ближайшей предстоящей встречи среди загруженных. Нужна там, где
  * расписание уже на руках: сервис считает ближайшую встречу только для выдачи
  * каталога, а в ответе по одной игре поле приходит пустым.
@@ -120,20 +151,7 @@ export function getNearestSessionStart(
   sessions: ReadonlyArray<GameSession>,
   from: number,
 ): string | null {
-  const upcoming = sessions
-    .filter((session) => session.status === 'SCHEDULED' && session.startsAt)
-    .map((session) => ({
-      startsAt: session.startsAt as string,
-      at: new Date(session.startsAt as string).getTime(),
-    }))
-    .filter((entry) => Number.isFinite(entry.at) && entry.at >= from);
-
-  const nearest = findNearestMoment(
-    upcoming.map((entry) => entry.at),
-    from,
-  );
-
-  return upcoming.find((entry) => entry.at === nearest)?.startsAt ?? null;
+  return findNearestScheduledSession(sessions, from)?.startsAt ?? null;
 }
 
 /**
@@ -147,30 +165,11 @@ export function getNearestPaidSession(
   sessions: ReadonlyArray<GameSession>,
   from: number,
 ): GameSession | null {
-  // Время встречи считается сразу и дальше идёт рядом с сессией: проверка
-  // `startsAt !== null` в отдельном `filter` не сужает тип на следующем шаге
-  // цепочки, и `new Date(null)` осталось бы ошибкой типов.
-  const upcomingPaidSessions = sessions
-    .filter(
-      (session) =>
-        session.status === 'SCHEDULED'
-        && session.priceAmount !== null
-        && session.priceCurrency !== null,
-    )
-    .map((session) => ({
-      session,
-      startsAt:
-        session.startsAt === null
-          ? Number.NaN
-          : new Date(session.startsAt).getTime(),
-    }))
-    .filter(({ startsAt }) => Number.isFinite(startsAt) && startsAt >= from)
-    .toSorted(
-      (leftSession, rightSession) =>
-        leftSession.startsAt - rightSession.startsAt,
-    );
-
-  return upcomingPaidSessions[0]?.session ?? null;
+  return findNearestScheduledSession(
+    sessions,
+    from,
+    (session) => session.priceAmount !== null && session.priceCurrency !== null,
+  );
 }
 
 /**

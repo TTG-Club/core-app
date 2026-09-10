@@ -30,10 +30,11 @@ export const GAME_DETAIL_TABS = [
 ];
 
 export const GAME_FINANCE_TITLE = 'Финансы игры';
+export const GAME_FINANCE_DESCRIPTION =
+  'Учёт авансов и долгов ведётся внутри игры; реальные платежи сервис не обрабатывает.';
 export const GAME_FINANCE_EMPTY = 'У игры пока нет финансовых операций';
 export const GAME_FINANCE_TOP_UP = 'Внести депозит';
 export const GAME_FINANCE_BALANCE = 'Баланс';
-export const GAME_FINANCE_DEBT = 'Долг';
 export const GAME_FINANCE_DEBT_DETAILS = 'Долги по встречам';
 export const GAME_FINANCE_PAY = 'Оплатить с баланса';
 export const GAME_FINANCE_CLAIM = 'Я оплатил';
@@ -65,35 +66,30 @@ export const GAME_REPORT_DETAILS_LABEL = 'Комментарий';
 export const GAME_REPORT_DETAILS_PLACEHOLDER =
   'Коротко поясните, что нарушает правила';
 export const GAME_REPORT_SUBMIT_LABEL = 'Отправить жалобу';
-export const GAME_REPORT_CANCEL_LABEL = 'Отмена';
 export const GAME_REPORT_SENT_TOAST = 'Жалоба отправлена';
 export const GAME_REPORT_MAX_DETAILS_LENGTH = 1000;
 export const GAME_REPORTS_API_PATH = `${FIND_GAME_API_PREFIX}/moderation/game-reports`;
-export const MODERATION_GAME_REPORTS_API_PATH = `${FIND_GAME_API_PREFIX}/moderation/games`;
+
+/** Модераторские действия над играми: например, скрыть все игры мастера. */
+export const MODERATION_GAMES_API_PATH = `${FIND_GAME_API_PREFIX}/moderation/games`;
 export const GAME_REPORTS_PAGE_SIZE = 20;
 export const GAME_REPORTS_TITLE = 'Жалобы на игры';
 export const GAME_REPORTS_EMPTY_TITLE = 'Жалоб пока нет';
 export const GAME_REPORTS_EMPTY_DESCRIPTION =
   'Новые жалобы на объявления появятся здесь.';
-export const GAME_REPORTS_RETRY_LABEL = 'Повторить';
 export const GAME_REPORT_AUTHOR_LABEL = 'Отправил';
 export const GAME_REPORT_CREATED_LABEL = 'Получена';
-export const GAME_REPORT_HIDE_GAME_LABEL = 'Скрыть игру';
+export const GAME_REPORT_DATE_FORMAT = 'DD.MM.YYYY HH:mm';
 export const GAME_REPORT_HIDE_ALL_MASTER_GAMES_LABEL =
   'Скрыть все игры мастера';
-export const GAME_REPORT_HIDE_GAME_TITLE = 'Скрыть игру?';
 export const GAME_REPORT_HIDE_ALL_MASTER_GAMES_TITLE =
   'Скрыть все игры мастера?';
-export const GAME_REPORT_HIDE_GAME_DESCRIPTION =
-  'Объявление исчезнет из каталога и будет недоступно по прямой ссылке.';
 export const GAME_REPORT_HIDE_ALL_MASTER_GAMES_DESCRIPTION =
   'Все активные объявления этого мастера исчезнут из каталога. Отменить действие нельзя.';
-export const GAME_REPORT_HIDE_GAME_TOAST = 'Игра скрыта';
 export const GAME_REPORT_HIDE_ALL_MASTER_GAMES_TOAST =
   'Все игры мастера скрыты';
 export const GAME_REPORT_DELETION_REASON =
   'Скрыто модератором по жалобе на игру';
-export const GAME_REPORT_HIDDEN_BADGE = 'Игра скрыта';
 
 export const SESSION_START_IN_PAST_ERROR =
   'Дата и время начала сессии должны быть в будущем';
@@ -844,6 +840,9 @@ export const GAME_DELETE_REASON_LABEL = 'Причина';
 export const GAME_DELETE_REASON_PLACEHOLDER = 'Нарушение правил сообщества';
 export const GAME_DELETED_TOAST = 'Игра скрыта';
 
+/** Пометка жалобы, чья игра уже скрыта: те же слова, что и в уведомлении. */
+export const GAME_REPORT_HIDDEN_BADGE = GAME_DELETED_TOAST;
+
 export const CANCEL_LABEL = 'Отмена';
 export const SAVE_LABEL = 'Сохранить';
 
@@ -1282,23 +1281,32 @@ export const GAME_APPROVED_PLAYERS_LABEL = 'Принято игроков';
  * Отборы состава на вкладке «Участники». Отклонённая заявка — это и отказ
  * новичку, и исключение игрока мастером: обе остаются историей, но каждый
  * день мастеру нужен живой состав, поэтому по умолчанию их не видно.
- * Вышедшие сами исчезают сами: сервис удаляет их заявку.
+ * Вышедшие исчезают сами: сервис удаляет их заявку.
  */
-export const REGISTRATION_FILTERS: ReadonlyArray<{
-  value: string;
-  label: string;
-  statuses: ReadonlyArray<(typeof SESSION_REGISTRATION_STATUSES)[number]>;
-}> = [
-  {
-    value: 'ACTIVE',
-    label: 'В составе и заявки',
-    statuses: ['PENDING', 'APPROVED'],
-  },
-  { value: 'PENDING', label: 'На рассмотрении', statuses: ['PENDING'] },
-  { value: 'APPROVED', label: 'Принятые', statuses: ['APPROVED'] },
-  { value: 'REJECTED', label: 'Отклонённые', statuses: ['REJECTED'] },
-  { value: 'ALL', label: 'Все', statuses: SESSION_REGISTRATION_STATUSES },
-];
+export const REGISTRATION_FILTERS = [
+  'ACTIVE',
+  'PENDING',
+  'APPROVED',
+  'REJECTED',
+  'ALL',
+] as const;
+
+export const REGISTRATION_FILTER_LABELS = {
+  ACTIVE: 'В составе и заявки',
+  PENDING: 'На рассмотрении',
+  APPROVED: 'Принятые',
+  REJECTED: 'Отклонённые',
+  ALL: 'Все',
+} as const;
+
+/** Состояния заявок, которые показывает каждый отбор. */
+export const REGISTRATION_FILTER_STATUSES = {
+  ACTIVE: ['PENDING', 'APPROVED'],
+  PENDING: ['PENDING'],
+  APPROVED: ['APPROVED'],
+  REJECTED: ['REJECTED'],
+  ALL: SESSION_REGISTRATION_STATUSES,
+} as const;
 
 export const REGISTRATIONS_DEFAULT_FILTER = 'ACTIVE';
 export const REGISTRATIONS_FILTER_LABEL = 'Показывать';

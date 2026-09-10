@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   getGameCardPriceLabel,
+  getNearestPaidSession,
+  getNearestSessionStart,
   getNextSessionLabel,
   groupSessionsByPeriod,
   parseGame,
@@ -119,5 +121,72 @@ describe('список расписания', () => {
     ]);
 
     expect(sessions.map((session) => session.id)).toEqual(original);
+  });
+});
+
+describe('ближайшая встреча из расписания', () => {
+  const now = Date.parse('2026-09-10T12:00:00Z');
+
+  const sessions = parseGameSessions([
+    {
+      id: 'past',
+      gameId: 'game-1',
+      startsAt: '2026-09-09T18:00:00Z',
+      status: 'SCHEDULED',
+      priceAmount: 500,
+      priceCurrency: 'RUB',
+    },
+    {
+      id: 'cancelled',
+      gameId: 'game-1',
+      startsAt: '2026-09-11T18:00:00Z',
+      status: 'CANCELLED',
+      priceAmount: 500,
+      priceCurrency: 'RUB',
+    },
+    {
+      id: 'trial',
+      gameId: 'game-1',
+      startsAt: '2026-09-12T18:00:00Z',
+      status: 'SCHEDULED',
+    },
+    {
+      id: 'paid-later',
+      gameId: 'game-1',
+      startsAt: '2026-09-20T18:00:00Z',
+      status: 'SCHEDULED',
+      priceAmount: 700,
+      priceCurrency: 'RUB',
+    },
+    {
+      id: 'paid',
+      gameId: 'game-1',
+      startsAt: '2026-09-15T18:00:00Z',
+      status: 'SCHEDULED',
+      priceAmount: 500,
+      priceCurrency: 'RUB',
+    },
+    {
+      id: 'open-date',
+      gameId: 'game-1',
+      startsAt: null,
+      status: 'SCHEDULED',
+      priceAmount: 500,
+      priceCurrency: 'RUB',
+    },
+  ]);
+
+  it('берёт запланированную встречу впереди, минуя прошедшие и отменённые', () => {
+    expect(getNearestSessionStart(sessions, now)).toBe('2026-09-12T18:00:00Z');
+  });
+
+  it('бесплатная пробная встреча не подменяет цену следующей платной', () => {
+    expect(getNearestPaidSession(sessions, now)?.id).toBe('paid');
+  });
+
+  it('без платных встреч впереди цены нет', () => {
+    expect(
+      getNearestPaidSession(sessions, Date.parse('2026-09-21T00:00:00Z')),
+    ).toBeNull();
   });
 });

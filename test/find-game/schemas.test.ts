@@ -1,11 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  createGameReportRequestSchema,
   getGameSeatsCounter,
   parseCities,
   parseFindGameProfile,
   parseGame,
   parseGameRegistration,
+  parseGameReportsPage,
   parseGameSessions,
   parseGamesPage,
   parseMasterProfile,
@@ -300,6 +302,68 @@ describe('разбор страницы каталога', () => {
 
     expect(page.content).toEqual([]);
     expect(page.totalElements).toBe(0);
+  });
+});
+
+describe('жалобы на игры', () => {
+  /** Жалоба в том виде, в каком её отдаёт очередь модератора. */
+  function reportResponse(overrides: Record<string, unknown> = {}) {
+    return {
+      id: '99999999-9999-4999-8999-999999999999',
+      gameId: '11111111-1111-4111-8111-111111111111',
+      gameTitle: 'Проклятие Страда',
+      gameDeleted: false,
+      reporterId: '88888888-8888-4888-8888-888888888888',
+      reason: 'SPAM',
+      details: 'Ссылка на чужой сервер',
+      createdAt: '2026-09-10T10:00:00Z',
+      ...overrides,
+    };
+  }
+
+  it('читает жалобу из очереди модератора', () => {
+    const page = parseGameReportsPage({
+      content: [reportResponse({ details: undefined })],
+      page: { size: 20, number: 0, totalElements: 1, totalPages: 1 },
+    });
+
+    expect(page.totalElements).toBe(1);
+
+    expect(page.content[0]).toMatchObject({
+      reason: 'SPAM',
+      gameDeleted: false,
+      details: null,
+    });
+  });
+
+  it('жалоба с неизвестной причиной выпадает, не пряча остальную очередь', () => {
+    const warn = vi.spyOn(consola, 'warn').mockImplementation(() => undefined);
+
+    const page = parseGameReportsPage({
+      content: [reportResponse(), reportResponse({ reason: 'UNKNOWN' })],
+      page: { size: 20, number: 0, totalElements: 2, totalPages: 1 },
+    });
+
+    expect(page.content).toHaveLength(1);
+    expect(warn).toHaveBeenCalled();
+
+    warn.mockRestore();
+  });
+
+  it('комментарий жалобы обрезается и ограничен по длине', () => {
+    expect(
+      createGameReportRequestSchema.parse({
+        reason: 'OTHER',
+        details: '  Реклама в описании  ',
+      }).details,
+    ).toBe('Реклама в описании');
+
+    expect(
+      createGameReportRequestSchema.safeParse({
+        reason: 'OTHER',
+        details: 'а'.repeat(1001),
+      }).success,
+    ).toBe(false);
   });
 });
 

@@ -46,7 +46,7 @@ import {
   GAME_REPORTS_API_PATH,
   GAMES_API_PATH,
   MASTER_PROFILE_API_PATH,
-  MODERATION_GAME_REPORTS_API_PATH,
+  MODERATION_GAMES_API_PATH,
   NOTIFICATIONS_API_PATH,
   OWN_REPUTATION_API_PATH,
   PLAYER_BOOKMARK_API_PATH,
@@ -172,9 +172,21 @@ function registrationsPath(gameId: string): string {
   return `${gamePath(gameId)}/registrations`;
 }
 
-/** Путь жалоб на конкретную игру. */
+/**
+ * Путь жалоб на конкретную игру.
+ * @param gameId Идентификатор игры.
+ */
 function gameReportsPath(gameId: string): string {
   return `${gamePath(gameId)}/reports`;
+}
+
+/**
+ * Путь всех игр мастера, которому принадлежит указанная игра, — для
+ * модераторского скрытия по жалобе.
+ * @param gameId Идентификатор игры, на которую пожаловались.
+ */
+function masterGamesModerationPath(gameId: string): string {
+  return `${MODERATION_GAMES_API_PATH}/${gameId}/master-games`;
 }
 
 /**
@@ -587,7 +599,11 @@ export async function deleteGame(
   });
 }
 
-/** Отправляет жалобу на чужое объявление. */
+/**
+ * Отправляет жалобу на чужое объявление.
+ * @param gameId Идентификатор игры.
+ * @param request Причина и комментарий жалобы.
+ */
 export async function reportGame(
   gameId: string,
   request: CreateGameReportRequest,
@@ -620,11 +636,14 @@ export async function fetchGameReports(
   return parseGameReportsPage(response);
 }
 
-/** Скрывает все активные игры мастера, которому принадлежит указанная игра. */
+/**
+ * Скрывает все активные игры мастера, которому принадлежит указанная игра.
+ * @param gameId Идентификатор игры, на которую пожаловались.
+ */
 export async function deleteAllMasterGamesByReport(
   gameId: string,
 ): Promise<void> {
-  await $fetch(`${MODERATION_GAME_REPORTS_API_PATH}/${gameId}/master-games`, {
+  await $fetch(masterGamesModerationPath(gameId), {
     method: 'DELETE',
     retry: 0,
   });
