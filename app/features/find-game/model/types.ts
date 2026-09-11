@@ -205,10 +205,12 @@ export interface GameReport {
   gameId: string;
   gameTitle: string;
   gameDeleted: boolean;
-  reporterId: string;
-  reason: GameReportReason;
+  reporterId: string | null;
+  reason: GameReportReason | null;
   details: string | null;
   createdAt: string;
+  gameDeletedAt: string | null;
+  gameDeletionReason: string | null;
 }
 
 /** Игра из выдачи find-game-api. */

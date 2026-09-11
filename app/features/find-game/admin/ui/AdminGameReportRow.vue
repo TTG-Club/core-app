@@ -6,7 +6,10 @@
     GAME_REPORT_AUTHOR_LABEL,
     GAME_REPORT_CREATED_LABEL,
     GAME_REPORT_DATE_FORMAT,
+    GAME_REPORT_HIDDEN_AT_LABEL,
     GAME_REPORT_HIDDEN_BADGE,
+    GAME_REPORT_HIDDEN_REASON_EMPTY,
+    GAME_REPORT_HIDDEN_REASON_LABEL,
     GAME_REPORT_HIDE_ALL_MASTER_GAMES_LABEL,
     GAME_REPORT_REASON_LABELS,
     getGameRoute,
@@ -23,7 +26,7 @@
   } = defineProps<{
     report: GameReport;
     /** Отображаемое имя автора жалобы; UUID пользователю показывать нельзя. */
-    reporterName: string;
+    reporterName: string | null;
     /** Идёт модераторское действие: кнопки заблокированы. */
     busy?: boolean;
   }>();
@@ -40,6 +43,12 @@
   const createdLabel = computed(() =>
     format(report.createdAt, GAME_REPORT_DATE_FORMAT),
   );
+
+  const hiddenAtLabel = computed(() =>
+    report.gameDeletedAt
+      ? format(report.gameDeletedAt, GAME_REPORT_DATE_FORMAT)
+      : null,
+  );
 </script>
 
 <template>
@@ -55,13 +64,17 @@
           {{ report.gameTitle }}
         </NuxtLink>
 
-        <p class="mt-1 text-sm text-muted">
+        <p
+          v-if="reporterName"
+          class="mt-1 text-sm text-muted"
+        >
           {{ GAME_REPORT_AUTHOR_LABEL }}:
           {{ reporterName }}
         </p>
       </div>
 
       <UBadge
+        v-if="report.reason"
         color="error"
         variant="subtle"
         :label="GAME_REPORT_REASON_LABELS[report.reason]"
@@ -75,9 +88,28 @@
       {{ report.details }}
     </p>
 
-    <p class="text-xs text-muted">
+    <p
+      v-if="report.gameDeleted"
+      class="text-sm whitespace-pre-line text-toned"
+    >
+      {{ GAME_REPORT_HIDDEN_REASON_LABEL }}:
+      {{ report.gameDeletionReason ?? GAME_REPORT_HIDDEN_REASON_EMPTY }}
+    </p>
+
+    <p
+      v-if="report.reporterId"
+      class="text-xs text-muted"
+    >
       {{ GAME_REPORT_CREATED_LABEL }}:
       {{ createdLabel }}
+    </p>
+
+    <p
+      v-if="hiddenAtLabel"
+      class="text-xs text-muted"
+    >
+      {{ GAME_REPORT_HIDDEN_AT_LABEL }}:
+      {{ hiddenAtLabel }}
     </p>
 
     <div class="flex flex-wrap gap-2">

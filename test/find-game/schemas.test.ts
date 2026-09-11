@@ -317,6 +317,8 @@ describe('жалобы на игры', () => {
       reason: 'SPAM',
       details: 'Ссылка на чужой сервер',
       createdAt: '2026-09-10T10:00:00Z',
+      gameDeletedAt: null,
+      gameDeletionReason: null,
       ...overrides,
     };
   }
@@ -333,6 +335,31 @@ describe('жалобы на игры', () => {
       reason: 'SPAM',
       gameDeleted: false,
       details: null,
+    });
+  });
+
+  it('читает скрытую игру без жалобы вместе с причиной сокрытия', () => {
+    const page = parseGameReportsPage({
+      content: [
+        reportResponse({
+          id: '11111111-1111-4111-8111-111111111111',
+          gameDeleted: true,
+          reporterId: null,
+          reason: null,
+          details: null,
+          createdAt: '2026-09-11T10:00:00Z',
+          gameDeletedAt: '2026-09-11T10:00:00Z',
+          gameDeletionReason: 'Нарушение правил сообщества',
+        }),
+      ],
+      page: { size: 20, number: 0, totalElements: 1, totalPages: 1 },
+    });
+
+    expect(page.content[0]).toMatchObject({
+      reporterId: null,
+      reason: null,
+      gameDeleted: true,
+      gameDeletionReason: 'Нарушение правил сообщества',
     });
   });
 

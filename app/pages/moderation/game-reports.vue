@@ -69,7 +69,16 @@
       ?? null,
   );
 
-  watchParticipantNames(() => reports.value.map((report) => report.reporterId));
+  watchParticipantNames(() =>
+    reports.value.flatMap((report) =>
+      report.reporterId ? [report.reporterId] : [],
+    ),
+  );
+
+  /** Возвращает имя автора жалобы, если у строки очереди есть жалоба. */
+  function getReporterName(reporterId: string | null): string | null {
+    return reporterId ? getParticipantName(reporterId) : null;
+  }
 
   /** Перечитывает текущую страницу очереди после ошибки. */
   function retry(): void {
@@ -172,7 +181,7 @@
           v-for="report in reports"
           :key="report.id"
           :report="report"
-          :reporter-name="getParticipantName(report.reporterId)"
+          :reporter-name="getReporterName(report.reporterId)"
           :busy="isRemoving"
           @hide-game="askToHideGame"
           @hide-master-games="askToHideAllMasterGames"

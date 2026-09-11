@@ -74,11 +74,14 @@ export const GAME_REPORTS_API_PATH = `${FIND_GAME_API_PREFIX}/moderation/game-re
 export const MODERATION_GAMES_API_PATH = `${FIND_GAME_API_PREFIX}/moderation/games`;
 export const GAME_REPORTS_PAGE_SIZE = 20;
 export const GAME_REPORTS_TITLE = 'Жалобы на игры';
-export const GAME_REPORTS_EMPTY_TITLE = 'Жалоб пока нет';
+export const GAME_REPORTS_EMPTY_TITLE = 'Очередь модерации пуста';
 export const GAME_REPORTS_EMPTY_DESCRIPTION =
-  'Новые жалобы на объявления появятся здесь.';
+  'Новые жалобы и скрытые объявления появятся здесь.';
 export const GAME_REPORT_AUTHOR_LABEL = 'Отправил';
 export const GAME_REPORT_CREATED_LABEL = 'Получена';
+export const GAME_REPORT_HIDDEN_AT_LABEL = 'Скрыта';
+export const GAME_REPORT_HIDDEN_REASON_LABEL = 'Причина сокрытия';
+export const GAME_REPORT_HIDDEN_REASON_EMPTY = 'Причина не указана';
 export const GAME_REPORT_DATE_FORMAT = 'DD.MM.YYYY HH:mm';
 export const GAME_REPORT_HIDE_ALL_MASTER_GAMES_LABEL =
   'Скрыть все игры мастера';

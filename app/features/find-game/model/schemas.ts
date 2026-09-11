@@ -555,10 +555,12 @@ const gameReportResponseSchema = z.object({
   gameId: uuidSchema,
   gameTitle: z.string().catch(''),
   gameDeleted: z.boolean().catch(false),
-  reporterId: uuidSchema,
-  reason: z.enum(GAME_REPORT_REASONS),
+  reporterId: uuidSchema.nullable(),
+  reason: z.enum(GAME_REPORT_REASONS).nullable(),
   details: z.string().nullish().catch(null),
   createdAt: instantSchema,
+  gameDeletedAt: nullableInstantSchema,
+  gameDeletionReason: z.string().nullish().catch(null),
 });
 
 /** Разбирает одну запись очереди жалоб. */
@@ -570,10 +572,12 @@ function toGameReport(
     gameId: parsed.gameId,
     gameTitle: parsed.gameTitle,
     gameDeleted: parsed.gameDeleted,
-    reporterId: parsed.reporterId,
-    reason: parsed.reason,
+    reporterId: parsed.reporterId ?? null,
+    reason: parsed.reason ?? null,
     details: parsed.details ?? null,
     createdAt: parsed.createdAt,
+    gameDeletedAt: parsed.gameDeletedAt,
+    gameDeletionReason: parsed.gameDeletionReason ?? null,
   };
 }
 
