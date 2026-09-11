@@ -10,6 +10,7 @@
     GUEST_ID_HEADER,
     GUEST_ID_STORAGE_KEY,
     HOME_GREETING_API_URL,
+    HOME_GREETING_HEIGHT,
     parseHomeGreeting,
   } from './model';
 
@@ -98,53 +99,59 @@
     в столбик по слову-два в строке, поэтому блок показываем только
     с 400px -->
   <div
-    v-if="greeting"
-    :class="[
-      $style.root,
-      'mx-auto flex w-fit max-w-full items-end justify-center gap-2 px-2 max-xs:hidden sm:max-w-3xl sm:gap-3',
-    ]"
+    :style="{ '--home-greeting-height': HOME_GREETING_HEIGHT }"
+    class="relative flex min-h-(--home-greeting-height) w-full items-end justify-center max-xs:hidden"
   >
-    <!-- Реплика слева от фигуры: текучая ширина, перенос текста, мягкий
-      предел высоты -->
+    <!-- Оболочка сохраняет место до ответа API и при отсутствии приветствия. -->
     <div
+      v-if="greeting"
       :class="[
-        $style.panel,
-        'relative mb-4 flex max-w-md min-w-0 items-start gap-2 rounded-2xl border border-default bg-elevated',
-        'px-4 py-3 shadow-lg ring-1 ring-primary/15 sm:mb-6 sm:gap-2.5 sm:px-5 sm:py-4',
+        $style.root,
+        'mx-auto flex w-fit max-w-full items-end justify-center gap-2 px-2 sm:max-w-3xl sm:gap-3',
       ]"
     >
-      <!-- Открывающая кавычка-маркер слева: не занимает отдельную строку -->
-      <UIcon
-        name="tabler:quote"
-        class="mt-0.5 size-6 shrink-0 text-primary/60 sm:size-7"
-      />
+      <!-- Реплика слева от фигуры: текучая ширина, перенос текста, мягкий
+      предел высоты -->
+      <div
+        :class="[
+          $style.panel,
+          'relative mb-4 flex max-w-md min-w-0 items-start gap-2 rounded-2xl border border-default bg-elevated',
+          'px-4 py-3 shadow-lg ring-1 ring-primary/15 sm:mb-6 sm:gap-2.5 sm:px-5 sm:py-4',
+        ]"
+      >
+        <!-- Открывающая кавычка-маркер слева: не занимает отдельную строку -->
+        <UIcon
+          name="tabler:quote"
+          class="mt-0.5 size-6 shrink-0 text-primary/60 sm:size-7"
+        />
 
-      <!--
+        <!--
         Высота реплики ограничена так, чтобы пузырь целиком (отступ + паддинги +
         текст = 170px) укладывался в высоту фигуры персонажа (180px). Тогда
         высота всего блока постоянна и главная не «прыгает» от фразы к фразе, а
         длинный текст читается прокруткой. Разные значения для sm — компенсация
         более крупных паддингов на десктопе.
       -->
-      <div
-        :class="[
-          $style.scroll,
-          'max-h-32 min-w-0 flex-1 overflow-y-auto pr-1 text-start text-sm leading-relaxed wrap-break-word text-toned sm:max-h-28 sm:text-base',
-        ]"
-      >
-        <MarkupRender :render-node="greetingText" />
+        <div
+          :class="[
+            $style.scroll,
+            'max-h-32 min-w-0 flex-1 overflow-y-auto pr-1 text-start text-sm leading-relaxed wrap-break-word text-toned sm:max-h-28 sm:text-base',
+          ]"
+        >
+          <MarkupRender :render-node="greetingText" />
+        </div>
       </div>
-    </div>
 
-    <!-- Фигура персонажа: без рамки, прижата к низу — «выглядывает» из-за поиска -->
-    <img
-      v-if="hasImage"
-      :src="greeting.image"
-      :alt="personaName"
-      draggable="false"
-      class="h-[180px] w-[150px] shrink-0 translate-y-2 self-end object-contain object-bottom select-none sm:translate-y-6"
-      @error="handleImageError"
-    />
+      <!-- Фигура персонажа: без рамки, прижата к низу — «выглядывает» из-за поиска -->
+      <img
+        v-if="hasImage"
+        :src="greeting.image"
+        :alt="personaName"
+        draggable="false"
+        class="h-(--home-greeting-height) w-[150px] shrink-0 translate-y-2 self-end object-contain object-bottom select-none sm:translate-y-6"
+        @error="handleImageError"
+      />
+    </div>
   </div>
 </template>
 

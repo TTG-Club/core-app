@@ -48,13 +48,17 @@
 
       display: block;
 
-      opacity: 0.6;
+      opacity: 0.24;
       background-image: url('/s3/home/legacy-site.webp');
       background-repeat: no-repeat;
       background-position: center;
       background-size: cover;
+      filter: grayscale(1) brightness(0.85);
 
-      transition: transform 250ms ease;
+      transition:
+        transform 250ms ease,
+        opacity 250ms ease,
+        filter 250ms ease;
     }
 
     &:after {
@@ -77,6 +81,8 @@
 
       &:before {
         transform: scale(1.08);
+        opacity: 0.5;
+        filter: grayscale(0) brightness(1);
       }
     }
   }
