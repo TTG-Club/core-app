@@ -1,9 +1,10 @@
 <script setup lang="ts">
   import type { FilterSelection, GameSearchFilter } from '../../model';
 
+  import { InputNumberClearable } from '~ui/input';
+
   import { useCityDictionary } from '../../composables';
   import {
-    CATALOG_FILTER_CITY_EXCLUDE_LABEL,
     CATALOG_FILTER_CITY_LABEL,
     CATALOG_FILTER_CITY_PLACEHOLDER,
     CATALOG_FILTER_COST_LABEL,
@@ -65,18 +66,10 @@
   const { isLoggedIn } = useUser();
 
   const citySearch = ref('');
-  const excludedCitySearch = ref('');
   const { cityNames, isLoading: citiesLoading } = useCityDictionary(citySearch);
-
-  const { cityNames: excludedCityNames, isLoading: excludedCitiesLoading } =
-    useCityDictionary(excludedCitySearch);
 
   const cityOptions = computed(() => [
     ...new Set([...draft.value.city, ...cityNames.value]),
-  ]);
-
-  const excludedCityOptions = computed(() => [
-    ...new Set([...draft.value.excludeCity, ...excludedCityNames.value]),
   ]);
 
   // Поля заменяют массивы целиком: черновик не изменяет применённый фильтр.
@@ -223,7 +216,6 @@
 
   const favorite = createFilterField('favorite');
   const cities = createFilterField('city');
-  const excludedCities = createFilterField('excludeCity');
   const minAge = createFilterField('minAge');
   const maxAge = createFilterField('maxAge');
   const maxFreeSeats = createFilterField('maxFreeSeats');
@@ -308,19 +300,6 @@
           />
         </UFormField>
 
-        <UFormField :label="CATALOG_FILTER_CITY_EXCLUDE_LABEL">
-          <USelectMenu
-            v-model="excludedCities"
-            v-model:search-term="excludedCitySearch"
-            :items="excludedCityOptions"
-            :loading="excludedCitiesLoading"
-            multiple
-            ignore-filter
-            :placeholder="CATALOG_FILTER_CITY_PLACEHOLDER"
-            class="w-full"
-          />
-        </UFormField>
-
         <UFormField :label="CATALOG_FILTER_CROSSPLAY_LABEL">
           <URadioGroup
             v-model="crossplayChoice"
@@ -334,7 +313,7 @@
             :label="CATALOG_FILTER_MIN_AGE_LABEL"
             :error="ageError"
           >
-            <UInputNumber
+            <InputNumberClearable
               v-model="minAge"
               :min="GAME_AGE_MIN"
               :max="GAME_AGE_MAX"
@@ -343,7 +322,7 @@
           </UFormField>
 
           <UFormField :label="CATALOG_FILTER_MAX_AGE_LABEL">
-            <UInputNumber
+            <InputNumberClearable
               v-model="maxAge"
               :min="GAME_AGE_MIN"
               :max="GAME_AGE_MAX"
@@ -356,7 +335,7 @@
           :label="CATALOG_FILTER_MAX_FREE_SEATS_LABEL"
           :help="CATALOG_FILTER_MAX_FREE_SEATS_HINT"
         >
-          <UInputNumber
+          <InputNumberClearable
             v-model="maxFreeSeats"
             :min="CATALOG_FILTER_FREE_SEATS_MIN"
             :max="GAME_PLAYERS_MAX"
@@ -368,7 +347,7 @@
           :label="CATALOG_FILTER_MAX_SEATS_TO_START_LABEL"
           :help="CATALOG_FILTER_MAX_SEATS_TO_START_HINT"
         >
-          <UInputNumber
+          <InputNumberClearable
             v-model="maxSeatsToStart"
             :min="CATALOG_FILTER_SEATS_TO_START_MIN"
             :max="GAME_PLAYERS_MAX"

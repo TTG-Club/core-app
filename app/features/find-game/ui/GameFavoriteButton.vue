@@ -33,7 +33,22 @@
   /** Отмеченная звезда выделена цветом, пустая остаётся спокойной. */
   const color = computed(() => (isMarked.value ? 'warning' : 'neutral'));
 
-  const variant = computed(() => (onCover ? 'solid' : 'ghost'));
+  /**
+   * Подложка звёздочки на обложке. Заливка `solid` там не годится: у
+   * нейтрального цвета фон инвертированный, то есть в тёмных схемах светлый, —
+   * кнопка выпадала из ряда значков белым пятном. Тёмная полупрозрачная
+   * подложка читается одинаково во всех схемах и на любой картинке.
+   */
+  const coverClass = computed(() => {
+    if (!onCover) {
+      return undefined;
+    }
+
+    const backdrop = 'bg-black/45 backdrop-blur-sm hover:bg-black/65';
+
+    // Отмеченной звезде цвет задаёт `color`, и белый текст перекрыл бы его.
+    return isMarked.value ? backdrop : `${backdrop} text-white`;
+  });
 
   const isBusy = computed(() => busyGameId.value === gameId);
 
@@ -55,7 +70,8 @@
     <UButton
       size="sm"
       :color="color"
-      :variant="variant"
+      variant="ghost"
+      :class="coverClass"
       :icon="icon"
       :loading="isBusy"
       :aria-label="label"

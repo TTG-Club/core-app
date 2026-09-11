@@ -5,7 +5,7 @@ import type {
   FilterItems,
 } from '../types';
 
-import { MIN_GROUP_VALUES_FOR_SEARCH, MIN_GROUPS_FOR_SEARCH } from '../model';
+import { MIN_GROUPS_FOR_SEARCH, MIN_VALUES_FOR_SEARCH } from '../model';
 import { getGroupItems } from './getGroupItems';
 
 /** Приводит строку к виду, пригодному для регистронезависимого сравнения. */
@@ -20,11 +20,13 @@ function normalizeForSearch(text: string): string {
  * @returns `true`, если групп или значений в них достаточно много.
  */
 export function isFilterSearchable(groups: FilterGroups): boolean {
+  const valuesCount = groups.reduce(
+    (total, group) => total + getGroupItems(group).length,
+    0,
+  );
+
   return (
-    groups.length > MIN_GROUPS_FOR_SEARCH
-    || groups.some(
-      (group) => getGroupItems(group).length > MIN_GROUP_VALUES_FOR_SEARCH,
-    )
+    groups.length > MIN_GROUPS_FOR_SEARCH || valuesCount > MIN_VALUES_FOR_SEARCH
   );
 }
 

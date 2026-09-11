@@ -6,7 +6,10 @@
   import { cloneDeep } from 'es-toolkit';
 
   import { FilterDrawer } from '../drawer';
-  import { FILTER_CONTROLS_SEARCH_PLACEHOLDER } from '../model';
+  import {
+    FILTER_CONTROLS_SEARCH_PLACEHOLDER,
+    FILTER_SOURCES_SEARCH_PLACEHOLDER,
+  } from '../model';
   import { FilterPreview } from '../preview';
   import { FilterSearchInput } from '../search-input';
   import {
@@ -330,6 +333,7 @@
       v-if="filter?.sources"
       v-model="sourcesOpened"
       title="Источники"
+      :search-placeholder="FILTER_SOURCES_SEARCH_PLACEHOLDER"
       :groups="filter.sources"
       @save="saveSources"
       @reset="resetSources"

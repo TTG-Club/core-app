@@ -190,7 +190,7 @@
       :text="GAME_CANCEL_LABEL"
     >
       <UButton
-        color="neutral"
+        color="error"
         variant="ghost"
         icon="tabler:calendar-x"
         :disabled="busy"

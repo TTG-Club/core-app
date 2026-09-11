@@ -145,7 +145,6 @@ export function createEmptyGameFilter(): GameSearchFilter {
     status: [],
     excludeStatus: [],
     city: [],
-    excludeCity: [],
     crossplayAllowed: null,
     minAge: null,
     maxAge: null,
@@ -210,7 +209,6 @@ export function parseGameFilterFromQuery(
       GAME_STATUSES,
     ),
     city: [...new Set(readQueryValues(query.city))],
-    excludeCity: [...new Set(readQueryValues(query.excludeCity))],
     crossplayAllowed: readTriStateFlag(query.crossplayAllowed),
     minAge,
     maxAge: hasInvertedRange ? null : maxAge,
@@ -256,7 +254,6 @@ const LIST_FILTER_KEYS = [
   'status',
   'excludeStatus',
   'city',
-  'excludeCity',
 ] as const satisfies ReadonlyArray<keyof GameSearchFilter>;
 
 /**

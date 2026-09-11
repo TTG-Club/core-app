@@ -54,12 +54,12 @@ describe('чтение фильтра из адреса', () => {
     const filter = parseGameFilterFromQuery({
       system: 'DND_2024',
       excludeType: 'TEXT',
-      excludeCity: 'Москва',
+      excludeStatus: 'CLOSED',
     });
 
     expect(filter.system).toEqual(['DND_2024']);
     expect(filter.excludeType).toEqual(['TEXT']);
-    expect(filter.excludeCity).toEqual(['Москва']);
+    expect(filter.excludeStatus).toEqual(['CLOSED']);
     expect(filter.type).toEqual([]);
   });
 

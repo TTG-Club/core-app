@@ -2,6 +2,7 @@
   import type { FilterGroups } from '~infrastructure/filter';
 
   import { FilterDrawer } from '~infrastructure/filter';
+  import { FILTER_SOURCES_SEARCH_PLACEHOLDER } from '~infrastructure/filter/model';
 
   import { useSourceDictionary } from '../../composables';
   import {
@@ -126,14 +127,21 @@
           />
         </UBadge>
       </div>
-
-      <FilterDrawer
-        v-model="isOpen"
-        :groups="groups"
-        :title="GAME_SOURCES_TITLE"
-        @save="save"
-        @reset="reset"
-      />
     </div>
   </UFormField>
+
+  <!--
+    Панель стоит вне поля намеренно: `UFormField` раздаёт всем потомкам один
+    общий `id` для связки подписи с полем, и чекбоксы «Выбрать все» внутри
+    панели получали бы его же — тогда нажатие на любую из подписей отмечало бы
+    первую группу вместо своей.
+  -->
+  <FilterDrawer
+    v-model="isOpen"
+    :groups="groups"
+    :title="GAME_SOURCES_TITLE"
+    :search-placeholder="FILTER_SOURCES_SEARCH_PLACEHOLDER"
+    @save="save"
+    @reset="reset"
+  />
 </template>

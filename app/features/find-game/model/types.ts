@@ -297,8 +297,9 @@ export interface SpringPage<Item> {
 }
 
 /**
- * Фильтр каталога. Категориальные фильтры — множественные, у каждого есть
- * исключающая пара; возраст, кроссплей и занятость мест — одиночные.
+ * Фильтр каталога. Перечисления — множественные, у каждого есть исключающая
+ * пара; города только искомые, а возраст, кроссплей и занятость мест —
+ * одиночные.
  */
 export interface GameSearchFilter {
   system: Array<GameSystem>;
@@ -312,7 +313,6 @@ export interface GameSearchFilter {
   status: Array<GameStatus>;
   excludeStatus: Array<GameStatus>;
   city: Array<string>;
-  excludeCity: Array<string>;
   crossplayAllowed: boolean | null;
   minAge: number | null;
   maxAge: number | null;

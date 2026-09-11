@@ -631,7 +631,6 @@ export const CATALOG_FILTER_COST_LABEL = 'Стоимость';
 export const CATALOG_FILTER_STATUS_LABEL = 'Статус набора';
 export const CATALOG_FILTER_CITY_LABEL = 'Города';
 export const CATALOG_FILTER_CITY_PLACEHOLDER = 'Найдите и выберите город';
-export const CATALOG_FILTER_CITY_EXCLUDE_LABEL = 'Исключить города';
 export const CATALOG_FILTER_CROSSPLAY_LABEL = 'Кросспол';
 export const CATALOG_FILTER_MIN_AGE_LABEL = 'Возраст от';
 export const CATALOG_FILTER_MAX_AGE_LABEL = 'Возраст до';
@@ -1013,7 +1012,8 @@ export const GAME_GENRE_SUGGESTIONS = [
 export const GAME_FIELD_IMAGE_LABEL = 'Обложка';
 
 export const GAME_FIELD_IMAGE_HINT =
-  'Эта картинка показывается в каталоге и на странице игры';
+  'Эта картинка показывается в каталоге и на странице игры. Подойдёт '
+  + 'горизонтальная, в соотношении 16:9, — например 1280 × 720';
 
 /** Раздел S3 для обложек игр — первый сегмент ключа объекта. */
 export const GAME_IMAGE_SECTION = 'games';

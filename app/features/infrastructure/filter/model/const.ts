@@ -1,6 +1,9 @@
 /** Плейсхолдер поля поиска по фильтрам внутри дровера */
 export const FILTER_DRAWER_SEARCH_PLACEHOLDER = 'Поиск по фильтрам...';
 
+/** Плейсхолдер того же поля в дровере источников */
+export const FILTER_SOURCES_SEARCH_PLACEHOLDER = 'Поиск по источникам...';
+
 /** Плейсхолдер поля поиска по разделу в тулбаре */
 export const FILTER_CONTROLS_SEARCH_PLACEHOLDER = 'Поиск...';
 
@@ -14,8 +17,13 @@ export const FILTER_SEARCH_CLEAR_LABEL = 'Очистить поиск';
  */
 export const MIN_GROUPS_FOR_SEARCH = 5;
 
-/** Второй порог: хотя бы в одной группе больше двадцати значений */
-export const MIN_GROUP_VALUES_FOR_SEARCH = 20;
+/**
+ * Второй порог: больше двадцати значений во всех группах дровера вместе.
+ * Считаются именно все — источники разложены по трём небольшим группам, но
+ * книг в них под сорок, и глазами нужную там ищут не быстрее, чем в одной
+ * длинной группе.
+ */
+export const MIN_VALUES_FOR_SEARCH = 20;
 
 /** Заголовок пустой выдачи, когда под запрос не подошла ни одна группа */
 export const FILTER_SEARCH_EMPTY_TITLE = 'Ничего не найдено';
