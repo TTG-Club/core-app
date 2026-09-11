@@ -216,7 +216,11 @@ export const GAME_VISIBILITIES = ['PUBLIC', 'PRIVATE'] as const;
 
 // CANCELLED — отдельный исход, а не разновидность завершения: по завершённым
 // видно, что было сыграно, и несостоявшимся среди них не место.
-export const GAME_STATUSES = ['DRAFT', 'OPEN', 'CLOSED', 'CANCELLED'] as const;
+//
+// Черновика здесь нет: сохранить игру без публикации негде — форма создания
+// статус вовсе не отправляет, — а неизвестное состояние из сервиса схема
+// приводит к «набор открыт».
+export const GAME_STATUSES = ['OPEN', 'CLOSED', 'CANCELLED'] as const;
 
 export const GAME_SESSION_STATUSES = [
   'SCHEDULED',
@@ -388,7 +392,6 @@ export const GAME_VISIBILITY_LABELS = {
 } as const;
 
 export const GAME_STATUS_LABELS = {
-  DRAFT: 'Черновик',
   OPEN: 'Набор открыт',
   CLOSED: 'Завершена',
   CANCELLED: 'Отменена',
@@ -442,7 +445,6 @@ export const PROFILE_GENDER_LABELS = {
 
 /** Цвета статусов и решений — берутся семантические, без палитры Tailwind. */
 export const GAME_STATUS_COLORS = {
-  DRAFT: 'neutral',
   OPEN: 'success',
   CLOSED: 'neutral',
   CANCELLED: 'error',

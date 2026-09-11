@@ -228,6 +228,15 @@
         class="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-2"
       >
         <div class="flex flex-wrap items-center gap-1">
+          <!-- Звёздочка поднята над подложкой карточки и возвращает себе
+            нажатия: ряд значков их не принимает, иначе он перехватывал бы
+            клик по самой карточке -->
+          <GameFavoriteButton
+            class="pointer-events-auto relative z-20"
+            :game-id="game.id"
+            on-cover
+          />
+
           <UBadge
             v-for="badge in statusBadges"
             :key="badge.key"
@@ -239,25 +248,15 @@
           />
         </div>
 
-        <div class="flex shrink-0 items-center gap-1">
-          <!-- Платность — первое, что ищут в карточке -->
-          <UBadge
-            size="sm"
-            variant="solid"
-            :color="costBadgeColor"
-            :icon="costBadgeIcon"
-            :label="costLabel"
-          />
-
-          <!-- Звёздочка поднята над подложкой карточки и возвращает себе
-            нажатия: ряд значков их не принимает, иначе он перехватывал бы
-            клик по самой карточке -->
-          <GameFavoriteButton
-            class="pointer-events-auto relative z-20"
-            :game-id="game.id"
-            on-cover
-          />
-        </div>
+        <!-- Платность — первое, что ищут в карточке -->
+        <UBadge
+          class="shrink-0"
+          size="sm"
+          variant="solid"
+          :color="costBadgeColor"
+          :icon="costBadgeIcon"
+          :label="costLabel"
+        />
       </div>
 
       <div
