@@ -1,5 +1,6 @@
 import type {
   CityOption,
+  FavoriteGame,
   FindGameNotification,
   FindGameProblemDetail,
   FindGameUserProfile,
@@ -251,6 +252,33 @@ export function parseFollows(input: unknown): Array<Follow> {
 
     if (!parsed.success) {
       consola.warn('[find-game] Отметка не прошла разбор:', item);
+
+      return [];
+    }
+
+    return [parsed.data];
+  });
+}
+
+const favoriteGameResponseSchema = z.object({
+  gameId: uuidSchema,
+  createdAt: instantSchema,
+});
+
+/**
+ * Разбирает список избранных игр, отсеивая битые записи поштучно.
+ * @param input Сырой массив из ответа сервиса.
+ */
+export function parseFavoriteGames(input: unknown): Array<FavoriteGame> {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input.flatMap((item) => {
+    const parsed = favoriteGameResponseSchema.safeParse(item);
+
+    if (!parsed.success) {
+      consola.warn('[find-game] Отметка игры не прошла разбор:', item);
 
       return [];
     }

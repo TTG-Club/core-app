@@ -24,6 +24,11 @@ export function useGameCatalog() {
   const route = useRoute();
   const router = useRouter();
 
+  // Выдача рисуется и на сервере, а туда обычный `$fetch` уходит без кук
+  // сессии: отбор по избранному вернул бы пустой каталог, который клиент уже
+  // не перезапрашивает. На клиенте это тот же `$fetch`.
+  const requestFetch = useRequestFetch();
+
   const filter = ref<GameSearchFilter>(parseGameFilterFromQuery(route.query));
   const page = ref(parseCatalogPageFromQuery(route.query));
 
@@ -40,7 +45,13 @@ export function useGameCatalog() {
     refresh,
   } = useAsyncData(
     'find-game-catalog',
-    () => fetchGames(filter.value, page.value, GAME_CATALOG_PAGE_SIZE),
+    () =>
+      fetchGames(
+        filter.value,
+        page.value,
+        GAME_CATALOG_PAGE_SIZE,
+        requestFetch,
+      ),
     { watch: [filter, page], deep: false },
   );
 

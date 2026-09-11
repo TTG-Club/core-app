@@ -7,6 +7,7 @@ import type {
   CreateGameSessionRequest,
   CreateGameSessionSeriesRequest,
   CreateSessionReviewRequest,
+  FavoriteGame,
   FindGameNotification,
   FindGameProblemDetail,
   FindGameUserProfile,
@@ -40,9 +41,11 @@ import {
   CITIES_API_PATH,
   DISPLAY_NAMES_BY_IDS_API_PATH,
   DISPLAY_NAMES_LOOKUP_MAX,
+  FAVORITE_GAMES_API_PATH,
   FIND_GAME_PROFILE_API_PATH,
   FIND_GAME_UNKNOWN_ERROR_MESSAGE,
   FOLLOWED_MASTERS_API_PATH,
+  GAME_FAVORITE_PATH_SUFFIX,
   GAME_REPORTS_API_PATH,
   GAMES_API_PATH,
   MASTER_PROFILE_API_PATH,
@@ -58,6 +61,7 @@ import {
   createGameRequestSchema,
   gameParticipantsSchema,
   parseCities,
+  parseFavoriteGames,
   parseFindGameProfile,
   parseFollows,
   parseGame,
@@ -157,6 +161,14 @@ function gamePath(gameId: string): string {
 }
 
 /**
+ * Путь отметки игры в избранном.
+ * @param gameId Идентификатор игры.
+ */
+function gameFavoritePath(gameId: string): string {
+  return `${gamePath(gameId)}/${GAME_FAVORITE_PATH_SUFFIX}`;
+}
+
+/**
  * Путь сессий игры.
  * @param gameId Идентификатор игры.
  */
@@ -208,13 +220,17 @@ function participantsPath(gameId: string, sessionId: string): string {
  * @param filter Условия поиска.
  * @param page Номер страницы с нуля.
  * @param size Размер страницы.
+ * @param fetcher Запросчик страницы: на сервере нужен `useRequestFetch()`,
+ * иначе куки сессии не доедут до прокси и отбор по избранному вернёт пустую
+ * выдачу — каталог гостю открыт, а список отметок личный.
  */
 export async function fetchGames(
   filter: GameSearchFilter,
   page: number,
   size: number,
+  fetcher: ReturnType<typeof useRequestFetch> = $fetch,
 ): Promise<SpringPage<Game>> {
-  const response = await $fetch(GAMES_API_PATH, {
+  const response = await fetcher(GAMES_API_PATH, {
     method: 'GET',
     query: toGameSearchQuery(filter, page, size),
     retry: 0,
@@ -503,6 +519,37 @@ export async function unbookmarkPlayer(playerId: string): Promise<void> {
     method: 'DELETE',
     retry: 0,
   });
+}
+
+/**
+ * Откладывает игру в избранное. Повторная отметка сервису не мешает: он
+ * отвечает тем же успехом, ничего не меняя.
+ * @param gameId Идентификатор игры.
+ */
+export async function addFavoriteGame(gameId: string): Promise<void> {
+  await $fetch(gameFavoritePath(gameId), {
+    method: 'PUT',
+    retry: 0,
+  });
+}
+
+/**
+ * Убирает игру из избранного. Снятие отсутствующей отметки сервис тоже
+ * принимает: звёздочку гасят и на игре, которой уже нет.
+ * @param gameId Идентификатор игры.
+ */
+export async function removeFavoriteGame(gameId: string): Promise<void> {
+  await $fetch(gameFavoritePath(gameId), {
+    method: 'DELETE',
+    retry: 0,
+  });
+}
+
+/** Отмеченные игры — свежие сверху; только идентификаторы, без карточек. */
+export async function fetchFavoriteGames(): Promise<Array<FavoriteGame>> {
+  const response = await $fetch(FAVORITE_GAMES_API_PATH, { retry: 0 });
+
+  return parseFavoriteGames(response);
 }
 
 /** Отмеченные мастера — свежие сверху. */

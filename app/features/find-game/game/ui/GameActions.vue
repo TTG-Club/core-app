@@ -22,6 +22,7 @@
     GAMES_EDIT_ROUTE_SUFFIX,
     GAMES_ROUTE,
   } from '../../model';
+  import { GameFavoriteButton } from '../../ui';
   import GameDeleteModal from './GameDeleteModal.vue';
   import GameReportModal from './GameReportModal.vue';
 
@@ -108,6 +109,11 @@
       Только иконки: действий немного, а подписи занимали всю строку заголовка.
       Название каждого остаётся доступным — в тултипе и как `aria-label`.
     -->
+
+    <!-- Звёздочка идёт первой: отложить объявление вправе любой вошедший, а
+      остальные действия зависят от роли в игре и часто не показываются вовсе -->
+    <GameFavoriteButton :game-id="gameId" />
+
     <UTooltip
       v-if="abilities.canEditGame"
       :text="GAME_EDIT_LABEL"

@@ -19,6 +19,9 @@
   import {
     BOOKMARKED_PLAYERS_TAB_LABEL,
     CATALOG_RETRY_LABEL,
+    FAVORITE_GAMES_EMPTY_DESCRIPTION,
+    FAVORITE_GAMES_EMPTY_TITLE,
+    FAVORITE_GAMES_TAB_LABEL,
     FOLLOWED_MASTERS_TAB_LABEL,
     GAME_CATALOG_GRID_COLUMNS,
     GAME_CATALOG_SKELETON_COUNT,
@@ -27,6 +30,7 @@
     GAMES_CREATE_NAVIGATION_LABEL,
     GAMES_CREATE_ROUTE,
     GAMES_MY_NAVIGATION_LABEL,
+    GAMES_NAVIGATION_LABEL,
     GAMES_ROUTE,
     getFindGameErrorMessage,
     MY_GAMES_APPLICATIONS_LABEL,
@@ -75,6 +79,10 @@
       return 'APPLICATIONS';
     }
 
+    if (tab.value === MY_GAMES_TABS.FAVORITES) {
+      return 'FAVORITE';
+    }
+
     return 'PLAYER';
   });
 
@@ -117,10 +125,27 @@
 
   const isError = computed(() => status.value === 'error');
 
+  const isFavoritesTab = computed(() => tab.value === MY_GAMES_TABS.FAVORITES);
+
   /**
-   * Вкладки раздела: свои игры и два списка отметок. Отметки живут здесь, а
-   * не в профиле: игрока отмечают, чтобы позвать в игру, а мастера — чтобы не
-   * пропустить его новую.
+   * Пустая вкладка избранного говорит о себе сама: отложенных игр просто ещё
+   * не набралось, и совет создать свою игру здесь не к месту — в отличие от
+   * пустых «Играю» и «Веду».
+   */
+  const emptyTitle = computed(() =>
+    isFavoritesTab.value ? FAVORITE_GAMES_EMPTY_TITLE : MY_GAMES_EMPTY_TITLE,
+  );
+
+  const emptyDescription = computed(() =>
+    isFavoritesTab.value
+      ? FAVORITE_GAMES_EMPTY_DESCRIPTION
+      : MY_GAMES_EMPTY_DESCRIPTION,
+  );
+
+  /**
+   * Вкладки раздела: срезы своих игр, избранное и два списка отметок. Отметки
+   * живут здесь, а не в профиле: игрока отмечают, чтобы позвать в игру, а
+   * мастера — чтобы не пропустить его новую.
    */
   const tabItems = [
     {
@@ -139,6 +164,11 @@
       icon: 'tabler:send',
     },
     {
+      value: MY_GAMES_TABS.FAVORITES,
+      label: FAVORITE_GAMES_TAB_LABEL,
+      icon: 'tabler:star',
+    },
+    {
       value: MY_GAMES_TABS.MASTERS,
       label: FOLLOWED_MASTERS_TAB_LABEL,
       icon: 'tabler:bookmark',
@@ -146,7 +176,7 @@
     {
       value: MY_GAMES_TABS.PLAYERS,
       label: BOOKMARKED_PLAYERS_TAB_LABEL,
-      icon: 'tabler:star',
+      icon: 'tabler:user-check',
     },
   ];
 
@@ -227,11 +257,19 @@
           <UiResult
             v-else-if="isEmpty"
             status="info"
-            :title="MY_GAMES_EMPTY_TITLE"
-            :sub-title="MY_GAMES_EMPTY_DESCRIPTION"
+            :title="emptyTitle"
+            :sub-title="emptyDescription"
           >
             <template #extra>
               <UButton
+                v-if="isFavoritesTab"
+                :to="GAMES_ROUTE"
+                icon="tabler:search"
+                :label="GAMES_NAVIGATION_LABEL"
+              />
+
+              <UButton
+                v-else
                 :to="GAMES_CREATE_ROUTE"
                 icon="tabler:plus"
                 :label="GAMES_CREATE_NAVIGATION_LABEL"

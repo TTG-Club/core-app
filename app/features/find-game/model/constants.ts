@@ -759,6 +759,10 @@ export const BOOKMARK_PLAYER_HINT =
 export const BOOKMARK_PLAYER_ADDED_TOAST = 'Игрок отмечен';
 export const BOOKMARK_PLAYER_REMOVED_TOAST = 'Отметка снята';
 
+/** Звёздочка избранного: пустая — можно отметить, залитая — уже отмечена. */
+export const GAME_FAVORITE_ICON = 'tabler:star';
+export const GAME_FAVORITE_ICON_ACTIVE = 'tabler:star-filled';
+
 export const GAME_FAVORITE_ADD_LABEL = 'В избранное';
 export const GAME_FAVORITE_REMOVE_LABEL = 'Убрать из избранного';
 

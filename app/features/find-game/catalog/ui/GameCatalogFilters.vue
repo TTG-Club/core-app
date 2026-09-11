@@ -9,6 +9,8 @@
     CATALOG_FILTER_COST_LABEL,
     CATALOG_FILTER_CROSSPLAY_LABEL,
     CATALOG_FILTER_DURATION_LABEL,
+    CATALOG_FILTER_FAVORITE_HINT,
+    CATALOG_FILTER_FAVORITE_LABEL,
     CATALOG_FILTER_FREE_SEATS_MIN,
     CATALOG_FILTER_MAX_AGE_LABEL,
     CATALOG_FILTER_MAX_FREE_SEATS_HINT,
@@ -59,6 +61,8 @@
       ? GAME_FORM_AGE_ERROR
       : undefined,
   );
+
+  const { isLoggedIn } = useUser();
 
   const citySearch = ref('');
   const excludedCitySearch = ref('');
@@ -217,6 +221,7 @@
   const costSelection = createChipSelection('costType', 'excludeCostType');
   const statusSelection = createChipSelection('status', 'excludeStatus');
 
+  const favorite = createFilterField('favorite');
   const cities = createFilterField('city');
   const excludedCities = createFilterField('excludeCity');
   const minAge = createFilterField('minAge');
@@ -248,6 +253,18 @@
   >
     <template #body>
       <div class="flex flex-col gap-6">
+        <!-- Гостю переключателя нет: список избранного личный, и сервис
+          вернул бы ему пустой каталог вместо подбора -->
+        <UFormField
+          v-if="isLoggedIn"
+          :help="CATALOG_FILTER_FAVORITE_HINT"
+        >
+          <USwitch
+            v-model="favorite"
+            :label="CATALOG_FILTER_FAVORITE_LABEL"
+          />
+        </UFormField>
+
         <GameFilterChips
           v-model="systemSelection"
           :label="CATALOG_FILTER_SYSTEM_LABEL"

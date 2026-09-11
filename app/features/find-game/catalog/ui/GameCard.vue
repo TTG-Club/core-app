@@ -25,7 +25,7 @@
     SESSION_REGISTRATION_STATUS_COLORS,
     SESSION_REGISTRATION_STATUS_LABELS,
   } from '../../model';
-  import { GameCover } from '../../ui';
+  import { GameCover, GameFavoriteButton } from '../../ui';
 
   /** Значок поверх обложки: состояние игры или её видимость. */
   interface CoverBadge {
@@ -239,15 +239,25 @@
           />
         </div>
 
-        <!-- Платность — первое, что ищут в карточке -->
-        <UBadge
-          class="shrink-0"
-          size="sm"
-          variant="solid"
-          :color="costBadgeColor"
-          :icon="costBadgeIcon"
-          :label="costLabel"
-        />
+        <div class="flex shrink-0 items-center gap-1">
+          <!-- Платность — первое, что ищут в карточке -->
+          <UBadge
+            size="sm"
+            variant="solid"
+            :color="costBadgeColor"
+            :icon="costBadgeIcon"
+            :label="costLabel"
+          />
+
+          <!-- Звёздочка поднята над подложкой карточки и возвращает себе
+            нажатия: ряд значков их не принимает, иначе он перехватывал бы
+            клик по самой карточке -->
+          <GameFavoriteButton
+            class="pointer-events-auto relative z-20"
+            :game-id="game.id"
+            on-cover
+          />
+        </div>
       </div>
 
       <div

@@ -121,6 +121,16 @@ function readTriStateFlag(value: QueryValue): boolean | null {
   return null;
 }
 
+/**
+ * Читает флаг-переключатель: в адресе он либо стоит значением `true`, либо
+ * его нет вовсе. Трёхзначность здесь не нужна — «не избранное» это и есть
+ * обычный каталог.
+ * @param value Сырое значение параметра адреса.
+ */
+function readFlag(value: QueryValue): boolean {
+  return readQueryValue(value) === 'true';
+}
+
 /** Пустой фильтр каталога — он же состояние после сброса. */
 export function createEmptyGameFilter(): GameSearchFilter {
   return {
@@ -141,6 +151,7 @@ export function createEmptyGameFilter(): GameSearchFilter {
     maxAge: null,
     maxFreeSeats: null,
     maxSeatsToStart: null,
+    favorite: false,
   };
 }
 
@@ -213,6 +224,7 @@ export function parseGameFilterFromQuery(
       CATALOG_FILTER_SEATS_TO_START_MIN,
       GAME_PLAYERS_MAX,
     ),
+    favorite: readFlag(query.favorite),
   };
 }
 
@@ -284,6 +296,12 @@ function toFilterParams(filter: GameSearchFilter): Record<string, string> {
 
   if (filter.maxSeatsToStart !== null) {
     params.maxSeatsToStart = String(filter.maxSeatsToStart);
+  }
+
+  // Выключенный переключатель в адрес не пишется вовсе: `favorite=false` —
+  // это обычный каталог, и в ссылке ему делать нечего.
+  if (filter.favorite) {
+    params.favorite = 'true';
   }
 
   return params;

@@ -1,4 +1,5 @@
 export * from './useCityDictionary';
+export * from './useFavoriteGames';
 export * from './useFindGameNotifications';
 export * from './useFindGameProfile';
 export * from './useFindGameToast';
