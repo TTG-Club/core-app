@@ -9,7 +9,7 @@
     :to="LEGACY_SITE.url"
     :class="[
       $style.card,
-      'group relative flex min-h-28 flex-col justify-end gap-1.5 overflow-hidden',
+      'relative flex min-h-28 flex-col justify-end gap-1.5 overflow-hidden',
       'rounded-xl border border-default bg-muted p-4 text-white no-underline',
     ]"
     target="_blank"
@@ -24,13 +24,8 @@
         {{ LEGACY_SITE.title }}
       </h2>
 
-      <p class="flex items-center gap-1.5 text-sm text-white/75">
+      <p class="text-sm text-white/75">
         {{ LEGACY_SITE.description }}
-
-        <UIcon
-          name="tabler:external-link"
-          class="size-4 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5"
-        />
       </p>
     </div>
   </NuxtLink>
