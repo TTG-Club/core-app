@@ -35,7 +35,7 @@ export interface SessionAbilities {
   isFull: boolean;
   /** Можно отметить присутствие. */
   canChangeAttendance: boolean;
-  /** Мастер может завершить сессию. */
+  /** Мастер может завершить сессию: она начата или состав подтверждён. */
   canComplete: boolean;
   /** Мастер может отметить сессию несостоявшейся. */
   canCancel: boolean;
@@ -180,7 +180,15 @@ export function resolveSessionAbilities(
       isParticipant
       && session.status !== 'COMPLETED'
       && session.status !== 'CANCELLED',
-    canComplete: abilities.isMaster && !isSessionClosed,
+    // Завершение — отметка о сыгранной встрече, поэтому подтверждённый состав
+    // ей нужен так же, как и началу: пустую закрывают отменой. Уже начатую
+    // завершаем всегда — отозванное по ходу подтверждение не должно запирать
+    // мастера в идущей сессии.
+    canComplete:
+      abilities.isMaster
+      && !isSessionClosed
+      && (session.status === 'IN_PROGRESS'
+        || session.confirmedPlayerIds.length > 0),
     canCancel: abilities.isMaster && !isSessionClosed,
     // Встречу без единого подтверждения сервис не начнёт: так мастер не
     // набивает себе счётчик сыгранных, начиная и закрывая её в одиночку.

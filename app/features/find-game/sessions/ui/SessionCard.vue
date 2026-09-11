@@ -26,10 +26,10 @@
     SESSION_COMPLETE_LABEL,
     SESSION_COPY_LABEL,
     SESSION_DATE_FORMAT,
+    SESSION_NEEDS_CONFIRMATION,
     SESSION_PARTICIPANTS_COUNT_LABEL,
     SESSION_PARTICIPANTS_LABEL,
     SESSION_START_LABEL,
-    SESSION_START_NEEDS_CONFIRMATION,
   } from '../../model';
 
   const {
@@ -105,11 +105,11 @@
   );
 
   /**
-   * Объяснение вместо кнопки «Начать»: мастер иначе не поймёт, почему её нет.
-   * Показывается только владельцу и только у встречи, которую уже пора бы
-   * начать.
+   * Объяснение вместо кнопок «Начать» и «Завершить»: мастер иначе не поймёт,
+   * почему их нет. Показывается только владельцу и только у встречи, которую
+   * уже пора бы начать.
    */
-  const showStartHint = computed(
+  const showConfirmationHint = computed(
     () =>
       abilities.isMaster
       && session.status === 'SCHEDULED'
@@ -128,7 +128,7 @@
       || sessionAbilities.value.canComplete
       || sessionAbilities.value.canReview
       || sessionAbilities.value.canCancel
-      || showStartHint.value,
+      || showConfirmationHint.value,
   );
 
   /**
@@ -298,10 +298,10 @@
       />
 
       <span
-        v-else-if="showStartHint"
+        v-else-if="showConfirmationHint"
         class="text-xs text-muted"
       >
-        {{ SESSION_START_NEEDS_CONFIRMATION }}
+        {{ SESSION_NEEDS_CONFIRMATION }}
       </span>
 
       <UButton

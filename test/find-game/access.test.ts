@@ -437,6 +437,32 @@ describe('состояния сессии у мастера', () => {
     expect(abilities.canStart).toBe(false);
   });
 
+  it('без подтверждённого участия встречу только отменяют', () => {
+    const abilities = resolveSessionAbilities(
+      makeSession({ confirmedPlayerIds: [] }),
+      game,
+      null,
+      masterOf(game),
+    );
+
+    // Завершение значит «сыграли»: пустую встречу закрывают отменой.
+    expect(abilities.canComplete).toBe(false);
+    expect(abilities.canCancel).toBe(true);
+  });
+
+  it('начатую встречу завершают даже без подтверждений', () => {
+    const abilities = resolveSessionAbilities(
+      makeSession({ status: 'IN_PROGRESS', confirmedPlayerIds: [] }),
+      game,
+      null,
+      masterOf(game),
+    );
+
+    // Игрок мог отозвать подтверждение по ходу встречи — мастер не должен
+    // остаться запертым в идущей сессии.
+    expect(abilities.canComplete).toBe(true);
+  });
+
   it('закрыть можно всё, кроме уже закрытой', () => {
     for (const status of ['SCHEDULED', 'IN_PROGRESS'] as const) {
       const abilities = resolveSessionAbilities(
