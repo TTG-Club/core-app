@@ -118,6 +118,31 @@ describe('чтение фильтра из адреса', () => {
     ).toBeNull();
   });
 
+  it('читает отбор по местам и отбрасывает бессмысленные значения', () => {
+    expect(parseGameFilterFromQuery({ maxFreeSeats: '1' }).maxFreeSeats).toBe(
+      1,
+    );
+
+    expect(
+      parseGameFilterFromQuery({ maxSeatsToStart: '2' }).maxSeatsToStart,
+    ).toBe(2);
+
+    // Ноль свободных мест в выдаче не встречается — собранный стол сервис в
+    // поиск не отдаёт, поэтому такое условие оставило бы пустой каталог.
+    expect(
+      parseGameFilterFromQuery({ maxFreeSeats: '0' }).maxFreeSeats,
+    ).toBeNull();
+
+    // А ноль до старта — рабочее условие: минимум набран, места ещё есть.
+    expect(
+      parseGameFilterFromQuery({ maxSeatsToStart: '0' }).maxSeatsToStart,
+    ).toBe(0);
+
+    expect(
+      parseGameFilterFromQuery({ maxFreeSeats: '99' }).maxFreeSeats,
+    ).toBeNull();
+  });
+
   it('снимает перевёрнутый возрастной диапазон', () => {
     // Сервис отвечает 400 на весь запрос, поэтому из такого адреса остаётся
     // только нижняя граница.
@@ -188,6 +213,8 @@ describe('запись фильтра в адрес', () => {
     filter.crossplayAllowed = true;
     filter.minAge = 18;
     filter.maxAge = 40;
+    filter.maxFreeSeats = 1;
+    filter.maxSeatsToStart = 0;
 
     const query = toRouteQuery(serializeGameFilterToQuery(filter, 4));
     const restored = parseGameFilterFromQuery(query);
@@ -208,6 +235,20 @@ describe('запрос к сервису', () => {
       costType: 'FREE',
       excludeType: 'TEXT',
       page: 2,
+      size: 12,
+    });
+  });
+
+  it('передаёт отбор по местам, включая ноль до старта', () => {
+    const filter = createEmptyGameFilter();
+
+    filter.maxFreeSeats = 1;
+    filter.maxSeatsToStart = 0;
+
+    expect(toGameSearchQuery(filter, 0, 12)).toEqual({
+      maxFreeSeats: '1',
+      maxSeatsToStart: '0',
+      page: 0,
       size: 12,
     });
   });

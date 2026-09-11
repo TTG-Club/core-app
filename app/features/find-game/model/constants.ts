@@ -162,6 +162,12 @@ export const BOOKMARKED_PLAYERS_API_PATH = `${FIND_GAME_API_PREFIX}/profiles/me/
 /** Отметка о конкретном игроке. */
 export const PLAYER_BOOKMARK_API_PATH = `${FIND_GAME_API_PREFIX}/profiles/players`;
 
+/** Отмеченные игры: сервис отдаёт только их идентификаторы. */
+export const FAVORITE_GAMES_API_PATH = `${FIND_GAME_API_PREFIX}/profiles/me/favorites/games`;
+
+/** Хвост пути отметки конкретной игры: `/games/{id}/favorite`. */
+export const GAME_FAVORITE_PATH_SUFFIX = 'favorite';
+
 /* ------------------------------------------------------------------ */
 /* Перечисления сервиса                                                */
 /* ------------------------------------------------------------------ */
@@ -629,6 +635,30 @@ export const CATALOG_FILTER_CITY_EXCLUDE_LABEL = 'Исключить город�
 export const CATALOG_FILTER_CROSSPLAY_LABEL = 'Кросспол';
 export const CATALOG_FILTER_MIN_AGE_LABEL = 'Возраст от';
 export const CATALOG_FILTER_MAX_AGE_LABEL = 'Возраст до';
+export const CATALOG_FILTER_MAX_FREE_SEATS_LABEL = 'Свободных мест не больше';
+
+export const CATALOG_FILTER_MAX_FREE_SEATS_HINT =
+  'Почти собранный стол: «1» — игры, где осталось последнее место';
+
+export const CATALOG_FILTER_MAX_SEATS_TO_START_LABEL =
+  'До старта не хватает не больше';
+
+export const CATALOG_FILTER_MAX_SEATS_TO_START_HINT =
+  'Сколько игроков мастеру нужно, чтобы начать: «1» — не хватает одного';
+
+export const CATALOG_FILTER_FAVORITE_LABEL = 'Только избранное';
+
+export const CATALOG_FILTER_FAVORITE_HINT =
+  'Игры из вашего списка; собранные столы каталог всё равно не показывает';
+
+/**
+ * Границы отбора по местам. Свободных мест в выдаче всегда хотя бы одно —
+ * собранный стол сервис в поиск не отдаёт, поэтому ноль там просто не
+ * встречается. До старта не хватать может и нуля: минимум уже набран, а
+ * места ещё есть.
+ */
+export const CATALOG_FILTER_FREE_SEATS_MIN = 1;
+export const CATALOG_FILTER_SEATS_TO_START_MIN = 0;
 
 /** Варианты трёхпозиционного выбора кроссплея. */
 export const CROSSPLAY_FILTER_OPTIONS: Array<{
@@ -729,16 +759,30 @@ export const BOOKMARK_PLAYER_HINT =
 export const BOOKMARK_PLAYER_ADDED_TOAST = 'Игрок отмечен';
 export const BOOKMARK_PLAYER_REMOVED_TOAST = 'Отметка снята';
 
+export const GAME_FAVORITE_ADD_LABEL = 'В избранное';
+export const GAME_FAVORITE_REMOVE_LABEL = 'Убрать из избранного';
+
+export const GAME_FAVORITE_ADDED_TOAST = 'Игра в избранном';
+export const GAME_FAVORITE_REMOVED_TOAST = 'Игра убрана из избранного';
+
 export const FOLLOWED_MASTERS_TAB_LABEL = 'Мои мастера';
 export const BOOKMARKED_PLAYERS_TAB_LABEL = 'Мои игроки';
-/** Вкладки раздела «Мои игры»: три среза своих игр и два списка отметок. */
+export const FAVORITE_GAMES_TAB_LABEL = 'Избранное';
+
+/** Вкладки раздела «Мои игры»: четыре среза игр и два списка отметок. */
 export const MY_GAMES_TABS = {
   PLAYING: 'playing',
   HOSTING: 'hosting',
   APPLICATIONS: 'applications',
+  FAVORITES: 'favorites',
   MASTERS: 'masters',
   PLAYERS: 'players',
 } as const;
+
+export const FAVORITE_GAMES_EMPTY_TITLE = 'Избранных игр нет';
+
+export const FAVORITE_GAMES_EMPTY_DESCRIPTION =
+  'Отметьте игру звёздочкой в каталоге — она появится здесь, даже если уйдёт из поиска.';
 
 export const FOLLOWED_MASTERS_EMPTY_TITLE = 'Отмеченных мастеров нет';
 

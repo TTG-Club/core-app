@@ -9,8 +9,14 @@
     CATALOG_FILTER_COST_LABEL,
     CATALOG_FILTER_CROSSPLAY_LABEL,
     CATALOG_FILTER_DURATION_LABEL,
+    CATALOG_FILTER_FREE_SEATS_MIN,
     CATALOG_FILTER_MAX_AGE_LABEL,
+    CATALOG_FILTER_MAX_FREE_SEATS_HINT,
+    CATALOG_FILTER_MAX_FREE_SEATS_LABEL,
+    CATALOG_FILTER_MAX_SEATS_TO_START_HINT,
+    CATALOG_FILTER_MAX_SEATS_TO_START_LABEL,
     CATALOG_FILTER_MIN_AGE_LABEL,
+    CATALOG_FILTER_SEATS_TO_START_MIN,
     CATALOG_FILTER_STATUS_LABEL,
     CATALOG_FILTER_SYSTEM_LABEL,
     CATALOG_FILTER_TYPE_LABEL,
@@ -28,6 +34,7 @@
     GAME_DURATION_TYPE_LABELS,
     GAME_DURATION_TYPES,
     GAME_FORM_AGE_ERROR,
+    GAME_PLAYERS_MAX,
     GAME_STATUS_LABELS,
     GAME_STATUSES,
     GAME_SYSTEM_LABELS,
@@ -214,6 +221,8 @@
   const excludedCities = createFilterField('excludeCity');
   const minAge = createFilterField('minAge');
   const maxAge = createFilterField('maxAge');
+  const maxFreeSeats = createFilterField('maxFreeSeats');
+  const maxSeatsToStart = createFilterField('maxSeatsToStart');
 
   /** Сбрасывает все условия подбора. */
   function handleReset(): void {
@@ -325,6 +334,30 @@
             />
           </UFormField>
         </div>
+
+        <UFormField
+          :label="CATALOG_FILTER_MAX_FREE_SEATS_LABEL"
+          :help="CATALOG_FILTER_MAX_FREE_SEATS_HINT"
+        >
+          <UInputNumber
+            v-model="maxFreeSeats"
+            :min="CATALOG_FILTER_FREE_SEATS_MIN"
+            :max="GAME_PLAYERS_MAX"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField
+          :label="CATALOG_FILTER_MAX_SEATS_TO_START_LABEL"
+          :help="CATALOG_FILTER_MAX_SEATS_TO_START_HINT"
+        >
+          <UInputNumber
+            v-model="maxSeatsToStart"
+            :min="CATALOG_FILTER_SEATS_TO_START_MIN"
+            :max="GAME_PLAYERS_MAX"
+            class="w-full"
+          />
+        </UFormField>
       </div>
     </template>
 

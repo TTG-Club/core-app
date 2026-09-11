@@ -10,10 +10,13 @@ import type {
 } from './types';
 
 import {
+  CATALOG_FILTER_FREE_SEATS_MIN,
+  CATALOG_FILTER_SEATS_TO_START_MIN,
   GAME_AGE_MAX,
   GAME_AGE_MIN,
   GAME_COST_TYPES,
   GAME_DURATION_TYPES,
+  GAME_PLAYERS_MAX,
   GAME_STATUSES,
   GAME_SYSTEMS,
   GAME_TYPES,
@@ -136,6 +139,8 @@ export function createEmptyGameFilter(): GameSearchFilter {
     crossplayAllowed: null,
     minAge: null,
     maxAge: null,
+    maxFreeSeats: null,
+    maxSeatsToStart: null,
   };
 }
 
@@ -198,6 +203,16 @@ export function parseGameFilterFromQuery(
     crossplayAllowed: readTriStateFlag(query.crossplayAllowed),
     minAge,
     maxAge: hasInvertedRange ? null : maxAge,
+    maxFreeSeats: readBoundedInteger(
+      query.maxFreeSeats,
+      CATALOG_FILTER_FREE_SEATS_MIN,
+      GAME_PLAYERS_MAX,
+    ),
+    maxSeatsToStart: readBoundedInteger(
+      query.maxSeatsToStart,
+      CATALOG_FILTER_SEATS_TO_START_MIN,
+      GAME_PLAYERS_MAX,
+    ),
   };
 }
 
@@ -259,6 +274,16 @@ function toFilterParams(filter: GameSearchFilter): Record<string, string> {
 
   if (filter.maxAge !== null) {
     params.maxAge = String(filter.maxAge);
+  }
+
+  // Ноль здесь — полноценное условие («минимум уже набран»), поэтому проверка
+  // именно на `null`, а не на пустоту значения.
+  if (filter.maxFreeSeats !== null) {
+    params.maxFreeSeats = String(filter.maxFreeSeats);
+  }
+
+  if (filter.maxSeatsToStart !== null) {
+    params.maxSeatsToStart = String(filter.maxSeatsToStart);
   }
 
   return params;
