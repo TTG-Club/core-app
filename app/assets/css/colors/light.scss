@@ -234,8 +234,12 @@ html.light {
   --color-hover: oklch(0.3 0.116 27 / 0.08); /* бордовая дымка при наведении */
   --color-link: var(--color-primary-500); /* ссылки бордовые, как и акцент */
 
-  /* Клетка фона — шапка главной и PageBackdrop */
+  /* Клетка фона PageBackdrop */
   --color-backdrop-grid: var(--ui-border);
+
+  /* Карта деревни в шапке главной — чернила на пергаменте — и её бледность */
+  --hero-map-image: url('/img/home/hero-map-light.svg');
+  --hero-map-opacity: 0.55;
 
   /* Logo — тема плоская: верх и низ каждого градиента совпадают */
   --color-logo-stroke-top: var(--color-neutral-900);

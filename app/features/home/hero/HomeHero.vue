@@ -9,9 +9,8 @@
 <template>
   <!--
     Шапка главной идёт во всю ширину экрана: колонка контента начинается только
-    ниже, в сетке блоков. `isolate` держит декоративные слои внутри — фоновая
-    анимация частиц (HomeBackground) лежит ниже, на уровне страницы, и светится
-    сквозь прозрачный герой.
+    ниже, в сетке блоков. `isolate` держит декоративные слои — карту и
+    свечение — внутри шапки, под её содержимым.
   -->
   <section
     class="relative isolate w-full overflow-hidden border-b border-default"
@@ -20,11 +19,12 @@
       aria-hidden="true"
       class="pointer-events-none absolute inset-0 -z-1"
     >
+      <!-- Карта деревни с высоты птичьего полёта: рисунок под каждую тему
+        лежит в `public/img/home`, выбирает его токен `--hero-map-image` -->
+      <div :class="$style.map" />
+
       <!-- Тёплое свечение по центру — «очаг», к которому стягивается взгляд -->
       <div :class="$style.glow" />
-
-      <!-- Волосяная клетка: даёт фактуру пустому месту по краям -->
-      <div :class="$style.grid" />
     </div>
 
     <div
@@ -56,6 +56,41 @@
 </template>
 
 <style lang="scss" module>
+  /* Уже этой ширины карта не сжимается: края уходят за экран, а дома
+     остаются различимыми */
+  $mapMinWidth: 1600px;
+
+  /* Масштаб карты задаёт только ширина шапки, не высота: высота растёт, когда
+     подгружается персонаж с репликой, и карта при `cover` прыгала бы. Холст
+     с запасом по высоте, поэтому шапку он закрывает и так */
+  .map {
+    position: absolute;
+    inset: 0;
+
+    opacity: var(--hero-map-opacity);
+    background: var(--hero-map-image) center / max(100%, $mapMinWidth) auto
+      no-repeat;
+
+    /* Под заголовком и поиском карта почти растворяется, по бокам видна
+       целиком; сверху и снизу тает, чтобы не упираться в края шапки */
+    mask-image:
+      linear-gradient(
+        to right,
+        #000 12%,
+        rgb(0 0 0 / 22%) 32%,
+        rgb(0 0 0 / 22%) 68%,
+        #000 88%
+      ),
+      linear-gradient(
+        to bottom,
+        transparent 0%,
+        #000 15%,
+        #000 85%,
+        transparent 100%
+      );
+    mask-composite: intersect;
+  }
+
   .glow {
     position: absolute;
     inset: 0;
@@ -70,32 +105,5 @@
         color-mix(in oklch, var(--ui-bg-elevated) 55%, transparent) 0%,
         transparent 75%
       );
-  }
-
-  .grid {
-    position: absolute;
-    inset: 0;
-    /* Клетка видна только по краям — под текстом она мешала бы читать */
-    opacity: 0.75;
-    /* Два повтора с одним шагом дают квадратную клетку, а не полоски */
-    background-image:
-      repeating-linear-gradient(
-        to right,
-        var(--color-backdrop-grid) 0 1px,
-        transparent 1px 96px
-      ),
-      repeating-linear-gradient(
-        to bottom,
-        var(--color-backdrop-grid) 0 1px,
-        transparent 1px 96px
-      );
-
-    mask-image: linear-gradient(
-      to right,
-      #000 0%,
-      transparent 24%,
-      transparent 76%,
-      #000 100%
-    );
   }
 </style>

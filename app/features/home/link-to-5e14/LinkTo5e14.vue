@@ -48,7 +48,7 @@
 
       display: block;
 
-      opacity: 0.45;
+      opacity: 0.6;
       background-image: url('/s3/home/legacy-site.webp');
       background-repeat: no-repeat;
       background-position: center;
@@ -67,8 +67,8 @@
 
       background: linear-gradient(
         to top,
-        rgb(10 12 16 / 88%) 0%,
-        rgb(10 12 16 / 55%) 100%
+        rgb(10 12 16 / 78%) 0%,
+        rgb(10 12 16 / 30%) 100%
       );
     }
 

@@ -93,10 +93,10 @@
     background:
       linear-gradient(
         to right,
-        rgb(0 0 0 / 88%) 0%,
-        rgb(0 0 0 / 62%) 65%,
-        rgb(0 0 0 / 30%) 100%
+        rgb(0 0 0 / 70%) 0%,
+        rgb(0 0 0 / 40%) 65%,
+        rgb(0 0 0 / 10%) 100%
       ),
-      linear-gradient(to top, rgb(0 0 0 / 82%) 0%, rgb(0 0 0 / 15%) 100%);
+      linear-gradient(to top, rgb(0 0 0 / 55%) 0%, transparent 100%);
   }
 </style>

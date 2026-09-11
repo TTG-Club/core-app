@@ -1,7 +1,6 @@
 <script setup lang="ts">
   import { HomeActivity } from '~home/activity';
   import { HomeArticles } from '~home/articles';
-  import { HomeBackground } from '~home/background';
   import { VttgPromoCard } from '~home/banners';
   import { HomeCommunity } from '~home/community';
   import { HomeHero } from '~home/hero';
@@ -23,10 +22,6 @@
 
 <template>
   <NuxtLayout>
-    <ClientOnly>
-      <HomeBackground />
-    </ClientOnly>
-
     <HomeHero />
 
     <!-- gap-6/8 между зонами: плита разделов и лента — разные по смыслу полосы,

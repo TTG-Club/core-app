@@ -206,8 +206,12 @@ html.dark {
   --color-hover: oklch(1 0 89.876 / 0.05);
   --color-link: var(--color-primary-300);
 
-  /* Клетка фона — шапка главной и PageBackdrop */
+  /* Клетка фона PageBackdrop */
   --color-backdrop-grid: var(--ui-border);
+
+  /* Карта деревни в шапке главной — рисунок в ночной палитре — и её бледность */
+  --hero-map-image: url('/img/home/hero-map-dark.svg');
+  --hero-map-opacity: 0.6;
 
   /* SearchPanel */
   --color-searchanel-100: #87bfdb;

@@ -79,7 +79,7 @@
 
         <div
           aria-hidden="true"
-          class="absolute inset-0 bg-linear-to-t from-black/92 via-black/55 to-black/10"
+          class="absolute inset-0 bg-linear-to-t from-black/80 via-black/25 to-black/5"
         />
 
         <div
