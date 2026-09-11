@@ -3,6 +3,7 @@
 
   import { StatusCodes } from 'http-status-codes';
 
+  import { ACTION_LABELS } from '~/shared/consts';
   import {
     useFindGameToast,
     useGameDetail,
@@ -307,7 +308,6 @@
   <NuxtLayout
     name="detail"
     :title="game?.title"
-    :back-to="GAMES_ROUTE"
   >
     <template #actions>
       <GameActions
@@ -323,6 +323,16 @@
         @report="handleReport"
         @remove="handleRemove"
       />
+
+      <UTooltip :text="ACTION_LABELS.close">
+        <UButton
+          :to="GAMES_ROUTE"
+          color="neutral"
+          variant="ghost"
+          icon="tabler:x"
+          :aria-label="ACTION_LABELS.close"
+        />
+      </UTooltip>
     </template>
 
     <template #default>
