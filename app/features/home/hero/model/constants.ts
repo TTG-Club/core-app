@@ -2,4 +2,4 @@
 export const HOME_HERO_TITLE = 'Справочник и инструменты D&D 2024';
 
 /** Вторая строка заголовка — приглушённая, про происхождение проекта */
-export const HOME_HERO_SUBTITLE = 'Создан сообществом — открыт для всех';
+export const HOME_HERO_SUBTITLE = 'Создан сообществом — для сообщества';
