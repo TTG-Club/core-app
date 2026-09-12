@@ -1,3 +1,4 @@
+export { default as AdminBugReportContent } from './AdminBugReportContent.vue';
 export { default as AdminBugReportDetail } from './AdminBugReportDetail.vue';
 export { default as AdminBugReportDetailPane } from './AdminBugReportDetailPane.vue';
 export { default as AdminBugReportDiagnostics } from './AdminBugReportDiagnostics.vue';

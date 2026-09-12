@@ -210,6 +210,13 @@ export interface BugReportStatusUpdatePayload {
   statusComment?: string;
 }
 
+/**
+ * Вкладка детального просмотра баг-репорта в панели модератора.
+ *
+ * `diagnostics` существует только у репортов со снимком метрик — из VTTG.
+ */
+export type BugReportDetailTab = 'report' | 'diagnostics';
+
 /** Цвет кисти для рисования на скриншоте */
 export interface BrushColor {
   /** Уникальное название цвета */

@@ -1,21 +1,20 @@
 <script setup lang="ts">
   import type {
+    BugReportDetailTab,
     BugReportResponse,
     BugReportStatus,
     BugReportStatusUpdatePayload,
-    ParsedSelection,
   } from '../../model';
-
-  import { MarkupRender } from '~ui/markup';
 
   import {
     BUG_REPORT_ANONYMOUS_USER,
-    BUG_REPORT_ANONYMOUS_USER_GENITIVE,
     BUG_REPORT_COMMENT_SAVE_BUTTON_LABEL,
     BUG_REPORT_COMMENT_SAVE_SUCCESS_DESC,
     BUG_REPORT_COMMENT_SAVE_SUCCESS_TITLE,
     BUG_REPORT_COPY_ID_TITLE,
     BUG_REPORT_DETAIL_DATE_FORMAT,
+    BUG_REPORT_DETAIL_DEFAULT_TAB,
+    BUG_REPORT_DETAIL_TABS,
     BUG_REPORT_PLATFORM_LABELS,
     BUG_REPORT_STATUS_COMMENT_MAX_LENGTH,
     BUG_REPORT_STATUS_COMMENT_PLACEHOLDER,
@@ -29,10 +28,8 @@
     getAdminBugStatusApiUrl,
     getBugReportStatusColor,
     parseBugReportDiagnostics,
-    parseSelectedText,
-    toBugReportDescriptionBlocks,
   } from '../../model';
-  import { AdminBugReportDiagnostics } from './';
+  import { AdminBugReportContent, AdminBugReportDiagnostics } from './';
 
   /**
    * Свойства компонента детального просмотра баг-репорта.
@@ -51,7 +48,6 @@
   const toast = useToast();
   const { copy } = useCopyAndShare();
 
-  const isImageModalOpen = ref(false);
   const isUpdating = ref(false);
   const currentTargetStatus = ref<BugReportStatus | null>(null);
 
@@ -62,12 +58,9 @@
 
   const isSavingComment = ref(false);
 
-  const { format } = useDayjs();
+  const activeTab = ref<BugReportDetailTab>(BUG_REPORT_DETAIL_DEFAULT_TAB);
 
-  /** Абзацы описания для рендера разметки: новые репорты — с оформлением, старые — текст. */
-  const descriptionBlocks = computed(() =>
-    toBugReportDescriptionBlocks(props.bugReport.description),
-  );
+  const { format } = useDayjs();
 
   /**
    * Форматированная дата последнего изменения статуса.
@@ -112,18 +105,10 @@
   );
 
   /**
-   * Разбирает строку выделенного текста на контекст до, выделенный фрагмент и контекст после.
+   * Вкладки нужны только тогда, когда снимок метрик есть: репорты с сайта и
+   * старые репорты из VTTG показываем сплошным блоком, как раньше.
    */
-  const parsedSelection = computed<ParsedSelection>(() =>
-    parseSelectedText(props.bugReport.selectedText ?? ''),
-  );
-
-  /**
-   * Открывает модальное окно просмотра скриншота.
-   */
-  function openScreenshotModal(): void {
-    isImageModalOpen.value = true;
-  }
+  const hasDiagnostics = computed<boolean>(() => diagnostics.value !== null);
 
   /**
    * Сохраняет изменения статуса и комментарий на сервере.
@@ -232,6 +217,15 @@
     () => props.bugReport.statusComment,
     (newComment) => {
       statusCommentInput.value = newComment ?? '';
+    },
+  );
+
+  // Другой репорт открывается с начала: вкладка со снимком метрик у него может
+  // и не быть, а от предыдущего остался бы выбор «Производительность»
+  watch(
+    () => props.bugReport.id,
+    () => {
+      activeTab.value = BUG_REPORT_DETAIL_DEFAULT_TAB;
     },
   );
 </script>
@@ -380,121 +374,31 @@
       </p>
     </div>
 
-    <!-- Страница ошибки -->
-    <div
-      v-if="bugReport.url"
-      class="space-y-2"
+    <!-- Репорт и снимок метрик: вкладки, пока снимок есть -->
+    <UTabs
+      v-if="hasDiagnostics"
+      v-model="activeTab"
+      :items="BUG_REPORT_DETAIL_TABS"
+      :unmount-on-hide="false"
+      size="sm"
+      :ui="{ root: 'gap-4', content: 'min-w-0' }"
     >
-      <div class="text-xs font-medium tracking-wide text-muted uppercase">
-        Страница ошибки
-      </div>
-
-      <a
-        :href="bugReport.url"
-        target="_blank"
-        class="flex items-center gap-2 text-sm font-medium break-all text-primary hover:underline"
-      >
-        <span>{{ bugReport.url }}</span>
-
-        <UIcon
-          name="tabler:external-link"
-          class="size-4 shrink-0"
-        />
-      </a>
-    </div>
-
-    <!-- Описание ошибки -->
-    <div class="space-y-2">
-      <div class="text-xs font-medium tracking-wide text-muted uppercase">
-        Описание проблемы
-      </div>
-
-      <!-- whitespace-pre-wrap сохраняет переносы строк старых репортов (обычный
-           текст); у блоков разметки убираем нижний отступ последнего -->
-      <div
-        class="rounded-xl border border-default bg-default/20 p-4 text-sm leading-relaxed break-words whitespace-pre-wrap text-highlighted [&>*:last-child]:mb-0"
-      >
-        <MarkupRender :render-node="descriptionBlocks" />
-      </div>
-    </div>
-
-    <!-- Производительность при отправке -->
-    <AdminBugReportDiagnostics
-      v-if="diagnostics"
-      :diagnostics="diagnostics"
-    />
-
-    <!-- Выделенный текст -->
-    <div
-      v-if="bugReport.selectedText"
-      class="space-y-2"
-    >
-      <div class="text-xs font-medium tracking-wide text-muted uppercase">
-        Выделенный текст на странице
-      </div>
-
-      <blockquote
-        v-if="parsedSelection.hasSelection"
-        class="rounded-r-xl border-l-4 border-primary/50 bg-default/30 py-2 pl-4 text-sm leading-relaxed break-words text-secondary"
-      >
-        <span class="text-secondary/70">{{ parsedSelection.before }}</span>
-
-        <span
-          class="rounded-sm bg-error/10 px-1 font-semibold text-highlighted underline decoration-error underline-offset-3"
-        >
-          {{ parsedSelection.selected }}
-        </span>
-
-        <span class="text-secondary/70">{{ parsedSelection.after }}</span>
-      </blockquote>
-
-      <blockquote
-        v-else
-        class="rounded-r-xl border-l-4 border-primary/50 bg-default/30 py-2 pl-4 text-sm leading-relaxed break-words text-secondary italic"
-      >
-        {{ bugReport.selectedText }}
-      </blockquote>
-    </div>
-
-    <!-- Скриншот -->
-    <div
-      v-if="bugReport.screenshotUrl"
-      class="space-y-2"
-    >
-      <div class="text-xs font-medium tracking-wide text-muted uppercase">
-        Скриншот
-      </div>
-
-      <div
-        class="relative max-w-2xl overflow-hidden rounded-xl border border-default bg-muted transition-colors hover:border-accented"
-      >
-        <img
-          :src="bugReport.screenshotUrl"
-          alt="Скриншот ошибки"
-          class="max-h-[350px] w-full cursor-pointer object-contain"
-          @click.left.exact.prevent="openScreenshotModal"
-        />
-      </div>
-    </div>
-
-    <!-- Модалка полного скриншота -->
-    <UModal
-      v-model:open="isImageModalOpen"
-      :title="`Скриншот баг-репорта от ${bugReport.userLogin || BUG_REPORT_ANONYMOUS_USER_GENITIVE}`"
-      :ui="{ content: 'max-w-5xl' }"
-    >
-      <template #body>
-        <div
-          class="flex items-center justify-center overflow-hidden rounded-lg bg-black/10 p-2"
-        >
-          <img
-            v-if="bugReport.screenshotUrl"
-            :src="bugReport.screenshotUrl"
-            alt="Скриншот ошибки в оригинальном размере"
-            class="max-h-[80vh] max-w-full object-contain"
-          />
-        </div>
+      <template #report>
+        <AdminBugReportContent :bug-report="bugReport" />
       </template>
-    </UModal>
+
+      <template #diagnostics>
+        <!-- v-if повторяет проверку снаружи: внутри слота сужение типа теряется -->
+        <AdminBugReportDiagnostics
+          v-if="diagnostics"
+          :diagnostics="diagnostics"
+        />
+      </template>
+    </UTabs>
+
+    <AdminBugReportContent
+      v-else
+      :bug-report="bugReport"
+    />
   </div>
 </template>

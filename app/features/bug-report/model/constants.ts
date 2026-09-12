@@ -1,4 +1,4 @@
-import type { BrushColor, BugReportStatus } from './types';
+import type { BrushColor, BugReportDetailTab, BugReportStatus } from './types';
 
 import { SOURCE_PLATFORM_LABELS } from '#shared/consts';
 
@@ -490,6 +490,28 @@ export const MY_BUGS_RETRY_LABEL = 'Повторить попытку';
 
 /** Заголовок блока со снимком метрик производительности */
 export const BUG_REPORT_DIAGNOSTICS_TITLE = 'Производительность при отправке';
+
+/**
+ * Вкладки детального просмотра баг-репорта. Вкладка со снимком метрик
+ * добавляется только тогда, когда снимок действительно пришёл.
+ */
+export const BUG_REPORT_DETAIL_TABS: Array<{
+  label: string;
+  value: BugReportDetailTab;
+  slot: BugReportDetailTab;
+  icon: string;
+}> = [
+  { label: 'Отчёт', value: 'report', slot: 'report', icon: 'tabler:bug' },
+  {
+    label: BUG_REPORT_DIAGNOSTICS_TITLE,
+    value: 'diagnostics',
+    slot: 'diagnostics',
+    icon: 'tabler:activity-heartbeat',
+  },
+];
+
+/** Вкладка, открытая при выборе баг-репорта */
+export const BUG_REPORT_DETAIL_DEFAULT_TAB: BugReportDetailTab = 'report';
 
 /** Заголовки секций снимка */
 export const BUG_REPORT_DIAGNOSTICS_CLIENT_TITLE = 'Клиент';
