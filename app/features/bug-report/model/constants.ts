@@ -487,3 +487,90 @@ export const MY_BUGS_EMPTY_FILTERED_TEXT =
 /** Текст ошибки загрузки списка и подпись кнопки повтора */
 export const MY_BUGS_LOAD_ERROR_TEXT = 'Не удалось загрузить ваши баг-репорты.';
 export const MY_BUGS_RETRY_LABEL = 'Повторить попытку';
+
+/** Заголовок блока со снимком метрик производительности */
+export const BUG_REPORT_DIAGNOSTICS_TITLE = 'Производительность при отправке';
+
+/** Заголовки секций снимка */
+export const BUG_REPORT_DIAGNOSTICS_CLIENT_TITLE = 'Клиент';
+export const BUG_REPORT_DIAGNOSTICS_SERVER_TITLE = 'Сервер мира';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_TITLE = 'Сцена';
+export const BUG_REPORT_DIAGNOSTICS_DEVICE_TITLE = 'Железо и браузер';
+
+/** Заголовки таблиц замеров */
+export const BUG_REPORT_DIAGNOSTICS_SPANS_TITLE =
+  'Профиль кадра (Σмс за секунду)';
+export const BUG_REPORT_DIAGNOSTICS_EVENTS_TITLE =
+  'Топ WS-событий (Σмс за 2 с)';
+
+/** Подписи столбцов таблиц замеров */
+export const BUG_REPORT_DIAGNOSTICS_SPAN_NAME_LABEL = 'Участок';
+export const BUG_REPORT_DIAGNOSTICS_EVENT_NAME_LABEL = 'Событие';
+export const BUG_REPORT_DIAGNOSTICS_SPAN_TOTAL_LABEL = 'Σмс';
+export const BUG_REPORT_DIAGNOSTICS_SPAN_COUNT_LABEL = 'Вызовов';
+export const BUG_REPORT_DIAGNOSTICS_SPAN_MAX_LABEL = 'Макс. мс';
+
+/** Подписи метрик клиента */
+export const BUG_REPORT_DIAGNOSTICS_FPS_LABEL = 'FPS';
+export const BUG_REPORT_DIAGNOSTICS_PING_LABEL = 'Ping до сервера';
+export const BUG_REPORT_DIAGNOSTICS_WALLS_LABEL = 'Стены (всего/отрис./кэш)';
+export const BUG_REPORT_DIAGNOSTICS_RAYCAST_LABEL = 'Raycast (мс/лучей/стен)';
+export const BUG_REPORT_DIAGNOSTICS_CHECKS_LABEL = 'Пересечений отрезков';
+export const BUG_REPORT_DIAGNOSTICS_LIGHT_CACHE_LABEL =
+  'Кэш зрения и света (попал/мимо)';
+export const BUG_REPORT_DIAGNOSTICS_QUADTREE_LABEL = 'Узлов квадродерева';
+
+/** Подписи метрик сервера */
+export const BUG_REPORT_DIAGNOSTICS_LOOP_LAG_LABEL =
+  'Loop-lag (сред./p99/макс.)';
+export const BUG_REPORT_DIAGNOSTICS_CLIENTS_LABEL = 'Клиентов на сервере';
+
+/** Подписи метрик сцены */
+export const BUG_REPORT_DIAGNOSTICS_SCENE_KIND_LABEL = 'Вид';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_SIZE_LABEL = 'Размер';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_TOKENS_LABEL = 'Токенов';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_LIGHTS_LABEL = 'Источников света';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_DRAWINGS_LABEL = 'Рисунков';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_AREAS_LABEL = 'Областей';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_TEMPLATES_LABEL =
+  'Шаблонов измерений';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_FOG_LABEL = 'Туман войны';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_DARKNESS_LABEL = 'Уровень темноты';
+
+/** Подписи метрик устройства */
+export const BUG_REPORT_DIAGNOSTICS_APP_VERSION_LABEL = 'Версия приложения';
+export const BUG_REPORT_DIAGNOSTICS_GPU_LABEL = 'Видеокарта';
+export const BUG_REPORT_DIAGNOSTICS_CPU_LABEL = 'Ядер процессора';
+export const BUG_REPORT_DIAGNOSTICS_MEMORY_LABEL = 'Память устройства';
+export const BUG_REPORT_DIAGNOSTICS_HEAP_LABEL = 'Куча JS (занято/предел)';
+export const BUG_REPORT_DIAGNOSTICS_SCREEN_LABEL = 'Экран';
+export const BUG_REPORT_DIAGNOSTICS_VIEWPORT_LABEL = 'Окно';
+export const BUG_REPORT_DIAGNOSTICS_PLATFORM_LABEL = 'Платформа';
+export const BUG_REPORT_DIAGNOSTICS_USER_AGENT_LABEL = 'User-Agent';
+
+/** Подписи режима запуска приложения */
+export const BUG_REPORT_DIAGNOSTICS_ELECTRON_LABEL = 'Десктопное приложение';
+export const BUG_REPORT_DIAGNOSTICS_BROWSER_LABEL = 'Браузер';
+
+/** Подписи сырого JSON снимка */
+export const BUG_REPORT_DIAGNOSTICS_RAW_LABEL = 'Показать сырой JSON';
+export const BUG_REPORT_DIAGNOSTICS_COPY_LABEL = 'Копировать JSON';
+
+/** Значение, которого нет в снимке */
+export const BUG_REPORT_DIAGNOSTICS_EMPTY_VALUE = '—';
+
+/** Подписи «да/нет» для булевых метрик снимка */
+export const BUG_REPORT_DIAGNOSTICS_YES_LABEL = 'включён';
+export const BUG_REPORT_DIAGNOSTICS_NO_LABEL = 'выключен';
+
+/** Порог FPS, ниже которого частота кадров подсвечивается как проблемная */
+export const BUG_REPORT_DIAGNOSTICS_FPS_WARN = 30;
+
+/** Порог p99 задержки event-loop сервера, выше которого она проблемная (мс) */
+export const BUG_REPORT_DIAGNOSTICS_LOOP_LAG_WARN_MS = 20;
+
+/** Порог суммарного времени участка кадра за секунду, выше которого он дорогой (мс) */
+export const BUG_REPORT_DIAGNOSTICS_SPAN_TOTAL_WARN_MS = 100;
+
+/** Порог одиночного выполнения участка кадра, выше которого он рвёт кадр (мс) */
+export const BUG_REPORT_DIAGNOSTICS_SPAN_MAX_WARN_MS = 8;

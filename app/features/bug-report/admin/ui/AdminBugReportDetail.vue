@@ -28,9 +28,11 @@
     BUG_REPORT_STATUSES,
     getAdminBugStatusApiUrl,
     getBugReportStatusColor,
+    parseBugReportDiagnostics,
     parseSelectedText,
     toBugReportDescriptionBlocks,
   } from '../../model';
+  import { AdminBugReportDiagnostics } from './';
 
   /**
    * Свойства компонента детального просмотра баг-репорта.
@@ -99,6 +101,15 @@
       color: getBugReportStatusColor(status),
     }));
   });
+
+  /**
+   * Снимок метрик производительности на момент отправки. `null` — снимка нет:
+   * репорт старый, пришёл с платформы, которая его не шлёт, либо строка
+   * оказалась не тем, чем должна.
+   */
+  const diagnostics = computed(() =>
+    parseBugReportDiagnostics(props.bugReport.diagnostics),
+  );
 
   /**
    * Разбирает строку выделенного текста на контекст до, выделенный фрагмент и контекст после.
@@ -406,6 +417,12 @@
         <MarkupRender :render-node="descriptionBlocks" />
       </div>
     </div>
+
+    <!-- Производительность при отправке -->
+    <AdminBugReportDiagnostics
+      v-if="diagnostics"
+      :diagnostics="diagnostics"
+    />
 
     <!-- Выделенный текст -->
     <div

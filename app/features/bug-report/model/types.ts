@@ -93,6 +93,9 @@ export interface BugReportResponse {
 
   /** Выделенный текст на странице */
   selectedText?: string;
+
+  /** Снимок метрик производительности на момент отправки (JSON-строка) */
+  diagnostics?: string;
 }
 
 /**
@@ -299,3 +302,153 @@ export interface BugReportStatsResponse {
 
 /** Допустимые инструменты рисования */
 export type DrawingTool = 'brush' | 'circle' | 'rectangle';
+
+/**
+ * Замер одного участка кадра или одного обработчика события за окно измерения.
+ *
+ * Одна форма на профиль клиентского кадра и на топ серверных WS-событий:
+ * различаются они только тем, что стоит в `name` — участок отрисовки или имя
+ * события.
+ */
+export interface BugReportDiagnosticsSpan {
+  /** Имя участка кадра либо WS-события */
+  name: string;
+
+  /** Суммарное время за окно измерения, мс */
+  totalMs: number;
+
+  /** Сколько раз выполнялось за окно */
+  count: number;
+
+  /** Самое долгое одиночное выполнение, мс */
+  maxMs: number;
+}
+
+/** Клиентские метрики отрисовки сцены */
+export interface BugReportDiagnosticsClient {
+  /** Частота кадров */
+  fps: number;
+
+  /** Сглаженный RTT до сервера мира, мс */
+  pingMs: number;
+
+  /** Стены: всего на сцене, отрисовано за кадр, отдано кэшем */
+  walls: { total: number; drawn: number; cacheHits: number };
+
+  /** Последний замер каста лучей */
+  raycast: { lastMs: number; rays: number; walls: number; checks: number };
+
+  /** Полигоны зрения и света: взято из кэша против пересчитано заново */
+  lightCache: { hits: number; misses: number };
+
+  /** Количество активных узлов квадродерева стен */
+  quadTreeNodes: number;
+
+  /** Самые дорогие участки кадра за последнюю секунду */
+  frameSpans: BugReportDiagnosticsSpan[];
+}
+
+/** Метрики сервера мира на момент отправки */
+export interface BugReportDiagnosticsServer {
+  /** Задержка event-loop за интервал замера, мс */
+  loopLag: { meanMs: number; p99Ms: number; maxMs: number };
+
+  /** Количество клиентов, подключённых к серверу мира */
+  clients: number;
+
+  /** Самые тяжёлые WS-события за интервал замера */
+  topEvents: BugReportDiagnosticsSpan[];
+}
+
+/** Размер открытой сцены: чем её наполнили, тем она и тяжелее */
+export interface BugReportDiagnosticsScene {
+  /** Вид сцены: карта или псевдо-сцена графа приключения */
+  kind: string;
+
+  /** Ширина сцены в пикселях */
+  width: number;
+
+  /** Высота сцены в пикселях */
+  height: number;
+
+  /** Количество токенов */
+  tokens: number;
+
+  /** Количество источников света */
+  lightSources: number;
+
+  /** Количество рисунков */
+  drawings: number;
+
+  /** Количество пользовательских областей */
+  customAreas: number;
+
+  /** Количество AoE-шаблонов измерений */
+  measurementTemplates: number;
+
+  /** Включён ли туман войны */
+  fogOfWar: boolean;
+
+  /** Уровень темноты сцены (0 — день, 1 — полная темнота) */
+  darknessLevel: number;
+}
+
+/** Железо и браузер отправителя */
+export interface BugReportDiagnosticsDevice {
+  /** Строка User-Agent */
+  userAgent: string;
+
+  /** Платформа, как её называет браузер */
+  platform: string;
+
+  /** Число логических ядер процессора */
+  cpuCores: number;
+
+  /** Объём памяти устройства, ГБ (браузер округляет) */
+  deviceMemoryGb: number;
+
+  /** Видеокарта по данным WebGL */
+  gpu: string;
+
+  /** Разрешение экрана с коэффициентом масштабирования */
+  screen: string;
+
+  /** Размер окна приложения */
+  viewport: string;
+
+  /** Занято в куче JS, МБ (только Chromium) */
+  jsHeapUsedMb: number;
+
+  /** Предел кучи JS, МБ (только Chromium) */
+  jsHeapLimitMb: number;
+
+  /** Отправлено из десктопного приложения, а не из браузера */
+  isElectron: boolean;
+
+  /** Версия приложения-источника */
+  appVersion: string;
+}
+
+/**
+ * Снимок метрик производительности, приложенный к баг-репорту.
+ *
+ * Собирает его платформа-источник, сервис хранит строкой как есть. Все секции
+ * необязательны: из панели управления VTTG уходит только `device`, а старые
+ * репорты поля не имеют вовсе.
+ */
+export interface BugReportDiagnostics {
+  /** Версия формата снимка */
+  v: number;
+
+  /** Клиентские метрики отрисовки (только из игры) */
+  client?: BugReportDiagnosticsClient;
+
+  /** Метрики сервера мира (только из игры) */
+  server?: BugReportDiagnosticsServer;
+
+  /** Размер открытой сцены (только из игры) */
+  scene?: BugReportDiagnosticsScene;
+
+  /** Железо и браузер отправителя */
+  device?: BugReportDiagnosticsDevice;
+}
