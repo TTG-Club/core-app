@@ -11,7 +11,7 @@ export const COOKIE_CONSENT_DISMISS_KEY = 'cookie-consent:dismissed';
  * достаточно поднять версию — баннер снова покажется всем, кто соглашался
  * с предыдущей редакцией.
  */
-export const COOKIE_CONSENT_VERSION = '1';
+export const COOKIE_CONSENT_VERSION = '2';
 
 /** Срок хранения согласия — один год */
 export const COOKIE_CONSENT_MAX_AGE = ONE_DAY_IN_SECONDS * 365;
@@ -28,3 +28,18 @@ export const COOKIE_CONSENT_ACCEPT_LABEL = 'Принять';
 
 /** Подпись кнопки закрытия баннера */
 export const COOKIE_CONSENT_CLOSE_LABEL = 'Закрыть';
+
+/** Иконка уведомления о cookie; ею же подписана ссылка на страницу в подвале */
+export const COOKIE_CONSENT_ICON = 'tabler:cookie';
+
+/** Иконка кнопки закрытия баннера */
+export const COOKIE_CONSENT_CLOSE_ICON = 'tabler:x';
+
+/** Адрес страницы со списком собираемых cookie */
+export const COOKIE_POLICY_ROUTE = '/cookies';
+
+/** Подпись ссылки на страницу со списком cookie */
+export const COOKIE_POLICY_LINK_LABEL = 'Подробнее о cookie';
+
+/** Иконка после подписи ссылки на страницу со списком cookie */
+export const COOKIE_POLICY_LINK_ICON = 'tabler:arrow-right';

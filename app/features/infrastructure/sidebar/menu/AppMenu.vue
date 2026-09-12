@@ -1,15 +1,14 @@
 <script setup lang="ts">
+  import {
+    SUPPORT_EMAIL,
+    SUPPORT_EMAIL_HREF,
+    SUPPORT_EMAIL_ICON,
+  } from '~/shared/consts';
   import { MulticlassDrawer } from '~classes/multiclass-drawer';
   import { HamburgerIcon, SvgLogo } from '~ui/icon';
 
   import { SidebarPopover } from '../popover';
-  import {
-    MENU_LINKS,
-    MENU_SECTIONS,
-    MENU_SUPPORT,
-    SUPPORT_EMAIL,
-    SUPPORT_EMAIL_HREF,
-  } from './model';
+  import { MENU_LINKS, MENU_SECTIONS, MENU_SUPPORT } from './model';
   import { MenuContacts, MenuSection, MenuSupport } from './ui';
 
   const overlay = useOverlay();
@@ -93,7 +92,7 @@
 
           <UButton
             :label="SUPPORT_EMAIL"
-            icon="tabler:mail"
+            :icon="SUPPORT_EMAIL_ICON"
             :href="SUPPORT_EMAIL_HREF"
             variant="link"
             color="neutral"

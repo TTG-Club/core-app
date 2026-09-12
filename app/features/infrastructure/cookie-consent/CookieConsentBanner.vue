@@ -2,9 +2,14 @@
   import { useCookieConsent } from './composables';
   import {
     COOKIE_CONSENT_ACCEPT_LABEL,
+    COOKIE_CONSENT_CLOSE_ICON,
     COOKIE_CONSENT_CLOSE_LABEL,
     COOKIE_CONSENT_DESCRIPTION,
+    COOKIE_CONSENT_ICON,
     COOKIE_CONSENT_TITLE,
+    COOKIE_POLICY_LINK_ICON,
+    COOKIE_POLICY_LINK_LABEL,
+    COOKIE_POLICY_ROUTE,
   } from './model';
 
   const { isVisible, accept, dismiss } = useCookieConsent();
@@ -22,7 +27,7 @@
     >
       <div class="flex items-start gap-3">
         <UIcon
-          name="tabler:cookie"
+          :name="COOKIE_CONSENT_ICON"
           class="mt-0.5 size-5 shrink-0 text-primary"
         />
 
@@ -37,17 +42,28 @@
             </p>
           </div>
 
-          <UButton
-            :label="COOKIE_CONSENT_ACCEPT_LABEL"
-            color="primary"
-            size="sm"
-            block
-            @click.left.exact.prevent="accept"
-          />
+          <div class="flex items-center gap-2">
+            <UButton
+              :label="COOKIE_CONSENT_ACCEPT_LABEL"
+              color="primary"
+              size="sm"
+              class="flex-1 justify-center"
+              @click.left.exact.prevent="accept"
+            />
+
+            <UButton
+              :label="COOKIE_POLICY_LINK_LABEL"
+              :to="COOKIE_POLICY_ROUTE"
+              :trailing-icon="COOKIE_POLICY_LINK_ICON"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+            />
+          </div>
         </div>
 
         <UButton
-          icon="tabler:x"
+          :icon="COOKIE_CONSENT_CLOSE_ICON"
           :aria-label="COOKIE_CONSENT_CLOSE_LABEL"
           color="neutral"
           variant="ghost"

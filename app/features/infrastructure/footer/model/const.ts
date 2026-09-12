@@ -1,9 +1,10 @@
 import {
-  MENU_LINKS,
-  MENU_SUPPORT,
   SUPPORT_EMAIL,
   SUPPORT_EMAIL_HREF,
-} from '../../sidebar/menu/model';
+  SUPPORT_EMAIL_ICON,
+} from '~/shared/consts';
+
+import { MENU_LINKS, MENU_SUPPORT } from '../../sidebar/menu/model';
 
 /** Маппинг иконок на человекочитаемые названия для aria-label */
 const SOCIAL_LABEL_MAP: Record<string, string> = {
@@ -27,6 +28,9 @@ export const FOOTER_SUPPORT_EMAIL = SUPPORT_EMAIL;
 
 /** Ссылка mailto для службы поддержки */
 export const FOOTER_SUPPORT_EMAIL_HREF = SUPPORT_EMAIL_HREF;
+
+/** Иконка почты службы поддержки */
+export const FOOTER_SUPPORT_EMAIL_ICON = SUPPORT_EMAIL_ICON;
 
 /** Текст копирайта */
 export const FOOTER_COPYRIGHT = `© 2022–${new Date().getFullYear()} TTG Club`;

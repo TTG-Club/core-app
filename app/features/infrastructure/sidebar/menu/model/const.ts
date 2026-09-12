@@ -218,9 +218,3 @@ export const MENU_SUPPORT: Array<{
     label: 'Magistrus',
   },
 ];
-
-/** Email адрес службы поддержки */
-export const SUPPORT_EMAIL = 'support@ttg.club';
-
-/** Ссылка mailto для службы поддержки */
-export const SUPPORT_EMAIL_HREF = `mailto:${SUPPORT_EMAIL}`;

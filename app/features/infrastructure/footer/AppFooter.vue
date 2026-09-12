@@ -1,10 +1,17 @@
 <script setup lang="ts">
   import {
+    COOKIE_CONSENT_ICON,
+    COOKIE_POLICY_PAGE_TITLE,
+    COOKIE_POLICY_ROUTE,
+  } from '~infrastructure/cookie-consent/model';
+
+  import {
     FOOTER_COPYRIGHT,
     FOOTER_DISCLAIMER,
     FOOTER_SOCIAL_LINKS,
     FOOTER_SUPPORT_EMAIL,
     FOOTER_SUPPORT_EMAIL_HREF,
+    FOOTER_SUPPORT_EMAIL_ICON,
     FOOTER_SUPPORT_LINKS,
   } from './model';
 </script>
@@ -33,6 +40,16 @@
         <span class="text-xs text-dimmed lg:whitespace-nowrap">
           {{ FOOTER_DISCLAIMER }}
         </span>
+
+        <UButton
+          :label="COOKIE_POLICY_PAGE_TITLE"
+          :to="COOKIE_POLICY_ROUTE"
+          :icon="COOKIE_CONSENT_ICON"
+          variant="link"
+          color="neutral"
+          size="xs"
+          class="self-center px-0 lg:self-start"
+        />
       </div>
     </template>
 
@@ -74,7 +91,7 @@
         <UButton
           :label="FOOTER_SUPPORT_EMAIL"
           :href="FOOTER_SUPPORT_EMAIL_HREF"
-          icon="tabler:mail"
+          :icon="FOOTER_SUPPORT_EMAIL_ICON"
           variant="link"
           color="neutral"
           size="xs"
