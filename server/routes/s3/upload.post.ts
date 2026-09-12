@@ -6,7 +6,11 @@ import { H3Error } from 'h3';
 import { StatusCodes } from 'http-status-codes';
 import { z } from 'zod/v4';
 
-import { getFileForUpload, S3Service } from '#server/domain/s3';
+import {
+  getFileForUpload,
+  readUploadFormFile,
+  S3Service,
+} from '#server/domain/s3';
 
 const requestSchema = z
   .object({
@@ -25,7 +29,7 @@ interface Request extends EventHandlerRequest {
 export default defineEventHandler<Request, Promise<S3UploadResponse>>(
   async (event) => {
     const { username } = await getUserFromToken(event);
-    const form = await readMultipartFormData(event);
+    const file = await readUploadFormFile(event);
 
     let maxSize: number | undefined;
     let section: string | undefined;
@@ -44,32 +48,6 @@ export default defineEventHandler<Request, Promise<S3UploadResponse>>(
       throw createError(
         getErrorResponse(StatusCodes.BAD_REQUEST, {
           message: 'Максимальный размер имеет неверный формат',
-        }),
-      );
-    }
-
-    if (!form) {
-      throw createError(
-        getErrorResponse(StatusCodes.BAD_REQUEST, {
-          message: 'Неизвестный формат данных',
-        }),
-      );
-    }
-
-    if (form.length > 1) {
-      throw createError(
-        getErrorResponse(StatusCodes.BAD_REQUEST, {
-          message: 'За один раз можно загрузить лишь один файл',
-        }),
-      );
-    }
-
-    const file = form.find((item) => item.name === 'file');
-
-    if (!file) {
-      throw createError(
-        getErrorResponse(StatusCodes.BAD_REQUEST, {
-          message: 'Отсутствуют файлы для загрузки',
         }),
       );
     }

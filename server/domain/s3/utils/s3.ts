@@ -1,3 +1,5 @@
+import type { H3Event } from 'h3';
+
 import type { S3UploadFile } from '#server/domain/s3';
 
 import { StatusCodes } from 'http-status-codes';
@@ -11,6 +13,46 @@ interface MultiPartData {
   name?: string;
   filename?: string;
   type?: string;
+}
+
+/**
+ * Единственный файл загрузки из multipart-формы запроса: поле `file`, и только
+ * оно. Иначе — ошибка запроса с понятным текстом.
+ *
+ * @param event Событие запроса.
+ */
+export async function readUploadFormFile(
+  event: H3Event,
+): Promise<MultiPartData> {
+  const form = await readMultipartFormData(event);
+
+  if (!form) {
+    throw createError(
+      getErrorResponse(StatusCodes.BAD_REQUEST, {
+        message: 'Неизвестный формат данных',
+      }),
+    );
+  }
+
+  if (form.length > 1) {
+    throw createError(
+      getErrorResponse(StatusCodes.BAD_REQUEST, {
+        message: 'За один раз можно загрузить лишь один файл',
+      }),
+    );
+  }
+
+  const file = form.find((part) => part.name === 'file');
+
+  if (!file) {
+    throw createError(
+      getErrorResponse(StatusCodes.BAD_REQUEST, {
+        message: 'Отсутствуют файлы для загрузки',
+      }),
+    );
+  }
+
+  return file;
 }
 
 /**

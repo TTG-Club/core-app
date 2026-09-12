@@ -54,6 +54,23 @@ export async function isUserHasAccess(
 }
 
 /**
+ * Пропускает дальше только администратора.
+ *
+ * Отдельная проверка вместо `assertAdminAccess`: та пускает и модератора, а
+ * есть действия только для администратора — рассылка промокодов от имени
+ * сайта, смена фона шапки главной.
+ *
+ * @param event Событие H3.
+ */
+export async function assertAdminRole(event: H3Event): Promise<void> {
+  const { roles } = await getUserFromToken(event);
+
+  if (!roles.includes(Role.ADMIN)) {
+    throw createError(getErrorResponse(StatusCodes.FORBIDDEN));
+  }
+}
+
+/**
  * Проверяет, что пользователь имеет роль ADMIN или MODERATOR.
  * При отсутствии прав выбрасывает ошибку 403.
  *

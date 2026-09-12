@@ -1,9 +1,51 @@
 <script setup lang="ts">
+  import type { HomeHeroMedia } from '#shared/types';
+
   import { HomeCounters } from '~home/counters';
   import { HomeTools } from '~home/tools';
   import { SearchPanel } from '~infrastructure/search';
 
+  import { useHomeHeroSettings } from './composables';
   import { HOME_HERO_SUBTITLE, HOME_HERO_TITLE } from './model';
+
+  const { preview = undefined } = defineProps<{
+    /**
+     * Фон для превью в админке — рисуется вместо сохранённого, пока его не
+     * опубликовали.
+     */
+    preview?: HomeHeroMedia;
+  }>();
+
+  const styles = useCssModule();
+  const { media: savedMedia } = useHomeHeroSettings();
+
+  const media = computed(() => preview ?? savedMedia.value);
+
+  const imageUrl = computed(() =>
+    media.value?.kind === 'image' ? media.value.url : undefined,
+  );
+
+  const videoUrl = computed(() =>
+    media.value?.kind === 'video' ? media.value.url : undefined,
+  );
+
+  // Своего фона нет — слой рисует карту под текущую тему
+  const mapClass = computed(() => [
+    styles.map,
+    media.value ? undefined : styles.mapDefault,
+  ]);
+
+  const videoRef = useTemplateRef<HTMLVideoElement>('videoRef');
+  const reducedMotion = usePreferredReducedMotion();
+
+  // Видео — только украшение: тем, кто попросил систему убрать движение,
+  // оставляем стоп-кадр. Пауза, а не отказ от `autoplay`: сервер не знает
+  // настройку, и видео успело бы запуститься до гидратации.
+  watch([videoRef, reducedMotion], ([video, motion]) => {
+    if (video && motion === 'reduce') {
+      video.pause();
+    }
+  });
 </script>
 
 <template>
@@ -20,8 +62,29 @@
       class="pointer-events-none absolute inset-0 -z-1"
     >
       <!-- Карта деревни с высоты птичьего полёта: рисунок под каждую тему
-        лежит в `public/img/home`, выбирает его токен `--hero-map-image` -->
-      <div :class="$style.map" />
+        лежит в `public/img/home`, выбирает его токен `--hero-map-image`.
+        Фон из админки ложится в тот же слой — с той же прозрачностью и маской -->
+      <div :class="mapClass">
+        <img
+          v-if="imageUrl"
+          :src="imageUrl"
+          :class="$style.media"
+          alt=""
+          decoding="async"
+        />
+
+        <video
+          v-else-if="videoUrl"
+          ref="videoRef"
+          :src="videoUrl"
+          :class="$style.media"
+          autoplay
+          muted
+          loop
+          playsinline
+          disablepictureinpicture
+        />
+      </div>
 
       <!-- Тёплое свечение по центру — «очаг», к которому стягивается взгляд -->
       <div :class="$style.glow" />
@@ -60,16 +123,11 @@
      остаются различимыми */
   $mapMinWidth: 1600px;
 
-  /* Масштаб карты задаёт только ширина шапки, не высота: высота растёт, когда
-     подгружается персонаж с репликой, и карта при `cover` прыгала бы. Холст
-     с запасом по высоте, поэтому шапку он закрывает и так */
   .map {
     position: absolute;
     inset: 0;
 
     opacity: var(--hero-map-opacity);
-    background: var(--hero-map-image) center / max(100%, $mapMinWidth) auto
-      no-repeat;
 
     /* Под заголовком и поиском карта почти растворяется, по бокам видна
        целиком; сверху и снизу тает, чтобы не упираться в края шапки */
@@ -89,6 +147,28 @@
         transparent 100%
       );
     mask-composite: intersect;
+  }
+
+  /* Масштаб карты задаёт только ширина шапки, не высота: высота растёт, когда
+     подгружается персонаж с репликой, и карта при `cover` прыгала бы. Холст
+     с запасом по высоте, поэтому шапку он закрывает и так */
+  .mapDefault {
+    background: var(--hero-map-image) center / max(100%, $mapMinWidth) auto
+      no-repeat;
+  }
+
+  /* Свой фон масштабируется так же, как карта: по ширине и по центру. Свою
+     картинку стоит делать с запасом по высоте — иначе на узкой и высокой
+     шапке снизу и сверху останутся полосы */
+  .media {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+    width: max(100%, $mapMinWidth);
+    max-width: none;
+    height: auto;
   }
 
   .glow {
