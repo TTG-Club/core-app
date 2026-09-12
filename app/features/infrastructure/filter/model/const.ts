@@ -7,6 +7,31 @@ export const FILTER_SOURCES_SEARCH_PLACEHOLDER = 'Поиск по источни
 /** Плейсхолдер поля поиска по разделу в тулбаре */
 export const FILTER_CONTROLS_SEARCH_PLACEHOLDER = 'Поиск...';
 
+/** Заголовок дровера с условиями отбора */
+export const FILTER_FILTERS_TITLE = 'Фильтры';
+
+/** Заголовок дровера с источниками и подпись кнопки, его открывающей */
+export const FILTER_SOURCES_TITLE = 'Источники';
+
+/** Подпись кнопки, открывающей дровер отбора; на узких экранах её нет */
+export const FILTER_CONTROLS_FILTER_LABEL = 'Фильтр';
+
+/** Подпись кнопки, снимающей все условия отбора разом */
+export const FILTER_CONTROLS_RESET_LABEL = 'Очистить фильтр';
+
+/** Подпись кнопки, отдающей ссылку на текущий отбор */
+export const FILTER_CONTROLS_SHARE_LABEL = 'Поделиться ссылкой';
+
+/** Подпись кнопки с действиями тулбара, не поместившимися в строку */
+export const FILTER_CONTROLS_MORE_LABEL = 'Ещё';
+
+/**
+ * Значок «поделиться». У Apple он свой: системная форма со стрелкой вверх, и
+ * на их устройствах привычна именно она.
+ */
+export const FILTER_SHARE_ICON = 'tabler:share';
+export const FILTER_SHARE_ICON_APPLE = 'tabler:share-2';
+
 /** Подпись крестика быстрой очистки поля поиска для скринридеров */
 export const FILTER_SEARCH_CLEAR_LABEL = 'Очистить поиск';
 

@@ -7,8 +7,16 @@
 
   import { FilterDrawer } from '../drawer';
   import {
+    FILTER_CONTROLS_FILTER_LABEL,
+    FILTER_CONTROLS_MORE_LABEL,
+    FILTER_CONTROLS_RESET_LABEL,
     FILTER_CONTROLS_SEARCH_PLACEHOLDER,
+    FILTER_CONTROLS_SHARE_LABEL,
+    FILTER_FILTERS_TITLE,
+    FILTER_SHARE_ICON,
+    FILTER_SHARE_ICON_APPLE,
     FILTER_SOURCES_SEARCH_PLACEHOLDER,
+    FILTER_SOURCES_TITLE,
   } from '../model';
   import { FilterPreview } from '../preview';
   import { FilterSearchInput } from '../search-input';
@@ -61,6 +69,13 @@
     () => isMounted.value && greaterOrEqual(Breakpoint.LG).value,
   );
 
+  /** На узком экране кнопка отбора остаётся одним значком: строка коротка. */
+  const filterButtonLabel = computed(() =>
+    isLarge.value ? FILTER_CONTROLS_FILTER_LABEL : undefined,
+  );
+
+  const shareIcon = isApple ? FILTER_SHARE_ICON_APPLE : FILTER_SHARE_ICON;
+
   const urlForCopy = computed(() => {
     return getOrigin() + useRoute().fullPath;
   });
@@ -86,8 +101,8 @@
   const overflowItems = computed<Array<Array<DropdownMenuItem>>>(() => [
     [
       {
-        label: 'Поделиться ссылкой',
-        icon: isApple ? 'tabler:share-2' : 'tabler:share',
+        label: FILTER_CONTROLS_SHARE_LABEL,
+        icon: shareIcon,
         onSelect: () => {
           share(urlForCopy.value);
         },
@@ -239,7 +254,7 @@
           :disabled="!filter"
           :loading="isPending"
           icon="tabler:filter"
-          :label="isLarge ? 'Фильтр' : undefined"
+          :label="filterButtonLabel"
           :square="!isLarge"
           block
           @click.left.exact.prevent="filterOpened = true"
@@ -247,7 +262,7 @@
 
         <UButton
           v-if="isFilterEdited"
-          title="Очистить фильтр"
+          :title="FILTER_CONTROLS_RESET_LABEL"
           icon="tabler:trash"
           @click.left.exact.prevent="resetFilter"
         />
@@ -258,7 +273,7 @@
           :disabled="!filter"
           :loading="isPending"
           icon="tabler:books"
-          title="Источники"
+          :title="FILTER_SOURCES_TITLE"
           square
           @click.left.exact.prevent="sourcesOpened = true"
         />
@@ -266,8 +281,8 @@
 
       <UButton
         v-if="showStandaloneShare"
-        :icon="isApple ? 'tabler:share-2' : 'tabler:share'"
-        title="Поделиться ссылкой"
+        :icon="shareIcon"
+        :title="FILTER_CONTROLS_SHARE_LABEL"
         square
         @click.left.exact.prevent="share(urlForCopy)"
       />
@@ -279,8 +294,8 @@
       >
         <UButton
           icon="tabler:dots"
-          title="Ещё"
-          aria-label="Ещё"
+          :title="FILTER_CONTROLS_MORE_LABEL"
+          :aria-label="FILTER_CONTROLS_MORE_LABEL"
           square
         />
       </UDropdownMenu>
@@ -323,7 +338,7 @@
     <FilterDrawer
       v-if="filter?.filters"
       v-model="filterOpened"
-      title="Фильтры"
+      :title="FILTER_FILTERS_TITLE"
       :groups="filter.filters"
       @save="saveFilter"
       @reset="resetFilter"
@@ -332,7 +347,7 @@
     <FilterDrawer
       v-if="filter?.sources"
       v-model="sourcesOpened"
-      title="Источники"
+      :title="FILTER_SOURCES_TITLE"
       :search-placeholder="FILTER_SOURCES_SEARCH_PLACEHOLDER"
       :groups="filter.sources"
       @save="saveSources"
