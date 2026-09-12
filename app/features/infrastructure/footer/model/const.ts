@@ -3,6 +3,16 @@ import {
   SUPPORT_EMAIL_HREF,
   SUPPORT_EMAIL_ICON,
 } from '~/shared/consts';
+import {
+  COOKIE_CONSENT_ICON,
+  COOKIE_POLICY_PAGE_TITLE,
+  COOKIE_POLICY_ROUTE,
+} from '~infrastructure/cookie-consent/model';
+import {
+  PRIVACY_POLICY_ICON,
+  PRIVACY_POLICY_PAGE_TITLE,
+  PRIVACY_POLICY_ROUTE,
+} from '~infrastructure/privacy-policy/model';
 
 import { MENU_LINKS, MENU_SUPPORT } from '../../sidebar/menu/model';
 
@@ -31,6 +41,20 @@ export const FOOTER_SUPPORT_EMAIL_HREF = SUPPORT_EMAIL_HREF;
 
 /** Иконка почты службы поддержки */
 export const FOOTER_SUPPORT_EMAIL_ICON = SUPPORT_EMAIL_ICON;
+
+/** Ссылки на юридические документы сайта */
+export const FOOTER_LEGAL_LINKS = [
+  {
+    label: PRIVACY_POLICY_PAGE_TITLE,
+    to: PRIVACY_POLICY_ROUTE,
+    icon: PRIVACY_POLICY_ICON,
+  },
+  {
+    label: COOKIE_POLICY_PAGE_TITLE,
+    to: COOKIE_POLICY_ROUTE,
+    icon: COOKIE_CONSENT_ICON,
+  },
+];
 
 /** Текст копирайта */
 export const FOOTER_COPYRIGHT = `© 2022–${new Date().getFullYear()} TTG Club`;

@@ -1,13 +1,8 @@
 <script setup lang="ts">
   import {
-    COOKIE_CONSENT_ICON,
-    COOKIE_POLICY_PAGE_TITLE,
-    COOKIE_POLICY_ROUTE,
-  } from '~infrastructure/cookie-consent/model';
-
-  import {
     FOOTER_COPYRIGHT,
     FOOTER_DISCLAIMER,
+    FOOTER_LEGAL_LINKS,
     FOOTER_SOCIAL_LINKS,
     FOOTER_SUPPORT_EMAIL,
     FOOTER_SUPPORT_EMAIL_HREF,
@@ -41,15 +36,21 @@
           {{ FOOTER_DISCLAIMER }}
         </span>
 
-        <UButton
-          :label="COOKIE_POLICY_PAGE_TITLE"
-          :to="COOKIE_POLICY_ROUTE"
-          :icon="COOKIE_CONSENT_ICON"
-          variant="link"
-          color="neutral"
-          size="xs"
-          class="self-center px-0 lg:self-start"
-        />
+        <div
+          class="flex flex-wrap items-center justify-center gap-x-3 lg:justify-start"
+        >
+          <UButton
+            v-for="link in FOOTER_LEGAL_LINKS"
+            :key="link.to"
+            :label="link.label"
+            :to="link.to"
+            :icon="link.icon"
+            variant="link"
+            color="neutral"
+            size="xs"
+            class="px-0"
+          />
+        </div>
       </div>
     </template>
 

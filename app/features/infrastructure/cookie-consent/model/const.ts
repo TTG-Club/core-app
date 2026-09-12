@@ -29,7 +29,7 @@ export const COOKIE_CONSENT_ACCEPT_LABEL = 'Принять';
 /** Подпись кнопки закрытия баннера */
 export const COOKIE_CONSENT_CLOSE_LABEL = 'Закрыть';
 
-/** Иконка уведомления о cookie; ею же подписана ссылка на страницу в подвале */
+/** Иконка уведомления о cookie; ею же подписаны ссылки на страницу о cookie */
 export const COOKIE_CONSENT_ICON = 'tabler:cookie';
 
 /** Иконка кнопки закрытия баннера */

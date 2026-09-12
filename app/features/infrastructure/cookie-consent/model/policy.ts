@@ -1,4 +1,4 @@
-import type { CookiePolicySection } from './types';
+import type { LegalDocumentSection } from '~ui/legal-document';
 
 import {
   SUPPORT_EMAIL,
@@ -23,15 +23,6 @@ export const COOKIE_POLICY_UPDATED_AT = '2026-09-12';
 /** Приставка к дате обновления страницы */
 export const COOKIE_POLICY_UPDATED_PREFIX = 'Страница обновлена';
 
-/** Формат даты обновления: «12 сентября 2026 г.» */
-export const COOKIE_POLICY_UPDATED_DATE_FORMAT = 'LL';
-
-/** Иконка плашки с датой обновления */
-export const COOKIE_POLICY_UPDATED_ICON = 'tabler:calendar';
-
-/** Маркер пункта в списках разделов */
-export const COOKIE_POLICY_BULLET_ICON = 'tabler:point-filled';
-
 /** Вводные абзацы страницы */
 export const COOKIE_POLICY_INTRO = [
   'Как почти любой сайт, TTG Club сохраняет небольшие записи в вашем браузере — их называют cookie. Мы используем их только для работы сайта и для обезличенной статистики: рекламы у нас нет, рекламный профиль мы не собираем, данные о посетителях никому не продаём.',
@@ -39,7 +30,7 @@ export const COOKIE_POLICY_INTRO = [
 ];
 
 /** Разделы страницы: причины хранения данных, контакты и управление */
-export const COOKIE_POLICY_SECTIONS: Array<CookiePolicySection> = [
+export const COOKIE_POLICY_SECTIONS: Array<LegalDocumentSection> = [
   {
     id: 'login',
     title: 'Вход в аккаунт',
@@ -110,7 +101,7 @@ export const COOKIE_POLICY_SECTIONS: Array<CookiePolicySection> = [
     links: [
       {
         label: SUPPORT_EMAIL,
-        url: SUPPORT_EMAIL_HREF,
+        href: SUPPORT_EMAIL_HREF,
         icon: SUPPORT_EMAIL_ICON,
       },
     ],
