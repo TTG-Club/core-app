@@ -15,6 +15,7 @@
     SECTION_TAGS,
   } from './tags';
   import {
+    transformPastedMarkupHtml,
     TtgBlockMarker,
     ttgFormatMarks,
     ttgHeadingExtensions,
@@ -24,6 +25,7 @@
     ttgParagraphExtensions,
     ttgQuoteExtensions,
     TtgSectionLink,
+    TtgSeparatorMarkdown,
     ttgTableExtensions,
   } from './tiptap';
   import { buildToolbarItems, TOOLBAR_LAYER_CLASS } from './toolbar-items';
@@ -42,6 +44,7 @@
     TtgMarker,
     TtgBlockMarker,
     TtgSectionLink,
+    TtgSeparatorMarkdown,
     TtgKeymap,
     ...ttgFormatMarks,
     ...ttgHeadingExtensions,
@@ -182,7 +185,17 @@
     // на котором падает бэкенд-десериализатор описания. Отключаем: перенос — это
     // новый абзац (Enter). Так наружу не уходит «сырой» одиночный \n.
     hardBreak: false,
+    // Блок кода сериализуется в ``` — маркера под него в разметке нет, и такой
+    // блок вышел бы на страницу тройными бэктиками. Код из буфера раскладывается
+    // построчно обычным текстом (см. transformPastedMarkupHtml).
+    codeBlock: false,
   } as const;
+
+  // Правки ProseMirror: приводим ЧУЖОЙ HTML из буфера к нашей схеме. Без этого
+  // ProseMirror молча теряет `<strong>`/`<em>`/`<a>` (их марок в схеме нет), а
+  // `<hr>`, `<code>` и `<img>` доживают до сохранения чужими узлами и печатаются
+  // на странице мусорным текстом.
+  const editorProps = { transformPastedHTML: transformPastedMarkupHtml };
 
   // Markdown здесь — лишь ТРАНСПОРТ для round-trip наших {@...}. Формат Markdown
   // мы не используем, поэтому GFM выключен: `| a | b |`, `~~зачёркнутое~~`,
@@ -336,6 +349,9 @@
           :markdown="markdownConfig"
           :starter-kit="starterKit"
           :extensions="editorExtensions"
+          :editor-props="editorProps"
+          :image="false"
+          :mention="false"
           :placeholder
           class="flex min-h-0 min-w-0 flex-1 flex-col"
           :ui="{

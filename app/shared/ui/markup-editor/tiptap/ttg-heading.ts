@@ -33,7 +33,7 @@ const HEADING_TOKEN = 'ttgHeading';
 const HEADING_NAMES = new Set(['h', 'heading']);
 
 /** Пользовательские уровни заголовка, доступные в редакторе (1 — крупный … 4). */
-const HEADING_LEVELS = [1, 2, 3, 4] as const;
+export const HEADING_LEVELS = [1, 2, 3, 4] as const;
 
 /** Разобранный заголовок: уровень, выравнивание и ленивые инлайн-токены. */
 interface HeadingData {

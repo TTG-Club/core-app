@@ -14,6 +14,7 @@ import {
   INTERACTIVE_TAGS,
   SECTION_TAGS,
 } from './tags';
+import { BLOCK_MARKER_NODE, SEPARATOR_MARKER } from './tiptap/constants';
 import { FORMAT_SPECS } from './tiptap/marks';
 import { hasMarkerAtom } from './tiptap/node-utils';
 
@@ -171,7 +172,10 @@ function insertTag(editor: Editor, tag: MarkupTag, isBlock = false): void {
     editor
       .chain()
       .focus()
-      .insertContentAt({ from, to }, { type: 'ttgBlockMarker', attrs: { raw } })
+      .insertContentAt(
+        { from, to },
+        { type: BLOCK_MARKER_NODE, attrs: { raw } },
+      )
       .run();
 
     return;
@@ -488,8 +492,8 @@ function separatorItem(editor: Editor, tag: MarkupTag): EditorToolbarItem {
         .chain()
         .focus()
         .insertContentAt(to, {
-          type: 'ttgBlockMarker',
-          attrs: { raw: '{@separator}' },
+          type: BLOCK_MARKER_NODE,
+          attrs: { raw: SEPARATOR_MARKER },
         })
         .run();
     },

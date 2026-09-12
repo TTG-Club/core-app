@@ -1,7 +1,11 @@
 import type { MarkerAttributes, MarkerNode, RenderNode } from './types';
 
 import { MARKER_MAP } from './config';
-import { CELL_PLACEHOLDER } from './consts';
+import {
+  CELL_PLACEHOLDER,
+  EMPTY_PARAGRAPH_MARKDOWN,
+  THEMATIC_BREAK_REGEXP,
+} from './consts';
 import { parse } from './parser';
 import { isBlockNode, isMarkerNode, isSimpleTextNode } from './utils';
 
@@ -288,7 +292,20 @@ export function toStoredMarkup(source: string): string {
   for (const segment of source.split(/\n{2,}/)) {
     const text = segment.trim();
 
-    if (!text) {
+    // Пустой абзац редактора (`&nbsp;`) своего содержимого не несёт — на
+    // странице он напечатался бы буквально, поэтому отбрасывается вместе с
+    // по-настоящему пустыми сегментами.
+    if (!text || text === EMPTY_PARAGRAPH_MARKDOWN) {
+      continue;
+    }
+
+    // Тематический разрыв Markdown — это наш разделитель. Он приходит и из
+    // визуального редактора (штатный `horizontalRule` TipTap сериализуется в
+    // `---`), и из режима кода; без этой ветки линия выходила бы на страницу
+    // текстом «---», потому что маркера `---` в разметке нет.
+    if (THEMATIC_BREAK_REGEXP.test(text)) {
+      stored.push({ type: 'separator' });
+
       continue;
     }
 

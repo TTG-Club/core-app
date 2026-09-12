@@ -26,7 +26,7 @@ export {
 } from './utils';
 
 export { MARKER_ALIASES, MARKER_MAP } from './config';
-export { CELL_PLACEHOLDER } from './consts';
+export { CELL_PLACEHOLDER, EMPTY_PARAGRAPH_MARKDOWN } from './consts';
 export { buildMarkdownTable, toMarkdownRow } from './markdown-table';
 export { default as MarkupRender } from './MarkupRender.vue';
 export { parse } from './parser';
