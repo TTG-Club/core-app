@@ -12,6 +12,7 @@
     GAME_REPORT_HIDDEN_REASON_LABEL,
     GAME_REPORT_HIDE_ALL_MASTER_GAMES_LABEL,
     GAME_REPORT_REASON_LABELS,
+    GAME_REPORT_RESTORE_LABEL,
     getGameRoute,
   } from '../../model';
 
@@ -34,6 +35,7 @@
   const emit = defineEmits<{
     'hide-game': [reportId: string];
     'hide-master-games': [reportId: string];
+    'restore-game': [reportId: string];
   }>();
 
   const { format } = useDayjs();
@@ -118,6 +120,17 @@
         color="neutral"
         variant="subtle"
         :label="GAME_REPORT_HIDDEN_BADGE"
+      />
+
+      <UButton
+        v-if="report.gameDeleted"
+        size="sm"
+        color="success"
+        variant="soft"
+        icon="tabler:eye"
+        :disabled="busy"
+        :label="GAME_REPORT_RESTORE_LABEL"
+        @click.left.exact.prevent="emit('restore-game', report.id)"
       />
 
       <UButton

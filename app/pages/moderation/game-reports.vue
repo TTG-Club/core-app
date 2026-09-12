@@ -18,11 +18,16 @@
     GAME_REPORT_HIDE_ALL_MASTER_GAMES_LABEL,
     GAME_REPORT_HIDE_ALL_MASTER_GAMES_TITLE,
     GAME_REPORT_HIDE_ALL_MASTER_GAMES_TOAST,
+    GAME_REPORT_RESTORE_DESCRIPTION,
+    GAME_REPORT_RESTORE_LABEL,
+    GAME_REPORT_RESTORE_TITLE,
+    GAME_REPORT_RESTORED_TOAST,
     GAME_REPORTS_EMPTY_DESCRIPTION,
     GAME_REPORTS_EMPTY_TITLE,
     GAME_REPORTS_PAGE_SIZE,
     GAME_REPORTS_TITLE,
     getFindGameErrorMessage,
+    restoreGameByReport,
   } from '~find-game/model';
   import { ConfirmDialog } from '~initiative/ui-kit';
   import { UiPagination } from '~ui/pagination';
@@ -37,7 +42,8 @@
   const selectedReportId = ref<string | null>(null);
   const isHideGameOpen = ref(false);
   const isHideAllMasterGamesOpen = ref(false);
-  const isRemoving = ref(false);
+  const isRestoreGameOpen = ref(false);
+  const isModerating = ref(false);
 
   const {
     data: reportsPage,
@@ -97,13 +103,19 @@
     isHideAllMasterGamesOpen.value = true;
   }
 
+  /** Открывает подтверждение возврата игры из скрытых. */
+  function askToRestoreGame(reportId: string): void {
+    selectedReportId.value = reportId;
+    isRestoreGameOpen.value = true;
+  }
+
   /** Скрывает объявление, на которое пришла жалоба. */
   async function hideGame(): Promise<void> {
     if (!selectedReport.value) {
       return;
     }
 
-    isRemoving.value = true;
+    isModerating.value = true;
 
     try {
       await deleteGame(
@@ -117,7 +129,7 @@
     } catch (error) {
       showError(error);
     } finally {
-      isRemoving.value = false;
+      isModerating.value = false;
     }
   }
 
@@ -127,7 +139,7 @@
       return;
     }
 
-    isRemoving.value = true;
+    isModerating.value = true;
 
     try {
       await deleteAllMasterGamesByReport(selectedReport.value.gameId);
@@ -137,7 +149,27 @@
     } catch (error) {
       showError(error);
     } finally {
-      isRemoving.value = false;
+      isModerating.value = false;
+    }
+  }
+
+  /** Возвращает скрытую игру в доступные объявления. */
+  async function restoreGame(): Promise<void> {
+    if (!selectedReport.value) {
+      return;
+    }
+
+    isModerating.value = true;
+
+    try {
+      await restoreGameByReport(selectedReport.value.gameId);
+      isRestoreGameOpen.value = false;
+      showSuccess(GAME_REPORT_RESTORED_TOAST);
+      await refreshReports();
+    } catch (error) {
+      showError(error);
+    } finally {
+      isModerating.value = false;
     }
   }
 </script>
@@ -182,9 +214,10 @@
           :key="report.id"
           :report="report"
           :reporter-name="getReporterName(report.reporterId)"
-          :busy="isRemoving"
+          :busy="isModerating"
           @hide-game="askToHideGame"
           @hide-master-games="askToHideAllMasterGames"
+          @restore-game="askToRestoreGame"
         />
 
         <UiPagination
@@ -202,7 +235,7 @@
         :confirm-label="GAME_DELETE_LABEL"
         confirm-color="error"
         confirm-icon="tabler:eye-off"
-        :loading="isRemoving"
+        :loading="isModerating"
         @confirm="hideGame"
       />
 
@@ -213,8 +246,19 @@
         :confirm-label="GAME_REPORT_HIDE_ALL_MASTER_GAMES_LABEL"
         confirm-color="error"
         confirm-icon="tabler:ban"
-        :loading="isRemoving"
+        :loading="isModerating"
         @confirm="hideAllMasterGames"
+      />
+
+      <ConfirmDialog
+        v-model:open="isRestoreGameOpen"
+        :title="GAME_REPORT_RESTORE_TITLE"
+        :description="GAME_REPORT_RESTORE_DESCRIPTION"
+        :confirm-label="GAME_REPORT_RESTORE_LABEL"
+        confirm-color="success"
+        confirm-icon="tabler:eye"
+        :loading="isModerating"
+        @confirm="restoreGame"
       />
     </div>
   </NuxtLayout>

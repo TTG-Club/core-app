@@ -193,12 +193,20 @@ function gameReportsPath(gameId: string): string {
 }
 
 /**
+ * Путь модераторских действий над одной игрой.
+ * @param gameId Идентификатор игры.
+ */
+function gameModerationPath(gameId: string): string {
+  return `${MODERATION_GAMES_API_PATH}/${gameId}`;
+}
+
+/**
  * Путь всех игр мастера, которому принадлежит указанная игра, — для
  * модераторского скрытия по жалобе.
  * @param gameId Идентификатор игры, на которую пожаловались.
  */
 function masterGamesModerationPath(gameId: string): string {
-  return `${MODERATION_GAMES_API_PATH}/${gameId}/master-games`;
+  return `${gameModerationPath(gameId)}/master-games`;
 }
 
 /**
@@ -692,6 +700,17 @@ export async function deleteAllMasterGamesByReport(
 ): Promise<void> {
   await $fetch(masterGamesModerationPath(gameId), {
     method: 'DELETE',
+    retry: 0,
+  });
+}
+
+/**
+ * Отменяет модераторское скрытие игры.
+ * @param gameId Идентификатор игры.
+ */
+export async function restoreGameByReport(gameId: string): Promise<void> {
+  await $fetch(`${gameModerationPath(gameId)}/restore`, {
+    method: 'PATCH',
     retry: 0,
   });
 }

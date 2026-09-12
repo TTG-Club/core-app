@@ -91,6 +91,11 @@ export const GAME_REPORT_HIDE_ALL_MASTER_GAMES_DESCRIPTION =
   'Все активные объявления этого мастера исчезнут из каталога. Отменить действие нельзя.';
 export const GAME_REPORT_HIDE_ALL_MASTER_GAMES_TOAST =
   'Все игры мастера скрыты';
+export const GAME_REPORT_RESTORE_LABEL = 'Вернуть игру';
+export const GAME_REPORT_RESTORE_TITLE = 'Вернуть игру из скрытых?';
+export const GAME_REPORT_RESTORE_DESCRIPTION =
+  'Игра снова станет доступна. Если она открыта, набор игроков возобновится.';
+export const GAME_REPORT_RESTORED_TOAST = 'Игра возвращена из скрытых';
 export const GAME_REPORT_DELETION_REASON =
   'Скрыто модератором по жалобе на игру';
 
