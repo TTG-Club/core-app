@@ -19,6 +19,7 @@
   import { MarkupEditor } from '~ui/markup-editor';
   import {
     SelectClass,
+    SelectDamageType,
     SelectFeat,
     SelectLineage,
     SelectMagicSchool,
@@ -168,6 +169,21 @@
                 <UInput
                   v-model="state.school.additionalType"
                   :placeholder="SPELL_MAIN_TAB_LABELS.additionalTypePlaceholder"
+                />
+              </UFormField>
+
+              <!-- Формулы вкладки «Бой» считают урон и не видят урона на выбор
+                или частей, идущих поочерёдно, — фильтр каталога берёт типы ещё
+                и отсюда -->
+              <UFormField
+                class="col-span-full"
+                :label="SPELL_MAIN_TAB_LABELS.damageTypes"
+                :help="SPELL_MAIN_TAB_LABELS.damageTypesHint"
+                name="effect.damageTypes"
+              >
+                <SelectDamageType
+                  v-model="state.effect.damageTypes"
+                  multiple
                 />
               </UFormField>
             </div>

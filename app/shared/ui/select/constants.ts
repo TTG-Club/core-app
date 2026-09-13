@@ -8,6 +8,13 @@ export const ITEMS_SEARCH_ENDPOINT = '/api/v2/item/search';
  */
 export const ITEM_DETAIL_ENDPOINT_PREFIX = '/api/v2/item';
 
+/** Ключ справочника типов урона: общий на все формы, список грузится однажды. */
+export const DAMAGE_TYPES_DATA_KEY = 'dictionaries-damage-types';
+
+export const DAMAGE_TYPE_SELECT_PLACEHOLDER = 'Выбери тип урона';
+
+export const DAMAGE_TYPE_SELECT_MULTIPLE_PLACEHOLDER = 'Выбери типы урона';
+
 export const SUBCLASS_SELECT_BASE_KEY = 'subclasses-select';
 
 export const SUBCLASS_SELECT_MULTIPLE_PLACEHOLDER_SUFFIX = 'ы';
