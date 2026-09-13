@@ -10,7 +10,7 @@ import {
 } from '~infrastructure/cookie-consent/model';
 import {
   PRIVACY_POLICY_ICON,
-  PRIVACY_POLICY_PAGE_TITLE,
+  PRIVACY_POLICY_LINK_LABEL,
   PRIVACY_POLICY_ROUTE,
 } from '~infrastructure/privacy-policy/model';
 
@@ -45,7 +45,7 @@ export const FOOTER_SUPPORT_EMAIL_ICON = SUPPORT_EMAIL_ICON;
 /** Ссылки на юридические документы сайта */
 export const FOOTER_LEGAL_LINKS = [
   {
-    label: PRIVACY_POLICY_PAGE_TITLE,
+    label: PRIVACY_POLICY_LINK_LABEL,
     to: PRIVACY_POLICY_ROUTE,
     icon: PRIVACY_POLICY_ICON,
   },

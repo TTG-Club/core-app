@@ -31,6 +31,15 @@ export type LegalDocumentLink =
   | LegalDocumentExternalLink
   | LegalDocumentPageLink;
 
+/** Сведение в карточке блока: название и значение, например «Срок — пока существует учётная запись» */
+export interface LegalDocumentFact {
+  /** Название сведения */
+  label: string;
+
+  /** Значение сведения */
+  value: string;
+}
+
 /** Блок документа: заголовок и содержимое без вложенных блоков */
 export interface LegalDocumentBlock {
   /** Идентификатор блока, он же якорь для ссылки на него */
@@ -41,6 +50,9 @@ export interface LegalDocumentBlock {
 
   /** Абзацы текста */
   paragraphs?: Array<string>;
+
+  /** Сведения карточкой «название — значение» после абзацев */
+  facts?: Array<LegalDocumentFact>;
 
   /** Пункты списка */
   bullets?: Array<string>;

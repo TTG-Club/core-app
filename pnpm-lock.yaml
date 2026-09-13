@@ -157,9 +157,6 @@ importers:
       nuxt-security:
         specifier: ^2.6.0
         version: 2.6.0(magic-string@1.2.3)(magicast@0.5.4)(oxc-parser@0.143.0)(rolldown@1.2.7)(rollup@4.62.2)(unplugin@3.3.0(esbuild@0.28.1)(rolldown@1.2.7)(rollup@4.62.2)(vite@8.2.2(@types/node@26.4.1)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(terser@5.51.2)(yaml@2.9.0))(webpack@5.105.4(esbuild@0.28.1)(lightningcss@1.33.0)(postcss@8.5.26)))
-      nuxt-yandex-metrika:
-        specifier: ^2.0.2
-        version: 2.0.2(2bd8c69d49a676b420b5464c1a5aaeb6)
       pako:
         specifier: ^2.2.0
         version: 2.2.0
@@ -2292,10 +2289,6 @@ packages:
     resolution: {integrity: sha512-/UyNlHfkuLXG6Ed85KB0WBF283xn2yavR+UtRibBRUcvEJId2DSLdGXwJ/cDa1X++SWDPzq3+GSFniHjkNy7yg==}
     peerDependencies:
       prettier: ^3.0.0
-
-  '@prleasing/utility@5.0.1':
-    resolution: {integrity: sha512-U0/1p6qbUQpeNse4HL0pMkUN8AvPRwCanta3tccRnm6iQD09kxbA+sOaPMxZsShm/lG7BsB9/H61stAqp2P40w==}
-    engines: {node: '>=20.11.0'}
 
   '@resvg/resvg-js-android-arm-eabi@2.6.2':
     resolution: {integrity: sha512-FrJibrAk6v29eabIPgcTUMPXiEz8ssrAk7TXxsiZzww9UTQ1Z5KAbFJs+Z0Ez+VZTYgnE5IQJqBcoSiMebtPHA==}
@@ -5507,9 +5500,6 @@ packages:
     engines: {node: '>=16'}
     hasBin: true
 
-  libphonenumber-js@1.13.7:
-    resolution: {integrity: sha512-rvr3HIMdOgzhz1RFGjftji+wjoAFlzhqCNqJOU/MKTZQ8d9NZxAR/tI+0weDicyoucqVR0U1GCniqHJ0f8aM2A==}
-
   lightgallery@2.9.0:
     resolution: {integrity: sha512-58Ud1DyhD2ao58t+kPEqSZrjFxg23tGd5ZKr75erm7q31g5xhUtWUJH3sTUkhHzlyJAKHj5eTrJ37HQRXG4Wbg==}
     engines: {node: '>=6.0.0'}
@@ -6201,11 +6191,6 @@ packages:
     resolution: {integrity: sha512-m0CK1Q43T3qtVHSBYeDHav/hp8t/ahhlJGzwdBOQM6WcxeZpF1wcJazoGQAJEFamX1xcRAtA0ZuvvEkwHSMG0w==}
     peerDependencies:
       vue: ^3.5.30
-
-  nuxt-yandex-metrika@2.0.2:
-    resolution: {integrity: sha512-2QjZLwPyeI1QP2iBqGYcgxjfM8Iwe9YddPyj2XgW9+d5UgXX0SsGg6IoYo3kpjYW51luolijq4ciOdeCWcbK+g==}
-    peerDependencies:
-      '@nuxt/scripts': ^0.13.2
 
   nuxt@4.5.2:
     resolution: {integrity: sha512-tR3fcqeHlHmmkLMpIg3V7Y+1ltr302lW8djMw/iy+myfo7QSSz+BVJDuQhg5j73b9oteSyBfOKTDYTgvMtj6TA==}
@@ -10566,11 +10551,6 @@ snapshots:
       '@xml-tools/parser': 1.0.11
       prettier: 3.8.4
 
-  '@prleasing/utility@5.0.1':
-    dependencies:
-      dayjs: 1.11.21
-      libphonenumber-js: 1.13.7
-
   '@resvg/resvg-js-android-arm-eabi@2.6.2':
     optional: true
 
@@ -13838,8 +13818,6 @@ snapshots:
     dependencies:
       isomorphic.js: 0.2.5
 
-  libphonenumber-js@1.13.7: {}
-
   lightgallery@2.9.0: {}
 
   lighthouse-logger@2.0.2:
@@ -14880,24 +14858,6 @@ snapshots:
       - unplugin
       - vite
       - zod
-
-  nuxt-yandex-metrika@2.0.2(2bd8c69d49a676b420b5464c1a5aaeb6):
-    dependencies:
-      '@nuxt/kit': 4.5.2(magic-string@1.2.3)(magicast@0.5.4)(oxc-parser@0.143.0)(rolldown@1.2.7)(unplugin@3.3.0(esbuild@0.28.1)(rolldown@1.2.7)(rollup@4.62.2)(vite@8.2.2(@types/node@26.4.1)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(terser@5.51.2)(yaml@2.9.0))(webpack@5.105.4(esbuild@0.28.1)(lightningcss@1.33.0)(postcss@8.5.26)))
-      '@nuxt/scripts': 1.2.1(@oxc-project/types@0.148.0)(@unhead/vue@3.4.0(@oxc-project/types@0.148.0)(esbuild@0.28.1)(lightningcss@1.33.0)(oxc-parser@0.143.0)(rolldown@1.2.7)(rollup@4.62.2)(vite@8.2.2(@types/node@26.4.1)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(terser@5.51.2)(yaml@2.9.0))(vue@3.5.42(typescript@5.9.3))(webpack@5.105.4(esbuild@0.28.1)(lightningcss@1.33.0)(postcss@8.5.26)))(db0@0.3.4)(esbuild@0.28.1)(idb-keyval@6.2.5)(ioredis@5.11.1)(magicast@0.5.4)(rolldown@1.2.7)(rollup@4.62.2)(typescript@5.9.3)(vite@8.2.2(@types/node@26.4.1)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(terser@5.51.2)(yaml@2.9.0))(vue@3.5.42(typescript@5.9.3))(webpack@5.105.4(esbuild@0.28.1)(lightningcss@1.33.0)(postcss@8.5.26))
-      '@prleasing/utility': 5.0.1
-      '@vueuse/core': 14.4.0(vue@3.5.42(typescript@5.9.3))
-      consola: 3.4.2
-      defu: 6.1.7
-      valibot: 1.2.0(typescript@5.9.3)
-    transitivePeerDependencies:
-      - magic-string
-      - magicast
-      - oxc-parser
-      - rolldown
-      - typescript
-      - unplugin
-      - vue
 
   nuxt@4.5.2(@babel/plugin-syntax-jsx@7.29.7(@babel/core@7.29.7))(@babel/plugin-syntax-typescript@7.29.7(@babel/core@7.29.7))(@oxc-project/types@0.148.0)(@parcel/watcher@2.5.6)(@types/node@26.4.1)(@vue/compiler-sfc@3.5.42)(cac@6.7.14)(db0@0.3.4)(esbuild@0.28.1)(eslint@10.5.0(jiti@2.7.0))(idb-keyval@6.2.5)(ioredis@5.11.1)(lightningcss@1.33.0)(magicast@0.5.4)(meow@14.1.0)(optionator@0.9.4)(oxc-parser@0.143.0)(pinia@3.0.4(typescript@5.9.3)(vue@3.5.42(typescript@5.9.3)))(rolldown@1.2.7)(rollup-plugin-visualizer@7.0.1(rolldown@1.2.7)(rollup@4.62.2))(rollup@4.62.2)(sass@1.101.0)(srvx@0.11.22)(stylelint@17.4.0(typescript@5.9.3))(terser@5.51.2)(typescript@5.9.3)(vite@8.2.2(@types/node@26.4.1)(esbuild@0.28.1)(jiti@2.7.0)(sass@1.101.0)(terser@5.51.2)(yaml@2.9.0))(vue-tsc@3.3.5(typescript@5.9.3))(webpack@5.105.4(esbuild@0.28.1)(lightningcss@1.33.0)(postcss@8.5.26))(yaml@2.9.0):
     dependencies:

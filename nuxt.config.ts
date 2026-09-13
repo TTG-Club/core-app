@@ -46,7 +46,6 @@ export default defineNuxtConfig({
     '@vueuse/nuxt',
     '@pinia/nuxt',
     'nuxt-security',
-    'nuxt-yandex-metrika',
     'nuxt-gtag',
   ],
 
@@ -75,32 +74,18 @@ export default defineNuxtConfig({
     },
   },
 
-  // Яндекс.Метрика (nuxt-yandex-metrika).
-  // ВАЖНО: id НЕ берём из env на этапе сборки — Docker-сборка не видит прод-переменных,
-  // поэтому id попадал бы в образ как placeholder 'xxx' и счётчик не трекал.
-  // Реальный id подставляется в РАНТАЙМЕ контейнера через NUXT_PUBLIC_YANDEX_METRIKA_ID
-  // (Nitro override → runtimeConfig.public.yandexMetrika.id). На сборке и на dev id пустой,
-  // поэтому в боевую статистику ничего не уходит.
-  yandexMetrika: {
-    id: '',
-    position: 'head',
-    options: {
-      clickmap: true,
-      trackLinks: true,
-      accurateTrackBounce: true,
-      webvisor: true,
-    },
-  },
-
   // Google Analytics (nuxt-gtag).
   // enabled:true ОБЯЗАТЕЛЬНО безусловно: при enabled:false модуль на этапе сборки
   // (где прод-env отсутствует) вырезает плагин и runtimeConfig.public.gtag из образа,
   // и счётчик не работает даже если id задан на проде. id подставляется в рантайме
-  // через NUXT_PUBLIC_GTAG_ID; при пустом id плагин не инжектит скрипт (resolveTags → []),
-  // поэтому на dev GA не грузится. SPA-переходы трекает Enhanced Measurement GA4.
+  // через NUXT_PUBLIC_GTAG_ID; при пустом id скрипт не подключается, поэтому на dev
+  // GA не грузится. SPA-переходы трекает Enhanced Measurement GA4.
+  // initMode: 'manual' — скрипт подключает плагин analytics.client.ts, и только после
+  // согласия посетителя на аналитические cookie.
   gtag: {
     enabled: true,
     id: '',
+    initMode: 'manual',
   },
 
   // SEO и метаданные
@@ -466,6 +451,16 @@ export default defineNuxtConfig({
       // с подсказкой, вместо перехода в 404. Задаётся через
       // NUXT_PUBLIC_OLD_SITE_URL.
       oldSiteUrl: '',
+      // Яндекс.Метрика. Подключается плагином analytics.client.ts только после
+      // согласия посетителя на аналитические cookie — поэтому без модуля
+      // nuxt-yandex-metrika: тот грузил счётчик сразу и без спроса.
+      // id НЕ берём из env на этапе сборки — Docker-сборка не видит прод-переменных.
+      // Реальный id подставляется в РАНТАЙМЕ контейнера через
+      // NUXT_PUBLIC_YANDEX_METRIKA_ID; на сборке и на dev он пустой, и счётчик
+      // не подключается.
+      yandexMetrika: {
+        id: '',
+      },
     },
     site: {
       url: process.env.NUXT_SITE_URL,

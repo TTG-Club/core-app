@@ -69,7 +69,6 @@
     "nuxt": "^4.5.2",
     "nuxt-gtag": "^4.1.0",
     "nuxt-security": "^2.6.0",
-    "nuxt-yandex-metrika": "^2.0.2",
     "pako": "^2.2.0",
     "pdf-lib": "^1.17.1",
     "pinia": "^3.0.4",

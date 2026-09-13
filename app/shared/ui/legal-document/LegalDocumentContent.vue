@@ -4,7 +4,8 @@
   import { LEGAL_DOCUMENT_BULLET_ICON } from './constants';
 
   /**
-   * Содержимое блока юридического документа: абзацы, список и ссылки.
+   * Содержимое блока юридического документа: абзацы, карточка сведений,
+   * список и ссылки.
    * Заголовок рисует родитель — у раздела и подраздела он разного уровня.
    */
   const { block } = defineProps<{
@@ -21,6 +22,25 @@
   >
     {{ paragraph }}
   </p>
+
+  <dl
+    v-if="block.facts"
+    class="flex flex-col divide-y divide-default rounded-md border border-default"
+  >
+    <div
+      v-for="fact in block.facts"
+      :key="fact.label"
+      class="flex flex-col gap-1 px-4 py-3 sm:grid sm:grid-cols-[11rem_minmax(0,1fr)] sm:gap-4"
+    >
+      <dt class="text-sm leading-6 font-medium text-highlighted">
+        {{ fact.label }}
+      </dt>
+
+      <dd class="text-sm leading-6 text-toned">
+        {{ fact.value }}
+      </dd>
+    </div>
+  </dl>
 
   <div
     v-if="block.bullets"

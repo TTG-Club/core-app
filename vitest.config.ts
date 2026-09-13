@@ -3,17 +3,16 @@ import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 /**
- * Юнит-тесты доменной логики.
+ * Тесты доменной логики и жизненного цикла композаблов.
  *
- * Окружение Nuxt намеренно не поднимается: под проверкой чистые модули —
- * схемы разбора, сборка запросов, разбор фильтров и права по ролям. Им нужны
- * только алиасы проекта и те немногие авто-импорты, которые они используют;
- * всё это даёт `test/setup.ts`, подставляя настоящие реализации, а не
- * заглушки.
+ * Окружение Nuxt не поднимается. Общие авто-импорты предоставляет test/setup.ts;
+ * тесты композаблов используют настоящую реактивность Vue и таймеры VueUse,
+ * подменяя хранилище, сетевые API и окружение приложения в своих файлах.
  */
 export default defineConfig({
   resolve: {
     alias: {
+      '~home': fileURLToPath(new URL('./app/features/home', import.meta.url)),
       '#shared': fileURLToPath(new URL('./shared', import.meta.url)),
       '#server': fileURLToPath(new URL('./server', import.meta.url)),
       '~find-game': fileURLToPath(
@@ -26,6 +25,9 @@ export default defineConfig({
         new URL('./app/features/character-sheet', import.meta.url),
       ),
       '~ui': fileURLToPath(new URL('./app/shared/ui', import.meta.url)),
+      '~infrastructure': fileURLToPath(
+        new URL('./app/features/infrastructure', import.meta.url),
+      ),
       '~': fileURLToPath(new URL('./app', import.meta.url)),
     },
   },
