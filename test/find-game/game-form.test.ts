@@ -30,6 +30,7 @@ function onlineGame(
     maxPlayers: 5,
     startingLevel: 1,
     crossplayAllowed: false,
+    requiresCompletePlayerProfile: false,
     durationType: 'CAMPAIGN',
     costType: 'FREE',
     visibility: 'PUBLIC',
@@ -182,6 +183,14 @@ describe('тело создания игры', () => {
     );
 
     expect(parsed.visibility).toBe('PRIVATE');
+  });
+
+  it('сохраняет требование заполненного профиля игрока', () => {
+    const parsed = createGameRequestSchema.parse(
+      onlineGame({ requiresCompletePlayerProfile: true }),
+    );
+
+    expect(parsed.requiresCompletePlayerProfile).toBe(true);
   });
 });
 

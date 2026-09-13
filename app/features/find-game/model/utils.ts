@@ -1,11 +1,20 @@
-import type { Game, GameSession, NextGameSession, Reputation } from './types';
+import type {
+  CreateGameRequest,
+  FindGameUserProfile,
+  Game,
+  GameSession,
+  NextGameSession,
+  Reputation,
+} from './types';
 
 import {
+  GAME_COPY_TITLE_SUFFIX,
   GAME_COST_TYPE_LABELS,
   GAME_DURATION_TYPE_LABELS,
   GAME_NEXT_SESSION_FALLBACK,
   GAME_PRICE_PENDING_LABEL,
   GAME_PRICE_PER_SESSION_LABEL,
+  GAME_TITLE_MAX_LENGTH,
   GAME_TYPE_LABELS,
   GAMES_ROUTE,
   INVITE_CODE_QUERY_KEY,
@@ -22,6 +31,66 @@ import { findNearestMoment } from './timeline';
 const HOURS_IN_DAY = 24;
 const MINUTES_IN_DAY = HOURS_IN_DAY * MINUTES_IN_HOUR;
 const MILLIS_IN_MINUTE = 60_000;
+
+/**
+ * Проверяет общую часть и анкету игрока по тем же правилам, что сервис
+ * применяет перед подачей заявки.
+ * @param profile Игровой профиль текущего пользователя.
+ */
+export function hasCompletePlayerProfile(
+  profile: FindGameUserProfile | null,
+): boolean {
+  if (!profile) {
+    return false;
+  }
+
+  return (
+    profile.birthYear !== null
+    && profile.gender !== null
+    && profile.tabletopExperienceYears !== null
+    && !!profile.playerAbout.trim()
+  );
+}
+
+/**
+ * Собирает обычный запрос создания из выбранной игры. Заявки, участники,
+ * расписание и служебное состояние в контракт создания не входят, поэтому
+ * копия всегда начинает новый набор с пустым составом.
+ * @param game Игра, на основе которой создаётся новая.
+ */
+export function toGameCopyRequest(game: Game): CreateGameRequest {
+  const titleBaseLength = GAME_TITLE_MAX_LENGTH - GAME_COPY_TITLE_SUFFIX.length;
+  const title = `${game.title.slice(0, titleBaseLength).trimEnd()}${GAME_COPY_TITLE_SUFFIX}`;
+
+  return {
+    title,
+    system: game.system,
+    description: game.description,
+    requirements: game.requirements,
+    type: game.type,
+    playersToStart: game.playersToStart,
+    maxPlayers: game.maxPlayers,
+    startingLevel: game.startingLevel,
+    crossplayAllowed: game.crossplayAllowed,
+    requiresCompletePlayerProfile: game.requiresCompletePlayerProfile,
+    durationType: game.durationType,
+    costType: game.costType,
+    visibility: game.visibility,
+    ...(game.imageUrl ? { imageUrl: game.imageUrl } : {}),
+    ...(game.virtualTableUrl ? { virtualTableUrl: game.virtualTableUrl } : {}),
+    ...(game.onlinePlatform ? { onlinePlatform: game.onlinePlatform } : {}),
+    ...(game.masterChatUrl ? { masterChatUrl: game.masterChatUrl } : {}),
+    ...(game.gameChatUrl ? { gameChatUrl: game.gameChatUrl } : {}),
+    ...(game.genre ? { genre: game.genre } : {}),
+    ...(game.allowedSources.length
+      ? { allowedSources: [...game.allowedSources] }
+      : {}),
+    ...(game.city ? { city: game.city } : {}),
+    ...(game.venue ? { venue: game.venue } : {}),
+    ...(game.minAge !== null ? { minAge: game.minAge } : {}),
+    ...(game.maxAge !== null ? { maxAge: game.maxAge } : {}),
+  };
+}
 
 /** Показывает начало и ожидаемое окончание в часовом поясе читателя. */
 export function getNextSessionLabel(

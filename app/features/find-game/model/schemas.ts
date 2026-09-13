@@ -378,6 +378,7 @@ const gameResponseSchema = z.object({
   maxAge: z.coerce.number().int().nullish().catch(null),
   startingLevel: z.coerce.number().int().catch(GAME_STARTING_LEVEL_MIN),
   crossplayAllowed: z.boolean().catch(false),
+  requiresCompletePlayerProfile: z.boolean().catch(false),
   recruitmentClosed: z.boolean().catch(false),
   status: z.enum(GAME_STATUSES).catch('OPEN'),
   durationType: z.enum(GAME_DURATION_TYPES).catch('CAMPAIGN'),
@@ -425,6 +426,7 @@ function toGame(parsed: z.infer<typeof gameResponseSchema>): Game {
     maxAge: parsed.maxAge ?? null,
     startingLevel: parsed.startingLevel,
     crossplayAllowed: parsed.crossplayAllowed,
+    requiresCompletePlayerProfile: parsed.requiresCompletePlayerProfile,
     recruitmentClosed: parsed.recruitmentClosed,
     status: parsed.status,
     durationType: parsed.durationType,
@@ -989,6 +991,7 @@ export const createGameRequestSchema = z
       .min(GAME_STARTING_LEVEL_MIN)
       .max(GAME_STARTING_LEVEL_MAX),
     crossplayAllowed: z.boolean(),
+    requiresCompletePlayerProfile: z.boolean(),
     durationType: z.enum(GAME_DURATION_TYPES),
     costType: z.enum(GAME_COST_TYPES),
     visibility: z.enum(GAME_VISIBILITIES),

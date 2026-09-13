@@ -16,18 +16,22 @@ import {
   closeGameRecruitment,
   completeGameSession,
   copyGameSession,
+  createGame,
   createGameRegistration,
   createGameSession,
   createGameSessionSeries,
   deleteGame,
+  fetchFindGameProfile,
   fetchGame,
   fetchGameSessions,
   fetchOwnGameRegistration,
   fetchOwnSessionParticipation,
+  hasCompletePlayerProfile,
   openGameRecruitment,
   raiseGame,
   resolveGameViewerAbilities,
   startGameSession,
+  toGameCopyRequest,
   updateSessionAttendance,
   withdrawGameRegistration,
 } from '../model';
@@ -191,6 +195,52 @@ export function useGameDetail(
     }),
   );
 
+  const shouldCheckPlayerProfile = computed(
+    () =>
+      !!game.value?.requiresCompletePlayerProfile && abilities.value.canApply,
+  );
+
+  const { data: applicationProfile, status: applicationProfileStatus } =
+    useAsyncData(
+      () => `find-game-application-profile-${currentGameId.value}`,
+      async () => {
+        if (!shouldCheckPlayerProfile.value) {
+          return null;
+        }
+
+        return await fetchFindGameProfile();
+      },
+      {
+        watch: [shouldCheckPlayerProfile],
+        server: false,
+        deep: false,
+        default: () => null,
+      },
+    );
+
+  const isApplicationProfileLoading = computed(
+    () =>
+      shouldCheckPlayerProfile.value
+      && applicationProfileStatus.value !== 'success'
+      && applicationProfileStatus.value !== 'error',
+  );
+
+  // При ошибке предварительной загрузки заявку не блокируем вслепую:
+  // окончательное правило всё равно проверяет сервис.
+  const canApplyWithCurrentProfile = computed(
+    () =>
+      !shouldCheckPlayerProfile.value
+      || applicationProfileStatus.value === 'error'
+      || hasCompletePlayerProfile(applicationProfile.value),
+  );
+
+  const shouldShowProfileRequirement = computed(
+    () =>
+      shouldCheckPlayerProfile.value
+      && applicationProfileStatus.value === 'success'
+      && !canApplyWithCurrentProfile.value,
+  );
+
   const isGameLoading = computed(
     () => gameStatus.value !== 'success' && gameStatus.value !== 'error',
   );
@@ -291,6 +341,23 @@ export function useGameDetail(
   }
 
   /**
+   * Создаёт новую игру через обычный endpoint создания. Поэтому копия не
+   * наследует состав и расписание, а сервер применяет к ней те же лимиты.
+   * @returns Идентификатор созданной игры или `null`, если источник исчез.
+   */
+  async function duplicateGame(): Promise<string | null> {
+    const sourceGame = game.value;
+
+    if (!sourceGame) {
+      return null;
+    }
+
+    const copiedGame = await createGame(toGameCopyRequest(sourceGame));
+
+    return copiedGame.id;
+  }
+
+  /**
    * Завершает сессию игры.
    * @param sessionId Идентификатор сессии.
    */
@@ -370,13 +437,16 @@ export function useGameDetail(
     ownParticipationBySession,
     refreshOwnParticipations,
     abilities,
+    canApplyWithCurrentProfile,
     inviteCode: currentInviteCode,
     currentUserId,
 
     gameError,
     gameStatus,
     isGameLoading,
+    isApplicationProfileLoading,
     areSessionsLoading,
+    shouldShowProfileRequirement,
 
     addSession,
     addSessionSeries,
@@ -388,6 +458,7 @@ export function useGameDetail(
     closeRecruitment,
     completeSession,
     duplicateSession,
+    duplicateGame,
     openRecruitment,
     raise,
     refreshAll,

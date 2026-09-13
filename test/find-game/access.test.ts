@@ -47,6 +47,7 @@ function makeGame(overrides: Partial<Game> = {}): Game {
     maxAge: null,
     startingLevel: 1,
     crossplayAllowed: false,
+    requiresCompletePlayerProfile: false,
     status: 'OPEN',
     recruitmentClosed: false,
     durationType: 'CAMPAIGN',
@@ -243,6 +244,22 @@ describe('заявка в игру', () => {
 });
 
 describe('права мастера на игру', () => {
+  it('копировать игру может только её владелец', () => {
+    const game = makeGame();
+
+    expect(masterOf(game).canDuplicateGame).toBe(true);
+    expect(viewerOf(game, null).canDuplicateGame).toBe(false);
+
+    expect(
+      resolveGameViewerAbilities({
+        game,
+        userId: null,
+        roles: [],
+        registration: null,
+      }).canDuplicateGame,
+    ).toBe(false);
+  });
+
   it('правит, ведёт сессии и разбирает заявки только владелец', () => {
     const game = makeGame();
     const master = masterOf(game);

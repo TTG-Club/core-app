@@ -502,6 +502,7 @@ export const SESSION_REGISTRATION_STATUS_COLORS = {
 /* ------------------------------------------------------------------ */
 
 export const GAME_TITLE_MAX_LENGTH = 150;
+export const GAME_COPY_TITLE_SUFFIX = ' (копия)';
 export const GAME_URL_MAX_LENGTH = 2048;
 export const GAME_GENRE_MAX_LENGTH = 100;
 export const GAME_DESCRIPTION_MAX_LENGTH = 20_000;
@@ -683,6 +684,9 @@ export const CROSSPLAY_FILTER_OPTIONS: Array<{
 export const GAME_DESCRIPTION_TITLE = 'Описание';
 export const GAME_REQUIREMENTS_TITLE = 'Требования к игрокам';
 export const GAME_ALLOWED_SOURCES_TITLE = 'Допустимые источники';
+export const GAME_ALLOWED_SOURCES_VISIBLE_LIMIT = 6;
+export const GAME_ALLOWED_SOURCES_SHOW_LABEL = 'Показать остальные';
+export const GAME_ALLOWED_SOURCES_HIDE_LABEL = 'Скрыть';
 export const GAME_VIRTUAL_TABLE_LABEL = 'Виртуальный стол';
 export const GAME_MASTER_LABEL = 'Мастер';
 
@@ -941,6 +945,8 @@ export const GAME_FORM_EDIT_TITLE = 'Редактирование игры';
 export const GAME_FORM_SUBMIT_LABEL = 'Опубликовать';
 export const GAME_EDIT_LABEL = 'Редактировать';
 export const GAME_FORM_CREATED_TOAST = 'Игра опубликована';
+export const GAME_COPY_LABEL = 'Создать копию';
+export const GAME_COPY_CREATED_TOAST = 'Копия игры создана';
 export const GAME_FORM_UPDATED_TOAST = 'Изменения сохранены';
 
 /**
@@ -1090,6 +1096,10 @@ export const GAME_FIELD_MAX_AGE_LABEL = 'Возраст до';
 export const GAME_FIELD_AGE_HINT = 'Обе границы необязательны.';
 export const GAME_FIELD_STARTING_LEVEL_LABEL = 'Стартовый уровень';
 export const GAME_FIELD_CROSSPLAY_LABEL = 'Разрешить персонажа другого пола';
+export const GAME_FIELD_COMPLETE_PLAYER_PROFILE_LABEL =
+  'Принимать заявки только с заполненным профилем игрока';
+export const GAME_FIELD_COMPLETE_PLAYER_PROFILE_HINT =
+  'Игрок должен указать год рождения, пол, опыт в НРИ и рассказать о себе.';
 
 export const GAME_FORM_PLAYERS_ERROR =
   'Для старта нужно не больше игроков, чем максимум';
@@ -1441,6 +1451,10 @@ export const APPLY_OWN_STATUS_LABEL = 'Ваша заявка';
 export const APPLY_WITHDRAWN_TOAST = 'Заявка отозвана';
 
 export const APPLY_SENT_TOAST = 'Заявка отправлена';
+export const APPLY_PROFILE_REQUIRED_TITLE = 'Заполните профиль игрока';
+export const APPLY_PROFILE_REQUIRED_DESCRIPTION =
+  'Мастер принимает заявки только от игроков, которые указали год рождения, пол, опыт в НРИ и рассказали о себе.';
+export const APPLY_PROFILE_REQUIRED_ACTION = 'Перейти в профиль';
 export const ATTENDANCE_TITLE = 'Придёте на сессию?';
 export const ATTENDANCE_SAVED_TOAST = 'Присутствие обновлено';
 export const PAYMENT_PAID_LABEL = 'Оплачено';

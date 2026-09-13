@@ -29,6 +29,8 @@
     GAME_FIELD_CITY_HINT,
     GAME_FIELD_CITY_LABEL,
     GAME_FIELD_CITY_PLACEHOLDER,
+    GAME_FIELD_COMPLETE_PLAYER_PROFILE_HINT,
+    GAME_FIELD_COMPLETE_PLAYER_PROFILE_LABEL,
     GAME_FIELD_COST_HINT,
     GAME_FIELD_COST_LABEL,
     GAME_FIELD_CROSSPLAY_LABEL,
@@ -156,6 +158,7 @@
       maxAge: null,
       startingLevel: GAME_STARTING_LEVEL_MIN,
       crossplayAllowed: false,
+      requiresCompletePlayerProfile: false,
       durationType: 'CAMPAIGN',
       costType: 'FREE',
       visibility: 'PUBLIC',
@@ -191,6 +194,7 @@
       maxAge: source.maxAge,
       startingLevel: source.startingLevel,
       crossplayAllowed: source.crossplayAllowed,
+      requiresCompletePlayerProfile: source.requiresCompletePlayerProfile,
       durationType: source.durationType,
       costType: source.costType,
       visibility: source.visibility,
@@ -436,6 +440,7 @@
       maxPlayers: state.maxPlayers,
       startingLevel: state.startingLevel,
       crossplayAllowed: state.crossplayAllowed,
+      requiresCompletePlayerProfile: state.requiresCompletePlayerProfile,
       durationType: state.durationType,
       costType: state.costType,
       visibility: state.visibility,
@@ -827,6 +832,12 @@
             <UCheckbox
               v-model="form.crossplayAllowed"
               :label="GAME_FIELD_CROSSPLAY_LABEL"
+            />
+
+            <UCheckbox
+              v-model="form.requiresCompletePlayerProfile"
+              :label="GAME_FIELD_COMPLETE_PLAYER_PROFILE_LABEL"
+              :description="GAME_FIELD_COMPLETE_PLAYER_PROFILE_HINT"
             />
           </section>
         </div>

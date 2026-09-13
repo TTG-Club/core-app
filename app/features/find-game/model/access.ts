@@ -107,6 +107,9 @@ export function resolveGameViewerAbilities(
     isApprovedPlayer,
     // Править игру может только её владелец — чужую сервис не отдаст.
     canEditGame: isMaster,
+    // Копия — действие владельца: она переносит и его рабочие ссылки. Само
+    // создание идёт обычным POST и проходит все серверные лимиты мастера.
+    canDuplicateGame: isMaster,
     canCreateSession: isMaster,
     canCopySession: isMaster,
     canReviewRegistrations: isMaster,

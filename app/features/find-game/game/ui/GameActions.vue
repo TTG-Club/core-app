@@ -13,6 +13,7 @@
     GAME_CLOSE_CONFIRM_DESCRIPTION,
     GAME_CLOSE_CONFIRM_TITLE,
     GAME_CLOSE_LABEL,
+    GAME_COPY_LABEL,
     GAME_DELETE_LABEL,
     GAME_EDIT_LABEL,
     GAME_RAISE_LABEL,
@@ -45,6 +46,7 @@
     'cancel': [];
     'close': [];
     'close-recruitment': [];
+    'duplicate': [];
     'open-recruitment': [];
     'raise': [];
     'report': [request: CreateGameReportRequest];
@@ -124,6 +126,20 @@
         variant="ghost"
         icon="tabler:pencil"
         :aria-label="GAME_EDIT_LABEL"
+      />
+    </UTooltip>
+
+    <UTooltip
+      v-if="abilities.canDuplicateGame"
+      :text="GAME_COPY_LABEL"
+    >
+      <UButton
+        color="neutral"
+        variant="ghost"
+        icon="tabler:copy"
+        :disabled="busy"
+        :aria-label="GAME_COPY_LABEL"
+        @click.left.exact.prevent="emit('duplicate')"
       />
     </UTooltip>
 

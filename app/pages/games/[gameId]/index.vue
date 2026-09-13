@@ -19,12 +19,17 @@
   import {
     APPLY_LABEL,
     APPLY_OWN_STATUS_LABEL,
+    APPLY_PROFILE_REQUIRED_ACTION,
+    APPLY_PROFILE_REQUIRED_DESCRIPTION,
+    APPLY_PROFILE_REQUIRED_TITLE,
     APPLY_SENT_TOAST,
     APPLY_WITHDRAWN_TOAST,
     FIND_GAME_NOT_FOUND_MESSAGE,
+    FIND_GAME_PROFILE_ROUTE,
     FIND_GAME_UNKNOWN_ERROR_MESSAGE,
     GAME_CANCELLED_TOAST,
     GAME_CLOSED_TOAST,
+    GAME_COPY_CREATED_TOAST,
     GAME_DELETED_TOAST,
     GAME_DETAIL_TABS,
     GAME_GUEST_NOTICE_DESCRIPTION,
@@ -82,6 +87,7 @@
     addSession,
     addSessionSeries,
     applyToGame,
+    canApplyWithCurrentProfile,
     changeAttendance,
     cancel,
     cancelSession,
@@ -89,11 +95,13 @@
     closeRecruitment,
     completeSession,
     duplicateSession,
+    duplicateGame,
     game,
     gameError,
     gameStatus,
-    isGameLoading,
     areSessionsLoading,
+    isApplicationProfileLoading,
+    isGameLoading,
     openRecruitment,
     ownParticipationBySession,
     ownRegistration,
@@ -102,6 +110,7 @@
     refreshOwnParticipations,
     remove,
     sessions,
+    shouldShowProfileRequirement,
     startSession,
     withdrawFromGame,
   } = useGameDetail(gameId, inviteCode);
@@ -261,6 +270,26 @@
     await refreshOwnParticipations();
   }
 
+  /** Создаёт пустую копию игры и открывает её страницу. */
+  async function handleDuplicateGame(): Promise<void> {
+    isBusy.value = true;
+
+    try {
+      const copiedGameId = await duplicateGame();
+
+      if (!copiedGameId) {
+        return;
+      }
+
+      showSuccess(GAME_COPY_CREATED_TOAST);
+      await navigateTo(`${GAMES_ROUTE}/${copiedGameId}`);
+    } catch (error) {
+      showError(error);
+    } finally {
+      isBusy.value = false;
+    }
+  }
+
   /**
    * Перечитывает всё после решения мастера: меняются и занятые места игры, и
    * состав незакрытых сессий.
@@ -274,6 +303,10 @@
 
   /** Открывает окно заявки в игру. */
   function openApply(): void {
+    if (!canApplyWithCurrentProfile.value) {
+      return;
+    }
+
     isApplyOpen.value = true;
   }
 
@@ -316,6 +349,7 @@
         :game-id="game.id"
         :busy="isBusy"
         @close="handleClose"
+        @duplicate="handleDuplicateGame"
         @close-recruitment="handleCloseRecruitment"
         @open-recruitment="handleOpenRecruitment"
         @cancel="handleCancel"
@@ -407,10 +441,31 @@
                   v-if="abilities.canApply"
                   block
                   icon="tabler:send"
-                  :disabled="isBusy"
+                  :loading="isApplicationProfileLoading"
+                  :disabled="isBusy || !canApplyWithCurrentProfile"
                   :label="APPLY_LABEL"
                   @click.left.exact.prevent="openApply"
                 />
+
+                <UAlert
+                  v-if="shouldShowProfileRequirement"
+                  color="warning"
+                  variant="subtle"
+                  icon="tabler:user-exclamation"
+                  :title="APPLY_PROFILE_REQUIRED_TITLE"
+                  :description="APPLY_PROFILE_REQUIRED_DESCRIPTION"
+                >
+                  <template #actions>
+                    <UButton
+                      :to="FIND_GAME_PROFILE_ROUTE"
+                      color="warning"
+                      variant="soft"
+                      size="sm"
+                      icon="tabler:user-edit"
+                      :label="APPLY_PROFILE_REQUIRED_ACTION"
+                    />
+                  </template>
+                </UAlert>
 
                 <div
                   v-if="ownRegistration"

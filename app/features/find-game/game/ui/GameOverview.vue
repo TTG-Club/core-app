@@ -4,7 +4,10 @@
   import { MarkupRender } from '~ui/markup';
 
   import {
+    GAME_ALLOWED_SOURCES_HIDE_LABEL,
+    GAME_ALLOWED_SOURCES_SHOW_LABEL,
     GAME_ALLOWED_SOURCES_TITLE,
+    GAME_ALLOWED_SOURCES_VISIBLE_LIMIT,
     GAME_DESCRIPTION_TITLE,
     GAME_REQUIREMENTS_TITLE,
   } from '../../model';
@@ -15,6 +18,25 @@
   }>();
 
   const descriptionNodes = computed(() => toGameMarkup(game.description));
+  const isAllowedSourcesOpen = ref(false);
+
+  const visibleAllowedSources = computed(() =>
+    game.allowedSources.slice(0, GAME_ALLOWED_SOURCES_VISIBLE_LIMIT),
+  );
+
+  const remainingAllowedSources = computed(() =>
+    game.allowedSources.slice(GAME_ALLOWED_SOURCES_VISIBLE_LIMIT),
+  );
+
+  const allowedSourcesToggleLabel = computed(() =>
+    isAllowedSourcesOpen.value
+      ? GAME_ALLOWED_SOURCES_HIDE_LABEL
+      : `${GAME_ALLOWED_SOURCES_SHOW_LABEL} (${remainingAllowedSources.value.length})`,
+  );
+
+  const allowedSourcesToggleIcon = computed(() =>
+    isAllowedSourcesOpen.value ? 'tabler:chevron-up' : 'tabler:chevron-down',
+  );
 </script>
 
 <!--
@@ -58,7 +80,7 @@
 
       <div class="flex flex-wrap gap-1.5">
         <UBadge
-          v-for="source in game.allowedSources"
+          v-for="source in visibleAllowedSources"
           :key="source"
           color="neutral"
           variant="subtle"
@@ -66,6 +88,34 @@
           :label="source"
         />
       </div>
+
+      <UCollapsible
+        v-if="remainingAllowedSources.length"
+        v-model:open="isAllowedSourcesOpen"
+        class="flex flex-col gap-2"
+      >
+        <UButton
+          color="neutral"
+          variant="ghost"
+          size="sm"
+          :icon="allowedSourcesToggleIcon"
+          :label="allowedSourcesToggleLabel"
+          class="self-start"
+        />
+
+        <template #content>
+          <div class="flex flex-wrap gap-1.5">
+            <UBadge
+              v-for="source in remainingAllowedSources"
+              :key="source"
+              color="neutral"
+              variant="subtle"
+              size="sm"
+              :label="source"
+            />
+          </div>
+        </template>
+      </UCollapsible>
     </article>
   </section>
 </template>

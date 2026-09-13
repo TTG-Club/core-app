@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createGameReportRequestSchema,
   getGameSeatsCounter,
+  hasCompletePlayerProfile,
   parseCities,
   parseFindGameProfile,
   parseGame,
@@ -13,6 +14,7 @@ import {
   parseMasterProfile,
   parseProblemDetail,
   parseSessionParticipant,
+  toGameCopyRequest,
 } from '~find-game/model';
 
 /** Ответ игры в том виде, в каком его отдаёт find-game-api. */
@@ -37,6 +39,7 @@ function gameResponse(overrides: Record<string, unknown> = {}) {
     maxAge: 99,
     startingLevel: 1,
     crossplayAllowed: true,
+    requiresCompletePlayerProfile: true,
     status: 'OPEN',
     durationType: 'CAMPAIGN',
     costType: 'PAID',
@@ -71,6 +74,15 @@ describe('разбор игры', () => {
     expect(game.system).toBe('DND_2024');
     expect(game.allowedSources).toEqual(["Player's Handbook 2024"]);
     expect(game.inviteCode).toBeNull();
+    expect(game.requiresCompletePlayerProfile).toBe(true);
+  });
+
+  it('поддерживает старые ответы без требования к профилю', () => {
+    const game = parseGame(
+      gameResponse({ requiresCompletePlayerProfile: undefined }),
+    );
+
+    expect(game.requiresCompletePlayerProfile).toBe(false);
   });
 
   it('подставляет null вместо отсутствующих необязательных полей', () => {
@@ -130,6 +142,30 @@ describe('разбор игры', () => {
     const game = parseGame(gameResponse({ gameChatUrl: undefined }));
 
     expect(game.gameChatUrl).toBeNull();
+  });
+
+  it('создаёт запрос копии только из настроек игры', () => {
+    const source = parseGame(
+      gameResponse({
+        title: 'Проклятие Страда',
+        takenSeats: 4,
+        approvedSeats: 3,
+        nextSession: {
+          id: '22222222-2222-4222-8222-222222222222',
+          startsAt: '2026-09-20T16:00:00Z',
+        },
+      }),
+    );
+
+    const request = toGameCopyRequest(source);
+
+    expect(request.title).toBe('Проклятие Страда (копия)');
+    expect(request.allowedSources).toEqual(["Player's Handbook 2024"]);
+    expect(request.requiresCompletePlayerProfile).toBe(true);
+    expect(request).not.toHaveProperty('takenSeats');
+    expect(request).not.toHaveProperty('approvedSeats');
+    expect(request).not.toHaveProperty('nextSession');
+    expect(request).not.toHaveProperty('inviteCode');
   });
 });
 
@@ -592,6 +628,29 @@ describe('разбор профиля', () => {
     expect(profile.birthYear).toBeNull();
     expect(profile.gender).toBeNull();
     expect(profile.masterAbout).toBe('');
+  });
+
+  it('считает профиль игрока заполненным только со всей общей частью и рассказом', () => {
+    const profile = parseFindGameProfile({
+      userId: 'user-1',
+      birthYear: 1990,
+      gender: 'NOT_SPECIFIED',
+      tabletopExperienceYears: 0,
+      master: { about: null },
+      player: { about: 'Люблю исследование' },
+      createdAt: '2026-08-01T10:00:00Z',
+      updatedAt: '2026-08-01T10:00:00Z',
+    });
+
+    expect(hasCompletePlayerProfile(profile)).toBe(true);
+
+    expect(hasCompletePlayerProfile({ ...profile, birthYear: null })).toBe(
+      false,
+    );
+
+    expect(hasCompletePlayerProfile({ ...profile, playerAbout: '   ' })).toBe(
+      false,
+    );
   });
 });
 

@@ -257,6 +257,7 @@ export interface Game {
   maxAge: number | null;
   startingLevel: number;
   crossplayAllowed: boolean;
+  requiresCompletePlayerProfile: boolean;
   status: GameStatus;
 
   /**
@@ -375,6 +376,7 @@ export interface CreateGameRequest {
   maxAge?: number;
   startingLevel: number;
   crossplayAllowed: boolean;
+  requiresCompletePlayerProfile: boolean;
   durationType: GameDurationType;
   costType: GameCostType;
   visibility: GameVisibility;
@@ -408,6 +410,7 @@ export interface GameFormState {
   maxAge: number | null;
   startingLevel: number;
   crossplayAllowed: boolean;
+  requiresCompletePlayerProfile: boolean;
   durationType: GameDurationType;
   costType: GameCostType;
   visibility: GameVisibility;
@@ -591,6 +594,7 @@ export interface GameViewerAbilities {
   isApprovedPlayer: boolean;
   /** Мастер может править свою игру. */
   canEditGame: boolean;
+  canDuplicateGame: boolean;
   canCreateSession: boolean;
   canCopySession: boolean;
   canReviewRegistrations: boolean;
