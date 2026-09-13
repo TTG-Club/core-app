@@ -49,6 +49,7 @@ export function useGameDetail(
 ) {
   const { user, isLoggedIn } = useUser();
   const { roles } = useUserRoles();
+  const requestFetch = useRequestFetch();
 
   const currentGameId = computed(() => toValue(gameId));
   const currentInviteCode = computed(() => toValue(inviteCode));
@@ -61,7 +62,7 @@ export function useGameDetail(
     refresh: refreshGame,
   } = useAsyncData(
     () => `find-game-detail-${toValue(gameId)}`,
-    () => fetchGame(currentGameId.value, currentInviteCode.value),
+    () => fetchGame(currentGameId.value, currentInviteCode.value, requestFetch),
     { watch: [currentGameId, currentInviteCode], deep: false },
   );
 

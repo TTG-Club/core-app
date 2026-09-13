@@ -280,12 +280,15 @@ export async function fetchMyGames(
  * отвечает 404, как и на несуществующую.
  * @param gameId Идентификатор игры.
  * @param inviteCode Код приглашения из адреса страницы.
+ * @param fetcher Запросчик страницы: на сервере нужен `useRequestFetch()`,
+ * чтобы прокси получил авторизационную cookie модератора.
  */
 export async function fetchGame(
   gameId: string,
   inviteCode: string | null,
+  fetcher: ReturnType<typeof useRequestFetch> = $fetch,
 ): Promise<Game> {
-  const response = await $fetch(gamePath(gameId), {
+  const response = await fetcher(gamePath(gameId), {
     method: 'GET',
     query: { inviteCode: inviteCode || undefined },
     retry: 0,
