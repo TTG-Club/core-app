@@ -354,6 +354,10 @@ interface LevelUpWizard {
  * Состояние живёт с экземпляром модалки (обычные `ref`, не `useState`): мастер
  * открывается заново на каждое повышение.
  *
+ * Справочники под выборы шагов мастер догружает сам, по мере их появления:
+ * пулы заклинаний и каталог черт (`isFeatsLoading`, `hasFeatsError`). Выбор
+ * приходит и после `prepare` — со взятым вариантом умения или подклассом.
+ *
  * @returns шаги мастера, действия по шагам и сборку итога для листа.
  */
 export function useLevelUpWizard(): LevelUpWizard {
@@ -650,6 +654,37 @@ export function useLevelUpWizard(): LevelUpWizard {
     void loadSpellPools();
   }
 
+  /**
+   * Есть ли на шагах выбор черты — боевой стиль, черта за повышение
+   * характеристик, черта взятого варианта умения. Выбор варианта приходит уже
+   * после сборки шагов («Уроки первородных» колдуна дают черту происхождения),
+   * а выбор черты подкласса — вместе с подклассом, взятым прямо здесь, поэтому
+   * каталог черт догружается по его появлению, а не один раз на загрузке
+   * классов.
+   */
+  const hasFeatChoice = computed(() =>
+    steps.value.some((step) =>
+      step.features.some((row) => row.featChoices.length > 0),
+    ),
+  );
+
+  // Цикла нет: обработчик правит только каталог черт, а примета считается по
+  // выборам умений — от загруженного каталога она не меняется.
+  watch(hasFeatChoice, handleFeatChoicePresenceChange);
+
+  /**
+   * Догружает каталог черт, когда на шагах появился выбор черты. Без выбора
+   * черты каталог не запрашивается — иначе лишний запрос на каждое повышение, а
+   * пришедший или загружаемый не запрашивается повторно.
+   *
+   * @param hasChoice на шагах есть выбор черты.
+   */
+  function handleFeatChoicePresenceChange(hasChoice: boolean): void {
+    if (hasChoice && !featCatalog.value.length && !isFeatsLoading.value) {
+      void loadFeats();
+    }
+  }
+
   /** Подсказка о неудачной загрузке справочника класса. */
   function showLoadError(): void {
     toast.add({
@@ -803,17 +838,6 @@ export function useLevelUpWizard(): LevelUpWizard {
       selectedSubclasses.value = {};
       drafts.value = buildLevelDrafts(growing, character.value.level);
       preparedKey.value = key;
-
-      // Каталог черт нужен только когда взятые уровни дают выбор черты —
-      // боевой стиль, черту за повышение характеристик: иначе лишний запрос
-      // на каждое повышение.
-      const hasFeatChoice = steps.value.some((step) =>
-        step.features.some((row) => row.featChoices.length > 0),
-      );
-
-      if (hasFeatChoice) {
-        await loadFeats();
-      }
 
       return true;
     } catch (error) {
