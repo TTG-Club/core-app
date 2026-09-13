@@ -21,3 +21,6 @@ export const HORIZONTAL_RULE_TAG = 'hr';
 
 /** Готовая разметка разделителя — вставка с тулбара, разбор `<hr>` и токена `hr`. */
 export const SEPARATOR_MARKER = '{@separator}';
+
+/** Мягкий перенос строки внутри абзаца — Shift+Enter и кнопка тулбара. */
+export const LINE_BREAK_MARKER = '{@br}';

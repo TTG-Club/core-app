@@ -14,7 +14,11 @@ import {
   INTERACTIVE_TAGS,
   SECTION_TAGS,
 } from './tags';
-import { BLOCK_MARKER_NODE, SEPARATOR_MARKER } from './tiptap/constants';
+import {
+  BLOCK_MARKER_NODE,
+  LINE_BREAK_MARKER,
+  SEPARATOR_MARKER,
+} from './tiptap/constants';
 import { FORMAT_SPECS } from './tiptap/marks';
 import { hasMarkerAtom } from './tiptap/node-utils';
 
@@ -66,6 +70,17 @@ const MARK_KBDS = new Map<string, string[]>(
  * (180–200 в SidebarPopover).
  */
 export const TOOLBAR_LAYER_CLASS = 'z-110';
+
+/**
+ * Класс кнопки, нужной только на сенсорном экране: при мыши она скрыта. Порог
+ * по типу указателя, а не по ширине окна: кнопка заменяет Shift+Enter, которого
+ * нет на экранной клавиатуре. Телефон в горизонтальном положении и планшет
+ * бывают шире `md`, а у десктопа в узком окне сочетание есть.
+ */
+const TOUCH_ONLY_CLASS = 'pointer-fine:hidden';
+
+/** Подпись кнопки мягкого переноса строки: текст подсказки и `aria-label`. */
+const LINE_BREAK_LABEL = 'Перенос строки';
 
 /**
  * Подсказка кнопки тулбара (с хоткеем или без). Штатная тема UTooltip рисует
@@ -302,6 +317,27 @@ function inlineItem(
   }
 
   return tagItem(editor, tag);
+}
+
+/**
+ * Пункт мягкого переноса строки `{@br}` — то же, что Shift+Enter: строка
+ * переносится, а новый абзац или пункт списка не появляется. Виден только на
+ * сенсорном экране (см. TOUCH_ONLY_CLASS).
+ */
+function lineBreakItem(editor: Editor): EditorToolbarItem {
+  return {
+    'icon': 'tabler:corner-down-left',
+    'tooltip': kbdTooltip(LINE_BREAK_LABEL),
+    'aria-label': LINE_BREAK_LABEL,
+    'class': TOUCH_ONLY_CLASS,
+    'onClick': () => {
+      editor
+        .chain()
+        .focus()
+        .insertContent({ type: 'ttgMarker', attrs: { raw: LINE_BREAK_MARKER } })
+        .run();
+    },
+  };
 }
 
 /**
@@ -619,7 +655,8 @@ function blockItem(
 /**
  * Собирает пункты тулбара визуального редактора группами: форматирование (марки) →
  * тип блока (заголовок «H» + выравнивание) → блочные теги (списки/цитата/
- * разделитель/таблица) → инлайновые/интерактивные теги → ссылки на разделы.
+ * разделитель/таблица) → перенос строки (только на сенсорном экране) и
+ * инлайновые/интерактивные теги → ссылки на разделы.
  *
  * Базовый пресет оставляет только оформление текста (см. BASIC_TAG_KEYS): без
  * выравнивания, доменных вставок и ссылок на разделы.
@@ -646,9 +683,12 @@ export function buildToolbarItems(
       blockTags
         .filter((tag) => BASIC_TAG_KEYS.has(tag.key))
         .map((tag) => blockItem(editor, tag, handlers)),
-      INLINE_TAGS.filter((tag) => BASIC_TAG_KEYS.has(tag.key)).map((tag) =>
-        inlineItem(editor, tag, handlers),
-      ),
+      [
+        lineBreakItem(editor),
+        ...INLINE_TAGS.filter((tag) => BASIC_TAG_KEYS.has(tag.key)).map((tag) =>
+          inlineItem(editor, tag, handlers),
+        ),
+      ],
     ];
   }
 
@@ -657,6 +697,7 @@ export function buildToolbarItems(
     [headingDropdown(editor), alignDropdown(editor)],
     blockTags.map((tag) => blockItem(editor, tag, handlers)),
     [
+      lineBreakItem(editor),
       ...INLINE_TAGS.map((tag) => inlineItem(editor, tag, handlers)),
       ...INTERACTIVE_TAGS.map((tag) => interactiveItem(editor, tag, handlers)),
     ],
