@@ -194,13 +194,15 @@
 -->
 <template>
   <article
-    class="group relative flex h-full flex-col overflow-hidden rounded-xl border border-default bg-elevated shadow-sm transition-all duration-200 hover:border-primary hover:shadow-lg"
+    class="group relative isolate flex h-full flex-col overflow-hidden rounded-xl border border-default bg-elevated shadow-sm transition-all duration-200 hover:border-primary hover:shadow-lg"
   >
     <!--
       Открывает объявление кликом по любому месту карточки. Для клавиатуры и
       скринридеров эта ссылка скрыта: она дублирует ссылку-заголовок ниже, и
       без скрытия каждая карточка требовала бы двух табов до одной цели.
-      Собственные ссылки подвала подняты над ней слоем.
+      Собственные ссылки подвала подняты над ней слоем. Слои замкнуты в
+      карточке `isolate`: иначе они перекрывали бы плавающие элементы
+      страницы, например мобильную плашку действий.
     -->
     <ULink
       :to="gameRoute"
