@@ -225,14 +225,13 @@
       />
 
       <div
-        class="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-2"
+        class="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 p-2"
       >
         <div class="flex flex-wrap items-center gap-1">
-          <!-- Звёздочка поднята над подложкой карточки и возвращает себе
-            нажатия: ряд значков их не принимает, иначе он перехватывал бы
-            клик по самой карточке -->
+          <!-- Панель уже поднята над ссылкой карточки; звёздочка только
+            возвращает себе нажатия внутри неинтерактивного ряда значков. -->
           <GameFavoriteButton
-            class="pointer-events-auto relative z-20"
+            class="pointer-events-auto"
             :game-id="game.id"
             on-cover
           />
