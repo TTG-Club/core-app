@@ -219,6 +219,17 @@ export interface FeatChoice {
    * приём»), а в шапке таблицы нужно существительное («Приёмы»).
    */
   shortName: string | undefined;
+
+  /**
+   * Выбранные заклинания не нужно готовить, и места в числе класса они не
+   * занимают: заговор «Чудотворца» жреца не входит в колонку «Заговоры». Только у
+   * выбора заклинания или заговора — то же, что {@link FeatSpellGrant.alwaysPrepared}
+   * у выдачи.
+   *
+   * `undefined` — готовить нужно: так поле уходит из отправляемой механики, когда
+   * отметка снята, и так же читаются записи, сделанные до её появления.
+   */
+  alwaysPrepared: boolean | undefined;
 }
 
 /**
@@ -739,6 +750,7 @@ export function createFeatChoice(): FeatChoice {
     scaling: undefined,
     showInTable: undefined,
     shortName: undefined,
+    alwaysPrepared: undefined,
   };
 }
 

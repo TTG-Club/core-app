@@ -251,6 +251,9 @@ const mechanicsChoicesSchema = z
         })
         .nullable()
         .catch(null),
+      // Выбранные заклинания держатся подготовленными и места в числе класса
+      // не занимают; у записей до появления отметки поля нет
+      alwaysPrepared: z.boolean().nullable().catch(null),
     }),
   )
   .nullable()
@@ -1258,6 +1261,8 @@ function buildMechanicChoices(
           : [],
       );
 
+      const alwaysPrepared = choice.alwaysPrepared === true;
+
       if (listedSpells.length) {
         return [
           {
@@ -1267,6 +1272,7 @@ function buildMechanicChoices(
             count,
             listed: [],
             listedSpells,
+            alwaysPrepared,
           },
         ];
       }
@@ -1277,6 +1283,7 @@ function buildMechanicChoices(
           kind: 'spell',
           label: label || SHEET_FEAT_CHOICE_LABELS.spell || '',
           count,
+          alwaysPrepared,
           // Пул приходит поиском по каталогу, а не списком из справочника.
           listed: [],
           spellFilter: {

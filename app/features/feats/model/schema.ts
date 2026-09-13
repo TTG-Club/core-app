@@ -106,6 +106,9 @@ const choiceSchema = z.object({
     .optional(),
   showInTable: z.boolean().optional(),
   shortName: z.string().optional(),
+  // Отметка «не готовить» у выбора заклинаний появилась позже: без поля
+  // выбранное заклинание готовят наравне с книгой
+  alwaysPrepared: z.boolean().optional(),
 });
 
 const hitPointsSchema = z.object({
@@ -361,6 +364,7 @@ function toFeatMechanicsState(
       scaling: choice.scaling,
       showInTable: choice.showInTable,
       shortName: choice.shortName,
+      alwaysPrepared: choice.alwaysPrepared,
     })),
     modifiers: {
       hitPoints: {

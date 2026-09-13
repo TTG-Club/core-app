@@ -784,6 +784,10 @@ export const FEAT_EDITOR_LABELS = {
   spellChoiceSourceList: 'Из перечисленных заклинаний',
   spellChoiceLevelFromRecord: 'по записям',
   spellChoiceListSpells: 'Заклинания, из которых выбирают',
+  spellChoiceAlwaysPreparedHint:
+    'По умолчанию выбранное заклинание игрок готовит сам, и оно занимает место '
+    + 'наравне с книгой. С отметкой заклинание всегда подготовлено, а заговор не '
+    + 'входит в число заговоров из таблицы класса.',
 
   spellcastingAbilityTitle: 'Характеристика заклинаний на выбор',
   spellcastingAbility: 'Из каких характеристик',
