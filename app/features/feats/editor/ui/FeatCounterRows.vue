@@ -178,6 +178,12 @@
           {{ texts.counterScalingTitle }}
         </span>
 
+        <!-- Без подсказки ступени читались только как рост: что первая из них
+          ещё и открывает ресурс, из заголовка не видно -->
+        <p class="text-xs text-dimmed">
+          {{ texts.counterScalingHint }}
+        </p>
+
         <p
           v-if="!counter.scaling.length"
           class="text-xs text-dimmed italic"

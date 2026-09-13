@@ -6340,6 +6340,29 @@ export function isFeatResource(resource: CharacterClassResource): boolean {
 }
 
 /**
+ * Ресурс справочника, у которого сейчас нет ни одного заряда: ступени
+ * начинаются позже уровня персонажа («Скороход» лесного эльфа — с третьего)
+ * либо формула пока даёт ноль.
+ *
+ * Такой ресурс лист прячет, а не удаляет: максимум считается при чтении, и
+ * строка появится сама, как только персонаж дорастёт. Свои ресурсы игрока не
+ * прячутся никогда — ноль у них поставлен руками.
+ *
+ * @param character персонаж.
+ * @param resource ресурс листа.
+ * @returns true — ресурс справочника без зарядов.
+ */
+export function isEmptyFeatResource(
+  character: Character,
+  resource: CharacterClassResource,
+): boolean {
+  return (
+    isFeatResource(resource)
+    && getResourceMax(character, resource) <= RESOURCE_COUNT_MIN
+  );
+}
+
+/**
  * Ресурсы листа, согласованные с чертами.
  *
  * Записи черт пересобираются целиком — как свои бонусы инициативы

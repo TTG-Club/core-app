@@ -5,6 +5,7 @@
   import {
     getResourceMax,
     getResourceRecoveryBadges,
+    isEmptyFeatResource,
     RESOURCES_TITLE,
     SHEET_CLASS_RESOURCES_PANEL_LABELS,
     SHEET_EMPTY_LABELS,
@@ -63,19 +64,23 @@
   }
 
   const displayRows = computed(() =>
-    props.resources.map((resource) => {
-      // Максимум ресурса с правилом считается от листа: записанное число —
-      // лишь снимок, и после повышения уровня оно уже не то.
-      const max = getResourceMax(character.value, resource);
+    props.resources
+      // Ресурс справочника без зарядов ещё не открылся: строка «0/0» с
+      // замком ни потратить, ни убрать — появится сама, когда персонаж дорастёт
+      .filter((resource) => !isEmptyFeatResource(character.value, resource))
+      .map((resource) => {
+        // Максимум ресурса с правилом считается от листа: записанное число —
+        // лишь снимок, и после повышения уровня оно уже не то.
+        const max = getResourceMax(character.value, resource);
 
-      return {
-        ...resource,
-        max,
-        recoveryBadges: getResourceRecoveryBadges(resource),
-        isMinusDisabled: resource.current <= 0,
-        isPlusDisabled: resource.current >= max,
-      };
-    }),
+        return {
+          ...resource,
+          max,
+          recoveryBadges: getResourceRecoveryBadges(resource),
+          isMinusDisabled: resource.current <= 0,
+          isPlusDisabled: resource.current >= max,
+        };
+      }),
   );
 </script>
 
