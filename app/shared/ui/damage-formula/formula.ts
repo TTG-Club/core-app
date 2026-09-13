@@ -147,6 +147,22 @@ const DAMAGE_TYPE_KEY_BY_TAG: Record<string, string> = Object.fromEntries(
 /** Токен типа урона в формуле: `@dmg.<тип>`. */
 const DAMAGE_FORMULA_TYPE_PATTERN = /@(dmg\.[a-z]+)/i;
 
+/** Все токены типа урона в формуле — у формулы их бывает несколько. */
+const DAMAGE_FORMULA_TYPES_PATTERN = /@(dmg\.[a-z]+)/gi;
+
+/**
+ * Ключи типов урона справочника из всех токенов `@dmg.*` формулы, в порядке
+ * появления. Незнакомый токен пропускается.
+ *
+ * @param formula формула части урона.
+ * @returns ключи типов урона (`FIRE`); пустой список — типа в формуле нет.
+ */
+export function getDamageFormulaTypes(formula: string): Array<string> {
+  return [...formula.matchAll(DAMAGE_FORMULA_TYPES_PATTERN)]
+    .map((match) => DAMAGE_TYPE_KEY_BY_TAG[(match[1] ?? '').toLowerCase()])
+    .filter((typeKey) => typeKey !== undefined);
+}
+
 /** Любой токен формулы — при разборе костей их отбрасываем. */
 const DAMAGE_FORMULA_TAG_PATTERN = /@[\w.]+/g;
 

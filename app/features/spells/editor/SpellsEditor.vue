@@ -7,6 +7,8 @@
   import { normalizeActiveEffects } from '~active-effects/model';
   import {
     createEmptySpellEffect,
+    getSpellFilterDamageTypes,
+    getSpellManualDamageTypes,
     normalizeLoadedSpell,
     normalizeSpellEffect,
     SPELL_AFFILIATION_LABELS,
@@ -108,6 +110,22 @@
         };
       },
     });
+
+  /**
+   * Типы урона для фильтра: к выбору автора всегда добавлены типы из формул
+   * вкладки «Бой», поэтому снять формульный тип можно только правкой формулы.
+   * В состоянии формы хранится лишь выбор сверх формул — объединение с ними
+   * пишется при сохранении.
+   */
+  const filterDamageTypes = computed({
+    get: () => getSpellFilterDamageTypes(state.value.effect),
+    set: (selectedTypes: string | Array<string> | undefined) => {
+      state.value.effect.damageTypes = getSpellManualDamageTypes(
+        state.value.effect,
+        Array.isArray(selectedTypes) ? selectedTypes : [],
+      );
+    },
+  });
 </script>
 
 <template>
@@ -172,9 +190,9 @@
                 />
               </UFormField>
 
-              <!-- Формулы вкладки «Бой» считают урон и не видят урона на выбор
-                или частей, идущих поочерёдно, — фильтр каталога берёт типы ещё
-                и отсюда -->
+              <!-- Фильтр каталога смотрит только в это поле: типы из формул
+                вкладки «Бой» стоят в нём сами, автор добавляет то, чего по
+                формулам не видно, — урон на выбор, поочерёдные части -->
               <UFormField
                 class="col-span-full"
                 :label="SPELL_MAIN_TAB_LABELS.damageTypes"
@@ -182,7 +200,7 @@
                 name="effect.damageTypes"
               >
                 <SelectDamageType
-                  v-model="state.effect.damageTypes"
+                  v-model="filterDamageTypes"
                   multiple
                 />
               </UFormField>

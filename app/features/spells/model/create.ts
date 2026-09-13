@@ -13,6 +13,7 @@ import {
   createEmptyDamageFormulaPart,
   DAMAGE_TYPE_TAGS,
   DEFAULT_DAMAGE_FORMULA_TARGET,
+  getDamageFormulaTypes,
   isDamageFormulaTarget,
   parseLoadedDamageFormulaParts,
 } from '~ui/damage-formula';
@@ -148,8 +149,9 @@ export interface SpellEffect {
   damageFormula?: string;
 
   /**
-   * Типы урона только для фильтра каталога. В расчёте не участвуют: урон считают
-   * формулы, но по ним не видно урона на выбор или частей, идущих поочерёдно.
+   * Типы урона только для фильтра каталога — фильтр смотрит лишь сюда. В расчёте
+   * не участвуют: урон считают формулы, но по ним не видно урона на выбор или
+   * частей, идущих поочерёдно. Типы из формул дописываются при сохранении.
    */
   damageTypes?: string[];
   healingTypes?: string[];
@@ -449,6 +451,61 @@ export function getSpellDamageFormulaParts(
 }
 
 /**
+ * Типы урона из тегов `@dmg.*` формул заклинания: базовых частей и тиров
+ * масштабирования заговора. Та же выборка у сохранения на бэке и у миграции,
+ * заполнившей поле у старых записей.
+ *
+ * @param effect воздействие заклинания.
+ * @returns ключи типов урона без повторов, в порядке появления.
+ */
+export function getSpellFormulaDamageTypes(effect: SpellEffect): Array<string> {
+  const tierFormulas = (effect.cantripScalingTiers ?? []).flatMap((tier) =>
+    tier.parts.map((part) => part.formula),
+  );
+
+  const formulaTypes = [
+    ...(effect.damageFormulas ?? []),
+    ...tierFormulas,
+  ].flatMap(getDamageFormulaTypes);
+
+  return [...new Set(formulaTypes)];
+}
+
+/**
+ * Типы урона для фильтра каталога: отмеченные автором и следом — типы из формул.
+ * Ровно этот список уходит в `effect.damageTypes` при сохранении.
+ *
+ * @param effect воздействие заклинания.
+ * @returns ключи типов урона без повторов.
+ */
+export function getSpellFilterDamageTypes(effect: SpellEffect): Array<string> {
+  return [
+    ...new Set([
+      ...(effect.damageTypes ?? []),
+      ...getSpellFormulaDamageTypes(effect),
+    ]),
+  ];
+}
+
+/**
+ * Выбор автора в поле типов урона без типов из формул. Формульные типы поле
+ * показывает всегда, и хранить их отдельно незачем: смени формулу — и тип,
+ * который она больше не наносит, уйдёт из поля сам.
+ *
+ * @param effect воздействие заклинания.
+ * @param selectedTypes типы, отмеченные в поле.
+ * @returns типы, которые автор добавил сверх формул.
+ */
+export function getSpellManualDamageTypes(
+  effect: SpellEffect,
+  selectedTypes: Array<string>,
+): Array<string> {
+  const formulaTypes = new Set(getSpellFormulaDamageTypes(effect));
+
+  return selectedTypes.filter((damageType) => !formulaTypes.has(damageType));
+}
+
+/**
  * Раскладывает части урона редактора обратно в параллельные массивы
  * SpellEffect одним обновлением — иначе формулы и цели разъезжаются по индексам.
  *
@@ -706,8 +763,10 @@ export function normalizeSpellEffect(
     }
   }
 
-  if (migratedEffect.damageTypes && migratedEffect.damageTypes.length > 0) {
-    normalized.damageTypes = migratedEffect.damageTypes;
+  const damageTypes = getSpellFilterDamageTypes(migratedEffect);
+
+  if (damageTypes.length > 0) {
+    normalized.damageTypes = damageTypes;
   }
 
   if (migratedEffect.deliveryType) {
