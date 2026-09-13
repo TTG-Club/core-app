@@ -62,9 +62,9 @@
 
   const tab = computed({
     get: () =>
-      typeof route.query.tab === 'string' && route.query.tab
-        ? route.query.tab
-        : MY_GAMES_TABS.PLAYING,
+      Object.values(MY_GAMES_TABS).find(
+        (section) => section === route.query.tab,
+      ) ?? MY_GAMES_TABS.PLAYING,
     set: (value: string) => {
       void router.replace({ query: { ...route.query, tab: value } });
     },
@@ -127,6 +127,12 @@
 
   const isFavoritesTab = computed(() => tab.value === MY_GAMES_TABS.FAVORITES);
 
+  const isGameList = computed(
+    () =>
+      tab.value !== MY_GAMES_TABS.MASTERS
+      && tab.value !== MY_GAMES_TABS.PLAYERS,
+  );
+
   /**
    * Пустая вкладка избранного говорит о себе сама: отложенных игр просто ещё
    * не набралось, и совет создать свою игру здесь не к месту — в отличие от
@@ -180,6 +186,10 @@
     },
   ];
 
+  const selectedSectionIcon = computed(
+    () => tabItems.find((section) => section.value === tab.value)?.icon,
+  );
+
   const { getParticipantName, watchParticipantNames } = useParticipantNames();
 
   // Имена мастеров живут в core-api, поэтому резолвятся отдельно и сразу на
@@ -207,28 +217,45 @@
       <div class="flex flex-col gap-4">
         <MyGamesOverview />
 
-        <UTabs
-          v-model="tab"
-          :items="tabItems"
-          :content="false"
-          :ui="{ list: 'flex-wrap' }"
-          class="w-full"
-        />
+        <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start">
+          <USelect
+            v-model="tab"
+            :items="tabItems"
+            :icon="selectedSectionIcon"
+            :aria-label="GAMES_MY_NAVIGATION_LABEL"
+            value-key="value"
+            size="lg"
+            color="primary"
+            highlight
+            :ui="{
+              leadingIcon: 'text-primary',
+              value: 'font-medium',
+              item: 'min-h-11 items-center',
+            }"
+            class="min-h-11 w-full sm:w-64"
+          />
+
+          <UFormField
+            v-if="isGameList"
+            :hint="MY_GAMES_STATUS_HINT"
+            class="min-w-0 sm:w-52"
+          >
+            <USelect
+              v-model="pickedStatus"
+              :items="statusItems"
+              :aria-label="MY_GAMES_STATUS_ALL_LABEL"
+              value-key="value"
+              size="lg"
+              class="min-h-11 w-full"
+            />
+          </UFormField>
+        </div>
 
         <FollowedMastersPanel v-if="tab === MY_GAMES_TABS.MASTERS" />
 
         <BookmarkedPlayersPanel v-else-if="tab === MY_GAMES_TABS.PLAYERS" />
 
         <template v-else>
-          <UFormField :hint="MY_GAMES_STATUS_HINT">
-            <USelect
-              v-model="pickedStatus"
-              :items="statusItems"
-              value-key="value"
-              class="w-52"
-            />
-          </UFormField>
-
           <PageGrid
             v-if="isLoading"
             :columns="GAME_CATALOG_GRID_COLUMNS"
