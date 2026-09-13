@@ -1,3 +1,8 @@
+// Предупреждение MarkupSectionLink: ссылка без адреса раздела или с незнакомым
+// типом рисуется обычным текстом.
+export const SECTION_LINK_PLAIN_TEXT_WARNING =
+  '[Markup] Section link is rendered as plain text:';
+
 // Наивысшая допустимая глубина вложенности.
 export const MAX_DEPTH = 7;
 

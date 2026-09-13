@@ -4,7 +4,7 @@
   import type { MarkerType } from '../config';
   import type { MarkerNode, RenderNode } from '../types';
 
-  import { computed } from 'vue';
+  import { computed, shallowRef, watch } from 'vue';
 
   import { ULink } from '#components';
   import { BackgroundDrawer } from '~backgrounds/drawer';
@@ -16,6 +16,8 @@
   import { MagicItemDrawer } from '~magic-items/drawer';
   import { SpeciesDrawer } from '~species/drawer';
   import { SpellDrawer } from '~spells/drawer';
+
+  import { SECTION_LINK_PLAIN_TEXT_WARNING } from '../consts';
 
   const { node, renderNodes } = defineProps<{
     node: MarkerNode;
@@ -73,14 +75,26 @@
     return type in DRAWER_COMPONENT_MAP;
   }
 
-  const url = node.attrs?.url?.toString() ?? '';
+  // Узел читаем только внутри computed: компонент переиспользуется под другое
+  // описание (панель выбора варианта в листе меняет описание на месте, а ключи
+  // в MarkupRender порядковые), и снимок при создании оставлял ссылке адрес
+  // прежнего описания при новом тексте.
+  const url = computed(() => node.attrs?.url?.toString() ?? '');
 
-  const sectionType = isSectionLinkType(node.type) ? node.type : null;
+  const sectionType = computed(() =>
+    isSectionLinkType(node.type) ? node.type : null,
+  );
+
+  const to = computed(() =>
+    sectionType.value && url.value
+      ? `/${MARKER_URL_MAP[sectionType.value]}/${url.value}`
+      : '',
+  );
 
   const overlay = useOverlay();
 
   /**
-   * Дровер раздела: заводим его только под настоящую ссылку с адресом.
+   * Дровер раздела под адрес ссылки.
    *
    * @param component дровер того раздела, на который ведёт ссылка.
    * @param drawerUrl адрес страницы раздела.
@@ -102,10 +116,17 @@
     return sectionDrawer;
   }
 
-  const drawer =
-    sectionType && url
-      ? createDrawer(DRAWER_COMPONENT_MAP[sectionType], url)
-      : null;
+  /** Дровер ссылки и путь страницы, под который он заведён. */
+  interface LinkDrawer {
+    path: string;
+    sectionDrawer: ReturnType<typeof createDrawer>;
+  }
+
+  /**
+   * Дровер заводится по клику, а не при создании компонента: адрес ссылки
+   * может смениться, и открываться должно то, куда ссылка ведёт сейчас.
+   */
+  const linkDrawer = shallowRef<LinkDrawer | null>(null);
 
   /**
    * Ссылка без адреса раздела (её легко написать руками: `{@spell Огненный
@@ -115,26 +136,47 @@
    * разметкой просто не появляется на экране. Так же рассуждает MarkupHeading
    * про неверный `level:`.
    */
-  if (!drawer) {
-    consola.warn(
-      `[Markup] Section link is rendered as plain text: ${JSON.stringify(node)}`,
-    );
-  }
-
-  const isOpened = computed(() => {
-    if (import.meta.server || !drawer) {
-      return false;
-    }
-
-    return overlay.isOpen(drawer.id);
-  });
-
-  const to = computed(() =>
-    sectionType && url ? `/${MARKER_URL_MAP[sectionType]}/${url}` : '',
+  watch(
+    to,
+    (linkPath) => {
+      if (!linkPath) {
+        consola.warn(SECTION_LINK_PLAIN_TEXT_WARNING, JSON.stringify(node));
+      }
+    },
+    { immediate: true },
   );
 
+  const isOpened = computed(() =>
+    linkDrawer.value
+      ? overlay.isOpen(linkDrawer.value.sectionDrawer.id)
+      : false,
+  );
+
+  /**
+   * Открывает дровер раздела по текущему адресу ссылки. Дровер, заведённый под
+   * другой путь, заменяется новым.
+   */
   function handleClick() {
-    drawer?.open();
+    const linkType = sectionType.value;
+
+    if (!linkType || !url.value) {
+      return;
+    }
+
+    if (linkDrawer.value?.path !== to.value) {
+      // Прежний дровер ведёт на старый адрес. Закрытый дровер сам с учёта
+      // оверлеев не снимается, поэтому снимаем его, а не копим
+      if (linkDrawer.value) {
+        overlay.unmount(linkDrawer.value.sectionDrawer.id);
+      }
+
+      linkDrawer.value = {
+        path: to.value,
+        sectionDrawer: createDrawer(DRAWER_COMPONENT_MAP[linkType], url.value),
+      };
+    }
+
+    linkDrawer.value.sectionDrawer.open();
   }
 
   const children = computed(() =>
@@ -144,7 +186,7 @@
 
 <template>
   <ULink
-    v-if="drawer"
+    v-if="to"
     :to="to"
     target="_self"
     :is-opened="isOpened"
