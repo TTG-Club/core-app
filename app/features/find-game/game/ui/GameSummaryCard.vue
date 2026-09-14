@@ -6,6 +6,8 @@
   import { useMasterProfileDrawer } from '../../composables';
   import {
     GAME_CHAT_LINK_LABEL,
+    GAME_COST_TYPE_COLORS,
+    GAME_COST_TYPE_ICONS,
     GAME_COST_TYPE_LABELS,
     GAME_CROSSPLAY_ALLOWED_VALUE,
     GAME_DURATION_TYPE_LABELS,
@@ -115,8 +117,8 @@
     items.push({
       key: 'cost',
       label: GAME_COST_TYPE_LABELS[game.costType],
-      icon: 'tabler:coins',
-      color: game.costType === 'FREE' ? 'success' : 'warning',
+      icon: GAME_COST_TYPE_ICONS[game.costType],
+      color: GAME_COST_TYPE_COLORS[game.costType],
     });
 
     return items;

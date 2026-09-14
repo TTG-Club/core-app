@@ -125,7 +125,6 @@ export function useGameCatalog() {
     page,
     games,
     totalGames,
-    activeFilterCount,
     hasActiveFilters,
 
     error,

@@ -497,6 +497,26 @@ export const SESSION_REGISTRATION_STATUS_COLORS = {
   REJECTED: 'error',
 } as const;
 
+/**
+ * Точка состояния на обложке карточки. Значок там на тёмной подложке с белой
+ * подписью, и цвет состояния несёт только точка. Нейтральному состоянию нужен
+ * светлый тон в любой схеме: тёмная точка на тёмной подложке пропала бы, а
+ * белый поверх фото — принятое исключение из семантических цветов.
+ */
+export const GAME_COVER_STATUS_DOT_CLASSES = {
+  success: 'bg-success',
+  warning: 'bg-warning',
+  error: 'bg-error',
+  neutral: 'bg-white/70',
+} as const;
+
+/**
+ * Подложка значков на обложке — стоимости и состояния. Та же тёмная
+ * полупрозрачная, что у звёздочки: цветные варианты значка на картинке не
+ * читаются, `subtle` полупрозрачен, а `solid` пишет светлым по светлому.
+ */
+export const GAME_COVER_BADGE_CLASS = 'bg-black/45 text-white backdrop-blur-sm';
+
 /* ------------------------------------------------------------------ */
 /* Ограничения полей (совпадают с валидацией find-game-api)            */
 /* ------------------------------------------------------------------ */
@@ -570,6 +590,13 @@ export const PROFILE_ABOUT_MAX_LENGTH = 5000;
  */
 export const GAME_CATALOG_PAGE_SIZE = 12;
 export const GAME_CATALOG_GRID_COLUMNS = 4;
+
+/**
+ * В «Моих играх» справа стоит колонка сводки, и четыре карточки в оставшейся
+ * ширине сжались бы до нечитаемых. Двенадцать игр на страницу делятся и на
+ * три, так что последняя строка остаётся полной.
+ */
+export const MY_GAMES_GRID_COLUMNS = 3;
 export const GAME_CATALOG_SKELETON_COUNT = GAME_CATALOG_PAGE_SIZE;
 export const MY_GAMES_PAGE_SIZE = GAME_CATALOG_PAGE_SIZE;
 
@@ -616,9 +643,6 @@ export const UNKNOWN_PARTICIPANT_NAME = 'Участник';
 /** Подпись кнопки перехода к странице игры. */
 export const GAME_OPEN_LABEL = 'Открыть игру';
 
-/* Подсказки трёхпозиционного чипа фильтра. */
-export const FILTER_CHIP_NEUTRAL_HINT = 'Не важно — нажмите, чтобы искать это';
-export const FILTER_CHIP_EXCLUDE_LABEL = 'Исключать';
 export const SESSION_AGENDA_LABELS = {
   today: 'Сегодня',
   week: 'На этой неделе',
@@ -626,15 +650,9 @@ export const SESSION_AGENDA_LABELS = {
   past: 'Прошедшие встречи',
   unscheduled: 'Дата согласуется',
 };
-export const FILTER_CHIP_INCLUDED_HINT = 'Включено в поиск';
-export const FILTER_CHIP_EXCLUDED_HINT = 'Исключено — нажмите, чтобы сбросить';
 
 /* Подписи панели фильтров каталога. */
-export const CATALOG_FILTERS_TITLE = 'Фильтры';
-export const CATALOG_FILTERS_DESCRIPTION =
-  'Выберите условия и нажмите «Показать игры». Для исключения значений включите «Исключать». Закрытие панели отменяет неприменённые изменения.';
 export const CATALOG_FILTERS_RESET_LABEL = 'Сбросить';
-export const CATALOG_FILTERS_APPLY_LABEL = 'Показать игры';
 export const CATALOG_FILTER_SYSTEM_LABEL = 'Система';
 export const CATALOG_FILTER_TYPE_LABEL = 'Формат';
 export const CATALOG_FILTER_DURATION_LABEL = 'Длительность';
@@ -645,21 +663,25 @@ export const CATALOG_FILTER_CITY_PLACEHOLDER = 'Найдите и выберит
 export const CATALOG_FILTER_CROSSPLAY_LABEL = 'Кросспол';
 export const CATALOG_FILTER_MIN_AGE_LABEL = 'Возраст от';
 export const CATALOG_FILTER_MAX_AGE_LABEL = 'Возраст до';
+/** Подписи условий по местам в ряду применённых фильтров. */
 export const CATALOG_FILTER_MAX_FREE_SEATS_LABEL = 'Свободных мест не больше';
-
-export const CATALOG_FILTER_MAX_FREE_SEATS_HINT =
-  'Почти собранный стол: «1» — игры, где осталось последнее место';
 
 export const CATALOG_FILTER_MAX_SEATS_TO_START_LABEL =
   'До старта не хватает не больше';
 
+/**
+ * Те же условия полями в панели. Поля стоят в одну строку, поэтому подписи
+ * короче: слово «места» уже есть в заголовке рамки над ними.
+ */
+export const CATALOG_FILTER_MAX_FREE_SEATS_FIELD_LABEL = 'Свободно, не больше';
+export const CATALOG_FILTER_MAX_FREE_SEATS_HINT =
+  '«1» — осталось последнее место';
+export const CATALOG_FILTER_MAX_SEATS_TO_START_FIELD_LABEL =
+  'До старта, не больше';
 export const CATALOG_FILTER_MAX_SEATS_TO_START_HINT =
-  'Сколько игроков мастеру нужно, чтобы начать: «1» — не хватает одного';
+  '«1» — не хватает одного игрока';
 
 export const CATALOG_FILTER_FAVORITE_LABEL = 'Только избранное';
-
-export const CATALOG_FILTER_FAVORITE_HINT =
-  'Игры из вашего списка; собранные столы каталог всё равно не показывает';
 
 /**
  * Границы отбора по местам. Свободных мест в выдаче всегда хотя бы одно —
@@ -670,15 +692,41 @@ export const CATALOG_FILTER_FAVORITE_HINT =
 export const CATALOG_FILTER_FREE_SEATS_MIN = 1;
 export const CATALOG_FILTER_SEATS_TO_START_MIN = 0;
 
-/** Варианты трёхпозиционного выбора кроссплея. */
-export const CROSSPLAY_FILTER_OPTIONS: Array<{
-  value: string;
-  label: string;
-}> = [
-  { value: 'any', label: 'Не важно' },
-  { value: 'allowed', label: 'Разрешён' },
-  { value: 'forbidden', label: 'Запрещён' },
-];
+/**
+ * Значения группы «Кросспол». Условие у сервиса трёхзначное: отмечен один
+ * вариант — отбор по нему, оба или ни одного — «не важно».
+ */
+export const CATALOG_FILTER_CROSSPLAY_VALUES = {
+  allowed: 'Разрешён',
+  forbidden: 'Запрещён',
+} as const;
+
+/** Идентификаторы тех же вариантов в группе панели. */
+export const CATALOG_FILTER_CROSSPLAY_IDS = {
+  allowed: 'allowed',
+  forbidden: 'forbidden',
+} as const;
+
+/**
+ * Ключи групп фильтра каталога в общей панели фильтров сайта. Панель знает
+ * только группы чипов, поэтому ключ связывает группу с полями фильтра игр.
+ */
+export const CATALOG_FILTER_GROUP_KEYS = {
+  favorite: 'favorite',
+  system: 'system',
+  type: 'type',
+  duration: 'durationType',
+  cost: 'costType',
+  status: 'status',
+  crossplay: 'crossplayAllowed',
+} as const;
+
+/**
+ * Границы возраста полями в панели. Заголовок рамки над ними — общая подпись
+ * «Возраст» из условий игры, поэтому у полей остаются только «от» и «до».
+ */
+export const CATALOG_FILTER_AGE_FROM_LABEL = 'От';
+export const CATALOG_FILTER_AGE_TO_LABEL = 'До';
 
 /* Подписи страницы игры. */
 export const GAME_DESCRIPTION_TITLE = 'Описание';
@@ -733,7 +781,8 @@ export const GAME_FACT_LABELS = {
 } as const;
 
 /** Значение строки кроссплея: сама строка есть, только если он разрешён. */
-export const GAME_CROSSPLAY_ALLOWED_VALUE = 'Разрешён';
+export const GAME_CROSSPLAY_ALLOWED_VALUE =
+  CATALOG_FILTER_CROSSPLAY_VALUES.allowed;
 
 /** Заголовок блока со ссылками на стол и разговоры игры. */
 export const GAME_LINKS_TITLE = 'Ссылки';
@@ -749,6 +798,16 @@ export const MASTER_PROFILE_SESSIONS_LABEL = 'Проведено встреч';
 export const MASTER_PROFILE_ERROR_TITLE = 'Не удалось загрузить профиль';
 export const MASTER_PROFILE_OPEN_HINT = 'Открыть профиль мастера';
 export const MASTER_PROFILE_REVIEWS_TITLE = 'Отзывы игроков';
+export const MASTER_PROFILE_ABOUT_TITLE = 'О мастере';
+
+/** Дата отзыва: без времени и пояса — важен порядок, а не минута. */
+export const MASTER_PROFILE_REVIEW_DATE_FORMAT = 'LL';
+
+/** Вердикт отзыва без текста: значок сам по себе неочевиден. */
+export const MASTER_PROFILE_REVIEW_VERDICT_LABELS = {
+  positive: 'Рекомендует мастера',
+  negative: 'Не рекомендует мастера',
+} as const;
 
 /* ------------------------------------------------------------------ */
 /* Отметки участников                                                  */
@@ -786,8 +845,13 @@ export const FOLLOWED_MASTERS_TAB_LABEL = 'Мои мастера';
 export const BOOKMARKED_PLAYERS_TAB_LABEL = 'Мои игроки';
 export const FAVORITE_GAMES_TAB_LABEL = 'Избранное';
 
-/** Вкладки раздела «Мои игры»: четыре среза игр и два списка отметок. */
+/**
+ * Вкладки раздела «Мои игры»: все свои игры разом, четыре среза и два списка
+ * отметок. «Все» открываются по умолчанию — срез выбирают уже из полного
+ * списка.
+ */
 export const MY_GAMES_TABS = {
+  ALL: 'all',
   PLAYING: 'playing',
   HOSTING: 'hosting',
   APPLICATIONS: 'applications',
@@ -982,6 +1046,39 @@ export const MY_GAMES_ATTENTION_EMPTY =
   'Нет ожидающих заявок и встреч без даты';
 export const MY_GAMES_ATTENTION_ACTION =
   'Разобрать заявки или назначить встречу';
+
+/**
+ * Ключ сводки «Ближайшие встречи» и «Требуют внимания». Общий: сводку читают
+ * и колонка «Моих игр», и кнопка «Мои игры» в шапке — с одним ключом это один
+ * запрос на двоих.
+ */
+export const MY_GAMES_OVERVIEW_DATA_KEY = 'find-game-personal-overview';
+
+/** Первая страница выдачи: сводке нужны только ближайшие игры. */
+export const MY_GAMES_OVERVIEW_PAGE = 0;
+
+/** Подсказка у точки на кнопке «Мои игры». */
+export const MY_GAMES_ATTENTION_HINT = 'Есть игры, которые требуют внимания';
+
+/**
+ * Имя кнопки «Мои игры» для скринридера, когда горит точка: сама точка
+ * вслух не читается.
+ */
+export const MY_GAMES_ATTENTION_ARIA_LABEL = `${GAMES_MY_NAVIGATION_LABEL}. ${MY_GAMES_ATTENTION_HINT}`;
+
+/** Разделитель причин в строке «Требуют внимания». */
+export const MY_GAMES_ATTENTION_REASON_SEPARATOR = ' · ';
+
+/** Причины внимания: у ближайшей встречи нет даты или встреч нет вовсе. */
+export const MY_GAMES_ATTENTION_NO_DATE_LABEL = 'Встреча без даты';
+export const MY_GAMES_ATTENTION_NO_SESSION_LABEL = 'Встреча не назначена';
+
+/** Плашка даты в «Ближайших встречах»: число крупно, месяц под ним. */
+export const MY_GAMES_AGENDA_DAY_FORMAT = 'D';
+export const MY_GAMES_AGENDA_MONTH_FORMAT = 'MMM';
+export const MY_GAMES_AGENDA_TIME_FORMAT = 'dd, HH:mm';
+
+export const MY_GAMES_ALL_LABEL = 'Все';
 export const MY_GAMES_PLAYING_LABEL = 'Участвую';
 export const MY_GAMES_HOSTING_LABEL = 'Веду';
 export const MY_GAMES_APPLICATIONS_LABEL = 'Мои заявки';

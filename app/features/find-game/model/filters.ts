@@ -1,8 +1,11 @@
 import type { LocationQuery, LocationQueryRaw } from 'vue-router';
 
+import type { FilterGroup, FilterGroups } from '~infrastructure/filter';
+
 import type {
   GameCostType,
   GameDurationType,
+  GameFilterChip,
   GameSearchFilter,
   GameStatus,
   GameSystem,
@@ -10,15 +13,36 @@ import type {
 } from './types';
 
 import {
+  CATALOG_FILTER_COST_LABEL,
+  CATALOG_FILTER_CROSSPLAY_IDS,
+  CATALOG_FILTER_CROSSPLAY_LABEL,
+  CATALOG_FILTER_CROSSPLAY_VALUES,
+  CATALOG_FILTER_DURATION_LABEL,
+  CATALOG_FILTER_FAVORITE_LABEL,
   CATALOG_FILTER_FREE_SEATS_MIN,
+  CATALOG_FILTER_GROUP_KEYS,
+  CATALOG_FILTER_MAX_AGE_LABEL,
+  CATALOG_FILTER_MAX_FREE_SEATS_LABEL,
+  CATALOG_FILTER_MAX_SEATS_TO_START_LABEL,
+  CATALOG_FILTER_MIN_AGE_LABEL,
   CATALOG_FILTER_SEATS_TO_START_MIN,
+  CATALOG_FILTER_STATUS_LABEL,
+  CATALOG_FILTER_SYSTEM_LABEL,
+  CATALOG_FILTER_TYPE_LABEL,
+  FAVORITE_GAMES_TAB_LABEL,
   GAME_AGE_MAX,
   GAME_AGE_MIN,
+  GAME_COST_TYPE_LABELS,
   GAME_COST_TYPES,
+  GAME_DURATION_TYPE_LABELS,
   GAME_DURATION_TYPES,
+  GAME_FIELD_CITY_LABEL,
   GAME_PLAYERS_MAX,
+  GAME_STATUS_LABELS,
   GAME_STATUSES,
+  GAME_SYSTEM_LABELS,
   GAME_SYSTEMS,
+  GAME_TYPE_LABELS,
   GAME_TYPES,
 } from './constants';
 
@@ -352,4 +376,446 @@ export function countActiveGameFilters(filter: GameSearchFilter): number {
  */
 export function isEmptyGameFilter(filter: GameSearchFilter): boolean {
   return countActiveGameFilters(filter) === 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Группы общей панели фильтров и ряд применённых условий              */
+/* ------------------------------------------------------------------ */
+
+/** Поле фильтра со списком значений. */
+type ListFilterKey = (typeof LIST_FILTER_KEYS)[number];
+
+/** Числовое условие фильтра: границы возраста и мест. */
+type NumberFilterKey = 'minAge' | 'maxAge' | 'maxFreeSeats' | 'maxSeatsToStart';
+
+/** Искомые и исключённые значения одной группы. */
+interface ChoiceSelection<Value extends string> {
+  included: Array<Value>;
+  excluded: Array<Value>;
+}
+
+/** Значение группы без исключения: избранное и кросспол. */
+interface PlainGroupEntry {
+  id: string;
+  name: string;
+  selected: boolean;
+}
+
+/**
+ * Статусы, по которым отбирается каталог. Отменённая игра в выдачу не
+ * попадает вовсе: отбор по ней дал бы пустой каталог, а не «покажи
+ * отменённые».
+ */
+const CATALOG_STATUS_OPTIONS = GAME_STATUSES.filter(
+  (status) => status !== 'CANCELLED',
+);
+
+/**
+ * Строит группу «искать — исключить» из двух половин фильтра.
+ *
+ * Общая панель сайта исключает сразу всю группу, а фильтр игр хранит обе
+ * половины. У перечислений из двух-трёх значений смешанный выбор ничего не
+ * добавляет к отбору, поэтому группа исключает, только когда искомых значений
+ * нет вовсе.
+ *
+ * @param key Ключ группы.
+ * @param name Заголовок группы.
+ * @param options Значения перечисления по порядку.
+ * @param labels Подписи значений.
+ * @param selection Искомые и исключённые значения.
+ */
+function toChoiceGroup<Value extends string>(
+  key: string,
+  name: string,
+  options: ReadonlyArray<Value>,
+  labels: Record<Value, string>,
+  selection: ChoiceSelection<Value>,
+): FilterGroup {
+  const isExcluding =
+    !selection.included.length && selection.excluded.length > 0;
+
+  const picked = new Set<string>(
+    isExcluding ? selection.excluded : selection.included,
+  );
+
+  return {
+    key,
+    name,
+    type: 'filter',
+    supports: { mode: true, union: false },
+    mode: isExcluding,
+    union: false,
+    values: options.map((option) => ({
+      id: option,
+      value: option,
+      name: labels[option],
+      selected: picked.has(option) ? true : null,
+    })),
+  };
+}
+
+/**
+ * Строит группу без исключения.
+ * @param key Ключ группы.
+ * @param name Заголовок группы.
+ * @param entries Значения группы.
+ */
+function toPlainGroup(
+  key: string,
+  name: string,
+  entries: Array<PlainGroupEntry>,
+): FilterGroup {
+  return {
+    key,
+    name,
+    type: 'filter',
+    values: entries.map((entry) => ({
+      id: entry.id,
+      value: entry.id,
+      name: entry.name,
+      selected: entry.selected ? true : null,
+    })),
+  };
+}
+
+/**
+ * Отмеченные значения группы по её ключу.
+ * @param groups Группы панели.
+ * @param key Ключ группы.
+ */
+function readSelectedIds(groups: FilterGroups, key: string): Set<string> {
+  const group = groups.find((candidate) => candidate.key === key);
+
+  return new Set(
+    (group?.values ?? [])
+      .filter((filterItem) => filterItem.selected)
+      .map((filterItem) => String(filterItem.id)),
+  );
+}
+
+/**
+ * Читает группу «искать — исключить» обратно в две половины фильтра.
+ * @param groups Группы панели.
+ * @param key Ключ группы.
+ * @param options Допустимые значения перечисления.
+ */
+function readChoiceGroup<Value extends string>(
+  groups: FilterGroups,
+  key: string,
+  options: ReadonlyArray<Value>,
+): ChoiceSelection<Value> {
+  const selectedIds = readSelectedIds(groups, key);
+  const selected = options.filter((option) => selectedIds.has(option));
+  const isExcluding = groups.find((group) => group.key === key)?.mode === true;
+
+  return isExcluding
+    ? { included: [], excluded: selected }
+    : { included: selected, excluded: [] };
+}
+
+/**
+ * Группы общей панели фильтров сайта из фильтра каталога игр.
+ *
+ * Город, возраст и места чипами не выражаются — их панель показывает
+ * отдельными полями, и в группы они не входят.
+ *
+ * @param filter Применённый фильтр каталога.
+ * @param withFavorite Показывать ли группу избранного: у гостя списка нет, и
+ *   сервис вернул бы ему пустой каталог вместо подбора.
+ */
+export function toGameFilterGroups(
+  filter: GameSearchFilter,
+  withFavorite: boolean,
+): FilterGroups {
+  const groups: FilterGroups = [
+    toChoiceGroup(
+      CATALOG_FILTER_GROUP_KEYS.system,
+      CATALOG_FILTER_SYSTEM_LABEL,
+      GAME_SYSTEMS,
+      GAME_SYSTEM_LABELS,
+      { included: filter.system, excluded: filter.excludeSystem },
+    ),
+    toChoiceGroup(
+      CATALOG_FILTER_GROUP_KEYS.type,
+      CATALOG_FILTER_TYPE_LABEL,
+      GAME_TYPES,
+      GAME_TYPE_LABELS,
+      { included: filter.type, excluded: filter.excludeType },
+    ),
+    toChoiceGroup(
+      CATALOG_FILTER_GROUP_KEYS.duration,
+      CATALOG_FILTER_DURATION_LABEL,
+      GAME_DURATION_TYPES,
+      GAME_DURATION_TYPE_LABELS,
+      { included: filter.durationType, excluded: filter.excludeDurationType },
+    ),
+    toChoiceGroup(
+      CATALOG_FILTER_GROUP_KEYS.cost,
+      CATALOG_FILTER_COST_LABEL,
+      GAME_COST_TYPES,
+      GAME_COST_TYPE_LABELS,
+      { included: filter.costType, excluded: filter.excludeCostType },
+    ),
+    toChoiceGroup(
+      CATALOG_FILTER_GROUP_KEYS.status,
+      CATALOG_FILTER_STATUS_LABEL,
+      CATALOG_STATUS_OPTIONS,
+      GAME_STATUS_LABELS,
+      { included: filter.status, excluded: filter.excludeStatus },
+    ),
+    toPlainGroup(
+      CATALOG_FILTER_GROUP_KEYS.crossplay,
+      CATALOG_FILTER_CROSSPLAY_LABEL,
+      [
+        {
+          id: CATALOG_FILTER_CROSSPLAY_IDS.allowed,
+          name: CATALOG_FILTER_CROSSPLAY_VALUES.allowed,
+          selected: filter.crossplayAllowed === true,
+        },
+        {
+          id: CATALOG_FILTER_CROSSPLAY_IDS.forbidden,
+          name: CATALOG_FILTER_CROSSPLAY_VALUES.forbidden,
+          selected: filter.crossplayAllowed === false,
+        },
+      ],
+    ),
+  ];
+
+  if (!withFavorite) {
+    return groups;
+  }
+
+  const favoriteGroup = toPlainGroup(
+    CATALOG_FILTER_GROUP_KEYS.favorite,
+    FAVORITE_GAMES_TAB_LABEL,
+    [
+      {
+        id: CATALOG_FILTER_GROUP_KEYS.favorite,
+        name: CATALOG_FILTER_FAVORITE_LABEL,
+        selected: filter.favorite,
+      },
+    ],
+  );
+
+  return [favoriteGroup, ...groups];
+}
+
+/**
+ * Переносит выбор из групп панели в фильтр каталога. Поля без групп — город,
+ * возраст и места — берутся из переданного фильтра как есть.
+ * @param filter Фильтр с полями, заданными вне групп.
+ * @param groups Группы панели после «Применить».
+ */
+export function applyGameFilterGroups(
+  filter: GameSearchFilter,
+  groups: FilterGroups,
+): GameSearchFilter {
+  const system = readChoiceGroup(
+    groups,
+    CATALOG_FILTER_GROUP_KEYS.system,
+    GAME_SYSTEMS,
+  );
+
+  const type = readChoiceGroup(
+    groups,
+    CATALOG_FILTER_GROUP_KEYS.type,
+    GAME_TYPES,
+  );
+
+  const duration = readChoiceGroup(
+    groups,
+    CATALOG_FILTER_GROUP_KEYS.duration,
+    GAME_DURATION_TYPES,
+  );
+
+  const cost = readChoiceGroup(
+    groups,
+    CATALOG_FILTER_GROUP_KEYS.cost,
+    GAME_COST_TYPES,
+  );
+
+  const status = readChoiceGroup(
+    groups,
+    CATALOG_FILTER_GROUP_KEYS.status,
+    CATALOG_STATUS_OPTIONS,
+  );
+
+  const crossplay = readSelectedIds(
+    groups,
+    CATALOG_FILTER_GROUP_KEYS.crossplay,
+  );
+
+  const isCrossplayAllowed = crossplay.has(
+    CATALOG_FILTER_CROSSPLAY_IDS.allowed,
+  );
+
+  const isCrossplayForbidden = crossplay.has(
+    CATALOG_FILTER_CROSSPLAY_IDS.forbidden,
+  );
+
+  return {
+    ...filter,
+    system: system.included,
+    excludeSystem: system.excluded,
+    type: type.included,
+    excludeType: type.excluded,
+    durationType: duration.included,
+    excludeDurationType: duration.excluded,
+    costType: cost.included,
+    excludeCostType: cost.excluded,
+    status: status.included,
+    excludeStatus: status.excluded,
+    // Отмечены оба варианта или ни одного — условие не задано.
+    crossplayAllowed:
+      isCrossplayAllowed === isCrossplayForbidden ? null : isCrossplayAllowed,
+    favorite: readSelectedIds(groups, CATALOG_FILTER_GROUP_KEYS.favorite).has(
+      CATALOG_FILTER_GROUP_KEYS.favorite,
+    ),
+  };
+}
+
+/**
+ * Чипы одного списка значений фильтра.
+ * @param key Поле фильтра.
+ * @param values Значения поля.
+ * @param getLabel Подпись значения.
+ * @param isExcluded Поле исключает значения.
+ */
+function toListChips<Value extends string>(
+  key: ListFilterKey,
+  values: ReadonlyArray<Value>,
+  getLabel: (value: Value) => string,
+  isExcluded: boolean,
+): Array<GameFilterChip> {
+  return values.map((value) => ({
+    key: `${key}:${value}`,
+    label: getLabel(value),
+    isExcluded,
+    remove: (current) => ({
+      ...current,
+      [key]: current[key].filter((listed) => listed !== value),
+    }),
+  }));
+}
+
+/**
+ * Чип числового условия; у незаданного условия чипа нет.
+ * @param key Поле фильтра.
+ * @param label Подпись условия.
+ * @param value Значение условия.
+ */
+function toNumberChips(
+  key: NumberFilterKey,
+  label: string,
+  value: number | null,
+): Array<GameFilterChip> {
+  if (value === null) {
+    return [];
+  }
+
+  return [
+    {
+      key,
+      label: `${label} ${value}`,
+      isExcluded: false,
+      remove: (current) => ({ ...current, [key]: null }),
+    },
+  ];
+}
+
+/**
+ * Подпись чипа кроссплея.
+ * @param isAllowed Кросспол разрешён.
+ */
+function getCrossplayChipLabel(isAllowed: boolean): string {
+  const value = isAllowed
+    ? CATALOG_FILTER_CROSSPLAY_VALUES.allowed
+    : CATALOG_FILTER_CROSSPLAY_VALUES.forbidden;
+
+  return `${CATALOG_FILTER_CROSSPLAY_LABEL}: ${value}`;
+}
+
+/**
+ * Применённые условия каталога — по чипу на условие. По ряду видно, что отбор
+ * включён, и условие снимается одним нажатием, без панели фильтров.
+ * @param filter Применённый фильтр каталога.
+ */
+export function getGameFilterChips(
+  filter: GameSearchFilter,
+): Array<GameFilterChip> {
+  const chips: Array<GameFilterChip> = [];
+
+  if (filter.favorite) {
+    chips.push({
+      key: CATALOG_FILTER_GROUP_KEYS.favorite,
+      label: CATALOG_FILTER_FAVORITE_LABEL,
+      isExcluded: false,
+      remove: (current) => ({ ...current, favorite: false }),
+    });
+  }
+
+  const getSystemLabel = (value: GameSystem) => GAME_SYSTEM_LABELS[value];
+  const getTypeLabel = (value: GameType) => GAME_TYPE_LABELS[value];
+  const getCostLabel = (value: GameCostType) => GAME_COST_TYPE_LABELS[value];
+  const getStatusLabel = (value: GameStatus) => GAME_STATUS_LABELS[value];
+
+  const getDurationLabel = (value: GameDurationType) =>
+    GAME_DURATION_TYPE_LABELS[value];
+
+  const getCityLabel = (city: string) => `${GAME_FIELD_CITY_LABEL}: ${city}`;
+
+  chips.push(
+    ...toListChips('system', filter.system, getSystemLabel, false),
+    ...toListChips('excludeSystem', filter.excludeSystem, getSystemLabel, true),
+    ...toListChips('type', filter.type, getTypeLabel, false),
+    ...toListChips('excludeType', filter.excludeType, getTypeLabel, true),
+    ...toListChips(
+      'durationType',
+      filter.durationType,
+      getDurationLabel,
+      false,
+    ),
+    ...toListChips(
+      'excludeDurationType',
+      filter.excludeDurationType,
+      getDurationLabel,
+      true,
+    ),
+    ...toListChips('costType', filter.costType, getCostLabel, false),
+    ...toListChips(
+      'excludeCostType',
+      filter.excludeCostType,
+      getCostLabel,
+      true,
+    ),
+    ...toListChips('status', filter.status, getStatusLabel, false),
+    ...toListChips('excludeStatus', filter.excludeStatus, getStatusLabel, true),
+    ...toListChips('city', filter.city, getCityLabel, false),
+  );
+
+  if (filter.crossplayAllowed !== null) {
+    chips.push({
+      key: CATALOG_FILTER_GROUP_KEYS.crossplay,
+      label: getCrossplayChipLabel(filter.crossplayAllowed),
+      isExcluded: false,
+      remove: (current) => ({ ...current, crossplayAllowed: null }),
+    });
+  }
+
+  chips.push(
+    ...toNumberChips('minAge', CATALOG_FILTER_MIN_AGE_LABEL, filter.minAge),
+    ...toNumberChips('maxAge', CATALOG_FILTER_MAX_AGE_LABEL, filter.maxAge),
+    ...toNumberChips(
+      'maxFreeSeats',
+      CATALOG_FILTER_MAX_FREE_SEATS_LABEL,
+      filter.maxFreeSeats,
+    ),
+    ...toNumberChips(
+      'maxSeatsToStart',
+      CATALOG_FILTER_MAX_SEATS_TO_START_LABEL,
+      filter.maxSeatsToStart,
+    ),
+  );
+
+  return chips;
 }

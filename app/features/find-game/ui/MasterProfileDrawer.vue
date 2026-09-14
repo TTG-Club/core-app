@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { SessionReview } from '../model';
+
   import { UiDrawer } from '~ui/drawer';
   import { UiResult } from '~ui/result';
 
@@ -14,25 +16,40 @@
     getReviewVerdictIcon,
     getReviewVerdictTextClass,
     MASTER_PROFILE_ABOUT_EMPTY,
+    MASTER_PROFILE_ABOUT_TITLE,
     MASTER_PROFILE_CANCELLED_LABEL,
     MASTER_PROFILE_CLOSED_LABEL,
     MASTER_PROFILE_ERROR_TITLE,
     MASTER_PROFILE_EXPERIENCE_LABEL,
     MASTER_PROFILE_RECRUITING_LABEL,
+    MASTER_PROFILE_REVIEW_DATE_FORMAT,
+    MASTER_PROFILE_REVIEW_VERDICT_LABELS,
     MASTER_PROFILE_REVIEWS_TITLE,
     MASTER_PROFILE_SESSIONS_LABEL,
     MASTER_PROFILE_TITLE,
     REVIEWS_EMPTY_DESCRIPTION,
     REVIEWS_EMPTY_TITLE,
-    SESSION_DATE_FORMAT,
   } from '../model';
+
+  /** Строка отзыва, уже подготовленная к показу. */
+  interface ReviewEntry {
+    id: string;
+    icon: string;
+    iconClass: string;
+    dateLabel: string;
+    /** Текст отзыва, а без него — словесный вердикт. */
+    text: string;
+    /** Словесный вердикт тише текста отзыва. */
+    textClass: string;
+  }
 
   /**
    * Мастер глазами того, кто выбирает игру.
    *
    * Открывается по имени мастера в объявлении: перед заявкой игрок хочет
-   * понять, с кем садится за стол — что мастер о себе написал и сколько игр у
-   * него за плечами.
+   * понять, с кем садится за стол — сколько игр у мастера за плечами, что о
+   * нём говорят игроки и что он написал о себе. Поэтому сверху имя с
+   * репутацией, под ним цифры, дальше — текст и отзывы.
    */
   const { masterId, masterName } = defineProps<{
     masterId: string;
@@ -68,16 +85,8 @@
 
   const isFollowed = computed(() => isMasterFollowed(masterId));
 
-  // Отмеченный мастер и его кнопка выглядят «включёнными»: это единственный
-  // признак того, что отметка уже стоит.
-  const followButtonColor = computed(() =>
-    isFollowed.value ? 'primary' : 'neutral',
-  );
-
-  const followButtonVariant = computed(() =>
-    isFollowed.value ? 'solid' : 'subtle',
-  );
-
+  // Отметка — переключатель, и выглядит так же, как нажатая «Мои игры»:
+  // это единственный признак того, что отметка уже стоит.
   const followButtonIcon = computed(() =>
     isFollowed.value ? 'tabler:bookmark-filled' : 'tabler:bookmark',
   );
@@ -86,14 +95,11 @@
     isFollowed.value ? FOLLOW_MASTER_ACTIVE_LABEL : FOLLOW_MASTER_LABEL,
   );
 
-  /** Мастер без единого отзыва отмечен спокойным цветом, а не «зелёным». */
-  const reviewsBadgeColor = computed(() =>
-    profile.value && profile.value.reviews > 0 ? 'success' : 'neutral',
-  );
-
   const isLoading = computed(
     () => status.value !== 'success' && status.value !== 'error',
   );
+
+  const hasReviews = computed(() => (profile.value?.reviews ?? 0) > 0);
 
   /**
    * Репутация мастера: доля тех, кто сыграл бы с ним снова. Доля, а не средний
@@ -113,7 +119,16 @@
     );
   });
 
-  /** Счётчики игр мастера — то, что видно по его прошлым объявлениям. */
+  /** Мастер без единого отзыва отмечен спокойным цветом, а не «зелёным». */
+  const reputationClass = computed(() =>
+    hasReviews.value ? 'text-success' : 'text-muted',
+  );
+
+  /**
+   * Счётчики игр мастера одной полосой. Первыми — проведённые встречи: по ним
+   * видно, водит ли мастер на деле; отменённые приглушены — это не заслуга,
+   * но и скрывать их нельзя.
+   */
   const counters = computed(() => {
     const loaded = profile.value;
 
@@ -123,28 +138,28 @@
 
     return [
       {
+        key: 'sessions',
+        label: MASTER_PROFILE_SESSIONS_LABEL,
+        value: loaded.completedSessions,
+        valueClass: 'text-highlighted',
+      },
+      {
         key: 'recruiting',
         label: MASTER_PROFILE_RECRUITING_LABEL,
         value: loaded.recruitingGames,
-        icon: 'tabler:user-plus',
+        valueClass: 'text-highlighted',
       },
       {
         key: 'closed',
         label: MASTER_PROFILE_CLOSED_LABEL,
         value: loaded.closedGames,
-        icon: 'tabler:flag-check',
+        valueClass: 'text-highlighted',
       },
       {
         key: 'cancelled',
         label: MASTER_PROFILE_CANCELLED_LABEL,
         value: loaded.cancelledGames,
-        icon: 'tabler:calendar-x',
-      },
-      {
-        key: 'sessions',
-        label: MASTER_PROFILE_SESSIONS_LABEL,
-        value: loaded.completedSessions,
-        icon: 'tabler:dice',
+        valueClass: 'text-muted',
       },
     ];
   });
@@ -154,8 +169,34 @@
 
     return years === null || years === undefined
       ? ''
-      : `${years} ${getPlural(years, ['год', 'года', 'лет'])}`;
+      : `${MASTER_PROFILE_EXPERIENCE_LABEL} ${years} ${getPlural(years, ['год', 'года', 'лет'])}`;
   });
+
+  /**
+   * Готовит отзыв к показу. Отзыв без текста не пустеет: вместо текста стоит
+   * словесный вердикт, иначе строка держалась бы на одном значке.
+   * @param review Отзыв игрока.
+   */
+  function toReviewEntry(review: SessionReview): ReviewEntry {
+    const verdictLabel = review.recommended
+      ? MASTER_PROFILE_REVIEW_VERDICT_LABELS.positive
+      : MASTER_PROFILE_REVIEW_VERDICT_LABELS.negative;
+
+    return {
+      id: review.id,
+      icon: getReviewVerdictIcon(review.recommended),
+      iconClass: getReviewVerdictTextClass(review.recommended),
+      dateLabel: format(review.createdAt, MASTER_PROFILE_REVIEW_DATE_FORMAT),
+      text: review.comment || verdictLabel,
+      textClass: review.comment ? 'text-toned' : 'text-sm text-muted',
+    };
+  }
+
+  const reviewEntries = computed(() =>
+    (reviews.value ?? []).map(toReviewEntry),
+  );
+
+  const reviewsCountLabel = computed(() => String(reviewEntries.value.length));
 </script>
 
 <template>
@@ -164,59 +205,89 @@
     class="w-lg"
     @close="emit('close')"
   >
-    <div class="flex flex-col gap-4">
-      <div class="flex items-center gap-3">
+    <div class="flex flex-col gap-6">
+      <!-- Кто это: имя, стаж и репутация. Отметка стоит рядом с именем, а не
+        над всем профилем: сначала человек, потом действие с ним -->
+      <section class="flex items-start gap-4">
         <UAvatar
           :alt="masterName"
-          size="lg"
-          class="shrink-0 bg-elevated"
+          size="3xl"
+          class="shrink-0 bg-primary/10 text-primary"
         />
 
-        <div class="flex min-w-0 flex-col">
-          <span class="truncate text-lg font-semibold text-highlighted">
-            {{ masterName }}
-          </span>
-
-          <span
-            v-if="experienceLabel"
-            class="text-sm text-muted"
+        <div class="flex min-w-0 flex-auto flex-col gap-1">
+          <h2
+            class="text-xl/tight font-semibold wrap-break-word text-highlighted"
           >
-            {{ MASTER_PROFILE_EXPERIENCE_LABEL }}: {{ experienceLabel }}
-          </span>
+            {{ masterName }}
+          </h2>
 
-          <UBadge
-            v-if="profile"
-            :color="reviewsBadgeColor"
-            variant="subtle"
-            size="sm"
-            icon="tabler:thumb-up"
-            class="mt-1 self-start"
-            :label="reputationLabel"
+          <USkeleton
+            v-if="isLoading"
+            class="h-4 w-32"
           />
-        </div>
-      </div>
 
-      <!-- Отметка односторонняя и мастера ни о чём не спрашивает: это
-        закладка в своём списке, чтобы не пропустить его новую игру -->
-      <UTooltip :text="FOLLOW_MASTER_HINT">
-        <UButton
-          block
-          :color="followButtonColor"
-          :variant="followButtonVariant"
-          :icon="followButtonIcon"
-          :loading="busyUserId === masterId"
-          :label="followButtonLabel"
-          @click.left.exact.prevent="toggleMaster(masterId)"
-        />
-      </UTooltip>
+          <template v-else-if="profile">
+            <span
+              v-if="experienceLabel"
+              class="flex items-center gap-1.5 text-sm text-muted"
+            >
+              <UIcon
+                name="tabler:hourglass"
+                class="size-4 shrink-0"
+              />
+
+              {{ experienceLabel }}
+            </span>
+
+            <span
+              class="flex items-center gap-1.5 text-sm"
+              :class="reputationClass"
+            >
+              <UIcon
+                name="tabler:thumb-up"
+                class="size-4 shrink-0"
+              />
+
+              {{ reputationLabel }}
+            </span>
+
+            <UProgress
+              v-if="hasReviews"
+              :model-value="profile.recommended"
+              :max="profile.reviews"
+              color="success"
+              size="xs"
+              class="mt-1 max-w-48"
+            />
+          </template>
+
+          <UTooltip :text="FOLLOW_MASTER_HINT">
+            <UButton
+              class="mt-2 self-start"
+              size="sm"
+              color="neutral"
+              variant="subtle"
+              active-color="primary"
+              active-variant="subtle"
+              :active="isFollowed"
+              :icon="followButtonIcon"
+              :loading="busyUserId === masterId"
+              :label="followButtonLabel"
+              :aria-pressed="isFollowed"
+              @click.left.exact.prevent="toggleMaster(masterId)"
+            />
+          </UTooltip>
+        </div>
+      </section>
 
       <div
         v-if="isLoading"
-        class="flex flex-col gap-2"
+        class="flex flex-col gap-3"
       >
-        <USkeleton class="h-16 w-full rounded-lg" />
+        <USkeleton class="h-18 w-full rounded-xl" />
 
-        <USkeleton class="h-20 w-full rounded-lg" />
+        <USkeleton class="h-24 w-full rounded-xl" />
       </div>
 
       <UiResult
@@ -227,76 +298,116 @@
       />
 
       <template v-else>
-        <p class="leading-snug wrap-break-word text-toned">
-          {{ profile?.about || MASTER_PROFILE_ABOUT_EMPTY }}
-        </p>
-
-        <!-- Счётчики берутся из самих игр: по ним видно, водит ли мастер или
+        <!-- Цифры берутся из самих игр: по ним видно, водит ли мастер или
           объявления копятся без исхода -->
-        <div class="grid grid-cols-2 gap-2">
+        <dl
+          class="grid grid-cols-2 divide-default overflow-hidden rounded-xl border border-default bg-elevated sm:grid-cols-4 sm:divide-x"
+        >
           <div
             v-for="counter in counters"
             :key="counter.key"
-            class="flex items-center gap-2 rounded-lg border border-default p-3"
+            class="flex flex-col-reverse items-center justify-end gap-1 px-2 py-3 text-center"
+          >
+            <dt class="text-xs/tight text-balance text-muted">
+              {{ counter.label }}
+            </dt>
+
+            <dd
+              class="text-2xl/none font-semibold tabular-nums"
+              :class="counter.valueClass"
+            >
+              {{ counter.value }}
+            </dd>
+          </div>
+        </dl>
+
+        <section class="flex flex-col gap-2">
+          <h3 class="font-semibold text-highlighted">
+            {{ MASTER_PROFILE_ABOUT_TITLE }}
+          </h3>
+
+          <p
+            v-if="profile?.about"
+            class="leading-snug wrap-break-word whitespace-pre-line text-toned"
+          >
+            {{ profile.about }}
+          </p>
+
+          <p
+            v-else
+            class="text-sm text-muted"
+          >
+            {{ MASTER_PROFILE_ABOUT_EMPTY }}
+          </p>
+        </section>
+
+        <section class="flex flex-col gap-2">
+          <h3 class="flex items-center gap-2 font-semibold text-highlighted">
+            {{ MASTER_PROFILE_REVIEWS_TITLE }}
+
+            <UBadge
+              v-if="reviewEntries.length"
+              color="neutral"
+              variant="subtle"
+              size="sm"
+              :label="reviewsCountLabel"
+            />
+          </h3>
+
+          <!-- Пустой список — тихая строка, а не заглушка на пол-экрана:
+            отзывов нет у большинства новых мастеров, и это не ошибка -->
+          <div
+            v-if="!reviewEntries.length"
+            class="flex items-start gap-3 rounded-xl border border-dashed border-default p-3"
           >
             <UIcon
-              :name="counter.icon"
-              class="size-5 shrink-0 text-muted"
+              name="tabler:message-circle"
+              class="mt-0.5 size-5 shrink-0 text-muted"
             />
 
-            <div class="flex min-w-0 flex-col">
-              <span class="text-lg font-semibold text-highlighted tabular-nums">
-                {{ counter.value }}
+            <div class="flex flex-col">
+              <span class="text-sm font-medium text-toned">
+                {{ REVIEWS_EMPTY_TITLE }}
               </span>
 
-              <span class="truncate text-xs text-muted">
-                {{ counter.label }}
+              <span class="text-sm text-muted">
+                {{ REVIEWS_EMPTY_DESCRIPTION }}
               </span>
             </div>
           </div>
-        </div>
-
-        <div class="flex flex-col gap-2">
-          <h3 class="font-semibold text-highlighted">
-            {{ MASTER_PROFILE_REVIEWS_TITLE }}
-          </h3>
-
-          <UiResult
-            v-if="!reviews?.length"
-            status="info"
-            :title="REVIEWS_EMPTY_TITLE"
-            :sub-title="REVIEWS_EMPTY_DESCRIPTION"
-          />
 
           <!-- Авторов не показываем: отзыв о мастере пишут игроки его же
             игр, и подпись превратила бы оценку в разговор с ним лично -->
-          <template v-else>
-            <div
-              v-for="review in reviews"
+          <ul
+            v-else
+            class="flex flex-col divide-y divide-default overflow-hidden rounded-xl border border-default bg-elevated"
+          >
+            <li
+              v-for="review in reviewEntries"
               :key="review.id"
-              class="flex flex-col gap-1 rounded-lg border border-default p-3"
+              class="flex items-start gap-3 p-3"
             >
-              <div class="flex items-center justify-between gap-2">
-                <UIcon
-                  :name="getReviewVerdictIcon(review.recommended)"
-                  class="size-5 shrink-0"
-                  :class="getReviewVerdictTextClass(review.recommended)"
-                />
+              <UIcon
+                :name="review.icon"
+                class="mt-0.5 size-5 shrink-0"
+                :class="review.iconClass"
+              />
+
+              <div class="flex min-w-0 flex-col gap-1">
+                <p
+                  class="leading-snug wrap-break-word"
+                  :class="review.textClass"
+                >
+                  {{ review.text }}
+                </p>
 
                 <span class="text-xs text-muted">
-                  {{ format(review.createdAt, SESSION_DATE_FORMAT) }}
+                  {{ review.dateLabel }}
                 </span>
               </div>
-
-              <p
-                v-if="review.comment"
-                class="leading-snug wrap-break-word text-toned"
-              >
-                {{ review.comment }}
-              </p>
-            </div>
-          </template>
-        </div>
+            </li>
+          </ul>
+        </section>
       </template>
     </div>
   </UiDrawer>

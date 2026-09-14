@@ -105,6 +105,16 @@
         :search="appliedSearch"
         @empty="isEmpty = $event"
       />
+
+      <!-- Условия, которые чипами не выражаются (город, числа), раздел кладёт
+        сюда сам. Поиск ищет только по группам, поэтому на время запроса поля
+        прячутся: иначе они стояли бы под любым результатом, не подходя под него -->
+      <div
+        v-if="$slots.append && !appliedSearch"
+        class="mt-6 flex flex-col gap-6"
+      >
+        <slot name="append" />
+      </div>
     </template>
 
     <template #footer>

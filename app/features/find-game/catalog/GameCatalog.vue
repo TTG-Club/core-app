@@ -1,4 +1,14 @@
 <script setup lang="ts">
+  import type { GameFilterChip } from '../model';
+
+  import { FilterTag } from '~infrastructure/filter';
+  import {
+    FILTER_CONTROLS_FILTER_LABEL,
+    FILTER_CONTROLS_RESET_LABEL,
+    FILTER_CONTROLS_SHARE_LABEL,
+    FILTER_SHARE_ICON,
+    FILTER_SHARE_ICON_APPLE,
+  } from '~infrastructure/filter/model';
   import { PageGrid } from '~ui/page';
   import { UiPagination } from '~ui/pagination';
   import { UiResult } from '~ui/result';
@@ -13,16 +23,15 @@
     CATALOG_EMPTY_TITLE,
     CATALOG_ERROR_TITLE,
     CATALOG_FILTERS_RESET_LABEL,
-    CATALOG_FILTERS_TITLE,
     CATALOG_RETRY_LABEL,
     GAME_CATALOG_GRID_COLUMNS,
     GAME_CATALOG_SKELETON_COUNT,
+    getGameFilterChips,
     getGamesFoundLabel,
   } from '../model';
   import { GameCard, GameCardSkeleton, GameCatalogFilters } from './ui';
 
   const {
-    activeFilterCount,
     error,
     filter,
     games,
@@ -54,6 +63,15 @@
       : getGamesFoundLabel(totalGames.value),
   );
 
+  /** Применённые условия — ряд под панелью, как предпросмотр в справочнике. */
+  const filterChips = computed(() => getGameFilterChips(filter.value));
+
+  const route = useRoute();
+  const { isApple } = useDevice();
+  const { share } = useCopyAndShare();
+
+  const shareIcon = isApple ? FILTER_SHARE_ICON_APPLE : FILTER_SHARE_ICON;
+
   const { getParticipantName, watchParticipantNames } = useParticipantNames();
 
   // Имена мастеров живут в core-api, поэтому резолвятся отдельно и сразу на
@@ -64,38 +82,50 @@
   function openFilters(): void {
     isFiltersOpen.value = true;
   }
+
+  /**
+   * Отдаёт ссылку на каталог с текущим отбором: фильтры живут в адресе, и
+   * ссылка открывает ту же выдачу.
+   */
+  function shareCatalog(): void {
+    share(getOrigin() + route.fullPath);
+  }
+
+  /**
+   * Снимает одно условие по нажатию на его чип.
+   * @param chip Чип снимаемого условия.
+   */
+  function removeFilterChip(chip: GameFilterChip): void {
+    filter.value = chip.remove(filter.value);
+  }
 </script>
 
 <template>
   <div class="flex flex-col gap-4">
     <div class="flex flex-wrap items-center gap-2">
-      <UButton
-        color="neutral"
-        variant="subtle"
-        icon="tabler:filter"
-        :label="CATALOG_FILTERS_TITLE"
-        @click.left.exact.prevent="openFilters"
-      >
-        <template
-          v-if="activeFilterCount"
-          #trailing
-        >
-          <UBadge
-            color="primary"
-            variant="solid"
-            size="sm"
-            :label="String(activeFilterCount)"
-          />
-        </template>
-      </UButton>
+      <!-- Та же пара кнопок, что в тулбаре фильтров справочника -->
+      <UFieldGroup class="space-x-px">
+        <UButton
+          icon="tabler:filter"
+          :label="FILTER_CONTROLS_FILTER_LABEL"
+          @click.left.exact.prevent="openFilters"
+        />
+
+        <UButton
+          v-if="hasActiveFilters"
+          :title="FILTER_CONTROLS_RESET_LABEL"
+          :aria-label="FILTER_CONTROLS_RESET_LABEL"
+          icon="tabler:trash"
+          @click.left.exact.prevent="resetFilter"
+        />
+      </UFieldGroup>
 
       <UButton
-        v-if="hasActiveFilters"
-        color="neutral"
-        variant="ghost"
-        icon="tabler:rotate"
-        :label="CATALOG_FILTERS_RESET_LABEL"
-        @click.left.exact.prevent="resetFilter"
+        :icon="shareIcon"
+        :title="FILTER_CONTROLS_SHARE_LABEL"
+        :aria-label="FILTER_CONTROLS_SHARE_LABEL"
+        square
+        @click.left.exact.prevent="shareCatalog"
       />
 
       <span
@@ -104,6 +134,22 @@
       >
         {{ foundLabel }}
       </span>
+    </div>
+
+    <div
+      v-if="filterChips.length"
+      class="flex flex-wrap gap-2"
+    >
+      <FilterTag
+        v-for="chip in filterChips"
+        :key="chip.key"
+        :model-value="true"
+        :exclude="chip.isExcluded"
+        preview
+        @update:model-value="removeFilterChip(chip)"
+      >
+        {{ chip.label }}
+      </FilterTag>
     </div>
 
     <GameCatalogFilters

@@ -19,6 +19,10 @@ import {
   GAMES_ROUTE,
   INVITE_CODE_QUERY_KEY,
   MINUTES_IN_HOUR,
+  MY_GAMES_ATTENTION_ACTION,
+  MY_GAMES_ATTENTION_NO_DATE_LABEL,
+  MY_GAMES_ATTENTION_NO_SESSION_LABEL,
+  MY_GAMES_ATTENTION_REASON_SEPARATOR,
   REPUTATION_EMPTY_LABEL,
   REVIEW_VERDICT_ICON,
   REVIEW_VERDICT_TEXT_CLASS,
@@ -175,6 +179,43 @@ export function getGameFormatSummary(game: Game): string {
  */
 export function getGamesFoundLabel(total: number): string {
   return `Найдено ${total} ${getPlural(total, ['игра', 'игры', 'игр'])}`;
+}
+
+/**
+ * Почему игра попала в «Требуют внимания» — по данным самой игры, без
+ * отдельного запроса.
+ *
+ * Сервис кладёт туда игры с неразобранными заявками и встречами без даты.
+ * Заявки называются только мастеру: игроку чужие заявки разбирать не нужно.
+ * Если ни одна причина по карточке не видна (заявка ждёт в другой встрече, а
+ * не в ближайшей), остаётся общая подсказка — выдумывать причину нельзя.
+ *
+ * @param game Игра из выдачи «Требуют внимания».
+ * @param userId Идентификатор текущего пользователя.
+ */
+export function getAttentionReason(game: Game, userId: string | null): string {
+  const reasons: Array<string> = [];
+  const pendingCount = game.takenSeats - game.approvedSeats;
+
+  if (game.masterId === userId && pendingCount > 0) {
+    const applications = getPlural(pendingCount, [
+      'заявка ждёт',
+      'заявки ждут',
+      'заявок ждут',
+    ]);
+
+    reasons.push(`${pendingCount} ${applications} решения`);
+  }
+
+  if (!game.nextSession) {
+    reasons.push(MY_GAMES_ATTENTION_NO_SESSION_LABEL);
+  } else if (!game.nextSession.startsAt) {
+    reasons.push(MY_GAMES_ATTENTION_NO_DATE_LABEL);
+  }
+
+  return reasons.length
+    ? reasons.join(MY_GAMES_ATTENTION_REASON_SEPARATOR)
+    : MY_GAMES_ATTENTION_ACTION;
 }
 
 /**

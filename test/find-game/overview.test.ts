@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  getAttentionReason,
   getGameCardPriceLabel,
   getNearestPaidSession,
   getNearestSessionStart,
@@ -188,5 +189,51 @@ describe('ближайшая встреча из расписания', () => {
     expect(
       getNearestPaidSession(sessions, Date.parse('2026-09-21T00:00:00Z')),
     ).toBeNull();
+  });
+});
+
+describe('причина в «Требуют внимания»', () => {
+  const MASTER_ID = 'master-1';
+
+  it('мастеру называет число неразобранных заявок', () => {
+    const game = parseGame({
+      id: 'game-1',
+      masterId: MASTER_ID,
+      takenSeats: 3,
+      approvedSeats: 1,
+      nextSession: NEXT_SESSION,
+    });
+
+    expect(getAttentionReason(game, MASTER_ID)).toBe('2 заявки ждут решения');
+  });
+
+  it('игроку чужие заявки не называет', () => {
+    const game = parseGame({
+      id: 'game-1',
+      masterId: MASTER_ID,
+      takenSeats: 3,
+      approvedSeats: 1,
+      nextSession: NEXT_SESSION,
+    });
+
+    expect(getAttentionReason(game, 'player-1')).toBe(
+      'Разобрать заявки или назначить встречу',
+    );
+  });
+
+  it('отличает встречу без даты от отсутствия встреч', () => {
+    const withoutDate = parseGame({
+      id: 'game-1',
+      masterId: MASTER_ID,
+      nextSession: { ...NEXT_SESSION, startsAt: null },
+    });
+
+    const withoutSession = parseGame({ id: 'game-2', masterId: MASTER_ID });
+
+    expect(getAttentionReason(withoutDate, MASTER_ID)).toBe('Встреча без даты');
+
+    expect(getAttentionReason(withoutSession, MASTER_ID)).toBe(
+      'Встреча не назначена',
+    );
   });
 });

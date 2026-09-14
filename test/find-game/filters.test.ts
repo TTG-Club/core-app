@@ -3,12 +3,15 @@ import type { LocationQuery, LocationQueryRaw } from 'vue-router';
 import { describe, expect, it } from 'vitest';
 
 import {
+  applyGameFilterGroups,
   countActiveGameFilters,
   createEmptyGameFilter,
+  getGameFilterChips,
   isEmptyGameFilter,
   parseCatalogPageFromQuery,
   parseGameFilterFromQuery,
   serializeGameFilterToQuery,
+  toGameFilterGroups,
   toGameSearchQuery,
 } from '~find-game/model';
 
@@ -275,5 +278,102 @@ describe('счётчик условий', () => {
 
     filter.minAge = 18;
     expect(countActiveGameFilters(filter)).toBe(3);
+  });
+});
+
+describe('группы общей панели фильтров', () => {
+  it('переносит фильтр в группы и обратно без потерь', () => {
+    const filter = createEmptyGameFilter();
+
+    filter.system = ['DND_2024'];
+    filter.excludeCostType = ['PAID'];
+    filter.crossplayAllowed = false;
+    filter.favorite = true;
+    filter.city = ['Москва'];
+    filter.minAge = 18;
+
+    const groups = toGameFilterGroups(filter, true);
+
+    expect(applyGameFilterGroups(filter, groups)).toEqual(filter);
+  });
+
+  it('исключает группу, только когда искомых значений нет', () => {
+    const groups = toGameFilterGroups(
+      {
+        ...createEmptyGameFilter(),
+        excludeCostType: ['PAID'],
+      },
+      true,
+    );
+
+    expect(groups.find((group) => group.key === 'costType')?.mode).toBe(true);
+    expect(groups.find((group) => group.key === 'system')?.mode).toBe(false);
+  });
+
+  it('гостю не показывает избранное', () => {
+    const groups = toGameFilterGroups(createEmptyGameFilter(), false);
+
+    expect(groups.some((group) => group.key === 'favorite')).toBe(false);
+  });
+
+  it('оба варианта кроссплея означают «не важно»', () => {
+    const groups = toGameFilterGroups(createEmptyGameFilter(), true).map(
+      (group) =>
+        group.key === 'crossplayAllowed'
+          ? {
+              ...group,
+              values: (group.values ?? []).map((filterItem) => ({
+                ...filterItem,
+                selected: true,
+              })),
+            }
+          : group,
+    );
+
+    expect(
+      applyGameFilterGroups(createEmptyGameFilter(), groups).crossplayAllowed,
+    ).toBeNull();
+  });
+
+  it('не отдаёт отменённые игры в статусы каталога', () => {
+    const status = toGameFilterGroups(createEmptyGameFilter(), true).find(
+      (group) => group.key === 'status',
+    );
+
+    expect(status?.values?.map((filterItem) => filterItem.id)).toEqual([
+      'OPEN',
+      'CLOSED',
+    ]);
+  });
+});
+
+describe('ряд применённых условий', () => {
+  it('даёт по чипу на условие и помечает исключения', () => {
+    const chips = getGameFilterChips({
+      ...createEmptyGameFilter(),
+      type: ['ONLINE'],
+      excludeCostType: ['PAID'],
+      maxSeatsToStart: 0,
+    });
+
+    expect(chips.map((chip) => [chip.label, chip.isExcluded])).toEqual([
+      ['Онлайн', false],
+      ['Платно', true],
+      ['До старта не хватает не больше 0', false],
+    ]);
+  });
+
+  it('снимает ровно своё условие', () => {
+    const filter = {
+      ...createEmptyGameFilter(),
+      city: ['Москва', 'Казань'],
+      minAge: 18,
+    };
+
+    const [moscow, kazan, age] = getGameFilterChips(filter);
+
+    expect(moscow?.remove(filter).city).toEqual(['Казань']);
+    expect(kazan?.remove(filter).city).toEqual(['Москва']);
+    expect(age?.remove(filter)).toEqual({ ...filter, minAge: null });
   });
 });

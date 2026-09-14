@@ -10,6 +10,7 @@ export * from './useGameRegistrations';
 export * from './useHumanPage';
 export * from './useMasterProfileDrawer';
 export * from './useMyGames';
+export * from './useMyGamesOverview';
 export * from './useParticipantNames';
 export * from './usePlayerReputations';
 export * from './useSessionPaymentFields';

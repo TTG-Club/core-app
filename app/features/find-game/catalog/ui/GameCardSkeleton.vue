@@ -6,13 +6,13 @@
     <USkeleton class="aspect-video w-full rounded-none" />
 
     <div class="flex flex-auto flex-col gap-3 p-4">
-      <USkeleton class="h-6 w-3/4 rounded-md" />
-
       <div class="flex h-6 items-center gap-2">
         <USkeleton class="h-5 w-24 rounded-full" />
 
         <USkeleton class="h-4 w-20 rounded-md" />
       </div>
+
+      <USkeleton class="h-6 w-3/4 rounded-md" />
 
       <div class="mt-auto flex flex-col gap-1.5 border-t border-default pt-3">
         <USkeleton class="h-5 w-2/5 rounded-md" />

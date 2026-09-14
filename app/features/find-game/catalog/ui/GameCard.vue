@@ -1,11 +1,12 @@
 <script setup lang="ts">
-  import type { BadgeProps } from '@nuxt/ui';
-
   import type { Game } from '../../model';
 
   import { useMasterProfileDrawer } from '../../composables';
   import {
+    GAME_COST_TYPE_ICONS,
     GAME_COST_TYPE_LABELS,
+    GAME_COVER_BADGE_CLASS,
+    GAME_COVER_STATUS_DOT_CLASSES,
     GAME_MASTER_LABEL,
     GAME_NEXT_SESSION_EMPTY,
     GAME_NEXT_SESSION_SHORT_DATE_FORMAT,
@@ -27,11 +28,19 @@
   } from '../../model';
   import { GameCover, GameFavoriteButton } from '../../ui';
 
-  /** Значок поверх обложки: состояние игры или её видимость. */
-  interface CoverBadge {
+  /**
+   * Значок состояния в «Моих играх»: состояние игры, своя заявка или
+   * видимость. Видимость показывается одним замком — подпись уходит в
+   * подсказку, чтобы столбик на обложке оставался узким.
+   */
+  interface StatusBadge {
     key: string;
-    label: string;
-    color: BadgeProps['color'];
+    /** Видимая подпись; у значка-замка её нет. */
+    label?: string;
+    /** Подсказка и `aria-label` для значка без подписи. */
+    hint?: string;
+    /** Цвет точки состояния; у замка точки нет. */
+    dotClass?: string;
     icon?: string;
   }
 
@@ -55,51 +64,48 @@
   // приватные игры не попадают, а у своих игр мастер открывает ссылку отдельно.
   const gameRoute = computed(() => getGameRoute(game.id));
 
-  const isFree = computed(() => game.costType === 'FREE');
-
-  /** Бесплатная игра отмечена спокойным цветом, платная — с монетой. */
-  const costBadgeColor = computed(() => (isFree.value ? 'success' : 'warning'));
-
-  const costBadgeIcon = computed(() =>
-    isFree.value ? undefined : 'tabler:coins',
-  );
+  /** Монета — только у платной игры; бесплатная обходится подписью. */
+  const costBadgeIcon = computed(() => GAME_COST_TYPE_ICONS[game.costType]);
 
   const costLabel = computed(() => GAME_COST_TYPE_LABELS[game.costType]);
 
   /**
-   * Состояние игры — поверх обложки слева. В каталоге этих значков нет вовсе,
-   * а в «Моих играх» они важнее всего остального: там им место на самом
-   * заметном участке карточки, а не в общем ряду условий.
+   * Состояние игры — столбиком в углу обложки напротив формата. В каталоге
+   * этих значков нет вовсе, а в «Моих играх» они важнее всего остального: там
+   * им место на самом заметном участке карточки, а не в общем ряду условий.
    */
-  const statusBadges = computed<Array<CoverBadge>>(() => {
+  const statusBadges = computed<Array<StatusBadge>>(() => {
     if (!showStatus) {
       return [];
     }
 
-    const items: Array<CoverBadge> = [
+    const items: Array<StatusBadge> = [
       {
         key: 'status',
         label: GAME_STATUS_LABELS[game.status],
-        color: GAME_STATUS_COLORS[game.status],
+        dotClass:
+          GAME_COVER_STATUS_DOT_CLASSES[GAME_STATUS_COLORS[game.status]],
       },
     ];
-
-    if (game.visibility === 'PRIVATE') {
-      items.push({
-        key: 'visibility',
-        label: GAME_VISIBILITY_LABELS.PRIVATE,
-        color: 'neutral',
-        icon: 'tabler:lock',
-      });
-    }
 
     // Своя заявка: в «Моих играх» игрок ищет в карточке в первую очередь то,
     // разобрал её мастер или нет.
     if (game.myRegistrationStatus) {
+      const registrationColor =
+        SESSION_REGISTRATION_STATUS_COLORS[game.myRegistrationStatus];
+
       items.push({
         key: 'registration',
         label: SESSION_REGISTRATION_STATUS_LABELS[game.myRegistrationStatus],
-        color: SESSION_REGISTRATION_STATUS_COLORS[game.myRegistrationStatus],
+        dotClass: GAME_COVER_STATUS_DOT_CLASSES[registrationColor],
+      });
+    }
+
+    if (game.visibility === 'PRIVATE') {
+      items.push({
+        key: 'visibility',
+        hint: GAME_VISIBILITY_LABELS.PRIVATE,
+        icon: 'tabler:lock',
       });
     }
 
@@ -187,10 +193,11 @@
   отведена одна строка, а подвал с мастером и местами прижат к низу. Иначе
   сетка расходится по рядам и каталог выглядит рваным.
 
-  Условия разложены по слоям, а не свалены в один ряд значков: стоимость и
-  состояние — поверх обложки, формат с длительностью — по её нижнему краю,
-  система с жанром — в теле. Так в карточку помещается всё сразу, без прежнего
-  обрезания значков, не поместившихся в отведённые две строки.
+  Условия разложены по слоям, а не свалены в один ряд значков: стоимость — в
+  углу обложки напротив звёздочки, формат с длительностью — по её нижнему
+  краю, состояние в «Моих играх» — столбиком напротив формата, система с
+  жанром — над названием. Так в карточку помещается всё сразу, без обрезания
+  значков, а тело карточки одинаково в каталоге и в «Моих играх».
 -->
 <template>
   <article
@@ -226,51 +233,83 @@
         class="pointer-events-none absolute inset-0 bg-linear-to-t from-black/80 via-black/25 to-black/5"
       />
 
+      <!-- Платность — первое, что ищут в карточке, поэтому она в углу обложки
+        напротив звёздочки -->
+
       <div
-        class="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-2 p-2"
+        class="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-2 p-2"
       >
-        <div class="flex flex-wrap items-center gap-1">
-          <!-- Панель уже поднята над ссылкой карточки; звёздочка только
-            возвращает себе нажатия внутри неинтерактивного ряда значков. -->
-          <GameFavoriteButton
-            class="pointer-events-auto"
-            :game-id="game.id"
-            on-cover
-          />
-
-          <UBadge
-            v-for="badge in statusBadges"
-            :key="badge.key"
-            size="sm"
-            variant="solid"
-            :color="badge.color"
-            :icon="badge.icon"
-            :label="badge.label"
-          />
-        </div>
-
-        <!-- Платность — первое, что ищут в карточке -->
         <UBadge
-          class="shrink-0"
-          size="sm"
+          size="md"
+          color="neutral"
           variant="solid"
-          :color="costBadgeColor"
+          :class="GAME_COVER_BADGE_CLASS"
           :icon="costBadgeIcon"
           :label="costLabel"
+        />
+
+        <!-- Панель уже поднята над ссылкой карточки; звёздочка только
+          возвращает себе нажатия внутри неинтерактивного слоя. -->
+        <GameFavoriteButton
+          class="pointer-events-auto ml-auto"
+          :game-id="game.id"
+          on-cover
         />
       </div>
 
       <div
-        class="pointer-events-none absolute inset-x-0 bottom-0 flex items-center gap-1.5 px-3 pb-2.5 text-xs font-medium text-white"
+        class="pointer-events-none absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 px-3 pb-2.5"
       >
-        <UIcon
-          :name="formatIcon"
-          class="size-4 shrink-0"
-        />
+        <div
+          class="flex min-w-0 items-center gap-1.5 text-xs font-medium text-white"
+        >
+          <UIcon
+            :name="formatIcon"
+            class="size-4 shrink-0"
+          />
 
-        <span class="truncate [text-shadow:0_1px_3px_#000000a6]">
-          {{ formatSummary }}
-        </span>
+          <span class="truncate [text-shadow:0_1px_3px_#000000a6]">
+            {{ formatSummary }}
+          </span>
+        </div>
+
+        <!--
+          Состояние игры в «Моих играх» — столбиком в правом нижнем углу,
+          напротив строки формата; цвет состояния несёт точка. Столбик поднят
+          над ссылкой карточки ради подсказки у замка и занимает ровно ширину
+          значков, чтобы остальная обложка по-прежнему открывала игру.
+        -->
+        <div
+          v-if="statusBadges.length"
+          class="pointer-events-auto relative z-20 flex shrink-0 flex-col items-end gap-1"
+        >
+          <UTooltip
+            v-for="badge in statusBadges"
+            :key="badge.key"
+            :text="badge.hint"
+            :disabled="!badge.hint"
+          >
+            <UBadge
+              :class="GAME_COVER_BADGE_CLASS"
+              size="md"
+              color="neutral"
+              variant="solid"
+              :icon="badge.icon"
+              :label="badge.label"
+              :aria-label="badge.hint"
+            >
+              <template
+                v-if="badge.dotClass"
+                #leading
+              >
+                <span
+                  class="size-2 shrink-0 rounded-full"
+                  :class="badge.dotClass"
+                />
+              </template>
+            </UBadge>
+          </UTooltip>
+        </div>
       </div>
     </div>
 
@@ -280,25 +319,13 @@
       каталога. Полный текст — на странице игры.
     -->
     <div class="flex flex-auto flex-col gap-3 p-4">
-      <!-- Высота заголовка не резервируется под вторую строку: у короткого
-        названия она осталась бы дырой между ним и условиями игры. Ровный низ
-        карточек держит прижатый подвал, и свободное место собирается над его
-        разделителем, где читается как поле, а не как провал -->
-      <h3 class="line-clamp-2 text-lg leading-6 font-semibold">
-        <ULink
-          :to="gameRoute"
-          class="text-highlighted transition-colors group-hover:text-primary"
-        >
-          {{ game.title }}
-        </ULink>
-      </h3>
-
+      <!-- Система с жанром — над названием, как рубрика над заголовком -->
       <div class="flex h-6 items-center gap-2">
         <UBadge
           class="shrink-0"
           color="primary"
           variant="subtle"
-          size="sm"
+          size="md"
           :label="systemLabel"
         />
 
@@ -310,6 +337,19 @@
           {{ game.genre }}
         </span>
       </div>
+
+      <!-- Высота заголовка не резервируется под вторую строку: у короткого
+        названия она осталась бы дырой между ним и подвалом. Ровный низ
+        карточек держит прижатый подвал, и свободное место собирается над его
+        разделителем, где читается как поле, а не как провал -->
+      <h3 class="line-clamp-2 text-lg leading-6 font-semibold">
+        <ULink
+          :to="gameRoute"
+          class="text-highlighted transition-colors group-hover:text-primary"
+        >
+          {{ game.title }}
+        </ULink>
+      </h3>
 
       <div
         class="mt-auto flex flex-col gap-1.5 border-t border-default pt-3 text-sm"
