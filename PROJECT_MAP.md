@@ -40,7 +40,7 @@ core-app/
 │   └── utils/                      # ⚡ Global utilities (auto-import)
 ├── server/                         # 🔒 Server-side (Nitro)
 │   ├── api/                        # HTTP handlers: catch-all proxy + auth/*, admin/*, user/*, bug-report, online
-│   ├── domain/                     # Server domains: s3 (model / service / utils), online (service only), vttg (service / utils), home-hero (model / service)
+│   ├── domain/                     # Server domains: s3 (model / service / utils), online (service only), vttg (service / utils), home-hero (model / service), user-avatar (model / service / utils)
 │   ├── middleware/                 # 001 validate/refresh token, 002 append auth header
 │   ├── routes/                     # manifest.json, online/heartbeat, s3 (upload/get/delete/copy)
 │   └── utils/                      # Service clients (auth/admin/subscriber/comments), secrets, JWT, proxy, display-name, image compression
@@ -978,6 +978,14 @@ modals), so its capabilities are listed here rather than squeezed into the table
 > reads it via `server/utils/displayName.ts` and pushes it to comments through
 > the internal `X-Service-Token` API (`server/utils/commentsRename.ts`,
 > `POST /api/user/comments/sync-name`, scoped by `SOURCE_PLATFORM`).
+
+> **Avatar.** Each site has its own avatar, stored next to the display name in
+> **core-api** (`avatarUrl`). The file is cropped to a square in the profile
+> (`sidebar`, `ImageCropModal`), then `PUT/DELETE /api/user/profile/avatar`
+> (`server/domain/user-avatar`) renders a static 256×256 webp into S3 under
+> `avatars/<sub>/`, saves the link in core-api and removes the previous file.
+> Shown in the header, the profile and the admin user card (the users list is
+> enriched through `POST /api/user/display-names`, like the display name).
 
 ### 🌐 Landing & infrastructure
 

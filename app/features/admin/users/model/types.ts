@@ -20,6 +20,8 @@ export interface AdminUserResponse {
   email: string;
   /** Отображаемое имя из core-api; null, если не задано или core-api недоступен. */
   displayName?: string | null;
+  /** Ссылка на аватарку из core-api; null, если не загружена или core-api недоступен. */
+  avatarUrl?: string | null;
   enabled: boolean;
   emailVerified: boolean;
   accountLocked: boolean;

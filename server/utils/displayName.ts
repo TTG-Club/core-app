@@ -1,27 +1,61 @@
 import { z } from 'zod';
 
-const displayNameResponseSchema = z.object({
-  displayName: z.string().min(1),
-});
-
-const displayNameByLoginSchema = z.object({
-  login: z.string(),
-  displayName: z.string(),
-});
+import { S3_URL_PREFIX } from '#server/domain/s3/model';
 
 /**
- * Тянет отображаемое имя текущего пользователя из core-api (владелец данных).
- * Best-effort: недоступность core-api или ещё не задеплоенная ручка (404) → null,
- * и вызывающий откатывается к логину. Побочно инициирует ленивое создание имени
- * на стороне core-api при первом обращении.
+ * Ссылка на аватарку из core-api. Принимается только ссылка на хранилище
+ * сайта: сторонний адрес на странице означал бы картинку с чужого сервера.
+ * Отсутствие поля (core-api без аватарок) и неподходящая ссылка — просто
+ * «аватарки нет».
  */
-export async function fetchUserDisplayName(
+const avatarUrlSchema = z
+  .string()
+  .startsWith(S3_URL_PREFIX)
+  .nullish()
+  .catch(null)
+  .transform((avatarUrl) => avatarUrl ?? null);
+
+const publicProfileResponseSchema = z.object({
+  displayName: z.string().min(1),
+  avatarUrl: avatarUrlSchema,
+});
+
+const publicProfileByLoginSchema = z.object({
+  login: z.string(),
+  displayName: z.string(),
+  avatarUrl: avatarUrlSchema,
+});
+
+/** Публичные данные пользователя из core-api: то, что видят другие. */
+export interface UserPublicProfile {
+  /** Отображаемое имя; null — core-api недоступен, показывается логин. */
+  displayName: string | null;
+  /** Ссылка на аватарку в хранилище сайта; null — аватарки нет. */
+  avatarUrl: string | null;
+}
+
+/** Публичные данные, когда core-api ответить не смог. */
+const EMPTY_PUBLIC_PROFILE: UserPublicProfile = {
+  displayName: null,
+  avatarUrl: null,
+};
+
+/**
+ * Тянет отображаемое имя и аватарку текущего пользователя из core-api
+ * (владелец данных). Best-effort: недоступность core-api или ещё не
+ * задеплоенная ручка (404) → пустые данные, и вызывающий откатывается к
+ * логину и инициалам. Побочно инициирует ленивое создание имени на стороне
+ * core-api при первом обращении.
+ *
+ * @param token токен пользователя.
+ */
+export async function fetchUserPublicProfile(
   token: string,
-): Promise<string | null> {
+): Promise<UserPublicProfile> {
   try {
     const { url } = getApiSecrets();
 
-    const payload = await $fetch<unknown>(
+    const profileResponse = await $fetch<unknown>(
       `${url}/api/user/profile/display-name`,
       {
         headers: {
@@ -30,47 +64,94 @@ export async function fetchUserDisplayName(
       },
     );
 
-    const parsed = displayNameResponseSchema.safeParse(payload);
+    const parsedProfile =
+      publicProfileResponseSchema.safeParse(profileResponse);
 
-    return parsed.success ? parsed.data.displayName : null;
+    return parsedProfile.success ? parsedProfile.data : EMPTY_PUBLIC_PROFILE;
   } catch {
-    return null;
+    return EMPTY_PUBLIC_PROFILE;
   }
 }
 
 /**
- * Резолвит логины в отображаемые имена через публичную ручку core-api.
+ * Отображаемое имя текущего пользователя из core-api. Best-effort, как и
+ * `fetchUserPublicProfile`: при сбое null, и вызывающий откатывается к логину.
+ *
+ * @param token токен пользователя.
+ */
+export async function fetchUserDisplayName(
+  token: string,
+): Promise<string | null> {
+  const { displayName } = await fetchUserPublicProfile(token);
+
+  return displayName;
+}
+
+/**
+ * Резолвит логины в публичные данные через публичную ручку core-api.
  * Возвращает Map по логину в нижнем регистре. Best-effort: при ошибке — пустая
  * Map, и вызывающий откатывается к логинам. Логины без заданного имени в ответ
  * не попадают (для них имя = логин на стороне вызывающего).
+ *
+ * @param logins логины пользователей.
  */
-export async function resolveDisplayNamesByLogins(
+export async function resolvePublicProfilesByLogins(
   logins: string[],
-): Promise<Map<string, string>> {
-  const nameByLogin = new Map<string, string>();
+): Promise<Map<string, UserPublicProfile>> {
+  const profileByLogin = new Map<string, UserPublicProfile>();
   const uniqueLogins = [...new Set(logins.filter(Boolean))];
 
   if (!uniqueLogins.length) {
-    return nameByLogin;
+    return profileByLogin;
   }
 
   try {
     const { url } = getApiSecrets();
 
-    const payload = await $fetch<unknown>(`${url}/api/user/display-names`, {
-      body: { logins: uniqueLogins },
-      method: 'POST',
-    });
+    const profilesResponse = await $fetch<unknown>(
+      `${url}/api/user/display-names`,
+      {
+        body: { logins: uniqueLogins },
+        method: 'POST',
+      },
+    );
 
-    const parsed = z.array(displayNameByLoginSchema).safeParse(payload);
+    const parsedProfiles = z
+      .array(publicProfileByLoginSchema)
+      .safeParse(profilesResponse);
 
-    if (parsed.success) {
-      for (const entry of parsed.data) {
-        nameByLogin.set(entry.login.toLowerCase(), entry.displayName);
+    if (parsedProfiles.success) {
+      for (const loginProfile of parsedProfiles.data) {
+        profileByLogin.set(loginProfile.login.toLowerCase(), {
+          displayName: loginProfile.displayName,
+          avatarUrl: loginProfile.avatarUrl,
+        });
       }
     }
   } catch {
     // best-effort — оставляем пустую Map, имена откатятся к логинам
+  }
+
+  return profileByLogin;
+}
+
+/**
+ * Резолвит логины в отображаемые имена. Возвращает Map по логину в нижнем
+ * регистре; логины без имени и сбой core-api дают пропуск, и вызывающий
+ * откатывается к логину.
+ *
+ * @param logins логины пользователей.
+ */
+export async function resolveDisplayNamesByLogins(
+  logins: string[],
+): Promise<Map<string, string>> {
+  const profileByLogin = await resolvePublicProfilesByLogins(logins);
+  const nameByLogin = new Map<string, string>();
+
+  for (const [login, profile] of profileByLogin) {
+    if (profile.displayName) {
+      nameByLogin.set(login, profile.displayName);
+    }
   }
 
   return nameByLogin;
