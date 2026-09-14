@@ -285,6 +285,9 @@ export interface BugReportUserFixedCount {
   /** Отображаемое имя пользователя (логин, если имя не задано) */
   name: string;
 
+  /** Ссылка на аватарку из core-api; null — аватарки нет */
+  avatarUrl: string | null;
+
   /** Количество решённых багов */
   fixed: number;
 }

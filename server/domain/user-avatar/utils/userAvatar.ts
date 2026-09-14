@@ -1,4 +1,4 @@
-import { S3_URL_PREFIX } from '#server/domain/s3/model';
+import { S3_URL_PREFIX } from '#shared/consts';
 import { getSlug } from '#shared/utils';
 
 import { USER_AVATAR_UPLOAD_SECTION } from '../model';

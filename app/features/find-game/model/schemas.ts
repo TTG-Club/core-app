@@ -1149,22 +1149,3 @@ export function parseProblemDetail(input: unknown): FindGameProblemDetail {
     availableAt: parsed.data.availableAt,
   };
 }
-
-/**
- * Разбирает ответ core-api с отображаемыми именами участников.
- * Резолв — вспомогательный: битый ответ не должен ронять страницу игры,
- * поэтому вместо исключения возвращается пустой список, и участники
- * подписываются заглушкой.
- * @param input Сырой ответ core-api.
- */
-export function parseParticipantNames(
-  input: unknown,
-): Array<{ userId: string; displayName: string }> {
-  const parsed = z
-    .array(
-      z.object({ userId: z.string().min(1), displayName: z.string().min(1) }),
-    )
-    .safeParse(input);
-
-  return parsed.success ? parsed.data : [];
-}

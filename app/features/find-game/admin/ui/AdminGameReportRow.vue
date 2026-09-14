@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { GameReport } from '../../model';
 
+  import { UserAvatar } from '~ui/user-avatar';
+
   import {
     GAME_DELETE_LABEL,
     GAME_REPORT_AUTHOR_LABEL,
@@ -68,9 +70,17 @@
 
         <p
           v-if="reporterName"
-          class="mt-1 text-sm text-muted"
+          class="mt-1 flex items-center gap-1.5 text-sm text-muted"
         >
           {{ GAME_REPORT_AUTHOR_LABEL }}:
+
+          <UserAvatar
+            :user-id="report.reporterId"
+            :name="reporterName"
+            size="3xs"
+            class="shrink-0"
+          />
+
           {{ reporterName }}
         </p>
       </div>

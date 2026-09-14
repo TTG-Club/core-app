@@ -63,6 +63,7 @@
 
       return {
         ...fixer,
+        avatarImageUrl: fixer.avatarUrl ?? undefined,
         isWinner: index === 0,
         displayIndex: index + 1,
         rowStyle: {
@@ -193,6 +194,14 @@
             </span>
           </div>
 
+          <UAvatar
+            :src="fixer.avatarImageUrl"
+            :alt="fixer.name"
+            size="2xs"
+            class="relative z-1 shrink-0"
+            :ui="{ fallback: 'uppercase' }"
+          />
+
           <!-- Имя охотника (логин, если имя не задано) -->
           <span
             class="relative z-1 flex-1 truncate text-sm"
@@ -227,6 +236,12 @@
               {{ slot.displayIndex }}
             </span>
           </div>
+
+          <!-- Пустое место под аватарку: подписи свободных мест стоят вровень с именами -->
+          <span
+            class="size-5 shrink-0 rounded-full border border-dashed border-default"
+            aria-hidden="true"
+          />
 
           <span class="flex-1 truncate text-sm text-dimmed italic">
             {{ slot.label }}

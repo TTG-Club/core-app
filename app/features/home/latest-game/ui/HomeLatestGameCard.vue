@@ -19,6 +19,7 @@
     getGenresLabel,
   } from '~find-game/model';
   import { GameCover } from '~find-game/ui';
+  import { UserAvatar } from '~ui/user-avatar';
 
   const { game, masterName } = defineProps<{
     game: Game;
@@ -180,12 +181,17 @@
           class="flex min-w-0 items-center gap-1.5"
           :title="masterHint"
         >
-          <UIcon
-            name="tabler:crown"
-            class="size-4 shrink-0"
-          />
-
           <span class="sr-only">{{ GAME_MASTER_LABEL }}:</span>
+
+          <!-- Аватарка встала на место значка короны и того же размера: строка
+            тесная, и лишняя ширина обрезала бы имя мастера. «Мастер» остаётся
+            в подсказке и для скринридера -->
+          <UserAvatar
+            :user-id="game.masterId"
+            :name="masterName"
+            size="3xs"
+            class="shrink-0"
+          />
 
           <span class="truncate font-medium text-toned">{{ masterName }}</span>
         </span>

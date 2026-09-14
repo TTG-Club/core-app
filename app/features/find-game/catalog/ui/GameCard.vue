@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { Game } from '../../model';
 
+  import { UserAvatar } from '~ui/user-avatar';
+
   import { useGameSystems, useMasterProfileDrawer } from '../../composables';
   import {
     GAME_COST_TYPE_ICONS,
@@ -386,6 +388,13 @@
           />
 
           <span class="shrink-0 text-muted">{{ GAME_MASTER_LABEL }}:</span>
+
+          <UserAvatar
+            :user-id="game.masterId"
+            :name="masterName"
+            size="2xs"
+            class="shrink-0"
+          />
 
           <!-- Имя ведёт в профиль мастера, а не в игру: карточка целиком и так
             открывает объявление. Ссылка поднята над подложкой карточки, иначе

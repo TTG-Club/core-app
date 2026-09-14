@@ -957,7 +957,9 @@ modals), so its capabilities are listed here rather than squeezed into the table
 > **Names come from core-api.** find-game-api stores only user UUIDs (`sub`),
 > so masters and players are resolved through
 > `POST /api/user/display-names/by-ids`; a failed lookup degrades to a neutral
-> placeholder rather than showing a raw UUID.
+> placeholder rather than showing a raw UUID. `useParticipantNames` sits on the
+> site-wide `useUserPublicProfiles` cache, so names and `UserAvatar` avatars share
+> one batch.
 
 ### 🛡️ Admin & moderation
 
@@ -986,6 +988,15 @@ modals), so its capabilities are listed here rather than squeezed into the table
 > `avatars/<sub>/`, saves the link in core-api and removes the previous file.
 > Shown in the header, the profile and the admin user card (the users list is
 > enriched through `POST /api/user/display-names`, like the display name).
+> Other people's avatars are never copied into other services: `UserAvatar`
+> (`~ui/user-avatar`) takes a user id and resolves it through the global
+> `useUserPublicProfiles` cache — ids requested in one tick go out as one
+> `POST /api/user/display-names/by-ids` batch (≤ 200). Used by comments (thread,
+> preview, `/comments` feed, home block, moderation) and find-game (catalog and
+> game cards, master drawer, participants, registrations, finance, reviews,
+> follows, report queue). The home bug-hunter board gets `avatarUrl` from
+> `/api/bug-report/stats`, which resolves logins. «My comments» replies stay
+> without avatars: comments-service sends no author id in `lastReply`.
 
 ### 🌐 Landing & infrastructure
 
@@ -1066,6 +1077,7 @@ imported via the auto-generated `~<domain>` alias (see
 | `tooltip`         | Info tooltip                                                                                                                                                                                                                                                                                                                                                                     |
 | `updates-dot`     | Unread-updates indicator dot                                                                                                                                                                                                                                                                                                                                                     |
 | `upload`          | Image & gallery upload widgets                                                                                                                                                                                                                                                                                                                                                   |
+| `user-avatar`     | `UserAvatar` — another user's avatar by user id (initials until the picture arrives), resolved in batches via `useUserPublicProfiles`                                                                                                                                                                                                                                            |
 
 ---
 

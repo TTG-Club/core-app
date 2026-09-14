@@ -3,6 +3,7 @@
 
   import { UiDrawer } from '~ui/drawer';
   import { UiResult } from '~ui/result';
+  import { UserAvatar } from '~ui/user-avatar';
 
   import { useFollows } from '../composables';
   import {
@@ -209,8 +210,9 @@
       <!-- Кто это: имя, стаж и репутация. Отметка стоит рядом с именем, а не
         над всем профилем: сначала человек, потом действие с ним -->
       <section class="flex items-start gap-4">
-        <UAvatar
-          :alt="masterName"
+        <UserAvatar
+          :user-id="masterId"
+          :name="masterName"
           size="3xl"
           class="shrink-0 bg-primary/10 text-primary"
         />

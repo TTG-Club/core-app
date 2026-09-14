@@ -5,6 +5,8 @@
     SessionAttendanceStatus,
   } from '../model';
 
+  import { UserAvatar } from '~ui/user-avatar';
+
   import { useParticipantNames } from '../composables';
   import {
     APPLY_WITHDRAW_LABEL,
@@ -231,7 +233,7 @@
         playerIds.push(ownRegistration.playerId);
       }
 
-      void resolveNames(playerIds);
+      resolveNames(playerIds);
     },
     { immediate: true },
   );
@@ -289,17 +291,26 @@
         class="flex min-w-0 flex-col gap-3 rounded-md border border-primary/40 bg-elevated/30 p-3 text-sm"
       >
         <div class="flex items-start justify-between gap-2">
-          <div class="min-w-0">
-            <p class="font-medium wrap-break-word text-highlighted">
-              {{ getParticipantName(ownRegistration.playerId) }}
-            </p>
+          <div class="flex min-w-0 items-start gap-3">
+            <UserAvatar
+              :user-id="ownRegistration.playerId"
+              :name="getParticipantName(ownRegistration.playerId)"
+              size="xs"
+              class="shrink-0"
+            />
 
-            <p
-              v-if="ownRegistration.characterName"
-              class="wrap-break-word text-muted"
-            >
-              {{ ownRegistration.characterName }}
-            </p>
+            <div class="min-w-0">
+              <p class="font-medium wrap-break-word text-highlighted">
+                {{ getParticipantName(ownRegistration.playerId) }}
+              </p>
+
+              <p
+                v-if="ownRegistration.characterName"
+                class="wrap-break-word text-muted"
+              >
+                {{ ownRegistration.characterName }}
+              </p>
+            </div>
           </div>
 
           <UBadge
@@ -397,9 +408,11 @@
         :key="participant.playerId"
         class="flex min-w-0 items-start gap-3 rounded-md border border-default bg-elevated/30 p-3 text-sm"
       >
-        <UIcon
-          name="tabler:user"
-          class="size-5 shrink-0 text-muted"
+        <UserAvatar
+          :user-id="participant.playerId"
+          :name="getParticipantName(participant.playerId)"
+          size="xs"
+          class="shrink-0"
         />
 
         <div class="min-w-0">

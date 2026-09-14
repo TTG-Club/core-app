@@ -23,7 +23,6 @@ import type {
   GameStatus,
   GameSystemOption,
   MasterPublicProfile,
-  ParticipantName,
   RegistrationDecision,
   Reputation,
   SessionAttendanceStatus,
@@ -40,8 +39,6 @@ import { FetchError } from 'ofetch';
 import {
   BOOKMARKED_PLAYERS_API_PATH,
   CITIES_API_PATH,
-  DISPLAY_NAMES_BY_IDS_API_PATH,
-  DISPLAY_NAMES_LOOKUP_MAX,
   FAVORITE_GAMES_API_PATH,
   FIND_GAME_PROFILE_API_PATH,
   FIND_GAME_UNKNOWN_ERROR_MESSAGE,
@@ -79,7 +76,6 @@ import {
   parseMasterProfile,
   parseNotification,
   parseNotificationsPage,
-  parseParticipantNames,
   parseProblemDetail,
   parseReputation,
   parseSessionParticipant,
@@ -1255,48 +1251,4 @@ export async function updateFindGameProfile(
   });
 
   return parseFindGameProfile(response);
-}
-
-/* ------------------------------------------------------------------ */
-/* Имена участников                                                    */
-/* ------------------------------------------------------------------ */
-
-/**
- * Резолвит идентификаторы участников в отображаемые имена через core-api —
- * владельца этих данных. find-game-api имён не хранит вовсе, поэтому без
- * резолва в списке игроков остался бы сырой UUID.
- *
- * Резолв вспомогательный: сбой не должен ронять страницу игры, поэтому вместо
- * исключения возвращается пустой список, а вызывающий подставляет заглушку.
- *
- * @param userIds Идентификаторы участников.
- */
-export async function fetchParticipantNames(
-  userIds: ReadonlyArray<string>,
-): Promise<Array<ParticipantName>> {
-  const unique = [...new Set(userIds.filter(Boolean))].slice(
-    0,
-    DISPLAY_NAMES_LOOKUP_MAX,
-  );
-
-  if (!unique.length) {
-    return [];
-  }
-
-  try {
-    const response = await $fetch(DISPLAY_NAMES_BY_IDS_API_PATH, {
-      method: 'POST',
-      body: { userIds: unique },
-      retry: 0,
-    });
-
-    return parseParticipantNames(response);
-  } catch (error) {
-    consola.warn(
-      '[find-game] Не удалось получить имена участников:',
-      getFindGameStatus(error),
-    );
-
-    return [];
-  }
 }

@@ -1,19 +1,6 @@
 import { z } from 'zod';
 
-import { S3_URL_PREFIX } from '#server/domain/s3/model';
-
-/**
- * Ссылка на аватарку из core-api. Принимается только ссылка на хранилище
- * сайта: сторонний адрес на странице означал бы картинку с чужого сервера.
- * Отсутствие поля (core-api без аватарок) и неподходящая ссылка — просто
- * «аватарки нет».
- */
-const avatarUrlSchema = z
-  .string()
-  .startsWith(S3_URL_PREFIX)
-  .nullish()
-  .catch(null)
-  .transform((avatarUrl) => avatarUrl ?? null);
+import { avatarUrlSchema } from '#shared/utils';
 
 const publicProfileResponseSchema = z.object({
   displayName: z.string().min(1),
@@ -133,26 +120,4 @@ export async function resolvePublicProfilesByLogins(
   }
 
   return profileByLogin;
-}
-
-/**
- * Резолвит логины в отображаемые имена. Возвращает Map по логину в нижнем
- * регистре; логины без имени и сбой core-api дают пропуск, и вызывающий
- * откатывается к логину.
- *
- * @param logins логины пользователей.
- */
-export async function resolveDisplayNamesByLogins(
-  logins: string[],
-): Promise<Map<string, string>> {
-  const profileByLogin = await resolvePublicProfilesByLogins(logins);
-  const nameByLogin = new Map<string, string>();
-
-  for (const [login, profile] of profileByLogin) {
-    if (profile.displayName) {
-      nameByLogin.set(login, profile.displayName);
-    }
-  }
-
-  return nameByLogin;
 }

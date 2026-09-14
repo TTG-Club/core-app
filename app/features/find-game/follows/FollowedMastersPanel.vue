@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { UiResult } from '~ui/result';
+  import { UserAvatar } from '~ui/user-avatar';
 
   import {
     useFollows,
@@ -59,13 +60,21 @@
           variant="link"
           color="primary"
           class="p-0"
-          icon="tabler:user"
           :title="MASTER_PROFILE_OPEN_HINT"
           :label="getParticipantName(follow.userId)"
           @click.left.exact.prevent="
             masterDrawer.open(follow.userId, getParticipantName(follow.userId))
           "
-        />
+        >
+          <template #leading>
+            <UserAvatar
+              :user-id="follow.userId"
+              :name="getParticipantName(follow.userId)"
+              size="2xs"
+              class="shrink-0"
+            />
+          </template>
+        </UButton>
 
         <UButton
           size="sm"

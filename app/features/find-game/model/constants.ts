@@ -158,9 +158,6 @@ export const GENRES_API_PATH = `${FIND_GAME_API_PREFIX}/genres`;
 
 export const NOTIFICATIONS_API_PATH = `${FIND_GAME_API_PREFIX}/notifications`;
 
-/** Резолв «UUID -> отображаемое имя» в core-api. */
-export const DISPLAY_NAMES_BY_IDS_API_PATH = '/api/user/display-names/by-ids';
-
 /**
  * Поиск источников сайта — тот же, что у раздела «Источники». Своего
  * справочника книг у find-game-api нет и не нужно: они принадлежат core-api.
@@ -620,9 +617,6 @@ export const MY_GAMES_PAGE_SIZE = GAME_CATALOG_PAGE_SIZE;
  * перестают читаться, и остаётся только счётчик.
  */
 export const GAME_SEATS_MAX_ICONS = 8;
-
-/** Максимум идентификаторов в одном запросе отображаемых имён (лимит core-api). */
-export const DISPLAY_NAMES_LOOKUP_MAX = 200;
 
 /* ------------------------------------------------------------------ */
 /* Тексты интерфейса                                                   */

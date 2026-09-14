@@ -6,7 +6,7 @@ import { S3 } from '@aws-sdk/client-s3';
 import { StatusCodes } from 'http-status-codes';
 import ms from 'ms';
 
-import { S3_URL_PREFIX } from '../model';
+import { S3_URL_PREFIX } from '#shared/consts';
 
 /**
  * Предел длины ключа файла в байтах: дальше хранилище его не принимает, а

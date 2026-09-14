@@ -2,6 +2,7 @@
   import type { Game, GameFinanceAccount, GameFinanceBill } from '../model';
 
   import { UiResult } from '~ui/result';
+  import { UserAvatar } from '~ui/user-avatar';
 
   import { useParticipantNames } from '../composables';
   import {
@@ -106,7 +107,7 @@
   watch(
     finance,
     (value) => {
-      void resolveNames(value.accounts.map((account) => account.playerId));
+      resolveNames(value.accounts.map((account) => account.playerId));
 
       // Обновление списка не сбрасывает выбор мастера: валюту подставляем
       // только тем счетам, где он её ещё не выбирал.
@@ -229,9 +230,18 @@
       >
         <div class="flex flex-col gap-3">
           <div class="flex items-center justify-between gap-3">
-            <span class="font-medium text-highlighted">{{
-              getParticipantName(view.account.playerId)
-            }}</span>
+            <span class="flex min-w-0 items-center gap-2">
+              <UserAvatar
+                :user-id="view.account.playerId"
+                :name="getParticipantName(view.account.playerId)"
+                size="2xs"
+                class="shrink-0"
+              />
+
+              <span class="font-medium text-highlighted">{{
+                getParticipantName(view.account.playerId)
+              }}</span>
+            </span>
 
             <div class="flex flex-wrap justify-end gap-1">
               <UBadge

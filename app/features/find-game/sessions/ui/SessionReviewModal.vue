@@ -7,6 +7,7 @@
   } from '../../model';
 
   import { UiResult } from '~ui/result';
+  import { UserAvatar } from '~ui/user-avatar';
 
   import { useFindGameToast, useParticipantNames } from '../../composables';
   import {
@@ -190,7 +191,7 @@
       comments.value = {};
       savedTargets.value = [];
       loadReviews();
-      void resolveNames(targetIds.value);
+      resolveNames(targetIds.value);
     },
     { immediate: true },
   );
@@ -237,8 +238,17 @@
             class="flex flex-col gap-2 rounded-lg border border-default p-3"
           >
             <div class="flex flex-wrap items-center justify-between gap-2">
-              <span class="font-medium text-highlighted">
-                {{ getParticipantName(targetId) }}
+              <span class="flex min-w-0 items-center gap-2">
+                <UserAvatar
+                  :user-id="targetId"
+                  :name="getParticipantName(targetId)"
+                  size="2xs"
+                  class="shrink-0"
+                />
+
+                <span class="font-medium text-highlighted">
+                  {{ getParticipantName(targetId) }}
+                </span>
               </span>
 
               <UBadge

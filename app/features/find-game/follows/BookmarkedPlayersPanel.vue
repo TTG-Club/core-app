@@ -2,6 +2,7 @@
   import type { Follow } from '../model';
 
   import { UiResult } from '~ui/result';
+  import { UserAvatar } from '~ui/user-avatar';
 
   import { useFollows, useParticipantNames } from '../composables';
   import {
@@ -68,9 +69,11 @@
         class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-default p-3"
       >
         <span class="flex min-w-0 items-center gap-2">
-          <UIcon
-            name="tabler:user"
-            class="size-4 shrink-0 text-muted"
+          <UserAvatar
+            :user-id="follow.userId"
+            :name="getParticipantName(follow.userId)"
+            size="2xs"
+            class="shrink-0"
           />
 
           <span class="truncate font-medium text-highlighted">

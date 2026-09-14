@@ -652,11 +652,6 @@ export interface FindGameNotification {
   createdAt: string;
 }
 
-/** Отображаемое имя участника. */
-export interface ParticipantName {
-  userId: string;
-  displayName: string;
-}
 /** Краткая карточка участника без приватных данных заявки. */
 export interface GameParticipant {
   playerId: string;

@@ -6,6 +6,7 @@
   } from '../../model';
 
   import { CharacterSheetDrawer } from '~character-sheet/drawer';
+  import { UserAvatar } from '~ui/user-avatar';
 
   import { useFollows } from '../../composables';
   import {
@@ -169,16 +170,25 @@
     class="flex min-w-0 flex-col gap-2 rounded-md border border-default bg-elevated/30 p-3 text-sm"
   >
     <div class="flex flex-wrap items-center justify-between gap-2">
-      <span class="flex min-w-0 flex-col">
-        <span class="font-medium wrap-break-word text-highlighted">{{
-          playerName
-        }}</span>
+      <span class="flex min-w-0 items-start gap-2">
+        <UserAvatar
+          :user-id="registration.playerId"
+          :name="playerName"
+          size="xs"
+          class="shrink-0"
+        />
 
-        <span
-          v-if="registration.characterName"
-          class="wrap-break-word text-muted"
-        >
-          {{ registration.characterName }}
+        <span class="flex min-w-0 flex-col">
+          <span class="font-medium wrap-break-word text-highlighted">{{
+            playerName
+          }}</span>
+
+          <span
+            v-if="registration.characterName"
+            class="wrap-break-word text-muted"
+          >
+            {{ registration.characterName }}
+          </span>
         </span>
       </span>
 

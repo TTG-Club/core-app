@@ -3,6 +3,8 @@
 
   import type { Game } from '../../model';
 
+  import { UserAvatar } from '~ui/user-avatar';
+
   import { useGameSystems, useMasterProfileDrawer } from '../../composables';
   import {
     GAME_CHAT_LINK_LABEL,
@@ -322,6 +324,13 @@
         />
 
         <span class="shrink-0 text-muted">{{ GAME_MASTER_LABEL }}:</span>
+
+        <UserAvatar
+          :user-id="game.masterId"
+          :name="masterName"
+          size="2xs"
+          class="shrink-0"
+        />
 
         <ULink
           as="button"

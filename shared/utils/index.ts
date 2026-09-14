@@ -7,3 +7,4 @@ export * from './getStatusMessage';
 export * from './home-hero';
 export * from './mailing';
 export * from './sortString';
+export * from './user-avatar';

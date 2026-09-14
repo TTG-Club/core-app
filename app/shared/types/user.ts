@@ -29,3 +29,15 @@ export interface UserProfile {
    */
   emailVerified: boolean;
 }
+
+/**
+ * Публичные данные другого пользователя из core-api — то, что видно всем в
+ * комментариях, играх и рейтингах: без логина и почты.
+ */
+export interface PublicUserProfile {
+  /** UUID пользователя (клейм `sub` токена). */
+  userId: string;
+  displayName: string;
+  /** Ссылка на аватарку в хранилище сайта; null — аватарки нет. */
+  avatarUrl: string | null;
+}

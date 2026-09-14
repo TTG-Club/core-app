@@ -1,7 +1,9 @@
+import type { UserPublicProfile } from '#server/utils/displayName';
+
 import { z } from 'zod';
 
 import { BUG_REPORT_EXTERNAL_API_BASE_URL } from '#server/utils/bugReportApi';
-import { resolveDisplayNamesByLogins } from '#server/utils/displayName';
+import { resolvePublicProfilesByLogins } from '#server/utils/displayName';
 
 const fixerSchema = z.object({
   login: z.string(),
@@ -19,17 +21,26 @@ const bugStatsSchema = z.object({
 type Fixer = z.infer<typeof fixerSchema>;
 
 /**
- * Заменяет логины на отображаемые имена; для логинов без заданного имени
- * оставляет логин (фолбэк «пусто → логин»). Логины на клиент при этом не уходят.
+ * Заменяет логины на отображаемые имена и добавляет аватарки; для логинов без
+ * заданного имени оставляет логин (фолбэк «пусто → логин»). Логины на клиент
+ * у тех, кто задал имя, не уходят.
+ *
+ * @param fixers охотники за багами с логинами.
+ * @param profileByLogin публичные данные из core-api по логину в нижнем регистре.
  */
 function toNamedFixers(
   fixers: Fixer[],
-  nameByLogin: Map<string, string>,
-): Array<{ name: string; fixed: number }> {
-  return fixers.map((fixer) => ({
-    name: nameByLogin.get(fixer.login.toLowerCase()) ?? fixer.login,
-    fixed: fixer.fixed,
-  }));
+  profileByLogin: Map<string, UserPublicProfile>,
+): Array<{ name: string; avatarUrl: string | null; fixed: number }> {
+  return fixers.map((fixer) => {
+    const profile = profileByLogin.get(fixer.login.toLowerCase());
+
+    return {
+      name: profile?.displayName ?? fixer.login,
+      avatarUrl: profile?.avatarUrl ?? null,
+      fixed: fixer.fixed,
+    };
+  });
 }
 
 /**
@@ -54,7 +65,7 @@ export default defineEventHandler(async () => {
     );
   }
 
-  const nameByLogin = await resolveDisplayNamesByLogins(
+  const profileByLogin = await resolvePublicProfilesByLogins(
     [...stats.topFixers, ...stats.topFixersThisMonth].map(
       (fixer) => fixer.login,
     ),
@@ -64,7 +75,7 @@ export default defineEventHandler(async () => {
     totalCount: stats.totalCount,
     fixedCount: stats.fixedCount,
     fixedCountThisMonth: stats.fixedCountThisMonth,
-    topFixers: toNamedFixers(stats.topFixers, nameByLogin),
-    topFixersThisMonth: toNamedFixers(stats.topFixersThisMonth, nameByLogin),
+    topFixers: toNamedFixers(stats.topFixers, profileByLogin),
+    topFixersThisMonth: toNamedFixers(stats.topFixersThisMonth, profileByLogin),
   };
 });
