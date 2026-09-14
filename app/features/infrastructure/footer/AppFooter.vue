@@ -9,17 +9,29 @@
     FOOTER_SUPPORT_EMAIL_ICON,
     FOOTER_SUPPORT_LINKS,
   } from './model';
+
+  const props = defineProps<{
+    /**
+     * Растянуть подвал на 2xl до `--max-content-wide` — вслед за колонкой
+     * главной, иначе на широком мониторе он уже контента над ним.
+     */
+    wide?: boolean;
+  }>();
+
+  // sm:px-4 lg:px-4 не избыточны: перекрывают адаптивные паддинги
+  // UContainer (sm:px-6 lg:px-8), чтобы контент-зона была 16px и совпадала
+  // по ширине (max-w-(--max-content) − 2×16px = 1288px) с контентом сайта
+  const containerClass = computed(() => [
+    'mx-auto w-full px-4 sm:px-4 lg:px-4 max-w-(--max-content) py-4 lg:flex lg:items-center lg:justify-between lg:gap-x-3',
+    props.wide ? '2xl:max-w-(--max-content-wide)' : undefined,
+  ]);
 </script>
 
 <template>
   <UFooter
     :ui="{
       root: 'mt-auto border-t border-default',
-      // sm:px-4 lg:px-4 не избыточны: перекрывают адаптивные паддинги
-      // UContainer (sm:px-6 lg:px-8), чтобы контент-зона была 16px и совпадала
-      // по ширине (max-w-(--max-content) − 2×16px = 1288px) с контентом сайта
-      container:
-        'mx-auto w-full px-4 sm:px-4 lg:px-4 max-w-(--max-content) py-4 lg:flex lg:items-center lg:justify-between lg:gap-x-3',
+      container: containerClass,
       left: 'flex items-center justify-center lg:justify-start lg:flex-1 gap-x-1.5 lg:order-1',
       center: 'mt-3 lg:mt-0 lg:order-2 flex items-center justify-center',
       right:
