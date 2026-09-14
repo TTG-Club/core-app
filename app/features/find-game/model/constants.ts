@@ -153,11 +153,33 @@ export const CITIES_API_PATH = `${FIND_GAME_API_PREFIX}/cities`;
 /** Справочник игровых систем для форм, карточек и фильтров. */
 export const GAME_SYSTEMS_API_PATH = `${FIND_GAME_API_PREFIX}/game-systems`;
 
+/** Общий ключ Nuxt-кэша справочника систем: карточки и формы читают один. */
+export const GAME_SYSTEMS_DATA_KEY = 'find-game-systems';
+
 /**
- * Справочник жанров: подсказки для поля жанров. Справочник общий и пополняется
- * самими мастерами — вписанный вручную жанр сервис заводит при сохранении игры.
+ * Справочник жанров для формы и фильтра каталога. Список готовый: мастер его
+ * не пополняет, а жанр не из списка пишет отдельным полем игры.
  */
 export const GENRES_API_PATH = `${FIND_GAME_API_PREFIX}/genres`;
+
+/** Общий ключ Nuxt-кэша списка жанров: форма и фильтр читают один список. */
+export const GAME_GENRES_DATA_KEY = 'find-game-genres';
+
+/**
+ * Код своей системы. В справочнике он есть, но в форме выбирается галочкой,
+ * а название системы игра хранит сама.
+ */
+export const GAME_CUSTOM_SYSTEM_CODE = 'HOMEBREW';
+
+/**
+ * Значение «свой жанр» в отборе по жанрам — тот же код, что у своей системы.
+ * Строки с ним в справочнике жанров нет: сервис отбирает по нему игры с
+ * заполненным своим жанром.
+ */
+export const GAME_CUSTOM_GENRE_FILTER_VALUE = GAME_CUSTOM_SYSTEM_CODE;
+
+/** Система новой игры по умолчанию — и та, что стоит в списке при своей системе. */
+export const GAME_DEFAULT_SYSTEM = 'DND_2024';
 
 export const NOTIFICATIONS_API_PATH = `${FIND_GAME_API_PREFIX}/notifications`;
 
@@ -534,6 +556,7 @@ export const GAME_TITLE_MAX_LENGTH = 150;
 export const GAME_COPY_TITLE_SUFFIX = ' (копия)';
 export const GAME_URL_MAX_LENGTH = 2048;
 export const GAME_GENRE_MAX_LENGTH = 100;
+export const GAME_CUSTOM_SYSTEM_MAX_LENGTH = 120;
 
 /** Сколько жанров помещается в одну игру. Больше сервис не принимает. */
 export const GAME_GENRES_MAX_COUNT = 10;
@@ -726,6 +749,7 @@ export const CATALOG_FILTER_CROSSPLAY_IDS = {
 export const CATALOG_FILTER_GROUP_KEYS = {
   favorite: 'favorite',
   system: 'system',
+  genre: 'genre',
   type: 'type',
   duration: 'durationType',
   cost: 'costType',
@@ -1149,31 +1173,22 @@ export const GAME_FORM_SUBMIT_HINT_REQUIRED =
 export const GAME_FIELD_TITLE_LABEL = 'Название';
 export const GAME_FIELD_TITLE_PLACEHOLDER = 'Проклятие Страда';
 export const GAME_FIELD_SYSTEM_LABEL = 'Система';
+export const GAME_FIELD_SYSTEM_SEARCH_PLACEHOLDER = 'Найдите систему';
+
+/** Подпись галочки своей системы — она же подпись варианта в фильтре каталога. */
+export const GAME_FIELD_CUSTOM_SYSTEM_LABEL = 'Своя система';
+export const GAME_FIELD_CUSTOM_SYSTEM_PLACEHOLDER = 'Название системы';
 export const GAME_FIELD_GENRE_LABEL = 'Жанры';
-export const GAME_FIELD_GENRE_PLACEHOLDER = 'Выберите или впишите свои';
-
-export const GAME_FIELD_GENRE_HINT = `Можно выбрать несколько из списка или вписать свои — до ${GAME_GENRES_MAX_COUNT}`;
-
 /**
- * Базовые жанры кампании из «Руководства Мастера» — раздел о жанрах фэнтези
- * (DMG, «Flavors of Fantasy»).
- *
- * Подсказки сервиса дополняются этим списком, а не заменяются им: справочник
- * жанров пополняют сами мастера, и на пустом справочнике поле осталось бы без
- * единого варианта. Свой жанр всегда можно вписать.
+ * Предел жанров стоит в подсказке внутри поля, а не пояснением под ним: иначе
+ * галочка своего жанра уехала бы ниже галочки своей системы в соседней колонке.
  */
-export const GAME_GENRE_SUGGESTIONS = [
-  'Героическое фэнтези',
-  'Меч и магия',
-  'Эпическое фэнтези',
-  'Мифическое фэнтези',
-  'Тёмное фэнтези',
-  'Интриги',
-  'Детектив',
-  'Плащ и шпага',
-  'Война',
-  'Уся',
-] as const;
+export const GAME_FIELD_GENRE_PLACEHOLDER = `Выберите до ${GAME_GENRES_MAX_COUNT} жанров`;
+export const GAME_FIELD_GENRE_SEARCH_PLACEHOLDER = 'Найдите жанр';
+
+/** Подпись галочки своего жанра — она же подпись варианта в фильтре каталога. */
+export const GAME_FIELD_CUSTOM_GENRE_LABEL = 'Свой жанр';
+export const GAME_FIELD_CUSTOM_GENRE_PLACEHOLDER = 'Название жанра';
 export const GAME_FIELD_IMAGE_LABEL = 'Обложка';
 
 export const GAME_FIELD_IMAGE_HINT =

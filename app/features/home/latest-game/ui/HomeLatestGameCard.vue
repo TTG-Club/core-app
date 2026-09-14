@@ -30,7 +30,7 @@
   const { format } = useDayjs();
 
   const gameRoute = computed(() => getGameRoute(game.id));
-  const genresLabel = computed(() => getGenresLabel(game.genres));
+  const genresLabel = computed(() => getGenresLabel(game));
 
   const costBadgeColor = computed(() => GAME_COST_TYPE_COLORS[game.costType]);
 
@@ -42,8 +42,8 @@
 
   const formatSummary = computed(() => getGameFormatSummary(game));
 
-  const { getSystemName } = useGameSystems();
-  const systemLabel = computed(() => getSystemName(game.system));
+  const { getGameSystemLabel } = useGameSystems();
+  const systemLabel = computed(() => getGameSystemLabel(game));
 
   /**
    * Своей даты у игры нет — время назначается встречам, поэтому показываем

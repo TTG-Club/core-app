@@ -3,7 +3,6 @@
 
   import type { CreateGameRequest, Game, GameFormState } from '../model';
 
-  import { uniqBy } from 'es-toolkit';
   import { StatusCodes } from 'http-status-codes';
 
   import { MarkupEditor } from '~ui/markup-editor';
@@ -12,8 +11,8 @@
   import {
     useCityDictionary,
     useFindGameToast,
+    useGameGenres,
     useGameSystems,
-    useGenreDictionary,
   } from '../composables';
   import {
     CANCEL_LABEL,
@@ -24,9 +23,12 @@
     GAME_CITY_MAX_LENGTH,
     GAME_COST_TYPE_LABELS,
     GAME_COST_TYPES,
+    GAME_CUSTOM_SYSTEM_CODE,
+    GAME_CUSTOM_SYSTEM_MAX_LENGTH,
     GAME_DEFAULT_MAX_PLAYERS,
     GAME_DEFAULT_ONLINE_PLATFORM,
     GAME_DEFAULT_PLAYERS_TO_START,
+    GAME_DEFAULT_SYSTEM,
     GAME_DURATION_TYPE_LABELS,
     GAME_DURATION_TYPES,
     GAME_EDIT_COST_LOCKED_HINT,
@@ -40,15 +42,19 @@
     GAME_FIELD_COST_HINT,
     GAME_FIELD_COST_LABEL,
     GAME_FIELD_CROSSPLAY_LABEL,
+    GAME_FIELD_CUSTOM_GENRE_LABEL,
+    GAME_FIELD_CUSTOM_GENRE_PLACEHOLDER,
+    GAME_FIELD_CUSTOM_SYSTEM_LABEL,
+    GAME_FIELD_CUSTOM_SYSTEM_PLACEHOLDER,
     GAME_FIELD_DESCRIPTION_LABEL,
     GAME_FIELD_DESCRIPTION_PLACEHOLDER,
     GAME_FIELD_DURATION_LABEL,
     GAME_FIELD_GAME_CHAT_HINT,
     GAME_FIELD_GAME_CHAT_LABEL,
     GAME_FIELD_GAME_CHAT_PLACEHOLDER,
-    GAME_FIELD_GENRE_HINT,
     GAME_FIELD_GENRE_LABEL,
     GAME_FIELD_GENRE_PLACEHOLDER,
+    GAME_FIELD_GENRE_SEARCH_PLACEHOLDER,
     GAME_FIELD_IMAGE_HINT,
     GAME_FIELD_IMAGE_LABEL,
     GAME_FIELD_MASTER_CHAT_HINT,
@@ -64,6 +70,7 @@
     GAME_FIELD_REQUIREMENTS_PLACEHOLDER,
     GAME_FIELD_STARTING_LEVEL_LABEL,
     GAME_FIELD_SYSTEM_LABEL,
+    GAME_FIELD_SYSTEM_SEARCH_PLACEHOLDER,
     GAME_FIELD_TITLE_LABEL,
     GAME_FIELD_TITLE_PLACEHOLDER,
     GAME_FIELD_TYPE_LABEL,
@@ -89,7 +96,7 @@
     GAME_FORM_SUBMIT_LABEL,
     GAME_FORM_UNSAVED_WARNING,
     GAME_FORM_UPDATED_TOAST,
-    GAME_GENRES_MAX_COUNT,
+    GAME_GENRE_MAX_LENGTH,
     GAME_IMAGE_MAX_SIZE,
     GAME_IMAGE_SECTION,
     GAME_LINKS_TITLE,
@@ -110,7 +117,6 @@
     GAMES_ROUTE,
     getFindGameErrorMessage,
     getFindGameStatus,
-    getGenreKey,
     normalizeGenres,
     updateGame,
   } from '../model';
@@ -146,13 +152,17 @@
   function createEmptyForm(): GameFormState {
     return {
       title: '',
-      system: 'DND_2024',
+      system: GAME_DEFAULT_SYSTEM,
+      isCustomSystem: false,
+      customSystem: '',
       imageUrl: '',
       virtualTableUrl: '',
       onlinePlatform: GAME_DEFAULT_ONLINE_PLATFORM,
       masterChatUrl: '',
       gameChatUrl: '',
       genres: [],
+      isCustomGenre: false,
+      customGenre: '',
       description: '',
       requirements: '',
       allowedSources: [],
@@ -178,9 +188,15 @@
    * @param source Редактируемая игра.
    */
   function toFormState(source: Game): GameFormState {
+    const isCustomSystem = source.system === GAME_CUSTOM_SYSTEM_CODE;
+
     return {
       title: source.title,
-      system: source.system,
+      // У своей системы в списке кода нет, поэтому там стоит система по
+      // умолчанию — на случай, если галочку снимут.
+      system: isCustomSystem ? GAME_DEFAULT_SYSTEM : source.system,
+      isCustomSystem,
+      customSystem: source.customSystem ?? '',
       imageUrl: source.imageUrl ?? '',
       virtualTableUrl: source.virtualTableUrl ?? '',
       onlinePlatform: source.onlinePlatform ?? GAME_DEFAULT_ONLINE_PLATFORM,
@@ -189,6 +205,8 @@
       // ему приходит и он.
       gameChatUrl: source.gameChatUrl ?? '',
       genres: [...source.genres],
+      isCustomGenre: !!source.customGenre,
+      customGenre: source.customGenre ?? '',
       description: source.description,
       requirements: source.requirements,
       allowedSources: [...source.allowedSources],
@@ -265,21 +283,32 @@
     }
   });
 
-  /** Проверяет тот же запрос, который будет отправлен сервису. */
+  /**
+   * Проверяет тот же запрос, который будет отправлен сервису. Пустое поле
+   * своего жанра запрос не выдаёт — пустой жанр в него просто не попадает, —
+   * поэтому отмеченную галочку без названия проверяет сама форма.
+   */
   function validateForm(): Array<FormError> {
     const result = createGameRequestSchema.safeParse(toRequest());
 
-    if (result.success) {
-      return [];
+    const requestErrors = result.success
+      ? []
+      : result.error.issues.map((issue) => ({
+          name: issue.path.join('.'),
+          message:
+            issue.code === 'too_small' && issue.minimum === 1
+              ? GAME_FORM_REQUIRED_ERROR
+              : issue.message,
+        }));
+
+    if (form.value.isCustomGenre && !form.value.customGenre.trim()) {
+      return [
+        ...requestErrors,
+        { name: 'customGenre', message: GAME_FORM_REQUIRED_ERROR },
+      ];
     }
 
-    return result.error.issues.map((issue) => ({
-      name: issue.path.join('.'),
-      message:
-        issue.code === 'too_small' && issue.minimum === 1
-          ? GAME_FORM_REQUIRED_ERROR
-          : issue.message,
-    }));
+    return requestErrors;
   }
 
   /** Раскрывает раздел и фокусирует первое поле с ошибкой, включая редактор. */
@@ -353,29 +382,11 @@
     form.value.city = value.trim().slice(0, GAME_CITY_MAX_LENGTH);
   }
 
-  const genreSearch = ref('');
-
-  const { genreNames, isLoading: areGenresLoading } =
-    useGenreDictionary(genreSearch);
-
-  // Выбранные жанры остаются в списке, даже когда подсказки уже про другое:
-  // иначе отмеченное пропадало бы из поля при следующем наборе. Отброс
-  // повторов идёт по тому же ключу, что и в справочнике, — подсказка в другом
-  // регистре не должна встать вторым вариантом рядом с отмеченным.
-  const genreItems = computed(() =>
-    uniqBy([...form.value.genres, ...genreNames.value], getGenreKey),
-  );
-
-  // Вписать свой жанр можно, пока набор не заполнен: иначе поле предлагало бы
-  // создать то, что всё равно не поместится.
-  const canCreateGenre = computed(
-    () => form.value.genres.length < GAME_GENRES_MAX_COUNT,
-  );
+  const { genres: genreItems, isLoading: areGenresLoading } = useGameGenres();
 
   /**
    * Отмеченные жанры. Набор приходит от поля целиком, поэтому лишнее
-   * отсекается здесь: сервис отвергает и повторы по регистру, и больше
-   * десяти жанров.
+   * отсекается здесь: больше десяти жанров сервис не принимает.
    */
   const selectedGenres = computed({
     get: () => form.value.genres,
@@ -383,17 +394,6 @@
       form.value.genres = normalizeGenres(values);
     },
   });
-
-  /**
-   * Добавляет вписанный вручную жанр. Сервис заведёт его в общем справочнике
-   * сам — отдельного запроса на создание жанра нет. Пробелы, длину и повтор
-   * с уже отмеченным разбирает сеттер набора.
-   * @param value Название жанра.
-   */
-  function addGenre(value: string): void {
-    selectedGenres.value = [...form.value.genres, value];
-    genreSearch.value = '';
-  }
 
   const typeItems = toSelectItems(GAME_TYPES, GAME_TYPE_LABELS);
 
@@ -463,7 +463,7 @@
 
     const request: CreateGameRequest = {
       title: state.title.trim(),
-      system: state.system,
+      system: state.isCustomSystem ? GAME_CUSTOM_SYSTEM_CODE : state.system,
       description: state.description.trim(),
       requirements: state.requirements.trim(),
       type: state.type,
@@ -476,6 +476,16 @@
       costType: state.costType,
       visibility: state.visibility,
     };
+
+    // Названия своей системы и своего жанра уходят, только пока отмечены их
+    // галочки: снятая галочка оставляет вписанное в поле, но не в игре.
+    if (state.isCustomSystem && state.customSystem.trim()) {
+      request.customSystem = state.customSystem.trim();
+    }
+
+    if (state.isCustomGenre && state.customGenre.trim()) {
+      request.customGenre = state.customGenre.trim();
+    }
 
     if (state.imageUrl.trim()) {
       request.imageUrl = state.imageUrl.trim();
@@ -612,38 +622,80 @@
               />
             </UFormField>
 
-            <div class="grid gap-4 sm:grid-cols-2">
-              <UFormField
-                :label="GAME_FIELD_SYSTEM_LABEL"
-                required
-              >
-                <USelect
-                  v-model="form.system"
-                  :items="systemItems"
-                  :loading="gameSystemsLoading"
-                  class="w-full"
-                />
-              </UFormField>
+            <!-- Своей системы и своего жанра в списках нет: их отмечают
+            галочкой под полем, и ниже появляется строка для названия. Галочки
+            стоят вне UFormField, чтобы не делить с полем его id -->
+            <div class="grid gap-4 sm:grid-cols-2 sm:items-start">
+              <div class="flex flex-col gap-3">
+                <UFormField
+                  :label="GAME_FIELD_SYSTEM_LABEL"
+                  required
+                >
+                  <USelectMenu
+                    v-model="form.system"
+                    value-key="value"
+                    :items="systemItems"
+                    :loading="gameSystemsLoading"
+                    :disabled="form.isCustomSystem"
+                    :search-input="{
+                      placeholder: GAME_FIELD_SYSTEM_SEARCH_PLACEHOLDER,
+                    }"
+                    class="w-full"
+                  />
+                </UFormField>
 
-              <!-- Длинные пояснения идут под полем, а не справа от подписи: в
-              строке подписи они отрываются от самого поля -->
-              <UFormField
-                :label="GAME_FIELD_GENRE_LABEL"
-                :help="GAME_FIELD_GENRE_HINT"
-              >
-                <USelectMenu
-                  v-model="selectedGenres"
-                  v-model:search-term="genreSearch"
-                  multiple
-                  :items="genreItems"
-                  :loading="areGenresLoading"
-                  ignore-filter
-                  :create-item="canCreateGenre"
-                  :placeholder="GAME_FIELD_GENRE_PLACEHOLDER"
-                  class="w-full"
-                  @create="addGenre"
+                <UCheckbox
+                  v-model="form.isCustomSystem"
+                  :label="GAME_FIELD_CUSTOM_SYSTEM_LABEL"
                 />
-              </UFormField>
+
+                <UFormField
+                  v-if="form.isCustomSystem"
+                  name="customSystem"
+                  data-game-field="customSystem"
+                >
+                  <UInput
+                    v-model="form.customSystem"
+                    :maxlength="GAME_CUSTOM_SYSTEM_MAX_LENGTH"
+                    :placeholder="GAME_FIELD_CUSTOM_SYSTEM_PLACEHOLDER"
+                    class="w-full"
+                  />
+                </UFormField>
+              </div>
+
+              <div class="flex flex-col gap-3">
+                <UFormField :label="GAME_FIELD_GENRE_LABEL">
+                  <USelectMenu
+                    v-model="selectedGenres"
+                    multiple
+                    :items="genreItems"
+                    :loading="areGenresLoading"
+                    :placeholder="GAME_FIELD_GENRE_PLACEHOLDER"
+                    :search-input="{
+                      placeholder: GAME_FIELD_GENRE_SEARCH_PLACEHOLDER,
+                    }"
+                    class="w-full"
+                  />
+                </UFormField>
+
+                <UCheckbox
+                  v-model="form.isCustomGenre"
+                  :label="GAME_FIELD_CUSTOM_GENRE_LABEL"
+                />
+
+                <UFormField
+                  v-if="form.isCustomGenre"
+                  name="customGenre"
+                  data-game-field="customGenre"
+                >
+                  <UInput
+                    v-model="form.customGenre"
+                    :maxlength="GAME_GENRE_MAX_LENGTH"
+                    :placeholder="GAME_FIELD_CUSTOM_GENRE_PLACEHOLDER"
+                    class="w-full"
+                  />
+                </UFormField>
+              </div>
             </div>
 
             <UFormField

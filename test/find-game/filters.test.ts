@@ -21,6 +21,9 @@ const SYSTEMS = [
   { code: 'PATHFINDER_2E', name: 'Pathfinder 2e' },
 ];
 
+/** Список жанров из сервиса: «свой жанр» в нём не приходит. */
+const GENRES = ['Хоррор', 'Вестерн'];
+
 /**
  * Приводит собранные параметры к тому виду, в каком их отдаёт маршрут: в
  * адресе всё становится строкой, и обратный разбор работает именно с этим.
@@ -223,6 +226,7 @@ describe('запись фильтра в адрес', () => {
     const filter = createEmptyGameFilter();
 
     filter.system = ['DND_2024'];
+    filter.genre = ['Хоррор', 'HOMEBREW'];
     filter.excludeType = ['TEXT'];
     filter.city = ['Кишинёв'];
     filter.crossplayAllowed = true;
@@ -245,10 +249,12 @@ describe('запрос к сервису', () => {
 
     filter.costType = ['FREE'];
     filter.excludeType = ['TEXT'];
+    filter.excludeGenre = ['Вестерн', 'HOMEBREW'];
 
     expect(toGameSearchQuery(filter, 2, 12)).toEqual({
       costType: 'FREE',
       excludeType: 'TEXT',
+      excludeGenre: 'Вестерн,HOMEBREW',
       page: 2,
       size: 12,
     });
@@ -304,9 +310,11 @@ describe('группы общей панели фильтров', () => {
     filter.city = ['Москва'];
     filter.minAge = 18;
 
-    const groups = toGameFilterGroups(filter, true, SYSTEMS);
+    const groups = toGameFilterGroups(filter, true, SYSTEMS, GENRES);
 
-    expect(applyGameFilterGroups(filter, groups, SYSTEMS)).toEqual(filter);
+    expect(applyGameFilterGroups(filter, groups, SYSTEMS, GENRES)).toEqual(
+      filter,
+    );
   });
 
   it('исключает группу, только когда искомых значений нет', () => {
@@ -317,6 +325,7 @@ describe('группы общей панели фильтров', () => {
       },
       true,
       SYSTEMS,
+      GENRES,
     );
 
     expect(groups.find((group) => group.key === 'costType')?.mode).toBe(true);
@@ -324,7 +333,12 @@ describe('группы общей панели фильтров', () => {
   });
 
   it('гостю не показывает избранное', () => {
-    const groups = toGameFilterGroups(createEmptyGameFilter(), false, SYSTEMS);
+    const groups = toGameFilterGroups(
+      createEmptyGameFilter(),
+      false,
+      SYSTEMS,
+      GENRES,
+    );
 
     expect(groups.some((group) => group.key === 'favorite')).toBe(false);
   });
@@ -334,6 +348,7 @@ describe('группы общей панели фильтров', () => {
       createEmptyGameFilter(),
       true,
       SYSTEMS,
+      GENRES,
     ).map((group) =>
       group.key === 'crossplayAllowed'
         ? {
@@ -347,7 +362,7 @@ describe('группы общей панели фильтров', () => {
     );
 
     expect(
-      applyGameFilterGroups(createEmptyGameFilter(), groups, SYSTEMS)
+      applyGameFilterGroups(createEmptyGameFilter(), groups, SYSTEMS, GENRES)
         .crossplayAllowed,
     ).toBeNull();
   });
@@ -357,12 +372,57 @@ describe('группы общей панели фильтров', () => {
       createEmptyGameFilter(),
       true,
       SYSTEMS,
+      GENRES,
     ).find((group) => group.key === 'status');
 
     expect(status?.values?.map((filterItem) => filterItem.id)).toEqual([
       'OPEN',
       'CLOSED',
     ]);
+  });
+
+  it('ставит свой жанр последним вариантом группы жанров', () => {
+    const genre = toGameFilterGroups(
+      createEmptyGameFilter(),
+      true,
+      SYSTEMS,
+      GENRES,
+    ).find((group) => group.key === 'genre');
+
+    expect(
+      genre?.values?.map((filterItem) => [filterItem.id, filterItem.name]),
+    ).toEqual([
+      ['Хоррор', 'Хоррор'],
+      ['Вестерн', 'Вестерн'],
+      ['HOMEBREW', 'Свой жанр'],
+    ]);
+  });
+
+  it('переносит исключённые жанры и отбрасывает жанр не из списка', () => {
+    const filter = {
+      ...createEmptyGameFilter(),
+      excludeGenre: ['Вестерн', 'HOMEBREW'],
+    };
+
+    const groups = toGameFilterGroups(filter, true, SYSTEMS, GENRES);
+
+    expect(applyGameFilterGroups(filter, groups, SYSTEMS, GENRES)).toEqual(
+      filter,
+    );
+
+    expect(
+      applyGameFilterGroups(
+        createEmptyGameFilter(),
+        toGameFilterGroups(
+          { ...createEmptyGameFilter(), genre: ['Выдуманный'] },
+          true,
+          SYSTEMS,
+          GENRES,
+        ),
+        SYSTEMS,
+        GENRES,
+      ).genre,
+    ).toEqual([]);
   });
 });
 
@@ -382,6 +442,23 @@ describe('ряд применённых условий', () => {
       ['Онлайн', false],
       ['Платно', true],
       ['До старта не хватает не больше 0', false],
+    ]);
+  });
+
+  it('подписывает свою систему справочником, а свой жанр — как в форме', () => {
+    const chips = getGameFilterChips(
+      {
+        ...createEmptyGameFilter(),
+        system: ['HOMEBREW'],
+        genre: ['Хоррор', 'HOMEBREW'],
+      },
+      [...SYSTEMS, { code: 'HOMEBREW', name: 'Своя система' }],
+    );
+
+    expect(chips.map((chip) => chip.label)).toEqual([
+      'Своя система',
+      'Хоррор',
+      'Свой жанр',
     ]);
   });
 

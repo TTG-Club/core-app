@@ -143,10 +143,10 @@
   const formatIcon = computed(() => GAME_TYPE_ICONS[game.type]);
 
   const formatSummary = computed(() => getGameFormatSummary(game));
-  const genresLabel = computed(() => getGenresLabel(game.genres));
+  const genresLabel = computed(() => getGenresLabel(game));
 
-  const { getSystemName } = useGameSystems();
-  const systemLabel = computed(() => getSystemName(game.system));
+  const { getGameSystemLabel } = useGameSystems();
+  const systemLabel = computed(() => getGameSystemLabel(game));
 
   /**
    * Места в ближайшей сессии, по одному значку на место. Три состояния

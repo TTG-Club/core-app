@@ -1,7 +1,10 @@
-import { fetchGameSystems } from '../model';
+import type { Game } from '../model';
 
-/** Общий ключ Nuxt-кэша: все карточки и формы используют один справочник. */
-const GAME_SYSTEMS_DATA_KEY = 'find-game-systems';
+import {
+  fetchGameSystems,
+  GAME_CUSTOM_SYSTEM_CODE,
+  GAME_SYSTEMS_DATA_KEY,
+} from '../model';
 
 /**
  * Загружает управляемый backend-справочник игровых систем.
@@ -17,11 +20,15 @@ export function useGameSystems() {
     { deep: false, default: () => [] },
   );
 
+  // Своя система в форме выбирается галочкой под списком, поэтому в самом
+  // списке её нет. В фильтре каталога она остаётся обычным вариантом.
   const systemItems = computed(() =>
-    systems.value.map((system) => ({
-      value: system.code,
-      label: system.name,
-    })),
+    systems.value
+      .filter((system) => system.code !== GAME_CUSTOM_SYSTEM_CODE)
+      .map((system) => ({
+        value: system.code,
+        label: system.name,
+      })),
   );
 
   const isLoading = computed(
@@ -36,5 +43,16 @@ export function useGameSystems() {
     return systems.value.find((system) => system.code === code)?.name ?? code;
   }
 
-  return { systems, systemItems, isLoading, getSystemName };
+  /**
+   * Подпись системы игры: у своей системы — название, которое вписал мастер,
+   * у системы из списка — её название в справочнике.
+   * @param game Игра с системой.
+   */
+  function getGameSystemLabel(
+    game: Pick<Game, 'system' | 'customSystem'>,
+  ): string {
+    return game.customSystem ?? getSystemName(game.system);
+  }
+
+  return { systems, systemItems, isLoading, getGameSystemLabel };
 }

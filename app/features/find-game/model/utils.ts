@@ -91,7 +91,9 @@ export function toGameCopyRequest(game: Game): CreateGameRequest {
     ...(game.onlinePlatform ? { onlinePlatform: game.onlinePlatform } : {}),
     ...(game.masterChatUrl ? { masterChatUrl: game.masterChatUrl } : {}),
     ...(game.gameChatUrl ? { gameChatUrl: game.gameChatUrl } : {}),
+    ...(game.customSystem ? { customSystem: game.customSystem } : {}),
     ...(game.genres.length ? { genres: [...game.genres] } : {}),
+    ...(game.customGenre ? { customGenre: game.customGenre } : {}),
     ...(game.allowedSources.length
       ? { allowedSources: [...game.allowedSources] }
       : {}),
@@ -193,11 +195,17 @@ export function normalizeGenres(genres: Array<string>): Array<string> {
 }
 
 /**
- * Жанры одной строкой для карточек и сводки. Пусто — мастер их не указал, и
- * строку показывать нечем.
- * @param genres Жанры игры.
+ * Жанры одной строкой для карточек и сводки: жанры из списка, следом свой.
+ * Пусто — мастер жанров не указал, и строку показывать нечем.
+ * @param game Игра с жанрами.
  */
-export function getGenresLabel(genres: Array<string>): string {
+export function getGenresLabel(
+  game: Pick<Game, 'genres' | 'customGenre'>,
+): string {
+  const genres = game.customGenre
+    ? [...game.genres, game.customGenre]
+    : game.genres;
+
   return genres.join(GENRES_SEPARATOR);
 }
 

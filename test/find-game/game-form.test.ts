@@ -49,6 +49,26 @@ describe('тело создания игры', () => {
     expect(parsed.system).toBe('PATHFINDER_2E');
   });
 
+  it('своя система без названия не проходит', () => {
+    const homebrewValidation = createGameRequestSchema.safeParse(
+      onlineGame({ system: 'HOMEBREW', customSystem: '   ' }),
+    );
+
+    expect(homebrewValidation.success).toBe(false);
+
+    expect(homebrewValidation.error?.issues.map((issue) => issue.path)).toEqual(
+      [['customSystem']],
+    );
+  });
+
+  it('своя система с названием проходит', () => {
+    const homebrewGame = createGameRequestSchema.parse(
+      onlineGame({ system: 'HOMEBREW', customSystem: ' Мир Тьмы ' }),
+    );
+
+    expect(homebrewGame.customSystem).toBe('Мир Тьмы');
+  });
+
   it('сохраняет выбранную платформу онлайн-игры', () => {
     const parsed = createGameRequestSchema.parse(
       onlineGame({ onlinePlatform: 'FOUNDRY_VTT' }),
@@ -392,10 +412,18 @@ describe('жанры игры', () => {
 
 describe('подпись жанров', () => {
   it('жанры перечисляются через запятую', () => {
-    expect(getGenresLabel(['Хоррор', 'Детектив'])).toBe('Хоррор, Детектив');
+    expect(
+      getGenresLabel({ genres: ['Хоррор', 'Детектив'], customGenre: null }),
+    ).toBe('Хоррор, Детектив');
+  });
+
+  it('свой жанр идёт после жанров из списка', () => {
+    expect(
+      getGenresLabel({ genres: ['Хоррор'], customGenre: 'Хоррор-комедия' }),
+    ).toBe('Хоррор, Хоррор-комедия');
   });
 
   it('без жанров подпись пустая', () => {
-    expect(getGenresLabel([])).toBe('');
+    expect(getGenresLabel({ genres: [], customGenre: null })).toBe('');
   });
 });

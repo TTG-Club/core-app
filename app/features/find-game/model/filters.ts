@@ -35,9 +35,12 @@ import {
   GAME_AGE_MIN,
   GAME_COST_TYPE_LABELS,
   GAME_COST_TYPES,
+  GAME_CUSTOM_GENRE_FILTER_VALUE,
   GAME_DURATION_TYPE_LABELS,
   GAME_DURATION_TYPES,
+  GAME_FACT_LABELS,
   GAME_FIELD_CITY_LABEL,
+  GAME_FIELD_CUSTOM_GENRE_LABEL,
   GAME_PLAYERS_MAX,
   GAME_STATUS_LABELS,
   GAME_STATUSES,
@@ -159,6 +162,8 @@ export function createEmptyGameFilter(): GameSearchFilter {
   return {
     system: [],
     excludeSystem: [],
+    genre: [],
+    excludeGenre: [],
     type: [],
     excludeType: [],
     durationType: [],
@@ -196,6 +201,8 @@ export function parseGameFilterFromQuery(
   return {
     system: [...new Set(readQueryValues(query.system))],
     excludeSystem: [...new Set(readQueryValues(query.excludeSystem))],
+    genre: [...new Set(readQueryValues(query.genre))],
+    excludeGenre: [...new Set(readQueryValues(query.excludeGenre))],
     type: readEnumValues<GameType>(readQueryValues(query.type), GAME_TYPES),
     excludeType: readEnumValues<GameType>(
       readQueryValues(query.excludeType),
@@ -262,6 +269,8 @@ export function parseCatalogPageFromQuery(query: LocationQuery): number {
 const LIST_FILTER_KEYS = [
   'system',
   'excludeSystem',
+  'genre',
+  'excludeGenre',
   'type',
   'excludeType',
   'durationType',
@@ -519,6 +528,26 @@ function toSystemLabels(
 }
 
 /**
+ * Варианты отбора по жанру: жанры списка по порядку и «свой жанр» последним —
+ * это выход для тех, чьего жанра в списке нет.
+ * @param genres Список жанров.
+ */
+function toGenreOptions(genres: ReadonlyArray<string>): Array<string> {
+  return [...genres, GAME_CUSTOM_GENRE_FILTER_VALUE];
+}
+
+/**
+ * Подпись варианта отбора по жанру. Жанр из списка подписан своим названием, а
+ * у своего жанра подпись та же, что у галочки в форме игры.
+ * @param genreFilterValue Название жанра или значение «свой жанр».
+ */
+function getGenreFilterLabel(genreFilterValue: string): string {
+  return genreFilterValue === GAME_CUSTOM_GENRE_FILTER_VALUE
+    ? GAME_FIELD_CUSTOM_GENRE_LABEL
+    : genreFilterValue;
+}
+
+/**
  * Группы общей панели фильтров сайта из фильтра каталога игр.
  *
  * Город, возраст и места чипами не выражаются — их панель показывает
@@ -529,12 +558,16 @@ function toSystemLabels(
  *   сервис вернул бы ему пустой каталог вместо подбора.
  * @param systems Справочник игровых систем: перечисления у них больше нет, и
  *   набор вариантов приходит от сервиса.
+ * @param genres Список жанров из сервиса.
  */
 export function toGameFilterGroups(
   filter: GameSearchFilter,
   withFavorite: boolean,
   systems: ReadonlyArray<GameSystemOption>,
+  genres: ReadonlyArray<string>,
 ): FilterGroups {
+  const genreOptions = toGenreOptions(genres);
+
   const groups: FilterGroups = [
     toChoiceGroup(
       CATALOG_FILTER_GROUP_KEYS.system,
@@ -542,6 +575,15 @@ export function toGameFilterGroups(
       systems.map((system) => system.code),
       toSystemLabels(systems),
       { included: filter.system, excluded: filter.excludeSystem },
+    ),
+    toChoiceGroup(
+      CATALOG_FILTER_GROUP_KEYS.genre,
+      GAME_FACT_LABELS.genres,
+      genreOptions,
+      Object.fromEntries(
+        genreOptions.map((option) => [option, getGenreFilterLabel(option)]),
+      ),
+      { included: filter.genre, excluded: filter.excludeGenre },
     ),
     toChoiceGroup(
       CATALOG_FILTER_GROUP_KEYS.type,
@@ -615,16 +657,24 @@ export function toGameFilterGroups(
  * @param groups Группы панели после «Применить».
  * @param systems Справочник игровых систем: по нему отсеиваются коды, которых
  *   в справочнике уже нет.
+ * @param genres Список жанров: так же отсеивает жанры, которых в нём нет.
  */
 export function applyGameFilterGroups(
   filter: GameSearchFilter,
   groups: FilterGroups,
   systems: ReadonlyArray<GameSystemOption>,
+  genres: ReadonlyArray<string>,
 ): GameSearchFilter {
   const system = readChoiceGroup(
     groups,
     CATALOG_FILTER_GROUP_KEYS.system,
     systems.map((option) => option.code),
+  );
+
+  const genre = readChoiceGroup(
+    groups,
+    CATALOG_FILTER_GROUP_KEYS.genre,
+    toGenreOptions(genres),
   );
 
   const type = readChoiceGroup(
@@ -668,6 +718,8 @@ export function applyGameFilterGroups(
     ...filter,
     system: system.included,
     excludeSystem: system.excluded,
+    genre: genre.included,
+    excludeGenre: genre.excluded,
     type: type.included,
     excludeType: type.excluded,
     durationType: duration.included,
@@ -785,6 +837,13 @@ export function getGameFilterChips(
   chips.push(
     ...toListChips('system', filter.system, getSystemLabel, false),
     ...toListChips('excludeSystem', filter.excludeSystem, getSystemLabel, true),
+    ...toListChips('genre', filter.genre, getGenreFilterLabel, false),
+    ...toListChips(
+      'excludeGenre',
+      filter.excludeGenre,
+      getGenreFilterLabel,
+      true,
+    ),
     ...toListChips('type', filter.type, getTypeLabel, false),
     ...toListChips('excludeType', filter.excludeType, getTypeLabel, true),
     ...toListChips(
