@@ -33,6 +33,7 @@ import {
   REVIEW_VERDICT_TEXT_CLASS,
   REVIEW_WINDOW_DAYS,
   SESSION_PAYMENT_TYPE_LABELS,
+  TABLETOP_EXPERIENCE_LABEL,
 } from './constants';
 import { findNearestMoment } from './timeline';
 
@@ -219,6 +220,19 @@ export function getGameFormatSummary(game: Game): string {
  */
 export function getGamesFoundLabel(total: number): string {
   return `Найдено ${total} ${getPlural(total, ['игра', 'игры', 'игр'])}`;
+}
+
+/**
+ * Стаж за игровым столом в профиле мастера или игрока.
+ * @param years Стаж, лет; `null` — владелец профиля его не указал.
+ * @returns Подпись стажа или пустая строка, когда показывать нечего.
+ */
+export function getTabletopExperienceLabel(years: number | null): string {
+  if (years === null) {
+    return '';
+  }
+
+  return `${TABLETOP_EXPERIENCE_LABEL} ${years} ${getPlural(years, ['год', 'года', 'лет'])}`;
 }
 
 /**

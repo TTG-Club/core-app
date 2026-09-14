@@ -67,6 +67,13 @@
     openPlayerProfile(playerId, getParticipantName(playerId));
   }
 
+  /** Открывает свой профиль из собственной карточки состава. */
+  function showOwnProfile(): void {
+    if (ownRegistration) {
+      showPlayerProfile(ownRegistration.playerId);
+    }
+  }
+
   const isApproved = computed(() => ownRegistration?.status === 'APPROVED');
 
   const canWithdraw = computed(
@@ -315,10 +322,8 @@
                 as="button"
                 type="button"
                 class="text-left font-medium wrap-break-word text-primary"
-                :aria-label="PLAYER_PROFILE_OPEN_HINT"
-                @click.left.exact.prevent.stop="
-                  showPlayerProfile(ownRegistration.playerId)
-                "
+                :title="PLAYER_PROFILE_OPEN_HINT"
+                @click.left.exact.prevent="showOwnProfile"
               >
                 {{ getParticipantName(ownRegistration.playerId) }}
               </ULink>
@@ -439,10 +444,8 @@
             as="button"
             type="button"
             class="text-left font-medium wrap-break-word text-primary"
-            :aria-label="PLAYER_PROFILE_OPEN_HINT"
-            @click.left.exact.prevent.stop="
-              showPlayerProfile(participant.playerId)
-            "
+            :title="PLAYER_PROFILE_OPEN_HINT"
+            @click.left.exact.prevent="showPlayerProfile(participant.playerId)"
           >
             {{ getParticipantName(participant.playerId) }}
           </ULink>

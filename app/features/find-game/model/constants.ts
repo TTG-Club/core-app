@@ -799,10 +799,12 @@ export const GAME_CROSSPLAY_ALLOWED_VALUE =
 /** Заголовок блока со ссылками на стол и разговоры игры. */
 export const GAME_LINKS_TITLE = 'Ссылки';
 
+/** Начало подписи стажа: одна и та же в профиле мастера и игрока. */
+export const TABLETOP_EXPERIENCE_LABEL = 'За столом';
+
 /* Профиль мастера. */
 export const MASTER_PROFILE_TITLE = 'Профиль мастера';
 export const MASTER_PROFILE_ABOUT_EMPTY = 'Мастер о себе пока не рассказал';
-export const MASTER_PROFILE_EXPERIENCE_LABEL = 'За столом';
 export const MASTER_PROFILE_RECRUITING_LABEL = 'В наборе';
 export const MASTER_PROFILE_CLOSED_LABEL = 'Завершено игр';
 export const MASTER_PROFILE_CANCELLED_LABEL = 'Отменено игр';
@@ -816,9 +818,8 @@ export const MASTER_PROFILE_ABOUT_TITLE = 'О мастере';
 export const PLAYER_PROFILE_TITLE = 'Профиль игрока';
 export const PLAYER_PROFILE_ABOUT_TITLE = 'Об игроке';
 export const PLAYER_PROFILE_ABOUT_EMPTY = 'Игрок о себе пока не рассказал';
-export const PLAYER_PROFILE_EXPERIENCE_LABEL = 'За столом';
 export const PLAYER_PROFILE_SESSIONS_LABEL = 'Сыграно встреч';
-export const PLAYER_PROFILE_ERROR_TITLE = 'Не удалось загрузить профиль';
+export const PLAYER_PROFILE_ERROR_TITLE = MASTER_PROFILE_ERROR_TITLE;
 export const PLAYER_PROFILE_OPEN_HINT = 'Открыть профиль игрока';
 
 /**

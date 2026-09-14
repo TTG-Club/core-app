@@ -20,6 +20,13 @@
 
   const { isLoggedIn } = useUser();
   const isAuthOpened = ref(false);
+
+  // Окно входа монтируется при первом нажатии и дальше остаётся: заранее его
+  // заводить в каждой карточке нельзя — при монтировании оно показывает
+  // уведомление о подтверждённой почте, а размонтирование при закрытии
+  // обрывало бы анимацию, и окно пропадало рывком.
+  const isAuthRequested = ref(false);
+
   const { busyGameId, isFavorite, toggleFavorite } = useFavoriteGames();
 
   const isMarked = computed(() => isFavorite(gameId));
@@ -57,6 +64,7 @@
   /** Ставит или снимает отметку; исход показывает уведомление. */
   function handleToggle(): void {
     if (!isLoggedIn.value) {
+      isAuthRequested.value = true;
       isAuthOpened.value = true;
 
       return;
@@ -86,7 +94,7 @@
     </UTooltip>
 
     <AuthModal
-      v-if="isAuthOpened"
+      v-if="isAuthRequested"
       v-model="isAuthOpened"
     />
   </span>

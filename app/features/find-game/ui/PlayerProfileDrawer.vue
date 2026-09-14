@@ -6,10 +6,10 @@
   import {
     fetchPlayerProfile,
     getFindGameErrorMessage,
+    getTabletopExperienceLabel,
     PLAYER_PROFILE_ABOUT_EMPTY,
     PLAYER_PROFILE_ABOUT_TITLE,
     PLAYER_PROFILE_ERROR_TITLE,
-    PLAYER_PROFILE_EXPERIENCE_LABEL,
     PLAYER_PROFILE_REVIEWS_HINT,
     PLAYER_PROFILE_SESSIONS_LABEL,
     PLAYER_PROFILE_TITLE,
@@ -47,13 +47,9 @@
     () => status.value !== 'success' && status.value !== 'error',
   );
 
-  const experienceLabel = computed(() => {
-    const years = profile.value?.tabletopExperienceYears;
-
-    return years === null || years === undefined
-      ? ''
-      : `${PLAYER_PROFILE_EXPERIENCE_LABEL} ${years} ${getPlural(years, ['год', 'года', 'лет'])}`;
-  });
+  const experienceLabel = computed(() =>
+    getTabletopExperienceLabel(profile.value?.tabletopExperienceYears ?? null),
+  );
 </script>
 
 <template>

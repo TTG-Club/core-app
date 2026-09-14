@@ -2,12 +2,26 @@ import { describe, expect, it } from 'vitest';
 
 import {
   getReputationLabel,
+  getTabletopExperienceLabel,
   parseMasterProfile,
   parseReputation,
   parseSessionReview,
   parseSessionReviews,
   REPUTATION_EMPTY_LABEL,
 } from '~find-game/model';
+
+describe('подпись стажа в профиле', () => {
+  it('склоняет годы', () => {
+    expect(getTabletopExperienceLabel(1)).toBe('За столом 1 год');
+    expect(getTabletopExperienceLabel(3)).toBe('За столом 3 года');
+    expect(getTabletopExperienceLabel(7)).toBe('За столом 7 лет');
+  });
+
+  it('без указанного стажа пуста', () => {
+    // Стаж необязателен: пустая подпись прячет строку, а не пишет «null лет».
+    expect(getTabletopExperienceLabel(null)).toBe('');
+  });
+});
 
 describe('подпись репутации', () => {
   it('читается долей, а не средним баллом', () => {

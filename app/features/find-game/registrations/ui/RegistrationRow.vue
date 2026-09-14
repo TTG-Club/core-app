@@ -191,8 +191,8 @@
             as="button"
             type="button"
             class="text-left font-medium wrap-break-word text-primary"
-            :aria-label="PLAYER_PROFILE_OPEN_HINT"
-            @click.left.exact.prevent.stop="showPlayerProfile"
+            :title="PLAYER_PROFILE_OPEN_HINT"
+            @click.left.exact.prevent="showPlayerProfile"
           >
             {{ playerName }}
           </ULink>

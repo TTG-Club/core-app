@@ -16,12 +16,12 @@
     getReputationLabel,
     getReviewVerdictIcon,
     getReviewVerdictTextClass,
+    getTabletopExperienceLabel,
     MASTER_PROFILE_ABOUT_EMPTY,
     MASTER_PROFILE_ABOUT_TITLE,
     MASTER_PROFILE_CANCELLED_LABEL,
     MASTER_PROFILE_CLOSED_LABEL,
     MASTER_PROFILE_ERROR_TITLE,
-    MASTER_PROFILE_EXPERIENCE_LABEL,
     MASTER_PROFILE_RECRUITING_LABEL,
     MASTER_PROFILE_REVIEW_DATE_FORMAT,
     MASTER_PROFILE_REVIEW_VERDICT_LABELS,
@@ -165,13 +165,9 @@
     ];
   });
 
-  const experienceLabel = computed(() => {
-    const years = profile.value?.tabletopExperienceYears;
-
-    return years === null || years === undefined
-      ? ''
-      : `${MASTER_PROFILE_EXPERIENCE_LABEL} ${years} ${getPlural(years, ['год', 'года', 'лет'])}`;
-  });
+  const experienceLabel = computed(() =>
+    getTabletopExperienceLabel(profile.value?.tabletopExperienceYears ?? null),
+  );
 
   /**
    * Готовит отзыв к показу. Отзыв без текста не пустеет: вместо текста стоит
