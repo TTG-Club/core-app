@@ -209,9 +209,17 @@ html.svifty7 {
      и светлой темах, и тянула внимание на себя */
   --color-backdrop-grid: color-mix(in oklch, var(--ui-border) 35%, transparent);
 
-  /* Карта деревни в шапке главной — рисунок в палитре темы — и её бледность */
-  --hero-map-image: url('/img/home/hero-map-svifty7.svg');
+  /* Карта деревни в шапке главной — рисунок в палитре темы — и её бледность.
+     Растровые копии hero-map-svifty7.svg (scripts/render-hero-map.mjs): весь
+     холст и середина для экранов уже 768px */
+  --hero-map-image: url('/img/home/hero-map-svifty7.webp');
+  --hero-map-image-sm: url('/img/home/hero-map-svifty7-sm.webp');
   --hero-map-opacity: 0.6;
+
+  /* Бумага и тушь карты — ими нарисованы повозка и дым поверх неё
+     (HomeHeroMotion). Совпадают с --paper и --ink в hero-map-svifty7.svg */
+  --hero-map-paper: oklch(0.5 0.01 75);
+  --hero-map-ink: oklch(0.16 0.006 75);
 
   // Logo — тема плоская: верх и низ каждого градиента совпадают
   --color-logo-stroke-top: oklch(0.66 0.07 84.542);

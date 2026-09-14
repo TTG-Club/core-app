@@ -4,18 +4,9 @@
   import type { MarkerType } from '../config';
   import type { MarkerNode, RenderNode } from '../types';
 
-  import { computed, shallowRef, watch } from 'vue';
+  import { computed, defineAsyncComponent, shallowRef, watch } from 'vue';
 
   import { ULink } from '#components';
-  import { BackgroundDrawer } from '~backgrounds/drawer';
-  import { CreatureDrawer } from '~bestiary/drawer';
-  import { ClassDrawer } from '~classes/drawer';
-  import { FeatDrawer } from '~feats/drawer';
-  import { GlossaryDrawer } from '~glossary/drawer';
-  import { ItemDrawer } from '~items/drawer';
-  import { MagicItemDrawer } from '~magic-items/drawer';
-  import { SpeciesDrawer } from '~species/drawer';
-  import { SpellDrawer } from '~spells/drawer';
 
   import { SECTION_LINK_PLAIN_TEXT_WARNING } from '../consts';
 
@@ -57,17 +48,51 @@
     glossary: 'glossary',
   } as const;
 
-  // Маппинг компонентов - все ключи обязательны
+  // Маппинг компонентов - все ключи обязательны. Дроверы грузятся отдельными
+  // чанками при первом открытии: каждый тянет тело своего раздела с моделью и
+  // галереей, а разметка есть и на страницах, где по ссылкам почти не ходят
+  // (реплика персонажа на главной). Статический импорт клал все девять
+  // разделов в стартовый скрипт таких страниц
   const DRAWER_COMPONENT_MAP: Record<SectionLinkType, DrawerComponent> = {
-    class: ClassDrawer,
-    species: SpeciesDrawer,
-    background: BackgroundDrawer,
-    creature: CreatureDrawer,
-    feat: FeatDrawer,
-    glossary: GlossaryDrawer,
-    magicItem: MagicItemDrawer,
-    item: ItemDrawer,
-    spell: SpellDrawer,
+    class: defineAsyncComponent(() =>
+      import('~classes/drawer').then(
+        (drawerModule) => drawerModule.ClassDrawer,
+      ),
+    ),
+    species: defineAsyncComponent(() =>
+      import('~species/drawer').then(
+        (drawerModule) => drawerModule.SpeciesDrawer,
+      ),
+    ),
+    background: defineAsyncComponent(() =>
+      import('~backgrounds/drawer').then(
+        (drawerModule) => drawerModule.BackgroundDrawer,
+      ),
+    ),
+    creature: defineAsyncComponent(() =>
+      import('~bestiary/drawer').then(
+        (drawerModule) => drawerModule.CreatureDrawer,
+      ),
+    ),
+    feat: defineAsyncComponent(() =>
+      import('~feats/drawer').then((drawerModule) => drawerModule.FeatDrawer),
+    ),
+    glossary: defineAsyncComponent(() =>
+      import('~glossary/drawer').then(
+        (drawerModule) => drawerModule.GlossaryDrawer,
+      ),
+    ),
+    magicItem: defineAsyncComponent(() =>
+      import('~magic-items/drawer').then(
+        (drawerModule) => drawerModule.MagicItemDrawer,
+      ),
+    ),
+    item: defineAsyncComponent(() =>
+      import('~items/drawer').then((drawerModule) => drawerModule.ItemDrawer),
+    ),
+    spell: defineAsyncComponent(() =>
+      import('~spells/drawer').then((drawerModule) => drawerModule.SpellDrawer),
+    ),
   } as const;
 
   // Type guard с использованием ключей из маппинга

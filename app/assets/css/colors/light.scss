@@ -237,9 +237,17 @@ html.light {
   /* Клетка фона PageBackdrop */
   --color-backdrop-grid: var(--ui-border);
 
-  /* Карта деревни в шапке главной — чернила на пергаменте — и её бледность */
-  --hero-map-image: url('/img/home/hero-map-light.svg');
+  /* Карта деревни в шапке главной — чернила на пергаменте — и её бледность.
+     Растровые копии hero-map-light.svg (scripts/render-hero-map.mjs): весь
+     холст и середина для экранов уже 768px */
+  --hero-map-image: url('/img/home/hero-map-light.webp');
+  --hero-map-image-sm: url('/img/home/hero-map-light-sm.webp');
   --hero-map-opacity: 0.55;
+
+  /* Бумага и тушь карты — ими нарисованы повозка и дым поверх неё
+     (HomeHeroMotion). Совпадают с --paper и --ink в hero-map-light.svg */
+  --hero-map-paper: oklch(0.985 0.008 75);
+  --hero-map-ink: oklch(0.26 0.02 60);
 
   /* Logo — тема плоская: верх и низ каждого градиента совпадают */
   --color-logo-stroke-top: var(--color-neutral-900);

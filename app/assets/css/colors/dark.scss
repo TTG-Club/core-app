@@ -209,9 +209,17 @@ html.dark {
   /* Клетка фона PageBackdrop */
   --color-backdrop-grid: var(--ui-border);
 
-  /* Карта деревни в шапке главной — рисунок в ночной палитре — и её бледность */
-  --hero-map-image: url('/img/home/hero-map-dark.svg');
+  /* Карта деревни в шапке главной — рисунок в ночной палитре — и её бледность.
+     Растровые копии hero-map-dark.svg (scripts/render-hero-map.mjs): весь
+     холст и середина для экранов уже 768px */
+  --hero-map-image: url('/img/home/hero-map-dark.webp');
+  --hero-map-image-sm: url('/img/home/hero-map-dark-sm.webp');
   --hero-map-opacity: 0.6;
+
+  /* Бумага и тушь карты — ими нарисованы повозка и дым поверх неё
+     (HomeHeroMotion). Совпадают с --paper и --ink в hero-map-dark.svg */
+  --hero-map-paper: oklch(0.42 0.03 230);
+  --hero-map-ink: oklch(0.1 0.02 235);
 
   /* SearchPanel */
   --color-searchanel-100: #87bfdb;
