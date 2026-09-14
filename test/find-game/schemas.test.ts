@@ -13,6 +13,7 @@ import {
   parseGamesPage,
   parseGameSystems,
   parseMasterProfile,
+  parsePlayerProfile,
   parseProblemDetail,
   parseSessionParticipant,
   toGameCopyRequest,
@@ -215,6 +216,32 @@ describe('профиль мастера', () => {
     expect(profile.about).toBeNull();
     expect(profile.tabletopExperienceYears).toBeNull();
     expect(profile.closedGames).toBe(0);
+  });
+});
+
+describe('профиль игрока', () => {
+  it('разбирает рассказ о себе и счётчик встреч', () => {
+    const profile = parsePlayerProfile({
+      userId: '66666666-6666-4666-8666-666666666666',
+      about: 'Люблю исследование',
+      tabletopExperienceYears: 7,
+      playedSessions: 12,
+    });
+
+    expect(profile.about).toBe('Люблю исследование');
+    expect(profile.tabletopExperienceYears).toBe(7);
+    expect(profile.playedSessions).toBe(12);
+  });
+
+  it('переживает игрока без рассказа о себе', () => {
+    // Игрок садится за стол, ничего о себе не написав: счётчик всё равно нужен.
+    const profile = parsePlayerProfile({
+      userId: '66666666-6666-4666-8666-666666666666',
+    });
+
+    expect(profile.about).toBeNull();
+    expect(profile.tabletopExperienceYears).toBeNull();
+    expect(profile.playedSessions).toBe(0);
   });
 });
 

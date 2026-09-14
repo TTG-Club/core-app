@@ -11,6 +11,7 @@ import type {
   GameSession,
   GameSystemOption,
   MasterPublicProfile,
+  PlayerPublicProfile,
   Reputation,
   SessionParticipant,
   SessionReview,
@@ -155,6 +156,32 @@ export function parseMasterProfile(input: unknown): MasterPublicProfile {
     completedSessions: parsed.completedSessions,
     recommended: parsed.recommended,
     reviews: parsed.reviews,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* Профиль игрока                                                      */
+/* ------------------------------------------------------------------ */
+
+const playerProfileResponseSchema = z.object({
+  userId: uuidSchema,
+  about: z.string().nullish().catch(null),
+  tabletopExperienceYears: z.coerce.number().int().nullish().catch(null),
+  playedSessions: z.coerce.number().int().catch(0),
+});
+
+/**
+ * Разбирает публичный профиль игрока.
+ * @param input Сырой ответ сервиса.
+ */
+export function parsePlayerProfile(input: unknown): PlayerPublicProfile {
+  const parsed = playerProfileResponseSchema.parse(input);
+
+  return {
+    userId: parsed.userId,
+    about: parsed.about ?? null,
+    tabletopExperienceYears: parsed.tabletopExperienceYears ?? null,
+    playedSessions: parsed.playedSessions,
   };
 }
 

@@ -14,6 +14,7 @@ export * from './useMasterProfileDrawer';
 export * from './useMyGames';
 export * from './useMyGamesOverview';
 export * from './useParticipantNames';
+export * from './usePlayerProfileDrawer';
 export * from './usePlayerReputations';
 export * from './useSessionPaymentFields';
 export * from './useSessionTimeRange';

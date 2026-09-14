@@ -8,7 +8,7 @@
   import { CharacterSheetDrawer } from '~character-sheet/drawer';
   import { UserAvatar } from '~ui/user-avatar';
 
-  import { useFollows } from '../../composables';
+  import { useFollows, usePlayerProfileDrawer } from '../../composables';
   import {
     BOOKMARK_PLAYER_ACTIVE_LABEL,
     BOOKMARK_PLAYER_HINT,
@@ -17,6 +17,7 @@
     getReputationLabel,
     getReviewVerdictIcon,
     getReviewVerdictTextClass,
+    PLAYER_PROFILE_OPEN_HINT,
     PLAYER_REVIEWS_OPEN_LABEL,
     REGISTRATION_APPROVE_LABEL,
     REGISTRATION_CHARACTER_SHEET_LABEL,
@@ -58,6 +59,13 @@
   }>();
 
   const overlay = useOverlay();
+
+  const { open: openPlayerProfile } = usePlayerProfileDrawer();
+
+  /** Открывает профиль игрока, подавшего заявку. */
+  function showPlayerProfile(): void {
+    openPlayerProfile(registration.playerId, playerName);
+  }
 
   const isPending = computed(() => registration.status === 'PENDING');
 
@@ -179,9 +187,15 @@
         />
 
         <span class="flex min-w-0 flex-col">
-          <span class="font-medium wrap-break-word text-highlighted">{{
-            playerName
-          }}</span>
+          <ULink
+            as="button"
+            type="button"
+            class="text-left font-medium wrap-break-word text-primary"
+            :aria-label="PLAYER_PROFILE_OPEN_HINT"
+            @click.left.exact.prevent.stop="showPlayerProfile"
+          >
+            {{ playerName }}
+          </ULink>
 
           <span
             v-if="registration.characterName"

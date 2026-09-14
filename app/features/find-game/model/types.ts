@@ -105,6 +105,25 @@ export interface MasterPublicProfile {
   reviews: number;
 }
 
+/**
+ * Игрок глазами тех, с кем он сидит за одним столом.
+ *
+ * Оценок здесь нет намеренно: отзывы об игроках — разговор мастеров между
+ * собой, и мастер читает их через заявку в свою игру.
+ */
+export interface PlayerPublicProfile {
+  userId: string;
+
+  /** Рассказ о себе; `null` — игрок его не писал. */
+  about: string | null;
+
+  /** Стаж за столом, лет; `null` — не указан. */
+  tabletopExperienceYears: number | null;
+
+  /** На скольких состоявшихся встречах он был в составе. */
+  playedSessions: number;
+}
+
 /** Кто кого оценил: игрок мастера или мастер игрока. */
 export type ReviewKind = (typeof REVIEW_KINDS)[number];
 

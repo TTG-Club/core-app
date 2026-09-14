@@ -23,6 +23,7 @@ import type {
   GameStatus,
   GameSystemOption,
   MasterPublicProfile,
+  PlayerPublicProfile,
   RegistrationDecision,
   Reputation,
   SessionAttendanceStatus,
@@ -53,6 +54,7 @@ import {
   NOTIFICATIONS_API_PATH,
   OWN_REPUTATION_API_PATH,
   PLAYER_BOOKMARK_API_PATH,
+  PLAYER_PROFILE_API_PATH,
   RETRY_AFTER_PREFIX,
 } from './constants';
 import { toGameSearchQuery } from './filters';
@@ -76,6 +78,7 @@ import {
   parseMasterProfile,
   parseNotification,
   parseNotificationsPage,
+  parsePlayerProfile,
   parseProblemDetail,
   parseReputation,
   parseSessionParticipant,
@@ -379,6 +382,24 @@ export async function fetchMasterProfile(
   });
 
   return parseMasterProfile(response);
+}
+
+/**
+ * Публичный профиль игрока: рассказ о себе и число сыгранных встреч.
+ *
+ * Оценок в нём нет: отзывы об игроках — разговор мастеров между собой, и
+ * мастер читает их через заявку в свою игру.
+ *
+ * @param playerId Идентификатор игрока.
+ */
+export async function fetchPlayerProfile(
+  playerId: string,
+): Promise<PlayerPublicProfile> {
+  const response = await $fetch(`${PLAYER_PROFILE_API_PATH}/${playerId}`, {
+    retry: 0,
+  });
+
+  return parsePlayerProfile(response);
 }
 
 /**

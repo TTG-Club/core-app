@@ -7,7 +7,7 @@
 
   import { UserAvatar } from '~ui/user-avatar';
 
-  import { useParticipantNames } from '../composables';
+  import { useParticipantNames, usePlayerProfileDrawer } from '../composables';
   import {
     APPLY_WITHDRAW_LABEL,
     ATTENDANCE_SAVED_TOAST,
@@ -30,6 +30,7 @@
     getFindGameErrorMessage,
     getNextSessionLabel,
     paySessionFromBalance,
+    PLAYER_PROFILE_OPEN_HINT,
     SESSION_ATTENDANCE_COLORS,
     SESSION_ATTENDANCE_ICONS,
     SESSION_ATTENDANCE_MARK_STATUSES,
@@ -56,6 +57,16 @@
 
   const emit = defineEmits<{ withdraw: [] }>();
   const { getParticipantName, resolveNames } = useParticipantNames();
+  const { open: openPlayerProfile } = usePlayerProfileDrawer();
+
+  /**
+   * Открывает профиль участника состава.
+   * @param playerId Идентификатор игрока.
+   */
+  function showPlayerProfile(playerId: string): void {
+    openPlayerProfile(playerId, getParticipantName(playerId));
+  }
+
   const isApproved = computed(() => ownRegistration?.status === 'APPROVED');
 
   const canWithdraw = computed(
@@ -300,9 +311,17 @@
             />
 
             <div class="min-w-0">
-              <p class="font-medium wrap-break-word text-highlighted">
+              <ULink
+                as="button"
+                type="button"
+                class="text-left font-medium wrap-break-word text-primary"
+                :aria-label="PLAYER_PROFILE_OPEN_HINT"
+                @click.left.exact.prevent.stop="
+                  showPlayerProfile(ownRegistration.playerId)
+                "
+              >
                 {{ getParticipantName(ownRegistration.playerId) }}
-              </p>
+              </ULink>
 
               <p
                 v-if="ownRegistration.characterName"
@@ -416,9 +435,17 @@
         />
 
         <div class="min-w-0">
-          <p class="font-medium wrap-break-word text-highlighted">
+          <ULink
+            as="button"
+            type="button"
+            class="text-left font-medium wrap-break-word text-primary"
+            :aria-label="PLAYER_PROFILE_OPEN_HINT"
+            @click.left.exact.prevent.stop="
+              showPlayerProfile(participant.playerId)
+            "
+          >
             {{ getParticipantName(participant.playerId) }}
-          </p>
+          </ULink>
 
           <p
             v-if="participant.characterName"

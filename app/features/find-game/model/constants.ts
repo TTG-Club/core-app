@@ -144,6 +144,9 @@ export const FIND_GAME_PROFILE_API_PATH = `${FIND_GAME_API_PREFIX}/profiles/me`;
 /** Публичный профиль мастера: его читают прямо с карточки игры. */
 export const MASTER_PROFILE_API_PATH = `${FIND_GAME_API_PREFIX}/profiles/masters`;
 
+/** Публичный профиль игрока: его открывают из состава игры. */
+export const PLAYER_PROFILE_API_PATH = `${FIND_GAME_API_PREFIX}/profiles/players`;
+
 /** Справочник городов: подсказки для поля города и фильтра каталога. */
 export const CITIES_API_PATH = `${FIND_GAME_API_PREFIX}/cities`;
 
@@ -808,6 +811,22 @@ export const MASTER_PROFILE_ERROR_TITLE = 'Не удалось загрузит�
 export const MASTER_PROFILE_OPEN_HINT = 'Открыть профиль мастера';
 export const MASTER_PROFILE_REVIEWS_TITLE = 'Отзывы игроков';
 export const MASTER_PROFILE_ABOUT_TITLE = 'О мастере';
+
+/* Профиль игрока. */
+export const PLAYER_PROFILE_TITLE = 'Профиль игрока';
+export const PLAYER_PROFILE_ABOUT_TITLE = 'Об игроке';
+export const PLAYER_PROFILE_ABOUT_EMPTY = 'Игрок о себе пока не рассказал';
+export const PLAYER_PROFILE_EXPERIENCE_LABEL = 'За столом';
+export const PLAYER_PROFILE_SESSIONS_LABEL = 'Сыграно встреч';
+export const PLAYER_PROFILE_ERROR_TITLE = 'Не удалось загрузить профиль';
+export const PLAYER_PROFILE_OPEN_HINT = 'Открыть профиль игрока';
+
+/**
+ * Почему в профиле игрока нет оценок. Мастер видит их через заявку в свою
+ * игру, и без пояснения их отсутствие читалось бы как «оценок нет вовсе».
+ */
+export const PLAYER_PROFILE_REVIEWS_HINT =
+  'Оценки игрока видны мастеру в заявке на его игру';
 
 /** Дата отзыва: без времени и пояса — важен порядок, а не минута. */
 export const MASTER_PROFILE_REVIEW_DATE_FORMAT = 'LL';
