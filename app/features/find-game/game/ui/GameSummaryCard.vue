@@ -309,7 +309,7 @@
           :key="badge.key"
           :color="badge.color"
           variant="subtle"
-          size="sm"
+          size="md"
           :icon="badge.icon"
           :label="badge.label"
         />
