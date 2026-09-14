@@ -70,34 +70,34 @@ export const GAME_REPORT_SENT_TOAST = 'Жалоба отправлена';
 export const GAME_REPORT_MAX_DETAILS_LENGTH = 1000;
 export const GAME_REPORTS_API_PATH = `${FIND_GAME_API_PREFIX}/moderation/game-reports`;
 
-/** Модераторские действия над играми: например, скрыть все игры мастера. */
+/** Модераторские действия над играми: например, заблокировать все игры мастера. */
 export const MODERATION_GAMES_API_PATH = `${FIND_GAME_API_PREFIX}/moderation/games`;
 export const GAME_REPORTS_PAGE_SIZE = 20;
 export const GAME_REPORTS_TITLE = 'Жалобы на игры';
 export const GAME_REPORTS_EMPTY_TITLE = 'Очередь модерации пуста';
 export const GAME_REPORTS_EMPTY_DESCRIPTION =
-  'Новые жалобы и скрытые объявления появятся здесь.';
+  'Новые жалобы и заблокированные объявления появятся здесь.';
 export const GAME_REPORT_AUTHOR_LABEL = 'Отправил';
 export const GAME_REPORT_CREATED_LABEL = 'Получена';
-export const GAME_REPORT_HIDDEN_AT_LABEL = 'Скрыта';
-export const GAME_REPORT_HIDDEN_REASON_LABEL = 'Причина сокрытия';
+export const GAME_REPORT_HIDDEN_AT_LABEL = 'Заблокирована';
+export const GAME_REPORT_HIDDEN_REASON_LABEL = 'Причина блокировки';
 export const GAME_REPORT_HIDDEN_REASON_EMPTY = 'Причина не указана';
 export const GAME_REPORT_DATE_FORMAT = 'DD.MM.YYYY HH:mm';
 export const GAME_REPORT_HIDE_ALL_MASTER_GAMES_LABEL =
-  'Скрыть все игры мастера';
+  'Заблокировать все игры мастера';
 export const GAME_REPORT_HIDE_ALL_MASTER_GAMES_TITLE =
-  'Скрыть все игры мастера?';
+  'Заблокировать все игры мастера?';
 export const GAME_REPORT_HIDE_ALL_MASTER_GAMES_DESCRIPTION =
   'Все активные объявления этого мастера исчезнут из каталога. Отменить действие нельзя.';
 export const GAME_REPORT_HIDE_ALL_MASTER_GAMES_TOAST =
-  'Все игры мастера скрыты';
-export const GAME_REPORT_RESTORE_LABEL = 'Вернуть игру';
-export const GAME_REPORT_RESTORE_TITLE = 'Вернуть игру из скрытых?';
+  'Все игры мастера заблокированы';
+export const GAME_REPORT_RESTORE_LABEL = 'Разблокировать игру';
+export const GAME_REPORT_RESTORE_TITLE = 'Разблокировать игру?';
 export const GAME_REPORT_RESTORE_DESCRIPTION =
   'Игра снова станет доступна. Если она открыта, набор игроков возобновится.';
-export const GAME_REPORT_RESTORED_TOAST = 'Игра возвращена из скрытых';
+export const GAME_REPORT_RESTORED_TOAST = 'Игра разблокирована';
 export const GAME_REPORT_DELETION_REASON =
-  'Скрыто модератором по жалобе на игру';
+  'Заблокировано модератором по жалобе на игру';
 
 export const SESSION_START_IN_PAST_ERROR =
   'Дата и время начала сессии должны быть в будущем';
@@ -1008,15 +1008,39 @@ export const RETRY_AFTER_PREFIX = 'Попробуйте снова через';
 export const GAME_RAISE_LABEL = 'Поднять в каталоге';
 export const GAME_RAISED_TOAST = 'Игра поднята в каталоге';
 
-export const GAME_DELETE_LABEL = 'Скрыть игру';
-export const GAME_DELETE_CONFIRM_TITLE = 'Скрыть игру?';
+export const GAME_DELETE_LABEL = 'Заблокировать игру';
+export const GAME_DELETE_CONFIRM_TITLE = 'Заблокировать игру?';
 export const GAME_DELETE_CONFIRM_DESCRIPTION =
-  'Игра исчезнет из поиска и станет недоступна по прямой ссылке и коду приглашения.';
+  'Игра скроется у всех на сайте, пока её не разблокируют. Открыть её смогут только модераторы и администраторы.';
+
+/**
+ * Что происходит с заблокированной игрой. Сервис игр отсеивает её во всех
+ * списках и на странице игры, а модераторам оставляет в очереди жалоб.
+ */
+export const GAME_DELETE_CONSEQUENCES = [
+  {
+    icon: 'tabler:eye-off',
+    text: 'Пропадёт из каталога, «Моих игр» и избранного — у всех пользователей, включая мастера и принятых игроков.',
+  },
+  {
+    icon: 'tabler:link-off',
+    text: 'Не откроется по прямой ссылке и коду приглашения, даже у мастера.',
+  },
+  {
+    icon: 'tabler:calendar-off',
+    text: 'Заявки, участники и встречи игры станут недоступны.',
+  },
+  {
+    icon: 'tabler:shield-lock',
+    text: `Попадёт в раздел модерации «${GAME_REPORTS_TITLE}» с причиной и датой блокировки. Там её можно разблокировать — игра и её данные не удаляются.`,
+  },
+] as const;
+
 export const GAME_DELETE_REASON_LABEL = 'Причина';
 export const GAME_DELETE_REASON_PLACEHOLDER = 'Нарушение правил сообщества';
-export const GAME_DELETED_TOAST = 'Игра скрыта';
+export const GAME_DELETED_TOAST = 'Игра заблокирована';
 
-/** Пометка жалобы, чья игра уже скрыта: те же слова, что и в уведомлении. */
+/** Пометка жалобы, чья игра уже заблокирована: те же слова, что и в уведомлении. */
 export const GAME_REPORT_HIDDEN_BADGE = GAME_DELETED_TOAST;
 
 export const CANCEL_LABEL = 'Отмена';

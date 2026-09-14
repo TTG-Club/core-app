@@ -5,6 +5,7 @@
     CANCEL_LABEL,
     GAME_DELETE_CONFIRM_DESCRIPTION,
     GAME_DELETE_CONFIRM_TITLE,
+    GAME_DELETE_CONSEQUENCES,
     GAME_DELETE_LABEL,
     GAME_DELETE_REASON_LABEL,
     GAME_DELETE_REASON_PLACEHOLDER,
@@ -36,7 +37,7 @@
     isOpen.value = false;
   }
 
-  /** Подтверждает скрытие игры с указанной причиной. */
+  /** Подтверждает блокировку игры с указанной причиной. */
   function confirm(): void {
     if (!isValid.value) {
       return;
@@ -61,25 +62,42 @@
     :description="GAME_DELETE_CONFIRM_DESCRIPTION"
   >
     <template #body>
-      <UFormField
-        :label="GAME_DELETE_REASON_LABEL"
-        required
-      >
-        <UTextarea
-          v-model="reason"
-          :rows="3"
-          :maxlength="GAME_DELETION_REASON_MAX_LENGTH"
-          :placeholder="GAME_DELETE_REASON_PLACEHOLDER"
-          class="w-full"
-        />
-      </UFormField>
+      <div class="flex flex-col gap-4">
+        <ul class="flex flex-col gap-2 text-sm text-toned">
+          <li
+            v-for="consequence in GAME_DELETE_CONSEQUENCES"
+            :key="consequence.icon"
+            class="flex gap-2"
+          >
+            <UIcon
+              :name="consequence.icon"
+              class="mt-0.5 size-4 shrink-0 text-muted"
+            />
+
+            <span>{{ consequence.text }}</span>
+          </li>
+        </ul>
+
+        <UFormField
+          :label="GAME_DELETE_REASON_LABEL"
+          required
+        >
+          <UTextarea
+            v-model="reason"
+            :rows="3"
+            :maxlength="GAME_DELETION_REASON_MAX_LENGTH"
+            :placeholder="GAME_DELETE_REASON_PLACEHOLDER"
+            class="w-full"
+          />
+        </UFormField>
+      </div>
     </template>
 
     <template #footer>
       <UiModalActions
         :cancel-label="CANCEL_LABEL"
         :submit-label="GAME_DELETE_LABEL"
-        submit-icon="tabler:eye-off"
+        submit-icon="tabler:lock"
         submit-color="error"
         :loading="loading"
         :disabled="!isValid"

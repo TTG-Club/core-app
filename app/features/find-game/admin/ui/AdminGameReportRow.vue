@@ -20,7 +20,7 @@
 
   /**
    * Жалоба на объявление в очереди модератора: что за игра, кто и почему
-   * пожаловался, и два ответа на неё — скрыть игру или все игры мастера.
+   * пожаловался, и два ответа на неё — заблокировать игру или все игры мастера.
    */
   const {
     report,
@@ -137,7 +137,7 @@
         size="sm"
         color="success"
         variant="soft"
-        icon="tabler:eye"
+        icon="tabler:lock-open"
         :disabled="busy"
         :label="GAME_REPORT_RESTORE_LABEL"
         @click.left.exact.prevent="emit('restore-game', report.id)"
@@ -148,7 +148,7 @@
         size="sm"
         color="error"
         variant="soft"
-        icon="tabler:eye-off"
+        icon="tabler:lock"
         :disabled="busy"
         :label="GAME_DELETE_LABEL"
         @click.left.exact.prevent="emit('hide-game', report.id)"

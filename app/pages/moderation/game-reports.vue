@@ -91,25 +91,25 @@
     void refreshReports();
   }
 
-  /** Открывает подтверждение скрытия одного объявления. */
+  /** Открывает подтверждение блокировки одного объявления. */
   function askToHideGame(reportId: string): void {
     selectedReportId.value = reportId;
     isHideGameOpen.value = true;
   }
 
-  /** Открывает подтверждение скрытия всех активных игр мастера. */
+  /** Открывает подтверждение блокировки всех активных игр мастера. */
   function askToHideAllMasterGames(reportId: string): void {
     selectedReportId.value = reportId;
     isHideAllMasterGamesOpen.value = true;
   }
 
-  /** Открывает подтверждение возврата игры из скрытых. */
+  /** Открывает подтверждение разблокировки игры. */
   function askToRestoreGame(reportId: string): void {
     selectedReportId.value = reportId;
     isRestoreGameOpen.value = true;
   }
 
-  /** Скрывает объявление, на которое пришла жалоба. */
+  /** Блокирует объявление, на которое пришла жалоба. */
   async function hideGame(): Promise<void> {
     if (!selectedReport.value) {
       return;
@@ -133,7 +133,7 @@
     }
   }
 
-  /** Скрывает все активные объявления мастера, которому принадлежит жалоба. */
+  /** Блокирует все активные объявления мастера, которому принадлежит жалоба. */
   async function hideAllMasterGames(): Promise<void> {
     if (!selectedReport.value) {
       return;
@@ -153,7 +153,7 @@
     }
   }
 
-  /** Возвращает скрытую игру в доступные объявления. */
+  /** Разблокирует игру и возвращает её в доступные объявления. */
   async function restoreGame(): Promise<void> {
     if (!selectedReport.value) {
       return;
@@ -234,7 +234,7 @@
         :description="GAME_DELETE_CONFIRM_DESCRIPTION"
         :confirm-label="GAME_DELETE_LABEL"
         confirm-color="error"
-        confirm-icon="tabler:eye-off"
+        confirm-icon="tabler:lock"
         :loading="isModerating"
         @confirm="hideGame"
       />
@@ -256,7 +256,7 @@
         :description="GAME_REPORT_RESTORE_DESCRIPTION"
         :confirm-label="GAME_REPORT_RESTORE_LABEL"
         confirm-color="success"
-        confirm-icon="tabler:eye"
+        confirm-icon="tabler:lock-open"
         :loading="isModerating"
         @confirm="restoreGame"
       />

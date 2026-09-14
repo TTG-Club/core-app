@@ -80,13 +80,13 @@
     emit('cancel');
   }
 
-  /** Открывает окно скрытия игры. */
+  /** Открывает окно блокировки игры. */
   function askToDelete(): void {
     isDeleteOpen.value = true;
   }
 
   /**
-   * Подтверждено скрытие игры.
+   * Подтверждена блокировка игры.
    * @param reason Причина для административного аудита.
    */
   function confirmDelete(reason: string): void {
@@ -236,7 +236,7 @@
       <UButton
         color="error"
         variant="ghost"
-        icon="tabler:eye-off"
+        icon="tabler:lock"
         :disabled="busy"
         :aria-label="GAME_DELETE_LABEL"
         @click.left.exact.prevent="askToDelete"
