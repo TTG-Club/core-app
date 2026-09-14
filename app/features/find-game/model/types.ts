@@ -244,6 +244,9 @@ export interface Game {
   masterId: string;
   title: string;
   system: GameSystem;
+
+  /** Название своей системы. Есть только у системы `HOMEBREW`. */
+  customSystem: string | null;
   imageUrl: string | null;
   virtualTableUrl: string | null;
   onlinePlatform: GameOnlinePlatform | null;
@@ -257,8 +260,11 @@ export interface Game {
    */
   gameChatUrl: string | null;
 
-  /** Жанры игры из общего справочника; пустой массив — мастер их не указал. */
+  /** Жанры игры из списка жанров; пустой массив — мастер их не указал. */
   genres: Array<string>;
+
+  /** Жанр не из списка — мастер написал его сам. */
+  customGenre: string | null;
   description: string;
   requirements: string;
   allowedSources: Array<string>;
@@ -333,6 +339,13 @@ export interface SpringPage<Item> {
 export interface GameSearchFilter {
   system: Array<GameSystem>;
   excludeSystem: Array<GameSystem>;
+
+  /**
+   * Названия жанров из списка. Значение `HOMEBREW` отбирает игры со своим
+   * жанром.
+   */
+  genre: Array<string>;
+  excludeGenre: Array<string>;
   type: Array<GameType>;
   excludeType: Array<GameType>;
   durationType: Array<GameDurationType>;
@@ -383,17 +396,20 @@ export interface GameFilterChip {
 export interface CreateGameRequest {
   title: string;
   system: GameSystem;
+
+  /** Название своей системы. Сервис требует его у `HOMEBREW`. */
+  customSystem?: string;
   imageUrl?: string;
   virtualTableUrl?: string;
   onlinePlatform?: GameOnlinePlatform;
   masterChatUrl?: string;
   gameChatUrl?: string;
 
-  /**
-   * Жанры игры. Незнакомое сервису название он заводит в справочнике сам —
-   * отдельного запроса на создание жанра нет.
-   */
+  /** Жанры игры. Сервис принимает только названия из списка жанров. */
   genres?: Array<string>;
+
+  /** Жанр не из списка. */
+  customGenre?: string;
   description: string;
   requirements: string;
   allowedSources?: Array<string>;
@@ -421,13 +437,19 @@ export type UpdateGameRequest = CreateGameRequest;
 /** Состояние формы создания игры: пустые поля живут как `null`. */
 export interface GameFormState {
   title: string;
+
+  /** Выбор в списке систем. Пока отмечена своя система, он не отправляется. */
   system: GameSystem;
+  isCustomSystem: boolean;
+  customSystem: string;
   imageUrl: string;
   virtualTableUrl: string;
   onlinePlatform: GameOnlinePlatform;
   masterChatUrl: string;
   gameChatUrl: string;
   genres: Array<string>;
+  isCustomGenre: boolean;
+  customGenre: string;
   description: string;
   requirements: string;
   allowedSources: Array<string>;

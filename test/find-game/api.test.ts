@@ -6,6 +6,7 @@ import {
   fetchGame,
   fetchGameSessions,
   fetchGameSystems,
+  fetchGenres,
   fetchOwnGameRegistration,
   getFindGameErrorMessage,
   getFindGameStatus,
@@ -104,6 +105,17 @@ describe('справочник игровых систем', () => {
     ]);
 
     expect(calls[0]?.path).toBe('/api/find-game/game-systems');
+  });
+});
+
+describe('список жанров', () => {
+  it('загружается целиком, без начала названия', async () => {
+    stubFetch([{ name: 'Хоррор' }, { name: 'Вестерн' }]);
+
+    await expect(fetchGenres()).resolves.toEqual(['Хоррор', 'Вестерн']);
+
+    expect(calls[0]?.path).toBe('/api/find-game/genres');
+    expect(calls[0]?.options?.query).toBeUndefined();
   });
 });
 

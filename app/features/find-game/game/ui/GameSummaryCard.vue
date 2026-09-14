@@ -127,7 +127,7 @@
   });
 
   const { format } = useDayjs();
-  const { getSystemName } = useGameSystems();
+  const { getGameSystemLabel } = useGameSystems();
 
   /**
    * Дата ближайшей встречи. Своей даты у игры нет — время назначается
@@ -187,7 +187,7 @@
       {
         key: 'system',
         label: GAME_FACT_LABELS.system,
-        value: getSystemName(game.system),
+        value: getGameSystemLabel(game),
       },
       {
         key: 'duration',
@@ -196,7 +196,7 @@
       },
     );
 
-    const genres = getGenresLabel(game.genres);
+    const genres = getGenresLabel(game);
 
     if (genres) {
       items.push({

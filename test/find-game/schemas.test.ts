@@ -175,6 +175,29 @@ describe('разбор игры', () => {
     expect(request).not.toHaveProperty('nextSession');
     expect(request).not.toHaveProperty('inviteCode');
   });
+
+  it('копия своей системы и своего жанра сохраняет их названия', () => {
+    const source = parseGame(
+      gameResponse({
+        system: 'HOMEBREW',
+        customSystem: 'Мир Тьмы по домашним правилам',
+        customGenre: 'Хоррор-комедия',
+      }),
+    );
+
+    const request = toGameCopyRequest(source);
+
+    expect(request.system).toBe('HOMEBREW');
+    expect(request.customSystem).toBe('Мир Тьмы по домашним правилам');
+    expect(request.customGenre).toBe('Хоррор-комедия');
+  });
+
+  it('ответ без своей системы и жанра даёт пустые поля', () => {
+    const game = parseGame(gameResponse());
+
+    expect(game.customSystem).toBeNull();
+    expect(game.customGenre).toBeNull();
+  });
 });
 
 describe('разбор справочника игровых систем', () => {

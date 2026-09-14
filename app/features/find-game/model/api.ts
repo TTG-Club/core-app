@@ -636,19 +636,11 @@ export async function fetchCities(query: string): Promise<Array<CityOption>> {
 }
 
 /**
- * Подсказки жанров из общего справочника сервиса.
- *
- * Пустой запрос отдаёт начало списка — с него и начинают выбор. Своего жанра
- * в справочнике может не оказаться: его заводит сам сервис при сохранении
- * игры, отдельного запроса на создание нет.
- *
- * @param query Начало названия жанра.
+ * Загружает весь список жанров: запрос без начала названия сервис отдаёт
+ * целиком. Жанра не из списка в нём нет — его мастер пишет отдельным полем.
  */
-export async function fetchGenres(query: string): Promise<Array<string>> {
-  const response = await $fetch(GENRES_API_PATH, {
-    query: query ? { q: query } : undefined,
-    retry: 0,
-  });
+export async function fetchGenres(): Promise<Array<string>> {
+  const response = await $fetch(GENRES_API_PATH);
 
   return parseGenres(response);
 }
