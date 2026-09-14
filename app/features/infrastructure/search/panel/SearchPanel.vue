@@ -15,11 +15,13 @@
   const { isDesktop, isMobile } = useDevice();
 
   const styles = useCssModule();
+  const fieldRef = useTemplateRef<HTMLButtonElement>('fieldRef');
 
   // Список выбирается один раз по устройству запроса, поэтому сервер и клиент
   // рисуют одинаковую строку — гидратация не спорит сама с собой.
   const { typed, isIdle } = useSearchHintTypewriter(
     isMobile ? SEARCH_PANEL_HINT_WORDS_COMPACT : SEARCH_PANEL_HINT_WORDS,
+    fieldRef,
   );
 
   /** Курсор мигает только в паузах — на наборе и стирании он горит ровно. */
@@ -40,6 +42,7 @@
       набор идёт уже в ней.
     -->
     <button
+      ref="fieldRef"
       type="button"
       :aria-label="SEARCH_PANEL_PLACEHOLDER"
       :class="[
@@ -51,6 +54,18 @@
       ]"
       @click.left.exact.prevent="open"
     >
+      <!--
+        Свет по контуру: кольцо-маска в толщину рамки, а под ним вращается
+        квадрат с дугами. Поворот и мерцание браузер ведёт одной композицией,
+        не перерисовывая градиент на каждом кадре.
+      -->
+      <span
+        aria-hidden="true"
+        :class="$style.glow"
+      >
+        <span :class="$style.arcs" />
+      </span>
+
       <UIcon
         name="tabler:search"
         class="size-5 shrink-0 text-dimmed transition-colors group-hover:text-primary"
@@ -61,9 +76,14 @@
         стирает по букве и печатает следующий. Скринридерам эта чехарда
         бесполезна — им кнопка представляется целой фразой через `aria-label`.
       -->
+      <!-- Высота строки задана явно (`h-5 sm:h-6` — ровно интервал текста):
+        подсказка изолирована от раскладки поля, и без неё схлопнулась бы -->
       <span
         aria-hidden="true"
-        :class="[$style.hint, 'min-w-0 flex-1 text-sm text-muted sm:text-base']"
+        :class="[
+          $style.hint,
+          'h-5 min-w-0 flex-1 text-sm text-muted sm:h-6 sm:text-base',
+        ]"
       >
         <span :class="$style.prefix">{{ SEARCH_PANEL_HINT_PREFIX }}</span>
 
@@ -91,10 +111,14 @@
      в заметный цикл и читаются как случайные.
 
      Никакого размытого ореола наружу: слой лежит ровно в толщине рамки, за её
-     края свет не выходит. */
+     края свет не выходит.
+
+     Дуги бегут и на телефонах: это поворот и прозрачность готового слоя, их
+     браузер ведёт в композиторе без перерисовки. Стоят они только при
+     системной настройке «меньше движения», а когда шапка главной уходит с
+     экрана, замирают: `--home-hero-play-state` ставит HomeHero. */
 
   $arc-track: conic-gradient(
-    from var(--arc-angle),
     transparent 0deg,
     var(--ui-color-primary-500) 14deg,
     var(--ui-color-primary-300) 34deg,
@@ -113,53 +137,65 @@
     transparent 360deg
   );
 
-  .field {
-    &::before {
-      pointer-events: none;
-      content: '';
+  /* При системной настройке «меньше движения» дуги стоят на месте и светят
+     ровно, вполсилы */
+  .glow {
+    pointer-events: none;
 
-      position: absolute;
-      /* Ровно по рамке: абсолютный слой считает края от внутренней (padding)
-         коробки, поэтому -1px возвращает его на край поля, а padding в 1px
-         задаёт толщину светящейся нити — ровно как у самой рамки. */
-      inset: -1px;
+    position: absolute;
+    /* Ровно по рамке: абсолютный слой считает края от внутренней (padding)
+       коробки, поэтому -1px возвращает его на край поля, а padding в 1px
+       задаёт толщину светящейся нити — ровно как у самой рамки. */
+    inset: -1px;
 
-      padding: 1px;
-      border-radius: inherit;
+    padding: 1px;
+    border-radius: inherit;
 
-      background: $arc-track;
+    opacity: 0.6;
 
-      /* Маска оставляет от дорожки только кольцо в эту толщину — без неё
-         градиент залил бы всё поле. */
-      mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
-      mask-clip: content-box, border-box;
-      mask-composite: exclude;
+    /* Маска оставляет от дорожки только кольцо в эту толщину — без неё
+       градиент залил бы всё поле. */
+    mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+    mask-clip: content-box, border-box;
+    mask-composite: exclude;
 
-      transition: filter 250ms ease;
-      animation:
-        arc-travel 9s linear infinite,
-        arc-flicker 7.3s ease-in-out infinite;
-    }
+    transition: filter 250ms ease;
 
-    &:hover::before,
-    &:focus-visible::before {
-      filter: brightness(1.35) saturate(1.1);
+    @media (prefers-reduced-motion: no-preference) {
+      animation: arc-flicker 7.3s ease-in-out infinite
+        var(--home-hero-play-state, running);
     }
   }
 
-  @property --arc-angle {
-    inherits: false;
-    initial-value: 0deg;
-    syntax: '<angle>';
+  .field:hover .glow,
+  .field:focus-visible .glow {
+    filter: brightness(1.35) saturate(1.1);
+  }
+
+  /* Поворот дорожки вокруг центра поля — то же, что сдвиг начального угла
+     конического градиента. Квадрат шире поля на 64px, поэтому его сторона
+     всегда не меньше диагонали поля и при любом повороте он закрывает рамку
+     целиком. */
+  .arcs {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+
+    aspect-ratio: 1;
+    width: calc(100% + 64px);
+
+    background: $arc-track;
+
+    @media (prefers-reduced-motion: no-preference) {
+      animation: arc-travel 9s linear infinite
+        var(--home-hero-play-state, running);
+    }
   }
 
   @keyframes arc-travel {
-    0% {
-      --arc-angle: 0deg;
-    }
-
-    100% {
-      --arc-angle: 360deg;
+    to {
+      rotate: 360deg;
     }
   }
 
@@ -214,6 +250,12 @@
   /* --- Строка-машинка ----------------------------------------------------- */
 
   .hint {
+    /* Машинка меняет текст по букве раз в десятки миллисекунд. Изоляция
+       (`strict`: размер, раскладка, отрисовка) замыкает каждую смену внутри
+       строки: браузер не пересчитывает поле и шапку вокруг и перерисовывает
+       только её прямоугольник. Размер строке задают флекс и высота из
+       разметки, не текст */
+    contain: strict;
     white-space: nowrap;
 
     /* Подсказка длиннее поля не рубится «в лоб»: правый край растворяется.
@@ -271,11 +313,6 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .field::before {
-      opacity: 0.6;
-      animation: none;
-    }
-
     .wordIdle::after {
       animation: none;
     }

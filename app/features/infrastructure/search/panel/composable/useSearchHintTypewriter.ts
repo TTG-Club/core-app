@@ -1,4 +1,4 @@
-import type { ComputedRef, Ref } from 'vue';
+import type { ComputedRef, MaybeRefOrGetter, Ref } from 'vue';
 
 import {
   SEARCH_PANEL_HINT_ERASE_STEP,
@@ -32,13 +32,20 @@ interface SearchHintTypewriter {
  * Набирает разделы в подсказке поиска по кругу: держит слово, стирает его по
  * букве, выдерживает паузу и печатает следующее.
  *
- * Машинка живёт только в браузере и замирает на скрытой вкладке: каждая буква
- * — это перерисовка строки, фоновой вкладке она ни к чему. При системной
- * настройке «меньше движения» набор не стартует вовсе — в подсказке остаётся
- * первый раздел целиком.
+ * Машинка живёт только в браузере. Каждая буква — это перерисовка строки,
+ * поэтому набор стоит, пока она никому не видна: на скрытой вкладке и пока
+ * поле за экраном. Начинает она, когда страница догидратировалась и браузер
+ * освободился: на телефоне первые секунды главный поток занят, и буквы шли бы
+ * рывками. При системной настройке «меньше движения» набор не стартует вовсе —
+ * в подсказке остаётся первый раздел целиком.
+ *
+ * @param words - разделы, которые набираются по кругу
+ * @param field - строка поиска, по ней видно, на экране ли подсказка
+ * @returns набранная строка и признак паузы
  */
 export function useSearchHintTypewriter(
   words: Array<string>,
+  field: MaybeRefOrGetter<HTMLElement | null>,
 ): SearchHintTypewriter {
   const { state: word, next } = useCycleList(words);
 
@@ -47,9 +54,21 @@ export function useSearchHintTypewriter(
 
   const preferredMotion = usePreferredReducedMotion();
   const visibility = useDocumentVisibility();
+  const isFieldVisible = useElementVisibility(field);
+
+  /** Приложение догидратировалось и браузер освободился (`onNuxtReady`) */
+  const isAppReady = ref(false);
+
+  onNuxtReady(() => {
+    isAppReady.value = true;
+  });
 
   const isTyping = computed<boolean>(
-    () => preferredMotion.value !== 'reduce' && visibility.value !== 'hidden',
+    () =>
+      isAppReady.value
+      && isFieldVisible.value
+      && preferredMotion.value !== 'reduce'
+      && visibility.value !== 'hidden',
   );
 
   const isIdle = computed<boolean>(

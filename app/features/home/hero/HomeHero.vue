@@ -5,8 +5,16 @@
   import { HomeTools } from '~home/tools';
   import { SearchPanel } from '~infrastructure/search';
 
-  import { useHomeHeroSettings } from './composables';
-  import { HOME_HERO_SUBTITLE, HOME_HERO_TITLE } from './model';
+  import { useHomeHeroMotion, useHomeHeroSettings } from './composables';
+  import HomeHeroMotion from './HomeHeroMotion.vue';
+  import {
+    HOME_HERO_MOTION_PAUSE_ICON,
+    HOME_HERO_MOTION_PAUSE_LABEL,
+    HOME_HERO_MOTION_PLAY_ICON,
+    HOME_HERO_MOTION_PLAY_LABEL,
+    HOME_HERO_SUBTITLE,
+    HOME_HERO_TITLE,
+  } from './model';
 
   const { preview = undefined } = defineProps<{
     /**
@@ -29,11 +37,38 @@
     media.value?.kind === 'video' ? media.value.url : undefined,
   );
 
-  // Своего фона нет — слой рисует карту под текущую тему
-  const mapClass = computed(() => [
-    styles.map,
-    media.value ? undefined : styles.mapDefault,
-  ]);
+  const heroRef = useTemplateRef<HTMLElement>('heroRef');
+
+  // Пока шапки не видно, её бесконечные анимации (повозка, дым, свет по
+  // рамке поиска) стоят: браузер не считает кадры ради того, что за экраном
+  const {
+    state: motionState,
+    isSupported: isMotionSupported,
+    isEnabled: isMotionEnabled,
+    isVisible: isHeroVisible,
+    toggle: toggleMotion,
+  } = useHomeHeroMotion(heroRef);
+
+  const heroClass = computed(() =>
+    isHeroVisible.value ? undefined : styles.offscreen,
+  );
+
+  // Повозка с дымом живут только на карте: свой фон из админки их не получает
+  const isMotionToggleVisible = computed(
+    () => isMotionSupported.value && !media.value,
+  );
+
+  const motionToggleLabel = computed(() =>
+    isMotionEnabled.value
+      ? HOME_HERO_MOTION_PAUSE_LABEL
+      : HOME_HERO_MOTION_PLAY_LABEL,
+  );
+
+  const motionToggleIcon = computed(() =>
+    isMotionEnabled.value
+      ? HOME_HERO_MOTION_PAUSE_ICON
+      : HOME_HERO_MOTION_PLAY_ICON,
+  );
 
   const videoRef = useTemplateRef<HTMLVideoElement>('videoRef');
   const reducedMotion = usePreferredReducedMotion();
@@ -55,7 +90,9 @@
     свечение — внутри шапки, под её содержимым.
   -->
   <section
+    ref="heroRef"
     class="relative isolate w-full overflow-hidden border-b border-default"
+    :class="heroClass"
   >
     <div
       aria-hidden="true"
@@ -64,7 +101,7 @@
       <!-- Карта деревни с высоты птичьего полёта: рисунок под каждую тему
         лежит в `public/img/home`, выбирает его токен `--hero-map-image`.
         Фон из админки ложится в тот же слой — с той же прозрачностью и маской -->
-      <div :class="mapClass">
+      <div :class="$style.map">
         <img
           v-if="imageUrl"
           :src="imageUrl"
@@ -84,6 +121,17 @@
           playsinline
           disablepictureinpicture
         />
+
+        <!-- Своего фона нет — карта под текущую тему, а поверх неё повозка
+          и дым: они анимированы отдельно от рисунка -->
+        <template v-else>
+          <div :class="$style.mapImage" />
+
+          <HomeHeroMotion
+            :state="motionState"
+            :class="$style.mapMotion"
+          />
+        </template>
       </div>
 
       <!-- Тёплое свечение по центру — «очаг», к которому стягивается взгляд -->
@@ -115,6 +163,26 @@
 
       <HomeTools />
     </div>
+
+    <!-- Пауза и запуск повозки с дымом — в левом нижнем углу, на полях шапки:
+      не спорит с поиском и лентой инструментов. На телефонах и планшетах
+      анимации нет, и кнопки тоже -->
+    <UTooltip
+      v-if="isMotionToggleVisible"
+      :text="motionToggleLabel"
+      :content="{ side: 'right' }"
+    >
+      <UButton
+        :icon="motionToggleIcon"
+        :aria-label="motionToggleLabel"
+        color="neutral"
+        variant="outline"
+        size="xs"
+        square
+        class="absolute bottom-2 left-4 rounded-full xl:left-6"
+        @click.left.exact.prevent="toggleMotion"
+      />
+    </UTooltip>
   </section>
 </template>
 
@@ -122,6 +190,16 @@
   /* Уже этой ширины карта не сжимается: края уходят за экран, а дома
      остаются различимыми */
   $mapMinWidth: 1600px;
+
+  /* Середина карты, видная на экране уже 768px (`hero-map-ТЕМА-sm.webp`, её
+     ширину задаёт scripts/render-hero-map.mjs) */
+  $mapSmallWidth: 768px;
+
+  /* Свет по рамке поиска за экраном стоит (`--home-hero-play-state` читает
+     SearchPanel); повозкой и дымом управляет `useHomeHeroMotion` */
+  .offscreen {
+    --home-hero-play-state: paused;
+  }
 
   .map {
     position: absolute;
@@ -151,10 +229,40 @@
 
   /* Масштаб карты задаёт только ширина шапки, не высота: высота растёт, когда
      подгружается персонаж с репликой, и карта при `cover` прыгала бы. Холст
-     с запасом по высоте, поэтому шапку он закрывает и так */
-  .mapDefault {
+     с запасом по высоте, поэтому шапку он закрывает и так.
+
+     Карта — готовая растровая копия SVG: сам рисунок с сотнями фигур и
+     шумовыми фильтрами браузер разбирал в основном потоке, а видеокарта
+     растрировала при первом показе секундами, и всё это время страница на
+     телефоне не прокручивалась. Своим слоем (`will-change`) карта не
+     перерисовывается, когда меняется что-то над ней: повозка, машинка в
+     поиске, наведение на кнопки */
+  .mapImage {
+    will-change: transform;
+    position: absolute;
+    inset: 0;
     background: var(--hero-map-image) center / max(100%, $mapMinWidth) auto
       no-repeat;
+
+    /* На узком экране видна только середина карты — её и грузим: та же карта
+       шириной $mapMinWidth, но без краёв за экраном */
+    @include media-max($md) {
+      background-image: var(--hero-map-image-sm);
+      background-size: $mapSmallWidth auto;
+    }
+  }
+
+  /* Холст повозки и дыма — ровно там, где фоновая картинка карты: та же
+     ширина, по центру шапки. Пропорции — холст карты `HOME_HERO_MAP_VIEWBOX` */
+  .mapMotion {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+
+    aspect-ratio: 3200 / 1100;
+    width: max(100%, $mapMinWidth);
+    height: auto;
   }
 
   /* Свой фон масштабируется так же, как карта: по ширине и по центру. Свою
