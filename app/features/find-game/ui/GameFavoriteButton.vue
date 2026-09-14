@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import { AuthModal } from '~user/auth-modal';
+
   import { useFavoriteGames } from '../composables';
   import {
     GAME_FAVORITE_ADD_LABEL,
@@ -17,6 +19,7 @@
   }>();
 
   const { isLoggedIn } = useUser();
+  const isAuthOpened = ref(false);
   const { busyGameId, isFavorite, toggleFavorite } = useFavoriteGames();
 
   const isMarked = computed(() => isFavorite(gameId));
@@ -53,29 +56,38 @@
 
   /** Ставит или снимает отметку; исход показывает уведомление. */
   function handleToggle(): void {
+    if (!isLoggedIn.value) {
+      isAuthOpened.value = true;
+
+      return;
+    }
+
     void toggleFavorite(gameId);
   }
 </script>
 
 <!--
-  Гостю звёздочки нет вовсе: список избранного личный, и хранить его негде —
-  кнопка, ведущая только к отказу сервиса, в карточке лишняя.
+  Звезда доступна и гостю: вместо запроса к личному списку открывается вход.
 -->
 <template>
-  <UTooltip
-    v-if="isLoggedIn"
-    :text="label"
-  >
-    <UButton
-      size="sm"
-      :color="color"
-      variant="ghost"
-      :class="coverClass"
-      :icon="icon"
-      :loading="isBusy"
-      :aria-label="label"
-      :aria-pressed="isMarked"
-      @click.left.exact.prevent.stop="handleToggle"
+  <span class="inline-flex">
+    <UTooltip :text="label">
+      <UButton
+        size="sm"
+        :color="color"
+        variant="ghost"
+        :class="coverClass"
+        :icon="icon"
+        :loading="isBusy"
+        :aria-label="label"
+        :aria-pressed="isMarked"
+        @click.left.exact.prevent.stop="handleToggle"
+      />
+    </UTooltip>
+
+    <AuthModal
+      v-if="isAuthOpened"
+      v-model="isAuthOpened"
     />
-  </UTooltip>
+  </span>
 </template>
