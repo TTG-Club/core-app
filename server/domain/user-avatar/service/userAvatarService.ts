@@ -7,7 +7,7 @@ import sharp from 'sharp';
 
 import { getFileKey, S3Service } from '#server/domain/s3';
 import { parseAuthJwtPayload } from '#server/utils/authService';
-import { fetchUserPublicProfile } from '#server/utils/displayName';
+import { fetchUserNameAndAvatar } from '#server/utils/displayName';
 import { getUserFromToken } from '#server/utils/getUser';
 
 import {
@@ -158,7 +158,7 @@ export async function replaceUserAvatar(
 ): Promise<UserAvatarResponse> {
   const { token, userId } = owner;
   const avatarImage = await renderAvatarImage(uploadedImage);
-  const { avatarUrl: previousAvatarUrl } = await fetchUserPublicProfile(token);
+  const { avatarUrl: previousAvatarUrl } = await fetchUserNameAndAvatar(token);
 
   const uploadedFile = await S3Service.upload({
     name: USER_AVATAR_FILENAME,
@@ -194,7 +194,7 @@ export async function removeUserAvatar(
   owner: AvatarOwner,
 ): Promise<UserAvatarResponse> {
   const { token, userId } = owner;
-  const { avatarUrl: previousAvatarUrl } = await fetchUserPublicProfile(token);
+  const { avatarUrl: previousAvatarUrl } = await fetchUserNameAndAvatar(token);
 
   await requestCoreApiAvatar(token, { method: 'DELETE' });
   await removeAvatarFile(previousAvatarUrl, userId);

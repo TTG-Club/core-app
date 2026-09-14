@@ -2,27 +2,27 @@ import { z } from 'zod';
 
 import { avatarUrlSchema } from '#shared/utils';
 
-const publicProfileResponseSchema = z.object({
+const nameAndAvatarResponseSchema = z.object({
   displayName: z.string().min(1),
   avatarUrl: avatarUrlSchema,
 });
 
-const publicProfileByLoginSchema = z.object({
+const nameAndAvatarByLoginSchema = z.object({
   login: z.string(),
   displayName: z.string(),
   avatarUrl: avatarUrlSchema,
 });
 
-/** Публичные данные пользователя из core-api: то, что видят другие. */
-export interface UserPublicProfile {
+/** Отображаемое имя и аватарка пользователя из core-api — то, что видят другие. */
+export interface UserNameAndAvatar {
   /** Отображаемое имя; null — core-api недоступен, показывается логин. */
   displayName: string | null;
   /** Ссылка на аватарку в хранилище сайта; null — аватарки нет. */
   avatarUrl: string | null;
 }
 
-/** Публичные данные, когда core-api ответить не смог. */
-const EMPTY_PUBLIC_PROFILE: UserPublicProfile = {
+/** Имя и аватарка, когда core-api ответить не смог. */
+const EMPTY_NAME_AND_AVATAR: UserNameAndAvatar = {
   displayName: null,
   avatarUrl: null,
 };
@@ -36,9 +36,9 @@ const EMPTY_PUBLIC_PROFILE: UserPublicProfile = {
  *
  * @param token токен пользователя.
  */
-export async function fetchUserPublicProfile(
+export async function fetchUserNameAndAvatar(
   token: string,
-): Promise<UserPublicProfile> {
+): Promise<UserNameAndAvatar> {
   try {
     const { url } = getApiSecrets();
 
@@ -52,40 +52,40 @@ export async function fetchUserPublicProfile(
     );
 
     const parsedProfile =
-      publicProfileResponseSchema.safeParse(profileResponse);
+      nameAndAvatarResponseSchema.safeParse(profileResponse);
 
-    return parsedProfile.success ? parsedProfile.data : EMPTY_PUBLIC_PROFILE;
+    return parsedProfile.success ? parsedProfile.data : EMPTY_NAME_AND_AVATAR;
   } catch {
-    return EMPTY_PUBLIC_PROFILE;
+    return EMPTY_NAME_AND_AVATAR;
   }
 }
 
 /**
  * Отображаемое имя текущего пользователя из core-api. Best-effort, как и
- * `fetchUserPublicProfile`: при сбое null, и вызывающий откатывается к логину.
+ * `fetchUserNameAndAvatar`: при сбое null, и вызывающий откатывается к логину.
  *
  * @param token токен пользователя.
  */
 export async function fetchUserDisplayName(
   token: string,
 ): Promise<string | null> {
-  const { displayName } = await fetchUserPublicProfile(token);
+  const { displayName } = await fetchUserNameAndAvatar(token);
 
   return displayName;
 }
 
 /**
- * Резолвит логины в публичные данные через публичную ручку core-api.
+ * Резолвит логины в отображаемые имена и аватарки через публичную ручку core-api.
  * Возвращает Map по логину в нижнем регистре. Best-effort: при ошибке — пустая
  * Map, и вызывающий откатывается к логинам. Логины без заданного имени в ответ
  * не попадают (для них имя = логин на стороне вызывающего).
  *
  * @param logins логины пользователей.
  */
-export async function resolvePublicProfilesByLogins(
+export async function resolveNamesAndAvatarsByLogins(
   logins: string[],
-): Promise<Map<string, UserPublicProfile>> {
-  const profileByLogin = new Map<string, UserPublicProfile>();
+): Promise<Map<string, UserNameAndAvatar>> {
+  const profileByLogin = new Map<string, UserNameAndAvatar>();
   const uniqueLogins = [...new Set(logins.filter(Boolean))];
 
   if (!uniqueLogins.length) {
@@ -104,7 +104,7 @@ export async function resolvePublicProfilesByLogins(
     );
 
     const parsedProfiles = z
-      .array(publicProfileByLoginSchema)
+      .array(nameAndAvatarByLoginSchema)
       .safeParse(profilesResponse);
 
     if (parsedProfiles.success) {

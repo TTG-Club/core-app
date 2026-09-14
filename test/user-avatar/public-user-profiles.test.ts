@@ -21,7 +21,7 @@ const fetchProfiles =
 const scopes: Array<EffectScope> = [];
 
 /** Профиль из ответа core-api для идентификатора. */
-function profileOf(userId: string) {
+function createProfileResponse(userId: string) {
   return {
     userId,
     displayName: `Имя ${userId}`,
@@ -34,7 +34,7 @@ function answerAllRequested(
   _path: string,
   options: { body: { userIds: Array<string> } },
 ): Promise<unknown> {
-  return Promise.resolve(options.body.userIds.map(profileOf));
+  return Promise.resolve(options.body.userIds.map(createProfileResponse));
 }
 
 /** Создаёт общий композабл в отдельной области, как это делает компонент. */

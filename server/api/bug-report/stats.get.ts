@@ -1,9 +1,9 @@
-import type { UserPublicProfile } from '#server/utils/displayName';
+import type { UserNameAndAvatar } from '#server/utils/displayName';
 
 import { z } from 'zod';
 
 import { BUG_REPORT_EXTERNAL_API_BASE_URL } from '#server/utils/bugReportApi';
-import { resolvePublicProfilesByLogins } from '#server/utils/displayName';
+import { resolveNamesAndAvatarsByLogins } from '#server/utils/displayName';
 
 const fixerSchema = z.object({
   login: z.string(),
@@ -30,7 +30,7 @@ type Fixer = z.infer<typeof fixerSchema>;
  */
 function toNamedFixers(
   fixers: Fixer[],
-  profileByLogin: Map<string, UserPublicProfile>,
+  profileByLogin: Map<string, UserNameAndAvatar>,
 ): Array<{ name: string; avatarUrl: string | null; fixed: number }> {
   return fixers.map((fixer) => {
     const profile = profileByLogin.get(fixer.login.toLowerCase());
@@ -65,7 +65,7 @@ export default defineEventHandler(async () => {
     );
   }
 
-  const profileByLogin = await resolvePublicProfilesByLogins(
+  const profileByLogin = await resolveNamesAndAvatarsByLogins(
     [...stats.topFixers, ...stats.topFixersThisMonth].map(
       (fixer) => fixer.login,
     ),

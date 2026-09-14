@@ -1,4 +1,4 @@
-import { resolvePublicProfilesByLogins } from '#server/utils/displayName';
+import { resolveNamesAndAvatarsByLogins } from '#server/utils/displayName';
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event);
@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
 
   // Обогащаем страницу отображаемыми именами и аватарками из core-api
   // (владелец данных). Best-effort: core-api недоступен → null, в UI прочерк.
-  const profileByLogin = await resolvePublicProfilesByLogins(
+  const profileByLogin = await resolveNamesAndAvatarsByLogins(
     usersPage.content.map((user) => user.username),
   );
 

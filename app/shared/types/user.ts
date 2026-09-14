@@ -37,6 +37,7 @@ export interface UserProfile {
 export interface PublicUserProfile {
   /** UUID пользователя (клейм `sub` токена). */
   userId: string;
+  /** Отображаемое имя — у пользователей без записи в core-api ответа нет вовсе. */
   displayName: string;
   /** Ссылка на аватарку в хранилище сайта; null — аватарки нет. */
   avatarUrl: string | null;
