@@ -33,14 +33,14 @@
 
   /**
    * Значок состояния в «Моих играх»: состояние игры, своя заявка или
-   * видимость. Видимость показывается одним замком — подпись уходит в
-   * подсказку, чтобы столбик на обложке оставался узким.
+   * видимость. Видимость показывается одним замком — подпись остаётся только
+   * в `aria-label`, чтобы столбик на обложке оставался узким.
    */
   interface StatusBadge {
     key: string;
     /** Видимая подпись; у значка-замка её нет. */
     label?: string;
-    /** Подсказка и `aria-label` для значка без подписи. */
+    /** `aria-label` для значка без подписи. */
     hint?: string;
     /** Цвет точки состояния; у замка точки нет. */
     dotClass?: string;
@@ -221,7 +221,6 @@
     -->
     <ULink
       :to="gameRoute"
-      :title="game.title"
       tabindex="-1"
       aria-hidden="true"
       class="absolute inset-0 z-10"
@@ -284,40 +283,36 @@
 
         <!--
           Состояние игры в «Моих играх» — столбиком в правом нижнем углу,
-          напротив строки формата; цвет состояния несёт точка. Столбик поднят
-          над ссылкой карточки ради подсказки у замка и занимает ровно ширину
-          значков, чтобы остальная обложка по-прежнему открывала игру.
+          напротив строки формата; цвет состояния несёт точка. Нажатия столбик
+          не перехватывает: подсказки у него больше нет, и обложка открывает
+          игру целиком. Расшифровка состояния осталась в `aria-label` — она
+          нужна там, где значок не виден.
         -->
         <div
           v-if="statusBadges.length"
-          class="pointer-events-auto relative z-20 flex shrink-0 flex-col items-end gap-1"
+          class="flex shrink-0 flex-col items-end gap-1"
         >
-          <UTooltip
+          <UBadge
             v-for="badge in statusBadges"
             :key="badge.key"
-            :text="badge.hint"
-            :disabled="!badge.hint"
+            :class="GAME_COVER_BADGE_CLASS"
+            size="md"
+            color="neutral"
+            variant="solid"
+            :icon="badge.icon"
+            :label="badge.label"
+            :aria-label="badge.hint"
           >
-            <UBadge
-              :class="GAME_COVER_BADGE_CLASS"
-              size="md"
-              color="neutral"
-              variant="solid"
-              :icon="badge.icon"
-              :label="badge.label"
-              :aria-label="badge.hint"
+            <template
+              v-if="badge.dotClass"
+              #leading
             >
-              <template
-                v-if="badge.dotClass"
-                #leading
-              >
-                <span
-                  class="size-2 shrink-0 rounded-full"
-                  :class="badge.dotClass"
-                />
-              </template>
-            </UBadge>
-          </UTooltip>
+              <span
+                class="size-2 shrink-0 rounded-full"
+                :class="badge.dotClass"
+              />
+            </template>
+          </UBadge>
         </div>
       </div>
     </div>
@@ -341,7 +336,6 @@
         <span
           v-if="genresLabel"
           class="truncate text-sm text-muted"
-          :title="genresLabel"
         >
           {{ genresLabel }}
         </span>
@@ -403,7 +397,7 @@
             as="button"
             type="button"
             class="relative z-20 truncate text-left font-medium text-primary"
-            :title="MASTER_PROFILE_OPEN_HINT"
+            :aria-label="MASTER_PROFILE_OPEN_HINT"
             @click.left.exact.prevent.stop="openMasterProfile"
           >
             {{ masterName }}
