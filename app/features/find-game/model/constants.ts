@@ -147,6 +147,15 @@ export const MASTER_PROFILE_API_PATH = `${FIND_GAME_API_PREFIX}/profiles/masters
 /** Справочник городов: подсказки для поля города и фильтра каталога. */
 export const CITIES_API_PATH = `${FIND_GAME_API_PREFIX}/cities`;
 
+/** Справочник игровых систем для форм, карточек и фильтров. */
+export const GAME_SYSTEMS_API_PATH = `${FIND_GAME_API_PREFIX}/game-systems`;
+
+/**
+ * Справочник жанров: подсказки для поля жанров. Справочник общий и пополняется
+ * самими мастерами — вписанный вручную жанр сервис заводит при сохранении игры.
+ */
+export const GENRES_API_PATH = `${FIND_GAME_API_PREFIX}/genres`;
+
 export const NOTIFICATIONS_API_PATH = `${FIND_GAME_API_PREFIX}/notifications`;
 
 /** Резолв «UUID -> отображаемое имя» в core-api. */
@@ -179,8 +188,6 @@ export const GAME_FAVORITE_PATH_SUFFIX = 'favorite';
 /* ------------------------------------------------------------------ */
 /* Перечисления сервиса                                                */
 /* ------------------------------------------------------------------ */
-
-export const GAME_SYSTEMS = ['DND_2024', 'DND_2014'] as const;
 
 export const GAME_TYPES = ['ONLINE', 'TEXT', 'OFFLINE'] as const;
 
@@ -355,11 +362,6 @@ export const REGISTRATION_DECISIONS = ['APPROVE', 'REJECT'] as const;
 /* Подписи перечислений                                                */
 /* ------------------------------------------------------------------ */
 
-export const GAME_SYSTEM_LABELS = {
-  DND_2024: 'D&D 5 (2024)',
-  DND_2014: 'D&D 5 (2014)',
-} as const;
-
 export const GAME_TYPE_LABELS = {
   ONLINE: 'Онлайн',
   TEXT: 'Текстовая',
@@ -532,6 +534,12 @@ export const GAME_TITLE_MAX_LENGTH = 150;
 export const GAME_COPY_TITLE_SUFFIX = ' (копия)';
 export const GAME_URL_MAX_LENGTH = 2048;
 export const GAME_GENRE_MAX_LENGTH = 100;
+
+/** Сколько жанров помещается в одну игру. Больше сервис не принимает. */
+export const GAME_GENRES_MAX_COUNT = 10;
+
+/** Разделитель жанров в карточках и сводке объявления. */
+export const GENRES_SEPARATOR = ', ';
 export const GAME_DESCRIPTION_MAX_LENGTH = 20_000;
 export const GAME_REQUIREMENTS_MAX_LENGTH = 10_000;
 export const GAME_CITY_MAX_LENGTH = 120;
@@ -780,7 +788,7 @@ export const GAME_FACT_LABELS = {
   venue: 'Место встречи',
   system: 'Система',
   duration: 'Длительность',
-  genre: 'Жанр',
+  genres: 'Жанры',
   players: 'Игроки',
   level: 'Стартовый уровень',
   age: 'Возраст',
@@ -1103,19 +1111,18 @@ export const GAME_FORM_SUBMIT_HINT_REQUIRED =
 export const GAME_FIELD_TITLE_LABEL = 'Название';
 export const GAME_FIELD_TITLE_PLACEHOLDER = 'Проклятие Страда';
 export const GAME_FIELD_SYSTEM_LABEL = 'Система';
-export const GAME_FIELD_GENRE_LABEL = 'Жанр';
-export const GAME_FIELD_GENRE_PLACEHOLDER = 'Выберите или впишите свой';
+export const GAME_FIELD_GENRE_LABEL = 'Жанры';
+export const GAME_FIELD_GENRE_PLACEHOLDER = 'Выберите или впишите свои';
 
-export const GAME_FIELD_GENRE_HINT =
-  'Можно выбрать из списка или вписать свой вариант';
+export const GAME_FIELD_GENRE_HINT = `Можно выбрать несколько из списка или вписать свои — до ${GAME_GENRES_MAX_COUNT}`;
 
 /**
- * Жанры кампании из «Руководства Мастера» — раздел о жанрах фэнтези
+ * Базовые жанры кампании из «Руководства Мастера» — раздел о жанрах фэнтези
  * (DMG, «Flavors of Fantasy»).
  *
- * Список не закрытый: сервис принимает у жанра любую строку до 100 символов,
- * и запирать мастера в перечисление значило бы придумать ограничение, которого
- * у контракта нет. Свой вариант всегда можно вписать.
+ * Подсказки сервиса дополняются этим списком, а не заменяются им: справочник
+ * жанров пополняют сами мастера, и на пустом справочнике поле осталось бы без
+ * единого варианта. Свой жанр всегда можно вписать.
  */
 export const GAME_GENRE_SUGGESTIONS = [
   'Героическое фэнтези',

@@ -9,6 +9,7 @@ import type {
   GameSearchFilter,
   GameStatus,
   GameSystem,
+  GameSystemOption,
   GameType,
 } from './types';
 
@@ -40,8 +41,6 @@ import {
   GAME_PLAYERS_MAX,
   GAME_STATUS_LABELS,
   GAME_STATUSES,
-  GAME_SYSTEM_LABELS,
-  GAME_SYSTEMS,
   GAME_TYPE_LABELS,
   GAME_TYPES,
 } from './constants';
@@ -195,14 +194,8 @@ export function parseGameFilterFromQuery(
     minAge !== null && maxAge !== null && minAge > maxAge;
 
   return {
-    system: readEnumValues<GameSystem>(
-      readQueryValues(query.system),
-      GAME_SYSTEMS,
-    ),
-    excludeSystem: readEnumValues<GameSystem>(
-      readQueryValues(query.excludeSystem),
-      GAME_SYSTEMS,
-    ),
+    system: [...new Set(readQueryValues(query.system))],
+    excludeSystem: [...new Set(readQueryValues(query.excludeSystem))],
     type: readEnumValues<GameType>(readQueryValues(query.type), GAME_TYPES),
     excludeType: readEnumValues<GameType>(
       readQueryValues(query.excludeType),
@@ -514,6 +507,18 @@ function readChoiceGroup<Value extends string>(
 }
 
 /**
+ * Подписи игровых систем по коду — для групп панели и для чипов.
+ * @param systems Справочник игровых систем.
+ */
+function toSystemLabels(
+  systems: ReadonlyArray<GameSystemOption>,
+): Record<string, string> {
+  return Object.fromEntries(
+    systems.map((system): [string, string] => [system.code, system.name]),
+  );
+}
+
+/**
  * Группы общей панели фильтров сайта из фильтра каталога игр.
  *
  * Город, возраст и места чипами не выражаются — их панель показывает
@@ -522,17 +527,20 @@ function readChoiceGroup<Value extends string>(
  * @param filter Применённый фильтр каталога.
  * @param withFavorite Показывать ли группу избранного: у гостя списка нет, и
  *   сервис вернул бы ему пустой каталог вместо подбора.
+ * @param systems Справочник игровых систем: перечисления у них больше нет, и
+ *   набор вариантов приходит от сервиса.
  */
 export function toGameFilterGroups(
   filter: GameSearchFilter,
   withFavorite: boolean,
+  systems: ReadonlyArray<GameSystemOption>,
 ): FilterGroups {
   const groups: FilterGroups = [
     toChoiceGroup(
       CATALOG_FILTER_GROUP_KEYS.system,
       CATALOG_FILTER_SYSTEM_LABEL,
-      GAME_SYSTEMS,
-      GAME_SYSTEM_LABELS,
+      systems.map((system) => system.code),
+      toSystemLabels(systems),
       { included: filter.system, excluded: filter.excludeSystem },
     ),
     toChoiceGroup(
@@ -605,15 +613,18 @@ export function toGameFilterGroups(
  * возраст и места — берутся из переданного фильтра как есть.
  * @param filter Фильтр с полями, заданными вне групп.
  * @param groups Группы панели после «Применить».
+ * @param systems Справочник игровых систем: по нему отсеиваются коды, которых
+ *   в справочнике уже нет.
  */
 export function applyGameFilterGroups(
   filter: GameSearchFilter,
   groups: FilterGroups,
+  systems: ReadonlyArray<GameSystemOption>,
 ): GameSearchFilter {
   const system = readChoiceGroup(
     groups,
     CATALOG_FILTER_GROUP_KEYS.system,
-    GAME_SYSTEMS,
+    systems.map((option) => option.code),
   );
 
   const type = readChoiceGroup(
@@ -739,9 +750,12 @@ function getCrossplayChipLabel(isAllowed: boolean): string {
  * Применённые условия каталога — по чипу на условие. По ряду видно, что отбор
  * включён, и условие снимается одним нажатием, без панели фильтров.
  * @param filter Применённый фильтр каталога.
+ * @param systems Справочник игровых систем: названия систем живут там же, где
+ *   и сами системы.
  */
 export function getGameFilterChips(
   filter: GameSearchFilter,
+  systems: ReadonlyArray<GameSystemOption>,
 ): Array<GameFilterChip> {
   const chips: Array<GameFilterChip> = [];
 
@@ -754,7 +768,11 @@ export function getGameFilterChips(
     });
   }
 
-  const getSystemLabel = (value: GameSystem) => GAME_SYSTEM_LABELS[value];
+  const systemLabels = toSystemLabels(systems);
+
+  // Код системы остаётся подписью, пока справочник не подъехал: пустой чип
+  // молчал бы о том, что отбор вообще включён.
+  const getSystemLabel = (value: GameSystem) => systemLabels[value] ?? value;
   const getTypeLabel = (value: GameType) => GAME_TYPE_LABELS[value];
   const getCostLabel = (value: GameCostType) => GAME_COST_TYPE_LABELS[value];
   const getStatusLabel = (value: GameStatus) => GAME_STATUS_LABELS[value];

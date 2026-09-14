@@ -15,6 +15,7 @@
 
   import {
     useGameCatalog,
+    useGameSystems,
     useHumanPage,
     useParticipantNames,
   } from '../composables';
@@ -64,7 +65,11 @@
   );
 
   /** Применённые условия — ряд под панелью, как предпросмотр в справочнике. */
-  const filterChips = computed(() => getGameFilterChips(filter.value));
+  const { systems } = useGameSystems();
+
+  const filterChips = computed(() =>
+    getGameFilterChips(filter.value, systems.value),
+  );
 
   const route = useRoute();
   const { isApple } = useDevice();

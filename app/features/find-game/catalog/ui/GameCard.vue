@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import type { Game } from '../../model';
 
-  import { useMasterProfileDrawer } from '../../composables';
+  import { useGameSystems, useMasterProfileDrawer } from '../../composables';
   import {
     GAME_COST_TYPE_ICONS,
     GAME_COST_TYPE_LABELS,
@@ -16,13 +16,13 @@
     GAME_SEATS_MAX_ICONS,
     GAME_STATUS_COLORS,
     GAME_STATUS_LABELS,
-    GAME_SYSTEM_LABELS,
     GAME_TYPE_ICONS,
     GAME_VISIBILITY_LABELS,
     getGameFormatSummary,
     getGameRoute,
     getGameSeatsCounter,
     getGameSeatsHint,
+    getGenresLabel,
     MASTER_PROFILE_OPEN_HINT,
     SESSION_REGISTRATION_STATUS_COLORS,
     SESSION_REGISTRATION_STATUS_LABELS,
@@ -141,8 +141,10 @@
   const formatIcon = computed(() => GAME_TYPE_ICONS[game.type]);
 
   const formatSummary = computed(() => getGameFormatSummary(game));
+  const genresLabel = computed(() => getGenresLabel(game.genres));
 
-  const systemLabel = computed(() => GAME_SYSTEM_LABELS[game.system]);
+  const { getSystemName } = useGameSystems();
+  const systemLabel = computed(() => getSystemName(game.system));
 
   /**
    * Места в ближайшей сессии, по одному значку на место. Три состояния
@@ -335,11 +337,11 @@
         />
 
         <span
-          v-if="game.genre"
+          v-if="genresLabel"
           class="truncate text-sm text-muted"
-          :title="game.genre"
+          :title="genresLabel"
         >
-          {{ game.genre }}
+          {{ genresLabel }}
         </span>
       </div>
 

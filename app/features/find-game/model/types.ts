@@ -6,7 +6,6 @@ import type {
   GAME_REPORT_REASONS,
   GAME_SESSION_STATUSES,
   GAME_STATUSES,
-  GAME_SYSTEMS,
   GAME_TYPES,
   GAME_VISIBILITIES,
   NOTIFICATION_TYPES,
@@ -21,7 +20,7 @@ import type {
   SESSION_WEEKDAYS,
 } from './constants';
 
-export type GameSystem = (typeof GAME_SYSTEMS)[number];
+export type GameSystem = string;
 export type GameType = (typeof GAME_TYPES)[number];
 export type GameOnlinePlatform = (typeof GAME_ONLINE_PLATFORMS)[number];
 export type GameDurationType = (typeof GAME_DURATION_TYPES)[number];
@@ -74,6 +73,12 @@ export interface CityOption {
   /** Область или штат; `null` — город известен без уточнения. */
   region: string | null;
   country: string;
+}
+
+/** Игровая система из справочника сервиса. */
+export interface GameSystemOption {
+  code: GameSystem;
+  name: string;
 }
 
 /**
@@ -232,7 +237,9 @@ export interface Game {
    * его не отдаёт сервис, поэтому здесь он просто пуст.
    */
   gameChatUrl: string | null;
-  genre: string | null;
+
+  /** Жанры игры из общего справочника; пустой массив — мастер их не указал. */
+  genres: Array<string>;
   description: string;
   requirements: string;
   allowedSources: Array<string>;
@@ -362,7 +369,12 @@ export interface CreateGameRequest {
   onlinePlatform?: GameOnlinePlatform;
   masterChatUrl?: string;
   gameChatUrl?: string;
-  genre?: string;
+
+  /**
+   * Жанры игры. Незнакомое сервису название он заводит в справочнике сам —
+   * отдельного запроса на создание жанра нет.
+   */
+  genres?: Array<string>;
   description: string;
   requirements: string;
   allowedSources?: Array<string>;
@@ -396,7 +408,7 @@ export interface GameFormState {
   onlinePlatform: GameOnlinePlatform;
   masterChatUrl: string;
   gameChatUrl: string;
-  genre: string;
+  genres: Array<string>;
   description: string;
   requirements: string;
   allowedSources: Array<string>;

@@ -3,12 +3,18 @@
 
   import type { CreateGameRequest, Game, GameFormState } from '../model';
 
+  import { uniqBy } from 'es-toolkit';
   import { StatusCodes } from 'http-status-codes';
 
   import { MarkupEditor } from '~ui/markup-editor';
   import { UploadImage } from '~ui/upload';
 
-  import { useCityDictionary, useFindGameToast } from '../composables';
+  import {
+    useCityDictionary,
+    useFindGameToast,
+    useGameSystems,
+    useGenreDictionary,
+  } from '../composables';
   import {
     CANCEL_LABEL,
     createGame,
@@ -83,8 +89,7 @@
     GAME_FORM_SUBMIT_LABEL,
     GAME_FORM_UNSAVED_WARNING,
     GAME_FORM_UPDATED_TOAST,
-    GAME_GENRE_MAX_LENGTH,
-    GAME_GENRE_SUGGESTIONS,
+    GAME_GENRES_MAX_COUNT,
     GAME_IMAGE_MAX_SIZE,
     GAME_IMAGE_SECTION,
     GAME_LINKS_TITLE,
@@ -95,8 +100,6 @@
     GAME_REQUIREMENTS_MAX_LENGTH,
     GAME_STARTING_LEVEL_MAX,
     GAME_STARTING_LEVEL_MIN,
-    GAME_SYSTEM_LABELS,
-    GAME_SYSTEMS,
     GAME_TITLE_MAX_LENGTH,
     GAME_TYPE_LABELS,
     GAME_TYPES,
@@ -107,6 +110,8 @@
     GAMES_ROUTE,
     getFindGameErrorMessage,
     getFindGameStatus,
+    getGenreKey,
+    normalizeGenres,
     updateGame,
   } from '../model';
   import { GameCover } from '../ui';
@@ -133,6 +138,8 @@
 
   const { showError, showSuccess } = useFindGameToast();
 
+  const { systemItems, isLoading: gameSystemsLoading } = useGameSystems();
+
   const isEdit = computed(() => !!game);
 
   /** Пустая форма новой игры с безопасными значениями по умолчанию. */
@@ -145,7 +152,7 @@
       onlinePlatform: GAME_DEFAULT_ONLINE_PLATFORM,
       masterChatUrl: '',
       gameChatUrl: '',
-      genre: '',
+      genres: [],
       description: '',
       requirements: '',
       allowedSources: [],
@@ -181,7 +188,7 @@
       // Чужой чат игры сервис не отдаёт, но форму открывает только мастер:
       // ему приходит и он.
       gameChatUrl: source.gameChatUrl ?? '',
-      genre: source.genre ?? '',
+      genres: [...source.genres],
       description: source.description,
       requirements: source.requirements,
       allowedSources: [...source.allowedSources],
@@ -325,7 +332,6 @@
     return values.map((value) => ({ value, label: labels[value] }));
   }
 
-  /** Жанры из «Руководства Мастера» плюс уже выбранный, если он свой. */
   const citySearch = ref('');
 
   const { cityNames, isLoading: areCitiesLoading } =
@@ -347,23 +353,48 @@
     form.value.city = value.trim().slice(0, GAME_CITY_MAX_LENGTH);
   }
 
-  const genreItems = computed(() => [
-    ...new Set(
-      form.value.genre
-        ? [...GAME_GENRE_SUGGESTIONS, form.value.genre]
-        : GAME_GENRE_SUGGESTIONS,
-    ),
-  ]);
+  const genreSearch = ref('');
+
+  const { genreNames, isLoading: areGenresLoading } =
+    useGenreDictionary(genreSearch);
+
+  // Выбранные жанры остаются в списке, даже когда подсказки уже про другое:
+  // иначе отмеченное пропадало бы из поля при следующем наборе. Отброс
+  // повторов идёт по тому же ключу, что и в справочнике, — подсказка в другом
+  // регистре не должна встать вторым вариантом рядом с отмеченным.
+  const genreItems = computed(() =>
+    uniqBy([...form.value.genres, ...genreNames.value], getGenreKey),
+  );
+
+  // Вписать свой жанр можно, пока набор не заполнен: иначе поле предлагало бы
+  // создать то, что всё равно не поместится.
+  const canCreateGenre = computed(
+    () => form.value.genres.length < GAME_GENRES_MAX_COUNT,
+  );
 
   /**
-   * Ставит вписанный вручную жанр.
+   * Отмеченные жанры. Набор приходит от поля целиком, поэтому лишнее
+   * отсекается здесь: сервис отвергает и повторы по регистру, и больше
+   * десяти жанров.
+   */
+  const selectedGenres = computed({
+    get: () => form.value.genres,
+    set: (values: Array<string>) => {
+      form.value.genres = normalizeGenres(values);
+    },
+  });
+
+  /**
+   * Добавляет вписанный вручную жанр. Сервис заведёт его в общем справочнике
+   * сам — отдельного запроса на создание жанра нет. Пробелы, длину и повтор
+   * с уже отмеченным разбирает сеттер набора.
    * @param value Название жанра.
    */
   function addGenre(value: string): void {
-    form.value.genre = value.trim().slice(0, GAME_GENRE_MAX_LENGTH);
+    selectedGenres.value = [...form.value.genres, value];
+    genreSearch.value = '';
   }
 
-  const systemItems = toSelectItems(GAME_SYSTEMS, GAME_SYSTEM_LABELS);
   const typeItems = toSelectItems(GAME_TYPES, GAME_TYPE_LABELS);
 
   const onlinePlatformItems = toSelectItems(
@@ -466,8 +497,8 @@
       request.gameChatUrl = state.gameChatUrl.trim();
     }
 
-    if (state.genre.trim()) {
-      request.genre = state.genre.trim();
+    if (state.genres.length) {
+      request.genres = state.genres;
     }
 
     if (state.allowedSources.length) {
@@ -589,6 +620,7 @@
                 <USelect
                   v-model="form.system"
                   :items="systemItems"
+                  :loading="gameSystemsLoading"
                   class="w-full"
                 />
               </UFormField>
@@ -600,10 +632,14 @@
                 :help="GAME_FIELD_GENRE_HINT"
               >
                 <USelectMenu
-                  v-model="form.genre"
+                  v-model="selectedGenres"
+                  v-model:search-term="genreSearch"
+                  multiple
                   :items="genreItems"
+                  :loading="areGenresLoading"
+                  ignore-filter
+                  :create-item="canCreateGenre"
                   :placeholder="GAME_FIELD_GENRE_PLACEHOLDER"
-                  create-item
                   class="w-full"
                   @create="addGenre"
                 />

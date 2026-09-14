@@ -7,16 +7,21 @@ import type {
   Reputation,
 } from './types';
 
+import { uniqBy } from 'es-toolkit';
+
 import {
   GAME_COPY_TITLE_SUFFIX,
   GAME_COST_TYPE_LABELS,
   GAME_DURATION_TYPE_LABELS,
+  GAME_GENRE_MAX_LENGTH,
+  GAME_GENRES_MAX_COUNT,
   GAME_NEXT_SESSION_FALLBACK,
   GAME_PRICE_PENDING_LABEL,
   GAME_PRICE_PER_SESSION_LABEL,
   GAME_TITLE_MAX_LENGTH,
   GAME_TYPE_LABELS,
   GAMES_ROUTE,
+  GENRES_SEPARATOR,
   INVITE_CODE_QUERY_KEY,
   MINUTES_IN_HOUR,
   MY_GAMES_ATTENTION_ACTION,
@@ -85,7 +90,7 @@ export function toGameCopyRequest(game: Game): CreateGameRequest {
     ...(game.onlinePlatform ? { onlinePlatform: game.onlinePlatform } : {}),
     ...(game.masterChatUrl ? { masterChatUrl: game.masterChatUrl } : {}),
     ...(game.gameChatUrl ? { gameChatUrl: game.gameChatUrl } : {}),
-    ...(game.genre ? { genre: game.genre } : {}),
+    ...(game.genres.length ? { genres: [...game.genres] } : {}),
     ...(game.allowedSources.length
       ? { allowedSources: [...game.allowedSources] }
       : {}),
@@ -158,6 +163,41 @@ export function getGameFormatLabel(game: Game): string {
   }
 
   return format;
+}
+
+/**
+ * Ключ сравнения жанров. Справочник сервиса не различает регистр: «Хоррор» и
+ * «хоррор» для него один жанр, и здесь сравнение должно совпадать с тем.
+ * @param genre Название жанра.
+ */
+export function getGenreKey(genre: string): string {
+  return genre.toLocaleLowerCase('ru');
+}
+
+/**
+ * Приводит отмеченные жанры к тому, что примет сервис: без пустых, без
+ * повторов по регистру и не длиннее предела игры.
+ *
+ * Повторы отсекаются здесь, а не только на сервисе: вторая отметка того же
+ * жанра иначе молча пропала бы при сохранении.
+ *
+ * @param genres Жанры в порядке, в котором их отметили.
+ */
+export function normalizeGenres(genres: Array<string>): Array<string> {
+  const trimmed = genres
+    .map((genre) => genre.trim().slice(0, GAME_GENRE_MAX_LENGTH))
+    .filter((genre) => genre);
+
+  return uniqBy(trimmed, getGenreKey).slice(0, GAME_GENRES_MAX_COUNT);
+}
+
+/**
+ * Жанры одной строкой для карточек и сводки. Пусто — мастер их не указал, и
+ * строку показывать нечем.
+ * @param genres Жанры игры.
+ */
+export function getGenresLabel(genres: Array<string>): string {
+  return genres.join(GENRES_SEPARATOR);
 }
 
 /**

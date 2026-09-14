@@ -33,7 +33,7 @@ function makeGame(overrides: Partial<Game> = {}): Game {
     onlinePlatform: null,
     masterChatUrl: null,
     gameChatUrl: null,
-    genre: null,
+    genres: [],
     description: 'Описание',
     requirements: 'Требования',
     allowedSources: [],

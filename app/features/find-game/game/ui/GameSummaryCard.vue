@@ -3,7 +3,7 @@
 
   import type { Game } from '../../model';
 
-  import { useMasterProfileDrawer } from '../../composables';
+  import { useGameSystems, useMasterProfileDrawer } from '../../composables';
   import {
     GAME_CHAT_LINK_LABEL,
     GAME_COST_TYPE_COLORS,
@@ -24,13 +24,13 @@
     GAME_RECRUITMENT_FULL_BADGE,
     GAME_STATUS_COLORS,
     GAME_STATUS_LABELS,
-    GAME_SYSTEM_LABELS,
     GAME_VIRTUAL_TABLE_LABEL,
     GAME_VISIBILITY_LABELS,
     getGameAgeLabel,
     getGameFormatLabel,
     getGamePlayersLabel,
     getGameStartingLevelLabel,
+    getGenresLabel,
     isGameRecruitmentClosed,
     MASTER_PROFILE_OPEN_HINT,
   } from '../../model';
@@ -125,6 +125,7 @@
   });
 
   const { format } = useDayjs();
+  const { getSystemName } = useGameSystems();
 
   /**
    * Дата ближайшей встречи. Своей даты у игры нет — время назначается
@@ -184,7 +185,7 @@
       {
         key: 'system',
         label: GAME_FACT_LABELS.system,
-        value: GAME_SYSTEM_LABELS[game.system],
+        value: getSystemName(game.system),
       },
       {
         key: 'duration',
@@ -193,11 +194,13 @@
       },
     );
 
-    if (game.genre) {
+    const genres = getGenresLabel(game.genres);
+
+    if (genres) {
       items.push({
-        key: 'genre',
-        label: GAME_FACT_LABELS.genre,
-        value: game.genre,
+        key: 'genres',
+        label: GAME_FACT_LABELS.genres,
+        value: genres,
       });
     }
 

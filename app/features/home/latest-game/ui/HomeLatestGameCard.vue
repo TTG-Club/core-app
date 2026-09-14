@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { Game } from '~find-game/model';
 
+  import { useGameSystems } from '~find-game/composables';
   import {
     GAME_COST_TYPE_COLORS,
     GAME_COST_TYPE_ICONS,
@@ -10,12 +11,12 @@
     GAME_NEXT_SESSION_SHORT_DATE_FORMAT,
     GAME_NEXT_SESSION_SHORT_LABEL,
     GAME_SEATS_LABEL,
-    GAME_SYSTEM_LABELS,
     GAME_TYPE_ICONS,
     getGameFormatSummary,
     getGameRoute,
     getGameSeatsCounter,
     getGameSeatsHint,
+    getGenresLabel,
   } from '~find-game/model';
   import { GameCover } from '~find-game/ui';
 
@@ -28,6 +29,7 @@
   const { format } = useDayjs();
 
   const gameRoute = computed(() => getGameRoute(game.id));
+  const genresLabel = computed(() => getGenresLabel(game.genres));
 
   const costBadgeColor = computed(() => GAME_COST_TYPE_COLORS[game.costType]);
 
@@ -39,7 +41,8 @@
 
   const formatSummary = computed(() => getGameFormatSummary(game));
 
-  const systemLabel = computed(() => GAME_SYSTEM_LABELS[game.system]);
+  const { getSystemName } = useGameSystems();
+  const systemLabel = computed(() => getSystemName(game.system));
 
   /**
    * Своей даты у игры нет — время назначается встречам, поэтому показываем
@@ -107,8 +110,8 @@
         :label="costLabel"
       />
 
-      <!-- Жанр переехал сюда из тела карточки: по смыслу он из той же строки
-        «какая это игра», что формат и длительность -->
+      <!-- Жанры переехали сюда из тела карточки: по смыслу они из той же
+        строки «какая это игра», что формат и длительность -->
       <div
         class="absolute inset-x-0 bottom-0 flex items-center gap-1.5 px-3 pb-2.5 text-xs font-medium text-white"
       >
@@ -120,7 +123,7 @@
         <span class="truncate [text-shadow:0_1px_3px_#000000a6]">
           {{ formatSummary }}
 
-          <template v-if="game.genre">
+          <template v-if="genresLabel">
             <span
               aria-hidden="true"
               class="text-white/50"
@@ -128,7 +131,7 @@
               ·
             </span>
 
-            {{ game.genre }}
+            {{ genresLabel }}
           </template>
         </span>
       </div>

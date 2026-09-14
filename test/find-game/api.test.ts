@@ -5,6 +5,7 @@ import {
   createGameRegistration,
   fetchGame,
   fetchGameSessions,
+  fetchGameSystems,
   fetchOwnGameRegistration,
   getFindGameErrorMessage,
   getFindGameStatus,
@@ -92,6 +93,18 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+describe('справочник игровых систем', () => {
+  it('загружает системы через same-origin proxy', async () => {
+    stubFetch([{ code: 'PATHFINDER_2E', name: 'Pathfinder 2e' }]);
+
+    await expect(fetchGameSystems()).resolves.toEqual([
+      { code: 'PATHFINDER_2E', name: 'Pathfinder 2e' },
+    ]);
+
+    expect(calls[0]?.path).toBe('/api/find-game/game-systems');
+  });
 });
 
 describe('код приглашения в запросах приватной игры', () => {

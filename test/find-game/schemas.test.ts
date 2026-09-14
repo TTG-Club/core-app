@@ -11,6 +11,7 @@ import {
   parseGameReportsPage,
   parseGameSessions,
   parseGamesPage,
+  parseGameSystems,
   parseMasterProfile,
   parseProblemDetail,
   parseSessionParticipant,
@@ -27,7 +28,7 @@ function gameResponse(overrides: Record<string, unknown> = {}) {
     imageUrl: null,
     virtualTableUrl: null,
     onlinePlatform: null,
-    genre: 'Готическое фэнтези',
+    genres: ['Готическое фэнтези'],
     description: 'Кампания',
     requirements: 'Совершеннолетние',
     allowedSources: ["Player's Handbook 2024"],
@@ -85,16 +86,22 @@ describe('разбор игры', () => {
     expect(game.requiresCompletePlayerProfile).toBe(false);
   });
 
+  it('сохраняет новую систему, которой не было при сборке frontend', () => {
+    const game = parseGame(gameResponse({ system: 'PATHFINDER_2E' }));
+
+    expect(game.system).toBe('PATHFINDER_2E');
+  });
+
   it('подставляет null вместо отсутствующих необязательных полей', () => {
     const game = parseGame(
       gameResponse({
-        genre: undefined,
+        genres: undefined,
         minAge: undefined,
         allowedSources: undefined,
       }),
     );
 
-    expect(game.genre).toBeNull();
+    expect(game.genres).toEqual([]);
     expect(game.minAge).toBeNull();
     expect(game.allowedSources).toEqual([]);
   });
@@ -166,6 +173,17 @@ describe('разбор игры', () => {
     expect(request).not.toHaveProperty('approvedSeats');
     expect(request).not.toHaveProperty('nextSession');
     expect(request).not.toHaveProperty('inviteCode');
+  });
+});
+
+describe('разбор справочника игровых систем', () => {
+  it('читает новые системы и пропускает битые записи', () => {
+    expect(
+      parseGameSystems([
+        { code: 'PATHFINDER_2E', name: 'Pathfinder 2e' },
+        { code: '', name: 'Некорректная запись' },
+      ]),
+    ).toEqual([{ code: 'PATHFINDER_2E', name: 'Pathfinder 2e' }]);
   });
 });
 

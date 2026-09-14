@@ -21,6 +21,7 @@ import type {
   GameSearchFilter,
   GameSession,
   GameStatus,
+  GameSystemOption,
   MasterPublicProfile,
   ParticipantName,
   RegistrationDecision,
@@ -47,7 +48,9 @@ import {
   FOLLOWED_MASTERS_API_PATH,
   GAME_FAVORITE_PATH_SUFFIX,
   GAME_REPORTS_API_PATH,
+  GAME_SYSTEMS_API_PATH,
   GAMES_API_PATH,
+  GENRES_API_PATH,
   MASTER_PROFILE_API_PATH,
   MODERATION_GAMES_API_PATH,
   NOTIFICATIONS_API_PATH,
@@ -71,6 +74,8 @@ import {
   parseGameSession,
   parseGameSessions,
   parseGamesPage,
+  parseGameSystems,
+  parseGenres,
   parseMasterProfile,
   parseNotification,
   parseNotificationsPage,
@@ -611,6 +616,31 @@ export async function fetchCities(query: string): Promise<Array<CityOption>> {
   });
 
   return parseCities(response);
+}
+
+/**
+ * Подсказки жанров из общего справочника сервиса.
+ *
+ * Пустой запрос отдаёт начало списка — с него и начинают выбор. Своего жанра
+ * в справочнике может не оказаться: его заводит сам сервис при сохранении
+ * игры, отдельного запроса на создание нет.
+ *
+ * @param query Начало названия жанра.
+ */
+export async function fetchGenres(query: string): Promise<Array<string>> {
+  const response = await $fetch(GENRES_API_PATH, {
+    query: query ? { q: query } : undefined,
+    retry: 0,
+  });
+
+  return parseGenres(response);
+}
+
+/** Загружает все игровые системы, доступные для создания и поиска игр. */
+export async function fetchGameSystems(): Promise<Array<GameSystemOption>> {
+  const response = await $fetch(GAME_SYSTEMS_API_PATH);
+
+  return parseGameSystems(response);
 }
 
 /**

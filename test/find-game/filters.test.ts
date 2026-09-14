@@ -15,6 +15,12 @@ import {
   toGameSearchQuery,
 } from '~find-game/model';
 
+/** Справочник систем: перечисления у них нет, набор приходит от сервиса. */
+const SYSTEMS = [
+  { code: 'DND_2024', name: 'D&D 5 (2024)' },
+  { code: 'PATHFINDER_2E', name: 'Pathfinder 2e' },
+];
+
 /**
  * Приводит собранные параметры к тому виду, в каком их отдаёт маршрут: в
  * адресе всё становится строкой, и обратный разбор работает именно с этим.
@@ -39,6 +45,12 @@ describe('чтение фильтра из адреса', () => {
 
     expect(isEmptyGameFilter(filter)).toBe(true);
     expect(filter).toEqual(createEmptyGameFilter());
+  });
+
+  it('сохраняет код системы из управляемого справочника', () => {
+    const filter = parseGameFilterFromQuery({ system: 'PATHFINDER_2E' });
+
+    expect(filter.system).toEqual(['PATHFINDER_2E']);
   });
 
   it('читает перечисление через запятую', () => {
@@ -292,9 +304,9 @@ describe('группы общей панели фильтров', () => {
     filter.city = ['Москва'];
     filter.minAge = 18;
 
-    const groups = toGameFilterGroups(filter, true);
+    const groups = toGameFilterGroups(filter, true, SYSTEMS);
 
-    expect(applyGameFilterGroups(filter, groups)).toEqual(filter);
+    expect(applyGameFilterGroups(filter, groups, SYSTEMS)).toEqual(filter);
   });
 
   it('исключает группу, только когда искомых значений нет', () => {
@@ -304,6 +316,7 @@ describe('группы общей панели фильтров', () => {
         excludeCostType: ['PAID'],
       },
       true,
+      SYSTEMS,
     );
 
     expect(groups.find((group) => group.key === 'costType')?.mode).toBe(true);
@@ -311,34 +324,40 @@ describe('группы общей панели фильтров', () => {
   });
 
   it('гостю не показывает избранное', () => {
-    const groups = toGameFilterGroups(createEmptyGameFilter(), false);
+    const groups = toGameFilterGroups(createEmptyGameFilter(), false, SYSTEMS);
 
     expect(groups.some((group) => group.key === 'favorite')).toBe(false);
   });
 
   it('оба варианта кроссплея означают «не важно»', () => {
-    const groups = toGameFilterGroups(createEmptyGameFilter(), true).map(
-      (group) =>
-        group.key === 'crossplayAllowed'
-          ? {
-              ...group,
-              values: (group.values ?? []).map((filterItem) => ({
-                ...filterItem,
-                selected: true,
-              })),
-            }
-          : group,
+    const groups = toGameFilterGroups(
+      createEmptyGameFilter(),
+      true,
+      SYSTEMS,
+    ).map((group) =>
+      group.key === 'crossplayAllowed'
+        ? {
+            ...group,
+            values: (group.values ?? []).map((filterItem) => ({
+              ...filterItem,
+              selected: true,
+            })),
+          }
+        : group,
     );
 
     expect(
-      applyGameFilterGroups(createEmptyGameFilter(), groups).crossplayAllowed,
+      applyGameFilterGroups(createEmptyGameFilter(), groups, SYSTEMS)
+        .crossplayAllowed,
     ).toBeNull();
   });
 
   it('не отдаёт отменённые игры в статусы каталога', () => {
-    const status = toGameFilterGroups(createEmptyGameFilter(), true).find(
-      (group) => group.key === 'status',
-    );
+    const status = toGameFilterGroups(
+      createEmptyGameFilter(),
+      true,
+      SYSTEMS,
+    ).find((group) => group.key === 'status');
 
     expect(status?.values?.map((filterItem) => filterItem.id)).toEqual([
       'OPEN',
@@ -349,12 +368,15 @@ describe('группы общей панели фильтров', () => {
 
 describe('ряд применённых условий', () => {
   it('даёт по чипу на условие и помечает исключения', () => {
-    const chips = getGameFilterChips({
-      ...createEmptyGameFilter(),
-      type: ['ONLINE'],
-      excludeCostType: ['PAID'],
-      maxSeatsToStart: 0,
-    });
+    const chips = getGameFilterChips(
+      {
+        ...createEmptyGameFilter(),
+        type: ['ONLINE'],
+        excludeCostType: ['PAID'],
+        maxSeatsToStart: 0,
+      },
+      SYSTEMS,
+    );
 
     expect(chips.map((chip) => [chip.label, chip.isExcluded])).toEqual([
       ['Онлайн', false],
@@ -370,7 +392,7 @@ describe('ряд применённых условий', () => {
       minAge: 18,
     };
 
-    const [moscow, kazan, age] = getGameFilterChips(filter);
+    const [moscow, kazan, age] = getGameFilterChips(filter, SYSTEMS);
 
     expect(moscow?.remove(filter).city).toEqual(['Казань']);
     expect(kazan?.remove(filter).city).toEqual(['Москва']);

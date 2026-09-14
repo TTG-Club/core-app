@@ -7,6 +7,8 @@ export * from './useFollows';
 export * from './useGameCatalog';
 export * from './useGameDetail';
 export * from './useGameRegistrations';
+export * from './useGameSystems';
+export * from './useGenreDictionary';
 export * from './useHumanPage';
 export * from './useMasterProfileDrawer';
 export * from './useMyGames';

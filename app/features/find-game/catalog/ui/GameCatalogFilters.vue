@@ -7,7 +7,7 @@
   import { FILTER_FILTERS_TITLE } from '~infrastructure/filter/model';
   import { InputNumberClearable } from '~ui/input';
 
-  import { useCityDictionary } from '../../composables';
+  import { useCityDictionary, useGameSystems } from '../../composables';
   import {
     applyGameFilterGroups,
     CATALOG_FILTER_AGE_FROM_LABEL,
@@ -44,8 +44,10 @@
 
   // Панель сама клонирует группы при открытии и отдаёт их обратно только по
   // «Применить», поэтому группы строятся прямо из применённого фильтра.
+  const { systems } = useGameSystems();
+
   const groups = computed(() =>
-    toGameFilterGroups(filter.value, isLoggedIn.value),
+    toGameFilterGroups(filter.value, isLoggedIn.value, systems.value),
   );
 
   // Поля без групп панель не знает — их черновик держит этот компонент.
@@ -107,7 +109,12 @@
       return;
     }
 
-    filter.value = applyGameFilterGroups(draft.value, appliedGroups);
+    filter.value = applyGameFilterGroups(
+      draft.value,
+      appliedGroups,
+      systems.value,
+    );
+
     isOpen.value = false;
   }
 

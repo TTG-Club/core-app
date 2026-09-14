@@ -11,8 +11,10 @@ import {
   getGameInviteLink,
   getGamePlayersLabel,
   getGameRoute,
+  getGenresLabel,
   getSessionDurationLabel,
   getSessionPriceLabel,
+  normalizeGenres,
   toLocalDateTimeInput,
 } from '~find-game/model';
 
@@ -39,6 +41,14 @@ function onlineGame(
 }
 
 describe('тело создания игры', () => {
+  it('принимает систему, добавленную в справочник после сборки frontend', () => {
+    const parsed = createGameRequestSchema.parse(
+      onlineGame({ system: 'PATHFINDER_2E' }),
+    );
+
+    expect(parsed.system).toBe('PATHFINDER_2E');
+  });
+
   it('сохраняет выбранную платформу онлайн-игры', () => {
     const parsed = createGameRequestSchema.parse(
       onlineGame({ onlinePlatform: 'FOUNDRY_VTT' }),
@@ -151,12 +161,33 @@ describe('тело создания игры', () => {
   it('пустые необязательные поля превращаются в отсутствующие', () => {
     // Иначе сервис получил бы пустую строку там, где ждёт URL, и ответил 400.
     const parsed = createGameRequestSchema.parse(
-      onlineGame({ imageUrl: '', genre: '   ', virtualTableUrl: '' }),
+      onlineGame({ imageUrl: '', virtualTableUrl: '' }),
     );
 
     expect(parsed.imageUrl).toBeUndefined();
-    expect(parsed.genre).toBeUndefined();
     expect(parsed.virtualTableUrl).toBeUndefined();
+  });
+
+  it('принимает несколько жанров', () => {
+    const parsed = createGameRequestSchema.parse(
+      onlineGame({ genres: ['Готическое фэнтези', 'Хоррор'] }),
+    );
+
+    expect(parsed.genres).toEqual(['Готическое фэнтези', 'Хоррор']);
+  });
+
+  it('жанров не больше десяти', () => {
+    const tooMany = Array.from({ length: 11 }, (_, index) => `Жанр ${index}`);
+
+    expect(() =>
+      createGameRequestSchema.parse(onlineGame({ genres: tooMany })),
+    ).toThrow();
+  });
+
+  it('слишком длинный жанр не проходит', () => {
+    expect(() =>
+      createGameRequestSchema.parse(onlineGame({ genres: ['а'.repeat(101)] })),
+    ).toThrow();
   });
 
   it('источников не больше пятидесяти', () => {
@@ -331,5 +362,40 @@ describe('ссылки на игру', () => {
     expect(getGameInviteLink('game-1', 'code-1')).toBe(
       'https://ttg.club/games/game-1?inviteCode=code-1',
     );
+  });
+});
+
+describe('жанры игры', () => {
+  it('повтор по регистру отбрасывается', () => {
+    // Справочник сервиса считает «Хоррор» и «хоррор» одним жанром: вторая
+    // отметка иначе молча пропала бы при сохранении.
+    expect(normalizeGenres(['Хоррор', 'хоррор', 'Детектив'])).toEqual([
+      'Хоррор',
+      'Детектив',
+    ]);
+  });
+
+  it('пустые и пробельные значения не попадают в набор', () => {
+    expect(normalizeGenres(['  Детектив  ', '   ', ''])).toEqual(['Детектив']);
+  });
+
+  it('набор обрезается до предела игры', () => {
+    const tooMany = Array.from({ length: 12 }, (_, index) => `Жанр ${index}`);
+
+    expect(normalizeGenres(tooMany)).toHaveLength(10);
+  });
+
+  it('слишком длинный жанр укорачивается до предела сервиса', () => {
+    expect(normalizeGenres(['а'.repeat(120)])).toEqual(['а'.repeat(100)]);
+  });
+});
+
+describe('подпись жанров', () => {
+  it('жанры перечисляются через запятую', () => {
+    expect(getGenresLabel(['Хоррор', 'Детектив'])).toBe('Хоррор, Детектив');
+  });
+
+  it('без жанров подпись пустая', () => {
+    expect(getGenresLabel([])).toBe('');
   });
 });

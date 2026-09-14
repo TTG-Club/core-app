@@ -9,6 +9,7 @@ import type {
   GameRegistration,
   GameReport,
   GameSession,
+  GameSystemOption,
   MasterPublicProfile,
   Reputation,
   SessionParticipant,
@@ -28,6 +29,7 @@ import {
   GAME_DESCRIPTION_MAX_LENGTH,
   GAME_DURATION_TYPES,
   GAME_GENRE_MAX_LENGTH,
+  GAME_GENRES_MAX_COUNT,
   GAME_ONLINE_PLATFORMS,
   GAME_PLAYERS_MAX,
   GAME_PLAYERS_MIN,
@@ -38,7 +40,6 @@ import {
   GAME_STARTING_LEVEL_MAX,
   GAME_STARTING_LEVEL_MIN,
   GAME_STATUSES,
-  GAME_SYSTEMS,
   GAME_TITLE_MAX_LENGTH,
   GAME_TYPES,
   GAME_URL_MAX_LENGTH,
@@ -331,6 +332,58 @@ export function parseCities(input: unknown): Array<CityOption> {
 }
 
 /* ------------------------------------------------------------------ */
+/* Справочник игровых систем                                          */
+/* ------------------------------------------------------------------ */
+
+const gameSystemResponseSchema = z.object({
+  code: z.string().trim().min(1).max(30),
+  name: z.string().trim().min(1).max(120),
+});
+
+/**
+ * Разбирает игровые системы из сервиса. Некорректная отдельная запись не
+ * должна скрывать остальные варианты выбора.
+ * @param input Сырой массив из ответа сервиса.
+ */
+export function parseGameSystems(input: unknown): Array<GameSystemOption> {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input.flatMap((entry) => {
+    const parsed = gameSystemResponseSchema.safeParse(entry);
+
+    return parsed.success ? [parsed.data] : [];
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Справочник жанров                                                   */
+/* ------------------------------------------------------------------ */
+
+const genreResponseSchema = z.object({
+  name: z.string().trim().min(1).max(GAME_GENRE_MAX_LENGTH),
+});
+
+/**
+ * Разбирает подсказки жанров. Справочник пополняют сами мастера, поэтому
+ * битая запись выкидывается по одной: из-за неё не должны пропасть остальные
+ * подсказки.
+ * @param input Сырой массив из ответа сервиса.
+ */
+export function parseGenres(input: unknown): Array<string> {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input.flatMap((entry) => {
+    const parsed = genreResponseSchema.safeParse(entry);
+
+    return parsed.success ? [parsed.data.name] : [];
+  });
+}
+
+/* ------------------------------------------------------------------ */
 /* Игра                                                                */
 /* ------------------------------------------------------------------ */
 
@@ -355,13 +408,13 @@ const gameResponseSchema = z.object({
   id: uuidSchema,
   masterId: uuidSchema,
   title: z.string().catch(''),
-  system: z.enum(GAME_SYSTEMS).catch('DND_2024'),
+  system: z.string().min(1).catch(''),
   imageUrl: z.string().nullish().catch(null),
   virtualTableUrl: z.string().nullish().catch(null),
   onlinePlatform: z.enum(GAME_ONLINE_PLATFORMS).nullish().catch(null),
   masterChatUrl: z.string().nullish().catch(null),
   gameChatUrl: z.string().nullish().catch(null),
-  genre: z.string().nullish().catch(null),
+  genres: z.array(z.string()).nullish().catch(null),
   description: z.string().catch(''),
   requirements: z.string().catch(''),
   allowedSources: z.array(z.string()).nullish().catch(null),
@@ -411,7 +464,7 @@ function toGame(parsed: z.infer<typeof gameResponseSchema>): Game {
     onlinePlatform: parsed.onlinePlatform ?? null,
     masterChatUrl: parsed.masterChatUrl ?? null,
     gameChatUrl: parsed.gameChatUrl ?? null,
-    genre: parsed.genre ?? null,
+    genres: parsed.genres ?? [],
     description: parsed.description,
     requirements: parsed.requirements,
     allowedSources: parsed.allowedSources ?? [],
@@ -961,13 +1014,16 @@ function optionalTrimmed(max: number) {
 export const createGameRequestSchema = z
   .object({
     title: z.string().trim().min(1).max(GAME_TITLE_MAX_LENGTH),
-    system: z.enum(GAME_SYSTEMS),
+    system: z.string().trim().min(1).max(30),
     imageUrl: optionalTrimmed(GAME_URL_MAX_LENGTH),
     virtualTableUrl: optionalTrimmed(GAME_URL_MAX_LENGTH),
     onlinePlatform: z.enum(GAME_ONLINE_PLATFORMS).optional(),
     masterChatUrl: optionalTrimmed(GAME_URL_MAX_LENGTH),
     gameChatUrl: optionalTrimmed(GAME_URL_MAX_LENGTH),
-    genre: optionalTrimmed(GAME_GENRE_MAX_LENGTH),
+    genres: z
+      .array(z.string().trim().min(1).max(GAME_GENRE_MAX_LENGTH))
+      .max(GAME_GENRES_MAX_COUNT)
+      .optional(),
     description: z.string().trim().min(1).max(GAME_DESCRIPTION_MAX_LENGTH),
     requirements: z.string().trim().min(1).max(GAME_REQUIREMENTS_MAX_LENGTH),
     allowedSources: z
