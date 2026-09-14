@@ -84,7 +84,7 @@
           :key="source"
           color="neutral"
           variant="subtle"
-          size="sm"
+          size="md"
           :label="source"
         />
       </div>
@@ -110,7 +110,7 @@
               :key="source"
               color="neutral"
               variant="subtle"
-              size="sm"
+              size="md"
               :label="source"
             />
           </div>
