@@ -1,0 +1,168 @@
+<script setup lang="ts">
+  import type { GameReport } from '../../model';
+
+  import { UserAvatar } from '~ui/user-avatar';
+
+  import {
+    GAME_DELETE_LABEL,
+    GAME_REPORT_AUTHOR_LABEL,
+    GAME_REPORT_CREATED_LABEL,
+    GAME_REPORT_DATE_FORMAT,
+    GAME_REPORT_HIDDEN_AT_LABEL,
+    GAME_REPORT_HIDDEN_BADGE,
+    GAME_REPORT_HIDDEN_REASON_EMPTY,
+    GAME_REPORT_HIDDEN_REASON_LABEL,
+    GAME_REPORT_HIDE_ALL_MASTER_GAMES_LABEL,
+    GAME_REPORT_REASON_LABELS,
+    GAME_REPORT_RESTORE_LABEL,
+    getGameRoute,
+  } from '../../model';
+
+  /**
+   * Жалоба на объявление в очереди модератора: что за игра, кто и почему
+   * пожаловался, и два ответа на неё — заблокировать игру или все игры мастера.
+   */
+  const {
+    report,
+    reporterName,
+    busy = false,
+  } = defineProps<{
+    report: GameReport;
+    /** Отображаемое имя автора жалобы; UUID пользователю показывать нельзя. */
+    reporterName: string | null;
+    /** Идёт модераторское действие: кнопки заблокированы. */
+    busy?: boolean;
+  }>();
+
+  const emit = defineEmits<{
+    'hide-game': [reportId: string];
+    'hide-master-games': [reportId: string];
+    'restore-game': [reportId: string];
+  }>();
+
+  const { format } = useDayjs();
+
+  const gameRoute = computed(() => getGameRoute(report.gameId));
+
+  const createdLabel = computed(() =>
+    format(report.createdAt, GAME_REPORT_DATE_FORMAT),
+  );
+
+  const hiddenAtLabel = computed(() =>
+    report.gameDeletedAt
+      ? format(report.gameDeletedAt, GAME_REPORT_DATE_FORMAT)
+      : null,
+  );
+</script>
+
+<template>
+  <article
+    class="flex flex-col gap-3 rounded-xl border border-default bg-elevated p-4"
+  >
+    <div class="flex flex-wrap items-start justify-between gap-2">
+      <div class="min-w-0">
+        <NuxtLink
+          :to="gameRoute"
+          class="font-semibold text-highlighted hover:text-primary"
+        >
+          {{ report.gameTitle }}
+        </NuxtLink>
+
+        <p
+          v-if="reporterName"
+          class="mt-1 flex items-center gap-1.5 text-sm text-muted"
+        >
+          {{ GAME_REPORT_AUTHOR_LABEL }}:
+
+          <UserAvatar
+            :user-id="report.reporterId"
+            :name="reporterName"
+            size="3xs"
+            class="shrink-0"
+          />
+
+          {{ reporterName }}
+        </p>
+      </div>
+
+      <UBadge
+        v-if="report.reason"
+        color="error"
+        variant="subtle"
+        :label="GAME_REPORT_REASON_LABELS[report.reason]"
+      />
+    </div>
+
+    <p
+      v-if="report.details"
+      class="text-sm whitespace-pre-line text-toned"
+    >
+      {{ report.details }}
+    </p>
+
+    <p
+      v-if="report.gameDeleted"
+      class="text-sm whitespace-pre-line text-toned"
+    >
+      {{ GAME_REPORT_HIDDEN_REASON_LABEL }}:
+      {{ report.gameDeletionReason ?? GAME_REPORT_HIDDEN_REASON_EMPTY }}
+    </p>
+
+    <p
+      v-if="report.reporterId"
+      class="text-xs text-muted"
+    >
+      {{ GAME_REPORT_CREATED_LABEL }}:
+      {{ createdLabel }}
+    </p>
+
+    <p
+      v-if="hiddenAtLabel"
+      class="text-xs text-muted"
+    >
+      {{ GAME_REPORT_HIDDEN_AT_LABEL }}:
+      {{ hiddenAtLabel }}
+    </p>
+
+    <div class="flex flex-wrap gap-2">
+      <UBadge
+        v-if="report.gameDeleted"
+        color="neutral"
+        variant="subtle"
+        :label="GAME_REPORT_HIDDEN_BADGE"
+      />
+
+      <UButton
+        v-if="report.gameDeleted"
+        size="sm"
+        color="success"
+        variant="soft"
+        icon="tabler:lock-open"
+        :disabled="busy"
+        :label="GAME_REPORT_RESTORE_LABEL"
+        @click.left.exact.prevent="emit('restore-game', report.id)"
+      />
+
+      <UButton
+        v-else
+        size="sm"
+        color="error"
+        variant="soft"
+        icon="tabler:lock"
+        :disabled="busy"
+        :label="GAME_DELETE_LABEL"
+        @click.left.exact.prevent="emit('hide-game', report.id)"
+      />
+
+      <UButton
+        size="sm"
+        color="error"
+        variant="outline"
+        icon="tabler:ban"
+        :disabled="busy"
+        :label="GAME_REPORT_HIDE_ALL_MASTER_GAMES_LABEL"
+        @click.left.exact.prevent="emit('hide-master-games', report.id)"
+      />
+    </div>
+  </article>
+</template>

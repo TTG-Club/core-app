@@ -22,6 +22,11 @@
     ADMIN_DASHBOARD_TOKENATOR_TITLE,
   } from '~admin/dashboard/model';
   import {
+    HOME_HERO_ADMIN_PAGE_DESCRIPTION,
+    HOME_HERO_ADMIN_PAGE_TITLE,
+    HOME_HERO_ADMIN_ROUTE,
+  } from '~admin/home-hero/model';
+  import {
     MAILING_PAGE_DESCRIPTION,
     MAILING_PAGE_TITLE,
     MAILING_ROUTE,
@@ -252,6 +257,27 @@
 
           <div class="text-sm text-muted">
             {{ ADMIN_DASHBOARD_ARTICLES_DESCRIPTION }}
+          </div>
+        </UCard>
+
+        <UCard variant="subtle">
+          <template #header>
+            <div class="flex items-center justify-between gap-2">
+              <h2 class="truncate text-base text-highlighted">
+                {{ HOME_HERO_ADMIN_PAGE_TITLE }}
+              </h2>
+
+              <UButton
+                size="sm"
+                :to="HOME_HERO_ADMIN_ROUTE"
+              >
+                {{ ADMIN_DASHBOARD_CONFIGURE_LABEL }}
+              </UButton>
+            </div>
+          </template>
+
+          <div class="text-sm text-muted">
+            {{ HOME_HERO_ADMIN_PAGE_DESCRIPTION }}
           </div>
         </UCard>
 

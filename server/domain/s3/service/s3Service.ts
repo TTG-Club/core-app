@@ -6,6 +6,15 @@ import { S3 } from '@aws-sdk/client-s3';
 import { StatusCodes } from 'http-status-codes';
 import ms from 'ms';
 
+import { S3_URL_PREFIX } from '#shared/consts';
+
+/**
+ * Предел длины ключа файла в байтах: дальше хранилище его не принимает, а
+ * кириллица в имени занимает по два байта на символ.
+ */
+const MAX_FILE_PATH_BYTES = 1024;
+
+/** Клиент хранилища: загрузка, удаление и чтение файлов сайта. */
 export function createS3Service() {
   const { endpoint, region, accessKeyId, secretAccessKey, bucket } =
     getS3Secrets();
@@ -59,7 +68,7 @@ export function createS3Service() {
       throw new Error('Отсутствуют данные для загрузки');
     }
 
-    if (getStringByteSize(file.path) > 1024) {
+    if (getStringByteSize(file.path) > MAX_FILE_PATH_BYTES) {
       throw createError(
         getErrorResponse(StatusCodes.BAD_REQUEST, {
           message:
@@ -79,7 +88,7 @@ export function createS3Service() {
 
     return {
       filename: file.name,
-      url: `/s3/${file.path}`,
+      url: `${S3_URL_PREFIX}${file.path}`,
     };
   }
 
@@ -106,8 +115,8 @@ export function createS3Service() {
         Key: targetKey,
         MetadataDirective: 'COPY',
       });
-    } catch (err) {
-      consola.error(err);
+    } catch (error) {
+      consola.error(error);
 
       throw createError(
         getErrorResponse(StatusCodes.INTERNAL_SERVER_ERROR, {
@@ -131,8 +140,8 @@ export function createS3Service() {
         Key: key,
         Bucket: bucket,
       });
-    } catch (err) {
-      consola.error(err);
+    } catch (error) {
+      consola.error(error);
 
       throw createError(
         getErrorResponse(StatusCodes.INTERNAL_SERVER_ERROR, {
@@ -150,8 +159,8 @@ export function createS3Service() {
       });
 
       return command.Contents || [];
-    } catch (err) {
-      consola.error(err);
+    } catch (error) {
+      consola.error(error);
 
       throw createError(
         getErrorResponse(StatusCodes.INTERNAL_SERVER_ERROR, {

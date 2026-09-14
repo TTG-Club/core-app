@@ -26,6 +26,7 @@ import {
   parseSavedCharacterSheetListPage,
 } from './character-schema';
 import {
+  CHARACTER_SHEET_ADMIN_API_PATH,
   CHARACTER_SHEET_API_PATH,
   CHARACTER_SHEET_SAVED_API_PATH,
   CHARACTER_SHEET_SHARED_API_PATH,
@@ -431,6 +432,25 @@ export async function fetchSharedCharacterSheet(
   token: string,
 ): Promise<CharacterSheetDetail> {
   const response = await $fetch(`${CHARACTER_SHEET_SHARED_API_PATH}/${token}`, {
+    method: 'GET',
+    retry: 0,
+  });
+
+  return parseCharacterSheetDetail(response);
+}
+
+/**
+ * Любой лист по идентификатору — для администратора: так он открывает лист из
+ * баг-репорта, даже если владелец не делился ссылкой. Только чтение, токена
+ * ссылки в ответе нет. Удалённый или несуществующий лист — 404.
+ *
+ * @param id идентификатор листа.
+ * @returns лист с разобранным персонажем.
+ */
+export async function fetchCharacterSheetForAdmin(
+  id: string,
+): Promise<CharacterSheetDetail> {
+  const response = await $fetch(`${CHARACTER_SHEET_ADMIN_API_PATH}/${id}`, {
     method: 'GET',
     retry: 0,
   });

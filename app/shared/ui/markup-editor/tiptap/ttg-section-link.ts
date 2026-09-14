@@ -7,6 +7,11 @@ import type {
 import { mergeAttributes, Node } from '@tiptap/core';
 import { VueNodeViewRenderer } from '@tiptap/vue-3';
 
+import {
+  SECTION_LINK_ATTR,
+  SECTION_LINK_KIND_ATTR,
+  SECTION_LINK_URL_ATTR,
+} from './constants';
 import { classifyLinkMarker, sanitizeLabel } from './link-markers';
 import SectionLinkChip from './SectionLinkChip.vue';
 
@@ -80,25 +85,31 @@ export const TtgSectionLink = Node.create({
     return {
       kind: {
         default: 'link',
-        parseHTML: (element) => element.getAttribute('data-kind') ?? 'link',
-        renderHTML: (attributes) => ({ 'data-kind': attributes.kind }),
+        parseHTML: (element) =>
+          element.getAttribute(SECTION_LINK_KIND_ATTR) ?? 'link',
+        renderHTML: (attributes) => ({
+          [SECTION_LINK_KIND_ATTR]: attributes.kind,
+        }),
       },
       url: {
         default: '',
-        parseHTML: (element) => element.getAttribute('data-url') ?? '',
-        renderHTML: (attributes) => ({ 'data-url': attributes.url }),
+        parseHTML: (element) =>
+          element.getAttribute(SECTION_LINK_URL_ATTR) ?? '',
+        renderHTML: (attributes) => ({
+          [SECTION_LINK_URL_ATTR]: attributes.url,
+        }),
       },
     };
   },
 
   parseHTML() {
-    return [{ tag: 'span[data-ttg-section-link]' }];
+    return [{ tag: `span[${SECTION_LINK_ATTR}]` }];
   },
 
   renderHTML({ HTMLAttributes }) {
     return [
       'span',
-      mergeAttributes({ 'data-ttg-section-link': '' }, HTMLAttributes),
+      mergeAttributes({ [SECTION_LINK_ATTR]: '' }, HTMLAttributes),
       0,
     ];
   },

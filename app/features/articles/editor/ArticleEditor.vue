@@ -73,6 +73,8 @@
       telegramSummary: '',
       publishToDiscord: false,
       discordMention: ARTICLE_DISCORD_MENTION_DEFAULT,
+      discordCompact: false,
+      discordCompactText: '',
       publishToVk: false,
       title: '',
       previewImageUrl: null,
@@ -94,9 +96,9 @@
       // а `defineModel({ default: '' })` подставляет дефолт только на undefined),
       // из-за чего `state.preview` остаётся null и PUT падает на `@NotNull`.
       // Нормализуем при загрузке к пустой строке. `publishToTelegram`,
-      // `publishToDiscord`, `publishToVk`, `discordMention`, `telegramFormat` и
-      // поля короткого описания также страхуем на случай null у записей до
-      // миграции бэка (у них короткого описания ещё не было).
+      // `publishToDiscord`, `publishToVk`, `discordMention`, `telegramFormat`,
+      // поля короткого описания и компактного поста в Discord также страхуем на
+      // случай null у записей до миграции бэка (у них этих полей ещё не было).
       normalizeLoaded: (raw) => ({
         ...raw,
         preview: raw.preview ?? '',
@@ -104,6 +106,8 @@
         publishToDiscord: raw.publishToDiscord ?? false,
         publishToVk: raw.publishToVk ?? false,
         discordMention: raw.discordMention ?? ARTICLE_DISCORD_MENTION_DEFAULT,
+        discordCompact: raw.discordCompact ?? false,
+        discordCompactText: raw.discordCompactText ?? '',
         telegramFormat: raw.telegramFormat ?? ARTICLE_TELEGRAM_FORMAT_DEFAULT,
         telegramSummaryEnabled: raw.telegramSummaryEnabled ?? false,
         telegramSummary: raw.telegramSummary ?? '',
@@ -204,12 +208,36 @@
   // считаем как есть, без разбора разметки.
   const summaryCharCount = computed(() => state.value.telegramSummary.length);
 
+  // Компактный пост в Discord: вместо анонса и содержания уходит свой короткий
+  // текст, а ссылку на новость на сайте бэк допишет в конец поста сам.
+  const isDiscordCompact = computed(
+    () => state.value.publishToDiscord && state.value.discordCompact,
+  );
+
+  // Текст компактного поста — обычный текст, длину считаем как есть.
+  const discordCompactCharCount = computed(
+    () => state.value.discordCompactText.length,
+  );
+
+  // Сколько символов уйдёт в пост Discord: компактный текст либо анонс + содержание.
+  const discordCharCount = computed(() =>
+    isDiscordCompact.value
+      ? discordCompactCharCount.value
+      : postCharCount.value,
+  );
+
+  const discordHint = computed(() =>
+    isDiscordCompact.value
+      ? 'компактный вариант, ссылка на сайт добавится сама'
+      : 'при любом раскладе',
+  );
+
   const telegramCounterClass = computed(() =>
     counterClass(postCharCount.value > telegramTarget.value),
   );
 
   const discordCounterClass = computed(() =>
-    counterClass(postCharCount.value > discordTarget),
+    counterClass(discordCharCount.value > discordTarget),
   );
 
   const summaryCounterClass = computed(() =>
@@ -393,6 +421,10 @@
     telegramSummary: z.string(),
     publishToDiscord: z.boolean(),
     discordMention: z.enum(ARTICLE_DISCORD_MENTIONS),
+    // Текст компактного поста необязателен: пустой — в посте останутся заголовок
+    // и ссылка на сайт.
+    discordCompact: z.boolean(),
+    discordCompactText: z.string(),
     publishToVk: z.boolean(),
     // Анонс необязателен: пустую строку допускаем (бэк принимает пустой preview).
     preview: z.string().trim(),
@@ -682,6 +714,36 @@
           новости повторно не звенит. Подписчикам других серверов пинг не
           передаётся: Discord вырезает упоминания из копии.
         </p>
+
+        <USwitch
+          v-model="state.discordCompact"
+          label="Компактный вариант"
+          description="Вместо анонса и текста новости в Discord уйдёт короткий текст, а в конце поста сама добавится ссылка «Подробнее читайте на сайте»."
+        />
+
+        <UFormField
+          v-if="state.discordCompact"
+          name="discordCompactText"
+          label="Текст компактного варианта"
+          help="Переносы строк сохраняются; работают **жирный**, *курсив* и маркеры разметки. Пустой текст — в посте останутся заголовок и ссылка на сайт."
+        >
+          <template #hint>
+            <span
+              class="tabular-nums"
+              :class="discordCounterClass"
+            >
+              {{ discordCompactCharCount }} / {{ discordTarget }}
+            </span>
+          </template>
+
+          <UTextarea
+            v-model="state.discordCompactText"
+            autoresize
+            :maxrows="8"
+            class="w-full"
+            placeholder="Коротко о главном — этот текст уйдёт в Discord"
+          />
+        </UFormField>
       </div>
 
       <div
@@ -715,8 +777,9 @@
           class="tabular-nums"
           :class="discordCounterClass"
         >
-          Discord: {{ postCharCount }} / {{ discordTarget }} (при любом
-          раскладе)
+          Discord: {{ discordCharCount }} / {{ discordTarget }} ({{
+            discordHint
+          }})
         </p>
       </div>
     </UCard>

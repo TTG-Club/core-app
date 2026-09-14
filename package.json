@@ -10,6 +10,8 @@
     "server": "node .output/server/index.mjs",
     "postinstall": "nuxt cleanup && nuxt prepare",
     "type-check": "vue-tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "lint:check": "eslint .",
     "lint:write": "eslint . --fix",
     "lint:workflow": "eslint . --quiet",
@@ -67,7 +69,6 @@
     "nuxt": "^4.5.2",
     "nuxt-gtag": "^4.1.0",
     "nuxt-security": "^2.6.0",
-    "nuxt-yandex-metrika": "^2.0.2",
     "pako": "^2.2.0",
     "pdf-lib": "^1.17.1",
     "pinia": "^3.0.4",
@@ -102,6 +103,7 @@
     "simple-git-hooks": "^2.13.1",
     "stylelint-config-clean-order": "^8.0.2",
     "typescript": "^5.9.3",
+    "vitest": "^4.1.11",
     "vue-tsc": "^3.3.5"
   },
   "simple-git-hooks": {

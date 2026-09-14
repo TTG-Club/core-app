@@ -7,6 +7,9 @@ export const MODERATION_BUGS_ROUTE = `${MODERATION_ROUTE}/bug-reports`;
 /** Маршрут раздела модерации комментариев в панели модератора */
 export const MODERATION_COMMENTS_ROUTE = `${MODERATION_ROUTE}/comments`;
 
+/** Маршрут очереди жалоб на объявления. */
+export const MODERATION_GAME_REPORTS_ROUTE = `${MODERATION_ROUTE}/game-reports`;
+
 /** Заголовок панели модератора */
 export const MODERATION_PANEL_TITLE = 'Панель модератора';
 
@@ -26,6 +29,13 @@ export const MODERATION_DASHBOARD_COMMENTS_TITLE = 'Комментарии';
 /** Описание плитки модерации комментариев на дашборде */
 export const MODERATION_DASHBOARD_COMMENTS_DESCRIPTION =
   'Жалобы пользователей и модерация всех комментариев сайта';
+
+/** Заголовок плитки жалоб на игры. */
+export const MODERATION_DASHBOARD_GAME_REPORTS_TITLE = 'Жалобы на игры';
+
+/** Описание плитки очереди жалоб на объявления. */
+export const MODERATION_DASHBOARD_GAME_REPORTS_DESCRIPTION =
+  'Сообщения о рекламе, спаме и непристойных изображениях в играх';
 
 /** Подпись кнопки перехода в раздел с дашборда */
 export const MODERATION_DASHBOARD_OPEN_LABEL = 'Открыть';

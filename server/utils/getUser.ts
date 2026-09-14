@@ -5,13 +5,21 @@ import { errors } from 'jose';
 
 import { Role } from '~/shared/types';
 
+/**
+ * Пользователь из токена запроса.
+ *
+ * Истёкший токен и битый различаются ответом: первый лечится входом заново,
+ * второй — ошибка запроса, и повторять его бессмысленно.
+ *
+ * @param event Событие H3.
+ */
 export function getUserFromToken(event: H3Event) {
   const token = getTokenFromRequest(event);
 
   try {
     return verifyJwt(token);
-  } catch (err) {
-    if (err instanceof errors.JWTExpired) {
+  } catch (error) {
+    if (error instanceof errors.JWTExpired) {
       throw createError(getErrorResponse(StatusCodes.UNAUTHORIZED));
     }
 
@@ -19,6 +27,13 @@ export function getUserFromToken(event: H3Event) {
   }
 }
 
+/**
+ * Может ли пользователь распоряжаться чужой записью: своей — всегда, чужой —
+ * только с ролью администратора или модератора.
+ *
+ * @param event Событие H3.
+ * @param username Владелец записи.
+ */
 export async function isUserHasAccess(
   event: H3Event,
   username: string | undefined,
@@ -36,6 +51,23 @@ export async function isUserHasAccess(
   return roles.some((role) => {
     return role === Role.ADMIN || role === Role.MODERATOR;
   });
+}
+
+/**
+ * Пропускает дальше только администратора.
+ *
+ * Отдельная проверка вместо `assertAdminAccess`: та пускает и модератора, а
+ * есть действия только для администратора — рассылка промокодов от имени
+ * сайта, смена фона шапки главной.
+ *
+ * @param event Событие H3.
+ */
+export async function assertAdminRole(event: H3Event): Promise<void> {
+  const { roles } = await getUserFromToken(event);
+
+  if (!roles.includes(Role.ADMIN)) {
+    throw createError(getErrorResponse(StatusCodes.FORBIDDEN));
+  }
 }
 
 /**

@@ -4,7 +4,9 @@
     CharacterFeature,
     CharacterInnateSpell,
     ClassChoice,
+    ClassOption,
     FeatSelectOption,
+    FeatSummary,
     FeatureDescriptionNode,
     FeatureOrigin,
     LevelUpFeatChoice,
@@ -15,7 +17,7 @@
     SpeciesSummary,
   } from '../../model';
 
-  import { partition } from 'es-toolkit';
+  import { omit, partition } from 'es-toolkit';
 
   import { ACTION_LABELS } from '~/shared/consts';
   import { SpeciesDrawer } from '~species/drawer';
@@ -36,8 +38,10 @@
     buildChoiceControl,
     buildFeatFeature,
     CLASS_FEAT_CHOICE_ID_SEGMENT,
+    CLASSES_SEARCH_PATH,
     collectChosenProficiencies,
     collectFeatAbilityIncreases,
+    collectFeatChoiceAnswers,
     collectSpeciesProficiencies,
     CURRENT_SELECTION_LABELS,
     CUSTOM_SPECIES_LABELS,
@@ -51,14 +55,18 @@
     getChoiceModalSubtitle,
     getChosenProficientSkills,
     getFeatChoiceOptions,
+    getFeatSpellcastingAbility,
     getFeatUrlFromFeatureId,
     getOwnedWeaponNames,
+    getPickedFeatChoices,
     getSpeciesDarkvision,
     getSpeciesVision,
     getSpellChoicesKey,
     getToolNames,
+    getVisibleFeatChoices,
     LANGUAGE_PROFICIENCY_GROUPS,
     ORIGIN_FEAT_ACQUISITION_LEVEL,
+    parseClassOptions,
     parseFeatSelectOptions,
     parseSizeOptionsFromText,
     parseSpeciesDetail,
@@ -233,6 +241,37 @@
   const isFeatsLoading = ref(false);
 
   const hasFeatsError = ref(false);
+
+  /**
+   * Детали черт, выбранных в умениях, по идентификатору выбора черты: под полем
+   * черты спрашиваются её собственные выборы — «Посвящённый в магию» просит
+   * список, заговоры и заклинание так же, как в окне добавления черты. Словарь
+   * заменяется целиком, поэтому глубокая реактивность ему не нужна.
+   */
+  const pickedFeats = shallowRef<Record<string, FeatSummary>>({});
+
+  /**
+   * Детали черт в пути: идентификатор выбора черты → url черты, за которой ушёл
+   * запрос. Применять вид до их прихода рано — черта легла бы без ответов.
+   */
+  const pickedFeatRequests = shallowRef<Record<string, string>>({});
+
+  /** Хоть одна деталь выбранной черты ещё в пути. */
+  const isPickedFeatLoading = computed(
+    () => Object.keys(pickedFeatRequests.value).length > 0,
+  );
+
+  /** Применение идёт или ждёт деталей выбранных черт — кнопка занята. */
+  const isApplyPending = computed(
+    () => isApplying.value || isPickedFeatLoading.value,
+  );
+
+  /**
+   * Классы каталога — подписи выбора списка заклинаний у черты: в механике
+   * классы лежат ссылками, и без каталога игрок увидел бы слаг. Грузятся, только
+   * когда взятая черта такой выбор спрашивает.
+   */
+  const spellListClasses = shallowRef<ClassOption[]>([]);
 
   // Источники черт — та же глобальная настройка профиля, что у остальных
   // каталогов. Лениво: `/feats/select` по источникам не фильтрует, отбор идёт
@@ -456,10 +495,27 @@
     return rows;
   });
 
-  /** Все выборы мастера: по ним считается, что уже выбрано во владение. */
-  const allChoices = computed<ClassChoice[]>(() =>
-    featureRows.value.flatMap((row) => row.choiceControls),
+  /**
+   * Собственные выборы взятых черт по идентификатору выбора черты — все, а не
+   * только показанные: по ним собираются пулы заклинаний и ответы записи черты.
+   */
+  const pickedFeatChoices = computed<Record<string, ClassChoice[]>>(() =>
+    Object.fromEntries(
+      Object.entries(pickedFeats.value).map(([choiceId, summary]) => [
+        choiceId,
+        getPickedFeatChoices(summary, spellListClasses.value),
+      ]),
+    ),
   );
+
+  /**
+   * Все выборы мастера вместе с выборами взятых черт: по ним считается, что уже
+   * выбрано во владение, и помечаются заклинания, взятые соседним выбором.
+   */
+  const allChoices = computed<ClassChoice[]>(() => [
+    ...featureRows.value.flatMap((row) => row.choiceControls),
+    ...Object.values(pickedFeatChoices.value).flat(),
+  ]);
 
   // Пул заклинаний собирается поиском по каталогу, а не лежит в записи вида:
   // умение, дающее заговор из списка волшебника, перечислило бы весь список, и
@@ -472,14 +528,19 @@
     load: loadSpellPools,
     retry: retrySpellPool,
   } = useChoiceSpellPools({
-    sources: () =>
-      featureRows.value.map((row) => ({ choices: row.choiceControls })),
+    sources: () => [
+      ...featureRows.value.map((row) => ({ choices: row.choiceControls })),
+      // Черта — своей записью: заговоры «Посвящённого в магию» сужаются ответом
+      // на её же выбор списка, а ищется он среди выборов той же записи
+      ...Object.values(pickedFeatChoices.value).map((choices) => ({ choices })),
+    ],
     answers: selections,
   });
 
   /**
    * Примета выборов заклинаний, которые мастер спрашивает сейчас: они приходят
-   * вместе с выбранным видом и подвидом, поэтому пул догружается по её смене.
+   * вместе с выбранным видом и подвидом, а у черты — вместе с её деталью,
+   * поэтому пул догружается по её смене.
    */
   const spellChoicesKey = computed(() => getSpellChoicesKey(allChoices.value));
 
@@ -587,6 +648,41 @@
       ),
   );
 
+  /**
+   * Собственные выборы взятых черт единым пикером по идентификатору выбора
+   * черты. Только показанные: выбор заклинаний ждёт ответа про список, иначе
+   * пул был бы собран не из того списка.
+   */
+  const pickedFeatControls = computed<Record<string, SheetChoiceControl[]>>(
+    () => {
+      const controls: Record<string, SheetChoiceControl[]> = {};
+
+      for (const row of featureRows.value) {
+        for (const featPickChoice of row.featChoices) {
+          const summary = pickedFeats.value[featPickChoice.id];
+
+          if (!summary) {
+            continue;
+          }
+
+          // В подзаголовке окна — черта и умение, которое её дало
+          const origin: SheetChoiceOrigin = {
+            featureName: summary.name,
+            originLabel: `${FEATURE_ORIGIN_LABELS.feat} · ${row.name}`,
+            level: null,
+          };
+
+          controls[featPickChoice.id] = getVisibleFeatChoices(
+            pickedFeatChoices.value[featPickChoice.id] ?? [],
+            selections.value,
+          ).map((ownChoice) => choiceControl(ownChoice, origin));
+        }
+      }
+
+      return controls;
+    },
+  );
+
   /** Подзаголовки окон выбора черты по идентификаторам строк умений. */
   const featureRowModalSubtitles = computed<Record<string, string>>(() =>
     Object.fromEntries(
@@ -690,6 +786,95 @@
   }
 
   /**
+   * Классы каталога для подписей выбора списка заклинаний. Сбой выбору не
+   * мешает: подписью останется ссылка класса, а пул сузится и по ней.
+   */
+  async function loadSpellListClasses(): Promise<void> {
+    if (spellListClasses.value.length) {
+      return;
+    }
+
+    try {
+      const response = await $fetch<unknown>(CLASSES_SEARCH_PATH, {
+        method: 'GET',
+        retry: 0,
+      });
+
+      spellListClasses.value = parseClassOptions(response, true);
+    } catch (error) {
+      consola.error(SPECIES_WIZARD_LABELS.spellListClassesErrorLog, error);
+    }
+  }
+
+  /**
+   * Деталь черты вместе с подписями классов для её выбора списка заклинаний.
+   *
+   * @param featUrl url черты.
+   * @returns деталь черты; null — не загрузилась.
+   */
+  async function fetchPickedFeat(featUrl: string): Promise<FeatSummary | null> {
+    try {
+      const summary = await fetchFeatDetail(featUrl);
+
+      // Подписи классов нужны до показа выбора: ответ хранится подписью, и её
+      // смена после ответа потеряла бы выбранный список
+      if (summary?.choices.some((choice) => choice.kind === 'spell-list')) {
+        await loadSpellListClasses();
+      }
+
+      return summary;
+    } catch (error) {
+      consola.error(SPECIES_WIZARD_LABELS.featDetailErrorLog, error);
+
+      return null;
+    }
+  }
+
+  /**
+   * Догружает деталь черты, выбранной в умении: её собственные выборы
+   * спрашиваются тут же, под полем черты. Деталь прежней черты уходит сразу —
+   * её выборы к новой черте не относятся.
+   *
+   * @param choiceId идентификатор выбора черты.
+   * @param featUrl url выбранной черты; '' — выбор снят.
+   */
+  async function loadPickedFeat(
+    choiceId: string,
+    featUrl: string,
+  ): Promise<void> {
+    pickedFeats.value = omit(pickedFeats.value, [choiceId]);
+
+    if (!featUrl) {
+      pickedFeatRequests.value = omit(pickedFeatRequests.value, [choiceId]);
+
+      return;
+    }
+
+    pickedFeatRequests.value = {
+      ...pickedFeatRequests.value,
+      [choiceId]: featUrl,
+    };
+
+    const summary = await fetchPickedFeat(featUrl);
+
+    // Пока деталь шла, игрок мог выбрать другую черту или снять выбор — тогда
+    // ответ устарел
+    if (pickedFeatRequests.value[choiceId] !== featUrl) {
+      return;
+    }
+
+    pickedFeatRequests.value = omit(pickedFeatRequests.value, [choiceId]);
+
+    if (!summary) {
+      showFeatDetailError();
+
+      return;
+    }
+
+    pickedFeats.value = { ...pickedFeats.value, [choiceId]: summary };
+  }
+
+  /**
    * Выбор черты в умении. Смена черты обнуляет выбранные характеристики: у
    * новой черты свой список и своё число прибавок.
    *
@@ -710,6 +895,8 @@
         }).fill(null),
       },
     };
+
+    void loadPickedFeat(choiceId, featUrl);
   }
 
   /**
@@ -763,6 +950,15 @@
       color: 'error',
       icon: 'tabler:alert-triangle',
       title: ABILITY_IMPROVEMENT_LABELS.applyError,
+    });
+  }
+
+  /** Тост о том, что деталь выбранной черты не пришла: её выборы не спросить. */
+  function showFeatDetailError() {
+    toast.add({
+      color: 'error',
+      icon: 'tabler:alert-triangle',
+      title: SPECIES_WIZARD_LABELS.featDetailError,
     });
   }
 
@@ -871,6 +1067,8 @@
       choices.value = {};
       selections.value = {};
       featSelections.value = {};
+      pickedFeats.value = {};
+      pickedFeatRequests.value = {};
       sizeChoice.value = sizeOptions.value[0];
 
       // Каталог черт нужен только виду с выбором черты: иначе лишний запрос на
@@ -910,11 +1108,23 @@
 
     return Promise.all(
       entries.map(async ({ row, choice, selection }) => {
-        const summary = await fetchFeatDetail(selection.featUrl);
+        // Деталь пришла ещё при выборе черты — на ней игрок и ответил на её
+        // выборы. Запрос заново — только если тогда она не загрузилась
+        const loadedSummary = pickedFeats.value[choice.id];
+
+        const summary =
+          loadedSummary?.url === selection.featUrl
+            ? loadedSummary
+            : await fetchFeatDetail(selection.featUrl);
 
         if (!summary) {
           throw new Error(SPECIES_FEAT_INVALID_RESPONSE_ERROR);
         }
+
+        const ownChoices = getPickedFeatChoices(
+          summary,
+          spellListClasses.value,
+        );
 
         return {
           rowId: row.id,
@@ -928,6 +1138,25 @@
               originName: row.originName,
               abilityIncreases: collectFeatAbilityIncreases(
                 selection.abilities,
+              ),
+              // Ответы на выборы самой черты ложатся в запись так же, как при
+              // добавлении черты окном: владения — в снимок, заклинания — в
+              // список записи, остальное лист хранит ответом
+              proficiencies: collectChosenProficiencies(
+                ownChoices,
+                selections.value,
+                proficientSkillNames.value,
+              ),
+              choiceAnswers: collectFeatChoiceAnswers(
+                ownChoices,
+                selections.value,
+              ),
+              spells: collectChosenSpells({ choices: ownChoices }),
+              // Названная игроком характеристика ложится на заклинания черты:
+              // от неё считаются их атака и Сл спасброска
+              spellcastingAbility: getFeatSpellcastingAbility(
+                summary,
+                selections.value,
               ),
             }),
             id: `${row.id}:${CLASS_FEAT_CHOICE_ID_SEGMENT}:${summary.url}`,
@@ -944,7 +1173,7 @@
   async function handleApply() {
     const detail = speciesDetail.value;
 
-    if (!detail || isApplying.value) {
+    if (!detail || isApplyPending.value) {
       return;
     }
 
@@ -1370,20 +1599,42 @@
 
               <!-- Черту выбирают тем же полем, что в мастере класса: пул
               бывает под сотню записей, и описание каждой читают в окне -->
-              <SheetFeatChoiceField
+              <template
                 v-for="choice in row.featChoices"
                 :key="choice.id"
-                :title="choice.label"
-                :modal-subtitle="featureRowModalSubtitles[row.id]"
-                :options="featOptions(choice)"
-                :selected="selectedFeat(choice.id)"
-                :abilities="featAbilities(choice.id)"
-                :scores="character.abilities"
-                :is-loading="isFeatsLoading"
-                :has-error="hasFeatsError"
-                @update:feat="setFeatChoice(row.id, choice.id, $event)"
-                @update:ability="setFeatAbility(choice.id, $event)"
-              />
+              >
+                <SheetFeatChoiceField
+                  :title="choice.label"
+                  :modal-subtitle="featureRowModalSubtitles[row.id]"
+                  :options="featOptions(choice)"
+                  :selected="selectedFeat(choice.id)"
+                  :abilities="featAbilities(choice.id)"
+                  :scores="character.abilities"
+                  :is-loading="isFeatsLoading"
+                  :has-error="hasFeatsError"
+                  @update:feat="setFeatChoice(row.id, choice.id, $event)"
+                  @update:ability="setFeatAbility(choice.id, $event)"
+                />
+
+                <!-- Выборы самой черты — под её полем, как в окне добавления
+                черты: «Посвящённый в магию» просит список, заговоры и
+                заклинание -->
+                <SheetChoicePickerField
+                  v-for="control in pickedFeatControls[choice.id]"
+                  :key="control.choice.id"
+                  :title="control.title"
+                  :explanation="control.explanation"
+                  :modal-title="control.modalTitle"
+                  :modal-subtitle="control.modalSubtitle"
+                  :options="control.options"
+                  :count="control.requiredCount"
+                  :status="control.status"
+                  :warning="control.warning"
+                  :model-value="selections[control.choice.id] ?? []"
+                  @update:model-value="updateSelection(control.choice, $event)"
+                  @retry="handleSpellPoolRetry(control.choice)"
+                />
+              </template>
 
               <SheetChoicePickerField
                 v-for="control in featureRowControls[row.id]"
@@ -1459,7 +1710,7 @@
             v-if="step === 'features'"
             :label="ACTION_LABELS.apply"
             color="primary"
-            :loading="isApplying"
+            :loading="isApplyPending"
             @click.left.exact.prevent="handleApply"
           />
 

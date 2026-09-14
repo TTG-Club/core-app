@@ -1,6 +1,12 @@
 import type { NameResponse, SourceResponse } from '~/shared/types';
 
+import type { BackgroundToolCategory } from './tool-category';
+
 import { BACKGROUND_DETAIL_LABELS } from './constants';
+import {
+  findBackgroundToolCategory,
+  toBackgroundToolCategoryMarker,
+} from './tool-category';
 
 /** Ссылка на запись справочника со снимком названия. */
 export interface BackgroundEntityRef {
@@ -44,6 +50,37 @@ function toMarker(reference: BackgroundEntityRef, section: string): string {
 }
 
 /**
+ * Выбор инструментов строкой. Выбор из всей категории называется категорией
+ * со ссылкой на раздел, иначе инструменты перечисляются через «или».
+ *
+ * @param count сколько инструментов выбирает игрок.
+ * @param pool инструменты, из которых он выбирает; пусто — любой инструмент.
+ * @param toolCategories категории инструментов раздела «Предметы».
+ * @returns разметка строки выбора.
+ */
+function getToolChoiceNode(
+  count: number,
+  pool: Array<BackgroundEntityRef>,
+  toolCategories: Array<BackgroundToolCategory>,
+): string {
+  const prefix = `${BACKGROUND_DETAIL_LABELS.toolChoicePrefix} ${count}`;
+
+  if (!pool.length) {
+    return `${prefix}: ${BACKGROUND_DETAIL_LABELS.anyTool}`;
+  }
+
+  const category = findBackgroundToolCategory(pool, toolCategories);
+
+  if (category) {
+    return `${prefix} ${BACKGROUND_DETAIL_LABELS.toolCategoryJoiner} ${toBackgroundToolCategoryMarker(category)}`;
+  }
+
+  return `${prefix}: ${pool
+    .map((reference) => toMarker(reference, 'item'))
+    .join(BACKGROUND_DETAIL_LABELS.choiceSeparator)}`;
+}
+
+/**
  * Владение инструментами для страницы предыстории.
  *
  * Ссылки мастерской главнее свободного текста: у переведённых записей текст
@@ -51,10 +88,14 @@ function toMarker(reference: BackgroundEntityRef, section: string): string {
  * отдельной строкой — он не владение, а обещание его назвать.
  *
  * @param background деталь предыстории.
+ * @param toolCategories категории инструментов раздела «Предметы»: по ним
+ *   выбор из всей категории называется категорией. Без них выбор всегда
+ *   перечисляется поимённо.
  * @returns строки разметки для блока владения инструментами.
  */
 export function getBackgroundToolNodes(
   background: BackgroundDetailResponse,
+  toolCategories: Array<BackgroundToolCategory> = [],
 ): Array<string> {
   const fixed = background.toolProficiencies ?? [];
 
@@ -77,14 +118,8 @@ export function getBackgroundToolNodes(
   }
 
   if (choiceCount >= 1) {
-    const pool = choice?.from ?? [];
-
     nodes.push(
-      pool.length
-        ? `${BACKGROUND_DETAIL_LABELS.toolChoicePrefix} ${choiceCount}: ${pool
-            .map((reference) => toMarker(reference, 'item'))
-            .join(BACKGROUND_DETAIL_LABELS.choiceSeparator)}`
-        : `${BACKGROUND_DETAIL_LABELS.toolChoicePrefix} ${choiceCount}: ${BACKGROUND_DETAIL_LABELS.anyTool}`,
+      getToolChoiceNode(choiceCount, choice?.from ?? [], toolCategories),
     );
   }
 

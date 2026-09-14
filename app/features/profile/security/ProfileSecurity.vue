@@ -1,9 +1,15 @@
 <script setup lang="ts">
-  import { PasswordChangeCard, TwoFactorCard } from './ui';
+  import {
+    EmailVerificationCard,
+    PasswordChangeCard,
+    TwoFactorCard,
+  } from './ui';
 </script>
 
 <template>
   <div class="space-y-6">
+    <EmailVerificationCard />
+
     <PasswordChangeCard />
 
     <TwoFactorCard />

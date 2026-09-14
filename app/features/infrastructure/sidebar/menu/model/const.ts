@@ -2,6 +2,17 @@ import type { MenuSection } from './types';
 
 import { Role } from '~/shared/types';
 import { RECENT_COMMENTS_ROUTE, RECENT_COMMENTS_TITLE } from '~comments/model';
+import {
+  FIND_GAME_PROFILE_NAVIGATION_LABEL,
+  FIND_GAME_PROFILE_ROUTE,
+  GAMES_CATALOG_NAVIGATION_LABEL,
+  GAMES_CREATE_NAVIGATION_LABEL,
+  GAMES_CREATE_ROUTE,
+  GAMES_MY_NAVIGATION_LABEL,
+  GAMES_MY_ROUTE,
+  GAMES_NAVIGATION_LABEL,
+  GAMES_ROUTE,
+} from '~find-game/model';
 
 export const MENU_SECTIONS: Array<MenuSection> = [
   {
@@ -102,6 +113,31 @@ export const MENU_SECTIONS: Array<MenuSection> = [
     ],
   },
   {
+    label: GAMES_NAVIGATION_LABEL,
+    icon: 'menu/filled/character',
+    items: [
+      {
+        href: GAMES_ROUTE,
+        label: GAMES_CATALOG_NAVIGATION_LABEL,
+      },
+      {
+        href: GAMES_CREATE_ROUTE,
+        label: GAMES_CREATE_NAVIGATION_LABEL,
+        roles: [Role.USER],
+      },
+      {
+        href: GAMES_MY_ROUTE,
+        label: GAMES_MY_NAVIGATION_LABEL,
+        roles: [Role.USER],
+      },
+      {
+        href: FIND_GAME_PROFILE_ROUTE,
+        label: FIND_GAME_PROFILE_NAVIGATION_LABEL,
+        roles: [Role.USER],
+      },
+    ],
+  },
+  {
     label: 'Virtual TTG',
     icon: 'menu/filled/information',
     items: [
@@ -182,9 +218,3 @@ export const MENU_SUPPORT: Array<{
     label: 'Magistrus',
   },
 ];
-
-/** Email адрес службы поддержки */
-export const SUPPORT_EMAIL = 'support@ttg.club';
-
-/** Ссылка mailto для службы поддержки */
-export const SUPPORT_EMAIL_HREF = `mailto:${SUPPORT_EMAIL}`;

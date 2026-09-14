@@ -45,7 +45,6 @@
           <UFieldGroup>
             <UInputNumber
               v-model="model[ability.shortKey].value"
-              :precision="0"
               :min="0"
               :max="30"
             />

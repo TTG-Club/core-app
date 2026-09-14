@@ -63,19 +63,28 @@
 </script>
 
 <template>
-  <USeparator
-    v-if="hasContent"
-    :color="color"
-  >
-    <component
-      :is="vnode"
-      v-for="(vnode, index) in children"
-      :key="index"
-    />
-  </USeparator>
+  <!--
+    Обёртка задаёт ВЕСЬ воздух вокруг линии — паддингом, а не margin. Так зазор
+    сверху и снизу одинаков: margin'ы соседей MarkupRender гасит (во флекс-колонке
+    тела статьи они не схлопываются, и `mt-*` заголовка после линии делал бы зазор
+    снизу шире). В редакторе чип блочного маркера гасит margin потомков
+    (`*:my-0!` в MarkerChip), а паддинг остаётся — линия отбита и там, и там.
+  -->
+  <div class="py-6">
+    <USeparator
+      v-if="hasContent"
+      :color="color"
+    >
+      <component
+        :is="vnode"
+        v-for="(vnode, index) in children"
+        :key="index"
+      />
+    </USeparator>
 
-  <USeparator
-    v-else
-    :color="color"
-  />
+    <USeparator
+      v-else
+      :color="color"
+    />
+  </div>
 </template>

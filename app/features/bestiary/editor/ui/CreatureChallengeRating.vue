@@ -42,7 +42,6 @@
       >
         <UInputNumber
           v-model="model.inLair"
-          :precision="0"
           :min="0"
           placeholder="Значение в логове"
         />

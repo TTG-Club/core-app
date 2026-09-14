@@ -20,9 +20,14 @@
     (event: 'reset'): void;
   }>();
 
-  const { groups, title } = defineProps<{
+  const {
+    groups,
+    title,
+    searchPlaceholder = FILTER_DRAWER_SEARCH_PLACEHOLDER,
+  } = defineProps<{
     groups: FilterGroups;
     title: string;
+    searchPlaceholder?: string;
   }>();
 
   const opened = defineModel<boolean>();
@@ -83,7 +88,7 @@
         <FilterSearchInput
           v-model="search"
           class="w-full"
-          :placeholder="FILTER_DRAWER_SEARCH_PLACEHOLDER"
+          :placeholder="searchPlaceholder"
           icon="tabler:search"
         />
       </div>
@@ -100,6 +105,16 @@
         :search="appliedSearch"
         @empty="isEmpty = $event"
       />
+
+      <!-- Условия, которые чипами не выражаются (город, числа), раздел кладёт
+        сюда сам. Поиск ищет только по группам, поэтому на время запроса поля
+        прячутся: иначе они стояли бы под любым результатом, не подходя под него -->
+      <div
+        v-if="$slots.append && !appliedSearch"
+        class="mt-6 flex flex-col gap-6"
+      >
+        <slot name="append" />
+      </div>
     </template>
 
     <template #footer>

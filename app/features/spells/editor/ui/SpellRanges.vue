@@ -98,7 +98,6 @@
       <UInputNumber
         v-model="range.value"
         :disabled="isValueDisabled(range.unit)"
-        :precision="0"
         :min="0"
         :placeholder="SPELL_USAGE_LABELS.amountPlaceholder"
       />

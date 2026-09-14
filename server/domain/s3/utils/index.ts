@@ -1,1 +1,1 @@
-export { getFileForUpload, getFileKey } from './s3';
+export { getFileForUpload, getFileKey, readUploadFormFile } from './s3';

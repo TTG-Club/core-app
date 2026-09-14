@@ -5,6 +5,7 @@
     FilterItems,
   } from '../../../types';
 
+  import { FILTER_SELECT_ALL_LABEL } from '../../../model';
   import { getGroupItems, hasTouchedItem } from '../../../utils';
   import { FilterTag } from '../tag';
 
@@ -65,6 +66,35 @@
 
     updateGroup({ values });
   }
+
+  const selectedCount = computed(
+    () => items.filter((filterItem) => filterItem.selected).length,
+  );
+
+  /** Состояние переключателя «Выбрать все»: часть отмеченных даёт третье. */
+  const selectAllState = computed<boolean | 'indeterminate'>(() => {
+    if (selectedCount.value === 0) {
+      return false;
+    }
+
+    return selectedCount.value === items.length ? true : 'indeterminate';
+  });
+
+  /**
+   * Отмечает или снимает разом все показанные значения группы. Именно
+   * показанные: под поиском и каскадом зависимостей в группе остаётся часть
+   * значений, и переключатель обязан работать по тому, что видно.
+   */
+  function handleSelectAll(state: boolean | 'indeterminate'): void {
+    const selected = state === true ? true : null;
+    const visibleIds = new Set(items.map((filterItem) => filterItem.id));
+
+    const values = getGroupItems(group.value).map((filterItem) =>
+      visibleIds.has(filterItem.id) ? { ...filterItem, selected } : filterItem,
+    );
+
+    updateGroup({ values });
+  }
 </script>
 
 <template>
@@ -82,6 +112,14 @@
         <span class="font-medium">{{ group.name }}</span>
 
         <div class="flex flex-wrap items-center gap-3">
+          <UCheckbox
+            v-if="items.length > 0"
+            :model-value="selectAllState"
+            :label="FILTER_SELECT_ALL_LABEL"
+            size="xs"
+            @update:model-value="handleSelectAll"
+          />
+
           <UCheckbox
             v-if="group.supports?.mode"
             :model-value="group.mode"

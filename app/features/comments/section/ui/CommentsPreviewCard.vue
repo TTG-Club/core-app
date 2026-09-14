@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { CommentEntry } from '../../model';
 
+  import { UserAvatar } from '~ui/user-avatar';
+
   import { useCommentTimestamp } from '../../composables';
   import { COMMENT_REPLY_TO_PREFIX } from '../../model';
 
@@ -14,11 +16,11 @@
 <template>
   <article class="flex min-w-0 flex-col gap-1.5">
     <header class="flex items-center gap-2">
-      <UAvatar
-        :alt="comment.authorName"
+      <UserAvatar
+        :user-id="comment.authorId"
+        :name="comment.authorName"
         size="xs"
         class="shrink-0"
-        :ui="{ fallback: 'uppercase' }"
       />
 
       <span class="min-w-0 truncate text-sm/6 font-semibold text-highlighted">

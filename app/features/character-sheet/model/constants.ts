@@ -39,12 +39,14 @@ import type {
   PreparedKindLabels,
   PreparedSpellKind,
   ProficiencyBaseSource,
+  ProficiencyCatalogGroup,
   ProficiencyGroupKey,
   ResourceMaxSource,
   ResourceRecovery,
   ResourceRecoveryField,
   ResourceRecoveryMode,
   RollMode,
+  SheetReadonlyReason,
   SheetSaveStatus,
   SheetTab,
   SkillProficiencyLevel,
@@ -87,6 +89,12 @@ export const CHARACTER_SHEET_SHARED_API_PATH = `${CHARACTER_SHEET_API_PATH}/shar
 
 /** Эндпоинт чужих листов, сохранённых по ссылке. */
 export const CHARACTER_SHEET_SAVED_API_PATH = `${CHARACTER_SHEET_API_PATH}/saved`;
+
+/**
+ * Эндпоинт чтения любого листа администратором — например, по ссылке из
+ * баг-репорта. Только чтение: ручек записи в чужой лист на бэке нет.
+ */
+export const CHARACTER_SHEET_ADMIN_API_PATH = `${CHARACTER_SHEET_API_PATH}/admin`;
 
 /**
  * Префикс значения `?detail=` у листа, открытого по ссылке: за префиксом идёт токен, а не
@@ -225,11 +233,15 @@ export const SHEET_SAVE_STATUS_META: Record<
 export const SHEET_LOCKED_MESSAGE = 'Лист заблокирован от редактирования';
 
 /**
- * Сообщение при попытке правки листа, открытого по ссылке. Страховка на случай,
- * если редактирующее действие всё же вызвано: сервер такой запрос не примет.
+ * Сообщение при попытке правки чужого листа — по причине режима просмотра.
+ * Страховка на случай, если редактирующее действие всё же вызвано: сервер такой
+ * запрос не примет.
  */
-export const SHEET_READONLY_MESSAGE =
-  'Лист открыт по ссылке — доступен только просмотр';
+export const SHEET_READONLY_MESSAGES: Record<SheetReadonlyReason, string> = {
+  shared: 'Лист открыт по ссылке — доступен только просмотр',
+  admin:
+    'Чужой лист открыт с правами администратора — доступен только просмотр',
+};
 
 /**
  * Класс скрытия кнопки, недоступной без прав (шестерёнки, ±, карандаши, корзины,
@@ -285,10 +297,14 @@ export const SHEET_HEADER_STAT_CLASS = `${SHEET_STAT_TILE_CLASS} cursor-pointer 
  */
 export const SHEET_STATIC_STAT_CLASS = `${SHEET_STAT_TILE_CLASS} cursor-default`;
 
-/** Подпись и подсказка режима просмотра в шапке чужого листа. */
-export const SHEET_READONLY_LABELS: Record<'badge' | 'tooltip', string> = {
-  badge: 'Только просмотр',
-  tooltip: 'Лист открыт по ссылке: правки недоступны',
+/** Пометка режима просмотра в шапке чужого листа. */
+export const SHEET_READONLY_BADGE_LABEL = 'Только просмотр';
+
+/** Подсказка к пометке режима просмотра — по его причине. */
+export const SHEET_READONLY_TOOLTIPS: Record<SheetReadonlyReason, string> = {
+  shared: 'Лист открыт по ссылке: правки недоступны',
+  admin:
+    'Лист другого пользователя открыт с правами администратора: правки недоступны, но его можно скопировать к себе',
 };
 
 /**
@@ -410,7 +426,7 @@ export const SAVED_SHEETS_LABELS: Record<
   unavailable: 'Доступ к листу закрыт',
   unavailableHint:
     'Владелец отозвал ссылку или удалил лист. Попросите новую ссылку и сохраните её заново.',
-  readonlyBadge: 'Только просмотр',
+  readonlyBadge: SHEET_READONLY_BADGE_LABEL,
   open: SHEET_OPEN_IN_PANEL_LABEL,
   remove: 'Убрать',
   removeTitle: 'Убрать лист из сохранённых?',
@@ -3340,6 +3356,15 @@ export const SPECIES_WIZARD_LABELS = {
 
   /** Подсказка поля свободного выбора в умении без распознанного пикера. */
   featureChoicePlaceholder: 'Ваш выбор в особенности (необязательно)',
+
+  /** Тост: деталь выбранной в умении черты не загрузилась. */
+  featDetailError: 'Не удалось загрузить выборы черты',
+
+  /** Лог: деталь выбранной в умении черты не загрузилась. */
+  featDetailErrorLog: 'Ошибка загрузки черты умения вида:',
+
+  /** Лог: каталог классов для подписей списка заклинаний не загрузился. */
+  spellListClassesErrorLog: 'Ошибка загрузки классов для списка заклинаний:',
 } as const;
 
 /** Подписи формы своего вида. */
@@ -4733,7 +4758,12 @@ export const FEATURE_ORIGIN_OPTIONS: Array<{
   { label: FEATURE_ORIGIN_LABELS.feat, value: 'feat' },
 ];
 
-/** Каталог языков для настройки владения: группы и языки. */
+/**
+ * Каталог языков для настройки владения: группы и языки в порядке таблиц книги
+ * игрока 2024. Экзотических языков по этим правилам нет — Друидический и Язык
+ * воров стоят среди редких. Лист хранит сами языки, а не подпись группы: состав
+ * групп меняется, и подпись поменяла бы смысл у уже сохранённых персонажей.
+ */
 export const LANGUAGE_PROFICIENCY_GROUPS: LanguageProficiencyGroup[] = [
   {
     key: 'standard',
@@ -4742,6 +4772,7 @@ export const LANGUAGE_PROFICIENCY_GROUPS: LanguageProficiencyGroup[] = [
     items: [
       'Общий',
       'Общий язык жестов',
+      'Драконий',
       'Дварфийский',
       'Эльфийский',
       'Гигантский',
@@ -4759,6 +4790,46 @@ export const LANGUAGE_PROFICIENCY_GROUPS: LanguageProficiencyGroup[] = [
       'Абиссальный',
       'Небесный',
       'Глубинная речь',
+      'Друидический',
+      'Инфернальный',
+      'Первоязык',
+      'Сильван',
+      'Язык воров',
+      'Подземный',
+    ],
+  },
+];
+
+/**
+ * Составы языковых групп до перехода на правила 2024 — для листов, в которые
+ * окно владения языками записало подпись «вся группа» вместо самих языков.
+ * Подпись означает состав на момент записи, а не нынешний каталог: с тех пор
+ * Драконий ушёл в стандартные, Друидический и Язык воров — в редкие, а группы
+ * экзотических не стало. Поэтому составы заморожены и за каталогом не следуют.
+ */
+export const LEGACY_LANGUAGE_GROUPS: Array<
+  Pick<ProficiencyCatalogGroup, 'all' | 'items'>
+> = [
+  {
+    all: 'Все стандартные языки',
+    items: [
+      'Общий',
+      'Общий язык жестов',
+      'Дварфийский',
+      'Эльфийский',
+      'Гигантский',
+      'Гномский',
+      'Гоблинский',
+      'Полуросликовский',
+      'Оркский',
+    ],
+  },
+  {
+    all: 'Все редкие языки',
+    items: [
+      'Абиссальный',
+      'Небесный',
+      'Глубинная речь',
       'Драконий',
       'Инфернальный',
       'Первоязык',
@@ -4767,8 +4838,6 @@ export const LANGUAGE_PROFICIENCY_GROUPS: LanguageProficiencyGroup[] = [
     ],
   },
   {
-    key: 'exotic',
-    title: 'Экзотические',
     all: 'Все экзотические языки',
     items: ['Друидический', 'Язык воров'],
   },

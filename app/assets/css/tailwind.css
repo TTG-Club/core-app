@@ -2,9 +2,27 @@
 @import '@nuxt/ui';
 
 @theme {
+  /* Ступень между 2xl и 2K: с неё лента главной раскладывается в три колонки —
+     раньше рельс получался слишком узким. */
+  --breakpoint-3xl: 1700px;
+
+  /* Самые узкие телефоны — 360px и уже: главная там ужимает заголовок и
+     ставит плитки разделов в столбец. `max-2xs:` сравнивает строго
+     (`width < 361px`), поэтому граница на пиксель выше — иначе сами 360px
+     остались бы снаружи. */
+  --breakpoint-2xs: 361px;
+
+  /* Узкие телефоны — уже 400px: главная там не показывает персонажа
+     с репликой. */
+  --breakpoint-xs: 400px;
+
   --font-sans:
     'Open Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
     'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+  --font-mono:
+    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    'Liberation Mono', 'Courier New', monospace;
 
   --color-hover: var(--color-hover);
 }

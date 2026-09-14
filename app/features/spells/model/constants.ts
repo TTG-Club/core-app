@@ -114,7 +114,6 @@ export const SPELL_USES_RECOVERY_OPTIONS: Array<
 ];
 
 /**
- * Способы применения заклинания — зеркало `DELIVERY_TYPE_OPTIONS` из VTTG./**
  * Способы применения заклинания — зеркало `DELIVERY_TYPE_OPTIONS` из VTTG.
  * Не задан — потребитель выводит способ по типу атаки и единице дистанции,
  * как выводил до появления поля.
@@ -142,6 +141,11 @@ export const SPELL_MAIN_TAB_LABELS = {
   school: 'Школа',
   additionalType: 'Подшкола',
   additionalTypePlaceholder: 'Подшкола',
+  damageTypes: 'Типы урона для фильтра',
+  damageTypesHint:
+    'Только для поиска в каталоге. Типы из формул на вкладке '
+    + `«${SPELL_EDITOR_TABS.combat}» отмечаются сами; добавь те, что формулы `
+    + 'не показывают, — например, выбираемые при накладывании.',
   description: 'Описание',
   descriptionPlaceholder: 'Введи описание',
   upper: 'На более высоких уровнях',

@@ -5,7 +5,7 @@
   import { MarkupRender } from '~ui/markup';
 
   import {
-    formatCreatureInventoryLabel,
+    formatCreatureInventoryNote,
     getCreatureInventoryEntries,
   } from '../../../model';
   import { CreatureAbilitiesTable, CreatureInventoryLink } from './ui';
@@ -29,11 +29,14 @@
 
   const { equipments, inventory, inventoryText } = defineProps<Props>();
 
-  /** Позиции инвентаря для показа: подпись с количеством и адрес карточки. */
+  /**
+   * Позиции инвентаря для показа: название, пояснение в скобках и адрес
+   * карточки. Ссылкой становится только название — «Копьё (6)».
+   */
   const inventoryEntries = computed(() =>
     getCreatureInventoryEntries(inventory).map((entry) => ({
-      label: formatCreatureInventoryLabel(entry.name, entry.quantity),
-      note: entry.description,
+      name: entry.name,
+      note: formatCreatureInventoryNote(entry.quantity, entry.description),
       section: entry.section,
       url: entry.url,
     })),
@@ -135,10 +138,10 @@
             v-if="entry.url"
             :section="entry.section"
             :url="entry.url"
-            :label="entry.label"
+            :label="entry.name"
           />
 
-          <template v-else>{{ entry.label }}</template>
+          <template v-else>{{ entry.name }}</template>
 
           <template v-if="entry.note"> ({{ entry.note }})</template>
         </template>

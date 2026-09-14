@@ -2,9 +2,11 @@
   import {
     FOOTER_COPYRIGHT,
     FOOTER_DISCLAIMER,
+    FOOTER_LEGAL_LINKS,
     FOOTER_SOCIAL_LINKS,
     FOOTER_SUPPORT_EMAIL,
     FOOTER_SUPPORT_EMAIL_HREF,
+    FOOTER_SUPPORT_EMAIL_ICON,
     FOOTER_SUPPORT_LINKS,
   } from './model';
 </script>
@@ -33,6 +35,22 @@
         <span class="text-xs text-dimmed lg:whitespace-nowrap">
           {{ FOOTER_DISCLAIMER }}
         </span>
+
+        <div
+          class="flex flex-wrap items-center justify-center gap-x-3 lg:justify-start"
+        >
+          <UButton
+            v-for="link in FOOTER_LEGAL_LINKS"
+            :key="link.to"
+            :label="link.label"
+            :to="link.to"
+            :icon="link.icon"
+            variant="link"
+            color="neutral"
+            size="xs"
+            class="px-0"
+          />
+        </div>
       </div>
     </template>
 
@@ -74,7 +92,7 @@
         <UButton
           :label="FOOTER_SUPPORT_EMAIL"
           :href="FOOTER_SUPPORT_EMAIL_HREF"
-          icon="tabler:mail"
+          :icon="FOOTER_SUPPORT_EMAIL_ICON"
           variant="link"
           color="neutral"
           size="xs"
