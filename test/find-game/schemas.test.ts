@@ -177,7 +177,7 @@ describe('разбор игры', () => {
   });
 
   it('копия своей системы и своего жанра сохраняет их названия', () => {
-    const source = parseGame(
+    const homebrewGame = parseGame(
       gameResponse({
         system: 'HOMEBREW',
         customSystem: 'Мир Тьмы по домашним правилам',
@@ -185,11 +185,11 @@ describe('разбор игры', () => {
       }),
     );
 
-    const request = toGameCopyRequest(source);
+    const copyRequest = toGameCopyRequest(homebrewGame);
 
-    expect(request.system).toBe('HOMEBREW');
-    expect(request.customSystem).toBe('Мир Тьмы по домашним правилам');
-    expect(request.customGenre).toBe('Хоррор-комедия');
+    expect(copyRequest.system).toBe('HOMEBREW');
+    expect(copyRequest.customSystem).toBe('Мир Тьмы по домашним правилам');
+    expect(copyRequest.customGenre).toBe('Хоррор-комедия');
   });
 
   it('ответ без своей системы и жанра даёт пустые поля', () => {

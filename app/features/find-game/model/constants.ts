@@ -153,6 +153,9 @@ export const CITIES_API_PATH = `${FIND_GAME_API_PREFIX}/cities`;
 /** Справочник игровых систем для форм, карточек и фильтров. */
 export const GAME_SYSTEMS_API_PATH = `${FIND_GAME_API_PREFIX}/game-systems`;
 
+/** Общий ключ Nuxt-кэша справочника систем: карточки и формы читают один. */
+export const GAME_SYSTEMS_DATA_KEY = 'find-game-systems';
+
 /**
  * Справочник жанров для формы и фильтра каталога. Список готовый: мастер его
  * не пополняет, а жанр не из списка пишет отдельным полем игры.
@@ -169,10 +172,11 @@ export const GAME_GENRES_DATA_KEY = 'find-game-genres';
 export const GAME_CUSTOM_SYSTEM_CODE = 'HOMEBREW';
 
 /**
- * Значение «свой жанр» в отборе по жанрам. Строки с ним в справочнике нет:
- * сервис отбирает по нему игры с заполненным своим жанром.
+ * Значение «свой жанр» в отборе по жанрам — тот же код, что у своей системы.
+ * Строки с ним в справочнике жанров нет: сервис отбирает по нему игры с
+ * заполненным своим жанром.
  */
-export const GAME_CUSTOM_GENRE_FILTER_VALUE = 'HOMEBREW';
+export const GAME_CUSTOM_GENRE_FILTER_VALUE = GAME_CUSTOM_SYSTEM_CODE;
 
 /** Система новой игры по умолчанию — и та, что стоит в списке при своей системе. */
 export const GAME_DEFAULT_SYSTEM = 'DND_2024';
@@ -1180,6 +1184,7 @@ export const GAME_FIELD_GENRE_LABEL = 'Жанры';
  * галочка своего жанра уехала бы ниже галочки своей системы в соседней колонке.
  */
 export const GAME_FIELD_GENRE_PLACEHOLDER = `Выберите до ${GAME_GENRES_MAX_COUNT} жанров`;
+export const GAME_FIELD_GENRE_SEARCH_PLACEHOLDER = 'Найдите жанр';
 
 /** Подпись галочки своего жанра — она же подпись варианта в фильтре каталога. */
 export const GAME_FIELD_CUSTOM_GENRE_LABEL = 'Свой жанр';

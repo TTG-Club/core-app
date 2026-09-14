@@ -54,6 +54,7 @@
     GAME_FIELD_GAME_CHAT_PLACEHOLDER,
     GAME_FIELD_GENRE_LABEL,
     GAME_FIELD_GENRE_PLACEHOLDER,
+    GAME_FIELD_GENRE_SEARCH_PLACEHOLDER,
     GAME_FIELD_IMAGE_HINT,
     GAME_FIELD_IMAGE_LABEL,
     GAME_FIELD_MASTER_CHAT_HINT,
@@ -621,9 +622,9 @@
               />
             </UFormField>
 
-            <!-- Своих системы и жанра в списках нет: их отмечают галочкой под
-            полем, и ниже появляется строка для названия. Галочки стоят вне
-            UFormField, чтобы не делить с полем его id -->
+            <!-- Своей системы и своего жанра в списках нет: их отмечают
+            галочкой под полем, и ниже появляется строка для названия. Галочки
+            стоят вне UFormField, чтобы не делить с полем его id -->
             <div class="grid gap-4 sm:grid-cols-2 sm:items-start">
               <div class="flex flex-col gap-3">
                 <UFormField
@@ -670,6 +671,9 @@
                     :items="genreItems"
                     :loading="areGenresLoading"
                     :placeholder="GAME_FIELD_GENRE_PLACEHOLDER"
+                    :search-input="{
+                      placeholder: GAME_FIELD_GENRE_SEARCH_PLACEHOLDER,
+                    }"
                     class="w-full"
                   />
                 </UFormField>

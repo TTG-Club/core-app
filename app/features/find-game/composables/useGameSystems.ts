@@ -1,9 +1,10 @@
 import type { Game } from '../model';
 
-import { fetchGameSystems, GAME_CUSTOM_SYSTEM_CODE } from '../model';
-
-/** Общий ключ Nuxt-кэша: все карточки и формы используют один справочник. */
-const GAME_SYSTEMS_DATA_KEY = 'find-game-systems';
+import {
+  fetchGameSystems,
+  GAME_CUSTOM_SYSTEM_CODE,
+  GAME_SYSTEMS_DATA_KEY,
+} from '../model';
 
 /**
  * Загружает управляемый backend-справочник игровых систем.

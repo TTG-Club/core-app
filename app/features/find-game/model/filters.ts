@@ -539,12 +539,12 @@ function toGenreOptions(genres: ReadonlyArray<string>): Array<string> {
 /**
  * Подпись варианта отбора по жанру. Жанр из списка подписан своим названием, а
  * у своего жанра подпись та же, что у галочки в форме игры.
- * @param value Название жанра или значение «свой жанр».
+ * @param genreFilterValue Название жанра или значение «свой жанр».
  */
-function getGenreFilterLabel(value: string): string {
-  return value === GAME_CUSTOM_GENRE_FILTER_VALUE
+function getGenreFilterLabel(genreFilterValue: string): string {
+  return genreFilterValue === GAME_CUSTOM_GENRE_FILTER_VALUE
     ? GAME_FIELD_CUSTOM_GENRE_LABEL
-    : value;
+    : genreFilterValue;
 }
 
 /**

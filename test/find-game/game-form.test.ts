@@ -50,23 +50,23 @@ describe('тело создания игры', () => {
   });
 
   it('своя система без названия не проходит', () => {
-    const result = createGameRequestSchema.safeParse(
+    const homebrewValidation = createGameRequestSchema.safeParse(
       onlineGame({ system: 'HOMEBREW', customSystem: '   ' }),
     );
 
-    expect(result.success).toBe(false);
+    expect(homebrewValidation.success).toBe(false);
 
-    expect(result.error?.issues.map((issue) => issue.path)).toEqual([
-      ['customSystem'],
-    ]);
+    expect(homebrewValidation.error?.issues.map((issue) => issue.path)).toEqual(
+      [['customSystem']],
+    );
   });
 
   it('своя система с названием проходит', () => {
-    const parsed = createGameRequestSchema.parse(
+    const homebrewGame = createGameRequestSchema.parse(
       onlineGame({ system: 'HOMEBREW', customSystem: ' Мир Тьмы ' }),
     );
 
-    expect(parsed.customSystem).toBe('Мир Тьмы');
+    expect(homebrewGame.customSystem).toBe('Мир Тьмы');
   });
 
   it('сохраняет выбранную платформу онлайн-игры', () => {
