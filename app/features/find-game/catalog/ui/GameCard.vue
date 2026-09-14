@@ -6,6 +6,7 @@
     GAME_COST_TYPE_ICONS,
     GAME_COST_TYPE_LABELS,
     GAME_COVER_BADGE_CLASS,
+    GAME_COVER_COST_ICON_CLASS,
     GAME_COVER_STATUS_DOT_CLASSES,
     GAME_MASTER_LABEL,
     GAME_NEXT_SESSION_EMPTY,
@@ -64,7 +65,10 @@
   // приватные игры не попадают, а у своих игр мастер открывает ссылку отдельно.
   const gameRoute = computed(() => getGameRoute(game.id));
 
-  /** Монета — только у платной игры; бесплатная обходится подписью. */
+  /**
+   * Монета — только у платной игры, и выделена золотом; бесплатная обходится
+   * подписью.
+   */
   const costBadgeIcon = computed(() => GAME_COST_TYPE_ICONS[game.costType]);
 
   const costLabel = computed(() => GAME_COST_TYPE_LABELS[game.costType]);
@@ -246,6 +250,7 @@
           :class="GAME_COVER_BADGE_CLASS"
           :icon="costBadgeIcon"
           :label="costLabel"
+          :ui="{ leadingIcon: GAME_COVER_COST_ICON_CLASS }"
         />
 
         <!-- Панель уже поднята над ссылкой карточки; звёздочка только
