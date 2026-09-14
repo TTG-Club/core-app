@@ -35,12 +35,19 @@
   const pickedGameId = ref<string>('');
   const isSending = ref(false);
 
-  // Звать можно только туда, где открыт набор: в закрытую игру сервис
-  // приглашение не примет.
+  // Звать можно только в свою игру и только туда, где открыт набор: в чужую
+  // или закрытую игру сервис приглашение не примет. Роль задаётся явно —
+  // «все свои игры» включают и те, где пользователь сам игрок или только
+  // отметил игру в избранное.
   const { data: games, status } = useAsyncData(
     'find-game-invitable-games',
     async () => {
-      const page = await fetchMyGames(0, MY_GAMES_PAGE_SIZE, ['OPEN']);
+      const page = await fetchMyGames(
+        0,
+        MY_GAMES_PAGE_SIZE,
+        ['OPEN'],
+        'MASTER',
+      );
 
       return page.content.filter((game) => !game.recruitmentClosed);
     },
