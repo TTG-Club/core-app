@@ -77,6 +77,7 @@
     GAME_FIELD_VENUE_HINT,
     GAME_FIELD_VENUE_LABEL,
     GAME_FIELD_VENUE_PLACEHOLDER,
+    GAME_FIELD_VIRTUAL_TABLE_HINT,
     GAME_FIELD_VIRTUAL_TABLE_LABEL,
     GAME_FIELD_VIRTUAL_TABLE_PLACEHOLDER,
     GAME_FIELD_VISIBILITY_HINT,
@@ -958,7 +959,7 @@
           </section>
 
           <!-- Разговоры группы живут там, где она привыкла: чат с мастером
-          открыт всем, чат игры — только принятым -->
+          открыт всем, стол и чат игры — только принятым -->
           <section
             class="flex flex-col gap-4 rounded-xl border border-default bg-elevated p-4 sm:p-5"
           >
@@ -970,6 +971,7 @@
               name="virtualTableUrl"
               data-game-field="virtualTableUrl"
               :label="GAME_FIELD_VIRTUAL_TABLE_LABEL"
+              :help="GAME_FIELD_VIRTUAL_TABLE_HINT"
             >
               <UInput
                 v-model="form.virtualTableUrl"

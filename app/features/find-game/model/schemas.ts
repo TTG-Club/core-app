@@ -441,6 +441,9 @@ const gameResponseSchema = z.object({
   customSystem: z.string().nullish().catch(null),
   imageUrl: z.string().nullish().catch(null),
   virtualTableUrl: z.string().nullish().catch(null),
+  // Сборки сервиса, которые ещё отдают ссылку на стол всем, признака не
+  // присылают: ссылка тогда видна и так, а пояснение не нужно.
+  hasVirtualTable: z.boolean().catch(false),
   onlinePlatform: z.enum(GAME_ONLINE_PLATFORMS).nullish().catch(null),
   masterChatUrl: z.string().nullish().catch(null),
   gameChatUrl: z.string().nullish().catch(null),
@@ -493,6 +496,7 @@ function toGame(parsed: z.infer<typeof gameResponseSchema>): Game {
     customSystem: parsed.customSystem ?? null,
     imageUrl: parsed.imageUrl ?? null,
     virtualTableUrl: parsed.virtualTableUrl ?? null,
+    hasVirtualTable: parsed.hasVirtualTable,
     onlinePlatform: parsed.onlinePlatform ?? null,
     masterChatUrl: parsed.masterChatUrl ?? null,
     gameChatUrl: parsed.gameChatUrl ?? null,

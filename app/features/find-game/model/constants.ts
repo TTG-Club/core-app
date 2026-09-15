@@ -772,6 +772,7 @@ export const GAME_ALLOWED_SOURCES_VISIBLE_LIMIT = 6;
 export const GAME_ALLOWED_SOURCES_SHOW_LABEL = 'Показать остальные';
 export const GAME_ALLOWED_SOURCES_HIDE_LABEL = 'Скрыть';
 export const GAME_VIRTUAL_TABLE_LABEL = 'Виртуальный стол';
+export const GAME_VIRTUAL_TABLE_ICON = 'tabler:dice';
 export const GAME_MASTER_LABEL = 'Мастер';
 
 /** Подпись ряда мест в карточке каталога: без неё значки игроков немы. */
@@ -822,6 +823,13 @@ export const GAME_CROSSPLAY_ALLOWED_VALUE =
 
 /** Заголовок блока со ссылками на стол и разговоры игры. */
 export const GAME_LINKS_TITLE = 'Ссылки';
+
+/**
+ * Пояснение вместо ссылки на стол для тех, кого мастер ещё не принял: стол
+ * есть, но ссылка откроется только группе.
+ */
+export const GAME_VIRTUAL_TABLE_MEMBERS_ONLY_HINT =
+  'Мастер указал ссылку, её увидят только принятые игроки';
 
 /** Начало подписи стажа: одна и та же в профиле мастера и игрока. */
 export const TABLETOP_EXPERIENCE_LABEL = 'За столом';
@@ -1204,6 +1212,8 @@ export const GAME_IMAGE_SECTION = 'games';
  */
 export const GAME_IMAGE_MAX_SIZE = '1024';
 export const GAME_FIELD_VIRTUAL_TABLE_LABEL = 'Виртуальный стол';
+export const GAME_FIELD_VIRTUAL_TABLE_HINT =
+  'Ссылку видят только принятые игроки, остальные — лишь то, что стол есть';
 export const GAME_FIELD_VIRTUAL_TABLE_PLACEHOLDER =
   'https://vtt.example.org/games/curse-of-strahd';
 export const GAME_FIELD_MASTER_CHAT_LABEL = 'Чат с мастером';
