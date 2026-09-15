@@ -152,6 +152,23 @@ describe('разбор игры', () => {
     expect(game.gameChatUrl).toBeNull();
   });
 
+  it('знает о виртуальном столе, когда ссылку на него не прислали', () => {
+    // Мастер стол указал, но ссылка принадлежит принятым игрокам: остальным
+    // сервис сообщает только сам факт.
+    const game = parseGame(
+      gameResponse({ virtualTableUrl: undefined, hasVirtualTable: true }),
+    );
+
+    expect(game.virtualTableUrl).toBeNull();
+    expect(game.hasVirtualTable).toBe(true);
+  });
+
+  it('считает, что стола нет, на сборке сервиса без признака', () => {
+    const game = parseGame(gameResponse({ hasVirtualTable: undefined }));
+
+    expect(game.hasVirtualTable).toBe(false);
+  });
+
   it('создаёт запрос копии только из настроек игры', () => {
     const source = parseGame(
       gameResponse({

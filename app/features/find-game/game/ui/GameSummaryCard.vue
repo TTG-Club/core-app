@@ -26,7 +26,9 @@
     GAME_RECRUITMENT_FULL_BADGE,
     GAME_STATUS_COLORS,
     GAME_STATUS_LABELS,
+    GAME_VIRTUAL_TABLE_ICON,
     GAME_VIRTUAL_TABLE_LABEL,
+    GAME_VIRTUAL_TABLE_MEMBERS_ONLY_HINT,
     GAME_VISIBILITY_LABELS,
     getGameAgeLabel,
     getGameFormatLabel,
@@ -241,8 +243,8 @@
   });
 
   /**
-   * Ссылки игры. Чат игры сервис отдаёт только мастеру и принятым игрокам —
-   * остальным поле приходит пустым, и ссылки просто нет.
+   * Ссылки игры. Стол и чат игры сервис отдаёт только мастеру и принятым
+   * игрокам — остальным поля приходят пустыми, и ссылок просто нет.
    */
   const links = computed<Array<GameLink>>(() => {
     const items: Array<GameLink> = [];
@@ -251,7 +253,7 @@
       items.push({
         key: 'table',
         label: GAME_VIRTUAL_TABLE_LABEL,
-        icon: 'tabler:dice',
+        icon: GAME_VIRTUAL_TABLE_ICON,
         url: game.virtualTableUrl,
       });
     }
@@ -276,6 +278,19 @@
 
     return items;
   });
+
+  /**
+   * Стол у игры есть, но ссылку зрителю не отдали: мастер его ещё не принял.
+   * Вместо ссылки об этом говорит пояснение — иначе стол выглядит забытым.
+   */
+  const isVirtualTableMembersOnly = computed(
+    () => game.hasVirtualTable && !game.virtualTableUrl,
+  );
+
+  /** Блок ссылок нужен, если есть хоть одна ссылка или пояснение о столе. */
+  const hasLinksSection = computed(
+    () => links.value.length > 0 || isVirtualTableMembersOnly.value,
+  );
 
   const { open: openProfile } = useMasterProfileDrawer();
 
@@ -356,12 +371,39 @@
       </dl>
 
       <div
-        v-if="links.length"
+        v-if="hasLinksSection"
         class="flex flex-col gap-2"
       >
         <span class="text-sm font-semibold text-highlighted">
           {{ GAME_LINKS_TITLE }}
         </span>
+
+        <!-- Отступами и значками повторяет кнопку ссылки ниже, но не нажимается:
+          пунктир и замок говорят, что стол есть, а ссылка пока закрыта -->
+        <div
+          v-if="isVirtualTableMembersOnly"
+          class="flex items-center gap-2 rounded-md border border-dashed border-accented px-3 py-2 text-sm"
+        >
+          <UIcon
+            :name="GAME_VIRTUAL_TABLE_ICON"
+            class="size-5 shrink-0 text-dimmed"
+          />
+
+          <div class="flex min-w-0 flex-auto flex-col">
+            <span class="font-medium text-muted">
+              {{ GAME_VIRTUAL_TABLE_LABEL }}
+            </span>
+
+            <span class="text-xs text-dimmed">
+              {{ GAME_VIRTUAL_TABLE_MEMBERS_ONLY_HINT }}
+            </span>
+          </div>
+
+          <UIcon
+            name="tabler:lock"
+            class="size-5 shrink-0 text-dimmed"
+          />
+        </div>
 
         <UButton
           v-for="link in links"
@@ -371,7 +413,7 @@
           rel="noopener noreferrer"
           color="neutral"
           variant="subtle"
-          size="sm"
+          size="lg"
           block
           :icon="link.icon"
           :label="link.label"
