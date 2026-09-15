@@ -252,7 +252,7 @@ export default defineNuxtConfig({
           // От XSS защищает экранирование на выводе, а не отказ на входе.
           xssValidator: false,
           rateLimiter: {
-            tokensPerInterval: 75,
+            tokensPerInterval: 200,
             interval: ms('1m'),
             headers: true,
           },
