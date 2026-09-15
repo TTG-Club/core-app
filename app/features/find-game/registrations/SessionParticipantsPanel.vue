@@ -18,6 +18,7 @@
     SESSION_PARTICIPANTS_LABEL,
     updateParticipantPayment,
   } from '../model';
+  import { ParticipantName } from '../ui';
 
   /**
    * Состав сессии глазами мастера: кто придёт и кто заплатил.
@@ -38,7 +39,9 @@
   }>();
 
   const { showError, showSuccess } = useFindGameToast();
-  const { getParticipantName, watchParticipantNames } = useParticipantNames();
+
+  const { getParticipantAvatarName, watchParticipantNames } =
+    useParticipantNames();
 
   // Пока панель закрыта, запрашивать нечего: состав подтягивается ровно на её
   // открытие.
@@ -174,13 +177,13 @@
               <span class="flex min-w-0 items-center gap-2">
                 <UserAvatar
                   :user-id="participant.playerId"
-                  :name="getParticipantName(participant.playerId)"
+                  :name="getParticipantAvatarName(participant.playerId)"
                   size="2xs"
                   class="shrink-0"
                 />
 
                 <span class="font-medium text-highlighted">
-                  {{ getParticipantName(participant.playerId) }}
+                  <ParticipantName :user-id="participant.playerId" />
                 </span>
               </span>
 

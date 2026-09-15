@@ -13,6 +13,7 @@
     FOLLOWED_MASTERS_EMPTY_TITLE,
     MASTER_PROFILE_OPEN_HINT,
   } from '../model';
+  import { ParticipantName } from '../ui';
 
   /**
    * Отмеченные мастера: их новые игры приходят уведомлением.
@@ -22,7 +23,9 @@
    */
   const { busyUserId, masters, isMastersLoading, toggleMaster } = useFollows();
 
-  const { getParticipantName, watchParticipantNames } = useParticipantNames();
+  const { getParticipantAvatarName, watchParticipantNames } =
+    useParticipantNames();
+
   const masterDrawer = useMasterProfileDrawer();
 
   // Сервис поиска игр знает только идентификаторы: имена приезжают из core-api
@@ -61,19 +64,20 @@
           color="primary"
           class="p-0"
           :title="MASTER_PROFILE_OPEN_HINT"
-          :label="getParticipantName(follow.userId)"
-          @click.left.exact.prevent="
-            masterDrawer.open(follow.userId, getParticipantName(follow.userId))
-          "
+          @click.left.exact.prevent="masterDrawer.open(follow.userId)"
         >
           <template #leading>
             <UserAvatar
               :user-id="follow.userId"
-              :name="getParticipantName(follow.userId)"
+              :name="getParticipantAvatarName(follow.userId)"
               size="2xs"
               class="shrink-0"
             />
           </template>
+
+          <span class="truncate">
+            <ParticipantName :user-id="follow.userId" />
+          </span>
         </UButton>
 
         <UButton

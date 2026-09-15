@@ -147,6 +147,32 @@ describe('общий кеш имён и аватарок пользовател�
     expect(profiles.getProfile('user-1')?.displayName).toBe('Имя user-1');
   });
 
+  it('загрузка идёт до ответа, а пользователь без данных её завершает', async () => {
+    const profiles = mountProfiles();
+
+    fetchProfiles.mockResolvedValueOnce([createProfileResponse('user-1')]);
+    profiles.resolveProfiles(['user-1', 'user-unknown']);
+
+    expect(profiles.isProfilePending('user-1')).toBe(true);
+    expect(profiles.isProfilePending('user-unknown')).toBe(true);
+
+    await flushRequests();
+
+    expect(profiles.isProfilePending('user-1')).toBe(false);
+    expect(profiles.isProfilePending('user-unknown')).toBe(false);
+    expect(profiles.getProfile('user-unknown')).toBeUndefined();
+  });
+
+  it('сбой запроса завершает загрузку, чтобы место имени не ждало вечно', async () => {
+    const profiles = mountProfiles();
+
+    fetchProfiles.mockRejectedValueOnce(new Error('core-api unavailable'));
+    profiles.resolveProfiles(['user-1']);
+    await flushRequests();
+
+    expect(profiles.isProfilePending('user-1')).toBe(false);
+  });
+
   it('ссылку не на хранилище сайта считает отсутствием аватарки', async () => {
     const profiles = mountProfiles();
 

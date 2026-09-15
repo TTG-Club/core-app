@@ -5,7 +5,11 @@
 
   import { UserAvatar } from '~ui/user-avatar';
 
-  import { useGameSystems, useMasterProfileDrawer } from '../../composables';
+  import {
+    useGameSystems,
+    useMasterProfileDrawer,
+    useParticipantNames,
+  } from '../../composables';
   import {
     GAME_CHAT_LINK_LABEL,
     GAME_COST_TYPE_COLORS,
@@ -38,7 +42,7 @@
     isGameRecruitmentClosed,
     MASTER_PROFILE_OPEN_HINT,
   } from '../../model';
-  import { GameCover } from '../../ui';
+  import { GameCover, ParticipantName } from '../../ui';
 
   /** Значок состояния игры: набор, доступность, стоимость. */
   interface StateBadge {
@@ -65,13 +69,10 @@
 
   const {
     game,
-    masterName,
     nextSessionAt = null,
     nextPaidSessionPrice = null,
   } = defineProps<{
     game: Game;
-    /** Отображаемое имя мастера; UUID пользователю показывать нельзя. */
-    masterName: string;
     /**
      * Начало ближайшей встречи из загруженного расписания. Считается снаружи:
      * сервис заполняет ближайшую встречу только в выдаче каталога, а по одной
@@ -292,11 +293,14 @@
     () => links.value.length > 0 || isVirtualTableMembersOnly.value,
   );
 
+  // UUID мастера пользователю показывать нельзя: имя приходит из core-api.
+  const { getParticipantAvatarName } = useParticipantNames();
+
   const { open: openProfile } = useMasterProfileDrawer();
 
   /** Открывает профиль мастера этой игры. */
   function openMasterProfile(): void {
-    openProfile(game.masterId, masterName);
+    openProfile(game.masterId);
   }
 </script>
 
@@ -342,7 +346,7 @@
 
         <UserAvatar
           :user-id="game.masterId"
-          :name="masterName"
+          :name="getParticipantAvatarName(game.masterId)"
           size="2xs"
           class="shrink-0"
         />
@@ -354,7 +358,7 @@
           :title="MASTER_PROFILE_OPEN_HINT"
           @click.left.exact.prevent="openMasterProfile"
         >
-          {{ masterName }}
+          <ParticipantName :user-id="game.masterId" />
         </ULink>
       </div>
 

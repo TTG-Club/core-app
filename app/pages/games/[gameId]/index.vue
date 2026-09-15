@@ -65,7 +65,7 @@
   const route = useRoute();
   const { showError, showSuccess } = useFindGameToast();
 
-  const { getParticipantName, watchParticipantNames } = useParticipantNames();
+  const { watchParticipantNames } = useParticipantNames();
 
   const gameId = computed(() =>
     typeof route.params.gameId === 'string' ? route.params.gameId : '',
@@ -122,10 +122,6 @@
   );
 
   const isError = computed(() => gameStatus.value === 'error');
-
-  const masterName = computed(() =>
-    game.value ? getParticipantName(game.value.masterId) : '',
-  );
 
   const detailTabs = computed(() =>
     abilities.value.canReviewRegistrations && game.value?.costType === 'PAID'
@@ -428,7 +424,6 @@
         <div class="flex flex-col gap-4 lg:col-start-2 lg:row-start-1">
           <GameSummaryCard
             :game="game"
-            :master-name="masterName"
             :next-session-at="nextSessionAt"
             :next-paid-session-price="nextPaidSessionPrice"
           >

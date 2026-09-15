@@ -11,6 +11,7 @@
     BOOKMARKED_PLAYERS_EMPTY_TITLE,
     INVITE_PLAYER_LABEL,
   } from '../model';
+  import { ParticipantName } from '../ui';
   import { PlayerInviteModal } from './ui';
 
   /**
@@ -18,7 +19,11 @@
    */
   const { busyUserId, players, isPlayersLoading, togglePlayer } = useFollows();
 
-  const { getParticipantName, watchParticipantNames } = useParticipantNames();
+  const {
+    getParticipantName,
+    getParticipantAvatarName,
+    watchParticipantNames,
+  } = useParticipantNames();
 
   const inviteTarget = ref<Follow | null>(null);
 
@@ -71,13 +76,13 @@
         <span class="flex min-w-0 items-center gap-2">
           <UserAvatar
             :user-id="follow.userId"
-            :name="getParticipantName(follow.userId)"
+            :name="getParticipantAvatarName(follow.userId)"
             size="2xs"
             class="shrink-0"
           />
 
           <span class="truncate font-medium text-highlighted">
-            {{ getParticipantName(follow.userId) }}
+            <ParticipantName :user-id="follow.userId" />
           </span>
         </span>
 

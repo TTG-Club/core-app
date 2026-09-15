@@ -6,6 +6,7 @@ import {
   EMPTY_PARAGRAPH_MARKDOWN,
   THEMATIC_BREAK_REGEXP,
 } from './consts';
+import { unescapeEditorMarkdown } from './editor-markdown';
 import { parse } from './parser';
 import { isBlockNode, isMarkerNode, isSimpleTextNode } from './utils';
 
@@ -309,7 +310,14 @@ export function toStoredMarkup(source: string): string {
       continue;
     }
 
-    const nodes = parse(text);
+    // Текст из визуального редактора приходит с экранированием @tiptap/markdown
+    // (`\~`, `\*`, `&amp;`): для round-trip'а внутри редактора оно нужно, а на
+    // странице печаталось бы буквально — снимаем его ровно здесь, на границе
+    // хранения. Пустой абзац и `---` сверяются ДО этого: их экранирование не
+    // касается.
+    const markup = unescapeEditorMarkdown(text);
+
+    const nodes = parse(markup);
     const [node] = nodes;
 
     // Сегмент-блок — это РОВНО один блочный узел. Его кладём объектом. Абзац
@@ -318,7 +326,7 @@ export function toStoredMarkup(source: string): string {
     if (nodes.length === 1 && node !== undefined && isBlockNode(node)) {
       stored.push(node);
     } else {
-      stored.push(text);
+      stored.push(markup);
     }
   }
 

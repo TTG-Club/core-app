@@ -37,6 +37,7 @@
     SESSION_ATTENDANCE_STATUS_LABELS,
     SESSION_REGISTRATION_STATUS_LABELS,
   } from '../model';
+  import { ParticipantName } from '../ui';
 
   const {
     gameId,
@@ -56,7 +57,7 @@
   }>();
 
   const emit = defineEmits<{ withdraw: [] }>();
-  const { getParticipantName, resolveNames } = useParticipantNames();
+  const { getParticipantAvatarName, resolveNames } = useParticipantNames();
   const { open: openPlayerProfile } = usePlayerProfileDrawer();
 
   /**
@@ -64,7 +65,7 @@
    * @param playerId Идентификатор игрока.
    */
   function showPlayerProfile(playerId: string): void {
-    openPlayerProfile(playerId, getParticipantName(playerId));
+    openPlayerProfile(playerId);
   }
 
   /** Открывает свой профиль из собственной карточки состава. */
@@ -312,7 +313,7 @@
           <div class="flex min-w-0 items-start gap-3">
             <UserAvatar
               :user-id="ownRegistration.playerId"
-              :name="getParticipantName(ownRegistration.playerId)"
+              :name="getParticipantAvatarName(ownRegistration.playerId)"
               size="xs"
               class="shrink-0"
             />
@@ -325,7 +326,7 @@
                 :title="PLAYER_PROFILE_OPEN_HINT"
                 @click.left.exact.prevent="showOwnProfile"
               >
-                {{ getParticipantName(ownRegistration.playerId) }}
+                <ParticipantName :user-id="ownRegistration.playerId" />
               </ULink>
 
               <p
@@ -434,7 +435,7 @@
       >
         <UserAvatar
           :user-id="participant.playerId"
-          :name="getParticipantName(participant.playerId)"
+          :name="getParticipantAvatarName(participant.playerId)"
           size="xs"
           class="shrink-0"
         />
@@ -447,7 +448,7 @@
             :title="PLAYER_PROFILE_OPEN_HINT"
             @click.left.exact.prevent="showPlayerProfile(participant.playerId)"
           >
-            {{ getParticipantName(participant.playerId) }}
+            <ParticipantName :user-id="participant.playerId" />
           </ULink>
 
           <p

@@ -8,7 +8,11 @@
   import { CharacterSheetDrawer } from '~character-sheet/drawer';
   import { UserAvatar } from '~ui/user-avatar';
 
-  import { useFollows, usePlayerProfileDrawer } from '../../composables';
+  import {
+    useFollows,
+    useParticipantNames,
+    usePlayerProfileDrawer,
+  } from '../../composables';
   import {
     BOOKMARK_PLAYER_ACTIVE_LABEL,
     BOOKMARK_PLAYER_HINT,
@@ -31,19 +35,16 @@
     SESSION_REGISTRATION_STATUS_COLORS,
     SESSION_REGISTRATION_STATUS_LABELS,
   } from '../../model';
-  import { getSharedCharacterSheetToken } from '../../ui';
+  import { getSharedCharacterSheetToken, ParticipantName } from '../../ui';
 
   const {
     registration,
-    playerName,
     gameId,
     reputation = null,
     isFull,
     busy = false,
   } = defineProps<{
     registration: GameRegistration;
-    /** Отображаемое имя игрока; сырой UUID показывать нельзя. */
-    playerName: string;
     /** Игра, в которую подана заявка: по ней сервис пускает к отзывам. */
     gameId: string;
     /** Репутация игрока; `null` — ещё не загружена или сервис её не отдал. */
@@ -60,11 +61,14 @@
 
   const overlay = useOverlay();
 
+  // Сырой UUID игрока показывать нельзя: имя приходит из core-api.
+  const { getParticipantAvatarName } = useParticipantNames();
+
   const { open: openPlayerProfile } = usePlayerProfileDrawer();
 
   /** Открывает профиль игрока, подавшего заявку. */
   function showPlayerProfile(): void {
-    openPlayerProfile(registration.playerId, playerName);
+    openPlayerProfile(registration.playerId);
   }
 
   const isPending = computed(() => registration.status === 'PENDING');
@@ -181,7 +185,7 @@
       <span class="flex min-w-0 items-start gap-2">
         <UserAvatar
           :user-id="registration.playerId"
-          :name="playerName"
+          :name="getParticipantAvatarName(registration.playerId)"
           size="xs"
           class="shrink-0"
         />
@@ -194,7 +198,7 @@
             :title="PLAYER_PROFILE_OPEN_HINT"
             @click.left.exact.prevent="showPlayerProfile"
           >
-            {{ playerName }}
+            <ParticipantName :user-id="registration.playerId" />
           </ULink>
 
           <span

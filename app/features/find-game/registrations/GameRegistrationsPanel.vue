@@ -215,7 +215,6 @@
         v-for="registration in visibleRegistrations"
         :key="registration.id"
         :registration="registration"
-        :player-name="getParticipantName(registration.playerId)"
         :reputation="getPlayerReputation(registration.playerId)"
         :game-id="game.id"
         :is-full="isFull"

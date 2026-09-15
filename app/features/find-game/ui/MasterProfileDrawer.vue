@@ -5,7 +5,7 @@
   import { UiResult } from '~ui/result';
   import { UserAvatar } from '~ui/user-avatar';
 
-  import { useFollows } from '../composables';
+  import { useFollows, useParticipantNames } from '../composables';
   import {
     fetchMasterProfile,
     fetchMasterReviews,
@@ -52,11 +52,20 @@
    * нём говорят игроки и что он написал о себе. Поэтому сверху имя с
    * репутацией, под ним цифры, дальше — текст и отзывы.
    */
-  const { masterId, masterName } = defineProps<{
+  const { masterId } = defineProps<{
+    /** Сервис поиска игр знает только идентификатор, имя приходит из core-api. */
     masterId: string;
-    /** Имя из core-api: сервис поиска игр знает только идентификатор. */
-    masterName: string;
   }>();
+
+  const {
+    getParticipantName,
+    getParticipantAvatarName,
+    isParticipantNamePending,
+    watchParticipantNames,
+  } = useParticipantNames();
+
+  // Дровер открывают из разных мест, и списка участников рядом может не быть.
+  watchParticipantNames(() => [masterId]);
 
   const emit = defineEmits<{
     close: [];
@@ -208,16 +217,22 @@
       <section class="flex items-start gap-4">
         <UserAvatar
           :user-id="masterId"
-          :name="masterName"
+          :name="getParticipantAvatarName(masterId)"
           size="3xl"
           class="shrink-0 bg-primary/10 text-primary"
         />
 
         <div class="flex min-w-0 flex-auto flex-col gap-1">
+          <USkeleton
+            v-if="isParticipantNamePending(masterId)"
+            class="h-6 w-40"
+          />
+
           <h2
+            v-else
             class="text-xl/tight font-semibold wrap-break-word text-highlighted"
           >
-            {{ masterName }}
+            {{ getParticipantName(masterId) }}
           </h2>
 
           <USkeleton

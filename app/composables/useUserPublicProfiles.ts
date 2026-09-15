@@ -13,6 +13,12 @@ const PUBLIC_USER_PROFILES_API_PATH = '/api/user/display-names/by-ids';
 /** Сколько идентификаторов core-api принимает за один запрос. */
 const PUBLIC_USER_PROFILES_LOOKUP_MAX = 200;
 
+/**
+ * Сколько ждать ответа, мс. Пока ответа нет, на месте имён скелетоны — завис
+ * запрос, и они крутились бы вечно; по таймауту резолв считается сбоем.
+ */
+const PUBLIC_USER_PROFILES_TIMEOUT_MS = 10_000;
+
 /** Резолв не удался: имена и аватарки подождут следующего запроса. */
 const PUBLIC_USER_PROFILES_FAILED_LOG =
   '[user-profiles] Не удалось получить имена и аватарки пользователей:';
@@ -54,6 +60,7 @@ async function fetchPublicUserProfiles(
       method: 'POST',
       body: { userIds },
       retry: 0,
+      timeout: PUBLIC_USER_PROFILES_TIMEOUT_MS,
     });
 
     return parsePublicUserProfiles(profilesResponse);
@@ -83,6 +90,10 @@ export const useUserPublicProfiles = createSharedComposable(() => {
   // резолв повторно, в том числе для пользователей, которых core-api не знает.
   const requestedUserIds = new Set<string>();
 
+  // Идентификаторы, по которым ответ уже пришёл: данные нашлись, core-api
+  // пользователя не знает или запрос не удался. Остальные ещё загружаются.
+  const settledUserIds = shallowRef<ReadonlySet<string>>(new Set());
+
   // Идентификаторы, собранные за текущий тик и ещё не отправленные.
   const pendingUserIds = new Set<string>();
 
@@ -90,7 +101,8 @@ export const useUserPublicProfiles = createSharedComposable(() => {
 
   /**
    * Отправляет собранные идентификаторы пачками. Пачка, запрос которой не
-   * удался, снимается с учёта — следующий резолв попробует снова.
+   * удался, снимается с учёта — следующий резолв попробует снова. Загрузка
+   * по ней при этом завершается, чтобы место имени не ждало вечно.
    */
   async function flushPendingUserIds(): Promise<void> {
     isFlushScheduled = false;
@@ -122,6 +134,11 @@ export const useUserPublicProfiles = createSharedComposable(() => {
         requestedUserIds.delete(userId);
       }
     }
+
+    settledUserIds.value = new Set([
+      ...settledUserIds.value,
+      ...userIdBatches.flat(),
+    ]);
 
     if (!resolvedProfiles.length) {
       return;
@@ -186,9 +203,22 @@ export const useUserPublicProfiles = createSharedComposable(() => {
     return profileByUserId.value[userId];
   }
 
+  /**
+   * Загружаются ли ещё данные пользователя: их нет, и ответ по нему не
+   * приходил. На сервере резолв не идёт, поэтому там это верно всегда —
+   * страница рисуется с заглушками загрузки, и гидратация видит то же.
+   *
+   * @param userId идентификатор пользователя.
+   * @returns true — ответа по пользователю ещё не было.
+   */
+  function isProfilePending(userId: string): boolean {
+    return !profileByUserId.value[userId] && !settledUserIds.value.has(userId);
+  }
+
   return {
     resolveProfiles,
     watchProfiles,
     getProfile,
+    isProfilePending,
   };
 });
