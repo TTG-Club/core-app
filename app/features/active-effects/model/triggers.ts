@@ -28,7 +28,6 @@ import {
   isEffectTag,
   LEGACY_TRIGGER_ID_PREFIX,
   LEGACY_TRIGGER_IDS,
-  PRESENCE_TRIGGER_EVENTS,
   TURN_TRIGGER_EVENTS,
 } from './triggerTypes';
 
@@ -79,7 +78,7 @@ export function resolveTriggerActionGate(
 }
 
 /** Гейты разового срабатывания по выбору «при успехе». */
-export interface EffectLandingGates {
+interface EffectLandingGates {
   /** Когда бьёт урон эффекта. */
   damage: EffectTriggerActionGate;
   /** Урон при успехе — половина. */
@@ -95,9 +94,7 @@ export interface EffectLandingGates {
  * @param effect эффект.
  * @returns гейты урона и наложения.
  */
-export function resolveEffectLandingGates(
-  effect: ActiveEffect,
-): EffectLandingGates {
+function resolveEffectLandingGates(effect: ActiveEffect): EffectLandingGates {
   if (effect.applyOnSuccessOnly) {
     return { damage: 'saved', halfOnSave: false, effect: 'saved' };
   }
@@ -117,10 +114,20 @@ export function resolveEffectLandingGates(
  * @param timing начало или конец хода.
  * @returns событие.
  */
-export function turnTriggerEventOf(
-  timing: EffectSaveTiming,
-): EffectTriggerEvent {
+function turnTriggerEventOf(timing: EffectSaveTiming): EffectTriggerEvent {
   return timing === 'startOfTurn' ? 'turnStart' : 'turnEnd';
+}
+
+/**
+ * Отметка времени хода по событию хода — обратное к `turnTriggerEventOf`.
+ *
+ * @param event событие начала или конца хода.
+ * @returns начало хода для `turnStart`, иначе конец хода.
+ */
+export function saveTimingOfTriggerEvent(
+  event: EffectTriggerEvent,
+): EffectSaveTiming {
+  return event === 'turnStart' ? 'startOfTurn' : 'endOfTurn';
 }
 
 /**
@@ -131,7 +138,7 @@ export function turnTriggerEventOf(
  * @param event событие срабатывания.
  * @returns срабатывание: урон (если есть) и длящаяся копия эффекта.
  */
-export function readEffectLandingTrigger(
+function readEffectLandingTrigger(
   effect: ActiveEffect,
   event: EffectTriggerEvent,
 ): EffectTrigger {
@@ -202,7 +209,7 @@ function readLegacyListTriggers(effect: ActiveEffect): EffectTrigger[] {
 
   if (recurringDamage) {
     const { save } = recurringDamage;
-    const half = save?.onSuccess === 'half';
+    const isHalfDamage = save?.onSuccess === 'half';
 
     triggers.push({
       id: LEGACY_TRIGGER_IDS.recurringDamage,
@@ -212,8 +219,8 @@ function readLegacyListTriggers(effect: ActiveEffect): EffectTrigger[] {
         {
           type: 'damage',
           parts: recurringDamage.damageParts,
-          on: save && !half ? 'failed' : 'always',
-          ...(half ? { halfOnSave: true as const } : {}),
+          on: save && !isHalfDamage ? 'failed' : 'always',
+          ...(isHalfDamage ? { halfOnSave: true as const } : {}),
         },
       ],
     });
@@ -314,21 +321,6 @@ export function listTriggerTags(triggers: readonly EffectTrigger[]): string[] {
 }
 
 /**
- * Есть ли у эффекта явные срабатывания входа или выхода — у ауры они будят
- * вход и выход так же, как у зоны.
- *
- * @param effect эффект.
- * @returns `true`, если срабатывание входа или выхода есть.
- */
-export function hasPresenceTriggers(effect: ActiveEffect): boolean {
-  return listEffectListTriggers(effect).some(
-    (trigger) =>
-      !isLegacyTrigger(trigger)
-      && PRESENCE_TRIGGER_EVENTS.includes(trigger.event),
-  );
-}
-
-/**
  * Простое срабатывание: без роли, условия и лимита, ход — субъекта.
  *
  * @param trigger срабатывание.
@@ -365,10 +357,10 @@ export function classifyLegacyTrigger(
       return gate === 'always' && !action.halfOnSave ? 'recurringDamage' : null;
     }
 
-    const negate = gate === 'failed' && !action.halfOnSave;
-    const half = gate === 'always' && action.halfOnSave === true;
+    const negatesOnSuccess = gate === 'failed' && !action.halfOnSave;
+    const halvesOnSuccess = gate === 'always' && action.halfOnSave === true;
 
-    return negate || half ? 'recurringDamage' : null;
+    return negatesOnSuccess || halvesOnSuccess ? 'recurringDamage' : null;
   }
 
   if (
@@ -407,7 +399,7 @@ function toLegacyFields(
   trigger: EffectTrigger,
 ): Pick<ActiveEffect, 'recurringDamage' | 'recurringSave' | 'consumeOn'> {
   const [action] = trigger.actions;
-  const timing = trigger.event === 'turnStart' ? 'startOfTurn' : 'endOfTurn';
+  const timing = saveTimingOfTriggerEvent(trigger.event);
 
   if (kind === 'recurringDamage' && action?.type === 'damage') {
     return {
@@ -455,7 +447,7 @@ export function writeEffectTriggers(
   effect: ActiveEffect,
   triggers: readonly EffectTrigger[],
 ): ActiveEffect {
-  const legacy: Pick<
+  let legacy: Pick<
     ActiveEffect,
     'recurringDamage' | 'recurringSave' | 'consumeOn'
   > = {};
@@ -470,7 +462,7 @@ export function writeEffectTriggers(
     const kind = classifyLegacyTrigger(trigger);
 
     if (kind && legacy[kind] === undefined) {
-      Object.assign(legacy, toLegacyFields(kind, trigger));
+      legacy = { ...legacy, ...toLegacyFields(kind, trigger) };
 
       continue;
     }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  APPLIER_SAVE_DC,
   applyConditionPresetToEffect,
   buildConditionActiveEffect,
   clearInertEffectFields,
@@ -11,6 +12,7 @@ import {
   describeEffectScenario,
   EFFECT_FORM_STEPS,
   EFFECT_SUCCESS_OUTCOMES,
+  FIXED_MIN_SAVE_DC,
   listEffectFormSteps,
   listEffectListTriggers,
   listEffectTriggerPresets,
@@ -18,40 +20,45 @@ import {
   listTriggerActionTypes,
   listTriggerTags,
   normalizeEffectDraft,
+  readEffectAreaTrigger,
   readEffectDelivery,
   readEffectSuccessOutcome,
-  readEffectTrigger,
   resolveEffectFormLayout,
   triggerEventAcceptsDcFormula,
   triggerEventHasOtherParty,
+  writeEffectAreaTrigger,
   writeEffectDelivery,
   writeEffectSaveEnabled,
   writeEffectSuccessOutcome,
-  writeEffectTrigger,
   writeEffectTriggerRow,
 } from '~active-effects/model';
 
 import {
   ALL_CREATURES_AURA,
   ALLIES_AURA,
+  AURA_RADIUS,
   CONSTITUTION_SAVE,
   createEffect,
+  NEW_EFFECT_ID,
+  NEW_EFFECT_NAME,
   POISON_DAMAGE,
   resolveLayoutFor,
   SAVE_DC,
+  TYPED_SAVE_DC,
   WALK_SPEED_CHANGE,
 } from './fixtures';
 
 /** Радиус ауры, настроенный автором. */
 const CUSTOM_AURA_RADIUS = 30;
 
-/** Сл, набранная автором вручную. */
-const TYPED_SAVE_DC = 15;
-
 describe('новый эффект по месту формы', () => {
   it('у действия существа и заклинания эффект сразу на цели', () => {
     for (const context of ['creatureAction', 'spell'] as const) {
-      const effect = createEffectForContext(context, 'effect_new', 'Новый');
+      const effect = createEffectForContext(
+        context,
+        NEW_EFFECT_ID,
+        NEW_EFFECT_NAME,
+      );
 
       expect(effect.effectTarget, context).toBe('target');
       expect(readEffectDelivery(effect, context)).toBe('target');
@@ -65,7 +72,11 @@ describe('новый эффект по месту формы', () => {
       'item',
       'feature',
     ] as const) {
-      const effect = createEffectForContext(context, 'effect_new', 'Новый');
+      const effect = createEffectForContext(
+        context,
+        NEW_EFFECT_ID,
+        NEW_EFFECT_NAME,
+      );
 
       expect(effect.effectTarget, context).toBe('self');
       expect(readEffectDelivery(effect, context)).toBe('carrier');
@@ -98,24 +109,24 @@ describe('раскладка формы эффекта', () => {
   });
 
   it('аура умения («Аура защиты»): «пока внутри» без сроков, вход — со спасброском', () => {
-    const stay = resolveLayoutFor('feature', { aura: ALLIES_AURA });
+    const stayLayout = resolveLayoutFor('feature', { aura: ALLIES_AURA });
 
-    expect(stay.delivery).toBe('aura');
-    expect(stay.showAuraSettings).toBe(true);
-    expect(stay.showSave).toBe(false);
-    expect(stay.saveUnavailableReason).toBe('stayTrigger');
-    expect(stay.showDuration).toBe(false);
-    expect(stay.showRecurringSave).toBe(false);
+    expect(stayLayout.delivery).toBe('aura');
+    expect(stayLayout.showAuraSettings).toBe(true);
+    expect(stayLayout.showSave).toBe(false);
+    expect(stayLayout.saveUnavailableReason).toBe('stayTrigger');
+    expect(stayLayout.showDuration).toBe(false);
+    expect(stayLayout.showRecurringSave).toBe(false);
 
-    const enter = resolveLayoutFor('feature', {
+    const enterLayout = resolveLayoutFor('feature', {
       aura: ALLIES_AURA,
       areaTrigger: 'enter',
     });
 
-    expect(enter.showSave).toBe(true);
-    expect(enter.showTriggerDamage).toBe(true);
-    expect(enter.showDuration).toBe(true);
-    expect(enter.minSaveDc).toBe(1);
+    expect(enterLayout.showSave).toBe(true);
+    expect(enterLayout.showTriggerDamage).toBe(true);
+    expect(enterLayout.showDuration).toBe(true);
+    expect(enterLayout.minSaveDc).toBe(FIXED_MIN_SAVE_DC);
   });
 
   it('оружие на владельце подсказывает, где спасбросок', () => {
@@ -134,7 +145,7 @@ describe('раскладка формы эффекта', () => {
     expect(layout.showSave).toBe(true);
     expect(layout.showDuration).toBe(true);
     expect(layout.successOutcomeForActionSave).toBe(false);
-    expect(layout.minSaveDc).toBe(0);
+    expect(layout.minSaveDc).toBe(APPLIER_SAVE_DC);
   });
 
   it('аура предмета «пока внутри»: без длительности, иммунитеты достаются накрытым', () => {
@@ -147,7 +158,7 @@ describe('раскладка формы эффекта', () => {
     expect(layout.showDuration).toBe(false);
     expect(layout.showConditionImmunities).toBe(true);
     expect(layout.showRecurringDamage).toBe(true);
-    expect(layout.minSaveDc).toBe(1);
+    expect(layout.minSaveDc).toBe(FIXED_MIN_SAVE_DC);
   });
 
   it('аура своих эффектов «пока внутри» тикает длительностью носителя', () => {
@@ -174,7 +185,7 @@ describe('раскладка формы эффекта', () => {
     });
 
     expect(layout.deliveryOptions).toEqual(['target']);
-    expect(layout.minSaveDc).toBe(0);
+    expect(layout.minSaveDc).toBe(APPLIER_SAVE_DC);
     expect(layout.successOutcomeForActionSave).toBe(true);
 
     expect(layout.successOutcomes).toEqual([
@@ -191,12 +202,15 @@ describe('раскладка формы эффекта', () => {
     });
 
     expect(layout.successOutcomeForActionSave).toBe(false);
-    expect(layout.minSaveDc).toBe(0);
+    expect(layout.minSaveDc).toBe(APPLIER_SAVE_DC);
   });
 
   it('заклинание на заклинателе: Сл 0 — Сл заклинателя при любой доставке', () => {
-    expect(resolveLayoutFor('spell').minSaveDc).toBe(0);
-    expect(resolveLayoutFor('spell', { aura: ALLIES_AURA }).minSaveDc).toBe(0);
+    expect(resolveLayoutFor('spell').minSaveDc).toBe(APPLIER_SAVE_DC);
+
+    expect(resolveLayoutFor('spell', { aura: ALLIES_AURA }).minSaveDc).toBe(
+      APPLIER_SAVE_DC,
+    );
   });
 });
 
@@ -223,24 +237,44 @@ describe('доставка эффекта', () => {
   });
 
   it('«пока внутри» не хранится полем', () => {
-    const effect = writeEffectTrigger(
+    const effect = writeEffectAreaTrigger(
       createEffect({ areaTrigger: 'enter' }),
       'stay',
     );
 
     expect(effect.areaTrigger).toBeUndefined();
-    expect(readEffectTrigger(effect)).toBe('stay');
+    expect(readEffectAreaTrigger(effect)).toBe('stay');
   });
 });
 
 describe('исход успешного спасброска', () => {
   /** Ожидаемые поля по исходу. */
   const OUTCOME_FIELDS = {
-    nothing: ['negate', undefined, undefined],
-    halfDamage: ['half', undefined, undefined],
-    halfDamageWithEffect: ['half', true, undefined],
-    effectWithoutDamage: ['negate', true, undefined],
-    onlyOnSuccess: ['negate', undefined, true],
+    nothing: {
+      onSuccess: 'negate',
+      applyOnSuccess: undefined,
+      applyOnSuccessOnly: undefined,
+    },
+    halfDamage: {
+      onSuccess: 'half',
+      applyOnSuccess: undefined,
+      applyOnSuccessOnly: undefined,
+    },
+    halfDamageWithEffect: {
+      onSuccess: 'half',
+      applyOnSuccess: true,
+      applyOnSuccessOnly: undefined,
+    },
+    effectWithoutDamage: {
+      onSuccess: 'negate',
+      applyOnSuccess: true,
+      applyOnSuccessOnly: undefined,
+    },
+    onlyOnSuccess: {
+      onSuccess: 'negate',
+      applyOnSuccess: undefined,
+      applyOnSuccessOnly: true,
+    },
   } as const;
 
   it('запись и чтение сходятся для каждого исхода, обоих флагов сразу не бывает', () => {
@@ -254,7 +288,7 @@ describe('исход успешного спасброска', () => {
         outcome,
       );
 
-      const [onSuccess, applyOnSuccess, applyOnSuccessOnly] =
+      const { onSuccess, applyOnSuccess, applyOnSuccessOnly } =
         OUTCOME_FIELDS[outcome];
 
       expect(readEffectSuccessOutcome(effect)).toBe(outcome);
@@ -316,23 +350,27 @@ describe('неработающие поля', () => {
     });
 
     const layout = resolveEffectFormLayout('feature', effect);
-    const inert = listInertEffectFields(effect, layout);
+    const inertFields = listInertEffectFields(effect, layout);
 
     // Аура умения работает: персонаж излучает её сам
-    expect(inert).toEqual(['applySave', 'recurringSave', 'duration']);
+    expect(inertFields).toEqual(['applySave', 'recurringSave', 'duration']);
 
-    const cleared = clearInertEffectFields(effect, inert, 'feature');
+    const clearedEffect = clearInertEffectFields(
+      effect,
+      inertFields,
+      'feature',
+    );
 
-    expect(cleared.aura).toEqual(ALLIES_AURA);
-    expect(cleared.applySave).toBeUndefined();
-    expect(cleared.recurringSave).toBeUndefined();
-    expect(cleared.duration).toEqual({ type: 'permanent' });
-    expect(cleared.changes).toEqual([WALK_SPEED_CHANGE]);
+    expect(clearedEffect.aura).toEqual(ALLIES_AURA);
+    expect(clearedEffect.applySave).toBeUndefined();
+    expect(clearedEffect.recurringSave).toBeUndefined();
+    expect(clearedEffect.duration).toEqual({ type: 'permanent' });
+    expect(clearedEffect.changes).toEqual([WALK_SPEED_CHANGE]);
 
     expect(
       listInertEffectFields(
-        cleared,
-        resolveEffectFormLayout('feature', cleared),
+        clearedEffect,
+        resolveEffectFormLayout('feature', clearedEffect),
       ),
     ).toEqual([]);
   });
@@ -376,16 +414,16 @@ describe('неработающие поля', () => {
     });
 
     const layout = resolveEffectFormLayout('item', effect);
-    const inert = listInertEffectFields(effect, layout);
+    const inertFields = listInertEffectFields(effect, layout);
 
-    expect(inert).toEqual(['applySave', 'successOutcome', 'damageParts']);
+    expect(inertFields).toEqual(['applySave', 'successOutcome', 'damageParts']);
 
-    const cleared = clearInertEffectFields(effect, inert, 'item');
+    const clearedEffect = clearInertEffectFields(effect, inertFields, 'item');
 
-    expect(cleared.applySave).toBeUndefined();
-    expect(cleared.applyOnSuccess).toBeUndefined();
-    expect(cleared.applyOnSuccessOnly).toBeUndefined();
-    expect(cleared.damageParts).toBeUndefined();
+    expect(clearedEffect.applySave).toBeUndefined();
+    expect(clearedEffect.applyOnSuccess).toBeUndefined();
+    expect(clearedEffect.applyOnSuccessOnly).toBeUndefined();
+    expect(clearedEffect.damageParts).toBeUndefined();
   });
 });
 
@@ -448,7 +486,7 @@ describe('переключатели спасбросков', () => {
         true,
         resolveEffectFormLayout('spell', spellEffect),
       ).applySave?.dc,
-    ).toBe(0);
+    ).toBe(APPLIER_SAVE_DC);
   });
 
   it('включение не сбрасывает уже настроенный спасбросок', () => {
@@ -473,14 +511,14 @@ describe('переключатели спасбросков', () => {
       applyOnSuccessOnly: true,
     });
 
-    const cleared = writeEffectSaveEnabled(
+    const effectWithoutSave = writeEffectSaveEnabled(
       effect,
       false,
       resolveEffectFormLayout('weapon', effect),
     );
 
-    expect(cleared.applySave).toBeUndefined();
-    expect(cleared.applyOnSuccessOnly).toBeUndefined();
+    expect(effectWithoutSave.applySave).toBeUndefined();
+    expect(effectWithoutSave.applyOnSuccessOnly).toBeUndefined();
   });
 
   it('у действия существа «при успехе» остаётся за спасброском действия', () => {
@@ -490,22 +528,22 @@ describe('переключатели спасбросков', () => {
       applyOnSuccessOnly: true,
     });
 
-    const cleared = writeEffectSaveEnabled(
+    const effectWithoutSave = writeEffectSaveEnabled(
       effect,
       false,
       resolveEffectFormLayout('creatureAction', effect),
     );
 
-    expect(cleared.applySave).toBeUndefined();
-    expect(cleared.applyOnSuccessOnly).toBe(true);
+    expect(effectWithoutSave.applySave).toBeUndefined();
+    expect(effectWithoutSave.applyOnSuccessOnly).toBe(true);
   });
 });
 
 describe('список «Срабатывания»', () => {
   it('события и действия по месту', () => {
-    const own = resolveLayoutFor('ownEffects');
+    const ownLayout = resolveLayoutFor('ownEffects');
 
-    expect(own.triggerEvents).toEqual([
+    expect(ownLayout.triggerEvents).toEqual([
       'turnStart',
       'turnEnd',
       'attackRoll',
@@ -513,7 +551,7 @@ describe('список «Срабатывания»', () => {
       'hpZero',
     ]);
 
-    expect(own.triggerActions).toEqual([
+    expect(ownLayout.triggerActions).toEqual([
       'damage',
       'applyCondition',
       'applyTag',
@@ -522,7 +560,7 @@ describe('список «Срабатывания»', () => {
       'removeSelf',
     ]);
 
-    expect(listTriggerActionTypes(own, 'attackRoll')).toEqual([
+    expect(listTriggerActionTypes(ownLayout, 'attackRoll')).toEqual([
       'damage',
       'applyCondition',
       'applyTag',
@@ -530,7 +568,7 @@ describe('список «Срабатывания»', () => {
       'removeSelf',
     ]);
 
-    expect(listTriggerActionTypes(own, 'hpZero')).toEqual([
+    expect(listTriggerActionTypes(ownLayout, 'hpZero')).toEqual([
       'damage',
       'applyCondition',
       'applyTag',
@@ -572,16 +610,16 @@ describe('список «Срабатывания»', () => {
       'hpZero',
     ]);
 
-    const trait = resolveLayoutFor('creatureTrait');
+    const traitLayout = resolveLayoutFor('creatureTrait');
 
-    expect(trait.triggerEvents).toEqual([
+    expect(traitLayout.triggerEvents).toEqual([
       'turnStart',
       'turnEnd',
       'damageTaken',
       'hpZero',
     ]);
 
-    expect(trait.triggerActions).toEqual([
+    expect(traitLayout.triggerActions).toEqual([
       'damage',
       'applyCondition',
       'applyTag',
@@ -589,9 +627,9 @@ describe('список «Срабатывания»', () => {
     ]);
 
     // Эффект накладывают — выбирается и ход наложившего
-    expect(own.triggerTurnOwners).toEqual(['subject', 'source']);
+    expect(ownLayout.triggerTurnOwners).toEqual(['subject', 'source']);
     // У черты существа наложившего нет
-    expect(trait.triggerTurnOwners).toEqual(['subject']);
+    expect(traitLayout.triggerTurnOwners).toEqual(['subject']);
 
     for (const context of ['feature', 'item'] as const) {
       expect(resolveLayoutFor(context).triggerEvents, context).toEqual([
@@ -633,72 +671,76 @@ describe('список «Срабатывания»', () => {
       timing: 'endOfTurn',
     });
 
-    const spell = createEffect({ effectTarget: 'target' });
+    const spellEffect = createEffect({ effectTarget: 'target' });
 
     // У заклинания — Сл заклинателя
     expect(
       createEffectTriggerPreset(
         'recurringSave',
-        spell,
-        resolveEffectFormLayout('spell', spell),
+        spellEffect,
+        resolveEffectFormLayout('spell', spellEffect),
       ).save?.dc,
-    ).toBe(0);
+    ).toBe(APPLIER_SAVE_DC);
   });
 
   it('запись «сначала старые поля»: лимит уводит строку в triggers, удаление снимает поле', () => {
     const layout = resolveLayoutFor('ownEffects');
     const effect = createEffect();
 
-    const burning = writeEffectTriggerRow(
+    const recurringDamageEffect = writeEffectTriggerRow(
       effect,
       0,
       createEffectTriggerPreset('recurringDamage', effect, layout),
     );
 
-    expect(burning.recurringDamage).toEqual({
+    expect(recurringDamageEffect.recurringDamage).toEqual({
       damageParts: [],
       timing: 'startOfTurn',
     });
 
-    expect(burning.triggers).toBeUndefined();
+    expect(recurringDamageEffect.triggers).toBeUndefined();
 
-    const [row] = listEffectListTriggers(burning);
+    const [recurringDamageTrigger] = listEffectListTriggers(
+      recurringDamageEffect,
+    );
 
-    expect(row).toBeDefined();
-
-    if (!row) {
-      return;
+    if (!recurringDamageTrigger) {
+      throw new Error('Пресет урона каждый ход не дал строки срабатывания');
     }
 
-    const limited = writeEffectTriggerRow(burning, 0, {
-      ...row,
+    const limitedEffect = writeEffectTriggerRow(recurringDamageEffect, 0, {
+      ...recurringDamageTrigger,
       actions: [{ type: 'damage', parts: POISON_DAMAGE }],
       limit: { max: 1, per: 'turn' },
     });
 
-    expect(limited.recurringDamage).toBeUndefined();
-    expect(limited.triggers).toHaveLength(1);
+    expect(limitedEffect.recurringDamage).toBeUndefined();
+    expect(limitedEffect.triggers).toHaveLength(1);
     // Id legacy.* не уходит в triggers
-    expect(limited.triggers?.[0]?.id).not.toBe(row.id);
-    expect(limited.triggers?.[0]?.limit).toEqual({ max: 1, per: 'turn' });
+    expect(limitedEffect.triggers?.[0]?.id).not.toBe(recurringDamageTrigger.id);
+    expect(limitedEffect.triggers?.[0]?.limit).toEqual({ max: 1, per: 'turn' });
 
-    const consumed = writeEffectTriggerRow(
-      limited,
+    const consumeOnEffect = writeEffectTriggerRow(
+      limitedEffect,
       1,
-      createEffectTriggerPreset('consumeOn', limited, layout),
+      createEffectTriggerPreset('consumeOn', limitedEffect, layout),
     );
 
-    expect(consumed.consumeOn).toBe('carrierAttack');
+    expect(consumeOnEffect.consumeOn).toBe('carrierAttack');
 
     // Старые поля читаются первыми
     expect(
-      listEffectListTriggers(consumed).map((trigger) => trigger.event),
+      listEffectListTriggers(consumeOnEffect).map((trigger) => trigger.event),
     ).toEqual(['attackRoll', 'turnStart']);
 
-    const removed = writeEffectTriggerRow(consumed, 0, null);
+    const effectWithoutConsumeOn = writeEffectTriggerRow(
+      consumeOnEffect,
+      0,
+      null,
+    );
 
-    expect(removed.consumeOn).toBeUndefined();
-    expect(removed.triggers).toHaveLength(1);
+    expect(effectWithoutConsumeOn.consumeOn).toBeUndefined();
+    expect(effectWithoutConsumeOn.triggers).toHaveLength(1);
   });
 
   it('срабатывание не для этого места — плашкой; «Убрать» оставляет работающие', () => {
@@ -722,11 +764,15 @@ describe('список «Срабатывания»', () => {
 
     expect(listInertEffectFields(effect, layout)).toEqual(['triggers']);
 
-    const cleared = clearInertEffectFields(effect, ['triggers'], 'spell');
+    const effectWithWorkingTriggers = clearInertEffectFields(
+      effect,
+      ['triggers'],
+      'spell',
+    );
 
-    expect(cleared.triggers?.map((trigger) => trigger.id)).toEqual([
-      'trigger_turn',
-    ]);
+    expect(
+      effectWithWorkingTriggers.triggers?.map((trigger) => trigger.id),
+    ).toEqual(['trigger_turn']);
 
     expect(
       listInertEffectFields(
@@ -771,14 +817,16 @@ describe('список «Срабатывания»', () => {
     });
 
     const itemLayout = resolveEffectFormLayout('item', effect);
-    const saved = normalizeEffectDraft(effect, itemLayout);
+    const normalizedEffect = normalizeEffectDraft(effect, itemLayout);
 
-    expect(saved.triggers?.map((trigger) => trigger.id)).toEqual([
+    expect(normalizedEffect.triggers?.map((trigger) => trigger.id)).toEqual([
       'trigger_stench',
     ]);
 
-    expect(saved.triggers?.[0]?.save?.dc).toBe(1);
-    expect(saved.triggers?.[0]?.limit).toEqual({ max: 1, per: 'round' });
+    const [stenchTrigger] = normalizedEffect.triggers ?? [];
+
+    expect(stenchTrigger?.save?.dc).toBe(FIXED_MIN_SAVE_DC);
+    expect(stenchTrigger?.limit).toEqual({ max: 1, per: 'round' });
 
     expect(
       normalizeEffectDraft(
@@ -806,26 +854,24 @@ describe('шаблон состояния', () => {
 
     const condition = buildConditionActiveEffect('poisoned');
 
-    expect(condition).not.toBeNull();
-
     if (!condition) {
-      return;
+      throw new Error('Нет шаблона состояния «Отравленный»');
     }
 
-    const applied = applyConditionPresetToEffect(effect, condition);
+    const poisonedEffect = applyConditionPresetToEffect(effect, condition);
 
-    expect(applied.id).toBe(effect.id);
-    expect(applied.origin).toBe('spell');
-    expect(applied.aura).toEqual(ALLIES_AURA);
-    expect(applied.areaTrigger).toBe('enter');
-    expect(applied.applySave).toEqual(CONSTITUTION_SAVE);
-    expect(applied.damageParts).toEqual(POISON_DAMAGE);
-    expect(applied.duration).toEqual({ type: 'minutes', value: 1 });
-    expect(applied.conditionKey).toBe('poisoned');
-    expect(applied.name).toBe(condition.name);
-    expect(applied.changes).toEqual(condition.changes);
-    expect(applied.flags).toEqual(condition.flags);
-    expect(applied.exhaustionLevel).toBeUndefined();
+    expect(poisonedEffect.id).toBe(effect.id);
+    expect(poisonedEffect.origin).toBe('spell');
+    expect(poisonedEffect.aura).toEqual(ALLIES_AURA);
+    expect(poisonedEffect.areaTrigger).toBe('enter');
+    expect(poisonedEffect.applySave).toEqual(CONSTITUTION_SAVE);
+    expect(poisonedEffect.damageParts).toEqual(POISON_DAMAGE);
+    expect(poisonedEffect.duration).toEqual({ type: 'minutes', value: 1 });
+    expect(poisonedEffect.conditionKey).toBe('poisoned');
+    expect(poisonedEffect.name).toBe(condition.name);
+    expect(poisonedEffect.changes).toEqual(condition.changes);
+    expect(poisonedEffect.flags).toEqual(condition.flags);
+    expect(poisonedEffect.exhaustionLevel).toBeUndefined();
   });
 });
 
@@ -845,15 +891,15 @@ describe('черновик перед сохранением', () => {
       conditionImmunities: [],
     });
 
-    const normalized = normalizeEffectDraft(
+    const normalizedEffect = normalizeEffectDraft(
       effect,
       resolveEffectFormLayout('item', effect),
     );
 
-    expect(normalized.name).toBe('Яд');
-    expect(normalized.recurringSave?.dc).toBe(TYPED_SAVE_DC);
-    expect(normalized.damageParts).toBeUndefined();
-    expect(normalized.conditionImmunities).toBeUndefined();
+    expect(normalizedEffect.name).toBe('Яд');
+    expect(normalizedEffect.recurringSave?.dc).toBe(TYPED_SAVE_DC);
+    expect(normalizedEffect.damageParts).toBeUndefined();
+    expect(normalizedEffect.conditionImmunities).toBeUndefined();
   });
 
   it('сл спасброска против урона каждый ход: 0 у ауры предмета — 1', () => {
@@ -862,17 +908,20 @@ describe('черновик перед сохранением', () => {
       recurringDamage: {
         damageParts: POISON_DAMAGE,
         timing: 'startOfTurn',
-        save: { ...CONSTITUTION_SAVE, dc: 0 },
+        save: { ...CONSTITUTION_SAVE, dc: APPLIER_SAVE_DC },
       },
     });
 
-    const normalized = normalizeEffectDraft(
+    const normalizedEffect = normalizeEffectDraft(
       effect,
       resolveEffectFormLayout('item', effect),
     );
 
-    expect(normalized.recurringDamage?.save?.dc).toBe(1);
-    expect(normalized.recurringDamage?.damageParts).toEqual(POISON_DAMAGE);
+    expect(normalizedEffect.recurringDamage?.save?.dc).toBe(FIXED_MIN_SAVE_DC);
+
+    expect(normalizedEffect.recurringDamage?.damageParts).toEqual(
+      POISON_DAMAGE,
+    );
   });
 
   it('отметка без годного ключа выбрасывается одна, а не со срабатыванием', () => {
@@ -894,13 +943,13 @@ describe('черновик перед сохранением', () => {
       ],
     });
 
-    const normalized = normalizeEffectDraft(
+    const normalizedEffect = normalizeEffectDraft(
       effect,
       resolveEffectFormLayout('ownEffects', effect),
     );
 
     expect(
-      normalized.triggers?.map((trigger) => [
+      normalizedEffect.triggers?.map((trigger) => [
         trigger.id,
         trigger.actions.map((action) =>
           action.type === 'applyTag' ? action.tag : action.type,
@@ -914,7 +963,7 @@ describe('черновик перед сохранением', () => {
   it('сл 0 остаётся «Сл источника» только там, где источник есть', () => {
     const spellEffect = createEffect({
       effectTarget: 'target',
-      applySave: { ...CONSTITUTION_SAVE, dc: 0 },
+      applySave: { ...CONSTITUTION_SAVE, dc: APPLIER_SAVE_DC },
     });
 
     expect(
@@ -922,12 +971,12 @@ describe('черновик перед сохранением', () => {
         spellEffect,
         resolveEffectFormLayout('spell', spellEffect),
       ).applySave?.dc,
-    ).toBe(0);
+    ).toBe(APPLIER_SAVE_DC);
 
     const auraEffect = createEffect({
       aura: ALLIES_AURA,
       areaTrigger: 'enter',
-      applySave: { ...CONSTITUTION_SAVE, dc: 0 },
+      applySave: { ...CONSTITUTION_SAVE, dc: APPLIER_SAVE_DC },
     });
 
     expect(
@@ -935,7 +984,7 @@ describe('черновик перед сохранением', () => {
         auraEffect,
         resolveEffectFormLayout('item', auraEffect),
       ).applySave?.dc,
-    ).toBe(1);
+    ).toBe(FIXED_MIN_SAVE_DC);
   });
 });
 
@@ -951,7 +1000,7 @@ describe('живая сводка эффекта', () => {
     });
 
     expect(describeEffectScenario(effect, 'creatureTrait')).toBe(
-      'Когда существо входит в ауру 10 фт (союзники): спасбросок Телосложения, Сл 13. '
+      `Когда существо входит в ауру ${AURA_RADIUS} фт (союзники): спасбросок Телосложения, Сл ${SAVE_DC}. `
         + 'Провал — 2d6 ядом, «Отравленный», на 1 минуту. '
         + 'Успех — половина урона.',
     );
@@ -966,7 +1015,7 @@ describe('живая сводка эффекта', () => {
     });
 
     expect(describeEffectScenario(effect, 'weapon')).toBe(
-      'При попадании оружием: спасбросок Телосложения, Сл 13. '
+      `При попадании оружием: спасбросок Телосложения, Сл ${SAVE_DC}. `
         + 'Провал — «Отравленный», на 1 раунд. Успех — ничего.',
     );
   });
@@ -982,7 +1031,7 @@ describe('живая сводка эффекта', () => {
     );
 
     expect(describeEffectScenario(effect, 'weapon')).toBe(
-      'При попадании оружием: спасбросок Телосложения, Сл 13. '
+      `При попадании оружием: спасбросок Телосложения, Сл ${SAVE_DC}. `
         + 'Провал — ничего. Успех — Скорость (ходьба) +10 фт.',
     );
   });
@@ -1008,7 +1057,11 @@ describe('живая сводка эффекта', () => {
   it('действие существа: Сл 0 — Сл действия', () => {
     const effect = createEffect({
       effectTarget: 'target',
-      applySave: { ability: 'strength', dc: 0, onSuccess: 'negate' },
+      applySave: {
+        ability: 'strength',
+        dc: APPLIER_SAVE_DC,
+        onSuccess: 'negate',
+      },
       conditionKey: 'prone',
     });
 
@@ -1049,7 +1102,11 @@ describe('живая сводка эффекта', () => {
       effectTarget: 'target',
       conditionKey: 'restrained',
       duration: { type: 'rounds', value: 10 },
-      recurringSave: { ability: 'strength', dc: 0, timing: 'endOfTurn' },
+      recurringSave: {
+        ability: 'strength',
+        dc: APPLIER_SAVE_DC,
+        timing: 'endOfTurn',
+      },
     });
 
     expect(describeEffectScenario(effect, 'spell')).toBe(
@@ -1061,11 +1118,11 @@ describe('живая сводка эффекта', () => {
   it('состояние из шаблона не перечисляет свои правила, только добавленные', () => {
     const condition = buildConditionActiveEffect('poisoned');
 
-    expect(condition?.flags.length).toBeGreaterThan(0);
-
     if (!condition) {
-      return;
+      throw new Error('Нет шаблона состояния «Отравленный»');
     }
+
+    expect(condition.flags.length).toBeGreaterThan(0);
 
     const effect = applyConditionPresetToEffect(
       createEffect({ effectTarget: 'target' }),
@@ -1099,8 +1156,8 @@ describe('живая сводка эффекта', () => {
       });
 
       expect(describeEffectScenario(effect, 'creatureTrait')).toBe(
-        'Существам в ауре 10 фт (союзники): каждый ход 2d6 ядом в начале хода '
-          + `(спасбросок Телосложения, Сл 13: успех — ${successLabel}).`,
+        `Существам в ауре ${AURA_RADIUS} фт (союзники): каждый ход 2d6 ядом в начале хода `
+          + `(спасбросок Телосложения, Сл ${SAVE_DC}: успех — ${successLabel}).`,
       );
     }
   });
@@ -1129,7 +1186,9 @@ describe('живая сводка эффекта', () => {
         createEffect({ aura: ALLIES_AURA, changes: [WALK_SPEED_CHANGE] }),
         'item',
       ),
-    ).toBe('Существам в ауре 10 фт (союзники): Скорость (ходьба) +10 фт.');
+    ).toBe(
+      `Существам в ауре ${AURA_RADIUS} фт (союзники): Скорость (ходьба) +10 фт.`,
+    );
 
     expect(
       describeEffectScenario(

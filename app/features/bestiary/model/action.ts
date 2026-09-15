@@ -3,6 +3,7 @@ import type { DamageFormulaPart } from '~ui/damage-formula';
 
 import { AbilityKey } from '~/shared/types';
 import {
+  EFFECT_FORM_CONTEXT,
   normalizeActiveEffects,
   normalizeLoadedActiveEffects,
 } from '~active-effects/model';
@@ -26,6 +27,29 @@ export type CreatureEffectContext = Extract<
   EffectFormContext,
   'creatureAction' | 'creatureTrait'
 >;
+
+/** Списки записей боевого блока в состоянии формы существа. */
+export type CreatureActionListKey =
+  | 'traits'
+  | 'actions'
+  | 'bonusActions'
+  | 'reactions'
+  | 'legendary'
+  | 'lair';
+
+/**
+ * Место эффектов записей каждого списка боевого блока. Одна карта на форму и
+ * на сохранение: иначе список мог бы показывать эффекты черты, а сохраняться
+ * как действие — с другой допустимой Сл.
+ */
+export const CREATURE_ACTION_EFFECT_CONTEXTS = {
+  traits: EFFECT_FORM_CONTEXT.creatureTrait,
+  actions: EFFECT_FORM_CONTEXT.creatureAction,
+  bonusActions: EFFECT_FORM_CONTEXT.creatureAction,
+  reactions: EFFECT_FORM_CONTEXT.creatureAction,
+  legendary: EFFECT_FORM_CONTEXT.creatureAction,
+  lair: EFFECT_FORM_CONTEXT.creatureAction,
+} as const satisfies Record<CreatureActionListKey, CreatureEffectContext>;
 
 /** Что происходит с уроном при успешном спасброске цели. */
 export type CreatureSaveEffect = 'HALF' | 'NONE' | 'SPECIAL';

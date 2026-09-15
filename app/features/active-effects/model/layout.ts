@@ -25,11 +25,13 @@ import type {
   EffectAbility,
   EffectAreaTrigger,
   EffectAura,
+  EffectOrigin,
   EffectSave,
   EffectSaveOutcome,
 } from './types';
 
 import { hasLastingEffectPayload } from './automation';
+import { EFFECT_TRIGGER_CONDITION_DEFAULT_VALUES } from './constants';
 import { writeTriggerCondition } from './triggerConditions';
 import {
   createEffectTriggerId,
@@ -47,7 +49,11 @@ import {
   PRESENCE_TRIGGER_EVENTS,
   TURN_TRIGGER_EVENTS,
 } from './triggerTypes';
-import { DEFAULT_EFFECT_CHANGE_PRIORITY, parseFormNumber } from './types';
+import {
+  DEFAULT_EFFECT_CHANGE_PRIORITY,
+  EFFECT_ORIGIN,
+  parseFormNumber,
+} from './types';
 
 /** Места, откуда открывается форма эффекта. */
 export const EFFECT_FORM_CONTEXTS = [
@@ -79,6 +85,23 @@ export const EFFECT_FORM_CONTEXTS = [
  * - `generic` — место неизвестно: видно всё (сайт его не передаёт).
  */
 export type EffectFormContext = (typeof EFFECT_FORM_CONTEXTS)[number];
+
+/** Места формы по имени: редакторы передают их вместо строк. */
+export const EFFECT_FORM_CONTEXT = {
+  ownEffects: 'ownEffects',
+  feature: 'feature',
+  item: 'item',
+  weapon: 'weapon',
+  spell: 'spell',
+  creatureAction: 'creatureAction',
+  creatureTrait: 'creatureTrait',
+  zone: 'zone',
+  condition: 'condition',
+  generic: 'generic',
+} as const satisfies Record<EffectFormContext, EffectFormContext>;
+
+/** Место эффектов предмета: оружие или прочее снаряжение. */
+export type ItemEffectContext = Extract<EffectFormContext, 'item' | 'weapon'>;
 
 /** Куда эффект доставляется. */
 export type EffectDelivery = 'carrier' | 'aura' | 'target' | 'zone';
@@ -239,7 +262,7 @@ const ACTION_SAVE_CONTEXTS: ReadonlySet<EffectFormContext> = new Set([
 ]);
 
 /** Аура нового эффекта по умолчанию. */
-const DEFAULT_EFFECT_AURA: EffectAura = {
+export const DEFAULT_EFFECT_AURA: EffectAura = {
   radius: 10,
   target: 'allies',
   applyToSelf: true,
@@ -253,13 +276,13 @@ export const DEFAULT_EFFECT_SAVE_DC = 13;
 export const DEFAULT_EFFECT_SAVE_ABILITY: EffectAbility = 'wisdom';
 
 /** Минимальная Сл, когда подставить Сл источника нечем. */
-const FIXED_MIN_SAVE_DC = 1;
+export const FIXED_MIN_SAVE_DC = 1;
 
 /** Сл в данных, которая значит «Сл источника» (поле показывает «Авто»). */
-export const SOURCE_SAVE_DC = 0;
+export const APPLIER_SAVE_DC = 0;
 
 /** Минимальная Сл, когда 0 значит «Сл источника». */
-const SOURCE_MIN_SAVE_DC = SOURCE_SAVE_DC;
+const APPLIER_MIN_SAVE_DC = APPLIER_SAVE_DC;
 
 /** Хиты нового действия «Хиты становятся»: «вместо 0 хитов — 1 хит». */
 export const DEFAULT_SET_HP_VALUE = 1;
@@ -275,26 +298,31 @@ export function readEffectDelivery(
   effect: ActiveEffect,
   context: EffectFormContext,
 ): EffectDelivery {
-  const options = CONTEXT_DELIVERIES[context];
+  const contextDeliveries = CONTEXT_DELIVERIES[context];
 
   // Зона мастера — единственная доставка своего места; у заклинания зона лишь
   // одна из доставок, и её выбирает поле эффекта
   if (
-    (options.length === 1 && options[0] === 'zone')
-    || (effect.effectTarget === 'zone' && options.includes('zone'))
+    (contextDeliveries.length === 1 && contextDeliveries[0] === 'zone')
+    || (effect.effectTarget === 'zone' && contextDeliveries.includes('zone'))
   ) {
     return 'zone';
   }
 
-  if (effect.aura && options.includes('aura')) {
+  if (effect.aura && contextDeliveries.includes('aura')) {
     return 'aura';
   }
 
-  if (effect.effectTarget === 'target' && options.includes('target')) {
+  if (
+    effect.effectTarget === 'target'
+    && contextDeliveries.includes('target')
+  ) {
     return 'target';
   }
 
-  return options.includes('carrier') ? 'carrier' : (options[0] ?? 'carrier');
+  return contextDeliveries.includes('carrier')
+    ? 'carrier'
+    : (contextDeliveries[0] ?? 'carrier');
 }
 
 /**
@@ -342,7 +370,7 @@ export function writeEffectDelivery(
  * @param effect эффект.
  * @returns момент срабатывания.
  */
-export function readEffectTrigger(effect: ActiveEffect): EffectAreaTrigger {
+export function readEffectAreaTrigger(effect: ActiveEffect): EffectAreaTrigger {
   return effect.areaTrigger ?? 'stay';
 }
 
@@ -354,7 +382,7 @@ export function readEffectTrigger(effect: ActiveEffect): EffectAreaTrigger {
  * @param trigger новый момент.
  * @returns новый эффект.
  */
-export function writeEffectTrigger(
+export function writeEffectAreaTrigger(
   effect: ActiveEffect,
   trigger: EffectAreaTrigger,
 ): ActiveEffect {
@@ -367,19 +395,21 @@ export function writeEffectTrigger(
  * @param context место формы.
  * @param id идентификатор нового эффекта.
  * @param name название по умолчанию.
+ * @param origin чем эффект выдан; без него — заведён вручную.
  * @returns новый эффект.
  */
 export function createEffectForContext(
   context: EffectFormContext,
   id: string,
   name: string,
+  origin: EffectOrigin = EFFECT_ORIGIN.manual,
 ): ActiveEffect {
   const effect: ActiveEffect = {
     id,
     name,
     description: '',
     disabled: false,
-    origin: 'manual',
+    origin,
     transfer: false,
     duration: { type: 'permanent' },
     changes: [],
@@ -482,24 +512,26 @@ function listSuccessOutcomes(
  *
  * @param context место формы.
  * @param effect эффект в форме.
- * @param options что ещё влияет на раскладку.
+ * @param layoutOptions что ещё влияет на раскладку.
  * @returns раскладка.
  */
 export function resolveEffectFormLayout(
   context: EffectFormContext,
   effect: ActiveEffect,
-  options: EffectFormLayoutOptions = {},
+  layoutOptions: EffectFormLayoutOptions = {},
 ): EffectFormLayout {
   const delivery = readEffectDelivery(effect, context);
 
   // Без области у заклинания зоне негде появиться: такой доставки не
   // предлагаем, а уже выбранная остаётся видна — её покажет плашка
   const deliveryOptions =
-    options.zoneAvailable === false && context !== 'zone' && delivery !== 'zone'
+    layoutOptions.zoneAvailable === false
+    && context !== 'zone'
+    && delivery !== 'zone'
       ? CONTEXT_DELIVERIES[context].filter((option) => option !== 'zone')
       : CONTEXT_DELIVERIES[context];
 
-  const trigger = readEffectTrigger(effect);
+  const trigger = readEffectAreaTrigger(effect);
   const isGeneric = context === 'generic';
 
   const hasTrigger = delivery === 'zone' || delivery === 'aura';
@@ -567,16 +599,16 @@ export function resolveEffectFormLayout(
     ...resolveTriggerListLayout({
       showRecurringDamage,
       canRemoveSelf: livesOnItsOwn,
-      hasPresence: delivery === 'zone' || delivery === 'aura',
+      hasPresence: hasTrigger,
       hearsDamage:
         (delivery === 'carrier' && DAMAGE_EVENT_CONTEXTS.has(context))
         || isAuraStay,
-      hasSource: !isTickingCarrier,
+      hasApplier: !isTickingCarrier,
     }),
-    minSaveDc: acceptsSourceSaveDc(context, delivery)
-      ? SOURCE_MIN_SAVE_DC
+    minSaveDc: acceptsApplierSaveDc(context, delivery)
+      ? APPLIER_MIN_SAVE_DC
       : FIXED_MIN_SAVE_DC,
-    zoneAvailable: options.zoneAvailable !== false,
+    zoneAvailable: layoutOptions.zoneAvailable !== false,
   };
 }
 
@@ -594,7 +626,7 @@ interface TriggerListPlace {
   /** Эффект слышит урон по носителю. */
   hearsDamage: boolean;
   /** У эффекта бывает наложивший. */
-  hasSource: boolean;
+  hasApplier: boolean;
 }
 
 /**
@@ -637,7 +669,7 @@ function resolveTriggerListLayout(
       ...(place.hearsDamage ? (['setHp'] as const) : []),
       ...(place.canRemoveSelf ? (['endCast', 'removeSelf'] as const) : []),
     ],
-    triggerTurnOwners: place.hasSource
+    triggerTurnOwners: place.hasApplier
       ? EFFECT_TRIGGER_TURN_OWNERS
       : TURN_OWNERS_SUBJECT,
   };
@@ -690,7 +722,7 @@ export function listTriggerActionTypes(
   event: EffectTriggerEvent,
 ): EffectTriggerActionType[] {
   return layout.triggerActions.filter(
-    (type) => event === 'hpZero' || type !== 'setHp',
+    (actionType) => event === 'hpZero' || actionType !== 'setHp',
   );
 }
 
@@ -746,9 +778,6 @@ export function listEffectTriggerPresets(
   return EFFECT_TRIGGER_PRESETS.filter((preset) => available[preset]);
 }
 
-/** Тип урона нового пресета «Отметка от урона»: огонь «Регенерации» тролля. */
-const DEFAULT_TAG_DAMAGE_TYPE = 'fire';
-
 /**
  * Новое срабатывание по пресету. Спасбросок берёт характеристику и Сл
  * спасброска эффекта: повторный почти всегда повторяет исходный.
@@ -778,7 +807,7 @@ export function createEffectTriggerPreset(
         event: 'turnEnd',
         save: {
           ability: effect.applySave?.ability ?? DEFAULT_EFFECT_SAVE_ABILITY,
-          dc: effect.applySave?.dc ?? defaultSaveDc(layout),
+          dc: effect.applySave?.dc ?? defaultSaveDc(layout.minSaveDc),
         },
         actions: [{ type: 'removeSelf', on: 'saved' }],
       };
@@ -800,8 +829,12 @@ export function createEffectTriggerPreset(
       return {
         id,
         event: 'damageTaken',
+        // Огонь «Регенерации» тролля — тип урона новой части условия
         condition: writeTriggerCondition([
-          { kind: 'damageType', value: DEFAULT_TAG_DAMAGE_TYPE },
+          {
+            kind: 'damageType',
+            value: EFFECT_TRIGGER_CONDITION_DEFAULT_VALUES.damageType,
+          },
         ]),
         actions: [{ type: 'applyTag', tag: DEFAULT_EFFECT_TAG }],
       };
@@ -824,15 +857,13 @@ export function writeEffectTriggerRow(
   index: number,
   trigger: EffectTrigger | null,
 ): ActiveEffect {
-  const rows = [...listEffectListTriggers(effect)];
+  // За концом списка `toSpliced` ничего не удаляет и вставляет строку в конец
+  const replacement = trigger === null ? [] : [trigger];
 
-  if (trigger === null) {
-    rows.splice(index, 1);
-  } else {
-    rows[Math.min(index, rows.length)] = trigger;
-  }
-
-  return writeEffectTriggers(effect, rows);
+  return writeEffectTriggers(
+    effect,
+    listEffectListTriggers(effect).toSpliced(index, 1, ...replacement),
+  );
 }
 
 /**
@@ -859,7 +890,7 @@ function isTriggerSupported(
  * @param delivery доставка эффекта.
  * @returns `true`, если 0 значит «Сл источника».
  */
-function acceptsSourceSaveDc(
+function acceptsApplierSaveDc(
   context: EffectFormContext,
   delivery: EffectDelivery,
 ): boolean {
@@ -923,15 +954,15 @@ export function listEffectFormSteps(
 }
 
 /**
- * Сложность нового спасброска: там, где есть источник, — его Сл, иначе Сл по
- * умолчанию.
+ * Сложность спасброска по умолчанию: там, где 0 значит «Сл источника», — Сл
+ * источника, иначе Сл по умолчанию, а не минимум: Сл 1 проходил бы любой.
  *
- * @param layout раскладка формы.
+ * @param minDc минимальная Сл места формы.
  * @returns сложность.
  */
-function defaultSaveDc(layout: EffectFormLayout): number {
-  return layoutAcceptsSourceSaveDc(layout)
-    ? SOURCE_MIN_SAVE_DC
+function defaultSaveDc(minDc: number): number {
+  return minDc === APPLIER_MIN_SAVE_DC
+    ? APPLIER_SAVE_DC
     : DEFAULT_EFFECT_SAVE_DC;
 }
 
@@ -942,8 +973,8 @@ function defaultSaveDc(layout: EffectFormLayout): number {
  * @param layout раскладка формы.
  * @returns `true`, если Сл источника подставляется.
  */
-export function layoutAcceptsSourceSaveDc(layout: EffectFormLayout): boolean {
-  return layout.minSaveDc === SOURCE_MIN_SAVE_DC;
+export function layoutAcceptsApplierSaveDc(layout: EffectFormLayout): boolean {
+  return layout.minSaveDc === APPLIER_MIN_SAVE_DC;
 }
 
 /**
@@ -955,7 +986,10 @@ export function layoutAcceptsSourceSaveDc(layout: EffectFormLayout): boolean {
 export function createDefaultEffectSave(
   layout: EffectFormLayout,
 ): EffectTriggerSave {
-  return { ability: DEFAULT_EFFECT_SAVE_ABILITY, dc: defaultSaveDc(layout) };
+  return {
+    ability: DEFAULT_EFFECT_SAVE_ABILITY,
+    dc: defaultSaveDc(layout.minSaveDc),
+  };
 }
 
 /**
@@ -1154,19 +1188,18 @@ export function clearInertEffectFields(
 }
 
 /**
- * Сложность спасброска не ниже допустимой. Пустое поле там, где 0 значит «Сл
- * источника», — Сл источника; там, где подставить нечего, — Сл по умолчанию, а
- * не минимум: Сл 1 проходил бы любой.
+ * Сложность спасброска не ниже допустимой. Пустое поле — Сл по умолчанию места
+ * (`defaultSaveDc`).
  *
  * @param dc сложность из поля.
  * @param minDc минимум места.
  * @returns сложность.
  */
 function clampSaveDc(dc: unknown, minDc: number): number {
-  const fallback =
-    minDc === SOURCE_MIN_SAVE_DC ? SOURCE_MIN_SAVE_DC : DEFAULT_EFFECT_SAVE_DC;
-
-  return Math.max(minDc, Math.trunc(parseFormNumber(dc) ?? fallback));
+  return Math.max(
+    minDc,
+    Math.trunc(parseFormNumber(dc) ?? defaultSaveDc(minDc)),
+  );
 }
 
 /**

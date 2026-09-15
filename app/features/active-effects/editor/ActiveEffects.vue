@@ -4,6 +4,7 @@
   import { EditorNestedSection } from '~ui/editor';
 
   import {
+    ACTIVE_EFFECT_ICONS,
     ACTIVE_EFFECT_LABELS,
     createEmptyActiveEffect,
     DEFAULT_EFFECT_ICON,
@@ -18,7 +19,7 @@
   const {
     context,
     zoneAvailable = undefined,
-    sourceSaveDc = undefined,
+    applierSaveDc = undefined,
     origin = EFFECT_ORIGIN.spell,
     title = ACTIVE_EFFECT_LABELS.title,
     nested = false,
@@ -40,7 +41,7 @@
      * Сл источника для «Авто» у полей Сл: у действия существа — Сл самого
      * действия из формы.
      */
-    sourceSaveDc?: number;
+    applierSaveDc?: number;
 
     origin?: EffectOrigin;
 
@@ -118,6 +119,7 @@
     }),
   );
 
+  /** Добавляет новый эффект в конец списка и сразу его раскрывает. */
   function addEffect() {
     // Индекс считается ДО записи: `model.value` после присваивания ещё отдаёт
     // прежний массив — проп доедет только следующим тиком.
@@ -138,6 +140,10 @@
     pendingRemoval.value = index;
   }
 
+  /**
+   * Удаляет эффект, удаление которого подтвердили, и закрывает окно
+   * подтверждения.
+   */
   function confirmRemoveEffect() {
     const index = pendingRemoval.value;
 
@@ -158,24 +164,27 @@
    * Заменяет эффект целиком.
    *
    * @param index номер эффекта.
-   * @param value новый эффект.
+   * @param nextEffect новый эффект.
    */
-  function updateEffect(index: number, value: ActiveEffect) {
+  function updateEffect(index: number, nextEffect: ActiveEffect) {
     model.value = model.value.map((effect, position) =>
-      position === index ? value : effect,
+      position === index ? nextEffect : effect,
     );
   }
 </script>
 
 <template>
   <DefineEffects>
+    <!-- `contain-inline-size`: ширину списку задаёт форма, а не содержимое.
+      Без него сводка без переносов и ряд вкладок доставки распирали сетку
+      редактора, и на телефоне страница уезжала вбок на несколько экранов -->
     <div
       v-if="model.length"
-      class="flex flex-col gap-3"
+      class="flex flex-col gap-3 contain-inline-size"
     >
       <div
-        v-for="(row, index) in effectRows"
-        :key="row.effect.id"
+        v-for="(effectRow, index) in effectRows"
+        :key="effectRow.effect.id"
         class="rounded-lg border border-default bg-elevated/20"
       >
         <div
@@ -192,34 +201,34 @@
             @click.left.exact.prevent="toggle(index)"
           >
             <UIcon
-              :name="row.icon"
+              :name="effectRow.icon"
               class="size-5 shrink-0 text-primary"
             />
 
             <span class="flex min-w-0 flex-1 flex-col text-left">
               <span class="truncate text-base">
-                {{ row.name }}
+                {{ effectRow.name }}
               </span>
 
               <span class="truncate text-xs text-muted">
-                {{ row.scenario }}
+                {{ effectRow.scenario }}
               </span>
             </span>
           </button>
 
           <UBadge
-            v-if="row.inertBadge"
+            v-if="effectRow.inertBadge"
             color="warning"
             variant="subtle"
             size="sm"
-            icon="tabler:alert-triangle"
+            :icon="ACTIVE_EFFECT_ICONS.inertBadge"
             class="shrink-0"
           >
-            {{ row.inertBadge }}
+            {{ effectRow.inertBadge }}
           </UBadge>
 
           <UButton
-            icon="tabler:trash"
+            :icon="ACTIVE_EFFECT_ICONS.remove"
             color="error"
             variant="ghost"
             size="xs"
@@ -239,10 +248,10 @@
           class="border-t border-default p-3"
         >
           <ActiveEffectItem
-            :model-value="row.effect"
+            :model-value="effectRow.effect"
             :context="context"
             :zone-available="zoneAvailable"
-            :source-save-dc="sourceSaveDc"
+            :applier-save-dc="applierSaveDc"
             @update:model-value="updateEffect(index, $event)"
           />
         </div>
@@ -280,7 +289,7 @@
         </div>
 
         <UButton
-          icon="tabler:plus"
+          :icon="ACTIVE_EFFECT_ICONS.add"
           size="sm"
           variant="subtle"
           @click.left.exact.prevent="addEffect"
@@ -310,7 +319,7 @@
 
         <UButton
           color="error"
-          icon="tabler:trash"
+          :icon="ACTIVE_EFFECT_ICONS.remove"
           @click.left.exact.prevent="confirmRemoveEffect"
         >
           {{ ACTIVE_EFFECT_LABELS.removeConfirmApply }}

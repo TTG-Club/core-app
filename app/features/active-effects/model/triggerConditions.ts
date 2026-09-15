@@ -17,10 +17,14 @@
 import type { EffectTriggerEvent } from './triggerTypes';
 
 import {
+  EFFECT_CARRIER_TAG_CONDITION_PREFIX,
+  EFFECT_CARRIER_TAG_NOT_CONDITION_PREFIX,
   EFFECT_CARRIER_TYPE_CONDITION_PREFIX,
   EFFECT_CONDITION_AND_SEPARATOR,
-  EFFECT_MARKED_BY_SELF_CONDITION,
+  EFFECT_DAMAGE_TYPE_CONDITION_PREFIX,
+  EFFECT_DAMAGE_TYPE_NOT_CONDITION_PREFIX,
   EFFECT_TARGET_TYPE_CONDITION_PREFIX,
+  EFFECT_TRIGGER_FIXED_CONDITIONS,
   isEffectCreatureCategory,
   isEffectDamageType,
   splitConditionParts,
@@ -100,8 +104,14 @@ const PARAMETRIC_PARTS: Partial<
     { prefix: string; parameter: TriggerConditionParameter }
   >
 > = {
-  damageType: { prefix: 'damage.type === ', parameter: 'damageType' },
-  damageTypeNot: { prefix: 'damage.type !== ', parameter: 'damageType' },
+  damageType: {
+    prefix: EFFECT_DAMAGE_TYPE_CONDITION_PREFIX,
+    parameter: 'damageType',
+  },
+  damageTypeNot: {
+    prefix: EFFECT_DAMAGE_TYPE_NOT_CONDITION_PREFIX,
+    parameter: 'damageType',
+  },
   selfCreatureType: {
     prefix: EFFECT_CARRIER_TYPE_CONDITION_PREFIX,
     parameter: 'creatureType',
@@ -110,19 +120,11 @@ const PARAMETRIC_PARTS: Partial<
     prefix: EFFECT_TARGET_TYPE_CONDITION_PREFIX,
     parameter: 'creatureType',
   },
-  selfTag: { prefix: 'self.tag === ', parameter: 'tag' },
-  selfTagNot: { prefix: 'self.tag !== ', parameter: 'tag' },
-};
-
-/** Части условия без значения — строкой целиком. */
-const FIXED_PARTS: Partial<Record<TriggerConditionKind, string>> = {
-  damageCritical: 'damage.isCritical === true',
-  damageNotCritical: 'damage.isCritical === false',
-  selfBloodied: 'self.hp.value <= (self.hp.max / 2)',
-  selfWounded: 'self.hp.value < self.hp.max',
-  rollAdvantage: 'roll.hasAdvantage === true',
-  rollDisadvantage: 'roll.hasDisadvantage === true',
-  otherMarkedBySelf: EFFECT_MARKED_BY_SELF_CONDITION,
+  selfTag: { prefix: EFFECT_CARRIER_TAG_CONDITION_PREFIX, parameter: 'tag' },
+  selfTagNot: {
+    prefix: EFFECT_CARRIER_TAG_NOT_CONDITION_PREFIX,
+    parameter: 'tag',
+  },
 };
 
 /** Кавычки вокруг значения в строке условия. */
@@ -167,12 +169,12 @@ export function getTriggerConditionParameter(
  * @param part вид и значение.
  * @returns строка словаря.
  */
-export function buildTriggerConditionPart(part: TriggerConditionPart): string {
+function buildTriggerConditionPart(part: TriggerConditionPart): string {
   const parametric = PARAMETRIC_PARTS[part.kind];
 
   return parametric
     ? `${parametric.prefix}"${part.value ?? ''}"`
-    : (FIXED_PARTS[part.kind] ?? '');
+    : (EFFECT_TRIGGER_FIXED_CONDITIONS[part.kind] ?? '');
 }
 
 /**
@@ -187,7 +189,7 @@ export function parseTriggerConditionPart(
   const trimmed = text.trim();
 
   for (const kind of TRIGGER_CONDITION_KINDS) {
-    if (FIXED_PARTS[kind] === trimmed) {
+    if (EFFECT_TRIGGER_FIXED_CONDITIONS[kind] === trimmed) {
       return { kind };
     }
 

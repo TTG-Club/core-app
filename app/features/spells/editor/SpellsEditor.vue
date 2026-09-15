@@ -4,7 +4,10 @@
   import type { SpellCreate } from '~spells/model';
 
   import { ActiveEffects } from '~active-effects/editor';
-  import { normalizeActiveEffects } from '~active-effects/model';
+  import {
+    EFFECT_FORM_CONTEXT,
+    normalizeActiveEffects,
+  } from '~active-effects/model';
   import {
     createEmptySpellEffect,
     getSpellFilterDamageTypes,
@@ -107,9 +110,12 @@
         return {
           ...formState,
           effect: normalizedEffect ?? createEmptySpellEffect(),
+          // Область передаётся так же, как форме: сохранение раскладывает
+          // эффекты тем же знанием, что и показ
           activeEffects: normalizeActiveEffects(
             formState.activeEffects,
-            'spell',
+            EFFECT_FORM_CONTEXT.spell,
+            { zoneAvailable: hasSpellArea(formState.effect) },
           ),
         };
       },
@@ -119,7 +125,7 @@
    * Есть ли у заклинания область: без неё доставке «зоной на месте области»
    * взяться неоткуда, и у таких эффектов форма покажет плашку.
    */
-  const isSpellAreaSet = computed(() => hasSpellArea(state.value.effect));
+  const hasArea = computed(() => hasSpellArea(state.value.effect));
 
   /**
    * Типы урона для фильтра: к выбору автора всегда добавлены типы из формул
@@ -403,8 +409,8 @@
       <template #effects>
         <ActiveEffects
           v-model="state.activeEffects"
-          context="spell"
-          :zone-available="isSpellAreaSet"
+          :context="EFFECT_FORM_CONTEXT.spell"
+          :zone-available="hasArea"
         />
       </template>
     </UTabs>

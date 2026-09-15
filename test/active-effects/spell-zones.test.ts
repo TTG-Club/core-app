@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  APPLIER_SAVE_DC,
   clearInertEffectFields,
   describeEffectScenario,
+  FIXED_MIN_SAVE_DC,
   listInertEffectFields,
   readEffectDelivery,
   resolveEffectFormLayout,
@@ -18,7 +20,7 @@ const MOONBEAM_STAY = createEffect({
   recurringDamage: {
     damageParts: [{ formula: '2d10@dmg.radiant+@mod.spell' }],
     timing: 'endOfTurn',
-    save: { ability: 'constitution', dc: 0, onSuccess: 'half' },
+    save: { ability: 'constitution', dc: APPLIER_SAVE_DC, onSuccess: 'half' },
   },
 });
 
@@ -27,12 +29,12 @@ const WEB_ENTER = createEffect({
   name: 'Опутанный',
   effectTarget: 'zone',
   areaTrigger: 'enter',
-  applySave: { ability: 'dexterity', dc: 0, onSuccess: 'negate' },
+  applySave: { ability: 'dexterity', dc: APPLIER_SAVE_DC, onSuccess: 'negate' },
   conditionKey: 'restrained',
   duration: { type: 'rounds', value: 10 },
 });
 
-describe('[SZ05] форма эффекта заклинания: доставка «зоной на месте области»', () => {
+describe('форма эффекта заклинания: доставка «зоной на месте области»', () => {
   it('зона — одна из доставок заклинания; обычный эффект заклинания остаётся «на цели»', () => {
     const layout = resolveEffectFormLayout(
       'spell',
@@ -54,11 +56,14 @@ describe('[SZ05] форма эффекта заклинания: доставк�
   it('сл 0 — Сл заклинателя у зоны заклинания; момент — как у ауры, без её настроек', () => {
     const layout = resolveEffectFormLayout('spell', WEB_ENTER);
 
-    expect(layout.minSaveDc).toBe(0);
+    expect(layout.minSaveDc).toBe(APPLIER_SAVE_DC);
     expect(layout.showTrigger).toBe(true);
     expect(layout.showAuraSettings).toBe(false);
     expect(layout.showSave).toBe(true);
-    expect(resolveEffectFormLayout('item', WEB_ENTER).minSaveDc).toBe(1);
+
+    expect(resolveEffectFormLayout('item', WEB_ENTER).minSaveDc).toBe(
+      FIXED_MIN_SAVE_DC,
+    );
   });
 
   it('зона «пока в зоне»: без спасброска и длительности, с уроном каждый ход', () => {
@@ -71,17 +76,17 @@ describe('[SZ05] форма эффекта заклинания: доставк�
   });
 
   it('смена доставки: в зону и обратно на цель без хвостов момента срабатывания', () => {
-    const toZone = writeEffectDelivery(createEffect(), 'zone');
+    const zoneEffect = writeEffectDelivery(createEffect(), 'zone');
 
-    expect(toZone.effectTarget).toBe('zone');
+    expect(zoneEffect.effectTarget).toBe('zone');
 
-    const back = writeEffectDelivery(
-      { ...toZone, areaTrigger: 'enter' },
+    const targetEffect = writeEffectDelivery(
+      { ...zoneEffect, areaTrigger: 'enter' },
       'target',
     );
 
-    expect(back.effectTarget).toBe('target');
-    expect(back.areaTrigger).toBeUndefined();
+    expect(targetEffect.effectTarget).toBe('target');
+    expect(targetEffect.areaTrigger).toBeUndefined();
   });
 
   it('без области у заклинания зону не предлагают, а уже выбранная — неработающее поле', () => {
@@ -107,7 +112,7 @@ describe('[SZ05] форма эффекта заклинания: доставк�
     ).toBe('target');
   });
 
-  it('«в зону» у предмета, умения, черты и действия существа не работает', () => {
+  it('«в зону» не работает у предмета, умения, черты и действия существа и у своих эффектов', () => {
     for (const context of [
       'item',
       'feature',

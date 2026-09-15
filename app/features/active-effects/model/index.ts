@@ -11,6 +11,7 @@ export * from './scenario';
 export * from './schema';
 export * from './triggerConditions';
 export * from './triggerDescribe';
+export * from './triggerRow';
 export * from './triggers';
 export * from './triggerTypes';
 export * from './types';

@@ -1,7 +1,7 @@
 import type {
   ActiveEffect,
   EffectAbility,
-  EffectFormContext,
+  ItemEffectContext,
 } from '~active-effects/model';
 import type { DamageFormulaPart } from '~ui/damage-formula';
 import type { EditorBaseInfoState } from '~ui/editor';
@@ -10,6 +10,7 @@ import { isPlainObject } from 'es-toolkit';
 import { z } from 'zod';
 
 import {
+  EFFECT_FORM_CONTEXT,
   normalizeActiveEffects,
   normalizeLoadedActiveEffects,
 } from '~active-effects/model';
@@ -23,7 +24,11 @@ import {
   parseLoadedDamageFormulaParts,
 } from '~ui/damage-formula';
 
-import { DEFAULT_ITEM_CATEGORY, WEAPON_PROPERTY_KEYS } from './constants';
+import {
+  DEFAULT_ITEM_CATEGORY,
+  ITEM_WEAPON_CATEGORY,
+  WEAPON_PROPERTY_KEYS,
+} from './constants';
 
 /** Категории предмета (`ItemCategory` бэкенда). */
 export type ItemCategory =
@@ -525,7 +530,9 @@ export function normalizeItemBeforeSubmit(state: ItemCreate): ItemCreate {
   return {
     ...state,
     weapon: normalizeWeaponBeforeSubmit(
-      state.category === 'WEAPON' ? state.weapon : createEmptyWeapon(),
+      state.category === ITEM_WEAPON_CATEGORY
+        ? state.weapon
+        : createEmptyWeapon(),
     ),
     armor: state.category === 'ARMOR' ? state.armor : createEmptyArmor(),
     tool: state.category === 'TOOL' ? state.tool : createEmptyTool(),
@@ -537,14 +544,26 @@ export function normalizeItemBeforeSubmit(state: ItemCreate): ItemCreate {
 }
 
 /**
- * Место эффектов предмета: у оружия эффект может лечь на цель при попадании,
- * у остального снаряжения — только на владельца.
+ * Место эффектов предмета: у оружия эффект может лечь и на цель при
+ * попадании, у остального снаряжения — на владельца или аурой вокруг него.
  *
  * @param category категория предмета.
  * @returns место формы эффекта.
  */
 export function getItemEffectContext(
   category: ItemCategory,
-): Extract<EffectFormContext, 'item' | 'weapon'> {
-  return category === 'WEAPON' ? 'weapon' : 'item';
+): ItemEffectContext {
+  return resolveItemEffectContext(category === ITEM_WEAPON_CATEGORY);
+}
+
+/**
+ * Место эффектов предмета по признаку оружия. Правило одно у обычных и
+ * магических предметов, а категория у них хранится по-разному — поэтому на
+ * вход идёт уже готовый признак.
+ *
+ * @param isWeapon предмет — оружие.
+ * @returns место формы эффекта.
+ */
+export function resolveItemEffectContext(isWeapon: boolean): ItemEffectContext {
+  return isWeapon ? EFFECT_FORM_CONTEXT.weapon : EFFECT_FORM_CONTEXT.item;
 }

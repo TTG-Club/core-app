@@ -19,7 +19,7 @@
    * свёрнутыми полями. Поэтому имена полей здесь относительные: путь записи
    * (`actions.0`) вложенная форма подставляет сама.
    */
-  const { effectContext } = defineProps<{
+  defineProps<{
     /** Место эффектов записи: черта существа или действие. */
     effectContext: CreatureEffectContext;
   }>();
@@ -28,7 +28,9 @@
 
   /**
    * Сл самого действия — ею «Авто» подписывает поле Сл эффекта: «Сл действия ·
-   * 14». У действия без спасброска числа нет, остаётся одна подпись.
+   * 14». Берётся Сл только первого спасброска: у записи с несколькими
+   * спасбросками подпись назовёт первую, остальные в неё не попадут. У
+   * действия без спасброска числа нет, остаётся одна подпись.
    */
   const actionSaveDc = computed(() => model.value.effect.savingThrows[0]?.dc);
 </script>
@@ -91,7 +93,7 @@
     v-model="model.effect.activeEffects"
     nested
     :context="effectContext"
-    :source-save-dc="actionSaveDc"
+    :applier-save-dc="actionSaveDc"
     :origin="EFFECT_ORIGIN.feature"
     :title="CREATURE_ACTION_SECTIONS.effects"
   />

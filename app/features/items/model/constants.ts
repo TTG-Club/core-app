@@ -70,11 +70,14 @@ export const ITEM_CATEGORY_OPTIONS: Array<{
   },
 ];
 
+/** Категория оружия: у него своя подформа и своё место эффектов. */
+export const ITEM_WEAPON_CATEGORY = 'WEAPON' satisfies ItemCategory;
+
 /**
  * Категория новой записи — первая в переключателе. Форма открывается с
  * выбранной карточкой, а не с подсвеченной серединой списка.
  */
-export const DEFAULT_ITEM_CATEGORY: ItemCategory = 'WEAPON';
+export const DEFAULT_ITEM_CATEGORY: ItemCategory = ITEM_WEAPON_CATEGORY;
 
 /** Вкладки формы предмета. */
 export const ITEM_EDITOR_TABS = {

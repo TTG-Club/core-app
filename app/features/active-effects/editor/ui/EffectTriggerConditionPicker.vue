@@ -17,6 +17,7 @@
     isEffectTag,
     listTriggerConditionKinds,
     readTriggerConditionParts,
+    TRIGGER_CONDITION_TAG_PARAMETER,
     writeTriggerCondition,
   } from '../../model';
 
@@ -41,45 +42,55 @@
   /** Строка списка частей: разобранная часть или строка как есть. */
   interface ConditionRow {
     key: string;
-    part: TriggerConditionPart | null;
     text: string;
     /** Подсказка к строке, которую форма не узнала. */
     title?: string;
+    /** Значение разобранной части. */
+    value: string | undefined;
     /** Варианты значения части; пусто — значение не выбирается списком. */
     valueItems: Array<{ label: string; value: string }>;
+    /** Значение части выбирается списком. */
+    showsValueSelect: boolean;
     /** Значение части вводится строкой — ключ отметки. */
-    isTagPart: boolean;
+    showsTagInput: boolean;
   }
 
   const parts = computed(() => readTriggerConditionParts(condition.value));
 
-  const rows = computed<ConditionRow[]>(() =>
+  const conditionRows = computed<ConditionRow[]>(() =>
     parts.value.map((part, index) => {
       if (typeof part === 'string') {
         return {
           key: `${index}-raw`,
-          part: null,
           text: part,
           title: EFFECT_TRIGGER_CONDITION_LABELS.unknown,
+          value: undefined,
           valueItems: [],
-          isTagPart: false,
+          showsValueSelect: false,
+          showsTagInput: false,
         };
       }
 
       const parameter = getTriggerConditionParameter(part.kind);
 
+      const valueItems =
+        parameter && parameter !== TRIGGER_CONDITION_TAG_PARAMETER
+          ? EFFECT_TRIGGER_CONDITION_VALUE_OPTIONS[parameter]
+          : [];
+
       return {
         key: `${index}-${part.kind}`,
-        part,
         text: EFFECT_TRIGGER_CONDITION_KIND_LABELS[part.kind],
-        valueItems:
-          parameter && parameter !== 'tag'
-            ? EFFECT_TRIGGER_CONDITION_VALUE_OPTIONS[parameter]
-            : [],
-        isTagPart: parameter === 'tag',
+        value: part.value,
+        valueItems,
+        showsValueSelect: valueItems.length > 0,
+        showsTagInput: parameter === TRIGGER_CONDITION_TAG_PARAMETER,
       };
     }),
   );
+
+  /** Условия нет: срабатывает всегда. */
+  const isEmpty = computed(() => conditionRows.value.length === 0);
 
   /**
    * Записывает части условия.
@@ -99,7 +110,7 @@
    * @returns значение.
    */
   function getDefaultValue(parameter: TriggerConditionParameter): string {
-    return parameter === 'tag'
+    return parameter === TRIGGER_CONDITION_TAG_PARAMETER
       ? (knownTags[0] ?? EFFECT_TRIGGER_CONDITION_DEFAULT_VALUES.tag)
       : EFFECT_TRIGGER_CONDITION_DEFAULT_VALUES[parameter];
   }
@@ -131,13 +142,13 @@
    * Меняет значение части условия.
    *
    * @param index номер части.
-   * @param value новое значение.
+   * @param partValue новое значение.
    */
-  function updatePartValue(index: number, value: string): void {
+  function updatePartValue(index: number, partValue: string): void {
     writeParts(
       parts.value.map((part, partIndex) =>
         partIndex === index && typeof part !== 'string'
-          ? { ...part, value }
+          ? { ...part, value: partValue }
           : part,
       ),
     );
@@ -148,17 +159,17 @@
    * разобралось бы строкой, которую форма не знает, и поле ввода пропало бы.
    *
    * @param index номер части.
-   * @param value введённый ключ.
+   * @param enteredTag введённый ключ.
    */
-  function updatePartTag(index: number, value: string): void {
-    const tag = value.trim();
+  function updatePartTag(index: number, enteredTag: string): void {
+    const tag = enteredTag.trim();
 
     if (isEffectTag(tag)) {
       updatePartValue(index, tag);
     }
   }
 
-  const addItems = computed<DropdownMenuItem[]>(() =>
+  const addPartMenuItems = computed<DropdownMenuItem[]>(() =>
     listTriggerConditionKinds(event).map((kind) => ({
       label: EFFECT_TRIGGER_CONDITION_KIND_LABELS[kind],
       onSelect: () => addPart(kind),
@@ -173,15 +184,15 @@
     </span>
 
     <p
-      v-if="rows.length === 0"
+      v-if="isEmpty"
       class="text-xs text-muted"
     >
       {{ EFFECT_TRIGGER_CONDITION_LABELS.always }}
     </p>
 
     <div
-      v-for="(row, index) in rows"
-      :key="row.key"
+      v-for="(conditionRow, index) in conditionRows"
+      :key="conditionRow.key"
       class="flex flex-wrap items-center gap-2"
     >
       <span
@@ -193,24 +204,24 @@
 
       <span
         class="text-xs text-default"
-        :title="row.title"
+        :title="conditionRow.title"
       >
-        {{ row.text }}
+        {{ conditionRow.text }}
       </span>
 
       <USelect
-        v-if="row.part && row.valueItems.length > 0"
-        :model-value="row.part.value"
-        :items="row.valueItems"
+        v-if="conditionRow.showsValueSelect"
+        :model-value="conditionRow.value"
+        :items="conditionRow.valueItems"
         value-key="value"
         size="xs"
         class="w-44"
         @update:model-value="updatePartValue(index, $event)"
       />
 
-      <template v-else-if="row.part && row.isTagPart">
+      <template v-else-if="conditionRow.showsTagInput">
         <UInput
-          :model-value="row.part.value"
+          :model-value="conditionRow.value"
           size="xs"
           class="w-40"
           @update:model-value="updatePartTag(index, $event)"
@@ -239,7 +250,7 @@
     </div>
 
     <UDropdownMenu
-      :items="addItems"
+      :items="addPartMenuItems"
       :content="{ align: 'start' }"
       :ui="{ content: 'max-h-72 overflow-y-auto' }"
     >

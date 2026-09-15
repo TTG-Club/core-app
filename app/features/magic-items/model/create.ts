@@ -1,4 +1,4 @@
-import type { ActiveEffect, EffectFormContext } from '~active-effects/model';
+import type { ActiveEffect, ItemEffectContext } from '~active-effects/model';
 import type { DamageFormulaPart } from '~ui/damage-formula';
 import type { EditorBaseInfoState } from '~ui/editor';
 
@@ -8,6 +8,7 @@ import {
   normalizeActiveEffects,
   normalizeLoadedActiveEffects,
 } from '~active-effects/model';
+import { resolveItemEffectContext } from '~items/model';
 import {
   normalizeDamageFormulaParts,
   parseLoadedDamageFormulaParts,
@@ -101,19 +102,6 @@ export interface MagicItemCategory {
   clarification: string | undefined; // описание категории
 }
 
-/**
- * Место эффектов магического предмета: у оружия эффект может лечь на цель при
- * попадании, у остальных предметов — только на владельца.
- *
- * @param category категория предмета.
- * @returns место формы эффекта.
- */
-export function getMagicItemEffectContext(
-  category: MagicItemCategory,
-): Extract<EffectFormContext, 'item' | 'weapon'> {
-  return category.type === MAGIC_ITEM_WEAPON_CATEGORY ? 'weapon' : 'item';
-}
-
 export interface MagicItemRarity {
   type: string | undefined; // редкость
   varies: string | undefined; // текст для магических предметов с варьируемой редкостью
@@ -170,6 +158,19 @@ function normalizeMagicItemResource(
 }
 
 /**
+ * Место эффектов магического предмета: у оружия эффект может лечь и на цель
+ * при попадании, у остальных предметов — на владельца или аурой вокруг него.
+ *
+ * @param category категория предмета.
+ * @returns место формы эффекта.
+ */
+export function getMagicItemEffectContext(
+  category: MagicItemCategory,
+): ItemEffectContext {
+  return resolveItemEffectContext(category.type === MAGIC_ITEM_WEAPON_CATEGORY);
+}
+
+/**
  * Механика предмета для отправки. Полностью пустая механика уходит как `null`:
  * иначе у каждого предмета появлялся бы блок-пустышка, а лист считал бы, что
  * ему есть что применять.
@@ -180,7 +181,7 @@ function normalizeMagicItemResource(
  */
 export function normalizeMagicItemMechanics(
   mechanics: MagicItemMechanics,
-  effectContext: Extract<EffectFormContext, 'item' | 'weapon'>,
+  effectContext: ItemEffectContext,
 ): MagicItemMechanics | null {
   const activeEffects = normalizeActiveEffects(
     mechanics.activeEffects,

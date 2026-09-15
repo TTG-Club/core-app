@@ -3,12 +3,13 @@
  * шаблону.
  */
 
+import type { EffectConditionTemplate } from './constants';
 import type { EffectFormContext } from './layout';
 import type { ActiveEffect, EffectConditionKey, EffectOrigin } from './types';
 
 import { EFFECT_CONDITION_TEMPLATES, EFFECT_NEW_NAME } from './constants';
 import { createEffectForContext } from './layout';
-import { DEFAULT_EFFECT_ICON } from './types';
+import { DEFAULT_EFFECT_ICON, EFFECT_ORIGIN } from './types';
 
 /** Приставка ключа эффекта: по ней в данных видно, чей это ключ. */
 const EFFECT_ID_PREFIX = 'effect';
@@ -31,10 +32,25 @@ export function createEmptyActiveEffect(
       context,
       createEntityId(EFFECT_ID_PREFIX),
       EFFECT_NEW_NAME,
+      origin,
     ),
     icon: DEFAULT_EFFECT_ICON,
-    origin,
   };
+}
+
+/**
+ * Шаблон стандартного состояния по ключу. У Истощения шаблона нет — его
+ * модификаторы зависят от степени.
+ *
+ * @param conditionKey ключ состояния.
+ * @returns шаблон либо `undefined`, если шаблона нет.
+ */
+export function findEffectConditionTemplate(
+  conditionKey: EffectConditionKey,
+): EffectConditionTemplate | undefined {
+  return EFFECT_CONDITION_TEMPLATES.find(
+    (conditionTemplate) => conditionTemplate.key === conditionKey,
+  );
 }
 
 /**
@@ -49,9 +65,7 @@ export function createEmptyActiveEffect(
 export function buildConditionActiveEffect(
   conditionKey: EffectConditionKey,
 ): ActiveEffect | null {
-  const template = EFFECT_CONDITION_TEMPLATES.find(
-    (conditionTemplate) => conditionTemplate.key === conditionKey,
-  );
+  const template = findEffectConditionTemplate(conditionKey);
 
   if (!template) {
     return null;
@@ -63,7 +77,7 @@ export function buildConditionActiveEffect(
     description: template.description,
     icon: template.icon,
     disabled: false,
-    origin: 'condition',
+    origin: EFFECT_ORIGIN.condition,
     transfer: false,
     duration: { type: 'permanent' },
     changes: template.changes.map((change) => ({ ...change })),

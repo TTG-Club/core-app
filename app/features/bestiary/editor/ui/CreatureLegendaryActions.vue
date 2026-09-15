@@ -3,6 +3,7 @@
 
   import { MarkupEditor } from '~ui/markup-editor';
 
+  import { CREATURE_ACTION_EFFECT_CONTEXTS } from '../../model';
   import { CREATURE_ACTION_ADD_LABELS } from '../constants';
   import { CreatureActionList } from './action';
 
@@ -65,7 +66,7 @@
         v-model="model.actions"
         :add-label="CREATURE_ACTION_ADD_LABELS.legendary"
         path="legendary.actions"
-        effect-context="creatureAction"
+        :effect-context="CREATURE_ACTION_EFFECT_CONTEXTS.legendary"
       />
     </div>
   </UCard>

@@ -30,6 +30,7 @@ import type {
 import { z } from 'zod';
 
 import { EFFECT_CONDITION_OPTIONS, EFFECT_FLAG_LABELS } from './constants';
+import { isHealingDamagePart } from './describe';
 import {
   EFFECT_TAG_PATTERN,
   EFFECT_TRIGGER_ACTION_GATES,
@@ -58,19 +59,19 @@ const MAX_EFFECT_CHANGE_PRIORITY = 100;
  * выбрасывается один, а не вместе со всем списком.
  *
  * @param schema схема элемента.
- * @param value значение из данных.
+ * @param candidates значение из данных.
  * @returns разобранные элементы по порядку.
  */
 function parseEachValid<Schema extends z.ZodType>(
   schema: Schema,
-  value: unknown,
+  candidates: unknown,
 ): Array<z.output<Schema>> {
-  if (!Array.isArray(value)) {
+  if (!Array.isArray(candidates)) {
     return [];
   }
 
-  return value.flatMap((rawElement: unknown) => {
-    const validation = schema.safeParse(rawElement);
+  return candidates.flatMap((candidate: unknown) => {
+    const validation = schema.safeParse(candidate);
 
     return validation.success ? [validation.data] : [];
   });
@@ -339,16 +340,17 @@ const activeEffectSchema: z.ZodType<ActiveEffect> = z.object({
 /**
  * Переносит легаси-поле `type` части урона в токен формулы.
  *
- * Тип урона задаётся токеном `@dmg.<тип>`, а прежний редактор писал его
- * отдельным полем. Без переноса такая часть в форме выглядела бы «без типа»:
- * форма правит формулу, а поля `type` в ней нет.
+ * Тип урона задаётся токеном формулы (`@dmg.fire`), а прежний редактор писал
+ * его отдельным полем. Без переноса такая часть в форме выглядела бы «без
+ * типа»: форма правит формулу, а поля `type` в ней нет. Лечение типа урона не
+ * получает — токен лечения распознаётся тем же правилом, что в описании.
  *
  * @param part часть урона, как её отдал сервер.
  * @returns часть, у которой тип живёт в формуле.
  */
 function migrateEffectDamagePart(part: EffectDamagePart): EffectDamagePart {
   const formula = part.formula;
-  const hasTypeToken = formula.includes('@dmg.') || formula.includes('@heal');
+  const hasTypeToken = formula.includes('@dmg.') || isHealingDamagePart(part);
 
   if (!part.type || hasTypeToken) {
     return { ...part, type: undefined };

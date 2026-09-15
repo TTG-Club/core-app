@@ -1,5 +1,9 @@
 <script setup lang="ts">
-  import { EFFECT_DESCRIPTION_LABELS } from '../../model';
+  import {
+    EFFECT_DESCRIPTION_LABELS,
+    EFFECT_DESCRIPTION_ROWS,
+  } from '../../model';
+  import EffectSectionToggle from './EffectSectionToggle.vue';
 
   /**
    * Сворачиваемое описание эффекта: текст для подсказки и списка эффектов.
@@ -26,25 +30,16 @@
     v-model:open="isOpen"
     class="flex flex-col gap-2"
   >
-    <UButton
-      color="neutral"
-      variant="ghost"
-      size="sm"
+    <EffectSectionToggle
       icon="tabler:file-description"
-      trailing-icon="tabler:chevron-down"
       :label="EFFECT_DESCRIPTION_LABELS.title"
-      class="w-full justify-start"
-      :ui="{
-        trailingIcon:
-          'ms-auto transition-transform duration-200 group-data-[state=open]:rotate-180',
-      }"
     />
 
     <template #content>
       <div class="flex flex-col gap-2 px-1 pb-1">
         <UTextarea
           v-model="description"
-          :rows="2"
+          :rows="EFFECT_DESCRIPTION_ROWS"
           autoresize
           class="w-full"
           :placeholder="EFFECT_DESCRIPTION_LABELS.placeholder"

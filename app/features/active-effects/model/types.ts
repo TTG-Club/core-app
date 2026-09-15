@@ -127,6 +127,25 @@ export type EffectSaveTiming = 'startOfTurn' | 'endOfTurn';
  */
 export type EffectDamagePartTarget = 'selected' | 'self' | 'choose';
 
+/** Тип урона (ключ словаря VTTG, lowercase). */
+export type EffectDamageType =
+  | 'slashing'
+  | 'piercing'
+  | 'bludgeoning'
+  | 'fire'
+  | 'cold'
+  | 'lightning'
+  | 'thunder'
+  | 'poison'
+  | 'acid'
+  | 'necrotic'
+  | 'radiant'
+  | 'force'
+  | 'psychic';
+
+/** Вид лечения части: `@heal` — хиты, `@heal.temp` — временные хиты. */
+export type EffectHealKind = 'hp' | 'temp';
+
 /** Одна часть урона/лечения эффекта (подмножество DamagePart из VTTG). */
 export interface EffectDamagePart {
   /** Формула (напр. "2к8@dmg.poison", "1к4@heal"). */
@@ -135,7 +154,7 @@ export interface EffectDamagePart {
   type?: string;
   /** Цель части (по умолчанию `selected`). */
   target?: EffectDamagePartTarget;
-  /** Применять часть только если по носителю нанесён урон (>0). */
+  /** Применять часть только если по носителю нанесён урон (больше нуля). */
   requiresDamage?: boolean;
 }
 
@@ -336,7 +355,9 @@ export function parseFormNumber(value: unknown): number | undefined {
   }
 
   const trimmed = value.trim();
-  const parsed = Number(trimmed);
+  const numericValue = Number(trimmed);
 
-  return trimmed === '' || !Number.isFinite(parsed) ? undefined : parsed;
+  return trimmed === '' || !Number.isFinite(numericValue)
+    ? undefined
+    : numericValue;
 }

@@ -31,16 +31,17 @@ import type {
 } from './types';
 
 import {
-  AURA_TRIGGER_LABELS,
   EFFECT_ACTION_SAVE_OUTCOME_OPTIONS,
-  EFFECT_AURA_LABELS,
+  EFFECT_AURA_AREA_TRIGGER_LABELS,
+  EFFECT_AURA_TARGET_LABELS,
   EFFECT_CARRIER_DELIVERY_LABELS,
   EFFECT_CREATURE_CATEGORY_OPTIONS,
   EFFECT_DAMAGE_TYPE_OPTIONS,
   EFFECT_DELIVERY_ICONS,
   EFFECT_DELIVERY_LABELS,
+  EFFECT_DURATION_HINTS,
   EFFECT_DURATION_LABELS,
-  EFFECT_DURATION_STEP_LABELS,
+  EFFECT_SAVE_DC_FIELD_MODE_LABELS,
   EFFECT_SUCCESS_OUTCOME_OPTIONS,
   EFFECT_TARGET_DELIVERY_LABELS,
   EFFECT_TRIGGER_ATTACK_OTHER_PARTY_LABELS,
@@ -52,8 +53,9 @@ import {
   EFFECT_TRIGGER_ROLE_LABELS,
   EFFECT_TURN_ANCHOR_LABELS,
   EFFECT_TURN_TIMING_LABELS,
-  SAVE_DC_FIELD_MODE_LABELS,
-  ZONE_TRIGGER_LABELS,
+  EFFECT_ZONE_AREA_TRIGGER_LABELS,
+  SAVE_DC_AUTO_MODE,
+  SAVE_DC_MANUAL_MODE,
 } from './constants';
 import { triggerEventHasRole } from './layout';
 import {
@@ -65,7 +67,7 @@ import {
 } from './triggerTypes';
 
 /** Моменты срабатывания зоны и ауры в порядке показа. */
-const EFFECT_TRIGGER_ORDER: readonly EffectAreaTrigger[] = [
+const EFFECT_AREA_TRIGGER_ORDER: readonly EffectAreaTrigger[] = [
   'stay',
   'enter',
   'exit',
@@ -89,6 +91,19 @@ const EFFECT_TURN_TIMING_ORDER: readonly EffectTurnTiming[] = ['end', 'start'];
 const EFFECT_TURN_ANCHOR_ORDER: readonly EffectTurnAnchor[] = [
   'carrier',
   'source',
+];
+
+/** Кого задевает аура — в порядке показа. */
+const EFFECT_AURA_TARGET_ORDER: readonly EffectAuraTarget[] = [
+  'allies',
+  'enemies',
+  'all',
+];
+
+/** Режимы поля Сл в порядке показа: сначала Сл источника. */
+const SAVE_DC_FIELD_MODE_ORDER: readonly SaveDcFieldMode[] = [
+  SAVE_DC_AUTO_MODE,
+  SAVE_DC_MANUAL_MODE,
 ];
 
 /** Длительности, у которых есть число единиц. */
@@ -167,13 +182,15 @@ export function buildDeliveryOptions(
  * @param delivery доставка.
  * @returns варианты.
  */
-export function buildTriggerOptions(
+export function buildAreaTriggerOptions(
   delivery: EffectDelivery,
 ): EffectSegmentOption<EffectAreaTrigger>[] {
   const labels =
-    delivery === 'aura' ? AURA_TRIGGER_LABELS : ZONE_TRIGGER_LABELS;
+    delivery === 'aura'
+      ? EFFECT_AURA_AREA_TRIGGER_LABELS
+      : EFFECT_ZONE_AREA_TRIGGER_LABELS;
 
-  return EFFECT_TRIGGER_ORDER.map((trigger) => ({
+  return EFFECT_AREA_TRIGGER_ORDER.map((trigger) => ({
     value: trigger,
     label: labels[trigger],
   }));
@@ -185,10 +202,10 @@ export function buildTriggerOptions(
  * @param value значение из переключателя.
  * @returns момент либо `undefined` для чужого значения.
  */
-export function findTrigger(
+export function findAreaTrigger(
   value: string | number,
 ): EffectAreaTrigger | undefined {
-  return EFFECT_TRIGGER_ORDER.find((trigger) => trigger === value);
+  return EFFECT_AREA_TRIGGER_ORDER.find((trigger) => trigger === value);
 }
 
 /**
@@ -200,53 +217,42 @@ export function findTrigger(
 export function buildSuccessOutcomeOptions(
   layout: EffectFormLayout,
 ): EffectDescribedOption<EffectSuccessOutcome>[] {
-  const options = layout.successOutcomeForActionSave
+  const outcomeOptions = layout.successOutcomeForActionSave
     ? EFFECT_ACTION_SAVE_OUTCOME_OPTIONS
     : EFFECT_SUCCESS_OUTCOME_OPTIONS;
 
   return layout.successOutcomes.map((outcome) => ({
     value: outcome,
-    ...options[outcome],
+    ...outcomeOptions[outcome],
   }));
 }
 
 /**
  * Есть ли у длительности число единиц.
  *
- * @param type тип длительности.
+ * @param durationType тип длительности.
  * @returns `true` для раундов, минут, часов и дней.
  */
-export function isCountedDuration(type: EffectDurationType): boolean {
-  return COUNTED_DURATION_TYPES.has(type);
+export function isCountedDuration(durationType: EffectDurationType): boolean {
+  return COUNTED_DURATION_TYPES.has(durationType);
 }
 
 /**
  * Пояснение под выбором длительности.
  *
- * @param type тип длительности.
+ * @param durationType тип длительности.
  * @returns пояснение.
  */
-export function durationHint(type: EffectDurationType): string {
-  switch (type) {
-    case 'permanent':
-      return EFFECT_DURATION_STEP_LABELS.permanentHint;
-    case 'rounds':
-      return EFFECT_DURATION_STEP_LABELS.roundsHint;
-    case 'turn':
-      return EFFECT_DURATION_STEP_LABELS.turnHint;
-    case 'special':
-      return EFFECT_DURATION_STEP_LABELS.specialHint;
-    default:
-      return EFFECT_DURATION_STEP_LABELS.timeHint;
-  }
+export function durationHint(durationType: EffectDurationType): string {
+  return EFFECT_DURATION_HINTS[durationType];
 }
 
 /** Варианты типа длительности. */
 export const EFFECT_DURATION_TYPE_OPTIONS: Array<
   EffectSegmentOption<EffectDurationType>
-> = EFFECT_DURATION_TYPE_ORDER.map((type) => ({
-  value: type,
-  label: EFFECT_DURATION_LABELS[type],
+> = EFFECT_DURATION_TYPE_ORDER.map((durationType) => ({
+  value: durationType,
+  label: EFFECT_DURATION_LABELS[durationType],
 }));
 
 /** Варианты момента хода точной длительности. */
@@ -270,37 +276,38 @@ export const EFFECT_TURN_ANCHOR_OPTIONS: Array<
  * часами и днями; момент и якорь хода нужны только точной длительности.
  *
  * @param duration длительность.
- * @param type новый тип.
+ * @param durationType новый тип.
  * @returns новая длительность.
  */
 export function writeDurationType(
   duration: EffectDuration,
-  type: EffectDurationType,
+  durationType: EffectDurationType,
 ): EffectDuration {
+  const isTurnDuration = durationType === 'turn';
+
   return {
-    type,
-    value: isCountedDuration(type) ? duration.value : undefined,
-    turnAnchor: type === 'turn' ? duration.turnAnchor : undefined,
-    turnTiming: type === 'turn' ? duration.turnTiming : undefined,
+    type: durationType,
+    value: isCountedDuration(durationType) ? duration.value : undefined,
+    turnAnchor: isTurnDuration ? duration.turnAnchor : undefined,
+    turnTiming: isTurnDuration ? duration.turnTiming : undefined,
   };
 }
 
 /** Варианты «кого задевает аура». */
 export const EFFECT_AURA_TARGET_OPTIONS: Array<
   EffectSegmentOption<EffectAuraTarget>
-> = [
-  { value: 'allies', label: EFFECT_AURA_LABELS.targetAllies },
-  { value: 'enemies', label: EFFECT_AURA_LABELS.targetEnemies },
-  { value: 'all', label: EFFECT_AURA_LABELS.targetAll },
-];
+> = EFFECT_AURA_TARGET_ORDER.map((auraTarget) => ({
+  value: auraTarget,
+  label: EFFECT_AURA_TARGET_LABELS[auraTarget],
+}));
 
 /** Режимы поля Сл: Сл источника или своё число. */
 export const SAVE_DC_FIELD_MODE_OPTIONS: Array<
   EffectSegmentOption<SaveDcFieldMode>
-> = [
-  { value: 'auto', label: SAVE_DC_FIELD_MODE_LABELS.auto },
-  { value: 'manual', label: SAVE_DC_FIELD_MODE_LABELS.manual },
-];
+> = SAVE_DC_FIELD_MODE_ORDER.map((mode) => ({
+  value: mode,
+  label: EFFECT_SAVE_DC_FIELD_MODE_LABELS[mode],
+}));
 
 /** Исход урона в строке срабатывания: гейт либо «успех — половина». */
 export type EffectTriggerDamageGateChoice =

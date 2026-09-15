@@ -7,12 +7,16 @@
   } from '../../model';
 
   import {
+    DEFAULT_EFFECT_TURN_ANCHOR,
+    DEFAULT_EFFECT_TURN_TIMING,
     durationHint,
     EFFECT_DURATION_STEP_LABELS,
     EFFECT_DURATION_TYPE_OPTIONS,
     EFFECT_TURN_ANCHOR_OPTIONS,
+    EFFECT_TURN_DURATION_TYPE,
     EFFECT_TURN_TIMING_OPTIONS,
     isCountedDuration,
+    MIN_EFFECT_DURATION_VALUE,
     writeDurationType,
   } from '../../model';
 
@@ -36,7 +40,9 @@
     isCountedDuration(effect.value.duration.type),
   );
 
-  const isTurnDuration = computed(() => effect.value.duration.type === 'turn');
+  const isTurnDuration = computed(
+    () => effect.value.duration.type === EFFECT_TURN_DURATION_TYPE,
+  );
 
   const durationDescription = computed(() =>
     durationHint(effect.value.duration.type),
@@ -44,16 +50,19 @@
 
   const durationValue = computed({
     get: () => effect.value.duration.value ?? null,
-    set: (value: number | null) => {
+    set: (durationAmount: number | null) => {
       effect.value = {
         ...effect.value,
-        duration: { ...effect.value.duration, value: value ?? undefined },
+        duration: {
+          ...effect.value.duration,
+          value: durationAmount ?? undefined,
+        },
       };
     },
   });
 
   const turnTiming = computed({
-    get: () => effect.value.duration.turnTiming ?? 'end',
+    get: () => effect.value.duration.turnTiming ?? DEFAULT_EFFECT_TURN_TIMING,
     set: (timing: EffectTurnTiming) => {
       effect.value = {
         ...effect.value,
@@ -63,7 +72,7 @@
   });
 
   const turnAnchor = computed({
-    get: () => effect.value.duration.turnAnchor ?? 'carrier',
+    get: () => effect.value.duration.turnAnchor ?? DEFAULT_EFFECT_TURN_ANCHOR,
     set: (anchor: EffectTurnAnchor) => {
       effect.value = {
         ...effect.value,
@@ -91,7 +100,7 @@
       <UInputNumber
         v-if="hasDurationValue"
         v-model="durationValue"
-        :min="0"
+        :min="MIN_EFFECT_DURATION_VALUE"
         :placeholder="EFFECT_DURATION_STEP_LABELS.valuePlaceholder"
         size="sm"
         class="w-28"

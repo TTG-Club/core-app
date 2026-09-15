@@ -2,7 +2,11 @@
   import type { ActiveEffect } from '~active-effects/model';
 
   import { ActiveEffectItem } from '~active-effects/editor';
-  import { createEmptyActiveEffect } from '~active-effects/model';
+  import {
+    createEmptyActiveEffect,
+    EFFECT_FORM_CONTEXT,
+    EFFECT_ORIGIN,
+  } from '~active-effects/model';
 
   import { useSheetActiveEffects } from '../../composables';
   import { SHEET_EFFECT_LABELS } from '../../model';
@@ -28,7 +32,10 @@
   const draft = ref<ActiveEffect>(
     editedEffect
       ? structuredClone(toRaw(editedEffect))
-      : createEmptyActiveEffect('manual', 'ownEffects'),
+      : createEmptyActiveEffect(
+          EFFECT_ORIGIN.manual,
+          EFFECT_FORM_CONTEXT.ownEffects,
+        ),
   );
 
   const modalTitle = computed(() =>
@@ -53,7 +60,7 @@
     <template #body>
       <ActiveEffectItem
         v-model="draft"
-        context="ownEffects"
+        :context="EFFECT_FORM_CONTEXT.ownEffects"
       />
     </template>
 

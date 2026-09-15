@@ -7,13 +7,14 @@
   import { EFFECT_ORIGIN } from '~active-effects/model';
   import {
     createEmptyItem,
-    getItemEffectContext,
     ITEM_CATEGORY_OPTIONS,
     ITEM_EDITOR_SECTIONS,
     ITEM_EDITOR_TABS,
     ITEM_FORM_LABELS,
+    ITEM_WEAPON_CATEGORY,
     normalizeItemBeforeSubmit,
     normalizeLoadedItem,
+    resolveItemEffectContext,
   } from '~items/model';
   import { ItemPreview } from '~items/preview';
   import { EditorBaseInfo } from '~ui/editor';
@@ -43,14 +44,16 @@
       revisionEntityType: REVISION_ENTITY_TYPES.ITEM,
     });
 
-  const isWeapon = computed(() => state.value.category === 'WEAPON');
+  const isWeapon = computed(
+    () => state.value.category === ITEM_WEAPON_CATEGORY,
+  );
 
   /**
    * Место эффектов предмета — по категории. Смена категории при заведённых
    * эффектах ничего не стирает: неподходящие настройки покажет плашка.
    */
   const effectContext = computed(() =>
-    getItemEffectContext(state.value.category),
+    resolveItemEffectContext(isWeapon.value),
   );
 
   /**
@@ -228,7 +231,7 @@
       <!-- ПАРАМЕТРЫ ВЫБРАННОЙ КАТЕГОРИИ -->
       <template #category>
         <WeaponForm
-          v-if="state.category === 'WEAPON'"
+          v-if="isWeapon"
           v-model="state.weapon"
         />
 

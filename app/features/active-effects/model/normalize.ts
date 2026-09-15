@@ -12,11 +12,16 @@ import type {
 } from './types';
 
 import {
+  DEFAULT_EFFECT_TURN_ANCHOR,
+  DEFAULT_EFFECT_TURN_TIMING,
+} from './constants';
+import {
   normalizeEffectDraft,
   readEffectSuccessOutcome,
   resolveEffectFormLayout,
   writeEffectSuccessOutcome,
 } from './layout';
+import { DEFAULT_EFFECT_DAMAGE_PART_TARGET } from './types';
 
 /**
  * Нормализует часть урона эффекта: trim формулы, сброс пустых полей.
@@ -31,7 +36,7 @@ function normalizeEffectDamagePart(part: EffectDamagePart): EffectDamagePart {
     // или поздно разошлись бы.
     formula: part.formula.trim(),
     type: undefined,
-    target: part.target ?? 'selected',
+    target: part.target ?? DEFAULT_EFFECT_DAMAGE_PART_TARGET,
     requiresDamage: part.requiresDamage || undefined,
   };
 }
@@ -90,8 +95,8 @@ function normalizeEffectDuration(duration: EffectDuration): EffectDuration {
 
   return {
     type: duration.type,
-    turnAnchor: duration.turnAnchor ?? 'carrier',
-    turnTiming: duration.turnTiming ?? 'end',
+    turnAnchor: duration.turnAnchor ?? DEFAULT_EFFECT_TURN_ANCHOR,
+    turnTiming: duration.turnTiming ?? DEFAULT_EFFECT_TURN_TIMING,
   };
 }
 
@@ -127,17 +132,17 @@ function normalizeTriggerDamageParts(
  *
  * @param effect эффект из формы.
  * @param context место формы.
- * @param options что ещё влияет на раскладку.
+ * @param layoutOptions что ещё влияет на раскладку.
  * @returns эффект для запроса.
  */
 function normalizeActiveEffect(
   effect: ActiveEffect,
   context: EffectFormContext,
-  options: EffectFormLayoutOptions,
+  layoutOptions: EffectFormLayoutOptions,
 ): ActiveEffect {
   const draft = normalizeEffectDraft(
     effect,
-    resolveEffectFormLayout(context, effect, options),
+    resolveEffectFormLayout(context, effect, layoutOptions),
   );
 
   // «Даже при успехе» и «только при успехе» вместе не читаются: движок всё
@@ -185,19 +190,19 @@ function normalizeActiveEffect(
  * @param effects эффекты из формы.
  * @param context место формы: по нему решается, какая Сл допустима и какие
  *   срабатывания пишутся.
- * @param options что ещё влияет на раскладку (область у заклинания).
+ * @param layoutOptions что ещё влияет на раскладку (область у заклинания).
  * @returns эффекты для запроса.
  */
 export function normalizeActiveEffects(
   effects: ActiveEffect[] | undefined,
   context: EffectFormContext,
-  options: EffectFormLayoutOptions = {},
+  layoutOptions: EffectFormLayoutOptions = {},
 ): ActiveEffect[] {
   if (!effects?.length) {
     return [];
   }
 
   return effects
-    .map((effect) => normalizeActiveEffect(effect, context, options))
+    .map((effect) => normalizeActiveEffect(effect, context, layoutOptions))
     .filter((effect) => effect.name.length > 0);
 }

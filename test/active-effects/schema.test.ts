@@ -1,62 +1,67 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  APPLIER_SAVE_DC,
+  DEFAULT_EFFECT_CHANGE_PRIORITY,
+  FIXED_MIN_SAVE_DC,
   normalizeActiveEffects,
   normalizeLoadedActiveEffects,
 } from '~active-effects/model';
 
-/** Сл, пришедшая из поля формы строкой. */
-const TYPED_DC = 14;
-
-/**
- * Сырой эффект, как его отдаёт сервер.
- *
- * @param overrides поля, отличные от умолчания.
- * @returns объект эффекта.
- */
-function createRawEffect(
-  overrides: Record<string, unknown> = {},
-): Record<string, unknown> {
-  return {
-    id: 'effect_raw',
-    name: 'Эффект',
-    description: '',
-    disabled: false,
-    origin: 'spell',
-    transfer: false,
-    duration: { type: 'permanent' },
-    changes: [],
-    flags: [],
-    ...overrides,
-  };
-}
+import {
+  AURA_RADIUS,
+  createRawEffect,
+  SAVE_DC,
+  stripUndefinedKeys,
+  TYPED_SAVE_DC,
+} from './fixtures';
 
 describe('терпимая загрузка эффектов', () => {
   it('эффект без id или с changes не той формы выпадает, соседний остаётся', () => {
-    const loaded = normalizeLoadedActiveEffects([
+    const loadedEffects = normalizeLoadedActiveEffects([
       createRawEffect({ id: undefined }),
       createRawEffect({ changes: 'мусор' }),
       createRawEffect({ id: 'effect_ok' }),
       'мусор',
     ]);
 
-    expect(loaded.map((effect) => effect.id)).toEqual(['effect_ok']);
+    expect(loadedEffects.map((effect) => effect.id)).toEqual(['effect_ok']);
   });
 
   it('плохая строка модификатора выпадает одна, остальные остаются', () => {
     const [effect] = normalizeLoadedActiveEffects([
       createRawEffect({
         changes: [
-          { key: 'armorClass', mode: 'add', value: '1', priority: 20 },
-          { key: 'armorClass', mode: 'teleport', value: '1', priority: 20 },
+          {
+            key: 'armorClass',
+            mode: 'add',
+            value: '1',
+            priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
+          },
+          {
+            key: 'armorClass',
+            mode: 'teleport',
+            value: '1',
+            priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
+          },
           { key: 'initiative', mode: 'add', value: '2', priority: '' },
         ],
       }),
     ]);
 
     expect(effect?.changes).toEqual([
-      { key: 'armorClass', mode: 'add', value: '1', priority: 20 },
-      { key: 'initiative', mode: 'add', value: '2', priority: 20 },
+      {
+        key: 'armorClass',
+        mode: 'add',
+        value: '1',
+        priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
+      },
+      {
+        key: 'initiative',
+        mode: 'add',
+        value: '2',
+        priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
+      },
     ]);
   });
 
@@ -95,7 +100,11 @@ describe('терпимая загрузка эффектов', () => {
         recurringDamage: {
           damageParts: [{ formula: '2d10@dmg.radiant' }],
           timing: 'endOfTurn',
-          save: { ability: 'constitution', dc: 0, onSuccess: 'half' },
+          save: {
+            ability: 'constitution',
+            dc: APPLIER_SAVE_DC,
+            onSuccess: 'half',
+          },
         },
       }),
     ]);
@@ -105,7 +114,7 @@ describe('терпимая загрузка эффектов', () => {
 
     expect(effect?.recurringDamage?.save).toEqual({
       ability: 'constitution',
-      dc: 0,
+      dc: APPLIER_SAVE_DC,
       onSuccess: 'half',
     });
   });
@@ -153,7 +162,11 @@ describe('терпимая загрузка эффектов', () => {
             event: 'turnStart',
             turnOf: 'someone',
             condition: '',
-            save: { ability: 'wisdom', dc: String(TYPED_DC), dcFormula: 5 },
+            save: {
+              ability: 'wisdom',
+              dc: String(TYPED_SAVE_DC),
+              dcFormula: 5,
+            },
             limit: { max: 0, per: 'turn' },
             actions: [
               { type: 'damage', parts: [{ formula: '1d6' }], on: 'sometimes' },
@@ -167,7 +180,7 @@ describe('терпимая загрузка эффектов', () => {
 
     expect(trigger?.turnOf).toBeUndefined();
     expect(trigger?.condition).toBeUndefined();
-    expect(trigger?.save).toEqual({ ability: 'wisdom', dc: TYPED_DC });
+    expect(trigger?.save).toEqual({ ability: 'wisdom', dc: TYPED_SAVE_DC });
     expect(trigger?.limit).toBeUndefined();
     expect(trigger?.actions[0]?.on).toBeUndefined();
   });
@@ -175,7 +188,7 @@ describe('терпимая загрузка эффектов', () => {
   it('эффект без срабатываний разбирается как раньше — поле не появляется', () => {
     const [effect] = normalizeLoadedActiveEffects([createRawEffect()]);
 
-    expect(JSON.parse(JSON.stringify(effect))).not.toHaveProperty('triggers');
+    expect(stripUndefinedKeys(effect)).not.toHaveProperty('triggers');
   });
 
   it('части урона срабатывания с легаси-типом переносят его в формулу', () => {
@@ -203,28 +216,43 @@ describe('терпимая загрузка эффектов', () => {
 
 describe('сохранение эффектов', () => {
   it('старый эффект без новых полей после «открыл и сохранил» тот же', () => {
-    const rawEffect = createRawEffect({
+    const legacyStoredEffect = createRawEffect({
       icon: 'tabler:flame',
       effectTarget: 'target',
       conditionKey: 'restrained',
-      applySave: { ability: 'strength', dc: 0, onSuccess: 'negate' },
-      recurringSave: { ability: 'strength', dc: 0, timing: 'endOfTurn' },
+      applySave: {
+        ability: 'strength',
+        dc: APPLIER_SAVE_DC,
+        onSuccess: 'negate',
+      },
+      recurringSave: {
+        ability: 'strength',
+        dc: APPLIER_SAVE_DC,
+        timing: 'endOfTurn',
+      },
       recurringDamage: {
         damageParts: [{ formula: '2d6@dmg.fire', target: 'selected' }],
         timing: 'startOfTurn',
       },
       consumeOn: 'carrierAttack',
       duration: { type: 'rounds', value: 10 },
-      changes: [{ key: 'armorClass', mode: 'add', value: '1', priority: 20 }],
+      changes: [
+        {
+          key: 'armorClass',
+          mode: 'add',
+          value: '1',
+          priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
+        },
+      ],
       flags: ['attack.disadvantage'],
     });
 
-    const saved = normalizeActiveEffects(
-      normalizeLoadedActiveEffects([rawEffect]),
+    const savedEffects = normalizeActiveEffects(
+      normalizeLoadedActiveEffects([legacyStoredEffect]),
       'spell',
     );
 
-    expect(JSON.parse(JSON.stringify(saved))).toEqual([rawEffect]);
+    expect(stripUndefinedKeys(savedEffects)).toEqual([legacyStoredEffect]);
   });
 
   it('урон каждый ход без частей не пишется, «при успехе» — ровно один исход', () => {
@@ -232,7 +260,7 @@ describe('сохранение эффектов', () => {
       normalizeLoadedActiveEffects([
         createRawEffect({
           effectTarget: 'target',
-          applySave: { ability: 'strength', dc: 13, onSuccess: 'half' },
+          applySave: { ability: 'strength', dc: SAVE_DC, onSuccess: 'half' },
           applyOnSuccess: true,
           applyOnSuccessOnly: true,
           recurringDamage: { damageParts: [], timing: 'startOfTurn' },
@@ -247,15 +275,24 @@ describe('сохранение эффектов', () => {
   });
 
   it('сл 0 у предмета поднимается до 1, у заклинания остаётся «Авто»', () => {
-    const rawEffect = createRawEffect({
-      aura: { radius: 10, target: 'all', applyToSelf: false },
+    const auraSaveEffect = createRawEffect({
+      aura: { radius: AURA_RADIUS, target: 'all', applyToSelf: false },
       areaTrigger: 'enter',
-      applySave: { ability: 'wisdom', dc: 0, onSuccess: 'negate' },
+      applySave: {
+        ability: 'wisdom',
+        dc: APPLIER_SAVE_DC,
+        onSuccess: 'negate',
+      },
     });
 
-    const loaded = normalizeLoadedActiveEffects([rawEffect]);
+    const loadedEffects = normalizeLoadedActiveEffects([auraSaveEffect]);
 
-    expect(normalizeActiveEffects(loaded, 'item')[0]?.applySave?.dc).toBe(1);
-    expect(normalizeActiveEffects(loaded, 'spell')[0]?.applySave?.dc).toBe(0);
+    expect(
+      normalizeActiveEffects(loadedEffects, 'item')[0]?.applySave?.dc,
+    ).toBe(FIXED_MIN_SAVE_DC);
+
+    expect(
+      normalizeActiveEffects(loadedEffects, 'spell')[0]?.applySave?.dc,
+    ).toBe(APPLIER_SAVE_DC);
   });
 });

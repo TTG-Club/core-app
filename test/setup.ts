@@ -3,6 +3,7 @@ import { createError } from 'h3';
 
 import { getErrorResponse, getPlural } from '#shared/utils';
 import { createEntityId } from '~/utils/createEntityId';
+import { z } from '~/utils/zod';
 
 /**
  * Авто-импорты Nuxt, которыми пользуется проверяемый код.
@@ -21,6 +22,7 @@ Object.assign(globalThis, {
   getErrorResponse,
   getPlural,
   getOrigin: () => TEST_ORIGIN,
+  z,
 });
 
 export { TEST_ORIGIN };

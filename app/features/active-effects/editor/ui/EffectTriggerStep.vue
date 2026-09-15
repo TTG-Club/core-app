@@ -7,17 +7,19 @@
   } from '../../model';
 
   import {
+    buildAreaTriggerOptions,
     buildDeliveryOptions,
-    buildTriggerOptions,
+    DEFAULT_EFFECT_AURA,
+    EFFECT_AREA_TRIGGER_HINTS,
     EFFECT_AURA_LABELS,
     EFFECT_AURA_RADIUS_STEP,
     EFFECT_AURA_TARGET_OPTIONS,
-    EFFECT_DELIVERY_HINTS,
-    EFFECT_SPELL_ZONE_DELIVERY_HINT,
-    EFFECT_TRIGGER_HINTS,
-    findTrigger,
+    EFFECT_SCROLLABLE_TABS_UI,
+    findAreaTrigger,
+    MIN_EFFECT_AURA_RADIUS,
+    resolveEffectDeliveryHint,
+    writeEffectAreaTrigger,
     writeEffectDelivery,
-    writeEffectTrigger,
   } from '../../model';
 
   /**
@@ -31,31 +33,19 @@
 
   const effect = defineModel<ActiveEffect>('effect', { required: true });
 
-  /**
-   * Лента вариантов прокручивается по горизонтали: у заклинания их четыре, и
-   * на телефоне сжатые вкладки обрезали подписи до пары букв.
-   */
-  const TAB_LIST_CLASS =
-    'max-w-full overflow-x-auto overscroll-x-contain hidden-scrollbar';
-
-  /** Вкладка не ужимается под ширину ленты — подпись видна целиком. */
-  const TAB_TRIGGER_CLASS = 'shrink-0';
-
   const deliveryOptions = computed(() => buildDeliveryOptions(layout));
 
-  const triggerOptions = computed(() => buildTriggerOptions(layout.delivery));
+  const triggerOptions = computed(() =>
+    buildAreaTriggerOptions(layout.delivery),
+  );
 
   /** Выбор доставки нужен, только если вариантов больше одного. */
   const showDeliveryChoice = computed(() => deliveryOptions.value.length > 1);
 
   /** Пояснение под выбором доставки: у зоны заклинания своё. */
-  const deliveryHint = computed(() =>
-    layout.delivery === 'zone' && layout.context === 'spell'
-      ? EFFECT_SPELL_ZONE_DELIVERY_HINT
-      : EFFECT_DELIVERY_HINTS[layout.delivery],
-  );
+  const deliveryHint = computed(() => resolveEffectDeliveryHint(layout));
 
-  const triggerHint = computed(() => EFFECT_TRIGGER_HINTS[layout.trigger]);
+  const triggerHint = computed(() => EFFECT_AREA_TRIGGER_HINTS[layout.trigger]);
 
   /** Настройки ауры видны у доставки «аурой», когда аура уже заведена. */
   const showAuraSettings = computed(
@@ -63,12 +53,20 @@
   );
 
   /**
+   * Аура в полях настроек. Поля видны, только когда аура заведена, так что
+   * аура по умолчанию лишь закрывает её отсутствие в типе.
+   */
+  const aura = computed(() => effect.value.aura ?? DEFAULT_EFFECT_AURA);
+
+  /**
    * Меняет доставку эффекта.
    *
-   * @param value значение переключателя.
+   * @param selectedDelivery значение переключателя.
    */
-  function selectDelivery(value: string | number): void {
-    const delivery = layout.deliveryOptions.find((option) => option === value);
+  function selectDelivery(selectedDelivery: string | number): void {
+    const delivery = layout.deliveryOptions.find(
+      (deliveryOption) => deliveryOption === selectedDelivery,
+    );
 
     if (delivery) {
       effect.value = writeEffectDelivery(effect.value, delivery);
@@ -78,13 +76,13 @@
   /**
    * Меняет момент срабатывания зоны или ауры.
    *
-   * @param value значение переключателя.
+   * @param selectedTrigger значение переключателя.
    */
-  function selectTrigger(value: string | number): void {
-    const trigger = findTrigger(value);
+  function selectTrigger(selectedTrigger: string | number): void {
+    const trigger = findAreaTrigger(selectedTrigger);
 
     if (trigger) {
-      effect.value = writeEffectTrigger(effect.value, trigger);
+      effect.value = writeEffectAreaTrigger(effect.value, trigger);
     }
   }
 
@@ -94,35 +92,37 @@
    * @param patch изменённые поля.
    */
   function updateAura(patch: Partial<EffectAura>): void {
-    const { aura } = effect.value;
+    const { aura: currentAura } = effect.value;
 
-    if (aura) {
-      effect.value = { ...effect.value, aura: { ...aura, ...patch } };
+    if (currentAura) {
+      effect.value = { ...effect.value, aura: { ...currentAura, ...patch } };
     }
   }
 
   const auraRadius = computed({
-    get: () => effect.value.aura?.radius ?? 0,
-    set: (radius: number | null) => {
-      if (radius !== null) {
+    get: () => aura.value.radius,
+    set: (radius: number | null | undefined) => {
+      // Очищенное поле числа отдаёт `undefined`, а не `null`
+      if (typeof radius === 'number') {
         updateAura({ radius });
       }
     },
   });
 
   const auraTarget = computed({
-    get: () => effect.value.aura?.target ?? 'allies',
+    get: () => aura.value.target,
     set: (target: EffectAuraTarget) => updateAura({ target }),
   });
 
   const auraApplyToSelf = computed({
-    get: () => effect.value.aura?.applyToSelf ?? false,
+    get: () => aura.value.applyToSelf,
     set: (applyToSelf: boolean | 'indeterminate') =>
       updateAura({ applyToSelf: applyToSelf === true }),
   });
 
+  // Круг в данных может быть не задан: тогда флажок снят, как и раньше
   const auraVisible = computed({
-    get: () => effect.value.aura?.visible ?? false,
+    get: () => aura.value.visible === true,
     set: (visible: boolean | 'indeterminate') =>
       updateAura({ visible: visible === true }),
   });
@@ -140,7 +140,7 @@
       size="xs"
       color="primary"
       class="w-fit max-w-full"
-      :ui="{ list: TAB_LIST_CLASS, trigger: TAB_TRIGGER_CLASS }"
+      :ui="EFFECT_SCROLLABLE_TABS_UI"
       @update:model-value="selectDelivery"
     />
 
@@ -160,7 +160,7 @@
       size="xs"
       color="primary"
       class="w-fit max-w-full"
-      :ui="{ list: TAB_LIST_CLASS, trigger: TAB_TRIGGER_CLASS }"
+      :ui="EFFECT_SCROLLABLE_TABS_UI"
       @update:model-value="selectTrigger"
     />
 
@@ -179,7 +179,7 @@
     >
       <UInputNumber
         v-model="auraRadius"
-        :min="0"
+        :min="MIN_EFFECT_AURA_RADIUS"
         :step="EFFECT_AURA_RADIUS_STEP"
         size="sm"
         class="w-full"

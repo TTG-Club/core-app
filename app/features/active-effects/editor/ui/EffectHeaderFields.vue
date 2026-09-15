@@ -22,22 +22,22 @@
 
   const name = computed({
     get: () => effect.value.name,
-    set: (value: string) => {
-      effect.value = { ...effect.value, name: value };
+    set: (nextName: string) => {
+      effect.value = { ...effect.value, name: nextName };
     },
   });
 
   const icon = computed({
     get: () => effect.value.icon ?? '',
-    set: (value: string) => {
-      effect.value = { ...effect.value, icon: value || undefined };
+    set: (nextIcon: string) => {
+      effect.value = { ...effect.value, icon: nextIcon || undefined };
     },
   });
 
   const isActive = computed({
     get: () => !effect.value.disabled,
-    set: (value: boolean) => {
-      effect.value = { ...effect.value, disabled: !value };
+    set: (enabled: boolean) => {
+      effect.value = { ...effect.value, disabled: !enabled };
     },
   });
 
@@ -58,13 +58,13 @@
    * @param conditionKey ключ состояния.
    */
   function applyConditionPreset(conditionKey: EffectConditionKey): void {
-    const condition = buildConditionActiveEffect(conditionKey);
+    const conditionEffect = buildConditionActiveEffect(conditionKey);
 
-    if (!condition) {
+    if (!conditionEffect) {
       return;
     }
 
-    effect.value = applyConditionPresetToEffect(effect.value, condition);
+    effect.value = applyConditionPresetToEffect(effect.value, conditionEffect);
   }
 
   // Истощения в меню нет: его модификаторы зависят от степени

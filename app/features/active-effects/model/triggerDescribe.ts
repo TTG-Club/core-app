@@ -9,108 +9,44 @@
  * Зеркало: dnd5-test-migrate/src/engine/effectTriggerDescribe.ts
  */
 
-import type { TriggerConditionKind } from './triggerConditions';
-import type {
-  EffectTrigger,
-  EffectTriggerAction,
-  EffectTriggerEvent,
-  EffectTriggerLimitPeriod,
-} from './triggerTypes';
+import type { TriggerConditionPart } from './triggerConditions';
+import type { EffectTrigger, EffectTriggerAction } from './triggerTypes';
 import type { EffectDuration } from './types';
 
 import {
   EFFECT_ABILITY_GENITIVE_LABELS,
-  EFFECT_CREATURE_CATEGORY_OPTIONS,
-  EFFECT_DAMAGE_TYPE_SHORT_LABELS,
+  EFFECT_PHRASE_PARTS,
+  EFFECT_SAVE_TIMING_LABELS,
+  EFFECT_TRIGGER_ATTACK_ROLE_PHRASES,
+  EFFECT_TRIGGER_CONDITION_PHRASES,
+  EFFECT_TRIGGER_CONSUME_ON_PHRASES,
+  EFFECT_TRIGGER_EVENT_PHRASES,
+  EFFECT_TRIGGER_PERIOD_LABELS,
+  EFFECT_TRIGGER_PHRASE_PARTS,
+  EFFECT_TRIGGER_RECURRING_DAMAGE_SUCCESS_LABELS,
 } from './constants';
 import {
   describeConditionName,
+  describeCreatureType,
+  describeDamageTypeShort,
   describeEffectChangeCondition,
   describeEffectDamageParts,
   describeEffectDuration,
 } from './describe';
-import { readTriggerConditionParts } from './triggerConditions';
+import {
+  getTriggerConditionParameter,
+  readTriggerConditionParts,
+} from './triggerConditions';
 import {
   classifyLegacyTrigger,
   isTurnTriggerEvent,
   resolveTriggerActionGate,
+  saveTimingOfTriggerEvent,
 } from './triggers';
+import { MIN_TRIGGER_LIMIT_MAX } from './triggerTypes';
 
 /** Переменная урона события в Сл срабатывания. */
 const EVENT_DAMAGE_VARIABLE = 'damage';
-
-/** Что даёт успех спасброска против урона каждый ход. */
-const RECURRING_DAMAGE_SUCCESS_LABELS = {
-  negate: 'без урона',
-  half: 'половина урона',
-} as const;
-
-/** Снятие после атаки — продолжением перечисления. */
-const CONSUME_ON_LABELS = {
-  attacker: 'снимается после своей атаки',
-  target: 'снимается после атаки по носителю',
-} as const;
-
-/** Когда срабатывает — по событию. */
-const TRIGGER_EVENT_LABELS: Record<EffectTriggerEvent, string> = {
-  turnStart: 'в начале хода',
-  turnEnd: 'в конце хода',
-  enter: 'при входе',
-  exit: 'при выходе',
-  applied: 'при наложении',
-  attackRoll: 'при броске атаки',
-  damageTaken: 'при получении урона',
-  hpZero: 'когда хиты падают до 0',
-  rest: 'после отдыха',
-  activate: 'при включении',
-  castEnd: 'когда заклинание заканчивается',
-};
-
-/** Бросок атаки — по роли субъекта. */
-const ATTACK_ROLE_EVENT_LABELS = {
-  attacker: 'после своей атаки',
-  target: 'после атаки по носителю',
-} as const;
-
-/** Период лимита — «не чаще … за ход». */
-const LIMIT_PERIOD_LABELS: Record<EffectTriggerLimitPeriod, string> = {
-  turn: 'ход',
-  round: 'раунд',
-  shortRest: 'короткий отдых',
-  longRest: 'долгий отдых',
-};
-
-/** Части фраз срабатывания. */
-const TRIGGER_LABELS = {
-  everyTurnPrefix: 'каждый ход ',
-  startOfTurn: ' в начале хода',
-  endOfTurn: ' в конце хода',
-  sourceTurnSuffix: ' источника',
-  damageSaveSuccess: ': успех — ',
-  recurringSavePrefix: 'повторный спасбросок ',
-  recurringSaveSuffix: ' снимает эффект',
-  savePrefix: 'спасбросок ',
-  failurePrefix: 'провал — ',
-  successPrefix: 'успех — ',
-  conditionPrefix: ', если ',
-  halfDamage: 'половина урона',
-  effect: 'эффект',
-  removeSelf: 'эффект снимается',
-  tagPrefix: 'отметка ',
-  conditionJoiner: ' и ',
-  setHpPrefix: 'хиты становятся ',
-  endCast: 'каст заканчивается',
-  dcFormulaPrefix: 'Сл = ',
-  damageVariable: 'урон',
-  recipientOther: ', на другую сторону',
-  nothing: 'ничего',
-  listJoiner: ', ',
-  clauseJoiner: '; ',
-  limitPrefix: ', не чаще ',
-  limitOnce: 'одного раза',
-  limitTimes: ' раз',
-  limitPeriodPrefix: ' за ',
-} as const;
 
 /** Настройки фразы. */
 export interface EffectTriggerDescribeOptions {
@@ -118,54 +54,25 @@ export interface EffectTriggerDescribeOptions {
   formatDc: (dc: number) => string;
 }
 
-/** Подписи типов существ по ключу. */
-const CREATURE_TYPE_LABELS = new Map(
-  EFFECT_CREATURE_CATEGORY_OPTIONS.map((creatureType) => [
-    creatureType.value,
-    creatureType.label,
-  ]),
-);
-
 /**
- * Подпись типа существа.
+ * Подпись значения части условия: тип урона и тип существа — словами, ключ
+ * отметки — как есть.
  *
- * @param value ключ типа.
- * @returns подпись либо ключ.
+ * @param part разобранная часть условия.
+ * @returns подпись значения; у части без значения — пустая строка.
  */
-function describeCreatureType(value: string): string {
-  return CREATURE_TYPE_LABELS.get(value) ?? value;
-}
+function describeTriggerConditionValue(part: TriggerConditionPart): string {
+  const value = part.value ?? '';
 
-/**
- * Краткая подпись типа урона.
- *
- * @param value ключ типа урона.
- * @returns подпись либо ключ.
- */
-function describeDamageType(value: string): string {
-  return EFFECT_DAMAGE_TYPE_SHORT_LABELS[value] ?? value;
+  switch (getTriggerConditionParameter(part.kind)) {
+    case 'damageType':
+      return describeDamageTypeShort(value);
+    case 'creatureType':
+      return describeCreatureType(value);
+    default:
+      return value;
+  }
 }
-
-/** Подписи частей условия срабатывания; значение — тип урона, существа, отметка. */
-const TRIGGER_CONDITION_PHRASES: Record<
-  TriggerConditionKind,
-  (value: string) => string
-> = {
-  damageType: (value) => `урон ${describeDamageType(value)}`,
-  damageTypeNot: (value) => `урон не ${describeDamageType(value)}`,
-  damageCritical: () => 'критическое попадание',
-  damageNotCritical: () => 'не критическое попадание',
-  selfBloodied: () => 'у носителя не больше половины хитов',
-  selfWounded: () => 'носитель ранен',
-  selfCreatureType: (value) => `носитель — ${describeCreatureType(value)}`,
-  selfTag: (value) => `на носителе отметка «${value}»`,
-  selfTagNot: (value) => `на носителе нет отметки «${value}»`,
-  rollAdvantage: () => 'атака с преимуществом',
-  rollDisadvantage: () => 'атака с помехой',
-  otherCreatureType: (value) =>
-    `другая сторона — ${describeCreatureType(value)}`,
-  otherMarkedBySelf: () => 'другая сторона помечена носителем',
-};
 
 /**
  * Подпись условия срабатывания: части словаря срабатываний — фразой, остальные
@@ -179,9 +86,11 @@ export function describeTriggerCondition(condition: string): string {
     .map((part) =>
       typeof part === 'string'
         ? describeEffectChangeCondition(part)
-        : TRIGGER_CONDITION_PHRASES[part.kind](part.value ?? ''),
+        : EFFECT_TRIGGER_CONDITION_PHRASES[part.kind](
+            describeTriggerConditionValue(part),
+          ),
     )
-    .join(TRIGGER_LABELS.conditionJoiner);
+    .join(EFFECT_PHRASE_PARTS.andJoiner);
 }
 
 /**
@@ -211,7 +120,7 @@ function describeAction(action: EffectTriggerAction): string {
     case 'damage':
       return describeEffectDamageParts(action.parts);
     case 'applySelf':
-      return TRIGGER_LABELS.effect;
+      return EFFECT_TRIGGER_PHRASE_PARTS.effect;
     case 'applyCondition':
       return withDurationSuffix(
         `«${describeConditionName(action.conditionKey)}»`,
@@ -219,15 +128,15 @@ function describeAction(action: EffectTriggerAction): string {
       );
     case 'applyTag':
       return withDurationSuffix(
-        `${TRIGGER_LABELS.tagPrefix}«${action.label ?? action.tag}»`,
+        `${EFFECT_TRIGGER_PHRASE_PARTS.tagPrefix}«${action.label ?? action.tag}»`,
         action.duration,
       );
     case 'setHp':
-      return `${TRIGGER_LABELS.setHpPrefix}${action.value}`;
+      return `${EFFECT_TRIGGER_PHRASE_PARTS.setHpPrefix}${action.value}`;
     case 'endCast':
-      return TRIGGER_LABELS.endCast;
+      return EFFECT_TRIGGER_PHRASE_PARTS.endCast;
     case 'removeSelf':
-      return TRIGGER_LABELS.removeSelf;
+      return EFFECT_TRIGGER_PHRASE_PARTS.removeSelf;
     default:
       return '';
   }
@@ -252,7 +161,7 @@ function describeOutcomeActions(
     }
 
     if (saved && action.type === 'damage' && action.halfOnSave) {
-      return [TRIGGER_LABELS.halfDamage];
+      return [EFFECT_PHRASE_PARTS.halfDamage];
     }
 
     const label = describeAction(action);
@@ -261,8 +170,8 @@ function describeOutcomeActions(
   });
 
   return parts.length > 0
-    ? parts.join(TRIGGER_LABELS.listJoiner)
-    : TRIGGER_LABELS.nothing;
+    ? parts.join(EFFECT_PHRASE_PARTS.listJoiner)
+    : EFFECT_PHRASE_PARTS.nothing;
 }
 
 /**
@@ -273,13 +182,13 @@ function describeOutcomeActions(
  */
 function describeMoment(trigger: EffectTrigger): string {
   if (trigger.event === 'attackRoll' && trigger.role) {
-    return ATTACK_ROLE_EVENT_LABELS[trigger.role];
+    return EFFECT_TRIGGER_ATTACK_ROLE_PHRASES[trigger.role];
   }
 
-  const label = TRIGGER_EVENT_LABELS[trigger.event];
+  const label = EFFECT_TRIGGER_EVENT_PHRASES[trigger.event];
 
   return isTurnTriggerEvent(trigger.event) && trigger.turnOf === 'source'
-    ? `${label}${TRIGGER_LABELS.sourceTurnSuffix}`
+    ? `${label}${EFFECT_TRIGGER_PHRASE_PARTS.applierTurnSuffix}`
     : label;
 }
 
@@ -287,21 +196,19 @@ function describeMoment(trigger: EffectTrigger): string {
  * Прежняя фраза срабатывания, которое выражает старое поле.
  *
  * @param trigger срабатывание.
- * @param options настройки.
+ * @param describeOptions настройки фразы.
  * @returns фраза, пустая строка (описывать нечего) либо `null`, если это не
  *   старое поле.
  */
 function describeLegacyShape(
   trigger: EffectTrigger,
-  options: EffectTriggerDescribeOptions,
+  describeOptions: EffectTriggerDescribeOptions,
 ): string | null {
   const kind = classifyLegacyTrigger(trigger);
   const [action] = trigger.actions;
 
   const timing =
-    trigger.event === 'turnStart'
-      ? TRIGGER_LABELS.startOfTurn
-      : TRIGGER_LABELS.endOfTurn;
+    EFFECT_SAVE_TIMING_LABELS[saveTimingOfTriggerEvent(trigger.event)];
 
   if (kind === 'recurringDamage' && action?.type === 'damage') {
     const damage = describeEffectDamageParts(action.parts);
@@ -313,20 +220,20 @@ function describeLegacyShape(
     const { save } = trigger;
 
     const saveClause = save
-      ? ` (${TRIGGER_LABELS.savePrefix}${EFFECT_ABILITY_GENITIVE_LABELS[save.ability]}, ${options.formatDc(save.dc)}${TRIGGER_LABELS.damageSaveSuccess}${RECURRING_DAMAGE_SUCCESS_LABELS[action.halfOnSave ? 'half' : 'negate']})`
+      ? ` (${EFFECT_PHRASE_PARTS.savePrefix}${EFFECT_ABILITY_GENITIVE_LABELS[save.ability]}, ${describeOptions.formatDc(save.dc)}${EFFECT_TRIGGER_PHRASE_PARTS.damageSaveSuccess}${EFFECT_TRIGGER_RECURRING_DAMAGE_SUCCESS_LABELS[action.halfOnSave ? 'half' : 'negate']})`
       : '';
 
-    return `${TRIGGER_LABELS.everyTurnPrefix}${damage}${timing}${saveClause}`;
+    return `${EFFECT_TRIGGER_PHRASE_PARTS.everyTurnPrefix}${damage} ${timing}${saveClause}`;
   }
 
   if (kind === 'recurringSave' && trigger.save) {
     const { ability, dc } = trigger.save;
 
-    return `${TRIGGER_LABELS.recurringSavePrefix}${EFFECT_ABILITY_GENITIVE_LABELS[ability]} ${options.formatDc(dc)}${timing}${TRIGGER_LABELS.recurringSaveSuffix}`;
+    return `${EFFECT_TRIGGER_PHRASE_PARTS.recurringSavePrefix}${EFFECT_ABILITY_GENITIVE_LABELS[ability]} ${describeOptions.formatDc(dc)} ${timing}${EFFECT_TRIGGER_PHRASE_PARTS.recurringSaveSuffix}`;
   }
 
   if (kind === 'consumeOn' && trigger.role) {
-    return CONSUME_ON_LABELS[trigger.role];
+    return EFFECT_TRIGGER_CONSUME_ON_PHRASES[trigger.role];
   }
 
   return null;
@@ -346,34 +253,38 @@ function describeLimit(trigger: EffectTrigger): string {
   const { max, per } = trigger.limit;
 
   const times =
-    max === 1 ? TRIGGER_LABELS.limitOnce : `${max}${TRIGGER_LABELS.limitTimes}`;
+    max === MIN_TRIGGER_LIMIT_MAX
+      ? EFFECT_TRIGGER_PHRASE_PARTS.limitOnce
+      : `${max}${EFFECT_TRIGGER_PHRASE_PARTS.limitTimes}`;
 
-  return `${TRIGGER_LABELS.limitPrefix}${times}${TRIGGER_LABELS.limitPeriodPrefix}${LIMIT_PERIOD_LABELS[per]}`;
+  return `${EFFECT_TRIGGER_PHRASE_PARTS.limitPrefix}${times}${EFFECT_TRIGGER_PHRASE_PARTS.limitPeriodPrefix}${EFFECT_TRIGGER_PERIOD_LABELS[per]}`;
 }
 
 /**
  * Фраза срабатывания для сводки — продолжение перечисления со строчной буквы.
  *
  * @param trigger срабатывание.
- * @param options настройки.
+ * @param describeOptions настройки фразы.
  * @returns фраза либо пустая строка, если описывать нечего.
  */
 export function describeEffectTrigger(
   trigger: EffectTrigger,
-  options: EffectTriggerDescribeOptions,
+  describeOptions: EffectTriggerDescribeOptions,
 ): string {
-  const legacy = describeLegacyShape(trigger, options);
+  const legacy = describeLegacyShape(trigger, describeOptions);
 
   if (legacy !== null) {
     return legacy;
   }
 
   const condition = trigger.condition
-    ? `${TRIGGER_LABELS.conditionPrefix}${describeTriggerCondition(trigger.condition)}`
+    ? `${EFFECT_TRIGGER_PHRASE_PARTS.conditionPrefix}${describeTriggerCondition(trigger.condition)}`
     : '';
 
   const recipient =
-    trigger.recipient === 'other' ? TRIGGER_LABELS.recipientOther : '';
+    trigger.recipient === 'other'
+      ? EFFECT_TRIGGER_PHRASE_PARTS.recipientOther
+      : '';
 
   const moment = `${describeMoment(trigger)}${condition}${recipient}`;
   const limit = describeLimit(trigger);
@@ -385,12 +296,12 @@ export function describeEffectTrigger(
   const { ability, dc, dcFormula } = trigger.save;
 
   const dcLabel = dcFormula
-    ? `${TRIGGER_LABELS.dcFormulaPrefix}${dcFormula.replaceAll(`@${EVENT_DAMAGE_VARIABLE}`, TRIGGER_LABELS.damageVariable)}`
-    : options.formatDc(dc);
+    ? `${EFFECT_TRIGGER_PHRASE_PARTS.dcFormulaPrefix}${dcFormula.replaceAll(`@${EVENT_DAMAGE_VARIABLE}`, EFFECT_TRIGGER_PHRASE_PARTS.damageVariable)}`
+    : describeOptions.formatDc(dc);
 
   return [
-    `${moment}: ${TRIGGER_LABELS.savePrefix}${EFFECT_ABILITY_GENITIVE_LABELS[ability]}, ${dcLabel}`,
-    `${TRIGGER_LABELS.failurePrefix}${describeOutcomeActions(trigger, false)}`,
-    `${TRIGGER_LABELS.successPrefix}${describeOutcomeActions(trigger, true)}${limit}`,
-  ].join(TRIGGER_LABELS.clauseJoiner);
+    `${moment}: ${EFFECT_PHRASE_PARTS.savePrefix}${EFFECT_ABILITY_GENITIVE_LABELS[ability]}, ${dcLabel}`,
+    `${EFFECT_TRIGGER_PHRASE_PARTS.failurePrefix}${describeOutcomeActions(trigger, false)}`,
+    `${EFFECT_TRIGGER_PHRASE_PARTS.successPrefix}${describeOutcomeActions(trigger, true)}${limit}`,
+  ].join(EFFECT_PHRASE_PARTS.clauseJoiner);
 }

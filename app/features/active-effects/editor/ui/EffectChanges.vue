@@ -40,9 +40,11 @@
    * молчать о ней нельзя. Строка из пункта-условия без ключа заведена ради
    * условия: ключ автор выберет сам, и подсказка ему как раз об этом.
    */
-  const rows = computed(() =>
+  const changeRows = computed(() =>
     model.value.map((change) => ({
       change,
+      /** Условие в поле: не заданное — пустая строка. */
+      condition: change.condition ?? '',
       showPriority:
         showPriorityField || change.priority !== DEFAULT_EFFECT_CHANGE_PRIORITY,
       keyError: change.key.trim()
@@ -54,6 +56,7 @@
     })),
   );
 
+  /** Добавляет пустую строку модификатора в конец списка. */
   function addChange() {
     model.value = [...model.value, createEmptyEffectChange()];
   }
@@ -212,17 +215,17 @@
     </p>
 
     <div
-      v-for="(row, index) in rows"
+      v-for="(changeRow, index) in changeRows"
       :key="index"
       class="grid grid-cols-24 items-start gap-2 rounded-lg border border-default bg-elevated/50 p-3"
     >
       <UFormField
         :label="ACTIVE_EFFECT_LABELS.changeKey"
-        :error="row.keyError"
+        :error="changeRow.keyError"
         class="col-span-full md:col-span-8"
       >
         <InputWithLibrary
-          :model-value="row.change.key"
+          :model-value="changeRow.change.key"
           :options="EFFECT_TARGET_KEY_SUGGESTIONS"
           :placeholder="ACTIVE_EFFECT_LABELS.changeKeyPlaceholder"
           @update:model-value="updateKey(index, $event)"
@@ -234,7 +237,7 @@
         class="col-span-full md:col-span-5"
       >
         <USelect
-          :model-value="row.change.mode"
+          :model-value="changeRow.change.mode"
           :items="EFFECT_CHANGE_MODE_OPTIONS"
           class="w-full"
           @update:model-value="updateMode(index, $event)"
@@ -243,11 +246,11 @@
 
       <UFormField
         :label="ACTIVE_EFFECT_LABELS.changeValue"
-        :error="row.valueError"
+        :error="changeRow.valueError"
         class="col-span-full md:col-span-7"
       >
         <InputWithLibrary
-          :model-value="row.change.value"
+          :model-value="changeRow.change.value"
           :options="EFFECT_VALUE_SUGGESTIONS"
           :placeholder="ACTIVE_EFFECT_LABELS.changeValuePlaceholder"
           @update:model-value="updateValue(index, $event)"
@@ -255,12 +258,12 @@
       </UFormField>
 
       <UFormField
-        v-if="row.showPriority"
+        v-if="changeRow.showPriority"
         :label="ACTIVE_EFFECT_LABELS.changePriority"
         class="col-span-12 md:col-span-3"
       >
         <UInputNumber
-          :model-value="row.change.priority"
+          :model-value="changeRow.change.priority"
           :min="0"
           :max="100"
           @update:model-value="updatePriority(index, $event)"
@@ -282,7 +285,7 @@
         class="col-span-full"
       >
         <InputWithLibrary
-          :model-value="row.change.condition ?? ''"
+          :model-value="changeRow.condition"
           :options="EFFECT_CONDITION_EXPR_SUGGESTIONS"
           :placeholder="ACTIVE_EFFECT_LABELS.changeConditionPlaceholder"
           @update:model-value="updateCondition(index, $event)"

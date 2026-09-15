@@ -23,26 +23,30 @@
    * атаки и свои срабатывания одним списком. Запись — «сначала старые поля»:
    * то, что выражает старое поле, пишется в него, остальное — в `triggers`.
    */
-  const { layout, sourceSaveDc = undefined } = defineProps<{
+  const { layout, applierSaveDc = undefined } = defineProps<{
     /** Раскладка формы. */
     layout: EffectFormLayout;
     /** Сл источника для «Авто», если форма её знает. */
-    sourceSaveDc?: number;
+    applierSaveDc?: number;
   }>();
 
   /** Эффект формы: строки списка пишутся в него «сначала старые поля». */
   const effect = defineModel<ActiveEffect>('effect', { required: true });
 
-  const rows = computed(() => listEffectListTriggers(effect.value));
+  /** Срабатывания списка: старые поля эффекта и явные `triggers`. */
+  const listedTriggers = computed(() => listEffectListTriggers(effect.value));
 
-  const knownTags = computed(() => listTriggerTags(rows.value));
+  const knownTags = computed(() => listTriggerTags(listedTriggers.value));
+
+  /** Список срабатываний пуст. */
+  const isEmpty = computed(() => listedTriggers.value.length === 0);
 
   /**
    * Строки с ключом для списка: номер и `id` — после записи легаси-строка
    * может сменить `id` и должна перерисоваться.
    */
-  const rowEntries = computed(() =>
-    rows.value.map((trigger, index) => ({
+  const triggerRows = computed(() =>
+    listedTriggers.value.map((trigger, index) => ({
       trigger,
       key: `${index}-${trigger.id}`,
     })),
@@ -62,7 +66,7 @@
    * @param index номер строки.
    * @param trigger новая строка; `null` — убрать.
    */
-  function writeRow(index: number, trigger: EffectTrigger | null): void {
+  function writeTriggerRow(index: number, trigger: EffectTrigger | null): void {
     effect.value = writeEffectTriggerRow(effect.value, index, trigger);
   }
 
@@ -71,8 +75,8 @@
    *
    * @param index номер строки.
    */
-  function removeRow(index: number): void {
-    writeRow(index, null);
+  function removeTriggerRow(index: number): void {
+    writeTriggerRow(index, null);
   }
 
   /**
@@ -81,8 +85,8 @@
    * @param preset пресет.
    */
   function addPreset(preset: EffectTriggerPreset): void {
-    writeRow(
-      rows.value.length,
+    writeTriggerRow(
+      listedTriggers.value.length,
       createEffectTriggerPreset(preset, effect.value, layout),
     );
   }
@@ -95,21 +99,21 @@
     </p>
 
     <p
-      v-if="rows.length === 0"
+      v-if="isEmpty"
       class="rounded-md border border-dashed border-default px-3 py-2 text-center text-xs text-dimmed"
     >
       {{ EFFECT_TRIGGERS_STEP_LABELS.empty }}
     </p>
 
     <EffectTriggerRow
-      v-for="(rowEntry, index) in rowEntries"
-      :key="rowEntry.key"
-      :trigger="rowEntry.trigger"
+      v-for="(triggerRow, index) in triggerRows"
+      :key="triggerRow.key"
+      :trigger="triggerRow.trigger"
       :layout="layout"
-      :source-save-dc="sourceSaveDc"
+      :applier-save-dc="applierSaveDc"
       :known-tags="knownTags"
-      @update:trigger="writeRow(index, $event)"
-      @remove="removeRow(index)"
+      @update:trigger="writeTriggerRow(index, $event)"
+      @remove="removeTriggerRow(index)"
     />
 
     <div class="flex flex-wrap items-center gap-1.5">

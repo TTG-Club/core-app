@@ -9,7 +9,7 @@
     DEFAULT_EFFECT_DAMAGE_PART_TARGET,
     EFFECT_DAMAGE_STEP_LABELS,
     EFFECT_DAMAGE_TARGET_OPTIONS,
-    EFFECT_DAMAGE_TYPE_OPTIONS,
+    EFFECT_DAMAGE_TYPE_TOKEN_OPTIONS,
   } from '../../model';
 
   /**
@@ -49,12 +49,7 @@
     })),
   );
 
-  /** Типы урона токенами формулы: `@dmg.fire` вместо отдельного поля. */
-  const damageTypeTags = EFFECT_DAMAGE_TYPE_OPTIONS.map((damageType) => ({
-    label: damageType.label,
-    value: `dmg.${damageType.value}`,
-  }));
-
+  /** Добавляет пустую часть урона в конец списка. */
   function addPart() {
     model.value = [...model.value, createEmptyEffectDamagePart()];
   }
@@ -117,15 +112,15 @@
 <template>
   <div class="flex flex-col gap-2">
     <div
-      v-for="(part, index) in partRows"
+      v-for="(partRow, index) in partRows"
       :key="index"
       class="flex flex-col gap-3 rounded-lg border border-default bg-elevated/50 p-3"
     >
       <!-- Модификаторы спрятаны, как в редакторе эффектов VTTG: нагрузка
         эффекта считается без характеристики носителя -->
       <DamageFormulaInput
-        :model-value="part.formula"
-        :damage-type-options="damageTypeTags"
+        :model-value="partRow.formula"
+        :damage-type-options="EFFECT_DAMAGE_TYPE_TOKEN_OPTIONS"
         hide-modifiers
         :hide-healing="hideHealing"
         @update:model-value="updateFormula(index, $event)"
@@ -137,7 +132,7 @@
           class="col-span-full md:col-span-9"
         >
           <USelect
-            :model-value="part.target"
+            :model-value="partRow.target"
             :items="EFFECT_DAMAGE_TARGET_OPTIONS"
             class="w-full"
             @update:model-value="updateTarget(index, $event)"
@@ -146,7 +141,7 @@
 
         <UFormField class="col-span-full flex items-center md:col-span-12">
           <UCheckbox
-            :model-value="part.requiresDamage"
+            :model-value="partRow.requiresDamage"
             :label="ACTIVE_EFFECT_LABELS.damagePartRequiresDamage"
             @update:model-value="updateRequiresDamage(index, $event)"
           />

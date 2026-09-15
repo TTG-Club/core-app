@@ -11,15 +11,25 @@
  * Зеркало: dnd5-test-migrate/src/engine/activeEffectScenario.ts
  */
 
+import type { EffectConditionTemplate } from './constants';
 import type { EffectFormContext, EffectFormLayout } from './layout';
 import type { EffectTrigger } from './triggerTypes';
 import type { ActiveEffect, EffectChange } from './types';
 
 import {
   EFFECT_ABILITY_GENITIVE_LABELS,
+  EFFECT_AURA_MOMENT_PREFIXES,
   EFFECT_AURA_TARGET_SCENARIO_LABELS,
+  EFFECT_CARRIER_MOMENT_LABELS,
+  EFFECT_PHRASE_PARTS,
+  EFFECT_SCENARIO_APPLIER_DC_LABELS,
+  EFFECT_SCENARIO_LABELS,
+  EFFECT_SCENARIO_MAX_NAMED_MODIFIERS,
+  EFFECT_SPELL_ZONE_MOMENT_LABELS,
+  EFFECT_TARGET_MOMENT_LABELS,
+  EFFECT_ZONE_MOMENT_LABELS,
 } from './constants';
-import { buildConditionActiveEffect } from './create';
+import { findEffectConditionTemplate } from './create';
 import {
   describeConditionName,
   describeEffectChange,
@@ -28,88 +38,20 @@ import {
   describeEffectFlag,
   formatEffectSaveDc,
 } from './describe';
-import { readEffectSuccessOutcome, resolveEffectFormLayout } from './layout';
+import {
+  APPLIER_SAVE_DC,
+  readEffectSuccessOutcome,
+  resolveEffectFormLayout,
+} from './layout';
 import { describeEffectTrigger } from './triggerDescribe';
 import { listEffectListTriggers } from './triggers';
 import { LEGACY_TRIGGER_IDS } from './triggerTypes';
 
-/** Когда срабатывает эффект «на носителе» — по месту формы. */
-const CARRIER_MOMENT_LABELS: Record<EffectFormContext, string> = {
-  ownEffects: 'Пока эффект активен',
-  feature: 'Постоянно у персонажа',
-  item: 'Пока предмет надет',
-  weapon: 'Пока оружие экипировано',
-  spell: 'После сотворения — на заклинателе',
-  creatureAction: 'При использовании действия',
-  creatureTrait: 'Постоянно у существа',
-  zone: 'Пока существо в зоне',
-  condition: 'Пока действует состояние',
-  generic: 'Пока эффект активен',
-};
-
-/** Когда срабатывает эффект «на цели» — по месту формы. */
-const TARGET_MOMENT_LABELS: Record<EffectFormContext, string> = {
-  ownEffects: 'При попадании',
-  feature: 'При попадании',
-  item: 'При попадании',
-  weapon: 'При попадании оружием',
-  spell: 'Когда заклинание задело цель',
-  creatureAction: 'Когда действие задело цель',
-  creatureTrait: 'При попадании',
-  zone: 'При попадании',
-  condition: 'При попадании',
-  generic: 'При попадании',
-};
-
-/** Когда срабатывает эффект зоны. */
-const ZONE_MOMENT_LABELS = {
-  stay: 'Пока существо в зоне',
-  enter: 'При входе в зону',
-  exit: 'При выходе из зоны',
-} as const;
-
-/** Когда срабатывает эффект зоны, которую оставляет заклинание. */
-const SPELL_ZONE_MOMENT_LABELS = {
-  stay: 'Пока существо в зоне заклинания',
-  enter: 'При входе в зону заклинания',
-  exit: 'При выходе из зоны заклинания',
-} as const;
-
-/** Начало фразы эффекта ауры — по моменту срабатывания. */
-const AURA_MOMENT_PREFIXES = {
-  stay: 'Существам в ауре ',
-  enter: 'Когда существо входит в ауру ',
-  exit: 'Когда существо выходит из ауры ',
-} as const;
-
-/** Части фраз сводки. */
-const SCENARIO_LABELS = {
-  savePrefix: 'спасбросок ',
-  failurePrefix: 'Провал — ',
-  successPrefix: 'Успех — ',
-  nothing: 'ничего',
-  halfDamage: 'половина урона',
-  andJoiner: ' и ',
-  listJoiner: ', ',
-  emptyEffect: 'эффект пока ничего не делает',
-  immunitiesPrefix: 'иммунитет к состояниям: ',
-  actionSaveEffectAnyway: 'Эффект ложится и при успешном спасброске.',
-  actionSaveOnlyOnSuccess: ', если цель прошла спасбросок',
-  feetSuffix: ' фт',
-  more: 'и ещё',
-} as const;
-
-/**
- * Подпись Сл 0 по месту формы: у действия существа это Сл действия, а не
- * заклинателя.
- */
-const SOURCE_SAVE_DC_LABELS: Partial<Record<EffectFormContext, string>> = {
-  creatureAction: 'Сл действия',
-  weapon: 'Сл оружия',
-};
-
-/** Сколько модификаторов и флагов называть поимённо, прежде чем сказать «и ещё». */
-const MAX_NAMED_MODIFIERS = 3;
+/** Что состояние уже делает само: это сводка не перечисляет. */
+type ConditionPayload = Pick<
+  EffectConditionTemplate,
+  'changes' | 'flags' | 'conditionImmunities'
+>;
 
 /**
  * Подпись Сл спасброска в сводке.
@@ -119,9 +61,11 @@ const MAX_NAMED_MODIFIERS = 3;
  * @returns подпись сложности.
  */
 function formatScenarioSaveDc(dc: number, context: EffectFormContext): string {
-  const sourceLabel = SOURCE_SAVE_DC_LABELS[context];
+  const applierLabel = EFFECT_SCENARIO_APPLIER_DC_LABELS[context];
 
-  return dc === 0 && sourceLabel ? sourceLabel : formatEffectSaveDc(dc);
+  return dc === APPLIER_SAVE_DC && applierLabel
+    ? applierLabel
+    : formatEffectSaveDc(dc);
 }
 
 /**
@@ -138,36 +82,39 @@ function describeMoment(
   switch (layout.delivery) {
     case 'zone':
       return layout.context === 'spell'
-        ? SPELL_ZONE_MOMENT_LABELS[layout.trigger]
-        : ZONE_MOMENT_LABELS[layout.trigger];
+        ? EFFECT_SPELL_ZONE_MOMENT_LABELS[layout.trigger]
+        : EFFECT_ZONE_MOMENT_LABELS[layout.trigger];
     case 'target':
-      return TARGET_MOMENT_LABELS[layout.context];
+      return EFFECT_TARGET_MOMENT_LABELS[layout.context];
     case 'aura': {
       if (!effect.aura) {
-        return CARRIER_MOMENT_LABELS[layout.context];
+        return EFFECT_CARRIER_MOMENT_LABELS[layout.context];
       }
 
-      return `${AURA_MOMENT_PREFIXES[layout.trigger]}${effect.aura.radius}${SCENARIO_LABELS.feetSuffix} (${EFFECT_AURA_TARGET_SCENARIO_LABELS[effect.aura.target]})`;
+      return `${EFFECT_AURA_MOMENT_PREFIXES[layout.trigger]}${effect.aura.radius}${EFFECT_PHRASE_PARTS.feetSuffix} (${EFFECT_AURA_TARGET_SCENARIO_LABELS[effect.aura.target]})`;
     }
     case 'carrier':
     default:
-      return CARRIER_MOMENT_LABELS[layout.context];
+      return EFFECT_CARRIER_MOMENT_LABELS[layout.context];
   }
 }
 
 /**
- * Эффект состояния из шаблона — чтобы не перечислять то, что уже сказано его
- * названием: «Отравленный» и так значит помеху на атаки.
+ * Что делает состояние, которым эффект считается, — чтобы не перечислять то,
+ * что уже сказано его названием: «Отравленный» и так значит помеху на атаки.
+ * Берётся из шаблона: сводка пересобирается на каждое изменение и не должна
+ * собирать эффект с новым ключом.
  *
  * @param effect эффект.
- * @returns эффект состояния либо `null`, если эффект состоянием не считается.
+ * @returns модификаторы, флаги и иммунитеты состояния либо `null`, если эффект
+ *   состоянием не считается или шаблона у состояния нет.
  */
-function conditionTemplateOf(effect: ActiveEffect): ActiveEffect | null {
+function conditionPayloadOf(effect: ActiveEffect): ConditionPayload | null {
   if (!effect.conditionKey) {
     return null;
   }
 
-  return buildConditionActiveEffect(effect.conditionKey);
+  return findEffectConditionTemplate(effect.conditionKey) ?? null;
 }
 
 /**
@@ -191,12 +138,12 @@ function isSameChange(left: EffectChange, right: EffectChange): boolean {
  * числом.
  *
  * @param effect эффект.
- * @param condition эффект состояния, которым эффект считается.
+ * @param condition что делает состояние, которым эффект считается.
  * @returns подписи.
  */
 function describeModifiers(
   effect: ActiveEffect,
-  condition: ActiveEffect | null,
+  condition: ConditionPayload | null,
 ): string[] {
   const ownChanges = effect.changes.filter(
     (change) =>
@@ -216,15 +163,15 @@ function describeModifiers(
     ...ownFlags.map(describeEffectFlag),
   ];
 
-  if (named.length <= MAX_NAMED_MODIFIERS) {
+  if (named.length <= EFFECT_SCENARIO_MAX_NAMED_MODIFIERS) {
     return named;
   }
 
-  const rest = named.length - MAX_NAMED_MODIFIERS;
+  const hiddenCount = named.length - EFFECT_SCENARIO_MAX_NAMED_MODIFIERS;
 
   return [
-    ...named.slice(0, MAX_NAMED_MODIFIERS),
-    `${SCENARIO_LABELS.more} ${rest}`,
+    ...named.slice(0, EFFECT_SCENARIO_MAX_NAMED_MODIFIERS),
+    `${EFFECT_SCENARIO_LABELS.more} ${hiddenCount}`,
   ];
 }
 
@@ -265,7 +212,7 @@ function describeLastingPayload(
   layout: EffectFormLayout,
 ): string[] {
   const parts: string[] = [];
-  const condition = conditionTemplateOf(effect);
+  const condition = conditionPayloadOf(effect);
 
   if (effect.conditionKey) {
     parts.push(`«${describeConditionName(effect.conditionKey)}»`);
@@ -279,9 +226,9 @@ function describeLastingPayload(
 
   if (layout.showConditionImmunities && ownImmunities.length > 0) {
     parts.push(
-      `${SCENARIO_LABELS.immunitiesPrefix}${ownImmunities
+      `${EFFECT_PHRASE_PARTS.immunitiesPrefix}${ownImmunities
         .map(describeConditionName)
-        .join(SCENARIO_LABELS.listJoiner)}`,
+        .join(EFFECT_PHRASE_PARTS.listJoiner)}`,
     );
   }
 
@@ -319,8 +266,8 @@ function describeLastingPayload(
  */
 function joinParts(parts: readonly string[]): string {
   return parts.length > 0
-    ? parts.join(SCENARIO_LABELS.listJoiner)
-    : SCENARIO_LABELS.nothing;
+    ? parts.join(EFFECT_PHRASE_PARTS.listJoiner)
+    : EFFECT_PHRASE_PARTS.nothing;
 }
 
 /**
@@ -338,16 +285,16 @@ function describeSuccess(
 ): string {
   switch (readEffectSuccessOutcome(effect)) {
     case 'halfDamage':
-      return SCENARIO_LABELS.halfDamage;
+      return EFFECT_PHRASE_PARTS.halfDamage;
     case 'halfDamageWithEffect':
-      return `${SCENARIO_LABELS.halfDamage}${SCENARIO_LABELS.andJoiner}${joinParts(lasting)}`;
+      return `${EFFECT_PHRASE_PARTS.halfDamage}${EFFECT_PHRASE_PARTS.andJoiner}${joinParts(lasting)}`;
     case 'effectWithoutDamage':
       return joinParts(lasting);
     case 'onlyOnSuccess':
       return joinParts(damage ? [damage, ...lasting] : lasting);
     case 'nothing':
     default:
-      return SCENARIO_LABELS.nothing;
+      return EFFECT_PHRASE_PARTS.nothing;
   }
 }
 
@@ -373,7 +320,7 @@ export function describeEffectScenario(
       ? describeEffectDamageParts(effect.damageParts)
       : '';
 
-  const everything = damage ? [damage, ...lasting] : lasting;
+  const failurePayload = damage ? [damage, ...lasting] : lasting;
 
   if (layout.showSave && effect.applySave) {
     const { ability, dc } = effect.applySave;
@@ -381,31 +328,31 @@ export function describeEffectScenario(
 
     const failure =
       outcome === 'onlyOnSuccess'
-        ? SCENARIO_LABELS.nothing
-        : joinParts(everything);
+        ? EFFECT_PHRASE_PARTS.nothing
+        : joinParts(failurePayload);
 
     return [
-      `${moment}: ${SCENARIO_LABELS.savePrefix}${EFFECT_ABILITY_GENITIVE_LABELS[ability]}, ${formatScenarioSaveDc(dc, context)}.`,
-      `${SCENARIO_LABELS.failurePrefix}${failure}.`,
-      `${SCENARIO_LABELS.successPrefix}${describeSuccess(effect, damage, lasting)}.`,
+      `${moment}: ${EFFECT_PHRASE_PARTS.savePrefix}${EFFECT_ABILITY_GENITIVE_LABELS[ability]}, ${formatScenarioSaveDc(dc, context)}.`,
+      `${EFFECT_SCENARIO_LABELS.failurePrefix}${failure}.`,
+      `${EFFECT_SCENARIO_LABELS.successPrefix}${describeSuccess(effect, damage, lasting)}.`,
     ].join(' ');
   }
 
-  if (everything.length === 0) {
-    return `${moment}: ${SCENARIO_LABELS.emptyEffect}.`;
+  if (failurePayload.length === 0) {
+    return `${moment}: ${EFFECT_SCENARIO_LABELS.emptyEffect}.`;
   }
 
   if (layout.successOutcomeForActionSave) {
     switch (readEffectSuccessOutcome(effect)) {
       case 'onlyOnSuccess':
-        return `${moment}${SCENARIO_LABELS.actionSaveOnlyOnSuccess}: ${joinParts(everything)}.`;
+        return `${moment}${EFFECT_SCENARIO_LABELS.actionSaveOnlyOnSuccess}: ${joinParts(failurePayload)}.`;
       case 'effectWithoutDamage':
       case 'halfDamageWithEffect':
-        return `${moment}: ${joinParts(everything)}. ${SCENARIO_LABELS.actionSaveEffectAnyway}`;
+        return `${moment}: ${joinParts(failurePayload)}. ${EFFECT_SCENARIO_LABELS.actionSaveEffectAnyway}`;
       default:
         break;
     }
   }
 
-  return `${moment}: ${joinParts(everything)}.`;
+  return `${moment}: ${joinParts(failurePayload)}.`;
 }

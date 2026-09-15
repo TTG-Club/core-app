@@ -2,7 +2,7 @@
   import type { InertEffectField } from '../../model';
 
   import {
-    EFFECT_INERT_FIELD_NAMES,
+    describeInertEffectFields,
     EFFECT_INERT_FIELDS_LABELS,
   } from '../../model';
 
@@ -21,12 +21,7 @@
   }>();
 
   /** Перечисление неработающих настроек. */
-  const description = computed(
-    () =>
-      `${EFFECT_INERT_FIELDS_LABELS.description}${fields
-        .map((field) => EFFECT_INERT_FIELD_NAMES[field])
-        .join(', ')}.`,
-  );
+  const description = computed(() => describeInertEffectFields(fields));
 </script>
 
 <template>

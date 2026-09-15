@@ -3,48 +3,56 @@ import type { EffectTrigger } from '~active-effects/model';
 import { describe, expect, it } from 'vitest';
 
 import {
+  APPLIER_SAVE_DC,
   collectEffectTriggers,
   describeEffectTrigger,
   isLegacyTrigger,
+  LEGACY_TRIGGER_IDS,
   listEffectListTriggers,
   resolveTriggerActionGate,
   writeEffectSuccessOutcome,
   writeEffectTriggers,
 } from '~active-effects/model';
 
-import { createEffect, POISON_DAMAGE, serializeEffect } from './fixtures';
+import {
+  createEffect,
+  POISON_DAMAGE,
+  SAVE_DC,
+  serializeEffect,
+  TYPED_SAVE_DC,
+} from './fixtures';
 
-/** Спасбросок Телосложения Сл 13 без исхода. */
-const CONSTITUTION_TRIGGER_SAVE = { ability: 'constitution', dc: 13 } as const;
-
-/** Сл повторного спасброска в тестах. */
-const RECURRING_SAVE_DC = 15;
+/** Спасбросок Телосложения со Сл эффектов в тестах, без исхода. */
+const CONSTITUTION_TRIGGER_SAVE = {
+  ability: 'constitution',
+  dc: SAVE_DC,
+} as const;
 
 /**
- * Подпись Сл для фраз: 0 — Сл заклинателя.
+ * Подпись Сл для фраз: `APPLIER_SAVE_DC` — Сл заклинателя.
  *
  * @param dc сложность.
  * @returns подпись.
  */
 function formatDc(dc: number): string {
-  return dc === 0 ? 'Сл заклинателя' : `Сл ${dc}`;
+  return dc === APPLIER_SAVE_DC ? 'Сл заклинателя' : `Сл ${dc}`;
 }
 
 describe('чтение старых полей как срабатываний', () => {
   it('урон каждый ход: без спасброска, «без урона» и «половина урона»', () => {
-    const plain = createEffect({
+    const recurringDamageEffect = createEffect({
       recurringDamage: { damageParts: POISON_DAMAGE, timing: 'startOfTurn' },
     });
 
-    expect(listEffectListTriggers(plain)).toEqual([
+    expect(listEffectListTriggers(recurringDamageEffect)).toEqual([
       {
-        id: 'legacy.recurringDamage',
+        id: LEGACY_TRIGGER_IDS.recurringDamage,
         event: 'turnStart',
         actions: [{ type: 'damage', parts: POISON_DAMAGE, on: 'always' }],
       },
     ]);
 
-    const [negate] = listEffectListTriggers(
+    const [negateOnSaveTrigger] = listEffectListTriggers(
       createEffect({
         recurringDamage: {
           damageParts: POISON_DAMAGE,
@@ -54,16 +62,16 @@ describe('чтение старых полей как срабатываний',
       }),
     );
 
-    expect(negate?.event).toBe('turnEnd');
-    expect(negate?.save).toEqual(CONSTITUTION_TRIGGER_SAVE);
+    expect(negateOnSaveTrigger?.event).toBe('turnEnd');
+    expect(negateOnSaveTrigger?.save).toEqual(CONSTITUTION_TRIGGER_SAVE);
 
-    expect(negate?.actions[0]).toEqual({
+    expect(negateOnSaveTrigger?.actions[0]).toEqual({
       type: 'damage',
       parts: POISON_DAMAGE,
       on: 'failed',
     });
 
-    const [half] = listEffectListTriggers(
+    const [halfOnSaveTrigger] = listEffectListTriggers(
       createEffect({
         recurringDamage: {
           damageParts: POISON_DAMAGE,
@@ -73,7 +81,7 @@ describe('чтение старых полей как срабатываний',
       }),
     );
 
-    expect(half?.actions[0]).toEqual({
+    expect(halfOnSaveTrigger?.actions[0]).toEqual({
       type: 'damage',
       parts: POISON_DAMAGE,
       on: 'always',
@@ -85,7 +93,7 @@ describe('чтение старых полей как срабатываний',
     const effect = createEffect({
       recurringSave: {
         ability: 'wisdom',
-        dc: RECURRING_SAVE_DC,
+        dc: TYPED_SAVE_DC,
         timing: 'endOfTurn',
       },
       consumeOn: 'attackOnCarrier',
@@ -93,13 +101,13 @@ describe('чтение старых полей как срабатываний',
 
     expect(listEffectListTriggers(effect)).toEqual([
       {
-        id: 'legacy.recurringSave',
+        id: LEGACY_TRIGGER_IDS.recurringSave,
         event: 'turnEnd',
-        save: { ability: 'wisdom', dc: RECURRING_SAVE_DC },
+        save: { ability: 'wisdom', dc: TYPED_SAVE_DC },
         actions: [{ type: 'removeSelf', on: 'saved' }],
       },
       {
-        id: 'legacy.consumeOn',
+        id: LEGACY_TRIGGER_IDS.consumeOn,
         event: 'attackRoll',
         role: 'target',
         actions: [{ type: 'removeSelf', on: 'always' }],
@@ -108,15 +116,45 @@ describe('чтение старых полей как срабатываний',
   });
 
   it('разовое срабатывание: событие по доставке, гейты по исходу «при успехе»', () => {
-    const cases = [
-      ['nothing', 'failed', 'failed', undefined],
-      ['halfDamage', 'always', 'failed', true],
-      ['halfDamageWithEffect', 'always', 'always', true],
-      ['effectWithoutDamage', 'failed', 'always', undefined],
-      ['onlyOnSuccess', 'saved', 'saved', undefined],
+    const successOutcomeGates = [
+      {
+        outcome: 'nothing',
+        damageGate: 'failed',
+        effectGate: 'failed',
+        halfOnSave: undefined,
+      },
+      {
+        outcome: 'halfDamage',
+        damageGate: 'always',
+        effectGate: 'failed',
+        halfOnSave: true,
+      },
+      {
+        outcome: 'halfDamageWithEffect',
+        damageGate: 'always',
+        effectGate: 'always',
+        halfOnSave: true,
+      },
+      {
+        outcome: 'effectWithoutDamage',
+        damageGate: 'failed',
+        effectGate: 'always',
+        halfOnSave: undefined,
+      },
+      {
+        outcome: 'onlyOnSuccess',
+        damageGate: 'saved',
+        effectGate: 'saved',
+        halfOnSave: undefined,
+      },
     ] as const;
 
-    for (const [outcome, damageGate, effectGate, half] of cases) {
+    for (const {
+      outcome,
+      damageGate,
+      effectGate,
+      halfOnSave,
+    } of successOutcomeGates) {
       const effect = writeEffectSuccessOutcome(
         createEffect({
           effectTarget: 'target',
@@ -129,7 +167,7 @@ describe('чтение старых полей как срабатываний',
 
       const [landing] = collectEffectTriggers(effect);
 
-      expect(landing?.id, outcome).toBe('legacy.landing');
+      expect(landing?.id, outcome).toBe(LEGACY_TRIGGER_IDS.landing);
       expect(landing?.event, outcome).toBe('applied');
       expect(landing?.save, outcome).toEqual(CONSTITUTION_TRIGGER_SAVE);
 
@@ -141,16 +179,16 @@ describe('чтение старых полей как срабатываний',
         ]),
         outcome,
       ).toEqual([
-        ['damage', damageGate, half],
+        ['damage', damageGate, halfOnSave],
         ['applySelf', effectGate, undefined],
       ]);
     }
 
-    const [entry] = collectEffectTriggers(
+    const [exitTrigger] = collectEffectTriggers(
       createEffect({ areaTrigger: 'exit', damageParts: POISON_DAMAGE }),
     );
 
-    expect(entry?.event).toBe('exit');
+    expect(exitTrigger?.event).toBe('exit');
 
     // У эффекта «на носителе» разового срабатывания нет
     expect(
@@ -176,7 +214,7 @@ describe('чтение старых полей как срабатываний',
     });
 
     expect(listEffectListTriggers(effect).map((trigger) => trigger.id)).toEqual(
-      ['legacy.consumeOn', 'trigger_stench'],
+      [LEGACY_TRIGGER_IDS.consumeOn, 'trigger_stench'],
     );
   });
 
@@ -229,7 +267,7 @@ describe('запись «сначала старые поля»', () => {
       ] as const) {
         for (const recurringSave of [
           undefined,
-          { ability: 'wisdom', dc: 0, timing: 'startOfTurn' },
+          { ability: 'wisdom', dc: APPLIER_SAVE_DC, timing: 'startOfTurn' },
         ] as const) {
           const effect = createEffect({
             recurringDamage: {
@@ -252,62 +290,59 @@ describe('запись «сначала старые поля»', () => {
   });
 
   it('невыразимое старым полем уходит в triggers: лимит, условие, ход источника, второй урон', () => {
-    const damage: EffectTrigger = {
-      id: 'legacy.recurringDamage',
+    const damageTrigger: EffectTrigger = {
+      id: LEGACY_TRIGGER_IDS.recurringDamage,
       event: 'turnStart',
       actions: [{ type: 'damage', parts: POISON_DAMAGE, on: 'always' }],
     };
 
-    const written = writeEffectTriggers(createEffect(), [
-      damage,
-      { ...damage, id: 'second' },
-      { ...damage, id: 'limited', limit: { max: 1, per: 'turn' } },
-      { ...damage, id: 'source', turnOf: 'source' },
+    const effectWithExtraTriggers = writeEffectTriggers(createEffect(), [
+      damageTrigger,
+      { ...damageTrigger, id: 'second' },
+      { ...damageTrigger, id: 'limited', limit: { max: 1, per: 'turn' } },
+      { ...damageTrigger, id: 'source', turnOf: 'source' },
       {
-        ...damage,
+        ...damageTrigger,
         id: 'conditional',
         condition: 'self.hp.value < self.hp.max',
       },
     ]);
 
-    expect(written.recurringDamage).toEqual({
+    expect(effectWithExtraTriggers.recurringDamage).toEqual({
       damageParts: POISON_DAMAGE,
       timing: 'startOfTurn',
     });
 
-    expect(written.triggers?.map((trigger) => trigger.id)).toEqual([
-      'second',
-      'limited',
-      'source',
-      'conditional',
-    ]);
+    expect(
+      effectWithExtraTriggers.triggers?.map((trigger) => trigger.id),
+    ).toEqual(['second', 'limited', 'source', 'conditional']);
   });
 
   it('старые поля, которых нет в списке, снимаются; разовое срабатывание не трогается', () => {
     const effect = createEffect({
       effectTarget: 'target',
       applySave: { ...CONSTITUTION_TRIGGER_SAVE, onSuccess: 'negate' },
-      recurringSave: { ability: 'wisdom', dc: 13, timing: 'endOfTurn' },
+      recurringSave: { ability: 'wisdom', dc: SAVE_DC, timing: 'endOfTurn' },
       consumeOn: 'carrierAttack',
     });
 
-    const written = writeEffectTriggers(
+    const effectWithoutConsumeOn = writeEffectTriggers(
       effect,
       collectEffectTriggers(effect).filter(
-        (trigger) => trigger.id !== 'legacy.consumeOn',
+        (trigger) => trigger.id !== LEGACY_TRIGGER_IDS.consumeOn,
       ),
     );
 
-    expect(written.consumeOn).toBeUndefined();
-    expect(written.recurringSave).toEqual(effect.recurringSave);
-    expect(written.applySave).toEqual(effect.applySave);
-    expect(written.triggers).toBeUndefined();
+    expect(effectWithoutConsumeOn.consumeOn).toBeUndefined();
+    expect(effectWithoutConsumeOn.recurringSave).toEqual(effect.recurringSave);
+    expect(effectWithoutConsumeOn.applySave).toEqual(effect.applySave);
+    expect(effectWithoutConsumeOn.triggers).toBeUndefined();
   });
 
   it('невыразимая строка с id legacy.* получает новый id', () => {
-    const written = writeEffectTriggers(createEffect(), [
+    const effectWithLimitedSave = writeEffectTriggers(createEffect(), [
       {
-        id: 'legacy.recurringSave',
+        id: LEGACY_TRIGGER_IDS.recurringSave,
         event: 'turnEnd',
         save: CONSTITUTION_TRIGGER_SAVE,
         actions: [{ type: 'removeSelf', on: 'saved' }],
@@ -315,10 +350,12 @@ describe('запись «сначала старые поля»', () => {
       },
     ]);
 
-    expect(written.recurringSave).toBeUndefined();
-    expect(written.triggers).toHaveLength(1);
+    const [limitedSaveTrigger] = effectWithLimitedSave.triggers ?? [];
 
-    expect(written.triggers?.[0] && isLegacyTrigger(written.triggers[0])).toBe(
+    expect(effectWithLimitedSave.recurringSave).toBeUndefined();
+    expect(effectWithLimitedSave.triggers).toHaveLength(1);
+
+    expect(limitedSaveTrigger && isLegacyTrigger(limitedSaveTrigger)).toBe(
       false,
     );
   });
@@ -331,7 +368,7 @@ describe('фразы срабатываний', () => {
         {
           id: 'stench',
           event: 'turnStart',
-          save: { ability: 'constitution', dc: 12 },
+          save: { ability: 'constitution', dc: SAVE_DC },
           actions: [
             {
               type: 'applyCondition',
@@ -344,7 +381,7 @@ describe('фразы срабатываний', () => {
         { formatDc },
       ),
     ).toBe(
-      'в начале хода: спасбросок Телосложения, Сл 12; провал — «Отравленный» на 1 раунд; '
+      `в начале хода: спасбросок Телосложения, Сл ${SAVE_DC}; провал — «Отравленный» на 1 раунд; `
         + 'успех — ничего, не чаще одного раза за ход',
     );
 
@@ -354,7 +391,7 @@ describe('фразы срабатываний', () => {
           id: 'burn',
           event: 'turnEnd',
           turnOf: 'source',
-          save: { ability: 'dexterity', dc: 0 },
+          save: { ability: 'dexterity', dc: APPLIER_SAVE_DC },
           actions: [
             {
               type: 'damage',
@@ -402,7 +439,7 @@ describe('фразы срабатываний', () => {
       },
       recurringSave: {
         ability: 'wisdom',
-        dc: RECURRING_SAVE_DC,
+        dc: TYPED_SAVE_DC,
         timing: 'endOfTurn',
       },
       consumeOn: 'carrierAttack',
@@ -413,8 +450,8 @@ describe('фразы срабатываний', () => {
         describeEffectTrigger(trigger, { formatDc }),
       ),
     ).toEqual([
-      'каждый ход 2d6 ядом в начале хода (спасбросок Телосложения, Сл 13: успех — половина урона)',
-      'повторный спасбросок Мудрости Сл 15 в конце хода снимает эффект',
+      `каждый ход 2d6 ядом в начале хода (спасбросок Телосложения, Сл ${SAVE_DC}: успех — половина урона)`,
+      `повторный спасбросок Мудрости Сл ${TYPED_SAVE_DC} в конце хода снимает эффект`,
       'снимается после своей атаки',
     ]);
   });

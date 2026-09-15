@@ -2,10 +2,13 @@
   import type { SaveDcFieldMode } from '../../model';
 
   import {
+    APPLIER_SAVE_DC,
     DEFAULT_EFFECT_SAVE_DC,
+    FIXED_MIN_SAVE_DC,
+    SAVE_DC_AUTO_MODE,
     SAVE_DC_AUTO_SEPARATOR,
     SAVE_DC_FIELD_MODE_OPTIONS,
-    SOURCE_SAVE_DC,
+    SAVE_DC_MANUAL_MODE,
   } from '../../model';
 
   /**
@@ -28,32 +31,36 @@
     autoValue?: number;
   }>();
 
-  /** Сл: `SOURCE_SAVE_DC` — «Авто». */
-  const dc = defineModel<number>({ required: true });
+  /** Сл: `APPLIER_SAVE_DC` — «Авто». */
+  const saveDc = defineModel<number>({ required: true });
 
   const mode = computed<SaveDcFieldMode>({
-    get: () => (autoAllowed && dc.value === SOURCE_SAVE_DC ? 'auto' : 'manual'),
+    get: () =>
+      autoAllowed && saveDc.value === APPLIER_SAVE_DC
+        ? SAVE_DC_AUTO_MODE
+        : SAVE_DC_MANUAL_MODE,
     set: (nextMode) => {
-      if (nextMode === 'auto') {
-        dc.value = SOURCE_SAVE_DC;
+      if (nextMode === SAVE_DC_AUTO_MODE) {
+        saveDc.value = APPLIER_SAVE_DC;
 
         return;
       }
 
       // Своё число начинается с того, что сейчас дал бы источник
-      if (dc.value === SOURCE_SAVE_DC) {
-        dc.value = autoValue ?? DEFAULT_EFFECT_SAVE_DC;
+      if (saveDc.value === APPLIER_SAVE_DC) {
+        saveDc.value = autoValue ?? DEFAULT_EFFECT_SAVE_DC;
       }
     },
   });
 
-  const isAuto = computed(() => mode.value === 'auto');
+  const isAuto = computed(() => mode.value === SAVE_DC_AUTO_MODE);
 
-  const manualDc = computed({
-    get: () => dc.value,
-    set: (value: number | null) => {
-      if (value !== null) {
-        dc.value = value;
+  const manualSaveDc = computed({
+    get: () => saveDc.value,
+    set: (enteredSaveDc: number | null | undefined) => {
+      // Очищенное поле числа отдаёт `undefined`, а не `null`
+      if (typeof enteredSaveDc === 'number') {
+        saveDc.value = enteredSaveDc;
       }
     },
   });
@@ -90,8 +97,8 @@
 
       <UInputNumber
         v-else
-        v-model="manualDc"
-        :min="1"
+        v-model="manualSaveDc"
+        :min="FIXED_MIN_SAVE_DC"
         size="sm"
         class="w-28"
       />

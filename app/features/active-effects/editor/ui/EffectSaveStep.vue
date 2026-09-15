@@ -1,7 +1,6 @@
 <script setup lang="ts">
   import type {
     ActiveEffect,
-    EffectAbility,
     EffectFormLayout,
     EffectSave,
     EffectSuccessOutcome,
@@ -10,28 +9,24 @@
   import {
     ACTIVE_EFFECT_FORM_LABELS,
     buildSuccessOutcomeOptions,
-    DEFAULT_EFFECT_SAVE_ABILITY,
-    EFFECT_ABILITY_OPTIONS,
     EFFECT_ACTION_SAVE_SUCCESS_TITLES,
     EFFECT_SAVE_STEP_LABELS,
     EFFECT_SAVE_UNAVAILABLE_HINTS,
-    EFFECT_SOURCE_DC_LABELS,
-    layoutAcceptsSourceSaveDc,
     readEffectSuccessOutcome,
     writeEffectSaveEnabled,
     writeEffectSuccessOutcome,
   } from '../../model';
-  import EffectSaveDcField from './EffectSaveDcField.vue';
+  import EffectSaveFields from './EffectSaveFields.vue';
 
   /**
    * Шаг «Спасбросок»: нужен ли спасбросок, какой и что даёт успех. Там, где
    * спасброска быть не может, шаг объясняет, как его получить.
    */
-  const { layout, sourceSaveDc = undefined } = defineProps<{
+  const { layout, applierSaveDc = undefined } = defineProps<{
     /** Раскладка формы. */
     layout: EffectFormLayout;
     /** Сл источника для «Авто», если форма её знает. */
-    sourceSaveDc?: number;
+    applierSaveDc?: number;
   }>();
 
   const effect = defineModel<ActiveEffect>('effect', { required: true });
@@ -85,8 +80,6 @@
       : '',
   );
 
-  const sourceDcLabel = computed(() => EFFECT_SOURCE_DC_LABELS[layout.context]);
-
   const hasSave = computed({
     get: () => effect.value.applySave !== undefined,
     set: (enabled: boolean) => {
@@ -95,32 +88,13 @@
   });
 
   /**
-   * Меняет поле спасброска.
+   * Заменяет спасбросок эффекта.
    *
-   * @param patch изменённые поля.
+   * @param nextSave спасбросок с изменёнными характеристикой или Сл.
    */
-  function updateSave(patch: Partial<EffectSave>): void {
-    const { applySave } = effect.value;
-
-    if (applySave) {
-      effect.value = {
-        ...effect.value,
-        applySave: { ...applySave, ...patch },
-      };
-    }
+  function updateSave(nextSave: EffectSave): void {
+    effect.value = { ...effect.value, applySave: nextSave };
   }
-
-  const acceptsSourceSaveDc = computed(() => layoutAcceptsSourceSaveDc(layout));
-
-  const saveAbility = computed({
-    get: () => effect.value.applySave?.ability ?? DEFAULT_EFFECT_SAVE_ABILITY,
-    set: (ability: EffectAbility) => updateSave({ ability }),
-  });
-
-  const saveDc = computed({
-    get: () => effect.value.applySave?.dc ?? layout.minSaveDc,
-    set: (dc: number) => updateSave({ dc }),
-  });
 
   const successOutcome = computed({
     get: () => readEffectSuccessOutcome(effect.value),
@@ -142,25 +116,13 @@
       v-if="effect.applySave"
       class="flex flex-wrap items-end gap-3"
     >
-      <UFormField
-        :label="ACTIVE_EFFECT_FORM_LABELS.ability"
-        class="w-48"
-      >
-        <USelect
-          v-model="saveAbility"
-          :items="EFFECT_ABILITY_OPTIONS"
-          value-key="value"
-          size="sm"
-          class="w-full"
-        />
-      </UFormField>
-
-      <EffectSaveDcField
-        v-model="saveDc"
-        :label="ACTIVE_EFFECT_FORM_LABELS.saveDc"
-        :auto-allowed="acceptsSourceSaveDc"
-        :auto-label="sourceDcLabel"
-        :auto-value="sourceSaveDc"
+      <EffectSaveFields
+        :save="effect.applySave"
+        :layout="layout"
+        :applier-save-dc="applierSaveDc"
+        :ability-label="ACTIVE_EFFECT_FORM_LABELS.ability"
+        :save-dc-label="ACTIVE_EFFECT_FORM_LABELS.saveDc"
+        @update:save="updateSave"
       />
     </div>
   </template>

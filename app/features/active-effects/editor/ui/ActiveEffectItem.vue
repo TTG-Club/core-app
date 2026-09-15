@@ -41,7 +41,7 @@
   const {
     context,
     zoneAvailable = undefined,
-    sourceSaveDc = undefined,
+    applierSaveDc = undefined,
   } = defineProps<{
     /** Место формы: задаёт, какие шаги и поля показать. */
     context: EffectFormContext;
@@ -54,7 +54,7 @@
      * Сл источника, которую подставит «Авто» у полей Сл: у действия существа
      * это Сл самого действия из формы. Не задано — видна только подпись.
      */
-    sourceSaveDc?: number;
+    applierSaveDc?: number;
   }>();
 
   const effect = defineModel<ActiveEffect>({ required: true });
@@ -73,7 +73,15 @@
     resolveEffectFormLayout(context, effect.value, { zoneAvailable }),
   );
 
-  const steps = computed(() => listEffectFormSteps(layout.value));
+  /**
+   * Номера показанных шагов с единицы; шага, которого в раскладке нет, в
+   * записи нет.
+   */
+  const stepNumbers = computed<Partial<Record<EffectFormStep, number>>>(() =>
+    Object.fromEntries(
+      listEffectFormSteps(layout.value).map((step, index) => [step, index + 1]),
+    ),
+  );
 
   const scenario = computed(() =>
     describeEffectScenario(effect.value, context),
@@ -91,30 +99,10 @@
 
   const description = computed({
     get: () => effect.value.description,
-    set: (value: string) => {
-      effect.value = { ...effect.value, description: value };
+    set: (nextDescription: string) => {
+      effect.value = { ...effect.value, description: nextDescription };
     },
   });
-
-  /**
-   * Показан ли шаг.
-   *
-   * @param step шаг.
-   * @returns `true`, если шаг есть в раскладке.
-   */
-  function isStepShown(step: EffectFormStep): boolean {
-    return steps.value.includes(step);
-  }
-
-  /**
-   * Номер шага среди показанных.
-   *
-   * @param step шаг.
-   * @returns номер с единицы.
-   */
-  function getStepNumber(step: EffectFormStep): number {
-    return steps.value.indexOf(step) + 1;
-  }
 
   /** Убирает настройки, которые в этом месте не работают. */
   function clearInertFields(): void {
@@ -146,8 +134,8 @@
     />
 
     <EffectFormStepSection
-      v-if="isStepShown('trigger')"
-      :step-number="getStepNumber('trigger')"
+      v-if="stepNumbers.trigger !== undefined"
+      :step-number="stepNumbers.trigger"
       :title="EFFECT_FORM_STEP_TITLES.trigger"
       :icon="EFFECT_FORM_STEP_ICONS.trigger"
     >
@@ -158,21 +146,21 @@
     </EffectFormStepSection>
 
     <EffectFormStepSection
-      v-if="isStepShown('save')"
-      :step-number="getStepNumber('save')"
+      v-if="stepNumbers.save !== undefined"
+      :step-number="stepNumbers.save"
       :title="EFFECT_FORM_STEP_TITLES.save"
       :icon="EFFECT_FORM_STEP_ICONS.save"
     >
       <EffectSaveStep
         v-model:effect="effect"
         :layout="layout"
-        :source-save-dc="sourceSaveDc"
+        :applier-save-dc="applierSaveDc"
       />
     </EffectFormStepSection>
 
     <EffectFormStepSection
-      v-if="isStepShown('damage')"
-      :step-number="getStepNumber('damage')"
+      v-if="stepNumbers.damage !== undefined"
+      :step-number="stepNumbers.damage"
       :title="EFFECT_FORM_STEP_TITLES.damage"
       :icon="EFFECT_FORM_STEP_ICONS.damage"
     >
@@ -180,8 +168,8 @@
     </EffectFormStepSection>
 
     <EffectFormStepSection
-      v-if="isStepShown('modifiers')"
-      :step-number="getStepNumber('modifiers')"
+      v-if="stepNumbers.modifiers !== undefined"
+      :step-number="stepNumbers.modifiers"
       :title="modifiersTitle"
       :icon="EFFECT_FORM_STEP_ICONS.modifiers"
     >
@@ -193,8 +181,8 @@
     </EffectFormStepSection>
 
     <EffectFormStepSection
-      v-if="isStepShown('duration')"
-      :step-number="getStepNumber('duration')"
+      v-if="stepNumbers.duration !== undefined"
+      :step-number="stepNumbers.duration"
       :title="EFFECT_FORM_STEP_TITLES.duration"
       :icon="EFFECT_FORM_STEP_ICONS.duration"
     >
@@ -202,15 +190,15 @@
     </EffectFormStepSection>
 
     <EffectFormStepSection
-      v-if="isStepShown('triggers')"
-      :step-number="getStepNumber('triggers')"
+      v-if="stepNumbers.triggers !== undefined"
+      :step-number="stepNumbers.triggers"
       :title="EFFECT_FORM_STEP_TITLES.triggers"
       :icon="EFFECT_FORM_STEP_ICONS.triggers"
     >
       <EffectTriggersStep
         v-model:effect="effect"
         :layout="layout"
-        :source-save-dc="sourceSaveDc"
+        :applier-save-dc="applierSaveDc"
       />
     </EffectFormStepSection>
 

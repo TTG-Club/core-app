@@ -13,7 +13,7 @@
   } from '../../constants';
   import CreatureActionEntry from './CreatureActionEntry.vue';
 
-  const { effectContext } = defineProps<{
+  defineProps<{
     /** Подпись кнопки добавления: «Добавить действие», «Добавить реакцию». */
     addLabel: string;
 
@@ -251,7 +251,7 @@
       >
         <CreatureActionEntry
           :model-value="row.action"
-          :effect-context="effectContext"
+          :effect-context
           @update:model-value="updateAction(actionIndex, $event)"
         />
       </div>

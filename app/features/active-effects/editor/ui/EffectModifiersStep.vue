@@ -10,6 +10,7 @@
     describeConditionName,
     EFFECT_CONDITION_BADGE_ICON,
     EFFECT_CONDITION_OPTIONS,
+    EFFECT_CONDITION_REMOVE_ICON,
     EFFECT_MODIFIERS_STEP_LABELS,
   } from '../../model';
   import EffectChanges from './EffectChanges.vue';
@@ -37,15 +38,15 @@
 
   const changes = computed({
     get: () => effect.value.changes,
-    set: (value: EffectChange[]) => {
-      effect.value = { ...effect.value, changes: value };
+    set: (nextChanges: EffectChange[]) => {
+      effect.value = { ...effect.value, changes: nextChanges };
     },
   });
 
   const flags = computed({
     get: () => effect.value.flags,
-    set: (value: string[]) => {
-      effect.value = { ...effect.value, flags: value };
+    set: (nextFlags: string[]) => {
+      effect.value = { ...effect.value, flags: nextFlags };
     },
   });
 
@@ -90,7 +91,7 @@
       color="neutral"
       variant="ghost"
       size="xs"
-      icon="tabler:x"
+      :icon="EFFECT_CONDITION_REMOVE_ICON"
       :label="EFFECT_MODIFIERS_STEP_LABELS.conditionRemove"
       :title="EFFECT_MODIFIERS_STEP_LABELS.conditionRemoveHint"
       @click.left.exact.prevent="removeCondition"

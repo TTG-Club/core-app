@@ -193,11 +193,11 @@ export const DEFAULT_EFFECT_TAG = 'отметка';
 /**
  * Годится ли строка ключом отметки.
  *
- * @param value строка.
+ * @param tag строка.
  * @returns `true`, если это ключ отметки.
  */
-export function isEffectTag(value: string): boolean {
-  return EFFECT_TAG_PATTERN.test(value);
+export function isEffectTag(tag: string): boolean {
+  return EFFECT_TAG_PATTERN.test(tag);
 }
 
 /**

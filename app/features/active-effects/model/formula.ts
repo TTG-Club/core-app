@@ -11,6 +11,8 @@
  * сообщения об ошибках.
  */
 
+import { EFFECT_FORMULA_ERRORS } from './constants';
+
 /** Результат проверки формулы. */
 export interface FormulaValidationResult {
   /** Годна ли формула. */
@@ -38,6 +40,8 @@ interface FormulaToken {
 /** Ошибка разбора формулы. */
 class FormulaError extends Error {
   /**
+   * Создаёт ошибку разбора с сообщением, которое увидит автор формулы.
+   *
    * @param message описание ошибки для автора.
    */
   constructor(message: string) {
@@ -80,27 +84,6 @@ const ALPHANUMERIC_PATTERN = /^\w$/;
 const DIGIT_PATTERN = /^\d$/;
 
 /**
- * Сообщения об ошибках разбора — те же, что у системы.
- */
-const FORMULA_ERRORS = {
-  empty: 'Формула не может быть пустой',
-  invalid: 'Невалидная формула',
-  missingVariable: (position: number) =>
-    `Ожидалось имя переменной после @ на позиции ${position}`,
-  unknownIdentifier: (identifier: string) =>
-    `Неизвестный идентификатор: "${identifier}". Переменные должны начинаться с @`,
-  unexpectedChar: (char: string, position: number) =>
-    `Неожиданный символ "${char}" на позиции ${position}`,
-  unexpectedEnd: 'Неожиданный конец формулы',
-  missingFunctionParen: (name: string) => `Ожидалась '(' после функции ${name}`,
-  unclosedFunction: (name: string) =>
-    `Ожидалась ')' после аргументов функции ${name}`,
-  unclosedParen: 'Незакрытая скобка',
-  unexpectedToken: (value: string) => `Неожиданный токен: "${value}"`,
-  extraToken: (value: string) => `Лишний токен: "${value}"`,
-} as const;
-
-/**
  * Разбивает формулу на токены.
  *
  * @param formula строка формулы.
@@ -112,25 +95,24 @@ function tokenize(formula: string): FormulaToken[] {
 
   let position = 0;
 
-  const charAt = (index: number): string => formula.charAt(index);
-
   while (position < formula.length) {
-    const char = charAt(position);
+    const character = formula.charAt(position);
 
-    if (char === ' ' || char === '\t') {
+    if (character === ' ' || character === '\t') {
       position++;
 
       continue;
     }
 
-    if (DIGIT_PATTERN.test(char)) {
+    if (DIGIT_PATTERN.test(character)) {
       let numberText = '';
 
       while (
         position < formula.length
-        && (DIGIT_PATTERN.test(charAt(position)) || charAt(position) === '.')
+        && (DIGIT_PATTERN.test(formula.charAt(position))
+          || formula.charAt(position) === '.')
       ) {
-        numberText += charAt(position);
+        numberText += formula.charAt(position);
         position++;
       }
 
@@ -139,22 +121,22 @@ function tokenize(formula: string): FormulaToken[] {
       continue;
     }
 
-    if (char === '@') {
+    if (character === '@') {
       let variablePath = '';
 
       position++;
 
       while (
         position < formula.length
-        && (ALPHANUMERIC_PATTERN.test(charAt(position))
-          || charAt(position) === '.')
+        && (ALPHANUMERIC_PATTERN.test(formula.charAt(position))
+          || formula.charAt(position) === '.')
       ) {
-        variablePath += charAt(position);
+        variablePath += formula.charAt(position);
         position++;
       }
 
       if (variablePath.length === 0) {
-        throw new FormulaError(FORMULA_ERRORS.missingVariable(position));
+        throw new FormulaError(EFFECT_FORMULA_ERRORS.missingVariable(position));
       }
 
       tokens.push({ type: 'variable', value: variablePath });
@@ -162,35 +144,42 @@ function tokenize(formula: string): FormulaToken[] {
       continue;
     }
 
-    if (char === '+' || char === '-' || char === '*' || char === '/') {
-      tokens.push({ type: 'operator', value: char });
+    if (
+      character === '+'
+      || character === '-'
+      || character === '*'
+      || character === '/'
+    ) {
+      tokens.push({ type: 'operator', value: character });
       position++;
 
       continue;
     }
 
-    const punctuationType = PUNCTUATION_TOKENS[char];
+    const punctuationType = PUNCTUATION_TOKENS[character];
 
     if (punctuationType) {
-      tokens.push({ type: punctuationType, value: char });
+      tokens.push({ type: punctuationType, value: character });
       position++;
 
       continue;
     }
 
-    if (ALPHA_PATTERN.test(char)) {
+    if (ALPHA_PATTERN.test(character)) {
       let identifier = '';
 
       while (
         position < formula.length
-        && ALPHANUMERIC_PATTERN.test(charAt(position))
+        && ALPHANUMERIC_PATTERN.test(formula.charAt(position))
       ) {
-        identifier += charAt(position);
+        identifier += formula.charAt(position);
         position++;
       }
 
       if (!SUPPORTED_FUNCTIONS.has(identifier)) {
-        throw new FormulaError(FORMULA_ERRORS.unknownIdentifier(identifier));
+        throw new FormulaError(
+          EFFECT_FORMULA_ERRORS.unknownIdentifier(identifier),
+        );
       }
 
       tokens.push({ type: 'function', value: identifier });
@@ -198,7 +187,9 @@ function tokenize(formula: string): FormulaToken[] {
       continue;
     }
 
-    throw new FormulaError(FORMULA_ERRORS.unexpectedChar(char, position));
+    throw new FormulaError(
+      EFFECT_FORMULA_ERRORS.unexpectedChar(character, position),
+    );
   }
 
   return tokens;
@@ -206,14 +197,13 @@ function tokenize(formula: string): FormulaToken[] {
 
 /**
  * Проверяет порядок токенов рекурсивным спуском с приоритетами операторов.
+ * Ничего не вычисляет: годная формула проходит молча, негодная — бросает.
  *
  * @param tokens токены формулы.
  * @throws FormulaError при синтаксической ошибке.
  */
-function parse(tokens: readonly FormulaToken[]): void {
+function assertFormulaSyntax(tokens: readonly FormulaToken[]): void {
   let position = 0;
-
-  const tokenAt = (index: number): FormulaToken | undefined => tokens[index];
 
   /**
    * Разбирает выражение не ниже приоритета.
@@ -224,9 +214,9 @@ function parse(tokens: readonly FormulaToken[]): void {
     parsePrimary();
 
     for (
-      let token = tokenAt(position);
+      let token = tokens[position];
       token?.type === 'operator';
-      token = tokenAt(position)
+      token = tokens[position]
     ) {
       const precedence = OPERATOR_PRECEDENCE[token.value] ?? 0;
 
@@ -241,10 +231,10 @@ function parse(tokens: readonly FormulaToken[]): void {
 
   /** Разбирает число, переменную, функцию, скобки или унарный знак. */
   function parsePrimary(): void {
-    const token = tokenAt(position);
+    const token = tokens[position];
 
     if (!token) {
-      throw new FormulaError(FORMULA_ERRORS.unexpectedEnd);
+      throw new FormulaError(EFFECT_FORMULA_ERRORS.unexpectedEnd);
     }
 
     if (token.type === 'number' || token.type === 'variable') {
@@ -256,25 +246,27 @@ function parse(tokens: readonly FormulaToken[]): void {
     if (token.type === 'function') {
       position++;
 
-      if (tokenAt(position)?.type !== 'leftParen') {
+      if (tokens[position]?.type !== 'leftParen') {
         throw new FormulaError(
-          FORMULA_ERRORS.missingFunctionParen(token.value),
+          EFFECT_FORMULA_ERRORS.missingFunctionParen(token.value),
         );
       }
 
       position++;
 
-      if (tokenAt(position) && tokenAt(position)?.type !== 'rightParen') {
+      if (tokens[position] && tokens[position]?.type !== 'rightParen') {
         parseExpression(0);
 
-        while (tokenAt(position)?.type === 'comma') {
+        while (tokens[position]?.type === 'comma') {
           position++;
           parseExpression(0);
         }
       }
 
-      if (tokenAt(position)?.type !== 'rightParen') {
-        throw new FormulaError(FORMULA_ERRORS.unclosedFunction(token.value));
+      if (tokens[position]?.type !== 'rightParen') {
+        throw new FormulaError(
+          EFFECT_FORMULA_ERRORS.unclosedFunction(token.value),
+        );
       }
 
       position++;
@@ -286,8 +278,8 @@ function parse(tokens: readonly FormulaToken[]): void {
       position++;
       parseExpression(0);
 
-      if (tokenAt(position)?.type !== 'rightParen') {
-        throw new FormulaError(FORMULA_ERRORS.unclosedParen);
+      if (tokens[position]?.type !== 'rightParen') {
+        throw new FormulaError(EFFECT_FORMULA_ERRORS.unclosedParen);
       }
 
       position++;
@@ -305,15 +297,15 @@ function parse(tokens: readonly FormulaToken[]): void {
       return;
     }
 
-    throw new FormulaError(FORMULA_ERRORS.unexpectedToken(token.value));
+    throw new FormulaError(EFFECT_FORMULA_ERRORS.unexpectedToken(token.value));
   }
 
   parseExpression(0);
 
-  const extra = tokenAt(position);
+  const extraToken = tokens[position];
 
-  if (extra) {
-    throw new FormulaError(FORMULA_ERRORS.extraToken(extra.value));
+  if (extraToken) {
+    throw new FormulaError(EFFECT_FORMULA_ERRORS.extraToken(extraToken.value));
   }
 }
 
@@ -327,7 +319,7 @@ export function validateFormula(formula: string): FormulaValidationResult {
   const trimmed = formula.trim();
 
   if (trimmed.length === 0) {
-    return { valid: false, error: FORMULA_ERRORS.empty };
+    return { valid: false, error: EFFECT_FORMULA_ERRORS.empty };
   }
 
   if (!Number.isNaN(Number(trimmed))) {
@@ -335,7 +327,7 @@ export function validateFormula(formula: string): FormulaValidationResult {
   }
 
   try {
-    parse(tokenize(trimmed));
+    assertFormulaSyntax(tokenize(trimmed));
 
     return { valid: true };
   } catch (parseError) {
@@ -344,7 +336,7 @@ export function validateFormula(formula: string): FormulaValidationResult {
       error:
         parseError instanceof FormulaError
           ? parseError.message
-          : FORMULA_ERRORS.invalid,
+          : EFFECT_FORMULA_ERRORS.invalid,
     };
   }
 }

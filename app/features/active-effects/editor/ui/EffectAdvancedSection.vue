@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { EFFECT_ADVANCED_LABELS } from '../../model';
+  import EffectSectionToggle from './EffectSectionToggle.vue';
 
   /**
    * Сворачиваемый раздел «Для опытных»: включает у модификаторов приоритет.
@@ -12,18 +13,9 @@
 
 <template>
   <UCollapsible class="flex flex-col gap-2">
-    <UButton
-      color="neutral"
-      variant="ghost"
-      size="sm"
+    <EffectSectionToggle
       icon="tabler:settings"
-      trailing-icon="tabler:chevron-down"
       :label="EFFECT_ADVANCED_LABELS.title"
-      class="w-full justify-start"
-      :ui="{
-        trailingIcon:
-          'ms-auto transition-transform duration-200 group-data-[state=open]:rotate-180',
-      }"
     />
 
     <template #content>
