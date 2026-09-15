@@ -262,7 +262,7 @@ function transformFeatureOption(
   return {
     ...option,
     mechanics: buildMechanics(option),
-    activeEffects: normalizeActiveEffects(option.activeEffects),
+    activeEffects: normalizeActiveEffects(option.activeEffects, 'feature'),
     editorRows: undefined,
   };
 }
@@ -292,7 +292,7 @@ function transformFeature(feature: ClassFeatureCreate): ClassFeatureCreate {
     options: feature.options.map(transformFeatureOption),
     optionsChoice: transformOptionsChoice(feature.optionsChoice),
     mechanics: buildMechanics(feature),
-    activeEffects: normalizeActiveEffects(feature.activeEffects),
+    activeEffects: normalizeActiveEffects(feature.activeEffects, 'feature'),
     editorRows: undefined,
   };
 }
@@ -333,7 +333,7 @@ export function transformClassBeforeSubmit(state: ClassCreate): ClassCreate {
     // Эффекты чистит общий нормализатор раздела: он же обслуживает черты,
     // заклинания и магические предметы, поэтому правило «что считать пустым»
     // одно на всех
-    activeEffects: normalizeActiveEffects(state.activeEffects),
+    activeEffects: normalizeActiveEffects(state.activeEffects, 'feature'),
     features: state.features.map(transformFeature),
   };
 }

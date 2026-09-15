@@ -175,6 +175,7 @@
 
           <ActiveEffects
             v-model="feature.activeEffects"
+            context="feature"
             :origin="EFFECT_ORIGIN.feature"
           />
         </div>

@@ -65,6 +65,7 @@
         v-model="model.actions"
         :add-label="CREATURE_ACTION_ADD_LABELS.legendary"
         path="legendary.actions"
+        effect-context="creatureAction"
       />
     </div>
   </UCard>

@@ -52,6 +52,7 @@
         v-model="model.effects"
         :add-label="CREATURE_ACTION_ADD_LABELS.lair"
         path="lair.effects"
+        effect-context="creatureAction"
       />
 
       <UForm

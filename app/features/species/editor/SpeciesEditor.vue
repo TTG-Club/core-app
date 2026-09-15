@@ -264,6 +264,7 @@
       <template #effects>
         <ActiveEffects
           v-model="state.activeEffects"
+          context="feature"
           :origin="EFFECT_ORIGIN.feature"
         />
       </template>

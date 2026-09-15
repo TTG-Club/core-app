@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CreateAction } from '../../model';
+  import type { CreateAction, CreatureEffectContext } from '../../model';
 
   import {
     CREATURE_ACTION_ADD_LABELS,
@@ -17,6 +17,11 @@
 
   const title = computed(() => CREATURE_ACTION_LIST_TITLES[name]);
   const addLabel = computed(() => CREATURE_ACTION_ADD_LABELS[name]);
+
+  /** У черт эффект лежит на самом существе, у действий — ложится на цель. */
+  const effectContext = computed<CreatureEffectContext>(() =>
+    name === 'traits' ? 'creatureTrait' : 'creatureAction',
+  );
 </script>
 
 <template>
@@ -32,6 +37,7 @@
       v-model="model"
       :add-label
       :path="name"
+      :effect-context="effectContext"
     />
   </UCard>
 </template>

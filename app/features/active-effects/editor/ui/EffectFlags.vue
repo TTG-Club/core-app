@@ -11,6 +11,7 @@
     EFFECT_FLAG_LABELS,
     EFFECT_FLAG_MENU,
     EFFECT_FLAG_OPTIONS,
+    EFFECT_MODIFIERS_STEP_LABELS,
   } from '../../model';
 
   const model = defineModel<Array<string>>({ default: () => [] });
@@ -79,7 +80,7 @@
   <div class="flex flex-col gap-2">
     <div class="flex items-center justify-between">
       <span class="text-sm font-medium">
-        {{ ACTIVE_EFFECT_LABELS.flagsTitle }}
+        {{ EFFECT_MODIFIERS_STEP_LABELS.flagsTitle }}
       </span>
 
       <div class="flex items-center gap-1">
@@ -92,9 +93,9 @@
             icon="tabler:list-search"
             size="xs"
             variant="soft"
-            :title="ACTIVE_EFFECT_LABELS.presetsFlagsHint"
+            :title="EFFECT_MODIFIERS_STEP_LABELS.flagPresetHint"
           >
-            {{ ACTIVE_EFFECT_LABELS.presets }}
+            {{ EFFECT_MODIFIERS_STEP_LABELS.presets }}
           </UButton>
         </UDropdownMenu>
 
@@ -113,7 +114,7 @@
       v-if="!model.length"
       class="rounded-lg border border-dashed border-default p-4 text-center text-xs text-dimmed italic"
     >
-      {{ ACTIVE_EFFECT_LABELS.flagsEmpty }}
+      {{ EFFECT_MODIFIERS_STEP_LABELS.flagsEmpty }}
     </p>
 
     <div
@@ -133,6 +134,7 @@
           icon="tabler:trash"
           color="error"
           variant="soft"
+          :aria-label="ACTIVE_EFFECT_LABELS.flagRemove"
           @click.left.exact.prevent="removeFlag(index)"
         />
       </div>

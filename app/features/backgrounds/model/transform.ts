@@ -51,7 +51,7 @@ export function transformBackgroundBeforeSubmit(
     // Эффекты чистит общий нормализатор раздела: он же обслуживает черты,
     // заклинания и магические предметы, поэтому правило «что считать пустым»
     // одно на всех
-    activeEffects: normalizeActiveEffects(state.activeEffects),
+    activeEffects: normalizeActiveEffects(state.activeEffects, 'feature'),
     toolChoice: buildToolChoice(state.toolChoice),
     mechanics: built.mechanics
       ? buildFeatMechanics(built.mechanics)

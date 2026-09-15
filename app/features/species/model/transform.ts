@@ -58,7 +58,7 @@ function transformFeature(feature: SpeciesFeatureCreate): SpeciesFeatureCreate {
           : undefined,
     })),
     mechanics: buildMechanics(feature),
-    activeEffects: normalizeActiveEffects(feature.activeEffects),
+    activeEffects: normalizeActiveEffects(feature.activeEffects, 'feature'),
     editorRows: undefined,
   };
 }
@@ -83,7 +83,7 @@ export function transformSpeciesBeforeSubmit(
     // Эффекты чистит общий нормализатор раздела: он же обслуживает черты,
     // заклинания и магические предметы, поэтому правило «что считать пустым»
     // одно на всех
-    activeEffects: normalizeActiveEffects(state.activeEffects),
+    activeEffects: normalizeActiveEffects(state.activeEffects, 'feature'),
     features: state.features.map(transformFeature),
   };
 }

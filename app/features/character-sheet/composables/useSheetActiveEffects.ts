@@ -188,7 +188,7 @@ export function useSheetActiveEffects() {
     updateActiveEffects([
       ...character.value.activeEffects,
       {
-        ...createEmptyActiveEffect('condition'),
+        ...createEmptyActiveEffect('condition', 'ownEffects'),
         name: template.name,
         description: template.description,
         icon: template.icon,

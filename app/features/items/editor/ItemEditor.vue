@@ -7,6 +7,7 @@
   import { EFFECT_ORIGIN } from '~active-effects/model';
   import {
     createEmptyItem,
+    getItemEffectContext,
     ITEM_CATEGORY_OPTIONS,
     ITEM_EDITOR_SECTIONS,
     ITEM_EDITOR_TABS,
@@ -43,6 +44,14 @@
     });
 
   const isWeapon = computed(() => state.value.category === 'WEAPON');
+
+  /**
+   * Место эффектов предмета — по категории. Смена категории при заведённых
+   * эффектах ничего не стирает: неподходящие настройки покажет плашка.
+   */
+  const effectContext = computed(() =>
+    getItemEffectContext(state.value.category),
+  );
 
   /**
    * Подпись вкладки с параметрами — по выбранной категории: у оружия там бой,
@@ -248,6 +257,7 @@
       <template #effects>
         <ActiveEffects
           v-model="state.activeEffects"
+          :context="effectContext"
           :origin="EFFECT_ORIGIN.item"
         />
       </template>

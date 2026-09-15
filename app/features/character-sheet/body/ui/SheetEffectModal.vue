@@ -28,7 +28,7 @@
   const draft = ref<ActiveEffect>(
     editedEffect
       ? structuredClone(toRaw(editedEffect))
-      : createEmptyActiveEffect('manual'),
+      : createEmptyActiveEffect('manual', 'ownEffects'),
   );
 
   const modalTitle = computed(() =>
@@ -53,7 +53,7 @@
     <template #body>
       <ActiveEffectItem
         v-model="draft"
-        hide-combat
+        context="ownEffects"
       />
     </template>
 

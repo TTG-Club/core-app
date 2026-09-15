@@ -2,6 +2,7 @@ import { consola } from 'consola';
 import { createError } from 'h3';
 
 import { getErrorResponse, getPlural } from '#shared/utils';
+import { createEntityId } from '~/utils/createEntityId';
 
 /**
  * Авто-импорты Nuxt, которыми пользуется проверяемый код.
@@ -15,6 +16,7 @@ const TEST_ORIGIN = 'https://ttg.club';
 
 Object.assign(globalThis, {
   consola,
+  createEntityId,
   createError,
   getErrorResponse,
   getPlural,

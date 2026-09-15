@@ -13,6 +13,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '~home': fileURLToPath(new URL('./app/features/home', import.meta.url)),
+      '~active-effects': fileURLToPath(
+        new URL('./app/features/active-effects', import.meta.url),
+      ),
       '#shared': fileURLToPath(new URL('./shared', import.meta.url)),
       '#server': fileURLToPath(new URL('./server', import.meta.url)),
       '~find-game': fileURLToPath(

@@ -294,7 +294,7 @@ export function transformFeatBeforeSubmit(state: FeatCreate): FeatCreate {
     editorRows: undefined,
     // Эффекты чистит общий нормализатор раздела: он же обслуживает заклинания
     // и магические предметы, поэтому правило «что считать пустым» одно на всех
-    activeEffects: normalizeActiveEffects(state.activeEffects),
+    activeEffects: normalizeActiveEffects(state.activeEffects, 'feature'),
     // Плоскую проекцию характеристик core-api пересобирает из
     // `mechanics.abilityBonuses` сам и в теле запроса её больше не ждёт
     abilities: undefined,

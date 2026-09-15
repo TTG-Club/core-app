@@ -9,6 +9,7 @@
     createEmptySpellEffect,
     getSpellFilterDamageTypes,
     getSpellManualDamageTypes,
+    hasSpellArea,
     normalizeLoadedSpell,
     normalizeSpellEffect,
     SPELL_AFFILIATION_LABELS,
@@ -106,10 +107,19 @@
         return {
           ...formState,
           effect: normalizedEffect ?? createEmptySpellEffect(),
-          activeEffects: normalizeActiveEffects(formState.activeEffects),
+          activeEffects: normalizeActiveEffects(
+            formState.activeEffects,
+            'spell',
+          ),
         };
       },
     });
+
+  /**
+   * Есть ли у заклинания область: без неё доставке «зоной на месте области»
+   * взяться неоткуда, и у таких эффектов форма покажет плашку.
+   */
+  const isSpellAreaSet = computed(() => hasSpellArea(state.value.effect));
 
   /**
    * Типы урона для фильтра: к выбору автора всегда добавлены типы из формул
@@ -391,7 +401,11 @@
 
       <!-- ЭФФЕКТЫ -->
       <template #effects>
-        <ActiveEffects v-model="state.activeEffects" />
+        <ActiveEffects
+          v-model="state.activeEffects"
+          context="spell"
+          :zone-available="isSpellAreaSet"
+        />
       </template>
     </UTabs>
 

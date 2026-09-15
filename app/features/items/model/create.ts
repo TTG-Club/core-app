@@ -1,4 +1,8 @@
-import type { ActiveEffect, EffectAbility } from '~active-effects/model';
+import type {
+  ActiveEffect,
+  EffectAbility,
+  EffectFormContext,
+} from '~active-effects/model';
 import type { DamageFormulaPart } from '~ui/damage-formula';
 import type { EditorBaseInfoState } from '~ui/editor';
 
@@ -525,6 +529,22 @@ export function normalizeItemBeforeSubmit(state: ItemCreate): ItemCreate {
     ),
     armor: state.category === 'ARMOR' ? state.armor : createEmptyArmor(),
     tool: state.category === 'TOOL' ? state.tool : createEmptyTool(),
-    activeEffects: normalizeActiveEffects(state.activeEffects),
+    activeEffects: normalizeActiveEffects(
+      state.activeEffects,
+      getItemEffectContext(state.category),
+    ),
   };
+}
+
+/**
+ * Место эффектов предмета: у оружия эффект может лечь на цель при попадании,
+ * у остального снаряжения — только на владельца.
+ *
+ * @param category категория предмета.
+ * @returns место формы эффекта.
+ */
+export function getItemEffectContext(
+  category: ItemCategory,
+): Extract<EffectFormContext, 'item' | 'weapon'> {
+  return category === 'WEAPON' ? 'weapon' : 'item';
 }

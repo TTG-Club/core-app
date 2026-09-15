@@ -122,6 +122,7 @@
       <ActiveEffects
         v-model="holder.activeEffects"
         nested
+        context="feature"
         :origin="EFFECT_ORIGIN.feature"
         :title="titles.effects"
       />

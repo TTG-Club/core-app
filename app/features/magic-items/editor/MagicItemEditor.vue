@@ -16,6 +16,7 @@
   import {
     createEmptyMagicItemMechanics,
     EMPTY_MAGIC_ITEM_BONUSES,
+    getMagicItemEffectContext,
     MAGIC_ITEM_EDITOR_SECTIONS,
     MAGIC_ITEM_EDITOR_TABS,
     MAGIC_ITEM_FORM_HINTS,
@@ -83,6 +84,14 @@
       normalizeLoaded: normalizeLoadedMagicItem,
       transformBeforeSubmit: normalizeMagicItemBeforeSubmit,
     });
+
+  /**
+   * Место эффектов магического предмета — по категории: у оружия эффект может
+   * лечь на цель при попадании.
+   */
+  const effectContext = computed(() =>
+    getMagicItemEffectContext(state.value.category),
+  );
 
   const tabItems: Array<TabsItem> = [
     { label: MAGIC_ITEM_EDITOR_TABS.main, slot: 'main' },
@@ -313,6 +322,7 @@
         <ActiveEffects
           v-if="state.mechanics"
           v-model="state.mechanics.activeEffects"
+          :context="effectContext"
           :origin="EFFECT_ORIGIN.item"
         />
       </template>

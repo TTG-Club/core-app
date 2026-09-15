@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { ActiveEffect, EffectOrigin, EffectTarget } from '../model';
+  import type { ActiveEffect, EffectFormContext, EffectOrigin } from '../model';
 
   import { EditorNestedSection } from '~ui/editor';
 
@@ -7,25 +7,42 @@
     ACTIVE_EFFECT_LABELS,
     createEmptyActiveEffect,
     DEFAULT_EFFECT_ICON,
+    describeEffectScenario,
     EFFECT_ORIGIN,
+    listInertEffectFields,
+    resolveEffectFormLayout,
   } from '../model';
   import ActiveEffectItem from './ui/ActiveEffectItem.vue';
 
   // Источник задаёт редактор-хозяин: он же и знает, чем эффект выдан.
   const {
+    context,
+    zoneAvailable = undefined,
+    sourceSaveDc = undefined,
     origin = EFFECT_ORIGIN.spell,
     title = ACTIVE_EFFECT_LABELS.title,
     nested = false,
-    defaultTarget = 'self',
   } = defineProps<{
-    origin?: EffectOrigin;
+    /**
+     * Место эффектов: заклинание, черта, предмет, оружие, действие или черта
+     * существа. От него зависят доставка нового эффекта, шаги формы и то, какие
+     * настройки здесь работают.
+     */
+    context: EffectFormContext;
 
     /**
-     * На кого нацелен новый эффект. У носителя, который описывает эффектом сам
-     * себя, это он сам; у действия существа — цель: укус накладывает Отравление
-     * на укушенного, а не на кусающего.
+     * Есть ли у заклинания область — где появиться зоне на месте шаблона.
+     * Передаёт только редактор заклинания; не задано — зона не прячется.
      */
-    defaultTarget?: EffectTarget;
+    zoneAvailable?: boolean;
+
+    /**
+     * Сл источника для «Авто» у полей Сл: у действия существа — Сл самого
+     * действия из формы.
+     */
+    sourceSaveDc?: number;
+
+    origin?: EffectOrigin;
 
     /**
      * Заголовок блока. Своим его называет редактор, у которого эффекты лежат
@@ -66,9 +83,39 @@
     },
   });
 
-  /** Без эффектов у карточки остаётся одна шапка: пустое тело места не занимает. */
+  /**
+   * Без эффектов у карточки остаётся одна шапка: пустое тело места не занимает.
+   * Обрезку содержимого карточка снимает всегда: под ней сводка раскрытого
+   * эффекта не прилипала бы к верху при прокрутке.
+   */
   const cardUi = computed(() =>
-    model.value.length ? {} : { body: 'p-0 sm:p-0' },
+    model.value.length
+      ? { root: 'overflow-visible' }
+      : { root: 'overflow-visible', body: 'p-0 sm:p-0' },
+  );
+
+  /**
+   * Свёрнутые строки: сводка — по ней автор и модератор сразу видят, что
+   * делает каждый эффект, — и число настроек, которые здесь не работают.
+   */
+  const effectRows = computed(() =>
+    model.value.map((effect) => {
+      const inertCount = listInertEffectFields(
+        effect,
+        resolveEffectFormLayout(context, effect, { zoneAvailable }),
+      ).length;
+
+      return {
+        effect,
+        icon: effect.icon || DEFAULT_EFFECT_ICON,
+        name: effect.name || ACTIVE_EFFECT_LABELS.unnamed,
+        scenario: describeEffectScenario(effect, context),
+        inertBadge:
+          inertCount > 0
+            ? `${ACTIVE_EFFECT_LABELS.inertBadge}${inertCount}`
+            : '',
+      };
+    }),
   );
 
   function addEffect() {
@@ -76,15 +123,17 @@
     // прежний массив — проп доедет только следующим тиком.
     const addedIndex = model.value.length;
 
-    model.value = [
-      ...model.value,
-      createEmptyActiveEffect(origin, defaultTarget),
-    ];
+    model.value = [...model.value, createEmptyActiveEffect(origin, context)];
 
     // Новый эффект сразу раскрыт: его всё равно тут же настраивают.
     expand(addedIndex);
   }
 
+  /**
+   * Просит подтвердить удаление эффекта.
+   *
+   * @param index номер эффекта.
+   */
   function askRemoveEffect(index: number) {
     pendingRemoval.value = index;
   }
@@ -105,6 +154,12 @@
     dropRow(index);
   }
 
+  /**
+   * Заменяет эффект целиком.
+   *
+   * @param index номер эффекта.
+   * @param value новый эффект.
+   */
   function updateEffect(index: number, value: ActiveEffect) {
     model.value = model.value.map((effect, position) =>
       position === index ? value : effect,
@@ -119,8 +174,8 @@
       class="flex flex-col gap-3"
     >
       <div
-        v-for="(effect, index) in model"
-        :key="index"
+        v-for="(row, index) in effectRows"
+        :key="row.effect.id"
         class="rounded-lg border border-default bg-elevated/20"
       >
         <div
@@ -137,14 +192,31 @@
             @click.left.exact.prevent="toggle(index)"
           >
             <UIcon
-              :name="effect.icon || DEFAULT_EFFECT_ICON"
+              :name="row.icon"
               class="size-5 shrink-0 text-primary"
             />
 
-            <span class="min-w-0 flex-1 truncate text-left text-base">
-              {{ effect.name || ACTIVE_EFFECT_LABELS.unnamed }}
+            <span class="flex min-w-0 flex-1 flex-col text-left">
+              <span class="truncate text-base">
+                {{ row.name }}
+              </span>
+
+              <span class="truncate text-xs text-muted">
+                {{ row.scenario }}
+              </span>
             </span>
           </button>
+
+          <UBadge
+            v-if="row.inertBadge"
+            color="warning"
+            variant="subtle"
+            size="sm"
+            icon="tabler:alert-triangle"
+            class="shrink-0"
+          >
+            {{ row.inertBadge }}
+          </UBadge>
 
           <UButton
             icon="tabler:trash"
@@ -167,7 +239,10 @@
           class="border-t border-default p-3"
         >
           <ActiveEffectItem
-            :model-value="effect"
+            :model-value="row.effect"
+            :context="context"
+            :zone-available="zoneAvailable"
+            :source-save-dc="sourceSaveDc"
             @update:model-value="updateEffect(index, $event)"
           />
         </div>

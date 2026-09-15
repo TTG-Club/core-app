@@ -125,20 +125,35 @@
       revisionEntityType: REVISION_ENTITY_TYPES.CREATURE,
       transformBeforeSubmit: (formState) => ({
         ...formState,
-        traits: normalizeCreatureActions(formState.traits),
-        actions: normalizeCreatureActions(formState.actions),
-        bonusActions: normalizeCreatureActions(formState.bonusActions),
-        reactions: normalizeCreatureActions(formState.reactions),
+        traits: normalizeCreatureActions(formState.traits, 'creatureTrait'),
+        actions: normalizeCreatureActions(formState.actions, 'creatureAction'),
+        bonusActions: normalizeCreatureActions(
+          formState.bonusActions,
+          'creatureAction',
+        ),
+        reactions: normalizeCreatureActions(
+          formState.reactions,
+          'creatureAction',
+        ),
         legendary: {
           ...formState.legendary,
-          actions: normalizeCreatureActions(formState.legendary.actions),
+          actions: normalizeCreatureActions(
+            formState.legendary.actions,
+            'creatureAction',
+          ),
         },
         lair: {
           ...formState.lair,
-          effects: normalizeCreatureActions(formState.lair.effects),
+          effects: normalizeCreatureActions(
+            formState.lair.effects,
+            'creatureAction',
+          ),
         },
         spellcasting: normalizeCreatureSpellcasting(formState.spellcasting),
-        activeEffects: normalizeActiveEffects(formState.activeEffects),
+        activeEffects: normalizeActiveEffects(
+          formState.activeEffects,
+          'ownEffects',
+        ),
       }),
     });
 
@@ -386,6 +401,7 @@
       <template #effects>
         <ActiveEffects
           v-model="state.activeEffects"
+          context="ownEffects"
           :origin="EFFECT_ORIGIN.feature"
         />
       </template>

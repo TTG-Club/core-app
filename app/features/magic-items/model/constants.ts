@@ -9,6 +9,9 @@ interface Option<Value extends string> {
   value: Value;
 }
 
+/** Категория магического оружия (`MagicItemCategory.WEAPON` бэкенда). */
+export const MAGIC_ITEM_WEAPON_CATEGORY = 'WEAPON';
+
 /** Бонус магического предмета отсутствует: поле не заполнено. */
 export const MAGIC_ITEM_BONUS_NONE = 0;
 

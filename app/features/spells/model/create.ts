@@ -675,6 +675,17 @@ function normalizeSpellCantripScalingTiers(
 }
 
 /**
+ * Есть ли у заклинания область: на её месте VTTG оставляет зону, в которую
+ * уходят эффекты с доставкой «зоной на месте области».
+ *
+ * @param effect воздействие заклинания.
+ * @returns `true`, если цель — область и её форма выбрана.
+ */
+export function hasSpellArea(effect: SpellEffect): boolean {
+  return effect.targetType === 'AREA' && Boolean(effect.areaOfEffect?.type);
+}
+
+/**
  * Нормализует SpellEffect перед отправкой на сервер:
  * - Удаляет пустые массивы и незаполненные вложенные объекты.
  * - Очищает areaOfEffect, если targetType не AREA.

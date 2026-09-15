@@ -1,4 +1,4 @@
-import type { ActiveEffect } from '~active-effects/model';
+import type { ActiveEffect, EffectFormContext } from '~active-effects/model';
 import type { DamageFormulaPart } from '~ui/damage-formula';
 import type { EditorBaseInfoState } from '~ui/editor';
 
@@ -12,6 +12,8 @@ import {
   normalizeDamageFormulaParts,
   parseLoadedDamageFormulaParts,
 } from '~ui/damage-formula';
+
+import { MAGIC_ITEM_WEAPON_CATEGORY } from './constants';
 
 export interface MagicItemCreate extends EditorBaseInfoState {
   description: string; // описание маркап
@@ -99,6 +101,19 @@ export interface MagicItemCategory {
   clarification: string | undefined; // описание категории
 }
 
+/**
+ * Место эффектов магического предмета: у оружия эффект может лечь на цель при
+ * попадании, у остальных предметов — только на владельца.
+ *
+ * @param category категория предмета.
+ * @returns место формы эффекта.
+ */
+export function getMagicItemEffectContext(
+  category: MagicItemCategory,
+): Extract<EffectFormContext, 'item' | 'weapon'> {
+  return category.type === MAGIC_ITEM_WEAPON_CATEGORY ? 'weapon' : 'item';
+}
+
 export interface MagicItemRarity {
   type: string | undefined; // редкость
   varies: string | undefined; // текст для магических предметов с варьируемой редкостью
@@ -160,12 +175,18 @@ function normalizeMagicItemResource(
  * ему есть что применять.
  *
  * @param mechanics механика из формы.
+ * @param effectContext место эффектов: оружие или прочий предмет.
  * @returns механика для запроса; null — заполнять было нечего.
  */
 export function normalizeMagicItemMechanics(
   mechanics: MagicItemMechanics,
+  effectContext: Extract<EffectFormContext, 'item' | 'weapon'>,
 ): MagicItemMechanics | null {
-  const activeEffects = normalizeActiveEffects(mechanics.activeEffects);
+  const activeEffects = normalizeActiveEffects(
+    mechanics.activeEffects,
+    effectContext,
+  );
+
   const resource = normalizeMagicItemResource(mechanics.resource);
   const passive = trimmedOrUndefined(mechanics.passive);
 
@@ -285,7 +306,10 @@ export function normalizeMagicItemBeforeSubmit(
   return {
     ...state,
     mechanics: state.mechanics
-      ? normalizeMagicItemMechanics(state.mechanics)
+      ? normalizeMagicItemMechanics(
+          state.mechanics,
+          getMagicItemEffectContext(state.category),
+        )
       : null,
     damageParts: normalizeDamageFormulaParts(state.damageParts),
     charges: getMagicItemChargesField(state.mechanics),

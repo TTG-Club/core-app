@@ -3,15 +3,15 @@
  * VTTG (Virtual TTG Club). Одна и та же у всего, что меняет числа на листе
  * персонажа: заклинаний, черт и магических предметов.
  *
- * Структура повторяет `ActiveEffect` из `@vtt/shared` один-в-один, чтобы экспорт
- * в VTTG был pass-through без преобразования словарей: характеристики хранятся
- * полными именами (`strength`…`charisma`), ключи состояний/режимов/флагов — в
- * тех же строковых значениях, что и в VTTG.
+ * Структура повторяет `ActiveEffect` системы dnd5e-2024 один-в-один, чтобы
+ * экспорт в VTTG был pass-through без преобразования словарей: характеристики
+ * хранятся полными именами (`strength`…`charisma`), ключи состояний, режимов и
+ * флагов — в тех же строковых значениях, что и в VTTG.
  *
- * Зеркало: vttg/packages/shared/src/system/dnd/activeEffectTypes.ts
+ * Зеркало: dnd5-test-migrate/src/engine/activeEffectTypes.ts
  */
 
-import { z } from 'zod';
+import type { EffectTrigger } from './triggerTypes';
 
 /** Характеристика D&D 5e (полное имя — словарь VTTG). */
 export type EffectAbility =
@@ -100,8 +100,14 @@ export type EffectConditionKey =
   | 'stunned'
   | 'unconscious';
 
-/** Куда применяется эффект. */
-export type EffectTarget = 'self' | 'target';
+/**
+ * Куда доставляется эффект:
+ * - `self` (по умолчанию) — на носителе;
+ * - `target` — на цели при попадании атакой или задетой заклинанием;
+ * - `zone` — в зону, которую заклинание оставляет на месте шаблона; на
+ *   заклинателе и на целях каста не действует.
+ */
+export type EffectTarget = 'self' | 'target' | 'zone';
 
 /** Кого задевает аура. */
 export type EffectAuraTarget = 'allies' | 'enemies' | 'all';
@@ -175,6 +181,7 @@ export interface EffectAura {
 /** Спасбросок при наложении эффекта (в момент попадания атакой/областью). */
 export interface EffectSave {
   ability: EffectAbility;
+  /** Сложность (`0` = Сл источника: заклинателя, действия, оружия). */
   dc: number;
   onSuccess: EffectSaveOutcome;
 }
@@ -191,6 +198,12 @@ export interface EffectRecurringSave {
 export interface EffectRecurringDamage {
   damageParts: EffectDamagePart[];
   timing: EffectSaveTiming;
+  /**
+   * Спасбросок против урона на каждом тике: провал — полный урон, успех — по
+   * `onSuccess` (без урона или половина). Эффект при этом остаётся — снимает
+   * его только `recurringSave`. `dc === 0` — Сл заклинателя.
+   */
+  save?: EffectSave;
 }
 
 /** Активный эффект — полная структура VTTG `ActiveEffect`. */
@@ -209,7 +222,10 @@ export interface ActiveEffect {
   origin: EffectOrigin;
   /** ID объекта-источника. */
   originId?: string;
-  /** Переносится ли эффект с предмета на актора при экипировке. */
+  /**
+   * Прежний признак переноса с предмета. Движок VTTG его не читает — у
+   * надетого предмета переносятся все эффекты, — но в данных поле остаётся.
+   */
   transfer: boolean;
   /** Длительность эффекта. */
   duration: EffectDuration;
@@ -221,7 +237,7 @@ export interface ActiveEffect {
   aura?: EffectAura;
   /** Триггер для эффектов области/ауры. */
   areaTrigger?: EffectAreaTrigger;
-  /** Цель применения эффекта (`self` по умолчанию). */
+  /** Куда доставляется эффект (`self` по умолчанию). */
   effectTarget?: EffectTarget;
   /** Ключ стандартного состояния D&D 5e, если эффект его представляет. */
   conditionKey?: EffectConditionKey;
@@ -248,10 +264,19 @@ export interface ActiveEffect {
   /** Периодический урон (DoT). */
   recurringDamage?: EffectRecurringDamage;
   /**
+   * Срабатывания, которых не выражают старые поля (урон каждый ход, повторный
+   * спасбросок, снятие после атаки): лимит «раз в ход», состояние на ходу,
+   * ход источника. Старые поля читаются как срабатывания `legacy.*` —
+   * `collectEffectTriggers` (`triggers.ts`).
+   */
+  triggers?: EffectTrigger[];
+  /**
    * Состояния, к которым эффект даёт иммунитет носителю (напр. Окаменевший
    * даёт иммунитет к Отравлению).
    */
   conditionImmunities?: EffectConditionKey[];
+  /** Степень Истощения (1–6), если `conditionKey === 'exhaustion'`. */
+  exhaustionLevel?: number;
 }
 
 /** Приоритет по умолчанию для нового изменения. */
@@ -259,38 +284,6 @@ export const DEFAULT_EFFECT_CHANGE_PRIORITY = 20;
 
 /** Иконка эффекта по умолчанию. */
 export const DEFAULT_EFFECT_ICON = 'tabler:sparkles';
-
-/** Приставка ключа эффекта: по ней в данных видно, чей это ключ. */
-const EFFECT_ID_PREFIX = 'effect';
-
-/**
- * Создаёт пустой активный эффект с дефолтами VTTG.
- *
- * @param origin чем эффект выдан; по умолчанию заклинанием.
- * @param defaultTarget на кого эффект нацелен изначально. У носителя, который
- *   эффектом описывает сам себя (черта, вид, предмет), это он сам; у действия
- *   существа — цель: укус накладывает Отравление на укушенного, и с `self`
- *   оркестратор VTTG не считает эффект предназначенным цели.
- * @returns новый эффект.
- */
-export function createEmptyActiveEffect(
-  origin: EffectOrigin = EFFECT_ORIGIN.spell,
-  defaultTarget: EffectTarget = 'self',
-): ActiveEffect {
-  return {
-    id: createEntityId(EFFECT_ID_PREFIX),
-    name: 'Новый эффект',
-    description: '',
-    icon: DEFAULT_EFFECT_ICON,
-    disabled: false,
-    origin,
-    transfer: false,
-    duration: { type: 'permanent' },
-    changes: [],
-    flags: [],
-    effectTarget: defaultTarget,
-  };
-}
 
 /** Ключ нового изменения по умолчанию: класс доспеха меняют чаще всего. */
 export const DEFAULT_EFFECT_CHANGE_KEY = 'armorClass';
@@ -309,350 +302,41 @@ export function createEmptyEffectChange(): EffectChange {
   };
 }
 
+/** Цель части урона без поля: выбранная цель. */
+export const DEFAULT_EFFECT_DAMAGE_PART_TARGET: EffectDamagePartTarget =
+  'selected';
+
 /** Создаёт пустую часть урона эффекта. */
 export function createEmptyEffectDamagePart(): EffectDamagePart {
   return {
     formula: '',
-    target: 'selected',
+    target: DEFAULT_EFFECT_DAMAGE_PART_TARGET,
   };
 }
 
 /** Флаг по умолчанию для нового элемента списка флагов. */
 export const DEFAULT_EFFECT_FLAG = 'vision.blinded';
 
-/** Дефолтный спасбросок при включении соответствующих блоков эффекта. */
-export const DEFAULT_EFFECT_SAVE: EffectSave = {
-  ability: 'wisdom',
-  dc: 13,
-  onSuccess: 'negate',
-};
+/**
+ * Читает число из поля формы: число как есть, строку с числом — числом.
+ *
+ * Поле ввода числа отдаёт пустую строку, когда его очистили, а без
+ * модификатора `.number` — строку с числом.
+ *
+ * @param value значение поля ввода.
+ * @returns число либо `undefined` для пустого, нечислового ввода и `NaN`.
+ */
+export function parseFormNumber(value: unknown): number | undefined {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : undefined;
+  }
 
-/** Дефолтные параметры ауры при её включении. */
-export const DEFAULT_EFFECT_AURA: EffectAura = {
-  radius: 10,
-  target: 'allies',
-  applyToSelf: true,
-  visible: true,
-};
-
-/** Нормализует часть урона эффекта: trim формулы, сброс пустых полей. */
-function normalizeEffectDamagePart(part: EffectDamagePart): EffectDamagePart {
-  return {
-    // Тип урона живёт токеном `@dmg.*` в самой формуле (`migrateEffectDamagePart`
-    // переносит туда легаси-поле при загрузке), поэтому наружу оно не уходит:
-    // два источника типа рано или поздно разошлись бы.
-    formula: part.formula.trim(),
-    type: undefined,
-    target: part.target ?? 'selected',
-    requiresDamage: part.requiresDamage || undefined,
-  };
-}
-
-/** Отбрасывает части без формулы и нормализует оставшиеся. */
-function normalizeEffectDamageParts(
-  parts: EffectDamagePart[] | undefined,
-): EffectDamagePart[] | undefined {
-  if (!parts?.length) {
+  if (typeof value !== 'string') {
     return undefined;
   }
 
-  const cleaned = parts
-    .filter((part) => part.formula.trim().length > 0)
-    .map(normalizeEffectDamagePart);
+  const trimmed = value.trim();
+  const parsed = Number(trimmed);
 
-  return cleaned.length > 0 ? cleaned : undefined;
-}
-
-/** Нормализует одно изменение: trim ключа/значения, пустое условие → undefined. */
-function normalizeEffectChange(change: EffectChange): EffectChange {
-  const condition = change.condition?.trim();
-
-  return {
-    key: change.key.trim(),
-    mode: change.mode,
-    value: change.value.trim(),
-    condition: condition || undefined,
-    priority: change.priority,
-  };
-}
-
-/**
- * Нормализует длительность: якорь и момент хода осмысленны только у точной
- * «ходовой» длительности, а у остальных типов они молча сбивали бы с толку —
- * поле в форме скрыто, а значение от прошлого выбора осталось бы в записи.
- *
- * @param duration длительность эффекта.
- * @returns длительность без лишних полей.
- */
-function normalizeEffectDuration(duration: EffectDuration): EffectDuration {
-  if (duration.type !== 'turn') {
-    return {
-      type: duration.type,
-      value: duration.value,
-      remaining: duration.remaining,
-    };
-  }
-
-  return {
-    type: duration.type,
-    turnAnchor: duration.turnAnchor ?? 'carrier',
-    turnTiming: duration.turnTiming ?? 'end',
-  };
-}
-
-/**
- * Нормализует один активный эффект перед отправкой на сервер:
- * - убирает пустые изменения (без ключа или значения) и пустые флаги;
- * - очищает части урона без формулы;
- * - сбрасывает `aura`/`effectTarget` во взаимоисключающих режимах;
- * - оставляет ровно один из взаимоисключающих исходов спасброска.
- */
-function normalizeActiveEffect(effect: ActiveEffect): ActiveEffect {
-  const changes = effect.changes
-    .map(normalizeEffectChange)
-    .filter((change) => change.key.length > 0 && change.value.length > 0);
-
-  const flags = effect.flags
-    .map((flag) => flag.trim())
-    .filter((flag) => flag.length > 0);
-
-  const damageParts = normalizeEffectDamageParts(effect.damageParts);
-
-  const recurringDamage = effect.recurringDamage
-    ? {
-        timing: effect.recurringDamage.timing,
-        damageParts:
-          normalizeEffectDamageParts(effect.recurringDamage.damageParts) ?? [],
-      }
-    : undefined;
-
-  // Аура и эффект на цель — взаимоисключающие режимы.
-  const aura = effect.effectTarget === 'target' ? undefined : effect.aura;
-
-  // «Даже при успехе» и «только при успехе» вместе не читаются: движок всё
-  // равно выбрал бы одно, поэтому наружу уходит ровно один исход.
-  const applyOnSuccess = effect.applyOnSuccess === true ? true : undefined;
-
-  const applyOnSuccessOnly =
-    !applyOnSuccess && effect.applyOnSuccessOnly === true ? true : undefined;
-
-  return {
-    ...effect,
-    name: effect.name.trim(),
-    description: effect.description.trim(),
-    icon: effect.icon?.trim() || undefined,
-    duration: normalizeEffectDuration(effect.duration),
-    changes,
-    flags,
-    aura,
-    applyOnSuccess,
-    applyOnSuccessOnly,
-    damageParts,
-    recurringDamage,
-    conditionImmunities: effect.conditionImmunities?.length
-      ? effect.conditionImmunities
-      : undefined,
-  };
-}
-
-/**
- * Нормализует массив активных эффектов перед сохранением.
- * Отбрасывает эффекты без названия.
- */
-export function normalizeActiveEffects(
-  effects: ActiveEffect[] | undefined,
-): ActiveEffect[] {
-  if (!effects?.length) {
-    return [];
-  }
-
-  return effects
-    .map(normalizeActiveEffect)
-    .filter((effect) => effect.name.length > 0);
-}
-
-// ── Zod-схемы для валидации загруженных с сервера данных ──────────
-// Внешние данные считаем `unknown` и валидируем через Zod (см. AGENTS.md),
-// без приведений типов. Закрытые наборы значений описаны через `z.enum`,
-// открытые (флаги, ключи изменений, типы урона) — как строки.
-
-const durationSchema: z.ZodType<EffectDuration> = z.object({
-  type: z.enum([
-    'permanent',
-    'rounds',
-    'minutes',
-    'hours',
-    'days',
-    'turn',
-    'special',
-  ]),
-  value: z.number().optional(),
-  remaining: z.number().optional(),
-  turnAnchor: z.enum(['carrier', 'source']).optional(),
-  turnTiming: z.enum(['start', 'end']).optional(),
-});
-
-const changeSchema: z.ZodType<EffectChange> = z.object({
-  key: z.string(),
-  mode: z.enum([
-    'add',
-    'multiply',
-    'override',
-    'upgrade',
-    'downgrade',
-    'custom',
-  ]),
-  value: z.string(),
-  condition: z.string().optional(),
-  priority: z.number(),
-});
-
-const damagePartSchema: z.ZodType<EffectDamagePart> = z.object({
-  formula: z.string(),
-  type: z.string().optional(),
-  target: z.enum(['selected', 'self', 'choose']).optional(),
-  requiresDamage: z.boolean().optional(),
-});
-
-const auraSchema: z.ZodType<EffectAura> = z.object({
-  radius: z.number(),
-  target: z.enum(['allies', 'enemies', 'all']),
-  applyToSelf: z.boolean(),
-  visible: z.boolean().optional(),
-});
-
-const abilitySchema = z.enum([
-  'strength',
-  'dexterity',
-  'constitution',
-  'intelligence',
-  'wisdom',
-  'charisma',
-]);
-
-const saveSchema: z.ZodType<EffectSave> = z.object({
-  ability: abilitySchema,
-  dc: z.number(),
-  onSuccess: z.enum(['negate', 'half']),
-});
-
-const recurringSaveSchema: z.ZodType<EffectRecurringSave> = z.object({
-  ability: abilitySchema,
-  dc: z.number(),
-  timing: z.enum(['startOfTurn', 'endOfTurn']),
-});
-
-const recurringDamageSchema: z.ZodType<EffectRecurringDamage> = z.object({
-  damageParts: z.array(damagePartSchema),
-  timing: z.enum(['startOfTurn', 'endOfTurn']),
-});
-
-const conditionKeySchema = z.enum([
-  'blinded',
-  'charmed',
-  'deafened',
-  'exhaustion',
-  'frightened',
-  'grappled',
-  'incapacitated',
-  'invisible',
-  'paralyzed',
-  'petrified',
-  'poisoned',
-  'prone',
-  'restrained',
-  'stunned',
-  'unconscious',
-]);
-
-const activeEffectSchema: z.ZodType<ActiveEffect> = z.object({
-  id: z.string(),
-  name: z.string(),
-  description: z.string(),
-  icon: z.string().optional(),
-  disabled: z.boolean(),
-  origin: z.enum(EFFECT_ORIGIN),
-  originId: z.string().optional(),
-  transfer: z.boolean(),
-  duration: durationSchema,
-  changes: z.array(changeSchema),
-  flags: z.array(z.string()),
-  aura: auraSchema.optional(),
-  areaTrigger: z.enum(['stay', 'enter', 'exit']).optional(),
-  effectTarget: z.enum(['self', 'target']).optional(),
-  conditionKey: conditionKeySchema.optional(),
-  applySave: saveSchema.optional(),
-  applyOnSuccess: z.boolean().optional(),
-  applyOnSuccessOnly: z.boolean().optional(),
-  consumeOn: z.enum(['carrierAttack', 'attackOnCarrier']).optional(),
-  damageParts: z.array(damagePartSchema).optional(),
-  recurringSave: recurringSaveSchema.optional(),
-  recurringDamage: recurringDamageSchema.optional(),
-  conditionImmunities: z.array(conditionKeySchema).optional(),
-});
-
-/**
- * Переносит легаси-поле `type` части урона в токен формулы.
- *
- * Тип урона задаётся токеном `@dmg.<тип>`, а прежний редактор писал его
- * отдельным полем. Без переноса такая часть в форме выглядела бы «без типа»:
- * вкладки правят формулу, а поля `type` в них нет.
- *
- * @param part часть урона, как её отдал сервер.
- * @returns часть, у которой тип живёт в формуле.
- */
-function migrateEffectDamagePart(part: EffectDamagePart): EffectDamagePart {
-  const formula = part.formula;
-  const hasTypeToken = formula.includes('@dmg.') || formula.includes('@heal');
-
-  if (!part.type || hasTypeToken) {
-    return { ...part, type: undefined };
-  }
-
-  return { ...part, formula: `${formula}@dmg.${part.type}`, type: undefined };
-}
-
-/**
- * Переносит легаси-типы урона во всех частях эффекта: при наложении и в
- * периодическом уроне.
- *
- * @param effect загруженный эффект.
- * @returns эффект с типами урона в формулах.
- */
-function migrateLoadedActiveEffect(effect: ActiveEffect): ActiveEffect {
-  return {
-    ...effect,
-    damageParts: effect.damageParts?.map(migrateEffectDamagePart),
-    recurringDamage: effect.recurringDamage
-      ? {
-          ...effect.recurringDamage,
-          damageParts: effect.recurringDamage.damageParts.map(
-            migrateEffectDamagePart,
-          ),
-        }
-      : undefined,
-  };
-}
-
-/**
- * Нормализует массив активных эффектов, загруженный с сервера.
- * Валидирует каждый эффект Zod-схемой и отбрасывает некорректные,
- * чтобы одна битая запись не обнулила весь список.
- */
-export function normalizeLoadedActiveEffects(raw: unknown): ActiveEffect[] {
-  if (!Array.isArray(raw)) {
-    return [];
-  }
-
-  const effects: ActiveEffect[] = [];
-
-  for (const item of raw) {
-    const parsed = activeEffectSchema.safeParse(item);
-
-    if (parsed.success) {
-      effects.push(migrateLoadedActiveEffect(parsed.data));
-    }
-  }
-
-  return effects;
+  return trimmed === '' || !Number.isFinite(parsed) ? undefined : parsed;
 }
