@@ -28,6 +28,7 @@
     REVIEW_WINDOW_HINT,
     submitSessionReview,
   } from '../../model';
+  import { ParticipantName } from '../../ui';
 
   /**
    * Взаимные оценки за встречу.
@@ -47,7 +48,7 @@
 
   const { showError, showSuccess } = useFindGameToast();
   const { user } = useUser();
-  const { getParticipantName, resolveNames } = useParticipantNames();
+  const { getParticipantAvatarName, resolveNames } = useParticipantNames();
 
   const currentUserId = computed(() => user.value?.id ?? null);
 
@@ -241,13 +242,13 @@
               <span class="flex min-w-0 items-center gap-2">
                 <UserAvatar
                   :user-id="targetId"
-                  :name="getParticipantName(targetId)"
+                  :name="getParticipantAvatarName(targetId)"
                   size="2xs"
                   class="shrink-0"
                 />
 
                 <span class="font-medium text-highlighted">
-                  {{ getParticipantName(targetId) }}
+                  <ParticipantName :user-id="targetId" />
                 </span>
               </span>
 

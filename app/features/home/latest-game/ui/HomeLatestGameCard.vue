@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import type { Game } from '~find-game/model';
 
-  import { useGameSystems } from '~find-game/composables';
+  import { useGameSystems, useParticipantNames } from '~find-game/composables';
   import {
     GAME_COST_TYPE_COLORS,
     GAME_COST_TYPE_ICONS,
@@ -18,14 +18,18 @@
     getGameSeatsHint,
     getGenresLabel,
   } from '~find-game/model';
-  import { GameCover } from '~find-game/ui';
+  import { GameCover, ParticipantName } from '~find-game/ui';
   import { UserAvatar } from '~ui/user-avatar';
 
-  const { game, masterName } = defineProps<{
+  const { game } = defineProps<{
     game: Game;
-    /** Имя мастера: сервис игр знает только идентификатор, имя резолвит родитель */
-    masterName: string;
   }>();
+
+  // Сервис игр знает только идентификатор мастера, имя приходит из core-api.
+  const { getParticipantAvatarName } = useParticipantNames();
+
+  /** Имя мастера; null — ещё грузится. */
+  const masterName = computed(() => getParticipantAvatarName(game.masterId));
 
   const { format } = useDayjs();
 
@@ -63,7 +67,11 @@
   );
 
   /** Подпись «Мастер» в строке заменена короной — полное имя остаётся в подсказке */
-  const masterHint = computed(() => `${GAME_MASTER_LABEL}: ${masterName}`);
+  const masterHint = computed(() =>
+    masterName.value
+      ? `${GAME_MASTER_LABEL}: ${masterName.value}`
+      : GAME_MASTER_LABEL,
+  );
 
   const seatsHint = computed(() => getGameSeatsHint(game));
 
@@ -193,7 +201,9 @@
             class="shrink-0"
           />
 
-          <span class="truncate font-medium text-toned">{{ masterName }}</span>
+          <span class="truncate font-medium text-toned">
+            <ParticipantName :user-id="game.masterId" />
+          </span>
         </span>
 
         <span

@@ -14,24 +14,21 @@ export function usePlayerProfileDrawer() {
   let drawer: ReturnType<typeof overlay.create> | undefined;
 
   /**
-   * Открывает профиль игрока.
+   * Открывает профиль игрока. Имя дровер находит по идентификатору сам:
+   * если оно ещё грузится, то появится, когда приедет.
    *
    * @param playerId Идентификатор игрока.
-   * @param playerName Отображаемое имя: сервис поиска игр знает только
-   *   идентификатор, имя приходит из core-api.
    */
-  function open(playerId: string, playerName: string): void {
+  function open(playerId: string): void {
     drawer ??= overlay.create(PlayerProfileDrawer, {
       props: {
         playerId,
-        playerName,
         onClose: () => drawer?.close(),
       },
     });
 
     drawer.open({
       playerId,
-      playerName,
       onClose: () => drawer?.close(),
     });
   }

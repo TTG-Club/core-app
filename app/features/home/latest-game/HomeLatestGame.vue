@@ -62,7 +62,7 @@
       : HOME_LATEST_GAME_EMPTY_TEXT,
   );
 
-  const { getParticipantName, watchParticipantNames } = useParticipantNames();
+  const { watchParticipantNames } = useParticipantNames();
 
   // Имя мастера живёт в core-api: сервис игр знает только идентификатор.
   watchParticipantNames(() =>
@@ -108,7 +108,6 @@
     <HomeLatestGameCard
       v-else-if="latestGame"
       :game="latestGame"
-      :master-name="getParticipantName(latestGame.masterId)"
     />
 
     <p

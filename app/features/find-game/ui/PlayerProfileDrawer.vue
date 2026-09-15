@@ -3,6 +3,7 @@
   import { UiResult } from '~ui/result';
   import { UserAvatar } from '~ui/user-avatar';
 
+  import { useParticipantNames } from '../composables';
   import {
     fetchPlayerProfile,
     getFindGameErrorMessage,
@@ -23,11 +24,20 @@
    * здесь нет: отзывы об игроках мастер читает через заявку в свою игру, и
    * показывать их соседям по составу было бы разговором за спиной.
    */
-  const { playerId, playerName } = defineProps<{
+  const { playerId } = defineProps<{
+    /** Сервис поиска игр знает только идентификатор, имя приходит из core-api. */
     playerId: string;
-    /** Имя из core-api: сервис поиска игр знает только идентификатор. */
-    playerName: string;
   }>();
+
+  const {
+    getParticipantName,
+    getParticipantAvatarName,
+    isParticipantNamePending,
+    watchParticipantNames,
+  } = useParticipantNames();
+
+  // Дровер открывают из разных мест, и списка участников рядом может не быть.
+  watchParticipantNames(() => [playerId]);
 
   const emit = defineEmits<{
     close: [];
@@ -64,16 +74,22 @@
       <section class="flex items-start gap-4">
         <UserAvatar
           :user-id="playerId"
-          :name="playerName"
+          :name="getParticipantAvatarName(playerId)"
           size="3xl"
           class="shrink-0 bg-primary/10 text-primary"
         />
 
         <div class="flex min-w-0 flex-auto flex-col gap-1">
+          <USkeleton
+            v-if="isParticipantNamePending(playerId)"
+            class="h-6 w-40"
+          />
+
           <h2
+            v-else
             class="text-xl/tight font-semibold wrap-break-word text-highlighted"
           >
-            {{ playerName }}
+            {{ getParticipantName(playerId) }}
           </h2>
 
           <USkeleton

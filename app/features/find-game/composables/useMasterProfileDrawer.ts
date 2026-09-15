@@ -12,24 +12,21 @@ export function useMasterProfileDrawer() {
   let drawer: ReturnType<typeof overlay.create> | undefined;
 
   /**
-   * Открывает профиль мастера.
+   * Открывает профиль мастера. Имя дровер находит по идентификатору сам:
+   * если оно ещё грузится, то появится, когда приедет.
    *
    * @param masterId Идентификатор мастера.
-   * @param masterName Отображаемое имя: сервис поиска игр знает только
-   *   идентификатор, имя приходит из core-api.
    */
-  function open(masterId: string, masterName: string): void {
+  function open(masterId: string): void {
     drawer ??= overlay.create(MasterProfileDrawer, {
       props: {
         masterId,
-        masterName,
         onClose: () => drawer?.close(),
       },
     });
 
     drawer.open({
       masterId,
-      masterName,
       onClose: () => drawer?.close(),
     });
   }

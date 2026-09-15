@@ -3,7 +3,11 @@
 
   import { UserAvatar } from '~ui/user-avatar';
 
-  import { useGameSystems, useMasterProfileDrawer } from '../../composables';
+  import {
+    useGameSystems,
+    useMasterProfileDrawer,
+    useParticipantNames,
+  } from '../../composables';
   import {
     GAME_COST_TYPE_ICONS,
     GAME_COST_TYPE_LABELS,
@@ -29,7 +33,7 @@
     SESSION_REGISTRATION_STATUS_COLORS,
     SESSION_REGISTRATION_STATUS_LABELS,
   } from '../../model';
-  import { GameCover, GameFavoriteButton } from '../../ui';
+  import { GameCover, GameFavoriteButton, ParticipantName } from '../../ui';
 
   /**
    * Значок состояния в «Моих играх»: состояние игры, своя заявка или
@@ -47,21 +51,15 @@
     icon?: string;
   }
 
-  const {
-    game,
-    masterName,
-    showStatus = false,
-  } = defineProps<{
+  const { game, showStatus = false } = defineProps<{
     game: Game;
-    /**
-     * Имя мастера. Резолвится списком в родителе: find-game-api знает только
-     * идентификатор, а по карточке на запрос вышло бы восемь запросов на
-     * страницу.
-     */
-    masterName: string;
     /** Показывать ли статус и видимость — нужно в разделе «Мои игры». */
     showStatus?: boolean;
   }>();
+
+  // find-game-api знает только идентификатор мастера. Имена всех карточек
+  // страницы уходят в core-api одной пачкой за тик, а не запросом на карточку.
+  const { getParticipantAvatarName } = useParticipantNames();
 
   // Код приглашения в ссылку каталога не подставляется: в публичную выдачу
   // приватные игры не попадают, а у своих игр мастер открывает ссылку отдельно.
@@ -191,7 +189,7 @@
 
   /** Открывает профиль мастера этой игры. */
   function openMasterProfile(): void {
-    openProfile(game.masterId, masterName);
+    openProfile(game.masterId);
   }
 </script>
 
@@ -385,7 +383,7 @@
 
           <UserAvatar
             :user-id="game.masterId"
-            :name="masterName"
+            :name="getParticipantAvatarName(game.masterId)"
             size="2xs"
             class="shrink-0"
           />
@@ -400,7 +398,7 @@
             :aria-label="MASTER_PROFILE_OPEN_HINT"
             @click.left.exact.prevent.stop="openMasterProfile"
           >
-            {{ masterName }}
+            <ParticipantName :user-id="game.masterId" />
           </ULink>
         </div>
 

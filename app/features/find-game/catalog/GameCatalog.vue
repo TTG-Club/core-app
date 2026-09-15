@@ -77,7 +77,7 @@
 
   const shareIcon = isApple ? FILTER_SHARE_ICON_APPLE : FILTER_SHARE_ICON;
 
-  const { getParticipantName, watchParticipantNames } = useParticipantNames();
+  const { watchParticipantNames } = useParticipantNames();
 
   // Имена мастеров живут в core-api, поэтому резолвятся отдельно и сразу на
   // всю страницу выдачи — по карточке на запрос было бы восемь запросов.
@@ -211,7 +211,6 @@
           v-for="game in games"
           :key="game.id"
           :game="game"
-          :master-name="getParticipantName(game.masterId)"
         />
       </PageGrid>
 

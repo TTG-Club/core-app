@@ -24,6 +24,7 @@
     SESSION_DEFAULT_CURRENCY,
     topUpGameAccount,
   } from '../model';
+  import { ParticipantName } from '../ui';
 
   /** Готовый бейдж баланса по одной валюте: разные деньги не складываются. */
   interface CurrencyBalance {
@@ -89,7 +90,7 @@
 
   const { game } = defineProps<{ game: Game }>();
   const toast = useToast();
-  const { getParticipantName, resolveNames } = useParticipantNames();
+  const { getParticipantAvatarName, resolveNames } = useParticipantNames();
   const depositAmounts = ref<Record<string, number>>({});
   const depositCurrencies = ref<Record<string, string>>({});
   const isSaving = ref(false);
@@ -233,14 +234,14 @@
             <span class="flex min-w-0 items-center gap-2">
               <UserAvatar
                 :user-id="view.account.playerId"
-                :name="getParticipantName(view.account.playerId)"
+                :name="getParticipantAvatarName(view.account.playerId)"
                 size="2xs"
                 class="shrink-0"
               />
 
-              <span class="font-medium text-highlighted">{{
-                getParticipantName(view.account.playerId)
-              }}</span>
+              <span class="font-medium text-highlighted">
+                <ParticipantName :user-id="view.account.playerId" />
+              </span>
             </span>
 
             <div class="flex flex-wrap justify-end gap-1">
