@@ -19,7 +19,7 @@
 </script>
 
 <template>
-  <section class="rounded-lg border border-muted bg-elevated/30 px-4 py-3">
+  <section class="rounded-lg border border-default bg-elevated/30 px-4 py-3">
     <header class="mb-3 flex items-center gap-2">
       <span
         class="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-semibold text-primary"

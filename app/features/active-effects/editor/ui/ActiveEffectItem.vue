@@ -122,8 +122,8 @@
     />
 
     <!-- Сводка держится сверху при прокрутке: правка любого шага видна в ней
-      сразу -->
-    <div class="sticky top-0 z-10 bg-default py-1">
+      сразу. Подложки у полосы нет — шаги уходят под саму сводку -->
+    <div class="sticky top-0 z-10">
       <EffectScenarioSummary :scenario="scenario" />
     </div>
 

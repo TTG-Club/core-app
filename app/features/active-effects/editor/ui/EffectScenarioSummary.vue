@@ -14,7 +14,7 @@
 
 <template>
   <div
-    class="flex items-start gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2"
+    class="flex items-start gap-2 rounded-lg border border-primary/30 bg-elevated px-3 py-2 shadow-sm"
     :title="ACTIVE_EFFECT_FORM_LABELS.summaryHint"
   >
     <UIcon
