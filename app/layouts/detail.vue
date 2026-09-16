@@ -5,6 +5,7 @@
   import type { SourceResponse } from '~/shared/types';
 
   import { CommentsBlock } from '~comments/section';
+  import { AppBreadcrumbs } from '~infrastructure/breadcrumbs';
   import { AppFooter } from '~infrastructure/footer';
   import { SourceTag } from '~ui/source-tag';
 
@@ -45,6 +46,8 @@
       <div
         class="mx-auto flex w-full max-w-(--max-content) flex-col gap-1 p-4 md:pt-6"
       >
+        <AppBreadcrumbs :title />
+
         <div class="flex items-center gap-1">
           <UButton
             v-if="backTo"

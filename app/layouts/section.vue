@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { SectionContent, SectionSidebar } from '~/shared/ui/section';
+  import { AppBreadcrumbs } from '~infrastructure/breadcrumbs';
   import { AppFooter } from '~infrastructure/footer';
 
   defineProps<{
@@ -48,6 +49,8 @@
           id="section-list-container"
           class="mr-1.5 flex h-full flex-auto flex-col gap-4 overflow-y-auto pr-3 pb-4 pl-4"
         >
+          <AppBreadcrumbs :title />
+
           <SectionContent :alert="alert">
             <slot name="default" />
           </SectionContent>
@@ -77,6 +80,8 @@
       </SectionSidebar>
 
       <div class="flex min-h-dvh flex-auto flex-col gap-4 px-4 pb-8 lg:pt-4">
+        <AppBreadcrumbs :title />
+
         <SectionContent :alert="alert">
           <slot name="default" />
         </SectionContent>
