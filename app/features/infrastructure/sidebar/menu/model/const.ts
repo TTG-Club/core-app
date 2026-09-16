@@ -1,6 +1,10 @@
 import type { MenuSection } from './types';
 
 import { Role } from '~/shared/types';
+import {
+  DICE_CALCULATOR_ROUTE,
+  DICE_CALCULATOR_TITLE,
+} from '~calculator/dice/model';
 import { RECENT_COMMENTS_ROUTE, RECENT_COMMENTS_TITLE } from '~comments/model';
 import {
   FIND_GAME_PROFILE_NAVIGATION_LABEL,
@@ -101,6 +105,10 @@ export const MENU_SECTIONS: Array<MenuSection> = [
       {
         href: '/calculators/abilities',
         label: 'Калькулятор характеристик',
+      },
+      {
+        href: DICE_CALCULATOR_ROUTE,
+        label: DICE_CALCULATOR_TITLE,
       },
       {
         href: '/tools/initiative',
