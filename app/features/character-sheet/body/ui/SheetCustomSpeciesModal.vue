@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { CustomFeatureDraft } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
   import { MarkupEditor } from '~ui/markup-editor';
 
   import { useCharacterSheet } from '../../composables';
@@ -110,7 +111,19 @@
       // Владения свой вид не выдаёт: навыки и языки остаются за классом и
       // предысторией.
       skills: { proficient: [], expertise: [] },
-      proficiencies: { languages: [] },
+      // Свой вид владений не описывает: игрок правит их на вкладке владений
+      // вручную, и подставлять за него пустой набор — это и есть «ничего»
+      proficiencies: {
+        armor: [],
+        weapons: [],
+        tools: [],
+        languages: [],
+        skills: [],
+        expertiseSkills: [],
+        weaponMasteries: [],
+        masteryProperties: [],
+        savingThrows: [],
+      },
     });
 
     emit('close', true);
@@ -271,7 +284,7 @@
     <template #footer>
       <div class="flex w-full justify-end gap-2">
         <UButton
-          label="Отмена"
+          :label="ACTION_LABELS.cancel"
           color="neutral"
           variant="ghost"
           @click.left.exact.prevent="handleCancel"

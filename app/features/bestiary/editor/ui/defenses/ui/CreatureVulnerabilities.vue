@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CreatureDefense } from '~bestiary/model';
+  import type { CreatureDefense } from '../../../../model';
 
   import { SelectDamageType } from '~ui/select';
 

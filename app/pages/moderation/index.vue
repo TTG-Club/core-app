@@ -6,7 +6,10 @@
     MODERATION_DASHBOARD_BUGS_TITLE,
     MODERATION_DASHBOARD_COMMENTS_DESCRIPTION,
     MODERATION_DASHBOARD_COMMENTS_TITLE,
+    MODERATION_DASHBOARD_GAME_REPORTS_DESCRIPTION,
+    MODERATION_DASHBOARD_GAME_REPORTS_TITLE,
     MODERATION_DASHBOARD_OPEN_LABEL,
+    MODERATION_GAME_REPORTS_ROUTE,
     MODERATION_PANEL_TITLE,
   } from '~moderation/model';
 </script>
@@ -58,6 +61,27 @@
 
         <div class="text-sm text-muted">
           {{ MODERATION_DASHBOARD_COMMENTS_DESCRIPTION }}
+        </div>
+      </UCard>
+
+      <UCard variant="subtle">
+        <template #header>
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="truncate text-base text-highlighted">
+              {{ MODERATION_DASHBOARD_GAME_REPORTS_TITLE }}
+            </h2>
+
+            <UButton
+              size="sm"
+              :to="MODERATION_GAME_REPORTS_ROUTE"
+            >
+              {{ MODERATION_DASHBOARD_OPEN_LABEL }}
+            </UButton>
+          </div>
+        </template>
+
+        <div class="text-sm text-muted">
+          {{ MODERATION_DASHBOARD_GAME_REPORTS_DESCRIPTION }}
         </div>
       </UCard>
     </div>

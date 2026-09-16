@@ -1,7 +1,18 @@
 <script setup lang="ts">
-  const { text = undefined, icon = undefined } = defineProps<{
+  const {
+    text = undefined,
+    icon = undefined,
+    inline = false,
+  } = defineProps<{
     text?: string;
     icon?: string;
+
+    /**
+     * Значок идёт следом за текстом, а не отдельной колонкой строки: длинная
+     * подпись переносится, и значок остаётся у последнего слова, а не
+     * улетает к правому краю.
+     */
+    inline?: boolean;
   }>();
 
   const slots = useSlots();
@@ -13,7 +24,7 @@
 </script>
 
 <template>
-  <div class="flex items-center-safe gap-1">
+  <div :class="inline ? 'inline' : 'flex items-center-safe gap-1'">
     <slot name="default" />
 
     <UPopover
@@ -22,9 +33,12 @@
       disable-hoverable-content
     >
       <template #default>
+        <!-- shrink-0 обязателен: значок — элемент flex-строки, и длинная
+          подпись ужимала его в овал -->
         <UIcon
           :name="icon || 'tabler:info-circle'"
-          class="cursor-help text-current"
+          class="shrink-0 cursor-help text-current"
+          :class="inline ? 'ml-1 inline-block align-text-bottom' : ''"
         />
       </template>
 

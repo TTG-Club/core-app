@@ -6,3 +6,4 @@ export * from './filterSearch';
 export * from './getFilterKey';
 export * from './getGroupItems';
 export * from './selection';
+export * from './sortSourceGroups';

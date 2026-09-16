@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { AbilityKey, CustomFeatureDraft } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
   import { CasterType } from '~classes/model';
   import { MarkupEditor } from '~ui/markup-editor';
 
@@ -17,9 +18,10 @@
     getOwnedSkillHints,
     HIT_DIE_OPTIONS,
     SKILL_DUPLICATE_WARNING,
+    toNamedPickerOptions,
     toSelectedAbilityKeys,
   } from '../../model';
-  import SheetChoiceSelect from './SheetChoiceSelect.vue';
+  import SheetChoicePickerField from './SheetChoicePickerField.vue';
 
   const emit = defineEmits<{
     /** `true` — свой класс применён к листу. */
@@ -51,6 +53,10 @@
 
   const ownedSkillHints = computed(() =>
     getOwnedSkillHints(character.value.skills),
+  );
+
+  const skillPickerOptions = computed(() =>
+    toNamedPickerOptions(skillNames.value, ownedSkillHints.value),
   );
 
   const isApplyDisabled = computed(() => !draftName.value.trim());
@@ -200,21 +206,13 @@
           />
         </div>
 
-        <div class="flex flex-col gap-1">
-          <span
-            class="text-[10px] font-bold tracking-wider text-muted uppercase"
-          >
-            {{ CUSTOM_CLASS_LABELS.skillsTitle }}
-          </span>
-
-          <SheetChoiceSelect
-            v-model="draftSkills"
-            :items="skillNames"
-            :hints="ownedSkillHints"
-            :warning="SKILL_DUPLICATE_WARNING"
-            :placeholder="CUSTOM_CLASS_LABELS.skillsPlaceholder"
-          />
-        </div>
+        <SheetChoicePickerField
+          v-model="draftSkills"
+          :title="CUSTOM_CLASS_LABELS.skillsTitle"
+          :explanation="CUSTOM_CLASS_LABELS.skillsPlaceholder"
+          :options="skillPickerOptions"
+          :warning="SKILL_DUPLICATE_WARNING"
+        />
 
         <div class="flex flex-col gap-1">
           <span
@@ -298,7 +296,7 @@
     <template #footer>
       <div class="flex w-full justify-end gap-2">
         <UButton
-          label="Отмена"
+          :label="ACTION_LABELS.cancel"
           color="neutral"
           variant="ghost"
           @click.left.exact.prevent="handleCancel"

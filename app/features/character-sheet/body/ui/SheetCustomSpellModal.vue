@@ -5,6 +5,7 @@
     CustomSpellFieldKey,
   } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
   import { MarkupEditor } from '~ui/markup-editor';
 
   import { useCharacterSheet } from '../../composables';
@@ -14,6 +15,7 @@
     CUSTOM_SPELL_FIELDS,
     getSpellLevelLabel,
     parseStoredMarkupNodes,
+    SHEET_CUSTOM_SPELL_LABELS,
     SHEET_SPELL_ABILITY_LABELS,
     SPELL_LEVELS,
     SPELL_SCHOOL_OPTIONS,
@@ -32,7 +34,7 @@
 
   const { character, addCustomSpell, updateCustomSpell } = useCharacterSheet();
 
-  // Круги для селекта: подписи те же, что у разделителей списка заклинаний.
+  // Уровни для селекта: подписи те же, что у строк списка заклинаний.
   const levelOptions = SPELL_LEVELS.map((level) => ({
     label: getSpellLevelLabel(level),
     value: level,
@@ -150,23 +152,23 @@
   >
     <template #body>
       <div class="flex flex-col gap-3">
-        <!-- Круг уезжает на вторую строку, пока форма узкая: рядом с ним
+        <!-- Уровень уезжает на вторую строку, пока форма узкая: рядом с ним
           названию заклинания остаётся слишком мало места -->
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_10rem]">
           <div class="flex min-w-0 flex-col gap-1">
             <span class="text-[10px] font-bold text-muted uppercase">
-              Название
+              {{ SHEET_CUSTOM_SPELL_LABELS.name }}
             </span>
 
             <UInput
               v-model="draftName"
-              placeholder="Название заклинания"
+              :placeholder="SHEET_CUSTOM_SPELL_LABELS.namePlaceholder"
             />
           </div>
 
           <div class="flex min-w-0 flex-col gap-1">
             <span class="text-[10px] font-bold text-muted uppercase">
-              Круг
+              {{ SHEET_CUSTOM_SPELL_LABELS.level }}
             </span>
 
             <USelect
@@ -179,13 +181,13 @@
         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div class="flex min-w-0 flex-col gap-1">
             <span class="text-[10px] font-bold text-muted uppercase">
-              Школа магии
+              {{ SHEET_CUSTOM_SPELL_LABELS.school }}
             </span>
 
             <USelect
               v-model="draftSchool"
               :items="SPELL_SCHOOL_OPTIONS"
-              placeholder="Не выбрана"
+              :placeholder="SHEET_CUSTOM_SPELL_LABELS.schoolPlaceholder"
             />
           </div>
 
@@ -221,23 +223,23 @@
         <div class="flex flex-wrap items-center gap-4">
           <UCheckbox
             v-model="draftConcentration"
-            label="Концентрация"
+            :label="SHEET_CUSTOM_SPELL_LABELS.concentration"
           />
 
           <UCheckbox
             v-model="draftRitual"
-            label="Ритуал"
+            :label="SHEET_CUSTOM_SPELL_LABELS.ritual"
           />
         </div>
 
         <div class="flex flex-col gap-1">
           <span class="text-[10px] font-bold text-muted uppercase">
-            Описание
+            {{ SHEET_CUSTOM_SPELL_LABELS.description }}
           </span>
 
           <MarkupEditor
             v-model="draftDescription"
-            placeholder="Опиши заклинание"
+            :placeholder="SHEET_CUSTOM_SPELL_LABELS.descriptionPlaceholder"
           />
         </div>
       </div>
@@ -246,7 +248,7 @@
     <template #footer>
       <div class="flex w-full justify-end gap-2">
         <UButton
-          label="Отмена"
+          :label="ACTION_LABELS.cancel"
           color="neutral"
           variant="ghost"
           @click.left.exact.prevent="handleCancel"

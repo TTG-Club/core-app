@@ -1,12 +1,13 @@
 <script setup lang="ts">
   import type { DropdownMenuItem } from '@nuxt/ui';
 
-  import type { MarkupTag } from './tags';
+  import type { MarkupEditorPreset, MarkupTag } from './tags';
 
   import { toMarkupSource, toStoredMarkup } from '~ui/markup';
 
   import MarkupInsertPanel from './MarkupInsertPanel.vue';
   import {
+    BASIC_TAG_KEYS,
     BLOCK_TAGS,
     FORMAT_TAGS,
     INLINE_TAGS,
@@ -14,6 +15,7 @@
     SECTION_TAGS,
   } from './tags';
   import {
+    transformPastedMarkupHtml,
     TtgBlockMarker,
     ttgFormatMarks,
     ttgHeadingExtensions,
@@ -23,9 +25,10 @@
     ttgParagraphExtensions,
     ttgQuoteExtensions,
     TtgSectionLink,
+    TtgSeparatorMarkdown,
     ttgTableExtensions,
   } from './tiptap';
-  import { buildToolbarItems } from './toolbar-items';
+  import { buildToolbarItems, TOOLBAR_LAYER_CLASS } from './toolbar-items';
 
   /** Режим панели ввода под тулбаром (поиск раздела / нотация кубика / подпись таблицы / URL ссылки). */
   type InsertPanelMode =
@@ -41,6 +44,7 @@
     TtgMarker,
     TtgBlockMarker,
     TtgSectionLink,
+    TtgSeparatorMarkdown,
     TtgKeymap,
     ...ttgFormatMarks,
     ...ttgHeadingExtensions,
@@ -57,8 +61,14 @@
   // обратно в структуру — `toStoredMarkup`. Поле остаётся строковым во всех формах.
   const model = defineModel<string>({ default: '' });
 
-  const { placeholder = 'Опиши материал' } = defineProps<{
+  const { placeholder = 'Опиши материал', preset = 'full' } = defineProps<{
     placeholder?: string;
+    /**
+     * Набор кнопок: `full` — всё для мастерской, `basic` — только оформление
+     * текста (жирный/курсив/…, заголовки, списки, цитата, ссылка) для
+     * пользовательских форм вроде баг-репорта.
+     */
+    preset?: MarkupEditorPreset;
   }>();
 
   // Интеграция с обёрткой UFormField (как у UTextarea): id/имя, aria, события
@@ -175,7 +185,17 @@
     // на котором падает бэкенд-десериализатор описания. Отключаем: перенос — это
     // новый абзац (Enter). Так наружу не уходит «сырой» одиночный \n.
     hardBreak: false,
+    // Блок кода сериализуется в ``` — маркера под него в разметке нет, и такой
+    // блок вышел бы на страницу тройными бэктиками. Код из буфера раскладывается
+    // построчно обычным текстом (см. transformPastedMarkupHtml).
+    codeBlock: false,
   } as const;
+
+  // Правки ProseMirror: приводим ЧУЖОЙ HTML из буфера к нашей схеме. Без этого
+  // ProseMirror молча теряет `<strong>`/`<em>`/`<a>` (их марок в схеме нет), а
+  // `<hr>`, `<code>` и `<img>` доживают до сохранения чужими узлами и печатаются
+  // на странице мусорным текстом.
+  const editorProps = { transformPastedHTML: transformPastedMarkupHtml };
 
   // Markdown здесь — лишь ТРАНСПОРТ для round-trip наших {@...}. Формат Markdown
   // мы не используем, поэтому GFM выключен: `| a | b |`, `~~зачёркнутое~~`,
@@ -227,11 +247,25 @@
 
   // Те же группы и порядок, что и в визуальном тулбаре (форматы → блок →
   // kbd+интерактив → раздел), чтобы набор кнопок совпадал в обоих режимах.
-  const codeToolbarGroups: MarkupTag[][] = [
-    FORMAT_TAGS,
-    BLOCK_TAGS,
-    [...INLINE_TAGS, ...INTERACTIVE_TAGS],
-  ];
+  // Базовый пресет оставляет из них только теги BASIC_TAG_KEYS.
+  const codeToolbarGroups = computed<MarkupTag[][]>(() => {
+    const groups: MarkupTag[][] = [
+      FORMAT_TAGS,
+      BLOCK_TAGS,
+      [...INLINE_TAGS, ...INTERACTIVE_TAGS],
+    ];
+
+    if (preset === 'full') {
+      return groups;
+    }
+
+    return groups
+      .map((group) => group.filter((tag) => BASIC_TAG_KEYS.has(tag.key)))
+      .filter((group) => group.length > 0);
+  });
+
+  // Ссылки на разделы сайта — доменная вставка, в базовом пресете их нет.
+  const hasSectionLinks = computed(() => preset === 'full');
 
   const sectionItems = computed<DropdownMenuItem[]>(() =>
     SECTION_TAGS.map((tag) => ({
@@ -315,6 +349,9 @@
           :markdown="markdownConfig"
           :starter-kit="starterKit"
           :extensions="editorExtensions"
+          :editor-props="editorProps"
+          :image="false"
+          :mention="false"
           :placeholder
           class="flex min-h-0 min-w-0 flex-1 flex-col"
           :ui="{
@@ -328,12 +365,16 @@
               <UEditorToolbar
                 :editor
                 :items="
-                  buildToolbarItems(editor, {
-                    onSection: openSectionPanel,
-                    onLink: openLinkPanel,
-                    onDice: openDicePanel,
-                    onCaption: openCaptionPanel,
-                  })
+                  buildToolbarItems(
+                    editor,
+                    {
+                      onSection: openSectionPanel,
+                      onLink: openLinkPanel,
+                      onDice: openDicePanel,
+                      onCaption: openCaptionPanel,
+                    },
+                    preset,
+                  )
                 "
                 class="flex-wrap border-b border-default"
                 :ui="{ group: 'flex-wrap' }"
@@ -367,6 +408,7 @@
                 v-for="tag in group"
                 :key="tag.key"
                 :text="tag.label"
+                :ui="{ content: TOOLBAR_LAYER_CLASS }"
               >
                 <UButton
                   :icon="tag.icon"
@@ -379,7 +421,11 @@
               </UTooltip>
             </div>
 
-            <UDropdownMenu :items="sectionItems">
+            <UDropdownMenu
+              v-if="hasSectionLinks"
+              :items="sectionItems"
+              :ui="{ content: TOOLBAR_LAYER_CLASS }"
+            >
               <UButton
                 icon="tabler:external-link"
                 aria-label="Ссылка на раздел"

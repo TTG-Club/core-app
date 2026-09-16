@@ -15,7 +15,7 @@ const application = {
     'TTG Club — сайт, посвященный DnD 5-й редакции. Тут можно найти: расы, происхождения, классы, заклинания, бестиарий, снаряжение, магические предметы и инструменты для облегчения игры как игрокам, так и мастерам — все в одном месте.',
   favicons: [48, 72, 96, 128, 192, 384, 512],
   themeColor: {
-    light: 'oklch(0.98 0.02 80.0)',
+    light: 'oklch(0.944 0.008 49.0)',
     dark: 'oklch(0.245 0.02 270.0)',
     svifty7: 'oklch(0.30 0.006 75.0)',
   },
@@ -46,7 +46,6 @@ export default defineNuxtConfig({
     '@vueuse/nuxt',
     '@pinia/nuxt',
     'nuxt-security',
-    'nuxt-yandex-metrika',
     'nuxt-gtag',
   ],
 
@@ -75,32 +74,18 @@ export default defineNuxtConfig({
     },
   },
 
-  // Яндекс.Метрика (nuxt-yandex-metrika).
-  // ВАЖНО: id НЕ берём из env на этапе сборки — Docker-сборка не видит прод-переменных,
-  // поэтому id попадал бы в образ как placeholder 'xxx' и счётчик не трекал.
-  // Реальный id подставляется в РАНТАЙМЕ контейнера через NUXT_PUBLIC_YANDEX_METRIKA_ID
-  // (Nitro override → runtimeConfig.public.yandexMetrika.id). На сборке и на dev id пустой,
-  // поэтому в боевую статистику ничего не уходит.
-  yandexMetrika: {
-    id: '',
-    position: 'head',
-    options: {
-      clickmap: true,
-      trackLinks: true,
-      accurateTrackBounce: true,
-      webvisor: true,
-    },
-  },
-
   // Google Analytics (nuxt-gtag).
   // enabled:true ОБЯЗАТЕЛЬНО безусловно: при enabled:false модуль на этапе сборки
   // (где прод-env отсутствует) вырезает плагин и runtimeConfig.public.gtag из образа,
   // и счётчик не работает даже если id задан на проде. id подставляется в рантайме
-  // через NUXT_PUBLIC_GTAG_ID; при пустом id плагин не инжектит скрипт (resolveTags → []),
-  // поэтому на dev GA не грузится. SPA-переходы трекает Enhanced Measurement GA4.
+  // через NUXT_PUBLIC_GTAG_ID; при пустом id скрипт не подключается, поэтому на dev
+  // GA не грузится. SPA-переходы трекает Enhanced Measurement GA4.
+  // initMode: 'manual' — скрипт подключает плагин analytics.client.ts, и только после
+  // согласия посетителя на аналитические cookie.
   gtag: {
     enabled: true,
     id: '',
+    initMode: 'manual',
   },
 
   // SEO и метаданные
@@ -200,7 +185,18 @@ export default defineNuxtConfig({
       fontshare: false,
     },
     priority: ['google', 'fontsource'],
-    families: [{ name: 'Open Sans' }],
+    families: [
+      { name: 'Open Sans' },
+      // Моноширинный шрифт микро-подписей и счётчиков на главной (и всех мест,
+      // где уже используется `font-mono`: коды, промо-коды, броски кубов).
+      // Кириллица нужна для подписей вида «МАТЕРИАЛОВ», латиница — для чисел
+      // и англоязычных названий; жирнее 600 нигде не требуется.
+      {
+        name: 'JetBrains Mono',
+        subsets: ['latin', 'cyrillic'],
+        weights: ['400', '500', '600'],
+      },
+    ],
   },
 
   image: {
@@ -256,7 +252,7 @@ export default defineNuxtConfig({
           // От XSS защищает экранирование на выводе, а не отказ на входе.
           xssValidator: false,
           rateLimiter: {
-            tokensPerInterval: 75,
+            tokensPerInterval: 200,
             interval: ms('1m'),
             headers: true,
           },
@@ -303,6 +299,11 @@ export default defineNuxtConfig({
 
     build: {
       minify: 'esbuild',
+      // Vite 8 (приехал с Nuxt 4.5) по умолчанию минифицирует CSS через
+      // lightningcss, а тот падает на нашей сборке с `SyntaxError: Invalid
+      // state` без указания файла и строки. Держим прежний минификатор —
+      // тот же, что и для JS выше.
+      cssMinify: 'esbuild',
       cssCodeSplit: false,
       reportCompressedSize: false,
       chunkSizeWarningLimit: 1000,
@@ -327,7 +328,6 @@ export default defineNuxtConfig({
         '@tiptap/pm/history': 'prosemirror-history',
         '@tiptap/pm/inputrules': 'prosemirror-inputrules',
         '@tiptap/pm/dropcursor': 'prosemirror-dropcursor',
-        '@tiptap/pm/trailing-node': 'prosemirror-trailing-node',
       },
       // Единственный инстанс каждого prosemirror-пакета на все пути импорта.
       dedupe: [
@@ -343,7 +343,6 @@ export default defineNuxtConfig({
         'prosemirror-history',
         'prosemirror-inputrules',
         'prosemirror-dropcursor',
-        'prosemirror-trailing-node',
       ],
     },
 
@@ -452,6 +451,16 @@ export default defineNuxtConfig({
       // с подсказкой, вместо перехода в 404. Задаётся через
       // NUXT_PUBLIC_OLD_SITE_URL.
       oldSiteUrl: '',
+      // Яндекс.Метрика. Подключается плагином analytics.client.ts только после
+      // согласия посетителя на аналитические cookie — поэтому без модуля
+      // nuxt-yandex-metrika: тот грузил счётчик сразу и без спроса.
+      // id НЕ берём из env на этапе сборки — Docker-сборка не видит прод-переменных.
+      // Реальный id подставляется в РАНТАЙМЕ контейнера через
+      // NUXT_PUBLIC_YANDEX_METRIKA_ID; на сборке и на dev он пустой, и счётчик
+      // не подключается.
+      yandexMetrika: {
+        id: '',
+      },
     },
     site: {
       url: process.env.NUXT_SITE_URL,

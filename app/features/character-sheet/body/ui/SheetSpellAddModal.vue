@@ -3,15 +3,21 @@
 
   import type { CharacterSpell, SpellCatalogItem } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
   import { FilterDrawer } from '~infrastructure/filter';
   import { SpellDrawer } from '~spells/drawer';
 
   import { useCharacterSheet, useSpellCatalogSearch } from '../../composables';
   import {
+    getExpandedSpellListSpells,
     getFilterChipClass,
     getSpellCatalogPreset,
     getSpellGroupLabel,
     isCustomSpell,
+    SHEET_CATALOG_MODAL_LABELS,
+    SHEET_SPELL_ADD_EXPANDED_GROUP_LEVEL,
+    SHEET_SPELL_ADD_LABELS,
+    SHEET_SPELL_ROW_LABELS,
     SPELL_CATALOG_LOAD_MORE_DISTANCE,
     SPELL_LEVELS,
   } from '../../model';
@@ -179,11 +185,61 @@
     spells: Array<SpellCatalogItem & { isSelected: boolean; rowClass: string }>;
   }
 
+  /**
+   * Заклинания, доступные сверх списка класса, — расширения от умений, черт и
+   * вида. Персонаж их не знает, но выучить или подготовить может, поэтому они
+   * идут отдельной группой над каталогом. Поиск и выбранные круги их сужают
+   * так же, как каталог; класс — нет: смысл расширения именно в том, что оно
+   * не из списка класса. Уже показанное каталогом второй раз не идёт.
+   */
+  const expandedGroup = computed<SpellCatalogGroup | null>(() => {
+    const catalogUrls = new Set(spells.value.map((spell) => spell.url));
+    const search = searchTerm.value.trim().toLocaleLowerCase();
+
+    const rows = getExpandedSpellListSpells(character.value)
+      .filter((spell) => !catalogUrls.has(spell.url))
+      .filter(
+        (spell) =>
+          !selectedLevels.value.size || selectedLevels.value.has(spell.level),
+      )
+      .filter(
+        (spell) => !search || spell.name.toLocaleLowerCase().includes(search),
+      )
+      .map((spell) => {
+        const isSelected = draftSpells.value.has(spell.url);
+
+        return {
+          ...spell,
+          concentration: spell.concentration ?? false,
+          ritual: spell.ritual ?? false,
+          isSelected,
+          rowClass: isSelected ? 'bg-elevated' : '',
+        };
+      })
+      .sort(
+        (left, right) =>
+          left.level - right.level || left.name.localeCompare(right.name, 'ru'),
+      );
+
+    return rows.length
+      ? {
+          level: SHEET_SPELL_ADD_EXPANDED_GROUP_LEVEL,
+          label: SHEET_SPELL_ADD_LABELS.expandedGroup,
+          spells: rows,
+        }
+      : null;
+  });
+
   // Сервер отдаёт заклинания в порядке групп кругов (grouping=LEVEL),
   // поэтому пересортировка не нужна; Map сливает заклинания одного круга
-  // из соседних страниц в единственную группу.
+  // из соседних страниц в единственную группу. Расширенный список — первой
+  // группой: он про этого персонажа, а не про каталог целиком.
   const displayGroups = computed(() => {
     const groupsByLevel = new Map<number, SpellCatalogGroup>();
+
+    if (expandedGroup.value) {
+      groupsByLevel.set(expandedGroup.value.level, expandedGroup.value);
+    }
 
     for (const spell of spells.value) {
       const isSelected = draftSpells.value.has(spell.url);
@@ -222,7 +278,7 @@
 
 <template>
   <UModal
-    title="Добавление заклинаний"
+    :title="SHEET_SPELL_ADD_LABELS.title"
     :ui="{ content: 'sm:max-w-4xl' }"
   >
     <template #body>
@@ -240,7 +296,7 @@
 
           <UButton
             icon="tabler:filter"
-            label="Фильтр"
+            :label="SHEET_CATALOG_MODAL_LABELS.filter"
             color="neutral"
             variant="subtle"
             size="sm"
@@ -250,7 +306,7 @@
 
           <UTooltip
             v-if="hasActiveFilters"
-            text="Сбросить фильтры"
+            :text="SHEET_CATALOG_MODAL_LABELS.resetFilters"
           >
             <UButton
               icon="tabler:filter-off"
@@ -258,7 +314,7 @@
               variant="ghost"
               size="sm"
               square
-              aria-label="Сбросить фильтры"
+              :aria-label="SHEET_CATALOG_MODAL_LABELS.resetFilters"
               @click.left.exact.prevent="resetFilters"
             />
           </UTooltip>
@@ -276,7 +332,7 @@
           <div class="flex shrink-0 items-center gap-1">
             <UButton
               icon="tabler:filter"
-              label="Все фильтры"
+              :label="SHEET_CATALOG_MODAL_LABELS.allFilters"
               color="neutral"
               variant="subtle"
               size="sm"
@@ -288,7 +344,7 @@
 
             <UTooltip
               v-if="hasActiveFilters"
-              text="Сбросить фильтры"
+              :text="SHEET_CATALOG_MODAL_LABELS.resetFilters"
             >
               <UButton
                 icon="tabler:filter-off"
@@ -296,7 +352,7 @@
                 variant="ghost"
                 size="sm"
                 square
-                aria-label="Сбросить фильтры"
+                :aria-label="SHEET_CATALOG_MODAL_LABELS.resetFilters"
                 @click.left.exact.prevent="resetFilters"
               />
             </UTooltip>
@@ -306,7 +362,7 @@
             <span
               class="text-[10px] font-bold tracking-wider text-muted uppercase"
             >
-              Круг
+              {{ SHEET_SPELL_ADD_LABELS.level }}
             </span>
 
             <div class="flex flex-wrap gap-1">
@@ -317,7 +373,7 @@
                 class="min-w-7 text-center"
                 :class="levelChip.chipClass"
                 :aria-pressed="levelChip.isSelected"
-                :aria-label="`Круг ${levelChip.level}`"
+                :aria-label="`${SHEET_SPELL_ADD_LABELS.levelChipAria} ${levelChip.level}`"
                 @click.left.exact.prevent="toggleLevel(levelChip.level)"
               >
                 {{ levelChip.level }}
@@ -329,7 +385,7 @@
             <span
               class="text-[10px] font-bold tracking-wider text-muted uppercase"
             >
-              Свойства
+              {{ SHEET_SPELL_ADD_LABELS.properties }}
             </span>
 
             <div class="flex flex-col gap-1">
@@ -350,7 +406,7 @@
             <span
               class="text-[10px] font-bold tracking-wider text-muted uppercase"
             >
-              Класс
+              {{ SHEET_SPELL_ADD_LABELS.characterClass }}
             </span>
 
             <div class="flex flex-col gap-1">
@@ -408,7 +464,7 @@
                   <button
                     type="button"
                     class="flex min-w-0 grow cursor-pointer items-center gap-2 px-3 py-1.5 text-left after:absolute after:inset-0 after:cursor-pointer"
-                    :aria-label="`Выбрать заклинание: ${spell.name}`"
+                    :aria-label="`${SHEET_SPELL_ADD_LABELS.pickAria}: ${spell.name}`"
                     @click.left.exact.prevent="toggleSpell(spell)"
                   >
                     <span class="truncate text-sm font-medium text-highlighted">
@@ -425,7 +481,7 @@
 
                   <UTooltip
                     v-if="spell.concentration"
-                    text="Концентрация"
+                    :text="SHEET_SPELL_ROW_LABELS.concentration"
                   >
                     <UBadge
                       size="sm"
@@ -433,13 +489,13 @@
                       variant="subtle"
                       class="relative z-10 shrink-0"
                     >
-                      К
+                      {{ SHEET_SPELL_ROW_LABELS.concentrationShort }}
                     </UBadge>
                   </UTooltip>
 
                   <UTooltip
                     v-if="spell.ritual"
-                    text="Ритуал"
+                    :text="SHEET_SPELL_ROW_LABELS.ritual"
                   >
                     <UBadge
                       size="sm"
@@ -447,11 +503,11 @@
                       variant="subtle"
                       class="relative z-10 shrink-0"
                     >
-                      Р
+                      {{ SHEET_SPELL_ROW_LABELS.ritualShort }}
                     </UBadge>
                   </UTooltip>
 
-                  <UTooltip text="Открыть описание заклинания">
+                  <UTooltip :text="SHEET_SPELL_ADD_LABELS.preview">
                     <UButton
                       icon="tabler:layout-sidebar-right-expand"
                       color="neutral"
@@ -459,7 +515,7 @@
                       size="xs"
                       square
                       class="relative z-10 shrink-0"
-                      :aria-label="`Описание заклинания: ${spell.name}`"
+                      :aria-label="`${SHEET_SPELL_ADD_LABELS.previewAria}: ${spell.name}`"
                       @click.left.exact.prevent="handlePreview(spell.url)"
                     />
                   </UTooltip>
@@ -476,7 +532,7 @@
                 v-if="!displayGroups.length && !hasLoadError"
                 class="px-3 py-6 text-center text-sm text-dimmed"
               >
-                Ничего не найдено
+                {{ SHEET_CATALOG_MODAL_LABELS.empty }}
               </span>
 
               <div
@@ -484,11 +540,11 @@
                 class="flex flex-col items-center gap-2 py-4"
               >
                 <span class="text-sm text-dimmed">
-                  Не удалось загрузить заклинания
+                  {{ SHEET_SPELL_ADD_LABELS.listError }}
                 </span>
 
                 <UButton
-                  label="Повторить"
+                  :label="ACTION_LABELS.retry"
                   color="neutral"
                   variant="soft"
                   size="sm"
@@ -516,7 +572,7 @@
       <FilterDrawer
         v-if="filterGroups.length"
         v-model="isFilterDrawerOpened"
-        title="Фильтры заклинаний"
+        :title="SHEET_SPELL_ADD_LABELS.filtersTitle"
         :groups="filterGroups"
         @save="handleFilterDrawerSave"
         @reset="handleFilterDrawerReset"
@@ -529,14 +585,14 @@
 
         <div class="flex gap-2">
           <UButton
-            label="Отмена"
+            :label="ACTION_LABELS.cancel"
             color="neutral"
             variant="ghost"
             @click.left.exact.prevent="handleCancel"
           />
 
           <UButton
-            label="Применить"
+            :label="ACTION_LABELS.apply"
             color="primary"
             @click.left.exact.prevent="handleApply"
           />

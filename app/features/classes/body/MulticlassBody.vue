@@ -62,6 +62,7 @@
           <MulticlassSpellSlots
             :caster-type="detail.casterType"
             :spellcasting-level="detail.spellcastingLevel"
+            :multiclass="detail.multiclass"
           />
         </div>
 

@@ -1,3 +1,4 @@
+/** Ручка статистики листов; её же читает счётчик на главной (~home/community) */
 export const ADMIN_SHEET_STATS_API_URL = '/api/v2/statistics/character-sheets';
 
 export const ADMIN_SHEET_STATS_DATA_KEY = 'admin-character-sheet-stats';

@@ -9,6 +9,8 @@
     feat: string;
     skillProficiencies: string;
     toolProficiency: string[];
+    /** Владение ещё собирается: выбор ждёт категорий инструментов. */
+    isToolProficiencyPending?: boolean;
     equipment: string[];
   }>();
 </script>
@@ -56,7 +58,15 @@
         Владение инструментами
       </InfoTooltip>
 
-      <MarkupRender :render-node="toolProficiency" />
+      <USkeleton
+        v-if="isToolProficiencyPending"
+        class="mt-1 h-4 w-3/4"
+      />
+
+      <MarkupRender
+        v-else
+        :render-node="toolProficiency"
+      />
     </div>
 
     <div :class="[$style.item, $style.block]">

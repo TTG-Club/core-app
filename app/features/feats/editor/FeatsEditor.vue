@@ -3,6 +3,8 @@
 
   import type { FeatCreate } from '../model';
 
+  import { ActiveEffects } from '~active-effects/editor';
+  import { EFFECT_FORM_CONTEXT, EFFECT_ORIGIN } from '~active-effects/model';
   import { EditorBaseInfo } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectFeatCategory } from '~ui/select';
@@ -66,6 +68,7 @@
       repeatability: false,
       abilities: [],
       mechanics: createFeatMechanics(),
+      activeEffects: [],
       editorRows: createFeatEditorRows(),
       tags: [],
     };
@@ -106,6 +109,7 @@
     { label: FEAT_EDITOR_TABS.spells, slot: 'spells' },
     { label: FEAT_EDITOR_TABS.automation, slot: 'automation' },
     { label: FEAT_EDITOR_TABS.prerequisites, slot: 'prerequisites' },
+    { label: FEAT_EDITOR_TABS.effects, slot: 'effects' },
   ];
 </script>
 
@@ -211,7 +215,7 @@
               </h2>
             </template>
 
-            <FeatGrantedSpells v-model="mechanics.spells" />
+            <FeatGrantedSpells v-model="editorRows.grantedSpells" />
           </UCard>
 
           <UCard variant="subtle">
@@ -313,6 +317,15 @@
             </UFormField>
           </UCard>
         </div>
+      </template>
+
+      <!-- ЭФФЕКТЫ -->
+      <template #effects>
+        <ActiveEffects
+          v-model="state.activeEffects"
+          :context="EFFECT_FORM_CONTEXT.feature"
+          :origin="EFFECT_ORIGIN.feature"
+        />
       </template>
     </UTabs>
 

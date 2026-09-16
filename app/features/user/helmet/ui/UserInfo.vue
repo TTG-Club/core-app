@@ -16,6 +16,9 @@
     () => props.user.displayName || props.user.username,
   );
 
+  // Аватарка из профиля; без неё UAvatar рисует инициалы.
+  const avatarImageUrl = computed(() => props.user.avatarUrl ?? undefined);
+
   // Данные бейджей прогреваются заранее в хелмете (см. UserHelmet), поэтому к
   // моменту открытия панели корона и рамка уже готовы — без «доезда».
   const { hasAvatarFrame, isSubscriptionActive, frameImageUrl } =
@@ -65,6 +68,7 @@
       @click.left.exact.prevent="openProfile"
     >
       <UAvatar
+        :src="avatarImageUrl"
         :alt="displayName"
         size="3xl"
         :ui="{ fallback: 'uppercase' }"

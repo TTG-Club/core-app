@@ -5,6 +5,7 @@
     FeatureTabFilter,
   } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
   import { ConfirmDialog } from '~initiative/ui-kit';
   import { MarkupRender } from '~ui/markup';
 
@@ -19,6 +20,7 @@
     getFeaturesAddMenuItems,
     getFilterChipClass,
     matchesFeatureFilter,
+    SHEET_FEATURE_ROW_ARIA_PREFIXES,
     SHEET_FEATURE_ROW_LABELS,
     SHEET_FILTER_LABELS,
     SHEET_REVEAL_CONTROL_CLASS,
@@ -98,12 +100,13 @@
 
   /**
    * Цвета бейджа происхождения: вид — зелёный, подвид — синий, класс —
-   * основной цвет темы, черта — акцентный.
+   * основной цвет темы, предыстория — предупреждающий, черта — акцентный.
    */
   const ORIGIN_BADGE_COLORS = {
     species: 'success',
     lineage: 'info',
     class: 'primary',
+    background: 'warning',
     feat: 'secondary',
     none: 'neutral',
   } as const;
@@ -293,7 +296,7 @@
         >
           <UButton
             icon="tabler:plus"
-            label="Добавить"
+            :label="ACTION_LABELS.add"
             color="neutral"
             variant="ghost"
             size="sm"
@@ -359,7 +362,7 @@
                 size="xs"
                 square
                 :class="editControlClass"
-                :aria-label="`Редактировать особенность: ${feature.name}`"
+                :aria-label="`${SHEET_FEATURE_ROW_ARIA_PREFIXES.edit}: ${feature.name}`"
                 @click.left.exact.prevent="handleEditClick(feature.id)"
               />
 
@@ -370,7 +373,7 @@
                 size="xs"
                 square
                 :class="editControlClass"
-                :aria-label="`Удалить особенность: ${feature.name}`"
+                :aria-label="`${SHEET_FEATURE_ROW_ARIA_PREFIXES.remove}: ${feature.name}`"
                 @click.left.exact.prevent="handleRemoveRequest(feature)"
               />
             </div>

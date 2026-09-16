@@ -4,5 +4,7 @@ export * from './getErrorResponse';
 export * from './getPlural';
 export * from './getSlug';
 export * from './getStatusMessage';
+export * from './home-hero';
 export * from './mailing';
 export * from './sortString';
+export * from './user-avatar';

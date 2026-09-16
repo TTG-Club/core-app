@@ -3,6 +3,7 @@
     ABILITY_ORDER,
     EXHAUSTION_LEVELS,
     SHEET_SKELETON_COUNTS,
+    SHEET_SKELETON_LOADING_LABEL,
   } from '../model';
   import { SheetSkeletonPanel } from './ui';
 
@@ -20,7 +21,7 @@
     aria-busy="true"
     class="@container mx-auto flex w-full max-w-350 flex-col gap-4"
   >
-    <span class="sr-only">Лист персонажа загружается</span>
+    <span class="sr-only">{{ SHEET_SKELETON_LOADING_LABEL }}</span>
 
     <header
       class="flex flex-col items-center gap-4 @2xl:flex-row @2xl:items-start @2xl:gap-6"

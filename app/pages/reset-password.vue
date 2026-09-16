@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { ApiFetchError } from '~/shared/types';
+
   import { StatusCodes } from 'http-status-codes';
 
   const route = useRoute();
@@ -14,13 +16,13 @@
 
   // Проверяем токен сразу при открытии страницы, чтобы не заставлять
   // пользователя вводить пароль ради протухшей ссылки.
-  const { status: tokenCheckStatus, error: tokenCheckError } = useFetch(
-    '/api/auth/password/reset-token/validate',
-    {
-      query: { token: passwordResetToken },
-      retry: false,
-    },
-  );
+  const { status: tokenCheckStatus, error: tokenCheckError } = useFetch<
+    void,
+    ApiFetchError
+  >('/api/auth/password/reset-token/validate', {
+    query: { token: passwordResetToken },
+    retry: false,
+  });
 
   const tokenInvalid = computed(() => tokenCheckStatus.value === 'error');
 
@@ -65,19 +67,21 @@
       && !passwordMismatch.value,
   );
 
-  const { execute, status, error } = useFetch(
+  const { execute, status, error } = useFetch<
+    void,
+    ApiFetchError,
     '/api/auth/password/reset-confirm',
-    {
-      body: computed(() => ({
-        newPassword: state.newPassword,
-        token: passwordResetToken,
-      })),
-      immediate: false,
-      method: 'POST',
-      retry: false,
-      watch: false,
-    },
-  );
+    'POST'
+  >('/api/auth/password/reset-confirm', {
+    body: computed(() => ({
+      newPassword: state.newPassword,
+      token: passwordResetToken,
+    })),
+    immediate: false,
+    method: 'POST',
+    retry: false,
+    watch: false,
+  });
 
   const inProgress = computed(() => status.value === 'pending');
   const success = computed(() => status.value === 'success');

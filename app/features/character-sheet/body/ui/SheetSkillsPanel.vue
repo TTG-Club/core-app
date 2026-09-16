@@ -4,6 +4,7 @@
   import { useCharacterSheet } from '../../composables';
   import {
     SHEET_SKILL_SETTINGS_LABELS,
+    SHEET_SKILLS_PANEL_LABELS,
     SHEET_TITLE_ACTION_CLASS,
     SHEET_TITLE_ACTION_REVEAL_CLASS,
     SKILL_GROUP_LABEL_CLASS,
@@ -92,7 +93,7 @@
 </script>
 
 <template>
-  <SheetPanel title="Навыки">
+  <SheetPanel :title="SHEET_SKILLS_PANEL_LABELS.title">
     <template #title-actions>
       <button
         type="button"
@@ -139,7 +140,7 @@
             <button
               type="button"
               class="z-10 flex cursor-pointer items-center"
-              :aria-label="`Владение навыком: ${row.name}`"
+              :aria-label="`${SHEET_SKILLS_PANEL_LABELS.proficiency}: ${row.name}`"
               @click.left.exact.prevent="emit('cycle', row.name)"
             >
               <UIcon
@@ -153,7 +154,7 @@
           <button
             type="button"
             class="flex min-w-0 grow cursor-pointer items-center gap-3 after:absolute after:inset-0 after:cursor-pointer"
-            :aria-label="`Проверка: ${row.name}`"
+            :aria-label="`${SHEET_SKILLS_PANEL_LABELS.roll}: ${row.name}`"
             @click.left.exact.prevent="emit('roll', row)"
           >
             <span

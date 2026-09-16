@@ -19,9 +19,13 @@
     hideGallery = false,
     navigateInPlace = false,
     inSplit = false,
+    hideNavigation = false,
   } = defineProps<{
     detail: ClassDetailResponse;
     hideGallery?: boolean;
+
+    /** Скрывает переходы к классу и подклассам (предпросмотр из листа). */
+    hideNavigation?: boolean;
     /**
      * Включает inline-навигацию внутри текущего контейнера (drawer).
      */
@@ -83,6 +87,7 @@
             :has-spells="detail.casterType !== 'NONE'"
             :navigate-in-place="navigateInPlace"
             :in-split="inSplit"
+            :hide-navigation="hideNavigation"
             @navigate="emit('navigate', $event)"
           />
 

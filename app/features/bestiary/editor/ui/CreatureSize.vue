@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CreatureSizes } from '~bestiary/model';
+  import type { CreatureSizes } from '../../model';
 
   import { SelectSize } from '~ui/select';
 

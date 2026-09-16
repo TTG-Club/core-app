@@ -6,6 +6,7 @@
     ToolProficiencyGroupKey,
   } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
   import { ItemDrawer } from '~items/drawer';
 
   import { useCharacterSheet, useToolCatalog } from '../../composables';
@@ -350,7 +351,7 @@
 
             <UButton
               icon="tabler:plus"
-              label="Добавить"
+              :label="ACTION_LABELS.add"
               color="neutral"
               variant="subtle"
               :disabled="isCustomAddDisabled"
@@ -397,14 +398,14 @@
     <template #footer>
       <div class="flex w-full justify-end gap-2">
         <UButton
-          label="Отмена"
+          :label="ACTION_LABELS.cancel"
           color="neutral"
           variant="ghost"
           @click.left.exact.prevent="handleCancel"
         />
 
         <UButton
-          label="Применить"
+          :label="ACTION_LABELS.apply"
           color="primary"
           :disabled="!isDraftReady"
           @click.left.exact.prevent="handleApply"

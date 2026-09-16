@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CreatureAbilitiesResponse } from '~bestiary/model';
+  import type { CreatureAbilitiesResponse } from '../../../../model';
 
   import { DiceRollerLink } from '~dice-roller/link'; // или путь к твоим типам
 

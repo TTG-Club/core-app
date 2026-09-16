@@ -48,14 +48,8 @@
   -webkit-overflow-scrolling: touch;
 
   &::selection {
-    color: var(--ui-text-highlighted);
+    color: var(--ui-text-inverted);
     background: var(--color-primary);
-  }
-
-  @media (hover: none) and (pointer: coarse) {
-    &:hover {
-      all: unset !important;
-    }
   }
 }
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { ACTION_LABELS } from '~/shared/consts';
   import { UiDrawer } from '~ui/drawer';
   import { UiResult } from '~ui/result';
 
@@ -11,6 +12,7 @@
     CHARACTER_SHEET_ROUTE,
     CHARACTER_SHEET_SHARED_ROUTE,
     CHARACTER_SHEET_TITLE,
+    SHEET_DRAWER_LABELS,
     SHEET_NOT_FOUND_SUBTITLES,
     SHEET_OPEN_ON_PAGE_LABEL,
   } from '../model';
@@ -85,21 +87,25 @@
       <UiResult
         v-else-if="status === 'notFound'"
         status="404"
-        title="Лист не найден"
+        :title="SHEET_DRAWER_LABELS.notFoundTitle"
         :sub-title="notFoundSubtitle"
       >
         <template #extra>
-          <UButton @click.left.exact.prevent="emit('close')"> Закрыть </UButton>
+          <UButton @click.left.exact.prevent="emit('close')">
+            {{ ACTION_LABELS.close }}
+          </UButton>
         </template>
       </UiResult>
 
       <UiResult
         v-else-if="status === 'error'"
         status="error"
-        title="Не удалось загрузить лист"
+        :title="SHEET_DRAWER_LABELS.errorTitle"
       >
         <template #extra>
-          <UButton @click.left.exact.prevent="load"> Повторить </UButton>
+          <UButton @click.left.exact.prevent="load">
+            {{ ACTION_LABELS.retry }}
+          </UButton>
         </template>
       </UiResult>
 

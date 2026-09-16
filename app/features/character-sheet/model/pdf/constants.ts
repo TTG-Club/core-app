@@ -209,6 +209,12 @@ export const PDF_PERSONALITY_COLUMNS = 4;
 /** Ширина столбца с кружком подготовки заклинания. */
 export const PDF_SPELL_MARK_COLUMN_WIDTH = 14;
 
+/** Ширина подписи уровня в ряду ячеек заклинаний: «1-й уровень» помещается. */
+export const PDF_SPELL_SLOT_LEVEL_WIDTH = 64;
+
+/** Отступ кружков ячеек от левого края ряда: подпись уровня и зазор за ней. */
+export const PDF_SPELL_SLOT_MARKS_LEFT = 72;
+
 /** Отметка надетого предмета в таблице снаряжения. */
 export const PDF_EQUIPPED_MARK = '+';
 
@@ -306,6 +312,7 @@ export const PDF_LABELS = {
   armorProficiency: 'Броня',
   weaponProficiency: 'Оружие',
   masteryProficiency: 'Мастерство',
+  masteryProperties: 'Оружейные приёмы',
   toolProficiency: 'Инструменты',
   languageProficiency: 'Языки',
   carried: 'Несёт',

@@ -2,7 +2,6 @@ export { default as ClassEquipment } from './ClassEquipment.vue';
 export { default as ClassProficiency } from './ClassProficiency.vue';
 export { default as ClassRouting } from './ClassRouting.vue';
 export { default as FeatureCollapse } from './FeatureCollapse.vue';
-export { default as FeatureOptionsDrawer } from './FeatureOptionsDrawer.vue';
 export { default as MulticlassLevelInfo } from './MulticlassLevelInfo.vue';
 export { default as MulticlassSpellSlots } from './MulticlassSpellSlots.vue';
 export { default as MulticlassStatsBlock } from './MulticlassStatsBlock.vue';

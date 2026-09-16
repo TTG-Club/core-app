@@ -1,99 +1,35 @@
 <script setup lang="ts">
-  import type {
-    BugReportStatsResponse,
-    BugReportStatus,
-  } from '~bug-report/model';
+  import type { BugReportStatsResponse } from '~bug-report/model';
 
   import type { CommunityRatingPeriod } from './model';
 
-  import { ADMIN_USERS_ROUTE } from '~admin/users/model';
   import { BUG_REPORT_STATS_API_URL } from '~bug-report/model';
-  import {
-    MATERIAL_COUNTER_API_URL,
-    MATERIAL_COUNTER_CACHE_API_URL,
-    MATERIAL_COUNTER_DATA_KEY,
-    MATERIAL_COUNTER_DESCRIPTION,
-    MATERIAL_COUNTER_LABEL_MATERIALS,
-    MATERIAL_COUNTER_LABEL_VISITORS,
-    MATERIAL_COUNTER_RESET_DATA_KEY,
-    MATERIAL_COUNTER_TITLE,
-    ONLINE_COUNTER_DATA_KEY,
-  } from '~home/counters/model';
-  import { MODERATION_BUGS_ROUTE } from '~moderation/model';
-  import { AnimatedNumber } from '~ui/animated-number';
+  import { HomePanel } from '~home/ui-kit';
 
   import {
     COMMUNITY_BUG_STATS_DATA_KEY,
     COMMUNITY_EMPTY_MONTH_TEXT,
-    COMMUNITY_LABEL_FIXED,
+    COMMUNITY_EMPTY_SLOT_TEXTS,
+    COMMUNITY_EMPTY_TEXT,
+    COMMUNITY_ICON,
+    COMMUNITY_LABEL,
     COMMUNITY_PERIOD_DEFAULT,
     COMMUNITY_PERIOD_OPTIONS,
-    COMMUNITY_REFRESH_INTERVAL_MS,
-    COMMUNITY_TOP_LABEL,
+    COMMUNITY_ROW_STAGGER_MS,
+    COMMUNITY_TOP_SIZE,
     COMMUNITY_TOP_TOOLTIP,
     COMMUNITY_TROPHY_COLOR,
   } from './model';
 
-  const { isAdmin, canManageBugReports } = useUserRoles();
-  const router = useRouter();
-
-  // Материалы и сброс кеша
-  const {
-    data: materialsCounter,
-    refresh: refreshMaterials,
-    status: materialsStatus,
-  } = await useAsyncData(MATERIAL_COUNTER_DATA_KEY, () =>
-    $fetch<number>(MATERIAL_COUNTER_API_URL),
+  // Ту же статистику по тому же ключу читает строка счётчиков в шапке
+  // (HomeCounters). dedupe: 'defer' — иначе второй потребитель ключа отменяет
+  // запрос первого вместо того, чтобы дождаться общего.
+  const { data: bugStats } = await useAsyncData(
+    COMMUNITY_BUG_STATS_DATA_KEY,
+    () => $fetch<BugReportStatsResponse>(BUG_REPORT_STATS_API_URL),
+    { dedupe: 'defer' },
   );
 
-  const { execute: resetCache, status: resetStatus } = await useAsyncData(
-    MATERIAL_COUNTER_RESET_DATA_KEY,
-    () =>
-      $fetch(MATERIAL_COUNTER_CACHE_API_URL, {
-        onResponse: ({ response }) => {
-          if (!response.ok) {
-            return;
-          }
-
-          refreshMaterials();
-        },
-      }),
-    {
-      immediate: false,
-      server: false,
-    },
-  );
-
-  // Онлайн-счётчик пишется плагином online-heartbeat, здесь только читаем
-  const visitorsCounter = useState<number | null>(
-    ONLINE_COUNTER_DATA_KEY,
-    () => null,
-  );
-
-  // Статистика баг-репортов и топ охотников
-  const {
-    data: bugStats,
-    refresh: refreshBugStats,
-    status: bugStatsStatus,
-  } = await useAsyncData(COMMUNITY_BUG_STATS_DATA_KEY, () =>
-    $fetch<BugReportStatsResponse>(BUG_REPORT_STATS_API_URL),
-  );
-
-  const isLoading = computed(
-    () =>
-      materialsStatus.value === 'pending'
-      || resetStatus.value === 'pending'
-      || bugStatsStatus.value === 'pending',
-  );
-
-  const materialsValue = computed(() => materialsCounter.value ?? 0);
-  const visitorsValue = computed(() => visitorsCounter.value ?? 0);
-
-  // Значения ещё не получены с бэка (null) — показываем загрузку, а не «0»
-  const isMaterialsLoading = computed(() => materialsCounter.value === null);
-  const isVisitorsLoading = computed(() => visitorsCounter.value === null);
-  const isFixedLoading = computed(() => bugStats.value === null);
-  const fixedCount = computed(() => bugStats.value?.fixedCount ?? 0);
   const topFixers = computed(() => bugStats.value?.topFixers ?? []);
 
   const topFixersThisMonth = computed(
@@ -127,15 +63,16 @@
 
       return {
         ...fixer,
+        avatarImageUrl: fixer.avatarUrl ?? undefined,
         isWinner: index === 0,
         displayIndex: index + 1,
         rowStyle: {
-          animationDelay: `${index * 80}ms`,
+          animationDelay: `${index * COMMUNITY_ROW_STAGGER_MS}ms`,
         },
         barClass: isTopThree ? 'bg-success-500/8' : 'bg-success-500/4',
         barStyle: {
           width: `${(fixer.fixed / maxValue) * 100}%`,
-          animationDelay: `${300 + index * 80}ms`,
+          animationDelay: `${300 + index * COMMUNITY_ROW_STAGGER_MS}ms`,
         },
         badgeColor: isTopThree ? ('success' as const) : ('neutral' as const),
         textClass: isTopThree ? 'font-semibold text-default' : 'text-muted',
@@ -143,181 +80,56 @@
     });
   });
 
-  /** Классы кликабельного стата исправленных багов (для админа/модератора) */
-  const fixedTileClass = computed(() => ({
-    'cursor-pointer transition-colors hover:bg-default/80':
-      canManageBugReports.value,
-  }));
-
-  /** Классы кликабельного стата авантюристов (для админа) */
-  const visitorsTileClass = computed(() => ({
-    'cursor-pointer transition-colors hover:bg-default/80': isAdmin.value,
-  }));
-
   /**
-   * Переход к управлению пользователями (для админа) — шорткат из статистики
-   * туда, где авантюристов видно поимённо.
+   * Свободные позиции рейтинга: в начале месяца охотников меньше десяти,
+   * и хвост списка дорисовывается заглушками, чтобы блок не выглядел пустым.
+   * Подпись берётся по порядку среди пустых строк, задержка анимации
+   * продолжает лесенку настоящих строк.
    */
-  function handleVisitorsClick(): void {
-    if (!isAdmin.value) {
-      return;
+  const emptySlots = computed(() => {
+    const filledCount = activeFixers.value.length;
+
+    const slots: Array<{
+      displayIndex: number;
+      label: string;
+      rowStyle: { animationDelay: string };
+    }> = [];
+
+    for (let i = filledCount; i < COMMUNITY_TOP_SIZE; i++) {
+      const emptyOffset = i - filledCount;
+
+      slots.push({
+        displayIndex: i + 1,
+        label:
+          COMMUNITY_EMPTY_SLOT_TEXTS[
+            emptyOffset % COMMUNITY_EMPTY_SLOT_TEXTS.length
+          ] ?? '',
+        rowStyle: { animationDelay: `${i * COMMUNITY_ROW_STAGGER_MS}ms` },
+      });
     }
 
-    router.push(ADMIN_USERS_ROUTE);
-  }
-
-  /**
-   * Переход к баг-репортам с фильтром по новым (для админа/модератора).
-   * Удобный шорткат для быстрой обработки свежих репортов.
-   */
-  function handleNewBugsClick(): void {
-    if (!canManageBugReports.value) {
-      return;
-    }
-
-    const status: BugReportStatus = 'NEW';
-
-    router.push({
-      path: MODERATION_BUGS_ROUTE,
-      query: { status },
-    });
-  }
-
-  /** Сброс кеша материалов и обновление всей статистики (для админа) */
-  function handleRefresh(): void {
-    resetCache();
-    refreshBugStats();
-  }
-
-  /** Автообновление статистики на клиенте */
-  onMounted(() => {
-    useIntervalFn(() => refreshBugStats(), COMMUNITY_REFRESH_INTERVAL_MS);
+    return slots;
   });
 </script>
 
 <template>
-  <div
-    class="home-community relative flex flex-col gap-3 overflow-hidden rounded-xl border border-default bg-muted p-4 text-default"
+  <HomePanel
+    :label="COMMUNITY_LABEL"
+    :icon="COMMUNITY_ICON"
+    body-class="flex flex-col gap-2 p-3"
   >
-    <!-- Заголовок с live-индикатором -->
-    <div class="flex items-center gap-2">
-      <div
-        class="community-glow flex size-5 items-center justify-center rounded bg-linear-to-br from-success-500 to-success-600 shadow-[0_0_12px_var(--color-success-500)]"
-      >
+    <!-- Подсказка про зачёт багов стоит в шапке панели: отдельного
+      подзаголовка у рейтинга больше нет, панель целиком про охотников -->
+    <template #actions>
+      <UTooltip :text="COMMUNITY_TOP_TOOLTIP">
         <UIcon
-          name="tabler:player-play-filled"
-          class="size-2.5 text-white"
+          name="tabler:help-circle-filled"
+          class="size-3.5 cursor-help text-dimmed transition-colors hover:text-default"
         />
-      </div>
+      </UTooltip>
+    </template>
 
-      <h3 class="text-sm leading-tight font-semibold text-success-400">
-        {{ MATERIAL_COUNTER_TITLE }}
-      </h3>
-
-      <UButton
-        v-if="isAdmin"
-        :loading="isLoading"
-        icon="tabler:refresh"
-        variant="ghost"
-        size="xs"
-        class="ml-auto"
-        @click.left.exact.prevent="handleRefresh"
-      />
-    </div>
-
-    <!-- Тэглайн проекта -->
-    <p class="text-xs leading-normal text-default">
-      {{ MATERIAL_COUNTER_DESCRIPTION }}
-    </p>
-
-    <!-- Ключевые показатели проекта. < 420px — в столбец, чтобы подписи не жались -->
-    <div class="grid grid-cols-1 gap-2 min-[420px]:grid-cols-3">
-      <div
-        class="flex flex-col rounded-lg border border-default bg-default/50 px-3 py-2.5"
-        :class="visitorsTileClass"
-        @click.left.exact.prevent="handleVisitorsClick"
-      >
-        <span
-          class="text-[10px] font-medium tracking-wider text-muted uppercase"
-        >
-          {{ MATERIAL_COUNTER_LABEL_VISITORS }}
-        </span>
-
-        <USkeleton
-          v-if="isVisitorsLoading"
-          class="mt-0.5 h-5 w-10"
-        />
-
-        <AnimatedNumber
-          v-else
-          class="text-lg leading-tight font-bold text-success-400"
-          :value="visitorsValue"
-        />
-      </div>
-
-      <div
-        class="flex flex-col rounded-lg border border-default bg-default/50 px-3 py-2.5"
-      >
-        <span
-          class="text-[10px] font-medium tracking-wider text-muted uppercase"
-        >
-          {{ MATERIAL_COUNTER_LABEL_MATERIALS }}
-        </span>
-
-        <USkeleton
-          v-if="isMaterialsLoading"
-          class="mt-0.5 h-5 w-10"
-        />
-
-        <AnimatedNumber
-          v-else
-          class="text-lg leading-tight font-bold text-primary-400"
-          :value="materialsValue"
-        />
-      </div>
-
-      <div
-        class="flex flex-col rounded-lg border border-default bg-default/50 px-3 py-2.5"
-        :class="fixedTileClass"
-        @click.left.exact.prevent="handleNewBugsClick"
-      >
-        <span
-          class="text-[10px] font-medium tracking-wider text-muted uppercase"
-        >
-          {{ COMMUNITY_LABEL_FIXED }}
-        </span>
-
-        <USkeleton
-          v-if="isFixedLoading"
-          class="mt-0.5 h-5 w-10"
-        />
-
-        <AnimatedNumber
-          v-else
-          class="text-lg leading-tight font-bold text-warning-400"
-          :value="fixedCount"
-        />
-      </div>
-    </div>
-
-    <!-- Рейтинг охотников за багами -->
-    <div
-      v-if="hasAnyFixers"
-      class="flex flex-col gap-2"
-    >
-      <div class="flex items-center gap-1">
-        <span class="text-xs font-medium tracking-[0.5px] text-muted uppercase">
-          {{ COMMUNITY_TOP_LABEL }}
-        </span>
-
-        <UTooltip :text="COMMUNITY_TOP_TOOLTIP">
-          <UIcon
-            name="tabler:help-circle-filled"
-            class="size-3.5 cursor-help text-muted transition-colors hover:text-default"
-          />
-        </UTooltip>
-      </div>
-
+    <template v-if="hasAnyFixers">
       <!-- Переключатель периода: за текущий месяц / за всё время.
            :content="false" — используем табы только как переключатель,
            панели-контент рисуем сами ниже.
@@ -353,7 +165,7 @@
         <div
           v-for="fixer in decoratedTopFixers"
           :key="fixer.name"
-          class="fixer-row group relative flex items-center gap-2 rounded-lg px-2.5 py-1.5"
+          class="fixer-row group relative flex items-center gap-2 rounded-lg border border-transparent px-2.5 py-1.5"
           :style="fixer.rowStyle"
         >
           <!-- Полоска прогресса на фоне строки -->
@@ -376,11 +188,19 @@
 
             <span
               v-else
-              class="text-xs font-semibold text-muted tabular-nums"
+              class="font-mono text-xs font-semibold text-dimmed tabular-nums"
             >
               {{ fixer.displayIndex }}
             </span>
           </div>
+
+          <UAvatar
+            :src="fixer.avatarImageUrl"
+            :alt="fixer.name"
+            size="2xs"
+            class="relative z-1 shrink-0"
+            :ui="{ fallback: 'uppercase' }"
+          />
 
           <!-- Имя охотника (логин, если имя не задано) -->
           <span
@@ -396,8 +216,36 @@
             :color="fixer.badgeColor"
             variant="subtle"
             size="sm"
-            class="relative z-1 tabular-nums"
+            class="relative z-1 font-mono tabular-nums"
           />
+        </div>
+
+        <!-- Свободные позиции до полного топ-10. Пунктир — принятый в проекте
+             язык «места пока нет»; рамка прозрачна у настоящих строк, чтобы
+             высота заглушки совпадала с ними. -->
+        <div
+          v-for="slot in emptySlots"
+          :key="slot.displayIndex"
+          class="fixer-row flex items-center gap-2 rounded-lg border border-dashed border-default px-2.5 py-1.5"
+          :style="slot.rowStyle"
+        >
+          <div class="flex w-5 shrink-0 items-center justify-center">
+            <span
+              class="font-mono text-xs font-semibold text-dimmed tabular-nums"
+            >
+              {{ slot.displayIndex }}
+            </span>
+          </div>
+
+          <!-- Пустое место под аватарку: подписи свободных мест стоят вровень с именами -->
+          <span
+            class="size-5 shrink-0 rounded-full border border-dashed border-default"
+            aria-hidden="true"
+          />
+
+          <span class="flex-1 truncate text-sm text-dimmed italic">
+            {{ slot.label }}
+          </span>
         </div>
       </div>
 
@@ -408,26 +256,20 @@
       >
         {{ COMMUNITY_EMPTY_MONTH_TEXT }}
       </p>
-    </div>
-  </div>
+    </template>
+
+    <!-- Рейтинга нет ни за один период (или статистика не пришла) — панель без
+      тэглайна осталась бы пустой, поэтому показываем заглушку -->
+    <p
+      v-else
+      class="rounded-lg border border-dashed border-default px-3 py-4 text-center text-xs text-muted"
+    >
+      {{ COMMUNITY_EMPTY_TEXT }}
+    </p>
+  </HomePanel>
 </template>
 
 <style scoped>
-  .community-glow {
-    animation: community-pulse-glow 2s ease-in-out infinite;
-  }
-
-  @keyframes community-pulse-glow {
-    0%,
-    100% {
-      box-shadow: 0 0 8px var(--color-success-500);
-    }
-
-    50% {
-      box-shadow: 0 0 16px var(--color-success-400);
-    }
-  }
-
   /* Анимация появления строк */
   .fixer-row {
     animation: fixer-slide-in 0.4s ease-out both;
@@ -453,6 +295,13 @@
   @keyframes bar-grow {
     from {
       width: 0 !important;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fixer-row,
+    .fixer-bar {
+      animation: none;
     }
   }
 </style>

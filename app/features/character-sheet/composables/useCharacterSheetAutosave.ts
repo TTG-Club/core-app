@@ -1,9 +1,11 @@
 import type { Character, SheetSaveStatus } from '../model';
 
 import {
-  CHARACTER_SHEET_API_PATH,
   DRAFT_CHARACTER_ID,
+  SHEET_KEEPALIVE_MAX_BYTES,
   SHEET_SAVE_DEBOUNCE_MS,
+  SHEET_SAVE_RETRY_LIMIT,
+  SHEET_SAVE_RETRY_MAX_DELAY_MS,
   updateCharacterSheet,
 } from '../model';
 import { useCharacterSheet } from './useCharacterSheet';
@@ -19,6 +21,34 @@ interface PendingSave {
 
   data: Character;
   json: string;
+}
+
+/**
+ * Размер документа листа в байтах. Считается по UTF-8, а не по длине строки:
+ * лист написан по-русски, и почти каждый символ занимает два байта — по
+ * `length` документ выглядел бы вдвое легче квоты, в которую на самом деле не
+ * влезает. Серверный `getStringByteSize` тут не годится: он считает через
+ * `Buffer`, которого в браузере нет.
+ *
+ * @param save очередь на отправку.
+ * @returns размер документа в байтах.
+ */
+function getPendingSaveBytes(save: PendingSave): number {
+  return new TextEncoder().encode(save.json).byteLength;
+}
+
+/**
+ * Пауза перед очередным повтором сохранения: удваивается с каждой неудачей,
+ * чтобы упавший бэкенд не получал один и тот же PUT каждые полторы секунды.
+ *
+ * @param attempt сколько попыток уже сорвалось.
+ * @returns пауза в миллисекундах.
+ */
+function getSaveRetryDelay(attempt: number): number {
+  return Math.min(
+    SHEET_SAVE_DEBOUNCE_MS * 2 ** attempt,
+    SHEET_SAVE_RETRY_MAX_DELAY_MS,
+  );
 }
 
 /**
@@ -48,6 +78,13 @@ let isSaving = false;
 let timer: ReturnType<typeof setTimeout> | null = null;
 
 /**
+ * Сколько раз подряд отправка уже сорвалась. Считается здесь же, рядом с
+ * очередью: повтор планирует тот экземпляр, который поймал ошибку, а ждёт его
+ * общая правка.
+ */
+let retryAttempt = 0;
+
+/**
  * Автосохранение листа персонажа: правки уходят на бэк с дебаунсом, статус
  * («Сохранение…»/«Сохранено»/ошибка) — в общем состоянии для индикатора шапки.
  *
@@ -68,9 +105,12 @@ export function useCharacterSheetAutosave() {
 
   const saveStatus = useCharacterSheetSaveStatus();
 
-  /** Повтор отправки после ошибки сохранения. */
+  /** Повтор отправки после ошибки сохранения — вручную, из шапки листа. */
   function retry(): void {
     if (pending) {
+      // Счёт автоматических попыток начинается заново: игрок нажал повтор,
+      // увидев ошибку, — значит с прошлой серии могло измениться и окружение.
+      retryAttempt = 0;
       saveStatus.value = 'saving';
       void flush();
     }
@@ -82,8 +122,12 @@ export function useCharacterSheetAutosave() {
     return { saveStatus, retry };
   }
 
-  /** Перезапускает дебаунс-таймер отправки накопленных изменений. */
-  function restartTimer(): void {
+  /**
+   * Перезапускает таймер отправки накопленных изменений.
+   *
+   * @param delay пауза до отправки; по умолчанию — дебаунс правок.
+   */
+  function restartTimer(delay: number = SHEET_SAVE_DEBOUNCE_MS): void {
     if (timer) {
       clearTimeout(timer);
     }
@@ -91,14 +135,41 @@ export function useCharacterSheetAutosave() {
     timer = setTimeout(() => {
       timer = null;
       void flush();
-    }, SHEET_SAVE_DEBOUNCE_MS);
+    }, delay);
+  }
+
+  /**
+   * Планирует повтор после сорвавшейся отправки. Без него правка ждала бы
+   * следующего действия игрока: `pending` остаётся в очереди, но отправить его
+   * некому — а игрок уже считает лист сохранённым и уходит со страницы.
+   *
+   * После {@link SHEET_SAVE_RETRY_LIMIT} попыток очередь остаётся с ошибкой и
+   * ждёт следующей правки, ухода со страницы либо явного {@link retry} (кнопки
+   * повтора в шапке пока нет — индикатор сохранения только показывает
+   * состояние).
+   */
+  function scheduleRetry(): void {
+    if (retryAttempt >= SHEET_SAVE_RETRY_LIMIT) {
+      return;
+    }
+
+    const delay = getSaveRetryDelay(retryAttempt);
+
+    retryAttempt += 1;
+
+    restartTimer(delay);
   }
 
   /**
    * Отправляет накопленные изменения. Ошибка не сбрасывает `pending` — база не
-   * двигается, и следующая правка (или `retry`) дошлёт изменения.
+   * двигается, и правку дошлёт повтор (или следующая правка, или `retry`).
+   *
+   * @param options настройки отправки.
+   * @param options.keepalive запрос должен пережить закрытие страницы. Ставится
+   *   только после проверки размера тела: браузер отклоняет `keepalive` больше
+   *   квоты, и такой отказ приходит уже некому.
    */
-  async function flush(): Promise<void> {
+  async function flush(options: { keepalive?: boolean } = {}): Promise<void> {
     if (isSaving || !pending) {
       return;
     }
@@ -108,9 +179,10 @@ export function useCharacterSheetAutosave() {
     isSaving = true;
 
     try {
-      await updateCharacterSheet(current.sheetId, current.data);
+      await updateCharacterSheet(current.sheetId, current.data, options);
 
       baselineJson = current.json;
+      retryAttempt = 0;
 
       if (pending === current) {
         pending = null;
@@ -121,6 +193,7 @@ export function useCharacterSheetAutosave() {
       }
     } catch {
       saveStatus.value = 'error';
+      scheduleRetry();
     } finally {
       isSaving = false;
     }
@@ -177,6 +250,8 @@ export function useCharacterSheetAutosave() {
     }
 
     pending = { sheetId: currentSheetId, data: next, json };
+    // Новая правка — новая серия попыток: прошлая ошибка могла быть разовой.
+    retryAttempt = 0;
     saveStatus.value = 'saving';
     restartTimer();
   }
@@ -189,24 +264,39 @@ export function useCharacterSheetAutosave() {
     void flush();
   });
 
+  // Вкладку свернули, ушли в другое приложение или перешли на другую страницу:
+  // страница ещё жива, и хвост правок уходит обычным запросом, не дожидаясь
+  // дебаунса. На мобильных это единственный надёжный сигнал ухода —
+  // `beforeunload` там может не сработать вовсе.
+  const visibility = useDocumentVisibility();
+
+  watch(visibility, (state) => {
+    if (state === 'hidden') {
+      void flush();
+    }
+  });
+
   // Закрытие вкладки: на обычный запрос времени нет, keepalive даёт браузеру
-  // дослать PUT уже после закрытия страницы. `pending` сбрасывается сразу,
-  // чтобы соседние экземпляры-слушатели не продублировали запрос.
-  useEventListener('beforeunload', () => {
+  // дослать PUT уже после закрытия страницы.
+  useEventListener('beforeunload', (event) => {
     if (!pending || isSaving) {
       return;
     }
 
-    const current = pending;
+    if (getPendingSaveBytes(pending) <= SHEET_KEEPALIVE_MAX_BYTES) {
+      void flush({ keepalive: true });
 
-    pending = null;
+      return;
+    }
 
-    void $fetch(`${CHARACTER_SHEET_API_PATH}/${current.sheetId}`, {
-      method: 'PUT',
-      body: { name: current.data.name, data: current.data },
-      keepalive: true,
-      retry: 0,
-    });
+    // Тело больше квоты keepalive: браузер отклонит такой запрос целиком, а
+    // отказ придёт уже некому — правка пропала бы молча, и лист откатился бы к
+    // прошлому сохранению. Поэтому шлём обычным запросом (успеет — хорошо) и
+    // спрашиваем подтверждение ухода: секунды диалога хватает, чтобы запрос
+    // дошёл, а если игрок останется — сохранит дебаунс.
+    void flush();
+
+    event.preventDefault();
   });
 
   return {

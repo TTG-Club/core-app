@@ -1,12 +1,15 @@
 <script setup lang="ts">
   import type { CharacterClassResource } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
+
   import { useCharacterSheet } from '../../composables';
   import {
     CLASS_RESOURCE_MODAL_TITLES,
     FEAT_RESOURCE_HINT,
     getResourceMax,
     getResourceRecoveryBadges,
+    isEmptyFeatResource,
     isFeatResource,
     NEW_CLASS_RESOURCE,
     RESOURCE_ROW_LABELS,
@@ -32,30 +35,35 @@
     character.value.classResources.map(toClassResourceDraft),
   );
 
-  const countLabel = computed(() => `${draftResources.value.length} шт.`);
-
+  // Ресурс справочника без зарядов ещё не открылся и в список не попадает, но
+  // из черновика не уходит: «Применить» вернёт его листу, и строка появится
+  // сама, когда персонаж дорастёт
   const displayRows = computed(() =>
-    draftResources.value.map((resource) => {
-      // Ресурс черты пересобирается из справочника при каждой смене черт:
-      // правка и удаление вернулись бы назад, поэтому их и не предлагаем —
-      // строка такого ресурса не кнопка, а обычный блок с замком.
-      const isFromFeat = isFeatResource(resource);
+    draftResources.value
+      .filter((resource) => !isEmptyFeatResource(character.value, resource))
+      .map((resource) => {
+        // Ресурс черты пересобирается из справочника при каждой смене черт:
+        // правка и удаление вернулись бы назад, поэтому их и не предлагаем —
+        // строка такого ресурса не кнопка, а обычный блок с замком.
+        const isFromFeat = isFeatResource(resource);
 
-      return {
-        ...resource,
-        max: getResourceMax(character.value, resource),
-        recoveryBadges: getResourceRecoveryBadges(resource),
-        isFromFeat,
-        tag: isFromFeat ? 'div' : 'button',
-        buttonType: isFromFeat ? undefined : 'button',
-        cursorClass: isFromFeat ? 'cursor-default' : 'cursor-pointer',
-        editLabel: isFromFeat
-          ? undefined
-          : `${RESOURCE_ROW_LABELS.edit}: ${resource.name}`,
-        removeLabel: `${RESOURCE_ROW_LABELS.remove}: ${resource.name}`,
-      };
-    }),
+        return {
+          ...resource,
+          max: getResourceMax(character.value, resource),
+          recoveryBadges: getResourceRecoveryBadges(resource),
+          isFromFeat,
+          tag: isFromFeat ? 'div' : 'button',
+          buttonType: isFromFeat ? undefined : 'button',
+          cursorClass: isFromFeat ? 'cursor-default' : 'cursor-pointer',
+          editLabel: isFromFeat
+            ? undefined
+            : `${RESOURCE_ROW_LABELS.edit}: ${resource.name}`,
+          removeLabel: `${RESOURCE_ROW_LABELS.remove}: ${resource.name}`,
+        };
+      }),
   );
+
+  const countLabel = computed(() => `${displayRows.value.length} шт.`);
 
   /** Добавление ресурса: окно формы открывается с заготовкой нового счётчика. */
   async function handleAddResource() {
@@ -136,7 +144,7 @@
 
           <UButton
             icon="tabler:plus"
-            label="Добавить"
+            :label="ACTION_LABELS.add"
             color="neutral"
             variant="ghost"
             size="xs"
@@ -222,7 +230,7 @@
         </div>
 
         <span
-          v-if="!draftResources.length"
+          v-if="!displayRows.length"
           class="text-sm text-dimmed italic"
         >
           {{ SHEET_EMPTY_LABELS.classResources }}
@@ -233,14 +241,14 @@
     <template #footer>
       <div class="flex w-full justify-end gap-2">
         <UButton
-          label="Отмена"
+          :label="ACTION_LABELS.cancel"
           color="neutral"
           variant="ghost"
           @click.left.exact.prevent="handleCancel"
         />
 
         <UButton
-          label="Применить"
+          :label="ACTION_LABELS.apply"
           color="primary"
           @click.left.exact.prevent="handleApply"
         />

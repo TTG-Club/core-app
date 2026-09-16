@@ -15,7 +15,7 @@
     close: [];
   }>();
 
-  const { character, completeLongRest } = useCharacterSheet();
+  const { character, maxHitPoints, completeLongRest } = useCharacterSheet();
 
   const toast = useToast();
 
@@ -169,7 +169,7 @@
                 </span>
 
                 <span class="text-sm leading-none text-muted">
-                  / {{ health.max }}
+                  / {{ maxHitPoints }}
                 </span>
 
                 <span
@@ -189,7 +189,7 @@
                 class="size-4"
               />
 
-              {{ health.max }}
+              {{ maxHitPoints }}
             </span>
           </div>
 

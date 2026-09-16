@@ -1,10 +1,9 @@
 <script setup lang="ts">
-  import type { ClassFeature } from '../../model';
+  import type { ClassFeature, FeatureOptionEntry } from '../../model';
 
+  import { FeatureOptionsDrawer } from '~classes/feature-options-drawer';
   import { UiCollapse } from '~ui/collapse';
   import { MarkupRender } from '~ui/markup';
-
-  import FeatureOptionsDrawer from './FeatureOptionsDrawer.vue';
 
   const props = withDefaults(
     defineProps<{
@@ -35,7 +34,22 @@
     return () => str;
   });
 
-  const optionsCount = computed(() => props.feature.options?.length ?? 0);
+  // Дровер описаний общий со мастером листа персонажа, поэтому берёт плоские
+  // записи вариантов, а не ответ API как есть
+  const optionEntries = computed<FeatureOptionEntry[]>(() =>
+    (props.feature.options ?? []).map((option) => ({
+      key: option.key,
+      name: option.name.rus || option.name.eng,
+      nameEng: option.name.eng,
+      description: option.description,
+      additional: option.additional ?? '',
+      prerequisite: option.prerequisite ?? '',
+      requiredClassLevel: option.requiredClassLevel ?? 0,
+      repeatable: option.repeatable,
+    })),
+  );
+
+  const optionsCount = computed(() => optionEntries.value.length);
 
   const optionsName = computed(
     () => props.feature.optionsName || props.feature.name,
@@ -88,7 +102,7 @@
         <FeatureOptionsDrawer
           v-if="optionsCount"
           v-model="optionsOpened"
-          :feature="props.feature"
+          :options="optionEntries"
           :title="optionsName"
         />
       </ClientOnly>

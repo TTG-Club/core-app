@@ -5,7 +5,9 @@
   import {
     getResourceMax,
     getResourceRecoveryBadges,
+    isEmptyFeatResource,
     RESOURCES_TITLE,
+    SHEET_CLASS_RESOURCES_PANEL_LABELS,
     SHEET_EMPTY_LABELS,
     SHEET_TITLE_ACTION_CLASS,
     SHEET_TITLE_ACTION_REVEAL_CLASS,
@@ -62,19 +64,23 @@
   }
 
   const displayRows = computed(() =>
-    props.resources.map((resource) => {
-      // Максимум ресурса с правилом считается от листа: записанное число —
-      // лишь снимок, и после повышения уровня оно уже не то.
-      const max = getResourceMax(character.value, resource);
+    props.resources
+      // Ресурс справочника без зарядов ещё не открылся: строка «0/0» с
+      // замком ни потратить, ни убрать — появится сама, когда персонаж дорастёт
+      .filter((resource) => !isEmptyFeatResource(character.value, resource))
+      .map((resource) => {
+        // Максимум ресурса с правилом считается от листа: записанное число —
+        // лишь снимок, и после повышения уровня оно уже не то.
+        const max = getResourceMax(character.value, resource);
 
-      return {
-        ...resource,
-        max,
-        recoveryBadges: getResourceRecoveryBadges(resource),
-        isMinusDisabled: resource.current <= 0,
-        isPlusDisabled: resource.current >= max,
-      };
-    }),
+        return {
+          ...resource,
+          max,
+          recoveryBadges: getResourceRecoveryBadges(resource),
+          isMinusDisabled: resource.current <= 0,
+          isPlusDisabled: resource.current >= max,
+        };
+      }),
   );
 </script>
 
@@ -91,7 +97,7 @@
           SHEET_TITLE_ACTION_REVEAL_CLASS,
           editControlClass,
         ]"
-        aria-label="Настроить ресурсы класса"
+        :aria-label="SHEET_CLASS_RESOURCES_PANEL_LABELS.settings"
         @click.left.exact.prevent="handleEditClick"
       >
         <UIcon
@@ -124,7 +130,7 @@
             square
             :class="gameControlClass"
             :disabled="row.isMinusDisabled"
-            :aria-label="`Потратить: ${row.name}`"
+            :aria-label="`${SHEET_CLASS_RESOURCES_PANEL_LABELS.spend}: ${row.name}`"
             @click.left.exact.prevent="handleAdjust(row.id, -1)"
           />
 
@@ -141,7 +147,7 @@
             square
             :class="gameControlClass"
             :disabled="row.isPlusDisabled"
-            :aria-label="`Восстановить: ${row.name}`"
+            :aria-label="`${SHEET_CLASS_RESOURCES_PANEL_LABELS.restore}: ${row.name}`"
             @click.left.exact.prevent="handleAdjust(row.id, 1)"
           />
 

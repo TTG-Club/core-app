@@ -1,65 +1,132 @@
 /**
- * Справочники для редактора активных эффектов.
+ * Справочники и подписи редактора активных эффектов.
+ *
  * Значения (`value`) совпадают со словарями VTTG, чтобы экспорт был
- * pass-through. Зеркало: vttg/.../activeEffectTypes.ts + consts.
+ * pass-through. Подписи формы взяты дословно из окна эффекта системы: автор на
+ * сайте и мастер в VTTG видят одни и те же слова.
+ *
+ * Зеркало: dnd5-test-migrate/src/engine/activeEffectTypes.ts,
+ * src/client/ui/effect/constants.ts, src/client/ui/effect/triggerLabels.ts.
  */
 
 import type {
+  EffectDelivery,
+  EffectFormContext,
+  EffectFormStep,
+  EffectSaveUnavailableReason,
+  EffectSuccessOutcome,
+  EffectTriggerActionType,
+  EffectTriggerPreset,
+  InertEffectField,
+} from './layout';
+import type {
+  TriggerConditionKind,
+  TriggerConditionParameter,
+} from './triggerConditions';
+import type {
+  EffectTriggerActionGate,
+  EffectTriggerAttackRole,
+  EffectTriggerEvent,
+  EffectTriggerLimitPeriod,
+  EffectTriggerRecipient,
+  EffectTriggerTurnOwner,
+} from './triggerTypes';
+import type {
   EffectAbility,
   EffectAreaTrigger,
+  EffectAttackTrigger,
   EffectAuraTarget,
   EffectChange,
   EffectChangeMode,
   EffectConditionKey,
   EffectDamagePartTarget,
+  EffectDamageType,
   EffectDurationType,
-  EffectOrigin,
+  EffectHealKind,
   EffectSaveOutcome,
   EffectSaveTiming,
+  EffectTurnAnchor,
+  EffectTurnTiming,
 } from './types';
+
+import { DEFAULT_EFFECT_TAG } from './triggerTypes';
 
 interface Option<Value extends string> {
   label: string;
   value: Value;
 }
 
-/** Режимы применения числового изменения. */
+/** Режимы применения числового изменения — подписи выбора в строке. */
 export const EFFECT_CHANGE_MODE_OPTIONS: Array<Option<EffectChangeMode>> = [
   { label: 'Добавить (+)', value: 'add' },
   { label: 'Умножить (×)', value: 'multiply' },
-  { label: 'Перезаписать (=)', value: 'override' },
-  { label: 'Улучшить (Max)', value: 'upgrade' },
-  { label: 'Ухудшить (Min)', value: 'downgrade' },
-  { label: 'Пользовательский', value: 'custom' },
+  { label: 'Заменить (=)', value: 'override' },
+  { label: 'Не меньше (max)', value: 'upgrade' },
+  { label: 'Не больше (min)', value: 'downgrade' },
+  { label: 'Особый', value: 'custom' },
 ];
 
-/** Источники эффекта. */
-export const EFFECT_ORIGIN_OPTIONS: Array<Option<EffectOrigin>> = [
-  { label: 'Заклинание', value: 'spell' },
-  { label: 'Предмет', value: 'item' },
-  { label: 'Особенность', value: 'feature' },
-  { label: 'Состояние', value: 'condition' },
-  { label: 'Вручную', value: 'manual' },
-  { label: 'Область', value: 'area' },
-];
+/** Режимы изменения словом — для описаний («заменить 60»). */
+export const EFFECT_CHANGE_MODE_LABELS: Record<EffectChangeMode, string> = {
+  add: 'Добавить',
+  multiply: 'Умножить',
+  override: 'Заменить',
+  upgrade: 'Повысить до',
+  downgrade: 'Понизить до',
+  custom: 'Особое',
+};
 
-/** Типы длительности. */
-export const EFFECT_DURATION_OPTIONS: Array<Option<EffectDurationType>> = [
-  { label: 'Постоянно', value: 'permanent' },
-  { label: 'Раунды', value: 'rounds' },
-  { label: 'Минуты', value: 'minutes' },
-  { label: 'Часы', value: 'hours' },
-  { label: 'Дни', value: 'days' },
-  { label: 'Особое', value: 'special' },
-];
+/** Названия типов длительности. */
+export const EFFECT_DURATION_LABELS: Record<EffectDurationType, string> = {
+  permanent: 'Постоянно',
+  rounds: 'Раунды',
+  minutes: 'Минуты',
+  hours: 'Часы',
+  days: 'Дни',
+  turn: 'До хода (точно)',
+  special: 'Особое',
+};
 
-/** Типы длительности, у которых есть числовое значение. */
-export const EFFECT_DURATION_WITH_VALUE: EffectDurationType[] = [
-  'rounds',
-  'minutes',
-  'hours',
-  'days',
-];
+/** Чей ход прекращает точную «ходовую» длительность. */
+export const EFFECT_TURN_ANCHOR_LABELS: Record<EffectTurnAnchor, string> = {
+  carrier: 'носителя (цели)',
+  source: 'источника (кастера)',
+};
+
+/** Момент хода длительности «до хода», когда в данных он не записан. */
+export const DEFAULT_EFFECT_TURN_TIMING: EffectTurnTiming = 'end';
+
+/** Чей ход считает длительность «до хода», когда в данных это не записано. */
+export const DEFAULT_EFFECT_TURN_ANCHOR: EffectTurnAnchor = 'carrier';
+
+/** Момент хода якоря для точной «ходовой» длительности. */
+export const EFFECT_TURN_TIMING_LABELS: Record<EffectTurnTiming, string> = {
+  start: 'в начале хода',
+  end: 'в конце хода',
+};
+
+/**
+ * Момент хода урона каждый ход и повторного спасброска — те же слова, что у
+ * момента хода длительности.
+ */
+export const EFFECT_SAVE_TIMING_LABELS: Record<EffectSaveTiming, string> = {
+  startOfTurn: EFFECT_TURN_TIMING_LABELS.start,
+  endOfTurn: EFFECT_TURN_TIMING_LABELS.end,
+};
+
+/** Названия моментов срабатывания области или ауры. */
+export const EFFECT_AREA_TRIGGER_LABELS: Record<EffectAreaTrigger, string> = {
+  stay: 'Пока внутри',
+  enter: 'При входе',
+  exit: 'При выходе',
+};
+
+/** Названия снятия после атаки. */
+export const EFFECT_ATTACK_TRIGGER_LABELS: Record<EffectAttackTrigger, string> =
+  {
+    carrierAttack: 'Снять после своей атаки',
+    attackOnCarrier: 'Снять после атаки по цели',
+  };
 
 /** Характеристики (полные имена — словарь VTTG). */
 export const EFFECT_ABILITY_OPTIONS: Array<Option<EffectAbility>> = [
@@ -71,37 +138,25 @@ export const EFFECT_ABILITY_OPTIONS: Array<Option<EffectAbility>> = [
   { label: 'Харизма', value: 'charisma' },
 ];
 
-/** Цель применения эффекта. */
-export const EFFECT_TARGET_OPTIONS = [
-  { label: 'Себе', value: 'self' as const },
-  { label: 'Цели', value: 'target' as const },
-];
+/** Характеристики в родительном падеже — «спасбросок Телосложения». */
+export const EFFECT_ABILITY_GENITIVE_LABELS: Record<EffectAbility, string> = {
+  strength: 'Силы',
+  dexterity: 'Ловкости',
+  constitution: 'Телосложения',
+  intelligence: 'Интеллекта',
+  wisdom: 'Мудрости',
+  charisma: 'Харизмы',
+};
 
-/** Момент периодического спасброска/урона. */
-export const EFFECT_SAVE_TIMING_OPTIONS: Array<Option<EffectSaveTiming>> = [
-  { label: 'В конце хода цели', value: 'endOfTurn' },
-  { label: 'В начале хода цели', value: 'startOfTurn' },
-];
-
-/** Результат успешного спасброска при наложении. */
-export const EFFECT_SAVE_OUTCOME_OPTIONS: Array<Option<EffectSaveOutcome>> = [
-  { label: 'Отменяет эффект', value: 'negate' },
-  { label: 'Половина урона', value: 'half' },
-];
-
-/** Триггеры области/ауры. */
-export const EFFECT_AREA_TRIGGER_OPTIONS: Array<Option<EffectAreaTrigger>> = [
-  { label: 'Пока внутри', value: 'stay' },
-  { label: 'При входе', value: 'enter' },
-  { label: 'При выходе', value: 'exit' },
-];
-
-/** Кого задевает аура. */
-export const EFFECT_AURA_TARGET_OPTIONS: Array<Option<EffectAuraTarget>> = [
-  { label: 'Только союзники', value: 'allies' },
-  { label: 'Только враги', value: 'enemies' },
-  { label: 'Все существа', value: 'all' },
-];
+/** Кого задевает аура — в сводке и описании. */
+export const EFFECT_AURA_TARGET_SCENARIO_LABELS: Record<
+  EffectAuraTarget,
+  string
+> = {
+  allies: 'союзники',
+  enemies: 'враги',
+  all: 'все существа',
+};
 
 /** Ключи стандартных состояний D&D 5e. */
 export const EFFECT_CONDITION_OPTIONS: Array<Option<EffectConditionKey>> = [
@@ -122,8 +177,46 @@ export const EFFECT_CONDITION_OPTIONS: Array<Option<EffectConditionKey>> = [
   { label: 'Без сознания', value: 'unconscious' },
 ];
 
+/**
+ * Типы существ для условий эффекта — зеркало `CREATURE_CATEGORIES` из VTTG.
+ * Свой список, а не словарь сайта: у справочника бестиария ключи другие
+ * (`SLIME`, пять видов `SWARM_OF_*`), а условие сверяет ровно тип VTTG.
+ */
+export const EFFECT_CREATURE_CATEGORY_OPTIONS: Array<Option<string>> = [
+  { label: 'Аберрация', value: 'aberration' },
+  { label: 'Зверь', value: 'beast' },
+  { label: 'Небожитель', value: 'celestial' },
+  { label: 'Конструкт', value: 'construct' },
+  { label: 'Дракон', value: 'dragon' },
+  { label: 'Элементаль', value: 'elemental' },
+  { label: 'Фея', value: 'fey' },
+  { label: 'Исчадие', value: 'fiend' },
+  { label: 'Великан', value: 'giant' },
+  { label: 'Гуманоид', value: 'humanoid' },
+  { label: 'Чудовище', value: 'monstrosity' },
+  { label: 'Слизь', value: 'ooze' },
+  { label: 'Растение', value: 'plant' },
+  { label: 'Нежить', value: 'undead' },
+  { label: 'Рой', value: 'swarm' },
+];
+
+/** Ключи типов существ — для проверки строки из данных. */
+const EFFECT_CREATURE_CATEGORY_KEYS: ReadonlySet<string> = new Set(
+  EFFECT_CREATURE_CATEGORY_OPTIONS.map((creatureType) => creatureType.value),
+);
+
+/**
+ * Проверяет, что строка — тип существа VTTG.
+ *
+ * @param creatureType строка из данных или поля формы.
+ * @returns `true` для известного типа существа.
+ */
+export function isEffectCreatureCategory(creatureType: string): boolean {
+  return EFFECT_CREATURE_CATEGORY_KEYS.has(creatureType);
+}
+
 /** Типы урона (ключи — словарь VTTG, lowercase). */
-export const EFFECT_DAMAGE_TYPE_OPTIONS: Array<Option<string>> = [
+export const EFFECT_DAMAGE_TYPE_OPTIONS: Array<Option<EffectDamageType>> = [
   { label: 'Рубящий', value: 'slashing' },
   { label: 'Колющий', value: 'piercing' },
   { label: 'Дробящий', value: 'bludgeoning' },
@@ -139,6 +232,80 @@ export const EFFECT_DAMAGE_TYPE_OPTIONS: Array<Option<string>> = [
   { label: 'Психический', value: 'psychic' },
 ];
 
+/** Приставка типа урона в токене формулы без `@`: `dmg.fire`. */
+export const EFFECT_DAMAGE_TYPE_TOKEN_PREFIX = 'dmg.';
+
+/** Типы урона токенами формулы: `@dmg.fire` вместо отдельного поля. */
+export const EFFECT_DAMAGE_TYPE_TOKEN_OPTIONS: Array<Option<string>> =
+  EFFECT_DAMAGE_TYPE_OPTIONS.map((damageType) => ({
+    label: damageType.label,
+    value: `${EFFECT_DAMAGE_TYPE_TOKEN_PREFIX}${damageType.value}`,
+  }));
+
+/** Ключи типов урона — для проверки строки из данных. */
+const EFFECT_DAMAGE_TYPE_KEYS: ReadonlySet<string> = new Set(
+  EFFECT_DAMAGE_TYPE_OPTIONS.map((damageType) => damageType.value),
+);
+
+/**
+ * Проверяет, что строка — тип урона, к которому применимы защиты.
+ *
+ * @param damageType строка из данных или поля формы.
+ * @returns `true` для известного типа урона.
+ */
+export function isEffectDamageType(
+  damageType: string,
+): damageType is EffectDamageType {
+  return EFFECT_DAMAGE_TYPE_KEYS.has(damageType);
+}
+
+/**
+ * Типы урона в сводке — «2к6 ядом», «1к10 огненный». Зеркало
+ * `getShortDamageTypeLabel` системы: полная подпись без слова «урон».
+ */
+export const EFFECT_DAMAGE_TYPE_SHORT_LABELS: Record<EffectDamageType, string> =
+  {
+    slashing: 'рубящий',
+    piercing: 'колющий',
+    bludgeoning: 'дробящий',
+    fire: 'огненный',
+    cold: 'холодом',
+    lightning: 'молнией',
+    thunder: 'звуком (гром)',
+    poison: 'ядом',
+    acid: 'кислотой',
+    necrotic: 'некротический',
+    radiant: 'излучением',
+    force: 'силовой',
+    psychic: 'психический',
+  };
+
+/**
+ * Навыки D&D 5e — зеркало `SKILLS_LABELS` из системы. Один список на всё, что
+ * про навыки: и ключи изменений (`skill.` с ключом навыка), и флаги преимущества с
+ * помехой. Второй перечень разъехался бы с первым при первом переименовании.
+ */
+export const EFFECT_SKILL_OPTIONS: Array<Option<string>> = [
+  { value: 'acrobatics', label: 'Акробатика' },
+  { value: 'investigation', label: 'Анализ' },
+  { value: 'arcana', label: 'Аркана' },
+  { value: 'athletics', label: 'Атлетика' },
+  { value: 'perception', label: 'Внимательность' },
+  { value: 'survival', label: 'Выживание' },
+  { value: 'performance', label: 'Выступление' },
+  { value: 'intimidation', label: 'Запугивание' },
+  { value: 'history', label: 'История' },
+  { value: 'sleightOfHand', label: 'Ловкость рук' },
+  { value: 'medicine', label: 'Медицина' },
+  { value: 'deception', label: 'Обман' },
+  { value: 'nature', label: 'Природа' },
+  { value: 'insight', label: 'Проницательность' },
+  { value: 'religion', label: 'Религия' },
+  { value: 'stealth', label: 'Скрытность' },
+  { value: 'persuasion', label: 'Убеждение' },
+  { value: 'animalHandling', label: 'Уход за животными' },
+];
+
 /** Цель части урона эффекта. */
 export const EFFECT_DAMAGE_TARGET_OPTIONS: Array<
   Option<EffectDamagePartTarget>
@@ -148,58 +315,84 @@ export const EFFECT_DAMAGE_TARGET_OPTIONS: Array<
   { label: 'Указать отдельно', value: 'choose' },
 ];
 
-/** Библиотека ключей атрибутов (для поля change.key). */
+/**
+ * Библиотека ключей атрибутов (для поля change.key) — зеркало
+ * `EFFECT_TARGET_SUGGESTIONS` из VTTG. Список закрыт: неизвестный ключ движок
+ * молча пропускает, и эффект выглядел бы настроенным, ничего не делая.
+ */
 export const EFFECT_TARGET_KEY_SUGGESTIONS: Array<Option<string>> = [
+  // Базовые параметры
   { value: 'armorClass', label: 'Класс доспеха (AC)' },
   { value: 'initiative', label: 'Инициатива (бонус)' },
   { value: 'proficiencyBonus', label: 'Бонус мастерства' },
   { value: 'spellSaveDC', label: 'Сложность спасброска от заклинаний' },
   { value: 'hitPoints.max', label: 'Макс. здоровье (HP)' },
-  { value: 'hitPoints.temp', label: 'Временные хиты (Temp HP)' },
+
+  // Местность
+  {
+    value: 'terrain.movementCost',
+    label: 'Труднопроходимость (цена клетки)',
+  },
+
+  // Критические попадания
+  {
+    value: 'critThreshold',
+    label:
+      'Порог крита атаками оружием (режим «Не больше»: 19 — крит на 19–20)',
+  },
+
+  // Скорости
   { value: 'movement.walk', label: 'Скорость (ходьба)' },
   { value: 'movement.fly', label: 'Скорость (полёт)' },
   { value: 'movement.swim', label: 'Скорость (плавание)' },
   { value: 'movement.climb', label: 'Скорость (лазание)' },
+  { value: 'movement.burrow', label: 'Скорость (копание)' },
+
+  // Чувства (дальность в футах)
+  { value: 'sense.darkvision', label: 'Чувство: Тёмное зрение' },
+  { value: 'sense.blindsight', label: 'Чувство: Слепое зрение' },
+  { value: 'sense.truesight', label: 'Чувство: Истинное зрение' },
+  { value: 'sense.tremorsense', label: 'Чувство: Чувство вибрации' },
+  { value: 'sense.telepathy', label: 'Чувство: Телепатия' },
+
+  // Характеристики
   { value: 'ability.strength', label: 'Сила (очки)' },
   { value: 'ability.dexterity', label: 'Ловкость (очки)' },
   { value: 'ability.constitution', label: 'Телосложение (очки)' },
   { value: 'ability.intelligence', label: 'Интеллект (очки)' },
   { value: 'ability.wisdom', label: 'Мудрость (очки)' },
   { value: 'ability.charisma', label: 'Харизма (очки)' },
+
+  // Спасброски
   { value: 'save.strength', label: 'Спасбросок (Сила)' },
   { value: 'save.dexterity', label: 'Спасбросок (Ловкость)' },
   { value: 'save.constitution', label: 'Спасбросок (Телосложение)' },
   { value: 'save.intelligence', label: 'Спасбросок (Интеллект)' },
   { value: 'save.wisdom', label: 'Спасбросок (Мудрость)' },
   { value: 'save.charisma', label: 'Спасбросок (Харизма)' },
+
+  // Атаки
   { value: 'attack.melee', label: 'Атака: рукопашное оружие' },
   { value: 'attack.ranged', label: 'Атака: дальнобойное оружие' },
   { value: 'attack.spell', label: 'Атака: заклинание' },
+
+  // Урон
   { value: 'damage.melee', label: 'Урон: рукопашное оружие' },
   { value: 'damage.ranged', label: 'Урон: дальнобойное оружие' },
   { value: 'damage.spell', label: 'Урон: заклинание' },
-  { value: 'skill.acrobatics', label: 'Навык (Акробатика)' },
-  { value: 'skill.animalHandling', label: 'Навык (Уход за животными)' },
-  { value: 'skill.arcana', label: 'Навык (Аркана)' },
-  { value: 'skill.athletics', label: 'Навык (Атлетика)' },
-  { value: 'skill.deception', label: 'Навык (Обман)' },
-  { value: 'skill.history', label: 'Навык (История)' },
-  { value: 'skill.insight', label: 'Навык (Проницательность)' },
-  { value: 'skill.investigation', label: 'Навык (Анализ)' },
-  { value: 'skill.intimidation', label: 'Навык (Запугивание)' },
-  { value: 'skill.medicine', label: 'Навык (Медицина)' },
-  { value: 'skill.nature', label: 'Навык (Природа)' },
-  { value: 'skill.perception', label: 'Навык (Внимательность)' },
-  { value: 'skill.performance', label: 'Навык (Выступление)' },
-  { value: 'skill.persuasion', label: 'Навык (Убеждение)' },
-  { value: 'skill.religion', label: 'Навык (Религия)' },
-  { value: 'skill.sleightOfHand', label: 'Навык (Ловкость рук)' },
-  { value: 'skill.stealth', label: 'Навык (Скрытность)' },
-  { value: 'skill.survival', label: 'Навык (Выживание)' },
+
+  // Навыки — из общего списка, чтобы ключ и флаг навыка не разъехались
+  ...EFFECT_SKILL_OPTIONS.map(
+    (skill): Option<string> => ({
+      value: `skill.${skill.value}`,
+      label: `Навык (${skill.label})`,
+    }),
+  ),
 ];
 
 /** Библиотека значений/формул (для поля change.value). */
 export const EFFECT_VALUE_SUGGESTIONS: Array<Option<string>> = [
+  // Характеристики и модификаторы
   { value: '@mod.spell', label: 'Модификатор заклинательной хар-ки' },
   { value: '@mod.str', label: 'Модификатор Силы' },
   { value: '@mod.dex', label: 'Модификатор Ловкости' },
@@ -209,129 +402,412 @@ export const EFFECT_VALUE_SUGGESTIONS: Array<Option<string>> = [
   { value: '@mod.cha', label: 'Модификатор Харизмы' },
   { value: '@prof', label: 'Бонус мастерства (@prof)' },
   { value: '@level', label: 'Уровень персонажа (@level)' },
+  {
+    value: '@classLevel',
+    label: 'Уровень в классе умения (@classLevel; у своего эффекта — общий)',
+  },
+
+  // Скорости листа: ими задаётся «полёт равен скорости ходьбы»
+  { value: '@speed.walk', label: 'Скорость ходьбы листа' },
+  { value: '@speed.fly', label: 'Скорость полёта листа' },
+  { value: '@speed.swim', label: 'Скорость плавания листа' },
+  { value: '@speed.climb', label: 'Скорость лазания листа' },
+  { value: '@speed.burrow', label: 'Скорость копания листа' },
+
+  // Типы урона
   { value: '1к6@dmg.fire', label: 'Урон: Огонь (1к6)' },
   { value: '1к6@dmg.cold', label: 'Урон: Холод' },
   { value: '1к6@dmg.lightning', label: 'Урон: Электричество' },
+  { value: '1к6@dmg.thunder', label: 'Урон: Звук' },
+  { value: '1к6@dmg.acid', label: 'Урон: Кислота' },
+  { value: '1к6@dmg.poison', label: 'Урон: Яд' },
   { value: '1к6@dmg.necrotic', label: 'Урон: Некроз' },
   { value: '1к6@dmg.radiant', label: 'Урон: Излучение' },
-  { value: '1к6@dmg.poison', label: 'Урон: Яд' },
+  { value: '1к6@dmg.force', label: 'Урон: Силовое поле' },
+  { value: '1к6@dmg.psychic', label: 'Урон: Психический' },
+  { value: '1к6@dmg.bludgeoning', label: 'Урон: Дробящий' },
+  { value: '1к6@dmg.piercing', label: 'Урон: Колющий' },
+  { value: '1к6@dmg.slashing', label: 'Урон: Рубящий' },
+
+  // Лечение
   { value: '1к8@heal', label: 'Лечение (1к8)' },
   { value: '1к8@heal.temp', label: 'Временные хиты (Temp HP)' },
+
+  // Условия по цели прямо в формуле
+  { value: '1к6@target.full', label: 'Формула: только при полном HP цели' },
+  { value: '1к6@target.notFull', label: 'Формула: только по раненой цели' },
 ];
 
-/** Библиотека условий (для поля change.condition). */
+/** Приставка условий по типу НОСИТЕЛЯ эффекта. */
+export const EFFECT_CARRIER_TYPE_CONDITION_PREFIX = 'self.creatureType === ';
+
+/** Приставка условий по типу ЦЕЛИ. */
+export const EFFECT_TARGET_TYPE_CONDITION_PREFIX = 'target.creatureType === ';
+
+/**
+ * Разделитель условий, соединённых «и»: `self.armor === "none" && ...`.
+ *
+ * Это не выражение и не шаг к нему: каждая часть остаётся строкой из закрытого
+ * перечня, а `&&` только позволяет требовать нескольких условий разом — «нет
+ * доспеха И нет щита» у наручей защиты. Другой связки (`||`, отрицания,
+ * скобок) намеренно нет: разбирать их пришлось бы парсером.
+ */
+export const EFFECT_CONDITION_AND_SEPARATOR = '&&';
+
+/**
+ * Части составного условия.
+ *
+ * Одиночное условие — тоже список, из одного элемента: так весь дальнейший
+ * разбор работает единообразно, без ветки «а если разделителя нет».
+ *
+ * @param condition условие изменения.
+ * @returns непустые части, каждая обрезана по краям.
+ */
+export function splitConditionParts(condition: string): string[] {
+  return condition
+    .split(EFFECT_CONDITION_AND_SEPARATOR)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+}
+
+/** Приставка условия по надетому доспеху носителя. */
+export const EFFECT_CARRIER_ARMOR_CONDITION_PREFIX = 'self.armor === ';
+
+/**
+ * Условие «цель помечена мной»: цель несёт эффект с флагом `mark.bySource`,
+ * наложенный носителем условия (Метка охотника, Сглаз).
+ */
+export const EFFECT_MARKED_BY_SELF_CONDITION = 'target.markedBySelf';
+
+/** Условие «бросок с преимуществом» — у модификаторов и у срабатываний. */
+export const EFFECT_ROLL_ADVANTAGE_CONDITION = 'roll.hasAdvantage === true';
+
+/** Условие «бросок с помехой» — у модификаторов и у срабатываний. */
+export const EFFECT_ROLL_DISADVANTAGE_CONDITION =
+  'roll.hasDisadvantage === true';
+
+/** Приставка условия срабатывания «урон этого типа». */
+export const EFFECT_DAMAGE_TYPE_CONDITION_PREFIX = 'damage.type === ';
+
+/** Приставка условия срабатывания «урон без этого типа». */
+export const EFFECT_DAMAGE_TYPE_NOT_CONDITION_PREFIX = 'damage.type !== ';
+
+/** Приставка условия срабатывания «на носителе отметка». */
+export const EFFECT_CARRIER_TAG_CONDITION_PREFIX = 'self.tag === ';
+
+/** Приставка условия срабатывания «на носителе нет отметки». */
+export const EFFECT_CARRIER_TAG_NOT_CONDITION_PREFIX = 'self.tag !== ';
+
+/** Части условия срабатывания без значения — строкой целиком. */
+export const EFFECT_TRIGGER_FIXED_CONDITIONS: Partial<
+  Record<TriggerConditionKind, string>
+> = {
+  damageCritical: 'damage.isCritical === true',
+  damageNotCritical: 'damage.isCritical === false',
+  selfBloodied: 'self.hp.value <= (self.hp.max / 2)',
+  selfWounded: 'self.hp.value < self.hp.max',
+  rollAdvantage: EFFECT_ROLL_ADVANTAGE_CONDITION,
+  rollDisadvantage: EFFECT_ROLL_DISADVANTAGE_CONDITION,
+  otherMarkedBySelf: EFFECT_MARKED_BY_SELF_CONDITION,
+};
+
+/**
+ * Условия по доспеху носителя — зеркало семейства `self.armor` из системы D&D.
+ *
+ * Считаются по самому листу, без броска: прибавка с таким условием попадает в
+ * постоянные числа, и +1 к КД «Обороны» видно в блоке защиты.
+ */
+export const EFFECT_ARMOR_CONDITION_OPTIONS: Array<Option<string>> = [
+  { value: 'any', label: 'в доспехе (любом)' },
+  { value: 'none', label: 'без доспеха' },
+  { value: 'light', label: 'в лёгком доспехе' },
+  { value: 'medium', label: 'в среднем доспехе' },
+  { value: 'heavy', label: 'в тяжёлом доспехе' },
+  { value: 'shield', label: 'со щитом' },
+  { value: 'noShield', label: 'без щита' },
+];
+
+/**
+ * Собирает условия по типу существа: движок сверяет тип носителя или цели с
+ * названным ключом.
+ *
+ * @param prefix приставка условия (носитель или цель).
+ * @param labelPrefix приставка подписи пункта.
+ * @returns условия по всем типам существ.
+ */
+function buildCreatureTypeConditions(
+  prefix: string,
+  labelPrefix: string,
+): Array<Option<string>> {
+  return EFFECT_CREATURE_CATEGORY_OPTIONS.map((creatureType) => ({
+    value: `${prefix}"${creatureType.value}"`,
+    label: `${labelPrefix}: ${creatureType.label}`,
+  }));
+}
+
+/**
+ * Библиотека условий (для поля change.condition) — зеркало
+ * `EFFECT_CONDITION_SUGGESTIONS` из VTTG.
+ *
+ * Список закрыт и содержит РОВНО те условия, которые движок умеет вычислять:
+ * броски, состояние хитов цели, вид входящей атаки (только для `armorClass`) и
+ * тип носителя/цели. Неизвестное условие движок молча не применяет — предлагать
+ * такие строки нельзя, эффект выглядел бы настроенным и не работал.
+ */
 export const EFFECT_CONDITION_EXPR_SUGGESTIONS: Array<Option<string>> = [
-  { value: 'roll.hasAdvantage === true', label: 'Бросок: с преимуществом' },
-  { value: 'roll.hasDisadvantage === true', label: 'Бросок: с помехой' },
-  { value: 'roll.isCritical === true', label: 'Бросок: критическое попадание' },
-  { value: 'target.creatureType === "undead"', label: 'Цель: нежить' },
-  { value: 'target.creatureType === "fiend"', label: 'Цель: исчадие' },
-  { value: 'target.hasCondition("prone")', label: 'Цель: сбита с ног' },
-  { value: 'target.hasCondition("poisoned")', label: 'Цель: отравлена' },
-  { value: 'target.hp.value === target.hp.max', label: 'Цель: полное HP' },
-  { value: 'target.hp.value < target.hp.max', label: 'Цель: ранена' },
+  { value: EFFECT_ROLL_ADVANTAGE_CONDITION, label: 'Бросок: с преимуществом' },
+  { value: EFFECT_ROLL_DISADVANTAGE_CONDITION, label: 'Бросок: с помехой' },
+  {
+    value: 'target.hp.value === target.hp.max',
+    label: 'Цель: с полными хитами (Убийца)',
+  },
+  {
+    value: 'target.hp.value < target.hp.max',
+    label: 'Цель: ранена (неполные хиты)',
+  },
   {
     value: 'target.hp.value <= (target.hp.max / 2)',
-    label: 'Цель: меньше половины HP',
+    label: 'Цель: не больше половины хитов (Окровавлен)',
   },
-  { value: 'item.type === "spell"', label: 'Атака: заклинанием' },
-  { value: 'target.distance <= 5', label: 'Дистанция: вплотную (≤5 фт)' },
-  { value: 'target.distance > 30', label: 'Дистанция: дальше 30 фт' },
-  { value: 'incoming.attackType === "melee"', label: 'Защита: от рукопашных' },
+  {
+    value: EFFECT_MARKED_BY_SELF_CONDITION,
+    label: 'Цель помечена мной (Метка охотника, Сглаз)',
+  },
+  {
+    value: 'incoming.attackType === "melee"',
+    label: 'Защита: от рукопашных атак (только КД)',
+  },
   {
     value: 'incoming.attackType === "ranged"',
-    label: 'Защита: от дальнобойных',
+    label: 'Защита: от дальнобойных атак (только КД)',
   },
-  { value: 'incoming.attackType === "spell"', label: 'Защита: от заклинаний' },
-  { value: 'scene.isDark === true', label: 'Окружение: темнота' },
+  {
+    value: 'incoming.attackType === "spell"',
+    label: 'Защита: от атак заклинаниями (только КД)',
+  },
+  ...buildCreatureTypeConditions(
+    EFFECT_CARRIER_TYPE_CONDITION_PREFIX,
+    'Носитель',
+  ),
+  ...buildCreatureTypeConditions(EFFECT_TARGET_TYPE_CONDITION_PREFIX, 'Цель'),
+  ...EFFECT_ARMOR_CONDITION_OPTIONS.map(
+    (armor): Option<string> => ({
+      value: `${EFFECT_CARRIER_ARMOR_CONDITION_PREFIX}"${armor.value}"`,
+      label: `Носитель: ${armor.label}`,
+    }),
+  ),
 ];
 
-const DEFENSIBLE_DAMAGE_TYPES: Array<Option<string>> =
-  EFFECT_DAMAGE_TYPE_OPTIONS;
-
-/** Статические флаги (нечисловые эффекты). */
-const STATIC_FLAG_OPTIONS: Array<Option<string>> = [
-  { value: 'attack.advantage', label: 'Преимущество на все атаки' },
-  { value: 'attack.disadvantage', label: 'Помеха на все атаки' },
-  {
-    value: 'attack.melee.advantage',
-    label: 'Преимущество на рукопашные атаки',
-  },
-  { value: 'attack.melee.disadvantage', label: 'Помеха на рукопашные атаки' },
-  {
-    value: 'attack.ranged.advantage',
-    label: 'Преимущество на дальнобойные атаки',
-  },
-  {
-    value: 'attack.ranged.disadvantage',
-    label: 'Помеха на дальнобойные атаки',
-  },
-  {
-    value: 'attack.spell.advantage',
-    label: 'Преимущество на атаки заклинанием',
-  },
-  { value: 'attack.spell.disadvantage', label: 'Помеха на атаки заклинанием' },
-  { value: 'attacksAgainst.advantage', label: 'Преимущество атак по существу' },
-  { value: 'attacksAgainst.disadvantage', label: 'Помеха атак по существу' },
-  { value: 'abilityCheck.advantage', label: 'Преимущество на все проверки' },
-  { value: 'abilityCheck.disadvantage', label: 'Помеха на все проверки' },
-  { value: 'save.advantage', label: 'Преимущество на все спасброски' },
-  { value: 'save.disadvantage', label: 'Помеха на все спасброски' },
-  { value: 'save.autoFail.strength', label: 'Автопровал спасбросков: Сила' },
-  {
-    value: 'save.autoFail.dexterity',
-    label: 'Автопровал спасбросков: Ловкость',
-  },
-  {
-    value: 'save.autoFail.constitution',
-    label: 'Автопровал спасбросков: Телосложение',
-  },
-  {
-    value: 'save.autoFail.intelligence',
-    label: 'Автопровал спасбросков: Интеллект',
-  },
-  { value: 'save.autoFail.wisdom', label: 'Автопровал спасбросков: Мудрость' },
-  { value: 'save.autoFail.charisma', label: 'Автопровал спасбросков: Харизма' },
-  { value: 'speed.zero', label: 'Скорость равна нулю' },
-  { value: 'incapacitated', label: 'Недееспособен' },
-  { value: 'initiative.advantage', label: 'Преимущество на инициативу' },
-  { value: 'initiative.disadvantage', label: 'Помеха на инициативу' },
-  { value: 'vision.blinded', label: 'Ослеплён' },
-  { value: 'vision.invisible', label: 'Невидимый' },
-  { value: 'skill.stealth.disadvantage', label: 'Помеха на Скрытность' },
-  {
-    value: 'defense.critImmunity',
-    label: 'Иммунитет к критическим попаданиям',
-  },
+/** Виды защит от урона: приставка ключа флага и подпись. */
+export const EFFECT_DAMAGE_DEFENSE_KINDS: Array<Option<string>> = [
+  { value: 'resistance', label: 'Сопротивление' },
+  { value: 'immunity', label: 'Иммунитет' },
+  { value: 'vulnerability', label: 'Уязвимость' },
 ];
 
-/** Флаги защит от урона (сопротивление/иммунитет/уязвимость) по типам. */
-const DAMAGE_DEFENSE_FLAG_OPTIONS: Array<Option<string>> =
-  DEFENSIBLE_DAMAGE_TYPES.flatMap((damageType) => [
-    {
-      value: `resistance.${damageType.value}`,
-      label: `Сопротивление: ${damageType.label}`,
-    },
-    {
-      value: `immunity.${damageType.value}`,
-      label: `Иммунитет: ${damageType.label}`,
-    },
-    {
-      value: `vulnerability.${damageType.value}`,
-      label: `Уязвимость: ${damageType.label}`,
-    },
+/**
+ * Собирает подписи флагов по всем характеристикам: помеха на спасброски и
+ * проверки задаётся отдельно для каждой из шести.
+ *
+ * @param keyPrefix приставка ключа флага.
+ * @param labelPrefix приставка подписи флага.
+ * @returns пары «ключ флага → подпись».
+ */
+function buildAbilityFlagLabels(
+  keyPrefix: string,
+  labelPrefix: string,
+): Array<[string, string]> {
+  return EFFECT_ABILITY_OPTIONS.map((ability) => [
+    `${keyPrefix}${ability.value}`,
+    `${labelPrefix}: ${ability.label}`,
   ]);
+}
 
-/** Полная библиотека флагов (статические + защиты от урона). */
-export const EFFECT_FLAG_OPTIONS: Array<Option<string>> = [
-  ...STATIC_FLAG_OPTIONS,
-  ...DAMAGE_DEFENSE_FLAG_OPTIONS,
-];
+/**
+ * Собирает подписи флагов спасброска против состояния: преимущество и помеха
+ * задаются отдельно для каждого из пятнадцати состояний.
+ *
+ * Семейством, а не перечислением: так написана половина видов справочника
+ * («преимущество на спасброски, чтобы избежать состояния Отравлен»), и держать
+ * их списком значило бы дописывать его при каждом новом виде.
+ *
+ * @param keyPrefix приставка ключа флага.
+ * @param labelPrefix приставка подписи флага.
+ * @returns пары «ключ флага → подпись».
+ */
+function buildSaveVsConditionFlagLabels(
+  keyPrefix: string,
+  labelPrefix: string,
+): Array<[string, string]> {
+  return EFFECT_CONDITION_OPTIONS.map((condition) => [
+    `${keyPrefix}${condition.value.charAt(0).toUpperCase()}${condition.value.slice(1)}`,
+    `${labelPrefix}: ${condition.label}`,
+  ]);
+}
 
-/** Карта label по значению флага — для подписи под выбранным флагом. */
-export const EFFECT_FLAG_LABEL_MAP: Record<string, string> = Object.fromEntries(
-  EFFECT_FLAG_OPTIONS.map((option) => [option.value, option.label]),
+/**
+ * Собирает подписи понавыковых флагов: преимущество и помеха задаются отдельно
+ * для каждого из восемнадцати навыков.
+ *
+ * @param keySuffix окончание ключа флага (`.advantage` либо `.disadvantage`).
+ * @param labelPrefix приставка подписи флага.
+ * @returns пары «ключ флага → подпись».
+ */
+function buildSkillFlagLabels(
+  keySuffix: string,
+  labelPrefix: string,
+): Array<[string, string]> {
+  return EFFECT_SKILL_OPTIONS.map((skill): [string, string] => [
+    `skill.${skill.value}${keySuffix}`,
+    `${labelPrefix}: ${skill.label}`,
+  ]);
+}
+
+/**
+ * Подписи флагов защит от урона: три вида защиты на каждый тип урона.
+ *
+ * @returns пары «ключ флага → подпись».
+ */
+function buildDamageDefenseFlagLabels(): Array<[string, string]> {
+  return EFFECT_DAMAGE_DEFENSE_KINDS.flatMap((kind) =>
+    EFFECT_DAMAGE_TYPE_OPTIONS.map((damageType): [string, string] => [
+      `${kind.value}.${damageType.value}`,
+      `${kind.label}: ${damageType.label}`,
+    ]),
+  );
+}
+
+/**
+ * Локализованные названия флагов эффектов — зеркало `EFFECT_FLAG_LABELS` VTTG.
+ * Единственный источник и для библиотеки флагов, и для меню «Готовые»: второй
+ * список рано или поздно разошёлся бы с первым.
+ */
+export const EFFECT_FLAG_LABELS: Record<string, string> = Object.fromEntries([
+  // Свои атаки
+  ['attack.advantage', 'Преимущество на все атаки'],
+  ['attack.disadvantage', 'Помеха на все атаки'],
+  ['attack.melee.advantage', 'Преимущество на рукопашные атаки'],
+  ['attack.melee.disadvantage', 'Помеха на рукопашные атаки'],
+  ['attack.ranged.advantage', 'Преимущество на дальнобойные атаки'],
+  ['attack.ranged.disadvantage', 'Помеха на дальнобойные атаки'],
+  ['attack.spell.advantage', 'Преимущество на атаки заклинаниями'],
+  ['attack.spell.disadvantage', 'Помеха на атаки заклинаниями'],
+
+  // Атаки по носителю
+  ['attacksAgainst.advantage', 'Преимущество атак по этому существу'],
+  ['attacksAgainst.disadvantage', 'Помеха атак по этому существу'],
+  [
+    'attacksAgainst.melee.advantage',
+    'Преимущество рукопашных атак по этому существу',
+  ],
+  [
+    'attacksAgainst.melee.disadvantage',
+    'Помеха рукопашных атак по этому существу',
+  ],
+  [
+    'attacksAgainst.ranged.advantage',
+    'Преимущество дальнобойных атак по этому существу',
+  ],
+  [
+    'attacksAgainst.ranged.disadvantage',
+    'Помеха дальнобойных атак по этому существу',
+  ],
+
+  // Проверки характеристик
+  ['abilityCheck.advantage', 'Преимущество на ВСЕ проверки характеристик'],
+  ['abilityCheck.disadvantage', 'Помеха на ВСЕ проверки характеристик'],
+  ...buildAbilityFlagLabels(
+    'abilityCheck.advantage.',
+    'Преимущество на проверки',
+  ),
+  ...buildAbilityFlagLabels('abilityCheck.disadvantage.', 'Помеха на проверки'),
+
+  // Навыки
+  ...buildSkillFlagLabels('.advantage', 'Преимущество на проверки'),
+  ...buildSkillFlagLabels('.disadvantage', 'Помеха на проверки'),
+
+  // Спасброски
+  ['save.advantage', 'Преимущество на ВСЕ спасброски'],
+  ['save.disadvantage', 'Помеха на ВСЕ спасброски'],
+  [
+    'save.advantage.vsMagic',
+    'Преимущество на спасброски против заклинаний и магических эффектов',
+  ],
+  [
+    'save.disadvantage.vsMagic',
+    'Помеха на спасброски против заклинаний и магических эффектов',
+  ],
+  ['save.advantage.vsConcentration', 'Преимущество на спасброски концентрации'],
+  ['save.disadvantage.vsConcentration', 'Помеха на спасброски концентрации'],
+  ...buildAbilityFlagLabels('save.advantage.', 'Преимущество на спасброски'),
+  ...buildAbilityFlagLabels('save.disadvantage.', 'Помеха на спасброски'),
+  ...buildAbilityFlagLabels('save.autoFail.', 'Автопровал спасбросков'),
+
+  // Спасброски против состояний
+  ...buildSaveVsConditionFlagLabels(
+    'save.advantage.vs',
+    'Преимущество на спасброски против состояния',
+  ),
+  ...buildSaveVsConditionFlagLabels(
+    'save.disadvantage.vs',
+    'Помеха на спасброски против состояния',
+  ),
+
+  // Прочее
+  ['speed.zero', 'Скорость равна нулю'],
+  [
+    'terrain.ignoreDifficult',
+    'Игнорирует труднопроходимую местность (клетки зон стоят как обычные)',
+  ],
+  [
+    'mark.bySource',
+    'Метка наложившего: его условие «цель помечена мной» (Метка охотника, Сглаз)',
+  ],
+  ['incapacitated', 'Недееспособен (нет действий и реакций)'],
+  ['initiative.advantage', 'Преимущество на бросок инициативы'],
+  ['initiative.disadvantage', 'Помеха на бросок инициативы'],
+  ['vision.blinded', 'Ослеплён (ничего не видит, автопровал проверок зрения)'],
+  ['vision.invisible', 'Невидимый (скрыт от глаз, преимущество на атаки)'],
+  ['defense.critImmunity', 'Защита: иммунитет к критическим попаданиям'],
+
+  // Защиты от урона
+  ...buildDamageDefenseFlagLabels(),
+]);
+
+/**
+ * Ключи флагов спасброска против состояния — по ним меню отделяет их от прочих
+ * спасбросков: приставка `save.` у них общая, а список из тридцати позиций в
+ * одном разделе с остальными не читается.
+ */
+export const SAVE_VS_CONDITION_FLAG_KEYS: ReadonlySet<string> = new Set(
+  [
+    ...buildSaveVsConditionFlagLabels('save.advantage.vs', ''),
+    ...buildSaveVsConditionFlagLabels('save.disadvantage.vs', ''),
+  ].map(([key]) => key),
 );
+
+/**
+ * Ключ флага спасброска против состояния.
+ *
+ * Собирается здесь, а не у потребителя: строка обязана совпадать с ключом из
+ * библиотеки флагов, и второе место сборки разошлось бы с ней на первом же
+ * состоянии. Зеркало `buildSaveVsConditionFlag` системы VTTG.
+ *
+ * @param mode вид флага.
+ * @param condition ключ состояния (`poisoned`).
+ * @returns ключ флага.
+ */
+export function buildSaveVsConditionFlag(
+  mode: 'advantage' | 'disadvantage',
+  condition: string,
+): string {
+  return `save.${mode}.vs${condition.charAt(0).toUpperCase()}${condition.slice(1)}`;
+}
+
+/** Полная библиотека флагов для поля выбора. */
+export const EFFECT_FLAG_OPTIONS: Array<Option<string>> = Object.entries(
+  EFFECT_FLAG_LABELS,
+).map(([value, label]) => ({ value, label }));
 
 /** Готовый шаблон стандартного состояния D&D 5e для быстрого заполнения. */
 export interface EffectConditionTemplate {
@@ -341,12 +817,47 @@ export interface EffectConditionTemplate {
   description: string;
   flags: string[];
   changes: EffectChange[];
+  conditionImmunities?: EffectConditionKey[];
 }
+
+/**
+ * Следствия Недееспособности (PHB 2024): само состояние плюс помеха на
+ * инициативу. Состояния, включающие Недееспособность, наследуют их целиком.
+ */
+const INCAPACITATED_FLAGS: string[] = [
+  'incapacitated',
+  'initiative.disadvantage',
+];
+
+/**
+ * Следствия беспомощности (PHB 2024): автопровал спасбросков Силы и Ловкости и
+ * преимущество атак по существу.
+ */
+const HELPLESS_FLAGS: string[] = [
+  'save.autoFail.strength',
+  'save.autoFail.dexterity',
+  'attacksAgainst.advantage',
+];
+
+/**
+ * Поправки атак по лежащему (PHB 2024): вплотную — преимущество, издали —
+ * помеха. Дистанцию движок в этом месте не знает, поэтому правило приближено по
+ * виду атаки.
+ */
+const PRONE_ATTACKED_FLAGS: string[] = [
+  'attacksAgainst.melee.advantage',
+  'attacksAgainst.ranged.disadvantage',
+];
+
+/** Сопротивление всему урону — по флагу на каждый тип урона. */
+const ALL_DAMAGE_RESISTANCE_FLAGS: string[] = EFFECT_DAMAGE_TYPE_OPTIONS.map(
+  (damageType) => `resistance.${damageType.value}`,
+);
 
 /**
  * Шаблоны Active Effects для состояний D&D 5e (PHB 2024) — зеркало
  * `CONDITION_EFFECT_TEMPLATES` + `CONDITIONS` из VTTG. Истощение исключено:
- * его модификаторы зависят от уровня и собираются в VTTG динамически.
+ * его модификаторы зависят от степени и собираются в VTTG динамически.
  */
 export const EFFECT_CONDITION_TEMPLATES: EffectConditionTemplate[] = [
   {
@@ -394,7 +905,7 @@ export const EFFECT_CONDITION_TEMPLATES: EffectConditionTemplate[] = [
     name: 'Схваченный',
     icon: 'tabler:hand-stop',
     description:
-      'Скорость равна 0. Перемещение того, кто схватил, стоит дополнительно.',
+      'Скорость равна 0. Помеха на броски атаки по любой цели, кроме схватившего. Схвативший может тащить существо за собой.',
     flags: ['speed.zero'],
     changes: [],
   },
@@ -404,7 +915,7 @@ export const EFFECT_CONDITION_TEMPLATES: EffectConditionTemplate[] = [
     icon: 'tabler:ban',
     description:
       'Нет действий, бонусных действий и реакций. Нет концентрации. Нельзя говорить. Помеха на инициативу.',
-    flags: ['incapacitated', 'initiative.disadvantage'],
+    flags: [...INCAPACITATED_FLAGS],
     changes: [],
   },
   {
@@ -427,13 +938,7 @@ export const EFFECT_CONDITION_TEMPLATES: EffectConditionTemplate[] = [
     icon: 'tabler:user-minus',
     description:
       'Недееспособен. Скорость 0. Автопровал спасбросков СИЛ и ЛОВ. Атаки по вам с преимуществом. Крит в пределах 5 фт.',
-    flags: [
-      'incapacitated',
-      'speed.zero',
-      'save.autoFail.strength',
-      'save.autoFail.dexterity',
-      'attacksAgainst.advantage',
-    ],
+    flags: [...INCAPACITATED_FLAGS, 'speed.zero', ...HELPLESS_FLAGS],
     changes: [],
   },
   {
@@ -443,13 +948,14 @@ export const EFFECT_CONDITION_TEMPLATES: EffectConditionTemplate[] = [
     description:
       'Превращение в камень. Недееспособен. Скорость 0. Автопровал спасбросков СИЛ и ЛОВ. Атаки с преимуществом. Сопротивление всему урону. Иммунитет к яду.',
     flags: [
-      'incapacitated',
+      ...INCAPACITATED_FLAGS,
       'speed.zero',
-      'save.autoFail.strength',
-      'save.autoFail.dexterity',
-      'attacksAgainst.advantage',
+      ...HELPLESS_FLAGS,
+      ...ALL_DAMAGE_RESISTANCE_FLAGS,
     ],
     changes: [],
+    // Иммунитет к Отравлению — само состояние; урон ядом лишь ослаблен выше.
+    conditionImmunities: ['poisoned'],
   },
   {
     key: 'poisoned',
@@ -465,7 +971,7 @@ export const EFFECT_CONDITION_TEMPLATES: EffectConditionTemplate[] = [
     icon: 'tabler:download',
     description:
       'Передвижение только ползком или подъём (½ скорости). Помеха на ваши атаки. Преимущество атак в пределах 5 фт, иначе помеха.',
-    flags: ['attack.disadvantage'],
+    flags: ['attack.disadvantage', ...PRONE_ATTACKED_FLAGS],
     changes: [],
   },
   {
@@ -473,8 +979,13 @@ export const EFFECT_CONDITION_TEMPLATES: EffectConditionTemplate[] = [
     name: 'Опутанный',
     icon: 'tabler:link',
     description:
-      'Скорость 0, не может быть увеличена. Атаки по вам с преимуществом, ваши — с помехой.',
-    flags: ['speed.zero', 'attack.disadvantage', 'attacksAgainst.advantage'],
+      'Скорость 0, не может быть увеличена. Атаки по вам с преимуществом, ваши — с помехой. Помеха на спасброски Ловкости.',
+    flags: [
+      'speed.zero',
+      'attack.disadvantage',
+      'attacksAgainst.advantage',
+      'save.disadvantage.dexterity',
+    ],
     changes: [],
   },
   {
@@ -483,12 +994,9 @@ export const EFFECT_CONDITION_TEMPLATES: EffectConditionTemplate[] = [
     icon: 'tabler:bolt',
     description:
       'Недееспособен. Автопровал спасбросков СИЛ и ЛОВ. Атаки по вам с преимуществом.',
-    flags: [
-      'incapacitated',
-      'save.autoFail.strength',
-      'save.autoFail.dexterity',
-      'attacksAgainst.advantage',
-    ],
+    // Скорость НЕ обнуляется: у Ошеломлённого 2024 нет пункта «не может
+    // двигаться» — в отличие от Парализованного и Без сознания.
+    flags: [...INCAPACITATED_FLAGS, ...HELPLESS_FLAGS],
     changes: [],
   },
   {
@@ -498,12 +1006,996 @@ export const EFFECT_CONDITION_TEMPLATES: EffectConditionTemplate[] = [
     description:
       'Недееспособен + лежащий ничком. Скорость 0. Автопровал СИЛ и ЛОВ. Атаки с преимуществом. Крит в пределах 5 фт. Не осознаёте окружение.',
     flags: [
-      'incapacitated',
+      ...INCAPACITATED_FLAGS,
       'speed.zero',
-      'save.autoFail.strength',
-      'save.autoFail.dexterity',
-      'attacksAgainst.advantage',
+      ...HELPLESS_FLAGS,
+      'attack.disadvantage',
+      ...PRONE_ATTACKED_FLAGS,
     ],
     changes: [],
   },
 ];
+
+/**
+ * Русские названия состояний по ключу — из шаблонов состояний, как `nameRu`
+ * системы. У Истощения шаблона нет — его название берётся отдельно.
+ */
+export const EFFECT_CONDITION_NAMES: Partial<
+  Record<EffectConditionKey, string>
+> = {
+  exhaustion: 'Истощённый',
+  ...Object.fromEntries(
+    EFFECT_CONDITION_TEMPLATES.map((template) => [template.key, template.name]),
+  ),
+};
+
+/** Ключи стандартных состояний — для проверки строки из данных. */
+const EFFECT_CONDITION_KEYS: ReadonlySet<string> = new Set(
+  EFFECT_CONDITION_OPTIONS.map((condition) => condition.value),
+);
+
+/**
+ * Проверяет, что строка — ключ стандартного состояния D&D 5e, а не состояние,
+ * заведённое в мире VTTG.
+ *
+ * @param conditionKey строка из данных.
+ * @returns `true` для ключа стандартного состояния.
+ */
+export function isEffectConditionKey(
+  conditionKey: string,
+): conditionKey is EffectConditionKey {
+  return EFFECT_CONDITION_KEYS.has(conditionKey);
+}
+
+/**
+ * Общие части фраз описания, сводки и срабатываний: у всех трёх одни и те же
+ * слова, и расходиться им нельзя.
+ */
+export const EFFECT_PHRASE_PARTS = {
+  savePrefix: 'спасбросок ',
+  nothing: 'ничего',
+  halfDamage: 'половина урона',
+  immunitiesPrefix: 'иммунитет к состояниям: ',
+  feetSuffix: ' фт',
+  listJoiner: ', ',
+  andJoiner: ' и ',
+  clauseJoiner: '; ',
+} as const;
+
+/** Что даёт успешный спасбросок против урона каждый ход — в описании эффекта. */
+export const EFFECT_RECURRING_DAMAGE_SAVE_SUCCESS_LABELS: Record<
+  EffectSaveOutcome,
+  string
+> = {
+  negate: 'при успехе без урона',
+  half: 'при успехе урон вдвое',
+};
+
+/** Что даёт успешный спасбросок при наложении — в описании эффекта. */
+export const EFFECT_APPLY_SAVE_SUCCESS_LABELS: Record<
+  EffectSaveOutcome,
+  string
+> = {
+  negate: 'при успехе эффект отменяется',
+  half: EFFECT_RECURRING_DAMAGE_SAVE_SUCCESS_LABELS.half,
+};
+
+/** Подписи лечения в описании части урона: `@heal` и `@heal.temp`. */
+export const EFFECT_HEAL_KIND_LABELS: Record<EffectHealKind, string> = {
+  hp: 'лечения',
+  temp: 'временных хитов',
+};
+
+/** Когда срабатывает эффект зоны — в сводке. */
+export const EFFECT_ZONE_MOMENT_LABELS: Record<EffectAreaTrigger, string> = {
+  stay: 'Пока существо в зоне',
+  enter: 'При входе в зону',
+  exit: 'При выходе из зоны',
+};
+
+/** Когда срабатывает эффект зоны, которую оставляет заклинание, — в сводке. */
+export const EFFECT_SPELL_ZONE_MOMENT_LABELS: Record<
+  EffectAreaTrigger,
+  string
+> = {
+  stay: 'Пока существо в зоне заклинания',
+  enter: 'При входе в зону заклинания',
+  exit: 'При выходе из зоны заклинания',
+};
+
+/** Начало фразы сводки у эффекта ауры — по моменту срабатывания. */
+export const EFFECT_AURA_MOMENT_PREFIXES: Record<EffectAreaTrigger, string> = {
+  stay: 'Существам в ауре ',
+  enter: 'Когда существо входит в ауру ',
+  exit: 'Когда существо выходит из ауры ',
+};
+
+/** Моменты сводки, которыми подписано сразу несколько мест формы. */
+const EFFECT_SHARED_MOMENT_LABELS = {
+  whileActive: 'Пока эффект активен',
+  onHit: 'При попадании',
+} as const;
+
+/** Когда срабатывает эффект «на носителе» — в сводке, по месту формы. */
+export const EFFECT_CARRIER_MOMENT_LABELS: Record<EffectFormContext, string> = {
+  ownEffects: EFFECT_SHARED_MOMENT_LABELS.whileActive,
+  feature: 'Постоянно у персонажа',
+  item: 'Пока предмет надет',
+  weapon: 'Пока оружие экипировано',
+  spell: 'После сотворения — на заклинателе',
+  creatureAction: 'При использовании действия',
+  creatureTrait: 'Постоянно у существа',
+  zone: EFFECT_ZONE_MOMENT_LABELS.stay,
+  condition: 'Пока действует состояние',
+  generic: EFFECT_SHARED_MOMENT_LABELS.whileActive,
+};
+
+/** Когда срабатывает эффект «на цели» — в сводке, по месту формы. */
+export const EFFECT_TARGET_MOMENT_LABELS: Record<EffectFormContext, string> = {
+  ownEffects: EFFECT_SHARED_MOMENT_LABELS.onHit,
+  feature: EFFECT_SHARED_MOMENT_LABELS.onHit,
+  item: EFFECT_SHARED_MOMENT_LABELS.onHit,
+  weapon: 'При попадании оружием',
+  spell: 'Когда заклинание задело цель',
+  creatureAction: 'Когда действие задело цель',
+  creatureTrait: EFFECT_SHARED_MOMENT_LABELS.onHit,
+  zone: EFFECT_SHARED_MOMENT_LABELS.onHit,
+  condition: EFFECT_SHARED_MOMENT_LABELS.onHit,
+  generic: EFFECT_SHARED_MOMENT_LABELS.onHit,
+};
+
+/** Части фраз сводки. */
+export const EFFECT_SCENARIO_LABELS = {
+  failurePrefix: 'Провал — ',
+  successPrefix: 'Успех — ',
+  emptyEffect: 'эффект пока ничего не делает',
+  actionSaveEffectAnyway: 'Эффект ложится и при успешном спасброске.',
+  actionSaveOnlyOnSuccess: ', если цель прошла спасбросок',
+  more: 'и ещё',
+} as const;
+
+/**
+ * Сколько модификаторов и флагов сводка называет поимённо, прежде чем сказать
+ * «и ещё».
+ */
+export const EFFECT_SCENARIO_MAX_NAMED_MODIFIERS = 3;
+
+/** Что даёт успех спасброска против урона каждый ход — во фразе срабатывания. */
+export const EFFECT_TRIGGER_RECURRING_DAMAGE_SUCCESS_LABELS: Record<
+  EffectSaveOutcome,
+  string
+> = {
+  negate: 'без урона',
+  half: EFFECT_PHRASE_PARTS.halfDamage,
+};
+
+/** Снятие после атаки — продолжением перечисления, по роли носителя. */
+export const EFFECT_TRIGGER_CONSUME_ON_PHRASES: Record<
+  EffectTriggerAttackRole,
+  string
+> = {
+  attacker: 'снимается после своей атаки',
+  target: 'снимается после атаки по носителю',
+};
+
+/** Когда срабатывает — во фразе срабатывания, по событию. */
+export const EFFECT_TRIGGER_EVENT_PHRASES: Record<EffectTriggerEvent, string> =
+  {
+    turnStart: EFFECT_TURN_TIMING_LABELS.start,
+    turnEnd: EFFECT_TURN_TIMING_LABELS.end,
+    enter: 'при входе',
+    exit: 'при выходе',
+    applied: 'при наложении',
+    attackRoll: 'при броске атаки',
+    damageTaken: 'при получении урона',
+    hpZero: 'когда хиты падают до 0',
+    rest: 'после отдыха',
+    activate: 'при включении',
+    castEnd: 'когда заклинание заканчивается',
+  };
+
+/** Бросок атаки во фразе срабатывания — по роли носителя. */
+export const EFFECT_TRIGGER_ATTACK_ROLE_PHRASES: Record<
+  EffectTriggerAttackRole,
+  string
+> = {
+  attacker: 'после своей атаки',
+  target: 'после атаки по носителю',
+};
+
+/** Части фраз срабатывания. */
+export const EFFECT_TRIGGER_PHRASE_PARTS = {
+  everyTurnPrefix: 'каждый ход ',
+  applierTurnSuffix: ' источника',
+  damageSaveSuccess: ': успех — ',
+  recurringSavePrefix: 'повторный спасбросок ',
+  recurringSaveSuffix: ' снимает эффект',
+  failurePrefix: 'провал — ',
+  successPrefix: 'успех — ',
+  conditionPrefix: ', если ',
+  effect: 'эффект',
+  removeSelf: 'эффект снимается',
+  tagPrefix: 'отметка ',
+  setHpPrefix: 'хиты становятся ',
+  endCast: 'каст заканчивается',
+  dcFormulaPrefix: 'Сл = ',
+  damageVariable: 'урон',
+  recipientOther: ', на другую сторону',
+  limitPrefix: ', не чаще ',
+  limitOnce: 'одного раза',
+  limitTimes: ' раз',
+  limitPeriodPrefix: ' за ',
+} as const;
+
+/**
+ * Фразы частей условия срабатывания. Аргумент — подпись значения части: типа
+ * урона, типа существа или ключ отметки; у частей без значения он не нужен.
+ */
+export const EFFECT_TRIGGER_CONDITION_PHRASES: Record<
+  TriggerConditionKind,
+  (valueLabel: string) => string
+> = {
+  damageType: (damageTypeLabel) => `урон ${damageTypeLabel}`,
+  damageTypeNot: (damageTypeLabel) => `урон не ${damageTypeLabel}`,
+  damageCritical: () => 'критическое попадание',
+  damageNotCritical: () => 'не критическое попадание',
+  selfBloodied: () => 'у носителя не больше половины хитов',
+  selfWounded: () => 'носитель ранен',
+  selfCreatureType: (creatureTypeLabel) => `носитель — ${creatureTypeLabel}`,
+  selfTag: (tag) => `на носителе отметка «${tag}»`,
+  selfTagNot: (tag) => `на носителе нет отметки «${tag}»`,
+  rollAdvantage: () => 'атака с преимуществом',
+  rollDisadvantage: () => 'атака с помехой',
+  otherCreatureType: (creatureTypeLabel) =>
+    `другая сторона — ${creatureTypeLabel}`,
+  otherMarkedBySelf: () => 'другая сторона помечена носителем',
+};
+
+/** Сообщения об ошибках разбора формулы — те же, что у системы. */
+export const EFFECT_FORMULA_ERRORS = {
+  empty: 'Формула не может быть пустой',
+  invalid: 'Невалидная формула',
+  missingVariable: (position: number) =>
+    `Ожидалось имя переменной после @ на позиции ${position}`,
+  unknownIdentifier: (identifier: string) =>
+    `Неизвестный идентификатор: "${identifier}". Переменные должны начинаться с @`,
+  unexpectedChar: (character: string, position: number) =>
+    `Неожиданный символ "${character}" на позиции ${position}`,
+  unexpectedEnd: 'Неожиданный конец формулы',
+  missingFunctionParen: (functionName: string) =>
+    `Ожидалась '(' после функции ${functionName}`,
+  unclosedFunction: (functionName: string) =>
+    `Ожидалась ')' после аргументов функции ${functionName}`,
+  unclosedParen: 'Незакрытая скобка',
+  unexpectedToken: (tokenValue: string) => `Неожиданный токен: "${tokenValue}"`,
+  extraToken: (tokenValue: string) => `Лишний токен: "${tokenValue}"`,
+} as const;
+
+/** Название нового эффекта. */
+export const EFFECT_NEW_NAME = 'Новый эффект';
+
+/** Подписи блока активных эффектов и строк модификаторов, флагов и урона. */
+export const ACTIVE_EFFECT_LABELS = {
+  title: 'Активные эффекты',
+  subtitle:
+    'Считаются листом персонажа на сайте и переносятся в виртуальный стол VTTG',
+  add: 'Добавить эффект',
+  remove: 'Удалить эффект',
+  unnamed: 'Эффект без названия',
+  inertBadge: 'Не работает здесь: ',
+  removeConfirmTitle: 'Удалить эффект?',
+  removeConfirmText:
+    'Эффект и все его настройки — модификаторы, флаги, урон — исчезнут из '
+    + 'записи. Отменить это можно только не сохраняя форму.',
+  removeConfirmCancel: 'Отмена',
+  removeConfirmApply: 'Удалить',
+  damagePartTarget: 'Цель',
+  damagePartRequiresDamage: 'Только если по цели нанесён урон',
+  damagePartRemove: 'Убрать часть урона',
+  /** Кнопка добавления строки внутри блока — не путать с `add` («Добавить эффект»). */
+  addRow: 'Добавить',
+
+  // Строки модификаторов
+  changeKey: 'Ключ атрибута',
+  changeKeyPlaceholder: 'Напр.: armorClass',
+  changeKeyRequired: 'Выбери, что меняется: без ключа строка не сохранится',
+  changeMode: 'Режим',
+  changeValue: 'Значение',
+  changeValuePlaceholder: '+2, 1к4, @mod.spell',
+  changeValueRequired: 'Без значения строка не сохранится',
+  changePriority: 'Приоритет',
+  changeCondition: 'Условие',
+  changeConditionPlaceholder: `Напр.: ${EFFECT_ROLL_ADVANTAGE_CONDITION}`,
+  changeRemove: 'Удалить модификатор',
+
+  // Строки флагов
+  flagPlaceholder: 'Напр.: vision.blinded',
+  flagUnknown: 'Кастомный или неизвестный флаг',
+  flagRemove: 'Убрать правило',
+} as const;
+
+/** Иконки блока активных эффектов: добавление, удаление и бейдж свёрнутой строки. */
+export const ACTIVE_EFFECT_ICONS = {
+  add: 'tabler:plus',
+  remove: 'tabler:trash',
+  inertBadge: 'tabler:alert-triangle',
+} as const;
+
+/** Подписи шапки, сводки и общих частей формы эффекта. */
+export const ACTIVE_EFFECT_FORM_LABELS = {
+  name: 'Название',
+  icon: 'Иконка',
+  iconPlaceholder: 'Напр: tabler:sparkles',
+  statusActive: 'Работает',
+  statusDisabled: 'Отключён',
+  conditionPreset: 'Шаблон состояния',
+  conditionPresetHint:
+    'Заполнить тем, что делает стандартное состояние. Когда эффект '
+    + 'срабатывает, спасбросок, урон и длительность останутся как есть.',
+  summaryHint: 'Так эффект сработает с текущими настройками',
+  ability: 'Характеристика',
+  saveDc: 'Сложность',
+} as const;
+
+/** Заголовки шагов формы. */
+export const EFFECT_FORM_STEP_TITLES: Record<EffectFormStep, string> = {
+  trigger: 'Когда срабатывает',
+  save: 'Спасбросок',
+  damage: 'Урон',
+  modifiers: 'Что меняет',
+  duration: 'Длительность',
+  triggers: 'Срабатывания',
+};
+
+/** Иконки шагов формы. */
+export const EFFECT_FORM_STEP_ICONS: Record<EffectFormStep, string> = {
+  trigger: 'tabler:bolt',
+  save: 'tabler:shield-half',
+  damage: 'tabler:flame',
+  modifiers: 'tabler:adjustments',
+  duration: 'tabler:hourglass',
+  triggers: 'tabler:repeat',
+};
+
+/** Заголовок шага «Что меняет» — по тому, на кого эффект ложится. */
+export const EFFECT_MODIFIERS_STEP_TITLES: Record<EffectDelivery, string> = {
+  carrier: EFFECT_FORM_STEP_TITLES.modifiers,
+  target: 'Что получает цель',
+  aura: 'Что получают существа в ауре',
+  zone: 'Что получает существо в зоне',
+};
+
+/** Иконки вариантов доставки. */
+export const EFFECT_DELIVERY_ICONS: Record<EffectDelivery, string> = {
+  carrier: 'tabler:user-shield',
+  target: 'tabler:crosshair',
+  aura: 'tabler:circle-dotted',
+  zone: 'tabler:hexagon',
+};
+
+/** Подписи доставки, которыми подписано сразу несколько мест формы. */
+const EFFECT_SHARED_DELIVERY_LABELS = {
+  owner: 'На владельце',
+  creature: 'На существе',
+  carrier: 'На носителе',
+  targetOnHit: 'На цели при попадании',
+  zone: 'В зоне',
+} as const;
+
+/** Подпись варианта «на носителе» — по месту формы. */
+export const EFFECT_CARRIER_DELIVERY_LABELS: Record<EffectFormContext, string> =
+  {
+    ownEffects: 'На себе',
+    feature: 'На персонаже',
+    item: EFFECT_SHARED_DELIVERY_LABELS.owner,
+    weapon: EFFECT_SHARED_DELIVERY_LABELS.owner,
+    spell: 'На заклинателе',
+    creatureAction: EFFECT_SHARED_DELIVERY_LABELS.creature,
+    creatureTrait: EFFECT_SHARED_DELIVERY_LABELS.creature,
+    zone: EFFECT_SHARED_DELIVERY_LABELS.zone,
+    condition: EFFECT_SHARED_DELIVERY_LABELS.carrier,
+    generic: EFFECT_SHARED_DELIVERY_LABELS.carrier,
+  };
+
+/** Подпись варианта «на цели» — по месту формы. */
+export const EFFECT_TARGET_DELIVERY_LABELS: Record<EffectFormContext, string> =
+  {
+    ownEffects: EFFECT_SHARED_DELIVERY_LABELS.targetOnHit,
+    feature: EFFECT_SHARED_DELIVERY_LABELS.targetOnHit,
+    item: EFFECT_SHARED_DELIVERY_LABELS.targetOnHit,
+    weapon: EFFECT_SHARED_DELIVERY_LABELS.targetOnHit,
+    spell: 'На цели заклинания',
+    creatureAction: 'На цели действия',
+    creatureTrait: EFFECT_SHARED_DELIVERY_LABELS.targetOnHit,
+    zone: EFFECT_SHARED_DELIVERY_LABELS.targetOnHit,
+    condition: EFFECT_SHARED_DELIVERY_LABELS.targetOnHit,
+    generic: EFFECT_SHARED_DELIVERY_LABELS.targetOnHit,
+  };
+
+/** Подписи вариантов доставки, не зависящие от места формы. */
+export const EFFECT_DELIVERY_LABELS = {
+  aura: 'Аурой вокруг',
+  zone: EFFECT_SHARED_DELIVERY_LABELS.zone,
+  /** Зона, которую заклинание оставляет на месте своего шаблона. */
+  spellZone: 'Зоной на месте области',
+} as const;
+
+/** Пояснения под выбором доставки. */
+export const EFFECT_DELIVERY_HINTS: Record<EffectDelivery, string> = {
+  carrier:
+    'Действует на того, у кого эффект: пока надет предмет, есть черта или '
+    + 'висит сам эффект.',
+  target:
+    'Ложится на цель, когда атака попала или заклинание её задело. '
+    + 'Спасбросок и урон ниже относятся к цели.',
+  aura: 'Носитель излучает эффект на существ вокруг себя.',
+  zone: 'Действует на существ в зоне.',
+};
+
+/**
+ * Пояснение к зоне заклинания: где она появляется и когда пропадает. Урон и
+ * эффекты при касте накладывает само заклинание, зона — то, что остаётся.
+ */
+export const EFFECT_SPELL_ZONE_DELIVERY_HINT =
+  'После применения на месте шаблона остаётся зона: в бою она держится, пока '
+  + 'длится заклинание, новая концентрация её снимает. Нужна область у '
+  + 'заклинания.';
+
+/** Подписи момента срабатывания зоны. */
+export const EFFECT_ZONE_AREA_TRIGGER_LABELS: Record<
+  EffectAreaTrigger,
+  string
+> = {
+  stay: 'Пока в зоне',
+  enter: EFFECT_AREA_TRIGGER_LABELS.enter,
+  exit: EFFECT_AREA_TRIGGER_LABELS.exit,
+};
+
+/** Подписи момента срабатывания ауры. */
+export const EFFECT_AURA_AREA_TRIGGER_LABELS: Record<
+  EffectAreaTrigger,
+  string
+> = {
+  stay: 'Пока в ауре',
+  enter: 'При входе в ауру',
+  exit: 'При выходе из ауры',
+};
+
+/** Пояснения под выбором момента срабатывания. */
+export const EFFECT_AREA_TRIGGER_HINTS: Record<EffectAreaTrigger, string> = {
+  stay:
+    'Держится, пока существо внутри, и снимается на выходе. Спасброска и урона '
+    + 'сразу у такого эффекта нет — только урон каждый ход.',
+  enter:
+    'Срабатывает один раз при каждом входе: спасбросок, урон и то, что '
+    + 'останется на существе.',
+  exit:
+    'Срабатывает один раз при каждом выходе: спасбросок, урон и то, что '
+    + 'останется на существе.',
+};
+
+/**
+ * Классы ленты вкладок доставки и момента срабатывания. Лента прокручивается по
+ * горизонтали: у заклинания вариантов четыре, и на телефоне сжатые вкладки
+ * обрезали подписи до пары букв. Вкладка не ужимается — подпись видна целиком.
+ */
+export const EFFECT_SCROLLABLE_TABS_UI = {
+  list: 'max-w-full overflow-x-auto overscroll-x-contain hidden-scrollbar',
+  trigger: 'shrink-0',
+} as const;
+
+/** Подписи настроек ауры. */
+export const EFFECT_AURA_LABELS = {
+  radius: 'Радиус, фт',
+  target: 'Кого задевает',
+  applyToSelf: 'Действует и на носителя',
+  visible: 'Круг на сцене',
+} as const;
+
+/** Подписи выбора «кого задевает аура». */
+export const EFFECT_AURA_TARGET_LABELS: Record<EffectAuraTarget, string> = {
+  allies: 'Только союзников',
+  enemies: 'Только врагов',
+  all: 'Всех существ',
+};
+
+/** Шаг радиуса ауры, фт. */
+export const EFFECT_AURA_RADIUS_STEP = 5;
+
+/** Наименьший радиус ауры, фт. */
+export const MIN_EFFECT_AURA_RADIUS = 0;
+
+/** Подписи шага «Спасбросок». */
+export const EFFECT_SAVE_STEP_LABELS = {
+  toggle: 'Цель делает спасбросок',
+  areaToggle: 'Существо делает спасбросок',
+  toggleHint: 'Провал — эффект срабатывает полностью. Что даёт успех — ниже.',
+  ownToggle: 'Отдельный спасбросок эффекта',
+  ownToggleHint:
+    'Обычно хватает спасброска самого заклинания или действия. Включите, если '
+    + 'эффект требует свой — например, другой характеристики.',
+  successTitle: 'Если спасбросок успешен',
+} as const;
+
+/**
+ * Чья Сл подставляется вместо Сл 0 — коротко, без пояснения: так её называют
+ * сводка и описание эффекта.
+ */
+export const EFFECT_APPLIER_DC_SHORT_LABELS = {
+  spell: 'Сл заклинателя',
+  creatureAction: 'Сл действия',
+  weapon: 'Сл оружия',
+  generic: 'Сл источника',
+} as const satisfies Partial<Record<EffectFormContext, string>>;
+
+/** Чья Сл подставляется в режиме «Авто», по месту формы. */
+export const EFFECT_APPLIER_DC_LABELS: Partial<
+  Record<EffectFormContext, string>
+> = {
+  ...EFFECT_APPLIER_DC_SHORT_LABELS,
+  weapon: `${EFFECT_APPLIER_DC_SHORT_LABELS.weapon} (8 + бонус атаки)`,
+};
+
+/**
+ * Сл 0 в сводке, если у места формы свой источник Сл: у действия существа это
+ * Сл действия, у оружия — Сл оружия. В остальных местах — Сл заклинателя.
+ */
+export const EFFECT_SCENARIO_APPLIER_DC_LABELS: Partial<
+  Record<EffectFormContext, string>
+> = {
+  creatureAction: EFFECT_APPLIER_DC_SHORT_LABELS.creatureAction,
+  weapon: EFFECT_APPLIER_DC_SHORT_LABELS.weapon,
+};
+
+/** Режим поля Сл: подставить Сл источника или задать своё число. */
+export type SaveDcFieldMode = 'auto' | 'manual';
+
+/** Подписи режимов поля Сл. */
+export const EFFECT_SAVE_DC_FIELD_MODE_LABELS: Record<SaveDcFieldMode, string> =
+  {
+    auto: 'Авто',
+    manual: 'Вручную',
+  };
+
+/** Разделитель источника Сл и её числа в режиме «Авто» («Сл действия · 14»). */
+export const SAVE_DC_AUTO_SEPARATOR = ' · ';
+
+/** Режим поля Сл «Авто»: подставляется Сл источника. */
+export const SAVE_DC_AUTO_MODE: SaveDcFieldMode = 'auto';
+
+/** Режим поля Сл «Вручную»: своё число. */
+export const SAVE_DC_MANUAL_MODE: SaveDcFieldMode = 'manual';
+
+/** Заголовок выбора «при успехе» спасброска самого заклинания или действия. */
+export const EFFECT_ACTION_SAVE_SUCCESS_TITLES: Partial<
+  Record<EffectFormContext, string>
+> = {
+  spell: 'Если цель прошла спасбросок заклинания',
+  creatureAction: 'Если цель прошла спасбросок действия',
+};
+
+/** Почему спасброска нет — пояснение вместо полей. */
+export const EFFECT_SAVE_UNAVAILABLE_HINTS: Record<
+  EffectSaveUnavailableReason,
+  string
+> = {
+  stayTrigger:
+    'У эффекта «пока внутри» спасброска нет. Чтобы существо бросало '
+    + 'спасбросок, выберите в шаге «Когда срабатывает» вход или выход.',
+  onCarrier:
+    'Спасбросок бросает цель. Чтобы при попадании цель бросала спасбросок, '
+    + 'выберите в шаге «Когда срабатывает» вариант «на цели».',
+};
+
+/** Вариант выбора «при успехе»: подпись и пояснение. */
+export interface EffectSuccessOutcomeOption {
+  /** Подпись варианта. */
+  label: string;
+  /** Пояснение под подписью. */
+  description: string;
+}
+
+/** Варианты «при успехе» спасброска самого эффекта. */
+export const EFFECT_SUCCESS_OUTCOME_OPTIONS: Record<
+  EffectSuccessOutcome,
+  EffectSuccessOutcomeOption
+> = {
+  nothing: {
+    label: 'Ничего',
+    description: 'Ни урона, ни эффекта.',
+  },
+  halfDamage: {
+    label: 'Половина урона',
+    description: 'Эффект не накладывается.',
+  },
+  halfDamageWithEffect: {
+    label: 'Половина урона и эффект',
+    description: 'Эффект накладывается и на прошедшего спасбросок.',
+  },
+  effectWithoutDamage: {
+    label: 'Эффект без урона',
+    description: 'Урона нет, эффект накладывается.',
+  },
+  onlyOnSuccess: {
+    label: 'Эффект только при успехе',
+    description:
+      'При провале — ничего. Для исходов «успех/провал» разными эффектами, '
+      + 'как у «Луча слабости».',
+  },
+};
+
+/** Варианты «при успехе» спасброска заклинания или действия. */
+export const EFFECT_ACTION_SAVE_OUTCOME_OPTIONS: Record<
+  EffectSuccessOutcome,
+  EffectSuccessOutcomeOption
+> = {
+  ...EFFECT_SUCCESS_OUTCOME_OPTIONS,
+  nothing: {
+    label: 'Эффект не накладывается',
+    description: 'Прошедшая спасбросок цель эффект не получает.',
+  },
+  effectWithoutDamage: {
+    label: 'Эффект всё равно',
+    description: 'Эффект ложится и на прошедшую спасбросок цель.',
+  },
+};
+
+/** Подписи шага «Урон». */
+export const EFFECT_DAMAGE_STEP_LABELS = {
+  triggerTitle: 'Урон при срабатывании',
+  triggerHint:
+    'Наносится сразу. Со спасброском: провал — полный, успех — по выбору в '
+    + 'шаге «Спасбросок».',
+  addDamage: 'Добавить урон',
+} as const;
+
+/** Подписи шага «Что меняет». */
+export const EFFECT_MODIFIERS_STEP_LABELS = {
+  conditionPrefix: 'Состояние: ',
+  conditionRemove: 'Не считать состоянием',
+  conditionRemoveHint:
+    'Эффект перестанет считаться состоянием: иммунитет к нему не сработает. '
+    + 'Модификаторы и особые правила останутся.',
+  changesTitle: 'Модификаторы',
+  changesEmpty: 'Модификаторов нет. Добавьте из списка «Готовые».',
+  flagsTitle: 'Особые правила',
+  flagsEmpty: 'Особых правил нет: помеха, преимущество, сопротивления…',
+  presets: 'Готовые',
+  changePresetHint:
+    'Ключ, режим и значение подставятся сами — останется поправить число.',
+  flagPresetHint: 'Выбрать правило из разделов',
+  add: ACTIVE_EFFECT_LABELS.addRow,
+  immunitiesTitle: 'Иммунитет к состояниям',
+  immunitiesHint:
+    'Пока эффект действует, носитель не подхватывает эти состояния.',
+  immunitiesPlaceholder: 'Состояния...',
+} as const;
+
+/** Подписи шага «Длительность». */
+export const EFFECT_DURATION_STEP_LABELS = {
+  durationTitle: 'Сколько держится',
+  valuePlaceholder: 'Сколько',
+  permanentHint: 'Пока не снимут вручную.',
+  roundsHint: 'Отсчитывается в бою каждый раунд.',
+  turnHint:
+    'Спадает точно на ходу носителя или источника — «до конца следующего '
+    + 'хода». Работает в бою.',
+  specialHint: 'Особое условие: снимает мастер.',
+  timeHint:
+    'В бою минуты и часы отсчитываются раундами (минута — 10); вне боя время '
+    + 'не идёт.',
+} as const;
+
+/** Пояснение под выбором длительности — по её типу. */
+export const EFFECT_DURATION_HINTS: Record<EffectDurationType, string> = {
+  permanent: EFFECT_DURATION_STEP_LABELS.permanentHint,
+  rounds: EFFECT_DURATION_STEP_LABELS.roundsHint,
+  minutes: EFFECT_DURATION_STEP_LABELS.timeHint,
+  hours: EFFECT_DURATION_STEP_LABELS.timeHint,
+  days: EFFECT_DURATION_STEP_LABELS.timeHint,
+  turn: EFFECT_DURATION_STEP_LABELS.turnHint,
+  special: EFFECT_DURATION_STEP_LABELS.specialHint,
+};
+
+/** Длительность «до хода»: у неё выбираются момент хода и чей это ход. */
+export const EFFECT_TURN_DURATION_TYPE = 'turn' satisfies EffectDurationType;
+
+/** Наименьшее число у длительности в раундах, минутах или часах. */
+export const MIN_EFFECT_DURATION_VALUE = 0;
+
+/** Подписи плашки неработающих настроек. */
+export const EFFECT_INERT_FIELDS_LABELS = {
+  title: 'Эти настройки здесь не работают',
+  description:
+    'Они остались от прежнего редактора или от другого места эффекта и при '
+    + 'срабатывании будут пропущены: ',
+  clear: 'Убрать',
+} as const;
+
+/** Названия неработающих настроек. */
+export const EFFECT_INERT_FIELD_NAMES: Record<InertEffectField, string> = {
+  effectTarget: 'на кого накладывается',
+  aura: 'аура',
+  areaTrigger: 'момент срабатывания',
+  applySave: 'спасбросок',
+  successOutcome: 'исход при успехе',
+  damageParts: 'урон при срабатывании',
+  recurringDamage: 'урон каждый ход',
+  recurringSave: 'повторный спасбросок',
+  consumeOn: 'снятие после атаки',
+  duration: 'длительность',
+  conditionImmunities: 'иммунитет к состояниям',
+  triggers: 'срабатывания не для этого места',
+};
+
+/** Разделитель названий в перечне неработающих настроек. */
+export const EFFECT_INERT_FIELDS_SEPARATOR = EFFECT_PHRASE_PARTS.listJoiner;
+
+/** Знак в конце перечня неработающих настроек. */
+export const EFFECT_INERT_FIELDS_TERMINATOR = '.';
+
+/** Подписи сворачиваемого раздела «Описание». */
+export const EFFECT_DESCRIPTION_LABELS = {
+  title: 'Описание',
+  placeholder: 'Коротко для подсказки и списка эффектов',
+  fillFromSummary: 'Взять из сводки',
+  fillFromSummaryHint: 'Заменить описание фразой из сводки сверху',
+} as const;
+
+/** Строк в поле описания до того, как оно растянется по тексту. */
+export const EFFECT_DESCRIPTION_ROWS = 2;
+
+/** Иконка раскрытия сворачиваемых разделов формы: «Описание», «Для опытных». */
+export const EFFECT_SECTION_TOGGLE_ICON = 'tabler:chevron-down';
+
+/** Кнопка раскрытия раздела: стрелка справа и поворот, пока раздел открыт. */
+export const EFFECT_SECTION_TOGGLE_UI = {
+  trailingIcon:
+    'ms-auto transition-transform duration-200 group-data-[state=open]:rotate-180',
+} as const;
+
+/** Подписи сворачиваемого раздела «Для опытных». */
+export const EFFECT_ADVANCED_LABELS = {
+  title: 'Для опытных',
+  priorityField: 'Приоритет у модификаторов',
+  priorityFieldHint:
+    'Порядок, в котором применяются модификаторы. Строки, где приоритет уже '
+    + 'задан, показывают его всегда.',
+} as const;
+
+/** Подписи шага «Срабатывания». */
+export const EFFECT_TRIGGERS_STEP_LABELS = {
+  hint:
+    'Что эффект делает сам по ходу боя: урон каждый ход, повторный спасбросок, '
+    + 'снятие после атаки или своё — «когда → спасбросок → что сделать → сколько '
+    + 'раз».',
+  empty: 'Срабатываний нет.',
+  addTitle: ACTIVE_EFFECT_LABELS.addRow,
+} as const;
+
+/** Подписи строки срабатывания. */
+export const EFFECT_TRIGGER_ROW_LABELS = {
+  event: 'Когда',
+  role: 'Чья атака',
+  turnOf: 'Чей ход',
+  saveToggle: 'Спасбросок',
+  saveAbility: ACTIVE_EFFECT_FORM_LABELS.ability,
+  saveDc: 'Сл',
+  actionsTitle: 'Что сделать',
+  actionsEmpty:
+    'Добавьте хотя бы одно действие — без него срабатывание не сохранится.',
+  addAction: 'Действие',
+  removeAction: 'Убрать действие',
+  remove: 'Убрать срабатывание',
+  gate: 'Исход',
+  condition: 'Состояние',
+  conditionRounds: 'Раундов',
+  conditionRoundsPlaceholder: 'Пока не снимут',
+  tag: 'Ключ отметки',
+  tagLabel: 'Имя в списке',
+  tagLabelPlaceholder: 'Как ключ',
+  tagRoundsPlaceholder: 'До начала следующего хода',
+  tagInvalid:
+    'Ключ — буквы, цифры, «_», «.» и «-»; без годного ключа отметка не сохранится.',
+  recipient: 'Кому',
+  setHpValue: 'Хитов',
+  dcFormula: 'Сл формулой',
+  dcFormulaPlaceholder: 'max(10, floor(@damage / 2))',
+  dcFormulaHint: '@damage — урон события. Пусто — число Сл.',
+  limitToggle: 'Не чаще',
+  limitTimes: 'раз за',
+} as const;
+
+/** События срабатывания в списке. */
+export const EFFECT_TRIGGER_EVENT_LABELS: Partial<
+  Record<EffectTriggerEvent, string>
+> = {
+  turnStart: 'В начале хода',
+  turnEnd: 'В конце хода',
+  enter: 'При входе в зону или ауру',
+  exit: 'При выходе из зоны или ауры',
+  attackRoll: 'При броске атаки',
+  damageTaken: 'Когда носитель получает урон',
+  hpZero: 'Когда хиты носителя падают до 0',
+};
+
+/** Кому достаются действия срабатывания; «другая сторона» — у урона. */
+export const EFFECT_TRIGGER_RECIPIENT_LABELS: Record<
+  EffectTriggerRecipient,
+  string
+> = {
+  subject: 'Носителю эффекта',
+  other: 'Тому, кто нанёс урон',
+};
+
+/** «Другая сторона» броска атаки по роли носителя. */
+export const EFFECT_TRIGGER_ATTACK_OTHER_PARTY_LABELS: Record<
+  EffectTriggerAttackRole,
+  string
+> = {
+  attacker: 'Цели атаки',
+  target: 'Атакующему',
+};
+
+/** Роль в броске атаки. */
+export const EFFECT_TRIGGER_ROLE_LABELS: Record<
+  EffectTriggerAttackRole,
+  string
+> = {
+  attacker: 'Своя атака',
+  target: 'Атака по носителю',
+};
+
+/** Чей ход у срабатывания начала и конца хода. */
+export const EFFECT_TRIGGER_TURN_OWNER_LABELS: Record<
+  EffectTriggerTurnOwner,
+  string
+> = {
+  subject: 'Носителя эффекта',
+  source: 'Наложившего эффект',
+};
+
+/** Виды действий. */
+export const EFFECT_TRIGGER_ACTION_LABELS: Record<
+  EffectTriggerActionType,
+  string
+> = {
+  damage: 'Урон или лечение',
+  applySelf: 'Наложить сам эффект',
+  applyCondition: 'Наложить состояние',
+  applyTag: 'Поставить отметку',
+  setHp: 'Хиты становятся',
+  endCast: 'Закончить каст',
+  removeSelf: 'Снять эффект',
+};
+
+/** Иконки видов действий. */
+export const EFFECT_TRIGGER_ACTION_ICONS: Record<
+  EffectTriggerActionType,
+  string
+> = {
+  damage: 'tabler:flame',
+  applySelf: 'tabler:copy',
+  applyCondition: 'tabler:mood-sick',
+  applyTag: 'tabler:bookmark',
+  setHp: 'tabler:heart-plus',
+  endCast: 'tabler:player-stop',
+  removeSelf: 'tabler:circle-x',
+};
+
+/** Иконки кнопок строки срабатывания. */
+export const EFFECT_TRIGGER_ROW_ICONS = {
+  remove: 'tabler:trash',
+  removeAction: 'tabler:x',
+  addAction: 'tabler:plus',
+} as const;
+
+/** Наименьший срок состояния или отметки действия, раундов; 0 — срок по умолчанию. */
+export const MIN_TRIGGER_ACTION_ROUNDS = 0;
+
+/** Наименьшее число хитов действия «Хиты становятся». */
+export const MIN_SET_HP_VALUE = 0;
+
+/** Исход спасброска, при котором выполняется действие. */
+export const EFFECT_TRIGGER_GATE_LABELS: Record<
+  EffectTriggerActionGate,
+  string
+> = {
+  failed: 'При провале',
+  saved: 'При успехе',
+  always: 'Всегда',
+};
+
+/** Исход урона: «половина при успехе» — отдельный вариант. */
+export const EFFECT_TRIGGER_DAMAGE_HALF_GATE = 'half';
+
+/** Подпись варианта «провал — полный, успех — половина». */
+export const EFFECT_TRIGGER_DAMAGE_HALF_LABEL =
+  'Провал — полный, успех — половина';
+
+/** Периоды лимита. */
+export const EFFECT_TRIGGER_PERIOD_LABELS: Record<
+  EffectTriggerLimitPeriod,
+  string
+> = {
+  turn: 'ход',
+  round: 'раунд',
+  shortRest: 'короткий отдых',
+  longRest: 'долгий отдых',
+};
+
+/** Готовые срабатывания. */
+export const EFFECT_TRIGGER_PRESET_LABELS: Record<EffectTriggerPreset, string> =
+  {
+    recurringDamage: 'Урон каждый ход',
+    recurringSave: 'Повторный спасбросок',
+    consumeOn: 'Снять после атаки',
+    hpZeroToOne: 'Вместо 0 хитов — 1 хит',
+    tagOnDamage: 'Отметка от урона',
+    custom: 'Своё…',
+  };
+
+/** Иконки готовых срабатываний. */
+export const EFFECT_TRIGGER_PRESET_ICONS: Record<EffectTriggerPreset, string> =
+  {
+    recurringDamage: 'tabler:flame',
+    recurringSave: 'tabler:shield-half',
+    consumeOn: 'tabler:sword',
+    hpZeroToOne: 'tabler:heart-broken',
+    tagOnDamage: 'tabler:bookmark',
+    custom: 'tabler:plus',
+  };
+
+/** Подписи условия срабатывания. */
+export const EFFECT_TRIGGER_CONDITION_LABELS = {
+  title: ACTIVE_EFFECT_LABELS.changeCondition,
+  always: 'Без условия — срабатывает всегда.',
+  and: 'и',
+  add: ACTIVE_EFFECT_LABELS.changeCondition,
+  remove: 'Убрать условие',
+  unknown: 'Условие из данных, окно его не знает: срабатывание не сработает',
+  knownTags: 'Отметки этого эффекта',
+} as const;
+
+/** Виды частей условия срабатывания. */
+export const EFFECT_TRIGGER_CONDITION_KIND_LABELS: Record<
+  TriggerConditionKind,
+  string
+> = {
+  damageType: 'Урон этого типа',
+  damageTypeNot: 'Урон без этого типа',
+  damageCritical: 'Критическое попадание',
+  damageNotCritical: 'Не критическое попадание',
+  selfBloodied: 'Носитель окровавлен (хитов не больше половины)',
+  selfWounded: 'Носитель ранен',
+  selfCreatureType: 'Носитель — существо типа',
+  selfTag: 'На носителе отметка',
+  selfTagNot: 'На носителе нет отметки',
+  rollAdvantage: 'Атака с преимуществом',
+  rollDisadvantage: 'Атака с помехой',
+  otherCreatureType: 'Другая сторона — существо типа',
+  otherMarkedBySelf: 'Другая сторона помечена носителем',
+};
+
+/** Значение новой части условия с выбором. */
+export const EFFECT_TRIGGER_CONDITION_DEFAULT_VALUES = {
+  damageType: 'fire',
+  creatureType: 'humanoid',
+  tag: DEFAULT_EFFECT_TAG,
+} as const;
+
+/** Значение части условия — ключ отметки: вводится строкой, а не выбором. */
+export const TRIGGER_CONDITION_TAG_PARAMETER =
+  'tag' satisfies TriggerConditionParameter;
+
+/** Состояние нового действия «Наложить состояние». */
+export const DEFAULT_TRIGGER_CONDITION: EffectConditionKey = 'poisoned';
+
+/** Период нового лимита «не чаще N раз». */
+export const DEFAULT_TRIGGER_LIMIT_PERIOD: EffectTriggerLimitPeriod = 'turn';
+
+/** Иконка бейджа состояния в шаге «Что меняет». */
+export const EFFECT_CONDITION_BADGE_ICON = 'tabler:heart-broken';
+
+/** Иконка кнопки «Не считать состоянием» у бейджа состояния. */
+export const EFFECT_CONDITION_REMOVE_ICON = 'tabler:x';

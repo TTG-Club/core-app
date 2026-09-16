@@ -4,6 +4,8 @@
     ProficiencyCatalogGroup,
   } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
+
   import { useCharacterSheet } from '../../composables';
   import {
     CUSTOM_LANGUAGE_NAME_MAX_LENGTH,
@@ -64,6 +66,12 @@
   /** Свою запись вписывают только языкам: список брони закрыт каталогом. */
   const isCustomAllowed = computed(() => props.target === 'languages');
 
+  // Подпись «вся группа» хранится только у брони: там это полноценная запись —
+  // её же пишут выдачи класса и черт, и по ней журнал выдач снимает броню.
+  // Языки хранятся поимённо: состав языковых групп меняется, и подпись поменяла
+  // бы смысл у уже сохранённых персонажей.
+  const isGroupLabelStored = computed(() => props.target === 'armor');
+
   const isCustomAddDisabled = computed(() => !customName.value.trim());
 
   // В черновике держим только конкретные виды: пункт «вся группа» производный —
@@ -86,15 +94,6 @@
   function isGroupFullySelected(group: ProficiencyCatalogGroup): boolean {
     return group.items.every((name) => draftSelected.value.has(name));
   }
-
-  // Три группы (языки) раскладываются в три колонки, иначе — в две.
-  const contentClass = computed(() =>
-    props.groups.length === 3 ? 'sm:max-w-3xl' : 'sm:max-w-2xl',
-  );
-
-  const gridClass = computed(() =>
-    props.groups.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2',
-  );
 
   const displayGroups = computed(() =>
     props.groups.map((group) => ({
@@ -188,7 +187,7 @@
 
   function handleApply() {
     const selectedFromCatalog = props.groups.flatMap((group) => {
-      if (isGroupFullySelected(group)) {
+      if (isGroupLabelStored.value && isGroupFullySelected(group)) {
         return [group.all];
       }
 
@@ -211,14 +210,11 @@
 <template>
   <UModal
     :title="title"
-    :ui="{ content: contentClass }"
+    :ui="{ content: 'sm:max-w-2xl' }"
   >
     <template #body>
       <div class="flex flex-col gap-3">
-        <div
-          class="grid grid-cols-1 gap-3"
-          :class="gridClass"
-        >
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div
             v-for="group in displayGroups"
             :key="group.key"
@@ -329,14 +325,14 @@
     <template #footer>
       <div class="flex w-full justify-end gap-2">
         <UButton
-          label="Отмена"
+          :label="ACTION_LABELS.cancel"
           color="neutral"
           variant="ghost"
           @click.left.exact.prevent="handleCancel"
         />
 
         <UButton
-          label="Применить"
+          :label="ACTION_LABELS.apply"
           color="primary"
           @click.left.exact.prevent="handleApply"
         />

@@ -2,6 +2,7 @@
   import { ImageCropModal } from '~ui/image-crop';
 
   import { useCharacterSheet, useSheetAvatar } from '../../composables';
+  import { SHEET_AVATAR_LABELS } from '../../model';
 
   const { character, canEdit, ensureEditable } = useCharacterSheet();
 
@@ -168,13 +169,13 @@
     <template v-else-if="canEdit">
       <UTooltip
         v-if="!hasImage"
-        text="Добавить изображение"
+        :text="SHEET_AVATAR_LABELS.add"
       >
         <button
           type="button"
           :class="[OVERLAY_CLASS, HOVER_REVEAL_CLASS]"
           class="cursor-pointer"
-          aria-label="Добавить изображение персонажа"
+          :aria-label="SHEET_AVATAR_LABELS.addAria"
           @click.left.exact.prevent="handleUploadClick"
         >
           <UIcon
@@ -188,7 +189,7 @@
         v-else
         :class="[OVERLAY_CLASS, actionsRevealClass]"
       >
-        <UTooltip text="Заменить изображение">
+        <UTooltip :text="SHEET_AVATAR_LABELS.replace">
           <UButton
             icon="tabler:photo-edit"
             color="neutral"
@@ -196,12 +197,12 @@
             size="sm"
             square
             class="rounded-full"
-            aria-label="Заменить изображение персонажа"
+            :aria-label="SHEET_AVATAR_LABELS.replaceAria"
             @click.left.exact.prevent="handleUploadClick"
           />
         </UTooltip>
 
-        <UTooltip text="Удалить изображение">
+        <UTooltip :text="SHEET_AVATAR_LABELS.remove">
           <UButton
             icon="tabler:trash"
             color="error"
@@ -209,7 +210,7 @@
             size="sm"
             square
             class="rounded-full"
-            aria-label="Удалить изображение персонажа"
+            :aria-label="SHEET_AVATAR_LABELS.removeAria"
             @click.left.exact.prevent="handleRemoveClick"
           />
         </UTooltip>
@@ -219,7 +220,7 @@
         v-if="hasImage && !areActionsRevealed"
         type="button"
         class="absolute inset-0 cursor-pointer pointer-fine:hidden"
-        aria-label="Показать действия с изображением персонажа"
+        :aria-label="SHEET_AVATAR_LABELS.revealAria"
         @click.left.exact.prevent="handleRevealClick"
       />
     </template>

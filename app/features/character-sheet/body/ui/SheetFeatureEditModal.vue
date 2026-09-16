@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { FeatureOrigin } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
   import { MarkupEditor } from '~ui/markup-editor';
 
   import { useCharacterSheet } from '../../composables';
@@ -8,6 +9,7 @@
     FEATURE_ORIGIN_LABELS,
     FEATURE_ORIGIN_OPTIONS,
     parseStoredMarkupNodes,
+    SHEET_FEATURE_FORM_LABELS,
   } from '../../model';
 
   // Идентификатор редактируемой особенности — прокидывается при открытии
@@ -107,7 +109,7 @@
 
 <template>
   <UModal
-    title="Редактирование особенности"
+    :title="SHEET_FEATURE_FORM_LABELS.editTitle"
     :ui="{ content: 'sm:max-w-2xl' }"
   >
     <template #body>
@@ -115,18 +117,18 @@
         <div class="flex items-end gap-3">
           <div class="flex min-w-0 grow flex-col gap-1">
             <span class="text-[10px] font-bold text-muted uppercase">
-              Название
+              {{ SHEET_FEATURE_FORM_LABELS.name }}
             </span>
 
             <UInput
               v-model="draftName"
-              placeholder="Название особенности"
+              :placeholder="SHEET_FEATURE_FORM_LABELS.namePlaceholder"
             />
           </div>
 
           <div class="flex w-40 shrink-0 flex-col gap-1">
             <span class="text-[10px] font-bold text-muted uppercase">
-              Источник
+              {{ SHEET_FEATURE_FORM_LABELS.origin }}
             </span>
 
             <USelect
@@ -138,23 +140,23 @@
 
         <div class="flex flex-col gap-1">
           <span class="text-[10px] font-bold text-muted uppercase">
-            Выбор
+            {{ SHEET_FEATURE_FORM_LABELS.choice }}
           </span>
 
           <UInput
             v-model="draftChoice"
-            placeholder="Например: красный дракон"
+            :placeholder="SHEET_FEATURE_FORM_LABELS.choicePlaceholder"
           />
         </div>
 
         <div class="flex flex-col gap-1">
           <span class="text-[10px] font-bold text-muted uppercase">
-            Описание
+            {{ SHEET_FEATURE_FORM_LABELS.description }}
           </span>
 
           <MarkupEditor
             v-model="draftDescription"
-            placeholder="Опиши особенность"
+            :placeholder="SHEET_FEATURE_FORM_LABELS.descriptionPlaceholder"
           />
         </div>
       </div>
@@ -163,14 +165,14 @@
     <template #footer>
       <div class="flex w-full justify-end gap-2">
         <UButton
-          label="Отмена"
+          :label="ACTION_LABELS.cancel"
           color="neutral"
           variant="ghost"
           @click.left.exact.prevent="handleCancel"
         />
 
         <UButton
-          label="Сохранить"
+          :label="ACTION_LABELS.save"
           color="primary"
           :disabled="isApplyDisabled"
           @click.left.exact.prevent="handleApply"

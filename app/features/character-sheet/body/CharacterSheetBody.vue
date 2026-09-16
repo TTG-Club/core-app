@@ -10,6 +10,7 @@
     SpellDamageRoll,
   } from '../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
   import { ConfirmDialog } from '~initiative/ui-kit';
 
   import {
@@ -23,15 +24,20 @@
   import {
     ABILITY_LABELS,
     ARMOR_PROFICIENCY_GROUPS,
+    combineRollModes,
     EMPTY_DAMAGE_ROLL_SOURCE,
     findCharacterSpell,
     getAbilityCheckValue,
-    getAvailableInnateSpells,
+    getClassGrantedSpells,
+    getInnateSpells,
+    getSkillKeyByName,
     getWeaponAttackBonus,
     getWeaponAttackRollMode,
     getWeaponDamageSource,
     isProficientWeapon,
     LANGUAGE_PROFICIENCY_GROUPS,
+    SHEET_BODY_LABELS,
+    SHEET_REMOVE_CONFIRM_TITLE,
   } from '../model';
   import CharacterSheetSkeleton from './CharacterSheetSkeleton.vue';
   import {
@@ -50,6 +56,7 @@
     SheetCustomSpellModal,
     SheetDamageModal,
     SheetDefencesPanel,
+    SheetEffectModal,
     SheetExhaustionPanel,
     SheetExperienceModal,
     SheetFeatAddModal,
@@ -108,9 +115,11 @@
   const {
     character,
     isLocked,
+    readonlyReason,
     isReadonly,
     toggleLock,
     ensureEditable,
+    ensureOwnSheet,
     abilityRows,
     savingThrowRows,
     skillGroups,
@@ -118,6 +127,8 @@
     featDefences,
     hasFeatDefences,
     formattedProficiencyBonus,
+    maxHitPoints,
+    maxHitPointsHint,
     initiativeBonus,
     formattedInitiative,
     armorClassValue,
@@ -153,6 +164,7 @@
     removeSpell,
     toggleInspiration,
     downloadCharacter,
+    getRollMode,
   } = useCharacterSheet();
 
   // Действия над листом целиком (копия и удаление) живут в общем состоянии
@@ -176,6 +188,8 @@
 
   // Сохранить чужой лист к себе может только тот, у кого есть доступ к самому
   // инструменту: обе ручки закрыты авторизацией, анониму их показывать нечестно.
+  // Копия доступна с любого чужого листа — и по ссылке, и открытого
+  // администратором; закладка в «Другие листы» — только у листа по ссылке.
   const { isLoggedIn } = useUser();
 
   const {
@@ -185,10 +199,7 @@
     save: saveLink,
   } = useCharacterSheetSaved();
 
-  const canSaveShared = computed(
-    () =>
-      isReadonly.value && isLoggedIn.value && Boolean(viewedShareToken.value),
-  );
+  const canSaveShared = computed(() => isReadonly.value && isLoggedIn.value);
 
   const isLinkSaved = computed(() =>
     viewedShareToken.value ? isTokenSaved(viewedShareToken.value) : false,
@@ -234,14 +245,19 @@
   // единственная в разделе без гарда, профиль на ней догружается уже после
   // монтирования, и к первому рендеру роль ещё неизвестна.
   watch(
-    canSaveShared,
-    (saveShared) => {
+    [canSaveShared, readonlyReason],
+    ([saveShared, reason]) => {
       if (!saveShared) {
         return;
       }
 
       void ensureLoaded();
-      void ensureSavedLoaded();
+
+      // «Другие листы» хранят ссылки, а у листа, открытого администратором,
+      // ссылки нет — сохранять его туда нечем.
+      if (reason === 'shared') {
+        void ensureSavedLoaded();
+      }
     },
     { immediate: true },
   );
@@ -428,6 +444,14 @@
   const noteModal = overlay.create(SheetNoteModal, {
     props: {
       noteId: null,
+    },
+  });
+
+  // Одна модалка на добавление и правку своего эффекта — тем же приёмом, что и
+  // заметка: пустой идентификатор означает новую запись.
+  const effectModal = overlay.create(SheetEffectModal, {
+    props: {
+      effectId: null,
     },
   });
 
@@ -676,6 +700,7 @@
       modifier: initiativeBonus.value,
       ability: 'dexterity',
       actionLabel: 'Бросить инициативу',
+      mode: getRollMode({ kind: 'initiative' }),
     });
   }
 
@@ -687,6 +712,17 @@
       // подмену, а в подменённом спасброске это уже другая характеристика.
       ability: row.ability,
       actionLabel: 'Бросить спасбросок',
+      mode: getRollMode({ kind: 'savingThrow', ability: row.key }),
+      // Источник спасброска лист не знает — его называет игрок в модалке:
+      // выдать преимущество против яда по предмету «против заклинаний» хуже,
+      // чем спросить.
+      resolveMode: (source) =>
+        getRollMode({
+          kind: 'savingThrow',
+          ability: row.key,
+          againstMagic: source.againstMagic,
+          againstCondition: source.condition ?? undefined,
+        }),
     });
   }
 
@@ -695,6 +731,12 @@
       title: `Проверка: ${row.name}`,
       modifier: row.value,
       ability: row.ability,
+      mode: getRollMode({
+        kind: 'skill',
+        ability: row.ability,
+        // Свой навык игрока в словаре эффектов не значится — флагов у него нет.
+        skill: getSkillKeyByName(row.name),
+      }),
     });
   }
 
@@ -719,9 +761,16 @@
       modifier: attack.value,
       ability: attack.ability,
       actionLabel: 'Бросить атаку',
-      // Тяжёлое оружие не по руке бьёт с помехой (правила 2024): модалка
-      // открывается сразу в этом режиме, но игрок волен его сменить.
-      mode: getWeaponAttackRollMode(attack),
+      // Режим дают два независимых источника: помеха тяжёлого оружия не по руке
+      // (правила 2024) и активные эффекты — Опутанный бьёт с помехой. Свести их
+      // можно только правилом 5e, поэтому не «или», а `combineRollModes`.
+      mode: combineRollModes(
+        getWeaponAttackRollMode(attack),
+        getRollMode({
+          kind: 'attack',
+          attackType: inventoryItem.weapon.ranged ? 'ranged' : 'melee',
+        }),
+      ),
     });
   }
 
@@ -777,7 +826,13 @@
   }
 
   const availableInnateSpells = computed(() =>
-    getAvailableInnateSpells(character.value),
+    getInnateSpells(character.value),
+  );
+
+  // Заклинания классовых умений идут своим списком: во вкладке они встают в
+  // круги книги, а не в группу врождённых
+  const classGrantedSpells = computed(() =>
+    getClassGrantedSpells(character.value),
   );
 
   function handleClassEdit() {
@@ -828,8 +883,25 @@
     featureEditModal.open({ featureId });
   }
 
-  function handleNoteAdd() {
+  function handleEffectAdd() {
     if (!ensureEditable()) {
+      return;
+    }
+
+    effectModal.open({ effectId: null });
+  }
+
+  function handleEffectEdit(effectId: string) {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    effectModal.open({ effectId });
+  }
+
+  // Заметки ведут по ходу игры, поэтому замок их не запирает — только чужой лист.
+  function handleNoteAdd() {
+    if (!ensureOwnSheet()) {
       return;
     }
 
@@ -837,7 +909,7 @@
   }
 
   function handleNoteEdit(noteId: string) {
-    if (!ensureEditable()) {
+    if (!ensureOwnSheet()) {
       return;
     }
 
@@ -1068,7 +1140,7 @@
         :can-expand="canExpand"
         :can-close="canClose"
         :can-duplicate="canCreate"
-        :readonly="isReadonly"
+        :readonly-reason="readonlyReason"
         :shared="isShared"
         :save-status="headerSaveStatus"
         :pdf-loading="isPdfExporting"
@@ -1124,22 +1196,24 @@
           <div class="flex flex-col gap-4 max-sm:contents">
             <div class="grid grid-cols-2 gap-4 max-sm:contents">
               <SheetStatTile
-                label="Мастерство"
+                :label="SHEET_BODY_LABELS.proficiencyBonus"
                 :value="formattedProficiencyBonus"
               />
 
               <SheetStatTile
-                label="Класс доспеха"
-                short-label="КД"
+                :label="SHEET_BODY_LABELS.armorClass"
+                :short-label="SHEET_BODY_LABELS.armorClassShort"
                 :value="armorClassValue"
                 interactive
-                press-label="Настроить класс доспеха"
+                :press-label="SHEET_BODY_LABELS.armorClassPress"
                 @press="handleArmorClassEdit"
               />
             </div>
 
             <SheetHealthPanel
               :health="character.health"
+              :max-hit-points="maxHitPoints"
+              :max-hit-points-hint="maxHitPointsHint"
               :hit-dice="character.hitDice"
               :extra-hit-dice="character.extraHitDice"
               class="max-sm:order-1 max-sm:col-span-full"
@@ -1186,7 +1260,7 @@
               />
 
               <SheetStatTile
-                label="Инициатива"
+                :label="SHEET_BODY_LABELS.initiative"
                 :value="formattedInitiative"
                 interactive
                 @press="handleInitiativeRoll"
@@ -1246,6 +1320,7 @@
           :features="character.features"
           :spells="character.spells"
           :innate-spells="availableInnateSpells"
+          :class-spells="classGrantedSpells"
           :spellcasting="spellcastingBreakdown"
           :spell-slots="spellSlotRows"
           :has-main-tab="!isWide"
@@ -1278,6 +1353,8 @@
           @roll-item-attack="handleItemAttackRoll"
           @roll-item-damage="handleItemDamageRoll"
           @edit-feature="handleFeatureEdit"
+          @add-effect="handleEffectAdd"
+          @edit-effect="handleEffectEdit"
           @add-note="handleNoteAdd"
           @edit-note="handleNoteEdit"
           @remove-note="removeNote"
@@ -1302,9 +1379,9 @@
 
       <ConfirmDialog
         v-model:open="isRemoveOpen"
-        title="Удалить лист персонажа?"
+        :title="SHEET_REMOVE_CONFIRM_TITLE"
         :description="removeDescription"
-        confirm-label="Удалить"
+        :confirm-label="ACTION_LABELS.remove"
         confirm-color="error"
         confirm-icon="tabler:trash"
         :loading="isMutating"

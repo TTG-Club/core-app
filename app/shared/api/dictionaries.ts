@@ -46,6 +46,7 @@ enum DictionaryEndpoints {
   NOTIFICATION_TYPES = '/api/v2/dictionaries/notification/types',
   ATTACK_TYPES = '/api/v2/dictionaries/attack/types',
   SPELL_AREA = '/api/v2/dictionaries/spell-area',
+  RECHARGE = '/api/v2/dictionaries/recharge',
 }
 
 class Dictionaries {
@@ -344,6 +345,15 @@ class Dictionaries {
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
     return $fetch(DictionaryEndpoints.ATTACK_TYPES, {
+      ...config,
+      method: 'get',
+    });
+  };
+
+  public recharge = <R extends NitroFetchRequest>(
+    config: Omit<NitroFetchOptions<R>, 'method'> = {},
+  ): Promise<Array<SelectOption>> => {
+    return $fetch(DictionaryEndpoints.RECHARGE, {
       ...config,
       method: 'get',
     });

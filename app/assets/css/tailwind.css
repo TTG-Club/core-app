@@ -2,9 +2,27 @@
 @import '@nuxt/ui';
 
 @theme {
+  /* Ступень между 2xl и 2K: с неё лента главной раскладывается в три колонки —
+     раньше рельс получался слишком узким. */
+  --breakpoint-3xl: 1700px;
+
+  /* Самые узкие телефоны — 360px и уже: главная там ужимает заголовок и
+     ставит плитки разделов в столбец. `max-2xs:` сравнивает строго
+     (`width < 361px`), поэтому граница на пиксель выше — иначе сами 360px
+     остались бы снаружи. */
+  --breakpoint-2xs: 361px;
+
+  /* Узкие телефоны — уже 400px: главная там не показывает персонажа
+     с репликой. */
+  --breakpoint-xs: 400px;
+
   --font-sans:
     'Open Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
     'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+  --font-mono:
+    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    'Liberation Mono', 'Courier New', monospace;
 
   --color-hover: var(--color-hover);
 }
@@ -54,6 +72,17 @@
 
 body {
   @apply bg-muted bg-linear-(--color-bg-main-gradient) bg-cover bg-fixed bg-no-repeat scheme-light dark:scheme-dark svifty7:scheme-dark;
+
+  /* Светлая тема кладёт поверх градиента плитку бумажной фактуры (`--paper-texture` из colors/light.scss).
+     Правило вне слоёв, поэтому перекрывает утилиты `bg-linear-*`, `bg-cover` и `bg-no-repeat` выше. */
+  html.light & {
+    background-image:
+      var(--paper-texture), linear-gradient(var(--color-bg-main-gradient));
+    background-repeat: repeat, no-repeat;
+    background-size:
+      720px 720px,
+      cover;
+  }
 }
 
 :root {

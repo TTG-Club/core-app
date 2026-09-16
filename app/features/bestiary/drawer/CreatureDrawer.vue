@@ -1,9 +1,10 @@
 <script setup lang="ts">
-  import type { CreatureDetailResponse } from '~bestiary/model';
+  import type { CreatureDetailResponse } from '../model';
 
-  import { CreatureBody } from '~bestiary/body';
-  import { getCreatureMarkdown } from '~bestiary/model';
   import { UiDrawer } from '~ui/drawer';
+
+  import { CreatureBody } from '../body';
+  import { getCreatureMarkdown } from '../model';
 
   const { url } = defineProps<{
     url: string;

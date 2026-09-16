@@ -5,6 +5,7 @@
     title,
     description = undefined,
     confirmLabel = 'Подтвердить',
+    cancelLabel = 'Отмена',
     confirmColor = 'primary',
     confirmIcon = undefined,
     loading = false,
@@ -12,6 +13,13 @@
     title: string;
     description?: string;
     confirmLabel?: string;
+
+    /**
+     * Подпись отказа. Своя нужна там, где рядом стоит такой же диалог с другой:
+     * в форме класса удаление умения предлагает «Оставить», и «Отмена» у
+     * соседнего вопроса читалась бы как другое действие.
+     */
+    cancelLabel?: string;
     confirmColor?: 'primary' | 'error' | 'warning' | 'success' | 'neutral';
     confirmIcon?: string;
     loading?: boolean;
@@ -44,7 +52,7 @@
           :disabled="loading"
           @click.left.exact.prevent="cancel"
         >
-          Отмена
+          {{ cancelLabel }}
         </UButton>
 
         <UButton

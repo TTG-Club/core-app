@@ -1,12 +1,18 @@
 <script setup lang="ts">
+  import { ACTION_LABELS } from '~/shared/consts';
+
   import { useCharacterSheet } from '../../composables';
   import {
+    getMaxHitPoints,
+    getMaxHitPointsHint,
     HIT_DICE_COUNT_MAX,
     HIT_DICE_COUNT_MIN,
     HIT_DIE_OPTIONS,
     HIT_POINT_STEP_BUTTONS,
     HIT_POINTS_MAX,
     HIT_POINTS_MIN,
+    MAX_HIT_POINTS_LABELS,
+    SHEET_HEALTH_MODAL_LABELS,
   } from '../../model';
 
   const emit = defineEmits<{
@@ -25,6 +31,21 @@
     character.value.extraHitDice.map((hitDie) => ({ ...hitDie })),
   );
 
+  // Правится записанный максимум, а лист показывает его с прибавками: разбор
+  // объясняет разницу прямо под полем — как подсказка на плитке характеристики.
+  const draftCharacter = computed(() => ({
+    ...character.value,
+    health: { ...character.value.health, max: draftHealth.value.max },
+  }));
+
+  const maxHitPointsTotal = computed(() =>
+    getMaxHitPoints(draftCharacter.value),
+  );
+
+  const maxHitPointsHint = computed(() =>
+    getMaxHitPointsHint(draftCharacter.value),
+  );
+
   /**
    * Быстрое изменение текущих хитов в редакторе: значение ограничивается
    * диапазоном [0, макс].
@@ -33,7 +54,7 @@
    */
   function adjustCurrent(step: number): void {
     draftHealth.value.current = Math.min(
-      draftHealth.value.max,
+      maxHitPointsTotal.value,
       Math.max(HIT_POINTS_MIN, draftHealth.value.current + step),
     );
   }
@@ -73,13 +94,13 @@
 </script>
 
 <template>
-  <UModal title="Очки здоровья и кости хитов">
+  <UModal :title="SHEET_HEALTH_MODAL_LABELS.title">
     <template #body>
       <div class="flex flex-col gap-4">
         <div class="flex items-end gap-3">
           <div class="flex grow flex-col gap-1">
             <span class="text-[10px] font-bold text-muted uppercase">
-              Сейчас
+              {{ SHEET_HEALTH_MODAL_LABELS.current }}
             </span>
 
             <UInputNumber
@@ -93,7 +114,7 @@
 
           <div class="flex grow flex-col gap-1">
             <span class="text-[10px] font-bold text-muted uppercase">
-              Всего
+              {{ SHEET_HEALTH_MODAL_LABELS.max }}
             </span>
 
             <UInputNumber
@@ -105,7 +126,7 @@
 
           <div class="flex grow flex-col gap-1">
             <span class="text-[10px] font-bold text-muted uppercase">
-              Врем.
+              {{ SHEET_HEALTH_MODAL_LABELS.temporary }}
             </span>
 
             <UInputNumber
@@ -116,10 +137,23 @@
           </div>
         </div>
 
+        <!-- Записанный максимум правится здесь, а лист показывает его с
+          прибавками: без разбора числа расходились бы молча -->
+        <div
+          v-if="maxHitPointsHint"
+          class="flex flex-wrap items-baseline justify-between gap-x-2 rounded-lg bg-elevated/40 px-3 py-2"
+        >
+          <span class="text-xs text-muted">
+            {{ MAX_HIT_POINTS_LABELS.totalTitle }}: {{ maxHitPointsTotal }}
+          </span>
+
+          <span class="text-xs text-dimmed">{{ maxHitPointsHint }}</span>
+        </div>
+
         <!-- Быстрые шаги урона/лечения для текущих хитов. -->
         <div class="flex items-center gap-2">
           <span class="shrink-0 text-[10px] font-bold text-muted uppercase">
-            Текущие
+            {{ SHEET_HEALTH_MODAL_LABELS.quickTitle }}
           </span>
 
           <div class="flex grow gap-1.5">
@@ -130,7 +164,7 @@
               variant="soft"
               size="sm"
               :label="button.label"
-              :aria-label="`Изменить текущие хиты на ${button.label}`"
+              :aria-label="`${SHEET_HEALTH_MODAL_LABELS.quickStep} ${button.label}`"
               class="flex-1 justify-center"
               @click.left.exact.prevent="adjustCurrent(button.step)"
             />
@@ -144,12 +178,12 @@
             <span
               class="text-[10px] font-bold tracking-wider text-muted uppercase"
             >
-              Кости хитов (из классов)
+              {{ SHEET_HEALTH_MODAL_LABELS.classDiceTitle }}
             </span>
 
             <UButton
               icon="tabler:plus"
-              label="Добавить"
+              :label="ACTION_LABELS.add"
               color="neutral"
               variant="ghost"
               size="xs"
@@ -162,15 +196,15 @@
             class="grid grid-cols-[1fr_1fr_1.2fr_auto] items-center gap-2"
           >
             <span class="text-[10px] font-bold text-muted uppercase">
-              Сейчас
+              {{ SHEET_HEALTH_MODAL_LABELS.current }}
             </span>
 
             <span class="text-[10px] font-bold text-muted uppercase">
-              Всего
+              {{ SHEET_HEALTH_MODAL_LABELS.max }}
             </span>
 
             <span class="text-[10px] font-bold text-muted uppercase">
-              Кость
+              {{ SHEET_HEALTH_MODAL_LABELS.die }}
             </span>
 
             <span />
@@ -202,7 +236,7 @@
                 variant="ghost"
                 size="xs"
                 square
-                aria-label="Удалить кость хитов"
+                :aria-label="SHEET_HEALTH_MODAL_LABELS.removeDie"
                 @click.left.exact.prevent="handleRemoveClassDie(dieIndex)"
               />
             </template>
@@ -212,7 +246,7 @@
             v-else
             class="text-xs text-dimmed italic"
           >
-            Нет костей хитов
+            {{ SHEET_HEALTH_MODAL_LABELS.diceEmpty }}
           </span>
         </div>
 
@@ -223,12 +257,12 @@
             <span
               class="text-[10px] font-bold tracking-wider text-muted uppercase"
             >
-              Дополнительные кости хитов
+              {{ SHEET_HEALTH_MODAL_LABELS.extraDiceTitle }}
             </span>
 
             <UButton
               icon="tabler:plus"
-              label="Добавить"
+              :label="ACTION_LABELS.add"
               color="neutral"
               variant="ghost"
               size="xs"
@@ -241,15 +275,15 @@
             class="grid grid-cols-[1fr_1fr_1.2fr_auto] items-center gap-2"
           >
             <span class="text-[10px] font-bold text-muted uppercase">
-              Сейчас
+              {{ SHEET_HEALTH_MODAL_LABELS.current }}
             </span>
 
             <span class="text-[10px] font-bold text-muted uppercase">
-              Всего
+              {{ SHEET_HEALTH_MODAL_LABELS.max }}
             </span>
 
             <span class="text-[10px] font-bold text-muted uppercase">
-              Кость
+              {{ SHEET_HEALTH_MODAL_LABELS.die }}
             </span>
 
             <span />
@@ -281,7 +315,7 @@
                 variant="ghost"
                 size="xs"
                 square
-                aria-label="Удалить кость хитов"
+                :aria-label="SHEET_HEALTH_MODAL_LABELS.removeDie"
                 @click.left.exact.prevent="handleRemoveExtraDie(hitDie.id)"
               />
             </template>
@@ -293,14 +327,14 @@
     <template #footer>
       <div class="flex w-full justify-end gap-2">
         <UButton
-          label="Отмена"
+          :label="ACTION_LABELS.cancel"
           color="neutral"
           variant="ghost"
           @click.left.exact.prevent="handleCancel"
         />
 
         <UButton
-          label="Применить"
+          :label="ACTION_LABELS.apply"
           color="primary"
           @click.left.exact.prevent="handleApply"
         />

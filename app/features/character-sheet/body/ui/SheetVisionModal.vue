@@ -1,9 +1,12 @@
 <script setup lang="ts">
   import type { VisionGrant, VisionKey } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
+
   import { useCharacterSheet } from '../../composables';
   import {
     getVisionGrants,
+    SHEET_VISION_MODAL_TITLE,
     SPEED_UNIT_OPTIONS,
     SPEED_UNIT_SHORT_LABELS,
     VISION_DISTANCE_MAX,
@@ -86,7 +89,7 @@
 </script>
 
 <template>
-  <UModal title="Зрение">
+  <UModal :title="SHEET_VISION_MODAL_TITLE">
     <template #body>
       <div class="flex flex-col gap-3">
         <div
@@ -104,6 +107,14 @@
               class="w-40"
             />
           </div>
+
+          <!-- Ноль у обычного зрения — не отсутствие, а «видит без предела» -->
+          <span
+            v-if="field.key === 'normal'"
+            class="text-xs text-dimmed"
+          >
+            {{ VISION_EDITOR_LABELS.normalHint }}
+          </span>
 
           <!-- В поле правится только своё значение, а чувство может прийти от
             черты или умения вида: без подписи ноль в поле выглядел бы ошибкой,
@@ -152,14 +163,14 @@
     <template #footer>
       <div class="flex w-full justify-end gap-2">
         <UButton
-          label="Отмена"
+          :label="ACTION_LABELS.cancel"
           color="neutral"
           variant="ghost"
           @click.left.exact.prevent="handleCancel"
         />
 
         <UButton
-          label="Применить"
+          :label="ACTION_LABELS.apply"
           color="primary"
           @click.left.exact.prevent="handleApply"
         />

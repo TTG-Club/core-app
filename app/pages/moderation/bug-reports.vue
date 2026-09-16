@@ -1,8 +1,10 @@
 <script setup lang="ts">
-  import type { WritableComputedRef } from 'vue';
+  import type { MaybeRefOrGetter, WritableComputedRef } from 'vue';
 
   import type {
+    AdminBugFilterOption,
     BugCountByStatusResponse,
+    BugReportFilterOptionsResponse,
     BugReportResponse,
     BugReportStatus,
     BugReportStatusUpdatePayload,
@@ -17,6 +19,8 @@
   import {
     ADMIN_BUG_SELECTED_DATA_KEY,
     ADMIN_BUGS_API_URL,
+    ADMIN_BUGS_AUTHOR_ALL_LABEL,
+    ADMIN_BUGS_AUTHOR_QUERY_KEY,
     ADMIN_BUGS_COUNT_BY_STATUS_API_URL,
     ADMIN_BUGS_DEFAULT_PAGE_SIZE,
     ADMIN_BUGS_DEFAULT_SORT,
@@ -24,13 +28,22 @@
     ADMIN_BUGS_DETAIL_EMPTY_TITLE,
     ADMIN_BUGS_EMPTY_TEXT,
     ADMIN_BUGS_FILTER_ALL,
+    ADMIN_BUGS_FILTER_OPTIONS_API_URL,
+    ADMIN_BUGS_FILTER_OPTIONS_DATA_KEY,
+    ADMIN_BUGS_FILTERS_APPLY_LABEL,
+    ADMIN_BUGS_FILTERS_BUTTON_LABEL,
+    ADMIN_BUGS_FILTERS_DRAWER_TITLE,
+    ADMIN_BUGS_FILTERS_RESET_LABEL,
     ADMIN_BUGS_ID_QUERY_KEY,
     ADMIN_BUGS_LAYOUT_TITLE,
     ADMIN_BUGS_LOAD_ERROR_TEXT,
+    ADMIN_BUGS_LOGIN_SEARCH_PLACEHOLDER,
     ADMIN_BUGS_PAGE_DESCRIPTION,
     ADMIN_BUGS_PAGE_TITLE,
     ADMIN_BUGS_PLATFORM_ALL_LABEL,
     ADMIN_BUGS_PLATFORM_QUERY_KEY,
+    ADMIN_BUGS_RESOLVER_ALL_LABEL,
+    ADMIN_BUGS_RESOLVER_QUERY_KEY,
     ADMIN_BUGS_RETRY_LABEL,
     ADMIN_BUGS_STAT_TOTAL_LABEL,
     ADMIN_BUGS_STATUS_ALL_LABEL,
@@ -41,8 +54,10 @@
     BUG_REPORT_PLATFORM_LABELS,
     BUG_REPORT_STATUS_LABELS,
     BUG_REPORT_STATUSES,
+    buildLoginFilterOptions,
     getAdminBugApiUrl,
     getBugReportStatusColor,
+    toAdminBugFilterApiValue,
   } from '~bug-report/model';
   import { UiPagination } from '~ui/pagination';
 
@@ -54,30 +69,51 @@
 
   const route = useRoute();
   const router = useRouter();
+  const requestFetch = useRequestFetch();
 
   const currentPage = ref(1);
   const itemsPerPage = ADMIN_BUGS_DEFAULT_PAGE_SIZE;
+
+  // Логины для выпадающих списков авторов и исполнителей. Загружаются до
+  // создания фильтров: значение фильтра из адреса сверяется с этим списком
+  const { data: filterOptions, refresh: refreshFilterOptions } =
+    await useAsyncData<BugReportFilterOptionsResponse>(
+      ADMIN_BUGS_FILTER_OPTIONS_DATA_KEY,
+      () =>
+        requestFetch<BugReportFilterOptionsResponse>(
+          ADMIN_BUGS_FILTER_OPTIONS_API_URL,
+        ),
+    );
+
+  const authorLogins = computed(() => filterOptions.value?.userLogins ?? []);
+
+  const resolverLogins = computed(
+    () => filterOptions.value?.statusUpdatedByLogins ?? [],
+  );
 
   /**
    * Создает вычисляемый фильтр, синхронизированный с URL query.
    *
    * Значение из адреса принимается, только если оно есть среди допустимых:
    * иначе произвольная строка (`?status=foo`) ушла бы в API, где Spring не
-   * сможет привести её к enum и ответит ошибкой на весь список.
+   * сможет привести её к enum и ответит ошибкой на весь список. Для логинов
+   * список допустимых приходит с сервера: неизвестный логин из адреса тоже
+   * сбрасывается в «все», чтобы селект не показывал значение вне своих пунктов.
    *
    * @param queryKey Ключ параметра в URL query.
-   * @param allowedValues Допустимые значения фильтра.
+   * @param allowedValues Допустимые значения фильтра (могут быть реактивными).
    */
   function createQueryFilter(
     queryKey: string,
-    allowedValues: ReadonlyArray<string>,
+    allowedValues: MaybeRefOrGetter<ReadonlyArray<string>>,
   ): WritableComputedRef<string> {
     return computed({
       get: () => {
         const queryValue = route.query[queryKey];
 
         return typeof queryValue === 'string'
-          && allowedValues.includes(queryValue)
+          && queryValue
+          && toValue(allowedValues).includes(queryValue)
           ? queryValue
           : ADMIN_BUGS_FILTER_ALL;
       },
@@ -103,6 +139,16 @@
     SOURCE_PLATFORMS,
   );
 
+  const authorFilter = createQueryFilter(
+    ADMIN_BUGS_AUTHOR_QUERY_KEY,
+    authorLogins,
+  );
+
+  const resolverFilter = createQueryFilter(
+    ADMIN_BUGS_RESOLVER_QUERY_KEY,
+    resolverLogins,
+  );
+
   // Синхронизация выбранного ID бага с URL query
   const selectedBugId = computed({
     get: () => {
@@ -120,14 +166,8 @@
     },
   });
 
-  /** Пункт селекта-фильтра: подпись и значение. */
-  interface FilterOption {
-    label: string;
-    value: string;
-  }
-
   // Опции фильтров не зависят от состояния страницы — считаются один раз
-  const statusOptions: FilterOption[] = [
+  const statusOptions: AdminBugFilterOption[] = [
     { label: ADMIN_BUGS_STATUS_ALL_LABEL, value: ADMIN_BUGS_FILTER_ALL },
     ...BUG_REPORT_STATUSES.map((status) => ({
       label: BUG_REPORT_STATUS_LABELS[status],
@@ -135,7 +175,7 @@
     })),
   ];
 
-  const platformOptions: FilterOption[] = [
+  const platformOptions: AdminBugFilterOption[] = [
     { label: ADMIN_BUGS_PLATFORM_ALL_LABEL, value: ADMIN_BUGS_FILTER_ALL },
     ...SOURCE_PLATFORMS.map((platform) => ({
       label: BUG_REPORT_PLATFORM_LABELS[platform],
@@ -143,13 +183,63 @@
     })),
   ];
 
+  // Списки логинов приходят с сервера и могут обновиться, поэтому вычисляемые
+  const authorOptions = computed(() =>
+    buildLoginFilterOptions(ADMIN_BUGS_AUTHOR_ALL_LABEL, authorLogins.value),
+  );
+
+  const resolverOptions = computed(() =>
+    buildLoginFilterOptions(
+      ADMIN_BUGS_RESOLVER_ALL_LABEL,
+      resolverLogins.value,
+    ),
+  );
+
   // Сброс страницы и выделения при изменении фильтров
-  watch([statusFilter, platformFilter], () => {
+  watch([statusFilter, platformFilter, authorFilter, resolverFilter], () => {
     currentPage.value = 1;
     selectedBugId.value = null;
   });
 
-  const requestFetch = useRequestFetch();
+  /**
+   * Сколько фильтров отличаются от «все». Число стоит на кнопке, которая на
+   * узких экранах заменяет собой все четыре списка: иначе выбранный отбор был
+   * бы не виден, пока не откроешь шторку.
+   */
+  const activeFiltersCount = computed(
+    () =>
+      [
+        statusFilter.value,
+        platformFilter.value,
+        authorFilter.value,
+        resolverFilter.value,
+      ].filter((filterValue) => filterValue !== ADMIN_BUGS_FILTER_ALL).length,
+  );
+
+  /** Список отфильтрован хотя бы по одному признаку. */
+  const hasActiveFilters = computed(() => activeFiltersCount.value > 0);
+
+  /**
+   * Сбрасывает все фильтры разом. По одному их сбрасывать нельзя: соседние
+   * записи `route.query` в этот момент ещё старые, и каждый следующий вызов
+   * `replace` вернул бы в адрес только что убранный параметр.
+   */
+  function resetFilters(): void {
+    router.replace({
+      query: {
+        ...route.query,
+        [ADMIN_BUGS_STATUS_QUERY_KEY]: undefined,
+        [ADMIN_BUGS_PLATFORM_QUERY_KEY]: undefined,
+        [ADMIN_BUGS_AUTHOR_QUERY_KEY]: undefined,
+        [ADMIN_BUGS_RESOLVER_QUERY_KEY]: undefined,
+        [ADMIN_BUGS_ID_QUERY_KEY]: undefined,
+      },
+    });
+  }
+
+  // Сводка и списки фильтров показываются дважды — в боковой колонке и в шторке
+  const [DefineStatusSummary, ReuseStatusSummary] = createReusableTemplate();
+  const [DefineFilterFields, ReuseFilterFields] = createReusableTemplate();
 
   // Запрос баг-репортов с учетом пагинации и фильтров
   const {
@@ -165,19 +255,21 @@
           page: currentPage.value - 1,
           size: itemsPerPage,
           sort: ADMIN_BUGS_DEFAULT_SORT,
-          status:
-            statusFilter.value === ADMIN_BUGS_FILTER_ALL
-              ? undefined
-              : statusFilter.value,
-          sourcePlatform:
-            platformFilter.value === ADMIN_BUGS_FILTER_ALL
-              ? undefined
-              : platformFilter.value,
+          status: toAdminBugFilterApiValue(statusFilter.value),
+          sourcePlatform: toAdminBugFilterApiValue(platformFilter.value),
+          userLogin: toAdminBugFilterApiValue(authorFilter.value),
+          statusUpdatedBy: toAdminBugFilterApiValue(resolverFilter.value),
         },
       });
     },
     {
-      watch: [currentPage, statusFilter, platformFilter],
+      watch: [
+        currentPage,
+        statusFilter,
+        platformFilter,
+        authorFilter,
+        resolverFilter,
+      ],
     },
   );
 
@@ -191,8 +283,9 @@
     void refreshBugs();
   }
 
-  // Сводка по статусам зависит только от платформы: цифры должны совпадать со
-  // списком, но не схлопываться до одного статуса при фильтрации по статусу
+  // Сводка по статусам зависит от всех фильтров, кроме статуса: цифры должны
+  // совпадать со списком, но не схлопываться до одного статуса при фильтрации
+  // по статусу
   const { data: statusCounts, refresh: refreshStatusCounts } =
     await useAsyncData<BugCountByStatusResponse[]>(
       ADMIN_BUGS_STATUS_COUNTS_DATA_KEY,
@@ -201,15 +294,14 @@
           ADMIN_BUGS_COUNT_BY_STATUS_API_URL,
           {
             query: {
-              sourcePlatform:
-                platformFilter.value === ADMIN_BUGS_FILTER_ALL
-                  ? undefined
-                  : platformFilter.value,
+              sourcePlatform: toAdminBugFilterApiValue(platformFilter.value),
+              userLogin: toAdminBugFilterApiValue(authorFilter.value),
+              statusUpdatedBy: toAdminBugFilterApiValue(resolverFilter.value),
             },
           },
         ),
       {
-        watch: [platformFilter],
+        watch: [platformFilter, authorFilter, resolverFilter],
       },
     );
 
@@ -348,8 +440,10 @@
    * @param payload Данные об обновлении статуса.
    */
   function handleBugStatusUpdate(payload: BugReportStatusUpdatePayload): void {
-    // Статус сменился — сводка по статусам устарела
+    // Статус сменился — сводка по статусам устарела, а в списке исполнителей
+    // мог появиться новый логин
     void refreshStatusCounts();
+    void refreshFilterOptions();
 
     // Баг, догруженный по ID, обновляем отдельно — в списке его может не быть
     const loadedBug = fetchedSelectedBug.value;
@@ -381,14 +475,10 @@
     >
       <!-- Элементы управления (Фильтры) -->
       <template #controls>
-        <div class="flex flex-col gap-3">
-          <p class="text-xs leading-normal text-secondary">
-            {{ ADMIN_BUGS_PAGE_DESCRIPTION }}
-          </p>
-
-          <!-- Сводка по баг-репортам: всего и по каждому статусу (скрыта на мобильных) -->
+        <!-- Сводка по баг-репортам: всего и по каждому статусу -->
+        <DefineStatusSummary>
           <div
-            class="hidden overflow-hidden rounded-lg border border-default bg-elevated/50 lg:block"
+            class="overflow-hidden rounded-lg border border-default bg-elevated/50"
           >
             <button
               type="button"
@@ -437,7 +527,10 @@
               </button>
             </div>
           </div>
+        </DefineStatusSummary>
 
+        <!-- Списки фильтров: одни и те же в боковой колонке и в шторке -->
+        <DefineFilterFields>
           <div class="flex flex-col gap-2">
             <!-- Фильтр по статусу -->
             <USelectMenu
@@ -455,6 +548,117 @@
               value-key="value"
               label-key="label"
               class="w-full"
+            />
+
+            <!-- Фильтр по автору -->
+            <USelectMenu
+              v-model="authorFilter"
+              :items="authorOptions"
+              :search-input="{
+                placeholder: ADMIN_BUGS_LOGIN_SEARCH_PLACEHOLDER,
+              }"
+              value-key="value"
+              label-key="label"
+              class="w-full"
+            />
+
+            <!-- Фильтр по исполнителю: кто последним менял статус -->
+            <USelectMenu
+              v-model="resolverFilter"
+              :items="resolverOptions"
+              :search-input="{
+                placeholder: ADMIN_BUGS_LOGIN_SEARCH_PLACEHOLDER,
+              }"
+              value-key="value"
+              label-key="label"
+              class="w-full"
+            />
+          </div>
+        </DefineFilterFields>
+
+        <div class="flex flex-col gap-3">
+          <!-- Пояснение к разделу: на узких экранах место дороже -->
+          <p class="hidden text-xs leading-normal text-secondary lg:block">
+            {{ ADMIN_BUGS_PAGE_DESCRIPTION }}
+          </p>
+
+          <!-- Широкие экраны: сводка и фильтры прямо в боковой колонке -->
+          <div class="hidden flex-col gap-3 lg:flex">
+            <ReuseStatusSummary />
+
+            <ReuseFilterFields />
+          </div>
+
+          <!-- Узкие экраны: одна кнопка вместо четырёх списков -->
+          <div class="flex gap-2 lg:hidden">
+            <USlideover
+              :title="ADMIN_BUGS_FILTERS_DRAWER_TITLE"
+              :ui="{
+                content: 'w-full max-w-sm',
+              }"
+              class="flex-1"
+            >
+              <UButton
+                icon="tabler:filter"
+                :label="ADMIN_BUGS_FILTERS_BUTTON_LABEL"
+                color="neutral"
+                variant="subtle"
+                block
+              >
+                <template #trailing>
+                  <UBadge
+                    v-if="hasActiveFilters"
+                    color="primary"
+                    variant="solid"
+                    size="sm"
+                    class="tabular-nums"
+                  >
+                    {{ activeFiltersCount }}
+                  </UBadge>
+                </template>
+              </UButton>
+
+              <template #body>
+                <div class="flex flex-col gap-4">
+                  <ReuseStatusSummary />
+
+                  <ReuseFilterFields />
+                </div>
+              </template>
+
+              <!-- Фильтры применяются сразу, поэтому кнопка только закрывает -->
+              <template #footer="{ close }">
+                <div class="flex w-full gap-2">
+                  <UButton
+                    block
+                    class="flex-1"
+                    @click.left.exact.prevent="close"
+                  >
+                    {{ ADMIN_BUGS_FILTERS_APPLY_LABEL }} ({{ totalBugsCount }})
+                  </UButton>
+
+                  <UButton
+                    v-if="hasActiveFilters"
+                    variant="ghost"
+                    color="error"
+                    icon="tabler:trash"
+                    @click.left.exact.prevent="resetFilters"
+                  >
+                    {{ ADMIN_BUGS_FILTERS_RESET_LABEL }}
+                  </UButton>
+                </div>
+              </template>
+            </USlideover>
+
+            <UButton
+              v-if="hasActiveFilters"
+              icon="tabler:trash"
+              color="neutral"
+              variant="subtle"
+              :title="ADMIN_BUGS_FILTERS_RESET_LABEL"
+              :aria-label="ADMIN_BUGS_FILTERS_RESET_LABEL"
+              square
+              @click.left.exact.prevent="resetFilters"
             />
           </div>
         </div>

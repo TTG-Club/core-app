@@ -15,9 +15,10 @@
     'remove-note': [noteId: string];
   }>();
 
-  // Добавление, правка и удаление меняют лист: без прав кнопки прячутся, а
+  // Добавлять и править заметки владелец может и на запертом листе — их ведут по
+  // ходу игры, — а удаление требует снятого замка. Без прав кнопки прячутся, а
   // карточки заметок остаются на прежних местах.
-  const { character, editControlClass } = useCharacterSheet();
+  const { character, editControlClass, gameControlClass } = useCharacterSheet();
 
   // Заметки читаются, а не листаются, поэтому карточки развёрнуты по умолчанию;
   // свёрнутые запоминаются, пока вкладка открыта.
@@ -74,7 +75,7 @@
         color="neutral"
         variant="ghost"
         size="sm"
-        :class="editControlClass"
+        :class="gameControlClass"
         @click.left.exact.prevent="handleAdd"
       />
     </div>
@@ -92,7 +93,7 @@
             type="button"
             class="flex min-w-0 grow cursor-pointer items-center text-left after:absolute after:inset-0 after:cursor-pointer"
             :aria-expanded="note.isExpanded"
-            :aria-label="`Заметка: ${note.title}`"
+            :aria-label="`${SHEET_NOTE_LABELS.openAria}: ${note.title}`"
             @click.left.exact.prevent="toggleNote(note.id)"
           >
             <span class="grow truncate text-sm font-medium text-highlighted">
@@ -107,8 +108,8 @@
             size="xs"
             square
             class="relative z-10 shrink-0 opacity-0 transition-opacity group-hover/note:opacity-100 focus-visible:opacity-100"
-            :class="[SHEET_REVEAL_CONTROL_CLASS, editControlClass]"
-            :aria-label="`Редактировать заметку: ${note.title}`"
+            :class="[SHEET_REVEAL_CONTROL_CLASS, gameControlClass]"
+            :aria-label="`${SHEET_NOTE_LABELS.editAria}: ${note.title}`"
             @click.left.exact.prevent="handleEdit(note.id)"
           />
 
@@ -120,7 +121,7 @@
             square
             class="relative z-10 shrink-0 opacity-0 transition-opacity group-hover/note:opacity-100 focus-visible:opacity-100"
             :class="[SHEET_REVEAL_CONTROL_CLASS, editControlClass]"
-            :aria-label="`Удалить заметку: ${note.title}`"
+            :aria-label="`${SHEET_NOTE_LABELS.removeAria}: ${note.title}`"
             @click.left.exact.prevent="handleRemove(note.id)"
           />
 

@@ -7,49 +7,49 @@
   import {
     DEFAULT_EQUIPMENT_OPTIONS_COUNT,
     EQUIPMENT_OPTION_LABELS,
+    MIN_EQUIPMENT_COINS,
+    MIN_EQUIPMENT_ITEM_QUANTITY,
+    STARTING_EQUIPMENT_EDITOR,
   } from './constants';
 
   const state = defineModel<Array<EquipmentOptionCreate>>({
     required: true,
   });
 
-  // Сущность без снаряжения открывается с двумя пустыми вариантами — «А» и «Б»,
-  // а вариант, пришедший из API без предметов, получает одну пустую строку.
-  // Guard разрывает цикл: после нормализации оба условия перестают выполняться,
-  // поэтому повторное присвоение state.value не происходит.
+  // Сущность без снаряжения открывается с двумя пустыми вариантами — «А» и «Б».
+  // Предметы в варианте не заводятся сами: пустой вариант показывает только
+  // кнопку «Добавить предмет». Guard разрывает цикл — после подстановки
+  // вариантов условие перестаёт выполняться, повторного присвоения нет.
   watch(
     state,
     (options) => {
-      if (!options.length) {
-        state.value = Array.from(
-          { length: DEFAULT_EQUIPMENT_OPTIONS_COUNT },
-          getEmptyEquipmentOption,
-        );
-
+      if (options.length) {
         return;
       }
 
-      if (options.every((option) => option.items.length)) {
-        return;
-      }
-
-      state.value = options.map((option) =>
-        option.items.length
-          ? option
-          : { ...option, items: [getEmptyEquipmentItem()] },
+      state.value = Array.from(
+        { length: DEFAULT_EQUIPMENT_OPTIONS_COUNT },
+        getEmptyEquipmentOption,
       );
     },
     { immediate: true, deep: false },
   );
 
-  /** Пустой вариант снаряжения: одна пустая строка предмета и без монет. */
+  /** Пустой вариант снаряжения: без предметов и без монет. */
   function getEmptyEquipmentOption(): EquipmentOptionCreate {
-    return { items: [getEmptyEquipmentItem()], coins: undefined };
+    return { items: [], coins: undefined };
   }
 
-  /** Пустая строка предмета внутри варианта снаряжения. */
+  /**
+   * Пустая строка предмета внутри варианта снаряжения: количество сразу
+   * минимально допустимое, иначе автор сохранял бы предмет без количества.
+   */
   function getEmptyEquipmentItem(): EquipmentItemCreate {
-    return { url: undefined, quantity: undefined, description: undefined };
+    return {
+      url: undefined,
+      quantity: MIN_EQUIPMENT_ITEM_QUANTITY,
+      description: undefined,
+    };
   }
 
   /** Добавляет новый пустой вариант снаряжения в конец списка. */
@@ -78,16 +78,15 @@
     <template #header>
       <div class="flex items-center justify-between gap-4">
         <h2 class="truncate text-base text-highlighted">
-          Варианты стартового снаряжения
+          {{ STARTING_EQUIPMENT_EDITOR.title }}
         </h2>
 
         <UButton
           icon="tabler:plus"
           variant="subtle"
+          :label="STARTING_EQUIPMENT_EDITOR.addOption"
           @click.left.exact.prevent="addEmptyEquipmentOption"
-        >
-          Добавить вариант
-        </UButton>
+        />
       </div>
     </template>
 
@@ -100,17 +99,17 @@
         <template #header>
           <div class="flex items-center justify-between gap-4">
             <h3 class="truncate text-sm text-highlighted">
-              Вариант {{ getEquipmentOptionLabel(optionIndex) }}
+              {{ STARTING_EQUIPMENT_EDITOR.optionTitle }}
+              {{ getEquipmentOptionLabel(optionIndex) }}
             </h3>
 
             <UButton
               icon="tabler:trash"
               variant="subtle"
               color="error"
+              :label="STARTING_EQUIPMENT_EDITOR.removeOption"
               @click.left.exact.prevent="removeEquipmentOption(optionIndex)"
-            >
-              Удалить вариант
-            </UButton>
+            />
           </div>
         </template>
 
@@ -124,7 +123,7 @@
           >
             <UFormField
               class="col-span-full md:col-span-8"
-              label="Предмет"
+              :label="STARTING_EQUIPMENT_EDITOR.item"
               name="url"
             >
               <SelectItem v-model="equipmentItem.url" />
@@ -132,24 +131,24 @@
 
             <UFormField
               class="col-span-full md:col-span-4"
-              label="Количество"
+              :label="STARTING_EQUIPMENT_EDITOR.quantity"
               name="quantity"
             >
               <UInputNumber
                 v-model="equipmentItem.quantity"
-                placeholder="Введи количество"
-                :min="1"
+                :placeholder="STARTING_EQUIPMENT_EDITOR.quantityPlaceholder"
+                :min="MIN_EQUIPMENT_ITEM_QUANTITY"
               />
             </UFormField>
 
             <UFormField
               class="col-span-full md:col-span-8"
-              label="Уточнение"
+              :label="STARTING_EQUIPMENT_EDITOR.description"
               name="description"
             >
               <UInput
                 v-model="equipmentItem.description"
-                placeholder="Например: по вашему выбору"
+                :placeholder="STARTING_EQUIPMENT_EDITOR.descriptionPlaceholder"
               />
             </UFormField>
 
@@ -167,23 +166,24 @@
             v-if="!option.items.length"
             class="col-span-full flex justify-center"
           >
-            <UButton @click.left.exact.prevent="addEmptyEquipmentItem(option)">
-              Добавить предмет
-            </UButton>
+            <UButton
+              :label="STARTING_EQUIPMENT_EDITOR.addItem"
+              @click.left.exact.prevent="addEmptyEquipmentItem(option)"
+            />
           </div>
 
           <USeparator class="col-span-full my-2" />
 
           <UFormField
             class="col-span-full md:col-span-8"
-            label="Монеты"
-            help="Количество золотых монет варианта"
+            :label="STARTING_EQUIPMENT_EDITOR.coins"
+            :help="STARTING_EQUIPMENT_EDITOR.coinsHelp"
             name="coins"
           >
             <UInputNumber
               v-model="option.coins"
-              placeholder="Введи количество"
-              :min="0"
+              :placeholder="STARTING_EQUIPMENT_EDITOR.quantityPlaceholder"
+              :min="MIN_EQUIPMENT_COINS"
             />
           </UFormField>
         </div>
@@ -193,9 +193,10 @@
         v-if="!state.length"
         class="grid place-items-center py-2"
       >
-        <UButton @click.left.exact.prevent="addEmptyEquipmentOption">
-          Добавить вариант
-        </UButton>
+        <UButton
+          :label="STARTING_EQUIPMENT_EDITOR.addOption"
+          @click.left.exact.prevent="addEmptyEquipmentOption"
+        />
       </div>
     </div>
   </UCard>

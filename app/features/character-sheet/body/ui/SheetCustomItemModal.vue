@@ -9,6 +9,7 @@
     WeaponCategory,
   } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
   import { MarkupEditor } from '~ui/markup-editor';
 
   import { useCharacterSheet } from '../../composables';
@@ -102,6 +103,8 @@
   const draftArmorType = ref<CustomArmorType>(initialDraft.armorType);
 
   const draftArmorClass = ref(initialDraft.baseArmorClass);
+
+  const draftStealthDisadvantage = ref(initialDraft.stealthDisadvantage);
 
   const draftWeaponCategory = ref<WeaponCategory>(initialDraft.weaponCategory);
 
@@ -293,6 +296,7 @@
       quantity: draftQuantity.value,
       armorType: draftArmorType.value,
       baseArmorClass: draftArmorClass.value,
+      stealthDisadvantage: draftStealthDisadvantage.value,
       weaponCategory: draftWeaponCategory.value,
       ranged: draftRanged.value,
       finesse: draftFinesse.value,
@@ -625,6 +629,14 @@
                 </div>
               </div>
 
+              <!-- Помеха идёт не от типа доспеха, а от самого доспеха: она
+                есть у стёганого (лёгкий) и нет у шкурного (средний), — поэтому
+                отдельная отметка, а не правило типа -->
+              <UCheckbox
+                v-model="draftStealthDisadvantage"
+                :label="CUSTOM_ITEM_FIELD_LABELS.armorStealthDisadvantage"
+              />
+
               <span class="text-xs text-dimmed">{{ armorHint }}</span>
             </div>
 
@@ -887,7 +899,7 @@
     <template #footer>
       <div class="flex w-full justify-end gap-2">
         <UButton
-          label="Отмена"
+          :label="ACTION_LABELS.cancel"
           color="neutral"
           variant="ghost"
           @click.left.exact.prevent="handleCancel"

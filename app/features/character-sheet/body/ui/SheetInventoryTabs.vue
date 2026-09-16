@@ -20,6 +20,7 @@
 
   import {
     SHEET_DEFAULT_TAB,
+    SHEET_INVENTORY_TABS_LABELS,
     SHEET_MAIN_TAB,
     SHEET_TABS,
     SHEET_TABS_AXIS_LOCK_THRESHOLD,
@@ -33,6 +34,7 @@
     SHEET_TABS_SCROLL_STEP_RATIO,
     SHEET_TABS_SWIPE_THRESHOLD,
   } from '../../model';
+  import SheetEffectsTab from './SheetEffectsTab.vue';
   import SheetEquipmentTab from './SheetEquipmentTab.vue';
   import SheetFeaturesTab from './SheetFeaturesTab.vue';
   import SheetNotesTab from './SheetNotesTab.vue';
@@ -50,7 +52,13 @@
     attunement: AttunementBreakdown;
     features: CharacterFeature[];
     spells: CharacterSpell[];
+
+    /** Заклинания вида и черт: у вкладки заклинаний под них своя группа. */
     innateSpells: CharacterSpell[];
+
+    /** Заклинания умений класса: во вкладке они стоят в кругах книги. */
+    classSpells: CharacterSpell[];
+
     spellcasting: SpellcastingBreakdown;
 
     /** Ячейки заклинаний по кругам; пусто — класс ячеек не даёт. */
@@ -95,6 +103,8 @@
     'add-note': [];
     'edit-note': [noteId: string];
     'remove-note': [noteId: string];
+    'add-effect': [];
+    'edit-effect': [effectId: string];
     'edit-personality': [field: PersonalityFieldKey | null];
     'edit-personality-description': [];
     'edit-background': [];
@@ -254,6 +264,14 @@
 
   function handleFeatureRemove(featureId: string) {
     emit('remove-feature', featureId);
+  }
+
+  function handleEffectAdd() {
+    emit('add-effect');
+  }
+
+  function handleEffectEdit(effectId: string) {
+    emit('edit-effect', effectId);
   }
 
   function handleNoteAdd() {
@@ -865,7 +883,7 @@
           size="xs"
           square
           class="absolute top-1/2 left-0 z-10 -translate-y-1/2"
-          aria-label="Прокрутить вкладки влево"
+          :aria-label="SHEET_INVENTORY_TABS_LABELS.scrollLeft"
           @click.left.exact.prevent="handleScrollLeft"
         />
       </Transition>
@@ -879,7 +897,7 @@
           size="xs"
           square
           class="absolute top-1/2 right-0 z-10 -translate-y-1/2"
-          aria-label="Прокрутить вкладки вправо"
+          :aria-label="SHEET_INVENTORY_TABS_LABELS.scrollRight"
           @click.left.exact.prevent="handleScrollRight"
         />
       </Transition>
@@ -947,6 +965,7 @@
             v-else-if="activeSlot === 'spells'"
             :spells="spells"
             :innate-spells="innateSpells"
+            :class-spells="classSpells"
             :spellcasting="spellcasting"
             :spell-slots="spellSlots"
             @add-spell="handleSpellAdd"
@@ -972,6 +991,12 @@
             @add-feat="handleFeatAdd"
             @edit-feature="handleFeatureEdit"
             @remove-feature="handleFeatureRemove"
+          />
+
+          <SheetEffectsTab
+            v-else-if="activeSlot === 'effects'"
+            @add-effect="handleEffectAdd"
+            @edit-effect="handleEffectEdit"
           />
 
           <SheetPersonalityTab

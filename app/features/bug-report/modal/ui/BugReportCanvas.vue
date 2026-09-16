@@ -1,7 +1,13 @@
 <script setup lang="ts">
   import type { DrawingTool } from '../../model';
 
-  import { MAX_UNDO_STEPS, MODAL_CHROME_WIDTH } from '../../model';
+  import {
+    MAX_SCREENSHOT_EXPORT_SIZE,
+    MAX_UNDO_STEPS,
+    MODAL_CHROME_WIDTH,
+    SCREENSHOT_EXPORT_MIME,
+    SCREENSHOT_EXPORT_QUALITY,
+  } from '../../model';
 
   interface StrokePath {
     color: string;
@@ -77,8 +83,35 @@
   const currentStroke = ref<StrokePath | null>(null);
 
   const backgroundImage = ref<HTMLImageElement>();
-  const canvasWidth = ref(0);
-  const canvasHeight = ref(0);
+
+  /** Размер canvas на экране в CSS-пикселях: вписан в свободное место модалки */
+  const displayWidth = ref(0);
+  const displayHeight = ref(0);
+
+  /**
+   * Сколько пикселей оригинала приходится на один CSS-пиксель холста.
+   *
+   * Экранный размер canvas ограничен модалкой, а буфер рисования хранит
+   * исходное разрешение вставленной картинки — иначе скриншот уезжал бы
+   * на сервер уже ужатым до размеров окна репортёра.
+   */
+  const pixelScale = ref(1);
+
+  /** Ширина буфера рисования: то самое разрешение, в котором уйдёт скриншот */
+  const bufferWidth = computed(() =>
+    Math.round(displayWidth.value * pixelScale.value),
+  );
+
+  /** Высота буфера рисования: то самое разрешение, в котором уйдёт скриншот */
+  const bufferHeight = computed(() =>
+    Math.round(displayHeight.value * pixelScale.value),
+  );
+
+  /** Экранный размер холста: буфер крупнее, на странице canvas занимает столько */
+  const canvasStyle = computed(() => ({
+    width: `${displayWidth.value}px`,
+    height: `${displayHeight.value}px`,
+  }));
 
   /** Смещение изображения относительно canvas (для центрирования маленьких картинок) */
   const imageOffsetX = ref(0);
@@ -121,12 +154,26 @@
       imageDrawHeight.value = drawHeight;
 
       // Canvas не меньше минимального размера, но картинка не растягивается
-      canvasWidth.value = Math.max(drawWidth, 300);
-      canvasHeight.value = Math.max(drawHeight, 200);
+      displayWidth.value = Math.max(drawWidth, 300);
+      displayHeight.value = Math.max(drawHeight, 200);
+
+      // Буфер рисования хранит оригинал: во сколько раз картинку ужали для
+      // показа, во столько же раз буфер крупнее экранного размера. Длинная
+      // сторона ограничена, чтобы webp не разрастался на 4K-скриншотах.
+      const longestSide = Math.max(image.naturalWidth, image.naturalHeight);
+
+      const exportLimit =
+        longestSide > MAX_SCREENSHOT_EXPORT_SIZE
+          ? MAX_SCREENSHOT_EXPORT_SIZE / longestSide
+          : 1;
+
+      pixelScale.value = drawWidth
+        ? Math.max(1, (image.naturalWidth * exportLimit) / drawWidth)
+        : 1;
 
       // Смещение для центрирования маленькой картинки
-      imageOffsetX.value = Math.floor((canvasWidth.value - drawWidth) / 2);
-      imageOffsetY.value = Math.floor((canvasHeight.value - drawHeight) / 2);
+      imageOffsetX.value = Math.floor((displayWidth.value - drawWidth) / 2);
+      imageOffsetY.value = Math.floor((displayHeight.value - drawHeight) / 2);
 
       nextTick(() => redrawCanvas());
     };
@@ -143,7 +190,12 @@
       return;
     }
 
+    context.setTransform(1, 0, 0, 1, 0, 0);
     context.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Дальше рисуем в CSS-координатах: масштаб до размера буфера берёт на себя
+    // контекст, поэтому штрихи и толщина кисти пересчитываются сами.
+    context.setTransform(pixelScale.value, 0, 0, pixelScale.value, 0, 0);
 
     // Заливаем область вокруг маленькой картинки нейтральным фоном
     if (imageOffsetX.value > 0 || imageOffsetY.value > 0) {
@@ -152,7 +204,7 @@
         .trim();
 
       context.fillStyle = computedColor || '#1a1a2e';
-      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.fillRect(0, 0, displayWidth.value, displayHeight.value);
     }
 
     // Рисуем изображение по центру в натуральном размере
@@ -253,9 +305,11 @@
   }
 
   /**
-   * Экспортирует текущее состояние canvas как PNG Blob.
+   * Экспортирует текущее состояние canvas как webp Blob.
    *
-   * Возвращает изображение без сжатия в формате PNG.
+   * Отдаёт полный буфер рисования, то есть исходное разрешение картинки, а не
+   * её экранный размер. Браузеры без кодировщика webp вернут png — тип файла
+   * читается вызывающей стороной из самого blob-а.
    */
   function exportToBlob(): Promise<Blob> {
     const canvas = canvasRef.value;
@@ -265,13 +319,17 @@
     }
 
     return new Promise((resolve, reject) => {
-      canvas.toBlob((blob) => {
-        if (blob) {
-          resolve(blob);
-        } else {
-          reject(new Error('Не удалось экспортировать canvas'));
-        }
-      }, 'image/png');
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('Не удалось экспортировать canvas'));
+          }
+        },
+        SCREENSHOT_EXPORT_MIME,
+        SCREENSHOT_EXPORT_QUALITY,
+      );
     });
   }
 
@@ -303,8 +361,9 @@
     <canvas
       ref="canvasRef"
       class="block cursor-crosshair"
-      :width="canvasWidth"
-      :height="canvasHeight"
+      :width="bufferWidth"
+      :height="bufferHeight"
+      :style="canvasStyle"
       @mousedown.left.prevent="handleMouseDown"
       @mousemove="handleMouseMove"
       @mouseup.left="handleMouseUp"

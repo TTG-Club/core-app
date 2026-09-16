@@ -1,9 +1,10 @@
 <script setup lang="ts">
-  import type { CreatureCreate, CreatureDetailResponse } from '~bestiary/model';
+  import type { CreatureCreate, CreatureDetailResponse } from '../model';
 
-  import { CreatureBody } from '~bestiary/body';
-  import { getCreatureMarkdown } from '~bestiary/model';
   import { UiDrawer } from '~ui/drawer';
+
+  import { CreatureBody } from '../body';
+  import { getCreatureMarkdown } from '../model';
 
   const opened = defineModel<boolean>('open', { required: true });
 

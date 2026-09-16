@@ -7,7 +7,8 @@ import {
   RESOURCE_RECOVERY_LABELS,
 } from '../constants';
 import {
-  getAvailableInnateSpells,
+  getClassGrantedSpells,
+  getInnateSpells,
   getSpellGroups,
   getSpellLevelLabel,
   getSpellSlotCircles,
@@ -25,6 +26,8 @@ import {
   PDF_SPELL_COLUMNS,
   PDF_SPELL_LABELS,
   PDF_SPELL_MARK_COLUMN_WIDTH,
+  PDF_SPELL_SLOT_LEVEL_WIDTH,
+  PDF_SPELL_SLOT_MARKS_LEFT,
   PDF_TITLES,
 } from './constants';
 import {
@@ -82,8 +85,8 @@ function getSpellNotes(spell: CharacterSpell): string {
 }
 
 /**
- * Ряды ячеек заклинаний: круг, кружки по числу ячеек (закрашенные — потрачены)
- * и способ восстановления.
+ * Ряды ячеек заклинаний: уровень, кружки по числу ячеек (закрашенные —
+ * потрачены) и способ восстановления.
  *
  * @param context документ в процессе сборки.
  * @param character персонаж.
@@ -111,12 +114,15 @@ function drawSpellSlots(
       top: flow.top + 1,
       font: context.fonts.bold,
       size: PDF_FONT_SIZES.value,
-      maxWidth: 48,
+      maxWidth: PDF_SPELL_SLOT_LEVEL_WIDTH,
     });
 
     for (const circle of getSpellSlotCircles(row)) {
       drawMark(flow.page, {
-        centerLeft: flow.left + 56 + circle.index * (PDF_MARK_RADIUS * 2 + 4),
+        centerLeft:
+          flow.left
+          + PDF_SPELL_SLOT_MARKS_LEFT
+          + circle.index * (PDF_MARK_RADIUS * 2 + 4),
         centerTop: flow.top + PDF_ROW_HEIGHT / 2,
         fill: circle.used ? 'full' : 'none',
       });
@@ -140,8 +146,8 @@ function drawSpellSlots(
 }
 
 /**
- * Страница заклинаний: ячейки по кругам и книга заклинаний по кругам. Страница
- * не создаётся, если персонаж не заклинатель и заклинаний у него нет.
+ * Страница заклинаний: ячейки по уровням и книга заклинаний по уровням.
+ * Страница не создаётся, если персонаж не заклинатель и заклинаний у него нет.
  *
  * @param context документ в процессе сборки.
  * @param character персонаж.
@@ -151,9 +157,20 @@ export function drawSpellsPage(
   character: Character,
 ): void {
   const slotRows = getSpellSlotRows(character);
-  const innateSpells = getAvailableInnateSpells(character);
+  const innateSpells = getInnateSpells(character);
 
-  if (!character.spells.length && !innateSpells.length && !slotRows.length) {
+  // Заклинания классовых умений идут по уровням вместе с книгой — как на листе.
+  // Уже заведённое в книге вторым рядом не печатается
+  const bookUrls = new Set(character.spells.map((spell) => spell.url));
+
+  const bookSpells = [
+    ...character.spells,
+    ...getClassGrantedSpells(character).filter(
+      (spell) => !bookUrls.has(spell.url),
+    ),
+  ];
+
+  if (!bookSpells.length && !innateSpells.length && !slotRows.length) {
     return;
   }
 
@@ -165,7 +182,7 @@ export function drawSpellsPage(
 
   drawSpellSlots(context, character, flow);
 
-  if (!character.spells.length && !innateSpells.length) {
+  if (!bookSpells.length && !innateSpells.length) {
     return;
   }
 
@@ -186,7 +203,7 @@ export function drawSpellsPage(
         ]
       : []),
     ...getSpellGroups(
-      character.spells,
+      bookSpells,
       slotRows.map((row) => row.level),
     ),
   ];

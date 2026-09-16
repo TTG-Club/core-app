@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { MagicItemDetailResponse } from '~magic-items/model';
+  import type { MagicItemDetailResponse } from '../../model';
 
   defineProps<Pick<MagicItemDetailResponse, 'subtitle'>>();
 </script>

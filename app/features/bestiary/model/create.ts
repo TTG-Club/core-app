@@ -1,6 +1,43 @@
+import type { ActiveEffect } from '~active-effects/model';
 import type { EditorBaseInfoState } from '~ui/editor';
 
+import type { CreatureActionEffect, CreatureEffectContext } from './action';
+import type { CreatureSpellcastingBlock } from './spellcasting';
+
 import { AbilityKey, AbilityShortKey } from '~/shared/types';
+
+import {
+  createEmptyCreatureActionEffect,
+  normalizeCreatureActionEffect,
+} from './action';
+
+/**
+ * Раздел карточки предмета. Справочника два — обычные предметы и магические, —
+ * а слаг у них общего вида: без раздела ни ссылку построить, ни название
+ * обновить.
+ */
+export type CreatureInventorySection = 'items' | 'magic-items';
+
+/** Позиция инвентаря существа — карточка предмета с сайта. */
+export interface CreatureInventoryItem {
+  section: CreatureInventorySection;
+  url: string | undefined;
+  /** Название на момент выбора: карточку могли переименовать */
+  name: string | undefined;
+  quantity: number | undefined;
+  description: string | undefined;
+}
+
+/** Пустая строка инвентаря — для добавления и для сравнения на пустоту. */
+export function getEmptyCreatureInventoryItem(): CreatureInventoryItem {
+  return {
+    section: 'items',
+    url: undefined,
+    name: undefined,
+    quantity: undefined,
+    description: undefined,
+  };
+}
 
 export interface CreatureCreate extends EditorBaseInfoState {
   description: string; // описание маркап
@@ -17,7 +54,10 @@ export interface CreatureCreate extends EditorBaseInfoState {
   abilities: CreateAbilities;
   skills: Array<CreateSkill>;
   defenses: CreatureDefenses;
+  /** Снаряжение строкой — поле старого импорта, запасной вид для показа */
   equipments: string | undefined;
+  inventory: Array<CreatureInventoryItem>;
+  inventoryText: string | undefined;
   senses: CreatureSenses;
   languages: CreatureLanguages;
   proficiencyBonus: number;
@@ -29,6 +69,24 @@ export interface CreatureCreate extends EditorBaseInfoState {
   legendary: LegendaryActions;
   lair: CreatureLair;
   section: CreateSection;
+
+  /**
+   * Заклинания существа блоками. Ни на карточке сайта, ни в выгрузке markdown
+   * они не показываются: статблок описывает заклинания текстом записи, а блоки
+   * заведены ради виртуального стола — там у существа своя вкладка заклинаний.
+   */
+  spellcasting: Array<CreatureSpellcastingBlock>;
+
+  /**
+   * Активные эффекты существа в вокабуляре VTTG — та же модель, что у черты,
+   * заклинания и предмета.
+   *
+   * Статблок описывает существо числами, а эффект — то, чем существо постоянно
+   * отличается от своих чисел или что оно накладывает: аура, врождённое
+   * состояние, защита с условием. На виртуальном столе такой эффект уезжает на
+   * токен как есть.
+   */
+  activeEffects: Array<ActiveEffect>;
 }
 
 export interface CreatureDefenses {
@@ -122,6 +180,18 @@ export interface CreateSpeed {
   hover?: boolean;
 }
 
+/**
+ * Пустая скорость вида — для добавления и для сравнения на пустоту. У полёта
+ * есть ещё отметка парения.
+ *
+ * @param type - вид скорости
+ */
+export function getEmptyCreatureSpeed(type: SpeedType): CreateSpeed {
+  return type === SpeedType.FLY
+    ? { value: 0, text: undefined, hover: false }
+    : { value: 0, text: undefined };
+}
+
 export type CreateAbilities = Record<AbilityShortKey, CreateAbility>;
 
 export interface CreateAbility {
@@ -163,30 +233,59 @@ export interface CreatureSenses {
   passivePerception: number;
 }
 
-export interface CreateTrait {
-  name: {
-    rus: string;
-    eng: string;
-  };
-  description: string;
-}
-
+/**
+ * Запись боевого блока существа: умение, действие, бонусное действие, реакция,
+ * легендарное действие или эффект логова.
+ *
+ * Тип один на все шесть списков: у них одинаковый набор полей, а разное —
+ * только заголовок списка и место в форме.
+ */
 export interface CreateAction {
   name: {
     rus: string;
     eng: string;
   };
   description: string;
-  attackType: string;
-  savingThrows: Array<SavingThrow>;
-  damageTypes: Array<string>;
   recharge: string | undefined;
-  restrictionOfUse: string | undefined;
+  effect: CreatureActionEffect;
 }
 
-export interface SavingThrow {
-  ability: string;
-  dc: string;
+/** Умение существа — та же запись, что и действие. */
+export type CreateTrait = CreateAction;
+
+/**
+ * Готовит записи боевого блока к отправке.
+ *
+ * @param actions записи из формы.
+ * @param effectContext место эффектов записей: у черт — сама черта, у
+ *   действий — цель.
+ * @returns записи для запроса.
+ */
+export function normalizeCreatureActions(
+  actions: Array<CreateAction>,
+  effectContext: CreatureEffectContext,
+): Array<CreateAction> {
+  return actions.map((action) => ({
+    ...action,
+    effect: normalizeCreatureActionEffect(action.effect, effectContext),
+  }));
+}
+
+/**
+ * Создаёт пустую запись боевого блока.
+ *
+ * @returns запись без названия, описания и механики.
+ */
+export function createEmptyCreatureAction(): CreateAction {
+  return {
+    name: {
+      rus: '',
+      eng: '',
+    },
+    description: '',
+    recharge: undefined,
+    effect: createEmptyCreatureActionEffect(),
+  };
 }
 
 export function getInitialState(): CreatureCreate {
@@ -290,6 +389,8 @@ export function getInitialState(): CreatureCreate {
       },
     },
     equipments: undefined,
+    inventory: [],
+    inventoryText: undefined,
     senses: {
       darkvision: undefined,
       unimpeded: undefined,
@@ -325,6 +426,8 @@ export function getInitialState(): CreatureCreate {
       description: '',
       ending: '',
     },
+    spellcasting: [],
+    activeEffects: [],
     section: {
       name: {
         rus: '',

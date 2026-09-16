@@ -25,6 +25,12 @@ type FileType =
 
 const maxFileSize = bytes('1MB')!;
 
+/**
+ * Сжимает картинку до предельного размера файла и стороны.
+ *
+ * @param file Загружаемая картинка.
+ * @param maxSize Предельная сторона, px.
+ */
 export async function getCompressedImage(
   file: S3UploadFile,
   maxSize?: number,

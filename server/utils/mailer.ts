@@ -5,8 +5,6 @@ import type { MailSecrets } from './secrets';
 import { StatusCodes } from 'http-status-codes';
 import { createTransport } from 'nodemailer';
 
-import { Role } from '~/shared/types';
-
 import { getMailSecrets } from './secrets';
 
 /** Письмо одному получателю. */
@@ -164,21 +162,4 @@ export function getMailErrorMessage(error: unknown): string {
   }
 
   return String(error);
-}
-
-/**
- * Пропускает дальше только администратора.
- *
- * Отдельная проверка вместо `assertAdminAccess`: та пускает и модератора, а
- * рассылка выпускает промокоды и отправляет письма от имени сайта — это право
- * только администратора.
- *
- * @param event событие запроса
- */
-export async function assertMailingAdmin(event: H3Event): Promise<void> {
-  const { roles } = await getUserFromToken(event);
-
-  if (!roles.includes(Role.ADMIN)) {
-    throw createError(getErrorResponse(StatusCodes.FORBIDDEN));
-  }
 }

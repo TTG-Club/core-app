@@ -8,6 +8,9 @@ import {
   BUG_REPORT_SUBMIT_ERROR_TITLE,
   BUG_REPORT_SUBMIT_SUCCESS_DESC,
   BUG_REPORT_SUBMIT_SUCCESS_TITLE,
+  SCREENSHOT_EXPORT_MIME,
+  SCREENSHOT_FILE_NAME_PNG,
+  SCREENSHOT_FILE_NAME_WEBP,
   SOURCE_PLATFORM,
 } from '../model';
 
@@ -21,6 +24,20 @@ function formatSelectionText(selection: TextSelection): string {
   const suffix = selection.after ? `${selection.after}...` : '';
 
   return `${prefix}[${selection.selected}]${suffix}`;
+}
+
+/**
+ * Возвращает имя файла скриншота, совпадающее с его реальным типом.
+ *
+ * Canvas экспортируется в webp, но браузеры без его кодировщика молча отдают
+ * png — расширение берётся из самого blob-а, а не задаётся заранее.
+ *
+ * @param blob Экспортированное изображение скриншота.
+ */
+function getScreenshotFileName(blob: Blob): string {
+  return blob.type === SCREENSHOT_EXPORT_MIME
+    ? SCREENSHOT_FILE_NAME_WEBP
+    : SCREENSHOT_FILE_NAME_PNG;
 }
 
 /**
@@ -138,7 +155,11 @@ export function useBugReport() {
     );
 
     if (screenshotBlob) {
-      formData.append('screenshot', screenshotBlob, 'screenshot.png');
+      formData.append(
+        'screenshot',
+        screenshotBlob,
+        getScreenshotFileName(screenshotBlob),
+      );
     }
 
     try {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CreatureTypes } from '~bestiary/model';
+  import type { CreatureTypes } from '../../model';
 
   import { isEqual } from 'es-toolkit';
 

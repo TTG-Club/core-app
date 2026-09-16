@@ -98,6 +98,7 @@ const classFeatureOptionSchema: z.ZodType<ClassFeatureOption> = z.object({
   prerequisite: renderNodeSchema.optional(),
   requiredClassLevel: levelSchema.optional(),
   hideInSubclasses: z.boolean().optional(),
+  repeatable: z.boolean().optional(),
 });
 
 const classFeatureSchema: z.ZodType<ClassFeature> = z.object({
@@ -142,6 +143,7 @@ const classInMulticlassSchema: z.ZodType<ClassInMulticlass> = z.object({
   subclass: z.string().optional(),
   level: z.number(),
   hitDice: z.string().optional(),
+  casterType: z.nativeEnum(CasterType).optional(),
 });
 
 const multiclassDetailResponseSchema: z.ZodType<MulticlassDetailResponse> =

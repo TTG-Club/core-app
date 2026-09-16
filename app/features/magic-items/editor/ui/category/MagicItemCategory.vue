@@ -1,6 +1,7 @@
 <script setup lang="ts">
-  import type { MagicItemCategory } from '~magic-items/model';
+  import type { MagicItemCategory } from '../../../model';
 
+  import { MAGIC_ITEM_FORM_LABELS } from '../../../model';
   import { SelectMagicItemCategory } from './ui';
 
   const model = defineModel<MagicItemCategory>({
@@ -23,7 +24,7 @@
   >
     <UFormField
       class="md:col-span-8"
-      label="Категория"
+      :label="MAGIC_ITEM_FORM_LABELS.category"
       name="type"
     >
       <SelectMagicItemCategory
@@ -34,12 +35,12 @@
 
     <UFormField
       class="md:col-span-16"
-      label="Уточнение категории"
+      :label="MAGIC_ITEM_FORM_LABELS.categoryClarification"
       name="clarification"
     >
       <UInput
         v-model="model.clarification"
-        placeholder="Введи уточнение категории"
+        :placeholder="MAGIC_ITEM_FORM_LABELS.categoryClarificationPlaceholder"
       />
     </UFormField>
   </UForm>

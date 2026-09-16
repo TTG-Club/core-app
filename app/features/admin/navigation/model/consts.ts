@@ -1,6 +1,11 @@
 import type { NavigationItem } from './types';
 
 import {
+  HOME_HERO_ADMIN_NAVIGATION_ICON,
+  HOME_HERO_ADMIN_PAGE_TITLE,
+  HOME_HERO_ADMIN_ROUTE,
+} from '~admin/home-hero/model';
+import {
   MAILING_NAVIGATION_ICON,
   MAILING_PAGE_TITLE,
   MAILING_ROUTE,
@@ -11,6 +16,9 @@ import {
 } from '~admin/users/model';
 import { ARTICLES_ADMIN_ROUTE } from '~articles/model';
 
+/** Маршрут главной страницы админ-панели (дашборд со статистикой) */
+export const ADMIN_DASHBOARD_ROUTE = '/admin';
+
 /**
  * Элементы главной навигации админ-панели
  */
@@ -18,7 +26,7 @@ export const ADMIN_NAVIGATION_ITEMS: NavigationItem[] = [
   {
     label: 'Главная',
     icon: 'tabler:home',
-    to: '/admin',
+    to: ADMIN_DASHBOARD_ROUTE,
   },
   {
     label: 'Токенатор',
@@ -39,6 +47,11 @@ export const ADMIN_NAVIGATION_ITEMS: NavigationItem[] = [
     label: 'Статьи / Новости',
     icon: 'tabler:news',
     to: ARTICLES_ADMIN_ROUTE,
+  },
+  {
+    label: HOME_HERO_ADMIN_PAGE_TITLE,
+    icon: HOME_HERO_ADMIN_NAVIGATION_ICON,
+    to: HOME_HERO_ADMIN_ROUTE,
   },
   {
     label: MAILING_PAGE_TITLE,

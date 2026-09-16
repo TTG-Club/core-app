@@ -8,12 +8,9 @@
   import {
     fetchRecentComments,
     filterLiveComments,
-    HOME_COMMENTS_ALL_LABEL,
     HOME_COMMENTS_COUNT,
     HOME_COMMENTS_EMPTY_TEXT,
     readWithoutStaleToken,
-    RECENT_COMMENTS_ROUTE,
-    RECENT_COMMENTS_TITLE,
   } from '~comments/model';
 
   import { HomeCommentRow } from './ui';
@@ -64,74 +61,39 @@
 </script>
 
 <template>
-  <UCard
-    v-if="!isError"
-    :ui="{
-      root: 'bg-muted overflow-hidden xl:flex xl:h-full xl:flex-col',
-      header: 'p-3 sm:p-3',
-      body: 'p-0 sm:p-0 xl:flex xl:min-h-0 xl:flex-1 xl:flex-col',
-    }"
+  <!-- Лента без собственной оправы: панель и переключатель вкладок держит
+    HomeActivity, где эта лента соседствует с обновлениями каталога -->
+  <div
+    v-if="isLoading"
+    class="flex flex-col gap-2 p-3"
   >
-    <template #header>
-      <div class="flex items-center gap-2">
-        <UIcon
-          name="tabler:message-circle"
-          class="size-5 text-primary"
-        />
+    <USkeleton
+      v-for="index in HOME_COMMENTS_COUNT"
+      :key="index"
+      class="h-14 w-full rounded-xl"
+    />
+  </div>
 
-        <h3 class="text-base leading-none font-medium">
-          {{ RECENT_COMMENTS_TITLE }}
-        </h3>
-      </div>
-    </template>
+  <p
+    v-else-if="isError || !hasComments"
+    class="m-3 rounded-xl border border-dashed border-default px-3 py-8 text-center text-sm text-muted"
+  >
+    {{ HOME_COMMENTS_EMPTY_TEXT }}
+  </p>
 
-    <div
-      v-if="isLoading"
-      class="flex flex-col gap-3 p-3"
-    >
-      <USkeleton
-        v-for="index in HOME_COMMENTS_COUNT"
-        :key="index"
-        class="h-12 w-full rounded-xl"
+  <!-- С xl лента занимает ровно остаток высоты панели, которую задал соседний
+    блок новостей; ниже xl ряда нет, и её держит собственный предел высоты -->
+  <UScrollArea
+    v-else
+    class="max-h-150 xl:h-full xl:max-h-none"
+    :ui="{ viewport: 'p-2' }"
+  >
+    <div class="flex flex-col gap-1">
+      <HomeCommentRow
+        v-for="comment in comments"
+        :key="comment.id"
+        :comment
       />
     </div>
-
-    <p
-      v-else-if="!hasComments"
-      class="m-3 rounded-xl border border-dashed border-default px-3 py-8 text-center text-sm text-muted"
-    >
-      {{ HOME_COMMENTS_EMPTY_TEXT }}
-    </p>
-
-    <div
-      v-else
-      class="flex flex-col xl:min-h-0 xl:flex-1"
-    >
-      <!-- Лента длиннее колонки не растёт: на десктопе занимает оставшуюся
-        высоту, на узком экране ограничена, и в обоих случаях прокручивается -->
-      <UScrollArea
-        class="max-h-125 min-h-0 xl:max-h-none xl:flex-1"
-        :ui="{ viewport: 'p-2' }"
-      >
-        <div class="flex flex-col gap-1">
-          <HomeCommentRow
-            v-for="comment in comments"
-            :key="comment.id"
-            :comment
-          />
-        </div>
-      </UScrollArea>
-
-      <UButton
-        :to="RECENT_COMMENTS_ROUTE"
-        :label="HOME_COMMENTS_ALL_LABEL"
-        block
-        size="lg"
-        color="neutral"
-        variant="soft"
-        trailing-icon="tabler:arrow-right"
-        class="justify-center rounded-none border-t border-default"
-      />
-    </div>
-  </UCard>
+  </UScrollArea>
 </template>

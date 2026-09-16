@@ -11,6 +11,7 @@
     getSavedSheetsSubscriptionHint,
     SAVED_SHEETS_LABELS,
     SAVED_SHEETS_TITLE,
+    SHEET_LIST_LABELS,
   } from '../model';
   import { CharacterSheetSavedCard } from './ui';
 
@@ -112,7 +113,7 @@
         size="sm"
         @click.left.exact.prevent="load"
       >
-        Обновить
+        {{ SHEET_LIST_LABELS.refresh }}
       </UButton>
     </div>
 

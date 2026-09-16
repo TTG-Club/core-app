@@ -7,6 +7,8 @@ import {
   toMarkdown,
 } from '~ui/markup';
 
+import { getBackgroundFeatNode, getBackgroundToolNodes } from './detail';
+
 /**
  * Собирает предысторию в Markdown формата Homebrewery.
  *
@@ -26,11 +28,11 @@ export function getBackgroundMarkdown(
     nameEng: background.name.eng,
     stats: [
       ['Характеристики', toMarkdown(background.abilityScores)],
-      ['Черта', toMarkdown(background.feat)],
+      ['Черта', toMarkdown(getBackgroundFeatNode(background))],
       ['Владение навыками', toMarkdown(background.skillProficiencies)],
       [
         'Владение инструментами',
-        joinStat(background.toolProficiency.map(toInlineValue)),
+        joinStat(getBackgroundToolNodes(background).map(toInlineValue)),
       ],
     ],
     source: background.source,

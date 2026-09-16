@@ -1,8 +1,17 @@
 <script setup lang="ts">
   import type { DrawingTool } from '../model';
 
+  import { toMarkupSource } from '~ui/markup';
+  import { MarkupEditor } from '~ui/markup-editor';
+
   import { useBugReport } from '../composables';
-  import { DEFAULT_BRUSH_COLOR, DEFAULT_BRUSH_SIZE } from '../model';
+  import {
+    BUG_REPORT_DESCRIPTION_MAX_LENGTH,
+    BUG_REPORT_DESCRIPTION_PLACEHOLDER,
+    BUG_REPORT_DESCRIPTION_TOO_LONG_ERROR,
+    DEFAULT_BRUSH_COLOR,
+    DEFAULT_BRUSH_SIZE,
+  } from '../model';
   import {
     BugReportAuthor,
     BugReportCanvas,
@@ -72,7 +81,33 @@
     { immediate: true },
   );
 
-  const isFormValid = computed(() => description.value.trim().length > 0);
+  // Редактор держит описание структурной JSON-строкой AST, а на бэкенд уходит
+  // исходник разметки `{@...}`: он компактнее (у API и колонки в базе лимит
+  // BUG_REPORT_DESCRIPTION_MAX_LENGTH символов) и читается как обычный текст.
+  // Просмотр репорта понимает обе формы (см. toBugReportDescriptionBlocks).
+  const descriptionSource = computed(() =>
+    toMarkupSource(description.value).trim(),
+  );
+
+  const isDescriptionTooLong = computed(
+    () => descriptionSource.value.length > BUG_REPORT_DESCRIPTION_MAX_LENGTH,
+  );
+
+  const descriptionError = computed(() =>
+    isDescriptionTooLong.value
+      ? BUG_REPORT_DESCRIPTION_TOO_LONG_ERROR
+      : undefined,
+  );
+
+  const isFormValid = computed(
+    () => descriptionSource.value.length > 0 && !isDescriptionTooLong.value,
+  );
+
+  // Ctrl/Cmd+Enter отправляет форму из contenteditable-редактора: событие
+  // всплывает до обёртки поля (своего @keydown у MarkupEditor нет).
+  const descriptionField = useTemplateRef<HTMLElement>('descriptionField');
+
+  useEventListener(descriptionField, 'keydown', handleKeyDown);
 
   async function handleSubmit(): Promise<void> {
     if (!isFormValid.value) {
@@ -86,7 +121,7 @@
         ? await canvasRef.value.exportToBlob()
         : null;
 
-      const success = await submit(description.value.trim(), screenshotBlob);
+      const success = await submit(descriptionSource.value, screenshotBlob);
 
       if (success) {
         description.value = '';
@@ -390,15 +425,15 @@
             name="description"
             label="Описание проблемы"
             required
+            :error="descriptionError"
           >
-            <UTextarea
-              v-model="description"
-              autoresize
-              :rows="5"
-              :maxrows="10"
-              placeholder="Опишите, что произошло..."
-              @keydown="handleKeyDown"
-            />
+            <div ref="descriptionField">
+              <MarkupEditor
+                v-model="description"
+                preset="basic"
+                :placeholder="BUG_REPORT_DESCRIPTION_PLACEHOLDER"
+              />
+            </div>
           </UFormField>
         </div>
       </div>

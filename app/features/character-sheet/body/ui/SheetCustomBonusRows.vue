@@ -14,7 +14,6 @@
     getCustomBonusSource,
     getCustomBonusSourceOptions,
     getCustomBonusValue,
-    getFormattedBonus,
     isFeatCustomBonus,
     NEW_CUSTOM_BONUS,
     SHEET_SETTINGS_LABELS,

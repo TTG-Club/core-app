@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { ApiFetchError } from '~/shared/types';
+
   import { omit } from 'es-toolkit';
 
   const emit = defineEmits<{
@@ -56,7 +58,12 @@
     repeat: '',
   });
 
-  const { execute, status, error } = useFetch('/api/auth/sign-up', {
+  const { execute, status, error } = useFetch<
+    void,
+    ApiFetchError,
+    '/api/auth/sign-up',
+    'post'
+  >('/api/auth/sign-up', {
     body: computed(() => omit(state, ['repeat'])),
     method: 'post',
     watch: false,
@@ -72,7 +79,9 @@
     if (error.value) {
       $toast.add({
         title: 'Ошибка регистрации',
-        description: error.value.data.message,
+        description:
+          error.value.data?.message
+          ?? 'Не удалось зарегистрироваться — попробуйте ещё раз.',
         color: 'error',
         icon: 'tabler:user-exclamation',
       });

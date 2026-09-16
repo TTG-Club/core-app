@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CreateAbility, CreateInitiative } from '~bestiary/model';
+  import type { CreateAbility, CreateInitiative } from '../../model';
 
   import { SelectMastery } from '~ui/select';
   import { watchDerivedField } from '~workshop/composable';
@@ -43,7 +43,6 @@
              (например, −2 у зомби), а `min="0"` не давал её ввести. -->
         <UInputNumber
           v-model="model.value"
-          :precision="0"
           placeholder="Введи инициативу"
         />
 

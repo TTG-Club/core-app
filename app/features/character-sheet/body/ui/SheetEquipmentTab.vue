@@ -6,6 +6,7 @@
     CharacterInventoryItem,
   } from '../../model';
 
+  import { ACTION_LABELS } from '~/shared/consts';
   import { ConfirmDialog } from '~initiative/ui-kit';
   import { ItemDrawer } from '~items/drawer';
   import { MagicItemDrawer } from '~magic-items/drawer';
@@ -253,7 +254,7 @@
       >
         <UButton
           icon="tabler:plus"
-          label="Добавить"
+          :label="ACTION_LABELS.add"
           color="neutral"
           variant="ghost"
           size="sm"

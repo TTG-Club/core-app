@@ -1,6 +1,7 @@
 export * from './api';
 export * from './character-schema';
 export * from './constants';
+export * from './effect-engine';
 export * from './effects';
 export * from './mock';
 export * from './schemas';

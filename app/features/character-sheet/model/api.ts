@@ -12,6 +12,7 @@ import type {
   SavedCharacterSheet,
   SavedCharacterSheetListPage,
   SpellCatalogItem,
+  SpellDamageFormulas,
   StartingEquipmentOption,
 } from './types';
 
@@ -25,6 +26,7 @@ import {
   parseSavedCharacterSheetListPage,
 } from './character-schema';
 import {
+  CHARACTER_SHEET_ADMIN_API_PATH,
   CHARACTER_SHEET_API_PATH,
   CHARACTER_SHEET_SAVED_API_PATH,
   CHARACTER_SHEET_SHARED_API_PATH,
@@ -52,6 +54,7 @@ import {
 import {
   buildStartingEquipmentItem,
   getInventoryItemDetailPath,
+  uniqueSpellsByName,
 } from './utils';
 
 /**
@@ -156,14 +159,21 @@ export async function createCharacterSheet(
  *
  * @param id идентификатор листа.
  * @param data актуальный персонаж листа.
+ * @param options настройки отправки.
+ * @param options.keepalive запрос должен пережить закрытие страницы. Браузер
+ *   отклоняет такой запрос с телом больше 64 КиБ, поэтому флаг ставит только
+ *   автосохранение и только после проверки размера
+ *   (см. `SHEET_KEEPALIVE_MAX_BYTES`).
  */
 export async function updateCharacterSheet(
   id: string,
   data: Character,
+  options: { keepalive?: boolean } = {},
 ): Promise<void> {
   await $fetch(`${CHARACTER_SHEET_API_PATH}/${id}`, {
     method: 'PUT',
     body: { name: data.name, data },
+    keepalive: options.keepalive,
     retry: 0,
   });
 }
@@ -323,22 +333,7 @@ export async function fetchMagicItemSummary(
       { method: 'GET', retry: 0 },
     );
 
-    const {
-      rarity,
-      baseItemUrls,
-      bonuses,
-      requiresAttunement,
-      maxCharges,
-      activeEffects,
-    } = parseMagicItemRaw(response);
-
-    const summary = {
-      rarity,
-      bonuses,
-      requiresAttunement,
-      maxCharges,
-      activeEffects,
-    };
+    const { baseItemUrls, ...summary } = parseMagicItemRaw(response);
 
     const [baseItemUrl] = baseItemUrls;
 
@@ -403,16 +398,17 @@ export async function fetchCatalogSpellDetail(
 }
 
 /**
- * Формулы урона каталожного заклинания. Публичная деталь их не отдаёт — как и
- * боевые числа предметов, они лежат в «сыром» ответе раздела. Отказ запроса не
- * ломает вкладку: заклинание останется без плитки урона.
+ * Формулы урона каталожного заклинания вместе с тирами масштабирования
+ * заговора. Публичная деталь их не отдаёт — как и боевые числа предметов, они
+ * лежат в «сыром» ответе раздела. Отказ запроса не ломает вкладку: заклинание
+ * останется без плитки урона.
  *
  * @param spellUrl слаг заклинания в каталоге.
- * @returns формулы урона; пустой список — урона нет или он не загрузился.
+ * @returns урон заклинания; пустые формулы — урона нет или он не загрузился.
  */
 export async function fetchSpellDamageFormulas(
   spellUrl: string,
-): Promise<string[]> {
+): Promise<SpellDamageFormulas> {
   try {
     const response = await $fetch<unknown>(
       `${SPELLS_DETAIL_BASE_PATH}/${spellUrl}/${SPELLS_RAW_DETAIL_PATH_SUFFIX}`,
@@ -421,7 +417,7 @@ export async function fetchSpellDamageFormulas(
 
     return parseSpellDamageFormulas(response);
   } catch {
-    return [];
+    return { base: [], cantripTiers: [] };
   }
 }
 
@@ -436,6 +432,25 @@ export async function fetchSharedCharacterSheet(
   token: string,
 ): Promise<CharacterSheetDetail> {
   const response = await $fetch(`${CHARACTER_SHEET_SHARED_API_PATH}/${token}`, {
+    method: 'GET',
+    retry: 0,
+  });
+
+  return parseCharacterSheetDetail(response);
+}
+
+/**
+ * Любой лист по идентификатору — для администратора: так он открывает лист из
+ * баг-репорта, даже если владелец не делился ссылкой. Только чтение, токена
+ * ссылки в ответе нет. Удалённый или несуществующий лист — 404.
+ *
+ * @param id идентификатор листа.
+ * @returns лист с разобранным персонажем.
+ */
+export async function fetchCharacterSheetForAdmin(
+  id: string,
+): Promise<CharacterSheetDetail> {
+  const response = await $fetch(`${CHARACTER_SHEET_ADMIN_API_PATH}/${id}`, {
     method: 'GET',
     retry: 0,
   });
@@ -522,12 +537,14 @@ export async function deleteSavedCharacterSheet(
  *
  * @param filter ограничения пула из механики черты.
  * @param classUrls классы, из списков которых идёт выбор; пусто — без сужения.
- * @returns заклинания пула; пустой список — ответ не разобрался или пуст.
+ * @returns заклинания пула; null — запрос не удался. Сбой отличается от пустого
+ *   пула нарочно: пустой пул снимает требование выбора, а сбой — нет, иначе
+ *   игрок прошёл бы шаг без заклинания, которое ему положено.
  */
 export async function fetchChoiceSpells(
   filter: FeatSpellChoiceFilter,
   classUrls: string[],
-): Promise<SpellCatalogItem[]> {
+): Promise<SpellCatalogItem[] | null> {
   const query: Record<string, unknown> = {
     page: 0,
     size: CHOICE_SPELL_POOL_SIZE,
@@ -550,11 +567,45 @@ export async function fetchChoiceSpells(
       retry: 0,
     });
 
-    return parseSpellCatalog(response);
+    // Одноимённые записи каталога схлопываются: ответ выбора хранится
+    // названием, и две «Дружбы» отмечались бы в пикере и ложились на лист вместе
+    return uniqueSpellsByName(parseSpellCatalog(response));
   } catch (error) {
     consola.error('Ошибка загрузки пула заклинаний черты:', error);
 
-    return [];
+    return null;
+  }
+}
+
+/**
+ * Заклинания перечисленного пула — записями каталога по их url.
+ *
+ * Запись перечисляет пул ссылками со снимком названия, а пикеру и листу нужны
+ * круг и школа, поэтому каждое заклинание догружается деталью. Списки такие
+ * короткие («выберите одно из трёх»), и запрос на запись дешевле новой ручки.
+ *
+ * @param urls url заклинаний в порядке записи.
+ * @returns заклинания каталога в том же порядке; null — хоть один запрос не
+ *   удался: неполный пул выглядел бы как пул, из которого что-то убрали.
+ */
+export async function fetchSpellsByUrls(
+  urls: string[],
+): Promise<SpellCatalogItem[] | null> {
+  try {
+    const details = await Promise.all(
+      urls.map((url) =>
+        $fetch<unknown>(`${SPELLS_DETAIL_BASE_PATH}/${url}`, {
+          method: 'GET',
+          retry: 0,
+        }),
+      ),
+    );
+
+    return parseSpellCatalog(details);
+  } catch (error) {
+    consola.error('Ошибка загрузки перечисленных заклинаний выбора:', error);
+
+    return null;
   }
 }
 

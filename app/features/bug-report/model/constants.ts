@@ -1,4 +1,4 @@
-import type { BrushColor, BugReportStatus } from './types';
+import type { BrushColor, BugReportDetailTab, BugReportStatus } from './types';
 
 import { SOURCE_PLATFORM_LABELS } from '#shared/consts';
 
@@ -30,6 +30,38 @@ export const SELECTION_CONTEXT_LENGTH = 50;
 /** Ширина «хрома» модалки (форма + toolbar + отступы), вычитается из viewport для canvas */
 export const MODAL_CHROME_WIDTH = 560;
 
+/**
+ * Предел длинной стороны сохраняемого скриншота в пикселях.
+ *
+ * Экранный размер картинки ограничен модалкой, а сохраняется оригинал: предел
+ * пропускает 4K целиком и страхует только от панорам на несколько мониторов,
+ * которые упёрлись бы в лимит загрузки сервиса (10 МБ на файл).
+ */
+export const MAX_SCREENSHOT_EXPORT_SIZE = 3840;
+
+/**
+ * MIME-тип сохраняемого скриншота.
+ *
+ * Сервис баг-репортов перегоняет png и jpeg в webp у себя, но отправлять
+ * полноразмерный png — это лишние мегабайты в канал репортёра; webp уходит
+ * готовым и складывается в S3 как есть.
+ */
+export const SCREENSHOT_EXPORT_MIME = 'image/webp';
+
+/** Качество webp-сжатия скриншота: текст на снимке экрана остаётся читаемым */
+export const SCREENSHOT_EXPORT_QUALITY = 0.92;
+
+/**
+ * Имя отправляемого файла скриншота в webp.
+ *
+ * Расширение обязано совпадать с типом blob-а: для уже сжатого webp сервис
+ * баг-репортов берёт расширение ключа в S3 именно из имени файла.
+ */
+export const SCREENSHOT_FILE_NAME_WEBP = 'screenshot.webp';
+
+/** Имя файла скриншота, когда браузер не умеет кодировать webp и вернул png */
+export const SCREENSHOT_FILE_NAME_PNG = 'screenshot.png';
+
 /** URL API микросервиса баг-репортов через локальный прокси */
 export const BUG_REPORT_API_URL = '/api/bug-report';
 
@@ -50,6 +82,9 @@ export const ADMIN_BUGS_API_URL = '/api/admin/bugs';
 
 /** URL API получения количества баг-репортов по каждому статусу (админка) */
 export const ADMIN_BUGS_COUNT_BY_STATUS_API_URL = `${ADMIN_BUGS_API_URL}/count-by-status`;
+
+/** URL API значений для фильтров списка: логины авторов и менявших статус (админка) */
+export const ADMIN_BUGS_FILTER_OPTIONS_API_URL = `${ADMIN_BUGS_API_URL}/filter-options`;
 
 /**
  * Платформа-источник бага. Реэкспорт из `#shared/consts`: идентичность сайта —
@@ -94,7 +129,7 @@ export const ADMIN_BUGS_CONFIGURE_LABEL = 'Посмотреть';
 
 /** Описание раздела админки баг-репортов */
 export const ADMIN_BUGS_PAGE_DESCRIPTION =
-  'Просмотр списка сообщений об ошибках, фильтрация по статусу и платформе.';
+  'Просмотр списка сообщений об ошибках, фильтрация по статусу, платформе, автору и тому, кто менял статус.';
 
 /** Текст при пустом списке баг-репортов */
 export const ADMIN_BUGS_EMPTY_TEXT = 'Баг-репорты не найдены';
@@ -116,6 +151,9 @@ export const ADMIN_BUGS_DETAIL_EMPTY_TEXT =
 /** Ключ кеша сводки количества баг-репортов по статусам в админке */
 export const ADMIN_BUGS_STATUS_COUNTS_DATA_KEY = 'admin-bugs-status-counts';
 
+/** Ключ кеша значений для фильтров списка (логины) в админке */
+export const ADMIN_BUGS_FILTER_OPTIONS_DATA_KEY = 'admin-bugs-filter-options';
+
 /** Ключ кеша баг-репорта, догруженного по ID из ссылки, в админке */
 export const ADMIN_BUG_SELECTED_DATA_KEY = 'admin-bug-selected';
 
@@ -127,6 +165,30 @@ export const ADMIN_BUGS_STATUS_ALL_LABEL = 'Все статусы';
 
 /** Значение фильтра "Все платформы" */
 export const ADMIN_BUGS_PLATFORM_ALL_LABEL = 'Все платформы';
+
+/** Значение фильтра «Все авторы» */
+export const ADMIN_BUGS_AUTHOR_ALL_LABEL = 'Все авторы';
+
+/**
+ * Значение фильтра «Все исполнители». Исполнитель — тот, кто последним менял
+ * статус репорта: вместе с фильтром по статусу «Исправлен» это и есть «кто исправил».
+ */
+export const ADMIN_BUGS_RESOLVER_ALL_LABEL = 'Все исполнители';
+
+/** Подсказка в поле поиска выпадающих списков авторов и исполнителей */
+export const ADMIN_BUGS_LOGIN_SEARCH_PLACEHOLDER = 'Поиск по логину…';
+
+/** Подпись кнопки, открывающей фильтры списка на узких экранах */
+export const ADMIN_BUGS_FILTERS_BUTTON_LABEL = 'Фильтры';
+
+/** Заголовок шторки с фильтрами списка */
+export const ADMIN_BUGS_FILTERS_DRAWER_TITLE = 'Фильтры баг-репортов';
+
+/** Подпись кнопки сброса всех фильтров списка */
+export const ADMIN_BUGS_FILTERS_RESET_LABEL = 'Сбросить';
+
+/** Подпись кнопки, закрывающей шторку фильтров */
+export const ADMIN_BUGS_FILTERS_APPLY_LABEL = 'Показать';
 
 /** Мапа русских названий для статусов баг-репортов */
 export const BUG_REPORT_STATUS_LABELS: Record<BugReportStatus, string> = {
@@ -207,6 +269,15 @@ export const BUG_REPORT_SUBMIT_ERROR_TITLE = 'Ошибка отправки';
 export const BUG_REPORT_SUBMIT_ERROR_DESC =
   'Не удалось отправить баг-репорт. Пожалуйста, попробуйте позже.';
 
+/** Placeholder поля описания проблемы в форме отправки */
+export const BUG_REPORT_DESCRIPTION_PLACEHOLDER = 'Опишите, что произошло...';
+
+/** Максимальная длина описания вместе с разметкой (ограничение API и колонки в базе) */
+export const BUG_REPORT_DESCRIPTION_MAX_LENGTH = 2000;
+
+/** Ошибка валидации: описание длиннее лимита API */
+export const BUG_REPORT_DESCRIPTION_TOO_LONG_ERROR = `Описание вместе с разметкой не должно превышать ${BUG_REPORT_DESCRIPTION_MAX_LENGTH} символов`;
+
 /** Успешный заголовок обновления статуса */
 export const BUG_REPORT_STATUS_UPDATE_SUCCESS_TITLE = 'Статус обновлен';
 
@@ -222,7 +293,7 @@ export const BUG_REPORT_STATUS_COMMENT_PLACEHOLDER =
 /** Максимальная длина комментария (ограничение API) */
 export const BUG_REPORT_STATUS_COMMENT_MAX_LENGTH = 2000;
 
-/** Значение фильтра "Все" для статуса/платформы */
+/** Значение фильтра «Все» для статуса, платформы, автора и исполнителя */
 export const ADMIN_BUGS_FILTER_ALL = 'ALL';
 
 /** Ключ URL-параметра с фильтром по статусу */
@@ -230,6 +301,12 @@ export const ADMIN_BUGS_STATUS_QUERY_KEY = 'status';
 
 /** Ключ URL-параметра с фильтром по платформе */
 export const ADMIN_BUGS_PLATFORM_QUERY_KEY = 'platform';
+
+/** Ключ URL-параметра с фильтром по логину автора */
+export const ADMIN_BUGS_AUTHOR_QUERY_KEY = 'author';
+
+/** Ключ URL-параметра с фильтром по логину исполнителя (кто менял статус) */
+export const ADMIN_BUGS_RESOLVER_QUERY_KEY = 'resolver';
 
 /** Ключ URL-параметра с идентификатором открытого баг-репорта */
 export const ADMIN_BUGS_ID_QUERY_KEY = 'id';
@@ -410,3 +487,112 @@ export const MY_BUGS_EMPTY_FILTERED_TEXT =
 /** Текст ошибки загрузки списка и подпись кнопки повтора */
 export const MY_BUGS_LOAD_ERROR_TEXT = 'Не удалось загрузить ваши баг-репорты.';
 export const MY_BUGS_RETRY_LABEL = 'Повторить попытку';
+
+/** Заголовок блока со снимком метрик производительности */
+export const BUG_REPORT_DIAGNOSTICS_TITLE = 'Производительность при отправке';
+
+/**
+ * Вкладки детального просмотра баг-репорта. Вкладка со снимком метрик
+ * добавляется только тогда, когда снимок действительно пришёл.
+ */
+export const BUG_REPORT_DETAIL_TABS: Array<{
+  label: string;
+  value: BugReportDetailTab;
+  slot: BugReportDetailTab;
+  icon: string;
+}> = [
+  { label: 'Отчёт', value: 'report', slot: 'report', icon: 'tabler:bug' },
+  {
+    label: BUG_REPORT_DIAGNOSTICS_TITLE,
+    value: 'diagnostics',
+    slot: 'diagnostics',
+    icon: 'tabler:activity-heartbeat',
+  },
+];
+
+/** Вкладка, открытая при выборе баг-репорта */
+export const BUG_REPORT_DETAIL_DEFAULT_TAB: BugReportDetailTab = 'report';
+
+/** Заголовки секций снимка */
+export const BUG_REPORT_DIAGNOSTICS_CLIENT_TITLE = 'Клиент';
+export const BUG_REPORT_DIAGNOSTICS_SERVER_TITLE = 'Сервер мира';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_TITLE = 'Сцена';
+export const BUG_REPORT_DIAGNOSTICS_DEVICE_TITLE = 'Железо и браузер';
+
+/** Заголовки таблиц замеров */
+export const BUG_REPORT_DIAGNOSTICS_SPANS_TITLE =
+  'Профиль кадра (Σмс за секунду)';
+export const BUG_REPORT_DIAGNOSTICS_EVENTS_TITLE =
+  'Топ WS-событий (Σмс за 2 с)';
+
+/** Подписи столбцов таблиц замеров */
+export const BUG_REPORT_DIAGNOSTICS_SPAN_NAME_LABEL = 'Участок';
+export const BUG_REPORT_DIAGNOSTICS_EVENT_NAME_LABEL = 'Событие';
+export const BUG_REPORT_DIAGNOSTICS_SPAN_TOTAL_LABEL = 'Σмс';
+export const BUG_REPORT_DIAGNOSTICS_SPAN_COUNT_LABEL = 'Вызовов';
+export const BUG_REPORT_DIAGNOSTICS_SPAN_MAX_LABEL = 'Макс. мс';
+
+/** Подписи метрик клиента */
+export const BUG_REPORT_DIAGNOSTICS_FPS_LABEL = 'FPS';
+export const BUG_REPORT_DIAGNOSTICS_PING_LABEL = 'Ping до сервера';
+export const BUG_REPORT_DIAGNOSTICS_WALLS_LABEL = 'Стены (всего/отрис./кэш)';
+export const BUG_REPORT_DIAGNOSTICS_RAYCAST_LABEL = 'Raycast (мс/лучей/стен)';
+export const BUG_REPORT_DIAGNOSTICS_CHECKS_LABEL = 'Пересечений отрезков';
+export const BUG_REPORT_DIAGNOSTICS_LIGHT_CACHE_LABEL =
+  'Кэш зрения и света (попал/мимо)';
+export const BUG_REPORT_DIAGNOSTICS_QUADTREE_LABEL = 'Узлов квадродерева';
+
+/** Подписи метрик сервера */
+export const BUG_REPORT_DIAGNOSTICS_LOOP_LAG_LABEL =
+  'Loop-lag (сред./p99/макс.)';
+export const BUG_REPORT_DIAGNOSTICS_CLIENTS_LABEL = 'Клиентов на сервере';
+
+/** Подписи метрик сцены */
+export const BUG_REPORT_DIAGNOSTICS_SCENE_KIND_LABEL = 'Вид';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_SIZE_LABEL = 'Размер';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_TOKENS_LABEL = 'Токенов';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_LIGHTS_LABEL = 'Источников света';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_DRAWINGS_LABEL = 'Рисунков';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_AREAS_LABEL = 'Областей';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_TEMPLATES_LABEL =
+  'Шаблонов измерений';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_FOG_LABEL = 'Туман войны';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_DARKNESS_LABEL = 'Уровень темноты';
+
+/** Подписи метрик устройства */
+export const BUG_REPORT_DIAGNOSTICS_APP_VERSION_LABEL = 'Версия приложения';
+export const BUG_REPORT_DIAGNOSTICS_GPU_LABEL = 'Видеокарта';
+export const BUG_REPORT_DIAGNOSTICS_CPU_LABEL = 'Ядер процессора';
+export const BUG_REPORT_DIAGNOSTICS_MEMORY_LABEL = 'Память устройства';
+export const BUG_REPORT_DIAGNOSTICS_HEAP_LABEL = 'Куча JS (занято/предел)';
+export const BUG_REPORT_DIAGNOSTICS_SCREEN_LABEL = 'Экран';
+export const BUG_REPORT_DIAGNOSTICS_VIEWPORT_LABEL = 'Окно';
+export const BUG_REPORT_DIAGNOSTICS_PLATFORM_LABEL = 'Платформа';
+export const BUG_REPORT_DIAGNOSTICS_USER_AGENT_LABEL = 'User-Agent';
+
+/** Подписи режима запуска приложения */
+export const BUG_REPORT_DIAGNOSTICS_ELECTRON_LABEL = 'Десктопное приложение';
+export const BUG_REPORT_DIAGNOSTICS_BROWSER_LABEL = 'Браузер';
+
+/** Подписи сырого JSON снимка */
+export const BUG_REPORT_DIAGNOSTICS_RAW_LABEL = 'Показать сырой JSON';
+export const BUG_REPORT_DIAGNOSTICS_COPY_LABEL = 'Копировать JSON';
+
+/** Значение, которого нет в снимке */
+export const BUG_REPORT_DIAGNOSTICS_EMPTY_VALUE = '—';
+
+/** Подписи «да/нет» для булевых метрик снимка */
+export const BUG_REPORT_DIAGNOSTICS_YES_LABEL = 'включён';
+export const BUG_REPORT_DIAGNOSTICS_NO_LABEL = 'выключен';
+
+/** Порог FPS, ниже которого частота кадров подсвечивается как проблемная */
+export const BUG_REPORT_DIAGNOSTICS_FPS_WARN = 30;
+
+/** Порог p99 задержки event-loop сервера, выше которого она проблемная (мс) */
+export const BUG_REPORT_DIAGNOSTICS_LOOP_LAG_WARN_MS = 20;
+
+/** Порог суммарного времени участка кадра за секунду, выше которого он дорогой (мс) */
+export const BUG_REPORT_DIAGNOSTICS_SPAN_TOTAL_WARN_MS = 100;
+
+/** Порог одиночного выполнения участка кадра, выше которого он рвёт кадр (мс) */
+export const BUG_REPORT_DIAGNOSTICS_SPAN_MAX_WARN_MS = 8;

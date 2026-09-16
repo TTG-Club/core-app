@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { ApiFetchError } from '~/shared/types';
+
   const emit = defineEmits<{
     (event: 'switch:sign-up' | 'switch:change-password' | 'close'): void;
   }>();
@@ -19,7 +21,12 @@
     remember: true,
   });
 
-  const { execute, status, error } = useFetch('/api/auth/sign-in', {
+  const { execute, status, error } = useFetch<
+    void,
+    ApiFetchError,
+    '/api/auth/sign-in',
+    'post'
+  >('/api/auth/sign-in', {
     body: computed(() => ({
       login: state.usernameOrEmail,
       password: state.password,
@@ -40,7 +47,8 @@
     if (error.value) {
       $toast.add({
         title: 'Ошибка авторизации',
-        description: error.value.data.message,
+        description:
+          error.value.data?.message ?? 'Не удалось войти — попробуйте ещё раз.',
         color: 'error',
         icon: 'tabler:user-exclamation',
       });

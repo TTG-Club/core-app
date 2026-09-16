@@ -3,6 +3,7 @@
 
   import { SOURCE_PLATFORM, SOURCE_PLATFORM_LABELS } from '#shared/consts';
   import { ConfirmDialog } from '~initiative/ui-kit';
+  import { UserAvatar } from '~ui/user-avatar';
 
   import { useCommentTimestamp } from '../../composables';
   import {
@@ -220,11 +221,11 @@
   >
     <div class="flex flex-col gap-1.5">
       <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <UAvatar
-          :alt="comment.authorName"
+        <UserAvatar
+          :user-id="comment.authorId"
+          :name="comment.authorName"
           size="xs"
           class="shrink-0"
-          :ui="{ fallback: 'uppercase' }"
         />
 
         <span class="min-w-0 truncate text-sm font-semibold text-highlighted">

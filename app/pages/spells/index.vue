@@ -95,6 +95,8 @@
     sectionPath: '/spells',
     apiBasePath: '/api/v2/spells',
     items: visibleSpells,
+    // Группы классов грузятся порциями, и полноту списка там не узнать.
+    hasMoreItems: () => isClassGrouping.value || hasNextPage.value,
   });
 
   const markdown = useEntityMarkdown(detailSpell, getSpellMarkdown);

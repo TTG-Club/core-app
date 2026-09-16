@@ -5,6 +5,7 @@
   import {
     SAVING_THROW_PROFICIENCY_ICONS,
     SHEET_SAVING_THROW_SETTINGS_LABELS,
+    SHEET_SAVING_THROWS_PANEL_LABELS,
     SHEET_TITLE_ACTION_CLASS,
     SHEET_TITLE_ACTION_REVEAL_CLASS,
   } from '../../model';
@@ -36,7 +37,7 @@
 </script>
 
 <template>
-  <SheetPanel title="Спасброски">
+  <SheetPanel :title="SHEET_SAVING_THROWS_PANEL_LABELS.title">
     <template #title-actions>
       <button
         type="button"
@@ -77,7 +78,7 @@
         <button
           type="button"
           class="flex min-w-0 grow cursor-pointer items-center after:absolute after:inset-0 after:cursor-pointer"
-          :aria-label="`Спасбросок: ${row.label}`"
+          :aria-label="`${SHEET_SAVING_THROWS_PANEL_LABELS.roll}: ${row.label}`"
           @click.left.exact.prevent="emit('roll', row)"
         >
           <span class="text-xs text-toned">{{ row.label }}</span>

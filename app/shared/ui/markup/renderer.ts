@@ -120,9 +120,14 @@ export function render(content: RenderNode | RenderNode[]): VNode[] {
   return Array.isArray(result) ? result : [result];
 }
 
-/** Группа отрендеренных VNode: блочная (рисуется как есть) или инлайновая (в <p>). */
+/** Группа отрендеренных VNode: блочная (рисуется как есть) или инлайновая (в `<p>`). */
 export interface RenderGroup {
   isBlock: boolean;
+  /**
+   * Тип блочного маркера группы (`separator`, `heading`, …). По нему MarkupRender
+   * решает, как отбивать группу от соседей. У инлайновых групп не задан.
+   */
+  blockType?: string;
   vnodes: VNode[];
 }
 
@@ -167,7 +172,13 @@ export function toBlockGroups(entry: RenderNode): RenderGroup[] {
   for (const node of nodes) {
     if (isBlockNode(node)) {
       flushInline();
-      groups.push({ isBlock: true, vnodes: render(node) });
+
+      groups.push({
+        isBlock: true,
+        // isBlockNode пропускает только маркеры, но сам не сужает тип.
+        blockType: isMarkerNode(node) ? node.type : undefined,
+        vnodes: render(node),
+      });
     } else {
       inlineRun.push(node);
     }

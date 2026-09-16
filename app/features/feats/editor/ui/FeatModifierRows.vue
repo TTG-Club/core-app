@@ -2,6 +2,7 @@
   import type { DropdownMenuItem } from '@nuxt/ui';
 
   import type {
+    FeatEditorLabelOverrides,
     FeatEditorRows,
     FeatModifierRow,
     FeatModifierRowKind,
@@ -18,16 +19,17 @@
     createModifierRow,
     FEAT_DAMAGE_CHOICE_COUNT,
     FEAT_DAMAGE_DEFENSE_OPTIONS,
-    FEAT_EDITOR_LABELS,
     FEAT_MODIFIER_KIND_OPTIONS,
     FEAT_MODIFIER_LABELS,
     FEAT_MODIFIER_SOURCE_OPTIONS,
+    getFeatEditorLabels,
     getTakenChoiceKeys,
     hasModifierValue,
     isDamageDefenseChoiceRow,
     isFixedDamageDefenseRow,
     supportsEqualsWalk,
   } from '../../model';
+  import FeatRowsSection from './FeatRowsSection.vue';
 
   /**
    * Постоянные правки листа: одна строка — одна правка. Список видов живёт в
@@ -35,12 +37,42 @@
    * на экране все чувства и все скорости сразу, и почти все поля в ней у
    * обычной черты пустовали.
    */
-  const { rows } = defineProps<{
+  const {
+    rows,
+    labels = {},
+    title = undefined,
+  } = defineProps<{
     /** Все строки редактора: из них берутся занятые ключи выборов. */
     rows: FeatEditorRows;
+
+    /**
+     * Подписи формы-владельца: чертой источник даров называет только форма
+     * черты, у умения класса и вида свои формулировки.
+     */
+    labels?: FeatEditorLabelOverrides;
+
+    /**
+     * Заголовок блока: с ним строки рисуются в рамке с кнопкой добавления в
+     * шапке. Пусто — форма-владелец рисует заголовок сама.
+     */
+    title?: string;
   }>();
 
+  /** Подписи с поправками формы-владельца. */
+  const texts = computed(() => getFeatEditorLabels(labels));
+
   const model = defineModel<Array<FeatModifierRow>>({ required: true });
+
+  /** Блок в рамке с заголовком: кнопка добавления живёт в его шапке. */
+  const isCompact = computed(() => Boolean(title));
+
+  /** Размер кнопки добавления: в шапке рамки она мельче, чем под списком. */
+  const addButtonSize = computed<'xs' | 'md'>(() =>
+    isCompact.value ? 'xs' : 'md',
+  );
+
+  /** В шапке кнопка не тянется и не сжимается, под списком — во всю ширину. */
+  const addButtonClass = computed(() => (isCompact.value ? 'shrink-0' : ''));
 
   /** Меню «Добавить модификатор»: все виды одним списком. */
   const addMenuItems = computed<Array<Array<DropdownMenuItem>>>(() => [
@@ -73,22 +105,13 @@
 </script>
 
 <template>
-  <div class="flex flex-col gap-2">
-    <InfoTooltip
-      :text="FEAT_EDITOR_LABELS.modifiersHintDetails"
-      icon="tabler:info-circle-filled"
-      class="text-sm text-dimmed"
-    >
-      <span>{{ FEAT_EDITOR_LABELS.modifiersHint }}</span>
-    </InfoTooltip>
-
-    <p
-      v-if="!model.length"
-      class="rounded-lg border border-dashed border-default p-4 text-center text-xs text-dimmed italic"
-    >
-      {{ FEAT_EDITOR_LABELS.modifiersEmpty }}
-    </p>
-
+  <FeatRowsSection
+    :title="title"
+    :summary="texts.modifiersHint"
+    :hint="texts.modifiersHintDetails"
+    :empty="texts.modifiersEmpty"
+    :count="model.length"
+  >
     <div
       v-for="(row, index) in model"
       :key="row.uid"
@@ -103,18 +126,18 @@
           v-if="hasModifierValue(row.kind) && !row.equalsWalk"
           v-model="row.value"
           class="w-32"
-          :aria-label="FEAT_EDITOR_LABELS.modifierValue"
+          :aria-label="texts.modifierValue"
         />
 
         <UCheckbox
           v-if="supportsEqualsWalk(row.kind)"
           v-model="row.equalsWalk"
-          :label="FEAT_EDITOR_LABELS.equalsWalk"
+          :label="texts.equalsWalk"
         />
 
         <InfoTooltip
           v-if="row.kind === 'DAMAGE_DEFENSE'"
-          :text="FEAT_EDITOR_LABELS.damageTypeSourceHint"
+          :text="texts.damageTypeSourceHint"
           icon="tabler:info-circle-filled"
         >
           <USelect
@@ -122,7 +145,7 @@
             :items="FEAT_MODIFIER_SOURCE_OPTIONS"
             value-key="value"
             class="w-44"
-            :aria-label="FEAT_EDITOR_LABELS.damageTypeSource"
+            :aria-label="texts.damageTypeSource"
           />
         </InfoTooltip>
 
@@ -138,7 +161,7 @@
           :items="FEAT_DAMAGE_DEFENSE_OPTIONS"
           value-key="value"
           class="w-44"
-          :aria-label="FEAT_EDITOR_LABELS.defenseKind"
+          :aria-label="texts.defenseKind"
         />
 
         <SelectCondition
@@ -171,10 +194,10 @@
         <UFormField class="md:col-span-12">
           <template #label>
             <InfoTooltip
-              :text="FEAT_EDITOR_LABELS.damageTypesPoolHint"
+              :text="texts.damageTypesPoolHint"
               icon="tabler:info-circle-filled"
             >
-              <span>{{ FEAT_EDITOR_LABELS.damageTypesPool }}</span>
+              <span>{{ texts.damageTypesPool }}</span>
             </InfoTooltip>
           </template>
 
@@ -186,7 +209,7 @@
 
         <UFormField
           class="md:col-span-4"
-          :label="FEAT_EDITOR_LABELS.damageChoiceCount"
+          :label="texts.damageChoiceCount"
         >
           <UInputNumber
             v-model="row.count"
@@ -197,27 +220,32 @@
 
         <UFormField
           class="md:col-span-8"
-          :label="FEAT_EDITOR_LABELS.damageChoiceLabel"
+          :label="texts.damageChoiceLabel"
         >
           <UInput
             v-model="row.label"
-            :placeholder="FEAT_EDITOR_LABELS.damageChoiceLabelPlaceholder"
+            :placeholder="texts.damageChoiceLabelPlaceholder"
           />
         </UFormField>
       </div>
     </div>
 
-    <UDropdownMenu
-      :items="addMenuItems"
-      :content="{ align: 'start' }"
-    >
-      <UButton
-        icon="tabler:plus"
-        :label="FEAT_EDITOR_LABELS.addModifier"
-        color="primary"
-        variant="soft"
-        block
-      />
-    </UDropdownMenu>
-  </div>
+    <!-- Кнопка добавления своя: вид модификатора выбирают меню, а не строкой -->
+    <template #add>
+      <UDropdownMenu
+        :items="addMenuItems"
+        :content="{ align: 'start' }"
+        :class="addButtonClass"
+      >
+        <UButton
+          icon="tabler:plus"
+          :label="texts.addModifier"
+          color="primary"
+          variant="soft"
+          :size="addButtonSize"
+          :block="!isCompact"
+        />
+      </UDropdownMenu>
+    </template>
+  </FeatRowsSection>
 </template>

@@ -256,8 +256,10 @@
           class="flex items-center gap-4"
         >
           <div class="flex shrink-0 flex-col items-center gap-1">
+            <!-- Обводка, а не рамка: рамка съедает место внутри круга, и фон,
+                 рассчитанный на всю сторону, съезжал вправо вниз. -->
             <div
-              class="rounded-full border-2 border-default bg-elevated bg-no-repeat"
+              class="rounded-full bg-elevated bg-no-repeat ring-2 ring-default"
               :style="previewStyle"
             />
 

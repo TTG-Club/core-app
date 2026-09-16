@@ -1,0 +1,1666 @@
+import { FIND_GAME_API_PREFIX } from '#shared/consts';
+
+export const GAME_LEAVE_LABEL = 'Выйти из игры';
+export const GAME_LEAVE_DESCRIPTION =
+  'Вы покинете состав игры и незавершённые сессии. История сыгранных встреч сохранится.';
+export const GAME_LEFT_TOAST = 'Вы вышли из игры';
+export const GAME_OWN_CARD_LABEL = 'Вы';
+export const GAME_PARTICIPANTS_PRIVATE_HINT =
+  'Карточки других участников появятся после принятия вашей заявки.';
+
+export const GAME_DETAIL_TABS = [
+  {
+    label: 'Участники',
+    icon: 'tabler:users',
+    slot: 'participants',
+    value: 'participants',
+  },
+  {
+    label: 'Сессии',
+    icon: 'tabler:calendar-event',
+    slot: 'sessions',
+    value: 'sessions',
+  },
+  {
+    label: 'Финансы',
+    icon: 'tabler:wallet',
+    slot: 'finance',
+    value: 'finance',
+  },
+];
+
+export const GAME_FINANCE_TITLE = 'Финансы игры';
+export const GAME_FINANCE_DESCRIPTION =
+  'Учёт авансов и долгов ведётся внутри игры; реальные платежи сервис не обрабатывает.';
+export const GAME_FINANCE_EMPTY = 'У игры пока нет финансовых операций';
+export const GAME_FINANCE_TOP_UP = 'Внести депозит';
+export const GAME_FINANCE_BALANCE = 'Баланс';
+export const GAME_FINANCE_DEBT_DETAILS = 'Долги по встречам';
+export const GAME_FINANCE_PAY = 'Оплатить с баланса';
+export const GAME_FINANCE_CLAIM = 'Я оплатил';
+export const GAME_FINANCE_PENDING = 'Ожидает подтверждения';
+export const GAME_FINANCE_CONFIRM = 'Подтвердить оплату';
+export const GAME_FINANCE_AMOUNT = 'Сумма';
+
+/** Причины жалобы на объявление. */
+export const GAME_REPORT_REASONS = [
+  'ADVERTISING',
+  'SPAM',
+  'INAPPROPRIATE_IMAGE',
+  'OTHER',
+] as const;
+
+export const GAME_REPORT_REASON_LABELS = {
+  ADVERTISING: 'Реклама',
+  SPAM: 'Спам',
+  INAPPROPRIATE_IMAGE: 'Непристойное изображение',
+  OTHER: 'Другое нарушение',
+} as const;
+
+export const GAME_REPORT_LABEL = 'Пожаловаться';
+export const GAME_REPORT_TITLE = 'Жалоба на игру';
+export const GAME_REPORT_DESCRIPTION =
+  'Опишите нарушение — жалобу увидят только модераторы.';
+export const GAME_REPORT_REASON_LABEL = 'Причина';
+export const GAME_REPORT_DETAILS_LABEL = 'Комментарий';
+export const GAME_REPORT_DETAILS_PLACEHOLDER =
+  'Коротко поясните, что нарушает правила';
+export const GAME_REPORT_SUBMIT_LABEL = 'Отправить жалобу';
+export const GAME_REPORT_SENT_TOAST = 'Жалоба отправлена';
+export const GAME_REPORT_MAX_DETAILS_LENGTH = 1000;
+export const GAME_REPORTS_API_PATH = `${FIND_GAME_API_PREFIX}/moderation/game-reports`;
+
+/** Модераторские действия над играми: например, заблокировать все игры мастера. */
+export const MODERATION_GAMES_API_PATH = `${FIND_GAME_API_PREFIX}/moderation/games`;
+export const GAME_REPORTS_PAGE_SIZE = 20;
+export const GAME_REPORTS_TITLE = 'Жалобы на игры';
+export const GAME_REPORTS_EMPTY_TITLE = 'Очередь модерации пуста';
+export const GAME_REPORTS_EMPTY_DESCRIPTION =
+  'Новые жалобы и заблокированные объявления появятся здесь.';
+export const GAME_REPORT_AUTHOR_LABEL = 'Отправил';
+export const GAME_REPORT_CREATED_LABEL = 'Получена';
+export const GAME_REPORT_HIDDEN_AT_LABEL = 'Заблокирована';
+export const GAME_REPORT_HIDDEN_REASON_LABEL = 'Причина блокировки';
+export const GAME_REPORT_HIDDEN_REASON_EMPTY = 'Причина не указана';
+export const GAME_REPORT_DATE_FORMAT = 'DD.MM.YYYY HH:mm';
+export const GAME_REPORT_HIDE_ALL_MASTER_GAMES_LABEL =
+  'Заблокировать все игры мастера';
+export const GAME_REPORT_HIDE_ALL_MASTER_GAMES_TITLE =
+  'Заблокировать все игры мастера?';
+export const GAME_REPORT_HIDE_ALL_MASTER_GAMES_DESCRIPTION =
+  'Все активные объявления этого мастера исчезнут из каталога. Отменить действие нельзя.';
+export const GAME_REPORT_HIDE_ALL_MASTER_GAMES_TOAST =
+  'Все игры мастера заблокированы';
+export const GAME_REPORT_RESTORE_LABEL = 'Разблокировать игру';
+export const GAME_REPORT_RESTORE_TITLE = 'Разблокировать игру?';
+export const GAME_REPORT_RESTORE_DESCRIPTION =
+  'Игра снова станет доступна. Если она открыта, набор игроков возобновится.';
+export const GAME_REPORT_RESTORED_TOAST = 'Игра разблокирована';
+export const GAME_REPORT_DELETION_REASON =
+  'Заблокировано модератором по жалобе на игру';
+
+export const SESSION_START_IN_PAST_ERROR =
+  'Дата и время начала сессии должны быть в будущем';
+export const SESSION_VALIDATION_CLOCK_INTERVAL = 1000;
+
+/* ------------------------------------------------------------------ */
+/* Маршруты сайта                                                      */
+/* ------------------------------------------------------------------ */
+
+/** Каталог игр. */
+export const GAMES_ROUTE = '/games';
+
+/** Создание игры мастером. */
+export const GAMES_CREATE_ROUTE = '/games/create';
+
+/** Свои игры мастера. */
+export const GAMES_MY_ROUTE = '/games/my';
+
+/** Профиль поиска игр во вкладках профиля пользователя. */
+export const FIND_GAME_PROFILE_ROUTE = '/user/profile/find-game';
+
+/** Раздел, под которым каталог живёт в навигации. */
+export const GAMES_NAVIGATION_LABEL = 'Поиск игр';
+
+/** Пункт каталога внутри раздела навигации. */
+export const GAMES_CATALOG_NAVIGATION_LABEL = 'Каталог игр';
+
+export const GAMES_CREATE_NAVIGATION_LABEL = 'Создать игру';
+
+export const GAMES_MY_NAVIGATION_LABEL = 'Мои игры';
+
+export const FIND_GAME_PROFILE_NAVIGATION_LABEL = 'Игровой профиль';
+
+/* ------------------------------------------------------------------ */
+/* Пути API                                                            */
+/* ------------------------------------------------------------------ */
+
+/** Базовый путь игр внутри same-origin прокси сайта. */
+export const GAMES_API_PATH = `${FIND_GAME_API_PREFIX}/games`;
+
+/** Профиль Мастера и Игрока. */
+export const FIND_GAME_PROFILE_API_PATH = `${FIND_GAME_API_PREFIX}/profiles/me`;
+
+/** Публичный профиль мастера: его читают прямо с карточки игры. */
+export const MASTER_PROFILE_API_PATH = `${FIND_GAME_API_PREFIX}/profiles/masters`;
+
+/** Публичный профиль игрока: его открывают из состава игры. */
+export const PLAYER_PROFILE_API_PATH = `${FIND_GAME_API_PREFIX}/profiles/players`;
+
+/** Справочник городов: подсказки для поля города и фильтра каталога. */
+export const CITIES_API_PATH = `${FIND_GAME_API_PREFIX}/cities`;
+
+/** Справочник игровых систем для форм, карточек и фильтров. */
+export const GAME_SYSTEMS_API_PATH = `${FIND_GAME_API_PREFIX}/game-systems`;
+
+/** Общий ключ Nuxt-кэша справочника систем: карточки и формы читают один. */
+export const GAME_SYSTEMS_DATA_KEY = 'find-game-systems';
+
+/**
+ * Справочник жанров для формы и фильтра каталога. Список готовый: мастер его
+ * не пополняет, а жанр не из списка пишет отдельным полем игры.
+ */
+export const GENRES_API_PATH = `${FIND_GAME_API_PREFIX}/genres`;
+
+/** Общий ключ Nuxt-кэша списка жанров: форма и фильтр читают один список. */
+export const GAME_GENRES_DATA_KEY = 'find-game-genres';
+
+/**
+ * Код своей системы. В справочнике он есть, но в форме выбирается галочкой,
+ * а название системы игра хранит сама.
+ */
+export const GAME_CUSTOM_SYSTEM_CODE = 'HOMEBREW';
+
+/**
+ * Значение «свой жанр» в отборе по жанрам — тот же код, что у своей системы.
+ * Строки с ним в справочнике жанров нет: сервис отбирает по нему игры с
+ * заполненным своим жанром.
+ */
+export const GAME_CUSTOM_GENRE_FILTER_VALUE = GAME_CUSTOM_SYSTEM_CODE;
+
+/** Система новой игры по умолчанию — и та, что стоит в списке при своей системе. */
+export const GAME_DEFAULT_SYSTEM = 'DND_2024';
+
+export const NOTIFICATIONS_API_PATH = `${FIND_GAME_API_PREFIX}/notifications`;
+
+/**
+ * Поиск источников сайта — тот же, что у раздела «Источники». Своего
+ * справочника книг у find-game-api нет и не нужно: они принадлежат core-api.
+ */
+export const SOURCES_SEARCH_PATH = '/api/v2/source/search';
+
+/** Своя репутация игрока: доля оценок без текстов и авторов. */
+export const OWN_REPUTATION_API_PATH = `${FIND_GAME_API_PREFIX}/profiles/me/reputation`;
+
+/** Отмеченные мастера: их новые игры приходят уведомлением. */
+export const FOLLOWED_MASTERS_API_PATH = `${FIND_GAME_API_PREFIX}/profiles/me/follows/masters`;
+
+/** Отмеченные игроки: их мастер зовёт в свои игры. */
+export const BOOKMARKED_PLAYERS_API_PATH = `${FIND_GAME_API_PREFIX}/profiles/me/follows/players`;
+
+/** Отметка о конкретном игроке. */
+export const PLAYER_BOOKMARK_API_PATH = `${FIND_GAME_API_PREFIX}/profiles/players`;
+
+/** Отмеченные игры: сервис отдаёт только их идентификаторы. */
+export const FAVORITE_GAMES_API_PATH = `${FIND_GAME_API_PREFIX}/profiles/me/favorites/games`;
+
+/** Хвост пути отметки конкретной игры: `/games/{id}/favorite`. */
+export const GAME_FAVORITE_PATH_SUFFIX = 'favorite';
+
+/* ------------------------------------------------------------------ */
+/* Перечисления сервиса                                                */
+/* ------------------------------------------------------------------ */
+
+export const GAME_TYPES = ['ONLINE', 'TEXT', 'OFFLINE'] as const;
+
+export const GAME_ONLINE_PLATFORMS = [
+  'VTTG',
+  'FOUNDRY_VTT',
+  'ROLL20',
+  'FANTASY_GROUNDS',
+  'OWLBEAR_RODEO',
+  'TALESPIRE',
+  'TABLETOP_SIMULATOR',
+  'THEATER_OF_MIND',
+  'DISCORD',
+  'DIVINITY_OS2',
+  'ZOOM',
+  'QUESTBOARD',
+] as const;
+
+export const GAME_DEFAULT_ONLINE_PLATFORM = 'VTTG';
+export const GAME_FIELD_ONLINE_PLATFORM_LABEL = 'Платформа для онлайн-вождения';
+export const GAME_ONLINE_PLATFORM_LABELS = {
+  VTTG: 'VTTG',
+  FOUNDRY_VTT: 'Foundry VTT',
+  ROLL20: 'Roll20',
+  FANTASY_GROUNDS: 'Fantasy Grounds',
+  OWLBEAR_RODEO: 'Owlbear Rodeo',
+  TALESPIRE: 'Talespire',
+  TABLETOP_SIMULATOR: 'Tabletop Simulator',
+  THEATER_OF_MIND: 'Театр разума',
+  DISCORD: 'Discord',
+  DIVINITY_OS2: 'Divinity OS2',
+  ZOOM: 'Zoom',
+  QUESTBOARD: 'Questboard',
+};
+
+export const GAME_DURATION_TYPES = ['ONE_SHOT', 'CAMPAIGN'] as const;
+
+export const GAME_COST_TYPES = ['FREE', 'PAID'] as const;
+
+export const GAME_VISIBILITIES = ['PUBLIC', 'PRIVATE'] as const;
+
+// CANCELLED — отдельный исход, а не разновидность завершения: по завершённым
+// видно, что было сыграно, и несостоявшимся среди них не место.
+//
+// Черновика здесь нет: сохранить игру без публикации негде — форма создания
+// статус вовсе не отправляет, — а неизвестное состояние из сервиса схема
+// приводит к «набор открыт».
+export const GAME_STATUSES = ['OPEN', 'CLOSED', 'CANCELLED'] as const;
+
+export const GAME_SESSION_STATUSES = [
+  'SCHEDULED',
+  'IN_PROGRESS',
+  'COMPLETED',
+  'CANCELLED',
+] as const;
+
+export const SESSION_REGISTRATION_STATUSES = [
+  'PENDING',
+  'APPROVED',
+  'REJECTED',
+] as const;
+
+export const SESSION_ATTENDANCE_STATUSES = [
+  'UNMARKED',
+  'ATTENDING',
+  'NOT_ATTENDING',
+] as const;
+
+/** Варианты, которые игрок может поставить: исходное состояние не выбирается. */
+export const SESSION_ATTENDANCE_MARK_STATUSES = [
+  'ATTENDING',
+  'NOT_ATTENDING',
+] as const;
+
+export const SESSION_PAYMENT_TYPES = ['PREPAYMENT', 'POSTPAYMENT'] as const;
+
+/** Условие оплаты по умолчанию: за столом чаще собирают после игры. */
+export const SESSION_DEFAULT_PAYMENT_TYPE = 'POSTPAYMENT';
+
+/** Дни недели серии в порядке недели: сервис ждёт имена `DayOfWeek`. */
+export const SESSION_WEEKDAYS = [
+  'MONDAY',
+  'TUESDAY',
+  'WEDNESDAY',
+  'THURSDAY',
+  'FRIDAY',
+  'SATURDAY',
+  'SUNDAY',
+] as const;
+
+export const SESSION_WEEKDAY_LABELS = {
+  MONDAY: 'Пн',
+  TUESDAY: 'Вт',
+  WEDNESDAY: 'Ср',
+  THURSDAY: 'Чт',
+  FRIDAY: 'Пт',
+  SATURDAY: 'Сб',
+  SUNDAY: 'Вс',
+} as const;
+
+/**
+ * Виды уведомлений. Текст собирает интерфейс: сервис присылает только повод,
+ * названия игры и сессии.
+ */
+export const NOTIFICATION_TYPES = [
+  'REGISTRATION_SUBMITTED',
+  'REGISTRATION_APPROVED',
+  'REGISTRATION_REJECTED',
+  'REGISTRATION_WITHDRAWN',
+  'PLAYER_REMOVED',
+  'SESSION_SCHEDULED',
+  'SESSION_STARTED',
+  'SESSION_COMPLETED',
+  'SESSION_CANCELLED',
+  'GAME_CLOSED',
+  'GAME_CANCELLED',
+  'MASTER_PUBLISHED_GAME',
+  'GAME_INVITE',
+] as const;
+
+export const NOTIFICATION_TEXTS = {
+  SESSION_CANCELLED: 'Сессия отменена',
+  REGISTRATION_SUBMITTED: 'Новая заявка в сессию',
+  REGISTRATION_APPROVED: 'Заявка принята',
+  REGISTRATION_REJECTED: 'Заявка отклонена',
+  REGISTRATION_WITHDRAWN: 'Игрок вышел из игры',
+  PLAYER_REMOVED: 'Мастер исключил вас из игры',
+  SESSION_SCHEDULED: 'Назначена новая встреча',
+  SESSION_STARTED: 'Сессия началась',
+  SESSION_COMPLETED: 'Сессия завершена',
+  GAME_CLOSED: 'Игра завершена',
+  GAME_CANCELLED: 'Игра отменена',
+  MASTER_PUBLISHED_GAME: 'Отмеченный мастер объявил игру',
+  GAME_INVITE: 'Мастер зовёт вас в игру',
+} as const;
+
+export const NOTIFICATION_ICONS = {
+  SESSION_CANCELLED: 'tabler:calendar-x',
+  REGISTRATION_SUBMITTED: 'tabler:user-plus',
+  REGISTRATION_APPROVED: 'tabler:user-check',
+  REGISTRATION_REJECTED: 'tabler:user-x',
+  REGISTRATION_WITHDRAWN: 'tabler:user-minus',
+  PLAYER_REMOVED: 'tabler:user-off',
+  SESSION_SCHEDULED: 'tabler:calendar-plus',
+  SESSION_STARTED: 'tabler:player-play',
+  SESSION_COMPLETED: 'tabler:flag-check',
+  GAME_CLOSED: 'tabler:circle-check',
+  GAME_CANCELLED: 'tabler:ban',
+  MASTER_PUBLISHED_GAME: 'tabler:bookmark',
+  GAME_INVITE: 'tabler:mail',
+} as const;
+
+export const NOTIFICATIONS_TITLE = 'Уведомления';
+export const NOTIFICATIONS_EMPTY_TITLE = 'Уведомлений нет';
+
+export const NOTIFICATIONS_EMPTY_DESCRIPTION =
+  'Здесь появятся заявки в ваши сессии и новости игр, в которые вас приняли.';
+
+export const NOTIFICATIONS_READ_ALL_LABEL = 'Прочитать всё';
+export const NOTIFICATIONS_PAGE_SIZE = 30;
+
+export const PROFILE_GENDERS = [
+  'MALE',
+  'FEMALE',
+  'OTHER',
+  'NOT_SPECIFIED',
+] as const;
+
+export const REGISTRATION_DECISIONS = ['APPROVE', 'REJECT'] as const;
+
+/* ------------------------------------------------------------------ */
+/* Подписи перечислений                                                */
+/* ------------------------------------------------------------------ */
+
+export const GAME_TYPE_LABELS = {
+  ONLINE: 'Онлайн',
+  TEXT: 'Текстовая',
+  OFFLINE: 'Вживую',
+} as const;
+
+export const GAME_TYPE_ICONS = {
+  ONLINE: 'tabler:device-desktop',
+  TEXT: 'tabler:message-2',
+  OFFLINE: 'tabler:users-group',
+} as const;
+
+export const GAME_DURATION_TYPE_LABELS = {
+  ONE_SHOT: 'Ваншот',
+  CAMPAIGN: 'Кампания',
+} as const;
+
+export const GAME_COST_TYPE_LABELS = {
+  FREE: 'Бесплатно',
+  PAID: 'Платно',
+} as const;
+
+/** Цвет значка стоимости: бесплатная игра — спокойным цветом, платная — предупреждающим. */
+export const GAME_COST_TYPE_COLORS = {
+  FREE: 'success',
+  PAID: 'warning',
+} as const;
+
+/** Иконка значка стоимости в карточке: монета только у платной игры. */
+export const GAME_COST_TYPE_ICONS = {
+  FREE: undefined,
+  PAID: 'tabler:coins',
+} as const;
+
+export const GAME_VISIBILITY_LABELS = {
+  PUBLIC: 'Публичная',
+  PRIVATE: 'По приглашению',
+} as const;
+
+export const GAME_STATUS_LABELS = {
+  OPEN: 'Набор открыт',
+  CLOSED: 'Завершена',
+  CANCELLED: 'Отменена',
+} as const;
+
+export const GAME_SESSION_STATUS_LABELS = {
+  SCHEDULED: 'Запланирована',
+  IN_PROGRESS: 'Идёт',
+  COMPLETED: 'Завершена',
+  CANCELLED: 'Отменена',
+} as const;
+
+export const SESSION_REGISTRATION_STATUS_LABELS = {
+  PENDING: 'На рассмотрении',
+  APPROVED: 'Принята',
+  REJECTED: 'Отклонена',
+} as const;
+
+export const SESSION_ATTENDANCE_STATUS_LABELS = {
+  UNMARKED: 'Нет отметки',
+  ATTENDING: 'Присутствую',
+  NOT_ATTENDING: 'Отсутствую',
+} as const;
+
+export const SESSION_ATTENDANCE_ICONS = {
+  UNMARKED: 'tabler:help',
+  ATTENDING: 'tabler:check',
+  NOT_ATTENDING: 'tabler:x',
+} as const;
+export const SESSION_ATTENDANCE_COLORS = {
+  UNMARKED: 'neutral',
+  ATTENDING: 'success',
+  NOT_ATTENDING: 'error',
+} as const;
+export const GAME_PARTICIPANTS_ERROR_TITLE = 'Не удалось загрузить участников';
+export const GAME_PARTICIPANTS_REFRESH_LABEL = 'Обновить отметки';
+export const GAME_NO_PLANNED_SESSION_LABEL = 'Нет запланированной сессии';
+export const GAME_NEAREST_SESSION_LABEL = 'Ближайшая сессия';
+
+export const SESSION_PAYMENT_TYPE_LABELS = {
+  PREPAYMENT: 'Предоплата',
+  POSTPAYMENT: 'Постоплата',
+} as const;
+
+export const PROFILE_GENDER_LABELS = {
+  MALE: 'Мужской',
+  FEMALE: 'Женский',
+  OTHER: 'Другой',
+  NOT_SPECIFIED: 'Не указан',
+} as const;
+
+/** Цвета статусов и решений — берутся семантические, без палитры Tailwind. */
+export const GAME_STATUS_COLORS = {
+  OPEN: 'success',
+  CLOSED: 'neutral',
+  CANCELLED: 'error',
+} as const;
+
+export const GAME_SESSION_STATUS_COLORS = {
+  SCHEDULED: 'primary',
+  IN_PROGRESS: 'success',
+  COMPLETED: 'neutral',
+  CANCELLED: 'error',
+} as const;
+
+/** Значок состояния на оси расписания: в кружке метки подписи не поместится. */
+export const GAME_SESSION_STATUS_ICONS = {
+  SCHEDULED: 'tabler:calendar-event',
+  IN_PROGRESS: 'tabler:player-play',
+  COMPLETED: 'tabler:flag-check',
+  CANCELLED: 'tabler:calendar-x',
+} as const;
+
+/**
+ * Цвет метки на оси расписания. Значки в кружках мелкие, и одной формой
+ * состояния не различить — цвет читается раньше значка: идущая встреча
+ * зелёная, отменённая красная, сыгранная гаснет до серой.
+ */
+export const GAME_SESSION_STATUS_TIMELINE_CLASSES = {
+  SCHEDULED: 'bg-primary text-inverted',
+  IN_PROGRESS: 'bg-success text-inverted',
+  COMPLETED: 'bg-elevated text-muted',
+  CANCELLED: 'bg-error text-inverted',
+} as const;
+
+/**
+ * Ореол вокруг ближайшей запланированной встречи. Цвет метки занят её
+ * состоянием, поэтому «следующая по расписанию» отмечается формой.
+ */
+export const SESSION_TIMELINE_NEAREST_CLASSES = 'ring-4 ring-primary/40';
+
+export const SESSION_REGISTRATION_STATUS_COLORS = {
+  PENDING: 'warning',
+  APPROVED: 'success',
+  REJECTED: 'error',
+} as const;
+
+/**
+ * Точка состояния на обложке карточки. Значок там на тёмной подложке с белой
+ * подписью, и цвет состояния несёт только точка. Нейтральному состоянию нужен
+ * светлый тон в любой схеме: тёмная точка на тёмной подложке пропала бы, а
+ * белый поверх фото — принятое исключение из семантических цветов.
+ */
+export const GAME_COVER_STATUS_DOT_CLASSES = {
+  success: 'bg-success',
+  warning: 'bg-warning',
+  error: 'bg-error',
+  neutral: 'bg-white/70',
+} as const;
+
+/**
+ * Подложка значков на обложке — стоимости и состояния. Та же тёмная
+ * полупрозрачная, что у звёздочки: цветные варианты значка на картинке не
+ * читаются, `subtle` полупрозрачен, а `solid` пишет светлым по светлому.
+ */
+export const GAME_COVER_BADGE_CLASS = 'bg-black/45 text-white backdrop-blur-sm';
+
+/**
+ * Монета платной игры на обложке выделена золотом. Тон светлее обычного
+ * `text-warning`: в светлой схеме тот тёмно-жёлтый и на тёмной подложке
+ * поверх светлой обложки пропадает.
+ */
+export const GAME_COVER_COST_ICON_CLASS = 'text-warning-300';
+
+/* ------------------------------------------------------------------ */
+/* Ограничения полей (совпадают с валидацией find-game-api)            */
+/* ------------------------------------------------------------------ */
+
+export const GAME_TITLE_MAX_LENGTH = 150;
+export const GAME_COPY_TITLE_SUFFIX = ' (копия)';
+export const GAME_URL_MAX_LENGTH = 2048;
+export const GAME_GENRE_MAX_LENGTH = 100;
+export const GAME_CUSTOM_SYSTEM_MAX_LENGTH = 120;
+
+/** Сколько жанров помещается в одну игру. Больше сервис не принимает. */
+export const GAME_GENRES_MAX_COUNT = 10;
+
+/** Разделитель жанров в карточках и сводке объявления. */
+export const GENRES_SEPARATOR = ', ';
+export const GAME_DESCRIPTION_MAX_LENGTH = 20_000;
+export const GAME_REQUIREMENTS_MAX_LENGTH = 10_000;
+export const GAME_CITY_MAX_LENGTH = 120;
+export const GAME_VENUE_MAX_LENGTH = 300;
+export const GAME_ALLOWED_SOURCE_MAX_LENGTH = 120;
+export const GAME_ALLOWED_SOURCES_MAX_COUNT = 50;
+export const GAME_PLAYERS_MIN = 1;
+
+/**
+ * Предел стола. Сервис проверяет его по подписке — без неё пять игроков, с
+ * ней пятнадцать; поле пускает до верхней границы, а решает сервис: знать о
+ * чужой подписке форме игры незачем.
+ */
+export const GAME_PLAYERS_MAX = 15;
+
+/** Тот же предел без подписки — он звучит только в подсказке поля. */
+const GAME_PLAYERS_FREE_MAX = 5;
+
+export const GAME_AGE_MIN = 0;
+export const GAME_AGE_MAX = 120;
+export const GAME_STARTING_LEVEL_MIN = 1;
+export const GAME_STARTING_LEVEL_MAX = 20;
+
+/**
+ * Стол новой игры по умолчанию: пятеро максимум, троих хватает для старта —
+ * самый ходовой размер группы, и мастеру остаётся поправить только своё.
+ */
+export const GAME_DEFAULT_MAX_PLAYERS = 5;
+export const GAME_DEFAULT_PLAYERS_TO_START = 3;
+export const GAME_DELETION_REASON_MAX_LENGTH = 1000;
+
+export const SESSION_TITLE_MAX_LENGTH = 150;
+
+/**
+ * Стоимость встречи задаётся целым числом: за стол берут круглую сумму, а
+ * копейки в цене — почти всегда описка на клавиатуре.
+ */
+export const SESSION_PRICE_MIN = 1;
+export const SESSION_PRICE_STEP = 1;
+
+/** Поле цены не показывает и не принимает дробную часть. */
+export const SESSION_PRICE_FORMAT: Intl.NumberFormatOptions = {
+  maximumFractionDigits: 0,
+};
+export const SESSION_CURRENCY_PATTERN = /^[A-Z]{3}$/;
+export const CHARACTER_SHEET_URL_MAX_LENGTH = 2048;
+export const CHARACTER_NAME_MAX_LENGTH = 100;
+
+export const PROFILE_BIRTH_YEAR_MIN = 1900;
+export const PROFILE_BIRTH_YEAR_MAX = 2100;
+export const PROFILE_EXPERIENCE_MIN = 0;
+export const PROFILE_EXPERIENCE_MAX = 100;
+export const PROFILE_ABOUT_MAX_LENGTH = 5000;
+/* ------------------------------------------------------------------ */
+/* Размеры страниц и лимиты запросов                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Двенадцать игр на страницу. Число делится на любое количество колонок
+ * сетки — 1, 2, 3 и 4, — поэтому последняя строка каталога полная на любой
+ * ширине экрана. Меняя размер страницы, держите его кратным всем ступеням
+ * `GAME_CATALOG_GRID_COLUMNS`, иначе строка снова станет рваной.
+ */
+export const GAME_CATALOG_PAGE_SIZE = 12;
+export const GAME_CATALOG_GRID_COLUMNS = 4;
+
+/**
+ * В «Моих играх» справа стоит колонка сводки, и четыре карточки в оставшейся
+ * ширине сжались бы до нечитаемых. Двенадцать игр на страницу делятся и на
+ * три, так что последняя строка остаётся полной.
+ */
+export const MY_GAMES_GRID_COLUMNS = 3;
+export const GAME_CATALOG_SKELETON_COUNT = GAME_CATALOG_PAGE_SIZE;
+export const MY_GAMES_PAGE_SIZE = GAME_CATALOG_PAGE_SIZE;
+
+/**
+ * До скольких мест занятость рисуется значками игроков. Дальше значки
+ * перестают читаться, и остаётся только счётчик.
+ */
+export const GAME_SEATS_MAX_ICONS = 8;
+
+/* ------------------------------------------------------------------ */
+/* Тексты интерфейса                                                   */
+/* ------------------------------------------------------------------ */
+
+/** Значки уведомлений раздела: один на успех, один на отказ. */
+export const FIND_GAME_TOAST_SUCCESS_ICON = 'tabler:check';
+export const FIND_GAME_TOAST_ERROR_ICON = 'tabler:alert-triangle';
+
+export const FIND_GAME_UNKNOWN_ERROR_MESSAGE =
+  'Что-то пошло не так. Попробуйте ещё раз.';
+
+export const PROFILE_SAVED_TITLE = 'Профиль сохранён';
+
+export const PROFILE_SAVE_ERROR_TITLE = 'Не удалось сохранить профиль';
+
+export const PROFILE_UNSAVED_TITLE = 'Несохранённые изменения';
+
+export const PROFILE_UNSAVED_CONFIRM =
+  'В профиле есть несохранённые изменения. Если уйти сейчас, они пропадут.';
+
+export const PROFILE_LEAVE_LABEL = 'Уйти без сохранения';
+
+export const FIND_GAME_FORBIDDEN_MESSAGE =
+  'У вас нет доступа к этому разделу игры.';
+
+export const FIND_GAME_NOT_FOUND_MESSAGE =
+  'Игра не найдена или доступна только по приглашению.';
+
+/** Имя-заглушка, когда core-api не вернул отображаемое имя участника. */
+export const UNKNOWN_PARTICIPANT_NAME = 'Участник';
+
+/** Подпись кнопки перехода к странице игры. */
+export const GAME_OPEN_LABEL = 'Открыть игру';
+
+export const SESSION_AGENDA_LABELS = {
+  today: 'Сегодня',
+  week: 'На этой неделе',
+  later: 'Позже',
+  past: 'Прошедшие встречи',
+  unscheduled: 'Дата согласуется',
+};
+
+/* Подписи панели фильтров каталога. */
+export const CATALOG_FILTERS_RESET_LABEL = 'Сбросить';
+export const CATALOG_FILTER_SYSTEM_LABEL = 'Система';
+export const CATALOG_FILTER_TYPE_LABEL = 'Формат';
+export const CATALOG_FILTER_DURATION_LABEL = 'Длительность';
+export const CATALOG_FILTER_COST_LABEL = 'Стоимость';
+export const CATALOG_FILTER_STATUS_LABEL = 'Статус набора';
+export const CATALOG_FILTER_CITY_LABEL = 'Города';
+export const CATALOG_FILTER_CITY_PLACEHOLDER = 'Найдите и выберите город';
+export const CATALOG_FILTER_CROSSPLAY_LABEL = 'Кросспол';
+export const CATALOG_FILTER_MIN_AGE_LABEL = 'Возраст от';
+export const CATALOG_FILTER_MAX_AGE_LABEL = 'Возраст до';
+/** Подписи условий по местам в ряду применённых фильтров. */
+export const CATALOG_FILTER_MAX_FREE_SEATS_LABEL = 'Свободных мест не больше';
+
+export const CATALOG_FILTER_MAX_SEATS_TO_START_LABEL =
+  'До старта не хватает не больше';
+
+/**
+ * Те же условия полями в панели. Поля стоят в одну строку, поэтому подписи
+ * короче: слово «места» уже есть в заголовке рамки над ними.
+ */
+export const CATALOG_FILTER_MAX_FREE_SEATS_FIELD_LABEL = 'Свободно, не больше';
+export const CATALOG_FILTER_MAX_FREE_SEATS_HINT =
+  '«1» — осталось последнее место';
+export const CATALOG_FILTER_MAX_SEATS_TO_START_FIELD_LABEL =
+  'До старта, не больше';
+export const CATALOG_FILTER_MAX_SEATS_TO_START_HINT =
+  '«1» — не хватает одного игрока';
+
+export const CATALOG_FILTER_FAVORITE_LABEL = 'Только избранное';
+
+/**
+ * Границы отбора по местам. Свободных мест в выдаче всегда хотя бы одно —
+ * собранный стол сервис в поиск не отдаёт, поэтому ноль там просто не
+ * встречается. До старта не хватать может и нуля: минимум уже набран, а
+ * места ещё есть.
+ */
+export const CATALOG_FILTER_FREE_SEATS_MIN = 1;
+export const CATALOG_FILTER_SEATS_TO_START_MIN = 0;
+
+/**
+ * Значения группы «Кросспол». Условие у сервиса трёхзначное: отмечен один
+ * вариант — отбор по нему, оба или ни одного — «не важно».
+ */
+export const CATALOG_FILTER_CROSSPLAY_VALUES = {
+  allowed: 'Разрешён',
+  forbidden: 'Запрещён',
+} as const;
+
+/** Идентификаторы тех же вариантов в группе панели. */
+export const CATALOG_FILTER_CROSSPLAY_IDS = {
+  allowed: 'allowed',
+  forbidden: 'forbidden',
+} as const;
+
+/**
+ * Ключи групп фильтра каталога в общей панели фильтров сайта. Панель знает
+ * только группы чипов, поэтому ключ связывает группу с полями фильтра игр.
+ */
+export const CATALOG_FILTER_GROUP_KEYS = {
+  favorite: 'favorite',
+  system: 'system',
+  genre: 'genre',
+  type: 'type',
+  duration: 'durationType',
+  cost: 'costType',
+  status: 'status',
+  crossplay: 'crossplayAllowed',
+} as const;
+
+/**
+ * Границы возраста полями в панели. Заголовок рамки над ними — общая подпись
+ * «Возраст» из условий игры, поэтому у полей остаются только «от» и «до».
+ */
+export const CATALOG_FILTER_AGE_FROM_LABEL = 'От';
+export const CATALOG_FILTER_AGE_TO_LABEL = 'До';
+
+/* Подписи страницы игры. */
+export const GAME_DESCRIPTION_TITLE = 'Описание';
+export const GAME_REQUIREMENTS_TITLE = 'Требования к игрокам';
+export const GAME_ALLOWED_SOURCES_TITLE = 'Допустимые источники';
+export const GAME_ALLOWED_SOURCES_VISIBLE_LIMIT = 6;
+export const GAME_ALLOWED_SOURCES_SHOW_LABEL = 'Показать остальные';
+export const GAME_ALLOWED_SOURCES_HIDE_LABEL = 'Скрыть';
+export const GAME_VIRTUAL_TABLE_LABEL = 'Виртуальный стол';
+export const GAME_VIRTUAL_TABLE_ICON = 'tabler:dice';
+export const GAME_MASTER_LABEL = 'Мастер';
+
+/** Подпись ряда мест в карточке каталога: без неё значки игроков немы. */
+export const GAME_SEATS_LABEL = 'Места';
+
+/** Подпись ближайшей встречи: она же отвечает на вопрос «когда играем». */
+export const GAME_NEXT_SESSION_LABEL = 'Ближайшая встреча';
+
+/** Расписания ещё нет: у игры своей даты начала не бывает — она у встреч. */
+export const GAME_NEXT_SESSION_EMPTY = 'Дата не назначена';
+
+/**
+ * Короткая подпись даты для карточки каталога: рядом с «Мастер» и «Места»
+ * полное «Ближайшая встреча» отнимает у самой даты половину строки, и время
+ * уезжает в многоточие. Полная подпись остаётся в сводке объявления.
+ */
+export const GAME_NEXT_SESSION_SHORT_LABEL = 'Когда';
+
+/**
+ * Дата ближайшей встречи без года и часового пояса: год почти всегда текущий,
+ * а точное время смотрят в расписании. В карточке каталога месяц ещё и
+ * сокращается — там на строку отведено чуть больше двухсот точек.
+ */
+export const GAME_NEXT_SESSION_DATE_FORMAT = 'D MMMM, HH:mm';
+export const GAME_NEXT_SESSION_SHORT_DATE_FORMAT = 'D MMM, HH:mm';
+
+/**
+ * Подписи условий игры в сводке объявления. Одна строка — одно условие:
+ * списком «подпись — значение» они читаются быстрее, чем рядом одинаковых
+ * значков, где каждое приходится разбирать по слову.
+ */
+export const GAME_FACT_LABELS = {
+  format: 'Формат',
+  platform: 'Платформа',
+  venue: 'Место встречи',
+  system: 'Система',
+  duration: 'Длительность',
+  genres: 'Жанры',
+  players: 'Игроки',
+  level: 'Стартовый уровень',
+  age: 'Возраст',
+  crossplay: 'Кросспол',
+} as const;
+
+/** Значение строки кроссплея: сама строка есть, только если он разрешён. */
+export const GAME_CROSSPLAY_ALLOWED_VALUE =
+  CATALOG_FILTER_CROSSPLAY_VALUES.allowed;
+
+/** Заголовок блока со ссылками на стол и разговоры игры. */
+export const GAME_LINKS_TITLE = 'Ссылки';
+
+/**
+ * Пояснение вместо ссылки на стол для тех, кого мастер ещё не принял: стол
+ * есть, но ссылка откроется только группе.
+ */
+export const GAME_VIRTUAL_TABLE_MEMBERS_ONLY_HINT =
+  'Мастер указал ссылку, её увидят только принятые игроки';
+
+/** Начало подписи стажа: одна и та же в профиле мастера и игрока. */
+export const TABLETOP_EXPERIENCE_LABEL = 'За столом';
+
+/* Профиль мастера. */
+export const MASTER_PROFILE_TITLE = 'Профиль мастера';
+export const MASTER_PROFILE_ABOUT_EMPTY = 'Мастер о себе пока не рассказал';
+export const MASTER_PROFILE_RECRUITING_LABEL = 'В наборе';
+export const MASTER_PROFILE_CLOSED_LABEL = 'Завершено игр';
+export const MASTER_PROFILE_CANCELLED_LABEL = 'Отменено игр';
+export const MASTER_PROFILE_SESSIONS_LABEL = 'Проведено встреч';
+export const MASTER_PROFILE_ERROR_TITLE = 'Не удалось загрузить профиль';
+export const MASTER_PROFILE_OPEN_HINT = 'Открыть профиль мастера';
+export const MASTER_PROFILE_REVIEWS_TITLE = 'Отзывы игроков';
+export const MASTER_PROFILE_ABOUT_TITLE = 'О мастере';
+
+/* Профиль игрока. */
+export const PLAYER_PROFILE_TITLE = 'Профиль игрока';
+export const PLAYER_PROFILE_ABOUT_TITLE = 'Об игроке';
+export const PLAYER_PROFILE_ABOUT_EMPTY = 'Игрок о себе пока не рассказал';
+export const PLAYER_PROFILE_SESSIONS_LABEL = 'Сыграно встреч';
+export const PLAYER_PROFILE_ERROR_TITLE = MASTER_PROFILE_ERROR_TITLE;
+export const PLAYER_PROFILE_OPEN_HINT = 'Открыть профиль игрока';
+
+/**
+ * Почему в профиле игрока нет оценок. Мастер видит их через заявку в свою
+ * игру, и без пояснения их отсутствие читалось бы как «оценок нет вовсе».
+ */
+export const PLAYER_PROFILE_REVIEWS_HINT =
+  'Оценки игрока видны мастеру в заявке на его игру';
+
+/** Дата отзыва: без времени и пояса — важен порядок, а не минута. */
+export const MASTER_PROFILE_REVIEW_DATE_FORMAT = 'LL';
+
+/** Вердикт отзыва без текста: значок сам по себе неочевиден. */
+export const MASTER_PROFILE_REVIEW_VERDICT_LABELS = {
+  positive: 'Рекомендует мастера',
+  negative: 'Не рекомендует мастера',
+} as const;
+
+/* ------------------------------------------------------------------ */
+/* Отметки участников                                                  */
+/* ------------------------------------------------------------------ */
+
+export const FOLLOW_MASTER_LABEL = 'Отслеживать';
+export const FOLLOW_MASTER_ACTIVE_LABEL = 'Отслеживаю';
+
+export const FOLLOW_MASTER_HINT =
+  'Новые игры этого мастера будут приходить уведомлением';
+
+export const FOLLOW_MASTER_ADDED_TOAST = 'Мастер отмечен';
+export const FOLLOW_MASTER_REMOVED_TOAST = 'Отметка снята';
+
+export const BOOKMARK_PLAYER_LABEL = 'Отметить игрока';
+export const BOOKMARK_PLAYER_ACTIVE_LABEL = 'Отмечен';
+
+export const BOOKMARK_PLAYER_HINT =
+  'Отмеченного игрока можно позвать в следующую игру';
+
+export const BOOKMARK_PLAYER_ADDED_TOAST = 'Игрок отмечен';
+export const BOOKMARK_PLAYER_REMOVED_TOAST = 'Отметка снята';
+
+/** Звёздочка избранного: пустая — можно отметить, залитая — уже отмечена. */
+export const GAME_FAVORITE_ICON = 'tabler:star';
+export const GAME_FAVORITE_ICON_ACTIVE = 'tabler:star-filled';
+
+export const GAME_FAVORITE_ADD_LABEL = 'В избранное';
+export const GAME_FAVORITE_REMOVE_LABEL = 'Убрать из избранного';
+
+export const GAME_FAVORITE_ADDED_TOAST = 'Игра в избранном';
+export const GAME_FAVORITE_REMOVED_TOAST = 'Игра убрана из избранного';
+
+export const FOLLOWED_MASTERS_TAB_LABEL = 'Мои мастера';
+export const BOOKMARKED_PLAYERS_TAB_LABEL = 'Мои игроки';
+export const FAVORITE_GAMES_TAB_LABEL = 'Избранное';
+
+/**
+ * Вкладки раздела «Мои игры»: все свои игры разом, четыре среза и два списка
+ * отметок. «Все» открываются по умолчанию — срез выбирают уже из полного
+ * списка.
+ */
+export const MY_GAMES_TABS = {
+  ALL: 'all',
+  PLAYING: 'playing',
+  HOSTING: 'hosting',
+  APPLICATIONS: 'applications',
+  FAVORITES: 'favorites',
+  MASTERS: 'masters',
+  PLAYERS: 'players',
+} as const;
+
+export const FAVORITE_GAMES_EMPTY_TITLE = 'Избранных игр нет';
+
+export const FAVORITE_GAMES_EMPTY_DESCRIPTION =
+  'Отметьте игру звёздочкой в каталоге — она появится здесь, даже если уйдёт из поиска.';
+
+export const FOLLOWED_MASTERS_EMPTY_TITLE = 'Отмеченных мастеров нет';
+
+export const FOLLOWED_MASTERS_EMPTY_DESCRIPTION =
+  'Откройте профиль мастера в объявлении и отметьте его — новые игры придут уведомлением.';
+
+export const BOOKMARKED_PLAYERS_EMPTY_TITLE = 'Отмеченных игроков нет';
+
+export const BOOKMARKED_PLAYERS_EMPTY_DESCRIPTION =
+  'Отметить игрока можно в заявках на вашу игру — потом его будет легко позвать в следующую.';
+
+export const INVITE_PLAYER_LABEL = 'Позвать в игру';
+export const INVITE_PLAYER_TITLE = 'Приглашение в игру';
+
+export const INVITE_PLAYER_DESCRIPTION =
+  'Игрок получит уведомление со ссылкой и подаст заявку сам.';
+
+export const INVITE_GAME_LABEL = 'Игра';
+export const INVITE_GAME_PLACEHOLDER = 'Выберите игру с открытым набором';
+export const INVITE_SENT_TOAST = 'Приглашение отправлено';
+export const INVITE_NO_GAMES_HINT = 'Нет игр с открытым набором';
+
+/* ------------------------------------------------------------------ */
+/* Оценки за встречу                                                   */
+/* ------------------------------------------------------------------ */
+
+/** Кто кого оценил: игрок мастера или мастер игрока. */
+export const REVIEW_KINDS = ['MASTER_REVIEW', 'PLAYER_REVIEW'] as const;
+
+/**
+ * Сколько дней после встречи её можно оценить. Ровно столько же держит окно
+ * сервис: позже он отвечает отказом.
+ */
+export const REVIEW_WINDOW_DAYS = 14;
+
+export const REVIEW_COMMENT_MAX_LENGTH = 2000;
+
+export const REVIEW_TITLE = 'Оценка встречи';
+export const REVIEW_OPEN_LABEL = 'Оценить встречу';
+export const REVIEW_SUBMIT_LABEL = 'Сохранить';
+export const REVIEW_UP_LABEL = 'Сыграл бы снова';
+export const REVIEW_DOWN_LABEL = 'Больше не сяду';
+export const REVIEW_COMMENT_LABEL = 'Отзыв';
+export const REVIEW_COMMENT_PLACEHOLDER = 'Необязательно: как прошла встреча';
+export const REVIEW_SAVED_TOAST = 'Оценка сохранена';
+
+/** Почему чужая оценка ещё не видна: пара раскрывается разом. */
+export const REVIEW_HIDDEN_HINT =
+  'Оценка второй стороны откроется, когда ответят оба';
+
+export const REVIEW_WINDOW_HINT = `Оценить встречу можно в течение ${REVIEW_WINDOW_DAYS} дней после её завершения`;
+
+export const REVIEW_EMPTY_PARTICIPANTS =
+  'Во встрече не было других участников — оценивать некого';
+
+export const REVIEWS_EMPTY_TITLE = 'Отзывов пока нет';
+
+export const REVIEWS_EMPTY_DESCRIPTION =
+  'Они появятся, когда игроки оценят проведённые встречи';
+
+export const REPUTATION_EMPTY_LABEL = 'Пока без оценок';
+export const PLAYER_REVIEWS_OPEN_LABEL = 'Отзывы мастеров';
+export const OWN_REPUTATION_TITLE = 'Ваша репутация игрока';
+
+/**
+ * Своя репутация показывается без текстов и авторов: игрок знает, где стоит,
+ * но не идёт выяснять отношения с конкретным мастером.
+ */
+export const OWN_REPUTATION_HINT =
+  'Мастера видят эту долю, когда разбирают вашу заявку. Кто именно и что написал — не показывается.';
+export const GAME_SESSIONS_TITLE = 'Календарь сессий';
+
+export const GAME_GUEST_NOTICE_TITLE = 'Войдите, чтобы участвовать';
+export const GAME_GUEST_NOTICE_DESCRIPTION =
+  'Список сессий и заявки доступны после входа на сайт.';
+export const GAME_SIGN_IN_LABEL = 'Войти';
+
+export const GAME_INVITE_TITLE = 'Ссылка-приглашение';
+export const GAME_INVITE_DESCRIPTION =
+  'Приватную игру видно только по этой ссылке. Отправьте её игрокам.';
+export const GAME_INVITE_COPY_LABEL = 'Скопировать ссылку';
+
+export const GAME_CLOSE_LABEL = 'Завершить игру';
+export const GAME_CLOSE_CONFIRM_TITLE = 'Завершить игру?';
+export const GAME_CLOSE_CONFIRM_DESCRIPTION =
+  'Игра получит статус «Завершена» и пропадёт из набора. Отменить это нельзя.';
+export const GAME_CLOSED_TOAST = 'Игра завершена';
+
+export const GAME_CANCEL_LABEL = 'Отменить игру';
+export const GAME_CANCEL_CONFIRM_TITLE = 'Отменить игру?';
+
+export const GAME_CANCEL_CONFIRM_DESCRIPTION =
+  'Игра будет отмечена как несостоявшаяся, а её набор закроется. По завершённым играм видно, что мастер действительно провёл, поэтому отмена — отдельный исход. Вернуть игру в набор нельзя.';
+
+export const GAME_CANCELLED_TOAST = 'Игра отменена';
+
+/**
+ * Значок и цвет вердикта отзыва. Палец вверх и вниз читаются без подписи, а
+ * цвет отделяет один отзыв от другого в общем списке.
+ */
+export const REVIEW_VERDICT_ICON = {
+  positive: 'tabler:thumb-up',
+  negative: 'tabler:thumb-down',
+} as const;
+
+export const REVIEW_VERDICT_TEXT_CLASS = {
+  positive: 'text-success',
+  negative: 'text-error',
+} as const;
+
+/** Начало сообщения об исчерпанной норме попыток. */
+export const RETRY_AFTER_PREFIX = 'Попробуйте снова через';
+
+export const GAME_RAISE_LABEL = 'Поднять в каталоге';
+export const GAME_RAISED_TOAST = 'Игра поднята в каталоге';
+
+export const GAME_DELETE_LABEL = 'Заблокировать игру';
+export const GAME_DELETE_CONFIRM_TITLE = 'Заблокировать игру?';
+export const GAME_DELETE_CONFIRM_DESCRIPTION =
+  'Игра скроется у всех на сайте, пока её не разблокируют. Открыть её смогут только модераторы и администраторы.';
+
+/**
+ * Что происходит с заблокированной игрой. Сервис игр отсеивает её во всех
+ * списках и на странице игры, а модераторам оставляет в очереди жалоб.
+ */
+export const GAME_DELETE_CONSEQUENCES = [
+  {
+    icon: 'tabler:eye-off',
+    text: 'Пропадёт из каталога, «Моих игр» и избранного — у всех пользователей, включая мастера и принятых игроков.',
+  },
+  {
+    icon: 'tabler:link-off',
+    text: 'Не откроется по прямой ссылке и коду приглашения, даже у мастера.',
+  },
+  {
+    icon: 'tabler:calendar-off',
+    text: 'Заявки, участники и встречи игры станут недоступны.',
+  },
+  {
+    icon: 'tabler:shield-lock',
+    text: `Попадёт в раздел модерации «${GAME_REPORTS_TITLE}» с причиной и датой блокировки. Там её можно разблокировать — игра и её данные не удаляются.`,
+  },
+] as const;
+
+export const GAME_DELETE_REASON_LABEL = 'Причина';
+export const GAME_DELETE_REASON_PLACEHOLDER = 'Нарушение правил сообщества';
+export const GAME_DELETED_TOAST = 'Игра заблокирована';
+
+/** Пометка жалобы, чья игра уже заблокирована: те же слова, что и в уведомлении. */
+export const GAME_REPORT_HIDDEN_BADGE = GAME_DELETED_TOAST;
+
+export const CANCEL_LABEL = 'Отмена';
+export const SAVE_LABEL = 'Сохранить';
+
+/** Редактирование игры мастером. */
+export const GAMES_EDIT_ROUTE_SUFFIX = 'edit';
+
+/* Подписи формы создания и редактирования игры. */
+export const GAME_FORM_TITLE = 'Новая игра';
+
+export const GAME_FORM_UNVERIFIED_EMAIL_TITLE = 'Подтвердите почту';
+
+export const GAME_FORM_UNVERIFIED_EMAIL_DESCRIPTION =
+  'Объявление об игре видят все, поэтому создать его можно только с подтверждённого адреса. Откройте ссылку из письма, которое сервис отправил при регистрации, и вернитесь на эту страницу.';
+
+export const GAME_FORM_EDIT_TITLE = 'Редактирование игры';
+export const GAME_FORM_SUBMIT_LABEL = 'Опубликовать';
+export const GAME_EDIT_LABEL = 'Редактировать';
+export const GAME_FORM_CREATED_TOAST = 'Игра опубликована';
+export const GAME_COPY_LABEL = 'Создать копию';
+export const GAME_COPY_CREATED_TOAST = 'Копия игры создана';
+export const GAME_FORM_UPDATED_TOAST = 'Изменения сохранены';
+
+/**
+ * Подсказки к правилам, которых нет при создании: они защищают уже созданные
+ * сессии и принятые заявки от рассинхронизации.
+ */
+export const GAME_EDIT_COST_LOCKED_HINT =
+  'Платность нельзя изменить: у игры уже есть сессии с зафиксированными условиями оплаты.';
+
+export const GAME_EDIT_VISIBILITY_HINT =
+  'При переходе в приватную игру выдаётся новая ссылка-приглашение, при возврате в публичную прежняя перестаёт работать.';
+export const GAME_FORM_MAIN_SECTION = 'Об игре';
+export const GAME_FORM_FORMAT_SECTION = 'Формат и участники';
+export const GAME_FORM_ADDITIONAL_SECTION = 'Дополнительно: ссылки и чаты';
+export const GAME_FORM_UNSAVED_WARNING =
+  'Изменения не сохранены. Покинуть форму?';
+export const GAME_FORM_REQUIRED_ERROR = 'Заполните это поле';
+export const GAME_FORM_LEAVE_TITLE = 'Несохранённые изменения';
+export const GAME_FORM_LEAVE_LABEL = 'Выйти без сохранения';
+export const GAME_FORM_STAY_LABEL = 'Продолжить редактирование';
+export const SESSION_AGENDA_CLOCK_INTERVAL = 60_000;
+export const GAME_NEXT_SESSION_FALLBACK = 'Время согласуется';
+export const GAME_NEXT_SESSION_LOADING_LABEL = 'Время встречи…';
+export const GAME_NEXT_PAID_SESSION_PRICE_LABEL = 'Стоимость за сессию';
+export const GAME_PRICE_PENDING_LABEL = 'Стоимость уточняется';
+export const GAME_PRICE_PER_SESSION_LABEL = 'за встречу';
+export const GAME_FREE_SEATS_LABEL = 'Свободно мест';
+export const MY_GAMES_OVERVIEW_SIZE = 4;
+export const MY_GAMES_UPCOMING_LABEL = 'Ближайшие встречи';
+export const MY_GAMES_ATTENTION_LABEL = 'Требуют внимания';
+export const MY_GAMES_UPCOMING_EMPTY = 'Назначенных встреч пока нет';
+export const MY_GAMES_ATTENTION_EMPTY =
+  'Нет ожидающих заявок и встреч без даты';
+export const MY_GAMES_ATTENTION_ACTION =
+  'Разобрать заявки или назначить встречу';
+
+/**
+ * Ключ сводки «Ближайшие встречи» и «Требуют внимания». Общий: сводку читают
+ * и колонка «Моих игр», и кнопка «Мои игры» в шапке — с одним ключом это один
+ * запрос на двоих.
+ */
+export const MY_GAMES_OVERVIEW_DATA_KEY = 'find-game-personal-overview';
+
+/** Первая страница выдачи: сводке нужны только ближайшие игры. */
+export const MY_GAMES_OVERVIEW_PAGE = 0;
+
+/** Подсказка у точки на кнопке «Мои игры». */
+export const MY_GAMES_ATTENTION_HINT = 'Есть игры, которые требуют внимания';
+
+/**
+ * Имя кнопки «Мои игры» для скринридера, когда горит точка: сама точка
+ * вслух не читается.
+ */
+export const MY_GAMES_ATTENTION_ARIA_LABEL = `${GAMES_MY_NAVIGATION_LABEL}. ${MY_GAMES_ATTENTION_HINT}`;
+
+/** Разделитель причин в строке «Требуют внимания». */
+export const MY_GAMES_ATTENTION_REASON_SEPARATOR = ' · ';
+
+/** Причины внимания: у ближайшей встречи нет даты или встреч нет вовсе. */
+export const MY_GAMES_ATTENTION_NO_DATE_LABEL = 'Встреча без даты';
+export const MY_GAMES_ATTENTION_NO_SESSION_LABEL = 'Встреча не назначена';
+
+/** Плашка даты в «Ближайших встречах»: число крупно, месяц под ним. */
+export const MY_GAMES_AGENDA_DAY_FORMAT = 'D';
+export const MY_GAMES_AGENDA_MONTH_FORMAT = 'MMM';
+export const MY_GAMES_AGENDA_TIME_FORMAT = 'dd, HH:mm';
+
+export const MY_GAMES_ALL_LABEL = 'Все';
+export const MY_GAMES_PLAYING_LABEL = 'Участвую';
+export const MY_GAMES_HOSTING_LABEL = 'Веду';
+export const MY_GAMES_APPLICATIONS_LABEL = 'Мои заявки';
+export const GAME_FORM_PLAYERS_SECTION = 'Игроки';
+
+/**
+ * Почему публикация недоступна. Отключённая кнопка без объяснения читается
+ * поломкой: мастер не видит, что именно осталось заполнить.
+ */
+export const GAME_FORM_SUBMIT_HINT_UPLOADING = 'Дождитесь загрузки обложки';
+
+export const GAME_FORM_SUBMIT_HINT_REQUIRED =
+  'Заполните обязательные поля: название, описание и требования к игрокам';
+
+export const GAME_FIELD_TITLE_LABEL = 'Название';
+export const GAME_FIELD_TITLE_PLACEHOLDER = 'Проклятие Страда';
+export const GAME_FIELD_SYSTEM_LABEL = 'Система';
+export const GAME_FIELD_SYSTEM_SEARCH_PLACEHOLDER = 'Найдите систему';
+
+/** Подпись галочки своей системы — она же подпись варианта в фильтре каталога. */
+export const GAME_FIELD_CUSTOM_SYSTEM_LABEL = 'Своя система';
+export const GAME_FIELD_CUSTOM_SYSTEM_PLACEHOLDER = 'Название системы';
+export const GAME_FIELD_GENRE_LABEL = 'Жанры';
+/**
+ * Предел жанров стоит в подсказке внутри поля, а не пояснением под ним: иначе
+ * галочка своего жанра уехала бы ниже галочки своей системы в соседней колонке.
+ */
+export const GAME_FIELD_GENRE_PLACEHOLDER = `Выберите до ${GAME_GENRES_MAX_COUNT} жанров`;
+export const GAME_FIELD_GENRE_SEARCH_PLACEHOLDER = 'Найдите жанр';
+
+/** Подпись галочки своего жанра — она же подпись варианта в фильтре каталога. */
+export const GAME_FIELD_CUSTOM_GENRE_LABEL = 'Свой жанр';
+export const GAME_FIELD_CUSTOM_GENRE_PLACEHOLDER = 'Название жанра';
+export const GAME_FIELD_IMAGE_LABEL = 'Обложка';
+
+export const GAME_FIELD_IMAGE_HINT =
+  'Эта картинка показывается в каталоге и на странице игры. Подойдёт '
+  + 'горизонтальная, в соотношении 16:9, — например 1280 × 720';
+
+/** Раздел S3 для обложек игр — первый сегмент ключа объекта. */
+export const GAME_IMAGE_SECTION = 'games';
+
+/**
+ * Максимальная длина короткой стороны обложки. Карточка каталога показывает
+ * её в соотношении 16:9 небольшого размера, поэтому больше 1024 не нужно.
+ */
+export const GAME_IMAGE_MAX_SIZE = '1024';
+export const GAME_FIELD_VIRTUAL_TABLE_LABEL = 'Виртуальный стол';
+export const GAME_FIELD_VIRTUAL_TABLE_HINT =
+  'Ссылку видят только принятые игроки, остальные — лишь то, что стол есть';
+export const GAME_FIELD_VIRTUAL_TABLE_PLACEHOLDER =
+  'https://vtt.example.org/games/curse-of-strahd';
+export const GAME_FIELD_MASTER_CHAT_LABEL = 'Чат с мастером';
+export const GAME_FIELD_MASTER_CHAT_HINT =
+  'Ссылку видит любой, кто открыл объявление';
+export const GAME_FIELD_MASTER_CHAT_PLACEHOLDER = 'https://t.me/master';
+export const GAME_FIELD_GAME_CHAT_LABEL = 'Чат игры';
+export const GAME_FIELD_GAME_CHAT_HINT =
+  'Ссылку видят только принятые игроки: подавшему заявку она не откроется';
+export const GAME_FIELD_GAME_CHAT_PLACEHOLDER = 'https://t.me/+strahd-party';
+
+/* Набор в игру. */
+export const GAME_RECRUITMENT_CLOSE_LABEL = 'Закрыть набор';
+export const GAME_RECRUITMENT_OPEN_LABEL = 'Открыть набор';
+export const GAME_RECRUITMENT_CLOSED_BADGE = 'Набор закрыт';
+export const GAME_RECRUITMENT_FULL_BADGE = 'Мест нет';
+export const GAME_RECRUITMENT_CLOSED_TOAST = 'Набор закрыт';
+export const GAME_RECRUITMENT_OPENED_TOAST = 'Набор открыт';
+
+/** Подпись ссылки на разговор в самом объявлении. */
+export const GAME_MASTER_CHAT_LINK_LABEL = 'Написать мастеру';
+export const GAME_CHAT_LINK_LABEL = 'Чат игры';
+
+export const GAME_FIELD_DESCRIPTION_LABEL = 'Описание';
+export const GAME_FIELD_DESCRIPTION_PLACEHOLDER =
+  'О чём игра, какой тон и чего ждать игрокам.';
+export const GAME_FIELD_REQUIREMENTS_LABEL = 'Требования к игрокам';
+export const GAME_FIELD_REQUIREMENTS_PLACEHOLDER =
+  '18+, стабильное участие по субботам.';
+export const GAME_FIELD_SOURCES_LABEL = 'Допустимые источники';
+export const GAME_SOURCES_TITLE = 'Источники';
+export const GAME_SOURCES_PICK_LABEL = 'Выбрать источники';
+
+export const GAME_SOURCES_EMPTY_LABEL = 'Не ограничены — подойдёт любая книга';
+export const GAME_FIELD_TYPE_LABEL = 'Формат';
+export const GAME_FIELD_CITY_LABEL = 'Город';
+export const GAME_FIELD_CITY_PLACEHOLDER = 'Москва';
+export const GAME_FIELD_CITY_HINT = 'Только для игр вживую.';
+export const GAME_FIELD_VENUE_LABEL = 'Место проведения';
+export const GAME_FIELD_VENUE_HINT = 'Клуб, антикафе или чей-то стол.';
+export const GAME_FIELD_VENUE_PLACEHOLDER = 'Клуб «Кубик», Пятницкая 12';
+export const GAME_FIELD_DURATION_LABEL = 'Длительность';
+export const GAME_FIELD_COST_LABEL = 'Стоимость';
+export const GAME_FIELD_COST_HINT =
+  'Сумму и условия оплаты вы зададите у каждой сессии отдельно.';
+export const GAME_FIELD_VISIBILITY_LABEL = 'Видимость';
+export const GAME_FIELD_VISIBILITY_HINT =
+  'Приватную игру видно только по ссылке-приглашению.';
+export const GAME_FIELD_PLAYERS_TO_START_LABEL = 'Игроков для старта';
+export const GAME_FIELD_MAX_PLAYERS_LABEL = 'Максимум игроков';
+export const GAME_FIELD_MAX_PLAYERS_HINT = `До ${GAME_PLAYERS_FREE_MAX}, с подпиской — до ${GAME_PLAYERS_MAX}`;
+export const GAME_FIELD_MIN_AGE_LABEL = 'Возраст от';
+export const GAME_FIELD_MAX_AGE_LABEL = 'Возраст до';
+export const GAME_FIELD_AGE_HINT = 'Обе границы необязательны.';
+export const GAME_FIELD_STARTING_LEVEL_LABEL = 'Стартовый уровень';
+export const GAME_FIELD_CROSSPLAY_LABEL = 'Разрешить персонажа другого пола';
+export const GAME_FIELD_COMPLETE_PLAYER_PROFILE_LABEL =
+  'Принимать заявки только с заполненным профилем игрока';
+export const GAME_FIELD_COMPLETE_PLAYER_PROFILE_HINT =
+  'Игрок должен указать год рождения, пол, опыт в НРИ и рассказать о себе.';
+
+export const GAME_FORM_PLAYERS_ERROR =
+  'Для старта нужно не больше игроков, чем максимум';
+export const GAME_FORM_AGE_ERROR =
+  'Минимальный возраст не может превышать максимальный';
+export const GAME_FORM_LIMIT_HINT =
+  'Без подписки у мастера может быть только одна незавершённая игра. Завершите текущую или оформите подписку.';
+
+/* Подписи раздела «Мои игры». */
+// Список собирает и свои игры, и чужие, куда пользователь записался,
+// поэтому пустой экран зовёт и создать стол, и найти чужой.
+
+/** Подсказка у пометки: почему в меню горит точка. */
+export const MY_GAMES_UPDATES_HINT = 'Есть новости в ваших играх';
+
+/**
+ * Значение варианта «все, кроме отменённых» в ряду отбора. Своё значение ему
+ * нужно потому, что пустую строку список выбора не принимает.
+ */
+export const MY_GAMES_STATUS_ALL_VALUE = 'ACTIVE';
+
+/** Отбор своих игр по состоянию: «все» — всё, кроме отменённых. */
+export const MY_GAMES_STATUS_ALL_LABEL = 'Активные';
+export const MY_GAMES_STATUS_HINT =
+  'Отменённые игры показываются только по отбору';
+
+export const MY_GAMES_EMPTY_TITLE = 'Пока ни одной игры';
+export const MY_GAMES_EMPTY_DESCRIPTION =
+  'Опубликуйте свою игру или подайте заявку в чужую — она появится здесь.';
+export const MY_GAMES_ERROR_TITLE = 'Не удалось загрузить ваши игры';
+
+/* Подписи профиля поиска игр. */
+export const PROFILE_TITLE = 'Игровой профиль';
+export const PROFILE_COMMON_SECTION = 'Общее';
+export const PROFILE_MASTER_SECTION = 'Анкета Мастера';
+export const PROFILE_PLAYER_SECTION = 'Анкета Игрока';
+export const PROFILE_BIRTH_YEAR_LABEL = 'Год рождения';
+export const PROFILE_GENDER_LABEL = 'Пол';
+export const PROFILE_EXPERIENCE_LABEL = 'Опыт в НРИ, лет';
+export const PROFILE_MASTER_ABOUT_LABEL = 'О себе как о Мастере';
+export const PROFILE_MASTER_ABOUT_PLACEHOLDER = 'Вожу сюжетные кампании';
+export const PROFILE_PLAYER_ABOUT_LABEL = 'О себе как об Игроке';
+export const PROFILE_PLAYER_ABOUT_PLACEHOLDER = 'Люблю исследование и отыгрыш';
+export const PROFILE_ABOUT_HINT = 'Анкеты Мастера и Игрока независимы.';
+export const PROFILE_DIRTY_HINT = 'Есть несохранённые изменения.';
+export const PROFILE_RESET_LABEL = 'Отменить изменения';
+export const PROFILE_ERROR_TITLE = 'Не удалось загрузить профиль';
+
+/* Подписи сессий. */
+export const SESSION_CREATE_LABEL = 'Новая сессия';
+export const SESSION_SERIES_LABEL = 'Серия сессий';
+export const SESSION_SERIES_TITLE = 'Серия сессий по расписанию';
+export const SESSION_SERIES_DESCRIPTION =
+  'Кампания идёт неделями: выберите дни, время и до какого срока продолжать.';
+export const SESSION_SERIES_WEEKDAYS_LABEL = 'Дни недели';
+export const SESSION_SERIES_START_LABEL = 'Начинать с';
+export const SESSION_SERIES_HORIZON_LABEL = 'Продолжать';
+export const SESSION_SERIES_HORIZON_UNITS = ['WEEKS', 'MONTHS'] as const;
+/**
+ * Сокращения, а не слова: рядом стоит число, и «2 месяцев» пришлось бы
+ * склонять по правилам русского счёта ради одной подписи.
+ */
+export const SESSION_SERIES_HORIZON_UNIT_LABELS = {
+  WEEKS: 'нед.',
+  MONTHS: 'мес.',
+} as const;
+export const SESSION_SERIES_HORIZON_MAX = 52;
+
+/**
+ * Расписание серии по умолчанию: две единицы срока (то есть два месяца) и
+ * одна встреча в неделю. Мастер меняет их первым же движением, но пустая
+ * форма без дня недели не показала бы, сколько встреч выйдет.
+ */
+export const SESSION_SERIES_DEFAULT_HORIZON = 2;
+export const SESSION_SERIES_DEFAULT_HORIZON_UNIT = 'MONTHS';
+export const SESSION_SERIES_DEFAULT_WEEKDAYS = ['WEDNESDAY'] as const;
+export const SESSION_SERIES_PREVIEW_PREFIX = 'Будет создано встреч';
+export const SESSION_SERIES_EMPTY_HINT =
+  'В выбранном промежутке нет ни одного подходящего дня.';
+export const SESSION_SERIES_CREATE_LABEL = 'Создать серию';
+export const SESSION_SERIES_CREATED_TOAST = 'Серия сессий создана';
+/** Предел серии: столько же встреч за раз принимает сервис. */
+export const SESSION_SERIES_MAX = 100;
+export const SESSION_COPY_LABEL = 'Скопировать';
+export const SESSION_CREATE_TITLE = 'Новая сессия';
+export const SESSION_COPY_TITLE = 'Копия сессии';
+export const SESSION_COPY_DESCRIPTION =
+  'Стоимость, условия оплаты и принятые игроки перенесутся. Присутствие каждого игрока сбросится на «Не буду».';
+export const SESSION_TITLE_LABEL = 'Название';
+export const SESSION_TITLE_PLACEHOLDER = 'Знакомство с Баровией';
+export const SESSION_COPY_TITLE_PLACEHOLDER =
+  'Оставьте пустым, чтобы сохранить прежнее';
+export const SESSION_STARTS_AT_LABEL = 'Начало';
+export const SESSION_DATE_LABEL = 'Дата';
+/**
+ * Время встречи мастер задаёт границами, а не длительностью: он думает
+ * «с семи до одиннадцати», а не «четыре часа».
+ */
+export const SESSION_TIME_START_LABEL = 'Начало';
+export const SESSION_TIME_END_LABEL = 'Конец';
+export const SESSION_TIME_RANGE_HINT =
+  'Конец раньше начала — сессия заканчивается на следующий день';
+
+/**
+ * Формат времени сессии со смещением часового пояса. Игроки собираются из
+ * разных поясов, и «17:00» без пояса каждый читает по-своему; время всегда
+ * показывается в поясе смотрящего, а смещение это проговаривает.
+ */
+export const SESSION_DATE_FORMAT = 'LLL ([UTC]Z)';
+
+export const SESSION_TIMEZONE_HINT_PREFIX = 'Время в вашем часовом поясе';
+
+/** Минут в часе — для перевода времени встречи в длительность. */
+export const MINUTES_IN_HOUR = 60;
+
+/**
+ * Время встречи по умолчанию: вечер буднего дня, когда игра и собирается.
+ * Конец раньше начала считается переходом через полночь, поэтому ночная
+ * сессия задаётся теми же двумя полями.
+ */
+export const SESSION_DEFAULT_START_HOUR = 19;
+export const SESSION_DEFAULT_END_HOUR = 23;
+
+export const SESSION_START_LABEL = 'Начать';
+
+export const SESSION_NEEDS_CONFIRMATION =
+  'Начать или завершить встречу можно, когда хотя бы один игрок подтвердит участие';
+export const SESSION_STARTED_TOAST = 'Сессия начата';
+export const SESSION_COMPLETE_LABEL = 'Завершить';
+export const SESSION_CANCEL_LABEL = 'Отменить';
+export const SESSION_CANCEL_TITLE = 'Отмена сессии';
+
+export const SESSION_CANCEL_DESCRIPTION =
+  'Сессия будет отмечена как несостоявшаяся: она уйдёт из предстоящих, места освободятся, а поданные заявки останутся историей. Вернуть её в набор нельзя.';
+
+export const SESSION_CANCELLED_TOAST = 'Сессия отменена';
+export const SESSION_COMPLETE_TITLE = 'Завершение сессии';
+
+export const SESSION_COMPLETE_DESCRIPTION =
+  'Сессия уйдёт из предстоящих, места в ней освободятся, а поданные заявки останутся историей. Вернуть сессию в набор нельзя.';
+
+export const SESSION_COMPLETED_TOAST = 'Сессия завершена';
+
+export const SESSION_PRICE_LABEL = 'Стоимость';
+export const SESSION_CURRENCY_LABEL = 'Валюта';
+export const SESSION_CURRENCY_PLACEHOLDER = 'Выберите валюту';
+
+/** Валюта по умолчанию: большинство игр на сайте считают в рублях. */
+export const SESSION_DEFAULT_CURRENCY = 'RUB';
+
+/**
+ * Валюты оплаты сессии. Сервис принимает трёхбуквенный код ISO 4217, а
+ * вводить его руками — источник опечаток вроде «РУБ» или «rub», поэтому
+ * мастер выбирает из списка. Список открытый: не хватает валюты — допишите
+ * сюда, ограничение сервиса это не нарушит.
+ */
+export const SESSION_CURRENCIES = [
+  { code: 'RUB', name: 'Российский рубль' },
+  { code: 'BYN', name: 'Белорусский рубль' },
+  { code: 'KZT', name: 'Тенге' },
+  { code: 'UAH', name: 'Гривна' },
+  { code: 'AMD', name: 'Драм' },
+  { code: 'GEL', name: 'Лари' },
+  { code: 'KGS', name: 'Сом' },
+  { code: 'UZS', name: 'Сум' },
+  { code: 'EUR', name: 'Евро' },
+  { code: 'USD', name: 'Доллар США' },
+  { code: 'RSD', name: 'Сербский динар' },
+  { code: 'TRY', name: 'Турецкая лира' },
+] as const;
+
+/**
+ * Готовые варианты для списков выбора валюты: в подписи видно и код, и
+ * название — по коду мастер узнаёт валюту, по названию находит её поиском.
+ */
+export const SESSION_CURRENCY_OPTIONS: Array<{
+  value: string;
+  label: string;
+}> = SESSION_CURRENCIES.map((currency) => ({
+  value: currency.code,
+  label: `${currency.code} — ${currency.name}`,
+}));
+
+export const SESSION_PAYMENT_TYPE_LABEL = 'Оплата';
+export const SESSION_FREE_SESSION_LABEL = 'Бесплатно';
+
+export const SESSION_FREE_SESSION_HINT =
+  'Знакомство или отработку можно провести без оплаты, даже если игра платная.';
+
+export const SESSION_PAID_HINT =
+  'Игра платная: сумма, валюта и условия оплаты обязательны.';
+export const SESSION_FREE_HINT =
+  'Игра бесплатная: платёжные поля у сессии не заполняются.';
+export const SESSION_CREATED_TOAST = 'Сессия создана';
+export const SESSION_COPIED_TOAST = 'Сессия скопирована';
+/**
+ * Состояния сессий, показываемые по умолчанию: то, что впереди, и то, что
+ * идёт прямо сейчас. Завершённые и отменённые копятся у долгой кампании и
+ * заслоняют набор, ради которого страницу и открывают.
+ */
+export const SESSIONS_DEFAULT_STATUSES = ['SCHEDULED', 'IN_PROGRESS'] as const;
+
+export const SESSIONS_FILTER_LABEL = 'Состояние сессий';
+export const SESSIONS_FILTER_PLACEHOLDER = 'Все состояния';
+
+export const SESSIONS_EMPTY_FILTERED_TITLE = 'Таких сессий нет';
+
+export const SESSIONS_EMPTY_FILTERED_DESCRIPTION =
+  'Ни одна сессия игры не в выбранном состоянии.';
+
+/* Расписание: таймлайн и список. */
+
+/**
+ * Масштаб таймлайна — длина показанного периода, как в календаре. Разброс
+ * велик — от разовой встречи до кампании на год, — и одним периодом такое не
+ * охватить.
+ *
+ * Дня среди масштабов нет: сессии идут раз в неделю или реже, и однодневное
+ * окно почти всегда пустует.
+ */
+export const SESSION_TIMELINE_SCALES = ['WEEK', 'MONTH', 'YEAR'] as const;
+
+export const SESSION_TIMELINE_SCALE_LABELS = {
+  WEEK: 'Неделя',
+  MONTH: 'Месяц',
+  YEAR: 'Год',
+} as const;
+
+/**
+ * Масштаб по умолчанию. Сессии обычно идут раз в неделю, и в месяце их видно
+ * сразу несколько — ближайшая и то, что за ней.
+ */
+export const SESSION_TIMELINE_DEFAULT_SCALE = 'MONTH';
+
+/** Дата сессии на оси: чем шире период, тем крупнее единица в подписи. */
+export const SESSION_TIMELINE_DATE_FORMATS = {
+  WEEK: 'dd, HH:mm',
+  MONTH: 'D MMM, HH:mm',
+  YEAR: 'D MMM, HH:mm',
+} as const;
+
+/** Подпись периода: у недели диапазон дат, у года — только год. */
+export const SESSION_TIMELINE_WINDOW_FORMATS = {
+  WEEK: 'D MMMM YYYY',
+  MONTH: 'MMMM YYYY',
+  YEAR: 'YYYY',
+} as const;
+
+export const SESSION_TIMELINE_VIEW_LABEL = 'Таймлайн';
+export const SESSION_LIST_VIEW_LABEL = 'Список';
+export const SESSIONS_VIEW_LABEL = 'Вид расписания';
+export const SESSION_TIMELINE_SCALE_LABEL = 'Масштаб';
+export const SESSION_TIMELINE_PREV_LABEL = 'Предыдущий период';
+export const SESSION_TIMELINE_NEXT_LABEL = 'Следующий период';
+export const SESSION_TIMELINE_TODAY_LABEL = 'Сегодня';
+export const SESSION_TIMELINE_NEAREST_LABEL = 'К ближайшей сессии';
+export const SESSION_TIMELINE_NEAREST_BADGE = 'Ближайшая';
+export const SESSION_TIMELINE_NOW_BADGE = 'Сейчас';
+export const SESSION_TIMELINE_EMPTY_TITLE = 'В этом периоде сессий нет';
+export const SESSION_TIMELINE_EMPTY_DESCRIPTION =
+  'Смените масштаб, перелистните период или перейдите к ближайшей сессии.';
+export const SESSION_DETAIL_TITLE = 'Сессия';
+export const SESSION_TIMELINE_OUTSIDE_PREFIX = 'Вне периода';
+
+export const SESSIONS_EMPTY_TITLE = 'Сессий пока нет';
+export const SESSIONS_EMPTY_MASTER_DESCRIPTION =
+  'Создайте первую сессию, чтобы игроки могли подать заявку.';
+export const SESSIONS_EMPTY_PLAYER_DESCRIPTION =
+  'Мастер ещё не назначил ни одной сессии.';
+export const GAME_APPROVED_PLAYERS_LABEL = 'Принято игроков';
+
+/**
+ * Отборы состава на вкладке «Участники». Отклонённая заявка — это и отказ
+ * новичку, и исключение игрока мастером: обе остаются историей, но каждый
+ * день мастеру нужен живой состав, поэтому по умолчанию их не видно.
+ * Вышедшие исчезают сами: сервис удаляет их заявку.
+ */
+export const REGISTRATION_FILTERS = [
+  'ACTIVE',
+  'PENDING',
+  'APPROVED',
+  'REJECTED',
+  'ALL',
+] as const;
+
+export const REGISTRATION_FILTER_LABELS = {
+  ACTIVE: 'В составе и заявки',
+  PENDING: 'На рассмотрении',
+  APPROVED: 'Принятые',
+  REJECTED: 'Отклонённые',
+  ALL: 'Все',
+} as const;
+
+/** Состояния заявок, которые показывает каждый отбор. */
+export const REGISTRATION_FILTER_STATUSES = {
+  ACTIVE: ['PENDING', 'APPROVED'],
+  PENDING: ['PENDING'],
+  APPROVED: ['APPROVED'],
+  REJECTED: ['REJECTED'],
+  ALL: SESSION_REGISTRATION_STATUSES,
+} as const;
+
+export const REGISTRATIONS_DEFAULT_FILTER = 'ACTIVE';
+export const REGISTRATIONS_FILTER_LABEL = 'Показывать';
+
+export const REGISTRATIONS_FILTER_EMPTY_TITLE = 'Заявок в этом состоянии нет';
+export const SESSION_PARTICIPANTS_COUNT_LABEL = 'Участников';
+export const SESSION_REGISTRATIONS_LABEL = 'Заявки';
+export const SESSION_PARTICIPANTS_LABEL = 'Участники';
+
+export const SESSION_PARTICIPANTS_EMPTY_TITLE =
+  'В сессии пока никого нет — состав появится, когда мастер примет заявки';
+
+export const PAYMENT_SAVED_TOAST = 'Отметка оплаты сохранена';
+
+/* Подписи заявок игрока. */
+export const APPLY_LABEL = 'Подать заявку';
+export const APPLY_TITLE = 'Заявка на сессию';
+export const APPLY_CHARACTER_SHEET_LABEL = 'Ссылка на лист персонажа';
+export const APPLY_CHARACTER_SHEET_PLACEHOLDER =
+  'https://ttg.club/tools/character-sheet';
+/* Чем игрок представляет персонажа в заявке. */
+export const APPLY_SOURCES = ['SHEET', 'LINK', 'NAME'] as const;
+
+export const APPLY_SOURCE_LABELS = {
+  SHEET: 'Мой лист',
+  LINK: 'Ссылка',
+  NAME: 'Только имя',
+} as const;
+
+export const APPLY_OWN_SHEET_LABEL = 'Лист персонажа';
+export const APPLY_OWN_SHEET_PLACEHOLDER = 'Выберите свой лист';
+
+export const APPLY_OWN_SHEET_EMPTY =
+  'Своих листов пока нет — приложите ссылку или назовите персонажа';
+
+export const APPLY_OWN_SHEET_HINT =
+  'Мастер откроет лист по ссылке; доступ включится автоматически.';
+
+export const APPLY_CHARACTER_NAME_LABEL = 'Имя персонажа';
+export const APPLY_CHARACTER_NAME_PLACEHOLDER = 'Тассельхоф Непоседа';
+
+export const APPLY_SHARE_FAILED_MESSAGE =
+  'Не удалось открыть доступ к листу по ссылке';
+export const APPLY_WITHDRAW_LABEL = 'Отозвать заявку';
+
+/** Подпись собственной заявки в сводке: значок статуса без неё нем. */
+export const APPLY_OWN_STATUS_LABEL = 'Ваша заявка';
+export const APPLY_WITHDRAWN_TOAST = 'Заявка отозвана';
+
+export const APPLY_SENT_TOAST = 'Заявка отправлена';
+export const APPLY_PROFILE_REQUIRED_TITLE = 'Заполните профиль игрока';
+export const APPLY_PROFILE_REQUIRED_DESCRIPTION =
+  'Мастер принимает заявки только от игроков, которые указали год рождения, пол, опыт в НРИ и рассказали о себе.';
+export const APPLY_PROFILE_REQUIRED_ACTION = 'Перейти в профиль';
+export const ATTENDANCE_TITLE = 'Придёте на сессию?';
+export const ATTENDANCE_SAVED_TOAST = 'Присутствие обновлено';
+export const PAYMENT_PAID_LABEL = 'Оплачено';
+export const PAYMENT_UNPAID_LABEL = 'Не оплачено';
+export const PAYMENT_MARK_LABEL = 'Отметить оплату';
+export const PAYMENT_UNMARK_LABEL = 'Снять отметку';
+export const REGISTRATION_APPROVE_LABEL = 'Принять';
+export const REGISTRATION_REJECT_LABEL = 'Отклонить';
+export const REGISTRATION_EXCLUDE_LABEL = 'Исключить';
+export const REGISTRATION_EXCLUDE_HINT =
+  'Игрок покинет игру и все незакрытые сессии';
+export const REGISTRATION_REJECT_TITLE = 'Отклонение заявки';
+export const REGISTRATION_EXCLUDE_TITLE = 'Исключение игрока';
+export const REGISTRATION_REASON_LABEL = 'Причина (необязательно)';
+export const REGISTRATION_REASON_PLACEHOLDER =
+  'Например: состав уже собран под другой стиль игры';
+export const REGISTRATION_REASON_HINT =
+  'Игрок увидит её у своей заявки. Оставьте пустой, если объяснять нечего.';
+export const REGISTRATION_REASON_MAX_LENGTH = 500;
+export const REGISTRATION_REJECTED_REASON_TITLE = 'Причина отказа';
+export const REGISTRATION_REVIEWED_TOAST = 'Заявка обработана';
+export const REGISTRATION_CHARACTER_SHEET_LABEL = 'Лист персонажа';
+export const REGISTRATIONS_EMPTY_TITLE = 'Заявок пока нет';
+export const REGISTRATIONS_FULL_HINT =
+  'Все места заняты: принять ещё одного игрока не получится.';
+
+/* Пустые состояния и ошибки каталога. */
+export const CATALOG_EMPTY_TITLE = 'Игр не нашлось';
+export const CATALOG_EMPTY_DESCRIPTION =
+  'Попробуйте ослабить условия подбора или сбросить фильтры.';
+export const CATALOG_ERROR_TITLE = 'Не удалось загрузить каталог';
+export const CATALOG_RETRY_LABEL = 'Повторить';
+
+/** Параметр приглашения в адресе приватной игры. */
+export const INVITE_CODE_QUERY_KEY = 'inviteCode';

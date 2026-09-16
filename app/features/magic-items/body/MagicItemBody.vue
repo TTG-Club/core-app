@@ -1,9 +1,9 @@
 <script setup lang="ts">
-  import type { MagicItemDetailResponse } from '~magic-items/model';
+  import type { MagicItemDetailResponse } from '../model';
 
   import { UiGallery } from '~ui/gallery';
 
-  import { DescriptionsBlock, TopBar } from './ui';
+  import { DescriptionsBlock, PropertiesBlock, TopBar } from './ui';
 
   defineProps<{
     magicItem: MagicItemDetailResponse;
@@ -19,6 +19,8 @@
         <div class="max-w-40 overflow-hidden rounded-md border border-default">
           <UiGallery :preview="magicItem.image || '/img/no-img.webp'" />
         </div>
+
+        <PropertiesBlock :magic-item />
       </div>
 
       <div class="flex flex-auto flex-col gap-3">

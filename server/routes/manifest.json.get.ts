@@ -17,7 +17,7 @@ export default defineEventHandler<Request>(async (event) => {
     const query = await getValidatedQuery(event, requestSchema.parse);
 
     themeName = query?.theme || 'dark';
-  } catch (err) {
+  } catch (error) {
     themeName = 'dark';
   }
 

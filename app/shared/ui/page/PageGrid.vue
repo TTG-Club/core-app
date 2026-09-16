@@ -1,7 +1,20 @@
 <script setup lang="ts">
+  /**
+   * Промежутки между карточками. Плотный — для списков-строк справочника,
+   * просторный — для карточек с обложками, где плотная сетка сливается в
+   * сплошное полотно.
+   */
+  const GAP_CLASSES = {
+    tight: 'gap-3',
+    wide: 'gap-4',
+  } as const;
+
   const props = defineProps<{
     columns?: 1 | 2 | 3 | 4 | 5 | 6;
+    gap?: keyof typeof GAP_CLASSES;
   }>();
+
+  const gapClass = computed(() => GAP_CLASSES[props.gap ?? 'tight']);
 
   const gridClasses = computed(() => {
     const maxCols = Math.min(props.columns ?? 6, 6);
@@ -21,7 +34,7 @@
 
 <template>
   <div class="@container">
-    <div :class="['grid gap-3', gridClasses]">
+    <div :class="['grid', gapClass, gridClasses]">
       <slot />
     </div>
   </div>

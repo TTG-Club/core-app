@@ -1,7 +1,13 @@
 <script setup lang="ts">
   import type { DropdownMenuItem } from '@nuxt/ui';
 
-  import type { Character, SheetSaveStatus } from '../../model';
+  import type {
+    Character,
+    SheetReadonlyReason,
+    SheetSaveStatus,
+  } from '../../model';
+
+  import { ACTION_LABELS } from '~/shared/consts';
 
   import {
     getClassesDisplayLabel,
@@ -12,8 +18,10 @@
     LONG_REST_LABELS,
     SHEET_COPY_LIMIT_HINT,
     SHEET_EMPTY_LABELS,
+    SHEET_HEADER_LABELS,
     SHEET_OPEN_ON_PAGE_LABEL,
-    SHEET_READONLY_LABELS,
+    SHEET_READONLY_BADGE_LABEL,
+    SHEET_READONLY_TOOLTIPS,
     SHEET_SAVE_LINK_LIMIT_HINT,
     SHEET_SAVE_SHARED_LABELS,
     SHEET_SAVE_STATUS_META,
@@ -34,17 +42,19 @@
     /** В лимите активных листов есть свободное место — копия разрешена. */
     canDuplicate?: boolean;
     /**
-     * Лист открыт по ссылке: вместо замка и действий владельца — пометка
-     * «только просмотр», из меню остаётся один экспорт.
+     * Лист чужой (открыт по ссылке или администратором): вместо замка и
+     * действий владельца — пометка «только просмотр», из меню остаётся один
+     * экспорт. null — лист свой.
      */
-    readonly?: boolean;
+    readonlyReason?: SheetReadonlyReason | null;
     /** Доступ по ссылке уже включён (пометка в меню действий). */
     shared?: boolean;
     /** Идёт сборка PDF — пункт меню показывает загрузку. */
     pdfLoading?: boolean;
     /**
-     * Чужой лист можно сохранить к себе: у зрителя есть доступ к инструменту и
-     * известен токен ссылки. false — в меню остаётся только выгрузка.
+     * Чужой лист можно сохранить к себе: у зрителя есть доступ к инструменту.
+     * Закладка в «Другие листы» при этом есть только у листа по ссылке.
+     * false — в меню остаётся только выгрузка.
      */
     canSaveShared?: boolean;
     /** В лимите своих активных листов есть место — копия чужого разрешена. */
@@ -80,16 +90,26 @@
     'save-link': [];
   }>();
 
+  // Подсказка пометки «только просмотр» объясняет причину режима; null — лист
+  // свой, пометки нет.
+  const readonlyTooltip = computed(() =>
+    props.readonlyReason ? SHEET_READONLY_TOOLTIPS[props.readonlyReason] : null,
+  );
+
+  // «Другие листы» хранят ссылки: лист, открытый администратором без ссылки,
+  // туда не добавить — ему остаётся только копия.
+  const canBookmarkLink = computed(() => props.readonlyReason === 'shared');
+
   // Меню действий листа (кнопка-троеточие в шапке) — то же, что в карточке
-  // списка персонажей. У листа, открытого по ссылке, владельческих действий нет,
-  // у запертого нет настроек: состав пунктов решает сам хелпер по флагам
-  // `isReadonly` и `isLocked`.
+  // списка персонажей. У чужого листа владельческих действий нет, у запертого
+  // нет настроек: состав пунктов решает сам хелпер по флагам `isReadonly` и
+  // `isLocked`.
   const menuItems = computed<Array<Array<DropdownMenuItem>>>(() =>
     getSheetActionMenuItems({
       canDuplicate: props.canDuplicate ?? false,
       canRemove: true,
       isShared: props.shared,
-      isReadonly: props.readonly,
+      isReadonly: Boolean(props.readonlyReason),
       isLocked: props.locked,
       isPdfLoading: props.pdfLoading,
       onDownload: () => emit('download'),
@@ -256,7 +276,7 @@
               size="xs"
               square
               class="rounded-full"
-              aria-label="Настроить зрение"
+              :aria-label="SHEET_HEADER_LABELS.vision"
               @click.left.exact.prevent="emit('edit-vision')"
             />
           </span>
@@ -319,7 +339,7 @@
       <button
         type="button"
         class="max-w-full cursor-pointer truncate text-center text-3xl font-bold tracking-wide text-highlighted transition-colors hover:text-primary @2xl:max-w-fit @2xl:text-left"
-        aria-label="Изменить имя персонажа"
+        :aria-label="SHEET_HEADER_LABELS.name"
         @click.left.exact.prevent="emit('edit-name')"
       >
         {{ character.name }}
@@ -331,7 +351,7 @@
         <button
           type="button"
           class="cursor-pointer rounded px-1 transition-colors hover:bg-elevated/60 hover:text-primary"
-          aria-label="Выбрать вид персонажа"
+          :aria-label="SHEET_HEADER_LABELS.species"
           @click.left.exact.prevent="emit('edit-species')"
         >
           {{ speciesLabel }}
@@ -342,7 +362,7 @@
         <button
           type="button"
           class="cursor-pointer rounded px-1 transition-colors hover:bg-elevated/60 hover:text-primary"
-          aria-label="Выбрать класс персонажа"
+          :aria-label="SHEET_HEADER_LABELS.characterClass"
           @click.left.exact.prevent="emit('edit-class')"
         >
           {{ classLabel }}
@@ -353,7 +373,7 @@
         <button
           type="button"
           class="cursor-pointer truncate rounded px-1 transition-colors hover:bg-elevated/60 hover:text-primary"
-          aria-label="Выбрать предысторию персонажа"
+          :aria-label="SHEET_HEADER_LABELS.background"
           @click.left.exact.prevent="emit('edit-background')"
         >
           {{ backgroundLabel }}
@@ -363,11 +383,12 @@
       <button
         type="button"
         class="mt-2 flex w-full cursor-pointer items-center gap-3 rounded p-1 text-xs text-toned transition-colors hover:bg-elevated/40 @5xl:max-w-lg"
-        aria-label="Настроить опыт и уровень"
+        :aria-label="SHEET_HEADER_LABELS.progress"
         @click.left.exact.prevent="emit('edit-progress')"
       >
         <span class="shrink-0"
-          ><span class="hidden @5xl:inline">Уровень </span
+          ><span class="hidden @5xl:inline"
+            >{{ SHEET_HEADER_LABELS.levelPrefix }}&nbsp;</span
           >{{ character.level }}</span
         >
 
@@ -397,7 +418,8 @@
         </span>
 
         <span class="shrink-0"
-          ><span class="hidden @5xl:inline">Уровень </span
+          ><span class="hidden @5xl:inline"
+            >{{ SHEET_HEADER_LABELS.levelPrefix }}&nbsp;</span
           >{{ character.level + 1 }}</span
         >
       </button>
@@ -427,11 +449,11 @@
         <!-- Замок чужого листа бессмысленен: снять его зритель всё равно не
           может, поэтому вместо него — пометка о режиме просмотра -->
         <UTooltip
-          v-if="readonly"
-          :text="SHEET_READONLY_LABELS.tooltip"
+          v-if="readonlyTooltip"
+          :text="readonlyTooltip"
         >
           <UBadge
-            :label="SHEET_READONLY_LABELS.badge"
+            :label="SHEET_READONLY_BADGE_LABEL"
             icon="tabler:eye"
             color="neutral"
             variant="subtle"
@@ -447,7 +469,7 @@
             variant="subtle"
             size="lg"
             class="@2xl:hidden"
-            :aria-label="SHEET_READONLY_LABELS.badge"
+            :aria-label="SHEET_READONLY_BADGE_LABEL"
           />
         </UTooltip>
 
@@ -464,7 +486,10 @@
             />
           </UTooltip>
 
-          <UTooltip :text="saveLinkTooltip">
+          <UTooltip
+            v-if="canBookmarkLink"
+            :text="saveLinkTooltip"
+          >
             <UButton
               :icon="saveLinkIcon"
               :color="saveLinkColor"
@@ -497,7 +522,7 @@
             color="neutral"
             variant="ghost"
             square
-            aria-label="Действия с листом"
+            :aria-label="SHEET_HEADER_LABELS.menu"
           />
         </UDropdownMenu>
 
@@ -517,14 +542,14 @@
 
         <UTooltip
           v-if="canClose"
-          text="Закрыть"
+          :text="ACTION_LABELS.close"
         >
           <UButton
             icon="tabler:x"
             color="neutral"
             variant="ghost"
             square
-            aria-label="Закрыть"
+            :aria-label="ACTION_LABELS.close"
             @click.left.exact.prevent="emit('close')"
           />
         </UTooltip>
@@ -534,7 +559,7 @@
         <UTooltip :text="inspirationTooltip">
           <UButton
             icon="tabler:sparkles"
-            label="Вдохновение"
+            :label="SHEET_HEADER_LABELS.inspiration"
             color="primary"
             :variant="inspirationVariant"
             class="@max-5xl:hidden"
@@ -553,7 +578,7 @@
             class="@5xl:hidden"
             :class="inspirationClass"
             :aria-pressed="character.inspiration"
-            aria-label="Вдохновение"
+            :aria-label="SHEET_HEADER_LABELS.inspiration"
             @click.left.exact.prevent="emit('toggle-inspiration')"
           />
         </UTooltip>

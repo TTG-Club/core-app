@@ -5,6 +5,7 @@
     ProfileNavigationTabs,
     ProfileSidebar,
   } from '~profile/sidebar';
+  import { PageBackdrop } from '~ui/page';
 
   const { user: profile, fetch: fetchUserProfile } = useUser();
 
@@ -18,9 +19,16 @@
 <template>
   <NuxtLayout>
     <ClientOnly>
-      <div class="relative min-h-[calc(100vh-var(--header-height))] pb-20">
-        <HomeBackground />
+      <!--
+        Фоновые слои лежат вне обёртки и без `relative` на пути к контейнеру
+        страницы в `app.vue`: иначе они обрезались колонкой layout'а, и по
+        бокам от профиля частиц не было.
+      -->
+      <PageBackdrop :glow="false" />
 
+      <HomeBackground />
+
+      <div class="pb-20">
         <UContainer class="relative z-10 pt-6">
           <div class="grid grid-cols-1 items-start gap-8 lg:grid-cols-16">
             <!-- Sidebar: Profile Info -->

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-  import type { CreatureLinkResponse } from '~bestiary/model';
+  import type { CreatureLinkResponse } from '../model';
 
-  import { CreatureDrawer } from '~bestiary/drawer';
   import { SmallLink } from '~ui/link';
+
+  import { CreatureDrawer } from '../drawer';
 
   const { creature } = defineProps<{
     creature: CreatureLinkResponse;
