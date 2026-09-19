@@ -973,7 +973,7 @@ export async function createGameRegistration(
 /**
  * Собственная заявка игрока.
  *
- * Отсутствие заявки сервис отдаёт как 404 — здесь это `null`, а не ошибка:
+ * Отсутствие заявки сервис отдаёт как 204 — здесь это `null`, а не ошибка:
  * «заявки ещё не было» для интерфейса такое же нормальное состояние, как
  * `PENDING` или `REJECTED`.
  *
@@ -985,14 +985,15 @@ export async function fetchOwnGameRegistration(
   inviteCode: string | null,
 ): Promise<GameRegistration | null> {
   try {
-    const response = await $fetch(`${registrationsPath(gameId)}/me`, {
+    const response: unknown = await $fetch(`${registrationsPath(gameId)}/me`, {
       method: 'GET',
       query: { inviteCode: inviteCode || undefined },
       retry: 0,
     });
 
-    return parseGameRegistration(response);
+    return response === undefined ? null : parseGameRegistration(response);
   } catch (error) {
+    // Старый API до обновления возвращает 404, когда заявки ещё нет.
     if (getFindGameStatus(error) === StatusCodes.NOT_FOUND) {
       return null;
     }
