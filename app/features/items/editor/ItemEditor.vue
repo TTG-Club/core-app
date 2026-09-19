@@ -185,6 +185,17 @@
                   :placeholder="ITEM_FORM_LABELS.weightPlaceholder"
                 />
               </UFormField>
+
+              <UFormField
+                class="md:col-span-24"
+                :help="ITEM_FORM_LABELS.consumableHint"
+                name="consumable"
+              >
+                <UCheckbox
+                  v-model="state.consumable"
+                  :label="ITEM_FORM_LABELS.consumable"
+                />
+              </UFormField>
             </div>
           </UCard>
 

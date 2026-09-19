@@ -198,6 +198,11 @@ export interface ItemCreate extends EditorBaseInfoState {
   image: string | undefined;
   /** Категория снаряжения VTTG; пусто — вывести из типов предмета. */
   equipmentCategory: ItemEquipmentCategory | undefined;
+  /**
+   * Расходуемый: применение тратит единицу предмета. Им же игрок заряжает
+   * стрелковое оружие на листе — с 0.8.62 система не спрашивает тип боеприпаса.
+   */
+  consumable: boolean;
   weapon: WeaponCreate; // данные оружия
   armor: ArmorCreate; // данные доспеха
   tool: ToolCreate; // данные инструмента
@@ -276,6 +281,7 @@ export function createEmptyItem(): ItemCreate {
     weight: undefined,
     image: undefined,
     equipmentCategory: undefined,
+    consumable: false,
     tags: [],
     weapon: createEmptyWeapon(),
     armor: createEmptyArmor(),
@@ -475,6 +481,9 @@ export function normalizeLoadedItem(
   const normalized: Record<string, unknown> = {
     ...rest,
     ...subforms,
+    // Незаданный признак приходит как `null`: галочке нужен именно `false`,
+    // иначе она встанет в неопределённое состояние
+    consumable: raw.consumable === true,
     activeEffects: normalizeLoadedActiveEffects(raw.activeEffects),
   };
 
