@@ -185,23 +185,30 @@ export const EFFECT_AURA_TARGET_SCENARIO_LABELS: Record<
   all: 'все существа',
 };
 
-/** Ключи стандартных состояний D&D 5e. */
+/**
+ * Ключи стандартных состояний D&D 5e.
+ *
+ * Названия — как в остальном каталоге сайта (`CONDITION_LABELS` листа,
+ * `CONDITION_CATALOG` трекера, справочник `/dictionaries/conditions`); там они
+ * совпадают с `CONDITIONS` системы VTTG. Своей формы слова здесь не заводится:
+ * одно состояние, названное в двух местах по-разному, читается как два.
+ */
 export const EFFECT_CONDITION_OPTIONS: Array<Option<EffectConditionKey>> = [
-  { label: 'Ослеплён', value: 'blinded' },
-  { label: 'Очарован', value: 'charmed' },
+  { label: 'Ослеплённый', value: 'blinded' },
+  { label: 'Очарованный', value: 'charmed' },
   { label: 'Оглохший', value: 'deafened' },
-  { label: 'Истощение', value: 'exhaustion' },
-  { label: 'Испуган', value: 'frightened' },
-  { label: 'Схвачен', value: 'grappled' },
-  { label: 'Недееспособен', value: 'incapacitated' },
+  { label: 'Истощённый', value: 'exhaustion' },
+  { label: 'Испуганный', value: 'frightened' },
+  { label: 'Схваченный', value: 'grappled' },
+  { label: 'Недееспособный', value: 'incapacitated' },
   { label: 'Невидимый', value: 'invisible' },
-  { label: 'Парализован', value: 'paralyzed' },
-  { label: 'Окаменел', value: 'petrified' },
-  { label: 'Отравлен', value: 'poisoned' },
-  { label: 'Сбит с ног', value: 'prone' },
-  { label: 'Опутан', value: 'restrained' },
-  { label: 'Ошеломлён', value: 'stunned' },
-  { label: 'Без сознания', value: 'unconscious' },
+  { label: 'Парализованный', value: 'paralyzed' },
+  { label: 'Окаменевший', value: 'petrified' },
+  { label: 'Отравленный', value: 'poisoned' },
+  { label: 'Лежащий ничком', value: 'prone' },
+  { label: 'Опутанный', value: 'restrained' },
+  { label: 'Ошеломлённый', value: 'stunned' },
+  { label: 'Бессознательный', value: 'unconscious' },
 ];
 
 /**
@@ -280,17 +287,23 @@ export function describeEffectCreatureSize(creatureSize: string): string {
   );
 }
 
-/** Типы урона (ключи — словарь VTTG, lowercase). */
+/**
+ * Типы урона (ключи — словарь VTTG, lowercase).
+ *
+ * Названия — как в `DAMAGE_TYPE_LABELS` каталога (`~ui/damage-formula`): поле
+ * урона эффекта берёт подписи оттуда, и короткая форма рядом («Огонь» против
+ * «Огненный») читалась бы как другой тип.
+ */
 export const EFFECT_DAMAGE_TYPE_OPTIONS: Array<Option<EffectDamageType>> = [
   { label: 'Рубящий', value: 'slashing' },
   { label: 'Колющий', value: 'piercing' },
   { label: 'Дробящий', value: 'bludgeoning' },
-  { label: 'Огонь', value: 'fire' },
-  { label: 'Холод', value: 'cold' },
-  { label: 'Электричество', value: 'lightning' },
-  { label: 'Звук', value: 'thunder' },
-  { label: 'Яд', value: 'poison' },
-  { label: 'Кислота', value: 'acid' },
+  { label: 'Огненный', value: 'fire' },
+  { label: 'Холодный', value: 'cold' },
+  { label: 'Электрический', value: 'lightning' },
+  { label: 'Звуковой', value: 'thunder' },
+  { label: 'Ядовитый', value: 'poison' },
+  { label: 'Кислотный', value: 'acid' },
   { label: 'Некротический', value: 'necrotic' },
   { label: 'Излучение', value: 'radiant' },
   { label: 'Силовое поле', value: 'force' },
@@ -486,13 +499,13 @@ export const EFFECT_VALUE_SUGGESTIONS: Array<Option<string>> = [
   { value: '@speed.burrow', label: 'Скорость копания листа' },
 
   // Типы урона
-  { value: '1к6@dmg.fire', label: 'Урон: Огонь (1к6)' },
-  { value: '1к6@dmg.cold', label: 'Урон: Холод' },
-  { value: '1к6@dmg.lightning', label: 'Урон: Электричество' },
-  { value: '1к6@dmg.thunder', label: 'Урон: Звук' },
-  { value: '1к6@dmg.acid', label: 'Урон: Кислота' },
-  { value: '1к6@dmg.poison', label: 'Урон: Яд' },
-  { value: '1к6@dmg.necrotic', label: 'Урон: Некроз' },
+  { value: '1к6@dmg.fire', label: 'Урон: Огненный (1к6)' },
+  { value: '1к6@dmg.cold', label: 'Урон: Холодный' },
+  { value: '1к6@dmg.lightning', label: 'Урон: Электрический' },
+  { value: '1к6@dmg.thunder', label: 'Урон: Звуковой' },
+  { value: '1к6@dmg.acid', label: 'Урон: Кислотный' },
+  { value: '1к6@dmg.poison', label: 'Урон: Ядовитый' },
+  { value: '1к6@dmg.necrotic', label: 'Урон: Некротический' },
   { value: '1к6@dmg.radiant', label: 'Урон: Излучение' },
   { value: '1к6@dmg.force', label: 'Урон: Силовое поле' },
   { value: '1к6@dmg.psychic', label: 'Урон: Психический' },
@@ -961,10 +974,13 @@ export const EFFECT_FLAG_LABELS: Record<string, string> = Object.fromEntries([
     'mark.bySource',
     'Метка наложившего: его условие «цель помечена мной» (Метка охотника, Сглаз)',
   ],
-  ['incapacitated', 'Недееспособен (нет действий и реакций)'],
+  ['incapacitated', 'Недееспособный (нет действий и реакций)'],
   ['initiative.advantage', 'Преимущество на бросок инициативы'],
   ['initiative.disadvantage', 'Помеха на бросок инициативы'],
-  ['vision.blinded', 'Ослеплён (ничего не видит, автопровал проверок зрения)'],
+  [
+    'vision.blinded',
+    'Ослеплённый (ничего не видит, автопровал проверок зрения)',
+  ],
   ['vision.invisible', 'Невидимый (скрыт от глаз, преимущество на атаки)'],
   ['defense.critImmunity', 'Защита: иммунитет к критическим попаданиям'],
 
