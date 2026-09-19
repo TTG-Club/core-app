@@ -620,6 +620,18 @@ describe('применение и включение', () => {
     expect(rageLayout.minSaveDc).toBe(FIXED_MIN_SAVE_DC);
   });
 
+  it('у применяемого предмета Сл своя: источника у зелья нет', () => {
+    const poison = createEffect({
+      effectTarget: 'target',
+      activation: { mode: 'use' },
+    });
+
+    const poisonLayout = resolveEffectFormLayout('item', poison);
+
+    expect(poisonLayout.delivery).toBe('target');
+    expect(poisonLayout.minSaveDc).toBe(FIXED_MIN_SAVE_DC);
+  });
+
   it('применяемое умение на цели бросает против Сл применившего', () => {
     const channel = createEffect({
       effectTarget: 'target',
