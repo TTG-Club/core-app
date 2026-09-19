@@ -542,7 +542,7 @@ describe('получатель «всем в радиусе»', () => {
       buildTriggerRecipientOptions(areaTrigger).map(
         (recipientOption) => recipientOption.value,
       ),
-    ).toEqual(['subject', 'area']);
+    ).toEqual(['subject', 'area', 'choice']);
 
     const turnTrigger = writeTriggerEvent(
       areaTrigger,
@@ -552,6 +552,31 @@ describe('получатель «всем в радиусе»', () => {
 
     expect(turnTrigger.recipient).toBeUndefined();
     expect(turnTrigger.area).toBeUndefined();
+  });
+
+  it('«по выбору» доступен и на границе хода, чужой блок не наследуется', () => {
+    const choiceTrigger: EffectTrigger = {
+      id: 'trigger_choice',
+      event: 'turnStart',
+      recipient: 'choice',
+      choice: { radius: AURA_RADIUS, target: 'allies', count: 1 },
+      actions: [{ type: 'removeSelf' }],
+    };
+
+    expect(
+      buildTriggerRecipientOptions(choiceTrigger).map(
+        (recipientOption) => recipientOption.value,
+      ),
+    ).toEqual(['subject', 'choice']);
+
+    const restTrigger = writeTriggerEvent(
+      choiceTrigger,
+      'rest',
+      resolveLayoutFor('ownEffects'),
+    );
+
+    expect(restTrigger.recipient).toBeUndefined();
+    expect(restTrigger.choice).toBeUndefined();
   });
 });
 

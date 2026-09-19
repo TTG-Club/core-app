@@ -8,6 +8,8 @@
     EffectTriggerActionType,
     EffectTriggerAreaTarget,
     EffectTriggerAttackRole,
+    EffectTriggerChoice,
+    EffectTriggerChooser,
     EffectTriggerEvent,
     EffectTriggerLimitPeriod,
     EffectTriggerRecipient,
@@ -20,12 +22,16 @@
   import {
     AREA_TRIGGER_RECIPIENT,
     buildTriggerRecipientOptions,
+    CHOICE_TRIGGER_RECIPIENT,
     clearTriggerActionGate,
     createDefaultEffectSave,
     createEffectTriggerAction,
     DEFAULT_TRIGGER_AREA_RADIUS,
     DEFAULT_TRIGGER_AREA_TARGET,
     DEFAULT_TRIGGER_ATTACK_ROLE,
+    DEFAULT_TRIGGER_CHOICE_COUNT,
+    DEFAULT_TRIGGER_CHOICE_RADIUS,
+    DEFAULT_TRIGGER_CHOOSER,
     DEFAULT_TRIGGER_LIMIT_PERIOD,
     DEFAULT_TRIGGER_RECIPIENT,
     DEFAULT_TRIGGER_REST_TYPE,
@@ -35,6 +41,8 @@
     EFFECT_TRIGGER_ACTION_ICONS,
     EFFECT_TRIGGER_ACTION_LABELS,
     EFFECT_TRIGGER_AREA_LABELS,
+    EFFECT_TRIGGER_CHOICE_LABELS,
+    EFFECT_TRIGGER_CHOOSER_OPTIONS,
     EFFECT_TRIGGER_EVENT_LABELS,
     EFFECT_TRIGGER_NORMAL_SAVE_MODE,
     EFFECT_TRIGGER_PERIOD_OPTIONS,
@@ -46,6 +54,7 @@
     EFFECT_TRIGGER_TURN_OWNER_LABELS,
     isTurnTriggerEvent,
     listTriggerActionTypes,
+    MAX_TRIGGER_CHOICE_COUNT,
     MIN_TRIGGER_AREA_RADIUS,
     MIN_TRIGGER_LIMIT_MAX,
     omitTriggerSaveDcFormula,
@@ -136,6 +145,10 @@
     () => trigger.value.recipient === AREA_TRIGGER_RECIPIENT,
   );
 
+  const isChoiceRecipient = computed(
+    () => trigger.value.recipient === CHOICE_TRIGGER_RECIPIENT,
+  );
+
   const recipientItems = computed(() =>
     buildTriggerRecipientOptions(trigger.value),
   );
@@ -177,7 +190,77 @@
           nextRecipient === AREA_TRIGGER_RECIPIENT
             ? (trigger.value.area ?? { radius: DEFAULT_TRIGGER_AREA_RADIUS })
             : undefined,
+        // «Выбранным» — с радиусом и одной целью
+        choice:
+          nextRecipient === CHOICE_TRIGGER_RECIPIENT
+            ? (trigger.value.choice ?? {
+                radius: DEFAULT_TRIGGER_CHOICE_RADIUS,
+              })
+            : undefined,
       }),
+  });
+
+  /**
+   * Меняет поле блока «по выбору», не теряя остальных.
+   *
+   * @param patch изменённые поля блока.
+   */
+  function updateChoice(patch: Partial<EffectTriggerChoice>): void {
+    updateTrigger({
+      choice: {
+        radius: DEFAULT_TRIGGER_CHOICE_RADIUS,
+        ...trigger.value.choice,
+        ...patch,
+      },
+    });
+  }
+
+  const choiceRadius = computed({
+    get: () => trigger.value.choice?.radius ?? DEFAULT_TRIGGER_CHOICE_RADIUS,
+    set: (nextRadius: number | null) => {
+      if (nextRadius !== null) {
+        updateChoice({ radius: nextRadius });
+      }
+    },
+  });
+
+  const choiceTarget = computed({
+    get: () => trigger.value.choice?.target ?? DEFAULT_TRIGGER_AREA_TARGET,
+    set: (nextTarget: EffectTriggerAreaTarget) =>
+      updateChoice({
+        target:
+          nextTarget === DEFAULT_TRIGGER_AREA_TARGET ? undefined : nextTarget,
+      }),
+  });
+
+  const choiceCount = computed({
+    get: () => trigger.value.choice?.count ?? DEFAULT_TRIGGER_CHOICE_COUNT,
+    set: (nextCount: number | null) => {
+      if (nextCount !== null) {
+        updateChoice({ count: nextCount });
+      }
+    },
+  });
+
+  const choiceChooser = computed({
+    get: () => trigger.value.choice?.chooser ?? DEFAULT_TRIGGER_CHOOSER,
+    set: (nextChooser: EffectTriggerChooser) =>
+      updateChoice({
+        chooser:
+          nextChooser === DEFAULT_TRIGGER_CHOOSER ? undefined : nextChooser,
+      }),
+  });
+
+  const choiceOptional = computed({
+    get: () => trigger.value.choice?.optional === true,
+    set: (enabled: boolean) =>
+      updateChoice({ optional: enabled ? true : undefined }),
+  });
+
+  const choiceCondition = computed({
+    get: () => trigger.value.choice?.condition,
+    set: (nextCondition: string | undefined) =>
+      updateChoice({ condition: nextCondition?.trim() || undefined }),
   });
 
   const areaRadius = computed({
@@ -476,6 +559,65 @@
         </UFormField>
       </template>
 
+      <template v-if="isChoiceRecipient">
+        <UFormField
+          :label="EFFECT_TRIGGER_CHOICE_LABELS.radius"
+          class="w-full sm:w-28"
+        >
+          <UInputNumber
+            v-model="choiceRadius"
+            :min="MIN_TRIGGER_AREA_RADIUS"
+            :step="EFFECT_AURA_RADIUS_STEP"
+            size="sm"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField
+          :label="EFFECT_TRIGGER_CHOICE_LABELS.target"
+          class="w-full sm:w-44"
+        >
+          <USelect
+            v-model="choiceTarget"
+            :items="EFFECT_AURA_TARGET_OPTIONS"
+            value-key="value"
+            size="sm"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField
+          :label="EFFECT_TRIGGER_CHOICE_LABELS.count"
+          class="w-full sm:w-28"
+        >
+          <UInputNumber
+            v-model="choiceCount"
+            :min="DEFAULT_TRIGGER_CHOICE_COUNT"
+            :max="MAX_TRIGGER_CHOICE_COUNT"
+            size="sm"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField
+          :label="EFFECT_TRIGGER_CHOICE_LABELS.chooser"
+          class="w-full sm:w-48"
+        >
+          <USelect
+            v-model="choiceChooser"
+            :items="EFFECT_TRIGGER_CHOOSER_OPTIONS"
+            value-key="value"
+            size="sm"
+            class="w-full"
+          />
+        </UFormField>
+
+        <USwitch
+          v-model="choiceOptional"
+          :label="EFFECT_TRIGGER_CHOICE_LABELS.optional"
+        />
+      </template>
+
       <UFormField
         v-if="showsTurnOwner"
         :label="EFFECT_TRIGGER_ROW_LABELS.turnOf"
@@ -506,6 +648,15 @@
       v-model:condition="condition"
       :event="trigger.event"
       :known-tags="knownTags"
+    />
+
+    <!-- Условие кандидата: тот же словарь, но проверяется на том, кого выбирают -->
+    <EffectTriggerConditionPicker
+      v-if="isChoiceRecipient"
+      v-model:condition="choiceCondition"
+      :event="trigger.event"
+      :known-tags="knownTags"
+      :title="EFFECT_TRIGGER_CHOICE_LABELS.condition"
     />
 
     <USwitch

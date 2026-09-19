@@ -100,15 +100,24 @@ export type EffectTriggerTurnOwner =
 export const DEFAULT_TRIGGER_TURN_OWNER: EffectTriggerTurnOwner = 'subject';
 
 /** Кому достаются действия срабатывания. */
-export const EFFECT_TRIGGER_RECIPIENTS = ['subject', 'other', 'area'] as const;
+export const EFFECT_TRIGGER_RECIPIENTS = [
+  'subject',
+  'other',
+  'area',
+  'choice',
+] as const;
 
 /** Получатель «всем в радиусе». */
 export const AREA_TRIGGER_RECIPIENT = 'area';
 
+/** Получатель «по выбору»: кого задеть, решает человек. */
+export const CHOICE_TRIGGER_RECIPIENT = 'choice';
+
 /**
  * Получатель действий: субъект — тот, на ком эффект, — другая сторона
- * события (кто нанёс урон) или все в радиусе от субъекта (`area`: взрыв при
- * смерти). Снятие эффекта всегда про эффект субъекта.
+ * события (кто нанёс урон), все в радиусе от субъекта (`area`: взрыв при
+ * смерти) или выбранные человеком (`choice`: «лечит одно существо на выбор»).
+ * Снятие эффекта всегда про эффект субъекта.
  */
 export type EffectTriggerRecipient = (typeof EFFECT_TRIGGER_RECIPIENTS)[number];
 
@@ -153,6 +162,79 @@ export const AREA_RECIPIENT_TRIGGER_EVENTS: readonly EffectTriggerEvent[] = [
   'applied',
   'attackRoll',
 ];
+
+/**
+ * События с получателем «по выбору». Спрашивают и на границе хода: «аура лечит
+ * одно существо на выбор в начале своего хода» — самый частый рецепт.
+ */
+export const CHOICE_RECIPIENT_TRIGGER_EVENTS: readonly EffectTriggerEvent[] = [
+  'turnStart',
+  'turnEnd',
+  'damageTaken',
+  'hpZero',
+  'applied',
+  'attackRoll',
+  'enter',
+  'exit',
+];
+
+/** Кто выбирает получателей: носитель эффекта или тот, кто его наложил. */
+export const EFFECT_TRIGGER_CHOOSERS = ['subject', 'source'] as const;
+
+/** Выбирающий. */
+export type EffectTriggerChooser = (typeof EFFECT_TRIGGER_CHOOSERS)[number];
+
+/** Кто выбирает без поля `chooser`: носитель эффекта. */
+export const DEFAULT_TRIGGER_CHOOSER: EffectTriggerChooser = 'subject';
+
+/** Сколько целей выбирают без поля `count`. */
+export const DEFAULT_TRIGGER_CHOICE_COUNT = 1;
+
+/** Радиус новой строки «по выбору», фт. */
+export const DEFAULT_TRIGGER_CHOICE_RADIUS = 30;
+
+/** Больше целей одним выбором не просят. */
+export const MAX_TRIGGER_CHOICE_COUNT = 20;
+
+/**
+ * «По выбору»: кандидаты и сколько из них задеть.
+ *
+ * Кандидаты отбираются так же, как «всем в радиусе» (радиус от фишки субъекта и
+ * отношение фишек), и дополнительно просеиваются условием из общего словаря
+ * условий — «только нежить», «только раненые». Что достанется выбранным, решают
+ * действия срабатывания: урон, лечение, временные хиты, состояние, отметка.
+ */
+export interface EffectTriggerChoice {
+  /** Радиус от фишки субъекта, фт. */
+  radius: number;
+  /** Кого можно выбрать; нет — всех, кроме субъекта. */
+  target?: EffectTriggerAreaTarget;
+  /** Сколько целей просят выбрать; нет — одну. */
+  count?: number;
+  /** Условие кандидата строкой словаря условий; нет — любой. */
+  condition?: string;
+  /** Выбор добровольный: отказ законен и не считается сбоем. */
+  optional?: true;
+  /** Кто выбирает; нет — носитель эффекта. */
+  chooser?: EffectTriggerChooser;
+}
+
+/**
+ * События, на которые реагирует наложенное состояние. Оно живёт своей жизнью на
+ * цели: каст, применение и наложение — про эффект-источник, у состояния их не
+ * бывает.
+ */
+export const NESTED_TRIGGER_EVENTS: readonly EffectTriggerEvent[] = [
+  'damageTaken',
+  'hpZero',
+  'turnStart',
+  'turnEnd',
+  'attackRoll',
+  'rest',
+];
+
+/** Событие нового вложенного срабатывания: «Сон» просыпается от урона. */
+export const DEFAULT_NESTED_TRIGGER_EVENT: EffectTriggerEvent = 'damageTaken';
 
 /** Роль субъекта в броске атаки. */
 export const EFFECT_TRIGGER_ATTACK_ROLES = ['attacker', 'target'] as const;
@@ -276,6 +358,15 @@ export interface EffectTriggerApplyConditionAction {
    * повторяет спасбросок в конце каждого своего хода». Сл 0 — Сл источника.
    */
   recurringSave?: EffectRecurringSave;
+  /**
+   * Собственные срабатывания наложенного состояния: «Сон» кладёт
+   * «Бессознательного», который снимается, когда цель получает урон. Без них
+   * пришлось бы заканчивать каст — а он снял бы сон со ВСЕХ целей.
+   *
+   * Одна ступень вложенности: у вложенного срабатывания своё `applyCondition`
+   * вложенных уже не несёт.
+   */
+  triggers?: NestedEffectTrigger[];
   on?: EffectTriggerActionGate;
 }
 
@@ -382,11 +473,27 @@ export interface EffectTrigger {
   recipient?: EffectTriggerRecipient;
   /** Радиус и отбор для получателя «всем в радиусе». */
   area?: EffectTriggerArea;
+  /** Кандидаты и число целей для получателя «по выбору». */
+  choice?: EffectTriggerChoice;
   /** Условие в словаре условий срабатываний (`triggerConditions.ts`). */
   condition?: string;
   save?: EffectTriggerSave;
   actions: EffectTriggerAction[];
   limit?: EffectTriggerLimit;
+}
+
+/**
+ * Действие вложенного срабатывания. Наложение состояния в нём своих
+ * срабатываний уже не несёт: вложенность — на одну ступень, иначе форма и схема
+ * стали бы бесконечными.
+ */
+export type NestedEffectTriggerAction =
+  | Exclude<EffectTriggerAction, EffectTriggerApplyConditionAction>
+  | Omit<EffectTriggerApplyConditionAction, 'triggers'>;
+
+/** Срабатывание, которое несёт на себе наложенное состояние. */
+export interface NestedEffectTrigger extends Omit<EffectTrigger, 'actions'> {
+  actions: NestedEffectTriggerAction[];
 }
 
 /** Приставка id срабатываний, выведенных из старых полей эффекта. */

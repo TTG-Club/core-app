@@ -16,9 +16,11 @@
 import type {
   EffectTrigger,
   EffectTriggerAction,
+  EffectTriggerChoice,
   EffectTriggerEvent,
   EffectTriggerSave,
   EffectTriggerTurnOwner,
+  NestedEffectTrigger,
 } from './triggerTypes';
 import type {
   ActiveEffect,
@@ -43,14 +45,20 @@ import {
 import {
   AREA_RECIPIENT_TRIGGER_EVENTS,
   AREA_TRIGGER_RECIPIENT,
+  CHOICE_RECIPIENT_TRIGGER_EVENTS,
+  CHOICE_TRIGGER_RECIPIENT,
   DAMAGE_DATA_TRIGGER_EVENTS,
   DAMAGE_TRIGGER_EVENTS,
   DEFAULT_EFFECT_TAG,
   DEFAULT_TRIGGER_AREA_RADIUS,
   DEFAULT_TRIGGER_ATTACK_ROLE,
+  DEFAULT_TRIGGER_CHOICE_COUNT,
+  DEFAULT_TRIGGER_CHOICE_RADIUS,
   EFFECT_TRIGGER_TURN_OWNERS,
   isEffectTag,
+  MAX_TRIGGER_CHOICE_COUNT,
   MIN_TRIGGER_LIMIT_MAX,
+  NESTED_TRIGGER_EVENTS,
   OTHER_PARTY_TRIGGER_EVENTS,
   PRESENCE_TRIGGER_EVENTS,
   TURN_TRIGGER_EVENTS,
@@ -875,6 +883,16 @@ export function triggerEventAcceptsArea(event: EffectTriggerEvent): boolean {
 }
 
 /**
+ * Можно ли отдать действия срабатывания выбранным человеком.
+ *
+ * @param event событие.
+ * @returns `true` для событий, где выбор успевают спросить.
+ */
+export function triggerEventAcceptsChoice(event: EffectTriggerEvent): boolean {
+  return CHOICE_RECIPIENT_TRIGGER_EVENTS.includes(event);
+}
+
+/**
  * Получатель срабатывания, который работает у события.
  *
  * @param trigger срабатывание.
@@ -890,9 +908,60 @@ function resolveDraftRecipient(
       return triggerEventAcceptsArea(trigger.event)
         ? AREA_TRIGGER_RECIPIENT
         : undefined;
+    case CHOICE_TRIGGER_RECIPIENT:
+      return triggerEventAcceptsChoice(trigger.event)
+        ? CHOICE_TRIGGER_RECIPIENT
+        : undefined;
     default:
       return undefined;
   }
+}
+
+/**
+ * Блок «по выбору» для записи: радиус и число целей — числами, пустое условие
+ * не пишется.
+ *
+ * @param choice блок черновика.
+ * @returns блок записи.
+ */
+function normalizeDraftChoice(
+  choice: EffectTriggerChoice | undefined,
+): EffectTriggerChoice {
+  const count = Math.trunc(
+    parseFormNumber(choice?.count) ?? DEFAULT_TRIGGER_CHOICE_COUNT,
+  );
+
+  return {
+    ...choice,
+    radius: Math.max(
+      0,
+      parseFormNumber(choice?.radius) ?? DEFAULT_TRIGGER_CHOICE_RADIUS,
+    ),
+    count: Math.min(
+      MAX_TRIGGER_CHOICE_COUNT,
+      Math.max(DEFAULT_TRIGGER_CHOICE_COUNT, count),
+    ),
+    condition: choice?.condition?.trim() || undefined,
+  };
+}
+
+/**
+ * Вложенные срабатывания наложенного состояния для записи: без действий и на
+ * чужом событии они не пишутся — состояние их всё равно не отработает.
+ *
+ * @param triggers вложенные срабатывания черновика.
+ * @returns срабатывания либо `undefined`.
+ */
+function normalizeNestedTriggers(
+  triggers: readonly NestedEffectTrigger[] | undefined,
+): NestedEffectTrigger[] | undefined {
+  const kept = (triggers ?? []).filter(
+    (trigger) =>
+      trigger.actions.length > 0
+      && NESTED_TRIGGER_EVENTS.includes(trigger.event),
+  );
+
+  return kept.length > 0 ? kept : undefined;
 }
 
 /**
@@ -1473,11 +1542,24 @@ function normalizeDraftTriggers(
                 ),
               }
             : undefined,
+        choice:
+          resolveDraftRecipient(trigger) === CHOICE_TRIGGER_RECIPIENT
+            ? normalizeDraftChoice(trigger.choice)
+            : undefined,
         // Отметку без годного ключа схема записи выбросила бы вместе со всем
         // срабатыванием — выбрасывается только само действие
-        actions: trigger.actions.filter(
-          (action) => action.type !== 'applyTag' || isEffectTag(action.tag),
-        ),
+        actions: trigger.actions
+          .filter(
+            (action) => action.type !== 'applyTag' || isEffectTag(action.tag),
+          )
+          .map((action) =>
+            action.type === 'applyCondition'
+              ? {
+                  ...action,
+                  triggers: normalizeNestedTriggers(action.triggers),
+                }
+              : action,
+          ),
         save: trigger.save
           ? {
               ...trigger.save,

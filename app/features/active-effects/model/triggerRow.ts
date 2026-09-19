@@ -23,13 +23,12 @@ import {
 import {
   DEFAULT_SET_HP_VALUE,
   listTriggerActionTypes,
+  triggerEventAcceptsArea,
+  triggerEventAcceptsChoice,
   triggerEventAcceptsDcFormula,
   triggerEventHasRole,
 } from './layout';
-import {
-  buildTriggerRecipientOptions,
-  triggerEventHasRecipientChoice,
-} from './options';
+import { buildTriggerRecipientOptions } from './options';
 import { isTurnTriggerEvent, triggerEventHasRestType } from './triggers';
 import {
   DEFAULT_EFFECT_TAG,
@@ -124,7 +123,8 @@ export function writeTriggerEvent(
     recipient: buildTriggerRecipientOptions({ ...trigger, event: nextEvent })
       .map((recipientOption) => recipientOption.value)
       .find((recipientValue) => recipientValue === trigger.recipient),
-    area: triggerEventHasRecipientChoice(nextEvent) ? trigger.area : undefined,
+    area: triggerEventAcceptsArea(nextEvent) ? trigger.area : undefined,
+    choice: triggerEventAcceptsChoice(nextEvent) ? trigger.choice : undefined,
     save: save && dropsDcFormula ? omitTriggerSaveDcFormula(save) : save,
     actions: trigger.actions.filter((action) =>
       allowedActionTypes.includes(action.type),

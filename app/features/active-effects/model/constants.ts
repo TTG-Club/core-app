@@ -34,6 +34,7 @@ import type {
   EffectTriggerActionGate,
   EffectTriggerAreaTarget,
   EffectTriggerAttackRole,
+  EffectTriggerChooser,
   EffectTriggerEvent,
   EffectTriggerLimitPeriod,
   EffectTriggerMaxHpRestEnd,
@@ -64,6 +65,7 @@ import type {
 
 import {
   AREA_TRIGGER_RECIPIENT,
+  CHOICE_TRIGGER_RECIPIENT,
   DEFAULT_EFFECT_TAG,
   MAX_HP_REDUCTION_NEVER_ENDS,
 } from './triggerTypes';
@@ -1441,6 +1443,13 @@ export const EFFECT_TRIGGER_PHRASE_PARTS = {
   dcFormulaPrefix: 'Сл = ',
   damageVariable: 'урон',
   recipientOther: ', на другую сторону',
+  recipientChoicePrefix: ', на ',
+  recipientChoiceTargetPrefix: ' из ',
+  recipientChoiceSuffix: ' фт вокруг по выбору',
+  recipientChoiceChooser: ' наложившего',
+  recipientChoiceOptional: ' (можно отказаться)',
+  recipientChoiceConditionPrefix: ', только ',
+  nestedTriggerPrefix: ', у состояния ',
   recipientAreaPrefix: ', на ',
   recipientAreaSuffix: ' фт вокруг',
   limitPrefix: ', не чаще ',
@@ -2252,12 +2261,39 @@ export const EFFECT_TRIGGER_RECIPIENT_LABELS: Record<
   subject: 'Носителю эффекта',
   other: 'Тому, кто нанёс урон',
   [AREA_TRIGGER_RECIPIENT]: 'Всем в радиусе',
+  [CHOICE_TRIGGER_RECIPIENT]: 'Выбранным',
 };
 
 /** Подписи полей «всем в радиусе». */
 export const EFFECT_TRIGGER_AREA_LABELS = {
   radius: 'Радиус, фт',
   target: 'Кого',
+} as const;
+
+/** Подписи полей «по выбору». */
+export const EFFECT_TRIGGER_CHOICE_LABELS = {
+  radius: 'Радиус, фт',
+  target: 'Из кого выбирать',
+  count: 'Сколько целей',
+  condition: 'Условие цели',
+  optional: 'Можно отказаться',
+  chooser: 'Кто выбирает',
+} as const;
+
+/** Кто выбирает получателей. */
+export const EFFECT_TRIGGER_CHOOSER_LABELS: Record<
+  EffectTriggerChooser,
+  string
+> = {
+  subject: 'Носитель эффекта',
+  source: 'Наложивший эффект',
+};
+
+/** Подписи вложенного срабатывания наложенного состояния. */
+export const EFFECT_TRIGGER_NESTED_LABELS = {
+  toggle: 'Своё срабатывание состояния',
+  event: 'Когда у состояния',
+  action: 'Что делает',
 } as const;
 
 /** «Другая сторона» при наложении — кто наложил эффект. */

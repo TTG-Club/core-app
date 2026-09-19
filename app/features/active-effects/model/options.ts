@@ -18,6 +18,7 @@ import type {
   EffectTrigger,
   EffectTriggerActionGate,
   EffectTriggerAttackRole,
+  EffectTriggerChooser,
   EffectTriggerLimitPeriod,
   EffectTriggerMaxHpRestEnd,
   EffectTriggerRecipient,
@@ -56,6 +57,7 @@ import {
   EFFECT_TARGET_DELIVERY_LABELS,
   EFFECT_TRIGGER_APPLIED_OTHER_PARTY_LABEL,
   EFFECT_TRIGGER_ATTACK_OTHER_PARTY_LABELS,
+  EFFECT_TRIGGER_CHOOSER_LABELS,
   EFFECT_TRIGGER_DAMAGE_HALF_GATE,
   EFFECT_TRIGGER_DAMAGE_HALF_LABEL,
   EFFECT_TRIGGER_GATE_LABELS,
@@ -76,6 +78,7 @@ import {
 } from './constants';
 import {
   triggerEventAcceptsArea,
+  triggerEventAcceptsChoice,
   triggerEventHasOtherParty,
   triggerEventHasRole,
 } from './layout';
@@ -83,6 +86,7 @@ import {
   DEFAULT_TRIGGER_ATTACK_ROLE,
   EFFECT_TRIGGER_ACTION_GATES,
   EFFECT_TRIGGER_ATTACK_ROLES,
+  EFFECT_TRIGGER_CHOOSERS,
   EFFECT_TRIGGER_LIMIT_PERIODS,
   EFFECT_TRIGGER_MAX_HP_REST_ENDS,
   EFFECT_TRIGGER_RECIPIENTS,
@@ -408,6 +412,14 @@ function resolveOtherPartyLabel(
     : EFFECT_TRIGGER_RECIPIENT_LABELS.other;
 }
 
+/** Кто выбирает получателей действий. */
+export const EFFECT_TRIGGER_CHOOSER_OPTIONS: Array<
+  EffectSegmentOption<EffectTriggerChooser>
+> = EFFECT_TRIGGER_CHOOSERS.map((chooser) => ({
+  value: chooser,
+  label: EFFECT_TRIGGER_CHOOSER_LABELS[chooser],
+}));
+
 /**
  * Варианты получателя действий срабатывания. «Другая сторона» подписана по
  * событию: у урона — кто его нанёс, у броска атаки — цель или атакующий. «Всем
@@ -428,6 +440,7 @@ export function buildTriggerRecipientOptions(
     subject: true,
     other: triggerEventHasOtherParty(trigger.event),
     area: triggerEventAcceptsArea(trigger.event),
+    choice: triggerEventAcceptsChoice(trigger.event),
   };
 
   return EFFECT_TRIGGER_RECIPIENTS.filter(
@@ -448,7 +461,11 @@ export function buildTriggerRecipientOptions(
 export function triggerEventHasRecipientChoice(
   event: EffectTrigger['event'],
 ): boolean {
-  return triggerEventHasOtherParty(event) || triggerEventAcceptsArea(event);
+  return (
+    triggerEventHasOtherParty(event)
+    || triggerEventAcceptsArea(event)
+    || triggerEventAcceptsChoice(event)
+  );
 }
 
 /** Варианты отдыха срабатывания «После отдыха». */

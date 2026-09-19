@@ -13,6 +13,7 @@ import type { TriggerConditionPart } from './triggerConditions';
 import type {
   EffectTrigger,
   EffectTriggerAction,
+  EffectTriggerChoice,
   EffectTriggerSaveMode,
 } from './triggerTypes';
 import type { EffectDuration } from './types';
@@ -56,7 +57,10 @@ import {
 } from './triggers';
 import {
   AREA_TRIGGER_RECIPIENT,
+  CHOICE_TRIGGER_RECIPIENT,
   DEFAULT_TRIGGER_AREA_TARGET,
+  DEFAULT_TRIGGER_CHOICE_COUNT,
+  DEFAULT_TRIGGER_CHOOSER,
   DEFAULT_TRIGGER_REST_TYPE,
   MAX_HP_REDUCTION_NEVER_ENDS,
   MIN_TRIGGER_LIMIT_MAX,
@@ -305,6 +309,10 @@ function describeTriggerRecipient(trigger: EffectTrigger): string {
     return EFFECT_TRIGGER_PHRASE_PARTS.recipientOther;
   }
 
+  if (trigger.recipient === CHOICE_TRIGGER_RECIPIENT && trigger.choice) {
+    return describeTriggerChoice(trigger.choice);
+  }
+
   if (trigger.recipient !== AREA_TRIGGER_RECIPIENT || !trigger.area) {
     return '';
   }
@@ -315,6 +323,53 @@ function describeTriggerRecipient(trigger: EffectTrigger): string {
     ];
 
   return `${EFFECT_TRIGGER_PHRASE_PARTS.recipientAreaPrefix}${target} в ${trigger.area.radius}${EFFECT_TRIGGER_PHRASE_PARTS.recipientAreaSuffix}`;
+}
+
+/**
+ * Получатель «по выбору» — часть фразы: «, на 1 из союзников в 30 фт вокруг по
+ * выбору наложившего».
+ *
+ * @param choice блок «по выбору».
+ * @returns часть фразы.
+ */
+function describeTriggerChoice(choice: EffectTriggerChoice): string {
+  const {
+    recipientChoicePrefix,
+    recipientChoiceTargetPrefix,
+    recipientChoiceSuffix,
+    recipientChoiceChooser,
+    recipientChoiceOptional,
+    recipientChoiceConditionPrefix,
+  } = EFFECT_TRIGGER_PHRASE_PARTS;
+
+  const count = choice.count ?? DEFAULT_TRIGGER_CHOICE_COUNT;
+
+  const target =
+    EFFECT_TRIGGER_AREA_TARGET_PHRASES[
+      choice.target ?? DEFAULT_TRIGGER_AREA_TARGET
+    ];
+
+  const chooser =
+    (choice.chooser ?? DEFAULT_TRIGGER_CHOOSER) === 'source'
+      ? recipientChoiceChooser
+      : '';
+
+  const condition = choice.condition
+    ? `${recipientChoiceConditionPrefix}${describeTriggerCondition(choice.condition)}`
+    : '';
+
+  return [
+    recipientChoicePrefix,
+    count,
+    recipientChoiceTargetPrefix,
+    target,
+    ' в ',
+    choice.radius,
+    recipientChoiceSuffix,
+    chooser,
+    condition,
+    choice.optional ? recipientChoiceOptional : '',
+  ].join('');
 }
 
 /**

@@ -436,6 +436,75 @@ describe('сохранение эффектов', () => {
     expect(effect?.applyOnSuccessOnly).toBe(true);
   });
 
+  it('вложенное срабатывание состояния и блок «по выбору» переживают круг', () => {
+    const storedEffect = createRawEffect({
+      triggers: [
+        {
+          id: 'trigger_sleep',
+          event: 'applied',
+          actions: [
+            {
+              type: 'applyCondition',
+              conditionKey: 'unconscious',
+              triggers: [
+                {
+                  id: 'trigger_wake',
+                  event: 'damageTaken',
+                  actions: [{ type: 'removeSelf' }],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          id: 'trigger_heal',
+          event: 'turnStart',
+          recipient: 'choice',
+          choice: {
+            radius: AURA_RADIUS,
+            target: 'allies',
+            count: 2,
+            condition: 'self.creatureType === "undead"',
+            optional: true,
+            chooser: 'source',
+          },
+          actions: [{ type: 'damage', parts: [{ formula: '5@heal' }] }],
+        },
+      ],
+    });
+
+    const [effect] = normalizeActiveEffects(
+      normalizeLoadedActiveEffects([storedEffect]),
+      'spell',
+    );
+
+    const [sleepTrigger, healTrigger] = effect?.triggers ?? [];
+    const [applyCondition] = sleepTrigger?.actions ?? [];
+
+    expect(
+      applyCondition?.type === 'applyCondition'
+        ? applyCondition.triggers
+        : undefined,
+    ).toEqual([
+      {
+        id: 'trigger_wake',
+        event: 'damageTaken',
+        actions: [{ type: 'removeSelf' }],
+      },
+    ]);
+
+    expect(healTrigger?.recipient).toBe('choice');
+
+    expect(stripUndefinedKeys(healTrigger?.choice ?? {})).toEqual({
+      radius: AURA_RADIUS,
+      target: 'allies',
+      count: 2,
+      condition: 'self.creatureType === "undead"',
+      optional: true,
+      chooser: 'source',
+    });
+  });
+
   it('сл 0 у предмета поднимается до 1, у заклинания остаётся «Авто»', () => {
     const auraSaveEffect = createRawEffect({
       aura: { radius: AURA_RADIUS, target: 'all', applyToSelf: false },
