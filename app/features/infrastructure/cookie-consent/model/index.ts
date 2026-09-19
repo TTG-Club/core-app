@@ -1,21 +1,13 @@
-export type { CookieConsentChoice, UseCookieConsentReturn } from './types';
+export type { UseCookieNoticeReturn } from './types';
 
 export {
-  COOKIE_CONSENT_ACCEPT_LABEL,
-  COOKIE_CONSENT_CHOICE_ALL,
-  COOKIE_CONSENT_CHOICE_NECESSARY,
-  COOKIE_CONSENT_CHOICES,
-  COOKIE_CONSENT_CLOSE_ICON,
-  COOKIE_CONSENT_CLOSE_LABEL,
-  COOKIE_CONSENT_DESCRIPTION,
-  COOKIE_CONSENT_DISMISS_DURATION,
-  COOKIE_CONSENT_DISMISS_KEY,
-  COOKIE_CONSENT_DISMISS_MAX_AGE,
-  COOKIE_CONSENT_ICON,
-  COOKIE_CONSENT_KEY,
-  COOKIE_CONSENT_MAX_AGE,
-  COOKIE_CONSENT_TITLE,
-  COOKIE_CONSENT_VERSION,
+  COOKIE_NOTICE_DESCRIPTION,
+  COOKIE_NOTICE_DISMISS_LABEL,
+  COOKIE_NOTICE_ICON,
+  COOKIE_NOTICE_KEY,
+  COOKIE_NOTICE_MAX_AGE,
+  COOKIE_NOTICE_TITLE,
+  COOKIE_NOTICE_VERSION,
   COOKIE_POLICY_ROUTE,
 } from './constants';
 
@@ -29,8 +21,4 @@ export {
   COOKIE_POLICY_UPDATED_PREFIX,
 } from './policy';
 
-export {
-  createCookieConsentValue,
-  parseCookieConsentChoice,
-  parseCookieDismissedUntil,
-} from './schema';
+export { isCookieNoticeDismissed } from './schema';

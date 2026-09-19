@@ -1,2 +1,2 @@
-export { useConsentedAnalytics } from './useConsentedAnalytics';
+export { useAnalytics } from './useAnalytics';
 export { useOnlineHeartbeat } from './useOnlineHeartbeat';

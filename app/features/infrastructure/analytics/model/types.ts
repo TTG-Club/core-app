@@ -17,7 +17,7 @@ export interface YandexMetrikaQueue {
 
 declare global {
   interface Window {
-    /** Функция Яндекс.Метрики; появляется только после согласия на аналитику */
+    /** Функция Яндекс.Метрики; создаётся при автоматическом подключении счётчика */
     ym?: YandexMetrikaQueue;
   }
 }

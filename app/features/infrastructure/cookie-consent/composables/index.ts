@@ -1,1 +1,1 @@
-export { useCookieConsent } from './useCookieConsent';
+export { useCookieNotice } from './useCookieNotice';
