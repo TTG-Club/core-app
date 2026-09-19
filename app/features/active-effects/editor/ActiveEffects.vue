@@ -1,5 +1,10 @@
 <script setup lang="ts">
-  import type { ActiveEffect, EffectFormContext, EffectOrigin } from '../model';
+  import type {
+    ActiveEffect,
+    EffectActivationMode,
+    EffectFormContext,
+    EffectOrigin,
+  } from '../model';
 
   import { EditorNestedSection } from '~ui/editor';
 
@@ -21,6 +26,7 @@
     zoneAvailable = undefined,
     applierSaveDc = undefined,
     origin = EFFECT_ORIGIN.spell,
+    newEffectActivation = undefined,
     title = ACTIVE_EFFECT_LABELS.title,
     nested = false,
   } = defineProps<{
@@ -44,6 +50,13 @@
     applierSaveDc?: number;
 
     origin?: EffectOrigin;
+
+    /**
+     * Как действует новый эффект: `use` — ложится применением источника.
+     * Передаёт редактор-хозяин, который знает, применяют ли запись: у зелья и
+     * жезла «вручную» эффект не работает, пока предмет не применили.
+     */
+    newEffectActivation?: EffectActivationMode;
 
     /**
      * Заголовок блока. Своим его называет редактор, у которого эффекты лежат
@@ -125,7 +138,10 @@
     // прежний массив — проп доедет только следующим тиком.
     const addedIndex = model.value.length;
 
-    model.value = [...model.value, createEmptyActiveEffect(origin, context)];
+    model.value = [
+      ...model.value,
+      createEmptyActiveEffect(origin, context, newEffectActivation),
+    ];
 
     // Новый эффект сразу раскрыт: его всё равно тут же настраивают.
     expand(addedIndex);

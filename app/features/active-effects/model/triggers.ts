@@ -304,6 +304,16 @@ export function isTurnTriggerEvent(event: EffectTriggerEvent): boolean {
 }
 
 /**
+ * Выбирается ли у события отдых: «после долгого», «после короткого».
+ *
+ * @param event событие срабатывания.
+ * @returns `true` для события отдыха.
+ */
+export function triggerEventHasRestType(event: EffectTriggerEvent): boolean {
+  return event === 'rest';
+}
+
+/**
  * Ключи отметок, которые ставят срабатывания: их предлагает условие «на
  * носителе отметка» того же эффекта.
  *

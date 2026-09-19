@@ -4,11 +4,13 @@
   import type {
     EffectTriggerEvent,
     TriggerConditionKind,
+    TriggerConditionListParameter,
     TriggerConditionParameter,
     TriggerConditionPart,
   } from '../../model';
 
   import {
+    DEFAULT_TAG_COUNT_THRESHOLD,
     EFFECT_TRIGGER_CONDITION_DEFAULT_VALUES,
     EFFECT_TRIGGER_CONDITION_KIND_LABELS,
     EFFECT_TRIGGER_CONDITION_LABELS,
@@ -16,8 +18,13 @@
     getTriggerConditionParameter,
     isEffectTag,
     listTriggerConditionKinds,
+    MIN_CONDITION_NUMBER,
+    MIN_TAG_COUNT_THRESHOLD,
+    normalizeTagCountThreshold,
     readTriggerConditionParts,
+    TRIGGER_CONDITION_NUMBER_PARAMETER,
     TRIGGER_CONDITION_TAG_PARAMETER,
+    triggerConditionHasAmount,
     writeTriggerCondition,
   } from '../../model';
 
@@ -27,11 +34,20 @@
    * (`listTriggerConditionKinds`); часть, которую словарь не знает,
    * показывается как есть и не теряется.
    */
-  const { event, knownTags } = defineProps<{
+  const {
+    event,
+    knownTags,
+    title = EFFECT_TRIGGER_CONDITION_LABELS.title,
+    emptyText = EFFECT_TRIGGER_CONDITION_LABELS.always,
+  } = defineProps<{
     /** Событие срабатывания: от него зависят доступные части. */
     event: EffectTriggerEvent;
     /** Отметки, которые ставит этот эффект: условие по отметке их предлагает. */
     knownTags: readonly string[];
+    /** Заголовок списка; по умолчанию — «Условие». */
+    title?: string;
+    /** Текст без условия; по умолчанию — «срабатывает всегда». */
+    emptyText?: string;
   }>();
 
   /** Условие строкой словаря (`self.tag === "x" && …`); пусто — без условия. */
@@ -53,6 +69,26 @@
     showsValueSelect: boolean;
     /** Значение части вводится строкой — ключ отметки. */
     showsTagInput: boolean;
+    /** Значение части — число: хиты носителя. */
+    showsNumberInput: boolean;
+    /** У части есть порог: сколько отметок нужно. */
+    amount?: number;
+  }
+
+  /**
+   * Выбирается ли значение части списком.
+   *
+   * @param parameter что выбирается у части; `undefined` — значения нет.
+   * @returns `true`, если у параметра есть список вариантов.
+   */
+  function isConditionListParameter(
+    parameter: TriggerConditionParameter | undefined,
+  ): parameter is TriggerConditionListParameter {
+    return (
+      parameter !== undefined
+      && parameter !== TRIGGER_CONDITION_TAG_PARAMETER
+      && parameter !== TRIGGER_CONDITION_NUMBER_PARAMETER
+    );
   }
 
   const parts = computed(() => readTriggerConditionParts(condition.value));
@@ -68,15 +104,15 @@
           valueItems: [],
           showsValueSelect: false,
           showsTagInput: false,
+          showsNumberInput: false,
         };
       }
 
       const parameter = getTriggerConditionParameter(part.kind);
 
-      const valueItems =
-        parameter && parameter !== TRIGGER_CONDITION_TAG_PARAMETER
-          ? EFFECT_TRIGGER_CONDITION_VALUE_OPTIONS[parameter]
-          : [];
+      const valueItems = isConditionListParameter(parameter)
+        ? EFFECT_TRIGGER_CONDITION_VALUE_OPTIONS[parameter]
+        : [];
 
       return {
         key: `${index}-${part.kind}`,
@@ -85,6 +121,10 @@
         valueItems,
         showsValueSelect: valueItems.length > 0,
         showsTagInput: parameter === TRIGGER_CONDITION_TAG_PARAMETER,
+        showsNumberInput: parameter === TRIGGER_CONDITION_NUMBER_PARAMETER,
+        amount: triggerConditionHasAmount(part.kind)
+          ? (part.amount ?? DEFAULT_TAG_COUNT_THRESHOLD)
+          : undefined,
       };
     }),
   );
@@ -155,6 +195,44 @@
   }
 
   /**
+   * Меняет число части условия: хиты носителя. Пустое поле — ноль: условие без
+   * числа форма не знает и потеряла бы поле ввода.
+   *
+   * @param index номер части.
+   * @param enteredNumber введённое число.
+   */
+  function updatePartNumber(
+    index: number,
+    enteredNumber: number | null | undefined,
+  ): void {
+    updatePartValue(
+      index,
+      String(Math.max(MIN_CONDITION_NUMBER, Math.trunc(enteredNumber ?? 0))),
+    );
+  }
+
+  /**
+   * Меняет порог счётчика отметок.
+   *
+   * @param index номер части.
+   * @param enteredAmount введённый порог; пусто — наименьший.
+   */
+  function updatePartAmount(
+    index: number,
+    enteredAmount: number | null | undefined,
+  ): void {
+    const amount = normalizeTagCountThreshold(enteredAmount);
+
+    writeParts(
+      parts.value.map((part, partIndex) =>
+        partIndex === index && typeof part !== 'string'
+          ? { ...part, amount }
+          : part,
+      ),
+    );
+  }
+
+  /**
    * Меняет ключ отметки части. Негодный ключ не пишется: условие с ним
    * разобралось бы строкой, которую форма не знает, и поле ввода пропало бы.
    *
@@ -180,14 +258,14 @@
 <template>
   <div class="flex flex-col gap-1.5">
     <span class="text-xs font-medium text-default">
-      {{ EFFECT_TRIGGER_CONDITION_LABELS.title }}
+      {{ title }}
     </span>
 
     <p
       v-if="isEmpty"
       class="text-xs text-muted"
     >
-      {{ EFFECT_TRIGGER_CONDITION_LABELS.always }}
+      {{ emptyText }}
     </p>
 
     <div
@@ -219,6 +297,15 @@
         @update:model-value="updatePartValue(index, $event)"
       />
 
+      <UInputNumber
+        v-else-if="conditionRow.showsNumberInput"
+        :model-value="Number(conditionRow.value)"
+        :min="MIN_CONDITION_NUMBER"
+        size="xs"
+        class="w-28"
+        @update:model-value="updatePartNumber(index, $event)"
+      />
+
       <template v-else-if="conditionRow.showsTagInput">
         <UInput
           :model-value="conditionRow.value"
@@ -236,6 +323,20 @@
           :label="tag"
           :title="EFFECT_TRIGGER_CONDITION_LABELS.knownTags"
           @click.left.exact.prevent="updatePartValue(index, tag)"
+        />
+      </template>
+
+      <template v-if="conditionRow.amount !== undefined">
+        <span class="text-xs text-muted">
+          {{ EFFECT_TRIGGER_CONDITION_LABELS.amount }}
+        </span>
+
+        <UInputNumber
+          :model-value="conditionRow.amount"
+          :min="MIN_TAG_COUNT_THRESHOLD"
+          size="xs"
+          class="w-24"
+          @update:model-value="updatePartAmount(index, $event)"
         />
       </template>
 

@@ -10,7 +10,9 @@
  * - строки модификаторов и срабатывания разбираются по одной: негодная выпадает
  *   одна;
  * - незнакомое значение необязательного поля обнуляет поле, а не эффект;
- * - числа, набранные строкой, приводятся к числам.
+ * - числа, набранные строкой, приводятся к числам;
+ * - флаги не сверяются со словарём сайта: он отстаёт от системы, и сверка
+ *   стирала бы флаги, которые VTTG понимает.
  *
  * Зеркало схем dnd5-test-migrate/src/engine/activeEffectTypes.ts.
  */
@@ -18,6 +20,7 @@
 import type { EffectTrigger } from './triggerTypes';
 import type {
   ActiveEffect,
+  EffectActivation,
   EffectAura,
   EffectChange,
   EffectDamagePart,
@@ -25,31 +28,42 @@ import type {
   EffectRecurringDamage,
   EffectRecurringSave,
   EffectSave,
+  EffectVariant,
 } from './types';
 
 import { z } from 'zod';
 
-import { EFFECT_CONDITION_OPTIONS, EFFECT_FLAG_LABELS } from './constants';
+import { EFFECT_CONDITION_OPTIONS } from './constants';
 import { isHealingDamagePart } from './describe';
 import {
   EFFECT_TAG_PATTERN,
   EFFECT_TRIGGER_ACTION_GATES,
+  EFFECT_TRIGGER_AREA_TARGETS,
   EFFECT_TRIGGER_ATTACK_ROLES,
   EFFECT_TRIGGER_EVENTS,
   EFFECT_TRIGGER_LIMIT_PERIODS,
+  EFFECT_TRIGGER_MAX_HP_REST_ENDS,
   EFFECT_TRIGGER_RECIPIENTS,
   EFFECT_TRIGGER_RESERVED_EVENTS,
+  EFFECT_TRIGGER_REST_TYPES,
+  EFFECT_TRIGGER_SAVE_MODES,
   EFFECT_TRIGGER_TURN_OWNERS,
   MIN_TRIGGER_LIMIT_MAX,
 } from './triggerTypes';
 import {
+  DEFAULT_ACTIVATION_AMOUNT,
   DEFAULT_EFFECT_CHANGE_PRIORITY,
+  EFFECT_ACTIVATION_MODES,
   EFFECT_ORIGIN,
+  EFFECT_VARIANT_PICKS,
   parseFormNumber,
 } from './types';
 
 /** Самая длинная формула Сл срабатывания. */
 const MAX_TRIGGER_DC_FORMULA_LENGTH = 200;
+
+/** Самая длинная формула «на сколько» у уменьшения максимума хитов. */
+const MAX_TRIGGER_AMOUNT_LENGTH = MAX_TRIGGER_DC_FORMULA_LENGTH;
 
 /** Самый высокий приоритет модификатора. */
 const MAX_EFFECT_CHANGE_PRIORITY = 100;
@@ -168,6 +182,35 @@ const auraSchema: z.ZodType<EffectAura> = z.object({
   target: z.enum(['allies', 'enemies', 'all']),
   applyToSelf: z.boolean(),
   visible: z.boolean().optional().catch(undefined),
+  radiusFormula: z.string().trim().min(1).optional().catch(undefined),
+  whileCapable: z.literal(true).optional().catch(undefined),
+});
+
+/** Самая длинная строка группы и подписи варианта. */
+const MAX_VARIANT_TEXT_LENGTH = 100;
+
+/** Самый длинный ключ счётчика применения. */
+const MAX_ACTIVATION_COUNTER_LENGTH = 100;
+
+const variantSchema: z.ZodType<EffectVariant> = z.object({
+  group: z.string().trim().min(1).max(MAX_VARIANT_TEXT_LENGTH),
+  label: z.string().trim().min(1).max(MAX_VARIANT_TEXT_LENGTH),
+  pick: z.enum(EFFECT_VARIANT_PICKS).optional().catch(undefined),
+});
+
+const activationSchema: z.ZodType<EffectActivation> = z.object({
+  mode: z.enum(EFFECT_ACTIVATION_MODES),
+  counter: z
+    .string()
+    .trim()
+    .min(1)
+    .max(MAX_ACTIVATION_COUNTER_LENGTH)
+    .optional()
+    .catch(undefined),
+  amount: z.preprocess(
+    coerceOptionalNumber,
+    z.number().int().min(DEFAULT_ACTIVATION_AMOUNT).optional(),
+  ),
 });
 
 /** Сложность спасброска: число, в том числе набранное строкой. */
@@ -195,6 +238,7 @@ const recurringDamageSchema: z.ZodType<EffectRecurringDamage> = z.object({
 const triggerSaveSchema = z.object({
   ability: abilitySchema,
   dc: saveDcSchema,
+  mode: z.enum(EFFECT_TRIGGER_SAVE_MODES).optional().catch(undefined),
   dcFormula: z
     .string()
     .trim()
@@ -227,6 +271,7 @@ const triggerActionSchema = z.discriminatedUnion('type', [
     type: z.literal('applyCondition'),
     conditionKey: z.string().min(1),
     duration: durationSchema.optional().catch(undefined),
+    recurringSave: recurringSaveSchema.optional().catch(undefined),
     on: triggerGateSchema,
   }),
   z.object({
@@ -234,6 +279,16 @@ const triggerActionSchema = z.discriminatedUnion('type', [
     tag: z.string().regex(EFFECT_TAG_PATTERN),
     label: z.string().min(1).optional().catch(undefined),
     duration: durationSchema.optional().catch(undefined),
+    stack: z.literal(true).optional().catch(undefined),
+    on: triggerGateSchema,
+  }),
+  z.object({
+    type: z.literal('reduceMaxHp'),
+    amount: z.string().trim().min(1).max(MAX_TRIGGER_AMOUNT_LENGTH),
+    endsOnRest: z
+      .enum(EFFECT_TRIGGER_MAX_HP_REST_ENDS)
+      .optional()
+      .catch(undefined),
     on: triggerGateSchema,
   }),
   z.object({
@@ -263,7 +318,15 @@ const triggerSchema: z.ZodType<EffectTrigger> = z.object({
   event: z.enum([...EFFECT_TRIGGER_EVENTS, ...EFFECT_TRIGGER_RESERVED_EVENTS]),
   turnOf: z.enum(EFFECT_TRIGGER_TURN_OWNERS).optional().catch(undefined),
   role: z.enum(EFFECT_TRIGGER_ATTACK_ROLES).optional().catch(undefined),
+  restType: z.enum(EFFECT_TRIGGER_REST_TYPES).optional().catch(undefined),
   recipient: z.enum(EFFECT_TRIGGER_RECIPIENTS).optional().catch(undefined),
+  area: z
+    .object({
+      radius: z.preprocess(coerceOptionalNumber, z.number().min(0)),
+      target: z.enum(EFFECT_TRIGGER_AREA_TARGETS).optional().catch(undefined),
+    })
+    .optional()
+    .catch(undefined),
   condition: z.string().min(1).optional().catch(undefined),
   save: triggerSaveSchema.optional().catch(undefined),
   actions: z.array(triggerActionSchema).min(1),
@@ -276,19 +339,21 @@ const triggersSchema = z
   .transform((rawTriggers) => parseEachValid(triggerSchema, rawTriggers));
 
 /**
- * Проверяет, что строка — известный флаг эффекта.
+ * Проверяет, что значение — непустая строка флага.
  *
- * @param flag произвольная строка флага.
- * @returns `true`, если такой флаг известен движку.
+ * По словарю сайта флаги НЕ сверяются: словарь отстаёт от системы, и такая
+ * сверка молча стирала флаги, которые VTTG понимает (`healing.blocked`,
+ * `save.evasion.*`). Незнакомый флаг сохраняется как есть, а форма показывает
+ * его сырым ключом с пометкой «неизвестный флаг».
+ *
+ * @param flag произвольное значение из списка флагов.
+ * @returns `true`, если это непустая строка.
  */
-function isKnownEffectFlag(flag: unknown): flag is string {
-  return typeof flag === 'string' && Object.hasOwn(EFFECT_FLAG_LABELS, flag);
+function isEffectFlagValue(flag: unknown): flag is string {
+  return typeof flag === 'string' && flag.trim().length > 0;
 }
 
-/**
- * Эффект. Незнакомый флаг выпадает один: движок VTTG сверяет флаги по тому же
- * списку, и потери поведения нет.
- */
+/** Эффект. */
 const activeEffectSchema: z.ZodType<ActiveEffect> = z.object({
   id: z.string().min(1),
   name: z.string(),
@@ -310,12 +375,16 @@ const activeEffectSchema: z.ZodType<ActiveEffect> = z.object({
     .transform((rawChanges) => parseEachValid(changeSchema, rawChanges)),
   flags: z
     .array(z.unknown())
-    .transform((rawFlags) => rawFlags.filter(isKnownEffectFlag)),
+    .transform((rawFlags) => rawFlags.filter(isEffectFlagValue)),
   aura: auraSchema.optional().catch(undefined),
   areaTrigger: z.enum(['stay', 'enter', 'exit']).optional().catch(undefined),
   // Незнакомая доставка обнуляет поле, а не отвергает эффект
   effectTarget: z.enum(['self', 'target', 'zone']).optional().catch(undefined),
   conditionKey: conditionKeySchema.optional().catch(undefined),
+  landingCondition: z.string().trim().min(1).optional().catch(undefined),
+  variant: variantSchema.optional().catch(undefined),
+  rollCondition: z.string().trim().min(1).optional().catch(undefined),
+  activation: activationSchema.optional().catch(undefined),
   applySave: saveSchema.optional().catch(undefined),
   applyOnSuccess: z.boolean().optional().catch(undefined),
   applyOnSuccessOnly: z.boolean().optional().catch(undefined),

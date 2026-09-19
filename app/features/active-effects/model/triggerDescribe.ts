@@ -10,13 +10,19 @@
  */
 
 import type { TriggerConditionPart } from './triggerConditions';
-import type { EffectTrigger, EffectTriggerAction } from './triggerTypes';
+import type {
+  EffectTrigger,
+  EffectTriggerAction,
+  EffectTriggerSaveMode,
+} from './triggerTypes';
 import type { EffectDuration } from './types';
 
 import {
+  describeEffectCreatureSize,
   EFFECT_ABILITY_GENITIVE_LABELS,
   EFFECT_PHRASE_PARTS,
   EFFECT_SAVE_TIMING_LABELS,
+  EFFECT_TRIGGER_AREA_TARGET_PHRASES,
   EFFECT_TRIGGER_ATTACK_ROLE_PHRASES,
   EFFECT_TRIGGER_CONDITION_PHRASES,
   EFFECT_TRIGGER_CONSUME_ON_PHRASES,
@@ -24,6 +30,9 @@ import {
   EFFECT_TRIGGER_PERIOD_LABELS,
   EFFECT_TRIGGER_PHRASE_PARTS,
   EFFECT_TRIGGER_RECURRING_DAMAGE_SUCCESS_LABELS,
+  EFFECT_TRIGGER_REST_EVENT_PHRASES,
+  EFFECT_TRIGGER_REST_UNTIL_PHRASES,
+  EVENT_DAMAGE_VARIABLE,
 } from './constants';
 import {
   describeConditionName,
@@ -34,6 +43,7 @@ import {
   describeEffectDuration,
 } from './describe';
 import {
+  DEFAULT_TAG_COUNT_THRESHOLD,
   getTriggerConditionParameter,
   readTriggerConditionParts,
 } from './triggerConditions';
@@ -42,11 +52,15 @@ import {
   isTurnTriggerEvent,
   resolveTriggerActionGate,
   saveTimingOfTriggerEvent,
+  triggerEventHasRestType,
 } from './triggers';
-import { MIN_TRIGGER_LIMIT_MAX } from './triggerTypes';
-
-/** Переменная урона события в Сл срабатывания. */
-const EVENT_DAMAGE_VARIABLE = 'damage';
+import {
+  AREA_TRIGGER_RECIPIENT,
+  DEFAULT_TRIGGER_AREA_TARGET,
+  DEFAULT_TRIGGER_REST_TYPE,
+  MAX_HP_REDUCTION_NEVER_ENDS,
+  MIN_TRIGGER_LIMIT_MAX,
+} from './triggerTypes';
 
 /** Настройки фразы. */
 export interface EffectTriggerDescribeOptions {
@@ -55,8 +69,8 @@ export interface EffectTriggerDescribeOptions {
 }
 
 /**
- * Подпись значения части условия: тип урона и тип существа — словами, ключ
- * отметки — как есть.
+ * Подпись значения части условия: тип урона, тип существа, размер и состояние —
+ * словами, ключ отметки и число — как есть.
  *
  * @param part разобранная часть условия.
  * @returns подпись значения; у части без значения — пустая строка.
@@ -69,6 +83,10 @@ function describeTriggerConditionValue(part: TriggerConditionPart): string {
       return describeDamageTypeShort(value);
     case 'creatureType':
       return describeCreatureType(value);
+    case 'size':
+      return describeEffectCreatureSize(value);
+    case 'condition':
+      return describeConditionName(value);
     default:
       return value;
   }
@@ -88,6 +106,7 @@ export function describeTriggerCondition(condition: string): string {
         ? describeEffectChangeCondition(part)
         : EFFECT_TRIGGER_CONDITION_PHRASES[part.kind](
             describeTriggerConditionValue(part),
+            part.amount ?? DEFAULT_TAG_COUNT_THRESHOLD,
           ),
     )
     .join(EFFECT_PHRASE_PARTS.andJoiner);
@@ -113,24 +132,52 @@ function withDurationSuffix(
  * Подпись действия.
  *
  * @param action действие.
+ * @param describeOptions настройки фразы.
  * @returns подпись либо пустая строка, если описывать нечего.
  */
-function describeAction(action: EffectTriggerAction): string {
+function describeAction(
+  action: EffectTriggerAction,
+  describeOptions: EffectTriggerDescribeOptions,
+): string {
   switch (action.type) {
     case 'damage':
       return describeEffectDamageParts(action.parts);
     case 'applySelf':
       return EFFECT_TRIGGER_PHRASE_PARTS.effect;
-    case 'applyCondition':
-      return withDurationSuffix(
+    case 'applyCondition': {
+      const condition = withDurationSuffix(
         `«${describeConditionName(action.conditionKey)}»`,
         action.duration,
       );
+
+      if (!action.recurringSave) {
+        return condition;
+      }
+
+      const { ability, dc, timing } = action.recurringSave;
+
+      return `${condition} (${EFFECT_TRIGGER_PHRASE_PARTS.recurringSavePrefix}${EFFECT_ABILITY_GENITIVE_LABELS[ability]} ${describeOptions.formatDc(dc)} ${EFFECT_SAVE_TIMING_LABELS[timing]}${EFFECT_TRIGGER_PHRASE_PARTS.recurringSaveSuffix})`;
+    }
     case 'applyTag':
       return withDurationSuffix(
-        `${EFFECT_TRIGGER_PHRASE_PARTS.tagPrefix}«${action.label ?? action.tag}»`,
+        `${EFFECT_TRIGGER_PHRASE_PARTS.tagPrefix}«${action.label ?? action.tag}»${action.stack ? EFFECT_TRIGGER_PHRASE_PARTS.stackSuffix : ''}`,
         action.duration,
       );
+    case 'reduceMaxHp': {
+      const amount = action.amount.replaceAll(
+        `@${EVENT_DAMAGE_VARIABLE}`,
+        EFFECT_TRIGGER_PHRASE_PARTS.damageVariable,
+      );
+
+      const endsOnRest = action.endsOnRest ?? DEFAULT_TRIGGER_REST_TYPE;
+
+      const until =
+        endsOnRest === MAX_HP_REDUCTION_NEVER_ENDS
+          ? ''
+          : EFFECT_TRIGGER_REST_UNTIL_PHRASES[endsOnRest];
+
+      return `${EFFECT_TRIGGER_PHRASE_PARTS.maxHpPrefix}${amount}${until}`;
+    }
     case 'setHp':
       return `${EFFECT_TRIGGER_PHRASE_PARTS.setHpPrefix}${action.value}`;
     case 'endCast':
@@ -147,11 +194,13 @@ function describeAction(action: EffectTriggerAction): string {
  *
  * @param trigger срабатывание.
  * @param saved пройден ли спасбросок.
+ * @param describeOptions настройки фразы.
  * @returns перечисление либо «ничего».
  */
 function describeOutcomeActions(
   trigger: EffectTrigger,
   saved: boolean,
+  describeOptions: EffectTriggerDescribeOptions,
 ): string {
   const parts = trigger.actions.flatMap((action) => {
     const gate = resolveTriggerActionGate(trigger, action);
@@ -164,7 +213,7 @@ function describeOutcomeActions(
       return [EFFECT_PHRASE_PARTS.halfDamage];
     }
 
-    const label = describeAction(action);
+    const label = describeAction(action, describeOptions);
 
     return label ? [label] : [];
   });
@@ -183,6 +232,12 @@ function describeOutcomeActions(
 function describeMoment(trigger: EffectTrigger): string {
   if (trigger.event === 'attackRoll' && trigger.role) {
     return EFFECT_TRIGGER_ATTACK_ROLE_PHRASES[trigger.role];
+  }
+
+  if (triggerEventHasRestType(trigger.event)) {
+    return EFFECT_TRIGGER_REST_EVENT_PHRASES[
+      trigger.restType ?? DEFAULT_TRIGGER_REST_TYPE
+    ];
   }
 
   const label = EFFECT_TRIGGER_EVENT_PHRASES[trigger.event];
@@ -240,6 +295,45 @@ function describeLegacyShape(
 }
 
 /**
+ * Кому достаются действия — часть фразы.
+ *
+ * @param trigger срабатывание.
+ * @returns часть фразы; субъект — пусто.
+ */
+function describeTriggerRecipient(trigger: EffectTrigger): string {
+  if (trigger.recipient === 'other') {
+    return EFFECT_TRIGGER_PHRASE_PARTS.recipientOther;
+  }
+
+  if (trigger.recipient !== AREA_TRIGGER_RECIPIENT || !trigger.area) {
+    return '';
+  }
+
+  const target =
+    EFFECT_TRIGGER_AREA_TARGET_PHRASES[
+      trigger.area.target ?? DEFAULT_TRIGGER_AREA_TARGET
+    ];
+
+  return `${EFFECT_TRIGGER_PHRASE_PARTS.recipientAreaPrefix}${target} в ${trigger.area.radius}${EFFECT_TRIGGER_PHRASE_PARTS.recipientAreaSuffix}`;
+}
+
+/**
+ * Подпись режима спасброска.
+ *
+ * @param mode режим спасброска.
+ * @returns продолжение фразы либо пустая строка.
+ */
+function describeSaveMode(mode: EffectTriggerSaveMode | undefined): string {
+  if (mode === 'advantage') {
+    return EFFECT_TRIGGER_PHRASE_PARTS.saveModeAdvantage;
+  }
+
+  return mode === 'disadvantage'
+    ? EFFECT_TRIGGER_PHRASE_PARTS.saveModeDisadvantage
+    : '';
+}
+
+/**
  * Лимит «не чаще N раз за период».
  *
  * @param trigger срабатывание.
@@ -281,27 +375,24 @@ export function describeEffectTrigger(
     ? `${EFFECT_TRIGGER_PHRASE_PARTS.conditionPrefix}${describeTriggerCondition(trigger.condition)}`
     : '';
 
-  const recipient =
-    trigger.recipient === 'other'
-      ? EFFECT_TRIGGER_PHRASE_PARTS.recipientOther
-      : '';
+  const recipient = describeTriggerRecipient(trigger);
 
   const moment = `${describeMoment(trigger)}${condition}${recipient}`;
   const limit = describeLimit(trigger);
 
   if (!trigger.save) {
-    return `${moment}: ${describeOutcomeActions(trigger, false)}${limit}`;
+    return `${moment}: ${describeOutcomeActions(trigger, false, describeOptions)}${limit}`;
   }
 
-  const { ability, dc, dcFormula } = trigger.save;
+  const { ability, dc, dcFormula, mode } = trigger.save;
 
   const dcLabel = dcFormula
     ? `${EFFECT_TRIGGER_PHRASE_PARTS.dcFormulaPrefix}${dcFormula.replaceAll(`@${EVENT_DAMAGE_VARIABLE}`, EFFECT_TRIGGER_PHRASE_PARTS.damageVariable)}`
     : describeOptions.formatDc(dc);
 
   return [
-    `${moment}: ${EFFECT_PHRASE_PARTS.savePrefix}${EFFECT_ABILITY_GENITIVE_LABELS[ability]}, ${dcLabel}`,
-    `${EFFECT_TRIGGER_PHRASE_PARTS.failurePrefix}${describeOutcomeActions(trigger, false)}`,
-    `${EFFECT_TRIGGER_PHRASE_PARTS.successPrefix}${describeOutcomeActions(trigger, true)}${limit}`,
+    `${moment}: ${EFFECT_PHRASE_PARTS.savePrefix}${EFFECT_ABILITY_GENITIVE_LABELS[ability]}${describeSaveMode(mode)}, ${dcLabel}`,
+    `${EFFECT_TRIGGER_PHRASE_PARTS.failurePrefix}${describeOutcomeActions(trigger, false, describeOptions)}`,
+    `${EFFECT_TRIGGER_PHRASE_PARTS.successPrefix}${describeOutcomeActions(trigger, true, describeOptions)}${limit}`,
   ].join(EFFECT_PHRASE_PARTS.clauseJoiner);
 }

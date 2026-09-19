@@ -4,7 +4,7 @@
   import type { MagicItemCreate } from '../model';
 
   import { ActiveEffects } from '~active-effects/editor';
-  import { EFFECT_ORIGIN } from '~active-effects/model';
+  import { EFFECT_ACTIVATION_MODE, EFFECT_ORIGIN } from '~active-effects/model';
   import { EditorBaseInfo } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectItem } from '~ui/select';
@@ -17,6 +17,8 @@
     createEmptyMagicItemMechanics,
     EMPTY_MAGIC_ITEM_BONUSES,
     getMagicItemEffectContext,
+    isUsedMagicItemActivation,
+    MAGIC_ITEM_CONSUMED_ACTIVATION,
     MAGIC_ITEM_EDITOR_SECTIONS,
     MAGIC_ITEM_EDITOR_TABS,
     MAGIC_ITEM_FORM_HINTS,
@@ -91,6 +93,40 @@
    */
   const effectContext = computed(() =>
     getMagicItemEffectContext(state.value.category),
+  );
+
+  /**
+   * Применяют ли предмет: у «при использовании» и «вручную» эффект не работает
+   * сам, его копия ложится при применении. Такой эффект здесь и создаётся.
+   */
+  const newEffectActivation = computed(() =>
+    isUsedMagicItemActivation(state.value.mechanics?.activation)
+      ? EFFECT_ACTIVATION_MODE.use
+      : undefined,
+  );
+
+  /**
+   * Подсказка про применение: предмет применяют, а эффект действует постоянно —
+   * в VTTG он сработает надетым, а не по кнопке.
+   */
+  const showsEffectActivationHint = computed(
+    () =>
+      newEffectActivation.value !== undefined
+      && (state.value.mechanics?.activeEffects ?? []).some(
+        (effect) => effect.activation === undefined,
+      ),
+  );
+
+  // «При использовании» — предмет тратится применением: галочка «Расходуемый»
+  // ставится сама. Обратной связи нет, поэтому цикла вотчеров не возникает:
+  // снятая руками галочка остаётся снятой, пока условие не выбрали заново.
+  watch(
+    () => state.value.mechanics?.activation,
+    (activation) => {
+      if (activation === MAGIC_ITEM_CONSUMED_ACTIVATION) {
+        state.value.consumable = true;
+      }
+    },
   );
 
   const tabItems: Array<TabsItem> = [
@@ -319,11 +355,21 @@
 
       <!-- ЭФФЕКТЫ -->
       <template #effects>
+        <UAlert
+          v-if="showsEffectActivationHint"
+          color="warning"
+          variant="subtle"
+          icon="tabler:alert-triangle"
+          class="mb-4"
+          :description="MAGIC_ITEM_FORM_LABELS.effectActivationHint"
+        />
+
         <ActiveEffects
           v-if="state.mechanics"
           v-model="state.mechanics.activeEffects"
           :context="effectContext"
           :origin="EFFECT_ORIGIN.item"
+          :new-effect-activation="newEffectActivation"
         />
       </template>
     </UTabs>

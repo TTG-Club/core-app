@@ -1,3 +1,5 @@
+import type { EffectFormContext } from '~active-effects/model';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -65,12 +67,26 @@ describe('терпимая загрузка эффектов', () => {
     ]);
   });
 
-  it('незнакомый флаг выпадает, эффект остаётся', () => {
+  it('незнакомый флаг остаётся: словарь сайта отстаёт от системы', () => {
     const [effect] = normalizeLoadedActiveEffects([
-      createRawEffect({ flags: ['attack.advantage', 'homebrew.flag'] }),
+      createRawEffect({
+        flags: [
+          'attack.advantage',
+          'healing.blocked',
+          'homebrew.flag',
+          '',
+          '   ',
+          42,
+          null,
+        ],
+      }),
     ]);
 
-    expect(effect?.flags).toEqual(['attack.advantage']);
+    expect(effect?.flags).toEqual([
+      'attack.advantage',
+      'healing.blocked',
+      'homebrew.flag',
+    ]);
   });
 
   it('незнакомые значения перечислений обнуляют поле, а не эффект', () => {
@@ -253,6 +269,152 @@ describe('сохранение эффектов', () => {
     );
 
     expect(stripUndefinedKeys(savedEffects)).toEqual([legacyStoredEffect]);
+  });
+
+  it('поля применения, варианта и новых срабатываний переживают «открыл и сохранил»', () => {
+    const storedEffect = createRawEffect({
+      activation: { mode: 'toggle', counter: 'rage' },
+      variant: { group: 'вариант', label: 'Оглушение', pick: 'random' },
+      landingCondition: 'source.weaponMastery === true',
+      rollCondition: 'incoming.attackType === "melee"',
+      aura: {
+        radius: AURA_RADIUS,
+        target: 'allies',
+        applyToSelf: true,
+        visible: true,
+        radiusFormula: '10 + 20 * floor(@classLevel / 18)',
+        whileCapable: true,
+      },
+      triggers: [
+        {
+          id: 'rest',
+          event: 'rest',
+          restType: 'short',
+          actions: [
+            { type: 'reduceMaxHp', amount: '@damage', endsOnRest: 'never' },
+          ],
+        },
+        {
+          id: 'burst',
+          event: 'hpZero',
+          recipient: 'area',
+          area: { radius: AURA_RADIUS, target: 'enemies' },
+          save: { ability: 'dexterity', dc: SAVE_DC, mode: 'advantage' },
+          actions: [
+            { type: 'applyTag', tag: 'burst', stack: true },
+            {
+              type: 'applyCondition',
+              conditionKey: 'prone',
+              recurringSave: {
+                ability: 'strength',
+                dc: SAVE_DC,
+                timing: 'endOfTurn',
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const savedEffects = normalizeActiveEffects(
+      normalizeLoadedActiveEffects([storedEffect]),
+      'ownEffects',
+    );
+
+    expect(stripUndefinedKeys(savedEffects)).toEqual([storedEffect]);
+  });
+
+  it('эффекты сценариев системы переживают круг «открыл и сохранил»', () => {
+    // Данные — из tests/scenarios системы: зелье (I16), «Тактика стаи»,
+    // «Опрокидывание» (W08) и взрыв спор на нуле хитов
+    const scenarios: Array<{
+      context: EffectFormContext;
+      name: string;
+      storedEffect: Record<string, unknown>;
+    }> = [
+      {
+        context: 'item',
+        name: 'Зелье лечения',
+        storedEffect: createRawEffect({
+          name: 'Зелье лечения',
+          activation: { mode: 'use' },
+          triggers: [
+            {
+              id: 'trigger_heal',
+              event: 'applied',
+              actions: [
+                {
+                  type: 'damage',
+                  // Цель части урона сайт пишет явно — у системы это умолчание
+                  parts: [{ formula: '2d4@heal+2', target: 'selected' }],
+                },
+                { type: 'removeSelf' },
+              ],
+            },
+          ],
+        }),
+      },
+      {
+        context: 'creatureTrait',
+        name: 'Тактика стаи',
+        storedEffect: createRawEffect({
+          name: 'Тактика стаи',
+          flags: ['attack.advantage'],
+          rollCondition: 'target.allyAdjacent',
+        }),
+      },
+      {
+        context: 'weapon',
+        name: 'Опрокидывание',
+        storedEffect: createRawEffect({
+          name: 'Опрокидывание',
+          effectTarget: 'target',
+          landingCondition: 'source.weaponMastery === true',
+          applySave: {
+            ability: 'constitution',
+            dc: APPLIER_SAVE_DC,
+            onSuccess: 'negate',
+          },
+          conditionKey: 'prone',
+        }),
+      },
+      {
+        context: 'creatureTrait',
+        name: 'Газовые споры',
+        storedEffect: createRawEffect({
+          name: 'Газовые споры',
+          triggers: [
+            {
+              id: 'trigger_spores',
+              event: 'hpZero',
+              recipient: 'area',
+              area: { radius: 10, target: 'all' },
+              save: { ability: 'constitution', dc: SAVE_DC },
+              actions: [
+                {
+                  type: 'applyCondition',
+                  conditionKey: 'poisoned',
+                  recurringSave: {
+                    ability: 'constitution',
+                    dc: SAVE_DC,
+                    timing: 'endOfTurn',
+                  },
+                },
+              ],
+            },
+          ],
+        }),
+      },
+    ];
+
+    for (const { context, name, storedEffect } of scenarios) {
+      const savedEffects = normalizeActiveEffects(
+        normalizeLoadedActiveEffects([storedEffect]),
+        context,
+      );
+
+      expect(stripUndefinedKeys(savedEffects), name).toEqual([storedEffect]);
+    }
   });
 
   it('урон каждый ход без частей не пишется, «при успехе» — ровно один исход', () => {

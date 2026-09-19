@@ -14,9 +14,14 @@
  * Зеркало: dnd5-test-migrate/src/engine/effectTriggerTypes.ts
  */
 
-import type { EffectAbility, EffectDamagePart, EffectDuration } from './types';
+import type {
+  EffectAbility,
+  EffectDamagePart,
+  EffectDuration,
+  EffectRecurringSave,
+} from './types';
 
-/** События, на которые срабатывание реагирует уже сейчас. */
+/** События, на которые срабатывание реагирует. */
 export const EFFECT_TRIGGER_EVENTS = [
   'turnStart',
   'turnEnd',
@@ -26,17 +31,17 @@ export const EFFECT_TRIGGER_EVENTS = [
   'attackRoll',
   'damageTaken',
   'hpZero',
+  'castEnd',
+  'rest',
+  'activate',
 ] as const;
 
 /**
  * События следующих фаз: разбираются и сохраняются, чтобы версия без их
- * поддержки не стирала их у записи, но пока ничего не запускают.
+ * поддержки не стирала их у записи, но пока ничего не запускают. Сейчас таких
+ * нет.
  */
-export const EFFECT_TRIGGER_RESERVED_EVENTS = [
-  'rest',
-  'activate',
-  'castEnd',
-] as const;
+export const EFFECT_TRIGGER_RESERVED_EVENTS = [] as const;
 
 /** Событие, на которое реагирует срабатывание. */
 export type EffectTriggerEvent =
@@ -62,12 +67,23 @@ export const DAMAGE_TRIGGER_EVENTS: readonly EffectTriggerEvent[] = [
 ];
 
 /**
- * События с другой стороной: противник на броске атаки, тот, кто нанёс урон.
- * Ей можно отдать действия срабатывания.
+ * События с уроном в данных: урон события, его типы и крит. «При наложении» —
+ * урон удара, которым эффект наложен («максимум хитов уменьшается на
+ * полученный некротический урон»).
+ */
+export const DAMAGE_DATA_TRIGGER_EVENTS: readonly EffectTriggerEvent[] = [
+  ...DAMAGE_TRIGGER_EVENTS,
+  'applied',
+];
+
+/**
+ * События с другой стороной: противник на броске атаки, тот, кто нанёс урон,
+ * тот, кто наложил эффект. Ей можно отдать действия срабатывания.
  */
 export const OTHER_PARTY_TRIGGER_EVENTS: readonly EffectTriggerEvent[] = [
   'attackRoll',
   'damageTaken',
+  'applied',
 ];
 
 /** Чей ход считает событие начала или конца хода. */
@@ -84,16 +100,59 @@ export type EffectTriggerTurnOwner =
 export const DEFAULT_TRIGGER_TURN_OWNER: EffectTriggerTurnOwner = 'subject';
 
 /** Кому достаются действия срабатывания. */
-export const EFFECT_TRIGGER_RECIPIENTS = ['subject', 'other'] as const;
+export const EFFECT_TRIGGER_RECIPIENTS = ['subject', 'other', 'area'] as const;
+
+/** Получатель «всем в радиусе». */
+export const AREA_TRIGGER_RECIPIENT = 'area';
 
 /**
- * Получатель действий: субъект — тот, на ком эффект, — или другая сторона
- * события: кто нанёс урон. Снятие эффекта всегда про эффект субъекта.
+ * Получатель действий: субъект — тот, на ком эффект, — другая сторона
+ * события (кто нанёс урон) или все в радиусе от субъекта (`area`: взрыв при
+ * смерти). Снятие эффекта всегда про эффект субъекта.
  */
 export type EffectTriggerRecipient = (typeof EFFECT_TRIGGER_RECIPIENTS)[number];
 
 /** Получатель без поля `recipient`: субъект — в данных он не пишется. */
 export const DEFAULT_TRIGGER_RECIPIENT: EffectTriggerRecipient = 'subject';
+
+/** Кого задевает «всем в радиусе». */
+export const EFFECT_TRIGGER_AREA_TARGETS = [
+  'all',
+  'allies',
+  'enemies',
+] as const;
+
+/** Кого задевает «всем в радиусе»: отношение к субъекту по фишкам. */
+export type EffectTriggerAreaTarget =
+  (typeof EFFECT_TRIGGER_AREA_TARGETS)[number];
+
+/** Кого задевает «всем в радиусе» без поля `target`. */
+export const DEFAULT_TRIGGER_AREA_TARGET: EffectTriggerAreaTarget = 'all';
+
+/** Радиус новой строки «всем в радиусе», фт. */
+export const DEFAULT_TRIGGER_AREA_RADIUS = 10;
+
+/** Наименьший радиус «всем в радиусе»: нулевой задевает только свою клетку. */
+export const MIN_TRIGGER_AREA_RADIUS = 0;
+
+/** «Всем в радиусе»: кому достаются действия. */
+export interface EffectTriggerArea {
+  /** Радиус от фишки субъекта, фт. */
+  radius: number;
+  /** Кого задевает; нет — всех, кроме субъекта. */
+  target?: EffectTriggerAreaTarget;
+}
+
+/**
+ * События с получателем «всем в радиусе»: их выполняет сервер VTTG со сценой
+ * в контексте — урон, «0 хитов», наложение, бросок атаки.
+ */
+export const AREA_RECIPIENT_TRIGGER_EVENTS: readonly EffectTriggerEvent[] = [
+  'damageTaken',
+  'hpZero',
+  'applied',
+  'attackRoll',
+];
 
 /** Роль субъекта в броске атаки. */
 export const EFFECT_TRIGGER_ATTACK_ROLES = ['attacker', 'target'] as const;
@@ -135,10 +194,44 @@ export type EffectTriggerLimitPeriod =
 /** Лимит «не чаще N раз» — от одного раза. */
 export const MIN_TRIGGER_LIMIT_MAX = 1;
 
+/** Режимы спасброска срабатывания сверх флагов бросающего. */
+export const EFFECT_TRIGGER_SAVE_MODES = ['advantage', 'disadvantage'] as const;
+
+/**
+ * Режим спасброска срабатывания: «повторяет спасбросок с преимуществом, если
+ * урон нанёс заклинатель» («Жуткий смех Таши»). Складывается с флагами
+ * бросающего по обычному правилу: преимущество и помеха гасятся.
+ */
+export type EffectTriggerSaveMode = (typeof EFFECT_TRIGGER_SAVE_MODES)[number];
+
+/** Какой отдых запускает срабатывание «после отдыха». */
+export const EFFECT_TRIGGER_REST_TYPES = ['long', 'short', 'any'] as const;
+
+/** Отдых срабатывания: долгий, короткий или любой. */
+export type EffectTriggerRestType = (typeof EFFECT_TRIGGER_REST_TYPES)[number];
+
+/** Отдых без поля `restType`: долгий — в данных он не пишется. */
+export const DEFAULT_TRIGGER_REST_TYPE: EffectTriggerRestType = 'long';
+
+/** Уменьшение максимума хитов, которое снимают только руками. */
+export const MAX_HP_REDUCTION_NEVER_ENDS = 'never';
+
+/** Когда проходит уменьшение максимума хитов: отдых или никогда. */
+export const EFFECT_TRIGGER_MAX_HP_REST_ENDS = [
+  ...EFFECT_TRIGGER_REST_TYPES,
+  MAX_HP_REDUCTION_NEVER_ENDS,
+] as const;
+
+/** Конец уменьшения максимума хитов. */
+export type EffectTriggerMaxHpRestEnd =
+  (typeof EFFECT_TRIGGER_MAX_HP_REST_ENDS)[number];
+
 /** Спасбросок срабатывания; Сл 0 — Сл источника, как у остальных полей. */
 export interface EffectTriggerSave {
   ability: EffectAbility;
   dc: number;
+  /** Преимущество или помеха самого спасброска. */
+  mode?: EffectTriggerSaveMode;
   /**
    * Сл формулой от данных события: `@damage` — урон события
    * («max(10, floor(@damage / 2))»). Нет данных или формула с ошибкой — `dc`.
@@ -178,6 +271,11 @@ export interface EffectTriggerApplyConditionAction {
   /** Ключ состояния — канонного либо заведённого в мире VTTG. */
   conditionKey: string;
   duration?: EffectDuration;
+  /**
+   * Повторный спасбросок наложенного состояния: «провал — парализован,
+   * повторяет спасбросок в конце каждого своего хода». Сл 0 — Сл источника.
+   */
+  recurringSave?: EffectRecurringSave;
   on?: EffectTriggerActionGate;
 }
 
@@ -213,6 +311,26 @@ export interface EffectTriggerApplyTagAction {
   label?: string;
   /** Срок; нет — до начала следующего хода носителя. */
   duration?: EffectDuration;
+  /**
+   * Счётчик: повторная отметка тем же ключом прибавляет ступень, а не
+   * заменяет прежнюю («три провала — окаменение»). Условие
+   * `self.tagCount["ключ"] >= N` читает число ступеней.
+   */
+  stack?: true;
+  on?: EffectTriggerActionGate;
+}
+
+/**
+ * Максимум хитов получателя уменьшается: «максимум хитов уменьшается на
+ * полученный урон, пока цель не закончит долгий отдых». Уменьшения
+ * складываются в одну метку.
+ */
+export interface EffectTriggerReduceMaxHpAction {
+  type: 'reduceMaxHp';
+  /** На сколько: число, кости или `@damage` — урон события. */
+  amount: string;
+  /** Какой отдых возвращает максимум; `never` — только снятие руками. */
+  endsOnRest?: EffectTriggerMaxHpRestEnd;
   on?: EffectTriggerActionGate;
 }
 
@@ -244,6 +362,7 @@ export type EffectTriggerAction =
   | EffectTriggerApplySelfAction
   | EffectTriggerApplyConditionAction
   | EffectTriggerApplyTagAction
+  | EffectTriggerReduceMaxHpAction
   | EffectTriggerSetHpAction
   | EffectTriggerEndCastAction
   | EffectTriggerRemoveSelfAction;
@@ -257,8 +376,12 @@ export interface EffectTrigger {
   turnOf?: EffectTriggerTurnOwner;
   /** Для броска атаки: роль субъекта. */
   role?: EffectTriggerAttackRole;
+  /** Для отдыха: какой отдых; не задано — долгий. */
+  restType?: EffectTriggerRestType;
   /** Кому достаются урон, лечение и наложения; не задано — субъекту. */
   recipient?: EffectTriggerRecipient;
+  /** Радиус и отбор для получателя «всем в радиусе». */
+  area?: EffectTriggerArea;
   /** Условие в словаре условий срабатываний (`triggerConditions.ts`). */
   condition?: string;
   save?: EffectTriggerSave;

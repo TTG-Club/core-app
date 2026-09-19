@@ -118,8 +118,63 @@ export type EffectAreaTrigger = 'stay' | 'enter' | 'exit';
 /** Что делает успешный спасбросок при наложении эффекта. */
 export type EffectSaveOutcome = 'negate' | 'half';
 
+/** Моменты периодического спасброска: начало или конец хода носителя. */
+export const EFFECT_SAVE_TIMINGS = ['startOfTurn', 'endOfTurn'] as const;
+
 /** Момент периодического спасброска/урона. */
-export type EffectSaveTiming = 'startOfTurn' | 'endOfTurn';
+export type EffectSaveTiming = (typeof EFFECT_SAVE_TIMINGS)[number];
+
+/**
+ * Как эффект начинает действовать: `use` — накладывается применением
+ * источника (зелье, стрела, кнопка «Применить»), `toggle` — включается
+ * переключателем («Ярость»).
+ */
+export const EFFECT_ACTIVATION_MODES = ['use', 'toggle'] as const;
+
+/** Способ применения или включения эффекта. */
+export type EffectActivationMode = (typeof EFFECT_ACTIVATION_MODES)[number];
+
+/** Способы применения по имени: редакторы-хозяева ссылаются на них, не на строку. */
+export const EFFECT_ACTIVATION_MODE = {
+  use: 'use',
+  toggle: 'toggle',
+} as const satisfies Record<EffectActivationMode, EffectActivationMode>;
+
+/** Сколько тратит применение или включение без поля `amount`. */
+export const DEFAULT_ACTIVATION_AMOUNT = 1;
+
+/** Применение или включение эффекта. */
+export interface EffectActivation {
+  /** Накладывается применением или включается переключателем. */
+  mode: EffectActivationMode;
+  /**
+   * Счётчик листа VTTG (ключ счётчика класса: `rages`), который тратит
+   * применение или включение; нет — ничего не тратит (у предмета тратятся его
+   * заряды).
+   */
+  counter?: string;
+  /** Сколько тратится со счётчика; нет — одна единица. */
+  amount?: number;
+}
+
+/** Как выбирается вариант группы: тем, кто бросает, или случаем. */
+export const EFFECT_VARIANT_PICKS = ['choose', 'random'] as const;
+
+/** Выбор варианта эффекта. */
+export type EffectVariantPick = (typeof EFFECT_VARIANT_PICKS)[number];
+
+/** Выбор без поля `pick`: вариант называет тот, кто бросает. */
+export const DEFAULT_EFFECT_VARIANT_PICK: EffectVariantPick = 'choose';
+
+/** Вариант эффекта в группе альтернатив. */
+export interface EffectVariant {
+  /** Ключ группы: эффекты с одним ключом — альтернативы. */
+  group: string;
+  /** Подпись варианта в выборе и в чате. */
+  label: string;
+  /** Как выбирается вариант группы; нет — называет тот, кто бросает. */
+  pick?: EffectVariantPick;
+}
 
 /**
  * Цель части урона/лечения внутри эффекта.
@@ -195,6 +250,14 @@ export interface EffectAura {
   applyToSelf: boolean;
   /** Отображать ли радиус ауры на сцене. */
   visible?: boolean;
+  /**
+   * Радиус формулой от носителя («10 фт, на 18-м уровне — 30» пишется
+   * `10 + 20 * floor(@classLevel / 18)`). VTTG считает её при сборе аур и
+   * кладёт результат в `radius`.
+   */
+  radiusFormula?: string;
+  /** Аура гаснет, пока носитель недееспособен («Аура защиты»). */
+  whileCapable?: true;
 }
 
 /** Спасбросок при наложении эффекта (в момент попадания атакой/областью). */
@@ -296,6 +359,82 @@ export interface ActiveEffect {
   conditionImmunities?: EffectConditionKey[];
   /** Степень Истощения (1–6), если `conditionKey === 'exhaustion'`. */
   exhaustionLevel?: number;
+  /**
+   * Условие наложения: эффект ложится, только если оно выполнено. Строка
+   * словаря срабатываний на событии «при наложении»: субъект — тот, на кого
+   * ложится эффект, другая сторона — кто накладывает; `source.weaponMastery` —
+   * атакующий владеет приёмом оружия («Опрокидывание»). Считается до урона
+   * этого удара.
+   */
+  landingCondition?: string;
+  /**
+   * Вариант: из эффектов одной группы ложится один — выбранный при касте или
+   * случайный («Глухота/слепота», «Лучи глаз»).
+   */
+  variant?: EffectVariant;
+  /**
+   * Условие броска: эффект не входит в числа листа и действует только в
+   * бросках, где условие выполнено, — флагами и прибавками. Строка словаря
+   * модификаторов (`EFFECT_CONDITION_EXPR_SUGGESTIONS`): «Тактика стаи» —
+   * `target.allyAdjacent`, «Защита от добра и зла» —
+   * `incoming.attackerCreatureType === "fiend"`.
+   */
+  rollCondition?: string;
+  /**
+   * Применение или включение: эффект не действует сам, пока источник не
+   * применили («Зелье лечения», «Стрела +1») или эффект не включили
+   * («Ярость»). Нет поля — действует постоянно.
+   */
+  activation?: EffectActivation;
+}
+
+/**
+ * Накладывается ли эффект только применением источника.
+ *
+ * @param effect эффект.
+ * @returns `true` для `activation.mode === 'use'`.
+ */
+export function isUseActivatedEffect(
+  effect: Pick<ActiveEffect, 'activation'>,
+): boolean {
+  return effect.activation?.mode === 'use';
+}
+
+/**
+ * Включают ли эффект переключателем.
+ *
+ * @param effect эффект.
+ * @returns `true` для `activation.mode === 'toggle'`.
+ */
+export function isToggleActivatedEffect(
+  effect: Pick<ActiveEffect, 'activation'>,
+): boolean {
+  return effect.activation?.mode === 'toggle';
+}
+
+/**
+ * Спит ли эффект: выключен или ждёт применения. Спящий эффект лежит на листе
+ * или предмете, но не действует — ни числами, ни флагами.
+ *
+ * @param effect эффект.
+ * @returns `true`, если эффект сейчас не действует.
+ */
+export function isEffectDormant(
+  effect: Pick<ActiveEffect, 'disabled' | 'activation'>,
+): boolean {
+  return effect.disabled || isUseActivatedEffect(effect);
+}
+
+/**
+ * Эффект, который ложится на лист из умения, черты или предмета: с применением
+ * или включением — выключенным. Переключаемый включают руками, шаблон
+ * применения не действует никогда. Зеркало `withActivationDefaults` системы.
+ *
+ * @param effect эффект записи.
+ * @returns эффект для листа.
+ */
+export function withActivationDefaults(effect: ActiveEffect): ActiveEffect {
+  return effect.activation ? { ...effect, disabled: true } : effect;
 }
 
 /** Приоритет по умолчанию для нового изменения. */

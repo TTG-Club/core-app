@@ -119,6 +119,7 @@
     <EffectHeaderFields
       v-model:effect="effect"
       :show-condition-preset="layout.showConditionPreset"
+      :show-status-toggle="layout.showStatusToggle"
     />
 
     <!-- Сводка держится сверху при прокрутке: правка любого шага видна в ней

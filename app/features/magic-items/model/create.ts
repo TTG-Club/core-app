@@ -37,6 +37,32 @@ export interface MagicItemCreate extends EditorBaseInfoState {
   mechanics: MagicItemMechanics | null;
 }
 
+/** Условие «при использовании»: применение тратит единицу предмета. */
+export const MAGIC_ITEM_CONSUMED_ACTIVATION = 'CONSUMED';
+
+/**
+ * Условия применения, при которых предмет применяют действием: эффект такого
+ * предмета не работает надетым, его копия ложится при применении.
+ */
+const USED_MAGIC_ITEM_ACTIVATIONS: ReadonlySet<MagicItemActivation> = new Set([
+  MAGIC_ITEM_CONSUMED_ACTIVATION,
+  'MANUAL',
+]);
+
+/**
+ * Применяют ли предмет с таким условием.
+ *
+ * @param activation условие применения механики.
+ * @returns `true`, если предмет применяют действием.
+ */
+export function isUsedMagicItemActivation(
+  activation: MagicItemActivation | undefined,
+): boolean {
+  return (
+    activation !== undefined && USED_MAGIC_ITEM_ACTIVATIONS.has(activation)
+  );
+}
+
 const magicItemActivationSchema = z.enum([
   'CARRIED',
   'WORN',

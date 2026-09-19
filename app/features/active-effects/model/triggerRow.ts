@@ -15,6 +15,7 @@ import type {
 } from './triggerTypes';
 
 import {
+  DEFAULT_MAX_HP_REDUCTION,
   DEFAULT_TRIGGER_CONDITION,
   EFFECT_TRIGGER_DAMAGE_HALF_GATE,
   MIN_TRIGGER_ACTION_ROUNDS,
@@ -23,10 +24,13 @@ import {
   DEFAULT_SET_HP_VALUE,
   listTriggerActionTypes,
   triggerEventAcceptsDcFormula,
-  triggerEventHasOtherParty,
   triggerEventHasRole,
 } from './layout';
-import { isTurnTriggerEvent } from './triggers';
+import {
+  buildTriggerRecipientOptions,
+  triggerEventHasRecipientChoice,
+} from './options';
+import { isTurnTriggerEvent, triggerEventHasRestType } from './triggers';
 import {
   DEFAULT_EFFECT_TAG,
   DEFAULT_TRIGGER_ATTACK_ROLE,
@@ -34,7 +38,8 @@ import {
 
 /**
  * Новое действие срабатывания со значениями по умолчанию: урон без частей,
- * состояние по умолчанию, отметка с ключом по умолчанию, «Хиты становятся» — 1.
+ * состояние по умолчанию, отметка с ключом по умолчанию, «Хиты становятся» — 1,
+ * уменьшение максимума хитов — на урон события.
  *
  * @param type вид действия.
  * @returns действие.
@@ -51,6 +56,8 @@ export function createEffectTriggerAction(
       return { type, tag: DEFAULT_EFFECT_TAG };
     case 'setHp':
       return { type, value: DEFAULT_SET_HP_VALUE };
+    case 'reduceMaxHp':
+      return { type, amount: DEFAULT_MAX_HP_REDUCTION };
     default:
       return { type };
   }
@@ -88,8 +95,8 @@ export function omitTriggerSaveDcFormula(
 /**
  * Строка срабатывания под новое событие. Смена события отбрасывает то, чего у
  * нового события нет: действия, которые на нём не работают, роль в броске
- * атаки, получателя, чей ход и формулу Сл. Роль у броска атаки остаётся
- * прежней, а если её не было — берётся роль по умолчанию.
+ * атаки, получателя с его радиусом, чей ход, отдых и формулу Сл. Роль у броска
+ * атаки остаётся прежней, а если её не было — берётся роль по умолчанию.
  *
  * @param trigger строка срабатывания.
  * @param nextEvent новое событие.
@@ -112,9 +119,12 @@ export function writeTriggerEvent(
       ? (trigger.role ?? DEFAULT_TRIGGER_ATTACK_ROLE)
       : undefined,
     turnOf: isTurnTriggerEvent(nextEvent) ? trigger.turnOf : undefined,
-    recipient: triggerEventHasOtherParty(nextEvent)
-      ? trigger.recipient
-      : undefined,
+    restType: triggerEventHasRestType(nextEvent) ? trigger.restType : undefined,
+    // Недоступного получателя новое событие не наследует
+    recipient: buildTriggerRecipientOptions({ ...trigger, event: nextEvent })
+      .map((recipientOption) => recipientOption.value)
+      .find((recipientValue) => recipientValue === trigger.recipient),
+    area: triggerEventHasRecipientChoice(nextEvent) ? trigger.area : undefined,
     save: save && dropsDcFormula ? omitTriggerSaveDcFormula(save) : save,
     actions: trigger.actions.filter((action) =>
       allowedActionTypes.includes(action.type),

@@ -48,6 +48,7 @@ import {
   EFFECT_SAVE_TIMING_LABELS,
   EFFECT_SPELL_ZONE_DELIVERY_HINT,
   EFFECT_TARGET_KEY_SUGGESTIONS,
+  EFFECT_USE_DELIVERY_HINTS,
   isEffectConditionKey,
   isEffectDamageType,
   splitConditionParts,
@@ -552,8 +553,15 @@ export function describeInertEffectFields(
  * @returns пояснение.
  */
 export function resolveEffectDeliveryHint(
-  layout: Pick<EffectFormLayout, 'delivery' | 'context'>,
+  layout: Pick<EffectFormLayout, 'delivery' | 'context' | 'useActivated'>,
 ): string {
+  if (
+    layout.useActivated
+    && (layout.delivery === 'carrier' || layout.delivery === 'target')
+  ) {
+    return EFFECT_USE_DELIVERY_HINTS[layout.delivery];
+  }
+
   return layout.delivery === 'zone' && layout.context === 'spell'
     ? EFFECT_SPELL_ZONE_DELIVERY_HINT
     : EFFECT_DELIVERY_HINTS[layout.delivery];

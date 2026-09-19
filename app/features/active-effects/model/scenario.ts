@@ -27,12 +27,15 @@ import {
   EFFECT_SCENARIO_MAX_NAMED_MODIFIERS,
   EFFECT_SPELL_ZONE_MOMENT_LABELS,
   EFFECT_TARGET_MOMENT_LABELS,
+  EFFECT_TOGGLE_MOMENT_LABEL,
+  EFFECT_USE_MOMENT_LABELS,
   EFFECT_ZONE_MOMENT_LABELS,
 } from './constants';
 import { findEffectConditionTemplate } from './create';
 import {
   describeConditionName,
   describeEffectChange,
+  describeEffectChangeCondition,
   describeEffectDamageParts,
   describeEffectDuration,
   describeEffectFlag,
@@ -43,9 +46,13 @@ import {
   readEffectSuccessOutcome,
   resolveEffectFormLayout,
 } from './layout';
-import { describeEffectTrigger } from './triggerDescribe';
+import {
+  describeEffectTrigger,
+  describeTriggerCondition,
+} from './triggerDescribe';
 import { listEffectListTriggers } from './triggers';
 import { LEGACY_TRIGGER_IDS } from './triggerTypes';
+import { DEFAULT_ACTIVATION_AMOUNT } from './types';
 
 /** Что состояние уже делает само: это сводка не перечисляет. */
 type ConditionPayload = Pick<
@@ -79,6 +86,21 @@ function describeMoment(
   effect: ActiveEffect,
   layout: EffectFormLayout,
 ): string {
+  const { mode } = effect.activation ?? {};
+
+  const activation =
+    mode && layout.activationModes.includes(mode) ? mode : undefined;
+
+  if (activation === 'use' && layout.delivery !== 'aura') {
+    return layout.delivery === 'target'
+      ? EFFECT_USE_MOMENT_LABELS.target
+      : EFFECT_USE_MOMENT_LABELS.carrier;
+  }
+
+  if (activation === 'toggle' && layout.delivery === 'carrier') {
+    return EFFECT_TOGGLE_MOMENT_LABEL;
+  }
+
   switch (layout.delivery) {
     case 'zone':
       return layout.context === 'spell'
@@ -91,12 +113,41 @@ function describeMoment(
         return EFFECT_CARRIER_MOMENT_LABELS[layout.context];
       }
 
-      return `${EFFECT_AURA_MOMENT_PREFIXES[layout.trigger]}${effect.aura.radius}${EFFECT_PHRASE_PARTS.feetSuffix} (${EFFECT_AURA_TARGET_SCENARIO_LABELS[effect.aura.target]})`;
+      const radius = effect.aura.radiusFormula ?? String(effect.aura.radius);
+
+      const capable = effect.aura.whileCapable
+        ? EFFECT_SCENARIO_LABELS.auraWhileCapable
+        : '';
+
+      return `${EFFECT_AURA_MOMENT_PREFIXES[layout.trigger]}${radius}${EFFECT_PHRASE_PARTS.feetSuffix} (${EFFECT_AURA_TARGET_SCENARIO_LABELS[effect.aura.target]})${capable}`;
     }
     case 'carrier':
     default:
       return EFFECT_CARRIER_MOMENT_LABELS[layout.context];
   }
+}
+
+/**
+ * Какой счётчик тратит применение или включение.
+ *
+ * @param effect эффект.
+ * @returns часть фразы либо пустая строка.
+ */
+function describeActivationCounter(effect: ActiveEffect): string {
+  const counter = effect.activation?.counter;
+
+  if (!counter) {
+    return '';
+  }
+
+  const amount = effect.activation?.amount ?? DEFAULT_ACTIVATION_AMOUNT;
+
+  const amountText =
+    amount > DEFAULT_ACTIVATION_AMOUNT
+      ? `${EFFECT_SCENARIO_LABELS.counterAmountPrefix}${amount}`
+      : '';
+
+  return `${EFFECT_SCENARIO_LABELS.counterPrefix}${counter}${EFFECT_SCENARIO_LABELS.counterSuffix}${amountText}`;
 }
 
 /**
@@ -312,7 +363,27 @@ export function describeEffectScenario(
   context: EffectFormContext,
 ): string {
   const layout = resolveEffectFormLayout(context, effect);
-  const moment = describeMoment(effect, layout);
+
+  const variant =
+    layout.showVariant && effect.variant
+      ? `${EFFECT_SCENARIO_LABELS.variantPrefix}«${effect.variant.label}»${EFFECT_SCENARIO_LABELS.variantSuffix}`
+      : '';
+
+  const landingCondition =
+    layout.showLandingCondition && effect.landingCondition
+      ? `${EFFECT_SCENARIO_LABELS.landingConditionPrefix}${describeTriggerCondition(effect.landingCondition)}`
+      : '';
+
+  const counter = layout.showActivationCounter
+    ? describeActivationCounter(effect)
+    : '';
+
+  const rollCondition = effect.rollCondition
+    ? `${EFFECT_SCENARIO_LABELS.rollConditionPrefix}${describeEffectChangeCondition(effect.rollCondition).toLowerCase()}`
+    : '';
+
+  const moment = `${variant}${describeMoment(effect, layout)}${counter}${landingCondition}${rollCondition}`;
+
   const lasting = describeLastingPayload(effect, layout);
 
   const damage =

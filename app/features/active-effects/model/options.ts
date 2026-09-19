@@ -6,7 +6,7 @@
  * Зеркало: dnd5-test-migrate/src/client/ui/effect/effectFormOptions.ts
  */
 
-import type { SaveDcFieldMode } from './constants';
+import type { EffectActivationChoice, SaveDcFieldMode } from './constants';
 import type {
   EffectDelivery,
   EffectFormContext,
@@ -19,52 +19,77 @@ import type {
   EffectTriggerActionGate,
   EffectTriggerAttackRole,
   EffectTriggerLimitPeriod,
+  EffectTriggerMaxHpRestEnd,
   EffectTriggerRecipient,
+  EffectTriggerRestType,
+  EffectTriggerSaveMode,
 } from './triggerTypes';
 import type {
   EffectAreaTrigger,
   EffectAuraTarget,
   EffectDuration,
   EffectDurationType,
+  EffectSaveTiming,
   EffectTurnAnchor,
   EffectTurnTiming,
+  EffectVariantPick,
 } from './types';
 
 import {
   EFFECT_ACTION_SAVE_OUTCOME_OPTIONS,
+  EFFECT_ACTIVATION_CHOICE_LABELS,
   EFFECT_AURA_AREA_TRIGGER_LABELS,
   EFFECT_AURA_TARGET_LABELS,
   EFFECT_CARRIER_DELIVERY_LABELS,
+  EFFECT_CONDITION_OPTIONS,
   EFFECT_CREATURE_CATEGORY_OPTIONS,
+  EFFECT_CREATURE_SIZE_OPTIONS,
   EFFECT_DAMAGE_TYPE_OPTIONS,
   EFFECT_DELIVERY_ICONS,
   EFFECT_DELIVERY_LABELS,
   EFFECT_DURATION_HINTS,
   EFFECT_DURATION_LABELS,
+  EFFECT_PERMANENT_ACTIVATION,
   EFFECT_SAVE_DC_FIELD_MODE_LABELS,
+  EFFECT_SAVE_TIMING_LABELS,
   EFFECT_SUCCESS_OUTCOME_OPTIONS,
   EFFECT_TARGET_DELIVERY_LABELS,
+  EFFECT_TRIGGER_APPLIED_OTHER_PARTY_LABEL,
   EFFECT_TRIGGER_ATTACK_OTHER_PARTY_LABELS,
   EFFECT_TRIGGER_DAMAGE_HALF_GATE,
   EFFECT_TRIGGER_DAMAGE_HALF_LABEL,
   EFFECT_TRIGGER_GATE_LABELS,
+  EFFECT_TRIGGER_MAX_HP_REST_LABELS,
+  EFFECT_TRIGGER_NORMAL_SAVE_MODE,
   EFFECT_TRIGGER_PERIOD_LABELS,
   EFFECT_TRIGGER_RECIPIENT_LABELS,
+  EFFECT_TRIGGER_REST_LABELS,
   EFFECT_TRIGGER_ROLE_LABELS,
+  EFFECT_TRIGGER_SAVE_MODE_LABELS,
   EFFECT_TURN_ANCHOR_LABELS,
   EFFECT_TURN_TIMING_LABELS,
+  EFFECT_USE_DELIVERY_LABELS,
+  EFFECT_VARIANT_PICK_LABELS,
   EFFECT_ZONE_AREA_TRIGGER_LABELS,
   SAVE_DC_AUTO_MODE,
   SAVE_DC_MANUAL_MODE,
 } from './constants';
-import { triggerEventHasRole } from './layout';
+import {
+  triggerEventAcceptsArea,
+  triggerEventHasOtherParty,
+  triggerEventHasRole,
+} from './layout';
 import {
   DEFAULT_TRIGGER_ATTACK_ROLE,
   EFFECT_TRIGGER_ACTION_GATES,
   EFFECT_TRIGGER_ATTACK_ROLES,
   EFFECT_TRIGGER_LIMIT_PERIODS,
+  EFFECT_TRIGGER_MAX_HP_REST_ENDS,
   EFFECT_TRIGGER_RECIPIENTS,
+  EFFECT_TRIGGER_REST_TYPES,
+  EFFECT_TRIGGER_SAVE_MODES,
 } from './triggerTypes';
+import { EFFECT_SAVE_TIMINGS, EFFECT_VARIANT_PICKS } from './types';
 
 /** Моменты срабатывания зоны и ауры в порядке показа. */
 const EFFECT_AREA_TRIGGER_ORDER: readonly EffectAreaTrigger[] = [
@@ -135,21 +160,28 @@ export interface EffectDescribedOption<Value extends string> {
 }
 
 /**
- * Подпись доставки в месте формы.
+ * Подпись доставки в месте формы. У применяемого эффекта свои: копия ложится
+ * при применении, а не пока источник надет.
  *
  * @param delivery доставка.
  * @param context место формы.
+ * @param useActivated накладывается ли эффект применением.
  * @returns подпись.
  */
 function deliveryLabel(
   delivery: EffectDelivery,
   context: EffectFormContext,
+  useActivated: boolean,
 ): string {
   switch (delivery) {
     case 'carrier':
-      return EFFECT_CARRIER_DELIVERY_LABELS[context];
+      return useActivated
+        ? EFFECT_USE_DELIVERY_LABELS.carrier
+        : EFFECT_CARRIER_DELIVERY_LABELS[context];
     case 'target':
-      return EFFECT_TARGET_DELIVERY_LABELS[context];
+      return useActivated
+        ? EFFECT_USE_DELIVERY_LABELS.target
+        : EFFECT_TARGET_DELIVERY_LABELS[context];
     case 'aura':
       return EFFECT_DELIVERY_LABELS.aura;
     case 'zone':
@@ -171,7 +203,7 @@ export function buildDeliveryOptions(
 ): EffectSegmentOption<EffectDelivery>[] {
   return layout.deliveryOptions.map((delivery) => ({
     value: delivery,
-    label: deliveryLabel(delivery, layout.context),
+    label: deliveryLabel(delivery, layout.context, layout.useActivated),
     icon: EFFECT_DELIVERY_ICONS[delivery],
   }));
 }
@@ -293,6 +325,39 @@ export function writeDurationType(
   };
 }
 
+/**
+ * Варианты «Действует»: постоянно и способы применения этого места. Пусто —
+ * эффект здесь только постоянный, и выбора нет.
+ *
+ * @param layout раскладка формы.
+ * @returns варианты.
+ */
+export function buildActivationOptions(
+  layout: EffectFormLayout,
+): EffectSegmentOption<EffectActivationChoice>[] {
+  if (layout.activationModes.length === 0) {
+    return [];
+  }
+
+  const choices: EffectActivationChoice[] = [
+    EFFECT_PERMANENT_ACTIVATION,
+    ...layout.activationModes,
+  ];
+
+  return choices.map((choice) => ({
+    value: choice,
+    label: EFFECT_ACTIVATION_CHOICE_LABELS[choice],
+  }));
+}
+
+/** Варианты способа выбора варианта эффекта. */
+export const EFFECT_VARIANT_PICK_OPTIONS: Array<
+  EffectSegmentOption<EffectVariantPick>
+> = EFFECT_VARIANT_PICKS.map((pick) => ({
+  value: pick,
+  label: EFFECT_VARIANT_PICK_LABELS[pick],
+}));
+
 /** Варианты «кого задевает аура». */
 export const EFFECT_AURA_TARGET_OPTIONS: Array<
   EffectSegmentOption<EffectAuraTarget>
@@ -323,8 +388,30 @@ export const EFFECT_TRIGGER_ROLE_OPTIONS: Array<
 }));
 
 /**
+ * Подпись «другой стороны» по событию: у урона — кто его нанёс, у броска атаки
+ * — цель или атакующий, при наложении — кто наложил.
+ *
+ * @param trigger событие и роль строки.
+ * @returns подпись.
+ */
+function resolveOtherPartyLabel(
+  trigger: Pick<EffectTrigger, 'event' | 'role'>,
+): string {
+  if (triggerEventHasRole(trigger.event)) {
+    return EFFECT_TRIGGER_ATTACK_OTHER_PARTY_LABELS[
+      trigger.role ?? DEFAULT_TRIGGER_ATTACK_ROLE
+    ];
+  }
+
+  return trigger.event === 'applied'
+    ? EFFECT_TRIGGER_APPLIED_OTHER_PARTY_LABEL
+    : EFFECT_TRIGGER_RECIPIENT_LABELS.other;
+}
+
+/**
  * Варианты получателя действий срабатывания. «Другая сторона» подписана по
- * событию: у урона — кто его нанёс, у броска атаки — цель или атакующий.
+ * событию: у урона — кто его нанёс, у броска атаки — цель или атакующий. «Всем
+ * в радиусе» — только у событий, которые выполняет сервер со сценой.
  *
  * @param trigger событие и роль строки.
  * @returns варианты.
@@ -332,23 +419,80 @@ export const EFFECT_TRIGGER_ROLE_OPTIONS: Array<
 export function buildTriggerRecipientOptions(
   trigger: Pick<EffectTrigger, 'event' | 'role'>,
 ): EffectSegmentOption<EffectTriggerRecipient>[] {
-  const labels: Record<EffectTriggerRecipient, string> = triggerEventHasRole(
-    trigger.event,
-  )
-    ? {
-        ...EFFECT_TRIGGER_RECIPIENT_LABELS,
-        other:
-          EFFECT_TRIGGER_ATTACK_OTHER_PARTY_LABELS[
-            trigger.role ?? DEFAULT_TRIGGER_ATTACK_ROLE
-          ],
-      }
-    : EFFECT_TRIGGER_RECIPIENT_LABELS;
+  const labels: Record<EffectTriggerRecipient, string> = {
+    ...EFFECT_TRIGGER_RECIPIENT_LABELS,
+    other: resolveOtherPartyLabel(trigger),
+  };
 
-  return EFFECT_TRIGGER_RECIPIENTS.map((recipient) => ({
+  const available: Record<EffectTriggerRecipient, boolean> = {
+    subject: true,
+    other: triggerEventHasOtherParty(trigger.event),
+    area: triggerEventAcceptsArea(trigger.event),
+  };
+
+  return EFFECT_TRIGGER_RECIPIENTS.filter(
+    (recipient) => available[recipient],
+  ).map((recipient) => ({
     value: recipient,
     label: labels[recipient],
   }));
 }
+
+/**
+ * Выбирается ли у события получатель действий: другая сторона или «всем в
+ * радиусе».
+ *
+ * @param event событие срабатывания.
+ * @returns `true`, если выбор получателя есть.
+ */
+export function triggerEventHasRecipientChoice(
+  event: EffectTrigger['event'],
+): boolean {
+  return triggerEventHasOtherParty(event) || triggerEventAcceptsArea(event);
+}
+
+/** Варианты отдыха срабатывания «После отдыха». */
+export const EFFECT_TRIGGER_REST_OPTIONS: Array<
+  EffectSegmentOption<EffectTriggerRestType>
+> = EFFECT_TRIGGER_REST_TYPES.map((restType) => ({
+  value: restType,
+  label: EFFECT_TRIGGER_REST_LABELS[restType],
+}));
+
+/** После какого отдыха возвращается максимум хитов. */
+export const EFFECT_TRIGGER_MAX_HP_REST_OPTIONS: Array<
+  EffectSegmentOption<EffectTriggerMaxHpRestEnd>
+> = EFFECT_TRIGGER_MAX_HP_REST_ENDS.map((restType) => ({
+  value: restType,
+  label: EFFECT_TRIGGER_MAX_HP_REST_LABELS[restType],
+}));
+
+/** Выбор режима спасброска срабатывания. */
+export type EffectTriggerSaveModeChoice =
+  | EffectTriggerSaveMode
+  | typeof EFFECT_TRIGGER_NORMAL_SAVE_MODE;
+
+/** Режимы спасброска по порядку: обычный первым. */
+const SAVE_MODE_CHOICES: readonly EffectTriggerSaveModeChoice[] = [
+  EFFECT_TRIGGER_NORMAL_SAVE_MODE,
+  ...EFFECT_TRIGGER_SAVE_MODES,
+];
+
+/** Варианты режима спасброска срабатывания. */
+export const EFFECT_TRIGGER_SAVE_MODE_OPTIONS: Array<
+  EffectSegmentOption<EffectTriggerSaveModeChoice>
+> = SAVE_MODE_CHOICES.map((saveMode) => ({
+  value: saveMode,
+  label: EFFECT_TRIGGER_SAVE_MODE_LABELS[saveMode],
+}));
+
+/** Варианты момента повторного спасброска. */
+export const EFFECT_SAVE_TIMING_OPTIONS: Array<
+  EffectSegmentOption<EffectSaveTiming>
+> = EFFECT_SAVE_TIMINGS.map((timing) => ({
+  value: timing,
+  label: EFFECT_SAVE_TIMING_LABELS[timing],
+}));
 
 /** Варианты периода лимита. */
 export const EFFECT_TRIGGER_PERIOD_OPTIONS: Array<
@@ -380,13 +524,24 @@ export const EFFECT_TRIGGER_DAMAGE_GATE_OPTIONS: Array<
 ];
 
 /**
- * Варианты значения части условия по тому, что выбирается: тип урона или тип
- * существа. Ключ отметки вводится строкой, и вариантов у него нет.
+ * Параметры части условия, значение которых выбирается списком. Ключ отметки и
+ * состояния вводится строкой, число — полем: у них вариантов нет.
+ */
+export type TriggerConditionListParameter = Exclude<
+  TriggerConditionParameter,
+  'tag' | 'number'
+>;
+
+/**
+ * Варианты значения части условия по тому, что выбирается: тип урона, тип
+ * существа, размер или состояние.
  */
 export const EFFECT_TRIGGER_CONDITION_VALUE_OPTIONS: Record<
-  Exclude<TriggerConditionParameter, 'tag'>,
+  TriggerConditionListParameter,
   Array<{ label: string; value: string }>
 > = {
   damageType: EFFECT_DAMAGE_TYPE_OPTIONS,
   creatureType: EFFECT_CREATURE_CATEGORY_OPTIONS,
+  size: EFFECT_CREATURE_SIZE_OPTIONS,
+  condition: EFFECT_CONDITION_OPTIONS,
 };

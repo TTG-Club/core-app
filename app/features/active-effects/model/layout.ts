@@ -23,6 +23,8 @@ import type {
 import type {
   ActiveEffect,
   EffectAbility,
+  EffectActivation,
+  EffectActivationMode,
   EffectAreaTrigger,
   EffectAura,
   EffectOrigin,
@@ -39,8 +41,12 @@ import {
   writeEffectTriggers,
 } from './triggers';
 import {
+  AREA_RECIPIENT_TRIGGER_EVENTS,
+  AREA_TRIGGER_RECIPIENT,
+  DAMAGE_DATA_TRIGGER_EVENTS,
   DAMAGE_TRIGGER_EVENTS,
   DEFAULT_EFFECT_TAG,
+  DEFAULT_TRIGGER_AREA_RADIUS,
   DEFAULT_TRIGGER_ATTACK_ROLE,
   EFFECT_TRIGGER_TURN_OWNERS,
   isEffectTag,
@@ -50,8 +56,11 @@ import {
   TURN_TRIGGER_EVENTS,
 } from './triggerTypes';
 import {
+  DEFAULT_ACTIVATION_AMOUNT,
   DEFAULT_EFFECT_CHANGE_PRIORITY,
+  EFFECT_ACTIVATION_MODES,
   EFFECT_ORIGIN,
+  isUseActivatedEffect,
   parseFormNumber,
 } from './types';
 
@@ -126,6 +135,9 @@ export type EffectSaveUnavailableReason = 'stayTrigger' | 'onCarrier';
 
 /** Поля, которые в месте формы ничего не делают. */
 export type InertEffectField =
+  | 'activation'
+  | 'landingCondition'
+  | 'variant'
   | 'effectTarget'
   | 'aura'
   | 'areaTrigger'
@@ -199,6 +211,24 @@ export interface EffectFormLayout {
    * выбора нет.
    */
   triggerTurnOwners: readonly EffectTriggerTurnOwner[];
+  /**
+   * Способы применения и включения, которые здесь работают; пусто — эффект
+   * здесь действует только постоянно.
+   */
+  activationModes: readonly EffectActivationMode[];
+  /** Применение или включение тратит счётчик листа. */
+  showActivationCounter: boolean;
+  /** Эффект накладывается применением: доставки подписаны «при применении». */
+  useActivated: boolean;
+  /**
+   * Переключатель «Работает» в шапке. У шаблона применения его нет: на листе
+   * такой шаблон всегда лежит выключенным.
+   */
+  showStatusToggle: boolean;
+  /** Условие наложения «Ложится, если». */
+  showLandingCondition: boolean;
+  /** Выбор «Один из вариантов». */
+  showVariant: boolean;
   /** Минимальная Сл спасброска (0 — «Сл источника»). */
   minSaveDc: number;
   /** Есть где появиться зоне на месте шаблона (у заклинания есть область). */
@@ -213,12 +243,58 @@ const CONTEXT_DELIVERIES: Record<EffectFormContext, readonly EffectDelivery[]> =
     item: ['carrier', 'aura'],
     weapon: ['carrier', 'target', 'aura'],
     spell: ['target', 'carrier', 'aura', 'zone'],
-    creatureAction: ['target'],
+    creatureAction: ['target', 'carrier'],
     creatureTrait: ['carrier', 'aura'],
     zone: ['zone'],
     condition: ['carrier'],
     generic: ['carrier', 'target', 'aura'],
   };
+
+/**
+ * Доставки эффекта, который накладывается применением: копия ложится на
+ * применившего (в том числе аурой) либо на выбранную цель.
+ */
+const USE_DELIVERIES: readonly EffectDelivery[] = ['carrier', 'target', 'aura'];
+
+/**
+ * Способы применения и включения по месту формы. Предмет применяют (зелье,
+ * стрела) — включать его нечем, он работает, пока надет. Эффект листа и умения
+ * применяют кнопкой или включают переключателем.
+ */
+const CONTEXT_ACTIVATION_MODES: Partial<
+  Record<EffectFormContext, readonly EffectActivationMode[]>
+> = {
+  ownEffects: EFFECT_ACTIVATION_MODES,
+  feature: EFFECT_ACTIVATION_MODES,
+  item: ['use'],
+  generic: EFFECT_ACTIVATION_MODES,
+};
+
+/** Места, где применение и включение тратят счётчик листа, а не заряды. */
+const ACTIVATION_COUNTER_CONTEXTS: ReadonlySet<EffectFormContext> = new Set([
+  'ownEffects',
+  'feature',
+  'generic',
+]);
+
+/**
+ * Места, где эффект «на носителе» кладёт каст: условие наложения проверяется
+ * на заклинателе.
+ */
+const LANDING_CARRIER_CONTEXTS: ReadonlySet<EffectFormContext> = new Set([
+  'spell',
+  'creatureAction',
+]);
+
+/**
+ * Места, где эффекты — часть одного каста или действия и могут быть
+ * альтернативами: выбор делается при броске.
+ */
+const VARIANT_CONTEXTS: ReadonlySet<EffectFormContext> = new Set([
+  'spell',
+  'weapon',
+  'creatureAction',
+]);
 
 /**
  * Места, где эффект «на носителе» лежит в `activeEffects` и проживает свою
@@ -229,6 +305,7 @@ const CONTEXT_DELIVERIES: Record<EffectFormContext, readonly EffectDelivery[]> =
 const LIVING_CARRIER_CONTEXTS: ReadonlySet<EffectFormContext> = new Set([
   'ownEffects',
   'spell',
+  'creatureAction',
 ]);
 
 /**
@@ -298,7 +375,7 @@ export function readEffectDelivery(
   effect: ActiveEffect,
   context: EffectFormContext,
 ): EffectDelivery {
-  const contextDeliveries = CONTEXT_DELIVERIES[context];
+  const contextDeliveries = resolveContextDeliveries(effect, context);
 
   // Зона мастера — единственная доставка своего места; у заклинания зона лишь
   // одна из доставок, и её выбирает поле эффекта
@@ -508,6 +585,78 @@ function listSuccessOutcomes(
 }
 
 /**
+ * Способы применения и включения эффекта в месте формы.
+ *
+ * @param context место формы.
+ * @returns способы; пусто — эффект здесь только постоянный.
+ */
+export function listEffectActivationModes(
+  context: EffectFormContext,
+): readonly EffectActivationMode[] {
+  return CONTEXT_ACTIVATION_MODES[context] ?? [];
+}
+
+/**
+ * Накладывается ли эффект в этом месте применением.
+ *
+ * @param effect эффект.
+ * @param context место формы.
+ * @returns `true`, если применение здесь работает и выбрано.
+ */
+function isUsedInContext(
+  effect: ActiveEffect,
+  context: EffectFormContext,
+): boolean {
+  return (
+    isUseActivatedEffect(effect)
+    && listEffectActivationModes(context).includes('use')
+  );
+}
+
+/**
+ * Доставки эффекта в месте формы: у применяемого — свои.
+ *
+ * @param effect эффект.
+ * @param context место формы.
+ * @returns доставки; первая — доставка нового эффекта.
+ */
+function resolveContextDeliveries(
+  effect: ActiveEffect,
+  context: EffectFormContext,
+): readonly EffectDelivery[] {
+  return isUsedInContext(effect, context)
+    ? USE_DELIVERIES
+    : CONTEXT_DELIVERIES[context];
+}
+
+/**
+ * Применение или включение для записи: пустой счётчик не пишется, расход — от
+ * единицы, а без счётчика расход не нужен.
+ *
+ * @param activation применение из черновика.
+ * @returns применение либо `undefined`.
+ */
+function normalizeDraftActivation(
+  activation: EffectActivation | undefined,
+): EffectActivation | undefined {
+  if (!activation) {
+    return undefined;
+  }
+
+  const counter = activation.counter?.trim() || undefined;
+
+  const amount = Math.trunc(
+    parseFormNumber(activation.amount) ?? DEFAULT_ACTIVATION_AMOUNT,
+  );
+
+  return {
+    mode: activation.mode,
+    counter,
+    amount: counter && amount > DEFAULT_ACTIVATION_AMOUNT ? amount : undefined,
+  };
+}
+
+/**
  * Раскладка формы эффекта: что показывать для места и текущей настройки.
  *
  * @param context место формы.
@@ -524,12 +673,14 @@ export function resolveEffectFormLayout(
 
   // Без области у заклинания зоне негде появиться: такой доставки не
   // предлагаем, а уже выбранная остаётся видна — её покажет плашка
+  const contextDeliveries = resolveContextDeliveries(effect, context);
+
   const deliveryOptions =
     layoutOptions.zoneAvailable === false
     && context !== 'zone'
     && delivery !== 'zone'
-      ? CONTEXT_DELIVERIES[context].filter((option) => option !== 'zone')
-      : CONTEXT_DELIVERIES[context];
+      ? contextDeliveries.filter((option) => option !== 'zone')
+      : contextDeliveries;
 
   const trigger = readEffectAreaTrigger(effect);
   const isGeneric = context === 'generic';
@@ -538,9 +689,17 @@ export function resolveEffectFormLayout(
   const isOneShot = hasTrigger && trigger !== 'stay';
   const isOnTarget = delivery === 'target';
   const isAuraStay = delivery === 'aura' && trigger === 'stay';
+  const activationModes = listEffectActivationModes(context);
 
-  const isLivingCarrier =
-    delivery === 'carrier' && LIVING_CARRIER_CONTEXTS.has(context);
+  // Применённая копия ложится на применившего или цель и живёт своей жизнью
+  const isUsed = isUsedInContext(effect, context);
+
+  const isToggled =
+    effect.activation?.mode === 'toggle' && activationModes.includes('toggle');
+
+  const livesOnCarrier = LIVING_CARRIER_CONTEXTS.has(context) || isUsed;
+
+  const isLivingCarrier = delivery === 'carrier' && livesOnCarrier;
 
   const isTickingCarrier =
     delivery === 'carrier' && TICKING_CARRIER_CONTEXTS.has(context);
@@ -591,21 +750,40 @@ export function resolveEffectFormLayout(
     // Иммунитет ауры «пока в ауре» получают все, кого она накрывает
     // («Аура отваги»)
     showConditionImmunities: true,
-    // Длительность самой ауры на живом носителе тоже тикает
-    showDuration:
-      livesOnItsOwn || (isAuraStay && LIVING_CARRIER_CONTEXTS.has(context)),
+    // Длительность самой ауры на живом носителе тоже тикает, а включённый
+    // эффект живёт до выключения
+    showDuration: livesOnItsOwn || (isAuraStay && livesOnCarrier) || isToggled,
     showRecurringSave: livesOnItsOwn,
     showConsumeOn: livesOnItsOwn,
     ...resolveTriggerListLayout({
       showRecurringDamage,
       canRemoveSelf: livesOnItsOwn,
       hasPresence: hasTrigger,
+      // Эффект на цели лежит на ней и слышит урон по ней, как свой
       hearsDamage:
         (delivery === 'carrier' && DAMAGE_EVENT_CONTEXTS.has(context))
-        || isAuraStay,
+        || isAuraStay
+        || isOnTarget,
       hasApplier: !isTickingCarrier,
+      endsWithCast: context === 'spell' && livesOnItsOwn,
+      // Применённая копия тоже «ложится»: зелье лечит при наложении
+      landsOnTarget: isOnTarget || isUsed,
+      switchesOn: isToggled,
     }),
-    minSaveDc: acceptsApplierSaveDc(context, delivery)
+    showLandingCondition:
+      isGeneric
+      || isOnTarget
+      || isOneShot
+      || isUsed
+      || (delivery === 'carrier' && LANDING_CARRIER_CONTEXTS.has(context)),
+    showVariant: isGeneric || isUsed || VARIANT_CONTEXTS.has(context),
+    activationModes,
+    showActivationCounter:
+      effect.activation !== undefined
+      && ACTIVATION_COUNTER_CONTEXTS.has(context),
+    useActivated: isUsed,
+    showStatusToggle: !(isUsed && ACTIVATION_COUNTER_CONTEXTS.has(context)),
+    minSaveDc: acceptsApplierSaveDc(context, delivery, isUsed)
       ? APPLIER_MIN_SAVE_DC
       : FIXED_MIN_SAVE_DC,
     zoneAvailable: layoutOptions.zoneAvailable !== false,
@@ -621,6 +799,12 @@ interface TriggerListPlace {
   showRecurringDamage: boolean;
   /** Эффект лежит на существе сам. */
   canRemoveSelf: boolean;
+  /** Эффект заклинания лежит на существе и уходит с кастом. */
+  endsWithCast: boolean;
+  /** Эффект ложится ударом, заклинанием или применением. */
+  landsOnTarget: boolean;
+  /** Эффект включают переключателем. */
+  switchesOn: boolean;
   /** Эффект зоны или ауры: в него входят и выходят. */
   hasPresence: boolean;
   /** Эффект слышит урон по носителю. */
@@ -650,10 +834,14 @@ function resolveTriggerListLayout(
   const ticks = place.showRecurringDamage || place.canRemoveSelf;
 
   const triggerEvents: EffectTriggerEvent[] = [
+    ...(place.landsOnTarget ? (['applied'] as const) : []),
+    ...(place.switchesOn ? (['activate'] as const) : []),
     ...(ticks ? TURN_TRIGGER_EVENTS : []),
     ...(place.hasPresence ? PRESENCE_TRIGGER_EVENTS : []),
     ...(place.canRemoveSelf ? (['attackRoll'] as const) : []),
     ...(place.hearsDamage ? DAMAGE_TRIGGER_EVENTS : []),
+    ...(place.endsWithCast ? (['castEnd'] as const) : []),
+    ...(place.canRemoveSelf ? (['rest'] as const) : []),
   ];
 
   if (triggerEvents.length === 0) {
@@ -666,6 +854,7 @@ function resolveTriggerListLayout(
       'damage',
       'applyCondition',
       'applyTag',
+      'reduceMaxHp',
       ...(place.hearsDamage ? (['setHp'] as const) : []),
       ...(place.canRemoveSelf ? (['endCast', 'removeSelf'] as const) : []),
     ],
@@ -673,6 +862,37 @@ function resolveTriggerListLayout(
       ? EFFECT_TRIGGER_TURN_OWNERS
       : TURN_OWNERS_SUBJECT,
   };
+}
+
+/**
+ * Можно ли отдать действия срабатывания «всем в радиусе».
+ *
+ * @param event событие.
+ * @returns `true` для событий, которые выполняет сервер со сценой.
+ */
+export function triggerEventAcceptsArea(event: EffectTriggerEvent): boolean {
+  return AREA_RECIPIENT_TRIGGER_EVENTS.includes(event);
+}
+
+/**
+ * Получатель срабатывания, который работает у события.
+ *
+ * @param trigger срабатывание.
+ * @returns получатель либо `undefined` — субъект.
+ */
+function resolveDraftRecipient(
+  trigger: EffectTrigger,
+): EffectTrigger['recipient'] {
+  switch (trigger.recipient) {
+    case 'other':
+      return triggerEventHasOtherParty(trigger.event) ? 'other' : undefined;
+    case AREA_TRIGGER_RECIPIENT:
+      return triggerEventAcceptsArea(trigger.event)
+        ? AREA_TRIGGER_RECIPIENT
+        : undefined;
+    default:
+      return undefined;
+  }
 }
 
 /**
@@ -685,7 +905,7 @@ function resolveTriggerListLayout(
 export function triggerEventAcceptsDcFormula(
   event: EffectTriggerEvent,
 ): boolean {
-  return DAMAGE_TRIGGER_EVENTS.includes(event);
+  return DAMAGE_DATA_TRIGGER_EVENTS.includes(event);
 }
 
 /**
@@ -888,11 +1108,13 @@ function isTriggerSupported(
  *
  * @param context место формы.
  * @param delivery доставка эффекта.
+ * @param isUsed накладывается ли эффект применением.
  * @returns `true`, если 0 значит «Сл источника».
  */
 function acceptsApplierSaveDc(
   context: EffectFormContext,
   delivery: EffectDelivery,
+  isUsed: boolean,
 ): boolean {
   switch (context) {
     case 'generic':
@@ -902,7 +1124,9 @@ function acceptsApplierSaveDc(
     case 'weapon':
       return delivery === 'target';
     default:
-      return false;
+      // У применяемого умения копия ложится на цель в момент применения:
+      // Сл берётся у того, кто применил
+      return isUsed && delivery === 'target';
   }
 }
 
@@ -939,7 +1163,12 @@ export function listEffectFormSteps(
   layout: EffectFormLayout,
 ): EffectFormStep[] {
   const visibility: Record<EffectFormStep, boolean> = {
-    trigger: layout.deliveryOptions.length > 1 || layout.showTrigger,
+    trigger:
+      layout.deliveryOptions.length > 1
+      || layout.showTrigger
+      || layout.activationModes.length > 0
+      || layout.showLandingCondition
+      || layout.showVariant,
     save:
       layout.showSave
       || layout.saveUnavailableReason !== null
@@ -1083,20 +1312,24 @@ export function listInertEffectFields(
 
   const checks: Array<[InertEffectField, boolean]> = [
     [
+      'activation',
+      effect.activation !== undefined
+        && !layout.activationModes.includes(effect.activation.mode),
+    ],
+    [
       'effectTarget',
       // У предмета и черты существа эффект «на цели» отсекается сбором, у
-      // умения копируется на персонажа и ложится на него самого, у действия
-      // существа эффект «на носителе» никто не накладывает. «В зону» работает
+      // умения копируется на персонажа и ложится на него самого — кроме
+      // применяемого: его копия ложится на выбранную цель. «В зону» работает
       // только там, где зона — одна из доставок, и у заклинания с областью
       ((context === 'item'
         || context === 'creatureTrait'
         || context === 'feature')
-        && effect.effectTarget === 'target')
-        || (context === 'creatureAction' && effect.effectTarget !== 'target')
+        && effect.effectTarget === 'target'
+        && !deliveryOptions.includes('target'))
         || (effect.effectTarget === 'zone'
           && context !== 'zone'
-          && (!CONTEXT_DELIVERIES[context].includes('zone')
-            || !layout.zoneAvailable)),
+          && (!deliveryOptions.includes('zone') || !layout.zoneAvailable)),
     ],
     ['aura', Boolean(effect.aura) && !deliveryOptions.includes('aura')],
     [
@@ -1125,6 +1358,11 @@ export function listInertEffectFields(
       !layout.showRecurringSave && effect.recurringSave !== undefined,
     ],
     ['consumeOn', !layout.showConsumeOn && effect.consumeOn !== undefined],
+    [
+      'landingCondition',
+      !layout.showLandingCondition && effect.landingCondition !== undefined,
+    ],
+    ['variant', !layout.showVariant && effect.variant !== undefined],
     ['duration', !layout.showDuration && effect.duration.type !== 'permanent'],
     [
       'conditionImmunities',
@@ -1219,9 +1457,18 @@ function normalizeDraftTriggers(
       (trigger): EffectTrigger => ({
         ...trigger,
         // Получатель и Сл формулой — только у событий, где они работают
-        recipient: triggerEventHasOtherParty(trigger.event)
-          ? trigger.recipient
-          : undefined,
+        recipient: resolveDraftRecipient(trigger),
+        area:
+          resolveDraftRecipient(trigger) === AREA_TRIGGER_RECIPIENT
+            ? {
+                ...trigger.area,
+                radius: Math.max(
+                  0,
+                  parseFormNumber(trigger.area?.radius)
+                    ?? DEFAULT_TRIGGER_AREA_RADIUS,
+                ),
+              }
+            : undefined,
         // Отметку без годного ключа схема записи выбросила бы вместе со всем
         // срабатыванием — выбрасывается только само действие
         actions: trigger.actions.filter(
@@ -1267,10 +1514,27 @@ export function normalizeEffectDraft(
   layout: EffectFormLayout,
 ): ActiveEffect {
   const durationValue = parseFormNumber(effect.duration.value);
+  const landingCondition = effect.landingCondition?.trim();
+  const variantGroup = effect.variant?.group.trim();
+  const variantLabel = effect.variant?.label.trim();
+
+  // Шаблон применения на своём листе лежит выключенным (withActivationDefaults)
+  const disabled =
+    layout.context === 'ownEffects' && isUseActivatedEffect(effect)
+      ? true
+      : effect.disabled;
 
   return {
     ...effect,
+    disabled,
     name: effect.name.trim(),
+    landingCondition: landingCondition || undefined,
+    rollCondition: effect.rollCondition?.trim() || undefined,
+    activation: normalizeDraftActivation(effect.activation),
+    variant:
+      effect.variant && variantGroup && variantLabel
+        ? { ...effect.variant, group: variantGroup, label: variantLabel }
+        : undefined,
     duration: {
       ...effect.duration,
       value:
@@ -1288,6 +1552,8 @@ export function normalizeEffectDraft(
       ? {
           ...effect.aura,
           radius: Math.max(0, parseFormNumber(effect.aura.radius) ?? 0),
+          radiusFormula: effect.aura.radiusFormula?.trim() || undefined,
+          whileCapable: effect.aura.whileCapable || undefined,
         }
       : undefined,
     applySave: effect.applySave

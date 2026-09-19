@@ -2,17 +2,27 @@
   import type {
     EffectConditionKey,
     EffectDamagePart,
+    EffectFormLayout,
+    EffectRecurringSave,
+    EffectSaveTiming,
     EffectTriggerAction,
+    EffectTriggerMaxHpRestEnd,
+    EffectTriggerReduceMaxHpAction,
     EffectTriggerSave,
   } from '../../model';
 
   import {
+    createDefaultEffectSave,
+    DEFAULT_RECURRING_SAVE_TIMING,
+    DEFAULT_TRIGGER_REST_TYPE,
     EFFECT_CONDITION_OPTIONS,
+    EFFECT_SAVE_TIMING_OPTIONS,
     EFFECT_TRIGGER_ACTION_ICONS,
     EFFECT_TRIGGER_ACTION_LABELS,
     EFFECT_TRIGGER_DAMAGE_GATE_OPTIONS,
     EFFECT_TRIGGER_DAMAGE_HALF_GATE,
     EFFECT_TRIGGER_GATE_OPTIONS,
+    EFFECT_TRIGGER_MAX_HP_REST_OPTIONS,
     EFFECT_TRIGGER_ROW_ICONS,
     EFFECT_TRIGGER_ROW_LABELS,
     isEffectTag,
@@ -24,14 +34,24 @@
     writeTriggerActionRounds,
   } from '../../model';
   import EffectDamageParts from './EffectDamageParts.vue';
+  import EffectSaveFields from './EffectSaveFields.vue';
 
   /**
    * Действие строки срабатывания: вид, исход относительно спасброска строки и
-   * поля вида — части урона, состояние и срок, число хитов, ключ и имя отметки.
+   * поля вида — части урона, состояние со сроком и повторным спасброском, число
+   * хитов, ключ и имя отметки со счётчиком, уменьшение максимума хитов.
    */
-  const { triggerSave = undefined } = defineProps<{
+  const {
+    layout,
+    triggerSave = undefined,
+    applierSaveDc = undefined,
+  } = defineProps<{
+    /** Раскладка формы: по ней подставляется Сл повторного спасброска. */
+    layout: EffectFormLayout;
     /** Спасбросок строки: без него исход действия не выбирается. */
     triggerSave?: EffectTriggerSave;
+    /** Сл источника для «Авто», если форма её знает. */
+    applierSaveDc?: number;
   }>();
 
   const emit = defineEmits<{
@@ -163,6 +183,111 @@
     }
   }
 
+  const hasRecurringSave = computed({
+    get: () =>
+      action.value.type === 'applyCondition'
+      && action.value.recurringSave !== undefined,
+    set: (enabled: boolean) => {
+      const currentAction = action.value;
+
+      if (currentAction.type !== 'applyCondition') {
+        return;
+      }
+
+      action.value = {
+        ...currentAction,
+        recurringSave: enabled
+          ? {
+              ...createDefaultEffectSave(layout),
+              timing: DEFAULT_RECURRING_SAVE_TIMING,
+            }
+          : undefined,
+      };
+    },
+  });
+
+  /** Повторный спасбросок состояния: поля заменяют его целиком. */
+  const recurringSave = computed({
+    get: (): EffectRecurringSave =>
+      action.value.type === 'applyCondition' && action.value.recurringSave
+        ? action.value.recurringSave
+        : {
+            ...createDefaultEffectSave(layout),
+            timing: DEFAULT_RECURRING_SAVE_TIMING,
+          },
+    set: (nextSave: EffectRecurringSave) => {
+      const currentAction = action.value;
+
+      if (currentAction.type === 'applyCondition') {
+        action.value = { ...currentAction, recurringSave: nextSave };
+      }
+    },
+  });
+
+  /**
+   * Меняет момент повторного спасброска состояния.
+   *
+   * @param nextTiming момент броска.
+   */
+  function updateRecurringSaveTiming(nextTiming: EffectSaveTiming): void {
+    recurringSave.value = { ...recurringSave.value, timing: nextTiming };
+  }
+
+  // Счётчик пишется только включённым: `stack: true`
+  const tagStack = computed({
+    get: () => action.value.type === 'applyTag' && action.value.stack === true,
+    set: (enabled: boolean) => {
+      const currentAction = action.value;
+
+      if (currentAction.type === 'applyTag') {
+        action.value = { ...currentAction, stack: enabled ? true : undefined };
+      }
+    },
+  });
+
+  /**
+   * Меняет поля уменьшения максимума хитов.
+   *
+   * @param patch изменённые поля.
+   */
+  function updateMaxHp(
+    patch: Partial<Omit<EffectTriggerReduceMaxHpAction, 'type'>>,
+  ): void {
+    const currentAction = action.value;
+
+    if (currentAction.type === 'reduceMaxHp') {
+      action.value = { ...currentAction, ...patch };
+    }
+  }
+
+  /**
+   * Меняет «на сколько». Пустое значение не пишется: без него действие не
+   * разобралось бы и срабатывание пропало бы из данных.
+   *
+   * @param nextAmount введённая строка.
+   */
+  function updateMaxHpAmount(nextAmount: string): void {
+    const amount = nextAmount.trim();
+
+    if (amount) {
+      updateMaxHp({ amount });
+    }
+  }
+
+  // Долгий отдых — значение по умолчанию: в данных он не пишется
+  const maxHpRest = computed({
+    get: () =>
+      action.value.type === 'reduceMaxHp'
+        ? (action.value.endsOnRest ?? DEFAULT_TRIGGER_REST_TYPE)
+        : DEFAULT_TRIGGER_REST_TYPE,
+    set: (nextRestEnd: EffectTriggerMaxHpRestEnd) => {
+      updateMaxHp({
+        endsOnRest:
+          nextRestEnd === DEFAULT_TRIGGER_REST_TYPE ? undefined : nextRestEnd,
+      });
+    },
+  });
+
   /**
    * Меняет ключ отметки.
    *
@@ -247,38 +372,69 @@
       @update:model-value="updateDamageParts"
     />
 
-    <div
-      v-else-if="action.type === 'applyCondition'"
-      class="flex flex-wrap items-end gap-2"
-    >
-      <UFormField
-        :label="EFFECT_TRIGGER_ROW_LABELS.condition"
-        class="w-56"
-      >
-        <USelect
-          :model-value="conditionKey"
-          :items="EFFECT_CONDITION_OPTIONS"
-          value-key="value"
-          size="sm"
-          class="w-full"
-          @update:model-value="updateCondition"
-        />
-      </UFormField>
+    <template v-else-if="action.type === 'applyCondition'">
+      <div class="flex flex-wrap items-end gap-2">
+        <UFormField
+          :label="EFFECT_TRIGGER_ROW_LABELS.condition"
+          class="w-56"
+        >
+          <USelect
+            :model-value="conditionKey"
+            :items="EFFECT_CONDITION_OPTIONS"
+            value-key="value"
+            size="sm"
+            class="w-full"
+            @update:model-value="updateCondition"
+          />
+        </UFormField>
 
-      <UFormField
-        :label="EFFECT_TRIGGER_ROW_LABELS.conditionRounds"
-        class="w-40"
+        <UFormField
+          :label="EFFECT_TRIGGER_ROW_LABELS.conditionRounds"
+          class="w-40"
+        >
+          <UInputNumber
+            :model-value="rounds"
+            :min="MIN_TRIGGER_ACTION_ROUNDS"
+            :placeholder="EFFECT_TRIGGER_ROW_LABELS.conditionRoundsPlaceholder"
+            size="sm"
+            class="w-full"
+            @update:model-value="updateActionRounds"
+          />
+        </UFormField>
+      </div>
+
+      <USwitch
+        v-model="hasRecurringSave"
+        :label="EFFECT_TRIGGER_ROW_LABELS.recurringSaveToggle"
+      />
+
+      <div
+        v-if="action.recurringSave"
+        class="flex flex-wrap items-end gap-2"
       >
-        <UInputNumber
-          :model-value="rounds"
-          :min="MIN_TRIGGER_ACTION_ROUNDS"
-          :placeholder="EFFECT_TRIGGER_ROW_LABELS.conditionRoundsPlaceholder"
-          size="sm"
-          class="w-full"
-          @update:model-value="updateActionRounds"
+        <EffectSaveFields
+          v-model:save="recurringSave"
+          :layout="layout"
+          :applier-save-dc="applierSaveDc"
+          :ability-label="EFFECT_TRIGGER_ROW_LABELS.saveAbility"
+          :save-dc-label="EFFECT_TRIGGER_ROW_LABELS.saveDc"
         />
-      </UFormField>
-    </div>
+
+        <UFormField
+          :label="EFFECT_TRIGGER_ROW_LABELS.recurringSaveTiming"
+          class="w-40"
+        >
+          <USelect
+            :model-value="action.recurringSave.timing"
+            :items="EFFECT_SAVE_TIMING_OPTIONS"
+            value-key="value"
+            size="sm"
+            class="w-full"
+            @update:model-value="updateRecurringSaveTiming"
+          />
+        </UFormField>
+      </div>
+    </template>
 
     <UFormField
       v-else-if="action.type === 'setHp'"
@@ -335,6 +491,45 @@
           size="sm"
           class="w-full"
           @update:model-value="updateActionRounds"
+        />
+      </UFormField>
+
+      <USwitch
+        v-model="tagStack"
+        class="self-end"
+        :label="EFFECT_TRIGGER_ROW_LABELS.tagStack"
+        :description="EFFECT_TRIGGER_ROW_LABELS.tagStackHint"
+      />
+    </div>
+
+    <div
+      v-else-if="action.type === 'reduceMaxHp'"
+      class="flex flex-wrap items-start gap-2"
+    >
+      <UFormField
+        :label="EFFECT_TRIGGER_ROW_LABELS.maxHpAmount"
+        :help="EFFECT_TRIGGER_ROW_LABELS.maxHpAmountHint"
+        class="w-56"
+      >
+        <UInput
+          :model-value="action.amount"
+          :placeholder="EFFECT_TRIGGER_ROW_LABELS.maxHpAmountPlaceholder"
+          size="sm"
+          class="w-full font-mono"
+          @update:model-value="updateMaxHpAmount"
+        />
+      </UFormField>
+
+      <UFormField
+        :label="EFFECT_TRIGGER_ROW_LABELS.maxHpRest"
+        class="w-48"
+      >
+        <USelect
+          v-model="maxHpRest"
+          :items="EFFECT_TRIGGER_MAX_HP_REST_OPTIONS"
+          value-key="value"
+          size="sm"
+          class="w-full"
         />
       </UFormField>
     </div>

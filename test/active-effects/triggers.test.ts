@@ -411,6 +411,118 @@ describe('фразы срабатываний', () => {
     );
   });
 
+  it('отдых, режим спасброска и «всем в радиусе»', () => {
+    expect(
+      describeEffectTrigger(
+        {
+          id: 'regain',
+          event: 'rest',
+          restType: 'short',
+          actions: [{ type: 'removeSelf' }],
+        },
+        { formatDc },
+      ),
+    ).toBe('после короткого отдыха: эффект снимается');
+
+    expect(
+      describeEffectTrigger(
+        { id: 'aftermath', event: 'rest', actions: [{ type: 'removeSelf' }] },
+        { formatDc },
+      ),
+    ).toBe('после долгого отдыха: эффект снимается');
+
+    expect(
+      describeEffectTrigger(
+        {
+          id: 'laughter',
+          event: 'damageTaken',
+          save: { ability: 'wisdom', dc: SAVE_DC, mode: 'advantage' },
+          actions: [{ type: 'removeSelf', on: 'saved' }],
+        },
+        { formatDc },
+      ),
+    ).toBe(
+      `при получении урона: спасбросок Мудрости с преимуществом, Сл ${SAVE_DC}; `
+        + 'провал — ничего; успех — эффект снимается',
+    );
+
+    expect(
+      describeEffectTrigger(
+        {
+          id: 'spores',
+          event: 'hpZero',
+          recipient: 'area',
+          area: { radius: 5, target: 'allies' },
+          actions: [{ type: 'removeSelf' }],
+        },
+        { formatDc },
+      ),
+    ).toBe(
+      'когда хиты падают до 0, на союзников в 5 фт вокруг: эффект снимается',
+    );
+  });
+
+  it('повторный спасбросок состояния, счётчик отметки и максимум хитов', () => {
+    expect(
+      describeEffectTrigger(
+        {
+          id: 'paralysis',
+          event: 'applied',
+          actions: [
+            {
+              type: 'applyCondition',
+              conditionKey: 'paralyzed',
+              recurringSave: {
+                ability: 'constitution',
+                dc: SAVE_DC,
+                timing: 'endOfTurn',
+              },
+            },
+          ],
+        },
+        { formatDc },
+      ),
+    ).toBe(
+      'при наложении: «Парализованный» (повторный спасбросок Телосложения '
+        + `Сл ${SAVE_DC} в конце хода снимает эффект)`,
+    );
+
+    expect(
+      describeEffectTrigger(
+        {
+          id: 'petrify',
+          event: 'turnEnd',
+          actions: [{ type: 'applyTag', tag: 'petrify', stack: true }],
+        },
+        { formatDc },
+      ),
+    ).toBe('в конце хода: отметка «petrify» +1');
+
+    expect(
+      describeEffectTrigger(
+        {
+          id: 'lifeDrain',
+          event: 'applied',
+          actions: [{ type: 'reduceMaxHp', amount: '@damage' }],
+        },
+        { formatDc },
+      ),
+    ).toBe('при наложении: максимум хитов −урон до долгого отдыха');
+
+    expect(
+      describeEffectTrigger(
+        {
+          id: 'curse',
+          event: 'applied',
+          actions: [
+            { type: 'reduceMaxHp', amount: '2d6', endsOnRest: 'never' },
+          ],
+        },
+        { formatDc },
+      ),
+    ).toBe('при наложении: максимум хитов −2d6');
+  });
+
   it('условие, Сл формулой и «хиты становятся»', () => {
     expect(
       describeEffectTrigger(

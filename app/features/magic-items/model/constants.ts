@@ -84,6 +84,9 @@ export const MAGIC_ITEM_FORM_LABELS = {
   attunementDescriptionPlaceholder: 'Введи особенности настройки (если есть)',
   curse: 'Проклятие',
   consumable: 'Расходуемый',
+  effectActivationHint:
+    'Эффект действует постоянно, пока предмет надет. Для «использовать» '
+    + 'выберите «Действует: при применении».',
   descriptionPlaceholder: 'Введи описание',
   image: 'Основное',
   imageHint:

@@ -6,37 +6,52 @@
     EffectTrigger,
     EffectTriggerAction,
     EffectTriggerActionType,
+    EffectTriggerAreaTarget,
     EffectTriggerAttackRole,
     EffectTriggerEvent,
     EffectTriggerLimitPeriod,
     EffectTriggerRecipient,
+    EffectTriggerRestType,
     EffectTriggerSave,
+    EffectTriggerSaveModeChoice,
     EffectTriggerTurnOwner,
   } from '../../model';
 
   import {
+    AREA_TRIGGER_RECIPIENT,
     buildTriggerRecipientOptions,
     clearTriggerActionGate,
     createDefaultEffectSave,
     createEffectTriggerAction,
+    DEFAULT_TRIGGER_AREA_RADIUS,
+    DEFAULT_TRIGGER_AREA_TARGET,
     DEFAULT_TRIGGER_ATTACK_ROLE,
     DEFAULT_TRIGGER_LIMIT_PERIOD,
     DEFAULT_TRIGGER_RECIPIENT,
+    DEFAULT_TRIGGER_REST_TYPE,
     DEFAULT_TRIGGER_TURN_OWNER,
+    EFFECT_AURA_RADIUS_STEP,
+    EFFECT_AURA_TARGET_OPTIONS,
     EFFECT_TRIGGER_ACTION_ICONS,
     EFFECT_TRIGGER_ACTION_LABELS,
+    EFFECT_TRIGGER_AREA_LABELS,
     EFFECT_TRIGGER_EVENT_LABELS,
+    EFFECT_TRIGGER_NORMAL_SAVE_MODE,
     EFFECT_TRIGGER_PERIOD_OPTIONS,
+    EFFECT_TRIGGER_REST_OPTIONS,
     EFFECT_TRIGGER_ROLE_OPTIONS,
     EFFECT_TRIGGER_ROW_ICONS,
     EFFECT_TRIGGER_ROW_LABELS,
+    EFFECT_TRIGGER_SAVE_MODE_OPTIONS,
     EFFECT_TRIGGER_TURN_OWNER_LABELS,
     isTurnTriggerEvent,
     listTriggerActionTypes,
+    MIN_TRIGGER_AREA_RADIUS,
     MIN_TRIGGER_LIMIT_MAX,
     omitTriggerSaveDcFormula,
     triggerEventAcceptsDcFormula,
-    triggerEventHasOtherParty,
+    triggerEventHasRecipientChoice,
+    triggerEventHasRestType,
     triggerEventHasRole,
     validateFormula,
     writeTriggerEvent,
@@ -107,11 +122,19 @@
     triggerEventAcceptsDcFormula(trigger.value.event),
   );
 
-  const hasOtherParty = computed(() =>
-    triggerEventHasOtherParty(trigger.value.event),
+  const hasRecipientChoice = computed(() =>
+    triggerEventHasRecipientChoice(trigger.value.event),
   );
 
   const showsRole = computed(() => triggerEventHasRole(trigger.value.event));
+
+  const showsRestType = computed(() =>
+    triggerEventHasRestType(trigger.value.event),
+  );
+
+  const isAreaRecipient = computed(
+    () => trigger.value.recipient === AREA_TRIGGER_RECIPIENT,
+  );
 
   const recipientItems = computed(() =>
     buildTriggerRecipientOptions(trigger.value),
@@ -149,7 +172,64 @@
           nextRecipient === DEFAULT_TRIGGER_RECIPIENT
             ? undefined
             : nextRecipient,
+        // «Всем в радиусе» появляется с радиусом по умолчанию
+        area:
+          nextRecipient === AREA_TRIGGER_RECIPIENT
+            ? (trigger.value.area ?? { radius: DEFAULT_TRIGGER_AREA_RADIUS })
+            : undefined,
       }),
+  });
+
+  const areaRadius = computed({
+    get: () => trigger.value.area?.radius ?? DEFAULT_TRIGGER_AREA_RADIUS,
+    set: (nextRadius: number | null) => {
+      if (nextRadius !== null) {
+        updateTrigger({ area: { ...trigger.value.area, radius: nextRadius } });
+      }
+    },
+  });
+
+  const areaTarget = computed({
+    get: () => trigger.value.area?.target ?? DEFAULT_TRIGGER_AREA_TARGET,
+    set: (nextTarget: EffectTriggerAreaTarget) =>
+      updateTrigger({
+        area: {
+          radius: trigger.value.area?.radius ?? DEFAULT_TRIGGER_AREA_RADIUS,
+          target:
+            nextTarget === DEFAULT_TRIGGER_AREA_TARGET ? undefined : nextTarget,
+        },
+      }),
+  });
+
+  // Долгий отдых — значение по умолчанию: в данных он не пишется
+  const restType = computed({
+    get: () => trigger.value.restType ?? DEFAULT_TRIGGER_REST_TYPE,
+    set: (nextRestType: EffectTriggerRestType) =>
+      updateTrigger({
+        restType:
+          nextRestType === DEFAULT_TRIGGER_REST_TYPE ? undefined : nextRestType,
+      }),
+  });
+
+  // Обычный спасбросок в данных не пишется
+  const saveMode = computed({
+    get: (): EffectTriggerSaveModeChoice =>
+      trigger.value.save?.mode ?? EFFECT_TRIGGER_NORMAL_SAVE_MODE,
+    set: (nextMode: EffectTriggerSaveModeChoice) => {
+      const { save } = trigger.value;
+
+      if (!save) {
+        return;
+      }
+
+      updateTrigger({
+        save: {
+          ...save,
+          mode:
+            nextMode === EFFECT_TRIGGER_NORMAL_SAVE_MODE ? undefined : nextMode,
+        },
+      });
+    },
   });
 
   const saveDcFormula = computed({
@@ -341,7 +421,21 @@
       </UFormField>
 
       <UFormField
-        v-if="hasOtherParty"
+        v-if="showsRestType"
+        :label="EFFECT_TRIGGER_ROW_LABELS.restType"
+        class="w-full sm:w-48"
+      >
+        <USelect
+          v-model="restType"
+          :items="EFFECT_TRIGGER_REST_OPTIONS"
+          value-key="value"
+          size="sm"
+          class="w-full"
+        />
+      </UFormField>
+
+      <UFormField
+        v-if="hasRecipientChoice"
         :label="EFFECT_TRIGGER_ROW_LABELS.recipient"
         class="w-full sm:w-56"
       >
@@ -353,6 +447,34 @@
           class="w-full"
         />
       </UFormField>
+
+      <template v-if="isAreaRecipient">
+        <UFormField
+          :label="EFFECT_TRIGGER_AREA_LABELS.radius"
+          class="w-full sm:w-28"
+        >
+          <UInputNumber
+            v-model="areaRadius"
+            :min="MIN_TRIGGER_AREA_RADIUS"
+            :step="EFFECT_AURA_RADIUS_STEP"
+            size="sm"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField
+          :label="EFFECT_TRIGGER_AREA_LABELS.target"
+          class="w-full sm:w-44"
+        >
+          <USelect
+            v-model="areaTarget"
+            :items="EFFECT_AURA_TARGET_OPTIONS"
+            value-key="value"
+            size="sm"
+            class="w-full"
+          />
+        </UFormField>
+      </template>
 
       <UFormField
         v-if="showsTurnOwner"
@@ -405,6 +527,19 @@
       />
 
       <UFormField
+        :label="EFFECT_TRIGGER_ROW_LABELS.saveMode"
+        class="w-full sm:w-44"
+      >
+        <USelect
+          v-model="saveMode"
+          :items="EFFECT_TRIGGER_SAVE_MODE_OPTIONS"
+          value-key="value"
+          size="sm"
+          class="w-full"
+        />
+      </UFormField>
+
+      <UFormField
         v-if="acceptsSaveDcFormula"
         :label="EFFECT_TRIGGER_ROW_LABELS.dcFormula"
         :help="EFFECT_TRIGGER_ROW_LABELS.dcFormulaHint"
@@ -436,6 +571,8 @@
         v-for="(actionRow, index) in actionRows"
         :key="actionRow.key"
         :action="actionRow.action"
+        :layout="layout"
+        :applier-save-dc="applierSaveDc"
         :trigger-save="trigger.save"
         @update:action="updateAction(index, $event)"
         @remove="removeAction(index)"
