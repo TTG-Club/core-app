@@ -1,0 +1,1 @@
+export { useGamePublications } from './useGamePublications';

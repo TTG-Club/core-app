@@ -26,6 +26,7 @@ export default defineConfig({
   plugins: [stubVueComponents],
   resolve: {
     alias: {
+      '~admin': fileURLToPath(new URL('./app/features/admin', import.meta.url)),
       '~home': fileURLToPath(new URL('./app/features/home', import.meta.url)),
       '~active-effects': fileURLToPath(
         new URL('./app/features/active-effects', import.meta.url),
