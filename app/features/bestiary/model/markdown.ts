@@ -21,6 +21,7 @@ import {
   formatCreatureInventoryNote,
   getCreatureInventoryEntries,
 } from './inventory';
+import { formatCreatureSpeed } from './speed';
 
 /** Колонки таблицы характеристик — в порядке вывода. */
 const ABILITY_COLUMNS: MarkdownColumn[] = [
@@ -120,14 +121,7 @@ function getStats(creature: CreatureDetailResponse): MarkdownStat[] {
         ' ',
       ),
     ],
-    // В `speed` попадают лишние пробелы («80 фт. , лазая»), поэтому строка
-    // нормализуется.
-    [
-      'Скорость',
-      escapeMarkdown(
-        creature.speed.replace(/\s+([,;])/g, '$1').replace(/\s{2,}/g, ' '),
-      ),
-    ],
+    ['Скорость', escapeMarkdown(formatCreatureSpeed(creature.speed))],
     ['Навыки', joinStat((creature.skills ?? []).map(toSkill))],
     ['Уязвимости', escapeMarkdown(creature.vulnerability)],
     ['Сопротивления', escapeMarkdown(creature.resistance)],
