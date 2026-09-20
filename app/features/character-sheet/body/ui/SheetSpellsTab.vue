@@ -363,17 +363,14 @@
   );
 
   /**
-   * Чипы уровней, которые есть в списке: сам чип — номер уровня, у заговоров
-   * вместо номера сокращение. Полную подпись («Заговоры», «Уровень 3»)
-   * показывает подсказка по наведению.
+   * Чипы уровней, которые есть в списке: сам чип — номер круга, у заговоров
+   * это ноль (сокращение «Зг» на его месте путало). Полную подпись
+   * («Заговоры», «Уровень 3») показывает подсказка по наведению.
    */
   const levelChips = computed(() =>
     availableLevels.value.map((level) => ({
       level,
-      label:
-        level === CANTRIP_SPELL_LEVEL
-          ? SPELL_FILTER_LABELS.cantrip
-          : String(level),
+      label: String(level),
       tooltip: getSpellGroupLabel(level),
       isPicked: spellFilter.value.levels.includes(level),
       chipClass: getFilterChipClass(spellFilter.value.levels.includes(level)),

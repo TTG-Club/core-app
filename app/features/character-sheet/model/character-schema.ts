@@ -858,6 +858,21 @@ function toResourceRecoveryRule(
   return { mode, amount: RESOURCE_RECOVERY_AMOUNT_MIN };
 }
 
+/**
+ * Правки игрока поверх записи справочника: в документе лежат только изменённые
+ * поля, остальное ресурс берёт из справочника на каждой пересборке.
+ */
+const classResourceOverridesSchema = z.object({
+  name: z.string().optional(),
+  shortLabel: z.string().optional(),
+  shortRest: resourceRecoveryRuleSchema.optional(),
+  longRest: resourceRecoveryRuleSchema.optional(),
+  max: z.coerce.number().optional(),
+  // Правка максимума пишется парой с `max`, и `null` здесь значит «своё
+  // число вместо книжного правила», а не «правки нет».
+  maxRule: resourceMaxRuleSchema.nullable().optional(),
+});
+
 const classResourceSchema = z
   .object({
     id: z.string(),
@@ -873,6 +888,8 @@ const classResourceSchema = z
     // Правило максимума: у ресурсов до него поля нет — их максимум записан
     // числом и от листа не зависит.
     maxRule: resourceMaxRuleSchema.nullable().optional().catch(null),
+    overrides: classResourceOverridesSchema.optional().catch(undefined),
+    hidden: z.boolean().optional().catch(undefined),
   })
   .transform(({ recovery, shortRest, longRest, ...resource }) => ({
     ...resource,
