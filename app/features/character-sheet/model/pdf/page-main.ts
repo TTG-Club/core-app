@@ -44,6 +44,7 @@ import {
   getSpeedRows,
   getSpellcastingBreakdown,
   getToolNames,
+  getVisibleClassResources,
   getVisionRows,
   getWeaponAttackBonus,
   getWeaponDamage,
@@ -1067,7 +1068,12 @@ function drawClassResourcesPanel(
 
       let cursor = contentTop;
 
-      for (const resource of character.classResources) {
+      // Убранные с листа и ещё не открывшиеся ресурсы не печатаются: лист на
+      // бумаге должен совпадать с тем, что игрок видит на экране.
+      for (const resource of getVisibleClassResources(
+        character,
+        character.classResources,
+      )) {
         drawKeyValueRow(context, page, {
           left: contentLeft,
           top: cursor,
@@ -1267,7 +1273,7 @@ export function drawMainPage(
       width: PDF_MAIN_COLUMN_WIDTHS.right,
     }) + PDF_GAP;
 
-  if (character.classResources.length) {
+  if (getVisibleClassResources(character, character.classResources).length) {
     rightTop +=
       drawClassResourcesPanel(context, page, character, {
         left: rightLeft,

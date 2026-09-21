@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CreateAction } from '../../../model';
+  import type { CreateAction, CreatureEffectContext } from '../../../model';
 
   import { ActiveEffects } from '~active-effects/editor';
   import { EFFECT_ORIGIN } from '~active-effects/model';
@@ -19,7 +19,20 @@
    * свёрнутыми полями. Поэтому имена полей здесь относительные: путь записи
    * (`actions.0`) вложенная форма подставляет сама.
    */
+  defineProps<{
+    /** Место эффектов записи: черта существа или действие. */
+    effectContext: CreatureEffectContext;
+  }>();
+
   const model = defineModel<CreateAction>({ required: true });
+
+  /**
+   * Сл самого действия — ею «Авто» подписывает поле Сл эффекта: «Сл действия ·
+   * 14». Берётся Сл только первого спасброска: у записи с несколькими
+   * спасбросками подпись назовёт первую, остальные в неё не попадут. У
+   * действия без спасброска числа нет, остаётся одна подпись.
+   */
+  const actionSaveDc = computed(() => model.value.effect.savingThrows[0]?.dc);
 </script>
 
 <template>
@@ -79,7 +92,8 @@
   <ActiveEffects
     v-model="model.effect.activeEffects"
     nested
-    default-target="target"
+    :context="effectContext"
+    :applier-save-dc="actionSaveDc"
     :origin="EFFECT_ORIGIN.feature"
     :title="CREATURE_ACTION_SECTIONS.effects"
   />

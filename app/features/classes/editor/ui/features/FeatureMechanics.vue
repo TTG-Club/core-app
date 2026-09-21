@@ -7,7 +7,7 @@
   } from '../../../model';
 
   import { ActiveEffects } from '~active-effects/editor';
-  import { EFFECT_ORIGIN } from '~active-effects/model';
+  import { EFFECT_FORM_CONTEXT, EFFECT_ORIGIN } from '~active-effects/model';
   import {
     FeatCounterRows,
     FeatGrantedSpells,
@@ -122,6 +122,7 @@
       <ActiveEffects
         v-model="holder.activeEffects"
         nested
+        :context="EFFECT_FORM_CONTEXT.feature"
         :origin="EFFECT_ORIGIN.feature"
         :title="titles.effects"
       />

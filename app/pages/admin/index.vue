@@ -2,6 +2,7 @@
   import type { AdminCharacterSheetStats } from '~admin/character-sheets/model';
   import type { AdminOnlineStatsResponse } from '~admin/online/model';
 
+  import { FetchStatus } from '~/shared/consts';
   import {
     ADMIN_SHEET_STATS_API_URL,
     ADMIN_SHEET_STATS_DATA_KEY,
@@ -21,6 +22,17 @@
     ADMIN_DASHBOARD_TOKENATOR_DESCRIPTION,
     ADMIN_DASHBOARD_TOKENATOR_TITLE,
   } from '~admin/dashboard/model';
+  import {
+    PUBLICATION_ROUTE,
+    PUBLICATION_TEXT,
+  } from '~admin/game-publications/model';
+  import {
+    ADMIN_GAME_STATISTICS_API_URL,
+    ADMIN_GAME_STATISTICS_DATA_KEY,
+    ADMIN_GAME_STATISTICS_REQUEST_TIMEOUT,
+    parseAdminGameStatistics,
+  } from '~admin/games/model';
+  import { AdminGameStatisticsCard } from '~admin/games/ui';
   import {
     HOME_HERO_ADMIN_PAGE_DESCRIPTION,
     HOME_HERO_ADMIN_PAGE_TITLE,
@@ -98,15 +110,43 @@
 
   const resolvedSheetStats = computed(() => sheetStats.value ?? null);
 
+  const {
+    data: gameStatistics,
+    error: gameStatisticsError,
+    refresh: refreshGameStatistics,
+    status: gameStatisticsStatus,
+  } = await useFetch(ADMIN_GAME_STATISTICS_API_URL, {
+    key: ADMIN_GAME_STATISTICS_DATA_KEY,
+    server: false,
+    lazy: true,
+    timeout: ADMIN_GAME_STATISTICS_REQUEST_TIMEOUT,
+    transform: parseAdminGameStatistics,
+  });
+
+  const isGameStatisticsLoading = computed(
+    () => gameStatisticsStatus.value === FetchStatus.Pending,
+  );
+
+  const hasGameStatisticsError = computed(() => !!gameStatisticsError.value);
+
+  const resolvedGameStatistics = computed(() => gameStatistics.value ?? null);
+
   const isStatsLoading = computed(
-    () => isOnlineStatsLoading.value || isSheetStatsLoading.value,
+    () =>
+      isOnlineStatsLoading.value
+      || isSheetStatsLoading.value
+      || isGameStatisticsLoading.value,
   );
 
   /**
-   * Обновляет обе статистики блока — кнопка «Обновить» в шапке одна на всю секцию.
+   * Обновляет все показатели общей кнопкой в шапке секции.
    */
   async function handleStatsRefresh(): Promise<void> {
-    await Promise.all([refreshOnlineStats(), refreshSheetStats()]);
+    await Promise.all([
+      refreshOnlineStats(),
+      refreshSheetStats(),
+      refreshGameStatistics(),
+    ]);
   }
 </script>
 
@@ -137,11 +177,35 @@
             />
           </template>
         </ClientOnly>
+
+        <AdminGameStatisticsCard
+          :statistics="resolvedGameStatistics"
+          :is-loading="isGameStatisticsLoading"
+          :has-error="hasGameStatisticsError"
+        />
       </AdminOnlineStats>
 
       <div
         class="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-4 sm:grid-cols-[repeat(auto-fit,minmax(360px,1fr))]"
       >
+        <UCard variant="subtle">
+          <template #header>
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h2 class="text-base text-highlighted">
+                {{ PUBLICATION_TEXT.title }}
+              </h2>
+
+              <UButton
+                size="sm"
+                :to="PUBLICATION_ROUTE"
+                >{{ ADMIN_DASHBOARD_CONFIGURE_LABEL }}</UButton
+              >
+            </div>
+          </template>
+
+          <p class="text-sm text-muted">{{ PUBLICATION_TEXT.description }}</p>
+        </UCard>
+
         <UCard variant="subtle">
           <template #header>
             <div class="flex items-center justify-between gap-2">

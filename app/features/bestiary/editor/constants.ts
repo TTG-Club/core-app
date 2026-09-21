@@ -1,4 +1,5 @@
 import type {
+  CreatureActionListKey,
   CreatureInventorySection,
   CreatureSaveEffect,
   CreatureSpellRestKind,
@@ -76,7 +77,10 @@ export const CREATURE_GALLERY_FIELD_LABEL = 'Галерея';
 
 export const CREATURE_UPLOAD_SECTION = 'bestiary';
 
-/** Заголовки списков боевого блока. */
+/**
+ * Заголовки списков боевого блока. Ключи — те же, что у мест эффектов
+ * `CREATURE_ACTION_EFFECT_CONTEXTS` в модели.
+ */
 export const CREATURE_ACTION_LIST_TITLES = {
   traits: 'Особенности',
   actions: 'Действия',
@@ -84,7 +88,7 @@ export const CREATURE_ACTION_LIST_TITLES = {
   reactions: 'Реакции',
   legendary: 'Легендарные действия',
   lair: 'Эффекты логова',
-} as const;
+} as const satisfies Record<CreatureActionListKey, string>;
 
 /** Подписи блока заклинаний существа. */
 export const CREATURE_SPELLCASTING_EDITOR = {
@@ -207,7 +211,7 @@ export const CREATURE_ACTION_ADD_LABELS = {
   reactions: 'Добавить реакцию',
   legendary: 'Добавить легендарное действие',
   lair: 'Добавить эффект логова',
-} as const;
+} as const satisfies Record<CreatureActionListKey, string>;
 
 /** Разделы внутри записи боевого блока. */
 export const CREATURE_ACTION_SECTIONS = {

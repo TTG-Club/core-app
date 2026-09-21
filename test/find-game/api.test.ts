@@ -1,4 +1,4 @@
-import { FetchError } from 'ofetch';
+import { createFetch, FetchError } from 'ofetch';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -165,6 +165,27 @@ describe('код приглашения в запросах приватной �
 });
 
 describe('своя заявка', () => {
+  it('пустой ответ 204 означает, что заявки ещё нет', async () => {
+    const request = vi.fn(() =>
+      Promise.resolve(new Response(null, { status: 204 })),
+    );
+
+    vi.stubGlobal('$fetch', createFetch({ fetch: request }));
+
+    await expect(fetchOwnGameRegistration(GAME_ID, null)).resolves.toBeNull();
+    expect(request).toHaveBeenCalledOnce();
+  });
+
+  it('возвращает существующую заявку вместе с её статусом', async () => {
+    const registration = registrationResponse();
+
+    stubFetch(registration);
+
+    await expect(
+      fetchOwnGameRegistration(GAME_ID, null),
+    ).resolves.toMatchObject(registration);
+  });
+
   it('404 означает «заявки ещё не было», а не ошибку', async () => {
     // Без распознавания 404 страница игры показывала бы ошибку вместо
     // предложения подать заявку.

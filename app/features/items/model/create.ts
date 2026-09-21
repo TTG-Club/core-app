@@ -1,4 +1,8 @@
-import type { ActiveEffect, EffectAbility } from '~active-effects/model';
+import type {
+  ActiveEffect,
+  EffectAbility,
+  ItemEffectContext,
+} from '~active-effects/model';
 import type { DamageFormulaPart } from '~ui/damage-formula';
 import type { EditorBaseInfoState } from '~ui/editor';
 
@@ -6,6 +10,7 @@ import { isPlainObject } from 'es-toolkit';
 import { z } from 'zod';
 
 import {
+  EFFECT_FORM_CONTEXT,
   normalizeActiveEffects,
   normalizeLoadedActiveEffects,
 } from '~active-effects/model';
@@ -19,7 +24,11 @@ import {
   parseLoadedDamageFormulaParts,
 } from '~ui/damage-formula';
 
-import { DEFAULT_ITEM_CATEGORY, WEAPON_PROPERTY_KEYS } from './constants';
+import {
+  DEFAULT_ITEM_CATEGORY,
+  ITEM_WEAPON_CATEGORY,
+  WEAPON_PROPERTY_KEYS,
+} from './constants';
 
 /** Категории предмета (`ItemCategory` бэкенда). */
 export type ItemCategory =
@@ -189,6 +198,11 @@ export interface ItemCreate extends EditorBaseInfoState {
   image: string | undefined;
   /** Категория снаряжения VTTG; пусто — вывести из типов предмета. */
   equipmentCategory: ItemEquipmentCategory | undefined;
+  /**
+   * Расходуемый: применение тратит единицу предмета. Им же игрок заряжает
+   * стрелковое оружие на листе — с 0.8.62 система не спрашивает тип боеприпаса.
+   */
+  consumable: boolean;
   weapon: WeaponCreate; // данные оружия
   armor: ArmorCreate; // данные доспеха
   tool: ToolCreate; // данные инструмента
@@ -267,6 +281,7 @@ export function createEmptyItem(): ItemCreate {
     weight: undefined,
     image: undefined,
     equipmentCategory: undefined,
+    consumable: false,
     tags: [],
     weapon: createEmptyWeapon(),
     armor: createEmptyArmor(),
@@ -466,6 +481,9 @@ export function normalizeLoadedItem(
   const normalized: Record<string, unknown> = {
     ...rest,
     ...subforms,
+    // Незаданный признак приходит как `null`: галочке нужен именно `false`,
+    // иначе она встанет в неопределённое состояние
+    consumable: raw.consumable === true,
     activeEffects: normalizeLoadedActiveEffects(raw.activeEffects),
   };
 
@@ -521,10 +539,40 @@ export function normalizeItemBeforeSubmit(state: ItemCreate): ItemCreate {
   return {
     ...state,
     weapon: normalizeWeaponBeforeSubmit(
-      state.category === 'WEAPON' ? state.weapon : createEmptyWeapon(),
+      state.category === ITEM_WEAPON_CATEGORY
+        ? state.weapon
+        : createEmptyWeapon(),
     ),
     armor: state.category === 'ARMOR' ? state.armor : createEmptyArmor(),
     tool: state.category === 'TOOL' ? state.tool : createEmptyTool(),
-    activeEffects: normalizeActiveEffects(state.activeEffects),
+    activeEffects: normalizeActiveEffects(
+      state.activeEffects,
+      getItemEffectContext(state.category),
+    ),
   };
+}
+
+/**
+ * Место эффектов предмета: у оружия эффект может лечь и на цель при
+ * попадании, у остального снаряжения — на владельца или аурой вокруг него.
+ *
+ * @param category категория предмета.
+ * @returns место формы эффекта.
+ */
+export function getItemEffectContext(
+  category: ItemCategory,
+): ItemEffectContext {
+  return resolveItemEffectContext(category === ITEM_WEAPON_CATEGORY);
+}
+
+/**
+ * Место эффектов предмета по признаку оружия. Правило одно у обычных и
+ * магических предметов, а категория у них хранится по-разному — поэтому на
+ * вход идёт уже готовый признак.
+ *
+ * @param isWeapon предмет — оружие.
+ * @returns место формы эффекта.
+ */
+export function resolveItemEffectContext(isWeapon: boolean): ItemEffectContext {
+  return isWeapon ? EFFECT_FORM_CONTEXT.weapon : EFFECT_FORM_CONTEXT.item;
 }

@@ -1,7 +1,7 @@
 import type { ActiveEffect } from '~active-effects/model';
 import type { EditorBaseInfoState } from '~ui/editor';
 
-import type { CreatureActionEffect } from './action';
+import type { CreatureActionEffect, CreatureEffectContext } from './action';
 import type { CreatureSpellcastingBlock } from './spellcasting';
 
 import { AbilityKey, AbilityShortKey } from '~/shared/types';
@@ -257,14 +257,17 @@ export type CreateTrait = CreateAction;
  * Готовит записи боевого блока к отправке.
  *
  * @param actions записи из формы.
+ * @param effectContext место эффектов записей: у черт — сама черта, у
+ *   действий — цель.
  * @returns записи для запроса.
  */
 export function normalizeCreatureActions(
   actions: Array<CreateAction>,
+  effectContext: CreatureEffectContext,
 ): Array<CreateAction> {
   return actions.map((action) => ({
     ...action,
-    effect: normalizeCreatureActionEffect(action.effect),
+    effect: normalizeCreatureActionEffect(action.effect, effectContext),
   }));
 }
 

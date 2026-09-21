@@ -1,7 +1,5 @@
 import type { YandexMetrikaQueue } from '../model';
 
-import { useCookieConsent } from '~infrastructure/cookie-consent/composables';
-
 import {
   GOOGLE_ANALYTICS_ID_QUERY_PARAMETER,
   GOOGLE_ANALYTICS_SCRIPT_MARKER,
@@ -40,16 +38,14 @@ function buildGoogleAnalyticsScriptUrl(
   return url.toString();
 }
 
-/** Подключает статистику после согласия и останавливает её при отзыве. */
-export function useConsentedAnalytics(): void {
+/** Подключает статистику при запуске приложения и освобождает её при остановке. */
+export function useAnalytics(): void {
   const nuxtApp = useNuxtApp();
   const router = useRouter();
 
   const {
     public: { gtag, yandexMetrika },
   } = useRuntimeConfig();
-
-  const { isAnalyticsAllowed } = useCookieConsent();
 
   const {
     disableAnalytics: disableGoogleAnalytics,
@@ -65,12 +61,10 @@ export function useConsentedAnalytics(): void {
 
   let isRouterReady = false;
   let isYandexMetrikaStarted = false;
-  let isGoogleAnalyticsScriptConnected = false;
   let isDisposed = false;
-  let consentRevision = 0;
 
-  /** Запускает Метрику только если согласие всё ещё действует после загрузки. */
-  async function startYandexMetrika(revision: number): Promise<void> {
+  /** Запускает Метрику, если приложение ещё активно после загрузки скрипта. */
+  async function startYandexMetrika(): Promise<void> {
     if (!metrikaScript) {
       return;
     }
@@ -84,11 +78,7 @@ export function useConsentedAnalytics(): void {
         await metrikaScript.load();
       }
 
-      if (
-        isDisposed
-        || revision !== consentRevision
-        || !isAnalyticsAllowed.value
-      ) {
+      if (isDisposed) {
         return;
       }
 
@@ -100,7 +90,7 @@ export function useConsentedAnalytics(): void {
 
       isYandexMetrikaStarted = true;
     } catch (error) {
-      if (!isDisposed && revision === consentRevision) {
+      if (!isDisposed) {
         consola.warn('Не удалось загрузить Яндекс.Метрику', error);
       }
     }
@@ -115,12 +105,6 @@ export function useConsentedAnalytics(): void {
    * ручном режиме он делает это сразу, не загружая только сам скрипт.
    */
   function connectGoogleAnalyticsScript(): void {
-    if (isGoogleAnalyticsScriptConnected) {
-      return;
-    }
-
-    isGoogleAnalyticsScriptConnected = true;
-
     nuxtApp.runWithContext(() =>
       useHead({
         script: [
@@ -146,24 +130,6 @@ export function useConsentedAnalytics(): void {
     }
   }
 
-  /** Применяет новый выбор, делая предыдущие ожидания загрузки неактуальными. */
-  function synchronizeAnalytics(): void {
-    consentRevision += 1;
-
-    if (!isAnalyticsAllowed.value) {
-      stopAnalytics();
-
-      return;
-    }
-
-    void startYandexMetrika(consentRevision);
-
-    if (gtag.id) {
-      enableGoogleAnalytics();
-      connectGoogleAnalyticsScript();
-    }
-  }
-
   // Начальный просмотр Метрика отправляет при инициализации.
   void router
     .isReady()
@@ -179,12 +145,7 @@ export function useConsentedAnalytics(): void {
     });
 
   const removeAfterEach = router.afterEach((destination, origin, failure) => {
-    if (
-      failure
-      || !isRouterReady
-      || !isYandexMetrikaStarted
-      || !isAnalyticsAllowed.value
-    ) {
+    if (failure || !isRouterReady || !isYandexMetrikaStarted || isDisposed) {
       return;
     }
 
@@ -198,16 +159,17 @@ export function useConsentedAnalytics(): void {
     );
   });
 
-  watch(isAnalyticsAllowed, synchronizeAnalytics, {
-    immediate: true,
-    flush: 'sync',
-  });
-
   onScopeDispose(() => {
     isDisposed = true;
-    consentRevision += 1;
     removeAfterEach();
     stopAnalytics();
     metrikaScript?.remove();
   });
+
+  void startYandexMetrika();
+
+  if (gtag.id) {
+    enableGoogleAnalytics();
+    connectGoogleAnalyticsScript();
+  }
 }

@@ -1,4 +1,4 @@
-import type { ActiveEffect } from '~active-effects/model';
+import type { ActiveEffect, ItemEffectContext } from '~active-effects/model';
 import type { DamageFormulaPart } from '~ui/damage-formula';
 import type { EditorBaseInfoState } from '~ui/editor';
 
@@ -8,10 +8,13 @@ import {
   normalizeActiveEffects,
   normalizeLoadedActiveEffects,
 } from '~active-effects/model';
+import { resolveItemEffectContext } from '~items/model';
 import {
   normalizeDamageFormulaParts,
   parseLoadedDamageFormulaParts,
 } from '~ui/damage-formula';
+
+import { MAGIC_ITEM_WEAPON_CATEGORY } from './constants';
 
 export interface MagicItemCreate extends EditorBaseInfoState {
   description: string; // описание маркап
@@ -32,6 +35,32 @@ export interface MagicItemCreate extends EditorBaseInfoState {
   // Как предмет влияет на лист персонажа. В форме — всегда объект, в теле
   // запроса — `null`, если заполнять было нечего.
   mechanics: MagicItemMechanics | null;
+}
+
+/** Условие «при использовании»: применение тратит единицу предмета. */
+export const MAGIC_ITEM_CONSUMED_ACTIVATION = 'CONSUMED';
+
+/**
+ * Условия применения, при которых предмет применяют действием: эффект такого
+ * предмета не работает надетым, его копия ложится при применении.
+ */
+const USED_MAGIC_ITEM_ACTIVATIONS: ReadonlySet<MagicItemActivation> = new Set([
+  MAGIC_ITEM_CONSUMED_ACTIVATION,
+  'MANUAL',
+]);
+
+/**
+ * Применяют ли предмет с таким условием.
+ *
+ * @param activation условие применения механики.
+ * @returns `true`, если предмет применяют действием.
+ */
+export function isUsedMagicItemActivation(
+  activation: MagicItemActivation | undefined,
+): boolean {
+  return (
+    activation !== undefined && USED_MAGIC_ITEM_ACTIVATIONS.has(activation)
+  );
 }
 
 const magicItemActivationSchema = z.enum([
@@ -155,17 +184,36 @@ function normalizeMagicItemResource(
 }
 
 /**
+ * Место эффектов магического предмета: у оружия эффект может лечь и на цель
+ * при попадании, у остальных предметов — на владельца или аурой вокруг него.
+ *
+ * @param category категория предмета.
+ * @returns место формы эффекта.
+ */
+export function getMagicItemEffectContext(
+  category: MagicItemCategory,
+): ItemEffectContext {
+  return resolveItemEffectContext(category.type === MAGIC_ITEM_WEAPON_CATEGORY);
+}
+
+/**
  * Механика предмета для отправки. Полностью пустая механика уходит как `null`:
  * иначе у каждого предмета появлялся бы блок-пустышка, а лист считал бы, что
  * ему есть что применять.
  *
  * @param mechanics механика из формы.
+ * @param effectContext место эффектов: оружие или прочий предмет.
  * @returns механика для запроса; null — заполнять было нечего.
  */
 export function normalizeMagicItemMechanics(
   mechanics: MagicItemMechanics,
+  effectContext: ItemEffectContext,
 ): MagicItemMechanics | null {
-  const activeEffects = normalizeActiveEffects(mechanics.activeEffects);
+  const activeEffects = normalizeActiveEffects(
+    mechanics.activeEffects,
+    effectContext,
+  );
+
   const resource = normalizeMagicItemResource(mechanics.resource);
   const passive = trimmedOrUndefined(mechanics.passive);
 
@@ -285,7 +333,10 @@ export function normalizeMagicItemBeforeSubmit(
   return {
     ...state,
     mechanics: state.mechanics
-      ? normalizeMagicItemMechanics(state.mechanics)
+      ? normalizeMagicItemMechanics(
+          state.mechanics,
+          getMagicItemEffectContext(state.category),
+        )
       : null,
     damageParts: normalizeDamageFormulaParts(state.damageParts),
     charges: getMagicItemChargesField(state.mechanics),

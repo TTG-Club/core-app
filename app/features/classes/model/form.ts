@@ -13,6 +13,7 @@ import type {
 import { z } from 'zod';
 
 import {
+  EFFECT_FORM_CONTEXT,
   normalizeActiveEffects,
   normalizeLoadedActiveEffects,
 } from '~active-effects/model';
@@ -262,7 +263,10 @@ function transformFeatureOption(
   return {
     ...option,
     mechanics: buildMechanics(option),
-    activeEffects: normalizeActiveEffects(option.activeEffects),
+    activeEffects: normalizeActiveEffects(
+      option.activeEffects,
+      EFFECT_FORM_CONTEXT.feature,
+    ),
     editorRows: undefined,
   };
 }
@@ -292,7 +296,10 @@ function transformFeature(feature: ClassFeatureCreate): ClassFeatureCreate {
     options: feature.options.map(transformFeatureOption),
     optionsChoice: transformOptionsChoice(feature.optionsChoice),
     mechanics: buildMechanics(feature),
-    activeEffects: normalizeActiveEffects(feature.activeEffects),
+    activeEffects: normalizeActiveEffects(
+      feature.activeEffects,
+      EFFECT_FORM_CONTEXT.feature,
+    ),
     editorRows: undefined,
   };
 }
@@ -330,10 +337,13 @@ export function transformClassBeforeSubmit(state: ClassCreate): ClassCreate {
     editorRows: undefined,
     table: state.table.map(transformColumn),
     mechanics: buildMechanics(state),
-    // Эффекты чистит общий нормализатор раздела: он же обслуживает черты,
-    // заклинания и магические предметы, поэтому правило «что считать пустым»
-    // одно на всех
-    activeEffects: normalizeActiveEffects(state.activeEffects),
+    // Эффекты чистит общий нормализатор раздела, но по месту формы: пустое
+    // отбрасывается везде одинаково, а допустимая Сл у каждого места своя — у
+    // класса «Сл источника» не подставить, и 0 поднимается до 1
+    activeEffects: normalizeActiveEffects(
+      state.activeEffects,
+      EFFECT_FORM_CONTEXT.feature,
+    ),
     features: state.features.map(transformFeature),
   };
 }

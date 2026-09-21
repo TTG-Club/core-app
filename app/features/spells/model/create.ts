@@ -674,6 +674,24 @@ function normalizeSpellCantripScalingTiers(
   return normalized.length > 0 ? normalized : undefined;
 }
 
+/** Воздействие заклинания, у которого цель — область с выбранной формой. */
+type SpellEffectWithArea = SpellEffect & {
+  areaOfEffect: SpellAreaOfEffect & { type: string };
+};
+
+/**
+ * Есть ли у заклинания область: на её месте VTTG оставляет зону, в которую
+ * уходят эффекты с доставкой «зоной на месте области».
+ *
+ * @param effect воздействие заклинания.
+ * @returns `true`, если цель — область и её форма выбрана.
+ */
+export function hasSpellArea(
+  effect: SpellEffect,
+): effect is SpellEffectWithArea {
+  return effect.targetType === 'AREA' && Boolean(effect.areaOfEffect?.type);
+}
+
 /**
  * Нормализует SpellEffect перед отправкой на сервер:
  * - Удаляет пустые массивы и незаполненные вложенные объекты.
@@ -706,10 +724,7 @@ export function normalizeSpellEffect(
     normalized.targetCount = migratedEffect.targetCount;
   }
 
-  if (
-    migratedEffect.targetType === 'AREA'
-    && migratedEffect.areaOfEffect?.type
-  ) {
+  if (hasSpellArea(migratedEffect)) {
     const showValue2 =
       migratedEffect.areaOfEffect.type === 'LINE'
       || migratedEffect.areaOfEffect.type === 'CYLINDER';

@@ -1,8 +1,9 @@
-import type { ActiveEffect } from '~active-effects/model';
+import type { ActiveEffect, EffectFormContext } from '~active-effects/model';
 import type { DamageFormulaPart } from '~ui/damage-formula';
 
 import { AbilityKey } from '~/shared/types';
 import {
+  EFFECT_FORM_CONTEXT,
   normalizeActiveEffects,
   normalizeLoadedActiveEffects,
 } from '~active-effects/model';
@@ -16,6 +17,39 @@ import {
  * дальности: рукопашная и «рукопашная или дальнобойная» уезжают `melee`.
  */
 export type CreatureAttackType = 'MELEE' | 'MELEE_OR_RANGE' | 'RANGE';
+
+/**
+ * Место эффектов записи боевого блока: у черты существа эффект лежит на нём
+ * самом (пассив или аура), у действия, реакции, легендарного действия и
+ * эффекта логова — ложится на цель.
+ */
+export type CreatureEffectContext = Extract<
+  EffectFormContext,
+  'creatureAction' | 'creatureTrait'
+>;
+
+/** Списки записей боевого блока в состоянии формы существа. */
+export type CreatureActionListKey =
+  | 'traits'
+  | 'actions'
+  | 'bonusActions'
+  | 'reactions'
+  | 'legendary'
+  | 'lair';
+
+/**
+ * Место эффектов записей каждого списка боевого блока. Одна карта на форму и
+ * на сохранение: иначе список мог бы показывать эффекты черты, а сохраняться
+ * как действие — с другой допустимой Сл.
+ */
+export const CREATURE_ACTION_EFFECT_CONTEXTS = {
+  traits: EFFECT_FORM_CONTEXT.creatureTrait,
+  actions: EFFECT_FORM_CONTEXT.creatureAction,
+  bonusActions: EFFECT_FORM_CONTEXT.creatureAction,
+  reactions: EFFECT_FORM_CONTEXT.creatureAction,
+  legendary: EFFECT_FORM_CONTEXT.creatureAction,
+  lair: EFFECT_FORM_CONTEXT.creatureAction,
+} as const satisfies Record<CreatureActionListKey, CreatureEffectContext>;
 
 /** Что происходит с уроном при успешном спасброске цели. */
 export type CreatureSaveEffect = 'HALF' | 'NONE' | 'SPECIAL';
@@ -244,10 +278,12 @@ export function normalizeLoadedCreatureActions(raw: unknown): Array<unknown> {
  * безопасно, и тип записи остаётся одним на форму и на запрос.
  *
  * @param effect механика из формы.
+ * @param effectContext место эффектов записи: черта существа или действие.
  * @returns механика для запроса.
  */
 export function normalizeCreatureActionEffect(
   effect: CreatureActionEffect | undefined,
+  effectContext: CreatureEffectContext,
 ): CreatureActionEffect {
   if (!effect) {
     return createEmptyCreatureActionEffect();
@@ -266,7 +302,7 @@ export function normalizeCreatureActionEffect(
       (save) => save.ability !== undefined,
     ),
     areaOfEffect,
-    activeEffects: normalizeActiveEffects(effect.activeEffects),
+    activeEffects: normalizeActiveEffects(effect.activeEffects, effectContext),
   };
 }
 

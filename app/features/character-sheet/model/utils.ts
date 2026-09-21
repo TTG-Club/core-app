@@ -23,6 +23,7 @@ import type {
   CharacterAttunement,
   CharacterClass,
   CharacterClassResource,
+  CharacterClassResourceOverrides,
   CharacterCurrency,
   CharacterCustomBonus,
   CharacterExhaustionEffects,
@@ -163,6 +164,7 @@ import type {
 import {
   capitalize,
   clamp,
+  isEqual,
   mapValues,
   omit,
   round,
@@ -5392,7 +5394,10 @@ export function getLongRestHitDiceRecovery(
  */
 export function getLongRestRecoveryLabels(character: Character): string[] {
   const labels = [
-    ...getResourceRecoveryLabels(character.classResources, 'long-rest'),
+    ...getResourceRecoveryLabels(
+      getVisibleClassResources(character, character.classResources),
+      'long-rest',
+    ),
     ...getInventoryChargesRecoveryLabels(character.inventory, 'long-rest'),
   ];
 
@@ -6363,13 +6368,218 @@ export function isEmptyFeatResource(
 }
 
 /**
+ * Запись ресурса такой, какой её задаёт справочник — без правок игрока.
+ *
+ * Отдельной функцией, потому что книжная запись нужна дважды: при сверке листа
+ * с чертами и в форме правки, где правки считаются как разница с ней.
+ *
+ * @param character персонаж (нужен для расчёта максимума по правилу).
+ * @param feature особенность, давшая счётчик.
+ * @param counter счётчик из механики справочника.
+ * @returns запись ресурса с полным запасом зарядов.
+ */
+function buildFeatResource(
+  character: Character,
+  feature: CharacterFeature,
+  counter: FeatCounter,
+): CharacterClassResource {
+  // Ресурсу со ступенями формула не нужна вовсе, но правило нужно: без
+  // него максимум замер бы числом и не вырос на следующем уровне
+  const parsedRule = counter.scaling.length
+    ? {
+        source: 'fixed' as const,
+        ability: RESOURCE_MAX_DEFAULT_ABILITY,
+        offset: 0,
+        scaling: counter.scaling,
+      }
+    : parseResourceMaxFormula(counter.max);
+
+  // Нижняя граница живёт в правиле: по нему максимум пересчитывается на
+  // каждом повышении уровня, и мимо правила она бы туда не попала
+  const maxRule =
+    parsedRule && counter.min > 0
+      ? { ...parsedRule, min: counter.min }
+      : parsedRule;
+
+  const base: CharacterClassResource = {
+    id: `${FEAT_RESOURCE_ID_PREFIX}${feature.id}:${counter.key}`,
+    name: counter.name,
+    // Краткой подписи у ресурса может не быть — тогда её место в строке
+    // панели заняло бы пустое поле; достраиваем из названия, как это
+    // делает форма своего ресурса.
+    shortLabel:
+      counter.shortName
+      || counter.name.slice(0, RESOURCE_SHORT_LABEL_MAX_LENGTH),
+    shortRest: getCounterShortRestRule(counter.recovery),
+    longRest: {
+      // Короткий отдых в правилах короче продолжительного: ресурс,
+      // восстанавливаемый коротким, продолжительным восстанавливается тоже.
+      mode: 'all',
+      amount: RESOURCE_RECOVERY_AMOUNT_MIN,
+    },
+    current: 0,
+    max: 0,
+    maxRule,
+  };
+
+  const max = maxRule
+    ? getResourceMax(character, base)
+    : clamp(
+        Math.max(Number(counter.max) || 1, counter.min),
+        RESOURCE_COUNT_MIN,
+        RESOURCE_COUNT_MAX,
+      );
+
+  return { ...base, max, current: max };
+}
+
+/**
+ * Книжная запись ресурса черты: та же строка без правок игрока.
+ *
+ * Нужна форме правки — и чтобы посчитать разницу с книжной записью, и чтобы
+ * вернуть ресурс к ней целиком. Справочник мог с тех пор отдать другую
+ * механику (счётчик переименовали или убрали) — тогда книжной записи нет.
+ *
+ * @param character персонаж.
+ * @param resource ресурс листа.
+ * @returns книжная запись; `undefined` — ресурс не из справочника либо
+ *   справочник его больше не даёт.
+ */
+export function getFeatResourceBase(
+  character: Character,
+  resource: CharacterClassResource,
+): CharacterClassResource | undefined {
+  if (!isFeatResource(resource)) {
+    return undefined;
+  }
+
+  return character.features
+    .flatMap((feature) =>
+      (feature.counters ?? []).map((counter) =>
+        buildFeatResource(character, feature, counter),
+      ),
+    )
+    .find((base) => base.id === resource.id);
+}
+
+/**
+ * Книжная запись с наложенными правками игрока.
+ *
+ * Максимум пересчитывается последним: правка могла заменить книжное правило
+ * своим числом (или наоборот), и снимок числа из правок без пересчёта разошёлся
+ * бы с правилом.
+ *
+ * @param character персонаж.
+ * @param base книжная запись ресурса.
+ * @param overrides правки игрока; нет — запись возвращается как есть.
+ * @returns запись ресурса для листа.
+ */
+export function applyResourceOverrides(
+  character: Character,
+  base: CharacterClassResource,
+  overrides: CharacterClassResourceOverrides | undefined,
+): CharacterClassResource {
+  if (!overrides) {
+    return base;
+  }
+
+  const overridden: CharacterClassResource = {
+    ...base,
+    ...overrides,
+    overrides,
+  };
+
+  return {
+    ...overridden,
+    max: overridden.maxRule
+      ? getResourceMax(character, overridden)
+      : clamp(
+          Math.trunc(overridden.max),
+          RESOURCE_COUNT_MIN,
+          RESOURCE_COUNT_MAX,
+        ),
+  };
+}
+
+/**
+ * Правки игрока как разница с книжной записью.
+ *
+ * Пишутся только изменённые поля: всё остальное ресурс и дальше берёт из
+ * справочника. Максимум по правилу производный, поэтому пока правило то же,
+ * снимок числа не сравнивается — его пересчитает лист.
+ *
+ * @param base книжная запись ресурса.
+ * @param edited запись после правки в форме.
+ * @returns правки; `undefined` — от справочника запись не отличается.
+ */
+export function buildResourceOverrides(
+  base: CharacterClassResource,
+  edited: CharacterClassResource,
+): CharacterClassResourceOverrides | undefined {
+  const overrides: CharacterClassResourceOverrides = {};
+
+  if (edited.name !== base.name) {
+    overrides.name = edited.name;
+  }
+
+  if (edited.shortLabel !== base.shortLabel) {
+    overrides.shortLabel = edited.shortLabel;
+  }
+
+  if (!isEqual(edited.shortRest, base.shortRest)) {
+    overrides.shortRest = edited.shortRest;
+  }
+
+  if (!isEqual(edited.longRest, base.longRest)) {
+    overrides.longRest = edited.longRest;
+  }
+
+  const baseRule = base.maxRule ?? null;
+  const editedRule = edited.maxRule ?? null;
+
+  const isSameMax =
+    isEqual(baseRule, editedRule)
+    && (editedRule !== null || edited.max === base.max);
+
+  if (!isSameMax) {
+    overrides.max = edited.max;
+    overrides.maxRule = editedRule;
+  }
+
+  return Object.keys(overrides).length > 0 ? overrides : undefined;
+}
+
+/**
+ * Запись ресурса справочника для листа после правки в форме.
+ *
+ * Правки считаются разницей с книжной записью и ложатся в саму запись. Игрок
+ * вернул всё как было — ключа правок в записи не остаётся: пустышка в документе
+ * листа выглядела бы как правленая запись.
+ *
+ * @param base книжная запись ресурса.
+ * @param edited запись после правки в форме.
+ * @returns запись для списка ресурсов листа.
+ */
+export function toEditedFeatResource(
+  base: CharacterClassResource,
+  edited: CharacterClassResource,
+): CharacterClassResource {
+  const overrides = buildResourceOverrides(base, edited);
+  const resource = omit(edited, ['overrides']);
+
+  return overrides ? { ...resource, overrides } : resource;
+}
+
+/**
  * Ресурсы листа, согласованные с чертами.
  *
  * Записи черт пересобираются целиком — как свои бонусы инициативы
  * ({@link withFeatInitiativeBonuses}): название, максимум и отдых приходят из
  * справочника, и правка вручную вернулась бы назад при ближайшей смене черт.
- * Потраченное при этом сохраняется: пересборка не должна восполнять заряды.
- * Ресурсы, добавленные игроком, не трогаются — их в записях черт нет.
+ * Поэтому правки игрока лежат отдельным слоем ({@link applyResourceOverrides})
+ * и накладываются после пересборки, а вместе с ними переносятся потраченные
+ * заряды и пометка «убран с листа». Ресурсы, добавленные игроком, не
+ * трогаются — их в записях черт нет.
  *
  * @param resources ресурсы листа.
  * @param features особенности листа.
@@ -6383,72 +6593,56 @@ export function withFeatResources(
 ): CharacterClassResource[] {
   const manual = resources.filter((resource) => !isFeatResource(resource));
 
-  const spentById = new Map(
+  const previousById = new Map(
     resources
       .filter((resource) => isFeatResource(resource))
-      .map((resource) => [resource.id, resource.max - resource.current]),
+      .map((resource) => [resource.id, resource]),
   );
 
   const fromFeatures = features.flatMap<CharacterClassResource>((feature) =>
     (feature.counters ?? []).map((counter) => {
-      // Ресурсу со ступенями формула не нужна вовсе, но правило нужно: без
-      // него максимум замер бы числом и не вырос на следующем уровне
-      const parsedRule = counter.scaling.length
-        ? {
-            source: 'fixed' as const,
-            ability: RESOURCE_MAX_DEFAULT_ABILITY,
-            offset: 0,
-            scaling: counter.scaling,
-          }
-        : parseResourceMaxFormula(counter.max);
+      const base = buildFeatResource(character, feature, counter);
+      const previous = previousById.get(base.id);
 
-      // Нижняя граница живёт в правиле: по нему максимум пересчитывается на
-      // каждом повышении уровня, и мимо правила она бы туда не попала
-      const maxRule =
-        parsedRule && counter.min > 0
-          ? { ...parsedRule, min: counter.min }
-          : parsedRule;
+      const resource = applyResourceOverrides(
+        character,
+        base,
+        previous?.overrides,
+      );
 
-      const id = `${FEAT_RESOURCE_ID_PREFIX}${feature.id}:${counter.key}`;
+      // Потраченное считается от прежней записи: пересборка не должна
+      // восполнять заряды, даже если максимум с тех пор вырос.
+      const spent = previous ? previous.max - previous.current : 0;
 
-      const base: CharacterClassResource = {
-        id,
-        name: counter.name,
-        // Краткой подписи у ресурса может не быть — тогда её место в строке
-        // панели заняло бы пустое поле; достраиваем из названия, как это
-        // делает форма своего ресурса.
-        shortLabel:
-          counter.shortName
-          || counter.name.slice(0, RESOURCE_SHORT_LABEL_MAX_LENGTH),
-        shortRest: getCounterShortRestRule(counter.recovery),
-        longRest: {
-          // Короткий отдых в правилах короче продолжительного: ресурс,
-          // восстанавливаемый коротким, продолжительным восстанавливается тоже.
-          mode: 'all',
-          amount: RESOURCE_RECOVERY_AMOUNT_MIN,
-        },
-        current: 0,
-        max: 0,
-        maxRule,
+      const rebuilt = {
+        ...resource,
+        current: clamp(resource.max - spent, 0, resource.max),
       };
 
-      const max = maxRule
-        ? getResourceMax(character, base)
-        : clamp(
-            Math.max(Number(counter.max) || 1, counter.min),
-            RESOURCE_COUNT_MIN,
-            RESOURCE_COUNT_MAX,
-          );
-
-      return {
-        ...base,
-        max,
-        current: clamp(max - (spentById.get(id) ?? 0), 0, max),
-      };
+      // Пометка ставится только тем, кого убрали: ключ со значением
+      // `undefined` у остальных сделал бы записи разными на вид при сверке.
+      return previous?.hidden ? { ...rebuilt, hidden: true } : rebuilt;
     }),
   );
 
   return [...manual, ...fromFeatures];
+}
+
+/**
+ * Ресурсы, которым место на листе: без убранных игроком и без записей
+ * справочника, у которых пока нет ни одного заряда.
+ *
+ * @param character персонаж.
+ * @param resources ресурсы листа.
+ * @returns ресурсы для показа.
+ */
+export function getVisibleClassResources(
+  character: Character,
+  resources: CharacterClassResource[],
+): CharacterClassResource[] {
+  return resources.filter(
+    (resource) => !resource.hidden && !isEmptyFeatResource(character, resource),
+  );
 }
 
 /**
@@ -6691,7 +6885,7 @@ function getInventoryChargesRecoveryLabels(
  */
 export function getShortRestRecoveryLabels(character: Character): string[] {
   const resourceLabels = getResourceRecoveryLabels(
-    character.classResources,
+    getVisibleClassResources(character, character.classResources),
     'short-rest',
   );
 

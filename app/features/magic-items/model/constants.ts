@@ -9,6 +9,9 @@ interface Option<Value extends string> {
   value: Value;
 }
 
+/** Категория магического оружия (`MagicItemCategory.WEAPON` бэкенда). */
+export const MAGIC_ITEM_WEAPON_CATEGORY = 'WEAPON';
+
 /** Бонус магического предмета отсутствует: поле не заполнено. */
 export const MAGIC_ITEM_BONUS_NONE = 0;
 
@@ -81,6 +84,9 @@ export const MAGIC_ITEM_FORM_LABELS = {
   attunementDescriptionPlaceholder: 'Введи особенности настройки (если есть)',
   curse: 'Проклятие',
   consumable: 'Расходуемый',
+  effectActivationHint:
+    'Эффект действует постоянно, пока предмет надет. Для «использовать» '
+    + 'выберите «Действует: при применении».',
   descriptionPlaceholder: 'Введи описание',
   image: 'Основное',
   imageHint:

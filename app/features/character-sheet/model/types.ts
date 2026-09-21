@@ -239,6 +239,24 @@ export interface ResourceMaxRule {
   min?: number;
 }
 
+/**
+ * Правки игрока поверх записи справочника.
+ *
+ * В листе лежат только изменённые поля: всё остальное ресурс черты берёт из
+ * справочника при каждой пересборке и продолжает расти вместе с персонажем.
+ * Максимум пишется парой `max` + `maxRule`: снимок числа без правила (или
+ * правило вместо книжного) — иначе расчёт взял бы книжное правило и правку
+ * игрока молча проигнорировал.
+ */
+export interface CharacterClassResourceOverrides {
+  name?: string;
+  shortLabel?: string;
+  shortRest?: ResourceRecoveryRule;
+  longRest?: ResourceRecoveryRule;
+  max?: number;
+  maxRule?: ResourceMaxRule | null;
+}
+
 /** Ресурс класса (счётчик). */
 export interface CharacterClassResource {
   id: string;
@@ -268,6 +286,20 @@ export interface CharacterClassResource {
    * меняются, а запись остаётся прежней.
    */
   maxRule?: ResourceMaxRule | null;
+
+  /**
+   * Правки игрока поверх справочника; только у ресурса черты
+   * ({@link CharacterClassResourceOverrides}). У своего ресурса игрока править
+   * нечего поверх — он и так целиком его.
+   */
+  overrides?: CharacterClassResourceOverrides;
+
+  /**
+   * Ресурс убран с листа игроком. Не удалён: справочник выдаёт его снова на
+   * каждой пересборке, поэтому строка остаётся в настройке ресурсов, откуда её
+   * можно вернуть.
+   */
+  hidden?: boolean;
 }
 
 /** Правило восстановления ресурса как поле формы и строка панели. */

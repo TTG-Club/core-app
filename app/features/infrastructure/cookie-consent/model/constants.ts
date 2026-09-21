@@ -1,59 +1,27 @@
 import { ONE_DAY_IN_SECONDS } from '#shared/consts';
 
-/** Ключ cookie, в котором хранится выбор посетителя в уведомлении */
-export const COOKIE_CONSENT_KEY = 'ttg-cookie-consent';
+/** Новый ключ отделяет закрытие уведомления от прежнего выбора согласия. */
+export const COOKIE_NOTICE_KEY = 'ttg-cookie-notice';
 
-/**
- * Версия уведомления. Выбор, сделанный в другой версии, не учитывается —
- * уведомление покажется снова. Версия 4 разделяет согласие на год и закрытие
- * без аналитики на 24 часа. Продолжение просмотра согласием не считается.
- */
-export const COOKIE_CONSENT_VERSION = '4';
+/** При изменении версии уведомление показывается повторно. */
+export const COOKIE_NOTICE_VERSION = '1';
 
-/** Выбор «Принять»: разрешены и необходимые, и аналитические cookie */
-export const COOKIE_CONSENT_CHOICE_ALL = 'all';
+/** Срок хранения отметки о закрытии уведомления — один год. */
+export const COOKIE_NOTICE_MAX_AGE = ONE_DAY_IN_SECONDS * 365;
 
-/** Закрытие крестиком: аналитика не подключается */
-export const COOKIE_CONSENT_CHOICE_NECESSARY = 'necessary';
-
-/** Все варианты выбора в уведомлении */
-export const COOKIE_CONSENT_CHOICES = [
-  COOKIE_CONSENT_CHOICE_ALL,
-  COOKIE_CONSENT_CHOICE_NECESSARY,
-] as const;
-
-/** Срок хранения согласия — один год */
-export const COOKIE_CONSENT_MAX_AGE = ONE_DAY_IN_SECONDS * 365;
-
-/** Cookie с версией уведомления и временем следующего показа после закрытия */
-export const COOKIE_CONSENT_DISMISS_KEY = 'ttg-cookie-dismissed';
-
-/** Срок скрытия уведомления после закрытия — 24 часа */
-export const COOKIE_CONSENT_DISMISS_MAX_AGE = ONE_DAY_IN_SECONDS;
-
-/** Срок скрытия в миллисекундах для отметки времени и таймера */
-export const COOKIE_CONSENT_DISMISS_DURATION =
-  COOKIE_CONSENT_DISMISS_MAX_AGE * 1000;
-
-/** Заголовок уведомления */
-export const COOKIE_CONSENT_TITLE =
+/** Заголовок уведомления. */
+export const COOKIE_NOTICE_TITLE =
   'Используем куки для работы и улучшения сайта';
 
-/** Подпись кнопки согласия на все cookie */
-export const COOKIE_CONSENT_ACCEPT_LABEL = 'Принять';
+/** Кнопка закрытия уведомления. */
+export const COOKIE_NOTICE_DISMISS_LABEL = 'Хорошо';
 
-/** Текст уведомления; подпись кнопки берётся из константы, чтобы не разойтись с кнопкой */
-export const COOKIE_CONSENT_DESCRIPTION = `Нажимая «${COOKIE_CONSENT_ACCEPT_LABEL}», вы разрешаете все куки и статистику TTG Club, Яндекса и Google. Крестик — только необходимые, без статистики.`;
+/** Текст уведомления об использовании файлов cookie. */
+export const COOKIE_NOTICE_DESCRIPTION =
+  'Оставаясь с нами, вы соглашаетесь на использование файлов cookie.';
 
-/** Подпись крестика: он тоже оставляет только необходимые cookie */
-export const COOKIE_CONSENT_CLOSE_LABEL =
-  'Закрыть и оставить только необходимые cookie';
+/** Иконка уведомления и ссылок на страницу о cookie. */
+export const COOKIE_NOTICE_ICON = 'tabler:cookie';
 
-/** Иконка уведомления о cookie; ею же подписаны ссылки на страницу о cookie */
-export const COOKIE_CONSENT_ICON = 'tabler:cookie';
-
-/** Иконка кнопки закрытия уведомления */
-export const COOKIE_CONSENT_CLOSE_ICON = 'tabler:x';
-
-/** Адрес страницы о cookie */
+/** Адрес страницы о cookie. */
 export const COOKIE_POLICY_ROUTE = '/cookies';

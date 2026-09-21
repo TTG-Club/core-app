@@ -19,6 +19,8 @@ import type { CharacterFeature } from '../model';
 import {
   createEmptyActiveEffect,
   EFFECT_CONDITION_TEMPLATES,
+  EFFECT_FORM_CONTEXT,
+  EFFECT_ORIGIN,
 } from '~active-effects/model';
 
 import { useCharacterSheet } from './useCharacterSheet';
@@ -188,7 +190,11 @@ export function useSheetActiveEffects() {
     updateActiveEffects([
       ...character.value.activeEffects,
       {
-        ...createEmptyActiveEffect('condition'),
+        // Доставка «на носителе» уже выбрана местом формы своих эффектов
+        ...createEmptyActiveEffect(
+          EFFECT_ORIGIN.condition,
+          EFFECT_FORM_CONTEXT.ownEffects,
+        ),
         name: template.name,
         description: template.description,
         icon: template.icon,
@@ -199,7 +205,6 @@ export function useSheetActiveEffects() {
           ? [...template.conditionImmunities]
           : undefined,
         duration: { type: 'special', value: undefined },
-        effectTarget: 'self',
       },
     ]);
   }

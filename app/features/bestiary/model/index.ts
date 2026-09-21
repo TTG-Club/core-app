@@ -6,4 +6,6 @@ export * from './link';
 export * from './list';
 export * from './markdown';
 export * from './search';
+export * from './speed';
 export * from './spellcasting';
+export * from './transform';

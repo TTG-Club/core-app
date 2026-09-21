@@ -12,12 +12,9 @@ import {
 } from 'vue';
 
 import { useOnlineHeartbeat } from '~infrastructure/analytics/composables';
+import { useCookieNotice } from '~infrastructure/cookie-consent/composables';
 
-const consent = vi.hoisted(() => ({ allowed: { value: false } }));
-
-vi.mock('~infrastructure/cookie-consent/composables', () => ({
-  useCookieConsent: () => ({ isAnalyticsAllowed: consent.allowed }),
-}));
+const noticeCookie = ref<unknown>(null);
 
 const scopes: Array<EffectScope> = [];
 const visitor = ref<unknown>(null);
@@ -32,12 +29,15 @@ let mountHook: (() => void) | undefined;
 const removeMountHook = vi.fn();
 
 /** Создаёт настоящий композабл и вызывает зарегистрированный хук приложения. */
-function mountHeartbeat(): EffectScope {
+function mountHeartbeat(startImmediately = true): EffectScope {
   const scope = effectScope();
 
   scopes.push(scope);
   scope.run(useOnlineHeartbeat);
-  mountHook?.();
+
+  if (startImmediately) {
+    mountHook?.();
+  }
 
   return scope;
 }
@@ -45,7 +45,7 @@ function mountHeartbeat(): EffectScope {
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(Date.parse('2026-09-13T12:00:00Z'));
-  consent.allowed = ref(false);
+  noticeCookie.value = null;
   visitor.value = null;
   user.value = null;
   counter.value = null;
@@ -59,7 +59,11 @@ beforeEach(() => {
   vi.stubGlobal('watch', watch);
   vi.stubGlobal('onScopeDispose', onScopeDispose);
   vi.stubGlobal('useIntervalFn', useIntervalFn);
-  vi.stubGlobal('useCookie', () => visitor);
+
+  vi.stubGlobal('useCookie', (name: string) =>
+    name === 'ttg-cookie-notice' ? noticeCookie : visitor,
+  );
+
   vi.stubGlobal('useState', () => counter);
   vi.stubGlobal('useDocumentVisibility', () => visibility);
 
@@ -90,14 +94,13 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe('согласие и учёт посетителей онлайн', () => {
+describe('автоматический учёт посетителей онлайн', () => {
   it.each([{ cookie: '' }, { cookie: { unexpected: true } }, { cookie: [] }])(
-    'заменяет повреждённый идентификатор $cookie только после согласия',
+    'заменяет повреждённый идентификатор $cookie при автоматическом запуске',
     async ({ cookie: invalidCookie }) => {
       visitor.value = invalidCookie;
       mountHeartbeat();
       expect(visitor.value).toEqual(invalidCookie);
-      consent.allowed.value = true;
       await vi.advanceTimersByTimeAsync(0);
       expect(visitor.value).toEqual(expect.any(String));
       expect(visitor.value).not.toEqual(invalidCookie);
@@ -111,52 +114,60 @@ describe('согласие и учёт посетителей онлайн', () 
     },
   );
 
-  it('до согласия не создаёт идентификатор, таймер и запросы', async () => {
-    mountHeartbeat();
-    visibility.value = 'hidden';
-    await nextTick();
-    visibility.value = 'visible';
+  it('начинает учёт при монтировании, а закрытие уведомления не меняет его работу', async () => {
+    const scope = mountHeartbeat(false);
+    const notice = scope.run(useCookieNotice);
+
+    expect(notice?.isVisible.value).toBe(true);
     await vi.advanceTimersByTimeAsync(60_000);
     expect(visitor.value).toBeNull();
     expect(heartbeat).not.toHaveBeenCalled();
-    expect(fetchProfile).not.toHaveBeenCalled();
     expect(vi.getTimerCount()).toBe(0);
-  });
-
-  it('после согласия учитывает гостя, затем останавливается и запускается повторно', async () => {
-    mountHeartbeat();
-    consent.allowed.value = true;
+    mountHook?.();
     await vi.advanceTimersByTimeAsync(0);
 
     expect(heartbeat).toHaveBeenCalledWith(
       '/api/v2/online/heartbeat',
-      expect.objectContaining({
-        body: { key: visitor.value, type: 'GUEST' },
-        signal: expect.any(AbortSignal),
-      }),
+      expect.objectContaining({ body: { key: visitor.value, type: 'GUEST' } }),
     );
 
     expect(counter.value).toBe(12);
 
     const guestKey = visitor.value;
 
-    consent.allowed.value = false;
-    expect(vi.getTimerCount()).toBe(0);
-    await vi.advanceTimersByTimeAsync(60_000);
-    expect(heartbeat).toHaveBeenCalledTimes(1);
-    consent.allowed.value = true;
+    notice?.dismiss();
+    mountHook?.();
     await vi.advanceTimersByTimeAsync(0);
+    expect(notice?.isVisible.value).toBe(false);
+    expect(heartbeat).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(30_000);
     expect(heartbeat).toHaveBeenCalledTimes(2);
     expect(visitor.value).toBe(guestKey);
+    scope.stop();
+    expect(vi.getTimerCount()).toBe(0);
+    mountHook?.();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(heartbeat).toHaveBeenCalledTimes(2);
   });
 
-  it('не отправляет статистику после отзыва во время загрузки профиля', async () => {
+  it('не запускается при запоздалом хуке после уничтожения владельца', async () => {
+    const scope = mountHeartbeat(false);
+
+    scope.stop();
+    mountHook?.();
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(heartbeat).not.toHaveBeenCalled();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('не отправляет статистику после остановки во время загрузки профиля', async () => {
     const profile = Promise.withResolvers<void>();
 
     fetchProfile.mockReturnValue(profile.promise);
-    consent.allowed.value = true;
-    mountHeartbeat();
-    consent.allowed.value = false;
+
+    const scope = mountHeartbeat();
+
+    scope.stop();
     profile.resolve();
     await vi.advanceTimersByTimeAsync(0);
     expect(heartbeat).not.toHaveBeenCalled();
@@ -167,8 +178,9 @@ describe('согласие и учёт посетителей онлайн', () 
     const response = Promise.withResolvers<unknown>();
 
     heartbeat.mockReturnValue(response.promise);
-    consent.allowed.value = true;
-    mountHeartbeat();
+
+    const scope = mountHeartbeat();
+
     await vi.advanceTimersByTimeAsync(0);
 
     const requestOptions = heartbeat.mock.calls[0]?.[1];
@@ -182,7 +194,7 @@ describe('согласие и учёт посетителей онлайн', () 
       throw new Error('Запрос не получил AbortSignal');
     }
 
-    consent.allowed.value = false;
+    scope.stop();
     expect(requestOptions.signal.aborted).toBe(true);
     response.resolve({ total: 999 });
     await vi.advanceTimersByTimeAsync(0);
@@ -195,7 +207,6 @@ describe('согласие и учёт посетителей онлайн', () 
     heartbeat.mockReturnValueOnce(response.promise);
     user.value = { username: 'tester' };
     visitor.value = '01994481-4800-7000-8000-000000000001';
-    consent.allowed.value = true;
     mountHeartbeat();
 
     expect(heartbeat).toHaveBeenCalledWith(
@@ -219,7 +230,6 @@ describe('согласие и учёт посетителей онлайн', () 
 
   it('без Web Locks пропускает скрытую вкладку и соблюдает интервал после возврата', async () => {
     visibility.value = 'hidden';
-    consent.allowed.value = true;
     mountHeartbeat();
     await vi.advanceTimersByTimeAsync(30_000);
     expect(heartbeat).not.toHaveBeenCalled();
@@ -254,8 +264,6 @@ describe('согласие и учёт посетителей онлайн', () 
       },
     });
 
-    consent.allowed.value = true;
-
     const scope = mountHeartbeat();
 
     visibility.value = 'hidden';
@@ -271,7 +279,7 @@ describe('согласие и учёт посетителей онлайн', () 
     expect(removeMountHook).toHaveBeenCalledOnce();
   });
 
-  it('освобождает захваченную блокировку при отзыве согласия', async () => {
+  it('освобождает захваченную блокировку при остановке', async () => {
     let released: Promise<void> | undefined;
 
     vi.stubGlobal('navigator', {
@@ -286,11 +294,11 @@ describe('согласие и учёт посетителей онлайн', () 
       },
     });
 
-    consent.allowed.value = true;
-    mountHeartbeat();
+    const scope = mountHeartbeat();
+
     await vi.advanceTimersByTimeAsync(0);
     expect(heartbeat).toHaveBeenCalledOnce();
-    consent.allowed.value = false;
+    scope.stop();
     await released;
     expect(vi.getTimerCount()).toBe(0);
   });
@@ -299,7 +307,6 @@ describe('согласие и учёт посетителей онлайн', () 
     const response = Promise.withResolvers<unknown>();
 
     heartbeat.mockReturnValueOnce(response.promise);
-    consent.allowed.value = true;
 
     const scope = mountHeartbeat();
 

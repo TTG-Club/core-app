@@ -1,0 +1,710 @@
+import type { EffectTrigger } from '~active-effects/model';
+
+import { describe, expect, it } from 'vitest';
+
+import {
+  APPLIER_SAVE_DC,
+  collectEffectTriggers,
+  describeEffectTrigger,
+  isLegacyTrigger,
+  LEGACY_TRIGGER_IDS,
+  listEffectListTriggers,
+  resolveTriggerActionGate,
+  writeEffectSuccessOutcome,
+  writeEffectTriggers,
+} from '~active-effects/model';
+
+import {
+  createEffect,
+  POISON_DAMAGE,
+  SAVE_DC,
+  serializeEffect,
+  TYPED_SAVE_DC,
+} from './fixtures';
+
+/** Спасбросок Телосложения со Сл эффектов в тестах, без исхода. */
+const CONSTITUTION_TRIGGER_SAVE = {
+  ability: 'constitution',
+  dc: SAVE_DC,
+} as const;
+
+/**
+ * Подпись Сл для фраз: `APPLIER_SAVE_DC` — Сл заклинателя.
+ *
+ * @param dc сложность.
+ * @returns подпись.
+ */
+function formatDc(dc: number): string {
+  return dc === APPLIER_SAVE_DC ? 'Сл заклинателя' : `Сл ${dc}`;
+}
+
+describe('чтение старых полей как срабатываний', () => {
+  it('урон каждый ход: без спасброска, «без урона» и «половина урона»', () => {
+    const recurringDamageEffect = createEffect({
+      recurringDamage: { damageParts: POISON_DAMAGE, timing: 'startOfTurn' },
+    });
+
+    expect(listEffectListTriggers(recurringDamageEffect)).toEqual([
+      {
+        id: LEGACY_TRIGGER_IDS.recurringDamage,
+        event: 'turnStart',
+        actions: [{ type: 'damage', parts: POISON_DAMAGE, on: 'always' }],
+      },
+    ]);
+
+    const [negateOnSaveTrigger] = listEffectListTriggers(
+      createEffect({
+        recurringDamage: {
+          damageParts: POISON_DAMAGE,
+          timing: 'endOfTurn',
+          save: { ...CONSTITUTION_TRIGGER_SAVE, onSuccess: 'negate' },
+        },
+      }),
+    );
+
+    expect(negateOnSaveTrigger?.event).toBe('turnEnd');
+    expect(negateOnSaveTrigger?.save).toEqual(CONSTITUTION_TRIGGER_SAVE);
+
+    expect(negateOnSaveTrigger?.actions[0]).toEqual({
+      type: 'damage',
+      parts: POISON_DAMAGE,
+      on: 'failed',
+    });
+
+    const [halfOnSaveTrigger] = listEffectListTriggers(
+      createEffect({
+        recurringDamage: {
+          damageParts: POISON_DAMAGE,
+          timing: 'endOfTurn',
+          save: { ...CONSTITUTION_TRIGGER_SAVE, onSuccess: 'half' },
+        },
+      }),
+    );
+
+    expect(halfOnSaveTrigger?.actions[0]).toEqual({
+      type: 'damage',
+      parts: POISON_DAMAGE,
+      on: 'always',
+      halfOnSave: true,
+    });
+  });
+
+  it('повторный спасбросок снимает эффект при успехе, снятие после атаки — по роли', () => {
+    const effect = createEffect({
+      recurringSave: {
+        ability: 'wisdom',
+        dc: TYPED_SAVE_DC,
+        timing: 'endOfTurn',
+      },
+      consumeOn: 'attackOnCarrier',
+    });
+
+    expect(listEffectListTriggers(effect)).toEqual([
+      {
+        id: LEGACY_TRIGGER_IDS.recurringSave,
+        event: 'turnEnd',
+        save: { ability: 'wisdom', dc: TYPED_SAVE_DC },
+        actions: [{ type: 'removeSelf', on: 'saved' }],
+      },
+      {
+        id: LEGACY_TRIGGER_IDS.consumeOn,
+        event: 'attackRoll',
+        role: 'target',
+        actions: [{ type: 'removeSelf', on: 'always' }],
+      },
+    ]);
+  });
+
+  it('разовое срабатывание: событие по доставке, гейты по исходу «при успехе»', () => {
+    const successOutcomeGates = [
+      {
+        outcome: 'nothing',
+        damageGate: 'failed',
+        effectGate: 'failed',
+        halfOnSave: undefined,
+      },
+      {
+        outcome: 'halfDamage',
+        damageGate: 'always',
+        effectGate: 'failed',
+        halfOnSave: true,
+      },
+      {
+        outcome: 'halfDamageWithEffect',
+        damageGate: 'always',
+        effectGate: 'always',
+        halfOnSave: true,
+      },
+      {
+        outcome: 'effectWithoutDamage',
+        damageGate: 'failed',
+        effectGate: 'always',
+        halfOnSave: undefined,
+      },
+      {
+        outcome: 'onlyOnSuccess',
+        damageGate: 'saved',
+        effectGate: 'saved',
+        halfOnSave: undefined,
+      },
+    ] as const;
+
+    for (const {
+      outcome,
+      damageGate,
+      effectGate,
+      halfOnSave,
+    } of successOutcomeGates) {
+      const effect = writeEffectSuccessOutcome(
+        createEffect({
+          effectTarget: 'target',
+          conditionKey: 'poisoned',
+          applySave: { ...CONSTITUTION_TRIGGER_SAVE, onSuccess: 'negate' },
+          damageParts: POISON_DAMAGE,
+        }),
+        outcome,
+      );
+
+      const [landing] = collectEffectTriggers(effect);
+
+      expect(landing?.id, outcome).toBe(LEGACY_TRIGGER_IDS.landing);
+      expect(landing?.event, outcome).toBe('applied');
+      expect(landing?.save, outcome).toEqual(CONSTITUTION_TRIGGER_SAVE);
+
+      expect(
+        landing?.actions.map((action) => [
+          action.type,
+          action.on,
+          action.type === 'damage' ? action.halfOnSave : undefined,
+        ]),
+        outcome,
+      ).toEqual([
+        ['damage', damageGate, halfOnSave],
+        ['applySelf', effectGate, undefined],
+      ]);
+    }
+
+    const [exitTrigger] = collectEffectTriggers(
+      createEffect({ areaTrigger: 'exit', damageParts: POISON_DAMAGE }),
+    );
+
+    expect(exitTrigger?.event).toBe('exit');
+
+    // У эффекта «на носителе» разового срабатывания нет
+    expect(
+      collectEffectTriggers(
+        createEffect({
+          applySave: { ...CONSTITUTION_TRIGGER_SAVE, onSuccess: 'negate' },
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it('явные срабатывания идут после старых полей', () => {
+    const stench: EffectTrigger = {
+      id: 'trigger_stench',
+      event: 'turnStart',
+      save: CONSTITUTION_TRIGGER_SAVE,
+      actions: [{ type: 'applyCondition', conditionKey: 'poisoned' }],
+    };
+
+    const effect = createEffect({
+      consumeOn: 'carrierAttack',
+      triggers: [stench],
+    });
+
+    expect(listEffectListTriggers(effect).map((trigger) => trigger.id)).toEqual(
+      [LEGACY_TRIGGER_IDS.consumeOn, 'trigger_stench'],
+    );
+  });
+
+  it('гейт по умолчанию: при спасброске — провал, но «половина при успехе» бьёт всегда', () => {
+    const withSave = { save: CONSTITUTION_TRIGGER_SAVE };
+
+    expect(
+      resolveTriggerActionGate(withSave, {
+        type: 'damage',
+        parts: POISON_DAMAGE,
+      }),
+    ).toBe('failed');
+
+    expect(
+      resolveTriggerActionGate({}, { type: 'damage', parts: POISON_DAMAGE }),
+    ).toBe('always');
+
+    expect(
+      resolveTriggerActionGate(withSave, {
+        type: 'damage',
+        parts: POISON_DAMAGE,
+        halfOnSave: true,
+      }),
+    ).toBe('always');
+
+    expect(
+      resolveTriggerActionGate(withSave, {
+        type: 'damage',
+        parts: POISON_DAMAGE,
+        halfOnSave: true,
+        on: 'saved',
+      }),
+    ).toBe('saved');
+  });
+});
+
+describe('запись «сначала старые поля»', () => {
+  it('круг чтение → запись не меняет эффект со всеми старыми полями', () => {
+    const saves = [
+      undefined,
+      { ...CONSTITUTION_TRIGGER_SAVE, onSuccess: 'negate' },
+      { ...CONSTITUTION_TRIGGER_SAVE, onSuccess: 'half' },
+    ] as const;
+
+    for (const save of saves) {
+      for (const consumeOn of [
+        undefined,
+        'carrierAttack',
+        'attackOnCarrier',
+      ] as const) {
+        for (const recurringSave of [
+          undefined,
+          { ability: 'wisdom', dc: APPLIER_SAVE_DC, timing: 'startOfTurn' },
+        ] as const) {
+          const effect = createEffect({
+            recurringDamage: {
+              damageParts: POISON_DAMAGE,
+              timing: 'startOfTurn',
+              ...(save ? { save } : {}),
+            },
+            ...(recurringSave ? { recurringSave } : {}),
+            ...(consumeOn ? { consumeOn } : {}),
+          });
+
+          expect(
+            serializeEffect(
+              writeEffectTriggers(effect, listEffectListTriggers(effect)),
+            ),
+          ).toBe(serializeEffect(effect));
+        }
+      }
+    }
+  });
+
+  it('невыразимое старым полем уходит в triggers: лимит, условие, ход источника, второй урон', () => {
+    const damageTrigger: EffectTrigger = {
+      id: LEGACY_TRIGGER_IDS.recurringDamage,
+      event: 'turnStart',
+      actions: [{ type: 'damage', parts: POISON_DAMAGE, on: 'always' }],
+    };
+
+    const effectWithExtraTriggers = writeEffectTriggers(createEffect(), [
+      damageTrigger,
+      { ...damageTrigger, id: 'second' },
+      { ...damageTrigger, id: 'limited', limit: { max: 1, per: 'turn' } },
+      { ...damageTrigger, id: 'source', turnOf: 'source' },
+      {
+        ...damageTrigger,
+        id: 'conditional',
+        condition: 'self.hp.value < self.hp.max',
+      },
+    ]);
+
+    expect(effectWithExtraTriggers.recurringDamage).toEqual({
+      damageParts: POISON_DAMAGE,
+      timing: 'startOfTurn',
+    });
+
+    expect(
+      effectWithExtraTriggers.triggers?.map((trigger) => trigger.id),
+    ).toEqual(['second', 'limited', 'source', 'conditional']);
+  });
+
+  it('старые поля, которых нет в списке, снимаются; разовое срабатывание не трогается', () => {
+    const effect = createEffect({
+      effectTarget: 'target',
+      applySave: { ...CONSTITUTION_TRIGGER_SAVE, onSuccess: 'negate' },
+      recurringSave: { ability: 'wisdom', dc: SAVE_DC, timing: 'endOfTurn' },
+      consumeOn: 'carrierAttack',
+    });
+
+    const effectWithoutConsumeOn = writeEffectTriggers(
+      effect,
+      collectEffectTriggers(effect).filter(
+        (trigger) => trigger.id !== LEGACY_TRIGGER_IDS.consumeOn,
+      ),
+    );
+
+    expect(effectWithoutConsumeOn.consumeOn).toBeUndefined();
+    expect(effectWithoutConsumeOn.recurringSave).toEqual(effect.recurringSave);
+    expect(effectWithoutConsumeOn.applySave).toEqual(effect.applySave);
+    expect(effectWithoutConsumeOn.triggers).toBeUndefined();
+  });
+
+  it('невыразимая строка с id legacy.* получает новый id', () => {
+    const effectWithLimitedSave = writeEffectTriggers(createEffect(), [
+      {
+        id: LEGACY_TRIGGER_IDS.recurringSave,
+        event: 'turnEnd',
+        save: CONSTITUTION_TRIGGER_SAVE,
+        actions: [{ type: 'removeSelf', on: 'saved' }],
+        limit: { max: 1, per: 'round' },
+      },
+    ]);
+
+    const [limitedSaveTrigger] = effectWithLimitedSave.triggers ?? [];
+
+    expect(effectWithLimitedSave.recurringSave).toBeUndefined();
+    expect(effectWithLimitedSave.triggers).toHaveLength(1);
+
+    expect(limitedSaveTrigger && isLegacyTrigger(limitedSaveTrigger)).toBe(
+      false,
+    );
+  });
+});
+
+describe('фразы срабатываний', () => {
+  it('новые срабатывания: момент, спасбросок, исходы, лимит, ход источника', () => {
+    expect(
+      describeEffectTrigger(
+        {
+          id: 'stench',
+          event: 'turnStart',
+          save: { ability: 'constitution', dc: SAVE_DC },
+          actions: [
+            {
+              type: 'applyCondition',
+              conditionKey: 'poisoned',
+              duration: { type: 'rounds', value: 1 },
+            },
+          ],
+          limit: { max: 1, per: 'turn' },
+        },
+        { formatDc },
+      ),
+    ).toBe(
+      `в начале хода: спасбросок Телосложения, Сл ${SAVE_DC}; провал — «Отравленный» на 1 раунд; `
+        + 'успех — ничего, не чаще одного раза за ход',
+    );
+
+    expect(
+      describeEffectTrigger(
+        {
+          id: 'burn',
+          event: 'turnEnd',
+          turnOf: 'source',
+          save: { ability: 'dexterity', dc: APPLIER_SAVE_DC },
+          actions: [
+            {
+              type: 'damage',
+              parts: [{ formula: '2d6', type: 'fire' }],
+              on: 'always',
+              halfOnSave: true,
+            },
+            { type: 'removeSelf', on: 'saved' },
+          ],
+          limit: { max: 3, per: 'longRest' },
+        },
+        { formatDc },
+      ),
+    ).toBe(
+      'в конце хода источника: спасбросок Ловкости, Сл заклинателя; провал — 2d6 огненный; '
+        + 'успех — половина урона, эффект снимается, не чаще 3 раз за долгий отдых',
+    );
+  });
+
+  it('отдых, режим спасброска и «всем в радиусе»', () => {
+    expect(
+      describeEffectTrigger(
+        {
+          id: 'regain',
+          event: 'rest',
+          restType: 'short',
+          actions: [{ type: 'removeSelf' }],
+        },
+        { formatDc },
+      ),
+    ).toBe('после короткого отдыха: эффект снимается');
+
+    expect(
+      describeEffectTrigger(
+        { id: 'aftermath', event: 'rest', actions: [{ type: 'removeSelf' }] },
+        { formatDc },
+      ),
+    ).toBe('после долгого отдыха: эффект снимается');
+
+    expect(
+      describeEffectTrigger(
+        {
+          id: 'laughter',
+          event: 'damageTaken',
+          save: { ability: 'wisdom', dc: SAVE_DC, mode: 'advantage' },
+          actions: [{ type: 'removeSelf', on: 'saved' }],
+        },
+        { formatDc },
+      ),
+    ).toBe(
+      `при получении урона: спасбросок Мудрости с преимуществом, Сл ${SAVE_DC}; `
+        + 'провал — ничего; успех — эффект снимается',
+    );
+
+    expect(
+      describeEffectTrigger(
+        {
+          id: 'spores',
+          event: 'hpZero',
+          recipient: 'area',
+          area: { radius: 5, target: 'allies' },
+          actions: [{ type: 'removeSelf' }],
+        },
+        { formatDc },
+      ),
+    ).toBe(
+      'когда хиты падают до 0, на союзников в 5 фт вокруг: эффект снимается',
+    );
+  });
+
+  it('повторный спасбросок состояния, счётчик отметки и максимум хитов', () => {
+    expect(
+      describeEffectTrigger(
+        {
+          id: 'paralysis',
+          event: 'applied',
+          actions: [
+            {
+              type: 'applyCondition',
+              conditionKey: 'paralyzed',
+              recurringSave: {
+                ability: 'constitution',
+                dc: SAVE_DC,
+                timing: 'endOfTurn',
+              },
+            },
+          ],
+        },
+        { formatDc },
+      ),
+    ).toBe(
+      'при наложении: «Парализованный» (повторный спасбросок Телосложения '
+        + `Сл ${SAVE_DC} в конце хода снимает эффект)`,
+    );
+
+    expect(
+      describeEffectTrigger(
+        {
+          id: 'petrify',
+          event: 'turnEnd',
+          actions: [{ type: 'applyTag', tag: 'petrify', stack: true }],
+        },
+        { formatDc },
+      ),
+    ).toBe('в конце хода: отметка «petrify» +1');
+
+    expect(
+      describeEffectTrigger(
+        {
+          id: 'lifeDrain',
+          event: 'applied',
+          actions: [{ type: 'reduceMaxHp', amount: '@damage' }],
+        },
+        { formatDc },
+      ),
+    ).toBe('при наложении: максимум хитов −урон до долгого отдыха');
+
+    expect(
+      describeEffectTrigger(
+        {
+          id: 'curse',
+          event: 'applied',
+          actions: [
+            { type: 'reduceMaxHp', amount: '2d6', endsOnRest: 'never' },
+          ],
+        },
+        { formatDc },
+      ),
+    ).toBe('при наложении: максимум хитов −2d6');
+  });
+
+  it('условие, Сл формулой и «хиты становятся»', () => {
+    expect(
+      describeEffectTrigger(
+        {
+          id: 'fortitude',
+          event: 'hpZero',
+          condition: 'damage.type !== "radiant" && damage.isCritical === false',
+          save: { ability: 'constitution', dc: 5, dcFormula: '5 + @damage' },
+          actions: [{ type: 'setHp', value: 1, on: 'saved' }],
+        },
+        { formatDc },
+      ),
+    ).toBe(
+      'когда хиты падают до 0, если урон не излучением и не критическое попадание: '
+        + 'спасбросок Телосложения, Сл = 5 + урон; провал — ничего; успех — хиты становятся 1',
+    );
+  });
+
+  it('старые поля описываются прежними фразами сводки', () => {
+    const effect = createEffect({
+      conditionKey: 'poisoned',
+      recurringDamage: {
+        damageParts: POISON_DAMAGE,
+        timing: 'startOfTurn',
+        save: { ...CONSTITUTION_TRIGGER_SAVE, onSuccess: 'half' },
+      },
+      recurringSave: {
+        ability: 'wisdom',
+        dc: TYPED_SAVE_DC,
+        timing: 'endOfTurn',
+      },
+      consumeOn: 'carrierAttack',
+    });
+
+    expect(
+      listEffectListTriggers(effect).map((trigger) =>
+        describeEffectTrigger(trigger, { formatDc }),
+      ),
+    ).toEqual([
+      `каждый ход 2d6 ядом в начале хода (спасбросок Телосложения, Сл ${SAVE_DC}: успех — половина урона)`,
+      `повторный спасбросок Мудрости Сл ${TYPED_SAVE_DC} в конце хода снимает эффект`,
+      'снимается после своей атаки',
+    ]);
+  });
+});
+
+describe('срабатывания 0.8.66', () => {
+  it('цена, вопрос, шанс и режим спасброска по условию не сворачиваются в старые поля', () => {
+    const plainRecurringSave: EffectTrigger = {
+      id: 'escape',
+      event: 'turnEnd',
+      save: CONSTITUTION_TRIGGER_SAVE,
+      actions: [{ type: 'removeSelf', on: 'saved' }],
+    };
+
+    const variants: EffectTrigger[] = [
+      { ...plainRecurringSave, cost: 'reaction' },
+      { ...plainRecurringSave, ask: true },
+      { ...plainRecurringSave, chancePercent: 50 },
+      {
+        ...plainRecurringSave,
+        save: {
+          ...CONSTITUTION_TRIGGER_SAVE,
+          modeIf: [{ condition: 'self.hp.temp === 0', mode: 'advantage' }],
+        },
+      },
+      {
+        ...plainRecurringSave,
+        save: {
+          ...CONSTITUTION_TRIGGER_SAVE,
+          autoFailIf: 'self.condition === "unconscious"',
+        },
+      },
+    ];
+
+    for (const trigger of variants) {
+      const effect = writeEffectTriggers(createEffect(), [trigger]);
+
+      expect(effect.recurringSave, JSON.stringify(trigger)).toBeUndefined();
+      expect(effect.triggers).toEqual([trigger]);
+    }
+
+    // Простое срабатывание по-прежнему пишется старым полем
+    expect(
+      writeEffectTriggers(createEffect(), [plainRecurringSave]).recurringSave,
+    ).toBeDefined();
+  });
+
+  it('фразы новых событий, получателей и действий', () => {
+    expect(
+      describeEffectTrigger(
+        {
+          id: 'heal',
+          event: 'healed',
+          recipient: 'source',
+          actions: [
+            { type: 'tempHp', amount: '5', mode: 'add' },
+            { type: 'setHp', value: 1, toMax: true },
+          ],
+        },
+        { formatDc },
+      ),
+    ).toBe(
+      'когда носителя лечат, на наложившего: временные хиты +5, хиты '
+        + 'восстанавливаются полностью',
+    );
+
+    expect(
+      describeEffectTrigger(
+        {
+          id: 'path',
+          event: 'moved',
+          everyFeet: 5,
+          actions: [
+            { type: 'move', kind: 'push', distance: 10 },
+            { type: 'moveArea', kind: 'follow' },
+            { type: 'moveArea', kind: 'away' },
+          ],
+        },
+        { formatDc },
+      ),
+    ).toBe(
+      'за каждые 5 фт пути: отталкивает на 10 фт, зона идёт за носителем, '
+        + 'сдвигает зону от получателя на 10 фт',
+    );
+
+    expect(
+      describeEffectTrigger(
+        {
+          id: 'word',
+          event: 'applied',
+          actions: [
+            { type: 'removeCondition' },
+            { type: 'removeCondition', conditionKey: 'poisoned' },
+            { type: 'kill' },
+            { type: 'revive' },
+            { type: 'revive', full: true },
+            { type: 'dropHeld' },
+            { type: 'restore', what: 'spellSlot', level: 3 },
+            { type: 'restore', what: 'counter', counter: 'rage' },
+            { type: 'dispel', maxLevel: 3 },
+            { type: 'grantInspiration' },
+            { type: 'notify', text: 'Выполняй приказ' },
+            { type: 'nextStage' },
+            { type: 'endCast', whose: 'recipient' },
+            {
+              type: 'applyCondition',
+              conditionKey: 'restrained',
+              endsOnExit: true,
+            },
+          ],
+        },
+        { formatDc },
+      ),
+    ).toBe(
+      [
+        'при наложении: снимаются все состояния',
+        'снимается состояние «Отравленный»',
+        'получатель умирает',
+        'получатель возвращается к жизни с 1',
+        'получатель возвращается к жизни с полным запасом хитов',
+        'получатель роняет то, что держит',
+        'возвращается ячейка круга 3',
+        'возвращается ресурс «rage»',
+        'рассеиваются заклинания до круга 3',
+        'получатель получает вдохновение',
+        'сообщение «Выполняй приказ»',
+        'эффект переходит на следующую ступень',
+        'каст получателя заканчивается',
+        '«Опутанный» до выхода из зоны',
+      ].join(', '),
+    );
+
+    expect(
+      describeEffectTrigger(
+        {
+          id: 'downed',
+          event: 'downedOther',
+          actions: [{ type: 'tempHp', amount: '1d6' }],
+        },
+        { formatDc },
+      ),
+    ).toBe('когда носитель сваливает цель: временные хиты 1d6');
+  });
+});

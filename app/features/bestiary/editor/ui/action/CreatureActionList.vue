@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CreateAction } from '../../../model';
+  import type { CreateAction, CreatureEffectContext } from '../../../model';
 
   import {
     createEmptyCreatureAction,
@@ -16,6 +16,12 @@
   defineProps<{
     /** Подпись кнопки добавления: «Добавить действие», «Добавить реакцию». */
     addLabel: string;
+
+    /**
+     * Место эффектов записей: у черт эффект лежит на самом существе, у
+     * действий, реакций, легендарных действий и логова — ложится на цель.
+     */
+    effectContext: CreatureEffectContext;
 
     /**
      * Путь списка в состоянии формы существа: `actions`, `legendary.actions`,
@@ -245,6 +251,7 @@
       >
         <CreatureActionEntry
           :model-value="row.action"
+          :effect-context
           @update:model-value="updateAction(actionIndex, $event)"
         />
       </div>
