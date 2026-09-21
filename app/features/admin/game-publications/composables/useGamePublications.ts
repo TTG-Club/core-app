@@ -247,6 +247,7 @@ export function useGamePublications() {
         name: form.name,
         platform: form.platform,
         telegramChatId: form.platform === 'TELEGRAM' ? form.telegramChatId : '',
+        vkGroupId: form.platform === 'VK' ? form.vkGroupId : '',
         enabled: form.enabled,
         webhookUrl: form.platform === 'DISCORD' ? form.webhookUrl : '',
         schedule: form.inherit ? null : form.schedule,

@@ -13,6 +13,7 @@ export const PUBLICATION_DEFAULT_PLATFORM = 'DISCORD';
 export const PUBLICATION_PLATFORMS = {
   DISCORD: { label: 'Discord', value: 'DISCORD', icon: 'ttg:discord' },
   TELEGRAM: { label: 'Telegram', value: 'TELEGRAM', icon: 'ttg:telegram' },
+  VK: { label: 'ВКонтакте', value: 'VK', icon: 'ttg:vk' },
 } satisfies Record<
   PublicationPlatform,
   { label: string; value: PublicationPlatform; icon: string }
@@ -24,6 +25,8 @@ export const PUBLICATION_PLATFORM_OPTIONS = Object.values(
 export const PUBLICATION_TELEGRAM_ID_PATTERN = /^-[1-9]\d{0,15}$/;
 /** Нижняя граница ID Telegram: за ней число теряет точность в JavaScript. */
 export const PUBLICATION_TELEGRAM_ID_LIMIT = -4_503_599_627_370_495;
+/** ID сообщества ВКонтакте: число; минус из owner_id допускается, сервис его отбросит. */
+export const PUBLICATION_VK_ID_PATTERN = /^-?[1-9]\d{0,11}$/;
 export const PUBLICATION_TELEGRAM_ID_VISIBILITY = {
   hidden: {
     type: 'password',
@@ -97,7 +100,7 @@ export const PUBLICATION_STATUS_LABELS = {
 export const PUBLICATION_TEXT = {
   title: 'Публикации игр',
   description:
-    'Игры разных систем по расписанию — в ваши каналы Discord и Telegram.',
+    'Игры разных систем по расписанию — в ваши каналы Discord, Telegram и ВКонтакте.',
   selection: `До ${PUBLICATION_MAX_GAMES} игр с открытым набором: по одной от каждой системы, затем следующий круг. Внутри системы — порядок каталога. Название, система, места, жанры и ссылка на сайт.`,
   timezone: 'Все дни и время указаны по Москве (UTC+3).',
   global: 'Общее расписание',
@@ -110,7 +113,7 @@ export const PUBLICATION_TEXT = {
   channels: 'Каналы',
   channelSettings: 'Настройки канала',
   addChannel: 'Добавить канал',
-  noChannels: 'Добавьте канал Discord или Telegram.',
+  noChannels: 'Добавьте канал Discord, Telegram или сообщество ВКонтакте.',
   platform: 'Платформа',
   telegramChatId: 'ID группы или канала Telegram',
   telegramChatIdPlaceholder: '-1001234567890',
@@ -122,6 +125,17 @@ export const PUBLICATION_TEXT = {
     'Бот Telegram ещё не подключён на сервере. Каналы можно сохранить, отправка станет доступна после подключения бота.',
   invalidTelegramChatId:
     'Укажите числовой ID группы или канала, начиная с минуса',
+  vkGroupId: 'ID сообщества ВКонтакте',
+  vkGroupIdPlaceholder: '123456789',
+  vkHint:
+    'Укажите числовой ID сообщества: для vk.com/club123456789 это 123456789. Подборка публикуется записью на стене от имени сообщества ключом, заданным на сервере. Тестовая запись тоже появится на стене — удалите её вручную.',
+  vkDefaultHint:
+    'Оставьте поле пустым, чтобы публиковать в сообщество из настроек сервера (VK_GROUP_ID), или укажите другой числовой ID. Тестовая запись тоже появится на стене — удалите её вручную.',
+  vkSaved:
+    'ID сохранён и не показывается. Оставьте поле пустым, чтобы сохранить прежний.',
+  vkUnavailable:
+    'Ключ сообщества ВКонтакте ещё не подключён на сервере. Каналы можно сохранить, публикация станет доступна после подключения ключа.',
+  invalidVkGroupId: 'Укажите числовой ID сообщества ВКонтакте',
   name: 'Название канала',
   webhook: 'Discord-вебхук',
   webhookHint:

@@ -22,12 +22,15 @@ const overview = {
   channels: [],
   configured: true,
   telegramConfigured: true,
+  vkConfigured: true,
+  vkGroupConfigured: false,
   timeZone: 'Europe/Moscow',
 };
 
 const newChannel = publicationChannelFormSchema.parse({
   platform: 'DISCORD',
   telegramChatId: '',
+  vkGroupId: '',
   name: 'Игры',
   enabled: true,
   inherit: true,
@@ -65,6 +68,8 @@ describe('валидация публикаций игр', () => {
     });
 
     expect(legacy.telegramConfigured).toBe(false);
+    expect(legacy.vkConfigured).toBe(false);
+    expect(legacy.vkGroupConfigured).toBe(false);
     expect(legacy.channels[0]?.platform).toBe('DISCORD');
   });
 
@@ -120,6 +125,79 @@ describe('валидация публикаций игр', () => {
 
     expect(parsed.channels[0]).not.toHaveProperty('telegramChatId');
     expect(parsed.channels[0]).not.toHaveProperty('webhookUrl');
+  });
+
+  it('проверяет ID сообщества ВКонтакте и не возвращает его из API', () => {
+    const vkChannel = {
+      ...newChannel,
+      platform: 'VK',
+      webhookUrl: '',
+      vkGroupId: ' 212345678 ',
+    };
+
+    expect(publicationChannelFormSchema.parse(vkChannel).vkGroupId).toBe(
+      '212345678',
+    );
+
+    expect(
+      publicationChannelFormSchema.safeParse({
+        ...vkChannel,
+        vkGroupId: '-212345678',
+      }).success,
+    ).toBe(true);
+
+    expect(
+      publicationChannelFormSchema.safeParse({
+        ...vkChannel,
+        isNew: false,
+        vkGroupId: '',
+      }).success,
+    ).toBe(true);
+
+    expect(
+      publicationChannelFormSchema.safeParse({ ...vkChannel, vkGroupId: '' })
+        .success,
+    ).toBe(false);
+
+    // При заданном VK_GROUP_ID новый канал сохраняется без своего ID, но неверный ID отклоняется.
+    expect(
+      publicationChannelFormSchema.safeParse({
+        ...vkChannel,
+        vkGroupDefault: true,
+        vkGroupId: '',
+      }).success,
+    ).toBe(true);
+
+    expect(
+      publicationChannelFormSchema.safeParse({
+        ...vkChannel,
+        vkGroupDefault: true,
+        vkGroupId: 'club1',
+      }).success,
+    ).toBe(false);
+
+    for (const vkGroupId of [
+      '',
+      '0',
+      '-0',
+      '012',
+      'club212345678',
+      'https://vk.com/club212345678',
+      '1234567890123',
+    ]) {
+      expect(
+        publicationChannelFormSchema.safeParse({ ...vkChannel, vkGroupId })
+          .success,
+      ).toBe(false);
+    }
+
+    const parsed = parsePublicationOverview({
+      ...overview,
+      channels: [{ ...savedChannel, platform: 'VK', vkGroupId: '212345678' }],
+    });
+
+    expect(parsed.channels[0]?.platform).toBe('VK');
+    expect(parsed.channels[0]).not.toHaveProperty('vkGroupId');
   });
 
   it('при наследовании не проверяет скрытый черновик индивидуального расписания', () => {
@@ -406,6 +484,34 @@ describe('жизненный цикл настроек Discord', () => {
           telegramChatId: '-1001234567890',
           webhookUrl: '',
           schedule: null,
+        }),
+        retry: 0,
+      }),
+    );
+  });
+
+  it('сохраняет ID сообщества ВКонтакте без адресов других платформ', async () => {
+    const { publications } = mount();
+
+    request.mockResolvedValueOnce(overview);
+
+    const vkChannel = publicationChannelFormSchema.parse({
+      ...newChannel,
+      platform: 'VK',
+      webhookUrl: '',
+      vkGroupId: '212345678',
+    });
+
+    expect(await publications.saveChannel(null, vkChannel)).toBe(true);
+
+    expect(request).toHaveBeenCalledWith(
+      expect.stringContaining('/channels'),
+      expect.objectContaining({
+        body: expect.objectContaining({
+          platform: 'VK',
+          vkGroupId: '212345678',
+          telegramChatId: '',
+          webhookUrl: '',
         }),
         retry: 0,
       }),

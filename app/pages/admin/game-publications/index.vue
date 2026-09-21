@@ -93,6 +93,10 @@
     () => overview.value && !overview.value.telegramConfigured,
   );
 
+  const vkUnavailable = computed(
+    () => overview.value && !overview.value.vkConfigured,
+  );
+
   const channelRows = computed(() => {
     const snapshot = overview.value;
 
@@ -106,7 +110,9 @@
       testDisabled:
         settingsDisabled.value
         || (channel.platform === PUBLICATION_PLATFORMS.TELEGRAM.value
-          && !snapshot.telegramConfigured),
+          && !snapshot.telegramConfigured)
+        || (channel.platform === PUBLICATION_PLATFORMS.VK.value
+          && !snapshot.vkConfigured),
       badge: channel.enabled
         ? PUBLICATION_CHANNEL_BADGES.active
         : PUBLICATION_CHANNEL_BADGES.paused,
@@ -292,6 +298,14 @@
         color="warning"
         variant="outline"
         :description="PUBLICATION_TEXT.telegramUnavailable"
+      />
+
+      <UAlert
+        v-if="vkUnavailable"
+        role="status"
+        color="warning"
+        variant="outline"
+        :description="PUBLICATION_TEXT.vkUnavailable"
       />
 
       <p
@@ -655,6 +669,7 @@
           :key="editorKey"
           :channel="selectedChannel"
           :busy="settingsDisabled"
+          :vk-group-configured="overview?.vkGroupConfigured ?? false"
           @save="submitChannel"
           @cancel="closeEditor"
         />

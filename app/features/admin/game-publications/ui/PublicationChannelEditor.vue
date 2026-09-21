@@ -19,6 +19,7 @@
   const props = defineProps<{
     channel: PublicationChannel | null;
     busy: boolean;
+    vkGroupConfigured: boolean;
   }>();
 
   const emit = defineEmits<{
@@ -39,6 +40,8 @@
     name: props.channel?.name ?? '',
     platform: props.channel?.platform ?? PUBLICATION_DEFAULT_PLATFORM,
     telegramChatId: '',
+    vkGroupId: '',
+    vkGroupDefault: props.vkGroupConfigured,
     enabled: props.channel?.enabled ?? true,
     webhookUrl: '',
     inherit: props.channel?.schedule == null,
@@ -61,6 +64,8 @@
     () => form.platform === PUBLICATION_PLATFORMS.TELEGRAM.value,
   );
 
+  const isVk = computed(() => form.platform === PUBLICATION_PLATFORMS.VK.value);
+
   const platformDisabled = computed(() => props.busy || !form.isNew);
 
   const telegramDescription = computed(() =>
@@ -69,11 +74,24 @@
       : PUBLICATION_TEXT.telegramHint,
   );
 
+  const vkDescription = computed(() => {
+    if (props.channel) {
+      return PUBLICATION_TEXT.vkSaved;
+    }
+
+    return form.vkGroupDefault
+      ? PUBLICATION_TEXT.vkDefaultHint
+      : PUBLICATION_TEXT.vkHint;
+  });
+
+  const vkGroupRequired = computed(() => form.isNew && !form.vkGroupDefault);
+
   watch(
     () => form.platform,
     () => {
       form.webhookUrl = '';
       form.telegramChatId = '';
+      form.vkGroupId = '';
       telegramChatIdVisible.value = false;
     },
     { flush: 'sync' },
@@ -93,12 +111,14 @@
   function cancel(): void {
     form.webhookUrl = '';
     form.telegramChatId = '';
+    form.vkGroupId = '';
     emit('cancel');
   }
 
   onBeforeUnmount(() => {
     form.webhookUrl = '';
     form.telegramChatId = '';
+    form.vkGroupId = '';
   });
 </script>
 
@@ -172,6 +192,24 @@
           />
         </template>
       </UInput>
+    </UFormField>
+
+    <UFormField
+      v-else-if="isVk"
+      name="vkGroupId"
+      :label="PUBLICATION_TEXT.vkGroupId"
+      :description="vkDescription"
+      :required="vkGroupRequired"
+    >
+      <UInput
+        v-model="form.vkGroupId"
+        inputmode="numeric"
+        autocomplete="off"
+        :spellcheck="false"
+        :placeholder="PUBLICATION_TEXT.vkGroupIdPlaceholder"
+        :disabled="busy"
+        class="w-full"
+      />
     </UFormField>
 
     <UFormField

@@ -10,11 +10,13 @@ import {
   PUBLICATION_TELEGRAM_ID_LIMIT,
   PUBLICATION_TELEGRAM_ID_PATTERN,
   PUBLICATION_TEXT,
+  PUBLICATION_VK_ID_PATTERN,
 } from './constants';
 
 export const publicationPlatformSchema = validation.enum([
   'DISCORD',
   'TELEGRAM',
+  'VK',
 ]);
 
 const telegramChatIdSchema = validation
@@ -75,6 +77,9 @@ export const publicationChannelFormSchema = validation
       .max(100),
     platform: publicationPlatformSchema,
     telegramChatId: validation.string().trim(),
+    vkGroupId: validation.string().trim(),
+    // Сервис подставит сообщество из VK_GROUP_ID, если поле ID нового канала пустое.
+    vkGroupDefault: validation.boolean().default(false),
     enabled: validation.boolean(),
     inherit: validation.boolean(),
     webhookUrl: validation
@@ -109,6 +114,18 @@ export const publicationChannelFormSchema = validation
           message: PUBLICATION_TEXT.invalidTelegramChatId,
         });
       }
+    }
+
+    if (
+      channel.platform === 'VK'
+      && (channel.vkGroupId || (channel.isNew && !channel.vkGroupDefault))
+      && !PUBLICATION_VK_ID_PATTERN.test(channel.vkGroupId)
+    ) {
+      validationContext.addIssue({
+        code: 'custom',
+        path: ['vkGroupId'],
+        message: PUBLICATION_TEXT.invalidVkGroupId,
+      });
     }
 
     if (channel.inherit) {
@@ -150,6 +167,8 @@ export const publicationOverviewSchema = validation.object({
     .max(PUBLICATION_MAX_CHANNELS),
   configured: validation.boolean(),
   telegramConfigured: validation.boolean().default(false),
+  vkConfigured: validation.boolean().default(false),
+  vkGroupConfigured: validation.boolean().default(false),
   timeZone: validation.literal('Europe/Moscow'),
 });
 export const publicationPreviewSchema = validation
