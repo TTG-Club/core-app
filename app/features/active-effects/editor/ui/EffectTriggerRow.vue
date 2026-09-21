@@ -1,7 +1,9 @@
 <script setup lang="ts">
   import type { DropdownMenuItem } from '@nuxt/ui';
+  import type { WritableComputedRef } from 'vue';
 
   import type {
+    EffectEscape,
     EffectFormLayout,
     EffectTrigger,
     EffectTriggerAction,
@@ -15,12 +17,15 @@
     EffectTriggerRecipient,
     EffectTriggerRestType,
     EffectTriggerSave,
+    EffectTriggerSaveMode,
     EffectTriggerSaveModeChoice,
     EffectTriggerTurnOwner,
   } from '../../model';
 
   import {
+    ANY_CONDITION_KEY,
     AREA_TRIGGER_RECIPIENT,
+    buildConditionItemsWithAny,
     buildTriggerRecipientOptions,
     CHOICE_TRIGGER_RECIPIENT,
     clearTriggerActionGate,
@@ -29,18 +34,20 @@
     DEFAULT_TRIGGER_AREA_RADIUS,
     DEFAULT_TRIGGER_AREA_TARGET,
     DEFAULT_TRIGGER_ATTACK_ROLE,
+    DEFAULT_TRIGGER_CHANCE_PERCENT,
     DEFAULT_TRIGGER_CHOICE_COUNT,
     DEFAULT_TRIGGER_CHOICE_RADIUS,
     DEFAULT_TRIGGER_CHOOSER,
     DEFAULT_TRIGGER_LIMIT_PERIOD,
+    DEFAULT_TRIGGER_PATH_FEET,
     DEFAULT_TRIGGER_RECIPIENT,
     DEFAULT_TRIGGER_REST_TYPE,
     DEFAULT_TRIGGER_TURN_OWNER,
     EFFECT_AURA_RADIUS_STEP,
-    EFFECT_AURA_TARGET_OPTIONS,
     EFFECT_TRIGGER_ACTION_ICONS,
     EFFECT_TRIGGER_ACTION_LABELS,
     EFFECT_TRIGGER_AREA_LABELS,
+    EFFECT_TRIGGER_AREA_TARGET_OPTIONS,
     EFFECT_TRIGGER_CHOICE_LABELS,
     EFFECT_TRIGGER_CHOOSER_OPTIONS,
     EFFECT_TRIGGER_EVENT_LABELS,
@@ -54,17 +61,25 @@
     EFFECT_TRIGGER_TURN_OWNER_LABELS,
     isTurnTriggerEvent,
     listTriggerActionTypes,
+    MAX_TRIGGER_CHANCE_PERCENT,
     MAX_TRIGGER_CHOICE_COUNT,
+    MAX_TRIGGER_PATH_FEET,
     MIN_TRIGGER_AREA_RADIUS,
+    MIN_TRIGGER_CHANCE_PERCENT,
+    MIN_TRIGGER_CHOICE_COUNT,
     MIN_TRIGGER_LIMIT_MAX,
     omitTriggerSaveDcFormula,
+    TRIGGER_PATH_FEET_ONCE,
     triggerEventAcceptsDcFormula,
+    triggerEventHasConditionKey,
+    triggerEventHasPathFeet,
     triggerEventHasRecipientChoice,
     triggerEventHasRestType,
     triggerEventHasRole,
     validateFormula,
     writeTriggerEvent,
   } from '../../model';
+  import EffectActionCostFields from './EffectActionCostFields.vue';
   import EffectSaveFields from './EffectSaveFields.vue';
   import EffectTriggerActionRow from './EffectTriggerActionRow.vue';
   import EffectTriggerConditionPicker from './EffectTriggerConditionPicker.vue';
@@ -139,6 +154,20 @@
 
   const showsRestType = computed(() =>
     triggerEventHasRestType(trigger.value.event),
+  );
+
+  const showsPathFeet = computed(() =>
+    triggerEventHasPathFeet(trigger.value.event),
+  );
+
+  /** Состояние выбирают только у события «когда состояние снимается». */
+  const showsLostCondition = computed(() =>
+    triggerEventHasConditionKey(trigger.value.event),
+  );
+
+  /** Состояния для выбора, «Любое» первым пунктом. */
+  const lostConditionItems = buildConditionItemsWithAny(
+    EFFECT_TRIGGER_ROW_LABELS.conditionKeyAny,
   );
 
   const isAreaRecipient = computed(
@@ -293,6 +322,134 @@
           nextRestType === DEFAULT_TRIGGER_REST_TYPE ? undefined : nextRestType,
       }),
   });
+
+  // Пусто — один раз за перемещение: в данных шага нет
+  const everyFeet = computed({
+    get: () => trigger.value.everyFeet ?? null,
+    set: (feet: number | null) =>
+      updateTrigger({
+        everyFeet:
+          typeof feet === 'number' && feet > TRIGGER_PATH_FEET_ONCE
+            ? feet
+            : undefined,
+      }),
+  });
+
+  // Пусто — любое снятое состояние: в данных ключа нет
+  const lostConditionKey = computed({
+    get: () => trigger.value.conditionKey ?? ANY_CONDITION_KEY,
+    set: (nextKey: string) =>
+      updateTrigger({
+        conditionKey: nextKey === ANY_CONDITION_KEY ? undefined : nextKey,
+      }),
+  });
+
+  // Шанс выключен — поля нет вовсе, а не сто процентов
+  const hasChance = computed({
+    get: () => trigger.value.chancePercent !== undefined,
+    set: (enabled: boolean) =>
+      updateTrigger({
+        chancePercent: enabled ? DEFAULT_TRIGGER_CHANCE_PERCENT : undefined,
+      }),
+  });
+
+  const chancePercent = computed({
+    get: () => trigger.value.chancePercent ?? DEFAULT_TRIGGER_CHANCE_PERCENT,
+    set: (percent: number | null) =>
+      updateTrigger({
+        chancePercent: percent ?? DEFAULT_TRIGGER_CHANCE_PERCENT,
+      }),
+  });
+
+  const actionCost = computed({
+    get: () => ({
+      cost: trigger.value.cost,
+      moveCostFeet: trigger.value.moveCostFeet,
+    }),
+    set: (nextCost: Pick<EffectEscape, 'cost' | 'moveCostFeet'>) =>
+      updateTrigger(nextCost),
+  });
+
+  const asks = computed({
+    get: () => trigger.value.ask === true,
+    set: (enabled: boolean) =>
+      updateTrigger({
+        ask: enabled ? true : undefined,
+        asker: enabled ? trigger.value.asker : undefined,
+      }),
+  });
+
+  // Носитель — значение по умолчанию: в данных он не пишется
+  const asker = computed({
+    get: () => trigger.value.asker ?? DEFAULT_TRIGGER_CHOOSER,
+    set: (nextAsker: EffectTriggerChooser) =>
+      updateTrigger({
+        asker: nextAsker === DEFAULT_TRIGGER_CHOOSER ? undefined : nextAsker,
+      }),
+  });
+
+  /**
+   * Условие режима спасброска: одно правило на режим — больше форме не нужно,
+   * а модель принимает список.
+   *
+   * @param mode преимущество или помеха.
+   * @returns модель условия.
+   */
+  function createSaveModeCondition(
+    mode: EffectTriggerSaveMode,
+  ): WritableComputedRef<string | undefined> {
+    return computed({
+      get: () =>
+        trigger.value.save?.modeIf?.find((rule) => rule.mode === mode)
+          ?.condition,
+      set: (nextCondition: string | undefined) => {
+        const { save } = trigger.value;
+
+        if (!save) {
+          return;
+        }
+
+        const otherRules = (save.modeIf ?? []).filter(
+          (rule) => rule.mode !== mode,
+        );
+
+        const rules = nextCondition
+          ? [...otherRules, { condition: nextCondition, mode }]
+          : otherRules;
+
+        updateTrigger({
+          save: { ...save, modeIf: rules.length > 0 ? rules : undefined },
+        });
+      },
+    });
+  }
+
+  const advantageIf = createSaveModeCondition('advantage');
+  const disadvantageIf = createSaveModeCondition('disadvantage');
+
+  /**
+   * Условие автоматического исхода спасброска.
+   *
+   * @param saveField поле спасброска.
+   * @returns модель условия.
+   */
+  function createAutoOutcomeCondition(
+    saveField: 'autoSuccessIf' | 'autoFailIf',
+  ): WritableComputedRef<string | undefined> {
+    return computed({
+      get: () => trigger.value.save?.[saveField],
+      set: (nextCondition: string | undefined) => {
+        const { save } = trigger.value;
+
+        if (save) {
+          updateTrigger({ save: { ...save, [saveField]: nextCondition } });
+        }
+      },
+    });
+  }
+
+  const autoSuccessIf = createAutoOutcomeCondition('autoSuccessIf');
+  const autoFailIf = createAutoOutcomeCondition('autoFailIf');
 
   // Обычный спасбросок в данных не пишется
   const saveMode = computed({
@@ -518,6 +675,38 @@
       </UFormField>
 
       <UFormField
+        v-if="showsPathFeet"
+        :label="EFFECT_TRIGGER_ROW_LABELS.everyFeet"
+        class="w-full sm:w-32"
+      >
+        <UInputNumber
+          v-model="everyFeet"
+          :min="TRIGGER_PATH_FEET_ONCE"
+          :max="MAX_TRIGGER_PATH_FEET"
+          :step="DEFAULT_TRIGGER_PATH_FEET"
+          :placeholder="EFFECT_TRIGGER_ROW_LABELS.everyFeetOnce"
+          size="sm"
+          class="w-full"
+        />
+      </UFormField>
+
+      <UFormField
+        v-if="showsLostCondition"
+        :label="EFFECT_TRIGGER_ROW_LABELS.conditionKey"
+        :help="EFFECT_TRIGGER_ROW_LABELS.conditionKeyHint"
+        class="w-full sm:w-56"
+      >
+        <USelectMenu
+          v-model="lostConditionKey"
+          :items="lostConditionItems"
+          value-key="value"
+          label-key="label"
+          size="sm"
+          class="w-full"
+        />
+      </UFormField>
+
+      <UFormField
         v-if="hasRecipientChoice"
         :label="EFFECT_TRIGGER_ROW_LABELS.recipient"
         class="w-full sm:w-56"
@@ -551,7 +740,7 @@
         >
           <USelect
             v-model="areaTarget"
-            :items="EFFECT_AURA_TARGET_OPTIONS"
+            :items="EFFECT_TRIGGER_AREA_TARGET_OPTIONS"
             value-key="value"
             size="sm"
             class="w-full"
@@ -579,7 +768,7 @@
         >
           <USelect
             v-model="choiceTarget"
-            :items="EFFECT_AURA_TARGET_OPTIONS"
+            :items="EFFECT_TRIGGER_AREA_TARGET_OPTIONS"
             value-key="value"
             size="sm"
             class="w-full"
@@ -592,7 +781,7 @@
         >
           <UInputNumber
             v-model="choiceCount"
-            :min="DEFAULT_TRIGGER_CHOICE_COUNT"
+            :min="MIN_TRIGGER_CHOICE_COUNT"
             :max="MAX_TRIGGER_CHOICE_COUNT"
             size="sm"
             class="w-full"
@@ -706,6 +895,40 @@
       </UFormField>
     </div>
 
+    <template v-if="trigger.save">
+      <EffectTriggerConditionPicker
+        v-model:condition="advantageIf"
+        :event="trigger.event"
+        :known-tags="knownTags"
+        :title="EFFECT_TRIGGER_ROW_LABELS.advantageIf"
+        :empty-text="EFFECT_TRIGGER_ROW_LABELS.saveModeIfEmpty"
+      />
+
+      <EffectTriggerConditionPicker
+        v-model:condition="disadvantageIf"
+        :event="trigger.event"
+        :known-tags="knownTags"
+        :title="EFFECT_TRIGGER_ROW_LABELS.disadvantageIf"
+        :empty-text="EFFECT_TRIGGER_ROW_LABELS.saveModeIfEmpty"
+      />
+
+      <EffectTriggerConditionPicker
+        v-model:condition="autoSuccessIf"
+        :event="trigger.event"
+        :known-tags="knownTags"
+        :title="EFFECT_TRIGGER_ROW_LABELS.autoSuccessIf"
+        :empty-text="EFFECT_TRIGGER_ROW_LABELS.autoOutcomeEmpty"
+      />
+
+      <EffectTriggerConditionPicker
+        v-model:condition="autoFailIf"
+        :event="trigger.event"
+        :known-tags="knownTags"
+        :title="EFFECT_TRIGGER_ROW_LABELS.autoFailIf"
+        :empty-text="EFFECT_TRIGGER_ROW_LABELS.autoOutcomeEmpty"
+      />
+    </template>
+
     <div class="flex flex-col gap-2">
       <span class="text-xs font-medium text-default">
         {{ EFFECT_TRIGGER_ROW_LABELS.actionsTitle }}
@@ -725,6 +948,7 @@
         :layout="layout"
         :applier-save-dc="applierSaveDc"
         :trigger-save="trigger.save"
+        :event="trigger.event"
         @update:action="updateAction(index, $event)"
         @remove="removeAction(index)"
       />
@@ -744,6 +968,34 @@
         />
       </UDropdownMenu>
     </div>
+
+    <div class="flex flex-wrap items-center gap-2">
+      <USwitch
+        v-model="hasChance"
+        :label="EFFECT_TRIGGER_ROW_LABELS.chanceToggle"
+      />
+
+      <template v-if="hasChance">
+        <UInputNumber
+          v-model="chancePercent"
+          :min="MIN_TRIGGER_CHANCE_PERCENT"
+          :max="MAX_TRIGGER_CHANCE_PERCENT"
+          size="sm"
+          class="w-24"
+        />
+
+        <span class="text-xs text-muted">
+          {{ EFFECT_TRIGGER_ROW_LABELS.chancePercent }}
+        </span>
+      </template>
+    </div>
+
+    <p
+      v-if="hasChance"
+      class="text-xs text-muted"
+    >
+      {{ EFFECT_TRIGGER_ROW_LABELS.chanceHint }}
+    </p>
 
     <div class="flex flex-wrap items-center gap-2">
       <USwitch
@@ -771,6 +1023,33 @@
           class="w-44"
         />
       </template>
+    </div>
+
+    <div class="flex flex-wrap items-end gap-2">
+      <EffectActionCostFields
+        v-model="actionCost"
+        :help="EFFECT_TRIGGER_ROW_LABELS.costHint"
+      />
+
+      <USwitch
+        v-model="asks"
+        class="mb-2"
+        :label="EFFECT_TRIGGER_ROW_LABELS.askToggle"
+      />
+
+      <UFormField
+        v-if="asks"
+        :label="EFFECT_TRIGGER_ROW_LABELS.asker"
+        class="w-full sm:w-48"
+      >
+        <USelect
+          v-model="asker"
+          :items="EFFECT_TRIGGER_CHOOSER_OPTIONS"
+          value-key="value"
+          size="sm"
+          class="w-full"
+        />
+      </UFormField>
     </div>
   </div>
 </template>

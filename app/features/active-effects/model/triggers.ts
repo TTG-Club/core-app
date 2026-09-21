@@ -20,14 +20,17 @@ import type {
   EffectTriggerAction,
   EffectTriggerActionGate,
   EffectTriggerEvent,
+  EffectTriggerSave,
   LegacyTriggerKind,
 } from './triggerTypes';
 import type { ActiveEffect, EffectSaveTiming } from './types';
 
 import {
+  CONDITION_LOST_TRIGGER_EVENTS,
   isEffectTag,
   LEGACY_TRIGGER_ID_PREFIX,
   LEGACY_TRIGGER_IDS,
+  MOVEMENT_TRIGGER_EVENTS,
   TURN_TRIGGER_EVENTS,
 } from './triggerTypes';
 
@@ -333,6 +336,10 @@ export function listTriggerTags(triggers: readonly EffectTrigger[]): string[] {
 /**
  * Простое срабатывание: без роли, условия и лимита, ход — субъекта.
  *
+ * Список закрытый и обязан расти вместе с полями срабатывания: то, чего старые
+ * поля не выражают, нельзя в них записывать — настройка молча пропала бы при
+ * сохранении, а форма после переоткрытия показала бы её пустой.
+ *
  * @param trigger срабатывание.
  * @returns `true`, если ничего сверх события, спасброска и действий нет.
  */
@@ -340,8 +347,54 @@ function isPlainTrigger(trigger: EffectTrigger): boolean {
   return (
     trigger.condition === undefined
     && trigger.limit === undefined
+    // Получателя старые поля не знают: урон каждый ход всегда про носителя
+    && trigger.recipient === undefined
     && (trigger.turnOf === undefined || trigger.turnOf === 'subject')
+    // Цены, вопроса человеку и шанса срабатывания у старых полей нет
+    && trigger.cost === undefined
+    && trigger.ask === undefined
+    && trigger.chancePercent === undefined
+    && isPlainTriggerSave(trigger.save)
   );
+}
+
+/**
+ * Простой спасбросок срабатывания: без режима по условию и без
+ * автоматического исхода — их старые поля тоже не выражают.
+ *
+ * @param save спасбросок срабатывания.
+ * @returns `true`, если спасброска нет или он простой.
+ */
+function isPlainTriggerSave(save: EffectTriggerSave | undefined): boolean {
+  return (
+    save === undefined
+    || (save.modeIf === undefined
+      && save.autoSuccessIf === undefined
+      && save.autoFailIf === undefined)
+  );
+}
+
+/**
+ * Выбирается ли у события состояние: «когда состояние снимается» слушает одно
+ * состояние или любое.
+ *
+ * @param event событие срабатывания.
+ * @returns `true` для события снятия состояния.
+ */
+export function triggerEventHasConditionKey(
+  event: EffectTriggerEvent,
+): boolean {
+  return CONDITION_LOST_TRIGGER_EVENTS.includes(event);
+}
+
+/**
+ * Событие перемещения: у него выбирается шаг пути — «за каждые N футов».
+ *
+ * @param event событие срабатывания.
+ * @returns `true` для события перемещения.
+ */
+export function triggerEventHasPathFeet(event: EffectTriggerEvent): boolean {
+  return MOVEMENT_TRIGGER_EVENTS.includes(event);
 }
 
 /**

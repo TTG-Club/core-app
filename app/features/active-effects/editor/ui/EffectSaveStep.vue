@@ -96,6 +96,21 @@
     effect.value = { ...effect.value, applySave: nextSave };
   }
 
+  // Галочка пишется только включённой: `allowWilling: true`
+  const allowWilling = computed({
+    get: () => effect.value.applySave?.allowWilling === true,
+    set: (enabled: boolean) => {
+      const { applySave } = effect.value;
+
+      if (applySave) {
+        effect.value = {
+          ...effect.value,
+          applySave: { ...applySave, allowWilling: enabled ? true : undefined },
+        };
+      }
+    },
+  });
+
   const successOutcome = computed({
     get: () => readEffectSuccessOutcome(effect.value),
     set: (outcome: EffectSuccessOutcome) => {
@@ -123,6 +138,13 @@
         :ability-label="ACTIVE_EFFECT_FORM_LABELS.ability"
         :save-dc-label="ACTIVE_EFFECT_FORM_LABELS.saveDc"
         @update:save="updateSave"
+      />
+
+      <USwitch
+        v-model="allowWilling"
+        class="mb-2"
+        :label="EFFECT_SAVE_STEP_LABELS.allowWilling"
+        :description="EFFECT_SAVE_STEP_LABELS.allowWillingHint"
       />
     </div>
   </template>

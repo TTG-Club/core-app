@@ -21,19 +21,24 @@ import type { EffectDuration } from './types';
 import {
   describeEffectCreatureSize,
   EFFECT_ABILITY_GENITIVE_LABELS,
+  EFFECT_ABILITY_OPTIONS,
   EFFECT_PHRASE_PARTS,
   EFFECT_SAVE_TIMING_LABELS,
+  EFFECT_TRIGGER_AREA_SHIFT_PHRASES,
   EFFECT_TRIGGER_AREA_TARGET_PHRASES,
   EFFECT_TRIGGER_ATTACK_ROLE_PHRASES,
   EFFECT_TRIGGER_CONDITION_PHRASES,
   EFFECT_TRIGGER_CONSUME_ON_PHRASES,
   EFFECT_TRIGGER_EVENT_PHRASES,
+  EFFECT_TRIGGER_MOVE_KIND_PHRASES,
   EFFECT_TRIGGER_PERIOD_LABELS,
   EFFECT_TRIGGER_PHRASE_PARTS,
   EFFECT_TRIGGER_RECURRING_DAMAGE_SUCCESS_LABELS,
   EFFECT_TRIGGER_REST_EVENT_PHRASES,
   EFFECT_TRIGGER_REST_UNTIL_PHRASES,
+  EFFECT_TRIGGER_TEMP_HP_PHRASES,
   EVENT_DAMAGE_VARIABLE,
+  TRIGGER_ATTACK_KIND_PHRASES,
 } from './constants';
 import {
   describeConditionName,
@@ -44,8 +49,10 @@ import {
   describeEffectDuration,
 } from './describe';
 import {
+  DEFAULT_ABILITY_THRESHOLD,
   DEFAULT_TAG_COUNT_THRESHOLD,
   getTriggerConditionParameter,
+  isTriggerAttackKind,
   readTriggerConditionParts,
 } from './triggerConditions';
 import {
@@ -53,18 +60,51 @@ import {
   isTurnTriggerEvent,
   resolveTriggerActionGate,
   saveTimingOfTriggerEvent,
+  triggerEventHasPathFeet,
   triggerEventHasRestType,
 } from './triggers';
 import {
   AREA_TRIGGER_RECIPIENT,
   CHOICE_TRIGGER_RECIPIENT,
+  DEFAULT_CAST_OWNER,
+  DEFAULT_TEMP_HP_MODE,
   DEFAULT_TRIGGER_AREA_TARGET,
   DEFAULT_TRIGGER_CHOICE_COUNT,
   DEFAULT_TRIGGER_CHOOSER,
+  DEFAULT_TRIGGER_MOVE_DISTANCE,
   DEFAULT_TRIGGER_REST_TYPE,
   MAX_HP_REDUCTION_NEVER_ENDS,
+  MIN_REVIVE_HP,
+  MIN_SPELL_SLOT_LEVEL,
   MIN_TRIGGER_LIMIT_MAX,
+  SOURCE_TRIGGER_RECIPIENT,
 } from './triggerTypes';
+
+/**
+ * Подпись характеристики.
+ *
+ * @param ability ключ характеристики.
+ * @returns подпись либо ключ.
+ */
+function describeAbilityName(ability: string): string {
+  return (
+    EFFECT_ABILITY_OPTIONS.find(
+      (abilityOption) => abilityOption.value === ability,
+    )?.label ?? ability
+  );
+}
+
+/**
+ * Подпись вида атаки.
+ *
+ * @param attackKind ключ вида.
+ * @returns подпись либо ключ.
+ */
+function describeAttackKind(attackKind: string): string {
+  return isTriggerAttackKind(attackKind)
+    ? TRIGGER_ATTACK_KIND_PHRASES[attackKind]
+    : attackKind;
+}
 
 /** Настройки фразы. */
 export interface EffectTriggerDescribeOptions {
@@ -91,9 +131,28 @@ function describeTriggerConditionValue(part: TriggerConditionPart): string {
       return describeEffectCreatureSize(value);
     case 'condition':
       return describeConditionName(value);
+    case 'ability':
+      return describeAbilityName(value);
+    case 'attackKind':
+      return describeAttackKind(value);
     default:
       return value;
   }
+}
+
+/**
+ * Порог части условия: у характеристики и у счётчика отметок свои умолчания.
+ *
+ * @param part разобранная часть условия.
+ * @returns порог.
+ */
+function describeTriggerConditionAmount(part: TriggerConditionPart): number {
+  const defaultAmount =
+    getTriggerConditionParameter(part.kind) === 'ability'
+      ? DEFAULT_ABILITY_THRESHOLD
+      : DEFAULT_TAG_COUNT_THRESHOLD;
+
+  return part.amount ?? defaultAmount;
 }
 
 /**
@@ -110,7 +169,7 @@ export function describeTriggerCondition(condition: string): string {
         ? describeEffectChangeCondition(part)
         : EFFECT_TRIGGER_CONDITION_PHRASES[part.kind](
             describeTriggerConditionValue(part),
-            part.amount ?? DEFAULT_TAG_COUNT_THRESHOLD,
+            describeTriggerConditionAmount(part),
           ),
     )
     .join(EFFECT_PHRASE_PARTS.andJoiner);
@@ -149,10 +208,11 @@ function describeAction(
     case 'applySelf':
       return EFFECT_TRIGGER_PHRASE_PARTS.effect;
     case 'applyCondition': {
-      const condition = withDurationSuffix(
-        `«${describeConditionName(action.conditionKey)}»`,
-        action.duration,
-      );
+      const named = `«${describeConditionName(action.conditionKey)}»`;
+
+      const condition = action.endsOnExit
+        ? `${named}${EFFECT_TRIGGER_PHRASE_PARTS.endsOnExitSuffix}`
+        : withDurationSuffix(named, action.duration);
 
       if (!action.recurringSave) {
         return condition;
@@ -183,9 +243,45 @@ function describeAction(
       return `${EFFECT_TRIGGER_PHRASE_PARTS.maxHpPrefix}${amount}${until}`;
     }
     case 'setHp':
-      return `${EFFECT_TRIGGER_PHRASE_PARTS.setHpPrefix}${action.value}`;
+      return action.toMax
+        ? EFFECT_TRIGGER_PHRASE_PARTS.setHpMax
+        : `${EFFECT_TRIGGER_PHRASE_PARTS.setHpPrefix}${action.value}`;
+    case 'tempHp':
+      return `${EFFECT_TRIGGER_TEMP_HP_PHRASES[action.mode ?? DEFAULT_TEMP_HP_MODE]}${action.amount}`;
+    case 'removeCondition':
+      return action.conditionKey
+        ? `${EFFECT_TRIGGER_PHRASE_PARTS.removeConditionPrefix}«${describeConditionName(action.conditionKey)}»`
+        : EFFECT_TRIGGER_PHRASE_PARTS.removeAllConditions;
+    case 'kill':
+      return EFFECT_TRIGGER_PHRASE_PARTS.kill;
+    case 'revive':
+      return action.full
+        ? EFFECT_TRIGGER_PHRASE_PARTS.reviveFull
+        : `${EFFECT_TRIGGER_PHRASE_PARTS.revivePrefix}${action.hp ?? MIN_REVIVE_HP}`;
+    case 'dropHeld':
+      return EFFECT_TRIGGER_PHRASE_PARTS.dropHeld;
+    case 'restore':
+      return action.what === 'spellSlot'
+        ? `${EFFECT_TRIGGER_PHRASE_PARTS.restoreSlotPrefix}${action.level ?? MIN_SPELL_SLOT_LEVEL}`
+        : `${EFFECT_TRIGGER_PHRASE_PARTS.restoreCounterPrefix}«${action.counter ?? ''}»`;
+    case 'dispel':
+      return `${EFFECT_TRIGGER_PHRASE_PARTS.dispelPrefix}${action.maxLevel}`;
+    case 'grantInspiration':
+      return EFFECT_TRIGGER_PHRASE_PARTS.grantInspiration;
+    case 'move':
+      return `${EFFECT_TRIGGER_MOVE_KIND_PHRASES[action.kind]}${action.distance}${EFFECT_TRIGGER_PHRASE_PARTS.moveSuffix}`;
+    case 'moveArea':
+      return action.kind === 'follow'
+        ? EFFECT_TRIGGER_AREA_SHIFT_PHRASES.follow
+        : `${EFFECT_TRIGGER_AREA_SHIFT_PHRASES[action.kind]}${action.distance ?? DEFAULT_TRIGGER_MOVE_DISTANCE}${EFFECT_TRIGGER_PHRASE_PARTS.moveSuffix}`;
+    case 'notify':
+      return `${EFFECT_TRIGGER_PHRASE_PARTS.notifyPrefix}«${action.text}»`;
+    case 'nextStage':
+      return EFFECT_TRIGGER_PHRASE_PARTS.nextStage;
     case 'endCast':
-      return EFFECT_TRIGGER_PHRASE_PARTS.endCast;
+      return (action.whose ?? DEFAULT_CAST_OWNER) === 'recipient'
+        ? EFFECT_TRIGGER_PHRASE_PARTS.endRecipientCast
+        : EFFECT_TRIGGER_PHRASE_PARTS.endCast;
     case 'removeSelf':
       return EFFECT_TRIGGER_PHRASE_PARTS.removeSelf;
     default:
@@ -242,6 +338,10 @@ function describeMoment(trigger: EffectTrigger): string {
     return EFFECT_TRIGGER_REST_EVENT_PHRASES[
       trigger.restType ?? DEFAULT_TRIGGER_REST_TYPE
     ];
+  }
+
+  if (triggerEventHasPathFeet(trigger.event) && trigger.everyFeet) {
+    return `${EFFECT_TRIGGER_PHRASE_PARTS.pathStepPrefix}${trigger.everyFeet}${EFFECT_TRIGGER_PHRASE_PARTS.pathStepSuffix}`;
   }
 
   const label = EFFECT_TRIGGER_EVENT_PHRASES[trigger.event];
@@ -307,6 +407,10 @@ function describeLegacyShape(
 function describeTriggerRecipient(trigger: EffectTrigger): string {
   if (trigger.recipient === 'other') {
     return EFFECT_TRIGGER_PHRASE_PARTS.recipientOther;
+  }
+
+  if (trigger.recipient === SOURCE_TRIGGER_RECIPIENT) {
+    return EFFECT_TRIGGER_PHRASE_PARTS.recipientSource;
   }
 
   if (trigger.recipient === CHOICE_TRIGGER_RECIPIENT && trigger.choice) {

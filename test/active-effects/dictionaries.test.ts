@@ -18,9 +18,9 @@ import {
  * разошлись, показывает `node scripts/compare-effect-dictionaries.mjs`.
  */
 const SYSTEM_DICTIONARY_SIZES = {
-  version: '0.8.62',
-  flags: 194,
-  changeKeys: 57,
+  version: '0.8.66',
+  flags: 200,
+  changeKeys: 61,
   conditions: 93,
   values: 32,
 };
@@ -68,6 +68,32 @@ describe('словари эффектов', () => {
     expect(changeKeys).toContain('save.concentration');
     expect(changeKeys).toContain('attacksAgainst');
     expect(changeKeys).toContain('deathSave');
+  });
+
+  it('новые ключи и флаги 0.8.66 на месте', () => {
+    for (const flag of [
+      'defense.suppressAll',
+      'hitPoints.maxReductionBlocked',
+      'attacksAgainst.forceCritical',
+      'movement.teleportBlocked',
+      'rest.noBenefit.short',
+      'rest.noBenefit.long',
+    ]) {
+      expect(EFFECT_FLAG_LABELS[flag], flag).toBeDefined();
+    }
+
+    const changeKeys = EFFECT_TARGET_KEY_SUGGESTIONS.map(
+      (suggestion) => suggestion.value,
+    );
+
+    for (const changeKey of [
+      'creatureType',
+      'damage.all',
+      'damage.weapon',
+      'attack.weapon',
+    ]) {
+      expect(changeKeys).toContain(changeKey);
+    }
   });
 
   it('условия о союзнике рядом с целью — семейством, с распознаванием', () => {

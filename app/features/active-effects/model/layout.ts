@@ -29,6 +29,8 @@ import type {
   EffectActivationMode,
   EffectAreaTrigger,
   EffectAura,
+  EffectCharges,
+  EffectEscape,
   EffectOrigin,
   EffectSave,
   EffectSaveOutcome,
@@ -36,6 +38,7 @@ import type {
 
 import { hasLastingEffectPayload } from './automation';
 import { EFFECT_TRIGGER_CONDITION_DEFAULT_VALUES } from './constants';
+import { applyEffectStage, resolveEffectStageIndex } from './stages';
 import { writeTriggerCondition } from './triggerConditions';
 import {
   createEffectTriggerId,
@@ -47,6 +50,7 @@ import {
   AREA_TRIGGER_RECIPIENT,
   CHOICE_RECIPIENT_TRIGGER_EVENTS,
   CHOICE_TRIGGER_RECIPIENT,
+  CONDITION_LOST_TRIGGER_EVENTS,
   DAMAGE_DATA_TRIGGER_EVENTS,
   DAMAGE_TRIGGER_EVENTS,
   DEFAULT_EFFECT_TAG,
@@ -55,12 +59,16 @@ import {
   DEFAULT_TRIGGER_CHOICE_COUNT,
   DEFAULT_TRIGGER_CHOICE_RADIUS,
   EFFECT_TRIGGER_TURN_OWNERS,
+  HEALING_TRIGGER_EVENTS,
   isEffectTag,
   MAX_TRIGGER_CHOICE_COUNT,
   MIN_TRIGGER_LIMIT_MAX,
+  MOVEMENT_TRIGGER_EVENTS,
   NESTED_TRIGGER_EVENTS,
   OTHER_PARTY_TRIGGER_EVENTS,
+  OWN_DEED_TRIGGER_EVENTS,
   PRESENCE_TRIGGER_EVENTS,
+  SOURCE_TRIGGER_RECIPIENT,
   TURN_TRIGGER_EVENTS,
 } from './triggerTypes';
 import {
@@ -69,6 +77,8 @@ import {
   EFFECT_ACTIVATION_MODES,
   EFFECT_ORIGIN,
   isUseActivatedEffect,
+  MAX_EFFECT_CHARGES,
+  MIN_EFFECT_CHARGES,
   parseFormNumber,
 } from './types';
 
@@ -157,6 +167,7 @@ export type InertEffectField =
   | 'consumeOn'
   | 'duration'
   | 'conditionImmunities'
+  | 'charges'
   | 'triggers';
 
 /** Вид действия срабатывания. */
@@ -233,6 +244,21 @@ export interface EffectFormLayout {
    * такой шаблон всегда лежит выключенным.
    */
   showStatusToggle: boolean;
+  /**
+   * Ступени эффекта: каждая со своими модификаторами и флагами. Есть смысл
+   * там, где эффект лежит на существе и живёт своей жизнью.
+   */
+  showStages: boolean;
+  /**
+   * Действие, снимающее эффект («вырваться»). Есть смысл там же, где ступени:
+   * снимать нечего у эффекта, который на существе не лежит.
+   */
+  showEscape: boolean;
+  /**
+   * Заряды эффекта. Есть смысл там, где у эффекта вообще бывают срабатывания
+   * и он ложится экземпляром на существо: заряд списывают из самого эффекта.
+   */
+  showCharges: boolean;
   /** Условие наложения «Ложится, если». */
   showLandingCondition: boolean;
   /** Выбор «Один из вариантов». */
@@ -741,6 +767,26 @@ export function resolveEffectFormLayout(
   const showRecurringDamage =
     livesOnItsOwn || (trigger === 'stay' && hasTrigger) || isTickingCarrier;
 
+  const triggerList = resolveTriggerListLayout({
+    showRecurringDamage,
+    canRemoveSelf: livesOnItsOwn,
+    hasPresence: hasTrigger,
+    // Эффект на цели лежит на ней и слышит урон по ней, как свой
+    hearsDamage:
+      (delivery === 'carrier' && DAMAGE_EVENT_CONTEXTS.has(context))
+      || isAuraStay
+      || isOnTarget,
+    hasApplier: !isTickingCarrier,
+    endsWithCast: context === 'spell' && livesOnItsOwn,
+    // Применённая копия тоже «ложится»: зелье лечит при наложении
+    landsOnTarget: isOnTarget || isUsed,
+    switchesOn: isToggled,
+    // Действующее заклинание на существе несёт свою кнопку действия: «пока
+    // заклинание действует, действием можешь…»
+    hasActiveAction: context === 'spell' && livesOnItsOwn,
+    hasStages: livesOnItsOwn,
+  });
+
   return {
     context,
     delivery,
@@ -763,21 +809,7 @@ export function resolveEffectFormLayout(
     showDuration: livesOnItsOwn || (isAuraStay && livesOnCarrier) || isToggled,
     showRecurringSave: livesOnItsOwn,
     showConsumeOn: livesOnItsOwn,
-    ...resolveTriggerListLayout({
-      showRecurringDamage,
-      canRemoveSelf: livesOnItsOwn,
-      hasPresence: hasTrigger,
-      // Эффект на цели лежит на ней и слышит урон по ней, как свой
-      hearsDamage:
-        (delivery === 'carrier' && DAMAGE_EVENT_CONTEXTS.has(context))
-        || isAuraStay
-        || isOnTarget,
-      hasApplier: !isTickingCarrier,
-      endsWithCast: context === 'spell' && livesOnItsOwn,
-      // Применённая копия тоже «ложится»: зелье лечит при наложении
-      landsOnTarget: isOnTarget || isUsed,
-      switchesOn: isToggled,
-    }),
+    ...triggerList,
     showLandingCondition:
       isGeneric
       || isOnTarget
@@ -791,6 +823,12 @@ export function resolveEffectFormLayout(
       && ACTIVATION_COUNTER_CONTEXTS.has(context),
     useActivated: isUsed,
     showStatusToggle: !(isUsed && ACTIVATION_COUNTER_CONTEXTS.has(context)),
+    showStages: livesOnItsOwn,
+    // Вырваться можно из того, что лежит на существе: черту и зону не снять
+    showEscape: livesOnItsOwn,
+    // Заряд списывают из экземпляра эффекта, и списывать его должно чему:
+    // срабатывания в этом месте обязаны работать
+    showCharges: livesOnItsOwn && triggerList.triggerEvents.length > 0,
     minSaveDc: acceptsApplierSaveDc(context, delivery, isUsed)
       ? APPLIER_MIN_SAVE_DC
       : FIXED_MIN_SAVE_DC,
@@ -819,6 +857,13 @@ interface TriggerListPlace {
   hearsDamage: boolean;
   /** У эффекта бывает наложивший. */
   hasApplier: boolean;
+  /**
+   * У действующего эффекта бывает своя кнопка действия («действием можешь
+   * переместить сферу»).
+   */
+  hasActiveAction: boolean;
+  /** У эффекта бывают ступени. */
+  hasStages: boolean;
 }
 
 /**
@@ -843,11 +888,21 @@ function resolveTriggerListLayout(
 
   const triggerEvents: EffectTriggerEvent[] = [
     ...(place.landsOnTarget ? (['applied'] as const) : []),
-    ...(place.switchesOn ? (['activate'] as const) : []),
+    ...(place.switchesOn || place.hasActiveAction
+      ? (['activate'] as const)
+      : []),
     ...(ticks ? TURN_TRIGGER_EVENTS : []),
     ...(place.hasPresence ? PRESENCE_TRIGGER_EVENTS : []),
     ...(place.canRemoveSelf ? (['attackRoll'] as const) : []),
     ...(place.hearsDamage ? DAMAGE_TRIGGER_EVENTS : []),
+    // Лечат того, у кого меняются хиты, — там же, где слышен урон
+    ...(place.hearsDamage ? HEALING_TRIGGER_EVENTS : []),
+    // «Состояние снялось» и «свалил цель» — про живого носителя, который
+    // действует и с которого что-то снимают
+    ...(place.canRemoveSelf ? CONDITION_LOST_TRIGGER_EVENTS : []),
+    ...(place.canRemoveSelf ? OWN_DEED_TRIGGER_EVENTS : []),
+    // «Прошёл N футов» — про носителя, у которого есть фишка и путь
+    ...(place.canRemoveSelf ? MOVEMENT_TRIGGER_EVENTS : []),
     ...(place.endsWithCast ? (['castEnd'] as const) : []),
     ...(place.canRemoveSelf ? (['rest'] as const) : []),
   ];
@@ -864,7 +919,23 @@ function resolveTriggerListLayout(
       'applyTag',
       'reduceMaxHp',
       ...(place.hearsDamage ? (['setHp'] as const) : []),
-      ...(place.canRemoveSelf ? (['endCast', 'removeSelf'] as const) : []),
+      'tempHp',
+      'move',
+      // Сдвинуть можно зону своего каста: её оставляет заклинание, которое
+      // живёт вместе с кастом
+      ...(place.endsWithCast ? (['moveArea'] as const) : []),
+      'removeCondition',
+      'kill',
+      'revive',
+      'dropHeld',
+      'restore',
+      'dispel',
+      'grantInspiration',
+      'notify',
+      ...(place.hasStages ? (['nextStage'] as const) : []),
+      ...(place.canRemoveSelf
+        ? (['endCast', 'removeSelf'] as const)
+        : (['endCast'] as const)),
     ],
     triggerTurnOwners: place.hasApplier
       ? EFFECT_TRIGGER_TURN_OWNERS
@@ -879,6 +950,20 @@ function resolveTriggerListLayout(
  * @returns `true` для событий, которые выполняет сервер со сценой.
  */
 export function triggerEventAcceptsArea(event: EffectTriggerEvent): boolean {
+  return AREA_RECIPIENT_TRIGGER_EVENTS.includes(event);
+}
+
+/**
+ * Можно ли отдать действия срабатывания наложившему эффект.
+ *
+ * Те же события, что и у «всем в радиусе»: получателя, кроме субъекта, VTTG
+ * ищет только на пути событий сервера. На границе хода действия идут прямо на
+ * носителя, и «наложившему» там молча било бы не того.
+ *
+ * @param event событие.
+ * @returns `true` для событий, которые выполняет сервер.
+ */
+export function triggerEventAcceptsSource(event: EffectTriggerEvent): boolean {
   return AREA_RECIPIENT_TRIGGER_EVENTS.includes(event);
 }
 
@@ -904,6 +989,10 @@ function resolveDraftRecipient(
   switch (trigger.recipient) {
     case 'other':
       return triggerEventHasOtherParty(trigger.event) ? 'other' : undefined;
+    case SOURCE_TRIGGER_RECIPIENT:
+      return triggerEventAcceptsSource(trigger.event)
+        ? SOURCE_TRIGGER_RECIPIENT
+        : undefined;
     case AREA_TRIGGER_RECIPIENT:
       return triggerEventAcceptsArea(trigger.event)
         ? AREA_TRIGGER_RECIPIENT
@@ -999,8 +1088,19 @@ export function triggerEventHasRole(event: EffectTriggerEvent): boolean {
 }
 
 /**
+ * События, у которых работает «Хиты становятся»: хиты упали до 0 («вместо 0
+ * хитов — 1», Неутомимость) и наложение («восстанавливает все хиты», Слово
+ * силы: Исцеление). На остальных событиях ставить хиты числом правилам не
+ * нужно: лечение и урон — отдельные действия.
+ */
+const SET_HP_TRIGGER_EVENTS: readonly EffectTriggerEvent[] = [
+  'hpZero',
+  'applied',
+];
+
+/**
  * Действия, которые работают у срабатывания на это событие в месте формы.
- * «Хиты становятся» — только когда хиты упали до 0.
+ * «Хиты становятся» — только на нуле хитов и при наложении.
  *
  * @param layout раскладка формы.
  * @param event событие срабатывания.
@@ -1011,7 +1111,25 @@ export function listTriggerActionTypes(
   event: EffectTriggerEvent,
 ): EffectTriggerActionType[] {
   return layout.triggerActions.filter(
-    (actionType) => event === 'hpZero' || actionType !== 'setHp',
+    (actionType) =>
+      actionType !== 'setHp' || SET_HP_TRIGGER_EVENTS.includes(event),
+  );
+}
+
+/**
+ * Действия вложенного срабатывания — того, что несёт наложенное состояние.
+ * Зоны наложенное состояние не оставляет, и сдвигать ему нечего.
+ *
+ * @param layout раскладка формы.
+ * @param event событие вложенного срабатывания.
+ * @returns виды действий.
+ */
+export function listNestedTriggerActionTypes(
+  layout: EffectFormLayout,
+  event: EffectTriggerEvent,
+): EffectTriggerActionType[] {
+  return listTriggerActionTypes(layout, event).filter(
+    (actionType) => actionType !== 'moveArea',
   );
 }
 
@@ -1156,17 +1274,25 @@ export function writeEffectTriggerRow(
 }
 
 /**
- * Работает ли явное срабатывание в месте формы.
+ * Работает ли явное срабатывание в месте формы: его событие здесь срабатывает,
+ * и каждое его действие форма на этом событии предлагает. Иначе срабатывание
+ * считалось бы собираемым, хотя действие в списке формы не найти.
  *
  * @param trigger срабатывание.
  * @param layout раскладка формы.
- * @returns `true`, если событие здесь срабатывает.
+ * @returns `true`, если срабатывание здесь работает целиком.
  */
 function isTriggerSupported(
   trigger: EffectTrigger,
   layout: EffectFormLayout,
 ): boolean {
-  return layout.triggerEvents.includes(trigger.event);
+  if (!layout.triggerEvents.includes(trigger.event)) {
+    return false;
+  }
+
+  const actionTypes = listTriggerActionTypes(layout, trigger.event);
+
+  return trigger.actions.every((action) => actionTypes.includes(action.type));
 }
 
 /**
@@ -1437,6 +1563,7 @@ export function listInertEffectFields(
     ],
     ['variant', !layout.showVariant && effect.variant !== undefined],
     ['duration', !layout.showDuration && effect.duration.type !== 'permanent'],
+    ['charges', !layout.showCharges && effect.charges !== undefined],
     [
       'conditionImmunities',
       !layout.showConditionImmunities
@@ -1451,6 +1578,38 @@ export function listInertEffectFields(
   ];
 
   return checks.filter(([, isInert]) => isInert).map(([field]) => field);
+}
+
+/**
+ * Заряды черновика: целые числа, остаток не больше исходного. Автор задаёт
+ * «сколько всего», а остаток форма держит равным ему.
+ *
+ * @param charges заряды из формы.
+ * @returns заряды либо `undefined`, если их нет.
+ */
+function normalizeDraftCharges(
+  charges: EffectCharges | undefined,
+): EffectCharges | undefined {
+  if (!charges) {
+    return undefined;
+  }
+
+  const max = Math.min(
+    MAX_EFFECT_CHARGES,
+    Math.max(
+      MIN_EFFECT_CHARGES,
+      Math.trunc(parseFormNumber(charges.max) ?? MIN_EFFECT_CHARGES),
+    ),
+  );
+
+  return {
+    ...charges,
+    max,
+    current: Math.min(
+      max,
+      Math.max(0, Math.trunc(parseFormNumber(charges.current) ?? max)),
+    ),
+  };
 }
 
 /**
@@ -1482,6 +1641,8 @@ export function clearInertEffectFields(
         };
       case 'duration':
         return { ...cleared, duration: { type: 'permanent' } };
+      case 'charges':
+        return { ...cleared, charges: undefined };
       case 'triggers': {
         // Убираются только срабатывания, которые здесь не работают
         const layout = resolveEffectFormLayout(context, cleared);
@@ -1588,17 +1749,46 @@ function normalizeDraftTriggers(
 }
 
 /**
+ * Действие «вырваться» к виду данных: Сл не ниже допустимой в этом месте,
+ * пустая подпись — отсутствием поля.
+ *
+ * @param escape блок действия из формы.
+ * @param minSaveDc наименьшая Сл места формы.
+ * @returns блок для сохранения либо `undefined`.
+ */
+function normalizeDraftEscape(
+  escape: EffectEscape | undefined,
+  minSaveDc: number,
+): EffectEscape | undefined {
+  if (!escape) {
+    return undefined;
+  }
+
+  return {
+    ...escape,
+    label: escape.label?.trim() || undefined,
+    check: escape.check
+      ? { ...escape.check, dc: clampSaveDc(escape.check.dc, minSaveDc) }
+      : undefined,
+  };
+}
+
+/**
  * Приводит черновик к записи перед сохранением: числа из полей — числами,
  * Сл — не ниже допустимой, пустые списки — отсутствием поля.
  *
- * @param effect черновик формы.
+ * @param draft черновик формы.
  * @param layout раскладка формы.
  * @returns эффект для сохранения.
  */
 export function normalizeEffectDraft(
-  effect: ActiveEffect,
+  draft: ActiveEffect,
   layout: EffectFormLayout,
 ): ActiveEffect {
+  // Ступень должна действовать, а не лежать списком: строки и флаги эффекта
+  // берутся из действующей ступени, иначе правка ступени ни на что не влияла бы
+  const effect = applyEffectStage(draft);
+
   const durationValue = parseFormNumber(effect.duration.value);
   const landingCondition = effect.landingCondition?.trim();
   const variantGroup = effect.variant?.group.trim();
@@ -1616,6 +1806,9 @@ export function normalizeEffectDraft(
     name: effect.name.trim(),
     landingCondition: landingCondition || undefined,
     rollCondition: effect.rollCondition?.trim() || undefined,
+    savedRoll: effect.savedRoll?.trim() || undefined,
+    charges: normalizeDraftCharges(effect.charges),
+    durationFormula: effect.durationFormula?.trim() || undefined,
     activation: normalizeDraftActivation(effect.activation),
     variant:
       effect.variant && variantGroup && variantLabel
@@ -1673,5 +1866,10 @@ export function normalizeEffectDraft(
       ? effect.conditionImmunities
       : undefined,
     triggers: normalizeDraftTriggers(effect.triggers, layout.minSaveDc),
+    stages: effect.stages?.length ? effect.stages : undefined,
+    stageIndex: effect.stages?.length
+      ? resolveEffectStageIndex(effect)
+      : undefined,
+    escape: normalizeDraftEscape(effect.escape, layout.minSaveDc),
   };
 }

@@ -13,19 +13,22 @@
     describeEffectChangeCondition,
     EFFECT_CONDITION_BADGE_ICON,
     EFFECT_CONDITION_EXPR_SUGGESTIONS,
+    EFFECT_CONDITION_KEY_ITEMS,
     EFFECT_CONDITION_OPTIONS,
     EFFECT_CONDITION_REMOVE_ICON,
     EFFECT_MODIFIERS_STEP_LABELS,
     EFFECT_ROLL_CONDITION_ALWAYS,
     EFFECT_TARGET_ALLY_ADJACENT_CONDITION,
     isAdjacentAllyCondition,
+    writeActiveEffectStageRows,
   } from '../../model';
   import EffectChanges from './EffectChanges.vue';
   import EffectFlags from './EffectFlags.vue';
 
   /**
-   * Шаг «Что меняет»: состояние, модификаторы, особые правила и иммунитеты к
-   * состояниям.
+   * Шаг «Что меняет»: состояние, модификаторы, особые правила, сохранённый
+   * бросок, иммунитеты к состояниям и их подавление. При заведённых ступенях
+   * строки и правила — это строки действующей ступени, правка уходит в неё.
    */
   defineProps<{
     /** Раскладка формы. */
@@ -124,14 +127,32 @@
   const changes = computed({
     get: () => effect.value.changes,
     set: (nextChanges: EffectChange[]) => {
-      effect.value = { ...effect.value, changes: nextChanges };
+      effect.value = writeActiveEffectStageRows({
+        ...effect.value,
+        changes: nextChanges,
+      });
     },
   });
 
   const flags = computed({
     get: () => effect.value.flags,
     set: (nextFlags: string[]) => {
-      effect.value = { ...effect.value, flags: nextFlags };
+      effect.value = writeActiveEffectStageRows({
+        ...effect.value,
+        flags: nextFlags,
+      });
+    },
+  });
+
+  // Пустая строка стирает поле, а не пишет пустоту: иначе эффект уносил бы в
+  // VTTG настройку, которой автор не задавал
+  const savedRoll = computed({
+    get: () => effect.value.savedRoll ?? '',
+    set: (nextFormula: string) => {
+      effect.value = {
+        ...effect.value,
+        savedRoll: nextFormula.trim() ? nextFormula : undefined,
+      };
     },
   });
 
@@ -141,6 +162,17 @@
       effect.value = {
         ...effect.value,
         conditionImmunities: keys.length > 0 ? keys : undefined,
+      };
+    },
+  });
+
+  // Пустой список в данных не пишется
+  const suppressConditions = computed({
+    get: () => effect.value.suppressConditions ?? [],
+    set: (keys: string[]) => {
+      effect.value = {
+        ...effect.value,
+        suppressConditions: keys.length > 0 ? keys : undefined,
       };
     },
   });
@@ -230,6 +262,18 @@
 
   <EffectFlags v-model="flags" />
 
+  <UFormField
+    :label="EFFECT_MODIFIERS_STEP_LABELS.savedRollTitle"
+    :help="EFFECT_MODIFIERS_STEP_LABELS.savedRollHint"
+  >
+    <UInput
+      v-model="savedRoll"
+      :placeholder="EFFECT_MODIFIERS_STEP_LABELS.savedRollPlaceholder"
+      size="sm"
+      class="w-full font-mono"
+    />
+  </UFormField>
+
   <div
     v-if="layout.showConditionImmunities"
     class="flex flex-col gap-1.5"
@@ -252,6 +296,28 @@
       multiple
       class="w-full"
       :placeholder="EFFECT_MODIFIERS_STEP_LABELS.immunitiesPlaceholder"
+    />
+  </div>
+
+  <div class="flex flex-col gap-1.5">
+    <div>
+      <span class="text-sm font-medium">
+        {{ EFFECT_MODIFIERS_STEP_LABELS.suppressTitle }}
+      </span>
+
+      <p class="text-xs text-muted">
+        {{ EFFECT_MODIFIERS_STEP_LABELS.suppressHint }}
+      </p>
+    </div>
+
+    <USelectMenu
+      v-model="suppressConditions"
+      :items="EFFECT_CONDITION_KEY_ITEMS"
+      value-key="value"
+      label-key="label"
+      multiple
+      class="w-full"
+      :placeholder="EFFECT_MODIFIERS_STEP_LABELS.suppressPlaceholder"
     />
   </div>
 </template>

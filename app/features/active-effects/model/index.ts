@@ -1,4 +1,5 @@
 export * from './automation';
+export * from './changeSteps';
 export * from './constants';
 export * from './create';
 export * from './describe';
@@ -9,6 +10,7 @@ export * from './normalize';
 export * from './options';
 export * from './scenario';
 export * from './schema';
+export * from './stages';
 export * from './triggerConditions';
 export * from './triggerDescribe';
 export * from './triggerRow';

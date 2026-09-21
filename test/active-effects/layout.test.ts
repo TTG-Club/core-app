@@ -542,7 +542,7 @@ describe('получатель «всем в радиусе»', () => {
       buildTriggerRecipientOptions(areaTrigger).map(
         (recipientOption) => recipientOption.value,
       ),
-    ).toEqual(['subject', 'area', 'choice']);
+    ).toEqual(['subject', 'source', 'area', 'choice']);
 
     const turnTrigger = writeTriggerEvent(
       areaTrigger,
@@ -813,6 +813,10 @@ describe('список «Срабатывания»', () => {
       'attackRoll',
       'damageTaken',
       'hpZero',
+      'healed',
+      'conditionLost',
+      'downedOther',
+      'moved',
       'rest',
     ]);
 
@@ -822,6 +826,17 @@ describe('список «Срабатывания»', () => {
       'applyTag',
       'reduceMaxHp',
       'setHp',
+      'tempHp',
+      'move',
+      'removeCondition',
+      'kill',
+      'revive',
+      'dropHeld',
+      'restore',
+      'dispel',
+      'grantInspiration',
+      'notify',
+      'nextStage',
       'endCast',
       'removeSelf',
     ]);
@@ -831,6 +846,17 @@ describe('список «Срабатывания»', () => {
       'applyCondition',
       'applyTag',
       'reduceMaxHp',
+      'tempHp',
+      'move',
+      'removeCondition',
+      'kill',
+      'revive',
+      'dropHeld',
+      'restore',
+      'dispel',
+      'grantInspiration',
+      'notify',
+      'nextStage',
       'endCast',
       'removeSelf',
     ]);
@@ -841,6 +867,17 @@ describe('список «Срабатывания»', () => {
       'applyTag',
       'reduceMaxHp',
       'setHp',
+      'tempHp',
+      'move',
+      'removeCondition',
+      'kill',
+      'revive',
+      'dropHeld',
+      'restore',
+      'dispel',
+      'grantInspiration',
+      'notify',
+      'nextStage',
       'endCast',
       'removeSelf',
     ]);
@@ -857,11 +894,17 @@ describe('список «Срабатывания»', () => {
       resolveLayoutFor('spell', { effectTarget: 'target' }).triggerEvents,
     ).toEqual([
       'applied',
+      // У действующего заклинания на цели есть своя кнопка действия
+      'activate',
       'turnStart',
       'turnEnd',
       'attackRoll',
       'damageTaken',
       'hpZero',
+      'healed',
+      'conditionLost',
+      'downedOther',
+      'moved',
       'castEnd',
       'rest',
     ]);
@@ -880,6 +923,17 @@ describe('список «Срабатывания»', () => {
       'applyCondition',
       'applyTag',
       'reduceMaxHp',
+      'tempHp',
+      'move',
+      'removeCondition',
+      'kill',
+      'revive',
+      'dropHeld',
+      'restore',
+      'dispel',
+      'grantInspiration',
+      'notify',
+      'endCast',
     ]);
 
     // В ауру входят и выходят так же, как в зону
@@ -892,6 +946,7 @@ describe('список «Срабатывания»', () => {
       'exit',
       'damageTaken',
       'hpZero',
+      'healed',
     ]);
 
     const traitLayout = resolveLayoutFor('creatureTrait');
@@ -901,6 +956,7 @@ describe('список «Срабатывания»', () => {
       'turnEnd',
       'damageTaken',
       'hpZero',
+      'healed',
     ]);
 
     expect(traitLayout.triggerActions).toEqual([
@@ -909,6 +965,17 @@ describe('список «Срабатывания»', () => {
       'applyTag',
       'reduceMaxHp',
       'setHp',
+      'tempHp',
+      'move',
+      'removeCondition',
+      'kill',
+      'revive',
+      'dropHeld',
+      'restore',
+      'dispel',
+      'grantInspiration',
+      'notify',
+      'endCast',
     ]);
 
     // Эффект накладывают — выбирается и ход наложившего
@@ -920,6 +987,7 @@ describe('список «Срабатывания»', () => {
       expect(resolveLayoutFor(context).triggerEvents, context).toEqual([
         'damageTaken',
         'hpZero',
+        'healed',
       ]);
     }
 

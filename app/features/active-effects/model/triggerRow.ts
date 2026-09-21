@@ -15,8 +15,11 @@ import type {
 } from './triggerTypes';
 
 import {
+  DEFAULT_DISPEL_MAX_LEVEL,
   DEFAULT_MAX_HP_REDUCTION,
   DEFAULT_TRIGGER_CONDITION,
+  DEFAULT_TRIGGER_NOTIFY_TEXT,
+  DEFAULT_TRIGGER_TEMP_HP,
   EFFECT_TRIGGER_DAMAGE_HALF_GATE,
   MIN_TRIGGER_ACTION_ROUNDS,
 } from './constants';
@@ -29,16 +32,28 @@ import {
   triggerEventHasRole,
 } from './layout';
 import { buildTriggerRecipientOptions } from './options';
-import { isTurnTriggerEvent, triggerEventHasRestType } from './triggers';
+import {
+  isTurnTriggerEvent,
+  triggerEventHasConditionKey,
+  triggerEventHasPathFeet,
+  triggerEventHasRestType,
+} from './triggers';
 import {
   DEFAULT_EFFECT_TAG,
+  DEFAULT_RESTORE_KIND,
+  DEFAULT_TRIGGER_AREA_SHIFT_KIND,
   DEFAULT_TRIGGER_ATTACK_ROLE,
+  DEFAULT_TRIGGER_MOVE_DISTANCE,
+  DEFAULT_TRIGGER_MOVE_KIND,
+  MIN_REVIVE_HP,
+  MIN_SPELL_SLOT_LEVEL,
 } from './triggerTypes';
 
 /**
  * Новое действие срабатывания со значениями по умолчанию: урон без частей,
  * состояние по умолчанию, отметка с ключом по умолчанию, «Хиты становятся» — 1,
- * уменьшение максимума хитов — на урон события.
+ * уменьшение максимума хитов — на урон события. Действие с обязательными
+ * полями получает их сразу: пустой `{ type }` выпал бы при следующем открытии.
  *
  * @param type вид действия.
  * @returns действие.
@@ -57,6 +72,30 @@ export function createEffectTriggerAction(
       return { type, value: DEFAULT_SET_HP_VALUE };
     case 'reduceMaxHp':
       return { type, amount: DEFAULT_MAX_HP_REDUCTION };
+    case 'notify':
+      return { type, text: DEFAULT_TRIGGER_NOTIFY_TEXT };
+    case 'tempHp':
+      return { type, amount: DEFAULT_TRIGGER_TEMP_HP };
+    case 'removeCondition':
+      return { type, conditionKey: DEFAULT_TRIGGER_CONDITION };
+    case 'revive':
+      return { type, hp: MIN_REVIVE_HP };
+    case 'restore':
+      return { type, what: DEFAULT_RESTORE_KIND, level: MIN_SPELL_SLOT_LEVEL };
+    case 'dispel':
+      return { type, maxLevel: DEFAULT_DISPEL_MAX_LEVEL };
+    case 'move':
+      return {
+        type,
+        kind: DEFAULT_TRIGGER_MOVE_KIND,
+        distance: DEFAULT_TRIGGER_MOVE_DISTANCE,
+      };
+    case 'moveArea':
+      return {
+        type,
+        kind: DEFAULT_TRIGGER_AREA_SHIFT_KIND,
+        distance: DEFAULT_TRIGGER_MOVE_DISTANCE,
+      };
     default:
       return { type };
   }
@@ -80,7 +119,8 @@ export function clearTriggerActionGate(
 }
 
 /**
- * Спасбросок срабатывания без формулы Сл: остаются характеристика и число.
+ * Спасбросок срабатывания без формулы Сл: остальное — характеристика, число,
+ * режим и условия режима — остаётся.
  *
  * @param save спасбросок строки.
  * @returns спасбросок без формулы.
@@ -88,14 +128,17 @@ export function clearTriggerActionGate(
 export function omitTriggerSaveDcFormula(
   save: EffectTriggerSave,
 ): EffectTriggerSave {
-  return { ability: save.ability, dc: save.dc };
+  const { dcFormula: _dcFormula, ...saveWithoutFormula } = save;
+
+  return saveWithoutFormula;
 }
 
 /**
  * Строка срабатывания под новое событие. Смена события отбрасывает то, чего у
  * нового события нет: действия, которые на нём не работают, роль в броске
- * атаки, получателя с его радиусом, чей ход, отдых и формулу Сл. Роль у броска
- * атаки остаётся прежней, а если её не было — берётся роль по умолчанию.
+ * атаки, получателя с его радиусом, чей ход, отдых, снятое состояние, шаг пути
+ * и формулу Сл. Роль у броска атаки остаётся прежней, а если её не было —
+ * берётся роль по умолчанию.
  *
  * @param trigger строка срабатывания.
  * @param nextEvent новое событие.
@@ -119,6 +162,12 @@ export function writeTriggerEvent(
       : undefined,
     turnOf: isTurnTriggerEvent(nextEvent) ? trigger.turnOf : undefined,
     restType: triggerEventHasRestType(nextEvent) ? trigger.restType : undefined,
+    conditionKey: triggerEventHasConditionKey(nextEvent)
+      ? trigger.conditionKey
+      : undefined,
+    everyFeet: triggerEventHasPathFeet(nextEvent)
+      ? trigger.everyFeet
+      : undefined,
     // Недоступного получателя новое событие не наследует
     recipient: buildTriggerRecipientOptions({ ...trigger, event: nextEvent })
       .map((recipientOption) => recipientOption.value)

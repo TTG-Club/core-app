@@ -10,8 +10,10 @@
   } from '../../model';
 
   import {
+    DEFAULT_ABILITY_THRESHOLD,
     DEFAULT_TAG_COUNT_THRESHOLD,
     EFFECT_TRIGGER_CONDITION_DEFAULT_VALUES,
+    EFFECT_TRIGGER_CONDITION_KIND_DEFAULT_VALUES,
     EFFECT_TRIGGER_CONDITION_KIND_LABELS,
     EFFECT_TRIGGER_CONDITION_LABELS,
     EFFECT_TRIGGER_CONDITION_VALUE_OPTIONS,
@@ -22,8 +24,10 @@
     MIN_TAG_COUNT_THRESHOLD,
     normalizeTagCountThreshold,
     readTriggerConditionParts,
+    TRIGGER_CONDITION_ABILITY_PARAMETER,
     TRIGGER_CONDITION_NUMBER_PARAMETER,
     TRIGGER_CONDITION_TAG_PARAMETER,
+    TRIGGER_CONDITION_TEXT_PARAMETER,
     triggerConditionHasAmount,
     writeTriggerCondition,
   } from '../../model';
@@ -69,9 +73,11 @@
     showsValueSelect: boolean;
     /** Значение части вводится строкой — ключ отметки. */
     showsTagInput: boolean;
+    /** Значение части — свободная строка: название вида. */
+    showsTextInput: boolean;
     /** Значение части — число: хиты носителя. */
     showsNumberInput: boolean;
-    /** У части есть порог: сколько отметок нужно. */
+    /** У части есть порог: сколько отметок нужно или какая характеристика. */
     amount?: number;
   }
 
@@ -88,7 +94,22 @@
       parameter !== undefined
       && parameter !== TRIGGER_CONDITION_TAG_PARAMETER
       && parameter !== TRIGGER_CONDITION_NUMBER_PARAMETER
+      && parameter !== TRIGGER_CONDITION_TEXT_PARAMETER
     );
+  }
+
+  /**
+   * Порог части по умолчанию: у характеристики и у счётчика отметок свой.
+   *
+   * @param parameter что выбирается у части.
+   * @returns порог.
+   */
+  function getDefaultAmount(
+    parameter: TriggerConditionParameter | undefined,
+  ): number {
+    return parameter === TRIGGER_CONDITION_ABILITY_PARAMETER
+      ? DEFAULT_ABILITY_THRESHOLD
+      : DEFAULT_TAG_COUNT_THRESHOLD;
   }
 
   const parts = computed(() => readTriggerConditionParts(condition.value));
@@ -104,6 +125,7 @@
           valueItems: [],
           showsValueSelect: false,
           showsTagInput: false,
+          showsTextInput: false,
           showsNumberInput: false,
         };
       }
@@ -121,9 +143,10 @@
         valueItems,
         showsValueSelect: valueItems.length > 0,
         showsTagInput: parameter === TRIGGER_CONDITION_TAG_PARAMETER,
+        showsTextInput: parameter === TRIGGER_CONDITION_TEXT_PARAMETER,
         showsNumberInput: parameter === TRIGGER_CONDITION_NUMBER_PARAMETER,
         amount: triggerConditionHasAmount(part.kind)
-          ? (part.amount ?? DEFAULT_TAG_COUNT_THRESHOLD)
+          ? (part.amount ?? getDefaultAmount(parameter))
           : undefined,
       };
     }),
@@ -144,12 +167,23 @@
   }
 
   /**
-   * Значение новой части: у отметки — первая отметка эффекта.
+   * Значение новой части: своё у вида, где общее не годится («на раунде 50»
+   * бессмысленно), у отметки — первая отметка эффекта.
    *
+   * @param kind вид части.
    * @param parameter что выбирается.
    * @returns значение.
    */
-  function getDefaultValue(parameter: TriggerConditionParameter): string {
+  function getDefaultValue(
+    kind: TriggerConditionKind,
+    parameter: TriggerConditionParameter,
+  ): string {
+    const kindDefault = EFFECT_TRIGGER_CONDITION_KIND_DEFAULT_VALUES[kind];
+
+    if (kindDefault !== undefined) {
+      return kindDefault;
+    }
+
     return parameter === TRIGGER_CONDITION_TAG_PARAMETER
       ? (knownTags[0] ?? EFFECT_TRIGGER_CONDITION_DEFAULT_VALUES.tag)
       : EFFECT_TRIGGER_CONDITION_DEFAULT_VALUES[parameter];
@@ -165,8 +199,23 @@
 
     writeParts([
       ...parts.value,
-      parameter ? { kind, value: getDefaultValue(parameter) } : { kind },
+      parameter ? { kind, value: getDefaultValue(kind, parameter) } : { kind },
     ]);
+  }
+
+  /**
+   * Меняет свободную строку части. Пустая не пишется: с ней часть не
+   * разобралась бы обратно и поле ввода пропало бы.
+   *
+   * @param index номер части.
+   * @param enteredText введённая строка.
+   */
+  function updatePartText(index: number, enteredText: string): void {
+    const text = enteredText.trim();
+
+    if (text) {
+      updatePartValue(index, text);
+    }
   }
 
   /**
@@ -304,6 +353,14 @@
         size="xs"
         class="w-28"
         @update:model-value="updatePartNumber(index, $event)"
+      />
+
+      <UInput
+        v-else-if="conditionRow.showsTextInput"
+        :model-value="conditionRow.value"
+        size="xs"
+        class="w-44"
+        @update:model-value="updatePartText(index, $event)"
       />
 
       <template v-else-if="conditionRow.showsTagInput">

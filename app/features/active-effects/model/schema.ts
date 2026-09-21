@@ -23,41 +23,77 @@ import type {
   EffectActivation,
   EffectAura,
   EffectChange,
+  EffectCharges,
   EffectDamagePart,
   EffectDuration,
+  EffectEscape,
   EffectRecurringDamage,
   EffectRecurringSave,
   EffectSave,
+  EffectStage,
   EffectVariant,
 } from './types';
 
 import { z } from 'zod';
 
-import { EFFECT_CONDITION_OPTIONS } from './constants';
+import {
+  EFFECT_CHANGE_STEP_PERIODS,
+  MAX_EFFECT_CHANGE_STEP,
+} from './changeSteps';
+import { EFFECT_CONDITION_OPTIONS, EFFECT_SKILL_OPTIONS } from './constants';
 import { isHealingDamagePart } from './describe';
 import {
+  EFFECT_ACTION_COSTS,
+  EFFECT_CAST_OWNERS,
+  EFFECT_NOTIFY_TARGETS,
+  EFFECT_RESTORE_KINDS,
   EFFECT_TAG_PATTERN,
+  EFFECT_TEMP_HP_MODES,
   EFFECT_TRIGGER_ACTION_GATES,
+  EFFECT_TRIGGER_AREA_SHIFT_KINDS,
   EFFECT_TRIGGER_AREA_TARGETS,
   EFFECT_TRIGGER_ATTACK_ROLES,
   EFFECT_TRIGGER_CHOOSERS,
   EFFECT_TRIGGER_EVENTS,
   EFFECT_TRIGGER_LIMIT_PERIODS,
   EFFECT_TRIGGER_MAX_HP_REST_ENDS,
+  EFFECT_TRIGGER_MOVE_KINDS,
+  EFFECT_TRIGGER_MOVE_ORIGINS,
   EFFECT_TRIGGER_RECIPIENTS,
   EFFECT_TRIGGER_RESERVED_EVENTS,
   EFFECT_TRIGGER_REST_TYPES,
   EFFECT_TRIGGER_SAVE_MODES,
   EFFECT_TRIGGER_TURN_OWNERS,
+  MAX_EFFECT_MOVE_COST_FEET,
+  MAX_NOTIFY_TEXT_LENGTH,
+  MAX_SAVE_MODE_RULES,
+  MAX_SPELL_SLOT_LEVEL,
+  MAX_TRIGGER_CHANCE_PERCENT,
   MAX_TRIGGER_CHOICE_COUNT,
+  MAX_TRIGGER_MOVE_DISTANCE,
+  MAX_TRIGGER_PATH_FEET,
+  MIN_DISPEL_LEVEL,
+  MIN_EFFECT_MOVE_COST_FEET,
+  MIN_REVIVE_HP,
+  MIN_SPELL_SLOT_LEVEL,
+  MIN_TRIGGER_CHANCE_PERCENT,
+  MIN_TRIGGER_CHOICE_COUNT,
   MIN_TRIGGER_LIMIT_MAX,
+  MIN_TRIGGER_MOVE_DISTANCE,
+  MIN_TRIGGER_PATH_FEET,
 } from './triggerTypes';
 import {
   DEFAULT_ACTIVATION_AMOUNT,
   DEFAULT_EFFECT_CHANGE_PRIORITY,
   EFFECT_ACTIVATION_MODES,
+  EFFECT_ESCAPE_ACTORS,
+  EFFECT_ESCAPE_OUTCOMES,
   EFFECT_ORIGIN,
   EFFECT_VARIANT_PICKS,
+  MAX_EFFECT_CHARGES,
+  MAX_EFFECT_STAGE_LABEL_LENGTH,
+  MAX_EFFECT_STAGES,
+  MIN_EFFECT_CHARGES,
   parseFormNumber,
 } from './types';
 
@@ -158,6 +194,21 @@ const changeSchema: z.ZodType<EffectChange> = z.object({
   ]),
   value: z.string(),
   condition: z.string().optional().catch(undefined),
+  step: z
+    .object({
+      by: z
+        .number()
+        .int()
+        .min(-MAX_EFFECT_CHANGE_STEP)
+        .max(MAX_EFFECT_CHANGE_STEP),
+      per: z.enum(EFFECT_CHANGE_STEP_PERIODS),
+      until: z.preprocess(
+        coerceOptionalNumber,
+        z.number().int().optional().catch(undefined),
+      ),
+    })
+    .optional()
+    .catch(undefined),
   // Очищенный приоритет — не повод терять строку
   priority: z
     .preprocess(
@@ -222,6 +273,7 @@ const saveSchema: z.ZodType<EffectSave> = z.object({
   ability: abilitySchema,
   dc: saveDcSchema,
   onSuccess: z.enum(['negate', 'half']),
+  allowWilling: z.literal(true).optional().catch(undefined),
 });
 
 const recurringSaveSchema: z.ZodType<EffectRecurringSave> = z.object({
@@ -248,6 +300,18 @@ const triggerSaveSchema = z.object({
     .max(MAX_TRIGGER_DC_FORMULA_LENGTH)
     .optional()
     .catch(undefined),
+  modeIf: z
+    .array(
+      z.object({
+        condition: z.string().trim().min(1),
+        mode: z.enum(EFFECT_TRIGGER_SAVE_MODES),
+      }),
+    )
+    .max(MAX_SAVE_MODE_RULES)
+    .optional()
+    .catch(undefined),
+  autoSuccessIf: z.string().trim().min(1).optional().catch(undefined),
+  autoFailIf: z.string().trim().min(1).optional().catch(undefined),
 });
 
 /** Гейт действия срабатывания. */
@@ -270,6 +334,18 @@ const triggerLimitSchema = z.object({
   per: z.enum(EFFECT_TRIGGER_LIMIT_PERIODS),
   key: z.string().min(1).optional().catch(undefined),
 });
+
+/** Футы перемещения, которыми платят цену `move`. */
+const moveCostFeetSchema = z.preprocess(
+  coerceOptionalNumber,
+  z
+    .number()
+    .int()
+    .min(MIN_EFFECT_MOVE_COST_FEET)
+    .max(MAX_EFFECT_MOVE_COST_FEET)
+    .optional()
+    .catch(undefined),
+);
 
 const plainTriggerActionSchemas = [
   z.object({
@@ -299,9 +375,115 @@ const plainTriggerActionSchemas = [
   z.object({
     type: z.literal('setHp'),
     value: z.preprocess(coerceOptionalNumber, z.number().int().min(0)),
+    toMax: z.literal(true).optional().catch(undefined),
     on: triggerGateSchema,
   }),
-  z.object({ type: z.literal('endCast'), on: triggerGateSchema }),
+  z.object({
+    type: z.literal('tempHp'),
+    amount: z.string().trim().min(1).max(MAX_TRIGGER_AMOUNT_LENGTH),
+    mode: z.enum(EFFECT_TEMP_HP_MODES).optional().catch(undefined),
+    on: triggerGateSchema,
+  }),
+  z.object({
+    type: z.literal('removeCondition'),
+    conditionKey: z.string().min(1).optional().catch(undefined),
+    on: triggerGateSchema,
+  }),
+  z.object({ type: z.literal('kill'), on: triggerGateSchema }),
+  z.object({
+    type: z.literal('revive'),
+    hp: z.preprocess(
+      coerceOptionalNumber,
+      z.number().int().min(MIN_REVIVE_HP).optional().catch(undefined),
+    ),
+    full: z.literal(true).optional().catch(undefined),
+    on: triggerGateSchema,
+  }),
+  z.object({ type: z.literal('dropHeld'), on: triggerGateSchema }),
+  z.object({
+    type: z.literal('restore'),
+    what: z.enum(EFFECT_RESTORE_KINDS),
+    level: z.preprocess(
+      coerceOptionalNumber,
+      z
+        .number()
+        .int()
+        .min(MIN_SPELL_SLOT_LEVEL)
+        .max(MAX_SPELL_SLOT_LEVEL)
+        .optional()
+        .catch(undefined),
+    ),
+    counter: z
+      .string()
+      .trim()
+      .min(1)
+      .max(MAX_ACTIVATION_COUNTER_LENGTH)
+      .optional()
+      .catch(undefined),
+    amount: z.preprocess(
+      coerceOptionalNumber,
+      z.number().int().min(1).optional().catch(undefined),
+    ),
+    on: triggerGateSchema,
+  }),
+  z.object({
+    type: z.literal('dispel'),
+    maxLevel: z.preprocess(
+      coerceOptionalNumber,
+      z.number().int().min(MIN_DISPEL_LEVEL).max(MAX_SPELL_SLOT_LEVEL),
+    ),
+    withoutLevel: z.literal(true).optional().catch(undefined),
+    on: triggerGateSchema,
+  }),
+  z.object({ type: z.literal('grantInspiration'), on: triggerGateSchema }),
+  z.object({
+    type: z.literal('move'),
+    kind: z.enum(EFFECT_TRIGGER_MOVE_KINDS),
+    distance: z.preprocess(
+      coerceOptionalNumber,
+      z
+        .number()
+        .int()
+        .min(MIN_TRIGGER_MOVE_DISTANCE)
+        .max(MAX_TRIGGER_MOVE_DISTANCE),
+    ),
+    from: z.enum(EFFECT_TRIGGER_MOVE_ORIGINS).optional().catch(undefined),
+    on: triggerGateSchema,
+  }),
+  z.object({
+    type: z.literal('moveArea'),
+    kind: z.enum(EFFECT_TRIGGER_AREA_SHIFT_KINDS),
+    distance: z.preprocess(
+      coerceOptionalNumber,
+      z
+        .number()
+        .int()
+        .min(MIN_TRIGGER_MOVE_DISTANCE)
+        .max(MAX_TRIGGER_MOVE_DISTANCE)
+        .optional()
+        .catch(undefined),
+    ),
+    on: triggerGateSchema,
+  }),
+  z.object({
+    type: z.literal('endCast'),
+    whose: z.enum(EFFECT_CAST_OWNERS).optional().catch(undefined),
+    on: triggerGateSchema,
+  }),
+  z.object({
+    type: z.literal('notify'),
+    text: z.string().trim().min(1).max(MAX_NOTIFY_TEXT_LENGTH),
+    to: z.enum(EFFECT_NOTIFY_TARGETS).optional().catch(undefined),
+    roll: z
+      .string()
+      .trim()
+      .min(1)
+      .max(MAX_TRIGGER_DC_FORMULA_LENGTH)
+      .optional()
+      .catch(undefined),
+    on: triggerGateSchema,
+  }),
+  z.object({ type: z.literal('nextStage'), on: triggerGateSchema }),
   z.object({ type: z.literal('removeSelf'), on: triggerGateSchema }),
 ] as const;
 
@@ -311,6 +493,8 @@ const applyConditionActionShape = {
   conditionKey: z.string().min(1),
   duration: durationSchema.optional().catch(undefined),
   recurringSave: recurringSaveSchema.optional().catch(undefined),
+  locked: z.literal(true).optional().catch(undefined),
+  endsOnExit: z.literal(true).optional().catch(undefined),
   on: triggerGateSchema,
 } as const;
 
@@ -347,7 +531,7 @@ const triggerShape = {
         z
           .number()
           .int()
-          .min(1)
+          .min(MIN_TRIGGER_CHOICE_COUNT)
           .max(MAX_TRIGGER_CHOICE_COUNT)
           .optional()
           .catch(undefined),
@@ -361,6 +545,31 @@ const triggerShape = {
   condition: z.string().min(1).optional().catch(undefined),
   save: triggerSaveSchema.optional().catch(undefined),
   limit: triggerLimitSchema.optional().catch(undefined),
+  conditionKey: z.string().min(1).optional().catch(undefined),
+  cost: z.enum(EFFECT_ACTION_COSTS).optional().catch(undefined),
+  moveCostFeet: moveCostFeetSchema,
+  everyFeet: z.preprocess(
+    coerceOptionalNumber,
+    z
+      .number()
+      .int()
+      .min(MIN_TRIGGER_PATH_FEET)
+      .max(MAX_TRIGGER_PATH_FEET)
+      .optional()
+      .catch(undefined),
+  ),
+  ask: z.literal(true).optional().catch(undefined),
+  asker: z.enum(EFFECT_TRIGGER_CHOOSERS).optional().catch(undefined),
+  chancePercent: z.preprocess(
+    coerceOptionalNumber,
+    z
+      .number()
+      .int()
+      .min(MIN_TRIGGER_CHANCE_PERCENT)
+      .max(MAX_TRIGGER_CHANCE_PERCENT)
+      .optional()
+      .catch(undefined),
+  ),
 } as const;
 
 /** Вложенное срабатывание наложенного состояния. */
@@ -410,6 +619,63 @@ function isEffectFlagValue(flag: unknown): flag is string {
   return typeof flag === 'string' && flag.trim().length > 0;
 }
 
+/** Строки модификаторов по одной: негодная строка не уносит соседние. */
+const changesSchema = z
+  .array(z.unknown())
+  .transform((rawChanges) => parseEachValid(changeSchema, rawChanges));
+
+/** Флаги: непустые строки, словарём сайта не сверяются. */
+const flagsSchema = z
+  .array(z.unknown())
+  .transform((rawFlags) => rawFlags.filter(isEffectFlagValue));
+
+/** Ключи навыков словаря VTTG: проверку «вырваться» с чужим ключом не бросить. */
+const SKILL_KEYS: ReadonlySet<string> = new Set(
+  EFFECT_SKILL_OPTIONS.map((skill) => skill.value),
+);
+
+/** Заряды эффекта. */
+const chargesSchema: z.ZodType<EffectCharges> = z.object({
+  max: z.preprocess(
+    coerceOptionalNumber,
+    z.number().int().min(MIN_EFFECT_CHARGES).max(MAX_EFFECT_CHARGES),
+  ),
+  current: z.preprocess(
+    coerceOptionalNumber,
+    z.number().int().min(0).max(MAX_EFFECT_CHARGES),
+  ),
+  endsWhenEmpty: z.literal(true).optional().catch(undefined),
+});
+
+/** Действие «вырваться». */
+const escapeSchema: z.ZodType<EffectEscape> = z.object({
+  by: z.enum(EFFECT_ESCAPE_ACTORS).optional().catch(undefined),
+  cost: z.enum(EFFECT_ACTION_COSTS).optional().catch(undefined),
+  moveCostFeet: moveCostFeetSchema,
+  check: z
+    .object({
+      skill: z.string().refine((skill) => SKILL_KEYS.has(skill)),
+      dc: saveDcSchema,
+    })
+    .optional()
+    .catch(undefined),
+  onSuccess: z.enum(EFFECT_ESCAPE_OUTCOMES).optional().catch(undefined),
+  label: z
+    .string()
+    .trim()
+    .min(1)
+    .max(MAX_EFFECT_STAGE_LABEL_LENGTH)
+    .optional()
+    .catch(undefined),
+});
+
+/** Ступень эффекта. */
+const stageSchema: z.ZodType<EffectStage> = z.object({
+  label: z.string().trim().min(1).max(MAX_EFFECT_STAGE_LABEL_LENGTH),
+  changes: changesSchema.catch([]),
+  flags: flagsSchema.catch([]),
+});
+
 /** Эффект. */
 const activeEffectSchema: z.ZodType<ActiveEffect> = z.object({
   id: z.string().min(1),
@@ -427,12 +693,8 @@ const activeEffectSchema: z.ZodType<ActiveEffect> = z.object({
 
     return parsedDuration.success ? parsedDuration.data : PERMANENT_DURATION;
   }),
-  changes: z
-    .array(z.unknown())
-    .transform((rawChanges) => parseEachValid(changeSchema, rawChanges)),
-  flags: z
-    .array(z.unknown())
-    .transform((rawFlags) => rawFlags.filter(isEffectFlagValue)),
+  changes: changesSchema,
+  flags: flagsSchema,
   aura: auraSchema.optional().catch(undefined),
   areaTrigger: z.enum(['stay', 'enter', 'exit']).optional().catch(undefined),
   // Незнакомая доставка обнуляет поле, а не отвергает эффект
@@ -442,6 +704,9 @@ const activeEffectSchema: z.ZodType<ActiveEffect> = z.object({
   variant: variantSchema.optional().catch(undefined),
   rollCondition: z.string().trim().min(1).optional().catch(undefined),
   activation: activationSchema.optional().catch(undefined),
+  charges: chargesSchema.optional().catch(undefined),
+  savedRoll: z.string().trim().min(1).optional().catch(undefined),
+  durationFormula: z.string().trim().min(1).optional().catch(undefined),
   applySave: saveSchema.optional().catch(undefined),
   applyOnSuccess: z.boolean().optional().catch(undefined),
   applyOnSuccessOnly: z.boolean().optional().catch(undefined),
@@ -453,6 +718,7 @@ const activeEffectSchema: z.ZodType<ActiveEffect> = z.object({
   recurringSave: recurringSaveSchema.optional().catch(undefined),
   recurringDamage: recurringDamageSchema.optional().catch(undefined),
   triggers: triggersSchema.optional().catch(undefined),
+  suppressConditions: z.array(z.string().min(1)).optional().catch(undefined),
   conditionImmunities: z
     .array(z.unknown())
     .transform((rawKeys) => parseEachValid(conditionKeySchema, rawKeys))
@@ -461,6 +727,22 @@ const activeEffectSchema: z.ZodType<ActiveEffect> = z.object({
   exhaustionLevel: z
     .preprocess(coerceOptionalNumber, z.number().int().min(0).optional())
     .catch(undefined),
+  escape: escapeSchema.optional().catch(undefined),
+  stages: z
+    .array(stageSchema)
+    .max(MAX_EFFECT_STAGES)
+    .optional()
+    .catch(undefined),
+  stageIndex: z.preprocess(
+    coerceOptionalNumber,
+    z
+      .number()
+      .int()
+      .min(0)
+      .max(MAX_EFFECT_STAGES - 1)
+      .optional()
+      .catch(undefined),
+  ),
 });
 
 /**

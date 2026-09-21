@@ -19,12 +19,14 @@
   import EffectDamageStep from './EffectDamageStep.vue';
   import EffectDescriptionSection from './EffectDescriptionSection.vue';
   import EffectDurationStep from './EffectDurationStep.vue';
+  import EffectEscapeSection from './EffectEscapeSection.vue';
   import EffectFormStepSection from './EffectFormStepSection.vue';
   import EffectHeaderFields from './EffectHeaderFields.vue';
   import EffectInertFieldsNotice from './EffectInertFieldsNotice.vue';
   import EffectModifiersStep from './EffectModifiersStep.vue';
   import EffectSaveStep from './EffectSaveStep.vue';
   import EffectScenarioSummary from './EffectScenarioSummary.vue';
+  import EffectStagesSection from './EffectStagesSection.vue';
   import EffectTriggersStep from './EffectTriggersStep.vue';
   import EffectTriggerStep from './EffectTriggerStep.vue';
 
@@ -179,6 +181,12 @@
         :layout="layout"
         :show-priority-field="showPriorityField"
       />
+
+      <EffectStagesSection
+        v-if="layout.showStages"
+        v-model:effect="effect"
+        :show-priority-field="showPriorityField"
+      />
     </EffectFormStepSection>
 
     <EffectFormStepSection
@@ -188,6 +196,13 @@
       :icon="EFFECT_FORM_STEP_ICONS.duration"
     >
       <EffectDurationStep v-model:effect="effect" />
+
+      <EffectEscapeSection
+        v-if="layout.showEscape"
+        v-model:effect="effect"
+        :layout="layout"
+        :applier-save-dc="applierSaveDc"
+      />
     </EffectFormStepSection>
 
     <EffectFormStepSection

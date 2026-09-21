@@ -9,6 +9,7 @@ import type {
   EffectChange,
   EffectDamagePart,
   EffectDuration,
+  EffectStage,
 } from './types';
 
 import {
@@ -72,8 +73,50 @@ function normalizeEffectChange(change: EffectChange): EffectChange {
     mode: change.mode,
     value: change.value.trim(),
     condition: condition || undefined,
+    step: change.step,
     priority: change.priority,
   };
+}
+
+/**
+ * Нормализует строки модификаторов: пустые (без ключа или значения) не
+ * пишутся.
+ *
+ * @param changes строки модификаторов.
+ * @returns строки без пустых.
+ */
+function normalizeEffectChanges(changes: EffectChange[]): EffectChange[] {
+  return changes
+    .map(normalizeEffectChange)
+    .filter((change) => change.key.length > 0 && change.value.length > 0);
+}
+
+/**
+ * Нормализует флаги: пустые не пишутся.
+ *
+ * @param flags флаги.
+ * @returns флаги без пробелов по краям и без пустых.
+ */
+function normalizeEffectFlags(flags: string[]): string[] {
+  return flags.map((flag) => flag.trim()).filter((flag) => flag.length > 0);
+}
+
+/**
+ * Нормализует ступени так же, как строки самого эффекта: действующая ступень
+ * переписывает строки эффекта, и расходиться с ними она не должна.
+ *
+ * @param stages ступени эффекта.
+ * @returns ступени с нормализованными строками и флагами.
+ */
+function normalizeEffectStages(
+  stages: EffectStage[] | undefined,
+): EffectStage[] | undefined {
+  return stages?.map((stage) => ({
+    ...stage,
+    label: stage.label.trim(),
+    changes: normalizeEffectChanges(stage.changes),
+    flags: normalizeEffectFlags(stage.flags),
+  }));
 }
 
 /**
@@ -152,13 +195,8 @@ function normalizeActiveEffect(
       ? writeEffectSuccessOutcome(draft, readEffectSuccessOutcome(draft))
       : draft;
 
-  const changes = withOutcome.changes
-    .map(normalizeEffectChange)
-    .filter((change) => change.key.length > 0 && change.value.length > 0);
-
-  const flags = withOutcome.flags
-    .map((flag) => flag.trim())
-    .filter((flag) => flag.length > 0);
+  const changes = normalizeEffectChanges(withOutcome.changes);
+  const flags = normalizeEffectFlags(withOutcome.flags);
 
   const recurringDamageParts = normalizeEffectDamageParts(
     withOutcome.recurringDamage?.damageParts,
@@ -180,6 +218,7 @@ function normalizeActiveEffect(
         ? { ...withOutcome.recurringDamage, damageParts: recurringDamageParts }
         : undefined,
     triggers: normalizeTriggerDamageParts(withOutcome.triggers),
+    stages: normalizeEffectStages(withOutcome.stages),
   };
 }
 

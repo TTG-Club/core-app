@@ -14,14 +14,16 @@ import {
   DEFAULT_TRIGGER_ATTACK_ROLE,
   DEFAULT_TRIGGER_CONDITION,
   EFFECT_TRIGGER_DAMAGE_HALF_GATE,
+  normalizeLoadedActiveEffects,
   omitTriggerSaveDcFormula,
   readTriggerActionRounds,
+  resolveEffectFormLayout,
   writeTriggerActionGate,
   writeTriggerActionRounds,
   writeTriggerEvent,
 } from '~active-effects/model';
 
-import { POISON_DAMAGE, resolveLayoutFor } from './fixtures';
+import { createEffect, POISON_DAMAGE, resolveLayoutFor } from './fixtures';
 
 /** Спасбросок строки: Телосложение, Сл 13. */
 const CONSTITUTION_SAVE = { ability: 'constitution', dc: 13 } as const;
@@ -307,5 +309,81 @@ describe('срок действия в раундах', () => {
     expect(writeTriggerActionRounds(HALF_DAMAGE_ACTION, ACTION_ROUNDS)).toBe(
       HALF_DAMAGE_ACTION,
     );
+  });
+});
+
+describe('заготовки новых действий', () => {
+  it('каждое действие места «заклинание на цели» проходит схему записи', () => {
+    const layout = resolveEffectFormLayout(
+      'spell',
+      createEffect({ effectTarget: 'target' }),
+    );
+
+    for (const actionType of layout.triggerActions) {
+      const action = createEffectTriggerAction(actionType);
+
+      const [loadedEffect] = normalizeLoadedActiveEffects([
+        createEffect({
+          triggers: [
+            { id: 'trigger_new', event: 'applied', actions: [action] },
+          ],
+        }),
+      ]);
+
+      // Пустой `{ type }` у действия с обязательными полями выпал бы при
+      // следующем открытии
+      expect(loadedEffect?.triggers?.[0]?.actions, actionType).toEqual([
+        action,
+      ]);
+    }
+  });
+});
+
+describe('смена события строки 0.8.66', () => {
+  it('снятое состояние и шаг пути живут только у своих событий', () => {
+    const lostTrigger = createTrigger({
+      event: 'conditionLost',
+      conditionKey: 'grappled',
+    });
+
+    expect(
+      writeTriggerEvent(lostTrigger, 'conditionLost', TRIGGER_LAYOUT)
+        .conditionKey,
+    ).toBe('grappled');
+
+    expect(
+      writeTriggerEvent(lostTrigger, 'turnStart', TRIGGER_LAYOUT).conditionKey,
+    ).toBeUndefined();
+
+    const pathTrigger = createTrigger({ event: 'moved', everyFeet: 5 });
+
+    expect(
+      writeTriggerEvent(pathTrigger, 'moved', TRIGGER_LAYOUT).everyFeet,
+    ).toBe(5);
+
+    expect(
+      writeTriggerEvent(pathTrigger, 'healed', TRIGGER_LAYOUT).everyFeet,
+    ).toBeUndefined();
+  });
+
+  it('без формулы Сл режим спасброска и его условия остаются', () => {
+    const save = {
+      ...CONSTITUTION_SAVE,
+      mode: 'advantage',
+      dcFormula: DAMAGE_DC_FORMULA,
+      modeIf: [{ condition: 'self.hp.temp === 0', mode: 'disadvantage' }],
+      autoFailIf: 'self.condition === "unconscious"',
+    } as const;
+
+    const trigger = createTrigger({ event: 'damageTaken', save });
+
+    expect(
+      writeTriggerEvent(trigger, 'turnStart', TRIGGER_LAYOUT).save,
+    ).toStrictEqual({
+      ...CONSTITUTION_SAVE,
+      mode: 'advantage',
+      modeIf: [{ condition: 'self.hp.temp === 0', mode: 'disadvantage' }],
+      autoFailIf: 'self.condition === "unconscious"',
+    });
   });
 });

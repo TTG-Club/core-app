@@ -6,6 +6,7 @@
  * Зеркало: dnd5-test-migrate/src/client/ui/effect/effectFormOptions.ts
  */
 
+import type { EffectChangeStepPeriod } from './changeSteps';
 import type { EffectActivationChoice, SaveDcFieldMode } from './constants';
 import type {
   EffectDelivery,
@@ -13,14 +14,27 @@ import type {
   EffectFormLayout,
   EffectSuccessOutcome,
 } from './layout';
-import type { TriggerConditionParameter } from './triggerConditions';
 import type {
+  TriggerAttackKind,
+  TriggerConditionParameter,
+} from './triggerConditions';
+import type {
+  EffectActionCost,
+  EffectCastOwner,
+  EffectNotifyTarget,
+  EffectRestoreKind,
+  EffectTempHpMode,
   EffectTrigger,
   EffectTriggerActionGate,
+  EffectTriggerAreaShiftKind,
+  EffectTriggerAreaTarget,
   EffectTriggerAttackRole,
   EffectTriggerChooser,
+  EffectTriggerEvent,
   EffectTriggerLimitPeriod,
   EffectTriggerMaxHpRestEnd,
+  EffectTriggerMoveKind,
+  EffectTriggerMoveOrigin,
   EffectTriggerRecipient,
   EffectTriggerRestType,
   EffectTriggerSaveMode,
@@ -30,18 +44,28 @@ import type {
   EffectAuraTarget,
   EffectDuration,
   EffectDurationType,
+  EffectEscapeActor,
+  EffectEscapeOutcome,
   EffectSaveTiming,
   EffectTurnAnchor,
   EffectTurnTiming,
   EffectVariantPick,
 } from './types';
 
+import { upperFirst } from 'es-toolkit';
+
+import { EFFECT_CHANGE_STEP_PERIODS } from './changeSteps';
 import {
+  ANY_CONDITION_KEY,
+  EFFECT_ABILITY_OPTIONS,
+  EFFECT_ACTION_COST_LABELS,
   EFFECT_ACTION_SAVE_OUTCOME_OPTIONS,
   EFFECT_ACTIVATION_CHOICE_LABELS,
   EFFECT_AURA_AREA_TRIGGER_LABELS,
   EFFECT_AURA_TARGET_LABELS,
   EFFECT_CARRIER_DELIVERY_LABELS,
+  EFFECT_CAST_OWNER_LABELS,
+  EFFECT_CHANGE_STEP_PER_LABELS,
   EFFECT_CONDITION_OPTIONS,
   EFFECT_CREATURE_CATEGORY_OPTIONS,
   EFFECT_CREATURE_SIZE_OPTIONS,
@@ -50,18 +74,27 @@ import {
   EFFECT_DELIVERY_LABELS,
   EFFECT_DURATION_HINTS,
   EFFECT_DURATION_LABELS,
+  EFFECT_ESCAPE_ACTOR_LABELS,
+  EFFECT_ESCAPE_OUTCOME_LABELS,
+  EFFECT_NOTIFY_TARGET_LABELS,
   EFFECT_PERMANENT_ACTIVATION,
+  EFFECT_RESTORE_KIND_LABELS,
   EFFECT_SAVE_DC_FIELD_MODE_LABELS,
   EFFECT_SAVE_TIMING_LABELS,
   EFFECT_SUCCESS_OUTCOME_OPTIONS,
   EFFECT_TARGET_DELIVERY_LABELS,
+  EFFECT_TEMP_HP_MODE_LABELS,
   EFFECT_TRIGGER_APPLIED_OTHER_PARTY_LABEL,
+  EFFECT_TRIGGER_AREA_LABELS,
+  EFFECT_TRIGGER_AREA_SHIFT_KIND_LABELS,
   EFFECT_TRIGGER_ATTACK_OTHER_PARTY_LABELS,
   EFFECT_TRIGGER_CHOOSER_LABELS,
   EFFECT_TRIGGER_DAMAGE_HALF_GATE,
   EFFECT_TRIGGER_DAMAGE_HALF_LABEL,
   EFFECT_TRIGGER_GATE_LABELS,
   EFFECT_TRIGGER_MAX_HP_REST_LABELS,
+  EFFECT_TRIGGER_MOVE_KIND_LABELS,
+  EFFECT_TRIGGER_MOVE_ORIGIN_LABELS,
   EFFECT_TRIGGER_NORMAL_SAVE_MODE,
   EFFECT_TRIGGER_PERIOD_LABELS,
   EFFECT_TRIGGER_RECIPIENT_LABELS,
@@ -75,25 +108,43 @@ import {
   EFFECT_ZONE_AREA_TRIGGER_LABELS,
   SAVE_DC_AUTO_MODE,
   SAVE_DC_MANUAL_MODE,
+  TRIGGER_ATTACK_KIND_PHRASES,
 } from './constants';
 import {
   triggerEventAcceptsArea,
   triggerEventAcceptsChoice,
+  triggerEventAcceptsSource,
   triggerEventHasOtherParty,
   triggerEventHasRole,
 } from './layout';
+import { TRIGGER_ATTACK_KINDS } from './triggerConditions';
+import { triggerEventHasPathFeet } from './triggers';
 import {
   DEFAULT_TRIGGER_ATTACK_ROLE,
+  EFFECT_ACTION_COSTS,
+  EFFECT_CAST_OWNERS,
+  EFFECT_NOTIFY_TARGETS,
+  EFFECT_RESTORE_KINDS,
+  EFFECT_TEMP_HP_MODES,
   EFFECT_TRIGGER_ACTION_GATES,
+  EFFECT_TRIGGER_AREA_SHIFT_KINDS,
   EFFECT_TRIGGER_ATTACK_ROLES,
   EFFECT_TRIGGER_CHOOSERS,
   EFFECT_TRIGGER_LIMIT_PERIODS,
   EFFECT_TRIGGER_MAX_HP_REST_ENDS,
+  EFFECT_TRIGGER_MOVE_KINDS,
+  EFFECT_TRIGGER_MOVE_ORIGINS,
   EFFECT_TRIGGER_RECIPIENTS,
   EFFECT_TRIGGER_REST_TYPES,
   EFFECT_TRIGGER_SAVE_MODES,
+  PATH_AREA_SHIFT_KINDS,
 } from './triggerTypes';
-import { EFFECT_SAVE_TIMINGS, EFFECT_VARIANT_PICKS } from './types';
+import {
+  EFFECT_ESCAPE_ACTORS,
+  EFFECT_ESCAPE_OUTCOMES,
+  EFFECT_SAVE_TIMINGS,
+  EFFECT_VARIANT_PICKS,
+} from './types';
 
 /** Моменты срабатывания зоны и ауры в порядке показа. */
 const EFFECT_AREA_TRIGGER_ORDER: readonly EffectAreaTrigger[] = [
@@ -370,6 +421,152 @@ export const EFFECT_AURA_TARGET_OPTIONS: Array<
   label: EFFECT_AURA_TARGET_LABELS[auraTarget],
 }));
 
+/**
+ * Кого задевает «всем в радиусе» и отбор кандидатов выбора. Отдельный список
+ * от ауры: у срабатывания есть ещё «и носителя» — соседей по сцене ядро VTTG
+ * отдаёт без субъекта, и добавить его может только система.
+ */
+export const EFFECT_TRIGGER_AREA_TARGET_OPTIONS: Array<
+  EffectSegmentOption<EffectTriggerAreaTarget>
+> = [
+  ...EFFECT_AURA_TARGET_OPTIONS,
+  { value: 'alliesWithSelf', label: EFFECT_TRIGGER_AREA_LABELS.alliesWithSelf },
+  { value: 'allWithSelf', label: EFFECT_TRIGGER_AREA_LABELS.allWithSelf },
+];
+
+/** Варианты периода шага строки модификатора. */
+export const EFFECT_CHANGE_STEP_PER_OPTIONS: Array<
+  EffectSegmentOption<EffectChangeStepPeriod>
+> = EFFECT_CHANGE_STEP_PERIODS.map((period) => ({
+  value: period,
+  label: EFFECT_CHANGE_STEP_PER_LABELS[period],
+}));
+
+/** Чем платят за срабатывание или за «вырваться». */
+export const EFFECT_ACTION_COST_OPTIONS: Array<
+  EffectSegmentOption<EffectActionCost>
+> = EFFECT_ACTION_COSTS.map((cost) => ({
+  value: cost,
+  label: EFFECT_ACTION_COST_LABELS[cost],
+}));
+
+/** Кому адресовано сообщение срабатывания. */
+export const EFFECT_NOTIFY_TARGET_OPTIONS: Array<
+  EffectSegmentOption<EffectNotifyTarget>
+> = EFFECT_NOTIFY_TARGETS.map((notifyTarget) => ({
+  value: notifyTarget,
+  label: EFFECT_NOTIFY_TARGET_LABELS[notifyTarget],
+}));
+
+/** Как двигает действие «Переместить». */
+export const EFFECT_TRIGGER_MOVE_KIND_OPTIONS: Array<
+  EffectSegmentOption<EffectTriggerMoveKind>
+> = EFFECT_TRIGGER_MOVE_KINDS.map((moveKind) => ({
+  value: moveKind,
+  label: EFFECT_TRIGGER_MOVE_KIND_LABELS[moveKind],
+}));
+
+/**
+ * Как сдвигается зона. «За носителем» — только на событии пути: смещение
+ * берётся у фишки носителя, на других событиях его нет.
+ *
+ * @param event событие срабатывания.
+ * @returns виды сдвига для события.
+ */
+export function buildAreaShiftKindOptions(
+  event: EffectTriggerEvent | undefined,
+): EffectSegmentOption<EffectTriggerAreaShiftKind>[] {
+  return EFFECT_TRIGGER_AREA_SHIFT_KINDS.filter(
+    (shiftKind) =>
+      !PATH_AREA_SHIFT_KINDS.includes(shiftKind)
+      || (event !== undefined && triggerEventHasPathFeet(event)),
+  ).map((shiftKind) => ({
+    value: shiftKind,
+    label: EFFECT_TRIGGER_AREA_SHIFT_KIND_LABELS[shiftKind],
+  }));
+}
+
+/** От кого считают направление перемещения. */
+export const EFFECT_TRIGGER_MOVE_ORIGIN_OPTIONS: Array<
+  EffectSegmentOption<EffectTriggerMoveOrigin>
+> = EFFECT_TRIGGER_MOVE_ORIGINS.map((moveOrigin) => ({
+  value: moveOrigin,
+  label: EFFECT_TRIGGER_MOVE_ORIGIN_LABELS[moveOrigin],
+}));
+
+/** Что делает действие с временными хитами. */
+export const EFFECT_TEMP_HP_MODE_OPTIONS: Array<
+  EffectSegmentOption<EffectTempHpMode>
+> = EFFECT_TEMP_HP_MODES.map((tempHpMode) => ({
+  value: tempHpMode,
+  label: EFFECT_TEMP_HP_MODE_LABELS[tempHpMode],
+}));
+
+/** Какой ресурс возвращает действие. */
+export const EFFECT_RESTORE_KIND_OPTIONS: Array<
+  EffectSegmentOption<EffectRestoreKind>
+> = EFFECT_RESTORE_KINDS.map((restoreKind) => ({
+  value: restoreKind,
+  label: EFFECT_RESTORE_KIND_LABELS[restoreKind],
+}));
+
+/** Чей каст заканчивает действие. */
+export const EFFECT_CAST_OWNER_OPTIONS: Array<
+  EffectSegmentOption<EffectCastOwner>
+> = EFFECT_CAST_OWNERS.map((castOwner) => ({
+  value: castOwner,
+  label: EFFECT_CAST_OWNER_LABELS[castOwner],
+}));
+
+/** Виды атаки в условии срабатывания: подписи фразы с заглавной буквы. */
+export const ATTACK_KIND_OPTIONS: Array<
+  EffectSegmentOption<TriggerAttackKind>
+> = TRIGGER_ATTACK_KINDS.map((attackKind) => ({
+  value: attackKind,
+  label: upperFirst(TRIGGER_ATTACK_KIND_PHRASES[attackKind]),
+}));
+
+/** Кто может вырваться из эффекта. */
+export const EFFECT_ESCAPE_ACTOR_OPTIONS: Array<
+  EffectSegmentOption<EffectEscapeActor>
+> = EFFECT_ESCAPE_ACTORS.map((escapeActor) => ({
+  value: escapeActor,
+  label: EFFECT_ESCAPE_ACTOR_LABELS[escapeActor],
+}));
+
+/** Что даёт успех действия «вырваться». */
+export const EFFECT_ESCAPE_OUTCOME_OPTIONS: Array<
+  EffectSegmentOption<EffectEscapeOutcome>
+> = EFFECT_ESCAPE_OUTCOMES.map((escapeOutcome) => ({
+  value: escapeOutcome,
+  label: EFFECT_ESCAPE_OUTCOME_LABELS[escapeOutcome],
+}));
+
+/**
+ * Состояния для выбора с ключом-строкой: так их хранят подавление, снятие и
+ * «когда состояние снимается» — как в системе, где состояние может быть
+ * заведено в мире.
+ */
+export const EFFECT_CONDITION_KEY_ITEMS: Array<{
+  label: string;
+  value: string;
+}> = EFFECT_CONDITION_OPTIONS;
+
+/**
+ * Состояния для выбора с пунктом «любое / все» первым.
+ *
+ * @param anyLabel подпись пункта без состояния.
+ * @returns пункты состояний.
+ */
+export function buildConditionItemsWithAny(
+  anyLabel: string,
+): Array<{ label: string; value: string }> {
+  return [
+    { label: anyLabel, value: ANY_CONDITION_KEY },
+    ...EFFECT_CONDITION_KEY_ITEMS,
+  ];
+}
+
 /** Режимы поля Сл: Сл источника или своё число. */
 export const SAVE_DC_FIELD_MODE_OPTIONS: Array<
   EffectSegmentOption<SaveDcFieldMode>
@@ -439,6 +636,7 @@ export function buildTriggerRecipientOptions(
   const available: Record<EffectTriggerRecipient, boolean> = {
     subject: true,
     other: triggerEventHasOtherParty(trigger.event),
+    source: triggerEventAcceptsSource(trigger.event),
     area: triggerEventAcceptsArea(trigger.event),
     choice: triggerEventAcceptsChoice(trigger.event),
   };
@@ -541,17 +739,17 @@ export const EFFECT_TRIGGER_DAMAGE_GATE_OPTIONS: Array<
 ];
 
 /**
- * Параметры части условия, значение которых выбирается списком. Ключ отметки и
- * состояния вводится строкой, число — полем: у них вариантов нет.
+ * Параметры части условия, значение которых выбирается списком. Ключ отметки
+ * и название вида вводятся строкой, число — полем: у них вариантов нет.
  */
 export type TriggerConditionListParameter = Exclude<
   TriggerConditionParameter,
-  'tag' | 'number'
+  'tag' | 'number' | 'text'
 >;
 
 /**
  * Варианты значения части условия по тому, что выбирается: тип урона, тип
- * существа, размер или состояние.
+ * существа, размер, состояние, характеристика или вид атаки.
  */
 export const EFFECT_TRIGGER_CONDITION_VALUE_OPTIONS: Record<
   TriggerConditionListParameter,
@@ -561,4 +759,6 @@ export const EFFECT_TRIGGER_CONDITION_VALUE_OPTIONS: Record<
   creatureType: EFFECT_CREATURE_CATEGORY_OPTIONS,
   size: EFFECT_CREATURE_SIZE_OPTIONS,
   condition: EFFECT_CONDITION_OPTIONS,
+  ability: EFFECT_ABILITY_OPTIONS,
+  attackKind: ATTACK_KIND_OPTIONS,
 };

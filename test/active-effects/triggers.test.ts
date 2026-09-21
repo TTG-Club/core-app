@@ -568,3 +568,143 @@ describe('фразы срабатываний', () => {
     ]);
   });
 });
+
+describe('срабатывания 0.8.66', () => {
+  it('цена, вопрос, шанс и режим спасброска по условию не сворачиваются в старые поля', () => {
+    const plainRecurringSave: EffectTrigger = {
+      id: 'escape',
+      event: 'turnEnd',
+      save: CONSTITUTION_TRIGGER_SAVE,
+      actions: [{ type: 'removeSelf', on: 'saved' }],
+    };
+
+    const variants: EffectTrigger[] = [
+      { ...plainRecurringSave, cost: 'reaction' },
+      { ...plainRecurringSave, ask: true },
+      { ...plainRecurringSave, chancePercent: 50 },
+      {
+        ...plainRecurringSave,
+        save: {
+          ...CONSTITUTION_TRIGGER_SAVE,
+          modeIf: [{ condition: 'self.hp.temp === 0', mode: 'advantage' }],
+        },
+      },
+      {
+        ...plainRecurringSave,
+        save: {
+          ...CONSTITUTION_TRIGGER_SAVE,
+          autoFailIf: 'self.condition === "unconscious"',
+        },
+      },
+    ];
+
+    for (const trigger of variants) {
+      const effect = writeEffectTriggers(createEffect(), [trigger]);
+
+      expect(effect.recurringSave, JSON.stringify(trigger)).toBeUndefined();
+      expect(effect.triggers).toEqual([trigger]);
+    }
+
+    // Простое срабатывание по-прежнему пишется старым полем
+    expect(
+      writeEffectTriggers(createEffect(), [plainRecurringSave]).recurringSave,
+    ).toBeDefined();
+  });
+
+  it('фразы новых событий, получателей и действий', () => {
+    expect(
+      describeEffectTrigger(
+        {
+          id: 'heal',
+          event: 'healed',
+          recipient: 'source',
+          actions: [
+            { type: 'tempHp', amount: '5', mode: 'add' },
+            { type: 'setHp', value: 1, toMax: true },
+          ],
+        },
+        { formatDc },
+      ),
+    ).toBe(
+      'когда носителя лечат, на наложившего: временные хиты +5, хиты '
+        + 'восстанавливаются полностью',
+    );
+
+    expect(
+      describeEffectTrigger(
+        {
+          id: 'path',
+          event: 'moved',
+          everyFeet: 5,
+          actions: [
+            { type: 'move', kind: 'push', distance: 10 },
+            { type: 'moveArea', kind: 'follow' },
+            { type: 'moveArea', kind: 'away' },
+          ],
+        },
+        { formatDc },
+      ),
+    ).toBe(
+      'за каждые 5 фт пути: отталкивает на 10 фт, зона идёт за носителем, '
+        + 'сдвигает зону от получателя на 10 фт',
+    );
+
+    expect(
+      describeEffectTrigger(
+        {
+          id: 'word',
+          event: 'applied',
+          actions: [
+            { type: 'removeCondition' },
+            { type: 'removeCondition', conditionKey: 'poisoned' },
+            { type: 'kill' },
+            { type: 'revive' },
+            { type: 'revive', full: true },
+            { type: 'dropHeld' },
+            { type: 'restore', what: 'spellSlot', level: 3 },
+            { type: 'restore', what: 'counter', counter: 'rage' },
+            { type: 'dispel', maxLevel: 3 },
+            { type: 'grantInspiration' },
+            { type: 'notify', text: 'Выполняй приказ' },
+            { type: 'nextStage' },
+            { type: 'endCast', whose: 'recipient' },
+            {
+              type: 'applyCondition',
+              conditionKey: 'restrained',
+              endsOnExit: true,
+            },
+          ],
+        },
+        { formatDc },
+      ),
+    ).toBe(
+      [
+        'при наложении: снимаются все состояния',
+        'снимается состояние «Отравленный»',
+        'получатель умирает',
+        'получатель возвращается к жизни с 1',
+        'получатель возвращается к жизни с полным запасом хитов',
+        'получатель роняет то, что держит',
+        'возвращается ячейка круга 3',
+        'возвращается ресурс «rage»',
+        'рассеиваются заклинания до круга 3',
+        'получатель получает вдохновение',
+        'сообщение «Выполняй приказ»',
+        'эффект переходит на следующую ступень',
+        'каст получателя заканчивается',
+        '«Опутанный» до выхода из зоны',
+      ].join(', '),
+    );
+
+    expect(
+      describeEffectTrigger(
+        {
+          id: 'downed',
+          event: 'downedOther',
+          actions: [{ type: 'tempHp', amount: '1d6' }],
+        },
+        { formatDc },
+      ),
+    ).toBe('когда носитель сваливает цель: временные хиты 1d6');
+  });
+});

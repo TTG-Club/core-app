@@ -8,12 +8,15 @@
 
   import {
     createEffectTriggerPreset,
+    DEFAULT_EFFECT_CHARGES,
     EFFECT_TRIGGER_PRESET_ICONS,
     EFFECT_TRIGGER_PRESET_LABELS,
     EFFECT_TRIGGERS_STEP_LABELS,
     listEffectListTriggers,
     listEffectTriggerPresets,
     listTriggerTags,
+    MAX_EFFECT_CHARGES,
+    MIN_EFFECT_CHARGES,
     writeEffectTriggerRow,
   } from '../../model';
   import EffectTriggerRow from './EffectTriggerRow.vue';
@@ -51,6 +54,49 @@
       key: `${index}-${trigger.id}`,
     })),
   );
+
+  // Заряды выключены — поля нет вовсе, а не ноль зарядов
+  const hasCharges = computed({
+    get: () => effect.value.charges !== undefined,
+    set: (enabled: boolean) => {
+      effect.value = {
+        ...effect.value,
+        charges: enabled
+          ? { max: DEFAULT_EFFECT_CHARGES, current: DEFAULT_EFFECT_CHARGES }
+          : undefined,
+      };
+    },
+  });
+
+  // Автор задаёт «сколько всего», а остаток держится равным ему
+  const chargesMax = computed({
+    get: () => effect.value.charges?.max ?? DEFAULT_EFFECT_CHARGES,
+    set: (nextMax: number | null) => {
+      const max = Math.max(
+        MIN_EFFECT_CHARGES,
+        Math.trunc(nextMax ?? DEFAULT_EFFECT_CHARGES),
+      );
+
+      effect.value = {
+        ...effect.value,
+        charges: { ...effect.value.charges, max, current: max },
+      };
+    },
+  });
+
+  const chargesEndsWhenEmpty = computed({
+    get: () => effect.value.charges?.endsWhenEmpty === true,
+    set: (enabled: boolean) => {
+      const { charges } = effect.value;
+
+      if (charges) {
+        effect.value = {
+          ...effect.value,
+          charges: { ...charges, endsWhenEmpty: enabled ? true : undefined },
+        };
+      }
+    },
+  });
 
   const presets = computed(() =>
     listEffectTriggerPresets(layout).map((preset) => ({
@@ -115,6 +161,37 @@
       @update:trigger="writeTriggerRow(index, $event)"
       @remove="removeTriggerRow(index)"
     />
+
+    <template v-if="layout.showCharges">
+      <div class="flex flex-wrap items-center gap-2">
+        <USwitch
+          v-model="hasCharges"
+          :label="EFFECT_TRIGGERS_STEP_LABELS.chargesToggle"
+        />
+
+        <template v-if="hasCharges">
+          <UInputNumber
+            v-model="chargesMax"
+            :min="MIN_EFFECT_CHARGES"
+            :max="MAX_EFFECT_CHARGES"
+            size="sm"
+            class="w-24"
+          />
+
+          <USwitch
+            v-model="chargesEndsWhenEmpty"
+            :label="EFFECT_TRIGGERS_STEP_LABELS.chargesEndsWhenEmpty"
+          />
+        </template>
+      </div>
+
+      <p
+        v-if="hasCharges"
+        class="text-xs text-muted"
+      >
+        {{ EFFECT_TRIGGERS_STEP_LABELS.chargesToggleHint }}
+      </p>
+    </template>
 
     <div class="flex flex-wrap items-center gap-1.5">
       <span class="text-xs text-muted">

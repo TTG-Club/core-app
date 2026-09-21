@@ -527,3 +527,162 @@ describe('сохранение эффектов', () => {
     ).toBe(APPLIER_SAVE_DC);
   });
 });
+
+describe('поля эффекта 0.8.66', () => {
+  it('негодное значение обнуляет только своё поле, числа строкой — числами', () => {
+    const [effect] = normalizeLoadedActiveEffects([
+      createRawEffect({
+        charges: { max: '3', current: '2', endsWhenEmpty: 'yes' },
+        savedRoll: '  ',
+        durationFormula: '1к4',
+        suppressConditions: ['restrained', 5],
+        escape: {
+          by: 'everyone',
+          cost: 'move',
+          moveCostFeet: '10',
+          check: { skill: 'luck', dc: 14 },
+          label: '',
+        },
+        stageIndex: '1',
+        stages: [
+          { label: 'Первая', changes: [], flags: ['speed.zero'] },
+          { label: 'Вторая', changes: 'мусор', flags: [] },
+        ],
+        changes: [
+          {
+            key: 'attack.melee',
+            mode: 'add',
+            value: '-1',
+            priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
+            step: { by: -1, per: 'turn', until: '-5' },
+          },
+          {
+            key: 'armorClass',
+            mode: 'add',
+            value: '1',
+            priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
+            step: { by: 1, per: 'week' },
+          },
+        ],
+        applySave: {
+          ability: 'wisdom',
+          dc: SAVE_DC,
+          onSuccess: 'negate',
+          allowWilling: 'да',
+        },
+      }),
+    ]);
+
+    expect(effect?.charges).toEqual({ max: 3, current: 2 });
+    expect(effect?.savedRoll).toBeUndefined();
+    expect(effect?.durationFormula).toBe('1к4');
+    // Список ключей с негодным элементом обнуляется целиком, как у системы
+    expect(effect?.suppressConditions).toBeUndefined();
+    expect(effect?.escape).toEqual({ cost: 'move', moveCostFeet: 10 });
+    expect(effect?.stageIndex).toBe(1);
+
+    expect(effect?.stages).toEqual([
+      { label: 'Первая', changes: [], flags: ['speed.zero'] },
+      { label: 'Вторая', changes: [], flags: [] },
+    ]);
+
+    expect(effect?.changes.map((change) => change.step)).toEqual([
+      { by: -1, per: 'turn', until: -5 },
+      undefined,
+    ]);
+
+    expect(effect?.applySave).toEqual({
+      ability: 'wisdom',
+      dc: SAVE_DC,
+      onSuccess: 'negate',
+    });
+  });
+
+  it('срабатывание с новым событием и новыми полями не выпадает', () => {
+    const [effect] = normalizeLoadedActiveEffects([
+      createRawEffect({
+        triggers: [
+          {
+            id: 'path',
+            event: 'moved',
+            everyFeet: '5',
+            cost: 'teleport',
+            chancePercent: 100,
+            ask: true,
+            asker: 'source',
+            actions: [{ type: 'moveArea', kind: 'follow' }],
+          },
+          {
+            id: 'lost',
+            event: 'conditionLost',
+            conditionKey: 'grappled',
+            save: {
+              ability: 'wisdom',
+              dc: SAVE_DC,
+              modeIf: [{ condition: 'self.hp.temp === 0', mode: 'lucky' }],
+              autoSuccessIf: 'self.grounded === true',
+            },
+            actions: [{ type: 'notify', text: 'Свободен', to: 'source' }],
+          },
+        ],
+      }),
+    ]);
+
+    expect(effect?.triggers).toEqual([
+      {
+        id: 'path',
+        event: 'moved',
+        everyFeet: 5,
+        ask: true,
+        asker: 'source',
+        actions: [{ type: 'moveArea', kind: 'follow' }],
+      },
+      {
+        id: 'lost',
+        event: 'conditionLost',
+        conditionKey: 'grappled',
+        save: {
+          ability: 'wisdom',
+          dc: SAVE_DC,
+          autoSuccessIf: 'self.grounded === true',
+        },
+        actions: [{ type: 'notify', text: 'Свободен', to: 'source' }],
+      },
+    ]);
+  });
+
+  it('при сохранении строки эффекта берутся из действующей ступени, заряды — целыми', () => {
+    const firstStageChange = {
+      key: 'movement.walk',
+      mode: 'add',
+      value: '-10',
+      priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
+    } as const;
+
+    const [savedEffect] = normalizeActiveEffects(
+      normalizeLoadedActiveEffects([
+        createRawEffect({
+          changes: [],
+          flags: [],
+          charges: { max: 5, current: 9 },
+          stages: [
+            { label: 'Первая', changes: [firstStageChange], flags: [] },
+            { label: 'Вторая', changes: [], flags: ['speed.zero'] },
+          ],
+          escape: { check: { skill: 'athletics', dc: APPLIER_SAVE_DC } },
+        }),
+      ]),
+      'item',
+    );
+
+    expect(savedEffect?.changes).toEqual([firstStageChange]);
+    expect(savedEffect?.stageIndex).toBe(0);
+    expect(savedEffect?.charges).toEqual({ max: 5, current: 5 });
+
+    // У предмета источника нет: «Авто» поднимается до наименьшей Сл
+    expect(savedEffect?.escape?.check).toEqual({
+      skill: 'athletics',
+      dc: FIXED_MIN_SAVE_DC,
+    });
+  });
+});

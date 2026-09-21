@@ -25,16 +25,48 @@ import {
   EFFECT_DAMAGE_TYPE_NOT_CONDITION_PREFIX,
   EFFECT_TARGET_TYPE_CONDITION_PREFIX,
   EFFECT_TRIGGER_FIXED_CONDITIONS,
+  isEffectAbility,
   isEffectCreatureCategory,
   isEffectCreatureSize,
   isEffectDamageType,
   splitConditionParts,
 } from './constants';
 import {
+  ATTACK_DATA_TRIGGER_EVENTS,
+  COMBAT_ROUND_TRIGGER_EVENTS,
   DAMAGE_DATA_TRIGGER_EVENTS,
   isEffectTag,
+  MOVEMENT_TRIGGER_EVENTS,
   OTHER_PARTY_TRIGGER_EVENTS,
+  OWN_DEED_TRIGGER_EVENTS,
 } from './triggerTypes';
+
+/** Чем бьют: вид атаки, от которого зависят части условия. */
+export const TRIGGER_ATTACK_KINDS = [
+  'melee',
+  'ranged',
+  'weapon',
+  'spell',
+  'unarmed',
+] as const;
+
+/** Вид атаки события. */
+export type TriggerAttackKind = (typeof TRIGGER_ATTACK_KINDS)[number];
+
+/** Виды атаки строками — для сверки со значением части условия. */
+const ATTACK_KIND_VALUES: ReadonlySet<string> = new Set(TRIGGER_ATTACK_KINDS);
+
+/**
+ * Вид ли атаки эта строка.
+ *
+ * @param attackKind строка из условия.
+ * @returns `true`, если это известный вид атаки.
+ */
+export function isTriggerAttackKind(
+  attackKind: string,
+): attackKind is TriggerAttackKind {
+  return ATTACK_KIND_VALUES.has(attackKind);
+}
 
 /** Виды частей условия срабатывания. */
 export const TRIGGER_CONDITION_KINDS = [
@@ -61,6 +93,24 @@ export const TRIGGER_CONDITION_KINDS = [
   'selfTagFromSource',
   'selfTagFromSourceNot',
   'sourceWeaponMastery',
+  'selfTempHpZero',
+  'selfGrounded',
+  'selfSpecies',
+  'selfAbilityAtMost',
+  'selfAbilityAtLeast',
+  'otherIsSource',
+  'otherBloodied',
+  'otherHpAtMost',
+  'damageAtLeast',
+  'sourceWithin',
+  'attackKind',
+  'attackAbility',
+  'attackLanded',
+  'attackMissed',
+  'combatRoundIs',
+  'combatRoundAtLeast',
+  'movementOwn',
+  'movementForced',
 ] as const;
 
 /**
@@ -80,7 +130,24 @@ export const TRIGGER_CONDITION_KINDS = [
  * - `selfTagFromSource` / `selfTagFromSourceNot` — есть / нет отметки,
  *   поставленной тем же, кто наложил эффект;
  * - `sourceWeaponMastery` — наложение ударом оружия, приёмом которого атакующий
- *   владеет.
+ *   владеет;
+ * - `selfTempHpZero` — у носителя нет временных хитов;
+ * - `selfGrounded` — носитель стоит на земле (не летит);
+ * - `selfSpecies` — вид носителя по названию записи;
+ * - `selfAbilityAtMost` / `selfAbilityAtLeast` — характеристика носителя не
+ *   больше / не меньше N;
+ * - `otherIsSource` — другая сторона и есть тот, кто наложил эффект;
+ * - `otherBloodied` — у другой стороны не больше половины хитов;
+ * - `otherHpAtMost` — у другой стороны не больше N хитов;
+ * - `damageAtLeast` — урон события не меньше N;
+ * - `sourceWithin` — наложивший эффект в пределах N футов;
+ * - `attackKind` — вид атаки события;
+ * - `attackAbility` — атака считается этой характеристикой;
+ * - `attackLanded` / `attackMissed` — атака попала / промахнулась;
+ * - `combatRoundIs` / `combatRoundAtLeast` — идёт раунд боя N / раунд не
+ *   раньше N (расписание «на втором раунде», «с третьего раунда»);
+ * - `movementOwn` / `movementForced` — носитель шёл сам / его переставили
+ *   правила (толчок, притягивание, телепортация).
  */
 export type TriggerConditionKind = (typeof TRIGGER_CONDITION_KINDS)[number];
 
@@ -91,15 +158,27 @@ export type TriggerConditionParameter =
   | 'tag'
   | 'number'
   | 'size'
-  | 'condition';
+  | 'condition'
+  | 'ability'
+  | 'attackKind'
+  | 'text';
 
 /** Часть условия срабатывания: вид и значение, если оно есть. */
 export interface TriggerConditionPart {
   kind: TriggerConditionKind;
   value?: string;
-  /** Порог счётчика отметок (`selfTagCountAtLeast`). */
+  /** Порог счётчика отметок или характеристики. */
   amount?: number;
 }
+
+/**
+ * События, где известна другая сторона: противник в атаке, источник урона и
+ * тот, кого носитель свалил, — условия о ней читают другую сторону события.
+ */
+const OTHER_CONDITION_EVENTS: readonly EffectTriggerEvent[] = [
+  ...OTHER_PARTY_TRIGGER_EVENTS,
+  ...OWN_DEED_TRIGGER_EVENTS,
+];
 
 /**
  * На каких событиях часть условия что-то значит; `undefined` — на любых. На
@@ -120,7 +199,7 @@ const KIND_EVENTS: Record<
   selfTagNot: undefined,
   rollAdvantage: ['attackRoll'],
   rollDisadvantage: ['attackRoll'],
-  otherCreatureType: OTHER_PARTY_TRIGGER_EVENTS,
+  otherCreatureType: OTHER_CONDITION_EVENTS,
   otherMarkedBySelf: ['attackRoll'],
   selfHpAtMost: undefined,
   selfHpAtLeast: undefined,
@@ -132,6 +211,24 @@ const KIND_EVENTS: Record<
   selfTagFromSource: undefined,
   selfTagFromSourceNot: undefined,
   sourceWeaponMastery: ['applied'],
+  selfTempHpZero: undefined,
+  selfGrounded: undefined,
+  selfSpecies: undefined,
+  selfAbilityAtMost: undefined,
+  selfAbilityAtLeast: undefined,
+  otherIsSource: OTHER_CONDITION_EVENTS,
+  otherBloodied: OTHER_CONDITION_EVENTS,
+  otherHpAtMost: OTHER_CONDITION_EVENTS,
+  damageAtLeast: DAMAGE_DATA_TRIGGER_EVENTS,
+  sourceWithin: undefined,
+  attackKind: ATTACK_DATA_TRIGGER_EVENTS,
+  attackAbility: ATTACK_DATA_TRIGGER_EVENTS,
+  attackLanded: ATTACK_DATA_TRIGGER_EVENTS,
+  attackMissed: ATTACK_DATA_TRIGGER_EVENTS,
+  combatRoundIs: COMBAT_ROUND_TRIGGER_EVENTS,
+  combatRoundAtLeast: COMBAT_ROUND_TRIGGER_EVENTS,
+  movementOwn: MOVEMENT_TRIGGER_EVENTS,
+  movementForced: MOVEMENT_TRIGGER_EVENTS,
 };
 
 /** Части условия со значением: приставка строки и что выбирается. */
@@ -174,6 +271,16 @@ const PARAMETRIC_PARTS: Partial<
     prefix: 'self.tagFromSource !== ',
     parameter: 'tag',
   },
+  selfSpecies: { prefix: 'self.species === ', parameter: 'text' },
+  otherHpAtMost: { prefix: 'target.hp.value <= ', parameter: 'number' },
+  damageAtLeast: { prefix: 'damage.amount >= ', parameter: 'number' },
+  sourceWithin: { prefix: 'source.distance <= ', parameter: 'number' },
+  attackKind: { prefix: 'attack.kind === ', parameter: 'attackKind' },
+  attackAbility: { prefix: 'attack.ability === ', parameter: 'ability' },
+  selfAbilityAtMost: { prefix: 'self.ability[', parameter: 'ability' },
+  selfAbilityAtLeast: { prefix: 'self.ability[', parameter: 'ability' },
+  combatRoundIs: { prefix: 'combat.round === ', parameter: 'number' },
+  combatRoundAtLeast: { prefix: 'combat.round >= ', parameter: 'number' },
 };
 
 /**
@@ -181,6 +288,22 @@ const PARAMETRIC_PARTS: Partial<
  * скобках — в ключе отметки бывает точка, и через точку его не прочитать.
  */
 const TAG_COUNT_PATTERN = /^self\.tagCount\["([^"]+)"\] >= (\d+)$/u;
+
+/**
+ * Характеристика носителя строкой: `self.ability["strength"] >= 13`. Как у
+ * счётчика отметок, у части два значения — какая характеристика и порог.
+ */
+const ABILITY_PATTERN = /^self\.ability\["(\w+)"\] (<=|>=) (\d+)$/u;
+
+/** Части условия с порогом: у них два значения, а не одно. */
+const PARTS_WITH_AMOUNT: readonly TriggerConditionKind[] = [
+  'selfTagCountAtLeast',
+  'selfAbilityAtMost',
+  'selfAbilityAtLeast',
+];
+
+/** Порог характеристики, пока автор не задал свой. */
+export const DEFAULT_ABILITY_THRESHOLD = 10;
 
 /** Порог счётчика отметок, пока автор не задал свой. */
 export const DEFAULT_TAG_COUNT_THRESHOLD = 3;
@@ -191,6 +314,9 @@ export const MIN_TAG_COUNT_THRESHOLD = 1;
 /** Самый большой порог числа в условии: хиты и счётчики. */
 const MAX_CONDITION_NUMBER = 100_000;
 
+/** Самая длинная свободная строка в условии: название вида. */
+const MAX_CONDITION_TEXT = 100;
+
 /** Наименьшее число в условии: отрицательных хитов не бывает. */
 export const MIN_CONDITION_NUMBER = 0;
 
@@ -198,13 +324,14 @@ export const MIN_CONDITION_NUMBER = 0;
 const WHOLE_NUMBER_PATTERN = /^\d+$/;
 
 /**
- * Есть ли у части условия второе число — порог (счётчик отметок).
+ * Есть ли у части условия второе число — порог (счётчик отметок,
+ * характеристика).
  *
  * @param kind вид части.
  * @returns `true` для части с порогом.
  */
 export function triggerConditionHasAmount(kind: TriggerConditionKind): boolean {
-  return kind === 'selfTagCountAtLeast';
+  return PARTS_WITH_AMOUNT.includes(kind);
 }
 
 /**
@@ -257,6 +384,12 @@ function isParameterValue(
       return isConditionNumber(value);
     case 'size':
       return isEffectCreatureSize(value);
+    case 'ability':
+      return isEffectAbility(value);
+    case 'attackKind':
+      return isTriggerAttackKind(value);
+    case 'text':
+      return value.trim().length > 0 && value.length <= MAX_CONDITION_TEXT;
     default:
       // Ключ состояния мира и ключ отметки — одного вида: буквы, цифры, «_.-»
       return isEffectTag(value);
@@ -286,6 +419,12 @@ function buildTriggerConditionPart(part: TriggerConditionPart): string {
     return `self.tagCount["${part.value ?? ''}"] >= ${part.amount ?? DEFAULT_TAG_COUNT_THRESHOLD}`;
   }
 
+  if (part.kind === 'selfAbilityAtMost' || part.kind === 'selfAbilityAtLeast') {
+    const sign = part.kind === 'selfAbilityAtMost' ? '<=' : '>=';
+
+    return `self.ability["${part.value ?? ''}"] ${sign} ${part.amount ?? DEFAULT_ABILITY_THRESHOLD}`;
+  }
+
   const parametric = PARAMETRIC_PARTS[part.kind];
 
   if (!parametric) {
@@ -308,6 +447,20 @@ export function parseTriggerConditionPart(
   text: string,
 ): TriggerConditionPart | null {
   const trimmed = text.trim();
+  const abilityMatch = ABILITY_PATTERN.exec(trimmed);
+
+  if (abilityMatch) {
+    const [, ability = '', sign = '', threshold = ''] = abilityMatch;
+
+    return isEffectAbility(ability) && isConditionNumber(threshold)
+      ? {
+          kind: sign === '<=' ? 'selfAbilityAtMost' : 'selfAbilityAtLeast',
+          value: ability,
+          amount: Number(threshold),
+        }
+      : null;
+  }
+
   const tagCount = TAG_COUNT_PATTERN.exec(trimmed);
 
   if (tagCount) {

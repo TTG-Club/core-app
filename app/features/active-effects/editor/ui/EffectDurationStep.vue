@@ -21,8 +21,9 @@
   } from '../../model';
 
   /**
-   * Шаг «Длительность»: сколько держится эффект. Повторный спасбросок и снятие
-   * после атаки — строки списка «Срабатывания».
+   * Шаг «Длительность»: сколько держится эффект — числом или формулой, которую
+   * VTTG бросит при наложении. Повторный спасбросок и снятие после атаки —
+   * строки списка «Срабатывания».
    */
   const effect = defineModel<ActiveEffect>('effect', { required: true });
 
@@ -32,6 +33,10 @@
       effect.value = {
         ...effect.value,
         duration: writeDurationType(effect.value.duration, type),
+        // Формула — это число единиц срока: у срока без числа её нет
+        durationFormula: isCountedDuration(type)
+          ? effect.value.durationFormula
+          : undefined,
       };
     },
   });
@@ -58,6 +63,36 @@
           value: durationAmount ?? undefined,
         },
       };
+    },
+  });
+
+  // Число и формулу вместе задать нельзя: заполненное число у формулы VTTG
+  // считает её результатом и кость не перебрасывает
+  const useDurationFormula = computed({
+    get: () => effect.value.durationFormula !== undefined,
+    set: (enabled: boolean) => {
+      effect.value = {
+        ...effect.value,
+        durationFormula: enabled ? '' : undefined,
+        duration: { ...effect.value.duration, value: undefined },
+      };
+    },
+  });
+
+  /** Срок задан формулой — у длительности, которая вообще считается. */
+  const showsDurationFormula = computed(
+    () => hasDurationValue.value && useDurationFormula.value,
+  );
+
+  /** Срок задан числом. */
+  const showsDurationNumber = computed(
+    () => hasDurationValue.value && !useDurationFormula.value,
+  );
+
+  const durationFormula = computed({
+    get: () => effect.value.durationFormula ?? '',
+    set: (formula: string) => {
+      effect.value = { ...effect.value, durationFormula: formula };
     },
   });
 
@@ -98,12 +133,27 @@
       />
 
       <UInputNumber
-        v-if="hasDurationValue"
+        v-if="showsDurationNumber"
         v-model="durationValue"
         :min="MIN_EFFECT_DURATION_VALUE"
         :placeholder="EFFECT_DURATION_STEP_LABELS.valuePlaceholder"
         size="sm"
         class="w-28"
+      />
+
+      <UInput
+        v-if="showsDurationFormula"
+        v-model="durationFormula"
+        :placeholder="EFFECT_DURATION_STEP_LABELS.formulaPlaceholder"
+        size="sm"
+        class="w-40 font-mono"
+      />
+
+      <USwitch
+        v-if="hasDurationValue"
+        v-model="useDurationFormula"
+        :label="EFFECT_DURATION_STEP_LABELS.formulaToggle"
+        size="sm"
       />
 
       <template v-if="isTurnDuration">
@@ -127,6 +177,13 @@
 
     <p class="text-xs text-muted">
       {{ durationDescription }}
+    </p>
+
+    <p
+      v-if="showsDurationFormula"
+      class="text-xs text-muted"
+    >
+      {{ EFFECT_DURATION_STEP_LABELS.formulaToggleHint }}
     </p>
   </div>
 </template>
