@@ -170,28 +170,29 @@
     },
   });
 
-  /**
-   * Меняет расстояние сдвига зоны; очищенное поле — ноль.
-   *
-   * @param nextDistance введённые футы.
-   */
-  function updateAreaShiftDistance(
-    nextDistance: number | null | undefined,
-  ): void {
-    const currentAction = action.value;
+  // Без своего числа зона сдвигается на расстояние по умолчанию;
+  // очищенное поле — ноль
+  const areaShiftDistance = computed({
+    get: () =>
+      action.value.type === 'moveArea'
+        ? (action.value.distance ?? DEFAULT_TRIGGER_MOVE_DISTANCE)
+        : DEFAULT_TRIGGER_MOVE_DISTANCE,
+    set: (nextDistance: number | null) => {
+      const currentAction = action.value;
 
-    if (currentAction.type === 'moveArea') {
-      action.value = {
-        ...currentAction,
-        distance: Math.max(
-          MIN_TRIGGER_MOVE_DISTANCE,
-          nextDistance ?? MIN_TRIGGER_MOVE_DISTANCE,
-        ),
-      };
-    }
-  }
+      if (currentAction.type === 'moveArea') {
+        action.value = {
+          ...currentAction,
+          distance: Math.max(
+            MIN_TRIGGER_MOVE_DISTANCE,
+            nextDistance ?? MIN_TRIGGER_MOVE_DISTANCE,
+          ),
+        };
+      }
+    },
+  });
 
-  // Пустой ключ значит «все состояния получателя»
+  // «Все состояния» — в данных ключа нет: снимаются все состояния получателя
   const removedCondition = computed({
     get: () =>
       action.value.type === 'removeCondition'
@@ -221,21 +222,23 @@
     },
   });
 
-  /**
-   * Меняет число хитов у «Вернуть к жизни»; очищенное поле — один хит.
-   *
-   * @param hitPoints введённое число.
-   */
-  function updateReviveHp(hitPoints: number | null | undefined): void {
-    const currentAction = action.value;
+  // Без своего числа — один хит; очищенное поле — тоже
+  const reviveHp = computed({
+    get: () =>
+      action.value.type === 'revive'
+        ? (action.value.hp ?? MIN_REVIVE_HP)
+        : MIN_REVIVE_HP,
+    set: (hitPoints: number | null) => {
+      const currentAction = action.value;
 
-    if (currentAction.type === 'revive') {
-      action.value = {
-        ...currentAction,
-        hp: Math.max(MIN_REVIVE_HP, hitPoints ?? MIN_REVIVE_HP),
-      };
-    }
-  }
+      if (currentAction.type === 'revive') {
+        action.value = {
+          ...currentAction,
+          hp: Math.max(MIN_REVIVE_HP, hitPoints ?? MIN_REVIVE_HP),
+        };
+      }
+    },
+  });
 
   const restoreWhat = computed({
     get: () =>
@@ -256,39 +259,40 @@
     },
   });
 
-  /**
-   * Меняет круг ячейки у «Вернуть ресурс».
-   *
-   * @param nextLevel введённый круг.
-   */
-  function updateRestoreLevel(nextLevel: number | null | undefined): void {
-    const currentAction = action.value;
+  // Круг ячейки держится в пределах кругов заклинаний
+  const restoreLevel = computed({
+    get: () =>
+      action.value.type === 'restore'
+        ? (action.value.level ?? MIN_SPELL_SLOT_LEVEL)
+        : MIN_SPELL_SLOT_LEVEL,
+    set: (nextLevel: number | null) => {
+      const currentAction = action.value;
 
-    if (currentAction.type === 'restore') {
-      action.value = {
-        ...currentAction,
-        level: Math.min(
-          MAX_SPELL_SLOT_LEVEL,
-          Math.max(MIN_SPELL_SLOT_LEVEL, nextLevel ?? MIN_SPELL_SLOT_LEVEL),
-        ),
-      };
-    }
-  }
+      if (currentAction.type === 'restore') {
+        action.value = {
+          ...currentAction,
+          level: Math.min(
+            MAX_SPELL_SLOT_LEVEL,
+            Math.max(MIN_SPELL_SLOT_LEVEL, nextLevel ?? MIN_SPELL_SLOT_LEVEL),
+          ),
+        };
+      }
+    },
+  });
 
-  /**
-   * Меняет ключ ресурса листа. Пустой ключ не пишется: без него возвращать
-   * нечего.
-   *
-   * @param nextCounter введённый ключ.
-   */
-  function updateRestoreCounter(nextCounter: string): void {
-    const currentAction = action.value;
-    const counter = nextCounter.trim();
+  // Пустой ключ ресурса не пишется: без него возвращать нечего
+  const restoreCounter = computed({
+    get: () =>
+      action.value.type === 'restore' ? (action.value.counter ?? '') : '',
+    set: (nextCounter: string) => {
+      const currentAction = action.value;
+      const counter = nextCounter.trim();
 
-    if (currentAction.type === 'restore' && counter) {
-      action.value = { ...currentAction, counter };
-    }
-  }
+      if (currentAction.type === 'restore' && counter) {
+        action.value = { ...currentAction, counter };
+      }
+    },
+  });
 
   /**
    * Меняет круг у «Рассеять заклинания».
@@ -375,18 +379,18 @@
     },
   });
 
-  /**
-   * Меняет бросок к сообщению: пустая формула убирает бросок.
-   *
-   * @param nextRoll формула броска.
-   */
-  function updateNotifyRoll(nextRoll: string): void {
-    const currentAction = action.value;
+  // Пустая формула убирает бросок к сообщению
+  const notifyRoll = computed({
+    get: () =>
+      action.value.type === 'notify' ? (action.value.roll ?? '') : '',
+    set: (nextRoll: string) => {
+      const currentAction = action.value;
 
-    if (currentAction.type === 'notify') {
-      action.value = { ...currentAction, roll: nextRoll.trim() || undefined };
-    }
-  }
+      if (currentAction.type === 'notify') {
+        action.value = { ...currentAction, roll: nextRoll.trim() || undefined };
+      }
+    },
+  });
 </script>
 
 <template>
@@ -445,12 +449,11 @@
       class="w-full sm:w-28"
     >
       <UInputNumber
-        :model-value="action.distance ?? DEFAULT_TRIGGER_MOVE_DISTANCE"
+        v-model="areaShiftDistance"
         :min="MIN_TRIGGER_MOVE_DISTANCE"
         :max="MAX_TRIGGER_MOVE_DISTANCE"
         size="sm"
         class="w-full"
-        @update:model-value="updateAreaShiftDistance"
       />
     </UFormField>
   </div>
@@ -526,11 +529,10 @@
       class="w-32"
     >
       <UInputNumber
-        :model-value="action.hp ?? MIN_REVIVE_HP"
+        v-model="reviveHp"
         :min="MIN_REVIVE_HP"
         size="sm"
         class="w-full"
-        @update:model-value="updateReviveHp"
       />
     </UFormField>
 
@@ -563,12 +565,11 @@
       class="w-full sm:w-28"
     >
       <UInputNumber
-        :model-value="action.level ?? MIN_SPELL_SLOT_LEVEL"
+        v-model="restoreLevel"
         :min="MIN_SPELL_SLOT_LEVEL"
         :max="MAX_SPELL_SLOT_LEVEL"
         size="sm"
         class="w-full"
-        @update:model-value="updateRestoreLevel"
       />
     </UFormField>
 
@@ -578,10 +579,9 @@
       class="w-full sm:w-56"
     >
       <UInput
-        :model-value="action.counter ?? ''"
+        v-model="restoreCounter"
         size="sm"
         class="w-full"
-        @update:model-value="updateRestoreCounter"
       />
     </UFormField>
   </div>
@@ -661,11 +661,10 @@
       class="w-full sm:w-40"
     >
       <UInput
-        :model-value="action.roll ?? ''"
+        v-model="notifyRoll"
         :placeholder="EFFECT_TRIGGER_ROW_LABELS.notifyRollPlaceholder"
         size="sm"
         class="w-full font-mono"
-        @update:model-value="updateNotifyRoll"
       />
     </UFormField>
   </div>

@@ -21,7 +21,6 @@ import type { EffectDuration } from './types';
 import {
   describeEffectCreatureSize,
   EFFECT_ABILITY_GENITIVE_LABELS,
-  EFFECT_ABILITY_OPTIONS,
   EFFECT_PHRASE_PARTS,
   EFFECT_SAVE_TIMING_LABELS,
   EFFECT_TRIGGER_AREA_SHIFT_PHRASES,
@@ -41,6 +40,7 @@ import {
   TRIGGER_ATTACK_KIND_PHRASES,
 } from './constants';
 import {
+  describeAbilityName,
   describeConditionName,
   describeCreatureType,
   describeDamageTypeShort,
@@ -64,6 +64,7 @@ import {
   triggerEventHasRestType,
 } from './triggers';
 import {
+  APPLIER_TRIGGER_RECIPIENT,
   AREA_TRIGGER_RECIPIENT,
   CHOICE_TRIGGER_RECIPIENT,
   DEFAULT_CAST_OWNER,
@@ -77,22 +78,7 @@ import {
   MIN_REVIVE_HP,
   MIN_SPELL_SLOT_LEVEL,
   MIN_TRIGGER_LIMIT_MAX,
-  SOURCE_TRIGGER_RECIPIENT,
 } from './triggerTypes';
-
-/**
- * Подпись характеристики.
- *
- * @param ability ключ характеристики.
- * @returns подпись либо ключ.
- */
-function describeAbilityName(ability: string): string {
-  return (
-    EFFECT_ABILITY_OPTIONS.find(
-      (abilityOption) => abilityOption.value === ability,
-    )?.label ?? ability
-  );
-}
 
 /**
  * Подпись вида атаки.
@@ -409,8 +395,8 @@ function describeTriggerRecipient(trigger: EffectTrigger): string {
     return EFFECT_TRIGGER_PHRASE_PARTS.recipientOther;
   }
 
-  if (trigger.recipient === SOURCE_TRIGGER_RECIPIENT) {
-    return EFFECT_TRIGGER_PHRASE_PARTS.recipientSource;
+  if (trigger.recipient === APPLIER_TRIGGER_RECIPIENT) {
+    return EFFECT_TRIGGER_PHRASE_PARTS.recipientApplier;
   }
 
   if (trigger.recipient === CHOICE_TRIGGER_RECIPIENT && trigger.choice) {

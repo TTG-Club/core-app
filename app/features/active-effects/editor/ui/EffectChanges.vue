@@ -26,6 +26,7 @@
     EFFECT_MODIFIERS_STEP_LABELS,
     EFFECT_TARGET_KEY_SUGGESTIONS,
     EFFECT_VALUE_SUGGESTIONS,
+    IDLE_CHANGE_STEP_BY,
     MAX_EFFECT_CHANGE_STEP,
   } from '../../model';
 
@@ -62,6 +63,8 @@
         ? undefined
         : ACTIVE_EFFECT_LABELS.changeValueRequired,
       hasStep: change.step !== undefined,
+      /** Предел шага в поле: не заданный — пустое поле «без предела». */
+      stepUntil: change.step?.until ?? null,
       ...describeStepHint(change),
     })),
   );
@@ -231,7 +234,7 @@
    * @param stepBy на сколько за период.
    */
   function updateStepBy(index: number, stepBy: number | null | undefined) {
-    updateStep(index, { by: stepBy ?? 0 });
+    updateStep(index, { by: stepBy ?? IDLE_CHANGE_STEP_BY });
   }
 
   /**
@@ -414,7 +417,7 @@
             </span>
 
             <UInputNumber
-              :model-value="changeRow.change.step.until ?? null"
+              :model-value="changeRow.stepUntil"
               :placeholder="EFFECT_CHANGE_STEP_LABELS.untilPlaceholder"
               size="sm"
               class="w-32"

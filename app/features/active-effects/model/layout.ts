@@ -46,6 +46,7 @@ import {
   writeEffectTriggers,
 } from './triggers';
 import {
+  APPLIER_TRIGGER_RECIPIENT,
   AREA_RECIPIENT_TRIGGER_EVENTS,
   AREA_TRIGGER_RECIPIENT,
   CHOICE_RECIPIENT_TRIGGER_EVENTS,
@@ -68,7 +69,6 @@ import {
   OTHER_PARTY_TRIGGER_EVENTS,
   OWN_DEED_TRIGGER_EVENTS,
   PRESENCE_TRIGGER_EVENTS,
-  SOURCE_TRIGGER_RECIPIENT,
   TURN_TRIGGER_EVENTS,
 } from './triggerTypes';
 import {
@@ -963,7 +963,7 @@ export function triggerEventAcceptsArea(event: EffectTriggerEvent): boolean {
  * @param event событие.
  * @returns `true` для событий, которые выполняет сервер.
  */
-export function triggerEventAcceptsSource(event: EffectTriggerEvent): boolean {
+export function triggerEventAcceptsApplier(event: EffectTriggerEvent): boolean {
   return AREA_RECIPIENT_TRIGGER_EVENTS.includes(event);
 }
 
@@ -989,9 +989,9 @@ function resolveDraftRecipient(
   switch (trigger.recipient) {
     case 'other':
       return triggerEventHasOtherParty(trigger.event) ? 'other' : undefined;
-    case SOURCE_TRIGGER_RECIPIENT:
-      return triggerEventAcceptsSource(trigger.event)
-        ? SOURCE_TRIGGER_RECIPIENT
+    case APPLIER_TRIGGER_RECIPIENT:
+      return triggerEventAcceptsApplier(trigger.event)
+        ? APPLIER_TRIGGER_RECIPIENT
         : undefined;
     case AREA_TRIGGER_RECIPIENT:
       return triggerEventAcceptsArea(trigger.event)

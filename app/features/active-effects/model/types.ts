@@ -12,7 +12,7 @@
  */
 
 import type { EffectChangeStep } from './changeSteps';
-import type { EffectActionCost, EffectTrigger } from './triggerTypes';
+import type { EffectActionCostSettings, EffectTrigger } from './triggerTypes';
 
 /** Характеристика D&D 5e (полное имя — словарь VTTG). */
 export type EffectAbility =
@@ -313,13 +313,9 @@ export const DEFAULT_ESCAPE_OUTCOME: EffectEscapeOutcome = 'removeSelf';
  * из компендиума нет, поэтому нулевая Сл в VTTG не превращается в проверку
  * против нуля — кнопка честно отказывается действовать.
  */
-export interface EffectEscape {
+export interface EffectEscape extends EffectActionCostSettings {
   /** Кто может действовать; нет — сам носитель. */
   by?: EffectEscapeActor;
-  /** Чем платит; нет — бесплатно. */
-  cost?: EffectActionCost;
-  /** Сколько футов перемещения стоит цена `move`. */
-  moveCostFeet?: number;
   /** Проверка навыка; нет — действие снимает эффект без броска. */
   check?: EffectEscapeCheck;
   /** Что даёт успех; нет — снимается сам эффект. */

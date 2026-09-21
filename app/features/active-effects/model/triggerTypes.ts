@@ -154,7 +154,7 @@ export const EFFECT_TRIGGER_RECIPIENTS = [
 ] as const;
 
 /** Получатель «тот, кто наложил эффект». */
-export const SOURCE_TRIGGER_RECIPIENT = 'source';
+export const APPLIER_TRIGGER_RECIPIENT = 'source';
 
 /** Получатель «всем в радиусе». */
 export const AREA_TRIGGER_RECIPIENT = 'area';
@@ -383,6 +383,17 @@ export function actionCostTakesFeet(
   cost: EffectActionCost | undefined,
 ): boolean {
   return cost === 'move';
+}
+
+/**
+ * Цена действия и футы перемещения к ней: одни и те же поля у срабатывания и у
+ * «вырваться» (`EffectEscape`).
+ */
+export interface EffectActionCostSettings {
+  /** Чем платят; нет — бесплатно. */
+  cost?: EffectActionCost;
+  /** Сколько футов перемещения стоит цена `move`. */
+  moveCostFeet?: number;
 }
 
 /** Сколько футов перемещения стоит действие с ценой `move` без своего числа. */
@@ -931,8 +942,13 @@ export type EffectTriggerAction =
   | EffectTriggerMoveAreaAction
   | EffectTriggerRemoveSelfAction;
 
-/** Срабатывание эффекта. */
-export interface EffectTrigger {
+/**
+ * Срабатывание эффекта. Цена (`cost`, `moveCostFeet`) — действие, бонусное
+ * действие, реакция или часть перемещения; нет поля — бесплатно. Реакция
+ * вдобавок тратит счётчик реакции носителя, остальные цены — пометка для
+ * человека.
+ */
+export interface EffectTrigger extends EffectActionCostSettings {
   /** Стабильный id; `legacy.*` зарезервированы под выведенные из старых полей. */
   id: string;
   event: EffectTriggerEvent;
@@ -965,14 +981,6 @@ export interface EffectTrigger {
    * срабатывает всегда.
    */
   chancePercent?: number;
-  /**
-   * Цена срабатывания: действие, бонусное действие, реакция, часть
-   * перемещения. Нет поля — бесплатно. Реакция вдобавок тратит счётчик
-   * реакции носителя, остальные цены — пометка для человека.
-   */
-  cost?: EffectActionCost;
-  /** Сколько футов перемещения стоит срабатывание с ценой `move`. */
-  moveCostFeet?: number;
   /**
    * Для перемещения: срабатывание повторяется за каждые столько футов пути
    * («Шипастая поросль» — за каждые 5 футов). Не задано — один раз за

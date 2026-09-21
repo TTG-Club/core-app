@@ -157,6 +157,16 @@ export function describeCreatureType(creatureType: string): string {
 }
 
 /**
+ * Подпись характеристики (`strength` → «Сила»).
+ *
+ * @param ability ключ характеристики.
+ * @returns подпись; незнакомый ключ отдаётся как есть.
+ */
+export function describeAbilityName(ability: string): string {
+  return ABILITY_LABELS.get(ability) ?? ability;
+}
+
+/**
  * Краткая подпись типа урона для фраз: `poison` → «ядом».
  *
  * @param damageType ключ типа урона.

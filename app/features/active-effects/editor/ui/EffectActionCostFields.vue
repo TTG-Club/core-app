@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { EffectActionCost, EffectEscape } from '../../model';
+  import type { EffectActionCost, EffectActionCostSettings } from '../../model';
 
   import {
     actionCostTakesFeet,
@@ -23,7 +23,7 @@
   }>();
 
   /** Цена и футы перемещения — те же поля у срабатывания и у «вырваться». */
-  const model = defineModel<Pick<EffectEscape, 'cost' | 'moveCostFeet'>>({
+  const model = defineModel<EffectActionCostSettings>({
     required: true,
   });
 

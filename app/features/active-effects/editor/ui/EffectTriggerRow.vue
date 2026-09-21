@@ -3,7 +3,7 @@
   import type { WritableComputedRef } from 'vue';
 
   import type {
-    EffectEscape,
+    EffectActionCostSettings,
     EffectFormLayout,
     EffectTrigger,
     EffectTriggerAction,
@@ -335,7 +335,7 @@
       }),
   });
 
-  // Пусто — любое снятое состояние: в данных ключа нет
+  // «Любое» — в данных ключа нет: срабатывание слушает любое снятое состояние
   const lostConditionKey = computed({
     get: () => trigger.value.conditionKey ?? ANY_CONDITION_KEY,
     set: (nextKey: string) =>
@@ -366,8 +366,7 @@
       cost: trigger.value.cost,
       moveCostFeet: trigger.value.moveCostFeet,
     }),
-    set: (nextCost: Pick<EffectEscape, 'cost' | 'moveCostFeet'>) =>
-      updateTrigger(nextCost),
+    set: (nextCost: EffectActionCostSettings) => updateTrigger(nextCost),
   });
 
   const asks = computed({

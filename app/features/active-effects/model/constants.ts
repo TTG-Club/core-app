@@ -76,11 +76,11 @@ import type {
 } from './types';
 
 import {
+  APPLIER_TRIGGER_RECIPIENT,
   AREA_TRIGGER_RECIPIENT,
   CHOICE_TRIGGER_RECIPIENT,
   DEFAULT_EFFECT_TAG,
   MAX_HP_REDUCTION_NEVER_ENDS,
-  SOURCE_TRIGGER_RECIPIENT,
 } from './triggerTypes';
 
 export const EFFECT_SYSTEM_VERSION = '0.8.66';
@@ -1531,7 +1531,7 @@ export const EFFECT_TRIGGER_PHRASE_PARTS = {
   pathStepPrefix: 'за каждые ',
   pathStepSuffix: ' фт пути',
   recipientOther: ', на другую сторону',
-  recipientSource: ', на наложившего',
+  recipientApplier: ', на наложившего',
   endsOnExitSuffix: ' до выхода из зоны',
   recipientChoicePrefix: ', на ',
   recipientChoiceTargetPrefix: ' из ',
@@ -1971,6 +1971,9 @@ export const EFFECT_SAVE_STEP_LABELS = {
 
 /** Шаг новой растущей строки: правило, ради которого его заводят, — убывающее. */
 export const DEFAULT_CHANGE_STEP_BY = -1;
+
+/** Шаг строки, пока автор набирает число: значение стоит на месте. */
+export const IDLE_CHANGE_STEP_BY = 0;
 
 /** Период шага новой растущей строки: каждый ход носителя. */
 export const DEFAULT_CHANGE_STEP_PER: EffectChangeStepPeriod = 'turn';
@@ -2592,7 +2595,7 @@ export const EFFECT_TRIGGER_SAVE_MODE_LABELS: Record<
 const SUBJECT_ADDRESS_LABEL = 'Носителю эффекта';
 
 /** Подпись наложившего эффект как получателя или адресата. */
-const SOURCE_ADDRESS_LABEL = 'Наложившему эффект';
+const APPLIER_ADDRESS_LABEL = 'Наложившему эффект';
 
 /** Кому достаются действия срабатывания; «другая сторона» — у урона. */
 export const EFFECT_TRIGGER_RECIPIENT_LABELS: Record<
@@ -2601,7 +2604,7 @@ export const EFFECT_TRIGGER_RECIPIENT_LABELS: Record<
 > = {
   subject: SUBJECT_ADDRESS_LABEL,
   other: 'Тому, кто нанёс урон',
-  [SOURCE_TRIGGER_RECIPIENT]: SOURCE_ADDRESS_LABEL,
+  [APPLIER_TRIGGER_RECIPIENT]: APPLIER_ADDRESS_LABEL,
   [AREA_TRIGGER_RECIPIENT]: 'Всем в радиусе',
   [CHOICE_TRIGGER_RECIPIENT]: 'Выбранным',
 };
@@ -2641,7 +2644,7 @@ export const EFFECT_TRIGGER_NESTED_LABELS = {
 } as const;
 
 /** «Другая сторона» при наложении — кто наложил эффект. */
-export const EFFECT_TRIGGER_APPLIED_OTHER_PARTY_LABEL = SOURCE_ADDRESS_LABEL;
+export const EFFECT_TRIGGER_APPLIED_OTHER_PARTY_LABEL = APPLIER_ADDRESS_LABEL;
 
 /** «Другая сторона» броска атаки по роли носителя. */
 export const EFFECT_TRIGGER_ATTACK_OTHER_PARTY_LABELS: Record<
@@ -2727,7 +2730,7 @@ export const EFFECT_TRIGGER_ACTION_ICONS: Record<
 /** Подписи того, кому адресовано сообщение срабатывания. */
 export const EFFECT_NOTIFY_TARGET_LABELS: Record<EffectNotifyTarget, string> = {
   subject: SUBJECT_ADDRESS_LABEL,
-  source: SOURCE_ADDRESS_LABEL,
+  source: APPLIER_ADDRESS_LABEL,
 };
 
 /** Подписи того, что делает действие с временными хитами. */

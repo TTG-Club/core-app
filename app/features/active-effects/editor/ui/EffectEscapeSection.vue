@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type {
     ActiveEffect,
+    EffectActionCostSettings,
     EffectEscape,
     EffectEscapeActor,
     EffectEscapeCheck,
@@ -119,8 +120,7 @@
       cost: effect.value.escape?.cost,
       moveCostFeet: effect.value.escape?.moveCostFeet,
     }),
-    set: (nextCost: Pick<EffectEscape, 'cost' | 'moveCostFeet'>) =>
-      updateEscape(nextCost),
+    set: (nextCost: EffectActionCostSettings) => updateEscape(nextCost),
   });
 
   // «Снять эффект» — значение по умолчанию: в данных оно не пишется

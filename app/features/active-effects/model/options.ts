@@ -111,9 +111,9 @@ import {
   TRIGGER_ATTACK_KIND_PHRASES,
 } from './constants';
 import {
+  triggerEventAcceptsApplier,
   triggerEventAcceptsArea,
   triggerEventAcceptsChoice,
-  triggerEventAcceptsSource,
   triggerEventHasOtherParty,
   triggerEventHasRole,
 } from './layout';
@@ -636,7 +636,7 @@ export function buildTriggerRecipientOptions(
   const available: Record<EffectTriggerRecipient, boolean> = {
     subject: true,
     other: triggerEventHasOtherParty(trigger.event),
-    source: triggerEventAcceptsSource(trigger.event),
+    source: triggerEventAcceptsApplier(trigger.event),
     area: triggerEventAcceptsArea(trigger.event),
     choice: triggerEventAcceptsChoice(trigger.event),
   };
