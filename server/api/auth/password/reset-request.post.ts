@@ -7,7 +7,7 @@ import {
 } from '#server/utils/authService';
 
 const passwordResetRequestSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().email(),
 });
 
 export default defineEventHandler(async (event) => {
