@@ -62,12 +62,16 @@
 
   // Загрузчик стирает прежний файл после новой загрузки. Сохранённую картинку
   // канала ему не отдаём: при отмене формы канал должен остаться с ней.
-  const uploadedImage = ref<string>();
+  const sessionImage = ref<string>();
 
-  watch(uploadedImage, (imageUrl) => {
-    if (imageUrl) {
-      form.imageUrl = imageUrl;
-    }
+  // Мост загрузчика и формы: загрузчик видит только файлы этой формы,
+  // а в форму попадает последняя загруженная картинка.
+  const uploadedImage = computed<string | undefined>({
+    get: () => sessionImage.value,
+    set: (imageUrl) => {
+      sessionImage.value = imageUrl;
+      form.imageUrl = imageUrl ?? '';
+    },
   });
 
   const saveDisabled = computed(() => props.busy || isImageUploading.value);
@@ -127,7 +131,7 @@
     emit('save', event.data);
   }
 
-  /** Убирает картинку у канала; файл остаётся в хранилище до сохранения формы. */
+  /** Убирает картинку у канала; файл в хранилище не удаляется: форму ещё можно отменить. */
   function removeImage(): void {
     form.imageUrl = '';
   }
@@ -275,14 +279,16 @@
           #preview
         >
           <div class="flex flex-col items-start gap-2">
+            <!-- Рамка 16:9 задана до загрузки, чтобы форма не прыгала;
+              картинка другой формы вписывается в неё целиком -->
             <img
               :src="form.imageUrl"
-              :alt="PUBLICATION_TEXT.imageAlt"
-              class="max-h-48 max-w-full rounded-lg border border-default object-contain"
+              :alt="PUBLICATION_TEXT.image"
+              decoding="async"
+              class="aspect-video w-full max-w-sm rounded-lg border border-default bg-elevated object-contain"
             />
 
             <UButton
-              type="button"
               color="neutral"
               variant="soft"
               size="sm"

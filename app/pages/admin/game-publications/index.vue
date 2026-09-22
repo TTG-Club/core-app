@@ -15,6 +15,7 @@
     PUBLICATION_LEGACY_ROUTE,
     PUBLICATION_PLATFORMS,
     PUBLICATION_STATUS_LABELS,
+    PUBLICATION_SUMMARY_SEPARATOR,
     PUBLICATION_TABS,
     PUBLICATION_TEXT,
   } from '~admin/game-publications/model';
@@ -123,7 +124,7 @@
         channel.imageUrl ? PUBLICATION_TEXT.withImage : null,
       ]
         .filter(Boolean)
-        .join(' · '),
+        .join(PUBLICATION_SUMMARY_SEPARATOR),
       scheduleSummary: formatPublicationSchedule(
         channel.schedule ?? snapshot.settings.schedule,
       ),

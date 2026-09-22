@@ -46,9 +46,13 @@ export const PUBLICATION_IMAGE_SECTION = 'game-publications';
  * показывают фото в ленте не крупнее, поэтому больше 1080 не нужно.
  */
 export const PUBLICATION_IMAGE_MAX_SIZE = '1080';
+/** Предел длины пути картинки в сервисе игр. */
+export const PUBLICATION_IMAGE_MAX_LENGTH = 512;
 /** Путь, который выдаёт загрузка сайта; сервис игр принимает только его. */
 export const PUBLICATION_IMAGE_PATTERN =
   /^\/s3\/(?:[\w-]+\/){1,4}[\w-]+(?:\.[a-z\d]{1,10})?$/i;
+/** Разделитель сведений о канале в одной строке списка. */
+export const PUBLICATION_SUMMARY_SEPARATOR = ' · ';
 /** Ошибки расписания: и у самого поля, и у любого его слота. */
 export const PUBLICATION_SCHEDULE_ERROR_PATTERN = /^schedule(?:\.|$)/;
 export const PUBLICATION_ICONS = {
@@ -155,7 +159,6 @@ export const PUBLICATION_TEXT = {
   image: 'Картинка к посту',
   imageHint:
     'Необязательно. Картинка уйдёт вместе с подборкой, без неё пост отправится только текстом. В Telegram подпись к фото короче обычного сообщения, поэтому длинная подборка придёт сразу после картинки отдельным сообщением.',
-  imageAlt: 'Картинка к посту',
   removeImage: 'Убрать картинку',
   invalidImage: 'Загрузите картинку заново',
   withImage: 'с картинкой',

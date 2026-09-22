@@ -2,6 +2,7 @@ import { z as validation } from 'zod';
 
 import {
   PUBLICATION_DEFAULT_PLATFORM,
+  PUBLICATION_IMAGE_MAX_LENGTH,
   PUBLICATION_IMAGE_PATTERN,
   PUBLICATION_LEGACY_MAX_GAMES,
   PUBLICATION_MAX_CHANNELS,
@@ -13,6 +14,12 @@ import {
   PUBLICATION_TEXT,
   PUBLICATION_VK_ID_PATTERN,
 } from './constants';
+
+/** Путь картинки из загрузки сайта — тот же, что принимает сервис игр. */
+const publicationImageSchema = validation
+  .string()
+  .max(PUBLICATION_IMAGE_MAX_LENGTH)
+  .regex(PUBLICATION_IMAGE_PATTERN, PUBLICATION_TEXT.invalidImage);
 
 export const publicationPlatformSchema = validation.enum([
   'DISCORD',
@@ -94,14 +101,7 @@ export const publicationChannelFormSchema = validation
     imageUrl: validation
       .string()
       .trim()
-      .pipe(
-        validation.union([
-          validation
-            .string()
-            .regex(PUBLICATION_IMAGE_PATTERN, PUBLICATION_TEXT.invalidImage),
-          validation.literal(''),
-        ]),
-      )
+      .pipe(validation.union([publicationImageSchema, validation.literal('')]))
       .default(''),
   })
   .refine(
@@ -169,7 +169,7 @@ export const publicationChannelSchema = validation.object({
   revision: validation.number().int().nonnegative(),
   nextRunAt: validation.iso.datetime().nullable(),
   // Прежний API картинку не возвращает: такие каналы публикуются без неё.
-  imageUrl: validation.string().nullable().default(null),
+  imageUrl: publicationImageSchema.nullable().default(null),
 });
 export const publicationOverviewSchema = validation.object({
   settings: validation.object({

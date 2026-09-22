@@ -104,6 +104,15 @@ describe('валидация публикаций игр', () => {
     });
 
     expect(parsed.channels[0]?.imageUrl).toBe(image);
+
+    expect(() =>
+      parsePublicationOverview({
+        ...overview,
+        channels: [
+          { ...savedChannel, imageUrl: 'https://evil.example/cover.png' },
+        ],
+      }),
+    ).toThrow();
   });
 
   it('проверяет ID Telegram, сохраняет прежний пустым полем и не возвращает секреты из API', () => {
