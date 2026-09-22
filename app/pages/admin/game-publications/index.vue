@@ -15,6 +15,7 @@
     PUBLICATION_LEGACY_ROUTE,
     PUBLICATION_PLATFORMS,
     PUBLICATION_STATUS_LABELS,
+    PUBLICATION_SUMMARY_SEPARATOR,
     PUBLICATION_TABS,
     PUBLICATION_TEXT,
   } from '~admin/game-publications/model';
@@ -106,7 +107,6 @@
 
     return snapshot.channels.map((channel) => ({
       ...channel,
-      platformLabel: PUBLICATION_PLATFORMS[channel.platform].label,
       testDisabled:
         settingsDisabled.value
         || (channel.platform === PUBLICATION_PLATFORMS.TELEGRAM.value
@@ -116,10 +116,15 @@
       badge: channel.enabled
         ? PUBLICATION_CHANNEL_BADGES.active
         : PUBLICATION_CHANNEL_BADGES.paused,
-      scheduleLabel:
+      summary: [
+        PUBLICATION_PLATFORMS[channel.platform].label,
         channel.schedule === null
           ? PUBLICATION_TEXT.inherited
           : PUBLICATION_TEXT.individual,
+        channel.imageUrl ? PUBLICATION_TEXT.withImage : null,
+      ]
+        .filter(Boolean)
+        .join(PUBLICATION_SUMMARY_SEPARATOR),
       scheduleSummary: formatPublicationSchedule(
         channel.schedule ?? snapshot.settings.schedule,
       ),
@@ -432,7 +437,7 @@
                     </h3>
 
                     <p class="text-sm text-muted">
-                      {{ channel.platformLabel }} · {{ channel.scheduleLabel }}
+                      {{ channel.summary }}
                     </p>
                   </div>
 

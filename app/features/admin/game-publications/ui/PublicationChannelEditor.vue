@@ -3,9 +3,14 @@
 
   import type { PublicationChannel, PublicationChannelForm } from '../model';
 
+  import { UploadImage } from '~ui/upload';
+
   import {
     PUBLICATION_DEFAULT_PLATFORM,
     PUBLICATION_DEFAULT_SLOT,
+    PUBLICATION_ICONS,
+    PUBLICATION_IMAGE_MAX_SIZE,
+    PUBLICATION_IMAGE_SECTION,
     PUBLICATION_INITIAL_REVISION,
     PUBLICATION_PLATFORM_OPTIONS,
     PUBLICATION_PLATFORMS,
@@ -50,7 +55,31 @@
     ],
     revision: props.channel?.revision ?? PUBLICATION_INITIAL_REVISION,
     isNew: props.channel === null,
+    imageUrl: props.channel?.imageUrl ?? '',
   });
+
+  const isImageUploading = ref(false);
+
+  // Картинка лежит в хранилище того сайта, где её загрузили: у дева и боя они
+  // разные. Локальный адрес сервису недоступен — тогда отдаём только путь.
+  const { origin } = useRequestURL();
+  const imageSite = origin.startsWith('https://') ? origin : '';
+
+  // Загрузчик стирает прежний файл после новой загрузки. Сохранённую картинку
+  // канала ему не отдаём: при отмене формы канал должен остаться с ней.
+  const sessionImage = ref<string>();
+
+  // Мост загрузчика и формы: загрузчик видит только файлы этой формы,
+  // а в форму попадает последняя загруженная картинка.
+  const uploadedImage = computed<string | undefined>({
+    get: () => sessionImage.value,
+    set: (imageUrl) => {
+      sessionImage.value = imageUrl;
+      form.imageUrl = imageUrl ? imageSite + imageUrl : '';
+    },
+  });
+
+  const saveDisabled = computed(() => props.busy || isImageUploading.value);
 
   const webhookDescription = computed(() =>
     props.channel
@@ -99,7 +128,17 @@
 
   /** Передаёт валидную форму без сохранения адреса канала в общем состоянии приложения. */
   function submit(event: FormSubmitEvent<PublicationChannelForm>): void {
+    // Без этой проверки канал сохранился бы без «догоняющей» картинки.
+    if (isImageUploading.value) {
+      return;
+    }
+
     emit('save', event.data);
+  }
+
+  /** Убирает картинку у канала; файл в хранилище не удаляется: форму ещё можно отменить. */
+  function removeImage(): void {
+    form.imageUrl = '';
   }
 
   /** Показывает первое поле, которое помешало сохранению. */
@@ -229,6 +268,45 @@
       />
     </UFormField>
 
+    <UFormField
+      name="imageUrl"
+      :label="PUBLICATION_TEXT.image"
+      :description="PUBLICATION_TEXT.imageHint"
+    >
+      <UploadImage
+        v-model="uploadedImage"
+        v-model:uploading="isImageUploading"
+        :section="PUBLICATION_IMAGE_SECTION"
+        :max-size="PUBLICATION_IMAGE_MAX_SIZE"
+      >
+        <template
+          v-if="form.imageUrl"
+          #preview
+        >
+          <div class="flex flex-col items-start gap-2">
+            <!-- Рамка 16:9 задана до загрузки, чтобы форма не прыгала;
+              картинка другой формы вписывается в неё целиком -->
+            <img
+              :src="form.imageUrl"
+              :alt="PUBLICATION_TEXT.image"
+              decoding="async"
+              class="aspect-video w-full max-w-sm rounded-lg border border-default bg-elevated object-contain"
+            />
+
+            <UButton
+              color="neutral"
+              variant="soft"
+              size="sm"
+              :icon="PUBLICATION_ICONS.remove"
+              :disabled="saveDisabled"
+              @click.left.exact.prevent="removeImage"
+              >{{ PUBLICATION_TEXT.removeImage }}</UButton
+            >
+          </div>
+        </template>
+      </UploadImage>
+    </UFormField>
+
     <USwitch
       v-model="form.enabled"
       :label="PUBLICATION_TEXT.channelEnabled"
@@ -257,6 +335,7 @@
       <UButton
         type="submit"
         :loading="busy"
+        :disabled="saveDisabled"
         >{{ PUBLICATION_TEXT.save }}</UButton
       >
 

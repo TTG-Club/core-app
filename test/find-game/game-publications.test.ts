@@ -71,6 +71,56 @@ describe('валидация публикаций игр', () => {
     expect(legacy.vkConfigured).toBe(false);
     expect(legacy.vkGroupConfigured).toBe(false);
     expect(legacy.channels[0]?.platform).toBe('DISCORD');
+    expect(legacy.channels[0]?.imageUrl).toBeNull();
+  });
+
+  it('принимает картинку только из загрузки сайта, а пустое поле — пост без картинки', () => {
+    const image = '/s3/game-publications/admin/1758560000000-cover.webp';
+    const address = `https://dev.ttg.club${image}`;
+
+    expect(newChannel.imageUrl).toBe('');
+
+    expect(
+      publicationChannelFormSchema.parse({
+        ...newChannel,
+        imageUrl: ` ${image} `,
+      }).imageUrl,
+    ).toBe(image);
+
+    // Сайт передаёт полный адрес: у дева и боя разные хранилища картинок.
+    expect(
+      publicationChannelFormSchema.parse({ ...newChannel, imageUrl: address })
+        .imageUrl,
+    ).toBe(address);
+
+    for (const imageUrl of [
+      'https://evil.example/cover.png',
+      'http://dev.ttg.club/s3/a/b.webp',
+      '/s3/a/../b.png',
+      '/s3/cover.png',
+      '/api/find-game/admin/x',
+    ]) {
+      expect(
+        publicationChannelFormSchema.safeParse({ ...newChannel, imageUrl })
+          .success,
+      ).toBe(false);
+    }
+
+    const parsed = parsePublicationOverview({
+      ...overview,
+      channels: [{ ...savedChannel, imageUrl: address }],
+    });
+
+    expect(parsed.channels[0]?.imageUrl).toBe(address);
+
+    expect(() =>
+      parsePublicationOverview({
+        ...overview,
+        channels: [
+          { ...savedChannel, imageUrl: 'https://evil.example/cover.png' },
+        ],
+      }),
+    ).toThrow();
   });
 
   it('проверяет ID Telegram, сохраняет прежний пустым полем и не возвращает секреты из API', () => {
@@ -514,6 +564,41 @@ describe('жизненный цикл настроек Discord', () => {
           webhookUrl: '',
         }),
         retry: 0,
+      }),
+    );
+  });
+
+  it('передаёт картинку канала, а пустой строкой убирает её', async () => {
+    const { publications } = mount();
+    const image = '/s3/game-publications/admin/1758560000000-cover.webp';
+
+    request.mockResolvedValue(overview);
+
+    expect(
+      await publications.saveChannel(null, { ...newChannel, imageUrl: image }),
+    ).toBe(true);
+
+    expect(request).toHaveBeenLastCalledWith(
+      expect.stringContaining('/channels'),
+      expect.objectContaining({
+        body: expect.objectContaining({ imageUrl: image }),
+      }),
+    );
+
+    expect(
+      await publications.saveChannel(savedChannel.id, {
+        ...newChannel,
+        isNew: false,
+        webhookUrl: '',
+        revision: savedChannel.revision,
+      }),
+    ).toBe(true);
+
+    expect(request).toHaveBeenLastCalledWith(
+      expect.stringContaining(`/channels/${savedChannel.id}`),
+      expect.objectContaining({
+        method: 'PUT',
+        body: expect.objectContaining({ imageUrl: '' }),
       }),
     );
   });
