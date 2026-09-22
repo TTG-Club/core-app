@@ -60,6 +60,11 @@
 
   const isImageUploading = ref(false);
 
+  // Картинка лежит в хранилище того сайта, где её загрузили: у дева и боя они
+  // разные. Локальный адрес сервису недоступен — тогда отдаём только путь.
+  const { origin } = useRequestURL();
+  const imageSite = origin.startsWith('https://') ? origin : '';
+
   // Загрузчик стирает прежний файл после новой загрузки. Сохранённую картинку
   // канала ему не отдаём: при отмене формы канал должен остаться с ней.
   const sessionImage = ref<string>();
@@ -70,7 +75,7 @@
     get: () => sessionImage.value,
     set: (imageUrl) => {
       sessionImage.value = imageUrl;
-      form.imageUrl = imageUrl ?? '';
+      form.imageUrl = imageUrl ? imageSite + imageUrl : '';
     },
   });
 

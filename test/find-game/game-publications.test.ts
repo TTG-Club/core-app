@@ -76,6 +76,7 @@ describe('валидация публикаций игр', () => {
 
   it('принимает картинку только из загрузки сайта, а пустое поле — пост без картинки', () => {
     const image = '/s3/game-publications/admin/1758560000000-cover.webp';
+    const address = `https://dev.ttg.club${image}`;
 
     expect(newChannel.imageUrl).toBe('');
 
@@ -86,8 +87,15 @@ describe('валидация публикаций игр', () => {
       }).imageUrl,
     ).toBe(image);
 
+    // Сайт передаёт полный адрес: у дева и боя разные хранилища картинок.
+    expect(
+      publicationChannelFormSchema.parse({ ...newChannel, imageUrl: address })
+        .imageUrl,
+    ).toBe(address);
+
     for (const imageUrl of [
       'https://evil.example/cover.png',
+      'http://dev.ttg.club/s3/a/b.webp',
       '/s3/a/../b.png',
       '/s3/cover.png',
       '/api/find-game/admin/x',
@@ -100,10 +108,10 @@ describe('валидация публикаций игр', () => {
 
     const parsed = parsePublicationOverview({
       ...overview,
-      channels: [{ ...savedChannel, imageUrl: image }],
+      channels: [{ ...savedChannel, imageUrl: address }],
     });
 
-    expect(parsed.channels[0]?.imageUrl).toBe(image);
+    expect(parsed.channels[0]?.imageUrl).toBe(address);
 
     expect(() =>
       parsePublicationOverview({
