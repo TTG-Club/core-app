@@ -3,9 +3,14 @@
 
   import type { PublicationChannel, PublicationChannelForm } from '../model';
 
+  import { UploadImage } from '~ui/upload';
+
   import {
     PUBLICATION_DEFAULT_PLATFORM,
     PUBLICATION_DEFAULT_SLOT,
+    PUBLICATION_ICONS,
+    PUBLICATION_IMAGE_MAX_SIZE,
+    PUBLICATION_IMAGE_SECTION,
     PUBLICATION_INITIAL_REVISION,
     PUBLICATION_PLATFORM_OPTIONS,
     PUBLICATION_PLATFORMS,
@@ -50,7 +55,22 @@
     ],
     revision: props.channel?.revision ?? PUBLICATION_INITIAL_REVISION,
     isNew: props.channel === null,
+    imageUrl: props.channel?.imageUrl ?? '',
   });
+
+  const isImageUploading = ref(false);
+
+  // Загрузчик стирает прежний файл после новой загрузки. Сохранённую картинку
+  // канала ему не отдаём: при отмене формы канал должен остаться с ней.
+  const uploadedImage = ref<string>();
+
+  watch(uploadedImage, (imageUrl) => {
+    if (imageUrl) {
+      form.imageUrl = imageUrl;
+    }
+  });
+
+  const saveDisabled = computed(() => props.busy || isImageUploading.value);
 
   const webhookDescription = computed(() =>
     props.channel
@@ -99,7 +119,17 @@
 
   /** Передаёт валидную форму без сохранения адреса канала в общем состоянии приложения. */
   function submit(event: FormSubmitEvent<PublicationChannelForm>): void {
+    // Без этой проверки канал сохранился бы без «догоняющей» картинки.
+    if (isImageUploading.value) {
+      return;
+    }
+
     emit('save', event.data);
+  }
+
+  /** Убирает картинку у канала; файл остаётся в хранилище до сохранения формы. */
+  function removeImage(): void {
+    form.imageUrl = '';
   }
 
   /** Показывает первое поле, которое помешало сохранению. */
@@ -229,6 +259,43 @@
       />
     </UFormField>
 
+    <UFormField
+      name="imageUrl"
+      :label="PUBLICATION_TEXT.image"
+      :description="PUBLICATION_TEXT.imageHint"
+    >
+      <UploadImage
+        v-model="uploadedImage"
+        v-model:uploading="isImageUploading"
+        :section="PUBLICATION_IMAGE_SECTION"
+        :max-size="PUBLICATION_IMAGE_MAX_SIZE"
+      >
+        <template
+          v-if="form.imageUrl"
+          #preview
+        >
+          <div class="flex flex-col items-start gap-2">
+            <img
+              :src="form.imageUrl"
+              :alt="PUBLICATION_TEXT.imageAlt"
+              class="max-h-48 max-w-full rounded-lg border border-default object-contain"
+            />
+
+            <UButton
+              type="button"
+              color="neutral"
+              variant="soft"
+              size="sm"
+              :icon="PUBLICATION_ICONS.remove"
+              :disabled="saveDisabled"
+              @click.left.exact.prevent="removeImage"
+              >{{ PUBLICATION_TEXT.removeImage }}</UButton
+            >
+          </div>
+        </template>
+      </UploadImage>
+    </UFormField>
+
     <USwitch
       v-model="form.enabled"
       :label="PUBLICATION_TEXT.channelEnabled"
@@ -257,6 +324,7 @@
       <UButton
         type="submit"
         :loading="busy"
+        :disabled="saveDisabled"
         >{{ PUBLICATION_TEXT.save }}</UButton
       >
 

@@ -235,7 +235,10 @@ export function useGamePublications() {
     return mutate('/settings', 'PUT', settings);
   }
 
-  /** Передаёт null для наследования и пустой адрес для сохранения прежнего. */
+  /**
+   * Передаёт null для наследования и пустой адрес для сохранения прежнего.
+   * Картинка передаётся всегда: пустая строка убирает её у канала.
+   */
   function saveChannel(
     channelId: string | null,
     form: PublicationChannelForm,
@@ -252,6 +255,7 @@ export function useGamePublications() {
         webhookUrl: form.platform === 'DISCORD' ? form.webhookUrl : '',
         schedule: form.inherit ? null : form.schedule,
         revision: form.revision,
+        imageUrl: form.imageUrl,
       },
     );
   }
