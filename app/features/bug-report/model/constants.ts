@@ -484,8 +484,11 @@ export const SCREENSHOT_MODAL_UI = {
   content: 'max-w-[96vw]',
 };
 
-/** Переключатель окна: показать снимок в его настоящем размере. */
-export const SCREENSHOT_MODAL_ZOOM_LABEL = 'Настоящий размер';
+/**
+ * Переключатель окна: показать снимок крупнее — во всю ширину окна, а если он
+ * шире окна, то в его настоящем размере.
+ */
+export const SCREENSHOT_MODAL_ZOOM_LABEL = 'Увеличить';
 
 /** Переключатель окна: вернуть снимок, вписанный в экран. */
 export const SCREENSHOT_MODAL_FIT_LABEL = 'Вписать в экран';
