@@ -98,13 +98,15 @@ export interface CreatureAbilitiesResponse {
 }
 
 export interface CreatureHitResponse {
-  hit: number;
+  /** `null` у призванных существ: их хиты описаны в `text` (`avatar-of-death-dmg`). */
+  hit: number | null;
   formula: string;
   text: string;
 }
 
 export interface CreatureAbilityResponse {
-  value: string;
+  /** Значение характеристики API отдаёт числом, в отличие от `mod` и `sav`. */
+  value: number;
   mod: string;
   sav: string;
 }

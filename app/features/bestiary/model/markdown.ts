@@ -113,8 +113,9 @@ function getStats(creature: CreatureDetailResponse): MarkdownStat[] {
       'Хиты',
       joinStat(
         [
-          // `hit` — число, экранировать в нём нечего.
-          String(hit.hit),
+          // `hit` — число, экранировать в нём нечего; у призванных существ его
+          // нет, и хиты описаны одним текстом.
+          hit.hit === null ? '' : String(hit.hit),
           toParenthesized(escapeMarkdown(hit.formula)),
           escapeMarkdown(hit.text),
         ],
@@ -193,9 +194,10 @@ function getAbilitiesTable(abilities: CreatureAbilitiesResponse): string {
       // Поля ответа названы сокращённо, поэтому переименовываются на месте.
       const { value, mod: modifier, sav: save } = abilities[key];
 
+      // Значение — число, экранировать в нём нечего.
       return [
         label,
-        escapeMarkdownCell(value),
+        String(value),
         escapeMarkdownCell(modifier),
         escapeMarkdownCell(save),
       ];
