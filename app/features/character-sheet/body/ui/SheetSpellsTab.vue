@@ -21,6 +21,7 @@
     CLASS_SPELL_BADGE,
     CUSTOM_SPELL_BADGE_HINT,
     getFilterChipClass,
+    getGrantedCantripUrls,
     getInnateSpellMenuItems,
     getPreparedSpellsHint,
     getPreparedSpellsValue,
@@ -33,6 +34,8 @@
     getSpellSlotCircles,
     getSpellSlotSummary,
     getSpellStatRows,
+    GRANTED_CANTRIP_GROUP_LABEL,
+    GRANTED_CANTRIP_GROUP_LEVEL,
     INNATE_SPELL_GROUP_LABEL,
     INNATE_SPELL_GROUP_LEVEL,
     isCustomSpell,
@@ -48,11 +51,11 @@
     SHEET_SPELL_ROW_LABELS,
     SHEET_STATIC_STAT_CLASS,
     SHEET_TAB_EMPTY_LABELS,
+    sortSpellsByLevelAndName,
     SPELL_DAMAGE_ROLL_HINT_LABEL,
     SPELL_DAMAGE_ROLL_LABEL,
     SPELL_DAMAGE_STAT_LABEL,
     SPELL_FILTER_LABELS,
-    SPELL_NAME_SORT_LOCALE,
     SPELL_SLOTS_LABEL,
     SPELLCASTING_STAT_LABELS,
     SPELLCASTING_TILE_LABELS,
@@ -65,8 +68,8 @@
     isPrepared: boolean;
 
     /**
-     * Квадрат переключает подготовку: у заговоров он остаётся меткой, а не
-     * кнопкой — подготовки они не требуют.
+     * Квадрат переключает подготовку: у выданных заговоров он остаётся меткой,
+     * а не кнопкой — такой заговор подготовлен всегда.
      */
     interactive: boolean;
 
@@ -110,14 +113,18 @@
   const props = defineProps<{
     spells: CharacterSpell[];
 
-    /** Заклинания вида и черт: они идут отдельной группой над кругами книги. */
+    /**
+     * Заклинания вида и черт: они идут отдельной группой над кругами книги, а
+     * заговоры — группой выданных заговоров.
+     */
     innateSpells: CharacterSpell[];
 
     /**
      * Заклинания, выданные умениями класса: в списке они стоят в своём круге
-     * наравне с книгой. Выдача с отметкой «Подготавливать не нужно» приходит
-     * подготовленной и места среди подготовленных не занимает, остальную
-     * готовит игрок (см. `takesPreparationSpace`).
+     * наравне с книгой, заговоры — в группе выданных заговоров. Выдача с
+     * отметкой «Подготавливать не нужно» приходит подготовленной и места среди
+     * подготовленных не занимает, остальную готовит игрок (см.
+     * `takesPreparationSpace`).
      */
     classSpells: CharacterSpell[];
 
@@ -220,9 +227,8 @@
   }
 
   /**
-   * Плитки счёта в шапке вкладки: заклинания кругов 1+ персонаж
-   * подготавливает, а заговоры знает — у каждого своя колонка таблицы класса,
-   * поэтому и плитки идут отдельные.
+   * Плитки счёта в шапке вкладки: у заклинаний кругов 1+ и у заговоров своя
+   * колонка таблицы класса, поэтому и плитки идут отдельные.
    */
   const preparedStats = computed(() =>
     PREPARED_KINDS.map((kind) => {
@@ -248,13 +254,17 @@
   );
 
   /**
-   * Предел выбран целиком: подготовить ещё одно заклинание уже нельзя. Заговоры
-   * предела подготовки не знают — они всегда доступны.
+   * Предел выбран целиком: подготовить ещё одно заклинание (или заговор — у
+   * них свой предел) уже нельзя.
    *
+   * @param kind вид счёта заклинания.
    * @returns true — предел достигнут.
    */
-  function isPreparedLimitReached(): boolean {
-    const { value, count } = props.spellcasting.prepared;
+  function isPreparedLimitReached(kind: PreparedSpellKind): boolean {
+    const { value, count } =
+      kind === 'cantrips'
+        ? props.spellcasting.preparedCantrips
+        : props.spellcasting.prepared;
 
     return value !== null && count >= value;
   }
@@ -509,9 +519,11 @@
     granted: boolean,
     countsInLimit: boolean,
   ): PreparedIconState {
-    // Заговор всегда доступен: подготовки он не требует ни по одному классу, а
-    // колонка «Заговоры» таблицы класса говорит, сколько их можно знать
-    if (getSpellPreparedKind(spell) === 'cantrips') {
+    const kind = getSpellPreparedKind(spell);
+
+    // Выданный заговор (вид, черта, умение класса) подготовлен всегда: снять
+    // его нельзя, а заговоры про запас игрок держит в книге и отмечает сам
+    if (granted && kind === 'cantrips') {
       return {
         isPrepared: true,
         interactive: false,
@@ -552,7 +564,7 @@
       // Предел выбран целиком — значок остаётся нажимаемым: подсказка и
       // предупреждение объясняют отказ понятнее, чем погашенная кнопка.
       tooltip:
-        !isPrepared && isPreparedLimitReached()
+        !isPrepared && isPreparedLimitReached(kind)
           ? `${label}. ${PREPARED_SPELL_TOGGLE_LABELS.limit}`
           : label,
       ariaLabel: `${label}: ${spell.name}`,
@@ -560,60 +572,90 @@
   }
 
   /**
-   * Заклинания классовых умений, встающие в круги: то, что игрок уже завёл в
-   * книге руками, вторым рядом не показывается — правки и удаление достаются
-   * записи книги.
+   * Заклинания классовых умений, которые стоят в списке. Заклинание круга,
+   * которое игрок уже завёл в книге руками, вторым рядом не показывается —
+   * правки и удаление достаются записи книги. У заговора наоборот: выданный
+   * стоит в группе выданных, а копия в книге скрыта (`bookSpells`).
    */
-  const groupedClassSpells = computed(() => {
+  const shownClassSpells = computed(() => {
     const bookUrls = new Set(props.spells.map((spell) => spell.url));
 
     return props.classSpells.filter(
       (spell) =>
-        !bookUrls.has(spell.url)
-        && matchesSpellFilter(spell, spellFilter.value),
+        getSpellPreparedKind(spell) === 'cantrips' || !bookUrls.has(spell.url),
     );
   });
 
-  /** URL заклинаний класса, стоящих в кругах: по ним строка узнаёт себя. */
+  /** URL заклинаний класса в списке: по ним строка узнаёт себя. */
   const classSpellUrls = computed(
-    () => new Set(groupedClassSpells.value.map((spell) => spell.url)),
+    () => new Set(shownClassSpells.value.map((spell) => spell.url)),
   );
 
+  /**
+   * Книга без копий выданных заговоров: заговор от вида, черты или умения
+   * стоит в группе выданных, и второй строкой в «Заговорах» он только мешал бы
+   * (в счёт такая копия тоже не идёт, см. `getGrantedCantripUrls`).
+   */
+  const bookSpells = computed(() => {
+    const grantedCantripUrls = getGrantedCantripUrls(character.value);
+
+    return props.spells.filter((spell) => !grantedCantripUrls.has(spell.url));
+  });
+
   const displayGroups = computed(() => {
-    // Заклинания класса идут в круги вместе с книгой: заговор волшебника игрок
-    // ищет среди заговоров, а не в отдельной группе
+    const isCantrip = (spell: CharacterSpell) =>
+      getSpellPreparedKind(spell) === 'cantrips';
+
+    const matchesFilter = (spell: CharacterSpell) =>
+      matchesSpellFilter(spell, spellFilter.value);
+
+    // Заклинания 1+ круга от умений класса идут в круги вместе с книгой:
+    // заклинание домена игрок ищет среди заклинаний своего круга
     const regularGroups = getSpellGroups(
       [
-        ...props.spells.filter((spell) =>
-          matchesSpellFilter(spell, spellFilter.value),
+        ...bookSpells.value.filter(matchesFilter),
+        ...shownClassSpells.value.filter(
+          (spell) => !isCantrip(spell) && matchesFilter(spell),
         ),
-        ...groupedClassSpells.value,
       ],
       groupSlotLevels.value,
     ).map((group) => ({ ...group, innate: false }));
 
-    const innateSpells = props.innateSpells.filter((spell) =>
-      matchesSpellFilter(spell, spellFilter.value),
+    // Выданные заговоры — от вида, черты, предыстории, умения класса — стоят
+    // своей группой: они подготовлены всегда, и в «Заговорах» остаётся только
+    // книга, из которой игрок отмечает свои
+    const grantedCantrips = [
+      ...props.innateSpells,
+      ...shownClassSpells.value,
+    ].filter((spell) => isCantrip(spell) && matchesFilter(spell));
+
+    const innateSpells = props.innateSpells.filter(
+      (spell) => !isCantrip(spell) && matchesFilter(spell),
     );
 
-    const groups = innateSpells.length
-      ? [
-          {
-            level: INNATE_SPELL_GROUP_LEVEL,
-            label: INNATE_SPELL_GROUP_LABEL,
-            spells: [...innateSpells].sort(
-              (firstSpell, secondSpell) =>
-                firstSpell.level - secondSpell.level
-                || firstSpell.name.localeCompare(
-                  secondSpell.name,
-                  SPELL_NAME_SORT_LOCALE,
-                ),
-            ),
-            innate: true,
-          },
-          ...regularGroups,
-        ]
-      : regularGroups;
+    const groups = [
+      ...(grantedCantrips.length
+        ? [
+            {
+              level: GRANTED_CANTRIP_GROUP_LEVEL,
+              label: GRANTED_CANTRIP_GROUP_LABEL,
+              spells: sortSpellsByLevelAndName(grantedCantrips),
+              innate: true,
+            },
+          ]
+        : []),
+      ...(innateSpells.length
+        ? [
+            {
+              level: INNATE_SPELL_GROUP_LEVEL,
+              label: INNATE_SPELL_GROUP_LABEL,
+              spells: sortSpellsByLevelAndName(innateSpells),
+              innate: true,
+            },
+          ]
+        : []),
+      ...regularGroups,
+    ];
 
     return groups.map((group) => {
       const slotRows = group.innate
@@ -643,10 +685,10 @@
           const isCustom = isCustomSpell(spell);
           const isExpanded = isCustom && expandedUrls.value.has(spell.url);
 
-          // Заклинание класса стоит в круге, а ведётся как врождённое: и
-          // пометка подготовки, и меню строки у них общие
-          const isClassGranted =
-            !group.innate && classSpellUrls.value.has(spell.url);
+          // Заклинание класса стоит в круге (заговор — в группе выданных), а
+          // ведётся как врождённое: и пометка подготовки, и меню строки у них
+          // общие
+          const isClassGranted = classSpellUrls.value.has(spell.url);
 
           const isGranted = group.innate || isClassGranted;
 
@@ -1015,8 +1057,8 @@
           <div class="relative flex items-center gap-3 p-3">
             <!-- Значок заклинания — переключатель подготовки: нажатие метит
               заклинание подготовленным, повторное — снимает пометку. Горит при
-              этом только сам квадрат, строка остаётся обычной. У заговора
-              квадрат ничего не переключает: подготовки заговор не требует -->
+              этом только сам квадрат, строка остаётся обычной. У выданного
+              заговора квадрат ничего не переключает: он подготовлен всегда -->
             <UTooltip :text="spell.preparedIcon.tooltip">
               <button
                 v-if="spell.preparedIcon.interactive"

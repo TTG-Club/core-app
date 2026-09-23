@@ -43,7 +43,7 @@ import {
   SHEET_NOTE_LABELS,
 } from './constants';
 import { DEFAULT_CHARACTER } from './mock';
-import { normalizeCatalogName } from './utils';
+import { normalizeCatalogName, settleBookCantripsPrepared } from './utils';
 
 /**
  * Схема сохранённого персонажа. Каждое поле снабжено `catch`-дефолтом из
@@ -1420,12 +1420,16 @@ const characterSchema = z
   })
   // Легаси-список владений спасбросками уходит из документа, как только тот
   // разобран: дальше по листу ходят только сами записи спасбросков. Тем же
-  // проходом лист приводится к мультиклассовой форме.
+  // проходом лист приводится к мультиклассовой форме, а заговоры книги без
+  // пометки (листы, сохранённые, пока заговоры не подготавливались) получают
+  // её — по уже нормализованным классам, от которых зависит предел.
   .transform(({ savingThrowProficiencies, savingThrows, ...character }) =>
-    normalizeCharacterClasses({
-      ...character,
-      savingThrows: toSavingThrows(savingThrows, savingThrowProficiencies),
-    }),
+    settleBookCantripsPrepared(
+      normalizeCharacterClasses({
+        ...character,
+        savingThrows: toSavingThrows(savingThrows, savingThrowProficiencies),
+      }),
+    ),
   );
 
 /**
