@@ -297,6 +297,7 @@ import {
   DEFAULT_ROLL_DICE_FACES,
   DEFAULT_ROLL_MODE,
   DEFAULT_WEAPON_ATTACK_ABILITY,
+  DEXTERITY_WEAPON_ABILITY,
   DICE_NOTATION_LETTER,
   EXHAUSTION_D20_PENALTY_PER_LEVEL,
   EXHAUSTION_LABELS,
@@ -4916,8 +4917,10 @@ export function getHeavyWeaponHint(ability: AbilityKey): string {
 }
 
 /**
- * Характеристика конкретного оружия: фехтовальное и дальнобойное бьёт от
- * Ловкости, остальное — от базовой характеристики атаки из настроек листа.
+ * Характеристика конкретного оружия: дальнобойное бьёт от Ловкости,
+ * фехтовальное — от лучшей из Ловкости и базовой характеристики атаки (по
+ * правилам игрок выбирает между Силой и Ловкостью), остальное — от базовой
+ * характеристики из настроек листа.
  *
  * @param character персонаж.
  * @param weapon параметры оружия.
@@ -4927,9 +4930,16 @@ function getWeaponAbility(
   character: Character,
   weapon: InventoryWeapon,
 ): AbilityKey {
-  return weapon.finesse || weapon.ranged
-    ? 'dexterity'
-    : getWeaponAttackAbility(character);
+  const baseAbility = getWeaponAttackAbility(character);
+
+  if (weapon.finesse) {
+    return getAbilityModifier(character, baseAbility)
+      > getAbilityModifier(character, DEXTERITY_WEAPON_ABILITY)
+      ? baseAbility
+      : DEXTERITY_WEAPON_ABILITY;
+  }
+
+  return weapon.ranged ? DEXTERITY_WEAPON_ABILITY : baseAbility;
 }
 
 /**

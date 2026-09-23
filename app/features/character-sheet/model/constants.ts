@@ -1028,6 +1028,12 @@ export const ARMOR_CLASS_LABELS: Record<
  */
 export const DEFAULT_WEAPON_ATTACK_ABILITY: AbilityKey = 'strength';
 
+/**
+ * Характеристика дальнобойного оружия и альтернатива базовой у фехтовального:
+ * по правилам это Ловкость независимо от настройки листа.
+ */
+export const DEXTERITY_WEAPON_ABILITY: AbilityKey = 'dexterity';
+
 /** Значение «Авто (по правилам)» в селекте характеристики атаки оружием. */
 export const WEAPON_ATTACK_ABILITY_AUTO = 'auto';
 
@@ -1044,10 +1050,10 @@ export const WEAPON_ATTACK_ABILITY_OPTIONS: Array<{
 export const WEAPON_ATTACK_ABILITY_AUTO_HINT = `По правилам: ${ABILITY_LABELS[DEFAULT_WEAPON_ATTACK_ABILITY]}`;
 
 /**
- * Пояснение к исключению из базовой характеристики: фехтовальное и
- * дальнобойное оружие считается от Ловкости независимо от настройки.
+ * Пояснение к исключениям из базовой характеристики: дальнобойное оружие
+ * считается от Ловкости, фехтовальное — от лучшей из Ловкости и настройки.
  */
-export const WEAPON_ATTACK_FINESSE_HINT = `Фехтовальное и дальнобойное оружие бьёт от характеристики «${ABILITY_LABELS.dexterity}» независимо от настройки.`;
+export const WEAPON_ATTACK_FINESSE_HINT = `Дальнобойное оружие бьёт от характеристики «${ABILITY_LABELS[DEXTERITY_WEAPON_ABILITY]}», фехтовальное — от лучшей из «${ABILITY_LABELS[DEXTERITY_WEAPON_ABILITY]}» и базовой характеристики.`;
 
 /** Вкладка модалки настроек листа с правилом подсчёта атаки оружием. */
 export const SHEET_SETTINGS_WEAPON_TAB = 'weapon-attack';
