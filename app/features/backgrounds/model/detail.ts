@@ -2,11 +2,30 @@ import type { NameResponse, SourceResponse } from '~/shared/types';
 
 import type { BackgroundToolCategory } from './tool-category';
 
-import { BACKGROUND_DETAIL_LABELS } from './constants';
+import { kebabCase } from 'es-toolkit';
+
+import { EFFECT_SKILL_OPTIONS } from '~active-effects/model';
+
+import {
+  BACKGROUND_DETAIL_LABELS,
+  SKILL_GLOSSARY_URL_SUFFIX,
+} from './constants';
 import {
   findBackgroundToolCategory,
   toBackgroundToolCategoryMarker,
 } from './tool-category';
+
+/**
+ * Адреса статей глоссария о навыках по названию навыка. Собраны из общего
+ * списка навыков, а не своим перечнем: так они не разъедутся при
+ * переименовании. Ключ навыка `sleightOfHand` даёт адрес `sleight-of-hand-phb`.
+ */
+const SKILL_GLOSSARY_URLS = new Map<string, string>(
+  EFFECT_SKILL_OPTIONS.map((skill) => [
+    skill.label,
+    `${kebabCase(skill.value)}${SKILL_GLOSSARY_URL_SUFFIX}`,
+  ]),
+);
 
 /** Ссылка на запись справочника со снимком названия. */
 export interface BackgroundEntityRef {
@@ -124,6 +143,30 @@ export function getBackgroundToolNodes(
   }
 
   return nodes;
+}
+
+/**
+ * Навыки предыстории для страницы: каждый известный навык — ссылка на его
+ * статью в глоссарии, незнакомое название остаётся текстом.
+ *
+ * @param background деталь предыстории.
+ * @returns разметка строки навыков.
+ */
+export function getBackgroundSkillNode(
+  background: BackgroundDetailResponse,
+): string {
+  return background.skillProficiencies
+    .split(BACKGROUND_DETAIL_LABELS.listSeparator)
+    .map((skillName) => skillName.trim())
+    .filter(Boolean)
+    .map((skillName) => {
+      const glossaryUrl = SKILL_GLOSSARY_URLS.get(skillName);
+
+      return glossaryUrl
+        ? toMarker({ url: glossaryUrl, name: skillName }, 'glossary')
+        : skillName;
+    })
+    .join(BACKGROUND_DETAIL_LABELS.listSeparator);
 }
 
 /**

@@ -287,11 +287,20 @@ const mechanicsCountersSchema = z
  * там они дополнены кругом и школой, а в механике лежат одними ссылками. Здесь
  * нужны подготовка — держит ли запись заклинание готовым — и характеристика, от
  * которой считаются все её заклинания.
+ *
+ * Ссылки перечисленных заклинаний и группы «весь список класса» нужны только
+ * затем, чтобы отличить в `grantedSpells` одно от другого: сервер отдаёт их
+ * одним списком, а мастер класса даёт взять список целиком либо выбрать из него.
  */
 const mechanicsSpellGrantSchema = z
   .object({
     alwaysPrepared: z.boolean().catch(false),
     spellcastingAbility: z.string().nullable().catch(null),
+    spells: z
+      .array(z.object({ url: z.string().catch('') }))
+      .nullish()
+      .catch(null),
+    classLists: z.array(z.unknown()).nullish().catch(null),
   })
   .nullable()
   .catch(null);
@@ -407,6 +416,33 @@ function toGrantedCharacterSpell(
     limitedBySlots: entry.limitedBySlots ?? undefined,
     ...toGrantedSpellAbility(entry.spellcastingAbility),
   };
+}
+
+/**
+ * Помечает заклинания, которые умение выдаёт правилом «весь список класса».
+ *
+ * Сервер разворачивает список и отдаёт его одним перечнем с перечисленными
+ * заклинаниями, поэтому своё отличие у списка одно: его заклинаний нет среди
+ * ссылок механики. Заклинание, названное и там, и там, считается
+ * перечисленным — его запись выдаёт в любом случае.
+ *
+ * @param spells заклинания умения записями листа.
+ * @param grant выдача заклинаний из механики умения.
+ * @returns те же заклинания; взятые из списка класса — с пометкой.
+ */
+function withClassListMarks(
+  spells: CharacterSpell[],
+  grant: z.infer<typeof mechanicsSpellGrantSchema>,
+): CharacterSpell[] {
+  if (!grant?.classLists?.length) {
+    return spells;
+  }
+
+  const listedUrls = new Set((grant.spells ?? []).map((spell) => spell.url));
+
+  return spells.map((spell) =>
+    listedUrls.has(spell.url) ? spell : { ...spell, fromClassList: true },
+  );
 }
 
 /**
@@ -3130,11 +3166,14 @@ function toClassSummary(
       // Умение либо держит заклинание подготовленным, либо оставляет подготовку
       // игроку — как черта
       spells: (feature.grantedSpells ?? []).length
-        ? (feature.grantedSpells ?? []).map((entry) =>
-            toGrantedCharacterSpell(
-              entry,
-              feature.mechanics?.spells?.alwaysPrepared ?? false,
+        ? withClassListMarks(
+            (feature.grantedSpells ?? []).map((entry) =>
+              toGrantedCharacterSpell(
+                entry,
+                feature.mechanics?.spells?.alwaysPrepared ?? false,
+              ),
             ),
+            feature.mechanics?.spells ?? null,
           )
         : null,
       spellcastingAbility: parseApiAbilityKey(

@@ -7,6 +7,7 @@ import type {
   CreateGameSessionSeriesRequest,
   SessionAttendanceStatus,
   SessionParticipant,
+  UpdateGameSessionRequest,
 } from '../model';
 
 import {
@@ -32,6 +33,7 @@ import {
   resolveGameViewerAbilities,
   startGameSession,
   toGameCopyRequest,
+  updateGameSession,
   updateSessionAttendance,
   withdrawGameRegistration,
 } from '../model';
@@ -378,6 +380,20 @@ export function useGameDetail(
   }
 
   /**
+   * Правит назначенную сессию: переносит её или переименовывает.
+   * @param sessionId Идентификатор сессии.
+   * @param request Новые название, время и длительность.
+   */
+  async function updateSession(
+    sessionId: string,
+    request: UpdateGameSessionRequest,
+  ): Promise<void> {
+    await updateGameSession(currentGameId.value, sessionId, request);
+
+    await refreshSessions();
+  }
+
+  /**
    * Отменяет сессию: она не состоялась.
    * @param sessionId Идентификатор сессии.
    */
@@ -464,6 +480,7 @@ export function useGameDetail(
     refreshAll,
     remove,
     startSession,
+    updateSession,
     withdrawFromGame,
   };
 }

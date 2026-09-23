@@ -321,6 +321,7 @@ export const NOTIFICATION_TYPES = [
   'REGISTRATION_WITHDRAWN',
   'PLAYER_REMOVED',
   'SESSION_SCHEDULED',
+  'SESSION_RESCHEDULED',
   'SESSION_STARTED',
   'SESSION_COMPLETED',
   'SESSION_CANCELLED',
@@ -338,6 +339,7 @@ export const NOTIFICATION_TEXTS = {
   REGISTRATION_WITHDRAWN: 'Игрок вышел из игры',
   PLAYER_REMOVED: 'Мастер исключил вас из игры',
   SESSION_SCHEDULED: 'Назначена новая встреча',
+  SESSION_RESCHEDULED: 'Встреча перенесена: подтвердите участие заново',
   SESSION_STARTED: 'Сессия началась',
   SESSION_COMPLETED: 'Сессия завершена',
   GAME_CLOSED: 'Игра завершена',
@@ -354,6 +356,7 @@ export const NOTIFICATION_ICONS = {
   REGISTRATION_WITHDRAWN: 'tabler:user-minus',
   PLAYER_REMOVED: 'tabler:user-off',
   SESSION_SCHEDULED: 'tabler:calendar-plus',
+  SESSION_RESCHEDULED: 'tabler:calendar-time',
   SESSION_STARTED: 'tabler:player-play',
   SESSION_COMPLETED: 'tabler:flag-check',
   GAME_CLOSED: 'tabler:circle-check',
@@ -1358,6 +1361,15 @@ export const SESSION_SERIES_CREATED_TOAST = 'Серия сессий созда�
 /** Предел серии: столько же встреч за раз принимает сервис. */
 export const SESSION_SERIES_MAX = 100;
 export const SESSION_COPY_LABEL = 'Скопировать';
+export const SESSION_EDIT_LABEL = 'Изменить';
+export const SESSION_EDIT_ICON = 'tabler:calendar-time';
+export const SESSION_EDIT_SUBMIT_ICON = 'tabler:device-floppy';
+export const SESSION_CREATE_SUBMIT_ICON = 'tabler:plus';
+export const SESSION_EDIT_TITLE = 'Изменение сессии';
+export const SESSION_EDIT_DESCRIPTION =
+  'Стоимость и условия оплаты не меняются. Если сдвинуть время, игроки получат уведомление, а их отметки присутствия сбросятся: каждый заново решит, успевает ли он.';
+export const SESSION_EDIT_SUBMIT_LABEL = 'Сохранить';
+export const SESSION_UPDATED_TOAST = 'Сессия изменена';
 export const SESSION_CREATE_TITLE = 'Новая сессия';
 export const SESSION_COPY_TITLE = 'Копия сессии';
 export const SESSION_COPY_DESCRIPTION =

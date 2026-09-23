@@ -518,6 +518,26 @@ describe('состояния сессии у мастера', () => {
     expect(abilities.canStart).toBe(false);
     expect(abilities.canComplete).toBe(false);
     expect(abilities.canCancel).toBe(false);
+    expect(abilities.canEdit).toBe(false);
+  });
+
+  it('переносят только ещё не начатую встречу', () => {
+    expect(
+      resolveSessionAbilities(makeSession(), game, null, masterOf(game))
+        .canEdit,
+    ).toBe(true);
+
+    // Время идущей или закрытой встречи уже стало историей.
+    for (const status of ['IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const) {
+      const abilities = resolveSessionAbilities(
+        makeSession({ status }),
+        game,
+        null,
+        masterOf(game),
+      );
+
+      expect(abilities.canEdit).toBe(false);
+    }
   });
 });
 

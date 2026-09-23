@@ -16,6 +16,12 @@ export const COOKIE_NOTICE_TITLE =
 /** Кнопка закрытия уведомления. */
 export const COOKIE_NOTICE_DISMISS_LABEL = 'Хорошо';
 
+/** Вторая, неакцентная кнопка закрытия уведомления — действует так же, как основная. */
+export const COOKIE_NOTICE_RELUCTANT_LABEL = 'Ну так уж и быть...';
+
+/** Подпись крестика в углу уведомления. */
+export const COOKIE_NOTICE_CLOSE_LABEL = 'Закрыть';
+
 /** Текст уведомления об использовании файлов cookie. */
 export const COOKIE_NOTICE_DESCRIPTION =
   'Оставаясь с нами, вы соглашаетесь на использование файлов cookie.';
