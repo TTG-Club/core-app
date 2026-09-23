@@ -9085,13 +9085,39 @@ export function parseStoredMarkupNodes(
  * Группа отбора по источнику особенности: подвид попадает в группу вида (свой
  * чип ради подвида ряд отбора не растит), ручная запись — в свои особенности.
  *
- * @param origin происхождение особенности.
+ * Черта, выданная умением вида, — всё равно черта: её бейдж и чип — «Черта».
+ * Происхождение записи при этом остаётся видовым, чтобы смена вида забирала
+ * черту вместе с умением, которое её дало, — поэтому черту узнаём по
+ * идентификатору, а не по происхождению. Без этого игрок не находил взятую
+ * «Универсальностью» черту среди умений человека и считал, что она не
+ * добавилась.
+ *
+ * @param feature особенность листа.
  * @returns группа отбора вкладки особенностей.
  */
 export function getFeatureOriginGroup(
-  origin: FeatureOrigin,
+  feature: CharacterFeature,
 ): FeatureOriginGroup {
-  return origin === 'lineage' ? 'species' : origin;
+  if (feature.origin === 'species' || feature.origin === 'lineage') {
+    return getFeatUrlFromFeatureId(feature.id) ? 'feat' : 'species';
+  }
+
+  return feature.origin;
+}
+
+/**
+ * Происхождение, которым подписан бейдж особенности. Черта от умения вида
+ * подписана как черта, а не как вид, — откуда она, говорит строка источника в
+ * раскрытой записи. Остальные записи подписаны своим происхождением: подвид
+ * остаётся подвидом, хотя отбирается вместе с видом.
+ *
+ * @param feature особенность листа.
+ * @returns происхождение для подписи и цвета бейджа.
+ */
+export function getFeatureBadgeOrigin(
+  feature: CharacterFeature,
+): FeatureOrigin {
+  return getFeatureOriginGroup(feature) === 'feat' ? 'feat' : feature.origin;
 }
 
 /**
@@ -9105,7 +9131,7 @@ export function getFeatureOriginGroups(
   features: CharacterFeature[],
 ): FeatureOriginGroup[] {
   const listGroups = new Set(
-    features.map((feature) => getFeatureOriginGroup(feature.origin)),
+    features.map((feature) => getFeatureOriginGroup(feature)),
   );
 
   return FEATURE_ORIGIN_GROUP_ORDER.filter((originGroup) =>
@@ -9126,8 +9152,8 @@ export function sortFeaturesByOriginGroup(
 ): CharacterFeature[] {
   return [...features].sort(
     (left, right) =>
-      FEATURE_ORIGIN_GROUP_ORDER.indexOf(getFeatureOriginGroup(left.origin))
-      - FEATURE_ORIGIN_GROUP_ORDER.indexOf(getFeatureOriginGroup(right.origin)),
+      FEATURE_ORIGIN_GROUP_ORDER.indexOf(getFeatureOriginGroup(left))
+      - FEATURE_ORIGIN_GROUP_ORDER.indexOf(getFeatureOriginGroup(right)),
   );
 }
 
@@ -9144,7 +9170,7 @@ export function matchesFeatureFilter(
 ): boolean {
   return (
     !filter.origins.length
-    || filter.origins.includes(getFeatureOriginGroup(feature.origin))
+    || filter.origins.includes(getFeatureOriginGroup(feature))
   );
 }
 

@@ -42,6 +42,10 @@ export default defineConfig({
       '~character-sheet': fileURLToPath(
         new URL('./app/features/character-sheet', import.meta.url),
       ),
+      '~classes': fileURLToPath(
+        new URL('./app/features/classes', import.meta.url),
+      ),
+      '~feats': fileURLToPath(new URL('./app/features/feats', import.meta.url)),
       '~bestiary': fileURLToPath(
         new URL('./app/features/bestiary', import.meta.url),
       ),
