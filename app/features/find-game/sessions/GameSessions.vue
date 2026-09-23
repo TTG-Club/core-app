@@ -10,6 +10,7 @@
     SessionAttendanceStatus,
     SessionParticipant,
     SessionTimelineScale,
+    UpdateGameSessionRequest,
   } from '../model';
 
   import { UiModalActions } from '~ui/modal-actions';
@@ -42,6 +43,7 @@
     SESSION_TIMELINE_DEFAULT_SCALE,
     SESSION_TIMELINE_SCALES,
     SESSION_TIMELINE_VIEW_LABEL,
+    SESSION_UPDATED_TOAST,
     SESSIONS_DEFAULT_STATUSES,
     SESSIONS_EMPTY_FILTERED_DESCRIPTION,
     SESSIONS_EMPTY_FILTERED_TITLE,
@@ -80,6 +82,7 @@
     completeSession,
     cancelSession,
     startSession,
+    updateSession,
     loading = false,
   } = defineProps<{
     game: Game;
@@ -105,6 +108,10 @@
     completeSession: (sessionId: string) => Promise<void>;
     cancelSession: (sessionId: string) => Promise<void>;
     startSession: (sessionId: string) => Promise<void>;
+    updateSession: (
+      sessionId: string,
+      request: UpdateGameSessionRequest,
+    ) => Promise<void>;
     loading?: boolean;
   }>();
 
@@ -219,6 +226,7 @@
   const isSeriesOpen = ref(false);
   const isBusy = ref(false);
   const copySource = ref<GameSession | null>(null);
+  const editTarget = ref<GameSession | null>(null);
   const completeTarget = ref<GameSession | null>(null);
   const cancelTarget = ref<GameSession | null>(null);
   const participantsSessionId = ref<string | null>(null);
@@ -229,6 +237,15 @@
     set: (opened: boolean) => {
       if (!opened) {
         copySource.value = null;
+      }
+    },
+  });
+
+  const isEditOpen = computed({
+    get: () => !!editTarget.value,
+    set: (opened: boolean) => {
+      if (!opened) {
+        editTarget.value = null;
       }
     },
   });
@@ -373,6 +390,32 @@
 
     if (copied) {
       copySource.value = null;
+    }
+  }
+
+  /**
+   * Открывает форму правки сессии.
+   * @param session Сессия, которую переносят или переименовывают.
+   */
+  function openEdit(session: GameSession): void {
+    editTarget.value = session;
+  }
+
+  /**
+   * Сохраняет правку сессии.
+   * @param sessionId Изменяемая сессия.
+   * @param request Новые название, время и длительность.
+   */
+  async function handleUpdate(
+    sessionId: string,
+    request: UpdateGameSessionRequest,
+  ): Promise<void> {
+    const updated = await runAction(SESSION_UPDATED_TOAST, () =>
+      updateSession(sessionId, request),
+    );
+
+    if (updated) {
+      editTarget.value = null;
     }
   }
 
@@ -592,6 +635,7 @@
         :busy="isBusy"
         @attend="handleAttend"
         @copy="openCopy"
+        @edit="openEdit"
         @open-participants="openParticipants"
         @complete="askComplete"
         @start="handleStart"
@@ -620,6 +664,7 @@
             :busy="isBusy"
             @attend="handleAttend"
             @copy="openCopy"
+            @edit="openEdit"
             @open-participants="openParticipants"
             @complete="askComplete"
             @start="handleStart"
@@ -635,6 +680,14 @@
       :cost-type="game.costType"
       :loading="isBusy"
       @submit="handleCreate"
+    />
+
+    <SessionFormModal
+      v-model:open="isEditOpen"
+      :cost-type="game.costType"
+      :session="editTarget"
+      :loading="isBusy"
+      @update="handleUpdate"
     />
 
     <SessionSeriesModal

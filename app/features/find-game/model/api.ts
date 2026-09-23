@@ -32,6 +32,7 @@ import type {
   SpringPage,
   UpdateFindGameProfileRequest,
   UpdateGameRequest,
+  UpdateGameSessionRequest,
 } from './types';
 
 import { StatusCodes } from 'http-status-codes';
@@ -833,6 +834,28 @@ export async function copyGameSession(
     `${sessionsPath(gameId)}/${sourceSessionId}/copy`,
     { method: 'POST', body: request, retry: 0 },
   );
+
+  return parseGameSession(response);
+}
+
+/**
+ * Правит назначенную сессию: название, время и длительность. При смене
+ * времени сервис сбрасывает отметки присутствия и уведомляет игроков.
+ *
+ * @param gameId Идентификатор игры.
+ * @param sessionId Идентификатор сессии.
+ * @param request Новые название, время и длительность.
+ */
+export async function updateGameSession(
+  gameId: string,
+  sessionId: string,
+  request: UpdateGameSessionRequest,
+): Promise<GameSession> {
+  const response = await $fetch(`${sessionsPath(gameId)}/${sessionId}`, {
+    method: 'PATCH',
+    body: request,
+    retry: 0,
+  });
 
   return parseGameSession(response);
 }

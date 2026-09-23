@@ -1,5 +1,12 @@
 <script setup lang="ts">
-  import type { CreateGameSessionRequest, GameCostType } from '../../model';
+  import type {
+    CreateGameSessionRequest,
+    GameCostType,
+    GameSession,
+    UpdateGameSessionRequest,
+  } from '../../model';
+
+  import { Time } from '@internationalized/date';
 
   import { UiModalActions } from '~ui/modal-actions';
 
@@ -13,10 +20,15 @@
     getDefaultSessionDate,
     isFutureSessionStart,
     SESSION_CREATE_LABEL,
+    SESSION_CREATE_SUBMIT_ICON,
     SESSION_CREATE_TITLE,
     SESSION_CURRENCY_LABEL,
     SESSION_CURRENCY_PLACEHOLDER,
     SESSION_DATE_LABEL,
+    SESSION_EDIT_DESCRIPTION,
+    SESSION_EDIT_SUBMIT_ICON,
+    SESSION_EDIT_SUBMIT_LABEL,
+    SESSION_EDIT_TITLE,
     SESSION_FREE_HINT,
     SESSION_FREE_SESSION_HINT,
     SESSION_FREE_SESSION_LABEL,
@@ -34,19 +46,39 @@
     SESSION_TITLE_MAX_LENGTH,
     SESSION_TITLE_PLACEHOLDER,
     SESSION_VALIDATION_CLOCK_INTERVAL,
+    toLocalDateInput,
   } from '../../model';
 
   const isOpen = defineModel<boolean>('open', { required: true });
 
-  const { costType, loading = false } = defineProps<{
+  const {
+    costType,
+    session = null,
+    loading = false,
+  } = defineProps<{
     /** Платность игры решает, нужны ли сессии платёжные поля. */
     costType: GameCostType;
+    /**
+     * Встреча, которую правят; без неё окно создаёт новую. Оплату у
+     * назначенной встречи не меняют — по ней уже могут быть расчёты.
+     */
+    session?: GameSession | null;
     loading?: boolean;
   }>();
 
   const emit = defineEmits<{
     submit: [request: CreateGameSessionRequest];
+    update: [sessionId: string, request: UpdateGameSessionRequest];
   }>();
+
+  /**
+   * Встреча, с которой окно открыли. Снимок, а не сам проп: при закрытии
+   * страница сразу сбрасывает проп, и без снимка окно на время анимации
+   * превращалось бы в создание новой встречи.
+   */
+  const editedSession = shallowRef<GameSession | null>(null);
+
+  const isEditing = computed(() => !!editedSession.value);
 
   const title = ref('');
 
@@ -61,6 +93,7 @@
     startTimeText,
     durationMinutes,
     timezoneHint,
+    applyRange,
     reset: resetTimeRange,
   } = useSessionTimeRange();
 
@@ -96,14 +129,36 @@
       : undefined,
   );
 
+  // Платёжные поля у правки скрыты и не участвуют в проверке.
   const isValid = computed(
-    () => !!title.value.trim() && isStartValid.value && isPaymentValid.value,
+    () =>
+      !!title.value.trim()
+      && isStartValid.value
+      && (isEditing.value || isPaymentValid.value),
   );
 
   /** Подсказка окна: у платной встречи речь о деньгах, у бесплатной — нет. */
   const paymentHint = computed(() =>
     isPaid.value ? SESSION_PAID_HINT : SESSION_FREE_HINT,
   );
+
+  const modalTitle = computed(() =>
+    isEditing.value ? SESSION_EDIT_TITLE : SESSION_CREATE_TITLE,
+  );
+
+  const modalDescription = computed(() =>
+    isEditing.value ? SESSION_EDIT_DESCRIPTION : paymentHint.value,
+  );
+
+  const submitLabel = computed(() =>
+    isEditing.value ? SESSION_EDIT_SUBMIT_LABEL : SESSION_CREATE_LABEL,
+  );
+
+  const submitIcon = computed(() =>
+    isEditing.value ? SESSION_EDIT_SUBMIT_ICON : SESSION_CREATE_SUBMIT_ICON,
+  );
+
+  const showPaymentFields = computed(() => !isEditing.value);
 
   /** Закрывает окно без создания сессии. */
   function cancel(): void {
@@ -126,39 +181,80 @@
       return;
     }
 
-    const request: CreateGameSessionRequest = {
+    const timing: UpdateGameSessionRequest = {
       title: title.value.trim(),
       startsAt: startsAtValue,
     };
 
     if (durationMinutes.value) {
-      request.estimatedDurationMinutes = durationMinutes.value;
+      timing.estimatedDurationMinutes = durationMinutes.value;
     }
+
+    if (editedSession.value) {
+      emit('update', editedSession.value.id, timing);
+
+      return;
+    }
+
+    const request: CreateGameSessionRequest = { ...timing };
 
     applyPaymentFields(request);
 
     emit('submit', request);
   }
 
-  // Форма живёт вместе со страницей: чистим её на каждом открытии, иначе
+  /**
+   * Заполняет форму назначенной встречей: дата и время — в поясе мастера,
+   * как он их и вводит.
+   * @param scheduledSession Встреча, которую правят.
+   */
+  function fillFrom(scheduledSession: GameSession): void {
+    title.value = scheduledSession.title;
+
+    if (!scheduledSession.startsAt) {
+      startsAt.value = getDefaultSessionDate();
+      resetTimeRange();
+
+      return;
+    }
+
+    const start = new Date(scheduledSession.startsAt);
+
+    startsAt.value = toLocalDateInput(scheduledSession.startsAt);
+
+    applyRange(
+      new Time(start.getHours(), start.getMinutes()),
+      scheduledSession.estimatedDurationMinutes,
+    );
+  }
+
+  // Форма живёт вместе со страницей: заполняем её на каждом открытии, иначе
   // прошлая сессия подставится в следующую.
   watch(isOpen, (opened) => {
     if (!opened) {
       return;
     }
 
+    editedSession.value = session;
+    resetPaymentFields();
+
+    if (session) {
+      fillFrom(session);
+
+      return;
+    }
+
     title.value = '';
     startsAt.value = getDefaultSessionDate();
     resetTimeRange();
-    resetPaymentFields();
   });
 </script>
 
 <template>
   <UModal
     v-model:open="isOpen"
-    :title="SESSION_CREATE_TITLE"
-    :description="paymentHint"
+    :title="modalTitle"
+    :description="modalDescription"
   >
     <template #body>
       <div class="flex flex-col gap-4">
@@ -211,14 +307,14 @@
         </div>
 
         <UCheckbox
-          v-if="costType === 'PAID'"
+          v-if="showPaymentFields && costType === 'PAID'"
           v-model="isFree"
           :label="SESSION_FREE_SESSION_LABEL"
           :description="SESSION_FREE_SESSION_HINT"
         />
 
         <div
-          v-if="isPaid"
+          v-if="showPaymentFields && isPaid"
           class="grid gap-3 sm:grid-cols-3"
         >
           <UFormField
@@ -264,8 +360,8 @@
     <template #footer>
       <UiModalActions
         :cancel-label="CANCEL_LABEL"
-        :submit-label="SESSION_CREATE_LABEL"
-        submit-icon="tabler:plus"
+        :submit-label="submitLabel"
+        :submit-icon="submitIcon"
         :loading="loading"
         :disabled="!isValid"
         @cancel="cancel"
