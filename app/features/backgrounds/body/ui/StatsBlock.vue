@@ -36,7 +36,11 @@
         Черта
       </InfoTooltip>
 
-      <MarkupRender :render-node="feat" />
+      <!-- Одиночная строка разметки рисуется без обёртки: без span ссылки и
+        запятые встали бы отдельными строками флекс-колонки -->
+      <span>
+        <MarkupRender :render-node="feat" />
+      </span>
     </div>
 
     <div :class="$style.item">
@@ -47,7 +51,9 @@
         Навыки
       </InfoTooltip>
 
-      <span>{{ skillProficiencies }}</span>
+      <span>
+        <MarkupRender :render-node="skillProficiencies" />
+      </span>
     </div>
 
     <div :class="$style.item">
