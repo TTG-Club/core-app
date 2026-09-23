@@ -9,6 +9,7 @@ import type {
   CharacterCustomBonus,
   CharacterCustomCurrency,
   ClassChoiceKind,
+  ClassSpellListMode,
   CurrencyKey,
   CustomArmorType,
   CustomArmorTypeMeta,
@@ -3162,6 +3163,40 @@ export const CLASS_WIZARD_LABELS = {
   subclassesLoading: 'Загрузка подклассов…',
   empty: 'Ничего не найдено',
 } as const;
+
+/**
+ * Подписи выбора «весь список класса»: умение, которое выдаёт список класса
+ * правилом, мастер класса даёт взять целиком либо выбрать из него. Подстановки:
+ * `{count}` — число заклинаний, `{prepared}` — сколько готовят по таблице.
+ */
+export const CLASS_SPELL_LIST_LABELS = {
+  title: 'Заклинания списка класса',
+  allLabel: 'Весь список сразу',
+  allDescription:
+    'На лист лягут все доступные заклинания списка ({count}), новые круги добавятся сами.',
+  chosenLabel: 'Выбрать самому',
+  chosenDescription:
+    'На лист лягут только выбранные. Добрать можно при повышении уровня или во вкладке заклинаний.',
+  pickerTitle: 'Заклинания из списка класса',
+  pickerExplanation:
+    'Выбранные ложатся на лист неподготовленными — подготовку отмечаете сами.',
+  preparedHint: 'По таблице класса на этом уровне подготавливают: {prepared}.',
+  levelUpExplanation:
+    'Можно добавить заклинания из списка класса. Они ложатся неподготовленными.',
+} as const;
+
+/**
+ * Режим «весь список класса», предложенный в мастере класса: выбор. Жалобы
+ * были ровно на то, что список ложился на лист целиком.
+ */
+export const CLASS_SPELL_LIST_DEFAULT_MODE: ClassSpellListMode = 'chosen';
+
+/**
+ * Сегмент ключа добора заклинаний списка класса в черновике шага мастера
+ * повышения: за ним идёт уровень в классе (`…:class-list-3`), перед ним —
+ * идентификатор умения.
+ */
+export const CLASS_SPELL_LIST_PICK_ID_SEGMENT = 'class-list';
 
 /** Сокращение уровня в подписях («3 ур.»). */
 export const LEVEL_SHORT_SUFFIX = 'ур.';

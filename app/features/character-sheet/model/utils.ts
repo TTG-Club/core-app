@@ -54,6 +54,8 @@ import type {
   ClassFeatureSummary,
   ClassOption,
   ClassResourceRecoveryBadge,
+  ClassSpellListMode,
+  ClassSpellListPickContext,
   ClassSummary,
   ClassTableColumn,
   CounterRecovery,
@@ -108,6 +110,7 @@ import type {
   InventoryWeaponDamage,
   ItemSummary,
   LevelUpAbilityImprovement,
+  LevelUpClassSpellListPick,
   LevelUpFeatChoice,
   LevelUpHitPointsGain,
   MagicItemCatalogGroup,
@@ -248,6 +251,8 @@ import {
   CLASS_FEATURE_ID_PREFIX,
   CLASS_FIRST_LEVEL,
   CLASS_RESOURCE_ID_PREFIX,
+  CLASS_SPELL_LIST_LABELS,
+  CLASS_SPELL_LIST_PICK_ID_SEGMENT,
   CLASS_SPELL_PROGRESSIONS,
   CLASS_SPELLCASTING_ABILITIES,
   CLASSES_LABEL_SEPARATOR,
@@ -7278,6 +7283,12 @@ interface GrantedSpellEntry {
   fromClass: boolean;
 }
 
+/** Заклинание записи листа вместе с идентификатором самой записи. */
+interface FeatureGrantedSpellEntry extends GrantedSpellEntry {
+  /** По нему находится класс-владелец и уровень в нём. */
+  featureId: string;
+}
+
 /**
  * Возвращает заклинания, которые персонаж знает вне книги: врождённые
  * заклинания вида, уже открытые на текущем уровне, и заклинания, выдаваемые
@@ -7387,21 +7398,62 @@ function collectGrantedSpells(character: Character): GrantedSpellEntry[] {
     // Часть заклинаний черты открывается по уровням («Малое восстановление»
     // метки дракона — с третьего). Отбор здесь, а не при взятии черты: список
     // должен пополняться сам, когда персонаж дорастёт
-    ...getFeatureGrantedSpells(character.features).filter(
-      (entry) =>
-        (!entry.spell.requiredLevel
-          || entry.spell.requiredLevel <= character.level)
-        // Список класса «не выше доступного круга» приезжает целиком: круг
-        // растёт вместе с персонажем, и снимок числом замёрз бы на том уровне,
-        // на котором заклинания легли на лист
-        && (!entry.spell.limitedBySlots || entry.spell.level <= maxSpellLevel),
+    ...getFeatureGrantedSpells(character.features).filter((entry) =>
+      isFeatureSpellOpen(character, entry, maxSpellLevel),
     ),
   ];
 
-  return uniqBy(granted, (entry) => entry.spell.url).map((entry) => ({
-    ...entry,
-    spell: { ...entry.spell, prepared: isInnateSpellPrepared(entry.spell) },
-  }));
+  return uniqBy(granted, (entry) => entry.spell.url).map(
+    ({ spell, fromClass }) => ({
+      spell: { ...spell, prepared: isInnateSpellPrepared(spell) },
+      fromClass,
+    }),
+  );
+}
+
+/**
+ * Открыто ли персонажу заклинание записи: дорос ли он до его уровня и круга.
+ *
+ * Заклинание умения класса открывается по уровню в СВОЁМ классе и по его
+ * собственной таблице ячеек: у жреца 5 / чародея 1 список чародея стоит на
+ * первом круге, хотя общий уровень шестой, а общие ячейки доходят до третьего
+ * круга. Заклинания черты, вида и прочих записей считаются по общему уровню
+ * персонажа — уровня в классе у них нет.
+ *
+ * @param character персонаж.
+ * @param entry заклинание записи с её идентификатором.
+ * @param maxSpellLevel старший круг, который персонаж вправе наложить.
+ * @returns `true` — заклинание уже доступно.
+ */
+function isFeatureSpellOpen(
+  character: Character,
+  entry: FeatureGrantedSpellEntry,
+  maxSpellLevel: number,
+): boolean {
+  const ownerClassUrl = entry.fromClass
+    ? getOwnerClassUrl(entry.featureId)
+    : null;
+
+  const ownerClass = ownerClassUrl
+    ? getCharacterClasses(character).find(
+        (characterClass) => characterClass.url === ownerClassUrl,
+      )
+    : undefined;
+
+  const { requiredLevel, limitedBySlots, level } = entry.spell;
+
+  const isLevelReached =
+    !requiredLevel || requiredLevel <= (ownerClass?.level ?? character.level);
+
+  // Список класса «не выше доступного круга» приезжает целиком: круг растёт
+  // вместе с персонажем, и снимок числом замёрз бы на том уровне, на котором
+  // заклинания легли на лист
+  const isCircleReached =
+    !limitedBySlots
+    || level
+      <= (ownerClass ? getClassMaxSpellLevel(ownerClass) : maxSpellLevel);
+
+  return isLevelReached && isCircleReached;
 }
 
 /**
@@ -7416,11 +7468,12 @@ function collectGrantedSpells(character: Character): GrantedSpellEntry[] {
  */
 function getFeatureGrantedSpells(
   features: CharacterFeature[],
-): GrantedSpellEntry[] {
+): FeatureGrantedSpellEntry[] {
   return features.flatMap((feature) =>
     (feature.spells ?? []).map((spell) => ({
       spell,
       fromClass: feature.origin === 'class',
+      featureId: feature.id,
     })),
   );
 }
@@ -8321,13 +8374,30 @@ export function getSpellSlotSummary(row: SpellSlotRow): string {
  * @returns старший круг; 0 — заклинаний класс пока не даёт.
  */
 function getClassMaxSpellLevel(characterClass: CharacterClass): number {
-  const casterType = getClassCasterType(characterClass);
+  return getCasterMaxSpellLevel(
+    getClassCasterType(characterClass),
+    characterClass.level,
+  );
+}
 
+/**
+ * Старший круг, который даёт таблица ячеек заклинателя такого типа на этом
+ * уровне класса. То же, что {@link getClassMaxSpellLevel}, но без класса на
+ * листе: мастер класса считает круг до того, как класс лёг на лист.
+ *
+ * @param casterType тип заклинателя; null — класс ячеек не даёт.
+ * @param classLevel уровень В КЛАССЕ.
+ * @returns старший круг; 0 — заклинаний класс пока не даёт.
+ */
+export function getCasterMaxSpellLevel(
+  casterType: CasterType | null,
+  classLevel: number,
+): number {
   if (!casterType) {
     return 0;
   }
 
-  return getSpellSlotMaximums(casterType, characterClass.level).reduce(
+  return getSpellSlotMaximums(casterType, classLevel).reduce(
     (maxLevel, slotCount, index) => (slotCount > 0 ? index + 1 : maxLevel),
     0,
   );
@@ -11622,6 +11692,232 @@ export function withChosenFeatureSpells(
 }
 
 /**
+ * Заклинания «весь список класса» умения, открытые на этом уровне класса: из
+ * них игрок выбирает, если берёт список не целиком. Одноимённые записи
+ * справочника (заклинание без суффикса источника и с ним) идут одной строкой —
+ * пикер различает варианты по названию.
+ *
+ * @param spells заклинания умения из детали класса.
+ * @param classLevel уровень В КЛАССЕ.
+ * @param maxSpellLevel старший круг, который даёт таблица ячеек класса.
+ * @returns заклинания списка, до которых класс дорос.
+ */
+export function getClassListSpellPool(
+  spells: CharacterSpell[] | null,
+  classLevel: number,
+  maxSpellLevel: number,
+): CharacterSpell[] {
+  return uniqueSpellsByName(
+    (spells ?? []).filter(
+      (spell) =>
+        spell.fromClassList === true
+        && (!spell.requiredLevel || spell.requiredLevel <= classLevel)
+        && (!spell.limitedBySlots || spell.level <= maxSpellLevel),
+    ),
+  );
+}
+
+/**
+ * Запись умения, у которого игрок выбирает заклинания списка сам: список класса
+ * с записи уходит, остаются перечисленные умением заклинания. Выбранное
+ * кладёт {@link withChosenFeatureSpells} — уже после, иначе оно сочлось бы
+ * повтором списка и не легло.
+ *
+ * @param feature запись умения, собранная из детали класса.
+ * @returns запись без списка класса и с отметкой режима.
+ */
+export function withChosenClassSpellList(
+  feature: CharacterFeature,
+): CharacterFeature {
+  const spells = (feature.spells ?? []).filter((spell) => !spell.fromClassList);
+
+  return {
+    ...feature,
+    classSpellListMode: 'chosen',
+    spells: spells.length ? spells : null,
+  };
+}
+
+/**
+ * Выбранные игроком заклинания списка записями листа. Пометка списка
+ * снимается: выбранное — уже не «весь список», и пересборка умения в режиме
+ * выбора его не уберёт.
+ *
+ * @param pool заклинания списка, из которых выбирали.
+ * @param names названия выбранных заклинаний (значения пикера).
+ * @returns выбранные заклинания.
+ */
+export function toChosenClassListSpells(
+  pool: CharacterSpell[],
+  names: string[],
+): CharacterSpell[] {
+  const chosen = new Set(names);
+
+  return pool
+    .filter((spell) => chosen.has(spell.name))
+    .map((spell) => ({ ...spell, fromClassList: false }));
+}
+
+/**
+ * Проверка режима «весь список класса»: переключатель отдаёт его
+ * нетипизированным.
+ *
+ * @param value значение из переключателя.
+ * @returns true — значение является режимом списка.
+ */
+export function isClassSpellListMode(
+  value: unknown,
+): value is ClassSpellListMode {
+  return value === 'all' || value === 'chosen';
+}
+
+/**
+ * Ключ добора списка класса в черновике шага мастера повышения: у каждого
+ * уровня свой, иначе ответы двух шагов легли бы друг на друга.
+ *
+ * @param featureId идентификатор умения на листе.
+ * @param classLevel уровень В КЛАССЕ, на котором добирают.
+ * @returns ключ ответа.
+ */
+export function getClassSpellListPickId(
+  featureId: string,
+  classLevel: number,
+): string {
+  return `${featureId}:${CLASS_SPELL_LIST_PICK_ID_SEGMENT}-${classLevel}`;
+}
+
+/**
+ * Принадлежит ли ключ ответа добору списка класса, а не выбору умения.
+ *
+ * @param choiceId ключ ответа в черновике шага.
+ * @returns `true` — это добор списка класса.
+ */
+export function isClassSpellListPickId(choiceId: string): boolean {
+  return choiceId.includes(`:${CLASS_SPELL_LIST_PICK_ID_SEGMENT}-`);
+}
+
+/**
+ * Пояснение поля выбора из списка класса: что станет с выбранным и сколько
+ * готовят по таблице.
+ *
+ * @param lead первая фраза пояснения.
+ * @param preparedHint сколько готовят по таблице; пусто — таблица не считает.
+ * @returns пояснение одной строкой.
+ */
+export function getClassSpellListExplanation(
+  lead: string,
+  preparedHint: string,
+): string {
+  return preparedHint ? `${lead} ${preparedHint}` : lead;
+}
+
+/**
+ * Пояснение к выбору заклинаний списка: сколько по таблице класса готовят на
+ * этом уровне. Выбирать можно и больше — подготовленных всё равно столько.
+ *
+ * @param scaling прогрессия подготовленных заклинаний класса.
+ * @param classLevel уровень В КЛАССЕ.
+ * @returns строка пояснения; пусто — таблица подготовку не считает.
+ */
+export function getClassSpellListPreparedHint(
+  scaling: PreparedSpellsScaling[],
+  classLevel: number,
+): string {
+  const prepared = getPreparedSpellsAtLevel(scaling, classLevel);
+
+  return prepared === null
+    ? ''
+    : CLASS_SPELL_LIST_LABELS.preparedHint.replace(
+        '{prepared}',
+        String(prepared),
+      );
+}
+
+/**
+ * Добор заклинаний «весь список класса» на уровне, который берут: у умений,
+ * где игрок выбирает список сам, — если на этом уровне открывается новый круг
+ * либо растёт число подготовленных. В пуле только то, чего на записи умения
+ * ещё нет и что не выбрано на прошлых шагах.
+ *
+ * @param context класс, уровень и записи листа.
+ * @returns доборы шага; пусто — предлагать нечего.
+ */
+export function getLevelClassSpellListPicks(
+  context: ClassSpellListPickContext,
+): LevelUpClassSpellListPick[] {
+  const { classLevel, casterType, preparedSpells, takenNames } = context;
+
+  const maxSpellLevel = getCasterMaxSpellLevel(casterType, classLevel);
+
+  const isCircleOpening =
+    maxSpellLevel > getCasterMaxSpellLevel(casterType, classLevel - 1);
+
+  const isPreparedGrowing =
+    (getPreparedSpellsAtLevel(preparedSpells, classLevel) ?? 0)
+    > (getPreparedSpellsAtLevel(preparedSpells, classLevel - 1) ?? 0);
+
+  const preparedHint = getClassSpellListPreparedHint(
+    preparedSpells,
+    classLevel,
+  );
+
+  return [
+    ...context.base.features,
+    ...(context.subclass?.features ?? []),
+  ].flatMap((summary) => {
+    const featureId = getClassFeatureId(context.classUrl, summary.key);
+
+    const storedFeature = context.features.find(
+      (feature) =>
+        feature.id === featureId && feature.classSpellListMode === 'chosen',
+    );
+
+    if (!storedFeature || summary.level > classLevel) {
+      return [];
+    }
+
+    const pool = getClassListSpellPool(
+      summary.spells,
+      classLevel,
+      maxSpellLevel,
+    );
+
+    // Круг бывает задан у группы уровнем, а не ячейками: тогда о новом круге
+    // говорит сама выдача, открывшаяся ровно на этом уровне
+    const isListOpening = pool.some(
+      (spell) => spell.requiredLevel === classLevel,
+    );
+
+    if (!isCircleOpening && !isPreparedGrowing && !isListOpening) {
+      return [];
+    }
+
+    const knownUrls = new Set(
+      (storedFeature.spells ?? []).map((spell) => spell.url),
+    );
+
+    const availableSpells = pool.filter(
+      (spell) => !knownUrls.has(spell.url) && !takenNames.has(spell.name),
+    );
+
+    if (!availableSpells.length) {
+      return [];
+    }
+
+    return [
+      {
+        id: getClassSpellListPickId(featureId, classLevel),
+        featureId,
+        featureName: summary.name,
+        pool: availableSpells,
+        options: toSpellPickerOptions(availableSpells),
+        preparedHint,
+      },
+    ];
+  });
+}
+
+/**
  * Классовые особенности ровно указанного уровня: базовый класс даёт свои,
  * выбранный подкласс — свои. Нужны мастеру повышения уровня, который выдаёт
  * умения по шагу на уровень.
@@ -13722,9 +14018,9 @@ export function getChoiceRequiredCount(
  * @param pool заклинания пула из поиска по каталогу.
  * @returns пул без повторов названий.
  */
-export function uniqueSpellsByName(
-  pool: SpellCatalogItem[],
-): SpellCatalogItem[] {
+export function uniqueSpellsByName<Spell extends CharacterSpell>(
+  pool: Spell[],
+): Spell[] {
   return uniqBy(pool, (spell) => spell.name);
 }
 
@@ -13737,7 +14033,7 @@ export function uniqueSpellsByName(
  * @returns варианты пикера с описанием по url заклинания.
  */
 export function toSpellPickerOptions(
-  pool: SpellCatalogItem[],
+  pool: CharacterSpell[],
   hints: Record<string, string> = {},
 ): SheetChoiceOption[] {
   return [...pool]

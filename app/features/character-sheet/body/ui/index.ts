@@ -16,6 +16,7 @@ export { default as SheetClassesModal } from './SheetClassesModal.vue';
 export { default as SheetClassResourceModal } from './SheetClassResourceModal.vue';
 export { default as SheetClassResourcesModal } from './SheetClassResourcesModal.vue';
 export { default as SheetClassResourcesPanel } from './SheetClassResourcesPanel.vue';
+export { default as SheetClassSpellListChoice } from './SheetClassSpellListChoice.vue';
 export { default as SheetClassWizardModal } from './SheetClassWizardModal.vue';
 export { default as SheetCurrencyModal } from './SheetCurrencyModal.vue';
 export { default as SheetCurrencyRow } from './SheetCurrencyRow.vue';

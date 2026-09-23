@@ -336,6 +336,9 @@ const spellSchema = z.object({
   // Заклинание пришло из группы «весь список класса, не выше доступного круга»:
   // список лежит на записи целиком, а круги лист отбирает каждый раз заново
   limitedBySlots: z.boolean().optional().catch(undefined),
+  // Заклинание умения, взятого списком класса целиком: при пересборке умения
+  // в режиме выбора такие уходят, а выбранные игроком остаются
+  fromClassList: z.boolean().optional().catch(undefined),
   // Своя характеристика заклинания: её ставит черта, давшая заклинание. Нет
   // поля — заклинание считается от характеристики класса
   spellcastingAbility: abilityKeySchema.optional().catch(undefined),
@@ -416,6 +419,9 @@ const featureSchema = z.object({
     .nullable()
     .optional()
     .catch(undefined),
+  // Как игрок взял «весь список класса» умения; у записей до появления выбора
+  // поля нет — такой список взят целиком.
+  classSpellListMode: z.enum(['all', 'chosen']).optional().catch(undefined),
   // Ответы игрока на выборы черты по ключу выбора; у записей до их появления
   // поля нет.
   choiceAnswers: z

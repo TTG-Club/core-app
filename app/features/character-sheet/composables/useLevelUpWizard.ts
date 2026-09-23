@@ -64,6 +64,7 @@ import {
   getHitDieFormula,
   getHitDieLabel,
   getHitPointsGainForMode,
+  getLevelClassSpellListPicks,
   getLevelFeatureRows,
   getLevelHitPointsGain,
   getOwnedWeaponNames,
@@ -73,6 +74,7 @@ import {
   getToolNames,
   isAbilityImprovementComplete,
   isAbilityImprovementFeatChoice,
+  isClassSpellListPickId,
   LANGUAGE_PROFICIENCY_GROUPS,
   LEVEL_UP_WIZARD_LABELS,
   mergeAbilityIncreases,
@@ -82,7 +84,9 @@ import {
   parseFeatSelectOptions,
   resolveChoiceOptions,
   SUBCLASS_SELECTION_MIN_LEVEL,
+  toChosenClassListSpells,
   withAbilityImprovementStep,
+  withChosenClassSpellList,
   withChosenFeatureSpells,
   withPendingAbilityIncreases,
   withStoredFeatureAnswers,
@@ -92,6 +96,23 @@ import { useCharacterSheet } from './useCharacterSheet';
 import { useChoiceHints } from './useChoiceHints';
 import { useChoiceSpellPools } from './useChoiceSpellPools';
 import { useToolCatalog } from './useToolCatalog';
+
+/**
+ * Заклинания списка класса, выбранные на шагах мастера: следующий шаг их уже
+ * не предлагает.
+ *
+ * @param drafts черновики шагов.
+ * @returns названия выбранных заклинаний.
+ */
+function getTakenClassSpellListNames(drafts: LevelUpStepDraft[]): Set<string> {
+  return new Set(
+    drafts.flatMap((draft) =>
+      Object.entries(draft.selections).flatMap(([choiceId, names]) =>
+        isClassSpellListPickId(choiceId) ? names : [],
+      ),
+    ),
+  );
+}
 
 /** Загруженные справочные данные класса, взятые в мастере. */
 interface LoadedClass {
@@ -514,6 +535,23 @@ export function useLevelUpWizard(): LevelUpWizard {
             )
           : [],
         isSubclassStep: draft.classLevel === loaded?.subclassStepLevel,
+        classSpellListPicks: loaded
+          ? getLevelClassSpellListPicks({
+              base: loaded.detail,
+              subclass: loaded.subclass,
+              classUrl: draft.classUrl,
+              classLevel: draft.classLevel,
+              casterType: getSelectedCasterType(loaded.detail, loaded.subclass),
+              preparedSpells: derivePreparedSpellsScaling([
+                ...loaded.detail.table,
+                ...(loaded.subclass?.table ?? []),
+              ]),
+              features: character.value.features,
+              takenNames: getTakenClassSpellListNames(
+                drafts.value.slice(0, index),
+              ),
+            })
+          : [],
         hitPointsGain:
           hitDie > 0
             ? getHitPointsGainForMode(
@@ -1251,9 +1289,14 @@ export function useLevelUpWizard(): LevelUpWizard {
 
     const knownFeatureIds = new Set(rows.map((row) => row.id));
 
-    const knownChoiceIds = new Set(
-      rows.flatMap((row) => row.choices.map((choice) => choice.id)),
-    );
+    // Добор списка класса лежит среди ответов пикеров, но выбором умения не
+    // значится — без него смена подкласса стирала бы и добор
+    const knownChoiceIds = new Set([
+      ...rows.flatMap((row) => row.choices.map((choice) => choice.id)),
+      ...steps.value.flatMap((step) =>
+        step.classSpellListPicks.map((pick) => pick.id),
+      ),
+    ]);
 
     drafts.value = drafts.value.map((draft) => ({
       ...draft,
@@ -1724,12 +1767,30 @@ export function useLevelUpWizard(): LevelUpWizard {
       {},
     );
 
-    const chosenSpellsByFeature = rows.reduce<Record<string, CharacterSpell[]>>(
-      (result, row) => ({
+    // Добор списка класса ложится на запись своего умения тем же путём, что и
+    // выбранное в выборах умений
+    const classSpellListPicks = steps.value.flatMap((step) =>
+      step.classSpellListPicks.map((pick) => ({
+        featureId: pick.featureId,
+        spells: toChosenClassListSpells(
+          pick.pool,
+          drafts.value[step.index]?.selections[pick.id] ?? [],
+        ),
+      })),
+    );
+
+    const chosenSpellsByFeature = [
+      ...rows.map((row) => ({
+        featureId: row.id,
+        spells: collectChosenSpells({ choices: row.choices }),
+      })),
+      ...classSpellListPicks,
+    ].reduce<Record<string, CharacterSpell[]>>(
+      (result, featureSpells) => ({
         ...result,
-        [row.id]: [
-          ...(result[row.id] ?? []),
-          ...collectChosenSpells({ choices: row.choices }),
+        [featureSpells.featureId]: [
+          ...(result[featureSpells.featureId] ?? []),
+          ...featureSpells.spells,
         ],
       }),
       storedSpellsByFeature,
@@ -1827,6 +1888,32 @@ export function useLevelUpWizard(): LevelUpWizard {
       };
     }
 
+    // Умение, где игрок выбирает список класса сам, при пересборке снова
+    // приходит со всем списком — список уходит, выбранное раньше вернёт
+    // `storedSpellsByFeature`
+    const chosenListFeatureIds = new Set(
+      character.value.features
+        .filter((feature) => feature.classSpellListMode === 'chosen')
+        .map((feature) => feature.id),
+    );
+
+    const rebuiltFeatureIds = new Set(
+      classFeatures.map((feature) => feature.id),
+    );
+
+    // Умение, которое этот уровень не пересобирает, в итог не попало бы вовсе,
+    // и добирать было бы не на что: оно идёт своей записью с листа
+    const pickedFeatureIds = new Set(
+      classSpellListPicks
+        .filter((pick) => pick.spells.length > 0)
+        .map((pick) => pick.featureId),
+    );
+
+    const pickedStoredFeatures = character.value.features.filter(
+      (feature) =>
+        pickedFeatureIds.has(feature.id) && !rebuiltFeatureIds.has(feature.id),
+    );
+
     return {
       experience,
       classLevels,
@@ -1837,7 +1924,12 @@ export function useLevelUpWizard(): LevelUpWizard {
       classPatches,
       features: withChosenFeatureSpells(
         [
-          ...classFeatures,
+          ...classFeatures.map((feature) =>
+            chosenListFeatureIds.has(feature.id)
+              ? withChosenClassSpellList(feature)
+              : feature,
+          ),
+          ...pickedStoredFeatures,
           ...featFeatures,
           ...buildAbilityImprovementFeatures(),
         ],
