@@ -11,6 +11,7 @@
 
 import type { EffectChangeMode } from './types';
 
+import { ABILITY_CHECK_KEY } from './changeDice';
 import {
   EFFECT_CARRIER_ARMOR_CONDITION_PREFIX,
   EFFECT_CARRIER_TYPE_CONDITION_PREFIX,
@@ -18,6 +19,7 @@ import {
   EFFECT_DAMAGE_DEFENSE_KINDS,
   EFFECT_DAMAGE_TYPE_OPTIONS,
   EFFECT_FLAG_LABELS,
+  EFFECT_MENU_SORT_LOCALE,
   EFFECT_TARGET_KEY_SUGGESTIONS,
   EFFECT_TARGET_TYPE_CONDITION_PREFIX,
   SAVE_VS_CONDITION_FLAG_KEYS,
@@ -196,10 +198,41 @@ export interface EffectModifierPreset {
   condition?: string;
 }
 
+/**
+ * Подменю одного «что меняется» с готовыми «как»: у навыка — число, кость к
+ * броску или бонус мастерства. Преимущество и помеха сюда не входят: это
+ * особые правила, и у них своё меню — второй вход к тому же вёл бы к путанице.
+ */
+export interface EffectModifierSubmenu {
+  /** Ключ того, что меняется. */
+  key: string;
+  /** Подпись подменю — что меняется. */
+  label: string;
+  /** Готовые варианты. */
+  options: EffectModifierPreset[];
+}
+
+/** Пункт раздела меню: готовая строка либо подменю вариантов. */
+export type EffectModifierMenuItem =
+  | EffectModifierPreset
+  | EffectModifierSubmenu;
+
 /** Раздел меню модификаторов. */
 export interface EffectModifierMenuGroup {
   label: string;
-  items: EffectModifierPreset[];
+  items: EffectModifierMenuItem[];
+}
+
+/**
+ * Пункт меню — подменю вариантов, а не готовая строка.
+ *
+ * @param menuItem пункт раздела меню.
+ * @returns `true` для подменю.
+ */
+export function isEffectModifierSubmenu(
+  menuItem: EffectModifierMenuItem,
+): menuItem is EffectModifierSubmenu {
+  return 'options' in menuItem;
 }
 
 /** Разделы меню модификаторов; порядок — от частого к редкому. */
@@ -209,7 +242,7 @@ const EFFECT_MODIFIER_GROUPS = [
   { key: 'movement', label: 'Скорости' },
   { key: 'abilities', label: 'Характеристики' },
   { key: 'saves', label: 'Спасброски' },
-  { key: 'skills', label: 'Навыки' },
+  { key: 'skills', label: 'Проверки и навыки' },
   { key: 'attack', label: 'Атака' },
   { key: 'damage', label: 'Урон' },
   { key: 'carrierType', label: 'Условие: тип носителя' },
@@ -233,7 +266,8 @@ function getModifierGroupKey(changeKey: string): string {
     return 'saves';
   }
 
-  if (changeKey.startsWith('skill.')) {
+  // Все проверки характеристик — рядом с навыками: навык тоже проверка
+  if (changeKey.startsWith('skill.') || changeKey === ABILITY_CHECK_KEY) {
     return 'skills';
   }
 
@@ -346,6 +380,62 @@ const EFFECT_MODIFIER_READY_PRESETS: EffectModifierPreset[] = [
 ];
 
 /**
+ * Прибавки к проверке, из которых выбирает автор. Кость — одним пунктом:
+ * вычитается она той же строкой со знаком минус, и второй пункт «−1к4» был бы
+ * тем же самым, только с другим числом.
+ */
+const CHECK_BONUS_OPTIONS: ReadonlyArray<{ label: string; value: string }> = [
+  { label: 'Число', value: '1' },
+  { label: 'Кость к броску', value: '1к4' },
+  { label: 'Бонус мастерства', value: '@prof' },
+];
+
+/**
+ * Подменю одной проверки: готовые прибавки.
+ *
+ * @param changeKey ключ проверки.
+ * @param label подпись проверки из библиотеки ключей.
+ * @returns подменю вариантов.
+ */
+function buildCheckSubmenu(
+  changeKey: string,
+  label: string,
+): EffectModifierSubmenu {
+  return {
+    key: changeKey,
+    label,
+    options: CHECK_BONUS_OPTIONS.map((option) => ({
+      key: changeKey,
+      label: option.label,
+      mode: 'add',
+      value: option.value,
+    })),
+  };
+}
+
+/**
+ * Порядок раздела проверок: «Все проверки» первыми, навыки — по алфавиту их
+ * русских названий. Навык ищут по имени, а порядок ключей следует английским
+ * названиям.
+ *
+ * @param menuItems пункты раздела проверок.
+ * @returns пункты в порядке показа.
+ */
+function sortCheckItems(
+  menuItems: readonly EffectModifierMenuItem[],
+): EffectModifierMenuItem[] {
+  return [...menuItems].sort((left, right) => {
+    const isLeftFirst = left.key === ABILITY_CHECK_KEY;
+
+    if (isLeftFirst !== (right.key === ABILITY_CHECK_KEY)) {
+      return isLeftFirst ? -1 : 1;
+    }
+
+    return left.label.localeCompare(right.label, EFFECT_MENU_SORT_LOCALE);
+  });
+}
+
+/**
  * Пункты-условия по типу существа: выбор заполняет ТОЛЬКО поле условия, ключ и
  * значение остаются пустыми — что именно ограничивает условие, автор называет
  * сам.
@@ -371,21 +461,29 @@ function buildConditionPresets(prefix: string): EffectModifierPreset[] {
  * @returns разделы меню модификаторов.
  */
 function buildModifierMenu(): EffectModifierMenuGroup[] {
-  const itemsByGroup = new Map<string, EffectModifierPreset[]>();
+  const itemsByGroup = new Map<string, EffectModifierMenuItem[]>();
 
   for (const suggestion of EFFECT_TARGET_KEY_SUGGESTIONS) {
     const groupKey = getModifierGroupKey(suggestion.value);
     const items = itemsByGroup.get(groupKey) ?? [];
 
-    items.push({
-      key: suggestion.value,
-      label: suggestion.label,
-      mode: getDefaultModeOfKey(suggestion.value),
-      value: getDefaultValueOfGroup(groupKey),
-    });
+    // Проверки — подменю: «как именно лучше» у навыка несколько, и ни одно не
+    // угадать за автора
+    items.push(
+      groupKey === 'skills'
+        ? buildCheckSubmenu(suggestion.value, suggestion.label)
+        : {
+            key: suggestion.value,
+            label: suggestion.label,
+            mode: getDefaultModeOfKey(suggestion.value),
+            value: getDefaultValueOfGroup(groupKey),
+          },
+    );
 
     itemsByGroup.set(groupKey, items);
   }
+
+  itemsByGroup.set('skills', sortCheckItems(itemsByGroup.get('skills') ?? []));
 
   for (const preset of EFFECT_MODIFIER_READY_PRESETS) {
     const groupKey = getModifierGroupKey(preset.key);

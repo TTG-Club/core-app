@@ -15,8 +15,8 @@
  * src/client/ui/effect/constants.ts, src/client/ui/effect/triggerLabels.ts.
  */
 
-/** Версия системы dnd5e-2024, с которой снят порт справочников и подписей. */
 import type { EffectChangeStepPeriod } from './changeSteps';
+import type { EffectChangeModeChoice } from './changeSubtract';
 import type {
   EffectDelivery,
   EffectFormContext,
@@ -75,6 +75,7 @@ import type {
   EffectVariantPick,
 } from './types';
 
+import { SUBTRACT_MODE_CHOICE } from './changeSubtract';
 import {
   APPLIER_TRIGGER_RECIPIENT,
   AREA_TRIGGER_RECIPIENT,
@@ -83,7 +84,11 @@ import {
   MAX_HP_REDUCTION_NEVER_ENDS,
 } from './triggerTypes';
 
-export const EFFECT_SYSTEM_VERSION = '0.8.66';
+/** Версия системы dnd5e-2024, с которой снят порт справочников и подписей. */
+export const EFFECT_SYSTEM_VERSION = '0.8.81';
+
+/** Язык сортировки пунктов меню «Готовые»: навыки ищут по русскому названию. */
+export const EFFECT_MENU_SORT_LOCALE = 'ru';
 
 /** Переменная урона события в формулах срабатывания. */
 export const EVENT_DAMAGE_VARIABLE = 'damage';
@@ -97,14 +102,17 @@ interface Option<Value extends string> {
 }
 
 /** Режимы применения числового изменения — подписи выбора в строке. */
-export const EFFECT_CHANGE_MODE_OPTIONS: Array<Option<EffectChangeMode>> = [
-  { label: 'Добавить (+)', value: 'add' },
-  { label: 'Умножить (×)', value: 'multiply' },
-  { label: 'Заменить (=)', value: 'override' },
-  { label: 'Не меньше (max)', value: 'upgrade' },
-  { label: 'Не больше (min)', value: 'downgrade' },
-  { label: 'Особый', value: 'custom' },
-];
+export const EFFECT_CHANGE_MODE_OPTIONS: Array<Option<EffectChangeModeChoice>> =
+  [
+    { label: 'Добавить (+)', value: 'add' },
+    // Только в форме: в данных это «Добавить» со знаком минус
+    { label: 'Вычесть (−)', value: SUBTRACT_MODE_CHOICE },
+    { label: 'Умножить (×)', value: 'multiply' },
+    { label: 'Заменить (=)', value: 'override' },
+    { label: 'Не меньше (max)', value: 'upgrade' },
+    { label: 'Не больше (min)', value: 'downgrade' },
+    { label: 'Особый', value: 'custom' },
+  ];
 
 /** Режимы изменения словом — для описаний («заменить 60»). */
 export const EFFECT_CHANGE_MODE_LABELS: Record<EffectChangeMode, string> = {
@@ -524,6 +532,11 @@ export const EFFECT_VALUE_SUGGESTIONS: Array<Option<string>> = [
     value: '@classLevel',
     label: 'Уровень в классе умения (@classLevel; у своего эффекта — общий)',
   },
+
+  // Кость к броску: катается в самом броске атаки, спасброска, проверки или
+  // навыка. Вычитается той же строкой со знаком минус — отдельной подсказки
+  // «−1к4» нет, это было бы то же самое
+  { value: '1к4', label: 'Кость к броску' },
 
   // Скорости листа: ими задаётся «полёт равен скорости ходьбы»
   { value: '@speed.walk', label: 'Скорость ходьбы листа' },
@@ -1734,6 +1747,12 @@ export const ACTIVE_EFFECT_LABELS = {
   changeValue: 'Значение',
   changeValuePlaceholder: '+2, 1к4, @mod.spell',
   changeValueRequired: 'Без значения строка не сохранится',
+  changeRollDiceHint: 'Кость бросается заново при каждом броске.',
+  changeDiceNotRolledError:
+    'Здесь кость никто не бросит: она работает только у атак, спасбросков, '
+    + 'проверок, навыков и урона. Укажите число.',
+  changeDiceModeError:
+    'Кость работает только в режимах «Добавить (+)» и «Вычесть (−)».',
   changePriority: 'Приоритет',
   changeCondition: 'Условие',
   changeConditionPlaceholder: `Напр.: ${EFFECT_ROLL_ADVANTAGE_CONDITION}`,
@@ -1838,8 +1857,9 @@ export const EFFECT_USE_DELIVERY_LABELS = {
 export const EFFECT_USE_DELIVERY_HINTS = {
   carrier: 'Копия ложится на того, кто применил, и живёт своей длительностью.',
   target:
-    'Копия ложится на выбранную цель при применении. Спасбросок и урон ниже '
-    + 'относятся к цели.',
+    'Копия ложится на того, кого выберут щелчком по фишке, — на себя или на '
+    + 'другого (зелье выпивают или вливают). Спасбросок и урон ниже относятся '
+    + 'к цели.',
 } as const;
 
 /** Подпись варианта «на цели» — по месту формы. */

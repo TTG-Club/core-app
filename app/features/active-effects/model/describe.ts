@@ -257,7 +257,12 @@ function describeChangeValue(change: EffectChange): string {
       return `${sign}${Math.abs(numeric)}${unit}`;
     }
 
-    return `+${prettifyFormula(change.value)}${unit}`;
+    // Вычитаемая кость («−1к4» к броску) читается минусом, а не «+-1к4»
+    const formula = change.value.trim();
+
+    return formula.startsWith('-')
+      ? `−${prettifyFormula(formula.slice(1).trim())}${unit}`
+      : `+${prettifyFormula(formula)}${unit}`;
   }
 
   if (change.mode === 'multiply') {

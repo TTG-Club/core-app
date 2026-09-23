@@ -3,8 +3,9 @@
 
   import type {
     EffectChange,
-    EffectChangeMode,
+    EffectChangeModeChoice,
     EffectChangeStep,
+    EffectModifierMenuItem,
     EffectModifierPreset,
   } from '../../model';
 
@@ -12,12 +13,14 @@
 
   import {
     ACTIVE_EFFECT_LABELS,
+    applyEffectChangeModeChoice,
     canStepEffectChangeValue,
     createEmptyEffectChange,
     DEFAULT_CHANGE_STEP_BY,
     DEFAULT_CHANGE_STEP_PER,
     DEFAULT_EFFECT_CHANGE_PRIORITY,
     DEFAULT_EFFECT_CHANGE_VALUE,
+    describeEffectChangeValueError,
     EFFECT_CHANGE_MODE_OPTIONS,
     EFFECT_CHANGE_STEP_LABELS,
     EFFECT_CHANGE_STEP_PER_OPTIONS,
@@ -26,8 +29,13 @@
     EFFECT_MODIFIERS_STEP_LABELS,
     EFFECT_TARGET_KEY_SUGGESTIONS,
     EFFECT_VALUE_SUGGESTIONS,
+    getEffectChangeModeChoice,
+    getEffectChangeShownValue,
     IDLE_CHANGE_STEP_BY,
+    isEffectModifierSubmenu,
+    isRollDiceEffectChange,
     MAX_EFFECT_CHANGE_STEP,
+    toStoredEffectChangeValue,
   } from '../../model';
 
   /**
@@ -59,9 +67,13 @@
       keyError: change.key.trim()
         ? undefined
         : ACTIVE_EFFECT_LABELS.changeKeyRequired,
-      valueError: change.value.trim()
-        ? undefined
-        : ACTIVE_EFFECT_LABELS.changeValueRequired,
+      valueError: describeEffectChangeValueError(change),
+      // «Вычесть» — только в форме: в данных это «Добавить» с минусом
+      modeChoice: getEffectChangeModeChoice(change),
+      shownValue: getEffectChangeShownValue(change),
+      valueHint: isRollDiceEffectChange(change)
+        ? ACTIVE_EFFECT_LABELS.changeRollDiceHint
+        : undefined,
       hasStep: change.step !== undefined,
       /** Предел шага в поле: не заданный — пустое поле «без предела». */
       stepUntil: change.step?.until ?? null,
@@ -122,15 +134,32 @@
     ];
   }
 
+  /**
+   * Пункт выпадающего меню: готовая строка либо подменю её вариантов.
+   *
+   * @param menuItem пункт раздела меню.
+   * @returns пункт выпадающего меню.
+   */
+  function toDropdownItem(menuItem: EffectModifierMenuItem): DropdownMenuItem {
+    if (isEffectModifierSubmenu(menuItem)) {
+      return {
+        label: menuItem.label,
+        children: menuItem.options.map((option) => ({
+          label: option.label,
+          onSelect: () => addChangeFromPreset(option),
+        })),
+      };
+    }
+
+    return {
+      label: menuItem.label,
+      onSelect: () => addChangeFromPreset(menuItem),
+    };
+  }
+
   const modifierMenuItems = computed<Array<Array<DropdownMenuItem>>>(() =>
     EFFECT_MODIFIER_MENU.map((group) => [
-      {
-        label: group.label,
-        children: group.items.map((preset) => ({
-          label: preset.label,
-          onSelect: () => addChangeFromPreset(preset),
-        })),
-      },
+      { label: group.label, children: group.items.map(toDropdownItem) },
     ]),
   );
 
@@ -166,23 +195,31 @@
   }
 
   /**
-   * Меняет режим строки.
+   * Меняет режим строки. Число в поле остаётся тем, что видел автор.
    *
    * @param index номер строки.
-   * @param mode режим применения.
+   * @param choice режим, в том числе «Вычесть».
    */
-  function updateMode(index: number, mode: EffectChangeMode) {
-    updateChange(index, { mode });
+  function updateMode(index: number, choice: EffectChangeModeChoice) {
+    const change = model.value[index];
+
+    if (change) {
+      updateChange(index, applyEffectChangeModeChoice(change, choice));
+    }
   }
 
   /**
-   * Меняет значение строки.
+   * Меняет значение строки. У «Вычесть» в данные уходит число с минусом.
    *
    * @param index номер строки.
-   * @param value значение или формула.
+   * @param value значение или формула из поля.
    */
   function updateValue(index: number, value: string) {
-    updateChange(index, { value });
+    const change = model.value[index];
+
+    if (change) {
+      updateChange(index, { value: toStoredEffectChangeValue(change, value) });
+    }
   }
 
   /**
@@ -325,7 +362,7 @@
         class="col-span-full md:col-span-5"
       >
         <USelect
-          :model-value="changeRow.change.mode"
+          :model-value="changeRow.modeChoice"
           :items="EFFECT_CHANGE_MODE_OPTIONS"
           class="w-full"
           @update:model-value="updateMode(index, $event)"
@@ -335,10 +372,11 @@
       <UFormField
         :label="ACTIVE_EFFECT_LABELS.changeValue"
         :error="changeRow.valueError"
+        :help="changeRow.valueHint"
         class="col-span-full md:col-span-7"
       >
         <InputWithLibrary
-          :model-value="changeRow.change.value"
+          :model-value="changeRow.shownValue"
           :options="EFFECT_VALUE_SUGGESTIONS"
           :placeholder="ACTIVE_EFFECT_LABELS.changeValuePlaceholder"
           @update:model-value="updateValue(index, $event)"

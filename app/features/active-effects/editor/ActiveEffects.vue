@@ -17,6 +17,7 @@
     EFFECT_ORIGIN,
     listInertEffectFields,
     resolveEffectFormLayout,
+    upgradeEffectDraft,
   } from '../model';
   import ActiveEffectItem from './ui/ActiveEffectItem.vue';
 
@@ -111,19 +112,23 @@
   /**
    * Свёрнутые строки: сводка — по ней автор и модератор сразу видят, что
    * делает каждый эффект, — и число настроек, которые здесь не работают.
+   * Сводка и счётчик — по эффекту, как его прочтёт VTTG: старая зона «пока
+   * внутри» со спасброском — уже «при входе».
    */
   const effectRows = computed(() =>
     model.value.map((effect) => {
+      const upgradedEffect = upgradeEffectDraft(effect, context);
+
       const inertCount = listInertEffectFields(
-        effect,
-        resolveEffectFormLayout(context, effect, { zoneAvailable }),
+        upgradedEffect,
+        resolveEffectFormLayout(context, upgradedEffect, { zoneAvailable }),
       ).length;
 
       return {
         effect,
         icon: effect.icon || DEFAULT_EFFECT_ICON,
         name: effect.name || ACTIVE_EFFECT_LABELS.unnamed,
-        scenario: describeEffectScenario(effect, context),
+        scenario: describeEffectScenario(upgradedEffect, context),
         inertBadge:
           inertCount > 0
             ? `${ACTIVE_EFFECT_LABELS.inertBadge}${inertCount}`
@@ -145,6 +150,28 @@
 
     // Новый эффект сразу раскрыт: его всё равно тут же настраивают.
     expand(addedIndex);
+  }
+
+  /**
+   * Раскрывает или сворачивает эффект. Раскрытый эффект открывается в новом
+   * виде: старая зона «пока внутри» со спасброском — уже «при входе», как её
+   * читает VTTG. Иначе форма числила бы спасбросок неработающим и «Убрать»
+   * стёрло бы его.
+   *
+   * @param index номер эффекта.
+   */
+  function toggleEffect(index: number) {
+    const effect = model.value[index];
+
+    if (!isExpanded(index) && effect) {
+      const upgradedEffect = upgradeEffectDraft(effect, context);
+
+      if (upgradedEffect !== effect) {
+        updateEffect(index, upgradedEffect);
+      }
+    }
+
+    toggle(index);
   }
 
   /**
@@ -214,7 +241,7 @@
             type="button"
             class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md before:absolute before:inset-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             :aria-expanded="isExpanded(index)"
-            @click.left.exact.prevent="toggle(index)"
+            @click.left.exact.prevent="toggleEffect(index)"
           >
             <UIcon
               :name="effectRow.icon"

@@ -20,6 +20,7 @@ import {
   normalizeEffectDraft,
   readEffectSuccessOutcome,
   resolveEffectFormLayout,
+  upgradeEffectDraft,
   writeEffectSuccessOutcome,
 } from './layout';
 import { DEFAULT_EFFECT_DAMAGE_PART_TARGET } from './types';
@@ -183,9 +184,13 @@ function normalizeActiveEffect(
   context: EffectFormContext,
   layoutOptions: EffectFormLayoutOptions,
 ): ActiveEffect {
+  // Старая зона «пока внутри» со спасброском уходит «при входе»: так VTTG её
+  // и читает, а в «пока внутри» спасбросок числился бы неработающим
+  const upgraded = upgradeEffectDraft(effect, context);
+
   const draft = normalizeEffectDraft(
-    effect,
-    resolveEffectFormLayout(context, effect, layoutOptions),
+    upgraded,
+    resolveEffectFormLayout(context, upgraded, layoutOptions),
   );
 
   // «Даже при успехе» и «только при успехе» вместе не читаются: движок всё

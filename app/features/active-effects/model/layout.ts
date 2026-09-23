@@ -43,6 +43,7 @@ import { writeTriggerCondition } from './triggerConditions';
 import {
   createEffectTriggerId,
   listEffectListTriggers,
+  upgradeStaySaveEffect,
   writeEffectTriggers,
 } from './triggers';
 import {
@@ -483,6 +484,26 @@ export function writeEffectDelivery(
  */
 export function readEffectAreaTrigger(effect: ActiveEffect): EffectAreaTrigger {
   return effect.areaTrigger ?? 'stay';
+}
+
+/**
+ * Эффект для правки и сохранения: старая зона или аура «пока внутри» со
+ * спасброском открывается уже «при входе», как VTTG её теперь и читает, — и
+ * после сохранения так и записывается.
+ *
+ * @param effect сохранённый эффект.
+ * @param context место формы.
+ * @returns эффект для правки; без перевода — тот же объект.
+ */
+export function upgradeEffectDraft(
+  effect: ActiveEffect,
+  context: EffectFormContext,
+): ActiveEffect {
+  const delivery = readEffectDelivery(effect, context);
+
+  return delivery === 'zone' || delivery === 'aura'
+    ? upgradeStaySaveEffect(effect)
+    : effect;
 }
 
 /**
@@ -1282,7 +1303,7 @@ export function writeEffectTriggerRow(
  * @param layout раскладка формы.
  * @returns `true`, если срабатывание здесь работает целиком.
  */
-function isTriggerSupported(
+export function isEffectTriggerSupported(
   trigger: EffectTrigger,
   layout: EffectFormLayout,
 ): boolean {
@@ -1572,7 +1593,7 @@ export function listInertEffectFields(
     [
       'triggers',
       (effect.triggers ?? []).some(
-        (trigger) => !isTriggerSupported(trigger, layout),
+        (trigger) => !isEffectTriggerSupported(trigger, layout),
       ),
     ],
   ];
@@ -1648,7 +1669,7 @@ export function clearInertEffectFields(
         const layout = resolveEffectFormLayout(context, cleared);
 
         const kept = (cleared.triggers ?? []).filter((trigger) =>
-          isTriggerSupported(trigger, layout),
+          isEffectTriggerSupported(trigger, layout),
         );
 
         return { ...cleared, triggers: kept.length > 0 ? kept : undefined };
