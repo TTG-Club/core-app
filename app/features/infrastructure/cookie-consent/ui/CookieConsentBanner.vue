@@ -6,9 +6,11 @@
 
   import { useCookieNotice } from '../composables';
   import {
+    COOKIE_NOTICE_CLOSE_LABEL,
     COOKIE_NOTICE_DESCRIPTION,
     COOKIE_NOTICE_DISMISS_LABEL,
     COOKIE_NOTICE_ICON,
+    COOKIE_NOTICE_RELUCTANT_LABEL,
     COOKIE_NOTICE_TITLE,
     COOKIE_POLICY_PAGE_TITLE,
     COOKIE_POLICY_ROUTE,
@@ -60,7 +62,7 @@
             </div>
           </div>
 
-          <div class="flex shrink-0 items-center">
+          <div class="flex shrink-0 flex-wrap items-center gap-2">
             <UButton
               :label="COOKIE_NOTICE_DISMISS_LABEL"
               color="primary"
@@ -68,8 +70,27 @@
               class="justify-center px-5"
               @click.left.exact.prevent="dismiss"
             />
+
+            <UButton
+              :label="COOKIE_NOTICE_RELUCTANT_LABEL"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              class="justify-center"
+              @click.left.exact.prevent="dismiss"
+            />
           </div>
         </div>
+
+        <UButton
+          icon="tabler:x"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          class="-mt-1 -mr-1 shrink-0"
+          :aria-label="COOKIE_NOTICE_CLOSE_LABEL"
+          @click.left.exact.prevent="dismiss"
+        />
       </div>
     </UCard>
   </Transition>
