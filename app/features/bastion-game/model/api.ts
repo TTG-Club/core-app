@@ -1,3 +1,4 @@
+import type { PlanDocument, PlanState } from './plan-schema';
 import type {
   CatalogFacility,
   CreatePlayerBastionRequest,
@@ -11,6 +12,7 @@ import {
   BASTION_FACILITY_CATALOG_API_PATH,
   PLAYER_BASTIONS_API_PATH,
 } from './constants';
+import { parsePlanResponse } from './plan-edit';
 import {
   catalogFacilitiesSchema,
   playerBastionGameSchema,
@@ -154,6 +156,59 @@ export async function updatePlayerBastion(
 export async function archivePlayerBastion(id: string): Promise<PlayerBastion> {
   const response = await $fetch<unknown>(
     `${PLAYER_BASTIONS_API_PATH}/${id}/archive`,
+    { method: 'POST', retry: 0 },
+  );
+
+  return playerBastionSchema.parse(response);
+}
+
+/**
+ * План бастиона.
+ *
+ * @param bastionId Бастион.
+ * @returns Версия, право правки и документ плана.
+ */
+export async function fetchBastionPlan(bastionId: string): Promise<PlanState> {
+  const response = await $fetch<unknown>(
+    `${PLAYER_BASTIONS_API_PATH}/${bastionId}/plan`,
+    { method: 'GET', retry: 0 },
+  );
+
+  return parsePlanResponse(response);
+}
+
+/**
+ * Сохраняет план целиком. Версия устарела — сервер отвечает 409.
+ *
+ * @param bastionId Бастион.
+ * @param version Версия плана, с которой начата правка.
+ * @param document План.
+ * @returns Сохранённый план с новой версией.
+ */
+export async function saveBastionPlan(
+  bastionId: string,
+  version: number,
+  document: PlanDocument,
+): Promise<PlanState> {
+  const response = await $fetch<unknown>(
+    `${PLAYER_BASTIONS_API_PATH}/${bastionId}/plan`,
+    { method: 'PUT', body: { version, document }, retry: 0 },
+  );
+
+  return parsePlanResponse(response);
+}
+
+/**
+ * Запускает бастион: закладка закончена, начинаются ходы. Только мастер.
+ *
+ * @param bastionId Бастион.
+ * @returns Бастион в статусе «Действует».
+ */
+export async function activatePlayerBastion(
+  bastionId: string,
+): Promise<PlayerBastion> {
+  const response = await $fetch<unknown>(
+    `${PLAYER_BASTIONS_API_PATH}/${bastionId}/activate`,
     { method: 'POST', retry: 0 },
   );
 

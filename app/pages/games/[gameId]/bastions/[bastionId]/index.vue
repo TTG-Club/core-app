@@ -5,10 +5,12 @@
 
   import { MemberFacilitiesCard } from '~bastion-game/facilities';
   import {
+    activatePlayerBastion,
     BASTION_DETAIL_LABELS,
     BASTION_GAME_LABELS,
     fetchPlayerBastion,
     getBastionErrorMessage,
+    PLAN_LABELS,
     PLAYER_BASTION_STATUS_COLORS,
     PLAYER_BASTION_STATUS_LABELS,
   } from '~bastion-game/model';
@@ -40,6 +42,39 @@
   });
 
   const gameRoute = computed(() => `/games/${gameId.value}`);
+
+  const planRoute = computed(
+    () => `/games/${gameId.value}/bastions/${bastionId.value}/plan`,
+  );
+
+  const toast = useToast();
+  const isActivating = ref(false);
+
+  /** Мастер может запустить бастион, пока тот в закладке. */
+  const canActivate = computed(
+    () => !!bastion.value?.canManage && bastion.value.status === 'SETUP',
+  );
+
+  /** Запускает бастион: закладка закончена, начинаются ходы. */
+  async function activate(): Promise<void> {
+    isActivating.value = true;
+
+    try {
+      bastion.value = await activatePlayerBastion(bastionId.value);
+      toast.add({ title: BASTION_DETAIL_LABELS.activated, color: 'success' });
+    } catch (activationError) {
+      toast.add({
+        title: BASTION_DETAIL_LABELS.activateError,
+        description: getBastionErrorMessage(
+          activationError,
+          BASTION_DETAIL_LABELS.activateError,
+        ),
+        color: 'error',
+      });
+    } finally {
+      isActivating.value = false;
+    }
+  }
 
   /**
    * Подменяет бастион ответом сервера после правки: в нём новая версия, и
@@ -121,7 +156,33 @@
             {{ BASTION_GAME_LABELS.treasury }}: {{ bastion.treasuryGp }}
             {{ BASTION_GAME_LABELS.gold }}
           </span>
+
+          <div class="ml-auto flex flex-wrap gap-2">
+            <UButton
+              :to="planRoute"
+              icon="tabler:map-2"
+              variant="subtle"
+            >
+              {{ PLAN_LABELS.open }}
+            </UButton>
+
+            <UButton
+              v-if="canActivate"
+              icon="tabler:player-play"
+              :loading="isActivating"
+              @click.left.exact.prevent="activate"
+            >
+              {{ BASTION_DETAIL_LABELS.activate }}
+            </UButton>
+          </div>
         </div>
+
+        <p
+          v-if="canActivate"
+          class="text-sm text-muted"
+        >
+          {{ BASTION_DETAIL_LABELS.activateHint }}
+        </p>
 
         <h2 class="text-base font-semibold text-highlighted">
           {{ BASTION_DETAIL_LABELS.members }}
