@@ -581,8 +581,15 @@ export const GAME_PLAYERS_MIN = 1;
  */
 export const GAME_PLAYERS_MAX = 15;
 
-/** Тот же предел без подписки — он звучит только в подсказке поля. */
-const GAME_PLAYERS_FREE_MAX = 5;
+/** Тот же предел без подписки — он звучит в подсказке поля и на странице подписки. */
+export const GAME_PLAYERS_FREE_MAX = 5;
+
+/**
+ * Сколько незавершённых игр (черновик или открытая) может вести мастер: без
+ * подписки одну, с ней десять. Проверяет сервис игр, здесь — для подсказок.
+ */
+export const GAME_ACTIVE_FREE_MAX = 1;
+export const GAME_ACTIVE_SUBSCRIBER_MAX = 10;
 
 export const GAME_AGE_MIN = 0;
 export const GAME_AGE_MAX = 120;
@@ -1282,8 +1289,7 @@ export const GAME_FORM_PLAYERS_ERROR =
   'Для старта нужно не больше игроков, чем максимум';
 export const GAME_FORM_AGE_ERROR =
   'Минимальный возраст не может превышать максимальный';
-export const GAME_FORM_LIMIT_HINT =
-  'Без подписки у мастера может быть только одна незавершённая игра. Завершите текущую или оформите подписку.';
+export const GAME_FORM_LIMIT_HINT = `Без подписки у мастера может быть только одна незавершённая игра, с подпиской — до ${GAME_ACTIVE_SUBSCRIBER_MAX}. Завершите одну из текущих игр или оформите подписку.`;
 
 /* Подписи раздела «Мои игры». */
 // Список собирает и свои игры, и чужие, куда пользователь записался,

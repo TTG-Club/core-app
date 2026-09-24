@@ -1,14 +1,19 @@
 <script setup lang="ts">
   import type { VttgSubscriptionLimit } from '../model';
 
-  import { VTTG_SUBSCRIPTION_LIMIT_LABELS } from '../model';
+  import {
+    formatSubscriptionLimitValue,
+    VTTG_SUBSCRIPTION_LIMIT_LABELS,
+  } from '../model';
 
   const { limit } = defineProps<{
     limit: VttgSubscriptionLimit;
   }>();
 
-  const baseValue = computed(
-    () => limit.base ?? VTTG_SUBSCRIPTION_LIMIT_LABELS.unavailable,
+  const baseValue = computed(() => formatSubscriptionLimitValue(limit.base));
+
+  const subscriberValue = computed(() =>
+    formatSubscriptionLimitValue(limit.subscriber),
   );
 </script>
 
@@ -18,7 +23,7 @@
       {{ limit.label }}
     </span>
 
-    <!-- Каждое число подписано: слева без подписки, справа с ней. -->
+    <!-- Каждое значение подписано: слева без подписки, справа с ней. -->
     <dl class="grid grid-cols-2 overflow-hidden rounded-lg ring ring-default">
       <div class="flex flex-col gap-0.5 bg-elevated px-4 py-3">
         <dt class="text-xs text-muted">
@@ -36,7 +41,7 @@
         </dt>
 
         <dd class="text-2xl font-bold text-primary">
-          {{ limit.subscriber }}
+          {{ subscriberValue }}
         </dd>
       </div>
     </dl>
