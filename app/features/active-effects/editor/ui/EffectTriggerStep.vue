@@ -8,6 +8,8 @@
     EffectVariantPick,
   } from '../../model';
 
+  import { InfoTooltip } from '~ui/tooltip';
+
   import {
     buildActivationOptions,
     buildAreaTriggerOptions,
@@ -304,11 +306,18 @@
       v-if="layout.showActivationCounter"
       class="flex flex-wrap items-end gap-2"
     >
-      <UFormField
-        :label="EFFECT_ACTIVATION_COUNTER_LABELS.counter"
-        :help="EFFECT_ACTIVATION_COUNTER_LABELS.hint"
-        class="w-full sm:w-72"
-      >
+      <!-- Подсказка под значком: строкой под полем она выталкивала поле
+        вверх, и оно не стояло в ряд с «Сколько» -->
+      <UFormField class="w-full sm:w-72">
+        <template #label>
+          <InfoTooltip
+            :text="EFFECT_ACTIVATION_COUNTER_LABELS.hint"
+            icon="tabler:info-circle-filled"
+          >
+            <span>{{ EFFECT_ACTIVATION_COUNTER_LABELS.counter }}</span>
+          </InfoTooltip>
+        </template>
+
         <UInput
           v-model="activationCounter"
           :placeholder="EFFECT_ACTIVATION_COUNTER_LABELS.counterPlaceholder"

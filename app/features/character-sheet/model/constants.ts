@@ -882,9 +882,13 @@ export const CLASS_RESOURCE_MODAL_TITLES: Record<'add' | 'edit', string> = {
 };
 
 /** Подсказки полей ресурса класса: пример вместо подставленного текста. */
-export const RESOURCE_PLACEHOLDERS: Record<'name' | 'shortLabel', string> = {
+export const RESOURCE_PLACEHOLDERS: Record<
+  'name' | 'shortLabel' | 'key',
+  string
+> = {
   name: 'Например, Ярость',
   shortLabel: 'ЯР',
+  key: 'rage',
 };
 
 /**
@@ -5868,6 +5872,11 @@ export const SHEET_CURRENCY_MODAL_LABELS = {
 export const SHEET_CLASS_RESOURCE_MODAL_LABELS = {
   name: 'Название',
   shortLabel: 'Кратко',
+  key: 'Ключ',
+  keyHint:
+    'Под этим ключом ресурс тратит эффект: его вписывают в поле «Тратит '
+    + 'ресурс» — rage у «Ярости». Латиницей, без пробелов. У ресурса '
+    + 'справочника ключ книжный и не меняется: на него ссылаются его эффекты.',
   current: 'Сейчас',
   max: 'Максимум',
   recovery: 'Восстановление',

@@ -2,6 +2,7 @@
   import type { CharacterClassResource, ResourceMaxSource } from '../../model';
 
   import { ACTION_LABELS } from '~/shared/consts';
+  import { InfoTooltip } from '~ui/tooltip';
 
   import { useCharacterSheet } from '../../composables';
   import {
@@ -33,6 +34,7 @@
     SHEET_CLASS_RESOURCE_MODAL_LABELS,
     toClassResourceDraft,
     toEditedFeatResource,
+    toSavedClassResource,
   } from '../../model';
 
   const props = defineProps<{
@@ -202,7 +204,7 @@
     const draft = draftResource.value;
 
     if (!props.bookResource) {
-      emit('close', draft);
+      emit('close', toSavedClassResource(draft));
 
       return;
     }
@@ -242,6 +244,25 @@
               v-model="draftResource.shortLabel"
               :placeholder="RESOURCE_PLACEHOLDERS.shortLabel"
               :maxlength="RESOURCE_SHORT_LABEL_MAX_LENGTH"
+            />
+          </div>
+
+          <!-- Ключ виден, чтобы знать, что вписать в «Тратит ресурс» у эффекта.
+            У книжного ресурса он только для чтения: на него ссылаются эффекты
+            справочника, и правка оторвала бы ресурс от них -->
+          <div class="flex w-28 shrink-0 flex-col gap-1">
+            <InfoTooltip
+              :text="SHEET_CLASS_RESOURCE_MODAL_LABELS.keyHint"
+              icon="tabler:info-circle-filled"
+              class="text-[10px] font-bold text-muted uppercase"
+            >
+              <span>{{ SHEET_CLASS_RESOURCE_MODAL_LABELS.key }}</span>
+            </InfoTooltip>
+
+            <UInput
+              v-model="draftResource.key"
+              :placeholder="RESOURCE_PLACEHOLDERS.key"
+              :disabled="isFromBook"
             />
           </div>
         </div>

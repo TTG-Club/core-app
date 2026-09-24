@@ -609,6 +609,12 @@ export const FEAT_EDITOR_LABELS = {
   counterName: 'Название',
   counterNamePlaceholder: 'Очки удачи',
   counterShortName: 'Кратко',
+  counterKey: 'Ключ',
+  counterKeyPlaceholder: 'rage',
+  counterKeyHint:
+    'Под этим ключом ресурс лежит на листе. Его вписывают в поле «Тратит '
+    + 'ресурс» у эффекта, который расходует заряды: у «Ярости» варвара — rage. '
+    + 'Латиницей, без пробелов; без ключа ресурс не сохранится.',
   counterMax: 'Максимум',
   counterMin: 'Минимум',
   choiceScalingTitle: 'Рост по уровням',

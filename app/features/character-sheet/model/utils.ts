@@ -6088,6 +6088,19 @@ export function toClassResourceDraft(
   };
 }
 
+/**
+ * Свой ресурс игрока из формы — к записи в лист: ключ без пробелов по краям, а
+ * пустой не пишется вовсе — ресурс без ключа эффекты просто не тратят.
+ *
+ * @param draftResource черновик ресурса из формы.
+ * @returns ресурс для списка листа.
+ */
+export function toSavedClassResource(
+  draftResource: CharacterClassResource,
+): CharacterClassResource {
+  return { ...draftResource, key: draftResource.key?.trim() || undefined };
+}
+
 /** Целое число без знака — им записаны и своё число максимума, и множитель. */
 const NUMBER_PATTERN = /^\d+$/;
 
@@ -6419,6 +6432,7 @@ function buildFeatResource(
 
   const base: CharacterClassResource = {
     id: `${FEAT_RESOURCE_ID_PREFIX}${feature.id}:${counter.key}`,
+    key: counter.key,
     name: counter.name,
     // Краткой подписи у ресурса может не быть — тогда её место в строке
     // панели заняло бы пустое поле; достраиваем из названия, как это
@@ -12878,6 +12892,8 @@ export function mergeClassResources(
 
     return {
       ...resource,
+      // Ключ книжный: листы, собранные до него, получают его пересборкой
+      key: next.key,
       name: next.name,
       shortLabel: next.shortLabel,
       max: next.max,
