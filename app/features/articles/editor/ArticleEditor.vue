@@ -255,6 +255,14 @@
   const route = useRoute();
   const closeRoute = useArticleEditorCloseRoute();
 
+  // Тип, url, состояние публикации и отправка в соцсети — решения админа.
+  // Модератор правит только содержание записи, эти блоки ему не показываем.
+  const { isAdmin } = useUserRoles();
+
+  const mainColumnClass = computed(() =>
+    isAdmin.value ? 'sm:col-span-3' : 'sm:col-span-5',
+  );
+
   // Собственный url записи при редактировании — чтобы проверка доступности slug
   // не считала его занятым.
   const currentUrl = computed(() =>
@@ -321,6 +329,10 @@
   );
 
   const mainActionLabel = computed(() => {
+    if (!isAdmin.value) {
+      return 'Сохранить';
+    }
+
     if (pubState.value === 'draft') {
       return 'Сохранить черновик';
     }
@@ -501,9 +513,13 @@
       </template>
 
       <div class="grid grid-cols-1 gap-6 sm:grid-cols-5">
-        <!-- Колонка 1: тип, заголовок, url -->
-        <div class="flex flex-col gap-5 sm:col-span-3">
+        <!-- Колонка 1: тип, заголовок, url (модератору — только заголовок) -->
+        <div
+          class="flex flex-col gap-5"
+          :class="mainColumnClass"
+        >
           <UFormField
+            v-if="isAdmin"
             label="Тип"
             name="type"
             required
@@ -529,6 +545,7 @@
             </UFormField>
 
             <UFormField
+              v-if="isAdmin"
               label="URL"
               name="url"
               required
@@ -542,8 +559,9 @@
           </div>
         </div>
 
-        <!-- Колонка 2: публикация -->
+        <!-- Колонка 2: публикация (только админу) -->
         <div
+          v-if="isAdmin"
           class="flex flex-col gap-4 border-t border-default pt-4 sm:col-span-2 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-6"
         >
           <UTabs
@@ -597,7 +615,10 @@
       </div>
     </UCard>
 
-    <UCard variant="subtle">
+    <UCard
+      v-if="isAdmin"
+      variant="subtle"
+    >
       <div class="flex flex-wrap items-center gap-2">
         <span class="text-sm font-medium text-highlighted">Опубликовать:</span>
 
