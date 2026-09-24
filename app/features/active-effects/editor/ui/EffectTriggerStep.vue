@@ -8,6 +8,8 @@
     EffectVariantPick,
   } from '../../model';
 
+  import { InfoTooltip } from '~ui/tooltip';
+
   import {
     buildActivationOptions,
     buildAreaTriggerOptions,
@@ -17,6 +19,7 @@
     DEFAULT_EFFECT_VARIANT_PICK,
     EFFECT_ACTIVATION_CHOICE_HINTS,
     EFFECT_ACTIVATION_COUNTER_LABELS,
+    EFFECT_ACTIVATION_RANGE_LABELS,
     EFFECT_AREA_TRIGGER_HINTS,
     EFFECT_AURA_LABELS,
     EFFECT_AURA_RADIUS_STEP,
@@ -28,6 +31,7 @@
     EFFECT_VARIANT_LABELS,
     EFFECT_VARIANT_PICK_OPTIONS,
     findAreaTrigger,
+    MIN_ACTIVATION_RANGE,
     MIN_EFFECT_AURA_RADIUS,
     resolveEffectDeliveryHint,
     writeEffectAreaTrigger,
@@ -112,6 +116,24 @@
       }
     },
   });
+
+  // Пустое поле — касание: дальность снимается, а не становится нулём.
+  // Очищенное поле числа отдаёт `undefined`, а не `null`
+  const activationRange = computed({
+    get: () => effect.value.activation?.range,
+    set: (range: number | null | undefined) =>
+      updateActivation({ range: range ?? undefined }),
+  });
+
+  /** Ряд полей применения: ресурс или дальность. */
+  const showActivationFields = computed(
+    () => layout.showActivationCounter || layout.showActivationRange,
+  );
+
+  /** «Сколько» тратить — только когда ресурс задан. */
+  const showActivationAmount = computed(
+    () => layout.showActivationCounter && activationCounter.value !== '',
+  );
 
   const deliveryOptions = computed(() => buildDeliveryOptions(layout));
 
@@ -301,14 +323,24 @@
     </p>
 
     <div
-      v-if="layout.showActivationCounter"
+      v-if="showActivationFields"
       class="flex flex-wrap items-end gap-2"
     >
+      <!-- Подсказка под значком: строкой под полем она выталкивала поле
+        вверх, и оно не стояло в ряд с «Сколько» -->
       <UFormField
-        :label="EFFECT_ACTIVATION_COUNTER_LABELS.counter"
-        :help="EFFECT_ACTIVATION_COUNTER_LABELS.hint"
+        v-if="layout.showActivationCounter"
         class="w-full sm:w-72"
       >
+        <template #label>
+          <InfoTooltip
+            :text="EFFECT_ACTIVATION_COUNTER_LABELS.hint"
+            icon="tabler:info-circle-filled"
+          >
+            <span>{{ EFFECT_ACTIVATION_COUNTER_LABELS.counter }}</span>
+          </InfoTooltip>
+        </template>
+
         <UInput
           v-model="activationCounter"
           :placeholder="EFFECT_ACTIVATION_COUNTER_LABELS.counterPlaceholder"
@@ -318,13 +350,35 @@
       </UFormField>
 
       <UFormField
-        v-if="activationCounter"
+        v-if="showActivationAmount"
         :label="EFFECT_ACTIVATION_COUNTER_LABELS.amount"
         class="w-24"
       >
         <UInputNumber
           v-model="activationAmount"
           :min="DEFAULT_ACTIVATION_AMOUNT"
+          size="sm"
+          class="w-full"
+        />
+      </UFormField>
+
+      <UFormField
+        v-if="layout.showActivationRange"
+        class="w-40"
+      >
+        <template #label>
+          <InfoTooltip
+            :text="EFFECT_ACTIVATION_RANGE_LABELS.hint"
+            icon="tabler:info-circle-filled"
+          >
+            <span>{{ EFFECT_ACTIVATION_RANGE_LABELS.range }}</span>
+          </InfoTooltip>
+        </template>
+
+        <UInputNumber
+          v-model="activationRange"
+          :min="MIN_ACTIVATION_RANGE"
+          :placeholder="EFFECT_ACTIVATION_RANGE_LABELS.placeholder"
           size="sm"
           class="w-full"
         />

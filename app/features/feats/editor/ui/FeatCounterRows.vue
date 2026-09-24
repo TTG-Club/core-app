@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { FeatCounterRow, FeatEditorLabelOverrides } from '../../model';
 
+  import { InfoTooltip } from '~ui/tooltip';
+
   import {
     COUNTER_MINIMUM_MAX,
     COUNTER_MINIMUM_MIN,
@@ -98,7 +100,7 @@
       class="grid grid-cols-1 items-end gap-3 rounded-lg bg-elevated/40 p-2 md:grid-cols-24"
     >
       <UFormField
-        class="md:col-span-6"
+        class="md:col-span-5"
         :label="texts.counterName"
       >
         <UInput
@@ -114,8 +116,26 @@
         <UInput v-model="counter.shortName" />
       </UFormField>
 
+      <!-- Ключ виден, потому что по нему эффект умения тратит ресурс: без
+        поля автор не знал, что вписать в «Тратит ресурс» -->
+      <UFormField class="md:col-span-3">
+        <template #label>
+          <InfoTooltip
+            :text="texts.counterKeyHint"
+            icon="tabler:info-circle-filled"
+          >
+            <span>{{ texts.counterKey }}</span>
+          </InfoTooltip>
+        </template>
+
+        <UInput
+          v-model="counter.key"
+          :placeholder="texts.counterKeyPlaceholder"
+        />
+      </UFormField>
+
       <UFormField
-        class="md:col-span-4"
+        class="md:col-span-3"
         :label="texts.counterMax"
       >
         <UInput
@@ -139,7 +159,7 @@
       </UFormField>
 
       <UFormField
-        class="md:col-span-7"
+        class="md:col-span-6"
         :label="texts.counterRecovery"
       >
         <USelect

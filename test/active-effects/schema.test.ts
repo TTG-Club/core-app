@@ -11,6 +11,7 @@ import {
 } from '~active-effects/model';
 
 import {
+  ACTIVATION_RANGE,
   AURA_RADIUS,
   createRawEffect,
   SAVE_DC,
@@ -525,6 +526,74 @@ describe('сохранение эффектов', () => {
     expect(
       normalizeActiveEffects(loadedEffects, 'spell')[0]?.applySave?.dc,
     ).toBe(APPLIER_SAVE_DC);
+  });
+});
+
+describe('дальность применения 0.8.87', () => {
+  it('дальность держится у применения, числом строкой — числом', () => {
+    const storedEffect = createRawEffect({
+      effectTarget: 'target',
+      activation: {
+        mode: 'use',
+        counter: 'channel-divinity',
+        range: ACTIVATION_RANGE,
+      },
+    });
+
+    const savedEffects = normalizeActiveEffects(
+      normalizeLoadedActiveEffects([storedEffect]),
+      'feature',
+    );
+
+    expect(stripUndefinedKeys(savedEffects)).toEqual([storedEffect]);
+
+    const [typedEffect] = normalizeLoadedActiveEffects([
+      createRawEffect({
+        activation: { mode: 'use', range: String(ACTIVATION_RANGE) },
+      }),
+    ]);
+
+    expect(typedEffect?.activation?.range).toBe(ACTIVATION_RANGE);
+  });
+
+  it('ноль, доля фута и мусор снимают только дальность', () => {
+    for (const range of [0, 2.5, 'далеко', -5]) {
+      const [loadedEffect] = normalizeLoadedActiveEffects([
+        createRawEffect({
+          activation: { mode: 'use', counter: 'channel-divinity', range },
+        }),
+      ]);
+
+      expect(loadedEffect?.activation, String(range)).toEqual({
+        mode: 'use',
+        counter: 'channel-divinity',
+        amount: undefined,
+        range: undefined,
+      });
+    }
+  });
+
+  it('у переключателя и без применения дальности нет', () => {
+    const toggled = createRawEffect({
+      activation: { mode: 'toggle', counter: 'rage', range: ACTIVATION_RANGE },
+    });
+
+    const [savedToggle] = normalizeActiveEffects(
+      normalizeLoadedActiveEffects([toggled]),
+      'feature',
+    );
+
+    expect(stripUndefinedKeys(savedToggle?.activation)).toEqual({
+      mode: 'toggle',
+      counter: 'rage',
+    });
+
+    const [savedPermanent] = normalizeActiveEffects(
+      normalizeLoadedActiveEffects([createRawEffect()]),
+      'feature',
+    );
+
+    expect(savedPermanent?.activation).toBeUndefined();
   });
 });
 

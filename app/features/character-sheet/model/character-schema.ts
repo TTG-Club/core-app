@@ -882,6 +882,7 @@ const classResourceOverridesSchema = z.object({
 const classResourceSchema = z
   .object({
     id: z.string(),
+    key: z.string().optional().catch(undefined),
     name: z.string().catch(''),
     shortLabel: z.string().catch(''),
     // Легаси-поле одного вида отдыха: у листов до раздельных порций оно

@@ -21,7 +21,9 @@ import type {
 
 import { upperFirst } from 'es-toolkit';
 
+import { isDiceFormulaValue } from './changeDice';
 import {
+  ACTIVE_EFFECT_LABELS,
   DEFAULT_EFFECT_TURN_ANCHOR,
   DEFAULT_EFFECT_TURN_TIMING,
   EFFECT_ABILITY_OPTIONS,
@@ -53,6 +55,7 @@ import {
   isEffectDamageType,
   splitConditionParts,
 } from './constants';
+import { renderReadableFormula } from './formula';
 import { APPLIER_SAVE_DC } from './layout';
 
 /**
@@ -88,6 +91,12 @@ const VALUE_TOKEN_LABELS: Record<string, string> = {
   '@mod.int': 'мод. Интеллекта',
   '@mod.wis': 'мод. Мудрости',
   '@mod.cha': 'мод. Харизмы',
+  '@str': 'значение Силы',
+  '@dex': 'значение Ловкости',
+  '@con': 'значение Телосложения',
+  '@int': 'значение Интеллекта',
+  '@wis': 'значение Мудрости',
+  '@cha': 'значение Харизмы',
   '@prof': 'бонус мастерства',
   '@level': 'уровень',
   '@classLevel': 'уровень в классе',
@@ -96,7 +105,15 @@ const VALUE_TOKEN_LABELS: Record<string, string> = {
   '@speed.swim': 'скорость плавания',
   '@speed.climb': 'скорость лазания',
   '@speed.burrow': 'скорость копания',
+  '@damage': 'урон события',
+  '@roll': 'сохранённый бросок',
 };
+
+/** Токен типа урона в формуле: `@dmg.fire`. */
+const DAMAGE_TYPE_TOKEN_PREFIX_PATTERN = /@dmg\./i;
+
+/** Токен условия по цели в формуле: `@target.full`. */
+const TARGET_TOKEN_PREFIX_PATTERN = /@target\./i;
 
 /**
  * Подписи условия по цели в формуле урона: токен `@target.full` или
@@ -223,16 +240,45 @@ function describeRecurringDamageSave(save: EffectSave): string {
 }
 
 /**
- * Заменяет @-токены формулы на короткие русские подписи.
+ * Подпись переменной формулы (`@prof` → «бонус мастерства»).
+ *
+ * @param token переменная с `@`.
+ * @returns подпись; незнакомая переменная отдаётся как есть.
+ */
+function labelFormulaVariable(token: string): string {
+  return VALUE_TOKEN_LABELS[token] ?? token;
+}
+
+/**
+ * Арифметика словами: разбираемая формула читается целиком — `floor`/`min`
+ * словами, а не кодом; кости с переменными — заменой токенов.
+ *
+ * @param formula формула без токенов урона.
+ * @returns читаемая запись.
+ */
+function prettifyArithmetic(formula: string): string {
+  return (
+    renderReadableFormula(formula, labelFormulaVariable)
+    ?? formula.replace(/@[a-z.]+/gi, labelFormulaVariable)
+  );
+}
+
+/**
+ * Формула словами. Формула с токенами урона, лечения или цели описывается как
+ * часть урона, прочая — как арифметика.
  *
  * @param value формула или значение модификатора.
- * @returns строка без сырых токенов.
+ * @returns читаемая запись без сырых токенов.
  */
 function prettifyFormula(value: string): string {
-  return value.replace(
-    /@[a-z.]+/gi,
-    (token) => VALUE_TOKEN_LABELS[token] ?? token,
-  );
+  const hasDamageTokens =
+    DAMAGE_TYPE_TOKEN_PREFIX_PATTERN.test(value)
+    || HEAL_TOKEN_PATTERN.test(value)
+    || TARGET_TOKEN_PREFIX_PATTERN.test(value);
+
+  return hasDamageTokens
+    ? describeEffectDamageParts([{ formula: value }])
+    : prettifyArithmetic(value);
 }
 
 /**
@@ -257,7 +303,12 @@ function describeChangeValue(change: EffectChange): string {
       return `${sign}${Math.abs(numeric)}${unit}`;
     }
 
-    return `+${prettifyFormula(change.value)}${unit}`;
+    // Вычитаемая кость («−1к4» к броску) читается минусом, а не «+-1к4»
+    const formula = change.value.trim();
+
+    return formula.startsWith('-')
+      ? `−${prettifyFormula(formula.slice(1).trim())}${unit}`
+      : `+${prettifyFormula(formula)}${unit}`;
   }
 
   if (change.mode === 'multiply') {
@@ -267,6 +318,41 @@ function describeChangeValue(change: EffectChange): string {
   const modeLabel = EFFECT_CHANGE_MODE_LABELS[change.mode].toLowerCase();
 
   return `${modeLabel} ${prettifyFormula(change.value)}${unit}`;
+}
+
+/**
+ * Расшифровка значения строки для подписи под полем: «+2 + (уровень в классе /
+ * 4, с округлением вниз)». Число или кость и так понятны — для них пустая
+ * строка, чтобы подпись не повторяла поле.
+ *
+ * @param change строка модификатора.
+ * @returns расшифровка либо пустая строка.
+ */
+export function describeEffectChangeValueHint(change: EffectChange): string {
+  const trimmedValue = change.value.trim();
+
+  const isSelfExplanatory =
+    trimmedValue === ''
+    || isNumeric(trimmedValue)
+    || (isDiceFormulaValue(trimmedValue) && !trimmedValue.includes('@'));
+
+  return isSelfExplanatory ? '' : describeChangeValue(change);
+}
+
+/**
+ * Подпись под полем значения строки: «Значение: …» с формулой словами.
+ *
+ * @param change строка модификатора.
+ * @returns подпись либо `undefined`, если значение понятно и так.
+ */
+export function describeEffectChangeValueLabel(
+  change: EffectChange,
+): string | undefined {
+  const readableValue = describeEffectChangeValueHint(change);
+
+  return readableValue
+    ? `${ACTIVE_EFFECT_LABELS.changeValueReadablePrefix}${readableValue}`
+    : undefined;
 }
 
 /**
@@ -376,7 +462,7 @@ export function describeEffectDamageParts(
         ? ` (${DAMAGE_TARGET_LABELS[targetToken[1]] ?? targetToken[1]})`
         : '';
 
-      const cleanFormula = prettifyFormula(
+      const cleanFormula = prettifyArithmetic(
         stripHealTokens(formula)
           .replace(/@dmg\.[a-z]+/gi, '')
           .replace(/@target\.\w+/gi, '')

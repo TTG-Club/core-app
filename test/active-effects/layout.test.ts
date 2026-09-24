@@ -40,6 +40,7 @@ import {
 } from '~active-effects/model';
 
 import {
+  ACTIVATION_RANGE,
   ALL_CREATURES_AURA,
   ALLIES_AURA,
   AURA_RADIUS,
@@ -720,6 +721,59 @@ describe('применение и включение', () => {
         resolveEffectFormLayout('feature', withoutCounter),
       ).activation,
     ).toEqual({ mode: 'use', counter: undefined, amount: undefined });
+  });
+
+  it('дальность применения: поле у применения, пишется только у него и от 1 фт', () => {
+    const spark = createEffect({
+      effectTarget: 'target',
+      activation: {
+        mode: 'use',
+        counter: 'channel-divinity',
+        range: ACTIVATION_RANGE,
+      },
+    });
+
+    const sparkLayout = resolveEffectFormLayout('feature', spark);
+
+    expect(sparkLayout.showActivationRange).toBe(true);
+
+    expect(normalizeEffectDraft(spark, sparkLayout).activation).toEqual({
+      mode: 'use',
+      counter: 'channel-divinity',
+      amount: undefined,
+      range: ACTIVATION_RANGE,
+    });
+
+    const potion = createEffect({ activation: { mode: 'use' } });
+
+    expect(resolveEffectFormLayout('item', potion).showActivationRange).toBe(
+      true,
+    );
+
+    const rage = createEffect({
+      activation: { mode: 'toggle', counter: 'rage', range: ACTIVATION_RANGE },
+    });
+
+    const rageLayout = resolveEffectFormLayout('feature', rage);
+
+    expect(rageLayout.showActivationRange).toBe(false);
+
+    expect(
+      normalizeEffectDraft(rage, rageLayout).activation?.range,
+    ).toBeUndefined();
+
+    expect(resolveLayoutFor('feature').showActivationRange).toBe(false);
+
+    // Очищенное поле отдаёт `undefined`, ноль и доля фута — касание
+    for (const range of [undefined, 0, 0.5]) {
+      const touch = createEffect({ activation: { mode: 'use', range } });
+      const touchLayout = resolveEffectFormLayout('feature', touch);
+
+      expect(
+        normalizeEffectDraft(touch, touchLayout).activation?.range,
+        String(range),
+      ).toBeUndefined();
+    }
   });
 });
 

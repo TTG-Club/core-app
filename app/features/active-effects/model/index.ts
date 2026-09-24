@@ -1,5 +1,7 @@
 export * from './automation';
+export * from './changeDice';
 export * from './changeSteps';
+export * from './changeSubtract';
 export * from './constants';
 export * from './create';
 export * from './describe';

@@ -27,6 +27,9 @@ export const TYPED_SAVE_DC = 15;
 /** Радиус ауры в тестах. */
 export const AURA_RADIUS = 10;
 
+/** Дальность применения в тестах, фт: «Божественная искра». */
+export const ACTIVATION_RANGE = 30;
+
 /** Id нового эффекта в тестах. */
 export const NEW_EFFECT_ID = 'effect_new';
 

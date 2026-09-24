@@ -43,6 +43,8 @@ import {
 } from './describe';
 import {
   APPLIER_SAVE_DC,
+  EFFECT_FORM_CONTEXT,
+  isEffectTriggerSupported,
   readEffectSuccessOutcome,
   resolveEffectFormLayout,
 } from './layout';
@@ -228,7 +230,8 @@ function describeModifiers(
 
 /**
  * Показывается ли срабатывание в сводке этого места: старые поля — там, где их
- * шаг работает, явные срабатывания — всегда.
+ * шаг работает, явные срабатывания — там, где они работают. Неработающее
+ * называет плашка, а сводка обещала бы то, чего не случится.
  *
  * @param trigger срабатывание.
  * @param layout раскладка формы.
@@ -246,7 +249,11 @@ function isTriggerShown(
     case LEGACY_TRIGGER_IDS.consumeOn:
       return layout.showConsumeOn;
     default:
-      return true;
+      // Место без раскладки плашку не показывает — и сводка ничего не прячет
+      return (
+        layout.context === EFFECT_FORM_CONTEXT.generic
+        || isEffectTriggerSupported(trigger, layout)
+      );
   }
 }
 

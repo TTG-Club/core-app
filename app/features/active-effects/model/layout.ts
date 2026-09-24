@@ -43,6 +43,7 @@ import { writeTriggerCondition } from './triggerConditions';
 import {
   createEffectTriggerId,
   listEffectListTriggers,
+  upgradeStaySaveEffect,
   writeEffectTriggers,
 } from './triggers';
 import {
@@ -78,6 +79,7 @@ import {
   EFFECT_ORIGIN,
   isUseActivatedEffect,
   MAX_EFFECT_CHARGES,
+  MIN_ACTIVATION_RANGE,
   MIN_EFFECT_CHARGES,
   parseFormNumber,
 } from './types';
@@ -237,6 +239,11 @@ export interface EffectFormLayout {
   activationModes: readonly EffectActivationMode[];
   /** Применение или включение тратит счётчик листа. */
   showActivationCounter: boolean;
+  /**
+   * Дальность применения «на цель»: эффект накладывается применением, и
+   * цель можно выбрать дальше касания.
+   */
+  showActivationRange: boolean;
   /** Эффект накладывается применением: доставки подписаны «при применении». */
   useActivated: boolean;
   /**
@@ -486,6 +493,26 @@ export function readEffectAreaTrigger(effect: ActiveEffect): EffectAreaTrigger {
 }
 
 /**
+ * Эффект для правки и сохранения: старая зона или аура «пока внутри» со
+ * спасброском открывается уже «при входе», как VTTG её теперь и читает, — и
+ * после сохранения так и записывается.
+ *
+ * @param effect сохранённый эффект.
+ * @param context место формы.
+ * @returns эффект для правки; без перевода — тот же объект.
+ */
+export function upgradeEffectDraft(
+  effect: ActiveEffect,
+  context: EffectFormContext,
+): ActiveEffect {
+  const delivery = readEffectDelivery(effect, context);
+
+  return delivery === 'zone' || delivery === 'aura'
+    ? upgradeStaySaveEffect(effect)
+    : effect;
+}
+
+/**
  * Меняет момент срабатывания. «Пока внутри» — поведение по умолчанию, поле для
  * него не хранится.
  *
@@ -665,7 +692,8 @@ function resolveContextDeliveries(
 
 /**
  * Применение или включение для записи: пустой счётчик не пишется, расход — от
- * единицы, а без счётчика расход не нужен.
+ * единицы, а без счётчика расход не нужен. Дальность — только у применения и
+ * от одного фута: меньше — касание, и поле не пишется.
  *
  * @param activation применение из черновика.
  * @returns применение либо `undefined`.
@@ -683,10 +711,19 @@ function normalizeDraftActivation(
     parseFormNumber(activation.amount) ?? DEFAULT_ACTIVATION_AMOUNT,
   );
 
+  const range = parseFormNumber(activation.range);
+
+  // Дальность — только у применения: переключатель ни на кого не ложится
+  const hasRange =
+    activation.mode === 'use'
+    && range !== undefined
+    && range >= MIN_ACTIVATION_RANGE;
+
   return {
     mode: activation.mode,
     counter,
     amount: counter && amount > DEFAULT_ACTIVATION_AMOUNT ? amount : undefined,
+    range: hasRange ? Math.trunc(range) : undefined,
   };
 }
 
@@ -821,6 +858,7 @@ export function resolveEffectFormLayout(
     showActivationCounter:
       effect.activation !== undefined
       && ACTIVATION_COUNTER_CONTEXTS.has(context),
+    showActivationRange: isUsed,
     useActivated: isUsed,
     showStatusToggle: !(isUsed && ACTIVATION_COUNTER_CONTEXTS.has(context)),
     showStages: livesOnItsOwn,
@@ -1282,7 +1320,7 @@ export function writeEffectTriggerRow(
  * @param layout раскладка формы.
  * @returns `true`, если срабатывание здесь работает целиком.
  */
-function isTriggerSupported(
+export function isEffectTriggerSupported(
   trigger: EffectTrigger,
   layout: EffectFormLayout,
 ): boolean {
@@ -1572,7 +1610,7 @@ export function listInertEffectFields(
     [
       'triggers',
       (effect.triggers ?? []).some(
-        (trigger) => !isTriggerSupported(trigger, layout),
+        (trigger) => !isEffectTriggerSupported(trigger, layout),
       ),
     ],
   ];
@@ -1648,7 +1686,7 @@ export function clearInertEffectFields(
         const layout = resolveEffectFormLayout(context, cleared);
 
         const kept = (cleared.triggers ?? []).filter((trigger) =>
-          isTriggerSupported(trigger, layout),
+          isEffectTriggerSupported(trigger, layout),
         );
 
         return { ...cleared, triggers: kept.length > 0 ? kept : undefined };

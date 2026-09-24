@@ -2,10 +2,11 @@
   import type { SourceDetailResponse } from '~sources/types';
 
   import { SourceBody } from '~sources/body';
-  import { getSourceMarkdown } from '~sources/types';
+  import { getSourceMarkdown, SOURCES_WORKSHOP_ROUTE } from '~sources/types';
   import { PageActions } from '~ui/page';
 
   const route = useRoute();
+  const { canEditSources } = useUserRoles();
 
   useSectionDetailRedirect('sources');
 
@@ -42,7 +43,11 @@
     );
   }
 
-  const editUrl = computed(() => `/workshop/sources/${route.params.url}`);
+  const editUrl = computed(() =>
+    canEditSources.value
+      ? `${SOURCES_WORKSHOP_ROUTE}/${route.params.url}`
+      : undefined,
+  );
 </script>
 
 <template>

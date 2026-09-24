@@ -18,11 +18,11 @@ import {
  * разошлись, показывает `node scripts/compare-effect-dictionaries.mjs`.
  */
 const SYSTEM_DICTIONARY_SIZES = {
-  version: '0.8.66',
+  version: '0.8.88',
   flags: 200,
   changeKeys: 61,
-  conditions: 93,
-  values: 32,
+  conditions: 95,
+  values: 33,
 };
 
 describe('словари эффектов', () => {

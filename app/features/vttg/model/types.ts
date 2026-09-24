@@ -98,6 +98,29 @@ export interface VttgGuideVariant {
   hidden?: boolean;
 }
 
+/** Как подписка поднимает лимит: значение без неё и с ней. */
+export interface VttgSubscriptionLimit {
+  /** Что именно считается — «Активных листов», «Игроков в одной игре». */
+  label: string;
+  /** Значение без подписки; `null` — без подписки этого нет совсем. */
+  base: number | null;
+  subscriber: number;
+}
+
+/** Привилегия подписки. */
+export interface VttgSubscriptionPerk extends VttgHighlight {
+  /** Главный лимит, который поднимает подписка, — показывается сравнением «бесплатно / с подпиской». */
+  limit?: VttgSubscriptionLimit;
+}
+
+/** Группа привилегий подписки: где она работает — в столе или на сайте. */
+export interface VttgSubscriptionPerkGroup {
+  title: string;
+  description: string;
+  icon: string;
+  perks: Array<VttgSubscriptionPerk>;
+}
+
 export const VIDEO_EXTENSIONS = ['.webm', '.mp4'] as const;
 
 export type VideoExtension = (typeof VIDEO_EXTENSIONS)[number];

@@ -93,6 +93,7 @@ import {
   MAX_EFFECT_CHARGES,
   MAX_EFFECT_STAGE_LABEL_LENGTH,
   MAX_EFFECT_STAGES,
+  MIN_ACTIVATION_RANGE,
   MIN_EFFECT_CHARGES,
   parseFormNumber,
 } from './types';
@@ -263,6 +264,11 @@ const activationSchema: z.ZodType<EffectActivation> = z.object({
   amount: z.preprocess(
     coerceOptionalNumber,
     z.number().int().min(DEFAULT_ACTIVATION_AMOUNT).optional(),
+  ),
+  // Битая дальность снимается одна, не унося всё применение
+  range: z.preprocess(
+    coerceOptionalNumber,
+    z.number().int().min(MIN_ACTIVATION_RANGE).optional().catch(undefined),
   ),
 });
 
