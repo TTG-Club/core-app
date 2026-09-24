@@ -63,9 +63,9 @@ export const MENU_SECTIONS: Array<MenuSection> = [
         disabled: false,
       },
       {
-        href: '/',
+        href: '/bastions',
         label: 'Бастионы',
-        disabled: true,
+        disabled: false,
       },
     ],
   },

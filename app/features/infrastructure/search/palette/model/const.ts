@@ -10,6 +10,7 @@ export const SearchItems = {
   MAGIC_ITEM: 'magic-items',
   ITEM: 'items',
   GLOSSARY: 'glossary',
+  BASTION: 'bastions',
   ARTICLE: 'articles',
   NEWS: 'news',
 } as const;
@@ -26,6 +27,7 @@ export const mapSearchItemsToPaths = new Map<SearchItemsType, string>([
   [SearchItems.MAGIC_ITEM, 'magic-items'],
   [SearchItems.ITEM, 'items'],
   [SearchItems.GLOSSARY, 'glossary'],
+  [SearchItems.BASTION, 'bastions'],
   [SearchItems.ARTICLE, 'articles'],
   // Новости и статьи открываются одной ручкой `/articles/{url}`, отдельного роута `/news` нет.
   [SearchItems.NEWS, 'articles'],
@@ -41,6 +43,7 @@ export const mapSearchItemsToTypeNames = new Map<SearchItemsType, string>([
   [SearchItems.MAGIC_ITEM, 'Магические предметы'],
   [SearchItems.ITEM, 'Предметы'],
   [SearchItems.GLOSSARY, 'Глоссарий'],
+  [SearchItems.BASTION, 'Бастионы'],
   [SearchItems.ARTICLE, 'Статьи'],
   [SearchItems.NEWS, 'Новости'],
 ]);

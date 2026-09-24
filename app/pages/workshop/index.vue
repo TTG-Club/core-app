@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import {
     SectionBackgrounds,
+    SectionBastions,
     SectionBestiary,
     SectionClasses,
     SectionFeats,
@@ -38,6 +39,8 @@
       <SectionBestiary />
 
       <SectionItem />
+
+      <SectionBastions />
 
       <SectionSources />
     </div>

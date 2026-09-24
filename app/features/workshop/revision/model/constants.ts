@@ -9,6 +9,7 @@ export const REVISION_LOAD_ERROR_DESCRIPTION =
 
 export const REVISION_ENTITY_TYPES = {
   BACKGROUND: 'background',
+  BASTION: 'bastion',
   CLASS: 'class',
   CREATURE: 'creature',
   FEAT: 'feat',

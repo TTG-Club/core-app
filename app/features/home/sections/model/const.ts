@@ -69,9 +69,8 @@ export const CARD_LINKS: Array<{
   },
   {
     name: 'Бастионы',
-    url: '/',
+    url: '/bastions',
     img: '/s3/home/section-link/bastions.webp',
     icon: 'tabler:building-castle',
-    disabled: true,
   },
 ];

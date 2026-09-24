@@ -1,4 +1,5 @@
 export { default as SectionBackgrounds } from './SectionBackgrounds.vue';
+export { default as SectionBastions } from './SectionBastions.vue';
 export { default as SectionBestiary } from './SectionBestiary.vue';
 export { default as SectionClasses } from './SectionClasses.vue';
 export { default as SectionFeats } from './SectionFeats.vue';
