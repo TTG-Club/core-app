@@ -1,8 +1,13 @@
 import type { PlayerBastion } from '~bastion-game/model';
 
+import { FetchError } from 'ofetch';
 import { describe, expect, it } from 'vitest';
 
-import { createMemberDrafts, toMemberRequests } from '~bastion-game/model';
+import {
+  createMemberDrafts,
+  getBastionErrorMessage,
+  toMemberRequests,
+} from '~bastion-game/model';
 
 /**
  * Бастион с одним участником; остальные поля на форму доступа не влияют.
@@ -71,5 +76,50 @@ describe('форма доступа к бастиону', () => {
     expect(toMemberRequests(drafts)).toEqual([
       { userId: 'player-2', characterName: 'Эльминстер', characterLevel: 5 },
     ]);
+  });
+});
+
+describe('текст ошибки бастиона', () => {
+  /**
+   * Ошибка запроса с ответом core-api.
+   *
+   * @param statusCode код ответа.
+   * @param message текст из тела ответа.
+   * @returns ошибка запроса.
+   */
+  function fetchError(statusCode: number, message: string): FetchError {
+    const error = new FetchError(message);
+
+    error.statusCode = statusCode;
+    error.data = { message };
+
+    return error;
+  }
+
+  it('показывает текст 4xx и 503, прячет прочие 5xx', () => {
+    expect(
+      getBastionErrorMessage(fetchError(404, 'Игра не найдена'), 'Сбой'),
+    ).toBe('Игра не найдена');
+
+    expect(
+      getBastionErrorMessage(
+        fetchError(503, 'Каталог игр сейчас недоступен'),
+        'Сбой',
+      ),
+    ).toBe('Каталог игр сейчас недоступен');
+
+    expect(
+      getBastionErrorMessage(fetchError(500, 'NullPointerException'), 'Сбой'),
+    ).toBe('Сбой');
+  });
+
+  it('достаёт ответ сервера из ошибки useAsyncData', () => {
+    const wrapped = new Error('Сбой', {
+      cause: fetchError(403, 'Бастионы игры видят только её участники'),
+    });
+
+    expect(getBastionErrorMessage(wrapped, 'Сбой')).toBe(
+      'Бастионы игры видят только её участники',
+    );
   });
 });

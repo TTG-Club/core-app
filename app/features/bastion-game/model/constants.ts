@@ -129,5 +129,6 @@ export const BASTION_DETAIL_LABELS = {
   members: 'Игроки и персонажи',
   notFound: 'Бастион не найден',
   forbidden: 'Бастион видят только участники игры',
+  loadError: 'Не удалось открыть бастион',
   seoTitle: 'Бастион',
 } as const;

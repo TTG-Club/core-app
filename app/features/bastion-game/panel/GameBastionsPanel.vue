@@ -18,8 +18,26 @@
 
   const { user } = useUser();
 
-  const { overview, status, refresh, isSaving, create, update, archive } =
-    useGameBastions(() => gameId);
+  const {
+    overview,
+    status,
+    errorMessage,
+    refresh,
+    isSaving,
+    create,
+    update,
+    archive,
+  } = useGameBastions(() => gameId);
+
+  /**
+   * Пояснение под заголовком ошибки — текст сервера. Если сервер ничего не
+   * объяснил, пояснения нет: общая фраза уже стоит в заголовке.
+   */
+  const errorDetails = computed(() =>
+    errorMessage.value === BASTION_GAME_LABELS.loadError
+      ? undefined
+      : errorMessage.value,
+  );
 
   const isFormOpen = ref(false);
   const editedBastion = ref<PlayerBastion>();
@@ -129,6 +147,7 @@
       v-else-if="status === 'error'"
       status="error"
       :title="BASTION_GAME_LABELS.loadError"
+      :sub-title="errorDetails"
     >
       <template #extra>
         <UButton

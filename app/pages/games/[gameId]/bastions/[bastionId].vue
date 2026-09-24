@@ -8,6 +8,7 @@
     BASTION_DETAIL_LABELS,
     BASTION_GAME_LABELS,
     fetchPlayerBastion,
+    getBastionErrorMessage,
     PLAYER_BASTION_STATUS_COLORS,
     PLAYER_BASTION_STATUS_LABELS,
   } from '~bastion-game/model';
@@ -50,12 +51,24 @@
     bastion.value = updated;
   }
 
-  /** Причина, по которой бастион не показан: чужая игра или его нет. */
-  const errorTitle = computed(() =>
-    error.value?.statusCode === StatusCodes.FORBIDDEN
-      ? BASTION_DETAIL_LABELS.forbidden
-      : BASTION_DETAIL_LABELS.notFound,
-  );
+  /** Что случилось: чужая игра, бастиона нет или сбой. */
+  const errorTitle = computed(() => {
+    switch (error.value?.statusCode) {
+      case StatusCodes.FORBIDDEN:
+        return BASTION_DETAIL_LABELS.forbidden;
+      case StatusCodes.NOT_FOUND:
+        return BASTION_DETAIL_LABELS.notFound;
+      default:
+        return BASTION_DETAIL_LABELS.loadError;
+    }
+  });
+
+  /** Текст сервера под заголовком, если он добавляет подробности. */
+  const errorDetails = computed(() => {
+    const message = getBastionErrorMessage(error.value, errorTitle.value);
+
+    return message === errorTitle.value ? undefined : message;
+  });
 </script>
 
 <template>
@@ -88,6 +101,7 @@
         v-else-if="status === 'error' || !bastion"
         status="error"
         :title="errorTitle"
+        :sub-title="errorDetails"
       />
 
       <template v-else>

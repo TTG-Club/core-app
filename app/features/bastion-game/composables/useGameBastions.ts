@@ -29,6 +29,7 @@ export function useGameBastions(gameId: MaybeRefOrGetter<string>) {
   const {
     data: overview,
     status,
+    error: loadError,
     refresh,
   } = useAsyncData(
     () => `game-bastions-${toValue(gameId)}`,
@@ -75,6 +76,10 @@ export function useGameBastions(gameId: MaybeRefOrGetter<string>) {
   return {
     overview,
     status,
+    /** Причина, по которой список не загрузился, — текстом для пользователя. */
+    errorMessage: computed(() =>
+      getBastionErrorMessage(loadError.value, BASTION_GAME_LABELS.loadError),
+    ),
     refresh,
     isSaving,
     create: (request: CreatePlayerBastionRequest) =>

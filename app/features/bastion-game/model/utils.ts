@@ -4,9 +4,12 @@ import type {
   PlayerBastionMemberRequest,
 } from './schema';
 
+import { StatusCodes } from 'http-status-codes';
 import { FetchError } from 'ofetch';
 
 import { BASTION_START_LEVEL } from './constants';
+
+const SERVICE_UNAVAILABLE_STATUS = StatusCodes.SERVICE_UNAVAILABLE;
 
 /** Строка формы доступа: игрок игры и его персонаж в бастионе. */
 export interface BastionMemberDraft {
@@ -64,26 +67,51 @@ export function toMemberRequests(
 }
 
 /**
+ * Находит исходную ошибку запроса: `useAsyncData` оборачивает её в ошибку
+ * Nuxt, и ответ сервера остаётся в `cause`.
+ *
+ * @param error Ошибка из `$fetch` или `useAsyncData`.
+ * @returns Ошибка запроса или undefined.
+ */
+function findFetchError(error: unknown): FetchError | undefined {
+  if (error instanceof FetchError) {
+    return error;
+  }
+
+  if (error instanceof Error && error.cause instanceof FetchError) {
+    return error.cause;
+  }
+
+  return undefined;
+}
+
+/**
  * Достаёт объяснение ошибки из ответа core-api. На 4xx в `message` лежит
- * текст для пользователя («Бастион уже изменили…»), на 5xx — технический, его
- * заменяет общая формулировка.
+ * текст для пользователя («Бастион уже изменили…»). На 503 — тоже: его отдаёт
+ * сам core-api, когда не отвечает каталог игр. Остальные 5xx несут технический
+ * текст (SQL, стек), его заменяет общая формулировка.
  *
  * @param error Ошибка запроса.
  * @param fallback Общая формулировка.
- * @returns Текст для уведомления.
+ * @returns Текст для пользователя.
  */
 export function getBastionErrorMessage(
   error: unknown,
   fallback: string,
 ): string {
-  if (!(error instanceof FetchError)) {
+  const fetchError = findFetchError(error);
+
+  if (!fetchError) {
     return fallback;
   }
 
-  const status = error.statusCode ?? 0;
-  const message: unknown = error.data?.message;
+  const status = fetchError.statusCode ?? 0;
+  const message: unknown = fetchError.data?.message;
 
-  if (status >= 400 && status < 500 && typeof message === 'string' && message) {
+  const isReadable =
+    (status >= 400 && status < 500) || status === SERVICE_UNAVAILABLE_STATUS;
+
+  if (isReadable && typeof message === 'string' && message) {
     return message;
   }
 
