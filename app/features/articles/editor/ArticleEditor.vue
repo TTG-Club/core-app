@@ -37,6 +37,7 @@
     getArticleRoute,
   } from '../model';
   import { ArticlePreview } from '../preview';
+  import { useArticleEditorCloseRoute } from './composables';
   import { ArticlePublishDateField, ArticleSlugField } from './ui';
 
   const formRef = useTemplateRef('formRef');
@@ -252,6 +253,7 @@
 
   const $toast = useToast();
   const route = useRoute();
+  const closeRoute = useArticleEditorCloseRoute();
 
   // Собственный url записи при редактировании — чтобы проверка доступности slug
   // не считала его занятым.
@@ -897,7 +899,7 @@
           color="neutral"
           icon="tabler:x"
           class="mr-auto"
-          :to="ARTICLES_ADMIN_ROUTE"
+          :to="closeRoute"
         >
           Закрыть
         </UButton>
