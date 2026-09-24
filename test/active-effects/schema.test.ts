@@ -528,6 +528,68 @@ describe('сохранение эффектов', () => {
   });
 });
 
+describe('дальность применения 0.8.87', () => {
+  it('дальность держится у применения, числом строкой — числом', () => {
+    const storedEffect = createRawEffect({
+      effectTarget: 'target',
+      activation: { mode: 'use', counter: 'channel-divinity', range: 30 },
+    });
+
+    const savedEffects = normalizeActiveEffects(
+      normalizeLoadedActiveEffects([storedEffect]),
+      'feature',
+    );
+
+    expect(stripUndefinedKeys(savedEffects)).toEqual([storedEffect]);
+
+    const [typedEffect] = normalizeLoadedActiveEffects([
+      createRawEffect({ activation: { mode: 'use', range: '30' } }),
+    ]);
+
+    expect(typedEffect?.activation?.range).toBe(30);
+  });
+
+  it('ноль, доля фута и мусор снимают только дальность', () => {
+    for (const range of [0, 2.5, 'далеко', -5]) {
+      const [loadedEffect] = normalizeLoadedActiveEffects([
+        createRawEffect({
+          activation: { mode: 'use', counter: 'channel-divinity', range },
+        }),
+      ]);
+
+      expect(loadedEffect?.activation, String(range)).toEqual({
+        mode: 'use',
+        counter: 'channel-divinity',
+        amount: undefined,
+        range: undefined,
+      });
+    }
+  });
+
+  it('у переключателя и без применения дальности нет', () => {
+    const toggled = createRawEffect({
+      activation: { mode: 'toggle', counter: 'rage', range: 30 },
+    });
+
+    const [savedToggle] = normalizeActiveEffects(
+      normalizeLoadedActiveEffects([toggled]),
+      'feature',
+    );
+
+    expect(stripUndefinedKeys(savedToggle?.activation)).toEqual({
+      mode: 'toggle',
+      counter: 'rage',
+    });
+
+    const [savedPermanent] = normalizeActiveEffects(
+      normalizeLoadedActiveEffects([createRawEffect()]),
+      'feature',
+    );
+
+    expect(savedPermanent?.activation).toBeUndefined();
+  });
+});
+
 describe('поля эффекта 0.8.66', () => {
   it('негодное значение обнуляет только своё поле, числа строкой — числами', () => {
     const [effect] = normalizeLoadedActiveEffects([

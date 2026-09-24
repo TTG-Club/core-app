@@ -3,12 +3,15 @@ import type { EffectChange } from '~active-effects/model';
 import { describe, expect, it } from 'vitest';
 
 import {
+  describeActiveEffect,
   describeEffectChange,
   describeEffectChangeValueHint,
   describeEffectChangeValueLabel,
   renderReadableFormula,
   validateFormula,
 } from '~active-effects/model';
+
+import { createEffect } from './fixtures';
 
 /**
  * Расшифровка значения модификатора под полем формы — зеркало
@@ -90,6 +93,27 @@ describe('steps() — число порогов, пройденных значе
   it('неразборная формула не расшифровывается', () => {
     expect(renderReadableFormula('2к6 + @prof', (token) => token)).toBe(
       undefined,
+    );
+  });
+
+  it('число костей выражением (0.8.86): скобки со ступенями перед костью', () => {
+    expect(validateFormula('1 + steps(@classLevel, 7, 13, 18)').valid).toBe(
+      true,
+    );
+
+    const spark = createEffect({
+      effectTarget: 'target',
+      damageParts: [
+        {
+          formula:
+            '(1 + steps(@classLevel, 7, 13, 18))к8@dmg.radiant + @mod.wis',
+          target: 'selected',
+        },
+      ],
+    });
+
+    expect(describeActiveEffect(spark)).toContain(
+      '(1 + steps(уровень в классе, 7, 13, 18))к8 + мод. Мудрости излучением',
     );
   });
 
