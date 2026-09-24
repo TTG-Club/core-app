@@ -4,6 +4,8 @@
   import { StatusCodes } from 'http-status-codes';
 
   import { ACTION_LABELS } from '~/shared/consts';
+  import { GAME_BASTIONS_TAB_VALUE } from '~bastion-game/model';
+  import { GameBastionsPanel } from '~bastion-game/panel';
   import {
     useFindGameToast,
     useGameDetail,
@@ -124,11 +126,21 @@
 
   const isError = computed(() => gameStatus.value === 'error');
 
-  const detailTabs = computed(() =>
-    abilities.value.canReviewRegistrations && game.value?.costType === 'PAID'
-      ? GAME_DETAIL_TABS
-      : GAME_DETAIL_TABS.filter((tab) => tab.value !== 'finance'),
-  );
+  const detailTabs = computed(() => {
+    const showFinance =
+      abilities.value.canReviewRegistrations && game.value?.costType === 'PAID';
+
+    // Бастионы игры видят её участники: мастер и игроки с одобренной заявкой —
+    // остальным core-api всё равно ответит 403.
+    const showBastions =
+      abilities.value.isMaster || abilities.value.isApprovedPlayer;
+
+    return GAME_DETAIL_TABS.filter(
+      (tab) =>
+        (tab.value !== 'finance' || showFinance)
+        && (tab.value !== GAME_BASTIONS_TAB_VALUE || showBastions),
+    );
+  });
 
   /**
    * Ближайшая встреча для сводки. Своё поле игры сервис заполняет только в
@@ -574,6 +586,10 @@
 
               <template #finance>
                 <GameFinancePanel :game="game" />
+              </template>
+
+              <template #bastions>
+                <GameBastionsPanel :game-id="game.id" />
               </template>
             </UTabs>
 

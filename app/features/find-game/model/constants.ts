@@ -27,6 +27,12 @@ export const GAME_DETAIL_TABS = [
     slot: 'finance',
     value: 'finance',
   },
+  {
+    label: 'Бастионы',
+    icon: 'tabler:building-castle',
+    slot: 'bastions',
+    value: 'bastions',
+  },
 ];
 
 export const GAME_FINANCE_TITLE = 'Финансы игры';

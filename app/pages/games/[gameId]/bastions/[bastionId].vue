@@ -1,0 +1,133 @@
+<script setup lang="ts">
+  import type { PlayerBastion } from '~bastion-game/model';
+
+  import { StatusCodes } from 'http-status-codes';
+
+  import { MemberFacilitiesCard } from '~bastion-game/facilities';
+  import {
+    BASTION_DETAIL_LABELS,
+    BASTION_GAME_LABELS,
+    fetchPlayerBastion,
+    PLAYER_BASTION_STATUS_COLORS,
+    PLAYER_BASTION_STATUS_LABELS,
+  } from '~bastion-game/model';
+  import { UiResult } from '~ui/result';
+
+  const route = useRoute();
+
+  const gameId = computed(() =>
+    typeof route.params.gameId === 'string' ? route.params.gameId : '',
+  );
+
+  const bastionId = computed(() =>
+    typeof route.params.bastionId === 'string' ? route.params.bastionId : '',
+  );
+
+  const {
+    data: bastion,
+    status,
+    error,
+  } = useAsyncData(
+    () => `player-bastion-${bastionId.value}`,
+    () => fetchPlayerBastion(bastionId.value),
+    { server: false, lazy: true },
+  );
+
+  useSeoMeta({
+    title: () => bastion.value?.name ?? BASTION_DETAIL_LABELS.seoTitle,
+    robots: 'noindex',
+  });
+
+  const gameRoute = computed(() => `/games/${gameId.value}`);
+
+  /**
+   * Подменяет бастион ответом сервера после правки: в нём новая версия, и
+   * следующая правка не упрётся в 409.
+   *
+   * @param updated Бастион после сохранения.
+   */
+  function handleUpdated(updated: PlayerBastion): void {
+    bastion.value = updated;
+  }
+
+  /** Причина, по которой бастион не показан: чужая игра или его нет. */
+  const errorTitle = computed(() =>
+    error.value?.statusCode === StatusCodes.FORBIDDEN
+      ? BASTION_DETAIL_LABELS.forbidden
+      : BASTION_DETAIL_LABELS.notFound,
+  );
+</script>
+
+<template>
+  <NuxtLayout
+    name="detail"
+    :title="bastion?.name"
+  >
+    <template #actions>
+      <UButton
+        :to="gameRoute"
+        icon="tabler:arrow-left"
+        color="neutral"
+        variant="ghost"
+      >
+        {{ BASTION_DETAIL_LABELS.back }}
+      </UButton>
+    </template>
+
+    <div class="flex flex-col gap-6">
+      <div
+        v-if="status === 'pending' || status === 'idle'"
+        class="flex flex-col gap-3"
+      >
+        <USkeleton class="h-8 w-1/3" />
+
+        <USkeleton class="h-40" />
+      </div>
+
+      <UiResult
+        v-else-if="status === 'error' || !bastion"
+        status="error"
+        :title="errorTitle"
+      />
+
+      <template v-else>
+        <div class="flex flex-wrap items-center gap-3 text-sm text-muted">
+          <UBadge
+            :color="PLAYER_BASTION_STATUS_COLORS[bastion.status]"
+            variant="subtle"
+          >
+            {{ PLAYER_BASTION_STATUS_LABELS[bastion.status] }}
+          </UBadge>
+
+          <span class="tabular-nums">
+            {{ BASTION_GAME_LABELS.turn }}: {{ bastion.turn }}
+          </span>
+
+          <span class="tabular-nums">
+            {{ BASTION_GAME_LABELS.treasury }}: {{ bastion.treasuryGp }}
+            {{ BASTION_GAME_LABELS.gold }}
+          </span>
+        </div>
+
+        <h2 class="text-base font-semibold text-highlighted">
+          {{ BASTION_DETAIL_LABELS.members }}
+        </h2>
+
+        <p
+          v-if="!bastion.members.length"
+          class="text-sm text-muted"
+        >
+          {{ BASTION_GAME_LABELS.noMembers }}
+        </p>
+
+        <MemberFacilitiesCard
+          v-for="member in bastion.members"
+          :key="member.id"
+          :bastion
+          :member
+          @updated="handleUpdated"
+        />
+      </template>
+    </div>
+  </NuxtLayout>
+</template>
