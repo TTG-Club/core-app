@@ -56,6 +56,7 @@ export default defineConfig({
       '~spells': fileURLToPath(
         new URL('./app/features/spells', import.meta.url),
       ),
+      '~vttg': fileURLToPath(new URL('./app/features/vttg', import.meta.url)),
       '~ui': fileURLToPath(new URL('./app/shared/ui', import.meta.url)),
       '~infrastructure': fileURLToPath(
         new URL('./app/features/infrastructure', import.meta.url),

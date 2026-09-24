@@ -7,6 +7,13 @@ import type {
   VttgSubscriptionPerkGroup,
 } from './types';
 
+import {
+  GAME_ACTIVE_FREE_MAX,
+  GAME_ACTIVE_SUBSCRIBER_MAX,
+  GAME_PLAYERS_FREE_MAX,
+  GAME_PLAYERS_MAX,
+} from '~find-game/model';
+
 import { VTTG_LANDING_PATH } from './passwordReset';
 
 /** Адрес страницы подписки. Пока страница видна только администраторам. */
@@ -70,7 +77,7 @@ export const VTTG_SUBSCRIPTION_FACTS: Array<VttgHighlight> = [
   {
     icon: 'tabler:world',
     title: 'Сайт и стол',
-    description: 'Одна подписка на оба',
+    description: 'Одна подписка на всё',
   },
   {
     icon: 'tabler:lock-open',
@@ -91,10 +98,11 @@ export const VTTG_SUBSCRIPTION_PERKS_HEADING: VttgHeading = {
 };
 
 /**
- * Привилегии подписки, разложенные по месту действия. Числа лимитов — зеркало
- * бэкендов: листы — `CharacterSheetLimits` в core-api, игроки за столом и
- * поднятия игры — `GameService` в find-game-api, туннель — `TIERS` в
- * tunnel-service. Поменялись там — поправить здесь.
+ * Привилегии подписки, разложенные по месту действия. Свои игры и игроки за
+ * столом берутся из констант поиска игр. Остальные числа — зеркало бэкендов:
+ * листы — `CharacterSheetLimits` в core-api, поднятия игры — `GameService` в
+ * find-game-api, туннель — `TIERS` в tunnel-service. Поменялись там —
+ * поправить здесь.
  */
 export const VTTG_SUBSCRIPTION_PERK_GROUPS: Array<VttgSubscriptionPerkGroup> = [
   {
@@ -115,7 +123,7 @@ export const VTTG_SUBSCRIPTION_PERK_GROUPS: Array<VttgSubscriptionPerkGroup> = [
           'Стол получает постоянный адрес вида имя-мир.play.ttg.club: игроки заходят по ссылке без белого IP, проброса портов и настройки роутера.',
         limit: {
           label: 'Миров, запущенных одновременно',
-          base: null,
+          base: 'none',
           subscriber: 5,
         },
       },
@@ -134,11 +142,26 @@ export const VTTG_SUBSCRIPTION_PERK_GROUPS: Array<VttgSubscriptionPerkGroup> = [
         limit: { label: 'Активных листов', base: 8, subscriber: 20 },
       },
       {
+        icon: 'tabler:calendar-plus',
+        title: 'Больше своих игр',
+        description:
+          'Ведите в поиске игр сразу несколько открытых игр — хоть кампанию, хоть ваншоты по выходным.',
+        limit: {
+          label: 'Незакрытых игр одновременно',
+          base: GAME_ACTIVE_FREE_MAX,
+          subscriber: GAME_ACTIVE_SUBSCRIBER_MAX,
+        },
+      },
+      {
         icon: 'tabler:users-group',
         title: 'Больше игроков за столом',
         description:
           'В поиске игр можно собрать большой стол или несколько групп в одной игре.',
-        limit: { label: 'Игроков в одной игре', base: 5, subscriber: 15 },
+        limit: {
+          label: 'Игроков в одной игре',
+          base: GAME_PLAYERS_FREE_MAX,
+          subscriber: GAME_PLAYERS_MAX,
+        },
       },
       {
         icon: 'tabler:arrow-big-up-lines',
@@ -160,8 +183,8 @@ export const VTTG_SUBSCRIPTION_PERK_GROUPS: Array<VttgSubscriptionPerkGroup> = [
 export const VTTG_SUBSCRIPTION_LIMIT_LABELS = {
   base: 'Бесплатно',
   subscriber: 'С подпиской',
-  /** Вместо числа, когда без подписки возможности нет совсем. */
-  unavailable: 'Нет',
+  /** Вместо числа, когда возможности нет совсем. */
+  none: 'Нет',
 } as const;
 
 export const VTTG_SUBSCRIPTION_FAQ_HEADING: VttgHeading = {

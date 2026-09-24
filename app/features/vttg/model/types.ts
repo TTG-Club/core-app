@@ -98,13 +98,15 @@ export interface VttgGuideVariant {
   hidden?: boolean;
 }
 
+/** Значение лимита: число или `none`, когда возможности нет совсем. */
+export type VttgSubscriptionLimitValue = number | 'none';
+
 /** Как подписка поднимает лимит: значение без неё и с ней. */
 export interface VttgSubscriptionLimit {
   /** Что именно считается — «Активных листов», «Игроков в одной игре». */
   label: string;
-  /** Значение без подписки; `null` — без подписки этого нет совсем. */
-  base: number | null;
-  subscriber: number;
+  base: VttgSubscriptionLimitValue;
+  subscriber: VttgSubscriptionLimitValue;
 }
 
 /** Привилегия подписки. */
