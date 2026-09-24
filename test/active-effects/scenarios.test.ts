@@ -14,7 +14,12 @@ import {
   resolveEffectFormLayout,
 } from '~active-effects/model';
 
-import { createRawEffect, SAVE_DC, stripUndefinedKeys } from './fixtures';
+import {
+  ACTIVATION_RANGE,
+  createRawEffect,
+  SAVE_DC,
+  stripUndefinedKeys,
+} from './fixtures';
 
 /**
  * Эффекты каталога сценариев системы dnd5e-2024 (`tests/scenarios`,
@@ -52,6 +57,9 @@ const DISPEL_MAX_LEVEL = 3;
 
 /** Срок «Вибрирующих жидкостей», раунды. */
 const SAVED_ROLL_DURATION_ROUNDS = 3;
+
+/** Лечение и урон «Божественной искры»: лишняя к8 на 7, 13 и 18 уровнях. */
+const DIVINE_SPARK_DICE = '(1 + steps(@classLevel, 7, 13, 18))к8';
 
 /** Сценарий каталога системы: эффект и место окна, где его собирает автор. */
 interface EffectScenario {
@@ -1427,12 +1435,6 @@ describeScenarios('каталог: магические предметы и ор
   },
 ]);
 
-/** Дальность «Божественной искры», фт. */
-const DIVINE_SPARK_RANGE = 30;
-
-/** Лечение и урон «Божественной искры»: лишняя к8 на 7, 13 и 18 уровнях. */
-const DIVINE_SPARK_DICE = '(1 + steps(@classLevel, 7, 13, 18))к8';
-
 /**
  * Вариант «Божественной искры» жреца (F19) в форме хранения сайта: срок у
  * системы «мгновенный» — такого срока у сайта нет, копия снимает себя сама.
@@ -1453,7 +1455,7 @@ function createDivineSpark(
     activation: {
       mode: 'use',
       counter: 'channel-divinity',
-      range: DIVINE_SPARK_RANGE,
+      range: ACTIVATION_RANGE,
     },
     variant: { group: 'Божественная искра', label },
     effectTarget: 'target',

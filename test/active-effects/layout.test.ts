@@ -40,6 +40,7 @@ import {
 } from '~active-effects/model';
 
 import {
+  ACTIVATION_RANGE,
   ALL_CREATURES_AURA,
   ALLIES_AURA,
   AURA_RADIUS,
@@ -725,7 +726,11 @@ describe('применение и включение', () => {
   it('дальность применения: поле у применения, пишется только у него и от 1 фт', () => {
     const spark = createEffect({
       effectTarget: 'target',
-      activation: { mode: 'use', counter: 'channel-divinity', range: 30 },
+      activation: {
+        mode: 'use',
+        counter: 'channel-divinity',
+        range: ACTIVATION_RANGE,
+      },
     });
 
     const sparkLayout = resolveEffectFormLayout('feature', spark);
@@ -736,7 +741,7 @@ describe('применение и включение', () => {
       mode: 'use',
       counter: 'channel-divinity',
       amount: undefined,
-      range: 30,
+      range: ACTIVATION_RANGE,
     });
 
     const potion = createEffect({ activation: { mode: 'use' } });
@@ -746,7 +751,7 @@ describe('применение и включение', () => {
     );
 
     const rage = createEffect({
-      activation: { mode: 'toggle', counter: 'rage', range: 30 },
+      activation: { mode: 'toggle', counter: 'rage', range: ACTIVATION_RANGE },
     });
 
     const rageLayout = resolveEffectFormLayout('feature', rage);
@@ -754,20 +759,20 @@ describe('применение и включение', () => {
     expect(rageLayout.showActivationRange).toBe(false);
 
     expect(
-      normalizeEffectDraft(rage, rageLayout).activation,
-    ).not.toHaveProperty('range');
+      normalizeEffectDraft(rage, rageLayout).activation?.range,
+    ).toBeUndefined();
 
     expect(resolveLayoutFor('feature').showActivationRange).toBe(false);
 
     // Очищенное поле отдаёт `undefined`, ноль и доля фута — касание
     for (const range of [undefined, 0, 0.5]) {
       const touch = createEffect({ activation: { mode: 'use', range } });
+      const touchLayout = resolveEffectFormLayout('feature', touch);
 
       expect(
-        normalizeEffectDraft(touch, resolveEffectFormLayout('feature', touch))
-          .activation,
+        normalizeEffectDraft(touch, touchLayout).activation?.range,
         String(range),
-      ).not.toHaveProperty('range');
+      ).toBeUndefined();
     }
   });
 });

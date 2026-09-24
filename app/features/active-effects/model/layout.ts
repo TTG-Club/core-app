@@ -711,16 +711,19 @@ function normalizeDraftActivation(
     parseFormNumber(activation.amount) ?? DEFAULT_ACTIVATION_AMOUNT,
   );
 
-  const range = Math.trunc(parseFormNumber(activation.range) ?? 0);
+  const range = parseFormNumber(activation.range);
+
+  // Дальность — только у применения: переключатель ни на кого не ложится
+  const hasRange =
+    activation.mode === 'use'
+    && range !== undefined
+    && range >= MIN_ACTIVATION_RANGE;
 
   return {
     mode: activation.mode,
     counter,
     amount: counter && amount > DEFAULT_ACTIVATION_AMOUNT ? amount : undefined,
-    // Дальность — только у применения: переключатель ни на кого не ложится
-    ...(activation.mode === 'use' && range >= MIN_ACTIVATION_RANGE
-      ? { range }
-      : {}),
+    range: hasRange ? Math.trunc(range) : undefined,
   };
 }
 

@@ -11,6 +11,7 @@ import {
 } from '~active-effects/model';
 
 import {
+  ACTIVATION_RANGE,
   AURA_RADIUS,
   createRawEffect,
   SAVE_DC,
@@ -532,7 +533,11 @@ describe('дальность применения 0.8.87', () => {
   it('дальность держится у применения, числом строкой — числом', () => {
     const storedEffect = createRawEffect({
       effectTarget: 'target',
-      activation: { mode: 'use', counter: 'channel-divinity', range: 30 },
+      activation: {
+        mode: 'use',
+        counter: 'channel-divinity',
+        range: ACTIVATION_RANGE,
+      },
     });
 
     const savedEffects = normalizeActiveEffects(
@@ -543,10 +548,12 @@ describe('дальность применения 0.8.87', () => {
     expect(stripUndefinedKeys(savedEffects)).toEqual([storedEffect]);
 
     const [typedEffect] = normalizeLoadedActiveEffects([
-      createRawEffect({ activation: { mode: 'use', range: '30' } }),
+      createRawEffect({
+        activation: { mode: 'use', range: String(ACTIVATION_RANGE) },
+      }),
     ]);
 
-    expect(typedEffect?.activation?.range).toBe(30);
+    expect(typedEffect?.activation?.range).toBe(ACTIVATION_RANGE);
   });
 
   it('ноль, доля фута и мусор снимают только дальность', () => {
@@ -568,7 +575,7 @@ describe('дальность применения 0.8.87', () => {
 
   it('у переключателя и без применения дальности нет', () => {
     const toggled = createRawEffect({
-      activation: { mode: 'toggle', counter: 'rage', range: 30 },
+      activation: { mode: 'toggle', counter: 'rage', range: ACTIVATION_RANGE },
     });
 
     const [savedToggle] = normalizeActiveEffects(

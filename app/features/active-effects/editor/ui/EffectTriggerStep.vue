@@ -125,6 +125,16 @@
       updateActivation({ range: range ?? undefined }),
   });
 
+  /** Ряд полей применения: ресурс или дальность. */
+  const showActivationFields = computed(
+    () => layout.showActivationCounter || layout.showActivationRange,
+  );
+
+  /** «Сколько» тратить — только когда ресурс задан. */
+  const showActivationAmount = computed(
+    () => layout.showActivationCounter && activationCounter.value !== '',
+  );
+
   const deliveryOptions = computed(() => buildDeliveryOptions(layout));
 
   const triggerOptions = computed(() =>
@@ -313,7 +323,7 @@
     </p>
 
     <div
-      v-if="layout.showActivationCounter || layout.showActivationRange"
+      v-if="showActivationFields"
       class="flex flex-wrap items-end gap-2"
     >
       <!-- Подсказка под значком: строкой под полем она выталкивала поле
@@ -340,7 +350,7 @@
       </UFormField>
 
       <UFormField
-        v-if="layout.showActivationCounter && activationCounter"
+        v-if="showActivationAmount"
         :label="EFFECT_ACTIVATION_COUNTER_LABELS.amount"
         class="w-24"
       >
