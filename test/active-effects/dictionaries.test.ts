@@ -18,10 +18,10 @@ import {
  * разошлись, показывает `node scripts/compare-effect-dictionaries.mjs`.
  */
 const SYSTEM_DICTIONARY_SIZES = {
-  version: '0.8.81',
+  version: '0.8.85',
   flags: 200,
   changeKeys: 61,
-  conditions: 93,
+  conditions: 95,
   values: 33,
 };
 

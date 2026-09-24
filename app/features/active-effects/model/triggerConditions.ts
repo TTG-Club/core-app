@@ -17,6 +17,7 @@
 import type { EffectTriggerEvent } from './triggerTypes';
 
 import {
+  EFFECT_ATTACK_ABILITY_CONDITION_PREFIX,
   EFFECT_CARRIER_TAG_CONDITION_PREFIX,
   EFFECT_CARRIER_TAG_NOT_CONDITION_PREFIX,
   EFFECT_CARRIER_TYPE_CONDITION_PREFIX,
@@ -276,7 +277,10 @@ const PARAMETRIC_PARTS: Partial<
   damageAtLeast: { prefix: 'damage.amount >= ', parameter: 'number' },
   sourceWithin: { prefix: 'source.distance <= ', parameter: 'number' },
   attackKind: { prefix: 'attack.kind === ', parameter: 'attackKind' },
-  attackAbility: { prefix: 'attack.ability === ', parameter: 'ability' },
+  attackAbility: {
+    prefix: EFFECT_ATTACK_ABILITY_CONDITION_PREFIX,
+    parameter: 'ability',
+  },
   selfAbilityAtMost: { prefix: 'self.ability[', parameter: 'ability' },
   selfAbilityAtLeast: { prefix: 'self.ability[', parameter: 'ability' },
   combatRoundIs: { prefix: 'combat.round === ', parameter: 'number' },

@@ -85,7 +85,7 @@ import {
 } from './triggerTypes';
 
 /** Версия системы dnd5e-2024, с которой снят порт справочников и подписей. */
-export const EFFECT_SYSTEM_VERSION = '0.8.81';
+export const EFFECT_SYSTEM_VERSION = '0.8.85';
 
 /** Язык сортировки пунктов меню «Готовые»: навыки ищут по русскому названию. */
 export const EFFECT_MENU_SORT_LOCALE = 'ru';
@@ -605,6 +605,12 @@ export function splitConditionParts(condition: string): string[] {
 export const EFFECT_CARRIER_ARMOR_CONDITION_PREFIX = 'self.armor === ';
 
 /**
+ * Приставка условия «атака идёт этой характеристикой». Общая для модификаторов
+ * («Ярость»: бонус урона только атакам Силой) и срабатываний.
+ */
+export const EFFECT_ATTACK_ABILITY_CONDITION_PREFIX = 'attack.ability === ';
+
+/**
  * Условие «цель помечена мной»: цель несёт эффект с флагом `mark.bySource`,
  * наложенный носителем условия (Метка охотника, Сглаз).
  */
@@ -766,6 +772,16 @@ export function isAdjacentAllyCondition(condition: string): boolean {
 export const EFFECT_CONDITION_EXPR_SUGGESTIONS: Array<Option<string>> = [
   { value: EFFECT_ROLL_ADVANTAGE_CONDITION, label: 'Бросок: с преимуществом' },
   { value: EFFECT_ROLL_DISADVANTAGE_CONDITION, label: 'Бросок: с помехой' },
+  // Бонус урона оружия VTTG считает по характеристике, которой оно бьёт:
+  // секира Силой получает «Ярость», рапира через Ловкость — нет
+  {
+    value: `${EFFECT_ATTACK_ABILITY_CONDITION_PREFIX}"strength"`,
+    label: 'Атака: Силой (урон оружия)',
+  },
+  {
+    value: `${EFFECT_ATTACK_ABILITY_CONDITION_PREFIX}"dexterity"`,
+    label: 'Атака: Ловкостью (урон оружия)',
+  },
   {
     value: 'target.hp.value === target.hp.max',
     label: 'Цель: с полными хитами (Убийца)',
@@ -1715,6 +1731,43 @@ export const EFFECT_FORMULA_ERRORS = {
   extraToken: (tokenValue: string) => `Лишний токен: "${tokenValue}"`,
 } as const;
 
+/** Типографский минус формулы словами: и у вычитания, и у унарного минуса. */
+const EFFECT_FORMULA_READABLE_MINUS = '−';
+
+/**
+ * Функции формулы словами под полем значения модификатора; `{0}`, `{1}` —
+ * аргументы. Зеркало `READABLE_FUNCTION_TEMPLATES` системы.
+ */
+export const EFFECT_FORMULA_READABLE_FUNCTIONS: Readonly<
+  Record<string, string>
+> = {
+  floor: '({0}, с округлением вниз)',
+  ceil: '({0}, с округлением вверх)',
+  min: 'меньшее из ({0}; {1})',
+  max: 'большее из ({0}; {1})',
+  abs: '|{0}|',
+};
+
+/**
+ * Знаки операторов формулы словами: минус и умножение — типографские. Зеркало
+ * `READABLE_OPERATORS` системы.
+ */
+export const EFFECT_FORMULA_READABLE_OPERATORS: Readonly<
+  Record<string, string>
+> = {
+  '+': '+',
+  '-': EFFECT_FORMULA_READABLE_MINUS,
+  '*': '×',
+  '/': '/',
+};
+
+/** Прочие части формулы словами: унарный минус и ступени `steps()`. */
+export const EFFECT_FORMULA_READABLE_LABELS = {
+  negate: EFFECT_FORMULA_READABLE_MINUS,
+  steps: (thresholds: string, steppedValue: string) =>
+    `(число порогов ${thresholds}, пройденных по ${steppedValue})`,
+} as const;
+
 /** Название нового эффекта. */
 export const EFFECT_NEW_NAME = 'Новый эффект';
 
@@ -1748,6 +1801,7 @@ export const ACTIVE_EFFECT_LABELS = {
   changeValuePlaceholder: '+2, 1к4, @mod.spell',
   changeValueRequired: 'Без значения строка не сохранится',
   changeRollDiceHint: 'Кость бросается заново при каждом броске.',
+  changeValueReadablePrefix: 'Значение: ',
   changeDiceNotRolledError:
     'Здесь кость никто не бросит: она работает только у атак, спасбросков, '
     + 'проверок, навыков и урона. Укажите число.',

@@ -10,6 +10,7 @@
   } from '../../model';
 
   import { InputWithLibrary } from '~ui/input';
+  import { InfoTooltip } from '~ui/tooltip';
 
   import {
     ACTIVE_EFFECT_LABELS,
@@ -21,6 +22,7 @@
     DEFAULT_EFFECT_CHANGE_PRIORITY,
     DEFAULT_EFFECT_CHANGE_VALUE,
     describeEffectChangeValueError,
+    describeEffectChangeValueLabel,
     EFFECT_CHANGE_MODE_OPTIONS,
     EFFECT_CHANGE_STEP_LABELS,
     EFFECT_CHANGE_STEP_PER_OPTIONS,
@@ -39,10 +41,10 @@
   } from '../../model';
 
   /**
-   * Строки модификаторов эффекта: что меняется, режим, значение, условие и
-   * шаг («меняется со временем»). Приоритет показывается в режиме «Для
-   * опытных» или когда у строки он уже задан не по умолчанию — прятать
-   * заданное нельзя.
+   * Строки модификаторов эффекта: что меняется и режим, под ними значение с
+   * расшифровкой формулы словами, условие и шаг («меняется со временем»).
+   * Приоритет показывается в режиме «Для опытных» или когда у строки он уже
+   * задан не по умолчанию — прятать заданное нельзя.
    */
   const { showPriorityField = false } = defineProps<{
     /** Показывать приоритет у всех строк. */
@@ -58,27 +60,34 @@
    * условия: ключ автор выберет сам, и подсказка ему как раз об этом.
    */
   const changeRows = computed(() =>
-    model.value.map((change) => ({
-      change,
-      /** Условие в поле: не заданное — пустая строка. */
-      condition: change.condition ?? '',
-      showPriority:
-        showPriorityField || change.priority !== DEFAULT_EFFECT_CHANGE_PRIORITY,
-      keyError: change.key.trim()
-        ? undefined
-        : ACTIVE_EFFECT_LABELS.changeKeyRequired,
-      valueError: describeEffectChangeValueError(change),
-      // «Вычесть» — только в форме: в данных это «Добавить» с минусом
-      modeChoice: getEffectChangeModeChoice(change),
-      shownValue: getEffectChangeShownValue(change),
-      valueHint: isRollDiceEffectChange(change)
-        ? ACTIVE_EFFECT_LABELS.changeRollDiceHint
-        : undefined,
-      hasStep: change.step !== undefined,
-      /** Предел шага в поле: не заданный — пустое поле «без предела». */
-      stepUntil: change.step?.until ?? null,
-      ...describeStepHint(change),
-    })),
+    model.value.map((change) => {
+      const showPriority =
+        showPriorityField || change.priority !== DEFAULT_EFFECT_CHANGE_PRIORITY;
+
+      return {
+        change,
+        /** Условие в поле: не заданное — пустая строка. */
+        condition: change.condition ?? '',
+        showPriority,
+        /** Ключ занимает место приоритета, когда того нет. */
+        keyColumnClass: showPriority ? 'md:col-span-12' : 'md:col-span-15',
+        keyError: change.key.trim()
+          ? undefined
+          : ACTIVE_EFFECT_LABELS.changeKeyRequired,
+        valueError: describeEffectChangeValueError(change),
+        // «Вычесть» — только в форме: в данных это «Добавить» с минусом
+        modeChoice: getEffectChangeModeChoice(change),
+        shownValue: getEffectChangeShownValue(change),
+        valueHint: isRollDiceEffectChange(change)
+          ? ACTIVE_EFFECT_LABELS.changeRollDiceHint
+          : undefined,
+        valueReadable: describeEffectChangeValueLabel(change),
+        hasStep: change.step !== undefined,
+        /** Предел шага в поле: не заданный — пустое поле «без предела». */
+        stepUntil: change.step?.until ?? null,
+        ...describeStepHint(change),
+      };
+    }),
   );
 
   /**
@@ -347,7 +356,8 @@
       <UFormField
         :label="ACTIVE_EFFECT_LABELS.changeKey"
         :error="changeRow.keyError"
-        class="col-span-full md:col-span-8"
+        class="col-span-full"
+        :class="changeRow.keyColumnClass"
       >
         <InputWithLibrary
           :model-value="changeRow.change.key"
@@ -359,27 +369,13 @@
 
       <UFormField
         :label="ACTIVE_EFFECT_LABELS.changeMode"
-        class="col-span-full md:col-span-5"
+        class="col-span-full md:col-span-8"
       >
         <USelect
           :model-value="changeRow.modeChoice"
           :items="EFFECT_CHANGE_MODE_OPTIONS"
           class="w-full"
           @update:model-value="updateMode(index, $event)"
-        />
-      </UFormField>
-
-      <UFormField
-        :label="ACTIVE_EFFECT_LABELS.changeValue"
-        :error="changeRow.valueError"
-        :help="changeRow.valueHint"
-        class="col-span-full md:col-span-7"
-      >
-        <InputWithLibrary
-          :model-value="changeRow.shownValue"
-          :options="EFFECT_VALUE_SUGGESTIONS"
-          :placeholder="ACTIVE_EFFECT_LABELS.changeValuePlaceholder"
-          @update:model-value="updateValue(index, $event)"
         />
       </UFormField>
 
@@ -405,6 +401,30 @@
           @click.left.exact.prevent="removeChange(index)"
         />
       </div>
+
+      <UFormField
+        :error="changeRow.valueError"
+        :help="changeRow.valueReadable"
+        class="col-span-full"
+      >
+        <template #label>
+          <InfoTooltip
+            v-if="changeRow.valueHint"
+            :text="changeRow.valueHint"
+          >
+            <span>{{ ACTIVE_EFFECT_LABELS.changeValue }}</span>
+          </InfoTooltip>
+
+          <span v-else>{{ ACTIVE_EFFECT_LABELS.changeValue }}</span>
+        </template>
+
+        <InputWithLibrary
+          :model-value="changeRow.shownValue"
+          :options="EFFECT_VALUE_SUGGESTIONS"
+          :placeholder="ACTIVE_EFFECT_LABELS.changeValuePlaceholder"
+          @update:model-value="updateValue(index, $event)"
+        />
+      </UFormField>
 
       <UFormField
         :label="ACTIVE_EFFECT_LABELS.changeCondition"
