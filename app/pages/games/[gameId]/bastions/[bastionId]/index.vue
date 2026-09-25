@@ -3,11 +3,13 @@
 
   import { StatusCodes } from 'http-status-codes';
 
+  import { BastionActionsBar, BastionJournal } from '~bastion-game/activity';
   import { MemberFacilitiesCard } from '~bastion-game/facilities';
   import {
     activatePlayerBastion,
     BASTION_DETAIL_LABELS,
     BASTION_GAME_LABELS,
+    fetchBastionActivity,
     fetchPlayerBastion,
     getBastionErrorMessage,
     PLAN_LABELS,
@@ -36,6 +38,13 @@
     { server: false, lazy: true },
   );
 
+  /** Журнал бастиона: приказы, ходы и движения казны. */
+  const { data: activity, refresh: refreshActivity } = useAsyncData(
+    () => `player-bastion-activity-${bastionId.value}`,
+    () => fetchBastionActivity(bastionId.value),
+    { server: false, lazy: true },
+  );
+
   useSeoMeta({
     title: () => bastion.value?.name ?? BASTION_DETAIL_LABELS.seoTitle,
     robots: 'noindex',
@@ -61,6 +70,7 @@
 
     try {
       bastion.value = await activatePlayerBastion(bastionId.value);
+      await refreshActivity();
       toast.add({ title: BASTION_DETAIL_LABELS.activated, color: 'success' });
     } catch (activationError) {
       toast.add({
@@ -82,8 +92,9 @@
    *
    * @param updated Бастион после сохранения.
    */
-  function handleUpdated(updated: PlayerBastion): void {
+  async function handleUpdated(updated: PlayerBastion): Promise<void> {
     bastion.value = updated;
+    await refreshActivity();
   }
 
   /** Что случилось: чужая игра, бастиона нет или сбой. */
@@ -184,6 +195,12 @@
           {{ BASTION_DETAIL_LABELS.activateHint }}
         </p>
 
+        <BastionActionsBar
+          :bastion
+          :activity="activity ?? undefined"
+          @updated="handleUpdated"
+        />
+
         <h2 class="text-base font-semibold text-highlighted">
           {{ BASTION_DETAIL_LABELS.members }}
         </h2>
@@ -200,6 +217,13 @@
           :key="member.id"
           :bastion
           :member
+          @updated="handleUpdated"
+        />
+
+        <BastionJournal
+          v-if="bastion.status !== 'SETUP'"
+          :bastion
+          :activity="activity ?? undefined"
           @updated="handleUpdated"
         />
       </template>

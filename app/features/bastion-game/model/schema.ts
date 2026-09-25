@@ -6,6 +6,29 @@ export const GAME_ROLES = ['MASTER', 'PLAYER', 'NONE'] as const;
 
 export const FACILITY_SPACES = ['CRAMPED', 'ROOMY', 'VAST'] as const;
 
+export const FACILITY_STATUSES = ['READY', 'BUILDING'] as const;
+
+export const BASTION_ORDERS = [
+  'CRAFT',
+  'EMPOWER',
+  'HARVEST',
+  'MAINTAIN',
+  'RECRUIT',
+  'RESEARCH',
+  'TRADE',
+] as const;
+
+export const ORDER_STATUSES = ['ACTIVE', 'COMPLETED', 'CANCELLED'] as const;
+
+export const LEDGER_REASONS = [
+  'DEPOSIT',
+  'WITHDRAWAL',
+  'ORDER',
+  'REFUND',
+  'BUILD',
+  'ENLARGE',
+] as const;
+
 const labelSchema = z.object({
   value: z.string(),
   name: z.string(),
@@ -34,6 +57,17 @@ const facilitySchema = z.object({
   prerequisite: labelSchema.nullable().optional(),
   prerequisiteConfirmed: z.boolean(),
   choices: z.array(selectedChoiceSchema),
+  status: z.enum(FACILITY_STATUSES),
+  readyOnTurn: z.number().nullish(),
+  pendingSpace: z
+    .object({
+      value: z.enum(FACILITY_SPACES),
+      name: z.string(),
+      squares: z.number(),
+    })
+    .nullish(),
+  pendingReadyOnTurn: z.number().nullish(),
+  enlargeable: z.boolean(),
 });
 
 const memberSchema = z.object({
@@ -45,6 +79,7 @@ const memberSchema = z.object({
   specialFacilityLimit: z.number(),
   canEditFacilities: z.boolean(),
   basicComplete: z.boolean(),
+  canGiveOrders: z.boolean(),
   facilities: z.array(facilitySchema),
 });
 
@@ -158,3 +193,71 @@ export interface UpdatePlayerBastionRequest {
   members: Array<PlayerBastionMemberRequest>;
   version: number;
 }
+
+/** Журналы бастиона (`GET /player-bastions/{id}/activity`). */
+export const bastionActivitySchema = z.object({
+  orders: z.array(
+    z.object({
+      id: z.string(),
+      facilityId: z.string().nullish(),
+      facilityName: z.string().nullish(),
+      order: z.object({ value: z.enum(BASTION_ORDERS), name: z.string() }),
+      optionName: z.string().nullish(),
+      costGp: z.number(),
+      givenOnTurn: z.number(),
+      completesOnTurn: z.number(),
+      status: z.enum(ORDER_STATUSES),
+      givenBy: z.string(),
+      note: z.string().nullish(),
+      result: z.string().nullish(),
+      canCancel: z.boolean(),
+    }),
+  ),
+  turns: z.array(
+    z.object({
+      number: z.number(),
+      maintain: z.boolean(),
+      event: z.string().nullish(),
+      summary: z.array(z.string()),
+      performedBy: z.string(),
+      performedAt: z.string(),
+    }),
+  ),
+  ledger: z.array(
+    z.object({
+      turn: z.number(),
+      amountGp: z.number(),
+      reason: z.enum(LEDGER_REASONS),
+      note: z.string().nullish(),
+      createdBy: z.string(),
+      createdAt: z.string(),
+    }),
+  ),
+});
+
+/** Сооружение справочника целиком — для вариантов приказа. */
+export const facilityDetailSchema = z.object({
+  url: z.string(),
+  name: z.object({ rus: z.string(), eng: z.string() }),
+  orderOptions: z
+    .array(
+      z.object({
+        order: z.enum(BASTION_ORDERS).nullish(),
+        name: z.string().nullish(),
+        description: z.string().nullish(),
+        days: z.number().nullish(),
+        cost: z.number().nullish(),
+        costNote: z.string().nullish(),
+        minLevel: z.number().nullish(),
+      }),
+    )
+    .nullish(),
+});
+
+export type BastionActivity = z.infer<typeof bastionActivitySchema>;
+export type BastionActivityOrder = BastionActivity['orders'][number];
+export type BastionOrderCode = (typeof BASTION_ORDERS)[number];
+export type FacilityOrderOptionDetail = NonNullable<
+  z.infer<typeof facilityDetailSchema>['orderOptions']
+>[number];
+export type LedgerReason = (typeof LEDGER_REASONS)[number];

@@ -1,21 +1,60 @@
 <script setup lang="ts">
   import type { PlayerBastionFacility } from '../../model';
 
-  import { FACILITY_SETUP_LABELS } from '../../model';
+  import { fillTemplate } from '~bastions/model';
+
+  import { ACTIVITY_LABELS, FACILITY_SETUP_LABELS } from '../../model';
 
   /**
    * Сооружение персонажа: название со ссылкой на справочник, пространство,
    * приказы, наёмники, сделанные выборы и состояние требования.
    */
-  const { facility, canConfirm = false } = defineProps<{
+  const {
+    facility,
+    canConfirm = false,
+    canAct = false,
+    canRemove = false,
+  } = defineProps<{
     facility: PlayerBastionFacility;
     /** Мастер может подтвердить требование. */
     canConfirm?: boolean;
+    /** Можно отдавать приказы и расширять: бастион запущен, это мастер или игрок персонажа. */
+    canAct?: boolean;
+    /** Мастер может убрать сооружение. */
+    canRemove?: boolean;
   }>();
 
   const emit = defineEmits<{
     'toggle-confirmation': [confirmed: boolean];
+    'order': [];
+    'enlarge': [];
+    'remove': [];
   }>();
+
+  /** Приказ можно отдать: сооружение готово, требование подтверждено, приказы есть. */
+  const canOrder = computed(
+    () =>
+      canAct
+      && facility.status === 'READY'
+      && facility.prerequisiteConfirmed
+      && facility.orders.length > 0,
+  );
+
+  /** Стройка или расширение: подпись с ходом, на котором закончится. */
+  const constructionText = computed(() => {
+    if (facility.status === 'BUILDING') {
+      return fillTemplate(ACTIVITY_LABELS.building, {
+        turn: facility.readyOnTurn ?? '—',
+      });
+    }
+
+    return facility.pendingSpace
+      ? fillTemplate(ACTIVITY_LABELS.enlarging, {
+          space: facility.pendingSpace.name,
+          turn: facility.pendingReadyOnTurn ?? '—',
+        })
+      : '';
+  });
 
   /** Просит родителя переключить подтверждение требования. */
   function requestToggle(): void {
@@ -72,6 +111,13 @@
     </div>
 
     <p
+      v-if="constructionText"
+      class="text-xs text-info"
+    >
+      {{ constructionText }}
+    </p>
+
+    <p
       v-if="choicesText"
       class="text-sm text-toned"
     >
@@ -100,6 +146,43 @@
         @click.left.exact.prevent="requestToggle"
       >
         {{ confirmLabel }}
+      </UButton>
+    </div>
+
+    <div
+      v-if="canOrder || (canAct && facility.enlargeable) || canRemove"
+      class="flex flex-wrap justify-end gap-1"
+    >
+      <UButton
+        v-if="canOrder"
+        icon="tabler:send"
+        size="xs"
+        variant="subtle"
+        @click.left.exact.prevent="emit('order')"
+      >
+        {{ ACTIVITY_LABELS.giveOrder }}
+      </UButton>
+
+      <UButton
+        v-if="canAct && facility.enlargeable"
+        icon="tabler:arrows-maximize"
+        size="xs"
+        color="neutral"
+        variant="subtle"
+        @click.left.exact.prevent="emit('enlarge')"
+      >
+        {{ ACTIVITY_LABELS.enlarge }}
+      </UButton>
+
+      <UButton
+        v-if="canRemove"
+        icon="tabler:trash"
+        size="xs"
+        color="error"
+        variant="ghost"
+        @click.left.exact.prevent="emit('remove')"
+      >
+        {{ ACTIVITY_LABELS.remove }}
       </UButton>
     </div>
   </div>
