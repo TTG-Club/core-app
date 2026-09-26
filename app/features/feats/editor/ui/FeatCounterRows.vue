@@ -149,61 +149,54 @@
         />
       </div>
 
-      <FeatCounterMaxField
-        v-model="counter.max"
-        v-model:minimum="counter.min"
-        :labels="labels"
-        class="md:col-span-24"
-      />
+      <!-- Максимум и оба отдыха одной строкой: полей немного, и каждое своим
+        рядом растягивало строку ресурса на полэкрана. Отдыхи раздельно:
+        «Второе дыхание» возвращает один заряд коротким и все продолжительным,
+        ярость — только продолжительным -->
+      <div class="flex flex-wrap items-end gap-3 md:col-span-24">
+        <FeatCounterMaxField
+          v-model="counter.max"
+          v-model:minimum="counter.min"
+          :labels="labels"
+        />
 
-      <!-- Короткий и продолжительный отдых раздельно: «Второе дыхание»
-        возвращает один заряд коротким и все продолжительным, ярость — только
-        продолжительным -->
-      <div class="flex flex-col gap-2 md:col-span-24">
-        <span class="text-xs font-medium text-muted">
-          {{ texts.counterRecovery }}
-        </span>
+        <template
+          v-for="field in FEAT_COUNTER_REST_FIELDS"
+          :key="field.key"
+        >
+          <UFormField class="w-52">
+            <template #label>
+              <span class="flex items-center gap-1">
+                <UIcon
+                  :name="field.icon"
+                  class="size-4 shrink-0"
+                />
 
-        <div class="grid gap-2 sm:grid-cols-2">
-          <div
-            v-for="field in FEAT_COUNTER_REST_FIELDS"
-            :key="field.key"
-            class="flex flex-wrap items-end gap-2 rounded-md bg-elevated/60 p-2"
+                {{ field.label }}
+              </span>
+            </template>
+
+            <USelect
+              v-model="counter[field.key].mode"
+              :items="FEAT_COUNTER_REST_MODE_OPTIONS"
+              value-key="value"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField
+            v-if="isCounterRestAmount(counter[field.key])"
+            class="w-24"
+            :label="texts.counterRestAmount"
           >
-            <UFormField class="min-w-40 grow">
-              <template #label>
-                <span class="flex items-center gap-1">
-                  <UIcon
-                    :name="field.icon"
-                    class="size-4 shrink-0"
-                  />
-
-                  {{ field.label }}
-                </span>
-              </template>
-
-              <USelect
-                v-model="counter[field.key].mode"
-                :items="FEAT_COUNTER_REST_MODE_OPTIONS"
-                value-key="value"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField
-              v-if="isCounterRestAmount(counter[field.key])"
-              class="w-28"
-              :label="texts.counterRestAmount"
-            >
-              <UInputNumber
-                v-model="counter[field.key].amount"
-                :min="COUNTER_REST_AMOUNT_MIN"
-                :max="COUNTER_COUNT_MAX"
-                class="w-full"
-              />
-            </UFormField>
-          </div>
-        </div>
+            <UInputNumber
+              v-model="counter[field.key].amount"
+              :min="COUNTER_REST_AMOUNT_MIN"
+              :max="COUNTER_COUNT_MAX"
+              class="w-full"
+            />
+          </UFormField>
+        </template>
       </div>
 
       <!-- Своей строкой, а не полем в ряду: подпись длинная, и в узкой колонке
@@ -243,7 +236,7 @@
           class="flex items-end gap-2"
         >
           <UFormField
-            class="w-28"
+            class="w-24"
             :label="texts.counterScalingLevel"
           >
             <UInputNumber
@@ -255,7 +248,7 @@
           </UFormField>
 
           <UFormField
-            class="w-28"
+            class="w-24"
             :label="texts.counterScalingMax"
           >
             <UInputNumber

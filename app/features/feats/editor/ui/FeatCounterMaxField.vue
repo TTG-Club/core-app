@@ -144,7 +144,7 @@
 <template>
   <div class="flex flex-wrap items-end gap-3">
     <UFormField
-      class="w-full sm:w-60"
+      class="w-52"
       :label="texts.counterMax"
     >
       <USelect
@@ -158,7 +158,7 @@
 
     <UFormField
       v-if="isFixed"
-      class="w-28"
+      class="w-24"
       :label="texts.counterMaxAmount"
     >
       <UInputNumber
@@ -184,7 +184,7 @@
     <template v-else>
       <UFormField
         v-if="isAbility"
-        class="w-44"
+        class="w-36"
         :label="texts.counterMaxAbility"
       >
         <SelectAbilities
@@ -194,7 +194,7 @@
       </UFormField>
 
       <UFormField
-        class="w-28"
+        class="w-24"
         :label="texts.counterMaxMultiplier"
       >
         <UInputNumber
@@ -207,7 +207,7 @@
       </UFormField>
 
       <UFormField
-        class="w-28"
+        class="w-24"
         :label="texts.counterMaxOffset"
       >
         <UInputNumber
@@ -224,7 +224,7 @@
       равно модификатору Харизмы, но с Харизмой +0 оно всё равно одно -->
     <UFormField
       v-if="!isFixed"
-      class="w-28"
+      class="w-24"
       :label="texts.counterMin"
     >
       <UInputNumber
