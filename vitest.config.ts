@@ -28,6 +28,9 @@ export default defineConfig({
     alias: {
       '~admin': fileURLToPath(new URL('./app/features/admin', import.meta.url)),
       '~home': fileURLToPath(new URL('./app/features/home', import.meta.url)),
+      '~bug-report': fileURLToPath(
+        new URL('./app/features/bug-report', import.meta.url),
+      ),
       '~active-effects': fileURLToPath(
         new URL('./app/features/active-effects', import.meta.url),
       ),
