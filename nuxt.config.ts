@@ -482,6 +482,14 @@ export default defineNuxtConfig({
     // Переопределяется через NUXT_VTTG_UPDATE_BASE_URL.
     vttg: {
       updateBaseUrl: 'https://update-v.ttg.club/vttg/',
+      // core-api каналов компендиума VTTG — те же, откуда их качает приложение
+      // (CHANNELS в vttg/packages/server/src/modules/compendium/compendiumUpdate.ts).
+      // Админка любого сайта видит и поднимает версии обоих каналов.
+      // Переопределяются через NUXT_VTTG_COMPENDIUM_API_URLS_DEV / _PROD.
+      compendiumApiUrls: {
+        dev: 'https://dev.api.ttg.club',
+        prod: 'https://api.ttg.club',
+      },
     },
   },
 });

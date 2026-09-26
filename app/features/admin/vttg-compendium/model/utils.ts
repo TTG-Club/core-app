@@ -1,8 +1,14 @@
+import type { VttgCompendiumChannel } from '#shared/consts';
+
 import type { VttgCompendiumRebuild } from './types';
 
+import { VTTG_COMPENDIUM_ADMIN_API_PREFIX } from '#shared/consts';
+
 import {
+  VTTG_COMPENDIUM_CHANNEL_TITLES,
   VTTG_COMPENDIUM_UPDATED_LABEL,
   VTTG_COMPENDIUM_UPDATED_SEPARATOR,
+  VTTG_COMPENDIUM_VERSION_DATA_KEY_PREFIX,
   VTTG_COMPENDIUM_VERSION_STEP,
 } from './constants';
 
@@ -64,11 +70,42 @@ export function getVttgCompendiumUpdatedText(
 }
 
 /**
+ * Роут сайта, за которым версия канала.
+ *
+ * @param channel канал компендиума
+ * @returns адрес чтения и подъёма версии канала
+ */
+export function getVttgCompendiumVersionApiUrl(
+  channel: VttgCompendiumChannel,
+): string {
+  return `${VTTG_COMPENDIUM_ADMIN_API_PREFIX}/${channel}`;
+}
+
+/**
+ * Ключ кеша версии канала: у каждого канала свой, иначе карточки делили бы
+ * один ответ.
+ *
+ * @param channel канал компендиума
+ * @returns ключ `useFetch`
+ */
+export function getVttgCompendiumVersionDataKey(
+  channel: VttgCompendiumChannel,
+): string {
+  return `${VTTG_COMPENDIUM_VERSION_DATA_KEY_PREFIX}-${channel}`;
+}
+
+/**
  * Текст подтверждения подъёма версии.
  *
+ * @param channel канал, версию которого поднимаем
  * @param version версия, до которой поднимаем
  * @returns описание последствий для диалога
  */
-export function getVttgCompendiumConfirmDescription(version: number): string {
-  return `Версия станет ${version}. Все приложения VTTG заново скачают компендиум целиком. Вернуть прежнюю версию будет нельзя.`;
+export function getVttgCompendiumConfirmDescription(
+  channel: VttgCompendiumChannel,
+  version: number,
+): string {
+  const channelTitle = VTTG_COMPENDIUM_CHANNEL_TITLES[channel];
+
+  return `${channelTitle}: версия станет ${version}. Все приложения VTTG заново скачают этот компендиум целиком. Вернуть прежнюю версию будет нельзя.`;
 }

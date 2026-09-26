@@ -2,9 +2,12 @@ import type { VttgCompendiumRebuild } from '~admin/vttg-compendium/model';
 
 import { describe, expect, it } from 'vitest';
 
+import { VTTG_COMPENDIUM_CHANNELS } from '#shared/consts';
 import {
   getNextVttgCompendiumVersion,
   getVttgCompendiumUpdatedText,
+  getVttgCompendiumVersionApiUrl,
+  getVttgCompendiumVersionDataKey,
   isVttgCompendiumRebuildRunning,
   parseVttgCompendiumVersion,
   VTTG_COMPENDIUM_UPDATED_LABEL,
@@ -27,6 +30,25 @@ describe('getNextVttgCompendiumVersion', () => {
     expect(getNextVttgCompendiumVersion(CURRENT_VERSION)).toBeGreaterThan(
       CURRENT_VERSION,
     );
+  });
+});
+
+describe('адрес и ключ кеша канала', () => {
+  it('у каждого канала свои', () => {
+    const apiUrls = VTTG_COMPENDIUM_CHANNELS.map(
+      getVttgCompendiumVersionApiUrl,
+    );
+
+    const dataKeys = VTTG_COMPENDIUM_CHANNELS.map(
+      getVttgCompendiumVersionDataKey,
+    );
+
+    expect(new Set(apiUrls).size).toBe(VTTG_COMPENDIUM_CHANNELS.length);
+    expect(new Set(dataKeys).size).toBe(VTTG_COMPENDIUM_CHANNELS.length);
+  });
+
+  it('канал — последний сегмент адреса', () => {
+    expect(getVttgCompendiumVersionApiUrl('prod').endsWith('/prod')).toBe(true);
   });
 });
 

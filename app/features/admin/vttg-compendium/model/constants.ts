@@ -1,16 +1,24 @@
 import type { BadgeProps } from '@nuxt/ui';
 
+import type { VttgCompendiumChannel } from '#shared/consts';
+
 import type { VttgCompendiumRebuildStatus } from './types';
 
 /** Страница версии компендиума в админке. */
 export const VTTG_COMPENDIUM_ADMIN_ROUTE = '/admin/vttg-compendium';
 
-/** Чтение (`GET`) и подъём (`PUT`) версии — ручка core-api, идёт через общий прокси. */
-export const VTTG_COMPENDIUM_VERSION_API_URL =
-  '/api/v2/vttg/admin/compendium-version';
+/** Начало ключа кеша версии; к нему добавляется канал. */
+export const VTTG_COMPENDIUM_VERSION_DATA_KEY_PREFIX =
+  'admin-vttg-compendium-version';
 
-/** Ключ кеша версии компендиума. */
-export const VTTG_COMPENDIUM_VERSION_DATA_KEY = 'admin-vttg-compendium-version';
+/** Названия каналов — как их различает приложение VTTG. */
+export const VTTG_COMPENDIUM_CHANNEL_TITLES: Record<
+  VttgCompendiumChannel,
+  string
+> = {
+  dev: 'Dev-компендиум',
+  prod: 'Прод-компендиум',
+};
 
 /** На сколько поле предлагает поднять текущую версию, и шаг кнопок поля. */
 export const VTTG_COMPENDIUM_VERSION_STEP = 1;
@@ -26,11 +34,9 @@ export const VTTG_COMPENDIUM_PAGE_TITLE = 'Версия компендиума V
 export const VTTG_COMPENDIUM_SEO_TITLE = `${VTTG_COMPENDIUM_PAGE_TITLE}: Настройки`;
 
 export const VTTG_COMPENDIUM_PAGE_DESCRIPTION =
-  'Поднять версию выгрузки — приложение VTTG перекачает компендиум целиком';
+  'Версии Dev- и Прод-компендиума в одном месте: поднять — приложение VTTG перекачает канал целиком';
 
 export const VTTG_COMPENDIUM_NAVIGATION_ICON = 'tabler:versions';
-
-export const VTTG_COMPENDIUM_CURRENT_TITLE = 'Текущая версия';
 
 export const VTTG_COMPENDIUM_UPDATED_LABEL = 'Изменена';
 
@@ -65,10 +71,10 @@ export const VTTG_COMPENDIUM_REBUILD_STATUS_COLORS: Record<
   FAILED: 'error',
 };
 
-export const VTTG_COMPENDIUM_NEXT_TITLE = 'Новая версия';
+export const VTTG_COMPENDIUM_NEXT_LABEL = 'Новая версия';
 
-export const VTTG_COMPENDIUM_NEXT_DESCRIPTION =
-  'Поднимай версию после изменения формата выгрузки. Сайт сразу пересоберёт выгрузку, а приложение VTTG, увидев новую версию, скачает компендиум заново. Ниже текущей версию поставить нельзя.';
+export const VTTG_COMPENDIUM_PAGE_HINT =
+  'У Dev и Прода свои базы и свои версии — поднимаются порознь. Поднимай версию канала после того, как на его сервер выехало изменение формата выгрузки: сервер сразу пересоберёт выгрузку, а приложение VTTG, увидев новую версию, скачает этот компендиум заново. Ниже текущей версию поставить нельзя.';
 
 export const VTTG_COMPENDIUM_SUBMIT_LABEL = 'Поднять версию';
 

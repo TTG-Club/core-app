@@ -1,38 +1,40 @@
+import type { VttgCompendiumChannel } from '#shared/consts';
+
 import {
   getNextVttgCompendiumVersion,
+  getVttgCompendiumVersionApiUrl,
+  getVttgCompendiumVersionDataKey,
   isVttgCompendiumRebuildRunning,
   parseVttgCompendiumVersion,
   VTTG_COMPENDIUM_REBUILD_POLL_INTERVAL_MS,
   VTTG_COMPENDIUM_SAVE_ERROR_TITLE,
   VTTG_COMPENDIUM_SUCCESS_MESSAGE,
-  VTTG_COMPENDIUM_VERSION_API_URL,
-  VTTG_COMPENDIUM_VERSION_DATA_KEY,
 } from '../model';
 
 /**
- * Версия компендиума VTTG в админке: текущая версия, состояние пересборки
- * выгрузки и подъём версии.
+ * Версия одного канала компендиума VTTG в админке: текущая версия, состояние
+ * пересборки выгрузки и подъём версии. У каналов свои core-api и свои версии,
+ * поэтому каждый канал — отдельный вызов со своим кешем.
  *
  * Пока бэк пересобирает выгрузку, состояние перезапрашивается по таймеру —
  * админ видит, когда она закончилась, без F5. Ниже текущей версию поднять
  * нельзя: поле не пускает, а бэк проверяет то же самое на своей стороне.
  *
+ * @param channel канал компендиума: dev или prod
  * @returns версия, введённое значение и действия с ними
  */
-export function useVttgCompendiumVersion() {
+export function useVttgCompendiumVersion(channel: VttgCompendiumChannel) {
   const $toast = useToast();
+  const versionApiUrl = getVttgCompendiumVersionApiUrl(channel);
 
   // server: false — приватные данные админки грузим на клиенте, где авторизация
   // (cookie → Bearer) гарантированно работает.
-  const { data, error, status, refresh } = useFetch(
-    VTTG_COMPENDIUM_VERSION_API_URL,
-    {
-      key: VTTG_COMPENDIUM_VERSION_DATA_KEY,
-      server: false,
-      lazy: true,
-      transform: parseVttgCompendiumVersion,
-    },
-  );
+  const { data, error, status, refresh } = useFetch(versionApiUrl, {
+    key: getVttgCompendiumVersionDataKey(channel),
+    server: false,
+    lazy: true,
+    transform: parseVttgCompendiumVersion,
+  });
 
   const currentVersion = computed(() => data.value?.version ?? null);
 
@@ -93,13 +95,10 @@ export function useVttgCompendiumVersion() {
     isSaving.value = true;
 
     try {
-      const savedVersionResponse = await $fetch(
-        VTTG_COMPENDIUM_VERSION_API_URL,
-        {
-          method: 'PUT',
-          body: { version: nextVersion.value },
-        },
-      );
+      const savedVersionResponse = await $fetch(versionApiUrl, {
+        method: 'PUT',
+        body: { version: nextVersion.value },
+      });
 
       data.value = parseVttgCompendiumVersion(savedVersionResponse);
 
