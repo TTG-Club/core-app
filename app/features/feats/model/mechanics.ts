@@ -1,5 +1,7 @@
 import type { AbilityKey } from '~/shared/types';
 
+import { createFullCounterRestRule, createNoCounterRestRule } from './counter';
+
 /**
  * Механика черты: то, что лист персонажа считает сам, а не показывает текстом.
  *
@@ -579,6 +581,17 @@ export interface FeatSpellListExpansion {
  */
 export type FeatCounterRecovery = 'SHORT_REST' | 'LONG_REST' | 'SHORT_REST_ONE';
 
+/** Сколько зарядов возвращает отдых: ничего, все или своё число. */
+export type FeatCounterRestMode = 'NONE' | 'ALL' | 'AMOUNT';
+
+/** Что возвращает ресурсу один вид отдыха. */
+export interface FeatCounterRestRule {
+  mode: FeatCounterRestMode;
+
+  /** Число возвращаемых зарядов; учитывается только при режиме `AMOUNT`. */
+  amount: number;
+}
+
 /**
  * Ресурс черты со счётчиком: очки удачи «Удачливого», применения «Целителя».
  *
@@ -639,6 +652,18 @@ export interface FeatCounter {
    */
   showInTable: boolean;
 
+  /** Что возвращает короткий отдых. */
+  shortRest: FeatCounterRestRule;
+
+  /** Что возвращает продолжительный отдых. */
+  longRest: FeatCounterRestRule;
+
+  /**
+   * Откат одним словом — для потребителей, которые ещё не читают раздельные
+   * правила отдыха. Форма его не правит: при сохранении он выводится из
+   * {@link FeatCounter.shortRest} и {@link FeatCounter.longRest}
+   * (`toLegacyCounterRecovery`).
+   */
   recovery: FeatCounterRecovery;
 }
 
@@ -864,6 +889,8 @@ export function createFeatCounter(): FeatCounter {
     scaling: [],
     min: 0,
     showInTable: false,
+    shortRest: createNoCounterRestRule(),
+    longRest: createFullCounterRestRule(),
     recovery: 'LONG_REST',
   };
 }

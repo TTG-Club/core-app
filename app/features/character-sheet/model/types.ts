@@ -1598,8 +1598,18 @@ export interface FeatCounter {
    */
   min: number;
 
-  /** Каким отдыхом восстанавливается. */
+  /**
+   * Каким отдыхом восстанавливается — одним словом. Читается, только если
+   * раздельных правил {@link FeatCounter.shortRest} и
+   * {@link FeatCounter.longRest} нет (записи и снимки до них).
+   */
   recovery: CounterRecovery;
+
+  /** Что возвращает короткий отдых; нет — выводится из `recovery`. */
+  shortRest?: ResourceRecoveryRule;
+
+  /** Что возвращает продолжительный отдых; нет — выводится из `recovery`. */
+  longRest?: ResourceRecoveryRule;
 }
 
 /** Ступень максимума ресурса: с какого уровня сколько зарядов. */
