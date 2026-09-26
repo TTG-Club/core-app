@@ -6440,8 +6440,9 @@ function buildFeatResource(
     shortLabel:
       counter.shortName
       || counter.name.slice(0, RESOURCE_SHORT_LABEL_MAX_LENGTH),
-    shortRest: getCounterShortRestRule(counter.recovery),
-    longRest: {
+    // Раздельные правила справочника главнее: без них — откат одним словом
+    shortRest: counter.shortRest ?? getCounterShortRestRule(counter.recovery),
+    longRest: counter.longRest ?? {
       // Короткий отдых в правилах короче продолжительного: ресурс,
       // восстанавливаемый коротким, продолжительным восстанавливается тоже.
       mode: 'all',

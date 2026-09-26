@@ -1,6 +1,7 @@
 import type { SelectOption } from '~/shared/types';
 
-import type { FeatDamageDefenseKind } from './mechanics';
+import type { FeatCounterMaxKind } from './counter';
+import type { FeatCounterRestMode, FeatDamageDefenseKind } from './mechanics';
 import type {
   FeatGrantedSpellLevelMode,
   FeatGrantedSpellSource,
@@ -14,6 +15,8 @@ import type {
 } from './rows';
 
 import { range } from 'es-toolkit';
+
+import { AbilityKey } from '~/shared/types';
 
 /** Значение селекта круга «любой круг»: круг фильтром не ограничен. */
 const FEAT_SPELL_ANY_LEVEL_VALUE = 'ANY';
@@ -425,6 +428,67 @@ export const COUNTER_MINIMUM_MIN = 0;
 /** Наибольшая нижняя граница максимума: выше неё запас уже не «минимум». */
 export const COUNTER_MINIMUM_MAX = 20;
 
+/** Токены формулы максимума — тот же диалект, что у листа и эффектов. */
+export const COUNTER_FORMULA_TOKENS = {
+  proficiencyBonus: '@prof',
+  level: '@level',
+  classLevel: '@classLevel',
+  abilityModifierPrefix: '@mod.',
+  spellAbilityModifier: '@mod.spell',
+} as const;
+
+/**
+ * Сокращения характеристик в формуле. Своя карта, а не `AbilityShortKey`: там
+ * у Харизмы `chr`, а формулы механики знают только `cha`.
+ */
+export const COUNTER_FORMULA_ABILITIES: Record<AbilityKey, string> = {
+  [AbilityKey.STRENGTH]: 'str',
+  [AbilityKey.DEXTERITY]: 'dex',
+  [AbilityKey.CONSTITUTION]: 'con',
+  [AbilityKey.INTELLIGENCE]: 'int',
+  [AbilityKey.WISDOM]: 'wis',
+  [AbilityKey.CHARISMA]: 'cha',
+};
+
+/** Характеристика правила по умолчанию: поле обязано быть заполненным. */
+export const COUNTER_MAX_DEFAULT_ABILITY = AbilityKey.CHARISMA;
+
+/** Наименьшее число зарядов ресурса. */
+export const COUNTER_COUNT_MIN = 0;
+
+/** Наибольшее число зарядов ресурса. */
+export const COUNTER_COUNT_MAX = 99;
+
+/** Наименьший множитель значения источника: единица его не меняет. */
+export const COUNTER_MAX_MULTIPLIER_MIN = 1;
+
+/** Наибольший множитель значения источника: «Возложение рук» — пять за уровень. */
+export const COUNTER_MAX_MULTIPLIER_MAX = 20;
+
+/** Прибавки к значению источника нет: максимум равен самому источнику. */
+export const COUNTER_MAX_NO_OFFSET = 0;
+
+/** Наименьшая прибавка к значению источника максимума. */
+export const COUNTER_MAX_OFFSET_MIN = -9;
+
+/** Наибольшая прибавка к значению источника максимума. */
+export const COUNTER_MAX_OFFSET_MAX = 9;
+
+/**
+ * Наименьшее «своё число» при переключении на него: ресурс на ноль зарядов на
+ * листе не появился бы вовсе.
+ */
+export const COUNTER_FIXED_MAX_MIN = 1;
+
+/** Наименьшее число зарядов, которое возвращает отдых в режиме «своё число». */
+export const COUNTER_REST_AMOUNT_MIN = 1;
+
+/**
+ * Сколько зарядов возвращает короткий отдых у отката «один заряд коротким, все
+ * продолжительным» («Второе дыхание», вдохновение барда 2024).
+ */
+export const COUNTER_SHORT_REST_ONE_AMOUNT = 1;
+
 /**
  * Подписи поля значений строки дара: они же объясняют, что именно выбирают.
  *
@@ -438,14 +502,46 @@ export const FEAT_GRANT_VALUE_PLACEHOLDERS = {
   masteryProperties: 'Выбери приёмы',
 } as const;
 
-/** Когда ресурс черты восстанавливается. */
-export const FEAT_COUNTER_RECOVERY_OPTIONS: Array<SelectOption> = [
-  { value: 'SHORT_REST', label: 'Короткий отдых' },
-  { value: 'LONG_REST', label: 'Продолжительный отдых' },
-  {
-    value: 'SHORT_REST_ONE',
-    label: 'Один заряд на коротком, все на продолжительном',
-  },
+/**
+ * «Своё число» — и у отдыха (сколько зарядов вернуть), и у максимума: одна
+ * подпись на оба селекта.
+ */
+const COUNTER_OWN_AMOUNT_LABEL = 'Своё число';
+
+/** Сколько зарядов возвращает отдых — варианты селекта. */
+export const FEAT_COUNTER_REST_MODE_OPTIONS: Array<{
+  label: string;
+  value: FeatCounterRestMode;
+}> = [
+  { label: 'Ничего', value: 'NONE' },
+  { label: 'Все заряды', value: 'ALL' },
+  { label: COUNTER_OWN_AMOUNT_LABEL, value: 'AMOUNT' },
+];
+
+/** Виды отдыха в настройке ресурса: ключ правила, подпись и значок. */
+export const FEAT_COUNTER_REST_FIELDS: Array<{
+  key: 'shortRest' | 'longRest';
+  label: string;
+  icon: string;
+}> = [
+  { key: 'shortRest', label: 'Короткий отдых', icon: 'tabler:campfire' },
+  { key: 'longRest', label: 'Продолжительный отдых', icon: 'tabler:sun' },
+];
+
+/** От чего считается максимум ресурса — варианты селекта. */
+export const FEAT_COUNTER_MAX_KIND_OPTIONS: Array<{
+  label: string;
+  value: FeatCounterMaxKind;
+}> = [
+  { label: COUNTER_OWN_AMOUNT_LABEL, value: 'fixed' },
+  { label: 'Бонус мастерства', value: 'proficiency' },
+  { label: 'Модификатор характеристики', value: 'ability' },
+  { label: 'Заклинательная характеристика', value: 'spellAbility' },
+  { label: 'Уровень персонажа', value: 'level' },
+  // У ресурса без класса-владельца (черта, вид) считать не от чего, и он
+  // читается как общий уровень — подпись говорит об этом прямо
+  { label: 'Уровень в классе (у черты и вида — общий)', value: 'classLevel' },
+  { label: 'Своя формула', value: 'formula' },
 ];
 
 /**
@@ -589,10 +685,14 @@ export const FEAT_EDITOR_LABELS = {
   countersHintDetails:
     'Например, «Удачливый» даёт очки удачи: их столько же, сколько бонус '
     + 'мастерства, и они возвращаются на продолжительном отдыхе. В поле '
-    + '«Максимум» так и пишут: @prof — бонус мастерства, @level — уровень '
-    + 'персонажа, можно и просто число, а ещё умножить: @level * 5. У черты '
-    + 'уровень всегда суммарный: @classLevel есть только у класса и его '
-    + 'умений, а здесь он читался бы тем же @level. Если ряд '
+    + '«Максимум» так и выбирают: бонус мастерства, модификатор '
+    + 'характеристики, уровень или своё число — с множителем и прибавкой '
+    + '(«пять за уровень», «бонус мастерства − 1»). Всё прочее пишут своей '
+    + 'формулой: @prof, @level, @classLevel, @mod.cha. У черты уровень всегда '
+    + 'суммарный: уровень в классе есть только у класса и его умений. '
+    + 'Короткий и продолжительный отдых настраиваются отдельно: ничего, все '
+    + 'заряды или своё число — «Второе дыхание» возвращает один заряд '
+    + 'коротким и все продолжительным. Если ряд '
     + 'формулой не пишется — 4 кости с 3 уровня, 5 с 7, 6 с 15, — заводят '
     + 'заряды по уровням: они старше формулы. Ими же задают ресурс, который '
     + 'появляется не с первого уровня: «Скороход» лесного эльфа — одна ступень '
@@ -617,6 +717,13 @@ export const FEAT_EDITOR_LABELS = {
     + 'Латиницей, без пробелов; без ключа ресурс не сохранится.',
   counterMax: 'Максимум',
   counterMin: 'Минимум',
+  counterMaxAmount: 'Сколько',
+  counterMaxAbility: 'Характеристика',
+  counterMaxMultiplier: 'Множитель',
+  counterMaxOffset: 'Прибавка',
+  counterMaxFormula: 'Формула',
+  counterMaxFormulaPlaceholder: '@prof * 2',
+  counterRestAmount: 'Зарядов',
   choiceScalingTitle: 'Рост по уровням',
   choiceScalingEmpty:
     'Ступеней нет — количество не растёт и берётся из поля «Сколько».',

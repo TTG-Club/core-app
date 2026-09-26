@@ -36,6 +36,7 @@ import type {
   ItemSummary,
   MagicItemCatalogItem,
   MagicItemRawDetail,
+  ResourceRecoveryRule,
   SpeciesFeatureSummary,
   SpeciesOption,
   SpeciesSummary,
@@ -70,6 +71,7 @@ import {
   ABILITY_LABELS,
   ABILITY_ORDER,
   ABILITY_VARIANT_CHOICE_ID_SEGMENT,
+  API_COUNTER_REST_MODES,
   API_SHORT_REST_ONE_RECOVERY,
   API_SHORT_REST_RECOVERY,
   ARMOR_GROUP_BY_API_CATEGORY,
@@ -87,6 +89,7 @@ import {
   LANGUAGE_NAME_BY_API_KEY,
   OPTION_CHOICE_DEFAULT_COUNT,
   OPTION_CHOICE_ID_SEGMENT,
+  RESOURCE_RECOVERY_AMOUNT_MIN,
   SHEET_FEAT_CHOICE_LABELS,
   SHEET_FEAT_MODAL_LABELS,
   SIZE_LABEL_BY_API_KEY,
@@ -260,6 +263,18 @@ const mechanicsChoicesSchema = z
   .catch(null);
 
 /**
+ * Что возвращает ресурсу один вид отдыха, как его хранит механика
+ * справочника: `NONE`, `ALL` или `AMOUNT` с числом зарядов.
+ */
+const mechanicsCounterRestRuleSchema = z
+  .object({
+    mode: z.enum(['NONE', 'ALL', 'AMOUNT']),
+    amount: z.number().nullable().catch(null),
+  })
+  .nullable()
+  .catch(null);
+
+/**
  * Ресурсы со счётчиком: максимум приходит формулой, потому что у большинства он
  * привязан к бонусу мастерства и растёт вместе с ним.
  */
@@ -277,6 +292,9 @@ const mechanicsCountersSchema = z
       // Нижняя граница максимума; у записей до неё поля нет
       min: z.number().nullable().catch(null),
       recovery: z.string().nullable().catch(null),
+      // Раздельные правила отдыха; у записей до них полей нет
+      shortRest: mechanicsCounterRestRuleSchema,
+      longRest: mechanicsCounterRestRuleSchema,
     }),
   )
   .nullable()
@@ -1778,9 +1796,54 @@ function toMechanicCounters(counters: FeatCountersResponse): FeatCounter[] {
         // зарядов не бывает
         min: Math.max(0, counter.min ?? 0),
         recovery: toCounterRecovery(counter.recovery),
+        ...toResourceRecoveryRules(counter.shortRest, counter.longRest),
       },
     ];
   });
+}
+
+/** Правило отдыха из механики справочника. */
+type CounterRestRuleResponse = z.infer<typeof mechanicsCounterRestRuleSchema>;
+
+/**
+ * Раздельные правила отдыха из механики справочника в вид листа. Есть хоть
+ * одно — недостающее читается как «ничего»: так же их разбирают core-api и
+ * редактор. Нет ни одного — пусто, и лист читает откат одним словом.
+ *
+ * @param shortRest правило короткого отдыха из ответа.
+ * @param longRest правило продолжительного отдыха из ответа.
+ * @returns правила листа либо пустой объект.
+ */
+function toResourceRecoveryRules(
+  shortRest: CounterRestRuleResponse,
+  longRest: CounterRestRuleResponse,
+): Pick<FeatCounter, 'shortRest' | 'longRest'> {
+  if (!shortRest && !longRest) {
+    return {};
+  }
+
+  return {
+    shortRest: toResourceRecoveryRule(shortRest),
+    longRest: toResourceRecoveryRule(longRest),
+  };
+}
+
+/**
+ * Одно правило отдыха из механики справочника в вид листа.
+ *
+ * @param rule правило из ответа; нет — отдых ничего не возвращает.
+ * @returns правило листа.
+ */
+function toResourceRecoveryRule(
+  rule: CounterRestRuleResponse,
+): ResourceRecoveryRule {
+  return {
+    mode: rule ? API_COUNTER_REST_MODES[rule.mode] : 'none',
+    amount: Math.max(
+      RESOURCE_RECOVERY_AMOUNT_MIN,
+      rule?.amount ?? RESOURCE_RECOVERY_AMOUNT_MIN,
+    ),
+  };
 }
 
 /**

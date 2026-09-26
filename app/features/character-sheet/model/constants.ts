@@ -701,6 +701,16 @@ export const API_SHORT_REST_RECOVERY = 'SHORT_REST';
  */
 export const API_SHORT_REST_ONE_RECOVERY = 'SHORT_REST_ONE';
 
+/** Режим восстановления ресурса из механики справочника в вид листа. */
+export const API_COUNTER_REST_MODES: Record<
+  'NONE' | 'ALL' | 'AMOUNT',
+  ResourceRecoveryMode
+> = {
+  NONE: 'none',
+  ALL: 'all',
+  AMOUNT: 'amount',
+};
+
 /** Обозначение бонуса мастерства в формуле максимума ресурса. */
 export const RESOURCE_FORMULA_PROFICIENCY = '@prof';
 

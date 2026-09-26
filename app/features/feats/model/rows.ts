@@ -25,6 +25,12 @@ import type {
 import { ABILITY_LABELS, isAbilityKey } from '~/shared/types';
 
 import {
+  createFullCounterRestRule,
+  createNoCounterRestRule,
+  toLegacyCounterRecovery,
+  toSavedCounterRestRule,
+} from './counter';
+import {
   createFeatMechanics,
   createPrerequisiteDetails,
   getFreeFeatChoiceKey,
@@ -904,6 +910,8 @@ export function createCounterRow(takenKeys: Array<string>): FeatCounterRow {
     scaling: [],
     min: 0,
     showInTable: false,
+    shortRest: createNoCounterRestRule(),
+    longRest: createFullCounterRestRule(),
     recovery: 'LONG_REST',
   };
 }
@@ -2305,7 +2313,11 @@ export function fromFeatEditorRows(
     // ноль зарядов не бывает
     min: Math.max(0, Math.trunc(row.min)),
     showInTable: row.showInTable,
-    recovery: row.recovery,
+    shortRest: toSavedCounterRestRule(row.shortRest),
+    longRest: toSavedCounterRestRule(row.longRest),
+    // Откат одним словом — для потребителей, которые раздельных правил ещё
+    // не читают
+    recovery: toLegacyCounterRecovery(row.shortRest),
   }));
 
   return {

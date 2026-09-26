@@ -195,6 +195,11 @@ const grantedProficienciesSchema = z.object({
   savingThrows: z.array(abilityKeySchema).catch([]),
 });
 
+const resourceRecoveryRuleSchema = z.object({
+  mode: z.enum(['none', 'all', 'amount']).catch('none'),
+  amount: z.coerce.number().catch(RESOURCE_RECOVERY_AMOUNT_MIN),
+});
+
 /**
  * Снимок ресурса черты в записи умения: максимум приходит формулой справочника
  * и разбирается при сборке панели, поэтому здесь он строкой.
@@ -218,6 +223,10 @@ const featCounterSchema = z.object({
   recovery: z
     .enum(['short-rest', 'long-rest', 'short-rest-one'])
     .catch('long-rest'),
+  // Раздельные правила отдыха появились позже: у снимков до них полей нет —
+  // ресурс восстанавливается по `recovery`
+  shortRest: resourceRecoveryRuleSchema.optional().catch(undefined),
+  longRest: resourceRecoveryRuleSchema.optional().catch(undefined),
 });
 
 /**
@@ -809,11 +818,6 @@ const hitDieSchema = z.object({
 
 const extraHitDieSchema = hitDieSchema.extend({
   id: z.string(),
-});
-
-const resourceRecoveryRuleSchema = z.object({
-  mode: z.enum(['none', 'all', 'amount']).catch('none'),
-  amount: z.coerce.number().catch(RESOURCE_RECOVERY_AMOUNT_MIN),
 });
 
 /**
