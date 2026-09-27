@@ -58,26 +58,26 @@ export function getWeaponOverrideValueOptions(
  * Ошибка значения замены свойства оружия — подписью под полем окна эффекта.
  *
  * @param key ключ строки.
- * @param value значение строки.
+ * @param changeValue значение строки.
  * @returns текст ошибки либо `undefined`.
  */
 export function validateWeaponOverrideValue(
   key: string,
-  value: string,
+  changeValue: string,
 ): string | undefined {
   if (!isWeaponOverrideKey(key)) {
     return undefined;
   }
 
-  const options = getWeaponOverrideValueOptions(key);
+  const valueOptions = getWeaponOverrideValueOptions(key);
 
-  if (options) {
-    return options.some((option) => option.value === value.trim())
-      ? undefined
-      : ACTIVE_EFFECT_LABELS.changeWeaponOptionError;
+  if (valueOptions) {
+    return describeWeaponOverrideValue(key, changeValue) === undefined
+      ? ACTIVE_EFFECT_LABELS.changeWeaponOptionError
+      : undefined;
   }
 
-  return DICE_LETTER_PATTERN.test(value)
+  return DICE_LETTER_PATTERN.test(changeValue)
     ? undefined
     : ACTIVE_EFFECT_LABELS.changeWeaponDiceError;
 }
@@ -87,14 +87,16 @@ export function validateWeaponOverrideValue(
  * «Силовое поле»).
  *
  * @param key ключ строки.
- * @param value значение строки.
+ * @param changeValue значение строки.
  * @returns подпись либо `undefined`, если значение не из списка.
  */
 export function describeWeaponOverrideValue(
   key: string,
-  value: string,
+  changeValue: string,
 ): string | undefined {
+  const trimmedValue = changeValue.trim();
+
   return getWeaponOverrideValueOptions(key)?.find(
-    (option) => option.value === value.trim(),
+    (valueOption) => valueOption.value === trimmedValue,
   )?.label;
 }

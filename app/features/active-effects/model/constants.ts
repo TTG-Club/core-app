@@ -685,13 +685,13 @@ const WEAPON_BASE_TYPE_QUOTES = /^["']|["']$/g;
 export function parseWeaponBaseTypeCondition(
   condition: string,
 ): string[] | undefined {
-  const trimmed = condition.trim();
+  const trimmedCondition = condition.trim();
 
-  if (!trimmed.startsWith(WEAPON_BASE_TYPE_CONDITION_PREFIX)) {
+  if (!trimmedCondition.startsWith(WEAPON_BASE_TYPE_CONDITION_PREFIX)) {
     return undefined;
   }
 
-  const baseTypes = trimmed
+  const baseTypes = trimmedCondition
     .slice(WEAPON_BASE_TYPE_CONDITION_PREFIX.length)
     .trim()
     .replace(WEAPON_BASE_TYPE_QUOTES, '')

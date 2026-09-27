@@ -18,6 +18,8 @@ import {
   ACTIVATION_RANGE,
   createRawEffect,
   SAVE_DC,
+  SHILLELAGH_DICE,
+  SHILLELAGH_WEAPONS,
   stripUndefinedKeys,
 } from './fixtures';
 
@@ -1546,28 +1548,21 @@ describeScenarios('каталог: классы и черты', [
   },
 ]);
 
-/** Условие «Дубинки»: дубинка или боевой посох. */
-const SHILLELAGH_WEAPONS = 'weapon.baseType === "club, quarterstaff"';
-
-/** Кость «Дубинки» по уровню заклинателя: к8, к10, к12, 2к6. */
-const SHILLELAGH_DICE =
-  '(1 + steps(@level, 17))к(8 + 2 * steps(@level, 5, 11) - 6 * steps(@level, 17))';
-
 /**
  * Строка замены свойства оружия «Дубинки».
  *
  * @param key ключ замены.
- * @param value значение.
+ * @param changeValue значение.
  * @returns строка модификатора, как её хранит сервер.
  */
 function createShillelaghChange(
   key: string,
-  value: string,
+  changeValue: string,
 ): Record<string, unknown> {
   return {
     key,
     mode: 'override',
-    value,
+    value: changeValue,
     condition: SHILLELAGH_WEAPONS,
     priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
   };

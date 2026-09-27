@@ -1,9 +1,12 @@
+import type { EffectChange } from '~active-effects/model';
+
 import { describe, expect, it } from 'vitest';
 
 import {
   ABILITY_CHECK_KEY,
   ACTIVE_EFFECT_LABELS,
   applyEffectChangeModeChoice,
+  DEFAULT_EFFECT_CHANGE_PRIORITY,
   describeEffectChange,
   describeEffectChangeValueError,
   describeEffectChangeValueHint,
@@ -26,10 +29,19 @@ import {
   upgradeEffectDraft,
 } from '~active-effects/model';
 
-import { CONSTITUTION_SAVE, createEffect, POISON_DAMAGE } from './fixtures';
+import {
+  CONSTITUTION_SAVE,
+  createEffect,
+  POISON_DAMAGE,
+  SHILLELAGH_DICE,
+  SHILLELAGH_WEAPONS,
+} from './fixtures';
 
 /** Подпись раздела проверок в меню «Готовые». */
 const CHECKS_GROUP_LABEL = 'Проверки и навыки';
+
+/** Подпись раздела замен свойств оружия в меню «Готовые». */
+const WEAPON_GROUP_LABEL = 'Оружие: замены';
 
 describe('режим «Вычесть» — только в форме', () => {
   it('смена знака затрагивает только сложение верхнего уровня', () => {
@@ -286,67 +298,69 @@ describe('сводка не обещает неработающее', () => {
 });
 
 describe('замены свойств оружия («Дубинка»)', () => {
-  /** Условие «Дубинки». */
-  const shillelaghCondition = 'weapon.baseType === "club, quarterstaff"';
-
-  /** Кость «Дубинки» по уровню: к8, к10, к12, 2к6. */
-  const shillelaghDice =
-    '(1 + steps(@level, 17))к(8 + 2 * steps(@level, 5, 11) - 6 * steps(@level, 17))';
-
   /**
-   * Строка замены в режиме «Заменить».
+   * Строка замены в режиме «Заменить» с условием «Дубинки».
    *
    * @param key ключ замены.
-   * @param value значение.
+   * @param changeValue значение.
    * @returns строка модификатора.
    */
-  function overrideChange(key: string, value: string) {
+  function createOverrideChange(
+    key: string,
+    changeValue: string,
+  ): EffectChange {
     return {
       key,
-      mode: 'override' as const,
-      value,
-      condition: shillelaghCondition,
-      priority: 20,
+      mode: 'override',
+      value: changeValue,
+      condition: SHILLELAGH_WEAPONS,
+      priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
     };
   }
 
   it('значения из своего списка без ошибки, чужие — с ошибкой списка', () => {
-    for (const [key, value] of [
+    for (const [changeKey, changeValue] of [
       ['weapon.attackAbility', 'spell'],
       ['weapon.attackAbility', 'wisdom'],
       ['weapon.damageType', 'force'],
     ] as const) {
       expect(
-        describeEffectChangeValueError(overrideChange(key, value)),
-        `${key}: ${value}`,
+        describeEffectChangeValueError(
+          createOverrideChange(changeKey, changeValue),
+        ),
+        `${changeKey}: ${changeValue}`,
       ).toBeUndefined();
     }
 
-    for (const [key, value] of [
+    for (const [changeKey, changeValue] of [
       ['weapon.attackAbility', 'force'],
       ['weapon.attackAbility', '@mod.wis'],
       ['weapon.damageType', 'spell'],
       ['weapon.damageType', 'wisdom'],
     ] as const) {
       expect(
-        describeEffectChangeValueError(overrideChange(key, value)),
-        `${key}: ${value}`,
+        describeEffectChangeValueError(
+          createOverrideChange(changeKey, changeValue),
+        ),
+        `${changeKey}: ${changeValue}`,
       ).toBe(ACTIVE_EFFECT_LABELS.changeWeaponOptionError);
     }
   });
 
   it('кость урона: любая кость, в том числе грань выражением; число — ошибка', () => {
-    for (const value of ['1к8', '2d6', shillelaghDice]) {
+    for (const diceValue of ['1к8', '2d6', SHILLELAGH_DICE]) {
       expect(
         describeEffectChangeValueError(
-          overrideChange('weapon.damageDice', value),
+          createOverrideChange('weapon.damageDice', diceValue),
         ),
-        value,
+        diceValue,
       ).toBeUndefined();
     }
 
     expect(
-      describeEffectChangeValueError(overrideChange('weapon.damageDice', '8')),
+      describeEffectChangeValueError(
+        createOverrideChange('weapon.damageDice', '8'),
+      ),
     ).toBe(ACTIVE_EFFECT_LABELS.changeWeaponDiceError);
   });
 
@@ -367,7 +381,9 @@ describe('замены свойств оружия («Дубинка»)', () => 
 
   it('сводка читает значение и условие словами', () => {
     expect(
-      describeEffectChange(overrideChange('weapon.attackAbility', 'spell')),
+      describeEffectChange(
+        createOverrideChange('weapon.attackAbility', 'spell'),
+      ),
     ).toBe(
       'Оружие: характеристика атаки заменить: Заклинательная характеристика '
         + '(только: Оружие: дубинка или боевой посох (Дубинка))',
@@ -375,12 +391,12 @@ describe('замены свойств оружия («Дубинка»)', () => 
 
     expect(
       describeEffectChangeValueHint(
-        overrideChange('weapon.damageType', 'force'),
+        createOverrideChange('weapon.damageType', 'force'),
       ),
     ).toBe('заменить: Силовое поле');
 
     const diceHint = describeEffectChangeValueHint(
-      overrideChange('weapon.damageDice', shillelaghDice),
+      createOverrideChange('weapon.damageDice', SHILLELAGH_DICE),
     );
 
     expect(diceHint).not.toContain('@');
@@ -389,7 +405,7 @@ describe('замены свойств оружия («Дубинка»)', () => 
 
   it('раздел «Оружие: замены» с тремя готовыми строками «Дубинки»', () => {
     const weaponGroup = EFFECT_MODIFIER_MENU.find(
-      (group) => group.label === 'Оружие: замены',
+      (group) => group.label === WEAPON_GROUP_LABEL,
     );
 
     const presets = (weaponGroup?.items ?? []).filter(
@@ -402,22 +418,22 @@ describe('замены свойств оружия («Дубинка»)', () => 
         key: 'weapon.damageDice',
         label: 'Дубинка: кость к8 → 2к6 по уровню',
         mode: 'override',
-        value: shillelaghDice,
-        condition: shillelaghCondition,
+        value: SHILLELAGH_DICE,
+        condition: SHILLELAGH_WEAPONS,
       },
       {
         key: 'weapon.attackAbility',
         label: 'Дубинка: заклинательная характеристика',
         mode: 'override',
         value: 'spell',
-        condition: shillelaghCondition,
+        condition: SHILLELAGH_WEAPONS,
       },
       {
         key: 'weapon.damageType',
         label: 'Дубинка: силовой урон',
         mode: 'override',
         value: 'force',
-        condition: shillelaghCondition,
+        condition: SHILLELAGH_WEAPONS,
       },
     ]);
 
@@ -427,24 +443,30 @@ describe('замены свойств оружия («Дубинка»)', () => 
         !isEffectModifierSubmenu(menuItem) && menuItem.condition === undefined,
     );
 
-    expect(
-      plainItems.map((menuItem) =>
-        isEffectModifierSubmenu(menuItem)
-          ? undefined
-          : [menuItem.key, menuItem.mode, menuItem.value],
-      ),
-    ).toEqual([
-      ['weapon.damageDice', 'override', '1к8'],
-      ['weapon.attackAbility', 'override', 'spell'],
-      ['weapon.damageType', 'override', 'force'],
+    expect(plainItems).toEqual([
+      expect.objectContaining({
+        key: 'weapon.damageDice',
+        mode: 'override',
+        value: '1к8',
+      }),
+      expect.objectContaining({
+        key: 'weapon.attackAbility',
+        mode: 'override',
+        value: 'spell',
+      }),
+      expect.objectContaining({
+        key: 'weapon.damageType',
+        mode: 'override',
+        value: 'force',
+      }),
     ]);
   });
 
   it('«открыл и сохранил» не трогает слова вместо формулы', () => {
     const changes = [
-      overrideChange('weapon.damageDice', shillelaghDice),
-      overrideChange('weapon.attackAbility', 'spell'),
-      overrideChange('weapon.damageType', 'force'),
+      createOverrideChange('weapon.damageDice', SHILLELAGH_DICE),
+      createOverrideChange('weapon.attackAbility', 'spell'),
+      createOverrideChange('weapon.damageType', 'force'),
     ];
 
     const [savedEffect] = normalizeActiveEffects(
