@@ -1218,7 +1218,7 @@
                       color="secondary"
                       variant="subtle"
                       icon="tabler:wand"
-                      class="shrink-0"
+                      class="relative z-10 shrink-0"
                     >
                       {{ spell.abilityBadge.label }}
                     </UBadge>
