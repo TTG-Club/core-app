@@ -23,6 +23,12 @@ import {
   EFFECT_TARGET_KEY_SUGGESTIONS,
   EFFECT_TARGET_TYPE_CONDITION_PREFIX,
   SAVE_VS_CONDITION_FLAG_KEYS,
+  SHILLELAGH_DAMAGE_TYPE,
+  SHILLELAGH_WEAPON_CONDITION,
+  WEAPON_ATTACK_ABILITY_KEY,
+  WEAPON_DAMAGE_DICE_KEY,
+  WEAPON_DAMAGE_TYPE_KEY,
+  WEAPON_SPELL_ABILITY_VALUE,
 } from './constants';
 
 /** Пункт меню флагов. */
@@ -194,7 +200,10 @@ export interface EffectModifierPreset {
   mode: EffectChangeMode;
   /** Значение строки; не задано — форма подставит своё по умолчанию. */
   value?: string;
-  /** Условие строки; задано — остальные поля пункт оставляет пустыми. */
+  /**
+   * Условие строки. У пункта-условия без ключа остальные поля пусты; у готовой
+   * строки «Дубинки» оно идёт вместе с ключом и значением.
+   */
   condition?: string;
 }
 
@@ -245,10 +254,14 @@ const EFFECT_MODIFIER_GROUPS = [
   { key: 'skills', label: 'Проверки и навыки' },
   { key: 'attack', label: 'Атака' },
   { key: 'damage', label: 'Урон' },
+  { key: 'weapon', label: 'Оружие: замены' },
   { key: 'carrierType', label: 'Условие: тип носителя' },
   { key: 'carrierArmor', label: 'Условие: доспех носителя' },
   { key: 'targetType', label: 'Условие: тип цели' },
 ] as const;
+
+/** Приставка ключей замены свойств оружия. */
+const WEAPON_KEY_PREFIX = 'weapon.';
 
 /**
  * Раздел, к которому относится ключ изменения. Определяется приставкой — так
@@ -279,6 +292,10 @@ function getModifierGroupKey(changeKey: string): string {
     return 'damage';
   }
 
+  if (changeKey.startsWith(WEAPON_KEY_PREFIX)) {
+    return 'weapon';
+  }
+
   if (changeKey.startsWith('movement.')) {
     return 'movement';
   }
@@ -307,6 +324,11 @@ function getDefaultModeOfKey(changeKey: string): EffectChangeMode {
     return 'upgrade';
   }
 
+  // Кость, характеристику и тип урона оружия не прибавить — только заменить
+  if (changeKey.startsWith(WEAPON_KEY_PREFIX)) {
+    return 'override';
+  }
+
   return 'add';
 }
 
@@ -328,6 +350,20 @@ function getDefaultValueOfGroup(groupKey: string): string | undefined {
 
   return undefined;
 }
+
+/**
+ * Значения по умолчанию у ключей замены оружия: единица, которую форма
+ * подставляет прочим ключам, здесь не значит ничего.
+ */
+const WEAPON_KEY_DEFAULT_VALUES: Readonly<Record<string, string>> = {
+  [WEAPON_DAMAGE_DICE_KEY]: '1к8',
+  [WEAPON_ATTACK_ABILITY_KEY]: WEAPON_SPELL_ABILITY_VALUE,
+  [WEAPON_DAMAGE_TYPE_KEY]: SHILLELAGH_DAMAGE_TYPE,
+};
+
+/** Кость «Дубинки» по уровню заклинателя: к8, к10, к12, 2к6. */
+const SHILLELAGH_DAMAGE_DICE =
+  '(1 + steps(@level, 17))к(8 + 2 * steps(@level, 5, 11) - 6 * steps(@level, 17))';
 
 /**
  * Комбинации, где важен не только ключ, но и значение: одним ключом их не
@@ -376,6 +412,28 @@ const EFFECT_MODIFIER_READY_PRESETS: EffectModifierPreset[] = [
     label: 'Полёт: равен скорости плавания',
     mode: 'upgrade',
     value: '@speed.swim',
+  },
+  // «Дубинка»: кость растёт по уровню заклинателя — к8, к10, к12, 2к6
+  {
+    key: WEAPON_DAMAGE_DICE_KEY,
+    label: 'Дубинка: кость к8 → 2к6 по уровню',
+    mode: 'override',
+    value: SHILLELAGH_DAMAGE_DICE,
+    condition: SHILLELAGH_WEAPON_CONDITION,
+  },
+  {
+    key: WEAPON_ATTACK_ABILITY_KEY,
+    label: 'Дубинка: заклинательная характеристика',
+    mode: 'override',
+    value: WEAPON_SPELL_ABILITY_VALUE,
+    condition: SHILLELAGH_WEAPON_CONDITION,
+  },
+  {
+    key: WEAPON_DAMAGE_TYPE_KEY,
+    label: 'Дубинка: силовой урон',
+    mode: 'override',
+    value: SHILLELAGH_DAMAGE_TYPE,
+    condition: SHILLELAGH_WEAPON_CONDITION,
   },
 ];
 
@@ -476,7 +534,9 @@ function buildModifierMenu(): EffectModifierMenuGroup[] {
             key: suggestion.value,
             label: suggestion.label,
             mode: getDefaultModeOfKey(suggestion.value),
-            value: getDefaultValueOfGroup(groupKey),
+            value:
+              getDefaultValueOfGroup(groupKey)
+              ?? WEAPON_KEY_DEFAULT_VALUES[suggestion.value],
           },
     );
 

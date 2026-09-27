@@ -18,6 +18,8 @@ import {
   ACTIVATION_RANGE,
   createRawEffect,
   SAVE_DC,
+  SHILLELAGH_DICE,
+  SHILLELAGH_WEAPONS,
   stripUndefinedKeys,
 } from './fixtures';
 
@@ -1047,6 +1049,24 @@ describeScenarios('каталог: значения формулой', [
       ],
     }),
   },
+  {
+    id: 'V20',
+    name: 'Грань кости выражением',
+    context: 'item',
+    storedEffect: createRawEffect({
+      id: 'Грань по ступеням',
+      name: 'Грань по ступеням',
+      disabled: true,
+      activation: { mode: 'use' },
+      effectTarget: 'target',
+      damageParts: [
+        {
+          formula: '1к(8 + 2 * steps(@level, 5, 11))@dmg.force',
+          target: 'selected',
+        },
+      ],
+    }),
+  },
 ]);
 
 describeScenarios('каталог: получатели и отбор', [
@@ -1522,6 +1542,92 @@ describeScenarios('каталог: классы и черты', [
         {
           formula: `${DIVINE_SPARK_DICE}@dmg.necrotic + @mod.wis`,
           target: 'selected',
+        },
+      ],
+    }),
+  },
+]);
+
+/**
+ * Строка замены свойства оружия «Дубинки».
+ *
+ * @param key ключ замены.
+ * @param changeValue значение.
+ * @returns строка модификатора, как её хранит сервер.
+ */
+function createShillelaghChange(
+  key: string,
+  changeValue: string,
+): Record<string, unknown> {
+  return {
+    key,
+    mode: 'override',
+    value: changeValue,
+    condition: SHILLELAGH_WEAPONS,
+    priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
+  };
+}
+
+/**
+ * Вариант «Дубинки» (S31): кость и заклинательная характеристика, у
+ * «Силового» — ещё и тип урона.
+ *
+ * @param label подпись варианта.
+ * @param damageType тип урона варианта.
+ * @returns эффект, как его хранит сервер.
+ */
+function createShillelagh(
+  label: string,
+  damageType?: string,
+): Record<string, unknown> {
+  return createRawEffect({
+    id: `Дубинка: ${label}`,
+    name: 'Дубинка',
+    effectTarget: 'self',
+    variant: { group: 'урон', label },
+    changes: [
+      createShillelaghChange('weapon.damageDice', SHILLELAGH_DICE),
+      createShillelaghChange('weapon.attackAbility', 'spell'),
+      ...(damageType
+        ? [createShillelaghChange('weapon.damageType', damageType)]
+        : []),
+    ],
+  });
+}
+
+describeScenarios('каталог: заклинания, меняющие оружие', [
+  {
+    id: 'S31',
+    name: 'Дубинка: дробящий',
+    context: 'spell',
+    storedEffect: createShillelagh('Дробящий'),
+  },
+  {
+    id: 'S31',
+    name: 'Дубинка: силовой',
+    context: 'spell',
+    storedEffect: createShillelagh('Силовой', 'force'),
+  },
+  {
+    id: 'S31b',
+    name: 'Громовой посох',
+    context: 'weapon',
+    storedEffect: createRawEffect({
+      id: 'Громовой посох',
+      name: 'Громовой посох',
+      transfer: true,
+      changes: [
+        {
+          key: 'weapon.damageType',
+          mode: 'override',
+          value: 'thunder',
+          priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
+        },
+        {
+          key: 'weapon.attackAbility',
+          mode: 'override',
+          value: 'spell',
+          priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
         },
       ],
     }),

@@ -73,6 +73,7 @@ import type {
   EffectTurnAnchor,
   EffectTurnTiming,
   EffectVariantPick,
+  WeaponOverrideKey,
 } from './types';
 
 import { SUBTRACT_MODE_CHOICE } from './changeSubtract';
@@ -85,7 +86,7 @@ import {
 } from './triggerTypes';
 
 /** Версия системы dnd5e-2024, с которой снят порт справочников и подписей. */
-export const EFFECT_SYSTEM_VERSION = '0.8.88';
+export const EFFECT_SYSTEM_VERSION = '0.8.96';
 
 /** Язык сортировки пунктов меню «Готовые»: навыки ищут по русскому названию. */
 export const EFFECT_MENU_SORT_LOCALE = 'ru';
@@ -430,6 +431,52 @@ export const EFFECT_DAMAGE_TARGET_OPTIONS: Array<
 ];
 
 /**
+ * Ключ замены кости урона оружия («Дубинка»: к8 вместо к6). Значение — кость
+ * формулой, число и грань костей можно задать выражением по уровню:
+ * `(1 + steps(@level, 17))к(8 + 2 * steps(@level, 5, 11) - 6 * steps(@level, 17))`.
+ */
+export const WEAPON_DAMAGE_DICE_KEY = 'weapon.damageDice';
+
+/**
+ * Ключ замены характеристики атаки и урона оружия. Значение — ключ
+ * характеристики либо `WEAPON_SPELL_ABILITY_VALUE`.
+ */
+export const WEAPON_ATTACK_ABILITY_KEY = 'weapon.attackAbility';
+
+/** Ключ замены типа урона оружия — ключ типа урона (`force`). */
+export const WEAPON_DAMAGE_TYPE_KEY = 'weapon.damageType';
+
+/**
+ * Значение «заклинательная характеристика наложившего». VTTG при сотворении
+ * подставляет вместо него ключ характеристики заклинателя.
+ */
+export const WEAPON_SPELL_ABILITY_VALUE = 'spell';
+
+/** Подпись значения `WEAPON_SPELL_ABILITY_VALUE`. */
+export const WEAPON_SPELL_ABILITY_LABEL = 'Заклинательная характеристика';
+
+/** Тип урона «Дубинки» во втором варианте. */
+export const SHILLELAGH_DAMAGE_TYPE = 'force';
+
+/** Ключи, которые заменяют свойства оружия, а не прибавляют число. */
+const WEAPON_OVERRIDE_KEYS: ReadonlySet<string> = new Set([
+  WEAPON_DAMAGE_DICE_KEY,
+  WEAPON_ATTACK_ABILITY_KEY,
+  WEAPON_DAMAGE_TYPE_KEY,
+]);
+
+/**
+ * Заменяет ли ключ свойство оружия. Значение такой строки — не число и не
+ * формула: кость или слово из закрытого списка.
+ *
+ * @param key ключ изменения.
+ * @returns `true` для ключей `weapon.*`.
+ */
+export function isWeaponOverrideKey(key: string): key is WeaponOverrideKey {
+  return WEAPON_OVERRIDE_KEYS.has(key);
+}
+
+/**
  * Библиотека ключей атрибутов (для поля change.key) — зеркало
  * `EFFECT_TARGET_SUGGESTIONS` из VTTG. Список закрыт: неизвестный ключ движок
  * молча пропускает, и эффект выглядел бы настроенным, ничего не делая.
@@ -506,6 +553,11 @@ export const EFFECT_TARGET_KEY_SUGGESTIONS: Array<Option<string>> = [
   { value: 'damage.all', label: 'Урон: весь наносимый' },
   { value: 'damage.weapon', label: 'Урон: только этим предметом' },
   { value: 'attack.weapon', label: 'Атака: только этим предметом' },
+
+  // Замены свойств оружия («Дубинка»)
+  { value: WEAPON_DAMAGE_DICE_KEY, label: 'Оружие: кость урона' },
+  { value: WEAPON_ATTACK_ABILITY_KEY, label: 'Оружие: характеристика атаки' },
+  { value: WEAPON_DAMAGE_TYPE_KEY, label: 'Оружие: тип урона' },
 
   // Навыки — из общего списка, чтобы ключ и флаг навыка не разъехались
   ...EFFECT_SKILL_OPTIONS.map(
@@ -609,6 +661,49 @@ export const EFFECT_CARRIER_ARMOR_CONDITION_PREFIX = 'self.armor === ';
  * («Ярость»: бонус урона только атакам Силой) и срабатываний.
  */
 export const EFFECT_ATTACK_ABILITY_CONDITION_PREFIX = 'attack.ability === ';
+
+/**
+ * Приставка условия «оружие этого вида» — для замен свойств оружия
+ * (`weapon.*`). В кавычках список ключей вида через запятую, подходит любой:
+ * `weapon.baseType === "club, quarterstaff"`. Ключи — листа VTTG (`club`), а не
+ * слаги страниц сайта.
+ */
+export const WEAPON_BASE_TYPE_CONDITION_PREFIX = 'weapon.baseType === ';
+
+/** Разделитель видов оружия внутри условия по виду оружия. */
+const WEAPON_BASE_TYPE_SEPARATOR = ',';
+
+/** Кавычки вокруг списка видов оружия в условии. */
+const WEAPON_BASE_TYPE_QUOTES = /^["']|["']$/g;
+
+/**
+ * Виды оружия, названные условием `weapon.baseType === "club, quarterstaff"`.
+ *
+ * @param condition часть условия.
+ * @returns ключи видов либо `undefined`, если часть из другого семейства.
+ */
+export function parseWeaponBaseTypeCondition(
+  condition: string,
+): string[] | undefined {
+  const trimmedCondition = condition.trim();
+
+  if (!trimmedCondition.startsWith(WEAPON_BASE_TYPE_CONDITION_PREFIX)) {
+    return undefined;
+  }
+
+  const baseTypes = trimmedCondition
+    .slice(WEAPON_BASE_TYPE_CONDITION_PREFIX.length)
+    .trim()
+    .replace(WEAPON_BASE_TYPE_QUOTES, '')
+    .split(WEAPON_BASE_TYPE_SEPARATOR)
+    .map((baseType) => baseType.trim())
+    .filter((baseType) => baseType.length > 0);
+
+  return baseTypes.length > 0 ? baseTypes : undefined;
+}
+
+/** Условие «Дубинки»: дубинка или боевой посох. */
+export const SHILLELAGH_WEAPON_CONDITION = `${WEAPON_BASE_TYPE_CONDITION_PREFIX}"club, quarterstaff"`;
 
 /**
  * Условие «цель помечена мной»: цель несёт эффект с флагом `mark.bySource`,
@@ -781,6 +876,12 @@ export const EFFECT_CONDITION_EXPR_SUGGESTIONS: Array<Option<string>> = [
   {
     value: `${EFFECT_ATTACK_ABILITY_CONDITION_PREFIX}"dexterity"`,
     label: 'Атака: Ловкостью (урон оружия)',
+  },
+  // Только для замен свойств оружия (`weapon.*`): каждое оружие листа
+  // сверяется со списком видов само
+  {
+    value: SHILLELAGH_WEAPON_CONDITION,
+    label: 'Оружие: дубинка или боевой посох (Дубинка)',
   },
   {
     value: 'target.hp.value === target.hp.max',
@@ -1807,6 +1908,8 @@ export const ACTIVE_EFFECT_LABELS = {
     + 'проверок, навыков и урона. Укажите число.',
   changeDiceModeError:
     'Кость работает только в режимах «Добавить (+)» и «Вычесть (−)».',
+  changeWeaponOptionError: 'Выберите значение из списка',
+  changeWeaponDiceError: 'Укажите кость, например 1к8',
   changePriority: 'Приоритет',
   changeCondition: 'Условие',
   changeConditionPlaceholder: `Напр.: ${EFFECT_ROLL_ADVANTAGE_CONDITION}`,

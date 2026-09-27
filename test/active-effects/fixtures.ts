@@ -30,6 +30,13 @@ export const AURA_RADIUS = 10;
 /** Дальность применения в тестах, фт: «Божественная искра». */
 export const ACTIVATION_RANGE = 30;
 
+/** Условие «Дубинки»: дубинка или боевой посох. */
+export const SHILLELAGH_WEAPONS = 'weapon.baseType === "club, quarterstaff"';
+
+/** Кость «Дубинки» по уровню заклинателя: к8, к10, к12, 2к6. */
+export const SHILLELAGH_DICE =
+  '(1 + steps(@level, 17))к(8 + 2 * steps(@level, 5, 11) - 6 * steps(@level, 17))';
+
 /** Id нового эффекта в тестах. */
 export const NEW_EFFECT_ID = 'effect_new';
 

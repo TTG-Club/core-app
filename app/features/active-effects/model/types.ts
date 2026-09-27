@@ -12,6 +12,11 @@
  */
 
 import type { EffectChangeStep } from './changeSteps';
+import type {
+  WEAPON_ATTACK_ABILITY_KEY,
+  WEAPON_DAMAGE_DICE_KEY,
+  WEAPON_DAMAGE_TYPE_KEY,
+} from './constants';
 import type { EffectActionCostSettings, EffectTrigger } from './triggerTypes';
 
 /** Характеристика D&D 5e (полное имя — словарь VTTG). */
@@ -222,6 +227,12 @@ export interface EffectDamagePart {
   /** Применять часть только если по носителю нанесён урон (больше нуля). */
   requiresDamage?: boolean;
 }
+
+/** Ключи, которые заменяют свойства оружия, а не прибавляют число. */
+export type WeaponOverrideKey =
+  | typeof WEAPON_DAMAGE_DICE_KEY
+  | typeof WEAPON_ATTACK_ABILITY_KEY
+  | typeof WEAPON_DAMAGE_TYPE_KEY;
 
 /** Одно числовое изменение, вносимое эффектом. */
 export interface EffectChange {
