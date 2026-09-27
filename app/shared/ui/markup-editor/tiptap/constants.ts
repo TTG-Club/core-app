@@ -24,3 +24,9 @@ export const SEPARATOR_MARKER = '{@separator}';
 
 /** Мягкий перенос строки внутри абзаца — Shift+Enter и кнопка тулбара. */
 export const LINE_BREAK_MARKER = '{@br}';
+
+/**
+ * Граница абзацев внутри `{@quote}`: два переноса подряд (один — мягкий перенос
+ * внутри абзаца, см. ttg-quote.ts).
+ */
+export const QUOTE_PARAGRAPH_SEPARATOR = `${LINE_BREAK_MARKER}${LINE_BREAK_MARKER}`;
