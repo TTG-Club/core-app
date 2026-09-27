@@ -29,6 +29,14 @@ export default defineNuxtConfig({
 
   compatibilityDate: '2025-07-22',
 
+  experimental: {
+    // Как часто открытая вкладка сверяет свою сборку с сервером. По умолчанию
+    // раз в час — после выкладки старая вкладка долго жила на удалённых
+    // чанках. Проверка — крошечный `builds/latest.json`; при новой сборке
+    // страница перезагрузится на ближайшем переходе (см. buildUpdate.client.ts).
+    checkOutdatedBuildInterval: ms('10m'),
+  },
+
   // Конфигурация среды разработки
   devServer: {
     https: process.env.NUXT_DEV_SSL === 'true',

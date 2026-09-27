@@ -53,6 +53,9 @@ import type {
   SkillProficiencyLevel,
   SpeedTypeKey,
   SpeedUnit,
+  SpellCastingKind,
+  SpellCastingKindMeta,
+  SpellCastingTextPattern,
   ToolProficiencyGroupKey,
   VisionKey,
   WeaponCategory,
@@ -64,6 +67,7 @@ import bytes from 'bytes';
 import { range } from 'es-toolkit';
 
 import { AbilityKey as ApiAbilityKey } from '~/shared/types';
+import { EFFECT_ACTION_COST_LABELS } from '~active-effects/model';
 import { CasterType } from '~classes/model';
 import { DAMAGE_TYPE_LABELS } from '~ui/damage-formula';
 
@@ -2701,8 +2705,88 @@ export const SPELLS_DETAIL_BASE_PATH = '/api/v2/spells';
  */
 export const SPELLS_RAW_DETAIL_PATH_SUFFIX = 'raw';
 
-/** Ключ общего кэша формул урона заклинаний (каталожные данные, не листа). */
-export const SPELL_DAMAGE_STATE_KEY = 'character-sheet:spell-damage';
+/**
+ * Ключ общего кэша урона и времени накладывания заклинаний (каталожные данные,
+ * не листа).
+ */
+export const SPELL_CATALOG_MECHANICS_STATE_KEY =
+  'character-sheet:spell-catalog-mechanics';
+
+/**
+ * Единицы времени накладывания справочника (`castingTime[].unit`), которые
+ * укладываются в боевой ход. Остальные — минуты, часы, особое — читаются как
+ * «дольше хода». Ритуал (null) пропускается: у строки для него свой бейдж.
+ */
+export const SPELL_CASTING_UNIT_KINDS: Partial<
+  Record<string, SpellCastingKind | null>
+> = {
+  ACTION: 'action',
+  BONUS: 'bonus',
+  REACTION: 'reaction',
+  RITUAL: null,
+};
+
+/**
+ * Время накладывания, которым читается всё, что не укладывается в боевой ход:
+ * незнакомая единица справочника и текст своего заклинания без знакомого слова.
+ */
+export const SPELL_CASTING_BEYOND_TURN_KIND: SpellCastingKind = 'long';
+
+/**
+ * Распознавание времени накладывания своего заклинания по тексту поля: оно
+ * вводится руками («1 бонусное действие»). Порядок важен — «бонусное действие»
+ * проверяется раньше просто «действия». Не подошло ни одно, а текст есть —
+ * время дольше хода ({@link SPELL_CASTING_BEYOND_TURN_KIND}).
+ */
+export const SPELL_CASTING_TEXT_PATTERNS: SpellCastingTextPattern[] = [
+  { kind: 'bonus', pattern: /бонусн/iu },
+  { kind: 'reaction', pattern: /реакци/iu },
+  { kind: 'action', pattern: /действи/iu },
+];
+
+/** Порядок времени накладывания в строке и в чипах отбора. */
+export const SPELL_CASTING_KIND_ORDER: SpellCastingKind[] = [
+  'action',
+  'bonus',
+  'reaction',
+  'long',
+];
+
+/**
+ * Время накладывания в строке заклинания и в чипах отбора: подпись, значок и
+ * цвет значка — у каждого своё, чтобы различать строки с одного взгляда.
+ */
+export const SPELL_CASTING_KIND_META: Record<
+  SpellCastingKind,
+  SpellCastingKindMeta
+> = {
+  action: {
+    label: EFFECT_ACTION_COST_LABELS.action,
+    icon: 'tabler:bolt',
+    iconClass: 'text-success',
+  },
+  bonus: {
+    label: EFFECT_ACTION_COST_LABELS.bonus,
+    icon: 'tabler:circle-plus',
+    iconClass: 'text-warning',
+  },
+  reaction: {
+    label: EFFECT_ACTION_COST_LABELS.reaction,
+    icon: 'tabler:arrow-back-up',
+    iconClass: 'text-info',
+  },
+  long: {
+    label: 'Дольше хода',
+    icon: 'tabler:hourglass',
+    iconClass: 'text-muted',
+  },
+};
+
+/**
+ * Подпись времени накладывания: поле формы своего заклинания и подсказка у
+ * времени в строке вкладки.
+ */
+export const SPELL_CASTING_TIME_LABEL = 'Время накладывания';
 
 /**
  * Подпись группы заклинаний, которые персонаж знает вне книги: врождённых
@@ -2801,7 +2885,7 @@ export const SPELL_COMPONENT_LABELS = {
 export const CUSTOM_SPELL_FIELDS: CustomSpellField[] = [
   {
     key: 'castingTime',
-    label: 'Время накладывания',
+    label: SPELL_CASTING_TIME_LABEL,
     placeholder: 'Например: 1 действие',
   },
   { key: 'range', label: 'Дистанция', placeholder: 'Например: 30 футов' },
@@ -3003,12 +3087,17 @@ export const SHEET_FILTER_LABELS: Record<
 };
 
 /** Подписи чипов отбора заклинаний на вкладке заклинаний. */
-export const SPELL_FILTER_LABELS: Record<'prepared' | 'preparedHint', string> =
-  {
-    prepared: 'Подготовленные',
-    preparedHint:
-      'Оставить в списке только заклинания и заговоры, помеченные значком',
-  };
+export const SPELL_FILTER_LABELS: Record<
+  'prepared' | 'preparedHint' | 'castingHint' | 'castingToggle',
+  string
+> = {
+  prepared: 'Подготовленные',
+  castingToggle: 'Отбор по времени накладывания',
+  preparedHint:
+    'Оставить в списке только заклинания и заговоры, помеченные значком',
+  castingHint:
+    'Оставить в списке только заклинания с таким временем накладывания',
+};
 
 /** Общая часть оформления чипа отбора (каталог заклинаний, вкладка). */
 export const FILTER_CHIP_CLASS =

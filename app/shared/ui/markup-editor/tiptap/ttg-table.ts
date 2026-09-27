@@ -8,10 +8,7 @@ import type {
 
 import type { MarkerNode, RenderNode } from '~ui/markup';
 
-import type {
-  DeferredBlockTokens,
-  DeferredInlineTokens,
-} from './block-tokenizer';
+import type { BlockSegment } from './block-tokenizer';
 
 import { Extension } from '@tiptap/core';
 import {
@@ -23,16 +20,15 @@ import {
 
 import {
   CELL_PLACEHOLDER,
-  isBlockNode,
   isMarkerNode,
   parse,
   serializeInlineNodes,
 } from '~ui/markup';
 
 import {
+  blockSegmentsToContent,
+  buildBlockSegments,
   createBlockMarkerTokenizer,
-  deferBlock,
-  deferInline,
   markerNameMatches,
 } from './block-tokenizer';
 import { dataAttr } from './node-utils';
@@ -56,22 +52,10 @@ interface ParsedTable extends MarkerNode {
   rows?: ParsedCell[][];
 }
 
-/**
- * Один сегмент содержимого ячейки. Ячейка обычно инлайновая (один сегмент →
- * абзац), но может содержать ВЛОЖЕННЫЙ блок ({@table}/{@list}/{@quote}/{@h}) —
- * тогда сегменты чередуются: инлайн-пробеги → абзацы, блочные узлы → нативные
- * редактируемые узлы. `block` выбирает, чем разбирать токены на фазе parseMarkdown
- * (`parseInline` → абзац vs `parseChildren` → блочный узел).
- */
-interface CellSegment {
-  block: boolean;
-  tokens: DeferredInlineTokens | DeferredBlockTokens;
-}
-
 /** Разобранная ячейка редактора: упорядоченные сегменты содержимого + атрибуты. */
 interface CellData {
   isHeader: boolean;
-  segments: CellSegment[];
+  segments: BlockSegment[];
   style?: string;
   align?: string;
 }
@@ -95,55 +79,6 @@ function toArray(value: RenderNode | RenderNode[] | undefined): RenderNode[] {
   }
 
   return Array.isArray(value) ? value : [value];
-}
-
-/**
- * Разбивает содержимое ячейки на сегменты: подряд идущие инлайн-узлы (текст,
- * форматирование, чипы) сливаются в инлайн-пробег (→ абзац), а блочные узлы
- * (вложенная таблица/список/цитата/заголовок) выделяются в отдельные сегменты
- * (→ нативный редактируемый узел). Так вложенная таблица грузится РЕДАКТИРУЕМОЙ,
- * а не «замерзает» атомарным чипом (инлайн-токенайзер превратил бы `{@table}` в
- * ttgMarker). Чистая инлайн-ячейка (обычный случай) даёт ровно один сегмент —
- * поведение таких таблиц не меняется.
- */
-function buildCellSegments(
-  content: RenderNode[],
-  lexer: MarkdownLexerConfiguration,
-): CellSegment[] {
-  const segments: CellSegment[] = [];
-
-  let inlineRun: RenderNode[] = [];
-
-  const flushInline = (): void => {
-    if (inlineRun.length) {
-      segments.push({
-        block: false,
-        tokens: deferInline(lexer, serializeInlineNodes(inlineRun)),
-      });
-
-      inlineRun = [];
-    }
-  };
-
-  for (const node of content) {
-    if (isBlockNode(node)) {
-      flushInline();
-
-      // Блочный узел сериализуем ОТДЕЛЬНО (один `{@…}`-маркер без окружающего
-      // текста), чтобы blockTokens вернул ровно один кастомный токен — его
-      // parseChildren соберёт в нативный узел (рекурсивно для вложенных таблиц).
-      segments.push({
-        block: true,
-        tokens: deferBlock(lexer, serializeInlineNodes([node])),
-      });
-    } else {
-      inlineRun.push(node);
-    }
-  }
-
-  flushInline();
-
-  return segments;
 }
 
 /**
@@ -178,7 +113,7 @@ function buildTableData(
     cells.push(
       colLabels.map((label, index) => ({
         isHeader: true,
-        segments: buildCellSegments(toArray(label), lexer),
+        segments: buildBlockSegments(toArray(label), lexer),
         style: colStyles[index] || undefined,
         align: colAligns[index] || undefined,
       })),
@@ -189,7 +124,7 @@ function buildTableData(
     cells.push(
       row.map((cell) => ({
         isHeader: false,
-        segments: buildCellSegments(cell.content ?? [], lexer),
+        segments: buildBlockSegments(cell.content ?? [], lexer),
         align: cell.align,
       })),
     );
@@ -219,11 +154,7 @@ function buildCellContent(
   cell: CellData,
   helpers: MarkdownParseHelpers,
 ): JSONContent[] {
-  const content = cell.segments.flatMap((segment) =>
-    segment.block
-      ? helpers.parseChildren(segment.tokens())
-      : [{ type: 'paragraph', content: helpers.parseInline(segment.tokens()) }],
-  );
+  const content = blockSegmentsToContent(cell.segments, helpers);
 
   return content.length ? content : [{ type: 'paragraph' }];
 }

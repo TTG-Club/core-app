@@ -145,6 +145,7 @@ import type {
   SpeedUnit,
   SpellcastingBreakdown,
   SpellcastingClassRow,
+  SpellCastingKind,
   SpellCatalogItem,
   SpellCatalogPreset,
   SpellDamage,
@@ -436,6 +437,9 @@ import {
   SPEED_UNIT_SHORT_LABELS,
   SPEED_VALUE_MAX,
   SPEED_VALUE_MIN,
+  SPELL_CASTING_BEYOND_TURN_KIND,
+  SPELL_CASTING_KIND_ORDER,
+  SPELL_CASTING_TEXT_PATTERNS,
   SPELL_DAMAGE_ABILITY_MODIFIER_TAG,
   SPELL_DAMAGE_CONDITION_TAG_LABELS,
   SPELL_DAMAGE_TYPE_SEPARATOR,
@@ -7216,21 +7220,68 @@ export function getSpellListLevels(
 /**
  * Проходит ли заклинание отбор вкладки: подготовленное — только помеченное
  * значком (врождённые заклинания помечены сразу, пока подготовку с них не
- * сняли, выданные заговоры — всегда), круг — любой из отобранных.
+ * сняли, выданные заговоры — всегда), круг — любой из отобранных, время
+ * накладывания — любое из отобранных.
  *
  * @param spell заклинание списка.
+ * @param castingKinds время накладывания заклинания; пусто — неизвестно.
  * @param filter отбор вкладки заклинаний.
  * @returns true — заклинание остаётся в списке.
  */
 export function matchesSpellFilter(
   spell: CharacterSpell,
+  castingKinds: SpellCastingKind[],
   filter: SpellTabFilter,
 ): boolean {
   if (filter.preparedOnly && !spell.prepared) {
     return false;
   }
 
+  if (
+    filter.castingKinds.length
+    && !castingKinds.some((kind) => filter.castingKinds.includes(kind))
+  ) {
+    return false;
+  }
+
   return !filter.levels.length || filter.levels.includes(spell.level);
+}
+
+/**
+ * Время накладывания без повторов и в порядке строки: действие, бонусное
+ * действие, реакция, дольше хода.
+ *
+ * @param kinds время накладывания в любом порядке, с повторами.
+ * @returns упорядоченное время накладывания.
+ */
+export function getOrderedSpellCastingKinds(
+  kinds: SpellCastingKind[],
+): SpellCastingKind[] {
+  return SPELL_CASTING_KIND_ORDER.filter((kind) => kinds.includes(kind));
+}
+
+/**
+ * Время накладывания своего заклинания по тексту поля: игрок вводит его руками
+ * («1 бонусное действие», «1 минута»), поэтому оно распознаётся по словам.
+ * Текст без знакомого слова — время дольше хода.
+ *
+ * @param castingTime текст времени накладывания; нет — не заполнено.
+ * @returns время накладывания; пусто — поле не заполнено.
+ */
+export function getCustomSpellCastingKinds(
+  castingTime: string | undefined,
+): SpellCastingKind[] {
+  const castingTimeText = castingTime?.trim();
+
+  if (!castingTimeText) {
+    return [];
+  }
+
+  const matchedPattern = SPELL_CASTING_TEXT_PATTERNS.find(({ pattern }) =>
+    pattern.test(castingTimeText),
+  );
+
+  return [matchedPattern?.kind ?? SPELL_CASTING_BEYOND_TURN_KIND];
 }
 
 /**
