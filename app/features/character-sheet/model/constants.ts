@@ -3088,10 +3088,11 @@ export const SHEET_FILTER_LABELS: Record<
 
 /** Подписи чипов отбора заклинаний на вкладке заклинаний. */
 export const SPELL_FILTER_LABELS: Record<
-  'prepared' | 'preparedHint' | 'castingHint',
+  'prepared' | 'preparedHint' | 'castingHint' | 'castingToggle',
   string
 > = {
   prepared: 'Подготовленные',
+  castingToggle: 'Отбор по времени накладывания',
   preparedHint:
     'Оставить в списке только заклинания и заговоры, помеченные значком',
   castingHint:

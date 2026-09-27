@@ -720,7 +720,8 @@ modals), so its capabilities are listed here rather than squeezed into the table
   (innate spells only) and keeps prepared cantrips alongside prepared spells.
 - Casting time on every spell row, next to the school: action, bonus action,
   reaction or «Дольше хода», each with its own icon colour, and matching chips
-  in the same filter row (shown once the list has more than one kind). Catalog
+  (shown once the list has more than one kind) in a row of their own, opened by
+  the filters button at the right edge of the filter row. Catalog
   spells take it from the `castingTime[].unit` of the spell `/raw` response
   already loaded for the damage tiles (`useSpellCatalogMechanics`; the ritual
   unit is skipped — the row has its own «Р» badge); custom spells get it from

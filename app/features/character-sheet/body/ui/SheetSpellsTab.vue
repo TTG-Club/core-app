@@ -427,17 +427,49 @@
    * подпись — полностью.
    */
   const castingChips = computed(() =>
-    availableCastingKinds.value.map((kind, kindIndex) => ({
+    availableCastingKinds.value.map((kind) => ({
       kind,
       ...SPELL_CASTING_KIND_META[kind],
       isPicked: spellFilter.value.castingKinds.includes(kind),
-      // Первый чип отступает от кругов: так ряд читается двумя группами
-      chipClass: [
-        getFilterChipClass(spellFilter.value.castingKinds.includes(kind)),
-        kindIndex ? '' : 'ml-1.5',
-      ],
+      chipClass: getFilterChipClass(
+        spellFilter.value.castingKinds.includes(kind),
+      ),
     })),
   );
+
+  /**
+   * Открыт ряд чипов времени накладывания. Чипы прячутся за кнопкой
+   * фильтров, чтобы ряд кругов оставался в одну строку.
+   */
+  const isCastingFiltersOpen = ref(false);
+
+  /** Ряд чипов времени накладывания виден: его открыли, и выбирать есть из чего. */
+  const isCastingRowShown = computed(
+    () =>
+      isCastingFiltersOpen.value
+      && hasFilterControls.value
+      && hasCastingChips.value,
+  );
+
+  /**
+   * Кнопка фильтров горит, пока ряд открыт или время выбрано: так скрытый
+   * отбор не теряется, когда ряд свернули.
+   */
+  const castingToggleClass = computed(() => [
+    getFilterChipClass(
+      isCastingFiltersOpen.value || spellFilter.value.castingKinds.length > 0,
+    ),
+    // Кнопка держится правого края; при отборе край занимает «Сбросить»
+    hasActiveFilter.value ? '' : 'ml-auto',
+  ]);
+
+  /**
+   * Нажатие на кнопку фильтров: ряд времени накладывания открывается,
+   * повторное нажатие его сворачивает.
+   */
+  function handleCastingFiltersToggle() {
+    isCastingFiltersOpen.value = !isCastingFiltersOpen.value;
+  }
 
   /** Нажатие на чип подготовленных: тем же чипом отбор и снимается. */
   function handlePreparedFilterToggle() {
@@ -1011,7 +1043,7 @@
       </UDropdownMenu>
     </div>
 
-    <!-- Отбор списка: подготовка и круги. Чипы идут от самого списка — круга
+    <!-- Отбор списка: подготовка, круги и кнопка времени накладывания. Чипы идут от самого списка — круга
       без заклинаний и ячеек среди них не бывает, а помечать подготовку бывает и
       нечего. Лежат они в ряду поштучно, без вложенных групп: иначе круги
       переносятся на новую строку все разом, даже когда место ещё есть -->
@@ -1062,33 +1094,6 @@
         </UTooltip>
       </template>
 
-      <!-- Время накладывания — чипами со значком строки: по ним игрок ищет,
-        чем занять действие, бонусное действие или реакцию. Отступ слева
-        отделяет их от кругов -->
-      <template v-if="hasCastingChips">
-        <UTooltip
-          v-for="castingChip in castingChips"
-          :key="castingChip.kind"
-          :text="SPELL_FILTER_LABELS.castingHint"
-        >
-          <button
-            type="button"
-            class="flex items-center gap-1"
-            :class="castingChip.chipClass"
-            :aria-pressed="castingChip.isPicked"
-            @click.left.exact.prevent="handleCastingPick(castingChip.kind)"
-          >
-            <UIcon
-              :name="castingChip.icon"
-              class="size-3.5"
-              :class="castingChip.iconClass"
-            />
-
-            {{ castingChip.label }}
-          </button>
-        </UTooltip>
-      </template>
-
       <!-- Сброс стоит у правого края ряда и появляется только при отборе:
         пустой кнопке в ряду делать нечего -->
       <UTooltip
@@ -1104,6 +1109,56 @@
           class="ml-auto"
           @click.left.exact.prevent="handleFilterReset"
         />
+      </UTooltip>
+
+      <!-- Время накладывания прячется за одной кнопкой у правого края: ряд
+        кругов остаётся коротким, а чипы открываются рядом ниже по нажатию -->
+      <UTooltip
+        v-if="hasCastingChips"
+        :text="SPELL_FILTER_LABELS.castingToggle"
+      >
+        <button
+          type="button"
+          class="flex items-center px-1.5"
+          :class="castingToggleClass"
+          :aria-label="SPELL_FILTER_LABELS.castingToggle"
+          :aria-expanded="isCastingFiltersOpen"
+          @click.left.exact.prevent="handleCastingFiltersToggle"
+        >
+          <UIcon
+            name="tabler:adjustments-horizontal"
+            class="size-4"
+          />
+        </button>
+      </UTooltip>
+    </div>
+
+    <!-- Время накладывания — чипами со значком строки: по ним игрок ищет,
+      чем занять действие, бонусное действие или реакцию -->
+    <div
+      v-if="isCastingRowShown"
+      class="flex flex-wrap items-center gap-1.5"
+    >
+      <UTooltip
+        v-for="castingChip in castingChips"
+        :key="castingChip.kind"
+        :text="SPELL_FILTER_LABELS.castingHint"
+      >
+        <button
+          type="button"
+          class="flex items-center gap-1"
+          :class="castingChip.chipClass"
+          :aria-pressed="castingChip.isPicked"
+          @click.left.exact.prevent="handleCastingPick(castingChip.kind)"
+        >
+          <UIcon
+            :name="castingChip.icon"
+            class="size-3.5"
+            :class="castingChip.iconClass"
+          />
+
+          {{ castingChip.label }}
+        </button>
       </UTooltip>
     </div>
 
