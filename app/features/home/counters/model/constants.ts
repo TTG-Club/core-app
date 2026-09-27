@@ -26,6 +26,9 @@ export const MATERIAL_COUNTER_ICON_SHEETS = 'tabler:id';
 /** Иконка счётчика исправленных багов */
 export const MATERIAL_COUNTER_ICON_FIXED = 'tabler:bug';
 
+/** Иконка кнопки сброса кеша и обновления статистики (только для админа) */
+export const MATERIAL_COUNTER_ICON_REFRESH = 'tabler:refresh';
+
 /** Подпись кнопки сброса кеша и обновления статистики (только для админа) */
 export const MATERIAL_COUNTER_REFRESH_LABEL =
   'Сбросить кеш и обновить статистику';

@@ -20,6 +20,7 @@
     MATERIAL_COUNTER_DATA_KEY,
     MATERIAL_COUNTER_ICON_FIXED,
     MATERIAL_COUNTER_ICON_MATERIALS,
+    MATERIAL_COUNTER_ICON_REFRESH,
     MATERIAL_COUNTER_ICON_SHEETS,
     MATERIAL_COUNTER_LABEL_FIXED,
     MATERIAL_COUNTER_LABEL_MATERIALS,
@@ -213,17 +214,22 @@
         :value="item.value"
       />
 
+      <!-- На телефоне подпись прячется, чтобы строка не распадалась на две, —
+        но остаётся для скринридера. -->
       <span
-        class="font-mono text-[10px] leading-none tracking-[0.16em] text-dimmed uppercase sm:text-[11px]"
+        class="sr-only font-mono text-[11px] leading-none tracking-[0.16em] text-dimmed uppercase sm:not-sr-only"
       >
         {{ item.label }}
       </span>
     </component>
 
+    <!-- Кнопка выше строки показателей: отрицательный отступ по вертикали
+      не даёт ей раздвигать строку, и у админа высота та же, что у гостя. -->
     <UButton
       v-if="isAdmin"
+      class="-my-1"
       :loading="isRefreshing"
-      icon="tabler:refresh"
+      :icon="MATERIAL_COUNTER_ICON_REFRESH"
       variant="ghost"
       color="neutral"
       size="xs"
