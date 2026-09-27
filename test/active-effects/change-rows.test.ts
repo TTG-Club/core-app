@@ -6,11 +6,13 @@ import {
   applyEffectChangeModeChoice,
   describeEffectChange,
   describeEffectChangeValueError,
+  describeEffectChangeValueHint,
   describeEffectScenario,
   EFFECT_CHANGE_MODE_OPTIONS,
   EFFECT_MODIFIER_MENU,
   getEffectChangeModeChoice,
   getEffectChangeShownValue,
+  getWeaponOverrideValueOptions,
   isEffectModifierSubmenu,
   isRollDiceEffectChange,
   isRollTimeDiceKey,
@@ -280,5 +282,176 @@ describe('сводка не обещает неработающее', () => {
     expect(describeEffectScenario(withInertTrigger, 'spell')).toBe(
       describeEffectScenario(withWorkingTrigger, 'spell'),
     );
+  });
+});
+
+describe('замены свойств оружия («Дубинка»)', () => {
+  /** Условие «Дубинки». */
+  const shillelaghCondition = 'weapon.baseType === "club, quarterstaff"';
+
+  /** Кость «Дубинки» по уровню: к8, к10, к12, 2к6. */
+  const shillelaghDice =
+    '(1 + steps(@level, 17))к(8 + 2 * steps(@level, 5, 11) - 6 * steps(@level, 17))';
+
+  /**
+   * Строка замены в режиме «Заменить».
+   *
+   * @param key ключ замены.
+   * @param value значение.
+   * @returns строка модификатора.
+   */
+  function overrideChange(key: string, value: string) {
+    return {
+      key,
+      mode: 'override' as const,
+      value,
+      condition: shillelaghCondition,
+      priority: 20,
+    };
+  }
+
+  it('значения из своего списка без ошибки, чужие — с ошибкой списка', () => {
+    for (const [key, value] of [
+      ['weapon.attackAbility', 'spell'],
+      ['weapon.attackAbility', 'wisdom'],
+      ['weapon.damageType', 'force'],
+    ] as const) {
+      expect(
+        describeEffectChangeValueError(overrideChange(key, value)),
+        `${key}: ${value}`,
+      ).toBeUndefined();
+    }
+
+    for (const [key, value] of [
+      ['weapon.attackAbility', 'force'],
+      ['weapon.attackAbility', '@mod.wis'],
+      ['weapon.damageType', 'spell'],
+      ['weapon.damageType', 'wisdom'],
+    ] as const) {
+      expect(
+        describeEffectChangeValueError(overrideChange(key, value)),
+        `${key}: ${value}`,
+      ).toBe(ACTIVE_EFFECT_LABELS.changeWeaponOptionError);
+    }
+  });
+
+  it('кость урона: любая кость, в том числе грань выражением; число — ошибка', () => {
+    for (const value of ['1к8', '2d6', shillelaghDice]) {
+      expect(
+        describeEffectChangeValueError(
+          overrideChange('weapon.damageDice', value),
+        ),
+        value,
+      ).toBeUndefined();
+    }
+
+    expect(
+      describeEffectChangeValueError(overrideChange('weapon.damageDice', '8')),
+    ).toBe(ACTIVE_EFFECT_LABELS.changeWeaponDiceError);
+  });
+
+  it('список характеристик начинается с заклинательной, у кости списка нет', () => {
+    expect(getWeaponOverrideValueOptions('weapon.attackAbility')?.[0]).toEqual({
+      value: 'spell',
+      label: 'Заклинательная характеристика',
+    });
+
+    expect(getWeaponOverrideValueOptions('weapon.damageType')).toContainEqual({
+      value: 'force',
+      label: 'Силовое поле',
+    });
+
+    expect(getWeaponOverrideValueOptions('weapon.damageDice')).toBeUndefined();
+    expect(getWeaponOverrideValueOptions('armorClass')).toBeUndefined();
+  });
+
+  it('сводка читает значение и условие словами', () => {
+    expect(
+      describeEffectChange(overrideChange('weapon.attackAbility', 'spell')),
+    ).toBe(
+      'Оружие: характеристика атаки заменить: Заклинательная характеристика '
+        + '(только: Оружие: дубинка или боевой посох (Дубинка))',
+    );
+
+    expect(
+      describeEffectChangeValueHint(
+        overrideChange('weapon.damageType', 'force'),
+      ),
+    ).toBe('заменить: Силовое поле');
+
+    const diceHint = describeEffectChangeValueHint(
+      overrideChange('weapon.damageDice', shillelaghDice),
+    );
+
+    expect(diceHint).not.toContain('@');
+    expect(diceHint).toContain('уровень');
+  });
+
+  it('раздел «Оружие: замены» с тремя готовыми строками «Дубинки»', () => {
+    const weaponGroup = EFFECT_MODIFIER_MENU.find(
+      (group) => group.label === 'Оружие: замены',
+    );
+
+    const presets = (weaponGroup?.items ?? []).filter(
+      (menuItem) =>
+        !isEffectModifierSubmenu(menuItem) && menuItem.condition !== undefined,
+    );
+
+    expect(presets).toEqual([
+      {
+        key: 'weapon.damageDice',
+        label: 'Дубинка: кость к8 → 2к6 по уровню',
+        mode: 'override',
+        value: shillelaghDice,
+        condition: shillelaghCondition,
+      },
+      {
+        key: 'weapon.attackAbility',
+        label: 'Дубинка: заклинательная характеристика',
+        mode: 'override',
+        value: 'spell',
+        condition: shillelaghCondition,
+      },
+      {
+        key: 'weapon.damageType',
+        label: 'Дубинка: силовой урон',
+        mode: 'override',
+        value: 'force',
+        condition: shillelaghCondition,
+      },
+    ]);
+
+    // Простые пункты раздела — «Заменить» со значением по смыслу, а не единица
+    const plainItems = (weaponGroup?.items ?? []).filter(
+      (menuItem) =>
+        !isEffectModifierSubmenu(menuItem) && menuItem.condition === undefined,
+    );
+
+    expect(
+      plainItems.map((menuItem) =>
+        isEffectModifierSubmenu(menuItem)
+          ? undefined
+          : [menuItem.key, menuItem.mode, menuItem.value],
+      ),
+    ).toEqual([
+      ['weapon.damageDice', 'override', '1к8'],
+      ['weapon.attackAbility', 'override', 'spell'],
+      ['weapon.damageType', 'override', 'force'],
+    ]);
+  });
+
+  it('«открыл и сохранил» не трогает слова вместо формулы', () => {
+    const changes = [
+      overrideChange('weapon.damageDice', shillelaghDice),
+      overrideChange('weapon.attackAbility', 'spell'),
+      overrideChange('weapon.damageType', 'force'),
+    ];
+
+    const [savedEffect] = normalizeActiveEffects(
+      [createEffect({ effectTarget: 'self', changes })],
+      'spell',
+    );
+
+    expect(savedEffect?.changes).toEqual(changes);
   });
 });

@@ -6,7 +6,8 @@
 
 import type { EffectChange } from './types';
 
-import { ACTIVE_EFFECT_LABELS } from './constants';
+import { ACTIVE_EFFECT_LABELS, isWeaponOverrideKey } from './constants';
+import { validateWeaponOverrideValue } from './weaponOverrides';
 
 /** Ключ «все проверки характеристик (и навыков)». */
 export const ABILITY_CHECK_KEY = 'abilityCheck';
@@ -75,7 +76,8 @@ export function isRollDiceEffectChange(
 /**
  * Ошибка значения строки модификатора. Кость числом не считается: её катает
  * бросок — если он у ключа вообще есть. Кость в «Классе доспеха» VTTG молча
- * пропустил бы. Строку без ключа не проверяем: о ней говорит поле ключа.
+ * пропустил бы. Замена свойства оружия проверяется своим списком или костью.
+ * Строку без ключа не проверяем: о ней говорит поле ключа.
  *
  * @param change строка модификатора.
  * @returns текст ошибки либо `undefined`.
@@ -85,6 +87,11 @@ export function describeEffectChangeValueError(
 ): string | undefined {
   if (!change.value.trim()) {
     return ACTIVE_EFFECT_LABELS.changeValueRequired;
+  }
+
+  // Замена свойства оружия — не формула: кость или слово из списка
+  if (isWeaponOverrideKey(change.key)) {
+    return validateWeaponOverrideValue(change.key, change.value);
   }
 
   if (!change.key.trim() || !isDiceFormulaValue(change.value)) {

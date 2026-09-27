@@ -8,6 +8,7 @@ import {
   EFFECT_TARGET_KEY_SUGGESTIONS,
   EFFECT_VALUE_SUGGESTIONS,
   isAdjacentAllyCondition,
+  parseWeaponBaseTypeCondition,
 } from '~active-effects/model';
 
 /**
@@ -18,10 +19,10 @@ import {
  * разошлись, показывает `node scripts/compare-effect-dictionaries.mjs`.
  */
 const SYSTEM_DICTIONARY_SIZES = {
-  version: '0.8.88',
+  version: '0.8.96',
   flags: 200,
-  changeKeys: 61,
-  conditions: 95,
+  changeKeys: 64,
+  conditions: 96,
   values: 33,
 };
 
@@ -94,6 +95,32 @@ describe('словари эффектов', () => {
     ]) {
       expect(changeKeys).toContain(changeKey);
     }
+  });
+
+  it('замены свойств оружия 0.8.96 на месте', () => {
+    const changeKeys = EFFECT_TARGET_KEY_SUGGESTIONS.map(
+      (suggestion) => suggestion.value,
+    );
+
+    for (const changeKey of [
+      'weapon.damageDice',
+      'weapon.attackAbility',
+      'weapon.damageType',
+    ]) {
+      expect(changeKeys).toContain(changeKey);
+    }
+
+    expect(
+      EFFECT_CONDITION_EXPR_SUGGESTIONS.map((suggestion) => suggestion.value),
+    ).toContain('weapon.baseType === "club, quarterstaff"');
+
+    expect(
+      parseWeaponBaseTypeCondition('weapon.baseType === "club, quarterstaff"'),
+    ).toEqual(['club', 'quarterstaff']);
+
+    expect(parseWeaponBaseTypeCondition('attack.ability === "strength"')).toBe(
+      undefined,
+    );
   });
 
   it('условия о союзнике рядом с целью — семейством, с распознаванием', () => {

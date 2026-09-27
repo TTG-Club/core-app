@@ -33,6 +33,7 @@
     EFFECT_VALUE_SUGGESTIONS,
     getEffectChangeModeChoice,
     getEffectChangeShownValue,
+    getWeaponOverrideValueOptions,
     IDLE_CHANGE_STEP_BY,
     isEffectModifierSubmenu,
     isRollDiceEffectChange,
@@ -75,6 +76,8 @@
           ? undefined
           : ACTIVE_EFFECT_LABELS.changeKeyRequired,
         valueError: describeEffectChangeValueError(change),
+        /** Характеристика и тип урона оружия — выбор из списка, не формула. */
+        valueOptions: getWeaponOverrideValueOptions(change.key),
         // «Вычесть» — только в форме: в данных это «Добавить» с минусом
         modeChoice: getEffectChangeModeChoice(change),
         shownValue: getEffectChangeShownValue(change),
@@ -418,7 +421,17 @@
           <span v-else>{{ ACTIVE_EFFECT_LABELS.changeValue }}</span>
         </template>
 
+        <USelect
+          v-if="changeRow.valueOptions"
+          :model-value="changeRow.change.value"
+          :items="changeRow.valueOptions"
+          value-key="value"
+          class="w-full"
+          @update:model-value="updateValue(index, $event)"
+        />
+
         <InputWithLibrary
+          v-else
           :model-value="changeRow.shownValue"
           :options="EFFECT_VALUE_SUGGESTIONS"
           :placeholder="ACTIVE_EFFECT_LABELS.changeValuePlaceholder"

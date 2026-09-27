@@ -19,3 +19,4 @@ export * from './triggerRow';
 export * from './triggers';
 export * from './triggerTypes';
 export * from './types';
+export * from './weaponOverrides';

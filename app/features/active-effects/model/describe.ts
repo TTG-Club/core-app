@@ -57,6 +57,7 @@ import {
 } from './constants';
 import { renderReadableFormula } from './formula';
 import { APPLIER_SAVE_DC } from './layout';
+import { describeWeaponOverrideValue } from './weaponOverrides';
 
 /**
  * Собирает карту «значение → подпись» из списка опций.
@@ -294,6 +295,13 @@ function describeChangeValue(change: EffectChange): string {
   const unit = change.key.startsWith('movement.')
     ? EFFECT_PHRASE_PARTS.feetSuffix
     : '';
+
+  // Характеристика и тип урона оружия — слова из списка, а не формула
+  const optionLabel = describeWeaponOverrideValue(change.key, change.value);
+
+  if (optionLabel) {
+    return `${EFFECT_CHANGE_MODE_LABELS[change.mode].toLowerCase()}: ${optionLabel}`;
+  }
 
   if (change.mode === 'add') {
     if (isNumeric(change.value)) {
