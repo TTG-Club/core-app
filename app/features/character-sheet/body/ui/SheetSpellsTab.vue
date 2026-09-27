@@ -4,6 +4,7 @@
     DamageRollSource,
     PreparedSpellKind,
     SpellcastingBreakdown,
+    SpellCastingKind,
     SpellDamageRoll,
     SpellSlotKind,
     SpellSlotRow,
@@ -14,7 +15,10 @@
   import { SpellDrawer } from '~spells/drawer';
   import { MarkupRender } from '~ui/markup';
 
-  import { useCharacterSheet, useSpellDamage } from '../../composables';
+  import {
+    useCharacterSheet,
+    useSpellCatalogMechanics,
+  } from '../../composables';
   import {
     ABILITY_LABELS,
     CANTRIP_SPELL_LEVEL,
@@ -23,6 +27,7 @@
     getFilterChipClass,
     getGrantedCantripUrls,
     getInnateSpellMenuItems,
+    getOrderedSpellCastingKinds,
     getPreparedSpellsHint,
     getPreparedSpellsValue,
     getSpellGroupLabel,
@@ -52,6 +57,8 @@
     SHEET_STATIC_STAT_CLASS,
     SHEET_TAB_EMPTY_LABELS,
     sortSpellsByLevelAndName,
+    SPELL_CASTING_KIND_META,
+    SPELL_CASTING_TIME_LABEL,
     SPELL_DAMAGE_ROLL_HINT_LABEL,
     SPELL_DAMAGE_ROLL_LABEL,
     SPELL_DAMAGE_STAT_LABEL,
@@ -155,10 +162,10 @@
   // прячутся, а ряды заклинаний и шапка вкладки остаются на прежних местах.
   const { character, editControlClass } = useCharacterSheet();
 
-  // Урон заклинаний живёт в справочнике, а не в листе: подгружаем его для всей
-  // вкладки — и для книги, и для заклинаний вне её. Уровень персонажа
-  // нужен заговорам: их урон растёт от него, а не от круга ячейки.
-  const { getDamage } = useSpellDamage(
+  // Урон и время накладывания живут в справочнике, а не в листе: подгружаем
+  // их для всей вкладки — и для книги, и для заклинаний вне её. Уровень
+  // персонажа нужен заговорам: их урон растёт от него, а не от круга ячейки.
+  const { getDamage, getCastingKinds } = useSpellCatalogMechanics(
     () => [...props.spells, ...props.innateSpells, ...props.classSpells],
     () => props.spellcasting.abilityModifier,
     () => character.value.level,
@@ -324,6 +331,26 @@
   /** Отмеченные чипами круги; пусто — круги списка не сужаются. */
   const pickedLevels = ref(new Set<number>());
 
+  /** Отмеченное чипами время накладывания; пусто — по нему список не сужается. */
+  const pickedCastingKinds = ref(new Set<SpellCastingKind>());
+
+  /**
+   * Время накладывания, которое есть в списке: чип без единого подходящего
+   * заклинания только сузил бы список до пустого.
+   */
+  const availableCastingKinds = computed(() =>
+    getOrderedSpellCastingKinds(
+      [...props.spells, ...props.innateSpells, ...props.classSpells].flatMap(
+        getCastingKinds,
+      ),
+    ),
+  );
+
+  /** Времени накладывания в списке больше одного — есть между чем выбирать. */
+  const hasCastingChips = computed(
+    () => availableCastingKinds.value.length > 1,
+  );
+
   /** Круги, которые вкладка уже показывает: по ним и отбирают. */
   const availableLevels = computed(() =>
     getSpellListLevels(
@@ -351,11 +378,17 @@
     levels: availableLevels.value.filter((level) =>
       pickedLevels.value.has(level),
     ),
+    castingKinds: availableCastingKinds.value.filter((kind) =>
+      pickedCastingKinds.value.has(kind),
+    ),
   }));
 
   /** Список сужен: отбор есть что сбросить. */
   const hasActiveFilter = computed(
-    () => spellFilter.value.preparedOnly || spellFilter.value.levels.length > 0,
+    () =>
+      spellFilter.value.preparedOnly
+      || spellFilter.value.levels.length > 0
+      || spellFilter.value.castingKinds.length > 0,
   );
 
   /**
@@ -365,7 +398,9 @@
   const hasFilterControls = computed(
     () =>
       hasAnySpells.value
-      && (isPreparedFilterAvailable.value || hasLevelChips.value),
+      && (isPreparedFilterAvailable.value
+        || hasLevelChips.value
+        || hasCastingChips.value),
   );
 
   const preparedChipClass = computed(() =>
@@ -384,6 +419,23 @@
       tooltip: getSpellGroupLabel(level),
       isPicked: spellFilter.value.levels.includes(level),
       chipClass: getFilterChipClass(spellFilter.value.levels.includes(level)),
+    })),
+  );
+
+  /**
+   * Чипы времени накладывания: значок и цвет те же, что у строки заклинания,
+   * подпись — полностью.
+   */
+  const castingChips = computed(() =>
+    availableCastingKinds.value.map((kind, kindIndex) => ({
+      kind,
+      ...SPELL_CASTING_KIND_META[kind],
+      isPicked: spellFilter.value.castingKinds.includes(kind),
+      // Первый чип отступает от кругов: так ряд читается двумя группами
+      chipClass: [
+        getFilterChipClass(spellFilter.value.castingKinds.includes(kind)),
+        kindIndex ? '' : 'ml-1.5',
+      ],
     })),
   );
 
@@ -406,10 +458,25 @@
     pickedLevels.value.add(level);
   }
 
+  /**
+   * Нажатие на чип времени накладывания: набираются по одному, повторное
+   * нажатие снимает время с отбора.
+   */
+  function handleCastingPick(kind: SpellCastingKind) {
+    if (pickedCastingKinds.value.has(kind)) {
+      pickedCastingKinds.value.delete(kind);
+
+      return;
+    }
+
+    pickedCastingKinds.value.add(kind);
+  }
+
   /** Нажатие на «Сбросить»: список возвращается целиком. */
   function handleFilterReset() {
     isPreparedOnlyPicked.value = false;
     pickedLevels.value.clear();
+    pickedCastingKinds.value.clear();
   }
 
   /**
@@ -607,7 +674,7 @@
       getSpellPreparedKind(spell) === 'cantrips';
 
     const matchesFilter = (spell: CharacterSpell) =>
-      matchesSpellFilter(spell, spellFilter.value);
+      matchesSpellFilter(spell, getCastingKinds(spell), spellFilter.value);
 
     // Заклинания 1+ круга от умений класса идут в круги вместе с книгой:
     // заклинание домена игрок ищет среди заклинаний своего круга
@@ -683,6 +750,12 @@
         })),
         spells: group.spells.map((spell) => {
           const isCustom = isCustomSpell(spell);
+
+          const castingKinds = getCastingKinds(spell).map((kind) => ({
+            kind,
+            ...SPELL_CASTING_KIND_META[kind],
+          }));
+
           const isExpanded = isCustom && expandedUrls.value.has(spell.url);
 
           // Заклинание класса стоит в круге (заговор — в группе выданных), а
@@ -737,6 +810,10 @@
             // Своя характеристика — бейдж строки: заклинание считается не так,
             // как остальная книга, и по строке это должно быть видно сразу.
             abilityBadge: getSpellAbilityBadge(spell),
+            // Время накладывания — под названием, рядом со школой: по нему игрок
+            // ищет, чем занять бонусное действие или реакцию.
+            castingKinds,
+            hasSubtitle: Boolean(spell.school) || castingKinds.length > 0,
             // Урон каталожного заклинания приходит из справочника; у своего его
             // нет — форма листа урон не заполняет.
             damageStats: getSpellDamageStats(spell),
@@ -985,6 +1062,33 @@
         </UTooltip>
       </template>
 
+      <!-- Время накладывания — чипами со значком строки: по ним игрок ищет,
+        чем занять действие, бонусное действие или реакцию. Отступ слева
+        отделяет их от кругов -->
+      <template v-if="hasCastingChips">
+        <UTooltip
+          v-for="castingChip in castingChips"
+          :key="castingChip.kind"
+          :text="SPELL_FILTER_LABELS.castingHint"
+        >
+          <button
+            type="button"
+            class="flex items-center gap-1"
+            :class="castingChip.chipClass"
+            :aria-pressed="castingChip.isPicked"
+            @click.left.exact.prevent="handleCastingPick(castingChip.kind)"
+          >
+            <UIcon
+              :name="castingChip.icon"
+              class="size-3.5"
+              :class="castingChip.iconClass"
+            />
+
+            {{ castingChip.label }}
+          </button>
+        </UTooltip>
+      </template>
+
       <!-- Сброс стоит у правого края ряда и появляется только при отборе:
         пустой кнопке в ряду делать нечего -->
       <UTooltip
@@ -1121,11 +1225,37 @@
                   </UTooltip>
                 </span>
 
+                <!-- Время накладывания стоит рядом со школой: значок и цвет
+                  различают действие, бонусное действие и реакцию с одного
+                  взгляда. Школа уступает место и обрезается первой -->
                 <span
-                  v-if="spell.school"
-                  class="truncate text-xs text-dimmed"
+                  v-if="spell.hasSubtitle"
+                  class="flex min-w-0 items-center gap-2 text-xs"
                 >
-                  {{ spell.school }}
+                  <span
+                    v-if="spell.school"
+                    class="truncate text-dimmed"
+                  >
+                    {{ spell.school }}
+                  </span>
+
+                  <UTooltip
+                    v-for="castingKind in spell.castingKinds"
+                    :key="castingKind.kind"
+                    :text="SPELL_CASTING_TIME_LABEL"
+                  >
+                    <span
+                      class="relative z-10 flex shrink-0 items-center gap-1 text-muted"
+                    >
+                      <UIcon
+                        :name="castingKind.icon"
+                        class="size-3.5"
+                        :class="castingKind.iconClass"
+                      />
+
+                      {{ castingKind.label }}
+                    </span>
+                  </UTooltip>
                 </span>
               </span>
             </button>

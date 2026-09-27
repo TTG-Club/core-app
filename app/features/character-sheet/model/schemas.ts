@@ -40,7 +40,9 @@ import type {
   SpeciesFeatureSummary,
   SpeciesOption,
   SpeciesSummary,
+  SpellCastingKind,
   SpellCatalogItem,
+  SpellCatalogMechanics,
   SpellDamageFormulas,
   StartingEquipmentItem,
   StartingEquipmentOption,
@@ -94,6 +96,8 @@ import {
   SHEET_FEAT_MODAL_LABELS,
   SIZE_LABEL_BY_API_KEY,
   SKILL_NAME_BY_API_KEY,
+  SPELL_CASTING_BEYOND_TURN_KIND,
+  SPELL_CASTING_UNIT_KINDS,
   SPELL_COMPONENT_LABELS,
   STARTING_EQUIPMENT_DEFAULT_COIN_KEY,
   STARTING_EQUIPMENT_LABELS,
@@ -108,6 +112,7 @@ import {
   getClassFeatureId,
   getClassToolChoice,
   getLegacyClassFeatChoices,
+  getOrderedSpellCastingKinds,
   isAbilityImprovementFeatChoice,
   isAbilityImprovementFeature,
   parseAbilityKeys,
@@ -3787,7 +3792,7 @@ const spellRawDamageSchema = z
  * @param input сырой ответ заклинания.
  * @returns формулы урона из справочника с тирами заговора.
  */
-export function parseSpellDamageFormulas(input: unknown): SpellDamageFormulas {
+function parseSpellDamageFormulas(input: unknown): SpellDamageFormulas {
   const effect = spellRawDamageSchema.parse(input).effect;
 
   const cantripTiers = (effect?.cantripScalingTiers ?? [])
@@ -3801,6 +3806,59 @@ export function parseSpellDamageFormulas(input: unknown): SpellDamageFormulas {
     .sort((left, right) => left.level - right.level);
 
   return { base: effect?.damageFormulas ?? [], cantripTiers };
+}
+
+/**
+ * Схема «сырого» ответа заклинания в части времени накладывания: единица
+ * справочника (`ACTION`, `BONUS`, `MINUTE`…) у каждого варианта.
+ */
+const spellRawCastingTimeSchema = z
+  .object({
+    castingTime: z
+      .array(
+        z
+          .object({ unit: z.string().nullable().catch(null) })
+          .catch({ unit: null }),
+      )
+      .catch([]),
+  })
+  .catch({ castingTime: [] });
+
+/**
+ * Время накладывания из «сырого» ответа заклинания. Вариант без единицы и
+ * ритуал пропускаются; единица вне боевого хода читается как «дольше хода».
+ *
+ * @param input сырой ответ заклинания.
+ * @returns время накладывания без повторов, по порядку строки.
+ */
+function parseSpellCastingKinds(input: unknown): SpellCastingKind[] {
+  const { castingTime } = spellRawCastingTimeSchema.parse(input);
+
+  const castingKinds = castingTime.flatMap(({ unit }) => {
+    const unitKind = unit ? SPELL_CASTING_UNIT_KINDS[unit] : null;
+
+    return unitKind === null
+      ? []
+      : [unitKind ?? SPELL_CASTING_BEYOND_TURN_KIND];
+  });
+
+  return getOrderedSpellCastingKinds(castingKinds);
+}
+
+/**
+ * Валидация «сырого» ответа `GET /api/v2/spells/{url}/raw`: урон и время
+ * накладывания — всё, что лист берёт у заклинания из справочника.
+ *
+ * @param input сырой ответ заклинания.
+ * @returns урон и время накладывания заклинания.
+ */
+export function parseSpellCatalogMechanics(
+  input: unknown,
+): SpellCatalogMechanics {
+  return {
+    damage: parseSpellDamageFormulas(input),
+    castingKinds: parseSpellCastingKinds(input),
+  };
 }
 
 /**

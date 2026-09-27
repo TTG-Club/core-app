@@ -12,7 +12,7 @@ import type {
   SavedCharacterSheet,
   SavedCharacterSheetListPage,
   SpellCatalogItem,
-  SpellDamageFormulas,
+  SpellCatalogMechanics,
   StartingEquipmentOption,
 } from './types';
 
@@ -49,7 +49,7 @@ import {
   parseItemWeapon,
   parseMagicItemRaw,
   parseSpellCatalog,
-  parseSpellDamageFormulas,
+  parseSpellCatalogMechanics,
 } from './schemas';
 import {
   buildStartingEquipmentItem,
@@ -399,25 +399,26 @@ export async function fetchCatalogSpellDetail(
 
 /**
  * Формулы урона каталожного заклинания вместе с тирами масштабирования
- * заговора. Публичная деталь их не отдаёт — как и боевые числа предметов, они
- * лежат в «сыром» ответе раздела. Отказ запроса не ломает вкладку: заклинание
- * останется без плитки урона.
+ * заговора и время накладывания. Публичная деталь урон не отдаёт — как и
+ * боевые числа предметов, он лежит в «сыром» ответе раздела, там же и время
+ * накладывания единицами справочника. Отказ запроса не ломает вкладку:
+ * заклинание останется без плитки урона и значка времени.
  *
  * @param spellUrl слаг заклинания в каталоге.
- * @returns урон заклинания; пустые формулы — урона нет или он не загрузился.
+ * @returns урон и время накладывания; пусто — нет или не загрузилось.
  */
-export async function fetchSpellDamageFormulas(
+export async function fetchSpellCatalogMechanics(
   spellUrl: string,
-): Promise<SpellDamageFormulas> {
+): Promise<SpellCatalogMechanics> {
   try {
     const response = await $fetch<unknown>(
       `${SPELLS_DETAIL_BASE_PATH}/${spellUrl}/${SPELLS_RAW_DETAIL_PATH_SUFFIX}`,
       { method: 'GET', retry: 0 },
     );
 
-    return parseSpellDamageFormulas(response);
+    return parseSpellCatalogMechanics(response);
   } catch {
-    return { base: [], cantripTiers: [] };
+    return { damage: { base: [], cantripTiers: [] }, castingKinds: [] };
   }
 }
 

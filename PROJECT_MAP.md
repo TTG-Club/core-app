@@ -718,6 +718,13 @@ modals), so its capabilities are listed here rather than squeezed into the table
   character has not reached never appears and a pick that disappears stops
   narrowing by itself. The prepared chip is skipped when the book is empty
   (innate spells only) and keeps prepared cantrips alongside prepared spells.
+- Casting time on every spell row, next to the school: action, bonus action,
+  reaction or «Дольше хода», each with its own icon colour, and matching chips
+  in the same filter row (shown once the list has more than one kind). Catalog
+  spells take it from the `castingTime[].unit` of the spell `/raw` response
+  already loaded for the damage tiles (`useSpellCatalogMechanics`; the ritual
+  unit is skipped — the row has its own «Р» badge); custom spells get it from
+  the words of their free-text field (`getCustomSpellCastingKinds`).
 - Weapon attack & damage rolled straight from their tiles in the equipment list
   (damage dice come from the item `/raw` response). A versatile weapon also
   keeps the second roll of that response, and the row action menu switches its
