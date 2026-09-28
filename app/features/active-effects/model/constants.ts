@@ -86,7 +86,7 @@ import {
 } from './triggerTypes';
 
 /** Версия системы dnd5e-2024, с которой снят порт справочников и подписей. */
-export const EFFECT_SYSTEM_VERSION = '0.8.96';
+export const EFFECT_SYSTEM_VERSION = '0.8.104';
 
 /** Язык сортировки пунктов меню «Готовые»: навыки ищут по русскому названию. */
 export const EFFECT_MENU_SORT_LOCALE = 'ru';
@@ -232,6 +232,7 @@ export const EFFECT_AURA_TARGET_SCENARIO_LABELS: Record<
  */
 export const EFFECT_CONDITION_OPTIONS: Array<Option<EffectConditionKey>> = [
   { label: 'Ослеплённый', value: 'blinded' },
+  { label: 'Окровавленный', value: 'bloodied' },
   { label: 'Очарованный', value: 'charmed' },
   { label: 'Оглохший', value: 'deafened' },
   { label: 'Истощённый', value: 'exhaustion' },
@@ -247,6 +248,22 @@ export const EFFECT_CONDITION_OPTIONS: Array<Option<EffectConditionKey>> = [
   { label: 'Ошеломлённый', value: 'stunned' },
   { label: 'Бессознательный', value: 'unconscious' },
 ];
+
+/**
+ * Окровавленность («Bloodied» правил 2024): хитов не больше половины максимума.
+ * Механики у неё нет — на неё ссылаются умения и урон существ.
+ */
+export const BLOODIED_CONDITION_KEY = 'bloodied' satisfies EffectConditionKey;
+
+/**
+ * Состояния, против которых бывает преимущество или помеха на спасбросок.
+ * Окровавленность сюда не идёт: спасброска против неё не бывает — её ставит и
+ * снимает запас хитов. Зеркало `SaveConditionKey` системы VTTG.
+ */
+export const EFFECT_SAVE_CONDITION_OPTIONS: Array<Option<EffectConditionKey>> =
+  EFFECT_CONDITION_OPTIONS.filter(
+    (condition) => condition.value !== BLOODIED_CONDITION_KEY,
+  );
 
 /**
  * Типы существ для условий эффекта — зеркало `CREATURE_CATEGORIES` из VTTG.
@@ -963,7 +980,7 @@ function buildAbilityFlagLabels(
 
 /**
  * Собирает подписи флагов спасброска против состояния: преимущество и помеха
- * задаются отдельно для каждого из пятнадцати состояний.
+ * задаются отдельно для каждого состояния, против которого бывает спасбросок.
  *
  * Семейством, а не перечислением: так написана половина видов справочника
  * («преимущество на спасброски, чтобы избежать состояния Отравлен»), и держать
@@ -977,7 +994,7 @@ function buildSaveVsConditionFlagLabels(
   keyPrefix: string,
   labelPrefix: string,
 ): Array<[string, string]> {
-  return EFFECT_CONDITION_OPTIONS.map((condition) => [
+  return EFFECT_SAVE_CONDITION_OPTIONS.map((condition) => [
     `${keyPrefix}${condition.value.charAt(0).toUpperCase()}${condition.value.slice(1)}`,
     `${labelPrefix}: ${condition.label}`,
   ]);
@@ -1273,6 +1290,15 @@ export const EFFECT_CONDITION_TEMPLATES: EffectConditionTemplate[] = [
       'attacksAgainst.advantage',
       'vision.blinded',
     ],
+    changes: [],
+  },
+  {
+    key: 'bloodied',
+    name: 'Окровавленный',
+    icon: 'tabler:droplet',
+    description:
+      'Хитов не больше половины максимума. Само по себе ничего не меняет — на него ссылаются умения и урон существ («или 2к8 + 2, если рой окровавлен»). Урон считает существо окровавленным и по хитам, без значка.',
+    flags: [],
     changes: [],
   },
   {

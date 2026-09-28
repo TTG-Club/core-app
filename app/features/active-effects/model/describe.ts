@@ -21,6 +21,8 @@ import type {
 
 import { upperFirst } from 'es-toolkit';
 
+import { labelDamageFormulaStatusTerms } from '~ui/damage-formula';
+
 import { isDiceFormulaValue } from './changeDice';
 import {
   ACTIVE_EFFECT_LABELS,
@@ -113,8 +115,11 @@ const VALUE_TOKEN_LABELS: Record<string, string> = {
 /** Токен типа урона в формуле: `@dmg.fire`. */
 const DAMAGE_TYPE_TOKEN_PREFIX_PATTERN = /@dmg\./i;
 
-/** Токен условия по цели в формуле: `@target.full`. */
-const TARGET_TOKEN_PREFIX_PATTERN = /@target\./i;
+/**
+ * Токен условия в формуле: по цели (`@target.full`) или по состоянию стороны
+ * (`@self.status.bloodied`).
+ */
+const CONDITION_TOKEN_PREFIX_PATTERN = /@(?:target\.|self\.status\.)/i;
 
 /**
  * Подписи условия по цели в формуле урона: токен `@target.full` или
@@ -275,7 +280,7 @@ function prettifyFormula(value: string): string {
   const hasDamageTokens =
     DAMAGE_TYPE_TOKEN_PREFIX_PATTERN.test(value)
     || HEAL_TOKEN_PATTERN.test(value)
-    || TARGET_TOKEN_PREFIX_PATTERN.test(value);
+    || CONDITION_TOKEN_PREFIX_PATTERN.test(value);
 
   return hasDamageTokens
     ? describeEffectDamageParts([{ formula: value }])
@@ -442,9 +447,9 @@ function stripHealTokens(formula: string): string {
 
 /**
  * Описывает части урона: «2к8 ядом + 1к6 огненный», «10 лечения». Разбирает
- * токены типа урона (`@dmg.poison`), лечения (`@heal`) и условия по цели
- * (`@target.full`) и чистит их из показываемой формулы, чтобы в описании не
- * торчали сырые токены.
+ * токены типа урона (`@dmg.poison`), лечения (`@heal`), условия по цели
+ * (`@target.full`) и по состоянию (`@target.status.prone`) и чистит их из
+ * показываемой формулы, чтобы в описании не торчали сырые токены.
  *
  * @param parts части урона эффекта.
  * @returns строка описания частей; пустая, если формул нет.
@@ -464,14 +469,17 @@ export function describeEffectDamageParts(
 
       const healLabel = healKind ? ` ${EFFECT_HEAL_KIND_LABELS[healKind]}` : '';
 
-      const targetToken = /@target\.(\w+)/.exec(formula);
+      // Слагаемые по состоянию подписываются на месте: «2к6 (цель: Лежащий
+      // ничком)» — токен относится к своему слагаемому, а не ко всей части
+      const labelledFormula = labelDamageFormulaStatusTerms(formula);
+      const targetToken = /@target\.(\w+)/.exec(labelledFormula);
 
       const targetLabel = targetToken?.[1]
         ? ` (${DAMAGE_TARGET_LABELS[targetToken[1]] ?? targetToken[1]})`
         : '';
 
       const cleanFormula = prettifyArithmetic(
-        stripHealTokens(formula)
+        stripHealTokens(labelledFormula)
           .replace(/@dmg\.[a-z]+/gi, '')
           .replace(/@target\.\w+/gi, '')
           .trim(),

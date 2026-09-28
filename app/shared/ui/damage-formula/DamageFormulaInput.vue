@@ -1,6 +1,4 @@
 <script setup lang="ts">
-  import type { DamageFormulaToolSlot } from './constants';
-
   import {
     DAMAGE_FORMULA_CONDITION_TAGS,
     DAMAGE_FORMULA_CREATURE_TYPE_TAGS,
@@ -15,6 +13,7 @@
     incrementDamageFormulaDice,
     insertIntoDamageFormula,
   } from './formula';
+  import { buildDamageFormulaTools } from './tools';
 
   interface DamageTypeOption {
     /** Подпись типа урона. */
@@ -44,7 +43,7 @@
     hideModifiers?: boolean;
     /** Скрыть вкладку лечения. */
     hideHealing?: boolean;
-    /** Скрыть вкладки условий: по хитам цели и по её типу. */
+    /** Скрыть вкладки условий: по хитам цели, по состояниям и по типу. */
     hideConditions?: boolean;
   }>();
 
@@ -59,44 +58,8 @@
     () => inputRef.value?.input ?? inputRef.value?.$el?.querySelector('input'),
   );
 
-  const tools = computed<Array<{ label: string; slot: DamageFormulaToolSlot }>>(
-    () => {
-      // Порядок вкладок системы, но «Кости» впереди: в справочнике формулу
-      // набирают с нуля, а не правят готовую — начинают всегда с кости.
-      const items: Array<{ label: string; slot: DamageFormulaToolSlot }> = [
-        { label: DAMAGE_FORMULA_LABELS.dice, slot: 'dice' },
-      ];
-
-      if (!hideModifiers) {
-        items.push({
-          label: DAMAGE_FORMULA_LABELS.modifiers,
-          slot: 'modifiers',
-        });
-      }
-
-      items.push({
-        label: DAMAGE_FORMULA_LABELS.damageTypes,
-        slot: 'damageTypes',
-      });
-
-      if (!hideHealing) {
-        items.push({ label: DAMAGE_FORMULA_LABELS.healing, slot: 'healing' });
-      }
-
-      if (!hideConditions) {
-        // Тип существа — такое же условие по цели, как и её хиты, поэтому
-        // прячется тем же пропом.
-        items.push(
-          { label: DAMAGE_FORMULA_LABELS.conditions, slot: 'conditions' },
-          {
-            label: DAMAGE_FORMULA_LABELS.creatureTypes,
-            slot: 'creatureTypes',
-          },
-        );
-      }
-
-      return items;
-    },
+  const tools = computed(() =>
+    buildDamageFormulaTools({ hideModifiers, hideHealing, hideConditions }),
   );
 
   /**
@@ -255,6 +218,28 @@
             variant="subtle"
             @click.left.exact.prevent="insertTag(condition.value)"
           />
+        </div>
+      </template>
+
+      <!-- Слагаемое — только при состоянии цели или атакующего: сторону
+        несёт вкладка -->
+      <template #statuses="{ item }">
+        <div class="flex flex-col gap-2">
+          <div class="flex flex-wrap gap-1.5">
+            <UButton
+              v-for="status in item.statusButtons"
+              :key="status.value"
+              :label="status.label"
+              size="xs"
+              color="neutral"
+              variant="subtle"
+              @click.left.exact.prevent="insertText(status.value)"
+            />
+          </div>
+
+          <p class="text-xs text-muted">
+            {{ item.statusHint }}
+          </p>
         </div>
       </template>
 

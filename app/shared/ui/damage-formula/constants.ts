@@ -23,6 +23,7 @@ export type DamageFormulaToolSlot =
   | 'damageTypes'
   | 'healing'
   | 'conditions'
+  | 'statuses'
   | 'creatureTypes';
 
 interface DamageFormulaTag {
@@ -70,6 +71,49 @@ export const DAMAGE_FORMULA_CONDITION_TAGS: Array<DamageFormulaTag> = [
 ];
 
 /**
+ * Чьё состояние проверяет токен состояния (`@target.status.prone`): `target` —
+ * цели урона, `self` — того, кто бросает (атакующий, заклинатель, существо со
+ * своим действием). Зеркало `StatusTokenSide` системы VTTG.
+ */
+export type DamageFormulaStatusSide = 'self' | 'target';
+
+/**
+ * Состояния для токенов `@target.status.prone` и `@self.status.bloodied`:
+ * слагаемое бросается, только если у стороны есть состояние.
+ *
+ * Канон VTTG без метки смерти (`listSelectableConditions`). Состояний мира сайт
+ * не знает: у записей компендиума в формулах — только канонические ключи. Свой
+ * список, а не состояния порта эффектов: тот сам тянет этот модуль.
+ */
+export const DAMAGE_FORMULA_STATUS_OPTIONS: Array<DamageFormulaTag> = [
+  { label: 'Ослеплённый', value: 'blinded' },
+  { label: 'Окровавленный', value: 'bloodied' },
+  { label: 'Очарованный', value: 'charmed' },
+  { label: 'Оглохший', value: 'deafened' },
+  { label: 'Истощённый', value: 'exhaustion' },
+  { label: 'Испуганный', value: 'frightened' },
+  { label: 'Схваченный', value: 'grappled' },
+  { label: 'Недееспособный', value: 'incapacitated' },
+  { label: 'Невидимый', value: 'invisible' },
+  { label: 'Парализованный', value: 'paralyzed' },
+  { label: 'Окаменевший', value: 'petrified' },
+  { label: 'Отравленный', value: 'poisoned' },
+  { label: 'Лежащий ничком', value: 'prone' },
+  { label: 'Опутанный', value: 'restrained' },
+  { label: 'Ошеломлённый', value: 'stunned' },
+  { label: 'Бессознательный', value: 'unconscious' },
+];
+
+/** Сторона в пометке слагаемого по состоянию: «2к6 (цель: Лежащий ничком)». */
+export const DAMAGE_FORMULA_STATUS_SIDE_LABELS: Record<
+  DamageFormulaStatusSide,
+  string
+> = {
+  self: 'атакующий',
+  target: 'цель',
+};
+
+/**
  * Типы существ для токена `@target.type.<тип>`: слагаемое достаётся только
  * целям названного типа.
  *
@@ -103,6 +147,17 @@ export const DAMAGE_FORMULA_LABELS = {
   damageTypes: 'Тип урона',
   healing: 'Лечение',
   conditions: 'Условия',
+  targetStatuses: 'Статусы цели',
+  selfStatuses: 'Статусы атакующего',
+  targetStatusesHint:
+    'Нажмите состояние — оно встанет в формулу у слагаемого, к которому '
+    + 'приписано: «1к8 + 2к6@target.status.prone» добавит 2к6, только если цель '
+    + 'лежит ничком. «Иначе другой урон» задаётся ниже, в «Или другой урон».',
+  selfStatusesHint:
+    'Нажмите состояние — оно встанет в формулу у слагаемого, к которому '
+    + 'приписано: «1к8 + 1к6@self.status.bloodied» добавит 1к6, только если '
+    + 'атакующий окровавлен. «Иначе другой урон» задаётся ниже, в «Или другой '
+    + 'урон».',
   creatureTypes: 'Тип существ',
 } as const;
 

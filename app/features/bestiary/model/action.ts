@@ -1,6 +1,8 @@
 import type { ActiveEffect, EffectFormContext } from '~active-effects/model';
 import type { DamageFormulaPart } from '~ui/damage-formula';
 
+import type { CreatureDamageAlternative } from './damageAlternatives';
+
 import { AbilityKey } from '~/shared/types';
 import {
   EFFECT_FORM_CONTEXT,
@@ -11,6 +13,11 @@ import {
   normalizeDamageFormulaParts,
   parseLoadedDamageFormulaParts,
 } from '~ui/damage-formula';
+
+import {
+  normalizeCreatureDamageAlternatives,
+  parseLoadedCreatureDamageAlternatives,
+} from './damageAlternatives';
 
 /**
  * Тип атаки записи существа — словарь сайта. В VTTG он переводится в тип
@@ -85,6 +92,13 @@ export interface CreatureActionEffect {
   rangeNormal: number | undefined;
   rangeLong: number | undefined;
   damageParts: Array<DamageFormulaPart>;
+
+  /**
+   * Урон «или»: другие наборы частей, каждый заменяет основной урон целиком.
+   * См. `damageAlternatives.ts`.
+   */
+  damageAlternatives: Array<CreatureDamageAlternative>;
+
   savingThrows: Array<CreatureSavingThrow>;
   saveEffect: CreatureSaveEffect | undefined;
   areaOfEffect: CreatureAreaOfEffect;
@@ -113,6 +127,7 @@ export function createEmptyCreatureActionEffect(): CreatureActionEffect {
     rangeNormal: undefined,
     rangeLong: undefined,
     damageParts: [],
+    damageAlternatives: [],
     savingThrows: [],
     saveEffect: undefined,
     areaOfEffect: {
@@ -144,6 +159,7 @@ const loadedActionEffectSchema = z
     rangeNormal: z.number().nullish().catch(null),
     rangeLong: z.number().nullish().catch(null),
     damageParts: z.unknown().nullish().catch(null),
+    damageAlternatives: z.unknown().nullish().catch(null),
     savingThrows: z
       .array(
         z.object({
@@ -191,6 +207,9 @@ export function parseLoadedCreatureActionEffect(
     rangeNormal: parsed.rangeNormal ?? undefined,
     rangeLong: parsed.rangeLong ?? undefined,
     damageParts: parseLoadedDamageFormulaParts(parsed.damageParts),
+    damageAlternatives: parseLoadedCreatureDamageAlternatives(
+      parsed.damageAlternatives,
+    ),
     savingThrows: (parsed.savingThrows ?? []).map((save) => ({
       ability: ABILITY_KEYS.find((ability) => ability === save.ability),
       dc: save.dc ?? undefined,
@@ -298,6 +317,9 @@ export function normalizeCreatureActionEffect(
   return {
     ...effect,
     damageParts: normalizeDamageFormulaParts(effect.damageParts),
+    damageAlternatives: normalizeCreatureDamageAlternatives(
+      effect.damageAlternatives,
+    ),
     savingThrows: effect.savingThrows.filter(
       (save) => save.ability !== undefined,
     ),
@@ -332,6 +354,14 @@ export function getCreatureActionCombatFilledCount(
       || effect.rangeLong !== undefined,
     effect.savingThrows.some((save) => save.ability !== undefined),
     Boolean(effect.areaOfEffect.type),
-    effect.damageParts.some((part) => part.formula.trim().length > 0),
+    // Урон заведён, если формула есть у основного урона или у любого «или»
+    [
+      effect.damageParts,
+      ...effect.damageAlternatives.map(
+        (alternative) => alternative.damageParts,
+      ),
+    ].some((formulaParts) =>
+      formulaParts.some((part) => part.formula.trim().length > 0),
+    ),
   ].filter(Boolean).length;
 }

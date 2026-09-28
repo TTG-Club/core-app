@@ -193,7 +193,11 @@ import {
   EMPTY_MAGIC_ITEM_BONUSES,
   MAGIC_ITEM_BONUS_NONE,
 } from '~magic-items/model';
-import { DAMAGE_TYPE_LABELS } from '~ui/damage-formula';
+import {
+  DAMAGE_TYPE_LABELS,
+  describeDamageFormulaStatusToken,
+  readDamageFormulaStatusToken,
+} from '~ui/damage-formula';
 import {
   getNodeText,
   isBlockNode,
@@ -7804,11 +7808,17 @@ export function getSpellStatRows(spell: CharacterSpell): CustomSpellStatRow[] {
  */
 const SPELL_DAMAGE_VARIANT_SEPARATOR = ' + ';
 
-/** Тег формулы справочника: `@dmg.fire`, `@target.full`, `@mod.spell`. */
-const SPELL_FORMULA_TAG_PATTERN = /@[a-z]+(?:\.[a-z]+)*/gi;
+/**
+ * Тег формулы справочника: `@dmg.fire`, `@target.full`, `@mod.spell`,
+ * `@target.status.prone`. Тег состояния идёт первым: его ключ бывает с цифрами
+ * и дефисом, и общий шаблон оставил бы хвост ключа в костях.
+ */
+const SPELL_FORMULA_TAG_PATTERN =
+  /@(?:self|target)\.status\.[a-z0-9][a-z0-9-]*|@[a-z]+(?:\.[a-z]+)*/gi;
 
 /** Тег вместе с предшествующим плюсом — так его вырезают из формулы целиком. */
-const SPELL_FORMULA_TAG_WITH_SIGN_PATTERN = /\+?@[a-z]+(?:\.[a-z]+)*/gi;
+const SPELL_FORMULA_TAG_WITH_SIGN_PATTERN =
+  /\+?(?:@(?:self|target)\.status\.[a-z0-9][a-z0-9-]*|@[a-z]+(?:\.[a-z]+)*)/gi;
 
 /** Латинское и русское обозначение кости в формуле справочника (`8d6`). */
 const SPELL_FORMULA_DICE_LETTER_PATTERN = /(\d)[dд](\d)/gi;
@@ -7858,6 +7868,16 @@ function parseSpellDamageTags(formula: string): SpellDamageTags | null {
 
   for (const match of formula.matchAll(SPELL_FORMULA_TAG_PATTERN)) {
     const tag = match[0].slice(1);
+    const statusToken = readDamageFormulaStatusToken(match[0]);
+
+    // Состояние стороны — такое же условие формулы, как хиты цели
+    if (statusToken) {
+      tags.conditionLabel = upperFirst(
+        describeDamageFormulaStatusToken(statusToken),
+      );
+
+      continue;
+    }
 
     if (tag.startsWith(SPELL_DAMAGE_TYPE_TAG_PREFIX)) {
       tags.hasDamageType = true;
