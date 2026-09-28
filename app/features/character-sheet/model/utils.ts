@@ -194,9 +194,11 @@ import {
   MAGIC_ITEM_BONUS_NONE,
 } from '~magic-items/model';
 import {
+  DAMAGE_FORMULA_TYPE_CHOICE_TOKEN_SOURCE,
   DAMAGE_TYPE_LABELS,
   describeDamageFormulaStatusToken,
   readDamageFormulaStatusToken,
+  readDamageFormulaTypeChoices,
 } from '~ui/damage-formula';
 import {
   getNodeText,
@@ -7809,16 +7811,21 @@ export function getSpellStatRows(spell: CharacterSpell): CustomSpellStatRow[] {
 const SPELL_DAMAGE_VARIANT_SEPARATOR = ' + ';
 
 /**
- * Тег формулы справочника: `@dmg.fire`, `@target.full`, `@mod.spell`,
- * `@target.status.prone`. Тег состояния идёт первым: его ключ бывает с цифрами
- * и дефисом, и общий шаблон оставил бы хвост ключа в костях.
+ * Исходник шаблона тега формулы справочника: `@dmg.fire`, `@target.full`,
+ * `@mod.spell`, `@target.status.prone`, `@dmg.choice(acid,cold)`. Тип на выбор
+ * и тег состояния идут первыми: общий шаблон оставил бы в костях хвост списка
+ * типов или ключа состояния с цифрами и дефисом.
  */
-const SPELL_FORMULA_TAG_PATTERN =
-  /@(?:self|target)\.status\.[a-z0-9][a-z0-9-]*|@[a-z]+(?:\.[a-z]+)*/gi;
+const SPELL_FORMULA_TAG_SOURCE = `${DAMAGE_FORMULA_TYPE_CHOICE_TOKEN_SOURCE}|@(?:self|target)\\.status\\.[a-z0-9][a-z0-9-]*|@[a-z]+(?:\\.[a-z]+)*`;
+
+/** Тег формулы справочника. */
+const SPELL_FORMULA_TAG_PATTERN = new RegExp(SPELL_FORMULA_TAG_SOURCE, 'gi');
 
 /** Тег вместе с предшествующим плюсом — так его вырезают из формулы целиком. */
-const SPELL_FORMULA_TAG_WITH_SIGN_PATTERN =
-  /\+?(?:@(?:self|target)\.status\.[a-z0-9][a-z0-9-]*|@[a-z]+(?:\.[a-z]+)*)/gi;
+const SPELL_FORMULA_TAG_WITH_SIGN_PATTERN = new RegExp(
+  `\\+?(?:${SPELL_FORMULA_TAG_SOURCE})`,
+  'gi',
+);
 
 /** Латинское и русское обозначение кости в формуле справочника (`8d6`). */
 const SPELL_FORMULA_DICE_LETTER_PATTERN = /(\d)[dд](\d)/gi;
@@ -7851,6 +7858,28 @@ interface SpellDamageTags {
 }
 
 /**
+ * Теги типов урона одного тега формулы: у обычного тега — он сам, у типа на
+ * выбор (`@dmg.choice(acid,cold)`) — теги всех типов списка: урон идёт одним
+ * из них, и подписываются все, как у формулы с несколькими типами.
+ *
+ * @param token тег формулы целиком, с приставкой `@`.
+ * @returns теги типов урона (`dmg.acid`); null — тег не про тип урона.
+ */
+function getSpellDamageTypeTags(token: string): string[] | null {
+  const [typeChoice] = readDamageFormulaTypeChoices(token);
+
+  if (typeChoice) {
+    return typeChoice.damageTypes.map(
+      (damageType) => `${SPELL_DAMAGE_TYPE_TAG_PREFIX}${damageType}`,
+    );
+  }
+
+  const tag = token.slice(1);
+
+  return tag.startsWith(SPELL_DAMAGE_TYPE_TAG_PREFIX) ? [tag] : null;
+}
+
+/**
  * Разбор тегов одной формулы справочника. Незнакомый тег (лечение, чужой
  * модификатор) делает формулу непригодной: подставить его нечем, а выкинуть —
  * значит соврать в броске.
@@ -7869,6 +7898,7 @@ function parseSpellDamageTags(formula: string): SpellDamageTags | null {
   for (const match of formula.matchAll(SPELL_FORMULA_TAG_PATTERN)) {
     const tag = match[0].slice(1);
     const statusToken = readDamageFormulaStatusToken(match[0]);
+    const typeTags = getSpellDamageTypeTags(match[0]);
 
     // Состояние стороны — такое же условие формулы, как хиты цели
     if (statusToken) {
@@ -7879,13 +7909,15 @@ function parseSpellDamageTags(formula: string): SpellDamageTags | null {
       continue;
     }
 
-    if (tag.startsWith(SPELL_DAMAGE_TYPE_TAG_PREFIX)) {
+    if (typeTags) {
       tags.hasDamageType = true;
 
-      const typeLabel = SPELL_DAMAGE_TYPE_TAG_LABELS[tag];
+      for (const typeTag of typeTags) {
+        const typeLabel = SPELL_DAMAGE_TYPE_TAG_LABELS[typeTag];
 
-      if (typeLabel && !tags.typeLabels.includes(typeLabel)) {
-        tags.typeLabels.push(typeLabel);
+        if (typeLabel && !tags.typeLabels.includes(typeLabel)) {
+          tags.typeLabels.push(typeLabel);
+        }
       }
 
       continue;

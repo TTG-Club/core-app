@@ -6,3 +6,4 @@ export * from './formula';
 export * from './part';
 export * from './status';
 export * from './tools';
+export * from './type-choice';
