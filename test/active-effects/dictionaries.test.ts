@@ -19,10 +19,10 @@ import {
  * разошлись, показывает `node scripts/compare-effect-dictionaries.mjs`.
  */
 const SYSTEM_DICTIONARY_SIZES = {
-  version: '0.8.96',
+  version: '0.8.104',
   flags: 200,
   changeKeys: 64,
-  conditions: 96,
+  conditions: 98,
   values: 33,
 };
 
@@ -124,8 +124,8 @@ describe('словари эффектов', () => {
   });
 
   it('условия о союзнике рядом с целью — семейством, с распознаванием', () => {
-    // Дееспособный, в любом состоянии и по пятнадцати состояниям в двух видах
-    expect(ADJACENT_ALLY_CONDITION_OPTIONS).toHaveLength(32);
+    // Дееспособный, в любом состоянии и по шестнадцати состояниям в двух видах
+    expect(ADJACENT_ALLY_CONDITION_OPTIONS).toHaveLength(34);
 
     const conditions = EFFECT_CONDITION_EXPR_SUGGESTIONS.map(
       (suggestion) => suggestion.value,

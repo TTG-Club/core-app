@@ -4,3 +4,5 @@ export { default as DamagePartRow } from './DamagePartRow.vue';
 export { default as DamageParts } from './DamageParts.vue';
 export * from './formula';
 export * from './part';
+export * from './status';
+export * from './tools';

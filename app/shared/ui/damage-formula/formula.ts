@@ -163,8 +163,13 @@ export function getDamageFormulaTypes(formula: string): Array<string> {
     .filter((typeKey) => typeKey !== undefined);
 }
 
-/** Любой токен формулы — при разборе костей их отбрасываем. */
-const DAMAGE_FORMULA_TAG_PATTERN = /@[\w.]+/g;
+/**
+ * Любой токен формулы — при разборе костей их отбрасываем. Токен состояния
+ * идёт первым: его ключ бывает с дефисом (`@target.status.marked-k3j2x9`), и
+ * общий шаблон оставил бы хвост ключа в костях.
+ */
+const DAMAGE_FORMULA_TAG_PATTERN =
+  /@(?:self|target)\.status\.[a-z0-9][a-z0-9-]*|@[\w.]+/gi;
 
 /** Простой бросок: `2к6`, `1к8+1`, `1d10-1`. Кость — русская «к» или «d». */
 const DAMAGE_FORMULA_DICE_PATTERN =

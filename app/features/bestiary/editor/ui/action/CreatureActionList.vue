@@ -64,17 +64,21 @@
    * проверяет своё состояние, а не отрисованные поля, — и свёрнутая запись,
    * поля которой сняты с монтирования, всё равно проверяется при сохранении.
    */
+  const damagePartsSchema = z
+    .array(z.object({ formula: z.string() }))
+    .refine(
+      (parts) =>
+        parts.every(
+          (part) => !CREATURE_FORMULA_FORBIDDEN_TOKENS.test(part.formula),
+        ),
+      { message: CREATURE_FORMULA_ERROR },
+    );
+
+  // Формулы урона «или» — те же правила, что у основного урона
   const actionSchema = z.object({
     effect: z.object({
-      damageParts: z
-        .array(z.object({ formula: z.string() }))
-        .refine(
-          (parts) =>
-            parts.every(
-              (part) => !CREATURE_FORMULA_FORBIDDEN_TOKENS.test(part.formula),
-            ),
-          { message: CREATURE_FORMULA_ERROR },
-        ),
+      damageParts: damagePartsSchema,
+      damageAlternatives: z.array(z.object({ damageParts: damagePartsSchema })),
     }),
   });
 

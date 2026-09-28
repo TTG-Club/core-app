@@ -91,6 +91,7 @@ export type EffectAttackTrigger = 'carrierAttack' | 'attackOnCarrier';
 /** Ключ состояния D&D 5e (PHB 2024). */
 export type EffectConditionKey =
   | 'blinded'
+  | 'bloodied'
   | 'charmed'
   | 'deafened'
   | 'exhaustion'

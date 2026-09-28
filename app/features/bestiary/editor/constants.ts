@@ -1,11 +1,16 @@
 import type {
   CreatureActionListKey,
+  CreatureDamageCondition,
   CreatureInventorySection,
   CreatureSaveEffect,
   CreatureSpellRestKind,
 } from '../model';
 
-import { SpeedType } from '../model';
+import {
+  CREATURE_DAMAGE_CONDITION_LABELS,
+  CREATURE_DAMAGE_CONDITIONS,
+  SpeedType,
+} from '../model';
 
 export const CREATURE_IMAGE_SECTION_TITLE = 'Изображения';
 
@@ -273,6 +278,40 @@ export const CREATURE_ACTION_LABELS = {
 /** Текст на месте пустого списка частей урона записи. */
 export const CREATURE_DAMAGE_PART_EMPTY =
   'Урона нет. Добавь часть, если запись его наносит или лечит.';
+
+/** Подписи урона «или» — как в окне действия системы VTTG. */
+export const CREATURE_DAMAGE_ALTERNATIVE_LABELS = {
+  title: 'Или другой урон',
+  hint:
+    'Урон, который целиком заменяет основной. Состояние в формуле варианта '
+    + '(вкладки «Статусы цели» и «Статусы атакующего») делает его условием: '
+    + '«2к8@self.status.bloodied + 2» берётся сам, когда атакующий окровавлен. '
+    + 'Без состояний вариант выбирается при броске или случайно.',
+  add: 'Добавить «или»',
+  /** Слово над каждым вариантом. */
+  or: 'или',
+  condition: 'Как выбрать',
+  label: 'Подпись',
+  labelPlaceholder: 'Необязательно: «С преимуществом»',
+  remove: 'Убрать вариант',
+  /** «По формуле», а состояния в формуле ещё нет. */
+  formulaWithoutStatus:
+    'Добавьте состояние во вкладке «Статусы цели» или «Статусы атакующего» — '
+    + 'без него вариант не сработает.',
+  /** Состояние цели у действия с областью: одной цели там нет. */
+  areaTargetWarning:
+    'У действия с областью цель не одна — вариант с состоянием цели не '
+    + 'сработает.',
+} as const;
+
+/** Способы выбора варианта урона «или» для списка. */
+export const CREATURE_DAMAGE_CONDITION_OPTIONS: Array<{
+  label: string;
+  value: CreatureDamageCondition;
+}> = CREATURE_DAMAGE_CONDITIONS.map((condition) => ({
+  label: CREATURE_DAMAGE_CONDITION_LABELS[condition],
+  value: condition,
+}));
 
 /** Что происходит с уроном при успешном спасброске цели. */
 export const CREATURE_SAVE_EFFECT_OPTIONS: Array<{
