@@ -87,10 +87,10 @@ export function buildDamageFormulaTools(
     });
   }
 
-  formulaTools.push({
-    label: DAMAGE_FORMULA_LABELS.damageTypes,
-    slot: 'damageTypes',
-  });
+  formulaTools.push(
+    { label: DAMAGE_FORMULA_LABELS.damageTypes, slot: 'damageTypes' },
+    { label: DAMAGE_FORMULA_LABELS.typeChoice, slot: 'damageTypeChoice' },
+  );
 
   if (!visibility.hideHealing) {
     formulaTools.push({

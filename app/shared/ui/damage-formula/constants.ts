@@ -21,6 +21,7 @@ export type DamageFormulaToolSlot =
   | 'modifiers'
   | 'dice'
   | 'damageTypes'
+  | 'damageTypeChoice'
   | 'healing'
   | 'conditions'
   | 'statuses'
@@ -159,7 +160,35 @@ export const DAMAGE_FORMULA_LABELS = {
     + 'атакующий окровавлен. «Иначе другой урон» задаётся ниже, в «Или другой '
     + 'урон».',
   creatureTypes: 'Тип существ',
+  typeChoice: 'Тип на выбор',
+  typeChoicePlaceholder: 'Отметьте типы урона',
+  typeChoiceChoose: 'На выбор бросающего',
+  typeChoiceRandom: 'Случайно',
+  typeChoiceHint:
+    'Отметьте два типа или больше и нажмите способ — в формулу встанет один '
+    + 'тип из списка: «1к6@dmg.choice(fire,cold)» спросит бросающего, '
+    + '«1к6@dmg.random(fire,cold)» выберет случайно с равными шансами. '
+    + 'Несколько типов подряд («@dmg.fire@dmg.cold») — это урон всеми сразу.',
 } as const;
+
+/** Меньше двух типов у токена «на выбор» не бывает: выбирать не из чего. */
+export const DAMAGE_FORMULA_TYPE_CHOICE_MIN_OPTIONS = 2;
+
+/** Способ выбора типа урона: имя токена `@dmg.choice(…)` или `@dmg.random(…)`. */
+export type DamageFormulaTypeChoiceMode = 'choice' | 'random';
+
+/** Кнопка способа выбора типа урона. */
+interface DamageFormulaTypeChoiceButton {
+  label: string;
+  mode: DamageFormulaTypeChoiceMode;
+}
+
+/** Кнопки способа выбора типа: спросить бросающего или бросить случай. */
+export const DAMAGE_FORMULA_TYPE_CHOICE_BUTTONS: Array<DamageFormulaTypeChoiceButton> =
+  [
+    { label: DAMAGE_FORMULA_LABELS.typeChoiceChoose, mode: 'choice' },
+    { label: DAMAGE_FORMULA_LABELS.typeChoiceRandom, mode: 'random' },
+  ];
 
 /** Начало тега типа урона: `dmg.fire` — это `dmg.` и хвост типа. */
 export const DAMAGE_TYPE_TAG_PREFIX = 'dmg.';

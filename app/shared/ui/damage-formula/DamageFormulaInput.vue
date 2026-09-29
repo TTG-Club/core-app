@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { DamageFormulaTypeChoiceMode } from './constants';
+
   import {
     DAMAGE_FORMULA_CONDITION_TAGS,
     DAMAGE_FORMULA_CREATURE_TYPE_TAGS,
@@ -6,6 +8,8 @@
     DAMAGE_FORMULA_HEALING_TAGS,
     DAMAGE_FORMULA_LABELS,
     DAMAGE_FORMULA_MODIFIER_TAGS,
+    DAMAGE_FORMULA_TYPE_CHOICE_BUTTONS,
+    DAMAGE_FORMULA_TYPE_CHOICE_MIN_OPTIONS,
   } from './constants';
   import {
     buildDamageFormulaModifier,
@@ -14,6 +18,7 @@
     insertIntoDamageFormula,
   } from './formula';
   import { buildDamageFormulaTools } from './tools';
+  import { buildDamageFormulaTypeChoiceToken } from './type-choice';
 
   interface DamageTypeOption {
     /** Подпись типа урона. */
@@ -117,6 +122,32 @@
     return insertText(buildDamageFormulaModifier(model.value, modifier, start));
   }
 
+  /** Теги типов урона (`dmg.fire`), из которых собирается токен на выбор. */
+  const choiceTypeTags = ref<Array<string>>([]);
+
+  /** Токен на выбор имеет смысл от двух типов: из одного выбирать нечего. */
+  const canInsertTypeChoice = computed(
+    () => choiceTypeTags.value.length >= DAMAGE_FORMULA_TYPE_CHOICE_MIN_OPTIONS,
+  );
+
+  /**
+   * Вставляет токен типа урона на выбор (`@dmg.choice(…)`) или случайного
+   * (`@dmg.random(…)`) из отмеченных типов.
+   *
+   * @param mode способ выбора типа.
+   */
+  async function insertTypeChoice(mode: DamageFormulaTypeChoiceMode) {
+    const token = buildDamageFormulaTypeChoiceToken(
+      mode,
+      choiceTypeTags.value,
+      damageTypeOptions.map((damageType) => damageType.value),
+    );
+
+    if (token) {
+      await insertText(token);
+    }
+  }
+
   /**
    * Кость не вставляется по курсору: у неё своё правило — уже указанная кость
    * того же размера наращивается в количестве (`1к6` → `2к6`).
@@ -190,6 +221,41 @@
             :loading="damageTypesPending"
             @click.left.exact.prevent="insertTag(damageType.value)"
           />
+        </div>
+      </template>
+
+      <!-- Один тип из списка: несколько «@dmg.<тип>» подряд — это урон
+        всеми сразу, а токен на выбор бросает ровно один -->
+      <template #damageTypeChoice>
+        <div class="flex flex-col gap-2">
+          <div class="flex flex-wrap items-end gap-2">
+            <USelectMenu
+              v-model="choiceTypeTags"
+              :items="damageTypeOptions"
+              value-key="value"
+              label-key="label"
+              multiple
+              size="xs"
+              :loading="damageTypesPending"
+              :placeholder="DAMAGE_FORMULA_LABELS.typeChoicePlaceholder"
+              class="min-w-56 flex-1"
+            />
+
+            <UButton
+              v-for="choiceButton in DAMAGE_FORMULA_TYPE_CHOICE_BUTTONS"
+              :key="choiceButton.mode"
+              :label="choiceButton.label"
+              size="xs"
+              color="neutral"
+              variant="subtle"
+              :disabled="!canInsertTypeChoice"
+              @click.left.exact.prevent="insertTypeChoice(choiceButton.mode)"
+            />
+          </div>
+
+          <p class="text-xs text-muted">
+            {{ DAMAGE_FORMULA_LABELS.typeChoiceHint }}
+          </p>
         </div>
       </template>
 

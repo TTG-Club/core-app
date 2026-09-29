@@ -265,6 +265,13 @@ const activationSchema: z.ZodType<EffectActivation> = z.object({
     coerceOptionalNumber,
     z.number().int().min(DEFAULT_ACTIVATION_AMOUNT).optional(),
   ),
+  exclusive: z
+    .string()
+    .trim()
+    .min(1)
+    .max(MAX_ACTIVATION_COUNTER_LENGTH)
+    .optional()
+    .catch(undefined),
   // Битая дальность снимается одна, не унося всё применение
   range: z.preprocess(
     coerceOptionalNumber,

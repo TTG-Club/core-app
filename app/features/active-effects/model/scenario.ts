@@ -54,7 +54,7 @@ import {
 } from './triggerDescribe';
 import { listEffectListTriggers } from './triggers';
 import { LEGACY_TRIGGER_IDS } from './triggerTypes';
-import { DEFAULT_ACTIVATION_AMOUNT } from './types';
+import { DEFAULT_ACTIVATION_AMOUNT, isToggleActivatedEffect } from './types';
 
 /** Что состояние уже делает само: это сводка не перечисляет. */
 type ConditionPayload = Pick<
@@ -150,6 +150,20 @@ function describeActivationCounter(effect: ActiveEffect): string {
       : '';
 
   return `${EFFECT_SCENARIO_LABELS.counterPrefix}${counter}${EFFECT_SCENARIO_LABELS.counterSuffix}${amountText}`;
+}
+
+/**
+ * Имя включения переключателя: с ним копии «Ярости» горят по одной.
+ *
+ * @param effect эффект.
+ * @returns часть фразы либо пустая строка.
+ */
+function describeActivationExclusive(effect: ActiveEffect): string {
+  const exclusive = effect.activation?.exclusive;
+
+  return exclusive && isToggleActivatedEffect(effect)
+    ? `${EFFECT_SCENARIO_LABELS.exclusivePrefix}${exclusive}${EFFECT_SCENARIO_LABELS.exclusiveSuffix}`
+    : '';
 }
 
 /**
@@ -382,7 +396,7 @@ export function describeEffectScenario(
       : '';
 
   const counter = layout.showActivationCounter
-    ? describeActivationCounter(effect)
+    ? `${describeActivationCounter(effect)}${describeActivationExclusive(effect)}`
     : '';
 
   const rollCondition = effect.rollCondition

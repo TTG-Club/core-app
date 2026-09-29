@@ -31,9 +31,12 @@
     EFFECT_VARIANT_LABELS,
     EFFECT_VARIANT_PICK_OPTIONS,
     findAreaTrigger,
+    isToggleActivatedEffect,
     MIN_ACTIVATION_RANGE,
     MIN_EFFECT_AURA_RADIUS,
     resolveEffectDeliveryHint,
+    toDraftActivationExclusive,
+    writeEffectActivationMode,
     writeEffectAreaTrigger,
     writeEffectDelivery,
   } from '../../model';
@@ -79,10 +82,7 @@
     );
 
     if (mode) {
-      effect.value = {
-        ...effect.value,
-        activation: { ...effect.value.activation, mode },
-      };
+      effect.value = writeEffectActivationMode(effect.value, mode);
     }
   }
 
@@ -106,6 +106,19 @@
     get: () => effect.value.activation?.counter ?? '',
     set: (counter: string) => updateActivation({ counter }),
   });
+
+  const activationExclusive = computed({
+    get: () => effect.value.activation?.exclusive ?? '',
+    set: (exclusiveInput: string) =>
+      updateActivation({
+        exclusive: toDraftActivationExclusive(exclusiveInput),
+      }),
+  });
+
+  /** Имя включения — только у переключателя: применение ничего не держит. */
+  const showActivationExclusive = computed(
+    () => layout.showActivationCounter && isToggleActivatedEffect(effect.value),
+  );
 
   const activationAmount = computed({
     get: () => effect.value.activation?.amount ?? DEFAULT_ACTIVATION_AMOUNT,
@@ -357,6 +370,27 @@
         <UInputNumber
           v-model="activationAmount"
           :min="DEFAULT_ACTIVATION_AMOUNT"
+          size="sm"
+          class="w-full"
+        />
+      </UFormField>
+
+      <UFormField
+        v-if="showActivationExclusive"
+        class="w-full sm:w-56"
+      >
+        <template #label>
+          <InfoTooltip
+            :text="EFFECT_ACTIVATION_COUNTER_LABELS.exclusiveHint"
+            icon="tabler:info-circle-filled"
+          >
+            <span>{{ EFFECT_ACTIVATION_COUNTER_LABELS.exclusive }}</span>
+          </InfoTooltip>
+        </template>
+
+        <UInput
+          v-model="activationExclusive"
+          :placeholder="EFFECT_ACTIVATION_COUNTER_LABELS.exclusivePlaceholder"
           size="sm"
           class="w-full"
         />
