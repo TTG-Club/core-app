@@ -646,6 +646,21 @@ describe('применение и включение', () => {
     expect(rageLayout.minSaveDc).toBe(FIXED_MIN_SAVE_DC);
   });
 
+  it('переключаемое умение держит вариант: его выбирают при включении', () => {
+    const wildRage = createEffect({
+      activation: { mode: 'toggle' },
+      variant: { group: 'Ярость диких земель', label: 'Медведь' },
+    });
+
+    const wildRageLayout = resolveEffectFormLayout('feature', wildRage);
+
+    expect(wildRageLayout.showVariant).toBe(true);
+
+    expect(listInertEffectFields(wildRage, wildRageLayout)).not.toContain(
+      'variant',
+    );
+  });
+
   it('у применяемого предмета Сл своя: источника у зелья нет', () => {
     const poison = createEffect({
       effectTarget: 'target',

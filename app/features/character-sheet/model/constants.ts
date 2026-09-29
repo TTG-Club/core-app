@@ -4323,6 +4323,21 @@ export const SPELL_DAMAGE_ABILITY_MODIFIER_TAG = 'mod.spell';
 /** Разделитель типов урона одного броска («Кислотный/Холодный» — на выбор). */
 export const SPELL_DAMAGE_TYPE_SEPARATOR = '/';
 
+/**
+ * Начало подписи типа урона на выбор в подсказке плитки: «На выбор:
+ * Кислотный/Холодный», у случайного типа — «Случайно: …». Как в листе VTTG.
+ */
+export const SPELL_DAMAGE_TYPE_CHOICE_PREFIX = {
+  choice: 'На выбор: ',
+  random: 'Случайно: ',
+} as const;
+
+/**
+ * Значок плитки урона с выбором: формула в плитке одна, а варианты — в
+ * подсказке. Тот же, что у плитки урона с выбором в листе VTTG.
+ */
+export const DAMAGE_VARIANTS_STAT_ICON = 'tabler:arrows-split';
+
 /** Короткая подпись плитки урона заклинания — та же, что и у оружия. */
 export const SPELL_DAMAGE_STAT_LABEL = 'Урон';
 

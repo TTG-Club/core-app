@@ -161,6 +161,9 @@ export const DAMAGE_FORMULA_LABELS = {
   creatureTypes: 'Тип существ',
 } as const;
 
+/** Начало тега типа урона: `dmg.fire` — это `dmg.` и хвост типа. */
+export const DAMAGE_TYPE_TAG_PREFIX = 'dmg.';
+
 /**
  * Ключ типа урона справочника сайта → токен формулы VTTG. Справочник отдаёт
  * `FIRE`, а формуле нужен `dmg.fire`; перевод живёт здесь, у знающей оба
