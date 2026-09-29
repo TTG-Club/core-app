@@ -13,6 +13,7 @@ import {
 import {
   ACTIVATION_RANGE,
   AURA_RADIUS,
+  createEffect,
   createRawEffect,
   SAVE_DC,
   stripUndefinedKeys,
@@ -594,6 +595,60 @@ describe('дальность применения 0.8.87', () => {
     );
 
     expect(savedPermanent?.activation).toBeUndefined();
+  });
+});
+
+describe('одно включение 0.8.124', () => {
+  it('имя включения переключателя переживает «открыл и сохранил»', () => {
+    const storedEffect = createRawEffect({
+      activation: { mode: 'toggle', counter: 'rage', exclusive: 'Ярость' },
+    });
+
+    const savedEffects = normalizeActiveEffects(
+      normalizeLoadedActiveEffects([storedEffect]),
+      'feature',
+    );
+
+    expect(stripUndefinedKeys(savedEffects)).toEqual([storedEffect]);
+  });
+
+  it('у применения, пустое и слишком длинное имя не пишется', () => {
+    const rawActivations = [
+      { mode: 'use', counter: 'rage', exclusive: 'Ярость' },
+      { mode: 'toggle', counter: 'rage', exclusive: '   ' },
+      { mode: 'toggle', counter: 'rage', exclusive: 'Я'.repeat(101) },
+    ];
+
+    for (const activation of rawActivations) {
+      const [savedEffect] = normalizeActiveEffects(
+        normalizeLoadedActiveEffects([createRawEffect({ activation })]),
+        'feature',
+      );
+
+      expect(
+        savedEffect?.activation?.exclusive,
+        activation.mode,
+      ).toBeUndefined();
+    }
+  });
+
+  it('имя из формы пишется без пробелов по краям только у переключателя', () => {
+    const [savedToggle, savedUse] = normalizeActiveEffects(
+      [
+        createEffect({
+          id: 'toggle',
+          activation: { mode: 'toggle', exclusive: '  Ярость ' },
+        }),
+        createEffect({
+          id: 'use',
+          activation: { mode: 'use', exclusive: 'Ярость' },
+        }),
+      ],
+      'feature',
+    );
+
+    expect(savedToggle?.activation?.exclusive).toBe('Ярость');
+    expect(savedUse?.activation?.exclusive).toBeUndefined();
   });
 });
 

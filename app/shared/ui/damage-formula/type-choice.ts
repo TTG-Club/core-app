@@ -1,3 +1,11 @@
+import type { DamageFormulaTypeChoiceMode } from './constants';
+
+import {
+  DAMAGE_FORMULA_TAG_PREFIX,
+  DAMAGE_FORMULA_TYPE_CHOICE_MIN_OPTIONS,
+  DAMAGE_TYPE_TAG_PREFIX,
+} from './constants';
+
 /**
  * Тип урона на выбор в формуле: токены `@dmg.choice(acid,cold,fire)` и
  * `@dmg.random(acid,cold,fire)`. Бросающий выбирает один тип из списка перед
@@ -50,4 +58,28 @@ export function readDamageFormulaTypeChoices(
         .filter((damageType) => damageType.length > 0),
     }),
   );
+}
+
+/**
+ * Токен типа урона на выбор (`@dmg.choice(…)`) или случайного
+ * (`@dmg.random(…)`) из отмеченных типов. Типы идут в порядке справочника, а
+ * не отметки: один и тот же набор — один и тот же токен.
+ *
+ * @param mode способ выбора типа.
+ * @param pickedTags отмеченные теги типов урона (`dmg.fire`).
+ * @param orderedTags теги типов урона в порядке справочника.
+ * @returns токен либо `undefined`, если отмечено меньше двух известных типов.
+ */
+export function buildDamageFormulaTypeChoiceToken(
+  mode: DamageFormulaTypeChoiceMode,
+  pickedTags: ReadonlyArray<string>,
+  orderedTags: ReadonlyArray<string>,
+): string | undefined {
+  const damageTypes = orderedTags
+    .filter((tag) => pickedTags.includes(tag))
+    .map((tag) => tag.slice(DAMAGE_TYPE_TAG_PREFIX.length));
+
+  return damageTypes.length >= DAMAGE_FORMULA_TYPE_CHOICE_MIN_OPTIONS
+    ? `${DAMAGE_FORMULA_TAG_PREFIX}${DAMAGE_TYPE_TAG_PREFIX}${mode}(${damageTypes.join(DAMAGE_FORMULA_TYPE_CHOICE_LIST_SEPARATOR)})`
+    : undefined;
 }

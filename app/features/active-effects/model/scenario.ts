@@ -153,6 +153,20 @@ function describeActivationCounter(effect: ActiveEffect): string {
 }
 
 /**
+ * Имя включения переключателя: с ним копии «Ярости» горят по одной.
+ *
+ * @param effect эффект.
+ * @returns часть фразы либо пустая строка.
+ */
+function describeActivationExclusive(effect: ActiveEffect): string {
+  const { mode, exclusive } = effect.activation ?? {};
+
+  return exclusive && mode === 'toggle'
+    ? `${EFFECT_SCENARIO_LABELS.exclusivePrefix}${exclusive}${EFFECT_SCENARIO_LABELS.exclusiveSuffix}`
+    : '';
+}
+
+/**
  * Что делает состояние, которым эффект считается, — чтобы не перечислять то,
  * что уже сказано его названием: «Отравленный» и так значит помеху на атаки.
  * Берётся из шаблона: сводка пересобирается на каждое изменение и не должна
@@ -382,7 +396,7 @@ export function describeEffectScenario(
       : '';
 
   const counter = layout.showActivationCounter
-    ? describeActivationCounter(effect)
+    ? `${describeActivationCounter(effect)}${describeActivationExclusive(effect)}`
     : '';
 
   const rollCondition = effect.rollCondition

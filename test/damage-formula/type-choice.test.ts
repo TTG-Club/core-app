@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { getSpellDamage } from '~character-sheet/model';
 import {
+  buildDamageFormulaTypeChoiceToken,
   getDamageFormulaTypes,
   parseDamageFormulaDice,
   readDamageFormulaTypeChoices,
@@ -97,5 +98,42 @@ describe('тип урона на выбор в формуле', () => {
     ]);
 
     expect(fireDamage?.typeChoiceLabels).toEqual([]);
+  });
+});
+
+describe('кнопки типа урона на выбор', () => {
+  /** Теги типов урона в порядке справочника. */
+  const orderedTags = ['dmg.acid', 'dmg.cold', 'dmg.fire', 'dmg.force'];
+
+  it('собирает токен в порядке справочника, а не отметки', () => {
+    const pickedTags = ['dmg.fire', 'dmg.acid'];
+
+    expect(
+      buildDamageFormulaTypeChoiceToken('choice', pickedTags, orderedTags),
+    ).toBe('@dmg.choice(acid,fire)');
+
+    expect(
+      buildDamageFormulaTypeChoiceToken('random', pickedTags, orderedTags),
+    ).toBe('@dmg.random(acid,fire)');
+
+    expect(
+      readDamageFormulaTypeChoices(
+        `3к8${buildDamageFormulaTypeChoiceToken('random', pickedTags, orderedTags)}`,
+      ),
+    ).toEqual([{ random: true, damageTypes: ['acid', 'fire'] }]);
+  });
+
+  it('меньше двух известных типов — токена нет', () => {
+    expect(
+      buildDamageFormulaTypeChoiceToken('choice', ['dmg.fire'], orderedTags),
+    ).toBeUndefined();
+
+    expect(
+      buildDamageFormulaTypeChoiceToken(
+        'choice',
+        ['dmg.fire', 'dmg.unknown'],
+        orderedTags,
+      ),
+    ).toBeUndefined();
   });
 });

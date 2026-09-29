@@ -63,7 +63,8 @@
 
   /**
    * Меняет способ действия эффекта: «Постоянно» убирает применение, способ
-   * применения сохраняет уже заданный ресурс.
+   * применения сохраняет уже заданный ресурс. Имя включения живёт только у
+   * переключателя и при смене способа снимается.
    *
    * @param selectedChoice значение переключателя.
    */
@@ -81,7 +82,12 @@
     if (mode) {
       effect.value = {
         ...effect.value,
-        activation: { ...effect.value.activation, mode },
+        activation: {
+          ...effect.value.activation,
+          mode,
+          exclusive:
+            mode === 'toggle' ? effect.value.activation?.exclusive : undefined,
+        },
       };
     }
   }
@@ -106,6 +112,18 @@
     get: () => effect.value.activation?.counter ?? '',
     set: (counter: string) => updateActivation({ counter }),
   });
+
+  // Пустое поле — переключатель сам по себе: имя снимается, а не пишется ""
+  const activationExclusive = computed({
+    get: () => effect.value.activation?.exclusive ?? '',
+    set: (exclusive: string) =>
+      updateActivation({ exclusive: exclusive.trim() ? exclusive : undefined }),
+  });
+
+  /** Имя включения — только у переключателя: применение ничего не держит. */
+  const showActivationExclusive = computed(
+    () => layout.showActivationCounter && activationChoice.value === 'toggle',
+  );
 
   const activationAmount = computed({
     get: () => effect.value.activation?.amount ?? DEFAULT_ACTIVATION_AMOUNT,
@@ -357,6 +375,27 @@
         <UInputNumber
           v-model="activationAmount"
           :min="DEFAULT_ACTIVATION_AMOUNT"
+          size="sm"
+          class="w-full"
+        />
+      </UFormField>
+
+      <UFormField
+        v-if="showActivationExclusive"
+        class="w-full sm:w-56"
+      >
+        <template #label>
+          <InfoTooltip
+            :text="EFFECT_ACTIVATION_COUNTER_LABELS.exclusiveHint"
+            icon="tabler:info-circle-filled"
+          >
+            <span>{{ EFFECT_ACTIVATION_COUNTER_LABELS.exclusive }}</span>
+          </InfoTooltip>
+        </template>
+
+        <UInput
+          v-model="activationExclusive"
+          :placeholder="EFFECT_ACTIVATION_COUNTER_LABELS.exclusivePlaceholder"
           size="sm"
           class="w-full"
         />

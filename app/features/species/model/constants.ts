@@ -18,6 +18,12 @@ export const SPECIES_INNATE_SPELL_EDITOR = {
   characterLevelPlaceholder: 'С умения',
   minimumCharacterLevel: 1,
   maximumCharacterLevel: 20,
+  /** Та же отметка, что у группы выданных заклинаний класса и черты */
+  alwaysPrepared: 'Подготавливать не нужно',
+  alwaysPreparedHint:
+    'Врождённая магия вида: заклинания всегда подготовлены и не занимают '
+    + 'места в числе подготовленных класса. Снимите отметку, если особенность '
+    + 'только добавляет заклинания, которые нужно готовить.',
 };
 
 /**

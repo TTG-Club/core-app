@@ -693,7 +693,8 @@ function resolveContextDeliveries(
 /**
  * Применение или включение для записи: пустой счётчик не пишется, расход — от
  * единицы, а без счётчика расход не нужен. Дальность — только у применения и
- * от одного фута: меньше — касание, и поле не пишется.
+ * от одного фута: меньше — касание, и поле не пишется. Имя включения — только
+ * у переключателя и непустое.
  *
  * @param activation применение из черновика.
  * @returns применение либо `undefined`.
@@ -719,10 +720,17 @@ function normalizeDraftActivation(
     && range !== undefined
     && range >= MIN_ACTIVATION_RANGE;
 
+  // Одно включение — только у переключателя: применение ничего не держит
+  const exclusive =
+    activation.mode === 'toggle'
+      ? activation.exclusive?.trim() || undefined
+      : undefined;
+
   return {
     mode: activation.mode,
     counter,
     amount: counter && amount > DEFAULT_ACTIVATION_AMOUNT ? amount : undefined,
+    exclusive,
     range: hasRange ? Math.trunc(range) : undefined,
   };
 }

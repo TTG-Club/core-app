@@ -46,6 +46,7 @@ const featureSchema = z.object({
         url: z.string(),
         name: z.string().nullish(),
         requiredLevel: z.number().nullish(),
+        alwaysPrepared: z.boolean().nullish(),
       }),
     )
     .nullish(),
@@ -89,6 +90,7 @@ function parseFeature(raw: unknown): SpeciesFeatureCreate {
       url: spell.url,
       name: spell.name ?? undefined,
       requiredLevel: spell.requiredLevel ?? undefined,
+      alwaysPrepared: spell.alwaysPrepared ?? undefined,
     })),
     mechanics,
     activeEffects: normalizeLoadedActiveEffects(

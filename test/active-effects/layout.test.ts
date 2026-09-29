@@ -646,6 +646,24 @@ describe('применение и включение', () => {
     expect(rageLayout.minSaveDc).toBe(FIXED_MIN_SAVE_DC);
   });
 
+  it('сценарий переключателя называет одно включение, у применения — нет', () => {
+    const rage = createEffect({
+      activation: { mode: 'toggle', counter: 'rage', exclusive: 'Ярость' },
+    });
+
+    expect(describeEffectScenario(rage, 'feature')).toContain(
+      'одно включение «Ярость»',
+    );
+
+    const channel = createEffect({
+      activation: { mode: 'use', counter: 'rage', exclusive: 'Ярость' },
+    });
+
+    expect(describeEffectScenario(channel, 'feature')).not.toContain(
+      'одно включение',
+    );
+  });
+
   it('переключаемое умение держит вариант: его выбирают при включении', () => {
     const wildRage = createEffect({
       activation: { mode: 'toggle' },

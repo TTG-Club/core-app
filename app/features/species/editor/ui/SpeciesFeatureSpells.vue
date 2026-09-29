@@ -2,8 +2,13 @@
   import type { FeatGrantedSpellRef } from '~feats/model';
 
   import { FeatEntityRefRows } from '~feats/editor/ui';
+  import { InfoTooltip } from '~ui/tooltip';
 
-  import { SPECIES_INNATE_SPELL_EDITOR } from '../../model';
+  import {
+    readSpeciesSpellsAlwaysPrepared,
+    SPECIES_INNATE_SPELL_EDITOR,
+    writeSpeciesSpellsAlwaysPrepared,
+  } from '../../model';
 
   /**
    * Заклинания, которые даёт умение вида.
@@ -22,6 +27,21 @@
      */
     featureLevel: number | undefined;
   }>();
+
+  /**
+   * «Подготавливать не нужно» — одна отметка на всё умение, как у группы
+   * выданных заклинаний класса и черты. У вида по умолчанию стоит: врождённая
+   * магия подготовки не требует.
+   */
+  const alwaysPrepared = computed({
+    get: () => readSpeciesSpellsAlwaysPrepared(spells.value),
+    set: (checked: boolean | 'indeterminate') => {
+      spells.value = writeSpeciesSpellsAlwaysPrepared(
+        spells.value,
+        checked === true,
+      );
+    },
+  });
 
   /**
    * Уровень строки. Слот отдаёт ссылку из общего списка, поэтому уровень
@@ -53,6 +73,17 @@
 </script>
 
 <template>
+  <InfoTooltip
+    v-if="spells.length > 0"
+    :text="SPECIES_INNATE_SPELL_EDITOR.alwaysPreparedHint"
+    icon="tabler:info-circle-filled"
+  >
+    <UCheckbox
+      v-model="alwaysPrepared"
+      :label="SPECIES_INNATE_SPELL_EDITOR.alwaysPrepared"
+    />
+  </InfoTooltip>
+
   <FeatEntityRefRows
     v-model="spells"
     kind="SPELL"
