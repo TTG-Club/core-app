@@ -54,7 +54,7 @@ import {
 } from './triggerDescribe';
 import { listEffectListTriggers } from './triggers';
 import { LEGACY_TRIGGER_IDS } from './triggerTypes';
-import { DEFAULT_ACTIVATION_AMOUNT } from './types';
+import { DEFAULT_ACTIVATION_AMOUNT, isToggleActivatedEffect } from './types';
 
 /** Что состояние уже делает само: это сводка не перечисляет. */
 type ConditionPayload = Pick<
@@ -159,9 +159,9 @@ function describeActivationCounter(effect: ActiveEffect): string {
  * @returns часть фразы либо пустая строка.
  */
 function describeActivationExclusive(effect: ActiveEffect): string {
-  const { mode, exclusive } = effect.activation ?? {};
+  const exclusive = effect.activation?.exclusive;
 
-  return exclusive && mode === 'toggle'
+  return exclusive && isToggleActivatedEffect(effect)
     ? `${EFFECT_SCENARIO_LABELS.exclusivePrefix}${exclusive}${EFFECT_SCENARIO_LABELS.exclusiveSuffix}`
     : '';
 }

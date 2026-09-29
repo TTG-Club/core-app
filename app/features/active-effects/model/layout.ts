@@ -444,6 +444,41 @@ export function readEffectDelivery(
 }
 
 /**
+ * Меняет способ применения эффекта, сохраняя уже заданный ресурс. Имя
+ * включения живёт только у переключателя и при смене способа снимается.
+ *
+ * @param effect эффект.
+ * @param mode новый способ применения.
+ * @returns новый эффект.
+ */
+export function writeEffectActivationMode(
+  effect: ActiveEffect,
+  mode: EffectActivationMode,
+): ActiveEffect {
+  const exclusive =
+    mode === 'toggle' ? effect.activation?.exclusive : undefined;
+
+  return {
+    ...effect,
+    activation: { ...effect.activation, mode, exclusive },
+  };
+}
+
+/**
+ * Имя включения из поля формы: пустое поле — переключатель сам по себе, и
+ * имя снимается, а не пишется пустой строкой. Пробелы по краям срезает
+ * запись, а не ввод — иначе пробел между словами пропадал бы на лету.
+ *
+ * @param exclusiveInput текст поля «Одно включение».
+ * @returns имя включения либо `undefined`.
+ */
+export function toDraftActivationExclusive(
+  exclusiveInput: string,
+): string | undefined {
+  return exclusiveInput.trim() ? exclusiveInput : undefined;
+}
+
+/**
  * Меняет доставку эффекта. Аура и цель атаки взаимоисключающие: аура
  * излучается носителем, а эффект «на цели» ложится на того, по кому попали.
  *

@@ -162,6 +162,8 @@ export const DAMAGE_FORMULA_LABELS = {
   creatureTypes: 'Тип существ',
   typeChoice: 'Тип на выбор',
   typeChoicePlaceholder: 'Отметьте типы урона',
+  typeChoiceChoose: 'На выбор бросающего',
+  typeChoiceRandom: 'Случайно',
   typeChoiceHint:
     'Отметьте два типа или больше и нажмите способ — в формулу встанет один '
     + 'тип из списка: «1к6@dmg.choice(fire,cold)» спросит бросающего, '
@@ -175,14 +177,18 @@ export const DAMAGE_FORMULA_TYPE_CHOICE_MIN_OPTIONS = 2;
 /** Способ выбора типа урона: имя токена `@dmg.choice(…)` или `@dmg.random(…)`. */
 export type DamageFormulaTypeChoiceMode = 'choice' | 'random';
 
-/** Кнопки способа выбора типа: спросить бросающего или бросить случай. */
-export const DAMAGE_FORMULA_TYPE_CHOICE_BUTTONS: Array<{
+/** Кнопка способа выбора типа урона. */
+interface DamageFormulaTypeChoiceButton {
   label: string;
   mode: DamageFormulaTypeChoiceMode;
-}> = [
-  { label: 'На выбор бросающего', mode: 'choice' },
-  { label: 'Случайно', mode: 'random' },
-];
+}
+
+/** Кнопки способа выбора типа: спросить бросающего или бросить случай. */
+export const DAMAGE_FORMULA_TYPE_CHOICE_BUTTONS: Array<DamageFormulaTypeChoiceButton> =
+  [
+    { label: DAMAGE_FORMULA_LABELS.typeChoiceChoose, mode: 'choice' },
+    { label: DAMAGE_FORMULA_LABELS.typeChoiceRandom, mode: 'random' },
+  ];
 
 /** Начало тега типа урона: `dmg.fire` — это `dmg.` и хвост типа. */
 export const DAMAGE_TYPE_TAG_PREFIX = 'dmg.';

@@ -31,9 +31,12 @@
     EFFECT_VARIANT_LABELS,
     EFFECT_VARIANT_PICK_OPTIONS,
     findAreaTrigger,
+    isToggleActivatedEffect,
     MIN_ACTIVATION_RANGE,
     MIN_EFFECT_AURA_RADIUS,
     resolveEffectDeliveryHint,
+    toDraftActivationExclusive,
+    writeEffectActivationMode,
     writeEffectAreaTrigger,
     writeEffectDelivery,
   } from '../../model';
@@ -63,8 +66,7 @@
 
   /**
    * Меняет способ действия эффекта: «Постоянно» убирает применение, способ
-   * применения сохраняет уже заданный ресурс. Имя включения живёт только у
-   * переключателя и при смене способа снимается.
+   * применения сохраняет уже заданный ресурс.
    *
    * @param selectedChoice значение переключателя.
    */
@@ -80,15 +82,7 @@
     );
 
     if (mode) {
-      effect.value = {
-        ...effect.value,
-        activation: {
-          ...effect.value.activation,
-          mode,
-          exclusive:
-            mode === 'toggle' ? effect.value.activation?.exclusive : undefined,
-        },
-      };
+      effect.value = writeEffectActivationMode(effect.value, mode);
     }
   }
 
@@ -113,16 +107,17 @@
     set: (counter: string) => updateActivation({ counter }),
   });
 
-  // Пустое поле — переключатель сам по себе: имя снимается, а не пишется ""
   const activationExclusive = computed({
     get: () => effect.value.activation?.exclusive ?? '',
-    set: (exclusive: string) =>
-      updateActivation({ exclusive: exclusive.trim() ? exclusive : undefined }),
+    set: (exclusiveInput: string) =>
+      updateActivation({
+        exclusive: toDraftActivationExclusive(exclusiveInput),
+      }),
   });
 
   /** Имя включения — только у переключателя: применение ничего не держит. */
   const showActivationExclusive = computed(
-    () => layout.showActivationCounter && activationChoice.value === 'toggle',
+    () => layout.showActivationCounter && isToggleActivatedEffect(effect.value),
   );
 
   const activationAmount = computed({

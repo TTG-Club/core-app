@@ -242,14 +242,14 @@
             />
 
             <UButton
-              v-for="button in DAMAGE_FORMULA_TYPE_CHOICE_BUTTONS"
-              :key="button.mode"
-              :label="button.label"
+              v-for="choiceButton in DAMAGE_FORMULA_TYPE_CHOICE_BUTTONS"
+              :key="choiceButton.mode"
+              :label="choiceButton.label"
               size="xs"
               color="neutral"
               variant="subtle"
               :disabled="!canInsertTypeChoice"
-              @click.left.exact.prevent="insertTypeChoice(button.mode)"
+              @click.left.exact.prevent="insertTypeChoice(choiceButton.mode)"
             />
           </div>
 

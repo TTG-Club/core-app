@@ -8,6 +8,8 @@ import {
   FIXED_MIN_SAVE_DC,
   normalizeActiveEffects,
   normalizeLoadedActiveEffects,
+  toDraftActivationExclusive,
+  writeEffectActivationMode,
 } from '~active-effects/model';
 
 import {
@@ -19,6 +21,9 @@ import {
   stripUndefinedKeys,
   TYPED_SAVE_DC,
 } from './fixtures';
+
+/** Имя включения длиннее предела в 100 знаков: схема его отбрасывает. */
+const TOO_LONG_ACTIVATION_EXCLUSIVE = 'Ярость'.repeat(20);
 
 describe('терпимая загрузка эффектов', () => {
   it('эффект без id или с changes не той формы выпадает, соседний остаётся', () => {
@@ -616,7 +621,11 @@ describe('одно включение 0.8.124', () => {
     const rawActivations = [
       { mode: 'use', counter: 'rage', exclusive: 'Ярость' },
       { mode: 'toggle', counter: 'rage', exclusive: '   ' },
-      { mode: 'toggle', counter: 'rage', exclusive: 'Я'.repeat(101) },
+      {
+        mode: 'toggle',
+        counter: 'rage',
+        exclusive: TOO_LONG_ACTIVATION_EXCLUSIVE,
+      },
     ];
 
     for (const activation of rawActivations) {
@@ -649,6 +658,28 @@ describe('одно включение 0.8.124', () => {
 
     expect(savedToggle?.activation?.exclusive).toBe('Ярость');
     expect(savedUse?.activation?.exclusive).toBeUndefined();
+  });
+
+  it('поле формы: пустое снимает имя, пробел между словами остаётся', () => {
+    expect(toDraftActivationExclusive('   ')).toBeUndefined();
+    expect(toDraftActivationExclusive('Гнев ')).toBe('Гнев ');
+  });
+
+  it('смена способа снимает имя включения, ресурс остаётся', () => {
+    const rage = createEffect({
+      activation: { mode: 'toggle', counter: 'rage', exclusive: 'Ярость' },
+    });
+
+    const usedRage = writeEffectActivationMode(rage, 'use');
+
+    expect(stripUndefinedKeys(usedRage.activation)).toEqual({
+      mode: 'use',
+      counter: 'rage',
+    });
+
+    expect(
+      writeEffectActivationMode(rage, 'toggle').activation?.exclusive,
+    ).toBe('Ярость');
   });
 });
 

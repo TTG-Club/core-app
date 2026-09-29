@@ -1,5 +1,7 @@
 import type { FeatEditorLabelOverrides } from '~feats/model';
 
+import { FEAT_EDITOR_LABELS } from '~feats/model';
+
 /**
  * Подписи заклинаний умения.
  *
@@ -19,7 +21,7 @@ export const SPECIES_INNATE_SPELL_EDITOR = {
   minimumCharacterLevel: 1,
   maximumCharacterLevel: 20,
   /** Та же отметка, что у группы выданных заклинаний класса и черты */
-  alwaysPrepared: 'Подготавливать не нужно',
+  alwaysPrepared: FEAT_EDITOR_LABELS.alwaysPrepared,
   alwaysPreparedHint:
     'Врождённая магия вида: заклинания всегда подготовлены и не занимают '
     + 'места в числе подготовленных класса. Снимите отметку, если особенность '

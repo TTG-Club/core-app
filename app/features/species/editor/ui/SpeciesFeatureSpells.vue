@@ -28,6 +28,9 @@
     featureLevel: number | undefined;
   }>();
 
+  /** Отметка подготовки нужна, только когда умение что-то выдаёт. */
+  const hasSpells = computed(() => spells.value.length > 0);
+
   /**
    * «Подготавливать не нужно» — одна отметка на всё умение, как у группы
    * выданных заклинаний класса и черты. У вида по умолчанию стоит: врождённая
@@ -74,7 +77,7 @@
 
 <template>
   <InfoTooltip
-    v-if="spells.length > 0"
+    v-if="hasSpells"
     :text="SPECIES_INNATE_SPELL_EDITOR.alwaysPreparedHint"
     icon="tabler:info-circle-filled"
   >
