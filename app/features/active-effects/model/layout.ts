@@ -853,7 +853,9 @@ export function resolveEffectFormLayout(
       || isOneShot
       || isUsed
       || (delivery === 'carrier' && LANDING_CARRIER_CONTEXTS.has(context)),
-    showVariant: isGeneric || isUsed || VARIANT_CONTEXTS.has(context),
+    // Варианты переключателя выбирают при включении («Ярость диких земель»)
+    showVariant:
+      isGeneric || isUsed || isToggled || VARIANT_CONTEXTS.has(context),
     activationModes,
     showActivationCounter:
       effect.activation !== undefined
