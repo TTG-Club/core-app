@@ -448,6 +448,7 @@ import {
   SPELL_CASTING_TEXT_PATTERNS,
   SPELL_DAMAGE_ABILITY_MODIFIER_TAG,
   SPELL_DAMAGE_CONDITION_TAG_LABELS,
+  SPELL_DAMAGE_TYPE_CHOICE_PREFIX,
   SPELL_DAMAGE_TYPE_SEPARATOR,
   SPELL_DAMAGE_TYPE_TAG_LABELS,
   SPELL_DAMAGE_TYPE_TAG_PREFIX,
@@ -7847,6 +7848,9 @@ interface SpellDamageTags {
   /** Названия типов урона в порядке появления; пусто — тип не распознан. */
   typeLabels: string[];
 
+  /** Подписи типов урона на выбор: «На выбор: Кислотный/Холодный». */
+  typeChoiceLabels: string[];
+
   /** Формула помечена тегом типа урона (а не лечения). */
   hasDamageType: boolean;
 
@@ -7880,6 +7884,34 @@ function getSpellDamageTypeTags(token: string): string[] | null {
 }
 
 /**
+ * Подпись типа урона на выбор для подсказки плитки: «На выбор:
+ * Кислотный/Холодный» или «Случайно: …» — как в листе VTTG.
+ *
+ * @param token тег формулы целиком, с приставкой `@`.
+ * @returns подпись; '' — тег не про тип на выбор.
+ */
+function getSpellDamageTypeChoiceLabel(token: string): string {
+  const [typeChoice] = readDamageFormulaTypeChoices(token);
+
+  if (!typeChoice) {
+    return '';
+  }
+
+  const prefix = typeChoice.random
+    ? SPELL_DAMAGE_TYPE_CHOICE_PREFIX.random
+    : SPELL_DAMAGE_TYPE_CHOICE_PREFIX.choice;
+
+  const typeLabels = typeChoice.damageTypes.map(
+    (damageType) =>
+      SPELL_DAMAGE_TYPE_TAG_LABELS[
+        `${SPELL_DAMAGE_TYPE_TAG_PREFIX}${damageType}`
+      ] ?? damageType,
+  );
+
+  return `${prefix}${typeLabels.join(SPELL_DAMAGE_TYPE_SEPARATOR)}`;
+}
+
+/**
  * Разбор тегов одной формулы справочника. Незнакомый тег (лечение, чужой
  * модификатор) делает формулу непригодной: подставить его нечем, а выкинуть —
  * значит соврать в броске.
@@ -7890,6 +7922,7 @@ function getSpellDamageTypeTags(token: string): string[] | null {
 function parseSpellDamageTags(formula: string): SpellDamageTags | null {
   const tags: SpellDamageTags = {
     typeLabels: [],
+    typeChoiceLabels: [],
     hasDamageType: false,
     conditionLabel: '',
     abilityModifierCount: 0,
@@ -7899,6 +7932,7 @@ function parseSpellDamageTags(formula: string): SpellDamageTags | null {
     const tag = match[0].slice(1);
     const statusToken = readDamageFormulaStatusToken(match[0]);
     const typeTags = getSpellDamageTypeTags(match[0]);
+    const typeChoiceLabel = getSpellDamageTypeChoiceLabel(match[0]);
 
     // Состояние стороны — такое же условие формулы, как хиты цели
     if (statusToken) {
@@ -7911,6 +7945,10 @@ function parseSpellDamageTags(formula: string): SpellDamageTags | null {
 
     if (typeTags) {
       tags.hasDamageType = true;
+
+      if (typeChoiceLabel) {
+        tags.typeChoiceLabels.push(typeChoiceLabel);
+      }
 
       for (const typeTag of typeTags) {
         const typeLabel = SPELL_DAMAGE_TYPE_TAG_LABELS[typeTag];
@@ -8043,6 +8081,7 @@ export function getSpellDamage(
         diceNotation,
         abilityModifierCount: tags.abilityModifierCount,
         typeLabel: tags.typeLabels.join(SPELL_DAMAGE_TYPE_SEPARATOR),
+        typeChoiceLabels: tags.typeChoiceLabels,
         conditionLabel: tags.conditionLabel,
       };
     })

@@ -68,4 +68,34 @@ describe('тип урона на выбор в формуле', () => {
     expect(holyStarDamage?.formula).toBe('4к10+4');
     expect(holyStarDamage?.typeLabel.split('/')).toHaveLength(2);
   });
+
+  it('подсказка листа называет тип на выбор, как лист VTTG', () => {
+    const [chromaticOrbDamage] = getSpellDamage(
+      { base: [CHROMATIC_ORB_FORMULA], cantripTiers: [] },
+      0,
+      1,
+    );
+
+    const [holyStarDamage] = getSpellDamage(
+      { base: [RANDOM_TYPE_FORMULA], cantripTiers: [] },
+      0,
+      1,
+    );
+
+    const [fireDamage] = getSpellDamage(
+      { base: ['8к6@dmg.fire'], cantripTiers: [] },
+      0,
+      1,
+    );
+
+    expect(chromaticOrbDamage?.typeChoiceLabels).toEqual([
+      `На выбор: ${chromaticOrbDamage?.typeLabel}`,
+    ]);
+
+    expect(holyStarDamage?.typeChoiceLabels).toEqual([
+      `Случайно: ${holyStarDamage?.typeLabel}`,
+    ]);
+
+    expect(fireDamage?.typeChoiceLabels).toEqual([]);
+  });
 });

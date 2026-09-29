@@ -24,6 +24,7 @@
     CANTRIP_SPELL_LEVEL,
     CLASS_SPELL_BADGE,
     CUSTOM_SPELL_BADGE_HINT,
+    DAMAGE_VARIANTS_STAT_ICON,
     getFilterChipClass,
     getGrantedCantripUrls,
     getInnateSpellMenuItems,
@@ -539,7 +540,10 @@
     return getDamage(spell.url).map((damage, damageIndex) => {
       const tooltipParts = [damage.formula];
 
-      if (damage.typeLabel) {
+      // Тип на выбор в плитке не пишется: там значок, а список — в подсказке
+      if (damage.typeChoiceLabels.length) {
+        tooltipParts.push(...damage.typeChoiceLabels);
+      } else if (damage.typeLabel) {
         tooltipParts.push(damage.typeLabel);
       }
 
@@ -556,6 +560,9 @@
       return {
         key: `${spell.url}:${damageIndex}`,
         formula: damage.formula,
+        icon: damage.typeChoiceLabels.length
+          ? DAMAGE_VARIANTS_STAT_ICON
+          : undefined,
         // Всё, что нужно окну настройки: кости и число вхождений модификатора
         // приходят из справочника, характеристика — из листа. Круг едет здесь
         // же: бросок урона считается накладыванием и занимает ячейку.
@@ -1333,8 +1340,16 @@
                   :aria-label="damageStat.ariaLabel"
                   @click.left.exact.prevent="handleDamageRoll(damageStat)"
                 >
-                  <span class="text-xs font-bold text-primary">
+                  <span
+                    class="flex items-center gap-0.5 text-xs font-bold text-primary"
+                  >
                     {{ damageStat.formula }}
+
+                    <UIcon
+                      v-if="damageStat.icon"
+                      :name="damageStat.icon"
+                      class="size-3"
+                    />
                   </span>
 
                   <span class="text-[9px] text-primary/80 uppercase">
