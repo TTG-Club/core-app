@@ -17,6 +17,7 @@
 
 import type { EffectChangeStepPeriod } from './changeSteps';
 import type { EffectChangeModeChoice } from './changeSubtract';
+import type { CreatureTypeConditionSubject } from './creatureTypeCondition';
 import type {
   EffectDelivery,
   EffectFormContext,
@@ -68,11 +69,15 @@ import type {
   EffectEscapeActor,
   EffectEscapeOutcome,
   EffectHealKind,
+  EffectLight,
+  EffectLightAnimation,
   EffectSaveOutcome,
+  EffectSaveOverride,
   EffectSaveTiming,
   EffectTurnAnchor,
   EffectTurnTiming,
   EffectVariantPick,
+  SaveOverridePeriod,
   WeaponOverrideKey,
 } from './types';
 
@@ -86,7 +91,7 @@ import {
 } from './triggerTypes';
 
 /** Версия системы dnd5e-2024, с которой снят порт справочников и подписей. */
-export const EFFECT_SYSTEM_VERSION = '0.8.104';
+export const EFFECT_SYSTEM_VERSION = '0.8.139';
 
 /** Язык сортировки пунктов меню «Готовые»: навыки ищут по русскому названию. */
 export const EFFECT_MENU_SORT_LOCALE = 'ru';
@@ -601,6 +606,10 @@ export const EFFECT_VALUE_SUGGESTIONS: Array<Option<string>> = [
     value: '@classLevel',
     label: 'Уровень в классе умения (@classLevel; у своего эффекта — общий)',
   },
+  {
+    value: '@castLevel',
+    label: 'Круг ячейки (@castLevel; только у эффекта заклинания)',
+  },
 
   // Кость к броску: катается в самом броске атаки, спасброска, проверки или
   // навыка. Вычитается той же строкой со знаком минус — отдельной подсказки
@@ -628,6 +637,11 @@ export const EFFECT_VALUE_SUGGESTIONS: Array<Option<string>> = [
   { value: '1к6@dmg.bludgeoning', label: 'Урон: Дробящий' },
   { value: '1к6@dmg.piercing', label: 'Урон: Колющий' },
   { value: '1к6@dmg.slashing', label: 'Урон: Рубящий' },
+  {
+    value: '1к6@dmg.choice(fire,cold)',
+    label: 'Урон: тип на выбор бросающего',
+  },
+  { value: '1к6@dmg.random(fire,cold)', label: 'Урон: случайный тип' },
 
   // Лечение
   { value: '1к8@heal', label: 'Лечение (1к8)' },
@@ -643,6 +657,14 @@ export const EFFECT_CARRIER_TYPE_CONDITION_PREFIX = 'self.creatureType === ';
 
 /** Приставка условий по типу ЦЕЛИ. */
 export const EFFECT_TARGET_TYPE_CONDITION_PREFIX = 'target.creatureType === ';
+
+/** Приставка условий «носитель не из списка типов». */
+export const EFFECT_CARRIER_TYPE_NOT_CONDITION_PREFIX =
+  'self.creatureType !== ';
+
+/** Приставка условий «цель не из списка типов». */
+export const EFFECT_TARGET_TYPE_NOT_CONDITION_PREFIX =
+  'target.creatureType !== ';
 
 /**
  * Разделитель условий, соединённых «и»: `self.armor === "none" && ...`.
@@ -1164,6 +1186,23 @@ export const EFFECT_FLAG_LABELS: Record<string, string> = Object.fromEntries([
     'Метка наложившего: его условие «цель помечена мной» (Метка охотника, Сглаз)',
   ],
   ['incapacitated', 'Недееспособный (нет действий и реакций)'],
+
+  // Ограничения действий
+  ['actions.noReaction', 'Не может совершать реакции'],
+  ['actions.noBonusAction', 'Не может совершать бонусные действия'],
+  [
+    'actions.oneActionOrBonus',
+    'За ход — действие или бонусное действие, не оба (Замедление)',
+  ],
+  ['spellcasting.blocked', 'Не может накладывать заклинания'],
+  [
+    'spellcasting.noVerbal',
+    'Не может накладывать заклинания с вербальным компонентом',
+  ],
+  [
+    'concentration.blocked',
+    'Не может концентрироваться (текущая концентрация прерывается)',
+  ],
   ['initiative.advantage', 'Преимущество на бросок инициативы'],
   ['initiative.disadvantage', 'Помеха на бросок инициативы'],
   [
@@ -1487,8 +1526,57 @@ export const EFFECT_PHRASE_PARTS = {
   feetSuffix: ' фт',
   listJoiner: ', ',
   andJoiner: ' и ',
+  orJoiner: ' или ',
+  notPrefix: 'не ',
   clauseJoiner: '; ',
+  saveDcPrefix: 'Сл ',
 } as const;
+
+/** Фразы света эффекта: «излучает яркий свет 20 фт и тусклый ещё 20 фт». */
+export const EFFECT_LIGHT_PHRASES = {
+  prefix: 'излучает ',
+  bright: (feet: number) => `яркий свет ${feet} фт`,
+  dim: (feet: number) => `тусклый ${feet} фт`,
+  dimBeyond: (feet: number) => `тусклый ещё ${feet} фт`,
+} as const;
+
+/** Фразы «провала в успех». */
+export const EFFECT_SAVE_OVERRIDE_PHRASES = {
+  head: 'провал спасброска — вместо этого успех',
+  counter: (counter: string) => ` за ресурс «${counter}»`,
+  limit: (times: string, restLabel: string) =>
+    `, ${times} до ${restLabel} отдыха`,
+} as const;
+
+/** Формы слова «раз» после числа. */
+export const EFFECT_SAVE_OVERRIDE_TIMES_FORMS: [string, string, string] = [
+  'раз',
+  'раза',
+  'раз',
+];
+
+/** Период своего счётчика «провал в успех» — родительным падежом. */
+export const EFFECT_SAVE_OVERRIDE_PERIOD_PHRASES: Record<
+  SaveOverridePeriod,
+  string
+> = {
+  shortRest: 'короткого',
+  longRest: 'долгого',
+};
+
+/** Кто назван в подписи условия по типу существа. */
+export const EFFECT_CREATURE_TYPE_SUBJECT_LABELS: Record<
+  CreatureTypeConditionSubject,
+  string
+> = {
+  'self.creatureType': 'Носитель',
+  'target.creatureType': 'Цель',
+  'incoming.attackerCreatureType': 'Защита: атакующий',
+  'source.creatureType': 'Источник спасброска',
+};
+
+/** Разделитель субъекта и типов в подписи условия: «Цель — Нежить». */
+export const EFFECT_CREATURE_TYPE_SUBJECT_SEPARATOR = ' — ';
 
 /** Что даёт успешный спасбросок против урона каждый ход — в описании эффекта. */
 export const EFFECT_RECURRING_DAMAGE_SAVE_SUCCESS_LABELS: Record<
@@ -1684,7 +1772,6 @@ export const EFFECT_TRIGGER_PHRASE_PARTS = {
   notifyPrefix: 'сообщение ',
   nextStage: 'эффект переходит на следующую ступень',
   endCast: 'каст заканчивается',
-  dcFormulaPrefix: 'Сл = ',
   damageVariable: 'урон',
   pathStepPrefix: 'за каждые ',
   pathStepSuffix: ' фт пути',
@@ -1797,11 +1884,14 @@ export const EFFECT_TRIGGER_CONDITION_PHRASES: Record<
   selfBloodied: () => 'у носителя не больше половины хитов',
   selfWounded: () => 'носитель ранен',
   selfCreatureType: (creatureTypeLabel) => `носитель — ${creatureTypeLabel}`,
+  selfCreatureTypeNot: (creatureTypeLabel) => `носитель — ${creatureTypeLabel}`,
   selfTag: (tag) => `на носителе отметка «${tag}»`,
   selfTagNot: (tag) => `на носителе нет отметки «${tag}»`,
   rollAdvantage: () => 'атака с преимуществом',
   rollDisadvantage: () => 'атака с помехой',
   otherCreatureType: (creatureTypeLabel) =>
+    `другая сторона — ${creatureTypeLabel}`,
+  otherCreatureTypeNot: (creatureTypeLabel) =>
     `другая сторона — ${creatureTypeLabel}`,
   otherMarkedBySelf: () => 'другая сторона помечена носителем',
   selfHpAtMost: (hitPoints) => `у носителя не больше ${hitPoints} хитов`,
@@ -2307,15 +2397,33 @@ export const EFFECT_SCENARIO_APPLIER_DC_LABELS: Partial<
   weapon: EFFECT_APPLIER_DC_SHORT_LABELS.weapon,
 };
 
-/** Режим поля Сл: подставить Сл источника или задать своё число. */
-export type SaveDcFieldMode = 'auto' | 'manual';
+/**
+ * Режим поля Сл: подставить Сл источника, задать своё число или формулу по
+ * владельцу эффекта.
+ */
+export type SaveDcFieldMode = 'auto' | 'manual' | 'formula';
 
 /** Подписи режимов поля Сл. */
 export const EFFECT_SAVE_DC_FIELD_MODE_LABELS: Record<SaveDcFieldMode, string> =
   {
     auto: 'Авто',
     manual: 'Вручную',
+    formula: 'Формулой',
   };
+
+/** Подписи поля Сл формулой. */
+export const EFFECT_SAVE_DC_FORMULA_LABELS = {
+  placeholder: '8 + @prof + @mod.str',
+  hint:
+    'По владельцу эффекта: @prof, @mod.str … @mod.cha, @spellDc — Сл его '
+    + 'заклинаний. Кому эффект достаётся, числа не меняет.',
+  damageHint: ' @damage — урон события.',
+} as const;
+
+/** Ошибки поля Сл формулой. */
+export const EFFECT_SAVE_DC_FORMULA_ERRORS = {
+  damageOutsideEvent: '@damage есть только у события урона',
+} as const;
 
 /** Разделитель источника Сл и её числа в режиме «Авто» («Сл действия · 14»). */
 export const SAVE_DC_AUTO_SEPARATOR = ' · ';
@@ -2325,6 +2433,9 @@ export const SAVE_DC_AUTO_MODE: SaveDcFieldMode = 'auto';
 
 /** Режим поля Сл «Вручную»: своё число. */
 export const SAVE_DC_MANUAL_MODE: SaveDcFieldMode = 'manual';
+
+/** Режим поля Сл «Формулой»: число рядом становится запасным. */
+export const SAVE_DC_FORMULA_MODE: SaveDcFieldMode = 'formula';
 
 /** Заголовок выбора «при успехе» спасброска самого заклинания или действия. */
 export const EFFECT_ACTION_SAVE_SUCCESS_TITLES: Partial<
@@ -2437,6 +2548,11 @@ export const EFFECT_MODIFIERS_STEP_LABELS = {
     'Кость бросается ОДИН раз — когда эффект ложится. Результат подставляется '
     + 'вместо @roll во все формулы эффекта и дальше не меняется: урон каждый '
     + 'ход будет одним и тем же числом, а не новой костью при каждом тике.',
+  creatureTypesTitle: 'Типы существ',
+  creatureTypesHint:
+    'Условие выполняется, если тип любой из выбранных: «Защита от зла и '
+    + 'добра» — аберрация, небожитель, элементаль, фея, исчадие, нежить.',
+  creatureTypesExcept: 'Кроме этих типов',
   adjacentAllyTitle: 'Какой союзник',
   adjacentAllyHint:
     'По правилам 2024 «Тактика стаи» не считает недееспособного союзника: '
@@ -2453,6 +2569,87 @@ export const EFFECT_MODIFIERS_STEP_LABELS = {
   suppressPlaceholder: 'Выберите состояния',
   immunitiesPlaceholder: 'Состояния...',
 } as const;
+
+/** Пункты списка «Действует» о типе существа: типы выбираются вторым полем. */
+export const EFFECT_CREATURE_TYPE_CONDITION_LABELS: Record<
+  CreatureTypeConditionSubject,
+  string
+> = {
+  'self.creatureType': 'Носитель — существо типа…',
+  'target.creatureType': 'Цель — существо типа…',
+  'incoming.attackerCreatureType': 'Защита: атакующий — существо типа…',
+  'source.creatureType': 'Спасбросок вызвало существо типа…',
+};
+
+/** Тип, с которого начинается новое условие броска о типе существа. */
+export const DEFAULT_CONDITION_CREATURE_TYPE = 'humanoid';
+
+/** Подписи раздела «Свет». */
+export const EFFECT_LIGHT_LABELS = {
+  toggle: 'Носитель излучает свет',
+  toggleHint:
+    'Пока эффект действует: «Корона света», светящееся оружие. Несколько '
+    + 'эффектов света не складываются — светит сильнейший.',
+  bright: 'Яркий, фт',
+  dim: 'Тусклый ещё, фт',
+  dimHint:
+    'Тусклый свет за ярким — как в тексте правил: «и тусклый ещё на 20 фт».',
+  color: 'Цвет',
+  animation: 'Анимация',
+  sceneHint:
+    'Свет фишки, который поставил ведущий, не меняется: эффект светит поверх, '
+    + 'если он сильнее. Сцена рисует его с VTTG 0.9.580.',
+} as const;
+
+/** Свет нового эффекта: яркий 20 фт и тусклый ещё 20 — как у факела. */
+export const DEFAULT_EFFECT_LIGHT: EffectLight = { bright: 20, dim: 20 };
+
+/** Цвет света без поля `color`: белый. */
+export const DEFAULT_EFFECT_LIGHT_COLOR = '#ffffff';
+
+/** Шаг радиуса света в поле формы, фт. */
+export const EFFECT_LIGHT_FEET_STEP = 5;
+
+/** Подписи анимаций света эффекта. */
+export const EFFECT_LIGHT_ANIMATION_LABELS: Record<
+  EffectLightAnimation,
+  string
+> = {
+  none: 'Ровный',
+  pulse: 'Пульсирует',
+  flicker: 'Мерцает',
+  torch: 'Как факел',
+  strobe: 'Вспышки',
+};
+
+/**
+ * Новый блок «провал в успех»: три раза до долгого отдыха — как у
+ * «Легендарного сопротивления».
+ */
+export const DEFAULT_SAVE_OVERRIDE: EffectSaveOverride = {
+  limit: { max: 3, per: 'longRest' },
+};
+
+/** Подписи раздела «Провал в успех». */
+export const EFFECT_SAVE_OVERRIDE_LABELS = {
+  toggle: 'Провал спасброска — вместо этого успех',
+  toggleHint:
+    'После проваленного спасброска владельцу носителя предлагают преуспеть '
+    + '(«Легендарное сопротивление»), пока есть чем заплатить.',
+  times: 'Раз',
+  per: 'До',
+  counter: 'Или тратит ресурс',
+  counterPlaceholder: 'Ключ ресурса листа',
+  counterHint:
+    'Ключ ресурса листа персонажа, например luck. Задан — тратится он по '
+    + 'единице, а счёт «раз до отдыха» не ведётся.',
+} as const;
+
+/** Подписи периода своего счётчика «провал в успех». */
+export const SAVE_OVERRIDE_PERIOD_LABELS: Record<SaveOverridePeriod, string> = {
+  shortRest: 'короткого отдыха',
+  longRest: 'долгого отдыха (день)',
+};
 
 /** Подписи шага «Длительность». */
 export const EFFECT_DURATION_STEP_LABELS = {
@@ -2599,6 +2796,7 @@ export const EFFECT_VARIANT_PICK_LABELS: Record<EffectVariantPick, string> = {
 /** Названия неработающих настроек. */
 export const EFFECT_INERT_FIELD_NAMES: Record<InertEffectField, string> = {
   charges: 'заряды',
+  saveOverride: 'провал в успех',
   activation: 'применение или включение',
   landingCondition: 'условие наложения',
   variant: 'вариант',
@@ -2693,9 +2891,6 @@ export const EFFECT_TRIGGER_ROW_LABELS = {
     'Ключ — буквы, цифры, «_», «.» и «-»; без годного ключа отметка не сохранится.',
   recipient: 'Кому',
   setHpValue: 'Хитов',
-  dcFormula: 'Сл формулой',
-  dcFormulaPlaceholder: 'max(10, floor(@damage / 2))',
-  dcFormulaHint: '@damage — урон события. Пусто — число Сл.',
   limitToggle: 'Не чаще',
   limitTimes: 'раз за',
   chanceToggle: 'С броском на шанс',
@@ -3110,11 +3305,13 @@ export const EFFECT_TRIGGER_CONDITION_KIND_LABELS: Record<
   selfBloodied: 'Носитель окровавлен (хитов не больше половины)',
   selfWounded: 'Носитель ранен',
   selfCreatureType: 'Носитель — существо типа',
+  selfCreatureTypeNot: 'Носитель — не существо типа',
   selfTag: 'На носителе отметка',
   selfTagNot: 'На носителе нет отметки',
   rollAdvantage: 'Атака с преимуществом',
   rollDisadvantage: 'Атака с помехой',
   otherCreatureType: 'Другая сторона — существо типа',
+  otherCreatureTypeNot: 'Другая сторона — не существо типа',
   otherMarkedBySelf: 'Другая сторона помечена носителем',
   selfHpAtMost: 'У носителя хитов не больше',
   selfHpAtLeast: 'У носителя хитов не меньше',
@@ -3188,6 +3385,10 @@ export const TRIGGER_CONDITION_TAG_PARAMETER =
 /** Значение части условия — число: вводится полем, а не выбором. */
 export const TRIGGER_CONDITION_NUMBER_PARAMETER =
   'number' satisfies TriggerConditionParameter;
+
+/** Значение части условия — список типов существ: выбирается несколько. */
+export const TRIGGER_CONDITION_CREATURE_TYPE_PARAMETER =
+  'creatureType' satisfies TriggerConditionParameter;
 
 /** Состояние нового действия «Наложить состояние». */
 export const DEFAULT_TRIGGER_CONDITION: EffectConditionKey = 'poisoned';

@@ -13,6 +13,7 @@
 
 import type { EffectConditionTemplate } from './constants';
 import type { EffectFormContext, EffectFormLayout } from './layout';
+import type { SaveDcSource } from './saveDc';
 import type { EffectTrigger } from './triggerTypes';
 import type { ActiveEffect, EffectChange } from './types';
 
@@ -39,6 +40,8 @@ import {
   describeEffectDamageParts,
   describeEffectDuration,
   describeEffectFlag,
+  describeEffectLight,
+  describeSaveOverride,
   formatEffectSaveDc,
 } from './describe';
 import {
@@ -65,16 +68,19 @@ type ConditionPayload = Pick<
 /**
  * Подпись Сл спасброска в сводке.
  *
- * @param dc сложность из эффекта.
+ * @param save Сл из эффекта.
  * @param context место формы.
  * @returns подпись сложности.
  */
-function formatScenarioSaveDc(dc: number, context: EffectFormContext): string {
+function formatScenarioSaveDc(
+  save: SaveDcSource,
+  context: EffectFormContext,
+): string {
   const applierLabel = EFFECT_SCENARIO_APPLIER_DC_LABELS[context];
 
-  return dc === APPLIER_SAVE_DC && applierLabel
+  return save.dc === APPLIER_SAVE_DC && !save.dcFormula && applierLabel
     ? applierLabel
-    : formatEffectSaveDc(dc);
+    : formatEffectSaveDc(save);
 }
 
 /**
@@ -304,13 +310,21 @@ function describeLastingPayload(
     );
   }
 
+  if (layout.showSaveOverride && effect.saveOverride) {
+    parts.push(describeSaveOverride(effect.saveOverride));
+  }
+
+  if (effect.light) {
+    parts.push(describeEffectLight(effect.light));
+  }
+
   for (const trigger of listEffectListTriggers(effect)) {
     if (!isTriggerShown(trigger, layout)) {
       continue;
     }
 
     const phrase = describeEffectTrigger(trigger, {
-      formatDc: (dc) => formatScenarioSaveDc(dc, layout.context),
+      formatDc: (save) => formatScenarioSaveDc(save, layout.context),
     });
 
     if (phrase) {
@@ -415,7 +429,7 @@ export function describeEffectScenario(
   const failurePayload = damage ? [damage, ...lasting] : lasting;
 
   if (layout.showSave && effect.applySave) {
-    const { ability, dc } = effect.applySave;
+    const { ability } = effect.applySave;
     const outcome = readEffectSuccessOutcome(effect);
 
     const failure =
@@ -424,7 +438,7 @@ export function describeEffectScenario(
         : joinParts(failurePayload);
 
     return [
-      `${moment}: ${EFFECT_PHRASE_PARTS.savePrefix}${EFFECT_ABILITY_GENITIVE_LABELS[ability]}, ${formatScenarioSaveDc(dc, context)}.`,
+      `${moment}: ${EFFECT_PHRASE_PARTS.savePrefix}${EFFECT_ABILITY_GENITIVE_LABELS[ability]}, ${formatScenarioSaveDc(effect.applySave, context)}.`,
       `${EFFECT_SCENARIO_LABELS.failurePrefix}${failure}.`,
       `${EFFECT_SCENARIO_LABELS.successPrefix}${describeSuccess(effect, damage, lasting)}.`,
     ].join(' ');

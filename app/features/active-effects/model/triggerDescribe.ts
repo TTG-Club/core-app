@@ -9,6 +9,7 @@
  * Зеркало: dnd5-test-migrate/src/engine/effectTriggerDescribe.ts
  */
 
+import type { SaveDcSource } from './saveDc';
 import type { TriggerConditionPart } from './triggerConditions';
 import type {
   EffectTrigger,
@@ -42,7 +43,7 @@ import {
 import {
   describeAbilityName,
   describeConditionName,
-  describeCreatureType,
+  describeCreatureTypeList,
   describeDamageTypeShort,
   describeEffectChangeCondition,
   describeEffectDamageParts,
@@ -52,6 +53,7 @@ import {
   DEFAULT_ABILITY_THRESHOLD,
   DEFAULT_TAG_COUNT_THRESHOLD,
   getTriggerConditionParameter,
+  isNegatedCreatureTypeConditionKind,
   isTriggerAttackKind,
   readTriggerConditionParts,
 } from './triggerConditions';
@@ -94,8 +96,8 @@ function describeAttackKind(attackKind: string): string {
 
 /** Настройки фразы. */
 export interface EffectTriggerDescribeOptions {
-  /** Подпись Сл (0 — Сл источника по месту формы). */
-  formatDc: (dc: number) => string;
+  /** Подпись Сл (0 — Сл источника по месту формы, формула — словами). */
+  formatDc: (save: SaveDcSource) => string;
 }
 
 /**
@@ -112,7 +114,10 @@ function describeTriggerConditionValue(part: TriggerConditionPart): string {
     case 'damageType':
       return describeDamageTypeShort(value);
     case 'creatureType':
-      return describeCreatureType(value);
+      return describeCreatureTypeList(
+        value,
+        isNegatedCreatureTypeConditionKind(part.kind),
+      );
     case 'size':
       return describeEffectCreatureSize(value);
     case 'condition':
@@ -204,9 +209,9 @@ function describeAction(
         return condition;
       }
 
-      const { ability, dc, timing } = action.recurringSave;
+      const { ability, timing } = action.recurringSave;
 
-      return `${condition} (${EFFECT_TRIGGER_PHRASE_PARTS.recurringSavePrefix}${EFFECT_ABILITY_GENITIVE_LABELS[ability]} ${describeOptions.formatDc(dc)} ${EFFECT_SAVE_TIMING_LABELS[timing]}${EFFECT_TRIGGER_PHRASE_PARTS.recurringSaveSuffix})`;
+      return `${condition} (${EFFECT_TRIGGER_PHRASE_PARTS.recurringSavePrefix}${EFFECT_ABILITY_GENITIVE_LABELS[ability]} ${describeOptions.formatDc(action.recurringSave)} ${EFFECT_SAVE_TIMING_LABELS[timing]}${EFFECT_TRIGGER_PHRASE_PARTS.recurringSaveSuffix})`;
     }
     case 'applyTag':
       return withDurationSuffix(
@@ -365,16 +370,16 @@ function describeLegacyShape(
     const { save } = trigger;
 
     const saveClause = save
-      ? ` (${EFFECT_PHRASE_PARTS.savePrefix}${EFFECT_ABILITY_GENITIVE_LABELS[save.ability]}, ${describeOptions.formatDc(save.dc)}${EFFECT_TRIGGER_PHRASE_PARTS.damageSaveSuccess}${EFFECT_TRIGGER_RECURRING_DAMAGE_SUCCESS_LABELS[action.halfOnSave ? 'half' : 'negate']})`
+      ? ` (${EFFECT_PHRASE_PARTS.savePrefix}${EFFECT_ABILITY_GENITIVE_LABELS[save.ability]}, ${describeOptions.formatDc(save)}${EFFECT_TRIGGER_PHRASE_PARTS.damageSaveSuccess}${EFFECT_TRIGGER_RECURRING_DAMAGE_SUCCESS_LABELS[action.halfOnSave ? 'half' : 'negate']})`
       : '';
 
     return `${EFFECT_TRIGGER_PHRASE_PARTS.everyTurnPrefix}${damage} ${timing}${saveClause}`;
   }
 
   if (kind === 'recurringSave' && trigger.save) {
-    const { ability, dc } = trigger.save;
+    const { ability } = trigger.save;
 
-    return `${EFFECT_TRIGGER_PHRASE_PARTS.recurringSavePrefix}${EFFECT_ABILITY_GENITIVE_LABELS[ability]} ${describeOptions.formatDc(dc)} ${timing}${EFFECT_TRIGGER_PHRASE_PARTS.recurringSaveSuffix}`;
+    return `${EFFECT_TRIGGER_PHRASE_PARTS.recurringSavePrefix}${EFFECT_ABILITY_GENITIVE_LABELS[ability]} ${describeOptions.formatDc(trigger.save)} ${timing}${EFFECT_TRIGGER_PHRASE_PARTS.recurringSaveSuffix}`;
   }
 
   if (kind === 'consumeOn' && trigger.role) {
@@ -529,11 +534,8 @@ export function describeEffectTrigger(
     return `${moment}: ${describeOutcomeActions(trigger, false, describeOptions)}${limit}`;
   }
 
-  const { ability, dc, dcFormula, mode } = trigger.save;
-
-  const dcLabel = dcFormula
-    ? `${EFFECT_TRIGGER_PHRASE_PARTS.dcFormulaPrefix}${dcFormula.replaceAll(`@${EVENT_DAMAGE_VARIABLE}`, EFFECT_TRIGGER_PHRASE_PARTS.damageVariable)}`
-    : describeOptions.formatDc(dc);
+  const { ability, mode } = trigger.save;
+  const dcLabel = describeOptions.formatDc(trigger.save);
 
   return [
     `${moment}: ${EFFECT_PHRASE_PARTS.savePrefix}${EFFECT_ABILITY_GENITIVE_LABELS[ability]}${describeSaveMode(mode)}, ${dcLabel}`,

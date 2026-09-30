@@ -1,4 +1,4 @@
-import type { EffectTrigger } from '~active-effects/model';
+import type { EffectTrigger, SaveDcSource } from '~active-effects/model';
 
 import { describe, expect, it } from 'vitest';
 
@@ -6,6 +6,7 @@ import {
   APPLIER_SAVE_DC,
   collectEffectTriggers,
   describeEffectTrigger,
+  formatEffectSaveDc,
   isLegacyTrigger,
   LEGACY_TRIGGER_IDS,
   listEffectListTriggers,
@@ -29,13 +30,17 @@ const CONSTITUTION_TRIGGER_SAVE = {
 } as const;
 
 /**
- * Подпись Сл для фраз: `APPLIER_SAVE_DC` — Сл заклинателя.
+ * Подпись Сл для фраз: `APPLIER_SAVE_DC` — Сл заклинателя, формула — словами.
  *
- * @param dc сложность.
+ * @param save Сл спасброска.
  * @returns подпись.
  */
-function formatDc(dc: number): string {
-  return dc === APPLIER_SAVE_DC ? 'Сл заклинателя' : `Сл ${dc}`;
+function formatDc(save: SaveDcSource): string {
+  if (save.dcFormula) {
+    return formatEffectSaveDc(save);
+  }
+
+  return save.dc === APPLIER_SAVE_DC ? 'Сл заклинателя' : `Сл ${save.dc}`;
 }
 
 describe('чтение старых полей как срабатываний', () => {
@@ -537,7 +542,7 @@ describe('фразы срабатываний', () => {
       ),
     ).toBe(
       'когда хиты падают до 0, если урон не излучением и не критическое попадание: '
-        + 'спасбросок Телосложения, Сл = 5 + урон; провал — ничего; успех — хиты становятся 1',
+        + 'спасбросок Телосложения, Сл 5 + урон события; провал — ничего; успех — хиты становятся 1',
     );
   });
 

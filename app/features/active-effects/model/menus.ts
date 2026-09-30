@@ -60,8 +60,16 @@ const EFFECT_FLAG_GROUPS = [
   { key: 'saveAutoFail', label: 'Автопровалы спасбросков' },
   { key: 'skills', label: 'Навыки' },
   { key: 'damageDefense', label: 'Защиты от урона' },
+  { key: 'restrictions', label: 'Ограничения действий' },
   { key: 'other', label: 'Прочее' },
 ] as const;
+
+/** Приставки флагов раздела «Ограничения действий». */
+const RESTRICTION_FLAG_PREFIXES: readonly string[] = [
+  'actions.',
+  'spellcasting.',
+  'concentration.',
+];
 
 /** Множество типов урона, к которым применимы защиты. */
 const DEFENSIBLE_DAMAGE_TYPE_LABELS: Record<string, string> =
@@ -123,6 +131,10 @@ function getFlagGroupKey(flagKey: string): string {
 
   if (flagKey.startsWith('skill.')) {
     return 'skills';
+  }
+
+  if (RESTRICTION_FLAG_PREFIXES.some((prefix) => flagKey.startsWith(prefix))) {
+    return 'restrictions';
   }
 
   return getDamageDefenseKind(flagKey) ?? 'other';

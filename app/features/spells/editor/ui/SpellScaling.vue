@@ -11,16 +11,20 @@
   import {
     createEmptySpellCantripScalingTier,
     createEmptySpellScaling,
+    SPELL_SCALING_AREA_SIZE_MIN,
     SPELL_SCALING_LABELS,
   } from '../../model';
 
   const {
     level,
+    hasArea,
     damageTypeOptions,
     damageTypesPending = false,
   } = defineProps<{
     /** Круг заклинания: у заговора масштабирование поуровневое, а не за круг. */
     level: number;
+    /** Есть ли у заклинания область: только ей есть куда расти за круг. */
+    hasArea: boolean;
     /** Типы урона справочника — для частей урона тира. */
     damageTypeOptions: Array<SelectOption>;
     /** Справочник ещё грузится. */
@@ -78,8 +82,8 @@
     };
   }
 
-  // Число доп. целей живёт в блоке целей и от галочки не зависит: снятие
-  // галочки убирает только кости и описание.
+  // Число доп. целей и рост области от галочки не зависят: снятие галочки
+  // убирает только кости и описание.
   function disableScaling() {
     if (!scaling.value) {
       return;
@@ -98,6 +102,17 @@
     get: () => scaling.value?.additionalDice ?? '',
     set: (value) => {
       patchScaling({ additionalDice: value });
+    },
+  });
+
+  /** Рост области — у уровневого заклинания с областью. */
+  const showAdditionalAreaSize = computed(() => !isCantrip.value && hasArea);
+
+  // Очищенное поле числа отдаёт `undefined` — роста нет
+  const additionalAreaSize = computed({
+    get: () => scaling.value?.additionalAreaSize,
+    set: (enteredAreaSize: number | null | undefined) => {
+      patchScaling({ additionalAreaSize: enteredAreaSize ?? undefined });
     },
   });
 
@@ -231,6 +246,20 @@
         </UFormField>
       </div>
     </template>
+
+    <!-- Отдельной строкой: рост области не зависит от галочки усиления -->
+    <UFormField
+      v-if="showAdditionalAreaSize"
+      :label="SPELL_SCALING_LABELS.additionalAreaSize"
+      :help="SPELL_SCALING_LABELS.additionalAreaSizeHint"
+      name="effect.scaling.additionalAreaSize"
+    >
+      <UInputNumber
+        v-model="additionalAreaSize"
+        :min="SPELL_SCALING_AREA_SIZE_MIN"
+        class="w-40"
+      />
+    </UFormField>
 
     <!-- Заговор: поуровневые тиры, каждый заменяет набор частей целиком -->
     <template v-else>

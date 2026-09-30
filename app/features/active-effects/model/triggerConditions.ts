@@ -21,17 +21,19 @@ import {
   EFFECT_CARRIER_TAG_CONDITION_PREFIX,
   EFFECT_CARRIER_TAG_NOT_CONDITION_PREFIX,
   EFFECT_CARRIER_TYPE_CONDITION_PREFIX,
+  EFFECT_CARRIER_TYPE_NOT_CONDITION_PREFIX,
   EFFECT_CONDITION_AND_SEPARATOR,
   EFFECT_DAMAGE_TYPE_CONDITION_PREFIX,
   EFFECT_DAMAGE_TYPE_NOT_CONDITION_PREFIX,
   EFFECT_TARGET_TYPE_CONDITION_PREFIX,
+  EFFECT_TARGET_TYPE_NOT_CONDITION_PREFIX,
   EFFECT_TRIGGER_FIXED_CONDITIONS,
   isEffectAbility,
-  isEffectCreatureCategory,
   isEffectCreatureSize,
   isEffectDamageType,
   splitConditionParts,
 } from './constants';
+import { isCreatureTypeList } from './creatureTypeCondition';
 import {
   ATTACK_DATA_TRIGGER_EVENTS,
   COMBAT_ROUND_TRIGGER_EVENTS,
@@ -78,11 +80,13 @@ export const TRIGGER_CONDITION_KINDS = [
   'selfBloodied',
   'selfWounded',
   'selfCreatureType',
+  'selfCreatureTypeNot',
   'selfTag',
   'selfTagNot',
   'rollAdvantage',
   'rollDisadvantage',
   'otherCreatureType',
+  'otherCreatureTypeNot',
   'otherMarkedBySelf',
   'selfHpAtMost',
   'selfHpAtLeast',
@@ -119,10 +123,12 @@ export const TRIGGER_CONDITION_KINDS = [
  * - `damageType` / `damageTypeNot` — урон этого типа / без этого типа;
  * - `damageCritical` / `damageNotCritical` — крит / не крит;
  * - `selfBloodied` / `selfWounded` — у носителя не больше половины хитов / хиты не полные;
- * - `selfCreatureType` — тип носителя;
+ * - `selfCreatureType` / `selfCreatureTypeNot` — тип носителя из списка / не
+ *   из списка («нежить или исчадие» — `"undead, fiend"`);
  * - `selfTag` / `selfTagNot` — на носителе есть / нет отметки;
  * - `rollAdvantage` / `rollDisadvantage` — атака с преимуществом / помехой;
- * - `otherCreatureType` — тип другой стороны;
+ * - `otherCreatureType` / `otherCreatureTypeNot` — тип другой стороны из
+ *   списка / не из списка;
  * - `otherMarkedBySelf` — другая сторона помечена носителем;
  * - `selfHpAtMost` / `selfHpAtLeast` — хитов у носителя не больше / не меньше N;
  * - `selfSizeAtMost` / `selfSizeAtLeast` — размер носителя не больше / не меньше;
@@ -196,11 +202,13 @@ const KIND_EVENTS: Record<
   selfBloodied: undefined,
   selfWounded: undefined,
   selfCreatureType: undefined,
+  selfCreatureTypeNot: undefined,
   selfTag: undefined,
   selfTagNot: undefined,
   rollAdvantage: ['attackRoll'],
   rollDisadvantage: ['attackRoll'],
   otherCreatureType: OTHER_CONDITION_EVENTS,
+  otherCreatureTypeNot: OTHER_CONDITION_EVENTS,
   otherMarkedBySelf: ['attackRoll'],
   selfHpAtMost: undefined,
   selfHpAtLeast: undefined,
@@ -251,8 +259,16 @@ const PARAMETRIC_PARTS: Partial<
     prefix: EFFECT_CARRIER_TYPE_CONDITION_PREFIX,
     parameter: 'creatureType',
   },
+  selfCreatureTypeNot: {
+    prefix: EFFECT_CARRIER_TYPE_NOT_CONDITION_PREFIX,
+    parameter: 'creatureType',
+  },
   otherCreatureType: {
     prefix: EFFECT_TARGET_TYPE_CONDITION_PREFIX,
+    parameter: 'creatureType',
+  },
+  otherCreatureTypeNot: {
+    prefix: EFFECT_TARGET_TYPE_NOT_CONDITION_PREFIX,
     parameter: 'creatureType',
   },
   selfTag: { prefix: EFFECT_CARRIER_TAG_CONDITION_PREFIX, parameter: 'tag' },
@@ -382,8 +398,9 @@ function isParameterValue(
   switch (parameter) {
     case 'damageType':
       return isEffectDamageType(value);
+    // Список типов через запятую: «нежить или исчадие»
     case 'creatureType':
-      return isEffectCreatureCategory(value);
+      return isCreatureTypeList(value);
     case 'number':
       return isConditionNumber(value);
     case 'size':
@@ -398,6 +415,24 @@ function isParameterValue(
       // Ключ состояния мира и ключ отметки — одного вида: буквы, цифры, «_.-»
       return isEffectTag(value);
   }
+}
+
+/** Части о типе существа «не из списка». */
+const NEGATED_CREATURE_TYPE_KINDS: ReadonlySet<TriggerConditionKind> = new Set([
+  'selfCreatureTypeNot',
+  'otherCreatureTypeNot',
+]);
+
+/**
+ * Часть ли это о типе существа «не из списка».
+ *
+ * @param kind вид части.
+ * @returns `true` для «носитель / другая сторона — не существо типа».
+ */
+export function isNegatedCreatureTypeConditionKind(
+  kind: TriggerConditionKind,
+): boolean {
+  return NEGATED_CREATURE_TYPE_KINDS.has(kind);
 }
 
 /**

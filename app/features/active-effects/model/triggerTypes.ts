@@ -494,8 +494,9 @@ export interface EffectTriggerSave {
   /** Преимущество или помеха самого спасброска. */
   mode?: EffectTriggerSaveMode;
   /**
-   * Сл формулой от данных события: `@damage` — урон события
-   * («max(10, floor(@damage / 2))»). Нет данных или формула с ошибкой — `dc`.
+   * Сл формулой: по владельцу эффекта («8 + @prof + @mod.wis», «@spellDc») и
+   * по данным события — `@damage`, урон события («max(10, floor(@damage /
+   * 2))»). Нет данных или формула с ошибкой — `dc`.
    */
   dcFormula?: string;
   /**
