@@ -13,6 +13,8 @@
     MAX_SAVE_OVERRIDE_USES,
     MIN_SAVE_OVERRIDE_USES,
     SAVE_OVERRIDE_PERIOD_OPTIONS,
+    toDraftSaveOverride,
+    toDraftSaveOverrideCounter,
   } from '../../model';
 
   /**
@@ -30,13 +32,9 @@
   function writeSaveOverride(
     nextSaveOverride: EffectSaveOverride | undefined,
   ): void {
-    const canPay =
-      nextSaveOverride?.limit !== undefined
-      || nextSaveOverride?.counter !== undefined;
-
     effect.value = {
       ...effect.value,
-      saveOverride: canPay ? nextSaveOverride : undefined,
+      saveOverride: toDraftSaveOverride(nextSaveOverride),
     };
   }
 
@@ -47,39 +45,38 @@
   });
 
   /** Свой счётчик; у блока только с ресурсом — счётчик нового блока. */
-  const limit = computed(
+  const saveOverrideLimit = computed(
     () => effect.value.saveOverride?.limit ?? DEFAULT_SAVE_OVERRIDE.limit,
   );
 
-  const times = computed({
-    get: () => limit.value?.max ?? MIN_SAVE_OVERRIDE_USES,
+  const saveOverrideTimes = computed({
+    get: () => saveOverrideLimit.value?.max ?? MIN_SAVE_OVERRIDE_USES,
     set: (enteredTimes: number | null | undefined) => {
       // Очищенное поле числа отдаёт `undefined`: число остаётся прежним
-      if (typeof enteredTimes === 'number' && limit.value) {
+      if (typeof enteredTimes === 'number' && saveOverrideLimit.value) {
         writeSaveOverride({
           ...effect.value.saveOverride,
-          limit: { ...limit.value, max: enteredTimes },
+          limit: { ...saveOverrideLimit.value, max: enteredTimes },
         });
       }
     },
   });
 
-  const period = computed({
-    get: () => limit.value?.per,
+  const saveOverridePeriod = computed({
+    get: () => saveOverrideLimit.value?.per,
     set: (nextPeriod: SaveOverridePeriod) =>
       writeSaveOverride({
         ...effect.value.saveOverride,
-        limit: { max: times.value, per: nextPeriod },
+        limit: { max: saveOverrideTimes.value, per: nextPeriod },
       }),
   });
 
-  // Пустой ключ стирает ресурс, а не пишет пустоту
-  const counter = computed({
+  const saveOverrideCounter = computed({
     get: () => effect.value.saveOverride?.counter ?? '',
     set: (enteredCounter: string) =>
       writeSaveOverride({
         ...effect.value.saveOverride,
-        counter: enteredCounter.trim() ? enteredCounter : undefined,
+        counter: toDraftSaveOverrideCounter(enteredCounter),
       }),
   });
 </script>
@@ -101,7 +98,7 @@
         class="w-24"
       >
         <UInputNumber
-          v-model="times"
+          v-model="saveOverrideTimes"
           :min="MIN_SAVE_OVERRIDE_USES"
           :max="MAX_SAVE_OVERRIDE_USES"
           size="sm"
@@ -114,7 +111,7 @@
         class="w-full sm:w-56"
       >
         <USelect
-          v-model="period"
+          v-model="saveOverridePeriod"
           :items="SAVE_OVERRIDE_PERIOD_OPTIONS"
           value-key="value"
           size="sm"
@@ -122,8 +119,7 @@
         />
       </UFormField>
 
-      <!-- Подсказка под значком: строкой под полем она выталкивала поле
-        вверх, и оно не стояло в ряд с «Раз» и «До» -->
+      <!-- Подсказка под значком: так поле стоит в одном ряду с «Раз» и «До» -->
       <UFormField class="w-full sm:w-72">
         <template #label>
           <InfoTooltip
@@ -135,7 +131,7 @@
         </template>
 
         <UInput
-          v-model="counter"
+          v-model="saveOverrideCounter"
           :placeholder="EFFECT_SAVE_OVERRIDE_LABELS.counterPlaceholder"
           size="sm"
           class="w-full font-mono"

@@ -1535,9 +1535,11 @@ export const EFFECT_PHRASE_PARTS = {
 /** Фразы света эффекта: «излучает яркий свет 20 фт и тусклый ещё 20 фт». */
 export const EFFECT_LIGHT_PHRASES = {
   prefix: 'излучает ',
-  bright: (feet: number) => `яркий свет ${feet} фт`,
-  dim: (feet: number) => `тусклый ${feet} фт`,
-  dimBeyond: (feet: number) => `тусклый ещё ${feet} фт`,
+  bright: (feet: number) =>
+    `яркий свет ${feet}${EFFECT_PHRASE_PARTS.feetSuffix}`,
+  dim: (feet: number) => `тусклый ${feet}${EFFECT_PHRASE_PARTS.feetSuffix}`,
+  dimBeyond: (feet: number) =>
+    `тусклый ещё ${feet}${EFFECT_PHRASE_PARTS.feetSuffix}`,
 } as const;
 
 /** Фразы «провала в успех». */

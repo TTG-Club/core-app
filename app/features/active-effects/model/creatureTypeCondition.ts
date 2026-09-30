@@ -65,11 +65,11 @@ const QUOTES_PATTERN = /^["']|["']$/g;
  * Типы списка из значения: `"undead, fiend"` без кавычек. Пустые места
  * пропускаются.
  *
- * @param listText список типов через запятую.
+ * @param listText список типов через запятую; нет — типов нет.
  * @returns ключи типов по порядку.
  */
-export function splitCreatureTypeList(listText: string): string[] {
-  return listText
+export function splitCreatureTypeList(listText: string | undefined): string[] {
+  return (listText ?? '')
     .split(CREATURE_TYPE_LIST_SEPARATOR)
     .map((creatureType) => creatureType.trim())
     .filter((creatureType) => creatureType.length > 0);

@@ -610,6 +610,31 @@ export const SAVE_DC_FIELD_MODE_OPTIONS: Array<
   label: EFFECT_SAVE_DC_FIELD_MODE_LABELS[mode],
 }));
 
+/** Какие режимы поля Сл, кроме «Вручную», есть в этом месте. */
+export interface SaveDcFieldModeRules {
+  /** «Авто»: у Сл есть источник. */
+  autoAllowed: boolean;
+  /** «Формулой»: у Сл есть владелец эффекта. */
+  formulaAllowed: boolean;
+}
+
+/**
+ * Режимы поля Сл в этом месте: «Авто» — где у Сл есть источник, «Формулой» —
+ * где у Сл есть владелец эффекта.
+ *
+ * @param modeRules какие режимы кроме «Вручную» доступны.
+ * @returns варианты выбора по порядку.
+ */
+export function listSaveDcFieldModeOptions(
+  modeRules: SaveDcFieldModeRules,
+): Array<EffectSegmentOption<SaveDcFieldMode>> {
+  return SAVE_DC_FIELD_MODE_OPTIONS.filter(
+    (option) =>
+      (option.value !== SAVE_DC_AUTO_MODE || modeRules.autoAllowed)
+      && (option.value !== SAVE_DC_FORMULA_MODE || modeRules.formulaAllowed),
+  );
+}
+
 /** Исход урона в строке срабатывания: гейт либо «успех — половина». */
 export type EffectTriggerDamageGateChoice =
   | EffectTriggerActionGate

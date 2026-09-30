@@ -7,19 +7,34 @@ import type {
 import { describe, expect, it } from 'vitest';
 
 import {
+  APPLIER_SAVE_DC,
+  DEFAULT_EFFECT_CHANGE_PRIORITY,
+  DEFAULT_EFFECT_LIGHT,
   describeActiveEffect,
   describeEffectChangeCondition,
   describeEffectLight,
   describeEffectTrigger,
   describeSaveDcFormulaError,
+  describeSaveDcFormulaHelp,
   describeSaveOverride,
   EFFECT_FLAG_OPTIONS,
+  EFFECT_LIGHT_STEADY_ANIMATION,
   EFFECT_SAVE_DC_FORMULA_ERRORS,
+  EFFECT_SAVE_DC_FORMULA_LABELS,
   formatEffectSaveDc,
+  listSaveDcFieldModeOptions,
+  MIN_EFFECT_LIGHT_FEET,
   normalizeActiveEffects,
   normalizeLoadedActiveEffects,
   parseCreatureTypeCondition,
   readTriggerConditionParts,
+  SAVE_DC_AUTO_MODE,
+  SAVE_DC_FORMULA_MODE,
+  SAVE_DC_MANUAL_MODE,
+  toDraftSaveOverride,
+  toDraftSaveOverrideCounter,
+  toStoredEffectLightAnimation,
+  toStoredEffectLightColor,
   writeCreatureTypeCondition,
   writeTriggerCondition,
   writeTriggerEvent,
@@ -55,6 +70,12 @@ const NOT_CONSTRUCT_CARRIER = 'self.creatureType !== "construct, undead"';
 
 /** Условие «спасбросок вызвало исчадие или нежить». */
 const FIEND_SOURCE = 'source.creatureType === "fiend, undead"';
+
+/** Белый цвет света заглавными буквами — так его отдаёт выбор цвета. */
+const WHITE_LIGHT_COLOR = '#FFFFFF';
+
+/** Радиус выбора целей срабатывания, фт. */
+const CHOICE_RADIUS = 30;
 
 /** Флаги волны 1: ограничения действий. */
 const RESTRICTION_FLAGS = [
@@ -132,14 +153,18 @@ describe('сл формулой (dcFormula)', () => {
         {
           id: 'trigger_stun',
           event: 'attackRoll',
-          save: { ability: 'constitution', dc: 0, dcFormula: OWNER_DC_FORMULA },
+          save: {
+            ability: 'constitution',
+            dc: APPLIER_SAVE_DC,
+            dcFormula: OWNER_DC_FORMULA,
+          },
           actions: [
             {
               type: 'applyCondition',
               conditionKey: 'stunned',
               recurringSave: {
                 ability: 'constitution',
-                dc: 0,
+                dc: APPLIER_SAVE_DC,
                 dcFormula: OWNER_DC_FORMULA,
                 timing: 'endOfTurn',
               },
@@ -208,6 +233,30 @@ describe('сл формулой (dcFormula)', () => {
     ).toBeUndefined();
   });
 
+  it('режимы поля: «Авто» — по источнику, «Формулой» — по владельцу', () => {
+    expect(
+      listSaveDcFieldModeOptions({
+        autoAllowed: false,
+        formulaAllowed: true,
+      }).map((option) => option.value),
+    ).toEqual([SAVE_DC_MANUAL_MODE, SAVE_DC_FORMULA_MODE]);
+
+    expect(
+      listSaveDcFieldModeOptions({
+        autoAllowed: true,
+        formulaAllowed: false,
+      }).map((option) => option.value),
+    ).toEqual([SAVE_DC_AUTO_MODE, SAVE_DC_MANUAL_MODE]);
+
+    expect(describeSaveDcFormulaHelp({ acceptsDamage: false })).toBe(
+      EFFECT_SAVE_DC_FORMULA_LABELS.hint,
+    );
+
+    expect(describeSaveDcFormulaHelp({ acceptsDamage: true })).toContain(
+      EFFECT_SAVE_DC_FORMULA_LABELS.damageHint,
+    );
+  });
+
   it('читается словами в описании', () => {
     expect(formatEffectSaveDc({ dc: SAVE_DC, dcFormula: '8 + @prof' })).toBe(
       'Сл 8 + бонус мастерства',
@@ -251,6 +300,17 @@ describe('провал в успех (saveOverride)', () => {
     ).toBeUndefined();
   });
 
+  it('черновик: без счётчика и ресурса блока нет, пустой ключ — не ресурс', () => {
+    expect(toDraftSaveOverride({})).toBeUndefined();
+
+    expect(toDraftSaveOverride(LEGENDARY_RESISTANCE)).toEqual(
+      LEGENDARY_RESISTANCE,
+    );
+
+    expect(toDraftSaveOverrideCounter('   ')).toBeUndefined();
+    expect(toDraftSaveOverrideCounter('luck')).toBe('luck');
+  });
+
   it('читается словами', () => {
     expect(describeSaveOverride(LEGENDARY_RESISTANCE)).toBe(
       'провал спасброска — вместо этого успех, 3 раза до долгого отдыха',
@@ -283,36 +343,42 @@ describe('свет (light)', () => {
 
   it('свет без радиуса, белый цвет и ровный свет не пишутся', () => {
     expect(
-      saveEffect(createEffect({ light: { bright: 0, dim: 0 } }), 'spell'),
-    ).not.toHaveProperty('light');
-
-    expect(
       saveEffect(
         createEffect({
-          light: { bright: 20, dim: 20, color: '#FFFFFF', animation: 'none' },
+          light: { bright: MIN_EFFECT_LIGHT_FEET, dim: MIN_EFFECT_LIGHT_FEET },
         }),
         'spell',
       ),
-    ).toMatchObject({ light: { bright: 20, dim: 20 } });
+    ).not.toHaveProperty('light');
 
-    expect(
-      JSON.stringify(
-        saveEffect(
-          createEffect({
-            light: { bright: 20, dim: 20, color: '#FFFFFF', animation: 'none' },
-          }),
-          'spell',
-        ),
-      ),
-    ).not.toMatch(/color|animation/);
+    const savedSteadyLight = saveEffect(
+      createEffect({
+        light: {
+          ...DEFAULT_EFFECT_LIGHT,
+          color: WHITE_LIGHT_COLOR,
+          animation: EFFECT_LIGHT_STEADY_ANIMATION,
+        },
+      }),
+      'spell',
+    );
+
+    expect(savedSteadyLight).toMatchObject({ light: DEFAULT_EFFECT_LIGHT });
+    expect(JSON.stringify(savedSteadyLight)).not.toMatch(/color|animation/);
+  });
+
+  it('белый цвет и ровный свет — значения по умолчанию', () => {
+    expect(toStoredEffectLightColor(WHITE_LIGHT_COLOR)).toBeUndefined();
+    expect(toStoredEffectLightColor(CROWN_LIGHT.color)).toBe(CROWN_LIGHT.color);
+    expect(toStoredEffectLightAnimation('none')).toBeUndefined();
+    expect(toStoredEffectLightAnimation('torch')).toBe('torch');
   });
 
   it('битый цвет при разборе снимается, свет остаётся', () => {
     expect(
       normalizeLoadedActiveEffects([
-        createRawEffect({ light: { bright: 30, dim: 30, color: 'yellow' } }),
+        createRawEffect({ light: { ...CROWN_LIGHT, color: 'yellow' } }),
       ])[0]?.light,
-    ).toEqual({ bright: 30, dim: 30 });
+    ).toEqual({ bright: CROWN_LIGHT.bright, dim: CROWN_LIGHT.dim });
   });
 
   it('читается словами', () => {
@@ -404,7 +470,7 @@ describe('условие по типу существа списком', () => {
           mode: 'add',
           value: '1к8',
           condition: UNDEAD_OR_FIEND_TARGET,
-          priority: 20,
+          priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
         },
       ],
       rollCondition: FIEND_SOURCE,
@@ -415,7 +481,7 @@ describe('условие по типу существа списком', () => {
           event: 'turnStart',
           condition: NOT_CONSTRUCT_CARRIER,
           recipient: 'choice',
-          choice: { radius: 30, condition: UNDEAD_OR_FIEND_TARGET },
+          choice: { radius: CHOICE_RADIUS, condition: UNDEAD_OR_FIEND_TARGET },
           actions: [{ type: 'removeSelf' }],
         },
       ],

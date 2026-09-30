@@ -76,6 +76,7 @@ import {
 } from './creatureTypeCondition';
 import { renderReadableFormula } from './formula';
 import { APPLIER_SAVE_DC } from './layout';
+import { MIN_EFFECT_LIGHT_FEET } from './types';
 import { describeWeaponOverrideValue } from './weaponOverrides';
 
 /**
@@ -750,13 +751,16 @@ export function describeActiveEffect(effect: ActiveEffect): string {
  * @returns фраза со строчной буквы.
  */
 export function describeEffectLight(light: EffectLight): string {
-  const brightParts =
-    light.bright > 0 ? [EFFECT_LIGHT_PHRASES.bright(light.bright)] : [];
+  const hasBright = light.bright > MIN_EFFECT_LIGHT_FEET;
+
+  const brightParts = hasBright
+    ? [EFFECT_LIGHT_PHRASES.bright(light.bright)]
+    : [];
 
   const dimParts =
-    light.dim > 0
+    light.dim > MIN_EFFECT_LIGHT_FEET
       ? [
-          light.bright > 0
+          hasBright
             ? EFFECT_LIGHT_PHRASES.dimBeyond(light.dim)
             : EFFECT_LIGHT_PHRASES.dim(light.dim),
         ]

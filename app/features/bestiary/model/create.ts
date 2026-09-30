@@ -4,6 +4,8 @@ import type { EditorBaseInfoState } from '~ui/editor';
 import type { CreatureActionEffect, CreatureEffectContext } from './action';
 import type { CreatureSpellcastingBlock } from './spellcasting';
 
+import { clamp } from 'es-toolkit';
+
 import { AbilityKey, AbilityShortKey } from '~/shared/types';
 import {
   EFFECT_FORM_CONTEXT,
@@ -301,7 +303,7 @@ export function toStoredSaveSuccessPerDay(
   const times = parseFormNumber(saveSuccessPerDay);
 
   return times !== undefined && times >= MIN_SAVE_OVERRIDE_USES
-    ? Math.min(MAX_SAVE_OVERRIDE_USES, Math.trunc(times))
+    ? clamp(Math.trunc(times), MIN_SAVE_OVERRIDE_USES, MAX_SAVE_OVERRIDE_USES)
     : undefined;
 }
 

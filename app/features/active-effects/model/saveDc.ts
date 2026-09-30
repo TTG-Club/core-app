@@ -22,6 +22,7 @@ import type { ActiveEffect } from './types';
 
 import {
   EFFECT_SAVE_DC_FORMULA_ERRORS,
+  EFFECT_SAVE_DC_FORMULA_LABELS,
   EVENT_DAMAGE_VARIABLE,
 } from './constants';
 import { validateFormula } from './formula';
@@ -38,7 +39,7 @@ export interface SaveDcSource {
 export const MAX_SAVE_DC_FORMULA_LENGTH = 200;
 
 /** Токен урона события в записи формулы. */
-export const EVENT_DAMAGE_TOKEN = `@${EVENT_DAMAGE_VARIABLE}`;
+const EVENT_DAMAGE_TOKEN = `@${EVENT_DAMAGE_VARIABLE}`;
 
 /** Что допускает поле Сл формулой в своём месте. */
 export interface SaveDcFormulaRules {
@@ -66,6 +67,19 @@ export function describeSaveDcFormulaError(
   return !rules.acceptsDamage && formula.includes(EVENT_DAMAGE_TOKEN)
     ? EFFECT_SAVE_DC_FORMULA_ERRORS.damageOutsideEvent
     : undefined;
+}
+
+/**
+ * Подсказка под полем Сл формулой: какие токены считаются, а у события урона
+ * — ещё `@damage`.
+ *
+ * @param rules что допускает место.
+ * @returns текст подсказки.
+ */
+export function describeSaveDcFormulaHelp(rules: SaveDcFormulaRules): string {
+  return rules.acceptsDamage
+    ? `${EFFECT_SAVE_DC_FORMULA_LABELS.hint}${EFFECT_SAVE_DC_FORMULA_LABELS.damageHint}`
+    : EFFECT_SAVE_DC_FORMULA_LABELS.hint;
 }
 
 /**
@@ -118,9 +132,10 @@ function mapActionSaveDcs<
  * @param mapSave что сделать с Сл.
  * @returns срабатывание с новыми Сл.
  */
-export function mapTriggerSaveDcs<
-  Trigger extends EffectTrigger | NestedEffectTrigger,
->(trigger: Trigger, mapSave: SaveDcMapper): Trigger {
+function mapTriggerSaveDcs<Trigger extends EffectTrigger | NestedEffectTrigger>(
+  trigger: Trigger,
+  mapSave: SaveDcMapper,
+): Trigger {
   return {
     ...trigger,
     ...(trigger.save ? { save: mapSave(trigger.save) } : {}),

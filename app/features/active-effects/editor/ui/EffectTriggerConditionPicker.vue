@@ -155,9 +155,7 @@
         valueItems,
         showsValueSelect: valueItems.length > 0 && !showsTypeList,
         showsTypeList,
-        creatureTypes: showsTypeList
-          ? splitCreatureTypeList(part.value ?? '')
-          : [],
+        creatureTypes: showsTypeList ? splitCreatureTypeList(part.value) : [],
         showsTagInput: parameter === TRIGGER_CONDITION_TAG_PARAMETER,
         showsTextInput: parameter === TRIGGER_CONDITION_TEXT_PARAMETER,
         showsNumberInput: parameter === TRIGGER_CONDITION_NUMBER_PARAMETER,

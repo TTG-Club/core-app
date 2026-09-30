@@ -5,11 +5,12 @@
     APPLIER_SAVE_DC,
     DEFAULT_EFFECT_SAVE_DC,
     describeSaveDcFormulaError,
+    describeSaveDcFormulaHelp,
     EFFECT_SAVE_DC_FORMULA_LABELS,
     FIXED_MIN_SAVE_DC,
+    listSaveDcFieldModeOptions,
     SAVE_DC_AUTO_MODE,
     SAVE_DC_AUTO_SEPARATOR,
-    SAVE_DC_FIELD_MODE_OPTIONS,
     SAVE_DC_FORMULA_MODE,
     SAVE_DC_MANUAL_MODE,
   } from '../../model';
@@ -49,11 +50,7 @@
   const saveDcFormula = defineModel<string | undefined>('formula');
 
   const modeOptions = computed(() =>
-    SAVE_DC_FIELD_MODE_OPTIONS.filter(
-      (option) =>
-        (option.value !== SAVE_DC_AUTO_MODE || autoAllowed)
-        && (option.value !== SAVE_DC_FORMULA_MODE || formulaAllowed),
-    ),
+    listSaveDcFieldModeOptions({ autoAllowed, formulaAllowed }),
   );
 
   const hasModeChoice = computed(() => modeOptions.value.length > 1);
@@ -125,15 +122,9 @@
       : undefined;
   });
 
-  const formulaHelp = computed(() => {
-    if (!isFormula.value) {
-      return undefined;
-    }
-
-    return acceptsDamage
-      ? `${EFFECT_SAVE_DC_FORMULA_LABELS.hint}${EFFECT_SAVE_DC_FORMULA_LABELS.damageHint}`
-      : EFFECT_SAVE_DC_FORMULA_LABELS.hint;
-  });
+  const formulaHelp = computed(() =>
+    isFormula.value ? describeSaveDcFormulaHelp({ acceptsDamage }) : undefined,
+  );
 </script>
 
 <template>

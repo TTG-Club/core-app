@@ -10,6 +10,7 @@
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectRecharge } from '~ui/select';
 
+  import { toStoredSaveSuccessPerDay } from '../../../model';
   import {
     CREATURE_ACTION_LABELS,
     CREATURE_ACTION_SECTIONS,
@@ -44,14 +45,13 @@
     () => effectContext === EFFECT_FORM_CONTEXT.creatureTrait,
   );
 
-  // Очищенное поле числа отдаёт `undefined`, а ноль — «не умеет»: в данных
-  // остаётся только число раз
+  // Очищенное поле и ноль — «не умеет»: в данных остаётся только число раз
   const saveSuccessPerDay = computed({
     get: () => model.value.saveSuccessPerDay,
     set: (enteredTimes: number | null | undefined) => {
       model.value = {
         ...model.value,
-        saveSuccessPerDay: enteredTimes || undefined,
+        saveSuccessPerDay: toStoredSaveSuccessPerDay(enteredTimes),
       };
     },
   });
