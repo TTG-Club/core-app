@@ -27,9 +27,11 @@ import type {
   EffectDamagePart,
   EffectDuration,
   EffectEscape,
+  EffectLight,
   EffectRecurringDamage,
   EffectRecurringSave,
   EffectSave,
+  EffectSaveOverride,
   EffectStage,
   EffectVariant,
 } from './types';
@@ -42,6 +44,7 @@ import {
 } from './changeSteps';
 import { EFFECT_CONDITION_OPTIONS, EFFECT_SKILL_OPTIONS } from './constants';
 import { isHealingDamagePart } from './describe';
+import { MAX_SAVE_DC_FORMULA_LENGTH } from './saveDc';
 import {
   EFFECT_ACTION_COSTS,
   EFFECT_CAST_OWNERS,
@@ -88,21 +91,24 @@ import {
   EFFECT_ACTIVATION_MODES,
   EFFECT_ESCAPE_ACTORS,
   EFFECT_ESCAPE_OUTCOMES,
+  EFFECT_LIGHT_ANIMATIONS,
   EFFECT_ORIGIN,
   EFFECT_VARIANT_PICKS,
   MAX_EFFECT_CHARGES,
+  MAX_EFFECT_LIGHT_FEET,
   MAX_EFFECT_STAGE_LABEL_LENGTH,
   MAX_EFFECT_STAGES,
+  MAX_SAVE_OVERRIDE_USES,
   MIN_ACTIVATION_RANGE,
   MIN_EFFECT_CHARGES,
+  MIN_EFFECT_LIGHT_FEET,
+  MIN_SAVE_OVERRIDE_USES,
   parseFormNumber,
+  SAVE_OVERRIDE_PERIODS,
 } from './types';
 
-/** Самая длинная формула Сл срабатывания. */
-const MAX_TRIGGER_DC_FORMULA_LENGTH = 200;
-
-/** Самая длинная формула «на сколько» у уменьшения максимума хитов. */
-const MAX_TRIGGER_AMOUNT_LENGTH = MAX_TRIGGER_DC_FORMULA_LENGTH;
+/** Самая длинная формула действия срабатывания: урон максимума, хиты, бросок. */
+const MAX_TRIGGER_FORMULA_LENGTH = 200;
 
 /** Самый высокий приоритет модификатора. */
 const MAX_EFFECT_CHANGE_PRIORITY = 100;
@@ -282,9 +288,22 @@ const activationSchema: z.ZodType<EffectActivation> = z.object({
 /** Сложность спасброска: число, в том числе набранное строкой. */
 const saveDcSchema = z.preprocess(coerceOptionalNumber, z.number().int());
 
+/**
+ * Сл формулой: пустая или слишком длинная отбрасывается, спасбросок остаётся
+ * с числом.
+ */
+const saveDcFormulaSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(MAX_SAVE_DC_FORMULA_LENGTH)
+  .optional()
+  .catch(undefined);
+
 const saveSchema: z.ZodType<EffectSave> = z.object({
   ability: abilitySchema,
   dc: saveDcSchema,
+  dcFormula: saveDcFormulaSchema,
   onSuccess: z.enum(['negate', 'half']),
   allowWilling: z.literal(true).optional().catch(undefined),
 });
@@ -292,6 +311,7 @@ const saveSchema: z.ZodType<EffectSave> = z.object({
 const recurringSaveSchema: z.ZodType<EffectRecurringSave> = z.object({
   ability: abilitySchema,
   dc: saveDcSchema,
+  dcFormula: saveDcFormulaSchema,
   timing: z.enum(['startOfTurn', 'endOfTurn']),
 });
 
@@ -306,13 +326,7 @@ const triggerSaveSchema = z.object({
   ability: abilitySchema,
   dc: saveDcSchema,
   mode: z.enum(EFFECT_TRIGGER_SAVE_MODES).optional().catch(undefined),
-  dcFormula: z
-    .string()
-    .trim()
-    .min(1)
-    .max(MAX_TRIGGER_DC_FORMULA_LENGTH)
-    .optional()
-    .catch(undefined),
+  dcFormula: saveDcFormulaSchema,
   modeIf: z
     .array(
       z.object({
@@ -378,7 +392,7 @@ const plainTriggerActionSchemas = [
   }),
   z.object({
     type: z.literal('reduceMaxHp'),
-    amount: z.string().trim().min(1).max(MAX_TRIGGER_AMOUNT_LENGTH),
+    amount: z.string().trim().min(1).max(MAX_TRIGGER_FORMULA_LENGTH),
     endsOnRest: z
       .enum(EFFECT_TRIGGER_MAX_HP_REST_ENDS)
       .optional()
@@ -393,7 +407,7 @@ const plainTriggerActionSchemas = [
   }),
   z.object({
     type: z.literal('tempHp'),
-    amount: z.string().trim().min(1).max(MAX_TRIGGER_AMOUNT_LENGTH),
+    amount: z.string().trim().min(1).max(MAX_TRIGGER_FORMULA_LENGTH),
     mode: z.enum(EFFECT_TEMP_HP_MODES).optional().catch(undefined),
     on: triggerGateSchema,
   }),
@@ -491,7 +505,7 @@ const plainTriggerActionSchemas = [
       .string()
       .trim()
       .min(1)
-      .max(MAX_TRIGGER_DC_FORMULA_LENGTH)
+      .max(MAX_TRIGGER_FORMULA_LENGTH)
       .optional()
       .catch(undefined),
     on: triggerGateSchema,
@@ -669,6 +683,7 @@ const escapeSchema: z.ZodType<EffectEscape> = z.object({
     .object({
       skill: z.string().refine((skill) => SKILL_KEYS.has(skill)),
       dc: saveDcSchema,
+      dcFormula: saveDcFormulaSchema,
     })
     .optional()
     .catch(undefined),
@@ -681,6 +696,58 @@ const escapeSchema: z.ZodType<EffectEscape> = z.object({
     .optional()
     .catch(undefined),
 });
+
+/** Цвет света `#rrggbb`. */
+const LIGHT_COLOR_PATTERN = /^#[\da-f]{6}$/i;
+
+/** Радиус света эффекта в футах. */
+const lightFeetSchema = z.preprocess(
+  coerceOptionalNumber,
+  z.number().min(MIN_EFFECT_LIGHT_FEET).max(MAX_EFFECT_LIGHT_FEET),
+);
+
+/** Свет эффекта: свет без радиуса отбрасывается, неверный цвет — белый. */
+const lightSchema: z.ZodType<EffectLight> = z
+  .object({
+    bright: lightFeetSchema,
+    dim: lightFeetSchema,
+    color: z.string().regex(LIGHT_COLOR_PATTERN).optional().catch(undefined),
+    animation: z.enum(EFFECT_LIGHT_ANIMATIONS).optional().catch(undefined),
+  })
+  .refine((light) => light.bright + light.dim > 0);
+
+/**
+ * «Провал в успех»: блок без счётчика и без ресурса платить нечем —
+ * отбрасывается целиком.
+ */
+const saveOverrideSchema: z.ZodType<EffectSaveOverride> = z
+  .object({
+    limit: z
+      .object({
+        max: z.preprocess(
+          coerceOptionalNumber,
+          z
+            .number()
+            .int()
+            .min(MIN_SAVE_OVERRIDE_USES)
+            .max(MAX_SAVE_OVERRIDE_USES),
+        ),
+        per: z.enum(SAVE_OVERRIDE_PERIODS),
+      })
+      .optional()
+      .catch(undefined),
+    counter: z
+      .string()
+      .trim()
+      .min(1)
+      .max(MAX_ACTIVATION_COUNTER_LENGTH)
+      .optional()
+      .catch(undefined),
+  })
+  .refine(
+    (saveOverride) =>
+      saveOverride.limit !== undefined || saveOverride.counter !== undefined,
+  );
 
 /** Ступень эффекта. */
 const stageSchema: z.ZodType<EffectStage> = z.object({
@@ -756,6 +823,8 @@ const activeEffectSchema: z.ZodType<ActiveEffect> = z.object({
       .optional()
       .catch(undefined),
   ),
+  saveOverride: saveOverrideSchema.optional().catch(undefined),
+  light: lightSchema.optional().catch(undefined),
 });
 
 /**

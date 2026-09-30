@@ -23,7 +23,9 @@
   import EffectFormStepSection from './EffectFormStepSection.vue';
   import EffectHeaderFields from './EffectHeaderFields.vue';
   import EffectInertFieldsNotice from './EffectInertFieldsNotice.vue';
+  import EffectLightSection from './EffectLightSection.vue';
   import EffectModifiersStep from './EffectModifiersStep.vue';
+  import EffectSaveOverrideSection from './EffectSaveOverrideSection.vue';
   import EffectSaveStep from './EffectSaveStep.vue';
   import EffectScenarioSummary from './EffectScenarioSummary.vue';
   import EffectStagesSection from './EffectStagesSection.vue';
@@ -187,6 +189,13 @@
         v-model:effect="effect"
         :show-priority-field="showPriorityField"
       />
+
+      <EffectSaveOverrideSection
+        v-if="layout.showSaveOverride"
+        v-model:effect="effect"
+      />
+
+      <EffectLightSection v-model:effect="effect" />
     </EffectFormStepSection>
 
     <EffectFormStepSection

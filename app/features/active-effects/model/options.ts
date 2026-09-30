@@ -8,6 +8,7 @@
 
 import type { EffectChangeStepPeriod } from './changeSteps';
 import type { EffectActivationChoice, SaveDcFieldMode } from './constants';
+import type { CreatureTypeConditionSubject } from './creatureTypeCondition';
 import type {
   EffectDelivery,
   EffectFormContext,
@@ -46,10 +47,12 @@ import type {
   EffectDurationType,
   EffectEscapeActor,
   EffectEscapeOutcome,
+  EffectLightAnimation,
   EffectSaveTiming,
   EffectTurnAnchor,
   EffectTurnTiming,
   EffectVariantPick,
+  SaveOverridePeriod,
 } from './types';
 
 import { upperFirst } from 'es-toolkit';
@@ -69,6 +72,7 @@ import {
   EFFECT_CONDITION_OPTIONS,
   EFFECT_CREATURE_CATEGORY_OPTIONS,
   EFFECT_CREATURE_SIZE_OPTIONS,
+  EFFECT_CREATURE_TYPE_CONDITION_LABELS,
   EFFECT_DAMAGE_TYPE_OPTIONS,
   EFFECT_DELIVERY_ICONS,
   EFFECT_DELIVERY_LABELS,
@@ -76,6 +80,7 @@ import {
   EFFECT_DURATION_LABELS,
   EFFECT_ESCAPE_ACTOR_LABELS,
   EFFECT_ESCAPE_OUTCOME_LABELS,
+  EFFECT_LIGHT_ANIMATION_LABELS,
   EFFECT_NOTIFY_TARGET_LABELS,
   EFFECT_PERMANENT_ACTIVATION,
   EFFECT_RESTORE_KIND_LABELS,
@@ -107,9 +112,12 @@ import {
   EFFECT_VARIANT_PICK_LABELS,
   EFFECT_ZONE_AREA_TRIGGER_LABELS,
   SAVE_DC_AUTO_MODE,
+  SAVE_DC_FORMULA_MODE,
   SAVE_DC_MANUAL_MODE,
+  SAVE_OVERRIDE_PERIOD_LABELS,
   TRIGGER_ATTACK_KIND_PHRASES,
 } from './constants';
+import { CREATURE_TYPE_CONDITION_SUBJECTS } from './creatureTypeCondition';
 import {
   triggerEventAcceptsApplier,
   triggerEventAcceptsArea,
@@ -142,8 +150,10 @@ import {
 import {
   EFFECT_ESCAPE_ACTORS,
   EFFECT_ESCAPE_OUTCOMES,
+  EFFECT_LIGHT_ANIMATIONS,
   EFFECT_SAVE_TIMINGS,
   EFFECT_VARIANT_PICKS,
+  SAVE_OVERRIDE_PERIODS,
 } from './types';
 
 /** Моменты срабатывания зоны и ауры в порядке показа. */
@@ -184,6 +194,7 @@ const EFFECT_AURA_TARGET_ORDER: readonly EffectAuraTarget[] = [
 const SAVE_DC_FIELD_MODE_ORDER: readonly SaveDcFieldMode[] = [
   SAVE_DC_AUTO_MODE,
   SAVE_DC_MANUAL_MODE,
+  SAVE_DC_FORMULA_MODE,
 ];
 
 /** Длительности, у которых есть число единиц. */
@@ -413,6 +424,30 @@ export const EFFECT_VARIANT_PICK_OPTIONS: Array<
   label: EFFECT_VARIANT_PICK_LABELS[pick],
 }));
 
+/** Пункты «Действует» о типе существа: типы выбираются вторым полем. */
+export const EFFECT_CREATURE_TYPE_SUBJECT_OPTIONS: Array<
+  EffectSegmentOption<CreatureTypeConditionSubject>
+> = CREATURE_TYPE_CONDITION_SUBJECTS.map((subject) => ({
+  value: subject,
+  label: EFFECT_CREATURE_TYPE_CONDITION_LABELS[subject],
+}));
+
+/** Варианты анимации света эффекта. */
+export const EFFECT_LIGHT_ANIMATION_OPTIONS: Array<
+  EffectSegmentOption<EffectLightAnimation>
+> = EFFECT_LIGHT_ANIMATIONS.map((animation) => ({
+  value: animation,
+  label: EFFECT_LIGHT_ANIMATION_LABELS[animation],
+}));
+
+/** Варианты периода своего счётчика «провал в успех». */
+export const SAVE_OVERRIDE_PERIOD_OPTIONS: Array<
+  EffectSegmentOption<SaveOverridePeriod>
+> = SAVE_OVERRIDE_PERIODS.map((period) => ({
+  value: period,
+  label: SAVE_OVERRIDE_PERIOD_LABELS[period],
+}));
+
 /** Варианты «кого задевает аура». */
 export const EFFECT_AURA_TARGET_OPTIONS: Array<
   EffectSegmentOption<EffectAuraTarget>
@@ -574,6 +609,31 @@ export const SAVE_DC_FIELD_MODE_OPTIONS: Array<
   value: mode,
   label: EFFECT_SAVE_DC_FIELD_MODE_LABELS[mode],
 }));
+
+/** Какие режимы поля Сл, кроме «Вручную», есть в этом месте. */
+export interface SaveDcFieldModeRules {
+  /** «Авто»: у Сл есть источник. */
+  autoAllowed: boolean;
+  /** «Формулой»: у Сл есть владелец эффекта. */
+  formulaAllowed: boolean;
+}
+
+/**
+ * Режимы поля Сл в этом месте: «Авто» — где у Сл есть источник, «Формулой» —
+ * где у Сл есть владелец эффекта.
+ *
+ * @param modeRules какие режимы кроме «Вручную» доступны.
+ * @returns варианты выбора по порядку.
+ */
+export function listSaveDcFieldModeOptions(
+  modeRules: SaveDcFieldModeRules,
+): Array<EffectSegmentOption<SaveDcFieldMode>> {
+  return SAVE_DC_FIELD_MODE_OPTIONS.filter(
+    (option) =>
+      (option.value !== SAVE_DC_AUTO_MODE || modeRules.autoAllowed)
+      && (option.value !== SAVE_DC_FORMULA_MODE || modeRules.formulaAllowed),
+  );
+}
 
 /** Исход урона в строке срабатывания: гейт либо «успех — половина». */
 export type EffectTriggerDamageGateChoice =

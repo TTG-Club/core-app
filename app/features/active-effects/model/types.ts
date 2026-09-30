@@ -300,6 +300,12 @@ export interface EffectSave {
   ability: EffectAbility;
   /** Сложность (`0` = Сл источника: заклинателя, действия, оружия). */
   dc: number;
+  /**
+   * Сл формулой по владельцу эффекта: «8 + @prof + @mod.str», `@spellDc` — Сл
+   * его заклинаний. VTTG считает её по тому, чей это эффект; не посчиталась —
+   * бросают против `dc`.
+   */
+  dcFormula?: string;
   onSuccess: EffectSaveOutcome;
   /**
    * Согласная цель не бросает: «Согласная цель может не совершать спасбросок».
@@ -358,6 +364,8 @@ export interface EffectEscapeCheck {
   skill: string;
   /** Сложность; 0 — Сл источника. */
   dc: number;
+  /** Сл формулой по наложившему: «8 + @prof + @mod.str» захвата. */
+  dcFormula?: string;
 }
 
 /** Самая длинная подпись ступени и кнопки «вырваться». */
@@ -402,11 +410,89 @@ export interface EffectCharges {
   endsWhenEmpty?: true;
 }
 
+/** Анимации света эффекта — те же, что у света фишки VTTG. */
+export const EFFECT_LIGHT_ANIMATIONS = [
+  'none',
+  'pulse',
+  'flicker',
+  'torch',
+  'strobe',
+] as const;
+
+/** Анимация света эффекта; `none` в данных не пишется — это ровный свет. */
+export type EffectLightAnimation = (typeof EFFECT_LIGHT_ANIMATIONS)[number];
+
+/** Ровный свет: анимации нет, поле `animation` не пишется. */
+export const EFFECT_LIGHT_STEADY_ANIMATION: EffectLightAnimation = 'none';
+
+/** Радиус света «нет света»: поле очищено, фт. */
+export const MIN_EFFECT_LIGHT_FEET = 0;
+
+/** Дальше этого радиуса свет эффекта не бывает, фт. */
+export const MAX_EFFECT_LIGHT_FEET = 1000;
+
+/**
+ * Свет, который излучает носитель, пока эффект действует («Корона света»:
+ * яркий 30 фт и тусклый ещё 30).
+ */
+export interface EffectLight {
+  /** Радиус яркого света, фт. */
+  bright: number;
+  /**
+   * Тусклый свет ЗА ярким, фт — как в тексте правил: «и тусклый ещё на 20
+   * фт». Дальний край света — `bright + dim`.
+   */
+  dim: number;
+  /** Цвет `#rrggbb`; нет — белый. */
+  color?: string;
+  /** Анимация; нет — ровный свет. */
+  animation?: EffectLightAnimation;
+}
+
+/** На какой отдых восстанавливается «провал в успех» своим счётчиком. */
+export const SAVE_OVERRIDE_PERIODS = ['shortRest', 'longRest'] as const;
+
+/** Период своего счётчика «провал в успех»: день — это долгий отдых. */
+export type SaveOverridePeriod = (typeof SAVE_OVERRIDE_PERIODS)[number];
+
+/** Меньше одного раза за период «провал в успех» не бывает. */
+export const MIN_SAVE_OVERRIDE_USES = 1;
+
+/** Больше раз за период «провал в успех» не бывает. */
+export const MAX_SAVE_OVERRIDE_USES = 20;
+
+/** Свой счётчик «провал в успех»: N раз до отдыха. */
+export interface EffectSaveOverrideLimit {
+  /** Сколько раз за период. */
+  max: number;
+  /** До какого отдыха. */
+  per: SaveOverridePeriod;
+}
+
+/**
+ * «Провал спасброска — вместо этого успех» за ресурс: «Легендарное
+ * сопротивление» (3/день), черты и предметы игроков. Платит своим счётчиком
+ * носителя (`limit`) либо ресурсом листа (`counter`); задано оба — платит
+ * ресурс листа.
+ */
+export interface EffectSaveOverride {
+  /** Своим счётчиком: N раз за период. */
+  limit?: EffectSaveOverrideLimit;
+  /** Ресурс листа VTTG (ключ счётчика класса: `luck`), тратится по единице. */
+  counter?: string;
+}
+
 /** Периодический спасбросок для снятия эффекта. */
 export interface EffectRecurringSave {
   ability: EffectAbility;
   /** Сложность (`0` = подставить Сл кастера при наложении в VTTG). */
   dc: number;
+  /**
+   * Сл формулой по владельцу эффекта: «8 + @prof + @mod.str», `@spellDc` — Сл
+   * его заклинаний. VTTG считает её по тому, чей это эффект; не посчиталась —
+   * бросают против `dc`.
+   */
+  dcFormula?: string;
   timing: EffectSaveTiming;
 }
 
@@ -555,6 +641,14 @@ export interface ActiveEffect {
   stages?: EffectStage[];
   /** Какая ступень действует сейчас; нет — первая (0). */
   stageIndex?: number;
+  /**
+   * «Провал спасброска — вместо этого успех» за ресурс: после проваленного
+   * спасброска владельцу носителя предлагают преуспеть, пока есть чем
+   * заплатить.
+   */
+  saveOverride?: EffectSaveOverride;
+  /** Свет, который излучает носитель, пока эффект действует. */
+  light?: EffectLight;
 }
 
 /**

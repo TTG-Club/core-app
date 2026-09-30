@@ -31,13 +31,22 @@ import type {
   EffectAura,
   EffectCharges,
   EffectEscape,
+  EffectLight,
   EffectOrigin,
   EffectSave,
   EffectSaveOutcome,
+  EffectSaveOverride,
 } from './types';
+
+import { clamp } from 'es-toolkit';
 
 import { hasLastingEffectPayload } from './automation';
 import { EFFECT_TRIGGER_CONDITION_DEFAULT_VALUES } from './constants';
+import {
+  toStoredEffectLightAnimation,
+  toStoredEffectLightColor,
+} from './light';
+import { mapEffectSaveDcs, trimSaveDcFormula } from './saveDc';
 import { applyEffectStage, resolveEffectStageIndex } from './stages';
 import { writeTriggerCondition } from './triggerConditions';
 import {
@@ -79,8 +88,12 @@ import {
   EFFECT_ORIGIN,
   isUseActivatedEffect,
   MAX_EFFECT_CHARGES,
+  MAX_EFFECT_LIGHT_FEET,
+  MAX_SAVE_OVERRIDE_USES,
   MIN_ACTIVATION_RANGE,
   MIN_EFFECT_CHARGES,
+  MIN_EFFECT_LIGHT_FEET,
+  MIN_SAVE_OVERRIDE_USES,
   parseFormNumber,
 } from './types';
 
@@ -170,6 +183,7 @@ export type InertEffectField =
   | 'duration'
   | 'conditionImmunities'
   | 'charges'
+  | 'saveOverride'
   | 'triggers';
 
 /** Вид действия срабатывания. */
@@ -266,6 +280,11 @@ export interface EffectFormLayout {
    * и он ложится экземпляром на существо: заряд списывают из самого эффекта.
    */
   showCharges: boolean;
+  /**
+   * «Провал спасброска — вместо этого успех» за ресурс. Работает там, где
+   * эффект действует на своего носителя: его читает сбор эффектов носителя.
+   */
+  showSaveOverride: boolean;
   /** Условие наложения «Ложится, если». */
   showLandingCondition: boolean;
   /** Выбор «Один из вариантов». */
@@ -912,6 +931,9 @@ export function resolveEffectFormLayout(
     // Заряд списывают из экземпляра эффекта, и списывать его должно чему:
     // срабатывания в этом месте обязаны работать
     showCharges: livesOnItsOwn && triggerList.triggerEvents.length > 0,
+    showSaveOverride:
+      isGeneric
+      || (delivery === 'carrier' && DAMAGE_EVENT_CONTEXTS.has(context)),
     minSaveDc: acceptsApplierSaveDc(context, delivery, isUsed)
       ? APPLIER_MIN_SAVE_DC
       : FIXED_MIN_SAVE_DC,
@@ -1137,13 +1159,13 @@ function normalizeNestedTriggers(
 }
 
 /**
- * Считается ли Сл спасброска формулой от данных события — у событий урона есть
- * `@damage`.
+ * Читает ли Сл формулой урон события — у событий урона есть `@damage`. Сама
+ * Сл формулой (по владельцу эффекта) есть у любого события.
  *
  * @param event событие.
- * @returns `true`, если формула Сл работает.
+ * @returns `true`, если в формуле Сл работает `@damage`.
  */
-export function triggerEventAcceptsDcFormula(
+export function triggerEventAcceptsDamageDc(
   event: EffectTriggerEvent,
 ): boolean {
   return DAMAGE_DATA_TRIGGER_EVENTS.includes(event);
@@ -1648,6 +1670,10 @@ export function listInertEffectFields(
     ['duration', !layout.showDuration && effect.duration.type !== 'permanent'],
     ['charges', !layout.showCharges && effect.charges !== undefined],
     [
+      'saveOverride',
+      !layout.showSaveOverride && effect.saveOverride !== undefined,
+    ],
+    [
       'conditionImmunities',
       !layout.showConditionImmunities
         && (effect.conditionImmunities?.length ?? 0) > 0,
@@ -1773,7 +1799,7 @@ function normalizeDraftTriggers(
     .map(
       (trigger): EffectTrigger => ({
         ...trigger,
-        // Получатель и Сл формулой — только у событий, где они работают
+        // Получатель — только у событий, где он работает
         recipient: resolveDraftRecipient(trigger),
         area:
           resolveDraftRecipient(trigger) === AREA_TRIGGER_RECIPIENT
@@ -1808,9 +1834,6 @@ function normalizeDraftTriggers(
           ? {
               ...trigger.save,
               dc: clampSaveDc(trigger.save.dc, minDc),
-              dcFormula: triggerEventAcceptsDcFormula(trigger.event)
-                ? trigger.save.dcFormula?.trim() || undefined
-                : undefined,
             }
           : undefined,
         limit: trigger.limit
@@ -1857,6 +1880,78 @@ function normalizeDraftEscape(
 }
 
 /**
+ * Радиус света из поля формы: целые футы от нуля до предела.
+ *
+ * @param feet радиус из поля.
+ * @returns радиус; пустое поле — ноль.
+ */
+function clampLightFeet(feet: unknown): number {
+  return clamp(
+    parseFormNumber(feet) ?? MIN_EFFECT_LIGHT_FEET,
+    MIN_EFFECT_LIGHT_FEET,
+    MAX_EFFECT_LIGHT_FEET,
+  );
+}
+
+/**
+ * Свет черновика к записи: радиусы числами, ровный свет — без поля анимации.
+ * Свет без радиуса не пишется: VTTG такой свет отбрасывает.
+ *
+ * @param light свет из формы.
+ * @returns свет либо `undefined`.
+ */
+function normalizeDraftLight(
+  light: EffectLight | undefined,
+): EffectLight | undefined {
+  if (!light) {
+    return undefined;
+  }
+
+  const bright = clampLightFeet(light.bright);
+  const dim = clampLightFeet(light.dim);
+
+  if (bright + dim <= 0) {
+    return undefined;
+  }
+
+  return {
+    bright,
+    dim,
+    color: toStoredEffectLightColor(light.color),
+    animation: toStoredEffectLightAnimation(light.animation),
+  };
+}
+
+/**
+ * «Провал в успех» черновика к записи: число раз — целым в пределах, ключ
+ * ресурса без пробелов. Блок, которому нечем платить, не пишется.
+ *
+ * @param saveOverride блок из формы.
+ * @returns блок либо `undefined`.
+ */
+function normalizeDraftSaveOverride(
+  saveOverride: EffectSaveOverride | undefined,
+): EffectSaveOverride | undefined {
+  const counter = saveOverride?.counter?.trim() || undefined;
+  const limit = saveOverride?.limit;
+
+  const normalizedLimit = limit
+    ? {
+        ...limit,
+        max: clamp(
+          Math.trunc(parseFormNumber(limit.max) ?? MIN_SAVE_OVERRIDE_USES),
+          MIN_SAVE_OVERRIDE_USES,
+          MAX_SAVE_OVERRIDE_USES,
+        ),
+      }
+    : undefined;
+
+  return normalizedLimit || counter
+    ? { limit: normalizedLimit, counter }
+    : undefined;
+}
+
+/**
  * Приводит черновик к записи перед сохранением: числа из полей — числами,
  * Сл — не ниже допустимой, пустые списки — отсутствием поля.
  *
@@ -1883,10 +1978,12 @@ export function normalizeEffectDraft(
       ? true
       : effect.disabled;
 
-  return {
+  const normalized: ActiveEffect = {
     ...effect,
     disabled,
     name: effect.name.trim(),
+    light: normalizeDraftLight(effect.light),
+    saveOverride: normalizeDraftSaveOverride(effect.saveOverride),
     landingCondition: landingCondition || undefined,
     rollCondition: effect.rollCondition?.trim() || undefined,
     savedRoll: effect.savedRoll?.trim() || undefined,
@@ -1955,4 +2052,7 @@ export function normalizeEffectDraft(
       : undefined,
     escape: normalizeDraftEscape(effect.escape, layout.minSaveDc),
   };
+
+  // Пустая формула Сл — её отсутствие: спасбросок остаётся с числом
+  return mapEffectSaveDcs(normalized, trimSaveDcFormula);
 }

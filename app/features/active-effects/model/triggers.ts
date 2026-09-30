@@ -15,6 +15,7 @@
  * Зеркало: dnd5-test-migrate/src/engine/effectTriggers.ts
  */
 
+import type { SaveDcSource } from './saveDc';
 import type {
   EffectTrigger,
   EffectTriggerAction,
@@ -167,6 +168,7 @@ function readEffectLandingTrigger(
           save: {
             ability: effect.applySave.ability,
             dc: effect.applySave.dc,
+            ...pickSaveDcFormula(effect.applySave),
           },
         }
       : {}),
@@ -238,7 +240,15 @@ function readLegacyListTriggers(effect: ActiveEffect): EffectTrigger[] {
     triggers.push({
       id: LEGACY_TRIGGER_IDS.recurringDamage,
       event: turnTriggerEventOf(recurringDamage.timing),
-      ...(save ? { save: { ability: save.ability, dc: save.dc } } : {}),
+      ...(save
+        ? {
+            save: {
+              ability: save.ability,
+              dc: save.dc,
+              ...pickSaveDcFormula(save),
+            },
+          }
+        : {}),
       actions: [
         {
           type: 'damage',
@@ -254,7 +264,11 @@ function readLegacyListTriggers(effect: ActiveEffect): EffectTrigger[] {
     triggers.push({
       id: LEGACY_TRIGGER_IDS.recurringSave,
       event: turnTriggerEventOf(recurringSave.timing),
-      save: { ability: recurringSave.ability, dc: recurringSave.dc },
+      save: {
+        ability: recurringSave.ability,
+        dc: recurringSave.dc,
+        ...pickSaveDcFormula(recurringSave),
+      },
       actions: [{ type: 'removeSelf', on: 'saved' }],
     });
   }
@@ -380,6 +394,19 @@ function isPlainTrigger(trigger: EffectTrigger): boolean {
 }
 
 /**
+ * Формула Сл старого поля для срабатывания и обратно — только если она есть:
+ * пустое поле в данных не пишется.
+ *
+ * @param save Сл старого поля или срабатывания.
+ * @returns поле формулы либо ничего.
+ */
+function pickSaveDcFormula(
+  save: SaveDcSource,
+): Pick<SaveDcSource, 'dcFormula'> {
+  return save.dcFormula ? { dcFormula: save.dcFormula } : {};
+}
+
+/**
  * Простой спасбросок срабатывания: без режима по условию и без
  * автоматического исхода — их старые поля тоже не выражают.
  *
@@ -495,6 +522,7 @@ function toLegacyFields(
               save: {
                 ability: trigger.save.ability,
                 dc: trigger.save.dc,
+                ...pickSaveDcFormula(trigger.save),
                 onSuccess: action.halfOnSave ? 'half' : 'negate',
               },
             }
@@ -508,6 +536,7 @@ function toLegacyFields(
       recurringSave: {
         ability: trigger.save.ability,
         dc: trigger.save.dc,
+        ...pickSaveDcFormula(trigger.save),
         timing,
       },
     };

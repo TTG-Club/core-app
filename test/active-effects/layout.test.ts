@@ -29,7 +29,7 @@ import {
   readEffectSuccessOutcome,
   resolveEffectFormLayout,
   triggerEventAcceptsArea,
-  triggerEventAcceptsDcFormula,
+  triggerEventAcceptsDamageDc,
   triggerEventHasOtherParty,
   writeEffectAreaTrigger,
   writeEffectDelivery,
@@ -969,9 +969,9 @@ describe('список «Срабатывания»', () => {
       'removeSelf',
     ]);
 
-    expect(triggerEventAcceptsDcFormula('damageTaken')).toBe(true);
-    expect(triggerEventAcceptsDcFormula('turnEnd')).toBe(false);
-    expect(triggerEventAcceptsDcFormula('applied')).toBe(true);
+    expect(triggerEventAcceptsDamageDc('damageTaken')).toBe(true);
+    expect(triggerEventAcceptsDamageDc('turnEnd')).toBe(false);
+    expect(triggerEventAcceptsDamageDc('applied')).toBe(true);
     expect(triggerEventHasOtherParty('attackRoll')).toBe(true);
     expect(triggerEventHasOtherParty('damageTaken')).toBe(true);
     expect(triggerEventHasOtherParty('applied')).toBe(true);

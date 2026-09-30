@@ -244,6 +244,9 @@ export const CREATURE_ACTION_ENTRY = {
   removeConfirmApply: 'Удалить',
 } as const;
 
+/** Наименьшее число в поле «провал в успех, раз в день»: ноль — не умеет. */
+export const CREATURE_SAVE_SUCCESS_PER_DAY_MIN = 0;
+
 /** Подписи полей записи боевого блока. */
 export const CREATURE_ACTION_LABELS = {
   nameRus: 'Название',
@@ -253,6 +256,12 @@ export const CREATURE_ACTION_LABELS = {
   description: 'Описание',
   descriptionPlaceholder: 'Введи описание',
   recharge: 'Перезарядка',
+  saveSuccessPerDay: 'Провал спасброска → успех, раз в день',
+  saveSuccessPerDayPlaceholder: 'Нет',
+  saveSuccessPerDayHint:
+    '«Легендарное сопротивление (3/день)»: провалив спасбросок, существо '
+    + 'может преуспеть — ведущий решает в окне после броска. Счёт '
+    + 'восстанавливает долгий отдых.',
   attackType: 'Тип атаки',
   attackBonus: 'Бонус атаки',
   attackBonusPlaceholder: 'Например: 5',

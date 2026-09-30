@@ -9,14 +9,21 @@
  * Зеркало: dnd5-test-migrate/src/engine/activeEffectDescribe.ts
  */
 
+import type {
+  CreatureTypeCondition,
+  CreatureTypeConditionSubject,
+} from './creatureTypeCondition';
 import type { EffectFormLayout, InertEffectField } from './layout';
+import type { SaveDcSource } from './saveDc';
 import type {
   ActiveEffect,
   EffectChange,
   EffectDamagePart,
   EffectDuration,
   EffectHealKind,
+  EffectLight,
   EffectSave,
+  EffectSaveOverride,
 } from './types';
 
 import { upperFirst } from 'es-toolkit';
@@ -38,6 +45,8 @@ import {
   EFFECT_CONDITION_EXPR_SUGGESTIONS,
   EFFECT_CONDITION_NAMES,
   EFFECT_CREATURE_CATEGORY_OPTIONS,
+  EFFECT_CREATURE_TYPE_SUBJECT_LABELS,
+  EFFECT_CREATURE_TYPE_SUBJECT_SEPARATOR,
   EFFECT_DAMAGE_TYPE_SHORT_LABELS,
   EFFECT_DELIVERY_HINTS,
   EFFECT_FLAG_LABELS,
@@ -46,9 +55,13 @@ import {
   EFFECT_INERT_FIELDS_LABELS,
   EFFECT_INERT_FIELDS_SEPARATOR,
   EFFECT_INERT_FIELDS_TERMINATOR,
+  EFFECT_LIGHT_PHRASES,
   EFFECT_MODIFIERS_STEP_LABELS,
   EFFECT_PHRASE_PARTS,
   EFFECT_RECURRING_DAMAGE_SAVE_SUCCESS_LABELS,
+  EFFECT_SAVE_OVERRIDE_PERIOD_PHRASES,
+  EFFECT_SAVE_OVERRIDE_PHRASES,
+  EFFECT_SAVE_OVERRIDE_TIMES_FORMS,
   EFFECT_SAVE_TIMING_LABELS,
   EFFECT_SPELL_ZONE_DELIVERY_HINT,
   EFFECT_TARGET_KEY_SUGGESTIONS,
@@ -57,8 +70,13 @@ import {
   isEffectDamageType,
   splitConditionParts,
 } from './constants';
+import {
+  parseCreatureTypeCondition,
+  splitCreatureTypeList,
+} from './creatureTypeCondition';
 import { renderReadableFormula } from './formula';
 import { APPLIER_SAVE_DC } from './layout';
+import { MIN_EFFECT_LIGHT_FEET } from './types';
 import { describeWeaponOverrideValue } from './weaponOverrides';
 
 /**
@@ -109,6 +127,8 @@ const VALUE_TOKEN_LABELS: Record<string, string> = {
   '@speed.climb': 'скорость лазания',
   '@speed.burrow': 'скорость копания',
   '@damage': 'урон события',
+  '@spellDc': 'Сл заклинаний',
+  '@castLevel': 'круг ячейки',
   '@roll': 'сохранённый бросок',
 };
 
@@ -180,6 +200,62 @@ export function describeCreatureType(creatureType: string): string {
 }
 
 /**
+ * Типы существ словами: «Нежить или Исчадие», а «не из списка» — «не Нежить и
+ * не Исчадие».
+ *
+ * @param types ключи типов.
+ * @param negate «не из списка».
+ * @returns подпись; незнакомый ключ отдаётся как есть.
+ */
+function describeCreatureTypes(
+  types: readonly string[],
+  negate: boolean,
+): string {
+  if (!negate) {
+    return types.map(describeCreatureType).join(EFFECT_PHRASE_PARTS.orJoiner);
+  }
+
+  return types
+    .map(
+      (creatureType) =>
+        `${EFFECT_PHRASE_PARTS.notPrefix}${describeCreatureType(creatureType)}`,
+    )
+    .join(EFFECT_PHRASE_PARTS.andJoiner);
+}
+
+/**
+ * Список типов существ из условия словами: «undead, fiend» → «Нежить или
+ * Исчадие».
+ *
+ * @param listText ключи типов через запятую.
+ * @param negate «не из списка».
+ * @returns подпись; незнакомый ключ отдаётся как есть.
+ */
+export function describeCreatureTypeList(
+  listText: string,
+  negate: boolean,
+): string {
+  return describeCreatureTypes(splitCreatureTypeList(listText), negate);
+}
+
+/**
+ * Условие по типу существа словами: «Цель — Нежить или Исчадие», «Носитель —
+ * не Конструкт и не Нежить».
+ *
+ * @param subject о ком условие.
+ * @param condition типы и отрицание.
+ * @returns подпись.
+ */
+export function describeCreatureTypeCondition(
+  subject: CreatureTypeConditionSubject,
+  condition: CreatureTypeCondition,
+): string {
+  const typesText = describeCreatureTypes(condition.types, condition.negate);
+
+  return `${EFFECT_CREATURE_TYPE_SUBJECT_LABELS[subject]}${EFFECT_CREATURE_TYPE_SUBJECT_SEPARATOR}${typesText}`;
+}
+
+/**
  * Подпись характеристики (`strength` → «Сила»).
  *
  * @param ability ключ характеристики.
@@ -222,16 +298,20 @@ export function describeEffectFlag(flag: string): string {
 }
 
 /**
- * Подпись Сл спасброска: `0` у эффектов заклинаний и действий — «Сл
- * заклинателя».
+ * Подпись Сл спасброска: формула словами («Сл 8 + бонус мастерства + мод.
+ * Силы»), `0` у эффектов заклинаний и действий — «Сл заклинателя».
  *
- * @param dc сложность из эффекта.
+ * @param save Сл из эффекта.
  * @returns подпись сложности.
  */
-export function formatEffectSaveDc(dc: number): string {
-  return dc === APPLIER_SAVE_DC
+export function formatEffectSaveDc(save: SaveDcSource): string {
+  if (save.dcFormula) {
+    return `${EFFECT_PHRASE_PARTS.saveDcPrefix}${prettifyFormula(save.dcFormula)}`;
+  }
+
+  return save.dc === APPLIER_SAVE_DC
     ? EFFECT_APPLIER_DC_SHORT_LABELS.spell
-    : `Сл ${dc}`;
+    : `${EFFECT_PHRASE_PARTS.saveDcPrefix}${save.dc}`;
 }
 
 /**
@@ -242,7 +322,7 @@ export function formatEffectSaveDc(dc: number): string {
  * @returns подпись.
  */
 function describeRecurringDamageSave(save: EffectSave): string {
-  return `${EFFECT_PHRASE_PARTS.savePrefix}(${ABILITY_LABELS.get(save.ability) ?? save.ability}, ${formatEffectSaveDc(save.dc)}), ${EFFECT_RECURRING_DAMAGE_SAVE_SUCCESS_LABELS[save.onSuccess]}`;
+  return `${EFFECT_PHRASE_PARTS.savePrefix}(${ABILITY_LABELS.get(save.ability) ?? save.ability}, ${formatEffectSaveDc(save)}), ${EFFECT_RECURRING_DAMAGE_SAVE_SUCCESS_LABELS[save.onSuccess]}`;
 }
 
 /**
@@ -378,7 +458,23 @@ export function describeEffectChangeValueLabel(
  */
 export function describeEffectChangeCondition(condition: string): string {
   return splitConditionParts(condition)
-    .map((part) => CONDITION_LABELS.get(part) ?? part)
+    .map((part) => {
+      const knownLabel = CONDITION_LABELS.get(part);
+
+      if (knownLabel) {
+        return knownLabel;
+      }
+
+      // Список типов и «не из списка» в словаре подсказок поимённо не лежат
+      const typeCondition = parseCreatureTypeCondition(part);
+
+      return typeCondition
+        ? describeCreatureTypeCondition(
+            typeCondition.subject,
+            typeCondition.condition,
+          )
+        : part;
+    })
     .join(EFFECT_PHRASE_PARTS.andJoiner);
 }
 
@@ -559,7 +655,7 @@ export function describeActiveEffect(effect: ActiveEffect): string {
       EFFECT_APPLY_SAVE_SUCCESS_LABELS[effect.applySave.onSuccess];
 
     clauses.push(
-      `${EFFECT_PHRASE_PARTS.savePrefix}(${ability}, ${formatEffectSaveDc(effect.applySave.dc)}), ${onSuccess}`,
+      `${EFFECT_PHRASE_PARTS.savePrefix}(${ability}, ${formatEffectSaveDc(effect.applySave)}), ${onSuccess}`,
     );
   }
 
@@ -593,7 +689,7 @@ export function describeActiveEffect(effect: ActiveEffect): string {
     const timing = EFFECT_SAVE_TIMING_LABELS[effect.recurringSave.timing];
 
     clauses.push(
-      `повторный спасбросок (${ability}, ${formatEffectSaveDc(effect.recurringSave.dc)}) ${timing} снимает эффект`,
+      `повторный спасбросок (${ability}, ${formatEffectSaveDc(effect.recurringSave)}) ${timing} снимает эффект`,
     );
   }
 
@@ -613,6 +709,14 @@ export function describeActiveEffect(effect: ActiveEffect): string {
       .join(EFFECT_PHRASE_PARTS.listJoiner);
 
     clauses.push(`${EFFECT_PHRASE_PARTS.immunitiesPrefix}${names}`);
+  }
+
+  if (effect.saveOverride) {
+    clauses.push(describeSaveOverride(effect.saveOverride));
+  }
+
+  if (effect.light) {
+    clauses.push(describeEffectLight(effect.light));
   }
 
   if (effect.applyOnSuccessOnly) {
@@ -638,6 +742,53 @@ export function describeActiveEffect(effect: ActiveEffect): string {
   const text = upperFirst(clauses.join(EFFECT_PHRASE_PARTS.clauseJoiner));
 
   return text.endsWith('.') ? text : `${text}.`;
+}
+
+/**
+ * Свет эффекта словами: «излучает яркий свет 20 фт и тусклый ещё 20 фт».
+ *
+ * @param light свет эффекта.
+ * @returns фраза со строчной буквы.
+ */
+export function describeEffectLight(light: EffectLight): string {
+  const hasBright = light.bright > MIN_EFFECT_LIGHT_FEET;
+
+  const brightParts = hasBright
+    ? [EFFECT_LIGHT_PHRASES.bright(light.bright)]
+    : [];
+
+  const dimParts =
+    light.dim > MIN_EFFECT_LIGHT_FEET
+      ? [
+          hasBright
+            ? EFFECT_LIGHT_PHRASES.dimBeyond(light.dim)
+            : EFFECT_LIGHT_PHRASES.dim(light.dim),
+        ]
+      : [];
+
+  return `${EFFECT_LIGHT_PHRASES.prefix}${[...brightParts, ...dimParts].join(EFFECT_PHRASE_PARTS.andJoiner)}`;
+}
+
+/**
+ * «Провал в успех» словами: «провал спасброска — вместо этого успех, 3 раза
+ * до долгого отдыха» или «… за ресурс «luck»».
+ *
+ * @param saveOverride блок эффекта.
+ * @returns фраза со строчной буквы.
+ */
+export function describeSaveOverride(saveOverride: EffectSaveOverride): string {
+  if (saveOverride.counter) {
+    return `${EFFECT_SAVE_OVERRIDE_PHRASES.head}${EFFECT_SAVE_OVERRIDE_PHRASES.counter(saveOverride.counter)}`;
+  }
+
+  if (!saveOverride.limit) {
+    return EFFECT_SAVE_OVERRIDE_PHRASES.head;
+  }
+
+  const { max, per } = saveOverride.limit;
+  const timesText = `${max} ${getPlural(max, EFFECT_SAVE_OVERRIDE_TIMES_FORMS)}`;
+
+  return `${EFFECT_SAVE_OVERRIDE_PHRASES.head}${EFFECT_SAVE_OVERRIDE_PHRASES.limit(timesText, EFFECT_SAVE_OVERRIDE_PERIOD_PHRASES[per])}`;
 }
 
 /**

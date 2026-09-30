@@ -19,12 +19,19 @@ import {
  * разошлись, показывает `node scripts/compare-effect-dictionaries.mjs`.
  */
 const SYSTEM_DICTIONARY_SIZES = {
-  version: '0.8.104',
-  flags: 200,
+  version: '0.8.139',
+  flags: 206,
   changeKeys: 64,
   conditions: 98,
-  values: 33,
+  values: 35,
 };
+
+/**
+ * Подсказки значений, которых нет в списке системы: токен круга ячейки
+ * `@castLevel` VTTG понимает в формулах эффектов заклинания, но подсказкой его
+ * система не предлагает.
+ */
+const SITE_ONLY_VALUE_SUGGESTIONS = ['@castLevel'];
 
 describe('словари эффектов', () => {
   it('размеры совпадают с системой, с которой снят порт', () => {
@@ -43,7 +50,7 @@ describe('словари эффектов', () => {
     );
 
     expect(EFFECT_VALUE_SUGGESTIONS).toHaveLength(
-      SYSTEM_DICTIONARY_SIZES.values,
+      SYSTEM_DICTIONARY_SIZES.values + SITE_ONLY_VALUE_SUGGESTIONS.length,
     );
   });
 

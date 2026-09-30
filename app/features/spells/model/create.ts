@@ -93,6 +93,7 @@ export interface SpellUses {
 export interface SpellScaling {
   additionalDice: string | undefined; // доп. урон за круг (напр. 1к6)
   additionalTargets: number | undefined; // доп. целей или снарядов за круг
+  additionalAreaSize: number | undefined; // рост размера области за круг
   description: string | undefined; // текстовое описание усиления
 }
 
@@ -288,6 +289,7 @@ export function createEmptySpellScaling(): SpellScaling {
   return {
     additionalDice: undefined,
     additionalTargets: undefined,
+    additionalAreaSize: undefined,
     description: undefined,
   };
 }
@@ -616,13 +618,16 @@ function normalizeSpellUses(
 /**
  * Нормализует усиление на высших кругах: пустые поля не пишутся, а усиление
  * без единого заполненного поля не пишется вовсе — иначе запись обещала бы
- * масштабирование, которого нет.
+ * масштабирование, которого нет. Рост области пишется только у заклинания с
+ * областью — как и сама область.
  *
  * @param scaling усиление из формы.
+ * @param hasArea есть ли у заклинания область.
  * @returns усиление для сервера либо `undefined`.
  */
 function normalizeSpellScaling(
   scaling: SpellScaling | undefined,
+  hasArea: boolean,
 ): SpellScaling | undefined {
   if (!scaling) {
     return undefined;
@@ -636,11 +641,21 @@ function normalizeSpellScaling(
       ? scaling.additionalTargets
       : undefined;
 
-  if (!additionalDice && !description && additionalTargets === undefined) {
+  const additionalAreaSize =
+    hasArea && scaling.additionalAreaSize && scaling.additionalAreaSize > 0
+      ? Math.trunc(scaling.additionalAreaSize)
+      : undefined;
+
+  if (
+    !additionalDice
+    && !description
+    && additionalTargets === undefined
+    && additionalAreaSize === undefined
+  ) {
     return undefined;
   }
 
-  return { additionalDice, additionalTargets, description };
+  return { additionalDice, additionalTargets, additionalAreaSize, description };
 }
 
 /**
@@ -799,7 +814,10 @@ export function normalizeSpellEffect(
     normalized.uses = uses;
   }
 
-  const scaling = normalizeSpellScaling(migratedEffect.scaling);
+  const scaling = normalizeSpellScaling(
+    migratedEffect.scaling,
+    hasSpellArea(migratedEffect),
+  );
 
   if (scaling) {
     normalized.scaling = scaling;
@@ -906,6 +924,7 @@ const loadedSpellScalingSchema = z
   .object({
     additionalDice: z.string().nullish().catch(null),
     additionalTargets: z.number().nullish().catch(null),
+    additionalAreaSize: z.number().nullish().catch(null),
     description: z.string().nullish().catch(null),
   })
   .nullish()
@@ -1076,6 +1095,7 @@ function toSpellScaling(
   return {
     additionalDice: scaling.additionalDice ?? undefined,
     additionalTargets: scaling.additionalTargets ?? undefined,
+    additionalAreaSize: scaling.additionalAreaSize ?? undefined,
     description: scaling.description ?? undefined,
   };
 }

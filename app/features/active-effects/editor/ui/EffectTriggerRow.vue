@@ -68,15 +68,13 @@
     MIN_TRIGGER_CHANCE_PERCENT,
     MIN_TRIGGER_CHOICE_COUNT,
     MIN_TRIGGER_LIMIT_MAX,
-    omitTriggerSaveDcFormula,
     TRIGGER_PATH_FEET_ONCE,
-    triggerEventAcceptsDcFormula,
+    triggerEventAcceptsDamageDc,
     triggerEventHasConditionKey,
     triggerEventHasPathFeet,
     triggerEventHasRecipientChoice,
     triggerEventHasRestType,
     triggerEventHasRole,
-    validateFormula,
     writeTriggerEvent,
   } from '../../model';
   import EffectActionCostFields from './EffectActionCostFields.vue';
@@ -87,8 +85,8 @@
   /**
    * Строка списка «Срабатывания»: когда → условие → спасбросок → что сделать →
    * сколько раз. Что доступно, решает модель по месту формы: события —
-   * `layout.triggerEvents`, действия — `listTriggerActionTypes`, Сл формулой —
-   * `triggerEventAcceptsDcFormula`.
+   * `layout.triggerEvents`, действия — `listTriggerActionTypes`, `@damage` в
+   * Сл формулой — `triggerEventAcceptsDamageDc`.
    */
   const {
     layout,
@@ -142,8 +140,8 @@
       && turnOwnerItems.value.length > 1,
   );
 
-  const acceptsSaveDcFormula = computed(() =>
-    triggerEventAcceptsDcFormula(trigger.value.event),
+  const acceptsDamageDc = computed(() =>
+    triggerEventAcceptsDamageDc(trigger.value.event),
   );
 
   const hasRecipientChoice = computed(() =>
@@ -469,31 +467,6 @@
         },
       });
     },
-  });
-
-  const saveDcFormula = computed({
-    get: () => trigger.value.save?.dcFormula ?? '',
-    set: (nextFormula: string) => {
-      const { save } = trigger.value;
-
-      if (!save) {
-        return;
-      }
-
-      const formula = nextFormula.trim();
-
-      updateTrigger({
-        save: formula
-          ? { ...save, dcFormula: formula }
-          : omitTriggerSaveDcFormula(save),
-      });
-    },
-  });
-
-  const saveDcFormulaError = computed(() => {
-    const formula = trigger.value.save?.dcFormula;
-
-    return formula ? validateFormula(formula).error : undefined;
   });
 
   const condition = computed({
@@ -862,6 +835,7 @@
         :applier-save-dc="applierSaveDc"
         :ability-label="EFFECT_TRIGGER_ROW_LABELS.saveAbility"
         :save-dc-label="EFFECT_TRIGGER_ROW_LABELS.saveDc"
+        :accepts-damage="acceptsDamageDc"
         @update:save="updateSave"
       />
 
@@ -875,21 +849,6 @@
           value-key="value"
           size="sm"
           class="w-full"
-        />
-      </UFormField>
-
-      <UFormField
-        v-if="acceptsSaveDcFormula"
-        :label="EFFECT_TRIGGER_ROW_LABELS.dcFormula"
-        :help="EFFECT_TRIGGER_ROW_LABELS.dcFormulaHint"
-        :error="saveDcFormulaError"
-        class="w-full sm:w-72"
-      >
-        <UInput
-          v-model="saveDcFormula"
-          :placeholder="EFFECT_TRIGGER_ROW_LABELS.dcFormulaPlaceholder"
-          size="sm"
-          class="w-full font-mono"
         />
       </UFormField>
     </div>

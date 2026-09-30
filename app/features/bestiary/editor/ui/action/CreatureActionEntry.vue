@@ -2,13 +2,19 @@
   import type { CreateAction, CreatureEffectContext } from '../../../model';
 
   import { ActiveEffects } from '~active-effects/editor';
-  import { EFFECT_ORIGIN } from '~active-effects/model';
+  import {
+    EFFECT_FORM_CONTEXT,
+    EFFECT_ORIGIN,
+    MAX_SAVE_OVERRIDE_USES,
+  } from '~active-effects/model';
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectRecharge } from '~ui/select';
 
+  import { toStoredSaveSuccessPerDay } from '../../../model';
   import {
     CREATURE_ACTION_LABELS,
     CREATURE_ACTION_SECTIONS,
+    CREATURE_SAVE_SUCCESS_PER_DAY_MIN,
   } from '../../constants';
   import CreatureActionCombat from './CreatureActionCombat.vue';
 
@@ -19,7 +25,7 @@
    * свёрнутыми полями. Поэтому имена полей здесь относительные: путь записи
    * (`actions.0`) вложенная форма подставляет сама.
    */
-  defineProps<{
+  const { effectContext } = defineProps<{
     /** Место эффектов записи: черта существа или действие. */
     effectContext: CreatureEffectContext;
   }>();
@@ -33,6 +39,22 @@
    * действия без спасброска числа нет, остаётся одна подпись.
    */
   const actionSaveDc = computed(() => model.value.effect.savingThrows[0]?.dc);
+
+  /** «Провал в успех, раз в день» бывает только у умения (черты) существа. */
+  const isTrait = computed(
+    () => effectContext === EFFECT_FORM_CONTEXT.creatureTrait,
+  );
+
+  // Очищенное поле и ноль — «не умеет»: в данных остаётся только число раз
+  const saveSuccessPerDay = computed({
+    get: () => model.value.saveSuccessPerDay,
+    set: (enteredTimes: number | null | undefined) => {
+      model.value = {
+        ...model.value,
+        saveSuccessPerDay: toStoredSaveSuccessPerDay(enteredTimes),
+      };
+    },
+  });
 </script>
 
 <template>
@@ -64,6 +86,22 @@
     name="recharge"
   >
     <SelectRecharge v-model="model.recharge" />
+  </UFormField>
+
+  <UFormField
+    v-if="isTrait"
+    class="col-span-full"
+    :label="CREATURE_ACTION_LABELS.saveSuccessPerDay"
+    :help="CREATURE_ACTION_LABELS.saveSuccessPerDayHint"
+    name="saveSuccessPerDay"
+  >
+    <UInputNumber
+      v-model="saveSuccessPerDay"
+      :min="CREATURE_SAVE_SUCCESS_PER_DAY_MIN"
+      :max="MAX_SAVE_OVERRIDE_USES"
+      :placeholder="CREATURE_ACTION_LABELS.saveSuccessPerDayPlaceholder"
+      class="w-40"
+    />
   </UFormField>
 
   <UFormField

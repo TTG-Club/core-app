@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type {
     ActiveEffect,
+    CreatureTypeCondition,
     EffectChange,
     EffectConditionKey,
     EffectFormLayout,
@@ -9,6 +10,7 @@
   import {
     ADJACENT_ALLY_CONDITION_LABEL,
     ADJACENT_ALLY_CONDITION_OPTIONS,
+    DEFAULT_CONDITION_CREATURE_TYPE,
     describeConditionName,
     describeEffectChangeCondition,
     EFFECT_CONDITION_BADGE_ICON,
@@ -16,11 +18,16 @@
     EFFECT_CONDITION_KEY_ITEMS,
     EFFECT_CONDITION_OPTIONS,
     EFFECT_CONDITION_REMOVE_ICON,
+    EFFECT_CREATURE_CATEGORY_OPTIONS,
+    EFFECT_CREATURE_TYPE_SUBJECT_OPTIONS,
     EFFECT_MODIFIERS_STEP_LABELS,
     EFFECT_ROLL_CONDITION_ALWAYS,
     EFFECT_TARGET_ALLY_ADJACENT_CONDITION,
+    findCreatureTypeConditionSubject,
     isAdjacentAllyCondition,
+    parseCreatureTypeCondition,
     writeActiveEffectStageRows,
+    writeCreatureTypeCondition,
   } from '../../model';
   import EffectChanges from './EffectChanges.vue';
   import EffectFlags from './EffectFlags.vue';
@@ -53,16 +60,25 @@
       && isAdjacentAllyCondition(effect.value.rollCondition),
   );
 
+  /** Условие броска о типе существа: о ком и какие типы. */
+  const creatureTypeCondition = computed(() =>
+    effect.value.rollCondition === undefined
+      ? undefined
+      : parseCreatureTypeCondition(effect.value.rollCondition),
+  );
+
   /**
    * Условия броска в выборе: «Всегда», условие из данных, которого в словаре
    * нет (составное — иначе поле выглядело бы пустым), и весь словарь. Условия о
-   * союзнике рядом — одним пунктом: какой союзник, выбирается вторым полем.
+   * союзнике рядом и о типе существа — одним пунктом: какой союзник и какие
+   * типы, выбирается вторым полем.
    */
   const rollConditionOptions = computed(() => {
     const current = effect.value.rollCondition;
 
     const isKnown =
       current === undefined
+      || creatureTypeCondition.value !== undefined
       || EFFECT_CONDITION_EXPR_SUGGESTIONS.some(
         (suggestion) => suggestion.value === current,
       );
@@ -80,8 +96,12 @@
           return [{ ...suggestion, label: ADJACENT_ALLY_CONDITION_LABEL }];
         }
 
-        return isAdjacentAllyCondition(suggestion.value) ? [] : [suggestion];
+        return isAdjacentAllyCondition(suggestion.value)
+          || parseCreatureTypeCondition(suggestion.value)
+          ? []
+          : [suggestion];
       }),
+      ...EFFECT_CREATURE_TYPE_SUBJECT_OPTIONS,
     ];
   });
 
@@ -101,11 +121,35 @@
   }
 
   const rollCondition = computed({
-    get: () =>
-      hasAdjacentAllyCondition.value
-        ? EFFECT_TARGET_ALLY_ADJACENT_CONDITION
-        : (effect.value.rollCondition ?? EFFECT_ROLL_CONDITION_ALWAYS),
+    get: () => {
+      if (hasAdjacentAllyCondition.value) {
+        return EFFECT_TARGET_ALLY_ADJACENT_CONDITION;
+      }
+
+      return (
+        creatureTypeCondition.value?.subject
+        ?? effect.value.rollCondition
+        ?? EFFECT_ROLL_CONDITION_ALWAYS
+      );
+    },
     set: (nextCondition: string) => {
+      const subject = findCreatureTypeConditionSubject(nextCondition);
+
+      // Пункт о типе: список типов выбирается вторым полем, и повторный выбор
+      // того же пункта его не сбрасывает
+      if (subject) {
+        if (creatureTypeCondition.value?.subject !== subject) {
+          writeRollCondition(
+            writeCreatureTypeCondition(subject, {
+              types: [DEFAULT_CONDITION_CREATURE_TYPE],
+              negate: false,
+            }),
+          );
+        }
+
+        return;
+      }
+
       // Повторный выбор пункта о союзнике не сбрасывает выбранного союзника
       if (
         nextCondition === EFFECT_TARGET_ALLY_ADJACENT_CONDITION
@@ -116,6 +160,38 @@
 
       writeRollCondition(nextCondition);
     },
+  });
+
+  /**
+   * Записывает условие о типе с новыми типами или отрицанием. Пустой список
+   * не пишется: условие без типов не разобралось бы обратно.
+   *
+   * @param patch что меняется.
+   */
+  function writeCreatureTypePatch(patch: Partial<CreatureTypeCondition>): void {
+    const currentCondition = creatureTypeCondition.value;
+
+    if (!currentCondition) {
+      return;
+    }
+
+    const nextCondition = { ...currentCondition.condition, ...patch };
+
+    if (nextCondition.types.length > 0) {
+      writeRollCondition(
+        writeCreatureTypeCondition(currentCondition.subject, nextCondition),
+      );
+    }
+  }
+
+  const conditionCreatureTypes = computed({
+    get: () => creatureTypeCondition.value?.condition.types ?? [],
+    set: (types: string[]) => writeCreatureTypePatch({ types }),
+  });
+
+  const isCreatureTypeNegated = computed({
+    get: () => creatureTypeCondition.value?.condition.negate ?? false,
+    set: (negate: boolean) => writeCreatureTypePatch({ negate }),
   });
 
   const adjacentAllyCondition = computed({
@@ -233,6 +309,34 @@
       size="sm"
       class="w-full"
     />
+
+    <template v-if="creatureTypeCondition">
+      <div>
+        <span class="text-sm font-medium">
+          {{ EFFECT_MODIFIERS_STEP_LABELS.creatureTypesTitle }}
+        </span>
+
+        <p class="text-xs text-muted">
+          {{ EFFECT_MODIFIERS_STEP_LABELS.creatureTypesHint }}
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <USelectMenu
+          v-model="conditionCreatureTypes"
+          :items="EFFECT_CREATURE_CATEGORY_OPTIONS"
+          value-key="value"
+          label-key="label"
+          multiple
+          class="min-w-56 flex-1"
+        />
+
+        <USwitch
+          v-model="isCreatureTypeNegated"
+          :label="EFFECT_MODIFIERS_STEP_LABELS.creatureTypesExcept"
+        />
+      </div>
+    </template>
 
     <template v-if="hasAdjacentAllyCondition">
       <div>

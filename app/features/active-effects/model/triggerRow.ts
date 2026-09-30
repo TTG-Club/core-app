@@ -28,10 +28,11 @@ import {
   listTriggerActionTypes,
   triggerEventAcceptsArea,
   triggerEventAcceptsChoice,
-  triggerEventAcceptsDcFormula,
+  triggerEventAcceptsDamageDc,
   triggerEventHasRole,
 } from './layout';
 import { buildTriggerRecipientOptions } from './options';
+import { saveDcFormulaReadsDamage } from './saveDc';
 import {
   isTurnTriggerEvent,
   triggerEventHasConditionKey,
@@ -137,7 +138,8 @@ export function omitTriggerSaveDcFormula(
  * Строка срабатывания под новое событие. Смена события отбрасывает то, чего у
  * нового события нет: действия, которые на нём не работают, роль в броске
  * атаки, получателя с его радиусом, чей ход, отдых, снятое состояние, шаг пути
- * и формулу Сл. Роль у броска атаки остаётся прежней, а если её не было —
+ * и формулу Сл, которая читает урон, если у нового события урона нет: формула
+ * по владельцу работает у любого события. Роль у броска атаки остаётся прежней, а если её не было —
  * берётся роль по умолчанию.
  *
  * @param trigger строка срабатывания.
@@ -152,7 +154,10 @@ export function writeTriggerEvent(
 ): EffectTrigger {
   const allowedActionTypes = listTriggerActionTypes(layout, nextEvent);
   const { save } = trigger;
-  const dropsDcFormula = !triggerEventAcceptsDcFormula(nextEvent);
+
+  const dropsDcFormula =
+    !triggerEventAcceptsDamageDc(nextEvent)
+    && saveDcFormulaReadsDamage(save?.dcFormula);
 
   return {
     ...trigger,

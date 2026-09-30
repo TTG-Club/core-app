@@ -155,6 +155,12 @@
     get: () => effect.value.escape?.check?.dc ?? APPLIER_SAVE_DC,
     set: (nextDc: number) => updateEscapeCheck({ dc: nextDc }),
   });
+
+  const escapeDcFormula = computed({
+    get: () => effect.value.escape?.check?.dcFormula,
+    set: (nextFormula: string | undefined) =>
+      updateEscapeCheck({ dcFormula: nextFormula }),
+  });
 </script>
 
 <template>
@@ -232,6 +238,8 @@
 
         <EffectSaveDcField
           v-model="escapeDc"
+          v-model:formula="escapeDcFormula"
+          formula-allowed
           :label="EFFECT_ESCAPE_SECTION_LABELS.dc"
           :auto-allowed="autoDcAllowed"
           :auto-label="applierDcLabel"
