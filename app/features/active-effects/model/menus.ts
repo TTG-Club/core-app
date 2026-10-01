@@ -2,6 +2,9 @@
  * Готовые меню редактора активных эффектов: «Готовые» флаги и «Готовые»
  * модификаторы. Зеркало `effectFlagMenu.ts` и `effectModifierMenu.ts` из VTTG.
  *
+ * Здесь же библиотеки полей «что меняется» и «особое правило»: те же строки,
+ * разложенные по разделам меню (`EFFECT_TARGET_LIBRARY`, `EFFECT_FLAG_LIBRARY`).
+ *
  * Своих списков ключей здесь НЕ заводится: разделы выводятся по приставке
  * ключа из тех же справочников, что питают библиотеки полей формы
  * (`EFFECT_FLAG_LABELS`, `EFFECT_TARGET_KEY_SUGGESTIONS`,
@@ -9,19 +12,22 @@
  * бы с первым, и меню предлагало бы то, чего движок не знает.
  */
 
-import type { EffectChangeMode } from './types';
+import type { EffectChangeMode, EffectLibrarySuggestion } from './types';
 
 import { ABILITY_CHECK_KEY } from './changeDice';
 import {
   EFFECT_CARRIER_ARMOR_CONDITION_PREFIX,
   EFFECT_CARRIER_TYPE_CONDITION_PREFIX,
   EFFECT_CONDITION_EXPR_SUGGESTIONS,
+  EFFECT_CONDITION_SECTIONS,
   EFFECT_DAMAGE_DEFENSE_KINDS,
   EFFECT_DAMAGE_TYPE_OPTIONS,
   EFFECT_FLAG_LABELS,
   EFFECT_MENU_SORT_LOCALE,
+  EFFECT_STRENGTH_ATTACK_CONDITION,
   EFFECT_TARGET_KEY_SUGGESTIONS,
   EFFECT_TARGET_TYPE_CONDITION_PREFIX,
+  RAGE_DAMAGE_BONUS_FORMULA,
   SAVE_VS_CONDITION_FLAG_KEYS,
   SHILLELAGH_DAMAGE_TYPE,
   SHILLELAGH_WEAPON_CONDITION,
@@ -201,6 +207,35 @@ function buildFlagMenu(): EffectFlagMenuGroup[] {
 export const EFFECT_FLAG_MENU: ReadonlyArray<EffectFlagMenuGroup> =
   buildFlagMenu();
 
+/**
+ * Строки библиотеки особых правил одного раздела меню; вложенные разделы (виды
+ * защиты от урона) становятся разделами библиотеки сами.
+ *
+ * @param group раздел меню флагов.
+ * @returns строки библиотеки.
+ */
+function buildFlagLibrarySection(
+  group: EffectFlagMenuGroup,
+): EffectLibrarySuggestion[] {
+  return [
+    // Полная подпись, а не короткая пункта меню: в поиске «Огненный» без
+    // «Сопротивление» не отличить от иммунитета
+    ...group.items.map((flagItem) => ({
+      value: flagItem.key,
+      label: EFFECT_FLAG_LABELS[flagItem.key] ?? flagItem.label,
+      section: group.label,
+    })),
+    ...(group.groups ?? []).flatMap(buildFlagLibrarySection),
+  ];
+}
+
+/**
+ * Библиотека особых правил теми же разделами, что и меню «Готовые»: одна
+ * раскладка на оба входа.
+ */
+export const EFFECT_FLAG_LIBRARY: ReadonlyArray<EffectLibrarySuggestion> =
+  EFFECT_FLAG_MENU.flatMap(buildFlagLibrarySection);
+
 /** Готовая строка модификатора: что подставится в новую строку формы. */
 export interface EffectModifierPreset {
   /**
@@ -267,6 +302,7 @@ const EFFECT_MODIFIER_GROUPS = [
   { key: 'attack', label: 'Атака' },
   { key: 'damage', label: 'Урон' },
   { key: 'weapon', label: 'Оружие: замены' },
+  { key: 'rollCondition', label: 'Условие: бросок, атака, цель' },
   { key: 'carrierType', label: 'Условие: тип носителя' },
   { key: 'carrierArmor', label: 'Условие: доспех носителя' },
   { key: 'targetType', label: 'Условие: тип цели' },
@@ -425,6 +461,40 @@ const EFFECT_MODIFIER_READY_PRESETS: EffectModifierPreset[] = [
     mode: 'upgrade',
     value: '@speed.swim',
   },
+  {
+    key: 'armorClass',
+    label: 'КД: +1 в доспехе (Оборона)',
+    mode: 'add',
+    value: '1',
+    condition: `${EFFECT_CARRIER_ARMOR_CONDITION_PREFIX}"any"`,
+  },
+  // Ярость 2024: +2, с 9-го уровня варвара +3, с 16-го +4 — только удары Силой
+  {
+    key: 'damage.melee',
+    label: 'Урон Ярости: +2 → +4 по уровню класса, удары Силой',
+    mode: 'add',
+    value: RAGE_DAMAGE_BONUS_FORMULA,
+    condition: EFFECT_STRENGTH_ATTACK_CONDITION,
+  },
+  {
+    key: 'damage.ranged',
+    label: 'Урон Ярости: то же для метательного оружия Силой',
+    mode: 'add',
+    value: RAGE_DAMAGE_BONUS_FORMULA,
+    condition: EFFECT_STRENGTH_ATTACK_CONDITION,
+  },
+  {
+    key: 'damage.weapon',
+    label: 'Урон предмета: +1к6 огнём',
+    mode: 'add',
+    value: '1к6@dmg.fire',
+  },
+  {
+    key: 'damage.all',
+    label: 'Урон: +2к6 только по нежити',
+    mode: 'add',
+    value: '2к6@target.type.undead',
+  },
   // «Дубинка»: кость растёт по уровню заклинателя — к8, к10, к12, 2к6
   {
     key: WEAPON_DAMAGE_DICE_KEY,
@@ -506,22 +576,37 @@ function sortCheckItems(
 }
 
 /**
- * Пункты-условия по типу существа: выбор заполняет ТОЛЬКО поле условия, ключ и
- * значение остаются пустыми — что именно ограничивает условие, автор называет
- * сам.
+ * Разделы библиотеки условий, из которых собран раздел меню «Условие: бросок,
+ * атака, цель». Союзники рядом и защита в меню не идут: их три десятка, и
+ * подменю перестало бы помещаться на экран, — они остаются в библиотеке.
+ */
+const ROLL_CONDITION_SECTIONS: ReadonlySet<string> = new Set([
+  EFFECT_CONDITION_SECTIONS.roll,
+  EFFECT_CONDITION_SECTIONS.targetHp,
+  EFFECT_CONDITION_SECTIONS.targetMark,
+]);
+
+/**
+ * Пункты-условия: выбор заполняет ТОЛЬКО поле условия, ключ и значение
+ * остаются пустыми — что именно ограничивает условие, автор называет сам.
  *
- * @param prefix приставка условия семейства (носитель или цель).
+ * Своего списка условий здесь нет: источник тот же, что и у библиотеки условий
+ * формы, — второй список разошёлся бы с первым.
+ *
+ * @param belongsToGroup подходит ли условие в раздел меню.
  * @returns готовые строки-условия.
  */
-function buildConditionPresets(prefix: string): EffectModifierPreset[] {
-  return EFFECT_CONDITION_EXPR_SUGGESTIONS.filter((suggestion) =>
-    suggestion.value.startsWith(prefix),
-  ).map((suggestion) => ({
-    key: '',
-    label: suggestion.label,
-    mode: 'add' as const,
-    condition: suggestion.value,
-  }));
+function buildConditionPresets(
+  belongsToGroup: (suggestion: EffectLibrarySuggestion) => boolean,
+): EffectModifierPreset[] {
+  return EFFECT_CONDITION_EXPR_SUGGESTIONS.filter(belongsToGroup).map(
+    (suggestion) => ({
+      key: '',
+      label: suggestion.label,
+      mode: 'add' as const,
+      condition: suggestion.value,
+    }),
+  );
 }
 
 /**
@@ -566,18 +651,31 @@ function buildModifierMenu(): EffectModifierMenuGroup[] {
   }
 
   itemsByGroup.set(
+    'rollCondition',
+    buildConditionPresets((suggestion) =>
+      ROLL_CONDITION_SECTIONS.has(suggestion.section),
+    ),
+  );
+
+  itemsByGroup.set(
     'carrierType',
-    buildConditionPresets(EFFECT_CARRIER_TYPE_CONDITION_PREFIX),
+    buildConditionPresets((suggestion) =>
+      suggestion.value.startsWith(EFFECT_CARRIER_TYPE_CONDITION_PREFIX),
+    ),
   );
 
   itemsByGroup.set(
     'carrierArmor',
-    buildConditionPresets(EFFECT_CARRIER_ARMOR_CONDITION_PREFIX),
+    buildConditionPresets((suggestion) =>
+      suggestion.value.startsWith(EFFECT_CARRIER_ARMOR_CONDITION_PREFIX),
+    ),
   );
 
   itemsByGroup.set(
     'targetType',
-    buildConditionPresets(EFFECT_TARGET_TYPE_CONDITION_PREFIX),
+    buildConditionPresets((suggestion) =>
+      suggestion.value.startsWith(EFFECT_TARGET_TYPE_CONDITION_PREFIX),
+    ),
   );
 
   return EFFECT_MODIFIER_GROUPS.map((group) => ({
@@ -589,3 +687,15 @@ function buildModifierMenu(): EffectModifierMenuGroup[] {
 /** Меню модификаторов разделами. Считается один раз: списки ключей статичны. */
 export const EFFECT_MODIFIER_MENU: ReadonlyArray<EffectModifierMenuGroup> =
   buildModifierMenu();
+
+/**
+ * Библиотека ключей «что меняется» по разделам меню «Готовые»: в поиске ключи
+ * лежат теми же группами, что и в меню, — искать их в двух местах по разной
+ * раскладке было бы вдвое труднее.
+ */
+export const EFFECT_TARGET_LIBRARY: ReadonlyArray<EffectLibrarySuggestion> =
+  EFFECT_MODIFIER_GROUPS.flatMap((group) =>
+    EFFECT_TARGET_KEY_SUGGESTIONS.filter(
+      (suggestion) => getModifierGroupKey(suggestion.value) === group.key,
+    ).map((suggestion) => ({ ...suggestion, section: group.label })),
+  );

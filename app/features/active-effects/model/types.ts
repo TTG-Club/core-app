@@ -242,6 +242,31 @@ export type WeaponOverrideKey =
   | typeof WEAPON_ATTACK_ABILITY_KEY
   | typeof WEAPON_DAMAGE_TYPE_KEY;
 
+/**
+ * Строка библиотеки подсказок формы эффекта: значение, условие, ключ или
+ * особое правило. Зеркало `EffectLibrarySuggestion` из VTTG.
+ *
+ * Раздел и пояснение нужны автору, который придумывает эффект сам: по одному
+ * названию `@castLevel` не понять, что он живёт только у заклинаний, а
+ * `steps(…)` без примера не найти вовсе.
+ */
+export interface EffectLibrarySuggestion {
+  /** Что подставится в поле. */
+  value: string;
+  /** Название строки. */
+  label: string;
+  /** Раздел библиотеки — подпись, по которой строки собираются вместе. */
+  section: string;
+  /** Где работает и как дописать под себя; нет — хватает названия. */
+  hint?: string;
+}
+
+/** Строка библиотеки до того, как ей назначен раздел. */
+export type UnsectionedLibrarySuggestion = Omit<
+  EffectLibrarySuggestion,
+  'section'
+>;
+
 /** Одно числовое изменение, вносимое эффектом. */
 export interface EffectChange {
   /** Какой параметр модифицировать (напр. "armorClass", "ability.strength"). */

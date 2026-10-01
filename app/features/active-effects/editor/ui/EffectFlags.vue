@@ -9,8 +9,8 @@
     ACTIVE_EFFECT_LABELS,
     DEFAULT_EFFECT_FLAG,
     EFFECT_FLAG_LABELS,
+    EFFECT_FLAG_LIBRARY,
     EFFECT_FLAG_MENU,
-    EFFECT_FLAG_OPTIONS,
     EFFECT_MODIFIERS_STEP_LABELS,
   } from '../../model';
 
@@ -125,7 +125,7 @@
       <div class="flex items-center gap-2">
         <InputWithLibrary
           :model-value="flag"
-          :options="EFFECT_FLAG_OPTIONS"
+          :options="EFFECT_FLAG_LIBRARY"
           :placeholder="ACTIVE_EFFECT_LABELS.flagPlaceholder"
           @update:model-value="updateFlag(index, $event)"
         />

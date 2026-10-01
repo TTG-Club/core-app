@@ -29,7 +29,7 @@
     EFFECT_CONDITION_EXPR_SUGGESTIONS,
     EFFECT_MODIFIER_MENU,
     EFFECT_MODIFIERS_STEP_LABELS,
-    EFFECT_TARGET_KEY_SUGGESTIONS,
+    EFFECT_TARGET_LIBRARY,
     EFFECT_VALUE_SUGGESTIONS,
     getEffectChangeModeChoice,
     getEffectChangeShownValue,
@@ -364,7 +364,7 @@
       >
         <InputWithLibrary
           :model-value="changeRow.change.key"
-          :options="EFFECT_TARGET_KEY_SUGGESTIONS"
+          :options="EFFECT_TARGET_LIBRARY"
           :placeholder="ACTIVE_EFFECT_LABELS.changeKeyPlaceholder"
           @update:model-value="updateKey(index, $event)"
         />
