@@ -179,7 +179,10 @@ import {
 } from 'es-toolkit';
 
 import { LEVELS } from '~/shared/consts';
-import { DEFAULT_EFFECT_CHANGE_PRIORITY } from '~active-effects/model';
+import {
+  DEFAULT_EFFECT_CHANGE_PRIORITY,
+  evaluateFormula,
+} from '~active-effects/model';
 import {
   CasterType,
   FULL_CASTER_SPELL_SLOTS,
@@ -4322,22 +4325,18 @@ function getArmorClassWithItemLimits(
 }
 
 /**
- * Токен формулы эффекта — число или переменная листа.
+ * Значение переменной листа в формуле эффекта.
  *
  * @param character персонаж.
- * @param token токен формулы в нижнем регистре.
+ * @param token токен переменной в нижнем регистре.
  * @param classLevel уровень в классе, выдавшем эффект, — значение `@classLevel`.
- * @returns число; null — переменная листу незнакома.
+ * @returns число; undefined — переменная листу незнакома.
  */
-function evaluateEffectFormulaToken(
+function getEffectFormulaVariable(
   character: Character,
   token: string,
   classLevel: number,
-): number | null {
-  if (/^\d+$/.test(token)) {
-    return Number(token);
-  }
-
+): number | undefined {
   if (token === RESOURCE_FORMULA_PROFICIENCY) {
     return getCharacterProficiencyBonus(character);
   }
@@ -4356,21 +4355,22 @@ function evaluateEffectFormulaToken(
         token.slice(RESOURCE_FORMULA_ABILITY_PREFIX.length)
       ];
 
-    return ability ? getAbilityModifier(character, ability) : null;
+    return ability ? getAbilityModifier(character, ability) : undefined;
   }
 
-  return null;
+  return undefined;
 }
 
 /**
- * Значение формулы эффекта числом: сумма слагаемых, каждое — число или
- * переменная листа (`@prof`, `@level`, `@classLevel`, `@mod.<аббревиатура>`) с
- * множителем.
+ * Значение формулы эффекта числом: арифметика со скобками и функциями (`max`,
+ * `min`, `floor`, `ceil`) над числами и переменными листа (`@prof`, `@level`,
+ * `@classLevel`, `@mod.` с аббревиатурой характеристики).
  *
- * Грамматика та же, что у максимума ресурса, только слагаемых сколько угодно:
- * «Защита без доспехов» пишется как `10+@mod.dex+@mod.con`. Незнакомая
- * переменная (`@mod.spell`, кость) делает формулу непонятной целиком — лист
- * лучше не применит эффект, чем применит его с нулём вместо слагаемого.
+ * Разбор общий с редактором эффектов, поэтому лист читает формулу так же, как
+ * VTTG: «Защита без доспехов» — `10+@mod.dex+@mod.con`, «Аура защиты» —
+ * `max(1, @mod.cha)`. Незнакомая переменная (`@mod.spell`, кость) делает
+ * формулу непонятной целиком — лист лучше не применит эффект, чем применит
+ * его с нулём вместо слагаемого.
  *
  * @param character персонаж.
  * @param formula значение изменения эффекта.
@@ -4384,39 +4384,11 @@ function evaluateEffectFormula(
   formula: string,
   classLevel: number = character.level,
 ): number | null {
-  const compact = formula.toLowerCase().replaceAll(/\s+/g, '');
-
-  if (!compact) {
-    return null;
-  }
-
-  const terms = compact.match(/[+-]?[^+-]+/g);
-
-  if (!terms) {
-    return null;
-  }
-
-  let total = 0;
-
-  for (const term of terms) {
-    const sign = term.startsWith('-') ? -1 : 1;
-
-    let product = 1;
-
-    for (const factor of term.replace(/^[+-]/, '').split('*')) {
-      const value = evaluateEffectFormulaToken(character, factor, classLevel);
-
-      if (value === null) {
-        return null;
-      }
-
-      product *= value;
-    }
-
-    total += sign * product;
-  }
-
-  return total;
+  return (
+    evaluateFormula(formula.toLowerCase(), (variableToken) =>
+      getEffectFormulaVariable(character, variableToken, classLevel),
+    ) ?? null
+  );
 }
 
 /**

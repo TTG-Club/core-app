@@ -6,9 +6,10 @@
  * Нужен полю «Сл формулой» у срабатываний урона (`max(10, floor(@damage / 2))`):
  * формулу с ошибкой VTTG молча заменяет числом Сл, и автор должен увидеть
  * ошибку ещё в форме. Значения переменных не проверяются — контекста нет.
- * Второе назначение — формула словами под полем значения модификатора.
+ * Второе назначение — формула словами под полем значения модификатора. Третье —
+ * значение формулы числом для листа персонажа: переменные ему отдаёт сам лист.
  *
- * Зеркало `validateFormula` и `renderReadableFormula` из
+ * Зеркало `validateFormula`, `renderReadableFormula` и `evaluateFormula` из
  * dnd5-test-migrate/src/engine/formulaParser.ts: те же токены, приоритеты,
  * сообщения об ошибках и читаемая запись.
  */
@@ -78,22 +79,63 @@ class FormulaError extends Error {
  */
 const STEPS_FUNCTION = 'steps';
 
-/**
- * Функции чётности: `even(число)` — 1 у чётного, 0 у нечётного; `odd(число)`
- * — наоборот. Развилка по выпавшему числу пишется множителем:
- * `@paid.hitDiceRoll * even(@paid.hitDiceRoll)`.
- */
-const PARITY_FUNCTIONS = ['even', 'odd'] as const;
+/** Делитель чётности. */
+const PARITY_DIVISOR = 2;
 
-/** Поддерживаемые функции. */
+/**
+ * Чётно ли число; дробная часть отбрасывается — так же считает система.
+ *
+ * @param checkedNumber проверяемое число.
+ * @returns true — число чётное.
+ */
+function isEvenNumber(checkedNumber: number): boolean {
+  return Math.abs(Math.trunc(checkedNumber)) % PARITY_DIVISOR === 0;
+}
+
+/**
+ * Функции ровно одного аргумента. Функции чётности: `even(число)` — 1 у
+ * чётного, 0 у нечётного; `odd(число)` — наоборот. Развилка по выпавшему числу
+ * пишется множителем: `@paid.hitDiceRoll * even(@paid.hitDiceRoll)`.
+ */
+const SINGLE_ARGUMENT_FUNCTIONS: Record<string, (operand: number) => number> = {
+  floor: Math.floor,
+  ceil: Math.ceil,
+  abs: Math.abs,
+  even: (operand) => Number(isEvenNumber(operand)),
+  odd: (operand) => Number(!isEvenNumber(operand)),
+};
+
+/** Меньше аргументов у `min`, `max` и `steps` не бывает. */
+const MIN_VARIADIC_ARGUMENTS = 2;
+
+/**
+ * Сколько порогов значение уже достигло: `steps(значение, порог1, порог2)`.
+ *
+ * @param operands значение и его пороги.
+ * @returns число достигнутых порогов.
+ */
+function countReachedSteps(operands: number[]): number {
+  const [steppedValue, ...thresholds] = operands;
+
+  return thresholds.filter(
+    (threshold) => steppedValue !== undefined && steppedValue >= threshold,
+  ).length;
+}
+
+/** Функции с любым числом аргументов, начиная с двух. */
+const VARIADIC_FUNCTIONS: Record<string, (operands: number[]) => number> = {
+  min: (operands) => Math.min(...operands),
+  max: (operands) => Math.max(...operands),
+  [STEPS_FUNCTION]: countReachedSteps,
+};
+
+/**
+ * Поддерживаемые функции — те, что разбор умеет и посчитать: имя заводится
+ * один раз, в таблице своей арности.
+ */
 const SUPPORTED_FUNCTIONS: ReadonlySet<string> = new Set([
-  'min',
-  'max',
-  'floor',
-  'ceil',
-  'abs',
-  STEPS_FUNCTION,
-  ...PARITY_FUNCTIONS,
+  ...Object.keys(SINGLE_ARGUMENT_FUNCTIONS),
+  ...Object.keys(VARIADIC_FUNCTIONS),
 ]);
 
 /** Приоритет операторов. */
@@ -406,6 +448,139 @@ export function validateFormula(formula: string): FormulaValidationResult {
           ? parseError.message
           : EFFECT_FORMULA_ERRORS.invalid,
     };
+  }
+}
+
+/**
+ * Значение переменной формулы по её токену (`@prof`, `@mod.cha`); `undefined` —
+ * переменная считающему незнакома.
+ */
+export type FormulaVariableResolver = (
+  variableToken: string,
+) => number | undefined;
+
+/** Арифметика формулы по символу оператора. */
+const BINARY_OPERATIONS: Record<
+  string,
+  (leftOperand: number, rightOperand: number) => number
+> = {
+  '+': (leftOperand, rightOperand) => leftOperand + rightOperand,
+  '-': (leftOperand, rightOperand) => leftOperand - rightOperand,
+  '*': (leftOperand, rightOperand) => leftOperand * rightOperand,
+  '/': (leftOperand, rightOperand) => leftOperand / rightOperand,
+};
+
+/**
+ * Значение вызова функции. Число аргументов сверяется так же, как в системе:
+ * `floor(1, 2)` и `max(1)` там ошибка, а не «как-нибудь посчитаем».
+ *
+ * @param functionName имя функции.
+ * @param argumentValues посчитанные аргументы.
+ * @returns значение; `undefined` — аргументов не столько, сколько ждёт функция.
+ */
+function evaluateFormulaFunction(
+  functionName: string,
+  argumentValues: number[],
+): number | undefined {
+  const singleArgumentFunction = SINGLE_ARGUMENT_FUNCTIONS[functionName];
+  const [onlyArgument, ...extraArguments] = argumentValues;
+
+  if (singleArgumentFunction) {
+    return onlyArgument !== undefined && extraArguments.length === 0
+      ? singleArgumentFunction(onlyArgument)
+      : undefined;
+  }
+
+  const variadicFunction = VARIADIC_FUNCTIONS[functionName];
+
+  return variadicFunction && argumentValues.length >= MIN_VARIADIC_ARGUMENTS
+    ? variadicFunction(argumentValues)
+    : undefined;
+}
+
+/**
+ * Значение узла формулы.
+ *
+ * @param node узел.
+ * @param resolveVariable значение переменной по токену.
+ * @returns число; `undefined` — в узле незнакомая переменная либо вызов функции
+ *   с неверным числом аргументов.
+ */
+function evaluateFormulaNode(
+  node: FormulaNode,
+  resolveVariable: FormulaVariableResolver,
+): number | undefined {
+  switch (node.type) {
+    case 'number':
+      return node.value;
+    case 'variable':
+      return resolveVariable(`@${node.path}`);
+    case 'negate': {
+      const operand = evaluateFormulaNode(node.operand, resolveVariable);
+
+      return operand === undefined ? undefined : -operand;
+    }
+    case 'function': {
+      const argumentValues = node.argumentNodes
+        .map((argumentNode) =>
+          evaluateFormulaNode(argumentNode, resolveVariable),
+        )
+        .filter((argumentValue) => argumentValue !== undefined);
+
+      return argumentValues.length === node.argumentNodes.length
+        ? evaluateFormulaFunction(node.name, argumentValues)
+        : undefined;
+    }
+    // Остался бинарный оператор: `default` вместо `case 'binary'` — иначе
+    // линтер требует возврата после исчерпанного `switch`
+    default: {
+      const leftOperand = evaluateFormulaNode(node.left, resolveVariable);
+      const rightOperand = evaluateFormulaNode(node.right, resolveVariable);
+      const operation = BINARY_OPERATIONS[node.operator];
+
+      return operation
+        && leftOperand !== undefined
+        && rightOperand !== undefined
+        ? operation(leftOperand, rightOperand)
+        : undefined;
+    }
+  }
+}
+
+/**
+ * Значение формулы числом — для листа персонажа: «Аура защиты» прибавляет к
+ * спасброскам `max(1, @mod.cha)`. Считает то же дерево, что проверка и запись
+ * словами, поэтому лист понимает формулу так же, как VTTG.
+ *
+ * Округления нет, как и в системе: его пишут в самой формуле (`floor`, `ceil`).
+ * Регистр важен: функции пишутся строчными.
+ *
+ * @param formula строка формулы.
+ * @param resolveVariable значение переменной по токену.
+ * @returns число; `undefined` — формулу не разобрать, в ней незнакомая
+ *   переменная, кость или деление на ноль.
+ */
+export function evaluateFormula(
+  formula: string,
+  resolveVariable: FormulaVariableResolver,
+): number | undefined {
+  const trimmedFormula = formula.trim();
+
+  if (trimmedFormula.length === 0) {
+    return undefined;
+  }
+
+  try {
+    const formulaValue = evaluateFormulaNode(
+      parseFormula(tokenize(trimmedFormula)),
+      resolveVariable,
+    );
+
+    return formulaValue !== undefined && Number.isFinite(formulaValue)
+      ? formulaValue
+      : undefined;
+  } catch {
+    return undefined;
   }
 }
 

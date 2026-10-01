@@ -479,11 +479,16 @@ modals), so its capabilities are listed here rather than squeezed into the table
   (`getLiveEffectBonusEntries`): changes with a carrier condition («while wearing
   armour») and formula values (`@mod.*`, `@prof`, `@level`), both in `add` mode
   only — the value-setting modes with a formula belong to the AC body
-  (`getArmorClassEffectBody`). A formula that names the very value being computed
+  (`getArmorClassEffectBody`). A formula is computed by `evaluateFormula` from
+  `~active-effects/model` — the parser the effect editor validates with, so
+  brackets and `max` / `min` / `floor` / `ceil` / `steps` read the way VTTG reads
+  them («Аура защиты» adds `max(1, @mod.cha)`). A formula that names the very value being computed
   cannot loop: the target already in progress gets no live bonuses. Senses
   (`sense.darkvision` and friends) join the sheet's vision through
   `getVisionGrants`, and an effect's `conditionImmunities` reach the defences
-  panel. Still dropped: the `multiply` / `custom` modes, auras, damage parts,
+  panel. An aura counts when it also applies to its carrier (`applyToSelf`), the
+  VTTG rule; its «while capable» gate is not checked. Still dropped: the
+  `multiply` / `custom` modes, auras for others only, damage parts,
   conditions the sheet cannot evaluate (`roll.*`, `target.*`), the `@mod.spell` /
   `@speed.*` tokens and keys the sheet has no target for, as are disabled effects
   and effects aimed at someone else. The `transfer` flag is not read — the
