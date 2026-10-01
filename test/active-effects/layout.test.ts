@@ -1046,12 +1046,18 @@ describe('список «Срабатывания»', () => {
 
     const traitLayout = resolveLayoutFor('creatureTrait');
 
+    // Черта действует вместе с существом: слышит и его атаку, путь, отдых
     expect(traitLayout.triggerEvents).toEqual([
       'turnStart',
       'turnEnd',
+      'attackRoll',
       'damageTaken',
       'hpZero',
       'healed',
+      'conditionLost',
+      'downedOther',
+      'moved',
+      'rest',
     ]);
 
     expect(traitLayout.triggerActions).toEqual([
@@ -1078,11 +1084,28 @@ describe('список «Срабатывания»', () => {
     // У черты существа наложившего нет
     expect(traitLayout.triggerTurnOwners).toEqual(['subject']);
 
-    expect(resolveLayoutFor('item').triggerEvents).toEqual([
+    // Постоянный эффект надетого предмета слышит то же, что эффект умения:
+    // урон по носителю и его поступки — атаку, путь, отдых
+    const itemLayout = resolveLayoutFor('item');
+
+    expect(itemLayout.triggerEvents).toEqual([
+      'attackRoll',
       'damageTaken',
       'hpZero',
       'healed',
+      'conditionLost',
+      'downedOther',
+      'moved',
+      'rest',
     ]);
+
+    // Свойство предмета срабатывание не снимает
+    expect(itemLayout.triggerActions).not.toContain('removeSelf');
+
+    // Эффект оружия «на владельце» — такой же эффект предмета в руке
+    expect(
+      resolveLayoutFor('weapon', { effectTarget: 'self' }).triggerEvents,
+    ).toEqual(['attackRoll', 'conditionLost', 'downedOther', 'moved', 'rest']);
 
     // Эффект умения скопирован на персонажа и слышит его поступки: атаку,
     // путь, отдых. Снять сам себя он не может — это сняло бы выданную черту
@@ -1100,8 +1123,6 @@ describe('список «Срабатывания»', () => {
     ]);
 
     expect(featureLayout.triggerActions).not.toContain('removeSelf');
-
-    expect(resolveLayoutFor('weapon').triggerEvents).toEqual([]);
   });
 
   it('пресеты по месту; повторный спасбросок повторяет спасбросок эффекта', () => {
@@ -1245,7 +1266,7 @@ describe('список «Срабатывания»', () => {
     ).toEqual([]);
   });
 
-  it('черта существа: срабатывание броска атаки не работает', () => {
+  it('черта существа: срабатывание броска атаки работает', () => {
     const effect = createEffect({
       triggers: [
         {
@@ -1261,7 +1282,7 @@ describe('список «Срабатывания»', () => {
         effect,
         resolveEffectFormLayout('creatureTrait', effect),
       ),
-    ).toEqual(['triggers']);
+    ).toEqual([]);
   });
 
   it('сохранение: без действий не пишется, Сл и лимит — в границах', () => {
