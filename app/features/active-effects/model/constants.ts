@@ -15,6 +15,7 @@
  * src/client/ui/effect/constants.ts, src/client/ui/effect/triggerLabels.ts.
  */
 
+import type { CastRuleComponent } from './castRule';
 import type { EffectChangeStepPeriod } from './changeSteps';
 import type { EffectChangeModeChoice } from './changeSubtract';
 import type { CreatureTypeConditionSubject } from './creatureTypeCondition';
@@ -28,6 +29,7 @@ import type {
   EffectTriggerPreset,
   InertEffectField,
 } from './layout';
+import type { EffectPriceKind } from './pay';
 import type {
   TriggerAttackKind,
   TriggerConditionKind,
@@ -56,6 +58,7 @@ import type {
 } from './triggerTypes';
 import type {
   EffectAbility,
+  EffectActivationCost,
   EffectActivationMode,
   EffectAreaTrigger,
   EffectAttackTrigger,
@@ -68,6 +71,8 @@ import type {
   EffectDurationType,
   EffectEscapeActor,
   EffectEscapeOutcome,
+  EffectEscapeRole,
+  EffectEscapeRollMode,
   EffectHealKind,
   EffectLibrarySuggestion,
   EffectLight,
@@ -77,6 +82,7 @@ import type {
   EffectSaveTiming,
   EffectTurnAnchor,
   EffectTurnTiming,
+  EffectUseAreaShape,
   EffectVariantPick,
   SaveOverridePeriod,
   UnsectionedLibrarySuggestion,
@@ -93,7 +99,7 @@ import {
 } from './triggerTypes';
 
 /** Версия системы dnd5e-2024, с которой снят порт справочников и подписей. */
-export const EFFECT_SYSTEM_VERSION = '0.8.139';
+export const EFFECT_SYSTEM_VERSION = '0.8.157';
 
 /** Язык сортировки пунктов меню «Готовые»: навыки ищут по русскому названию. */
 export const EFFECT_MENU_SORT_LOCALE = 'ru';
@@ -205,7 +211,7 @@ const EFFECT_ABILITY_KEYS: ReadonlySet<string> = new Set(
  * @param ability строка из условия.
  * @returns `true`, если это ключ характеристики словаря VTTG.
  */
-export function isEffectAbility(ability: string): boolean {
+export function isEffectAbility(ability: string): ability is EffectAbility {
   return EFFECT_ABILITY_KEYS.has(ability);
 }
 
@@ -445,6 +451,21 @@ export const EFFECT_SKILL_OPTIONS: Array<Option<string>> = [
   { value: 'animalHandling', label: 'Уход за животными' },
 ];
 
+/**
+ * Школы магии — ключи словаря VTTG. По ним собираются флаги «нельзя
+ * накладывать заклинания школы» и читается условие об источнике спасброска.
+ */
+export const EFFECT_SPELL_SCHOOL_OPTIONS: Array<Option<string>> = [
+  { value: 'abjuration', label: 'Ограждение' },
+  { value: 'conjuration', label: 'Вызов' },
+  { value: 'divination', label: 'Прорицание' },
+  { value: 'enchantment', label: 'Очарование' },
+  { value: 'evocation', label: 'Воплощение' },
+  { value: 'illusion', label: 'Иллюзия' },
+  { value: 'necromancy', label: 'Некромантия' },
+  { value: 'transmutation', label: 'Преобразование' },
+];
+
 /** Цель части урона эффекта. */
 export const EFFECT_DAMAGE_TARGET_OPTIONS: Array<
   Option<EffectDamagePartTarget>
@@ -501,6 +522,44 @@ export function isWeaponOverrideKey(key: string): key is WeaponOverrideKey {
 }
 
 /**
+ * Ключ «тип урона своих заклинаний — на выбор»: значение — ключ типа урона
+ * (`psychic`). При касте заклинания с уроном носитель выбирает, оставить тип
+ * заклинания или взять этот («Психические заклинания», «Арканный некроз»).
+ * Значение — слово из списка, а не формула.
+ */
+export const SPELL_DAMAGE_TYPE_KEY = 'spell.damageType';
+
+/** Тип урона новой строки «тип урона заклинаний на выбор». */
+export const SPELL_DAMAGE_TYPE_DEFAULT = 'psychic';
+
+/**
+ * Ключ прибавки к получаемым временным хитам: «+5 к получаемым временным
+ * хитам». VTTG считает её при каждой выдаче, а не на листе.
+ */
+export const TEMP_HP_GAIN_KEY = 'tempHp.gain';
+
+/**
+ * Ключ прибавки к досягаемости рукопашных атак носителя, в футах: «увеличить
+ * досягаемость этой атаки на 10 футов». VTTG считает её при проверке
+ * расстояния атаки, а не на листе.
+ */
+export const ATTACK_REACH_KEY = 'attack.reach';
+
+/** Ключ второго типа существа: добавляется к своему, а не заменяет его. */
+export const EXTRA_CREATURE_TYPE_KEY = 'creatureType.extra';
+
+/**
+ * Задаётся ли значение строки словом из списка или костью, а не формулой:
+ * замены свойств оружия и тип урона заклинаний.
+ *
+ * @param key ключ изменения.
+ * @returns `true`, если значение формулой не проверяют.
+ */
+export function isOptionValueKey(key: string): boolean {
+  return isWeaponOverrideKey(key) || key === SPELL_DAMAGE_TYPE_KEY;
+}
+
+/**
  * Библиотека ключей атрибутов (для поля change.key) — зеркало
  * `EFFECT_TARGET_SUGGESTIONS` из VTTG. Список закрыт: неизвестный ключ движок
  * молча пропускает, и эффект выглядел бы настроенным, ничего не делая.
@@ -519,8 +578,23 @@ export const EFFECT_TARGET_KEY_SUGGESTIONS: Array<Option<string>> = [
     label: 'Труднопроходимость (цена клетки)',
   },
 
+  // Считаются в момент события, а не на листе: выдача временных хитов и
+  // проверка расстояния рукопашной атаки
+  {
+    value: TEMP_HP_GAIN_KEY,
+    label: 'Прибавка к получаемым временным хитам',
+  },
+  {
+    value: ATTACK_REACH_KEY,
+    label: 'Досягаемость рукопашных атак, фт',
+  },
+
   // Тип существа: его читают гейты урона «только по нежити» и условия
   { value: 'creatureType', label: 'Тип существа' },
+  {
+    value: EXTRA_CREATURE_TYPE_KEY,
+    label: 'Тип существа: ещё один, в дополнение к своему',
+  },
 
   // Критические попадания
   {
@@ -582,6 +656,10 @@ export const EFFECT_TARGET_KEY_SUGGESTIONS: Array<Option<string>> = [
   { value: WEAPON_DAMAGE_DICE_KEY, label: 'Оружие: кость урона' },
   { value: WEAPON_ATTACK_ABILITY_KEY, label: 'Оружие: характеристика атаки' },
   { value: WEAPON_DAMAGE_TYPE_KEY, label: 'Оружие: тип урона' },
+  {
+    value: SPELL_DAMAGE_TYPE_KEY,
+    label: 'Заклинания: тип урона на выбор при касте',
+  },
 
   // Навыки — из общего списка, чтобы ключ и флаг навыка не разъехались
   ...EFFECT_SKILL_OPTIONS.map(
@@ -631,6 +709,8 @@ export const EFFECT_VALUE_SECTIONS = {
   damageGate: 'Урон: только если…',
   healing: 'Лечение',
   spell: 'Заклинание и эффект',
+  paid: 'Цена ресурсом: потраченное',
+  recipient: 'Числа получателя и события',
 } as const;
 
 /** Пояснение к токенам-гейтам урона: гасят своё слагаемое. */
@@ -642,6 +722,78 @@ const DAMAGE_GATE_HINT =
 const CAST_LEVEL_HINT =
   '@castLevel — круг, которым сотворили. Только у эффекта заклинания: '
   + 'число подставляется при касте.';
+
+/** Пояснение к токенам потраченного ценой ресурсом. */
+const PAID_TOKEN_HINT =
+  'Только у эффекта или срабатывания с ценой ресурсом: число подставляется '
+  + 'при оплате. Платежа не было — ноль.';
+
+/**
+ * Токены потраченного ценой ресурсом и чисел получателя. В списке подсказок
+ * системы их нет: там они названы только в пояснениях к полям цены. Сайт
+ * предлагает их наравне с остальными — автору не нужно помнить запись.
+ */
+const EFFECT_SITE_VALUE_SUGGESTIONS: ReadonlyArray<EffectLibrarySuggestion> = [
+  ...assignLibrarySection(
+    EFFECT_VALUE_SECTIONS.paid,
+    [
+      { value: '@paid.slotLevel', label: 'Круг потраченной ячейки' },
+      { value: '@paid.hitDice', label: 'Число потраченных костей хитов' },
+      { value: '@paid.hitDie', label: 'Грань потраченных костей хитов' },
+      {
+        value: '@paid.hitDiceRoll',
+        label: 'Бросок потраченных костей хитов',
+        hint: `Кости бросаются один раз — при оплате. ${PAID_TOKEN_HINT}`,
+      },
+      { value: '@paid.counter', label: 'Потрачено единиц счётчика' },
+      { value: '@paid.itemUses', label: 'Потрачено зарядов предмета' },
+      {
+        value: '(1 + @paid.slotLevel)к8',
+        label: 'Кости по кругу потраченной ячейки (Мистическая кара)',
+      },
+      {
+        value: '@paid.hitDiceRoll * even(@paid.hitDiceRoll)',
+        label: 'Развилка: только если бросок чётный',
+        hint:
+          'even(число) и odd(число) дают 1 или 0: «чётное — временные хиты, '
+          + 'нечётное — урон» пишется множителем.',
+      },
+    ],
+    PAID_TOKEN_HINT,
+  ),
+  ...assignLibrarySection(EFFECT_VALUE_SECTIONS.recipient, [
+    {
+      value: '@hp.temp',
+      label: 'Текущие временные хиты',
+      hint: 'В уроне срабатывания считается по получателю урона.',
+    },
+    {
+      value: 'ceil(@hitDice.left / 2)',
+      label: 'Половина непотраченных костей хитов',
+      hint: '@hitDice.left — непотраченные кости хитов листа; у существа — 0.',
+    },
+    {
+      value: '(@tag.pressure)к8',
+      label: 'Кость за каждую отметку на существе (здесь pressure)',
+      hint:
+        'После «@tag.» — ключ отметки латиницей, цифрами и «_». У '
+        + 'отметки-счётчика — число ступеней. В уроне срабатывания считается '
+        + 'по получателю урона.',
+    },
+    {
+      value: '2к12@dmg.event',
+      label: 'Урон того же типа, что только что полученный',
+      hint: 'Только в уроне срабатывания на событии урона.',
+    },
+    {
+      value: '@mod.feat',
+      label: 'Модификатор характеристики, выбранной в черте',
+      hint:
+        'У эффекта черты: заклинательная характеристика черты либо первая '
+        + 'повышенная ею. Годится и для Сл формулой.',
+    },
+  ]),
+];
 
 /** Скорости листа в формуле — в порядке показа системы. */
 const EFFECT_SPEED_VALUE_SUGGESTIONS: ReadonlyArray<UnsectionedLibrarySuggestion> =
@@ -830,6 +982,8 @@ export const EFFECT_VALUE_SUGGESTIONS: ReadonlyArray<EffectLibrarySuggestion> =
           + 'эффект ложится, и дальше не меняется.',
       },
     ]),
+
+    ...EFFECT_SITE_VALUE_SUGGESTIONS,
   ];
 
 /** Приставка условий по типу НОСИТЕЛЯ эффекта. */
@@ -946,6 +1100,49 @@ export const EFFECT_DAMAGE_TYPE_CONDITION_PREFIX = 'damage.type === ';
 /** Приставка условия срабатывания «урон без этого типа». */
 export const EFFECT_DAMAGE_TYPE_NOT_CONDITION_PREFIX = 'damage.type !== ';
 
+/**
+ * Условие «цель броска — тот, кто наложил этот эффект»: «помеха на броски
+ * атаки против вас» у эффекта на противнике.
+ */
+export const EFFECT_TARGET_IS_APPLIER_CONDITION = 'target.isSource === true';
+
+/**
+ * Условие «цель броска — НЕ тот, кто наложил этот эффект»: «помеха атакам по
+ * целям, отличным от вас» («Непристойный жест», «Угрожающее присутствие»).
+ */
+export const EFFECT_TARGET_NOT_APPLIER_CONDITION = 'target.isSource === false';
+
+/** Условие защитного эффекта «атакует тот, кто наложил этот эффект». */
+export const EFFECT_ATTACKER_IS_APPLIER_CONDITION =
+  'incoming.attackerIsSource === true';
+
+/**
+ * Условие защитного эффекта «атакует НЕ тот, кто наложил этот эффект»:
+ * «преимущество на атаки по цели для всех, кроме вас».
+ */
+export const EFFECT_ATTACKER_NOT_APPLIER_CONDITION =
+  'incoming.attackerIsSource === false';
+
+/** Приставка условия «спасбросок вызвало заклинание школы из списка». */
+export const EFFECT_SAVE_SPELL_SCHOOL_CONDITION_PREFIX =
+  'source.spellSchool === ';
+
+/** Приставка условия «источник спасброска наносит урон типа из списка». */
+export const EFFECT_SAVE_DAMAGE_TYPE_CONDITION_PREFIX =
+  'source.damageType === ';
+
+/** Приставка условия «вид носителя из списка». */
+export const EFFECT_CARRIER_SPECIES_CONDITION_PREFIX = 'self.species === ';
+
+/** Приставка условия «вид носителя не из списка». */
+export const EFFECT_CARRIER_SPECIES_NOT_CONDITION_PREFIX = 'self.species !== ';
+
+/** Приставка условия «вид другой стороны из списка». */
+export const EFFECT_TARGET_SPECIES_CONDITION_PREFIX = 'target.species === ';
+
+/** Приставка условия «вид другой стороны не из списка». */
+export const EFFECT_TARGET_SPECIES_NOT_CONDITION_PREFIX = 'target.species !== ';
+
 /** Приставка условия срабатывания «на носителе отметка». */
 export const EFFECT_CARRIER_TAG_CONDITION_PREFIX = 'self.tag === ';
 
@@ -966,7 +1163,8 @@ export const EFFECT_TRIGGER_FIXED_CONDITIONS: Partial<
   sourceWeaponMastery: 'source.weaponMastery === true',
   selfTempHpZero: 'self.hp.temp === 0',
   selfGrounded: 'self.grounded === true',
-  otherIsSource: 'target.isSource === true',
+  otherIsSource: EFFECT_TARGET_IS_APPLIER_CONDITION,
+  otherIsSourceSide: 'target.isSourceSide === true',
   otherBloodied: 'target.hp.value <= (target.hp.max / 2)',
   attackLanded: 'attack.landed === true',
   attackMissed: 'attack.landed === false',
@@ -1083,8 +1281,11 @@ export const EFFECT_CONDITION_SECTIONS = {
   armor: 'Доспех носителя',
   targetHp: 'Хиты цели',
   targetMark: 'Метка цели',
+  applier: 'Наложивший эффект',
   adjacentAlly: 'Союзник рядом с целью',
   defense: 'Защита: входящая атака',
+  saveSource: 'Источник спасброска',
+  carrierSpecies: 'Вид носителя',
   carrierType: 'Тип носителя',
   targetType: 'Тип цели',
 } as const;
@@ -1192,6 +1393,23 @@ export const EFFECT_CONDITION_EXPR_SUGGESTIONS: ReadonlyArray<EffectLibrarySugge
       ROLL_CONDITION_HINT,
     ),
 
+    // Эффект лежит на противнике, а условие — о том, кто его наложил
+    ...assignLibrarySection(
+      EFFECT_CONDITION_SECTIONS.applier,
+      [
+        {
+          value: EFFECT_TARGET_IS_APPLIER_CONDITION,
+          label: 'Цель — тот, кто наложил этот эффект («помеха атакам по вам»)',
+        },
+        {
+          value: EFFECT_TARGET_NOT_APPLIER_CONDITION,
+          label:
+            'Цель — не тот, кто наложил этот эффект («помеха атакам не по вам»)',
+        },
+      ],
+      ROLL_CONDITION_HINT,
+    ),
+
     ...assignLibrarySection(
       EFFECT_CONDITION_SECTIONS.adjacentAlly,
       ADJACENT_ALLY_CONDITION_OPTIONS.map((ally) => ({
@@ -1217,12 +1435,57 @@ export const EFFECT_CONDITION_EXPR_SUGGESTIONS: ReadonlyArray<EffectLibrarySugge
           value: 'incoming.attackType === "spell"',
           label: 'Защита: от атак заклинаниями',
         },
+        {
+          value: EFFECT_ATTACKER_IS_APPLIER_CONDITION,
+          label: 'Защита: атакует тот, кто наложил этот эффект',
+        },
+        {
+          value: EFFECT_ATTACKER_NOT_APPLIER_CONDITION,
+          label:
+            'Защита: атакует не тот, кто наложил этот эффект («все, кроме вас»)',
+        },
         ...EFFECT_CREATURE_CATEGORY_OPTIONS.map((creatureType) => ({
           value: `${EFFECT_INCOMING_ATTACKER_TYPE_CONDITION_PREFIX}"${creatureType.value}"`,
           label: `Защита: атакующий — ${creatureType.label}`,
         })),
       ],
       'Для КД и «Атак по носителю»: проверяется, когда атакуют носителя.',
+    ),
+
+    // Образцы: школу и типы урона автор вписывает свои, список — через запятую
+    ...assignLibrarySection(
+      EFFECT_CONDITION_SECTIONS.saveSource,
+      [
+        {
+          value: `${EFFECT_SAVE_SPELL_SCHOOL_CONDITION_PREFIX}"divination"`,
+          label:
+            'Спасбросок: от заклинания школы… (ключ школы; список через запятую)',
+        },
+        {
+          value: `${EFFECT_SAVE_DAMAGE_TYPE_CONDITION_PREFIX}"fire, radiant"`,
+          label:
+            'Спасбросок: от источника с уроном типа… (ключи типов через запятую)',
+        },
+      ],
+      ROLL_CONDITION_HINT,
+    ),
+
+    // Вид персонажа или подтип статблока — свободным названием, список через
+    // запятую. Образцы: название автор вписывает своё
+    ...assignLibrarySection(
+      EFFECT_CONDITION_SECTIONS.carrierSpecies,
+      [
+        {
+          value: `${EFFECT_CARRIER_SPECIES_CONDITION_PREFIX}"эльф"`,
+          label:
+            'Носитель: вида… (впишите вид или подтип; список через запятую)',
+        },
+        {
+          value: `${EFFECT_CARRIER_SPECIES_NOT_CONDITION_PREFIX}"дварф, дуэргар"`,
+          label: 'Носитель: не вида… («Пояс дварфов»: не дварф и не дуэргар)',
+        },
+      ],
+      SHEET_CONDITION_HINT,
     ),
 
     ...assignLibrarySection(
@@ -1328,6 +1591,19 @@ function buildDamageIgnoreResistanceFlagLabels(): Array<[string, string]> {
   return EFFECT_DAMAGE_TYPE_OPTIONS.map((damageType): [string, string] => [
     `damage.ignoreResistance.${damageType.value}`,
     `Свой урон (${damageType.label}) игнорирует сопротивление`,
+  ]);
+}
+
+/**
+ * Собирает подписи флагов «нельзя накладывать заклинания школы» — по одному
+ * на школу магии.
+ *
+ * @returns пары «ключ флага → подпись».
+ */
+function buildSpellSchoolBlockFlagLabels(): Array<[string, string]> {
+  return EFFECT_SPELL_SCHOOL_OPTIONS.map((school): [string, string] => [
+    `spellcasting.noSchool.${school.value}`,
+    `Не может накладывать заклинания школы «${school.label}»`,
   ]);
 }
 
@@ -1459,11 +1735,28 @@ export const EFFECT_FLAG_LABELS: Record<string, string> = Object.fromEntries([
     'actions.oneActionOrBonus',
     'За ход — действие или бонусное действие, не оба (Замедление)',
   ],
+  [
+    'actions.oneOfMoveActionBonus',
+    'За ход — одно из трёх: перемещение, действие или бонусное действие',
+  ],
+  [
+    'actions.oneAttackPerAction',
+    'Действием «Атака» — только одна атака за ход',
+  ],
+  [
+    'actions.noOpportunityAttack',
+    'Не может совершать провоцированные атаки (остальные реакции доступны)',
+  ],
   ['spellcasting.blocked', 'Не может накладывать заклинания'],
   [
     'spellcasting.noVerbal',
     'Не может накладывать заклинания с вербальным компонентом',
   ],
+  [
+    'spellcasting.noMagicAction',
+    'Не может совершать действие «Магия» (заклинания действием)',
+  ],
+  ...buildSpellSchoolBlockFlagLabels(),
   [
     'concentration.blocked',
     'Не может концентрироваться (текущая концентрация прерывается)',
@@ -1480,11 +1773,43 @@ export const EFFECT_FLAG_LABELS: Record<string, string> = Object.fromEntries([
     'defense.suppressAll',
     'Защиты от урона не действуют (сопротивления и иммунитеты сняты)',
   ],
+  [
+    'defense.suppressResistances',
+    'Сопротивления урону не действуют (иммунитеты остаются)',
+  ],
+  [
+    'damage.concentrationDisadvantage',
+    'Урон носителя: спасбросок концентрации цели с помехой',
+  ],
   ['hitPoints.maxReductionBlocked', 'Максимум хитов нельзя уменьшать'],
   ['attacksAgainst.forceCritical', 'Попадание по этому существу — крит'],
   ['movement.teleportBlocked', 'Не может телепортироваться'],
   ['rest.noBenefit.short', 'Короткий отдых не приносит пользы'],
   ['rest.noBenefit.long', 'Продолжительный отдых не приносит пользы'],
+
+  // Кости хитов: читают и короткий отдых, и цена ресурсом
+  ['hitDice.maximize', 'Кости хитов: максимум вместо броска'],
+  ['hitDice.lowAsThree', 'Кости хитов: выпавшие 1 и 2 считаются как 3'],
+  [
+    'hitDice.firstFree',
+    'Кости хитов: первая после продолжительного отдыха не тратится',
+  ],
+
+  // «Вырваться»
+  ['escape.advantage', 'Преимущество на проверки, чтобы вырваться'],
+  ['escape.disadvantage', 'Помеха на проверки, чтобы вырваться'],
+  [
+    'escape.advantage.grappled',
+    'Преимущество на проверки, чтобы вырваться из захвата (Схваченный)',
+  ],
+  [
+    'escape.disadvantage.grappled',
+    'Помеха на проверки, чтобы вырваться из захвата (Схваченный)',
+  ],
+  [
+    'grapple.escapeDisadvantage',
+    'Из захвата носителя вырываются с помехой (Схваченный, наложенный им)',
+  ],
 
   // Лечение
   ['healing.blocked', 'Не может восстанавливать хиты'],
@@ -1817,6 +2142,56 @@ export const EFFECT_SAVE_OVERRIDE_TIMES_FORMS: [string, string, string] = [
   'раз',
 ];
 
+/** Части фраз цены ресурсом — в сводке эффекта и срабатывания. */
+export const EFFECT_PRICE_PHRASES = {
+  slot: 'ячейка',
+  pactSlot: 'ячейка договора',
+  slotLevelSuffix: ' круга',
+  slotFrom: ' от ',
+  slotUpTo: ' до ',
+  amountRange: '–',
+  inspiration: 'героическое вдохновение',
+  payJoiner: ' и ',
+  payClausePrefix: ', цена: ',
+} as const;
+
+/** Формы слов «кость хитов» после числа. */
+export const EFFECT_PRICE_HIT_DICE_FORMS: [string, string, string] = [
+  'кость хитов',
+  'кости хитов',
+  'костей хитов',
+];
+
+/** Формы слова «заряд» после числа. */
+export const EFFECT_PRICE_ITEM_USES_FORMS: [string, string, string] = [
+  'заряд',
+  'заряда',
+  'зарядов',
+];
+
+/** Чем соединяются характеристики спасброска на выбор: «Сила или Ловкость». */
+export const EFFECT_SAVE_ABILITY_CHOICE_JOINER = ' или ';
+
+/** Фразы условия об источнике спасброска: школа заклинания и типы урона. */
+export const EFFECT_SAVE_SOURCE_CONDITION_PHRASES = {
+  spellSchool: 'спасбросок от заклинания школы: ',
+  damageType: 'спасбросок от источника с уроном: ',
+} as const;
+
+/** Фразы условия по виду существа: «вид носителя — эльф». */
+export const EFFECT_SPECIES_CONDITION_PHRASES = {
+  carrier: 'вид носителя — ',
+  carrierNot: 'вид носителя — не ',
+  target: 'вид другой стороны — ',
+  targetNot: 'вид другой стороны — не ',
+} as const;
+
+/** Подписи списка типов, взятого из выбора владельца эффекта. */
+export const EFFECT_CHOICE_LIST_PHRASES = {
+  included: 'тип из выбора владельца',
+  excluded: 'тип не из выбора владельца',
+} as const;
+
 /** Период своего счётчика «провал в успех» — родительным падежом. */
 export const EFFECT_SAVE_OVERRIDE_PERIOD_PHRASES: Record<
   SaveOverridePeriod,
@@ -1940,6 +2315,8 @@ export const EFFECT_SCENARIO_LABELS = {
   counterAmountPrefix: ' ×',
   exclusivePrefix: ', одно включение «',
   exclusiveSuffix: '»',
+  dcSkillPrefix: ' (при применении — итог проверки: ',
+  dcSkillSuffix: ')',
 } as const;
 
 /** Когда срабатывает эффект, который накладывается применением. */
@@ -2020,6 +2397,7 @@ export const EFFECT_TRIGGER_PHRASE_PARTS = {
   setHpPrefix: 'хиты становятся ',
   setHpMax: 'хиты восстанавливаются полностью',
   removeConditionPrefix: 'снимается состояние ',
+  removeConditionFromTypes: ', наложенное существом типа: ',
   removeAllConditions: 'снимаются все состояния',
   kill: 'получатель умирает',
   revivePrefix: 'получатель возвращается к жизни с ',
@@ -2027,8 +2405,12 @@ export const EFFECT_TRIGGER_PHRASE_PARTS = {
   dropHeld: 'получатель роняет то, что держит',
   restoreSlotPrefix: 'возвращается ячейка круга ',
   restoreCounterPrefix: 'возвращается ресурс ',
+  restoreAmountPrefix: ' ×',
+  restoreSetPrefix: ' становится ',
+  restoreDefaultAmount: '1',
   dispelPrefix: 'рассеиваются заклинания до круга ',
   grantInspiration: 'получатель получает вдохновение',
+  moveUpToPrefix: 'до ',
   moveSuffix: ' фт',
   endRecipientCast: 'каст получателя заканчивается',
   notifyPrefix: 'сообщение ',
@@ -2079,6 +2461,8 @@ export const EFFECT_TRIGGER_MOVE_KIND_PHRASES: Record<
   push: 'отталкивает на ',
   pull: 'притягивает на ',
   teleport: 'переносит на ',
+  bring: 'переносит вплотную к опоре',
+  choose: 'отталкивает или притягивает (на выбор применившего) на ',
 };
 
 /** Как сдвигается зона — в фразе. */
@@ -2158,6 +2542,8 @@ export const EFFECT_TRIGGER_CONDITION_PHRASES: Record<
   otherMarkedBySelf: () => 'другая сторона помечена носителем',
   selfHpAtMost: (hitPoints) => `у носителя не больше ${hitPoints} хитов`,
   selfHpAtLeast: (hitPoints) => `у носителя не меньше ${hitPoints} хитов`,
+  selfHpMaxAtMost: (hitPoints) =>
+    `максимум хитов носителя не больше ${hitPoints}`,
   selfSizeAtMost: (sizeLabel) => `носитель размером не больше «${sizeLabel}»`,
   selfSizeAtLeast: (sizeLabel) => `носитель размером не меньше «${sizeLabel}»`,
   selfCondition: (conditionLabel) => `носитель в состоянии «${conditionLabel}»`,
@@ -2172,11 +2558,19 @@ export const EFFECT_TRIGGER_CONDITION_PHRASES: Record<
   selfTempHpZero: () => 'у носителя нет временных хитов',
   selfGrounded: () => 'носитель не летит',
   selfSpecies: (species) => `вид носителя — «${species}»`,
+  selfSpeciesNot: (species) => `вид носителя — не «${species}»`,
+  otherSpecies: (species) => `вид другой стороны — «${species}»`,
+  otherSpeciesNot: (species) => `вид другой стороны — не «${species}»`,
+  damageTypeChosen: (choiceKey) =>
+    `урон типа из выбора владельца (${choiceKey})`,
+  otherCreatureTypeChosen: (choiceKey) =>
+    `другая сторона — тип из выбора владельца (${choiceKey})`,
   selfAbilityAtMost: (abilityLabel, amount) =>
     `${abilityLabel} носителя не больше ${amount}`,
   selfAbilityAtLeast: (abilityLabel, amount) =>
     `${abilityLabel} носителя не меньше ${amount}`,
   otherIsSource: () => 'другая сторона — тот, кто наложил эффект',
+  otherIsSourceSide: () => 'другая сторона — наложивший эффект или его союзник',
   otherBloodied: () => 'у другой стороны не больше половины хитов',
   otherHpAtMost: (hitPoints) => `у другой стороны не больше ${hitPoints} хитов`,
   damageAtLeast: (damage) => `урон не меньше ${damage}`,
@@ -2227,6 +2621,8 @@ export const EFFECT_FORMULA_READABLE_FUNCTIONS: Readonly<
   min: 'меньшее из ({0}; {1})',
   max: 'большее из ({0}; {1})',
   abs: '|{0}|',
+  even: '(1, если {0} чётное, иначе 0)',
+  odd: '(1, если {0} нечётное, иначе 0)',
 };
 
 /**
@@ -2521,10 +2917,24 @@ export const EFFECT_SAVE_STEP_LABELS = {
     'Обычно хватает спасброска самого заклинания или действия. Включите, если '
     + 'эффект требует свой — например, другой характеристики.',
   successTitle: 'Если спасбросок успешен',
+  altAbilities: 'Или характеристика',
+  altAbilitiesHint:
+    '«Спасбросок Силы или Ловкости»: цель бросает лучшей из названных. Пусто '
+    + '— характеристика одна.',
+  altAbilitiesPlaceholder: 'Только одна',
+  dcSkill: 'Сл — итог проверки навыка',
+  dcSkillNone: 'Нет — обычная Сл',
+  dcSkillHint:
+    '«Совершите проверку Харизмы (Запугивание); спасбросок со Сл, равной '
+    + 'результату проверки». Применивший бросает проверку при применении, её '
+    + 'итог и есть Сл; число рядом — запасное.',
   allowWilling: 'Согласная цель не бросает',
   allowWillingHint:
     'В окне броска появится «Не сопротивляюсь»: решает владелец цели',
 } as const;
+
+/** Значение «обычная Сл» в выборе навыка для Сл от проверки. */
+export const NO_DC_SKILL = 'none';
 
 /** Шаг новой растущей строки: правило, ради которого его заводят, — убывающее. */
 export const DEFAULT_CHANGE_STEP_BY = -1;
@@ -2584,7 +2994,84 @@ export const DEFAULT_ESCAPE_LABEL = 'Вырваться';
 export const EFFECT_ESCAPE_ACTOR_LABELS: Record<EffectEscapeActor, string> = {
   self: 'Носитель',
   adjacent: 'Существо рядом',
+  any: 'Носитель или существо рядом',
 };
+
+/** Подписи режима броска проверки «вырваться». */
+export const EFFECT_ESCAPE_ROLL_MODE_LABELS: Record<
+  EffectEscapeRollMode,
+  string
+> = {
+  advantage: 'С преимуществом',
+  disadvantage: 'С помехой',
+};
+
+/** Значение «обычный бросок» в выборе режима проверки «вырваться». */
+export const ESCAPE_ROLL_MODE_NORMAL = 'normal';
+
+/** Подпись выбора «обычный бросок» у режима проверки «вырваться». */
+export const ESCAPE_ROLL_MODE_NORMAL_LABEL = 'Обычный бросок';
+
+/** Значение «всем, кто может действовать» в выборе роли навыка. */
+export const ESCAPE_SKILL_ROLE_ANY = 'any';
+
+/** Подпись выбора «всем, кто может действовать» у роли навыка. */
+export const ESCAPE_SKILL_ROLE_ANY_LABEL = 'Всем, кто действует';
+
+/** Подписи роли, которой доступен навык проверки «вырваться». */
+export const ESCAPE_SKILL_ROLE_LABELS: Record<EffectEscapeRole, string> = {
+  self: 'Только носителю',
+  adjacent: 'Только существу рядом',
+};
+
+/**
+ * Значение «ничего» в выборе состояния после освобождения. Не пустая строка:
+ * пункт списка с пустым значением выпадающий список не принимает.
+ */
+export const NO_ESCAPE_AFTERMATH = 'none';
+
+/** Формула новой части урона за неудачную попытку: единица, как у капкана. */
+export const NEW_ESCAPE_FAIL_DAMAGE_FORMULA = '1';
+
+/** Иконки строк навыков и урона блока «вырваться». */
+export const EFFECT_ESCAPE_ROW_ICONS = {
+  add: 'tabler:plus',
+  remove: 'tabler:trash',
+} as const;
+
+/** Подписи полей блока «вырваться»: навыки, режим броска и что бывает после. */
+export const EFFECT_ESCAPE_FIELD_LABELS = {
+  skills: 'Навыки на выбор',
+  skillsHint:
+    'Вырывающийся выбирает один из навыков: правило захвата 2024 — «Атлетика '
+    + 'или Акробатика». Своя Сл — если у навыка она другая (кандалы: Ловкость '
+    + 'рук 20, Атлетика 25).',
+  addSkill: 'Добавить навык',
+  removeSkill: 'Убрать навык',
+  removeFailDamage: 'Убрать урон',
+  skillDc: 'Своя Сл',
+  skillDcPlaceholder: 'Как у проверки',
+  skillRole: 'Кому доступен',
+  skillLabel: 'Пометка',
+  skillLabelPlaceholder: 'воровскими инструментами',
+  mode: 'Режим броска',
+  modeHint:
+    'Преимущество или помеха самой проверки: «проверки для освобождения — с '
+    + 'помехой». Складывается с флагами бросающего.',
+  onSuccessApply: 'После освобождения',
+  onSuccessApplyNone: 'Ничего',
+  onSuccessApplyHint:
+    'Состояние, которое носитель получает, вырвавшись: «…и получает '
+    + 'состояние лежащий ничком».',
+  onFailDamage: 'Урон при провале проверки',
+  onFailDamageHint:
+    'Урон носителю за каждую неудачную проверку: «каждая неудачная проверка '
+    + 'наносит пойманному 1 колющий урон».',
+  onFailDamageFormula: 'Формула',
+  onFailDamageType: 'Тип',
+  onFailDamageTypePlaceholder: 'Без типа',
+  addFailDamage: 'Добавить урон',
+} as const;
 
 /** Подписи того, что даёт успех действия «вырваться». */
 export const EFFECT_ESCAPE_OUTCOME_LABELS: Record<EffectEscapeOutcome, string> =
@@ -2815,6 +3302,11 @@ export const EFFECT_MODIFIERS_STEP_LABELS = {
     'Условие выполняется, если тип любой из выбранных: «Защита от зла и '
     + 'добра» — аберрация, небожитель, элементаль, фея, исчадие, нежить.',
   creatureTypesExcept: 'Кроме этих типов',
+  creatureTypesChoice: 'или ключ выбора владельца',
+  creatureTypesChoiceHint:
+    'Типы берутся из выбора, сделанного на листе владельца эффекта: «существа '
+    + 'из вашего Гримуара» — ключ выбора умения (monster-manual). Пока выбор '
+    + 'не сделан, условие не выполняется.',
   adjacentAllyTitle: 'Какой союзник',
   adjacentAllyHint:
     'По правилам 2024 «Тактика стаи» не считает недееспособного союзника: '
@@ -2915,6 +3407,15 @@ export const SAVE_OVERRIDE_PERIOD_LABELS: Record<SaveOverridePeriod, string> = {
 
 /** Подписи шага «Длительность». */
 export const EFFECT_DURATION_STEP_LABELS = {
+  stackable: 'Складывается с одноимёнными',
+  stackableHint:
+    'Обычно повторное наложение одноимённого эффекта заменяет прежнее. '
+    + 'Включите — и каждое наложение ляжет рядом («урон кумулятивный»).',
+  turnCurrent: 'До конца текущего хода',
+  turnCurrentHint:
+    'Эффект, наложенный в ход того, по чьему ходу считается срок, обычно '
+    + 'живёт до конца его СЛЕДУЮЩЕГО хода. Включите — и он кончится с концом '
+    + 'этого же хода («скорость 0 до конца текущего хода»).',
   durationTitle: 'Сколько держится',
   valuePlaceholder: 'Сколько',
   formulaToggle: 'Формулой',
@@ -3019,6 +3520,160 @@ export const EFFECT_ACTIVATION_COUNTER_LABELS = {
     + 'формой. Варианты одной группы — одно включение и без имени.',
 } as const;
 
+/** Значение «ход не тратится» в выборе траты хода применения. */
+export const NO_ACTIVATION_COST = 'none';
+
+/** Трата хода применения в выборе: настоящая либо «ход не тратится». */
+export type EffectActivationCostChoice =
+  | EffectActivationCost
+  | typeof NO_ACTIVATION_COST;
+
+/** Подпись выбора «ход не тратится». */
+export const NO_ACTIVATION_COST_LABEL = 'Не тратит ход';
+
+/** Значение «одна цель» в выборе области применения. */
+export const NO_USE_AREA = 'none';
+
+/** Форма области применения в выборе: настоящая либо «без области». */
+export type EffectUseAreaChoice = EffectUseAreaShape | typeof NO_USE_AREA;
+
+/** Подписи форм области применения — те же, что у шаблона заклинания. */
+export const EFFECT_USE_AREA_SHAPE_LABELS: Record<EffectUseAreaShape, string> =
+  {
+    cone: 'Конус',
+    circle: 'Сфера',
+    ray: 'Линия',
+    rect: 'Куб',
+  };
+
+/** Подпись выбора «без области» у применения: одна цель по выбору. */
+export const NO_USE_AREA_LABEL = 'Нет — одна цель';
+
+/** Подпись выбора «без шаблона» у получателей кнопки «При действии». */
+export const NO_TRIGGER_TEMPLATE_LABEL = 'Радиус от носителя';
+
+/** Размер новой области применения, фт. */
+export const DEFAULT_USE_AREA_SIZE = 15;
+
+/** Подписи полей траты хода, области и концентрации применения. */
+export const EFFECT_ACTIVATION_EXTRA_LABELS = {
+  cost: 'Трата хода',
+  costHint:
+    '«Бонусным действием произнесите командное слово». Запрещённая трата '
+    + '(«нет бонусных действий») кнопку не пускает; сделанная идёт в счёт хода.',
+  area: 'Область',
+  areaHint:
+    'Шаблон на карте вместо выбора одной цели: эффекты «на цели» получают '
+    + 'все, кого он накрыл, эффект «в зону» остаётся зоной на его месте.',
+  areaSize: 'Размер, фт',
+  areaWidth: 'Ширина, фт',
+  concentration: 'Требует концентрации',
+  concentrationHint:
+    'Как у заклинания: применивший получает метку концентрации, прежняя '
+    + 'концентрация кончается, а с концом этой снимается всё наложенное.',
+} as const;
+
+/** Подписи вида цены ресурсом. */
+export const EFFECT_PRICE_KIND_LABELS: Record<EffectPriceKind, string> = {
+  counter: 'Счётчик листа',
+  hitDice: 'Кости хитов',
+  spellSlot: 'Ячейка заклинания',
+  itemUses: 'Заряды предмета',
+  inspiration: 'Героическое вдохновение',
+};
+
+/** Иконки строки платежа. */
+export const EFFECT_PAY_ROW_ICONS = {
+  add: 'tabler:plus',
+  remove: 'tabler:trash',
+} as const;
+
+/** Подписи блока «Цена ресурсом». */
+export const EFFECT_PAY_FIELD_LABELS = {
+  title: 'Цена ресурсом',
+  hintEffect:
+    'Что тратит тот, кто применяет, включает или колдует. Не хватает ресурса '
+    + '— применение, включение и каст не состоятся. Потраченное доступно в '
+    + 'формулах эффекта: @paid.slotLevel — круг ячейки, @paid.hitDice и '
+    + '@paid.hitDie — число и грань костей хитов, @paid.hitDiceRoll — сумма их '
+    + 'броска, @paid.counter — единицы счётчика, @paid.itemUses — заряды.',
+  hintTrigger:
+    'Что тратит носитель эффекта, чтобы срабатывание состоялось. Владельца '
+    + 'спросят перед списанием; отказ и нехватка ресурса срабатывание '
+    + 'отменяют. Потраченное доступно в формулах действий: @paid.slotLevel, '
+    + '@paid.hitDice, @paid.hitDie, @paid.hitDiceRoll, @paid.counter, '
+    + '@paid.itemUses.',
+  add: 'Добавить цену',
+  remove: 'Убрать цену',
+  kind: 'Чем платят',
+  counter: 'Ключ счётчика',
+  counterPlaceholder: 'bardic-inspiration',
+  amount: 'Сколько',
+  amountPlaceholder: '1',
+  amountHint:
+    'Число или формула: 2, @castLevel, 1 + @mod.con. Пусто — одна единица. '
+    + 'Ноль вместе с «До» — цена по желанию.',
+  max: 'До',
+  maxHint:
+    'Верхняя граница выбора: игрок платит от «Сколько» до «До». Пусто — ровно '
+    + '«Сколько».',
+  minLevel: 'Круг от',
+  maxLevel: 'Круг до',
+  pact: 'Только ячейка договора',
+  itemUsesHint:
+    'Заряды предмета, с которого пришёл эффект. Заменяет обычный расход '
+    + 'применения: 0 — свойство зарядов не тратит.',
+  inspirationHint: 'Тратит героическое вдохновение.',
+} as const;
+
+/** Пояснение к виду цены без своих полей: что и откуда спишется. */
+export const EFFECT_PRICE_KIND_NOTES: Partial<Record<EffectPriceKind, string>> =
+  {
+    itemUses: EFFECT_PAY_FIELD_LABELS.itemUsesHint,
+    inspiration: EFFECT_PAY_FIELD_LABELS.inspirationHint,
+  };
+
+/** Подписи раздела «Правило каста». */
+export const EFFECT_CAST_RULE_LABELS = {
+  toggle: 'Мешает носителю колдовать',
+  toggleHint:
+    'Лимит круга ячейки и провал каста. Полный запрет, запрет школы и '
+    + 'действия «Магия» — особые правила выше',
+  maxSlotLevel: 'Ячейки не выше круга',
+  maxSlotLevelHint:
+    '«Не может использовать ячейки 7-го круга и выше» — 6. Пусто — без лимита',
+  minSlotLevel: 'Ячейки не ниже круга',
+  minSlotLevelHint: 'Пусто — без лимита',
+  failChance: 'Шанс провала, %',
+  failChanceHint:
+    '«Вероятность 25 %, что заклинание не удастся» — 25. Пусто — без шанса',
+  failSaveToggle: 'Спасбросок при попытке каста',
+  failSaveToggleHint: 'Провал — заклинание не удалось, действие потрачено',
+  failSaveDc: 'Сл',
+  failComponent: 'Только заклинания с компонентом',
+  failLosesSlot: 'При провале тратится и ячейка',
+  failLosesSlotHint:
+    'Выключено — потрачено только действие («Слово силы: Боль»)',
+} as const;
+
+/** Значение «любое заклинание» в выборе компонента правила каста. */
+export const CAST_RULE_ANY_COMPONENT = 'any';
+
+/** Компонент в выборе: настоящий либо «любое заклинание». */
+export type CastRuleComponentChoice =
+  | CastRuleComponent
+  | typeof CAST_RULE_ANY_COMPONENT;
+
+/** Подпись выбора «любое заклинание» у компонента правила каста. */
+export const CAST_RULE_ANY_COMPONENT_LABEL = 'Любое заклинание';
+
+/** Названия компонентов заклинания в выборе правила каста. */
+export const CAST_RULE_COMPONENT_LABELS: Record<CastRuleComponent, string> = {
+  verbal: 'Вербальный',
+  somatic: 'Соматический',
+  material: 'Материальный',
+};
+
 /** Подписи дальности применения. */
 export const EFFECT_ACTIVATION_RANGE_LABELS = {
   range: 'Дальность, фт',
@@ -3053,6 +3708,7 @@ export const EFFECT_VARIANT_LABELS = {
 export const EFFECT_VARIANT_PICK_LABELS: Record<EffectVariantPick, string> = {
   choose: 'Выбирает бросающий',
   random: 'Случайно',
+  multi: 'Бросающий выбирает один или несколько',
 };
 
 /** Названия неработающих настроек. */
@@ -3073,6 +3729,7 @@ export const EFFECT_INERT_FIELD_NAMES: Record<InertEffectField, string> = {
   consumeOn: 'снятие после атаки',
   duration: 'длительность',
   conditionImmunities: 'иммунитет к состояниям',
+  pay: 'цена ресурсом',
   triggers: 'срабатывания не для этого места',
 };
 
@@ -3134,6 +3791,12 @@ export const EFFECT_TRIGGER_ROW_LABELS = {
   turnOf: 'Чей ход',
   saveToggle: 'Спасбросок',
   saveAbility: ACTIVE_EFFECT_FORM_LABELS.ability,
+  saveAltAbilities: 'Или характеристика (на выбор бросающего)',
+  removeConditionFromTypes: 'Наложено существом типа',
+  removeConditionFromTypesHint:
+    'Снимаются только состояния, наложенные существами этих типов '
+    + '(«Рассеивание добра и зла»). Пусто — кем бы ни было наложено',
+  removeConditionFromTypesPlaceholder: 'Кем бы ни было наложено',
   saveDc: 'Сл',
   actionsTitle: 'Что сделать',
   actionsEmpty:
@@ -3171,6 +3834,11 @@ export const EFFECT_TRIGGER_ROW_LABELS = {
   autoOutcomeEmpty: 'Без условия — спасбросок бросается как обычно.',
   moveKind: 'Как двигать',
   moveDistance: 'Футов',
+  moveUpTo: 'До стольких футов — выбирает применивший',
+  moveUpToHint:
+    '«Переместить на расстояние до 10 футов»: применившего спросят, на '
+    + 'сколько, с шагом в клетку и вариантом «не двигать». Где спросить некого '
+    + '— на все футы.',
   moveFrom: 'От кого',
   moveHint: 'Ядро ставит фишку; препятствия не учитываются',
   areaShiftKind: 'Куда',
@@ -3184,8 +3852,36 @@ export const EFFECT_TRIGGER_ROW_LABELS = {
   restoreWhat: 'Что вернуть',
   restoreLevel: 'Круг',
   restoreCounter: 'Ключ ресурса',
+  conditionEscapeToggle: 'Из состояния можно вырваться',
+  conditionEscapeHint:
+    'У наложенного состояния на листе появится кнопка действия: «опутан… '
+    + 'может действием совершить проверку Силы (Атлетика)».',
+  conditionFlags: 'Правила, пока состояние лежит',
+  conditionFlagsHint:
+    'Особые правила сверх самого состояния: «пока цель отравлена, она не '
+    + 'может совершать реакции». Снимаются вместе с состоянием.',
   restoreAmount: 'Сколько',
+  restoreAmountPlaceholder: '1',
+  restoreAmountHint:
+    'Число или формула: 2, @paid.slotLevel, max(1, @mod.wis). Пусто — одна '
+    + 'единица.',
+  restoreSet: 'Установить в это число',
+  restoreSetHint:
+    'Счётчик не прибавляется, а становится этим числом: новая трата заменяет '
+    + 'прежний запас.',
+  setHpFormula: 'Хиты формулой',
+  setHpFormulaHint:
+    'Вместо числа: 5 * @paid.slotLevel, 2 * @classLevel. Пусто — число рядом.',
+  durationFormula: 'Срок формулой',
+  durationFormulaHint:
+    'Число раундов формулой: @paid.hitDice, 1к4, @mod.con. Бросается один '
+    + 'раз, при наложении. Пусто — срок числом.',
   dispelMaxLevel: 'До какого круга',
+  dispelMaxLevelFormula: 'Круг формулой',
+  dispelMaxLevelFormulaHint:
+    '«Не выше круга ячейки, которую вы используете» — @castLevel. Пусто — '
+    + 'круг числом.',
+  dispelMaxLevelFormulaPlaceholder: '@castLevel',
   dispelWithoutLevel: 'И то, у чего круг неизвестен',
   endCastWhose: 'Чей каст',
   conditionEndsOnExit: 'Спадает при выходе из зоны',
@@ -3294,6 +3990,11 @@ export const EFFECT_TRIGGER_RECIPIENT_LABELS: Record<
 /** Подписи полей «всем в радиусе». */
 export const EFFECT_TRIGGER_AREA_LABELS = {
   radius: 'Радиус, фт',
+  template: 'Область',
+  templateHint:
+    'Шаблон, который ставит на карту нажавший кнопку: «выдохнуть 15-футовый '
+    + 'конус». Действия достаются тем, кого он накрыл. Без шаблона — всем в '
+    + 'радиусе от фишки носителя.',
   target: 'Кого',
   alliesWithSelf: 'Союзников и носителя',
   allWithSelf: 'Всех и носителя',
@@ -3442,6 +4143,8 @@ export const EFFECT_TRIGGER_MOVE_KIND_LABELS: Record<
   push: 'Оттолкнуть',
   pull: 'Притянуть',
   teleport: 'Перенести',
+  bring: 'Перенести вплотную к опоре',
+  choose: 'Оттолкнуть или притянуть — на выбор применившего',
 };
 
 /** Подписи того, как сдвигается зона действием «Сдвинуть зону». */
@@ -3577,6 +4280,7 @@ export const EFFECT_TRIGGER_CONDITION_KIND_LABELS: Record<
   otherMarkedBySelf: 'Другая сторона помечена носителем',
   selfHpAtMost: 'У носителя хитов не больше',
   selfHpAtLeast: 'У носителя хитов не меньше',
+  selfHpMaxAtMost: 'Максимум хитов носителя не больше',
   selfSizeAtMost: 'Носитель размером не больше',
   selfSizeAtLeast: 'Носитель размером не меньше',
   selfCondition: 'Носитель в состоянии',
@@ -3587,10 +4291,17 @@ export const EFFECT_TRIGGER_CONDITION_KIND_LABELS: Record<
   sourceWeaponMastery: 'Атакующий владеет приёмом этого оружия',
   selfTempHpZero: 'У носителя нет временных хитов',
   selfGrounded: 'Носитель не летит',
-  selfSpecies: 'Вид носителя',
+  selfSpecies: 'Вид носителя (или подтип; список через запятую)',
+  selfSpeciesNot: 'Вид носителя — не из списка',
+  otherSpecies: 'Вид другой стороны (или подтип; список через запятую)',
+  otherSpeciesNot: 'Вид другой стороны — не из списка',
+  damageTypeChosen: 'Урон типа из выбора владельца (ключ выбора)',
+  otherCreatureTypeChosen:
+    'Другая сторона — тип из выбора владельца (ключ выбора)',
   selfAbilityAtMost: 'У носителя характеристика не больше',
   selfAbilityAtLeast: 'У носителя характеристика не меньше',
   otherIsSource: 'Другая сторона — тот, кто наложил эффект',
+  otherIsSourceSide: 'Другая сторона — наложивший эффект или его союзник',
   otherBloodied: 'Другая сторона окровавлена (хитов не больше половины)',
   otherHpAtMost: 'У другой стороны хитов не больше',
   damageAtLeast: 'Урон не меньше',
@@ -3618,6 +4329,12 @@ export const EFFECT_TRIGGER_CONDITION_DEFAULT_VALUES = {
   text: '',
 } as const satisfies Record<TriggerConditionParameter, string>;
 
+/** Вид новой части условия о виде существа, пока автор не вписал свой. */
+const DEFAULT_CONDITION_SPECIES = 'Человек';
+
+/** Ключ выбора новой части условия, пока автор не вписал свой. */
+const DEFAULT_CONDITION_CHOICE_KEY = 'choice-key';
+
 /**
  * Значение новой части условия, когда общее по виду выбора не годится: «на
  * раунде 50» бессмысленно, расписание почти всегда — со второго раунда.
@@ -3629,7 +4346,13 @@ export const EFFECT_TRIGGER_CONDITION_KIND_DEFAULT_VALUES: Partial<
   combatRoundAtLeast: '2',
   // Пустая строка вида не разобралась бы обратно в часть, и поле ввода
   // пропало бы сразу после добавления
-  selfSpecies: 'Человек',
+  selfSpecies: DEFAULT_CONDITION_SPECIES,
+  selfSpeciesNot: DEFAULT_CONDITION_SPECIES,
+  otherSpecies: DEFAULT_CONDITION_SPECIES,
+  otherSpeciesNot: DEFAULT_CONDITION_SPECIES,
+  // Ключ выбора — латиницей: пустой или русский не разобрался бы обратно
+  damageTypeChosen: DEFAULT_CONDITION_CHOICE_KEY,
+  otherCreatureTypeChosen: DEFAULT_CONDITION_CHOICE_KEY,
 };
 
 /** Значение части условия — характеристика: у неё свой порог по умолчанию. */

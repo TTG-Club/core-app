@@ -13,9 +13,12 @@
  * там с рантаймом VTTG, сюда перенесены 1:1 с теми же именами.
  */
 
+import type { EffectCastRule } from './castRule';
 import type {
   EffectTrigger,
   EffectTriggerAction,
+  EffectTriggerApplyConditionAction,
+  EffectTriggerArea,
   EffectTriggerChoice,
   EffectTriggerEvent,
   EffectTriggerSave,
@@ -30,22 +33,34 @@ import type {
   EffectAreaTrigger,
   EffectAura,
   EffectCharges,
+  EffectDuration,
   EffectEscape,
+  EffectEscapeCheck,
+  EffectEscapeSkillOption,
   EffectLight,
   EffectOrigin,
   EffectSave,
   EffectSaveOutcome,
   EffectSaveOverride,
+  EffectUseArea,
 } from './types';
 
 import { clamp } from 'es-toolkit';
 
 import { hasLastingEffectPayload } from './automation';
-import { EFFECT_TRIGGER_CONDITION_DEFAULT_VALUES } from './constants';
+import { normalizeDraftCastRule } from './castRule';
+import {
+  DEFAULT_EFFECT_TURN_TIMING,
+  EFFECT_TRIGGER_CONDITION_DEFAULT_VALUES,
+  EFFECT_TURN_DURATION_TYPE,
+  NEW_ESCAPE_CHECK_SKILL,
+  NEW_ESCAPE_COST,
+} from './constants';
 import {
   toStoredEffectLightAnimation,
   toStoredEffectLightColor,
 } from './light';
+import { normalizeDraftPay } from './pay';
 import { mapEffectSaveDcs, trimSaveDcFormula } from './saveDc';
 import { applyEffectStage, resolveEffectStageIndex } from './stages';
 import { writeTriggerCondition } from './triggerConditions';
@@ -79,6 +94,7 @@ import {
   OTHER_PARTY_TRIGGER_EVENTS,
   OWN_DEED_TRIGGER_EVENTS,
   PRESENCE_TRIGGER_EVENTS,
+  triggerEventAcceptsAreaTemplate,
   TURN_TRIGGER_EVENTS,
 } from './triggerTypes';
 import {
@@ -93,8 +109,11 @@ import {
   MIN_ACTIVATION_RANGE,
   MIN_EFFECT_CHARGES,
   MIN_EFFECT_LIGHT_FEET,
+  MIN_EFFECT_USE_AREA_SIZE,
+  MIN_ESCAPE_SKILL_DC,
   MIN_SAVE_OVERRIDE_USES,
   parseFormNumber,
+  useAreaHasWidth,
 } from './types';
 
 /** Места, откуда открывается форма эффекта. */
@@ -184,6 +203,7 @@ export type InertEffectField =
   | 'conditionImmunities'
   | 'charges'
   | 'saveOverride'
+  | 'pay'
   | 'triggers';
 
 /** Вид действия срабатывания. */
@@ -254,6 +274,12 @@ export interface EffectFormLayout {
   /** Применение или включение тратит счётчик листа. */
   showActivationCounter: boolean;
   /**
+   * Цена ресурсом: её платит тот, кто применяет, включает или колдует, —
+   * поэтому она есть у заклинания, применения и переключателя. Эффект,
+   * который действует постоянно, никто не «запускает», и платить некому.
+   */
+  showPay: boolean;
+  /**
    * Дальность применения «на цель»: эффект накладывается применением, и
    * цель можно выбрать дальше касания.
    */
@@ -316,17 +342,25 @@ const CONTEXT_DELIVERIES: Record<EffectFormContext, readonly EffectDelivery[]> =
  */
 const USE_DELIVERIES: readonly EffectDelivery[] = ['carrier', 'target', 'aura'];
 
+/** Доставки применения с областью: ещё и зона на месте шаблона. */
+const USE_AREA_DELIVERIES: readonly EffectDelivery[] = [
+  ...USE_DELIVERIES,
+  'zone',
+];
+
 /**
- * Способы применения и включения по месту формы. Предмет применяют (зелье,
- * стрела) — включать его нечем, он работает, пока надет. Эффект листа и умения
- * применяют кнопкой или включают переключателем.
+ * Способы применения и включения по месту формы. Эффект листа, умения и
+ * предмета применяют кнопкой или включают переключателем.
  */
 const CONTEXT_ACTIVATION_MODES: Partial<
   Record<EffectFormContext, readonly EffectActivationMode[]>
 > = {
   ownEffects: EFFECT_ACTIVATION_MODES,
   feature: EFFECT_ACTIVATION_MODES,
-  item: ['use'],
+  // Предмет применяют (зелье, стрела) и включают («Язык пламени» пылает по
+  // командному слову) — пунктами меню предмета в VTTG
+  item: EFFECT_ACTIVATION_MODES,
+  weapon: EFFECT_ACTIVATION_MODES,
   generic: EFFECT_ACTIVATION_MODES,
 };
 
@@ -536,6 +570,24 @@ export function writeEffectDelivery(
   }
 }
 
+/** Момент хода, у которого бывает «до конца текущего хода»: конец хода. */
+const CURRENT_TURN_TIMING = 'end';
+
+/**
+ * Бывает ли у срока «до конца текущего хода»: только у срока по ходу, который
+ * кончается с концом хода, — у начала хода «текущего» нет.
+ *
+ * @param duration длительность эффекта.
+ * @returns `true` для срока «до конца хода».
+ */
+export function durationAcceptsCurrentTurn(duration: EffectDuration): boolean {
+  return (
+    duration.type === EFFECT_TURN_DURATION_TYPE
+    && (duration.turnTiming ?? DEFAULT_EFFECT_TURN_TIMING)
+      === CURRENT_TURN_TIMING
+  );
+}
+
 /**
  * Момент срабатывания зоны или ауры; без поля — «пока внутри».
  *
@@ -739,16 +791,44 @@ function resolveContextDeliveries(
   effect: ActiveEffect,
   context: EffectFormContext,
 ): readonly EffectDelivery[] {
-  return isUsedInContext(effect, context)
-    ? USE_DELIVERIES
-    : CONTEXT_DELIVERIES[context];
+  if (!isUsedInContext(effect, context)) {
+    return CONTEXT_DELIVERIES[context];
+  }
+
+  // Применение с областью может оставить зону на месте шаблона
+  return effect.activation?.area ? USE_AREA_DELIVERIES : USE_DELIVERIES;
+}
+
+/**
+ * Область применения или шаблон получателей для записи: без размера области
+ * нет, ширина — только у линии.
+ *
+ * @param area область из черновика.
+ * @returns область либо `undefined`.
+ */
+function normalizeDraftUseArea(
+  area: EffectUseArea | undefined,
+): EffectUseArea | undefined {
+  const size = Math.trunc(parseFormNumber(area?.size) ?? 0);
+
+  if (!area || size < MIN_EFFECT_USE_AREA_SIZE) {
+    return undefined;
+  }
+
+  const width = Math.trunc(parseFormNumber(area.width) ?? 0);
+
+  const hasWidth =
+    useAreaHasWidth(area.shape) && width >= MIN_EFFECT_USE_AREA_SIZE;
+
+  return { shape: area.shape, size, width: hasWidth ? width : undefined };
 }
 
 /**
  * Применение или включение для записи: пустой счётчик не пишется, расход — от
  * единицы, а без счётчика расход не нужен. Дальность — только у применения и
  * от одного фута: меньше — касание, и поле не пишется. Имя включения — только
- * у переключателя и непустое.
+ * у переключателя и непустое. Область и концентрация — только у применения:
+ * переключатель держится сам и ни на кого не ложится.
  *
  * @param activation применение из черновика.
  * @returns применение либо `undefined`.
@@ -768,11 +848,11 @@ function normalizeDraftActivation(
 
   const range = parseFormNumber(activation.range);
 
+  const isUse = activation.mode === 'use';
+
   // Дальность — только у применения: переключатель ни на кого не ложится
   const hasRange =
-    activation.mode === 'use'
-    && range !== undefined
-    && range >= MIN_ACTIVATION_RANGE;
+    isUse && range !== undefined && range >= MIN_ACTIVATION_RANGE;
 
   // Одно включение — только у переключателя: применение ничего не держит
   const exclusive =
@@ -786,6 +866,9 @@ function normalizeDraftActivation(
     amount: counter && amount > DEFAULT_ACTIVATION_AMOUNT ? amount : undefined,
     exclusive,
     range: hasRange ? Math.trunc(range) : undefined,
+    cost: activation.cost,
+    area: isUse ? normalizeDraftUseArea(activation.area) : undefined,
+    concentration: isUse && activation.concentration ? true : undefined,
   };
 }
 
@@ -877,13 +960,21 @@ export function resolveEffectFormLayout(
       || isOnTarget,
     hasApplier: !isTickingCarrier,
     endsWithCast: context === 'spell' && livesOnItsOwn,
-    // Применённая копия тоже «ложится»: зелье лечит при наложении
-    landsOnTarget: isOnTarget || isUsed,
+    // Применённая копия тоже «ложится»: зелье лечит при наложении. Эффект
+    // заклинания на самом заклинателе уходит тем же боевым снимком, что и
+    // эффект на цели, — «при наложении» слышит и он («Связь с иным планом»)
+    landsOnTarget:
+      isOnTarget || isUsed || (context === 'spell' && delivery === 'carrier'),
     switchesOn: isToggled,
     // Действующее заклинание на существе несёт свою кнопку действия: «пока
     // заклинание действует, действием можешь…»
     hasActiveAction: context === 'spell' && livesOnItsOwn,
     hasStages: livesOnItsOwn,
+    // Эффект умения скопирован на персонажа и действует вместе с ним: его
+    // срабатывания слышат атаку, путь и отдых носителя. Снять сам себя он не
+    // может — это сняло бы выданную черту
+    actsWithCarrier:
+      livesOnItsOwn || (delivery === 'carrier' && context === 'feature'),
   });
 
   return {
@@ -922,6 +1013,7 @@ export function resolveEffectFormLayout(
     showActivationCounter:
       effect.activation !== undefined
       && ACTIVATION_COUNTER_CONTEXTS.has(context),
+    showPay: isGeneric || context === 'spell' || isUsed || isToggled,
     showActivationRange: isUsed,
     useActivated: isUsed,
     showStatusToggle: !(isUsed && ACTIVATION_COUNTER_CONTEXTS.has(context)),
@@ -969,13 +1061,19 @@ interface TriggerListPlace {
   hasActiveAction: boolean;
   /** У эффекта бывают ступени. */
   hasStages: boolean;
+  /**
+   * Эффект лежит на живом носителе и слышит его поступки: атаку, путь, отдых,
+   * снятое состояние.
+   */
+  actsWithCarrier: boolean;
 }
 
 /**
  * Что умеет список «Срабатывания» в месте формы. Ход — там, где эффект тикает
  * на существе, вход и выход — у зоны и ауры, бросок атаки — у эффекта, лежащего
- * на существе. Снять эффект можно только лежащий на существе: черту, ауру
- * чужого токена и зону срабатывание не снимает.
+ * на существе, в том числе у эффекта умения, скопированного на персонажа. Снять
+ * эффект можно только лежащий на существе сам: черту, умение, ауру чужого
+ * токена и зону срабатывание не снимает.
  *
  * Ход наложившего выбирается у эффекта, который кто-то накладывает; у черты
  * существа наложившего нет.
@@ -998,18 +1096,18 @@ function resolveTriggerListLayout(
       : []),
     ...(ticks ? TURN_TRIGGER_EVENTS : []),
     ...(place.hasPresence ? PRESENCE_TRIGGER_EVENTS : []),
-    ...(place.canRemoveSelf ? (['attackRoll'] as const) : []),
+    ...(place.actsWithCarrier ? (['attackRoll'] as const) : []),
     ...(place.hearsDamage ? DAMAGE_TRIGGER_EVENTS : []),
     // Лечат того, у кого меняются хиты, — там же, где слышен урон
     ...(place.hearsDamage ? HEALING_TRIGGER_EVENTS : []),
     // «Состояние снялось» и «свалил цель» — про живого носителя, который
     // действует и с которого что-то снимают
-    ...(place.canRemoveSelf ? CONDITION_LOST_TRIGGER_EVENTS : []),
-    ...(place.canRemoveSelf ? OWN_DEED_TRIGGER_EVENTS : []),
+    ...(place.actsWithCarrier ? CONDITION_LOST_TRIGGER_EVENTS : []),
+    ...(place.actsWithCarrier ? OWN_DEED_TRIGGER_EVENTS : []),
     // «Прошёл N футов» — про носителя, у которого есть фишка и путь
-    ...(place.canRemoveSelf ? MOVEMENT_TRIGGER_EVENTS : []),
+    ...(place.actsWithCarrier ? MOVEMENT_TRIGGER_EVENTS : []),
     ...(place.endsWithCast ? (['castEnd'] as const) : []),
-    ...(place.canRemoveSelf ? (['rest'] as const) : []),
+    ...(place.actsWithCarrier ? (['rest'] as const) : []),
   ];
 
   if (triggerEvents.length === 0) {
@@ -1136,6 +1234,26 @@ function normalizeDraftChoice(
       Math.max(DEFAULT_TRIGGER_CHOICE_COUNT, count),
     ),
     condition: choice?.condition?.trim() || undefined,
+  };
+}
+
+/**
+ * Блок «всем в радиусе» для записи: радиус — числом, шаблон — только у
+ * события, где его ставят на карту, и только с размером.
+ *
+ * @param trigger срабатывание черновика.
+ * @returns блок записи.
+ */
+function normalizeDraftArea(trigger: EffectTrigger): EffectTriggerArea {
+  return {
+    ...trigger.area,
+    radius: Math.max(
+      0,
+      parseFormNumber(trigger.area?.radius) ?? DEFAULT_TRIGGER_AREA_RADIUS,
+    ),
+    template: triggerEventAcceptsAreaTemplate(trigger.event)
+      ? normalizeDraftUseArea(trigger.area?.template)
+      : undefined,
   };
 }
 
@@ -1662,6 +1780,7 @@ export function listInertEffectFields(
       !layout.showRecurringSave && effect.recurringSave !== undefined,
     ],
     ['consumeOn', !layout.showConsumeOn && effect.consumeOn !== undefined],
+    ['pay', !layout.showPay && effect.pay !== undefined],
     [
       'landingCondition',
       !layout.showLandingCondition && effect.landingCondition !== undefined,
@@ -1784,8 +1903,30 @@ function clampSaveDc(dc: unknown, minDc: number): number {
 }
 
 /**
+ * Действие «наложить состояние» для записи: вложенные срабатывания, «вырваться»
+ * и флаги наложенного состояния — без пустых полей.
+ *
+ * @param action действие из формы.
+ * @param minDc минимум Сл места.
+ * @returns действие для сохранения.
+ */
+function normalizeDraftConditionAction(
+  action: EffectTriggerApplyConditionAction,
+  minDc: number,
+): EffectTriggerApplyConditionAction {
+  return {
+    ...action,
+    durationFormula: action.durationFormula?.trim() || undefined,
+    triggers: normalizeNestedTriggers(action.triggers),
+    escape: normalizeDraftEscape(action.escape, minDc),
+    flags: action.flags?.length ? action.flags : undefined,
+  };
+}
+
+/**
  * Явные срабатывания для записи: без действий — не пишутся (разбор записи их
- * всё равно отбросит), Сл — не ниже допустимой, лимит — от одного раза.
+ * всё равно отбросит), Сл — не ниже допустимой, лимит — от одного раза, цена
+ * — без пустых платежей.
  *
  * @param triggers срабатывания черновика.
  * @param minDc минимум Сл места.
@@ -1799,18 +1940,12 @@ function normalizeDraftTriggers(
     .map(
       (trigger): EffectTrigger => ({
         ...trigger,
+        pay: normalizeDraftPay(trigger.pay),
         // Получатель — только у событий, где он работает
         recipient: resolveDraftRecipient(trigger),
         area:
           resolveDraftRecipient(trigger) === AREA_TRIGGER_RECIPIENT
-            ? {
-                ...trigger.area,
-                radius: Math.max(
-                  0,
-                  parseFormNumber(trigger.area?.radius)
-                    ?? DEFAULT_TRIGGER_AREA_RADIUS,
-                ),
-              }
+            ? normalizeDraftArea(trigger)
             : undefined,
         choice:
           resolveDraftRecipient(trigger) === CHOICE_TRIGGER_RECIPIENT
@@ -1824,10 +1959,7 @@ function normalizeDraftTriggers(
           )
           .map((action) =>
             action.type === 'applyCondition'
-              ? {
-                  ...action,
-                  triggers: normalizeNestedTriggers(action.triggers),
-                }
+              ? normalizeDraftConditionAction(action, minDc)
               : action,
           ),
         save: trigger.save
@@ -1855,8 +1987,102 @@ function normalizeDraftTriggers(
 }
 
 /**
+ * Проверка нового действия «вырваться». Сложность — Сл источника («Авто») там,
+ * где источник есть, иначе своё число: ноль без источника сохранение всё равно
+ * подняло бы до наименьшей допустимой Сл.
+ *
+ * @param autoDcAllowed у места формы бывает Сл источника.
+ * @returns проверка навыка.
+ */
+export function createDefaultEscapeCheck(
+  autoDcAllowed: boolean,
+): EffectEscapeCheck {
+  return {
+    skill: NEW_ESCAPE_CHECK_SKILL,
+    dc: autoDcAllowed ? APPLIER_SAVE_DC : DEFAULT_EFFECT_SAVE_DC,
+  };
+}
+
+/**
+ * Новое действие «вырваться»: действием, проверкой навыка — так правила пишут
+ * чаще всего.
+ *
+ * @param autoDcAllowed у места формы бывает Сл источника.
+ * @returns блок действия.
+ */
+export function createDefaultEscape(autoDcAllowed: boolean): EffectEscape {
+  return {
+    cost: NEW_ESCAPE_COST,
+    check: createDefaultEscapeCheck(autoDcAllowed),
+  };
+}
+
+/**
+ * Навык проверки «вырваться» к виду данных: своя Сл — целым от единицы, пустая
+ * пометка — отсутствием поля.
+ *
+ * @param skillOption навык из формы.
+ * @returns навык для сохранения.
+ */
+function normalizeDraftEscapeSkill(
+  skillOption: EffectEscapeSkillOption,
+): EffectEscapeSkillOption {
+  const ownDc = Math.trunc(parseFormNumber(skillOption.dc) ?? 0);
+
+  return {
+    skill: skillOption.skill,
+    dc: ownDc >= MIN_ESCAPE_SKILL_DC ? ownDc : undefined,
+    by: skillOption.by,
+    label: skillOption.label?.trim() || undefined,
+  };
+}
+
+/**
+ * Есть ли у навыка свои настройки: Сл, роль или пометка. Список из одного
+ * навыка без них — то же, что поле `skill`, и в данных он не нужен.
+ *
+ * @param skillOption навык проверки.
+ * @returns `true`, если навык несёт что-то сверх ключа.
+ */
+function hasEscapeSkillSettings(skillOption: EffectEscapeSkillOption): boolean {
+  return (
+    skillOption.dc !== undefined
+    || skillOption.by !== undefined
+    || skillOption.label !== undefined
+  );
+}
+
+/**
+ * Проверка «вырваться» к виду данных: первый навык списка — он же `skill` (по
+ * нему проверку читают версии VTTG без списка), своя Сл навыка — от единицы,
+ * список из одного навыка без своих настроек — отсутствием поля.
+ *
+ * @param check проверка из формы.
+ * @param minSaveDc наименьшая Сл места формы.
+ * @returns проверка для сохранения.
+ */
+function normalizeDraftEscapeCheck(
+  check: EffectEscapeCheck,
+  minSaveDc: number,
+): EffectEscapeCheck {
+  const skills = (check.skills ?? []).map(normalizeDraftEscapeSkill);
+  const [firstSkill] = skills;
+
+  const isSingleSkill =
+    skills.length <= 1 && !(firstSkill && hasEscapeSkillSettings(firstSkill));
+
+  return {
+    ...check,
+    skill: firstSkill?.skill ?? check.skill,
+    dc: clampSaveDc(check.dc, minSaveDc),
+    skills: isSingleSkill ? undefined : skills,
+  };
+}
+
+/**
  * Действие «вырваться» к виду данных: Сл не ниже допустимой в этом месте,
- * пустая подпись — отсутствием поля.
+ * пустая подпись — отсутствием поля, урон при провале — только части с
+ * формулой.
  *
  * @param escape блок действия из формы.
  * @param minSaveDc наименьшая Сл места формы.
@@ -1870,13 +2096,46 @@ function normalizeDraftEscape(
     return undefined;
   }
 
+  const failDamage = (escape.onFailDamage ?? [])
+    .filter((damagePart) => damagePart.formula.trim().length > 0)
+    .map((damagePart) => ({
+      ...damagePart,
+      formula: damagePart.formula.trim(),
+    }));
+
   return {
     ...escape,
     label: escape.label?.trim() || undefined,
     check: escape.check
-      ? { ...escape.check, dc: clampSaveDc(escape.check.dc, minSaveDc) }
+      ? normalizeDraftEscapeCheck(escape.check, minSaveDc)
       : undefined,
+    onSuccessApply: escape.onSuccessApply || undefined,
+    onFailDamage: failDamage.length > 0 ? failDamage : undefined,
   };
+}
+
+/**
+ * Правило каста черновика к записи: Сл спасброска при попытке каста — не ниже
+ * допустимой в этом месте, остальное приводит `normalizeDraftCastRule`.
+ *
+ * @param castRule правило из формы.
+ * @param minSaveDc наименьшая Сл места формы.
+ * @returns правило для сохранения либо `undefined`.
+ */
+function normalizeDraftCastRuleDc(
+  castRule: EffectCastRule | undefined,
+  minSaveDc: number,
+): EffectCastRule | undefined {
+  const failSave = castRule?.failSave;
+
+  return normalizeDraftCastRule(
+    castRule && failSave
+      ? {
+          ...castRule,
+          failSave: { ...failSave, dc: clampSaveDc(failSave.dc, minSaveDc) },
+        }
+      : castRule,
+  );
 }
 
 /**
@@ -1989,7 +2248,14 @@ export function normalizeEffectDraft(
     savedRoll: effect.savedRoll?.trim() || undefined,
     charges: normalizeDraftCharges(effect.charges),
     durationFormula: effect.durationFormula?.trim() || undefined,
+    // «До конца текущего хода» — только у срока «до конца хода»
+    turnCurrent:
+      effect.turnCurrent && durationAcceptsCurrentTurn(effect.duration)
+        ? true
+        : undefined,
+    stackable: effect.stackable ? true : undefined,
     activation: normalizeDraftActivation(effect.activation),
+    pay: normalizeDraftPay(effect.pay),
     variant:
       effect.variant && variantGroup && variantLabel
         ? { ...effect.variant, group: variantGroup, label: variantLabel }
@@ -2051,6 +2317,8 @@ export function normalizeEffectDraft(
       ? resolveEffectStageIndex(effect)
       : undefined,
     escape: normalizeDraftEscape(effect.escape, layout.minSaveDc),
+    // Пустое правило каста — его отсутствие
+    castRule: normalizeDraftCastRuleDc(effect.castRule, layout.minSaveDc),
   };
 
   // Пустая формула Сл — её отсутствие: спасбросок остаётся с числом

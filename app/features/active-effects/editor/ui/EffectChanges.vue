@@ -31,9 +31,9 @@
     EFFECT_MODIFIERS_STEP_LABELS,
     EFFECT_TARGET_LIBRARY,
     EFFECT_VALUE_SUGGESTIONS,
+    getChangeValueOptions,
     getEffectChangeModeChoice,
     getEffectChangeShownValue,
-    getWeaponOverrideValueOptions,
     IDLE_CHANGE_STEP_BY,
     isEffectModifierSubmenu,
     isRollDiceEffectChange,
@@ -76,8 +76,11 @@
           ? undefined
           : ACTIVE_EFFECT_LABELS.changeKeyRequired,
         valueError: describeEffectChangeValueError(change),
-        /** Характеристика и тип урона оружия — выбор из списка, не формула. */
-        valueOptions: getWeaponOverrideValueOptions(change.key),
+        /**
+         * Характеристика и тип урона оружия, тип урона заклинаний — выбор из
+         * списка, не формула.
+         */
+        valueOptions: getChangeValueOptions(change.key),
         // «Вычесть» — только в форме: в данных это «Добавить» с минусом
         modeChoice: getEffectChangeModeChoice(change),
         shownValue: getEffectChangeShownValue(change),

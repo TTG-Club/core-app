@@ -31,6 +31,8 @@ import {
   SAVE_VS_CONDITION_FLAG_KEYS,
   SHILLELAGH_DAMAGE_TYPE,
   SHILLELAGH_WEAPON_CONDITION,
+  SPELL_DAMAGE_TYPE_DEFAULT,
+  SPELL_DAMAGE_TYPE_KEY,
   WEAPON_ATTACK_ABILITY_KEY,
   WEAPON_DAMAGE_DICE_KEY,
   WEAPON_DAMAGE_TYPE_KEY,
@@ -372,8 +374,12 @@ function getDefaultModeOfKey(changeKey: string): EffectChangeMode {
     return 'upgrade';
   }
 
-  // Кость, характеристику и тип урона оружия не прибавить — только заменить
-  if (changeKey.startsWith(WEAPON_KEY_PREFIX)) {
+  // Кость, характеристику и тип урона оружия не прибавить — только заменить;
+  // тип урона заклинаний — тоже слово из списка, а не число
+  if (
+    changeKey.startsWith(WEAPON_KEY_PREFIX)
+    || changeKey === SPELL_DAMAGE_TYPE_KEY
+  ) {
     return 'override';
   }
 
@@ -400,13 +406,15 @@ function getDefaultValueOfGroup(groupKey: string): string | undefined {
 }
 
 /**
- * Значения по умолчанию у ключей замены оружия: единица, которую форма
- * подставляет прочим ключам, здесь не значит ничего.
+ * Значения по умолчанию у ключей, чьё значение — кость или слово из списка
+ * (замены оружия, тип урона заклинаний): единица, которую форма подставляет
+ * прочим ключам, здесь не значит ничего.
  */
-const WEAPON_KEY_DEFAULT_VALUES: Readonly<Record<string, string>> = {
+const OPTION_KEY_DEFAULT_VALUES: Readonly<Record<string, string>> = {
   [WEAPON_DAMAGE_DICE_KEY]: '1к8',
   [WEAPON_ATTACK_ABILITY_KEY]: WEAPON_SPELL_ABILITY_VALUE,
   [WEAPON_DAMAGE_TYPE_KEY]: SHILLELAGH_DAMAGE_TYPE,
+  [SPELL_DAMAGE_TYPE_KEY]: SPELL_DAMAGE_TYPE_DEFAULT,
 };
 
 /** Кость «Дубинки» по уровню заклинателя: к8, к10, к12, 2к6. */
@@ -633,7 +641,7 @@ function buildModifierMenu(): EffectModifierMenuGroup[] {
             mode: getDefaultModeOfKey(suggestion.value),
             value:
               getDefaultValueOfGroup(groupKey)
-              ?? WEAPON_KEY_DEFAULT_VALUES[suggestion.value],
+              ?? OPTION_KEY_DEFAULT_VALUES[suggestion.value],
           },
     );
 

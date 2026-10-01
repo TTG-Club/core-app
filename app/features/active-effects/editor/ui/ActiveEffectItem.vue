@@ -16,6 +16,7 @@
     resolveEffectFormLayout,
   } from '../../model';
   import EffectAdvancedSection from './EffectAdvancedSection.vue';
+  import EffectCastRuleSection from './EffectCastRuleSection.vue';
   import EffectDamageStep from './EffectDamageStep.vue';
   import EffectDescriptionSection from './EffectDescriptionSection.vue';
   import EffectDurationStep from './EffectDurationStep.vue';
@@ -193,6 +194,12 @@
       <EffectSaveOverrideSection
         v-if="layout.showSaveOverride"
         v-model:effect="effect"
+      />
+
+      <EffectCastRuleSection
+        v-model:effect="effect"
+        :layout="layout"
+        :applier-save-dc="applierSaveDc"
       />
 
       <EffectLightSection v-model:effect="effect" />

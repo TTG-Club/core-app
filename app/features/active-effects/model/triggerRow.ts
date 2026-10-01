@@ -48,6 +48,7 @@ import {
   DEFAULT_TRIGGER_MOVE_KIND,
   MIN_REVIVE_HP,
   MIN_SPELL_SLOT_LEVEL,
+  triggerEventAcceptsAreaTemplate,
 } from './triggerTypes';
 
 /**
@@ -137,10 +138,11 @@ export function omitTriggerSaveDcFormula(
 /**
  * Строка срабатывания под новое событие. Смена события отбрасывает то, чего у
  * нового события нет: действия, которые на нём не работают, роль в броске
- * атаки, получателя с его радиусом, чей ход, отдых, снятое состояние, шаг пути
- * и формулу Сл, которая читает урон, если у нового события урона нет: формула
- * по владельцу работает у любого события. Роль у броска атаки остаётся прежней, а если её не было —
- * берётся роль по умолчанию.
+ * атаки, получателя с его радиусом, шаблон получателей (его ставят только у
+ * «При действии»), чей ход, отдых, снятое состояние, шаг пути и формулу Сл,
+ * которая читает урон, если у нового события урона нет: формула по владельцу
+ * работает у любого события. Роль у броска атаки остаётся прежней, а если её
+ * не было — берётся роль по умолчанию.
  *
  * @param trigger строка срабатывания.
  * @param nextEvent новое событие.
@@ -177,7 +179,15 @@ export function writeTriggerEvent(
     recipient: buildTriggerRecipientOptions({ ...trigger, event: nextEvent })
       .map((recipientOption) => recipientOption.value)
       .find((recipientValue) => recipientValue === trigger.recipient),
-    area: triggerEventAcceptsArea(nextEvent) ? trigger.area : undefined,
+    area:
+      trigger.area && triggerEventAcceptsArea(nextEvent)
+        ? {
+            ...trigger.area,
+            template: triggerEventAcceptsAreaTemplate(nextEvent)
+              ? trigger.area.template
+              : undefined,
+          }
+        : undefined,
     choice: triggerEventAcceptsChoice(nextEvent) ? trigger.choice : undefined,
     save: save && dropsDcFormula ? omitTriggerSaveDcFormula(save) : save,
     actions: trigger.actions.filter((action) =>

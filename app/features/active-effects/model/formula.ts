@@ -1,6 +1,7 @@
 /**
  * Разбор арифметической формулы эффекта без вычисления: числа, `+ - * /`,
- * скобки, @-переменные и функции `min`, `max`, `floor`, `ceil`, `abs`, `steps`.
+ * скобки, @-переменные и функции `min`, `max`, `floor`, `ceil`, `abs`, `steps`,
+ * `even`, `odd`.
  *
  * Нужен полю «Сл формулой» у срабатываний урона (`max(10, floor(@damage / 2))`):
  * формулу с ошибкой VTTG молча заменяет числом Сл, и автор должен увидеть
@@ -77,6 +78,13 @@ class FormulaError extends Error {
  */
 const STEPS_FUNCTION = 'steps';
 
+/**
+ * Функции чётности: `even(число)` — 1 у чётного, 0 у нечётного; `odd(число)`
+ * — наоборот. Развилка по выпавшему числу пишется множителем:
+ * `@paid.hitDiceRoll * even(@paid.hitDiceRoll)`.
+ */
+const PARITY_FUNCTIONS = ['even', 'odd'] as const;
+
 /** Поддерживаемые функции. */
 const SUPPORTED_FUNCTIONS: ReadonlySet<string> = new Set([
   'min',
@@ -85,6 +93,7 @@ const SUPPORTED_FUNCTIONS: ReadonlySet<string> = new Set([
   'ceil',
   'abs',
   STEPS_FUNCTION,
+  ...PARITY_FUNCTIONS,
 ]);
 
 /** Приоритет операторов. */

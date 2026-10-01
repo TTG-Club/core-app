@@ -582,13 +582,13 @@ describe('получатель «всем в радиусе»', () => {
 });
 
 describe('применение и включение', () => {
-  it('способы по месту формы: предмет применяют, умение ещё и включают', () => {
-    expect(resolveLayoutFor('item').activationModes).toEqual(['use']);
-
-    expect(resolveLayoutFor('feature').activationModes).toEqual([
-      'use',
-      'toggle',
-    ]);
+  it('способы по месту формы: предмет, оружие и умение применяют и включают', () => {
+    for (const context of ['item', 'weapon', 'feature'] as const) {
+      expect(resolveLayoutFor(context).activationModes, context).toEqual([
+        'use',
+        'toggle',
+      ]);
+    }
 
     expect(resolveLayoutFor('ownEffects').activationModes).toEqual([
       'use',
@@ -705,14 +705,22 @@ describe('применение и включение', () => {
   });
 
   it('применение не для этого места — неработающее поле', () => {
-    const toggledItem = createEffect({ activation: { mode: 'toggle' } });
+    const toggledEffect = createEffect({ activation: { mode: 'toggle' } });
 
     expect(
       listInertEffectFields(
-        toggledItem,
-        resolveEffectFormLayout('item', toggledItem),
+        toggledEffect,
+        resolveEffectFormLayout('creatureTrait', toggledEffect),
       ),
     ).toEqual(['activation']);
+
+    // У предмета переключатель работает: «Язык пламени» зажигают и гасят
+    expect(
+      listInertEffectFields(
+        toggledEffect,
+        resolveEffectFormLayout('item', toggledEffect),
+      ),
+    ).toEqual([]);
   });
 
   it('шаблон применения на своём листе сохраняется выключенным', () => {
@@ -1070,13 +1078,28 @@ describe('список «Срабатывания»', () => {
     // У черты существа наложившего нет
     expect(traitLayout.triggerTurnOwners).toEqual(['subject']);
 
-    for (const context of ['feature', 'item'] as const) {
-      expect(resolveLayoutFor(context).triggerEvents, context).toEqual([
-        'damageTaken',
-        'hpZero',
-        'healed',
-      ]);
-    }
+    expect(resolveLayoutFor('item').triggerEvents).toEqual([
+      'damageTaken',
+      'hpZero',
+      'healed',
+    ]);
+
+    // Эффект умения скопирован на персонажа и слышит его поступки: атаку,
+    // путь, отдых. Снять сам себя он не может — это сняло бы выданную черту
+    const featureLayout = resolveLayoutFor('feature');
+
+    expect(featureLayout.triggerEvents).toEqual([
+      'attackRoll',
+      'damageTaken',
+      'hpZero',
+      'healed',
+      'conditionLost',
+      'downedOther',
+      'moved',
+      'rest',
+    ]);
+
+    expect(featureLayout.triggerActions).not.toContain('removeSelf');
 
     expect(resolveLayoutFor('weapon').triggerEvents).toEqual([]);
   });

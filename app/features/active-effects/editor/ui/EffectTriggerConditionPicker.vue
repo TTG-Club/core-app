@@ -19,6 +19,7 @@
     EFFECT_TRIGGER_CONDITION_VALUE_OPTIONS,
     getTriggerConditionParameter,
     isEffectTag,
+    isTriggerConditionText,
     joinCreatureTypeList,
     listTriggerConditionKinds,
     MIN_CONDITION_NUMBER,
@@ -218,16 +219,22 @@
   }
 
   /**
-   * Меняет свободную строку части. Пустая не пишется: с ней часть не
-   * разобралась бы обратно и поле ввода пропало бы.
+   * Меняет свободную строку части. Пустая строка и негодный ключ выбора
+   * владельца не пишутся: с ними часть не разобралась бы обратно и поле ввода
+   * пропало бы.
    *
    * @param index номер части.
    * @param enteredText введённая строка.
    */
   function updatePartText(index: number, enteredText: string): void {
+    const part = parts.value[index];
     const text = enteredText.trim();
 
-    if (text) {
+    if (
+      part !== undefined
+      && typeof part !== 'string'
+      && isTriggerConditionText(part.kind, text)
+    ) {
       updatePartValue(index, text);
     }
   }

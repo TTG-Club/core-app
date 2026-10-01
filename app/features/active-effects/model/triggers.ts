@@ -169,6 +169,7 @@ function readEffectLandingTrigger(
             ability: effect.applySave.ability,
             dc: effect.applySave.dc,
             ...pickSaveDcFormula(effect.applySave),
+            ...pickSaveAltAbilities(effect.applySave),
           },
         }
       : {}),
@@ -246,6 +247,7 @@ function readLegacyListTriggers(effect: ActiveEffect): EffectTrigger[] {
               ability: save.ability,
               dc: save.dc,
               ...pickSaveDcFormula(save),
+              ...pickSaveAltAbilities(save),
             },
           }
         : {}),
@@ -388,6 +390,7 @@ function isPlainTrigger(trigger: EffectTrigger): boolean {
     // Цены, вопроса человеку и шанса срабатывания у старых полей нет
     && trigger.cost === undefined
     && trigger.ask === undefined
+    && trigger.pay === undefined
     && trigger.chancePercent === undefined
     && isPlainTriggerSave(trigger.save)
   );
@@ -404,6 +407,21 @@ function pickSaveDcFormula(
   save: SaveDcSource,
 ): Pick<SaveDcSource, 'dcFormula'> {
   return save.dcFormula ? { dcFormula: save.dcFormula } : {};
+}
+
+/** Характеристики на выбор бросающего у спасброска. */
+type SaveAltAbilities = Pick<EffectTriggerSave, 'altAbilities'>;
+
+/**
+ * Характеристики на выбор старого поля для срабатывания и обратно — только
+ * если они есть. Их знают спасбросок при наложении и спасбросок против урона
+ * каждый ход; у повторного спасброска, снимающего эффект, такого поля нет.
+ *
+ * @param save спасбросок старого поля или срабатывания.
+ * @returns поле характеристик либо ничего.
+ */
+function pickSaveAltAbilities(save: SaveAltAbilities): SaveAltAbilities {
+  return save.altAbilities?.length ? { altAbilities: save.altAbilities } : {};
 }
 
 /**
@@ -478,6 +496,8 @@ export function classifyLegacyTrigger(
     isTurn
     && trigger.role === undefined
     && trigger.save
+    // Характеристик на выбор у старого повторного спасброска нет
+    && trigger.save.altAbilities === undefined
     && action.type === 'removeSelf'
     && gate === 'saved'
   ) {
@@ -523,6 +543,7 @@ function toLegacyFields(
                 ability: trigger.save.ability,
                 dc: trigger.save.dc,
                 ...pickSaveDcFormula(trigger.save),
+                ...pickSaveAltAbilities(trigger.save),
                 onSuccess: action.halfOnSave ? 'half' : 'negate',
               },
             }

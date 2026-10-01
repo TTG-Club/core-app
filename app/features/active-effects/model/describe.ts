@@ -31,6 +31,7 @@ import { upperFirst } from 'es-toolkit';
 import { labelDamageFormulaStatusTerms } from '~ui/damage-formula';
 
 import { isDiceFormulaValue } from './changeDice';
+import { splitQuotedList } from './conditionSyntax';
 import {
   ACTIVE_EFFECT_LABELS,
   DEFAULT_EFFECT_TURN_ANCHOR,
@@ -41,7 +42,10 @@ import {
   EFFECT_AREA_TRIGGER_LABELS,
   EFFECT_ATTACK_TRIGGER_LABELS,
   EFFECT_AURA_TARGET_SCENARIO_LABELS,
+  EFFECT_CARRIER_SPECIES_CONDITION_PREFIX,
+  EFFECT_CARRIER_SPECIES_NOT_CONDITION_PREFIX,
   EFFECT_CHANGE_MODE_LABELS,
+  EFFECT_CHOICE_LIST_PHRASES,
   EFFECT_CONDITION_EXPR_SUGGESTIONS,
   EFFECT_CONDITION_NAMES,
   EFFECT_CREATURE_CATEGORY_OPTIONS,
@@ -59,12 +63,19 @@ import {
   EFFECT_MODIFIERS_STEP_LABELS,
   EFFECT_PHRASE_PARTS,
   EFFECT_RECURRING_DAMAGE_SAVE_SUCCESS_LABELS,
+  EFFECT_SAVE_DAMAGE_TYPE_CONDITION_PREFIX,
   EFFECT_SAVE_OVERRIDE_PERIOD_PHRASES,
   EFFECT_SAVE_OVERRIDE_PHRASES,
   EFFECT_SAVE_OVERRIDE_TIMES_FORMS,
+  EFFECT_SAVE_SOURCE_CONDITION_PHRASES,
+  EFFECT_SAVE_SPELL_SCHOOL_CONDITION_PREFIX,
   EFFECT_SAVE_TIMING_LABELS,
+  EFFECT_SPECIES_CONDITION_PHRASES,
+  EFFECT_SPELL_SCHOOL_OPTIONS,
   EFFECT_SPELL_ZONE_DELIVERY_HINT,
   EFFECT_TARGET_KEY_SUGGESTIONS,
+  EFFECT_TARGET_SPECIES_CONDITION_PREFIX,
+  EFFECT_TARGET_SPECIES_NOT_CONDITION_PREFIX,
   EFFECT_USE_DELIVERY_HINTS,
   isEffectConditionKey,
   isEffectDamageType,
@@ -76,8 +87,9 @@ import {
 } from './creatureTypeCondition';
 import { renderReadableFormula } from './formula';
 import { APPLIER_SAVE_DC } from './layout';
+import { describeSaveAbilities } from './saveAbilities';
 import { MIN_EFFECT_LIGHT_FEET } from './types';
-import { describeWeaponOverrideValue } from './weaponOverrides';
+import { describeChangeOptionValue } from './weaponOverrides';
 
 /**
  * Собирает карту «значение → подпись» из списка опций.
@@ -102,6 +114,9 @@ const ABILITY_LABELS = toLabelMap(EFFECT_ABILITY_OPTIONS);
 
 /** Подпись типа существа (`humanoid` → «Гуманоид»). */
 const CREATURE_TYPE_LABELS = toLabelMap(EFFECT_CREATURE_CATEGORY_OPTIONS);
+
+/** Подпись школы магии (`divination` → «Прорицание»). */
+const SPELL_SCHOOL_LABELS = toLabelMap(EFFECT_SPELL_SCHOOL_OPTIONS);
 
 /** Короткие подписи @-токенов в формулах значений модификаторов. */
 const VALUE_TOKEN_LABELS: Record<string, string> = {
@@ -130,7 +145,19 @@ const VALUE_TOKEN_LABELS: Record<string, string> = {
   '@spellDc': 'Сл заклинаний',
   '@castLevel': 'круг ячейки',
   '@roll': 'сохранённый бросок',
+  '@hitDice.left': 'непотраченные кости хитов',
+  '@hp.temp': 'текущие временные хиты',
+  // Потраченное ценой ресурсом
+  '@paid.slotLevel': 'круг потраченной ячейки',
+  '@paid.hitDice': 'число потраченных костей хитов',
+  '@paid.hitDie': 'грань потраченных костей хитов',
+  '@paid.hitDiceRoll': 'бросок потраченных костей хитов',
+  '@paid.counter': 'потрачено единиц счётчика',
+  '@paid.itemUses': 'потрачено зарядов',
 };
+
+/** Токен формулы: `@prof`, `@mod.wis`, `@paid.slotLevel`. */
+const FORMULA_VARIABLE_TOKEN_PATTERN = /@[a-z][\w.]*/gi;
 
 /** Токен типа урона в формуле: `@dmg.fire`. */
 const DAMAGE_TYPE_TOKEN_PREFIX_PATTERN = /@dmg\./i;
@@ -250,6 +277,15 @@ export function describeCreatureTypeCondition(
   subject: CreatureTypeConditionSubject,
   condition: CreatureTypeCondition,
 ): string {
+  // Список из выбора владельца: «Цель — тип из выбора владельца (ключ)»
+  if (condition.choiceKey) {
+    const choiceLabel = condition.negate
+      ? EFFECT_CHOICE_LIST_PHRASES.excluded
+      : EFFECT_CHOICE_LIST_PHRASES.included;
+
+    return `${EFFECT_CREATURE_TYPE_SUBJECT_LABELS[subject]}${EFFECT_CREATURE_TYPE_SUBJECT_SEPARATOR}${choiceLabel} (${condition.choiceKey})`;
+  }
+
   const typesText = describeCreatureTypes(condition.types, condition.negate);
 
   return `${EFFECT_CREATURE_TYPE_SUBJECT_LABELS[subject]}${EFFECT_CREATURE_TYPE_SUBJECT_SEPARATOR}${typesText}`;
@@ -322,7 +358,7 @@ export function formatEffectSaveDc(save: SaveDcSource): string {
  * @returns подпись.
  */
 function describeRecurringDamageSave(save: EffectSave): string {
-  return `${EFFECT_PHRASE_PARTS.savePrefix}(${ABILITY_LABELS.get(save.ability) ?? save.ability}, ${formatEffectSaveDc(save)}), ${EFFECT_RECURRING_DAMAGE_SAVE_SUCCESS_LABELS[save.onSuccess]}`;
+  return `${EFFECT_PHRASE_PARTS.savePrefix}(${describeSaveAbilities(save)}, ${formatEffectSaveDc(save)}), ${EFFECT_RECURRING_DAMAGE_SAVE_SUCCESS_LABELS[save.onSuccess]}`;
 }
 
 /**
@@ -336,6 +372,20 @@ function labelFormulaVariable(token: string): string {
 }
 
 /**
+ * Формула с подписями вместо токенов: «круг потраченной ячейки», а не сырой
+ * `@paid.slotLevel`. Числа, кости и незнакомые токены остаются как есть.
+ *
+ * @param formula формула.
+ * @returns формула словами.
+ */
+export function labelFormulaVariables(formula: string): string {
+  return formula.replaceAll(
+    FORMULA_VARIABLE_TOKEN_PATTERN,
+    labelFormulaVariable,
+  );
+}
+
+/**
  * Арифметика словами: разбираемая формула читается целиком — `floor`/`min`
  * словами, а не кодом; кости с переменными — заменой токенов.
  *
@@ -345,7 +395,7 @@ function labelFormulaVariable(token: string): string {
 function prettifyArithmetic(formula: string): string {
   return (
     renderReadableFormula(formula, labelFormulaVariable)
-    ?? formula.replace(/@[a-z.]+/gi, labelFormulaVariable)
+    ?? labelFormulaVariables(formula)
   );
 }
 
@@ -381,8 +431,9 @@ function describeChangeValue(change: EffectChange): string {
     ? EFFECT_PHRASE_PARTS.feetSuffix
     : '';
 
-  // Характеристика и тип урона оружия — слова из списка, а не формула
-  const optionLabel = describeWeaponOverrideValue(change.key, change.value);
+  // Характеристика и тип урона оружия, тип урона заклинаний — слова из
+  // списка, а не формула
+  const optionLabel = describeChangeOptionValue(change.key, change.value);
 
   if (optionLabel) {
     return `${EFFECT_CHANGE_MODE_LABELS[change.mode].toLowerCase()}: ${optionLabel}`;
@@ -449,6 +500,77 @@ export function describeEffectChangeValueLabel(
 }
 
 /**
+ * Название школы магии по ключу; незнакомый ключ отдаётся как есть.
+ *
+ * @param schoolKey ключ школы (`divination`).
+ * @returns название в нижнем регистре.
+ */
+function describeSpellSchoolKey(schoolKey: string): string {
+  return SPELL_SCHOOL_LABELS.get(schoolKey)?.toLowerCase() ?? schoolKey;
+}
+
+/** Условия со списком в кавычках: приставка строки и фраза перед списком. */
+const LIST_CONDITION_PHRASES: ReadonlyArray<{
+  prefix: string;
+  phrase: string;
+  describeListValue?: (listValue: string) => string;
+}> = [
+  {
+    prefix: EFFECT_SAVE_SPELL_SCHOOL_CONDITION_PREFIX,
+    phrase: EFFECT_SAVE_SOURCE_CONDITION_PHRASES.spellSchool,
+    describeListValue: describeSpellSchoolKey,
+  },
+  {
+    prefix: EFFECT_SAVE_DAMAGE_TYPE_CONDITION_PREFIX,
+    phrase: EFFECT_SAVE_SOURCE_CONDITION_PHRASES.damageType,
+    describeListValue: describeDamageTypeShort,
+  },
+  {
+    prefix: EFFECT_CARRIER_SPECIES_CONDITION_PREFIX,
+    phrase: EFFECT_SPECIES_CONDITION_PHRASES.carrier,
+  },
+  {
+    prefix: EFFECT_CARRIER_SPECIES_NOT_CONDITION_PREFIX,
+    phrase: EFFECT_SPECIES_CONDITION_PHRASES.carrierNot,
+  },
+  {
+    prefix: EFFECT_TARGET_SPECIES_CONDITION_PREFIX,
+    phrase: EFFECT_SPECIES_CONDITION_PHRASES.target,
+  },
+  {
+    prefix: EFFECT_TARGET_SPECIES_NOT_CONDITION_PREFIX,
+    phrase: EFFECT_SPECIES_CONDITION_PHRASES.targetNot,
+  },
+];
+
+/**
+ * Подпись части условия со списком в кавычках: источник спасброска (школа
+ * заклинания, типы урона) и вид существа. Школу, типы и вид автор вписывает
+ * свои — поимённо в словаре подсказок их нет.
+ *
+ * @param part часть условия.
+ * @returns подпись либо `undefined`, если часть другого вида.
+ */
+function describeListCondition(part: string): string | undefined {
+  const listCondition = LIST_CONDITION_PHRASES.find((candidate) =>
+    part.startsWith(candidate.prefix),
+  );
+
+  if (!listCondition) {
+    return undefined;
+  }
+
+  const listValues = splitQuotedList(part.slice(listCondition.prefix.length));
+  const { describeListValue } = listCondition;
+
+  const listText = (
+    describeListValue ? listValues.map(describeListValue) : listValues
+  ).join(EFFECT_PHRASE_PARTS.listJoiner);
+
+  return `${listCondition.phrase}${listText}`;
+}
+
+/**
  * Подпись условия, в том числе составного: части, соединённые `&&`, читаются
  * как «… и …». Незнакомая часть отдаётся кодом — лучше показать автору
  * непонятную строку, чем скрыть от него условие целиком.
@@ -459,6 +581,14 @@ export function describeEffectChangeValueLabel(
 export function describeEffectChangeCondition(condition: string): string {
   return splitConditionParts(condition)
     .map((part) => {
+      // Свои значения автора — раньше словаря: иначе образец из подсказок
+      // отдал бы свою подпись
+      const listLabel = describeListCondition(part);
+
+      if (listLabel) {
+        return listLabel;
+      }
+
       const knownLabel = CONDITION_LABELS.get(part);
 
       if (knownLabel) {
@@ -590,10 +720,12 @@ export function describeEffectDamageParts(
  * Описывает длительность: «на 1 раунд», «постоянно», «до конца следующего хода».
  *
  * @param duration длительность эффекта.
+ * @param turnCurrent срок по ходу кончается с концом ТЕКУЩЕГО хода якоря.
  * @returns подпись либо `null`, если сказать нечего («особое», пустое число).
  */
 export function describeEffectDuration(
   duration: EffectDuration,
+  turnCurrent = false,
 ): string | null {
   if (duration.type === 'permanent') {
     return 'постоянно';
@@ -610,7 +742,10 @@ export function describeEffectDuration(
         ? 'источника'
         : 'носителя';
 
-    return `до ${when} следующего хода ${whose}`;
+    // «До конца текущего хода»: наложенный в ход якоря кончается с ним
+    const which = turnCurrent && when === 'конца' ? 'текущего' : 'следующего';
+
+    return `до ${when} ${which} хода ${whose}`;
   }
 
   const forms = DURATION_FORMS[duration.type];
@@ -649,7 +784,7 @@ export function describeActiveEffect(effect: ActiveEffect): string {
   }
 
   if (effect.applySave) {
-    const ability = ABILITY_LABELS.get(effect.applySave.ability) ?? '';
+    const ability = describeSaveAbilities(effect.applySave);
 
     const onSuccess =
       EFFECT_APPLY_SAVE_SUCCESS_LABELS[effect.applySave.onSuccess];
@@ -729,7 +864,10 @@ export function describeActiveEffect(effect: ActiveEffect): string {
 
   // Длительность идёт последней и только если есть что описывать: сама по себе
   // она ничего не рассказывает про эффект.
-  const duration = describeEffectDuration(effect.duration);
+  const duration = describeEffectDuration(
+    effect.duration,
+    effect.turnCurrent === true,
+  );
 
   if (duration && clauses.length > 0) {
     clauses.push(duration);

@@ -7,7 +7,13 @@
  */
 
 import type { EffectChangeStepPeriod } from './changeSteps';
-import type { EffectActivationChoice, SaveDcFieldMode } from './constants';
+import type {
+  CastRuleComponentChoice,
+  EffectActivationChoice,
+  EffectActivationCostChoice,
+  EffectUseAreaChoice,
+  SaveDcFieldMode,
+} from './constants';
 import type { CreatureTypeConditionSubject } from './creatureTypeCondition';
 import type {
   EffectDelivery,
@@ -15,6 +21,7 @@ import type {
   EffectFormLayout,
   EffectSuccessOutcome,
 } from './layout';
+import type { EffectPriceKind } from './pay';
 import type {
   TriggerAttackKind,
   TriggerConditionParameter,
@@ -47,6 +54,8 @@ import type {
   EffectDurationType,
   EffectEscapeActor,
   EffectEscapeOutcome,
+  EffectEscapeRole,
+  EffectEscapeRollMode,
   EffectLightAnimation,
   EffectSaveTiming,
   EffectTurnAnchor,
@@ -57,9 +66,13 @@ import type {
 
 import { upperFirst } from 'es-toolkit';
 
+import { CAST_RULE_COMPONENTS } from './castRule';
 import { EFFECT_CHANGE_STEP_PERIODS } from './changeSteps';
 import {
   ANY_CONDITION_KEY,
+  CAST_RULE_ANY_COMPONENT,
+  CAST_RULE_ANY_COMPONENT_LABEL,
+  CAST_RULE_COMPONENT_LABELS,
   EFFECT_ABILITY_OPTIONS,
   EFFECT_ACTION_COST_LABELS,
   EFFECT_ACTION_SAVE_OUTCOME_OPTIONS,
@@ -79,13 +92,18 @@ import {
   EFFECT_DURATION_HINTS,
   EFFECT_DURATION_LABELS,
   EFFECT_ESCAPE_ACTOR_LABELS,
+  EFFECT_ESCAPE_FIELD_LABELS,
   EFFECT_ESCAPE_OUTCOME_LABELS,
+  EFFECT_ESCAPE_ROLL_MODE_LABELS,
   EFFECT_LIGHT_ANIMATION_LABELS,
   EFFECT_NOTIFY_TARGET_LABELS,
   EFFECT_PERMANENT_ACTIVATION,
+  EFFECT_PRICE_KIND_LABELS,
   EFFECT_RESTORE_KIND_LABELS,
   EFFECT_SAVE_DC_FIELD_MODE_LABELS,
+  EFFECT_SAVE_STEP_LABELS,
   EFFECT_SAVE_TIMING_LABELS,
+  EFFECT_SKILL_OPTIONS,
   EFFECT_SUCCESS_OUTCOME_OPTIONS,
   EFFECT_TARGET_DELIVERY_LABELS,
   EFFECT_TEMP_HP_MODE_LABELS,
@@ -108,9 +126,22 @@ import {
   EFFECT_TRIGGER_SAVE_MODE_LABELS,
   EFFECT_TURN_ANCHOR_LABELS,
   EFFECT_TURN_TIMING_LABELS,
+  EFFECT_USE_AREA_SHAPE_LABELS,
   EFFECT_USE_DELIVERY_LABELS,
   EFFECT_VARIANT_PICK_LABELS,
   EFFECT_ZONE_AREA_TRIGGER_LABELS,
+  ESCAPE_ROLL_MODE_NORMAL,
+  ESCAPE_ROLL_MODE_NORMAL_LABEL,
+  ESCAPE_SKILL_ROLE_ANY,
+  ESCAPE_SKILL_ROLE_ANY_LABEL,
+  ESCAPE_SKILL_ROLE_LABELS,
+  NO_ACTIVATION_COST,
+  NO_ACTIVATION_COST_LABEL,
+  NO_DC_SKILL,
+  NO_ESCAPE_AFTERMATH,
+  NO_TRIGGER_TEMPLATE_LABEL,
+  NO_USE_AREA,
+  NO_USE_AREA_LABEL,
   SAVE_DC_AUTO_MODE,
   SAVE_DC_FORMULA_MODE,
   SAVE_DC_MANUAL_MODE,
@@ -125,6 +156,7 @@ import {
   triggerEventHasOtherParty,
   triggerEventHasRole,
 } from './layout';
+import { EFFECT_PRICE_KINDS } from './pay';
 import { TRIGGER_ATTACK_KINDS } from './triggerConditions';
 import { triggerEventHasPathFeet } from './triggers';
 import {
@@ -148,10 +180,14 @@ import {
   PATH_AREA_SHIFT_KINDS,
 } from './triggerTypes';
 import {
+  EFFECT_ACTIVATION_COSTS,
   EFFECT_ESCAPE_ACTORS,
   EFFECT_ESCAPE_OUTCOMES,
+  EFFECT_ESCAPE_ROLES,
+  EFFECT_ESCAPE_ROLL_MODES,
   EFFECT_LIGHT_ANIMATIONS,
   EFFECT_SAVE_TIMINGS,
+  EFFECT_USE_AREA_SHAPES,
   EFFECT_VARIANT_PICKS,
   SAVE_OVERRIDE_PERIODS,
 } from './types';
@@ -416,6 +452,60 @@ export function buildActivationOptions(
   }));
 }
 
+/** Варианты траты хода на применение и включение: «не тратит» первым. */
+export const EFFECT_ACTIVATION_COST_OPTIONS: Array<
+  EffectSegmentOption<EffectActivationCostChoice>
+> = [
+  { value: NO_ACTIVATION_COST, label: NO_ACTIVATION_COST_LABEL },
+  ...EFFECT_ACTIVATION_COSTS.map((activationCost) => ({
+    value: activationCost,
+    label: EFFECT_ACTION_COST_LABELS[activationCost],
+  })),
+];
+
+/** Формы области применения пунктами выбора. */
+const USE_AREA_SHAPE_OPTIONS: ReadonlyArray<
+  EffectSegmentOption<EffectUseAreaChoice>
+> = EFFECT_USE_AREA_SHAPES.map((areaShape) => ({
+  value: areaShape,
+  label: EFFECT_USE_AREA_SHAPE_LABELS[areaShape],
+}));
+
+/** Варианты области применения: «одна цель» первым. */
+export const EFFECT_USE_AREA_OPTIONS: Array<
+  EffectSegmentOption<EffectUseAreaChoice>
+> = [
+  { value: NO_USE_AREA, label: NO_USE_AREA_LABEL },
+  ...USE_AREA_SHAPE_OPTIONS,
+];
+
+/** Варианты области получателей у кнопки «При действии»: радиус первым. */
+export const EFFECT_TRIGGER_TEMPLATE_OPTIONS: Array<
+  EffectSegmentOption<EffectUseAreaChoice>
+> = [
+  { value: NO_USE_AREA, label: NO_TRIGGER_TEMPLATE_LABEL },
+  ...USE_AREA_SHAPE_OPTIONS,
+];
+
+/** Виды цены ресурсом — вариантами выбора. */
+export const EFFECT_PRICE_KIND_OPTIONS: Array<
+  EffectSegmentOption<EffectPriceKind>
+> = EFFECT_PRICE_KINDS.map((priceKind) => ({
+  value: priceKind,
+  label: EFFECT_PRICE_KIND_LABELS[priceKind],
+}));
+
+/** Варианты компонента правила каста: «любое заклинание» первым. */
+export const CAST_RULE_COMPONENT_OPTIONS: Array<
+  EffectSegmentOption<CastRuleComponentChoice>
+> = [
+  { value: CAST_RULE_ANY_COMPONENT, label: CAST_RULE_ANY_COMPONENT_LABEL },
+  ...CAST_RULE_COMPONENTS.map((component) => ({
+    value: component,
+    label: CAST_RULE_COMPONENT_LABELS[component],
+  })),
+];
+
 /** Варианты способа выбора варианта эффекта. */
 export const EFFECT_VARIANT_PICK_OPTIONS: Array<
   EffectSegmentOption<EffectVariantPick>
@@ -569,6 +659,38 @@ export const EFFECT_ESCAPE_ACTOR_OPTIONS: Array<
   label: EFFECT_ESCAPE_ACTOR_LABELS[escapeActor],
 }));
 
+/** Режим проверки «вырваться» в выборе: настоящий либо «обычный бросок». */
+export type EscapeRollModeChoice =
+  | EffectEscapeRollMode
+  | typeof ESCAPE_ROLL_MODE_NORMAL;
+
+/** Варианты режима проверки «вырваться»: «обычный бросок» первым. */
+export const ESCAPE_ROLL_MODE_OPTIONS: Array<
+  EffectSegmentOption<EscapeRollModeChoice>
+> = [
+  { value: ESCAPE_ROLL_MODE_NORMAL, label: ESCAPE_ROLL_MODE_NORMAL_LABEL },
+  ...EFFECT_ESCAPE_ROLL_MODES.map((rollMode) => ({
+    value: rollMode,
+    label: EFFECT_ESCAPE_ROLL_MODE_LABELS[rollMode],
+  })),
+];
+
+/** Кому доступен навык в выборе: роль либо «всем, кто действует». */
+export type EscapeSkillRoleChoice =
+  | EffectEscapeRole
+  | typeof ESCAPE_SKILL_ROLE_ANY;
+
+/** Варианты «кому доступен навык» проверки «вырваться». */
+export const ESCAPE_SKILL_ROLE_OPTIONS: Array<
+  EffectSegmentOption<EscapeSkillRoleChoice>
+> = [
+  { value: ESCAPE_SKILL_ROLE_ANY, label: ESCAPE_SKILL_ROLE_ANY_LABEL },
+  ...EFFECT_ESCAPE_ROLES.map((escapeRole) => ({
+    value: escapeRole,
+    label: ESCAPE_SKILL_ROLE_LABELS[escapeRole],
+  })),
+];
+
 /** Что даёт успех действия «вырваться». */
 export const EFFECT_ESCAPE_OUTCOME_OPTIONS: Array<
   EffectSegmentOption<EffectEscapeOutcome>
@@ -601,6 +723,21 @@ export function buildConditionItemsWithAny(
     ...EFFECT_CONDITION_KEY_ITEMS,
   ];
 }
+
+/** Состояние после освобождения: «Ничего» первым пунктом. */
+export const ESCAPE_AFTERMATH_ITEMS: Array<{ label: string; value: string }> = [
+  {
+    label: EFFECT_ESCAPE_FIELD_LABELS.onSuccessApplyNone,
+    value: NO_ESCAPE_AFTERMATH,
+  },
+  ...EFFECT_CONDITION_KEY_ITEMS,
+];
+
+/** Навыки для Сл от проверки: «обычная Сл» первым пунктом. */
+export const SAVE_DC_SKILL_ITEMS: Array<{ label: string; value: string }> = [
+  { label: EFFECT_SAVE_STEP_LABELS.dcSkillNone, value: NO_DC_SKILL },
+  ...EFFECT_SKILL_OPTIONS,
+];
 
 /** Режимы поля Сл: Сл источника или своё число. */
 export const SAVE_DC_FIELD_MODE_OPTIONS: Array<

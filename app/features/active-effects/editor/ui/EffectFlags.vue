@@ -4,6 +4,7 @@
   import type { EffectFlagMenuGroup } from '../../model';
 
   import { InputWithLibrary } from '~ui/input';
+  import { InfoTooltip } from '~ui/tooltip';
 
   import {
     ACTIVE_EFFECT_LABELS,
@@ -13,6 +14,18 @@
     EFFECT_FLAG_MENU,
     EFFECT_MODIFIERS_STEP_LABELS,
   } from '../../model';
+
+  /**
+   * Особые правила эффекта — флаги. Тот же блок правит флаги состояния,
+   * которое кладёт срабатывание: там у него свой заголовок и пояснение.
+   */
+  const { title = EFFECT_MODIFIERS_STEP_LABELS.flagsTitle, hint = undefined } =
+    defineProps<{
+      /** Заголовок блока; по умолчанию — «Особые правила». */
+      title?: string;
+      /** Пояснение к заголовку под значком. */
+      hint?: string;
+    }>();
 
   const model = defineModel<Array<string>>({ default: () => [] });
 
@@ -79,8 +92,19 @@
 <template>
   <div class="flex flex-col gap-2">
     <div class="flex items-center justify-between">
-      <span class="text-sm font-medium">
-        {{ EFFECT_MODIFIERS_STEP_LABELS.flagsTitle }}
+      <InfoTooltip
+        v-if="hint"
+        :text="hint"
+        icon="tabler:info-circle-filled"
+      >
+        <span class="text-sm font-medium">{{ title }}</span>
+      </InfoTooltip>
+
+      <span
+        v-else
+        class="text-sm font-medium"
+      >
+        {{ title }}
       </span>
 
       <div class="flex items-center gap-1">
