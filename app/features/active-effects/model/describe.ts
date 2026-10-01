@@ -14,6 +14,7 @@ import type {
   CreatureTypeConditionSubject,
 } from './creatureTypeCondition';
 import type { EffectFormLayout, InertEffectField } from './layout';
+import type { SaveAbilityChoice } from './saveAbilities';
 import type { SaveDcSource } from './saveDc';
 import type {
   ActiveEffect,
@@ -63,6 +64,7 @@ import {
   EFFECT_MODIFIERS_STEP_LABELS,
   EFFECT_PHRASE_PARTS,
   EFFECT_RECURRING_DAMAGE_SAVE_SUCCESS_LABELS,
+  EFFECT_SAVE_ABILITY_CHOICE_JOINER,
   EFFECT_SAVE_DAMAGE_TYPE_CONDITION_PREFIX,
   EFFECT_SAVE_OVERRIDE_PERIOD_PHRASES,
   EFFECT_SAVE_OVERRIDE_PHRASES,
@@ -87,7 +89,7 @@ import {
 } from './creatureTypeCondition';
 import { renderReadableFormula } from './formula';
 import { APPLIER_SAVE_DC } from './layout';
-import { describeSaveAbilities } from './saveAbilities';
+import { listSaveAbilities } from './saveAbilities';
 import { MIN_EFFECT_LIGHT_FEET } from './types';
 import { describeChangeOptionValue } from './weaponOverrides';
 
@@ -299,6 +301,18 @@ export function describeCreatureTypeCondition(
  */
 export function describeAbilityName(ability: string): string {
   return ABILITY_LABELS.get(ability) ?? ability;
+}
+
+/**
+ * Характеристики спасброска словами: «Сила или Ловкость».
+ *
+ * @param save спасбросок с характеристиками на выбор.
+ * @returns подпись.
+ */
+export function describeSaveAbilities(save: SaveAbilityChoice): string {
+  return listSaveAbilities(save)
+    .map(describeAbilityName)
+    .join(EFFECT_SAVE_ABILITY_CHOICE_JOINER);
 }
 
 /**

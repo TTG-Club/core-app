@@ -536,17 +536,17 @@ export const SPELL_DAMAGE_TYPE_DEFAULT = 'psychic';
  * Ключ прибавки к получаемым временным хитам: «+5 к получаемым временным
  * хитам». VTTG считает её при каждой выдаче, а не на листе.
  */
-export const TEMP_HP_GAIN_KEY = 'tempHp.gain';
+const TEMP_HP_GAIN_KEY = 'tempHp.gain';
 
 /**
  * Ключ прибавки к досягаемости рукопашных атак носителя, в футах: «увеличить
  * досягаемость этой атаки на 10 футов». VTTG считает её при проверке
  * расстояния атаки, а не на листе.
  */
-export const ATTACK_REACH_KEY = 'attack.reach';
+const ATTACK_REACH_KEY = 'attack.reach';
 
 /** Ключ второго типа существа: добавляется к своему, а не заменяет его. */
-export const EXTRA_CREATURE_TYPE_KEY = 'creatureType.extra';
+const EXTRA_CREATURE_TYPE_KEY = 'creatureType.extra';
 
 /**
  * Задаётся ли значение строки словом из списка или костью, а не формулой:
@@ -1104,23 +1104,23 @@ export const EFFECT_DAMAGE_TYPE_NOT_CONDITION_PREFIX = 'damage.type !== ';
  * Условие «цель броска — тот, кто наложил этот эффект»: «помеха на броски
  * атаки против вас» у эффекта на противнике.
  */
-export const EFFECT_TARGET_IS_APPLIER_CONDITION = 'target.isSource === true';
+const EFFECT_TARGET_IS_APPLIER_CONDITION = 'target.isSource === true';
 
 /**
  * Условие «цель броска — НЕ тот, кто наложил этот эффект»: «помеха атакам по
  * целям, отличным от вас» («Непристойный жест», «Угрожающее присутствие»).
  */
-export const EFFECT_TARGET_NOT_APPLIER_CONDITION = 'target.isSource === false';
+const EFFECT_TARGET_NOT_APPLIER_CONDITION = 'target.isSource === false';
 
 /** Условие защитного эффекта «атакует тот, кто наложил этот эффект». */
-export const EFFECT_ATTACKER_IS_APPLIER_CONDITION =
+const EFFECT_ATTACKER_IS_APPLIER_CONDITION =
   'incoming.attackerIsSource === true';
 
 /**
  * Условие защитного эффекта «атакует НЕ тот, кто наложил этот эффект»:
  * «преимущество на атаки по цели для всех, кроме вас».
  */
-export const EFFECT_ATTACKER_NOT_APPLIER_CONDITION =
+const EFFECT_ATTACKER_NOT_APPLIER_CONDITION =
   'incoming.attackerIsSource === false';
 
 /** Приставка условия «спасбросок вызвало заклинание школы из списка». */

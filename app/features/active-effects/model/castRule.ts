@@ -87,7 +87,7 @@ export function castRuleHasFailure(rule: EffectCastRule): boolean {
  * @param rule правило каста.
  * @returns `true`, если правило что-то задаёт.
  */
-export function hasCastRuleContent(rule: EffectCastRule): boolean {
+function hasCastRuleContent(rule: EffectCastRule): boolean {
   return (
     rule.maxSlotLevel !== undefined
     || rule.minSlotLevel !== undefined

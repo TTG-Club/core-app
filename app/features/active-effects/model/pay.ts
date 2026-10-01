@@ -40,7 +40,7 @@ export type EffectPriceKind = (typeof EFFECT_PRICE_KINDS)[number];
 export const DEFAULT_EFFECT_PRICE_KIND: EffectPriceKind = 'counter';
 
 /** Сколько единиц тратит цена без поля `amount`. */
-export const DEFAULT_PRICE_AMOUNT = '1';
+const DEFAULT_PRICE_AMOUNT = '1';
 
 /** Больше платежей у одной цены не бывает. */
 export const MAX_EFFECT_PRICES = 4;
@@ -293,7 +293,7 @@ function describeSpellSlotPrice(price: EffectSpellSlotPrice): string {
  * @param price платёж.
  * @returns платёж словами.
  */
-export function describeEffectPrice(price: EffectPrice): string {
+function describeEffectPrice(price: EffectPrice): string {
   if (price.kind === 'spellSlot') {
     return describeSpellSlotPrice(price);
   }

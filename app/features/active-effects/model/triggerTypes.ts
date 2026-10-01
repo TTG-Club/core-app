@@ -264,7 +264,7 @@ export interface EffectTriggerArea {
 }
 
 /** Событие кнопки «При действии» и включения переключателя. */
-export const ACTIVATE_TRIGGER_EVENT = 'activate' satisfies EffectTriggerEvent;
+const ACTIVATE_TRIGGER_EVENT = 'activate' satisfies EffectTriggerEvent;
 
 /**
  * События с получателем «всем в радиусе»: их выполняет сервер VTTG со сценой

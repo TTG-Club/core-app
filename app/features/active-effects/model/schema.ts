@@ -185,11 +185,13 @@ function coerceOptionalNumber(value: unknown): unknown {
  * Число из старых данных как формула из одного числа: «вернуть 2 единицы»
  * хранилось числом, а теперь это строка-формула.
  *
- * @param value значение поля как пришло.
+ * @param storedFormula значение поля как пришло.
  * @returns строка для числа, иначе исходное значение.
  */
-function coerceFormulaText(value: unknown): unknown {
-  return typeof value === 'number' ? String(value) : value;
+function coerceFormulaText(storedFormula: unknown): unknown {
+  return typeof storedFormula === 'number'
+    ? String(storedFormula)
+    : storedFormula;
 }
 
 /**
@@ -199,7 +201,7 @@ function coerceFormulaText(value: unknown): unknown {
  * @param maxLength предел длины формулы.
  * @returns схема непустой строки-формулы.
  */
-function createFormulaTextSchema(maxLength: number) {
+function createFormulaTextSchema(maxLength: number): z.ZodType<string> {
   return z.preprocess(
     coerceFormulaText,
     z.string().trim().min(1).max(maxLength),

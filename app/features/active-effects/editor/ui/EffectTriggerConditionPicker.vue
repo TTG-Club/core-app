@@ -227,13 +227,13 @@
    * @param enteredText введённая строка.
    */
   function updatePartText(index: number, enteredText: string): void {
-    const part = parts.value[index];
+    const conditionPart = parts.value[index];
     const text = enteredText.trim();
 
     if (
-      part !== undefined
-      && typeof part !== 'string'
-      && isTriggerConditionText(part.kind, text)
+      conditionPart !== undefined
+      && typeof conditionPart !== 'string'
+      && isTriggerConditionText(conditionPart.kind, text)
     ) {
       updatePartValue(index, text);
     }

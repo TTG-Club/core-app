@@ -4,7 +4,8 @@
  *
  * Выбирает бросающий, и выбор у него один разумный — характеристика с лучшим
  * спасброском: VTTG берёт её сам. Здесь — запись списка из формы и подпись
- * характеристик для сводки.
+ * характеристик для сводки; подпись в именительном падеже собирает
+ * `describeSaveAbilities` в `describe.ts`.
  *
  * Зеркало: dnd5-test-migrate/src/engine/saveAbilityChoice.ts
  */
@@ -13,7 +14,6 @@ import type { EffectAbility } from './types';
 
 import {
   EFFECT_ABILITY_GENITIVE_LABELS,
-  EFFECT_ABILITY_OPTIONS,
   EFFECT_SAVE_ABILITY_CHOICE_JOINER,
 } from './constants';
 
@@ -25,18 +25,13 @@ export interface SaveAbilityChoice {
   altAbilities?: readonly EffectAbility[];
 }
 
-/** Подпись характеристики в именительном падеже. */
-const ABILITY_LABELS = new Map(
-  EFFECT_ABILITY_OPTIONS.map((ability) => [ability.value, ability.label]),
-);
-
 /**
  * Характеристики спасброска по порядку записи, без повторов.
  *
  * @param save спасбросок.
  * @returns характеристики; одна — выбора нет.
  */
-function listSaveAbilities(save: SaveAbilityChoice): EffectAbility[] {
+export function listSaveAbilities(save: SaveAbilityChoice): EffectAbility[] {
   return [...new Set([save.ability, ...(save.altAbilities ?? [])])];
 }
 
@@ -57,18 +52,6 @@ export function normalizeAltAbilities(
   );
 
   return otherAbilities.length > 0 ? otherAbilities : undefined;
-}
-
-/**
- * Характеристики спасброска словами: «Сила или Ловкость».
- *
- * @param save спасбросок.
- * @returns подпись.
- */
-export function describeSaveAbilities(save: SaveAbilityChoice): string {
-  return listSaveAbilities(save)
-    .map((ability) => ABILITY_LABELS.get(ability) ?? ability)
-    .join(EFFECT_SAVE_ABILITY_CHOICE_JOINER);
 }
 
 /**

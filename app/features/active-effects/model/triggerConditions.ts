@@ -382,9 +382,7 @@ const CHOSEN_PARTS: readonly TriggerConditionKind[] = [
  * @param kind вид части.
  * @returns `true` для «урон / тип другой стороны из выбора владельца».
  */
-export function isChosenTriggerConditionKind(
-  kind: TriggerConditionKind,
-): boolean {
+function isChosenTriggerConditionKind(kind: TriggerConditionKind): boolean {
   return CHOSEN_PARTS.includes(kind);
 }
 
