@@ -5509,6 +5509,10 @@ function getTotalLevelHitPoints(gains: CharacterLevelHitPoints[]): number {
  * текущие хиты растут на его сумму. Номер уровня в записи — общий уровень
  * персонажа после взятия, класс — чей это уровень.
  *
+ * Потолка у текущих хитов здесь нет: итоговый максимум выше записанного на
+ * прибавки, и знает его только лист целиком — обрезает
+ * {@link withSettledCurrentHitPoints}.
+ *
  * @param health здоровье персонажа.
  * @param previousLevel общий уровень до повышения.
  * @param gains прирост максимума хитов за каждый взятый уровень по порядку.
@@ -5529,12 +5533,10 @@ export function applyLevelHitPoints(
 
   const total = getTotalLevelHitPoints(addedGains);
 
-  const max = health.max + total;
-
   return {
     ...health,
-    max,
-    current: clamp(health.current + total, 0, max),
+    max: health.max + total,
+    current: Math.max(0, health.current + total),
     levelGains,
   };
 }
@@ -5588,8 +5590,10 @@ export function getLevelHitPointsLoss(
 
 /**
  * Снятие хитов за снимаемые уровни классов: максимум уменьшается на записанный
- * за них прирост, записи удаляются, текущие хиты обрезаются новым максимумом.
- * Уровни без записи максимум не двигают.
+ * за них прирост, записи удаляются. Уровни без записи максимум не двигают.
+ *
+ * Текущие хиты здесь не трогаются: обрезать их нужно итоговым максимумом, а не
+ * записанным, — это делает {@link withSettledCurrentHitPoints}.
  *
  * @param health здоровье персонажа.
  * @param removedByClass сколько уровней снимается у каждого класса.
@@ -5609,12 +5613,9 @@ export function removeLevelHitPoints(
 
   const loss = getTotalLevelHitPoints([...removed]);
 
-  const max = Math.max(0, health.max - loss);
-
   return {
     ...health,
-    max,
-    current: clamp(health.current, 0, max),
+    max: Math.max(0, health.max - loss),
     levelGains,
   };
 }
@@ -5661,6 +5662,9 @@ export function shiftClassHitDice(
  * максимум и текущие хиты на разницу, умноженную на уровень. Незаполненное
  * здоровье (нулевой максимум) не трогается — прибавлять не к чему.
  *
+ * Потолок текущих хитов ставит {@link withSettledCurrentHitPoints}: итоговый
+ * максимум выше записанного на прибавки, и здесь он неизвестен.
+ *
  * @param health здоровье персонажа.
  * @param level уровень персонажа.
  * @param previousScore прежнее значение Телосложения.
@@ -5681,12 +5685,10 @@ export function adjustHealthForConstitution(
     return health;
   }
 
-  const max = Math.max(HIT_POINTS_LEVEL_GAIN_MIN, health.max + delta);
-
   return {
     ...health,
-    max,
-    current: clamp(health.current + delta, 0, max),
+    max: Math.max(HIT_POINTS_LEVEL_GAIN_MIN, health.max + delta),
+    current: Math.max(0, health.current + delta),
     // Модификатор входит в прирост каждого уровня, поэтому записи двигаются
     // вместе с максимумом: иначе снижение уровня вернуло бы устаревшую сумму.
     levelGains: health.levelGains.map((gain) => ({
@@ -5803,6 +5805,59 @@ export function getMaxHitPointsHint(character: Character): string | null {
   return getMaxHitPointsBreakdown(character)
     .map((part) => `${part.label} ${part.formattedValue}`)
     .join(' · ');
+}
+
+/**
+ * Прибавка к записанному максимуму хитов: всё, что итоговый максимум набирает
+ * сверх него, — поправка на итоговое Телосложение и адресные бонусы.
+ *
+ * @param character персонаж.
+ * @returns разница между итоговым и записанным максимумом хитов.
+ */
+function getMaxHitPointsBonus(character: Character): number {
+  return getMaxHitPoints(character) - character.health.max;
+}
+
+/**
+ * Доведение текущих хитов до итогового максимума после изменения листа.
+ *
+ * Записанный максимум двигают сами операции (уровень, черта, правка
+ * Телосложения), и текущие хиты идут за ним там же. Но итоговый максимум выше
+ * записанного на прибавки, а они меняются вместе с листом: повышение
+ * характеристик поднимает Телосложение эффектом, новый уровень добавляет
+ * прибавке ещё один хит. Здесь текущие хиты сдвигаются на изменение этой
+ * прибавки и обрезаются итоговым максимумом — иначе здоровый персонаж терял бы
+ * хиты на каждом повышении уровня.
+ *
+ * Незаполненное здоровье (нулевой максимум) не трогается — как и в
+ * {@link getMaxHitPoints}.
+ *
+ * @param next лист после изменения.
+ * @param previous лист до изменения.
+ * @returns лист с текущими хитами в пределах итогового максимума.
+ */
+export function withSettledCurrentHitPoints(
+  next: Character,
+  previous: Character,
+): Character {
+  if (next.health.max <= 0) {
+    return next;
+  }
+
+  const bonusDelta =
+    getMaxHitPointsBonus(next) - getMaxHitPointsBonus(previous);
+
+  const current = clamp(
+    next.health.current + bonusDelta,
+    0,
+    getMaxHitPoints(next),
+  );
+
+  if (current === next.health.current) {
+    return next;
+  }
+
+  return { ...next, health: { ...next.health, current } };
 }
 
 /**
@@ -10376,9 +10431,13 @@ function applyFeatHitPoints(
     return health;
   }
 
-  const max = Math.max(0, health.max + delta);
-
-  return { ...health, max, current: clamp(health.current + delta, 0, max) };
+  // Потолок текущих хитов — итоговый максимум, а он известен только листу
+  // целиком: обрезает `withSettledCurrentHitPoints`.
+  return {
+    ...health,
+    max: Math.max(0, health.max + delta),
+    current: Math.max(0, health.current + delta),
+  };
 }
 
 /**
@@ -11093,22 +11152,26 @@ function withFeatProficiencyGrants(
  * Свои бонусы инициативы и записи журнала выдач пересобираются целиком — эти
  * части сверки идемпотентны.
  *
+ * Текущие хиты доводятся последним шагом: и уровень, и особенности меняют
+ * прибавку к максимуму хитов (повышение характеристик поднимает Телосложение
+ * эффектом), поэтому лист «до» нужен целиком.
+ *
  * Вызывать нужно везде, где меняется список особенностей или уровень.
  *
  * @param next лист после изменения.
- * @param previous особенности и уровень до изменения.
+ * @param previous лист до изменения.
  * @returns лист с согласованной прибавкой черт.
  */
 export function withFeatModifiers(
   next: Character,
-  previous: Pick<Character, 'features' | 'level'>,
+  previous: Character,
 ): Character {
   const proficiencyGrants = withFeatProficiencyGrants(
     next.proficiencyGrants,
     next.features,
   );
 
-  return {
+  const withModifiers: Character = {
     ...next,
     abilities: applyFeatAbilityIncreases(next.abilities, previous, next),
     health: applyFeatHitPoints(next.health, previous, next),
@@ -11139,6 +11202,8 @@ export function withFeatModifiers(
     ),
     classResources: withFeatResources(next.classResources, next.features, next),
   };
+
+  return withSettledCurrentHitPoints(withModifiers, previous);
 }
 
 /**

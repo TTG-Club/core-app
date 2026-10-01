@@ -183,6 +183,7 @@ import {
   withFeatModifiers,
   withProficiencyGrant,
   withSavingThrowProficiencies,
+  withSettledCurrentHitPoints,
   withToggledFeatureEffect,
 } from '../model';
 
@@ -468,22 +469,28 @@ export function useCharacterSheet() {
       ABILITY_SCORE_MAX,
     );
 
-    character.value = {
-      ...character.value,
-      abilities: {
-        ...character.value.abilities,
-        [ability]: clampedScore,
+    // Сдвиг записанного Телосложения меняет и прибавку от итогового (бонус
+    // предмета мог перестать менять модификатор), поэтому текущие хиты
+    // доводятся по итоговому максимуму.
+    character.value = withSettledCurrentHitPoints(
+      {
+        ...character.value,
+        abilities: {
+          ...character.value.abilities,
+          [ability]: clampedScore,
+        },
+        health:
+          ability === 'constitution'
+            ? adjustHealthForConstitution(
+                character.value.health,
+                character.value.level,
+                character.value.abilities.constitution,
+                clampedScore,
+              )
+            : character.value.health,
       },
-      health:
-        ability === 'constitution'
-          ? adjustHealthForConstitution(
-              character.value.health,
-              character.value.level,
-              character.value.abilities.constitution,
-              clampedScore,
-            )
-          : character.value.health,
-    };
+      character.value,
+    );
   }
 
   /**
@@ -532,16 +539,19 @@ export function useCharacterSheet() {
       );
     }
 
-    character.value = {
-      ...character.value,
-      abilities: clampedAbilities,
-      health: adjustHealthForConstitution(
-        character.value.health,
-        character.value.level,
-        character.value.abilities.constitution,
-        clampedAbilities.constitution,
-      ),
-    };
+    character.value = withSettledCurrentHitPoints(
+      {
+        ...character.value,
+        abilities: clampedAbilities,
+        health: adjustHealthForConstitution(
+          character.value.health,
+          character.value.level,
+          character.value.abilities.constitution,
+          clampedAbilities.constitution,
+        ),
+      },
+      character.value,
+    );
   }
 
   /**
@@ -1571,11 +1581,6 @@ export function useCharacterSheet() {
     // Умения вида несут снимок механики, как черты: хиты, ресурсы и бонусы
     // инициативы доводит та же сверка, что при смене черт, — иначе прибавка
     // «Дварфийской выдержки» осталась бы от прежнего вида
-    const previous = {
-      features: character.value.features,
-      level: character.value.level,
-    };
-
     character.value = withFeatModifiers(
       {
         ...character.value,
@@ -1603,7 +1608,7 @@ export function useCharacterSheet() {
           ...preservedFeatures,
         ],
       },
-      previous,
+      character.value,
     );
   }
 
@@ -1630,11 +1635,6 @@ export function useCharacterSheet() {
       null,
     );
 
-    const previous = {
-      features: character.value.features,
-      level: character.value.level,
-    };
-
     character.value = withFeatModifiers(
       {
         ...character.value,
@@ -1650,7 +1650,7 @@ export function useCharacterSheet() {
             feature.origin !== 'species' && feature.origin !== 'lineage',
         ),
       },
-      previous,
+      character.value,
     );
   }
 
@@ -1804,64 +1804,70 @@ export function useCharacterSheet() {
     //
     // Максимум хитов здесь пересобран из записей прироста, а значит прибавки
     // черт в нём нет вовсе — сверка получает пустое «до» и кладёт её целиком.
-    character.value = withFeatModifiers(
-      {
-        ...character.value,
-        // Прибавки черт умений считаются в момент взятия, как в мастере
-        // повышения уровня; снятие класса их не откатывает — так же, как там
-        abilities: applyAbilityIncreases(
-          character.value.abilities,
-          payload.abilityIncreases ?? {},
-        ),
-        characterClass: {
-          ...characterClass,
-          startingEquipment: startingEquipment.granted,
-        },
-        level: getTotalClassLevel([characterClass, ...additionalClasses]),
-        experience: {
-          ...character.value.experience,
-          nextLevel: getNextLevelExperience(
-            getTotalClassLevel([characterClass, ...additionalClasses]),
-          ),
-        },
-        inventory: startingEquipment.inventory,
-        currency: startingEquipment.currency,
-        // Класс переписывает только владения: подменённая характеристика
-        // спасброска и его свои бонусы переживают смену класса.
-        savingThrows: withSavingThrowProficiencies(
-          character.value.savingThrows,
-          payload.savingThrows,
-        ),
-        // Свежий класс выдаёт свои кости непотраченными; кости второго класса
-        // (другого номинала) сохраняют трату.
-        hitDice: syncClassHitDice(character.value.hitDice, [
-          characterClass,
-          ...additionalClasses,
-        ]).map((hitDie) =>
-          hitDie.die === payload.hitDie
-            ? { ...hitDie, current: hitDie.max }
-            : hitDie,
-        ),
-        health: {
-          ...character.value.health,
-          max: recordedMaxHitPoints,
-          current: recordedMaxHitPoints,
-          levelGains,
-        },
-        proficiencies: classProficiencies.proficiencies,
-        proficiencyGrants: classProficiencies.grants,
-        skills: classProficiencies.skills,
-        classResources: [...preservedResources, ...payload.classResources],
-        features: [
-          ...payload.features.map((feature) => ({
-            ...feature,
-            description: [...feature.description],
-          })),
-          ...preservedFeatures,
-        ],
+    const withClass: Character = {
+      ...character.value,
+      // Прибавки черт умений считаются в момент взятия, как в мастере
+      // повышения уровня; снятие класса их не откатывает — так же, как там
+      abilities: applyAbilityIncreases(
+        character.value.abilities,
+        payload.abilityIncreases ?? {},
+      ),
+      characterClass: {
+        ...characterClass,
+        startingEquipment: startingEquipment.granted,
       },
-      { features: [], level: 0 },
-    );
+      level: getTotalClassLevel([characterClass, ...additionalClasses]),
+      experience: {
+        ...character.value.experience,
+        nextLevel: getNextLevelExperience(
+          getTotalClassLevel([characterClass, ...additionalClasses]),
+        ),
+      },
+      inventory: startingEquipment.inventory,
+      currency: startingEquipment.currency,
+      // Класс переписывает только владения: подменённая характеристика
+      // спасброска и его свои бонусы переживают смену класса.
+      savingThrows: withSavingThrowProficiencies(
+        character.value.savingThrows,
+        payload.savingThrows,
+      ),
+      // Свежий класс выдаёт свои кости непотраченными; кости второго класса
+      // (другого номинала) сохраняют трату.
+      hitDice: syncClassHitDice(character.value.hitDice, [
+        characterClass,
+        ...additionalClasses,
+      ]).map((hitDie) =>
+        hitDie.die === payload.hitDie
+          ? { ...hitDie, current: hitDie.max }
+          : hitDie,
+      ),
+      health: {
+        ...character.value.health,
+        max: recordedMaxHitPoints,
+        current: recordedMaxHitPoints,
+        levelGains,
+      },
+      proficiencies: classProficiencies.proficiencies,
+      proficiencyGrants: classProficiencies.grants,
+      skills: classProficiencies.skills,
+      classResources: [...preservedResources, ...payload.classResources],
+      features: [
+        ...payload.features.map((feature) => ({
+          ...feature,
+          description: [...feature.description],
+        })),
+        ...preservedFeatures,
+      ],
+    };
+
+    // «До» — тот же лист без особенностей и уровней: так текущие хиты
+    // получают и прибавку от итогового Телосложения, и свежий класс приходит
+    // с полным здоровьем.
+    character.value = withFeatModifiers(withClass, {
+      ...withClass,
+      features: [],
+      level: 0,
+    });
   }
 
   /**
