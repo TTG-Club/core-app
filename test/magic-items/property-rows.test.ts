@@ -3,6 +3,7 @@ import type { MagicItemDetailResponse } from '~magic-items/model';
 import { describe, expect, it } from 'vitest';
 
 import {
+  createEmptyMagicItemMechanics,
   getMagicItemBaseWeaponDataKey,
   getMagicItemPropertyRows,
   hasMagicItemWeaponProperties,
@@ -189,6 +190,20 @@ describe('строки блока свойств магического пред
         LONGSWORD_RAW_RESPONSE,
       ),
     ).toEqual(['1к8 рубящий, двумя руками 1к10 рубящий (длинный меч)']);
+  });
+
+  it('в пассивных свойствах длинное тире заменяет коротким', () => {
+    const magicItem = {
+      ...createMagicItemDetail([]),
+      mechanics: {
+        ...createEmptyMagicItemMechanics(),
+        passive: 'Осталось 25 хитов и меньше — Мудрость Сл. 15',
+      },
+    };
+
+    expect(
+      findPropertyLines(magicItem, MAGIC_ITEM_PROPERTY_LABELS.passive),
+    ).toEqual(['Осталось 25 хитов и меньше – Мудрость Сл. 15']);
   });
 
   it('без основы строки основного урона нет', () => {

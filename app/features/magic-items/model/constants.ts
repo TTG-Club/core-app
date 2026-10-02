@@ -169,6 +169,16 @@ export const MAGIC_ITEM_PROPERTY_LABELS = {
   adamantine: 'Адамантиновый',
 } as const;
 
+/**
+ * Тире блока свойств — короткое. Им же блок заменяет длинное тире в тексте,
+ * который пишут руками (пассивные свойства): иначе в соседних строках стояли
+ * бы два разных тире.
+ */
+export const MAGIC_ITEM_PROPERTY_DASH = '–';
+
+/** Длинное тире, которое блок свойств заменяет на своё. */
+export const MAGIC_ITEM_PROPERTY_REPLACED_DASH = '—';
+
 /** Слова, из которых собираются значения строк блока свойств. */
 export const MAGIC_ITEM_PROPERTY_PHRASES = {
   /** Перед уроном двуручного хвата: «1к8 рубящий, двумя руками 1к10 рубящий». */
@@ -176,7 +186,7 @@ export const MAGIC_ITEM_PROPERTY_PHRASES = {
   /** Между значениями одной строки. */
   listJoiner: ', ',
   /** Между уроном и теми, кому он достаётся: «2к6 излучение – по нежити». */
-  recipientJoiner: ' – ',
+  recipientJoiner: ` ${MAGIC_ITEM_PROPERTY_DASH} `,
   /** Перед названием основы: «1к6 дробящий (булава)». */
   baseNamePrefix: ' (',
   /** После названия основы. */
