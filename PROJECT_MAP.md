@@ -688,7 +688,11 @@ modals), so its capabilities are listed here rather than squeezed into the table
   panel: taking «Везунчик» adds its luck points, removing the feat takes them
   away, and what was spent survives the rebuild (`withFeatResources`, the same
   idempotent pattern as the feat initiative bonuses — records are rebuilt from
-  the snapshot, the player's own resources are left alone). They are spendable
+  the snapshot, the player's own resources are left alone). A resource marked
+  «Появляется пустым» (`startsEmpty`, a checkbox of the workshop resource row)
+  shows up at zero instead of its maximum — it is filled by an action, not
+  handed over with the feature — and the charges gained since survive the
+  rebuild the same way. They are spendable
   but not editable: the reference owns their name, maximum and rest, so an edit
   would come back at the next feat change.
 - The «Личность» tab holds the person rather than the build: seven appearance

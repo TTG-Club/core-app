@@ -199,6 +199,15 @@
         </template>
       </div>
 
+      <!-- Ресурс, который набирают действием, а не получают с умением -->
+      <div class="md:col-span-24">
+        <UCheckbox
+          v-model="counter.startsEmpty"
+          :label="texts.counterStartsEmpty"
+          :description="texts.counterStartsEmptyHint"
+        />
+      </div>
+
       <!-- Своей строкой, а не полем в ряду: подпись длинная, и в узкой колонке
         она не читается. Ряд по уровням справочник соберёт сам — у ресурса он
         уже задан ступенями либо формулой -->

@@ -2318,6 +2318,8 @@ export function fromFeatEditorRows(
     // Откат одним словом — для потребителей, которые раздельных правил ещё
     // не читают
     recovery: toLegacyCounterRecovery(row.shortRest),
+    // Пишется только взведённым: записи без отметки остаются прежними
+    startsEmpty: row.startsEmpty ? true : undefined,
   }));
 
   return {

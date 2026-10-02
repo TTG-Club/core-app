@@ -1,22 +1,73 @@
+import type { FeatEditorRows } from '~feats/model';
+
+import { omit } from 'es-toolkit';
 import { describe, expect, it } from 'vitest';
 
 import { AbilityKey } from '~/shared/types';
 import {
   buildCounterMaxFormula,
+  createFeatMechanics,
+  createPrerequisiteDetails,
+  fromFeatEditorRows,
   getCounterMaxKind,
   isCounterRestAmount,
   parseCounterMaxFormula,
+  parseLoadedMechanics,
   resolveCounterRestRules,
   switchCounterMaxKind,
+  toFeatEditorRows,
   toLegacyCounterRecovery,
   updateCounterMaxRule,
 } from '~feats/model';
+
+/**
+ * «Очки мутации» друида: отдых ресурс не возвращает, а появляется он пустым —
+ * запись в том виде, в каком её отдаёт справочник.
+ */
+const MUTATION_POINTS = {
+  key: 'mutation-points',
+  name: 'Очки мутации',
+  max: '9 + max(1, @mod.wis)',
+  recovery: 'LONG_REST',
+  shortRest: { mode: 'NONE', amount: 1 },
+  longRest: { mode: 'NONE', amount: 1 },
+  startsEmpty: true,
+};
 
 /** Формула вдохновения барда: модификатор Харизмы. */
 const CHARISMA_FORMULA = '@mod.cha';
 
 /** Формула «Возложения рук»: пять за уровень в классе. */
 const LAY_ON_HANDS_FORMULA = '@classLevel * 5';
+
+/**
+ * «Открыл запись в форме»: ресурс записи проходит разбор и становится строками
+ * редактора.
+ *
+ * @param storedCounter ресурс из записи справочника.
+ * @returns строки редактора.
+ */
+function openCounterInEditor(
+  storedCounter: Record<string, unknown>,
+): FeatEditorRows {
+  return toFeatEditorRows(
+    parseLoadedMechanics({ counters: [storedCounter] }),
+    createPrerequisiteDetails(),
+  );
+}
+
+/**
+ * «Сохранил форму»: первый ресурс в том виде, в каком он уйдёт в теле запроса —
+ * поля без значения в JSON не попадают.
+ *
+ * @param editorRows строки редактора.
+ * @returns ресурс из тела запроса.
+ */
+function submitFirstCounter(editorRows: FeatEditorRows): unknown {
+  const { mechanics } = fromFeatEditorRows(editorRows, createFeatMechanics());
+
+  return JSON.parse(JSON.stringify(mechanics.counters[0]));
+}
 
 describe('формула максимума ресурса', () => {
   it('разбирает источник, множитель и прибавку', () => {
@@ -135,5 +186,39 @@ describe('восстановление ресурса на отдыхе', () => 
     expect(toLegacyCounterRecovery({ mode: 'NONE', amount: 1 })).toBe(
       'LONG_REST',
     );
+  });
+});
+
+describe('ресурс в форме: открыть и сохранить', () => {
+  it('«отдых не восстанавливает» и «появляется пустым» не теряются', () => {
+    expect(
+      submitFirstCounter(openCounterInEditor(MUTATION_POINTS)),
+    ).toMatchObject(MUTATION_POINTS);
+  });
+
+  it('отметка без `true` в записи в неё и не пишется', () => {
+    for (const storedCounter of [
+      { ...MUTATION_POINTS, startsEmpty: false },
+      omit(MUTATION_POINTS, ['startsEmpty']),
+    ]) {
+      expect(
+        submitFirstCounter(openCounterInEditor(storedCounter)),
+      ).not.toHaveProperty('startsEmpty');
+    }
+  });
+
+  it('снятая в форме галочка в запись не пишется', () => {
+    const editorRows = openCounterInEditor(MUTATION_POINTS);
+
+    // Чекбокс пишет `false`, а не убирает поле
+    const uncheckedRows: FeatEditorRows = {
+      ...editorRows,
+      counters: editorRows.counters.map((counterRow) => ({
+        ...counterRow,
+        startsEmpty: false,
+      })),
+    };
+
+    expect(submitFirstCounter(uncheckedRows)).not.toHaveProperty('startsEmpty');
   });
 });

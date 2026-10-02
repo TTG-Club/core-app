@@ -6640,6 +6640,30 @@ export function toEditedFeatResource(
 }
 
 /**
+ * Сколько зарядов ресурса справочника уже потрачено.
+ *
+ * Ресурс «появляется пустым» при первом появлении потрачен целиком: его
+ * набирают действием. Первым появлением считается и запись без зарядов —
+ * ресурс со ступенями лежит на листе с нулевым максимумом до своего уровня.
+ *
+ * @param counter счётчик из механики справочника.
+ * @param previousResource прежняя запись ресурса на листе; нет — ресурс новый.
+ * @param rebuiltMax максимум пересобранной записи.
+ * @returns число потраченных зарядов.
+ */
+function getFeatResourceSpent(
+  counter: FeatCounter,
+  previousResource: CharacterClassResource | undefined,
+  rebuiltMax: number,
+): number {
+  if (!previousResource || previousResource.max <= RESOURCE_COUNT_MIN) {
+    return counter.startsEmpty ? rebuiltMax : RESOURCE_COUNT_MIN;
+  }
+
+  return previousResource.max - previousResource.current;
+}
+
+/**
  * Ресурсы листа, согласованные с чертами.
  *
  * Записи черт пересобираются целиком — как свои бонусы инициативы
@@ -6681,7 +6705,7 @@ export function withFeatResources(
 
       // Потраченное считается от прежней записи: пересборка не должна
       // восполнять заряды, даже если максимум с тех пор вырос.
-      const spent = previous ? previous.max - previous.current : 0;
+      const spent = getFeatResourceSpent(counter, previous, resource.max);
 
       const rebuilt = {
         ...resource,
