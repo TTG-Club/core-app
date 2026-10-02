@@ -3,14 +3,48 @@ import { describe, expect, it } from 'vitest';
 import { AbilityKey } from '~/shared/types';
 import {
   buildCounterMaxFormula,
+  createFeatMechanics,
+  createPrerequisiteDetails,
+  fromFeatEditorRows,
   getCounterMaxKind,
   isCounterRestAmount,
   parseCounterMaxFormula,
+  parseLoadedMechanics,
   resolveCounterRestRules,
   switchCounterMaxKind,
+  toFeatEditorRows,
   toLegacyCounterRecovery,
   updateCounterMaxRule,
 } from '~feats/model';
+
+/**
+ * «Очки мутации» друида: отдых ресурс не возвращает, а появляется он пустым —
+ * запись в том виде, в каком её отдаёт справочник.
+ */
+const MUTATION_POINTS = {
+  key: 'mutation-points',
+  name: 'Очки мутации',
+  max: '9 + max(1, @mod.wis)',
+  recovery: 'LONG_REST',
+  shortRest: { mode: 'NONE', amount: 1 },
+  longRest: { mode: 'NONE', amount: 1 },
+  startsEmpty: true,
+};
+
+/**
+ * «Открыл в форме и сохранил»: ресурс записи проходит разбор, строки редактора
+ * и сборку механики перед отправкой.
+ *
+ * @param counter ресурс из записи справочника.
+ * @returns ресурс, каким форма отправит его обратно.
+ */
+function roundTripCounter(counter: Record<string, unknown>) {
+  const mechanics = parseLoadedMechanics({ counters: [counter] });
+
+  const rows = toFeatEditorRows(mechanics, createPrerequisiteDetails());
+
+  return fromFeatEditorRows(rows, createFeatMechanics()).mechanics.counters[0];
+}
 
 /** Формула вдохновения барда: модификатор Харизмы. */
 const CHARISMA_FORMULA = '@mod.cha';
@@ -135,5 +169,45 @@ describe('восстановление ресурса на отдыхе', () => 
     expect(toLegacyCounterRecovery({ mode: 'NONE', amount: 1 })).toBe(
       'LONG_REST',
     );
+  });
+});
+
+describe('ресурс в форме: открыть и сохранить', () => {
+  it('«отдых не восстанавливает» и «появляется пустым» не теряются', () => {
+    expect(roundTripCounter(MUTATION_POINTS)).toMatchObject(MUTATION_POINTS);
+  });
+
+  it('разбор взводит отметку только по `true`', () => {
+    const [marked, unmarked, absent] = parseLoadedMechanics({
+      counters: [
+        MUTATION_POINTS,
+        { ...MUTATION_POINTS, startsEmpty: false },
+        { key: 'luck', name: 'Очки удачи' },
+      ],
+    }).counters;
+
+    expect(marked?.startsEmpty).toBe(true);
+    expect(unmarked).not.toHaveProperty('startsEmpty');
+    expect(absent).not.toHaveProperty('startsEmpty');
+  });
+
+  it('снятая отметка в запись не пишется', () => {
+    expect(
+      roundTripCounter({ ...MUTATION_POINTS, startsEmpty: false }),
+    ).not.toHaveProperty('startsEmpty');
+
+    const mechanics = parseLoadedMechanics({ counters: [MUTATION_POINTS] });
+    const rows = toFeatEditorRows(mechanics, createPrerequisiteDetails());
+
+    // Галочку сняли в форме: чекбокс пишет `false`, а не убирает поле
+    const unchecked = {
+      ...rows,
+      counters: rows.counters.map((row) => ({ ...row, startsEmpty: false })),
+    };
+
+    expect(
+      fromFeatEditorRows(unchecked, createFeatMechanics()).mechanics
+        .counters[0],
+    ).not.toHaveProperty('startsEmpty');
   });
 });

@@ -201,6 +201,9 @@ const counterSchema = z.object({
   // до них полей нет — правила выводятся из `recovery`
   shortRest: counterRestRuleSchema.optional(),
   longRest: counterRestRuleSchema.optional(),
+  // «Появляется пустым» появилось позже: у записей до него поля нет — такой
+  // ресурс появлялся полным, значит и должен
+  startsEmpty: z.boolean().optional(),
 });
 
 // Выдаваемое заклинание — та же ссылка плюс уровень, с которого оно доступно.
@@ -461,6 +464,7 @@ function toFeatMechanicsState(
       showInTable: counter.showInTable ?? false,
       ...resolveCounterRestRules(counter),
       recovery: counter.recovery,
+      ...(counter.startsEmpty ? { startsEmpty: true } : {}),
     })),
     feats: (parsed.feats ?? []).map((feat) => ({ ...feat })),
   };

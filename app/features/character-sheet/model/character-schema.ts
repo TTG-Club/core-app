@@ -227,6 +227,9 @@ const featCounterSchema = z.object({
   // ресурс восстанавливается по `recovery`
   shortRest: resourceRecoveryRuleSchema.optional().catch(undefined),
   longRest: resourceRecoveryRuleSchema.optional().catch(undefined),
+  // «Появляется пустым» появилось позже: у снимков до него поля нет — такой
+  // ресурс появлялся полным
+  startsEmpty: z.boolean().optional().catch(undefined),
 });
 
 /**

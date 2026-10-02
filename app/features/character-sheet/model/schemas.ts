@@ -300,6 +300,8 @@ const mechanicsCountersSchema = z
       // Раздельные правила отдыха; у записей до них полей нет
       shortRest: mechanicsCounterRestRuleSchema,
       longRest: mechanicsCounterRestRuleSchema,
+      // «Появляется пустым»; у записей до него поля нет
+      startsEmpty: z.boolean().nullable().catch(null),
     }),
   )
   .nullable()
@@ -1802,6 +1804,7 @@ function toMechanicCounters(counters: FeatCountersResponse): FeatCounter[] {
         min: Math.max(0, counter.min ?? 0),
         recovery: toCounterRecovery(counter.recovery),
         ...toResourceRecoveryRules(counter.shortRest, counter.longRest),
+        ...(counter.startsEmpty ? { startsEmpty: true } : {}),
       },
     ];
   });
