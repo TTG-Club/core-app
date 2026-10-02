@@ -22,8 +22,10 @@ import {
 
 import {
   MAGIC_ITEM_BONUS_NONE,
+  MAGIC_ITEM_PROPERTY_DASH,
   MAGIC_ITEM_PROPERTY_LABELS,
   MAGIC_ITEM_PROPERTY_PHRASES,
+  MAGIC_ITEM_PROPERTY_REPLACED_DASH,
   MAGIC_ITEM_RECHARGE_EVENT_OPTIONS,
 } from './constants';
 
@@ -191,6 +193,21 @@ function formatBaseWeaponDamage(baseWeapon: MagicItemBaseWeapon): string {
     : damageLabel;
 }
 
+/**
+ * Пассивные свойства для показа: длинное тире текста заменяется на тире блока.
+ * Текст пишут руками, и тире в нём длинное, а строки, которые блок собирает
+ * сам, идут с коротким.
+ *
+ * @param passive текст пассивных свойств.
+ * @returns текст с тире блока свойств.
+ */
+function formatPassiveProperties(passive: string): string {
+  return passive.replaceAll(
+    MAGIC_ITEM_PROPERTY_REPLACED_DASH,
+    MAGIC_ITEM_PROPERTY_DASH,
+  );
+}
+
 /** Название события восстановления зарядов; '' — событие не задано. */
 function getRechargeEventLabel(event: string | undefined): string {
   return (
@@ -308,7 +325,7 @@ export function getMagicItemPropertyRows(
     rows.push({
       key: 'passive',
       label: MAGIC_ITEM_PROPERTY_LABELS.passive,
-      lines: [passive],
+      lines: [formatPassiveProperties(passive)],
     });
   }
 
