@@ -139,6 +139,38 @@ export const DAMAGE_FORMULA_CREATURE_TYPE_TAGS: Array<DamageFormulaTag> = [
   { label: 'Рой', value: 'target.type.swarm' },
 ];
 
+/**
+ * Тип существа из токена `@target.type.fiend` → кому достаётся слагаемое, в
+ * дательном падеже: подпись читается фразой «по исчадиям и нежити». Ключи — те
+ * же типы, что у {@link DAMAGE_FORMULA_CREATURE_TYPE_TAGS}.
+ */
+export const DAMAGE_FORMULA_CREATURE_TYPE_RECIPIENT_LABELS: Record<
+  string,
+  string
+> = {
+  aberration: 'аберрациям',
+  beast: 'зверям',
+  celestial: 'небожителям',
+  construct: 'конструктам',
+  dragon: 'драконам',
+  elemental: 'элементалям',
+  fey: 'феям',
+  fiend: 'исчадиям',
+  giant: 'великанам',
+  humanoid: 'гуманоидам',
+  monstrosity: 'чудовищам',
+  ooze: 'слизям',
+  plant: 'растениям',
+  undead: 'нежити',
+  swarm: 'роям',
+};
+
+/** Начало подписи типов существ: «по исчадиям и нежити». */
+export const DAMAGE_FORMULA_CREATURE_TYPE_RECIPIENT_PREFIX = 'по ';
+
+/** Язык, по правилам которого перечисляются типы существ («а, б и в»). */
+export const DAMAGE_FORMULA_LIST_LOCALE = 'ru';
+
 /** Подписи вкладок и полей редактора формулы. */
 export const DAMAGE_FORMULA_LABELS = {
   formula: 'Формула',

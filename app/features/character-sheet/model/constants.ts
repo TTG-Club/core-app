@@ -69,6 +69,7 @@ import { range } from 'es-toolkit';
 import { AbilityKey as ApiAbilityKey } from '~/shared/types';
 import { EFFECT_ACTION_COST_LABELS } from '~active-effects/model';
 import { CasterType } from '~classes/model';
+import { MAGIC_ITEM_API_PATH } from '~magic-items/model';
 import { DAMAGE_TYPE_LABELS } from '~ui/damage-formula';
 
 /** Название инструмента «Лист персонажа». */
@@ -3717,7 +3718,7 @@ export const RAW_DETAIL_PATH_SUFFIX = 'raw';
 export const MAGIC_ITEMS_SEARCH_PATH = '/api/v2/magic-items/search';
 
 /** Базовый путь детали магического предмета. */
-export const MAGIC_ITEMS_DETAIL_BASE_PATH = '/api/v2/magic-items';
+export const MAGIC_ITEMS_DETAIL_BASE_PATH = MAGIC_ITEM_API_PATH;
 
 /** Эндпоинт фильтров магических предметов. */
 export const MAGIC_ITEMS_FILTERS_PATH = '/api/v2/magic-items/filters';

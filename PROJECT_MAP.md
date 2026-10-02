@@ -466,7 +466,15 @@ modals), so its capabilities are listed here rather than squeezed into the table
 - The section page and drawer show the structure in a «Свойства» block
   (`body/ui/PropertiesBlock.vue` fed by `getMagicItemPropertyRows`): bonuses,
   extra damage, charges with their recharge, passive properties and the two
-  flags. A record with no structure renders no block at all.
+  flags. A record with no structure renders no block at all. Extra damage names
+  who it lands on: the `@target.type.*` tokens of a part become «по исчадиям и
+  нежити» (`~ui/damage-formula/creature-type.ts`), and parts that differ only by
+  creature type merge into one line — it is one roll, not two. A weapon (attack
+  or damage bonus, or extra damage) also gets a leading «Основной урон» row with
+  the mundane base's dice («1к6 Дробящий (Булава)»): the public detail carries
+  no base, so `model/base-weapon.ts` reads the linked items from the section's
+  `/raw` answer and the dice from the base item's `/raw` — only when the link is
+  exactly one; the workshop preview passes the form's `items` instead.
 - Everything else a magic item does to the sheet comes from the workshop's
   «Активные эффекты» block (`mechanics.activeEffects`). `model/effects.ts`
   translates each plain numeric change into an `InventoryItemBonus` when the item

@@ -141,8 +141,21 @@ export const MAGIC_ITEM_FORM_HINTS = {
 export const MAGIC_ITEM_DAMAGE_EMPTY_LABEL =
   'Своего урона предмет не добавляет';
 
+/** Адрес раздела магических предметов в API: деталь и «сырой» ответ. */
+export const MAGIC_ITEM_API_PATH = '/api/v2/magic-items';
+
+/** Адрес раздела предметов в API: оттуда приходит немагическая основа. */
+export const MAGIC_ITEM_BASE_ITEM_API_PATH = '/api/v2/item';
+
+/** Хвост адреса «сырого» ответа раздела. */
+export const MAGIC_ITEM_RAW_PATH_SUFFIX = 'raw';
+
+/** Начало ключа запроса немагической основы для блока свойств. */
+export const MAGIC_ITEM_BASE_WEAPON_DATA_KEY = 'magic-items-base-weapon';
+
 /** Названия строк блока свойств на странице раздела. */
 export const MAGIC_ITEM_PROPERTY_LABELS = {
+  baseDamage: 'Основной урон',
   attack: 'Бонус к атаке',
   damage: 'Бонус к урону',
   armorClass: 'Бонус к КД',
@@ -154,4 +167,18 @@ export const MAGIC_ITEM_PROPERTY_LABELS = {
   traits: 'Свойства',
   focus: 'Заклинательная фокусировка',
   adamantine: 'Адамантиновый',
+} as const;
+
+/** Слова, из которых собираются значения строк блока свойств. */
+export const MAGIC_ITEM_PROPERTY_PHRASES = {
+  /** Перед уроном двуручного хвата: «1к8 Рубящий, двумя руками 1к10 Рубящий». */
+  versatilePrefix: 'двумя руками ',
+  /** Между значениями одной строки. */
+  listJoiner: ', ',
+  /** Между уроном и теми, кому он достаётся: «2к6 Излучение — по нежити». */
+  recipientJoiner: ' — ',
+  /** Перед названием основы: «1к6 Дробящий (Булава)». */
+  baseNamePrefix: ' (',
+  /** После названия основы. */
+  baseNameSuffix: ')',
 } as const;

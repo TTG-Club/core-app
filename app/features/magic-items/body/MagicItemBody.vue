@@ -7,6 +7,9 @@
 
   defineProps<{
     magicItem: MagicItemDetailResponse;
+
+    /** Слаги немагической основы для предпросмотра несохранённого предмета. */
+    baseItemUrls?: Array<string>;
   }>();
 </script>
 
@@ -20,7 +23,10 @@
           <UiGallery :preview="magicItem.image || '/img/no-img.webp'" />
         </div>
 
-        <PropertiesBlock :magic-item />
+        <PropertiesBlock
+          :magic-item
+          :base-item-urls
+        />
       </div>
 
       <div class="flex flex-auto flex-col gap-3">
