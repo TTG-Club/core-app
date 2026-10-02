@@ -1,7 +1,9 @@
 import type {
   Character,
+  CharacterClassResource,
   CharacterFeature,
   FeatCounter,
+  ResourceRecoveryRule,
 } from '~character-sheet/model';
 
 import { describe, expect, it } from 'vitest';
@@ -15,16 +17,22 @@ import {
 /** Максимум ресурса в тестах: своим числом, чтобы не зависеть от персонажа. */
 const COUNTER_MAX = 4;
 
+/** Сколько зарядов персонаж набрал действием к моменту пересборки листа. */
+const GAINED_CHARGES = 3;
+
 /** Уровень, с которого ресурс со ступенями появляется на листе. */
 const SCALING_START_LEVEL = 3;
+
+/** Правило «отдых ничего не возвращает» в виде листа. */
+const NO_REST_RECOVERY: ResourceRecoveryRule = { mode: 'none', amount: 1 };
 
 /**
  * Собирает ресурс справочника, который отдых не возвращает.
  *
- * @param fields поля ресурса поверх заготовки.
+ * @param counterFields поля ресурса поверх заготовки.
  * @returns ресурс из механики записи.
  */
-function createCounter(fields: Partial<FeatCounter> = {}): FeatCounter {
+function createCounter(counterFields: Partial<FeatCounter> = {}): FeatCounter {
   return {
     key: 'mutation-points',
     name: 'Очки мутации',
@@ -33,9 +41,9 @@ function createCounter(fields: Partial<FeatCounter> = {}): FeatCounter {
     scaling: [],
     min: 0,
     recovery: 'long-rest',
-    shortRest: { mode: 'none', amount: 1 },
-    longRest: { mode: 'none', amount: 1 },
-    ...fields,
+    shortRest: NO_REST_RECOVERY,
+    longRest: NO_REST_RECOVERY,
+    ...counterFields,
   };
 }
 
@@ -59,21 +67,39 @@ function createFeature(counter: FeatCounter): CharacterFeature {
 }
 
 /**
- * Ресурсы листа после сверки с особенностью.
+ * Сверяет лист с особенностью и отдаёт её ресурс.
  *
  * @param counter ресурс особенности.
  * @param character лист персонажа.
- * @returns ресурсы листа.
+ * @returns ресурс особенности на листе.
  */
-function settleResources(
+function settleFeatureResource(
   counter: FeatCounter,
   character: Character = DEFAULT_CHARACTER,
-) {
+): CharacterClassResource | undefined {
   return withFeatResources(
     character.classResources,
     [createFeature(counter)],
     character,
-  );
+  )[0];
+}
+
+/**
+ * Лист, на котором уже лежит ресурс особенности.
+ *
+ * @param resource ресурс листа; нет — лист остаётся без ресурсов.
+ * @param characterFields поля листа поверх заготовки.
+ * @returns лист персонажа.
+ */
+function createCharacterWithResource(
+  resource: CharacterClassResource | undefined,
+  characterFields: Partial<Character> = {},
+): Character {
+  return {
+    ...DEFAULT_CHARACTER,
+    ...characterFields,
+    classResources: resource ? [resource] : [],
+  };
 }
 
 describe('ресурс «появляется пустым»', () => {
@@ -85,8 +111,18 @@ describe('ресурс «появляется пустым»', () => {
       description: [],
       mechanics: {
         counters: [
-          { key: 'empty', name: 'Пустой', max: '4', startsEmpty: true },
-          { key: 'full', name: 'Полный', max: '4', startsEmpty: false },
+          {
+            key: 'empty',
+            name: 'Пустой',
+            max: String(COUNTER_MAX),
+            startsEmpty: true,
+          },
+          {
+            key: 'full',
+            name: 'Полный',
+            max: String(COUNTER_MAX),
+            startsEmpty: false,
+          },
         ],
       },
     });
@@ -96,23 +132,27 @@ describe('ресурс «появляется пустым»', () => {
   });
 
   it('новый ресурс с отметкой встаёт на ноль, без неё — полным', () => {
-    const [empty] = settleResources(createCounter({ startsEmpty: true }));
-    const [full] = settleResources(createCounter());
+    expect(
+      settleFeatureResource(createCounter({ startsEmpty: true })),
+    ).toMatchObject({ current: 0, max: COUNTER_MAX });
 
-    expect(empty).toMatchObject({ current: 0, max: COUNTER_MAX });
-    expect(full).toMatchObject({ current: COUNTER_MAX, max: COUNTER_MAX });
+    expect(settleFeatureResource(createCounter())).toMatchObject({
+      current: COUNTER_MAX,
+      max: COUNTER_MAX,
+    });
   });
 
   it('набранные заряды пересборка листа не обнуляет', () => {
     const counter = createCounter({ startsEmpty: true });
-    const [created] = settleResources(counter);
+    const createdResource = settleFeatureResource(counter);
 
-    const gained: Character = {
-      ...DEFAULT_CHARACTER,
-      classResources: created ? [{ ...created, current: 3 }] : [],
-    };
+    const characterWithCharges = createCharacterWithResource(
+      createdResource && { ...createdResource, current: GAINED_CHARGES },
+    );
 
-    expect(settleResources(counter, gained)[0]?.current).toBe(3);
+    expect(settleFeatureResource(counter, characterWithCharges)?.current).toBe(
+      GAINED_CHARGES,
+    );
   });
 
   it('ресурс со ступенями пуст и на уровне своего появления', () => {
@@ -121,17 +161,15 @@ describe('ресурс «появляется пустым»', () => {
       scaling: [{ level: SCALING_START_LEVEL, max: COUNTER_MAX }],
     });
 
-    const [beforeStart] = settleResources(counter);
+    const resourceBeforeStart = settleFeatureResource(counter);
 
-    expect(beforeStart?.max).toBe(0);
+    expect(resourceBeforeStart?.max).toBe(0);
 
-    const grown: Character = {
-      ...DEFAULT_CHARACTER,
+    const grownCharacter = createCharacterWithResource(resourceBeforeStart, {
       level: SCALING_START_LEVEL,
-      classResources: beforeStart ? [beforeStart] : [],
-    };
+    });
 
-    expect(settleResources(counter, grown)[0]).toMatchObject({
+    expect(settleFeatureResource(counter, grownCharacter)).toMatchObject({
       current: 0,
       max: COUNTER_MAX,
     });

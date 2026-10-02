@@ -2319,7 +2319,7 @@ export function fromFeatEditorRows(
     // не читают
     recovery: toLegacyCounterRecovery(row.shortRest),
     // Пишется только взведённым: записи без отметки остаются прежними
-    ...(row.startsEmpty ? { startsEmpty: true } : {}),
+    startsEmpty: row.startsEmpty ? true : undefined,
   }));
 
   return {

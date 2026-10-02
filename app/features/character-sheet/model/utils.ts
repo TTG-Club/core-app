@@ -6647,20 +6647,20 @@ export function toEditedFeatResource(
  * ресурс со ступенями лежит на листе с нулевым максимумом до своего уровня.
  *
  * @param counter счётчик из механики справочника.
- * @param previous прежняя запись ресурса на листе; нет — ресурс новый.
- * @param max максимум пересобранной записи.
+ * @param previousResource прежняя запись ресурса на листе; нет — ресурс новый.
+ * @param rebuiltMax максимум пересобранной записи.
  * @returns число потраченных зарядов.
  */
 function getFeatResourceSpent(
   counter: FeatCounter,
-  previous: CharacterClassResource | undefined,
-  max: number,
+  previousResource: CharacterClassResource | undefined,
+  rebuiltMax: number,
 ): number {
-  if (!previous || previous.max <= RESOURCE_COUNT_MIN) {
-    return counter.startsEmpty ? max : 0;
+  if (!previousResource || previousResource.max <= RESOURCE_COUNT_MIN) {
+    return counter.startsEmpty ? rebuiltMax : RESOURCE_COUNT_MIN;
   }
 
-  return previous.max - previous.current;
+  return previousResource.max - previousResource.current;
 }
 
 /**

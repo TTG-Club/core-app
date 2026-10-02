@@ -464,7 +464,7 @@ function toFeatMechanicsState(
       showInTable: counter.showInTable ?? false,
       ...resolveCounterRestRules(counter),
       recovery: counter.recovery,
-      ...(counter.startsEmpty ? { startsEmpty: true } : {}),
+      startsEmpty: counter.startsEmpty ? true : undefined,
     })),
     feats: (parsed.feats ?? []).map((feat) => ({ ...feat })),
   };

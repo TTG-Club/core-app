@@ -1,3 +1,6 @@
+import type { FeatEditorRows } from '~feats/model';
+
+import { omit } from 'es-toolkit';
 import { describe, expect, it } from 'vitest';
 
 import { AbilityKey } from '~/shared/types';
@@ -31,26 +34,40 @@ const MUTATION_POINTS = {
   startsEmpty: true,
 };
 
-/**
- * «Открыл в форме и сохранил»: ресурс записи проходит разбор, строки редактора
- * и сборку механики перед отправкой.
- *
- * @param counter ресурс из записи справочника.
- * @returns ресурс, каким форма отправит его обратно.
- */
-function roundTripCounter(counter: Record<string, unknown>) {
-  const mechanics = parseLoadedMechanics({ counters: [counter] });
-
-  const rows = toFeatEditorRows(mechanics, createPrerequisiteDetails());
-
-  return fromFeatEditorRows(rows, createFeatMechanics()).mechanics.counters[0];
-}
-
 /** Формула вдохновения барда: модификатор Харизмы. */
 const CHARISMA_FORMULA = '@mod.cha';
 
 /** Формула «Возложения рук»: пять за уровень в классе. */
 const LAY_ON_HANDS_FORMULA = '@classLevel * 5';
+
+/**
+ * «Открыл запись в форме»: ресурс записи проходит разбор и становится строками
+ * редактора.
+ *
+ * @param storedCounter ресурс из записи справочника.
+ * @returns строки редактора.
+ */
+function openCounterInEditor(
+  storedCounter: Record<string, unknown>,
+): FeatEditorRows {
+  return toFeatEditorRows(
+    parseLoadedMechanics({ counters: [storedCounter] }),
+    createPrerequisiteDetails(),
+  );
+}
+
+/**
+ * «Сохранил форму»: первый ресурс в том виде, в каком он уйдёт в теле запроса —
+ * поля без значения в JSON не попадают.
+ *
+ * @param editorRows строки редактора.
+ * @returns ресурс из тела запроса.
+ */
+function submitFirstCounter(editorRows: FeatEditorRows): unknown {
+  const { mechanics } = fromFeatEditorRows(editorRows, createFeatMechanics());
+
+  return JSON.parse(JSON.stringify(mechanics.counters[0]));
+}
 
 describe('формула максимума ресурса', () => {
   it('разбирает источник, множитель и прибавку', () => {
@@ -174,40 +191,34 @@ describe('восстановление ресурса на отдыхе', () => 
 
 describe('ресурс в форме: открыть и сохранить', () => {
   it('«отдых не восстанавливает» и «появляется пустым» не теряются', () => {
-    expect(roundTripCounter(MUTATION_POINTS)).toMatchObject(MUTATION_POINTS);
-  });
-
-  it('разбор взводит отметку только по `true`', () => {
-    const [marked, unmarked, absent] = parseLoadedMechanics({
-      counters: [
-        MUTATION_POINTS,
-        { ...MUTATION_POINTS, startsEmpty: false },
-        { key: 'luck', name: 'Очки удачи' },
-      ],
-    }).counters;
-
-    expect(marked?.startsEmpty).toBe(true);
-    expect(unmarked).not.toHaveProperty('startsEmpty');
-    expect(absent).not.toHaveProperty('startsEmpty');
-  });
-
-  it('снятая отметка в запись не пишется', () => {
     expect(
-      roundTripCounter({ ...MUTATION_POINTS, startsEmpty: false }),
-    ).not.toHaveProperty('startsEmpty');
+      submitFirstCounter(openCounterInEditor(MUTATION_POINTS)),
+    ).toMatchObject(MUTATION_POINTS);
+  });
 
-    const mechanics = parseLoadedMechanics({ counters: [MUTATION_POINTS] });
-    const rows = toFeatEditorRows(mechanics, createPrerequisiteDetails());
+  it('отметка без `true` в записи в неё и не пишется', () => {
+    for (const storedCounter of [
+      { ...MUTATION_POINTS, startsEmpty: false },
+      omit(MUTATION_POINTS, ['startsEmpty']),
+    ]) {
+      expect(
+        submitFirstCounter(openCounterInEditor(storedCounter)),
+      ).not.toHaveProperty('startsEmpty');
+    }
+  });
 
-    // Галочку сняли в форме: чекбокс пишет `false`, а не убирает поле
-    const unchecked = {
-      ...rows,
-      counters: rows.counters.map((row) => ({ ...row, startsEmpty: false })),
+  it('снятая в форме галочка в запись не пишется', () => {
+    const editorRows = openCounterInEditor(MUTATION_POINTS);
+
+    // Чекбокс пишет `false`, а не убирает поле
+    const uncheckedRows: FeatEditorRows = {
+      ...editorRows,
+      counters: editorRows.counters.map((counterRow) => ({
+        ...counterRow,
+        startsEmpty: false,
+      })),
     };
 
-    expect(
-      fromFeatEditorRows(unchecked, createFeatMechanics()).mechanics
-        .counters[0],
-    ).not.toHaveProperty('startsEmpty');
+    expect(submitFirstCounter(uncheckedRows)).not.toHaveProperty('startsEmpty');
   });
 });
