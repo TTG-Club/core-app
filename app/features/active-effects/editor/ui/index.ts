@@ -1,17 +1,20 @@
 export { default as ActiveEffectItem } from './ActiveEffectItem.vue';
 export { default as EffectActionCostFields } from './EffectActionCostFields.vue';
 export { default as EffectAdvancedSection } from './EffectAdvancedSection.vue';
+export { default as EffectCastRuleSection } from './EffectCastRuleSection.vue';
 export { default as EffectChanges } from './EffectChanges.vue';
 export { default as EffectDamageParts } from './EffectDamageParts.vue';
 export { default as EffectDamageStep } from './EffectDamageStep.vue';
 export { default as EffectDescriptionSection } from './EffectDescriptionSection.vue';
 export { default as EffectDurationStep } from './EffectDurationStep.vue';
+export { default as EffectEscapeFields } from './EffectEscapeFields.vue';
 export { default as EffectEscapeSection } from './EffectEscapeSection.vue';
 export { default as EffectFlags } from './EffectFlags.vue';
 export { default as EffectFormStepSection } from './EffectFormStepSection.vue';
 export { default as EffectHeaderFields } from './EffectHeaderFields.vue';
 export { default as EffectInertFieldsNotice } from './EffectInertFieldsNotice.vue';
 export { default as EffectModifiersStep } from './EffectModifiersStep.vue';
+export { default as EffectPayFields } from './EffectPayFields.vue';
 export { default as EffectSaveDcField } from './EffectSaveDcField.vue';
 export { default as EffectSaveFields } from './EffectSaveFields.vue';
 export { default as EffectSaveStep } from './EffectSaveStep.vue';
@@ -24,3 +27,4 @@ export { default as EffectTriggerConditionPicker } from './EffectTriggerConditio
 export { default as EffectTriggerRow } from './EffectTriggerRow.vue';
 export { default as EffectTriggersStep } from './EffectTriggersStep.vue';
 export { default as EffectTriggerStep } from './EffectTriggerStep.vue';
+export { default as EffectUseAreaFields } from './EffectUseAreaFields.vue';

@@ -665,6 +665,13 @@ export const FIND_GAME_TOAST_ERROR_ICON = 'tabler:alert-triangle';
 export const FIND_GAME_UNKNOWN_ERROR_MESSAGE =
   'Что-то пошло не так. Попробуйте ещё раз.';
 
+/**
+ * Отказ 401 сервис отдаёт без тела: объяснить его может только сайт. Повтор
+ * здесь не помогает — нужна перезагрузка, она уведёт на страницу входа.
+ */
+export const FIND_GAME_SESSION_EXPIRED_MESSAGE =
+  'Сессия истекла. Обновите страницу и войдите заново.';
+
 export const PROFILE_SAVED_TITLE = 'Профиль сохранён';
 
 export const PROFILE_SAVE_ERROR_TITLE = 'Не удалось сохранить профиль';

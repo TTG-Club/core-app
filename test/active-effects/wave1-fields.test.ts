@@ -17,7 +17,7 @@ import {
   describeSaveDcFormulaError,
   describeSaveDcFormulaHelp,
   describeSaveOverride,
-  EFFECT_FLAG_OPTIONS,
+  EFFECT_FLAG_LABELS,
   EFFECT_LIGHT_STEADY_ANIMATION,
   EFFECT_SAVE_DC_FORMULA_ERRORS,
   EFFECT_SAVE_DC_FORMULA_LABELS,
@@ -398,7 +398,7 @@ describe('свет (light)', () => {
 
 describe('флаги ограничений действий', () => {
   it('есть в словаре сайта и переживают сохранение', () => {
-    const knownFlags = new Set(EFFECT_FLAG_OPTIONS.map((flag) => flag.value));
+    const knownFlags = new Set(Object.keys(EFFECT_FLAG_LABELS));
 
     expect(RESTRICTION_FLAGS.every((flag) => knownFlags.has(flag))).toBe(true);
 

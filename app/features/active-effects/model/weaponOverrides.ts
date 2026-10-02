@@ -1,7 +1,9 @@
 /**
- * Значения замен свойств оружия в окне эффекта: кость урона, характеристика
- * атаки и тип урона («Дубинка»). Зеркало `getWeaponOverrideValueOptions`,
- * `validateWeaponOverrideValue` и `describeWeaponOverrideValue` из
+ * Значения строк, которые задают словом из списка или костью, а не формулой:
+ * замены свойств оружия — кость урона, характеристика атаки и тип урона
+ * («Дубинка») — и тип урона заклинаний на выбор. Зеркало
+ * `getWeaponOverrideValueOptions`, `getChangeValueOptions`,
+ * `validateChangeOptionValue` и `describeChangeOptionValue` из
  * `weaponOverrides.ts` VTTG. Расчёт замен по оружию сайту не нужен — его делает
  * лист VTTG.
  */
@@ -10,7 +12,8 @@ import {
   ACTIVE_EFFECT_LABELS,
   EFFECT_ABILITY_OPTIONS,
   EFFECT_DAMAGE_TYPE_OPTIONS,
-  isWeaponOverrideKey,
+  isOptionValueKey,
+  SPELL_DAMAGE_TYPE_KEY,
   WEAPON_ATTACK_ABILITY_KEY,
   WEAPON_DAMAGE_TYPE_KEY,
   WEAPON_SPELL_ABILITY_LABEL,
@@ -55,24 +58,40 @@ export function getWeaponOverrideValueOptions(
 }
 
 /**
- * Ошибка значения замены свойства оружия — подписью под полем окна эффекта.
+ * Значения на выбор у строки, чьё значение — слово из списка: замены свойств
+ * оружия и тип урона заклинаний.
+ *
+ * @param key ключ строки эффекта.
+ * @returns пункты выбора либо `undefined`, если значение набирают сами.
+ */
+export function getChangeValueOptions(
+  key: string,
+): WeaponOverrideValueOption[] | undefined {
+  return key === SPELL_DAMAGE_TYPE_KEY
+    ? EFFECT_DAMAGE_TYPE_OPTIONS
+    : getWeaponOverrideValueOptions(key);
+}
+
+/**
+ * Ошибка значения строки, которое задают словом из списка или костью (замена
+ * свойства оружия, тип урона заклинаний), — подписью под полем окна эффекта.
  *
  * @param key ключ строки.
  * @param changeValue значение строки.
  * @returns текст ошибки либо `undefined`.
  */
-export function validateWeaponOverrideValue(
+export function validateChangeOptionValue(
   key: string,
   changeValue: string,
 ): string | undefined {
-  if (!isWeaponOverrideKey(key)) {
+  if (!isOptionValueKey(key)) {
     return undefined;
   }
 
-  const valueOptions = getWeaponOverrideValueOptions(key);
+  const valueOptions = getChangeValueOptions(key);
 
   if (valueOptions) {
-    return describeWeaponOverrideValue(key, changeValue) === undefined
+    return describeChangeOptionValue(key, changeValue) === undefined
       ? ACTIVE_EFFECT_LABELS.changeWeaponOptionError
       : undefined;
   }
@@ -83,20 +102,20 @@ export function validateWeaponOverrideValue(
 }
 
 /**
- * Подпись значения замены из списка («Заклинательная характеристика»,
- * «Силовое поле»).
+ * Подпись значения из списка («Заклинательная характеристика», «Силовое
+ * поле») у замены свойства оружия и типа урона заклинаний.
  *
  * @param key ключ строки.
  * @param changeValue значение строки.
  * @returns подпись либо `undefined`, если значение не из списка.
  */
-export function describeWeaponOverrideValue(
+export function describeChangeOptionValue(
   key: string,
   changeValue: string,
 ): string | undefined {
   const trimmedValue = changeValue.trim();
 
-  return getWeaponOverrideValueOptions(key)?.find(
+  return getChangeValueOptions(key)?.find(
     (valueOption) => valueOption.value === trimmedValue,
   )?.label;
 }

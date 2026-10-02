@@ -14,11 +14,14 @@
  * Зеркало: dnd5-test-migrate/src/engine/effectTriggerTypes.ts
  */
 
+import type { EffectPay } from './pay';
 import type {
   EffectAbility,
   EffectDamagePart,
   EffectDuration,
+  EffectEscape,
   EffectRecurringSave,
+  EffectUseArea,
 } from './types';
 
 /** События, на которые срабатывание реагирует. */
@@ -251,18 +254,43 @@ export interface EffectTriggerArea {
   radius: number;
   /** Кого задевает; нет — всех, кроме субъекта. */
   target?: EffectTriggerAreaTarget;
+  /**
+   * Шаблон вместо радиуса: конус, линия, сфера или куб, который ставит на
+   * карту нажавший кнопку «При действии» («выдохнуть 15-футовый конус»).
+   * Получатели — те, кого шаблон накрыл. Только у события «При действии»: у
+   * остальных шаблон ставить некому, и действует радиус.
+   */
+  template?: EffectUseArea;
 }
+
+/** Событие кнопки «При действии» и включения переключателя. */
+const ACTIVATE_TRIGGER_EVENT = 'activate' satisfies EffectTriggerEvent;
 
 /**
  * События с получателем «всем в радиусе»: их выполняет сервер VTTG со сценой
- * в контексте — урон, «0 хитов», наложение, бросок атаки.
+ * в контексте — урон, «0 хитов», наложение, бросок атаки и кнопка «При
+ * действии» (её получателей клиент передаёт серверу событием правил).
  */
 export const AREA_RECIPIENT_TRIGGER_EVENTS: readonly EffectTriggerEvent[] = [
   'damageTaken',
   'hpZero',
   'applied',
   'attackRoll',
+  ACTIVATE_TRIGGER_EVENT,
 ];
+
+/**
+ * Ставит ли получателей события шаблон на карте: шаблон ставит нажавший
+ * кнопку, поэтому он есть только у события «При действии».
+ *
+ * @param event событие срабатывания.
+ * @returns `true` для события «При действии».
+ */
+export function triggerEventAcceptsAreaTemplate(
+  event: EffectTriggerEvent,
+): boolean {
+  return event === ACTIVATE_TRIGGER_EVENT;
+}
 
 /**
  * События с получателем «по выбору». Спрашивают и на границе хода: «аура лечит
@@ -490,6 +518,11 @@ export interface EffectTriggerSaveModeRule {
 /** Спасбросок срабатывания; Сл 0 — Сл источника, как у остальных полей. */
 export interface EffectTriggerSave {
   ability: EffectAbility;
+  /**
+   * Ещё характеристики на выбор бросающего: «спасбросок Силы или Ловкости» —
+   * бросается лучшей из названных.
+   */
+  altAbilities?: EffectAbility[];
   dc: number;
   /** Преимущество или помеха самого спасброска. */
   mode?: EffectTriggerSaveMode;
@@ -544,6 +577,13 @@ export interface EffectTriggerApplyConditionAction {
   conditionKey: string;
   duration?: EffectDuration;
   /**
+   * Срок формулой — число единиц срока `duration`: «невидим на число раундов,
+   * равное числу потраченных Костей Хитов» (`@paid.hitDice`). Бросается один
+   * раз, при наложении, как срок формулой у самого эффекта; без `duration` —
+   * в раундах.
+   */
+  durationFormula?: string;
+  /**
    * Состояние спадает, когда существо выходит из зоны, которая его наложила
    * («Опутанность спадает, как только выйдешь из Паутины»). Работает только у
    * зоны: у срабатывания вне зоны выходить не из чего.
@@ -569,6 +609,18 @@ export interface EffectTriggerApplyConditionAction {
    * снятия заклинанием).
    */
   locked?: true;
+  /**
+   * Действие, снимающее наложенное состояние: «опутан… может действием
+   * совершить проверку Силы (Атлетика) со Сл ваших заклинаний» у состояния,
+   * которое кладёт аура. Кнопка «Вырваться» появляется у состояния на листе.
+   */
+  escape?: EffectEscape;
+  /**
+   * Флаги сверх самого состояния: «пока цель отравлена, она совершает либо
+   * действие, либо бонусное действие и не может совершать реакции» — у
+   * «Отравленного», который кладёт аура. Действуют, пока состояние лежит.
+   */
+  flags?: string[];
   on?: EffectTriggerActionGate;
 }
 
@@ -604,6 +656,8 @@ export interface EffectTriggerApplyTagAction {
   label?: string;
   /** Срок; нет — до начала следующего хода носителя. */
   duration?: EffectDuration;
+  /** Срок формулой — число единиц срока `duration`; без него — в раундах. */
+  durationFormula?: string;
   /**
    * Счётчик: повторная отметка тем же ключом прибавляет ступень, а не
    * заменяет прежнюю («три провала — окаменение»). Условие
@@ -631,6 +685,12 @@ export interface EffectTriggerReduceMaxHpAction {
 export interface EffectTriggerSetHpAction {
   type: 'setHp';
   value: number;
+  /**
+   * Хиты формулой вместо числа: «хиты становятся равны 5 × круг потраченной
+   * ячейки» (`5 * @paid.slotLevel`), «удвоенному уровню следопыта». Считается
+   * по получателю; не посчиталась — берётся `value`.
+   */
+  formula?: string;
   /** Полный запас хитов вместо числа: «восстанавливает все хиты». */
   toMax?: true;
   on?: EffectTriggerActionGate;
@@ -712,6 +772,12 @@ export interface EffectTriggerRemoveConditionAction {
   type: 'removeCondition';
   /** Какое состояние; нет — все состояния получателя. */
   conditionKey?: string;
+  /**
+   * Только состояния, наложенные существами этих типов: «перестаёт быть
+   * очарованной или испуганной такими существами» («Рассеивание добра и
+   * зла»). Нет поля — кем бы ни было наложено.
+   */
+  fromCreatureTypes?: string[];
   on?: EffectTriggerActionGate;
 }
 
@@ -792,8 +858,16 @@ export interface EffectTriggerRestoreAction {
   level?: number;
   /** Ключ счётчика листа — у `counter`. */
   counter?: string;
-  /** Сколько вернуть; нет — одну единицу. */
-  amount?: number;
+  /**
+   * Сколько вернуть: число или формула (`@paid.slotLevel`, `max(1, @mod.wis)`);
+   * нет — одну единицу. Считается по получателю.
+   */
+  amount?: string;
+  /**
+   * Установить счётчик в это число, а не прибавить: «новая трата ячейки
+   * заменяет прежние Очки мутации». Только у `counter`.
+   */
+  set?: true;
   on?: EffectTriggerActionGate;
 }
 
@@ -809,6 +883,11 @@ export interface EffectTriggerDispelAction {
   type: 'dispel';
   /** До какого круга снимать. */
   maxLevel: number;
+  /**
+   * Круг формулой: «заклинания не выше круга ячейки, которую вы используете» —
+   * `@castLevel`. Считается при срабатывании; не посчиталась — `maxLevel`.
+   */
+  maxLevelFormula?: string;
   /** Снимать и то, у чего круг неизвестен. */
   withoutLevel?: true;
   on?: EffectTriggerActionGate;
@@ -837,10 +916,34 @@ export const TRIGGER_PATH_FEET_ONCE = 0;
 export const MAX_TRIGGER_PATH_FEET = 500;
 
 /** Как двигает действие «Переместить». */
-export const EFFECT_TRIGGER_MOVE_KINDS = ['push', 'pull', 'teleport'] as const;
+export const EFFECT_TRIGGER_MOVE_KINDS = [
+  'push',
+  'pull',
+  'teleport',
+  'bring',
+  'choose',
+] as const;
 
-/** Толчок от опоры, притягивание к ней или перенос по тому же направлению. */
+/**
+ * Толчок от опоры, притягивание к ней, перенос по тому же направлению, перенос
+ * вплотную к опоре (`bring`: «телепортируется в незанятое пространство в
+ * пределах 5 футов от вас») или «к опоре или от неё» на выбор применившего
+ * (`choose`).
+ */
 export type EffectTriggerMoveKind = (typeof EFFECT_TRIGGER_MOVE_KINDS)[number];
+
+/** Перенос вплотную к опоре: расстояния у него нет. */
+const BRING_MOVE_KIND: EffectTriggerMoveKind = 'bring';
+
+/**
+ * Читает ли перемещение расстояние: перенос вплотную к опоре — нет.
+ *
+ * @param kind как двигает действие.
+ * @returns `true`, если у перемещения задаются футы.
+ */
+export function moveKindTakesDistance(kind: EffectTriggerMoveKind): boolean {
+  return kind !== BRING_MOVE_KIND;
+}
 
 /** Как двигает новое действие «Переместить»: толчком. */
 export const DEFAULT_TRIGGER_MOVE_KIND: EffectTriggerMoveKind = 'push';
@@ -874,8 +977,13 @@ export const MAX_TRIGGER_MOVE_DISTANCE = 500;
 export interface EffectTriggerMoveAction {
   type: 'move';
   kind: EffectTriggerMoveKind;
-  /** На сколько футов. */
+  /** На сколько футов; у переноса вплотную не читается. */
   distance: number;
+  /**
+   * Расстояние «до N»: сколько футов, выбирает применивший (с шагом в клетку
+   * и «не двигать»). Где спросить некого — на все N.
+   */
+  upTo?: true;
   /** От кого считать направление; нет — от наложившего эффект. */
   from?: EffectTriggerMoveOrigin;
   on?: EffectTriggerActionGate;
@@ -995,6 +1103,14 @@ export interface EffectTrigger extends EffectActionCostSettings {
   ask?: true;
   /** У кого спрашивать; нет — у носителя эффекта. */
   asker?: EffectTriggerChooser;
+  /**
+   * Цена ресурсом: что тратит носитель эффекта, чтобы срабатывание
+   * состоялось, — ячейку, кости хитов, счётчик листа. Ресурс — решение
+   * человека, поэтому срабатывание с ценой спрашивает владельца так же, как
+   * цена «Реакция»; отказ и нехватка ресурса срабатывание отменяют.
+   * Потраченное подставляется в формулы действий токенами `@paid.*`.
+   */
+  pay?: EffectPay;
 }
 
 /**
@@ -1029,15 +1145,20 @@ export type LegacyTriggerKind = Exclude<
 >;
 
 /**
- * Спрашивают ли разрешения перед срабатыванием: явная галочка или цена
- * «Реакция». Реакция — ресурс человека: тратить её за него движок не вправе,
- * поэтому цена «Реакция» сама по себе делает срабатывание добровольным.
+ * Спрашивают ли разрешения перед срабатыванием: явная галочка, цена «Реакция»
+ * или цена ресурсом. Реакция и ресурсы листа — ресурс человека: тратить их за
+ * него движок не вправе, поэтому такая цена сама по себе делает срабатывание
+ * добровольным.
  *
  * @param trigger срабатывание.
  * @returns `true`, если перед срабатыванием спрашивают.
  */
 export function triggerAsksPermission(
-  trigger: Pick<EffectTrigger, 'ask' | 'cost'>,
+  trigger: Pick<EffectTrigger, 'ask' | 'cost' | 'pay'>,
 ): boolean {
-  return trigger.ask === true || trigger.cost === 'reaction';
+  return (
+    trigger.ask === true
+    || trigger.cost === 'reaction'
+    || trigger.pay !== undefined
+  );
 }

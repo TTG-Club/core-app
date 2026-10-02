@@ -3,6 +3,7 @@ import { createError } from 'h3';
 
 import { getErrorResponse, getPlural } from '#shared/utils';
 import { createEntityId } from '~/utils/createEntityId';
+import { getModifier } from '~/utils/modifier';
 import { z } from '~/utils/zod';
 
 /**
@@ -20,6 +21,7 @@ Object.assign(globalThis, {
   createEntityId,
   createError,
   getErrorResponse,
+  getModifier,
   getPlural,
   getOrigin: () => TEST_ORIGIN,
   z,

@@ -5,6 +5,7 @@
   import type {
     EffectActionCostSettings,
     EffectFormLayout,
+    EffectPay,
     EffectTrigger,
     EffectTriggerAction,
     EffectTriggerActionType,
@@ -20,6 +21,7 @@
     EffectTriggerSaveMode,
     EffectTriggerSaveModeChoice,
     EffectTriggerTurnOwner,
+    EffectUseArea,
   } from '../../model';
 
   import {
@@ -44,6 +46,7 @@
     DEFAULT_TRIGGER_REST_TYPE,
     DEFAULT_TRIGGER_TURN_OWNER,
     EFFECT_AURA_RADIUS_STEP,
+    EFFECT_PAY_FIELD_LABELS,
     EFFECT_TRIGGER_ACTION_ICONS,
     EFFECT_TRIGGER_ACTION_LABELS,
     EFFECT_TRIGGER_AREA_LABELS,
@@ -58,6 +61,7 @@
     EFFECT_TRIGGER_ROW_ICONS,
     EFFECT_TRIGGER_ROW_LABELS,
     EFFECT_TRIGGER_SAVE_MODE_OPTIONS,
+    EFFECT_TRIGGER_TEMPLATE_OPTIONS,
     EFFECT_TRIGGER_TURN_OWNER_LABELS,
     isTurnTriggerEvent,
     listTriggerActionTypes,
@@ -69,6 +73,7 @@
     MIN_TRIGGER_CHOICE_COUNT,
     MIN_TRIGGER_LIMIT_MAX,
     TRIGGER_PATH_FEET_ONCE,
+    triggerEventAcceptsAreaTemplate,
     triggerEventAcceptsDamageDc,
     triggerEventHasConditionKey,
     triggerEventHasPathFeet,
@@ -78,9 +83,11 @@
     writeTriggerEvent,
   } from '../../model';
   import EffectActionCostFields from './EffectActionCostFields.vue';
+  import EffectPayFields from './EffectPayFields.vue';
   import EffectSaveFields from './EffectSaveFields.vue';
   import EffectTriggerActionRow from './EffectTriggerActionRow.vue';
   import EffectTriggerConditionPicker from './EffectTriggerConditionPicker.vue';
+  import EffectUseAreaFields from './EffectUseAreaFields.vue';
 
   /**
    * Строка списка «Срабатывания»: когда → условие → спасбросок → что сделать →
@@ -304,12 +311,34 @@
     set: (nextTarget: EffectTriggerAreaTarget) =>
       updateTrigger({
         area: {
+          ...trigger.value.area,
           radius: trigger.value.area?.radius ?? DEFAULT_TRIGGER_AREA_RADIUS,
           target:
             nextTarget === DEFAULT_TRIGGER_AREA_TARGET ? undefined : nextTarget,
         },
       }),
   });
+
+  /** Шаблон ставит нажавший кнопку — он есть только у «При действии». */
+  const acceptsAreaTemplate = computed(() =>
+    triggerEventAcceptsAreaTemplate(trigger.value.event),
+  );
+
+  // Шаблон вместо радиуса: без шаблона — радиус от фишки носителя
+  const areaTemplate = computed({
+    get: () => trigger.value.area?.template,
+    set: (nextTemplate: EffectUseArea | undefined) =>
+      updateTrigger({
+        area: {
+          ...trigger.value.area,
+          radius: trigger.value.area?.radius ?? DEFAULT_TRIGGER_AREA_RADIUS,
+          template: nextTemplate,
+        },
+      }),
+  });
+
+  /** Радиус нужен, пока получателей не выбирает шаблон. */
+  const showsAreaRadius = computed(() => areaTemplate.value === undefined);
 
   // Долгий отдых — значение по умолчанию: в данных он не пишется
   const restType = computed({
@@ -374,6 +403,11 @@
         ask: enabled ? true : undefined,
         asker: enabled ? trigger.value.asker : undefined,
       }),
+  });
+
+  const pay = computed({
+    get: () => trigger.value.pay,
+    set: (nextPay: EffectPay | undefined) => updateTrigger({ pay: nextPay }),
   });
 
   // Носитель — значение по умолчанию: в данных он не пишется
@@ -693,7 +727,16 @@
       </UFormField>
 
       <template v-if="isAreaRecipient">
+        <EffectUseAreaFields
+          v-if="acceptsAreaTemplate"
+          v-model="areaTemplate"
+          :label="EFFECT_TRIGGER_AREA_LABELS.template"
+          :hint="EFFECT_TRIGGER_AREA_LABELS.templateHint"
+          :items="EFFECT_TRIGGER_TEMPLATE_OPTIONS"
+        />
+
         <UFormField
+          v-if="showsAreaRadius"
           :label="EFFECT_TRIGGER_AREA_LABELS.radius"
           class="w-full sm:w-28"
         >
@@ -835,6 +878,7 @@
         :applier-save-dc="applierSaveDc"
         :ability-label="EFFECT_TRIGGER_ROW_LABELS.saveAbility"
         :save-dc-label="EFFECT_TRIGGER_ROW_LABELS.saveDc"
+        :alt-abilities-label="EFFECT_TRIGGER_ROW_LABELS.saveAltAbilities"
         :accepts-damage="acceptsDamageDc"
         @update:save="updateSave"
       />
@@ -1009,5 +1053,10 @@
         />
       </UFormField>
     </div>
+
+    <EffectPayFields
+      v-model="pay"
+      :hint="EFFECT_PAY_FIELD_LABELS.hintTrigger"
+    />
   </div>
 </template>

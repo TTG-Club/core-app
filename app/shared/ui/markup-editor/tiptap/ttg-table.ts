@@ -5,6 +5,7 @@ import type {
   MarkdownRendererHelpers,
   MarkdownToken,
 } from '@tiptap/core';
+import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 
 import type { MarkerNode, RenderNode } from '~ui/markup';
 
@@ -16,6 +17,7 @@ import {
   TableCell,
   TableHeader,
   TableRow,
+  TableView,
 } from '@tiptap/extension-table';
 
 import {
@@ -31,6 +33,7 @@ import {
   createBlockMarkerTokenizer,
   markerNameMatches,
 } from './block-tokenizer';
+import { TABLE_CAPTION_ATTR } from './constants';
 import { dataAttr } from './node-utils';
 
 const TABLE_TOKEN = 'ttgTable';
@@ -217,6 +220,32 @@ function renderCellInline(
 }
 
 /**
+ * Отрисовка таблицы в редакторе. Штатный TableView при смене атрибутов узла
+ * обновляет только ширины колонок, а подпись над таблицей рисуется по
+ * DOM-атрибуту — поэтому при каждом обновлении узла переносим её в DOM сами.
+ */
+class TtgTableView extends TableView {
+  override update(tableNode: ProseMirrorNode): boolean {
+    const isUpdated = super.update(tableNode);
+
+    if (!isUpdated) {
+      return false;
+    }
+
+    // Атрибуты узла ProseMirror не типизированы — подпись проверяем явно.
+    const caption: unknown = tableNode.attrs.caption;
+
+    if (typeof caption === 'string' && caption) {
+      this.table.setAttribute(TABLE_CAPTION_ATTR, caption);
+    } else {
+      this.table.removeAttribute(TABLE_CAPTION_ATTR);
+    }
+
+    return true;
+  }
+}
+
+/**
  * Таблица: нативный редактируемый узел TipTap (вставка/строки/колонки), но
  * сериализуется/парсится через `{@table}`. Штатный GFM-парсер (`| a | b |`)
  * отключён (`parseMarkdown → []`) — источник таблиц только `{@table}`.
@@ -241,15 +270,15 @@ export const TtgTable = Table.extend({
       caption: {
         default: '',
         parseHTML: (element: HTMLElement) =>
-          element.getAttribute('data-caption') ?? '',
+          element.getAttribute(TABLE_CAPTION_ATTR) ?? '',
         renderHTML: (attributes: Record<string, unknown>) =>
           attributes.caption
-            ? { 'data-caption': String(attributes.caption) }
+            ? { [TABLE_CAPTION_ATTR]: String(attributes.caption) }
             : {},
       },
     };
   },
-});
+}).configure({ View: TtgTableView });
 
 export const TtgTableRow = TableRow.extend({
   parseMarkdown: () => [],

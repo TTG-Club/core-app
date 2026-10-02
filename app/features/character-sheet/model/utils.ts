@@ -179,7 +179,10 @@ import {
 } from 'es-toolkit';
 
 import { LEVELS } from '~/shared/consts';
-import { DEFAULT_EFFECT_CHANGE_PRIORITY } from '~active-effects/model';
+import {
+  DEFAULT_EFFECT_CHANGE_PRIORITY,
+  evaluateFormula,
+} from '~active-effects/model';
 import {
   CasterType,
   FULL_CASTER_SPELL_SLOTS,
@@ -4322,22 +4325,18 @@ function getArmorClassWithItemLimits(
 }
 
 /**
- * Токен формулы эффекта — число или переменная листа.
+ * Значение переменной листа в формуле эффекта.
  *
  * @param character персонаж.
- * @param token токен формулы в нижнем регистре.
+ * @param token токен переменной в нижнем регистре.
  * @param classLevel уровень в классе, выдавшем эффект, — значение `@classLevel`.
- * @returns число; null — переменная листу незнакома.
+ * @returns число; undefined — переменная листу незнакома.
  */
-function evaluateEffectFormulaToken(
+function getEffectFormulaVariable(
   character: Character,
   token: string,
   classLevel: number,
-): number | null {
-  if (/^\d+$/.test(token)) {
-    return Number(token);
-  }
-
+): number | undefined {
   if (token === RESOURCE_FORMULA_PROFICIENCY) {
     return getCharacterProficiencyBonus(character);
   }
@@ -4356,21 +4355,22 @@ function evaluateEffectFormulaToken(
         token.slice(RESOURCE_FORMULA_ABILITY_PREFIX.length)
       ];
 
-    return ability ? getAbilityModifier(character, ability) : null;
+    return ability ? getAbilityModifier(character, ability) : undefined;
   }
 
-  return null;
+  return undefined;
 }
 
 /**
- * Значение формулы эффекта числом: сумма слагаемых, каждое — число или
- * переменная листа (`@prof`, `@level`, `@classLevel`, `@mod.<аббревиатура>`) с
- * множителем.
+ * Значение формулы эффекта числом: арифметика со скобками и функциями (`max`,
+ * `min`, `floor`, `ceil`) над числами и переменными листа (`@prof`, `@level`,
+ * `@classLevel`, `@mod.` с аббревиатурой характеристики).
  *
- * Грамматика та же, что у максимума ресурса, только слагаемых сколько угодно:
- * «Защита без доспехов» пишется как `10+@mod.dex+@mod.con`. Незнакомая
- * переменная (`@mod.spell`, кость) делает формулу непонятной целиком — лист
- * лучше не применит эффект, чем применит его с нулём вместо слагаемого.
+ * Разбор общий с редактором эффектов, поэтому лист читает формулу так же, как
+ * VTTG: «Защита без доспехов» — `10+@mod.dex+@mod.con`, «Аура защиты» —
+ * `max(1, @mod.cha)`. Незнакомая переменная (`@mod.spell`, кость) делает
+ * формулу непонятной целиком — лист лучше не применит эффект, чем применит
+ * его с нулём вместо слагаемого.
  *
  * @param character персонаж.
  * @param formula значение изменения эффекта.
@@ -4384,39 +4384,11 @@ function evaluateEffectFormula(
   formula: string,
   classLevel: number = character.level,
 ): number | null {
-  const compact = formula.toLowerCase().replaceAll(/\s+/g, '');
-
-  if (!compact) {
-    return null;
-  }
-
-  const terms = compact.match(/[+-]?[^+-]+/g);
-
-  if (!terms) {
-    return null;
-  }
-
-  let total = 0;
-
-  for (const term of terms) {
-    const sign = term.startsWith('-') ? -1 : 1;
-
-    let product = 1;
-
-    for (const factor of term.replace(/^[+-]/, '').split('*')) {
-      const value = evaluateEffectFormulaToken(character, factor, classLevel);
-
-      if (value === null) {
-        return null;
-      }
-
-      product *= value;
-    }
-
-    total += sign * product;
-  }
-
-  return total;
+  return (
+    evaluateFormula(formula.toLowerCase(), (variableToken) =>
+      getEffectFormulaVariable(character, variableToken, classLevel),
+    ) ?? null
+  );
 }
 
 /**
@@ -5537,6 +5509,10 @@ function getTotalLevelHitPoints(gains: CharacterLevelHitPoints[]): number {
  * текущие хиты растут на его сумму. Номер уровня в записи — общий уровень
  * персонажа после взятия, класс — чей это уровень.
  *
+ * Потолка у текущих хитов здесь нет: итоговый максимум выше записанного на
+ * прибавки, и знает его только лист целиком — обрезает
+ * {@link withSettledCurrentHitPoints}.
+ *
  * @param health здоровье персонажа.
  * @param previousLevel общий уровень до повышения.
  * @param gains прирост максимума хитов за каждый взятый уровень по порядку.
@@ -5557,12 +5533,10 @@ export function applyLevelHitPoints(
 
   const total = getTotalLevelHitPoints(addedGains);
 
-  const max = health.max + total;
-
   return {
     ...health,
-    max,
-    current: clamp(health.current + total, 0, max),
+    max: health.max + total,
+    current: Math.max(0, health.current + total),
     levelGains,
   };
 }
@@ -5616,8 +5590,10 @@ export function getLevelHitPointsLoss(
 
 /**
  * Снятие хитов за снимаемые уровни классов: максимум уменьшается на записанный
- * за них прирост, записи удаляются, текущие хиты обрезаются новым максимумом.
- * Уровни без записи максимум не двигают.
+ * за них прирост, записи удаляются. Уровни без записи максимум не двигают.
+ *
+ * Текущие хиты здесь не трогаются: обрезать их нужно итоговым максимумом, а не
+ * записанным, — это делает {@link withSettledCurrentHitPoints}.
  *
  * @param health здоровье персонажа.
  * @param removedByClass сколько уровней снимается у каждого класса.
@@ -5637,12 +5613,9 @@ export function removeLevelHitPoints(
 
   const loss = getTotalLevelHitPoints([...removed]);
 
-  const max = Math.max(0, health.max - loss);
-
   return {
     ...health,
-    max,
-    current: clamp(health.current, 0, max),
+    max: Math.max(0, health.max - loss),
     levelGains,
   };
 }
@@ -5689,6 +5662,9 @@ export function shiftClassHitDice(
  * максимум и текущие хиты на разницу, умноженную на уровень. Незаполненное
  * здоровье (нулевой максимум) не трогается — прибавлять не к чему.
  *
+ * Потолок текущих хитов ставит {@link withSettledCurrentHitPoints}: итоговый
+ * максимум выше записанного на прибавки, и здесь он неизвестен.
+ *
  * @param health здоровье персонажа.
  * @param level уровень персонажа.
  * @param previousScore прежнее значение Телосложения.
@@ -5709,12 +5685,10 @@ export function adjustHealthForConstitution(
     return health;
   }
 
-  const max = Math.max(HIT_POINTS_LEVEL_GAIN_MIN, health.max + delta);
-
   return {
     ...health,
-    max,
-    current: clamp(health.current + delta, 0, max),
+    max: Math.max(HIT_POINTS_LEVEL_GAIN_MIN, health.max + delta),
+    current: Math.max(0, health.current + delta),
     // Модификатор входит в прирост каждого уровня, поэтому записи двигаются
     // вместе с максимумом: иначе снижение уровня вернуло бы устаревшую сумму.
     levelGains: health.levelGains.map((gain) => ({
@@ -5831,6 +5805,59 @@ export function getMaxHitPointsHint(character: Character): string | null {
   return getMaxHitPointsBreakdown(character)
     .map((part) => `${part.label} ${part.formattedValue}`)
     .join(' · ');
+}
+
+/**
+ * Прибавка к записанному максимуму хитов: всё, что итоговый максимум набирает
+ * сверх него, — поправка на итоговое Телосложение и адресные бонусы.
+ *
+ * @param character персонаж.
+ * @returns разница между итоговым и записанным максимумом хитов.
+ */
+function getMaxHitPointsBonus(character: Character): number {
+  return getMaxHitPoints(character) - character.health.max;
+}
+
+/**
+ * Доведение текущих хитов до итогового максимума после изменения листа.
+ *
+ * Записанный максимум двигают сами операции (уровень, черта, правка
+ * Телосложения), и текущие хиты идут за ним там же. Но итоговый максимум выше
+ * записанного на прибавки, а они меняются вместе с листом: повышение
+ * характеристик поднимает Телосложение эффектом, новый уровень добавляет
+ * прибавке ещё один хит. Здесь текущие хиты сдвигаются на изменение этой
+ * прибавки и обрезаются итоговым максимумом — иначе здоровый персонаж терял бы
+ * хиты на каждом повышении уровня.
+ *
+ * Незаполненное здоровье (нулевой максимум) не трогается — как и в
+ * {@link getMaxHitPoints}.
+ *
+ * @param next лист после изменения.
+ * @param previous лист до изменения.
+ * @returns лист с текущими хитами в пределах итогового максимума.
+ */
+export function withSettledCurrentHitPoints(
+  next: Character,
+  previous: Character,
+): Character {
+  if (next.health.max <= 0) {
+    return next;
+  }
+
+  const bonusDelta =
+    getMaxHitPointsBonus(next) - getMaxHitPointsBonus(previous);
+
+  const current = clamp(
+    next.health.current + bonusDelta,
+    0,
+    getMaxHitPoints(next),
+  );
+
+  if (current === next.health.current) {
+    return next;
+  }
+
+  return { ...next, health: { ...next.health, current } };
 }
 
 /**
@@ -10404,9 +10431,13 @@ function applyFeatHitPoints(
     return health;
   }
 
-  const max = Math.max(0, health.max + delta);
-
-  return { ...health, max, current: clamp(health.current + delta, 0, max) };
+  // Потолок текущих хитов — итоговый максимум, а он известен только листу
+  // целиком: обрезает `withSettledCurrentHitPoints`.
+  return {
+    ...health,
+    max: Math.max(0, health.max + delta),
+    current: Math.max(0, health.current + delta),
+  };
 }
 
 /**
@@ -11121,22 +11152,26 @@ function withFeatProficiencyGrants(
  * Свои бонусы инициативы и записи журнала выдач пересобираются целиком — эти
  * части сверки идемпотентны.
  *
+ * Текущие хиты доводятся последним шагом: и уровень, и особенности меняют
+ * прибавку к максимуму хитов (повышение характеристик поднимает Телосложение
+ * эффектом), поэтому лист «до» нужен целиком.
+ *
  * Вызывать нужно везде, где меняется список особенностей или уровень.
  *
  * @param next лист после изменения.
- * @param previous особенности и уровень до изменения.
+ * @param previous лист до изменения.
  * @returns лист с согласованной прибавкой черт.
  */
 export function withFeatModifiers(
   next: Character,
-  previous: Pick<Character, 'features' | 'level'>,
+  previous: Character,
 ): Character {
   const proficiencyGrants = withFeatProficiencyGrants(
     next.proficiencyGrants,
     next.features,
   );
 
-  return {
+  const withModifiers: Character = {
     ...next,
     abilities: applyFeatAbilityIncreases(next.abilities, previous, next),
     health: applyFeatHitPoints(next.health, previous, next),
@@ -11167,6 +11202,8 @@ export function withFeatModifiers(
     ),
     classResources: withFeatResources(next.classResources, next.features, next),
   };
+
+  return withSettledCurrentHitPoints(withModifiers, previous);
 }
 
 /**

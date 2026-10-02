@@ -14,11 +14,23 @@
  * - `source.creatureType === "fiend, undead"` — спасбросок вызвало исчадие или
  *   нежить.
  *
+ * Список может быть не записан заранее, а взят из выбора владельца эффекта:
+ * `target.creatureType === "@choice.monster-manual"` — типы, выбранные в
+ * «Гримуаре монстров». Токен подставляет лист владельца в VTTG; пока он не
+ * подставлен, условие не выполняется.
+ *
  * Одиночный тип (`=== "undead"`) — тот же список из одного.
  *
  * Зеркало: dnd5-test-migrate/src/engine/creatureTypeCondition.ts
  */
 
+import {
+  CONDITION_LIST_SEPARATOR,
+  readChoiceKey,
+  splitConditionList,
+  stripListQuotes,
+  writeChoiceToken,
+} from './conditionSyntax';
 import { isEffectCreatureCategory } from './constants';
 
 /** О ком условие: носитель, цель броска, атакующий у защиты, источник спасброска. */
@@ -39,6 +51,11 @@ export interface CreatureTypeCondition {
   types: string[];
   /** «Не из списка». */
   negate: boolean;
+  /**
+   * Ключ выбора владельца, из которого берётся список (токен `@choice.` с
+   * ключом). Задан — список ещё не подставлен, и типов в условии нет.
+   */
+  choiceKey?: string;
 }
 
 /** Субъект условия по типу вместе с самим условием. */
@@ -50,16 +67,13 @@ export interface SubjectCreatureTypeCondition {
 }
 
 /** Разделитель типов внутри кавычек — общий для всего словаря условий. */
-export const CREATURE_TYPE_LIST_SEPARATOR = ',';
+export const CREATURE_TYPE_LIST_SEPARATOR = CONDITION_LIST_SEPARATOR;
 
 /** Оператор «из списка». */
 const IN_OPERATOR = '===';
 
 /** Оператор «не из списка». */
 const NOT_IN_OPERATOR = '!==';
-
-/** Кавычки вокруг списка. */
-const QUOTES_PATTERN = /^["']|["']$/g;
 
 /**
  * Типы списка из значения: `"undead, fiend"` без кавычек. Пустые места
@@ -69,10 +83,7 @@ const QUOTES_PATTERN = /^["']|["']$/g;
  * @returns ключи типов по порядку.
  */
 export function splitCreatureTypeList(listText: string | undefined): string[] {
-  return (listText ?? '')
-    .split(CREATURE_TYPE_LIST_SEPARATOR)
-    .map((creatureType) => creatureType.trim())
-    .filter((creatureType) => creatureType.length > 0);
+  return splitConditionList(listText ?? '');
 }
 
 /**
@@ -124,11 +135,16 @@ function parseSubjectCondition(
     return undefined;
   }
 
-  const listText = operatorAndList
-    .slice(operator.length)
-    .trim()
-    .replace(QUOTES_PATTERN, '')
-    .toLowerCase();
+  const quotedList = stripListQuotes(operatorAndList.slice(operator.length));
+  const negate = operator === NOT_IN_OPERATOR;
+  const choiceKey = readChoiceKey(quotedList);
+
+  // Список — выбор владельца, который лист ещё не подставил
+  if (choiceKey !== undefined) {
+    return { types: [], negate, choiceKey };
+  }
+
+  const listText = quotedList.toLowerCase();
 
   // Незнакомый тип делает непонятым всё условие: молча выкинутый тип сузил
   // бы список, и условие срабатывало бы не там, где задумано
@@ -136,10 +152,7 @@ function parseSubjectCondition(
     return undefined;
   }
 
-  return {
-    types: [...new Set(splitCreatureTypeList(listText))],
-    negate: operator === NOT_IN_OPERATOR,
-  };
+  return { types: [...new Set(splitCreatureTypeList(listText))], negate };
 }
 
 /**
@@ -175,7 +188,24 @@ export function writeCreatureTypeCondition(
 ): string {
   const operator = condition.negate ? NOT_IN_OPERATOR : IN_OPERATOR;
 
-  return `${subject} ${operator} "${joinCreatureTypeList(condition.types)}"`;
+  const listText = condition.choiceKey
+    ? writeChoiceToken(condition.choiceKey)
+    : joinCreatureTypeList(condition.types);
+
+  return `${subject} ${operator} "${listText}"`;
+}
+
+/**
+ * Можно ли записать условие: в нём есть типы или ключ выбора владельца.
+ * Условие без того и другого не разобралось бы обратно.
+ *
+ * @param condition типы, отрицание и ключ выбора.
+ * @returns `true`, если условию есть что сверять.
+ */
+export function isWritableCreatureTypeCondition(
+  condition: CreatureTypeCondition,
+): boolean {
+  return condition.types.length > 0 || Boolean(condition.choiceKey);
 }
 
 /**

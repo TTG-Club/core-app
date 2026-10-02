@@ -17,21 +17,39 @@ import {
  * порт отстал), либо на сайте завелась своя запись, которой VTTG не знает.
  * Меняются числа только вместе с `EFFECT_SYSTEM_VERSION`; какие именно записи
  * разошлись, показывает `node scripts/compare-effect-dictionaries.mjs`.
+ *
  */
 const SYSTEM_DICTIONARY_SIZES = {
-  version: '0.8.139',
-  flags: 206,
-  changeKeys: 64,
-  conditions: 98,
-  values: 35,
+  version: '0.8.157',
+  flags: 228,
+  changeKeys: 68,
+  conditions: 107,
+  values: 51,
 };
 
 /**
- * Подсказки значений, которых нет в списке системы: токен круга ячейки
- * `@castLevel` VTTG понимает в формулах эффектов заклинания, но подсказкой его
- * система не предлагает.
+ * Подсказки значений, которых нет в списке системы. Голый токен круга ячейки
+ * `@castLevel` VTTG понимает в формулах эффектов заклинания, но подсказкой
+ * предлагает только внутри формул («(@castLevel)к10»). Токены потраченного
+ * ценой ресурсом и чисел получателя система называет только в пояснениях к
+ * полям — сайт предлагает их строками библиотеки.
  */
-const SITE_ONLY_VALUE_SUGGESTIONS = ['@castLevel'];
+const SITE_ONLY_VALUE_SUGGESTIONS = [
+  '@castLevel',
+  '@paid.slotLevel',
+  '@paid.hitDice',
+  '@paid.hitDie',
+  '@paid.hitDiceRoll',
+  '@paid.counter',
+  '@paid.itemUses',
+  '(1 + @paid.slotLevel)к8',
+  '@paid.hitDiceRoll * even(@paid.hitDiceRoll)',
+  '@hp.temp',
+  'ceil(@hitDice.left / 2)',
+  '(@tag.pressure)к8',
+  '2к12@dmg.event',
+  '@mod.feat',
+];
 
 describe('словари эффектов', () => {
   it('размеры совпадают с системой, с которой снят порт', () => {
@@ -52,6 +70,14 @@ describe('словари эффектов', () => {
     expect(EFFECT_VALUE_SUGGESTIONS).toHaveLength(
       SYSTEM_DICTIONARY_SIZES.values + SITE_ONLY_VALUE_SUGGESTIONS.length,
     );
+
+    const suggestedValues = EFFECT_VALUE_SUGGESTIONS.map(
+      (suggestion) => suggestion.value,
+    );
+
+    for (const siteValue of SITE_ONLY_VALUE_SUGGESTIONS) {
+      expect(suggestedValues, siteValue).toContain(siteValue);
+    }
   });
 
   it('новые ключи и флаги 0.8.62 на месте', () => {

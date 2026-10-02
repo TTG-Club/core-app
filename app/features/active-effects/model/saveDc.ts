@@ -114,6 +114,10 @@ function mapActionSaveDcs<
     ...(action.recurringSave
       ? { recurringSave: mapSave(action.recurringSave) }
       : {}),
+    // «Вырваться» наложенного состояния — та же Сл источника, что у спасброска
+    ...(action.escape?.check
+      ? { escape: { ...action.escape, check: mapSave(action.escape.check) } }
+      : {}),
     ...('triggers' in action && action.triggers
       ? {
           triggers: action.triggers.map((nestedTrigger) =>
@@ -145,8 +149,9 @@ function mapTriggerSaveDcs<Trigger extends EffectTrigger | NestedEffectTrigger>(
 
 /**
  * Все Сл эффекта одним обходом: при наложении, повторный спасбросок, против
- * урона каждый ход, проверка «вырваться», срабатывания и наложенные ими
- * состояния. Новое поле Сл добавляется сюда — и доходит до записи сразу.
+ * урона каждый ход, проверка «вырваться», спасбросок правила каста,
+ * срабатывания и наложенные ими состояния. Новое поле Сл добавляется сюда — и
+ * доходит до записи сразу.
  *
  * @param effect эффект.
  * @param mapSave что сделать с каждой Сл.
@@ -156,8 +161,14 @@ export function mapEffectSaveDcs(
   effect: ActiveEffect,
   mapSave: SaveDcMapper,
 ): ActiveEffect {
-  const { applySave, recurringSave, recurringDamage, escape, triggers } =
-    effect;
+  const {
+    applySave,
+    recurringSave,
+    recurringDamage,
+    escape,
+    castRule,
+    triggers,
+  } = effect;
 
   return {
     ...effect,
@@ -173,6 +184,10 @@ export function mapEffectSaveDcs(
       : {}),
     ...(escape?.check
       ? { escape: { ...escape, check: mapSave(escape.check) } }
+      : {}),
+    // Спасбросок при попытке каста — Сл наложившего, как у повторного
+    ...(castRule?.failSave
+      ? { castRule: { ...castRule, failSave: mapSave(castRule.failSave) } }
       : {}),
     ...(triggers
       ? {

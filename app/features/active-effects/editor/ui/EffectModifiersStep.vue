@@ -7,6 +7,8 @@
     EffectFormLayout,
   } from '../../model';
 
+  import { InfoTooltip } from '~ui/tooltip';
+
   import {
     ADJACENT_ALLY_CONDITION_LABEL,
     ADJACENT_ALLY_CONDITION_OPTIONS,
@@ -25,6 +27,8 @@
     EFFECT_TARGET_ALLY_ADJACENT_CONDITION,
     findCreatureTypeConditionSubject,
     isAdjacentAllyCondition,
+    isChoiceKey,
+    isWritableCreatureTypeCondition,
     parseCreatureTypeCondition,
     writeActiveEffectStageRows,
     writeCreatureTypeCondition,
@@ -163,8 +167,9 @@
   });
 
   /**
-   * Записывает условие о типе с новыми типами или отрицанием. Пустой список
-   * не пишется: условие без типов не разобралось бы обратно.
+   * Записывает условие о типе с новыми типами, отрицанием или ключом выбора
+   * владельца. Условие без типов и без ключа не пишется: оно не разобралось бы
+   * обратно.
    *
    * @param patch что меняется.
    */
@@ -177,17 +182,45 @@
 
     const nextCondition = { ...currentCondition.condition, ...patch };
 
-    if (nextCondition.types.length > 0) {
+    if (isWritableCreatureTypeCondition(nextCondition)) {
       writeRollCondition(
         writeCreatureTypeCondition(currentCondition.subject, nextCondition),
       );
     }
   }
 
+  // Свой список типов отменяет ссылку на выбор владельца
   const conditionCreatureTypes = computed({
     get: () => creatureTypeCondition.value?.condition.types ?? [],
-    set: (types: string[]) => writeCreatureTypePatch({ types }),
+    set: (types: string[]) =>
+      writeCreatureTypePatch({ types, choiceKey: undefined }),
   });
+
+  // Ключ выбора владельца, из которого берутся типы: «существа из вашего
+  // Гримуара». Пустой ключ возвращает свой список типов; негодный не пишется —
+  // условие с ним не разобралось бы обратно
+  const conditionChoiceKey = computed({
+    get: () => creatureTypeCondition.value?.condition.choiceKey ?? '',
+    set: (enteredKey: string) => {
+      const choiceKey = enteredKey.trim();
+
+      if (choiceKey === '') {
+        writeCreatureTypePatch({
+          types: [DEFAULT_CONDITION_CREATURE_TYPE],
+          choiceKey: undefined,
+        });
+
+        return;
+      }
+
+      if (isChoiceKey(choiceKey)) {
+        writeCreatureTypePatch({ types: [], choiceKey });
+      }
+    },
+  });
+
+  /** Типы берутся из выбора владельца: свой список тогда не выбирается. */
+  const hasConditionChoiceKey = computed(() => conditionChoiceKey.value !== '');
 
   const isCreatureTypeNegated = computed({
     get: () => creatureTypeCondition.value?.condition.negate ?? false,
@@ -328,6 +361,7 @@
           value-key="value"
           label-key="label"
           multiple
+          :disabled="hasConditionChoiceKey"
           class="min-w-56 flex-1"
         />
 
@@ -335,6 +369,18 @@
           v-model="isCreatureTypeNegated"
           :label="EFFECT_MODIFIERS_STEP_LABELS.creatureTypesExcept"
         />
+
+        <InfoTooltip
+          :text="EFFECT_MODIFIERS_STEP_LABELS.creatureTypesChoiceHint"
+          icon="tabler:info-circle-filled"
+        >
+          <UInput
+            v-model="conditionChoiceKey"
+            :placeholder="EFFECT_MODIFIERS_STEP_LABELS.creatureTypesChoice"
+            size="sm"
+            class="w-56 font-mono"
+          />
+        </InfoTooltip>
       </div>
     </template>
 

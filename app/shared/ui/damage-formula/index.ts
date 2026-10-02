@@ -1,4 +1,5 @@
 export * from './constants';
+export * from './creature-type';
 export { default as DamageFormulaInput } from './DamageFormulaInput.vue';
 export { default as DamagePartRow } from './DamagePartRow.vue';
 export { default as DamageParts } from './DamageParts.vue';
