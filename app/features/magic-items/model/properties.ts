@@ -43,15 +43,18 @@ export interface MagicItemPropertyRow {
 
 /** Бросок дополнительного урона и те, кому он достаётся. */
 interface ExtraDamageCaption {
-  /** Урон словами: «2к6 Излучение». */
+  /** Урон словами: «2к6 излучение». */
   damageLabel: string;
   /** Ключи типов существ; пусто — урон достаётся любой цели. */
   creatureTypes: Array<string>;
 }
 
 /**
- * Часть урона в читаемом виде: «2к6 Огненный». Формулу сложнее простых костей
+ * Часть урона в читаемом виде: «2к6 огненный». Формулу сложнее простых костей
  * разобрать нельзя — такую показываем как есть, чтобы не потерять её вовсе.
+ *
+ * Тип урона — со строчной: это нарицательное слово в середине строки, а не
+ * название. Справочник хранит его с прописной для списков и заголовков.
  *
  * @param formula формула части урона.
  * @returns подпись части урона.
@@ -66,7 +69,9 @@ function formatDamagePart(formula: string): string {
   const notation = `${dice.diceCount}${DAMAGE_FORMULA_DICE_SYMBOL}${dice.diceFaces}`;
   const bonus = dice.bonus === 0 ? '' : getFormattedBonus(dice.bonus);
 
-  return [`${notation}${bonus}`, DAMAGE_TYPE_LABELS[dice.type] ?? '']
+  const damageTypeLabel = DAMAGE_TYPE_LABELS[dice.type] ?? '';
+
+  return [`${notation}${bonus}`, damageTypeLabel.toLowerCase()]
     .filter(Boolean)
     .join(' ');
 }
@@ -144,7 +149,7 @@ function mergeExtraDamageCaptions(
 }
 
 /**
- * Строки дополнительного урона: «2к6 Излучение — по исчадиям и нежити».
+ * Строки дополнительного урона: «2к6 излучение – по исчадиям и нежити».
  *
  * @param formulas формулы частей урона.
  * @returns по строке на каждый разный бросок.
@@ -162,8 +167,9 @@ function getExtraDamageLines(formulas: Array<string>): Array<string> {
 }
 
 /**
- * Основной урон немагической основы: «1к6 Дробящий (Булава)», у универсального
- * оружия — «1к8 Рубящий, двумя руками 1к10 Рубящий (Длинный меч)».
+ * Основной урон немагической основы: «1к6 дробящий (булава)», у универсального
+ * оружия — «1к8 рубящий, двумя руками 1к10 рубящий (длинный меч)». Название
+ * основы — со строчной: «булава» здесь вид оружия, а не имя предмета.
  *
  * @param baseWeapon урон основы.
  * @returns значение строки основного урона.
@@ -181,7 +187,7 @@ function formatBaseWeaponDamage(baseWeapon: MagicItemBaseWeapon): string {
     .join(MAGIC_ITEM_PROPERTY_PHRASES.listJoiner);
 
   return baseWeapon.name
-    ? `${damageLabel}${MAGIC_ITEM_PROPERTY_PHRASES.baseNamePrefix}${baseWeapon.name}${MAGIC_ITEM_PROPERTY_PHRASES.baseNameSuffix}`
+    ? `${damageLabel}${MAGIC_ITEM_PROPERTY_PHRASES.baseNamePrefix}${baseWeapon.name.toLowerCase()}${MAGIC_ITEM_PROPERTY_PHRASES.baseNameSuffix}`
     : damageLabel;
 }
 

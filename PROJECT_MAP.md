@@ -471,7 +471,7 @@ modals), so its capabilities are listed here rather than squeezed into the table
   нежити» (`~ui/damage-formula/creature-type.ts`), and parts that differ only by
   creature type merge into one line — it is one roll, not two. A weapon (attack
   or damage bonus, or extra damage) also gets a leading «Основной урон» row with
-  the mundane base's dice («1к6 Дробящий (Булава)»): the public detail carries
+  the mundane base's dice («1к6 дробящий (булава)»): the public detail carries
   no base, so `model/base-weapon.ts` reads the linked items from the section's
   `/raw` answer and the dice from the base item's `/raw` — only when the link is
   exactly one; the workshop preview passes the form's `items` instead.

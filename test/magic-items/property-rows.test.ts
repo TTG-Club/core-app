@@ -142,7 +142,7 @@ describe('строки блока свойств магического пред
 
     expect(
       findPropertyLines(magicItem, MAGIC_ITEM_PROPERTY_LABELS.extraDamage),
-    ).toEqual(['2к6 Излучение — по исчадиям и нежити']);
+    ).toEqual(['2к6 излучение – по исчадиям и нежити']);
   });
 
   it('урон по любой цели не склеивает и условием не подписывает', () => {
@@ -150,7 +150,7 @@ describe('строки блока свойств магического пред
 
     expect(
       findPropertyLines(magicItem, MAGIC_ITEM_PROPERTY_LABELS.extraDamage),
-    ).toEqual(['2к6 Огненный', '2к6 Огненный']);
+    ).toEqual(['2к6 огненный', '2к6 огненный']);
   });
 
   it('разный урон по типам существ оставляет разными строками', () => {
@@ -161,7 +161,7 @@ describe('строки блока свойств магического пред
 
     expect(
       findPropertyLines(magicItem, MAGIC_ITEM_PROPERTY_LABELS.extraDamage),
-    ).toEqual(['2к6 Излучение — по нежити', '1к6 Огненный — по растениям']);
+    ).toEqual(['2к6 излучение – по нежити', '1к6 огненный – по растениям']);
   });
 
   it('первой строкой показывает основной урон немагической основы', () => {
@@ -175,7 +175,7 @@ describe('строки блока свойств магического пред
     expect(firstRow).toEqual({
       key: 'baseDamage',
       label: MAGIC_ITEM_PROPERTY_LABELS.baseDamage,
-      lines: ['1к6 Дробящий (Булава)'],
+      lines: ['1к6 дробящий (булава)'],
     });
   });
 
@@ -188,7 +188,7 @@ describe('строки блока свойств магического пред
         MAGIC_ITEM_PROPERTY_LABELS.baseDamage,
         LONGSWORD_RAW_RESPONSE,
       ),
-    ).toEqual(['1к8 Рубящий, двумя руками 1к10 Рубящий (Длинный меч)']);
+    ).toEqual(['1к8 рубящий, двумя руками 1к10 рубящий (длинный меч)']);
   });
 
   it('без основы строки основного урона нет', () => {
