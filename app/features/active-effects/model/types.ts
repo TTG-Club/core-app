@@ -19,7 +19,11 @@ import type {
   WEAPON_DAMAGE_TYPE_KEY,
 } from './constants';
 import type { EffectPaid, EffectPay } from './pay';
-import type { EffectActionCostSettings, EffectTrigger } from './triggerTypes';
+import type {
+  EffectActionCostSettings,
+  EffectAreaChoice,
+  EffectTrigger,
+} from './triggerTypes';
 
 /** Характеристика D&D 5e (полное имя — словарь VTTG). */
 export type EffectAbility =
@@ -712,6 +716,12 @@ export interface ActiveEffect {
   aura?: EffectAura;
   /** Триггер для эффектов области/ауры. */
   areaTrigger?: EffectAreaTrigger;
+  /**
+   * «На выбор из тех, кто в области»: кого из накрытых шаблоном задевает
+   * применение. Правило одно на заклинание, действие существа или применение
+   * с областью; нет — задеты все, кого накрыл шаблон.
+   */
+  areaChoice?: EffectAreaChoice;
   /** Куда доставляется эффект (`self` по умолчанию). */
   effectTarget?: EffectTarget;
   /** Ключ стандартного состояния D&D 5e, если эффект его представляет. */

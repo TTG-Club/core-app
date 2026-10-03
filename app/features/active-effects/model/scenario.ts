@@ -34,6 +34,7 @@ import {
 } from './constants';
 import { findEffectConditionTemplate } from './create';
 import {
+  describeAreaChoice,
   describeConditionName,
   describeEffectChange,
   describeEffectChangeCondition,
@@ -436,11 +437,19 @@ export function describeEffectScenario(
 
   const pay = layout.showPay ? describeEffectPayClause(effect.pay) : '';
 
+  const areaChoiceText = layout.showAreaChoice
+    ? describeAreaChoice(effect.areaChoice)
+    : '';
+
+  const areaChoice = areaChoiceText
+    ? `${EFFECT_PHRASE_PARTS.listJoiner}${areaChoiceText}`
+    : '';
+
   const rollCondition = effect.rollCondition
     ? `${EFFECT_SCENARIO_LABELS.rollConditionPrefix}${describeEffectChangeCondition(effect.rollCondition).toLowerCase()}`
     : '';
 
-  const moment = `${variant}${describeMoment(effect, layout)}${counter}${pay}${landingCondition}${rollCondition}`;
+  const moment = `${variant}${describeMoment(effect, layout)}${counter}${pay}${areaChoice}${landingCondition}${rollCondition}`;
 
   const lasting = describeLastingPayload(effect, layout);
 

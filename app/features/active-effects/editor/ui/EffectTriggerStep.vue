@@ -3,6 +3,7 @@
     ActiveEffect,
     EffectActivation,
     EffectActivationCostChoice,
+    EffectAreaChoice,
     EffectAura,
     EffectAuraTarget,
     EffectFormLayout,
@@ -48,13 +49,15 @@
     writeEffectAreaTrigger,
     writeEffectDelivery,
   } from '../../model';
+  import EffectAreaChoiceFields from './EffectAreaChoiceFields.vue';
   import EffectPayFields from './EffectPayFields.vue';
   import EffectTriggerConditionPicker from './EffectTriggerConditionPicker.vue';
   import EffectUseAreaFields from './EffectUseAreaFields.vue';
 
   /**
    * Шаг «Когда срабатывает»: постоянно ли действует эффект или его применяют
-   * (чем за это платят ходом и ресурсом, по какой области), на кого он
+   * (чем за это платят ходом и ресурсом, по какой области и кого в ней
+   * выбирает применивший), на кого он
    * ложится (носитель, цель, аура, зона), момент срабатывания зоны или ауры,
    * настройки ауры, условие наложения и вариант.
    */
@@ -176,6 +179,13 @@
     get: () => effect.value.pay,
     set: (nextPay: EffectPay | undefined) => {
       effect.value = { ...effect.value, pay: nextPay };
+    },
+  });
+
+  const areaChoice = computed({
+    get: () => effect.value.areaChoice,
+    set: (nextAreaChoice: EffectAreaChoice | undefined) => {
+      effect.value = { ...effect.value, areaChoice: nextAreaChoice };
     },
   });
 
@@ -509,6 +519,12 @@
     v-if="layout.showPay"
     v-model="pay"
     :hint="EFFECT_PAY_FIELD_LABELS.hintEffect"
+  />
+
+  <!-- Выбор целей из накрытых областью: там, где применение ставит шаблон -->
+  <EffectAreaChoiceFields
+    v-if="layout.showAreaChoice"
+    v-model="areaChoice"
   />
 
   <div

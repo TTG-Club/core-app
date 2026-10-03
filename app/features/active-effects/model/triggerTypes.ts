@@ -333,6 +333,61 @@ export const MAX_TRIGGER_CHOICE_COUNT = 99;
 export const MIN_TRIGGER_CHOICE_COUNT = 1;
 
 /**
+ * Как выбирают из тех, кого накрыла область: `all` — выбора нет, правило
+ * только отсеивает; `upTo` — до N, можно никого; `exactly` — ровно N
+ * (накрытых меньше — все они).
+ */
+export const AREA_CHOICE_MODES = ['all', 'upTo', 'exactly'] as const;
+
+/** Режим выбора из области. */
+export type AreaChoiceMode = (typeof AREA_CHOICE_MODES)[number];
+
+/**
+ * Кого задеть, если применивший выбор не сделал (закрыл окно выбора): никого
+ * или всех, кого правило допускает.
+ */
+export const AREA_CHOICE_FALLBACKS = ['none', 'all'] as const;
+
+/** Что делать без выбора. */
+export type AreaChoiceFallback = (typeof AREA_CHOICE_FALLBACKS)[number];
+
+/** Без поля `fallback`: закрытое окно выбора никого не задевает. */
+export const DEFAULT_AREA_CHOICE_FALLBACK: AreaChoiceFallback = 'none';
+
+/**
+ * Без поля `target`: все в области вместе с применившим — как у области без
+ * правила выбора.
+ */
+export const DEFAULT_AREA_CHOICE_TARGET: EffectTriggerAreaTarget =
+  'allWithSelf';
+
+/** Наибольшая длина формулы предела выбора из области. */
+export const MAX_AREA_CHOICE_FORMULA_LENGTH = 200;
+
+/**
+ * «На выбор из тех, кто в области»: кого из накрытых шаблоном задевает
+ * применение («Замедление»: до шести существ на выбор в кубе). Поле эффекта:
+ * одно правило на применение, его несёт любой эффект заклинания, действия
+ * существа или применения умения и предмета с областью. Нет правила — задеты
+ * все, кого накрыл шаблон.
+ *
+ * Зеркало: dnd5-test-migrate/src/engine/effectTriggerTypes.ts
+ */
+export interface EffectAreaChoice {
+  /**
+   * Сколько можно отметить: целое число либо формула от чисел применившего
+   * (`@castLevel + 1`, `@mod.cha`). Нет — без предела.
+   */
+  count?: number | string;
+  /** Как выбирают; нет — `upTo` у правила с числом и `all` без числа. */
+  mode?: AreaChoiceMode;
+  /** Кого можно выбрать; нет — всех в области вместе с применившим. */
+  target?: EffectTriggerAreaTarget;
+  /** Кого задеть, если выбор не сделан; нет — никого. */
+  fallback?: AreaChoiceFallback;
+}
+
+/**
  * «По выбору»: кандидаты и сколько из них задеть.
  *
  * Кандидаты отбираются так же, как «всем в радиусе» (радиус от фишки субъекта и

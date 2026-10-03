@@ -27,6 +27,8 @@ import type {
   TriggerConditionParameter,
 } from './triggerConditions';
 import type {
+  AreaChoiceFallback,
+  AreaChoiceMode,
   EffectActionCost,
   EffectCastOwner,
   EffectNotifyTarget,
@@ -77,6 +79,9 @@ import {
   EFFECT_ACTION_COST_LABELS,
   EFFECT_ACTION_SAVE_OUTCOME_OPTIONS,
   EFFECT_ACTIVATION_CHOICE_LABELS,
+  EFFECT_AREA_CHOICE_FALLBACK_LABELS,
+  EFFECT_AREA_CHOICE_MODE_LABELS,
+  EFFECT_AREA_CHOICE_TARGET_LABELS,
   EFFECT_AURA_AREA_TRIGGER_LABELS,
   EFFECT_AURA_TARGET_LABELS,
   EFFECT_CARRIER_DELIVERY_LABELS,
@@ -160,6 +165,9 @@ import { EFFECT_PRICE_KINDS } from './pay';
 import { TRIGGER_ATTACK_KINDS } from './triggerConditions';
 import { triggerEventHasPathFeet } from './triggers';
 import {
+  AREA_CHOICE_FALLBACKS,
+  AREA_CHOICE_MODES,
+  DEFAULT_AREA_CHOICE_TARGET,
   DEFAULT_TRIGGER_ATTACK_ROLE,
   EFFECT_ACTION_COSTS,
   EFFECT_CAST_OWNERS,
@@ -558,6 +566,42 @@ export const EFFECT_TRIGGER_AREA_TARGET_OPTIONS: Array<
   { value: 'alliesWithSelf', label: EFFECT_TRIGGER_AREA_LABELS.alliesWithSelf },
   { value: 'allWithSelf', label: EFFECT_TRIGGER_AREA_LABELS.allWithSelf },
 ];
+
+/** Как выбирают из тех, кто в области: «задеты все» первым. */
+export const EFFECT_AREA_CHOICE_MODE_OPTIONS: Array<
+  EffectSegmentOption<AreaChoiceMode>
+> = AREA_CHOICE_MODES.map((mode) => ({
+  value: mode,
+  label: EFFECT_AREA_CHOICE_MODE_LABELS[mode],
+}));
+
+/** Порядок «кого можно выбрать»: умолчание первым. */
+const AREA_CHOICE_TARGET_ORDER: readonly EffectTriggerAreaTarget[] = [
+  DEFAULT_AREA_CHOICE_TARGET,
+  'all',
+  'allies',
+  'enemies',
+  'alliesWithSelf',
+];
+
+/**
+ * Кого правило выбора допускает. Отдельные подписи от «всем в радиусе»: здесь
+ * отношение считается от применившего, а не от носителя эффекта.
+ */
+export const EFFECT_AREA_CHOICE_TARGET_OPTIONS: Array<
+  EffectSegmentOption<EffectTriggerAreaTarget>
+> = AREA_CHOICE_TARGET_ORDER.map((target) => ({
+  value: target,
+  label: EFFECT_AREA_CHOICE_TARGET_LABELS[target],
+}));
+
+/** Кого задеть, если выбор не сделан: «никого» первым. */
+export const EFFECT_AREA_CHOICE_FALLBACK_OPTIONS: Array<
+  EffectSegmentOption<AreaChoiceFallback>
+> = AREA_CHOICE_FALLBACKS.map((fallback) => ({
+  value: fallback,
+  label: EFFECT_AREA_CHOICE_FALLBACK_LABELS[fallback],
+}));
 
 /** Варианты периода шага строки модификатора. */
 export const EFFECT_CHANGE_STEP_PER_OPTIONS: Array<

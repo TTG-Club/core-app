@@ -24,7 +24,7 @@
   // Источник задаёт редактор-хозяин: он же и знает, чем эффект выдан.
   const {
     context,
-    zoneAvailable = undefined,
+    areaAvailable = undefined,
     applierSaveDc = undefined,
     origin = EFFECT_ORIGIN.spell,
     newEffectActivation = undefined,
@@ -39,10 +39,11 @@
     context: EffectFormContext;
 
     /**
-     * Есть ли у заклинания область — где появиться зоне на месте шаблона.
-     * Передаёт только редактор заклинания; не задано — зона не прячется.
+     * Есть ли у заклинания или действия существа область — где появиться зоне
+     * на месте шаблона и из кого выбирать цели. Передают редакторы заклинания
+     * и действия существа; не задано — ничего не прячется.
      */
-    zoneAvailable?: boolean;
+    areaAvailable?: boolean;
 
     /**
      * Сл источника для «Авто» у полей Сл: у действия существа — Сл самого
@@ -121,7 +122,7 @@
 
       const inertCount = listInertEffectFields(
         upgradedEffect,
-        resolveEffectFormLayout(context, upgradedEffect, { zoneAvailable }),
+        resolveEffectFormLayout(context, upgradedEffect, { areaAvailable }),
       ).length;
 
       return {
@@ -293,7 +294,7 @@
           <ActiveEffectItem
             :model-value="effectRow.effect"
             :context="context"
-            :zone-available="zoneAvailable"
+            :area-available="areaAvailable"
             :applier-save-dc="applierSaveDc"
             @update:model-value="updateEffect(index, $event)"
           />

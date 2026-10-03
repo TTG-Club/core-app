@@ -1,3 +1,4 @@
+export * from './areaChoice';
 export * from './automation';
 export * from './castRule';
 export * from './changeDice';

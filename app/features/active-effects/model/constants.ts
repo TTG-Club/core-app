@@ -36,6 +36,8 @@ import type {
   TriggerConditionParameter,
 } from './triggerConditions';
 import type {
+  AreaChoiceFallback,
+  AreaChoiceMode,
   EffectActionCost,
   EffectCastOwner,
   EffectNotifyTarget,
@@ -3573,6 +3575,82 @@ export const EFFECT_ACTIVATION_EXTRA_LABELS = {
     + 'концентрация кончается, а с концом этой снимается всё наложенное.',
 } as const;
 
+/** Подписи блока «на выбор из тех, кто в области». */
+export const EFFECT_AREA_CHOICE_LABELS = {
+  mode: 'Выбор целей в области',
+  modeHint:
+    'Кого из накрытых областью задевает применение: всех либо только тех, '
+    + 'кого отметит применивший («до шести существ на ваш выбор в кубе»). '
+    + 'Правило одно на заклинание, действие или применение — его достаточно '
+    + 'задать у одного эффекта. Мёртвых область не задевает и без правила.',
+  count: 'Сколько существ в области выбирает применивший',
+  countHint:
+    'Целое число от 1 до 99 либо формула от чисел применившего: '
+    + '«@castLevel + 1», «@mod.cha». Пустое поле — сколько угодно.',
+  countPlaceholder: 'Сколько угодно',
+  target: 'Кого можно выбрать',
+  targetWithoutChoice: 'Кого задевает область',
+  targetHint:
+    'Союзники и враги считаются от применившего по фишкам на сцене: '
+    + 'персонажи друг другу союзники, существа из бестиария — враги.',
+  fallback: 'Что делать, если выбор не сделан',
+  fallbackHint: 'Применивший закрыл окно выбора, никого не отметив.',
+} as const;
+
+/** Как выбирают из тех, кто в области. */
+export const EFFECT_AREA_CHOICE_MODE_LABELS: Record<AreaChoiceMode, string> = {
+  all: 'Не выбирает — задеты все',
+  upTo: 'До указанного числа, можно никого',
+  exactly: 'Ровно указанное число',
+};
+
+/** Кого правило выбора допускает. */
+export const EFFECT_AREA_CHOICE_TARGET_LABELS: Record<
+  EffectTriggerAreaTarget,
+  string
+> = {
+  allWithSelf: 'Всех в области, включая применившего',
+  all: 'Всех, кроме применившего',
+  allies: 'Только союзников',
+  enemies: 'Только врагов',
+  alliesWithSelf: 'Союзников и применившего',
+};
+
+/** Кого задеть, если выбор не сделан. */
+export const EFFECT_AREA_CHOICE_FALLBACK_LABELS: Record<
+  AreaChoiceFallback,
+  string
+> = {
+  none: 'Никого не задевать',
+  all: 'Задеть всех, кого можно выбрать',
+};
+
+/** Кого правило выбора допускает — в фразе. */
+export const EFFECT_AREA_CHOICE_TARGET_PHRASES: Record<
+  EffectTriggerAreaTarget,
+  string
+> = {
+  allWithSelf: 'все в области',
+  all: 'все, кроме применившего',
+  allies: 'только союзники',
+  enemies: 'только враги',
+  alliesWithSelf: 'союзники и применивший',
+};
+
+/**
+ * Фразы правила выбора: «применивший выбирает цели в области (до 6; только
+ * враги)», «в области задеты: только враги».
+ */
+export const EFFECT_AREA_CHOICE_PHRASES = {
+  settled: (targetPhrase: string) => `в области задеты: ${targetPhrase}`,
+  chosen: (choiceDetails: string) =>
+    `применивший выбирает цели в области (${choiceDetails})`,
+  upTo: (count: number | string) => `до ${count}`,
+  exactly: (count: number | string) => `ровно ${count}`,
+  unlimited: 'сколько угодно',
+  fallbackAll: 'без выбора — все',
+} as const;
+
 /** Подписи вида цены ресурсом. */
 export const EFFECT_PRICE_KIND_LABELS: Record<EffectPriceKind, string> = {
   counter: 'Счётчик листа',
@@ -3721,6 +3799,7 @@ export const EFFECT_INERT_FIELD_NAMES: Record<InertEffectField, string> = {
   effectTarget: 'на кого накладывается',
   aura: 'аура',
   areaTrigger: 'момент срабатывания',
+  areaChoice: 'выбор целей в области',
   applySave: 'спасбросок',
   successOutcome: 'исход при успехе',
   damageParts: 'урон при срабатывании',

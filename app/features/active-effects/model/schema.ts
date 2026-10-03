@@ -19,7 +19,11 @@
 
 import type { EffectCastRule } from './castRule';
 import type { EffectPaid, EffectPay, EffectPrice } from './pay';
-import type { EffectTrigger, NestedEffectTrigger } from './triggerTypes';
+import type {
+  EffectAreaChoice,
+  EffectTrigger,
+  NestedEffectTrigger,
+} from './triggerTypes';
 import type {
   ActiveEffect,
   EffectAbility,
@@ -43,6 +47,7 @@ import type {
 
 import { z } from 'zod';
 
+import { normalizeDraftAreaChoice } from './areaChoice';
 import {
   CAST_RULE_COMPONENTS,
   MAX_CAST_FAIL_CHANCE,
@@ -68,6 +73,8 @@ import {
 } from './pay';
 import { MAX_SAVE_DC_FORMULA_LENGTH } from './saveDc';
 import {
+  AREA_CHOICE_FALLBACKS,
+  AREA_CHOICE_MODES,
   EFFECT_ACTION_COSTS,
   EFFECT_CAST_OWNERS,
   EFFECT_NOTIFY_TARGETS,
@@ -89,6 +96,7 @@ import {
   EFFECT_TRIGGER_REST_TYPES,
   EFFECT_TRIGGER_SAVE_MODES,
   EFFECT_TRIGGER_TURN_OWNERS,
+  MAX_AREA_CHOICE_FORMULA_LENGTH,
   MAX_EFFECT_MOVE_COST_FEET,
   MAX_NOTIFY_TEXT_LENGTH,
   MAX_SAVE_MODE_RULES,
@@ -1006,6 +1014,33 @@ const castRuleSchema = z
   .optional()
   .catch(undefined);
 
+/**
+ * «На выбор из тех, кто в области». Негодное поле выбрасывается одно, пустое
+ * правило — целиком: эффект с незнакомым значением остаётся рабочим.
+ */
+const areaChoiceSchema = z
+  .object({
+    count: z
+      .union([
+        z
+          .number()
+          .int()
+          .min(MIN_TRIGGER_CHOICE_COUNT)
+          .max(MAX_TRIGGER_CHOICE_COUNT),
+        z.string().trim().min(1).max(MAX_AREA_CHOICE_FORMULA_LENGTH),
+      ])
+      .optional()
+      .catch(undefined),
+    mode: z.enum(AREA_CHOICE_MODES).optional().catch(undefined),
+    target: z.enum(EFFECT_TRIGGER_AREA_TARGETS).optional().catch(undefined),
+    fallback: z.enum(AREA_CHOICE_FALLBACKS).optional().catch(undefined),
+  })
+  .transform((areaChoice): EffectAreaChoice | undefined =>
+    normalizeDraftAreaChoice(areaChoice),
+  )
+  .optional()
+  .catch(undefined);
+
 /** Цвет света `#rrggbb`. */
 const LIGHT_COLOR_PATTERN = /^#[\da-f]{6}$/i;
 
@@ -1086,6 +1121,7 @@ const activeEffectSchema: z.ZodType<ActiveEffect> = z.object({
   flags: flagsSchema,
   aura: auraSchema.optional().catch(undefined),
   areaTrigger: z.enum(['stay', 'enter', 'exit']).optional().catch(undefined),
+  areaChoice: areaChoiceSchema,
   // Незнакомая доставка обнуляет поле, а не отвергает эффект
   effectTarget: z.enum(['self', 'target', 'zone']).optional().catch(undefined),
   conditionKey: conditionKeySchema.optional().catch(undefined),

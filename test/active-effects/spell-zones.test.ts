@@ -93,13 +93,13 @@ describe('форма эффекта заклинания: доставка «з�
     const layout = resolveEffectFormLayout(
       'spell',
       createEffect({ effectTarget: 'target' }),
-      { zoneAvailable: false },
+      { areaAvailable: false },
     );
 
     expect(layout.deliveryOptions).toEqual(['target', 'carrier', 'aura']);
 
     const zoneLayout = resolveEffectFormLayout('spell', MOONBEAM_STAY, {
-      zoneAvailable: false,
+      areaAvailable: false,
     });
 
     expect(listInertEffectFields(MOONBEAM_STAY, zoneLayout)).toEqual([
