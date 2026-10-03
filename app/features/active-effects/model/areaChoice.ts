@@ -62,6 +62,32 @@ export function resolveAreaChoiceMode(
 }
 
 /**
+ * Спрашивают ли применившего: без выбора правило только отсеивает накрытых.
+ *
+ * @param mode режим выбора.
+ * @returns `true`, если применивший отмечает цели сам.
+ */
+export function areaChoiceAsksApplier(mode: AreaChoiceMode): boolean {
+  return mode !== 'all';
+}
+
+/**
+ * Правило без единого поля — его отсутствие: в данных оно не пишется.
+ *
+ * @param areaChoice правило выбора.
+ * @returns правило либо `undefined`.
+ */
+function omitEmptyAreaChoice(
+  areaChoice: EffectAreaChoice,
+): EffectAreaChoice | undefined {
+  const { count, mode, target, fallback } = areaChoice;
+
+  return count === undefined && !mode && !target && !fallback
+    ? undefined
+    : areaChoice;
+}
+
+/**
  * Правило выбора для полей формы: умолчания VTTG подставлены.
  *
  * @param areaChoice правило выбора эффекта.
@@ -89,8 +115,8 @@ export function readAreaChoiceSettings(
 export function toDraftAreaChoice(
   settings: AreaChoiceSettings,
 ): EffectAreaChoice | undefined {
-  const asks = settings.mode !== 'all';
-  const count = asks ? settings.count : undefined;
+  const asksApplier = areaChoiceAsksApplier(settings.mode);
+  const count = asksApplier ? settings.count : undefined;
 
   const mode =
     settings.mode === impliedAreaChoiceMode(count) ? undefined : settings.mode;
@@ -101,13 +127,23 @@ export function toDraftAreaChoice(
       : settings.target;
 
   const fallback =
-    asks && settings.fallback !== DEFAULT_AREA_CHOICE_FALLBACK
+    asksApplier && settings.fallback !== DEFAULT_AREA_CHOICE_FALLBACK
       ? settings.fallback
       : undefined;
 
-  return count === undefined && !mode && !target && !fallback
-    ? undefined
-    : { count, mode, target, fallback };
+  return omitEmptyAreaChoice({ count, mode, target, fallback });
+}
+
+/**
+ * Предел выбора в поле формы: числа нет — поле пустое.
+ *
+ * @param count предел правила.
+ * @returns текст поля.
+ */
+export function toAreaChoiceCountInput(
+  count: EffectAreaChoice['count'],
+): string {
+  return count === undefined ? '' : String(count);
 }
 
 /**
@@ -166,10 +202,8 @@ export function normalizeDraftAreaChoice(
     return undefined;
   }
 
-  const { mode, target, fallback } = areaChoice;
-  const count = normalizeDraftAreaChoiceCount(areaChoice.count);
-
-  return count === undefined && !mode && !target && !fallback
-    ? undefined
-    : { count, mode, target, fallback };
+  return omitEmptyAreaChoice({
+    ...areaChoice,
+    count: normalizeDraftAreaChoiceCount(areaChoice.count),
+  });
 }

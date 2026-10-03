@@ -115,7 +115,7 @@
           activeEffects: normalizeActiveEffects(
             formState.activeEffects,
             EFFECT_FORM_CONTEXT.spell,
-            { zoneAvailable: hasSpellArea(formState.effect) },
+            { areaAvailable: hasSpellArea(formState.effect) },
           ),
         };
       },
@@ -410,7 +410,7 @@
         <ActiveEffects
           v-model="state.activeEffects"
           :context="EFFECT_FORM_CONTEXT.spell"
-          :zone-available="hasArea"
+          :area-available="hasArea"
         />
       </template>
     </UTabs>

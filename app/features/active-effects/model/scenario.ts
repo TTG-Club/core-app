@@ -18,7 +18,6 @@ import type { EffectTrigger } from './triggerTypes';
 import type { ActiveEffect, EffectChange } from './types';
 
 import {
-  EFFECT_AREA_CHOICE_PHRASES,
   EFFECT_AURA_MOMENT_PREFIXES,
   EFFECT_AURA_TARGET_SCENARIO_LABELS,
   EFFECT_CARRIER_MOMENT_LABELS,
@@ -443,7 +442,7 @@ export function describeEffectScenario(
     : '';
 
   const areaChoice = areaChoiceText
-    ? `${EFFECT_AREA_CHOICE_PHRASES.scenarioPrefix}${areaChoiceText}`
+    ? `${EFFECT_PHRASE_PARTS.listJoiner}${areaChoiceText}`
     : '';
 
   const rollCondition = effect.rollCondition

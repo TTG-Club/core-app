@@ -3642,14 +3642,13 @@ export const EFFECT_AREA_CHOICE_TARGET_PHRASES: Record<
  * враги)», «в области задеты: только враги».
  */
 export const EFFECT_AREA_CHOICE_PHRASES = {
-  settled: (target: string) => `в области задеты: ${target}`,
-  chosen: (details: string) =>
-    `применивший выбирает цели в области (${details})`,
+  settled: (targetPhrase: string) => `в области задеты: ${targetPhrase}`,
+  chosen: (choiceDetails: string) =>
+    `применивший выбирает цели в области (${choiceDetails})`,
   upTo: (count: number | string) => `до ${count}`,
   exactly: (count: number | string) => `ровно ${count}`,
   unlimited: 'сколько угодно',
   fallbackAll: 'без выбора — все',
-  scenarioPrefix: ', ',
 } as const;
 
 /** Подписи вида цены ресурсом. */

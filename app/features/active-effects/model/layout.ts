@@ -218,7 +218,7 @@ export interface EffectFormLayoutOptions {
    * шаблона взяться неоткуда и выбирать из накрытых областью некого. Не
    * задано — считается, что есть (форма без этого знания ничего не прячет).
    */
-  zoneAvailable?: boolean;
+  areaAvailable?: boolean;
 }
 
 /** Раскладка формы эффекта для текущего места и настройки. */
@@ -937,7 +937,7 @@ export function resolveEffectFormLayout(
   const contextDeliveries = resolveContextDeliveries(effect, context);
 
   const deliveryOptions =
-    layoutOptions.zoneAvailable === false
+    layoutOptions.areaAvailable === false
     && context !== 'zone'
     && delivery !== 'zone'
       ? contextDeliveries.filter((option) => option !== 'zone')
@@ -1076,11 +1076,11 @@ export function resolveEffectFormLayout(
     minSaveDc: acceptsApplierSaveDc(context, delivery, isUsed)
       ? APPLIER_MIN_SAVE_DC
       : FIXED_MIN_SAVE_DC,
-    zoneAvailable: layoutOptions.zoneAvailable !== false,
+    zoneAvailable: layoutOptions.areaAvailable !== false,
     showAreaChoice:
       isGeneric
       || (AREA_SOURCE_CONTEXTS.has(context)
-        && layoutOptions.zoneAvailable !== false)
+        && layoutOptions.areaAvailable !== false)
       || (isUsed && effect.activation?.area !== undefined)
       || hasTriggerAreaTemplate(effect),
   };

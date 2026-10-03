@@ -10,12 +10,14 @@
   import { InfoTooltip } from '~ui/tooltip';
 
   import {
+    areaChoiceAsksApplier,
     EFFECT_AREA_CHOICE_FALLBACK_OPTIONS,
     EFFECT_AREA_CHOICE_LABELS,
     EFFECT_AREA_CHOICE_MODE_OPTIONS,
     EFFECT_AREA_CHOICE_TARGET_OPTIONS,
     MAX_AREA_CHOICE_FORMULA_LENGTH,
     readAreaChoiceSettings,
+    toAreaChoiceCountInput,
     toDraftAreaChoice,
     toDraftAreaChoiceCount,
   } from '../../model';
@@ -47,7 +49,7 @@
 
   // Число или формула одним полем: одни цифры пишутся числом
   const count = computed({
-    get: () => String(settings.value.count ?? ''),
+    get: () => toAreaChoiceCountInput(settings.value.count),
     set: (enteredCount: string) =>
       updateSettings({ count: toDraftAreaChoiceCount(enteredCount) }),
   });
@@ -65,11 +67,13 @@
   });
 
   /** Число и исход закрытого окна — только когда применивший выбирает. */
-  const asksCaster = computed(() => settings.value.mode !== 'all');
+  const asksApplier = computed(() =>
+    areaChoiceAsksApplier(settings.value.mode),
+  );
 
   /** Без выбора правило только отсеивает: подпись отбора — про область. */
   const targetLabel = computed(() =>
-    asksCaster.value
+    asksApplier.value
       ? EFFECT_AREA_CHOICE_LABELS.target
       : EFFECT_AREA_CHOICE_LABELS.targetWithoutChoice,
   );
@@ -97,7 +101,7 @@
     </UFormField>
 
     <UFormField
-      v-if="asksCaster"
+      v-if="asksApplier"
       class="w-full sm:w-96"
     >
       <template #label>
@@ -138,7 +142,7 @@
     </UFormField>
 
     <UFormField
-      v-if="asksCaster"
+      v-if="asksApplier"
       class="w-full sm:w-72"
     >
       <template #label>

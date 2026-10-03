@@ -45,7 +45,7 @@
    */
   const {
     context,
-    zoneAvailable = undefined,
+    areaAvailable = undefined,
     applierSaveDc = undefined,
   } = defineProps<{
     /** Место формы: задаёт, какие шаги и поля показать. */
@@ -54,7 +54,7 @@
      * Есть ли у заклинания или действия существа область — где появиться зоне
      * на месте шаблона и из кого выбирать цели. Не задано — ничего не прячется.
      */
-    zoneAvailable?: boolean;
+    areaAvailable?: boolean;
     /**
      * Сл источника, которую подставит «Авто» у полей Сл: у действия существа
      * это Сл самого действия из формы. Не задано — видна только подпись.
@@ -75,7 +75,7 @@
   const showPriorityField = ref(false);
 
   const layout = computed(() =>
-    resolveEffectFormLayout(context, effect.value, { zoneAvailable }),
+    resolveEffectFormLayout(context, effect.value, { areaAvailable }),
   );
 
   /**

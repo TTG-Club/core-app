@@ -179,7 +179,7 @@ describe('область заклинания', () => {
     const [savedZoneEffect] = normalizeActiveEffects(
       [zoneEffect],
       EFFECT_FORM_CONTEXT.spell,
-      { zoneAvailable: hasSpellArea(createEmptySpellEffect()) },
+      { areaAvailable: hasSpellArea(createEmptySpellEffect()) },
     );
 
     expect(savedZoneEffect?.effectTarget).toBe('zone');

@@ -20,6 +20,7 @@ import {
   readAreaChoiceSettings,
   resolveAreaChoiceMode,
   resolveEffectFormLayout,
+  toAreaChoiceCountInput,
   toDraftAreaChoice,
   toDraftAreaChoiceCount,
 } from '~active-effects/model';
@@ -52,6 +53,9 @@ const OVER_MAX_CHOICE_COUNT = 150;
 /** Длина формулы больше допустимой. */
 const OVER_MAX_FORMULA_LENGTH = 201;
 
+/** Получателей ставит шаблон: радиуса от носителя нет. */
+const NO_TRIGGER_RADIUS = 0;
+
 /** Размер области применения в тестах, фт. */
 const USE_AREA_SIZE = 20;
 
@@ -71,7 +75,10 @@ const TEMPLATE_ACTION_TRIGGER: EffectTrigger = {
   id: 'trigger_breath',
   event: 'activate',
   recipient: 'area',
-  area: { radius: 0, template: { shape: 'cone', size: USE_AREA_SIZE } },
+  area: {
+    radius: NO_TRIGGER_RADIUS,
+    template: { shape: 'cone', size: USE_AREA_SIZE },
+  },
   actions: [{ type: 'damage', parts: [{ formula: '2d6@dmg.fire' }] }],
 };
 
@@ -209,7 +216,7 @@ describe('сохранение: правило переживает «откры
   });
 
   it('черновик приводится к записи: предел в пределах, формула без пробелов', () => {
-    const [clamped, trimmed, blank] = normalizeActiveEffects(
+    const [clampedEffect, trimmedEffect, blankEffect] = normalizeActiveEffects(
       [
         createEffect({ areaChoice: { count: OVER_MAX_CHOICE_COUNT } }),
         createEffect({ areaChoice: { count: ` ${CAST_LEVEL_FORMULA} ` } }),
@@ -218,9 +225,9 @@ describe('сохранение: правило переживает «откры
       EFFECT_FORM_CONTEXT.spell,
     );
 
-    expect(clamped?.areaChoice?.count).toBe(MAX_CHOICE_COUNT);
-    expect(trimmed?.areaChoice?.count).toBe(CAST_LEVEL_FORMULA);
-    expect(blank?.areaChoice).toBeUndefined();
+    expect(clampedEffect?.areaChoice?.count).toBe(MAX_CHOICE_COUNT);
+    expect(trimmedEffect?.areaChoice?.count).toBe(CAST_LEVEL_FORMULA);
+    expect(blankEffect?.areaChoice).toBeUndefined();
   });
 
   it('форма заклинания отдаёт правило эффекта', () => {
@@ -315,6 +322,9 @@ describe('поля формы: умолчания не пишутся', () => {
     expect(toDraftAreaChoiceCount('6')).toBe(SLOW_CHOICE_COUNT);
     expect(toDraftAreaChoiceCount(CAST_LEVEL_FORMULA)).toBe(CAST_LEVEL_FORMULA);
     expect(toDraftAreaChoiceCount('')).toBeUndefined();
+
+    expect(toAreaChoiceCountInput(SLOW_CHOICE_COUNT)).toBe('6');
+    expect(toAreaChoiceCountInput(undefined)).toBe('');
   });
 });
 
@@ -323,12 +333,12 @@ describe('раскладка: правило видно там, где прим�
     const effect = createEffect({ effectTarget: 'target' });
 
     expect(
-      resolveEffectFormLayout('spell', effect, { zoneAvailable: true })
+      resolveEffectFormLayout('spell', effect, { areaAvailable: true })
         .showAreaChoice,
     ).toBe(true);
 
     expect(
-      resolveEffectFormLayout('spell', effect, { zoneAvailable: false })
+      resolveEffectFormLayout('spell', effect, { areaAvailable: false })
         .showAreaChoice,
     ).toBe(false);
 
@@ -340,13 +350,13 @@ describe('раскладка: правило видно там, где прим�
     const effect = createEffect({ effectTarget: 'target' });
 
     expect(
-      resolveEffectFormLayout('creatureAction', effect, { zoneAvailable: true })
+      resolveEffectFormLayout('creatureAction', effect, { areaAvailable: true })
         .showAreaChoice,
     ).toBe(true);
 
     expect(
       resolveEffectFormLayout('creatureAction', effect, {
-        zoneAvailable: false,
+        areaAvailable: false,
       }).showAreaChoice,
     ).toBe(false);
   });
@@ -417,7 +427,7 @@ describe('раскладка: правило видно там, где прим�
     expect(
       listInertEffectFields(
         effect,
-        resolveEffectFormLayout('spell', effect, { zoneAvailable: false }),
+        resolveEffectFormLayout('spell', effect, { areaAvailable: false }),
       ),
     ).toContain('areaChoice');
   });

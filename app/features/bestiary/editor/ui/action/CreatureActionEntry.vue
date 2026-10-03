@@ -137,7 +137,7 @@
     v-model="model.effect.activeEffects"
     nested
     :context="effectContext"
-    :zone-available="hasArea"
+    :area-available="hasArea"
     :applier-save-dc="actionSaveDc"
     :origin="EFFECT_ORIGIN.feature"
     :title="CREATURE_ACTION_SECTIONS.effects"

@@ -32,7 +32,7 @@ import { upperFirst } from 'es-toolkit';
 
 import { labelDamageFormulaStatusTerms } from '~ui/damage-formula';
 
-import { readAreaChoiceSettings } from './areaChoice';
+import { areaChoiceAsksApplier, readAreaChoiceSettings } from './areaChoice';
 import { isDiceFormulaValue } from './changeDice';
 import { splitQuotedList } from './conditionSyntax';
 import {
@@ -925,7 +925,7 @@ export function describeAreaChoice(
   const hasTarget = target !== DEFAULT_AREA_CHOICE_TARGET;
   const targetPhrase = EFFECT_AREA_CHOICE_TARGET_PHRASES[target];
 
-  if (mode === 'all') {
+  if (!areaChoiceAsksApplier(mode)) {
     return hasTarget ? EFFECT_AREA_CHOICE_PHRASES.settled(targetPhrase) : '';
   }
 
@@ -934,7 +934,7 @@ export function describeAreaChoice(
       ? EFFECT_AREA_CHOICE_PHRASES.exactly
       : EFFECT_AREA_CHOICE_PHRASES.upTo;
 
-  const details = [
+  const choiceDetails = [
     count === undefined
       ? EFFECT_AREA_CHOICE_PHRASES.unlimited
       : limitedPhrase(count),
@@ -944,7 +944,7 @@ export function describeAreaChoice(
       : [EFFECT_AREA_CHOICE_PHRASES.fallbackAll]),
   ].join(EFFECT_PHRASE_PARTS.clauseJoiner);
 
-  return EFFECT_AREA_CHOICE_PHRASES.chosen(details);
+  return EFFECT_AREA_CHOICE_PHRASES.chosen(choiceDetails);
 }
 
 /**

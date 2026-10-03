@@ -130,7 +130,7 @@ describeScenarios('каталог: вопросы человеку', [
     id: 'Q01',
     name: 'Опутывание',
     context: 'spell',
-    layoutOptions: { zoneAvailable: false },
+    layoutOptions: { areaAvailable: false },
     storedEffect: createRawEffect({
       id: 'Опутывание',
       name: 'Опутывание',
