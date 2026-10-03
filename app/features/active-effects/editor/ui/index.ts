@@ -1,6 +1,7 @@
 export { default as ActiveEffectItem } from './ActiveEffectItem.vue';
 export { default as EffectActionCostFields } from './EffectActionCostFields.vue';
 export { default as EffectAdvancedSection } from './EffectAdvancedSection.vue';
+export { default as EffectAreaChoiceFields } from './EffectAreaChoiceFields.vue';
 export { default as EffectCastRuleSection } from './EffectCastRuleSection.vue';
 export { default as EffectChanges } from './EffectChanges.vue';
 export { default as EffectDamageParts } from './EffectDamageParts.vue';

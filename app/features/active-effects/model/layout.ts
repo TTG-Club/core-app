@@ -47,6 +47,7 @@ import type {
 
 import { clamp } from 'es-toolkit';
 
+import { normalizeDraftAreaChoice } from './areaChoice';
 import { hasLastingEffectPayload } from './automation';
 import { normalizeDraftCastRule } from './castRule';
 import {
@@ -193,6 +194,7 @@ export type InertEffectField =
   | 'effectTarget'
   | 'aura'
   | 'areaTrigger'
+  | 'areaChoice'
   | 'applySave'
   | 'successOutcome'
   | 'damageParts'
@@ -212,8 +214,9 @@ export type EffectTriggerActionType = EffectTriggerAction['type'];
 /** Что ещё, кроме места, влияет на раскладку. */
 export interface EffectFormLayoutOptions {
   /**
-   * Есть ли у заклинания область: без неё зоне на месте шаблона взяться неоткуда.
-   * Не задано — считается, что есть (форма без этого знания доставку не прячет).
+   * Есть ли у заклинания или действия существа область: без неё зоне на месте
+   * шаблона взяться неоткуда и выбирать из накрытых областью некого. Не
+   * задано — считается, что есть (форма без этого знания ничего не прячет).
    */
   zoneAvailable?: boolean;
 }
@@ -319,6 +322,12 @@ export interface EffectFormLayout {
   minSaveDc: number;
   /** Есть где появиться зоне на месте шаблона (у заклинания есть область). */
   zoneAvailable: boolean;
+  /**
+   * Правило «на выбор из тех, кто в области». Работает там, где применение
+   * ставит шаблон на карту: заклинание и действие существа с областью,
+   * применение с областью, кнопка «При действии» с шаблоном.
+   */
+  showAreaChoice: boolean;
 }
 
 /** Доставки по месту формы: первая — доставка нового эффекта. */
@@ -335,6 +344,15 @@ const CONTEXT_DELIVERIES: Record<EffectFormContext, readonly EffectDelivery[]> =
     condition: ['carrier'],
     generic: ['carrier', 'target', 'aura'],
   };
+
+/**
+ * Места, где шаблон на карту ставит сам источник: область заклинания и
+ * область действия существа.
+ */
+const AREA_SOURCE_CONTEXTS: ReadonlySet<EffectFormContext> = new Set([
+  'spell',
+  'creatureAction',
+]);
 
 /**
  * Доставки эффекта, который накладывается применением: копия ложится на
@@ -886,6 +904,20 @@ function normalizeDraftActivation(
 }
 
 /**
+ * Ставит ли шаблон на карту кнопка «При действии» эффекта.
+ *
+ * @param effect эффект.
+ * @returns `true`, если у срабатывания «При действии» получатели — шаблоном.
+ */
+function hasTriggerAreaTemplate(effect: ActiveEffect): boolean {
+  return (effect.triggers ?? []).some(
+    (trigger) =>
+      triggerEventAcceptsAreaTemplate(trigger.event)
+      && trigger.area?.template !== undefined,
+  );
+}
+
+/**
  * Раскладка формы эффекта: что показывать для места и текущей настройки.
  *
  * @param context место формы.
@@ -1045,6 +1077,12 @@ export function resolveEffectFormLayout(
       ? APPLIER_MIN_SAVE_DC
       : FIXED_MIN_SAVE_DC,
     zoneAvailable: layoutOptions.zoneAvailable !== false,
+    showAreaChoice:
+      isGeneric
+      || (AREA_SOURCE_CONTEXTS.has(context)
+        && layoutOptions.zoneAvailable !== false)
+      || (isUsed && effect.activation?.area !== undefined)
+      || hasTriggerAreaTemplate(effect),
   };
 }
 
@@ -1776,6 +1814,7 @@ export function listInertEffectFields(
         && effect.areaTrigger !== undefined
         && effect.areaTrigger !== 'stay',
     ],
+    ['areaChoice', !layout.showAreaChoice && effect.areaChoice !== undefined],
     ['applySave', !layout.showSave && effect.applySave !== undefined],
     [
       'successOutcome',
@@ -2271,6 +2310,7 @@ export function normalizeEffectDraft(
         : undefined,
     stackable: effect.stackable ? true : undefined,
     activation: normalizeDraftActivation(effect.activation),
+    areaChoice: normalizeDraftAreaChoice(effect.areaChoice),
     pay: normalizeDraftPay(effect.pay),
     variant:
       effect.variant && variantGroup && variantLabel

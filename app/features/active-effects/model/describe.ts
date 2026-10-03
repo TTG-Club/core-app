@@ -16,6 +16,7 @@ import type {
 import type { EffectFormLayout, InertEffectField } from './layout';
 import type { SaveAbilityChoice } from './saveAbilities';
 import type { SaveDcSource } from './saveDc';
+import type { EffectAreaChoice } from './triggerTypes';
 import type {
   ActiveEffect,
   EffectChange,
@@ -31,6 +32,7 @@ import { upperFirst } from 'es-toolkit';
 
 import { labelDamageFormulaStatusTerms } from '~ui/damage-formula';
 
+import { readAreaChoiceSettings } from './areaChoice';
 import { isDiceFormulaValue } from './changeDice';
 import { splitQuotedList } from './conditionSyntax';
 import {
@@ -40,6 +42,8 @@ import {
   EFFECT_ABILITY_OPTIONS,
   EFFECT_APPLIER_DC_SHORT_LABELS,
   EFFECT_APPLY_SAVE_SUCCESS_LABELS,
+  EFFECT_AREA_CHOICE_PHRASES,
+  EFFECT_AREA_CHOICE_TARGET_PHRASES,
   EFFECT_AREA_TRIGGER_LABELS,
   EFFECT_ATTACK_TRIGGER_LABELS,
   EFFECT_AURA_TARGET_SCENARIO_LABELS,
@@ -90,6 +94,10 @@ import {
 import { renderReadableFormula } from './formula';
 import { APPLIER_SAVE_DC } from './layout';
 import { listSaveAbilities } from './saveAbilities';
+import {
+  DEFAULT_AREA_CHOICE_FALLBACK,
+  DEFAULT_AREA_CHOICE_TARGET,
+} from './triggerTypes';
 import { MIN_EFFECT_LIGHT_FEET } from './types';
 import { describeChangeOptionValue } from './weaponOverrides';
 
@@ -852,6 +860,12 @@ export function describeActiveEffect(effect: ActiveEffect): string {
     clauses.push(EFFECT_AREA_TRIGGER_LABELS[effect.areaTrigger].toLowerCase());
   }
 
+  const areaChoice = describeAreaChoice(effect.areaChoice);
+
+  if (areaChoice) {
+    clauses.push(areaChoice);
+  }
+
   if (effect.conditionImmunities?.length) {
     const names = effect.conditionImmunities
       .map(describeConditionName)
@@ -894,6 +908,43 @@ export function describeActiveEffect(effect: ActiveEffect): string {
   const text = upperFirst(clauses.join(EFFECT_PHRASE_PARTS.clauseJoiner));
 
   return text.endsWith('.') ? text : `${text}.`;
+}
+
+/**
+ * Правило «на выбор из тех, кто в области» словами: «применивший выбирает
+ * цели в области (до 6; только враги)», «в области задеты: только враги».
+ * Правило, которое ничего не меняет (задеты все в области), — пустая строка.
+ *
+ * @param areaChoice правило выбора эффекта.
+ * @returns фраза со строчной буквы либо пустая строка.
+ */
+export function describeAreaChoice(
+  areaChoice: EffectAreaChoice | undefined,
+): string {
+  const { count, mode, target, fallback } = readAreaChoiceSettings(areaChoice);
+  const hasTarget = target !== DEFAULT_AREA_CHOICE_TARGET;
+  const targetPhrase = EFFECT_AREA_CHOICE_TARGET_PHRASES[target];
+
+  if (mode === 'all') {
+    return hasTarget ? EFFECT_AREA_CHOICE_PHRASES.settled(targetPhrase) : '';
+  }
+
+  const limitedPhrase =
+    mode === 'exactly'
+      ? EFFECT_AREA_CHOICE_PHRASES.exactly
+      : EFFECT_AREA_CHOICE_PHRASES.upTo;
+
+  const details = [
+    count === undefined
+      ? EFFECT_AREA_CHOICE_PHRASES.unlimited
+      : limitedPhrase(count),
+    ...(hasTarget ? [targetPhrase] : []),
+    ...(fallback === DEFAULT_AREA_CHOICE_FALLBACK
+      ? []
+      : [EFFECT_AREA_CHOICE_PHRASES.fallbackAll]),
+  ].join(EFFECT_PHRASE_PARTS.clauseJoiner);
+
+  return EFFECT_AREA_CHOICE_PHRASES.chosen(details);
 }
 
 /**

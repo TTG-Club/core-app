@@ -40,6 +40,12 @@
    */
   const actionSaveDc = computed(() => model.value.effect.savingThrows[0]?.dc);
 
+  /**
+   * Есть ли у записи область: из накрытых ею применивший выбирает цели
+   * эффекта («до шести существ на выбор»).
+   */
+  const hasArea = computed(() => Boolean(model.value.effect.areaOfEffect.type));
+
   /** «Провал в успех, раз в день» бывает только у умения (черты) существа. */
   const isTrait = computed(
     () => effectContext === EFFECT_FORM_CONTEXT.creatureTrait,
@@ -131,6 +137,7 @@
     v-model="model.effect.activeEffects"
     nested
     :context="effectContext"
+    :zone-available="hasArea"
     :applier-save-dc="actionSaveDc"
     :origin="EFFECT_ORIGIN.feature"
     :title="CREATURE_ACTION_SECTIONS.effects"
