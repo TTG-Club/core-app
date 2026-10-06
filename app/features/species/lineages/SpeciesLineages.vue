@@ -2,6 +2,7 @@
   import type { SpeciesDetailResponse } from '~species/model';
 
   import { SpeciesBody } from '~species/body';
+  import { SPECIES_LINEAGES_TITLE } from '~species/model';
   import { UiCollapse } from '~ui/collapse';
 
   const { url } = defineProps<{
@@ -27,7 +28,7 @@
     v-if="!isLoading && lineages?.length"
     class="flex flex-col gap-4"
   >
-    <h3 class="text-xl font-semibold">Происхождения</h3>
+    <h3 class="text-xl font-semibold">{{ SPECIES_LINEAGES_TITLE }}</h3>
 
     <UiCollapse
       v-for="species in lineages"

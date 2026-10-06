@@ -62,6 +62,16 @@
   });
 
   const markdown = useEntityMarkdown(detailSpecies, getSpeciesMarkdown);
+
+  /** Возврат к родительскому виду в той же сплит-панели. */
+  const backTo = computed(() => {
+    const parentUrl =
+      detailSpecies.value?.parent?.url ?? detailSpecies.value?.species?.url;
+
+    return parentUrl
+      ? { query: { ...route.query, detail: parentUrl } }
+      : undefined;
+  });
 </script>
 
 <template>
@@ -121,13 +131,7 @@
         :markdown
         :is-loading="isDetailLoading"
         :is-error="isDetailError"
-        :back-to="
-          detailSpecies?.parent
-            ? { query: { ...route.query, detail: detailSpecies.parent.url } }
-            : detailSpecies?.species
-              ? { query: { ...route.query, detail: detailSpecies.species.url } }
-              : undefined
-        "
+        :back-to="backTo"
         copy-title
         @close="handleCloseDetail"
       >

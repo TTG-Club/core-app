@@ -3,6 +3,7 @@
 
   import { SpeciesLineages } from '~species/lineages';
   import { SpeciesLineagesDrawer } from '~species/lineages-drawer';
+  import { SPECIES_LINEAGES_TITLE } from '~species/model';
   import { UiCollapse } from '~ui/collapse';
   import { UiGallery } from '~ui/gallery';
   import { MarkupRender } from '~ui/markup';
@@ -60,24 +61,6 @@
       ? description.length > 0
       : Boolean(description);
   }
-
-  const activeFeatures = ref<Array<string>>([]);
-
-  watch(
-    () => species,
-    (value) => {
-      if (!value) {
-        return;
-      }
-
-      activeFeatures.value = visibleFeatures.value.map(
-        (feature) => feature.url,
-      );
-    },
-    {
-      immediate: true,
-    },
-  );
 </script>
 
 <template>
@@ -103,7 +86,7 @@
           block
           @click.left.exact.prevent="openLineages(species.url)"
         >
-          Происхождения
+          {{ SPECIES_LINEAGES_TITLE }}
         </UButton>
       </div>
 

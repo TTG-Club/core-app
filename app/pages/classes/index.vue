@@ -63,6 +63,15 @@
   });
 
   const markdown = useEntityMarkdown(detailClass, getClassMarkdown);
+
+  /** Возврат от подкласса к его классу в той же сплит-панели. */
+  const backTo = computed(() => {
+    const parentUrl = detailClass.value?.parent?.url;
+
+    return parentUrl
+      ? { query: { ...route.query, detail: parentUrl } }
+      : undefined;
+  });
 </script>
 
 <template>
@@ -122,11 +131,7 @@
         :markdown
         :is-loading="isDetailLoading"
         :is-error="isDetailError"
-        :back-to="
-          detailClass?.parent
-            ? { query: { ...route.query, detail: detailClass.parent.url } }
-            : undefined
-        "
+        :back-to="backTo"
         copy-title
         @close="handleCloseDetail"
       >

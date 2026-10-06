@@ -10,7 +10,7 @@
   }>();
 
   defineEmits<{
-    (e: 'close'): void;
+    (event: 'close'): void;
   }>();
 
   const { data: detail, status } = await useAsyncData(

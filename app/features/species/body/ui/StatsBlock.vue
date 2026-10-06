@@ -28,21 +28,25 @@
     class="w-full overflow-hidden rounded-lg border border-default bg-muted py-1.5"
   >
     <div class="flex w-full min-w-full gap-2 px-4 py-1.5">
-      <span class="min-w-20 text-sm font-medium text-highlighted">Тип:</span>
+      <span class="min-w-20 text-sm font-medium text-highlighted">
+        {{ SPECIES_STATS_LABELS.type }}
+      </span>
 
       <span>{{ properties.type }}</span>
     </div>
 
     <div class="flex w-full min-w-full gap-2 px-4 py-1.5">
-      <span class="min-w-20 text-sm font-medium text-highlighted">Размер:</span>
+      <span class="min-w-20 text-sm font-medium text-highlighted">
+        {{ SPECIES_STATS_LABELS.size }}
+      </span>
 
       <span>{{ properties.size }}</span>
     </div>
 
     <div class="flex w-full min-w-full gap-2 px-4 py-1.5">
-      <span class="min-w-20 text-sm font-medium text-highlighted"
-        >Скорость:</span
-      >
+      <span class="min-w-20 text-sm font-medium text-highlighted">
+        {{ SPECIES_STATS_LABELS.speed }}
+      </span>
 
       <span>{{ properties.speed }}</span>
     </div>
