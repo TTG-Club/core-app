@@ -7,12 +7,14 @@
 
   import {
     ClassEquipment,
+    ClassPageNavigation,
     ClassProficiency,
     ClassRouting,
     ClassTable,
     FeatureCollapse,
     StatsBlock,
   } from './ui';
+  import { CLASS_SECTION_ANCHOR } from './ui/constants';
 
   const {
     detail,
@@ -62,10 +64,22 @@
           :saving-throws="detail.savingThrows"
           :primary-characteristics="detail.primaryCharacteristics"
         />
+
+        <!-- Липнет к верху колонки, картинка и характеристики уезжают -->
+        <ClassPageNavigation
+          v-if="!navigateInPlace"
+          class="max-lg:hidden @max-3xl:hidden"
+          :features="detail.features"
+          :has-equipment="!!detail.equipment"
+          :has-description="!!detail.description"
+        />
       </div>
 
       <div class="flex min-w-0 flex-auto flex-col gap-6">
-        <div class="flex min-w-0 flex-col gap-2">
+        <div
+          :id="CLASS_SECTION_ANCHOR.table"
+          class="flex min-w-0 flex-col gap-2"
+        >
           <ClassRouting
             :url="detail.url"
             :name="detail.name"
@@ -86,11 +100,15 @@
         </div>
 
         <ClassProficiency
+          :id="CLASS_SECTION_ANCHOR.proficiency"
           :proficiency="detail.proficiency"
           :saving-throws="detail.savingThrows"
         />
 
-        <ClassEquipment :equipment="detail.equipment" />
+        <ClassEquipment
+          :id="CLASS_SECTION_ANCHOR.equipment"
+          :equipment="detail.equipment"
+        />
 
         <FeatureCollapse
           v-for="feature in detail.features"
@@ -100,7 +118,7 @@
 
         <div
           v-if="detail.description"
-          id="description"
+          :id="CLASS_SECTION_ANCHOR.description"
         >
           <UiCollapse default-open>
             <template #default>Описание</template>
