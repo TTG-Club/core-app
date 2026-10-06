@@ -37,3 +37,17 @@ export const CLASS_SECTION_LABEL = {
   equipment: 'Снаряжение',
   description: 'Описание',
 } as const;
+
+/**
+ * Префикс идентификаторов меток текущего раздела в навигации.
+ */
+export const CLASS_NAVIGATION_MARKER_PREFIX = 'class-navigation-marker-';
+
+/**
+ * Возвращает идентификатор метки, по которой навигация подсвечивает раздел.
+ *
+ * @param sectionId Якорь раздела страницы класса.
+ */
+export function getClassNavigationMarkerId(sectionId: string): string {
+  return `${CLASS_NAVIGATION_MARKER_PREFIX}${sectionId}`;
+}
