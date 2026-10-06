@@ -134,7 +134,6 @@
         <SpeciesBody
           v-if="detailSpecies"
           :species="detailSpecies"
-          hide-gallery
         />
       </UiDetailPane>
 

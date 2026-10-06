@@ -46,7 +46,6 @@
     <SpeciesBody
       v-if="detail"
       :species="detail"
-      hide-gallery
     />
   </UiDrawer>
 </template>

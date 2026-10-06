@@ -87,13 +87,16 @@
         v-if="!hideLeftBlock"
         class="flex w-full flex-col gap-4 @min-3xl:max-w-80 @min-3xl:min-w-68"
       >
-        <UiGallery
-          v-if="!hideGallery"
-          :preview="species.image"
-          :images="species.gallery"
-        />
+        <div class="flex flex-col gap-4 @min-xl:@max-3xl:flex-row">
+          <UiGallery
+            v-if="!hideGallery"
+            class="min-w-25 shrink-0 @min-xl:@max-3xl:w-50"
+            :preview="species.image"
+            :images="species.gallery"
+          />
 
-        <StatsBlock :properties="species.properties" />
+          <StatsBlock :properties="species.properties" />
+        </div>
 
         <UButton
           v-if="species.hasLineages"
