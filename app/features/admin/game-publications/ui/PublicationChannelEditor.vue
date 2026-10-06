@@ -278,6 +278,7 @@
         v-model:uploading="isImageUploading"
         :section="PUBLICATION_IMAGE_SECTION"
         :max-size="PUBLICATION_IMAGE_MAX_SIZE"
+        :removable="false"
       >
         <template
           v-if="form.imageUrl"

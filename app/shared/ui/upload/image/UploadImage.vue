@@ -2,7 +2,7 @@
   const {
     section,
     maxSize = undefined,
-    removable = false,
+    removable = true,
   } = defineProps<{
     section: string;
     /**
@@ -10,7 +10,8 @@
      */
     maxSize?: string | number;
     /**
-     * Показывать на превью кнопку удаления картинки при наведении
+     * Показывать на превью кнопку удаления картинки при наведении. Выключают
+     * там, где у формы своя кнопка удаления.
      */
     removable?: boolean;
   }>();

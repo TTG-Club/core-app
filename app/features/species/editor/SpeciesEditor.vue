@@ -288,7 +288,6 @@
                 v-model="state.image"
                 section="species"
                 max-size="1024"
-                removable
               >
                 <template #preview>
                   <NuxtImg
