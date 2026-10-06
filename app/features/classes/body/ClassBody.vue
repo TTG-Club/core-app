@@ -46,28 +46,15 @@
 
 <template>
   <div class="@container">
-    <div
-      :class="[
-        'flex flex-col gap-6',
-        inSplit ? '' : '@min-3xl:flex-row @min-3xl:gap-7',
-      ]"
-    >
+    <div class="flex flex-col gap-6 @min-3xl:flex-row @min-3xl:gap-7">
       <div
-        :class="[
-          'flex w-full shrink-0 flex-col gap-4',
-          inSplit
-            ? '@min-xl:flex-row'
-            : '@min-xl:@max-3xl:flex-row @min-3xl:w-80',
-        ]"
+        class="flex w-full flex-col gap-4 @min-xl:@max-3xl:flex-row @min-3xl:max-w-80 @min-3xl:min-w-68"
       >
         <UiGallery
           v-if="!hideGallery && detail.image"
+          class="min-w-25 shrink-0 @min-xl:@max-3xl:w-50"
           :preview="detail.image"
           :images="detail.gallery"
-          :class="[
-            'min-w-25',
-            inSplit ? '@min-xl:max-w-50' : '@min-xl:@max-3xl:max-w-50',
-          ]"
         />
 
         <StatsBlock
