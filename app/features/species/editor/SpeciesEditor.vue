@@ -52,7 +52,6 @@
       },
       description: '',
       image: undefined,
-      linkImage: undefined,
       gallery: [],
       parent: undefined,
       source: {
@@ -280,15 +279,16 @@
 
           <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
             <UFormField
-              class="col-span-full md:col-span-8"
+              class="col-span-full md:col-span-12"
               label="Основное"
-              help="Эта картинка отображается при просмотре страницы вида"
+              help="Эта картинка отображается на странице вида и в списке видов"
               name="image"
             >
               <UploadImage
                 v-model="state.image"
                 section="species"
                 max-size="1024"
+                removable
               >
                 <template #preview>
                   <NuxtImg
@@ -319,46 +319,7 @@
             </UFormField>
 
             <UFormField
-              class="col-span-full md:col-span-8"
-              label="Для ссылки"
-              help="Эта картинка отображается на странице со списком видов"
-              name="linkImage"
-            >
-              <UploadImage
-                v-model="state.linkImage"
-                section="species"
-                max-size="256"
-              >
-                <template #preview>
-                  <NuxtImg
-                    v-slot="{ src, isLoaded, imgAttrs }"
-                    :key="state.linkImage"
-                    :src="state.linkImage"
-                    custom
-                  >
-                    <!-- Show the actual image when loaded -->
-                    <img
-                      v-if="isLoaded"
-                      v-bind="imgAttrs"
-                      class="aspect-square w-full rounded-lg object-cover"
-                      :src="src"
-                      :alt="state.name.rus"
-                    />
-
-                    <!-- Show a placeholder while loading -->
-                    <img
-                      v-else
-                      class="w-full rounded-lg object-contain"
-                      src="/img/no-img.webp"
-                      alt="no image"
-                    />
-                  </NuxtImg>
-                </template>
-              </UploadImage>
-            </UFormField>
-
-            <UFormField
-              class="col-span-full md:col-span-8"
+              class="col-span-full md:col-span-12"
               label="Галерея"
               name="gallery"
             >
