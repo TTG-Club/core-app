@@ -19,6 +19,9 @@ export const FILTER_CONTROLS_FILTER_LABEL = 'Фильтр';
 /** Подпись кнопки, снимающей все условия отбора разом */
 export const FILTER_CONTROLS_RESET_LABEL = 'Очистить фильтр';
 
+/** Короткая подпись той же кнопки в шапке фильтров, встроенных в панель */
+export const FILTER_INLINE_RESET_LABEL = 'Сбросить';
+
 /** Подпись кнопки, отдающей ссылку на текущий отбор */
 export const FILTER_CONTROLS_SHARE_LABEL = 'Поделиться ссылкой';
 

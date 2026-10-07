@@ -39,7 +39,6 @@
     search,
     filterQuery,
     isPending: isFilterPending,
-    isShowedPreview: isFilterPreviewShowed,
     defaults: filterDefaults,
   } = await useFilter('spells', '/api/v2/spells/filters');
 
@@ -387,7 +386,6 @@
         v-model:filter="filter"
         :defaults="filterDefaults"
         :is-pending="isFilterPending"
-        :show-preview="isFilterPreviewShowed"
         :presentation-menus="presentationMenus"
       >
         <template #legend>

@@ -13,12 +13,12 @@
     FILTER_CONTROLS_SEARCH_PLACEHOLDER,
     FILTER_CONTROLS_SHARE_LABEL,
     FILTER_FILTERS_TITLE,
+    FILTER_INLINE_RESET_LABEL,
     FILTER_SHARE_ICON,
     FILTER_SHARE_ICON_APPLE,
     FILTER_SOURCES_SEARCH_PLACEHOLDER,
     FILTER_SOURCES_TITLE,
   } from '../model';
-  import { FilterPreview } from '../preview';
   import { FilterSearchInput } from '../search-input';
   import {
     getGroupItems,
@@ -38,12 +38,10 @@
 
   const {
     isPending = false,
-    showPreview = false,
     defaults = undefined,
     presentationMenus = [],
   } = defineProps<{
     isPending?: boolean;
-    showPreview?: boolean;
     defaults?: Filter;
     presentationMenus?: Array<PresentationMenu>;
   }>();
@@ -124,12 +122,6 @@
       && filter.value.filters?.some((group) =>
         hasTouchedItem(getGroupItems(group)),
       ),
-  );
-
-  // Сброс на широком экране — отдельной кнопкой: кнопки отбора, к которой он
-  // приклеен на узком, там нет.
-  const showStandaloneReset = computed(
-    () => isLarge.value && isFilterEdited.value,
   );
 
   const isSourcesEdited = computed(() => {
@@ -305,14 +297,6 @@
       </UChip>
 
       <UButton
-        v-if="showStandaloneReset"
-        :title="FILTER_CONTROLS_RESET_LABEL"
-        icon="tabler:trash"
-        square
-        @click.left.exact.prevent="resetFilter"
-      />
-
-      <UButton
         v-if="showStandaloneShare"
         :icon="shareIcon"
         :title="FILTER_CONTROLS_SHARE_LABEL"
@@ -359,16 +343,30 @@
       <template v-if="isLarge">
         <slot name="legend" />
 
-        <FilterPreview
-          v-if="showPreview && filter?.filters"
-          v-model="filter.filters"
-        />
-
         <!-- Те же группы, что в дровере, но прямо в панели и без «Применить». -->
         <!-- На узком экране панель — строка над списком, и отбор остаётся -->
         <!-- за кнопкой «Фильтр». -->
         <template v-if="filter?.filters">
           <USeparator />
+
+          <!-- Сброс живёт в шапке блока: кнопки отбора, к которой он приклеен -->
+          <!-- на узком экране, здесь нет. -->
+          <div class="flex min-h-6 items-center justify-between gap-2">
+            <span class="text-sm font-medium text-muted">
+              {{ FILTER_FILTERS_TITLE }}
+            </span>
+
+            <UButton
+              v-if="isFilterEdited"
+              :label="FILTER_INLINE_RESET_LABEL"
+              :title="FILTER_CONTROLS_RESET_LABEL"
+              icon="tabler:trash"
+              color="error"
+              variant="ghost"
+              size="xs"
+              @click.left.exact.prevent="resetFilter"
+            />
+          </div>
 
           <FilterList
             :model-value="filter.filters"

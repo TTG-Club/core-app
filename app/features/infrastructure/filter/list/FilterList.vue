@@ -4,7 +4,6 @@
   import {
     getAvailableGroupItems,
     getSearchedGroupItems,
-    hasTouchedItem,
     isGroupDependentOn,
   } from '../utils';
   import { FilterGroup as FilterGroupComponent } from './ui';
@@ -33,20 +32,14 @@
     (event: 'empty', value: boolean): void;
   }>();
 
-  const {
-    preview = false,
-    collapsible = false,
-    search = '',
-  } = defineProps<{
-    preview?: boolean;
-
+  const { collapsible = false, search = '' } = defineProps<{
     /** Сворачиваемые группы одной колонкой — список, встроенный в панель. */
     collapsible?: boolean;
     search?: string;
   }>();
 
   /**
-   * Определяет видимость группы в обычном режиме и режиме предпросмотра.
+   * Определяет видимость группы.
    *
    * При активном поиске пустой набор означает, что не подошло ни одно значение
    * группы и её название — показывать такую группу нечем. Без поиска поведение
@@ -60,38 +53,22 @@
       return false;
     }
 
-    return !preview || hasTouchedItem(items);
+    return true;
   }
 
   const filter = defineModel<FilterGroups>({
     required: true,
   });
 
-  /** В превью и во встроенном списке группы не склеиваются в общий блок. */
-  const isDetached = computed(() => preview || collapsible);
-
-  const containerGapClass = computed(() => {
-    if (collapsible) {
-      return 'gap-1';
-    }
-
-    return preview ? 'gap-3' : 'gap-6';
-  });
-
-  const groupGapClass = computed(() => {
-    if (collapsible) {
-      return 'gap-1';
-    }
-
-    return preview ? 'gap-3' : undefined;
-  });
+  const containerGapClass = computed(() => (collapsible ? 'gap-1' : 'gap-6'));
+  const groupGapClass = computed(() => (collapsible ? 'gap-1' : undefined));
 
   /** Позиция группы: склеиваются только блоки обычного списка дровера. */
   function resolveGroupPosition(
     itemIndex: number,
     groupLength: number,
   ): GroupPosition {
-    return isDetached.value
+    return collapsible
       ? 'standalone'
       : getGroupPosition(itemIndex, groupLength);
   }
@@ -191,7 +168,6 @@
         :key="`${item.group.key}-${item.group.name}`"
         :model-value="item.group"
         :items="item.availableItems"
-        :preview
         :collapsible
         :position="resolveGroupPosition(itemIndex, itemGroup.length)"
         @update:model-value="handleGroupUpdate(item.index, $event)"

@@ -8,8 +8,6 @@ import {
   buildFullQuery,
   buildSearchQuery,
   getFilterKey,
-  getGroupItems,
-  hasTouchedItem,
   normalizeDependentSelections,
 } from '../utils';
 
@@ -43,18 +41,6 @@ export async function useFilter(key: string, url: string) {
   );
 
   const isPending = computed(() => status.value === 'pending');
-
-  const isShowedPreview = computed(() => {
-    if (!filter.value) {
-      return false;
-    }
-
-    return (
-      filter.value.filters?.some((group) =>
-        hasTouchedItem(getGroupItems(group)),
-      ) || false
-    );
-  });
 
   const filterQuery = computed(() => buildSearchQuery(filter.value));
 
@@ -145,7 +131,6 @@ export async function useFilter(key: string, url: string) {
     search,
     filterQuery,
     isPending,
-    isShowedPreview,
     defaults,
     refresh,
   };

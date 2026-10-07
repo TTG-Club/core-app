@@ -32,7 +32,6 @@
     search,
     filterQuery,
     isPending: isFilterPending,
-    isShowedPreview: isFilterPreviewShowed,
     defaults: filterDefaults,
   } = await useFilter('magic-items', '/api/v2/magic-items/filters');
 
@@ -121,7 +120,6 @@
         v-model:filter="filter"
         :defaults="filterDefaults"
         :is-pending="isFilterPending"
-        :show-preview="isFilterPreviewShowed"
         :presentation-menus="presentationMenus"
       >
         <template #legend>
