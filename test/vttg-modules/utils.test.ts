@@ -7,6 +7,7 @@ import {
   getManifestSystemIds,
   getModuleIcon,
   hasSystemsMismatch,
+  isSubmissionClosed,
   isSubmissionEditable,
   parseSubmissionsPage,
 } from '~vttg-modules/model';
@@ -40,6 +41,8 @@ function createSubmission(
       syncedAt: '2026-10-07T10:00:00Z',
     },
     moderation: null,
+    linksLocked: false,
+    approvedAt: null,
     createdAt: '2026-10-07T10:00:00Z',
     updatedAt: '2026-10-07T10:00:00Z',
   };
@@ -106,5 +109,14 @@ describe('заявка и её статус', () => {
 
     expect(page.totalElements).toBe(41);
     expect(page.content).toHaveLength(1);
+  });
+});
+
+describe('закрытые заявки', () => {
+  it('отозванная и заменённая заявки закрыты', () => {
+    expect(isSubmissionClosed('WITHDRAWN')).toBe(true);
+    expect(isSubmissionClosed('SUPERSEDED')).toBe(true);
+    expect(isSubmissionClosed('APPROVED')).toBe(false);
+    expect(isSubmissionClosed('REJECTED')).toBe(false);
   });
 });

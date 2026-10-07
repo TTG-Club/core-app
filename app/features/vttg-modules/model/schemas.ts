@@ -46,6 +46,8 @@ const moduleSubmissionSchema = z.object({
       reviewedAt: z.string(),
     })
     .nullable(),
+  linksLocked: z.boolean(),
+  approvedAt: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

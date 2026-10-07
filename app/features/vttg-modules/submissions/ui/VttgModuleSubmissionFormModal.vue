@@ -12,6 +12,7 @@
     FORM_DESCRIPTION_PLACEHOLDER,
     FORM_EDIT_HINT,
     FORM_EDIT_TITLE,
+    FORM_LINKS_LOCKED_HINT,
     FORM_MANIFEST_HINT,
     FORM_MANIFEST_LABEL,
     FORM_MANIFEST_PLACEHOLDER,
@@ -59,6 +60,14 @@
     isEdit.value ? FORM_EDIT_HINT : undefined,
   );
 
+  // Ссылки модуля, который уже одобрялся, фиксированы: сервис отклонит их
+  // смену, поэтому поля закрыты, а подсказка ведёт к новой заявке.
+  const areLinksLocked = computed(() => submission?.linksLocked ?? false);
+
+  const manifestHelp = computed(() =>
+    areLinksLocked.value ? FORM_LINKS_LOCKED_HINT : FORM_MANIFEST_HINT,
+  );
+
   const submitLabel = computed(() =>
     isEdit.value ? FORM_RESUBMIT_LABEL : FORM_SUBMIT_LABEL,
   );
@@ -103,6 +112,7 @@
           <UInput
             v-model="form.repositoryUrl"
             type="url"
+            :disabled="areLinksLocked"
             :maxlength="SUBMISSION_URL_MAX_LENGTH"
             :placeholder="FORM_REPOSITORY_PLACEHOLDER"
             class="w-full"
@@ -111,12 +121,13 @@
 
         <UFormField
           :label="FORM_MANIFEST_LABEL"
-          :help="FORM_MANIFEST_HINT"
+          :help="manifestHelp"
           required
         >
           <UInput
             v-model="form.manifestUrl"
             type="url"
+            :disabled="areLinksLocked"
             :maxlength="SUBMISSION_URL_MAX_LENGTH"
             :placeholder="FORM_MANIFEST_PLACEHOLDER"
             class="w-full"

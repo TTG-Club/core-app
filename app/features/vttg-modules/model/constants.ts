@@ -67,6 +67,7 @@ export const SUBMISSION_STATUSES = [
   'APPROVED',
   'REJECTED',
   'WITHDRAWN',
+  'SUPERSEDED',
 ] as const;
 
 /** Подписи статусов. */
@@ -75,6 +76,7 @@ export const SUBMISSION_STATUS_LABELS: Record<SubmissionStatus, string> = {
   APPROVED: 'Одобрен',
   REJECTED: 'Отклонён',
   WITHDRAWN: 'Отозван',
+  SUPERSEDED: 'Заменён',
 };
 
 /** Цвета значков статусов. */
@@ -86,12 +88,19 @@ export const SUBMISSION_STATUS_COLORS: Record<
   APPROVED: 'success',
   REJECTED: 'error',
   WITHDRAWN: 'neutral',
+  SUPERSEDED: 'neutral',
 };
 
 /** Статусы, которые автор может исправить и отправить заново. */
 export const EDITABLE_STATUSES: ReadonlyArray<SubmissionStatus> = [
   'PENDING',
   'REJECTED',
+];
+
+/** Закрытые заявки: над ними больше нет действий. */
+export const CLOSED_STATUSES: ReadonlyArray<SubmissionStatus> = [
+  'WITHDRAWN',
+  'SUPERSEDED',
 ];
 
 /** Статус, с которого открывается очередь модерации. */
@@ -113,8 +122,9 @@ export const VTTG_MODULES_REQUIREMENTS_TITLE = 'Что нужно для зая�
 
 /** Требования к модулю, которые сервис проверяет при подаче. */
 export const VTTG_MODULES_REQUIREMENTS = [
-  'Открытый репозиторий на GitHub, GitLab, Codeberg, GitFlic или GitVerse.',
-  'Файл module.json с полями id, name, version и download — ссылкой на архив модуля.',
+  'Открытый репозиторий на GitHub или GitLab.',
+  'Файл module.json с полями id, name, version и download — ссылкой на архив модуля. И манифест, и архив должны лежать в этом же репозитории.',
+  'После одобрения ссылки на репозиторий и module.json не меняются. Чтобы сменить их, подайте новую заявку на тот же модуль — после одобрения она заменит прежнюю.',
   'id — строчные латинские буквы, цифры, «-» и «_»; он же имя папки модуля в мире.',
 ] as const;
 
@@ -138,6 +148,9 @@ export const RETRY_LABEL = 'Повторить';
 export const FORM_CREATE_TITLE = 'Заявка на модуль';
 
 export const FORM_EDIT_TITLE = 'Исправить заявку';
+
+export const FORM_LINKS_LOCKED_HINT =
+  'Модуль уже одобрялся — ссылку менять нельзя. Для новой ссылки подайте новую заявку на этот же модуль.';
 
 export const FORM_EDIT_HINT =
   'После правки заявка снова уйдёт на рассмотрение.';

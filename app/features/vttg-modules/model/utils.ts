@@ -8,6 +8,7 @@ import { z } from 'zod';
 
 import {
   ALLOWED_ICON_PREFIXES,
+  CLOSED_STATUSES,
   DEFAULT_MODULE_ICON,
   EDITABLE_STATUSES,
 } from './constants';
@@ -22,6 +23,14 @@ const manifestSystemsSchema = z.object({
  */
 export function isSubmissionEditable(status: SubmissionStatus): boolean {
   return EDITABLE_STATUSES.includes(status);
+}
+
+/**
+ * Закрыта ли заявка: отозвана автором или заменена новой одобренной.
+ * @param status Текущий статус заявки.
+ */
+export function isSubmissionClosed(status: SubmissionStatus): boolean {
+  return CLOSED_STATUSES.includes(status);
 }
 
 /**

@@ -42,6 +42,9 @@ export interface ModuleSubmission {
   systemIds: Array<string>;
   module: SubmissionModuleInfo;
   moderation: SubmissionModeration | null;
+  /** Ссылки зафиксированы первым одобрением: сменить их можно только новой заявкой. */
+  linksLocked: boolean;
+  approvedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -4,6 +4,7 @@
   import {
     EDIT_ICON,
     EDIT_LABEL,
+    isSubmissionClosed,
     isSubmissionEditable,
     REFRESH_MANIFEST_ICON,
     REFRESH_MANIFEST_LABEL,
@@ -26,7 +27,7 @@
   }>();
 
   const isEditable = computed(() => isSubmissionEditable(submission.status));
-  const isActive = computed(() => submission.status !== 'WITHDRAWN');
+  const isActive = computed(() => !isSubmissionClosed(submission.status));
 
   /** Открывает правку заявки. */
   function edit(): void {
