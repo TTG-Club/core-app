@@ -183,12 +183,6 @@ export const MENU_SECTIONS: Array<MenuSection> = [
         label: RECENT_COMMENTS_TITLE,
       },
       {
-        href: '/roadmap',
-        label: 'Дорожная карта (только админ)',
-        disabled: false,
-        roles: [Role.ADMIN],
-      },
-      {
         href: 'https://5e14.ttg.club/',
         label: 'Редакция D&D 2014',
         disabled: false,
@@ -196,6 +190,12 @@ export const MENU_SECTIONS: Array<MenuSection> = [
       {
         href: VTTG_SUBSCRIPTION_PATH,
         label: VTTG_SUBSCRIPTION_NAVIGATION_LABEL,
+      },
+      {
+        href: '/roadmap',
+        label: 'Дорожная карта (только админ)',
+        disabled: false,
+        roles: [Role.ADMIN],
       },
     ],
   },
