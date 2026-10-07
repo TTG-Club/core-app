@@ -81,7 +81,11 @@
 
 <template>
   <div class="flex flex-col gap-6">
-    <h4 class="text-2xl">Авторизация</h4>
+    <div class="flex flex-col gap-1">
+      <h4 class="text-2xl font-semibold text-highlighted">Вход</h4>
+
+      <p class="text-sm text-muted">Рады видеть вас снова</p>
+    </div>
 
     <UForm
       class="flex flex-col gap-4"
@@ -92,6 +96,9 @@
       <UFormField path="usernameOrEmail">
         <UInput
           v-model="state.usernameOrEmail"
+          class="w-full"
+          size="lg"
+          icon="tabler:user"
           autocapitalize="off"
           autocomplete="username"
           autocorrect="off"
@@ -103,6 +110,9 @@
       <UFormField path="password">
         <UInput
           v-model="state.password"
+          class="w-full"
+          size="lg"
+          icon="tabler:lock"
           autocapitalize="off"
           autocomplete="current-password"
           autocorrect="off"
@@ -125,45 +135,47 @@
         </UInput>
       </UFormField>
 
-      <UFormField>
+      <div class="flex items-center justify-between gap-3">
         <UCheckbox
           v-model="state.remember"
           label="Запомнить меня"
           default-value
         />
-      </UFormField>
-
-      <div class="flex flex-col gap-2 md:flex-row">
-        <UButton
-          :disabled="inProgress"
-          :loading="inProgress"
-          class="md:w-auto"
-          block
-          @click.left.exact.prevent="onSubmit"
-        >
-          Вход
-        </UButton>
 
         <UButton
+          class="p-0"
+          variant="link"
           :disabled="inProgress"
-          class="md:w-auto"
-          variant="soft"
-          block
-          @click.left.exact.prevent="$emit('switch:sign-up')"
-        >
-          Регистрация
-        </UButton>
-
-        <UButton
-          class="md:w-auto"
-          variant="soft"
-          :disabled="inProgress"
-          block
           @click.left.exact.prevent="$emit('switch:change-password')"
         >
           Забыли пароль?
         </UButton>
       </div>
+
+      <UButton
+        :disabled="inProgress"
+        :loading="inProgress"
+        size="lg"
+        block
+        @click.left.exact.prevent="onSubmit"
+      >
+        Войти
+      </UButton>
     </UForm>
+
+    <div
+      class="flex flex-wrap items-center justify-center gap-x-2 border-t border-default pt-5 text-sm text-muted"
+    >
+      Ещё нет аккаунта?
+
+      <UButton
+        class="p-0"
+        variant="link"
+        :disabled="inProgress"
+        @click.left.exact.prevent="$emit('switch:sign-up')"
+      >
+        Зарегистрироваться
+      </UButton>
+    </div>
   </div>
 </template>

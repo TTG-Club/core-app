@@ -20,7 +20,7 @@
   <div class="@container">
     <div class="flex flex-col gap-6 @min-3xl:flex-row @min-3xl:gap-7">
       <div
-        class="flex w-full flex-col gap-4 @min-xl:@max-3xl:flex-row @min-3xl:max-w-80 @min-3xl:min-w-68"
+        class="flex w-full flex-col gap-4 @min-xl:@max-3xl:flex-row @min-3xl:w-68 @min-3xl:shrink-0"
       >
         <MulticlassLevelInfo
           v-if="detail.characterLevel && detail.multiclass"
