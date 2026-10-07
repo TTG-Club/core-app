@@ -108,7 +108,8 @@ export async function useFilter(
     );
 
     if (!isEqual(route.query, finalQuery)) {
-      router.replace({ query: finalQuery });
+      // Якорь раздела страницы (например, умения класса) фильтры не трогают.
+      router.replace({ query: finalQuery, hash: route.hash });
     }
   }
 

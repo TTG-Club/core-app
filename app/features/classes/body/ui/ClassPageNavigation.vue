@@ -26,9 +26,15 @@
   }>();
 
   const nuxtApp = useNuxtApp();
+  const route = useRoute();
+  const router = useRouter();
 
-  const links = computed<Array<ClassNavigationLink>>(() => {
-    const sections: Array<ClassNavigationLink> = [
+  /**
+   * Разделы страницы по их якорям в адресе. Якорь — id раздела, а навигация
+   * следит за его заголовком.
+   */
+  const sections = computed<Array<ClassNavigationLink>>(() => {
+    const navigationSections: Array<ClassNavigationLink> = [
       {
         id: CLASS_SECTION_ANCHOR.table,
         text: CLASS_SECTION_LABEL.table,
@@ -42,14 +48,14 @@
     ];
 
     if (hasEquipment) {
-      sections.push({
+      navigationSections.push({
         id: CLASS_SECTION_ANCHOR.equipment,
         text: CLASS_SECTION_LABEL.equipment,
         depth: CLASS_NAVIGATION_LINK_DEPTH,
       });
     }
 
-    sections.push(
+    navigationSections.push(
       ...features.map((feature) => ({
         id: feature.key,
         text: feature.name,
@@ -58,18 +64,61 @@
     );
 
     if (hasDescription) {
-      sections.push({
+      navigationSections.push({
         id: CLASS_SECTION_ANCHOR.description,
         text: CLASS_SECTION_LABEL.description,
         depth: CLASS_NAVIGATION_LINK_DEPTH,
       });
     }
 
-    return sections.map((section) => ({
+    return navigationSections;
+  });
+
+  const links = computed<Array<ClassNavigationLink>>(() =>
+    sections.value.map((section) => ({
       ...section,
       id: getSectionHeadingId(section.id),
-    }));
-  });
+    })),
+  );
+
+  /**
+   * Прокручивает ближайший прокручиваемый контейнер к заголовку раздела.
+   *
+   * @param sectionId Id раздела.
+   * @param behavior Плавно при клике, сразу при открытии ссылки с якорем.
+   */
+  function scrollToSection(
+    sectionId: string,
+    behavior: 'smooth' | 'instant',
+  ): void {
+    document.getElementById(getSectionHeadingId(sectionId))?.scrollIntoView({
+      behavior,
+      block: 'start',
+    });
+  }
+
+  /**
+   * Находит раздел страницы по якорю из адреса. Чужие якоря (например,
+   * комментариев) не считаются разделами.
+   *
+   * @param hash Якорь адреса вместе с `#`, роутер отдаёт его раскодированным.
+   */
+  function findSectionByHash(hash: string): ClassNavigationLink | undefined {
+    const sectionId = hash.slice(1);
+
+    return sections.value.find((section) => section.id === sectionId);
+  }
+
+  /**
+   * Открывает раздел из якоря ссылки, которой поделились.
+   */
+  function scrollToHashSection(): void {
+    const section = findSectionByHash(route.hash);
+
+    if (section) {
+      scrollToSection(section.id, 'instant');
+    }
+  }
 
   /**
    * Пересобирает список отслеживаемых разделов.
@@ -85,7 +134,8 @@
    * Перехватывает клик по пункту до `UContentToc`: тот делает
    * `router.push('#якорь')`, что в сплит-панели теряет `?detail=` и закрывает
    * класс, а прокручивает окно, хотя скроллится панель. Поэтому прокручиваем
-   * ближайший контейнер сами и URL не трогаем.
+   * ближайший контейнер сами, а в адресе меняем только якорь: `detail` и
+   * фильтры в query остаются как были.
    *
    * @param event Клик внутри навигации.
    */
@@ -104,13 +154,28 @@
     event.preventDefault();
     event.stopPropagation();
 
-    document.getElementById(decodeURIComponent(href.slice(1)))?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-    });
+    const headingId = decodeURIComponent(href.slice(1));
+
+    const section = sections.value.find(
+      (navigationSection) =>
+        getSectionHeadingId(navigationSection.id) === headingId,
+    );
+
+    if (!section) {
+      return;
+    }
+
+    scrollToSection(section.id, 'smooth');
+
+    // Замена, а не новая запись истории: «назад» уводит со страницы, а не
+    // перебирает разделы.
+    router.replace({ query: route.query, hash: `#${section.id}` });
   }
 
-  onMounted(refreshObservedSections);
+  onMounted(() => {
+    refreshObservedSections();
+    scrollToHashSection();
+  });
 
   watch(links, refreshObservedSections, { flush: 'post' });
 </script>
