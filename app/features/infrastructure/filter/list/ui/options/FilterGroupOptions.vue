@@ -37,10 +37,12 @@
     return selectedCount.value === items.length ? true : 'indeterminate';
   });
 
+  /** Включает или выключает режим «Исключать» для группы. */
   function handleModeChange(mode: boolean | 'indeterminate'): void {
     group.value = { ...group.value, mode: mode === true };
   }
 
+  /** Включает или выключает «Точное совпадение» для группы. */
   function handleUnionChange(union: boolean | 'indeterminate'): void {
     group.value = { ...group.value, union: union === true };
   }

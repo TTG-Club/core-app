@@ -32,6 +32,14 @@ function hasFilterQuery(pristine: Filter, query: LocationQuery): boolean {
   return Object.keys(query).some((queryKey) => filterKeys.has(queryKey));
 }
 
+/**
+ * Состояние фильтра раздела: загружает группы, держит выбор и поисковую
+ * строку, синхронизирует их с адресом страницы.
+ *
+ * @param key ключ раздела — по нему выбор хранится между страницами.
+ * @param url ручка, отдающая группы фильтра и источники раздела.
+ * @returns фильтр, поиск, готовые query-параметры и признаки загрузки.
+ */
 export async function useFilter(key: string, url: string) {
   const route = useRoute();
   const router = useRouter();

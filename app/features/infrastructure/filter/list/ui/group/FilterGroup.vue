@@ -58,15 +58,20 @@
 
   const isOpened = computed(() => expanded || isOpenedByUser.value);
 
+  /** Запоминает, свернул или раскрыл группу сам пользователь. */
   function handleOpenChange(opened: boolean): void {
     isOpenedByUser.value = opened;
   }
 
   const counterColor = computed(() => (group.value.mode ? 'error' : 'primary'));
 
-  // Группа приходит одним пропом (defineModel), но мутировать её (или проп
-  // items) напрямую нельзя. Любое изменение пересобирается иммутабельно и
-  // эмитится наверх через defineModel — родитель обновляет filter.value.
+  /**
+   * Отмечает или снимает одно значение группы.
+   *
+   * Группа приходит одним пропом (defineModel), но мутировать её (или проп
+   * items) напрямую нельзя. Любое изменение пересобирается иммутабельно и
+   * эмитится наверх через defineModel — родитель обновляет filter.value.
+   */
   function handleItemSelect(
     itemId: FilterItem['id'],
     selected: boolean | null,

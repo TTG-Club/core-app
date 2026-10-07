@@ -160,12 +160,14 @@
     };
   }
 
+  /** Применяет выбор из дровера и закрывает его. */
   function saveFilter(payload: FilterGroups) {
     applyFilter(payload);
 
     filterOpened.value = false;
   }
 
+  /** Снимает все условия отбора; источники не трогает. */
   function resetFilter() {
     if (!filter.value?.filters) {
       filterOpened.value = false;
@@ -189,6 +191,7 @@
     filterOpened.value = false;
   }
 
+  /** Применяет выбор источников из дровера и закрывает его. */
   function saveSources(payload: FilterGroups) {
     if (!filter.value) {
       return;
@@ -198,6 +201,7 @@
     sourcesOpened.value = false;
   }
 
+  /** Возвращает источники к исходному набору раздела. */
   function resetSources() {
     if (!filter.value?.sources) {
       sourcesOpened.value = false;

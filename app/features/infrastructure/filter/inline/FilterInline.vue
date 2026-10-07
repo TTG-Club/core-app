@@ -1,17 +1,16 @@
 <script setup lang="ts">
   import type { FilterGroups } from '../types';
 
+  import { useFilterSearch } from '../composable';
   import { FilterList } from '../list';
   import {
     FILTER_CONTROLS_RESET_LABEL,
     FILTER_DRAWER_SEARCH_PLACEHOLDER,
     FILTER_FILTERS_TITLE,
     FILTER_INLINE_RESET_LABEL,
-    FILTER_SEARCH_DEBOUNCE,
     FILTER_SEARCH_EMPTY_TITLE,
   } from '../model';
   import { FilterSearchInput } from '../search-input';
-  import { isFilterSearchable } from '../utils';
 
   /**
    * Фильтры раздела прямо в его панели: те же группы, что в дровере, но
@@ -29,24 +28,8 @@
     (event: 'reset'): void;
   }>();
 
-  const search = ref('');
-  const isEmpty = ref(false);
-
-  // Поле остаётся на `search`, чтобы ввод не тормозил, а список считается по
-  // дебаунснутому значению.
-  const debouncedSearch = refDebounced(search, FILTER_SEARCH_DEBOUNCE);
-
-  // Пустой запрос применяется без задержки: после крестика очистки список
-  // иначе ещё 200 мс оставался бы отфильтрованным запросом, которого уже нет.
-  const appliedSearch = computed(() =>
-    search.value ? debouncedSearch.value : '',
-  );
-
-  const isSearchable = computed(() => isFilterSearchable(groups));
-
-  const showEmptyResult = computed(
-    () => !!appliedSearch.value && isEmpty.value,
-  );
+  const { search, isEmpty, appliedSearch, isSearchable, showEmptyResult } =
+    useFilterSearch(() => groups);
 </script>
 
 <template>
