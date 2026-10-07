@@ -6,7 +6,6 @@
 
   import { getRangeItems, getSelectedItemIds } from '../../../utils';
   import { FilterGroupOptions } from '../options';
-  import { FILTER_RANGE_LABELS } from './constants';
   import FilterGroupValues from './FilterGroupValues.vue';
 
   type GroupPosition = 'standalone' | 'top' | 'bottom';
@@ -110,19 +109,13 @@
 
     <template #content>
       <div class="flex flex-col gap-3 pt-1 pb-3">
-        <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-          <USwitch
-            v-if="supportsRange"
-            v-model="rangeMode"
-            :label="FILTER_RANGE_LABELS.toggle"
-          />
-
-          <FilterGroupOptions
-            v-model="group"
-            :items
-            size="md"
-          />
-        </div>
+        <FilterGroupOptions
+          v-model="group"
+          v-model:range="rangeMode"
+          :items
+          :range-available="supportsRange"
+          size="md"
+        />
 
         <FilterGroupValues
           v-model="group"
@@ -140,19 +133,12 @@
     <div :class="headerClass">
       <span class="font-medium">{{ group.name }}</span>
 
-      <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <USwitch
-          v-if="supportsRange"
-          v-model="rangeMode"
-          :label="FILTER_RANGE_LABELS.toggle"
-          size="xs"
-        />
-
-        <FilterGroupOptions
-          v-model="group"
-          :items
-        />
-      </div>
+      <FilterGroupOptions
+        v-model="group"
+        v-model:range="rangeMode"
+        :items
+        :range-available="supportsRange"
+      />
     </div>
 
     <div :class="bodyClass">

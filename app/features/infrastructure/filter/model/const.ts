@@ -89,6 +89,9 @@ export const CATALOG_PICKER_SEARCH_DEBOUNCE_MS = 300;
  */
 export const CATALOG_PICKER_SELECT_ALL_LIMIT = 1000;
 
+/** Подпись переключателя, меняющего теги значений на ползунок диапазона */
+export const FILTER_RANGE_LABEL = 'Диапазон';
+
 /** Подпись переключателя, отмечающего все показанные значения группы */
 export const FILTER_SELECT_ALL_LABEL = 'Выбрать все';
 

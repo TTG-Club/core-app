@@ -65,16 +65,19 @@
     () => rangeItems.value.filter((filterItem) => filterItem.selected).length,
   );
 
-  const rangeHint = computed(() => {
-    if (!selectedCount.value) {
-      return FILTER_RANGE_LABELS.empty;
-    }
+  const hasRangeSelection = computed(() => selectedCount.value > 0);
 
+  /**
+   * Подсказка под ползунком: нужна, только когда внутри границ отмечено не
+   * всё — тогда ползунок показывает больше, чем выбрано на самом деле.
+   */
+  const rangeHint = computed(() => {
     const [minimum, maximum] = rangeBounds.value;
 
-    return selectedCount.value === maximum - minimum + 1
-      ? undefined
-      : FILTER_RANGE_LABELS.sparse;
+    return hasRangeSelection.value
+      && selectedCount.value !== maximum - minimum + 1
+      ? FILTER_RANGE_LABELS.sparse
+      : undefined;
   });
 
   /** Применяет валидные границы слайдера к существующим значениям фильтра. */
@@ -141,12 +144,21 @@
     v-if="showRange"
     class="flex w-full min-w-0 flex-col gap-3"
   >
-    <div class="flex items-center justify-between gap-3 text-sm">
-      <span>{{ rangeMinimumLabel }} — {{ rangeMaximumLabel }}</span>
+    <div class="flex min-h-6 items-center justify-between gap-3 text-sm">
+      <span v-if="hasRangeSelection">
+        {{ rangeMinimumLabel }} — {{ rangeMaximumLabel }}
+      </span>
+
+      <span
+        v-else
+        class="text-muted"
+      >
+        {{ FILTER_RANGE_LABELS.empty }}
+      </span>
 
       <UButton
+        v-if="hasRangeSelection"
         :label="FILTER_RANGE_LABELS.reset"
-        :disabled="!selectedCount"
         size="xs"
         color="neutral"
         variant="ghost"
