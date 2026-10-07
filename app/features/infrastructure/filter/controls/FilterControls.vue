@@ -8,7 +8,6 @@
   import { FilterDrawer } from '../drawer';
   import { FilterList } from '../list';
   import {
-    FILTER_CONTROLS_FILTER_LABEL,
     FILTER_CONTROLS_MORE_LABEL,
     FILTER_CONTROLS_RESET_LABEL,
     FILTER_CONTROLS_SEARCH_PLACEHOLDER,
@@ -70,9 +69,12 @@
     () => isMounted.value && greaterOrEqual(Breakpoint.LG).value,
   );
 
-  /** На узком экране кнопка отбора остаётся одним значком: строка коротка. */
-  const filterButtonLabel = computed(() =>
-    isLarge.value ? FILTER_CONTROLS_FILTER_LABEL : undefined,
+  /**
+   * На широком экране место кнопки отбора занимают «Источники»: сами фильтры
+   * стоят в панели, и подпись помещается. На узком это один значок.
+   */
+  const sourcesButtonLabel = computed(() =>
+    isLarge.value ? FILTER_SOURCES_TITLE : undefined,
   );
 
   const shareIcon = isApple ? FILTER_SHARE_ICON_APPLE : FILTER_SHARE_ICON;
@@ -122,6 +124,12 @@
       && filter.value.filters?.some((group) =>
         hasTouchedItem(getGroupItems(group)),
       ),
+  );
+
+  // Сброс на широком экране — отдельной кнопкой: кнопки отбора, к которой он
+  // приклеен на узком, там нет.
+  const showStandaloneReset = computed(
+    () => isLarge.value && isFilterEdited.value,
   );
 
   const isSourcesEdited = computed(() => {
@@ -258,13 +266,16 @@
     />
 
     <div class="flex gap-2">
-      <UFieldGroup class="w-full space-x-px">
+      <!-- Кнопка отбора — только на узком экране: на широком фильтры стоят -->
+      <!-- в панели. Прячется стилем, а не условием, чтобы не мигать до -->
+      <!-- монтирования, пока ширина ещё неизвестна. -->
+      <UFieldGroup class="w-full space-x-px lg:hidden">
         <UButton
           :disabled="!filter"
           :loading="isPending"
           icon="tabler:filter"
-          :label="filterButtonLabel"
-          :square="!isLarge"
+          :title="FILTER_FILTERS_TITLE"
+          square
           block
           @click.left.exact.prevent="filterOpened = true"
         />
@@ -277,16 +288,29 @@
         />
       </UFieldGroup>
 
-      <UChip :show="isSourcesEdited">
+      <UChip
+        :show="isSourcesEdited"
+        class="lg:grow"
+      >
         <UButton
           :disabled="!filter"
           :loading="isPending"
           icon="tabler:books"
           :title="FILTER_SOURCES_TITLE"
-          square
+          :label="sourcesButtonLabel"
+          :square="!isLarge"
+          :block="isLarge"
           @click.left.exact.prevent="sourcesOpened = true"
         />
       </UChip>
+
+      <UButton
+        v-if="showStandaloneReset"
+        :title="FILTER_CONTROLS_RESET_LABEL"
+        icon="tabler:trash"
+        square
+        @click.left.exact.prevent="resetFilter"
+      />
 
       <UButton
         v-if="showStandaloneShare"
