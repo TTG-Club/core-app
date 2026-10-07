@@ -103,8 +103,10 @@ export const CLOSED_STATUSES: ReadonlyArray<SubmissionStatus> = [
   'SUPERSEDED',
 ];
 
-/** Статус, с которого открывается очередь модерации. */
-export const DEFAULT_MODERATION_STATUS: SubmissionStatus = 'PENDING';
+/** Статусы, с которыми открывается очередь модерации: то, что ждёт решения. */
+export const DEFAULT_MODERATION_STATUSES: ReadonlyArray<SubmissionStatus> = [
+  'PENDING',
+];
 
 /* ------------------------------------------------------------------ */
 /* Тексты страницы автора                                              */
@@ -253,14 +255,13 @@ export const VTTG_MODULES_DASHBOARD_TITLE = 'Модули VTTG';
 export const VTTG_MODULES_DASHBOARD_DESCRIPTION =
   'Заявки авторов на включение модулей в каталог виртуального стола';
 
-export const MODERATION_STATUS_ALL_LABEL = 'Все';
-
-export const MODERATION_STATUS_ALL_VALUE = 'ALL';
+/** Подсказка фильтра, когда ни один статус не выбран — показываются все. */
+export const MODERATION_STATUS_FILTER_PLACEHOLDER = 'Все статусы';
 
 export const MODERATION_EMPTY_TITLE = 'Заявок нет';
 
 export const MODERATION_EMPTY_DESCRIPTION =
-  'В этом статусе сейчас нет ни одной заявки.';
+  'С выбранными статусами сейчас нет ни одной заявки.';
 
 export const MODERATION_AUTHOR_PREFIX = 'Автор';
 

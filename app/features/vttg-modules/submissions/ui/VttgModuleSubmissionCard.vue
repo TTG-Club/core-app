@@ -51,7 +51,7 @@
       <UButton
         v-if="isEditable"
         :icon="EDIT_ICON"
-        size="sm"
+        size="md"
         variant="soft"
         :disabled="busy"
         @click.left.exact.prevent="edit"
@@ -62,7 +62,7 @@
       <UButton
         v-if="isActive"
         :icon="REFRESH_MANIFEST_ICON"
-        size="sm"
+        size="md"
         variant="soft"
         color="neutral"
         :disabled="busy"
@@ -74,7 +74,7 @@
       <UButton
         v-if="isActive"
         :icon="WITHDRAW_ICON"
-        size="sm"
+        size="md"
         variant="ghost"
         color="error"
         :disabled="busy"

@@ -162,19 +162,24 @@ export async function withdrawSubmission(submissionId: string): Promise<void> {
 
 /**
  * Загружает страницу очереди модерации, старые заявки сверху.
- * @param status Статус заявок; `null` — все.
+ * @param statuses Статусы заявок; пустой список — все заявки.
  * @param page Номер страницы, считая с нуля.
  * @param size Размер страницы.
  * @param fetcher Функция запроса; на сервере — с cookie текущего запроса.
  */
 export async function fetchModerationSubmissions(
-  status: SubmissionStatus | null,
+  statuses: ReadonlyArray<SubmissionStatus>,
   page: number,
   size: number,
   fetcher: Fetcher = $fetch,
 ): Promise<SubmissionsPage> {
   const response = await fetcher(VTTG_MODULES_MODERATION_API_PATH, {
-    query: { status: status ?? undefined, page, size },
+    // Сервис понимает статусы через запятую; без параметра отдаёт все.
+    query: {
+      status: statuses.length > 0 ? statuses.join(',') : undefined,
+      page,
+      size,
+    },
     retry: 0,
   });
 

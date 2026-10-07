@@ -99,7 +99,7 @@
 
       <div>
         <UButton
-          size="xs"
+          size="md"
           variant="link"
           color="neutral"
           :label="manifestToggleLabel"
@@ -118,7 +118,7 @@
       <UButton
         v-if="canApprove"
         :icon="APPROVE_ICON"
-        size="sm"
+        size="md"
         color="success"
         :disabled="busy"
         @click.left.exact.prevent="approve"
@@ -129,7 +129,7 @@
       <UButton
         v-if="canReject"
         :icon="REJECT_ICON"
-        size="sm"
+        size="md"
         color="error"
         variant="soft"
         :disabled="busy"

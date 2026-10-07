@@ -7,14 +7,13 @@
   import {
     APPROVED_TOAST,
     approveSubmission,
-    DEFAULT_MODERATION_STATUS,
+    DEFAULT_MODERATION_STATUSES,
     fetchModerationSubmissions,
     getVttgModulesErrorMessage,
     MODERATION_EMPTY_DESCRIPTION,
     MODERATION_EMPTY_TITLE,
     MODERATION_PAGE_SIZE,
-    MODERATION_STATUS_ALL_LABEL,
-    MODERATION_STATUS_ALL_VALUE,
+    MODERATION_STATUS_FILTER_PLACEHOLDER,
     MODERATION_TITLE,
     REJECTED_TOAST,
     rejectSubmission,
@@ -32,25 +31,28 @@
   const requestFetch = useRequestFetch();
   const { showError, showSuccess } = useVttgModulesToast();
 
-  const selectedStatus = ref<string>(DEFAULT_MODERATION_STATUS);
+  const selectedStatuses = ref<Array<SubmissionStatus>>([
+    ...DEFAULT_MODERATION_STATUSES,
+  ]);
+
   const currentPage = ref(1);
   const rejectedSubmission = ref<ModuleSubmission | null>(null);
   const isRejectOpen = ref(false);
   const isModerating = ref(false);
 
-  const statusItems = [
-    ...SUBMISSION_STATUSES.map((status) => ({
-      value: status,
-      label: SUBMISSION_STATUS_LABELS[status],
-    })),
-    { value: MODERATION_STATUS_ALL_VALUE, label: MODERATION_STATUS_ALL_LABEL },
-  ];
+  const statusItems = SUBMISSION_STATUSES.map((status) => ({
+    value: status,
+    label: SUBMISSION_STATUS_LABELS[status],
+  }));
 
-  /** Статус фильтра для запроса; «Все» — без фильтра. */
-  const statusFilter = computed<SubmissionStatus | null>(
-    () =>
-      SUBMISSION_STATUSES.find((status) => status === selectedStatus.value)
-      ?? null,
+  /**
+   * Выбранные статусы в порядке жизненного цикла. Пустой выбор — все заявки:
+   * так фильтр снимается одним кликом, без отдельного пункта «Все».
+   */
+  const statusFilter = computed<Array<SubmissionStatus>>(() =>
+    SUBMISSION_STATUSES.filter((status) =>
+      selectedStatuses.value.includes(status),
+    ),
   );
 
   const {
@@ -82,7 +84,7 @@
     getVttgModulesErrorMessage(submissionsError.value),
   );
 
-  // Другой статус — другой список: со второй страницы прошлого фильтра
+  // Другие статусы — другой список: со второй страницы прошлого фильтра
   // начинать незачем.
   watch(statusFilter, () => {
     currentPage.value = 1;
@@ -150,11 +152,15 @@
     :title="MODERATION_TITLE"
   >
     <div class="flex flex-col gap-3">
-      <UTabs
-        v-model="selectedStatus"
+      <USelectMenu
+        v-model="selectedStatuses"
+        multiple
+        value-key="value"
         :items="statusItems"
-        :content="false"
-        size="sm"
+        :search-input="false"
+        :placeholder="MODERATION_STATUS_FILTER_PLACEHOLDER"
+        size="md"
+        class="w-full sm:w-80"
       />
 
       <template v-if="isLoading">
