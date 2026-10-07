@@ -5,6 +5,7 @@
 
   import {
     CANCEL_LABEL,
+    isSubmissionInCatalog,
     MODERATION_COMMENT_MAX_LENGTH,
     REJECT_COMMENT_LABEL,
     REJECT_COMMENT_PLACEHOLDER,
@@ -33,7 +34,9 @@
 
   const comment = ref('');
 
-  const isTakeDown = computed(() => submission?.status === 'APPROVED');
+  const isTakeDown = computed(() =>
+    submission ? isSubmissionInCatalog(submission.status) : false,
+  );
 
   const title = computed(() =>
     isTakeDown.value ? TAKE_DOWN_TITLE : REJECT_TITLE,

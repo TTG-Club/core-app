@@ -8,9 +8,12 @@ import { z } from 'zod';
 
 import {
   ALLOWED_ICON_PREFIXES,
+  APPROVABLE_STATUSES,
+  CATALOG_STATUS,
   CLOSED_STATUSES,
   DEFAULT_MODULE_ICON,
   EDITABLE_STATUSES,
+  REJECTABLE_STATUSES,
 } from './constants';
 
 const manifestSystemsSchema = z.object({
@@ -31,6 +34,30 @@ export function isSubmissionEditable(status: SubmissionStatus): boolean {
  */
 export function isSubmissionClosed(status: SubmissionStatus): boolean {
   return CLOSED_STATUSES.includes(status);
+}
+
+/**
+ * Может ли модератор одобрить заявку.
+ * @param status Текущий статус заявки.
+ */
+export function canApproveSubmission(status: SubmissionStatus): boolean {
+  return APPROVABLE_STATUSES.includes(status);
+}
+
+/**
+ * Может ли модератор отклонить заявку или снять модуль из каталога.
+ * @param status Текущий статус заявки.
+ */
+export function canRejectSubmission(status: SubmissionStatus): boolean {
+  return REJECTABLE_STATUSES.includes(status);
+}
+
+/**
+ * Стоит ли модуль в каталоге VTTG: тогда отклонение снимает его оттуда.
+ * @param status Текущий статус заявки.
+ */
+export function isSubmissionInCatalog(status: SubmissionStatus): boolean {
+  return status === CATALOG_STATUS;
 }
 
 /**

@@ -103,6 +103,18 @@ export const CLOSED_STATUSES: ReadonlyArray<SubmissionStatus> = [
   'SUPERSEDED',
 ];
 
+/** Заявки, которые модератор может одобрить. */
+export const APPROVABLE_STATUSES: ReadonlyArray<SubmissionStatus> = ['PENDING'];
+
+/** Заявки, которые модератор может отклонить или снять из каталога. */
+export const REJECTABLE_STATUSES: ReadonlyArray<SubmissionStatus> = [
+  'PENDING',
+  'APPROVED',
+];
+
+/** Статус модуля в каталоге VTTG: его отклонение — это снятие из каталога. */
+export const CATALOG_STATUS: SubmissionStatus = 'APPROVED';
+
 /** Статусы, с которыми открывается очередь модерации: то, что ждёт решения. */
 export const DEFAULT_MODERATION_STATUSES: ReadonlyArray<SubmissionStatus> = [
   'PENDING',

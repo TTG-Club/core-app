@@ -3,12 +3,15 @@ import type { ModuleSubmission } from '~vttg-modules/model';
 import { describe, expect, it } from 'vitest';
 
 import {
+  canApproveSubmission,
+  canRejectSubmission,
   DEFAULT_MODULE_ICON,
   getManifestSystemIds,
   getModuleIcon,
   hasSystemsMismatch,
   isSubmissionClosed,
   isSubmissionEditable,
+  isSubmissionInCatalog,
   parseSubmissionsPage,
 } from '~vttg-modules/model';
 
@@ -118,5 +121,22 @@ describe('закрытые заявки', () => {
     expect(isSubmissionClosed('SUPERSEDED')).toBe(true);
     expect(isSubmissionClosed('APPROVED')).toBe(false);
     expect(isSubmissionClosed('REJECTED')).toBe(false);
+  });
+});
+
+describe('решения модератора по статусу', () => {
+  it('одобрить можно только заявку на рассмотрении', () => {
+    expect(canApproveSubmission('PENDING')).toBe(true);
+    expect(canApproveSubmission('APPROVED')).toBe(false);
+    expect(canApproveSubmission('REJECTED')).toBe(false);
+  });
+
+  it('отклонить можно заявку на рассмотрении, одобренную — снять', () => {
+    expect(canRejectSubmission('PENDING')).toBe(true);
+    expect(canRejectSubmission('APPROVED')).toBe(true);
+    expect(canRejectSubmission('WITHDRAWN')).toBe(false);
+    expect(canRejectSubmission('SUPERSEDED')).toBe(false);
+    expect(isSubmissionInCatalog('APPROVED')).toBe(true);
+    expect(isSubmissionInCatalog('PENDING')).toBe(false);
   });
 });

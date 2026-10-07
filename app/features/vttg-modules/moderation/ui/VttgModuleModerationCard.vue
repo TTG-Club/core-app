@@ -6,8 +6,11 @@
   import {
     APPROVE_ICON,
     APPROVE_LABEL,
+    canApproveSubmission,
+    canRejectSubmission,
     formatManifest,
     hasSystemsMismatch,
+    isSubmissionInCatalog,
     MANIFEST_HIDE_LABEL,
     MANIFEST_SHOW_LABEL,
     MANIFEST_SYSTEMS_MISMATCH_HINT,
@@ -46,14 +49,11 @@
   );
 
   const isMismatch = computed(() => hasSystemsMismatch(submission));
-  const canApprove = computed(() => submission.status === 'PENDING');
-
-  const canReject = computed(
-    () => submission.status === 'PENDING' || submission.status === 'APPROVED',
-  );
+  const canApprove = computed(() => canApproveSubmission(submission.status));
+  const canReject = computed(() => canRejectSubmission(submission.status));
 
   const rejectLabel = computed(() =>
-    submission.status === 'APPROVED' ? TAKE_DOWN_LABEL : REJECT_LABEL,
+    isSubmissionInCatalog(submission.status) ? TAKE_DOWN_LABEL : REJECT_LABEL,
   );
 
   const manifestToggleLabel = computed(() =>
