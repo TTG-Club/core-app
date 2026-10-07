@@ -8,7 +8,13 @@
   import { HamburgerIcon, SvgLogo } from '~ui/icon';
 
   import { SidebarPopover } from '../popover';
-  import { MENU_LINKS, MENU_SECTIONS, MENU_SUPPORT } from './model';
+  import {
+    MENU_LINKS,
+    MENU_SECTIONS,
+    MENU_SITE_DESCRIPTION,
+    MENU_SITE_TITLE,
+    MENU_SUPPORT,
+  } from './model';
   import { MenuContacts, MenuSection, MenuSupport } from './ui';
 
   const overlay = useOverlay();
@@ -48,7 +54,7 @@
     </template>
 
     <template #default>
-      <div class="flex gap-4 p-6 pb-3">
+      <header class="flex items-center gap-4 px-6 py-5">
         <NuxtLink
           :class="$style.logo"
           to="/"
@@ -56,36 +62,41 @@
           <SvgLogo />
         </NuxtLink>
 
-        <div :class="$style.name">
-          <span :class="$style.description">
-            Онлайн справочник по D&D 5e 2024
+        <div class="flex min-w-0 flex-col gap-1">
+          <span class="text-2xl leading-none font-semibold text-highlighted">
+            {{ MENU_SITE_TITLE }}
           </span>
 
-          <span :class="$style.title">TTG Club</span>
+          <span class="text-sm text-muted">{{ MENU_SITE_DESCRIPTION }}</span>
         </div>
-      </div>
+      </header>
 
-      <USeparator class="my-3" />
+      <USeparator />
 
-      <div :class="$style.content">
-        <MenuSection
-          v-for="section in MENU_SECTIONS"
-          :key="section.label"
-          v-bind="section"
-          @action="handleMenuAction"
-        />
-      </div>
+      <nav :class="$style.navigation">
+        <div :class="$style.content">
+          <MenuSection
+            v-for="section in MENU_SECTIONS"
+            :key="section.label"
+            v-bind="section"
+            @action="handleMenuAction"
+          />
+        </div>
+      </nav>
 
-      <USeparator class="my-3" />
+      <USeparator />
 
-      <div :class="$style.footer">
+      <footer
+        :class="$style.footer"
+        class="bg-elevated/40 text-sm text-muted"
+      >
         <div :class="$style.contacts">
           <MenuContacts :social-links="MENU_LINKS" />
 
           <USeparator
             :class="$style.divider"
             orientation="vertical"
-            class="my-3 h-8"
+            class="h-8"
           />
 
           <MenuSupport :support-items="MENU_SUPPORT" />
@@ -99,52 +110,40 @@
             :class="$style.email"
           />
         </div>
-      </div>
+      </footer>
     </template>
   </SidebarPopover>
 </template>
 
 <style lang="scss" module>
-  .header {
-    padding: 24px 24px 12px 24px;
-  }
-
   .logo {
-    width: 33%;
-    max-width: 100px;
+    flex-shrink: 0;
+    width: 56px;
   }
 
-  .name {
+  // Колонки считаются от ширины самого меню, а не окна: меню уже окна
+  .navigation {
     container-type: inline-size;
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    gap: 8px;
-    align-items: flex-start;
-    justify-content: center;
+    padding: 24px 14px 0;
   }
 
-  .title {
-    font-size: 28px;
-    font-weight: 600;
-    line-height: 28px;
-    color: var(--ui-text-highlighted);
-
-    @container (width >= 248px) {
-      font-size: 40px;
-      font-weight: 600;
-      line-height: 36px;
-    }
-  }
-
-  // Разделы делят всю ширину меню поровну: при рядах фиксированной ширины
-  // широкое меню оставляло справа от первого ряда пустую полосу. Минимум
-  // колонки — тот же, что у самого раздела (MenuSection).
+  // Разделы идут сверху вниз и сами раскладываются по колонкам равной высоты,
+  // поэтому под короткими разделами не остаётся пустых полей.
   .content {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-    padding: 12px 16px;
+    column-count: 2;
+    column-gap: 12px;
+
+    @container (width < 340px) {
+      column-count: 1;
+    }
+
+    @container (width >= 620px) {
+      column-count: 3;
+    }
+
+    @container (width >= 860px) {
+      column-count: 4;
+    }
   }
 
   .footer {
@@ -152,27 +151,32 @@
   }
 
   .contacts {
-    container-type: inline-size;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 4px 12px;
+    padding: 10px 24px;
 
-    padding: 0 24px 12px 24px;
-
-    @container (width >= 640px) {
+    @container (width >= 800px) {
       flex-direction: row;
+      align-items: center;
     }
 
     .divider {
       display: none;
 
-      @container (width >= 592px) {
+      @container (width >= 800px) {
         display: inline-block;
       }
     }
 
     .email {
-      margin-left: auto;
+      align-self: flex-start;
+      padding-left: 0;
+
+      @container (width >= 800px) {
+        align-self: auto;
+        margin-left: auto;
+      }
     }
   }
 </style>

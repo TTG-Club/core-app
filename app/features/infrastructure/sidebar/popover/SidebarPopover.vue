@@ -48,7 +48,7 @@
     <Transition name="fade">
       <div
         v-if="isOpened"
-        :class="$style.background"
+        :class="[$style.background, { [$style.isMenu]: isMenu }]"
         @click.left.exact.self.prevent.stop="close()"
       />
     </Transition>
@@ -81,10 +81,9 @@
   $horizontalMargin: 72px;
   $verticalMargin: 16px;
 
-  // Меню раскрывается шире прочих поповеров: при 1100px семь его разделов
-  // (по 240px с зазором 20px, см. MenuSection) ложились в два неровных ряда,
-  // а на этой ширине с полями встают одной полосой.
-  $menuMaxWidth: 1840px;
+  // Меню держится компактной панелью у навигации, а не полосой во весь экран:
+  // четыре колонки разделов (см. AppMenu) читаются одним взглядом.
+  $menuMaxWidth: 1040px;
 
   .navPopover {
     flex-shrink: 0;
@@ -118,6 +117,11 @@
     height: 100dvh;
 
     background-color: var(--color-overlay);
+
+    // Под меню страница дополнительно размывается, чтобы не спорить с ним
+    &.isMenu {
+      backdrop-filter: blur(4px);
+    }
   }
 
   .body {
