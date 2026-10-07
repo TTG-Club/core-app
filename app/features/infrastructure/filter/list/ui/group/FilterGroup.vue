@@ -67,12 +67,12 @@
 <template>
   <!-- Группа с выбором раскрыта сразу: иначе отмеченное пряталось бы под -->
   <!-- шапкой. Дальше её состоянием управляет сам пользователь. -->
-  <!-- Группы разделены тонкой линией сверху: раскрытая оказывается между -->
-  <!-- двумя линиями, и видно, какие значения к ней относятся. -->
+  <!-- Шапка группы — строка-заголовок: от названия к стрелке тянется тонкая -->
+  <!-- линия, по ней видно, где начинается группа и её значения. -->
   <UCollapsible
     v-if="collapsible"
     :default-open="hasSelection"
-    class="flex flex-col border-t border-default py-1"
+    class="flex flex-col"
   >
     <UButton
       trailing-icon="tabler:chevron-down"
@@ -85,9 +85,11 @@
           'transition-transform duration-200 group-data-[state=open]:rotate-180',
       }"
     >
-      <span class="min-w-0 grow truncate text-left font-medium">
+      <span class="min-w-0 truncate text-left font-medium">
         {{ group.name }}
       </span>
+
+      <span class="min-w-3 grow border-t border-default" />
 
       <UBadge
         v-if="hasSelection"
