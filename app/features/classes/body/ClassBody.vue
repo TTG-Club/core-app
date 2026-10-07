@@ -80,18 +80,27 @@
           :id="CLASS_SECTION_ANCHOR.table"
           class="flex min-w-0 flex-col gap-2"
         >
-          <ClassRouting
+          <!--
+            Якорь на обёртке, а не на ClassRouting: тот асинхронный и появляется
+            в DOM позже, чем навигация собирает отслеживаемые заголовки.
+            Отступ прокрутки доводит первый раздел до самого верха контейнера.
+          -->
+          <div
             :id="getSectionHeadingId(CLASS_SECTION_ANCHOR.table)"
-            :url="detail.url"
-            :name="detail.name"
-            :parent="detail.parent"
-            :has-description="!!detail.description"
-            :has-spells="detail.casterType !== 'NONE'"
-            :navigate-in-place="navigateInPlace"
-            :in-split="inSplit"
-            :hide-navigation="hideNavigation"
-            @navigate="emit('navigate', $event)"
-          />
+            class="scroll-mt-24"
+          >
+            <ClassRouting
+              :url="detail.url"
+              :name="detail.name"
+              :parent="detail.parent"
+              :has-description="!!detail.description"
+              :has-spells="detail.casterType !== 'NONE'"
+              :navigate-in-place="navigateInPlace"
+              :in-split="inSplit"
+              :hide-navigation="hideNavigation"
+              @navigate="emit('navigate', $event)"
+            />
+          </div>
 
           <ClassTable
             :table="detail.table"
