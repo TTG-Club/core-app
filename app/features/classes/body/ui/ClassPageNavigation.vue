@@ -6,6 +6,7 @@
     CLASS_NAVIGATION_TITLE,
     CLASS_SECTION_ANCHOR,
     CLASS_SECTION_LABEL,
+    getSectionHeadingId,
   } from './constants';
 
   interface ClassNavigationLink {
@@ -64,7 +65,10 @@
       });
     }
 
-    return sections;
+    return sections.map((section) => ({
+      ...section,
+      id: getSectionHeadingId(section.id),
+    }));
   });
 
   /**
@@ -114,7 +118,7 @@
 <template>
   <!-- Липнет обёртка: внутри неё перехватываем клики до UContentToc -->
   <div
-    class="sticky top-4"
+    class="sticky top-0"
     @click.capture="handleLinkClick"
   >
     <UContentToc

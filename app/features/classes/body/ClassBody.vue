@@ -14,7 +14,7 @@
     FeatureCollapse,
     StatsBlock,
   } from './ui';
-  import { CLASS_SECTION_ANCHOR } from './ui/constants';
+  import { CLASS_SECTION_ANCHOR, getSectionHeadingId } from './ui/constants';
 
   const {
     detail,
@@ -81,6 +81,7 @@
           class="flex min-w-0 flex-col gap-2"
         >
           <ClassRouting
+            :id="getSectionHeadingId(CLASS_SECTION_ANCHOR.table)"
             :url="detail.url"
             :name="detail.name"
             :parent="detail.parent"
@@ -101,12 +102,14 @@
 
         <ClassProficiency
           :id="CLASS_SECTION_ANCHOR.proficiency"
+          :heading-id="getSectionHeadingId(CLASS_SECTION_ANCHOR.proficiency)"
           :proficiency="detail.proficiency"
           :saving-throws="detail.savingThrows"
         />
 
         <ClassEquipment
           :id="CLASS_SECTION_ANCHOR.equipment"
+          :heading-id="getSectionHeadingId(CLASS_SECTION_ANCHOR.equipment)"
           :equipment="detail.equipment"
         />
 
@@ -120,7 +123,10 @@
           v-if="detail.description"
           :id="CLASS_SECTION_ANCHOR.description"
         >
-          <UiCollapse default-open>
+          <UiCollapse
+            default-open
+            :heading-id="getSectionHeadingId(CLASS_SECTION_ANCHOR.description)"
+          >
             <template #default>Описание</template>
 
             <template #content>

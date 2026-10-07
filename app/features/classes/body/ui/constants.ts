@@ -9,6 +9,14 @@ export function getIndexedFeatureAnchorId(
 }
 
 /**
+ * Формирует якорь заголовка раздела. Навигация следит за заголовками, а не за
+ * разделами целиком, иначе подсвечиваются все короткие разделы на экране.
+ */
+export function getSectionHeadingId(sectionId: string): string {
+  return `${sectionId}-heading`;
+}
+
+/**
  * Заголовок навигации по разделам страницы класса.
  */
 export const CLASS_NAVIGATION_TITLE = 'На этой странице';
