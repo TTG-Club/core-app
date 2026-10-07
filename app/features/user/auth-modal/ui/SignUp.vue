@@ -134,7 +134,11 @@
 
 <template>
   <div class="flex flex-col gap-6">
-    <h4 class="text-2xl">Регистрация</h4>
+    <div class="flex flex-col gap-1">
+      <h4 class="text-2xl font-semibold text-highlighted">Регистрация</h4>
+
+      <p class="text-sm text-muted">Пара минут — и аккаунт готов</p>
+    </div>
 
     <UForm
       class="flex flex-col gap-4"
@@ -145,6 +149,9 @@
       <UFormField name="username">
         <UInput
           v-model="state.username"
+          class="w-full"
+          size="lg"
+          icon="tabler:user"
           autocapitalize="off"
           autocomplete="username"
           autocorrect="off"
@@ -156,6 +163,9 @@
       <UFormField name="email">
         <UInput
           v-model="state.email"
+          class="w-full"
+          size="lg"
+          icon="tabler:mail"
           autocapitalize="off"
           autocomplete="email"
           autocorrect="off"
@@ -178,6 +188,9 @@
           <UInput
             ref="passwordField"
             v-model="state.password"
+            class="w-full"
+            size="lg"
+            icon="tabler:lock"
             autocapitalize="off"
             autocomplete="new-password"
             autocorrect="off"
@@ -203,6 +216,9 @@
       <UFormField name="repeat">
         <UInput
           v-model="state.repeat"
+          class="w-full"
+          size="lg"
+          icon="tabler:lock-check"
           autocapitalize="off"
           autocomplete="new-password"
           autocorrect="off"
@@ -256,26 +272,29 @@
         </UCheckbox>
       </UFormField>
 
-      <div class="flex flex-col gap-2 md:flex-row">
-        <UButton
-          :loading="inProgress"
-          :disabled="submitDisabled"
-          class="md:w-auto"
-          block
-          @click.left.exact.prevent="onSubmit"
-        >
-          Зарегистрироваться
-        </UButton>
-
-        <UButton
-          class="md:w-auto"
-          variant="soft"
-          block
-          @click.left.exact.prevent="$emit('switch:sign-in')"
-        >
-          Есть аккаунт?
-        </UButton>
-      </div>
+      <UButton
+        :loading="inProgress"
+        :disabled="submitDisabled"
+        size="lg"
+        block
+        @click.left.exact.prevent="onSubmit"
+      >
+        Зарегистрироваться
+      </UButton>
     </UForm>
+
+    <div
+      class="flex flex-wrap items-center justify-center gap-x-2 border-t border-default pt-5 text-sm text-muted"
+    >
+      Уже есть аккаунт?
+
+      <UButton
+        class="p-0"
+        variant="link"
+        @click.left.exact.prevent="$emit('switch:sign-in')"
+      >
+        Войти
+      </UButton>
+    </div>
   </div>
 </template>

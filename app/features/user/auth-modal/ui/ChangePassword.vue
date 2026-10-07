@@ -59,7 +59,15 @@
 
 <template>
   <div class="flex flex-col gap-6">
-    <h4 class="text-2xl">Восстановление пароля</h4>
+    <div class="flex flex-col gap-1">
+      <h4 class="text-2xl font-semibold text-highlighted">
+        Восстановление пароля
+      </h4>
+
+      <p class="text-sm text-muted">
+        Пришлём на почту ссылку для сброса пароля
+      </p>
+    </div>
 
     <UForm
       class="flex flex-col gap-4"
@@ -70,6 +78,9 @@
       <UFormField name="email">
         <UInput
           v-model="state.email"
+          class="w-full"
+          size="lg"
+          icon="tabler:mail"
           autocapitalize="off"
           autocomplete="email"
           autocorrect="off"
@@ -78,26 +89,26 @@
         />
       </UFormField>
 
-      <div class="flex flex-col gap-2 md:flex-row">
-        <UButton
-          :disabled="success"
-          :loading="inProgress"
-          class="md:w-auto"
-          block
-          @click.left.exact.prevent="onSubmit"
-        >
-          Отправить письмо
-        </UButton>
-
-        <UButton
-          class="md:w-auto"
-          variant="soft"
-          block
-          @click.left.exact.prevent="$emit('switch:sign-in')"
-        >
-          Авторизация
-        </UButton>
-      </div>
+      <UButton
+        :disabled="success"
+        :loading="inProgress"
+        size="lg"
+        block
+        @click.left.exact.prevent="onSubmit"
+      >
+        Отправить письмо
+      </UButton>
     </UForm>
+
+    <div class="flex justify-center border-t border-default pt-5">
+      <UButton
+        class="p-0"
+        variant="link"
+        icon="tabler:arrow-left"
+        @click.left.exact.prevent="$emit('switch:sign-in')"
+      >
+        Вернуться ко входу
+      </UButton>
+    </div>
   </div>
 </template>
