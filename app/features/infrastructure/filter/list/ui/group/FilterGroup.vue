@@ -105,6 +105,7 @@
         <FilterGroupOptions
           v-model="group"
           :items
+          size="md"
         />
 
         <div class="flex flex-wrap gap-2">

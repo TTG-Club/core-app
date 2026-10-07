@@ -12,9 +12,12 @@
    * Переключатели группы: «Выбрать все», «Исключать» и «Точное совпадение».
    * Общие для дровера и встроенного списка — раскладка разная, поведение одно.
    */
-  const { items } = defineProps<{
+  const { items, size = 'xs' } = defineProps<{
     /** Показанные значения группы: «Выбрать все» работает именно по ним. */
     items: FilterItems;
+
+    /** Размер переключателей: в панели раздела они крупнее, чем в дровере. */
+    size?: 'xs' | 'md';
   }>();
 
   const group = defineModel<FilterGroup>({
@@ -65,7 +68,7 @@
       v-if="items.length > 0"
       :model-value="selectAllState"
       :label="FILTER_SELECT_ALL_LABEL"
-      size="xs"
+      :size
       @update:model-value="handleSelectAll"
     />
 
@@ -73,7 +76,7 @@
       v-if="group.supports?.mode"
       :model-value="group.mode"
       :label="FILTER_EXCLUDE_LABEL"
-      size="xs"
+      :size
       color="error"
       @update:model-value="handleModeChange"
     />
@@ -82,7 +85,7 @@
       v-if="group.supports?.union"
       :model-value="group.union"
       :label="FILTER_UNION_LABEL"
-      size="xs"
+      :size
       @update:model-value="handleUnionChange"
     />
   </div>
