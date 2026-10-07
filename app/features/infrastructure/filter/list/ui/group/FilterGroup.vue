@@ -14,12 +14,16 @@
   const {
     items,
     collapsible = false,
+    expanded = false,
     position = 'standalone',
   } = defineProps<{
     items: FilterItems;
 
     /** Сворачиваемая группа для узкой колонки: шапка-кнопка, значения под ней. */
     collapsible?: boolean;
+
+    /** Держит сворачиваемую группу раскрытой — например, пока идёт поиск. */
+    expanded?: boolean;
     position?: GroupPosition;
   }>();
 
@@ -47,6 +51,17 @@
 
   const hasSelection = computed(() => selectedTotal.value > 0);
 
+  // Группа с выбором раскрыта сразу: иначе отмеченное пряталось бы под шапкой.
+  // Дальше её состоянием управляет сам пользователь.
+  // eslint-disable-next-line vue/no-ref-object-reactivity-loss -- намеренный снимок на момент появления группы, см. комментарий выше
+  const isOpenedByUser = ref(hasSelection.value);
+
+  const isOpened = computed(() => expanded || isOpenedByUser.value);
+
+  function handleOpenChange(opened: boolean): void {
+    isOpenedByUser.value = opened;
+  }
+
   const counterColor = computed(() => (group.value.mode ? 'error' : 'primary'));
 
   // Группа приходит одним пропом (defineModel), но мутировать её (или проп
@@ -65,21 +80,20 @@
 </script>
 
 <template>
-  <!-- Группа с выбором раскрыта сразу: иначе отмеченное пряталось бы под -->
-  <!-- шапкой. Дальше её состоянием управляет сам пользователь. -->
   <!-- Шапка группы — строка-заголовок: от названия к стрелке тянется тонкая -->
   <!-- линия, по ней видно, где начинается группа и её значения. -->
   <UCollapsible
     v-if="collapsible"
-    :default-open="hasSelection"
+    :open="isOpened"
     class="flex flex-col"
+    @update:open="handleOpenChange"
   >
     <UButton
       trailing-icon="tabler:chevron-down"
       color="neutral"
-      variant="ghost"
+      variant="link"
       block
-      class="group justify-between px-2"
+      class="group justify-between px-0 text-default hover:text-highlighted"
       :ui="{
         trailingIcon:
           'transition-transform duration-200 group-data-[state=open]:rotate-180',
@@ -101,7 +115,7 @@
     </UButton>
 
     <template #content>
-      <div class="flex flex-col gap-3 px-2 pt-2 pb-3">
+      <div class="flex flex-col gap-3 pt-1 pb-3">
         <FilterGroupOptions
           v-model="group"
           :items

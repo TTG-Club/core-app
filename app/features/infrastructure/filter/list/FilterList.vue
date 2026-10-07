@@ -60,6 +60,9 @@
     required: true,
   });
 
+  /** Под поиском сворачиваемые группы раскрыты: найденное должно быть видно. */
+  const isSearching = computed(() => !!search);
+
   // Во встроенном списке группы стоят вплотную: шапка каждой — сама себе
   // разделитель.
   const containerGapClass = computed(() => (collapsible ? undefined : 'gap-6'));
@@ -169,6 +172,7 @@
         :model-value="item.group"
         :items="item.availableItems"
         :collapsible
+        :expanded="isSearching"
         :position="resolveGroupPosition(itemIndex, itemGroup.length)"
         @update:model-value="handleGroupUpdate(item.index, $event)"
       />

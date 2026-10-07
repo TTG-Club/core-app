@@ -6,14 +6,13 @@
   import { cloneDeep } from 'es-toolkit';
 
   import { FilterDrawer } from '../drawer';
-  import { FilterList } from '../list';
+  import { FilterInline } from '../inline';
   import {
     FILTER_CONTROLS_MORE_LABEL,
     FILTER_CONTROLS_RESET_LABEL,
     FILTER_CONTROLS_SEARCH_PLACEHOLDER,
     FILTER_CONTROLS_SHARE_LABEL,
     FILTER_FILTERS_TITLE,
-    FILTER_INLINE_RESET_LABEL,
     FILTER_SHARE_ICON,
     FILTER_SHARE_ICON_APPLE,
     FILTER_SOURCES_SEARCH_PLACEHOLDER,
@@ -302,29 +301,11 @@
         <template v-if="filter?.filters">
           <USeparator />
 
-          <!-- Сброс живёт в шапке блока: кнопки отбора, к которой он приклеен -->
-          <!-- на узком экране, здесь нет. -->
-          <div class="flex min-h-6 items-center justify-between gap-2">
-            <span class="text-sm font-medium text-muted">
-              {{ FILTER_FILTERS_TITLE }}
-            </span>
-
-            <UButton
-              v-if="isFilterEdited"
-              :label="FILTER_INLINE_RESET_LABEL"
-              :title="FILTER_CONTROLS_RESET_LABEL"
-              icon="tabler:trash"
-              color="error"
-              variant="ghost"
-              size="xs"
-              @click.left.exact.prevent="resetFilter"
-            />
-          </div>
-
-          <FilterList
-            :model-value="filter.filters"
-            collapsible
-            @update:model-value="applyFilter"
+          <FilterInline
+            :groups="filter.filters"
+            :is-edited="isFilterEdited"
+            @update="applyFilter"
+            @reset="resetFilter"
           />
         </template>
       </template>

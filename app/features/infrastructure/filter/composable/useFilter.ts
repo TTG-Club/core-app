@@ -1,3 +1,5 @@
+import type { LocationQuery } from 'vue-router';
+
 import type { Filter } from '../types';
 
 import { isEqual } from 'es-toolkit';
@@ -7,9 +9,28 @@ import {
   applyQueryToFilters,
   buildFullQuery,
   buildSearchQuery,
+  collectGroupKeys,
   getFilterKey,
   normalizeDependentSelections,
 } from '../utils';
+
+/**
+ * Проверяет, задаёт ли адрес страницы условия отбора или источники.
+ *
+ * @param pristine фильтр раздела в исходном виде — по нему известны ключи.
+ * @param query параметры текущего адреса.
+ * @returns `true`, если в адресе есть хотя бы один параметр фильтра.
+ */
+function hasFilterQuery(pristine: Filter, query: LocationQuery): boolean {
+  const filterKeys = collectGroupKeys([
+    ...pristine.filters,
+    ...(pristine.sources ?? []),
+  ]);
+
+  filterKeys.add('source');
+
+  return Object.keys(query).some((queryKey) => filterKeys.has(queryKey));
+}
 
 export async function useFilter(key: string, url: string) {
   const route = useRoute();
@@ -78,10 +99,29 @@ export async function useFilter(key: string, url: string) {
     }
   }
 
+  // Выбор раздела живёт в `useState` и переживает уход на другую страницу.
+  // При возвращении по ссылке без параметров он остаётся в силе; адрес с
+  // параметрами (ссылкой поделились) всегда важнее запомненного.
+  let isRememberedFilterKept = false;
+  let isFirstDefaultsRun = true;
+
   watch(
     validatedDefaults,
     (value) => {
       if (!value) {
+        return;
+      }
+
+      // Только на первом прогоне: дальше дефолты меняются из-за обновления
+      // ответа (например, сменились источники профиля), и их надо применить.
+      isRememberedFilterKept =
+        isFirstDefaultsRun
+        && !!filter.value
+        && !hasFilterQuery(value, route.query);
+
+      isFirstDefaultsRun = false;
+
+      if (isRememberedFilterKept) {
         return;
       }
 
@@ -125,6 +165,12 @@ export async function useFilter(key: string, url: string) {
     },
     { deep: true },
   );
+
+  // Запомненный выбор в адресе ещё не отражён, а вотчер выше не сработает:
+  // сам фильтр не менялся. Возвращаем параметры в адрес вручную.
+  if (isRememberedFilterKept) {
+    syncUrlWithFilter();
+  }
 
   return {
     filter,
