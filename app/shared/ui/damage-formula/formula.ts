@@ -252,12 +252,60 @@ export function parseDamageFormulaDice(
 
   const [, diceCount, diceFaces, sign, bonus] = diceMatch;
   const signedBonus = sign === '-' ? -Number(bonus) : Number(bonus);
-  const typeTag = DAMAGE_FORMULA_TYPE_PATTERN.exec(formula ?? '')?.[1];
 
   return {
     diceCount: Number(diceCount),
     diceFaces: Number(diceFaces),
     bonus: bonus === undefined ? 0 : signedBonus,
-    type: typeTag ? (DAMAGE_TYPE_KEY_BY_TAG[typeTag.toLowerCase()] ?? '') : '',
+    type: getDamageFormulaFirstType(formula ?? ''),
+  };
+}
+
+/**
+ * Ключ типа урона справочника из первого токена `@dmg.*` формулы.
+ *
+ * @param formula формула части урона.
+ * @returns ключ типа урона (`FIRE`); '' — типа в формуле нет или он незнаком.
+ */
+function getDamageFormulaFirstType(formula: string): string {
+  const typeTag = DAMAGE_FORMULA_TYPE_PATTERN.exec(formula)?.[1];
+
+  return typeTag ? (DAMAGE_TYPE_KEY_BY_TAG[typeTag.toLowerCase()] ?? '') : '';
+}
+
+/** Плоский урон: одно число без костей — `1` у духовой трубки. */
+const DAMAGE_FORMULA_FLAT_PATTERN = /^\d+$/;
+
+/** Плоский урон формулы: число и тип урона. */
+export interface DamageFormulaFlat {
+  /** Урон числом. */
+  amount: number;
+  /** Ключ типа урона справочника (`FIRE`); '' — тип в формуле не указан. */
+  type: string;
+}
+
+/**
+ * Разбирает формулу плоского урона — одного числа без костей (`1@dmg.piercing`).
+ *
+ * Как и у костей, формулу сложнее (с модификаторами, арифметикой) разобрать
+ * нельзя — такая возвращает `undefined`.
+ *
+ * @param formula формула части урона.
+ * @returns плоский урон формулы; `undefined` — формула не одно число.
+ */
+export function parseDamageFormulaFlat(
+  formula: string | undefined,
+): DamageFormulaFlat | undefined {
+  const cleaned = (formula ?? '')
+    .replace(DAMAGE_FORMULA_TAG_PATTERN, '')
+    .trim();
+
+  if (!DAMAGE_FORMULA_FLAT_PATTERN.test(cleaned)) {
+    return undefined;
+  }
+
+  return {
+    amount: Number(cleaned),
+    type: getDamageFormulaFirstType(formula ?? ''),
   };
 }

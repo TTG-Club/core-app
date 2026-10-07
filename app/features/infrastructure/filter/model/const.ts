@@ -19,6 +19,9 @@ export const FILTER_CONTROLS_FILTER_LABEL = 'Фильтр';
 /** Подпись кнопки, снимающей все условия отбора разом */
 export const FILTER_CONTROLS_RESET_LABEL = 'Очистить фильтр';
 
+/** Короткая подпись той же кнопки в шапке фильтров, встроенных в панель */
+export const FILTER_INLINE_RESET_LABEL = 'Сбросить';
+
 /** Подпись кнопки, отдающей ссылку на текущий отбор */
 export const FILTER_CONTROLS_SHARE_LABEL = 'Поделиться ссылкой';
 
@@ -86,5 +89,14 @@ export const CATALOG_PICKER_SEARCH_DEBOUNCE_MS = 300;
  */
 export const CATALOG_PICKER_SELECT_ALL_LIMIT = 1000;
 
+/** Подпись переключателя, меняющего теги значений на ползунок диапазона */
+export const FILTER_RANGE_LABEL = 'Диапазон';
+
 /** Подпись переключателя, отмечающего все показанные значения группы */
 export const FILTER_SELECT_ALL_LABEL = 'Выбрать все';
+
+/** Подпись переключателя, превращающего выбор группы в исключение */
+export const FILTER_EXCLUDE_LABEL = 'Исключать';
+
+/** Подпись переключателя, требующего совпадения по всем выбранным значениям */
+export const FILTER_UNION_LABEL = 'Точное совпадение (AND)';

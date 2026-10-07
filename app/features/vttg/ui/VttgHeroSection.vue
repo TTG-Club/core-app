@@ -49,10 +49,11 @@
       class="vttg-hero__backdrop"
       aria-hidden="true"
     >
-      <img
-        :src="VTTG_HERO_BACKGROUND"
-        alt=""
+      <!-- Фон задан через CSS, а не тегом img: картинки из разметки Google
+           считает содержимым страницы и показывал фон в выдаче. -->
+      <div
         class="vttg-hero__image"
+        :style="{ backgroundImage: `url(${VTTG_HERO_BACKGROUND})` }"
       />
 
       <div class="vttg-hero__glow" />
@@ -211,8 +212,9 @@
     height: 100%;
 
     opacity: 0.45;
-    object-fit: cover;
-    object-position: center;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
   }
 
   /* Warm radial light behind the title */

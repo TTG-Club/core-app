@@ -60,6 +60,14 @@ const LONGSWORD_RAW_RESPONSE = {
   },
 };
 
+/** «Сырой» ответ духовой трубки: урон — одно число без костей. */
+const BLOWGUN_RAW_RESPONSE = {
+  name: { rus: 'Духовая трубка', eng: 'Blowgun' },
+  weapon: {
+    damageParts: [{ formula: '1@dmg.piercing', target: 'selected' }],
+  },
+};
+
 /**
  * Создаёт деталь магического предмета с частями дополнительного урона.
  *
@@ -190,6 +198,18 @@ describe('строки блока свойств магического пред
         LONGSWORD_RAW_RESPONSE,
       ),
     ).toEqual(['1к8 рубящий, двумя руками 1к10 рубящий (длинный меч)']);
+  });
+
+  it('плоский урон основы показывает числом с типом', () => {
+    const magicItem = createMagicItemDetail([FIRE_FORMULA]);
+
+    expect(
+      findPropertyLines(
+        magicItem,
+        MAGIC_ITEM_PROPERTY_LABELS.baseDamage,
+        BLOWGUN_RAW_RESPONSE,
+      ),
+    ).toEqual(['1 колющий (духовая трубка)']);
   });
 
   it('в пассивных свойствах длинное тире заменяет коротким', () => {

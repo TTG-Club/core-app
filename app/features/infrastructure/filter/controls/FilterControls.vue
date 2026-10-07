@@ -6,8 +6,8 @@
   import { cloneDeep } from 'es-toolkit';
 
   import { FilterDrawer } from '../drawer';
+  import { FilterInline } from '../inline';
   import {
-    FILTER_CONTROLS_FILTER_LABEL,
     FILTER_CONTROLS_MORE_LABEL,
     FILTER_CONTROLS_RESET_LABEL,
     FILTER_CONTROLS_SEARCH_PLACEHOLDER,
@@ -18,7 +18,6 @@
     FILTER_SOURCES_SEARCH_PLACEHOLDER,
     FILTER_SOURCES_TITLE,
   } from '../model';
-  import { FilterPreview } from '../preview';
   import { FilterSearchInput } from '../search-input';
   import {
     getGroupItems,
@@ -38,12 +37,10 @@
 
   const {
     isPending = false,
-    showPreview = false,
     defaults = undefined,
     presentationMenus = [],
   } = defineProps<{
     isPending?: boolean;
-    showPreview?: boolean;
     defaults?: Filter;
     presentationMenus?: Array<PresentationMenu>;
   }>();
@@ -69,11 +66,6 @@
     () => isMounted.value && greaterOrEqual(Breakpoint.LG).value,
   );
 
-  /** На узком экране кнопка отбора остаётся одним значком: строка коротка. */
-  const filterButtonLabel = computed(() =>
-    isLarge.value ? FILTER_CONTROLS_FILTER_LABEL : undefined,
-  );
-
   const shareIcon = isApple ? FILTER_SHARE_ICON_APPLE : FILTER_SHARE_ICON;
 
   const urlForCopy = computed(() => {
@@ -82,22 +74,8 @@
 
   const hasPresentationMenus = computed(() => presentationMenus.length > 0);
 
-  // Отдельная кнопка «Поделиться» — на десктопе всегда, а на мобильном только
-  // когда её нечем накрыть (нет меню представления, чтобы собрать «⋯»).
-  const showStandaloneShare = computed(
-    () => isLarge.value || !hasPresentationMenus.value,
-  );
-
-  // Меню «⋯» собирает «Поделиться» + группировку/сортировку — только на мобильном.
-  const showOverflowMenu = computed(
-    () => !isLarge.value && hasPresentationMenus.value,
-  );
-
-  // Второй ряд тулбара с меню представления — только на десктопе.
-  const showPresentationRow = computed(
-    () => isLarge.value && hasPresentationMenus.value,
-  );
-
+  // Меню «⋯» собирает «Поделиться» и группировку с сортировкой. Без меню
+  // представления накрывать «Поделиться» нечем, и кнопка стоит отдельно.
   const overflowItems = computed<Array<Array<DropdownMenuItem>>>(() => [
     [
       {
@@ -165,7 +143,11 @@
     },
   );
 
-  function saveFilter(payload: FilterGroups) {
+  /**
+   * Применяет условия отбора. Встроенный список зовёт её на каждое нажатие —
+   * кнопки «Применить» у него нет, выдача меняется сразу.
+   */
+  function applyFilter(payload: FilterGroups) {
     if (!filter.value) {
       return;
     }
@@ -176,10 +158,16 @@
       ...filter.value,
       filters: normalizeDependentSelections(payload),
     };
+  }
+
+  /** Применяет выбор из дровера и закрывает его. */
+  function saveFilter(payload: FilterGroups) {
+    applyFilter(payload);
 
     filterOpened.value = false;
   }
 
+  /** Снимает все условия отбора; источники не трогает. */
   function resetFilter() {
     if (!filter.value?.filters) {
       filterOpened.value = false;
@@ -203,6 +191,7 @@
     filterOpened.value = false;
   }
 
+  /** Применяет выбор источников из дровера и закрывает его. */
   function saveSources(payload: FilterGroups) {
     if (!filter.value) {
       return;
@@ -212,6 +201,7 @@
     sourcesOpened.value = false;
   }
 
+  /** Возвращает источники к исходному набору раздела. */
   function resetSources() {
     if (!filter.value?.sources) {
       sourcesOpened.value = false;
@@ -242,20 +232,24 @@
 </script>
 
 <template>
-  <div class="flex gap-2 lg:flex-col lg:gap-4">
-    <FilterSearchInput
-      v-model="localSearch"
-      :placeholder="FILTER_CONTROLS_SEARCH_PLACEHOLDER"
-    />
-
+  <div class="flex flex-col gap-4">
     <div class="flex gap-2">
-      <UFieldGroup class="w-full space-x-px">
+      <FilterSearchInput
+        v-model="localSearch"
+        class="lg:min-w-0 lg:grow"
+        :placeholder="FILTER_CONTROLS_SEARCH_PLACEHOLDER"
+      />
+
+      <!-- Кнопка отбора — только на узком экране: на широком фильтры стоят -->
+      <!-- в панели. Прячется стилем, а не условием, чтобы не мигать до -->
+      <!-- монтирования, пока ширина ещё неизвестна. -->
+      <UFieldGroup class="space-x-px lg:hidden">
         <UButton
           :disabled="!filter"
           :loading="isPending"
           icon="tabler:filter"
-          :label="filterButtonLabel"
-          :square="!isLarge"
+          :title="FILTER_FILTERS_TITLE"
+          square
           block
           @click.left.exact.prevent="filterOpened = true"
         />
@@ -280,7 +274,7 @@
       </UChip>
 
       <UButton
-        v-if="showStandaloneShare"
+        v-if="!hasPresentationMenus"
         :icon="shareIcon"
         :title="FILTER_CONTROLS_SHARE_LABEL"
         square
@@ -288,7 +282,7 @@
       />
 
       <UDropdownMenu
-        v-if="showOverflowMenu"
+        v-if="hasPresentationMenus"
         :items="overflowItems"
         :ui="{ content: 'w-56' }"
       >
@@ -301,35 +295,23 @@
       </UDropdownMenu>
     </div>
 
-    <div
-      v-if="showPresentationRow"
-      class="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-2"
-    >
-      <UDropdownMenu
-        v-for="menu in presentationMenus"
-        :key="menu.id"
-        :items="menu.items"
-        :ui="{ content: 'w-56' }"
-      >
-        <UButton
-          :icon="menu.icon"
-          :label="menu.label"
-          trailing-icon="tabler:chevron-down"
-          color="neutral"
-          variant="subtle"
-          block
-        />
-      </UDropdownMenu>
-    </div>
-
     <ClientOnly>
       <template v-if="isLarge">
         <slot name="legend" />
 
-        <FilterPreview
-          v-if="showPreview && filter?.filters"
-          v-model="filter.filters"
-        />
+        <!-- Те же группы, что в дровере, но прямо в панели и без «Применить». -->
+        <!-- На узком экране панель — строка над списком, и отбор остаётся -->
+        <!-- за кнопкой «Фильтр». -->
+        <template v-if="filter?.filters">
+          <USeparator />
+
+          <FilterInline
+            :groups="filter.filters"
+            :is-edited="isFilterEdited"
+            @update="applyFilter"
+            @reset="resetFilter"
+          />
+        </template>
       </template>
     </ClientOnly>
   </div>

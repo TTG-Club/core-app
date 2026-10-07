@@ -18,6 +18,7 @@ import {
   describeDamageFormulaCreatureTypes,
   listDamageFormulaCreatureTypes,
   parseDamageFormulaDice,
+  parseDamageFormulaFlat,
 } from '~ui/damage-formula';
 
 import {
@@ -52,45 +53,68 @@ interface ExtraDamageCaption {
 }
 
 /**
- * Часть урона в читаемом виде: «2к6 огненный». Формулу сложнее простых костей
- * разобрать нельзя — такую показываем как есть, чтобы не потерять её вовсе.
+ * Склеивает величину урона с его типом: «2к6 огненный».
  *
  * Тип урона — со строчной: это нарицательное слово в середине строки, а не
  * название. Справочник хранит его с прописной для списков и заголовков.
+ *
+ * @param amount величина урона: кости или число.
+ * @param damageType ключ типа урона справочника; '' — типа нет.
+ * @returns подпись урона.
+ */
+function joinDamageLabel(amount: string, damageType: string): string {
+  const damageTypeLabel = DAMAGE_TYPE_LABELS[damageType] ?? '';
+
+  return [amount, damageTypeLabel.toLowerCase()].filter(Boolean).join(' ');
+}
+
+/**
+ * Часть урона в читаемом виде: «2к6 огненный», у плоского урона —
+ * «1 колющий». Формулу сложнее разобрать нельзя — такую показываем как есть,
+ * чтобы не потерять её вовсе.
+ *
+ * @param formula формула части урона.
+ * @returns подпись части урона; `undefined` — формулу разобрать нельзя.
+ */
+function formatParsedDamagePart(formula: string): string | undefined {
+  const dice = parseDamageFormulaDice(formula);
+
+  if (dice) {
+    const notation = `${dice.diceCount}${DAMAGE_FORMULA_DICE_SYMBOL}${dice.diceFaces}`;
+    const bonus = dice.bonus === 0 ? '' : getFormattedBonus(dice.bonus);
+
+    return joinDamageLabel(`${notation}${bonus}`, dice.type);
+  }
+
+  const flat = parseDamageFormulaFlat(formula);
+
+  return flat ? joinDamageLabel(String(flat.amount), flat.type) : undefined;
+}
+
+/**
+ * Часть урона в читаемом виде; неразобранная формула остаётся как есть.
  *
  * @param formula формула части урона.
  * @returns подпись части урона.
  */
 function formatDamagePart(formula: string): string {
-  const dice = parseDamageFormulaDice(formula);
-
-  if (!dice) {
-    return formula;
-  }
-
-  const notation = `${dice.diceCount}${DAMAGE_FORMULA_DICE_SYMBOL}${dice.diceFaces}`;
-  const bonus = dice.bonus === 0 ? '' : getFormattedBonus(dice.bonus);
-
-  const damageTypeLabel = DAMAGE_TYPE_LABELS[dice.type] ?? '';
-
-  return [`${notation}${bonus}`, damageTypeLabel.toLowerCase()]
-    .filter(Boolean)
-    .join(' ');
+  return formatParsedDamagePart(formula) ?? formula;
 }
 
 /**
- * Подпись части дополнительного урона. Типы существ читаются только у формулы
- * из простых костей: сложную показываем как есть, и её токены видны сами.
+ * Подпись части дополнительного урона. Типы существ читаются только у
+ * разобранной формулы: сложную показываем как есть, и её токены видны сами.
  *
  * @param formula формула части урона.
  * @returns урон словами и типы существ, которым он достаётся.
  */
 function toExtraDamageCaption(formula: string): ExtraDamageCaption {
+  const damageLabel = formatParsedDamagePart(formula);
+
   return {
-    damageLabel: formatDamagePart(formula),
-    creatureTypes: parseDamageFormulaDice(formula)
-      ? listDamageFormulaCreatureTypes(formula)
-      : [],
+    damageLabel: damageLabel ?? formula,
+    creatureTypes:
+      damageLabel === undefined ? [] : listDamageFormulaCreatureTypes(formula),
   };
 }
 

@@ -17,7 +17,7 @@
   }>();
 
   defineEmits<{
-    (e: 'close'): void;
+    (event: 'close'): void;
   }>();
 
   /** Текущий URL класса/подкласса — может меняться при inline-навигации */

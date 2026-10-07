@@ -31,6 +31,13 @@
 
   const markdown = useEntityMarkdown(detail, getClassMarkdown);
 
+  /** Возврат от подкласса к странице его класса. */
+  const backTo = computed(() => {
+    const parentUrl = detail.value?.parent?.url;
+
+    return parentUrl ? `/classes/${parentUrl}` : undefined;
+  });
+
   useSeoMeta({
     title: getSeoTitle,
     description: getSeoDescription,
@@ -101,7 +108,7 @@
     :subtitle
     :source="detail?.source"
     :date-time="detail?.updatedAt"
-    :back-to="detail?.parent ? `/classes/${detail.parent.url}` : undefined"
+    :back-to="backTo"
     copy-text
   >
     <template #actions>

@@ -233,7 +233,18 @@
                 v-model="state.image"
                 section="item"
                 max-size="480"
-              />
+              >
+                <template
+                  v-if="state.image"
+                  #preview
+                >
+                  <img
+                    :src="state.image"
+                    :alt="ITEM_FORM_LABELS.image"
+                    class="w-full rounded-lg object-contain"
+                  />
+                </template>
+              </UploadImage>
             </UFormField>
           </UCard>
         </div>

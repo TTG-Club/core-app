@@ -188,8 +188,14 @@ export const SPECIES_FEATURE_LEVEL = {
   max: 20,
 } as const;
 
+/** Заголовок происхождений вида: кнопка, дровер и список на странице. */
+export const SPECIES_LINEAGES_TITLE = 'Происхождения';
+
 /** Подписи статблока вида на странице. */
 export const SPECIES_STATS_LABELS = {
+  type: 'Тип:',
+  size: 'Размер:',
+  speed: 'Скорость:',
   vision: 'Зрение:',
   markdownVision: 'Обычное зрение',
   /** Ноль дальности у обычного зрения — «видит без предела», как у токена VTTG. */

@@ -176,6 +176,7 @@ export default defineNuxtConfig({
 
   ui: {
     colorMode: false,
+    content: true,
   },
 
   icon: {
