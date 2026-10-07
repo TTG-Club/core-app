@@ -1,6 +1,6 @@
 import type { LocationQuery } from 'vue-router';
 
-import type { Filter } from '../types';
+import type { Filter, FilterRangeOrders } from '../types';
 
 import { isEqual } from 'es-toolkit';
 
@@ -38,9 +38,14 @@ function hasFilterQuery(pristine: Filter, query: LocationQuery): boolean {
  *
  * @param key ключ раздела — по нему выбор хранится между страницами.
  * @param url ручка, отдающая группы фильтра и источники раздела.
+ * @param rangeOrders порядок значений групп, которые выбираются диапазоном.
  * @returns фильтр, поиск, готовые query-параметры и признаки загрузки.
  */
-export async function useFilter(key: string, url: string) {
+export async function useFilter(
+  key: string,
+  url: string,
+  rangeOrders?: FilterRangeOrders,
+) {
   const route = useRoute();
   const router = useRouter();
 
@@ -66,7 +71,7 @@ export async function useFilter(key: string, url: string) {
   // Внешние данные API не доверенные: валидируем/санитизируем один раз на
   // изменение ответа, чтобы каскад работал с проверенными дефолтами.
   const validatedDefaults = computed(() =>
-    defaults.value ? parseFilter(defaults.value) : undefined,
+    defaults.value ? parseFilter(defaults.value, rangeOrders) : undefined,
   );
 
   const isPending = computed(() => status.value === 'pending');

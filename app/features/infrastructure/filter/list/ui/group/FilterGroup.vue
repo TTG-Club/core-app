@@ -1,13 +1,13 @@
 <script setup lang="ts">
   import type {
     FilterGroup as FilterGroupType,
-    FilterItem,
     FilterItems,
   } from '../../../types';
 
-  import { getGroupItems, getSelectedItemIds } from '../../../utils';
+  import { getRangeItems, getSelectedItemIds } from '../../../utils';
   import { FilterGroupOptions } from '../options';
-  import { FilterTag } from '../tag';
+  import { FILTER_RANGE_LABELS } from './constants';
+  import FilterGroupValues from './FilterGroupValues.vue';
 
   type GroupPosition = 'standalone' | 'top' | 'bottom';
 
@@ -30,6 +30,13 @@
   const group = defineModel<FilterGroupType>({
     required: true,
   });
+
+  const rangeMode = ref(false);
+
+  /** Диапазон доступен, если среди показанных значений есть упорядоченные. */
+  const supportsRange = computed(
+    () => getRangeItems(items, group.value.rangeOrder).length > 0,
+  );
 
   // Классы бордера шапки: нижний блок не имеет скругления сверху
   const headerClass = computed(() => ({
@@ -64,24 +71,6 @@
   }
 
   const counterColor = computed(() => (group.value.mode ? 'error' : 'primary'));
-
-  /**
-   * Отмечает или снимает одно значение группы.
-   *
-   * Группа приходит одним пропом (defineModel), но мутировать её (или проп
-   * items) напрямую нельзя. Любое изменение пересобирается иммутабельно и
-   * эмитится наверх через defineModel — родитель обновляет filter.value.
-   */
-  function handleItemSelect(
-    itemId: FilterItem['id'],
-    selected: boolean | null,
-  ): void {
-    const values = getGroupItems(group.value).map((filterItem) =>
-      filterItem.id === itemId ? { ...filterItem, selected } : filterItem,
-    );
-
-    group.value = { ...group.value, values };
-  }
 </script>
 
 <template>
@@ -121,23 +110,25 @@
 
     <template #content>
       <div class="flex flex-col gap-3 pt-1 pb-3">
-        <FilterGroupOptions
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <USwitch
+            v-if="supportsRange"
+            v-model="rangeMode"
+            :label="FILTER_RANGE_LABELS.toggle"
+          />
+
+          <FilterGroupOptions
+            v-model="group"
+            :items
+            size="md"
+          />
+        </div>
+
+        <FilterGroupValues
           v-model="group"
           :items
-          size="md"
+          :range="rangeMode"
         />
-
-        <div class="flex flex-wrap gap-2">
-          <FilterTag
-            v-for="filterItem in items"
-            :key="`${filterItem.id}-${filterItem.name}`"
-            :model-value="filterItem.selected"
-            :exclude="group.mode"
-            @update:model-value="handleItemSelect(filterItem.id, $event)"
-          >
-            {{ filterItem.name }}
-          </FilterTag>
-        </div>
       </div>
     </template>
   </UCollapsible>
@@ -149,22 +140,28 @@
     <div :class="headerClass">
       <span class="font-medium">{{ group.name }}</span>
 
-      <FilterGroupOptions
-        v-model="group"
-        :items
-      />
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <USwitch
+          v-if="supportsRange"
+          v-model="rangeMode"
+          :label="FILTER_RANGE_LABELS.toggle"
+          size="xs"
+        />
+
+        <FilterGroupOptions
+          v-model="group"
+          :items
+        />
+      </div>
     </div>
 
     <div :class="bodyClass">
-      <FilterTag
-        v-for="filterItem in items"
-        :key="`${filterItem.id}-${filterItem.name}`"
-        :model-value="filterItem.selected"
-        :exclude="group.mode"
-        @update:model-value="handleItemSelect(filterItem.id, $event)"
-      >
-        {{ filterItem.name }}
-      </FilterTag>
+      <FilterGroupValues
+        v-model="group"
+        class="w-full"
+        :items
+        :range="rangeMode"
+      />
     </div>
   </div>
 </template>

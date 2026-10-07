@@ -2,7 +2,7 @@ import type { LocationQuery } from 'vue-router';
 
 import type { CatalogPreviewSection } from '~/composables/useCatalogPreview';
 
-import type { Filter, FilterGroups } from '../types';
+import type { Filter, FilterGroups, FilterRangeOrders } from '../types';
 
 import { z } from '~/utils/zod';
 
@@ -39,6 +39,9 @@ export interface CatalogPickerSection {
 
   /** Ключ запроса фильтров: у каждого раздела свой набор. */
   filtersKey: string;
+
+  /** Порядки диапазонов, определённые доменом каталога. */
+  filterRangeOrders?: FilterRangeOrders;
 
   /**
    * Постоянные параметры запроса раздела: у черт это категории, у предметов —
@@ -188,7 +191,7 @@ export function useCatalogPicker(section: CatalogPickerSection) {
         retry: 0,
       });
 
-      return parseFilter(response);
+      return parseFilter(response, section.filterRangeOrders);
     },
     { server: false },
   );
