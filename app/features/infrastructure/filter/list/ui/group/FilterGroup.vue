@@ -5,8 +5,12 @@
     FilterItems,
   } from '../../../types';
 
-  import { FILTER_SELECT_ALL_LABEL } from '../../../model';
-  import { getGroupItems, hasTouchedItem } from '../../../utils';
+  import {
+    getGroupItems,
+    getSelectedItemIds,
+    hasTouchedItem,
+  } from '../../../utils';
+  import { FilterGroupOptions } from '../options';
   import { FilterTag } from '../tag';
 
   type GroupPosition = 'standalone' | 'top' | 'bottom';
@@ -14,10 +18,14 @@
   const {
     items,
     preview = false,
+    collapsible = false,
     position = 'standalone',
   } = defineProps<{
     items: FilterItems;
     preview?: boolean;
+
+    /** Сворачиваемая группа для узкой колонки: шапка-кнопка, значения под ней. */
+    collapsible?: boolean;
     position?: GroupPosition;
   }>();
 
@@ -41,21 +49,19 @@
     'border-x border-default flex flex-wrap gap-3 px-3 py-4': true,
   }));
 
+  /**
+   * Сколько значений группы отмечено. Считаются все, а не только показанные:
+   * счётчик на свёрнутой шапке говорит о том, что влияет на выдачу.
+   */
+  const selectedTotal = computed(() => getSelectedItemIds(group.value).length);
+
+  const hasSelection = computed(() => selectedTotal.value > 0);
+
+  const counterColor = computed(() => (group.value.mode ? 'error' : 'primary'));
+
   // Группа приходит одним пропом (defineModel), но мутировать её (или проп
   // items) напрямую нельзя. Любое изменение пересобирается иммутабельно и
   // эмитится наверх через defineModel — родитель обновляет filter.value.
-  function updateGroup(patch: Partial<FilterGroupType>): void {
-    group.value = { ...group.value, ...patch };
-  }
-
-  function handleModeChange(mode: boolean | 'indeterminate'): void {
-    updateGroup({ mode: mode === true });
-  }
-
-  function handleUnionChange(union: boolean | 'indeterminate'): void {
-    updateGroup({ union: union === true });
-  }
-
   function handleItemSelect(
     itemId: FilterItem['id'],
     selected: boolean | null,
@@ -64,42 +70,68 @@
       filterItem.id === itemId ? { ...filterItem, selected } : filterItem,
     );
 
-    updateGroup({ values });
-  }
-
-  const selectedCount = computed(
-    () => items.filter((filterItem) => filterItem.selected).length,
-  );
-
-  /** Состояние переключателя «Выбрать все»: часть отмеченных даёт третье. */
-  const selectAllState = computed<boolean | 'indeterminate'>(() => {
-    if (selectedCount.value === 0) {
-      return false;
-    }
-
-    return selectedCount.value === items.length ? true : 'indeterminate';
-  });
-
-  /**
-   * Отмечает или снимает разом все показанные значения группы. Именно
-   * показанные: под поиском и каскадом зависимостей в группе остаётся часть
-   * значений, и переключатель обязан работать по тому, что видно.
-   */
-  function handleSelectAll(state: boolean | 'indeterminate'): void {
-    const selected = state === true ? true : null;
-    const visibleIds = new Set(items.map((filterItem) => filterItem.id));
-
-    const values = getGroupItems(group.value).map((filterItem) =>
-      visibleIds.has(filterItem.id) ? { ...filterItem, selected } : filterItem,
-    );
-
-    updateGroup({ values });
+    group.value = { ...group.value, values };
   }
 </script>
 
 <template>
   <template v-if="isVisible">
+    <!-- Группа с выбором раскрыта сразу: иначе отмеченное пряталось бы под -->
+    <!-- шапкой. Дальше её состоянием управляет сам пользователь. -->
+    <UCollapsible
+      v-if="collapsible"
+      :default-open="hasSelection"
+      class="flex flex-col"
+    >
+      <UButton
+        trailing-icon="tabler:chevron-down"
+        color="neutral"
+        variant="ghost"
+        block
+        class="group justify-between px-2"
+        :ui="{
+          trailingIcon:
+            'transition-transform duration-200 group-data-[state=open]:rotate-180',
+        }"
+      >
+        <span class="min-w-0 grow truncate text-left font-medium">
+          {{ group.name }}
+        </span>
+
+        <UBadge
+          v-if="hasSelection"
+          :label="selectedTotal"
+          :color="counterColor"
+          variant="subtle"
+          size="sm"
+        />
+      </UButton>
+
+      <template #content>
+        <div class="flex flex-col gap-3 px-2 pt-2 pb-3">
+          <FilterGroupOptions
+            v-model="group"
+            :items
+            stacked
+          />
+
+          <div class="flex flex-wrap gap-2">
+            <FilterTag
+              v-for="filterItem in items"
+              :key="`${filterItem.id}-${filterItem.name}`"
+              :model-value="filterItem.selected"
+              :exclude="group.mode"
+              @update:model-value="handleItemSelect(filterItem.id, $event)"
+            >
+              {{ filterItem.name }}
+            </FilterTag>
+          </div>
+        </div>
+      </template>
+    </UCollapsible>
+
     <div
+      v-else
       class="flex flex-col"
       :class="contentGapClass"
     >
@@ -111,32 +143,10 @@
       >
         <span class="font-medium">{{ group.name }}</span>
 
-        <div class="flex flex-wrap items-center gap-3">
-          <UCheckbox
-            v-if="items.length > 0"
-            :model-value="selectAllState"
-            :label="FILTER_SELECT_ALL_LABEL"
-            size="xs"
-            @update:model-value="handleSelectAll"
-          />
-
-          <UCheckbox
-            v-if="group.supports?.mode"
-            :model-value="group.mode"
-            label="Исключать"
-            size="xs"
-            color="error"
-            @update:model-value="handleModeChange"
-          />
-
-          <UCheckbox
-            v-if="group.supports?.union"
-            :model-value="group.union"
-            label="Точное совпадение (AND)"
-            size="xs"
-            @update:model-value="handleUnionChange"
-          />
-        </div>
+        <FilterGroupOptions
+          v-model="group"
+          :items
+        />
       </div>
 
       <div

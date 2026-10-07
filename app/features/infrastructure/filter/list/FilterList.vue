@@ -33,8 +33,15 @@
     (event: 'empty', value: boolean): void;
   }>();
 
-  const { preview = false, search = '' } = defineProps<{
+  const {
+    preview = false,
+    collapsible = false,
+    search = '',
+  } = defineProps<{
     preview?: boolean;
+
+    /** Сворачиваемые группы одной колонкой — список, встроенный в панель. */
+    collapsible?: boolean;
     search?: string;
   }>();
 
@@ -44,9 +51,12 @@
    * При активном поиске пустой набор означает, что не подошло ни одно значение
    * группы и её название — показывать такую группу нечем. Без поиска поведение
    * прежнее: группа без доступных значений остаётся на месте.
+   *
+   * Сворачиваемая группа без значений тоже прячется: под её шапкой было бы
+   * пусто, и раскрывать её незачем.
    */
   function isGroupVisible(items: FilterItems): boolean {
-    if (search && items.length === 0) {
+    if ((search || collapsible) && items.length === 0) {
       return false;
     }
 
@@ -57,15 +67,33 @@
     required: true,
   });
 
-  const containerGapClass = computed(() => (preview ? 'gap-3' : 'gap-6'));
-  const groupGapClass = computed(() => (preview ? 'gap-3' : undefined));
+  /** В превью и во встроенном списке группы не склеиваются в общий блок. */
+  const isDetached = computed(() => preview || collapsible);
 
-  /** Позиция группы с учётом предпросмотра (в превью блоки не объединяются). */
+  const containerGapClass = computed(() => {
+    if (collapsible) {
+      return 'gap-1';
+    }
+
+    return preview ? 'gap-3' : 'gap-6';
+  });
+
+  const groupGapClass = computed(() => {
+    if (collapsible) {
+      return 'gap-1';
+    }
+
+    return preview ? 'gap-3' : undefined;
+  });
+
+  /** Позиция группы: склеиваются только блоки обычного списка дровера. */
   function resolveGroupPosition(
     itemIndex: number,
     groupLength: number,
   ): GroupPosition {
-    return preview ? 'standalone' : getGroupPosition(itemIndex, groupLength);
+    return isDetached.value
+      ? 'standalone'
+      : getGroupPosition(itemIndex, groupLength);
   }
 
   /**
@@ -164,6 +192,7 @@
         :model-value="item.group"
         :items="item.availableItems"
         :preview
+        :collapsible
         :position="resolveGroupPosition(itemIndex, itemGroup.length)"
         @update:model-value="handleGroupUpdate(item.index, $event)"
       />

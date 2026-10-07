@@ -88,3 +88,9 @@ export const CATALOG_PICKER_SELECT_ALL_LIMIT = 1000;
 
 /** Подпись переключателя, отмечающего все показанные значения группы */
 export const FILTER_SELECT_ALL_LABEL = 'Выбрать все';
+
+/** Подпись переключателя, превращающего выбор группы в исключение */
+export const FILTER_EXCLUDE_LABEL = 'Исключать';
+
+/** Подпись переключателя, требующего совпадения по всем выбранным значениям */
+export const FILTER_UNION_LABEL = 'Точное совпадение (AND)';

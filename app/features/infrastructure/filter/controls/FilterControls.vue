@@ -6,6 +6,7 @@
   import { cloneDeep } from 'es-toolkit';
 
   import { FilterDrawer } from '../drawer';
+  import { FilterList } from '../list';
   import {
     FILTER_CONTROLS_FILTER_LABEL,
     FILTER_CONTROLS_MORE_LABEL,
@@ -165,7 +166,11 @@
     },
   );
 
-  function saveFilter(payload: FilterGroups) {
+  /**
+   * Применяет условия отбора. Встроенный список зовёт её на каждое нажатие —
+   * кнопки «Применить» у него нет, выдача меняется сразу.
+   */
+  function applyFilter(payload: FilterGroups) {
     if (!filter.value) {
       return;
     }
@@ -176,6 +181,10 @@
       ...filter.value,
       filters: normalizeDependentSelections(payload),
     };
+  }
+
+  function saveFilter(payload: FilterGroups) {
+    applyFilter(payload);
 
     filterOpened.value = false;
   }
@@ -330,6 +339,19 @@
           v-if="showPreview && filter?.filters"
           v-model="filter.filters"
         />
+
+        <!-- Те же группы, что в дровере, но прямо в панели и без «Применить». -->
+        <!-- На узком экране панель — строка над списком, и отбор остаётся -->
+        <!-- за кнопкой «Фильтр». -->
+        <template v-if="filter?.filters">
+          <USeparator />
+
+          <FilterList
+            :model-value="filter.filters"
+            collapsible
+            @update:model-value="applyFilter"
+          />
+        </template>
       </template>
     </ClientOnly>
   </div>
