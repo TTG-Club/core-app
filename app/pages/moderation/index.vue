@@ -12,6 +12,11 @@
     MODERATION_GAME_REPORTS_ROUTE,
     MODERATION_PANEL_TITLE,
   } from '~moderation/model';
+  import {
+    VTTG_MODULES_DASHBOARD_DESCRIPTION,
+    VTTG_MODULES_DASHBOARD_TITLE,
+    VTTG_MODULES_MODERATION_ROUTE,
+  } from '~vttg-modules/model';
 </script>
 
 <template>
@@ -82,6 +87,27 @@
 
         <div class="text-sm text-muted">
           {{ MODERATION_DASHBOARD_GAME_REPORTS_DESCRIPTION }}
+        </div>
+      </UCard>
+
+      <UCard variant="subtle">
+        <template #header>
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="truncate text-base text-highlighted">
+              {{ VTTG_MODULES_DASHBOARD_TITLE }}
+            </h2>
+
+            <UButton
+              size="sm"
+              :to="VTTG_MODULES_MODERATION_ROUTE"
+            >
+              {{ MODERATION_DASHBOARD_OPEN_LABEL }}
+            </UButton>
+          </div>
+        </template>
+
+        <div class="text-sm text-muted">
+          {{ VTTG_MODULES_DASHBOARD_DESCRIPTION }}
         </div>
       </UCard>
     </div>
