@@ -16,7 +16,7 @@ import {
 
 import { VTTG_LANDING_PATH } from './passwordReset';
 
-/** Адрес страницы подписки. Пока страница видна только администраторам. */
+/** Адрес страницы подписки. */
 export const VTTG_SUBSCRIPTION_PATH = '/vttg/subscription';
 
 /** Подпись пункта меню. */
@@ -27,8 +27,6 @@ export const VTTG_SUBSCRIPTION_SEO = {
   title: 'Подписка — Virtual TTG Club',
   description:
     'Подписка TTG Club открывает привилегии на сайте и в виртуальном столе.',
-  /** Страница пока закрыта для всех, кроме администраторов, — в поиск ей рано. */
-  robots: 'noindex, nofollow',
 } as const;
 
 /** Цена подписки. Число и знак валюты раздельно: на карточке цены они разного цвета. */

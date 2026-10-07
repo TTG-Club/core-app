@@ -14,6 +14,14 @@ import {
   GAMES_ROUTE,
 } from '~find-game/model';
 import {
+  COOKIE_POLICY_PAGE_TITLE,
+  COOKIE_POLICY_ROUTE,
+} from '~infrastructure/cookie-consent/model';
+import {
+  PRIVACY_POLICY_LINK_LABEL,
+  PRIVACY_POLICY_ROUTE,
+} from '~infrastructure/privacy-policy/model';
+import {
   VTTG_LANDING_PATH,
   VTTG_PASSWORD_RESET_PAGE,
   VTTG_PASSWORD_RESET_PATH,
@@ -156,15 +164,10 @@ export const MENU_SECTIONS: Array<MenuSection> = [
         href: VTTG_PASSWORD_RESET_PATH,
         label: VTTG_PASSWORD_RESET_PAGE.title,
       },
-      {
-        href: VTTG_SUBSCRIPTION_PATH,
-        label: VTTG_SUBSCRIPTION_NAVIGATION_LABEL,
-        roles: [Role.ADMIN],
-      },
     ],
   },
   {
-    label: 'Другое',
+    label: 'Полезное',
     icon: 'menu/filled/workshop',
     items: [
       {
@@ -181,7 +184,7 @@ export const MENU_SECTIONS: Array<MenuSection> = [
       },
       {
         href: '/roadmap',
-        label: 'Дорожная карта',
+        label: 'Дорожная карта (только админ)',
         disabled: false,
         roles: [Role.ADMIN],
       },
@@ -189,6 +192,24 @@ export const MENU_SECTIONS: Array<MenuSection> = [
         href: 'https://5e14.ttg.club/',
         label: 'Редакция D&D 2014',
         disabled: false,
+      },
+      {
+        href: VTTG_SUBSCRIPTION_PATH,
+        label: VTTG_SUBSCRIPTION_NAVIGATION_LABEL,
+      },
+    ],
+  },
+  {
+    label: 'Другое',
+    icon: 'menu/filled/information',
+    items: [
+      {
+        href: COOKIE_POLICY_ROUTE,
+        label: COOKIE_POLICY_PAGE_TITLE,
+      },
+      {
+        href: PRIVACY_POLICY_ROUTE,
+        label: PRIVACY_POLICY_LINK_LABEL,
       },
     ],
   },

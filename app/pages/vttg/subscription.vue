@@ -1,5 +1,4 @@
 <script setup lang="ts">
-  import { Role } from '~/shared/types';
   import {
     VTTG_SUBSCRIPTION_CTA,
     VTTG_SUBSCRIPTION_FAQ_HEADING,
@@ -12,16 +11,13 @@
     VttgSubscriptionPerks,
   } from '~vttg/ui';
 
-  // Пока оплата не подключена, страницу видят только администраторы.
   definePageMeta({
     layout: 'vttg',
-    auth: { roles: [Role.ADMIN] },
   });
 
   useSeoMeta({
     title: VTTG_SUBSCRIPTION_SEO.title,
     description: VTTG_SUBSCRIPTION_SEO.description,
-    robots: VTTG_SUBSCRIPTION_SEO.robots,
   });
 </script>
 
