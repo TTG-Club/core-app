@@ -67,17 +67,19 @@
 <template>
   <!-- Группа с выбором раскрыта сразу: иначе отмеченное пряталось бы под -->
   <!-- шапкой. Дальше её состоянием управляет сам пользователь. -->
+  <!-- Раскрытая группа — карточка с рамкой и залитой шапкой: по ним видно, -->
+  <!-- где она начинается и какие значения к ней относятся. -->
   <UCollapsible
     v-if="collapsible"
     :default-open="hasSelection"
-    class="flex flex-col"
+    class="flex flex-col overflow-hidden rounded-lg border border-transparent transition-colors data-[state=open]:border-default"
   >
     <UButton
       trailing-icon="tabler:chevron-down"
       color="neutral"
       variant="ghost"
       block
-      class="group justify-between px-2"
+      class="group justify-between px-2 data-[state=open]:rounded-none data-[state=open]:bg-elevated"
       :ui="{
         trailingIcon:
           'transition-transform duration-200 group-data-[state=open]:rotate-180',
@@ -97,11 +99,10 @@
     </UButton>
 
     <template #content>
-      <div class="flex flex-col gap-3 px-2 pt-2 pb-3">
+      <div class="flex flex-col gap-3 border-t border-default p-2.5">
         <FilterGroupOptions
           v-model="group"
           :items
-          stacked
         />
 
         <div class="flex flex-wrap gap-2">

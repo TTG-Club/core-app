@@ -67,14 +67,6 @@
     () => isMounted.value && greaterOrEqual(Breakpoint.LG).value,
   );
 
-  /**
-   * На широком экране место кнопки отбора занимают «Источники»: сами фильтры
-   * стоят в панели, и подпись помещается. На узком это один значок.
-   */
-  const sourcesButtonLabel = computed(() =>
-    isLarge.value ? FILTER_SOURCES_TITLE : undefined,
-  );
-
   const shareIcon = isApple ? FILTER_SHARE_ICON_APPLE : FILTER_SHARE_ICON;
 
   const urlForCopy = computed(() => {
@@ -83,22 +75,8 @@
 
   const hasPresentationMenus = computed(() => presentationMenus.length > 0);
 
-  // Отдельная кнопка «Поделиться» — на десктопе всегда, а на мобильном только
-  // когда её нечем накрыть (нет меню представления, чтобы собрать «⋯»).
-  const showStandaloneShare = computed(
-    () => isLarge.value || !hasPresentationMenus.value,
-  );
-
-  // Меню «⋯» собирает «Поделиться» + группировку/сортировку — только на мобильном.
-  const showOverflowMenu = computed(
-    () => !isLarge.value && hasPresentationMenus.value,
-  );
-
-  // Второй ряд тулбара с меню представления — только на десктопе.
-  const showPresentationRow = computed(
-    () => isLarge.value && hasPresentationMenus.value,
-  );
-
+  // Меню «⋯» собирает «Поделиться» и группировку с сортировкой. Без меню
+  // представления накрывать «Поделиться» нечем, и кнопка стоит отдельно.
   const overflowItems = computed<Array<Array<DropdownMenuItem>>>(() => [
     [
       {
@@ -251,17 +229,18 @@
 </script>
 
 <template>
-  <div class="flex gap-2 lg:flex-col lg:gap-4">
-    <FilterSearchInput
-      v-model="localSearch"
-      :placeholder="FILTER_CONTROLS_SEARCH_PLACEHOLDER"
-    />
-
+  <div class="flex flex-col gap-4">
     <div class="flex gap-2">
+      <FilterSearchInput
+        v-model="localSearch"
+        class="lg:min-w-0 lg:grow"
+        :placeholder="FILTER_CONTROLS_SEARCH_PLACEHOLDER"
+      />
+
       <!-- Кнопка отбора — только на узком экране: на широком фильтры стоят -->
       <!-- в панели. Прячется стилем, а не условием, чтобы не мигать до -->
       <!-- монтирования, пока ширина ещё неизвестна. -->
-      <UFieldGroup class="w-full space-x-px lg:hidden">
+      <UFieldGroup class="space-x-px lg:hidden">
         <UButton
           :disabled="!filter"
           :loading="isPending"
@@ -280,24 +259,19 @@
         />
       </UFieldGroup>
 
-      <UChip
-        :show="isSourcesEdited"
-        class="lg:grow"
-      >
+      <UChip :show="isSourcesEdited">
         <UButton
           :disabled="!filter"
           :loading="isPending"
           icon="tabler:books"
           :title="FILTER_SOURCES_TITLE"
-          :label="sourcesButtonLabel"
-          :square="!isLarge"
-          :block="isLarge"
+          square
           @click.left.exact.prevent="sourcesOpened = true"
         />
       </UChip>
 
       <UButton
-        v-if="showStandaloneShare"
+        v-if="!hasPresentationMenus"
         :icon="shareIcon"
         :title="FILTER_CONTROLS_SHARE_LABEL"
         square
@@ -305,7 +279,7 @@
       />
 
       <UDropdownMenu
-        v-if="showOverflowMenu"
+        v-if="hasPresentationMenus"
         :items="overflowItems"
         :ui="{ content: 'w-56' }"
       >
@@ -314,27 +288,6 @@
           :title="FILTER_CONTROLS_MORE_LABEL"
           :aria-label="FILTER_CONTROLS_MORE_LABEL"
           square
-        />
-      </UDropdownMenu>
-    </div>
-
-    <div
-      v-if="showPresentationRow"
-      class="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-2"
-    >
-      <UDropdownMenu
-        v-for="menu in presentationMenus"
-        :key="menu.id"
-        :items="menu.items"
-        :ui="{ content: 'w-56' }"
-      >
-        <UButton
-          :icon="menu.icon"
-          :label="menu.label"
-          trailing-icon="tabler:chevron-down"
-          color="neutral"
-          variant="subtle"
-          block
         />
       </UDropdownMenu>
     </div>

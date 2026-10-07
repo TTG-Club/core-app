@@ -12,21 +12,14 @@
    * Переключатели группы: «Выбрать все», «Исключать» и «Точное совпадение».
    * Общие для дровера и встроенного списка — раскладка разная, поведение одно.
    */
-  const { items, stacked = false } = defineProps<{
+  const { items } = defineProps<{
     /** Показанные значения группы: «Выбрать все» работает именно по ним. */
     items: FilterItems;
-
-    /** Столбиком вместо строки — для узкой колонки. */
-    stacked?: boolean;
   }>();
 
   const group = defineModel<FilterGroup>({
     required: true,
   });
-
-  const layoutClass = computed(() =>
-    stacked ? 'flex flex-col gap-2' : 'flex flex-wrap items-center gap-3',
-  );
 
   const selectedCount = computed(
     () => items.filter((filterItem) => filterItem.selected).length,
@@ -67,7 +60,7 @@
 </script>
 
 <template>
-  <div :class="layoutClass">
+  <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
     <UCheckbox
       v-if="items.length > 0"
       :model-value="selectAllState"
