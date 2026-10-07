@@ -6,7 +6,6 @@
     CLASS_NAVIGATION_TITLE,
     CLASS_SECTION_ANCHOR,
     CLASS_SECTION_LABEL,
-    getClassNavigationMarkerId,
   } from './constants';
 
   interface ClassNavigationLink {
@@ -26,10 +25,6 @@
   }>();
 
   const nuxtApp = useNuxtApp();
-
-  const sectionElements = shallowRef<Array<HTMLElement>>([]);
-  const visibleSectionIds = new Set<string>();
-  const activeSectionId = ref<string>();
 
   const links = computed<Array<ClassNavigationLink>>(() => {
     const sections: Array<ClassNavigationLink> = [
@@ -73,32 +68,12 @@
   });
 
   /**
-   * `UContentToc` подсвечивает все разделы, которые видны на экране, а нужен
-   * один. Поэтому вместо разделов он следит за метками внутри навигации:
-   * показана всегда только метка текущего раздела.
-   */
-  const markerLinks = computed<Array<ClassNavigationLink>>(() =>
-    links.value.map((link) => ({
-      ...link,
-      id: getClassNavigationMarkerId(link.id),
-    })),
-  );
-
-  /**
    * Пересобирает список отслеживаемых разделов.
    *
-   * `UContentToc` ищет метки в DOM только по хукам смены страницы, а в
+   * `UContentToc` ищет разделы в DOM только по хукам смены страницы, а в
    * сплит-панели класс меняется без неё. Других слушателей у этого хука нет.
    */
   function refreshObservedSections(): void {
-    visibleSectionIds.clear();
-
-    sectionElements.value = links.value.flatMap((link) => {
-      const element = document.getElementById(link.id);
-
-      return element ? [element] : [];
-    });
-
     nuxtApp.callHook('page:transition:finish');
   }
 
@@ -116,47 +91,20 @@
     }
 
     const link = event.target.closest('a[data-slot="link"]');
-    const markerId = link?.getAttribute('href')?.slice(1);
+    const href = link?.getAttribute('href');
 
-    if (!markerId) {
+    if (!href) {
       return;
     }
 
     event.preventDefault();
     event.stopPropagation();
 
-    const section = links.value.find(
-      (item) => getClassNavigationMarkerId(item.id) === markerId,
-    );
-
-    if (!section) {
-      return;
-    }
-
-    document.getElementById(section.id)?.scrollIntoView({
+    document.getElementById(decodeURIComponent(href.slice(1)))?.scrollIntoView({
       behavior: 'smooth',
       block: 'start',
     });
   }
-
-  // Текущий раздел — верхний из видимых; если не виден ни один, остаётся прежний
-  useIntersectionObserver(sectionElements, (entries) => {
-    for (const entry of entries) {
-      if (entry.isIntersecting) {
-        visibleSectionIds.add(entry.target.id);
-      } else {
-        visibleSectionIds.delete(entry.target.id);
-      }
-    }
-
-    const topVisibleSection = links.value.find((link) =>
-      visibleSectionIds.has(link.id),
-    );
-
-    if (topVisibleSection) {
-      activeSectionId.value = topVisibleSection.id;
-    }
-  });
 
   onMounted(refreshObservedSections);
 
@@ -169,24 +117,15 @@
     class="sticky top-4"
     @click.capture="handleLinkClick"
   >
-    <span
-      v-for="link in links"
-      v-show="link.id === activeSectionId"
-      :id="getClassNavigationMarkerId(link.id)"
-      :key="link.id"
-      class="pointer-events-none absolute size-px"
-      aria-hidden="true"
-    />
-
     <UContentToc
-      :links="markerLinks"
+      :links
       :title="CLASS_NAVIGATION_TITLE"
       color="neutral"
       highlight
       highlight-variant="circuit"
       :ui="{
         root: 'static z-auto mx-0 px-0 sm:mx-0 sm:px-0 bg-transparent lg:bg-transparent backdrop-blur-none max-h-[calc(100dvh-2rem)]',
-        container: 'p-0! border-0',
+        container: 'p-0 sm:p-0 lg:p-0 border-0',
       }"
     />
   </div>
