@@ -1,3 +1,9 @@
+/** Подпись блока со ссылками на сообщества проекта */
+export const SOCIAL_LINKS_LABEL = 'Мы в сети';
+
+/** Иконка блока со ссылками на сообщества */
+export const SOCIAL_LINKS_ICON = 'tabler:brand-hipchat';
+
 export const SOCIAL_LINKS = [
   {
     name: 'Boosty',

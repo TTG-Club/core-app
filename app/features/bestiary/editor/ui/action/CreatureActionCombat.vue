@@ -17,6 +17,7 @@
     CREATURE_DAMAGE_PART_EMPTY,
     CREATURE_SAVE_EFFECT_OPTIONS,
   } from '../../constants';
+  import CreatureDamageAlternatives from './CreatureDamageAlternatives.vue';
 
   const { fieldNamePrefix } = defineProps<{
     /** Приставка имени поля формы — по ней подсвечивается ошибка. */
@@ -77,6 +78,9 @@
   const filledCount = computed(() =>
     getCreatureActionCombatFilledCount(model.value),
   );
+
+  /** Задана ли область: у атаки по области одной цели нет. */
+  const hasArea = computed(() => Boolean(model.value.areaOfEffect.type));
 
   /** Второе значение области: только у линии (ширина) и цилиндра (высота). */
   const areaSecondLabel = computed(() => {
@@ -240,6 +244,16 @@
         :damage-types-pending="damageTypesPending"
         :empty-label="CREATURE_DAMAGE_PART_EMPTY"
         :field-name-prefix="`${fieldNamePrefix}.damageParts`"
+      />
+
+      <!-- Урон «или»: наборы частей, целиком заменяющие основной -->
+      <CreatureDamageAlternatives
+        v-model="model.damageAlternatives"
+        :base-parts="model.damageParts"
+        :has-area="hasArea"
+        :damage-type-options="damageTypeOptions"
+        :damage-types-pending="damageTypesPending"
+        :field-name-prefix="fieldNamePrefix"
       />
     </div>
   </EditorNestedSection>

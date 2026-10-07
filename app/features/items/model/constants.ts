@@ -70,11 +70,14 @@ export const ITEM_CATEGORY_OPTIONS: Array<{
   },
 ];
 
+/** Категория оружия: у него своя подформа и своё место эффектов. */
+export const ITEM_WEAPON_CATEGORY = 'WEAPON' satisfies ItemCategory;
+
 /**
  * Категория новой записи — первая в переключателе. Форма открывается с
  * выбранной карточкой, а не с подсвеченной серединой списка.
  */
-export const DEFAULT_ITEM_CATEGORY: ItemCategory = 'WEAPON';
+export const DEFAULT_ITEM_CATEGORY: ItemCategory = ITEM_WEAPON_CATEGORY;
 
 /** Вкладки формы предмета. */
 export const ITEM_EDITOR_TABS = {
@@ -119,6 +122,11 @@ export const ITEM_FORM_LABELS = {
   descriptionPlaceholder: 'Введи описание',
   image: 'Основное',
   imageHint: 'Эта картинка отображается при просмотре страницы предмета',
+  consumable: 'Расходуемый',
+  consumableHint:
+    'Применение тратит единицу предмета, последний уходит из инвентаря. Этим '
+    + 'же признаком игрок заряжает стрелковое оружие на листе. Боеприпасы, яды '
+    + 'и еда с эффектом расходуются и без галочки.',
   equipmentCategory: 'Категория снаряжения',
   equipmentCategoryUnset: 'Определить по типам предмета',
   equipmentCategoryHint:
@@ -556,6 +564,7 @@ export const EQUIPMENT_CATEGORY_OPTIONS: Array<
   { label: 'Кольцо', value: 'ring' },
   { label: 'Жезл', value: 'wand' },
   { label: 'Чудесный предмет', value: 'wondrous' },
+  { label: 'Зелье', value: 'potion' },
   { label: 'Еда', value: 'food' },
   { label: 'Снаряжение транспорта', value: 'vehicle-equipment' },
 ];

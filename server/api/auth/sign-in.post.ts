@@ -9,7 +9,7 @@ import {
 } from '#server/utils/authService';
 
 const signInRequestSchema = z.object({
-  login: z.string().min(1),
+  login: z.string().trim().min(1),
   password: z.string().min(1),
 });
 

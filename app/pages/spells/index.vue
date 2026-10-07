@@ -39,7 +39,6 @@
     search,
     filterQuery,
     isPending: isFilterPending,
-    isShowedPreview: isFilterPreviewShowed,
     defaults: filterDefaults,
   } = await useFilter('spells', '/api/v2/spells/filters');
 
@@ -95,6 +94,8 @@
     sectionPath: '/spells',
     apiBasePath: '/api/v2/spells',
     items: visibleSpells,
+    // Группы классов грузятся порциями, и полноту списка там не узнать.
+    hasMoreItems: () => isClassGrouping.value || hasNextPage.value,
   });
 
   const markdown = useEntityMarkdown(detailSpell, getSpellMarkdown);
@@ -385,7 +386,6 @@
         v-model:filter="filter"
         :defaults="filterDefaults"
         :is-pending="isFilterPending"
-        :show-preview="isFilterPreviewShowed"
         :presentation-menus="presentationMenus"
       >
         <template #legend>

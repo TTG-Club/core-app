@@ -4,4 +4,5 @@ export * from './detail';
 export * from './link';
 export * from './markdown';
 export * from './schema';
+export * from './tool-category';
 export * from './transform';

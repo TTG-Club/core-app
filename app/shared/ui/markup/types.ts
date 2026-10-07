@@ -30,6 +30,10 @@ export type RenderNode =
 export interface Group {
   id: number;
   isBlock: boolean;
+  /** Тип блочного маркера группы — см. `RenderGroup` в `renderer.ts`. */
+  blockType?: string;
+  /** Классы вертикальной отбивки группы от соседей (считает MarkupRender). */
+  spacingClass: string;
   vnodes: VNode[];
 }
 

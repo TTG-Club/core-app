@@ -15,7 +15,7 @@
   import { PageActions } from '~ui/page';
 
   const route = useRoute();
-  const { isAdmin } = useUserRoles();
+  const { canEditEntities } = useUserRoles();
 
   const { data: article, error } = await useAsyncData(
     `article-${route.params.url}`,
@@ -56,7 +56,9 @@
   const markdown = useEntityMarkdown(article, getArticleMarkdown);
 
   const editUrl = computed(() =>
-    isAdmin.value ? `${ARTICLES_ADMIN_ROUTE}/${route.params.url}` : undefined,
+    canEditEntities.value
+      ? `${ARTICLES_ADMIN_ROUTE}/${route.params.url}`
+      : undefined,
   );
 
   // Возврат — в листинг соответствующего типа (новости → /news, статьи → /articles).

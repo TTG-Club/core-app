@@ -1,6 +1,9 @@
 import type { BackgroundCreate, BackgroundToolChoice } from './create';
 
-import { normalizeActiveEffects } from '~active-effects/model';
+import {
+  EFFECT_FORM_CONTEXT,
+  normalizeActiveEffects,
+} from '~active-effects/model';
 import {
   buildFeatMechanics,
   createFeatMechanics,
@@ -48,10 +51,13 @@ export function transformBackgroundBeforeSubmit(
   return {
     ...state,
     editorRows: undefined,
-    // Эффекты чистит общий нормализатор раздела: он же обслуживает черты,
-    // заклинания и магические предметы, поэтому правило «что считать пустым»
-    // одно на всех
-    activeEffects: normalizeActiveEffects(state.activeEffects),
+    // Эффекты чистит общий нормализатор раздела, но по месту формы: пустое
+    // отбрасывается везде одинаково, а допустимая Сл у каждого места своя — у
+    // предыстории «Сл источника» не подставить, и 0 поднимается до 1
+    activeEffects: normalizeActiveEffects(
+      state.activeEffects,
+      EFFECT_FORM_CONTEXT.feature,
+    ),
     toolChoice: buildToolChoice(state.toolChoice),
     mechanics: built.mechanics
       ? buildFeatMechanics(built.mechanics)

@@ -1,7 +1,11 @@
 <script setup lang="ts">
   import type { Particle } from './model';
 
-  import { useElementBounding, useRafFn } from '@vueuse/core';
+  import {
+    useElementBounding,
+    useMutationObserver,
+    useRafFn,
+  } from '@vueuse/core';
   import Color from 'colorjs.io';
 
   import {
@@ -18,7 +22,6 @@
   const containerRef = useTemplateRef<HTMLDivElement>('container');
   const canvasRef = useTemplateRef<HTMLCanvasElement>('canvas');
   const { width, height } = useElementBounding(containerRef);
-  const { name } = useTheme();
 
   const uiColor = ref(getCurrentColor());
 
@@ -28,14 +31,15 @@
       .trim();
   }
 
-  watch(
-    name,
+  // Слушаем не имя темы, а сам класс на <html>. `useHead` в app.vue проставляет
+  // его НЕ синхронно с переключателем, поэтому watch по имени темы успевал
+  // прочитать ещё старую палитру — и цвет частиц менялся только после F5.
+  useMutationObserver(
+    () => document.documentElement,
     () => {
       uiColor.value = getCurrentColor();
     },
-    {
-      immediate: true,
-    },
+    { attributeFilter: ['class'], attributes: true },
   );
 
   function getColor(): Color {

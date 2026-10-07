@@ -44,6 +44,7 @@
     buildStartingEquipmentItems,
     CLASSES_SEARCH_PATH,
     collectChosenProficiencies,
+    collectFeatChoiceAnswers,
     computeAbilityBonuses,
     CURRENT_SELECTION_LABELS,
     CUSTOM_BACKGROUND_LABELS,
@@ -851,43 +852,6 @@
     return urls;
   }
 
-  /**
-   * Ответы игрока на выборы записи по ключу выбора: id пикера — это
-   * `<источник>:<url>:<ключ>`, а в записи ответы лежат под самим ключом, потому
-   * что у повторяемой черты id записи получает ещё и уникальный суффикс.
-   *
-   * @param summary сводка, чьи выборы собираются: черта либо дары предыстории.
-   * @returns ответы по ключу выбора.
-   */
-  function collectChoiceAnswers(
-    summary: FeatSummary | null,
-  ): Record<string, string[]> {
-    const answers: Record<string, string[]> = {};
-
-    // Не только показанные пикеры: за скрытый выбор списка ответила сама
-    // предыстория, и без записанного ответа лист потом не сузит пул заклинаний
-    // до названного ею класса
-    for (const choice of summary?.choices ?? []) {
-      // Выборы повышения характеристик заведены самим листом: ключа выбора в
-      // механике у них нет, а ответ уходит в прибавки к характеристикам.
-      if (
-        choice.kind === 'ability-score'
-        || choice.kind === 'ability-variant'
-      ) {
-        continue;
-      }
-
-      const values = selections.value[choice.id] ?? [];
-      const key = choice.id.split(':').at(-1) ?? '';
-
-      if (key && values.length) {
-        answers[key] = values;
-      }
-    }
-
-    return answers;
-  }
-
   function showLoadError() {
     toast.add({
       color: 'error',
@@ -1056,7 +1020,13 @@
             selections.value,
             backgroundSkills,
           ),
-          choiceAnswers: collectChoiceAnswers(summary),
+          // Ответы по всем выборам черты, а не только показанным: за скрытый
+          // выбор списка ответила сама предыстория, и без записанного ответа
+          // лист потом не сузит пул заклинаний до названного ею класса
+          choiceAnswers: collectFeatChoiceAnswers(
+            summary.choices,
+            selections.value,
+          ),
           spells: collectChosenSpells(summary),
           abilityIncreases: getFeatAbilityIncreases(
             summary,
@@ -1090,7 +1060,10 @@
               selections.value,
               backgroundSkills,
             ),
-            choiceAnswers: collectChoiceAnswers(grants),
+            choiceAnswers: collectFeatChoiceAnswers(
+              grants.choices,
+              selections.value,
+            ),
             spells: collectChosenSpells(grants),
             abilityIncreases: getFeatAbilityIncreases(
               grants,

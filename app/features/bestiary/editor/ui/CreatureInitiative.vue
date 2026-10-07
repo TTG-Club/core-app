@@ -43,7 +43,6 @@
              (например, −2 у зомби), а `min="0"` не давал её ввести. -->
         <UInputNumber
           v-model="model.value"
-          :precision="0"
           placeholder="Введи инициативу"
         />
 

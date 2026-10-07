@@ -64,7 +64,6 @@
             <UInputNumber
               v-model="model.darkvision"
               :min="0"
-              :precision="0"
               placeholder="В фт."
             />
 
@@ -86,7 +85,6 @@
             <UInputNumber
               v-model="model.truesight"
               :min="0"
-              :precision="0"
               placeholder="В фт."
             />
 
@@ -108,7 +106,6 @@
             <UInputNumber
               v-model="model.blindsight"
               :min="0"
-              :precision="0"
               placeholder="В фт."
             />
 
@@ -130,7 +127,6 @@
             <UInputNumber
               v-model="model.tremorsense"
               :min="0"
-              :precision="0"
               placeholder="В фт."
             />
 
@@ -152,7 +148,6 @@
             <UInputNumber
               v-model="model.passivePerception"
               :min="0"
-              :precision="0"
               placeholder="Введите значение"
             />
 

@@ -2,6 +2,7 @@
   import type { AdminCharacterSheetStats } from '~admin/character-sheets/model';
   import type { AdminOnlineStatsResponse } from '~admin/online/model';
 
+  import { FetchStatus } from '~/shared/consts';
   import {
     ADMIN_SHEET_STATS_API_URL,
     ADMIN_SHEET_STATS_DATA_KEY,
@@ -22,6 +23,22 @@
     ADMIN_DASHBOARD_TOKENATOR_TITLE,
   } from '~admin/dashboard/model';
   import {
+    PUBLICATION_ROUTE,
+    PUBLICATION_TEXT,
+  } from '~admin/game-publications/model';
+  import {
+    ADMIN_GAME_STATISTICS_API_URL,
+    ADMIN_GAME_STATISTICS_DATA_KEY,
+    ADMIN_GAME_STATISTICS_REQUEST_TIMEOUT,
+    parseAdminGameStatistics,
+  } from '~admin/games/model';
+  import { AdminGameStatisticsCard } from '~admin/games/ui';
+  import {
+    HOME_HERO_ADMIN_PAGE_DESCRIPTION,
+    HOME_HERO_ADMIN_PAGE_TITLE,
+    HOME_HERO_ADMIN_ROUTE,
+  } from '~admin/home-hero/model';
+  import {
     MAILING_PAGE_DESCRIPTION,
     MAILING_PAGE_TITLE,
     MAILING_ROUTE,
@@ -37,6 +54,11 @@
     ADMIN_USERS_NAVIGATION_LABEL,
     ADMIN_USERS_PAGE_DESCRIPTION,
   } from '~admin/users/model';
+  import {
+    VTTG_COMPENDIUM_ADMIN_ROUTE,
+    VTTG_COMPENDIUM_PAGE_DESCRIPTION,
+    VTTG_COMPENDIUM_PAGE_TITLE,
+  } from '~admin/vttg-compendium/model';
   import {
     ARTICLES_ADMIN_CREATE_ROUTE,
     ARTICLES_ADMIN_ROUTE,
@@ -93,15 +115,43 @@
 
   const resolvedSheetStats = computed(() => sheetStats.value ?? null);
 
+  const {
+    data: gameStatistics,
+    error: gameStatisticsError,
+    refresh: refreshGameStatistics,
+    status: gameStatisticsStatus,
+  } = await useFetch(ADMIN_GAME_STATISTICS_API_URL, {
+    key: ADMIN_GAME_STATISTICS_DATA_KEY,
+    server: false,
+    lazy: true,
+    timeout: ADMIN_GAME_STATISTICS_REQUEST_TIMEOUT,
+    transform: parseAdminGameStatistics,
+  });
+
+  const isGameStatisticsLoading = computed(
+    () => gameStatisticsStatus.value === FetchStatus.Pending,
+  );
+
+  const hasGameStatisticsError = computed(() => !!gameStatisticsError.value);
+
+  const resolvedGameStatistics = computed(() => gameStatistics.value ?? null);
+
   const isStatsLoading = computed(
-    () => isOnlineStatsLoading.value || isSheetStatsLoading.value,
+    () =>
+      isOnlineStatsLoading.value
+      || isSheetStatsLoading.value
+      || isGameStatisticsLoading.value,
   );
 
   /**
-   * Обновляет обе статистики блока — кнопка «Обновить» в шапке одна на всю секцию.
+   * Обновляет все показатели общей кнопкой в шапке секции.
    */
   async function handleStatsRefresh(): Promise<void> {
-    await Promise.all([refreshOnlineStats(), refreshSheetStats()]);
+    await Promise.all([
+      refreshOnlineStats(),
+      refreshSheetStats(),
+      refreshGameStatistics(),
+    ]);
   }
 </script>
 
@@ -132,11 +182,35 @@
             />
           </template>
         </ClientOnly>
+
+        <AdminGameStatisticsCard
+          :statistics="resolvedGameStatistics"
+          :is-loading="isGameStatisticsLoading"
+          :has-error="hasGameStatisticsError"
+        />
       </AdminOnlineStats>
 
       <div
         class="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-4 sm:grid-cols-[repeat(auto-fit,minmax(360px,1fr))]"
       >
+        <UCard variant="subtle">
+          <template #header>
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h2 class="text-base text-highlighted">
+                {{ PUBLICATION_TEXT.title }}
+              </h2>
+
+              <UButton
+                size="sm"
+                :to="PUBLICATION_ROUTE"
+                >{{ ADMIN_DASHBOARD_CONFIGURE_LABEL }}</UButton
+              >
+            </div>
+          </template>
+
+          <p class="text-sm text-muted">{{ PUBLICATION_TEXT.description }}</p>
+        </UCard>
+
         <UCard variant="subtle">
           <template #header>
             <div class="flex items-center justify-between gap-2">
@@ -259,6 +333,27 @@
           <template #header>
             <div class="flex items-center justify-between gap-2">
               <h2 class="truncate text-base text-highlighted">
+                {{ HOME_HERO_ADMIN_PAGE_TITLE }}
+              </h2>
+
+              <UButton
+                size="sm"
+                :to="HOME_HERO_ADMIN_ROUTE"
+              >
+                {{ ADMIN_DASHBOARD_CONFIGURE_LABEL }}
+              </UButton>
+            </div>
+          </template>
+
+          <div class="text-sm text-muted">
+            {{ HOME_HERO_ADMIN_PAGE_DESCRIPTION }}
+          </div>
+        </UCard>
+
+        <UCard variant="subtle">
+          <template #header>
+            <div class="flex items-center justify-between gap-2">
+              <h2 class="truncate text-base text-highlighted">
                 {{ MAILING_PAGE_TITLE }}
               </h2>
 
@@ -273,6 +368,27 @@
 
           <div class="text-sm text-muted">
             {{ MAILING_PAGE_DESCRIPTION }}
+          </div>
+        </UCard>
+
+        <UCard variant="subtle">
+          <template #header>
+            <div class="flex items-center justify-between gap-2">
+              <h2 class="truncate text-base text-highlighted">
+                {{ VTTG_COMPENDIUM_PAGE_TITLE }}
+              </h2>
+
+              <UButton
+                size="sm"
+                :to="VTTG_COMPENDIUM_ADMIN_ROUTE"
+              >
+                {{ ADMIN_DASHBOARD_CONFIGURE_LABEL }}
+              </UButton>
+            </div>
+          </template>
+
+          <div class="text-sm text-muted">
+            {{ VTTG_COMPENDIUM_PAGE_DESCRIPTION }}
           </div>
         </UCard>
       </div>

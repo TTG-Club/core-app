@@ -17,6 +17,9 @@ const authTokenSchema = z.object({
 const authUserSchema = z.object({
   email: z.string().email(),
   username: z.string().min(1),
+  // Признак необязателен: старые сборки auth-service его не отдают, и
+  // отсутствие поля не должно ронять весь профиль.
+  emailVerified: z.boolean().optional(),
 });
 
 const authJwtPayloadSchema = z.object({

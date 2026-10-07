@@ -1,0 +1,1 @@
+export { AdminGameReportRow } from './ui';

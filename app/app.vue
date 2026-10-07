@@ -3,7 +3,7 @@
 
   import { DiceRollerFloatButton } from '~dice-roller/float-button';
   import { DiceRollerModal } from '~dice-roller/modal';
-  import { CookieConsentBanner } from '~infrastructure/cookie-consent';
+  import { CookieConsentBanner } from '~infrastructure/cookie-consent/ui';
   import { PwaConfig } from '~infrastructure/pwa';
   import { SidebarPanel } from '~infrastructure/sidebar';
 

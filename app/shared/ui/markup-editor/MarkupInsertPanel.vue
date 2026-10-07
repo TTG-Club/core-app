@@ -3,6 +3,11 @@
 
   import type { MarkupTag } from './tags';
 
+  import {
+    INSERT_PANEL_CONFIRM_ICON,
+    INSERT_PANEL_CONFIRM_LABELS,
+    INSERT_PANEL_ENTER_KEY_HINT,
+  } from './constants';
   import { hasMarkerAtom } from './tiptap/node-utils';
   import { sanitizeMarkerText } from './toolbar-items';
 
@@ -63,10 +68,16 @@
       return String(editor.getAttributes('table').caption ?? '');
     }
 
-    // Ссылка → поле = URL (метку берём из выделения при вставке). Кубик → поле =
-    // ФОРМУЛА (обязательна, пусто и в фокусе); выделение уходит в текст справа.
-    if (mode.kind === 'link' || mode.kind === 'dice') {
+    // Ссылка → поле = URL (метку берём из выделения при вставке).
+    if (mode.kind === 'link') {
       return '';
+    }
+
+    // Кубик → поле = ФОРМУЛА: выделил «1к6», нажал кубик — формула уже готова, и
+    // Enter сразу вставляет бросок. Выделение с чипами в формулу не идёт: плоский
+    // текст теряет их содержимое.
+    if (mode.kind === 'dice') {
+      return selectionHasChip ? '' : selectedText;
     }
 
     return selectedText;
@@ -76,8 +87,9 @@
 
   // Показанный текст броска (что видно, напр. «+5»), если отличается от формулы
   // (query, напр. «1к20+5»). Пусто → показывается сама формула. По умолчанию —
-  // выделение: выделил «+5», нажал кубик — «+5» останется видимым. Пишется в
-  // атрибут `text`: `{@dice <формула> | text:<текст>}`. См. confirmDice.
+  // выделение: выделил «+5», нажал кубик и дописал формулу — «+5» останется
+  // видимым. Пишется в атрибут `text`: `{@dice <формула> | text:<текст>}`; если
+  // текст совпал с формулой, атрибута нет. См. confirmDice.
   const diceDisplay = ref(mode.kind === 'dice' ? selectedText : '');
 
   const results = ref<SectionSearchResult[]>([]);
@@ -145,6 +157,19 @@
 
     return 'Поиск сущности';
   });
+
+  // Кнопка подтверждения рядом с полем. На телефоне клавиша ввода экранной
+  // клавиатуры может оказаться «Далее» (переход к следующему полю) и не прислать
+  // Enter — без кнопки значение было бы нечем применить. У поиска раздела её
+  // нет: там результат выбирают нажатием на строку списка.
+  const hasConfirmButton = computed(() => mode.kind !== 'section');
+
+  /** Подпись кнопки подтверждения по режиму. */
+  const confirmLabel = computed(() =>
+    mode.kind === 'caption'
+      ? INSERT_PANEL_CONFIRM_LABELS.caption
+      : INSERT_PANEL_CONFIRM_LABELS.insert,
+  );
 
   onMounted(() => {
     nextTick(() => inputRef.value?.focus());
@@ -296,7 +321,12 @@
     emit('close');
   }
 
-  function onEnter() {
+  /**
+   * Подтверждает ввод панели по её режиму — и клавишей Enter в поле, и кнопкой
+   * подтверждения: кубик/подпись/ссылка применяются, в поиске раздела
+   * выбирается подсвеченный результат.
+   */
+  function confirmInput() {
     if (mode.kind === 'dice') {
       confirmDice();
 
@@ -353,8 +383,9 @@
         v-model="query"
         :placeholder="panelPlaceholder"
         :aria-label="panelAriaLabel"
+        :enterkeyhint="INSERT_PANEL_ENTER_KEY_HINT"
         class="min-w-0 flex-1 bg-transparent text-sm text-default outline-none"
-        @keydown.enter.prevent="onEnter"
+        @keydown.enter.prevent="confirmInput"
         @keydown.esc.prevent="emit('close')"
         @keydown.down.prevent="moveActive(1)"
         @keydown.up.prevent="moveActive(-1)"
@@ -377,11 +408,22 @@
           v-model="diceDisplay"
           placeholder="Текст (необяз.), напр. +5"
           aria-label="Показанный текст броска"
+          :enterkeyhint="INSERT_PANEL_ENTER_KEY_HINT"
           class="min-w-0 flex-1 bg-transparent text-sm text-default outline-none"
-          @keydown.enter.prevent="onEnter"
+          @keydown.enter.prevent="confirmInput"
           @keydown.esc.prevent="emit('close')"
         />
       </template>
+
+      <UButton
+        v-if="hasConfirmButton"
+        :icon="INSERT_PANEL_CONFIRM_ICON"
+        :aria-label="confirmLabel"
+        color="primary"
+        variant="soft"
+        size="xs"
+        @click.left.exact.prevent="confirmInput"
+      />
 
       <UButton
         icon="tabler:x"

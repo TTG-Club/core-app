@@ -4,6 +4,7 @@
   import type { CommentNode, CommentTreeActions } from '../../model';
 
   import { ConfirmDialog } from '~initiative/ui-kit';
+  import { UserAvatar } from '~ui/user-avatar';
 
   import { useCommentTimestamp } from '../../composables';
   import {
@@ -423,11 +424,11 @@
     <template v-else>
       <!-- На узких экранах мета-блок (бейдж, время, меню) уходит под имя -->
       <header class="flex items-start gap-2 sm:items-center">
-        <UAvatar
-          :alt="publishedComment?.authorName"
+        <UserAvatar
+          :user-id="publishedComment?.authorId"
+          :name="publishedComment?.authorName"
           size="xs"
           class="shrink-0"
-          :ui="{ fallback: 'uppercase' }"
         />
 
         <div

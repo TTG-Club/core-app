@@ -4,6 +4,7 @@
     DamageRollSource,
     PreparedSpellKind,
     SpellcastingBreakdown,
+    SpellCastingKind,
     SpellDamageRoll,
     SpellSlotKind,
     SpellSlotRow,
@@ -14,14 +15,20 @@
   import { SpellDrawer } from '~spells/drawer';
   import { MarkupRender } from '~ui/markup';
 
-  import { useCharacterSheet, useSpellDamage } from '../../composables';
+  import {
+    useCharacterSheet,
+    useSpellCatalogMechanics,
+  } from '../../composables';
   import {
     ABILITY_LABELS,
     CANTRIP_SPELL_LEVEL,
     CLASS_SPELL_BADGE,
     CUSTOM_SPELL_BADGE_HINT,
+    DAMAGE_VARIANTS_STAT_ICON,
     getFilterChipClass,
+    getGrantedCantripUrls,
     getInnateSpellMenuItems,
+    getOrderedSpellCastingKinds,
     getPreparedSpellsHint,
     getPreparedSpellsValue,
     getSpellGroupLabel,
@@ -33,6 +40,8 @@
     getSpellSlotCircles,
     getSpellSlotSummary,
     getSpellStatRows,
+    GRANTED_CANTRIP_GROUP_LABEL,
+    GRANTED_CANTRIP_GROUP_LEVEL,
     INNATE_SPELL_GROUP_LABEL,
     INNATE_SPELL_GROUP_LEVEL,
     isCustomSpell,
@@ -48,11 +57,13 @@
     SHEET_SPELL_ROW_LABELS,
     SHEET_STATIC_STAT_CLASS,
     SHEET_TAB_EMPTY_LABELS,
+    sortSpellsByLevelAndName,
+    SPELL_CASTING_KIND_META,
+    SPELL_CASTING_TIME_LABEL,
     SPELL_DAMAGE_ROLL_HINT_LABEL,
     SPELL_DAMAGE_ROLL_LABEL,
     SPELL_DAMAGE_STAT_LABEL,
     SPELL_FILTER_LABELS,
-    SPELL_NAME_SORT_LOCALE,
     SPELL_SLOTS_LABEL,
     SPELLCASTING_STAT_LABELS,
     SPELLCASTING_TILE_LABELS,
@@ -65,8 +76,8 @@
     isPrepared: boolean;
 
     /**
-     * Квадрат переключает подготовку: у заговоров он остаётся меткой, а не
-     * кнопкой — подготовки они не требуют.
+     * Квадрат переключает подготовку: у выданных заговоров он остаётся меткой,
+     * а не кнопкой — такой заговор подготовлен всегда.
      */
     interactive: boolean;
 
@@ -110,14 +121,18 @@
   const props = defineProps<{
     spells: CharacterSpell[];
 
-    /** Заклинания вида и черт: они идут отдельной группой над кругами книги. */
+    /**
+     * Заклинания вида и черт: они идут отдельной группой над кругами книги, а
+     * заговоры — группой выданных заговоров.
+     */
     innateSpells: CharacterSpell[];
 
     /**
      * Заклинания, выданные умениями класса: в списке они стоят в своём круге
-     * наравне с книгой. Выдача с отметкой «Подготавливать не нужно» приходит
-     * подготовленной и места среди подготовленных не занимает, остальную
-     * готовит игрок (см. `takesPreparationSpace`).
+     * наравне с книгой, заговоры — в группе выданных заговоров. Выдача с
+     * отметкой «Подготавливать не нужно» приходит подготовленной и места среди
+     * подготовленных не занимает, остальную готовит игрок (см.
+     * `takesPreparationSpace`).
      */
     classSpells: CharacterSpell[];
 
@@ -148,10 +163,10 @@
   // прячутся, а ряды заклинаний и шапка вкладки остаются на прежних местах.
   const { character, editControlClass } = useCharacterSheet();
 
-  // Урон заклинаний живёт в справочнике, а не в листе: подгружаем его для всей
-  // вкладки — и для книги, и для заклинаний вне её. Уровень персонажа
-  // нужен заговорам: их урон растёт от него, а не от круга ячейки.
-  const { getDamage } = useSpellDamage(
+  // Урон и время накладывания живут в справочнике, а не в листе: подгружаем
+  // их для всей вкладки — и для книги, и для заклинаний вне её. Уровень
+  // персонажа нужен заговорам: их урон растёт от него, а не от круга ячейки.
+  const { getDamage, getCastingKinds } = useSpellCatalogMechanics(
     () => [...props.spells, ...props.innateSpells, ...props.classSpells],
     () => props.spellcasting.abilityModifier,
     () => character.value.level,
@@ -220,9 +235,8 @@
   }
 
   /**
-   * Плитки счёта в шапке вкладки: заклинания кругов 1+ персонаж
-   * подготавливает, а заговоры знает — у каждого своя колонка таблицы класса,
-   * поэтому и плитки идут отдельные.
+   * Плитки счёта в шапке вкладки: у заклинаний кругов 1+ и у заговоров своя
+   * колонка таблицы класса, поэтому и плитки идут отдельные.
    */
   const preparedStats = computed(() =>
     PREPARED_KINDS.map((kind) => {
@@ -248,13 +262,17 @@
   );
 
   /**
-   * Предел выбран целиком: подготовить ещё одно заклинание уже нельзя. Заговоры
-   * предела подготовки не знают — они всегда доступны.
+   * Предел выбран целиком: подготовить ещё одно заклинание (или заговор — у
+   * них свой предел) уже нельзя.
    *
+   * @param kind вид счёта заклинания.
    * @returns true — предел достигнут.
    */
-  function isPreparedLimitReached(): boolean {
-    const { value, count } = props.spellcasting.prepared;
+  function isPreparedLimitReached(kind: PreparedSpellKind): boolean {
+    const { value, count } =
+      kind === 'cantrips'
+        ? props.spellcasting.preparedCantrips
+        : props.spellcasting.prepared;
 
     return value !== null && count >= value;
   }
@@ -314,6 +332,26 @@
   /** Отмеченные чипами круги; пусто — круги списка не сужаются. */
   const pickedLevels = ref(new Set<number>());
 
+  /** Отмеченное чипами время накладывания; пусто — по нему список не сужается. */
+  const pickedCastingKinds = ref(new Set<SpellCastingKind>());
+
+  /**
+   * Время накладывания, которое есть в списке: чип без единого подходящего
+   * заклинания только сузил бы список до пустого.
+   */
+  const availableCastingKinds = computed(() =>
+    getOrderedSpellCastingKinds(
+      [...props.spells, ...props.innateSpells, ...props.classSpells].flatMap(
+        getCastingKinds,
+      ),
+    ),
+  );
+
+  /** Времени накладывания в списке больше одного — есть между чем выбирать. */
+  const hasCastingChips = computed(
+    () => availableCastingKinds.value.length > 1,
+  );
+
   /** Круги, которые вкладка уже показывает: по ним и отбирают. */
   const availableLevels = computed(() =>
     getSpellListLevels(
@@ -341,11 +379,17 @@
     levels: availableLevels.value.filter((level) =>
       pickedLevels.value.has(level),
     ),
+    castingKinds: availableCastingKinds.value.filter((kind) =>
+      pickedCastingKinds.value.has(kind),
+    ),
   }));
 
   /** Список сужен: отбор есть что сбросить. */
   const hasActiveFilter = computed(
-    () => spellFilter.value.preparedOnly || spellFilter.value.levels.length > 0,
+    () =>
+      spellFilter.value.preparedOnly
+      || spellFilter.value.levels.length > 0
+      || spellFilter.value.castingKinds.length > 0,
   );
 
   /**
@@ -355,7 +399,9 @@
   const hasFilterControls = computed(
     () =>
       hasAnySpells.value
-      && (isPreparedFilterAvailable.value || hasLevelChips.value),
+      && (isPreparedFilterAvailable.value
+        || hasLevelChips.value
+        || hasCastingChips.value),
   );
 
   const preparedChipClass = computed(() =>
@@ -363,22 +409,68 @@
   );
 
   /**
-   * Чипы уровней, которые есть в списке: сам чип — номер уровня, у заговоров
-   * вместо номера сокращение. Полную подпись («Заговоры», «Уровень 3»)
-   * показывает подсказка по наведению.
+   * Чипы уровней, которые есть в списке: сам чип — номер круга, у заговоров
+   * это ноль (сокращение «Зг» на его месте путало). Полную подпись
+   * («Заговоры», «Уровень 3») показывает подсказка по наведению.
    */
   const levelChips = computed(() =>
     availableLevels.value.map((level) => ({
       level,
-      label:
-        level === CANTRIP_SPELL_LEVEL
-          ? SPELL_FILTER_LABELS.cantrip
-          : String(level),
+      label: String(level),
       tooltip: getSpellGroupLabel(level),
       isPicked: spellFilter.value.levels.includes(level),
       chipClass: getFilterChipClass(spellFilter.value.levels.includes(level)),
     })),
   );
+
+  /**
+   * Чипы времени накладывания: значок и цвет те же, что у строки заклинания,
+   * подпись — полностью.
+   */
+  const castingChips = computed(() =>
+    availableCastingKinds.value.map((kind) => ({
+      kind,
+      ...SPELL_CASTING_KIND_META[kind],
+      isPicked: spellFilter.value.castingKinds.includes(kind),
+      chipClass: getFilterChipClass(
+        spellFilter.value.castingKinds.includes(kind),
+      ),
+    })),
+  );
+
+  /**
+   * Открыт ряд чипов времени накладывания. Чипы прячутся за кнопкой
+   * фильтров, чтобы ряд кругов оставался в одну строку.
+   */
+  const isCastingFiltersOpen = ref(false);
+
+  /** Ряд чипов времени накладывания виден: его открыли, и выбирать есть из чего. */
+  const isCastingRowShown = computed(
+    () =>
+      isCastingFiltersOpen.value
+      && hasFilterControls.value
+      && hasCastingChips.value,
+  );
+
+  /**
+   * Кнопка фильтров горит, пока ряд открыт или время выбрано: так скрытый
+   * отбор не теряется, когда ряд свернули.
+   */
+  const castingToggleClass = computed(() => [
+    getFilterChipClass(
+      isCastingFiltersOpen.value || spellFilter.value.castingKinds.length > 0,
+    ),
+    // Кнопка держится правого края; при отборе край занимает «Сбросить»
+    hasActiveFilter.value ? '' : 'ml-auto',
+  ]);
+
+  /**
+   * Нажатие на кнопку фильтров: ряд времени накладывания открывается,
+   * повторное нажатие его сворачивает.
+   */
+  function handleCastingFiltersToggle() {
+    isCastingFiltersOpen.value = !isCastingFiltersOpen.value;
+  }
 
   /** Нажатие на чип подготовленных: тем же чипом отбор и снимается. */
   function handlePreparedFilterToggle() {
@@ -399,10 +491,25 @@
     pickedLevels.value.add(level);
   }
 
+  /**
+   * Нажатие на чип времени накладывания: набираются по одному, повторное
+   * нажатие снимает время с отбора.
+   */
+  function handleCastingPick(kind: SpellCastingKind) {
+    if (pickedCastingKinds.value.has(kind)) {
+      pickedCastingKinds.value.delete(kind);
+
+      return;
+    }
+
+    pickedCastingKinds.value.add(kind);
+  }
+
   /** Нажатие на «Сбросить»: список возвращается целиком. */
   function handleFilterReset() {
     isPreparedOnlyPicked.value = false;
     pickedLevels.value.clear();
+    pickedCastingKinds.value.clear();
   }
 
   /**
@@ -433,7 +540,10 @@
     return getDamage(spell.url).map((damage, damageIndex) => {
       const tooltipParts = [damage.formula];
 
-      if (damage.typeLabel) {
+      // Тип на выбор в плитке не пишется: там значок, а список — в подсказке
+      if (damage.typeChoiceLabels.length) {
+        tooltipParts.push(...damage.typeChoiceLabels);
+      } else if (damage.typeLabel) {
         tooltipParts.push(damage.typeLabel);
       }
 
@@ -450,6 +560,9 @@
       return {
         key: `${spell.url}:${damageIndex}`,
         formula: damage.formula,
+        icon: damage.typeChoiceLabels.length
+          ? DAMAGE_VARIANTS_STAT_ICON
+          : undefined,
         // Всё, что нужно окну настройки: кости и число вхождений модификатора
         // приходят из справочника, характеристика — из листа. Круг едет здесь
         // же: бросок урона считается накладыванием и занимает ячейку.
@@ -512,9 +625,11 @@
     granted: boolean,
     countsInLimit: boolean,
   ): PreparedIconState {
-    // Заговор всегда доступен: подготовки он не требует ни по одному классу, а
-    // колонка «Заговоры» таблицы класса говорит, сколько их можно знать
-    if (getSpellPreparedKind(spell) === 'cantrips') {
+    const kind = getSpellPreparedKind(spell);
+
+    // Выданный заговор (вид, черта, умение класса) подготовлен всегда: снять
+    // его нельзя, а заговоры про запас игрок держит в книге и отмечает сам
+    if (granted && kind === 'cantrips') {
       return {
         isPrepared: true,
         interactive: false,
@@ -555,7 +670,7 @@
       // Предел выбран целиком — значок остаётся нажимаемым: подсказка и
       // предупреждение объясняют отказ понятнее, чем погашенная кнопка.
       tooltip:
-        !isPrepared && isPreparedLimitReached()
+        !isPrepared && isPreparedLimitReached(kind)
           ? `${label}. ${PREPARED_SPELL_TOGGLE_LABELS.limit}`
           : label,
       ariaLabel: `${label}: ${spell.name}`,
@@ -563,60 +678,90 @@
   }
 
   /**
-   * Заклинания классовых умений, встающие в круги: то, что игрок уже завёл в
-   * книге руками, вторым рядом не показывается — правки и удаление достаются
-   * записи книги.
+   * Заклинания классовых умений, которые стоят в списке. Заклинание круга,
+   * которое игрок уже завёл в книге руками, вторым рядом не показывается —
+   * правки и удаление достаются записи книги. У заговора наоборот: выданный
+   * стоит в группе выданных, а копия в книге скрыта (`bookSpells`).
    */
-  const groupedClassSpells = computed(() => {
+  const shownClassSpells = computed(() => {
     const bookUrls = new Set(props.spells.map((spell) => spell.url));
 
     return props.classSpells.filter(
       (spell) =>
-        !bookUrls.has(spell.url)
-        && matchesSpellFilter(spell, spellFilter.value),
+        getSpellPreparedKind(spell) === 'cantrips' || !bookUrls.has(spell.url),
     );
   });
 
-  /** URL заклинаний класса, стоящих в кругах: по ним строка узнаёт себя. */
+  /** URL заклинаний класса в списке: по ним строка узнаёт себя. */
   const classSpellUrls = computed(
-    () => new Set(groupedClassSpells.value.map((spell) => spell.url)),
+    () => new Set(shownClassSpells.value.map((spell) => spell.url)),
   );
 
+  /**
+   * Книга без копий выданных заговоров: заговор от вида, черты или умения
+   * стоит в группе выданных, и второй строкой в «Заговорах» он только мешал бы
+   * (в счёт такая копия тоже не идёт, см. `getGrantedCantripUrls`).
+   */
+  const bookSpells = computed(() => {
+    const grantedCantripUrls = getGrantedCantripUrls(character.value);
+
+    return props.spells.filter((spell) => !grantedCantripUrls.has(spell.url));
+  });
+
   const displayGroups = computed(() => {
-    // Заклинания класса идут в круги вместе с книгой: заговор волшебника игрок
-    // ищет среди заговоров, а не в отдельной группе
+    const isCantrip = (spell: CharacterSpell) =>
+      getSpellPreparedKind(spell) === 'cantrips';
+
+    const matchesFilter = (spell: CharacterSpell) =>
+      matchesSpellFilter(spell, getCastingKinds(spell), spellFilter.value);
+
+    // Заклинания 1+ круга от умений класса идут в круги вместе с книгой:
+    // заклинание домена игрок ищет среди заклинаний своего круга
     const regularGroups = getSpellGroups(
       [
-        ...props.spells.filter((spell) =>
-          matchesSpellFilter(spell, spellFilter.value),
+        ...bookSpells.value.filter(matchesFilter),
+        ...shownClassSpells.value.filter(
+          (spell) => !isCantrip(spell) && matchesFilter(spell),
         ),
-        ...groupedClassSpells.value,
       ],
       groupSlotLevels.value,
     ).map((group) => ({ ...group, innate: false }));
 
-    const innateSpells = props.innateSpells.filter((spell) =>
-      matchesSpellFilter(spell, spellFilter.value),
+    // Выданные заговоры — от вида, черты, предыстории, умения класса — стоят
+    // своей группой: они подготовлены всегда, и в «Заговорах» остаётся только
+    // книга, из которой игрок отмечает свои
+    const grantedCantrips = [
+      ...props.innateSpells,
+      ...shownClassSpells.value,
+    ].filter((spell) => isCantrip(spell) && matchesFilter(spell));
+
+    const innateSpells = props.innateSpells.filter(
+      (spell) => !isCantrip(spell) && matchesFilter(spell),
     );
 
-    const groups = innateSpells.length
-      ? [
-          {
-            level: INNATE_SPELL_GROUP_LEVEL,
-            label: INNATE_SPELL_GROUP_LABEL,
-            spells: [...innateSpells].sort(
-              (firstSpell, secondSpell) =>
-                firstSpell.level - secondSpell.level
-                || firstSpell.name.localeCompare(
-                  secondSpell.name,
-                  SPELL_NAME_SORT_LOCALE,
-                ),
-            ),
-            innate: true,
-          },
-          ...regularGroups,
-        ]
-      : regularGroups;
+    const groups = [
+      ...(grantedCantrips.length
+        ? [
+            {
+              level: GRANTED_CANTRIP_GROUP_LEVEL,
+              label: GRANTED_CANTRIP_GROUP_LABEL,
+              spells: sortSpellsByLevelAndName(grantedCantrips),
+              innate: true,
+            },
+          ]
+        : []),
+      ...(innateSpells.length
+        ? [
+            {
+              level: INNATE_SPELL_GROUP_LEVEL,
+              label: INNATE_SPELL_GROUP_LABEL,
+              spells: sortSpellsByLevelAndName(innateSpells),
+              innate: true,
+            },
+          ]
+        : []),
+      ...regularGroups,
+    ];
 
     return groups.map((group) => {
       const slotRows = group.innate
@@ -644,12 +789,18 @@
         })),
         spells: group.spells.map((spell) => {
           const isCustom = isCustomSpell(spell);
+
+          const castingKinds = getCastingKinds(spell).map((kind) => ({
+            kind,
+            ...SPELL_CASTING_KIND_META[kind],
+          }));
+
           const isExpanded = isCustom && expandedUrls.value.has(spell.url);
 
-          // Заклинание класса стоит в круге, а ведётся как врождённое: и
-          // пометка подготовки, и меню строки у них общие
-          const isClassGranted =
-            !group.innate && classSpellUrls.value.has(spell.url);
+          // Заклинание класса стоит в круге (заговор — в группе выданных), а
+          // ведётся как врождённое: и пометка подготовки, и меню строки у них
+          // общие
+          const isClassGranted = classSpellUrls.value.has(spell.url);
 
           const isGranted = group.innate || isClassGranted;
 
@@ -698,6 +849,10 @@
             // Своя характеристика — бейдж строки: заклинание считается не так,
             // как остальная книга, и по строке это должно быть видно сразу.
             abilityBadge: getSpellAbilityBadge(spell),
+            // Время накладывания — под названием, рядом со школой: по нему игрок
+            // ищет, чем занять бонусное действие или реакцию.
+            castingKinds,
+            hasSubtitle: Boolean(spell.school) || castingKinds.length > 0,
             // Урон каталожного заклинания приходит из справочника; у своего его
             // нет — форма листа урон не заполняет.
             damageStats: getSpellDamageStats(spell),
@@ -895,7 +1050,7 @@
       </UDropdownMenu>
     </div>
 
-    <!-- Отбор списка: подготовка и круги. Чипы идут от самого списка — круга
+    <!-- Отбор списка: подготовка, круги и кнопка времени накладывания. Чипы идут от самого списка — круга
       без заклинаний и ячеек среди них не бывает, а помечать подготовку бывает и
       нечего. Лежат они в ряду поштучно, без вложенных групп: иначе круги
       переносятся на новую строку все разом, даже когда место ещё есть -->
@@ -962,6 +1117,56 @@
           @click.left.exact.prevent="handleFilterReset"
         />
       </UTooltip>
+
+      <!-- Время накладывания прячется за одной кнопкой у правого края: ряд
+        кругов остаётся коротким, а чипы открываются рядом ниже по нажатию -->
+      <UTooltip
+        v-if="hasCastingChips"
+        :text="SPELL_FILTER_LABELS.castingToggle"
+      >
+        <button
+          type="button"
+          class="flex items-center px-1.5"
+          :class="castingToggleClass"
+          :aria-label="SPELL_FILTER_LABELS.castingToggle"
+          :aria-expanded="isCastingFiltersOpen"
+          @click.left.exact.prevent="handleCastingFiltersToggle"
+        >
+          <UIcon
+            name="tabler:adjustments-horizontal"
+            class="size-4"
+          />
+        </button>
+      </UTooltip>
+    </div>
+
+    <!-- Время накладывания — чипами со значком строки: по ним игрок ищет,
+      чем занять действие, бонусное действие или реакцию -->
+    <div
+      v-if="isCastingRowShown"
+      class="flex flex-wrap items-center gap-1.5"
+    >
+      <UTooltip
+        v-for="castingChip in castingChips"
+        :key="castingChip.kind"
+        :text="SPELL_FILTER_LABELS.castingHint"
+      >
+        <button
+          type="button"
+          class="flex items-center gap-1"
+          :class="castingChip.chipClass"
+          :aria-pressed="castingChip.isPicked"
+          @click.left.exact.prevent="handleCastingPick(castingChip.kind)"
+        >
+          <UIcon
+            :name="castingChip.icon"
+            class="size-3.5"
+            :class="castingChip.iconClass"
+          />
+
+          {{ castingChip.label }}
+        </button>
+      </UTooltip>
     </div>
 
     <template v-if="displayGroups.length">
@@ -1018,8 +1223,8 @@
           <div class="relative flex items-center gap-3 p-3">
             <!-- Значок заклинания — переключатель подготовки: нажатие метит
               заклинание подготовленным, повторное — снимает пометку. Горит при
-              этом только сам квадрат, строка остаётся обычной. У заговора
-              квадрат ничего не переключает: подготовки заговор не требует -->
+              этом только сам квадрат, строка остаётся обычной. У выданного
+              заговора квадрат ничего не переключает: он подготовлен всегда -->
             <UTooltip :text="spell.preparedIcon.tooltip">
               <button
                 v-if="spell.preparedIcon.interactive"
@@ -1075,18 +1280,44 @@
                       color="secondary"
                       variant="subtle"
                       icon="tabler:wand"
-                      class="shrink-0"
+                      class="relative z-10 shrink-0"
                     >
                       {{ spell.abilityBadge.label }}
                     </UBadge>
                   </UTooltip>
                 </span>
 
+                <!-- Время накладывания стоит рядом со школой: значок и цвет
+                  различают действие, бонусное действие и реакцию с одного
+                  взгляда. Школа уступает место и обрезается первой -->
                 <span
-                  v-if="spell.school"
-                  class="truncate text-xs text-dimmed"
+                  v-if="spell.hasSubtitle"
+                  class="flex min-w-0 items-center gap-2 text-xs"
                 >
-                  {{ spell.school }}
+                  <span
+                    v-if="spell.school"
+                    class="truncate text-dimmed"
+                  >
+                    {{ spell.school }}
+                  </span>
+
+                  <UTooltip
+                    v-for="castingKind in spell.castingKinds"
+                    :key="castingKind.kind"
+                    :text="SPELL_CASTING_TIME_LABEL"
+                  >
+                    <span
+                      class="relative z-10 flex shrink-0 items-center gap-1 text-muted"
+                    >
+                      <UIcon
+                        :name="castingKind.icon"
+                        class="size-3.5"
+                        :class="castingKind.iconClass"
+                      />
+
+                      {{ castingKind.label }}
+                    </span>
+                  </UTooltip>
                 </span>
               </span>
             </button>
@@ -1109,8 +1340,16 @@
                   :aria-label="damageStat.ariaLabel"
                   @click.left.exact.prevent="handleDamageRoll(damageStat)"
                 >
-                  <span class="text-xs font-bold text-primary">
+                  <span
+                    class="flex items-center gap-0.5 text-xs font-bold text-primary"
+                  >
                     {{ damageStat.formula }}
+
+                    <UIcon
+                      v-if="damageStat.icon"
+                      :name="damageStat.icon"
+                      class="size-3"
+                    />
                   </span>
 
                   <span class="text-[9px] text-primary/80 uppercase">

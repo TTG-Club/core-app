@@ -7,12 +7,14 @@
 
   import {
     ClassEquipment,
+    ClassPageNavigation,
     ClassProficiency,
     ClassRouting,
     ClassTable,
     FeatureCollapse,
     StatsBlock,
   } from './ui';
+  import { CLASS_SECTION_ANCHOR, getSectionHeadingId } from './ui/constants';
 
   const {
     detail,
@@ -46,28 +48,15 @@
 
 <template>
   <div class="@container">
-    <div
-      :class="[
-        'flex flex-col gap-6',
-        inSplit ? '' : '@min-3xl:flex-row @min-3xl:gap-7',
-      ]"
-    >
+    <div class="flex flex-col gap-6 @min-3xl:flex-row @min-3xl:gap-7">
       <div
-        :class="[
-          'flex w-full shrink-0 flex-col gap-4',
-          inSplit
-            ? '@min-xl:flex-row'
-            : '@min-xl:@max-3xl:flex-row @min-3xl:w-80',
-        ]"
+        class="flex w-full flex-col gap-4 @min-xl:@max-3xl:flex-row @min-3xl:max-w-80 @min-3xl:min-w-68"
       >
         <UiGallery
           v-if="!hideGallery && detail.image"
+          class="min-w-25 shrink-0 @min-xl:@max-3xl:w-50"
           :preview="detail.image"
           :images="detail.gallery"
-          :class="[
-            'min-w-25',
-            inSplit ? '@min-xl:max-w-50' : '@min-xl:@max-3xl:max-w-50',
-          ]"
         />
 
         <StatsBlock
@@ -75,21 +64,43 @@
           :saving-throws="detail.savingThrows"
           :primary-characteristics="detail.primaryCharacteristics"
         />
+
+        <!-- Липнет к верху колонки, картинка и характеристики уезжают -->
+        <ClassPageNavigation
+          v-if="!navigateInPlace"
+          class="max-lg:hidden @max-3xl:hidden"
+          :features="detail.features"
+          :has-equipment="!!detail.equipment"
+          :has-description="!!detail.description"
+        />
       </div>
 
       <div class="flex min-w-0 flex-auto flex-col gap-6">
-        <div class="flex min-w-0 flex-col gap-2">
-          <ClassRouting
-            :url="detail.url"
-            :name="detail.name"
-            :parent="detail.parent"
-            :has-description="!!detail.description"
-            :has-spells="detail.casterType !== 'NONE'"
-            :navigate-in-place="navigateInPlace"
-            :in-split="inSplit"
-            :hide-navigation="hideNavigation"
-            @navigate="emit('navigate', $event)"
-          />
+        <div
+          :id="CLASS_SECTION_ANCHOR.table"
+          class="flex min-w-0 flex-col gap-2"
+        >
+          <!--
+            Якорь на обёртке, а не на ClassRouting: тот асинхронный и появляется
+            в DOM позже, чем навигация собирает отслеживаемые заголовки.
+            Отступ прокрутки доводит первый раздел до самого верха контейнера.
+          -->
+          <div
+            :id="getSectionHeadingId(CLASS_SECTION_ANCHOR.table)"
+            class="scroll-mt-24"
+          >
+            <ClassRouting
+              :url="detail.url"
+              :name="detail.name"
+              :parent="detail.parent"
+              :has-description="!!detail.description"
+              :has-spells="detail.casterType !== 'NONE'"
+              :navigate-in-place="navigateInPlace"
+              :in-split="inSplit"
+              :hide-navigation="hideNavigation"
+              @navigate="emit('navigate', $event)"
+            />
+          </div>
 
           <ClassTable
             :table="detail.table"
@@ -99,11 +110,17 @@
         </div>
 
         <ClassProficiency
+          :id="CLASS_SECTION_ANCHOR.proficiency"
+          :heading-id="getSectionHeadingId(CLASS_SECTION_ANCHOR.proficiency)"
           :proficiency="detail.proficiency"
           :saving-throws="detail.savingThrows"
         />
 
-        <ClassEquipment :equipment="detail.equipment" />
+        <ClassEquipment
+          :id="CLASS_SECTION_ANCHOR.equipment"
+          :heading-id="getSectionHeadingId(CLASS_SECTION_ANCHOR.equipment)"
+          :equipment="detail.equipment"
+        />
 
         <FeatureCollapse
           v-for="feature in detail.features"
@@ -113,9 +130,12 @@
 
         <div
           v-if="detail.description"
-          id="description"
+          :id="CLASS_SECTION_ANCHOR.description"
         >
-          <UiCollapse default-open>
+          <UiCollapse
+            default-open
+            :heading-id="getSectionHeadingId(CLASS_SECTION_ANCHOR.description)"
+          >
             <template #default>Описание</template>
 
             <template #content>

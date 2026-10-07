@@ -1,6 +1,8 @@
-import type { ComputedRef, Ref } from 'vue';
+import type { ComputedRef, MaybeRefOrGetter, Ref } from 'vue';
 
 import type { FetchStatusValue } from '~/shared/consts';
+
+import { omit } from 'es-toolkit';
 
 import { useLayoutWidth } from '~/composables/useLayoutWidth';
 import { FetchStatus } from '~/shared/consts';
@@ -20,6 +22,12 @@ export interface UseSectionDetailOptions<TDetail = unknown> {
    * при выборе дочернего (например, подкласса).
    */
   getParentUrl?: (detail: TDetail) => string | undefined;
+  /**
+   * Есть ли у списка ещё не загруженные страницы. Пока они есть, отсутствие
+   * открытой записи в загруженной части ничего не значит: она может найтись
+   * дальше. Спискам без пагинации не задаётся.
+   */
+  hasMoreItems?: MaybeRefOrGetter<boolean>;
 }
 
 export interface UseSectionDetailReturn<TDetail> {
@@ -47,6 +55,9 @@ export interface UseSectionDetailReturn<TDetail> {
  * Универсальный composable для управления детальной панелью в широком режиме (Wide Mode).
  * Инкапсулирует загрузку данных с кэшированием, обработку query-параметров, редиректы,
  * автовыбор первого элемента и SEO-метаданные.
+ *
+ * Сам меняет `detail` в адресе: после смены фильтров или поиска карточка
+ * записи, выпавшей из выдачи, переключается на первую запись нового списка.
  *
  * @param options Параметры конфигурации раздела.
  * @returns Набор реактивных переменных и методов для управления детальной панелью.
@@ -217,6 +228,100 @@ export function useSectionDetail<TDetail>(
       autoSelectFirst();
     }
   });
+
+  // Запрос списка — весь query, кроме самой карточки: фильтры, источники и
+  // поиск синхронизируются в адрес.
+  const listQuery = computed(() =>
+    JSON.stringify(omit(route.query, ['detail'])),
+  );
+
+  // Флаг, а не проверка на месте: адрес меняется сразу, а новая выдача
+  // приходит позже.
+  let isListCheckPending = false;
+
+  watch(listQuery, () => {
+    isListCheckPending = true;
+  });
+
+  /**
+   * Есть ли открытая запись в загруженном списке — сама или её родитель
+   * (подкласс показан в списке своим классом).
+   */
+  function isDetailListed(): boolean {
+    const listedUrls = new Set(
+      options.items.value?.map((listedEntity) => listedEntity.url),
+    );
+
+    if (listedUrls.has(detailUrl.value)) {
+      return true;
+    }
+
+    return (
+      !!options.getParentUrl
+      && !!detailParentUrl.value
+      && listedUrls.has(detailParentUrl.value)
+    );
+  }
+
+  /**
+   * После смены фильтров или поиска сверяет открытую карточку с новой выдачей.
+   *
+   * Запись, которую фильтр убрал из списка, уступает место первой записи
+   * выдачи: иначе справа оставалась бы, например, запись снятого источника, и
+   * казалось бы, что фильтр не сработал. При первой загрузке проверки нет —
+   * расшаренная ссылка открывает свою запись, даже если та не проходит фильтры
+   * получателя.
+   */
+  function syncDetailWithList(): void {
+    if (!isListCheckPending || !isRouterReady.value || !options.items.value) {
+      return;
+    }
+
+    if (!isSplitActive.value || !detailUrl.value) {
+      isListCheckPending = false;
+
+      return;
+    }
+
+    // Родитель подзаписи известен только по её загруженным данным.
+    if (options.getParentUrl && isDetailLoading.value) {
+      return;
+    }
+
+    if (isDetailListed()) {
+      isListCheckPending = false;
+
+      return;
+    }
+
+    if (toValue(options.hasMoreItems)) {
+      return;
+    }
+
+    // Флаг снимается до смены `detail`, и на этом цикл обрывается: новая
+    // карточка грузится, меняет `detailParentUrl`, вотчер снова зовёт
+    // проверку — но она выходит на первом же условии.
+    isListCheckPending = false;
+
+    const firstEntity = options.items.value[0];
+
+    // Пустая выдача: вместо вечной заглушки загрузки — «запись не выбрана».
+    if (!firstEntity) {
+      isDetailDismissed.value = true;
+    }
+
+    router.replace({
+      query: {
+        ...route.query,
+        detail: firstEntity?.url,
+      },
+    });
+  }
+
+  watch(
+    [options.items, () => toValue(options.hasMoreItems), detailParentUrl],
+    syncDetailWithList,
+  );
 
   /**
    * Закрывает детальную панель и очищает query-параметр detail.

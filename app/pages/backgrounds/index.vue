@@ -23,7 +23,6 @@
     search,
     filterQuery,
     isPending: isFilterPending,
-    isShowedPreview: isFilterPreviewShowed,
     defaults: filterDefaults,
   } = await useFilter('backgrounds', '/api/v2/backgrounds/filters');
 
@@ -77,7 +76,6 @@
         v-model:filter="filter"
         :defaults="filterDefaults"
         :is-pending="isFilterPending"
-        :show-preview="isFilterPreviewShowed"
       >
       </FilterControls>
     </template>

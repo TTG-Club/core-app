@@ -14,7 +14,12 @@ import type { DeferredInlineTokens } from './block-tokenizer';
 import { Extension } from '@tiptap/core';
 import { Paragraph } from '@tiptap/extension-paragraph';
 
-import { isMarkerNode, parse, serializeInlineNodes } from '~ui/markup';
+import {
+  EMPTY_PARAGRAPH_MARKDOWN,
+  isMarkerNode,
+  parse,
+  serializeInlineNodes,
+} from '~ui/markup';
 
 import {
   createBlockMarkerTokenizer,
@@ -27,14 +32,6 @@ const PARAGRAPH_TOKEN = 'ttgParagraph';
 
 /** Имена маркера абзаца (алиас `p` из markup/config.ts). */
 const PARAGRAPH_NAMES = new Set(['p', 'paragraph']);
-
-/**
- * Маркер ПУСТОГО абзаца, которым @tiptap/markdown сохраняет пустую строку между
- * абзацами при round-trip. Дублируем значение из @tiptap/extension-paragraph:
- * мы переопределяем штатный renderMarkdown и обязаны повторить эту логику, иначе
- * пустые абзацы потеряются.
- */
-const EMPTY_PARAGRAPH_MARKDOWN = '&nbsp;';
 
 /** Разобранный абзац: выравнивание + ленивые инлайн-токены содержимого. */
 interface ParagraphData {

@@ -1,6 +1,12 @@
 <script setup lang="ts">
   import { DictionaryService } from '~/shared/api';
 
+  import {
+    DAMAGE_TYPE_SELECT_MULTIPLE_PLACEHOLDER,
+    DAMAGE_TYPE_SELECT_PLACEHOLDER,
+    DAMAGE_TYPES_DATA_KEY,
+  } from './constants';
+
   const { multiple = false, disabled } = defineProps<{
     disabled?: boolean;
     multiple?: boolean;
@@ -8,30 +14,30 @@
 
   const model = defineModel<string | Array<string>>();
 
-  const { data, status, refresh } = await useAsyncData(
-    'dictionaries-damage-types',
+  const { data: damageTypes, status } = await useAsyncData(
+    DAMAGE_TYPES_DATA_KEY,
     () => DictionaryService.damageTypes(),
     { dedupe: 'defer' },
   );
 
-  function handleDropdownOpening(state: boolean) {
-    if (!state) {
-      return;
-    }
+  const damageTypeOptions = computed(() => damageTypes.value ?? []);
 
-    refresh();
-  }
+  const isPending = computed(() => status.value === 'pending');
+
+  const placeholder = computed(() =>
+    multiple
+      ? DAMAGE_TYPE_SELECT_MULTIPLE_PLACEHOLDER
+      : DAMAGE_TYPE_SELECT_PLACEHOLDER,
+  );
 </script>
 
 <template>
   <USelect
     v-model="model"
-    :placeholder="`Выбери тип${multiple ? 'ы' : ''} урона`"
+    :placeholder="placeholder"
     :multiple="multiple"
-    :loading="status === 'pending'"
-    :items="data || []"
+    :loading="isPending"
+    :items="damageTypeOptions"
     :disabled="disabled"
-    searchable
-    @open="handleDropdownOpening(true)"
   />
 </template>

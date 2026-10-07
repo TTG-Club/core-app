@@ -1,4 +1,9 @@
-import type { BrushColor, BugReportStatus } from './types';
+import type {
+  BrushColor,
+  BugReportDetailTab,
+  BugReportServerLagCause,
+  BugReportStatus,
+} from './types';
 
 import { SOURCE_PLATFORM_LABELS } from '#shared/consts';
 
@@ -471,6 +476,34 @@ export const MY_BUGS_SCREENSHOT_TITLE = 'Скриншот';
 /** Заголовок модалки с полным скриншотом */
 export const MY_BUGS_SCREENSHOT_MODAL_TITLE = 'Скриншот к баг-репорту';
 
+/**
+ * Рамка окна просмотра скриншота: почти во весь экран.
+ *
+ * Скриншот уходит на сервер в разрешении экрана того, кто его прислал, — это
+ * бывает и 4K. Обычная ширина модалки (32rem) ужимала такой снимок в несколько
+ * раз, и читать на нём было нечего. Ширину по содержимому (`w-fit`) не берём:
+ * с ней ширина картинки и ширина окна начинают считаться друг от друга, и окно
+ * схлопывается вдвое меньше экрана.
+ */
+export const SCREENSHOT_MODAL_UI = {
+  content: 'max-w-[96vw]',
+};
+
+/**
+ * Переключатель окна: показать снимок крупнее — во всю ширину окна, а если он
+ * шире окна, то в его настоящем размере.
+ */
+export const SCREENSHOT_MODAL_ZOOM_LABEL = 'Увеличить';
+
+/** Переключатель окна: вернуть снимок, вписанный в экран. */
+export const SCREENSHOT_MODAL_FIT_LABEL = 'Вписать в экран';
+
+/**
+ * Ссылка на исходный файл: в окне снимок всё-таки вписан в экран, а оригинал
+ * может быть крупнее.
+ */
+export const SCREENSHOT_ORIGINAL_LINK_LABEL = 'Открыть оригинал';
+
 /** Alt-текст миниатюры и полного скриншота */
 export const MY_BUGS_SCREENSHOT_ALT = 'Скриншот к баг-репорту';
 
@@ -487,3 +520,266 @@ export const MY_BUGS_EMPTY_FILTERED_TEXT =
 /** Текст ошибки загрузки списка и подпись кнопки повтора */
 export const MY_BUGS_LOAD_ERROR_TEXT = 'Не удалось загрузить ваши баг-репорты.';
 export const MY_BUGS_RETRY_LABEL = 'Повторить попытку';
+
+/** Заголовок блока со снимком метрик производительности */
+export const BUG_REPORT_DIAGNOSTICS_TITLE = 'Производительность при отправке';
+
+/**
+ * Вкладки детального просмотра баг-репорта. Вкладка со снимком метрик
+ * добавляется только тогда, когда снимок действительно пришёл.
+ */
+export const BUG_REPORT_DETAIL_TABS: Array<{
+  label: string;
+  value: BugReportDetailTab;
+  slot: BugReportDetailTab;
+  icon: string;
+}> = [
+  { label: 'Отчёт', value: 'report', slot: 'report', icon: 'tabler:bug' },
+  {
+    label: BUG_REPORT_DIAGNOSTICS_TITLE,
+    value: 'diagnostics',
+    slot: 'diagnostics',
+    icon: 'tabler:activity-heartbeat',
+  },
+];
+
+/** Вкладка, открытая при выборе баг-репорта */
+export const BUG_REPORT_DETAIL_DEFAULT_TAB: BugReportDetailTab = 'report';
+
+/** Заголовки секций снимка */
+export const BUG_REPORT_DIAGNOSTICS_CLIENT_TITLE = 'Клиент';
+export const BUG_REPORT_DIAGNOSTICS_SERVER_TITLE = 'Сервер мира';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_TITLE = 'Сцена';
+export const BUG_REPORT_DIAGNOSTICS_DEVICE_TITLE = 'Железо и браузер';
+
+/** Заголовки таблиц замеров */
+export const BUG_REPORT_DIAGNOSTICS_SPANS_TITLE =
+  'Профиль кадра (Σмс за секунду)';
+export const BUG_REPORT_DIAGNOSTICS_EVENTS_TITLE =
+  'Топ WS-событий (Σмс за 2 с)';
+
+/** Подписи столбцов таблиц замеров */
+export const BUG_REPORT_DIAGNOSTICS_SPAN_NAME_LABEL = 'Участок';
+export const BUG_REPORT_DIAGNOSTICS_EVENT_NAME_LABEL = 'Событие';
+export const BUG_REPORT_DIAGNOSTICS_SPAN_TOTAL_LABEL = 'Σмс';
+export const BUG_REPORT_DIAGNOSTICS_SPAN_COUNT_LABEL = 'Вызовов';
+export const BUG_REPORT_DIAGNOSTICS_SPAN_MAX_LABEL = 'Макс. мс';
+
+/** Подписи метрик клиента */
+export const BUG_REPORT_DIAGNOSTICS_FPS_LABEL = 'FPS';
+export const BUG_REPORT_DIAGNOSTICS_PING_LABEL = 'Ping до сервера';
+export const BUG_REPORT_DIAGNOSTICS_WALLS_LABEL = 'Стены (всего/отрис./кэш)';
+export const BUG_REPORT_DIAGNOSTICS_RAYCAST_LABEL = 'Raycast (мс/лучей/стен)';
+export const BUG_REPORT_DIAGNOSTICS_CHECKS_LABEL = 'Пересечений отрезков';
+export const BUG_REPORT_DIAGNOSTICS_LIGHT_CACHE_LABEL =
+  'Кэш зрения и света (попал/мимо)';
+export const BUG_REPORT_DIAGNOSTICS_QUADTREE_LABEL = 'Узлов квадродерева';
+
+/** Подписи метрик сервера */
+export const BUG_REPORT_DIAGNOSTICS_LOOP_LAG_LABEL =
+  'Loop-lag (сред./p99/макс.)';
+export const BUG_REPORT_DIAGNOSTICS_CLIENTS_LABEL = 'Клиентов на сервере';
+
+/** Подписи метрик сцены */
+export const BUG_REPORT_DIAGNOSTICS_SCENE_KIND_LABEL = 'Вид';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_SIZE_LABEL = 'Размер';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_TOKENS_LABEL = 'Токенов';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_LIGHTS_LABEL = 'Источников света';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_DRAWINGS_LABEL = 'Рисунков';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_AREAS_LABEL = 'Областей';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_TEMPLATES_LABEL =
+  'Шаблонов измерений';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_FOG_LABEL = 'Туман войны';
+export const BUG_REPORT_DIAGNOSTICS_SCENE_DARKNESS_LABEL = 'Уровень темноты';
+
+/** Подписи метрик устройства */
+export const BUG_REPORT_DIAGNOSTICS_APP_VERSION_LABEL = 'Версия приложения';
+export const BUG_REPORT_DIAGNOSTICS_GPU_LABEL = 'Видеокарта';
+export const BUG_REPORT_DIAGNOSTICS_CPU_LABEL = 'Ядер процессора';
+export const BUG_REPORT_DIAGNOSTICS_MEMORY_LABEL = 'Память устройства';
+export const BUG_REPORT_DIAGNOSTICS_HEAP_LABEL = 'Куча JS (занято/предел)';
+export const BUG_REPORT_DIAGNOSTICS_SCREEN_LABEL = 'Экран';
+export const BUG_REPORT_DIAGNOSTICS_VIEWPORT_LABEL = 'Окно';
+export const BUG_REPORT_DIAGNOSTICS_PLATFORM_LABEL = 'Платформа';
+export const BUG_REPORT_DIAGNOSTICS_USER_AGENT_LABEL = 'User-Agent';
+
+/** Подписи режима запуска приложения */
+export const BUG_REPORT_DIAGNOSTICS_ELECTRON_LABEL = 'Десктопное приложение';
+export const BUG_REPORT_DIAGNOSTICS_BROWSER_LABEL = 'Браузер';
+
+/** Подписи сырого JSON снимка */
+export const BUG_REPORT_DIAGNOSTICS_RAW_LABEL = 'Показать сырой JSON';
+export const BUG_REPORT_DIAGNOSTICS_COPY_LABEL = 'Копировать JSON';
+
+/** Значение, которого нет в снимке */
+export const BUG_REPORT_DIAGNOSTICS_EMPTY_VALUE = '—';
+
+/** Подписи «да/нет» для булевых метрик снимка */
+export const BUG_REPORT_DIAGNOSTICS_YES_LABEL = 'включён';
+export const BUG_REPORT_DIAGNOSTICS_NO_LABEL = 'выключен';
+
+/** Порог FPS, ниже которого частота кадров подсвечивается как проблемная */
+export const BUG_REPORT_DIAGNOSTICS_FPS_WARN = 30;
+
+/** Порог p99 задержки event-loop сервера, выше которого она проблемная (мс) */
+export const BUG_REPORT_DIAGNOSTICS_LOOP_LAG_WARN_MS = 20;
+
+/** Порог суммарного времени участка кадра за секунду, выше которого он дорогой (мс) */
+export const BUG_REPORT_DIAGNOSTICS_SPAN_TOTAL_WARN_MS = 100;
+
+/** Порог одиночного выполнения участка кадра, выше которого он рвёт кадр (мс) */
+export const BUG_REPORT_DIAGNOSTICS_SPAN_MAX_WARN_MS = 8;
+
+/** Заголовок секции машины и нагрузки сервера мира */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_HOST_TITLE = 'Машина сервера мира';
+
+/** Заголовок ленты нагрузки сервера */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_TITLE =
+  'Самые долгие зависания сервера за последние минуты';
+
+/** Подпись процессора процесса сервера и машины */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_CPU_LABEL =
+  'CPU (процесс, % ядра / машина, %)';
+
+/** Подпись памяти процесса сервера и свободной памяти машины */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_RAM_LABEL =
+  'RAM (процесс / свободно / всего)';
+
+/** Подпись сборки мусора */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_GC_LABEL =
+  'Сборка мусора (Σ / макс.)';
+
+/** Подпись процессора машины сервера */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_CPU_MODEL_LABEL = 'Процессор';
+
+/** Подпись ОС машины сервера */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_OS_LABEL = 'ОС';
+
+/** Подпись среды запуска сервера */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_RUNTIME_LABEL = 'Среда';
+
+/** Подпись времени работы процесса и машины */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_UPTIME_LABEL =
+  'Работает (процесс / машина)';
+
+/** Среда запуска сервера без Electron */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_HEADLESS_LABEL =
+  'без Electron (VDS)';
+
+/** Колонка ленты: за сколько секунд до отправки */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_AGO_LABEL = 'Когда';
+
+/** Колонка ленты: максимальная задержка event-loop */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_LAG_LABEL = 'Лаг, мс';
+
+/** Колонка ленты: процессор процесса сервера */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_PROCESS_CPU_LABEL = 'CPU проц.';
+
+/** Колонка ленты: процессор машины */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_SYSTEM_CPU_LABEL = 'CPU маш.';
+
+/** Колонка ленты: сборка мусора */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_GC_LABEL = 'GC, мс';
+
+/** Колонка ленты: самое тяжёлое WS-событие интервала */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_EVENT_LABEL = 'Тяжелее всего';
+
+/** Подпись момента снапшота: столько секунд до отправки */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_AGO_SUFFIX = 'с назад';
+
+/** Подпись сводки ленты: сколько интервалов с зависанием */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_SUMMARY_LABEL =
+  'Интервалов по 2 с с зависанием';
+
+/**
+ * Задержка event-loop, начиная с которой интервал считается зависанием, а не
+ * фоновым шумом (мс). Игрок замечает задержку примерно с этого порога.
+ */
+export const BUG_REPORT_SERVER_STALL_MS = 200;
+
+/**
+ * Процессор процесса сервера (% одного ядра), начиная с которого зависание
+ * считается делом нашего кода: JS в Node работает в одном потоке, и почти
+ * целое ядро значит, что поток был занят сам.
+ */
+export const BUG_REPORT_SERVER_OWN_CPU_PERCENT = 70;
+
+/** Процессор всей машины (%), начиная с которого она считается перегруженной */
+export const BUG_REPORT_SERVER_MACHINE_CPU_PERCENT = 85;
+
+/** Доля зависания, которую должна занять сборка мусора, чтобы винить её */
+export const BUG_REPORT_SERVER_GC_SHARE = 0.3;
+
+/** Сколько самых долгих зависаний показывать в ленте */
+export const BUG_REPORT_SERVER_TIMELINE_ROWS = 10;
+
+/** Порог процессора в таблицах и строках нагрузки (%) */
+export const BUG_REPORT_DIAGNOSTICS_CPU_WARN_PERCENT = 80;
+
+/** Порог сборки мусора за интервал, выше которого она заметна (мс) */
+export const BUG_REPORT_DIAGNOSTICS_GC_WARN_MS = 50;
+
+/** Заголовки вывода о причине тормозов сервера */
+export const BUG_REPORT_SERVER_LAG_TITLES: Record<
+  BugReportServerLagCause,
+  string
+> = {
+  'calm': 'Сервер не зависал',
+  'own-code': 'Тормозит код сервера VTTG',
+  'garbage-collection': 'Тормозит сборка мусора на сервере',
+  'machine-busy': 'Машину сервера заняли другие программы',
+  'process-stalled': 'Сервер стоял без нагрузки',
+};
+
+/** Пояснения к выводу о причине тормозов сервера */
+export const BUG_REPORT_SERVER_LAG_DESCRIPTIONS: Record<
+  BugReportServerLagCause,
+  string
+> = {
+  'calm':
+    'За всю ленту сервер мира ни разу не вставал. Если игрок жаловался на задержки — ищите в клиенте (FPS, профиль кадра) или в сети.',
+  'own-code':
+    'Во время зависаний процесс сервера сам занимал ядро процессора. Это наша проблема: смотрите, какое событие было тяжелее всего.',
+  'garbage-collection':
+    'Зависания совпали с долгой сборкой мусора. Процесс держит слишком много памяти — это наша проблема (утечка или раздутый кэш).',
+  'machine-busy':
+    'Процесс сервера почти не работал, а процессор машины был занят. Мешали другие программы на машине, где запущен мир, — это не наша сторона.',
+  'process-stalled':
+    'И процесс, и машина простаивали, но сервер не отвечал. Обычно это сон или гибернация машины, медленный диск или подкачка памяти. Реже — синхронный вызов внешней программы из нашего кода.',
+};
+
+/** Цвет плашки вывода о причине тормозов сервера */
+export const BUG_REPORT_SERVER_LAG_COLORS: Record<
+  BugReportServerLagCause,
+  'success' | 'error' | 'warning' | 'info'
+> = {
+  'calm': 'success',
+  'own-code': 'error',
+  'garbage-collection': 'error',
+  'machine-busy': 'info',
+  'process-stalled': 'warning',
+};
+
+/** Подпись события, которое чаще всего было самым тяжёлым во время зависаний */
+export const BUG_REPORT_SERVER_LAG_SUSPECT_LABEL =
+  'Чаще всего тяжелее всего было событие';
+
+/** Единица времени в строках снимка: миллисекунды */
+export const BUG_REPORT_DIAGNOSTICS_MS_UNIT = 'мс';
+
+/** Единица памяти в строках снимка: мегабайты */
+export const BUG_REPORT_DIAGNOSTICS_MB_UNIT = 'МБ';
+
+/** Подпись самого долгого зависания в сводке ленты */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_WORST_LABEL = 'макс.';
+
+/** Название среды выполнения сервера перед её версией */
+export const BUG_REPORT_DIAGNOSTICS_NODE_LABEL = 'Node';
+
+/** Единицы в подписи времени работы сервера: дни, часы, минуты, секунды */
+export const BUG_REPORT_UPTIME_UNITS = {
+  days: 'д',
+  hours: 'ч',
+  minutes: 'мин',
+  seconds: 'с',
+} as const;

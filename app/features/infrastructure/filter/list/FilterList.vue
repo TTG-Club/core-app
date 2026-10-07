@@ -4,7 +4,6 @@
   import {
     getAvailableGroupItems,
     getSearchedGroupItems,
-    hasTouchedItem,
     isGroupDependentOn,
   } from '../utils';
   import { FilterGroup as FilterGroupComponent } from './ui';
@@ -33,39 +32,49 @@
     (event: 'empty', value: boolean): void;
   }>();
 
-  const { preview = false, search = '' } = defineProps<{
-    preview?: boolean;
+  const { collapsible = false, search = '' } = defineProps<{
+    /** Сворачиваемые группы одной колонкой — список, встроенный в панель. */
+    collapsible?: boolean;
     search?: string;
   }>();
 
   /**
-   * Определяет видимость группы в обычном режиме и режиме предпросмотра.
+   * Определяет видимость группы.
    *
    * При активном поиске пустой набор означает, что не подошло ни одно значение
    * группы и её название — показывать такую группу нечем. Без поиска поведение
    * прежнее: группа без доступных значений остаётся на месте.
+   *
+   * Сворачиваемая группа без значений тоже прячется: под её шапкой было бы
+   * пусто, и раскрывать её незачем.
    */
   function isGroupVisible(items: FilterItems): boolean {
-    if (search && items.length === 0) {
+    if ((search || collapsible) && items.length === 0) {
       return false;
     }
 
-    return !preview || hasTouchedItem(items);
+    return true;
   }
 
   const filter = defineModel<FilterGroups>({
     required: true,
   });
 
-  const containerGapClass = computed(() => (preview ? 'gap-3' : 'gap-6'));
-  const groupGapClass = computed(() => (preview ? 'gap-3' : undefined));
+  /** Под поиском сворачиваемые группы раскрыты: найденное должно быть видно. */
+  const isSearching = computed(() => !!search);
 
-  /** Позиция группы с учётом предпросмотра (в превью блоки не объединяются). */
+  // Во встроенном списке группы стоят вплотную: шапка каждой — сама себе
+  // разделитель.
+  const containerGapClass = computed(() => (collapsible ? undefined : 'gap-6'));
+
+  /** Позиция группы: склеиваются только блоки обычного списка дровера. */
   function resolveGroupPosition(
     itemIndex: number,
     groupLength: number,
   ): GroupPosition {
-    return preview ? 'standalone' : getGroupPosition(itemIndex, groupLength);
+    return collapsible
+      ? 'standalone'
+      : getGroupPosition(itemIndex, groupLength);
   }
 
   /**
@@ -156,14 +165,14 @@
       v-for="(itemGroup, groupIndex) in groupedFilters"
       :key="groupIndex"
       class="flex flex-col"
-      :class="groupGapClass"
     >
       <FilterGroupComponent
         v-for="(item, itemIndex) in itemGroup"
         :key="`${item.group.key}-${item.group.name}`"
         :model-value="item.group"
         :items="item.availableItems"
-        :preview
+        :collapsible
+        :expanded="isSearching"
         :position="resolveGroupPosition(itemIndex, itemGroup.length)"
         @update:model-value="handleGroupUpdate(item.index, $event)"
       />

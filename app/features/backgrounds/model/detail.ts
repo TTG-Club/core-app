@@ -1,6 +1,31 @@
 import type { NameResponse, SourceResponse } from '~/shared/types';
 
-import { BACKGROUND_DETAIL_LABELS } from './constants';
+import type { BackgroundToolCategory } from './tool-category';
+
+import { kebabCase } from 'es-toolkit';
+
+import { EFFECT_SKILL_OPTIONS } from '~active-effects/model';
+
+import {
+  BACKGROUND_DETAIL_LABELS,
+  SKILL_GLOSSARY_URL_SUFFIX,
+} from './constants';
+import {
+  findBackgroundToolCategory,
+  toBackgroundToolCategoryMarker,
+} from './tool-category';
+
+/**
+ * Адреса статей глоссария о навыках по названию навыка. Собраны из общего
+ * списка навыков, а не своим перечнем: так они не разъедутся при
+ * переименовании. Ключ навыка `sleightOfHand` даёт адрес `sleight-of-hand-phb`.
+ */
+const SKILL_GLOSSARY_URLS = new Map<string, string>(
+  EFFECT_SKILL_OPTIONS.map((skill) => [
+    skill.label,
+    `${kebabCase(skill.value)}${SKILL_GLOSSARY_URL_SUFFIX}`,
+  ]),
+);
 
 /** Ссылка на запись справочника со снимком названия. */
 export interface BackgroundEntityRef {
@@ -44,6 +69,37 @@ function toMarker(reference: BackgroundEntityRef, section: string): string {
 }
 
 /**
+ * Выбор инструментов строкой. Выбор из всей категории называется категорией
+ * со ссылкой на раздел, иначе инструменты перечисляются через «или».
+ *
+ * @param count сколько инструментов выбирает игрок.
+ * @param pool инструменты, из которых он выбирает; пусто — любой инструмент.
+ * @param toolCategories категории инструментов раздела «Предметы».
+ * @returns разметка строки выбора.
+ */
+function getToolChoiceNode(
+  count: number,
+  pool: Array<BackgroundEntityRef>,
+  toolCategories: Array<BackgroundToolCategory>,
+): string {
+  const prefix = `${BACKGROUND_DETAIL_LABELS.toolChoicePrefix} ${count}`;
+
+  if (!pool.length) {
+    return `${prefix}: ${BACKGROUND_DETAIL_LABELS.anyTool}`;
+  }
+
+  const category = findBackgroundToolCategory(pool, toolCategories);
+
+  if (category) {
+    return `${prefix} ${BACKGROUND_DETAIL_LABELS.toolCategoryJoiner} ${toBackgroundToolCategoryMarker(category)}`;
+  }
+
+  return `${prefix}: ${pool
+    .map((reference) => toMarker(reference, 'item'))
+    .join(BACKGROUND_DETAIL_LABELS.choiceSeparator)}`;
+}
+
+/**
  * Владение инструментами для страницы предыстории.
  *
  * Ссылки мастерской главнее свободного текста: у переведённых записей текст
@@ -51,10 +107,14 @@ function toMarker(reference: BackgroundEntityRef, section: string): string {
  * отдельной строкой — он не владение, а обещание его назвать.
  *
  * @param background деталь предыстории.
+ * @param toolCategories категории инструментов раздела «Предметы»: по ним
+ *   выбор из всей категории называется категорией. Без них выбор всегда
+ *   перечисляется поимённо.
  * @returns строки разметки для блока владения инструментами.
  */
 export function getBackgroundToolNodes(
   background: BackgroundDetailResponse,
+  toolCategories: Array<BackgroundToolCategory> = [],
 ): Array<string> {
   const fixed = background.toolProficiencies ?? [];
 
@@ -77,18 +137,36 @@ export function getBackgroundToolNodes(
   }
 
   if (choiceCount >= 1) {
-    const pool = choice?.from ?? [];
-
     nodes.push(
-      pool.length
-        ? `${BACKGROUND_DETAIL_LABELS.toolChoicePrefix} ${choiceCount}: ${pool
-            .map((reference) => toMarker(reference, 'item'))
-            .join(BACKGROUND_DETAIL_LABELS.choiceSeparator)}`
-        : `${BACKGROUND_DETAIL_LABELS.toolChoicePrefix} ${choiceCount}: ${BACKGROUND_DETAIL_LABELS.anyTool}`,
+      getToolChoiceNode(choiceCount, choice?.from ?? [], toolCategories),
     );
   }
 
   return nodes;
+}
+
+/**
+ * Навыки предыстории для страницы: каждый известный навык — ссылка на его
+ * статью в глоссарии, незнакомое название остаётся текстом.
+ *
+ * @param background деталь предыстории.
+ * @returns разметка строки навыков.
+ */
+export function getBackgroundSkillNode(
+  background: BackgroundDetailResponse,
+): string {
+  return background.skillProficiencies
+    .split(BACKGROUND_DETAIL_LABELS.listSeparator)
+    .map((skillName) => skillName.trim())
+    .filter(Boolean)
+    .map((skillName) => {
+      const glossaryUrl = SKILL_GLOSSARY_URLS.get(skillName);
+
+      return glossaryUrl
+        ? toMarker({ url: glossaryUrl, name: skillName }, 'glossary')
+        : skillName;
+    })
+    .join(BACKGROUND_DETAIL_LABELS.listSeparator);
 }
 
 /**

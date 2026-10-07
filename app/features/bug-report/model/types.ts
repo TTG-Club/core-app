@@ -93,6 +93,9 @@ export interface BugReportResponse {
 
   /** Выделенный текст на странице */
   selectedText?: string;
+
+  /** Снимок метрик производительности на момент отправки (JSON-строка) */
+  diagnostics?: string;
 }
 
 /**
@@ -207,6 +210,13 @@ export interface BugReportStatusUpdatePayload {
   statusComment?: string;
 }
 
+/**
+ * Вкладка детального просмотра баг-репорта в панели модератора.
+ *
+ * `diagnostics` существует только у репортов со снимком метрик — из VTTG.
+ */
+export type BugReportDetailTab = 'report' | 'diagnostics';
+
 /** Цвет кисти для рисования на скриншоте */
 export interface BrushColor {
   /** Уникальное название цвета */
@@ -275,6 +285,9 @@ export interface BugReportUserFixedCount {
   /** Отображаемое имя пользователя (логин, если имя не задано) */
   name: string;
 
+  /** Ссылка на аватарку из core-api; null — аватарки нет */
+  avatarUrl: string | null;
+
   /** Количество решённых багов */
   fixed: number;
 }
@@ -299,3 +312,299 @@ export interface BugReportStatsResponse {
 
 /** Допустимые инструменты рисования */
 export type DrawingTool = 'brush' | 'circle' | 'rectangle';
+
+/**
+ * Замер одного участка кадра или одного обработчика события за окно измерения.
+ *
+ * Одна форма на профиль клиентского кадра и на топ серверных WS-событий:
+ * различаются они только тем, что стоит в `name` — участок отрисовки или имя
+ * события.
+ */
+export interface BugReportDiagnosticsSpan {
+  /** Имя участка кадра либо WS-события */
+  name: string;
+
+  /** Суммарное время за окно измерения, мс */
+  totalMs: number;
+
+  /** Сколько раз выполнялось за окно */
+  count: number;
+
+  /** Самое долгое одиночное выполнение, мс */
+  maxMs: number;
+}
+
+/** Клиентские метрики отрисовки сцены */
+export interface BugReportDiagnosticsClient {
+  /** Частота кадров */
+  fps: number;
+
+  /** Сглаженный RTT до сервера мира, мс */
+  pingMs: number;
+
+  /** Стены: всего на сцене, отрисовано за кадр, отдано кэшем */
+  walls: { total: number; drawn: number; cacheHits: number };
+
+  /** Последний замер каста лучей */
+  raycast: { lastMs: number; rays: number; walls: number; checks: number };
+
+  /** Полигоны зрения и света: взято из кэша против пересчитано заново */
+  lightCache: { hits: number; misses: number };
+
+  /** Количество активных узлов квадродерева стен */
+  quadTreeNodes: number;
+
+  /** Самые дорогие участки кадра за последнюю секунду */
+  frameSpans: BugReportDiagnosticsSpan[];
+}
+
+/** Метрики сервера мира на момент отправки */
+export interface BugReportDiagnosticsServer {
+  /** Задержка event-loop за интервал замера, мс */
+  loopLag: { meanMs: number; p99Ms: number; maxMs: number };
+
+  /** Количество клиентов, подключённых к серверу мира */
+  clients: number;
+
+  /** Самые тяжёлые WS-события за интервал замера */
+  topEvents: BugReportDiagnosticsSpan[];
+
+  /** Нагрузка процесса и машины сервера за тот же интервал (в старых репортах нет) */
+  load?: BugReportDiagnosticsServerLoad;
+}
+
+/**
+ * Нагрузка на процесс сервера мира и на его машину за интервал замера.
+ *
+ * Отличает «сервер занят своим кодом» от «машину заняли другие программы»:
+ * loop-lag в обоих случаях одинаковый.
+ */
+export interface BugReportDiagnosticsServerLoad {
+  /** Процессор процесса сервера, % одного ядра (бывает больше 100) */
+  processCpuPercent: number;
+
+  /** Процессор всей машины, % всех ядер */
+  systemCpuPercent: number;
+
+  /** Память процесса целиком (RSS), МБ */
+  rssMb: number;
+
+  /** Занято в куче JS процесса, МБ */
+  heapUsedMb: number;
+
+  /** Свободная память машины, МБ */
+  systemFreeMemoryMb: number;
+
+  /** Сборка мусора за интервал, мс */
+  gcMs: number;
+
+  /** Самая долгая одиночная сборка мусора за интервал, мс */
+  gcMaxMs: number;
+}
+
+/**
+ * Машина, на которой работает сервер мира, и сам процесс сервера.
+ *
+ * Пишет её сам сервер, а не браузер отправителя: секция `device` описывает
+ * компьютер того, кто нажал «Отправить», а сервер обычно живёт на другой машине.
+ */
+export interface BugReportDiagnosticsServerHost {
+  /** Модель процессора */
+  cpuModel: string;
+
+  /** Число логических ядер */
+  cpuCores: number;
+
+  /** Вся память машины, МБ */
+  totalMemoryMb: number;
+
+  /** Свободная память машины в момент отправки, МБ */
+  freeMemoryMb: number;
+
+  /** ОС, её версия и разрядность */
+  os: string;
+
+  /** Версия Node.js */
+  nodeVersion: string;
+
+  /** Версия Electron; пусто — сервер запущен без него (VDS, headless) */
+  electronVersion: string;
+
+  /** Сколько процесс сервера уже работает, с */
+  processUptimeSec: number;
+
+  /** Сколько машина работает с последней загрузки, с */
+  systemUptimeSec: number;
+
+  /** Память процесса целиком (RSS), МБ */
+  rssMb: number;
+
+  /** Занято в куче JS процесса, МБ */
+  heapUsedMb: number;
+}
+
+/** Один двухсекундный снапшот из ленты нагрузки сервера */
+export interface BugReportDiagnosticsTimelineSample {
+  /** За сколько секунд до отправки снят снапшот */
+  agoSec: number;
+
+  /** Средняя задержка event-loop за интервал, мс */
+  lagMeanMs: number;
+
+  /** Максимальная задержка event-loop за интервал, мс */
+  lagMaxMs: number;
+
+  /** Процессор процесса сервера, % одного ядра */
+  processCpu: number;
+
+  /** Процессор всей машины, % всех ядер */
+  systemCpu: number;
+
+  /** Сборка мусора за интервал, мс */
+  gcMs: number;
+
+  /** Память процесса (RSS), МБ */
+  rssMb: number;
+
+  /** Самое тяжёлое WS-событие интервала; пусто — событий не было */
+  heaviestEvent: string;
+
+  /** Суммарное время этого события за интервал, мс */
+  heaviestEventMs: number;
+}
+
+/**
+ * Чем, судя по нагрузке, было вызвано зависание сервера мира.
+ *
+ * - `calm` — за всю ленту сервер ни разу не зависал;
+ * - `own-code` — процесс сервера сам съедал ядро: тормозит наш код;
+ * - `garbage-collection` — зависания совпали с долгой сборкой мусора;
+ * - `machine-busy` — процесс почти простаивал, а машина была загружена
+ *   другими программами;
+ * - `process-stalled` — и процесс, и машина простаивали, а сервер всё равно
+ *   стоял: сон или гибернация, диск, подкачка, синхронный вызов внешней
+ *   программы.
+ */
+export type BugReportServerLagCause =
+  | 'calm'
+  | 'own-code'
+  | 'garbage-collection'
+  | 'machine-busy'
+  | 'process-stalled';
+
+/** Вывод о причине тормозов сервера по ленте нагрузки */
+export interface BugReportServerLagVerdict {
+  /** Причина, на которую приходится больше всего зависаний */
+  cause: BugReportServerLagCause;
+
+  /** Сколько двухсекундных интервалов в ленте с зависанием */
+  stalledSamples: number;
+
+  /** Сколько интервалов в ленте всего */
+  totalSamples: number;
+
+  /** Самое долгое зависание в ленте, мс */
+  worstLagMs: number;
+
+  /** WS-событие, которое чаще всего было самым тяжёлым в зависших интервалах */
+  suspectEvent: string;
+}
+
+/** Размер открытой сцены: чем её наполнили, тем она и тяжелее */
+export interface BugReportDiagnosticsScene {
+  /** Вид сцены: карта или псевдо-сцена графа приключения */
+  kind: string;
+
+  /** Ширина сцены в пикселях */
+  width: number;
+
+  /** Высота сцены в пикселях */
+  height: number;
+
+  /** Количество токенов */
+  tokens: number;
+
+  /** Количество источников света */
+  lightSources: number;
+
+  /** Количество рисунков */
+  drawings: number;
+
+  /** Количество пользовательских областей */
+  customAreas: number;
+
+  /** Количество AoE-шаблонов измерений */
+  measurementTemplates: number;
+
+  /** Включён ли туман войны */
+  fogOfWar: boolean;
+
+  /** Уровень темноты сцены (0 — день, 1 — полная темнота) */
+  darknessLevel: number;
+}
+
+/** Железо и браузер отправителя */
+export interface BugReportDiagnosticsDevice {
+  /** Строка User-Agent */
+  userAgent: string;
+
+  /** Платформа, как её называет браузер */
+  platform: string;
+
+  /** Число логических ядер процессора */
+  cpuCores: number;
+
+  /** Объём памяти устройства, ГБ (браузер округляет) */
+  deviceMemoryGb: number;
+
+  /** Видеокарта по данным WebGL */
+  gpu: string;
+
+  /** Разрешение экрана с коэффициентом масштабирования */
+  screen: string;
+
+  /** Размер окна приложения */
+  viewport: string;
+
+  /** Занято в куче JS, МБ (только Chromium) */
+  jsHeapUsedMb: number;
+
+  /** Предел кучи JS, МБ (только Chromium) */
+  jsHeapLimitMb: number;
+
+  /** Отправлено из десктопного приложения, а не из браузера */
+  isElectron: boolean;
+
+  /** Версия приложения-источника */
+  appVersion: string;
+}
+
+/**
+ * Снимок метрик производительности, приложенный к баг-репорту.
+ *
+ * Собирает его платформа-источник, сервис хранит строкой как есть. Все секции
+ * необязательны: из панели управления VTTG уходит только `device`, а старые
+ * репорты поля не имеют вовсе.
+ */
+export interface BugReportDiagnostics {
+  /** Версия формата снимка */
+  v: number;
+
+  /** Клиентские метрики отрисовки (только из игры) */
+  client?: BugReportDiagnosticsClient;
+
+  /** Метрики сервера мира (только из игры) */
+  server?: BugReportDiagnosticsServer;
+
+  /** Размер открытой сцены (только из игры) */
+  scene?: BugReportDiagnosticsScene;
+
+  /** Железо и браузер отправителя */
+  device?: BugReportDiagnosticsDevice;
+
+  /** Машина и процесс сервера мира — дописывает сам сервер */
+  serverHost?: BugReportDiagnosticsServerHost;
+
+  /** Лента нагрузки сервера за последние минуты, от старых снапшотов к новым */
+  serverTimeline?: BugReportDiagnosticsTimelineSample[];
+}

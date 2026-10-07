@@ -22,6 +22,9 @@
     (e: 'close'): void;
   }>();
 
+  // Предыдущий адрес внутри сайта; у внешнего захода его нет (`null`).
+  const backUrlSchema = z.string().startsWith('/');
+
   const route = useRoute();
   const router = useRouter();
 
@@ -31,6 +34,13 @@
     return getOrigin() + route.fullPath;
   });
 
+  /**
+   * Закрывает карточку и ведёт в список раздела (`closeUrl`).
+   *
+   * Назад по истории — только если пришли прямо из списка: так сохраняются его
+   * фильтры и прокрутка. Иначе (переходы между подклассами, ссылки из описаний)
+   * шаг назад вёл бы на прошлую карточку, а не закрывал её.
+   */
   function close() {
     if (!closeUrl) {
       emit('close');
@@ -38,9 +48,12 @@
       return;
     }
 
-    const backUrl = window.history.state.back;
+    const backUrl = backUrlSchema.safeParse(window.history.state?.back);
 
-    if (backUrl?.startsWith('/')) {
+    if (
+      backUrl.success
+      && router.resolve(backUrl.data).path === router.resolve(closeUrl).path
+    ) {
       router.back();
     } else {
       navigateTo(closeUrl);

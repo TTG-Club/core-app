@@ -32,6 +32,12 @@ export const ADMIN_USERS_NAME_SEARCH_API_PATH =
 /** С какой длины запроса искать по имени (короче — лишний шум). */
 export const ADMIN_USERS_NAME_SEARCH_MIN_LENGTH = 2;
 
+/** Подпись поля аватарки в карточке пользователя. */
+export const ADMIN_USERS_AVATAR_LABEL = 'Аватарка';
+
+/** Значение поля, когда пользователь аватарку не загружал. */
+export const ADMIN_USERS_AVATAR_EMPTY_LABEL = 'Не загружена';
+
 /** Заголовок блока подсказок по отображаемому имени. */
 export const ADMIN_USERS_NAME_MATCHES_LABEL = 'Найдено по имени';
 

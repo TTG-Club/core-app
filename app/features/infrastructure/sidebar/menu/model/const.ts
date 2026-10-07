@@ -2,6 +2,32 @@ import type { MenuSection } from './types';
 
 import { Role } from '~/shared/types';
 import { RECENT_COMMENTS_ROUTE, RECENT_COMMENTS_TITLE } from '~comments/model';
+import {
+  FIND_GAME_PROFILE_NAVIGATION_LABEL,
+  FIND_GAME_PROFILE_ROUTE,
+  GAMES_CATALOG_NAVIGATION_LABEL,
+  GAMES_CREATE_NAVIGATION_LABEL,
+  GAMES_CREATE_ROUTE,
+  GAMES_MY_NAVIGATION_LABEL,
+  GAMES_MY_ROUTE,
+  GAMES_NAVIGATION_LABEL,
+  GAMES_ROUTE,
+} from '~find-game/model';
+import {
+  COOKIE_POLICY_PAGE_TITLE,
+  COOKIE_POLICY_ROUTE,
+} from '~infrastructure/cookie-consent/model';
+import {
+  PRIVACY_POLICY_LINK_LABEL,
+  PRIVACY_POLICY_ROUTE,
+} from '~infrastructure/privacy-policy/model';
+import {
+  VTTG_LANDING_PATH,
+  VTTG_PASSWORD_RESET_PAGE,
+  VTTG_PASSWORD_RESET_PATH,
+  VTTG_SUBSCRIPTION_NAVIGATION_LABEL,
+  VTTG_SUBSCRIPTION_PATH,
+} from '~vttg/model';
 
 export const MENU_SECTIONS: Array<MenuSection> = [
   {
@@ -102,17 +128,46 @@ export const MENU_SECTIONS: Array<MenuSection> = [
     ],
   },
   {
-    label: 'Virtual TTG',
-    icon: 'menu/filled/information',
+    label: GAMES_NAVIGATION_LABEL,
+    icon: 'menu/filled/character',
     items: [
       {
-        href: '/vttg',
-        label: 'Информация',
+        href: GAMES_ROUTE,
+        label: GAMES_CATALOG_NAVIGATION_LABEL,
+      },
+      {
+        href: GAMES_CREATE_ROUTE,
+        label: GAMES_CREATE_NAVIGATION_LABEL,
+        roles: [Role.USER],
+      },
+      {
+        href: GAMES_MY_ROUTE,
+        label: GAMES_MY_NAVIGATION_LABEL,
+        roles: [Role.USER],
+      },
+      {
+        href: FIND_GAME_PROFILE_ROUTE,
+        label: FIND_GAME_PROFILE_NAVIGATION_LABEL,
+        roles: [Role.USER],
       },
     ],
   },
   {
-    label: 'Другое',
+    label: 'Virtual TTG',
+    icon: 'menu/filled/information',
+    items: [
+      {
+        href: VTTG_LANDING_PATH,
+        label: 'Информация',
+      },
+      {
+        href: VTTG_PASSWORD_RESET_PATH,
+        label: VTTG_PASSWORD_RESET_PAGE.title,
+      },
+    ],
+  },
+  {
+    label: 'Полезное',
     icon: 'menu/filled/workshop',
     items: [
       {
@@ -129,7 +184,7 @@ export const MENU_SECTIONS: Array<MenuSection> = [
       },
       {
         href: '/roadmap',
-        label: 'Дорожная карта',
+        label: 'Дорожная карта (только админ)',
         disabled: false,
         roles: [Role.ADMIN],
       },
@@ -137,6 +192,24 @@ export const MENU_SECTIONS: Array<MenuSection> = [
         href: 'https://5e14.ttg.club/',
         label: 'Редакция D&D 2014',
         disabled: false,
+      },
+      {
+        href: VTTG_SUBSCRIPTION_PATH,
+        label: VTTG_SUBSCRIPTION_NAVIGATION_LABEL,
+      },
+    ],
+  },
+  {
+    label: 'Другое',
+    icon: 'menu/filled/information',
+    items: [
+      {
+        href: COOKIE_POLICY_ROUTE,
+        label: COOKIE_POLICY_PAGE_TITLE,
+      },
+      {
+        href: PRIVACY_POLICY_ROUTE,
+        label: PRIVACY_POLICY_LINK_LABEL,
       },
     ],
   },
@@ -182,9 +255,3 @@ export const MENU_SUPPORT: Array<{
     label: 'Magistrus',
   },
 ];
-
-/** Email адрес службы поддержки */
-export const SUPPORT_EMAIL = 'support@ttg.club';
-
-/** Ссылка mailto для службы поддержки */
-export const SUPPORT_EMAIL_HREF = `mailto:${SUPPORT_EMAIL}`;

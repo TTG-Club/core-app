@@ -37,6 +37,7 @@
     getArticleRoute,
   } from '../model';
   import { ArticlePreview } from '../preview';
+  import { useArticleEditorCloseRoute } from './composables';
   import { ArticlePublishDateField, ArticleSlugField } from './ui';
 
   const formRef = useTemplateRef('formRef');
@@ -73,6 +74,8 @@
       telegramSummary: '',
       publishToDiscord: false,
       discordMention: ARTICLE_DISCORD_MENTION_DEFAULT,
+      discordCompact: false,
+      discordCompactText: '',
       publishToVk: false,
       title: '',
       previewImageUrl: null,
@@ -94,9 +97,9 @@
       // а `defineModel({ default: '' })` подставляет дефолт только на undefined),
       // из-за чего `state.preview` остаётся null и PUT падает на `@NotNull`.
       // Нормализуем при загрузке к пустой строке. `publishToTelegram`,
-      // `publishToDiscord`, `publishToVk`, `discordMention`, `telegramFormat` и
-      // поля короткого описания также страхуем на случай null у записей до
-      // миграции бэка (у них короткого описания ещё не было).
+      // `publishToDiscord`, `publishToVk`, `discordMention`, `telegramFormat`,
+      // поля короткого описания и компактного поста в Discord также страхуем на
+      // случай null у записей до миграции бэка (у них этих полей ещё не было).
       normalizeLoaded: (raw) => ({
         ...raw,
         preview: raw.preview ?? '',
@@ -104,6 +107,8 @@
         publishToDiscord: raw.publishToDiscord ?? false,
         publishToVk: raw.publishToVk ?? false,
         discordMention: raw.discordMention ?? ARTICLE_DISCORD_MENTION_DEFAULT,
+        discordCompact: raw.discordCompact ?? false,
+        discordCompactText: raw.discordCompactText ?? '',
         telegramFormat: raw.telegramFormat ?? ARTICLE_TELEGRAM_FORMAT_DEFAULT,
         telegramSummaryEnabled: raw.telegramSummaryEnabled ?? false,
         telegramSummary: raw.telegramSummary ?? '',
@@ -204,12 +209,36 @@
   // считаем как есть, без разбора разметки.
   const summaryCharCount = computed(() => state.value.telegramSummary.length);
 
+  // Компактный пост в Discord: вместо анонса и содержания уходит свой короткий
+  // текст, а ссылку на новость на сайте бэк допишет в конец поста сам.
+  const isDiscordCompact = computed(
+    () => state.value.publishToDiscord && state.value.discordCompact,
+  );
+
+  // Текст компактного поста — обычный текст, длину считаем как есть.
+  const discordCompactCharCount = computed(
+    () => state.value.discordCompactText.length,
+  );
+
+  // Сколько символов уйдёт в пост Discord: компактный текст либо анонс + содержание.
+  const discordCharCount = computed(() =>
+    isDiscordCompact.value
+      ? discordCompactCharCount.value
+      : postCharCount.value,
+  );
+
+  const discordHint = computed(() =>
+    isDiscordCompact.value
+      ? 'компактный вариант, ссылка на сайт добавится сама'
+      : 'при любом раскладе',
+  );
+
   const telegramCounterClass = computed(() =>
     counterClass(postCharCount.value > telegramTarget.value),
   );
 
   const discordCounterClass = computed(() =>
-    counterClass(postCharCount.value > discordTarget),
+    counterClass(discordCharCount.value > discordTarget),
   );
 
   const summaryCounterClass = computed(() =>
@@ -224,6 +253,15 @@
 
   const $toast = useToast();
   const route = useRoute();
+  const closeRoute = useArticleEditorCloseRoute();
+
+  // Тип, url, состояние публикации и отправка в соцсети — решения админа.
+  // Модератор правит только содержание записи, эти блоки ему не показываем.
+  const { isAdmin } = useUserRoles();
+
+  const mainColumnClass = computed(() =>
+    isAdmin.value ? 'sm:col-span-3' : 'sm:col-span-5',
+  );
 
   // Собственный url записи при редактировании — чтобы проверка доступности slug
   // не считала его занятым.
@@ -291,6 +329,10 @@
   );
 
   const mainActionLabel = computed(() => {
+    if (!isAdmin.value) {
+      return 'Сохранить';
+    }
+
     if (pubState.value === 'draft') {
       return 'Сохранить черновик';
     }
@@ -393,6 +435,10 @@
     telegramSummary: z.string(),
     publishToDiscord: z.boolean(),
     discordMention: z.enum(ARTICLE_DISCORD_MENTIONS),
+    // Текст компактного поста необязателен: пустой — в посте останутся заголовок
+    // и ссылка на сайт.
+    discordCompact: z.boolean(),
+    discordCompactText: z.string(),
     publishToVk: z.boolean(),
     // Анонс необязателен: пустую строку допускаем (бэк принимает пустой preview).
     preview: z.string().trim(),
@@ -467,9 +513,13 @@
       </template>
 
       <div class="grid grid-cols-1 gap-6 sm:grid-cols-5">
-        <!-- Колонка 1: тип, заголовок, url -->
-        <div class="flex flex-col gap-5 sm:col-span-3">
+        <!-- Колонка 1: тип, заголовок, url (модератору — только заголовок) -->
+        <div
+          class="flex flex-col gap-5"
+          :class="mainColumnClass"
+        >
           <UFormField
+            v-if="isAdmin"
             label="Тип"
             name="type"
             required
@@ -495,6 +545,7 @@
             </UFormField>
 
             <UFormField
+              v-if="isAdmin"
               label="URL"
               name="url"
               required
@@ -508,8 +559,9 @@
           </div>
         </div>
 
-        <!-- Колонка 2: публикация -->
+        <!-- Колонка 2: публикация (только админу) -->
         <div
+          v-if="isAdmin"
           class="flex flex-col gap-4 border-t border-default pt-4 sm:col-span-2 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-6"
         >
           <UTabs
@@ -563,7 +615,10 @@
       </div>
     </UCard>
 
-    <UCard variant="subtle">
+    <UCard
+      v-if="isAdmin"
+      variant="subtle"
+    >
       <div class="flex flex-wrap items-center gap-2">
         <span class="text-sm font-medium text-highlighted">Опубликовать:</span>
 
@@ -682,6 +737,36 @@
           новости повторно не звенит. Подписчикам других серверов пинг не
           передаётся: Discord вырезает упоминания из копии.
         </p>
+
+        <USwitch
+          v-model="state.discordCompact"
+          label="Компактный вариант"
+          description="Вместо анонса и текста новости в Discord уйдёт короткий текст, а в конце поста сама добавится ссылка «Подробнее читайте на сайте»."
+        />
+
+        <UFormField
+          v-if="state.discordCompact"
+          name="discordCompactText"
+          label="Текст компактного варианта"
+          help="Переносы строк сохраняются; работают **жирный**, *курсив* и маркеры разметки. Пустой текст — в посте останутся заголовок и ссылка на сайт."
+        >
+          <template #hint>
+            <span
+              class="tabular-nums"
+              :class="discordCounterClass"
+            >
+              {{ discordCompactCharCount }} / {{ discordTarget }}
+            </span>
+          </template>
+
+          <UTextarea
+            v-model="state.discordCompactText"
+            autoresize
+            :maxrows="8"
+            class="w-full"
+            placeholder="Коротко о главном — этот текст уйдёт в Discord"
+          />
+        </UFormField>
       </div>
 
       <div
@@ -715,8 +800,9 @@
           class="tabular-nums"
           :class="discordCounterClass"
         >
-          Discord: {{ postCharCount }} / {{ discordTarget }} (при любом
-          раскладе)
+          Discord: {{ discordCharCount }} / {{ discordTarget }} ({{
+            discordHint
+          }})
         </p>
       </div>
     </UCard>
@@ -834,7 +920,7 @@
           color="neutral"
           icon="tabler:x"
           class="mr-auto"
-          :to="ARTICLES_ADMIN_ROUTE"
+          :to="closeRoute"
         >
           Закрыть
         </UButton>

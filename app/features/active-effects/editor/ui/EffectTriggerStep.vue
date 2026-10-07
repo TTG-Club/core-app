@@ -1,0 +1,700 @@
+<script setup lang="ts">
+  import type {
+    ActiveEffect,
+    EffectActivation,
+    EffectActivationCostChoice,
+    EffectAreaChoice,
+    EffectAura,
+    EffectAuraTarget,
+    EffectFormLayout,
+    EffectPay,
+    EffectUseArea,
+    EffectVariantPick,
+  } from '../../model';
+
+  import { InfoTooltip } from '~ui/tooltip';
+
+  import {
+    buildActivationOptions,
+    buildAreaTriggerOptions,
+    buildDeliveryOptions,
+    DEFAULT_ACTIVATION_AMOUNT,
+    DEFAULT_EFFECT_AURA,
+    DEFAULT_EFFECT_VARIANT_PICK,
+    EFFECT_ACTIVATION_CHOICE_HINTS,
+    EFFECT_ACTIVATION_COST_OPTIONS,
+    EFFECT_ACTIVATION_COUNTER_LABELS,
+    EFFECT_ACTIVATION_EXTRA_LABELS,
+    EFFECT_ACTIVATION_RANGE_LABELS,
+    EFFECT_AREA_TRIGGER_HINTS,
+    EFFECT_AURA_LABELS,
+    EFFECT_AURA_RADIUS_STEP,
+    EFFECT_AURA_TARGET_OPTIONS,
+    EFFECT_LANDING_CONDITION_LABELS,
+    EFFECT_NO_KNOWN_TAGS,
+    EFFECT_PAY_FIELD_LABELS,
+    EFFECT_PERMANENT_ACTIVATION,
+    EFFECT_SCROLLABLE_TABS_UI,
+    EFFECT_USE_AREA_OPTIONS,
+    EFFECT_VARIANT_LABELS,
+    EFFECT_VARIANT_PICK_OPTIONS,
+    findAreaTrigger,
+    isToggleActivatedEffect,
+    MIN_ACTIVATION_RANGE,
+    MIN_EFFECT_AURA_RADIUS,
+    NO_ACTIVATION_COST,
+    resolveEffectDeliveryHint,
+    toDraftActivationExclusive,
+    writeEffectActivationMode,
+    writeEffectAreaTrigger,
+    writeEffectDelivery,
+  } from '../../model';
+  import EffectAreaChoiceFields from './EffectAreaChoiceFields.vue';
+  import EffectPayFields from './EffectPayFields.vue';
+  import EffectTriggerConditionPicker from './EffectTriggerConditionPicker.vue';
+  import EffectUseAreaFields from './EffectUseAreaFields.vue';
+
+  /**
+   * Шаг «Когда срабатывает»: постоянно ли действует эффект или его применяют
+   * (чем за это платят ходом и ресурсом, по какой области и кого в ней
+   * выбирает применивший), на кого он
+   * ложится (носитель, цель, аура, зона), момент срабатывания зоны или ауры,
+   * настройки ауры, условие наложения и вариант.
+   */
+  const { layout } = defineProps<{
+    /** Раскладка формы. */
+    layout: EffectFormLayout;
+  }>();
+
+  const effect = defineModel<ActiveEffect>('effect', { required: true });
+
+  const activationOptions = computed(() => buildActivationOptions(layout));
+
+  const activationChoice = computed(
+    () => effect.value.activation?.mode ?? EFFECT_PERMANENT_ACTIVATION,
+  );
+
+  const activationHint = computed(
+    () => EFFECT_ACTIVATION_CHOICE_HINTS[activationChoice.value],
+  );
+
+  /**
+   * Меняет способ действия эффекта: «Постоянно» убирает применение, способ
+   * применения сохраняет уже заданный ресурс.
+   *
+   * @param selectedChoice значение переключателя.
+   */
+  function selectActivation(selectedChoice: string | number): void {
+    if (selectedChoice === EFFECT_PERMANENT_ACTIVATION) {
+      effect.value = { ...effect.value, activation: undefined };
+
+      return;
+    }
+
+    const mode = layout.activationModes.find(
+      (activationMode) => activationMode === selectedChoice,
+    );
+
+    if (mode) {
+      effect.value = writeEffectActivationMode(effect.value, mode);
+    }
+  }
+
+  /**
+   * Меняет ресурс применения.
+   *
+   * @param patch изменённые поля.
+   */
+  function updateActivation(patch: Partial<EffectActivation>): void {
+    const { activation } = effect.value;
+
+    if (activation) {
+      effect.value = {
+        ...effect.value,
+        activation: { ...activation, ...patch },
+      };
+    }
+  }
+
+  const activationCounter = computed({
+    get: () => effect.value.activation?.counter ?? '',
+    set: (counter: string) => updateActivation({ counter }),
+  });
+
+  const activationExclusive = computed({
+    get: () => effect.value.activation?.exclusive ?? '',
+    set: (exclusiveInput: string) =>
+      updateActivation({
+        exclusive: toDraftActivationExclusive(exclusiveInput),
+      }),
+  });
+
+  /** Имя включения — только у переключателя: применение ничего не держит. */
+  const showActivationExclusive = computed(
+    () => layout.showActivationCounter && isToggleActivatedEffect(effect.value),
+  );
+
+  const activationAmount = computed({
+    get: () => effect.value.activation?.amount ?? DEFAULT_ACTIVATION_AMOUNT,
+    set: (amount: number | null | undefined) => {
+      // Очищенное поле числа отдаёт `undefined`, а не `null`
+      if (typeof amount === 'number') {
+        updateActivation({ amount });
+      }
+    },
+  });
+
+  // Пустое поле — касание: дальность снимается, а не становится нулём.
+  // Очищенное поле числа отдаёт `undefined`, а не `null`
+  const activationRange = computed({
+    get: () => effect.value.activation?.range,
+    set: (range: number | null | undefined) =>
+      updateActivation({ range: range ?? undefined }),
+  });
+
+  // Трата хода на применение или включение: «не тратит» в данных не пишется
+  const activationCost = computed<EffectActivationCostChoice>({
+    get: () => effect.value.activation?.cost ?? NO_ACTIVATION_COST,
+    set: (nextCost) =>
+      updateActivation({
+        cost: nextCost === NO_ACTIVATION_COST ? undefined : nextCost,
+      }),
+  });
+
+  // Область применения: «одна цель» — без поля
+  const activationArea = computed({
+    get: () => effect.value.activation?.area,
+    set: (nextArea: EffectUseArea | undefined) =>
+      updateActivation({ area: nextArea }),
+  });
+
+  // Концентрация применения: снятая отметка не пишется вовсе
+  const activationConcentration = computed({
+    get: () => effect.value.activation?.concentration === true,
+    set: (enabled: boolean) =>
+      updateActivation({ concentration: enabled ? true : undefined }),
+  });
+
+  const pay = computed({
+    get: () => effect.value.pay,
+    set: (nextPay: EffectPay | undefined) => {
+      effect.value = { ...effect.value, pay: nextPay };
+    },
+  });
+
+  const areaChoice = computed({
+    get: () => effect.value.areaChoice,
+    set: (nextAreaChoice: EffectAreaChoice | undefined) => {
+      effect.value = { ...effect.value, areaChoice: nextAreaChoice };
+    },
+  });
+
+  /** Ряд полей применения есть у любого применения и включения: трата хода. */
+  const showActivationFields = computed(
+    () => effect.value.activation !== undefined,
+  );
+
+  /** «Сколько» тратить — только когда ресурс задан. */
+  const showActivationAmount = computed(
+    () => layout.showActivationCounter && activationCounter.value !== '',
+  );
+
+  const deliveryOptions = computed(() => buildDeliveryOptions(layout));
+
+  const triggerOptions = computed(() =>
+    buildAreaTriggerOptions(layout.delivery),
+  );
+
+  /** Выбор доставки нужен, только если вариантов больше одного. */
+  const showDeliveryChoice = computed(() => deliveryOptions.value.length > 1);
+
+  /** Пояснение под выбором доставки: у зоны заклинания своё. */
+  const deliveryHint = computed(() => resolveEffectDeliveryHint(layout));
+
+  const triggerHint = computed(() => EFFECT_AREA_TRIGGER_HINTS[layout.trigger]);
+
+  /** Настройки ауры видны у доставки «аурой», когда аура уже заведена. */
+  const showAuraSettings = computed(
+    () => layout.showAuraSettings && effect.value.aura !== undefined,
+  );
+
+  /**
+   * Аура в полях настроек. Поля видны, только когда аура заведена, так что
+   * аура по умолчанию лишь закрывает её отсутствие в типе.
+   */
+  const aura = computed(() => effect.value.aura ?? DEFAULT_EFFECT_AURA);
+
+  /**
+   * Меняет доставку эффекта.
+   *
+   * @param selectedDelivery значение переключателя.
+   */
+  function selectDelivery(selectedDelivery: string | number): void {
+    const delivery = layout.deliveryOptions.find(
+      (deliveryOption) => deliveryOption === selectedDelivery,
+    );
+
+    if (delivery) {
+      effect.value = writeEffectDelivery(effect.value, delivery);
+    }
+  }
+
+  /**
+   * Меняет момент срабатывания зоны или ауры.
+   *
+   * @param selectedTrigger значение переключателя.
+   */
+  function selectTrigger(selectedTrigger: string | number): void {
+    const trigger = findAreaTrigger(selectedTrigger);
+
+    if (trigger) {
+      effect.value = writeEffectAreaTrigger(effect.value, trigger);
+    }
+  }
+
+  /**
+   * Меняет поле ауры.
+   *
+   * @param patch изменённые поля.
+   */
+  function updateAura(patch: Partial<EffectAura>): void {
+    const { aura: currentAura } = effect.value;
+
+    if (currentAura) {
+      effect.value = { ...effect.value, aura: { ...currentAura, ...patch } };
+    }
+  }
+
+  const auraRadius = computed({
+    get: () => aura.value.radius,
+    set: (radius: number | null | undefined) => {
+      // Очищенное поле числа отдаёт `undefined`, а не `null`
+      if (typeof radius === 'number') {
+        updateAura({ radius });
+      }
+    },
+  });
+
+  const auraTarget = computed({
+    get: () => aura.value.target,
+    set: (target: EffectAuraTarget) => updateAura({ target }),
+  });
+
+  const auraRadiusFormula = computed({
+    get: () => aura.value.radiusFormula ?? '',
+    set: (radiusFormula: string) =>
+      updateAura({ radiusFormula: radiusFormula || undefined }),
+  });
+
+  const auraWhileCapable = computed({
+    get: () => aura.value.whileCapable === true,
+    set: (whileCapable: boolean | 'indeterminate') =>
+      updateAura({ whileCapable: whileCapable === true || undefined }),
+  });
+
+  const landingCondition = computed({
+    get: () => effect.value.landingCondition,
+    set: (nextCondition: string | undefined) => {
+      effect.value = { ...effect.value, landingCondition: nextCondition };
+    },
+  });
+
+  const hasVariant = computed({
+    get: () => effect.value.variant !== undefined,
+    set: (enabled: boolean) => {
+      effect.value = {
+        ...effect.value,
+        variant: enabled
+          ? {
+              group: EFFECT_VARIANT_LABELS.defaultGroup,
+              label: effect.value.name,
+            }
+          : undefined,
+      };
+    },
+  });
+
+  /**
+   * Меняет поле варианта. Пустое поле не пишется: вариант без группы или
+   * подписи разбор записи выбросил бы.
+   *
+   * @param patch изменённые поля.
+   * @param patch.group ключ группы.
+   * @param patch.label подпись варианта.
+   */
+  function updateVariant(patch: { group?: string; label?: string }): void {
+    const { variant } = effect.value;
+    const group = (patch.group ?? variant?.group ?? '').trim();
+    const label = (patch.label ?? variant?.label ?? '').trim();
+
+    if (variant && group && label) {
+      effect.value = { ...effect.value, variant: { ...variant, group, label } };
+    }
+  }
+
+  // Выбор бросающим — значение по умолчанию: в данных оно не пишется
+  const variantPick = computed({
+    get: () => effect.value.variant?.pick ?? DEFAULT_EFFECT_VARIANT_PICK,
+    set: (pick: EffectVariantPick) => {
+      const { variant } = effect.value;
+
+      if (!variant) {
+        return;
+      }
+
+      effect.value = {
+        ...effect.value,
+        variant: {
+          ...variant,
+          pick: pick === DEFAULT_EFFECT_VARIANT_PICK ? undefined : pick,
+        },
+      };
+    },
+  });
+
+  const auraApplyToSelf = computed({
+    get: () => aura.value.applyToSelf,
+    set: (applyToSelf: boolean | 'indeterminate') =>
+      updateAura({ applyToSelf: applyToSelf === true }),
+  });
+
+  // Круг в данных может быть не задан: тогда флажок снят, как и раньше
+  const auraVisible = computed({
+    get: () => aura.value.visible === true,
+    set: (visible: boolean | 'indeterminate') =>
+      updateAura({ visible: visible === true }),
+  });
+</script>
+
+<template>
+  <div
+    v-if="activationOptions.length > 0"
+    class="flex flex-col gap-1.5"
+  >
+    <UTabs
+      :model-value="activationChoice"
+      :items="activationOptions"
+      :content="false"
+      size="xs"
+      color="primary"
+      class="w-fit max-w-full"
+      :ui="EFFECT_SCROLLABLE_TABS_UI"
+      @update:model-value="selectActivation"
+    />
+
+    <p class="text-xs text-muted">
+      {{ activationHint }}
+    </p>
+
+    <div
+      v-if="showActivationFields"
+      class="flex flex-wrap items-end gap-2"
+    >
+      <!-- Подсказка под значком: строкой под полем она выталкивала поле
+        вверх, и оно не стояло в ряд с «Сколько» -->
+      <UFormField
+        v-if="layout.showActivationCounter"
+        class="w-full sm:w-72"
+      >
+        <template #label>
+          <InfoTooltip
+            :text="EFFECT_ACTIVATION_COUNTER_LABELS.hint"
+            icon="tabler:info-circle-filled"
+          >
+            <span>{{ EFFECT_ACTIVATION_COUNTER_LABELS.counter }}</span>
+          </InfoTooltip>
+        </template>
+
+        <UInput
+          v-model="activationCounter"
+          :placeholder="EFFECT_ACTIVATION_COUNTER_LABELS.counterPlaceholder"
+          size="sm"
+          class="w-full"
+        />
+      </UFormField>
+
+      <UFormField
+        v-if="showActivationAmount"
+        :label="EFFECT_ACTIVATION_COUNTER_LABELS.amount"
+        class="w-24"
+      >
+        <UInputNumber
+          v-model="activationAmount"
+          :min="DEFAULT_ACTIVATION_AMOUNT"
+          size="sm"
+          class="w-full"
+        />
+      </UFormField>
+
+      <UFormField
+        v-if="showActivationExclusive"
+        class="w-full sm:w-56"
+      >
+        <template #label>
+          <InfoTooltip
+            :text="EFFECT_ACTIVATION_COUNTER_LABELS.exclusiveHint"
+            icon="tabler:info-circle-filled"
+          >
+            <span>{{ EFFECT_ACTIVATION_COUNTER_LABELS.exclusive }}</span>
+          </InfoTooltip>
+        </template>
+
+        <UInput
+          v-model="activationExclusive"
+          :placeholder="EFFECT_ACTIVATION_COUNTER_LABELS.exclusivePlaceholder"
+          size="sm"
+          class="w-full"
+        />
+      </UFormField>
+
+      <UFormField
+        v-if="layout.showActivationRange"
+        class="w-40"
+      >
+        <template #label>
+          <InfoTooltip
+            :text="EFFECT_ACTIVATION_RANGE_LABELS.hint"
+            icon="tabler:info-circle-filled"
+          >
+            <span>{{ EFFECT_ACTIVATION_RANGE_LABELS.range }}</span>
+          </InfoTooltip>
+        </template>
+
+        <UInputNumber
+          v-model="activationRange"
+          :min="MIN_ACTIVATION_RANGE"
+          :placeholder="EFFECT_ACTIVATION_RANGE_LABELS.placeholder"
+          size="sm"
+          class="w-full"
+        />
+      </UFormField>
+
+      <UFormField class="w-full sm:w-52">
+        <template #label>
+          <InfoTooltip
+            :text="EFFECT_ACTIVATION_EXTRA_LABELS.costHint"
+            icon="tabler:info-circle-filled"
+          >
+            <span>{{ EFFECT_ACTIVATION_EXTRA_LABELS.cost }}</span>
+          </InfoTooltip>
+        </template>
+
+        <USelect
+          v-model="activationCost"
+          :items="EFFECT_ACTIVATION_COST_OPTIONS"
+          value-key="value"
+          size="sm"
+          class="w-full"
+        />
+      </UFormField>
+
+      <!-- Область и концентрация — только у применения: переключатель ни на
+        кого не ложится и держится сам -->
+      <template v-if="layout.showActivationRange">
+        <EffectUseAreaFields
+          v-model="activationArea"
+          :label="EFFECT_ACTIVATION_EXTRA_LABELS.area"
+          :hint="EFFECT_ACTIVATION_EXTRA_LABELS.areaHint"
+          :items="EFFECT_USE_AREA_OPTIONS"
+        />
+
+        <InfoTooltip
+          :text="EFFECT_ACTIVATION_EXTRA_LABELS.concentrationHint"
+          icon="tabler:info-circle-filled"
+          class="mb-2"
+        >
+          <USwitch
+            v-model="activationConcentration"
+            :label="EFFECT_ACTIVATION_EXTRA_LABELS.concentration"
+            size="sm"
+          />
+        </InfoTooltip>
+      </template>
+    </div>
+  </div>
+
+  <!-- Цена ресурсом: у заклинания это цена каста сверх ячейки, у применения и
+    переключателя — цена кнопки -->
+  <EffectPayFields
+    v-if="layout.showPay"
+    v-model="pay"
+    :hint="EFFECT_PAY_FIELD_LABELS.hintEffect"
+  />
+
+  <!-- Выбор целей из накрытых областью: там, где применение ставит шаблон -->
+  <EffectAreaChoiceFields
+    v-if="layout.showAreaChoice"
+    v-model="areaChoice"
+  />
+
+  <div
+    v-if="showDeliveryChoice"
+    class="flex flex-col gap-1.5"
+  >
+    <UTabs
+      :model-value="layout.delivery"
+      :items="deliveryOptions"
+      :content="false"
+      size="xs"
+      color="primary"
+      class="w-fit max-w-full"
+      :ui="EFFECT_SCROLLABLE_TABS_UI"
+      @update:model-value="selectDelivery"
+    />
+
+    <p class="text-xs text-muted">
+      {{ deliveryHint }}
+    </p>
+  </div>
+
+  <div
+    v-if="layout.showTrigger"
+    class="flex flex-col gap-1.5"
+  >
+    <UTabs
+      :model-value="layout.trigger"
+      :items="triggerOptions"
+      :content="false"
+      size="xs"
+      color="primary"
+      class="w-fit max-w-full"
+      :ui="EFFECT_SCROLLABLE_TABS_UI"
+      @update:model-value="selectTrigger"
+    />
+
+    <p class="text-xs text-muted">
+      {{ triggerHint }}
+    </p>
+  </div>
+
+  <div
+    v-if="showAuraSettings"
+    class="flex flex-wrap items-end gap-3 rounded-md border border-default bg-elevated/40 px-3 py-2"
+  >
+    <UFormField
+      :label="EFFECT_AURA_LABELS.radius"
+      class="w-32"
+    >
+      <UInputNumber
+        v-model="auraRadius"
+        :min="MIN_EFFECT_AURA_RADIUS"
+        :step="EFFECT_AURA_RADIUS_STEP"
+        size="sm"
+        class="w-full"
+      />
+    </UFormField>
+
+    <UFormField
+      :label="EFFECT_AURA_LABELS.radiusFormula"
+      :help="EFFECT_AURA_LABELS.radiusFormulaHint"
+      class="w-full sm:w-72"
+    >
+      <UInput
+        v-model="auraRadiusFormula"
+        :placeholder="EFFECT_AURA_LABELS.radiusFormulaPlaceholder"
+        size="sm"
+        class="w-full font-mono"
+      />
+    </UFormField>
+
+    <UFormField
+      :label="EFFECT_AURA_LABELS.target"
+      class="w-48"
+    >
+      <USelect
+        v-model="auraTarget"
+        :items="EFFECT_AURA_TARGET_OPTIONS"
+        value-key="value"
+        size="sm"
+        class="w-full"
+      />
+    </UFormField>
+
+    <div class="flex h-8 flex-wrap items-center gap-4">
+      <UCheckbox
+        v-model="auraApplyToSelf"
+        :label="EFFECT_AURA_LABELS.applyToSelf"
+      />
+
+      <UCheckbox
+        v-model="auraVisible"
+        :label="EFFECT_AURA_LABELS.visible"
+      />
+
+      <UCheckbox
+        v-model="auraWhileCapable"
+        :label="EFFECT_AURA_LABELS.whileCapable"
+      />
+    </div>
+  </div>
+
+  <div
+    v-if="layout.showLandingCondition"
+    class="flex flex-col gap-1"
+  >
+    <EffectTriggerConditionPicker
+      v-model:condition="landingCondition"
+      event="applied"
+      :known-tags="EFFECT_NO_KNOWN_TAGS"
+      :title="EFFECT_LANDING_CONDITION_LABELS.title"
+      :empty-text="EFFECT_LANDING_CONDITION_LABELS.always"
+    />
+
+    <p class="text-xs text-muted">
+      {{ EFFECT_LANDING_CONDITION_LABELS.hint }}
+    </p>
+  </div>
+
+  <div
+    v-if="layout.showVariant"
+    class="flex flex-col gap-2"
+  >
+    <USwitch
+      v-model="hasVariant"
+      :label="EFFECT_VARIANT_LABELS.toggle"
+      :description="EFFECT_VARIANT_LABELS.toggleHint"
+    />
+
+    <div
+      v-if="effect.variant"
+      class="flex flex-wrap items-end gap-2"
+    >
+      <UFormField
+        :label="EFFECT_VARIANT_LABELS.group"
+        class="w-40"
+      >
+        <UInput
+          :model-value="effect.variant.group"
+          size="sm"
+          class="w-full"
+          @update:model-value="updateVariant({ group: String($event) })"
+        />
+      </UFormField>
+
+      <UFormField
+        :label="EFFECT_VARIANT_LABELS.label"
+        class="w-full sm:w-56"
+      >
+        <UInput
+          :model-value="effect.variant.label"
+          size="sm"
+          class="w-full"
+          @update:model-value="updateVariant({ label: String($event) })"
+        />
+      </UFormField>
+
+      <UFormField
+        :label="EFFECT_VARIANT_LABELS.pick"
+        class="w-full sm:w-80"
+      >
+        <USelect
+          v-model="variantPick"
+          :items="EFFECT_VARIANT_PICK_OPTIONS"
+          value-key="value"
+          size="sm"
+          class="w-full"
+        />
+      </UFormField>
+    </div>
+  </div>
+</template>

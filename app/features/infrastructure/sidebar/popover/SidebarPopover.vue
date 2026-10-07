@@ -81,6 +81,11 @@
   $horizontalMargin: 72px;
   $verticalMargin: 16px;
 
+  // Меню раскрывается шире прочих поповеров: при 1100px семь его разделов
+  // (по 240px с зазором 20px, см. MenuSection) ложились в два неровных ряда,
+  // а на этой ширине с полями встают одной полосой.
+  $menuMaxWidth: 1840px;
+
   .navPopover {
     flex-shrink: 0;
     width: 40px;
@@ -150,6 +155,7 @@
 
       @include media-min($md) {
         width: calc(100vw - 56px - 24px);
+        max-width: $menuMaxWidth;
       }
     }
 

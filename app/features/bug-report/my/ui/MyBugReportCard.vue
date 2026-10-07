@@ -29,6 +29,7 @@
     parseSelectedText,
     toBugReportDescriptionBlocks,
   } from '../../model';
+  import { BugReportScreenshotModal } from '../../screenshot';
 
   /** Оформление карточки с непросмотренным изменением статуса. */
   const UPDATED_CARD_CLASS =
@@ -367,23 +368,12 @@
     </div>
 
     <!-- Скриншот в полном размере -->
-    <UModal
+    <BugReportScreenshotModal
+      v-if="bugReport.screenshotUrl"
       v-model:open="isScreenshotModalOpen"
+      :url="bugReport.screenshotUrl"
       :title="MY_BUGS_SCREENSHOT_MODAL_TITLE"
-      :ui="{ content: 'max-w-5xl' }"
-    >
-      <template #body>
-        <div
-          class="flex items-center justify-center overflow-hidden rounded-lg bg-black/10 p-2"
-        >
-          <img
-            v-if="bugReport.screenshotUrl"
-            :src="bugReport.screenshotUrl"
-            :alt="MY_BUGS_SCREENSHOT_ALT"
-            class="max-h-[80vh] max-w-full object-contain"
-          />
-        </div>
-      </template>
-    </UModal>
+      :alt="MY_BUGS_SCREENSHOT_ALT"
+    />
   </div>
 </template>

@@ -2,6 +2,7 @@
   import type { SpeciesLinkResponse } from '~species/model';
 
   import { SpeciesLink } from '~species/link';
+  import { SPECIES_LINEAGES_TITLE } from '~species/model';
   import { UiDrawer } from '~ui/drawer';
 
   const { url } = defineProps<{
@@ -9,7 +10,7 @@
   }>();
 
   defineEmits<{
-    (e: 'close'): void;
+    (event: 'close'): void;
   }>();
 
   // Ключ отличается от ключа `SpeciesLineages`: тот тянет полные детали
@@ -34,7 +35,7 @@
 
 <template>
   <UiDrawer
-    title="Происхождения"
+    :title="SPECIES_LINEAGES_TITLE"
     class="w-md"
     :is-loading
     :is-error
@@ -46,9 +47,7 @@
         :key="link.url"
         :species="link"
         hide-image-on-mobile
-      >
-        {{ link.url }}
-      </SpeciesLink>
+      />
     </div>
   </UiDrawer>
 </template>

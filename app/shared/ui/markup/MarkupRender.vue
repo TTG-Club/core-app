@@ -3,11 +3,51 @@
 
   import { computed } from 'vue';
 
+  import {
+    GROUP_SPACING,
+    GROUP_SPACING_AFTER_SEPARATOR,
+    GROUP_SPACING_BEFORE_SEPARATOR,
+    GROUP_SPACING_SEPARATOR,
+    SEPARATOR_BLOCK_TYPE,
+  } from './consts';
   import { render, toBlockGroups } from './renderer';
 
   const { renderNode } = defineProps<{
     renderNode: RenderNode;
   }>();
+
+  /**
+   * Вертикальная отбивка группы от соседей.
+   *
+   * Вокруг разделителя весь зазор задаёт он сам (паддингом), а margin'ы гасятся:
+   * описание рисуется во флекс-колонке (ArticleBody и другие тела), где соседние
+   * margin'ы НЕ схлопываются, и `mt-*` заголовка после линии делал зазор снизу
+   * заметно шире, чем сверху.
+   *
+   * @param blockType - Тип блочного маркера самой группы
+   * @param previousType - Тип блочного маркера предыдущей группы
+   * @param nextType - Тип блочного маркера следующей группы
+   * @returns Строка Tailwind-классов отбивки
+   */
+  function toSpacingClass(
+    blockType: string | undefined,
+    previousType: string | undefined,
+    nextType: string | undefined,
+  ): string {
+    if (blockType === SEPARATOR_BLOCK_TYPE) {
+      return GROUP_SPACING_SEPARATOR;
+    }
+
+    if (previousType === SEPARATOR_BLOCK_TYPE) {
+      return GROUP_SPACING_AFTER_SEPARATOR;
+    }
+
+    if (nextType === SEPARATOR_BLOCK_TYPE) {
+      return GROUP_SPACING_BEFORE_SEPARATOR;
+    }
+
+    return GROUP_SPACING;
+  }
 
   const rendered = computed<RenderResult>(() => {
     try {
@@ -21,15 +61,17 @@
 
       // Каждый элемент описания разбиваем на блочные/инлайновые группы, чтобы
       // блочные маркеры ({@h}/{@list}/{@quote}/…) рисовались вне <p>, а не внутри.
-      const groups: Group[] = [];
+      const blockGroups = renderNode.flatMap((entry) => toBlockGroups(entry));
 
-      let groupId = 0;
-
-      for (const entry of renderNode) {
-        for (const group of toBlockGroups(entry)) {
-          groups.push({ id: groupId++, ...group });
-        }
-      }
+      const groups: Group[] = blockGroups.map((group, index) => ({
+        id: index,
+        ...group,
+        spacingClass: toSpacingClass(
+          group.blockType,
+          blockGroups[index - 1]?.blockType,
+          blockGroups[index + 1]?.blockType,
+        ),
+      }));
 
       return {
         isSingle: false,
@@ -63,13 +105,13 @@
             :is="vnode"
             v-for="(vnode, index) in group.vnodes"
             :key="index"
-            class="mb-2"
+            :class="group.spacingClass"
           />
         </template>
 
         <p
           v-else
-          class="mb-2"
+          :class="group.spacingClass"
         >
           <component
             :is="vnode"

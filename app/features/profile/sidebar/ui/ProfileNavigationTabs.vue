@@ -10,6 +10,7 @@
     MY_COMMENTS_UPDATES_HINT,
   } from '~comments/model';
   import { useMyCommentUpdates } from '~comments/my';
+  import { FIND_GAME_PROFILE_NAVIGATION_LABEL } from '~find-game/model';
   import { UpdatesDot } from '~ui/updates-dot';
 
   const props = defineProps<{
@@ -21,6 +22,7 @@
     ACTIVATION: 'activation',
     BUGS: 'bugs',
     COMMENTS: 'comments',
+    FIND_GAME: 'find-game',
     SECURITY: 'security',
     SETTINGS: 'settings',
   } as const;
@@ -45,6 +47,11 @@
       value: ProfileTabs.COMMENTS,
       label: MY_COMMENTS_NAVIGATION_LABEL,
       icon: 'tabler:message-circle',
+    },
+    {
+      value: ProfileTabs.FIND_GAME,
+      label: FIND_GAME_PROFILE_NAVIGATION_LABEL,
+      icon: 'tabler:dice-5',
     },
     {
       value: ProfileTabs.SECURITY,

@@ -29,6 +29,23 @@ export default defineNuxtConfig({
 
   compatibilityDate: '2025-07-22',
 
+  experimental: {
+    // Как часто открытая вкладка сверяет свою сборку с сервером. По умолчанию
+    // раз в час — после выкладки старая вкладка долго жила на удалённых
+    // чанках. Проверка — крошечный `builds/latest.json`; при новой сборке
+    // страница перезагрузится на ближайшем переходе (см. buildUpdate.client.ts).
+    checkOutdatedBuildInterval: ms('10m'),
+
+    // Без карты импорта `#entry`. С ней Nuxt убирает имя главного чанка из
+    // кода, чтобы хэши остальных не менялись, но Vite потом дописывает это имя
+    // в списки предзагрузки (`__vite__mapDeps`) уже после расчёта хэша. Чанк
+    // меняет содержимое, не меняя имени: браузер держит старую копию
+    // (`immutable` на год), её SRI-хэш не сходится с новым HTML, и приложение
+    // не запускается до очистки кэша. Без карты импорта имя главного чанка
+    // входит в хэши зависимых, и после выкладки они получают новые имена.
+    entryImportMap: false,
+  },
+
   // Конфигурация среды разработки
   devServer: {
     https: process.env.NUXT_DEV_SSL === 'true',
@@ -46,7 +63,6 @@ export default defineNuxtConfig({
     '@vueuse/nuxt',
     '@pinia/nuxt',
     'nuxt-security',
-    'nuxt-yandex-metrika',
     'nuxt-gtag',
   ],
 
@@ -75,32 +91,18 @@ export default defineNuxtConfig({
     },
   },
 
-  // Яндекс.Метрика (nuxt-yandex-metrika).
-  // ВАЖНО: id НЕ берём из env на этапе сборки — Docker-сборка не видит прод-переменных,
-  // поэтому id попадал бы в образ как placeholder 'xxx' и счётчик не трекал.
-  // Реальный id подставляется в РАНТАЙМЕ контейнера через NUXT_PUBLIC_YANDEX_METRIKA_ID
-  // (Nitro override → runtimeConfig.public.yandexMetrika.id). На сборке и на dev id пустой,
-  // поэтому в боевую статистику ничего не уходит.
-  yandexMetrika: {
-    id: '',
-    position: 'head',
-    options: {
-      clickmap: true,
-      trackLinks: true,
-      accurateTrackBounce: true,
-      webvisor: true,
-    },
-  },
-
   // Google Analytics (nuxt-gtag).
   // enabled:true ОБЯЗАТЕЛЬНО безусловно: при enabled:false модуль на этапе сборки
   // (где прод-env отсутствует) вырезает плагин и runtimeConfig.public.gtag из образа,
   // и счётчик не работает даже если id задан на проде. id подставляется в рантайме
-  // через NUXT_PUBLIC_GTAG_ID; при пустом id плагин не инжектит скрипт (resolveTags → []),
-  // поэтому на dev GA не грузится. SPA-переходы трекает Enhanced Measurement GA4.
+  // через NUXT_PUBLIC_GTAG_ID; при пустом id скрипт не подключается, поэтому на dev
+  // GA не грузится. SPA-переходы трекает Enhanced Measurement GA4.
+  // initMode: 'manual' — плагин analytics.client.ts автоматически подключает
+  // скрипт с defer при запуске приложения.
   gtag: {
     enabled: true,
     id: '',
+    initMode: 'manual',
   },
 
   // SEO и метаданные
@@ -174,6 +176,7 @@ export default defineNuxtConfig({
 
   ui: {
     colorMode: false,
+    content: true,
   },
 
   icon: {
@@ -200,7 +203,18 @@ export default defineNuxtConfig({
       fontshare: false,
     },
     priority: ['google', 'fontsource'],
-    families: [{ name: 'Open Sans' }],
+    families: [
+      { name: 'Open Sans' },
+      // Моноширинный шрифт микро-подписей и счётчиков на главной (и всех мест,
+      // где уже используется `font-mono`: коды, промо-коды, броски кубов).
+      // Кириллица нужна для подписей вида «МАТЕРИАЛОВ», латиница — для чисел
+      // и англоязычных названий; жирнее 600 нигде не требуется.
+      {
+        name: 'JetBrains Mono',
+        subsets: ['latin', 'cyrillic'],
+        weights: ['400', '500', '600'],
+      },
+    ],
   },
 
   image: {
@@ -256,7 +270,7 @@ export default defineNuxtConfig({
           // От XSS защищает экранирование на выводе, а не отказ на входе.
           xssValidator: false,
           rateLimiter: {
-            tokensPerInterval: 75,
+            tokensPerInterval: 200,
             interval: ms('1m'),
             headers: true,
           },
@@ -455,6 +469,15 @@ export default defineNuxtConfig({
       // с подсказкой, вместо перехода в 404. Задаётся через
       // NUXT_PUBLIC_OLD_SITE_URL.
       oldSiteUrl: '',
+      // Яндекс.Метрика автоматически подключается плагином analytics.client.ts.
+      // Плагин также учитывает переходы между страницами и освобождает счётчик.
+      // id НЕ берём из env на этапе сборки — Docker-сборка не видит прод-переменных.
+      // Реальный id подставляется в РАНТАЙМЕ контейнера через
+      // NUXT_PUBLIC_YANDEX_METRIKA_ID; на сборке и на dev он пустой, и счётчик
+      // не подключается.
+      yandexMetrika: {
+        id: '',
+      },
     },
     site: {
       url: process.env.NUXT_SITE_URL,
@@ -477,6 +500,14 @@ export default defineNuxtConfig({
     // Переопределяется через NUXT_VTTG_UPDATE_BASE_URL.
     vttg: {
       updateBaseUrl: 'https://update-v.ttg.club/vttg/',
+      // core-api каналов компендиума VTTG — те же, откуда их качает приложение
+      // (CHANNELS в vttg/packages/server/src/modules/compendium/compendiumUpdate.ts).
+      // Админка любого сайта видит и поднимает версии обоих каналов.
+      // Переопределяются через NUXT_VTTG_COMPENDIUM_API_URLS_DEV / _PROD.
+      compendiumApiUrls: {
+        dev: 'https://dev.api.ttg.club',
+        prod: 'https://api.ttg.club',
+      },
     },
   },
 });

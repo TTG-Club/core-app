@@ -2,8 +2,13 @@ import {
   DAMAGE_FORMULA_DICE_SYMBOL,
   DAMAGE_FORMULA_SEPARATOR,
   DAMAGE_FORMULA_TAG_PREFIX,
+  DAMAGE_TYPE_TAG_PREFIX,
   DAMAGE_TYPE_TAGS,
 } from './constants';
+import {
+  DAMAGE_FORMULA_TYPE_CHOICE_TOKEN_SOURCE,
+  readDamageFormulaTypeChoices,
+} from './type-choice';
 
 /**
  * Символы, после которых арифметический разделитель не нужен: слагаемого слева
@@ -147,8 +152,64 @@ const DAMAGE_TYPE_KEY_BY_TAG: Record<string, string> = Object.fromEntries(
 /** Токен типа урона в формуле: `@dmg.<тип>`. */
 const DAMAGE_FORMULA_TYPE_PATTERN = /@(dmg\.[a-z]+)/i;
 
-/** Любой токен формулы — при разборе костей их отбрасываем. */
-const DAMAGE_FORMULA_TAG_PATTERN = /@[\w.]+/g;
+/**
+ * Все токены типа урона в формуле — у формулы их бывает несколько. Тип на
+ * выбор (`@dmg.choice(acid,cold)`) идёт первым: иначе шаблон принял бы
+ * `choice` за тип.
+ */
+const DAMAGE_FORMULA_TYPES_PATTERN = new RegExp(
+  `${DAMAGE_FORMULA_TYPE_CHOICE_TOKEN_SOURCE}|@(dmg\\.[a-z]+)`,
+  'gi',
+);
+
+/**
+ * Теги типов урона одного токена: обычный токен даёт свой тег, тип на выбор —
+ * теги всех типов своего списка.
+ *
+ * @param token токен типа урона целиком (`@dmg.fire`, `@dmg.choice(acid,cold)`).
+ * @param plainTag тег обычного токена (`dmg.fire`); `undefined` — токен на выбор.
+ * @returns теги типов урона (`dmg.acid`).
+ */
+function getDamageTypeTokenTags(
+  token: string,
+  plainTag: string | undefined,
+): Array<string> {
+  if (plainTag) {
+    return [plainTag.toLowerCase()];
+  }
+
+  return readDamageFormulaTypeChoices(token).flatMap((typeChoice) =>
+    typeChoice.damageTypes.map(
+      (damageType) => `${DAMAGE_TYPE_TAG_PREFIX}${damageType}`,
+    ),
+  );
+}
+
+/**
+ * Ключи типов урона справочника из всех токенов `@dmg.*` формулы, в порядке
+ * появления; у типа на выбор — все типы его списка. Незнакомый токен
+ * пропускается.
+ *
+ * @param formula формула части урона.
+ * @returns ключи типов урона (`FIRE`); пустой список — типа в формуле нет.
+ */
+export function getDamageFormulaTypes(formula: string): Array<string> {
+  return [...formula.matchAll(DAMAGE_FORMULA_TYPES_PATTERN)]
+    .flatMap((match) => getDamageTypeTokenTags(match[0], match[1]))
+    .map((typeTag) => DAMAGE_TYPE_KEY_BY_TAG[typeTag])
+    .filter((typeKey) => typeKey !== undefined);
+}
+
+/**
+ * Любой токен формулы — при разборе костей их отбрасываем. Тип на выбор и
+ * токен состояния идут первыми: общий шаблон оставил бы в костях хвост списка
+ * типов (`(acid,cold)`) или ключа состояния с дефисом
+ * (`@target.status.marked-k3j2x9`).
+ */
+const DAMAGE_FORMULA_TAG_PATTERN = new RegExp(
+  `${DAMAGE_FORMULA_TYPE_CHOICE_TOKEN_SOURCE}|@(?:self|target)\\.status\\.[a-z0-9][a-z0-9-]*|@[\\w.]+`,
+  'gi',
+);
 
 /** Простой бросок: `2к6`, `1к8+1`, `1d10-1`. Кость — русская «к» или «d». */
 const DAMAGE_FORMULA_DICE_PATTERN =
@@ -191,12 +252,60 @@ export function parseDamageFormulaDice(
 
   const [, diceCount, diceFaces, sign, bonus] = diceMatch;
   const signedBonus = sign === '-' ? -Number(bonus) : Number(bonus);
-  const typeTag = DAMAGE_FORMULA_TYPE_PATTERN.exec(formula ?? '')?.[1];
 
   return {
     diceCount: Number(diceCount),
     diceFaces: Number(diceFaces),
     bonus: bonus === undefined ? 0 : signedBonus,
-    type: typeTag ? (DAMAGE_TYPE_KEY_BY_TAG[typeTag.toLowerCase()] ?? '') : '',
+    type: getDamageFormulaFirstType(formula ?? ''),
+  };
+}
+
+/**
+ * Ключ типа урона справочника из первого токена `@dmg.*` формулы.
+ *
+ * @param formula формула части урона.
+ * @returns ключ типа урона (`FIRE`); '' — типа в формуле нет или он незнаком.
+ */
+function getDamageFormulaFirstType(formula: string): string {
+  const typeTag = DAMAGE_FORMULA_TYPE_PATTERN.exec(formula)?.[1];
+
+  return typeTag ? (DAMAGE_TYPE_KEY_BY_TAG[typeTag.toLowerCase()] ?? '') : '';
+}
+
+/** Плоский урон: одно число без костей — `1` у духовой трубки. */
+const DAMAGE_FORMULA_FLAT_PATTERN = /^\d+$/;
+
+/** Плоский урон формулы: число и тип урона. */
+export interface DamageFormulaFlat {
+  /** Урон числом. */
+  amount: number;
+  /** Ключ типа урона справочника (`FIRE`); '' — тип в формуле не указан. */
+  type: string;
+}
+
+/**
+ * Разбирает формулу плоского урона — одного числа без костей (`1@dmg.piercing`).
+ *
+ * Как и у костей, формулу сложнее (с модификаторами, арифметикой) разобрать
+ * нельзя — такая возвращает `undefined`.
+ *
+ * @param formula формула части урона.
+ * @returns плоский урон формулы; `undefined` — формула не одно число.
+ */
+export function parseDamageFormulaFlat(
+  formula: string | undefined,
+): DamageFormulaFlat | undefined {
+  const cleaned = (formula ?? '')
+    .replace(DAMAGE_FORMULA_TAG_PATTERN, '')
+    .trim();
+
+  if (!DAMAGE_FORMULA_FLAT_PATTERN.test(cleaned)) {
+    return undefined;
+  }
+
+  return {
+    amount: Number(cleaned),
+    type: getDamageFormulaFirstType(formula ?? ''),
   };
 }

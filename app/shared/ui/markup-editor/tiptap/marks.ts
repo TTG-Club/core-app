@@ -10,6 +10,7 @@ import type {
 import { Mark, mergeAttributes } from '@tiptap/core';
 
 import { findMarkerEnd } from '../../markup/balance';
+import { BLOCK_MARKER_NODE, FORMAT_MARK_ATTR } from './constants';
 import { classifyLinkMarker } from './link-markers';
 import { isBlockMarker } from './render-chip';
 import { isHeadingMarkerStart } from './ttg-heading';
@@ -43,6 +44,12 @@ interface FormatSpec {
   className: string;
   /** Хоткей переключения марки в нотации TipTap (`Mod` = Ctrl/⌘). */
   shortcut: string;
+  /**
+   * HTML-теги, которыми это же оформление приходит из ЧУЖОГО буфера обмена
+   * (сайт, чат, редактор документов). По ним вставка приводится к нашей марке —
+   * см. `paste-html.ts`.
+   */
+  htmlTags: string[];
 }
 
 /**
@@ -59,6 +66,7 @@ export const FORMAT_SPECS: FormatSpec[] = [
     token: 'ttgMark_bold',
     className: 'font-bold',
     shortcut: 'Mod-b',
+    htmlTags: ['strong', 'b'],
   },
   {
     type: 'italic',
@@ -68,6 +76,7 @@ export const FORMAT_SPECS: FormatSpec[] = [
     token: 'ttgMark_italic',
     className: 'italic',
     shortcut: 'Mod-i',
+    htmlTags: ['em', 'i'],
   },
   {
     type: 'underline',
@@ -77,6 +86,7 @@ export const FORMAT_SPECS: FormatSpec[] = [
     token: 'ttgMark_underline',
     className: 'underline underline-offset-2',
     shortcut: 'Mod-u',
+    htmlTags: ['u', 'ins'],
   },
   {
     type: 'strikethrough',
@@ -86,6 +96,7 @@ export const FORMAT_SPECS: FormatSpec[] = [
     token: 'ttgMark_strike',
     className: 'line-through',
     shortcut: 'Mod-Shift-s',
+    htmlTags: ['s', 'del', 'strike'],
   },
   {
     type: 'superscript',
@@ -95,6 +106,7 @@ export const FORMAT_SPECS: FormatSpec[] = [
     token: 'ttgMark_superscript',
     className: 'align-super text-[0.75em]',
     shortcut: 'Mod-.',
+    htmlTags: ['sup'],
   },
   {
     type: 'subscript',
@@ -104,6 +116,7 @@ export const FORMAT_SPECS: FormatSpec[] = [
     token: 'ttgMark_subscript',
     className: 'align-sub text-[0.75em]',
     shortcut: 'Mod-,',
+    htmlTags: ['sub'],
   },
   {
     type: 'highlight',
@@ -113,6 +126,7 @@ export const FORMAT_SPECS: FormatSpec[] = [
     token: 'ttgMark_highlight',
     className: 'rounded bg-warning/30 px-0.5',
     shortcut: 'Mod-Shift-h',
+    htmlTags: ['mark'],
   },
 ];
 
@@ -233,7 +247,7 @@ export const markerMarkdownTokenizer: MarkdownTokenizer = {
  * не попадают — их ловит инлайновый `markerMarkdownTokenizer` (чип/марка).
  */
 export const blockMarkerMarkdownTokenizer: MarkdownTokenizer = {
-  name: 'ttgBlockMarker',
+  name: BLOCK_MARKER_NODE,
   level: 'block',
   // Блочный маркер начинается с начала строки — только туда и «прицеливаемся».
   start: (source: string) => {
@@ -282,7 +296,7 @@ export const blockMarkerMarkdownTokenizer: MarkdownTokenizer = {
     }
 
     return {
-      type: 'ttgBlockMarker',
+      type: BLOCK_MARKER_NODE,
       raw: source.slice(0, end + trailing[0].length),
     };
   },
@@ -329,14 +343,14 @@ function createFormatMark(spec: FormatSpec) {
       `{@${spec.alias} ${helpers.renderChildren(node)}}`,
 
     parseHTML() {
-      return [{ tag: `span[data-ttg-mark="${spec.type}"]` }];
+      return [{ tag: `span[${FORMAT_MARK_ATTR}="${spec.type}"]` }];
     },
 
     renderHTML({ HTMLAttributes }) {
       return [
         'span',
         mergeAttributes(
-          { 'data-ttg-mark': spec.type, 'class': spec.className },
+          { [FORMAT_MARK_ATTR]: spec.type, class: spec.className },
           HTMLAttributes,
         ),
         0,

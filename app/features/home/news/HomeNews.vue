@@ -1,18 +1,22 @@
 <script setup lang="ts">
-  import type { TimelineItem } from '@nuxt/ui';
-
   import type { ArticleShortResponse } from '~articles/model';
 
-  import { ArticleHero } from '~articles/card';
+  import { ArticleHero, ArticleTile } from '~articles/card';
   import { ArticleDrawer } from '~articles/drawer';
   import {
-    ARTICLE_DATE_FORMAT,
     ARTICLE_TYPE,
     ARTICLES_SEARCH_PATH,
-    getArticleRoute,
     HOME_NEWS_COUNT,
     NEWS_ROUTE,
   } from '~articles/model';
+  import { HomePanel } from '~home/ui-kit';
+
+  import {
+    HOME_NEWS_ALL_LABEL,
+    HOME_NEWS_EMPTY_TEXT,
+    HOME_NEWS_ICON,
+    HOME_NEWS_LABEL,
+  } from './model';
 
   // Клиентская (не-SSR) загрузка: блок новостей ниже сгиба и не должен держать
   // TTFB главной в ожидании бэкенда статей (как HomeRecentChanges). Пока запрос
@@ -43,8 +47,6 @@
     }
   });
 
-  const { format } = useDayjs();
-
   // Скелетон — только на ПЕРВОЙ загрузке (данных ещё нет); idle тоже держим как
   // loading (server:false: до клиентского фетча статус 'idle'). Фоновое обновление
   // при возврате на вкладку не мигает скелетоном поверх уже показанных новостей.
@@ -60,22 +62,8 @@
 
   const heroArticle = computed(() => data.value?.[0] ?? null);
 
-  // Остальные новости (после «геройской») — компактной лентой-таймлайном.
-  // url — маршрут страницы (для ссылки/ctrl+click), slug — для открытия в дровере.
-  const timelineItems = computed<
-    Array<TimelineItem & { url: string; slug: string }>
-  >(() =>
-    (data.value ?? []).slice(1).map((article) => ({
-      value: article.id,
-      title: article.title,
-      date: article.publishDateTime
-        ? format(article.publishDateTime, ARTICLE_DATE_FORMAT)
-        : '',
-      icon: 'tabler:news',
-      url: getArticleRoute(article.url),
-      slug: article.url,
-    })),
-  );
+  /** Остальные новости после «геройской» — компактной сеткой плиток */
+  const restArticles = computed(() => (data.value ?? []).slice(1));
 
   // По умолчанию новость открывается в дровере (страница остаётся доступной
   // по ссылке/ctrl+click и по кнопке «открыть на отдельной странице»).
@@ -95,22 +83,36 @@
 </script>
 
 <template>
-  <UCard
+  <HomePanel
     v-if="!isError"
-    :ui="{ root: 'bg-muted overflow-hidden', body: 'p-0 sm:p-0' }"
+    :label="HOME_NEWS_LABEL"
+    :icon="HOME_NEWS_ICON"
+    :to="NEWS_ROUTE"
+    :link-label="HOME_NEWS_ALL_LABEL"
+    body-class="p-0"
   >
     <div
       v-if="isLoading"
       class="flex flex-col"
     >
-      <USkeleton class="h-44 w-full rounded-none sm:h-52" />
+      <USkeleton
+        class="aspect-16/10 w-full rounded-none sm:aspect-2/1 xl:aspect-21/9"
+      />
 
-      <div class="flex flex-col gap-3 p-3">
-        <USkeleton
-          v-for="index in 3"
+      <div class="grid grid-cols-1 gap-2 p-2 sm:grid-cols-2">
+        <div
+          v-for="index in 4"
           :key="index"
-          class="h-5 w-3/4 rounded-md"
-        />
+          class="flex items-center gap-3 p-2"
+        >
+          <USkeleton class="h-16 w-24 shrink-0 rounded-md" />
+
+          <div class="flex flex-1 flex-col gap-2">
+            <USkeleton class="h-2.5 w-16 rounded" />
+
+            <USkeleton class="h-4 w-3/4 rounded" />
+          </div>
+        </div>
       </div>
     </div>
 
@@ -118,7 +120,7 @@
       v-else-if="!hasNews"
       class="m-3 rounded-xl border border-dashed border-default px-3 py-8 text-center text-sm text-muted"
     >
-      Новостей пока нет
+      {{ HOME_NEWS_EMPTY_TEXT }}
     </p>
 
     <div
@@ -132,56 +134,16 @@
       />
 
       <div
-        v-if="timelineItems.length"
-        class="p-3"
+        v-if="restArticles.length"
+        class="grid grid-cols-1 gap-1 border-t border-default p-2 sm:grid-cols-2"
       >
-        <UTimeline
-          :items="timelineItems"
-          color="primary"
-          :ui="{
-            indicator: 'bg-border',
-            separator: 'border-l-2 border-default',
-          }"
-        >
-          <template #date="{ item }">
-            <div class="flex items-center gap-2">
-              <span>{{ item.date }}</span>
-
-              <UButton
-                :to="item.url"
-                icon="tabler:external-link"
-                color="neutral"
-                variant="ghost"
-                size="xs"
-                class="shrink-0"
-                :aria-label="`Открыть «${item.title}» на отдельной странице`"
-              />
-            </div>
-          </template>
-
-          <template #title="{ item }">
-            <button
-              type="button"
-              class="cursor-pointer text-left font-medium text-highlighted hover:underline"
-              @click="openArticle(item.slug)"
-            >
-              {{ item.title }}
-            </button>
-          </template>
-        </UTimeline>
+        <ArticleTile
+          v-for="article in restArticles"
+          :key="article.id"
+          :article
+          @open="openArticle(article.url)"
+        />
       </div>
-
-      <UButton
-        :to="NEWS_ROUTE"
-        block
-        size="lg"
-        color="neutral"
-        variant="soft"
-        trailing-icon="tabler:arrow-right"
-        class="justify-center rounded-none border-t border-default"
-      >
-        Все новости
-      </UButton>
     </div>
-  </UCard>
+  </HomePanel>
 </template>

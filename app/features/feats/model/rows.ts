@@ -25,6 +25,12 @@ import type {
 import { ABILITY_LABELS, isAbilityKey } from '~/shared/types';
 
 import {
+  createFullCounterRestRule,
+  createNoCounterRestRule,
+  toLegacyCounterRecovery,
+  toSavedCounterRestRule,
+} from './counter';
+import {
   createFeatMechanics,
   createPrerequisiteDetails,
   getFreeFeatChoiceKey,
@@ -289,6 +295,12 @@ export interface FeatSpellPickRow {
 
   /** Перечисленные заклинания — пул порции при `source: 'LIST'`; иначе пусто. */
   spells: Array<FeatEntityRef>;
+
+  /**
+   * Выбранное не нужно готовить, и места в числе класса оно не занимает:
+   * заговор «Чудотворца» жреца идёт сверх колонки «Заговоры» таблицы класса.
+   */
+  alwaysPrepared: boolean;
 }
 
 /**
@@ -787,6 +799,7 @@ export function createSpellPickRow(takenKeys: Array<string>): FeatSpellPickRow {
     requiredLevel: undefined,
     source: 'FILTER',
     spells: [],
+    alwaysPrepared: false,
   };
 }
 
@@ -897,6 +910,8 @@ export function createCounterRow(takenKeys: Array<string>): FeatCounterRow {
     scaling: [],
     min: 0,
     showInTable: false,
+    shortRest: createNoCounterRestRule(),
+    longRest: createFullCounterRestRule(),
     recovery: 'LONG_REST',
   };
 }
@@ -1054,6 +1069,7 @@ function toSpellPickRow(choice: FeatChoice): FeatSpellPickRow {
     requiredLevel: choice.requiredLevel,
     source: spells.length ? 'LIST' : 'FILTER',
     spells,
+    alwaysPrepared: choice.alwaysPrepared ?? false,
   };
 }
 
@@ -1703,6 +1719,8 @@ function toBaseChoice(
     // Колонка выводится из ступеней: без них показывать в таблице нечего
     showInTable: scaling.length && row.showInTable ? true : undefined,
     shortName: row.shortName?.trim() || undefined,
+    // Отметка «не готовить» бывает только у выбора заклинаний
+    alwaysPrepared: undefined,
   };
 }
 
@@ -1727,6 +1745,7 @@ function createEmptyChoice(key: string, type: FeatChoiceType): FeatChoice {
     shortName: undefined,
     rechooseOnLongRest: false,
     requiredLevel: undefined,
+    alwaysPrepared: undefined,
   };
 }
 
@@ -1831,6 +1850,8 @@ function toSpellChoices(
       count: pick.count,
       countEqualsProficiencyBonus: pick.countEqualsProficiencyBonus,
       requiredLevel: pick.requiredLevel,
+      // Снятая отметка не пишется: её отсутствие и значит «готовить нужно»
+      alwaysPrepared: pick.alwaysPrepared || undefined,
       options: isList ? listed : [],
       // Фильтра у перечисленного пула нет: круг и класс берутся из записей
       spellFilter: isList
@@ -2292,7 +2313,13 @@ export function fromFeatEditorRows(
     // ноль зарядов не бывает
     min: Math.max(0, Math.trunc(row.min)),
     showInTable: row.showInTable,
-    recovery: row.recovery,
+    shortRest: toSavedCounterRestRule(row.shortRest),
+    longRest: toSavedCounterRestRule(row.longRest),
+    // Откат одним словом — для потребителей, которые раздельных правил ещё
+    // не читают
+    recovery: toLegacyCounterRecovery(row.shortRest),
+    // Пишется только взведённым: записи без отметки остаются прежними
+    startsEmpty: row.startsEmpty ? true : undefined,
   }));
 
   return {

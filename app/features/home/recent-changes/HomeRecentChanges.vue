@@ -3,6 +3,16 @@
 
   import type { NameResponse, SourceResponse } from '~/shared/types';
 
+  import {
+    RECENT_CHANGES_DEFAULT_LIMIT,
+    RECENT_CHANGES_ERROR_DESCRIPTION,
+    RECENT_CHANGES_ERROR_TITLE,
+    RECENT_CHANGES_LIMIT_LABEL,
+    RECENT_CHANGES_LIMIT_STORAGE_KEY,
+    RECENT_CHANGES_LIMIT_VALUES,
+    RECENT_CHANGES_REFRESH_LABEL,
+  } from './model';
+
   enum ActionType {
     ADDED = 'ADDED',
     UPDATED = 'UPDATED',
@@ -21,12 +31,11 @@
     source?: SourceResponse;
   }
 
-  const LIMIT_VALUES = [5, 10, 20, 50, 100];
-  const DEFAULT_LIMIT = 5;
-
-  const selectedLimit = useLocalStorage('recent-changes-limit', DEFAULT_LIMIT, {
-    initOnMounted: true,
-  });
+  const selectedLimit = useLocalStorage(
+    RECENT_CHANGES_LIMIT_STORAGE_KEY,
+    RECENT_CHANGES_DEFAULT_LIMIT,
+    { initOnMounted: true },
+  );
 
   const { format } = useDayjs();
 
@@ -36,7 +45,7 @@
    * @returns Массив опций с label, состоянием checked и обработчиком выбора
    */
   const limitOptions = computed<DropdownMenuItem[]>(() =>
-    LIMIT_VALUES.map((value) => ({
+    RECENT_CHANGES_LIMIT_VALUES.map((value) => ({
       label: String(value),
       checked: selectedLimit.value === value,
       type: 'checkbox' as const,
@@ -105,54 +114,44 @@
 </script>
 
 <template>
-  <UCard
-    :ui="{
-      root: 'bg-muted ',
-      header: 'p-3 sm:p-3',
-      body: 'p-0 sm:p-0',
-    }"
-  >
-    <template #header>
-      <div class="flex items-center justify-between gap-2">
-        <div class="flex flex-col gap-2">
-          <h3 class="text-base leading-none font-medium">
-            Обновления на сайте
-          </h3>
-
-          <div class="flex items-center gap-1">
-            <span class="text-xs leading-none text-muted">Последние:</span>
-
-            <UDropdownMenu
-              :items="limitOptions"
-              :ui="{ content: 'w-auto min-w-fit' }"
-            >
-              <template #default>
-                <UButton
-                  trailing-icon="tabler:chevron-down"
-                  color="neutral"
-                  variant="soft"
-                  size="xs"
-                >
-                  {{ selectedLimit }}
-                </UButton>
-              </template>
-            </UDropdownMenu>
-          </div>
-        </div>
-
+  <!-- Лента без собственной оправы: панель и переключатель вкладок держит
+    HomeActivity. Управление лимитом и обновлением переехало из шапки панели
+    в тело — шапку занял переключатель. -->
+  <div class="flex min-h-0 flex-col xl:h-full">
+    <div
+      class="flex shrink-0 items-center justify-end gap-1 border-b border-default px-2 py-1.5"
+    >
+      <UDropdownMenu
+        :items="limitOptions"
+        :ui="{ content: 'w-auto min-w-fit' }"
+      >
         <UButton
-          :loading="pending"
-          variant="soft"
-          icon="tabler:refresh"
-          @click.left.exact.prevent="refresh()"
-        />
-      </div>
-    </template>
+          trailing-icon="tabler:chevron-down"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          class="font-mono"
+          :aria-label="RECENT_CHANGES_LIMIT_LABEL"
+        >
+          {{ selectedLimit }}
+        </UButton>
+      </UDropdownMenu>
+
+      <UButton
+        :loading="pending"
+        variant="ghost"
+        color="neutral"
+        size="xs"
+        icon="tabler:refresh"
+        :aria-label="RECENT_CHANGES_REFRESH_LABEL"
+        @click.left.exact.prevent="refresh()"
+      />
+    </div>
 
     <UAlert
       v-if="status === 'error'"
-      title="Не удалось загрузить обновления"
-      description="Попробуйте обновить еще раз"
+      :title="RECENT_CHANGES_ERROR_TITLE"
+      :description="RECENT_CHANGES_ERROR_DESCRIPTION"
       class="rounded-none"
       variant="soft"
       color="error"
@@ -160,18 +159,16 @@
 
     <UScrollArea
       v-else
-      class="max-h-125 min-h-0"
-      :ui="{
-        viewport: 'p-3',
-      }"
+      class="max-h-150 min-h-0 xl:max-h-none xl:flex-1"
+      :ui="{ viewport: 'p-3' }"
     >
       <div
         v-if="showSkeleton"
         class="flex flex-col gap-4"
       >
         <div
-          v-for="i in 5"
-          :key="i"
+          v-for="index in RECENT_CHANGES_DEFAULT_LIMIT"
+          :key="index"
           class="flex gap-4"
         >
           <div class="flex flex-col items-center gap-2">
@@ -196,6 +193,7 @@
           indicator: 'bg-border',
           separator: 'border-l-2 border-default',
           item: 'last:*:data-[slot=wrapper]:pb-1.5',
+          date: 'font-mono text-[11px] tracking-wide uppercase',
         }"
       >
         <template #indicator="{ item }">
@@ -216,8 +214,9 @@
             <UBadge
               v-if="item.source"
               color="neutral"
-              variant="soft"
+              variant="subtle"
               size="sm"
+              class="normal-case"
             >
               {{ item.source.name.label }}
             </UBadge>
@@ -241,5 +240,5 @@
         </template>
       </UTimeline>
     </UScrollArea>
-  </UCard>
+  </div>
 </template>

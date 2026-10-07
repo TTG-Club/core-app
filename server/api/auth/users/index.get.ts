@@ -1,4 +1,4 @@
-import { resolveDisplayNamesByLogins } from '#server/utils/displayName';
+import { resolveNamesAndAvatarsByLogins } from '#server/utils/displayName';
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event);
@@ -24,17 +24,22 @@ export default defineEventHandler(async (event) => {
     }),
   );
 
-  // Обогащаем страницу отображаемыми именами из core-api (владелец данных).
-  // Best-effort: core-api недоступен → displayName = null, в UI покажется прочерк.
-  const nameByLogin = await resolveDisplayNamesByLogins(
+  // Обогащаем страницу отображаемыми именами и аватарками из core-api
+  // (владелец данных). Best-effort: core-api недоступен → null, в UI прочерк.
+  const profileByLogin = await resolveNamesAndAvatarsByLogins(
     usersPage.content.map((user) => user.username),
   );
 
   return {
     ...usersPage,
-    content: usersPage.content.map((user) => ({
-      ...user,
-      displayName: nameByLogin.get(user.username.toLowerCase()) ?? null,
-    })),
+    content: usersPage.content.map((user) => {
+      const profile = profileByLogin.get(user.username.toLowerCase());
+
+      return {
+        ...user,
+        displayName: profile?.displayName ?? null,
+        avatarUrl: profile?.avatarUrl ?? null,
+      };
+    }),
   };
 });

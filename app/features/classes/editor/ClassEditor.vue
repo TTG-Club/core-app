@@ -6,7 +6,7 @@
   import type { ClassCreate, ClassLinkResponse } from '../model';
 
   import { ActiveEffects } from '~active-effects/editor';
-  import { EFFECT_ORIGIN } from '~active-effects/model';
+  import { EFFECT_FORM_CONTEXT, EFFECT_ORIGIN } from '~active-effects/model';
   import { ClassPreview } from '~classes/preview';
   import {
     FeatCounterRows,
@@ -501,6 +501,7 @@
       <template #effects>
         <ActiveEffects
           v-model="state.activeEffects"
+          :context="EFFECT_FORM_CONTEXT.feature"
           :origin="EFFECT_ORIGIN.feature"
         />
       </template>
@@ -526,13 +527,11 @@
                 max-size="1024"
               >
                 <template #preview>
-                  <div class="relative w-48 overflow-hidden rounded-lg">
-                    <img
-                      :src="state.image || '/img/no-img.webp'"
-                      alt="Uploaded image"
-                      class="h-full w-full object-contain"
-                    />
-                  </div>
+                  <img
+                    :src="state.image || '/img/no-img.webp'"
+                    alt="Uploaded image"
+                    class="w-full rounded-lg object-contain"
+                  />
                 </template>
               </UploadImage>
             </UFormField>

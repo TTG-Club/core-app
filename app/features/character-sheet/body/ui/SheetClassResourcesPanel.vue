@@ -5,6 +5,7 @@
   import {
     getResourceMax,
     getResourceRecoveryBadges,
+    getVisibleClassResources,
     RESOURCES_TITLE,
     SHEET_CLASS_RESOURCES_PANEL_LABELS,
     SHEET_EMPTY_LABELS,
@@ -63,19 +64,24 @@
   }
 
   const displayRows = computed(() =>
-    props.resources.map((resource) => {
-      // Максимум ресурса с правилом считается от листа: записанное число —
-      // лишь снимок, и после повышения уровня оно уже не то.
-      const max = getResourceMax(character.value, resource);
+    // Со строками справочника, которых на листе быть не должно: убранными
+    // игроком и теми, что ещё не открылись (строка «0/0» появится сама, когда
+    // персонаж дорастёт), панель не работает
+    getVisibleClassResources(character.value, props.resources).map(
+      (resource) => {
+        // Максимум ресурса с правилом считается от листа: записанное число —
+        // лишь снимок, и после повышения уровня оно уже не то.
+        const max = getResourceMax(character.value, resource);
 
-      return {
-        ...resource,
-        max,
-        recoveryBadges: getResourceRecoveryBadges(resource),
-        isMinusDisabled: resource.current <= 0,
-        isPlusDisabled: resource.current >= max,
-      };
-    }),
+        return {
+          ...resource,
+          max,
+          recoveryBadges: getResourceRecoveryBadges(resource),
+          isMinusDisabled: resource.current <= 0,
+          isPlusDisabled: resource.current >= max,
+        };
+      },
+    ),
   );
 </script>
 
@@ -109,11 +115,16 @@
           :key="row.id"
           class="flex flex-wrap items-center gap-1.5 rounded bg-default/30 px-2 py-1.5"
         >
+          <!-- Название занимает всё свободное место строки: справа от счётчика
+            пусто, а сокращение из четырёх букв («ЯР») само по себе ничего не
+            говорит. Не влезло — обрезается многоточием, полное показывает
+            подсказка. Нижняя граница держит место под короткие названия, чтобы
+            счётчики строк не разъезжались -->
           <UTooltip :text="row.name">
             <span
-              class="w-9 shrink-0 cursor-help truncate text-sm font-bold text-highlighted uppercase"
+              class="min-w-9 flex-1 cursor-help truncate text-sm font-bold text-highlighted"
             >
-              {{ row.shortLabel }}
+              {{ row.name }}
             </span>
           </UTooltip>
 

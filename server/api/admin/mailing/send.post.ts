@@ -3,9 +3,9 @@ import type { MailingSendResponse, MailingSendResult } from '#shared/types';
 import { StatusCodes } from 'http-status-codes';
 import { z } from 'zod';
 
+import { assertAdminRole } from '#server/utils/getUser';
 import {
   assertMailerConfigured,
-  assertMailingAdmin,
   getMailErrorMessage,
   getMailingSiteUrl,
   sendCampaignMail,
@@ -110,7 +110,7 @@ async function issueCode(
  */
 export default defineEventHandler(
   async (event): Promise<MailingSendResponse> => {
-    await assertMailingAdmin(event);
+    await assertAdminRole(event);
 
     const parsedBody = sendMailingSchema.safeParse(await readBody(event));
 

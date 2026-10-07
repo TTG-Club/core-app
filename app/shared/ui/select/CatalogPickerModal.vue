@@ -76,6 +76,7 @@
    * успеет измениться снаружи.
    */
   const draft = ref<Array<CatalogPickerEntry>>(
+    // eslint-disable-next-line vue/no-ref-object-reactivity-loss -- намеренный снимок поля при открытии окна, см. комментарий выше
     toRaw(selected.value).map((entry) => ({ ...entry })),
   );
 

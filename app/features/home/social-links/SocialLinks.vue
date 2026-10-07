@@ -1,7 +1,9 @@
 <script setup lang="ts">
   import Color from 'colorjs.io';
 
-  import { SOCIAL_LINKS } from './model';
+  import { HomePanel } from '~home/ui-kit';
+
+  import { SOCIAL_LINKS, SOCIAL_LINKS_ICON, SOCIAL_LINKS_LABEL } from './model';
 
   const links = computed(() =>
     SOCIAL_LINKS.map((link) => {
@@ -20,17 +22,21 @@
 </script>
 
 <template>
-  <div class="grid w-full grid-cols-2 gap-3">
+  <HomePanel
+    :label="SOCIAL_LINKS_LABEL"
+    :icon="SOCIAL_LINKS_ICON"
+    body-class="grid grid-cols-2 gap-2 p-2"
+  >
     <NuxtLink
       v-for="(link, index) in links"
       :key="index"
       :to="link.url"
       :class="[
         'flex items-center justify-center gap-2',
-        'h-12 overflow-hidden no-underline shadow-lg',
-        `rounded-md border border-default`,
-        'bg-muted hover:bg-elevated',
-        'transition-colors duration-200',
+        'h-11 overflow-hidden no-underline',
+        'rounded-lg border border-default',
+        'bg-default/40 hover:bg-elevated',
+        'text-sm font-semibold transition-colors duration-200',
         { 'pointer-events-none opacity-50': link.disabled },
       ]"
       :style="{ borderColor: link.borderColor }"
@@ -39,10 +45,10 @@
       <UIcon
         :style="{ color: !link.disabled ? link.color : undefined }"
         :name="link.icon"
-        size="24"
+        class="size-5 shrink-0"
       />
 
-      <span class="font-semibold">{{ link.name }}</span>
+      {{ link.name }}
     </NuxtLink>
-  </div>
+  </HomePanel>
 </template>

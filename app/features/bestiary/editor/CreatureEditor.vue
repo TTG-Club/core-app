@@ -7,7 +7,7 @@
 
   import { DictionaryService } from '~/shared/api';
   import { ActiveEffects } from '~active-effects/editor';
-  import { EFFECT_ORIGIN, normalizeActiveEffects } from '~active-effects/model';
+  import { EFFECT_FORM_CONTEXT, EFFECT_ORIGIN } from '~active-effects/model';
   import { EditorBaseInfo } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectAlignment } from '~ui/select';
@@ -18,10 +18,9 @@
 
   import {
     getInitialState,
-    normalizeCreatureActions,
-    normalizeCreatureSpellcasting,
     normalizeLoadedCreatureActions,
     normalizeLoadedCreatureSpellcasting,
+    transformCreatureBeforeSubmit,
   } from '../model';
   import { CreaturePreview } from '../preview';
   import {
@@ -123,23 +122,7 @@
       getInitialState,
       normalizeLoaded,
       revisionEntityType: REVISION_ENTITY_TYPES.CREATURE,
-      transformBeforeSubmit: (formState) => ({
-        ...formState,
-        traits: normalizeCreatureActions(formState.traits),
-        actions: normalizeCreatureActions(formState.actions),
-        bonusActions: normalizeCreatureActions(formState.bonusActions),
-        reactions: normalizeCreatureActions(formState.reactions),
-        legendary: {
-          ...formState.legendary,
-          actions: normalizeCreatureActions(formState.legendary.actions),
-        },
-        lair: {
-          ...formState.lair,
-          effects: normalizeCreatureActions(formState.lair.effects),
-        },
-        spellcasting: normalizeCreatureSpellcasting(formState.spellcasting),
-        activeEffects: normalizeActiveEffects(formState.activeEffects),
-      }),
+      transformBeforeSubmit: transformCreatureBeforeSubmit,
     });
 
   /**
@@ -386,6 +369,7 @@
       <template #effects>
         <ActiveEffects
           v-model="state.activeEffects"
+          :context="EFFECT_FORM_CONTEXT.ownEffects"
           :origin="EFFECT_ORIGIN.feature"
         />
       </template>

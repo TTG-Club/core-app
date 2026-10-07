@@ -1,4 +1,3 @@
-import type { AbilityKey } from '~/shared/types';
 import type { ActiveEffect } from '~active-effects/model';
 import type {
   DamageFormulaPart,
@@ -6,15 +5,26 @@ import type {
 } from '~ui/damage-formula';
 import type { EditorBaseInfoState } from '~ui/editor';
 
+import { z } from 'zod';
+
+import { AbilityKey } from '~/shared/types';
 import { normalizeLoadedActiveEffects } from '~active-effects/model';
 import {
   createEmptyDamageFormulaPart,
   DAMAGE_TYPE_TAGS,
   DEFAULT_DAMAGE_FORMULA_TARGET,
+  getDamageFormulaTypes,
   isDamageFormulaTarget,
+  parseLoadedDamageFormulaParts,
 } from '~ui/damage-formula';
 
-import { SPELL_HEALING_TYPE_TAGS } from './constants';
+import {
+  SPELL_DELIVERY_TYPE_OPTIONS,
+  SPELL_HEALING_TYPE_TAGS,
+  SPELL_SAVE_EFFECT_OPTIONS,
+  SPELL_TARGET_TYPE_OPTIONS,
+  SPELL_USES_RECOVERY_OPTIONS,
+} from './constants';
 
 /**
  * Тип цели заклинания.
@@ -83,6 +93,7 @@ export interface SpellUses {
 export interface SpellScaling {
   additionalDice: string | undefined; // доп. урон за круг (напр. 1к6)
   additionalTargets: number | undefined; // доп. целей или снарядов за круг
+  additionalAreaSize: number | undefined; // рост размера области за круг
   description: string | undefined; // текстовое описание усиления
 }
 
@@ -137,6 +148,12 @@ export interface SpellEffect {
   damageFormulaTargets?: DamageFormulaTarget[]; // цели частей урона, по индексам damageFormulas
   damageFormulaRequiresDamage?: boolean[]; // «только если нанесён урон», по индексам damageFormulas
   damageFormula?: string;
+
+  /**
+   * Типы урона только для фильтра каталога — фильтр смотрит лишь сюда. В расчёте
+   * не участвуют: урон считают формулы, но по ним не видно урона на выбор или
+   * частей, идущих поочерёдно. Типы из формул дописываются при сохранении.
+   */
   damageTypes?: string[];
   healingTypes?: string[];
   savingThrows?: AbilityKey[];
@@ -272,6 +289,7 @@ export function createEmptySpellScaling(): SpellScaling {
   return {
     additionalDice: undefined,
     additionalTargets: undefined,
+    additionalAreaSize: undefined,
     description: undefined,
   };
 }
@@ -435,6 +453,61 @@ export function getSpellDamageFormulaParts(
 }
 
 /**
+ * Типы урона из тегов `@dmg.*` формул заклинания: базовых частей и тиров
+ * масштабирования заговора. Та же выборка у сохранения на бэке и у миграции,
+ * заполнившей поле у старых записей.
+ *
+ * @param effect воздействие заклинания.
+ * @returns ключи типов урона без повторов, в порядке появления.
+ */
+export function getSpellFormulaDamageTypes(effect: SpellEffect): Array<string> {
+  const tierFormulas = (effect.cantripScalingTiers ?? []).flatMap((tier) =>
+    tier.parts.map((part) => part.formula),
+  );
+
+  const formulaTypes = [
+    ...(effect.damageFormulas ?? []),
+    ...tierFormulas,
+  ].flatMap(getDamageFormulaTypes);
+
+  return [...new Set(formulaTypes)];
+}
+
+/**
+ * Типы урона для фильтра каталога: отмеченные автором и следом — типы из формул.
+ * Ровно этот список уходит в `effect.damageTypes` при сохранении.
+ *
+ * @param effect воздействие заклинания.
+ * @returns ключи типов урона без повторов.
+ */
+export function getSpellFilterDamageTypes(effect: SpellEffect): Array<string> {
+  return [
+    ...new Set([
+      ...(effect.damageTypes ?? []),
+      ...getSpellFormulaDamageTypes(effect),
+    ]),
+  ];
+}
+
+/**
+ * Выбор автора в поле типов урона без типов из формул. Формульные типы поле
+ * показывает всегда, и хранить их отдельно незачем: смени формулу — и тип,
+ * который она больше не наносит, уйдёт из поля сам.
+ *
+ * @param effect воздействие заклинания.
+ * @param selectedTypes типы, отмеченные в поле.
+ * @returns типы, которые автор добавил сверх формул.
+ */
+export function getSpellManualDamageTypes(
+  effect: SpellEffect,
+  selectedTypes: Array<string>,
+): Array<string> {
+  const formulaTypes = new Set(getSpellFormulaDamageTypes(effect));
+
+  return selectedTypes.filter((damageType) => !formulaTypes.has(damageType));
+}
+
+/**
  * Раскладывает части урона редактора обратно в параллельные массивы
  * SpellEffect одним обновлением — иначе формулы и цели разъезжаются по индексам.
  *
@@ -452,46 +525,6 @@ export function applySpellDamageFormulaParts(
     damageFormulaTargets: parts.map((part) => part.target),
     damageFormulaRequiresDamage: parts.map((part) => part.requiresDamage),
   };
-}
-
-/**
- * Восстанавливает цели частей урона из загруженного с сервера raw-значения.
- * Незнакомое значение заменяется дефолтом, чтобы не сбить выравнивание по
- * индексам формул.
- */
-function normalizeLoadedSpellDamageFormulaTargets(
-  raw: unknown,
-): DamageFormulaTarget[] {
-  if (!Array.isArray(raw)) {
-    return [];
-  }
-
-  // Array.isArray сужает unknown до any[], поэтому элементы читаются через
-  // явно типизированный unknown-массив.
-  const rawTargets: Array<unknown> = raw;
-
-  return rawTargets.map((target) =>
-    isDamageFormulaTarget(target) ? target : DEFAULT_DAMAGE_FORMULA_TARGET,
-  );
-}
-
-/**
- * Восстанавливает признаки «только если нанесён урон» из загруженного с сервера
- * raw-значения. Всё, кроме `true`, считается выключенным — чужое значение не
- * должно сбить выравнивание по индексам формул.
- */
-function normalizeLoadedSpellDamageFormulaRequiresDamage(
-  raw: unknown,
-): boolean[] {
-  if (!Array.isArray(raw)) {
-    return [];
-  }
-
-  // Array.isArray сужает unknown до any[], поэтому элементы читаются через
-  // явно типизированный unknown-массив.
-  const rawFlags: Array<unknown> = raw;
-
-  return rawFlags.map((flag) => flag === true);
 }
 
 /**
@@ -534,13 +567,14 @@ function migrateSpellEffectDamageTargets(effect: SpellEffect): SpellEffect {
 
 /**
  * Мигрирует старые формулы урона SpellEffect к новому формату массивов формул.
+ * Типы урона остаются на месте: теперь это поле фильтра каталога, и типы
+ * legacy-записи ему как раз и соответствуют.
  */
 function migrateSpellEffectDamageFormulas(effect: SpellEffect): SpellEffect {
   if (effect.damageFormulas && effect.damageFormulas.length > 0) {
     return {
       ...effect,
       damageFormula: undefined,
-      damageTypes: [],
     };
   }
 
@@ -554,7 +588,6 @@ function migrateSpellEffectDamageFormulas(effect: SpellEffect): SpellEffect {
       createSpellDamageFormula(effect.damageFormula ?? '', damageType),
     ),
     damageFormula: undefined,
-    damageTypes: [],
   };
 }
 
@@ -585,13 +618,16 @@ function normalizeSpellUses(
 /**
  * Нормализует усиление на высших кругах: пустые поля не пишутся, а усиление
  * без единого заполненного поля не пишется вовсе — иначе запись обещала бы
- * масштабирование, которого нет.
+ * масштабирование, которого нет. Рост области пишется только у заклинания с
+ * областью — как и сама область.
  *
  * @param scaling усиление из формы.
+ * @param hasArea есть ли у заклинания область.
  * @returns усиление для сервера либо `undefined`.
  */
 function normalizeSpellScaling(
   scaling: SpellScaling | undefined,
+  hasArea: boolean,
 ): SpellScaling | undefined {
   if (!scaling) {
     return undefined;
@@ -605,11 +641,21 @@ function normalizeSpellScaling(
       ? scaling.additionalTargets
       : undefined;
 
-  if (!additionalDice && !description && additionalTargets === undefined) {
+  const additionalAreaSize =
+    hasArea && scaling.additionalAreaSize && scaling.additionalAreaSize > 0
+      ? Math.trunc(scaling.additionalAreaSize)
+      : undefined;
+
+  if (
+    !additionalDice
+    && !description
+    && additionalTargets === undefined
+    && additionalAreaSize === undefined
+  ) {
     return undefined;
   }
 
-  return { additionalDice, additionalTargets, description };
+  return { additionalDice, additionalTargets, additionalAreaSize, description };
 }
 
 /**
@@ -641,6 +687,24 @@ function normalizeSpellCantripScalingTiers(
     .sort((tierA, tierB) => (tierA.level ?? 0) - (tierB.level ?? 0));
 
   return normalized.length > 0 ? normalized : undefined;
+}
+
+/** Воздействие заклинания, у которого цель — область с выбранной формой. */
+type SpellEffectWithArea = SpellEffect & {
+  areaOfEffect: SpellAreaOfEffect & { type: string };
+};
+
+/**
+ * Есть ли у заклинания область: на её месте VTTG оставляет зону, в которую
+ * уходят эффекты с доставкой «зоной на месте области».
+ *
+ * @param effect воздействие заклинания.
+ * @returns `true`, если цель — область и её форма выбрана.
+ */
+export function hasSpellArea(
+  effect: SpellEffect,
+): effect is SpellEffectWithArea {
+  return effect.targetType === 'AREA' && Boolean(effect.areaOfEffect?.type);
 }
 
 /**
@@ -675,10 +739,7 @@ export function normalizeSpellEffect(
     normalized.targetCount = migratedEffect.targetCount;
   }
 
-  if (
-    migratedEffect.targetType === 'AREA'
-    && migratedEffect.areaOfEffect?.type
-  ) {
+  if (hasSpellArea(migratedEffect)) {
     const showValue2 =
       migratedEffect.areaOfEffect.type === 'LINE'
       || migratedEffect.areaOfEffect.type === 'CYLINDER';
@@ -732,6 +793,12 @@ export function normalizeSpellEffect(
     }
   }
 
+  const damageTypes = getSpellFilterDamageTypes(migratedEffect);
+
+  if (damageTypes.length > 0) {
+    normalized.damageTypes = damageTypes;
+  }
+
   if (migratedEffect.deliveryType) {
     normalized.deliveryType = migratedEffect.deliveryType;
   }
@@ -747,7 +814,10 @@ export function normalizeSpellEffect(
     normalized.uses = uses;
   }
 
-  const scaling = normalizeSpellScaling(migratedEffect.scaling);
+  const scaling = normalizeSpellScaling(
+    migratedEffect.scaling,
+    hasSpellArea(migratedEffect),
+  );
 
   if (scaling) {
     normalized.scaling = scaling;
@@ -785,311 +855,395 @@ export function normalizeSpellEffect(
 }
 
 /**
- * Проверяет, является ли значение объектом (Record<string, unknown>).
+ * Разбор заклинания, пришедшего с сервера.
+ *
+ * Данные приходят из `GET /api/v2/spells/{url}/raw`: воздействие лежит в JSONB,
+ * и у записей разных лет набор его полей разный. Каждое поле разбирается
+ * отдельно — битое значение становится пустым и не роняет соседние.
  */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
 
 /**
- * Проверяет, является ли значение массивом строк.
+ * Схема значения из списка вариантов формы: чужое значение не поднимается.
+ *
+ * @param options варианты селекта с допустимыми значениями.
+ * @returns схема, пропускающая только значения из списка.
  */
-function isStringArray(value: unknown): value is string[] {
-  return (
-    Array.isArray(value) && value.every((item) => typeof item === 'string')
+function createOptionValueSchema<Value extends string>(
+  options: ReadonlyArray<{ value: Value }>,
+): z.ZodCustom<Value, Value> {
+  return z.custom<Value>((candidate) =>
+    options.some((option) => option.value === candidate),
   );
 }
 
+/** Ключ характеристики: спасброски и заклинательная характеристика. */
+const loadedAbilityKeySchema = z.enum(AbilityKey);
+
+/** Область воздействия: у `effect` и у старого поля записи форма одна. */
+const loadedSpellAreaOfEffectSchema = z
+  .object({
+    type: z.string().nullish().catch(null),
+    value1: z.number().nullish().catch(null),
+    value2: z.number().nullish().catch(null),
+  })
+  .nullish()
+  .catch(null);
+
+const loadedSpellProjectilesSchema = z
+  .object({
+    count: z.number().nullish().catch(null),
+    perSlotLevel: z.number().nullish().catch(null),
+    countByCharacterLevel: z
+      .array(
+        z
+          .object({
+            level: z.number().nullish().catch(null),
+            count: z.number().nullish().catch(null),
+          })
+          .nullable()
+          .catch(null),
+      )
+      .nullish()
+      .catch(null),
+    targetDistribution: z.enum(['single', 'distinct']).nullish().catch(null),
+  })
+  .nullish()
+  .catch(null);
+
+const loadedSpellUsesSchema = z
+  .object({
+    max: z.number().nullish().catch(null),
+    recovery: createOptionValueSchema(SPELL_USES_RECOVERY_OPTIONS)
+      .nullish()
+      .catch(null),
+  })
+  .nullish()
+  .catch(null);
+
+const loadedSpellScalingSchema = z
+  .object({
+    additionalDice: z.string().nullish().catch(null),
+    additionalTargets: z.number().nullish().catch(null),
+    additionalAreaSize: z.number().nullish().catch(null),
+    description: z.string().nullish().catch(null),
+  })
+  .nullish()
+  .catch(null);
+
+/** Тиры заговора; части урона внутри разбирает общая схема частей. */
+const loadedSpellCantripScalingTiersSchema = z
+  .array(
+    z
+      .object({
+        level: z.number().nullish().catch(null),
+        // Без optional ключ обязателен: тир без частей выпал бы целиком
+        parts: z.unknown().optional(),
+      })
+      .nullable()
+      .catch(null),
+  )
+  .nullish()
+  .catch(null);
+
 /**
- * Проверяет, является ли значение корректным ключом характеристики (AbilityKey).
+ * Воздействие заклинания. Цели и признаки частей урона разбираются
+ * поэлементно: чужое значение заменяется дефолтом, а не выбрасывается — иначе
+ * они разъехались бы с формулами по индексам.
  */
-function isAbilityKey(value: unknown): value is AbilityKey {
-  return (
-    typeof value === 'string'
-    && ['str', 'dex', 'con', 'int', 'wis', 'cha'].includes(value)
-  );
+const loadedSpellEffectSchema = z
+  .object({
+    targetType: createOptionValueSchema(SPELL_TARGET_TYPE_OPTIONS)
+      .nullish()
+      .catch(null),
+    targetCount: z.number().nullish().catch(null),
+    areaOfEffect: loadedSpellAreaOfEffectSchema,
+    attackType: z.string().nullish().catch(null),
+    deliveryType: createOptionValueSchema(SPELL_DELIVERY_TYPE_OPTIONS)
+      .nullish()
+      .catch(null),
+    attackBonus: z.number().nullish().catch(null),
+    autoHit: z.boolean().nullish().catch(null),
+    projectiles: loadedSpellProjectilesSchema,
+    uses: loadedSpellUsesSchema,
+    scaling: loadedSpellScalingSchema,
+    cantripScalingTiers: loadedSpellCantripScalingTiersSchema,
+    damageFormulas: z.array(z.string()).nullish().catch(null),
+    damageFormulaTargets: z
+      .array(
+        z
+          .custom<DamageFormulaTarget>(isDamageFormulaTarget)
+          .catch(DEFAULT_DAMAGE_FORMULA_TARGET),
+      )
+      .nullish()
+      .catch(null),
+    damageFormulaRequiresDamage: z
+      .array(z.boolean().catch(false))
+      .nullish()
+      .catch(null),
+    damageFormula: z.string().nullish().catch(null),
+    damageTypes: z.array(z.string()).nullish().catch(null),
+    healingTypes: z.array(z.string()).nullish().catch(null),
+    savingThrows: z.array(loadedAbilityKeySchema).nullish().catch(null),
+    saveEffect: createOptionValueSchema(SPELL_SAVE_EFFECT_OPTIONS)
+      .nullish()
+      .catch(null),
+    conditions: z.array(z.string()).nullish().catch(null),
+    spellcastingAbility: loadedAbilityKeySchema.nullish().catch(null),
+  })
+  .nullish()
+  .catch(null);
+
+type LoadedSpellEffect = NonNullable<z.infer<typeof loadedSpellEffectSchema>>;
+
+/** Старые поля воздействия, лежавшие на самой записи до появления `effect`. */
+const legacySpellFieldsSchema = z.object({
+  savingThrow: z.array(loadedAbilityKeySchema).nullish().catch(null),
+  healingType: z.array(z.string()).nullish().catch(null),
+  damageType: z.array(z.string()).nullish().catch(null),
+  damageFormula: z.string().nullish().catch(null),
+  condition: z.array(z.string()).nullish().catch(null),
+  attackType: z.string().nullish().catch(null),
+  areaOfEffect: loadedSpellAreaOfEffectSchema,
+});
+
+/** Старые поля записи: после переноса в `effect` с записи снимаются. */
+const LEGACY_SPELL_FIELD_KEYS: ReadonlySet<string> = new Set([
+  'savingThrow',
+  'healingType',
+  'damageType',
+  'damageFormula',
+  'damageTypes',
+  'condition',
+  'attackType',
+  'areaOfEffect',
+]);
+
+/**
+ * Область воздействия для формы: ключи есть всегда — редактор пишет в них
+ * через v-model.
+ *
+ * @param area разобранная область либо пустое значение.
+ * @returns область с незаполненными полями вместо отсутствующих.
+ */
+function toSpellAreaOfEffect(
+  area: LoadedSpellEffect['areaOfEffect'],
+): SpellAreaOfEffect {
+  return {
+    type: area?.type ?? undefined,
+    value1: area?.value1 ?? undefined,
+    value2: area?.value2 ?? undefined,
+  };
 }
 
 /**
- * Проверяет, является ли значение массивом ключей характеристик (AbilityKey[]).
+ * Снарядный режим для формы. Гарантирует наличие массива порогов уровня для
+ * v-model редактора.
+ *
+ * @param projectiles разобранный снарядный режим либо пустое значение.
+ * @returns снарядный режим либо `undefined`, если его нет.
  */
-function isAbilityKeyArray(value: unknown): value is AbilityKey[] {
-  return Array.isArray(value) && value.every(isAbilityKey);
-}
-
-/**
- * Восстанавливает снарядный режим из загруженного с сервера raw-значения.
- * Гарантирует наличие массива порогов уровня для v-model редактора.
- */
-function normalizeLoadedSpellProjectiles(
-  raw: unknown,
+function toSpellProjectiles(
+  projectiles: LoadedSpellEffect['projectiles'],
 ): SpellProjectiles | undefined {
-  if (!isRecord(raw)) {
-    return undefined;
-  }
-
-  const tiers = Array.isArray(raw.countByCharacterLevel)
-    ? raw.countByCharacterLevel.filter(isRecord).map((tier) => ({
-        level: typeof tier.level === 'number' ? tier.level : undefined,
-        count: typeof tier.count === 'number' ? tier.count : undefined,
-      }))
-    : [];
-
-  return {
-    count: typeof raw.count === 'number' ? raw.count : 1,
-    perSlotLevel:
-      typeof raw.perSlotLevel === 'number' ? raw.perSlotLevel : undefined,
-    countByCharacterLevel: tiers,
-    targetDistribution:
-      raw.targetDistribution === 'single'
-      || raw.targetDistribution === 'distinct'
-        ? raw.targetDistribution
-        : undefined,
-  };
-}
-
-/** Способы применения, известные потребителю: чужое значение не поднимается. */
-const SPELL_DELIVERY_TYPE_SET: ReadonlySet<string> = new Set<SpellDeliveryType>(
-  ['ranged', 'melee', 'self', 'touch', 'sight', 'none'],
-);
-
-/**
- * Проверяет, что значение — способ применения из словаря VTTG.
- *
- * @param value произвольное значение.
- * @returns `true`, если это известный способ применения.
- */
-export function isSpellDeliveryType(
-  value: unknown,
-): value is SpellDeliveryType {
-  return typeof value === 'string' && SPELL_DELIVERY_TYPE_SET.has(value);
-}
-
-/** Способы восстановления зарядов, известные потребителю. */
-const SPELL_USES_RECOVERY_SET: ReadonlySet<string> = new Set<SpellUsesRecovery>(
-  ['atWill', 'shortRest', 'longRest'],
-);
-
-/**
- * Проверяет, что значение — способ восстановления зарядов из словаря VTTG.
- *
- * @param value произвольное значение.
- * @returns `true`, если это известный способ восстановления.
- */
-export function isSpellUsesRecovery(
-  value: unknown,
-): value is SpellUsesRecovery {
-  return typeof value === 'string' && SPELL_USES_RECOVERY_SET.has(value);
-}
-
-/**
- * Восстанавливает заряды из загруженного с сервера raw-значения.
- *
- * @param raw значение с сервера.
- * @returns заряды для формы либо `undefined`.
- */
-function normalizeLoadedSpellUses(raw: unknown): SpellUses | undefined {
-  if (!isRecord(raw)) {
+  if (!projectiles) {
     return undefined;
   }
 
   return {
-    max: typeof raw.max === 'number' ? raw.max : undefined,
-    recovery: isSpellUsesRecovery(raw.recovery)
-      ? raw.recovery
-      : DEFAULT_SPELL_USES_RECOVERY,
+    count: projectiles.count ?? 1,
+    perSlotLevel: projectiles.perSlotLevel ?? undefined,
+    countByCharacterLevel: (projectiles.countByCharacterLevel ?? [])
+      .filter((tier) => tier !== null)
+      .map((tier) => ({
+        level: tier.level ?? undefined,
+        count: tier.count ?? undefined,
+      })),
+    targetDistribution: projectiles.targetDistribution ?? undefined,
   };
 }
 
 /**
- * Восстанавливает усиление на высших кругах из загруженного raw-значения.
+ * Заряды для формы: без способа восстановления — самый частый.
  *
- * @param raw значение с сервера.
- * @returns усиление для формы либо `undefined`.
+ * @param uses разобранные заряды либо пустое значение.
+ * @returns заряды либо `undefined`, если их нет.
  */
-function normalizeLoadedSpellScaling(raw: unknown): SpellScaling | undefined {
-  if (!isRecord(raw)) {
+function toSpellUses(uses: LoadedSpellEffect['uses']): SpellUses | undefined {
+  if (!uses) {
     return undefined;
   }
 
   return {
-    additionalDice:
-      typeof raw.additionalDice === 'string' ? raw.additionalDice : undefined,
-    additionalTargets:
-      typeof raw.additionalTargets === 'number'
-        ? raw.additionalTargets
-        : undefined,
-    description:
-      typeof raw.description === 'string' ? raw.description : undefined,
+    max: uses.max ?? undefined,
+    recovery: uses.recovery ?? DEFAULT_SPELL_USES_RECOVERY,
   };
 }
 
 /**
- * Восстанавливает часть урона тира из загруженного raw-значения.
+ * Усиление на высших кругах для формы.
  *
- * @param raw значение с сервера.
- * @returns часть урона для формы.
+ * @param scaling разобранное усиление либо пустое значение.
+ * @returns усиление либо `undefined`, если его нет.
  */
-function normalizeLoadedSpellDamagePart(raw: unknown): DamageFormulaPart {
-  if (!isRecord(raw)) {
-    return createEmptyDamageFormulaPart();
+function toSpellScaling(
+  scaling: LoadedSpellEffect['scaling'],
+): SpellScaling | undefined {
+  if (!scaling) {
+    return undefined;
   }
 
   return {
-    formula: typeof raw.formula === 'string' ? raw.formula : '',
-    target: isDamageFormulaTarget(raw.target)
-      ? raw.target
-      : DEFAULT_DAMAGE_FORMULA_TARGET,
-    requiresDamage: raw.requiresDamage === true,
+    additionalDice: scaling.additionalDice ?? undefined,
+    additionalTargets: scaling.additionalTargets ?? undefined,
+    additionalAreaSize: scaling.additionalAreaSize ?? undefined,
+    description: scaling.description ?? undefined,
   };
 }
 
 /**
- * Восстанавливает тиры масштабирования заговора из загруженного raw-значения.
- * У тира всегда есть хотя бы одна часть — иначе форме нечего показать.
+ * Тиры масштабирования заговора для формы. У тира всегда есть хотя бы одна
+ * часть — иначе форме нечего показать.
  *
- * @param raw значение с сервера.
+ * @param tiers разобранные тиры либо пустое значение.
  * @returns тиры для формы.
  */
-function normalizeLoadedSpellCantripScalingTiers(
-  raw: unknown,
+function toSpellCantripScalingTiers(
+  tiers: LoadedSpellEffect['cantripScalingTiers'],
 ): SpellCantripScalingTier[] {
-  if (!Array.isArray(raw)) {
+  return (tiers ?? [])
+    .filter((tier) => tier !== null)
+    .map((tier) => {
+      const parts = parseLoadedDamageFormulaParts(tier.parts);
+
+      return {
+        level: tier.level ?? undefined,
+        parts: parts.length > 0 ? parts : [createEmptyDamageFormulaPart()],
+      };
+    });
+}
+
+/**
+ * Воздействие для формы: все поля на месте, списки — пустые вместо
+ * отсутствующих, чтобы v-model не обращался к undefined.
+ *
+ * @param effect разобранное воздействие.
+ * @returns воздействие для формы до миграций старых форматов.
+ */
+function toSpellEffect(effect: LoadedSpellEffect): SpellEffect {
+  return {
+    targetType: effect.targetType ?? undefined,
+    targetCount: effect.targetCount ?? undefined,
+    areaOfEffect: toSpellAreaOfEffect(effect.areaOfEffect),
+    attackType: effect.attackType ?? undefined,
+    deliveryType: effect.deliveryType ?? undefined,
+    attackBonus: effect.attackBonus ?? undefined,
+    autoHit: effect.autoHit ?? false,
+    projectiles: toSpellProjectiles(effect.projectiles),
+    uses: toSpellUses(effect.uses),
+    scaling: toSpellScaling(effect.scaling),
+    cantripScalingTiers: toSpellCantripScalingTiers(effect.cantripScalingTiers),
+    damageFormulas: effect.damageFormulas ?? [],
+    damageFormulaTargets: effect.damageFormulaTargets ?? [],
+    damageFormulaRequiresDamage: effect.damageFormulaRequiresDamage ?? [],
+    damageFormula: effect.damageFormula ?? undefined,
+    damageTypes: effect.damageTypes ?? [],
+    healingTypes: effect.healingTypes ?? [],
+    savingThrows: effect.savingThrows ?? [],
+    saveEffect: effect.saveEffect ?? undefined,
+    conditions: effect.conditions ?? [],
+    spellcastingAbility: effect.spellcastingAbility ?? undefined,
+  };
+}
+
+/**
+ * Формулы урона старой записи: одна формула размножалась по типам урона, а
+ * у лечения стояла как есть.
+ *
+ * @param damageFormula старая единая формула.
+ * @param damageTypes старые типы урона.
+ * @param healingTypes старые типы лечения.
+ * @returns формулы в нынешнем формате.
+ */
+function getLegacySpellDamageFormulas(
+  damageFormula: string | undefined,
+  damageTypes: string[],
+  healingTypes: string[],
+): string[] {
+  if (damageFormula === undefined) {
     return [];
   }
 
-  return raw.filter(isRecord).map((tier) => {
-    const parts = Array.isArray(tier.parts)
-      ? tier.parts.map(normalizeLoadedSpellDamagePart)
-      : [];
+  if (damageTypes.length > 0) {
+    return damageTypes.map((damageType) =>
+      createSpellDamageFormula(damageFormula, damageType),
+    );
+  }
 
-    return {
-      level: typeof tier.level === 'number' ? tier.level : undefined,
-      parts: parts.length > 0 ? parts : [createEmptyDamageFormulaPart()],
-    };
+  return healingTypes.length > 0 ? [damageFormula] : [];
+}
+
+/**
+ * Собирает воздействие старой записи без `effect` из полей верхнего уровня.
+ *
+ * @param loadedSpell запись с сервера.
+ * @returns воздействие для формы.
+ */
+function migrateLegacySpellFields(
+  loadedSpell: Record<string, unknown>,
+): SpellEffect {
+  const legacyFields = legacySpellFieldsSchema.parse(loadedSpell);
+  const damageTypes = legacyFields.damageType ?? [];
+  const healingTypes = legacyFields.healingType ?? [];
+
+  return migrateSpellEffectHealingFormulas({
+    ...createEmptySpellEffect(),
+    savingThrows: legacyFields.savingThrow ?? [],
+    healingTypes,
+    damageTypes,
+    damageFormulas: getLegacySpellDamageFormulas(
+      legacyFields.damageFormula ?? undefined,
+      damageTypes,
+      healingTypes,
+    ),
+    conditions: legacyFields.condition ?? [],
+    attackType: legacyFields.attackType ?? undefined,
+    areaOfEffect: toSpellAreaOfEffect(legacyFields.areaOfEffect),
   });
 }
 
 /**
- * Нормализует загруженный с сервера raw-объект заклинания:
+ * Нормализует загруженное с сервера заклинание:
  * - Поддерживает старые записи без effect (мигрирует отдельные поля).
  * - Обеспечивает наличие всех вложенных массивов и areaOfEffect.
+ *
+ * @param loadedSpell запись из ответа `/raw`.
+ * @returns запись для формы.
  */
 export function normalizeLoadedSpell(
-  raw: Record<string, unknown>,
+  loadedSpell: Record<string, unknown>,
 ): Record<string, unknown> {
-  const result = { ...raw };
+  const loadedEffect = loadedSpellEffectSchema.parse(loadedSpell.effect);
+  const activeEffects = normalizeLoadedActiveEffects(loadedSpell.activeEffects);
 
-  if (result.effect && isRecord(result.effect)) {
-    const rawEffect = result.effect;
-
-    result.effect = migrateSpellEffectDamageTargets(
-      migrateSpellEffectHealingFormulas(
-        migrateSpellEffectDamageFormulas({
-          ...createEmptySpellEffect(),
-          ...rawEffect,
-          damageFormulaTargets: normalizeLoadedSpellDamageFormulaTargets(
-            rawEffect.damageFormulaTargets,
-          ),
-          damageFormulaRequiresDamage:
-            normalizeLoadedSpellDamageFormulaRequiresDamage(
-              rawEffect.damageFormulaRequiresDamage,
-            ),
-          areaOfEffect:
-            rawEffect.areaOfEffect && isRecord(rawEffect.areaOfEffect)
-              ? {
-                  type: undefined,
-                  value1: undefined,
-                  value2: undefined,
-                  ...rawEffect.areaOfEffect,
-                }
-              : createEmptySpellEffect().areaOfEffect,
-          projectiles: normalizeLoadedSpellProjectiles(rawEffect.projectiles),
-          deliveryType: isSpellDeliveryType(rawEffect.deliveryType)
-            ? rawEffect.deliveryType
-            : undefined,
-          attackBonus:
-            typeof rawEffect.attackBonus === 'number'
-              ? rawEffect.attackBonus
-              : undefined,
-          uses: normalizeLoadedSpellUses(rawEffect.uses),
-          scaling: normalizeLoadedSpellScaling(rawEffect.scaling),
-          cantripScalingTiers: normalizeLoadedSpellCantripScalingTiers(
-            rawEffect.cantripScalingTiers,
-          ),
-        }),
+  if (loadedEffect) {
+    return {
+      ...loadedSpell,
+      effect: migrateSpellEffectDamageTargets(
+        migrateSpellEffectHealingFormulas(
+          migrateSpellEffectDamageFormulas(toSpellEffect(loadedEffect)),
+        ),
       ),
-    );
-  } else {
-    // Миграция старых записей без effect
-    const migratedEffect = createEmptySpellEffect();
-
-    if (isAbilityKeyArray(result.savingThrow)) {
-      migratedEffect.savingThrows = result.savingThrow;
-    }
-
-    if (isStringArray(result.healingType)) {
-      migratedEffect.healingTypes = result.healingType;
-    }
-
-    if (isStringArray(result.damageType)) {
-      migratedEffect.damageTypes = result.damageType;
-    }
-
-    if (
-      typeof result.damageFormula === 'string'
-      && migratedEffect.damageTypes
-      && migratedEffect.damageTypes.length > 0
-    ) {
-      const damageFormula = result.damageFormula;
-
-      migratedEffect.damageFormulas = migratedEffect.damageTypes.map(
-        (damageType) => createSpellDamageFormula(damageFormula, damageType),
-      );
-
-      migratedEffect.damageFormula = undefined;
-      migratedEffect.damageTypes = [];
-    } else if (
-      typeof result.damageFormula === 'string'
-      && migratedEffect.healingTypes
-      && migratedEffect.healingTypes.length > 0
-    ) {
-      migratedEffect.damageFormulas = [result.damageFormula];
-      migratedEffect.damageFormula = undefined;
-    }
-
-    if (isStringArray(result.condition)) {
-      migratedEffect.conditions = result.condition;
-    }
-
-    if (typeof result.attackType === 'string') {
-      migratedEffect.attackType = result.attackType;
-    }
-
-    if (result.areaOfEffect && isRecord(result.areaOfEffect)) {
-      const oldArea = result.areaOfEffect;
-
-      migratedEffect.areaOfEffect = {
-        type: typeof oldArea.type === 'string' ? oldArea.type : undefined,
-        value1: typeof oldArea.value1 === 'number' ? oldArea.value1 : undefined,
-        value2: typeof oldArea.value2 === 'number' ? oldArea.value2 : undefined,
-      };
-    }
-
-    result.effect = migrateSpellEffectHealingFormulas(migratedEffect);
-
-    // Удаляем старые поля
-    delete result.savingThrow;
-    delete result.healingType;
-    delete result.damageType;
-    delete result.damageFormula;
-    delete result.damageTypes;
-    delete result.condition;
-    delete result.attackType;
-    delete result.areaOfEffect;
+      activeEffects,
+    };
   }
 
-  result.activeEffects = normalizeLoadedActiveEffects(result.activeEffects);
+  const currentFields = Object.entries(loadedSpell).filter(
+    ([fieldName]) => !LEGACY_SPELL_FIELD_KEYS.has(fieldName),
+  );
 
-  return result;
+  return {
+    ...Object.fromEntries(currentFields),
+    effect: migrateLegacySpellFields(loadedSpell),
+    activeEffects,
+  };
 }

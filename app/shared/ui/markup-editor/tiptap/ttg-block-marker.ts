@@ -1,8 +1,21 @@
 import { Node } from '@tiptap/core';
 import { VueNodeViewRenderer } from '@tiptap/vue-3';
 
+import {
+  BLOCK_MARKER_ATTR,
+  BLOCK_MARKER_NODE,
+  HORIZONTAL_RULE_TAG,
+  SEPARATOR_MARKER,
+} from './constants';
 import MarkerChip from './MarkerChip.vue';
 import { blockMarkerMarkdownTokenizer } from './marks';
+
+/**
+ * Приоритет правила разбора `<hr>`: больше дефолтных 50 ProseMirror, поэтому
+ * тег достаётся нам, а не штатному `HorizontalRule`, узел которого разметка
+ * выразить не может.
+ */
+const HORIZONTAL_RULE_PARSE_PRIORITY = 100;
 
 /**
  * Атомарный БЛОЧНЫЙ узел для блочных маркеров {@...} (заголовок, список, цитата,
@@ -14,15 +27,15 @@ import { blockMarkerMarkdownTokenizer } from './marks';
  * В Markdown сериализуется дословно из атрибута `raw` — round-trip без потерь.
  */
 export const TtgBlockMarker = Node.create({
-  name: 'ttgBlockMarker',
+  name: BLOCK_MARKER_NODE,
   group: 'block',
   atom: true,
   selectable: true,
 
-  markdownTokenName: 'ttgBlockMarker',
+  markdownTokenName: BLOCK_MARKER_NODE,
   markdownTokenizer: blockMarkerMarkdownTokenizer,
   parseMarkdown: (token) => ({
-    type: 'ttgBlockMarker',
+    type: BLOCK_MARKER_NODE,
     attrs: { raw: String(token.raw ?? '').trim() },
   }),
   renderMarkdown: (node) => String(node.attrs?.raw ?? ''),
@@ -31,22 +44,29 @@ export const TtgBlockMarker = Node.create({
     return {
       raw: {
         default: '',
-        parseHTML: (element) => element.textContent ?? '',
+        // У `<hr>` своего текста нет — он и ЕСТЬ наш разделитель (см. правило
+        // разбора ниже). Прочие элементы несут разметку маркера текстом.
+        parseHTML: (element) =>
+          element.tagName.toLowerCase() === HORIZONTAL_RULE_TAG
+            ? SEPARATOR_MARKER
+            : (element.textContent ?? ''),
         renderHTML: () => ({}),
       },
     };
   },
 
   parseHTML() {
-    return [{ tag: 'div[data-ttg-block-marker]' }];
+    return [
+      { tag: `div[${BLOCK_MARKER_ATTR}]` },
+      // Линия из чужого HTML (вставка, перетаскивание) — это `{@separator}`.
+      // Приоритет выше дефолтных 50, иначе тег забрал бы себе штатный
+      // `HorizontalRule`, узел которого наша разметка выразить не может.
+      { tag: HORIZONTAL_RULE_TAG, priority: HORIZONTAL_RULE_PARSE_PRIORITY },
+    ];
   },
 
   renderHTML({ node }) {
-    return [
-      'div',
-      { 'data-ttg-block-marker': '' },
-      String(node.attrs.raw ?? ''),
-    ];
+    return ['div', { [BLOCK_MARKER_ATTR]: '' }, String(node.attrs.raw ?? '')];
   },
 
   addNodeView() {

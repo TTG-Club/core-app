@@ -4,9 +4,15 @@
   import type { SpellCreate } from '~spells/model';
 
   import { ActiveEffects } from '~active-effects/editor';
-  import { normalizeActiveEffects } from '~active-effects/model';
+  import {
+    EFFECT_FORM_CONTEXT,
+    normalizeActiveEffects,
+  } from '~active-effects/model';
   import {
     createEmptySpellEffect,
+    getSpellFilterDamageTypes,
+    getSpellManualDamageTypes,
+    hasSpellArea,
     normalizeLoadedSpell,
     normalizeSpellEffect,
     SPELL_AFFILIATION_LABELS,
@@ -19,6 +25,7 @@
   import { MarkupEditor } from '~ui/markup-editor';
   import {
     SelectClass,
+    SelectDamageType,
     SelectFeat,
     SelectLineage,
     SelectMagicSchool,
@@ -103,10 +110,38 @@
         return {
           ...formState,
           effect: normalizedEffect ?? createEmptySpellEffect(),
-          activeEffects: normalizeActiveEffects(formState.activeEffects),
+          // Область передаётся так же, как форме: сохранение раскладывает
+          // эффекты тем же знанием, что и показ
+          activeEffects: normalizeActiveEffects(
+            formState.activeEffects,
+            EFFECT_FORM_CONTEXT.spell,
+            { areaAvailable: hasSpellArea(formState.effect) },
+          ),
         };
       },
     });
+
+  /**
+   * Есть ли у заклинания область: без неё доставке «зоной на месте области»
+   * взяться неоткуда, и у таких эффектов форма покажет плашку.
+   */
+  const hasArea = computed(() => hasSpellArea(state.value.effect));
+
+  /**
+   * Типы урона для фильтра: к выбору автора всегда добавлены типы из формул
+   * вкладки «Бой», поэтому снять формульный тип можно только правкой формулы.
+   * В состоянии формы хранится лишь выбор сверх формул — объединение с ними
+   * пишется при сохранении.
+   */
+  const filterDamageTypes = computed({
+    get: () => getSpellFilterDamageTypes(state.value.effect),
+    set: (selectedTypes: string | Array<string> | undefined) => {
+      state.value.effect.damageTypes = getSpellManualDamageTypes(
+        state.value.effect,
+        Array.isArray(selectedTypes) ? selectedTypes : [],
+      );
+    },
+  });
 </script>
 
 <template>
@@ -168,6 +203,21 @@
                 <UInput
                   v-model="state.school.additionalType"
                   :placeholder="SPELL_MAIN_TAB_LABELS.additionalTypePlaceholder"
+                />
+              </UFormField>
+
+              <!-- Фильтр каталога смотрит только в это поле: типы из формул
+                вкладки «Бой» стоят в нём сами, автор добавляет то, чего по
+                формулам не видно, — урон на выбор, поочерёдные части -->
+              <UFormField
+                class="col-span-full"
+                :label="SPELL_MAIN_TAB_LABELS.damageTypes"
+                :help="SPELL_MAIN_TAB_LABELS.damageTypesHint"
+                name="effect.damageTypes"
+              >
+                <SelectDamageType
+                  v-model="filterDamageTypes"
+                  multiple
                 />
               </UFormField>
             </div>
@@ -357,7 +407,11 @@
 
       <!-- ЭФФЕКТЫ -->
       <template #effects>
-        <ActiveEffects v-model="state.activeEffects" />
+        <ActiveEffects
+          v-model="state.activeEffects"
+          :context="EFFECT_FORM_CONTEXT.spell"
+          :area-available="hasArea"
+        />
       </template>
     </UTabs>
 

@@ -276,7 +276,7 @@
       </UFormField>
 
       <UFormField
-        class="md:col-span-full"
+        class="md:col-span-16"
         :label="texts.spellChoiceLabel"
       >
         <UInput
@@ -284,6 +284,20 @@
           :placeholder="texts.spellChoiceLabelPlaceholder"
         />
       </UFormField>
+
+      <!-- Та же отметка, что у выдачи: заклинание сверх таблицы класса место в
+        её числе не занимает — заговор «Чудотворца» жреца -->
+      <div class="flex items-center md:col-span-8 md:self-end md:pb-2">
+        <InfoTooltip
+          :text="texts.spellChoiceAlwaysPreparedHint"
+          icon="tabler:info-circle-filled"
+        >
+          <UCheckbox
+            v-model="row.alwaysPrepared"
+            :label="texts.alwaysPrepared"
+          />
+        </InfoTooltip>
+      </div>
     </div>
   </FeatRowsSection>
 </template>

@@ -1,7 +1,11 @@
 <script setup lang="ts">
   import type { DropdownMenuItem } from '@nuxt/ui';
 
-  import type { Character, SheetSaveStatus } from '../../model';
+  import type {
+    Character,
+    SheetReadonlyReason,
+    SheetSaveStatus,
+  } from '../../model';
 
   import { ACTION_LABELS } from '~/shared/consts';
 
@@ -16,7 +20,8 @@
     SHEET_EMPTY_LABELS,
     SHEET_HEADER_LABELS,
     SHEET_OPEN_ON_PAGE_LABEL,
-    SHEET_READONLY_LABELS,
+    SHEET_READONLY_BADGE_LABEL,
+    SHEET_READONLY_TOOLTIPS,
     SHEET_SAVE_LINK_LIMIT_HINT,
     SHEET_SAVE_SHARED_LABELS,
     SHEET_SAVE_STATUS_META,
@@ -37,17 +42,19 @@
     /** В лимите активных листов есть свободное место — копия разрешена. */
     canDuplicate?: boolean;
     /**
-     * Лист открыт по ссылке: вместо замка и действий владельца — пометка
-     * «только просмотр», из меню остаётся один экспорт.
+     * Лист чужой (открыт по ссылке или администратором): вместо замка и
+     * действий владельца — пометка «только просмотр», из меню остаётся один
+     * экспорт. null — лист свой.
      */
-    readonly?: boolean;
+    readonlyReason?: SheetReadonlyReason | null;
     /** Доступ по ссылке уже включён (пометка в меню действий). */
     shared?: boolean;
     /** Идёт сборка PDF — пункт меню показывает загрузку. */
     pdfLoading?: boolean;
     /**
-     * Чужой лист можно сохранить к себе: у зрителя есть доступ к инструменту и
-     * известен токен ссылки. false — в меню остаётся только выгрузка.
+     * Чужой лист можно сохранить к себе: у зрителя есть доступ к инструменту.
+     * Закладка в «Другие листы» при этом есть только у листа по ссылке.
+     * false — в меню остаётся только выгрузка.
      */
     canSaveShared?: boolean;
     /** В лимите своих активных листов есть место — копия чужого разрешена. */
@@ -83,16 +90,26 @@
     'save-link': [];
   }>();
 
+  // Подсказка пометки «только просмотр» объясняет причину режима; null — лист
+  // свой, пометки нет.
+  const readonlyTooltip = computed(() =>
+    props.readonlyReason ? SHEET_READONLY_TOOLTIPS[props.readonlyReason] : null,
+  );
+
+  // «Другие листы» хранят ссылки: лист, открытый администратором без ссылки,
+  // туда не добавить — ему остаётся только копия.
+  const canBookmarkLink = computed(() => props.readonlyReason === 'shared');
+
   // Меню действий листа (кнопка-троеточие в шапке) — то же, что в карточке
-  // списка персонажей. У листа, открытого по ссылке, владельческих действий нет,
-  // у запертого нет настроек: состав пунктов решает сам хелпер по флагам
-  // `isReadonly` и `isLocked`.
+  // списка персонажей. У чужого листа владельческих действий нет, у запертого
+  // нет настроек: состав пунктов решает сам хелпер по флагам `isReadonly` и
+  // `isLocked`.
   const menuItems = computed<Array<Array<DropdownMenuItem>>>(() =>
     getSheetActionMenuItems({
       canDuplicate: props.canDuplicate ?? false,
       canRemove: true,
       isShared: props.shared,
-      isReadonly: props.readonly,
+      isReadonly: Boolean(props.readonlyReason),
       isLocked: props.locked,
       isPdfLoading: props.pdfLoading,
       onDownload: () => emit('download'),
@@ -432,11 +449,11 @@
         <!-- Замок чужого листа бессмысленен: снять его зритель всё равно не
           может, поэтому вместо него — пометка о режиме просмотра -->
         <UTooltip
-          v-if="readonly"
-          :text="SHEET_READONLY_LABELS.tooltip"
+          v-if="readonlyTooltip"
+          :text="readonlyTooltip"
         >
           <UBadge
-            :label="SHEET_READONLY_LABELS.badge"
+            :label="SHEET_READONLY_BADGE_LABEL"
             icon="tabler:eye"
             color="neutral"
             variant="subtle"
@@ -452,7 +469,7 @@
             variant="subtle"
             size="lg"
             class="@2xl:hidden"
-            :aria-label="SHEET_READONLY_LABELS.badge"
+            :aria-label="SHEET_READONLY_BADGE_LABEL"
           />
         </UTooltip>
 
@@ -469,7 +486,10 @@
             />
           </UTooltip>
 
-          <UTooltip :text="saveLinkTooltip">
+          <UTooltip
+            v-if="canBookmarkLink"
+            :text="saveLinkTooltip"
+          >
             <UButton
               :icon="saveLinkIcon"
               :color="saveLinkColor"

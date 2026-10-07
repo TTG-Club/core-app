@@ -10,9 +10,11 @@ export function useSectionDetailRedirect(parentRouteName: string) {
   const { isSplitActive } = useLayoutWidth();
 
   // Якорь сохраняется: deep-link на комментарий должен пережить редирект.
+  // Query тоже: ссылка вида `/glossary/X?source=…` (так её пишет баг-репорт из
+  // широкого режима) должна открыть список с теми же фильтрами и источниками.
   const splitLocation = {
     name: parentRouteName,
-    query: { detail: route.params.url },
+    query: { ...route.query, detail: route.params.url },
     hash: route.hash,
   };
 

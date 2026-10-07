@@ -114,7 +114,6 @@ export const SPELL_USES_RECOVERY_OPTIONS: Array<
 ];
 
 /**
- * Способы применения заклинания — зеркало `DELIVERY_TYPE_OPTIONS` из VTTG./**
  * Способы применения заклинания — зеркало `DELIVERY_TYPE_OPTIONS` из VTTG.
  * Не задан — потребитель выводит способ по типу атаки и единице дистанции,
  * как выводил до появления поля.
@@ -142,6 +141,11 @@ export const SPELL_MAIN_TAB_LABELS = {
   school: 'Школа',
   additionalType: 'Подшкола',
   additionalTypePlaceholder: 'Подшкола',
+  damageTypes: 'Типы урона для фильтра',
+  damageTypesHint:
+    'Только для поиска в каталоге. Типы из формул на вкладке '
+    + `«${SPELL_EDITOR_TABS.combat}» отмечаются сами; добавь те, что формулы `
+    + 'не показывают, — например, выбираемые при накладывании.',
   description: 'Описание',
   descriptionPlaceholder: 'Введи описание',
   upper: 'На более высоких уровнях',
@@ -178,6 +182,9 @@ export const SPELL_USAGE_LABELS = {
   materialConsumable: 'Материалы расходуются',
 } as const;
 
+/** Наименьший рост области за круг в поле формы: ноль — роста нет. */
+export const SPELL_SCALING_AREA_SIZE_MIN = 0;
+
 /** Подписи блока масштабирования заклинания. */
 export const SPELL_SCALING_LABELS = {
   title: 'Масштабирование',
@@ -188,6 +195,10 @@ export const SPELL_SCALING_LABELS = {
   enable: 'Усиление на высших уровнях',
   additionalDice: 'Доп. урон за каждый уровень',
   additionalDicePlaceholder: '1к6',
+  additionalAreaSize: 'Рост области за круг',
+  additionalAreaSizeHint:
+    'На сколько растёт размер области за каждый круг ячейки выше базового: '
+    + '«Туманное облако» — 20. Круг тогда выбирают до шаблона.',
   description: 'Описание усиления',
   descriptionPlaceholder: 'Например: урон увеличивается на 1к6 за уровень',
   fallbackHint:

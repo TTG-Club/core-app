@@ -11,8 +11,10 @@
     ITEM_EDITOR_SECTIONS,
     ITEM_EDITOR_TABS,
     ITEM_FORM_LABELS,
+    ITEM_WEAPON_CATEGORY,
     normalizeItemBeforeSubmit,
     normalizeLoadedItem,
+    resolveItemEffectContext,
   } from '~items/model';
   import { ItemPreview } from '~items/preview';
   import { EditorBaseInfo } from '~ui/editor';
@@ -42,7 +44,17 @@
       revisionEntityType: REVISION_ENTITY_TYPES.ITEM,
     });
 
-  const isWeapon = computed(() => state.value.category === 'WEAPON');
+  const isWeapon = computed(
+    () => state.value.category === ITEM_WEAPON_CATEGORY,
+  );
+
+  /**
+   * Место эффектов предмета — по категории. Смена категории при заведённых
+   * эффектах ничего не стирает: неподходящие настройки покажет плашка.
+   */
+  const effectContext = computed(() =>
+    resolveItemEffectContext(isWeapon.value),
+  );
 
   /**
    * Подпись вкладки с параметрами — по выбранной категории: у оружия там бой,
@@ -150,7 +162,6 @@
               >
                 <UInput
                   v-model="state.cost"
-                  :precision="0"
                   :placeholder="ITEM_FORM_LABELS.costPlaceholder"
                   min="0"
                 />
@@ -172,6 +183,17 @@
                 <UInput
                   v-model="state.weight"
                   :placeholder="ITEM_FORM_LABELS.weightPlaceholder"
+                />
+              </UFormField>
+
+              <UFormField
+                class="md:col-span-24"
+                :help="ITEM_FORM_LABELS.consumableHint"
+                name="consumable"
+              >
+                <UCheckbox
+                  v-model="state.consumable"
+                  :label="ITEM_FORM_LABELS.consumable"
                 />
               </UFormField>
             </div>
@@ -211,7 +233,18 @@
                 v-model="state.image"
                 section="item"
                 max-size="480"
-              />
+              >
+                <template
+                  v-if="state.image"
+                  #preview
+                >
+                  <img
+                    :src="state.image"
+                    :alt="ITEM_FORM_LABELS.image"
+                    class="w-full rounded-lg object-contain"
+                  />
+                </template>
+              </UploadImage>
             </UFormField>
           </UCard>
         </div>
@@ -220,7 +253,7 @@
       <!-- ПАРАМЕТРЫ ВЫБРАННОЙ КАТЕГОРИИ -->
       <template #category>
         <WeaponForm
-          v-if="state.category === 'WEAPON'"
+          v-if="isWeapon"
           v-model="state.weapon"
         />
 
@@ -249,6 +282,7 @@
       <template #effects>
         <ActiveEffects
           v-model="state.activeEffects"
+          :context="effectContext"
           :origin="EFFECT_ORIGIN.item"
         />
       </template>

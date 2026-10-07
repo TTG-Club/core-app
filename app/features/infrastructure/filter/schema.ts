@@ -2,6 +2,8 @@ import type { Filter, FilterRangeOrders } from './types';
 
 import { z } from 'zod';
 
+import { sortSourceGroups } from './utils';
+
 /**
  * Схема элемента фильтра. `looseObject` сохраняет неизвестные поля
  * (`[p: string]: unknown` в `FilterItem`), а `catch` гасит битые значения,
@@ -52,13 +54,16 @@ export function parseFilter(
   const result = filterSchema.safeParse(payload);
 
   if (result.success) {
-    return {
-      ...result.data,
-      filters: result.data.filters.map((group) => ({
-        ...group,
-        rangeOrder: rangeOrders?.[group.key],
-      })),
-    };
+    const filters = result.data.filters.map((group) => ({
+      ...group,
+      rangeOrder: rangeOrders?.[group.key],
+    }));
+
+    // Порядок групп источников задаёт интерфейс, а не сервис: читателю нужны
+    // сначала официальные книги, а не порядок перечисления на бэкенде.
+    return result.data.sources
+      ? { filters, sources: sortSourceGroups(result.data.sources) }
+      : { filters };
   }
 
   consola.error('[useFilter] Некорректные данные фильтра:', result.error);

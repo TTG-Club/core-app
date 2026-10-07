@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { CommentEntry } from '../../model';
 
+  import { UserAvatar } from '~ui/user-avatar';
+
   import { useCommentLocation, useCommentTimestamp } from '../../composables';
   import { COMMENT_REPLY_TO_PREFIX } from '../../model';
 
@@ -28,8 +30,17 @@
       автора сталкивало её на вторую строку, и она повисала справа в пустоте -->
     <div class="flex items-start gap-2">
       <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-        <span class="text-sm font-medium text-highlighted">
-          {{ comment.authorName }}
+        <span class="flex min-w-0 items-center gap-2">
+          <UserAvatar
+            :user-id="comment.authorId"
+            :name="comment.authorName"
+            size="xs"
+            class="shrink-0"
+          />
+
+          <span class="text-sm font-medium text-highlighted">
+            {{ comment.authorName }}
+          </span>
         </span>
 
         <span

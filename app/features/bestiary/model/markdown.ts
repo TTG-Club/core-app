@@ -18,9 +18,10 @@ import {
 } from '~ui/markup';
 
 import {
-  formatCreatureInventoryLabel,
+  formatCreatureInventoryNote,
   getCreatureInventoryEntries,
 } from './inventory';
+import { formatCreatureSpeed } from './speed';
 
 /** Колонки таблицы характеристик — в порядке вывода. */
 const ABILITY_COLUMNS: MarkdownColumn[] = [
@@ -112,22 +113,16 @@ function getStats(creature: CreatureDetailResponse): MarkdownStat[] {
       'Хиты',
       joinStat(
         [
-          // `hit` — число, экранировать в нём нечего.
-          String(hit.hit),
+          // `hit` — число, экранировать в нём нечего; у призванных существ его
+          // нет, и хиты описаны одним текстом.
+          hit.hit === null ? '' : String(hit.hit),
           toParenthesized(escapeMarkdown(hit.formula)),
           escapeMarkdown(hit.text),
         ],
         ' ',
       ),
     ],
-    // В `speed` попадают лишние пробелы («80 фт. , лазая»), поэтому строка
-    // нормализуется.
-    [
-      'Скорость',
-      escapeMarkdown(
-        creature.speed.replace(/\s+([,;])/g, '$1').replace(/\s{2,}/g, ' '),
-      ),
-    ],
+    ['Скорость', escapeMarkdown(formatCreatureSpeed(creature.speed))],
     ['Навыки', joinStat((creature.skills ?? []).map(toSkill))],
     ['Уязвимости', escapeMarkdown(creature.vulnerability)],
     ['Сопротивления', escapeMarkdown(creature.resistance)],
@@ -145,17 +140,19 @@ function getStats(creature: CreatureDetailResponse): MarkdownStat[] {
 /**
  * Инвентарь строкой: позиции с количеством и уточнением, а следом свободная
  * строка через точку с запятой. Ссылки в выгрузке не нужны — это текст для
- * чтения, а уточнение нужно: «Меч (из золота)» без него теряет смысл.
+ * чтения, а уточнение нужно: «Меч (2, из золота)» без него теряет смысл.
  */
 function toInventory(creature: CreatureDetailResponse): string {
   const entries = getCreatureInventoryEntries(creature.inventory).map((entry) =>
     joinStat(
       [
-        formatCreatureInventoryLabel(
-          escapeMarkdown(entry.name),
-          entry.quantity,
+        escapeMarkdown(entry.name),
+        toParenthesized(
+          formatCreatureInventoryNote(
+            entry.quantity,
+            escapeMarkdown(entry.description),
+          ),
         ),
-        toParenthesized(escapeMarkdown(entry.description)),
       ],
       ' ',
     ),
@@ -197,9 +194,10 @@ function getAbilitiesTable(abilities: CreatureAbilitiesResponse): string {
       // Поля ответа названы сокращённо, поэтому переименовываются на месте.
       const { value, mod: modifier, sav: save } = abilities[key];
 
+      // Значение — число, экранировать в нём нечего.
       return [
         label,
-        escapeMarkdownCell(value),
+        String(value),
         escapeMarkdownCell(modifier),
         escapeMarkdownCell(save),
       ];

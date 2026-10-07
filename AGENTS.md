@@ -240,6 +240,7 @@ Always import feature components using the domain alias (e.g.,
 - `pnpm dev` - Start dev server
 - `pnpm build` - Build project
 - `pnpm type-check` - Run TS checks (vue-tsc)
+- `pnpm test` - Run unit tests (vitest, `test/`)
 - `pnpm lint:write` - ESLint auto-fix
 - `pnpm postinstall` - Generate domain aliases (`nuxt prepare`)
 

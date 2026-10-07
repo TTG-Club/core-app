@@ -4,17 +4,18 @@ import bytes from 'bytes';
 import { StatusCodes } from 'http-status-codes';
 import { FetchError } from 'ofetch';
 
+import { IMAGE_UPLOAD_TYPES } from '#shared/consts';
 import { getStatusMessage } from '#shared/utils';
 import { z } from '~/utils/zod';
+
+/** Допустимые типы загружаемых изображений — общий список с сервером. */
+export { IMAGE_UPLOAD_TYPES };
 
 /** Ответ S3-слоя на загрузку или копирование файла. */
 const uploadResponseSchema = z.object({
   filename: z.string(),
   url: z.string().min(1),
 });
-
-/** Допустимые типы загружаемых изображений. */
-export const IMAGE_UPLOAD_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 /** Строка для атрибута `accept` диалога выбора файла. */
 export const IMAGE_UPLOAD_ACCEPT = IMAGE_UPLOAD_TYPES.join(', ');
@@ -110,7 +111,7 @@ function getImageSize(file: File): Promise<{ width: number; height: number }> {
  * @param error пойманная ошибка.
  * @returns текст для тоста.
  */
-function getUploadErrorMessage(error: unknown): string {
+export function getUploadErrorMessage(error: unknown): string {
   if (!(error instanceof FetchError)) {
     return (
       getStatusMessage(StatusCodes.INTERNAL_SERVER_ERROR)

@@ -1,9 +1,9 @@
 import { StatusCodes } from 'http-status-codes';
 import { z } from 'zod';
 
+import { assertAdminRole } from '#server/utils/getUser';
 import {
   assertMailerConfigured,
-  assertMailingAdmin,
   getMailErrorMessage,
   getMailingSiteUrl,
   sendCampaignMail,
@@ -29,7 +29,7 @@ const testMailingSchema = z.object({
  * SMTP перед настоящей рассылкой.
  */
 export default defineEventHandler(async (event) => {
-  await assertMailingAdmin(event);
+  await assertAdminRole(event);
 
   const parsedBody = testMailingSchema.safeParse(await readBody(event));
 

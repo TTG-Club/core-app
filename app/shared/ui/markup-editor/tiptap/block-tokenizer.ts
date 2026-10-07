@@ -1,8 +1,14 @@
 import type {
+  JSONContent,
   MarkdownLexerConfiguration,
+  MarkdownParseHelpers,
   MarkdownToken,
   MarkdownTokenizer,
 } from '@tiptap/core';
+
+import type { RenderNode } from '~ui/markup';
+
+import { isBlockNode, serializeInlineNodes } from '~ui/markup';
 
 import { findMarkerEnd } from '../../markup/balance';
 
@@ -61,6 +67,80 @@ export function deferBlock(
   source: string,
 ): DeferredBlockTokens {
   return () => lexer.blockTokens(source);
+}
+
+/**
+ * Один сегмент содержимого блочного контейнера (ячейки таблицы, абзаца цитаты).
+ * Инлайн-пробег → абзац, вложенный блок ({@table}/{@list}/{@quote}/{@h}) →
+ * нативный редактируемый узел. `block` выбирает, чем разбирать токены на фазе
+ * parseMarkdown (`parseInline` → абзац vs `parseChildren` → блочный узел).
+ */
+export interface BlockSegment {
+  block: boolean;
+  tokens: DeferredInlineTokens | DeferredBlockTokens;
+}
+
+/**
+ * Разбивает содержимое контейнера на сегменты: подряд идущие инлайн-узлы (текст,
+ * форматирование, чипы) сливаются в инлайн-пробег (→ абзац), а блочные узлы
+ * выделяются в отдельные сегменты (→ нативный редактируемый узел). Так вложенный
+ * список/таблица грузится РЕДАКТИРУЕМЫМ, а не «замерзает» атомарным чипом
+ * (инлайн-токенайзер превратил бы `{@list}` в ttgMarker). Чисто инлайновое
+ * содержимое (обычный случай) даёт ровно один сегмент.
+ */
+export function buildBlockSegments(
+  content: RenderNode[],
+  lexer: MarkdownLexerConfiguration,
+): BlockSegment[] {
+  const segments: BlockSegment[] = [];
+
+  let inlineRun: RenderNode[] = [];
+
+  const flushInline = (): void => {
+    if (inlineRun.length) {
+      segments.push({
+        block: false,
+        tokens: deferInline(lexer, serializeInlineNodes(inlineRun)),
+      });
+
+      inlineRun = [];
+    }
+  };
+
+  for (const node of content) {
+    if (isBlockNode(node)) {
+      flushInline();
+
+      // Блочный узел сериализуем ОТДЕЛЬНО (один `{@…}`-маркер без окружающего
+      // текста), чтобы blockTokens вернул ровно один кастомный токен — его
+      // parseChildren соберёт в нативный узел (рекурсивно для вложенных блоков).
+      segments.push({
+        block: true,
+        tokens: deferBlock(lexer, serializeInlineNodes([node])),
+      });
+    } else {
+      inlineRun.push(node);
+    }
+  }
+
+  flushInline();
+
+  return segments;
+}
+
+/**
+ * Собирает JSON-узлы из сегментов: инлайн-пробег → абзац (`parseInline`),
+ * блочный узел → нативный узел (`parseChildren` над блочными токенами).
+ */
+export function blockSegmentsToContent(
+  segments: BlockSegment[],
+  helpers: MarkdownParseHelpers,
+): JSONContent[] {
+  return segments.flatMap((segment) =>
+    segment.block
+      ? helpers.parseChildren(segment.tokens())
+      : [{ type: 'paragraph', content: helpers.parseInline(segment.tokens()) }],
+  );
 }
 
 /**

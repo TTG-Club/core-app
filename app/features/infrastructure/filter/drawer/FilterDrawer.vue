@@ -5,50 +5,36 @@
 
   import { UiResult } from '~ui/result';
 
+  import { useFilterSearch } from '../composable';
   import { FilterList } from '../list';
   import {
     FILTER_DRAWER_SEARCH_PLACEHOLDER,
-    FILTER_SEARCH_DEBOUNCE,
     FILTER_SEARCH_EMPTY_SUBTITLE,
     FILTER_SEARCH_EMPTY_TITLE,
   } from '../model';
   import { FilterSearchInput } from '../search-input';
-  import { isFilterSearchable } from '../utils';
 
   defineEmits<{
     (event: 'save', value: FilterGroups): void;
     (event: 'reset'): void;
   }>();
 
-  const { groups, title } = defineProps<{
+  const {
+    groups,
+    title,
+    searchPlaceholder = FILTER_DRAWER_SEARCH_PLACEHOLDER,
+  } = defineProps<{
     groups: FilterGroups;
     title: string;
+    searchPlaceholder?: string;
   }>();
 
   const opened = defineModel<boolean>();
 
   const cloned = ref<FilterGroups>(cloneDeep(groups));
-  const search = ref('');
-  const isEmpty = ref(false);
 
-  // Поле остаётся на `search`, чтобы ввод не тормозил, а список считается по
-  // дебаунснутому значению.
-  const debouncedSearch = refDebounced(search, FILTER_SEARCH_DEBOUNCE);
-
-  // Пустой запрос применяется без задержки: после крестика очистки и при
-  // повторном открытии дровера список иначе ещё 200 мс остаётся отфильтрованным
-  // прошлым запросом, которого в поле уже нет.
-  const appliedSearch = computed(() =>
-    search.value ? debouncedSearch.value : '',
-  );
-
-  const isSearchable = computed(() => isFilterSearchable(groups));
-
-  // Пустое состояние только для непустого запроса: без него пустой список
-  // означает, что фильтры ещё не пришли, а не что ничего не нашлось.
-  const showEmptyResult = computed(
-    () => isSearchable.value && !!appliedSearch.value && isEmpty.value,
-  );
+  const { search, isEmpty, appliedSearch, isSearchable, showEmptyResult } =
+    useFilterSearch(() => groups);
 
   watch(opened, (value) => {
     if (!value) {
@@ -83,7 +69,7 @@
         <FilterSearchInput
           v-model="search"
           class="w-full"
-          :placeholder="FILTER_DRAWER_SEARCH_PLACEHOLDER"
+          :placeholder="searchPlaceholder"
           icon="tabler:search"
         />
       </div>
@@ -100,6 +86,16 @@
         :search="appliedSearch"
         @empty="isEmpty = $event"
       />
+
+      <!-- Условия, которые чипами не выражаются (город, числа), раздел кладёт
+        сюда сам. Поиск ищет только по группам, поэтому на время запроса поля
+        прячутся: иначе они стояли бы под любым результатом, не подходя под него -->
+      <div
+        v-if="$slots.append && !appliedSearch"
+        class="mt-6 flex flex-col gap-6"
+      >
+        <slot name="append" />
+      </div>
     </template>
 
     <template #footer>

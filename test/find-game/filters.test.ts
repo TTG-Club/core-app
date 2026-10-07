@@ -1,0 +1,478 @@
+import type { LocationQuery, LocationQueryRaw } from 'vue-router';
+
+import { describe, expect, it } from 'vitest';
+
+import {
+  applyGameFilterGroups,
+  countActiveGameFilters,
+  createEmptyGameFilter,
+  getGameFilterChips,
+  isEmptyGameFilter,
+  parseCatalogPageFromQuery,
+  parseGameFilterFromQuery,
+  serializeGameFilterToQuery,
+  toGameFilterGroups,
+  toGameSearchQuery,
+} from '~find-game/model';
+
+/** Справочник систем: перечисления у них нет, набор приходит от сервиса. */
+const SYSTEMS = [
+  { code: 'DND_2024', name: 'D&D 5 (2024)' },
+  { code: 'PATHFINDER_2E', name: 'Pathfinder 2e' },
+];
+
+/** Список жанров из сервиса: «свой жанр» в нём не приходит. */
+const GENRES = ['Хоррор', 'Вестерн'];
+
+/**
+ * Приводит собранные параметры к тому виду, в каком их отдаёт маршрут: в
+ * адресе всё становится строкой, и обратный разбор работает именно с этим.
+ *
+ * @param query Параметры, собранные из фильтра.
+ */
+function toRouteQuery(query: LocationQueryRaw): LocationQuery {
+  const entries = Object.entries(query).map(([key, value]) => {
+    if (Array.isArray(value)) {
+      return [key, value.map((item) => (item == null ? null : String(item)))];
+    }
+
+    return [key, value == null ? null : String(value)];
+  });
+
+  return Object.fromEntries(entries);
+}
+
+describe('чтение фильтра из адреса', () => {
+  it('пустой адрес даёт пустой фильтр', () => {
+    const filter = parseGameFilterFromQuery({});
+
+    expect(isEmptyGameFilter(filter)).toBe(true);
+    expect(filter).toEqual(createEmptyGameFilter());
+  });
+
+  it('сохраняет код системы из управляемого справочника', () => {
+    const filter = parseGameFilterFromQuery({ system: 'PATHFINDER_2E' });
+
+    expect(filter.system).toEqual(['PATHFINDER_2E']);
+  });
+
+  it('читает перечисление через запятую', () => {
+    const filter = parseGameFilterFromQuery({ type: 'ONLINE,OFFLINE' });
+
+    expect(filter.type).toEqual(['ONLINE', 'OFFLINE']);
+  });
+
+  it('читает повтор параметра — сервис принимает и такую запись', () => {
+    const filter = parseGameFilterFromQuery({ type: ['ONLINE', 'OFFLINE'] });
+
+    expect(filter.type).toEqual(['ONLINE', 'OFFLINE']);
+  });
+
+  it('читает исключающие фильтры отдельно от включающих', () => {
+    const filter = parseGameFilterFromQuery({
+      system: 'DND_2024',
+      excludeType: 'TEXT',
+      excludeStatus: 'CLOSED',
+    });
+
+    expect(filter.system).toEqual(['DND_2024']);
+    expect(filter.excludeType).toEqual(['TEXT']);
+    expect(filter.excludeStatus).toEqual(['CLOSED']);
+    expect(filter.type).toEqual([]);
+  });
+
+  it('выбрасывает незнакомое значение перечисления', () => {
+    // Отправлять его в сервис нельзя: он ответит 400 на весь запрос, и
+    // каталог покажет ошибку вместо выдачи.
+    const filter = parseGameFilterFromQuery({ type: 'ONLINE,TELEPATHY' });
+
+    expect(filter.type).toEqual(['ONLINE']);
+  });
+
+  it('не считает пустую строку заданным условием', () => {
+    const filter = parseGameFilterFromQuery({ city: '', type: '' });
+
+    expect(filter.city).toEqual([]);
+    expect(filter.type).toEqual([]);
+    expect(isEmptyGameFilter(filter)).toBe(true);
+  });
+
+  it('переживает null в значении параметра', () => {
+    const query: LocationQuery = { city: null, type: [null, 'ONLINE'] };
+    const filter = parseGameFilterFromQuery(query);
+
+    expect(filter.city).toEqual([]);
+    expect(filter.type).toEqual(['ONLINE']);
+  });
+
+  it('схлопывает повторы значений', () => {
+    const filter = parseGameFilterFromQuery({ type: 'ONLINE,ONLINE,OFFLINE' });
+
+    expect(filter.type).toEqual(['ONLINE', 'OFFLINE']);
+  });
+
+  it('читает трёхзначный кроссплей', () => {
+    expect(
+      parseGameFilterFromQuery({ crossplayAllowed: 'true' }).crossplayAllowed,
+    ).toBe(true);
+
+    expect(
+      parseGameFilterFromQuery({ crossplayAllowed: 'false' }).crossplayAllowed,
+    ).toBe(false);
+
+    expect(
+      parseGameFilterFromQuery({ crossplayAllowed: 'да' }).crossplayAllowed,
+    ).toBeNull();
+
+    expect(parseGameFilterFromQuery({}).crossplayAllowed).toBeNull();
+  });
+
+  it('читает возрастные границы и отбрасывает выходящие за пределы', () => {
+    expect(parseGameFilterFromQuery({ minAge: '18' }).minAge).toBe(18);
+    expect(parseGameFilterFromQuery({ minAge: '999' }).minAge).toBeNull();
+
+    expect(
+      parseGameFilterFromQuery({ minAge: 'восемнадцать' }).minAge,
+    ).toBeNull();
+  });
+
+  it('читает отбор по местам и отбрасывает бессмысленные значения', () => {
+    expect(parseGameFilterFromQuery({ maxFreeSeats: '1' }).maxFreeSeats).toBe(
+      1,
+    );
+
+    expect(
+      parseGameFilterFromQuery({ maxSeatsToStart: '2' }).maxSeatsToStart,
+    ).toBe(2);
+
+    // Ноль свободных мест в выдаче не встречается — собранный стол сервис в
+    // поиск не отдаёт, поэтому такое условие оставило бы пустой каталог.
+    expect(
+      parseGameFilterFromQuery({ maxFreeSeats: '0' }).maxFreeSeats,
+    ).toBeNull();
+
+    // А ноль до старта — рабочее условие: минимум набран, места ещё есть.
+    expect(
+      parseGameFilterFromQuery({ maxSeatsToStart: '0' }).maxSeatsToStart,
+    ).toBe(0);
+
+    expect(
+      parseGameFilterFromQuery({ maxFreeSeats: '99' }).maxFreeSeats,
+    ).toBeNull();
+  });
+
+  it('снимает перевёрнутый возрастной диапазон', () => {
+    // Сервис отвечает 400 на весь запрос, поэтому из такого адреса остаётся
+    // только нижняя граница.
+    const filter = parseGameFilterFromQuery({ minAge: '30', maxAge: '18' });
+
+    expect(filter.minAge).toBe(30);
+    expect(filter.maxAge).toBeNull();
+  });
+});
+
+describe('чтение страницы из адреса', () => {
+  it('без параметра открывается первая страница', () => {
+    expect(parseCatalogPageFromQuery({})).toBe(0);
+  });
+
+  it('в адресе страница человеческая, внутри — с нуля', () => {
+    expect(parseCatalogPageFromQuery({ page: '3' })).toBe(2);
+  });
+
+  it('нулевая и отрицательная страница считаются первой', () => {
+    expect(parseCatalogPageFromQuery({ page: '0' })).toBe(0);
+    expect(parseCatalogPageFromQuery({ page: '-5' })).toBe(0);
+  });
+});
+
+describe('запись фильтра в адрес', () => {
+  it('пустой фильтр даёт чистый адрес', () => {
+    expect(serializeGameFilterToQuery(createEmptyGameFilter(), 0)).toEqual({});
+  });
+
+  it('склеивает множественные значения запятой', () => {
+    const filter = createEmptyGameFilter();
+
+    filter.type = ['ONLINE', 'OFFLINE'];
+    filter.excludeSystem = ['DND_2014'];
+
+    expect(serializeGameFilterToQuery(filter, 0)).toEqual({
+      type: 'ONLINE,OFFLINE',
+      excludeSystem: 'DND_2014',
+    });
+  });
+
+  it('первая страница в адрес не попадает', () => {
+    const filter = createEmptyGameFilter();
+
+    expect(serializeGameFilterToQuery(filter, 0).page).toBeUndefined();
+    expect(serializeGameFilterToQuery(filter, 2).page).toBe('3');
+  });
+
+  it('пишет кроссплей и возраст, когда они заданы', () => {
+    const filter = createEmptyGameFilter();
+
+    filter.crossplayAllowed = false;
+    filter.minAge = 18;
+
+    expect(serializeGameFilterToQuery(filter, 0)).toEqual({
+      crossplayAllowed: 'false',
+      minAge: '18',
+    });
+  });
+
+  it('адрес и разбор адреса обратимы', () => {
+    const filter = createEmptyGameFilter();
+
+    filter.system = ['DND_2024'];
+    filter.genre = ['Хоррор', 'HOMEBREW'];
+    filter.excludeType = ['TEXT'];
+    filter.city = ['Кишинёв'];
+    filter.crossplayAllowed = true;
+    filter.minAge = 18;
+    filter.maxAge = 40;
+    filter.maxFreeSeats = 1;
+    filter.maxSeatsToStart = 0;
+
+    const query = toRouteQuery(serializeGameFilterToQuery(filter, 4));
+    const restored = parseGameFilterFromQuery(query);
+
+    expect(restored).toEqual(filter);
+    expect(parseCatalogPageFromQuery(query)).toBe(4);
+  });
+});
+
+describe('запрос к сервису', () => {
+  it('передаёт условия вместе с серверной пагинацией', () => {
+    const filter = createEmptyGameFilter();
+
+    filter.costType = ['FREE'];
+    filter.excludeType = ['TEXT'];
+    filter.excludeGenre = ['Вестерн', 'HOMEBREW'];
+
+    expect(toGameSearchQuery(filter, 2, 12)).toEqual({
+      costType: 'FREE',
+      excludeType: 'TEXT',
+      excludeGenre: 'Вестерн,HOMEBREW',
+      page: 2,
+      size: 12,
+    });
+  });
+
+  it('передаёт отбор по местам, включая ноль до старта', () => {
+    const filter = createEmptyGameFilter();
+
+    filter.maxFreeSeats = 1;
+    filter.maxSeatsToStart = 0;
+
+    expect(toGameSearchQuery(filter, 0, 12)).toEqual({
+      maxFreeSeats: '1',
+      maxSeatsToStart: '0',
+      page: 0,
+      size: 12,
+    });
+  });
+
+  it('пустой фильтр отправляет только пагинацию', () => {
+    expect(toGameSearchQuery(createEmptyGameFilter(), 0, 12)).toEqual({
+      page: 0,
+      size: 12,
+    });
+  });
+});
+
+describe('счётчик условий', () => {
+  it('считает каждое заданное поле один раз', () => {
+    const filter = createEmptyGameFilter();
+
+    expect(countActiveGameFilters(filter)).toBe(0);
+
+    filter.type = ['ONLINE', 'OFFLINE'];
+    expect(countActiveGameFilters(filter)).toBe(1);
+
+    filter.excludeType = ['TEXT'];
+    expect(countActiveGameFilters(filter)).toBe(2);
+
+    filter.minAge = 18;
+    expect(countActiveGameFilters(filter)).toBe(3);
+  });
+});
+
+describe('группы общей панели фильтров', () => {
+  it('переносит фильтр в группы и обратно без потерь', () => {
+    const filter = createEmptyGameFilter();
+
+    filter.system = ['DND_2024'];
+    filter.excludeCostType = ['PAID'];
+    filter.crossplayAllowed = false;
+    filter.favorite = true;
+    filter.city = ['Москва'];
+    filter.minAge = 18;
+
+    const groups = toGameFilterGroups(filter, true, SYSTEMS, GENRES);
+
+    expect(applyGameFilterGroups(filter, groups, SYSTEMS, GENRES)).toEqual(
+      filter,
+    );
+  });
+
+  it('исключает группу, только когда искомых значений нет', () => {
+    const groups = toGameFilterGroups(
+      {
+        ...createEmptyGameFilter(),
+        excludeCostType: ['PAID'],
+      },
+      true,
+      SYSTEMS,
+      GENRES,
+    );
+
+    expect(groups.find((group) => group.key === 'costType')?.mode).toBe(true);
+    expect(groups.find((group) => group.key === 'system')?.mode).toBe(false);
+  });
+
+  it('гостю не показывает избранное', () => {
+    const groups = toGameFilterGroups(
+      createEmptyGameFilter(),
+      false,
+      SYSTEMS,
+      GENRES,
+    );
+
+    expect(groups.some((group) => group.key === 'favorite')).toBe(false);
+  });
+
+  it('оба варианта кроссплея означают «не важно»', () => {
+    const groups = toGameFilterGroups(
+      createEmptyGameFilter(),
+      true,
+      SYSTEMS,
+      GENRES,
+    ).map((group) =>
+      group.key === 'crossplayAllowed'
+        ? {
+            ...group,
+            values: (group.values ?? []).map((filterItem) => ({
+              ...filterItem,
+              selected: true,
+            })),
+          }
+        : group,
+    );
+
+    expect(
+      applyGameFilterGroups(createEmptyGameFilter(), groups, SYSTEMS, GENRES)
+        .crossplayAllowed,
+    ).toBeNull();
+  });
+
+  it('не отдаёт отменённые игры в статусы каталога', () => {
+    const status = toGameFilterGroups(
+      createEmptyGameFilter(),
+      true,
+      SYSTEMS,
+      GENRES,
+    ).find((group) => group.key === 'status');
+
+    expect(status?.values?.map((filterItem) => filterItem.id)).toEqual([
+      'OPEN',
+      'CLOSED',
+    ]);
+  });
+
+  it('ставит свой жанр последним вариантом группы жанров', () => {
+    const genre = toGameFilterGroups(
+      createEmptyGameFilter(),
+      true,
+      SYSTEMS,
+      GENRES,
+    ).find((group) => group.key === 'genre');
+
+    expect(
+      genre?.values?.map((filterItem) => [filterItem.id, filterItem.name]),
+    ).toEqual([
+      ['Хоррор', 'Хоррор'],
+      ['Вестерн', 'Вестерн'],
+      ['HOMEBREW', 'Свой жанр'],
+    ]);
+  });
+
+  it('переносит исключённые жанры и отбрасывает жанр не из списка', () => {
+    const filter = {
+      ...createEmptyGameFilter(),
+      excludeGenre: ['Вестерн', 'HOMEBREW'],
+    };
+
+    const groups = toGameFilterGroups(filter, true, SYSTEMS, GENRES);
+
+    expect(applyGameFilterGroups(filter, groups, SYSTEMS, GENRES)).toEqual(
+      filter,
+    );
+
+    expect(
+      applyGameFilterGroups(
+        createEmptyGameFilter(),
+        toGameFilterGroups(
+          { ...createEmptyGameFilter(), genre: ['Выдуманный'] },
+          true,
+          SYSTEMS,
+          GENRES,
+        ),
+        SYSTEMS,
+        GENRES,
+      ).genre,
+    ).toEqual([]);
+  });
+});
+
+describe('ряд применённых условий', () => {
+  it('даёт по чипу на условие и помечает исключения', () => {
+    const chips = getGameFilterChips(
+      {
+        ...createEmptyGameFilter(),
+        type: ['ONLINE'],
+        excludeCostType: ['PAID'],
+        maxSeatsToStart: 0,
+      },
+      SYSTEMS,
+    );
+
+    expect(chips.map((chip) => [chip.label, chip.isExcluded])).toEqual([
+      ['Онлайн', false],
+      ['Платно', true],
+      ['До старта не хватает не больше 0', false],
+    ]);
+  });
+
+  it('подписывает свою систему справочником, а свой жанр — как в форме', () => {
+    const chips = getGameFilterChips(
+      {
+        ...createEmptyGameFilter(),
+        system: ['HOMEBREW'],
+        genre: ['Хоррор', 'HOMEBREW'],
+      },
+      [...SYSTEMS, { code: 'HOMEBREW', name: 'Своя система' }],
+    );
+
+    expect(chips.map((chip) => chip.label)).toEqual([
+      'Своя система',
+      'Хоррор',
+      'Свой жанр',
+    ]);
+  });
+
+  it('снимает ровно своё условие', () => {
+    const filter = {
+      ...createEmptyGameFilter(),
+      city: ['Москва', 'Казань'],
+      minAge: 18,
+    };
+
+    const [moscow, kazan, age] = getGameFilterChips(filter, SYSTEMS);
+
+    expect(moscow?.remove(filter).city).toEqual(['Казань']);
+    expect(kazan?.remove(filter).city).toEqual(['Москва']);
+    expect(age?.remove(filter)).toEqual({ ...filter, minAge: null });
+  });
+});

@@ -157,6 +157,13 @@
     }
   });
 
+  /**
+   * Подменяет сохранённого пользователя в странице списка. Ответ блокировки
+   * приходит из auth-service без имени и аватарки из core-api, поэтому поверх
+   * прежней записи, а не вместо неё — иначе после бана они пропадали бы.
+   *
+   * @param updated пользователь после сохранения.
+   */
   function onUserSaved(updated: AdminUserResponse): void {
     if (!usersPage.value) {
       return;
@@ -165,7 +172,7 @@
     usersPage.value = {
       ...usersPage.value,
       content: usersPage.value.content.map((user) =>
-        user.id === updated.id ? updated : user,
+        user.id === updated.id ? { ...user, ...updated } : user,
       ),
     };
   }

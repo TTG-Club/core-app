@@ -216,6 +216,15 @@ export const ARTICLE_IMAGE_MAX_SIZE = '1024';
 /** Заглушка обложки, если `previewImageUrl` отсутствует. */
 export const ARTICLE_FALLBACK_IMAGE = '/img/no-img.webp';
 
+/** Подпись кнопки на обложке новости: открыть запись на отдельной странице. */
+export const ARTICLE_OPEN_PAGE_LABEL = 'Открыть на отдельной странице';
+
+/** Подпись кнопки на обложке новости: создать новость (только админу). */
+export const ARTICLE_CREATE_NEWS_LABEL = 'Создать новость';
+
+/** Подпись кнопки на обложке новости: список новостей в админ-панели. */
+export const ARTICLE_ADMIN_NEWS_LIST_LABEL = 'Список новостей в админ-панели';
+
 /** Количество записей в публичном листинге. */
 export const ARTICLES_LIST_COUNT = 24;
 
@@ -225,8 +234,8 @@ export const ARTICLES_ADMIN_LIST_COUNT = 100;
 /** Количество новостей в блоке на главной (1 «геройская» + лента из 4). */
 export const HOME_NEWS_COUNT = 5;
 
-/** Количество статей в блоке на главной (компактный список). */
-export const HOME_ARTICLES_COUNT = 5;
+/** Количество статей в блоке на главной (сетка в две колонки — три ровных ряда). */
+export const HOME_ARTICLES_COUNT = 6;
 
 /**
  * Желательный максимум символов поста (анонс + содержание) для кросс-постинга в

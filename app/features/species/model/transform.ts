@@ -1,11 +1,19 @@
 import type { SpeciesCreate, SpeciesFeatureCreate } from './types';
 
-import { normalizeActiveEffects } from '~active-effects/model';
+import {
+  EFFECT_FORM_CONTEXT,
+  normalizeActiveEffects,
+} from '~active-effects/model';
 import {
   buildFeatMechanics,
   createFeatMechanics,
   fromFeatEditorRows,
 } from '~feats/model';
+
+import {
+  readSpeciesSpellsAlwaysPrepared,
+  writeSpeciesSpellsAlwaysPrepared,
+} from './utils';
 
 /** Носитель даров: и сама запись вида, и любое её умение. */
 interface MechanicsHolder {
@@ -49,7 +57,11 @@ function transformFeature(feature: SpeciesFeatureCreate): SpeciesFeatureCreate {
     // Первый уровень — значение по умолчанию у потребителя, и писать его
     // каждому умению незачем
     level,
-    grantedSpells: feature.grantedSpells.map((spell) => ({
+    // Отметка одна на умение: строка, добавленная после снятия, её тоже получает
+    grantedSpells: writeSpeciesSpellsAlwaysPrepared(
+      feature.grantedSpells,
+      readSpeciesSpellsAlwaysPrepared(feature.grantedSpells),
+    ).map((spell) => ({
       ...spell,
       // То же и у уровня ссылки: совпал с уровнем умения — писать его незачем
       requiredLevel:
@@ -58,7 +70,10 @@ function transformFeature(feature: SpeciesFeatureCreate): SpeciesFeatureCreate {
           : undefined,
     })),
     mechanics: buildMechanics(feature),
-    activeEffects: normalizeActiveEffects(feature.activeEffects),
+    activeEffects: normalizeActiveEffects(
+      feature.activeEffects,
+      EFFECT_FORM_CONTEXT.feature,
+    ),
     editorRows: undefined,
   };
 }
@@ -80,10 +95,13 @@ export function transformSpeciesBeforeSubmit(
     // оставить его здесь значило бы выдать каждое заклинание дважды
     innateSpells: [],
     mechanics: buildMechanics(state),
-    // Эффекты чистит общий нормализатор раздела: он же обслуживает черты,
-    // заклинания и магические предметы, поэтому правило «что считать пустым»
-    // одно на всех
-    activeEffects: normalizeActiveEffects(state.activeEffects),
+    // Эффекты чистит общий нормализатор раздела, но по месту формы: пустое
+    // отбрасывается везде одинаково, а допустимая Сл у каждого места своя — у
+    // вида «Сл источника» не подставить, и 0 поднимается до 1
+    activeEffects: normalizeActiveEffects(
+      state.activeEffects,
+      EFFECT_FORM_CONTEXT.feature,
+    ),
     features: state.features.map(transformFeature),
   };
 }

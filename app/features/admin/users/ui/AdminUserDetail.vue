@@ -12,6 +12,8 @@
 
   import {
     ADMIN_USERS_ACTIVE_BADGE,
+    ADMIN_USERS_AVATAR_EMPTY_LABEL,
+    ADMIN_USERS_AVATAR_LABEL,
     ADMIN_USERS_CREDENTIALS_EXPIRED_BADGE,
     ADMIN_USERS_DATE_FORMAT,
     ADMIN_USERS_DETAIL_DEFAULT_TAB,
@@ -127,6 +129,11 @@
 
   const displayNameLabel = computed(() => props.user.displayName || '—');
 
+  // Подпись картинки: отображаемое имя, иначе логин.
+  const avatarAlt = computed(
+    () => props.user.displayName || props.user.username,
+  );
+
   function getRoleIdsByNames(
     roles: AdminRoleResponse[],
     roleNames: string[],
@@ -207,6 +214,30 @@
         <div
           class="grid grid-cols-2 gap-x-6 gap-y-4 rounded-xl border border-default bg-default/10 p-4"
         >
+          <!-- Аватарка: сама картинка, без инициалов — админ проверяет загруженное -->
+          <div class="col-span-2 flex flex-col gap-1.5">
+            <span
+              class="text-xs font-medium tracking-wide text-muted uppercase"
+            >
+              {{ ADMIN_USERS_AVATAR_LABEL }}
+            </span>
+
+            <UAvatar
+              v-if="user.avatarUrl"
+              :src="user.avatarUrl"
+              :alt="avatarAlt"
+              size="3xl"
+              class="size-20"
+            />
+
+            <span
+              v-else
+              class="text-sm text-highlighted"
+            >
+              {{ ADMIN_USERS_AVATAR_EMPTY_LABEL }}
+            </span>
+          </div>
+
           <!-- Email -->
           <div class="col-span-1 flex flex-col gap-1">
             <span

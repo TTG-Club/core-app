@@ -1,11 +1,12 @@
 <script setup lang="ts">
-  import type { BackgroundDetailResponse } from '~backgrounds/model';
+  import type { BackgroundDetailResponse } from '../model';
 
+  import { useBackgroundToolCategories } from '../composable';
   import {
     getBackgroundFeatNode,
+    getBackgroundSkillNode,
     getBackgroundToolNodes,
-  } from '~backgrounds/model';
-
+  } from '../model';
   import { DescriptionsBlock, StatsBlock } from './ui';
 
   const { background } = defineProps<{
@@ -15,9 +16,16 @@
   /** Черта: названная предысторией либо список на выбор игрока. */
   const featNode = computed<string>(() => getBackgroundFeatNode(background));
 
+  /** Навыки: ссылки на статьи глоссария. */
+  const skillNode = computed<string>(() => getBackgroundSkillNode(background));
+
+  /** Категории инструментов: выбор из всей категории называется ею. */
+  const { toolCategories, isPending: isToolCategoriesPending } =
+    useBackgroundToolCategories(() => background);
+
   /** Владение инструментами: ссылки мастерской либо прежний свободный текст. */
   const toolNodes = computed<Array<string>>(() =>
-    getBackgroundToolNodes(background),
+    getBackgroundToolNodes(background, toolCategories.value),
   );
 </script>
 
@@ -31,8 +39,9 @@
         <StatsBlock
           :ability-scores="background.abilityScores"
           :feat="featNode"
-          :skill-proficiencies="background.skillProficiencies"
+          :skill-proficiencies="skillNode"
           :tool-proficiency="toolNodes"
+          :is-tool-proficiency-pending="isToolCategoriesPending"
           :equipment="background.equipment"
         />
       </div>

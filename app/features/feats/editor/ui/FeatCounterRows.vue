@@ -1,20 +1,26 @@
 <script setup lang="ts">
   import type { FeatCounterRow, FeatEditorLabelOverrides } from '../../model';
 
+  import { InfoTooltip } from '~ui/tooltip';
+
   import {
-    COUNTER_MINIMUM_MAX,
-    COUNTER_MINIMUM_MIN,
+    COUNTER_COUNT_MAX,
+    COUNTER_REST_AMOUNT_MIN,
     createCounterRow,
-    FEAT_COUNTER_RECOVERY_OPTIONS,
+    FEAT_COUNTER_REST_FIELDS,
+    FEAT_COUNTER_REST_MODE_OPTIONS,
     getFeatEditorLabels,
+    isCounterRestAmount,
   } from '../../model';
+  import FeatCounterMaxField from './FeatCounterMaxField.vue';
   import FeatRowsSection from './FeatRowsSection.vue';
 
   /**
-   * Ресурсы черты: счётчик с максимумом-формулой и откатом от отдыха.
+   * Ресурсы черты: счётчик с максимумом-формулой и восстановлением на отдыхе.
    *
    * Максимум формулой, а не числом, потому что у большинства таких запасов он
-   * привязан к бонусу мастерства и обязан расти вместе с ним («Удачливый»).
+   * привязан к бонусу мастерства и обязан расти вместе с ним («Удачливый»);
+   * формулу раскладывает на понятный выбор {@link FeatCounterMaxField}.
    */
   const { labels = {}, title = undefined } = defineProps<{
     /**
@@ -98,7 +104,7 @@
       class="grid grid-cols-1 items-end gap-3 rounded-lg bg-elevated/40 p-2 md:grid-cols-24"
     >
       <UFormField
-        class="md:col-span-6"
+        class="md:col-span-10"
         :label="texts.counterName"
       >
         <UInput
@@ -108,44 +114,27 @@
       </UFormField>
 
       <UFormField
-        class="md:col-span-3"
+        class="md:col-span-5"
         :label="texts.counterShortName"
       >
         <UInput v-model="counter.shortName" />
       </UFormField>
 
-      <UFormField
-        class="md:col-span-4"
-        :label="texts.counterMax"
-      >
+      <!-- Ключ виден, потому что по нему эффект умения тратит ресурс: без
+        поля автор не знал, что вписать в «Тратит ресурс» -->
+      <UFormField class="md:col-span-8">
+        <template #label>
+          <InfoTooltip
+            :text="texts.counterKeyHint"
+            icon="tabler:info-circle-filled"
+          >
+            <span>{{ texts.counterKey }}</span>
+          </InfoTooltip>
+        </template>
+
         <UInput
-          v-model="counter.max"
-          placeholder="@prof"
-        />
-      </UFormField>
-
-      <!-- Нижняя граница максимума: вдохновение барда равно модификатору
-        Харизмы, но с Харизмой +0 бард всё равно вдохновляет один раз -->
-      <UFormField
-        class="md:col-span-3"
-        :label="texts.counterMin"
-      >
-        <UInputNumber
-          v-model="counter.min"
-          :min="COUNTER_MINIMUM_MIN"
-          :max="COUNTER_MINIMUM_MAX"
-          class="w-full"
-        />
-      </UFormField>
-
-      <UFormField
-        class="md:col-span-7"
-        :label="texts.counterRecovery"
-      >
-        <USelect
-          v-model="counter.recovery"
-          :items="FEAT_COUNTER_RECOVERY_OPTIONS"
-          value-key="value"
+          v-model="counter.key"
+          :placeholder="texts.counterKeyPlaceholder"
         />
       </UFormField>
 
@@ -157,6 +146,65 @@
           size="xs"
           :aria-label="counter.name || texts.countersTitle"
           @click.left.exact.prevent="removeCounter(index)"
+        />
+      </div>
+
+      <!-- Максимум и оба отдыха одной строкой: полей немного, и каждое своим
+        рядом растягивало строку ресурса на полэкрана. Отдыхи раздельно:
+        «Второе дыхание» возвращает один заряд коротким и все продолжительным,
+        ярость — только продолжительным -->
+      <div class="flex flex-wrap items-end gap-3 md:col-span-24">
+        <FeatCounterMaxField
+          v-model="counter.max"
+          v-model:minimum="counter.min"
+          :labels="labels"
+        />
+
+        <template
+          v-for="field in FEAT_COUNTER_REST_FIELDS"
+          :key="field.key"
+        >
+          <UFormField class="w-52">
+            <template #label>
+              <span class="flex items-center gap-1">
+                <UIcon
+                  :name="field.icon"
+                  class="size-4 shrink-0"
+                />
+
+                {{ field.label }}
+              </span>
+            </template>
+
+            <USelect
+              v-model="counter[field.key].mode"
+              :items="FEAT_COUNTER_REST_MODE_OPTIONS"
+              value-key="value"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField
+            v-if="isCounterRestAmount(counter[field.key])"
+            class="w-24"
+            :label="texts.counterRestAmount"
+          >
+            <UInputNumber
+              v-model="counter[field.key].amount"
+              :min="COUNTER_REST_AMOUNT_MIN"
+              :max="COUNTER_COUNT_MAX"
+              class="w-full"
+            />
+          </UFormField>
+        </template>
+      </div>
+
+      <!-- Ресурс, который набирают действием, а не получают с умением -->
+      <div class="md:col-span-24">
+        <UCheckbox
+          v-model="counter.startsEmpty"
+          :label="texts.counterStartsEmpty"
+          :description="texts.counterStartsEmptyHint"
         />
       </div>
 
@@ -178,6 +226,12 @@
           {{ texts.counterScalingTitle }}
         </span>
 
+        <!-- Без подсказки ступени читались только как рост: что первая из них
+          ещё и открывает ресурс, из заголовка не видно -->
+        <p class="text-xs text-dimmed">
+          {{ texts.counterScalingHint }}
+        </p>
+
         <p
           v-if="!counter.scaling.length"
           class="text-xs text-dimmed italic"
@@ -191,7 +245,7 @@
           class="flex items-end gap-2"
         >
           <UFormField
-            class="w-28"
+            class="w-24"
             :label="texts.counterScalingLevel"
           >
             <UInputNumber
@@ -203,7 +257,7 @@
           </UFormField>
 
           <UFormField
-            class="w-28"
+            class="w-24"
             :label="texts.counterScalingMax"
           >
             <UInputNumber

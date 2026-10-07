@@ -1,5 +1,7 @@
 import type { AbilityKey } from '~/shared/types';
 
+import { createFullCounterRestRule, createNoCounterRestRule } from './counter';
+
 /**
  * Механика черты: то, что лист персонажа считает сам, а не показывает текстом.
  *
@@ -219,6 +221,17 @@ export interface FeatChoice {
    * приём»), а в шапке таблицы нужно существительное («Приёмы»).
    */
   shortName: string | undefined;
+
+  /**
+   * Выбранные заклинания не нужно готовить, и места в числе класса они не
+   * занимают: заговор «Чудотворца» жреца не входит в колонку «Заговоры». Только у
+   * выбора заклинания или заговора — то же, что {@link FeatSpellGrant.alwaysPrepared}
+   * у выдачи.
+   *
+   * `undefined` — готовить нужно: так поле уходит из отправляемой механики, когда
+   * отметка снята, и так же читаются записи, сделанные до её появления.
+   */
+  alwaysPrepared: boolean | undefined;
 }
 
 /**
@@ -568,6 +581,17 @@ export interface FeatSpellListExpansion {
  */
 export type FeatCounterRecovery = 'SHORT_REST' | 'LONG_REST' | 'SHORT_REST_ONE';
 
+/** Сколько зарядов возвращает отдых: ничего, все или своё число. */
+export type FeatCounterRestMode = 'NONE' | 'ALL' | 'AMOUNT';
+
+/** Что возвращает ресурсу один вид отдыха. */
+export interface FeatCounterRestRule {
+  mode: FeatCounterRestMode;
+
+  /** Число возвращаемых зарядов; учитывается только при режиме `AMOUNT`. */
+  amount: number;
+}
+
 /**
  * Ресурс черты со счётчиком: очки удачи «Удачливого», применения «Целителя».
  *
@@ -628,7 +652,27 @@ export interface FeatCounter {
    */
   showInTable: boolean;
 
+  /** Что возвращает короткий отдых. */
+  shortRest: FeatCounterRestRule;
+
+  /** Что возвращает продолжительный отдых. */
+  longRest: FeatCounterRestRule;
+
+  /**
+   * Откат одним словом — для потребителей, которые ещё не читают раздельные
+   * правила отдыха. Форма его не правит: при сохранении он выводится из
+   * {@link FeatCounter.shortRest} и {@link FeatCounter.longRest}
+   * (`toLegacyCounterRecovery`).
+   */
   recovery: FeatCounterRecovery;
+
+  /**
+   * Ресурс появляется на листе пустым (ноль из максимума), а не полным: его
+   * набирают действием — эффектом «вернуть ресурс», — а не получают вместе с
+   * умением («Очки мутации» друида). Пишется только взведённым: у ресурса без
+   * отметки поля в записи нет.
+   */
+  startsEmpty?: boolean;
 }
 
 /** Механика черты целиком. */
@@ -739,6 +783,7 @@ export function createFeatChoice(): FeatChoice {
     scaling: undefined,
     showInTable: undefined,
     shortName: undefined,
+    alwaysPrepared: undefined,
   };
 }
 
@@ -852,6 +897,8 @@ export function createFeatCounter(): FeatCounter {
     scaling: [],
     min: 0,
     showInTable: false,
+    shortRest: createNoCounterRestRule(),
+    longRest: createFullCounterRestRule(),
     recovery: 'LONG_REST',
   };
 }

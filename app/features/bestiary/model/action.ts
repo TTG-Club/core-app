@@ -1,8 +1,11 @@
-import type { ActiveEffect } from '~active-effects/model';
+import type { ActiveEffect, EffectFormContext } from '~active-effects/model';
 import type { DamageFormulaPart } from '~ui/damage-formula';
+
+import type { CreatureDamageAlternative } from './damageAlternatives';
 
 import { AbilityKey } from '~/shared/types';
 import {
+  EFFECT_FORM_CONTEXT,
   normalizeActiveEffects,
   normalizeLoadedActiveEffects,
 } from '~active-effects/model';
@@ -11,11 +14,49 @@ import {
   parseLoadedDamageFormulaParts,
 } from '~ui/damage-formula';
 
+import {
+  normalizeCreatureDamageAlternatives,
+  parseLoadedCreatureDamageAlternatives,
+} from './damageAlternatives';
+
 /**
  * Тип атаки записи существа — словарь сайта. В VTTG он переводится в тип
  * дальности: рукопашная и «рукопашная или дальнобойная» уезжают `melee`.
  */
 export type CreatureAttackType = 'MELEE' | 'MELEE_OR_RANGE' | 'RANGE';
+
+/**
+ * Место эффектов записи боевого блока: у черты существа эффект лежит на нём
+ * самом (пассив или аура), у действия, реакции, легендарного действия и
+ * эффекта логова — ложится на цель.
+ */
+export type CreatureEffectContext = Extract<
+  EffectFormContext,
+  'creatureAction' | 'creatureTrait'
+>;
+
+/** Списки записей боевого блока в состоянии формы существа. */
+export type CreatureActionListKey =
+  | 'traits'
+  | 'actions'
+  | 'bonusActions'
+  | 'reactions'
+  | 'legendary'
+  | 'lair';
+
+/**
+ * Место эффектов записей каждого списка боевого блока. Одна карта на форму и
+ * на сохранение: иначе список мог бы показывать эффекты черты, а сохраняться
+ * как действие — с другой допустимой Сл.
+ */
+export const CREATURE_ACTION_EFFECT_CONTEXTS = {
+  traits: EFFECT_FORM_CONTEXT.creatureTrait,
+  actions: EFFECT_FORM_CONTEXT.creatureAction,
+  bonusActions: EFFECT_FORM_CONTEXT.creatureAction,
+  reactions: EFFECT_FORM_CONTEXT.creatureAction,
+  legendary: EFFECT_FORM_CONTEXT.creatureAction,
+  lair: EFFECT_FORM_CONTEXT.creatureAction,
+} as const satisfies Record<CreatureActionListKey, CreatureEffectContext>;
 
 /** Что происходит с уроном при успешном спасброске цели. */
 export type CreatureSaveEffect = 'HALF' | 'NONE' | 'SPECIAL';
@@ -51,6 +92,13 @@ export interface CreatureActionEffect {
   rangeNormal: number | undefined;
   rangeLong: number | undefined;
   damageParts: Array<DamageFormulaPart>;
+
+  /**
+   * Урон «или»: другие наборы частей, каждый заменяет основной урон целиком.
+   * См. `damageAlternatives.ts`.
+   */
+  damageAlternatives: Array<CreatureDamageAlternative>;
+
   savingThrows: Array<CreatureSavingThrow>;
   saveEffect: CreatureSaveEffect | undefined;
   areaOfEffect: CreatureAreaOfEffect;
@@ -79,6 +127,7 @@ export function createEmptyCreatureActionEffect(): CreatureActionEffect {
     rangeNormal: undefined,
     rangeLong: undefined,
     damageParts: [],
+    damageAlternatives: [],
     savingThrows: [],
     saveEffect: undefined,
     areaOfEffect: {
@@ -110,6 +159,7 @@ const loadedActionEffectSchema = z
     rangeNormal: z.number().nullish().catch(null),
     rangeLong: z.number().nullish().catch(null),
     damageParts: z.unknown().nullish().catch(null),
+    damageAlternatives: z.unknown().nullish().catch(null),
     savingThrows: z
       .array(
         z.object({
@@ -157,6 +207,9 @@ export function parseLoadedCreatureActionEffect(
     rangeNormal: parsed.rangeNormal ?? undefined,
     rangeLong: parsed.rangeLong ?? undefined,
     damageParts: parseLoadedDamageFormulaParts(parsed.damageParts),
+    damageAlternatives: parseLoadedCreatureDamageAlternatives(
+      parsed.damageAlternatives,
+    ),
     savingThrows: (parsed.savingThrows ?? []).map((save) => ({
       ability: ABILITY_KEYS.find((ability) => ability === save.ability),
       dc: save.dc ?? undefined,
@@ -244,10 +297,12 @@ export function normalizeLoadedCreatureActions(raw: unknown): Array<unknown> {
  * безопасно, и тип записи остаётся одним на форму и на запрос.
  *
  * @param effect механика из формы.
+ * @param effectContext место эффектов записи: черта существа или действие.
  * @returns механика для запроса.
  */
 export function normalizeCreatureActionEffect(
   effect: CreatureActionEffect | undefined,
+  effectContext: CreatureEffectContext,
 ): CreatureActionEffect {
   if (!effect) {
     return createEmptyCreatureActionEffect();
@@ -262,11 +317,14 @@ export function normalizeCreatureActionEffect(
   return {
     ...effect,
     damageParts: normalizeDamageFormulaParts(effect.damageParts),
+    damageAlternatives: normalizeCreatureDamageAlternatives(
+      effect.damageAlternatives,
+    ),
     savingThrows: effect.savingThrows.filter(
       (save) => save.ability !== undefined,
     ),
     areaOfEffect,
-    activeEffects: normalizeActiveEffects(effect.activeEffects),
+    activeEffects: normalizeActiveEffects(effect.activeEffects, effectContext),
   };
 }
 
@@ -296,6 +354,14 @@ export function getCreatureActionCombatFilledCount(
       || effect.rangeLong !== undefined,
     effect.savingThrows.some((save) => save.ability !== undefined),
     Boolean(effect.areaOfEffect.type),
-    effect.damageParts.some((part) => part.formula.trim().length > 0),
+    // Урон заведён, если формула есть у основного урона или у любого «или»
+    [
+      effect.damageParts,
+      ...effect.damageAlternatives.map(
+        (alternative) => alternative.damageParts,
+      ),
+    ].some((formulaParts) =>
+      formulaParts.some((part) => part.formula.trim().length > 0),
+    ),
   ].filter(Boolean).length;
 }

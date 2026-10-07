@@ -3,6 +3,7 @@
 
   import { MarkupEditor } from '~ui/markup-editor';
 
+  import { CREATURE_ACTION_EFFECT_CONTEXTS } from '../../model';
   import { CREATURE_ACTION_ADD_LABELS } from '../constants';
   import { CreatureActionList } from './action';
 
@@ -52,6 +53,7 @@
         v-model="model.effects"
         :add-label="CREATURE_ACTION_ADD_LABELS.lair"
         path="lair.effects"
+        :effect-context="CREATURE_ACTION_EFFECT_CONTEXTS.lair"
       />
 
       <UForm

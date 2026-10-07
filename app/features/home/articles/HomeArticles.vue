@@ -1,15 +1,22 @@
 <script setup lang="ts">
   import type { ArticleShortResponse } from '~articles/model';
 
+  import { ArticleTile } from '~articles/card';
   import { ArticleDrawer } from '~articles/drawer';
   import {
-    ARTICLE_DATE_FORMAT,
-    ARTICLE_FALLBACK_IMAGE,
     ARTICLE_TYPE,
     ARTICLES_ROUTE,
     ARTICLES_SEARCH_PATH,
     HOME_ARTICLES_COUNT,
   } from '~articles/model';
+  import { HomePanel } from '~home/ui-kit';
+
+  import {
+    HOME_ARTICLES_ALL_LABEL,
+    HOME_ARTICLES_EMPTY_TEXT,
+    HOME_ARTICLES_ICON,
+    HOME_ARTICLES_LABEL,
+  } from './model';
 
   // Клиентская (не-SSR) загрузка: блок статей ниже сгиба и не должен держать TTFB
   // главной в ожидании бэкенда (как HomeNews / HomeRecentChanges). Пока запрос идёт —
@@ -40,8 +47,6 @@
     }
   });
 
-  const { format } = useDayjs();
-
   // Скелетон — только на ПЕРВОЙ загрузке (данных ещё нет); idle тоже держим как
   // loading (server:false: до клиентского фетча статус 'idle'). Фоновое обновление
   // не мигает скелетоном поверх уже показанных статей.
@@ -55,26 +60,6 @@
   // включён и т.п.) — аккуратнее показать пустую главную, чем ошибку гостям.
   const isError = computed(
     () => status.value === 'error' && !hasArticles.value,
-  );
-
-  interface HomeArticleCard {
-    id: string;
-    url: string;
-    title: string;
-    date: string;
-    cover: string;
-  }
-
-  const cards = computed<HomeArticleCard[]>(() =>
-    (data.value ?? []).map((article) => ({
-      id: article.id,
-      url: article.url,
-      title: article.title,
-      date: article.publishDateTime
-        ? format(article.publishDateTime, ARTICLE_DATE_FORMAT)
-        : '',
-      cover: article.previewImageUrl || ARTICLE_FALLBACK_IMAGE,
-    })),
   );
 
   // По умолчанию статья открывается в дровере (страница остаётся доступной по
@@ -95,97 +80,50 @@
 </script>
 
 <template>
-  <UCard
+  <HomePanel
     v-if="!isError"
-    :ui="{
-      root: 'bg-muted',
-      header: 'p-3 sm:p-3',
-      body: 'p-0 sm:p-0',
-    }"
+    :label="HOME_ARTICLES_LABEL"
+    :icon="HOME_ARTICLES_ICON"
+    :to="ARTICLES_ROUTE"
+    :link-label="HOME_ARTICLES_ALL_LABEL"
+    body-class="p-2"
   >
-    <template #header>
-      <div class="flex items-center gap-2">
-        <UIcon
-          name="tabler:article"
-          class="size-5 text-primary"
-        />
-
-        <h3 class="text-base leading-none font-medium">Статьи</h3>
-      </div>
-    </template>
-
     <div
       v-if="isLoading"
-      class="flex flex-col gap-3 p-3"
+      class="grid grid-cols-1 gap-1 sm:grid-cols-2"
     >
       <div
         v-for="index in HOME_ARTICLES_COUNT"
         :key="index"
-        class="flex items-center gap-3"
+        class="flex items-center gap-3 p-2"
       >
-        <USkeleton class="h-14 w-24 shrink-0 rounded-lg" />
+        <USkeleton class="h-16 w-24 shrink-0 rounded-md" />
 
         <div class="flex flex-1 flex-col gap-2">
-          <USkeleton class="h-3 w-20 rounded-md" />
+          <USkeleton class="h-2.5 w-16 rounded" />
 
-          <USkeleton class="h-4 w-3/4 rounded-md" />
+          <USkeleton class="h-4 w-3/4 rounded" />
         </div>
       </div>
     </div>
 
     <p
       v-else-if="!hasArticles"
-      class="m-3 rounded-xl border border-dashed border-default px-3 py-8 text-center text-sm text-muted"
+      class="m-1 rounded-xl border border-dashed border-default px-3 py-8 text-center text-sm text-muted"
     >
-      Статей пока нет
+      {{ HOME_ARTICLES_EMPTY_TEXT }}
     </p>
 
     <div
       v-else
-      class="flex flex-col"
+      class="grid grid-cols-1 gap-1 sm:grid-cols-2"
     >
-      <div class="flex flex-col gap-1 p-2">
-        <button
-          v-for="card in cards"
-          :key="card.id"
-          type="button"
-          class="group flex cursor-pointer items-center gap-3 rounded-lg p-2 text-left transition-colors hover:bg-elevated"
-          @click.left.exact.prevent="openArticle(card.url)"
-        >
-          <img
-            :src="card.cover"
-            :alt="card.title"
-            class="h-14 w-24 shrink-0 rounded-lg object-cover"
-          />
-
-          <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span
-              v-if="card.date"
-              class="text-xs leading-none text-muted"
-            >
-              {{ card.date }}
-            </span>
-
-            <h4
-              class="line-clamp-2 text-sm leading-tight font-medium text-highlighted group-hover:text-primary"
-            >
-              {{ card.title }}
-            </h4>
-          </div>
-        </button>
-      </div>
-
-      <UButton
-        :to="ARTICLES_ROUTE"
-        block
-        size="lg"
-        color="neutral"
-        variant="soft"
-        trailing-icon="tabler:arrow-right"
-        class="justify-center rounded-none border-t border-default"
-      >
-        Все статьи
-      </UButton>
+      <ArticleTile
+        v-for="article in data"
+        :key="article.id"
+        :article
+        @open="openArticle(article.url)"
+      />
     </div>
-  </UCard>
+  </HomePanel>
 </template>
