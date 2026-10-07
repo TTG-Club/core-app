@@ -13,6 +13,16 @@ import {
   PRIVACY_POLICY_LINK_LABEL,
   PRIVACY_POLICY_ROUTE,
 } from '~infrastructure/privacy-policy/model';
+import {
+  PUBLIC_OFFER_ICON,
+  PUBLIC_OFFER_PAGE_TITLE,
+  PUBLIC_OFFER_ROUTE,
+} from '~infrastructure/public-offer/model';
+import {
+  USER_AGREEMENT_ICON,
+  USER_AGREEMENT_PAGE_TITLE,
+  USER_AGREEMENT_ROUTE,
+} from '~infrastructure/user-agreement/model';
 
 import { MENU_LINKS, MENU_SUPPORT } from '../../sidebar/menu/model';
 
@@ -53,6 +63,16 @@ export const FOOTER_LEGAL_LINKS = [
     label: COOKIE_POLICY_PAGE_TITLE,
     to: COOKIE_POLICY_ROUTE,
     icon: COOKIE_NOTICE_ICON,
+  },
+  {
+    label: USER_AGREEMENT_PAGE_TITLE,
+    to: USER_AGREEMENT_ROUTE,
+    icon: USER_AGREEMENT_ICON,
+  },
+  {
+    label: PUBLIC_OFFER_PAGE_TITLE,
+    to: PUBLIC_OFFER_ROUTE,
+    icon: PUBLIC_OFFER_ICON,
   },
 ];
 

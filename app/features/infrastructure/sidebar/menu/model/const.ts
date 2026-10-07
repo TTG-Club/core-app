@@ -22,6 +22,14 @@ import {
   PRIVACY_POLICY_ROUTE,
 } from '~infrastructure/privacy-policy/model';
 import {
+  PUBLIC_OFFER_PAGE_TITLE,
+  PUBLIC_OFFER_ROUTE,
+} from '~infrastructure/public-offer/model';
+import {
+  USER_AGREEMENT_PAGE_TITLE,
+  USER_AGREEMENT_ROUTE,
+} from '~infrastructure/user-agreement/model';
+import {
   VTTG_LANDING_PATH,
   VTTG_PASSWORD_RESET_PAGE,
   VTTG_PASSWORD_RESET_PATH,
@@ -210,6 +218,14 @@ export const MENU_SECTIONS: Array<MenuSection> = [
       {
         href: PRIVACY_POLICY_ROUTE,
         label: PRIVACY_POLICY_LINK_LABEL,
+      },
+      {
+        href: USER_AGREEMENT_ROUTE,
+        label: USER_AGREEMENT_PAGE_TITLE,
+      },
+      {
+        href: PUBLIC_OFFER_ROUTE,
+        label: PUBLIC_OFFER_PAGE_TITLE,
       },
     ],
   },
