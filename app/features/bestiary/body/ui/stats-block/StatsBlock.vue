@@ -6,6 +6,7 @@
 
   import {
     formatCreatureInventoryNote,
+    formatCreatureSpeed,
     getCreatureInventoryEntries,
   } from '../../../model';
   import { CreatureAbilitiesTable, CreatureInventoryLink } from './ui';
@@ -27,14 +28,17 @@
       | 'languages'
     >;
 
-  const { equipments, inventory, inventoryText } = defineProps<Props>();
+  const props = defineProps<Props>();
+
+  /** Скорость без лишних пробелов перед запятыми — так её присылает бэкенд. */
+  const formattedSpeed = computed(() => formatCreatureSpeed(props.speed));
 
   /**
    * Позиции инвентаря для показа: название, пояснение в скобках и адрес
    * карточки. Ссылкой становится только название — «Копьё (6)».
    */
   const inventoryEntries = computed(() =>
-    getCreatureInventoryEntries(inventory).map((entry) => ({
+    getCreatureInventoryEntries(props.inventory).map((entry) => ({
       name: entry.name,
       note: formatCreatureInventoryNote(entry.quantity, entry.description),
       section: entry.section,
@@ -44,7 +48,7 @@
 
   /** Инвентарь заведён — показываем его. */
   const hasInventory = computed(
-    () => inventoryEntries.value.length > 0 || Boolean(inventoryText),
+    () => inventoryEntries.value.length > 0 || Boolean(props.inventoryText),
   );
 
   /**
@@ -52,7 +56,7 @@
    * инвентарь ещё не завели: иначе одно и то же было бы написано дважды.
    */
   const legacyEquipments = computed(() =>
-    hasInventory.value ? '' : (equipments ?? ''),
+    hasInventory.value ? '' : (props.equipments ?? ''),
   );
 </script>
 
@@ -94,7 +98,7 @@
     <div :class="$style.item">
       <span :class="$style.name">Скорость: </span>
 
-      <span>{{ speed }}</span>
+      <span>{{ formattedSpeed }}</span>
     </div>
 
     <CreatureAbilitiesTable v-bind="abilities" />

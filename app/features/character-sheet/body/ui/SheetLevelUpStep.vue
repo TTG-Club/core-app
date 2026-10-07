@@ -17,7 +17,9 @@
 
   import {
     ABILITY_IMPROVEMENT_LABELS,
+    CLASS_SPELL_LIST_LABELS,
     getChoiceModalSubtitle,
+    getClassSpellListExplanation,
     getHitDieAverage,
     getHitDieLabel,
     getLevelHitPointsGain,
@@ -207,6 +209,20 @@
     ),
   );
 
+  /** Доборы списка класса шага полями пикера: пояснение с числом из таблицы. */
+  const classSpellListFields = computed(() =>
+    step.classSpellListPicks.map((pick) => ({
+      id: pick.id,
+      title: pick.featureName,
+      explanation: getClassSpellListExplanation(
+        CLASS_SPELL_LIST_LABELS.levelUpExplanation,
+        pick.preparedHint,
+      ),
+      options: pick.options,
+      selected: draft.selections[pick.id] ?? [],
+    })),
+  );
+
   /** Умения, свёрнутые игроком: по умолчанию все карточки раскрыты. */
   const collapsedFeatureIds = ref(new Set<string>());
 
@@ -340,6 +356,17 @@
   function handleSubclass(values: string[]) {
     emit('update:subclass', values[0] ?? null);
   }
+
+  /**
+   * Выбор добора списка класса: предела нет — подготовленных всё равно
+   * столько, сколько даёт таблица.
+   *
+   * @param pickId ключ добора в черновике шага.
+   * @param names названия выбранных заклинаний.
+   */
+  function handleClassSpellListPick(pickId: string, names: string[]) {
+    emit('update:selection', pickId, names);
+  }
 </script>
 
 <template>
@@ -453,6 +480,25 @@
       <span class="text-xs text-dimmed">
         {{ LEVEL_UP_WIZARD_LABELS.subclassHint }}
       </span>
+    </div>
+
+    <div
+      v-if="classSpellListFields.length"
+      :class="SHEET_WIZARD_SECTION_CLASS"
+    >
+      <span :class="SHEET_WIZARD_SECTION_TITLE_CLASS">
+        {{ CLASS_SPELL_LIST_LABELS.title }}
+      </span>
+
+      <SheetChoicePickerField
+        v-for="field in classSpellListFields"
+        :key="field.id"
+        :title="field.title"
+        :explanation="field.explanation"
+        :options="field.options"
+        :model-value="field.selected"
+        @update:model-value="handleClassSpellListPick(field.id, $event)"
+      />
     </div>
 
     <div class="flex flex-col gap-2">

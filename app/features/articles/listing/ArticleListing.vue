@@ -26,7 +26,7 @@
     title: string;
   }>();
 
-  const { isAdmin } = useUserRoles();
+  const { canEditEntities } = useUserRoles();
 
   // Поиск — серверный: дебаунсим ввод и уводим в query (пустую строку не шлём;
   // `search` фильтрует по всему набору, `cnt` лишь режет выдачу).
@@ -99,7 +99,7 @@
 
   // Правка — в админке (useSectionDetail целится в /workshop, у записей другой путь).
   const detailEditUrl = computed(() =>
-    isAdmin.value && detailUrl.value
+    canEditEntities.value && detailUrl.value
       ? `${ARTICLES_ADMIN_ROUTE}/${detailUrl.value}`
       : undefined,
   );

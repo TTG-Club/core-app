@@ -10,12 +10,14 @@
     CharacterSpell,
     ClassChoice,
     ClassOption,
+    ClassSpellListMode,
     ClassSummary,
     ClassWizardTab,
     FeatSelectOption,
     LevelUpAbilityImprovement,
     LevelUpFeatChoice,
     SheetChoiceControl,
+    SheetChoiceOption,
     SheetChoiceOrigin,
   } from '../../model';
 
@@ -45,6 +47,7 @@
     CLASS_GRANTED_FEAT_ID_SEGMENT,
     CLASS_SKILLS_CHOICE_ID,
     CLASS_SOURCES_ASYNC_DATA_KEY,
+    CLASS_SPELL_LIST_DEFAULT_MODE,
     CLASS_WIZARD_LABELS,
     CLASS_WIZARD_TAB_LABELS,
     CLASS_WIZARD_TAB_ORDER,
@@ -64,6 +67,7 @@
     fetchFeatDetail,
     filterChoicesByLevel,
     getAbilityImprovementSpent,
+    getCasterMaxSpellLevel,
     getCharacterClasses,
     getChoiceModalSubtitle,
     getChosenFeatureOptionKeys,
@@ -71,9 +75,11 @@
     getChosenProficientSkills,
     getClassFeatureChoices,
     getClassFeatureId,
+    getClassListSpellPool,
     getClassMaxHitPoints,
     getClassOwnGrantsFeatureId,
     getClassSkillChoice,
+    getClassSpellListPreparedHint,
     getClassToolChoice,
     getEffectiveAbilities,
     getFeatChoiceOptions,
@@ -108,13 +114,17 @@
     SHEET_WIZARD_SECTION_CLASS,
     STARTING_EQUIPMENT_SKIP_VALUE,
     SUBCLASS_SELECTION_MIN_LEVEL,
+    toChosenClassListSpells,
+    toSpellPickerOptions,
     unionToolProficiencies,
     withAbilityImprovementStep,
+    withChosenClassSpellList,
     withChosenFeatureSpells,
     withPendingAbilityIncreases,
   } from '../../model';
   import SheetAbilityImprovementChoice from './SheetAbilityImprovementChoice.vue';
   import SheetChoicePickerField from './SheetChoicePickerField.vue';
+  import SheetClassSpellListChoice from './SheetClassSpellListChoice.vue';
   import SheetCustomClassModal from './SheetCustomClassModal.vue';
   import SheetFeatChoiceField from './SheetFeatChoiceField.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
@@ -280,6 +290,15 @@
   const abilityImprovements = ref<Record<string, LevelUpAbilityImprovement>>(
     {},
   );
+
+  /**
+   * Как игрок берёт «весь список класса» по идентификатору умения; умения нет
+   * в словаре — режим по умолчанию.
+   */
+  const classSpellListModes = ref<Record<string, ClassSpellListMode>>({});
+
+  /** Выбранные из списка класса заклинания (названия) по идентификатору умения. */
+  const classSpellListSelections = ref<Record<string, string[]>>({});
 
   /** Каталог черт для выборов черты в умениях; грузится, когда они есть. */
   const featCatalog = ref<FeatSelectOption[]>([]);
@@ -606,6 +625,9 @@
       /** Умение даёт повышение характеристик — его спрашивает свой раздел. */
       abilityImprovement: boolean;
 
+      /** Заклинания умения: среди них бывает «весь список класса». */
+      spells: CharacterSpell[] | null;
+
       /**
        * Повышения умения по уровням: персонаж собирается сразу на нужном
        * уровне, и «Улучшение характеристик» спрашивает своё за каждый
@@ -677,6 +699,7 @@
             ...getChosenOptionFeatUrls(feature, chosenOptionKeys),
           ],
           abilityImprovement: feature.abilityImprovement,
+          spells: feature.spells,
           improvementChoices: feature.abilityImprovement
             ? [feature.level, ...feature.scalingLevels]
                 .filter((featureLevel) => featureLevel <= level.value)
@@ -705,6 +728,158 @@
 
     return rows;
   });
+
+  /**
+   * Заклинания «весь список класса», открытые на этом уровне, по
+   * идентификаторам умений. Умения без такой выдачи здесь не значатся: о выборе
+   * списка спрашивают только их.
+   */
+  const classSpellListPools = computed<Record<string, CharacterSpell[]>>(() => {
+    const base = classDetail.value;
+
+    if (!base) {
+      return {};
+    }
+
+    const maxSpellLevel = getCasterMaxSpellLevel(
+      getSelectedCasterType(base, subclassDetail.value),
+      level.value,
+    );
+
+    return Object.fromEntries(
+      featureRows.value.flatMap((row) => {
+        const pool = getClassListSpellPool(
+          row.spells,
+          level.value,
+          maxSpellLevel,
+        );
+
+        return pool.length ? [[row.id, pool]] : [];
+      }),
+    );
+  });
+
+  /** Заклинания списка вариантами пикера по идентификаторам умений. */
+  const classSpellListOptions = computed<Record<string, SheetChoiceOption[]>>(
+    () =>
+      Object.fromEntries(
+        Object.entries(classSpellListPools.value).map(([featureId, pool]) => [
+          featureId,
+          toSpellPickerOptions(pool),
+        ]),
+      ),
+  );
+
+  /**
+   * Карточки умений на вкладке «Умения»: строка умения и её выбор «весь список
+   * класса». Выбор лежит полем карточки, а не словарём рядом: шаблон проверяет
+   * его у самой карточки, и у умения без такой выдачи поле пустое.
+   */
+  const featureCards = computed(() =>
+    featureRows.value.map((row) => {
+      const options = classSpellListOptions.value[row.id];
+
+      return {
+        ...row,
+        spellListChoice: options
+          ? {
+              options,
+              spellCount: options.length,
+              mode: getClassSpellListMode(row.id),
+              selected: classSpellListSelections.value[row.id] ?? [],
+            }
+          : null,
+      };
+    }),
+  );
+
+  /** Сколько готовят по таблице класса и подкласса на этом уровне. */
+  const classSpellListPreparedHint = computed(() =>
+    getClassSpellListPreparedHint(
+      derivePreparedSpellsScaling([
+        ...(classDetail.value?.table ?? []),
+        ...(subclassDetail.value?.table ?? []),
+      ]),
+      level.value,
+    ),
+  );
+
+  /**
+   * Режим «весь список класса» умения.
+   *
+   * @param featureId идентификатор умения.
+   * @returns выбранный игроком режим либо режим по умолчанию.
+   */
+  function getClassSpellListMode(featureId: string): ClassSpellListMode {
+    return (
+      classSpellListModes.value[featureId] ?? CLASS_SPELL_LIST_DEFAULT_MODE
+    );
+  }
+
+  /**
+   * Смена режима «весь список класса» у умения.
+   *
+   * @param featureId идентификатор умения.
+   * @param mode выбранный режим.
+   */
+  function setClassSpellListMode(
+    featureId: string,
+    mode: ClassSpellListMode,
+  ): void {
+    classSpellListModes.value = {
+      ...classSpellListModes.value,
+      [featureId]: mode,
+    };
+  }
+
+  /**
+   * Выбор заклинаний из списка класса у умения.
+   *
+   * @param featureId идентификатор умения.
+   * @param names названия выбранных заклинаний.
+   */
+  function setClassSpellListSelection(
+    featureId: string,
+    names: string[],
+  ): void {
+    classSpellListSelections.value = {
+      ...classSpellListSelections.value,
+      [featureId]: names,
+    };
+  }
+
+  /**
+   * Записи умений с учётом выбора списка класса: где игрок выбирает сам, список
+   * с записи уходит, а выбранное ложится следом — {@link withChosenFeatureSpells}
+   * иначе отбросил бы его как повтор списка.
+   *
+   * @param features записи умений, собранные из детали класса.
+   * @returns записи умений с выбранным из списка.
+   */
+  function withClassSpellListChoices(
+    features: CharacterFeature[],
+  ): CharacterFeature[] {
+    const chosenIds = new Set(
+      Object.keys(classSpellListPools.value).filter(
+        (featureId) => getClassSpellListMode(featureId) === 'chosen',
+      ),
+    );
+
+    return withChosenFeatureSpells(
+      features.map((feature) =>
+        chosenIds.has(feature.id) ? withChosenClassSpellList(feature) : feature,
+      ),
+      Object.fromEntries(
+        [...chosenIds].map((featureId) => [
+          featureId,
+          toChosenClassListSpells(
+            classSpellListPools.value[featureId] ?? [],
+            classSpellListSelections.value[featureId] ?? [],
+          ),
+        ]),
+      ),
+    );
+  }
 
   /** Все выборы мастера: по ним считается, что уже взято из общего списка. */
   const allChoices = computed<ClassChoice[]>(() => [
@@ -1620,6 +1795,8 @@
       selections.value = {};
       featSelections.value = {};
       abilityImprovements.value = {};
+      classSpellListModes.value = {};
+      classSpellListSelections.value = {};
 
       // Первый вариант снаряжения предлагается по умолчанию: лист чаще всего
       // заполняется на создании персонажа, где набор класса нужен целиком.
@@ -1838,12 +2015,14 @@
 
     const features = withChosenFeatureSpells(
       [
-        ...buildClassFeatures(
-          base,
-          subclassDetail.value,
-          level.value,
-          featureChoices,
-          featureAnswers,
+        ...withClassSpellListChoices(
+          buildClassFeatures(
+            base,
+            subclassDetail.value,
+            level.value,
+            featureChoices,
+            featureAnswers,
+          ),
         ),
         ...classFeatFeatures.map((selection) => selection.feature),
         // Взятые повышения характеристик: прибавка приезжает на лист эффектом,
@@ -2354,7 +2533,7 @@
                 </span>
 
                 <div
-                  v-for="row in featureRows"
+                  v-for="row in featureCards"
                   :key="row.id"
                   :class="SHEET_WIZARD_FEATURE_CARD_CLASS"
                 >
@@ -2439,6 +2618,19 @@
                         updateSelection(control.choice, $event)
                       "
                       @retry="handleSpellPoolRetry(control.choice)"
+                    />
+
+                    <SheetClassSpellListChoice
+                      v-if="row.spellListChoice"
+                      :spell-count="row.spellListChoice.spellCount"
+                      :options="row.spellListChoice.options"
+                      :prepared-hint="classSpellListPreparedHint"
+                      :mode="row.spellListChoice.mode"
+                      :model-value="row.spellListChoice.selected"
+                      @update:mode="setClassSpellListMode(row.id, $event)"
+                      @update:model-value="
+                        setClassSpellListSelection(row.id, $event)
+                      "
                     />
 
                     <UInput

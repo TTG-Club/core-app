@@ -321,6 +321,7 @@ export const NOTIFICATION_TYPES = [
   'REGISTRATION_WITHDRAWN',
   'PLAYER_REMOVED',
   'SESSION_SCHEDULED',
+  'SESSION_RESCHEDULED',
   'SESSION_STARTED',
   'SESSION_COMPLETED',
   'SESSION_CANCELLED',
@@ -338,6 +339,7 @@ export const NOTIFICATION_TEXTS = {
   REGISTRATION_WITHDRAWN: 'Игрок вышел из игры',
   PLAYER_REMOVED: 'Мастер исключил вас из игры',
   SESSION_SCHEDULED: 'Назначена новая встреча',
+  SESSION_RESCHEDULED: 'Встреча перенесена: подтвердите участие заново',
   SESSION_STARTED: 'Сессия началась',
   SESSION_COMPLETED: 'Сессия завершена',
   GAME_CLOSED: 'Игра завершена',
@@ -354,6 +356,7 @@ export const NOTIFICATION_ICONS = {
   REGISTRATION_WITHDRAWN: 'tabler:user-minus',
   PLAYER_REMOVED: 'tabler:user-off',
   SESSION_SCHEDULED: 'tabler:calendar-plus',
+  SESSION_RESCHEDULED: 'tabler:calendar-time',
   SESSION_STARTED: 'tabler:player-play',
   SESSION_COMPLETED: 'tabler:flag-check',
   GAME_CLOSED: 'tabler:circle-check',
@@ -578,8 +581,15 @@ export const GAME_PLAYERS_MIN = 1;
  */
 export const GAME_PLAYERS_MAX = 15;
 
-/** Тот же предел без подписки — он звучит только в подсказке поля. */
-const GAME_PLAYERS_FREE_MAX = 5;
+/** Тот же предел без подписки — он звучит в подсказке поля и на странице подписки. */
+export const GAME_PLAYERS_FREE_MAX = 5;
+
+/**
+ * Сколько незавершённых игр (черновик или открытая) может вести мастер: без
+ * подписки одну, с ней десять. Проверяет сервис игр, здесь — для подсказок.
+ */
+export const GAME_ACTIVE_FREE_MAX = 1;
+export const GAME_ACTIVE_SUBSCRIBER_MAX = 10;
 
 export const GAME_AGE_MIN = 0;
 export const GAME_AGE_MAX = 120;
@@ -654,6 +664,13 @@ export const FIND_GAME_TOAST_ERROR_ICON = 'tabler:alert-triangle';
 
 export const FIND_GAME_UNKNOWN_ERROR_MESSAGE =
   'Что-то пошло не так. Попробуйте ещё раз.';
+
+/**
+ * Отказ 401 сервис отдаёт без тела: объяснить его может только сайт. Повтор
+ * здесь не помогает — нужна перезагрузка, она уведёт на страницу входа.
+ */
+export const FIND_GAME_SESSION_EXPIRED_MESSAGE =
+  'Сессия истекла. Обновите страницу и войдите заново.';
 
 export const PROFILE_SAVED_TITLE = 'Профиль сохранён';
 
@@ -1279,8 +1296,7 @@ export const GAME_FORM_PLAYERS_ERROR =
   'Для старта нужно не больше игроков, чем максимум';
 export const GAME_FORM_AGE_ERROR =
   'Минимальный возраст не может превышать максимальный';
-export const GAME_FORM_LIMIT_HINT =
-  'Без подписки у мастера может быть только одна незавершённая игра. Завершите текущую или оформите подписку.';
+export const GAME_FORM_LIMIT_HINT = `Без подписки у мастера может быть только одна незавершённая игра, с подпиской — до ${GAME_ACTIVE_SUBSCRIBER_MAX}. Завершите одну из текущих игр или оформите подписку.`;
 
 /* Подписи раздела «Мои игры». */
 // Список собирает и свои игры, и чужие, куда пользователь записался,
@@ -1358,6 +1374,15 @@ export const SESSION_SERIES_CREATED_TOAST = 'Серия сессий созда�
 /** Предел серии: столько же встреч за раз принимает сервис. */
 export const SESSION_SERIES_MAX = 100;
 export const SESSION_COPY_LABEL = 'Скопировать';
+export const SESSION_EDIT_LABEL = 'Изменить';
+export const SESSION_EDIT_ICON = 'tabler:calendar-time';
+export const SESSION_EDIT_SUBMIT_ICON = 'tabler:device-floppy';
+export const SESSION_CREATE_SUBMIT_ICON = 'tabler:plus';
+export const SESSION_EDIT_TITLE = 'Изменение сессии';
+export const SESSION_EDIT_DESCRIPTION =
+  'Стоимость и условия оплаты не меняются. Если сдвинуть время, игроки получат уведомление, а их отметки присутствия сбросятся: каждый заново решит, успевает ли он.';
+export const SESSION_EDIT_SUBMIT_LABEL = 'Сохранить';
+export const SESSION_UPDATED_TOAST = 'Сессия изменена';
 export const SESSION_CREATE_TITLE = 'Новая сессия';
 export const SESSION_COPY_TITLE = 'Копия сессии';
 export const SESSION_COPY_DESCRIPTION =

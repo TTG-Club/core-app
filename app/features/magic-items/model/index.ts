@@ -1,3 +1,4 @@
+export * from './base-weapon';
 export * from './constants';
 export * from './create';
 export * from './detail';

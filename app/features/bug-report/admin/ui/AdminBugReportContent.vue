@@ -8,6 +8,7 @@
     parseSelectedText,
     toBugReportDescriptionBlocks,
   } from '../../model';
+  import { BugReportScreenshotModal } from '../../screenshot';
 
   /**
    * Содержимое самого репорта: страница, описание, выделенный фрагмент и
@@ -134,24 +135,13 @@
       </div>
     </div>
 
-    <!-- Модалка полного скриншота -->
-    <UModal
+    <!-- Окно полного скриншота -->
+    <BugReportScreenshotModal
+      v-if="bugReport.screenshotUrl"
       v-model:open="isImageModalOpen"
+      :url="bugReport.screenshotUrl"
       :title="`Скриншот баг-репорта от ${bugReport.userLogin || BUG_REPORT_ANONYMOUS_USER_GENITIVE}`"
-      :ui="{ content: 'max-w-5xl' }"
-    >
-      <template #body>
-        <div
-          class="flex items-center justify-center overflow-hidden rounded-lg bg-black/10 p-2"
-        >
-          <img
-            v-if="bugReport.screenshotUrl"
-            :src="bugReport.screenshotUrl"
-            alt="Скриншот ошибки в оригинальном размере"
-            class="max-h-[80vh] max-w-full object-contain"
-          />
-        </div>
-      </template>
-    </UModal>
+      alt="Скриншот ошибки в оригинальном размере"
+    />
   </div>
 </template>

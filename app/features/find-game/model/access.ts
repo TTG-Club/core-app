@@ -39,6 +39,8 @@ export interface SessionAbilities {
   canComplete: boolean;
   /** Мастер может отметить сессию несостоявшейся. */
   canCancel: boolean;
+  /** Мастер может поправить встречу: перенести её или переименовать. */
+  canEdit: boolean;
   /** Мастер может перевести сессию в «идёт». */
   canStart: boolean;
 
@@ -193,6 +195,9 @@ export function resolveSessionAbilities(
       && (session.status === 'IN_PROGRESS'
         || session.confirmedPlayerIds.length > 0),
     canCancel: abilities.isMaster && !isSessionClosed,
+    // Править можно только то, что ещё не началось: время идущей или
+    // закрытой встречи уже стало историей.
+    canEdit: abilities.isMaster && session.status === 'SCHEDULED',
     // Встречу без единого подтверждения сервис не начнёт: так мастер не
     // набивает себе счётчик сыгранных, начиная и закрывая её в одиночку.
     canStart:

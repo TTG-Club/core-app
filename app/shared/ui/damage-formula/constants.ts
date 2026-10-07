@@ -21,8 +21,10 @@ export type DamageFormulaToolSlot =
   | 'modifiers'
   | 'dice'
   | 'damageTypes'
+  | 'damageTypeChoice'
   | 'healing'
   | 'conditions'
+  | 'statuses'
   | 'creatureTypes';
 
 interface DamageFormulaTag {
@@ -70,6 +72,49 @@ export const DAMAGE_FORMULA_CONDITION_TAGS: Array<DamageFormulaTag> = [
 ];
 
 /**
+ * Чьё состояние проверяет токен состояния (`@target.status.prone`): `target` —
+ * цели урона, `self` — того, кто бросает (атакующий, заклинатель, существо со
+ * своим действием). Зеркало `StatusTokenSide` системы VTTG.
+ */
+export type DamageFormulaStatusSide = 'self' | 'target';
+
+/**
+ * Состояния для токенов `@target.status.prone` и `@self.status.bloodied`:
+ * слагаемое бросается, только если у стороны есть состояние.
+ *
+ * Канон VTTG без метки смерти (`listSelectableConditions`). Состояний мира сайт
+ * не знает: у записей компендиума в формулах — только канонические ключи. Свой
+ * список, а не состояния порта эффектов: тот сам тянет этот модуль.
+ */
+export const DAMAGE_FORMULA_STATUS_OPTIONS: Array<DamageFormulaTag> = [
+  { label: 'Ослеплённый', value: 'blinded' },
+  { label: 'Окровавленный', value: 'bloodied' },
+  { label: 'Очарованный', value: 'charmed' },
+  { label: 'Оглохший', value: 'deafened' },
+  { label: 'Истощённый', value: 'exhaustion' },
+  { label: 'Испуганный', value: 'frightened' },
+  { label: 'Схваченный', value: 'grappled' },
+  { label: 'Недееспособный', value: 'incapacitated' },
+  { label: 'Невидимый', value: 'invisible' },
+  { label: 'Парализованный', value: 'paralyzed' },
+  { label: 'Окаменевший', value: 'petrified' },
+  { label: 'Отравленный', value: 'poisoned' },
+  { label: 'Лежащий ничком', value: 'prone' },
+  { label: 'Опутанный', value: 'restrained' },
+  { label: 'Ошеломлённый', value: 'stunned' },
+  { label: 'Бессознательный', value: 'unconscious' },
+];
+
+/** Сторона в пометке слагаемого по состоянию: «2к6 (цель: Лежащий ничком)». */
+export const DAMAGE_FORMULA_STATUS_SIDE_LABELS: Record<
+  DamageFormulaStatusSide,
+  string
+> = {
+  self: 'атакующий',
+  target: 'цель',
+};
+
+/**
  * Типы существ для токена `@target.type.<тип>`: слагаемое достаётся только
  * целям названного типа.
  *
@@ -94,6 +139,38 @@ export const DAMAGE_FORMULA_CREATURE_TYPE_TAGS: Array<DamageFormulaTag> = [
   { label: 'Рой', value: 'target.type.swarm' },
 ];
 
+/**
+ * Тип существа из токена `@target.type.fiend` → кому достаётся слагаемое, в
+ * дательном падеже: подпись читается фразой «по исчадиям и нежити». Ключи — те
+ * же типы, что у {@link DAMAGE_FORMULA_CREATURE_TYPE_TAGS}.
+ */
+export const DAMAGE_FORMULA_CREATURE_TYPE_RECIPIENT_LABELS: Record<
+  string,
+  string
+> = {
+  aberration: 'аберрациям',
+  beast: 'зверям',
+  celestial: 'небожителям',
+  construct: 'конструктам',
+  dragon: 'драконам',
+  elemental: 'элементалям',
+  fey: 'феям',
+  fiend: 'исчадиям',
+  giant: 'великанам',
+  humanoid: 'гуманоидам',
+  monstrosity: 'чудовищам',
+  ooze: 'слизям',
+  plant: 'растениям',
+  undead: 'нежити',
+  swarm: 'роям',
+};
+
+/** Начало подписи типов существ: «по исчадиям и нежити». */
+export const DAMAGE_FORMULA_CREATURE_TYPE_RECIPIENT_PREFIX = 'по ';
+
+/** Язык, по правилам которого перечисляются типы существ («а, б и в»). */
+export const DAMAGE_FORMULA_LIST_LOCALE = 'ru';
+
 /** Подписи вкладок и полей редактора формулы. */
 export const DAMAGE_FORMULA_LABELS = {
   formula: 'Формула',
@@ -103,8 +180,50 @@ export const DAMAGE_FORMULA_LABELS = {
   damageTypes: 'Тип урона',
   healing: 'Лечение',
   conditions: 'Условия',
+  targetStatuses: 'Статусы цели',
+  selfStatuses: 'Статусы атакующего',
+  targetStatusesHint:
+    'Нажмите состояние — оно встанет в формулу у слагаемого, к которому '
+    + 'приписано: «1к8 + 2к6@target.status.prone» добавит 2к6, только если цель '
+    + 'лежит ничком. «Иначе другой урон» задаётся ниже, в «Или другой урон».',
+  selfStatusesHint:
+    'Нажмите состояние — оно встанет в формулу у слагаемого, к которому '
+    + 'приписано: «1к8 + 1к6@self.status.bloodied» добавит 1к6, только если '
+    + 'атакующий окровавлен. «Иначе другой урон» задаётся ниже, в «Или другой '
+    + 'урон».',
   creatureTypes: 'Тип существ',
+  typeChoice: 'Тип на выбор',
+  typeChoicePlaceholder: 'Отметьте типы урона',
+  typeChoiceChoose: 'На выбор бросающего',
+  typeChoiceRandom: 'Случайно',
+  typeChoiceHint:
+    'Отметьте два типа или больше и нажмите способ — в формулу встанет один '
+    + 'тип из списка: «1к6@dmg.choice(fire,cold)» спросит бросающего, '
+    + '«1к6@dmg.random(fire,cold)» выберет случайно с равными шансами. '
+    + 'Несколько типов подряд («@dmg.fire@dmg.cold») — это урон всеми сразу.',
 } as const;
+
+/** Меньше двух типов у токена «на выбор» не бывает: выбирать не из чего. */
+export const DAMAGE_FORMULA_TYPE_CHOICE_MIN_OPTIONS = 2;
+
+/** Способ выбора типа урона: имя токена `@dmg.choice(…)` или `@dmg.random(…)`. */
+export type DamageFormulaTypeChoiceMode = 'choice' | 'random';
+
+/** Кнопка способа выбора типа урона. */
+interface DamageFormulaTypeChoiceButton {
+  label: string;
+  mode: DamageFormulaTypeChoiceMode;
+}
+
+/** Кнопки способа выбора типа: спросить бросающего или бросить случай. */
+export const DAMAGE_FORMULA_TYPE_CHOICE_BUTTONS: Array<DamageFormulaTypeChoiceButton> =
+  [
+    { label: DAMAGE_FORMULA_LABELS.typeChoiceChoose, mode: 'choice' },
+    { label: DAMAGE_FORMULA_LABELS.typeChoiceRandom, mode: 'random' },
+  ];
+
+/** Начало тега типа урона: `dmg.fire` — это `dmg.` и хвост типа. */
+export const DAMAGE_TYPE_TAG_PREFIX = 'dmg.';
 
 /**
  * Ключ типа урона справочника сайта → токен формулы VTTG. Справочник отдаёт

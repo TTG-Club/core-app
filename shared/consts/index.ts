@@ -5,3 +5,4 @@ export * from './home-hero';
 export * from './mailing';
 export * from './platform';
 export * from './upload';
+export * from './vttg-compendium';

@@ -112,6 +112,7 @@
     sessions,
     shouldShowProfileRequirement,
     startSession,
+    updateSession,
     withdrawFromGame,
   } = useGameDetail(gameId, inviteCode);
 
@@ -565,6 +566,7 @@
                   :complete-session="completeSession"
                   :cancel-session="cancelSession"
                   :start-session="startSession"
+                  :update-session="updateSession"
                   :loading="areSessionsLoading"
                   @refresh="handleRegistrationsChanged"
                 />

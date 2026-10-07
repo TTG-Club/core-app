@@ -9,6 +9,8 @@ import { z } from 'zod';
 import { AbilityKey } from '~/shared/types';
 import { normalizeLoadedActiveEffects } from '~active-effects/model';
 
+import { COUNTER_REST_AMOUNT_MIN } from './constants';
+import { resolveCounterRestRules } from './counter';
 import { createFeatMechanics, createPrerequisiteDetails } from './mechanics';
 import { toFeatEditorRows } from './rows';
 
@@ -175,6 +177,11 @@ const counterScalingSchema = z.object({
   max: z.number(),
 });
 
+const counterRestRuleSchema = z.object({
+  mode: z.enum(['NONE', 'ALL', 'AMOUNT']),
+  amount: z.number().default(COUNTER_REST_AMOUNT_MIN),
+});
+
 const counterSchema = z.object({
   key: z.string().optional(),
   name: z.string().optional(),
@@ -190,6 +197,13 @@ const counterSchema = z.object({
   recovery: z
     .enum(['SHORT_REST', 'LONG_REST', 'SHORT_REST_ONE'])
     .default('LONG_REST'),
+  // Раздельные правила отдыха появились позже отката одним словом: у записей
+  // до них полей нет — правила выводятся из `recovery`
+  shortRest: counterRestRuleSchema.optional(),
+  longRest: counterRestRuleSchema.optional(),
+  // «Появляется пустым» появилось позже: у записей до него поля нет — такой
+  // ресурс появлялся полным, значит и должен
+  startsEmpty: z.boolean().optional(),
 });
 
 // Выдаваемое заклинание — та же ссылка плюс уровень, с которого оно доступно.
@@ -448,7 +462,9 @@ function toFeatMechanicsState(
       scaling: counter.scaling ?? [],
       min: counter.min ?? 0,
       showInTable: counter.showInTable ?? false,
+      ...resolveCounterRestRules(counter),
       recovery: counter.recovery,
+      startsEmpty: counter.startsEmpty ? true : undefined,
     })),
     feats: (parsed.feats ?? []).map((feat) => ({ ...feat })),
   };

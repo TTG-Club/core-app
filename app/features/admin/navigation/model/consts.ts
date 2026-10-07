@@ -1,6 +1,11 @@
 import type { NavigationItem } from './types';
 
 import {
+  PUBLICATION_ICON,
+  PUBLICATION_ROUTE,
+  PUBLICATION_TEXT,
+} from '~admin/game-publications/model';
+import {
   HOME_HERO_ADMIN_NAVIGATION_ICON,
   HOME_HERO_ADMIN_PAGE_TITLE,
   HOME_HERO_ADMIN_ROUTE,
@@ -14,6 +19,11 @@ import {
   ADMIN_USERS_NAVIGATION_ICON,
   ADMIN_USERS_NAVIGATION_LABEL,
 } from '~admin/users/model';
+import {
+  VTTG_COMPENDIUM_ADMIN_ROUTE,
+  VTTG_COMPENDIUM_NAVIGATION_ICON,
+  VTTG_COMPENDIUM_PAGE_TITLE,
+} from '~admin/vttg-compendium/model';
 import { ARTICLES_ADMIN_ROUTE } from '~articles/model';
 
 /** Маршрут главной страницы админ-панели (дашборд со статистикой) */
@@ -27,6 +37,11 @@ export const ADMIN_NAVIGATION_ITEMS: NavigationItem[] = [
     label: 'Главная',
     icon: 'tabler:home',
     to: ADMIN_DASHBOARD_ROUTE,
+  },
+  {
+    label: PUBLICATION_TEXT.title,
+    icon: PUBLICATION_ICON,
+    to: PUBLICATION_ROUTE,
   },
   {
     label: 'Токенатор',
@@ -57,6 +72,11 @@ export const ADMIN_NAVIGATION_ITEMS: NavigationItem[] = [
     label: MAILING_PAGE_TITLE,
     icon: MAILING_NAVIGATION_ICON,
     to: MAILING_ROUTE,
+  },
+  {
+    label: VTTG_COMPENDIUM_PAGE_TITLE,
+    icon: VTTG_COMPENDIUM_NAVIGATION_ICON,
+    to: VTTG_COMPENDIUM_ADMIN_ROUTE,
   },
 ];
 

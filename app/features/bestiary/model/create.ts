@@ -1,10 +1,18 @@
 import type { ActiveEffect } from '~active-effects/model';
 import type { EditorBaseInfoState } from '~ui/editor';
 
-import type { CreatureActionEffect } from './action';
+import type { CreatureActionEffect, CreatureEffectContext } from './action';
 import type { CreatureSpellcastingBlock } from './spellcasting';
 
+import { clamp } from 'es-toolkit';
+
 import { AbilityKey, AbilityShortKey } from '~/shared/types';
+import {
+  EFFECT_FORM_CONTEXT,
+  MAX_SAVE_OVERRIDE_USES,
+  MIN_SAVE_OVERRIDE_USES,
+  parseFormNumber,
+} from '~active-effects/model';
 
 import {
   createEmptyCreatureActionEffect,
@@ -248,6 +256,12 @@ export interface CreateAction {
   description: string;
   recharge: string | undefined;
   effect: CreatureActionEffect;
+  /**
+   * Сколько раз в день существо превращает проваленный спасбросок в успех —
+   * «Легендарное сопротивление (3/день)». Только у умения (черты); нет — не
+   * умеет. Счётчик ведёт VTTG, восстанавливает долгий отдых.
+   */
+  saveSuccessPerDay?: number;
 }
 
 /** Умение существа — та же запись, что и действие. */
@@ -257,15 +271,40 @@ export type CreateTrait = CreateAction;
  * Готовит записи боевого блока к отправке.
  *
  * @param actions записи из формы.
+ * @param effectContext место эффектов записей: у черт — сама черта, у
+ *   действий — цель.
  * @returns записи для запроса.
  */
 export function normalizeCreatureActions(
   actions: Array<CreateAction>,
+  effectContext: CreatureEffectContext,
 ): Array<CreateAction> {
+  const isTrait = effectContext === EFFECT_FORM_CONTEXT.creatureTrait;
+
   return actions.map((action) => ({
     ...action,
-    effect: normalizeCreatureActionEffect(action.effect),
+    effect: normalizeCreatureActionEffect(action.effect, effectContext),
+    saveSuccessPerDay: isTrait
+      ? toStoredSaveSuccessPerDay(action.saveSuccessPerDay)
+      : undefined,
   }));
+}
+
+/**
+ * «Провал в успех, раз в день» к записи: целое в пределах, пусто и ноль — поля
+ * нет.
+ *
+ * @param saveSuccessPerDay число из формы.
+ * @returns число раз либо `undefined`.
+ */
+export function toStoredSaveSuccessPerDay(
+  saveSuccessPerDay: unknown,
+): number | undefined {
+  const times = parseFormNumber(saveSuccessPerDay);
+
+  return times !== undefined && times >= MIN_SAVE_OVERRIDE_USES
+    ? clamp(Math.trunc(times), MIN_SAVE_OVERRIDE_USES, MAX_SAVE_OVERRIDE_USES)
+    : undefined;
 }
 
 /**

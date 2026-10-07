@@ -568,6 +568,42 @@ export function getGameInviteLink(gameId: string, inviteCode: string): string {
 }
 
 /**
+ * Двузначная часть даты или времени для полей ввода.
+ * @param value Месяц, день, часы или минуты.
+ */
+function padDatePart(value: number): string {
+  return `${value}`.padStart(2, '0');
+}
+
+/**
+ * Разбирает момент времени; пустой или нечитаемый даёт `null`.
+ * @param isoDate Момент времени в ISO-формате.
+ */
+function parseMoment(isoDate: string | null): Date | null {
+  if (!isoDate) {
+    return null;
+  }
+
+  const date = new Date(isoDate);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/**
+ * Приводит момент времени к значению поля `date` — дате по местным часам.
+ * @param isoDate Момент времени в ISO-формате.
+ */
+export function toLocalDateInput(isoDate: string | null): string {
+  const date = parseMoment(isoDate);
+
+  if (!date) {
+    return '';
+  }
+
+  return `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())}`;
+}
+
+/**
  * Приводит момент времени к значению поля `datetime-local`.
  *
  * Поле работает в местном времени браузера без указания зоны — ровно то, что
@@ -576,21 +612,15 @@ export function getGameInviteLink(gameId: string, inviteCode: string): string {
  * @param isoDate Момент времени в ISO-формате.
  */
 export function toLocalDateTimeInput(isoDate: string | null): string {
-  if (!isoDate) {
+  const date = parseMoment(isoDate);
+
+  if (!date) {
     return '';
   }
-
-  const date = new Date(isoDate);
-
-  if (Number.isNaN(date.getTime())) {
-    return '';
-  }
-
-  const pad = (value: number) => `${value}`.padStart(2, '0');
 
   return [
-    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
-    `${pad(date.getHours())}:${pad(date.getMinutes())}`,
+    toLocalDateInput(isoDate),
+    `${padDatePart(date.getHours())}:${padDatePart(date.getMinutes())}`,
   ].join('T');
 }
 
@@ -614,7 +644,7 @@ export function getDefaultSessionStart(): string {
  * границами встречи, поэтому в дате его нет.
  */
 export function getDefaultSessionDate(): string {
-  return toLocalDateTimeInput(new Date().toISOString()).slice(0, 10);
+  return toLocalDateInput(new Date().toISOString());
 }
 
 /**

@@ -29,6 +29,23 @@ export default defineNuxtConfig({
 
   compatibilityDate: '2025-07-22',
 
+  experimental: {
+    // Как часто открытая вкладка сверяет свою сборку с сервером. По умолчанию
+    // раз в час — после выкладки старая вкладка долго жила на удалённых
+    // чанках. Проверка — крошечный `builds/latest.json`; при новой сборке
+    // страница перезагрузится на ближайшем переходе (см. buildUpdate.client.ts).
+    checkOutdatedBuildInterval: ms('10m'),
+
+    // Без карты импорта `#entry`. С ней Nuxt убирает имя главного чанка из
+    // кода, чтобы хэши остальных не менялись, но Vite потом дописывает это имя
+    // в списки предзагрузки (`__vite__mapDeps`) уже после расчёта хэша. Чанк
+    // меняет содержимое, не меняя имени: браузер держит старую копию
+    // (`immutable` на год), её SRI-хэш не сходится с новым HTML, и приложение
+    // не запускается до очистки кэша. Без карты импорта имя главного чанка
+    // входит в хэши зависимых, и после выкладки они получают новые имена.
+    entryImportMap: false,
+  },
+
   // Конфигурация среды разработки
   devServer: {
     https: process.env.NUXT_DEV_SSL === 'true',
@@ -80,8 +97,8 @@ export default defineNuxtConfig({
   // и счётчик не работает даже если id задан на проде. id подставляется в рантайме
   // через NUXT_PUBLIC_GTAG_ID; при пустом id скрипт не подключается, поэтому на dev
   // GA не грузится. SPA-переходы трекает Enhanced Measurement GA4.
-  // initMode: 'manual' — скрипт подключает плагин analytics.client.ts, и только после
-  // согласия посетителя на аналитические cookie.
+  // initMode: 'manual' — плагин analytics.client.ts автоматически подключает
+  // скрипт с defer при запуске приложения.
   gtag: {
     enabled: true,
     id: '',
@@ -451,9 +468,8 @@ export default defineNuxtConfig({
       // с подсказкой, вместо перехода в 404. Задаётся через
       // NUXT_PUBLIC_OLD_SITE_URL.
       oldSiteUrl: '',
-      // Яндекс.Метрика. Подключается плагином analytics.client.ts только после
-      // согласия посетителя на аналитические cookie — поэтому без модуля
-      // nuxt-yandex-metrika: тот грузил счётчик сразу и без спроса.
+      // Яндекс.Метрика автоматически подключается плагином analytics.client.ts.
+      // Плагин также учитывает переходы между страницами и освобождает счётчик.
       // id НЕ берём из env на этапе сборки — Docker-сборка не видит прод-переменных.
       // Реальный id подставляется в РАНТАЙМЕ контейнера через
       // NUXT_PUBLIC_YANDEX_METRIKA_ID; на сборке и на dev он пустой, и счётчик
@@ -483,6 +499,14 @@ export default defineNuxtConfig({
     // Переопределяется через NUXT_VTTG_UPDATE_BASE_URL.
     vttg: {
       updateBaseUrl: 'https://update-v.ttg.club/vttg/',
+      // core-api каналов компендиума VTTG — те же, откуда их качает приложение
+      // (CHANNELS в vttg/packages/server/src/modules/compendium/compendiumUpdate.ts).
+      // Админка любого сайта видит и поднимает версии обоих каналов.
+      // Переопределяются через NUXT_VTTG_COMPENDIUM_API_URLS_DEV / _PROD.
+      compendiumApiUrls: {
+        dev: 'https://dev.api.ttg.club',
+        prod: 'https://api.ttg.club',
+      },
     },
   },
 });

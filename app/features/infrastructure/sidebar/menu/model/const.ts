@@ -13,6 +13,13 @@ import {
   GAMES_NAVIGATION_LABEL,
   GAMES_ROUTE,
 } from '~find-game/model';
+import {
+  VTTG_LANDING_PATH,
+  VTTG_PASSWORD_RESET_PAGE,
+  VTTG_PASSWORD_RESET_PATH,
+  VTTG_SUBSCRIPTION_NAVIGATION_LABEL,
+  VTTG_SUBSCRIPTION_PATH,
+} from '~vttg/model';
 
 export const MENU_SECTIONS: Array<MenuSection> = [
   {
@@ -142,8 +149,17 @@ export const MENU_SECTIONS: Array<MenuSection> = [
     icon: 'menu/filled/information',
     items: [
       {
-        href: '/vttg',
+        href: VTTG_LANDING_PATH,
         label: 'Информация',
+      },
+      {
+        href: VTTG_PASSWORD_RESET_PATH,
+        label: VTTG_PASSWORD_RESET_PAGE.title,
+      },
+      {
+        href: VTTG_SUBSCRIPTION_PATH,
+        label: VTTG_SUBSCRIPTION_NAVIGATION_LABEL,
+        roles: [Role.ADMIN],
       },
     ],
   },

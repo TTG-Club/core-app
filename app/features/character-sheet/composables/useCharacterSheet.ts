@@ -140,9 +140,9 @@ import {
   mergeCharacterFeatures,
   mergeClassResources,
   normalizeResourceRecoveryRule,
+  PREPARED_KIND_LABELS,
   PREPARED_SPELLS_BONUS_MAX,
   PREPARED_SPELLS_BONUS_MIN,
-  PREPARED_SPELLS_LIMIT_TOAST_TITLE,
   PREPARED_SPELLS_MAX,
   PREPARED_SPELLS_MIN,
   removeClassFeatures,
@@ -159,6 +159,7 @@ import {
   restoreInventoryCharges,
   setFeatureSpellcastingAbility,
   setFeatureSpellPrepared,
+  settleBookCantripsPrepared,
   SHEET_HIDDEN_CONTROL_CLASS,
   SHEET_LOCKED_MESSAGE,
   SHEET_READONLY_MESSAGES,
@@ -182,6 +183,7 @@ import {
   withFeatModifiers,
   withProficiencyGrant,
   withSavingThrowProficiencies,
+  withSettledCurrentHitPoints,
   withToggledFeatureEffect,
 } from '../model';
 
@@ -467,22 +469,28 @@ export function useCharacterSheet() {
       ABILITY_SCORE_MAX,
     );
 
-    character.value = {
-      ...character.value,
-      abilities: {
-        ...character.value.abilities,
-        [ability]: clampedScore,
+    // Сдвиг записанного Телосложения меняет и прибавку от итогового (бонус
+    // предмета мог перестать менять модификатор), поэтому текущие хиты
+    // доводятся по итоговому максимуму.
+    character.value = withSettledCurrentHitPoints(
+      {
+        ...character.value,
+        abilities: {
+          ...character.value.abilities,
+          [ability]: clampedScore,
+        },
+        health:
+          ability === 'constitution'
+            ? adjustHealthForConstitution(
+                character.value.health,
+                character.value.level,
+                character.value.abilities.constitution,
+                clampedScore,
+              )
+            : character.value.health,
       },
-      health:
-        ability === 'constitution'
-          ? adjustHealthForConstitution(
-              character.value.health,
-              character.value.level,
-              character.value.abilities.constitution,
-              clampedScore,
-            )
-          : character.value.health,
-    };
+      character.value,
+    );
   }
 
   /**
@@ -531,16 +539,19 @@ export function useCharacterSheet() {
       );
     }
 
-    character.value = {
-      ...character.value,
-      abilities: clampedAbilities,
-      health: adjustHealthForConstitution(
-        character.value.health,
-        character.value.level,
-        character.value.abilities.constitution,
-        clampedAbilities.constitution,
-      ),
-    };
+    character.value = withSettledCurrentHitPoints(
+      {
+        ...character.value,
+        abilities: clampedAbilities,
+        health: adjustHealthForConstitution(
+          character.value.health,
+          character.value.level,
+          character.value.abilities.constitution,
+          clampedAbilities.constitution,
+        ),
+      },
+      character.value,
+    );
   }
 
   /**
@@ -1570,11 +1581,6 @@ export function useCharacterSheet() {
     // Умения вида несут снимок механики, как черты: хиты, ресурсы и бонусы
     // инициативы доводит та же сверка, что при смене черт, — иначе прибавка
     // «Дварфийской выдержки» осталась бы от прежнего вида
-    const previous = {
-      features: character.value.features,
-      level: character.value.level,
-    };
-
     character.value = withFeatModifiers(
       {
         ...character.value,
@@ -1602,7 +1608,7 @@ export function useCharacterSheet() {
           ...preservedFeatures,
         ],
       },
-      previous,
+      character.value,
     );
   }
 
@@ -1629,11 +1635,6 @@ export function useCharacterSheet() {
       null,
     );
 
-    const previous = {
-      features: character.value.features,
-      level: character.value.level,
-    };
-
     character.value = withFeatModifiers(
       {
         ...character.value,
@@ -1649,7 +1650,7 @@ export function useCharacterSheet() {
             feature.origin !== 'species' && feature.origin !== 'lineage',
         ),
       },
-      previous,
+      character.value,
     );
   }
 
@@ -1803,64 +1804,70 @@ export function useCharacterSheet() {
     //
     // Максимум хитов здесь пересобран из записей прироста, а значит прибавки
     // черт в нём нет вовсе — сверка получает пустое «до» и кладёт её целиком.
-    character.value = withFeatModifiers(
-      {
-        ...character.value,
-        // Прибавки черт умений считаются в момент взятия, как в мастере
-        // повышения уровня; снятие класса их не откатывает — так же, как там
-        abilities: applyAbilityIncreases(
-          character.value.abilities,
-          payload.abilityIncreases ?? {},
-        ),
-        characterClass: {
-          ...characterClass,
-          startingEquipment: startingEquipment.granted,
-        },
-        level: getTotalClassLevel([characterClass, ...additionalClasses]),
-        experience: {
-          ...character.value.experience,
-          nextLevel: getNextLevelExperience(
-            getTotalClassLevel([characterClass, ...additionalClasses]),
-          ),
-        },
-        inventory: startingEquipment.inventory,
-        currency: startingEquipment.currency,
-        // Класс переписывает только владения: подменённая характеристика
-        // спасброска и его свои бонусы переживают смену класса.
-        savingThrows: withSavingThrowProficiencies(
-          character.value.savingThrows,
-          payload.savingThrows,
-        ),
-        // Свежий класс выдаёт свои кости непотраченными; кости второго класса
-        // (другого номинала) сохраняют трату.
-        hitDice: syncClassHitDice(character.value.hitDice, [
-          characterClass,
-          ...additionalClasses,
-        ]).map((hitDie) =>
-          hitDie.die === payload.hitDie
-            ? { ...hitDie, current: hitDie.max }
-            : hitDie,
-        ),
-        health: {
-          ...character.value.health,
-          max: recordedMaxHitPoints,
-          current: recordedMaxHitPoints,
-          levelGains,
-        },
-        proficiencies: classProficiencies.proficiencies,
-        proficiencyGrants: classProficiencies.grants,
-        skills: classProficiencies.skills,
-        classResources: [...preservedResources, ...payload.classResources],
-        features: [
-          ...payload.features.map((feature) => ({
-            ...feature,
-            description: [...feature.description],
-          })),
-          ...preservedFeatures,
-        ],
+    const withClass: Character = {
+      ...character.value,
+      // Прибавки черт умений считаются в момент взятия, как в мастере
+      // повышения уровня; снятие класса их не откатывает — так же, как там
+      abilities: applyAbilityIncreases(
+        character.value.abilities,
+        payload.abilityIncreases ?? {},
+      ),
+      characterClass: {
+        ...characterClass,
+        startingEquipment: startingEquipment.granted,
       },
-      { features: [], level: 0 },
-    );
+      level: getTotalClassLevel([characterClass, ...additionalClasses]),
+      experience: {
+        ...character.value.experience,
+        nextLevel: getNextLevelExperience(
+          getTotalClassLevel([characterClass, ...additionalClasses]),
+        ),
+      },
+      inventory: startingEquipment.inventory,
+      currency: startingEquipment.currency,
+      // Класс переписывает только владения: подменённая характеристика
+      // спасброска и его свои бонусы переживают смену класса.
+      savingThrows: withSavingThrowProficiencies(
+        character.value.savingThrows,
+        payload.savingThrows,
+      ),
+      // Свежий класс выдаёт свои кости непотраченными; кости второго класса
+      // (другого номинала) сохраняют трату.
+      hitDice: syncClassHitDice(character.value.hitDice, [
+        characterClass,
+        ...additionalClasses,
+      ]).map((hitDie) =>
+        hitDie.die === payload.hitDie
+          ? { ...hitDie, current: hitDie.max }
+          : hitDie,
+      ),
+      health: {
+        ...character.value.health,
+        max: recordedMaxHitPoints,
+        current: recordedMaxHitPoints,
+        levelGains,
+      },
+      proficiencies: classProficiencies.proficiencies,
+      proficiencyGrants: classProficiencies.grants,
+      skills: classProficiencies.skills,
+      classResources: [...preservedResources, ...payload.classResources],
+      features: [
+        ...payload.features.map((feature) => ({
+          ...feature,
+          description: [...feature.description],
+        })),
+        ...preservedFeatures,
+      ],
+    };
+
+    // «До» — тот же лист без особенностей и уровней: так текущие хиты
+    // получают и прибавку от итогового Телосложения, и свежий класс приходит
+    // с полным здоровьем.
+    character.value = withFeatModifiers(withClass, {
+      ...withClass,
+      features: [],
+      level: 0,
+    });
   }
 
   /**
@@ -2335,6 +2342,9 @@ export function useCharacterSheet() {
 
   /**
    * Установка книги заклинаний персонажа; дубли по URL отбрасываются.
+   * Заговор без пометки получает её сам: подготовленным, пока в колонке
+   * «Заговоры» есть место, иначе ложится в запас
+   * (`settleBookCantripsPrepared`).
    *
    * @param spells новый список заклинаний.
    */
@@ -2345,7 +2355,7 @@ export function useCharacterSheet() {
 
     const seenUrls = new Set<string>();
 
-    character.value = {
+    character.value = settleBookCantripsPrepared({
       ...character.value,
       spells: spells
         .filter((spell) => {
@@ -2358,13 +2368,16 @@ export function useCharacterSheet() {
           return true;
         })
         .map((spell) => ({ ...spell })),
-    };
+    });
   }
 
   /**
    * Добавление своего заклинания (не из каталога). URL генерируется с
    * префиксом `custom:` — со слагами каталога он не столкнётся, а книга
    * заклинаний остаётся единым списком.
+   * Заговор без пометки получает её сам: подготовленным, пока в колонке
+   * «Заговоры» есть место, иначе ложится в запас
+   * (`settleBookCantripsPrepared`).
    *
    * @param draft значения формы своего заклинания.
    */
@@ -2382,17 +2395,19 @@ export function useCharacterSheet() {
       return;
     }
 
-    character.value = {
+    character.value = settleBookCantripsPrepared({
       ...character.value,
       spells: [...character.value.spells, spell],
-    };
+    });
   }
 
   /**
    * Редактирование своего заклинания; URL (идентификатор записи) не меняется.
    * Пустое название игнорируется — заклинание без названия не сохраняем.
    * Каталожные записи форма не правит: их описание живёт в разделе, а не в
-   * листе, и превращать их в свои нельзя.
+   * листе, и превращать их в свои нельзя. Заклинание, ставшее заговором без
+   * пометки, получает её по свободному месту в колонке «Заговоры»
+   * (`settleBookCantripsPrepared`).
    *
    * @param spellUrl URL редактируемого заклинания.
    * @param draft новые значения формы.
@@ -2416,7 +2431,7 @@ export function useCharacterSheet() {
       return;
     }
 
-    character.value = {
+    character.value = settleBookCantripsPrepared({
       ...character.value,
       spells: character.value.spells.map((spell) =>
         spell.url === spellUrl
@@ -2429,7 +2444,7 @@ export function useCharacterSheet() {
             }
           : spell,
       ),
-    };
+    });
   }
 
   /**
@@ -2517,7 +2532,7 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Установка числа подготовленных заклинаний либо известных заговоров (у них
+   * Установка числа подготовленных заклинаний либо заговоров (у них
    * свой счётчик): своё число выключает подсчёт по таблице класса, бонус
    * прибавляется к числу класса.
    *
@@ -2565,18 +2580,19 @@ export function useCharacterSheet() {
    * почему этого не произошло. Предел неизвестен (класс его не даёт, своё число
    * не задано) — пометок сколько угодно.
    *
-   * Заговор подготовки не требует: предел его не касается, а плитка «Заговоры»
-   * считает известные.
+   * Заговоры смотрят на свой предел — колонку «Заговоры», заклинания кругов —
+   * на свой.
    *
    * @param spell заклинание, которое помечают подготовленным.
    * @returns true — пометку можно ставить.
    */
   function ensurePreparationSpace(spell: CharacterSpell): boolean {
-    if (getSpellPreparedKind(spell) === 'cantrips') {
-      return true;
-    }
+    const kind = getSpellPreparedKind(spell);
 
-    const { value: limit, count } = spellcastingBreakdown.value.prepared;
+    const { value: limit, count } =
+      kind === 'cantrips'
+        ? spellcastingBreakdown.value.preparedCantrips
+        : spellcastingBreakdown.value.prepared;
 
     if (limit === null || count < limit) {
       return true;
@@ -2585,8 +2601,8 @@ export function useCharacterSheet() {
     toast.add({
       color: 'warning',
       icon: 'tabler:wand',
-      title: PREPARED_SPELLS_LIMIT_TOAST_TITLE,
-      description: getPreparedSpellsLimitDescription(limit),
+      title: PREPARED_KIND_LABELS[kind].limitToastTitle,
+      description: getPreparedSpellsLimitDescription(limit, kind),
     });
 
     return false;
@@ -2809,7 +2825,8 @@ export function useCharacterSheet() {
    * источника, и от раздела сайта — дальше её правит форма листа. Из группы
    * заклинаний вне книги оно при этом уходит, иначе осталось бы в листе дважды.
    * Характеристики и описание дозагружаются из справочника: ни у вида, ни у
-   * черты их нет.
+   * черты их нет. Заговор-копия встаёт в книгу, как новый: подготовленным,
+   * пока в колонке «Заговоры» есть место (`settleBookCantripsPrepared`).
    *
    * @param spellUrl URL заклинания вне книги.
    */
@@ -2847,10 +2864,10 @@ export function useCharacterSheet() {
 
     const withoutGranted = withoutGrantedSpell(granted.kind, spellUrl);
 
-    character.value = {
+    character.value = settleBookCantripsPrepared({
       ...withoutGranted,
       spells: [...withoutGranted.spells, ownSpell],
-    };
+    });
 
     toast.add({
       color: 'success',

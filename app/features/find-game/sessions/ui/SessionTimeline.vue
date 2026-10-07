@@ -76,6 +76,7 @@
   const emit = defineEmits<{
     'attend': [sessionId: string, status: SessionAttendanceStatus];
     'copy': [session: GameSession];
+    'edit': [session: GameSession];
     'open-participants': [sessionId: string];
     'cancel': [session: GameSession];
     'complete': [session: GameSession];
@@ -476,6 +477,7 @@
           :busy="busy"
           @attend="(id, status) => emit('attend', id, status)"
           @copy="closeAnd(() => emit('copy', $event))"
+          @edit="closeAnd(() => emit('edit', $event))"
           @open-participants="closeAnd(() => emit('open-participants', $event))"
           @complete="closeAnd(() => emit('complete', $event))"
           @start="closeAnd(() => emit('start', $event))"

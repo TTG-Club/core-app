@@ -43,7 +43,7 @@ import {
   SHEET_NOTE_LABELS,
 } from './constants';
 import { DEFAULT_CHARACTER } from './mock';
-import { normalizeCatalogName } from './utils';
+import { normalizeCatalogName, settleBookCantripsPrepared } from './utils';
 
 /**
  * Схема сохранённого персонажа. Каждое поле снабжено `catch`-дефолтом из
@@ -195,6 +195,11 @@ const grantedProficienciesSchema = z.object({
   savingThrows: z.array(abilityKeySchema).catch([]),
 });
 
+const resourceRecoveryRuleSchema = z.object({
+  mode: z.enum(['none', 'all', 'amount']).catch('none'),
+  amount: z.coerce.number().catch(RESOURCE_RECOVERY_AMOUNT_MIN),
+});
+
 /**
  * Снимок ресурса черты в записи умения: максимум приходит формулой справочника
  * и разбирается при сборке панели, поэтому здесь он строкой.
@@ -218,6 +223,13 @@ const featCounterSchema = z.object({
   recovery: z
     .enum(['short-rest', 'long-rest', 'short-rest-one'])
     .catch('long-rest'),
+  // Раздельные правила отдыха появились позже: у снимков до них полей нет —
+  // ресурс восстанавливается по `recovery`
+  shortRest: resourceRecoveryRuleSchema.optional().catch(undefined),
+  longRest: resourceRecoveryRuleSchema.optional().catch(undefined),
+  // «Появляется пустым» появилось позже: у снимков до него поля нет — такой
+  // ресурс появлялся полным
+  startsEmpty: z.boolean().optional().catch(undefined),
 });
 
 /**
@@ -336,6 +348,9 @@ const spellSchema = z.object({
   // Заклинание пришло из группы «весь список класса, не выше доступного круга»:
   // список лежит на записи целиком, а круги лист отбирает каждый раз заново
   limitedBySlots: z.boolean().optional().catch(undefined),
+  // Заклинание умения, взятого списком класса целиком: при пересборке умения
+  // в режиме выбора такие уходят, а выбранные игроком остаются
+  fromClassList: z.boolean().optional().catch(undefined),
   // Своя характеристика заклинания: её ставит черта, давшая заклинание. Нет
   // поля — заклинание считается от характеристики класса
   spellcastingAbility: abilityKeySchema.optional().catch(undefined),
@@ -416,6 +431,9 @@ const featureSchema = z.object({
     .nullable()
     .optional()
     .catch(undefined),
+  // Как игрок взял «весь список класса» умения; у записей до появления выбора
+  // поля нет — такой список взят целиком.
+  classSpellListMode: z.enum(['all', 'chosen']).optional().catch(undefined),
   // Ответы игрока на выборы черты по ключу выбора; у записей до их появления
   // поля нет.
   choiceAnswers: z
@@ -805,11 +823,6 @@ const extraHitDieSchema = hitDieSchema.extend({
   id: z.string(),
 });
 
-const resourceRecoveryRuleSchema = z.object({
-  mode: z.enum(['none', 'all', 'amount']).catch('none'),
-  amount: z.coerce.number().catch(RESOURCE_RECOVERY_AMOUNT_MIN),
-});
-
 /**
  * Правило максимума ресурса. Неизвестный источник читается как своё число:
  * такой ресурс останется с записанным максимумом, а не обнулится.
@@ -858,9 +871,25 @@ function toResourceRecoveryRule(
   return { mode, amount: RESOURCE_RECOVERY_AMOUNT_MIN };
 }
 
+/**
+ * Правки игрока поверх записи справочника: в документе лежат только изменённые
+ * поля, остальное ресурс берёт из справочника на каждой пересборке.
+ */
+const classResourceOverridesSchema = z.object({
+  name: z.string().optional(),
+  shortLabel: z.string().optional(),
+  shortRest: resourceRecoveryRuleSchema.optional(),
+  longRest: resourceRecoveryRuleSchema.optional(),
+  max: z.coerce.number().optional(),
+  // Правка максимума пишется парой с `max`, и `null` здесь значит «своё
+  // число вместо книжного правила», а не «правки нет».
+  maxRule: resourceMaxRuleSchema.nullable().optional(),
+});
+
 const classResourceSchema = z
   .object({
     id: z.string(),
+    key: z.string().optional().catch(undefined),
     name: z.string().catch(''),
     shortLabel: z.string().catch(''),
     // Легаси-поле одного вида отдыха: у листов до раздельных порций оно
@@ -873,6 +902,8 @@ const classResourceSchema = z
     // Правило максимума: у ресурсов до него поля нет — их максимум записан
     // числом и от листа не зависит.
     maxRule: resourceMaxRuleSchema.nullable().optional().catch(null),
+    overrides: classResourceOverridesSchema.optional().catch(undefined),
+    hidden: z.boolean().optional().catch(undefined),
   })
   .transform(({ recovery, shortRest, longRest, ...resource }) => ({
     ...resource,
@@ -1403,12 +1434,16 @@ const characterSchema = z
   })
   // Легаси-список владений спасбросками уходит из документа, как только тот
   // разобран: дальше по листу ходят только сами записи спасбросков. Тем же
-  // проходом лист приводится к мультиклассовой форме.
+  // проходом лист приводится к мультиклассовой форме, а заговоры книги без
+  // пометки (листы, сохранённые, пока заговоры не подготавливались) получают
+  // её — по уже нормализованным классам, от которых зависит предел.
   .transform(({ savingThrowProficiencies, savingThrows, ...character }) =>
-    normalizeCharacterClasses({
-      ...character,
-      savingThrows: toSavingThrows(savingThrows, savingThrowProficiencies),
-    }),
+    settleBookCantripsPrepared(
+      normalizeCharacterClasses({
+        ...character,
+        savingThrows: toSavingThrows(savingThrows, savingThrowProficiencies),
+      }),
+    ),
   );
 
 /**

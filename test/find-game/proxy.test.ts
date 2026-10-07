@@ -3,6 +3,40 @@ import { describe, expect, it } from 'vitest';
 import { getFindGameUpstreamPath } from '#server/utils/findGameProxy';
 
 describe('переписывание пути в find-game-api', () => {
+  it('сохраняет совместимый путь публикаций для обновления сервисов по очереди', () => {
+    expect(
+      getFindGameUpstreamPath(
+        '/api/find-game/admin/discord-publications/channels/channel-id/test?revision=3',
+      ),
+    ).toBe(
+      '/api/v1/admin/discord-publications/channels/channel-id/test?revision=3',
+    );
+  });
+
+  it('сохраняет путь тестовой отправки и версию канала', () => {
+    expect(
+      getFindGameUpstreamPath(
+        '/api/find-game/admin/game-publications/channels/channel-id/test?revision=3',
+      ),
+    ).toBe(
+      '/api/v1/admin/game-publications/channels/channel-id/test?revision=3',
+    );
+  });
+
+  it('сохраняет путь канала Discord и версию при удалении', () => {
+    expect(
+      getFindGameUpstreamPath(
+        '/api/find-game/admin/game-publications/channels/channel-id?revision=3',
+      ),
+    ).toBe('/api/v1/admin/game-publications/channels/channel-id?revision=3');
+  });
+
+  it('направляет статистику администратора в отдельный сервис игр', () => {
+    expect(
+      getFindGameUpstreamPath('/api/find-game/admin/statistics/games'),
+    ).toBe('/api/v1/admin/statistics/games');
+  });
+
   it('свой префикс сайта заменяется версией API сервиса', () => {
     expect(getFindGameUpstreamPath('/api/find-game/games')).toBe(
       '/api/v1/games',

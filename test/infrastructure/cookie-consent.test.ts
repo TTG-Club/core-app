@@ -1,20 +1,15 @@
 import type { EffectScope, Ref } from 'vue';
 
-import { useTimeoutFn } from '@vueuse/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { computed, effectScope, nextTick, ref, watch } from 'vue';
+import { computed, effectScope, ref } from 'vue';
 
-import { useCookieConsent } from '~infrastructure/cookie-consent/composables';
+import { useCookieNotice } from '~infrastructure/cookie-consent/composables';
 
-const CONSENT_KEY = 'ttg-cookie-consent';
-const DISMISSAL_KEY = 'ttg-cookie-dismissed';
-const DAY = 24 * 60 * 60 * 1000;
-const INITIAL_TIME = Date.parse('2026-09-13T12:00:00Z');
-
+const NOTICE_KEY = 'ttg-cookie-notice';
 const cookies = new Map<string, Ref<unknown>>();
 const scopes: Array<EffectScope> = [];
 
-/** Подменяет только хранилище Nuxt; реактивность и таймеры VueUse остаются настоящими. */
+/** Подменяет только хранилище Nuxt; реактивность остаётся настоящей. */
 function useTestCookie(name: string): Ref<unknown> {
   const existingCookie = cookies.get(name);
 
@@ -29,16 +24,16 @@ function useTestCookie(name: string): Ref<unknown> {
   return cookie;
 }
 
-/** Запускает композабл в области владельца для проверки повторного открытия и очистки. */
-function mountConsent(): {
-  state: ReturnType<typeof useCookieConsent>;
+/** Запускает уведомление в области владельца для проверки повторного открытия. */
+function mountNotice(): {
+  state: ReturnType<typeof useCookieNotice>;
   scope: EffectScope;
 } {
   const scope = effectScope();
 
   scopes.push(scope);
 
-  const state = scope.run(useCookieConsent);
+  const state = scope.run(useCookieNotice);
 
   if (!state) {
     throw new Error('Не удалось создать состояние уведомления');
@@ -48,131 +43,75 @@ function mountConsent(): {
 }
 
 beforeEach(() => {
-  vi.useFakeTimers();
-  vi.setSystemTime(INITIAL_TIME);
   cookies.clear();
   vi.stubGlobal('computed', computed);
-  vi.stubGlobal('watch', watch);
-  vi.stubGlobal('useTimeoutFn', useTimeoutFn);
   vi.stubGlobal('useCookie', vi.fn(useTestCookie));
 });
 
 afterEach(() => {
-  for (const scope of scopes.splice(0)) {
-    scope.stop();
-  }
-
+  scopes.splice(0).forEach((scope) => scope.stop());
   vi.unstubAllGlobals();
-  vi.useRealTimers();
 });
 
-describe('выбор cookie и повторный показ уведомления', () => {
-  it('до выбора показывает баннер и не разрешает аналитику', () => {
-    const { state } = mountConsent();
+describe('информационное уведомление о cookie', () => {
+  it('показывается при первом посещении без записи о согласии', () => {
+    const { state } = mountNotice();
 
     expect(state.isVisible.value).toBe(true);
-    expect(state.isAnalyticsAllowed.value).toBe(false);
-    expect(cookies.get(CONSENT_KEY)?.value).toBeNull();
+    expect(cookies.get(NOTICE_KEY)?.value).toBeNull();
+    expect(cookies.has('ttg-cookie-consent')).toBe(false);
   });
 
-  it('после крестика напоминает ровно через сутки без включения аналитики', async () => {
-    const { state } = mountConsent();
+  it('закрывается на год и остаётся скрытым при повторном открытии', () => {
+    const firstVisit = mountNotice();
 
-    state.acceptNecessary();
-    await nextTick();
-
-    expect(state.isVisible.value).toBe(false);
-    expect(state.isAnalyticsAllowed.value).toBe(false);
+    firstVisit.state.dismiss();
+    expect(firstVisit.state.isVisible.value).toBe(false);
+    expect(cookies.get(NOTICE_KEY)?.value).toEqual({ version: '1' });
 
     expect(useCookie).toHaveBeenCalledWith(
-      DISMISSAL_KEY,
-      expect.objectContaining({ maxAge: 86400 }),
+      NOTICE_KEY,
+      expect.objectContaining({
+        maxAge: 365 * 86400,
+        path: '/',
+        sameSite: 'lax',
+      }),
     );
 
-    await vi.advanceTimersByTimeAsync(DAY - 1);
-    expect(state.isVisible.value).toBe(false);
-    await vi.advanceTimersByTimeAsync(1);
-    expect(state.isVisible.value).toBe(true);
-    expect(state.isAnalyticsAllowed.value).toBe(false);
-  });
-
-  it('повторное открытие не продлевает сутки от первого закрытия', async () => {
-    const firstVisit = mountConsent();
-
-    firstVisit.state.acceptNecessary();
-    await nextTick();
-    await vi.advanceTimersByTimeAsync(DAY / 2);
     firstVisit.scope.stop();
-
-    const nextVisit = mountConsent();
-
-    expect(nextVisit.state.isVisible.value).toBe(false);
-    await vi.advanceTimersByTimeAsync(DAY / 2);
-    expect(nextVisit.state.isVisible.value).toBe(true);
-    expect(nextVisit.state.isAnalyticsAllowed.value).toBe(false);
+    expect(mountNotice().state.isVisible.value).toBe(false);
   });
 
-  it('принятие отменяет напоминание и сохраняет согласие на год', async () => {
-    const { state } = mountConsent();
-
-    state.acceptNecessary();
-    await nextTick();
-    state.acceptAll();
-    await nextTick();
-
-    expect(useCookie).toHaveBeenCalledWith(
-      CONSENT_KEY,
-      expect.objectContaining({ maxAge: 365 * 86400 }),
-    );
-
-    expect(state.isAnalyticsAllowed.value).toBe(true);
-    expect(cookies.get(DISMISSAL_KEY)?.value).toBeNull();
-    expect(vi.getTimerCount()).toBe(0);
-
-    await vi.advanceTimersByTimeAsync(DAY);
-    expect(state.isVisible.value).toBe(false);
-    expect(mountConsent().state.isAnalyticsAllowed.value).toBe(true);
-  });
-
-  it.each([
-    { version: '3', until: INITIAL_TIME + DAY },
-    { version: '4', until: 'tomorrow' },
-    { version: '4', until: INITIAL_TIME },
-    { version: '4', until: INITIAL_TIME + DAY + 1 },
-  ])(
-    'старая, повреждённая или просроченная запись не скрывает баннер: %j',
+  it.each([null, '', '1', {}, { version: 'old' }, { version: 1 }])(
+    'не скрывается при старой или повреждённой записи: %j',
     (cookieValue) => {
-      useTestCookie(DISMISSAL_KEY).value = cookieValue;
-
-      const { state } = mountConsent();
-
-      expect(state.isVisible.value).toBe(true);
-      expect(state.isAnalyticsAllowed.value).toBe(false);
+      useTestCookie(NOTICE_KEY).value = cookieValue;
+      expect(mountNotice().state.isVisible.value).toBe(true);
     },
   );
 
-  it('синхронизирует согласие и отменяет таймеры у открытых потребителей', async () => {
-    const firstTab = mountConsent();
-    const secondTab = mountConsent();
+  it.each(['all', 'necessary'])(
+    'показывает новый текст при старом выборе %s',
+    (choice) => {
+      useTestCookie('ttg-cookie-consent').value = { version: '4', choice };
 
-    firstTab.state.acceptNecessary();
-    await nextTick();
-    expect(secondTab.state.isVisible.value).toBe(false);
+      useTestCookie('ttg-cookie-dismissed').value = {
+        version: '4',
+        until: Date.now() + 86400000,
+      };
 
-    secondTab.state.acceptAll();
-    await nextTick();
-    expect(firstTab.state.isAnalyticsAllowed.value).toBe(true);
-    expect(vi.getTimerCount()).toBe(0);
-  });
+      expect(mountNotice().state.isVisible.value).toBe(true);
+    },
+  );
 
-  it('освобождает таймер при уничтожении владельца', async () => {
-    const { state, scope } = mountConsent();
+  it('обновляет открытых потребителей после закрытия и очистки cookie', () => {
+    const firstNotice = mountNotice();
+    const secondNotice = mountNotice();
 
-    state.acceptNecessary();
-    await nextTick();
-    expect(vi.getTimerCount()).toBeGreaterThan(0);
-
-    scope.stop();
-    expect(vi.getTimerCount()).toBe(0);
+    firstNotice.state.dismiss();
+    expect(secondNotice.state.isVisible.value).toBe(false);
+    useTestCookie(NOTICE_KEY).value = null;
+    expect(firstNotice.state.isVisible.value).toBe(true);
+    expect(secondNotice.state.isVisible.value).toBe(true);
   });
 });

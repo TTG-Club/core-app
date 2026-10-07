@@ -2,23 +2,31 @@ import type { MaybeRefOrGetter, Ref } from 'vue';
 
 import type {
   CharacterSpell,
+  SpellCastingKind,
+  SpellCatalogMechanics,
   SpellDamage,
-  SpellDamageFormulas,
 } from '../model';
 
 import {
-  fetchSpellDamageFormulas,
+  fetchSpellCatalogMechanics,
+  getCustomSpellCastingKinds,
   getSpellDamage,
   isCustomSpell,
-  SPELL_DAMAGE_STATE_KEY,
+  SPELL_CATALOG_MECHANICS_STATE_KEY,
 } from '../model';
 
-interface SpellDamageCatalog {
+interface SpellCatalogMechanicsAccess {
   /**
    * Броски урона заклинания: пока справочник не ответил — пустой список,
    * поэтому плитки появляются, когда данные доедут.
    */
   getDamage: (spellUrl: string) => SpellDamage[];
+
+  /**
+   * Время накладывания заклинания: у каталожного — из справочника (пусто, пока
+   * он не ответил), у своего — по тексту его поля.
+   */
+  getCastingKinds: (spell: CharacterSpell) => SpellCastingKind[];
 }
 
 /**
@@ -29,40 +37,45 @@ interface SpellDamageCatalog {
 const requestedSpellUrls = new Set<string>();
 
 /**
- * Урон каталожных заклинаний из справочника. В документе листа урона нет:
- * заклинание — ссылка на раздел, а формулы там правятся отдельно от листа,
- * поэтому они дозагружаются и кэшируются на всё приложение, а не сохраняются.
+ * Урон и время накладывания каталожных заклинаний из справочника. В документе
+ * листа их нет: заклинание — ссылка на раздел, а он правится отдельно от листа,
+ * поэтому данные дозагружаются и кэшируются на всё приложение, а не
+ * сохраняются.
  *
- * Свои заклинания пропускаются: у них нет страницы в каталоге.
+ * Свои заклинания справочник не запрашивают: у них нет страницы в каталоге,
+ * время накладывания у них — текст самой записи.
  *
- * @param spells заклинания, которым нужен урон (книга и врождённые).
+ * @param spells заклинания, которым нужны данные (книга и врождённые).
  * @param spellAbilityModifier модификатор заклинательной характеристики.
  * @param characterLevel общий уровень персонажа: по нему растёт урон заговоров.
- * @returns доступ к разобранным броскам урона по URL заклинания.
+ * @returns доступ к урону и времени накладывания заклинаний.
  */
-export function useSpellDamage(
+export function useSpellCatalogMechanics(
   spells: MaybeRefOrGetter<CharacterSpell[]>,
   spellAbilityModifier: MaybeRefOrGetter<number>,
   characterLevel: MaybeRefOrGetter<number>,
-): SpellDamageCatalog {
+): SpellCatalogMechanicsAccess {
   // Формулы кэшируются как есть: модификатор характеристики и уровень персонажа
   // подставляются при разборе, поэтому их смена не требует новых запросов.
-  const damageFormulas: Ref<Record<string, SpellDamageFormulas>> = useState(
-    SPELL_DAMAGE_STATE_KEY,
+  const catalogMechanics: Ref<Record<string, SpellCatalogMechanics>> = useState(
+    SPELL_CATALOG_MECHANICS_STATE_KEY,
     () => ({}),
   );
 
-  /** Догружает формулы урона заклинания, если их ещё никто не запрашивал. */
-  async function loadDamageFormulas(spellUrl: string): Promise<void> {
+  /** Догружает данные заклинания, если их ещё никто не запрашивал. */
+  async function loadCatalogMechanics(spellUrl: string): Promise<void> {
     if (requestedSpellUrls.has(spellUrl)) {
       return;
     }
 
     requestedSpellUrls.add(spellUrl);
 
-    const formulas = await fetchSpellDamageFormulas(spellUrl);
+    const mechanics = await fetchSpellCatalogMechanics(spellUrl);
 
-    damageFormulas.value = { ...damageFormulas.value, [spellUrl]: formulas };
+    catalogMechanics.value = {
+      ...catalogMechanics.value,
+      [spellUrl]: mechanics,
+    };
   }
 
   watch(
@@ -76,7 +89,7 @@ export function useSpellDamage(
 
       for (const spell of currentSpells) {
         if (!isCustomSpell(spell)) {
-          void loadDamageFormulas(spell.url);
+          void loadCatalogMechanics(spell.url);
         }
       }
     },
@@ -90,16 +103,30 @@ export function useSpellDamage(
    * @returns броски урона; пусто — урона нет либо справочник ещё не ответил.
    */
   function getDamage(spellUrl: string): SpellDamage[] {
-    const damage = damageFormulas.value[spellUrl];
+    const mechanics = catalogMechanics.value[spellUrl];
 
-    return damage
+    return mechanics
       ? getSpellDamage(
-          damage,
+          mechanics.damage,
           toValue(spellAbilityModifier),
           toValue(characterLevel),
         )
       : [];
   }
 
-  return { getDamage };
+  /**
+   * Время накладывания заклинания.
+   *
+   * @param spell заклинание вкладки.
+   * @returns время накладывания; пусто — неизвестно или ещё не загрузилось.
+   */
+  function getCastingKinds(spell: CharacterSpell): SpellCastingKind[] {
+    if (isCustomSpell(spell)) {
+      return getCustomSpellCastingKinds(spell.castingTime);
+    }
+
+    return catalogMechanics.value[spell.url]?.castingKinds ?? [];
+  }
+
+  return { getDamage, getCastingKinds };
 }

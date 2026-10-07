@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CreateAction } from '../../../model';
+  import type { CreateAction, CreatureEffectContext } from '../../../model';
 
   import {
     createEmptyCreatureAction,
@@ -16,6 +16,12 @@
   defineProps<{
     /** Подпись кнопки добавления: «Добавить действие», «Добавить реакцию». */
     addLabel: string;
+
+    /**
+     * Место эффектов записей: у черт эффект лежит на самом существе, у
+     * действий, реакций, легендарных действий и логова — ложится на цель.
+     */
+    effectContext: CreatureEffectContext;
 
     /**
      * Путь списка в состоянии формы существа: `actions`, `legendary.actions`,
@@ -58,17 +64,21 @@
    * проверяет своё состояние, а не отрисованные поля, — и свёрнутая запись,
    * поля которой сняты с монтирования, всё равно проверяется при сохранении.
    */
+  const damagePartsSchema = z
+    .array(z.object({ formula: z.string() }))
+    .refine(
+      (parts) =>
+        parts.every(
+          (part) => !CREATURE_FORMULA_FORBIDDEN_TOKENS.test(part.formula),
+        ),
+      { message: CREATURE_FORMULA_ERROR },
+    );
+
+  // Формулы урона «или» — те же правила, что у основного урона
   const actionSchema = z.object({
     effect: z.object({
-      damageParts: z
-        .array(z.object({ formula: z.string() }))
-        .refine(
-          (parts) =>
-            parts.every(
-              (part) => !CREATURE_FORMULA_FORBIDDEN_TOKENS.test(part.formula),
-            ),
-          { message: CREATURE_FORMULA_ERROR },
-        ),
+      damageParts: damagePartsSchema,
+      damageAlternatives: z.array(z.object({ damageParts: damagePartsSchema })),
     }),
   });
 
@@ -245,6 +255,7 @@
       >
         <CreatureActionEntry
           :model-value="row.action"
+          :effect-context
           @update:model-value="updateAction(actionIndex, $event)"
         />
       </div>

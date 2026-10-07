@@ -25,6 +25,6 @@ export { useChoiceSpellPools } from './useChoiceSpellPools';
 export { useLevelUpWizard } from './useLevelUpWizard';
 export { useSheetActiveEffects } from './useSheetActiveEffects';
 export { useSheetAvatar } from './useSheetAvatar';
+export { useSpellCatalogMechanics } from './useSpellCatalogMechanics';
 export { useSpellCatalogSearch } from './useSpellCatalogSearch';
-export { useSpellDamage } from './useSpellDamage';
 export { useToolCatalog } from './useToolCatalog';

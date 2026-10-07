@@ -4,7 +4,7 @@ import {
   SUPPORT_EMAIL_ICON,
 } from '~/shared/consts';
 import {
-  COOKIE_CONSENT_ICON,
+  COOKIE_NOTICE_ICON,
   COOKIE_POLICY_PAGE_TITLE,
   COOKIE_POLICY_ROUTE,
 } from '~infrastructure/cookie-consent/model';
@@ -52,7 +52,7 @@ export const FOOTER_LEGAL_LINKS = [
   {
     label: COOKIE_POLICY_PAGE_TITLE,
     to: COOKIE_POLICY_ROUTE,
-    icon: COOKIE_CONSENT_ICON,
+    icon: COOKIE_NOTICE_ICON,
   },
 ];
 

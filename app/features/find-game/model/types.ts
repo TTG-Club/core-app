@@ -543,6 +543,16 @@ export interface CreateGameSessionSeriesRequest {
   paymentType?: SessionPaymentType;
 }
 
+/**
+ * Правка назначенной встречи. Оплата сюда не входит: по ней уже могут быть
+ * расчёты с игроками.
+ */
+export interface UpdateGameSessionRequest {
+  title: string;
+  startsAt: string;
+  estimatedDurationMinutes?: number;
+}
+
 /** Тело копирования сессии: и название, и дата необязательны. */
 export interface CopyGameSessionRequest {
   title?: string;

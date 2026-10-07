@@ -32,6 +32,7 @@ import type {
   SpringPage,
   UpdateFindGameProfileRequest,
   UpdateGameRequest,
+  UpdateGameSessionRequest,
 } from './types';
 
 import { StatusCodes } from 'http-status-codes';
@@ -42,6 +43,7 @@ import {
   CITIES_API_PATH,
   FAVORITE_GAMES_API_PATH,
   FIND_GAME_PROFILE_API_PATH,
+  FIND_GAME_SESSION_EXPIRED_MESSAGE,
   FIND_GAME_UNKNOWN_ERROR_MESSAGE,
   FOLLOWED_MASTERS_API_PATH,
   GAME_FAVORITE_PATH_SUFFIX,
@@ -147,9 +149,14 @@ export function getFindGameErrorMessage(
     return problem.title;
   }
 
-  return error instanceof FetchError && error.message
-    ? error.message
-    : fallback;
+  // Отказ без тела (401 от сервиса, сбой прокси) объясняем сами: текст
+  // `FetchError` — это метод, путь и статус запроса, человеку он ни о чём
+  // не говорит.
+  if (getFindGameStatus(error) === StatusCodes.UNAUTHORIZED) {
+    return FIND_GAME_SESSION_EXPIRED_MESSAGE;
+  }
+
+  return fallback;
 }
 
 /* ------------------------------------------------------------------ */
@@ -838,6 +845,28 @@ export async function copyGameSession(
 }
 
 /**
+ * Правит назначенную сессию: название, время и длительность. При смене
+ * времени сервис сбрасывает отметки присутствия и уведомляет игроков.
+ *
+ * @param gameId Идентификатор игры.
+ * @param sessionId Идентификатор сессии.
+ * @param request Новые название, время и длительность.
+ */
+export async function updateGameSession(
+  gameId: string,
+  sessionId: string,
+  request: UpdateGameSessionRequest,
+): Promise<GameSession> {
+  const response = await $fetch(`${sessionsPath(gameId)}/${sessionId}`, {
+    method: 'PATCH',
+    body: request,
+    retry: 0,
+  });
+
+  return parseGameSession(response);
+}
+
+/**
  * Переводит сессию в «идёт».
  *
  * @param gameId Идентификатор игры.
@@ -973,7 +1002,7 @@ export async function createGameRegistration(
 /**
  * Собственная заявка игрока.
  *
- * Отсутствие заявки сервис отдаёт как 404 — здесь это `null`, а не ошибка:
+ * Отсутствие заявки сервис отдаёт как 204 — здесь это `null`, а не ошибка:
  * «заявки ещё не было» для интерфейса такое же нормальное состояние, как
  * `PENDING` или `REJECTED`.
  *
@@ -985,14 +1014,15 @@ export async function fetchOwnGameRegistration(
   inviteCode: string | null,
 ): Promise<GameRegistration | null> {
   try {
-    const response = await $fetch(`${registrationsPath(gameId)}/me`, {
+    const response: unknown = await $fetch(`${registrationsPath(gameId)}/me`, {
       method: 'GET',
       query: { inviteCode: inviteCode || undefined },
       retry: 0,
     });
 
-    return parseGameRegistration(response);
+    return response === undefined ? null : parseGameRegistration(response);
   } catch (error) {
+    // Старый API до обновления возвращает 404, когда заявки ещё нет.
     if (getFindGameStatus(error) === StatusCodes.NOT_FOUND) {
       return null;
     }

@@ -26,6 +26,8 @@
     SESSION_COMPLETE_LABEL,
     SESSION_COPY_LABEL,
     SESSION_DATE_FORMAT,
+    SESSION_EDIT_ICON,
+    SESSION_EDIT_LABEL,
     SESSION_NEEDS_CONFIRMATION,
     SESSION_PARTICIPANTS_COUNT_LABEL,
     SESSION_PARTICIPANTS_LABEL,
@@ -50,6 +52,7 @@
   const emit = defineEmits<{
     'attend': [sessionId: string, status: SessionAttendanceStatus];
     'copy': [session: GameSession];
+    'edit': [session: GameSession];
     'open-participants': [sessionId: string];
     'cancel': [session: GameSession];
     'complete': [session: GameSession];
@@ -124,6 +127,7 @@
     () =>
       abilities.canReviewRegistrations
       || abilities.canCopySession
+      || sessionAbilities.value.canEdit
       || sessionAbilities.value.canStart
       || sessionAbilities.value.canComplete
       || sessionAbilities.value.canReview
@@ -282,6 +286,17 @@
         icon="tabler:copy"
         :label="SESSION_COPY_LABEL"
         @click.left.exact.prevent="emit('copy', session)"
+      />
+
+      <UButton
+        v-if="sessionAbilities.canEdit"
+        size="sm"
+        color="neutral"
+        variant="subtle"
+        :icon="SESSION_EDIT_ICON"
+        :disabled="busy"
+        :label="SESSION_EDIT_LABEL"
+        @click.left.exact.prevent="emit('edit', session)"
       />
 
       <!-- Зелёная, как метка идущей встречи на оси: кнопка переводит сессию

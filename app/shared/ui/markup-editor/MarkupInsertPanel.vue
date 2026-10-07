@@ -3,6 +3,11 @@
 
   import type { MarkupTag } from './tags';
 
+  import {
+    INSERT_PANEL_CONFIRM_ICON,
+    INSERT_PANEL_CONFIRM_LABELS,
+    INSERT_PANEL_ENTER_KEY_HINT,
+  } from './constants';
   import { hasMarkerAtom } from './tiptap/node-utils';
   import { sanitizeMarkerText } from './toolbar-items';
 
@@ -152,6 +157,19 @@
 
     return 'Поиск сущности';
   });
+
+  // Кнопка подтверждения рядом с полем. На телефоне клавиша ввода экранной
+  // клавиатуры может оказаться «Далее» (переход к следующему полю) и не прислать
+  // Enter — без кнопки значение было бы нечем применить. У поиска раздела её
+  // нет: там результат выбирают нажатием на строку списка.
+  const hasConfirmButton = computed(() => mode.kind !== 'section');
+
+  /** Подпись кнопки подтверждения по режиму. */
+  const confirmLabel = computed(() =>
+    mode.kind === 'caption'
+      ? INSERT_PANEL_CONFIRM_LABELS.caption
+      : INSERT_PANEL_CONFIRM_LABELS.insert,
+  );
 
   onMounted(() => {
     nextTick(() => inputRef.value?.focus());
@@ -303,7 +321,12 @@
     emit('close');
   }
 
-  function onEnter() {
+  /**
+   * Подтверждает ввод панели по её режиму — и клавишей Enter в поле, и кнопкой
+   * подтверждения: кубик/подпись/ссылка применяются, в поиске раздела
+   * выбирается подсвеченный результат.
+   */
+  function confirmInput() {
     if (mode.kind === 'dice') {
       confirmDice();
 
@@ -360,8 +383,9 @@
         v-model="query"
         :placeholder="panelPlaceholder"
         :aria-label="panelAriaLabel"
+        :enterkeyhint="INSERT_PANEL_ENTER_KEY_HINT"
         class="min-w-0 flex-1 bg-transparent text-sm text-default outline-none"
-        @keydown.enter.prevent="onEnter"
+        @keydown.enter.prevent="confirmInput"
         @keydown.esc.prevent="emit('close')"
         @keydown.down.prevent="moveActive(1)"
         @keydown.up.prevent="moveActive(-1)"
@@ -384,11 +408,22 @@
           v-model="diceDisplay"
           placeholder="Текст (необяз.), напр. +5"
           aria-label="Показанный текст броска"
+          :enterkeyhint="INSERT_PANEL_ENTER_KEY_HINT"
           class="min-w-0 flex-1 bg-transparent text-sm text-default outline-none"
-          @keydown.enter.prevent="onEnter"
+          @keydown.enter.prevent="confirmInput"
           @keydown.esc.prevent="emit('close')"
         />
       </template>
+
+      <UButton
+        v-if="hasConfirmButton"
+        :icon="INSERT_PANEL_CONFIRM_ICON"
+        :aria-label="confirmLabel"
+        color="primary"
+        variant="soft"
+        size="xs"
+        @click.left.exact.prevent="confirmInput"
+      />
 
       <UButton
         icon="tabler:x"

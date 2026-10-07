@@ -1,6 +1,10 @@
 export * from './constants';
+export * from './creature-type';
 export { default as DamageFormulaInput } from './DamageFormulaInput.vue';
 export { default as DamagePartRow } from './DamagePartRow.vue';
 export { default as DamageParts } from './DamageParts.vue';
 export * from './formula';
 export * from './part';
+export * from './status';
+export * from './tools';
+export * from './type-choice';

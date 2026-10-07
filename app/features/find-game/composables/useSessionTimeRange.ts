@@ -65,6 +65,21 @@ export function useSessionTimeRange() {
     endTime.value = new Time(SESSION_DEFAULT_END_HOUR, 0);
   }
 
+  /**
+   * Подставляет время уже назначенной встречи. Конец считается от начала и
+   * длительности и сам переходит через полночь; без длительности остаётся
+   * конец по умолчанию.
+   * @param start Начало встречи в поясе мастера.
+   * @param minutes Длительность встречи; `null` — не указана.
+   */
+  function applyRange(start: Time, minutes: number | null): void {
+    startTime.value = start;
+
+    endTime.value = minutes
+      ? start.add({ minutes })
+      : new Time(SESSION_DEFAULT_END_HOUR, 0);
+  }
+
   return {
     startTime,
     endTime,
@@ -72,6 +87,7 @@ export function useSessionTimeRange() {
     durationMinutes,
     timezoneHint,
 
+    applyRange,
     reset,
   };
 }

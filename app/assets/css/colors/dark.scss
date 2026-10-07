@@ -196,7 +196,7 @@ html.dark {
   --ui-bg-accented: oklch(0.28 0.035 235); /* #12212c */
   --ui-bg-inverted: var(--color-neutral-50); /* #ffffff */
   --ui-border: var(--color-gray-950); /* rgba(255, 255, 255, 0.08) */
-  --ui-border-muted: var(--color-gray-50); /* rgba(255, 255, 255, 0.05) */
+  --ui-border-muted: oklch(0.25 0.01 220); /* мягче обычной рамки, а не белая */
   --ui-border-accented: var(--color-gray-900); /* rgba(255, 255, 255, 0.05) */
   --ui-border-inverted: var(--color-neutral-50); /* #ffffff */
 

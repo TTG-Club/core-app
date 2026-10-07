@@ -36,10 +36,13 @@ import type {
   ItemSummary,
   MagicItemCatalogItem,
   MagicItemRawDetail,
+  ResourceRecoveryRule,
   SpeciesFeatureSummary,
   SpeciesOption,
   SpeciesSummary,
+  SpellCastingKind,
   SpellCatalogItem,
+  SpellCatalogMechanics,
   SpellDamageFormulas,
   StartingEquipmentItem,
   StartingEquipmentOption,
@@ -70,6 +73,7 @@ import {
   ABILITY_LABELS,
   ABILITY_ORDER,
   ABILITY_VARIANT_CHOICE_ID_SEGMENT,
+  API_COUNTER_REST_MODES,
   API_SHORT_REST_ONE_RECOVERY,
   API_SHORT_REST_RECOVERY,
   ARMOR_GROUP_BY_API_CATEGORY,
@@ -87,10 +91,13 @@ import {
   LANGUAGE_NAME_BY_API_KEY,
   OPTION_CHOICE_DEFAULT_COUNT,
   OPTION_CHOICE_ID_SEGMENT,
+  RESOURCE_RECOVERY_AMOUNT_MIN,
   SHEET_FEAT_CHOICE_LABELS,
   SHEET_FEAT_MODAL_LABELS,
   SIZE_LABEL_BY_API_KEY,
   SKILL_NAME_BY_API_KEY,
+  SPELL_CASTING_BEYOND_TURN_KIND,
+  SPELL_CASTING_UNIT_KINDS,
   SPELL_COMPONENT_LABELS,
   STARTING_EQUIPMENT_DEFAULT_COIN_KEY,
   STARTING_EQUIPMENT_LABELS,
@@ -105,6 +112,7 @@ import {
   getClassFeatureId,
   getClassToolChoice,
   getLegacyClassFeatChoices,
+  getOrderedSpellCastingKinds,
   isAbilityImprovementFeatChoice,
   isAbilityImprovementFeature,
   parseAbilityKeys,
@@ -260,6 +268,18 @@ const mechanicsChoicesSchema = z
   .catch(null);
 
 /**
+ * Что возвращает ресурсу один вид отдыха, как его хранит механика
+ * справочника: `NONE`, `ALL` или `AMOUNT` с числом зарядов.
+ */
+const mechanicsCounterRestRuleSchema = z
+  .object({
+    mode: z.enum(['NONE', 'ALL', 'AMOUNT']),
+    amount: z.number().nullable().catch(null),
+  })
+  .nullable()
+  .catch(null);
+
+/**
  * Ресурсы со счётчиком: максимум приходит формулой, потому что у большинства он
  * привязан к бонусу мастерства и растёт вместе с ним.
  */
@@ -277,6 +297,11 @@ const mechanicsCountersSchema = z
       // Нижняя граница максимума; у записей до неё поля нет
       min: z.number().nullable().catch(null),
       recovery: z.string().nullable().catch(null),
+      // Раздельные правила отдыха; у записей до них полей нет
+      shortRest: mechanicsCounterRestRuleSchema,
+      longRest: mechanicsCounterRestRuleSchema,
+      // «Появляется пустым»; у записей до него поля нет
+      startsEmpty: z.boolean().nullable().catch(null),
     }),
   )
   .nullable()
@@ -287,11 +312,20 @@ const mechanicsCountersSchema = z
  * там они дополнены кругом и школой, а в механике лежат одними ссылками. Здесь
  * нужны подготовка — держит ли запись заклинание готовым — и характеристика, от
  * которой считаются все её заклинания.
+ *
+ * Ссылки перечисленных заклинаний и группы «весь список класса» нужны только
+ * затем, чтобы отличить в `grantedSpells` одно от другого: сервер отдаёт их
+ * одним списком, а мастер класса даёт взять список целиком либо выбрать из него.
  */
 const mechanicsSpellGrantSchema = z
   .object({
     alwaysPrepared: z.boolean().catch(false),
     spellcastingAbility: z.string().nullable().catch(null),
+    spells: z
+      .array(z.object({ url: z.string().catch('') }))
+      .nullish()
+      .catch(null),
+    classLists: z.array(z.unknown()).nullish().catch(null),
   })
   .nullable()
   .catch(null);
@@ -407,6 +441,33 @@ function toGrantedCharacterSpell(
     limitedBySlots: entry.limitedBySlots ?? undefined,
     ...toGrantedSpellAbility(entry.spellcastingAbility),
   };
+}
+
+/**
+ * Помечает заклинания, которые умение выдаёт правилом «весь список класса».
+ *
+ * Сервер разворачивает список и отдаёт его одним перечнем с перечисленными
+ * заклинаниями, поэтому своё отличие у списка одно: его заклинаний нет среди
+ * ссылок механики. Заклинание, названное и там, и там, считается
+ * перечисленным — его запись выдаёт в любом случае.
+ *
+ * @param spells заклинания умения записями листа.
+ * @param grant выдача заклинаний из механики умения.
+ * @returns те же заклинания; взятые из списка класса — с пометкой.
+ */
+function withClassListMarks(
+  spells: CharacterSpell[],
+  grant: z.infer<typeof mechanicsSpellGrantSchema>,
+): CharacterSpell[] {
+  if (!grant?.classLists?.length) {
+    return spells;
+  }
+
+  const listedUrls = new Set((grant.spells ?? []).map((spell) => spell.url));
+
+  return spells.map((spell) =>
+    listedUrls.has(spell.url) ? spell : { ...spell, fromClassList: true },
+  );
 }
 
 /**
@@ -1742,9 +1803,55 @@ function toMechanicCounters(counters: FeatCountersResponse): FeatCounter[] {
         // зарядов не бывает
         min: Math.max(0, counter.min ?? 0),
         recovery: toCounterRecovery(counter.recovery),
+        ...toResourceRecoveryRules(counter.shortRest, counter.longRest),
+        ...(counter.startsEmpty ? { startsEmpty: true } : {}),
       },
     ];
   });
+}
+
+/** Правило отдыха из механики справочника. */
+type CounterRestRuleResponse = z.infer<typeof mechanicsCounterRestRuleSchema>;
+
+/**
+ * Раздельные правила отдыха из механики справочника в вид листа. Есть хоть
+ * одно — недостающее читается как «ничего»: так же их разбирают core-api и
+ * редактор. Нет ни одного — пусто, и лист читает откат одним словом.
+ *
+ * @param shortRest правило короткого отдыха из ответа.
+ * @param longRest правило продолжительного отдыха из ответа.
+ * @returns правила листа либо пустой объект.
+ */
+function toResourceRecoveryRules(
+  shortRest: CounterRestRuleResponse,
+  longRest: CounterRestRuleResponse,
+): Pick<FeatCounter, 'shortRest' | 'longRest'> {
+  if (!shortRest && !longRest) {
+    return {};
+  }
+
+  return {
+    shortRest: toResourceRecoveryRule(shortRest),
+    longRest: toResourceRecoveryRule(longRest),
+  };
+}
+
+/**
+ * Одно правило отдыха из механики справочника в вид листа.
+ *
+ * @param rule правило из ответа; нет — отдых ничего не возвращает.
+ * @returns правило листа.
+ */
+function toResourceRecoveryRule(
+  rule: CounterRestRuleResponse,
+): ResourceRecoveryRule {
+  return {
+    mode: rule ? API_COUNTER_REST_MODES[rule.mode] : 'none',
+    amount: Math.max(
+      RESOURCE_RECOVERY_AMOUNT_MIN,
+      rule?.amount ?? RESOURCE_RECOVERY_AMOUNT_MIN,
+    ),
+  };
 }
 
 /**
@@ -3130,11 +3237,14 @@ function toClassSummary(
       // Умение либо держит заклинание подготовленным, либо оставляет подготовку
       // игроку — как черта
       spells: (feature.grantedSpells ?? []).length
-        ? (feature.grantedSpells ?? []).map((entry) =>
-            toGrantedCharacterSpell(
-              entry,
-              feature.mechanics?.spells?.alwaysPrepared ?? false,
+        ? withClassListMarks(
+            (feature.grantedSpells ?? []).map((entry) =>
+              toGrantedCharacterSpell(
+                entry,
+                feature.mechanics?.spells?.alwaysPrepared ?? false,
+              ),
             ),
+            feature.mechanics?.spells ?? null,
           )
         : null,
       spellcastingAbility: parseApiAbilityKey(
@@ -3685,7 +3795,7 @@ const spellRawDamageSchema = z
  * @param input сырой ответ заклинания.
  * @returns формулы урона из справочника с тирами заговора.
  */
-export function parseSpellDamageFormulas(input: unknown): SpellDamageFormulas {
+function parseSpellDamageFormulas(input: unknown): SpellDamageFormulas {
   const effect = spellRawDamageSchema.parse(input).effect;
 
   const cantripTiers = (effect?.cantripScalingTiers ?? [])
@@ -3699,6 +3809,59 @@ export function parseSpellDamageFormulas(input: unknown): SpellDamageFormulas {
     .sort((left, right) => left.level - right.level);
 
   return { base: effect?.damageFormulas ?? [], cantripTiers };
+}
+
+/**
+ * Схема «сырого» ответа заклинания в части времени накладывания: единица
+ * справочника (`ACTION`, `BONUS`, `MINUTE`…) у каждого варианта.
+ */
+const spellRawCastingTimeSchema = z
+  .object({
+    castingTime: z
+      .array(
+        z
+          .object({ unit: z.string().nullable().catch(null) })
+          .catch({ unit: null }),
+      )
+      .catch([]),
+  })
+  .catch({ castingTime: [] });
+
+/**
+ * Время накладывания из «сырого» ответа заклинания. Вариант без единицы и
+ * ритуал пропускаются; единица вне боевого хода читается как «дольше хода».
+ *
+ * @param input сырой ответ заклинания.
+ * @returns время накладывания без повторов, по порядку строки.
+ */
+function parseSpellCastingKinds(input: unknown): SpellCastingKind[] {
+  const { castingTime } = spellRawCastingTimeSchema.parse(input);
+
+  const castingKinds = castingTime.flatMap(({ unit }) => {
+    const unitKind = unit ? SPELL_CASTING_UNIT_KINDS[unit] : null;
+
+    return unitKind === null
+      ? []
+      : [unitKind ?? SPELL_CASTING_BEYOND_TURN_KIND];
+  });
+
+  return getOrderedSpellCastingKinds(castingKinds);
+}
+
+/**
+ * Валидация «сырого» ответа `GET /api/v2/spells/{url}/raw`: урон и время
+ * накладывания — всё, что лист берёт у заклинания из справочника.
+ *
+ * @param input сырой ответ заклинания.
+ * @returns урон и время накладывания заклинания.
+ */
+export function parseSpellCatalogMechanics(
+  input: unknown,
+): SpellCatalogMechanics {
+  return {
+    damage: parseSpellDamageFormulas(input),
+    castingKinds: parseSpellCastingKinds(input),
+  };
 }
 
 /**

@@ -6,7 +6,6 @@ import {
   ONLINE_COUNTER_DATA_KEY,
   parseOnlineUsersTotal,
 } from '~home/counters/model';
-import { useCookieConsent } from '~infrastructure/cookie-consent/composables';
 
 import {
   HEARTBEAT_COOLDOWN_MS,
@@ -20,7 +19,7 @@ import {
   VISITOR_ONLINE_TYPE,
 } from '../model';
 
-/** Учитывает посетителей из одной вкладки; отзыв согласия отменяет ожидания и запросы. */
+/** Автоматически учитывает посетителей из одной вкладки и освобождает ресурсы при остановке. */
 export function useOnlineHeartbeat(): void {
   const nuxtApp = useNuxtApp();
 
@@ -37,17 +36,16 @@ export function useOnlineHeartbeat(): void {
 
   const visitorId = computed(() => parseOnlineVisitorId(storedVisitorId.value));
   const { fetch: fetchUser, isLoggedIn, user } = useUser();
-  const { isAnalyticsAllowed } = useCookieConsent();
   const visibility = useDocumentVisibility();
-  const isMounted = ref(false);
 
   let session: AbortController | undefined;
   let request: AbortController | undefined;
   let releaseLock: (() => void) | undefined;
   let isLeader = false;
+  let isDisposed = false;
   let lastHeartbeatTime = Number.NEGATIVE_INFINITY;
 
-  /** Собирает тело запроса после проверки актуального согласия. */
+  /** Собирает тело запроса с текущим логином или идентификатором гостя. */
   function getHeartbeatBody(): OnlineHeartbeatBody {
     if (isLoggedIn.value && user.value?.username) {
       return {
@@ -68,7 +66,6 @@ export function useOnlineHeartbeat(): void {
   async function sendHeartbeat(): Promise<void> {
     if (
       !session
-      || !isAnalyticsAllowed.value
       || request
       || (navigator.locks ? !isLeader : visibility.value === 'hidden')
       || Date.now() - lastHeartbeatTime < HEARTBEAT_COOLDOWN_MS
@@ -86,8 +83,8 @@ export function useOnlineHeartbeat(): void {
         await fetchUser();
       }
 
-      // За время ожидания профиля могли отозвать согласие или сменить пользователя.
-      if (currentRequest.signal.aborted || !isAnalyticsAllowed.value) {
+      // За время ожидания профиля могли остановить приложение или сменить пользователя.
+      if (currentRequest.signal.aborted) {
         return;
       }
 
@@ -98,7 +95,7 @@ export function useOnlineHeartbeat(): void {
         signal: currentRequest.signal,
       });
 
-      if (!currentRequest.signal.aborted && isAnalyticsAllowed.value) {
+      if (!currentRequest.signal.aborted) {
         visitorsCounter.value = parseOnlineUsersTotal(heartbeatResponse);
       }
     } catch (error) {
@@ -133,15 +130,9 @@ export function useOnlineHeartbeat(): void {
     pause();
   }
 
-  /** Согласует запуск и остановку с текущим выбором посетителя. */
-  function synchronizeHeartbeat(): void {
-    if (!isMounted.value || !isAnalyticsAllowed.value) {
-      stopHeartbeat();
-
-      return;
-    }
-
-    if (session) {
+  /** Запускает учёт один раз перед монтированием приложения. */
+  function startHeartbeat(): void {
+    if (isDisposed || session) {
       return;
     }
 
@@ -187,13 +178,7 @@ export function useOnlineHeartbeat(): void {
       });
   }
 
-  const removeMountHook = nuxtApp.hooks.hook('app:beforeMount', () => {
-    isMounted.value = true;
-  });
-
-  watch([isMounted, isAnalyticsAllowed], synchronizeHeartbeat, {
-    flush: 'sync',
-  });
+  const removeMountHook = nuxtApp.hooks.hook('app:beforeMount', startHeartbeat);
 
   watch(visibility, (current, previous) => {
     if (current === 'visible' && previous === 'hidden') {
@@ -212,6 +197,7 @@ export function useOnlineHeartbeat(): void {
   );
 
   onScopeDispose(() => {
+    isDisposed = true;
     removeMountHook();
     stopHeartbeat();
   });
