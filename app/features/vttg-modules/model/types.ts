@@ -49,9 +49,8 @@ export interface ModuleSubmission {
   updatedAt: string;
 }
 
-/** Данные формы заявки. */
+/** Данные формы заявки. Репозиторий сервис берёт из ссылки на манифест. */
 export interface SubmissionRequest {
-  repositoryUrl: string;
   manifestUrl: string;
   description: string;
   systemIds: Array<string>;

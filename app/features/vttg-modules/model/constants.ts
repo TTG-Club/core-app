@@ -122,9 +122,9 @@ export const VTTG_MODULES_REQUIREMENTS_TITLE = 'Что нужно для зая�
 
 /** Требования к модулю, которые сервис проверяет при подаче. */
 export const VTTG_MODULES_REQUIREMENTS = [
-  'Открытый репозиторий на GitHub или GitLab.',
-  'Файл module.json с полями id, name, version и download — ссылкой на архив модуля. И манифест, и архив должны лежать в этом же репозитории.',
-  'После одобрения ссылки на репозиторий и module.json не меняются. Чтобы сменить их, подайте новую заявку на тот же модуль — после одобрения она заменит прежнюю.',
+  'Ссылка на module.json в открытом репозитории на GitHub или GitLab — репозиторий сервис определит по ней сам.',
+  'В module.json — поля id, name, version и download: ссылка на архив модуля в этом же репозитории.',
+  'После одобрения ссылка на module.json не меняется. Чтобы сменить её, подайте новую заявку на тот же модуль — после одобрения она заменит прежнюю.',
   'id — строчные латинские буквы, цифры, «-» и «_»; он же имя папки модуля в мире.',
 ] as const;
 
@@ -155,17 +155,13 @@ export const FORM_LINKS_LOCKED_HINT =
 export const FORM_EDIT_HINT =
   'После правки заявка снова уйдёт на рассмотрение.';
 
-export const FORM_REPOSITORY_LABEL = 'Репозиторий';
-
-export const FORM_REPOSITORY_PLACEHOLDER = 'https://github.com/автор/модуль';
-
 export const FORM_MANIFEST_LABEL = 'Ссылка на module.json';
 
 export const FORM_MANIFEST_PLACEHOLDER =
   'https://github.com/автор/модуль/blob/main/module.json';
 
 export const FORM_MANIFEST_HINT =
-  'Подойдёт и ссылка на страницу файла в GitHub — сервис сам возьмёт его содержимое.';
+  'Файл в открытом репозитории GitHub или GitLab. Подойдёт и ссылка на страницу файла в GitHub.';
 
 export const FORM_SYSTEMS_LABEL = 'Игровые системы';
 

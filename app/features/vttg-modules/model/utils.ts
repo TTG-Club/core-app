@@ -41,7 +41,6 @@ export function createSubmissionForm(
   submission: ModuleSubmission | null,
 ): SubmissionRequest {
   return {
-    repositoryUrl: submission?.repositoryUrl ?? '',
     manifestUrl: submission?.manifestUrl ?? '',
     description: submission?.description ?? '',
     systemIds: submission ? [...submission.systemIds] : [],

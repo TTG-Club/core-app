@@ -16,8 +16,6 @@
     FORM_MANIFEST_HINT,
     FORM_MANIFEST_LABEL,
     FORM_MANIFEST_PLACEHOLDER,
-    FORM_REPOSITORY_LABEL,
-    FORM_REPOSITORY_PLACEHOLDER,
     FORM_RESUBMIT_LABEL,
     FORM_SUBMIT_ICON,
     FORM_SUBMIT_LABEL,
@@ -60,8 +58,8 @@
     isEdit.value ? FORM_EDIT_HINT : undefined,
   );
 
-  // Ссылки модуля, который уже одобрялся, фиксированы: сервис отклонит их
-  // смену, поэтому поля закрыты, а подсказка ведёт к новой заявке.
+  // Ссылка модуля, который уже одобрялся, фиксирована: сервис отклонит её
+  // смену, поэтому поле закрыто, а подсказка ведёт к новой заявке.
   const areLinksLocked = computed(() => submission?.linksLocked ?? false);
 
   const manifestHelp = computed(() =>
@@ -105,20 +103,6 @@
   >
     <template #body>
       <div class="flex flex-col gap-4">
-        <UFormField
-          :label="FORM_REPOSITORY_LABEL"
-          required
-        >
-          <UInput
-            v-model="form.repositoryUrl"
-            type="url"
-            :disabled="areLinksLocked"
-            :maxlength="SUBMISSION_URL_MAX_LENGTH"
-            :placeholder="FORM_REPOSITORY_PLACEHOLDER"
-            class="w-full"
-          />
-        </UFormField>
-
         <UFormField
           :label="FORM_MANIFEST_LABEL"
           :help="manifestHelp"

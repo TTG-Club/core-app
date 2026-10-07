@@ -67,7 +67,6 @@ const problemDetailSchema = z.object({
 
 /** Проверяет заявку до отправки: те же ограничения, что у сервиса. */
 export const submissionRequestSchema = z.object({
-  repositoryUrl: z.string().trim().min(1).max(SUBMISSION_URL_MAX_LENGTH),
   manifestUrl: z.string().trim().min(1).max(SUBMISSION_URL_MAX_LENGTH),
   description: z.string().trim().min(1).max(SUBMISSION_DESCRIPTION_MAX_LENGTH),
   systemIds: z.array(z.string()).max(SUBMISSION_SYSTEMS_MAX_COUNT),
