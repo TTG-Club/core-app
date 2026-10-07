@@ -141,8 +141,14 @@
       column-count: 3;
     }
 
+    // На широком меню разделы встают сеткой в два ряда: заполняются по
+    // колонкам, поэтому порядок чтения тот же, а заголовки второго ряда
+    // стоят на одной линии.
     @container (width >= 860px) {
-      column-count: 4;
+      display: grid;
+      grid-auto-flow: column;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-rows: repeat(2, auto);
     }
   }
 
