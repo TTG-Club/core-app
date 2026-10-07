@@ -60,8 +60,8 @@
     required: true,
   });
 
-  const containerGapClass = computed(() => (collapsible ? 'gap-1' : 'gap-6'));
-  const groupGapClass = computed(() => (collapsible ? 'gap-1' : undefined));
+  // Во встроенном списке группы стоят вплотную: их разделяют линии самих групп.
+  const containerGapClass = computed(() => (collapsible ? undefined : 'gap-6'));
 
   /** Позиция группы: склеиваются только блоки обычного списка дровера. */
   function resolveGroupPosition(
@@ -161,7 +161,6 @@
       v-for="(itemGroup, groupIndex) in groupedFilters"
       :key="groupIndex"
       class="flex flex-col"
-      :class="groupGapClass"
     >
       <FilterGroupComponent
         v-for="(item, itemIndex) in itemGroup"
