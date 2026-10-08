@@ -73,17 +73,8 @@
   const isLoading = computed(() => submissionsStatus.value === 'pending');
   const isEmpty = computed(() => submissions.value.length === 0);
 
-  /** Выбор автора: развернул или свернул инструкцию сам; `null` — не трогал. */
-  const isGuideToggled = ref<boolean | null>(null);
-
-  // Инструкция раскрыта, пока заявок нет: автору с заявками она уже знакома
-  // и только отодвигала бы список. Свой выбор автора важнее.
-  const isGuideOpen = computed({
-    get: () => isGuideToggled.value ?? isEmpty.value,
-    set: (open: boolean) => {
-      isGuideToggled.value = open;
-    },
-  });
+  /** Инструкция свёрнута, пока автор сам её не раскроет. */
+  const isGuideOpen = ref(false);
 
   const errorMessage = computed(() =>
     getVttgModulesErrorMessage(submissionsError.value),
