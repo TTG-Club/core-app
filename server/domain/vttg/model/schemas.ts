@@ -16,3 +16,16 @@ export const vttgCompendiumVersionBodySchema = z.object({
 export const vttgCompendiumApiErrorBodySchema = z.object({
   message: z.string().min(1),
 });
+
+/**
+ * Тело запроса справки о личности для мира VTTG: адрес мира. Что это именно
+ * адрес без пути и параметров, проверяет auth-service — он же её подписывает.
+ */
+export const vttgAuthorizeBodySchema = z.object({
+  audience: z.string().trim().min(1).max(255),
+});
+
+/** Ответ auth-service со справкой: берём только саму справку. */
+export const vttgIdentityTicketSchema = z.object({
+  ticket: z.string().min(1),
+});

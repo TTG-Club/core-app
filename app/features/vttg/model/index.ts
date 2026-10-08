@@ -1,3 +1,4 @@
+export * from './authorize';
 export * from './constants';
 export * from './passwordReset';
 export * from './subscription';

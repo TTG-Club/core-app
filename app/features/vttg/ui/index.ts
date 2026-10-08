@@ -1,3 +1,4 @@
+export { default as VttgAuthorizeCard } from './VttgAuthorizeCard.vue';
 export { default as VttgDownloadBuilds } from './VttgDownloadBuilds.vue';
 export { default as VttgDownloadModal } from './VttgDownloadModal.vue';
 export { default as VttgFaqSection } from './VttgFaqSection.vue';
