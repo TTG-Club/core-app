@@ -11,7 +11,6 @@ import {
   MODERATION_COMMENT_MAX_LENGTH,
   SUBMISSION_DESCRIPTION_MAX_LENGTH,
   SUBMISSION_STATUSES,
-  SUBMISSION_SYSTEMS_MAX_COUNT,
   SUBMISSION_URL_MAX_LENGTH,
 } from './constants';
 
@@ -69,7 +68,6 @@ const problemDetailSchema = z.object({
 export const submissionRequestSchema = z.object({
   manifestUrl: z.string().trim().min(1).max(SUBMISSION_URL_MAX_LENGTH),
   description: z.string().trim().min(1).max(SUBMISSION_DESCRIPTION_MAX_LENGTH),
-  systemIds: z.array(z.string()).max(SUBMISSION_SYSTEMS_MAX_COUNT),
 });
 
 /** Проверяет комментарий модератора до отправки. */

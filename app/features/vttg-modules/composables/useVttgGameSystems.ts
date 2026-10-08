@@ -3,20 +3,15 @@ import type { VttgGameSystem } from '../model';
 import { fetchGameSystems, VTTG_MODULES_SYSTEMS_ASYNC_KEY } from '../model';
 
 /**
- * Справочник игровых систем реестра: варианты для формы заявки и подписи
- * систем на карточках. Один запрос на страницу — ключ общий.
+ * Справочник игровых систем реестра: названия систем для карточек. Сами
+ * системы модуля приходят из его манифеста. Один запрос на страницу — ключ
+ * общий.
  */
 export function useVttgGameSystems() {
-  const { data: systems, status } = useAsyncData(
+  const { data: systems } = useAsyncData(
     VTTG_MODULES_SYSTEMS_ASYNC_KEY,
     () => fetchGameSystems(),
     { server: false, default: (): Array<VttgGameSystem> => [] },
-  );
-
-  const isLoading = computed(() => status.value === 'pending');
-
-  const systemItems = computed(() =>
-    systems.value.map((system) => ({ value: system.id, label: system.name })),
   );
 
   /**
@@ -29,5 +24,5 @@ export function useVttgGameSystems() {
     );
   }
 
-  return { systemItems, isLoading, getSystemName };
+  return { getSystemName };
 }

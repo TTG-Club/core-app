@@ -9,12 +9,9 @@
     canApproveSubmission,
     canRejectSubmission,
     formatManifest,
-    hasSystemsMismatch,
     isSubmissionInCatalog,
     MANIFEST_HIDE_LABEL,
     MANIFEST_SHOW_LABEL,
-    MANIFEST_SYSTEMS_MISMATCH_HINT,
-    MANIFEST_SYSTEMS_MISMATCH_ICON,
     MODERATION_AUTHOR_PREFIX,
     REJECT_ICON,
     REJECT_LABEL,
@@ -23,8 +20,7 @@
   import { VttgModuleSummary } from '../../ui';
 
   /**
-   * Заявка в очереди модератора: кто подал, что лежит в манифесте и не
-   * расходятся ли системы заявки с теми, что VTTG прочтёт из манифеста.
+   * Заявка в очереди модератора: кто подал и что лежит в манифесте.
    */
   const { submission, busy = false } = defineProps<{
     submission: ModuleSubmission;
@@ -48,7 +44,6 @@
     formatManifest(submission.module.manifest),
   );
 
-  const isMismatch = computed(() => hasSystemsMismatch(submission));
   const canApprove = computed(() => canApproveSubmission(submission.status));
   const canReject = computed(() => canRejectSubmission(submission.status));
 
@@ -88,14 +83,6 @@
 
         <span class="truncate">{{ authorLabel }}</span>
       </div>
-
-      <UAlert
-        v-if="isMismatch"
-        :title="MANIFEST_SYSTEMS_MISMATCH_HINT"
-        :icon="MANIFEST_SYSTEMS_MISMATCH_ICON"
-        color="warning"
-        variant="subtle"
-      />
 
       <div>
         <UButton

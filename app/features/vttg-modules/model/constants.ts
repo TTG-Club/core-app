@@ -55,9 +55,6 @@ export const SUBMISSION_URL_MAX_LENGTH = 2048;
 /** Длина краткого описания модуля. */
 export const SUBMISSION_DESCRIPTION_MAX_LENGTH = 1000;
 
-/** Сколько систем можно указать в заявке. */
-export const SUBMISSION_SYSTEMS_MAX_COUNT = 20;
-
 /** Начальная высота полей описания и причины отклонения, в строках. */
 export const TEXTAREA_ROWS = 4;
 
@@ -183,13 +180,6 @@ export const FORM_MANIFEST_PLACEHOLDER =
 export const FORM_MANIFEST_HINT =
   'Файл в открытом репозитории GitHub или GitLab. Подойдёт и ссылка на страницу файла в GitHub.';
 
-export const FORM_SYSTEMS_LABEL = 'Игровые системы';
-
-export const FORM_SYSTEMS_PLACEHOLDER = 'Любая система';
-
-export const FORM_SYSTEMS_HINT =
-  'Оставьте пустым, если модуль работает в мире на любой системе.';
-
 export const FORM_DESCRIPTION_LABEL = 'Краткое описание';
 
 export const FORM_DESCRIPTION_PLACEHOLDER =
@@ -286,11 +276,6 @@ export const MODERATION_AUTHOR_PREFIX = 'Автор';
 export const MANIFEST_SHOW_LABEL = 'Показать module.json';
 
 export const MANIFEST_HIDE_LABEL = 'Скрыть module.json';
-
-export const MANIFEST_SYSTEMS_MISMATCH_ICON = 'tabler:alert-triangle';
-
-export const MANIFEST_SYSTEMS_MISMATCH_HINT =
-  'В module.json указаны другие системы';
 
 export const APPROVE_LABEL = 'Одобрить';
 

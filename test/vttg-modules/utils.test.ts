@@ -6,9 +6,7 @@ import {
   canApproveSubmission,
   canRejectSubmission,
   DEFAULT_MODULE_ICON,
-  getManifestSystemIds,
   getModuleIcon,
-  hasSystemsMismatch,
   isSubmissionClosed,
   isSubmissionEditable,
   isSubmissionInCatalog,
@@ -50,42 +48,6 @@ function createSubmission(
     updatedAt: '2026-10-07T10:00:00Z',
   };
 }
-
-describe('системы модуля из манифеста', () => {
-  it('нет поля, пустой список и «*» — любая система', () => {
-    expect(getManifestSystemIds('{}')).toEqual([]);
-    expect(getManifestSystemIds('{"compatibleSystems": []}')).toEqual([]);
-    expect(getManifestSystemIds('{"compatibleSystems": ["*"]}')).toEqual([]);
-  });
-
-  it('битый манифест не роняет карточку модератора', () => {
-    expect(getManifestSystemIds('<html>')).toEqual([]);
-    expect(getManifestSystemIds('{"compatibleSystems": "dnd5e"}')).toEqual([]);
-  });
-
-  it('системы заявки совпадают с манифестом без учёта порядка', () => {
-    const submission = createSubmission(
-      ['pf2e', 'dnd5e-2024'],
-      '{"compatibleSystems": ["dnd5e-2024", "pf2e"]}',
-    );
-
-    expect(hasSystemsMismatch(submission)).toBe(false);
-  });
-
-  it('расхождение заметно модератору', () => {
-    expect(
-      hasSystemsMismatch(
-        createSubmission(['dnd5e-2024'], '{"compatibleSystems": ["*"]}'),
-      ),
-    ).toBe(true);
-
-    expect(
-      hasSystemsMismatch(
-        createSubmission([], '{"compatibleSystems": ["dnd5e-2024"]}'),
-      ),
-    ).toBe(true);
-  });
-});
 
 describe('значок модуля', () => {
   it('пропускает только разрешённые коллекции', () => {

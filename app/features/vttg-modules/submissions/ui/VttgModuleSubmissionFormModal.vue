@@ -3,7 +3,6 @@
 
   import { UiModalActions } from '~ui/modal-actions';
 
-  import { useVttgGameSystems } from '../../composables';
   import {
     CANCEL_LABEL,
     createSubmissionForm,
@@ -19,9 +18,6 @@
     FORM_RESUBMIT_LABEL,
     FORM_SUBMIT_ICON,
     FORM_SUBMIT_LABEL,
-    FORM_SYSTEMS_HINT,
-    FORM_SYSTEMS_LABEL,
-    FORM_SYSTEMS_PLACEHOLDER,
     SUBMISSION_DESCRIPTION_MAX_LENGTH,
     SUBMISSION_URL_MAX_LENGTH,
     submissionRequestSchema,
@@ -43,8 +39,6 @@
   const emit = defineEmits<{
     submit: [request: SubmissionRequest];
   }>();
-
-  const { systemItems, isLoading: areSystemsLoading } = useVttgGameSystems();
 
   const form = ref<SubmissionRequest>(createSubmissionForm(null));
 
@@ -114,21 +108,6 @@
             :disabled="areLinksLocked"
             :maxlength="SUBMISSION_URL_MAX_LENGTH"
             :placeholder="FORM_MANIFEST_PLACEHOLDER"
-            class="w-full"
-          />
-        </UFormField>
-
-        <UFormField
-          :label="FORM_SYSTEMS_LABEL"
-          :help="FORM_SYSTEMS_HINT"
-        >
-          <USelectMenu
-            v-model="form.systemIds"
-            multiple
-            value-key="value"
-            :items="systemItems"
-            :loading="areSystemsLoading"
-            :placeholder="FORM_SYSTEMS_PLACEHOLDER"
             class="w-full"
           />
         </UFormField>
