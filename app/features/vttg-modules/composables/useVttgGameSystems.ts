@@ -1,6 +1,6 @@
 import type { VttgGameSystem } from '../model';
 
-import { fetchGameSystems } from '../model';
+import { fetchGameSystems, VTTG_MODULES_SYSTEMS_ASYNC_KEY } from '../model';
 
 /**
  * Справочник игровых систем реестра: варианты для формы заявки и подписи
@@ -8,7 +8,7 @@ import { fetchGameSystems } from '../model';
  */
 export function useVttgGameSystems() {
   const { data: systems, status } = useAsyncData(
-    'vttg-modules-game-systems',
+    VTTG_MODULES_SYSTEMS_ASYNC_KEY,
     () => fetchGameSystems(),
     { server: false, default: (): Array<VttgGameSystem> => [] },
   );

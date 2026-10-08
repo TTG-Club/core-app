@@ -42,6 +42,8 @@
     isTakeDown.value ? TAKE_DOWN_TITLE : REJECT_TITLE,
   );
 
+  const moduleName = computed(() => submission?.module.name);
+
   const submitLabel = computed(() =>
     isTakeDown.value ? TAKE_DOWN_LABEL : REJECT_LABEL,
   );
@@ -72,7 +74,7 @@
   <UModal
     v-model:open="isOpen"
     :title
-    :description="submission?.module.name"
+    :description="moduleName"
   >
     <template #body>
       <UFormField

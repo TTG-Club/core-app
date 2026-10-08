@@ -13,6 +13,7 @@
     MODERATION_EMPTY_DESCRIPTION,
     MODERATION_EMPTY_TITLE,
     MODERATION_PAGE_SIZE,
+    MODERATION_SKELETON_COUNT,
     MODERATION_STATUS_FILTER_PLACEHOLDER,
     MODERATION_TITLE,
     REJECTED_TOAST,
@@ -20,6 +21,7 @@
     RETRY_LABEL,
     SUBMISSION_STATUS_LABELS,
     SUBMISSION_STATUSES,
+    VTTG_MODULES_MODERATION_ASYNC_KEY,
   } from '~vttg-modules/model';
   import {
     VttgModuleModerationCard,
@@ -61,7 +63,7 @@
     error: submissionsError,
     refresh: refreshSubmissions,
   } = await useAsyncData(
-    'moderation-vttg-modules',
+    VTTG_MODULES_MODERATION_ASYNC_KEY,
     () =>
       fetchModerationSubmissions(
         statusFilter.value,
@@ -79,6 +81,11 @@
   );
 
   const isLoading = computed(() => submissionsStatus.value === 'pending');
+  const isEmpty = computed(() => submissions.value.length === 0);
+
+  const isPaginationVisible = computed(
+    () => totalSubmissions.value > MODERATION_PAGE_SIZE,
+  );
 
   const errorMessage = computed(() =>
     getVttgModulesErrorMessage(submissionsError.value),
@@ -165,7 +172,7 @@
 
       <template v-if="isLoading">
         <USkeleton
-          v-for="index in 3"
+          v-for="index in MODERATION_SKELETON_COUNT"
           :key="index"
           class="h-40 w-full"
         />
@@ -185,7 +192,7 @@
       </UiResult>
 
       <UiResult
-        v-else-if="submissions.length === 0"
+        v-else-if="isEmpty"
         status="info"
         :title="MODERATION_EMPTY_TITLE"
         :sub-title="MODERATION_EMPTY_DESCRIPTION"
@@ -202,7 +209,7 @@
         />
 
         <UiPagination
-          v-if="totalSubmissions > MODERATION_PAGE_SIZE"
+          v-if="isPaginationVisible"
           v-model:page="currentPage"
           :total="totalSubmissions"
           :items-per-page="MODERATION_PAGE_SIZE"

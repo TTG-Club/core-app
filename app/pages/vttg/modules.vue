@@ -20,10 +20,12 @@
     SUBMISSIONS_EMPTY_DESCRIPTION,
     SUBMISSIONS_EMPTY_TITLE,
     SUBMISSIONS_LOAD_ERROR_TITLE,
+    SUBMISSIONS_SKELETON_COUNT,
     SUBMIT_ICON,
     SUBMIT_LABEL,
     SUBMITTED_TOAST,
     VTTG_MODULES_DESCRIPTION,
+    VTTG_MODULES_MY_SUBMISSIONS_ASYNC_KEY,
     VTTG_MODULES_REQUIREMENTS,
     VTTG_MODULES_REQUIREMENTS_TITLE,
     VTTG_MODULES_TITLE,
@@ -60,12 +62,13 @@
     error: submissionsError,
     refresh: refreshSubmissions,
   } = await useAsyncData(
-    'vttg-modules-my-submissions',
+    VTTG_MODULES_MY_SUBMISSIONS_ASYNC_KEY,
     () => fetchMySubmissions(requestFetch),
     { default: (): Array<ModuleSubmission> => [] },
   );
 
   const isLoading = computed(() => submissionsStatus.value === 'pending');
+  const isEmpty = computed(() => submissions.value.length === 0);
 
   const errorMessage = computed(() =>
     getVttgModulesErrorMessage(submissionsError.value),
@@ -204,7 +207,7 @@
 
       <template v-if="isLoading">
         <USkeleton
-          v-for="index in 2"
+          v-for="index in SUBMISSIONS_SKELETON_COUNT"
           :key="index"
           class="h-40 w-full"
         />
@@ -224,7 +227,7 @@
       </UiResult>
 
       <UiResult
-        v-else-if="submissions.length === 0"
+        v-else-if="isEmpty"
         status="info"
         :title="SUBMISSIONS_EMPTY_TITLE"
         :sub-title="SUBMISSIONS_EMPTY_DESCRIPTION"

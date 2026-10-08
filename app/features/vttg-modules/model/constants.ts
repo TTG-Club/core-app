@@ -26,6 +26,16 @@ export const VTTG_MODULES_MY_SUBMISSIONS_API_PATH = `${VTTG_MODULES_SUBMISSIONS_
 /** Очередь модерации. */
 export const VTTG_MODULES_MODERATION_API_PATH = `${VTTG_MODULES_API_PREFIX}/moderation/submissions`;
 
+/** Ключ `useAsyncData` справочника игровых систем: общий на всю страницу. */
+export const VTTG_MODULES_SYSTEMS_ASYNC_KEY = 'vttg-modules-game-systems';
+
+/** Ключ `useAsyncData` списка своих заявок автора. */
+export const VTTG_MODULES_MY_SUBMISSIONS_ASYNC_KEY =
+  'vttg-modules-my-submissions';
+
+/** Ключ `useAsyncData` очереди модерации. */
+export const VTTG_MODULES_MODERATION_ASYNC_KEY = 'moderation-vttg-modules';
+
 /** Хвост пути перечитывания манифеста. */
 export const REFRESH_MANIFEST_PATH_SUFFIX = 'refresh-manifest';
 
@@ -56,6 +66,12 @@ export const MODERATION_COMMENT_MAX_LENGTH = 2000;
 
 /** Заявок на странице очереди модерации. */
 export const MODERATION_PAGE_SIZE = 20;
+
+/** Сколько заглушек показывать, пока грузится очередь модерации. */
+export const MODERATION_SKELETON_COUNT = 3;
+
+/** Сколько заглушек показывать, пока грузятся заявки автора. */
+export const SUBMISSIONS_SKELETON_COUNT = 2;
 
 /* ------------------------------------------------------------------ */
 /* Статусы                                                             */
