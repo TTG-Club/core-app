@@ -23,6 +23,11 @@
   import { KbdShortcut } from '~ui/kbd-shortcut';
   import { UpdatesDot } from '~ui/updates-dot';
   import { AuthModal } from '~user/auth-modal';
+  import {
+    VTTG_MODULES_ICON,
+    VTTG_MODULES_ROUTE,
+    VTTG_MODULES_TITLE,
+  } from '~vttg-modules/model';
 
   import { UserInfo } from './ui';
 
@@ -251,6 +256,19 @@
                   :title="MY_GAMES_UPDATES_HINT"
                 />
               </span>
+            </UButton>
+
+            <!-- Заявки авторов модулей VTTG: подача и ответы модератора -->
+            <UButton
+              :icon="VTTG_MODULES_ICON"
+              color="neutral"
+              variant="ghost"
+              class="w-full"
+              size="lg"
+              :to="VTTG_MODULES_ROUTE"
+              @click.left.exact="closeMenu"
+            >
+              {{ VTTG_MODULES_TITLE }}
             </UButton>
 
             <UButton

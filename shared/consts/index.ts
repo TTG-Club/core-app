@@ -6,3 +6,4 @@ export * from './mailing';
 export * from './platform';
 export * from './upload';
 export * from './vttg-compendium';
+export * from './vttg-modules';
