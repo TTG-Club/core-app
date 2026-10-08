@@ -4,18 +4,12 @@
   import { useVttgGameSystems } from '../composables';
   import {
     CARD_DATE_FORMAT,
-    CARD_DOWNLOAD_ICON,
-    CARD_DOWNLOAD_LABEL,
-    CARD_MANIFEST_ICON,
-    CARD_MANIFEST_LABEL,
     CARD_MODERATOR_COMMENT_LABEL,
-    CARD_REPOSITORY_ICON,
-    CARD_REPOSITORY_LABEL,
     CARD_SUBMITTED_PREFIX,
     CARD_SYNCED_PREFIX,
-    CARD_UNIVERSAL_LABEL,
     CARD_VERSION_PREFIX,
     getModuleIcon,
+    getSubmissionLinks,
   } from '../model';
   import VttgModuleStatusBadge from './VttgModuleStatusBadge.vue';
 
@@ -29,7 +23,7 @@
   }>();
 
   const { format } = useDayjs();
-  const { getSystemName } = useVttgGameSystems();
+  const { getSystemNames } = useVttgGameSystems();
 
   const title = computed(() => submission.module.name);
 
@@ -39,29 +33,9 @@
 
   const icon = computed(() => getModuleIcon(submission.module.icon));
 
-  const systemNames = computed(() =>
-    submission.systemIds.length > 0
-      ? submission.systemIds.map(getSystemName)
-      : [CARD_UNIVERSAL_LABEL],
-  );
+  const systemNames = computed(() => getSystemNames(submission.systemIds));
 
-  const links = computed(() => [
-    {
-      label: CARD_REPOSITORY_LABEL,
-      to: submission.repositoryUrl,
-      icon: CARD_REPOSITORY_ICON,
-    },
-    {
-      label: CARD_MANIFEST_LABEL,
-      to: submission.manifestUrl,
-      icon: CARD_MANIFEST_ICON,
-    },
-    {
-      label: CARD_DOWNLOAD_LABEL,
-      to: submission.module.downloadUrl,
-      icon: CARD_DOWNLOAD_ICON,
-    },
-  ]);
+  const links = computed(() => getSubmissionLinks(submission));
 
   const submittedAt = computed(
     () =>
@@ -114,7 +88,7 @@
           :key="systemName"
           color="neutral"
           variant="outline"
-          size="sm"
+          size="md"
         >
           {{ systemName }}
         </UBadge>

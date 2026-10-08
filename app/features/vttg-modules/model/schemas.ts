@@ -9,7 +9,6 @@ import { z } from 'zod';
 
 import {
   MODERATION_COMMENT_MAX_LENGTH,
-  SUBMISSION_DESCRIPTION_MAX_LENGTH,
   SUBMISSION_STATUSES,
   SUBMISSION_URL_MAX_LENGTH,
 } from './constants';
@@ -64,10 +63,9 @@ const problemDetailSchema = z.object({
   detail: z.string().nullish(),
 });
 
-/** Проверяет заявку до отправки: те же ограничения, что у сервиса. */
+/** Проверяет заявку до отправки: то же ограничение, что у сервиса. */
 export const submissionRequestSchema = z.object({
   manifestUrl: z.string().trim().min(1).max(SUBMISSION_URL_MAX_LENGTH),
-  description: z.string().trim().min(1).max(SUBMISSION_DESCRIPTION_MAX_LENGTH),
 });
 
 /** Проверяет комментарий модератора до отправки. */
@@ -129,7 +127,7 @@ export function parseProblemMessage(input: unknown): string | null {
 }
 
 /**
- * Готовит заявку к отправке: обрезает пробелы и проверяет длины.
+ * Готовит заявку к отправке: обрезает пробелы и проверяет длину ссылки.
  * @param request Данные формы.
  */
 export function prepareSubmissionRequest(

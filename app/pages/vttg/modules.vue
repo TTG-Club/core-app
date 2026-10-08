@@ -25,7 +25,7 @@
     SUBMIT_LABEL,
     SUBMITTED_TOAST,
     VTTG_MODULES_DESCRIPTION,
-    VTTG_MODULES_GUIDE_CHEVRON_ICON,
+    VTTG_MODULES_GUIDE_BUTTON_LABEL,
     VTTG_MODULES_GUIDE_ICON,
     VTTG_MODULES_GUIDE_LABEL,
     VTTG_MODULES_GUIDE_STEPS,
@@ -72,9 +72,6 @@
 
   const isLoading = computed(() => submissionsStatus.value === 'pending');
   const isEmpty = computed(() => submissions.value.length === 0);
-
-  /** Инструкция свёрнута, пока автор сам её не раскроет. */
-  const isGuideOpen = ref(false);
 
   const errorMessage = computed(() =>
     getVttgModulesErrorMessage(submissionsError.value),
@@ -181,44 +178,40 @@
   >
     <div class="flex flex-col gap-4">
       <UCard variant="subtle">
-        <div class="flex flex-col gap-4">
-          <div
-            class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6"
-          >
-            <p class="text-sm leading-6 text-toned">
-              {{ VTTG_MODULES_DESCRIPTION }}
-            </p>
+        <div
+          class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6"
+        >
+          <p class="text-sm leading-6 text-toned">
+            {{ VTTG_MODULES_DESCRIPTION }}
+          </p>
+
+          <div class="flex shrink-0 flex-wrap gap-2">
+            <!-- Инструкция выезжает панелью и не сдвигает список заявок -->
+            <USlideover
+              :title="VTTG_MODULES_GUIDE_LABEL"
+              :ui="{ content: 'w-full max-w-2xl' }"
+            >
+              <UButton
+                size="md"
+                color="neutral"
+                variant="subtle"
+                :icon="VTTG_MODULES_GUIDE_ICON"
+                :label="VTTG_MODULES_GUIDE_BUTTON_LABEL"
+              />
+
+              <template #body>
+                <VttgGuideSteps :steps="VTTG_MODULES_GUIDE_STEPS" />
+              </template>
+            </USlideover>
 
             <UButton
-              class="shrink-0 self-start sm:self-center"
+              size="md"
               :icon="SUBMIT_ICON"
               @click.left.exact.prevent="openCreate"
             >
               {{ SUBMIT_LABEL }}
             </UButton>
           </div>
-
-          <UCollapsible
-            v-model:open="isGuideOpen"
-            class="flex flex-col gap-6 border-t border-default pt-3"
-          >
-            <UButton
-              class="group self-start"
-              color="neutral"
-              variant="ghost"
-              :icon="VTTG_MODULES_GUIDE_ICON"
-              :trailing-icon="VTTG_MODULES_GUIDE_CHEVRON_ICON"
-              :label="VTTG_MODULES_GUIDE_LABEL"
-              :ui="{
-                trailingIcon:
-                  'transition-transform group-data-[state=open]:rotate-180',
-              }"
-            />
-
-            <template #content>
-              <VttgGuideSteps :steps="VTTG_MODULES_GUIDE_STEPS" />
-            </template>
-          </UCollapsible>
         </div>
       </UCard>
 

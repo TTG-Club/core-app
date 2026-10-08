@@ -1,11 +1,12 @@
 import type { VttgGuideStep } from '~vttg/model';
 
-/** Подпись сворачиваемой инструкции на странице автора. */
+/** Заголовок панели с инструкцией на странице автора. */
 export const VTTG_MODULES_GUIDE_LABEL = 'Как подготовить модуль к заявке';
 
-export const VTTG_MODULES_GUIDE_ICON = 'tabler:list-check';
+/** Кнопка, которая открывает инструкцию. */
+export const VTTG_MODULES_GUIDE_BUTTON_LABEL = 'Как подготовить модуль';
 
-export const VTTG_MODULES_GUIDE_CHEVRON_ICON = 'tabler:chevron-down';
+export const VTTG_MODULES_GUIDE_ICON = 'tabler:list-check';
 
 /** Пример манифеста: обязательные поля реестра и самые частые необязательные. */
 const MANIFEST_EXAMPLE = `{
@@ -30,9 +31,9 @@ export const VTTG_MODULES_GUIDE_STEPS: Array<VttgGuideStep> = [
   {
     title: 'Соберите манифест module.json',
     paragraphs: [
-      'Манифест — файл module.json в корне модуля: по нему VTTG узнаёт модуль, а каталог берёт из него название, версию и ссылку на архив.',
-      'Обязательные поля: id, name, version и download. Поле id — строчные латинские буквы, цифры, «-» и «_», до 64 символов; оно же станет именем папки модуля в мире. Поле version — семантическая версия, например 1.0.0. Поле download — ссылка на архив модуля.',
-      'Необязательные поля: description, author, icon (только значки tabler и ttg), compatibleSystems — идентификаторы игровых систем, для которых сделан модуль, compatibility и systemCompatibility — подходящие версии приложения и игровой системы.',
+      'Манифест — файл module.json в корне модуля: по нему VTTG узнаёт модуль, а каталог берёт из него название, описание, версию, игровые системы и ссылку на архив.',
+      'Обязательные поля: id, name, version, description и download. Поле id — строчные латинские буквы, цифры, «-» и «_», до 64 символов; оно же станет именем папки модуля в мире. Поле version — семантическая версия, например 1.0.0. Поле description — описание модуля для каталога, до 1000 символов. Поле download — ссылка на архив модуля.',
+      'Необязательные поля: author, icon (только значки tabler и ttg), compatibleSystems — идентификаторы игровых систем, для которых сделан модуль, compatibility и systemCompatibility — подходящие версии приложения и игровой системы.',
       'Модулю нужно содержимое: блок client с точкой входа, папка compendium или и то, и другое. Пустой модуль VTTG не покажет.',
     ],
     codes: [{ caption: 'module.json', content: MANIFEST_EXAMPLE }],
@@ -48,7 +49,7 @@ export const VTTG_MODULES_GUIDE_STEPS: Array<VttgGuideStep> = [
     title: 'Подайте заявку',
     paragraphs: [
       'Укажите ссылку на module.json — подойдёт и адрес страницы файла из браузера. Репозиторий сервис определит по ссылке сам и сразу проверит манифест: если что-то не так, вы увидите причину.',
-      'Игровые системы выбирать не нужно: каталог берёт их из compatibleSystems манифеста. Если модуль подходит любой системе, не указывайте это поле.',
+      'Описание и игровые системы вводить не нужно: каталог берёт их из полей description и compatibleSystems манифеста. Если модуль подходит любой системе, не указывайте compatibleSystems.',
     ],
     warning:
       'После одобрения ссылка на module.json не меняется. Чтобы сменить её, подайте новую заявку на тот же модуль — после одобрения она заменит прежнюю.',

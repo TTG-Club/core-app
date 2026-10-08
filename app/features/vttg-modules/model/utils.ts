@@ -1,5 +1,6 @@
 import type {
   ModuleSubmission,
+  SubmissionLink,
   SubmissionRequest,
   SubmissionStatus,
 } from './types';
@@ -7,10 +8,18 @@ import type {
 import {
   ALLOWED_ICON_PREFIXES,
   APPROVABLE_STATUSES,
+  CARD_DOWNLOAD_ICON,
+  CARD_DOWNLOAD_LABEL,
+  CARD_MANIFEST_ICON,
+  CARD_MANIFEST_LABEL,
+  CARD_REPOSITORY_ICON,
+  CARD_REPOSITORY_LABEL,
+  CARD_VERSION_PREFIX,
   CATALOG_STATUS,
   CLOSED_STATUSES,
   DEFAULT_MODULE_ICON,
   EDITABLE_STATUSES,
+  MODERATION_AUTHOR_PREFIX,
   REJECTABLE_STATUSES,
 } from './constants';
 
@@ -55,7 +64,7 @@ export function isSubmissionInCatalog(status: SubmissionStatus): boolean {
 }
 
 /**
- * Поля формы заявки: у правки — данные заявки, у новой заявки — пустые.
+ * Поля формы заявки: у правки — ссылка заявки, у новой заявки — пусто.
  * @param submission Заявка для правки; `null` — новая заявка.
  */
 export function createSubmissionForm(
@@ -63,8 +72,49 @@ export function createSubmissionForm(
 ): SubmissionRequest {
   return {
     manifestUrl: submission?.manifestUrl ?? '',
-    description: submission?.description ?? '',
   };
+}
+
+/**
+ * Ссылки заявки: репозиторий, манифест и архив модуля.
+ * @param submission Заявка.
+ */
+export function getSubmissionLinks(
+  submission: ModuleSubmission,
+): Array<SubmissionLink> {
+  return [
+    {
+      label: CARD_REPOSITORY_LABEL,
+      to: submission.repositoryUrl,
+      icon: CARD_REPOSITORY_ICON,
+    },
+    {
+      label: CARD_MANIFEST_LABEL,
+      to: submission.manifestUrl,
+      icon: CARD_MANIFEST_ICON,
+    },
+    {
+      label: CARD_DOWNLOAD_LABEL,
+      to: submission.module.downloadUrl,
+      icon: CARD_DOWNLOAD_ICON,
+    },
+  ];
+}
+
+/**
+ * Идентификатор модуля с версией одной строкой: `map-import v1.0.0`.
+ * @param submission Заявка.
+ */
+export function getModuleVersionLabel(submission: ModuleSubmission): string {
+  return `${submission.module.id} ${CARD_VERSION_PREFIX}${submission.module.version}`;
+}
+
+/**
+ * Подпись автора заявки; без имени показываем его идентификатор.
+ * @param submission Заявка.
+ */
+export function getSubmissionAuthorLabel(submission: ModuleSubmission): string {
+  return `${MODERATION_AUTHOR_PREFIX}: ${submission.authorName ?? submission.authorId}`;
 }
 
 /**

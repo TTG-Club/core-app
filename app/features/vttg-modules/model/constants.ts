@@ -52,10 +52,7 @@ export const REJECT_PATH_SUFFIX = 'reject';
 /** Длина ссылки на репозиторий и манифест. */
 export const SUBMISSION_URL_MAX_LENGTH = 2048;
 
-/** Длина краткого описания модуля. */
-export const SUBMISSION_DESCRIPTION_MAX_LENGTH = 1000;
-
-/** Начальная высота полей описания и причины отклонения, в строках. */
+/** Начальная высота поля причины отклонения, в строках. */
 export const TEXTAREA_ROWS = 4;
 
 /** Длина комментария модератора. */
@@ -128,10 +125,11 @@ export const REJECTABLE_STATUSES: ReadonlyArray<SubmissionStatus> = [
 /** Статус модуля в каталоге VTTG: его отклонение — это снятие из каталога. */
 export const CATALOG_STATUS: SubmissionStatus = 'APPROVED';
 
-/** Статусы, с которыми открывается очередь модерации: то, что ждёт решения. */
-export const DEFAULT_MODERATION_STATUSES: ReadonlyArray<SubmissionStatus> = [
-  'PENDING',
-];
+/** Варианты фильтра очереди модерации по статусам. */
+export const SUBMISSION_STATUS_ITEMS = SUBMISSION_STATUSES.map((status) => ({
+  value: status,
+  label: SUBMISSION_STATUS_LABELS[status],
+}));
 
 /* ------------------------------------------------------------------ */
 /* Тексты страницы автора                                              */
@@ -178,12 +176,7 @@ export const FORM_MANIFEST_PLACEHOLDER =
   'https://github.com/автор/модуль/blob/main/module.json';
 
 export const FORM_MANIFEST_HINT =
-  'Файл в открытом репозитории GitHub или GitLab. Подойдёт и ссылка на страницу файла в GitHub.';
-
-export const FORM_DESCRIPTION_LABEL = 'Краткое описание';
-
-export const FORM_DESCRIPTION_PLACEHOLDER =
-  'Что делает модуль и кому он пригодится';
+  'Файл в открытом репозитории GitHub или GitLab. Подойдёт и ссылка на страницу файла в GitHub. Название, описание и игровые системы модуля сервис возьмёт из этого файла.';
 
 export const FORM_SUBMIT_LABEL = 'Отправить';
 
@@ -258,6 +251,25 @@ export const WITHDRAWN_TOAST = 'Заявка отозвана';
 
 export const MODERATION_TITLE = 'Модули VTTG';
 
+/** Пояснение к очереди в боковой колонке. */
+export const MODERATION_DESCRIPTION =
+  'Заявки авторов на включение модулей в каталог VTTG. Откройте заявку, чтобы посмотреть манифест и принять решение.';
+
+/** Оформление обычной строки очереди. */
+export const MODERATION_ROW_CLASS =
+  'border-default bg-elevated hover:border-accented hover:bg-accented';
+
+/** Оформление строки, чья карточка открыта. */
+export const MODERATION_ROW_OPENED_CLASS =
+  'border-primary bg-primary/10 shadow-xs ring-1 ring-primary/50';
+
+export const MODERATION_DETAIL_EMPTY_ICON = 'tabler:puzzle';
+
+export const MODERATION_DETAIL_EMPTY_TITLE = 'Заявка не выбрана';
+
+export const MODERATION_DETAIL_EMPTY_TEXT =
+  'Выберите заявку из списка слева, чтобы посмотреть манифест и принять решение';
+
 export const VTTG_MODULES_DASHBOARD_TITLE = 'Модули VTTG';
 
 export const VTTG_MODULES_DASHBOARD_DESCRIPTION =
@@ -272,10 +284,6 @@ export const MODERATION_EMPTY_DESCRIPTION =
   'С выбранными статусами сейчас нет ни одной заявки.';
 
 export const MODERATION_AUTHOR_PREFIX = 'Автор';
-
-export const MANIFEST_SHOW_LABEL = 'Показать module.json';
-
-export const MANIFEST_HIDE_LABEL = 'Скрыть module.json';
 
 export const APPROVE_LABEL = 'Одобрить';
 

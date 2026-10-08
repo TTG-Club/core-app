@@ -7,6 +7,9 @@ import {
   canRejectSubmission,
   DEFAULT_MODULE_ICON,
   getModuleIcon,
+  getModuleVersionLabel,
+  getSubmissionAuthorLabel,
+  getSubmissionLinks,
   isSubmissionClosed,
   isSubmissionEditable,
   isSubmissionInCatalog,
@@ -100,5 +103,28 @@ describe('решения модератора по статусу', () => {
     expect(canRejectSubmission('SUPERSEDED')).toBe(false);
     expect(isSubmissionInCatalog('APPROVED')).toBe(true);
     expect(isSubmissionInCatalog('PENDING')).toBe(false);
+  });
+});
+
+describe('подписи заявки', () => {
+  it('ссылки ведут в репозиторий, на манифест и на архив', () => {
+    const submission = createSubmission([], '{}');
+
+    expect(getSubmissionLinks(submission).map((link) => link.to)).toEqual([
+      submission.repositoryUrl,
+      submission.manifestUrl,
+      submission.module.downloadUrl,
+    ]);
+  });
+
+  it('модуль подписан идентификатором с версией, автор — именем', () => {
+    const submission = createSubmission([], '{}');
+
+    expect(getModuleVersionLabel(submission)).toBe('map-import v1.0.0');
+    expect(getSubmissionAuthorLabel(submission)).toBe('Автор: author');
+
+    expect(getSubmissionAuthorLabel({ ...submission, authorName: null })).toBe(
+      'Автор: author-1',
+    );
   });
 });

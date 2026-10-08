@@ -7,8 +7,6 @@
     CANCEL_LABEL,
     createSubmissionForm,
     FORM_CREATE_TITLE,
-    FORM_DESCRIPTION_LABEL,
-    FORM_DESCRIPTION_PLACEHOLDER,
     FORM_EDIT_HINT,
     FORM_EDIT_TITLE,
     FORM_LINKS_LOCKED_HINT,
@@ -18,10 +16,8 @@
     FORM_RESUBMIT_LABEL,
     FORM_SUBMIT_ICON,
     FORM_SUBMIT_LABEL,
-    SUBMISSION_DESCRIPTION_MAX_LENGTH,
     SUBMISSION_URL_MAX_LENGTH,
     submissionRequestSchema,
-    TEXTAREA_ROWS,
   } from '../../model';
 
   /**
@@ -108,20 +104,6 @@
             :disabled="areLinksLocked"
             :maxlength="SUBMISSION_URL_MAX_LENGTH"
             :placeholder="FORM_MANIFEST_PLACEHOLDER"
-            class="w-full"
-          />
-        </UFormField>
-
-        <UFormField
-          :label="FORM_DESCRIPTION_LABEL"
-          required
-        >
-          <UTextarea
-            v-model="form.description"
-            :maxlength="SUBMISSION_DESCRIPTION_MAX_LENGTH"
-            :placeholder="FORM_DESCRIPTION_PLACEHOLDER"
-            :rows="TEXTAREA_ROWS"
-            autoresize
             class="w-full"
           />
         </UFormField>

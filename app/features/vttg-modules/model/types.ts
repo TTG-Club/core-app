@@ -37,6 +37,7 @@ export interface ModuleSubmission {
   authorName: string | null;
   repositoryUrl: string;
   manifestUrl: string;
+  /** Описание из манифеста модуля. */
   description: string;
   /** Системы из манифеста модуля; пустой список — модуль универсальный. */
   systemIds: Array<string>;
@@ -50,12 +51,19 @@ export interface ModuleSubmission {
 }
 
 /**
- * Данные формы заявки. Репозиторий сервис берёт из ссылки на манифест, а
- * игровые системы — из `compatibleSystems` самого манифеста.
+ * Данные формы заявки — одна ссылка. Репозиторий сервис берёт из неё, а
+ * описание и игровые системы — из `description` и `compatibleSystems`
+ * самого манифеста.
  */
 export interface SubmissionRequest {
   manifestUrl: string;
-  description: string;
+}
+
+/** Ссылка заявки наружу: репозиторий, манифест или архив. */
+export interface SubmissionLink {
+  label: string;
+  to: string;
+  icon: string;
 }
 
 /** Страница очереди модерации. */

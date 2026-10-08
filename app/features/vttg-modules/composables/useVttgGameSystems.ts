@@ -1,6 +1,10 @@
 import type { VttgGameSystem } from '../model';
 
-import { fetchGameSystems, VTTG_MODULES_SYSTEMS_ASYNC_KEY } from '../model';
+import {
+  CARD_UNIVERSAL_LABEL,
+  fetchGameSystems,
+  VTTG_MODULES_SYSTEMS_ASYNC_KEY,
+} from '../model';
 
 /**
  * Справочник игровых систем реестра: названия систем для карточек. Сами
@@ -24,5 +28,15 @@ export function useVttgGameSystems() {
     );
   }
 
-  return { getSystemName };
+  /**
+   * Подписи систем модуля для значков; у универсального модуля — одна общая.
+   * @param systemIds Идентификаторы систем из манифеста модуля.
+   */
+  function getSystemNames(systemIds: Array<string>): Array<string> {
+    return systemIds.length > 0
+      ? systemIds.map(getSystemName)
+      : [CARD_UNIVERSAL_LABEL];
+  }
+
+  return { getSystemName, getSystemNames };
 }

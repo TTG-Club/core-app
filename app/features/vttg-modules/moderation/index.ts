@@ -1,1 +1,5 @@
-export { VttgModuleModerationCard, VttgModuleRejectModal } from './ui';
+export {
+  VttgModuleModerationDetailPane,
+  VttgModuleModerationRow,
+  VttgModuleRejectModal,
+} from './ui';

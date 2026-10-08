@@ -15,7 +15,7 @@
   <UBadge
     :color
     variant="subtle"
-    size="sm"
+    size="md"
   >
     {{ label }}
   </UBadge>
