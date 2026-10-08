@@ -25,9 +25,11 @@
     SUBMIT_LABEL,
     SUBMITTED_TOAST,
     VTTG_MODULES_DESCRIPTION,
+    VTTG_MODULES_GUIDE_CHEVRON_ICON,
+    VTTG_MODULES_GUIDE_ICON,
+    VTTG_MODULES_GUIDE_LABEL,
+    VTTG_MODULES_GUIDE_STEPS,
     VTTG_MODULES_MY_SUBMISSIONS_ASYNC_KEY,
-    VTTG_MODULES_REQUIREMENTS,
-    VTTG_MODULES_REQUIREMENTS_TITLE,
     VTTG_MODULES_TITLE,
     WITHDRAW_CONFIRM_DESCRIPTION,
     WITHDRAW_CONFIRM_TITLE,
@@ -40,6 +42,7 @@
     VttgModuleSubmissionCard,
     VttgModuleSubmissionFormModal,
   } from '~vttg-modules/submissions';
+  import { VttgGuideSteps } from '~vttg/ui';
 
   definePageMeta({
     auth: { roles: [Role.USER] },
@@ -69,6 +72,18 @@
 
   const isLoading = computed(() => submissionsStatus.value === 'pending');
   const isEmpty = computed(() => submissions.value.length === 0);
+
+  /** Выбор автора: развернул или свернул инструкцию сам; `null` — не трогал. */
+  const isGuideToggled = ref<boolean | null>(null);
+
+  // Инструкция раскрыта, пока заявок нет: автору с заявками она уже знакома
+  // и только отодвигала бы список. Свой выбор автора важнее.
+  const isGuideOpen = computed({
+    get: () => isGuideToggled.value ?? isEmpty.value,
+    set: (open: boolean) => {
+      isGuideToggled.value = open;
+    },
+  });
 
   const errorMessage = computed(() =>
     getVttgModulesErrorMessage(submissionsError.value),
@@ -175,33 +190,44 @@
   >
     <div class="flex flex-col gap-4">
       <UCard variant="subtle">
-        <div class="flex flex-col gap-3">
-          <p class="text-sm text-default">
-            {{ VTTG_MODULES_DESCRIPTION }}
-          </p>
+        <div class="flex flex-col gap-4">
+          <div
+            class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6"
+          >
+            <p class="text-sm leading-6 text-toned">
+              {{ VTTG_MODULES_DESCRIPTION }}
+            </p>
 
-          <div>
-            <h2 class="text-sm font-semibold text-highlighted">
-              {{ VTTG_MODULES_REQUIREMENTS_TITLE }}
-            </h2>
-
-            <ul class="mt-1 list-disc pl-5 text-sm text-muted">
-              <li
-                v-for="requirement in VTTG_MODULES_REQUIREMENTS"
-                :key="requirement"
-              >
-                {{ requirement }}
-              </li>
-            </ul>
+            <UButton
+              class="shrink-0 self-start sm:self-center"
+              :icon="SUBMIT_ICON"
+              @click.left.exact.prevent="openCreate"
+            >
+              {{ SUBMIT_LABEL }}
+            </UButton>
           </div>
 
-          <UButton
-            class="self-start"
-            :icon="SUBMIT_ICON"
-            @click.left.exact.prevent="openCreate"
+          <UCollapsible
+            v-model:open="isGuideOpen"
+            class="flex flex-col gap-6 border-t border-default pt-3"
           >
-            {{ SUBMIT_LABEL }}
-          </UButton>
+            <UButton
+              class="group self-start"
+              color="neutral"
+              variant="ghost"
+              :icon="VTTG_MODULES_GUIDE_ICON"
+              :trailing-icon="VTTG_MODULES_GUIDE_CHEVRON_ICON"
+              :label="VTTG_MODULES_GUIDE_LABEL"
+              :ui="{
+                trailingIcon:
+                  'transition-transform group-data-[state=open]:rotate-180',
+              }"
+            />
+
+            <template #content>
+              <VttgGuideSteps :steps="VTTG_MODULES_GUIDE_STEPS" />
+            </template>
+          </UCollapsible>
         </div>
       </UCard>
 

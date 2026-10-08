@@ -1,0 +1,56 @@
+import type { VttgGuideStep } from '~vttg/model';
+
+/** Подпись сворачиваемой инструкции на странице автора. */
+export const VTTG_MODULES_GUIDE_LABEL = 'Как подготовить модуль к заявке';
+
+export const VTTG_MODULES_GUIDE_ICON = 'tabler:list-check';
+
+export const VTTG_MODULES_GUIDE_CHEVRON_ICON = 'tabler:chevron-down';
+
+/** Пример манифеста: обязательные поля реестра и самые частые необязательные. */
+const MANIFEST_EXAMPLE = `{
+  "id": "my-module",
+  "name": "Мой модуль",
+  "version": "1.0.0",
+  "download": "https://github.com/author/my-module/releases/download/v1.0.0/my-module.zip",
+  "description": "Что делает модуль",
+  "author": "Автор",
+  "icon": "tabler:puzzle",
+  "compatibleSystems": ["dnd5e"],
+  "compatibility": { "minimum": "0.9.630" },
+  "client": { "entry": "client.js" }
+}`;
+
+/**
+ * Шаги подготовки модуля к заявке. Требования — те, что проверяет реестр при
+ * подаче (`ManifestParser`, `UrlPolicy` в vttg-module-registry), и те, без
+ * которых модуль не заработает в самом VTTG (`docs/MODULES.md`).
+ */
+export const VTTG_MODULES_GUIDE_STEPS: Array<VttgGuideStep> = [
+  {
+    title: 'Соберите манифест module.json',
+    paragraphs: [
+      'Манифест — файл module.json в корне модуля: по нему VTTG узнаёт модуль, а каталог берёт из него название, версию и ссылку на архив.',
+      'Обязательные поля: id, name, version и download. Поле id — строчные латинские буквы, цифры, «-» и «_», до 64 символов; оно же станет именем папки модуля в мире. Поле version — семантическая версия, например 1.0.0. Поле download — ссылка на архив модуля.',
+      'Необязательные поля: description, author, icon (только значки tabler и ttg), compatibleSystems — идентификаторы игровых систем, для которых сделан модуль, compatibility и systemCompatibility — подходящие версии приложения и игровой системы.',
+      'Модулю нужно содержимое: блок client с точкой входа, папка compendium или и то, и другое. Пустой модуль VTTG не покажет.',
+    ],
+    codes: [{ caption: 'module.json', content: MANIFEST_EXAMPLE }],
+  },
+  {
+    title: 'Выложите модуль в открытый репозиторий',
+    paragraphs: [
+      'Подходят GitHub и GitLab. И module.json, и архив из поля download должны лежать в одном репозитории и открываться по ссылке https без входа в аккаунт.',
+      'Чтобы выпустить обновление, поменяйте version и download в module.json и нажмите «Перечитать манифест» у своей заявки — повторная проверка модератором не нужна.',
+    ],
+  },
+  {
+    title: 'Подайте заявку',
+    paragraphs: [
+      'Укажите ссылку на module.json — подойдёт и адрес страницы файла из браузера. Репозиторий сервис определит по ссылке сам и сразу проверит манифест: если что-то не так, вы увидите причину.',
+      'Игровые системы в заявке должны совпадать с compatibleSystems из манифеста: VTTG проверяет совместимость по манифесту. Если модуль подходит любой системе, оставьте оба списка пустыми.',
+    ],
+    warning:
+      'После одобрения ссылка на module.json не меняется. Чтобы сменить её, подайте новую заявку на тот же модуль — после одобрения она заменит прежнюю.',
+  },
+];
