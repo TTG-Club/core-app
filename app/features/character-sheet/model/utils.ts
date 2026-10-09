@@ -15842,14 +15842,19 @@ export interface SheetActionMenuOptions {
    * чужого листа и мест без управления доступом остаётся без лишнего действия.
    */
   onShare?: () => void;
+
+  /**
+   * Копия чужого листа, открытого по ссылке, к себе; не передан — у такого
+   * листа в меню только выгрузка. Доступность — по тому же `canDuplicate`.
+   */
+  onCopyShared?: () => void;
 }
 
 /**
  * Пункты меню действий над листом — общие для шапки открытого листа и карточки
  * в списке персонажей: экспорт, копия, доступ по ссылке и настройки одной
  * группой, удаление — отдельной, оно необратимее прочих. У листа, открытого по
- * ссылке, остаётся только выгрузка: сохранить его к себе зритель может кнопками
- * в шапке, а не отсюда.
+ * ссылке, остаётся выгрузка и, если передан `onCopyShared`, копия к себе.
  *
  * @param options доступность действий и обработчики пунктов.
  * @returns группы пунктов для `UDropdownMenu`.
@@ -15873,22 +15878,32 @@ export function getSheetActionMenuItems(
     onSelect: options.onDownload,
   };
 
+  /**
+   * Пункт копии листа.
+   *
+   * @param onSelect создание копии.
+   * @returns пункт меню.
+   */
+  const getCopyItem = (onSelect: () => void): DropdownMenuItem => ({
+    label: 'Создать копию',
+    icon: 'tabler:copy',
+    // Причина недоступности прямо в пункте: без неё серый пункт выглядит
+    // поломкой, а тултипа у пунктов меню нет.
+    description: options.canDuplicate ? undefined : SHEET_COPY_LIMIT_HINT,
+    disabled: !options.canDuplicate,
+    onSelect,
+  });
+
   if (options.isReadonly) {
-    return [[downloadPdf, download]];
+    return options.onCopyShared
+      ? [[downloadPdf, download, getCopyItem(options.onCopyShared)]]
+      : [[downloadPdf, download]];
   }
 
   const actions: DropdownMenuItem[] = [
     downloadPdf,
     download,
-    {
-      label: 'Создать копию',
-      icon: 'tabler:copy',
-      // Причина недоступности прямо в пункте: без неё серый пункт выглядит
-      // поломкой, а тултипа у пунктов меню нет.
-      description: options.canDuplicate ? undefined : SHEET_COPY_LIMIT_HINT,
-      disabled: !options.canDuplicate,
-      onSelect: options.onDuplicate,
-    },
+    getCopyItem(options.onDuplicate),
   ];
 
   if (options.onShare) {

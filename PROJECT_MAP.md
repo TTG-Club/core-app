@@ -912,10 +912,10 @@ modals), so its capabilities are listed here rather than squeezed into the table
   the token, not the session — in a read-only mode with no autosave. Of the
   section pages only `/:id` keeps an auth guard: the list page is public and
   swaps its private content for a sign-in prompt when there is no session.
-- A viewer with access to the tool gets two extra items in the header action
-  menu of a shared sheet: **copy** the document into their own sheets
-  (`copyShared`, no backend of its own — a plain `POST` of the copied document)
-  or **save the link** into the «Другие листы» section (`saved/`, `/…/saved`
+- A viewer with access to the tool can **copy** a shared sheet into their own
+  sheets from the header action menu (`copyShared`, no backend of its own — a
+  plain `POST` of the copied document) or **save the link** (header bookmark
+  button) into the «Другие листы» section (`saved/`, `/…/saved`
   endpoints, server-side limit of 4, subscription-ready). The token the sheet
   was opened by lives in `useCharacterSheetShare().viewedShareToken` — the
   public endpoint never returns one.

@@ -17,7 +17,6 @@
     getSpeciesDisplayName,
     getVisionRows,
     LONG_REST_LABELS,
-    SHEET_COPY_LIMIT_HINT,
     SHEET_EDIT_ACCESS_LABELS,
     SHEET_EDITOR_BADGE_LABEL,
     SHEET_EDITOR_BADGE_TOOLTIP,
@@ -124,7 +123,10 @@
   // `isLocked`.
   const menuItems = computed<Array<Array<DropdownMenuItem>>>(() =>
     getSheetActionMenuItems({
-      canDuplicate: props.canDuplicate ?? false,
+      // У листа по ссылке копия — своя, чужая: место в лимите считается так же.
+      canDuplicate: props.readonlyReason
+        ? (props.canCopyShared ?? false)
+        : (props.canDuplicate ?? false),
       // Удалить лист и поделиться им может только владелец, не редактор.
       canRemove: !props.editorAccess,
       isShared: props.shared,
@@ -138,6 +140,7 @@
       onSettings: () => emit('edit-settings'),
       onAbilityScores: () => emit('edit-ability-scores'),
       onShare: props.editorAccess ? undefined : () => emit('share'),
+      onCopyShared: props.canSaveShared ? () => emit('copy-shared') : undefined,
     }),
   );
 
@@ -200,13 +203,8 @@
     return 'text-muted';
   });
 
-  // Сохранить чужой лист к себе — главное, зачем зритель пришёл по ссылке,
-  // поэтому оба действия стоят кнопками рядом с пометкой «только просмотр», а
-  // не прячутся в меню за троеточием.
-  const copySharedTooltip = computed(() =>
-    props.canCopyShared ? SHEET_SAVE_SHARED_LABELS.copy : SHEET_COPY_LIMIT_HINT,
-  );
-
+  // Закладка чужого листа стоит кнопкой рядом с пометкой просмотра, а копия к
+  // себе — в меню за троеточием: в шапке ей не хватало места.
   const saveLinkIcon = computed(() =>
     props.linkSaved ? 'tabler:bookmark-filled' : 'tabler:bookmark-plus',
   );
@@ -540,18 +538,6 @@
         </UTooltip>
 
         <template v-if="canSaveShared">
-          <UTooltip :text="copySharedTooltip">
-            <UButton
-              icon="tabler:user-plus"
-              color="neutral"
-              variant="ghost"
-              square
-              :disabled="!canCopyShared"
-              :aria-label="copySharedTooltip"
-              @click.left.exact.prevent="emit('copy-shared')"
-            />
-          </UTooltip>
-
           <UTooltip
             v-if="canBookmarkLink"
             :text="saveLinkTooltip"
