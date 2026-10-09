@@ -135,6 +135,18 @@ let timer: ReturnType<typeof setTimeout> | null = null;
 let retryAttempt = 0;
 
 /**
+ * Выбрасывает из очереди правки листа: после конфликта они построены на
+ * устаревшем документе, и отправка затёрла бы чужое изменение.
+ *
+ * @param sheetId идентификатор листа.
+ */
+function dropPending(sheetId: string): void {
+  if (pending?.sheetId === sheetId) {
+    pending = null;
+  }
+}
+
+/**
  * Автосохранение листа персонажа: правки уходят на бэк с дебаунсом, статус
  * («Сохранение…»/«Сохранено»/ошибка) — в общем состоянии для индикатора шапки.
  *
@@ -212,18 +224,6 @@ export function useCharacterSheetAutosave() {
     retryAttempt += 1;
 
     restartTimer(delay);
-  }
-
-  /**
-   * Выбрасывает из очереди правки листа: после конфликта они построены на
-   * устаревшем документе, и отправка затёрла бы чужое изменение.
-   *
-   * @param sheetId идентификатор листа.
-   */
-  function dropPending(sheetId: string): void {
-    if (pending?.sheetId === sheetId) {
-      pending = null;
-    }
   }
 
   /**
