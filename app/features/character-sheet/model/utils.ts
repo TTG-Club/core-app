@@ -2372,6 +2372,7 @@ export function buildInventoryItem(
     weapon: summary.weapon,
     equipped: false,
     twoHanded: false,
+    attackAbility: null,
     // Влияние предмета на лист мастерская описывает активными эффектами — теми
     // же, что у магического предмета: лист берёт из них числовые изменения.
     bonuses: toInventoryBonusesFromEffects(summary.activeEffects),
@@ -2588,6 +2589,7 @@ export function buildMagicItemInventoryItem(
     ),
     equipped: false,
     twoHanded: false,
+    attackAbility: null,
     // Остальное влияние на лист мастерская описывает активными эффектами: лист
     // берёт из них числовые изменения своих значений.
     bonuses: toInventoryBonusesFromEffects(summary?.activeEffects ?? []),
@@ -2686,6 +2688,7 @@ export function buildStartingEquipmentItem(
       weapon: null,
       equipped: false,
       twoHanded: false,
+      attackAbility: null,
       bonuses: [],
       ...DEFAULT_INVENTORY_MAGIC_STATE,
     };
@@ -2709,6 +2712,7 @@ export function buildStartingEquipmentItem(
     weapon: null,
     equipped: false,
     twoHanded: false,
+    attackAbility: null,
     // Пассивные бонусы есть только у своих предметов: их задаёт форма листа.
     bonuses: [],
     ...DEFAULT_INVENTORY_MAGIC_STATE,
@@ -3644,6 +3648,7 @@ export function toCustomInventoryItem(
     // Хват начинается с одной руки: взять универсальное оружие двумя предлагает
     // меню предмета, а правку хвата сохраняет `toUpdatedCustomInventoryItem`.
     twoHanded: false,
+    attackAbility: null,
     bonuses: getCustomInventoryBonuses(draft),
     // Включение и настройка — состояние игрока, форма задаёт только само
     // требование настройки и запас зарядов; свежий предмет заряжен полностью.
@@ -3674,6 +3679,26 @@ function withKeptVersatileGrip(
   }
 
   return { ...updatedItem, twoHanded: editedItem.twoHanded };
+}
+
+/**
+ * Возврат выбранной характеристики атаки правленому предмету: её игрок задаёт в
+ * окне броска, и правка описания серпа не должна возвращать его к Силе.
+ * Переставший быть оружием предмет выбор теряет: атаковать им больше нечем.
+ *
+ * @param updatedItem предмет, собранный из значений формы.
+ * @param editedItem предмет до правки.
+ * @returns предмет с сохранённой характеристикой атаки.
+ */
+function withKeptAttackAbility(
+  updatedItem: CharacterInventoryItem,
+  editedItem: CharacterInventoryItem,
+): CharacterInventoryItem {
+  if (!updatedItem.weapon) {
+    return updatedItem;
+  }
+
+  return { ...updatedItem, attackAbility: editedItem.attackAbility };
 }
 
 /**
@@ -3732,7 +3757,10 @@ export function toUpdatedCustomInventoryItem(
 
   const updatedItem = draftItem
     ? withKeptMagicState(
-        withKeptVersatileGrip(draftItem, editedItem),
+        withKeptAttackAbility(
+          withKeptVersatileGrip(draftItem, editedItem),
+          editedItem,
+        ),
         editedItem,
       )
     : null;
@@ -4820,14 +4848,16 @@ export function isProficientWeapon(
  * @param character персонаж.
  * @param weapon параметры оружия.
  * @param isProficient персонаж владеет этим оружием.
+ * @param attackAbility характеристика, выбранная у предмета; null — по правилам.
  * @returns бонус атаки и использованная характеристика.
  */
 export function getWeaponAttackBonus(
   character: Character,
   weapon: InventoryWeapon,
   isProficient: boolean,
+  attackAbility: AbilityKey | null,
 ): WeaponAttack {
-  const ability = getWeaponAbility(character, weapon);
+  const ability = getWeaponAbility(character, weapon, attackAbility);
 
   const proficiencyBonus = isProficient
     ? getCharacterProficiencyBonus(character)
@@ -4909,16 +4939,16 @@ export function getHeavyWeaponHint(ability: AbilityKey): string {
 }
 
 /**
- * Характеристика конкретного оружия: дальнобойное бьёт от Ловкости,
+ * Характеристика оружия по правилам: дальнобойное бьёт от Ловкости,
  * фехтовальное — от лучшей из Ловкости и базовой характеристики атаки (по
  * правилам игрок выбирает между Силой и Ловкостью), остальное — от базовой
  * характеристики из настроек листа.
  *
  * @param character персонаж.
  * @param weapon параметры оружия.
- * @returns характеристика атаки и урона этим оружием.
+ * @returns характеристика атаки и урона этим оружием по правилам.
  */
-function getWeaponAbility(
+export function getWeaponRulesAbility(
   character: Character,
   weapon: InventoryWeapon,
 ): AbilityKey {
@@ -4935,6 +4965,23 @@ function getWeaponAbility(
 }
 
 /**
+ * Характеристика конкретного оружия: выбранная игроком в окне атаки, а без
+ * выбора — по правилам.
+ *
+ * @param character персонаж.
+ * @param weapon параметры оружия.
+ * @param attackAbility характеристика, выбранная у предмета; null — по правилам.
+ * @returns характеристика атаки и урона этим оружием.
+ */
+function getWeaponAbility(
+  character: Character,
+  weapon: InventoryWeapon,
+  attackAbility: AbilityKey | null,
+): AbilityKey {
+  return attackAbility ?? getWeaponRulesAbility(character, weapon);
+}
+
+/**
  * Бросок урона оружием: кости из справочника, собственный бонус оружия и
  * модификатор той же характеристики, что и у атаки. Универсальное оружие, взятое
  * двумя руками, катит свой второй бросок — кость у него больше. Использует
@@ -4943,12 +4990,14 @@ function getWeaponAbility(
  * @param character персонаж.
  * @param weapon параметры оружия.
  * @param twoHanded оружие взято двумя руками (свойство «Универсальное»).
+ * @param attackAbility характеристика, выбранная у предмета; null — по правилам.
  * @returns разбор броска урона или null, если справочник не дал костей урона.
  */
 export function getWeaponDamage(
   character: Character,
   weapon: InventoryWeapon,
   twoHanded: boolean,
+  attackAbility: AbilityKey | null,
 ): WeaponDamage | null {
   // Хват двумя руками без второго броска ничего не меняет: оружие катит свой
   // обычный урон.
@@ -4958,7 +5007,7 @@ export function getWeaponDamage(
     return null;
   }
 
-  const ability = getWeaponAbility(character, weapon);
+  const ability = getWeaponAbility(character, weapon, attackAbility);
 
   const diceNotation = `${damage.diceCount}${DICE_NOTATION_LETTER}${damage.diceFaces}`;
 
@@ -5003,14 +5052,16 @@ export function getWeaponDamage(
  * @param character персонаж.
  * @param weapon параметры оружия.
  * @param twoHanded оружие взято двумя руками (свойство «Универсальное»).
+ * @param attackAbility характеристика, выбранная у предмета; null — по правилам.
  * @returns данные броска или null, если справочник не дал костей урона.
  */
 export function getWeaponDamageSource(
   character: Character,
   weapon: InventoryWeapon,
   twoHanded: boolean,
+  attackAbility: AbilityKey | null,
 ): DamageRollSource | null {
-  const damage = getWeaponDamage(character, weapon, twoHanded);
+  const damage = getWeaponDamage(character, weapon, twoHanded, attackAbility);
 
   if (!damage) {
     return null;

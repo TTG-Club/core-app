@@ -1204,6 +1204,9 @@ const inventoryItemBaseSchema = z.object({
   weapon: inventoryWeaponSchema,
   equipped: z.boolean().catch(false),
   twoHanded: z.boolean().catch(false),
+  // Выбор характеристики атаки появился позже: у листов без него оружие бьёт
+  // по правилам.
+  attackAbility: abilityKeySchema.nullable().catch(null),
   bonuses: inventoryBonusesSchema,
   // Эффекты предмета целиком: у листов, сохранённых до их появления, поля нет,
   // и лист считает предмет по одним бонусам, как считал раньше.

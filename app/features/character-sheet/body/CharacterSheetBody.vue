@@ -162,6 +162,7 @@
     adjustInventoryItemCharges,
     restoreInventoryItemCharges,
     toggleInventoryItemTwoHanded,
+    setInventoryItemAttackAbility,
     copyInnateSpellToSheet,
     copyInventoryItemToSheet,
     copySpellToSheet,
@@ -865,16 +866,28 @@
       return;
     }
 
+    // Окно получает атаку по правилам и выбор игрока отдельно: подсказка
+    // «По правилам — Сила» остаётся верной, а выбранная характеристика
+    // подменяется в окне так же, как при ручном выборе.
     const attack = getWeaponAttackBonus(
       character.value,
       inventoryItem.weapon,
       isProficientWeapon(character.value, inventoryItem),
+      null,
     );
+
+    const inventoryItemId = inventoryItem.id;
 
     rollModal.open({
       title: `Атака: ${inventoryItem.name}`,
       modifier: attack.value,
       ability: attack.ability,
+      selectedAbility: inventoryItem.attackAbility,
+      // Зритель чужого листа выбирает характеристику на один бросок: сохранить
+      // её ему некуда.
+      rememberAbility: isReadonly.value
+        ? undefined
+        : (ability) => setInventoryItemAttackAbility(inventoryItemId, ability),
       actionLabel: 'Бросить атаку',
       // Режим дают два независимых источника: помеха тяжёлого оружия не по руке
       // (правила 2024) и активные эффекты — Опутанный бьёт с помехой. Свести их
@@ -895,6 +908,7 @@
           character.value,
           inventoryItem.weapon,
           inventoryItem.twoHanded,
+          inventoryItem.attackAbility,
         )
       : null;
 

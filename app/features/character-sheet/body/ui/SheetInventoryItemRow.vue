@@ -215,13 +215,14 @@
   // Разбор атаки нужен и плитке, и значку помехи тяжёлого оружия — считаем его
   // один раз. null — предмет оружием не является.
   const weaponAttack = computed<WeaponAttack | null>(() => {
-    const { weapon } = props.inventoryItem;
+    const { weapon, attackAbility } = props.inventoryItem;
 
     return weapon
       ? getWeaponAttackBonus(
           character.value,
           weapon,
           hasWeaponProficiency.value,
+          attackAbility,
         )
       : null;
   });
@@ -511,7 +512,12 @@
    * нет (например, у предмета, добавленного до появления урона в листе).
    */
   function getWeaponDamageStat(weapon: InventoryWeapon): ItemStat | null {
-    const damage = getWeaponDamage(character.value, weapon, isTwoHanded.value);
+    const damage = getWeaponDamage(
+      character.value,
+      weapon,
+      isTwoHanded.value,
+      props.inventoryItem.attackAbility,
+    );
 
     if (!damage) {
       return null;

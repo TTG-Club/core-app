@@ -841,11 +841,17 @@ function drawWeaponsPanel(
             character,
             weapon,
             isProficientWeapon(character, item),
+            item.attackAbility,
           );
 
           // Урон печатаем по нынешнему хвату: универсальное оружие, взятое
           // двумя руками, и на бумаге катит свою большую кость.
-          const damage = getWeaponDamage(character, weapon, item.twoHanded);
+          const damage = getWeaponDamage(
+            character,
+            weapon,
+            item.twoHanded,
+            item.attackAbility,
+          );
 
           return [
             item.name,

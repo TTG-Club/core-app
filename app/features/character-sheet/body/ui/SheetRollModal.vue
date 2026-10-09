@@ -67,11 +67,25 @@
        * вида против состояния. Не задан — строки нет, и это обычная проверка.
        */
       resolveMode?: (source: SheetRollSource) => RollMode;
+
+      /**
+       * Характеристика, выбранная игроком раньше: ею окно и открывается. null —
+       * «Авто», бросок по правилам.
+       */
+      selectedAbility?: AbilityKey | null;
+
+      /**
+       * Запоминание выбранной характеристики (атака оружием: выбор остаётся у
+       * предмета). Не задано — выбор действует на один бросок.
+       */
+      rememberAbility?: (ability: AbilityKey | null) => void;
     }>(),
     {
       actionLabel: ROLL_CHECK_ACTION_LABEL,
       mode: DEFAULT_ROLL_MODE,
       resolveMode: undefined,
+      selectedAbility: null,
+      rememberAbility: undefined,
     },
   );
 
@@ -90,10 +104,17 @@
   const rollMode = ref<RollMode>(props.mode);
 
   // Черновики живут только пока модалка открыта: оверлей размонтирует её после
-  // закрытия, поэтому следующий бросок снова начинается с «Авто» и к20.
+  // закрытия, поэтому следующий бросок снова начинается с к20 и с «Авто» — если
+  // характеристику не запомнил сам вызывающий (оружие помнит свою).
   const draftAbility = ref<AbilityKey | typeof ROLL_ABILITY_AUTO>(
-    ROLL_ABILITY_AUTO,
+    props.selectedAbility ?? ROLL_ABILITY_AUTO,
   );
+
+  // Выбор уходит сразу, а не по броску: игрок, поменявший Силу на Ловкость и
+  // закрывший окно, тоже ждёт, что серп запомнит Ловкость.
+  watch(draftAbility, (ability) => {
+    props.rememberAbility?.(ability === ROLL_ABILITY_AUTO ? null : ability);
+  });
 
   const draftDiceFaces = ref(DEFAULT_ROLL_DICE_FACES);
 

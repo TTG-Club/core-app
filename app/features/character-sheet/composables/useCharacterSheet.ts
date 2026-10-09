@@ -3374,6 +3374,32 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Выбор характеристики атаки оружием: игрок меняет её в окне броска атаки, и
+   * выбор остаётся у предмета — плитки атаки и урона считаются уже от неё.
+   * Игровое действие — блокировкой листа не ограничивается.
+   *
+   * @param inventoryItemId идентификатор предмета инвентаря.
+   * @param ability выбранная характеристика; null — по правилам.
+   */
+  function setInventoryItemAttackAbility(
+    inventoryItemId: string,
+    ability: AbilityKey | null,
+  ): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      inventory: character.value.inventory.map((inventoryItem) =>
+        inventoryItem.id === inventoryItemId && inventoryItem.weapon
+          ? { ...inventoryItem, attackAbility: ability }
+          : inventoryItem,
+      ),
+    };
+  }
+
+  /**
    * Добавление особенности вручную; идентификатор генерируется.
    *
    * @param feature особенность без идентификатора.
@@ -3833,6 +3859,7 @@ export function useCharacterSheet() {
     adjustInventoryItemCharges,
     restoreInventoryItemCharges,
     toggleInventoryItemTwoHanded,
+    setInventoryItemAttackAbility,
     toggleInspiration,
     downloadCharacter,
     addFeature,
