@@ -946,7 +946,11 @@ modals), so its capabilities are listed here rather than squeezed into the table
   (an eye for read-only; labels live in tooltips). While a request is pending
   the requester polls `GET /…/saved/edit-access`
   (`useCharacterSheetEditGrants`): an approval shows a toast with «Открыть», a
-  dot at the helmet and refreshes the saved list without F5.
+  dot at the helmet and refreshes the saved list without F5. There is no
+  intermediate mode: a link viewer with an approved right is sent to the sheet
+  by id at once, and when the right is revoked the editor's presence heartbeat
+  gets 403 (editors heartbeat every 4 s) and the sheet reopens read-only by the
+  saved link.
 - **Concurrent editing**: while a sheet is open for editing (owner or editor)
   it sends `POST /…/{id}/presence` (every 20 s alone, every 4 s when others
   hold it open) and leaves with `DELETE` on close (`useCharacterSheetPresence`).

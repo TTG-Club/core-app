@@ -28,6 +28,7 @@
     ABILITY_LABELS,
     ARMOR_PROFICIENCY_GROUPS,
     CHARACTER_SHEET_ROUTE,
+    CHARACTER_SHEET_SHARED_ROUTE,
     combineRollModes,
     DRAFT_CHARACTER_ID,
     EMPTY_DAMAGE_ROLL_SOURCE,
@@ -42,6 +43,7 @@
     isProficientWeapon,
     LANGUAGE_PROFICIENCY_GROUPS,
     SHEET_BODY_LABELS,
+    SHEET_EDIT_REVOKED_TOAST,
     SHEET_REMOVE_CONFIRM_TITLE,
   } from '../model';
   import CharacterSheetSkeleton from './CharacterSheetSkeleton.vue';
@@ -223,7 +225,11 @@
       : character.value.id,
   );
 
-  useCharacterSheetPresence(presenceSheetId);
+  // Редактору чужого листа отметка заодно сообщает, что право отозвали.
+  const { isAccessLost } = useCharacterSheetPresence(
+    presenceSheetId,
+    isEditorAccess,
+  );
 
   // Сохранить чужой лист к себе может только тот, у кого есть доступ к самому
   // инструменту: обе ручки закрыты авторизацией, анониму их показывать нечестно.
@@ -232,6 +238,8 @@
   const { isLoggedIn } = useUser();
 
   const {
+    savedSheets,
+    load: loadSaved,
     canSave: canSaveLink,
     ensureLoaded: ensureSavedLoaded,
     isTokenSaved,
@@ -256,6 +264,21 @@
     return saved?.editStatus ?? null;
   });
 
+  // Право на правки выдано — промежуточного режима «просмотр с кнопкой правки»
+  // нет: лист сразу открывается как свой, по id. Срабатывает и когда право
+  // пришло, пока лист открыт по ссылке.
+  watch(
+    () => canRequestEdit.value && viewedEditStatus.value === 'APPROVED',
+    (isApproved) => {
+      if (isApproved) {
+        void navigateTo(`${CHARACTER_SHEET_ROUTE}/${character.value.id}`, {
+          replace: true,
+        });
+      }
+    },
+    { immediate: true },
+  );
+
   const isLinkSaved = computed(() =>
     viewedShareToken.value ? isTokenSaved(viewedShareToken.value) : false,
   );
@@ -272,6 +295,43 @@
   const overlay = useOverlay();
 
   const toast = useToast();
+
+  /**
+   * Право на правки отозвали, пока лист был открыт: правки сразу закрываются —
+   * лист переоткрывается на просмотр по сохранённой ссылке, а без неё (ссылку
+   * тоже отключили) — возвращаемся к списку листов.
+   */
+  async function handleEditAccessLost(): Promise<void> {
+    toast.add({
+      title: SHEET_EDIT_REVOKED_TOAST.title,
+      description: SHEET_EDIT_REVOKED_TOAST.description,
+      color: 'warning',
+      icon: 'tabler:eye',
+    });
+
+    // Свежий список, а не закэшированный: в нём право ещё «выдано», и лист по
+    // ссылке сразу вернул бы на правку.
+    await loadSaved();
+
+    const sheetId = character.value.id;
+    const saved = savedSheets.value.find((sheet) => sheet.sheetId === sheetId);
+
+    await navigateTo(
+      saved
+        ? `${CHARACTER_SHEET_SHARED_ROUTE}/${saved.shareToken}`
+        : CHARACTER_SHEET_ROUTE,
+      { replace: true },
+    );
+  }
+
+  watch(
+    () => isEditorAccess.value && isAccessLost.value,
+    (isLost) => {
+      if (isLost) {
+        void handleEditAccessLost();
+      }
+    },
+  );
 
   // Статус автосохранения пишет автосейв контейнера (страница/панель/drawer),
   // тело листа лишь показывает его в шапке.
@@ -1157,11 +1217,6 @@
     await requestEdit(viewedShareToken.value);
   }
 
-  /** Право на правки уже выдано — лист открывается как свой, по id. */
-  function handleOpenForEdit() {
-    navigateTo(`${CHARACTER_SHEET_ROUTE}/${character.value.id}`);
-  }
-
   /** Подтверждённое удаление: лист уходит в историю, затем закрывается. */
   async function handleRemoveConfirm() {
     if (!(await removeSheet(character.value.id))) {
@@ -1229,7 +1284,6 @@
         @copy-shared="handleCopyShared"
         @save-link="handleSaveLink"
         @request-edit="handleRequestEdit"
-        @open-for-edit="handleOpenForEdit"
         @expand="handleExpand"
         @edit-ability-scores="handleAbilityScoresEdit"
         @edit-background="handleBackgroundEdit"

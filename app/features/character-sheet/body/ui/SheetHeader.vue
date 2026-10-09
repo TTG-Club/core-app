@@ -101,16 +101,13 @@
     'copy-shared': [];
     'save-link': [];
     'request-edit': [];
-    'open-for-edit': [];
   }>();
 
   // Подсказка пометки «только просмотр» объясняет причину режима; null — лист
   // свой, пометки нет. Если владелец уже разрешил правки, вместо глаза стоит
   // карандаш, открывающий лист на редактирование.
   const readonlyTooltip = computed(() =>
-    props.readonlyReason && props.editStatus !== 'APPROVED'
-      ? SHEET_READONLY_TOOLTIPS[props.readonlyReason]
-      : null,
+    props.readonlyReason ? SHEET_READONLY_TOOLTIPS[props.readonlyReason] : null,
   );
 
   // «Другие листы» хранят ссылки: лист, открытый администратором без ссылки,
@@ -144,44 +141,22 @@
     }),
   );
 
-  // Кнопка права на правки у зрителя по ссылке: попросить, ждать ответа или,
-  // когда право уже выдано, открыть лист на редактирование.
-  const isEditApproved = computed(() => props.editStatus === 'APPROVED');
-
+  // Кнопка права на правки у зрителя по ссылке: попросить или ждать ответа.
+  // С выданным правом лист сам открывается на редактирование, кнопки нет.
   const isEditRequestPending = computed(() => props.editStatus === 'PENDING');
 
-  const editRequestIcon = computed(() => {
-    if (isEditApproved.value) {
-      return 'tabler:pencil';
-    }
-
-    return isEditRequestPending.value ? 'tabler:clock' : 'tabler:pencil-plus';
-  });
-
-  const editRequestColor = computed(() =>
-    isEditApproved.value ? 'primary' : 'neutral',
+  const editRequestIcon = computed(() =>
+    isEditRequestPending.value ? 'tabler:clock' : 'tabler:pencil-plus',
   );
 
-  const editRequestTooltip = computed(() => {
-    if (isEditApproved.value) {
-      return SHEET_EDIT_ACCESS_LABELS.openForEdit;
-    }
+  const editRequestTooltip = computed(() =>
+    isEditRequestPending.value
+      ? `${SHEET_EDIT_ACCESS_LABELS.pending}. ${SHEET_EDIT_ACCESS_LABELS.pendingHint}`
+      : SHEET_EDIT_ACCESS_LABELS.request,
+  );
 
-    if (isEditRequestPending.value) {
-      return `${SHEET_EDIT_ACCESS_LABELS.pending}. ${SHEET_EDIT_ACCESS_LABELS.pendingHint}`;
-    }
-
-    return SHEET_EDIT_ACCESS_LABELS.request;
-  });
-
-  /** Запрос права на правки или переход к листу, если право уже выдано. */
+  /** Запрос права на правки у владельца листа. */
   function handleEditRequest(): void {
-    if (isEditApproved.value) {
-      emit('open-for-edit');
-
-      return;
-    }
-
     emit('request-edit');
   }
 
@@ -557,7 +532,7 @@
           >
             <UButton
               :icon="editRequestIcon"
-              :color="editRequestColor"
+              color="neutral"
               variant="ghost"
               square
               :disabled="isEditRequestPending"
