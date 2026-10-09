@@ -19,9 +19,35 @@ describe('слияние одновременных правок листа', ()
     });
   });
 
-  it('одно и то же поле поменяли оба — побеждает своя правка', () => {
-    expect(mergeSheetValues({ hp: 10 }, { hp: 7 }, { hp: 5 })).toEqual({
-      hp: 7,
+  it('одну и ту же строку поменяли оба — побеждает своя правка', () => {
+    expect(
+      mergeSheetValues(
+        { name: 'Гимли' },
+        { name: 'Гимли II' },
+        { name: 'Гном' },
+      ),
+    ).toEqual({ name: 'Гимли II' });
+  });
+
+  it('одновременные «+1» к одному числу складываются', () => {
+    const base = {
+      abilities: { strength: 10 },
+      slots: [{ level: 1, used: 0 }],
+    };
+
+    const mine = {
+      abilities: { strength: 11 },
+      slots: [{ level: 1, used: 1 }],
+    };
+
+    const theirs = {
+      abilities: { strength: 11 },
+      slots: [{ level: 1, used: 1 }],
+    };
+
+    expect(mergeSheetValues(base, mine, theirs)).toEqual({
+      abilities: { strength: 12 },
+      slots: [{ level: 1, used: 2 }],
     });
   });
 

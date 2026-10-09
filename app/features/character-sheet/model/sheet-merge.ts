@@ -55,6 +55,22 @@ function toIdentifiedItems(value: unknown): IdentifiedItem[] | null {
 }
 
 /**
+ * Список объектов без собственного `id` (ячейки заклинаний и т. п.).
+ *
+ * @param value значение документа.
+ * @returns элементы списка; null — список не такой.
+ */
+function toObjectItems(value: unknown): JsonObject[] | null {
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const items = value.filter(isJsonObject);
+
+  return items.length === value.length ? items : null;
+}
+
+/**
  * Индекс элементов списка по `id`.
  *
  * @param items элементы списка.
@@ -153,9 +169,11 @@ function mergeObjects(
 /**
  * Трёхстороннее слияние значений JSON-документа — так одновременные правки
  * разных людей не затирают друг друга. Что поменял только один, берётся у
- * него; объекты сливаются по ключам, списки с `id` — по элементам. Если одно и
- * то же значение поменяли оба, побеждает своя правка: она сделана позже, раз
- * сервер уже успел принять чужую.
+ * него; объекты сливаются по ключам, списки с `id` — по элементам, списки
+ * объектов той же длины — по позициям. Числа, которые поменяли оба,
+ * складываются как приращения: два одновременных «+1» к характеристике, хитам
+ * или счётчику дают «+2», а не теряют одно нажатие. Прочее, что поменяли оба,
+ * берётся своё: правка сделана позже, раз сервер уже успел принять чужую.
  *
  * @param base значение на момент начала правки (последнее сохранённое).
  * @param mine своё значение.
@@ -167,12 +185,22 @@ export function mergeSheetValues(
   mine: unknown,
   theirs: unknown,
 ): unknown {
-  if (isEqual(mine, theirs) || isEqual(mine, base)) {
+  if (isEqual(mine, base)) {
     return theirs;
   }
 
   if (isEqual(theirs, base)) {
     return mine;
+  }
+
+  // Поменяли оба. Совпадение итогов не значит, что правка одна: два «+1» к
+  // одному числу дают одинаковый документ, поэтому сначала — разбор вглубь.
+  if (
+    typeof base === 'number'
+    && typeof mine === 'number'
+    && typeof theirs === 'number'
+  ) {
+    return theirs + (mine - base);
   }
 
   if (isJsonObject(base) && isJsonObject(mine) && isJsonObject(theirs)) {
@@ -185,6 +213,22 @@ export function mergeSheetValues(
 
   if (baseItems && mineItems && theirsItems) {
     return mergeIdentifiedLists(baseItems, mineItems, theirsItems);
+  }
+
+  const baseObjects = toObjectItems(base);
+  const mineObjects = toObjectItems(mine);
+  const theirsObjects = toObjectItems(theirs);
+
+  if (
+    baseObjects
+    && mineObjects
+    && theirsObjects
+    && mineObjects.length === baseObjects.length
+    && theirsObjects.length === baseObjects.length
+  ) {
+    return mineObjects.map((mineItem, index) =>
+      mergeSheetValues(baseObjects[index], mineItem, theirsObjects[index]),
+    );
   }
 
   return mine;

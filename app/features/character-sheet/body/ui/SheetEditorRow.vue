@@ -31,16 +31,6 @@
 
   const avatarSource = computed(() => editor.avatarUrl ?? undefined);
 
-  const statusLabel = computed(() =>
-    isPendingRequest.value
-      ? SHEET_EDITORS_LABELS.pendingBadge
-      : SHEET_EDITORS_LABELS.editorBadge,
-  );
-
-  const statusColor = computed(() =>
-    isPendingRequest.value ? 'warning' : 'primary',
-  );
-
   // Причина недоступности — в подсказке: серая кнопка без неё выглядит поломкой.
   const approveTooltip = computed(() =>
     canApprove
@@ -70,19 +60,13 @@
       :ui="{ fallback: 'uppercase' }"
     />
 
-    <div class="flex min-w-0 flex-auto flex-col gap-0.5">
-      <span class="truncate text-sm font-medium text-highlighted">
-        {{ editor.displayName }}
-      </span>
-
-      <UBadge
-        :label="statusLabel"
-        :color="statusColor"
-        variant="subtle"
-        size="sm"
-        class="self-start"
-      />
-    </div>
+    <!-- Состояние строки видно по кнопкам: «Разрешить/Отклонить» — запрос,
+      «Отозвать» — редактор. Отдельная пометка его только повторяла -->
+    <span
+      class="min-w-0 flex-auto truncate text-sm font-medium text-highlighted"
+    >
+      {{ editor.displayName }}
+    </span>
 
     <div class="flex shrink-0 items-center gap-1">
       <template v-if="isPendingRequest">

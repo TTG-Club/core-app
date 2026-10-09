@@ -398,8 +398,6 @@ export const SHEET_EDITORS_LABELS = {
   editorsHint:
     'Тот, кто сохранил лист по ссылке, может попросить доступ к правкам — запрос появится здесь и у шлема.',
   editorsEmpty: 'Кроме вас лист пока никто не редактирует.',
-  pendingBadge: 'Ждёт ответа',
-  editorBadge: 'Редактор',
   approve: 'Разрешить',
   decline: 'Отклонить',
   revoke: 'Отозвать',

@@ -957,7 +957,8 @@ modals), so its capabilities are listed here rather than squeezed into the table
   The heartbeat returns the sheet version; a newer one is fetched and merged
   into the open sheet. Autosave merges a 409 the same way
   (`mergeCharacterSheets`, three-way: disjoint fields and `id` list items
-  combine, the same field edited by both — the later edit wins).
+  combine, numbers changed by both add up as deltas — two «+1» give «+2» —, other
+  fields changed by both take the later edit).
 
 ### 📰 Content & publishing
 
