@@ -241,14 +241,18 @@
             {{ sheet.name }}
           </span>
 
-          <UBadge
-            :label="badgeLabel"
-            :icon="badgeIcon"
-            :color="badgeColor"
-            variant="subtle"
-            size="sm"
-            class="shrink-0"
-          />
+          <!-- Режим — значком: подпись занимала место у имени, а смысл
+            объясняет подсказка -->
+          <UTooltip :text="badgeLabel">
+            <UBadge
+              :icon="badgeIcon"
+              :color="badgeColor"
+              variant="subtle"
+              size="sm"
+              class="shrink-0"
+              :aria-label="badgeLabel"
+            />
+          </UTooltip>
         </span>
 
         <span

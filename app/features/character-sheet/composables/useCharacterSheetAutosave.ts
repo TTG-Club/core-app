@@ -1,4 +1,8 @@
-import type { Character, SheetSaveStatus } from '../model';
+import type {
+  Character,
+  CharacterSheetDetail,
+  SheetSaveStatus,
+} from '../model';
 
 import { StatusCodes } from 'http-status-codes';
 
@@ -7,12 +11,11 @@ import { getFetchStatus } from '~initiative/model';
 import {
   DRAFT_CHARACTER_ID,
   fetchCharacterSheet,
+  mergeCharacterSheets,
   SHEET_KEEPALIVE_MAX_BYTES,
   SHEET_SAVE_DEBOUNCE_MS,
   SHEET_SAVE_RETRY_LIMIT,
   SHEET_SAVE_RETRY_MAX_DELAY_MS,
-  SHEET_VERSION_CONFLICT_RELOAD_FAILED_TOAST,
-  SHEET_VERSION_CONFLICT_TOAST,
   updateCharacterSheet,
 } from '../model';
 import { useCharacterSheet } from './useCharacterSheet';
@@ -28,6 +31,26 @@ interface PendingSave {
 
   data: Character;
   json: string;
+
+  /**
+   * Последний принятый сервером документ, от которого сделаны правки. Нужен
+   * слиянию: если лист тем временем сохранил другой редактор, свои правки
+   * переносятся на его версию как разница с этой базой.
+   */
+  base: Character;
+}
+
+/** Последнее принятое сервером состояние открытого листа. */
+interface SheetBaseline {
+  sheetId: string;
+  data: Character;
+  json: string;
+}
+
+/** Версия листа на сервере, о которой узнали без сохранения. */
+interface RemoteSheetVersion {
+  sheetId: string;
+  version: number;
 }
 
 /**
@@ -114,6 +137,21 @@ export function useCharacterSheetVersion() {
 }
 
 /**
+ * Версия открытого листа на сервере, известная по отметке присутствия. Пишет
+ * отметка, читает автосохранение: если версия новее своей, лист сохранил
+ * кто-то ещё, и его правки подтягиваются слиянием, не дожидаясь своего
+ * сохранения.
+ *
+ * @returns реактивная версия листа на сервере; null — неизвестна.
+ */
+export function useCharacterSheetRemoteVersion() {
+  return useState<RemoteSheetVersion | null>(
+    'character-sheet:remote-version',
+    () => null,
+  );
+}
+
+/**
  * Состояние автосохранения — на уровне модуля, а не экземпляра композабла.
  * Контейнеры листа (страница, панель списка, drawer из глобального
  * overlay-хоста) живут по разным жизненным циклам, и их экземпляры автосейва
@@ -121,10 +159,12 @@ export function useCharacterSheetVersion() {
  * PUT, кто бы из живых наблюдателей её ни заметил. На сервере код не
  * выполняется (см. гард в композабле), поэтому состояние строго клиентское.
  */
-let baselineJson: string | null = null;
-let baselineSheetId: string | null = null;
+let baseline: SheetBaseline | null = null;
 let pending: PendingSave | null = null;
 let isSaving = false;
+
+/** Идёт подтягивание чужих правок — второй экземпляр автосейва его не дублирует. */
+let isSyncing = false;
 let timer: ReturnType<typeof setTimeout> | null = null;
 
 /**
@@ -135,14 +175,15 @@ let timer: ReturnType<typeof setTimeout> | null = null;
 let retryAttempt = 0;
 
 /**
- * Выбрасывает из очереди правки листа: после конфликта они построены на
- * устаревшем документе, и отправка затёрла бы чужое изменение.
+ * Двигает базу открытого листа к документу, который принял сервер.
  *
  * @param sheetId идентификатор листа.
+ * @param data принятый документ.
+ * @param json он же строкой (чтобы не сериализовать дважды).
  */
-function dropPending(sheetId: string): void {
-  if (pending?.sheetId === sheetId) {
-    pending = null;
+function moveBaseline(sheetId: string, data: Character, json: string): void {
+  if (baseline?.sheetId === sheetId) {
+    baseline = { sheetId, data, json };
   }
 }
 
@@ -168,8 +209,6 @@ export function useCharacterSheetAutosave() {
   const saveStatus = useCharacterSheetSaveStatus();
 
   const { getSheetVersion, setSheetVersion } = useCharacterSheetVersion();
-
-  const toast = useToast();
 
   /** Повтор отправки после ошибки сохранения — вручную, из шапки листа. */
   function retry(): void {
@@ -227,53 +266,124 @@ export function useCharacterSheetAutosave() {
   }
 
   /**
-   * Конфликт сохранения: лист изменили в другом месте (другая вкладка, хиты
-   * от мастера боя). Правки из очереди выбрасываются, актуальный документ
-   * загружается в состояние, если лист всё ещё открыт, — иначе следующая
-   * правка снова ушла бы от устаревшей версии.
+   * Применяет документ, который сервер принял от другого редактора (или из
+   * другой вкладки). Свои несохранённые правки не теряются: они сливаются с ним
+   * (`mergeCharacterSheets`) и уходят следующим сохранением уже от его версии.
    *
-   * Цикла «загрузка → watch → PUT» нет: база выставляется в JSON загруженного
-   * документа до записи в `character`, и `scheduleSave` отсеивает срабатывание
-   * сравнением с ней.
+   * Цикла «загрузка → watch → PUT» нет: база выставляется в серверный документ
+   * до записи в `character`, и `scheduleSave` отсеивает срабатывание сравнением
+   * с ней; слитый документ отличается от базы ровно своими правками — их и
+   * нужно дослать.
    *
-   * @param sheetId идентификатор листа, сохранение которого отвергнуто.
+   * @param detail актуальный лист с сервера.
+   * @param local свои правки этого листа; null — их нет.
    */
-  async function resolveConflict(sheetId: string): Promise<void> {
-    dropPending(sheetId);
+  function applyServerDocument(
+    detail: CharacterSheetDetail,
+    local: PendingSave | null,
+  ): void {
+    const sheetId = detail.id;
+    const serverJson = JSON.stringify(detail.data);
+
+    setSheetVersion(sheetId, detail.version);
+    moveBaseline(sheetId, detail.data, serverJson);
+
+    const merged = local
+      ? mergeCharacterSheets(local.base, local.data, detail.data)
+      : detail.data;
+
+    const mergedJson = JSON.stringify(merged);
+
+    if (mergedJson === serverJson) {
+      if (pending?.sheetId === sheetId) {
+        pending = null;
+        saveStatus.value = 'saved';
+      }
+    } else {
+      pending = { sheetId, data: merged, json: mergedJson, base: detail.data };
+      restartTimer();
+    }
+
+    if (character.value.id === sheetId) {
+      loadCharacter(merged);
+    }
+  }
+
+  /**
+   * Конфликт сохранения: лист успел сохранить кто-то ещё (редактор, другая
+   * вкладка, хиты от мастера боя). Актуальный документ загружается, свои
+   * правки сливаются с ним и отправляются заново — ничего не пропадает.
+   * Сорвалась загрузка — правка остаётся в очереди, повтор попробует снова.
+   *
+   * @param rejected отвергнутая отправка.
+   */
+  async function resolveConflict(rejected: PendingSave): Promise<void> {
     retryAttempt = 0;
 
     try {
-      const detail = await fetchCharacterSheet(sheetId);
+      const detail = await fetchCharacterSheet(rejected.sheetId);
 
-      setSheetVersion(sheetId, detail.version);
-      // Правки, сделанные пока шёл запрос, тоже от устаревшего документа.
-      dropPending(sheetId);
-
-      if (baselineSheetId === sheetId) {
-        baselineJson = JSON.stringify(detail.data);
-      }
-
-      if (character.value.id === sheetId) {
-        loadCharacter(detail.data);
-      }
-
-      saveStatus.value = 'saved';
-      toast.add({ ...SHEET_VERSION_CONFLICT_TOAST, color: 'warning' });
+      // Пока шёл запрос, могли накопиться новые правки — сливаем самые свежие.
+      applyServerDocument(
+        detail,
+        pending?.sheetId === rejected.sheetId ? pending : rejected,
+      );
     } catch {
       saveStatus.value = 'error';
+      scheduleRetry();
+    }
+  }
 
-      toast.add({
-        ...SHEET_VERSION_CONFLICT_RELOAD_FAILED_TOAST,
-        color: 'error',
-      });
+  /**
+   * Подтягивает чужие правки, когда версия листа на сервере обогнала свою.
+   * Пока идёт своё сохранение, ждать незачем: устаревшая версия вернёт 409, и
+   * то же слияние сделает {@link resolveConflict}.
+   *
+   * @param remote версия листа на сервере.
+   */
+  async function syncRemoteVersion(remote: RemoteSheetVersion): Promise<void> {
+    const knownVersion = getSheetVersion(remote.sheetId);
+
+    if (
+      isSaving
+      || isSyncing
+      || knownVersion === null
+      || remote.version <= knownVersion
+    ) {
+      return;
+    }
+
+    isSyncing = true;
+
+    try {
+      const detail = await fetchCharacterSheet(remote.sheetId);
+      const currentVersion = getSheetVersion(remote.sheetId);
+
+      // За время запроса своё сохранение могло уйти и принести версию новее.
+      if (
+        isSaving
+        || detail.version === null
+        || (currentVersion !== null && detail.version <= currentVersion)
+      ) {
+        return;
+      }
+
+      applyServerDocument(
+        detail,
+        pending?.sheetId === remote.sheetId ? pending : null,
+      );
+    } catch {
+      // Не страшно: следующая отметка присутствия или своё сохранение повторят.
+    } finally {
+      isSyncing = false;
     }
   }
 
   /**
    * Отправляет накопленные изменения. Ошибка не сбрасывает `pending` — база не
    * двигается, и правку дошлёт повтор (или следующая правка, или `retry`).
-   * Конфликт версий — исключение: такую правку дослать нельзя, её место
-   * занимает актуальный документ (см. {@link resolveConflict}).
+   * Конфликт версий дослать как есть нельзя — правка сначала сливается с
+   * актуальным документом (см. {@link resolveConflict}).
    *
    * @param options настройки отправки.
    * @param options.keepalive запрос должен пережить закрытие страницы. Ставится
@@ -298,7 +408,7 @@ export function useCharacterSheetAutosave() {
       );
 
       setSheetVersion(current.sheetId, savedVersion);
-      baselineJson = current.json;
+      moveBaseline(current.sheetId, current.data, current.json);
       retryAttempt = 0;
 
       if (pending === current) {
@@ -306,11 +416,16 @@ export function useCharacterSheetAutosave() {
         saveStatus.value = 'saved';
       } else {
         // За время запроса накопились новые правки — дошлём следующим циклом.
+        // Их база теперь — только что принятый документ.
+        if (pending?.sheetId === current.sheetId) {
+          pending = { ...pending, base: current.data };
+        }
+
         restartTimer();
       }
     } catch (error) {
       if (getFetchStatus(error) === StatusCodes.CONFLICT) {
-        await resolveConflict(current.sheetId);
+        await resolveConflict(current);
 
         // В очереди могла остаться правка другого листа: её таймер сработал,
         // пока шёл этот запрос, и отправка тогда была пропущена.
@@ -350,15 +465,14 @@ export function useCharacterSheetAutosave() {
         void flush();
       }
 
-      baselineSheetId = null;
-      baselineJson = null;
+      baseline = null;
 
       return;
     }
 
     const json = JSON.stringify(next);
 
-    if (currentSheetId !== baselineSheetId) {
+    if (currentSheetId !== baseline?.sheetId) {
       // Хвост правок предыдущего листа дошлём немедленно, не дожидаясь
       // дебаунса — иначе он потерялся бы при смене базы ниже.
       if (pending && pending.sheetId !== currentSheetId) {
@@ -367,18 +481,25 @@ export function useCharacterSheetAutosave() {
 
       // Смена листа: это срабатывание — загрузка документа в состояние,
       // фиксируем базу без отправки.
-      baselineSheetId = currentSheetId;
-      baselineJson = json;
+      baseline = { sheetId: currentSheetId, data: next, json };
       saveStatus.value = 'saved';
 
       return;
     }
 
-    if (json === baselineJson) {
+    if (json === baseline.json) {
       return;
     }
 
-    pending = { sheetId: currentSheetId, data: next, json };
+    pending = {
+      sheetId: currentSheetId,
+      data: next,
+      json,
+      // База серии правок — тот документ, от которого начали править; у новой
+      // серии это последнее принятое сервером.
+      base: pending?.sheetId === currentSheetId ? pending.base : baseline.data,
+    };
+
     // Новая правка — новая серия попыток: прошлая ошибка могла быть разовой.
     retryAttempt = 0;
     saveStatus.value = 'saving';
@@ -386,6 +507,16 @@ export function useCharacterSheetAutosave() {
   }
 
   watch(character, scheduleSave);
+
+  // Лист сохранил кто-то ещё — подтягиваем его правки сразу, а не при своём
+  // сохранении. Цикла нет: слияние пишет версию и документ, но не отметку.
+  const remoteVersion = useCharacterSheetRemoteVersion();
+
+  watch(remoteVersion, (remote) => {
+    if (remote) {
+      void syncRemoteVersion(remote);
+    }
+  });
 
   onBeforeUnmount(() => {
     // Уход контейнера не должен терять хвост дебаунса. Таймер не трогаем —

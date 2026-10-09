@@ -2,6 +2,7 @@
   import { PageGrid } from '~ui/page';
 
   import {
+    useCharacterSheetEditGrants,
     useCharacterSheetList,
     useCharacterSheetSaved,
   } from '../composables';
@@ -43,6 +44,20 @@
     void load();
     void ensureListLoaded();
   });
+
+  // Раздел на экране — значит, о разрешениях на правку пользователь узнал:
+  // карточки уже показывают их, и точка у шлема гаснет.
+  const { hasUnseenGrants, markGrantsSeen } = useCharacterSheetEditGrants();
+
+  watch(
+    hasUnseenGrants,
+    (unseen) => {
+      if (unseen) {
+        markGrantsSeen();
+      }
+    },
+    { immediate: true },
+  );
 
   const canCopy = computed(() => canCreate.value && !isListMutating.value);
 

@@ -81,7 +81,6 @@
     SheetPersonalityDescriptionModal,
     SheetPersonalityModal,
     SheetPreparedSpellsModal,
-    SheetPresenceAlert,
     SheetProficienciesPanel,
     SheetProficiencyGroupsModal,
     SheetRollModal,
@@ -215,17 +214,16 @@
     { immediate: true },
   );
 
-  // Мягкая блокировка: пока лист открыт на правку (своим или редактором), он
-  // отмечается на сервере, а тело предупреждает, у кого он открыт ещё. Лист на
-  // просмотр не отмечается — зритель ничего не меняет.
+  // Совместная правка: пока лист открыт на правку (владельцем или редактором),
+  // он отмечается на сервере, и по версии из ответа автосохранение подтягивает
+  // чужие правки. Лист на просмотр не отмечается — зритель ничего не меняет.
   const presenceSheetId = computed(() =>
     isReadonly.value || character.value.id === DRAFT_CHARACTER_ID
       ? ''
       : character.value.id,
   );
 
-  const { otherUsers: presenceUsers } =
-    useCharacterSheetPresence(presenceSheetId);
+  useCharacterSheetPresence(presenceSheetId);
 
   // Сохранить чужой лист к себе может только тот, у кого есть доступ к самому
   // инструменту: обе ручки закрыты авторизацией, анониму их показывать нечестно.
@@ -1247,8 +1245,6 @@
         @toggle-inspiration="toggleInspiration"
         @toggle-lock="toggleLock"
       />
-
-      <SheetPresenceAlert :users="presenceUsers" />
 
       <SheetEditRequestsBanner
         v-if="isOwnSheet"

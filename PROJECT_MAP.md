@@ -941,12 +941,18 @@ modals), so its capabilities are listed here rather than squeezed into the table
   editors, re-request 24 h after a decline, revoking the link drops editors).
   An approved saved card opens the sheet by id like an own one; the loader
   marks it `editor` (`useCharacterSheetShare().isEditorAccess`): edits and
-  autosave work, delete and share are hidden, the header shows «Редактор».
-- **Soft lock**: while a sheet is open for editing (owner or editor) it sends
-  `POST /…/{id}/presence` every 20 s and leaves with `DELETE` on close
-  (`useCharacterSheetPresence`); other users holding it open are shown in a
-  warning above the sheet. Nothing is blocked — concurrent saves are still
-  caught by the sheet version (409).
+  autosave work, delete and share are hidden, the header shows a pencil icon
+  (an eye for read-only; labels live in tooltips). While a request is pending
+  the requester polls `GET /…/saved/edit-access`
+  (`useCharacterSheetEditGrants`): an approval shows a toast with «Открыть», a
+  dot at the helmet and refreshes the saved list without F5.
+- **Concurrent editing**: while a sheet is open for editing (owner or editor)
+  it sends `POST /…/{id}/presence` (every 20 s alone, every 4 s when others
+  hold it open) and leaves with `DELETE` on close (`useCharacterSheetPresence`).
+  The heartbeat returns the sheet version; a newer one is fetched and merged
+  into the open sheet. Autosave merges a 409 the same way
+  (`mergeCharacterSheets`, three-way: disjoint fields and `id` list items
+  combine, the same field edited by both — the later edit wins).
 
 ### 📰 Content & publishing
 

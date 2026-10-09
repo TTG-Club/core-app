@@ -16,9 +16,10 @@ import type {
   ResourceRecoveryRule,
   SavedCharacterSheet,
   SavedCharacterSheetListPage,
+  SavedSheetEditAccess,
   SheetEditorList,
   SheetEditStatus,
-  SheetPresenceUser,
+  SheetPresence,
 } from './types';
 
 import { clamp, uniqBy } from 'es-toolkit';
@@ -1830,6 +1831,32 @@ export function parseSheetEditRequestStatus(input: unknown): SheetEditStatus {
   return sheetEditRequestSchema.parse(input).status;
 }
 
+/** Схема сводки прав на редактирование сохранённых листов. */
+const savedSheetEditAccessSchema = z.object({
+  sheets: z
+    .array(
+      z.object({
+        savedId: z.string(),
+        sheetId: z.string(),
+        name: z.string().catch(''),
+        status: sheetEditStatusSchema,
+      }),
+    )
+    .catch([]),
+});
+
+/**
+ * Валидация ответа `GET /saved/edit-access`.
+ *
+ * @param input сырой ответ сервера.
+ * @returns права на редактирование сохранённых листов.
+ */
+export function parseSavedSheetEditAccess(
+  input: unknown,
+): SavedSheetEditAccess[] {
+  return savedSheetEditAccessSchema.parse(input).sheets;
+}
+
 /** Схема ответа на отметку присутствия в листе. */
 const sheetPresenceSchema = z.object({
   users: z
@@ -1840,14 +1867,15 @@ const sheetPresenceSchema = z.object({
       }),
     )
     .catch([]),
+  version: z.number().int().nullable().catch(null),
 });
 
 /**
  * Валидация ответа `POST /{id}/presence`.
  *
  * @param input сырой ответ сервера.
- * @returns другие пользователи, у которых лист сейчас открыт.
+ * @returns другие пользователи, у которых лист открыт, и версия листа.
  */
-export function parseSheetPresence(input: unknown): SheetPresenceUser[] {
-  return sheetPresenceSchema.parse(input).users;
+export function parseSheetPresence(input: unknown): SheetPresence {
+  return sheetPresenceSchema.parse(input);
 }

@@ -106,9 +106,12 @@
   }>();
 
   // Подсказка пометки «только просмотр» объясняет причину режима; null — лист
-  // свой, пометки нет.
+  // свой, пометки нет. Если владелец уже разрешил правки, вместо глаза стоит
+  // карандаш, открывающий лист на редактирование.
   const readonlyTooltip = computed(() =>
-    props.readonlyReason ? SHEET_READONLY_TOOLTIPS[props.readonlyReason] : null,
+    props.readonlyReason && props.editStatus !== 'APPROVED'
+      ? SHEET_READONLY_TOOLTIPS[props.readonlyReason]
+      : null,
   );
 
   // «Другие листы» хранят ссылки: лист, открытый администратором без ссылки,
@@ -506,53 +509,32 @@
         </UTooltip>
 
         <!-- Замок чужого листа бессмысленен: снять его зритель всё равно не
-          может, поэтому вместо него — пометка о режиме просмотра -->
+          может, поэтому вместо него — значок режима просмотра. Подпись — в
+          подсказке: словами пометка занимала полшапки -->
         <UTooltip
           v-if="readonlyTooltip"
           :text="readonlyTooltip"
         >
           <UBadge
-            :label="SHEET_READONLY_BADGE_LABEL"
             icon="tabler:eye"
             color="neutral"
             variant="subtle"
             size="lg"
-            class="@max-2xl:hidden"
-          />
-
-          <!-- В компактной шапке подписи не остаётся: ряд с кнопками
-            сохранения и без неё занимает всю ширину -->
-          <UBadge
-            icon="tabler:eye"
-            color="neutral"
-            variant="subtle"
-            size="lg"
-            class="@2xl:hidden"
             :aria-label="SHEET_READONLY_BADGE_LABEL"
           />
         </UTooltip>
 
-        <!-- Чужой лист по праву редактора: замок и правки свои, а пометка
-          напоминает, что удалить лист и поделиться им может только владелец -->
+        <!-- Чужой лист по праву редактора: карандаш говорит, что править можно,
+          а подсказка — что удалить лист и поделиться им может только владелец -->
         <UTooltip
           v-if="editorAccess"
           :text="SHEET_EDITOR_BADGE_TOOLTIP"
         >
           <UBadge
-            :label="SHEET_EDITOR_BADGE_LABEL"
-            icon="tabler:users"
+            icon="tabler:pencil"
             color="primary"
             variant="subtle"
             size="lg"
-            class="@max-2xl:hidden"
-          />
-
-          <UBadge
-            icon="tabler:users"
-            color="primary"
-            variant="subtle"
-            size="lg"
-            class="@2xl:hidden"
             :aria-label="SHEET_EDITOR_BADGE_LABEL"
           />
         </UTooltip>

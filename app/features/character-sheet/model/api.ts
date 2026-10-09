@@ -11,9 +11,10 @@ import type {
   MagicItemSummary,
   SavedCharacterSheet,
   SavedCharacterSheetListPage,
+  SavedSheetEditAccess,
   SheetEditorList,
   SheetEditStatus,
-  SheetPresenceUser,
+  SheetPresence,
   SpellCatalogItem,
   SpellCatalogMechanics,
   StartingEquipmentOption,
@@ -28,6 +29,7 @@ import {
   parseCharacterSheetVersion,
   parseSavedCharacterSheet,
   parseSavedCharacterSheetListPage,
+  parseSavedSheetEditAccess,
   parseSheetEditorList,
   parseSheetEditRequestCount,
   parseSheetEditRequestStatus,
@@ -320,15 +322,13 @@ export async function fetchIncomingEditRequestCount(): Promise<number> {
 }
 
 /**
- * Отмечает, что лист открыт на правку, и узнаёт, у кого он открыт ещё
- * (мягкая блокировка). Отметка живёт недолго — её шлют, пока лист открыт.
+ * Отмечает, что лист открыт на правку, и узнаёт, у кого он открыт ещё и какая
+ * версия листа на сервере. Отметка живёт недолго — её шлют, пока лист открыт.
  *
  * @param id идентификатор листа.
- * @returns другие пользователи, у которых лист сейчас открыт.
+ * @returns другие пользователи, у которых лист открыт, и версия листа.
  */
-export async function sendSheetPresence(
-  id: string,
-): Promise<SheetPresenceUser[]> {
+export async function sendSheetPresence(id: string): Promise<SheetPresence> {
   const response = await $fetch(`${CHARACTER_SHEET_API_PATH}/${id}/presence`, {
     method: 'POST',
     retry: 0,
@@ -651,6 +651,26 @@ export async function requestSheetEdit(
   );
 
   return parseSheetEditRequestStatus(response);
+}
+
+/**
+ * Права на редактирование сохранённых листов — лёгкая сводка без документов:
+ * по ней мастер сразу узнаёт, что владелец разрешил правки.
+ *
+ * @returns права по листам, на которые отправлялись запросы.
+ */
+export async function fetchSavedSheetEditAccess(): Promise<
+  SavedSheetEditAccess[]
+> {
+  const response = await $fetch(
+    `${CHARACTER_SHEET_SAVED_API_PATH}/edit-access`,
+    {
+      method: 'GET',
+      retry: 0,
+    },
+  );
+
+  return parseSavedSheetEditAccess(response);
 }
 
 /**

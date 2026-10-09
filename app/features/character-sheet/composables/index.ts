@@ -15,6 +15,7 @@ export {
 
 export { useCharacterSheet } from './useCharacterSheet';
 export { useCharacterSheetDetail } from './useCharacterSheetDetail';
+export { useCharacterSheetEditGrants } from './useCharacterSheetEditGrants';
 export { useCharacterSheetEditors } from './useCharacterSheetEditors';
 export { useCharacterSheetEditRequests } from './useCharacterSheetEditRequests';
 export { useCharacterSheetList } from './useCharacterSheetList';

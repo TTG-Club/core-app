@@ -1,10 +1,14 @@
 <script setup lang="ts">
   import { MY_BUGS_UPDATES_HINT } from '~bug-report/model';
   import { useMyBugReportUpdates } from '~bug-report/my';
-  import { useCharacterSheetEditRequests } from '~character-sheet/composables';
+  import {
+    useCharacterSheetEditGrants,
+    useCharacterSheetEditRequests,
+  } from '~character-sheet/composables';
   import {
     CHARACTER_SHEET_LIST_TITLE,
     CHARACTER_SHEET_ROUTE,
+    SHEET_EDIT_GRANTS_UPDATES_HINT,
     SHEET_EDIT_REQUESTS_UPDATES_HINT,
   } from '~character-sheet/model';
   import { MY_COMMENTS_UPDATES_HINT } from '~comments/model';
@@ -63,6 +67,24 @@
   // поэтому точка стоит у пункта листов, а не у профиля.
   const { hasRequests: hasSheetEditRequests } = useCharacterSheetEditRequests();
 
+  // Разрешения на правку чужих листов: тост приходит сразу, а точка горит,
+  // пока пользователь не заглянет в «Другие листы».
+  const { hasUnseenGrants: hasSheetEditGrants } = useCharacterSheetEditGrants();
+
+  const hasSheetUpdates = computed(
+    () => hasSheetEditRequests.value || hasSheetEditGrants.value,
+  );
+
+  // Подсказка называет оба повода: точка у пункта листов одна.
+  const sheetUpdatesHint = computed(() =>
+    [
+      hasSheetEditRequests.value ? SHEET_EDIT_REQUESTS_UPDATES_HINT : '',
+      hasSheetEditGrants.value ? SHEET_EDIT_GRANTS_UPDATES_HINT : '',
+    ]
+      .filter(Boolean)
+      .join(' · '),
+  );
+
   const hasProfileUpdates = computed(
     () => bugReportUpdates.hasUpdates.value || commentUpdates.hasUpdates.value,
   );
@@ -73,9 +95,7 @@
   /** Точка на шлеме одна на всё меню — зажечь её может любая новость. */
   const hasAnyUpdates = computed(
     () =>
-      hasProfileUpdates.value
-      || hasGameUpdates.value
-      || hasSheetEditRequests.value,
+      hasProfileUpdates.value || hasGameUpdates.value || hasSheetUpdates.value,
   );
 
   // Подсказка называет всё, что ждёт в профиле: точка одна, а поводов может
@@ -206,8 +226,8 @@
                 {{ CHARACTER_SHEET_LIST_TITLE }}
 
                 <UpdatesDot
-                  v-if="hasSheetEditRequests"
-                  :title="SHEET_EDIT_REQUESTS_UPDATES_HINT"
+                  v-if="hasSheetUpdates"
+                  :title="sheetUpdatesHint"
                 />
               </span>
             </UButton>

@@ -4536,12 +4536,38 @@ export interface SheetEditorList {
   editors: SheetEditor[];
 }
 
-/** Пользователь, у которого лист сейчас открыт (мягкая блокировка). */
+/** Право на редактирование сохранённого чужого листа — без документа. */
+export interface SavedSheetEditAccess {
+  /** Идентификатор сохранённой записи. */
+  savedId: string;
+
+  /** Идентификатор самого листа: по нему лист открывается на правку. */
+  sheetId: string;
+
+  /** Название листа из сохранённой записи. */
+  name: string;
+
+  status: SheetEditStatus;
+}
+
+/** Пользователь, у которого лист сейчас открыт. */
 export interface SheetPresenceUser {
   displayName: string;
 
   /** Ссылка на аватарку; null — аватарки нет. */
   avatarUrl: string | null;
+}
+
+/** Ответ на отметку присутствия в листе. */
+export interface SheetPresence {
+  /** Другие пользователи, у которых лист сейчас открыт. */
+  users: SheetPresenceUser[];
+
+  /**
+   * Версия листа на сервере: обогнала свою — лист сохранил кто-то ещё. null —
+   * бэк версию не прислал.
+   */
+  version: number | null;
 }
 
 /** Раздел листа персонажа — значение вкладки и ключ её содержимого. */

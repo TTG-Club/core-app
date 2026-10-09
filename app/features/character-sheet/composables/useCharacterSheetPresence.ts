@@ -8,7 +8,9 @@ import {
   leaveSheetPresence,
   sendSheetPresence,
   SHEET_PRESENCE_INTERVAL_MS,
+  SHEET_PRESENCE_SHARED_INTERVAL_MS,
 } from '../model';
+import { useCharacterSheetRemoteVersion } from './useCharacterSheetAutosave';
 
 /**
  * Снимает отметку присутствия. Ошибку глотает: отметка истечёт на сервере
@@ -21,10 +23,13 @@ function leaveQuietly(sheetId: string): void {
 }
 
 /**
- * Мягкая блокировка открытого листа: пока лист открыт на правку, он
- * отмечается на сервере и узнаёт, у кого ещё он открыт, — чтобы предупредить
- * «сейчас редактирует такой-то». Ничего не запрещает: одновременное сохранение
- * и так отсекает версия листа, здесь только предупреждение заранее.
+ * Совместная правка открытого листа: пока лист открыт на правку, он
+ * отмечается на сервере и узнаёт, у кого ещё он открыт и какая версия листа
+ * сейчас на сервере. Версию подхватывает автосохранение — обогнала свою,
+ * значит лист сохранил кто-то ещё, и его правки сливаются со своими.
+ *
+ * Пока лист открыт у кого-то ещё, отметка идёт чаще: чужие правки появляются
+ * почти сразу. Один на листе — редко, только чтобы заметить второго.
  *
  * Побочные эффекты: отметка сразу и затем по таймеру; при смене листа и при
  * уходе хозяина отметка снимается запросом, переживающим закрытие страницы.
@@ -36,7 +41,15 @@ function leaveQuietly(sheetId: string): void {
 export function useCharacterSheetPresence(sheetId: MaybeRefOrGetter<string>) {
   const otherUsers = ref<SheetPresenceUser[]>([]);
 
-  /** Отмечается сам и обновляет список остальных. */
+  const remoteVersion = useCharacterSheetRemoteVersion();
+
+  const interval = computed(() =>
+    otherUsers.value.length
+      ? SHEET_PRESENCE_SHARED_INTERVAL_MS
+      : SHEET_PRESENCE_INTERVAL_MS,
+  );
+
+  /** Отмечается сам и обновляет список остальных и версию листа. */
   async function heartbeat(): Promise<void> {
     const requestedSheetId = toValue(sheetId);
 
@@ -45,17 +58,23 @@ export function useCharacterSheetPresence(sheetId: MaybeRefOrGetter<string>) {
     }
 
     try {
-      const users = await sendSheetPresence(requestedSheetId);
+      const presence = await sendSheetPresence(requestedSheetId);
 
       // Пока шёл запрос, могли открыть другой лист — чужой ответ не применяем.
-      if (toValue(sheetId) === requestedSheetId) {
-        otherUsers.value = users;
+      if (toValue(sheetId) !== requestedSheetId) {
+        return;
+      }
+
+      otherUsers.value = presence.users;
+
+      if (presence.version !== null) {
+        remoteVersion.value = {
+          sheetId: requestedSheetId,
+          version: presence.version,
+        };
       }
     } catch {
-      // Предупреждение необязательно: при ошибке его просто не показываем.
-      if (toValue(sheetId) === requestedSheetId) {
-        otherUsers.value = [];
-      }
+      // Отметка необязательна: следующая попытка будет по таймеру.
     }
   }
 
@@ -65,7 +84,7 @@ export function useCharacterSheetPresence(sheetId: MaybeRefOrGetter<string>) {
 
   useIntervalFn(() => {
     void heartbeat();
-  }, SHEET_PRESENCE_INTERVAL_MS);
+  }, interval);
 
   watch(
     () => toValue(sheetId),

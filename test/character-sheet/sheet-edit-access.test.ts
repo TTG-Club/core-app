@@ -115,10 +115,14 @@ describe('права на редактирование листа', () => {
     expect(
       parseSheetPresence({
         users: [{ displayName: 'Мастер', avatarUrl: null }],
+        version: 4,
       }),
-    ).toEqual([{ displayName: 'Мастер', avatarUrl: null }]);
+    ).toEqual({
+      users: [{ displayName: 'Мастер', avatarUrl: null }],
+      version: 4,
+    });
 
-    expect(parseSheetPresence({})).toEqual([]);
+    expect(parseSheetPresence({})).toEqual({ users: [], version: null });
   });
 
   it('пункт запроса в меню сохранённого листа зависит от права', () => {

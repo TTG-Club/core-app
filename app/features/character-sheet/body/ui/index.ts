@@ -63,7 +63,6 @@ export { default as SheetPersonalityDescriptionModal } from './SheetPersonalityD
 export { default as SheetPersonalityModal } from './SheetPersonalityModal.vue';
 export { default as SheetPersonalityTab } from './SheetPersonalityTab.vue';
 export { default as SheetPreparedSpellsModal } from './SheetPreparedSpellsModal.vue';
-export { default as SheetPresenceAlert } from './SheetPresenceAlert.vue';
 export { default as SheetProficienciesPanel } from './SheetProficienciesPanel.vue';
 export { default as SheetProficiencyGroupsModal } from './SheetProficiencyGroupsModal.vue';
 export { default as SheetRollModal } from './SheetRollModal.vue';
