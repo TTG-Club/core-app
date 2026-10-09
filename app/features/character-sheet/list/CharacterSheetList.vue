@@ -4,7 +4,10 @@
   import { PageGrid } from '~ui/page';
   import { UiResult } from '~ui/result';
 
-  import { useCharacterSheetList } from '../composables';
+  import {
+    useCharacterSheetEditRequests,
+    useCharacterSheetList,
+  } from '../composables';
   import {
     CHARACTER_SHEET_ROUTE,
     getSheetsCountTooltip,
@@ -52,6 +55,7 @@
         id: string;
         character: Character;
         shareToken: string | null;
+        pendingEditRequests: number;
       }> =>
         sheet.data
           ? [
@@ -59,6 +63,7 @@
                 id: sheet.id,
                 character: sheet.data,
                 shareToken: sheet.shareToken,
+                pendingEditRequests: sheet.pendingEditRequests,
               },
             ]
           : [],
@@ -102,6 +107,26 @@
 
   onMounted(() => {
     load();
+  });
+
+  // Метки запросов на карточках должны совпадать со сводкой у шлема: она
+  // опрашивается фоном и меняется, когда приходит запрос или владелец отвечает
+  // на него в открытом рядом листе. Сводка считает те же активные листы, поэтому
+  // список перечитывается только при расхождении — после загрузки они равны, и
+  // наблюдатель затихает.
+  const { count: incomingEditRequests } = useCharacterSheetEditRequests();
+
+  const listedEditRequests = computed(() =>
+    activeSheets.value.reduce(
+      (total, sheet) => total + sheet.pendingEditRequests,
+      0,
+    ),
+  );
+
+  watch(incomingEditRequests, (count) => {
+    if (count !== listedEditRequests.value && !isLoading.value) {
+      void load();
+    }
   });
 
   /** Создаёт пустой лист и открывает его на отдельной странице. */
@@ -184,6 +209,7 @@
             :key="card.id"
             :character="card.character"
             :share-token="card.shareToken"
+            :pending-edit-requests="card.pendingEditRequests"
             removable
             :disabled="isMutating"
             :can-duplicate="canCreate"

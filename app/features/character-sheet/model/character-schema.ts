@@ -16,6 +16,9 @@ import type {
   ResourceRecoveryRule,
   SavedCharacterSheet,
   SavedCharacterSheetListPage,
+  SheetEditorList,
+  SheetEditStatus,
+  SheetPresenceUser,
 } from './types';
 
 import { clamp, uniqBy } from 'es-toolkit';
@@ -1508,6 +1511,8 @@ const sheetListItemSchema = z.object({
   updatedAt: z.string().nullable().catch(null),
   // С `catch`: бэк без версий поля не пришлёт, а лист по ссылке его не отдаёт.
   version: z.number().int().nullable().catch(null),
+  // С `catch`: бэк без прав на редактирование поля не пришлёт — меток просто нет.
+  pendingEditRequests: z.number().int().nonnegative().catch(0),
 });
 
 /**
@@ -1536,6 +1541,8 @@ const sheetDetailSchema = z.object({
   data: z.unknown(),
   shareToken: z.string().nullable().catch(null),
   version: z.number().int().nullable().catch(null),
+  // Без поля лист считается своим: так его прислал бы бэк без прав на редактирование.
+  editor: z.boolean().catch(false),
 });
 
 /**
@@ -1594,6 +1601,7 @@ export function parseCharacterSheetListPage(
     createdAt: sheet.createdAt,
     updatedAt: sheet.updatedAt,
     version: sheet.version,
+    pendingEditRequests: sheet.pendingEditRequests,
   }));
 
   return {
@@ -1606,6 +1614,9 @@ export function parseCharacterSheetListPage(
   };
 }
 
+/** Схема состояния права на редактирование чужого листа. */
+const sheetEditStatusSchema = z.enum(['PENDING', 'APPROVED', 'DECLINED']);
+
 /**
  * Схема сохранённого чужого листа. `data` приходит только у доступных записей —
  * у остальных сервер отдаёт null вместе с `available: false`.
@@ -1617,6 +1628,9 @@ const savedSheetSchema = z.object({
   name: z.string().catch(''),
   data: z.unknown(),
   available: z.boolean().catch(false),
+  // С `catch`: незнакомый статус безопаснее считать «не запрашивалось», чем
+  // открыть по нему лист на правку.
+  editStatus: sheetEditStatusSchema.nullable().catch(null),
 });
 
 /**
@@ -1674,6 +1688,7 @@ function toSavedSheet(
     name: sheet.name,
     data: toSavedSheetCharacter(sheet),
     available: sheet.available,
+    editStatus: sheet.editStatus,
   };
 }
 
@@ -1741,6 +1756,7 @@ export function parseCharacterSheetDetail(
     data: parseCharacter(detail.data, detail.id),
     shareToken: detail.shareToken,
     version: detail.version,
+    editor: detail.editor,
   };
 }
 
@@ -1754,4 +1770,84 @@ export function parseCharacterSheetVersion(input: unknown): number | null {
   const result = sheetVersionSchema.safeParse(input);
 
   return result.success ? result.data.version : null;
+}
+
+/**
+ * Схема запросов и редакторов листа (`GET /{id}/editors` и ответы решений
+ * владельца). Отклонённые записи бэк в список не отдаёт.
+ */
+const sheetEditorListSchema = z.object({
+  limit: z.number().int(),
+  editors: z
+    .array(
+      z.object({
+        id: z.string(),
+        displayName: z.string(),
+        avatarUrl: z.string().nullable().catch(null),
+        status: z.enum(['PENDING', 'APPROVED']),
+      }),
+    )
+    .catch([]),
+});
+
+/**
+ * Валидация запросов и редакторов листа.
+ *
+ * @param input сырой ответ сервера.
+ * @returns запросы, выданные права и лимит редакторов.
+ */
+export function parseSheetEditorList(input: unknown): SheetEditorList {
+  return sheetEditorListSchema.parse(input);
+}
+
+/** Схема числа неотвеченных запросов на листы пользователя. */
+const sheetEditRequestCountSchema = z.object({
+  count: z.number().int().nonnegative(),
+});
+
+/**
+ * Валидация ответа `GET /edit-requests/count`.
+ *
+ * @param input сырой ответ сервера.
+ * @returns число неотвеченных запросов на редактирование.
+ */
+export function parseSheetEditRequestCount(input: unknown): number {
+  return sheetEditRequestCountSchema.parse(input).count;
+}
+
+/** Схема ответа на запрос права редактирования. */
+const sheetEditRequestSchema = z.object({
+  status: sheetEditStatusSchema,
+});
+
+/**
+ * Валидация ответа `POST /saved/{id}/edit-request`.
+ *
+ * @param input сырой ответ сервера.
+ * @returns состояние права после запроса.
+ */
+export function parseSheetEditRequestStatus(input: unknown): SheetEditStatus {
+  return sheetEditRequestSchema.parse(input).status;
+}
+
+/** Схема ответа на отметку присутствия в листе. */
+const sheetPresenceSchema = z.object({
+  users: z
+    .array(
+      z.object({
+        displayName: z.string(),
+        avatarUrl: z.string().nullable().catch(null),
+      }),
+    )
+    .catch([]),
+});
+
+/**
+ * Валидация ответа `POST /{id}/presence`.
+ *
+ * @param input сырой ответ сервера.
+ * @returns другие пользователи, у которых лист сейчас открыт.
+ */
+export function parseSheetPresence(input: unknown): SheetPresenceUser[] {
+  return sheetPresenceSchema.parse(input).users;
 }

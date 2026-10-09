@@ -25,6 +25,7 @@
     isMutating,
     loadErrorMessage,
     load,
+    requestEdit,
     remove,
   } = useCharacterSheetSaved();
 
@@ -127,11 +128,12 @@
           монтировании — иначе они остались бы со старым токеном -->
         <CharacterSheetSavedCard
           v-for="sheet in savedSheets"
-          :key="sheet.shareToken"
+          :key="`${sheet.shareToken}:${sheet.editStatus}`"
           :sheet
           :disabled="isMutating"
           :can-copy="canCopy"
           @copy="copyShared"
+          @request-edit="requestEdit"
           @remove="remove"
         />
       </PageGrid>

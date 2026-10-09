@@ -31,6 +31,7 @@
   const {
     character,
     shareToken = null,
+    pendingEditRequests = 0,
     removable = false,
     disabled = false,
     canDuplicate = false,
@@ -39,6 +40,9 @@
 
     /** Токен ссылки листа; null — доступ по ссылке выключен. */
     shareToken?: string | null;
+
+    /** Неотвеченные запросы на редактирование листа — метка на карточке. */
+    pendingEditRequests?: number;
 
     /** Показать пункт удаления листа в меню (список сохранённых). */
     removable?: boolean;
@@ -98,6 +102,10 @@
   );
 
   const levelValue = computed(() => getDisplayLevel(character));
+
+  const editRequestsLabel = computed(
+    () => `${SHEET_CARD_LABELS.editRequests}: ${pendingEditRequests}`,
+  );
 
   // Максимум с прибавками — тот же, что показывает сам лист.
   const maxHitPoints = computed(() => getMaxHitPoints(character));
@@ -216,8 +224,22 @@
       </div>
 
       <div class="flex min-w-0 flex-auto flex-col gap-0.5">
-        <span class="truncate text-base font-semibold text-highlighted">
-          {{ character.name }}
+        <span class="flex min-w-0 items-center gap-2">
+          <span class="truncate text-base font-semibold text-highlighted">
+            {{ character.name }}
+          </span>
+
+          <!-- Метка запросов на правки: ответить на них можно в самом листе,
+            куда и ведёт клик по карточке -->
+          <UBadge
+            v-if="pendingEditRequests > 0"
+            :label="editRequestsLabel"
+            icon="tabler:pencil-question"
+            color="primary"
+            variant="subtle"
+            size="sm"
+            class="shrink-0"
+          />
         </span>
 
         <span class="truncate text-sm text-secondary">

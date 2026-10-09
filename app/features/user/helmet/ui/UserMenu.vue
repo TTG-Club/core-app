@@ -1,9 +1,11 @@
 <script setup lang="ts">
   import { MY_BUGS_UPDATES_HINT } from '~bug-report/model';
   import { useMyBugReportUpdates } from '~bug-report/my';
+  import { useCharacterSheetEditRequests } from '~character-sheet/composables';
   import {
     CHARACTER_SHEET_LIST_TITLE,
     CHARACTER_SHEET_ROUTE,
+    SHEET_EDIT_REQUESTS_UPDATES_HINT,
   } from '~character-sheet/model';
   import { MY_COMMENTS_UPDATES_HINT } from '~comments/model';
   import { useMyCommentUpdates } from '~comments/my';
@@ -57,6 +59,10 @@
   // второго запроса от меню не будет.
   const gameNotifications = useFindGameNotifications();
 
+  // Запросы на правки листов: ответить на них можно только в самом листе,
+  // поэтому точка стоит у пункта листов, а не у профиля.
+  const { hasRequests: hasSheetEditRequests } = useCharacterSheetEditRequests();
+
   const hasProfileUpdates = computed(
     () => bugReportUpdates.hasUpdates.value || commentUpdates.hasUpdates.value,
   );
@@ -66,7 +72,10 @@
 
   /** Точка на шлеме одна на всё меню — зажечь её может любая новость. */
   const hasAnyUpdates = computed(
-    () => hasProfileUpdates.value || hasGameUpdates.value,
+    () =>
+      hasProfileUpdates.value
+      || hasGameUpdates.value
+      || hasSheetEditRequests.value,
   );
 
   // Подсказка называет всё, что ждёт в профиле: точка одна, а поводов может
@@ -193,7 +202,14 @@
               :to="CHARACTER_SHEET_ROUTE"
               @click.left.exact="closeMenu"
             >
-              {{ CHARACTER_SHEET_LIST_TITLE }}
+              <span class="flex items-center gap-2">
+                {{ CHARACTER_SHEET_LIST_TITLE }}
+
+                <UpdatesDot
+                  v-if="hasSheetEditRequests"
+                  :title="SHEET_EDIT_REQUESTS_UPDATES_HINT"
+                />
+              </span>
             </UButton>
 
             <!-- Короткий путь к своим играм: новости по ним ждут именно

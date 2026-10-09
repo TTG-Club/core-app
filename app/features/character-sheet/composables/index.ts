@@ -15,9 +15,12 @@ export {
 
 export { useCharacterSheet } from './useCharacterSheet';
 export { useCharacterSheetDetail } from './useCharacterSheetDetail';
+export { useCharacterSheetEditors } from './useCharacterSheetEditors';
+export { useCharacterSheetEditRequests } from './useCharacterSheetEditRequests';
 export { useCharacterSheetList } from './useCharacterSheetList';
 export { useCharacterSheetLoader } from './useCharacterSheetLoader';
 export { useCharacterSheetPdf } from './useCharacterSheetPdf';
+export { useCharacterSheetPresence } from './useCharacterSheetPresence';
 export { useCharacterSheetSaved } from './useCharacterSheetSaved';
 export { useCharacterSheetShare } from './useCharacterSheetShare';
 export { useChoiceHints } from './useChoiceHints';

@@ -8,6 +8,7 @@
   import { useCharacterSheetPdf } from '../../composables';
   import { CharacterSheetDrawer } from '../../drawer';
   import {
+    CHARACTER_SHEET_ROUTE,
     CHARACTER_SHEET_SHARED_ROUTE,
     downloadCharacterJson,
     getClassesDisplayLabel,
@@ -18,6 +19,7 @@
     SAVED_SHEETS_LABELS,
     SHARED_DETAIL_QUERY_PREFIX,
     SHEET_CARD_LABELS,
+    SHEET_EDIT_ACCESS_LABELS,
     SHEET_EMPTY_LABELS,
   } from '../../model';
 
@@ -37,32 +39,52 @@
   }>();
 
   const emit = defineEmits<{
-    copy: [character: Character];
-    remove: [id: string];
+    'copy': [character: Character];
+    'remove': [id: string];
+    'request-edit': [shareToken: string];
   }>();
 
   const overlay = useOverlay();
 
   const isRemoveOpen = ref(false);
 
-  const to = computed(
-    () => `${CHARACTER_SHEET_SHARED_ROUTE}/${sheet.shareToken}`,
+  // Владелец разрешил правки — лист открывается по id, как свой, и грузится
+  // ручкой владельца. Снимок на момент монтирования: список ключует карточки
+  // вместе с правом, и смена права пересоздаёт карточку целиком.
+  const isEditable = sheet.editStatus === 'APPROVED';
+
+  const to = computed(() =>
+    isEditable
+      ? `${CHARACTER_SHEET_ROUTE}/${sheet.sheetId}`
+      : `${CHARACTER_SHEET_SHARED_ROUTE}/${sheet.shareToken}`,
   );
 
   const drawer = overlay.create(CharacterSheetDrawer, {
     props: {
-      shareToken: sheet.shareToken,
+      characterId: isEditable ? sheet.sheetId : undefined,
+      shareToken: isEditable ? undefined : sheet.shareToken,
       onClose: () => drawer.close(),
     },
   });
 
   // Тот же контракт, что у карточки своего листа: drawer в стандартном режиме,
-  // `?detail=` в широком. Значение с префиксом — чтобы панель узнала чужой лист.
+  // `?detail=` в широком. Значение с префиксом — чтобы панель узнала чужой лист
+  // на просмотр; лист с правом правок панель открывает по id, как свой.
   const { isOpened, handleOpen } = useSectionLink(
-    `${SHARED_DETAIL_QUERY_PREFIX}${sheet.shareToken}`,
+    isEditable
+      ? sheet.sheetId
+      : `${SHARED_DETAIL_QUERY_PREFIX}${sheet.shareToken}`,
     drawer.id,
     () => drawer.open(),
   );
+
+  const badgeLabel = isEditable
+    ? SHEET_EDIT_ACCESS_LABELS.approvedBadge
+    : SAVED_SHEETS_LABELS.readonlyBadge;
+
+  const badgeIcon = isEditable ? 'tabler:pencil' : 'tabler:eye';
+
+  const badgeColor = isEditable ? 'primary' : 'neutral';
 
   const classLabel = computed(() =>
     sheet.data?.characterClass
@@ -119,6 +141,11 @@
     isRemoveOpen.value = true;
   }
 
+  /** Запрос права на правки — отправляет раздел (у него и ответ сервера). */
+  function handleRequestEdit(): void {
+    emit('request-edit', sheet.shareToken);
+  }
+
   /** Подтверждённое удаление записи — событие обрабатывает раздел. */
   function confirmRemove(): void {
     emit('remove', sheet.id);
@@ -129,9 +156,11 @@
     getSavedSheetActionMenuItems({
       canCopy,
       isPdfLoading: isExporting.value,
+      editStatus: sheet.editStatus,
       onDownload: handleDownload,
       onDownloadPdf: handleDownloadPdf,
       onCopy: handleCopy,
+      onRequestEdit: handleRequestEdit,
       onRemove: handleRemove,
     }),
   );
@@ -213,9 +242,9 @@
           </span>
 
           <UBadge
-            :label="SAVED_SHEETS_LABELS.readonlyBadge"
-            icon="tabler:eye"
-            color="neutral"
+            :label="badgeLabel"
+            :icon="badgeIcon"
+            :color="badgeColor"
             variant="subtle"
             size="sm"
             class="shrink-0"

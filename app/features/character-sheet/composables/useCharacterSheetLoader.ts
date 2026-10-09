@@ -70,7 +70,10 @@ export function useCharacterSheetLoader(
   options: SheetLoaderOptions = {},
 ) {
   const { loadCharacter, resetCharacter, setReadonly } = useCharacterSheet();
-  const { setShareToken, setViewedShareToken } = useCharacterSheetShare();
+
+  const { setShareToken, setViewedShareToken, setEditorAccess } =
+    useCharacterSheetShare();
+
   const { setSheetVersion } = useCharacterSheetVersion();
   const { user, isAdmin, fetch: fetchProfile } = useUser();
 
@@ -164,6 +167,7 @@ export function useCharacterSheetLoader(
     // Режим фиксируется до запроса: панель могла переключиться со своего листа
     // на чужой, и тело листа не должно успеть показать владельческие действия.
     setReadonly(currentShared ? 'shared' : null);
+    setEditorAccess(false);
 
     if (!currentSheetId) {
       status.value = 'idle';
@@ -196,6 +200,8 @@ export function useCharacterSheetLoader(
       setShareToken(detail.id, detail.shareToken);
       // Зато известен токен, по которому лист открыт, — им меню сохраняет его к себе.
       setViewedShareToken(currentShared ? currentSheetId : null);
+      // Чужой лист по праву редактора: правки разрешены, управление доступом — нет.
+      setEditorAccess(detail.editor);
       status.value = 'ready';
     } catch (error) {
       if (isStaleResponse(currentSheetId, currentShared)) {
@@ -227,6 +233,7 @@ export function useCharacterSheetLoader(
     resetCharacter();
     setShareToken(null, null);
     setViewedShareToken(null);
+    setEditorAccess(false);
     // Режим просмотра снимается вместе со страницей: состояние общее, и
     // следующий свой лист иначе открылся бы нередактируемым.
     setReadonly(null);

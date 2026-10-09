@@ -15,8 +15,11 @@
 
   import {
     useCharacterSheet,
+    useCharacterSheetEditors,
+    useCharacterSheetEditRequests,
     useCharacterSheetList,
     useCharacterSheetPdf,
+    useCharacterSheetPresence,
     useCharacterSheetSaved,
     useCharacterSheetSaveStatus,
     useCharacterSheetShare,
@@ -24,7 +27,9 @@
   import {
     ABILITY_LABELS,
     ARMOR_PROFICIENCY_GROUPS,
+    CHARACTER_SHEET_ROUTE,
     combineRollModes,
+    DRAFT_CHARACTER_ID,
     EMPTY_DAMAGE_ROLL_SOURCE,
     findCharacterSpell,
     getAbilityCheckValue,
@@ -56,6 +61,7 @@
     SheetCustomSpellModal,
     SheetDamageModal,
     SheetDefencesPanel,
+    SheetEditRequestsBanner,
     SheetEffectModal,
     SheetExhaustionPanel,
     SheetExperienceModal,
@@ -75,6 +81,7 @@
     SheetPersonalityDescriptionModal,
     SheetPersonalityModal,
     SheetPreparedSpellsModal,
+    SheetPresenceAlert,
     SheetProficienciesPanel,
     SheetProficiencyGroupsModal,
     SheetRollModal,
@@ -182,9 +189,43 @@
   // Доступ по ссылке: состояние читает меню шапки, меняет — модалка.
   // `viewedShareToken` — токен, по которому открыт чужой лист: им меню
   // сохраняет его к себе.
-  const { viewedShareToken, isSheetShared } = useCharacterSheetShare();
+  // `isEditorAccess` — лист чужой, но открыт по праву редактора.
+  const { viewedShareToken, isSheetShared, isEditorAccess } =
+    useCharacterSheetShare();
 
   const isShared = computed(() => isSheetShared(character.value.id));
+
+  /** Лист свой: запросы на правки и управление доступом — только здесь. */
+  const isOwnSheet = computed(() => !isReadonly.value && !isEditorAccess.value);
+
+  // Запросы на правки своего листа показываются баннером над ним. Перечитываются
+  // при открытии листа и когда сводка у шлема изменилась: новый запрос мог
+  // прийти, пока лист открыт. Цикла нет: решение по запросу перечитывает
+  // сводку, сводка — список, а загрузка списка сводку уже не трогает.
+  const { load: loadEditors } = useCharacterSheetEditors();
+  const { count: incomingEditRequests } = useCharacterSheetEditRequests();
+
+  watch(
+    [() => character.value.id, isOwnSheet, incomingEditRequests],
+    ([sheetId, ownSheet]) => {
+      if (ownSheet && sheetId !== DRAFT_CHARACTER_ID) {
+        void loadEditors(sheetId);
+      }
+    },
+    { immediate: true },
+  );
+
+  // Мягкая блокировка: пока лист открыт на правку (своим или редактором), он
+  // отмечается на сервере, а тело предупреждает, у кого он открыт ещё. Лист на
+  // просмотр не отмечается — зритель ничего не меняет.
+  const presenceSheetId = computed(() =>
+    isReadonly.value || character.value.id === DRAFT_CHARACTER_ID
+      ? ''
+      : character.value.id,
+  );
+
+  const { otherUsers: presenceUsers } =
+    useCharacterSheetPresence(presenceSheetId);
 
   // Сохранить чужой лист к себе может только тот, у кого есть доступ к самому
   // инструменту: обе ручки закрыты авторизацией, анониму их показывать нечестно.
@@ -196,10 +237,26 @@
     canSave: canSaveLink,
     ensureLoaded: ensureSavedLoaded,
     isTokenSaved,
+    findByToken,
     save: saveLink,
+    requestEdit,
   } = useCharacterSheetSaved();
 
   const canSaveShared = computed(() => isReadonly.value && isLoggedIn.value);
+
+  // Попросить правки можно только у листа по ссылке: запрос привязан к
+  // сохранённой ссылке, а у листа, открытого администратором, её нет.
+  const canRequestEdit = computed(
+    () => canSaveShared.value && readonlyReason.value === 'shared',
+  );
+
+  const viewedEditStatus = computed(() => {
+    const saved = viewedShareToken.value
+      ? findByToken(viewedShareToken.value)
+      : undefined;
+
+    return saved?.editStatus ?? null;
+  });
 
   const isLinkSaved = computed(() =>
     viewedShareToken.value ? isTokenSaved(viewedShareToken.value) : false,
@@ -1093,6 +1150,20 @@
     await saveLink(viewedShareToken.value);
   }
 
+  /** Запрос права на правки чужого листа; несохранённая ссылка сохранится. */
+  async function handleRequestEdit() {
+    if (!viewedShareToken.value) {
+      return;
+    }
+
+    await requestEdit(viewedShareToken.value);
+  }
+
+  /** Право на правки уже выдано — лист открывается как свой, по id. */
+  function handleOpenForEdit() {
+    navigateTo(`${CHARACTER_SHEET_ROUTE}/${character.value.id}`);
+  }
+
   /** Подтверждённое удаление: лист уходит в историю, затем закрывается. */
   async function handleRemoveConfirm() {
     if (!(await removeSheet(character.value.id))) {
@@ -1148,6 +1219,9 @@
         :can-copy-shared="canCreate && !isMutating"
         :can-save-link="canSaveLink"
         :link-saved="isLinkSaved"
+        :editor-access="isEditorAccess"
+        :can-request-edit="canRequestEdit"
+        :edit-status="viewedEditStatus"
         @close="handleClose"
         @download="downloadCharacter"
         @download-pdf="handleDownloadPdf"
@@ -1156,6 +1230,8 @@
         @share="handleShare"
         @copy-shared="handleCopyShared"
         @save-link="handleSaveLink"
+        @request-edit="handleRequestEdit"
+        @open-for-edit="handleOpenForEdit"
         @expand="handleExpand"
         @edit-ability-scores="handleAbilityScoresEdit"
         @edit-background="handleBackgroundEdit"
@@ -1170,6 +1246,13 @@
         @short-rest="handleShortRest"
         @toggle-inspiration="toggleInspiration"
         @toggle-lock="toggleLock"
+      />
+
+      <SheetPresenceAlert :users="presenceUsers" />
+
+      <SheetEditRequestsBanner
+        v-if="isOwnSheet"
+        :sheet-id="character.id"
       />
 
       <div class="relative flex items-center justify-center py-1">

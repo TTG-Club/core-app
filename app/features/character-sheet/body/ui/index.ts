@@ -31,6 +31,8 @@ export { default as SheetCustomSpellModal } from './SheetCustomSpellModal.vue';
 export { default as SheetDamageModal } from './SheetDamageModal.vue';
 export { default as SheetDefencesPanel } from './SheetDefencesPanel.vue';
 export { default as SheetDistanceRows } from './SheetDistanceRows.vue';
+export { default as SheetEditorRow } from './SheetEditorRow.vue';
+export { default as SheetEditRequestsBanner } from './SheetEditRequestsBanner.vue';
 export { default as SheetEffectModal } from './SheetEffectModal.vue';
 export { default as SheetEffectsTab } from './SheetEffectsTab.vue';
 export { default as SheetEquipmentTab } from './SheetEquipmentTab.vue';
@@ -61,6 +63,7 @@ export { default as SheetPersonalityDescriptionModal } from './SheetPersonalityD
 export { default as SheetPersonalityModal } from './SheetPersonalityModal.vue';
 export { default as SheetPersonalityTab } from './SheetPersonalityTab.vue';
 export { default as SheetPreparedSpellsModal } from './SheetPreparedSpellsModal.vue';
+export { default as SheetPresenceAlert } from './SheetPresenceAlert.vue';
 export { default as SheetProficienciesPanel } from './SheetProficienciesPanel.vue';
 export { default as SheetProficiencyGroupsModal } from './SheetProficiencyGroupsModal.vue';
 export { default as SheetRollModal } from './SheetRollModal.vue';

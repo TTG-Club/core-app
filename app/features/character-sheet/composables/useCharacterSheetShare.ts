@@ -38,6 +38,13 @@ export function useCharacterSheetShare() {
     () => null,
   );
 
+  // Лист чужой, но открыт по праву редактора: править можно, а управлять
+  // доступом — нет. Кладёт загрузчик, читают шапка и тело листа.
+  const isEditorAccess = useState<boolean>(
+    'character-sheet:editor-access',
+    () => false,
+  );
+
   const isPending = ref(false);
 
   /**
@@ -85,6 +92,15 @@ export function useCharacterSheetShare() {
    */
   function setViewedShareToken(token: string | null): void {
     viewedShareToken.value = token;
+  }
+
+  /**
+   * Отмечает, открыт ли лист по праву редактора, а не владельцем.
+   *
+   * @param editorAccess true — лист чужой, правки разрешены владельцем.
+   */
+  function setEditorAccess(editorAccess: boolean): void {
+    isEditorAccess.value = editorAccess;
   }
 
   /**
@@ -147,11 +163,13 @@ export function useCharacterSheetShare() {
   return {
     shareToken,
     viewedShareToken,
+    isEditorAccess,
     isPending,
     isSheetShared,
     getShareUrl,
     setShareToken,
     setViewedShareToken,
+    setEditorAccess,
     enableShare,
     disableShare,
   };

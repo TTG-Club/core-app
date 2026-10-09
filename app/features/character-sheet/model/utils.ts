@@ -136,6 +136,7 @@ import type {
   SheetChoiceOption,
   SheetChoiceOrigin,
   SheetChoicePoolStatus,
+  SheetEditStatus,
   SkillRow,
   SkillRowGroup,
   SpeciesFeatureSummary,
@@ -421,6 +422,7 @@ import {
   SHEET_DOWNLOAD_JSON_LABEL,
   SHEET_DOWNLOAD_PDF_HINT,
   SHEET_DOWNLOAD_PDF_LABEL,
+  SHEET_EDIT_ACCESS_LABELS,
   SHEET_FEAT_CHOICE_LABELS,
   SHEET_PDF_MIME_TYPE,
   SHEET_PERSONALITY_LABELS,
@@ -15940,16 +15942,60 @@ export interface SavedSheetActionMenuOptions {
   /** Идёт сборка PDF: пункт показывает загрузку и не принимает повторный клик. */
   isPdfLoading?: boolean;
 
+  /**
+   * Право на редактирование листа; null — его не запрашивали. От него зависит
+   * пункт запроса: доступен, ждёт ответа или не нужен (право уже выдано).
+   */
+  editStatus: SheetEditStatus | null;
+
   onDownload: () => void;
   onDownloadPdf: () => void;
   onCopy: () => void;
+  onRequestEdit: () => void;
   onRemove: () => void;
+}
+
+/**
+ * Пункт запроса права на редактирование в меню сохранённого листа. С выданным
+ * правом пункта нет: карточка сама открывает лист на правку.
+ *
+ * @param editStatus право на редактирование; null — не запрашивалось.
+ * @param onRequestEdit отправка запроса.
+ * @returns пункт меню; null — пункт не нужен.
+ */
+function getRequestEditMenuItem(
+  editStatus: SheetEditStatus | null,
+  onRequestEdit: () => void,
+): DropdownMenuItem | null {
+  if (editStatus === 'APPROVED') {
+    return null;
+  }
+
+  if (editStatus === 'PENDING') {
+    return {
+      label: SHEET_EDIT_ACCESS_LABELS.pending,
+      icon: 'tabler:clock',
+      description: SHEET_EDIT_ACCESS_LABELS.pendingHint,
+      disabled: true,
+    };
+  }
+
+  return {
+    label: SHEET_EDIT_ACCESS_LABELS.request,
+    icon: 'tabler:pencil-plus',
+    description:
+      editStatus === 'DECLINED'
+        ? SHEET_EDIT_ACCESS_LABELS.declinedHint
+        : SHEET_EDIT_ACCESS_LABELS.requestHint,
+    onSelect: onRequestEdit,
+  };
 }
 
 /**
  * Пункты меню карточки чужого листа, сохранённого по ссылке. От меню своего
  * листа отличается тем, чего у зрителя нет: правок, настроек и управления
- * доступом. Копия остаётся — она создаёт уже свой лист.
+ * доступом. Копия остаётся — она создаёт уже свой лист. Правки же можно
+ * попросить у владельца — пунктом запроса.
  *
  * @param options доступность действий и обработчики пунктов.
  * @returns группы пунктов для `UDropdownMenu`.
@@ -15957,6 +16003,11 @@ export interface SavedSheetActionMenuOptions {
 export function getSavedSheetActionMenuItems(
   options: SavedSheetActionMenuOptions,
 ): Array<Array<DropdownMenuItem>> {
+  const requestEdit = getRequestEditMenuItem(
+    options.editStatus,
+    options.onRequestEdit,
+  );
+
   return [
     [
       {
@@ -15980,6 +16031,7 @@ export function getSavedSheetActionMenuItems(
         disabled: !options.canCopy,
         onSelect: options.onCopy,
       },
+      ...(requestEdit ? [requestEdit] : []),
     ],
     [
       {
