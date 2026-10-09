@@ -178,7 +178,7 @@ modals), so its capabilities are listed here rather than squeezed into the table
 - Wizards for species / class / background; rolls go through `dice-roller`
   (universal `SheetRollModal`). The ability picked in a weapon's attack roll is
   remembered on the inventory item (`attackAbility`) and drives its attack and
-  damage tiles.
+  damage tiles; the weapon row menu «Характеристика атаки» sets it without a roll.
 - «Калькулятор характеристик» in the sheet action menu (`SheetAbilityScoresModal`) sets
   all six scores the way `/calculators/abilities` does. The three generators
   (random roll / standard array / point buy) plus the resulting summary live in

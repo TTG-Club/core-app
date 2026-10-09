@@ -4113,6 +4113,12 @@ export const INVENTORY_GRIP_MENU_LABELS: Record<
   twoHanded: 'Взять в две руки',
 };
 
+/**
+ * Подпись пункта меню оружия с выбором характеристики атаки и урона: тот же
+ * выбор, что в окне броска атаки, только без броска.
+ */
+export const INVENTORY_ATTACK_ABILITY_MENU_LABEL = 'Характеристика атаки';
+
 /** Значок универсального оружия, взятого двумя руками. */
 export const INVENTORY_TWO_HANDED_BADGE_LABEL = 'Двумя руками';
 

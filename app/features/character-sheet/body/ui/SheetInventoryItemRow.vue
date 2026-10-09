@@ -26,6 +26,7 @@
     getInventoryItemMenuItems,
     getWeaponAttackBonus,
     getWeaponDamage,
+    getWeaponRulesAbility,
     INVENTORY_ACTIVE_BADGE_HINT,
     INVENTORY_ACTIVE_BADGE_LABEL,
     INVENTORY_ATTUNED_BADGE_HINT,
@@ -180,7 +181,12 @@
   // состояние листа через composable (как модалки). Оттуда же классы кнопок:
   // правка и удаление предмета меняют лист, а количество — игровое действие,
   // его запертый лист разрешает, чужой — нет.
-  const { character, editControlClass, gameControlClass } = useCharacterSheet();
+  const {
+    character,
+    editControlClass,
+    gameControlClass,
+    setInventoryItemAttackAbility,
+  } = useCharacterSheet();
 
   const categoryIcon = computed(
     () => INVENTORY_CATEGORY_ICONS[props.inventoryItem.category],
@@ -311,6 +317,16 @@
         ? () => emit('toggle-two-handed')
         : undefined,
       twoHanded: isTwoHanded.value,
+      // Выбор пишется в лист прямо отсюда: строка и так читает общее состояние,
+      // а цепочка событий через вкладки ничего бы не добавила.
+      onSelectAttackAbility: props.inventoryItem.weapon
+        ? (ability) =>
+            setInventoryItemAttackAbility(props.inventoryItem.id, ability)
+        : undefined,
+      attackAbility: props.inventoryItem.attackAbility,
+      rulesAttackAbility: props.inventoryItem.weapon
+        ? getWeaponRulesAbility(character.value, props.inventoryItem.weapon)
+        : null,
       // Игровые действия магии отбирает отсутствующий предмет: настраиваться,
       // включать и заряжать нечего, пока его у персонажа нет.
       onToggleAttunement:

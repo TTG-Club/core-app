@@ -341,6 +341,7 @@ import {
   HIT_POINTS_LEVEL_GAIN_MIN,
   INNATE_SPELL_REMOVE_MENU_LABEL,
   INVENTORY_ACTIVE_MENU_LABELS,
+  INVENTORY_ATTACK_ABILITY_MENU_LABEL,
   INVENTORY_ATTUNEMENT_MENU_LABELS,
   INVENTORY_BONUS_GROUP_LABELS,
   INVENTORY_BONUS_LABELS,
@@ -16400,6 +16401,18 @@ export interface InventoryItemMenuOptions extends SheetEntryMenuOptions {
   /** Оружие уже взято двумя руками — пункт предлагает вернуть его в одну. */
   twoHanded: boolean;
 
+  /**
+   * Выбор характеристики атаки оружием; не передан — пункта нет (предмет не
+   * оружие).
+   */
+  onSelectAttackAbility?: (ability: AbilityKey | null) => void;
+
+  /** Характеристика, выбранная у оружия; null — по правилам. */
+  attackAbility: AbilityKey | null;
+
+  /** Характеристика оружия по правилам — подпись пункта «Авто». */
+  rulesAttackAbility: AbilityKey | null;
+
   /** Настройка на предмет; не передан — предмет её не требует. */
   onToggleAttunement?: () => void;
 
@@ -16439,6 +16452,32 @@ export function getInventoryItemMenuItems(
         : INVENTORY_GRIP_MENU_LABELS.twoHanded,
       icon: 'tabler:sword',
       onSelect: options.onToggleGrip,
+    });
+  }
+
+  const { onSelectAttackAbility, attackAbility, rulesAttackAbility } = options;
+
+  if (onSelectAttackAbility && rulesAttackAbility) {
+    // Подменю, а не окно: выбор в одно нажатие, отметка показывает нынешний.
+    gameItems.push({
+      label: INVENTORY_ATTACK_ABILITY_MENU_LABEL,
+      icon: 'tabler:target-arrow',
+      children: [
+        {
+          label: `Авто (${ABILITY_LABELS[rulesAttackAbility]})`,
+          type: 'checkbox',
+          checked: attackAbility === null,
+          onSelect: () => onSelectAttackAbility(null),
+        },
+        ...ABILITY_ORDER.map(
+          (ability): DropdownMenuItem => ({
+            label: ABILITY_LABELS[ability],
+            type: 'checkbox',
+            checked: attackAbility === ability,
+            onSelect: () => onSelectAttackAbility(ability),
+          }),
+        ),
+      ],
     });
   }
 
