@@ -7,6 +7,7 @@
   } from '../composables';
   import { SheetLimitHint } from '../list/ui';
   import {
+    getSavedSheetCardKey,
     getSavedSheetsCountTooltip,
     getSavedSheetsSubscriptionHint,
     SAVED_SHEETS_LABELS,
@@ -128,7 +129,7 @@
           монтировании — иначе они остались бы со старым токеном -->
         <CharacterSheetSavedCard
           v-for="sheet in savedSheets"
-          :key="`${sheet.shareToken}:${sheet.editStatus}`"
+          :key="getSavedSheetCardKey(sheet)"
           :sheet
           :disabled="isMutating"
           :can-copy="canCopy"

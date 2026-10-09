@@ -131,6 +131,7 @@ import type {
   ResourceRecoveryMode,
   ResourceRecoveryRule,
   RollMode,
+  SavedCharacterSheet,
   SavingThrowRow,
   SheetChoiceControl,
   SheetChoiceOption,
@@ -15953,6 +15954,18 @@ export interface SavedSheetActionMenuOptions {
   onCopy: () => void;
   onRequestEdit: () => void;
   onRemove: () => void;
+}
+
+/**
+ * Ключ карточки сохранённого листа в списке. Право на правки входит в ключ:
+ * карточка снимает режим (просмотр или правка) при монтировании, и смена права
+ * должна пересоздать её целиком.
+ *
+ * @param sheet сохранённый лист.
+ * @returns ключ для `v-for`.
+ */
+export function getSavedSheetCardKey(sheet: SavedCharacterSheet): string {
+  return `${sheet.shareToken}:${sheet.editStatus ?? 'NONE'}`;
 }
 
 /**

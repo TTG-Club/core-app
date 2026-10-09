@@ -48,6 +48,8 @@
       : SHEET_EDITORS_LABELS.limitReached,
   );
 
+  const isApproveDisabled = computed(() => disabled || !canApprove);
+
   /** Разрешить правки по запросу. */
   function handleApprove(): void {
     emit('approve', editor.id);
@@ -91,7 +93,7 @@
             color="primary"
             variant="soft"
             size="sm"
-            :disabled="disabled || !canApprove"
+            :disabled="isApproveDisabled"
             @click.left.exact.prevent="handleApprove"
           />
         </UTooltip>
