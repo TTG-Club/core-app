@@ -16011,10 +16011,7 @@ function getRequestEditMenuItem(
   return {
     label: SHEET_EDIT_ACCESS_LABELS.request,
     icon: 'tabler:pencil-plus',
-    description:
-      editStatus === 'DECLINED'
-        ? SHEET_EDIT_ACCESS_LABELS.declinedHint
-        : SHEET_EDIT_ACCESS_LABELS.requestHint,
+    description: SHEET_EDIT_ACCESS_LABELS.requestHint,
     onSelect: onRequestEdit,
   };
 }

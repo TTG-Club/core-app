@@ -171,9 +171,7 @@
       return `${SHEET_EDIT_ACCESS_LABELS.pending}. ${SHEET_EDIT_ACCESS_LABELS.pendingHint}`;
     }
 
-    return props.editStatus === 'DECLINED'
-      ? `${SHEET_EDIT_ACCESS_LABELS.request}. ${SHEET_EDIT_ACCESS_LABELS.declinedHint}`
-      : SHEET_EDIT_ACCESS_LABELS.request;
+    return SHEET_EDIT_ACCESS_LABELS.request;
   });
 
   /** Запрос права на правки или переход к листу, если право уже выдано. */

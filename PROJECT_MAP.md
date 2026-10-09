@@ -938,7 +938,8 @@ modals), so its capabilities are listed here rather than squeezed into the table
   `GET /…/edit-requests/count`), a marker on the list card
   (`pendingEditRequests`), a banner over the open sheet and the editors list in
   the share modal (`useCharacterSheetEditors`: approve, decline, revoke; max 5
-  editors, re-request 24 h after a decline, revoking the link drops editors).
+  editors; decline and revoke delete the record, so the user can ask again
+  at once; revoking the link drops editors).
   An approved saved card opens the sheet by id like an own one; the loader
   marks it `editor` (`useCharacterSheetShare().isEditorAccess`): edits and
   autosave work, delete and share are hidden, the header shows a pencil icon
