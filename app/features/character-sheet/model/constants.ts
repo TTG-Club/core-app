@@ -468,6 +468,12 @@ export const SHEET_EDIT_GRANTED_TOAST = {
   action: 'Открыть',
 } as const;
 
+/** Тост: владелец отклонил запрос на правку. */
+export const SHEET_EDIT_DECLINED_TOAST = {
+  title: 'В редактировании отказано',
+  descriptionSuffix: 'владелец отклонил запрос. Его можно отправить снова.',
+} as const;
+
 /** Тост: владелец отозвал право править его лист, лист открыт на просмотр. */
 export const SHEET_EDIT_REVOKED_TOAST = {
   title: 'Редактирование закрыто',

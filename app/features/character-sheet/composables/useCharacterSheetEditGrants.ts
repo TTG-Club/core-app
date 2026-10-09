@@ -9,6 +9,7 @@ import {
   fetchSavedSheetEditAccess,
   SHEET_EDIT_ACCESS_DATA_KEY,
   SHEET_EDIT_ACCESS_POLL_INTERVAL_MS,
+  SHEET_EDIT_DECLINED_TOAST,
   SHEET_EDIT_GRANTED_TOAST,
   SHEET_EDIT_REQUESTS_POLL_COOLDOWN_MS,
   SHEET_EDIT_REQUESTS_POLL_MAX_BACKOFF_MS,
@@ -37,8 +38,9 @@ function isApproved(access: SavedSheetEditAccess): boolean {
 
 /**
  * Ответы владельцев на запросы правок — у того, кто просил: тост «Редактирование
- * разрешено», точка у шлема, пока разрешение не увидено, и свежий раздел
- * «Другие листы» без F5.
+ * разрешено» или «В редактировании отказано», точка у шлема, пока разрешение
+ * не увидено, и свежий раздел «Другие листы» без F5 (после отказа кнопка
+ * запроса сразу снова доступна).
  *
  * Обёрнут в `createSharedComposable`: потребители — меню шлема и раздел
  * «Другие листы», а опрос нужен один. Сводка опрашивается только пока есть
@@ -110,6 +112,39 @@ function createCharacterSheetEditGrants(): UseCharacterSheetEditGrantsReturn {
     });
   }
 
+  /**
+   * Тост об отказе. Отказ записи не оставляет — о нём узнаём по пропаже
+   * ждавшего ответа запроса.
+   *
+   * @param name название листа.
+   */
+  function notifyDeclined(name: string): void {
+    toast.add({
+      title: SHEET_EDIT_DECLINED_TOAST.title,
+      description: `«${name}»: ${SHEET_EDIT_DECLINED_TOAST.descriptionSuffix}`,
+      color: 'warning',
+      icon: 'tabler:pencil-off',
+    });
+  }
+
+  /**
+   * Перечитывает «Другие листы» и сообщает об отказах: запросы, которые и
+   * после перечитывания больше не ждут ответа и не разрешены, отклонены.
+   * Перечитывание отсеивает гонку с только что отправленным запросом, которого
+   * сводка ещё не видела.
+   *
+   * @param candidateIds сохранённые листы, чей запрос пропал из сводки.
+   */
+  async function reloadSaved(candidateIds: string[]): Promise<void> {
+    await loadSaved();
+
+    savedSheets.value
+      .filter(
+        (sheet) => candidateIds.includes(sheet.id) && sheet.editStatus === null,
+      )
+      .forEach((sheet) => notifyDeclined(sheet.name));
+  }
+
   /** Отметить все выданные разрешения как увиденные. */
   function markGrantsSeen(): void {
     const approvedIds = (data.value ?? [])
@@ -126,7 +161,7 @@ function createCharacterSheetEditGrants(): UseCharacterSheetEditGrantsReturn {
   // Ответ владельца: тост о новом разрешении и свежий раздел «Другие листы»,
   // если он уже загружен и показывает прежнее право. Цикла нет: загрузка
   // раздела сводку не трогает.
-  watch(data, (accesses) => {
+  watch(data, (accesses, previousAccesses) => {
     (accesses ?? [])
       .filter(
         (access) =>
@@ -143,7 +178,23 @@ function createCharacterSheetEditGrants(): UseCharacterSheetEditGrantsReturn {
       ),
     );
 
-    if (isSavedOutdated) {
+    const currentIds = new Set(
+      (accesses ?? []).map((access) => access.savedId),
+    );
+
+    // Ждал ответа, а в свежей сводке его нет — запрос отклонили.
+    const declinedCandidateIds = [
+      ...(previousAccesses ?? [])
+        .filter((access) => access.status === 'PENDING')
+        .map((access) => access.savedId),
+      ...savedSheets.value
+        .filter((sheet) => sheet.editStatus === 'PENDING')
+        .map((sheet) => sheet.id),
+    ].filter((savedId) => !currentIds.has(savedId));
+
+    if (declinedCandidateIds.length) {
+      void reloadSaved([...new Set(declinedCandidateIds)]);
+    } else if (isSavedOutdated) {
       void loadSaved();
     }
   });
