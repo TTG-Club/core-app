@@ -5,6 +5,10 @@ import type {
   CharacterSheetListItem,
 } from '../model';
 
+import { StatusCodes } from 'http-status-codes';
+
+import { getFetchStatus } from '~initiative/model';
+
 import {
   CHARACTER_SHEET_ROUTE,
   createCharacterSheet,
@@ -575,16 +579,33 @@ export function useCharacterSheetList() {
     // `setSettings`, а сюда документ уходит на бэк напрямую.
     const next: Character = { ...target, settings: toStoredSettings(settings) };
 
+    // Версия — та, с которой карточка пришла в список: лист могли изменить в
+    // другом месте, и тогда сохранение настроек затёрло бы ту правку.
+    const listedVersion =
+      sheets.value.find((sheet) => sheet.id === next.id)?.version ?? null;
+
     try {
-      await updateCharacterSheet(next.id, next);
+      const savedVersion = await updateCharacterSheet(
+        next.id,
+        next,
+        listedVersion,
+      );
 
       sheets.value = sheets.value.map((sheet) =>
-        sheet.id === next.id ? { ...sheet, data: next } : sheet,
+        sheet.id === next.id
+          ? { ...sheet, data: next, version: savedVersion }
+          : sheet,
       );
 
       return true;
     } catch (error) {
       notifyError(error, 'Не удалось сохранить настройки листа');
+
+      // Конфликт версий: карточка показывает устаревший документ — список
+      // перечитывается, чтобы повторная правка шла от актуального.
+      if (getFetchStatus(error) === StatusCodes.CONFLICT) {
+        void load();
+      }
 
       return false;
     } finally {

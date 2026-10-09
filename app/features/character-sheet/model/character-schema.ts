@@ -1506,6 +1506,8 @@ const sheetListItemSchema = z.object({
   shareToken: z.string().nullable().catch(null),
   createdAt: z.string().nullable().catch(null),
   updatedAt: z.string().nullable().catch(null),
+  // С `catch`: бэк без версий поля не пришлёт, а лист по ссылке его не отдаёт.
+  version: z.number().int().nullable().catch(null),
 });
 
 /**
@@ -1533,6 +1535,15 @@ const sheetDetailSchema = z.object({
   name: z.string().catch(''),
   data: z.unknown(),
   shareToken: z.string().nullable().catch(null),
+  version: z.number().int().nullable().catch(null),
+});
+
+/**
+ * Схема ответа сохранения листа: из него нужна только новая версия. Документ
+ * не разбирается — он тот же, что клиент только что отправил.
+ */
+const sheetVersionSchema = z.object({
+  version: z.number().int().nullable().catch(null),
 });
 
 /**
@@ -1582,6 +1593,7 @@ export function parseCharacterSheetListPage(
     shareToken: sheet.shareToken,
     createdAt: sheet.createdAt,
     updatedAt: sheet.updatedAt,
+    version: sheet.version,
   }));
 
   return {
@@ -1728,5 +1740,18 @@ export function parseCharacterSheetDetail(
     name: detail.name,
     data: parseCharacter(detail.data, detail.id),
     shareToken: detail.shareToken,
+    version: detail.version,
   };
+}
+
+/**
+ * Версия листа из ответа сохранения `PUT /{id}`.
+ *
+ * @param input сырой ответ сервера.
+ * @returns новая версия листа; null — бэк без версий её не прислал.
+ */
+export function parseCharacterSheetVersion(input: unknown): number | null {
+  const result = sheetVersionSchema.safeParse(input);
+
+  return result.success ? result.data.version : null;
 }

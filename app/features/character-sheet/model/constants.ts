@@ -115,6 +115,23 @@ export const SHARED_DETAIL_QUERY_PREFIX = 'shared:';
  */
 export const DRAFT_CHARACTER_ID = 'new-character';
 
+/**
+ * Тост конфликта сохранения: лист изменили в другом месте (другая вкладка,
+ * хиты от мастера боя), и автосохранение загрузило актуальную версию вместо
+ * того, чтобы затереть чужую правку.
+ */
+export const SHEET_VERSION_CONFLICT_TOAST = {
+  title: 'Лист изменили в другом месте',
+  description:
+    'Загружена актуальная версия. Последние правки не сохранились — повторите их.',
+} as const;
+
+/** Тост, когда после конфликта сохранения не удалось загрузить актуальный лист. */
+export const SHEET_VERSION_CONFLICT_RELOAD_FAILED_TOAST = {
+  title: 'Лист изменили в другом месте',
+  description: 'Не удалось загрузить актуальную версию — обновите страницу.',
+} as const;
+
 /** Дебаунс автосохранения листа персонажа. */
 export const SHEET_SAVE_DEBOUNCE_MS = 1500;
 

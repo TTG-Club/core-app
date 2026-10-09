@@ -1,11 +1,18 @@
 import type { Character, SheetSaveStatus } from '../model';
 
+import { StatusCodes } from 'http-status-codes';
+
+import { getFetchStatus } from '~initiative/model';
+
 import {
   DRAFT_CHARACTER_ID,
+  fetchCharacterSheet,
   SHEET_KEEPALIVE_MAX_BYTES,
   SHEET_SAVE_DEBOUNCE_MS,
   SHEET_SAVE_RETRY_LIMIT,
   SHEET_SAVE_RETRY_MAX_DELAY_MS,
+  SHEET_VERSION_CONFLICT_RELOAD_FAILED_TOAST,
+  SHEET_VERSION_CONFLICT_TOAST,
   updateCharacterSheet,
 } from '../model';
 import { useCharacterSheet } from './useCharacterSheet';
@@ -64,6 +71,49 @@ export function useCharacterSheetSaveStatus() {
 }
 
 /**
+ * Версии открытых листов: `sheetId → версия`, с которой идёт правка. Пишет
+ * загрузчик (версия из ответа) и автосохранение (новая версия после записи);
+ * читает автосохранение — сервер сверяет её и на устаревшую отвечает 409.
+ *
+ * По листам, а не одна на всё состояние: хвост правок предыдущего листа может
+ * уйти уже после того, как открыт следующий, и должен нести свою версию.
+ *
+ * @returns чтение и запись версии листа.
+ */
+export function useCharacterSheetVersion() {
+  const versions = useState<Record<string, number>>(
+    'character-sheet:versions',
+    () => ({}),
+  );
+
+  /**
+   * Версия листа, с которой идёт правка.
+   *
+   * @param sheetId идентификатор листа.
+   * @returns версия; null — неизвестна, сохранение уйдёт без проверки.
+   */
+  function getSheetVersion(sheetId: string): number | null {
+    return versions.value[sheetId] ?? null;
+  }
+
+  /**
+   * Запоминает версию листа. null (бэк без версий) ничего не меняет.
+   *
+   * @param sheetId идентификатор листа.
+   * @param version версия из ответа сервера.
+   */
+  function setSheetVersion(sheetId: string, version: number | null): void {
+    if (version === null) {
+      return;
+    }
+
+    versions.value = { ...versions.value, [sheetId]: version };
+  }
+
+  return { getSheetVersion, setSheetVersion };
+}
+
+/**
  * Состояние автосохранения — на уровне модуля, а не экземпляра композабла.
  * Контейнеры листа (страница, панель списка, drawer из глобального
  * overlay-хоста) живут по разным жизненным циклам, и их экземпляры автосейва
@@ -101,9 +151,13 @@ let retryAttempt = 0;
  * @returns статус сохранения и повтор после ошибки.
  */
 export function useCharacterSheetAutosave() {
-  const { character, isReadonly } = useCharacterSheet();
+  const { character, isReadonly, loadCharacter } = useCharacterSheet();
 
   const saveStatus = useCharacterSheetSaveStatus();
+
+  const { getSheetVersion, setSheetVersion } = useCharacterSheetVersion();
+
+  const toast = useToast();
 
   /** Повтор отправки после ошибки сохранения — вручную, из шапки листа. */
   function retry(): void {
@@ -161,8 +215,65 @@ export function useCharacterSheetAutosave() {
   }
 
   /**
+   * Выбрасывает из очереди правки листа: после конфликта они построены на
+   * устаревшем документе, и отправка затёрла бы чужое изменение.
+   *
+   * @param sheetId идентификатор листа.
+   */
+  function dropPending(sheetId: string): void {
+    if (pending?.sheetId === sheetId) {
+      pending = null;
+    }
+  }
+
+  /**
+   * Конфликт сохранения: лист изменили в другом месте (другая вкладка, хиты
+   * от мастера боя). Правки из очереди выбрасываются, актуальный документ
+   * загружается в состояние, если лист всё ещё открыт, — иначе следующая
+   * правка снова ушла бы от устаревшей версии.
+   *
+   * Цикла «загрузка → watch → PUT» нет: база выставляется в JSON загруженного
+   * документа до записи в `character`, и `scheduleSave` отсеивает срабатывание
+   * сравнением с ней.
+   *
+   * @param sheetId идентификатор листа, сохранение которого отвергнуто.
+   */
+  async function resolveConflict(sheetId: string): Promise<void> {
+    dropPending(sheetId);
+    retryAttempt = 0;
+
+    try {
+      const detail = await fetchCharacterSheet(sheetId);
+
+      setSheetVersion(sheetId, detail.version);
+      // Правки, сделанные пока шёл запрос, тоже от устаревшего документа.
+      dropPending(sheetId);
+
+      if (baselineSheetId === sheetId) {
+        baselineJson = JSON.stringify(detail.data);
+      }
+
+      if (character.value.id === sheetId) {
+        loadCharacter(detail.data);
+      }
+
+      saveStatus.value = 'saved';
+      toast.add({ ...SHEET_VERSION_CONFLICT_TOAST, color: 'warning' });
+    } catch {
+      saveStatus.value = 'error';
+
+      toast.add({
+        ...SHEET_VERSION_CONFLICT_RELOAD_FAILED_TOAST,
+        color: 'error',
+      });
+    }
+  }
+
+  /**
    * Отправляет накопленные изменения. Ошибка не сбрасывает `pending` — база не
    * двигается, и правку дошлёт повтор (или следующая правка, или `retry`).
+   * Конфликт версий — исключение: такую правку дослать нельзя, её место
+   * занимает актуальный документ (см. {@link resolveConflict}).
    *
    * @param options настройки отправки.
    * @param options.keepalive запрос должен пережить закрытие страницы. Ставится
@@ -179,8 +290,14 @@ export function useCharacterSheetAutosave() {
     isSaving = true;
 
     try {
-      await updateCharacterSheet(current.sheetId, current.data, options);
+      const savedVersion = await updateCharacterSheet(
+        current.sheetId,
+        current.data,
+        getSheetVersion(current.sheetId),
+        options,
+      );
 
+      setSheetVersion(current.sheetId, savedVersion);
       baselineJson = current.json;
       retryAttempt = 0;
 
@@ -191,7 +308,19 @@ export function useCharacterSheetAutosave() {
         // За время запроса накопились новые правки — дошлём следующим циклом.
         restartTimer();
       }
-    } catch {
+    } catch (error) {
+      if (getFetchStatus(error) === StatusCodes.CONFLICT) {
+        await resolveConflict(current.sheetId);
+
+        // В очереди могла остаться правка другого листа: её таймер сработал,
+        // пока шёл этот запрос, и отправка тогда была пропущена.
+        if (pending) {
+          restartTimer();
+        }
+
+        return;
+      }
+
       saveStatus.value = 'error';
       scheduleRetry();
     } finally {

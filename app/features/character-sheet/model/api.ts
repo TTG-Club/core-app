@@ -22,6 +22,7 @@ import {
   parseCharacterSheetDetail,
   parseCharacterSheetListPage,
   parseCharacterSheetShare,
+  parseCharacterSheetVersion,
   parseSavedCharacterSheet,
   parseSavedCharacterSheetListPage,
 } from './character-schema';
@@ -157,25 +158,34 @@ export async function createCharacterSheet(
  * Сохранение листа целиком (автосохранение). Название дублируется из
  * документа, как при создании.
  *
+ * Версия — та, с которой началась правка: если лист с тех пор изменили в
+ * другом месте (другая вкладка, хиты от мастера боя), бэк ответит 409 и ничего
+ * не запишет. null — сохранение без проверки.
+ *
  * @param id идентификатор листа.
  * @param data актуальный персонаж листа.
+ * @param version версия листа, от которой сделана правка.
  * @param options настройки отправки.
  * @param options.keepalive запрос должен пережить закрытие страницы. Браузер
  *   отклоняет такой запрос с телом больше 64 КиБ, поэтому флаг ставит только
  *   автосохранение и только после проверки размера
  *   (см. `SHEET_KEEPALIVE_MAX_BYTES`).
+ * @returns новая версия листа; null — бэк без версий её не прислал.
  */
 export async function updateCharacterSheet(
   id: string,
   data: Character,
+  version: number | null,
   options: { keepalive?: boolean } = {},
-): Promise<void> {
-  await $fetch(`${CHARACTER_SHEET_API_PATH}/${id}`, {
+): Promise<number | null> {
+  const response = await $fetch(`${CHARACTER_SHEET_API_PATH}/${id}`, {
     method: 'PUT',
-    body: { name: data.name, data },
+    body: { name: data.name, data, version },
     keepalive: options.keepalive,
     retry: 0,
   });
+
+  return parseCharacterSheetVersion(response);
 }
 
 /**

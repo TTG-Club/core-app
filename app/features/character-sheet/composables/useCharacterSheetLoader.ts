@@ -13,6 +13,7 @@ import {
   fetchSharedCharacterSheet,
 } from '../model';
 import { useCharacterSheet } from './useCharacterSheet';
+import { useCharacterSheetVersion } from './useCharacterSheetAutosave';
 import { useCharacterSheetShare } from './useCharacterSheetShare';
 
 /** Статус загрузки листа: idle — лист не выбран (пустой идентификатор). */
@@ -70,6 +71,7 @@ export function useCharacterSheetLoader(
 ) {
   const { loadCharacter, resetCharacter, setReadonly } = useCharacterSheet();
   const { setShareToken, setViewedShareToken } = useCharacterSheetShare();
+  const { setSheetVersion } = useCharacterSheetVersion();
   const { user, isAdmin, fetch: fetchProfile } = useUser();
 
   const isShared = computed(() => toValue(options.shared ?? false));
@@ -186,6 +188,9 @@ export function useCharacterSheetLoader(
       // выясняется только по ответу, а автосейв должен увидеть документ уже в
       // режиме просмотра и не слать PUT в чужой лист.
       setReadonly(readonlyReason);
+      // Версия — раньше документа: первая же правка после загрузки должна
+      // уйти с ней, иначе сохранение затёрло бы чужое изменение без проверки.
+      setSheetVersion(detail.id, detail.version);
       loadCharacter(detail.data);
       // У листа по ссылке токена в ответе нет: управление доступом — только у владельца.
       setShareToken(detail.id, detail.shareToken);
