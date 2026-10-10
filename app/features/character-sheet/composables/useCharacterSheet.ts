@@ -111,6 +111,7 @@ import {
   getNextLevelExperience,
   getPreparedSpellsLimitDescription,
   getProficiencySourceId,
+  getPurchaseCostInCopper,
   getResourceMax,
   getSavingThrowRows,
   getSheetRollFlags,
@@ -167,6 +168,7 @@ import {
   sortAbilityKeys,
   SPELL_COPY_TOAST_TITLE,
   SPELL_SLOTS_EMPTY_TOAST_TITLE,
+  spendCurrency,
   syncClassHitDice,
   toCopiedInventoryItem,
   toCopiedSpell,
@@ -3002,6 +3004,61 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Покупка предметов из каталога раздела «Предметы»: предметы добавляются в
+   * инвентарь, а их стоимость списывается из кошелька одним обновлением листа.
+   * Уже добавленные предметы отбрасываются и не оплачиваются; предметы без
+   * распознанной цены бесплатны. Нехватку монеты нужного номинала закрывает
+   * размен более крупной.
+   *
+   * @param inventoryItems предметы с готовыми идентификаторами.
+   * @returns true — покупка прошла; false — лист заблокирован или денег не
+   * хватает.
+   */
+  function purchaseInventoryItems(
+    inventoryItems: CharacterInventoryItem[],
+  ): boolean {
+    if (!ensureEditable()) {
+      return false;
+    }
+
+    const existingIds = new Set(
+      character.value.inventory.map((inventoryItem) => inventoryItem.id),
+    );
+
+    const freshItems = inventoryItems.filter(
+      (inventoryItem) => !existingIds.has(inventoryItem.id),
+    );
+
+    const currency = spendCurrency(
+      character.value.currency,
+      getPurchaseCostInCopper(
+        freshItems.map((inventoryItem) => inventoryItem.cost),
+      ),
+    );
+
+    if (!currency) {
+      return false;
+    }
+
+    character.value = {
+      ...character.value,
+      currency: {
+        copper: clampCurrencyAmount(currency.copper),
+        silver: clampCurrencyAmount(currency.silver),
+        electrum: clampCurrencyAmount(currency.electrum),
+        gold: clampCurrencyAmount(currency.gold),
+        platinum: clampCurrencyAmount(currency.platinum),
+      },
+      inventory: [
+        ...character.value.inventory,
+        ...freshItems.map((inventoryItem) => ({ ...inventoryItem })),
+      ],
+    };
+
+    return true;
+  }
+
+  /**
    * Добавление своего предмета (заполненного формой, а не выбранного из
    * разделов сайта). Идентификатор генерируется с префиксом `custom:` — со
    * слагами каталога он не столкнётся, а инвентарь остаётся единым списком.
@@ -3867,6 +3924,7 @@ export function useCharacterSheet() {
     addNote,
     applyLevelUp,
     addInventoryItems,
+    purchaseInventoryItems,
     addCustomInventoryItem,
     addCustomSpell,
     copyInnateSpellToSheet,

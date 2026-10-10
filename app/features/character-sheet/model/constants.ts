@@ -3893,6 +3893,35 @@ export const CURRENCY_GOLD_RATES: Record<CurrencyKey, number> = {
   platinum: 10,
 };
 
+/**
+ * Стоимость денежной единицы в медных монетах: покупка считается в целых
+ * медяках, чтобы доли золотого не копили ошибку округления.
+ */
+export const CURRENCY_COPPER_RATES: Record<CurrencyKey, number> = {
+  copper: 1,
+  silver: 10,
+  electrum: 50,
+  gold: 100,
+  platinum: 1000,
+};
+
+/**
+ * Монеты сдачи при размене крупной монеты, от крупной к мелкой. Электрум в
+ * сдачу не идёт: по правилам он редкий, и сдачу им не дают.
+ */
+export const CURRENCY_CHANGE_ORDER: CurrencyKey[] = [
+  'platinum',
+  'gold',
+  'silver',
+  'copper',
+];
+
+/**
+ * Монеты подписи цены покупки, от крупной к мелкой: цены справочника заданы в
+ * золоте и мелочи, поэтому платина и электрум в подписи суммы не нужны.
+ */
+export const CURRENCY_PRICE_ORDER: CurrencyKey[] = ['gold', 'silver', 'copper'];
+
 /** Подписи групп каталога для предметов без значения поля группировки. */
 export const MAGIC_ITEM_CATALOG_EMPTY_GROUP_LABELS: Record<
   Exclude<MagicItemCatalogGrouping, 'NONE'>,
@@ -5698,6 +5727,29 @@ export const SHEET_ITEM_ADD_LABELS = {
   pickAria: 'Выбрать предмет',
   preview: 'Открыть описание предмета',
   previewAria: 'Описание предмета',
+  buy: 'Купить',
+} as const;
+
+/** Подписи окна подтверждения покупки предметов. */
+export const SHEET_ITEM_PURCHASE_LABELS = {
+  title: 'Покупка предметов',
+  confirm: 'Купить',
+  total: 'Стоимость',
+  free: 'Бесплатно',
+  freeHint:
+    'Предметы без распознанной цены считаются бесплатными и не списывают деньги.',
+  wallet: 'Кошелёк',
+  walletBefore: 'Сейчас',
+  walletAfter: 'Останется',
+  shortageTitle: 'Не хватает денег',
+  shortagePrefix: 'Не хватает',
+  shortageHint: 'Уберите часть предметов из списка, чтобы денег хватило.',
+  changeHint: 'Недостающие мелкие монеты разменяются из более крупных.',
+  remove: 'Убрать из покупки',
+  empty: 'Список покупки пуст',
+  failed: 'Не удалось купить предметы',
+  partialFailed:
+    'Часть предметов не загрузилась: куплены и оплачены только остальные',
 } as const;
 
 /** Подписи окна добавления магических предметов. */

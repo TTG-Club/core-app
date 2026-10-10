@@ -4085,6 +4085,15 @@ export interface ItemCatalogItem {
   sourceLabel: string;
 }
 
+/** Итог окна покупки предметов. */
+export interface ItemPurchaseResult {
+  /** true — покупка подтверждена; false — окно закрыто кнопкой «Отмена». */
+  confirmed: boolean;
+
+  /** Предметы, оставшиеся в списке покупки после правок в окне. */
+  items: ItemCatalogItem[];
+}
+
 /** Магический предмет каталога в модалке добавления (ссылка из поиска). */
 export interface MagicItemCatalogItem {
   url: string;

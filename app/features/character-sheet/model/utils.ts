@@ -276,10 +276,13 @@ import {
   CREATURE_TYPE_LABELS,
   CURRENCY_AMOUNT_MAX,
   CURRENCY_AMOUNT_MIN,
+  CURRENCY_CHANGE_ORDER,
+  CURRENCY_COPPER_RATES,
   CURRENCY_GOLD_RATES,
   CURRENCY_KEYS_BY_LABEL,
   CURRENCY_LABELS,
   CURRENCY_ORDER,
+  CURRENCY_PRICE_ORDER,
   CUSTOM_ARMOR_TYPE_BY_DEXTERITY_MOD,
   CUSTOM_ARMOR_TYPE_META,
   CUSTOM_BACKGROUND_URL_PREFIX,
@@ -2420,6 +2423,153 @@ export function parseItemCostInGold(costText: string): number | null {
   return Number.isFinite(amount)
     ? amount * CURRENCY_GOLD_RATES[currencyKey]
     : null;
+}
+
+/**
+ * Стоимость в медных монетах из подписи справочника («10 зм» → 1000).
+ *
+ * @param costText подпись стоимости из ответа API.
+ * @returns стоимость в медных; null — подпись не распознана или пуста.
+ */
+export function parseItemCostInCopper(costText: string): number | null {
+  const gold = parseItemCostInGold(costText);
+
+  return gold === null ? null : Math.round(gold * CURRENCY_COPPER_RATES.gold);
+}
+
+/**
+ * Суммарная стоимость покупки в медных монетах. Предметы с нераспознанной или
+ * пустой ценой считаются бесплатными.
+ *
+ * @param costTexts подписи стоимости покупаемых предметов.
+ * @returns сумма в медных монетах.
+ */
+export function getPurchaseCostInCopper(costTexts: string[]): number {
+  return costTexts.reduce(
+    (sum, costText) => sum + (parseItemCostInCopper(costText) ?? 0),
+    0,
+  );
+}
+
+/**
+ * Все стандартные монеты кошелька, пересчитанные в медные.
+ *
+ * @param currency кошелёк персонажа.
+ * @returns сумма в медных монетах.
+ */
+export function getCurrencyInCopper(currency: CharacterCurrency): number {
+  return CURRENCY_ORDER.reduce(
+    (sum, key) => sum + currency[key] * CURRENCY_COPPER_RATES[key],
+    0,
+  );
+}
+
+/**
+ * Раскладка суммы в медных на монеты: от крупной к мелкой, каждой — сколько
+ * помещается целиком.
+ *
+ * @param copperAmount сумма в медных монетах.
+ * @param order монеты раскладки от крупной к мелкой; последней должна быть медь.
+ * @returns количества монет; монет вне `order` — ноль.
+ */
+function splitCopperIntoCoins(
+  copperAmount: number,
+  order: CurrencyKey[],
+): CharacterCurrency {
+  const coins: CharacterCurrency = {
+    copper: 0,
+    silver: 0,
+    electrum: 0,
+    gold: 0,
+    platinum: 0,
+  };
+
+  let rest = copperAmount;
+
+  for (const key of order) {
+    const count = Math.floor(rest / CURRENCY_COPPER_RATES[key]);
+
+    coins[key] = count;
+    rest -= count * CURRENCY_COPPER_RATES[key];
+  }
+
+  return coins;
+}
+
+/**
+ * Оплата покупки из кошелька. Сначала платим монетами от крупной к мелкой без
+ * сдачи; если без сдачи не выходит (мелочи не хватило), разменивается самая
+ * мелкая из оставшихся монет, которая покрывает остаток, а сдача приходит
+ * платиной, золотом, серебром и медью — как размен у торговца по правилам.
+ *
+ * @param currency кошелёк персонажа.
+ * @param costInCopper стоимость покупки в медных монетах.
+ * @returns кошелёк после оплаты; null — денег не хватает.
+ */
+export function spendCurrency(
+  currency: CharacterCurrency,
+  costInCopper: number,
+): CharacterCurrency | null {
+  if (costInCopper > getCurrencyInCopper(currency)) {
+    return null;
+  }
+
+  const wallet: CharacterCurrency = { ...currency };
+
+  let rest = costInCopper;
+
+  for (const key of [...CURRENCY_ORDER].reverse()) {
+    const rate = CURRENCY_COPPER_RATES[key];
+    const used = Math.min(wallet[key], Math.floor(rest / rate));
+
+    wallet[key] -= used;
+    rest -= used * rate;
+  }
+
+  if (rest === 0) {
+    return wallet;
+  }
+
+  // Оставшиеся монеты каждого номинала дороже остатка: жадный проход забрал
+  // всё, что в него помещалось. Денег хватает, значит такая монета есть.
+  const brokenKey = CURRENCY_ORDER.find((key) => wallet[key] > 0);
+
+  if (!brokenKey) {
+    return null;
+  }
+
+  wallet[brokenKey] -= 1;
+
+  const change = splitCopperIntoCoins(
+    CURRENCY_COPPER_RATES[brokenKey] - rest,
+    CURRENCY_CHANGE_ORDER,
+  );
+
+  return {
+    copper: wallet.copper + change.copper,
+    silver: wallet.silver + change.silver,
+    electrum: wallet.electrum + change.electrum,
+    gold: wallet.gold + change.gold,
+    platinum: wallet.platinum + change.platinum,
+  };
+}
+
+/**
+ * Подпись суммы в медных монетах золотом, серебром и медью («12 зм 5 см»).
+ *
+ * @param copperAmount сумма в медных монетах.
+ * @returns подпись суммы; нулевая сумма — «0 зм».
+ */
+export function getCopperAmountLabel(copperAmount: number): string {
+  const coins = splitCopperIntoCoins(copperAmount, CURRENCY_PRICE_ORDER);
+
+  const parts = CURRENCY_PRICE_ORDER.filter((key) => coins[key] > 0).map(
+    (key) => `${coins[key]} ${CURRENCY_LABELS[key].toLowerCase()}`,
+  );
+
+  return parts.length
+    ? parts.join(' ')
+    : `0 ${CURRENCY_LABELS.gold.toLowerCase()}`;
 }
 
 /**
