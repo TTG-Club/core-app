@@ -7,7 +7,9 @@ import {
   DEFAULT_CHARACTER,
   getWeaponAttackBonus,
   getWeaponDamage,
+  getWeaponDamageRiders,
   getWeaponDamageSource,
+  parseCharacter,
   parseFeatDetail,
 } from '~character-sheet/model';
 
@@ -31,6 +33,30 @@ const LONGSWORD: InventoryWeapon = {
 const RAPIER: InventoryWeapon = { ...LONGSWORD, finesse: true };
 
 const LONGBOW: InventoryWeapon = { ...LONGSWORD, ranged: true };
+
+const GREATSWORD: InventoryWeapon = { ...LONGSWORD, heavy: true };
+
+/** Бонус мастерства персонажа первого уровня. */
+const FIRST_LEVEL_PROFICIENCY_BONUS = 2;
+
+/**
+ * «Мастерство тяжёлого оружия» из черты «Мастер большого оружия» — как в
+ * справочнике: эффект для виртуального стола, накладываемый на цель.
+ */
+const HEAVY_WEAPON_MASTERY_EFFECT = {
+  id: 'effect-great-weapon-master-phb-heavy-weapon-mastery',
+  name: 'Мастерство тяжёлого оружия',
+  description: 'В свой ход попали оружием со свойством «тяжёлое».',
+  disabled: true,
+  origin: 'feature',
+  transfer: false,
+  duration: { type: 'permanent' },
+  changes: [],
+  flags: [],
+  effectTarget: 'target',
+  activation: { mode: 'use' },
+  damageParts: [{ formula: '(@prof)@dmg.choice', target: 'selected' }],
+};
 
 /**
  * Постоянный эффект с одним изменением — в том виде, в каком его отдаёт
@@ -192,5 +218,50 @@ describe('прибавки боевых стилей к броскам оруж�
     expect(getWeaponDamage(duelist, LONGSWORD, false, null)?.effectBonus).toBe(
       0,
     );
+  });
+});
+
+describe('прибавки к урону оружия по применению', () => {
+  const master = buildCharacterWithFeat(
+    'Мастер большого оружия',
+    HEAVY_WEAPON_MASTERY_EFFECT,
+  );
+
+  it('тяжёлому оружию предлагается бонус мастерства', () => {
+    expect(getWeaponDamageRiders(master, GREATSWORD)).toEqual([
+      {
+        id: HEAVY_WEAPON_MASTERY_EFFECT.id,
+        name: HEAVY_WEAPON_MASTERY_EFFECT.name,
+        description: HEAVY_WEAPON_MASTERY_EFFECT.description,
+        bonus: FIRST_LEVEL_PROFICIENCY_BONUS,
+      },
+    ]);
+  });
+
+  it('в сам урон прибавка без галочки не входит', () => {
+    const damage = getWeaponDamageSource(master, GREATSWORD, false, null);
+
+    expect(damage?.effectBonus).toBe(0);
+    expect(damage?.riders).toHaveLength(1);
+  });
+
+  it('оружию без свойства «Тяжёлое» прибавка не предлагается', () => {
+    expect(getWeaponDamageRiders(master, LONGSWORD)).toEqual([]);
+  });
+
+  it('прибавка переживает сохранение листа', () => {
+    expect(
+      getWeaponDamageRiders(parseCharacter(master, 'sheet'), GREATSWORD),
+    ).toHaveLength(1);
+  });
+
+  it('урон костью и своим типом прибавкой к удару не считается', () => {
+    const smiter = buildCharacterWithFeat('Кара', {
+      ...HEAVY_WEAPON_MASTERY_EFFECT,
+      id: 'effect-smite',
+      damageParts: [{ formula: '2к8@dmg.radiant', target: 'selected' }],
+    });
+
+    expect(getWeaponDamageRiders(smiter, GREATSWORD)).toEqual([]);
   });
 });

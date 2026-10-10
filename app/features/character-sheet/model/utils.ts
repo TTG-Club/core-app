@@ -165,6 +165,7 @@ import type {
   VisionRow,
   WeaponAttack,
   WeaponDamage,
+  WeaponDamageRider,
 } from './types';
 
 import {
@@ -183,6 +184,7 @@ import {
 import { LEVELS } from '~/shared/consts';
 import {
   DEFAULT_EFFECT_CHANGE_PRIORITY,
+  EFFECT_ACTIVATION_MODE,
   evaluateFormula,
 } from '~active-effects/model';
 import {
@@ -337,6 +339,7 @@ import {
   FILTER_CHIP_SELECTED_CLASS,
   GENERAL_FEAT_CATEGORY,
   HEAVY_WEAPON_ABILITY_MINIMUM,
+  HEAVY_WEAPON_RIDER_EFFECT_IDS,
   HIT_DICE_ROLL_COUNT,
   HIT_POINTS_LEVEL_GAIN_MIN,
   INNATE_SPELL_REMOVE_MENU_LABEL,
@@ -479,6 +482,7 @@ import {
   VISION_ORDER,
   VISION_UNLIMITED_LABEL,
   WEAPON_CATEGORY_LABELS,
+  WEAPON_DAMAGE_TYPE_TOKEN,
   WEAPON_MASTERY_PROPERTY_NAMES,
   WEAPON_MATCH_KEYWORDS,
   WEAPON_NAMES_BY_MASTERY_PROPERTY_NAME,
@@ -5030,6 +5034,88 @@ function getWeaponDamageEffectBonus(
 }
 
 /**
+ * Величина прибавки «по применению» числом: сумма частей урона эффекта.
+ *
+ * Прибавкой к удару оружием считается эффект, у которого каждая часть урона
+ * идёт типом оружия и считается листом числом («бонус мастерства»). Кость, свой
+ * тип урона и лечение дают null: это отдельный бросок, а не слагаемое удара.
+ *
+ * @param character персонаж.
+ * @param effect активный эффект записи.
+ * @param classLevel уровень в классе записи-носителя — значение `@classLevel`.
+ * @returns прибавка к урону; null — эффект не прибавка к удару оружием.
+ */
+function getWeaponDamageRiderBonus(
+  character: Character,
+  effect: ActiveEffect,
+  classLevel: number,
+): number | null {
+  const damageParts = effect.damageParts ?? [];
+
+  if (!damageParts.length) {
+    return null;
+  }
+
+  let total = 0;
+
+  for (const damagePart of damageParts) {
+    const formula = damagePart.formula.trim();
+
+    const value = formula.endsWith(WEAPON_DAMAGE_TYPE_TOKEN)
+      ? evaluateEffectFormula(
+          character,
+          formula.slice(0, -WEAPON_DAMAGE_TYPE_TOKEN.length),
+          classLevel,
+        )
+      : null;
+
+    if (value === null) {
+      return null;
+    }
+
+    total += value;
+  }
+
+  return total;
+}
+
+/**
+ * Прибавки к урону оружия «по применению»: эффекты умений и черт, которые
+ * за виртуальным столом накладывают на цель после попадания («Мастерство
+ * тяжёлого оружия» — урон, равный бонусу мастерства). Цели у листа нет, поэтому
+ * такая прибавка предлагается галочкой в окне броска урона.
+ *
+ * Эффект берётся и выключенным: «по применению» он выключен всегда — включает
+ * его само применение.
+ *
+ * @param character персонаж.
+ * @param weapon параметры оружия.
+ * @returns прибавки, подходящие этому оружию; пустой список — их нет.
+ */
+export function getWeaponDamageRiders(
+  character: Character,
+  weapon: InventoryWeapon,
+): WeaponDamageRider[] {
+  return getEffectCarriers(character).flatMap(({ effects, classLevel }) =>
+    effects
+      .filter(
+        (effect) =>
+          effect.activation?.mode === EFFECT_ACTIVATION_MODE.use
+          && effect.effectTarget === 'target'
+          && (weapon.heavy
+            || !HEAVY_WEAPON_RIDER_EFFECT_IDS.includes(effect.id)),
+      )
+      .map((effect) => ({
+        id: effect.id,
+        name: effect.name,
+        description: effect.description,
+        bonus: getWeaponDamageRiderBonus(character, effect, classLevel) ?? 0,
+      }))
+      .filter((rider) => rider.bonus > 0),
+  );
+}
+
+/**
  * Бросок урона оружием: кости из справочника, собственный бонус оружия,
  * прибавки активных эффектов и модификатор той же характеристики, что и у
  * атаки. Универсальное оружие, взятое
@@ -5133,6 +5219,7 @@ export function getWeaponDamageSource(
       : damage.diceNotation,
     flatBonus: damage.weaponBonus,
     effectBonus: damage.effectBonus,
+    riders: getWeaponDamageRiders(character, weapon),
     ability: damage.ability,
     // Модификатор характеристики входит в урон оружия ровно один раз.
     abilityModifierCount: 1,

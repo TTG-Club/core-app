@@ -61,6 +61,30 @@
 
   const draftBonus = ref(0);
 
+  // Прибавки «по применению» выключены, пока игрок не отметит: идут они не в
+  // каждый удар, а условие («в свой ход действием Атака») лист не проверит.
+  const enabledRiderIds = ref<string[]>([]);
+
+  const enabledRiders = computed(() =>
+    props.damage.riders.filter((rider) =>
+      enabledRiderIds.value.includes(rider.id),
+    ),
+  );
+
+  const ridersBonus = computed(() =>
+    enabledRiders.value.reduce((total, rider) => total + rider.bonus, 0),
+  );
+
+  /** Подписи галочек: название эффекта с величиной прибавки. */
+  const riderOptions = computed(() =>
+    props.damage.riders.map((rider) => ({
+      id: rider.id,
+      label: `${rider.name} ${getFormattedBonus(rider.bonus)}`,
+      description: rider.description,
+      enabled: enabledRiderIds.value.includes(rider.id),
+    })),
+  );
+
   const draftAbility = ref<AbilityKey | typeof ROLL_ABILITY_AUTO>(
     ROLL_ABILITY_AUTO,
   );
@@ -90,6 +114,7 @@
       baseNotation.flatBonus
       + props.damage.flatBonus
       + props.damage.effectBonus
+      + ridersBonus.value
       + props.damage.abilityModifierCount * abilityModifier.value,
   );
 
@@ -118,6 +143,10 @@
       baseParts.push(
         `${ABILITY_LABELS[abilityKey.value]} ${getFormattedBonus(abilityModifier.value)}${repeat}`,
       );
+    }
+
+    for (const rider of enabledRiders.value) {
+      baseParts.push(`${rider.name} ${getFormattedBonus(rider.bonus)}`);
     }
 
     const typePart = props.damage.typeLabel
@@ -160,6 +189,12 @@
     diceGroups.value = diceGroups.value.filter(
       (_, index) => index !== diceIndex,
     );
+  }
+
+  function handleRiderToggle(riderId: string) {
+    enabledRiderIds.value = enabledRiderIds.value.includes(riderId)
+      ? enabledRiderIds.value.filter((enabledId) => enabledId !== riderId)
+      : [...enabledRiderIds.value, riderId];
   }
 
   function handleRollClick() {
@@ -233,6 +268,26 @@
             :disabled="!canAddDice"
             block
             @click.left.exact.prevent="handleDiceAdd"
+          />
+        </div>
+
+        <div
+          v-if="riderOptions.length"
+          class="flex flex-col gap-2"
+        >
+          <span
+            class="text-[10px] font-bold tracking-wider text-muted uppercase"
+          >
+            {{ SHEET_DAMAGE_MODAL_LABELS.riders }}
+          </span>
+
+          <UCheckbox
+            v-for="riderOption in riderOptions"
+            :key="riderOption.id"
+            :model-value="riderOption.enabled"
+            :label="riderOption.label"
+            :description="riderOption.description"
+            @update:model-value="handleRiderToggle(riderOption.id)"
           />
         </div>
 

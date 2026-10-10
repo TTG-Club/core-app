@@ -4987,6 +4987,7 @@ export const EMPTY_DAMAGE_ROLL_SOURCE: DamageRollSource = {
   diceNotation: '',
   flatBonus: 0,
   effectBonus: 0,
+  riders: [],
   ability: null,
   abilityModifierCount: 0,
   typeLabel: '',
@@ -6108,7 +6109,25 @@ export const SHEET_DAMAGE_MODAL_LABELS = {
   addDie: 'Добавить кость',
   ability: 'Характеристика',
   bonus: 'Доп. бонус',
+  riders: 'Прибавки по применению',
 } as const;
+
+/**
+ * Токен «урон того же типа, что у оружия» в части урона эффекта: тип на выбор
+ * без списка типов. По нему лист узнаёт прибавку к удару оружием среди прочих
+ * эффектов «по применению» (лечение, урон умения своим типом).
+ */
+export const WEAPON_DAMAGE_TYPE_TOKEN = '@dmg.choice';
+
+/**
+ * Эффекты, чья прибавка идёт только оружию со свойством «Тяжёлое». Само
+ * ограничение в данных эффекта не записано — оно стоит в его описании, а
+ * виртуальному столу его заменяет выбор цели игроком, — поэтому лист знает
+ * такие эффекты поимённо. Эффект не из списка предлагается любому оружию.
+ */
+export const HEAVY_WEAPON_RIDER_EFFECT_IDS: readonly string[] = [
+  'effect-great-weapon-master-phb-heavy-weapon-mastery',
+];
 
 /** Подписи окна валюты. */
 export const SHEET_CURRENCY_MODAL_LABELS = {

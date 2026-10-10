@@ -575,6 +575,7 @@
             flatBonus: 0,
             // Прибавки эффектов к урону заклинаний лист не считает
             effectBonus: 0,
+            riders: [],
             // Заклинание черты считается от её характеристики, а не от
             // характеристики класса: у «Посвящённого в магию» она своя
             ability: spell.spellcastingAbility ?? props.spellcasting.ability,
