@@ -309,9 +309,10 @@
 
   const charges = computed(() => props.inventoryItem.charges);
 
-  // Продать можно только то, что есть в наличии и имеет цену.
-  const isSellable = computed(
-    () => getInventoryItemSalePriceInCopper(props.inventoryItem) !== null,
+  // Выручка за продажу: продать можно только то, что есть в наличии и имеет
+  // цену, иначе пункт меню неактивен.
+  const salePrice = computed(() =>
+    getInventoryItemSalePriceInCopper(props.inventoryItem),
   );
 
   // Правка и удаление — под многоточием: строка и без них плотная (иконка,
@@ -353,7 +354,8 @@
       onEdit: isCustom.value ? () => emit('edit') : undefined,
       onCopy: isCustom.value ? undefined : () => emit('copy'),
       onRemove: () => emit('remove'),
-      onSell: isSellable.value ? () => emit('sell') : undefined,
+      onSell: () => emit('sell'),
+      salePrice: salePrice.value,
     }),
   );
 

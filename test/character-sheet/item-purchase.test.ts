@@ -13,7 +13,7 @@ import {
   getInventoryItemSalePriceInCopper,
   getPurchaseCostInCopper,
   INVENTORY_REMOVE_MENU_LABEL,
-  INVENTORY_SELL_MENU_LABEL,
+  INVENTORY_SELL_MENU_LABELS,
   spendCurrency,
 } from '~character-sheet/model';
 
@@ -98,6 +98,7 @@ const MENU_OPTIONS = {
   rulesAttackAbility: null,
   attuned: false,
   active: false,
+  salePrice: null,
 };
 
 describe('продажа предмета', () => {
@@ -121,23 +122,27 @@ describe('продажа предмета', () => {
     ).toEqual({ ...EMPTY_WALLET, gold: 12, silver: 5, copper: 2, platinum: 1 });
   });
 
-  it('пункт «Продать» стоит прямо перед удалением', () => {
+  it('пункт «Продать» с ценой стоит прямо перед удалением', () => {
     const labels = getInventoryItemMenuItems({
       ...MENU_OPTIONS,
       onSell: () => undefined,
+      salePrice: 300,
     }).map((menuItem) => menuItem.label);
 
     expect(labels.slice(-2)).toEqual([
-      INVENTORY_SELL_MENU_LABEL,
+      `${INVENTORY_SELL_MENU_LABELS.sellFor} 3 зм`,
       INVENTORY_REMOVE_MENU_LABEL,
     ]);
   });
 
-  it('без продажи пункта нет', () => {
-    const labels = getInventoryItemMenuItems(MENU_OPTIONS).map(
-      (menuItem) => menuItem.label,
+  it('без цены пункт виден, но неактивен', () => {
+    const sellItem = getInventoryItemMenuItems({
+      ...MENU_OPTIONS,
+      onSell: () => undefined,
+    }).find(
+      (menuItem) => menuItem.label === INVENTORY_SELL_MENU_LABELS.noPrice,
     );
 
-    expect(labels).not.toContain(INVENTORY_SELL_MENU_LABEL);
+    expect(sellItem?.disabled).toBe(true);
   });
 });
