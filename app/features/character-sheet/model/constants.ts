@@ -5373,6 +5373,9 @@ export const INVENTORY_SELL_CONFIRM_TITLE = 'Продать предмет?';
 /** Подпись кнопки подтверждения продажи предмета. */
 export const INVENTORY_SELL_CONFIRM_LABEL = 'Продать';
 
+/** Единица количества в тексте подтверждения продажи («3 шт.»). */
+export const INVENTORY_QUANTITY_UNIT_LABEL = 'шт.';
+
 /** То же для строки заклинания: убирается оно из книги заклинаний. */
 export const SPELL_REMOVE_MENU_LABEL = 'Убрать из книги';
 

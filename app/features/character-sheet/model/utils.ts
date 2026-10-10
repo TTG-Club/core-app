@@ -362,6 +362,7 @@ import {
   INVENTORY_GRIP_MENU_LABELS,
   INVENTORY_QUANTITY_MAX,
   INVENTORY_QUANTITY_MIN,
+  INVENTORY_QUANTITY_UNIT_LABEL,
   INVENTORY_REMOVE_MENU_LABEL,
   INVENTORY_RESTORE_CHARGES_MENU_LABEL,
   INVENTORY_SELL_MENU_LABEL,
@@ -2629,7 +2630,9 @@ export function getInventorySellDescription(
   salePrice: number,
 ): string {
   const quantityLabel =
-    inventoryItem.quantity > 1 ? ` (${inventoryItem.quantity} шт.)` : '';
+    inventoryItem.quantity > 1
+      ? ` (${inventoryItem.quantity} ${INVENTORY_QUANTITY_UNIT_LABEL})`
+      : '';
 
   return `«${inventoryItem.name}»${quantityLabel} уйдёт из снаряжения, в кошелёк вернётся ${getCopperAmountLabel(salePrice)}.`;
 }

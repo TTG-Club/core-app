@@ -65,7 +65,7 @@
   );
 
   interface SummaryTile {
-    key: string;
+    key: 'wallet' | 'cost' | 'balance';
     label: string;
     value: string;
     valueClass: string;

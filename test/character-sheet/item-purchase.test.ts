@@ -12,6 +12,8 @@ import {
   getInventoryItemMenuItems,
   getInventoryItemSalePriceInCopper,
   getPurchaseCostInCopper,
+  INVENTORY_REMOVE_MENU_LABEL,
+  INVENTORY_SELL_MENU_LABEL,
   spendCurrency,
 } from '~character-sheet/model';
 
@@ -125,7 +127,10 @@ describe('продажа предмета', () => {
       onSell: () => undefined,
     }).map((menuItem) => menuItem.label);
 
-    expect(labels.slice(-2)).toEqual(['Продать', 'Убрать из снаряжения']);
+    expect(labels.slice(-2)).toEqual([
+      INVENTORY_SELL_MENU_LABEL,
+      INVENTORY_REMOVE_MENU_LABEL,
+    ]);
   });
 
   it('без продажи пункта нет', () => {
@@ -133,6 +138,6 @@ describe('продажа предмета', () => {
       (menuItem) => menuItem.label,
     );
 
-    expect(labels).not.toContain('Продать');
+    expect(labels).not.toContain(INVENTORY_SELL_MENU_LABEL);
   });
 });
