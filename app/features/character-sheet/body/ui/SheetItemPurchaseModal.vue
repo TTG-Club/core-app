@@ -1,23 +1,15 @@
 <script setup lang="ts">
-  import type {
-    CurrencyKey,
-    ItemCatalogItem,
-    ItemPurchaseResult,
-  } from '../../model';
+  import type { ItemCatalogItem, ItemPurchaseResult } from '../../model';
 
   import { ACTION_LABELS } from '~/shared/consts';
 
   import { useCharacterSheet } from '../../composables';
   import {
-    CURRENCY_LABELS,
-    CURRENCY_NAMES,
-    CURRENCY_ORDER,
     getCopperAmountLabel,
     getCurrencyInCopper,
     getPurchaseCostInCopper,
     parseItemCostInCopper,
     SHEET_ITEM_PURCHASE_LABELS,
-    spendCurrency,
   } from '../../model';
 
   const { items } = defineProps<{
@@ -34,24 +26,21 @@
   const draftItems = ref<ItemCatalogItem[]>([...items]);
 
   interface PurchaseRow extends ItemCatalogItem {
-    isFree: boolean;
     costLabel: string;
   }
 
   const purchaseRows = computed<PurchaseRow[]>(() =>
-    draftItems.value.map((catalogItem) => {
-      const isFree = parseItemCostInCopper(catalogItem.cost) === null;
-
-      return {
-        ...catalogItem,
-        isFree,
-        costLabel: isFree ? SHEET_ITEM_PURCHASE_LABELS.free : catalogItem.cost,
-      };
-    }),
+    draftItems.value.map((catalogItem) => ({
+      ...catalogItem,
+      costLabel:
+        parseItemCostInCopper(catalogItem.cost) === null
+          ? SHEET_ITEM_PURCHASE_LABELS.free
+          : catalogItem.cost,
+    })),
   );
 
-  const hasFreeItems = computed(() =>
-    purchaseRows.value.some((purchaseRow) => purchaseRow.isFree),
+  const walletInCopper = computed(() =>
+    getCurrencyInCopper(character.value.currency),
   );
 
   const costInCopper = computed(() =>
@@ -60,72 +49,59 @@
     ),
   );
 
-  const costLabel = computed(() => getCopperAmountLabel(costInCopper.value));
-
-  /** Кошелёк после оплаты; null — денег не хватает. */
-  const currencyAfter = computed(() =>
-    spendCurrency(character.value.currency, costInCopper.value),
+  /** Остаток после оплаты; отрицательный — денег не хватает. */
+  const balanceInCopper = computed(
+    () => walletInCopper.value - costInCopper.value,
   );
 
-  const shortageLabel = computed(() => {
-    const shortage =
-      costInCopper.value - getCurrencyInCopper(character.value.currency);
+  const isShortage = computed(() => balanceInCopper.value < 0);
 
-    return `${SHEET_ITEM_PURCHASE_LABELS.shortagePrefix} ${getCopperAmountLabel(shortage)}. ${SHEET_ITEM_PURCHASE_LABELS.shortageHint}`;
-  });
+  const shortageLabel = computed(() =>
+    getCopperAmountLabel(Math.abs(balanceInCopper.value)),
+  );
 
-  interface WalletRow {
-    key: CurrencyKey;
+  const shortageTitle = computed(
+    () => `${SHEET_ITEM_PURCHASE_LABELS.shortageTitle}: ${shortageLabel.value}`,
+  );
+
+  interface SummaryTile {
+    key: string;
     label: string;
-    name: string;
-    before: number;
-    after: number;
-    afterClass: string;
+    value: string;
+    valueClass: string;
   }
 
-  /**
-   * Цвет количества монеты после оплаты: убыль, прибавка сдачей или без
-   * изменений.
-   *
-   * @param before количество до покупки.
-   * @param after количество после покупки.
-   * @returns классы цвета текста.
-   */
-  function getWalletAfterClass(before: number, after: number): string {
-    if (after < before) {
-      return 'text-error';
-    }
-
-    if (after > before) {
-      return 'text-success';
-    }
-
-    return 'text-highlighted';
-  }
-
-  const walletRows = computed<WalletRow[]>(() =>
-    CURRENCY_ORDER.map((key) => {
-      const before = character.value.currency[key];
-      const after = currencyAfter.value?.[key] ?? before;
-
-      return {
-        key,
-        label: CURRENCY_LABELS[key],
-        name: CURRENCY_NAMES[key],
-        before,
-        after,
-        afterClass: getWalletAfterClass(before, after),
-      };
-    }),
-  );
-
-  /** Оплата идёт с разменом: какой-то монеты после покупки стало больше. */
-  const hasChange = computed(() =>
-    walletRows.value.some((walletRow) => walletRow.after > walletRow.before),
-  );
+  /** Плитки сводки: сколько есть, сколько уйдёт и что останется (или нехватка). */
+  const summaryTiles = computed<SummaryTile[]>(() => [
+    {
+      key: 'wallet',
+      label: SHEET_ITEM_PURCHASE_LABELS.wallet,
+      value: getCopperAmountLabel(walletInCopper.value),
+      valueClass: 'text-highlighted',
+    },
+    {
+      key: 'cost',
+      label: SHEET_ITEM_PURCHASE_LABELS.cost,
+      value: getCopperAmountLabel(costInCopper.value),
+      valueClass: 'text-highlighted',
+    },
+    isShortage.value
+      ? {
+          key: 'balance',
+          label: SHEET_ITEM_PURCHASE_LABELS.shortage,
+          value: shortageLabel.value,
+          valueClass: 'text-error',
+        }
+      : {
+          key: 'balance',
+          label: SHEET_ITEM_PURCHASE_LABELS.remaining,
+          value: getCopperAmountLabel(balanceInCopper.value),
+          valueClass: 'text-success',
+        },
+  ]);
 
   const isConfirmDisabled = computed(
-    () => !draftItems.value.length || !currencyAfter.value,
+    () => !draftItems.value.length || isShortage.value,
   );
 
   /**
@@ -157,130 +133,86 @@
 <template>
   <UModal
     :title="SHEET_ITEM_PURCHASE_LABELS.title"
-    :ui="{ content: 'sm:max-w-lg' }"
+    :ui="{ content: 'sm:max-w-md' }"
   >
     <template #body>
       <div class="flex flex-col gap-4">
-        <div class="flex max-h-72 flex-col gap-1 overflow-y-auto pr-1">
+        <div class="grid grid-cols-3 gap-2">
           <div
-            v-for="purchaseRow in purchaseRows"
-            :key="purchaseRow.url"
-            class="flex items-center gap-2 rounded-md px-3 py-1.5 hover:bg-elevated/60"
+            v-for="summaryTile in summaryTiles"
+            :key="summaryTile.key"
+            class="flex min-w-0 flex-col gap-1 rounded-lg border border-default/50 bg-elevated/20 p-3"
           >
             <span
-              class="min-w-0 grow truncate text-sm font-medium text-highlighted"
+              class="truncate text-[10px] font-bold tracking-wider text-muted uppercase"
             >
-              {{ purchaseRow.name }}
-            </span>
-
-            <span class="shrink-0 text-xs text-muted">
-              {{ purchaseRow.costLabel }}
-            </span>
-
-            <UTooltip :text="SHEET_ITEM_PURCHASE_LABELS.remove">
-              <UButton
-                icon="tabler:x"
-                color="neutral"
-                variant="ghost"
-                size="xs"
-                square
-                :aria-label="`${SHEET_ITEM_PURCHASE_LABELS.remove}: ${purchaseRow.name}`"
-                @click.left.exact.prevent="handleRemove(purchaseRow.url)"
-              />
-            </UTooltip>
-          </div>
-
-          <span
-            v-if="!purchaseRows.length"
-            class="px-3 py-6 text-center text-sm text-dimmed"
-          >
-            {{ SHEET_ITEM_PURCHASE_LABELS.empty }}
-          </span>
-        </div>
-
-        <div
-          class="flex items-center justify-between gap-3 rounded-lg border border-default/50 bg-elevated/20 p-3"
-        >
-          <span class="text-sm text-muted">
-            {{ SHEET_ITEM_PURCHASE_LABELS.total }}
-          </span>
-
-          <span class="text-sm font-semibold text-highlighted">
-            {{ costLabel }}
-          </span>
-        </div>
-
-        <div class="flex flex-col gap-2">
-          <span class="text-sm text-muted">
-            {{ SHEET_ITEM_PURCHASE_LABELS.wallet }}
-          </span>
-
-          <div
-            class="grid grid-cols-[auto_repeat(5,minmax(0,1fr))] gap-x-3 gap-y-1 rounded-lg border border-default/50 bg-elevated/20 p-3 text-sm"
-          >
-            <span />
-
-            <UTooltip
-              v-for="walletRow in walletRows"
-              :key="`label-${walletRow.key}`"
-              :text="walletRow.name"
-            >
-              <span class="text-center text-xs font-medium text-muted">
-                {{ walletRow.label }}
-              </span>
-            </UTooltip>
-
-            <span class="text-muted">
-              {{ SHEET_ITEM_PURCHASE_LABELS.walletBefore }}
+              {{ summaryTile.label }}
             </span>
 
             <span
-              v-for="walletRow in walletRows"
-              :key="`before-${walletRow.key}`"
-              class="text-center text-highlighted tabular-nums"
+              class="truncate text-sm font-semibold tabular-nums"
+              :class="summaryTile.valueClass"
             >
-              {{ walletRow.before }}
+              {{ summaryTile.value }}
             </span>
-
-            <template v-if="currencyAfter">
-              <span class="text-muted">
-                {{ SHEET_ITEM_PURCHASE_LABELS.walletAfter }}
-              </span>
-
-              <span
-                v-for="walletRow in walletRows"
-                :key="`after-${walletRow.key}`"
-                class="text-center font-semibold tabular-nums"
-                :class="walletRow.afterClass"
-              >
-                {{ walletRow.after }}
-              </span>
-            </template>
           </div>
         </div>
 
         <UAlert
-          v-if="!currencyAfter"
-          icon="tabler:coin-off"
+          v-if="isShortage"
+          icon="tabler:alert-triangle"
           color="error"
           variant="subtle"
-          :title="SHEET_ITEM_PURCHASE_LABELS.shortageTitle"
-          :description="shortageLabel"
+          :title="shortageTitle"
+          :description="SHEET_ITEM_PURCHASE_LABELS.shortageHint"
         />
 
-        <p
-          v-if="hasChange"
-          class="text-xs text-muted"
-        >
-          {{ SHEET_ITEM_PURCHASE_LABELS.changeHint }}
-        </p>
+        <div class="flex flex-col gap-1">
+          <span
+            class="text-[10px] font-bold tracking-wider text-muted uppercase"
+          >
+            {{ SHEET_ITEM_PURCHASE_LABELS.purchases }}
+          </span>
 
-        <p
-          v-if="hasFreeItems"
-          class="text-xs text-muted"
-        >
-          {{ SHEET_ITEM_PURCHASE_LABELS.freeHint }}
-        </p>
+          <div
+            class="flex max-h-72 flex-col divide-y divide-default/50 overflow-y-auto"
+          >
+            <div
+              v-for="purchaseRow in purchaseRows"
+              :key="purchaseRow.url"
+              class="flex items-center gap-2 py-2"
+            >
+              <span
+                class="min-w-0 grow truncate text-sm font-medium text-highlighted"
+              >
+                {{ purchaseRow.name }}
+              </span>
+
+              <span class="shrink-0 text-xs text-muted">
+                {{ purchaseRow.costLabel }}
+              </span>
+
+              <UTooltip :text="SHEET_ITEM_PURCHASE_LABELS.remove">
+                <UButton
+                  icon="tabler:x"
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  square
+                  :aria-label="`${SHEET_ITEM_PURCHASE_LABELS.remove}: ${purchaseRow.name}`"
+                  @click.left.exact.prevent="handleRemove(purchaseRow.url)"
+                />
+              </UTooltip>
+            </div>
+
+            <span
+              v-if="!purchaseRows.length"
+              class="py-6 text-center text-sm text-dimmed"
+            >
+              {{ SHEET_ITEM_PURCHASE_LABELS.empty }}
+            </span>
+          </div>
+        </div>
       </div>
     </template>
 
