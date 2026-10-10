@@ -4986,6 +4986,7 @@ export const DAMAGE_DICE_GROUPS_MAX = 6;
 export const EMPTY_DAMAGE_ROLL_SOURCE: DamageRollSource = {
   diceNotation: '',
   flatBonus: 0,
+  effectBonus: 0,
   ability: null,
   abilityModifierCount: 0,
   typeLabel: '',

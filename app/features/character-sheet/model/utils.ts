@@ -497,7 +497,9 @@ import {
 } from './effect-engine';
 import {
   getEffectBonusTarget,
+  getWeaponDamageChangeKeys,
   isSelfAppliedEffect,
+  matchesAttackAbilityCondition,
   parseEffectValue,
   toInventoryBonusesFromEffects,
 } from './effects';
@@ -4983,8 +4985,54 @@ function getWeaponAbility(
 }
 
 /**
- * Бросок урона оружием: кости из справочника, собственный бонус оружия и
- * модификатор той же характеристики, что и у атаки. Универсальное оружие, взятое
+ * Прибавка к урону оружия от активных эффектов листа: умений и черт («Дуэлянт»,
+ * «Ярость»), надетого снаряжения и своих эффектов игрока.
+ *
+ * Берутся изменения режима «добавить» с числом или формулой листа — без
+ * условия либо с условием о характеристике удара. Кость («1к6») и условие о
+ * цели остаются броску за виртуальным столом: посчитать их листу нечем.
+ *
+ * Считается по самим эффектам, а не по снимку бонусов записи: так прибавку
+ * получают и листы, где черта взята раньше, чем лист научился её читать.
+ *
+ * @param character персонаж.
+ * @param weapon параметры оружия.
+ * @param ability характеристика атаки этим оружием.
+ * @returns суммарная прибавка; 0 — подходящих эффектов нет.
+ */
+function getWeaponDamageEffectBonus(
+  character: Character,
+  weapon: InventoryWeapon,
+  ability: AbilityKey,
+): number {
+  const damageKeys = getWeaponDamageChangeKeys(weapon.ranged);
+
+  return getEffectCarriers(character).reduce(
+    (total, { effects, classLevel }) =>
+      effects
+        .filter(isSelfAppliedEffect)
+        .flatMap((effect) => effect.changes)
+        .filter(
+          (change) =>
+            change.mode === 'add'
+            && damageKeys.includes(change.key)
+            && (!change.condition
+              || matchesAttackAbilityCondition(change.condition, ability)),
+        )
+        .reduce(
+          (carrierTotal, change) =>
+            carrierTotal
+            + (evaluateEffectFormula(character, change.value, classLevel) ?? 0),
+          total,
+        ),
+    0,
+  );
+}
+
+/**
+ * Бросок урона оружием: кости из справочника, собственный бонус оружия,
+ * прибавки активных эффектов и модификатор той же характеристики, что и у
+ * атаки. Универсальное оружие, взятое
  * двумя руками, катит свой второй бросок — кость у него больше. Использует
  * ASCII-минус — формула уходит в парсер дайс-роллера.
  *
@@ -5025,7 +5073,10 @@ export function getWeaponDamage(
     ? `${diceNotation}+${extraNotation}`
     : diceNotation;
 
-  const totalBonus = damage.bonus + getAbilityModifier(character, ability);
+  const effectBonus = getWeaponDamageEffectBonus(character, weapon, ability);
+
+  const totalBonus =
+    damage.bonus + effectBonus + getAbilityModifier(character, ability);
 
   const sign = totalBonus < 0 ? '-' : '+';
 
@@ -5036,6 +5087,7 @@ export function getWeaponDamage(
         : `${diceFormula}${sign}${Math.abs(totalBonus)}`,
     diceNotation,
     weaponBonus: damage.bonus,
+    effectBonus,
     ability,
     typeLabel: DAMAGE_TYPE_LABELS[damage.type] ?? '',
     extraNotation,
@@ -5080,6 +5132,7 @@ export function getWeaponDamageSource(
       ? `${damage.diceNotation}+${damage.extraNotation}`
       : damage.diceNotation,
     flatBonus: damage.weaponBonus,
+    effectBonus: damage.effectBonus,
     ability: damage.ability,
     // Модификатор характеристики входит в урон оружия ровно один раз.
     abilityModifierCount: 1,

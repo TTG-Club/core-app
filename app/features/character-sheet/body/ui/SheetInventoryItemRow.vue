@@ -555,6 +555,12 @@
       );
     }
 
+    if (damage.effectBonus !== 0) {
+      tooltipParts.push(
+        getBonusPart(INVENTORY_STAT_HINT_LABELS.effects, damage.effectBonus),
+      );
+    }
+
     tooltipParts.push(getAbilityPart(damage.ability));
 
     const typePart = damage.typeLabel ? ` · ${damage.typeLabel}` : '';

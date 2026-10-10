@@ -89,6 +89,7 @@
     () =>
       baseNotation.flatBonus
       + props.damage.flatBonus
+      + props.damage.effectBonus
       + props.damage.abilityModifierCount * abilityModifier.value,
   );
 
@@ -102,6 +103,10 @@
 
     if (props.damage.flatBonus !== 0) {
       baseParts.push(`оружие ${getFormattedBonus(props.damage.flatBonus)}`);
+    }
+
+    if (props.damage.effectBonus !== 0) {
+      baseParts.push(`эффекты ${getFormattedBonus(props.damage.effectBonus)}`);
     }
 
     if (abilityKey.value && props.damage.abilityModifierCount > 0) {
