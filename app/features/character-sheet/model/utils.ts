@@ -364,6 +364,7 @@ import {
   INVENTORY_QUANTITY_MIN,
   INVENTORY_REMOVE_MENU_LABEL,
   INVENTORY_RESTORE_CHARGES_MENU_LABEL,
+  INVENTORY_SELL_MENU_LABEL,
   ITEM_BONUS_MAX,
   ITEM_BONUS_MIN,
   ITEM_BONUS_VALUE_MAX,
@@ -2570,6 +2571,67 @@ export function getCopperAmountLabel(copperAmount: number): string {
   return parts.length
     ? parts.join(' ')
     : `0 ${CURRENCY_LABELS.gold.toLowerCase()}`;
+}
+
+/**
+ * Выручка за продажу предмета в медных монетах: цена справочника за каждую
+ * штуку в наличии.
+ *
+ * @param inventoryItem продаваемый предмет снаряжения.
+ * @returns выручка в медных; null — продавать нечего (цены нет или она не
+ * распознана, либо предмета нет в наличии).
+ */
+export function getInventoryItemSalePriceInCopper(
+  inventoryItem: CharacterInventoryItem,
+): number | null {
+  const unitPrice = parseItemCostInCopper(inventoryItem.cost);
+
+  if (!unitPrice || isMissingInventoryItem(inventoryItem)) {
+    return null;
+  }
+
+  return unitPrice * inventoryItem.quantity;
+}
+
+/**
+ * Пополнение кошелька суммой в медных: она приходит золотом, серебром и
+ * медью — теми же монетами, которыми справочник задаёт цены.
+ *
+ * @param currency кошелёк персонажа.
+ * @param copperAmount пополнение в медных монетах.
+ * @returns кошелёк после пополнения.
+ */
+export function addCopperToCurrency(
+  currency: CharacterCurrency,
+  copperAmount: number,
+): CharacterCurrency {
+  const income = splitCopperIntoCoins(copperAmount, CURRENCY_PRICE_ORDER);
+
+  return {
+    copper: currency.copper + income.copper,
+    silver: currency.silver + income.silver,
+    electrum: currency.electrum + income.electrum,
+    gold: currency.gold + income.gold,
+    platinum: currency.platinum + income.platinum,
+  };
+}
+
+/**
+ * Текст подтверждения продажи предмета: что уйдёт из снаряжения и сколько
+ * вернётся в кошелёк.
+ *
+ * @param inventoryItem продаваемый предмет снаряжения.
+ * @param salePrice выручка в медных монетах.
+ * @returns описание для диалога подтверждения.
+ */
+export function getInventorySellDescription(
+  inventoryItem: CharacterInventoryItem,
+  salePrice: number,
+): string {
+  const quantityLabel =
+    inventoryItem.quantity > 1 ? ` (${inventoryItem.quantity} шт.)` : '';
+
+  return `«${inventoryItem.name}»${quantityLabel} уйдёт из снаряжения, в кошелёк вернётся ${getCopperAmountLabel(salePrice)}.`;
 }
 
 /**
@@ -16637,11 +16699,14 @@ export interface SheetEntryMenuOptions {
  *
  * @param options обработчики пунктов.
  * @param removeLabel подпись удаления (у снаряжения и книги она своя).
+ * @param beforeRemoveItems пункты, которые встают прямо перед удалением (у
+ * снаряжения — продажа: она тоже убирает предмет).
  * @returns пункты для `UDropdownMenu`.
  */
 function getSheetEntryMenuItems(
   options: SheetEntryMenuOptions,
   removeLabel: string,
+  beforeRemoveItems: DropdownMenuItem[] = [],
 ): DropdownMenuItem[] {
   const items: DropdownMenuItem[] = [];
 
@@ -16661,7 +16726,7 @@ function getSheetEntryMenuItems(
     });
   }
 
-  items.push({
+  items.push(...beforeRemoveItems, {
     label: removeLabel,
     icon: 'tabler:trash',
     color: 'error',
@@ -16717,6 +16782,12 @@ export interface InventoryItemMenuOptions extends SheetEntryMenuOptions {
 
   /** Восстановление зарядов; не передан — зарядов у предмета нет. */
   onRestoreCharges?: () => void;
+
+  /**
+   * Продажа предмета; не передан — пункта нет (у предмета нет распознанной
+   * цены или его нет в наличии).
+   */
+  onSell?: () => void;
 }
 
 /**
@@ -16732,7 +16803,22 @@ export interface InventoryItemMenuOptions extends SheetEntryMenuOptions {
 export function getInventoryItemMenuItems(
   options: InventoryItemMenuOptions,
 ): DropdownMenuItem[] {
-  const items = getSheetEntryMenuItems(options, INVENTORY_REMOVE_MENU_LABEL);
+  const sellItems: DropdownMenuItem[] = options.onSell
+    ? [
+        {
+          label: INVENTORY_SELL_MENU_LABEL,
+          icon: 'tabler:coins',
+          onSelect: options.onSell,
+        },
+      ]
+    : [];
+
+  const items = getSheetEntryMenuItems(
+    options,
+    INVENTORY_REMOVE_MENU_LABEL,
+    sellItems,
+  );
+
   const gameItems: DropdownMenuItem[] = [];
 
   if (options.onToggleGrip) {

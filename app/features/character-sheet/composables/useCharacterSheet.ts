@@ -55,6 +55,7 @@ import {
   ABILITY_ORDER,
   ABILITY_SCORE_MAX,
   ABILITY_SCORE_MIN,
+  addCopperToCurrency,
   adjustHealthForConstitution,
   adjustHitDice,
   applyAbilityIncreases,
@@ -105,6 +106,7 @@ import {
   getEffectiveSpeed,
   getFeatDefences,
   getInitiativeBonus,
+  getInventoryItemSalePriceInCopper,
   getInventoryWeight,
   getMaxHitPoints,
   getMaxHitPointsHint,
@@ -3223,6 +3225,41 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Продажа предмета: он уходит из инвентаря, а цена справочника за каждую
+   * штуку в наличии возвращается в кошелёк одним обновлением листа. Предмет
+   * без распознанной цены не продаётся.
+   *
+   * @param inventoryItemId идентификатор предмета инвентаря.
+   */
+  function sellInventoryItem(inventoryItemId: string): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const soldItem = character.value.inventory.find(
+      (inventoryItem) => inventoryItem.id === inventoryItemId,
+    );
+
+    const salePrice = soldItem
+      ? getInventoryItemSalePriceInCopper(soldItem)
+      : null;
+
+    if (salePrice === null) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      currency: clampCurrency(
+        addCopperToCurrency(character.value.currency, salePrice),
+      ),
+      inventory: character.value.inventory.filter(
+        (inventoryItem) => inventoryItem.id !== inventoryItemId,
+      ),
+    };
+  }
+
+  /**
    * Изменение количества предмета в пределах от нуля до максимума. Игровое
    * действие (трата и пополнение расходников) — блокировкой листа не
    * ограничивается; удаление предмета — отдельным экшеном. Обнулённый доспех
@@ -3952,6 +3989,7 @@ export function useCharacterSheet() {
     removeFeature,
     removeInnateSpell,
     removeInventoryItem,
+    sellInventoryItem,
     removeNote,
     removeSpell,
     updateActiveEffects,

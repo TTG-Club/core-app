@@ -5364,6 +5364,15 @@ export const INVENTORY_REMOVE_CONFIRM_LABEL = 'Убрать';
  */
 export const INVENTORY_REMOVE_MENU_LABEL = 'Убрать из снаряжения';
 
+/** Подпись пункта меню строки снаряжения о продаже предмета. */
+export const INVENTORY_SELL_MENU_LABEL = 'Продать';
+
+/** Заголовок подтверждения продажи предмета из снаряжения. */
+export const INVENTORY_SELL_CONFIRM_TITLE = 'Продать предмет?';
+
+/** Подпись кнопки подтверждения продажи предмета. */
+export const INVENTORY_SELL_CONFIRM_LABEL = 'Продать';
+
 /** То же для строки заклинания: убирается оно из книги заклинаний. */
 export const SPELL_REMOVE_MENU_LABEL = 'Убрать из книги';
 

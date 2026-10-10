@@ -24,6 +24,7 @@
     getInventoryEquipIcon,
     getInventoryItemBonusLabels,
     getInventoryItemMenuItems,
+    getInventoryItemSalePriceInCopper,
     getWeaponAttackBonus,
     getWeaponDamage,
     getWeaponRulesAbility,
@@ -166,6 +167,7 @@
     'edit': [];
     'copy': [];
     'remove': [];
+    'sell': [];
     'adjust': [delta: number];
     'toggle-equip': [];
     'toggle-attuned': [];
@@ -307,6 +309,11 @@
 
   const charges = computed(() => props.inventoryItem.charges);
 
+  // Продать можно только то, что есть в наличии и имеет цену.
+  const isSellable = computed(
+    () => getInventoryItemSalePriceInCopper(props.inventoryItem) !== null,
+  );
+
   // Правка и удаление — под многоточием: строка и без них плотная (иконка,
   // название, плитки, «+/−»), а два разных набора кнопок ломали бы её ритм.
   // Каталожный предмет правится в своём разделе — вместо правки ему предлагается
@@ -346,6 +353,7 @@
       onEdit: isCustom.value ? () => emit('edit') : undefined,
       onCopy: isCustom.value ? undefined : () => emit('copy'),
       onRemove: () => emit('remove'),
+      onSell: isSellable.value ? () => emit('sell') : undefined,
     }),
   );
 

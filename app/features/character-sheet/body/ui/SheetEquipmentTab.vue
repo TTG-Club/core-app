@@ -19,9 +19,13 @@
     getAttunementValue,
     getEquipmentAddMenuItems,
     getInventoryGroups,
+    getInventoryItemSalePriceInCopper,
     getInventoryRemoveDescription,
+    getInventorySellDescription,
     INVENTORY_REMOVE_CONFIRM_LABEL,
     INVENTORY_REMOVE_CONFIRM_TITLE,
+    INVENTORY_SELL_CONFIRM_LABEL,
+    INVENTORY_SELL_CONFIRM_TITLE,
     SHEET_HEADER_STAT_CLASS,
     SHEET_TAB_EMPTY_LABELS,
     WEIGHT_UNIT_LABEL,
@@ -63,7 +67,7 @@
 
   // Пополнение снаряжения — правка листа: у запертого и у чужого листа кнопка
   // «Добавить» прячется, а ряд с переносимым весом остаётся прежним.
-  const { editControlClass } = useCharacterSheet();
+  const { editControlClass, sellInventoryItem } = useCharacterSheet();
 
   const addMenuItems = getEquipmentAddMenuItems({
     onAddItem: () => emit('add-item'),
@@ -136,6 +140,44 @@
     }
 
     isRemoveOpen.value = false;
+  }
+
+  // Продажу, как и удаление, подтверждаем: предмет уходит из снаряжения, а
+  // диалог заодно показывает, сколько денег вернётся. Предмет держим до
+  // закрытия диалога по той же причине, что и при удалении. Деньги пишутся в
+  // лист прямо отсюда: вкладка и так читает общее состояние, а цепочка событий
+  // через вкладки ничего бы не добавила.
+  const saleItem = shallowRef<CharacterInventoryItem | null>(null);
+
+  const isSellOpen = ref(false);
+
+  const sellDescription = computed(() => {
+    const salePrice = saleItem.value
+      ? getInventoryItemSalePriceInCopper(saleItem.value)
+      : null;
+
+    return saleItem.value && salePrice !== null
+      ? getInventorySellDescription(saleItem.value, salePrice)
+      : '';
+  });
+
+  /**
+   * Спрашивает подтверждение продажи: предмет пока остаётся в снаряжении.
+   *
+   * @param inventoryItem предмет, который просят продать.
+   */
+  function handleSellRequest(inventoryItem: CharacterInventoryItem) {
+    saleItem.value = inventoryItem;
+    isSellOpen.value = true;
+  }
+
+  /** Продаёт подтверждённый предмет и закрывает диалог. */
+  function handleSellConfirm() {
+    if (saleItem.value) {
+      sellInventoryItem(saleItem.value.id);
+    }
+
+    isSellOpen.value = false;
   }
 
   const displayGroups = computed(() => getInventoryGroups(props.inventory));
@@ -293,6 +335,7 @@
           @edit="emit('edit-item', inventoryItem.id)"
           @copy="emit('copy-item', inventoryItem.id)"
           @remove="handleRemoveRequest(inventoryItem)"
+          @sell="handleSellRequest(inventoryItem)"
           @adjust="(delta) => handleQuantityAdjust(inventoryItem.id, delta)"
           @toggle-equip="emit('toggle-equip', inventoryItem.id)"
           @toggle-attuned="emit('toggle-attuned', inventoryItem.id)"
@@ -321,6 +364,15 @@
       confirm-color="error"
       confirm-icon="tabler:trash"
       @confirm="handleRemoveConfirm"
+    />
+
+    <ConfirmDialog
+      v-model:open="isSellOpen"
+      :title="INVENTORY_SELL_CONFIRM_TITLE"
+      :description="sellDescription"
+      :confirm-label="INVENTORY_SELL_CONFIRM_LABEL"
+      confirm-icon="tabler:coins"
+      @confirm="handleSellConfirm"
     />
   </div>
 </template>
