@@ -5364,14 +5364,8 @@ export const INVENTORY_REMOVE_CONFIRM_LABEL = 'Убрать';
  */
 export const INVENTORY_REMOVE_MENU_LABEL = 'Убрать из снаряжения';
 
-/**
- * Подписи пункта меню строки снаряжения о продаже предмета. Пункт виден всегда,
- * чтобы продажу было где найти; без цены он неактивен и говорит почему.
- */
-export const INVENTORY_SELL_MENU_LABELS = {
-  sellFor: 'Продать за',
-  noPrice: 'Продать (нет цены)',
-} as const;
+/** Подпись пункта меню строки снаряжения о продаже предмета. */
+export const INVENTORY_SELL_MENU_LABEL = 'Продать';
 
 /** Заголовок подтверждения продажи предмета из снаряжения. */
 export const INVENTORY_SELL_CONFIRM_TITLE = 'Продать предмет?';

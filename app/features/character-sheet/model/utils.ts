@@ -365,7 +365,7 @@ import {
   INVENTORY_QUANTITY_UNIT_LABEL,
   INVENTORY_REMOVE_MENU_LABEL,
   INVENTORY_RESTORE_CHARGES_MENU_LABEL,
-  INVENTORY_SELL_MENU_LABELS,
+  INVENTORY_SELL_MENU_LABEL,
   ITEM_BONUS_MAX,
   ITEM_BONUS_MIN,
   ITEM_BONUS_VALUE_MAX,
@@ -16786,14 +16786,11 @@ export interface InventoryItemMenuOptions extends SheetEntryMenuOptions {
   /** Восстановление зарядов; не передан — зарядов у предмета нет. */
   onRestoreCharges?: () => void;
 
-  /** Продажа предмета; не передан — пункта нет (лист только на просмотр). */
-  onSell?: () => void;
-
   /**
-   * Выручка за продажу в медных монетах; null — цены нет или предмета нет в
-   * наличии, и пункт продажи неактивен.
+   * Продажа предмета; не передан — пункта нет (у предмета нет распознанной
+   * цены или его нет в наличии).
    */
-  salePrice: number | null;
+  onSell?: () => void;
 }
 
 /**
@@ -16809,18 +16806,12 @@ export interface InventoryItemMenuOptions extends SheetEntryMenuOptions {
 export function getInventoryItemMenuItems(
   options: InventoryItemMenuOptions,
 ): DropdownMenuItem[] {
-  const { onSell, salePrice } = options;
-
-  const sellItems: DropdownMenuItem[] = onSell
+  const sellItems: DropdownMenuItem[] = options.onSell
     ? [
         {
-          label:
-            salePrice === null
-              ? INVENTORY_SELL_MENU_LABELS.noPrice
-              : `${INVENTORY_SELL_MENU_LABELS.sellFor} ${getCopperAmountLabel(salePrice)}`,
+          label: INVENTORY_SELL_MENU_LABEL,
           icon: 'tabler:coins',
-          disabled: salePrice === null,
-          onSelect: onSell,
+          onSelect: options.onSell,
         },
       ]
     : [];
