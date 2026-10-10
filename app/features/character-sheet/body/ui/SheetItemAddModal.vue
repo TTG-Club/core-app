@@ -276,7 +276,7 @@
   );
 
   const selectedCountLabel = computed(
-    () => `Выбрано: ${draftItems.value.size}`,
+    () => `${SHEET_ITEM_ADD_LABELS.selectedPrefix}: ${draftItems.value.size}`,
   );
 
   const isApplyDisabled = computed(
@@ -344,7 +344,7 @@
         toast.add({
           color: 'error',
           icon: 'tabler:alert-triangle',
-          title: 'Не удалось добавить часть предметов',
+          title: SHEET_ITEM_ADD_LABELS.partialFailed,
         });
       }
 
@@ -391,6 +391,9 @@
     }
   }
 
+  /**
+   * Открытие окна покупки выбранных предметов и оплата после подтверждения.
+   */
   async function handleBuy() {
     if (isApplyDisabled.value) {
       return;

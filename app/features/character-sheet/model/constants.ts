@@ -5728,6 +5728,8 @@ export const SHEET_ITEM_ADD_LABELS = {
   preview: 'Открыть описание предмета',
   previewAria: 'Описание предмета',
   buy: 'Купить',
+  selectedPrefix: 'Выбрано',
+  partialFailed: 'Не удалось добавить часть предметов',
 } as const;
 
 /** Подписи окна подтверждения покупки предметов. */

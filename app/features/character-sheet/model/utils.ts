@@ -2484,13 +2484,13 @@ function splitCopperIntoCoins(
     platinum: 0,
   };
 
-  let rest = copperAmount;
+  let remainingCopper = copperAmount;
 
   for (const key of order) {
-    const count = Math.floor(rest / CURRENCY_COPPER_RATES[key]);
+    const count = Math.floor(remainingCopper / CURRENCY_COPPER_RATES[key]);
 
     coins[key] = count;
-    rest -= count * CURRENCY_COPPER_RATES[key];
+    remainingCopper -= count * CURRENCY_COPPER_RATES[key];
   }
 
   return coins;
@@ -2516,17 +2516,17 @@ export function spendCurrency(
 
   const wallet: CharacterCurrency = { ...currency };
 
-  let rest = costInCopper;
+  let remainingCost = costInCopper;
 
-  for (const key of [...CURRENCY_ORDER].reverse()) {
+  for (const key of CURRENCY_ORDER.toReversed()) {
     const rate = CURRENCY_COPPER_RATES[key];
-    const used = Math.min(wallet[key], Math.floor(rest / rate));
+    const used = Math.min(wallet[key], Math.floor(remainingCost / rate));
 
     wallet[key] -= used;
-    rest -= used * rate;
+    remainingCost -= used * rate;
   }
 
-  if (rest === 0) {
+  if (remainingCost === 0) {
     return wallet;
   }
 
@@ -2541,7 +2541,7 @@ export function spendCurrency(
   wallet[brokenKey] -= 1;
 
   const change = splitCopperIntoCoins(
-    CURRENCY_COPPER_RATES[brokenKey] - rest,
+    CURRENCY_COPPER_RATES[brokenKey] - remainingCost,
     CURRENCY_CHANGE_ORDER,
   );
 

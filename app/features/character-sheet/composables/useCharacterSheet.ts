@@ -220,6 +220,43 @@ function clampCurrencyAmount(amount: number): number {
 }
 
 /**
+ * Кошелёк с количествами каждой стандартной монеты в допустимом диапазоне.
+ *
+ * @param currency количества пяти стандартных денежных единиц.
+ * @returns кошелёк с ограниченными количествами.
+ */
+function clampCurrency(currency: CharacterCurrency): CharacterCurrency {
+  return {
+    copper: clampCurrencyAmount(currency.copper),
+    silver: clampCurrencyAmount(currency.silver),
+    electrum: clampCurrencyAmount(currency.electrum),
+    gold: clampCurrencyAmount(currency.gold),
+    platinum: clampCurrencyAmount(currency.platinum),
+  };
+}
+
+/**
+ * Предметы, которых ещё нет в инвентаре: идентификаторы каталога устойчивы
+ * (`item:url`), поэтому повтор отбрасывается.
+ *
+ * @param inventory текущий инвентарь персонажа.
+ * @param inventoryItems добавляемые предметы.
+ * @returns добавляемые предметы без уже имеющихся.
+ */
+function getFreshInventoryItems(
+  inventory: CharacterInventoryItem[],
+  inventoryItems: CharacterInventoryItem[],
+): CharacterInventoryItem[] {
+  const existingIds = new Set(
+    inventory.map((inventoryItem) => inventoryItem.id),
+  );
+
+  return inventoryItems.filter(
+    (inventoryItem) => !existingIds.has(inventoryItem.id),
+  );
+}
+
+/**
  * Состояние листа персонажа: реактивный персонаж, производные значения по
  * правилам D&D 2024 и экшены редактирования. Состояние разделяется между всеми
  * потребителями через `useState`.
@@ -2982,12 +3019,9 @@ export function useCharacterSheet() {
       return;
     }
 
-    const existingIds = new Set(
-      character.value.inventory.map((inventoryItem) => inventoryItem.id),
-    );
-
-    const freshItems = inventoryItems.filter(
-      (inventoryItem) => !existingIds.has(inventoryItem.id),
+    const freshItems = getFreshInventoryItems(
+      character.value.inventory,
+      inventoryItems,
     );
 
     if (!freshItems.length) {
@@ -3021,12 +3055,9 @@ export function useCharacterSheet() {
       return false;
     }
 
-    const existingIds = new Set(
-      character.value.inventory.map((inventoryItem) => inventoryItem.id),
-    );
-
-    const freshItems = inventoryItems.filter(
-      (inventoryItem) => !existingIds.has(inventoryItem.id),
+    const freshItems = getFreshInventoryItems(
+      character.value.inventory,
+      inventoryItems,
     );
 
     const currency = spendCurrency(
@@ -3042,13 +3073,7 @@ export function useCharacterSheet() {
 
     character.value = {
       ...character.value,
-      currency: {
-        copper: clampCurrencyAmount(currency.copper),
-        silver: clampCurrencyAmount(currency.silver),
-        electrum: clampCurrencyAmount(currency.electrum),
-        gold: clampCurrencyAmount(currency.gold),
-        platinum: clampCurrencyAmount(currency.platinum),
-      },
+      currency: clampCurrency(currency),
       inventory: [
         ...character.value.inventory,
         ...freshItems.map((inventoryItem) => ({ ...inventoryItem })),
@@ -3849,13 +3874,7 @@ export function useCharacterSheet() {
 
     character.value = {
       ...character.value,
-      currency: {
-        copper: clampCurrencyAmount(currency.copper),
-        silver: clampCurrencyAmount(currency.silver),
-        electrum: clampCurrencyAmount(currency.electrum),
-        gold: clampCurrencyAmount(currency.gold),
-        platinum: clampCurrencyAmount(currency.platinum),
-      },
+      currency: clampCurrency(currency),
       customCurrencies: customCurrencies
         .map((customCurrency) => ({
           id: customCurrency.id,

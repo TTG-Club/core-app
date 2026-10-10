@@ -1,5 +1,9 @@
 <script setup lang="ts">
-  import type { ItemCatalogItem, ItemPurchaseResult } from '../../model';
+  import type {
+    CurrencyKey,
+    ItemCatalogItem,
+    ItemPurchaseResult,
+  } from '../../model';
 
   import { ACTION_LABELS } from '~/shared/consts';
 
@@ -71,7 +75,7 @@
   });
 
   interface WalletRow {
-    key: string;
+    key: CurrencyKey;
     label: string;
     name: string;
     before: number;
@@ -124,12 +128,18 @@
     () => !draftItems.value.length || !currencyAfter.value,
   );
 
+  /**
+   * Убирает предмет из списка покупки.
+   *
+   * @param itemUrl url убираемого предмета.
+   */
   function handleRemove(itemUrl: string) {
     draftItems.value = draftItems.value.filter(
       (catalogItem) => catalogItem.url !== itemUrl,
     );
   }
 
+  /** Подтверждает покупку оставшихся в списке предметов. */
   function handleConfirm() {
     if (isConfirmDisabled.value) {
       return;
@@ -138,6 +148,7 @@
     emit('close', { confirmed: true, items: draftItems.value });
   }
 
+  /** Закрывает окно без покупки, сохраняя правки списка. */
   function handleCancel() {
     emit('close', { confirmed: false, items: draftItems.value });
   }
