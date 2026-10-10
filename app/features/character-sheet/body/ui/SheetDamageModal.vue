@@ -17,6 +17,7 @@
     DEFAULT_DAMAGE_DICE_FACES,
     getAbilityModifier,
     getDamageFormula,
+    INVENTORY_STAT_HINT_LABELS,
     parseDamageNotation,
     ROLL_ABILITY_AUTO,
     ROLL_ABILITY_OPTIONS,
@@ -63,7 +64,7 @@
 
   // Прибавки «по применению» выключены, пока игрок не отметит: идут они не в
   // каждый удар, а условие («в свой ход действием Атака») лист не проверит.
-  const enabledRiderIds = ref<string[]>([]);
+  const enabledRiderIds = shallowRef<string[]>([]);
 
   const enabledRiders = computed(() =>
     props.damage.riders.filter((rider) =>
@@ -81,7 +82,6 @@
       id: rider.id,
       label: `${rider.name} ${getFormattedBonus(rider.bonus)}`,
       description: rider.description,
-      enabled: enabledRiderIds.value.includes(rider.id),
     })),
   );
 
@@ -131,7 +131,9 @@
     }
 
     if (props.damage.effectBonus !== 0) {
-      baseParts.push(`эффекты ${getFormattedBonus(props.damage.effectBonus)}`);
+      baseParts.push(
+        `${INVENTORY_STAT_HINT_LABELS.effects} ${getFormattedBonus(props.damage.effectBonus)}`,
+      );
     }
 
     if (abilityKey.value && props.damage.abilityModifierCount > 0) {
@@ -189,12 +191,6 @@
     diceGroups.value = diceGroups.value.filter(
       (_, index) => index !== diceIndex,
     );
-  }
-
-  function handleRiderToggle(riderId: string) {
-    enabledRiderIds.value = enabledRiderIds.value.includes(riderId)
-      ? enabledRiderIds.value.filter((enabledId) => enabledId !== riderId)
-      : [...enabledRiderIds.value, riderId];
   }
 
   function handleRollClick() {
@@ -281,13 +277,10 @@
             {{ SHEET_DAMAGE_MODAL_LABELS.riders }}
           </span>
 
-          <UCheckbox
-            v-for="riderOption in riderOptions"
-            :key="riderOption.id"
-            :model-value="riderOption.enabled"
-            :label="riderOption.label"
-            :description="riderOption.description"
-            @update:model-value="handleRiderToggle(riderOption.id)"
+          <UCheckboxGroup
+            v-model="enabledRiderIds"
+            :items="riderOptions"
+            value-key="id"
           />
         </div>
 
