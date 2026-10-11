@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { ItemPurchaseLine, ItemPurchaseResult } from '../../model';
 
+  import { clamp } from 'es-toolkit';
+
   import { ACTION_LABELS } from '~/shared/consts';
 
   import { useCharacterSheet } from '../../composables';
@@ -131,16 +133,17 @@
   }
 
   /**
-   * Меняет количество позиции. Очищенное поле оставляет одну штуку: убирают
-   * предмет крестиком, а не нулём.
+   * Меняет количество позиции в допустимом диапазоне. Очищенное поле оставляет
+   * одну штуку: убирают предмет крестиком, а не нулём.
    *
    * @param itemUrl url предмета позиции.
    * @param quantity новое количество из поля.
    */
   function handleQuantityChange(itemUrl: string, quantity: number | null) {
-    const nextQuantity = Math.max(
-      PURCHASE_QUANTITY_MIN,
+    const nextQuantity = clamp(
       Math.trunc(quantity ?? PURCHASE_QUANTITY_MIN),
+      PURCHASE_QUANTITY_MIN,
+      INVENTORY_QUANTITY_MAX,
     );
 
     draftItems.value = draftItems.value.map((purchaseLine) =>

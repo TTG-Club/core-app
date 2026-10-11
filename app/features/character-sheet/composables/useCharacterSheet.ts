@@ -3250,7 +3250,7 @@ export function useCharacterSheet() {
       currency: clampCurrency(
         addCopperToCurrency(
           character.value.currency,
-          Math.max(0, Math.round(salePrice)),
+          Math.max(CURRENCY_AMOUNT_MIN, Math.round(salePrice)),
         ),
       ),
       inventory: character.value.inventory.filter(
