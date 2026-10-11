@@ -11,6 +11,10 @@ import type {
   MagicItemSummary,
   SavedCharacterSheet,
   SavedCharacterSheetListPage,
+  SavedSheetEditAccess,
+  SheetEditorList,
+  SheetEditStatus,
+  SheetPresence,
   SpellCatalogItem,
   SpellCatalogMechanics,
   StartingEquipmentOption,
@@ -22,12 +26,19 @@ import {
   parseCharacterSheetDetail,
   parseCharacterSheetListPage,
   parseCharacterSheetShare,
+  parseCharacterSheetVersion,
   parseSavedCharacterSheet,
   parseSavedCharacterSheetListPage,
+  parseSavedSheetEditAccess,
+  parseSheetEditorList,
+  parseSheetEditRequestCount,
+  parseSheetEditRequestStatus,
+  parseSheetPresence,
 } from './character-schema';
 import {
   CHARACTER_SHEET_ADMIN_API_PATH,
   CHARACTER_SHEET_API_PATH,
+  CHARACTER_SHEET_EDIT_REQUESTS_COUNT_API_PATH,
   CHARACTER_SHEET_SAVED_API_PATH,
   CHARACTER_SHEET_SHARED_API_PATH,
   CHOICE_SPELL_POOL_SIZE,
@@ -157,25 +168,34 @@ export async function createCharacterSheet(
  * Сохранение листа целиком (автосохранение). Название дублируется из
  * документа, как при создании.
  *
+ * Версия — та, с которой началась правка: если лист с тех пор изменили в
+ * другом месте (другая вкладка, хиты от мастера боя), бэк ответит 409 и ничего
+ * не запишет. null — сохранение без проверки.
+ *
  * @param id идентификатор листа.
  * @param data актуальный персонаж листа.
+ * @param version версия листа, от которой сделана правка.
  * @param options настройки отправки.
  * @param options.keepalive запрос должен пережить закрытие страницы. Браузер
  *   отклоняет такой запрос с телом больше 64 КиБ, поэтому флаг ставит только
  *   автосохранение и только после проверки размера
  *   (см. `SHEET_KEEPALIVE_MAX_BYTES`).
+ * @returns новая версия листа; null — бэк без версий её не прислал.
  */
 export async function updateCharacterSheet(
   id: string,
   data: Character,
+  version: number | null,
   options: { keepalive?: boolean } = {},
-): Promise<void> {
-  await $fetch(`${CHARACTER_SHEET_API_PATH}/${id}`, {
+): Promise<number | null> {
+  const response = await $fetch(`${CHARACTER_SHEET_API_PATH}/${id}`, {
     method: 'PUT',
-    body: { name: data.name, data },
+    body: { name: data.name, data, version },
     keepalive: options.keepalive,
     retry: 0,
   });
+
+  return parseCharacterSheetVersion(response);
 }
 
 /**
@@ -227,6 +247,107 @@ export async function shareCharacterSheet(id: string): Promise<string> {
 export async function revokeCharacterSheetShare(id: string): Promise<void> {
   await $fetch(`${CHARACTER_SHEET_API_PATH}/${id}/share`, {
     method: 'DELETE',
+    retry: 0,
+  });
+}
+
+/**
+ * Запросы на редактирование и выданные права листа — только владельцу.
+ *
+ * @param id идентификатор листа.
+ * @returns запросы, редакторы и лимит редакторов.
+ */
+export async function fetchSheetEditors(id: string): Promise<SheetEditorList> {
+  const response = await $fetch(`${CHARACTER_SHEET_API_PATH}/${id}/editors`, {
+    method: 'GET',
+    retry: 0,
+  });
+
+  return parseSheetEditorList(response);
+}
+
+/**
+ * Разрешает редактирование по запросу. Сверх лимита редакторов бэк ответит 409
+ * с текстом.
+ *
+ * @param id идентификатор листа.
+ * @param editorId идентификатор запроса.
+ * @returns обновлённые запросы и редакторы листа.
+ */
+export async function approveSheetEditor(
+  id: string,
+  editorId: string,
+): Promise<SheetEditorList> {
+  const response = await $fetch(
+    `${CHARACTER_SHEET_API_PATH}/${id}/editors/${editorId}/approve`,
+    { method: 'POST', retry: 0 },
+  );
+
+  return parseSheetEditorList(response);
+}
+
+/**
+ * Отклоняет запрос или отзывает выданное право. Блокировки нет: тот же
+ * пользователь может сразу попросить снова.
+ *
+ * @param id идентификатор листа.
+ * @param editorId идентификатор запроса или права.
+ * @returns обновлённые запросы и редакторы листа.
+ */
+export async function removeSheetEditor(
+  id: string,
+  editorId: string,
+): Promise<SheetEditorList> {
+  const response = await $fetch(
+    `${CHARACTER_SHEET_API_PATH}/${id}/editors/${editorId}`,
+    { method: 'DELETE', retry: 0 },
+  );
+
+  return parseSheetEditorList(response);
+}
+
+/**
+ * Неотвеченные запросы на редактирование всех активных листов пользователя —
+ * для точки у шлема.
+ *
+ * @returns число запросов.
+ */
+export async function fetchIncomingEditRequestCount(): Promise<number> {
+  const response = await $fetch(CHARACTER_SHEET_EDIT_REQUESTS_COUNT_API_PATH, {
+    method: 'GET',
+    retry: 0,
+  });
+
+  return parseSheetEditRequestCount(response);
+}
+
+/**
+ * Отмечает, что лист открыт на правку, и узнаёт, у кого он открыт ещё и какая
+ * версия листа на сервере. Отметка живёт недолго — её шлют, пока лист открыт.
+ *
+ * @param id идентификатор листа.
+ * @returns другие пользователи, у которых лист открыт, и версия листа.
+ */
+export async function sendSheetPresence(id: string): Promise<SheetPresence> {
+  const response = await $fetch(`${CHARACTER_SHEET_API_PATH}/${id}/presence`, {
+    method: 'POST',
+    retry: 0,
+  });
+
+  return parseSheetPresence(response);
+}
+
+/**
+ * Снимает свою отметку присутствия — лист закрыт. Запрос переживает закрытие
+ * страницы (`keepalive`): иначе сосед видел бы предупреждение, пока отметка не
+ * истечёт сама.
+ *
+ * @param id идентификатор листа.
+ */
+export async function leaveSheetPresence(id: string): Promise<void> {
+  await $fetch(`${CHARACTER_SHEET_API_PATH}/${id}/presence`, {
+    method: 'DELETE',
+    keepalive: true,
     retry: 0,
   });
 }
@@ -511,6 +632,45 @@ export async function updateSavedCharacterSheetHitPoints(
     body: { current },
     retry: 0,
   });
+}
+
+/**
+ * Запрос права редактировать чужой лист, сохранённый по ссылке. Повтор
+ * безопасен: ждущий запрос не дублируется. После отказа можно сразу попросить
+ * снова.
+ *
+ * @param savedId идентификатор сохранённой записи.
+ * @returns состояние права после запроса.
+ */
+export async function requestSheetEdit(
+  savedId: string,
+): Promise<SheetEditStatus> {
+  const response = await $fetch(
+    `${CHARACTER_SHEET_SAVED_API_PATH}/${savedId}/edit-request`,
+    { method: 'POST', retry: 0 },
+  );
+
+  return parseSheetEditRequestStatus(response);
+}
+
+/**
+ * Права на редактирование сохранённых листов — лёгкая сводка без документов:
+ * по ней мастер сразу узнаёт, что владелец разрешил правки.
+ *
+ * @returns права по листам, на которые отправлялись запросы.
+ */
+export async function fetchSavedSheetEditAccess(): Promise<
+  SavedSheetEditAccess[]
+> {
+  const response = await $fetch(
+    `${CHARACTER_SHEET_SAVED_API_PATH}/edit-access`,
+    {
+      method: 'GET',
+      retry: 0,
+    },
+  );
+
+  return parseSavedSheetEditAccess(response);
 }
 
 /**

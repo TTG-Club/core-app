@@ -47,6 +47,7 @@ import type {
   ResourceRecoveryField,
   ResourceRecoveryMode,
   RollMode,
+  RollModeSourceMode,
   SheetReadonlyReason,
   SheetSaveStatus,
   SheetTab,
@@ -95,6 +96,9 @@ export const CHARACTER_SHEET_SHARED_API_PATH = `${CHARACTER_SHEET_API_PATH}/shar
 
 /** Эндпоинт чужих листов, сохранённых по ссылке. */
 export const CHARACTER_SHEET_SAVED_API_PATH = `${CHARACTER_SHEET_API_PATH}/saved`;
+
+/** Эндпоинт числа неотвеченных запросов на редактирование листов пользователя. */
+export const CHARACTER_SHEET_EDIT_REQUESTS_COUNT_API_PATH = `${CHARACTER_SHEET_API_PATH}/edit-requests/count`;
 
 /**
  * Эндпоинт чтения любого листа администратором — например, по ссылке из
@@ -361,12 +365,12 @@ export const SHEET_SHARE_LABELS: Record<
   disable: 'Отключить доступ',
   close: 'Закрыть',
   enabledHint:
-    'Лист откроется у любого, кто перейдёт по ссылке. Редактировать его смогут только вы.',
+    'Лист откроется у любого, кто перейдёт по ссылке. Редактировать его смогут только вы и те, кому вы разрешите.',
   disabledHint:
     'Пока доступ выключен, лист виден только вам. Ссылку можно отозвать в любой момент.',
   viewerNoteTitle: 'Гость видит лист целиком',
   viewerNoteDescription:
-    'Правки, броски и настройки ему недоступны — редактирование остаётся только у вас.',
+    'Правки, броски и настройки ему недоступны, пока вы не разрешите редактирование по его запросу.',
 };
 
 /**
@@ -382,6 +386,136 @@ export const SHEET_SEARCH_LABELS: Record<
   byNamePlaceholder: 'Поиск по названию…',
   clear: 'Очистить поиск',
 };
+
+/**
+ * Подписи прав на редактирование у владельца листа: баннер с запросами в
+ * листе и список редакторов в модалке «Поделиться».
+ */
+export const SHEET_EDITORS_LABELS = {
+  requestsTitle: 'Просят доступ к редактированию',
+  requestsHint:
+    'Редактор сможет менять лист, но не удалять его, не делиться им и не раздавать права.',
+  editorsTitle: 'Редактирование',
+  editorsHint:
+    'Тот, кто сохранил лист по ссылке, может попросить доступ к правкам — запрос появится здесь и у шлема.',
+  editorsEmpty: 'Кроме вас лист пока никто не редактирует.',
+  approve: 'Разрешить',
+  decline: 'Отклонить',
+  revoke: 'Отозвать',
+  limitReached: 'Достигнут лимит редакторов',
+  revokeOnDisableHint:
+    'Если отключить доступ по ссылке, права на редактирование тоже пропадут.',
+} as const;
+
+/** Заголовок тоста с ошибкой решения по запросу на редактирование. */
+export const SHEET_EDITORS_ERROR_TITLE =
+  'Не удалось изменить доступ к редактированию';
+
+/** Подсказка к точке у шлема: на листы пользователя пришли запросы. */
+export const SHEET_EDIT_REQUESTS_UPDATES_HINT =
+  'Просят доступ к редактированию ваших листов';
+
+/** Ключ `useAsyncData` сводки входящих запросов на редактирование. */
+export const SHEET_EDIT_REQUESTS_DATA_KEY =
+  'character-sheet:edit-requests-count';
+
+/** Интервал фонового опроса сводки входящих запросов. */
+export const SHEET_EDIT_REQUESTS_POLL_INTERVAL_MS = 60_000;
+
+/** Минимальный интервал между двумя опросами сводки запросов. */
+export const SHEET_EDIT_REQUESTS_POLL_COOLDOWN_MS = 10_000;
+
+/** Потолок backoff опроса сводки, если она перестала отвечать. */
+export const SHEET_EDIT_REQUESTS_POLL_MAX_BACKOFF_MS = 5 * 60_000;
+
+/**
+ * Подписи права на редактирование у того, кто сохранил чужой лист: запрос,
+ * его ожидание и работа с листом по выданному праву.
+ */
+export const SHEET_EDIT_ACCESS_LABELS = {
+  request: 'Запросить редактирование',
+  requestHint: 'Владелец листа увидит запрос и решит, разрешить ли правки',
+  pending: 'Запрос на редактирование отправлен',
+  pendingHint: 'Ждёт ответа владельца',
+  approvedBadge: 'Владелец разрешил вам редактировать этот лист',
+} as const;
+
+/** Тост об отправленном запросе на редактирование. */
+export const SHEET_EDIT_REQUEST_SENT_TOAST = {
+  title: 'Запрос отправлен',
+  description:
+    'Когда владелец разрешит правки, лист откроется на редактирование из раздела «Другие листы».',
+} as const;
+
+/** Тост: владелец уже разрешил правки, повторный запрос не нужен. */
+export const SHEET_EDIT_REQUEST_APPROVED_TOAST = {
+  title: 'Редактирование уже разрешено',
+  description: 'Лист открывается на правку из раздела «Другие листы».',
+} as const;
+
+/** Заголовок тоста с ошибкой запроса на редактирование. */
+export const SHEET_EDIT_REQUEST_ERROR_TITLE =
+  'Не удалось запросить редактирование';
+
+/** Подсказка к точке у шлема: владелец разрешил править его лист. */
+export const SHEET_EDIT_GRANTS_UPDATES_HINT =
+  'Вам разрешили редактировать лист';
+
+/** Тост: владелец разрешил править его лист. */
+export const SHEET_EDIT_GRANTED_TOAST = {
+  title: 'Редактирование разрешено',
+  descriptionSuffix:
+    'можно править: лист открывается из раздела «Другие листы».',
+  action: 'Открыть',
+} as const;
+
+/** Тост: владелец отклонил запрос на правку. */
+export const SHEET_EDIT_DECLINED_TOAST = {
+  title: 'В редактировании отказано',
+  descriptionSuffix: 'владелец отклонил запрос. Его можно отправить снова.',
+} as const;
+
+/** Тост: владелец отозвал право править его лист, лист открыт на просмотр. */
+export const SHEET_EDIT_REVOKED_TOAST = {
+  title: 'Редактирование закрыто',
+  description: 'Владелец отозвал доступ — лист открыт только для просмотра.',
+} as const;
+
+/** Ключ `useAsyncData` сводки прав на редактирование сохранённых листов. */
+export const SHEET_EDIT_ACCESS_DATA_KEY = 'character-sheet:edit-access';
+
+/**
+ * Ключ хранилища: листы, о разрешении на правку которых пользователь уже
+ * знает, — по ним точка у шлема больше не горит.
+ */
+export const SHEET_SEEN_EDIT_GRANTS_STORAGE_KEY =
+  'character-sheet:seen-edit-grants';
+
+/**
+ * Интервал опроса сводки прав, пока есть запрос без ответа: разрешение должно
+ * дойти до мастера сразу, а не после F5.
+ */
+export const SHEET_EDIT_ACCESS_POLL_INTERVAL_MS = 15_000;
+
+/** Пометка в шапке листа, открытого по праву редактора. */
+export const SHEET_EDITOR_BADGE_LABEL = 'Редактор';
+
+/** Подсказка к пометке редактора в шапке листа. */
+export const SHEET_EDITOR_BADGE_TOOLTIP =
+  'Чужой лист: владелец разрешил вам правки. Удалить лист и поделиться им может только он.';
+
+/**
+ * Как часто открытый лист отмечается на сервере, когда его больше никто не
+ * правит. Сервер считает отметку живой 45 секунд — один пропущенный запрос её
+ * не гасит.
+ */
+export const SHEET_PRESENCE_INTERVAL_MS = 20_000;
+
+/**
+ * Как часто отмечается лист, открытый ещё у кого-то: по версии из ответа
+ * подтягиваются чужие правки, и чем чаще, тем ближе совместная правка к живой.
+ */
+export const SHEET_PRESENCE_SHARED_INTERVAL_MS = 4000;
 
 /** Заголовок тоста с ошибкой доступа по ссылке. */
 export const SHEET_SHARE_ERROR_TITLE = 'Не удалось изменить доступ по ссылке';
@@ -1853,6 +1987,12 @@ export const SPEED_UNIT_OPTIONS: Array<{ label: string; value: SpeedUnit }> = [
 /** Режим броска d20 по умолчанию: без преимущества и помехи. */
 export const DEFAULT_ROLL_MODE: RollMode = 'normal';
 
+/** Значки преимущества и помехи: одни и те же на кнопках режима и в источниках. */
+export const ROLL_MODE_ICONS: Record<RollModeSourceMode, string> = {
+  advantage: 'tabler:arrow-big-up-filled',
+  disadvantage: 'tabler:arrow-big-down-filled',
+};
+
 /** Варианты режима броска d20. */
 export const ROLL_MODE_OPTIONS: Array<{
   value: RollMode;
@@ -1860,13 +2000,30 @@ export const ROLL_MODE_OPTIONS: Array<{
   icon?: string;
 }> = [
   { value: 'normal', label: 'Обычный' },
-  { value: 'advantage', label: 'Преим.', icon: 'tabler:arrow-big-up-filled' },
+  { value: 'advantage', label: 'Преим.', icon: ROLL_MODE_ICONS.advantage },
   {
     value: 'disadvantage',
     label: 'Помеха',
-    icon: 'tabler:arrow-big-down-filled',
+    icon: ROLL_MODE_ICONS.disadvantage,
   },
 ];
+
+/** Вид строки источника режима в окне броска: подпись, значок и его цвет. */
+export const ROLL_MODE_SOURCE_VIEWS: Record<
+  RollModeSourceMode,
+  { label: string; icon: string; iconClass: string }
+> = {
+  advantage: {
+    label: 'Преимущество',
+    icon: ROLL_MODE_ICONS.advantage,
+    iconClass: 'text-success',
+  },
+  disadvantage: {
+    label: 'Помеха',
+    icon: ROLL_MODE_ICONS.disadvantage,
+    iconClass: 'text-error',
+  },
+};
 
 /** Количество костей в броске по его режиму: преимущество и помеха катят две. */
 export const ROLL_MODE_DICE_COUNT: Record<RollMode, number> = {
@@ -3760,6 +3917,35 @@ export const CURRENCY_GOLD_RATES: Record<CurrencyKey, number> = {
   platinum: 10,
 };
 
+/**
+ * Стоимость денежной единицы в медных монетах: покупка считается в целых
+ * медяках, чтобы доли золотого не копили ошибку округления.
+ */
+export const CURRENCY_COPPER_RATES: Record<CurrencyKey, number> = {
+  copper: 1,
+  silver: 10,
+  electrum: 50,
+  gold: 100,
+  platinum: 1000,
+};
+
+/**
+ * Монеты сдачи при размене крупной монеты, от крупной к мелкой. Электрум в
+ * сдачу не идёт: по правилам он редкий, и сдачу им не дают.
+ */
+export const CURRENCY_CHANGE_ORDER: CurrencyKey[] = [
+  'platinum',
+  'gold',
+  'silver',
+  'copper',
+];
+
+/**
+ * Монеты подписи цены покупки, от крупной к мелкой: цены справочника заданы в
+ * золоте и мелочи, поэтому платина и электрум в подписи суммы не нужны.
+ */
+export const CURRENCY_PRICE_ORDER: CurrencyKey[] = ['gold', 'silver', 'copper'];
+
 /** Подписи групп каталога для предметов без значения поля группировки. */
 export const MAGIC_ITEM_CATALOG_EMPTY_GROUP_LABELS: Record<
   Exclude<MagicItemCatalogGrouping, 'NONE'>,
@@ -3979,6 +4165,13 @@ export const INVENTORY_GRIP_MENU_LABELS: Record<
   oneHanded: 'Взять в одну руку',
   twoHanded: 'Взять в две руки',
 };
+
+/**
+ * Подпись пункта меню оружия с выбором характеристики атаки и урона: тот же
+ * выбор, что в окне броска атаки, только без броска.
+ */
+export const INVENTORY_ATTACK_ABILITY_MENU_LABEL =
+  'Характеристика атаки и урона';
 
 /** Значок универсального оружия, взятого двумя руками. */
 export const INVENTORY_TWO_HANDED_BADGE_LABEL = 'Двумя руками';
@@ -4847,6 +5040,8 @@ export const DAMAGE_DICE_GROUPS_MAX = 6;
 export const EMPTY_DAMAGE_ROLL_SOURCE: DamageRollSource = {
   diceNotation: '',
   flatBonus: 0,
+  effectBonus: 0,
+  riders: [],
   ability: null,
   abilityModifierCount: 0,
   typeLabel: '',
@@ -5192,6 +5387,18 @@ export const INVENTORY_REMOVE_CONFIRM_LABEL = 'Убрать';
  * слова «Убрать» мало — непонятно, откуда именно исчезнет предмет.
  */
 export const INVENTORY_REMOVE_MENU_LABEL = 'Убрать из снаряжения';
+
+/** Подпись пункта меню строки снаряжения о продаже предмета. */
+export const INVENTORY_SELL_MENU_LABEL = 'Продать';
+
+/** Заголовок подтверждения продажи предмета из снаряжения. */
+export const INVENTORY_SELL_CONFIRM_TITLE = 'Продать предмет?';
+
+/** Подпись кнопки подтверждения продажи предмета. */
+export const INVENTORY_SELL_CONFIRM_LABEL = 'Продать';
+
+/** Единица количества в тексте подтверждения продажи («3 шт.»). */
+export const INVENTORY_QUANTITY_UNIT_LABEL = 'шт.';
 
 /** То же для строки заклинания: убирается оно из книги заклинаний. */
 export const SPELL_REMOVE_MENU_LABEL = 'Убрать из книги';
@@ -5556,6 +5763,28 @@ export const SHEET_ITEM_ADD_LABELS = {
   pickAria: 'Выбрать предмет',
   preview: 'Открыть описание предмета',
   previewAria: 'Описание предмета',
+  buy: 'Купить',
+  selectedPrefix: 'Выбрано',
+  partialFailed: 'Не удалось добавить часть предметов',
+} as const;
+
+/** Подписи окна подтверждения покупки предметов. */
+export const SHEET_ITEM_PURCHASE_LABELS = {
+  title: 'Покупка снаряжения',
+  confirm: 'Купить',
+  free: 'Бесплатно',
+  wallet: 'В кошельке',
+  cost: 'Будет списано',
+  remaining: 'Останется',
+  shortage: 'Не хватает',
+  shortageTitle: 'Не хватает денег',
+  shortageHint: 'Уберите что-нибудь из списка, чтобы хватило.',
+  purchases: 'Покупки',
+  remove: 'Убрать из покупки',
+  empty: 'Список покупки пуст',
+  failed: 'Не удалось купить предметы',
+  partialFailed:
+    'Часть предметов не загрузилась: куплены и оплачены только остальные',
 } as const;
 
 /** Подписи окна добавления магических предметов. */
@@ -5968,7 +6197,25 @@ export const SHEET_DAMAGE_MODAL_LABELS = {
   addDie: 'Добавить кость',
   ability: 'Характеристика',
   bonus: 'Доп. бонус',
+  riders: 'Прибавки по применению',
 } as const;
+
+/**
+ * Токен «урон того же типа, что у оружия» в части урона эффекта: тип на выбор
+ * без списка типов. По нему лист узнаёт прибавку к удару оружием среди прочих
+ * эффектов «по применению» (лечение, урон умения своим типом).
+ */
+export const WEAPON_DAMAGE_TYPE_TOKEN = '@dmg.choice';
+
+/**
+ * Эффекты, чья прибавка идёт только оружию со свойством «Тяжёлое». Само
+ * ограничение в данных эффекта не записано — оно стоит в его описании, а
+ * виртуальному столу его заменяет выбор цели игроком, — поэтому лист знает
+ * такие эффекты поимённо. Эффект не из списка предлагается любому оружию.
+ */
+export const HEAVY_WEAPON_RIDER_EFFECT_IDS: readonly string[] = [
+  'effect-great-weapon-master-phb-heavy-weapon-mastery',
+];
 
 /** Подписи окна валюты. */
 export const SHEET_CURRENCY_MODAL_LABELS = {
@@ -6022,6 +6269,7 @@ export const SHEET_CARD_LABELS = {
   level: 'Уровень',
   menuAria: 'Действия с листом',
   savedMenuAria: 'Действия с сохранённым листом',
+  editRequests: 'Просят доступ',
 } as const;
 
 /** Заголовок подтверждения удаления листа персонажа. */
@@ -6061,6 +6309,7 @@ export const SHEET_ROLL_MODAL_LABELS = {
   againstMagicHelp: 'Заклинание или иной магический эффект',
   magicSource: 'Магический источник',
   mode: 'Режим броска',
+  modeCancelled: 'Преимущество и помеха гасят друг друга — бросок обычный',
 } as const;
 
 /** Подписи окна заклинательной характеристики. */

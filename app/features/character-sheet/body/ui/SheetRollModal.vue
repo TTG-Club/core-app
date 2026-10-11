@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { AbilityKey, RollMode } from '../../model';
+  import type { AbilityKey, RollMode, RollModeSource } from '../../model';
 
   import { EFFECT_CONDITION_OPTIONS } from '~active-effects/model';
   import { useDiceRollHandler } from '~dice-roller/composables';
@@ -19,6 +19,7 @@
     ROLL_CHECK_ACTION_LABEL,
     ROLL_DICE_FACES_OPTIONS,
     ROLL_MODE_OPTIONS,
+    ROLL_MODE_SOURCE_VIEWS,
     SHEET_ROLL_MODAL_LABELS,
   } from '../../model';
 
@@ -37,6 +38,15 @@
     icon?: string;
     color: 'primary' | 'neutral';
     variant: 'soft' | 'outline';
+  }
+
+  /** Строка источника режима: что даёт преимущество или помеху. */
+  interface RollModeSourceItem {
+    key: string;
+    label: string;
+    modeLabel: string;
+    icon: string;
+    iconClass: string;
   }
 
   const props = withDefaults(
@@ -60,6 +70,13 @@
       mode?: RollMode;
 
       /**
+       * Откуда взялись преимущество и помеха: эффекты, состояния, умения,
+       * предметы и правила оружия. Окно только показывает их — режим всё
+       * равно задаёт `mode`.
+       */
+      modeSources?: RollModeSource[];
+
+      /**
        * Пересчёт режима по названному источнику спасброска.
        *
        * Задан — модалка спрашивает, от чего спасаемся: лист источника не знает,
@@ -67,11 +84,26 @@
        * вида против состояния. Не задан — строки нет, и это обычная проверка.
        */
       resolveMode?: (source: SheetRollSource) => RollMode;
+
+      /**
+       * Характеристика, выбранная игроком раньше: ею окно и открывается. null —
+       * «Авто», бросок по правилам.
+       */
+      selectedAbility?: AbilityKey | null;
+
+      /**
+       * Запоминание выбранной характеристики (атака оружием: выбор остаётся у
+       * предмета). Не задано — выбор действует на один бросок.
+       */
+      rememberAbility?: (ability: AbilityKey | null) => void;
     }>(),
     {
       actionLabel: ROLL_CHECK_ACTION_LABEL,
       mode: DEFAULT_ROLL_MODE,
+      modeSources: () => [],
       resolveMode: undefined,
+      selectedAbility: null,
+      rememberAbility: undefined,
     },
   );
 
@@ -90,10 +122,17 @@
   const rollMode = ref<RollMode>(props.mode);
 
   // Черновики живут только пока модалка открыта: оверлей размонтирует её после
-  // закрытия, поэтому следующий бросок снова начинается с «Авто» и к20.
+  // закрытия, поэтому следующий бросок снова начинается с к20 и с «Авто» — если
+  // характеристику не запомнил сам вызывающий (оружие помнит свою).
   const draftAbility = ref<AbilityKey | typeof ROLL_ABILITY_AUTO>(
-    ROLL_ABILITY_AUTO,
+    props.selectedAbility ?? ROLL_ABILITY_AUTO,
   );
+
+  // Выбор уходит сразу, а не по броску: игрок, поменявший Силу на Ловкость и
+  // закрывший окно, тоже ждёт, что серп запомнит Ловкость.
+  watch(draftAbility, (ability) => {
+    props.rememberAbility?.(ability === ROLL_ABILITY_AUTO ? null : ability);
+  });
 
   const draftDiceFaces = ref(DEFAULT_ROLL_DICE_FACES);
 
@@ -170,6 +209,28 @@
       color: option.value === rollMode.value ? 'primary' : 'neutral',
       variant: option.value === rollMode.value ? 'soft' : 'outline',
     })),
+  );
+
+  const modeSourceItems = computed<RollModeSourceItem[]>(() =>
+    props.modeSources.map((source) => {
+      const view = ROLL_MODE_SOURCE_VIEWS[source.mode];
+
+      return {
+        key: `${source.mode}:${source.label}`,
+        label: source.label,
+        modeLabel: view.label,
+        icon: view.icon,
+        iconClass: view.iconClass,
+      };
+    }),
+  );
+
+  // Источники обоих знаков по правилам гасят друг друга: без пометки игрок не
+  // поймёт, почему при наложенном состоянии окно открылось обычным броском.
+  const isModeCancelled = computed(
+    () =>
+      props.modeSources.some((source) => source.mode === 'advantage')
+      && props.modeSources.some((source) => source.mode === 'disadvantage'),
   );
 
   function handleModeSelect(mode: RollMode) {
@@ -290,6 +351,35 @@
               @click.left.exact.prevent="handleModeSelect(modeButton.value)"
             />
           </div>
+
+          <ul
+            v-if="modeSourceItems.length"
+            class="flex flex-col gap-1"
+          >
+            <li
+              v-for="source in modeSourceItems"
+              :key="source.key"
+              class="flex items-start gap-1.5 text-sm"
+            >
+              <UIcon
+                :name="source.icon"
+                class="mt-0.5 size-4 shrink-0"
+                :class="source.iconClass"
+              />
+
+              <span>
+                <span class="text-muted">{{ source.modeLabel }}:</span>
+                {{ source.label }}
+              </span>
+            </li>
+          </ul>
+
+          <span
+            v-if="isModeCancelled"
+            class="text-xs text-muted"
+          >
+            {{ SHEET_ROLL_MODAL_LABELS.modeCancelled }}
+          </span>
         </div>
       </div>
     </template>

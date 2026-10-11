@@ -40,6 +40,7 @@ import type {
   PreparedSpellKind,
   ProficiencyGrant,
   RollMode,
+  RollModeSource,
   SheetReadonlyReason,
   SheetRollContext,
   SpeedTypeKey,
@@ -55,6 +56,7 @@ import {
   ABILITY_ORDER,
   ABILITY_SCORE_MAX,
   ABILITY_SCORE_MIN,
+  addCopperToCurrency,
   adjustHealthForConstitution,
   adjustHitDice,
   applyAbilityIncreases,
@@ -105,16 +107,19 @@ import {
   getEffectiveSpeed,
   getFeatDefences,
   getInitiativeBonus,
+  getInventoryItemSalePriceInCopper,
   getInventoryWeight,
   getMaxHitPoints,
   getMaxHitPointsHint,
   getNextLevelExperience,
   getPreparedSpellsLimitDescription,
   getProficiencySourceId,
+  getPurchaseCostInCopper,
   getResourceMax,
   getSavingThrowRows,
   getSheetRollFlags,
   getSheetRollMode,
+  getSheetRollModeSources,
   getSkillRowGroups,
   getSkillRows,
   getSpellcastingBreakdown,
@@ -167,6 +172,7 @@ import {
   sortAbilityKeys,
   SPELL_COPY_TOAST_TITLE,
   SPELL_SLOTS_EMPTY_TOAST_TITLE,
+  spendCurrency,
   syncClassHitDice,
   toCopiedInventoryItem,
   toCopiedSpell,
@@ -215,6 +221,43 @@ function clampCurrencyAmount(amount: number): number {
   }
 
   return clamp(Math.trunc(amount), CURRENCY_AMOUNT_MIN, CURRENCY_AMOUNT_MAX);
+}
+
+/**
+ * Кошелёк с количествами каждой стандартной монеты в допустимом диапазоне.
+ *
+ * @param currency количества пяти стандартных денежных единиц.
+ * @returns кошелёк с ограниченными количествами.
+ */
+function clampCurrency(currency: CharacterCurrency): CharacterCurrency {
+  return {
+    copper: clampCurrencyAmount(currency.copper),
+    silver: clampCurrencyAmount(currency.silver),
+    electrum: clampCurrencyAmount(currency.electrum),
+    gold: clampCurrencyAmount(currency.gold),
+    platinum: clampCurrencyAmount(currency.platinum),
+  };
+}
+
+/**
+ * Предметы, которых ещё нет в инвентаре: идентификаторы каталога устойчивы
+ * (`item:url`), поэтому повтор отбрасывается.
+ *
+ * @param inventory текущий инвентарь персонажа.
+ * @param inventoryItems добавляемые предметы.
+ * @returns добавляемые предметы без уже имеющихся.
+ */
+function getFreshInventoryItems(
+  inventory: CharacterInventoryItem[],
+  inventoryItems: CharacterInventoryItem[],
+): CharacterInventoryItem[] {
+  const existingIds = new Set(
+    inventory.map((inventoryItem) => inventoryItem.id),
+  );
+
+  return inventoryItems.filter(
+    (inventoryItem) => !existingIds.has(inventoryItem.id),
+  );
 }
 
 /**
@@ -2980,12 +3023,9 @@ export function useCharacterSheet() {
       return;
     }
 
-    const existingIds = new Set(
-      character.value.inventory.map((inventoryItem) => inventoryItem.id),
-    );
-
-    const freshItems = inventoryItems.filter(
-      (inventoryItem) => !existingIds.has(inventoryItem.id),
+    const freshItems = getFreshInventoryItems(
+      character.value.inventory,
+      inventoryItems,
     );
 
     if (!freshItems.length) {
@@ -2999,6 +3039,52 @@ export function useCharacterSheet() {
         ...freshItems.map((inventoryItem) => ({ ...inventoryItem })),
       ],
     };
+  }
+
+  /**
+   * Покупка предметов из каталога раздела «Предметы»: предметы добавляются в
+   * инвентарь, а их стоимость списывается из кошелька одним обновлением листа.
+   * Уже добавленные предметы отбрасываются и не оплачиваются; предметы без
+   * распознанной цены бесплатны. Нехватку монеты нужного номинала закрывает
+   * размен более крупной.
+   *
+   * @param inventoryItems предметы с готовыми идентификаторами.
+   * @returns true — покупка прошла; false — лист заблокирован или денег не
+   * хватает.
+   */
+  function purchaseInventoryItems(
+    inventoryItems: CharacterInventoryItem[],
+  ): boolean {
+    if (!ensureEditable()) {
+      return false;
+    }
+
+    const freshItems = getFreshInventoryItems(
+      character.value.inventory,
+      inventoryItems,
+    );
+
+    const currency = spendCurrency(
+      character.value.currency,
+      getPurchaseCostInCopper(
+        freshItems.map((inventoryItem) => inventoryItem.cost),
+      ),
+    );
+
+    if (!currency) {
+      return false;
+    }
+
+    character.value = {
+      ...character.value,
+      currency: clampCurrency(currency),
+      inventory: [
+        ...character.value.inventory,
+        ...freshItems.map((inventoryItem) => ({ ...inventoryItem })),
+      ],
+    };
+
+    return true;
   }
 
   /**
@@ -3134,6 +3220,41 @@ export function useCharacterSheet() {
 
     character.value = {
       ...character.value,
+      inventory: character.value.inventory.filter(
+        (inventoryItem) => inventoryItem.id !== inventoryItemId,
+      ),
+    };
+  }
+
+  /**
+   * Продажа предмета: он уходит из инвентаря, а цена справочника за каждую
+   * штуку в наличии возвращается в кошелёк одним обновлением листа. Предмет
+   * без распознанной цены не продаётся.
+   *
+   * @param inventoryItemId идентификатор предмета инвентаря.
+   */
+  function sellInventoryItem(inventoryItemId: string): void {
+    if (!ensureEditable()) {
+      return;
+    }
+
+    const soldItem = character.value.inventory.find(
+      (inventoryItem) => inventoryItem.id === inventoryItemId,
+    );
+
+    const salePrice = soldItem
+      ? getInventoryItemSalePriceInCopper(soldItem)
+      : null;
+
+    if (salePrice === null) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      currency: clampCurrency(
+        addCopperToCurrency(character.value.currency, salePrice),
+      ),
       inventory: character.value.inventory.filter(
         (inventoryItem) => inventoryItem.id !== inventoryItemId,
       ),
@@ -3368,6 +3489,32 @@ export function useCharacterSheet() {
         inventoryItem.id === inventoryItemId
         && isVersatileInventoryItem(inventoryItem)
           ? { ...inventoryItem, twoHanded: !inventoryItem.twoHanded }
+          : inventoryItem,
+      ),
+    };
+  }
+
+  /**
+   * Выбор характеристики атаки оружием: игрок меняет её в окне броска атаки, и
+   * выбор остаётся у предмета — плитки атаки и урона считаются уже от неё.
+   * Игровое действие — блокировкой листа не ограничивается.
+   *
+   * @param inventoryItemId идентификатор предмета инвентаря.
+   * @param ability выбранная характеристика; null — по правилам.
+   */
+  function setInventoryItemAttackAbility(
+    inventoryItemId: string,
+    ability: AbilityKey | null,
+  ): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      inventory: character.value.inventory.map((inventoryItem) =>
+        inventoryItem.id === inventoryItemId && inventoryItem.weapon
+          ? { ...inventoryItem, attackAbility: ability }
           : inventoryItem,
       ),
     };
@@ -3616,6 +3763,16 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Источники преимущества и помехи броска: что именно задало его режим.
+   *
+   * @param context обстоятельства броска.
+   * @returns эффекты, умения и предметы, дающие преимущество или помеху.
+   */
+  function getRollModeSources(context: SheetRollContext): RollModeSource[] {
+    return getSheetRollModeSources(character.value, context);
+  }
+
+  /**
    * Установка личности персонажа: приметы, мировоззрение и подробное описание.
    * Правят её две модалки, каждая своей частью, поэтому обе присылают личность
    * целиком — поверх текущей. Пробелы по краям снимаются: строка из одних
@@ -3766,13 +3923,7 @@ export function useCharacterSheet() {
 
     character.value = {
       ...character.value,
-      currency: {
-        copper: clampCurrencyAmount(currency.copper),
-        silver: clampCurrencyAmount(currency.silver),
-        electrum: clampCurrencyAmount(currency.electrum),
-        gold: clampCurrencyAmount(currency.gold),
-        platinum: clampCurrencyAmount(currency.platinum),
-      },
+      currency: clampCurrency(currency),
       customCurrencies: customCurrencies
         .map((customCurrency) => ({
           id: customCurrency.id,
@@ -3833,6 +3984,7 @@ export function useCharacterSheet() {
     adjustInventoryItemCharges,
     restoreInventoryItemCharges,
     toggleInventoryItemTwoHanded,
+    setInventoryItemAttackAbility,
     toggleInspiration,
     downloadCharacter,
     addFeature,
@@ -3840,6 +3992,7 @@ export function useCharacterSheet() {
     addNote,
     applyLevelUp,
     addInventoryItems,
+    purchaseInventoryItems,
     addCustomInventoryItem,
     addCustomSpell,
     copyInnateSpellToSheet,
@@ -3848,6 +4001,7 @@ export function useCharacterSheet() {
     removeFeature,
     removeInnateSpell,
     removeInventoryItem,
+    sellInventoryItem,
     removeNote,
     removeSpell,
     updateActiveEffects,
@@ -3855,6 +4009,7 @@ export function useCharacterSheet() {
     appliedActiveEffects,
     resolvedEffects,
     getRollMode,
+    getRollModeSources,
     updateFeature,
     updateNote,
     updateCustomInventoryItem,

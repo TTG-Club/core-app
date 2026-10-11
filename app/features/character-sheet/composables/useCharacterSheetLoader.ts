@@ -13,6 +13,7 @@ import {
   fetchSharedCharacterSheet,
 } from '../model';
 import { useCharacterSheet } from './useCharacterSheet';
+import { useCharacterSheetVersion } from './useCharacterSheetAutosave';
 import { useCharacterSheetShare } from './useCharacterSheetShare';
 
 /** Статус загрузки листа: idle — лист не выбран (пустой идентификатор). */
@@ -69,7 +70,11 @@ export function useCharacterSheetLoader(
   options: SheetLoaderOptions = {},
 ) {
   const { loadCharacter, resetCharacter, setReadonly } = useCharacterSheet();
-  const { setShareToken, setViewedShareToken } = useCharacterSheetShare();
+
+  const { setShareToken, setViewedShareToken, setEditorAccess } =
+    useCharacterSheetShare();
+
+  const { setSheetVersion } = useCharacterSheetVersion();
   const { user, isAdmin, fetch: fetchProfile } = useUser();
 
   const isShared = computed(() => toValue(options.shared ?? false));
@@ -162,6 +167,7 @@ export function useCharacterSheetLoader(
     // Режим фиксируется до запроса: панель могла переключиться со своего листа
     // на чужой, и тело листа не должно успеть показать владельческие действия.
     setReadonly(currentShared ? 'shared' : null);
+    setEditorAccess(false);
 
     if (!currentSheetId) {
       status.value = 'idle';
@@ -186,11 +192,16 @@ export function useCharacterSheetLoader(
       // выясняется только по ответу, а автосейв должен увидеть документ уже в
       // режиме просмотра и не слать PUT в чужой лист.
       setReadonly(readonlyReason);
+      // Версия — раньше документа: первая же правка после загрузки должна
+      // уйти с ней, иначе сохранение затёрло бы чужое изменение без проверки.
+      setSheetVersion(detail.id, detail.version);
       loadCharacter(detail.data);
       // У листа по ссылке токена в ответе нет: управление доступом — только у владельца.
       setShareToken(detail.id, detail.shareToken);
       // Зато известен токен, по которому лист открыт, — им меню сохраняет его к себе.
       setViewedShareToken(currentShared ? currentSheetId : null);
+      // Чужой лист по праву редактора: правки разрешены, управление доступом — нет.
+      setEditorAccess(detail.editor);
       status.value = 'ready';
     } catch (error) {
       if (isStaleResponse(currentSheetId, currentShared)) {
@@ -222,6 +233,7 @@ export function useCharacterSheetLoader(
     resetCharacter();
     setShareToken(null, null);
     setViewedShareToken(null);
+    setEditorAccess(false);
     // Режим просмотра снимается вместе со страницей: состояние общее, и
     // следующий свой лист иначе открылся бы нередактируемым.
     setReadonly(null);

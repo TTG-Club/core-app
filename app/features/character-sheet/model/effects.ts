@@ -19,6 +19,11 @@ import type {
 
 import { camelCase } from 'es-toolkit';
 
+import {
+  EFFECT_ATTACK_ABILITY_CONDITION_PREFIX,
+  splitQuotedList,
+} from '~active-effects/model';
+
 import { ABILITY_ORDER, SKILL_NAME_BY_API_KEY } from './constants';
 
 /** Способы передвижения VTTG к ключам скоростей листа. */
@@ -94,6 +99,54 @@ const EFFECT_BONUS_MODES: Record<string, InventoryBonusMode> = {
   upgrade: 'upgrade',
   downgrade: 'downgrade',
 };
+
+/** Ключ изменения «урон рукопашным оружием». */
+const MELEE_DAMAGE_CHANGE_KEY = 'damage.melee';
+
+/** Ключ изменения «урон дальнобойным оружием». */
+const RANGED_DAMAGE_CHANGE_KEY = 'damage.ranged';
+
+/** Ключ изменения «весь наносимый урон». */
+const ALL_DAMAGE_CHANGE_KEY = 'damage.all';
+
+/**
+ * Ключи изменений, прибавляющих урон этому оружию: свой по дальности атаки и
+ * общий «весь наносимый урон». Урон «только этим предметом» сюда не идёт —
+ * его предмет несёт собственным бонусом урона.
+ *
+ * @param ranged оружие дальнобойное.
+ * @returns ключи изменений урона.
+ */
+export function getWeaponDamageChangeKeys(ranged: boolean): string[] {
+  return [
+    ranged ? RANGED_DAMAGE_CHANGE_KEY : MELEE_DAMAGE_CHANGE_KEY,
+    ALL_DAMAGE_CHANGE_KEY,
+  ];
+}
+
+/**
+ * Выполнено ли условие «атака идёт этой характеристикой» — единственное
+ * условие урона, которое лист проверяет сам: характеристику удара он знает.
+ * Так считает и VTTG (`readAbilityDamageScope`): «Ярость» прибавляет урон
+ * только ударам Силой. Составное условие и условие о цели дают `false`.
+ *
+ * @param condition условие изменения.
+ * @param ability характеристика атаки этим оружием.
+ * @returns true — условие названо и выполнено.
+ */
+export function matchesAttackAbilityCondition(
+  condition: string,
+  ability: string,
+): boolean {
+  const trimmed = condition.trim();
+
+  return (
+    trimmed.startsWith(EFFECT_ATTACK_ABILITY_CONDITION_PREFIX)
+    && splitQuotedList(
+      trimmed.slice(EFFECT_ATTACK_ABILITY_CONDITION_PREFIX.length),
+    ).includes(ability.toLowerCase())
+  );
+}
 
 /**
  * Величина изменения числом. Значение эффекта — строка, и в ней бывает формула

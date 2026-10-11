@@ -3,6 +3,7 @@
     CreateGameSessionRequest,
     GameCostType,
     GameSession,
+    GameSessionPrice,
     UpdateGameSessionRequest,
   } from '../../model';
 
@@ -53,11 +54,14 @@
 
   const {
     costType,
+    gamePrice = null,
     session = null,
     loading = false,
   } = defineProps<{
     /** Платность игры решает, нужны ли сессии платёжные поля. */
     costType: GameCostType;
+    /** Цена игры по умолчанию: ею предзаполнены платёжные поля. */
+    gamePrice?: GameSessionPrice | null;
     /**
      * Встреча, которую правят; без неё окно создаёт новую. Оплату у
      * назначенной встречи не меняют — по ней уже могут быть расчёты.
@@ -108,7 +112,10 @@
     paymentTypeOptions,
     applyTo: applyPaymentFields,
     reset: resetPaymentFields,
-  } = useSessionPaymentFields(() => costType);
+  } = useSessionPaymentFields(
+    () => costType,
+    () => gamePrice,
+  );
 
   // Дата и время живут порознь: время задаётся двумя полями, и склеивать их
   // обратно в одно поле пришлось бы только ради формата `datetime-local`.

@@ -2,6 +2,7 @@ import type { OnlineHeartbeatBody } from '../model';
 
 import { v7 as uuidv7 } from 'uuid';
 
+import { USER_TOKEN_COOKIE } from '#shared/consts';
 import {
   ONLINE_COUNTER_DATA_KEY,
   parseOnlineUsersTotal,
@@ -35,6 +36,7 @@ export function useOnlineHeartbeat(): void {
   });
 
   const visitorId = computed(() => parseOnlineVisitorId(storedVisitorId.value));
+  const userTokenCookie = useCookie<string | null>(USER_TOKEN_COOKIE);
   const { fetch: fetchUser, isLoggedIn, user } = useUser();
   const visibility = useDocumentVisibility();
 
@@ -79,7 +81,11 @@ export function useOnlineHeartbeat(): void {
     lastHeartbeatTime = Date.now();
 
     try {
-      if (!user.value) {
+      // Профиль спрашиваем, только если есть токен: у гостя запрос всё равно
+      // кончится 401, а его ожидание крутило загрузку на шлеме и кнопке входа.
+      refreshCookie(USER_TOKEN_COOKIE);
+
+      if (!user.value && userTokenCookie.value) {
         await fetchUser();
       }
 

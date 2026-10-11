@@ -17,6 +17,7 @@
     DEFAULT_DAMAGE_DICE_FACES,
     getAbilityModifier,
     getDamageFormula,
+    INVENTORY_STAT_HINT_LABELS,
     parseDamageNotation,
     ROLL_ABILITY_AUTO,
     ROLL_ABILITY_OPTIONS,
@@ -61,6 +62,29 @@
 
   const draftBonus = ref(0);
 
+  // Прибавки «по применению» выключены, пока игрок не отметит: идут они не в
+  // каждый удар, а условие («в свой ход действием Атака») лист не проверит.
+  const enabledRiderIds = shallowRef<string[]>([]);
+
+  const enabledRiders = computed(() =>
+    props.damage.riders.filter((rider) =>
+      enabledRiderIds.value.includes(rider.id),
+    ),
+  );
+
+  const ridersBonus = computed(() =>
+    enabledRiders.value.reduce((total, rider) => total + rider.bonus, 0),
+  );
+
+  /** Подписи галочек: название эффекта с величиной прибавки. */
+  const riderOptions = computed(() =>
+    props.damage.riders.map((rider) => ({
+      id: rider.id,
+      label: `${rider.name} ${getFormattedBonus(rider.bonus)}`,
+      description: rider.description,
+    })),
+  );
+
   const draftAbility = ref<AbilityKey | typeof ROLL_ABILITY_AUTO>(
     ROLL_ABILITY_AUTO,
   );
@@ -89,6 +113,8 @@
     () =>
       baseNotation.flatBonus
       + props.damage.flatBonus
+      + props.damage.effectBonus
+      + ridersBonus.value
       + props.damage.abilityModifierCount * abilityModifier.value,
   );
 
@@ -104,6 +130,12 @@
       baseParts.push(`оружие ${getFormattedBonus(props.damage.flatBonus)}`);
     }
 
+    if (props.damage.effectBonus !== 0) {
+      baseParts.push(
+        `${INVENTORY_STAT_HINT_LABELS.effects} ${getFormattedBonus(props.damage.effectBonus)}`,
+      );
+    }
+
     if (abilityKey.value && props.damage.abilityModifierCount > 0) {
       const repeat =
         props.damage.abilityModifierCount > 1
@@ -113,6 +145,10 @@
       baseParts.push(
         `${ABILITY_LABELS[abilityKey.value]} ${getFormattedBonus(abilityModifier.value)}${repeat}`,
       );
+    }
+
+    for (const rider of enabledRiders.value) {
+      baseParts.push(`${rider.name} ${getFormattedBonus(rider.bonus)}`);
     }
 
     const typePart = props.damage.typeLabel
@@ -228,6 +264,23 @@
             :disabled="!canAddDice"
             block
             @click.left.exact.prevent="handleDiceAdd"
+          />
+        </div>
+
+        <div
+          v-if="riderOptions.length"
+          class="flex flex-col gap-2"
+        >
+          <span
+            class="text-[10px] font-bold tracking-wider text-muted uppercase"
+          >
+            {{ SHEET_DAMAGE_MODAL_LABELS.riders }}
+          </span>
+
+          <UCheckboxGroup
+            v-model="enabledRiderIds"
+            :items="riderOptions"
+            value-key="id"
           />
         </div>
 

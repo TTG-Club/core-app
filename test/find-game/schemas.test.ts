@@ -193,6 +193,36 @@ describe('разбор игры', () => {
     expect(request).not.toHaveProperty('inviteCode');
   });
 
+  it('читает цену игры по умолчанию и копирует её в новую игру', () => {
+    const source = parseGame(
+      gameResponse({
+        priceAmount: 1500,
+        priceCurrency: 'RUB',
+        paymentType: 'PREPAYMENT',
+      }),
+    );
+
+    expect(source.priceAmount).toBe(1500);
+    expect(source.priceCurrency).toBe('RUB');
+    expect(source.paymentType).toBe('PREPAYMENT');
+
+    const request = toGameCopyRequest(source);
+
+    expect(request.priceAmount).toBe(1500);
+    expect(request.priceCurrency).toBe('RUB');
+    expect(request.paymentType).toBe('PREPAYMENT');
+  });
+
+  it('старая платная игра без цены читается с пустой ценой', () => {
+    const legacy = parseGame(gameResponse());
+
+    expect(legacy.costType).toBe('PAID');
+    expect(legacy.priceAmount).toBeNull();
+    expect(legacy.priceCurrency).toBeNull();
+    expect(legacy.paymentType).toBeNull();
+    expect(toGameCopyRequest(legacy)).not.toHaveProperty('priceAmount');
+  });
+
   it('копия своей системы и своего жанра сохраняет их названия', () => {
     const homebrewGame = parseGame(
       gameResponse({

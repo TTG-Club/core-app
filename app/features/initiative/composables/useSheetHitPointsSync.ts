@@ -50,15 +50,23 @@ export function useSheetHitPointsSync() {
    * @param hitPoints Текущие хиты из трекера.
    */
   async function saveOwn(sheetId: string, hitPoints: number): Promise<void> {
-    const { data } = await fetchCharacterSheet(sheetId);
+    const { data, version } = await fetchCharacterSheet(sheetId);
 
-    await updateCharacterSheet(sheetId, {
-      ...data,
-      health: {
-        ...data.health,
-        current: clamp(hitPoints, 0, data.health.max),
+    // Версия — от только что прочитанного документа: игрок успел поправить
+    // лист между чтением и записью — сервер ответит конфликтом, а не затрёт
+    // правку. Открытому листу новую версию не передаём: его автосохранение
+    // получит конфликт и подгрузит лист уже с этими хитами.
+    await updateCharacterSheet(
+      sheetId,
+      {
+        ...data,
+        health: {
+          ...data.health,
+          current: clamp(hitPoints, 0, data.health.max),
+        },
       },
-    });
+      version,
+    );
   }
 
   /**
