@@ -5814,6 +5814,8 @@ export const SHEET_MAGIC_ITEM_ADD_MODAL_LABELS = {
   pickAria: 'Выбрать магический предмет',
   preview: 'Открыть описание магического предмета',
   previewAria: 'Описание магического предмета',
+  buy: 'Купить',
+  selectedPrefix: 'Выбрано',
 } as const;
 
 /** Подписи окна мастера класса: список классов и подклассов. */

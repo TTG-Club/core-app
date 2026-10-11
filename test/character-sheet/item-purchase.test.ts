@@ -119,6 +119,17 @@ describe('продажа предмета', () => {
     expect(getInventoryItemSalePriceInCopper(ROPE)).toBe(300);
   });
 
+  it('магический предмет продаётся по цене из редкости и основы', () => {
+    expect(
+      getInventoryItemSalePriceInCopper({
+        ...ROPE,
+        category: 'MAGIC_ITEM',
+        cost: '410,5 зм',
+        quantity: 1,
+      }),
+    ).toBe(41050);
+  });
+
   it('предмет без цены или без наличия не продаётся', () => {
     expect(
       getInventoryItemSalePriceInCopper({ ...ROPE, cost: 'варьируется' }),
