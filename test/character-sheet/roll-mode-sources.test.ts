@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   DEFAULT_CHARACTER,
+  getHeavyWeaponHint,
   getSheetRollModeSources,
   getWeaponAttackBonus,
   getWeaponAttackRollModeSources,
@@ -101,7 +102,10 @@ describe('источники преимущества и помехи броск
     const attack = getWeaponAttackBonus(character, GREATSWORD, true, null);
 
     expect(getWeaponAttackRollModeSources(attack)).toEqual([
-      { label: 'Тяжёлое оружие: Сила меньше 13', mode: 'disadvantage' },
+      {
+        label: getHeavyWeaponHint('strength'),
+        mode: 'disadvantage',
+      },
     ]);
   });
 });

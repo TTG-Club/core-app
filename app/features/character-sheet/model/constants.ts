@@ -1987,6 +1987,12 @@ export const SPEED_UNIT_OPTIONS: Array<{ label: string; value: SpeedUnit }> = [
 /** Режим броска d20 по умолчанию: без преимущества и помехи. */
 export const DEFAULT_ROLL_MODE: RollMode = 'normal';
 
+/** Значки преимущества и помехи: одни и те же на кнопках режима и в источниках. */
+export const ROLL_MODE_ICONS: Record<RollModeSourceMode, string> = {
+  advantage: 'tabler:arrow-big-up-filled',
+  disadvantage: 'tabler:arrow-big-down-filled',
+};
+
 /** Варианты режима броска d20. */
 export const ROLL_MODE_OPTIONS: Array<{
   value: RollMode;
@@ -1994,11 +2000,11 @@ export const ROLL_MODE_OPTIONS: Array<{
   icon?: string;
 }> = [
   { value: 'normal', label: 'Обычный' },
-  { value: 'advantage', label: 'Преим.', icon: 'tabler:arrow-big-up-filled' },
+  { value: 'advantage', label: 'Преим.', icon: ROLL_MODE_ICONS.advantage },
   {
     value: 'disadvantage',
     label: 'Помеха',
-    icon: 'tabler:arrow-big-down-filled',
+    icon: ROLL_MODE_ICONS.disadvantage,
   },
 ];
 
@@ -2009,12 +2015,12 @@ export const ROLL_MODE_SOURCE_VIEWS: Record<
 > = {
   advantage: {
     label: 'Преимущество',
-    icon: 'tabler:arrow-big-up-filled',
+    icon: ROLL_MODE_ICONS.advantage,
     iconClass: 'text-success',
   },
   disadvantage: {
     label: 'Помеха',
-    icon: 'tabler:arrow-big-down-filled',
+    icon: ROLL_MODE_ICONS.disadvantage,
     iconClass: 'text-error',
   },
 };

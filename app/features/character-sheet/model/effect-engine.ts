@@ -430,6 +430,17 @@ export function getEffectDamageDefences(
 }
 
 /**
+ * Действует ли эффект на самого персонажа: выключенный эффект и эффект,
+ * нацеленный на кого-то другого, лист не считает.
+ *
+ * @param effect активный эффект.
+ * @returns признак действия эффекта на персонажа.
+ */
+function isEffectActingOnSelf(effect: ActiveEffect): boolean {
+  return !effect.disabled && effect.effectTarget !== 'target';
+}
+
+/**
  * Разбирает эффекты в набор безусловных флагов и список условных изменений.
  *
  * Выключенный эффект и эффект, нацеленный на кого-то другого, пропускаются:
@@ -444,11 +455,7 @@ export function resolveSheetEffects(
   const flags = new Set<string>();
   const conditionalChanges: EffectChange[] = [];
 
-  for (const effect of effects) {
-    if (effect.disabled || effect.effectTarget === 'target') {
-      continue;
-    }
-
+  for (const effect of effects.filter(isEffectActingOnSelf)) {
     for (const flag of effect.flags) {
       flags.add(flag);
     }
@@ -685,36 +692,68 @@ export function getSheetRollModeSources(
   character: Character,
   context: SheetRollContext,
 ): RollModeSource[] {
-  const sources: RollModeSource[] = [];
-
-  for (const entry of collectAppliedEffectEntries(character)) {
-    const { effect } = entry;
-
-    if (effect.disabled || effect.effectTarget === 'target') {
-      continue;
-    }
-
-    const flags = new Set(effect.flags);
-    const label = getEffectSourceLabel(entry);
-
-    if (hasAdvantageFlag(flags, context)) {
-      sources.push({ label, mode: 'advantage' });
-    }
-
-    if (hasDisadvantageFlag(flags, context)) {
-      sources.push({ label, mode: 'disadvantage' });
-    }
-  }
-
-  if (hasDisadvantageFlag(new Set([STEALTH_DISADVANTAGE_FLAG]), context)) {
-    for (const inventoryItem of character.inventory.filter(isNoisyArmorWorn)) {
-      sources.push({ label: inventoryItem.name, mode: 'disadvantage' });
-    }
-  }
+  const sources = [
+    ...getEffectRollModeSources(character, context),
+    ...getArmorRollModeSources(character, context),
+  ];
 
   // Одно состояние может прийти и от заклинания, и от предмета под тем же
   // названием — в окне ему хватит одной строки.
   return uniqBy(sources, (source) => `${source.mode}:${source.label}`);
+}
+
+/**
+ * Источники режима среди эффектов: каждый эффект, чьи флаги дают этому броску
+ * преимущество или помеху.
+ *
+ * @param character персонаж.
+ * @param context обстоятельства броска.
+ * @returns источники режима из эффектов.
+ */
+function getEffectRollModeSources(
+  character: Character,
+  context: SheetRollContext,
+): RollModeSource[] {
+  return collectAppliedEffectEntries(character)
+    .filter((entry) => isEffectActingOnSelf(entry.effect))
+    .flatMap((entry) => {
+      const flags = new Set(entry.effect.flags);
+      const label = getEffectSourceLabel(entry);
+      const sources: RollModeSource[] = [];
+
+      if (hasAdvantageFlag(flags, context)) {
+        sources.push({ label, mode: 'advantage' });
+      }
+
+      if (hasDisadvantageFlag(flags, context)) {
+        sources.push({ label, mode: 'disadvantage' });
+      }
+
+      return sources;
+    });
+}
+
+/**
+ * Источники режима среди снаряжения: шумный доспех на проверке Скрытности.
+ *
+ * @param character персонаж.
+ * @param context обстоятельства броска.
+ * @returns надетые шумные доспехи, если бросок — проверка Скрытности.
+ */
+function getArmorRollModeSources(
+  character: Character,
+  context: SheetRollContext,
+): RollModeSource[] {
+  if (!hasDisadvantageFlag(new Set([STEALTH_DISADVANTAGE_FLAG]), context)) {
+    return [];
+  }
+
+  return character.inventory.filter(isNoisyArmorWorn).map(
+    (inventoryItem): RollModeSource => ({
+      label: inventoryItem.name,
+      mode: 'disadvantage',
+    }),
+  );
 }
 
 /**

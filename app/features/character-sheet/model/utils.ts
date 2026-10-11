@@ -5166,7 +5166,7 @@ export function getWeaponAttackRollModeSources(
 
   return [
     {
-      label: `Тяжёлое оружие: ${ABILITY_LABELS[attack.heavyAbility]} меньше ${HEAVY_WEAPON_ABILITY_MINIMUM}`,
+      label: getHeavyWeaponHint(attack.heavyAbility),
       mode: 'disadvantage',
     },
   ];
