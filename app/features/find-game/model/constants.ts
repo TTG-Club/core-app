@@ -1130,6 +1130,7 @@ export const GAME_FORM_ADDITIONAL_SECTION = 'Дополнительно: ссы�
 export const GAME_FORM_UNSAVED_WARNING =
   'Изменения не сохранены. Покинуть форму?';
 export const GAME_FORM_REQUIRED_ERROR = 'Заполните это поле';
+export const GAME_FORM_FREE_PRICE_ERROR = 'У бесплатной игры цены нет';
 export const GAME_FORM_LEAVE_TITLE = 'Несохранённые изменения';
 export const GAME_FORM_LEAVE_LABEL = 'Выйти без сохранения';
 export const GAME_FORM_STAY_LABEL = 'Продолжить редактирование';

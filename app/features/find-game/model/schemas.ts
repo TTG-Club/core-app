@@ -31,6 +31,7 @@ import {
   GAME_CUSTOM_SYSTEM_MAX_LENGTH,
   GAME_DESCRIPTION_MAX_LENGTH,
   GAME_DURATION_TYPES,
+  GAME_FORM_FREE_PRICE_ERROR,
   GAME_FORM_REQUIRED_ERROR,
   GAME_GENRE_MAX_LENGTH,
   GAME_GENRES_MAX_COUNT,
@@ -1058,6 +1059,13 @@ function optionalTrimmed(max: number) {
     .optional();
 }
 
+/** Поля цены игры по умолчанию: у платной игры нужны все, у бесплатной ни одного. */
+const GAME_PRICE_FIELDS = [
+  'priceAmount',
+  'priceCurrency',
+  'paymentType',
+] as const;
+
 export const createGameRequestSchema = z
   .object({
     title: z.string().trim().min(1).max(GAME_TITLE_MAX_LENGTH),
@@ -1108,24 +1116,22 @@ export const createGameRequestSchema = z
     const game = context.value;
 
     // Цену платной игры видно до первой встречи, поэтому сервис требует её
-    // целиком; у бесплатной игры цены нет вовсе.
-    if (game.costType === 'PAID') {
-      const priceFields = [
-        'priceAmount',
-        'priceCurrency',
-        'paymentType',
-      ] as const;
+    // целиком; у бесплатной игры цены нет вовсе, и сервис такую цену отвергает.
+    const isPaid = game.costType === 'PAID';
 
-      for (const field of priceFields) {
-        if (game[field] === undefined) {
-          context.issues.push({
-            code: 'custom',
-            input: game[field],
-            path: [field],
-            message: GAME_FORM_REQUIRED_ERROR,
-          });
-        }
+    for (const field of GAME_PRICE_FIELDS) {
+      const isSet = game[field] !== undefined;
+
+      if (isPaid === isSet) {
+        continue;
       }
+
+      context.issues.push({
+        code: 'custom',
+        input: game[field],
+        path: [field],
+        message: isPaid ? GAME_FORM_REQUIRED_ERROR : GAME_FORM_FREE_PRICE_ERROR,
+      });
     }
 
     // Без названия своей системы игроку не понять, во что играют: сервис

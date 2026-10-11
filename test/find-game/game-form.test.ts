@@ -104,6 +104,18 @@ describe('тело создания игры', () => {
     expect(paid.priceAmount).toBe(1500);
   });
 
+  it('у бесплатной игры цена не допускается', () => {
+    const freeValidation = createGameRequestSchema.safeParse(
+      onlineGame({ priceAmount: 1500 }),
+    );
+
+    expect(freeValidation.success).toBe(false);
+
+    expect(freeValidation.error?.issues.map((issue) => issue.path)).toEqual([
+      ['priceAmount'],
+    ]);
+  });
+
   it('минимальная онлайн-игра проходит проверку', () => {
     const parsed = createGameRequestSchema.parse(onlineGame());
 
@@ -319,7 +331,7 @@ describe('подписи сессии', () => {
       paymentType: 'PREPAYMENT',
     } as never);
 
-    expect(label).toBe('15.00 EUR · Предоплата');
+    expect(label).toBe('15 EUR · Предоплата');
   });
 
   it('у бесплатной сессии стоимости нет', () => {

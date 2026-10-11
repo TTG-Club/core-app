@@ -152,6 +152,15 @@ export function getNextSessionLabel(
 }
 
 /**
+ * Сумма цены в русской записи: с разрядами и без лишних нулей после запятой,
+ * чтобы карточка и страница игры показывали её одинаково.
+ * @param amount Сумма цены.
+ */
+function formatPriceAmount(amount: number): string {
+  return amount.toLocaleString('ru-RU');
+}
+
+/**
  * Цена встречи для карточки: сначала ближайшей, затем игры по умолчанию.
  * Отсутствие цены не означает бесплатную игру — у старой платной игры её
  * просто не указали.
@@ -170,7 +179,7 @@ export function getGameCardPriceLabel(game: Game): string {
     return GAME_PRICE_UNSPECIFIED_LABEL;
   }
 
-  return `${price.priceAmount.toLocaleString('ru-RU')} ${price.priceCurrency} / ${GAME_PRICE_PER_SESSION_LABEL}`;
+  return `${formatPriceAmount(price.priceAmount)} ${price.priceCurrency} / ${GAME_PRICE_PER_SESSION_LABEL}`;
 }
 
 /**
@@ -463,7 +472,7 @@ export function getSessionPriceLabel(
     return null;
   }
 
-  const price = `${sessionPrice.priceAmount.toFixed(2)} ${sessionPrice.priceCurrency}`;
+  const price = `${formatPriceAmount(sessionPrice.priceAmount)} ${sessionPrice.priceCurrency}`;
 
   if (!sessionPrice.paymentType) {
     return price;
