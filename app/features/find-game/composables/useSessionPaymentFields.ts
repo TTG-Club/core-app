@@ -1,6 +1,10 @@
 import type { MaybeRefOrGetter } from 'vue';
 
-import type { GameCostType, SessionPaymentType } from '../model';
+import type {
+  GameCostType,
+  GameSessionPrice,
+  SessionPaymentType,
+} from '../model';
 
 import {
   SESSION_CURRENCY_OPTIONS,
@@ -23,6 +27,7 @@ interface SessionPaymentRequestFields {
   priceAmount?: number;
   priceCurrency?: string;
   paymentType?: SessionPaymentType;
+  free?: boolean;
 }
 
 const paymentTypeOptions: Array<PaymentOption> = SESSION_PAYMENT_TYPES.map(
@@ -36,10 +41,15 @@ const paymentTypeOptions: Array<PaymentOption> = SESSION_PAYMENT_TYPES.map(
  * поэтому поля живут здесь целиком — вместе с правилом «платная игра не
  * обязана быть платной целиком» и сборкой полей в тело запроса.
  *
+ * Поля предзаполнены ценой игры по умолчанию: обычно встреча стоит столько
+ * же, и мастеру остаётся поправить цену только у особенной.
+ *
  * @param costType Платность игры: у бесплатной платёжных полей нет вовсе.
+ * @param gamePrice Цена игры по умолчанию; у старой игры её может не быть.
  */
 export function useSessionPaymentFields(
   costType: MaybeRefOrGetter<GameCostType>,
+  gamePrice: MaybeRefOrGetter<GameSessionPrice | null> = null,
 ) {
   const isFree = ref(false);
   const priceAmount = ref<number | null>(null);
@@ -50,6 +60,17 @@ export function useSessionPaymentFields(
   const paymentType = ref<SessionPaymentType | null>(
     SESSION_DEFAULT_PAYMENT_TYPE,
   );
+
+  /** Ставит в поля цену игры, а без неё — значения по умолчанию. */
+  function fillFromGamePrice(): void {
+    const price = toValue(gamePrice);
+
+    priceAmount.value = price?.priceAmount ?? null;
+    priceCurrency.value = price?.priceCurrency ?? SESSION_DEFAULT_CURRENCY;
+    paymentType.value = price?.paymentType ?? SESSION_DEFAULT_PAYMENT_TYPE;
+  }
+
+  fillFromGamePrice();
 
   /** Показывать ли платёжные поля: игра платная и встречу не объявили даром. */
   const isPaid = computed(() => toValue(costType) === 'PAID' && !isFree.value);
@@ -88,10 +109,18 @@ export function useSessionPaymentFields(
   /**
    * Дописывает платёжные поля в тело запроса. У бесплатной игры они не
    * отправляются вовсе — сервис отвергает запрос, в котором они заданы.
+   * Бесплатную встречу платной игры сервис узнаёт по явной отметке: без неё
+   * встреча получила бы цену игры.
    *
    * @param request Тело запроса на создание встречи или серии.
    */
   function applyTo(request: SessionPaymentRequestFields): void {
+    if (toValue(costType) === 'PAID' && isFree.value) {
+      request.free = true;
+
+      return;
+    }
+
     if (!isPaid.value || priceAmount.value === null || !paymentType.value) {
       return;
     }
@@ -104,9 +133,7 @@ export function useSessionPaymentFields(
   /** Возвращает платёжные поля к пустым значениям. */
   function reset(): void {
     isFree.value = false;
-    priceAmount.value = null;
-    priceCurrency.value = SESSION_DEFAULT_CURRENCY;
-    paymentType.value = SESSION_DEFAULT_PAYMENT_TYPE;
+    fillFromGamePrice();
   }
 
   return {
