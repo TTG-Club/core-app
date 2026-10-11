@@ -2,6 +2,7 @@
   import type {
     CreateGameSessionSeriesRequest,
     GameCostType,
+    GameSessionPrice,
     SessionWeekday,
   } from '../../model';
 
@@ -59,9 +60,15 @@
    */
   const isOpen = defineModel<boolean>('open', { required: true });
 
-  const { costType, loading = false } = defineProps<{
+  const {
+    costType,
+    gamePrice = null,
+    loading = false,
+  } = defineProps<{
     /** Платность игры решает, нужны ли встречам платёжные поля. */
     costType: GameCostType;
+    /** Цена игры по умолчанию: ею предзаполнены платёжные поля. */
+    gamePrice?: GameSessionPrice | null;
     loading?: boolean;
   }>();
 
@@ -104,7 +111,10 @@
     paymentTypeOptions,
     applyTo: applyPaymentFields,
     reset: resetPaymentFields,
-  } = useSessionPaymentFields(() => costType);
+  } = useSessionPaymentFields(
+    () => costType,
+    () => gamePrice,
+  );
 
   const weekdayOptions = SESSION_WEEKDAYS.map((value) => ({
     value,

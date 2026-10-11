@@ -86,6 +86,24 @@ describe('тело создания игры', () => {
     ).toThrow();
   });
 
+  it('платная игра требует цену за сессию целиком', () => {
+    expect(
+      createGameRequestSchema.safeParse(onlineGame({ costType: 'PAID' }))
+        .success,
+    ).toBe(false);
+
+    const paid = createGameRequestSchema.parse(
+      onlineGame({
+        costType: 'PAID',
+        priceAmount: 1500,
+        priceCurrency: 'RUB',
+        paymentType: 'POSTPAYMENT',
+      }),
+    );
+
+    expect(paid.priceAmount).toBe(1500);
+  });
+
   it('минимальная онлайн-игра проходит проверку', () => {
     const parsed = createGameRequestSchema.parse(onlineGame());
 
@@ -218,14 +236,11 @@ describe('тело создания игры', () => {
     ).toThrow();
   });
 
-  it('платность игры задаётся типом, без суммы', () => {
-    // Сумма и условия оплаты живут у сессии, а не у игры.
-    const paid = createGameRequestSchema.parse(
-      onlineGame({ costType: 'PAID' }),
-    );
+  it('бесплатная игра обходится без цены', () => {
+    const free = createGameRequestSchema.parse(onlineGame());
 
-    expect(paid.costType).toBe('PAID');
-    expect('priceAmount' in paid).toBe(false);
+    expect(free.costType).toBe('FREE');
+    expect('priceAmount' in free).toBe(false);
   });
 
   it('приватная игра отличается только видимостью', () => {

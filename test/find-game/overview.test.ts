@@ -51,12 +51,26 @@ describe('карточка ближайшей встречи', () => {
     expect(getGameCardPriceLabel(game)).toContain('RUB / за встречу');
 
     expect(getGameCardPriceLabel({ ...game, nextSession: null })).toBe(
-      'Стоимость уточняется',
+      'Не указано',
     );
 
     expect(getGameCardPriceLabel({ ...game, costType: 'FREE' })).toBe(
       'Бесплатно',
     );
+  });
+
+  it('без назначенной встречи показывает цену игры по умолчанию', () => {
+    const game = parseGame({
+      id: 'game-1',
+      masterId: 'master-1',
+      costType: 'PAID',
+      priceAmount: 2000,
+      priceCurrency: 'RUB',
+      paymentType: 'PREPAYMENT',
+    });
+
+    expect(getGameCardPriceLabel(game)).toContain('RUB / за встречу');
+    expect(getGameCardPriceLabel(game)).toMatch(/^2\s000 RUB/u);
   });
 
   it('показывает переход через полночь и часовой пояс', () => {

@@ -1137,7 +1137,8 @@ export const SESSION_AGENDA_CLOCK_INTERVAL = 60_000;
 export const GAME_NEXT_SESSION_FALLBACK = 'Время согласуется';
 export const GAME_NEXT_SESSION_LOADING_LABEL = 'Время встречи…';
 export const GAME_NEXT_PAID_SESSION_PRICE_LABEL = 'Стоимость за сессию';
-export const GAME_PRICE_PENDING_LABEL = 'Стоимость уточняется';
+/** Платная игра без цены: заведена до цены по умолчанию или ещё не дозаполнена. */
+export const GAME_PRICE_UNSPECIFIED_LABEL = 'Не указано';
 export const GAME_PRICE_PER_SESSION_LABEL = 'за встречу';
 export const GAME_FREE_SEATS_LABEL = 'Свободно мест';
 export const MY_GAMES_OVERVIEW_SIZE = 4;
@@ -1275,7 +1276,8 @@ export const GAME_FIELD_VENUE_PLACEHOLDER = 'Клуб «Кубик», Пятни
 export const GAME_FIELD_DURATION_LABEL = 'Длительность';
 export const GAME_FIELD_COST_LABEL = 'Стоимость';
 export const GAME_FIELD_COST_HINT =
-  'Сумму и условия оплаты вы зададите у каждой сессии отдельно.';
+  'У платной игры цену за сессию видно до первой встречи; у отдельной сессии её можно изменить.';
+export const GAME_FIELD_PRICE_LABEL = 'Цена за сессию';
 export const GAME_FIELD_VISIBILITY_LABEL = 'Видимость';
 export const GAME_FIELD_VISIBILITY_HINT =
   'Приватную игру видно только по ссылке-приглашению.';

@@ -678,6 +678,7 @@
     <SessionFormModal
       v-model:open="isCreateOpen"
       :cost-type="game.costType"
+      :game-price="game"
       :loading="isBusy"
       @submit="handleCreate"
     />
@@ -693,6 +694,7 @@
     <SessionSeriesModal
       v-model:open="isSeriesOpen"
       :cost-type="game.costType"
+      :game-price="game"
       :loading="isBusy"
       @submit="handleCreateSeries"
     />

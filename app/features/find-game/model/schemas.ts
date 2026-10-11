@@ -58,7 +58,9 @@ import {
   PROFILE_GENDERS,
   REVIEW_KINDS,
   SESSION_ATTENDANCE_STATUSES,
+  SESSION_CURRENCY_PATTERN,
   SESSION_PAYMENT_TYPES,
+  SESSION_PRICE_MIN,
   SESSION_REGISTRATION_STATUSES,
 } from './constants';
 
@@ -474,6 +476,11 @@ const gameResponseSchema = z.object({
   // Публичные ответы код приглашения вырезают — здесь он появляется только
   // при создании игры и в собственной выдаче мастера.
   inviteCode: z.string().nullish().catch(null),
+  // Цена игры по умолчанию. Старые сборки сервиса и игры, заведённые до неё,
+  // поля не отдают — тогда карточка пишет «Не указано».
+  priceAmount: decimalSchema.nullish().catch(null),
+  priceCurrency: z.string().nullish().catch(null),
+  paymentType: z.enum(SESSION_PAYMENT_TYPES).nullish().catch(null),
   nextSession: nextGameSessionSchema.nullish(),
   createdAt: instantSchema,
   // Поле сборок сервиса с поднятием игр: на старой сборке его просто нет.
@@ -523,6 +530,9 @@ function toGame(parsed: z.infer<typeof gameResponseSchema>): Game {
     costType: parsed.costType,
     visibility: parsed.visibility,
     inviteCode: parsed.inviteCode ?? null,
+    priceAmount: parsed.priceAmount ?? null,
+    priceCurrency: parsed.priceCurrency ?? null,
+    paymentType: parsed.paymentType ?? null,
     nextSession: parsed.nextSession
       ? {
           id: parsed.nextSession.id,
@@ -1090,9 +1100,33 @@ export const createGameRequestSchema = z
     durationType: z.enum(GAME_DURATION_TYPES),
     costType: z.enum(GAME_COST_TYPES),
     visibility: z.enum(GAME_VISIBILITIES),
+    priceAmount: z.number().int().min(SESSION_PRICE_MIN).optional(),
+    priceCurrency: z.string().regex(SESSION_CURRENCY_PATTERN).optional(),
+    paymentType: z.enum(SESSION_PAYMENT_TYPES).optional(),
   })
   .check((context) => {
     const game = context.value;
+
+    // Цену платной игры видно до первой встречи, поэтому сервис требует её
+    // целиком; у бесплатной игры цены нет вовсе.
+    if (game.costType === 'PAID') {
+      const priceFields = [
+        'priceAmount',
+        'priceCurrency',
+        'paymentType',
+      ] as const;
+
+      for (const field of priceFields) {
+        if (game[field] === undefined) {
+          context.issues.push({
+            code: 'custom',
+            input: game[field],
+            path: [field],
+            message: GAME_FORM_REQUIRED_ERROR,
+          });
+        }
+      }
+    }
 
     // Без названия своей системы игроку не понять, во что играют: сервис
     // такую игру отвергает.
