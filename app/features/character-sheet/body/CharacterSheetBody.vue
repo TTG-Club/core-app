@@ -6,6 +6,7 @@
     PreparedSpellKind,
     ProficiencyGroupKey,
     SavingThrowRow,
+    SheetRollContext,
     SkillRow,
     SpellDamageRoll,
   } from '../model';
@@ -39,6 +40,7 @@
     getSkillKeyByName,
     getWeaponAttackBonus,
     getWeaponAttackRollMode,
+    getWeaponAttackRollModeSources,
     getWeaponDamageSource,
     isProficientWeapon,
     LANGUAGE_PROFICIENCY_GROUPS,
@@ -174,6 +176,7 @@
     toggleInspiration,
     downloadCharacter,
     getRollMode,
+    getRollModeSources,
   } = useCharacterSheet();
 
   // Действия над листом целиком (копия и удаление) живут в общем состоянии
@@ -878,6 +881,11 @@
 
     const inventoryItemId = inventoryItem.id;
 
+    const attackContext: SheetRollContext = {
+      kind: 'attack',
+      attackType: inventoryItem.weapon.ranged ? 'ranged' : 'melee',
+    };
+
     rollModal.open({
       title: `Атака: ${inventoryItem.name}`,
       modifier: attack.value,
@@ -894,11 +902,14 @@
       // можно только правилом 5e, поэтому не «или», а `combineRollModes`.
       mode: combineRollModes(
         getWeaponAttackRollMode(attack),
-        getRollMode({
-          kind: 'attack',
-          attackType: inventoryItem.weapon.ranged ? 'ranged' : 'melee',
-        }),
+        getRollMode(attackContext),
       ),
+      // Окно называет, откуда взялись преимущество и помеха: сам значок режима
+      // о причине не говорит.
+      modeSources: [
+        ...getWeaponAttackRollModeSources(attack),
+        ...getRollModeSources(attackContext),
+      ],
     });
   }
 

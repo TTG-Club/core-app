@@ -40,6 +40,7 @@ import type {
   PreparedSpellKind,
   ProficiencyGrant,
   RollMode,
+  RollModeSource,
   SheetReadonlyReason,
   SheetRollContext,
   SpeedTypeKey,
@@ -118,6 +119,7 @@ import {
   getSavingThrowRows,
   getSheetRollFlags,
   getSheetRollMode,
+  getSheetRollModeSources,
   getSkillRowGroups,
   getSkillRows,
   getSpellcastingBreakdown,
@@ -3761,6 +3763,16 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Источники преимущества и помехи броска: что именно задало его режим.
+   *
+   * @param context обстоятельства броска.
+   * @returns эффекты, умения и предметы, дающие преимущество или помеху.
+   */
+  function getRollModeSources(context: SheetRollContext): RollModeSource[] {
+    return getSheetRollModeSources(character.value, context);
+  }
+
+  /**
    * Установка личности персонажа: приметы, мировоззрение и подробное описание.
    * Правят её две модалки, каждая своей частью, поэтому обе присылают личность
    * целиком — поверх текущей. Пробелы по краям снимаются: строка из одних
@@ -3997,6 +4009,7 @@ export function useCharacterSheet() {
     appliedActiveEffects,
     resolvedEffects,
     getRollMode,
+    getRollModeSources,
     updateFeature,
     updateNote,
     updateCustomInventoryItem,

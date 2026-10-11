@@ -131,6 +131,7 @@ import type {
   ResourceRecoveryMode,
   ResourceRecoveryRule,
   RollMode,
+  RollModeSource,
   SavedCharacterSheet,
   SavingThrowRow,
   SheetChoiceControl,
@@ -5147,6 +5148,28 @@ function getHeavyWeaponAbility(
  */
 export function getWeaponAttackRollMode(attack: WeaponAttack): RollMode {
   return attack.heavyAbility ? 'disadvantage' : DEFAULT_ROLL_MODE;
+}
+
+/**
+ * Источник помехи атаки по правилам оружия: тяжёлое оружие не по руке. Окно
+ * атаки показывает его рядом с источниками из эффектов.
+ *
+ * @param attack разбор бонуса атаки оружием.
+ * @returns источник помехи; пустой список — оружие по руке.
+ */
+export function getWeaponAttackRollModeSources(
+  attack: WeaponAttack,
+): RollModeSource[] {
+  if (!attack.heavyAbility) {
+    return [];
+  }
+
+  return [
+    {
+      label: `Тяжёлое оружие: ${ABILITY_LABELS[attack.heavyAbility]} меньше ${HEAVY_WEAPON_ABILITY_MINIMUM}`,
+      mode: 'disadvantage',
+    },
+  ];
 }
 
 /**

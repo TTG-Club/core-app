@@ -158,6 +158,22 @@ export interface CharacterExtraHitDie extends CharacterHitDie {
 /** Режим броска d20. */
 export type RollMode = 'normal' | 'advantage' | 'disadvantage';
 
+/** Режим броска d20, который даёт источник: обычный бросок источником не бывает. */
+export type RollModeSourceMode = Exclude<RollMode, 'normal'>;
+
+/**
+ * Источник преимущества или помехи броска: эффект, состояние, умение, предмет
+ * или правило снаряжения. Окно броска показывает их, чтобы игрок видел, откуда
+ * взялся режим.
+ */
+export interface RollModeSource {
+  /** Название источника. */
+  label: string;
+
+  /** Что даёт источник: преимущество или помеху. */
+  mode: RollModeSourceMode;
+}
+
 /** Способ прироста максимума хитов за взятые уровни в модалке опыта. */
 export type HitPointsGainMode = 'average' | 'roll' | 'max';
 

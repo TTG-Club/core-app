@@ -47,6 +47,7 @@ import type {
   ResourceRecoveryField,
   ResourceRecoveryMode,
   RollMode,
+  RollModeSourceMode,
   SheetReadonlyReason,
   SheetSaveStatus,
   SheetTab,
@@ -2000,6 +2001,23 @@ export const ROLL_MODE_OPTIONS: Array<{
     icon: 'tabler:arrow-big-down-filled',
   },
 ];
+
+/** Вид строки источника режима в окне броска: подпись, значок и его цвет. */
+export const ROLL_MODE_SOURCE_VIEWS: Record<
+  RollModeSourceMode,
+  { label: string; icon: string; iconClass: string }
+> = {
+  advantage: {
+    label: 'Преимущество',
+    icon: 'tabler:arrow-big-up-filled',
+    iconClass: 'text-success',
+  },
+  disadvantage: {
+    label: 'Помеха',
+    icon: 'tabler:arrow-big-down-filled',
+    iconClass: 'text-error',
+  },
+};
 
 /** Количество костей в броске по его режиму: преимущество и помеха катят две. */
 export const ROLL_MODE_DICE_COUNT: Record<RollMode, number> = {
@@ -6285,6 +6303,7 @@ export const SHEET_ROLL_MODAL_LABELS = {
   againstMagicHelp: 'Заклинание или иной магический эффект',
   magicSource: 'Магический источник',
   mode: 'Режим броска',
+  modeCancelled: 'Преимущество и помеха гасят друг друга — бросок обычный',
 } as const;
 
 /** Подписи окна заклинательной характеристики. */

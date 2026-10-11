@@ -16,7 +16,15 @@
 
 import type { ActiveEffect, EffectChange } from '~active-effects/model';
 
-import type { ArmorDexterityMod, Character, RollMode } from './types';
+import type {
+  ArmorDexterityMod,
+  Character,
+  CharacterInventoryItem,
+  RollMode,
+  RollModeSource,
+} from './types';
+
+import { uniqBy } from 'es-toolkit';
 
 import {
   buildSaveVsConditionFlag,
@@ -249,14 +257,46 @@ export function getSkillKeyByName(name: string): string | undefined {
  * @returns эффекты персонажа и его снаряжения одним списком.
  */
 export function collectAppliedEffects(character: Character): ActiveEffect[] {
+  return collectAppliedEffectEntries(character).map((entry) => entry.effect);
+}
+
+/** Действующий эффект вместе с названием того, кто его несёт. */
+interface AppliedEffectEntry {
+  effect: ActiveEffect;
+
+  /** Название умения или предмета; `undefined` — эффект наложен на персонажа. */
+  ownerName?: string;
+}
+
+/**
+ * Все эффекты, действующие на персонажа, с названием носителя: окну броска
+ * мало названия эффекта — «Преимущество» у предмета ничего не говорит, пока
+ * рядом не стоит сам предмет.
+ *
+ * @param character персонаж.
+ * @returns эффекты персонажа, его умений и надетого снаряжения.
+ */
+function collectAppliedEffectEntries(
+  character: Character,
+): AppliedEffectEntry[] {
   return [
-    ...character.activeEffects,
+    ...character.activeEffects.map((effect) => ({ effect })),
     // Умения листа: черта действует всегда, пока взята, — снимать её нечем,
     // кроме удаления записи, поэтому условия «надет» тут нет.
-    ...character.features.flatMap((feature) => feature.activeEffects ?? []),
+    ...character.features.flatMap((feature) =>
+      (feature.activeEffects ?? []).map((effect) => ({
+        effect,
+        ownerName: feature.name,
+      })),
+    ),
     ...character.inventory
       .filter((item) => item.equipped)
-      .flatMap((item) => item.activeEffects ?? []),
+      .flatMap((item) =>
+        (item.activeEffects ?? []).map((effect) => ({
+          effect,
+          ownerName: item.name,
+        })),
+      ),
   ];
 }
 
@@ -293,11 +333,20 @@ const STEALTH_DISADVANTAGE_FLAG = 'skill.stealth.disadvantage';
  * @returns признак помехи на проверки Скрытности от снаряжения.
  */
 export function hasArmorStealthDisadvantage(character: Character): boolean {
-  return character.inventory.some(
-    (inventoryItem) =>
-      inventoryItem.equipped
-      && inventoryItem.quantity > 0
-      && inventoryItem.armor?.stealthDisadvantage === true,
+  return character.inventory.some(isNoisyArmorWorn);
+}
+
+/**
+ * Надет ли шумный доспех, мешающий прятаться.
+ *
+ * @param inventoryItem предмет снаряжения.
+ * @returns признак помехи на Скрытность от этого предмета.
+ */
+function isNoisyArmorWorn(inventoryItem: CharacterInventoryItem): boolean {
+  return (
+    inventoryItem.equipped
+    && inventoryItem.quantity > 0
+    && inventoryItem.armor?.stealthDisadvantage === true
   );
 }
 
@@ -602,6 +651,70 @@ export function getSheetRollMode(
   }
 
   return 'normal';
+}
+
+/**
+ * Подпись источника режима: название эффекта и, если оно другое, название
+ * умения или предмета, который его несёт.
+ *
+ * @param entry действующий эффект с носителем.
+ * @returns подпись источника.
+ */
+function getEffectSourceLabel(entry: AppliedEffectEntry): string {
+  const { effect, ownerName } = entry;
+
+  if (!ownerName || ownerName === effect.name) {
+    return effect.name;
+  }
+
+  return `${effect.name} (${ownerName})`;
+}
+
+/**
+ * Источники преимущества и помехи для броска: каждый эффект, чьи флаги дают
+ * режим этому броску, и шумный доспех на проверке Скрытности.
+ *
+ * Перечисляются все источники, даже взаимно гасящие друг друга, — игрок видит,
+ * почему бросок обычный при наложенном состоянии.
+ *
+ * @param character персонаж.
+ * @param context обстоятельства броска.
+ * @returns источники режима; пустой список — режим ничем не задан.
+ */
+export function getSheetRollModeSources(
+  character: Character,
+  context: SheetRollContext,
+): RollModeSource[] {
+  const sources: RollModeSource[] = [];
+
+  for (const entry of collectAppliedEffectEntries(character)) {
+    const { effect } = entry;
+
+    if (effect.disabled || effect.effectTarget === 'target') {
+      continue;
+    }
+
+    const flags = new Set(effect.flags);
+    const label = getEffectSourceLabel(entry);
+
+    if (hasAdvantageFlag(flags, context)) {
+      sources.push({ label, mode: 'advantage' });
+    }
+
+    if (hasDisadvantageFlag(flags, context)) {
+      sources.push({ label, mode: 'disadvantage' });
+    }
+  }
+
+  if (hasDisadvantageFlag(new Set([STEALTH_DISADVANTAGE_FLAG]), context)) {
+    for (const inventoryItem of character.inventory.filter(isNoisyArmorWorn)) {
+      sources.push({ label: inventoryItem.name, mode: 'disadvantage' });
+    }
+  }
+
+  // Одно состояние может прийти и от заклинания, и от предмета под тем же
+  // названием — в окне ему хватит одной строки.
+  return uniqBy(sources, (source) => `${source.mode}:${source.label}`);
 }
 
 /**
