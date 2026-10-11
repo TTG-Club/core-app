@@ -454,20 +454,22 @@ export function getGameStartingLevelLabel(game: Game): string {
  * Подпись стоимости сессии вместе с условиями оплаты. Подходит и для цены
  * игры по умолчанию: поля у неё те же.
  * У бесплатной игры платёжных полей нет вовсе.
- * @param session Сессия игры или цена игры по умолчанию.
+ * @param sessionPrice Цена сессии игры или цена игры по умолчанию.
  */
-export function getSessionPriceLabel(session: GameSessionPrice): string | null {
-  if (session.priceAmount === null || !session.priceCurrency) {
+export function getSessionPriceLabel(
+  sessionPrice: GameSessionPrice,
+): string | null {
+  if (sessionPrice.priceAmount === null || !sessionPrice.priceCurrency) {
     return null;
   }
 
-  const price = `${session.priceAmount.toFixed(2)} ${session.priceCurrency}`;
+  const price = `${sessionPrice.priceAmount.toFixed(2)} ${sessionPrice.priceCurrency}`;
 
-  if (!session.paymentType) {
+  if (!sessionPrice.paymentType) {
     return price;
   }
 
-  return `${price} · ${SESSION_PAYMENT_TYPE_LABELS[session.paymentType]}`;
+  return `${price} · ${SESSION_PAYMENT_TYPE_LABELS[sessionPrice.paymentType]}`;
 }
 
 /**
