@@ -107,7 +107,6 @@ import {
   getEffectiveSpeed,
   getFeatDefences,
   getInitiativeBonus,
-  getInventoryItemSalePriceInCopper,
   getInventoryWeight,
   getMaxHitPoints,
   getMaxHitPointsHint,
@@ -3066,9 +3065,7 @@ export function useCharacterSheet() {
 
     const currency = spendCurrency(
       character.value.currency,
-      getPurchaseCostInCopper(
-        freshItems.map((inventoryItem) => inventoryItem.cost),
-      ),
+      getPurchaseCostInCopper(freshItems),
     );
 
     if (!currency) {
@@ -3227,33 +3224,34 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Продажа предмета: он уходит из инвентаря, а цена справочника за каждую
-   * штуку в наличии возвращается в кошелёк одним обновлением листа. Предмет
-   * без распознанной цены не продаётся.
+   * Продажа предмета: он уходит из инвентаря, а выручка возвращается в
+   * кошелёк одним обновлением листа. Цену выбирает игрок в окне продажи (по
+   * умолчанию — полцены справочника); дробная или отрицательная цена в лист
+   * не попадает.
    *
    * @param inventoryItemId идентификатор предмета инвентаря.
+   * @param salePrice выручка в медных монетах.
    */
-  function sellInventoryItem(inventoryItemId: string): void {
-    if (!ensureEditable()) {
+  function sellInventoryItem(inventoryItemId: string, salePrice: number): void {
+    if (!ensureEditable() || !Number.isFinite(salePrice)) {
       return;
     }
 
-    const soldItem = character.value.inventory.find(
+    const hasItem = character.value.inventory.some(
       (inventoryItem) => inventoryItem.id === inventoryItemId,
     );
 
-    const salePrice = soldItem
-      ? getInventoryItemSalePriceInCopper(soldItem)
-      : null;
-
-    if (salePrice === null) {
+    if (!hasItem) {
       return;
     }
 
     character.value = {
       ...character.value,
       currency: clampCurrency(
-        addCopperToCurrency(character.value.currency, salePrice),
+        addCopperToCurrency(
+          character.value.currency,
+          Math.max(0, Math.round(salePrice)),
+        ),
       ),
       inventory: character.value.inventory.filter(
         (inventoryItem) => inventoryItem.id !== inventoryItemId,

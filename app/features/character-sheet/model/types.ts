@@ -4101,13 +4101,18 @@ export interface ItemCatalogItem {
   sourceLabel: string;
 }
 
+/** Позиция покупки: предмет каталога и сколько штук берётся. */
+export interface ItemPurchaseLine extends ItemCatalogItem {
+  quantity: number;
+}
+
 /** Итог окна покупки предметов. */
 export interface ItemPurchaseResult {
   /** true — покупка подтверждена; false — окно закрыто кнопкой «Отмена». */
   confirmed: boolean;
 
-  /** Предметы, оставшиеся в списке покупки после правок в окне. */
-  items: ItemCatalogItem[];
+  /** Позиции, оставшиеся в списке покупки после правок в окне. */
+  items: ItemPurchaseLine[];
 }
 
 /** Магический предмет каталога в модалке добавления (ссылка из поиска). */

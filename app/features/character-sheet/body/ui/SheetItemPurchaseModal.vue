@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { ItemCatalogItem, ItemPurchaseResult } from '../../model';
+  import type { ItemPurchaseLine, ItemPurchaseResult } from '../../model';
 
   import { ACTION_LABELS } from '~/shared/consts';
 
@@ -8,12 +8,14 @@
     getCopperAmountLabel,
     getCurrencyInCopper,
     getPurchaseCostInCopper,
+    INVENTORY_QUANTITY_MAX,
     parseItemCostInCopper,
+    PURCHASE_QUANTITY_MIN,
     SHEET_ITEM_PURCHASE_LABELS,
   } from '../../model';
 
   const { items } = defineProps<{
-    items: ItemCatalogItem[];
+    items: ItemPurchaseLine[];
   }>();
 
   const emit = defineEmits<{
@@ -22,20 +24,35 @@
 
   const { character } = useCharacterSheet();
 
-  /** Черновик списка покупки: из него можно убрать предметы до оплаты. */
-  const draftItems = ref<ItemCatalogItem[]>([...items]);
+  /**
+   * Черновик списка покупки: в нём меняют количество и убирают предметы до
+   * оплаты.
+   */
+  const draftItems = ref<ItemPurchaseLine[]>([...items]);
 
-  interface PurchaseRow extends ItemCatalogItem {
+  interface PurchaseRow extends ItemPurchaseLine {
     costLabel: string;
   }
 
+  /**
+   * Подпись стоимости позиции: цена штуки на количество; без цены —
+   * «Бесплатно».
+   *
+   * @param purchaseLine позиция покупки.
+   * @returns подпись стоимости.
+   */
+  function getPurchaseLineCostLabel(purchaseLine: ItemPurchaseLine): string {
+    const unitPrice = parseItemCostInCopper(purchaseLine.cost);
+
+    return unitPrice === null
+      ? SHEET_ITEM_PURCHASE_LABELS.free
+      : getCopperAmountLabel(unitPrice * purchaseLine.quantity);
+  }
+
   const purchaseRows = computed<PurchaseRow[]>(() =>
-    draftItems.value.map((catalogItem) => ({
-      ...catalogItem,
-      costLabel:
-        parseItemCostInCopper(catalogItem.cost) === null
-          ? SHEET_ITEM_PURCHASE_LABELS.free
-          : catalogItem.cost,
+    draftItems.value.map((purchaseLine) => ({
+      ...purchaseLine,
+      costLabel: getPurchaseLineCostLabel(purchaseLine),
     })),
   );
 
@@ -44,9 +61,7 @@
   );
 
   const costInCopper = computed(() =>
-    getPurchaseCostInCopper(
-      draftItems.value.map((catalogItem) => catalogItem.cost),
-    ),
+    getPurchaseCostInCopper(draftItems.value),
   );
 
   /** Остаток после оплаты; отрицательный — денег не хватает. */
@@ -111,7 +126,27 @@
    */
   function handleRemove(itemUrl: string) {
     draftItems.value = draftItems.value.filter(
-      (catalogItem) => catalogItem.url !== itemUrl,
+      (purchaseLine) => purchaseLine.url !== itemUrl,
+    );
+  }
+
+  /**
+   * Меняет количество позиции. Очищенное поле оставляет одну штуку: убирают
+   * предмет крестиком, а не нулём.
+   *
+   * @param itemUrl url предмета позиции.
+   * @param quantity новое количество из поля.
+   */
+  function handleQuantityChange(itemUrl: string, quantity: number | null) {
+    const nextQuantity = Math.max(
+      PURCHASE_QUANTITY_MIN,
+      Math.trunc(quantity ?? PURCHASE_QUANTITY_MIN),
+    );
+
+    draftItems.value = draftItems.value.map((purchaseLine) =>
+      purchaseLine.url === itemUrl
+        ? { ...purchaseLine, quantity: nextQuantity }
+        : purchaseLine,
     );
   }
 
@@ -188,7 +223,19 @@
                 {{ purchaseRow.name }}
               </span>
 
-              <span class="shrink-0 text-xs text-muted">
+              <UInputNumber
+                :model-value="purchaseRow.quantity"
+                :min="PURCHASE_QUANTITY_MIN"
+                :max="INVENTORY_QUANTITY_MAX"
+                size="xs"
+                class="w-24 shrink-0"
+                :aria-label="`${SHEET_ITEM_PURCHASE_LABELS.quantityAria}: ${purchaseRow.name}`"
+                @update:model-value="
+                  handleQuantityChange(purchaseRow.url, $event)
+                "
+              />
+
+              <span class="min-w-14 shrink-0 text-right text-xs text-muted">
                 {{ purchaseRow.costLabel }}
               </span>
 

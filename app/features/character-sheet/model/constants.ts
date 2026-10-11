@@ -5391,14 +5391,32 @@ export const INVENTORY_REMOVE_MENU_LABEL = 'Убрать из снаряжени
 /** Подпись пункта меню строки снаряжения о продаже предмета. */
 export const INVENTORY_SELL_MENU_LABEL = 'Продать';
 
-/** Заголовок подтверждения продажи предмета из снаряжения. */
-export const INVENTORY_SELL_CONFIRM_TITLE = 'Продать предмет?';
-
-/** Подпись кнопки подтверждения продажи предмета. */
-export const INVENTORY_SELL_CONFIRM_LABEL = 'Продать';
-
 /** Единица количества в тексте подтверждения продажи («3 шт.»). */
 export const INVENTORY_QUANTITY_UNIT_LABEL = 'шт.';
+
+/**
+ * Доля цены справочника, за которую предмет продаётся по умолчанию: по
+ * правилам снаряжение сбывают за полцены. Игрок может указать свою цену.
+ */
+export const INVENTORY_SALE_PRICE_RATIO = 0.5;
+
+/** Шаг поля цены продажи в золотых: цена задаётся с точностью до медяка. */
+export const INVENTORY_SALE_PRICE_STEP = 0.01;
+
+/** Знаков после запятой в поле цены продажи (до медяка). */
+export const INVENTORY_SALE_PRICE_FRACTION_DIGITS = 2;
+
+/** Подписи окна продажи предмета. */
+export const SHEET_ITEM_SELL_LABELS = {
+  title: 'Продажа предмета',
+  price: 'Цена продажи, зм',
+  fullPricePrefix: 'Цена по справочнику',
+  halfPriceHint: 'По правилам снаряжение продаётся за полцены.',
+  confirm: 'Продать',
+} as const;
+
+/** Наименьшее количество позиции в окне покупки. */
+export const PURCHASE_QUANTITY_MIN = 1;
 
 /** То же для строки заклинания: убирается оно из книги заклинаний. */
 export const SPELL_REMOVE_MENU_LABEL = 'Убрать из книги';
@@ -5780,6 +5798,7 @@ export const SHEET_ITEM_PURCHASE_LABELS = {
   shortageTitle: 'Не хватает денег',
   shortageHint: 'Уберите что-нибудь из списка, чтобы хватило.',
   purchases: 'Покупки',
+  quantityAria: 'Количество',
   remove: 'Убрать из покупки',
   empty: 'Список покупки пуст',
   failed: 'Не удалось купить предметы',

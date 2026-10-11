@@ -9,6 +9,7 @@ import {
   addCopperToCurrency,
   buildInventoryItem,
   getCopperAmountLabel,
+  getDefaultSalePriceInCopper,
   getInventoryItemMenuItems,
   getInventoryItemSalePriceInCopper,
   getPurchaseCostInCopper,
@@ -28,12 +29,25 @@ const EMPTY_WALLET: CharacterCurrency = {
 describe('стоимость покупки', () => {
   it('складывает цены в разных монетах, нераспознанные — бесплатны', () => {
     expect(
-      getPurchaseCostInCopper(['10 зм', '5 см', '2 мм', 'варьируется', '']),
+      getPurchaseCostInCopper(
+        ['10 зм', '5 см', '2 мм', 'варьируется', ''].map((cost) => ({
+          cost,
+          quantity: 1,
+        })),
+      ),
     ).toBe(1052);
   });
 
   it('читает разряды, разделённые пробелом', () => {
-    expect(getPurchaseCostInCopper(['1 500 зм'])).toBe(150000);
+    expect(getPurchaseCostInCopper([{ cost: '1 500 зм', quantity: 1 }])).toBe(
+      150000,
+    );
+  });
+
+  it('умножает цену штуки на количество', () => {
+    expect(getPurchaseCostInCopper([{ cost: '5 мм', quantity: 100 }])).toBe(
+      500,
+    );
   });
 
   it('подписывает сумму золотом, серебром и медью', () => {
@@ -113,6 +127,11 @@ describe('продажа предмета', () => {
     expect(getInventoryItemSalePriceInCopper({ ...ROPE, quantity: 0 })).toBe(
       null,
     );
+  });
+
+  it('по умолчанию продаётся за полцены', () => {
+    expect(getDefaultSalePriceInCopper(300)).toBe(150);
+    expect(getDefaultSalePriceInCopper(5)).toBe(3);
   });
 
   it('выручка приходит золотом, серебром и медью', () => {

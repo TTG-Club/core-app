@@ -108,6 +108,7 @@ import type {
   InventoryItemOrigin,
   InventoryWeapon,
   InventoryWeaponDamage,
+  ItemPurchaseLine,
   ItemSummary,
   LevelUpAbilityImprovement,
   LevelUpClassSpellListPick,
@@ -366,6 +367,7 @@ import {
   INVENTORY_QUANTITY_UNIT_LABEL,
   INVENTORY_REMOVE_MENU_LABEL,
   INVENTORY_RESTORE_CHARGES_MENU_LABEL,
+  INVENTORY_SALE_PRICE_RATIO,
   INVENTORY_SELL_MENU_LABEL,
   ITEM_BONUS_MAX,
   ITEM_BONUS_MIN,
@@ -2441,15 +2443,19 @@ export function parseItemCostInCopper(costText: string): number | null {
 }
 
 /**
- * Суммарная стоимость покупки в медных монетах. Предметы с нераспознанной или
- * пустой ценой считаются бесплатными.
+ * Суммарная стоимость покупки в медных монетах: цена штуки на количество по
+ * каждой позиции. Предметы с нераспознанной или пустой ценой бесплатны.
  *
- * @param costTexts подписи стоимости покупаемых предметов.
+ * @param purchaseLines позиции покупки: подпись цены штуки и количество.
  * @returns сумма в медных монетах.
  */
-export function getPurchaseCostInCopper(costTexts: string[]): number {
-  return costTexts.reduce(
-    (sum, costText) => sum + (parseItemCostInCopper(costText) ?? 0),
+export function getPurchaseCostInCopper(
+  purchaseLines: Array<Pick<ItemPurchaseLine, 'cost' | 'quantity'>>,
+): number {
+  return purchaseLines.reduce(
+    (sum, purchaseLine) =>
+      sum
+      + (parseItemCostInCopper(purchaseLine.cost) ?? 0) * purchaseLine.quantity,
     0,
   );
 }
@@ -2619,23 +2625,30 @@ export function addCopperToCurrency(
 }
 
 /**
- * Текст подтверждения продажи предмета: что уйдёт из снаряжения и сколько
- * вернётся в кошелёк.
+ * Цена продажи по умолчанию: по правилам снаряжение сбывают за полцены.
+ *
+ * @param fullPrice цена справочника за всё количество в медных монетах.
+ * @returns цена продажи в медных монетах.
+ */
+export function getDefaultSalePriceInCopper(fullPrice: number): number {
+  return Math.round(fullPrice * INVENTORY_SALE_PRICE_RATIO);
+}
+
+/**
+ * Текст окна продажи предмета: что уйдёт из снаряжения.
  *
  * @param inventoryItem продаваемый предмет снаряжения.
- * @param salePrice выручка в медных монетах.
- * @returns описание для диалога подтверждения.
+ * @returns описание для окна продажи.
  */
 export function getInventorySellDescription(
   inventoryItem: CharacterInventoryItem,
-  salePrice: number,
 ): string {
   const quantityLabel =
     inventoryItem.quantity > 1
       ? ` (${inventoryItem.quantity} ${INVENTORY_QUANTITY_UNIT_LABEL})`
       : '';
 
-  return `«${inventoryItem.name}»${quantityLabel} уйдёт из снаряжения, в кошелёк вернётся ${getCopperAmountLabel(salePrice)}.`;
+  return `«${inventoryItem.name}»${quantityLabel} уйдёт из снаряжения, а выручка — в кошелёк.`;
 }
 
 /**
