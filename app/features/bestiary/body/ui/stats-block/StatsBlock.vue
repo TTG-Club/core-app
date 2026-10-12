@@ -129,7 +129,7 @@
       v-if="hasInventory"
       :class="$style.item"
     >
-      <span :class="$style.name">Инвентарь: </span>
+      <span :class="$style.name">Снаряжение: </span>
 
       <span>
         <template

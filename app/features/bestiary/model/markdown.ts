@@ -127,7 +127,7 @@ function getStats(creature: CreatureDetailResponse): MarkdownStat[] {
     ['Уязвимости', escapeMarkdown(creature.vulnerability)],
     ['Сопротивления', escapeMarkdown(creature.resistance)],
     ['Иммунитеты', escapeMarkdown(creature.immunity)],
-    ['Инвентарь', inventory],
+    ['Снаряжение', inventory],
     // Снаряжение старого импорта — только пока не заведён инвентарь: иначе
     // одно и то же было бы написано дважды.
     ['Снаряжение', inventory ? '' : toInlineValue(creature.equipments)],

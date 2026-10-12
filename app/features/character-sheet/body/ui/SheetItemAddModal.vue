@@ -6,6 +6,7 @@
   import type {
     CharacterInventoryItem,
     ItemCatalogItem,
+    ItemPurchaseLine,
     ItemSummary,
   } from '../../model';
 
@@ -28,6 +29,7 @@
     ITEMS_FILTERS_PATH,
     ITEMS_SEARCH_PATH,
     parseItemCatalog,
+    PURCHASE_QUANTITY_MIN,
     SHEET_CATALOG_MODAL_LABELS,
     SHEET_ITEM_ADD_LABELS,
     SHEET_ITEM_PURCHASE_LABELS,
@@ -232,9 +234,9 @@
   /**
    * Черновик выбора: новые, ещё не добавленные предметы по url. Хранятся сами
    * предметы, а не только url: окну покупки нужны названия и цены и тех, что
-   * текущий фильтр уже скрыл.
+   * текущий фильтр уже скрыл, а заодно количество, выбранное в окне покупки.
    */
-  const draftItems = ref(new Map<string, ItemCatalogItem>());
+  const draftItems = ref(new Map<string, ItemPurchaseLine>());
 
   const isApplying = ref(false);
 
@@ -299,6 +301,7 @@
         nameEng: catalogRow.nameEng,
         cost: catalogRow.cost,
         sourceLabel: catalogRow.sourceLabel,
+        quantity: PURCHASE_QUANTITY_MIN,
       });
     }
 
@@ -355,17 +358,46 @@
   }
 
   /**
+   * Загрузка детали позиции покупки и сборка записи инвентаря с купленным
+   * количеством.
+   *
+   * @param purchaseLine позиция покупки.
+   * @returns запись инвентаря; null — деталь не загрузилась.
+   */
+  async function loadPurchasedItem(
+    purchaseLine: ItemPurchaseLine,
+  ): Promise<CharacterInventoryItem | null> {
+    const summary = await fetchItemSummary(purchaseLine.url);
+
+    return summary
+      ? { ...buildInventoryItem(summary), quantity: purchaseLine.quantity }
+      : null;
+  }
+
+  /**
    * Покупка выбранных предметов. Окно подтверждения показывает траты и остаток;
    * предметы, убранные там из списка, снимаются и с выбора. Списание считается
-   * по ценам загруженных деталей: не загрузившийся предмет не оплачивается.
+   * по ценам загруженных деталей и выбранному количеству: не загрузившийся
+   * предмет не оплачивается.
    *
-   * @param urls url предметов, оставшихся в списке покупки.
+   * @param purchaseLines позиции, оставшиеся в списке покупки.
    */
-  async function purchaseItems(urls: string[]): Promise<void> {
+  async function purchaseItems(
+    purchaseLines: ItemPurchaseLine[],
+  ): Promise<void> {
     isApplying.value = true;
 
     try {
-      const inventoryItems = await loadInventoryItems(urls);
+      const results = await Promise.allSettled(
+        purchaseLines.map(loadPurchasedItem),
+      );
+
+      const inventoryItems = results
+        .map((result) => (result.status === 'fulfilled' ? result.value : null))
+        .filter(
+          (inventoryItem): inventoryItem is CharacterInventoryItem =>
+            inventoryItem !== null,
+        );
 
       if (!inventoryItems.length || !purchaseInventoryItems(inventoryItems)) {
         toast.add({
@@ -377,7 +409,7 @@
         return;
       }
 
-      if (inventoryItems.length < urls.length) {
+      if (inventoryItems.length < purchaseLines.length) {
         toast.add({
           color: 'error',
           icon: 'tabler:alert-triangle',
@@ -409,11 +441,11 @@
     }
 
     draftItems.value = new Map(
-      purchase.items.map((catalogItem) => [catalogItem.url, catalogItem]),
+      purchase.items.map((purchaseLine) => [purchaseLine.url, purchaseLine]),
     );
 
     if (purchase.confirmed && purchase.items.length) {
-      await purchaseItems(purchase.items.map((catalogItem) => catalogItem.url));
+      await purchaseItems(purchase.items);
     }
   }
 

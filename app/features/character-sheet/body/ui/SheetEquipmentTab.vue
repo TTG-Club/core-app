@@ -19,19 +19,16 @@
     getAttunementValue,
     getEquipmentAddMenuItems,
     getInventoryGroups,
-    getInventoryItemSalePriceInCopper,
     getInventoryRemoveDescription,
-    getInventorySellDescription,
     INVENTORY_REMOVE_CONFIRM_LABEL,
     INVENTORY_REMOVE_CONFIRM_TITLE,
-    INVENTORY_SELL_CONFIRM_LABEL,
-    INVENTORY_SELL_CONFIRM_TITLE,
     SHEET_HEADER_STAT_CLASS,
     SHEET_TAB_EMPTY_LABELS,
     WEIGHT_UNIT_LABEL,
   } from '../../model';
   import SheetCurrencyRow from './SheetCurrencyRow.vue';
   import SheetInventoryItemRow from './SheetInventoryItemRow.vue';
+  import SheetItemSellModal from './SheetItemSellModal.vue';
 
   const props = defineProps<{
     currency: CharacterCurrency;
@@ -142,42 +139,26 @@
     isRemoveOpen.value = false;
   }
 
-  // Продажу, как и удаление, подтверждаем: предмет уходит из снаряжения, а
-  // диалог заодно показывает, сколько денег вернётся. Предмет держим до
-  // закрытия диалога по той же причине, что и при удалении. Деньги пишутся в
-  // лист прямо отсюда: вкладка и так читает общее состояние, а цепочка событий
-  // через вкладки ничего бы не добавила.
-  const saleItem = shallowRef<CharacterInventoryItem | null>(null);
-
-  const isSellOpen = ref(false);
-
-  const sellDescription = computed(() => {
-    const salePrice = saleItem.value
-      ? getInventoryItemSalePriceInCopper(saleItem.value)
-      : null;
-
-    return saleItem.value && salePrice !== null
-      ? getInventorySellDescription(saleItem.value, salePrice)
-      : '';
-  });
+  // Продажа идёт через своё окно: в нём игрок видит цену справочника и
+  // задаёт выручку (по умолчанию полцены). Деньги пишутся в лист прямо
+  // отсюда: вкладка и так читает общее состояние, а цепочка событий через
+  // вкладки ничего бы не добавила.
+  const sellModal = overlay.create(SheetItemSellModal);
 
   /**
-   * Спрашивает подтверждение продажи: предмет пока остаётся в снаряжении.
+   * Открывает окно продажи и продаёт предмет за выбранную цену.
    *
    * @param inventoryItem предмет, который просят продать.
    */
-  function handleSellRequest(inventoryItem: CharacterInventoryItem) {
-    saleItem.value = inventoryItem;
-    isSellOpen.value = true;
-  }
+  async function handleSellRequest(inventoryItem: CharacterInventoryItem) {
+    const salePrice = await sellModal.open({ inventoryItem }).result;
 
-  /** Продаёт подтверждённый предмет и закрывает диалог. */
-  function handleSellConfirm() {
-    if (saleItem.value) {
-      sellInventoryItem(saleItem.value.id);
+    // Отмена или закрытие окна мимо кнопок — предмет остаётся.
+    if (typeof salePrice !== 'number') {
+      return;
     }
 
-    isSellOpen.value = false;
+    sellInventoryItem(inventoryItem.id, salePrice);
   }
 
   const displayGroups = computed(() => getInventoryGroups(props.inventory));
@@ -364,15 +345,6 @@
       confirm-color="error"
       confirm-icon="tabler:trash"
       @confirm="handleRemoveConfirm"
-    />
-
-    <ConfirmDialog
-      v-model:open="isSellOpen"
-      :title="INVENTORY_SELL_CONFIRM_TITLE"
-      :description="sellDescription"
-      :confirm-label="INVENTORY_SELL_CONFIRM_LABEL"
-      confirm-icon="tabler:coins"
-      @confirm="handleSellConfirm"
     />
   </div>
 </template>
