@@ -264,9 +264,9 @@
                   v-if="option.percent"
                   :label="option.percent"
                   color="success"
-                  variant="solid"
+                  variant="outline"
                   size="sm"
-                  class="absolute -top-2.5 right-2"
+                  class="absolute -top-2.5 right-2 bg-default font-bold"
                 />
               </UButton>
             </div>
