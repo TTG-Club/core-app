@@ -1,5 +1,4 @@
 import type { ListPresentationConfig } from '~infrastructure/list-presentation/model';
-import type { HeadingLevel } from '~ui/markup';
 import type { RatingValue } from '~ui/rating';
 
 import type {
@@ -34,17 +33,6 @@ export const ARTICLE_RATING_SECTION = 'articles';
 
 /** Заголовок блока содержания статьи. */
 export const ARTICLE_TOC_TITLE = 'Содержание';
-
-/**
- * Отступ пункта содержания по уровню заголовка: подзаголовки сдвигаются вправо
- * под своим разделом.
- */
-export const ARTICLE_TOC_INDENT: Record<HeadingLevel, string> = {
-  1: 'pl-0',
-  2: 'pl-3',
-  3: 'pl-6',
-  4: 'pl-9',
-};
 
 /** Сортировка листинга по умолчанию — по дате выхода, новые сверху. */
 export const ARTICLE_SORTING_DEFAULT: ArticleSorting = 'DATE';

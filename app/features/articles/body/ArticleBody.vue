@@ -77,8 +77,13 @@
           :url="article.url"
         />
 
+        <!--
+          Как навигация классов: липнет к верху колонки, а в узкой раскладке
+          (дровер, мобильные) скрыта — там колонка стоит над текстом.
+        -->
         <ArticleTableOfContents
           v-if="headings.length"
+          :class="[$style.toc, 'max-lg:hidden']"
           :headings
         />
       </div>
@@ -124,7 +129,6 @@
     @container (width > 800px) {
       flex-direction: row;
       gap: 24px;
-      align-items: flex-start;
     }
   }
 
@@ -146,6 +150,15 @@
     width: 100%;
     border-radius: 12px;
     object-fit: cover;
+  }
+
+  // Содержание имеет смысл только рядом с текстом, а не над ним.
+  .toc {
+    display: none;
+
+    @container (width > 800px) {
+      display: block;
+    }
   }
 
   .text {

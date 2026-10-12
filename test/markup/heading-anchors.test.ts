@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { buildArticleTocLinks } from '~/features/articles/model/markup';
 import { getHeadingAnchor, withHeadingAnchors } from '~ui/markup/anchors';
 
 /**
@@ -70,5 +71,57 @@ describe('якоря заголовков для содержания', () => {
     expect(getHeadingAnchor({ type: 'heading', attrs: { anchor: 1 } })).toBe(
       undefined,
     );
+  });
+});
+
+/**
+ * Пункты содержания вкладываются под ближайший заголовок с меньшим уровнем —
+ * так `UContentToc` рисует подзаголовки со сдвигом.
+ */
+describe('дерево содержания статьи', () => {
+  it('вкладывает подзаголовки под раздел', () => {
+    const links = buildArticleTocLinks([
+      { id: 'a', text: 'А', level: 1 },
+      { id: 'b', text: 'Б', level: 2 },
+      { id: 'c', text: 'В', level: 3 },
+      { id: 'd', text: 'Г', level: 2 },
+      { id: 'e', text: 'Д', level: 1 },
+    ]);
+
+    expect(links).toEqual([
+      {
+        id: 'a',
+        text: 'А',
+        depth: 1,
+        children: [
+          {
+            id: 'b',
+            text: 'Б',
+            depth: 2,
+            children: [{ id: 'c', text: 'В', depth: 3 }],
+          },
+          { id: 'd', text: 'Г', depth: 2 },
+        ],
+      },
+      { id: 'e', text: 'Д', depth: 1 },
+    ]);
+  });
+
+  it('при пропуске уровня вкладывает на один шаг', () => {
+    const links = buildArticleTocLinks([
+      { id: 'a', text: 'А', level: 1 },
+      { id: 'b', text: 'Б', level: 3 },
+    ]);
+
+    expect(links[0]?.children).toEqual([{ id: 'b', text: 'Б', depth: 2 }]);
+  });
+
+  it('статья без верхнего уровня даёт плоский список', () => {
+    const links = buildArticleTocLinks([
+      { id: 'a', text: 'А', level: 2 },
+      { id: 'b', text: 'Б', level: 2 },
+    ]);
+
+    expect(links.map((link) => link.depth)).toEqual([1, 1]);
   });
 });
