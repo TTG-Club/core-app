@@ -13,7 +13,7 @@
   import { render, toBlockGroups } from './renderer';
 
   const { renderNode } = defineProps<{
-    renderNode: RenderNode;
+    renderNode: RenderNode | RenderNode[];
   }>();
 
   /**

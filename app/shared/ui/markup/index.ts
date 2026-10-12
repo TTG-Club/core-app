@@ -1,3 +1,4 @@
+export type { AnchoredMarkup, MarkupHeadingAnchor } from './anchors';
 export type { MarkdownStat } from './markdown-entity';
 export type { MarkdownAlign, MarkdownColumn } from './markdown-table';
 
@@ -25,6 +26,7 @@ export {
   isSimpleTextNode,
 } from './utils';
 
+export { getHeadingAnchor, withHeadingAnchors } from './anchors';
 export { MARKER_ALIASES, MARKER_MAP } from './config';
 export { CELL_PLACEHOLDER, EMPTY_PARAGRAPH_MARKDOWN } from './consts';
 export { buildMarkdownTable, toMarkdownRow } from './markdown-table';
