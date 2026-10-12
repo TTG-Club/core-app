@@ -14,11 +14,14 @@ export const SUBSCRIPTION_CONSENTS_API_PATH = '/api/auth/consents';
 export const SUBSCRIPTION_EMAIL_VERIFICATION_ROUTE = '/user/profile/security';
 
 /**
- * Параметры, которые платёжная форма PayAnyWay добавляет к адресу возврата на
- * страницу подписки: итог оплаты и номер платежа. После показа итога их убираем.
+ * Параметры адреса возврата с платёжной формы PayAnyWay: наш итог оплаты и
+ * служебные `MNT_*` (номер счёта, операции, платежа). После показа итога их
+ * убираем. Кнопка «Вернуться в магазин» иногда возвращает только `MNT_*` без
+ * итога — тогда по номеру операции показываем, что платёж обрабатывается.
  */
 export const SUBSCRIPTION_PAYMENT_RESULT_QUERY = 'payment';
-export const SUBSCRIPTION_PAYMENT_TRANSACTION_QUERY = 'MNT_TRANSACTION_ID';
+export const SUBSCRIPTION_PAYMENT_SERVICE_QUERY_PREFIX = 'MNT_';
+export const SUBSCRIPTION_PAYMENT_OPERATION_QUERY = 'MNT_OPERATION_ID';
 
 /**
  * Условия оплаты из subscriber-service: цена месяца и предел срока. Цену берём
