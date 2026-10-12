@@ -82,10 +82,25 @@ export const subscriptionPaymentTermsSchema = z.object({
       }),
     )
     .default([]),
+  /** Скидки за точный срок (пасхалки): важнее ступеней, в подсказке не упоминаются. */
+  exactDiscounts: z
+    .array(
+      z.object({
+        months: z.number().int().positive(),
+        percent: z.number().int().min(0).max(100),
+      }),
+    )
+    .default([]),
 });
 
 export type SubscriptionPaymentDiscount =
   SubscriptionPaymentTerms['discounts'][number];
+
+/** Скидки, по которым считается сумма: ступени и скидки за точный срок. */
+export type SubscriptionPaymentDiscounts = Pick<
+  SubscriptionPaymentTerms,
+  'discounts' | 'exactDiscounts'
+>;
 
 export type SubscriptionPaymentTerms = z.infer<
   typeof subscriptionPaymentTermsSchema
@@ -122,6 +137,8 @@ export const VTTG_SUBSCRIPTION_PURCHASE_TEXT = {
   discountHintFrom: 'от',
   monthsShort: 'мес.',
   savingLabel: 'Экономия',
+  savingShort: 'выгода',
+  noDiscount: 'Без скидки',
   totalLabel: 'К оплате',
   extendHint:
     'Если подписка уже действует, оплаченные месяцы добавятся к её сроку.',
@@ -177,12 +194,19 @@ export type SubscriptionPaymentResult =
   keyof typeof SUBSCRIPTION_PAYMENT_RESULTS;
 
 /**
- * Скидка в процентах за срок: наибольшая из ступеней, до которых срок дотянул.
+ * Скидка в процентах за срок: скидка за точный срок, иначе наибольшая из
+ * ступеней, до которых срок дотянул. Так же считает subscriber-service.
  */
 export function getSubscriptionDiscountPercent(
-  discounts: ReadonlyArray<SubscriptionPaymentDiscount>,
+  { discounts, exactDiscounts }: SubscriptionPaymentDiscounts,
   months: number,
 ): number {
+  const exact = exactDiscounts.find((discount) => discount.months === months);
+
+  if (exact) {
+    return exact.percent;
+  }
+
   return discounts.reduce(
     (percent, tier) =>
       months >= tier.fromMonths ? Math.max(percent, tier.percent) : percent,
@@ -207,7 +231,7 @@ export function getSubscriptionFullPrice(
 export function getSubscriptionPaymentTotal(
   monthPrice: number,
   months: number,
-  discounts: ReadonlyArray<SubscriptionPaymentDiscount>,
+  discounts: SubscriptionPaymentDiscounts,
 ): number {
   const percent = getSubscriptionDiscountPercent(discounts, months);
 
@@ -220,7 +244,7 @@ export function getSubscriptionPaymentTotal(
 export function getSubscriptionSaving(
   monthPrice: number,
   months: number,
-  discounts: ReadonlyArray<SubscriptionPaymentDiscount>,
+  discounts: SubscriptionPaymentDiscounts,
 ): number {
   return (
     Math.round(

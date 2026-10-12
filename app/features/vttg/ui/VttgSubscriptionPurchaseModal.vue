@@ -83,18 +83,19 @@
       ? getSubscriptionPaymentTotal(
           terms.value.monthPrice,
           months.value,
-          terms.value.discounts,
+          terms.value,
         )
       : undefined,
   );
 
   const discountPercent = computed(() =>
-    terms.value
-      ? getSubscriptionDiscountPercent(terms.value.discounts, months.value)
-      : 0,
+    terms.value ? getSubscriptionDiscountPercent(terms.value, months.value) : 0,
   );
 
-  /** Цена без скидки и экономия — показываются, только если скидка есть. */
+  /**
+   * Цена без скидки и экономия. Строка под суммой есть всегда («Без скидки»,
+   * если скидки нет), чтобы блок не менял высоту при смене срока.
+   */
   const discountCaption = computed(() => {
     if (!terms.value || !discountPercent.value) {
       return undefined;
@@ -105,7 +106,7 @@
     const saving = getSubscriptionSaving(
       terms.value.monthPrice,
       months.value,
-      terms.value.discounts,
+      terms.value,
     );
 
     return {
@@ -114,11 +115,15 @@
     };
   });
 
-  /** Варианты срока с ценой и экономией. */
+  /**
+   * Варианты срока: подпись, цена, скидка и выгода. У всех карточек одинаковый
+   * набор строк, чтобы сетка не прыгала.
+   */
   const presetOptions = computed(() =>
     SUBSCRIPTION_PAYMENT_MONTHS.presets.map((preset) => {
-      const discounts = terms.value?.discounts ?? [];
-      const percent = getSubscriptionDiscountPercent(discounts, preset);
+      const percent = terms.value
+        ? getSubscriptionDiscountPercent(terms.value, preset)
+        : 0;
 
       return {
         months: preset,
@@ -128,14 +133,15 @@
               getSubscriptionPaymentTotal(
                 terms.value.monthPrice,
                 preset,
-                discounts,
+                terms.value,
               ),
             )
-          : undefined,
+          : VTTG_SUBSCRIPTION_PURCHASE_TEXT.totalPlaceholder,
+        percent: percent ? `−${percent}%` : undefined,
         saving:
           terms.value && percent
-            ? `−${percent}% · ${VTTG_SUBSCRIPTION_PURCHASE_TEXT.savingLabel.toLowerCase()} ${formatSubscriptionPrice(getSubscriptionSaving(terms.value.monthPrice, preset, discounts))}`
-            : undefined,
+            ? `${VTTG_SUBSCRIPTION_PURCHASE_TEXT.savingShort} ${formatSubscriptionPrice(getSubscriptionSaving(terms.value.monthPrice, preset, terms.value))}`
+            : VTTG_SUBSCRIPTION_PURCHASE_TEXT.noDiscount,
       };
     }),
   );
@@ -230,31 +236,38 @@
           :help="monthsHint"
         >
           <div class="flex flex-col gap-3">
-            <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div class="grid grid-cols-2 gap-x-2 gap-y-3 pt-2 sm:grid-cols-4">
               <UButton
                 v-for="option in presetOptions"
                 :key="option.months"
                 :variant="getPresetVariant(option.months)"
                 :disabled="isPending"
                 color="primary"
-                class="flex-col items-start gap-0.5 text-left"
+                class="relative flex-col items-stretch gap-1 p-3 text-left"
                 @click.left.exact.prevent="handlePresetClick(option.months)"
               >
-                <span class="font-semibold">{{ option.label }}</span>
+                <span class="truncate font-semibold">{{ option.label }}</span>
 
                 <span
-                  v-if="option.price"
-                  class="text-xs"
+                  class="text-base font-bold whitespace-nowrap tabular-nums"
                 >
                   {{ option.price }}
                 </span>
 
                 <span
-                  v-if="option.saving"
-                  class="text-xs opacity-80"
+                  class="truncate text-xs whitespace-nowrap tabular-nums opacity-80"
                 >
                   {{ option.saving }}
                 </span>
+
+                <UBadge
+                  v-if="option.percent"
+                  :label="option.percent"
+                  color="success"
+                  variant="solid"
+                  size="sm"
+                  class="absolute -top-2.5 right-2"
+                />
               </UButton>
             </div>
 
@@ -294,24 +307,31 @@
 
           <USkeleton
             v-if="isTermsLoading"
-            class="h-6 w-32"
+            class="h-12 w-40"
           />
 
           <div
             v-else
-            class="flex flex-col items-end"
+            class="flex flex-col items-end gap-0.5 text-right tabular-nums"
           >
-            <span class="text-lg font-bold text-highlighted">
+            <span class="text-lg/7 font-bold text-highlighted">
               {{ totalCaption }}
             </span>
 
             <span
               v-if="discountCaption"
-              class="text-xs text-muted"
+              class="flex items-center gap-1.5 text-xs/5 text-muted"
             >
               <s>{{ discountCaption.full }}</s>
 
               <span class="text-success">{{ discountCaption.saving }}</span>
+            </span>
+
+            <span
+              v-else
+              class="text-xs/5 text-muted"
+            >
+              {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.noDiscount }}
             </span>
           </div>
         </div>
