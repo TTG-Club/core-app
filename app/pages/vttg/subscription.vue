@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { useSubscriptionPaymentResult } from '~vttg/composables';
   import {
     VTTG_SUBSCRIPTION_CTA,
     VTTG_SUBSCRIPTION_FAQ_HEADING,
@@ -14,6 +15,8 @@
   definePageMeta({
     layout: 'vttg',
   });
+
+  useSubscriptionPaymentResult();
 
   useSeoMeta({
     title: VTTG_SUBSCRIPTION_SEO.title,
