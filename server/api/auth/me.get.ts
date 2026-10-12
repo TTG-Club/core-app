@@ -27,5 +27,8 @@ export default defineEventHandler(async (event) => {
     // Молчание auth-service о подтверждении не запрещает действия: доступ
     // всё равно решает сервис, а интерфейс лишь объясняет отказ заранее.
     emailVerified: user.emailVerified ?? true,
+    // Без ответа auth-service согласия считаем не данными: окно оплаты попросит
+    // их отметить, а решение об оплате всё равно принимает subscriber-service.
+    consentsAccepted: user.consentsAccepted ?? false,
   };
 });

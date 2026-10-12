@@ -20,6 +20,8 @@ const authUserSchema = z.object({
   // Признак необязателен: старые сборки auth-service его не отдают, и
   // отсутствие поля не должно ронять весь профиль.
   emailVerified: z.boolean().optional(),
+  // Согласия с офертой и на обработку ПД; старые сборки auth-service поле не отдают.
+  consentsAccepted: z.boolean().optional(),
 });
 
 const authJwtPayloadSchema = z.object({
