@@ -10,7 +10,24 @@ export interface AdminOnlineCounters {
   total: number;
 }
 
+/** Имя настройки отображения → значение → число уникальных посетителей. */
+export type AdminOnlinePreferenceCounts = Record<
+  string,
+  Record<string, number>
+>;
+
+/** Чем пользовались посетители площадки за последние `days` суток, включая сегодня. */
+export interface AdminOnlinePreferencePeriod {
+  days: number;
+  preferences: AdminOnlinePreferenceCounts;
+}
+
 export interface AdminOnlineSiteStats extends AdminOnlineCounters {
+  /**
+   * Срезы настроек отображения. Поле необязательное: площадки, которые настройки
+   * не шлют, и online-app до обновления его не отдают.
+   */
+  preferences?: AdminOnlinePreferencePeriod[];
   siteId: string;
 }
 
@@ -54,4 +71,17 @@ export interface AdminOnlineAppTile {
   hint: string;
   label: string;
   value: string;
+}
+
+/** Вариант настройки отображения, который карточка знает в лицо. */
+export interface AdminOnlinePreferenceOption {
+  label: string;
+  value: string;
+}
+
+/** Карточка настройки: одна настройка и её известные варианты. */
+export interface AdminOnlinePreferenceSection {
+  name: string;
+  options: ReadonlyArray<AdminOnlinePreferenceOption>;
+  title: string;
 }

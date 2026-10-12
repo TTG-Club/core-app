@@ -31,6 +31,7 @@
   import AdminUserBan from './AdminUserBan.vue';
   import AdminUserRedeemedCodes from './AdminUserRedeemedCodes.vue';
   import AdminUserSubscription from './AdminUserSubscription.vue';
+  import AdminUserSubscriptionHistory from './AdminUserSubscriptionHistory.vue';
 
   const props = defineProps<{
     roles: AdminRoleResponse[];
@@ -411,13 +412,17 @@
       </div>
     </template>
 
-    <!-- Подписка: статус, выдача месяцев и активированные коды -->
+    <!-- Подписка: статус, выдача месяцев, история и активированные коды -->
     <template #subscription>
       <div
         v-if="isSubscriptionTabVisited"
         class="space-y-6"
       >
         <AdminUserSubscription :username="user.username" />
+
+        <USeparator />
+
+        <AdminUserSubscriptionHistory :username="user.username" />
 
         <USeparator />
 

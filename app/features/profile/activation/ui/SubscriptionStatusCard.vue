@@ -9,6 +9,7 @@
   import {
     ProfileCardUI,
     REDEMPTION_DATE_FORMAT,
+    SUBSCRIPTION_STATUS_SUBSCRIBE_BUTTON,
     SUBSCRIPTION_TYPE_LABELS,
   } from '../model';
 
@@ -166,15 +167,12 @@
 
         <UButton
           v-if="!registered"
-          to="/user/profile/activation"
-          icon="tabler:ticket"
+          v-bind="SUBSCRIPTION_STATUS_SUBSCRIBE_BUTTON"
           color="neutral"
           variant="soft"
           size="sm"
           class="shrink-0 self-start sm:self-auto"
-        >
-          Активировать код
-        </UButton>
+        />
       </div>
 
       <div
@@ -189,21 +187,18 @@
           />
 
           <p class="text-sm text-muted">
-            Активной подписки нет. Активируйте промокод, чтобы получить подписку
-            и награды.
+            Активной подписки нет. Оформите подписку или введите промокод ниже,
+            чтобы получить подписку и награды.
           </p>
         </div>
 
         <UButton
-          to="/user/profile/activation"
-          icon="tabler:ticket"
+          v-bind="SUBSCRIPTION_STATUS_SUBSCRIBE_BUTTON"
           color="primary"
           variant="soft"
           size="sm"
           class="shrink-0 self-start sm:self-auto"
-        >
-          Активировать код
-        </UButton>
+        />
       </div>
 
       <!-- Ожидающая активации подписка — независимо от наличия активной -->

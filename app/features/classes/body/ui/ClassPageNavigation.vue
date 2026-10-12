@@ -28,6 +28,7 @@
   const nuxtApp = useNuxtApp();
   const route = useRoute();
   const router = useRouter();
+  const { scrollToTop } = useAnchorScroll();
 
   /**
    * Разделы страницы по их якорям в адресе. Якорь — id раздела, а навигация
@@ -91,10 +92,21 @@
     sectionId: string,
     behavior: 'smooth' | 'instant',
   ): void {
-    document.getElementById(getSectionHeadingId(sectionId))?.scrollIntoView({
-      behavior,
-      block: 'start',
-    });
+    const heading = document.getElementById(getSectionHeadingId(sectionId));
+
+    if (!heading) {
+      return;
+    }
+
+    // Над первым разделом стоит шапка страницы, поэтому «Основное» прокручивает
+    // контейнер к самому началу, а не к разделу: иначе шапка остаётся срезанной.
+    if (sectionId === CLASS_SECTION_ANCHOR.table) {
+      scrollToTop({ behavior, offsetTop: 0 }, heading);
+
+      return;
+    }
+
+    heading.scrollIntoView({ behavior, block: 'start' });
   }
 
   /**
@@ -167,9 +179,16 @@
 
     scrollToSection(section.id, 'smooth');
 
-    // Замена, а не новая запись истории: «назад» уводит со страницы, а не
-    // перебирает разделы.
-    router.replace({ query: route.query, hash: `#${section.id}` });
+    // Якорь меняем мимо роутера: на смену якоря он сам прокручивает окно к
+    // разделу и перебивает нашу прокрутку, из-за чего «Основное» вставало
+    // под шапку, а не к самому верху. Замена, а не новая запись истории:
+    // «назад» уводит со страницы, а не перебирает разделы.
+    const { href: sectionHref } = router.resolve({
+      query: route.query,
+      hash: `#${section.id}`,
+    });
+
+    window.history.replaceState(window.history.state, '', sectionHref);
   }
 
   onMounted(() => {

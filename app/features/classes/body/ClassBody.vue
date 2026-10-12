@@ -83,12 +83,8 @@
           <!--
             Якорь на обёртке, а не на ClassRouting: тот асинхронный и появляется
             в DOM позже, чем навигация собирает отслеживаемые заголовки.
-            Отступ прокрутки доводит первый раздел до самого верха контейнера.
           -->
-          <div
-            :id="getSectionHeadingId(CLASS_SECTION_ANCHOR.table)"
-            class="scroll-mt-24"
-          >
+          <div :id="getSectionHeadingId(CLASS_SECTION_ANCHOR.table)">
             <ClassRouting
               :url="detail.url"
               :name="detail.name"

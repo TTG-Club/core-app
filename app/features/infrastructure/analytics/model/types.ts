@@ -22,9 +22,17 @@ declare global {
   }
 }
 
+/** Имя настройки отображения → выбранное значение. */
+export type OnlineDisplayPreferences = Record<string, string>;
+
 /** Данные посетителя для собственного счётчика онлайн. */
 export interface OnlineHeartbeatBody {
   key: string;
+  /**
+   * Настройки отображения посетителя (тема, ширина сайта) для статистики в админке.
+   * Без заданных настроек поле не отправляется.
+   */
+  preferences?: OnlineDisplayPreferences;
   previousGuestKey?: string;
   type: typeof REGISTERED_ONLINE_TYPE | typeof VISITOR_ONLINE_TYPE;
 }

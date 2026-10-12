@@ -1,13 +1,13 @@
 <script setup lang="ts">
   import {
     VTTG_HERO_BACKGROUND,
-    VTTG_SUBSCRIBE_BUTTON,
     VTTG_SUBSCRIPTION_FACTS,
     VTTG_SUBSCRIPTION_HERO,
     VTTG_SUBSCRIPTION_PERKS_BUTTON,
     VTTG_SUBSCRIPTION_PERKS_SECTION_ID,
     VTTG_SUBSCRIPTION_PRICE,
   } from '../model';
+  import VttgSubscribeButton from './VttgSubscribeButton.vue';
 
   // id узора уникален для экземпляра: при одинаковых id все svg на странице
   // ссылались бы на первый узор в DOM.
@@ -65,17 +65,16 @@
           {{ VTTG_SUBSCRIPTION_HERO.description }}
         </p>
 
-        <div class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+        <div
+          class="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-start"
+        >
           <UButton
             v-bind="VTTG_SUBSCRIPTION_PERKS_BUTTON"
             class="justify-center"
             @click.left.exact.prevent="handlePerksClick"
           />
 
-          <UButton
-            v-bind="VTTG_SUBSCRIBE_BUTTON"
-            class="justify-center"
-          />
+          <VttgSubscribeButton />
         </div>
       </div>
 

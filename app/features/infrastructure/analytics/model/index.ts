@@ -1,4 +1,8 @@
-export type { OnlineHeartbeatBody, YandexMetrikaQueue } from './types';
+export type {
+  OnlineDisplayPreferences,
+  OnlineHeartbeatBody,
+  YandexMetrikaQueue,
+} from './types';
 
 export {
   GOOGLE_ANALYTICS_ID_QUERY_PARAMETER,

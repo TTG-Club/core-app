@@ -10,10 +10,20 @@ const adminOnlineCountersSchema = z.object({
   total: z.number().int().nonnegative(),
 });
 
+const adminOnlinePreferencePeriodSchema = z.object({
+  days: z.number().int().positive(),
+  preferences: z.record(
+    z.string(),
+    z.record(z.string(), z.number().int().nonnegative()),
+  ),
+});
+
 const adminOnlineStatsResponseSchema: z.ZodType<AdminOnlineStatsResponse> =
   z.object({
     sites: z.array(
       adminOnlineCountersSchema.extend({
+        // Пока online-app не обновлён, срезов настроек в ответе нет — карточка покажет пустоту.
+        preferences: z.array(adminOnlinePreferencePeriodSchema).optional(),
         siteId: z.string().min(1),
       }),
     ),
