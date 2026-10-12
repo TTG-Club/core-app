@@ -227,15 +227,18 @@ export const VTTG_SUBSCRIPTION_CTA = {
   title: 'Поддержите проект — и получите больше',
   description:
     'Каждая подписка помогает развивать TTG Club и Virtual TTG Club: новые функции, контент и сервера.',
-  links: [
-    { ...VTTG_SUBSCRIBE_BUTTON, color: 'primary', variant: 'solid' },
-    {
-      label: 'О виртуальном столе',
-      trailingIcon: 'tabler:arrow-right',
-      to: VTTG_LANDING_PATH,
-      size: 'xl',
-      color: 'neutral',
-      variant: 'ghost',
-    },
-  ] satisfies Array<ButtonProps>,
+  /** Выключенная кнопка «скоро» для тех, кому покупка пока недоступна. */
+  soonButton: {
+    ...VTTG_SUBSCRIBE_BUTTON,
+    color: 'primary',
+    variant: 'solid',
+  } satisfies ButtonProps,
+  landingLink: {
+    label: 'О виртуальном столе',
+    trailingIcon: 'tabler:arrow-right',
+    to: VTTG_LANDING_PATH,
+    size: 'xl',
+    color: 'neutral',
+    variant: 'ghost',
+  } satisfies ButtonProps,
 } as const;

@@ -8,6 +8,7 @@
   } from '~vttg/model';
   import {
     VttgFaqSection,
+    VttgSubscribeButton,
     VttgSubscriptionHero,
     VttgSubscriptionPerks,
   } from '~vttg/ui';
@@ -40,9 +41,14 @@
         <UPageCTA
           :title="VTTG_SUBSCRIPTION_CTA.title"
           :description="VTTG_SUBSCRIPTION_CTA.description"
-          :links="VTTG_SUBSCRIPTION_CTA.links"
           variant="subtle"
-        />
+        >
+          <template #links>
+            <VttgSubscribeButton :soon="VTTG_SUBSCRIPTION_CTA.soonButton" />
+
+            <UButton v-bind="VTTG_SUBSCRIPTION_CTA.landingLink" />
+          </template>
+        </UPageCTA>
       </section>
     </UPage>
   </NuxtLayout>
