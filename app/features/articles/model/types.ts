@@ -1,4 +1,5 @@
 import type { RenderNode } from '~ui/markup';
+import type { RatingValue } from '~ui/rating';
 
 /** Ключ типа записи: новость или статья. */
 export type ArticleType = 'NEWS' | 'ARTICLE';
@@ -19,6 +20,15 @@ export type ArticlePubState = 'draft' | 'active' | 'inactive';
  * - `draft` — черновики, тот же `/search/unpublished` (разделение по `status`).
  */
 export type ArticleAdminTab = 'published' | 'unpublished' | 'draft';
+
+/**
+ * Сортировка публичного листинга: по дате выхода (по умолчанию), по названию,
+ * по рейтингу (средняя оценка, затем число оценок).
+ */
+export type ArticleSorting = 'DATE' | 'TITLE' | 'RATING';
+
+/** Группировка листинга — у записей её нет, нужна только для меню представления. */
+export type ArticleGrouping = 'NONE';
 
 /** Значение фильтра по типу (включая «все»). */
 export type ArticleTypeFilter = 'all' | ArticleType;
@@ -75,7 +85,9 @@ export type ArticleTelegramFormat = 'INSTANT_VIEW' | 'FULL_TEXT';
  *   (учитывается при `publishToDiscord`);
  * - `discordCompactText` — текст компактного поста (учитывается при `discordCompact`). Обычный
  *   текст, как у `telegramSummary`; пустой — в посте останутся заголовок и ссылка на сайт;
- * - `publishToVk` — при сохранении продублировать новость в сообщество ВКонтакте.
+ * - `publishToVk` — при сохранении продублировать новость в сообщество ВКонтакте;
+ * - `tags` — произвольные теги статьи (лор, механика, местность…); бэк хранит их
+ *   без лишних пробелов, в нижнем регистре и без повторов.
  */
 export interface ArticleRequest {
   url: string;
@@ -92,6 +104,7 @@ export interface ArticleRequest {
   discordCompact: boolean;
   discordCompactText: string;
   publishToVk: boolean;
+  tags: string[];
   title: string;
   previewImageUrl: string | null;
   publishDateTime: string | null;
@@ -114,6 +127,9 @@ export interface ArticleShortResponse {
   publishDateTime: string | null;
   previewImageUrl: string | null;
   preview: RenderNode;
+  tags: string[];
+  /** Рейтинг записи; заполнен только в публичном листинге (`/search`). */
+  rating: RatingValue | null;
 }
 
 /**
@@ -135,6 +151,7 @@ export interface ArticleDetailedResponse {
   publishDateTime: string | null;
   preview: RenderNode;
   content: RenderNode;
+  tags: string[];
   createdAt: string;
   updatedAt: string;
 }
