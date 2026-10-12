@@ -4,7 +4,11 @@
   import { CardLink } from '~ui/link';
 
   import { ArticleDrawer } from '../drawer';
-  import { ARTICLE_DATE_FORMAT, getArticleRoute } from '../model';
+  import {
+    ARTICLE_DATE_FORMAT,
+    getArticleRatingLabel,
+    getArticleRoute,
+  } from '../model';
 
   const { article } = defineProps<{
     article: ArticleShortResponse;
@@ -34,12 +38,17 @@
   const to = computed(() => getArticleRoute(article.url));
 
   // CardLink рассчитан на сущности с рус/англ названием; у записи одно название,
-  // в подзаголовок кладём дату публикации.
+  // в подзаголовок кладём дату публикации и рейтинг (если запись уже оценивали).
   const name = computed(() => ({
     rus: article.title,
-    eng: article.publishDateTime
-      ? format(article.publishDateTime, ARTICLE_DATE_FORMAT)
-      : '',
+    eng: [
+      article.publishDateTime
+        ? format(article.publishDateTime, ARTICLE_DATE_FORMAT)
+        : '',
+      article.rating?.total ? getArticleRatingLabel(article.rating) : '',
+    ]
+      .filter(Boolean)
+      .join(' · '),
   }));
 </script>
 

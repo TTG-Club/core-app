@@ -56,6 +56,7 @@
     <ArticleBody
       v-if="article"
       :article
+      hide-rating
     />
   </UiDrawer>
 </template>

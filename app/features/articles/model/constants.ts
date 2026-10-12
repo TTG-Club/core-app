@@ -1,9 +1,15 @@
+import type { ListPresentationConfig } from '~infrastructure/list-presentation/model';
+import type { RatingValue } from '~ui/rating';
+
 import type {
   ArticleAdminTab,
   ArticleDiscordMention,
+  ArticleGrouping,
   ArticlePublishChannel,
   ArticlePublishMode,
   ArticlePubState,
+  ArticleShortResponse,
+  ArticleSorting,
   ArticleStatus,
   ArticleTelegramFormat,
   ArticleType,
@@ -18,6 +24,57 @@ export const ARTICLES_SEARCH_PATH = `${ARTICLES_API_PATH}/search`;
 
 /** Путь поиска черновиков и отложенных записей (для модерации). */
 export const ARTICLES_UNPUBLISHED_SEARCH_PATH = `${ARTICLES_API_PATH}/search/unpublished`;
+
+/** Путь списка тегов опубликованных записей (фильтр листинга и подсказки редактора). */
+export const ARTICLES_TAGS_PATH = `${ARTICLES_API_PATH}/tags`;
+
+/** Раздел общей таблицы рейтинга для записей (тот же ключ у бэка). */
+export const ARTICLE_RATING_SECTION = 'articles';
+
+/** Сортировка листинга по умолчанию — по дате выхода, новые сверху. */
+export const ARTICLE_SORTING_DEFAULT: ArticleSorting = 'DATE';
+
+/**
+ * Представление публичного листинга статей для общего меню сортировки
+ * (`useListPresentationMenus`). Группировки нет — единственный вариант `NONE`,
+ * поэтому в меню попадает только сортировка.
+ */
+export const ARTICLE_LIST_PRESENTATION: ListPresentationConfig<
+  ArticleShortResponse,
+  ArticleGrouping,
+  ArticleSorting
+> = {
+  sectionKey: 'articles',
+  defaultGrouping: 'NONE',
+  defaultSorting: ARTICLE_SORTING_DEFAULT,
+  groupingOptions: [
+    { label: 'Без группировки', value: 'NONE', apiValue: 'NONE' },
+  ],
+  sortingOptions: [
+    { label: 'По дате выхода', value: 'DATE', apiValue: 'DATE' },
+    { label: 'По названию', value: 'TITLE', apiValue: 'TITLE' },
+    { label: 'По рейтингу', value: 'RATING', apiValue: 'RATING' },
+  ],
+};
+
+/** Подпись и плейсхолдер фильтра по тегам в листинге. */
+export const ARTICLE_TAGS_FILTER_PLACEHOLDER = 'Теги';
+
+/** Пустой результат листинга, когда записи отсеял только фильтр по тегам. */
+export const ARTICLE_TAGS_EMPTY_TEXT = 'По выбранным тегам ничего не найдено';
+
+/** Подпись поля тегов в редакторе. */
+export const ARTICLE_TAGS_LABEL = 'Теги';
+
+/** Подсказка поля тегов в редакторе. */
+export const ARTICLE_TAGS_HINT =
+  'Например: лор, механика, местность. Можно выбрать из уже существующих или добавить новый.';
+
+/** Плейсхолдер поля тегов в редакторе. */
+export const ARTICLE_TAGS_PLACEHOLDER = 'Выбери или добавь теги';
+
+/** Максимальная длина тега (длина колонки на бэке). */
+export const ARTICLE_TAG_MAX_LENGTH = 64;
 
 /** Публичный маршрут листинга статей (и база маршрута чтения `/articles/{url}`). */
 export const ARTICLES_ROUTE = '/articles';
@@ -257,4 +314,31 @@ export const ARTICLE_POST_CHAR_TARGET_DISCORD = 1100;
  */
 export function getArticleRoute(url: string): string {
   return `${ARTICLES_ROUTE}/${url}`;
+}
+
+/**
+ * Возвращает текст пустого результата листинга для поискового запроса `search`.
+ */
+export function getArticleSearchEmptyText(search: string): string {
+  return `По запросу «${search}» ничего не найдено`;
+}
+
+/**
+ * Возвращает короткую подпись рейтинга для карточки: средняя оценка и число оценок.
+ */
+export function getArticleRatingLabel(rating: RatingValue): string {
+  return `★ ${rating.value} (${rating.total})`;
+}
+
+/**
+ * Приводит тег к виду, в котором его хранит бэк: без лишних пробелов, в нижнем
+ * регистре, не длиннее `ARTICLE_TAG_MAX_LENGTH`.
+ */
+export function normalizeArticleTag(tag: string): string {
+  return tag
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+    .slice(0, ARTICLE_TAG_MAX_LENGTH)
+    .trim();
 }
