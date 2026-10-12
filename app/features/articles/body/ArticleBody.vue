@@ -1,10 +1,8 @@
 <script setup lang="ts">
-  import type { RenderNode } from '~ui/markup';
-
   import type { ArticleDetailedResponse } from '../model';
 
   import { UiGallery } from '~ui/gallery';
-  import { getNodeText, MarkupRender } from '~ui/markup';
+  import { getNodeText, MarkupRender, withHeadingAnchors } from '~ui/markup';
   import { RatingWidget } from '~ui/rating';
 
   import {
@@ -13,6 +11,7 @@
     ARTICLE_TYPE,
     toArticleMarkup,
   } from '../model';
+  import { ArticleTableOfContents } from '../toc';
 
   const { article, hideRating = false } = defineProps<{
     article: ArticleDetailedResponse;
@@ -26,15 +25,17 @@
   );
 
   // toArticleMarkup разворачивает возможную сырую JSON-строку описания в узлы (см.
-  // хелпер). Каст к RenderNode безопасен в рантайме: parse() возвращает плоский
-  // массив узлов, который MarkupRender корректно принимает как «несколько записей».
-  const previewNodes = computed(
-    () => toArticleMarkup(article.preview) as RenderNode,
+  // хелпер).
+  const previewNodes = computed(() => toArticleMarkup(article.preview));
+
+  // Заголовки текста получают якоря и складываются в содержание под рейтингом.
+  const anchoredContent = computed(() =>
+    withHeadingAnchors(toArticleMarkup(article.content)),
   );
 
-  const contentNodes = computed(
-    () => toArticleMarkup(article.content) as RenderNode,
-  );
+  const contentNodes = computed(() => anchoredContent.value.nodes);
+
+  const headings = computed(() => anchoredContent.value.headings);
 
   // Анонс необязателен: если текста нет — не рендерим его блок, иначе пустой
   // flex-элемент оставляет призрачный отступ (gap) над содержанием.
@@ -74,6 +75,16 @@
           v-if="isRatingShown"
           :section="ARTICLE_RATING_SECTION"
           :url="article.url"
+        />
+
+        <!--
+          Как навигация классов: липнет к верху колонки, а в узкой раскладке
+          (дровер, мобильные) скрыта — там колонка стоит над текстом.
+        -->
+        <ArticleTableOfContents
+          v-if="headings.length"
+          :class="[$style.toc, 'max-lg:hidden']"
+          :headings
         />
       </div>
 
@@ -118,7 +129,6 @@
     @container (width > 800px) {
       flex-direction: row;
       gap: 24px;
-      align-items: flex-start;
     }
   }
 
@@ -140,6 +150,15 @@
     width: 100%;
     border-radius: 12px;
     object-fit: cover;
+  }
+
+  // Содержание имеет смысл только рядом с текстом, а не над ним.
+  .toc {
+    display: none;
+
+    @container (width > 800px) {
+      display: block;
+    }
   }
 
   .text {

@@ -31,6 +31,9 @@ export const ARTICLES_TAGS_PATH = `${ARTICLES_API_PATH}/tags`;
 /** Раздел общей таблицы рейтинга для записей (тот же ключ у бэка). */
 export const ARTICLE_RATING_SECTION = 'articles';
 
+/** Заголовок блока содержания статьи. */
+export const ARTICLE_TOC_TITLE = 'Содержание';
+
 /** Сортировка листинга по умолчанию — по дате выхода, новые сверху. */
 export const ARTICLE_SORTING_DEFAULT: ArticleSorting = 'DATE';
 
