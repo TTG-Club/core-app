@@ -81,6 +81,7 @@
     () => hasSave.value || isAutoHit.value,
   );
 
+  /** Подсказка под бонусом атаки: почему он не нужен или каким его вводить. */
   const attackBonusHelp = computed(() => {
     if (isAutoHit.value) {
       return CREATURE_ACTION_LABELS.attackBonusAutoHit;
@@ -96,6 +97,7 @@
     isAutoHit.value ? CREATURE_ACTION_LABELS.saveAutoHit : undefined,
   );
 
+  /** Сл и исход спасброска: без спасброска или при автопопадании не нужны. */
   const isSaveDetailsDisabled = computed(
     () => !hasSave.value || isAutoHit.value,
   );
