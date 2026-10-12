@@ -43,6 +43,14 @@ export const SUBSCRIPTION_PAYMENT_MONTHS = {
   presets: [1, 3, 6, 12],
 } as const;
 
+/** Подписи готовых вариантов срока; остальные сроки подписываются числом месяцев. */
+export const SUBSCRIPTION_PAYMENT_PRESET_LABELS: Readonly<
+  Record<number, string>
+> = {
+  6: 'Полгода',
+  12: 'Год',
+};
+
 /** Почта для чека: та же проверка, что у subscriber-service. */
 export const subscriptionReceiptEmailSchema = z.email().max(255);
 
@@ -65,7 +73,19 @@ export const subscriptionPaymentTermsSchema = z.object({
   monthPrice: z.number(),
   currency: z.string(),
   maxMonths: z.number().int().positive().nullable(),
+  /** Ступени скидки за срок по возрастанию; сумму платежа считает сервер. */
+  discounts: z
+    .array(
+      z.object({
+        fromMonths: z.number().int().positive(),
+        percent: z.number().int().min(0).max(100),
+      }),
+    )
+    .default([]),
 });
+
+export type SubscriptionPaymentDiscount =
+  SubscriptionPaymentTerms['discounts'][number];
 
 export type SubscriptionPaymentTerms = z.infer<
   typeof subscriptionPaymentTermsSchema
@@ -97,7 +117,11 @@ export const VTTG_SUBSCRIPTION_PURCHASE_TEXT = {
     'Даю согласие на обработку персональных данных в соответствии с',
   privacyPolicyLink: 'политикой конфиденциальности',
   monthsLabel: 'Срок подписки',
-  monthsHint: 'Можно оплатить сразу любое число месяцев.',
+  monthsHint: 'Или укажите своё число месяцев.',
+  discountHintPrefix: 'Скидка за срок:',
+  discountHintFrom: 'от',
+  monthsShort: 'мес.',
+  savingLabel: 'Экономия',
   totalLabel: 'К оплате',
   extendHint:
     'Если подписка уже действует, оплаченные месяцы добавятся к её сроку.',
@@ -153,13 +177,84 @@ export type SubscriptionPaymentResult =
   keyof typeof SUBSCRIPTION_PAYMENT_RESULTS;
 
 /**
- * Считает сумму к оплате за выбранное число месяцев по цене месяца с сервера.
+ * Скидка в процентах за срок: наибольшая из ступеней, до которых срок дотянул.
  */
-export function getSubscriptionPaymentTotal(
+export function getSubscriptionDiscountPercent(
+  discounts: ReadonlyArray<SubscriptionPaymentDiscount>,
+  months: number,
+): number {
+  return discounts.reduce(
+    (percent, tier) =>
+      months >= tier.fromMonths ? Math.max(percent, tier.percent) : percent,
+    0,
+  );
+}
+
+/**
+ * Сумма без скидки: цена месяца, умноженная на срок.
+ */
+export function getSubscriptionFullPrice(
   monthPrice: number,
   months: number,
 ): number {
   return Math.round(monthPrice * months * 100) / 100;
+}
+
+/**
+ * Сумма к оплате со скидкой — так же, как считает subscriber-service
+ * (округление до копеек).
+ */
+export function getSubscriptionPaymentTotal(
+  monthPrice: number,
+  months: number,
+  discounts: ReadonlyArray<SubscriptionPaymentDiscount>,
+): number {
+  const percent = getSubscriptionDiscountPercent(discounts, months);
+
+  return Math.round(monthPrice * months * (100 - percent)) / 100;
+}
+
+/**
+ * Сколько пользователь сэкономит за срок по сравнению с помесячной оплатой.
+ */
+export function getSubscriptionSaving(
+  monthPrice: number,
+  months: number,
+  discounts: ReadonlyArray<SubscriptionPaymentDiscount>,
+): number {
+  return (
+    Math.round(
+      (getSubscriptionFullPrice(monthPrice, months)
+        - getSubscriptionPaymentTotal(monthPrice, months, discounts))
+        * 100,
+    ) / 100
+  );
+}
+
+/**
+ * Подпись варианта срока: «Полгода», «Год» или «3 месяца».
+ */
+export function formatSubscriptionPreset(months: number): string {
+  return (
+    SUBSCRIPTION_PAYMENT_PRESET_LABELS[months]
+    ?? formatSubscriptionMonths(months)
+  );
+}
+
+/**
+ * Подсказка о скидках: «Скидка за срок: от 3 мес. — 3%, от 6 мес. — 6%».
+ */
+export function formatSubscriptionDiscountHint(
+  discounts: ReadonlyArray<SubscriptionPaymentDiscount>,
+): string {
+  const tiers = discounts
+    .map(
+      (tier) =>
+        `${VTTG_SUBSCRIPTION_PURCHASE_TEXT.discountHintFrom} ${tier.fromMonths} ${VTTG_SUBSCRIPTION_PURCHASE_TEXT.monthsShort} — ${tier.percent}%`,
+    )
+    .join(', ');
+
+  return `${VTTG_SUBSCRIPTION_PURCHASE_TEXT.discountHintPrefix} ${tiers}.`;
 }
 
 /** Ключ кэша условий оплаты в `useAsyncData`. */

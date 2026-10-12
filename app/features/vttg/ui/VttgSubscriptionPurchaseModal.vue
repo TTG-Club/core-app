@@ -7,10 +7,14 @@
     useSubscriptionPaymentTerms,
   } from '../composables';
   import {
-    formatSubscriptionMonths,
+    formatSubscriptionDiscountHint,
+    formatSubscriptionPreset,
     formatSubscriptionPrice,
     formatSubscriptionTotal,
+    getSubscriptionDiscountPercent,
+    getSubscriptionFullPrice,
     getSubscriptionPaymentTotal,
+    getSubscriptionSaving,
     SUBSCRIPTION_EMAIL_VERIFICATION_ACTIONS,
     SUBSCRIPTION_PAYMENT_MONTHS,
     SUBSCRIPTION_PURCHASE_ICONS,
@@ -73,11 +77,73 @@
       || !isConsentsGiven.value,
   );
 
-  /** Итоговая сумма за выбранный срок; пока цена не загружена — нет. */
+  /** Итоговая сумма за выбранный срок со скидкой; пока цена не загружена — нет. */
   const total = computed(() =>
     terms.value
-      ? getSubscriptionPaymentTotal(terms.value.monthPrice, months.value)
+      ? getSubscriptionPaymentTotal(
+          terms.value.monthPrice,
+          months.value,
+          terms.value.discounts,
+        )
       : undefined,
+  );
+
+  const discountPercent = computed(() =>
+    terms.value
+      ? getSubscriptionDiscountPercent(terms.value.discounts, months.value)
+      : 0,
+  );
+
+  /** Цена без скидки и экономия — показываются, только если скидка есть. */
+  const discountCaption = computed(() => {
+    if (!terms.value || !discountPercent.value) {
+      return undefined;
+    }
+
+    const full = getSubscriptionFullPrice(terms.value.monthPrice, months.value);
+
+    const saving = getSubscriptionSaving(
+      terms.value.monthPrice,
+      months.value,
+      terms.value.discounts,
+    );
+
+    return {
+      full: formatSubscriptionPrice(full),
+      saving: `${VTTG_SUBSCRIPTION_PURCHASE_TEXT.savingLabel} ${formatSubscriptionPrice(saving)} (−${discountPercent.value}%)`,
+    };
+  });
+
+  /** Варианты срока с ценой и экономией. */
+  const presetOptions = computed(() =>
+    SUBSCRIPTION_PAYMENT_MONTHS.presets.map((preset) => {
+      const discounts = terms.value?.discounts ?? [];
+      const percent = getSubscriptionDiscountPercent(discounts, preset);
+
+      return {
+        months: preset,
+        label: formatSubscriptionPreset(preset),
+        price: terms.value
+          ? formatSubscriptionPrice(
+              getSubscriptionPaymentTotal(
+                terms.value.monthPrice,
+                preset,
+                discounts,
+              ),
+            )
+          : undefined,
+        saving:
+          terms.value && percent
+            ? `−${percent}% · ${VTTG_SUBSCRIPTION_PURCHASE_TEXT.savingLabel.toLowerCase()} ${formatSubscriptionPrice(getSubscriptionSaving(terms.value.monthPrice, preset, discounts))}`
+            : undefined,
+      };
+    }),
+  );
+
+  const monthsHint = computed(() =>
+    terms.value?.discounts.length
+      ? `${VTTG_SUBSCRIPTION_PURCHASE_TEXT.monthsHint} ${formatSubscriptionDiscountHint(terms.value.discounts)}`
+      : VTTG_SUBSCRIPTION_PURCHASE_TEXT.monthsHint,
   );
 
   const totalCaption = computed(() =>
@@ -161,20 +227,35 @@
 
         <UFormField
           :label="VTTG_SUBSCRIPTION_PURCHASE_TEXT.monthsLabel"
-          :help="VTTG_SUBSCRIPTION_PURCHASE_TEXT.monthsHint"
+          :help="monthsHint"
         >
           <div class="flex flex-col gap-3">
-            <div class="flex flex-wrap gap-2">
+            <div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
               <UButton
-                v-for="preset in SUBSCRIPTION_PAYMENT_MONTHS.presets"
-                :key="preset"
-                :label="formatSubscriptionMonths(preset)"
-                :variant="getPresetVariant(preset)"
+                v-for="option in presetOptions"
+                :key="option.months"
+                :variant="getPresetVariant(option.months)"
                 :disabled="isPending"
                 color="primary"
-                size="sm"
-                @click.left.exact.prevent="handlePresetClick(preset)"
-              />
+                class="flex-col items-start gap-0.5 text-left"
+                @click.left.exact.prevent="handlePresetClick(option.months)"
+              >
+                <span class="font-semibold">{{ option.label }}</span>
+
+                <span
+                  v-if="option.price"
+                  class="text-xs"
+                >
+                  {{ option.price }}
+                </span>
+
+                <span
+                  v-if="option.saving"
+                  class="text-xs opacity-80"
+                >
+                  {{ option.saving }}
+                </span>
+              </UButton>
             </div>
 
             <UInputNumber
@@ -216,12 +297,23 @@
             class="h-6 w-32"
           />
 
-          <span
+          <div
             v-else
-            class="text-lg font-bold text-highlighted"
+            class="flex flex-col items-end"
           >
-            {{ totalCaption }}
-          </span>
+            <span class="text-lg font-bold text-highlighted">
+              {{ totalCaption }}
+            </span>
+
+            <span
+              v-if="discountCaption"
+              class="text-xs text-muted"
+            >
+              <s>{{ discountCaption.full }}</s>
+
+              <span class="text-success">{{ discountCaption.saving }}</span>
+            </span>
+          </div>
         </div>
 
         <p
