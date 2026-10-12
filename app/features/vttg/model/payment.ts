@@ -150,7 +150,6 @@ export const VTTG_SUBSCRIPTION_PURCHASE_TEXT = {
   cancelLabel: 'Отмена',
   payLabel: 'Оплатить',
   totalFor: 'за',
-  totalPlaceholder: '—',
   termsError: 'Не удалось загрузить цену подписки. Попробуйте позже.',
   errorTitle: 'Не удалось перейти к оплате',
   errorFallback: 'Попробуйте ещё раз чуть позже.',
@@ -280,9 +279,6 @@ export function formatSubscriptionDiscountHint(
 
   return `${VTTG_SUBSCRIPTION_PURCHASE_TEXT.discountHintPrefix} ${tiers}.`;
 }
-
-/** Ключ кэша условий оплаты в `useAsyncData`. */
-export const SUBSCRIPTION_PAYMENT_TERMS_DATA_KEY = 'subscription-payment-terms';
 
 /** Иконки окна покупки подписки. */
 export const SUBSCRIPTION_PURCHASE_ICONS = {

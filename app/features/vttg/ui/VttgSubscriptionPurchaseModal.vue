@@ -1,11 +1,10 @@
 <script setup lang="ts">
+  import type { SubscriptionPaymentTerms } from '../model';
+
   import { PRIVACY_POLICY_ROUTE } from '~infrastructure/privacy-policy/model';
   import { PUBLIC_OFFER_ROUTE } from '~infrastructure/public-offer/model';
 
-  import {
-    useSubscriptionPayment,
-    useSubscriptionPaymentTerms,
-  } from '../composables';
+  import { useSubscriptionPayment } from '../composables';
   import {
     formatSubscriptionDiscountHint,
     formatSubscriptionPreset,
@@ -23,13 +22,16 @@
     VTTG_SUBSCRIPTION_PURCHASE_TEXT,
   } from '../model';
 
+  const { terms } = defineProps<{
+    /** Условия оплаты: кнопка загружает их до открытия окна, чтобы цена не мигала. */
+    terms: SubscriptionPaymentTerms;
+  }>();
+
   const emit = defineEmits<{
     close: [];
   }>();
 
   const { isPending, startPayment } = useSubscriptionPayment();
-
-  const { data: terms, status: termsStatus } = useSubscriptionPaymentTerms();
 
   const { user } = useUser();
 
@@ -62,34 +64,23 @@
       : undefined,
   );
 
-  const isTermsLoading = computed(() => termsStatus.value === 'pending');
-
-  const isTermsFailed = computed(() => termsStatus.value === 'error');
-
-  const maxMonths = computed(() => terms.value?.maxMonths ?? undefined);
+  const maxMonths = computed(() => terms.maxMonths ?? undefined);
 
   const isPayDisabled = computed(
     () =>
-      !terms.value
-      || isPending.value
+      isPending.value
       || !isEmailVerified.value
       || !isEmailValid.value
       || !isConsentsGiven.value,
   );
 
-  /** Итоговая сумма за выбранный срок со скидкой; пока цена не загружена — нет. */
+  /** Итоговая сумма за выбранный срок со скидкой. */
   const total = computed(() =>
-    terms.value
-      ? getSubscriptionPaymentTotal(
-          terms.value.monthPrice,
-          months.value,
-          terms.value,
-        )
-      : undefined,
+    getSubscriptionPaymentTotal(terms.monthPrice, months.value, terms),
   );
 
   const discountPercent = computed(() =>
-    terms.value ? getSubscriptionDiscountPercent(terms.value, months.value) : 0,
+    getSubscriptionDiscountPercent(terms, months.value),
   );
 
   /**
@@ -97,17 +88,13 @@
    * если скидки нет), чтобы блок не менял высоту при смене срока.
    */
   const discountCaption = computed(() => {
-    if (!terms.value || !discountPercent.value) {
+    if (!discountPercent.value) {
       return undefined;
     }
 
-    const full = getSubscriptionFullPrice(terms.value.monthPrice, months.value);
+    const full = getSubscriptionFullPrice(terms.monthPrice, months.value);
 
-    const saving = getSubscriptionSaving(
-      terms.value.monthPrice,
-      months.value,
-      terms.value,
-    );
+    const saving = getSubscriptionSaving(terms.monthPrice, months.value, terms);
 
     return {
       full: formatSubscriptionPrice(full),
@@ -121,55 +108,40 @@
    */
   const presetOptions = computed(() =>
     SUBSCRIPTION_PAYMENT_MONTHS.presets.map((preset) => {
-      const percent = terms.value
-        ? getSubscriptionDiscountPercent(terms.value, preset)
-        : 0;
+      const percent = getSubscriptionDiscountPercent(terms, preset);
 
       return {
         months: preset,
         label: formatSubscriptionPreset(preset),
-        price: terms.value
-          ? formatSubscriptionPrice(
-              getSubscriptionPaymentTotal(
-                terms.value.monthPrice,
-                preset,
-                terms.value,
-              ),
-            )
-          : VTTG_SUBSCRIPTION_PURCHASE_TEXT.totalPlaceholder,
+        price: formatSubscriptionPrice(
+          getSubscriptionPaymentTotal(terms.monthPrice, preset, terms),
+        ),
         percent: percent ? `−${percent}%` : undefined,
-        saving:
-          terms.value && percent
-            ? `${VTTG_SUBSCRIPTION_PURCHASE_TEXT.savingShort} ${formatSubscriptionPrice(getSubscriptionSaving(terms.value.monthPrice, preset, terms.value))}`
-            : VTTG_SUBSCRIPTION_PURCHASE_TEXT.noDiscount,
+        saving: percent
+          ? `${VTTG_SUBSCRIPTION_PURCHASE_TEXT.savingShort} ${formatSubscriptionPrice(getSubscriptionSaving(terms.monthPrice, preset, terms))}`
+          : VTTG_SUBSCRIPTION_PURCHASE_TEXT.noDiscount,
       };
     }),
   );
 
   const monthsHint = computed(() =>
-    terms.value?.discounts.length
-      ? `${VTTG_SUBSCRIPTION_PURCHASE_TEXT.monthsHint} ${formatSubscriptionDiscountHint(terms.value.discounts)}`
+    terms.discounts.length
+      ? `${VTTG_SUBSCRIPTION_PURCHASE_TEXT.monthsHint} ${formatSubscriptionDiscountHint(terms.discounts)}`
       : VTTG_SUBSCRIPTION_PURCHASE_TEXT.monthsHint,
   );
 
   const totalCaption = computed(() =>
-    total.value === undefined
-      ? VTTG_SUBSCRIPTION_PURCHASE_TEXT.totalPlaceholder
-      : formatSubscriptionTotal(total.value, months.value),
+    formatSubscriptionTotal(total.value, months.value),
   );
 
-  const payLabel = computed(() =>
-    total.value === undefined
-      ? VTTG_SUBSCRIPTION_PURCHASE_TEXT.payLabel
-      : `${VTTG_SUBSCRIPTION_PURCHASE_TEXT.payLabel} ${formatSubscriptionPrice(total.value)}`,
+  const payLabel = computed(
+    () =>
+      `${VTTG_SUBSCRIPTION_PURCHASE_TEXT.payLabel} ${formatSubscriptionPrice(total.value)}`,
   );
 
-  const isPayLoading = computed(() => isPending.value || isTermsLoading.value);
-
-  const monthPrice = computed(() =>
-    terms.value
-      ? `${formatSubscriptionPrice(terms.value.monthPrice)} ${VTTG_SUBSCRIPTION_PRICE.cycle}`
-      : undefined,
+  const monthPrice = computed(
+    () =>
+      `${formatSubscriptionPrice(terms.monthPrice)} ${VTTG_SUBSCRIPTION_PRICE.cycle}`,
   );
 
   watch(maxMonths, (limit) => {
@@ -305,15 +277,7 @@
             {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.totalLabel }}
           </span>
 
-          <USkeleton
-            v-if="isTermsLoading"
-            class="h-12 w-40"
-          />
-
-          <div
-            v-else
-            class="flex flex-col items-end gap-0.5 text-right tabular-nums"
-          >
+          <div class="flex flex-col items-end gap-0.5 text-right tabular-nums">
             <span class="text-lg/7 font-bold text-highlighted">
               {{ totalCaption }}
             </span>
@@ -335,13 +299,6 @@
             </span>
           </div>
         </div>
-
-        <p
-          v-if="isTermsFailed"
-          class="text-sm text-error"
-        >
-          {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.termsError }}
-        </p>
 
         <div
           v-if="needsConsents"
@@ -414,7 +371,7 @@
 
         <UButton
           :label="payLabel"
-          :loading="isPayLoading"
+          :loading="isPending"
           :disabled="isPayDisabled"
           :icon="SUBSCRIPTION_PURCHASE_ICONS.pay"
           color="primary"
