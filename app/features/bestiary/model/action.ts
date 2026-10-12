@@ -88,6 +88,13 @@ export interface CreatureAreaOfEffect {
 export interface CreatureActionEffect {
   attackType: CreatureAttackType | undefined;
   attackBonus: number | undefined;
+
+  /**
+   * Автопопадание: запись наносит урон сразу, без броска атаки и спасброска
+   * цели. Тот же флаг, что `autoHit` у действия существа в системе VTTG.
+   */
+  autoHit: boolean;
+
   reach: number | undefined;
   rangeNormal: number | undefined;
   rangeLong: number | undefined;
@@ -123,6 +130,7 @@ export function createEmptyCreatureActionEffect(): CreatureActionEffect {
   return {
     attackType: undefined,
     attackBonus: undefined,
+    autoHit: false,
     reach: undefined,
     rangeNormal: undefined,
     rangeLong: undefined,
@@ -155,6 +163,7 @@ const loadedActionEffectSchema = z
   .object({
     attackType: z.string().nullish().catch(null),
     attackBonus: z.number().nullish().catch(null),
+    autoHit: z.boolean().nullish().catch(null),
     reach: z.number().nullish().catch(null),
     rangeNormal: z.number().nullish().catch(null),
     rangeLong: z.number().nullish().catch(null),
@@ -203,6 +212,7 @@ export function parseLoadedCreatureActionEffect(
   return {
     attackType: ATTACK_TYPES.find((type) => type === parsed.attackType),
     attackBonus: parsed.attackBonus ?? undefined,
+    autoHit: parsed.autoHit ?? false,
     reach: parsed.reach ?? undefined,
     rangeNormal: parsed.rangeNormal ?? undefined,
     rangeLong: parsed.rangeLong ?? undefined,
@@ -348,7 +358,9 @@ export function getCreatureActionCombatFilledCount(
   }
 
   return [
-    effect.attackType !== undefined || effect.attackBonus !== undefined,
+    effect.attackType !== undefined
+      || effect.attackBonus !== undefined
+      || effect.autoHit,
     effect.reach !== undefined
       || effect.rangeNormal !== undefined
       || effect.rangeLong !== undefined,
