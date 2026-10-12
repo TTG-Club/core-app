@@ -25,7 +25,10 @@ export const ARTICLES_SEARCH_PATH = `${ARTICLES_API_PATH}/search`;
 /** Путь поиска черновиков и отложенных записей (для модерации). */
 export const ARTICLES_UNPUBLISHED_SEARCH_PATH = `${ARTICLES_API_PATH}/search/unpublished`;
 
-/** Путь списка тегов опубликованных записей (фильтр листинга и подсказки редактора). */
+/** Путь метаданных фильтра листинга (группа тегов) в общем формате разделов. */
+export const ARTICLES_FILTERS_PATH = `${ARTICLES_API_PATH}/filters`;
+
+/** Путь списка тегов опубликованных записей (подсказки редактора). */
 export const ARTICLES_TAGS_PATH = `${ARTICLES_API_PATH}/tags`;
 
 /** Раздел общей таблицы рейтинга для записей (тот же ключ у бэка). */
@@ -69,9 +72,6 @@ export const ARTICLE_LIST_PRESENTATION: ListPresentationConfig<
     { label: 'По рейтингу', value: 'RATING', apiValue: 'RATING' },
   ],
 };
-
-/** Подпись и плейсхолдер фильтра по тегам в листинге. */
-export const ARTICLE_TAGS_FILTER_PLACEHOLDER = 'Теги';
 
 /** Пустой результат листинга, когда записи отсеял только фильтр по тегам. */
 export const ARTICLE_TAGS_EMPTY_TEXT = 'По выбранным тегам ничего не найдено';
