@@ -32,7 +32,7 @@ export const ARTICLES_TAGS_PATH = `${ARTICLES_API_PATH}/tags`;
 export const ARTICLE_RATING_SECTION = 'articles';
 
 /** Заголовок блока содержания статьи. */
-export const ARTICLE_TOC_TITLE = 'Содержание';
+export const ARTICLE_TOC_TITLE = 'На этой странице';
 
 /** Сортировка листинга по умолчанию — по дате выхода, новые сверху. */
 export const ARTICLE_SORTING_DEFAULT: ArticleSorting = 'DATE';
