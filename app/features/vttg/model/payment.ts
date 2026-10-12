@@ -82,11 +82,11 @@ export const subscriptionPaymentTermsSchema = z.object({
       }),
     )
     .default([]),
-  /** Скидки за точный срок (пасхалки): важнее ступеней, в подсказке не упоминаются. */
-  exactDiscounts: z
+  /** Скрытые ступени (пасхалки): считаются как обычные, в подсказке не упоминаются. */
+  hiddenDiscounts: z
     .array(
       z.object({
-        months: z.number().int().positive(),
+        fromMonths: z.number().int().positive(),
         percent: z.number().int().min(0).max(100),
       }),
     )
@@ -96,10 +96,10 @@ export const subscriptionPaymentTermsSchema = z.object({
 export type SubscriptionPaymentDiscount =
   SubscriptionPaymentTerms['discounts'][number];
 
-/** Скидки, по которым считается сумма: ступени и скидки за точный срок. */
+/** Скидки, по которым считается сумма: обычные и скрытые ступени. */
 export type SubscriptionPaymentDiscounts = Pick<
   SubscriptionPaymentTerms,
-  'discounts' | 'exactDiscounts'
+  'discounts' | 'hiddenDiscounts'
 >;
 
 export type SubscriptionPaymentTerms = z.infer<
@@ -193,20 +193,14 @@ export type SubscriptionPaymentResult =
   keyof typeof SUBSCRIPTION_PAYMENT_RESULTS;
 
 /**
- * Скидка в процентах за срок: скидка за точный срок, иначе наибольшая из
- * ступеней, до которых срок дотянул. Так же считает subscriber-service.
+ * Скидка в процентах за срок: наибольшая из обычных и скрытых ступеней, до
+ * которых срок дотянул. Так же считает subscriber-service.
  */
 export function getSubscriptionDiscountPercent(
-  { discounts, exactDiscounts }: SubscriptionPaymentDiscounts,
+  { discounts, hiddenDiscounts }: SubscriptionPaymentDiscounts,
   months: number,
 ): number {
-  const exact = exactDiscounts.find((discount) => discount.months === months);
-
-  if (exact) {
-    return exact.percent;
-  }
-
-  return discounts.reduce(
+  return [...discounts, ...hiddenDiscounts].reduce(
     (percent, tier) =>
       months >= tier.fromMonths ? Math.max(percent, tier.percent) : percent,
     0,
