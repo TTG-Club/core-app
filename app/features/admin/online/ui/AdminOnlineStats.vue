@@ -25,6 +25,7 @@
     isVttgSite,
   } from '../model';
   import AdminOnlineAppCard from './AdminOnlineAppCard.vue';
+  import AdminOnlinePreferencesCard from './AdminOnlinePreferencesCard.vue';
   import AdminOnlineStatsRow from './AdminOnlineStatsRow.vue';
 
   const props = defineProps<{
@@ -227,5 +228,11 @@
 
       <slot />
     </div>
+
+    <AdminOnlinePreferencesCard
+      :has-error="hasError"
+      :is-pending="isPending"
+      :stats="stats"
+    />
   </section>
 </template>

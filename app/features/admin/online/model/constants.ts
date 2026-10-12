@@ -1,3 +1,12 @@
+import type { AdminOnlinePreferenceSection } from './types';
+
+import {
+  LAYOUT_WIDTH_OPTIONS,
+  LAYOUT_WIDTH_SECTION_TITLE,
+  THEME_OPTIONS,
+  THEME_SECTION_TITLE,
+} from '~infrastructure/sidebar/display-settings';
+
 export const ADMIN_ONLINE_STATS_API_URL = '/api/v2/online/stats';
 
 export const ADMIN_ONLINE_STATS_DATA_KEY = 'admin-online-stats';
@@ -95,3 +104,43 @@ export const ADMIN_ONLINE_STATS_EMPTY_VALUE = '—';
 
 export const ADMIN_ONLINE_STATS_EMPTY_TEXT =
   'Online-app пока не вернул сайты для отображения.';
+
+export const ADMIN_ONLINE_PREFERENCES_TITLE = 'Настройки отображения';
+
+export const ADMIN_ONLINE_PREFERENCES_DESCRIPTION =
+  'Сколько разных посетителей пользовались каждой темой и шириной сайта. Кто переключался за период, учтён в обоих вариантах.';
+
+export const ADMIN_ONLINE_PREFERENCES_EMPTY_TEXT =
+  'Данных пока нет: статистика копится с момента включения учёта.';
+
+/** Подписи периодов; период, которого здесь нет, подписывается числом дней. */
+export const ADMIN_ONLINE_PREFERENCES_PERIOD_LABELS: Readonly<
+  Record<number, string>
+> = {
+  1: 'Сегодня',
+  7: '7 дней',
+  30: '30 дней',
+};
+
+export const ADMIN_ONLINE_PREFERENCES_PERCENT_SIGN = '%';
+
+/** Иконка значения, которого сайт не знает (например, тему уже убрали). */
+export const ADMIN_ONLINE_PREFERENCES_UNKNOWN_ICON = 'tabler:help';
+
+/**
+ * Какие настройки показываем. Имена совпадают с теми, под которыми сервер сайта
+ * передаёт их в heartbeat, а варианты — те же, что в панели настроек отображения.
+ */
+export const ADMIN_ONLINE_PREFERENCE_SECTIONS: ReadonlyArray<AdminOnlinePreferenceSection> =
+  [
+    {
+      name: 'theme',
+      options: THEME_OPTIONS,
+      title: THEME_SECTION_TITLE,
+    },
+    {
+      name: 'width',
+      options: LAYOUT_WIDTH_OPTIONS,
+      title: LAYOUT_WIDTH_SECTION_TITLE,
+    },
+  ];

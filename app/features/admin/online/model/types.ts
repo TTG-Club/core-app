@@ -10,7 +10,24 @@ export interface AdminOnlineCounters {
   total: number;
 }
 
+/** Имя настройки отображения → значение → число уникальных посетителей. */
+export type AdminOnlinePreferenceCounts = Record<
+  string,
+  Record<string, number>
+>;
+
+/** Чем пользовались посетители площадки за последние `days` суток, включая сегодня. */
+export interface AdminOnlinePreferencePeriod {
+  days: number;
+  preferences: AdminOnlinePreferenceCounts;
+}
+
 export interface AdminOnlineSiteStats extends AdminOnlineCounters {
+  /**
+   * Срезы настроек отображения. Поле необязательное: площадки, которые настройки
+   * не шлют, и online-app до обновления его не отдают.
+   */
+  preferences?: AdminOnlinePreferencePeriod[];
   siteId: string;
 }
 
@@ -53,5 +70,31 @@ export interface AdminOnlineAppTile {
   /** Что за число: разворачивается в подсказке при наведении */
   hint: string;
   label: string;
+  value: string;
+}
+
+/** Вариант настройки отображения, который карточка знает в лицо: подпись и иконка. */
+export interface AdminOnlinePreferenceOption {
+  icon: string;
+  label: string;
+  value: string;
+}
+
+/** Секция карточки настроек: одна настройка и её известные варианты. */
+export interface AdminOnlinePreferenceSection {
+  name: string;
+  options: ReadonlyArray<AdminOnlinePreferenceOption>;
+  title: string;
+}
+
+/** Строка секции: вариант настройки, сколько посетителей его выбрали и какая это доля. */
+export interface AdminOnlinePreferenceRow {
+  count: number;
+  icon: string;
+  label: string;
+  /** Доля от всех посетителей секции за период, целые проценты */
+  percent: number;
+  /** Та же доля, подписанная для вывода */
+  share: string;
   value: string;
 }

@@ -1,4 +1,14 @@
+import type {
+  AdminOnlinePreferenceCounts,
+  AdminOnlinePreferenceRow,
+  AdminOnlinePreferenceSection,
+  AdminOnlineSiteStats,
+} from './types';
+
 import {
+  ADMIN_ONLINE_PREFERENCES_PERCENT_SIGN,
+  ADMIN_ONLINE_PREFERENCES_PERIOD_LABELS,
+  ADMIN_ONLINE_PREFERENCES_UNKNOWN_ICON,
   ADMIN_ONLINE_STATS_EMPTY_VALUE,
   ADMIN_ONLINE_STATS_VTTG_SITE_ID,
   ADMIN_ONLINE_STATS_VTTG_TABLE_SITE_ID,
@@ -48,4 +58,96 @@ export function formatSum(
   return typeof first === 'number' && typeof second === 'number'
     ? String(first + second)
     : ADMIN_ONLINE_STATS_EMPTY_VALUE;
+}
+
+/**
+ * Собирает периоды, за которые площадки прислали срезы настроек, — по возрастанию и
+ * без повторов.
+ */
+export function collectPreferencePeriods(
+  sites: ReadonlyArray<AdminOnlineSiteStats>,
+): Array<number> {
+  const periods = new Set(
+    sites.flatMap((site) => (site.preferences ?? []).map(({ days }) => days)),
+  );
+
+  return [...periods].sort((first, second) => first - second);
+}
+
+/**
+ * Складывает срезы настроек всех площадок за один период. Настройки шлёт обычно одна
+ * площадка, но если их станет несколько, числа просуммируются.
+ */
+export function sumPreferencePeriod(
+  sites: ReadonlyArray<AdminOnlineSiteStats>,
+  days: number,
+): AdminOnlinePreferenceCounts {
+  const periods = sites.flatMap((site) =>
+    (site.preferences ?? []).filter((period) => period.days === days),
+  );
+
+  return periods.reduce<AdminOnlinePreferenceCounts>(
+    (result, period) =>
+      Object.entries(period.preferences).reduce<AdminOnlinePreferenceCounts>(
+        (merged, [name, counts]) => ({
+          ...merged,
+          [name]: Object.entries(counts).reduce<Record<string, number>>(
+            (values, [value, count]) => ({
+              ...values,
+              [value]: (values[value] ?? 0) + count,
+            }),
+            merged[name] ?? {},
+          ),
+        }),
+        result,
+      ),
+    {},
+  );
+}
+
+/**
+ * Подписывает период: знакомые периоды — словами, остальные — числом дней.
+ */
+export function formatPreferencePeriod(days: number): string {
+  return ADMIN_ONLINE_PREFERENCES_PERIOD_LABELS[days] ?? String(days);
+}
+
+/**
+ * Собирает строки секции: сначала известные варианты в порядке панели настроек (даже с
+ * нулём — так видно, что вариантом не пользуются), затем незнакомые значения из ответа.
+ */
+export function createPreferenceRows(
+  section: AdminOnlinePreferenceSection,
+  counts: Readonly<Record<string, number>>,
+): Array<AdminOnlinePreferenceRow> {
+  const knownValues = new Set(section.options.map(({ value }) => value));
+
+  const unknownOptions = Object.keys(counts)
+    .filter((value) => !knownValues.has(value))
+    .map((value) => ({
+      icon: ADMIN_ONLINE_PREFERENCES_UNKNOWN_ICON,
+      label: value,
+      value,
+    }));
+
+  const options = [...section.options, ...unknownOptions];
+
+  const total = options.reduce(
+    (sum, option) => sum + (counts[option.value] ?? 0),
+    0,
+  );
+
+  return options.map((option) => {
+    const count = counts[option.value] ?? 0;
+    const percent = total ? Math.round((count / total) * 100) : 0;
+
+    return {
+      count,
+      icon: option.icon,
+      label: option.label,
+      percent,
+      share: `${percent}${ADMIN_ONLINE_PREFERENCES_PERCENT_SIGN}`,
+      value: option.value,
+    };
+  });
 }
