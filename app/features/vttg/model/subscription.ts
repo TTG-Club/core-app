@@ -17,7 +17,7 @@ import {
 import { VTTG_LANDING_PATH } from './passwordReset';
 
 /** Адрес страницы подписки. */
-export const VTTG_SUBSCRIPTION_PATH = '/vttg/subscription';
+export const VTTG_SUBSCRIPTION_PATH = '/subscription';
 
 /** Подпись пункта меню. */
 export const VTTG_SUBSCRIPTION_NAVIGATION_LABEL = 'Подписка';
