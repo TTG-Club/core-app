@@ -14,7 +14,11 @@
     section: string;
     url: string;
     initial?: RatingValue;
-    size?: 'small' | 'medium';
+    /**
+     * `medium` — карточка с подписью, `small` — только звёзды, `compact` — звёзды,
+     * оценка и число оценок одной плашкой (поверх обложки статьи).
+     */
+    size?: 'small' | 'medium' | 'compact';
   }>();
 
   const $toast = useToast();
@@ -165,6 +169,20 @@
     </div>
 
     <div class="text-xs">Оценок: {{ rating?.total || 0 }}</div>
+  </div>
+
+  <div
+    v-else-if="size === 'compact'"
+    :class="[
+      'flex items-center gap-2 rounded-md px-2 py-1',
+      'bg-default/75 shadow-sm backdrop-blur-md',
+    ]"
+  >
+    <StarsRow />
+
+    <span class="text-sm font-medium text-highlighted">{{ safeRating }}</span>
+
+    <span class="text-xs text-muted">Оценок: {{ rating?.total || 0 }}</span>
   </div>
 
   <div

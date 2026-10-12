@@ -57,25 +57,30 @@
         увеличивать нечего — она остаётся обычной картинкой без zoom-курсора.
       -->
       <div :class="[$style.cover, 'flex flex-col gap-4']">
-        <UiGallery
-          v-if="article.previewImageUrl"
-          :preview="article.previewImageUrl"
-          :alt="article.title"
-          disable-square
-        />
+        <!-- Рейтинг — компактной плашкой поверх нижнего края обложки -->
+        <div class="relative">
+          <UiGallery
+            v-if="article.previewImageUrl"
+            :preview="article.previewImageUrl"
+            :alt="article.title"
+            disable-square
+          />
 
-        <img
-          v-else
-          :src="ARTICLE_FALLBACK_IMAGE"
-          :alt="article.title"
-          :class="$style.coverImage"
-        />
+          <img
+            v-else
+            :src="ARTICLE_FALLBACK_IMAGE"
+            :alt="article.title"
+            :class="$style.coverImage"
+          />
 
-        <RatingWidget
-          v-if="isRatingShown"
-          :section="ARTICLE_RATING_SECTION"
-          :url="article.url"
-        />
+          <RatingWidget
+            v-if="isRatingShown"
+            class="absolute bottom-2 left-2"
+            size="compact"
+            :section="ARTICLE_RATING_SECTION"
+            :url="article.url"
+          />
+        </div>
 
         <!--
           Как навигация классов: липнет к верху колонки, а в узкой раскладке
