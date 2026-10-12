@@ -41,6 +41,7 @@
     ARTICLES_ADMIN_ROUTE,
     ARTICLES_API_PATH,
     ARTICLES_TAGS_PATH,
+    articleTagsSchema,
     getArticlePreviewText,
     getArticleRoute,
     normalizeArticleTag,
@@ -280,11 +281,13 @@
   // держим ими открытие формы.
   const { data: knownTags } = useAsyncData(
     'article-editor-tags',
-    () =>
-      $fetch<string[]>(ARTICLES_TAGS_PATH, {
-        method: 'GET',
-        query: { type: ARTICLE_TYPE.ARTICLE },
-      }),
+    async () =>
+      articleTagsSchema.parse(
+        await $fetch<unknown>(ARTICLES_TAGS_PATH, {
+          method: 'GET',
+          query: { type: ARTICLE_TYPE.ARTICLE },
+        }),
+      ),
     { default: () => [], lazy: true, server: false },
   );
 

@@ -57,6 +57,9 @@ export const ARTICLE_LIST_PRESENTATION: ListPresentationConfig<
   ],
 };
 
+/** Разделитель частей подзаголовка карточки (дата выхода и рейтинг). */
+export const ARTICLE_CARD_SUBTITLE_SEPARATOR = ' · ';
+
 /** Подпись и плейсхолдер фильтра по тегам в листинге. */
 export const ARTICLE_TAGS_FILTER_PLACEHOLDER = 'Теги';
 

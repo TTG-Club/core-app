@@ -27,6 +27,7 @@
     ARTICLES_ROUTE,
     ARTICLES_SEARCH_PATH,
     ARTICLES_TAGS_PATH,
+    articleTagsSchema,
     getArticleMarkdown,
     getArticleSearchEmptyText,
   } from '../model';
@@ -52,7 +53,10 @@
 
   // Сортировка серверная; по умолчанию — по дате выхода. Группировки у записей
   // нет, её ref нужен только общему построителю меню.
-  const grouping = ref<ArticleGrouping>('NONE');
+  const grouping = ref<ArticleGrouping>(
+    ARTICLE_LIST_PRESENTATION.defaultGrouping,
+  );
+
   const sorting = ref<ArticleSorting>(ARTICLE_SORTING_DEFAULT);
 
   const presentationMenus = useListPresentationMenus(
@@ -63,12 +67,14 @@
 
   const { data: tags } = await useAsyncData(
     `articles-tags-${type}`,
-    () =>
-      $fetch<string[]>(ARTICLES_TAGS_PATH, {
-        method: 'GET',
-        query: { type },
-      }),
-    { default: () => [], immediate: type === ARTICLE_TYPE.ARTICLE },
+    async () =>
+      articleTagsSchema.parse(
+        await $fetch<unknown>(ARTICLES_TAGS_PATH, {
+          method: 'GET',
+          query: { type },
+        }),
+      ),
+    { default: () => [], immediate: isArticleListing.value },
   );
 
   // Пагинация «через cnt»: увеличиваем запрашиваемое число и перезапрашиваем.

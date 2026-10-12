@@ -5,6 +5,7 @@
 
   import { ArticleDrawer } from '../drawer';
   import {
+    ARTICLE_CARD_SUBTITLE_SEPARATOR,
     ARTICLE_DATE_FORMAT,
     getArticleRatingLabel,
     getArticleRoute,
@@ -48,7 +49,7 @@
       article.rating?.total ? getArticleRatingLabel(article.rating) : '',
     ]
       .filter(Boolean)
-      .join(' · '),
+      .join(ARTICLE_CARD_SUBTITLE_SEPARATOR),
   }));
 </script>
 
