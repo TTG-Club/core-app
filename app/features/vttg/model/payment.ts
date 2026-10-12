@@ -2,10 +2,7 @@ import type { ButtonProps } from '@nuxt/ui';
 
 import { z } from 'zod';
 
-import {
-  VTTG_SUBSCRIPTION_HERO,
-  VTTG_SUBSCRIPTION_PRICE,
-} from './subscription';
+import { VTTG_SUBSCRIPTION_HERO } from './subscription';
 
 /** Создание платежа за подписку в subscriber-service (через прокси сайта). */
 export const SUBSCRIPTION_PAYMENT_API_PATH = '/api/subscriptions/payments';
@@ -17,8 +14,12 @@ export const SUBSCRIPTION_PAYMENT_API_PATH = '/api/subscriptions/payments';
 export const SUBSCRIPTION_PAYMENT_RESULT_QUERY = 'payment';
 export const SUBSCRIPTION_PAYMENT_TRANSACTION_QUERY = 'MNT_TRANSACTION_ID';
 
-/** Цена одного месяца подписки числом — для расчёта суммы за выбранный срок. */
-export const SUBSCRIPTION_MONTH_PRICE = Number(VTTG_SUBSCRIPTION_PRICE.amount);
+/**
+ * Условия оплаты из subscriber-service: цена месяца и предел срока. Цену берём
+ * отсюда, а не из кода сайта: сумму платежа всё равно считает и подписывает сервер.
+ */
+export const SUBSCRIPTION_PAYMENT_TERMS_API_PATH =
+  '/api/subscriptions/payments/terms';
 
 /**
  * Срок одной оплаты: от месяца без верхнего предела (в subscriber-service
@@ -43,6 +44,17 @@ export const subscriptionPaymentSchema = z.object({
   paymentUrl: z.url(),
   testMode: z.boolean(),
 });
+
+/** Условия оплаты: цена месяца, валюта и предел срока (`null` — без предела). */
+export const subscriptionPaymentTermsSchema = z.object({
+  monthPrice: z.number(),
+  currency: z.string(),
+  maxMonths: z.number().int().positive().nullable(),
+});
+
+export type SubscriptionPaymentTerms = z.infer<
+  typeof subscriptionPaymentTermsSchema
+>;
 
 /** Кнопка на странице подписки, открывающая окно покупки (пока только для администраторов). */
 export const VTTG_SUBSCRIPTION_BUY_BUTTON: ButtonProps = {
@@ -72,6 +84,7 @@ export const VTTG_SUBSCRIPTION_PURCHASE_TEXT = {
   adminOnly: 'Оплата пока доступна только администраторам для проверки.',
   cancelLabel: 'Отмена',
   payLabel: 'Оплатить',
+  termsError: 'Не удалось загрузить цену подписки. Попробуйте позже.',
   errorTitle: 'Не удалось перейти к оплате',
   errorFallback: 'Попробуйте ещё раз чуть позже.',
 } as const;
@@ -114,10 +127,13 @@ export type SubscriptionPaymentResult =
   keyof typeof SUBSCRIPTION_PAYMENT_RESULTS;
 
 /**
- * Считает сумму к оплате за выбранное число месяцев.
+ * Считает сумму к оплате за выбранное число месяцев по цене месяца с сервера.
  */
-export function getSubscriptionPaymentTotal(months: number): number {
-  return SUBSCRIPTION_MONTH_PRICE * months;
+export function getSubscriptionPaymentTotal(
+  monthPrice: number,
+  months: number,
+): number {
+  return Math.round(monthPrice * months * 100) / 100;
 }
 
 /**

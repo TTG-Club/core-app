@@ -2,7 +2,10 @@
   import { PRIVACY_POLICY_ROUTE } from '~infrastructure/privacy-policy/model';
   import { PUBLIC_OFFER_ROUTE } from '~infrastructure/public-offer/model';
 
-  import { useSubscriptionPayment } from '../composables';
+  import {
+    useSubscriptionPayment,
+    useSubscriptionPaymentTerms,
+  } from '../composables';
   import {
     formatSubscriptionMonths,
     getSubscriptionPaymentTotal,
@@ -17,22 +20,54 @@
 
   const { isPending, startPayment } = useSubscriptionPayment();
 
+  const { data: terms, status: termsStatus } = useSubscriptionPaymentTerms();
+
   const months = ref<number>(SUBSCRIPTION_PAYMENT_MONTHS.default);
 
-  const total = computed(
-    () =>
-      `${getSubscriptionPaymentTotal(months.value)} ${VTTG_SUBSCRIPTION_PRICE.currency}`,
+  const isTermsLoading = computed(() => termsStatus.value === 'pending');
+
+  const isTermsFailed = computed(() => termsStatus.value === 'error');
+
+  const maxMonths = computed(() => terms.value?.maxMonths ?? undefined);
+
+  const isPayDisabled = computed(() => !terms.value || isPending.value);
+
+  /** Сумма с валютой, пока цена не загружена — пусто. */
+  function formatPrice(amount: number): string {
+    return `${amount} ${VTTG_SUBSCRIPTION_PRICE.currency}`;
+  }
+
+  const total = computed(() =>
+    terms.value
+      ? formatPrice(
+          getSubscriptionPaymentTotal(terms.value.monthPrice, months.value),
+        )
+      : '',
   );
 
-  const totalCaption = computed(
-    () => `${total.value} за ${formatSubscriptionMonths(months.value)}`,
+  const totalCaption = computed(() =>
+    terms.value
+      ? `${total.value} за ${formatSubscriptionMonths(months.value)}`
+      : '—',
   );
 
-  const payLabel = computed(
-    () => `${VTTG_SUBSCRIPTION_PURCHASE_TEXT.payLabel} ${total.value}`,
+  const payLabel = computed(() =>
+    terms.value
+      ? `${VTTG_SUBSCRIPTION_PURCHASE_TEXT.payLabel} ${total.value}`
+      : VTTG_SUBSCRIPTION_PURCHASE_TEXT.payLabel,
   );
 
-  const monthPrice = `${VTTG_SUBSCRIPTION_PRICE.amount} ${VTTG_SUBSCRIPTION_PRICE.currency} ${VTTG_SUBSCRIPTION_PRICE.cycle}`;
+  const monthPrice = computed(() =>
+    terms.value
+      ? `${formatPrice(terms.value.monthPrice)} ${VTTG_SUBSCRIPTION_PRICE.cycle}`
+      : undefined,
+  );
+
+  watch(maxMonths, (limit) => {
+    if (limit && months.value > limit) {
+      months.value = limit;
+    }
+  });
 
   /** Возвращает цвет быстрой кнопки срока: выбранная подсвечена. */
   function getPresetVariant(preset: number) {
@@ -51,6 +86,10 @@
 
   /** Создаёт платёж за выбранный срок и уводит на форму оплаты. */
   function handlePayClick() {
+    if (isPayDisabled.value) {
+      return;
+    }
+
     startPayment(months.value);
   }
 </script>
@@ -90,6 +129,7 @@
             <UInputNumber
               v-model="months"
               :min="SUBSCRIPTION_PAYMENT_MONTHS.min"
+              :max="maxMonths"
               :disabled="isPending"
               class="w-40"
             />
@@ -103,10 +143,25 @@
             {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.totalLabel }}
           </span>
 
-          <span class="text-lg font-bold text-highlighted">
+          <USkeleton
+            v-if="isTermsLoading"
+            class="h-6 w-32"
+          />
+
+          <span
+            v-else
+            class="text-lg font-bold text-highlighted"
+          >
             {{ totalCaption }}
           </span>
         </div>
+
+        <p
+          v-if="isTermsFailed"
+          class="text-sm text-error"
+        >
+          {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.termsError }}
+        </p>
 
         <div class="flex flex-col gap-1.5 text-xs leading-relaxed text-muted">
           <p>{{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.extendHint }}</p>
@@ -153,7 +208,8 @@
 
         <UButton
           :label="payLabel"
-          :loading="isPending"
+          :loading="isPending || isTermsLoading"
+          :disabled="isPayDisabled"
           icon="tabler:credit-card"
           color="primary"
           @click.left.exact.prevent="handlePayClick"
