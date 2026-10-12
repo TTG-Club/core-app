@@ -1,7 +1,12 @@
 <script setup lang="ts">
   import type { MarkupHeadingAnchor } from '~ui/markup';
 
-  import { ARTICLE_TOC_TITLE, buildArticleTocLinks } from '../model';
+  import {
+    ARTICLE_TOC_TITLE,
+    ARTICLE_TOC_TOP_LABEL,
+    ARTICLE_TOP_ANCHOR_ID,
+    buildArticleTocLinks,
+  } from '../model';
 
   const { headings } = defineProps<{
     headings: Array<MarkupHeadingAnchor>;
@@ -11,7 +16,11 @@
   const route = useRoute();
   const router = useRouter();
 
-  const links = computed(() => buildArticleTocLinks(headings));
+  // Первым идёт искусственный пункт «На самый верх» — к метке в начале статьи.
+  const links = computed(() => [
+    { id: ARTICLE_TOP_ANCHOR_ID, text: ARTICLE_TOC_TOP_LABEL, depth: 1 },
+    ...buildArticleTocLinks(headings),
+  ]);
 
   /**
    * Прокручивает ближайший прокручиваемый контейнер к заголовку статьи.
@@ -75,6 +84,14 @@
 
     event.preventDefault();
     event.stopPropagation();
+
+    // К началу статьи: якорь из адреса убираем — наверху он ни к чему.
+    if (decodeURIComponent(href) === `#${ARTICLE_TOP_ANCHOR_ID}`) {
+      scrollToHeading(ARTICLE_TOP_ANCHOR_ID, 'smooth');
+      router.replace({ query: route.query, hash: '' });
+
+      return;
+    }
 
     const heading = findHeadingByHash(decodeURIComponent(href));
 

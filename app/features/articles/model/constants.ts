@@ -34,6 +34,16 @@ export const ARTICLE_RATING_SECTION = 'articles';
 /** Заголовок блока содержания статьи. */
 export const ARTICLE_TOC_TITLE = 'На этой странице';
 
+/** Первый пункт содержания: ведёт к началу статьи. */
+export const ARTICLE_TOC_TOP_LABEL = 'На самый верх';
+
+/**
+ * Id невидимой метки в начале статьи — к ней прокручивает пункт «На самый
+ * верх». Отдельная метка нулевой высоты, а не вся статья: подсветка содержания
+ * считает пункт активным, пока метка в окне, то есть только у самого верха.
+ */
+export const ARTICLE_TOP_ANCHOR_ID = 'article-top';
+
 /** Сортировка листинга по умолчанию — по дате выхода, новые сверху. */
 export const ARTICLE_SORTING_DEFAULT: ArticleSorting = 'DATE';
 
