@@ -37,31 +37,6 @@ export const SUBSCRIPTION_PAYMENT_MONTHS = {
   presets: [1, 3, 6, 12],
 } as const;
 
-/**
- * Способы оплаты: платёжная форма PayAnyWay сразу открывает экран выбранного
- * способа. Значение уходит в subscriber-service как `method`.
- */
-export const SUBSCRIPTION_PAYMENT_METHODS = [
-  {
-    value: 'CARD',
-    label: 'Банковская карта',
-    description: 'Ввести данные карты',
-    icon: 'tabler:credit-card',
-  },
-  {
-    value: 'SBP',
-    label: 'СБП',
-    description: 'QR-код для оплаты из приложения банка',
-    icon: 'tabler:qrcode',
-  },
-] as const;
-
-export type SubscriptionPaymentMethod =
-  (typeof SUBSCRIPTION_PAYMENT_METHODS)[number]['value'];
-
-export const SUBSCRIPTION_DEFAULT_PAYMENT_METHOD: SubscriptionPaymentMethod =
-  'CARD';
-
 /** Почта для чека: та же проверка, что у subscriber-service. */
 export const subscriptionReceiptEmailSchema = z.email().max(255);
 
@@ -106,7 +81,6 @@ export const VTTG_SUBSCRIPTION_PURCHASE_TEXT = {
   emailLabel: 'Почта для чека',
   emailHint: 'Сюда придёт чек об оплате.',
   emailInvalid: 'Укажите корректную почту.',
-  methodLabel: 'Способ оплаты',
   unverifiedTitle: 'Подтвердите почту',
   unverifiedDescription:
     'Оплатить подписку можно только с подтверждённой почтой аккаунта. Откройте ссылку из письма или отправьте его заново в профиле.',
@@ -123,10 +97,7 @@ export const VTTG_SUBSCRIPTION_PURCHASE_TEXT = {
     'Если подписка уже действует, оплаченные месяцы добавятся к её сроку.',
   noRenewal:
     'Без автопродления: деньги списываются один раз, а подписка просто закончится в конце оплаченного срока.',
-  offerNote: 'Нажимая «Оплатить», вы принимаете условия',
   offerLink: 'публичной оферты',
-  privacyNote: 'и',
-  privacyLink: 'обработки персональных данных',
   refundNote: 'Оплаченный период не возвращается.',
   adminOnly: 'Оплата пока доступна только администраторам для проверки.',
   cancelLabel: 'Отмена',

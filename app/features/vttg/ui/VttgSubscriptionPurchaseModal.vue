@@ -1,6 +1,4 @@
 <script setup lang="ts">
-  import type { SubscriptionPaymentMethod } from '../model';
-
   import { PRIVACY_POLICY_ROUTE } from '~infrastructure/privacy-policy/model';
   import { PUBLIC_OFFER_ROUTE } from '~infrastructure/public-offer/model';
 
@@ -11,9 +9,7 @@
   import {
     formatSubscriptionMonths,
     getSubscriptionPaymentTotal,
-    SUBSCRIPTION_DEFAULT_PAYMENT_METHOD,
     SUBSCRIPTION_EMAIL_VERIFICATION_ROUTE,
-    SUBSCRIPTION_PAYMENT_METHODS,
     SUBSCRIPTION_PAYMENT_MONTHS,
     subscriptionReceiptEmailSchema,
     VTTG_SUBSCRIPTION_PRICE,
@@ -33,10 +29,6 @@
   const months = ref<number>(SUBSCRIPTION_PAYMENT_MONTHS.default);
 
   const email = ref<string>(user.value?.email ?? '');
-
-  const method = ref<SubscriptionPaymentMethod>(
-    SUBSCRIPTION_DEFAULT_PAYMENT_METHOD,
-  );
 
   const offerAccepted = ref(false);
 
@@ -62,8 +54,6 @@
       ? VTTG_SUBSCRIPTION_PURCHASE_TEXT.emailInvalid
       : undefined,
   );
-
-  const methodItems = SUBSCRIPTION_PAYMENT_METHODS.map((item) => ({ ...item }));
 
   const isTermsLoading = computed(() => termsStatus.value === 'pending');
 
@@ -141,7 +131,6 @@
     startPayment({
       months: months.value,
       email: email.value.trim(),
-      method: method.value,
       acceptConsents: needsConsents.value,
     });
   }
@@ -180,7 +169,7 @@
 
         <UFormField
           :label="VTTG_SUBSCRIPTION_PURCHASE_TEXT.monthsLabel"
-          :hint="VTTG_SUBSCRIPTION_PURCHASE_TEXT.monthsHint"
+          :help="VTTG_SUBSCRIPTION_PURCHASE_TEXT.monthsHint"
         >
           <div class="flex flex-col gap-3">
             <div class="flex flex-wrap gap-2">
@@ -206,18 +195,6 @@
           </div>
         </UFormField>
 
-        <UFormField :label="VTTG_SUBSCRIPTION_PURCHASE_TEXT.methodLabel">
-          <URadioGroup
-            v-model="method"
-            :items="methodItems"
-            :disabled="isPending"
-            variant="card"
-            orientation="horizontal"
-            color="primary"
-            :ui="{ fieldset: 'grid grid-cols-1 gap-2 sm:grid-cols-2' }"
-          />
-        </UFormField>
-
         <UFormField
           :label="VTTG_SUBSCRIPTION_PURCHASE_TEXT.emailLabel"
           :hint="VTTG_SUBSCRIPTION_PURCHASE_TEXT.emailHint"
@@ -236,7 +213,7 @@
         </UFormField>
 
         <div
-          class="flex items-baseline justify-between gap-3 rounded-lg border border-default bg-elevated/40 p-3"
+          class="flex items-center justify-between gap-3 rounded-lg border border-default bg-elevated/40 p-3"
         >
           <span class="text-sm text-muted">
             {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.totalLabel }}
@@ -310,29 +287,8 @@
 
           <p>{{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.noRenewal }}</p>
 
-          <p v-if="needsConsents">
+          <p>
             {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.refundNote }}
-          </p>
-
-          <p v-else>
-            {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.offerNote }}
-
-            <ULink
-              :to="PUBLIC_OFFER_ROUTE"
-              target="_blank"
-              class="text-primary"
-            >
-              {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.offerLink }}</ULink
-            >
-            {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.privacyNote }}
-
-            <ULink
-              :to="PRIVACY_POLICY_ROUTE"
-              target="_blank"
-              class="text-primary"
-            >
-              {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.privacyLink }}</ULink
-            >. {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.refundNote }}
           </p>
 
           <p class="text-warning">

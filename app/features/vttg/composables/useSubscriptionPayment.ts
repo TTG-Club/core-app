@@ -1,5 +1,3 @@
-import type { SubscriptionPaymentMethod } from '../model';
-
 import { FetchError } from 'ofetch';
 import { z } from 'zod';
 
@@ -34,8 +32,6 @@ export interface SubscriptionPaymentParams {
   months: number;
   /** Почта для чека. */
   email: string;
-  /** Способ оплаты, экран которого сразу откроет платёжная форма. */
-  method: SubscriptionPaymentMethod;
   /** Отметил ли пользователь согласия, которых у аккаунта ещё нет. */
   acceptConsents: boolean;
 }
@@ -67,7 +63,6 @@ export function useSubscriptionPayment() {
   async function startPayment({
     months,
     email,
-    method,
     acceptConsents: needsConsents,
   }: SubscriptionPaymentParams): Promise<void> {
     if (isPending.value) {
@@ -84,7 +79,7 @@ export function useSubscriptionPayment() {
       const payment = subscriptionPaymentSchema.parse(
         await $fetch<unknown>(SUBSCRIPTION_PAYMENT_API_PATH, {
           method: 'POST',
-          body: { months, email, method },
+          body: { months, email },
         }),
       );
 
