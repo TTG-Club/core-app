@@ -57,7 +57,6 @@ export const VTTG_SUBSCRIPTION_PURCHASE_TEXT = {
   title: 'Покупка подписки',
   description:
     'Подписка поддерживает развитие TTG Club и Virtual TTG Club и открывает привилегии на сайте и в виртуальном столе.',
-  perksTitle: 'Что даёт подписка',
   monthsLabel: 'Срок подписки',
   monthsHint: 'Можно оплатить сразу любое число месяцев.',
   totalLabel: 'К оплате',
@@ -67,6 +66,8 @@ export const VTTG_SUBSCRIPTION_PURCHASE_TEXT = {
     'Без автопродления: деньги списываются один раз, а подписка просто закончится в конце оплаченного срока.',
   offerNote: 'Нажимая «Оплатить», вы принимаете условия',
   offerLink: 'публичной оферты',
+  privacyNote: 'и',
+  privacyLink: 'обработки персональных данных',
   refundNote: 'Оплаченный период не возвращается.',
   adminOnly: 'Оплата пока доступна только администраторам для проверки.',
   cancelLabel: 'Отмена',
@@ -74,29 +75,6 @@ export const VTTG_SUBSCRIPTION_PURCHASE_TEXT = {
   errorTitle: 'Не удалось перейти к оплате',
   errorFallback: 'Попробуйте ещё раз чуть позже.',
 } as const;
-
-/** Короткий список привилегий для окна покупки (подробно — на странице подписки). */
-export const VTTG_SUBSCRIPTION_PURCHASE_PERKS: Array<{
-  icon: string;
-  text: string;
-}> = [
-  {
-    icon: 'tabler:wand',
-    text: 'Автоматизация всего контента в виртуальном столе',
-  },
-  {
-    icon: 'tabler:world-share',
-    text: 'Подключение к столу по ссылке без белого IP',
-  },
-  {
-    icon: 'tabler:id-badge-2',
-    text: 'Больше листов персонажа и своих игр на сайте',
-  },
-  {
-    icon: 'tabler:rosette',
-    text: 'Значок подписчика в профиле',
-  },
-];
 
 /** Итог оплаты, с которым платёжная форма возвращает на страницу подписки. */
 export const SUBSCRIPTION_PAYMENT_RESULTS = {

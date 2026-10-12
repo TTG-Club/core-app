@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { PRIVACY_POLICY_ROUTE } from '~infrastructure/privacy-policy/model';
   import { PUBLIC_OFFER_ROUTE } from '~infrastructure/public-offer/model';
 
   import { useSubscriptionPayment } from '../composables';
@@ -7,7 +8,6 @@
     getSubscriptionPaymentTotal,
     SUBSCRIPTION_PAYMENT_MONTHS,
     VTTG_SUBSCRIPTION_PRICE,
-    VTTG_SUBSCRIPTION_PURCHASE_PERKS,
     VTTG_SUBSCRIPTION_PURCHASE_TEXT,
   } from '../model';
 
@@ -67,28 +67,6 @@
           {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.description }}
         </p>
 
-        <div class="flex flex-col gap-2">
-          <p class="text-sm font-semibold text-highlighted">
-            {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.perksTitle }}
-          </p>
-
-          <ul class="flex flex-col gap-2">
-            <li
-              v-for="perk in VTTG_SUBSCRIPTION_PURCHASE_PERKS"
-              :key="perk.text"
-              class="flex items-center gap-2.5 text-sm text-toned"
-            >
-              <UIcon
-                :name="perk.icon"
-                class="size-5 shrink-0 text-primary"
-                aria-hidden="true"
-              />
-
-              {{ perk.text }}
-            </li>
-          </ul>
-        </div>
-
         <USeparator />
 
         <UFormField
@@ -144,6 +122,15 @@
               class="text-primary"
             >
               {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.offerLink }}</ULink
+            >
+            {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.privacyNote }}
+
+            <ULink
+              :to="PRIVACY_POLICY_ROUTE"
+              target="_blank"
+              class="text-primary"
+            >
+              {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.privacyLink }}</ULink
             >. {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.refundNote }}
           </p>
 
