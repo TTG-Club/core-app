@@ -48,27 +48,28 @@ describe('createPreferenceRows', () => {
   const section = {
     name: 'theme',
     options: [
-      { icon: 'tabler:sun', label: 'Светлая', value: 'light' },
-      { icon: 'tabler:moon', label: 'Темная', value: 'dark' },
+      { label: 'Светлая', value: 'light' },
+      { label: 'Темная', value: 'dark' },
     ],
     title: 'Тема',
   };
 
-  it('держит известные варианты с нулём и добавляет незнакомые в конец', () => {
+  it('держит известные варианты с нулём, незнакомые добавляет в конец, итог внизу', () => {
     const rows = createPreferenceRows(section, { dark: 3, old: 1 });
 
     expect(
-      rows.map(({ value, count, share }) => [value, count, share]),
+      rows.map(({ label, value, isTotal }) => [label, value, isTotal]),
     ).toEqual([
-      ['light', 0, '0%'],
-      ['dark', 3, '75%'],
-      ['old', 1, '25%'],
+      ['Светлая', '0 · 0%', false],
+      ['Темная', '3 · 75%', false],
+      ['old', '1 · 25%', false],
+      ['Всего', '4', true],
     ]);
   });
 
-  it('без данных даёт нулевые доли', () => {
+  it('без данных ставит прочерки', () => {
     expect(
-      createPreferenceRows(section, {}).map(({ percent }) => percent),
-    ).toEqual([0, 0]);
+      createPreferenceRows(section, null).map(({ value }) => value),
+    ).toEqual(['—', '—', '—']);
   });
 });

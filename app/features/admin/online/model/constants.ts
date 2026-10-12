@@ -105,13 +105,13 @@ export const ADMIN_ONLINE_STATS_EMPTY_VALUE = '—';
 export const ADMIN_ONLINE_STATS_EMPTY_TEXT =
   'Online-app пока не вернул сайты для отображения.';
 
-export const ADMIN_ONLINE_PREFERENCES_TITLE = 'Настройки отображения';
+/** Подпись первой строки карточки настройки — как «Сайт» у карточек площадок. */
+export const ADMIN_ONLINE_PREFERENCES_CARD_LABEL = 'Настройка';
 
-export const ADMIN_ONLINE_PREFERENCES_DESCRIPTION =
-  'Сколько разных посетителей пользовались каждой темой и шириной сайта. Кто переключался за период, учтён в обоих вариантах.';
+export const ADMIN_ONLINE_PREFERENCES_PERIOD_LABEL = 'Настройки за';
 
-export const ADMIN_ONLINE_PREFERENCES_EMPTY_TEXT =
-  'Данных пока нет: статистика копится с момента включения учёта.';
+export const ADMIN_ONLINE_PREFERENCES_PERIOD_HINT =
+  'Сколько разных посетителей пользовались каждым вариантом. Кто переключался за период, учтён в обоих вариантах, поэтому «Всего» может быть больше числа людей.';
 
 /** Подписи периодов; период, которого здесь нет, подписывается числом дней. */
 export const ADMIN_ONLINE_PREFERENCES_PERIOD_LABELS: Readonly<
@@ -124,11 +124,11 @@ export const ADMIN_ONLINE_PREFERENCES_PERIOD_LABELS: Readonly<
 
 export const ADMIN_ONLINE_PREFERENCES_PERCENT_SIGN = '%';
 
-/** Иконка значения, которого сайт не знает (например, тему уже убрали). */
-export const ADMIN_ONLINE_PREFERENCES_UNKNOWN_ICON = 'tabler:help';
+/** Разделитель числа и доли в строке карточки */
+export const ADMIN_ONLINE_PREFERENCES_SHARE_SEPARATOR = ' · ';
 
 /**
- * Какие настройки показываем. Имена совпадают с теми, под которыми сервер сайта
+ * Какие настройки показываем. Имена совпадают с теми, под которыми браузер
  * передаёт их в heartbeat, а варианты — те же, что в панели настроек отображения.
  */
 export const ADMIN_ONLINE_PREFERENCE_SECTIONS: ReadonlyArray<AdminOnlinePreferenceSection> =

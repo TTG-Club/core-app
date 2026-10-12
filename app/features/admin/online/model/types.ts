@@ -73,28 +73,15 @@ export interface AdminOnlineAppTile {
   value: string;
 }
 
-/** Вариант настройки отображения, который карточка знает в лицо: подпись и иконка. */
+/** Вариант настройки отображения, который карточка знает в лицо. */
 export interface AdminOnlinePreferenceOption {
-  icon: string;
   label: string;
   value: string;
 }
 
-/** Секция карточки настроек: одна настройка и её известные варианты. */
+/** Карточка настройки: одна настройка и её известные варианты. */
 export interface AdminOnlinePreferenceSection {
   name: string;
   options: ReadonlyArray<AdminOnlinePreferenceOption>;
   title: string;
-}
-
-/** Строка секции: вариант настройки, сколько посетителей его выбрали и какая это доля. */
-export interface AdminOnlinePreferenceRow {
-  count: number;
-  icon: string;
-  label: string;
-  /** Доля от всех посетителей секции за период, целые проценты */
-  percent: number;
-  /** Та же доля, подписанная для вывода */
-  share: string;
-  value: string;
 }

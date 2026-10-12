@@ -1,15 +1,16 @@
 import type {
   AdminOnlinePreferenceCounts,
-  AdminOnlinePreferenceRow,
   AdminOnlinePreferenceSection,
+  AdminOnlineSiteCardRow,
   AdminOnlineSiteStats,
 } from './types';
 
 import {
   ADMIN_ONLINE_PREFERENCES_PERCENT_SIGN,
   ADMIN_ONLINE_PREFERENCES_PERIOD_LABELS,
-  ADMIN_ONLINE_PREFERENCES_UNKNOWN_ICON,
+  ADMIN_ONLINE_PREFERENCES_SHARE_SEPARATOR,
   ADMIN_ONLINE_STATS_EMPTY_VALUE,
+  ADMIN_ONLINE_STATS_TOTAL_LABEL,
   ADMIN_ONLINE_STATS_VTTG_SITE_ID,
   ADMIN_ONLINE_STATS_VTTG_TABLE_SITE_ID,
 } from './constants';
@@ -113,41 +114,49 @@ export function formatPreferencePeriod(days: number): string {
 }
 
 /**
- * Собирает строки секции: сначала известные варианты в порядке панели настроек (даже с
- * нулём — так видно, что вариантом не пользуются), затем незнакомые значения из ответа.
+ * Собирает строки карточки настройки в том же виде, что у карточек площадок: сначала
+ * известные варианты в порядке панели настроек (даже с нулём — так видно, что вариантом
+ * не пользуются), затем незнакомые значения из ответа и итог внизу. Без данных вместо
+ * чисел прочерки.
  */
 export function createPreferenceRows(
   section: AdminOnlinePreferenceSection,
-  counts: Readonly<Record<string, number>>,
-): Array<AdminOnlinePreferenceRow> {
+  counts: Readonly<Record<string, number>> | null,
+): Array<AdminOnlineSiteCardRow> {
   const knownValues = new Set(section.options.map(({ value }) => value));
 
-  const unknownOptions = Object.keys(counts)
+  const unknownOptions = Object.keys(counts ?? {})
     .filter((value) => !knownValues.has(value))
-    .map((value) => ({
-      icon: ADMIN_ONLINE_PREFERENCES_UNKNOWN_ICON,
-      label: value,
-      value,
-    }));
+    .map((value) => ({ label: value, value }));
 
   const options = [...section.options, ...unknownOptions];
 
   const total = options.reduce(
-    (sum, option) => sum + (counts[option.value] ?? 0),
+    (sum, option) => sum + (counts?.[option.value] ?? 0),
     0,
   );
 
-  return options.map((option) => {
-    const count = counts[option.value] ?? 0;
+  const optionRows = options.map((option): AdminOnlineSiteCardRow => {
+    const count = counts?.[option.value] ?? 0;
     const percent = total ? Math.round((count / total) * 100) : 0;
 
     return {
-      count,
-      icon: option.icon,
+      divider: 'none',
+      isTotal: false,
       label: option.label,
-      percent,
-      share: `${percent}${ADMIN_ONLINE_PREFERENCES_PERCENT_SIGN}`,
-      value: option.value,
+      value: counts
+        ? `${count}${ADMIN_ONLINE_PREFERENCES_SHARE_SEPARATOR}${percent}${ADMIN_ONLINE_PREFERENCES_PERCENT_SIGN}`
+        : ADMIN_ONLINE_STATS_EMPTY_VALUE,
     };
   });
+
+  return [
+    ...optionRows,
+    {
+      divider: 'above',
+      isTotal: true,
+      label: ADMIN_ONLINE_STATS_TOTAL_LABEL,
+      value: counts ? String(total) : ADMIN_ONLINE_STATS_EMPTY_VALUE,
+    },
+  ];
 }

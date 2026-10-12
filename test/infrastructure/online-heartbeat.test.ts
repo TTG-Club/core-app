@@ -15,6 +15,8 @@ import { useOnlineHeartbeat } from '~infrastructure/analytics/composables';
 import { useCookieNotice } from '~infrastructure/cookie-consent/composables';
 
 const noticeCookie = ref<unknown>(null);
+const themeCookie = ref<unknown>(null);
+const layoutWidthCookie = ref<unknown>(null);
 
 const scopes: Array<EffectScope> = [];
 const visitor = ref<unknown>(null);
@@ -47,6 +49,8 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(Date.parse('2026-09-13T12:00:00Z'));
   noticeCookie.value = null;
+  themeCookie.value = null;
+  layoutWidthCookie.value = null;
   visitor.value = null;
   user.value = null;
   userToken.value = null;
@@ -65,6 +69,14 @@ beforeEach(() => {
   vi.stubGlobal('useCookie', (name: string) => {
     if (name === 'ttg-cookie-notice') {
       return noticeCookie;
+    }
+
+    if (name === 'ttg-theme') {
+      return themeCookie;
+    }
+
+    if (name === 'ttg-layout-width') {
+      return layoutWidthCookie;
     }
 
     return name === 'ttg-user-token' ? userToken : visitor;
@@ -165,6 +177,24 @@ describe('автоматический учёт посетителей онла�
     await vi.advanceTimersByTimeAsync(30_000);
     expect(heartbeat).not.toHaveBeenCalled();
     expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('передаёт тему и ширину сайта из cookie, пропуская пустые значения', async () => {
+    themeCookie.value = 'light';
+    layoutWidthCookie.value = '';
+    mountHeartbeat();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(heartbeat).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        body: {
+          key: visitor.value,
+          preferences: { theme: 'light' },
+          type: 'GUEST',
+        },
+      }),
+    );
   });
 
   it('не спрашивает профиль гостя без токена', async () => {
