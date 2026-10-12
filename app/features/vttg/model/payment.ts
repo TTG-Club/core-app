@@ -21,14 +21,21 @@ export const SUBSCRIPTION_PAYMENT_TRANSACTION_QUERY = 'MNT_TRANSACTION_ID';
 export const SUBSCRIPTION_MONTH_PRICE = Number(VTTG_SUBSCRIPTION_PRICE.amount);
 
 /**
- * Сколько месяцев можно оплатить за раз. Зеркало `PAYANYWAY_MAX_MONTHS` в
- * subscriber-service: поменялось там — поправить здесь.
+ * Срок одной оплаты: от месяца без верхнего предела (в subscriber-service
+ * `PAYANYWAY_MAX_MONTHS=0`). Быстрые варианты — кнопки над полем срока.
  */
 export const SUBSCRIPTION_PAYMENT_MONTHS = {
   min: 1,
-  max: 12,
   default: 1,
+  presets: [1, 3, 6, 12],
 } as const;
+
+/** Формы слова «месяц» для getPlural. */
+export const SUBSCRIPTION_MONTH_FORMS: [string, string, string] = [
+  'месяц',
+  'месяца',
+  'месяцев',
+];
 
 /** Ответ на создание платежа: подписанная ссылка на платёжную форму. */
 export const subscriptionPaymentSchema = z.object({
@@ -37,25 +44,59 @@ export const subscriptionPaymentSchema = z.object({
   testMode: z.boolean(),
 });
 
-/** Кнопка оплаты подписки (пока доступна только администраторам); подпись с суммой собирается в компоненте. */
-export const VTTG_SUBSCRIPTION_PAY_BUTTON: ButtonProps = {
+/** Кнопка на странице подписки, открывающая окно покупки (пока только для администраторов). */
+export const VTTG_SUBSCRIPTION_BUY_BUTTON: ButtonProps = {
+  label: 'Купить подписку',
   icon: VTTG_SUBSCRIPTION_HERO.icon,
   size: 'xl',
   color: 'primary',
 };
 
-/** Подписи у кнопки оплаты. */
-export const VTTG_SUBSCRIPTION_PAYMENT_TEXT = {
-  payLabel: 'Оформить за',
-  monthsLabel: 'Срок, мес.',
+/** Тексты окна покупки подписки. */
+export const VTTG_SUBSCRIPTION_PURCHASE_TEXT = {
+  title: 'Покупка подписки',
+  description:
+    'Подписка поддерживает развитие TTG Club и Virtual TTG Club и открывает привилегии на сайте и в виртуальном столе.',
+  perksTitle: 'Что даёт подписка',
+  monthsLabel: 'Срок подписки',
+  monthsHint: 'Можно оплатить сразу любое число месяцев.',
+  totalLabel: 'К оплате',
+  extendHint:
+    'Если подписка уже действует, оплаченные месяцы добавятся к её сроку.',
   noRenewal:
-    'Без автопродления: подписка просто закончится в конце оплаченного срока.',
-  offerNote: 'Нажимая «Оформить», вы принимаете условия',
+    'Без автопродления: деньги списываются один раз, а подписка просто закончится в конце оплаченного срока.',
+  offerNote: 'Нажимая «Оплатить», вы принимаете условия',
   offerLink: 'публичной оферты',
+  refundNote: 'Оплаченный период не возвращается.',
   adminOnly: 'Оплата пока доступна только администраторам для проверки.',
+  cancelLabel: 'Отмена',
+  payLabel: 'Оплатить',
   errorTitle: 'Не удалось перейти к оплате',
   errorFallback: 'Попробуйте ещё раз чуть позже.',
 } as const;
+
+/** Короткий список привилегий для окна покупки (подробно — на странице подписки). */
+export const VTTG_SUBSCRIPTION_PURCHASE_PERKS: Array<{
+  icon: string;
+  text: string;
+}> = [
+  {
+    icon: 'tabler:wand',
+    text: 'Автоматизация всего контента в виртуальном столе',
+  },
+  {
+    icon: 'tabler:world-share',
+    text: 'Подключение к столу по ссылке без белого IP',
+  },
+  {
+    icon: 'tabler:id-badge-2',
+    text: 'Больше листов персонажа и своих игр на сайте',
+  },
+  {
+    icon: 'tabler:rosette',
+    text: 'Значок подписчика в профиле',
+  },
+];
 
 /** Итог оплаты, с которым платёжная форма возвращает на страницу подписки. */
 export const SUBSCRIPTION_PAYMENT_RESULTS = {
@@ -99,6 +140,13 @@ export type SubscriptionPaymentResult =
  */
 export function getSubscriptionPaymentTotal(months: number): number {
   return SUBSCRIPTION_MONTH_PRICE * months;
+}
+
+/**
+ * Подпись срока: «3 месяца».
+ */
+export function formatSubscriptionMonths(months: number): string {
+  return `${months} ${getPlural(months, SUBSCRIPTION_MONTH_FORMS)}`;
 }
 
 /**

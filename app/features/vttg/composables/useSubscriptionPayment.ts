@@ -4,7 +4,7 @@ import { z } from 'zod';
 import {
   SUBSCRIPTION_PAYMENT_API_PATH,
   subscriptionPaymentSchema,
-  VTTG_SUBSCRIPTION_PAYMENT_TEXT,
+  VTTG_SUBSCRIPTION_PURCHASE_TEXT,
 } from '../model';
 
 /**
@@ -19,7 +19,7 @@ function getPaymentErrorMessage(error: unknown): string {
     }
   }
 
-  return VTTG_SUBSCRIPTION_PAYMENT_TEXT.errorFallback;
+  return VTTG_SUBSCRIPTION_PURCHASE_TEXT.errorFallback;
 }
 
 /**
@@ -51,7 +51,7 @@ export function useSubscriptionPayment() {
       isPending.value = false;
 
       toast.add({
-        title: VTTG_SUBSCRIPTION_PAYMENT_TEXT.errorTitle,
+        title: VTTG_SUBSCRIPTION_PURCHASE_TEXT.errorTitle,
         description: getPaymentErrorMessage(error),
         color: 'error',
       });

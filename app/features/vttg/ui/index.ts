@@ -14,4 +14,5 @@ export { default as VttgSubscribeButton } from './VttgSubscribeButton.vue';
 export { default as VttgSubscriptionHero } from './VttgSubscriptionHero.vue';
 export { default as VttgSubscriptionLimitComparison } from './VttgSubscriptionLimitComparison.vue';
 export { default as VttgSubscriptionPerks } from './VttgSubscriptionPerks.vue';
+export { default as VttgSubscriptionPurchaseModal } from './VttgSubscriptionPurchaseModal.vue';
 export { default as VttgVideoPlayer } from './VttgVideoPlayer.vue';
