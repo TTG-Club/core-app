@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { SubscriptionPaymentMethod } from '../model';
+
   import { PRIVACY_POLICY_ROUTE } from '~infrastructure/privacy-policy/model';
   import { PUBLIC_OFFER_ROUTE } from '~infrastructure/public-offer/model';
 
@@ -9,7 +11,11 @@
   import {
     formatSubscriptionMonths,
     getSubscriptionPaymentTotal,
+    SUBSCRIPTION_DEFAULT_PAYMENT_METHOD,
+    SUBSCRIPTION_EMAIL_VERIFICATION_ROUTE,
+    SUBSCRIPTION_PAYMENT_METHODS,
     SUBSCRIPTION_PAYMENT_MONTHS,
+    subscriptionReceiptEmailSchema,
     VTTG_SUBSCRIPTION_PRICE,
     VTTG_SUBSCRIPTION_PURCHASE_TEXT,
   } from '../model';
@@ -22,7 +28,42 @@
 
   const { data: terms, status: termsStatus } = useSubscriptionPaymentTerms();
 
+  const { user } = useUser();
+
   const months = ref<number>(SUBSCRIPTION_PAYMENT_MONTHS.default);
+
+  const email = ref<string>(user.value?.email ?? '');
+
+  const method = ref<SubscriptionPaymentMethod>(
+    SUBSCRIPTION_DEFAULT_PAYMENT_METHOD,
+  );
+
+  const offerAccepted = ref(false);
+
+  const personalDataConsent = ref(false);
+
+  const isEmailVerified = computed(() => user.value?.emailVerified !== false);
+
+  /** Согласий у аккаунта нет — их просят отметить прямо в окне оплаты. */
+  const needsConsents = computed(() => user.value?.consentsAccepted === false);
+
+  const isConsentsGiven = computed(
+    () =>
+      !needsConsents.value
+      || (offerAccepted.value && personalDataConsent.value),
+  );
+
+  const isEmailValid = computed(
+    () => subscriptionReceiptEmailSchema.safeParse(email.value.trim()).success,
+  );
+
+  const emailError = computed(() =>
+    email.value && !isEmailValid.value
+      ? VTTG_SUBSCRIPTION_PURCHASE_TEXT.emailInvalid
+      : undefined,
+  );
+
+  const methodItems = SUBSCRIPTION_PAYMENT_METHODS.map((item) => ({ ...item }));
 
   const isTermsLoading = computed(() => termsStatus.value === 'pending');
 
@@ -30,7 +71,14 @@
 
   const maxMonths = computed(() => terms.value?.maxMonths ?? undefined);
 
-  const isPayDisabled = computed(() => !terms.value || isPending.value);
+  const isPayDisabled = computed(
+    () =>
+      !terms.value
+      || isPending.value
+      || !isEmailVerified.value
+      || !isEmailValid.value
+      || !isConsentsGiven.value,
+  );
 
   /** Сумма с валютой, пока цена не загружена — пусто. */
   function formatPrice(amount: number): string {
@@ -90,7 +138,12 @@
       return;
     }
 
-    startPayment(months.value);
+    startPayment({
+      months: months.value,
+      email: email.value.trim(),
+      method: method.value,
+      acceptConsents: needsConsents.value,
+    });
   }
 </script>
 
@@ -107,6 +160,23 @@
         </p>
 
         <USeparator />
+
+        <UAlert
+          v-if="!isEmailVerified"
+          :title="VTTG_SUBSCRIPTION_PURCHASE_TEXT.unverifiedTitle"
+          :description="VTTG_SUBSCRIPTION_PURCHASE_TEXT.unverifiedDescription"
+          :actions="[
+            {
+              label: VTTG_SUBSCRIPTION_PURCHASE_TEXT.unverifiedLink,
+              to: SUBSCRIPTION_EMAIL_VERIFICATION_ROUTE,
+              color: 'warning',
+              variant: 'outline',
+            },
+          ]"
+          icon="tabler:mail-exclamation"
+          color="warning"
+          variant="subtle"
+        />
 
         <UFormField
           :label="VTTG_SUBSCRIPTION_PURCHASE_TEXT.monthsLabel"
@@ -136,6 +206,35 @@
           </div>
         </UFormField>
 
+        <UFormField :label="VTTG_SUBSCRIPTION_PURCHASE_TEXT.methodLabel">
+          <URadioGroup
+            v-model="method"
+            :items="methodItems"
+            :disabled="isPending"
+            variant="card"
+            orientation="horizontal"
+            color="primary"
+            :ui="{ fieldset: 'grid grid-cols-1 gap-2 sm:grid-cols-2' }"
+          />
+        </UFormField>
+
+        <UFormField
+          :label="VTTG_SUBSCRIPTION_PURCHASE_TEXT.emailLabel"
+          :hint="VTTG_SUBSCRIPTION_PURCHASE_TEXT.emailHint"
+          :error="emailError"
+        >
+          <UInput
+            v-model="email"
+            :disabled="isPending"
+            type="email"
+            icon="tabler:mail"
+            autocomplete="email"
+            autocapitalize="off"
+            autocorrect="off"
+            class="w-full"
+          />
+        </UFormField>
+
         <div
           class="flex items-baseline justify-between gap-3 rounded-lg border border-default bg-elevated/40 p-3"
         >
@@ -163,12 +262,59 @@
           {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.termsError }}
         </p>
 
+        <div
+          v-if="needsConsents"
+          class="flex flex-col gap-2"
+        >
+          <p class="text-sm font-medium text-highlighted">
+            {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.consentsTitle }}
+          </p>
+
+          <UCheckbox
+            v-model="offerAccepted"
+            :disabled="isPending"
+          >
+            <template #label>
+              {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.offerConsent }}
+
+              <ULink
+                :to="PUBLIC_OFFER_ROUTE"
+                target="_blank"
+                class="text-primary"
+              >
+                {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.offerLink }}
+              </ULink>
+            </template>
+          </UCheckbox>
+
+          <UCheckbox
+            v-model="personalDataConsent"
+            :disabled="isPending"
+          >
+            <template #label>
+              {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.personalDataConsent }}
+
+              <ULink
+                :to="PRIVACY_POLICY_ROUTE"
+                target="_blank"
+                class="text-primary"
+              >
+                {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.privacyPolicyLink }}
+              </ULink>
+            </template>
+          </UCheckbox>
+        </div>
+
         <div class="flex flex-col gap-1.5 text-xs leading-relaxed text-muted">
           <p>{{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.extendHint }}</p>
 
           <p>{{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.noRenewal }}</p>
 
-          <p>
+          <p v-if="needsConsents">
+            {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.refundNote }}
+          </p>
+
+          <p v-else>
             {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.offerNote }}
 
             <ULink

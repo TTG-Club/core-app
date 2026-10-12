@@ -1,7 +1,13 @@
+import type { SubscriptionPaymentMethod } from '../model';
+
 import { FetchError } from 'ofetch';
 import { z } from 'zod';
 
+import { PRIVACY_POLICY_UPDATED_AT } from '~infrastructure/privacy-policy/model';
+import { PUBLIC_OFFER_UPDATED_AT } from '~infrastructure/public-offer/model';
+
 import {
+  SUBSCRIPTION_CONSENTS_API_PATH,
   SUBSCRIPTION_PAYMENT_API_PATH,
   subscriptionPaymentSchema,
   VTTG_SUBSCRIPTION_PURCHASE_TEXT,
@@ -22,8 +28,35 @@ function getPaymentErrorMessage(error: unknown): string {
   return VTTG_SUBSCRIPTION_PURCHASE_TEXT.errorFallback;
 }
 
+/** Что пользователь выбрал в окне покупки. */
+export interface SubscriptionPaymentParams {
+  /** Срок подписки в месяцах. */
+  months: number;
+  /** Почта для чека. */
+  email: string;
+  /** Способ оплаты, экран которого сразу откроет платёжная форма. */
+  method: SubscriptionPaymentMethod;
+  /** Отметил ли пользователь согласия, которых у аккаунта ещё нет. */
+  acceptConsents: boolean;
+}
+
 /**
- * Оплата подписки: создаёт платёж в subscriber-service за выбранное число месяцев
+ * Сохраняет в auth-service согласия с действующими редакциями оферты и политики.
+ */
+async function acceptConsents(): Promise<void> {
+  await $fetch(SUBSCRIPTION_CONSENTS_API_PATH, {
+    method: 'POST',
+    body: {
+      offerAccepted: true,
+      offerVersion: PUBLIC_OFFER_UPDATED_AT,
+      personalDataConsent: true,
+      privacyPolicyVersion: PRIVACY_POLICY_UPDATED_AT,
+    },
+  });
+}
+
+/**
+ * Оплата подписки: при необходимости сохраняет согласия, затем создаёт платёж в subscriber-service за выбранное число месяцев
  * (без автопродления) и уводит пользователя на платёжную форму PayAnyWay. Пока идёт
  * переход, кнопка остаётся в состоянии загрузки.
  */
@@ -31,7 +64,12 @@ export function useSubscriptionPayment() {
   const toast = useToast();
   const isPending = ref(false);
 
-  async function startPayment(months: number): Promise<void> {
+  async function startPayment({
+    months,
+    email,
+    method,
+    acceptConsents: needsConsents,
+  }: SubscriptionPaymentParams): Promise<void> {
     if (isPending.value) {
       return;
     }
@@ -39,10 +77,14 @@ export function useSubscriptionPayment() {
     isPending.value = true;
 
     try {
+      if (needsConsents) {
+        await acceptConsents();
+      }
+
       const payment = subscriptionPaymentSchema.parse(
         await $fetch<unknown>(SUBSCRIPTION_PAYMENT_API_PATH, {
           method: 'POST',
-          body: { months },
+          body: { months, email, method },
         }),
       );
 

@@ -7,6 +7,12 @@ import { VTTG_SUBSCRIPTION_HERO } from './subscription';
 /** Создание платежа за подписку в subscriber-service (через прокси сайта). */
 export const SUBSCRIPTION_PAYMENT_API_PATH = '/api/subscriptions/payments';
 
+/** Согласия с офертой и на обработку ПД для аккаунтов без них (через прокси сайта). */
+export const SUBSCRIPTION_CONSENTS_API_PATH = '/api/auth/consents';
+
+/** Раздел профиля, где подтверждают почту. */
+export const SUBSCRIPTION_EMAIL_VERIFICATION_ROUTE = '/user/profile/security';
+
 /**
  * Параметры, которые платёжная форма PayAnyWay добавляет к адресу возврата на
  * страницу подписки: итог оплаты и номер платежа. После показа итога их убираем.
@@ -30,6 +36,34 @@ export const SUBSCRIPTION_PAYMENT_MONTHS = {
   default: 1,
   presets: [1, 3, 6, 12],
 } as const;
+
+/**
+ * Способы оплаты: платёжная форма PayAnyWay сразу открывает экран выбранного
+ * способа. Значение уходит в subscriber-service как `method`.
+ */
+export const SUBSCRIPTION_PAYMENT_METHODS = [
+  {
+    value: 'CARD',
+    label: 'Банковская карта',
+    description: 'Ввести данные карты',
+    icon: 'tabler:credit-card',
+  },
+  {
+    value: 'SBP',
+    label: 'СБП',
+    description: 'QR-код для оплаты из приложения банка',
+    icon: 'tabler:qrcode',
+  },
+] as const;
+
+export type SubscriptionPaymentMethod =
+  (typeof SUBSCRIPTION_PAYMENT_METHODS)[number]['value'];
+
+export const SUBSCRIPTION_DEFAULT_PAYMENT_METHOD: SubscriptionPaymentMethod =
+  'CARD';
+
+/** Почта для чека: та же проверка, что у subscriber-service. */
+export const subscriptionReceiptEmailSchema = z.email().max(255);
 
 /** Формы слова «месяц» для getPlural. */
 export const SUBSCRIPTION_MONTH_FORMS: [string, string, string] = [
@@ -69,6 +103,19 @@ export const VTTG_SUBSCRIPTION_PURCHASE_TEXT = {
   title: 'Покупка подписки',
   description:
     'Подписка поддерживает развитие TTG Club и Virtual TTG Club и открывает привилегии на сайте и в виртуальном столе.',
+  emailLabel: 'Почта для чека',
+  emailHint: 'Сюда придёт чек об оплате.',
+  emailInvalid: 'Укажите корректную почту.',
+  methodLabel: 'Способ оплаты',
+  unverifiedTitle: 'Подтвердите почту',
+  unverifiedDescription:
+    'Оплатить подписку можно только с подтверждённой почтой аккаунта. Откройте ссылку из письма или отправьте его заново в профиле.',
+  unverifiedLink: 'Перейти к подтверждению',
+  consentsTitle: 'Нужно ваше согласие',
+  offerConsent: 'Принимаю условия',
+  personalDataConsent:
+    'Даю согласие на обработку персональных данных в соответствии с',
+  privacyPolicyLink: 'политикой конфиденциальности',
   monthsLabel: 'Срок подписки',
   monthsHint: 'Можно оплатить сразу любое число месяцев.',
   totalLabel: 'К оплате',
