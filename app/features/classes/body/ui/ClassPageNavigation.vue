@@ -179,9 +179,16 @@
 
     scrollToSection(section.id, 'smooth');
 
-    // Замена, а не новая запись истории: «назад» уводит со страницы, а не
-    // перебирает разделы.
-    router.replace({ query: route.query, hash: `#${section.id}` });
+    // Якорь меняем мимо роутера: на смену якоря он сам прокручивает окно к
+    // разделу и перебивает нашу прокрутку, из-за чего «Основное» вставало
+    // под шапку, а не к самому верху. Замена, а не новая запись истории:
+    // «назад» уводит со страницы, а не перебирает разделы.
+    const { href: sectionHref } = router.resolve({
+      query: route.query,
+      hash: `#${section.id}`,
+    });
+
+    window.history.replaceState(window.history.state, '', sectionHref);
   }
 
   onMounted(() => {

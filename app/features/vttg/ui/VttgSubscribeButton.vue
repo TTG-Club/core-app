@@ -1,9 +1,16 @@
 <script setup lang="ts">
+  import type { ButtonProps } from '@nuxt/ui';
+
   import {
     VTTG_SUBSCRIBE_BUTTON,
     VTTG_SUBSCRIPTION_BUY_BUTTON,
   } from '../model';
   import VttgSubscriptionPurchaseModal from './VttgSubscriptionPurchaseModal.vue';
+
+  const { soon = VTTG_SUBSCRIBE_BUTTON } = defineProps<{
+    /** Вид выключенной кнопки «скоро» для тех, кому покупка недоступна. */
+    soon?: ButtonProps;
+  }>();
 
   // Покупка пока открыта только администраторам: остальные видят выключенную кнопку «скоро».
   const { isAdmin } = useUserRoles();
@@ -27,7 +34,7 @@
 
   <UButton
     v-else
-    v-bind="VTTG_SUBSCRIBE_BUTTON"
+    v-bind="soon"
     class="justify-center"
   />
 </template>
