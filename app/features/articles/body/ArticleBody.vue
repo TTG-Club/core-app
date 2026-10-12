@@ -8,6 +8,7 @@
   import {
     ARTICLE_FALLBACK_IMAGE,
     ARTICLE_RATING_SECTION,
+    ARTICLE_TOP_ANCHOR_ID,
     ARTICLE_TYPE,
     toArticleMarkup,
   } from '../model';
@@ -67,6 +68,12 @@
     дровере (~672px) — в столбик. Один ArticleBody на чтение/дровер/предпросмотр.
   -->
   <article :class="$style.container">
+    <!-- Метка начала статьи для пункта содержания «На самый верх» -->
+    <span
+      :id="ARTICLE_TOP_ANCHOR_ID"
+      class="block scroll-mt-4"
+    />
+
     <div :class="$style.body">
       <!--
         Обложку открываем в лайтбоксе (как галереи классов/видов). Заглушку
