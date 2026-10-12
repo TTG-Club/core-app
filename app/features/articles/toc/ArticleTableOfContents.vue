@@ -107,11 +107,11 @@
 </script>
 
 <template>
-  <!-- Липнет обёртка: внутри неё перехватываем клики до UContentToc -->
-  <div
-    class="sticky top-0"
-    @click.capture="handleLinkClick"
-  >
+  <!--
+    Обёртка перехватывает клики до UContentToc. Липнет не она, а колонка в
+    ArticleBody — вместе с тегами под содержанием.
+  -->
+  <div @click.capture="handleLinkClick">
     <UContentToc
       :links
       :title="ARTICLE_TOC_TITLE"

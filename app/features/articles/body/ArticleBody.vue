@@ -37,6 +37,8 @@
 
   const headings = computed(() => anchoredContent.value.headings);
 
+  const [DefineArticleTags, ArticleTags] = createReusableTemplate();
+
   // Анонс необязателен: если текста нет — не рендерим его блок, иначе пустой
   // flex-элемент оставляет призрачный отступ (gap) над содержанием.
   const hasPreview = computed(
@@ -45,6 +47,20 @@
 </script>
 
 <template>
+  <!-- Теги рисуются в двух местах (сбоку или над текстом) — разметка общая -->
+  <DefineArticleTags>
+    <div class="flex flex-wrap gap-1.5">
+      <UBadge
+        v-for="tag in article.tags"
+        :key="tag"
+        :label="tag"
+        color="neutral"
+        variant="soft"
+        icon="tabler:tag"
+      />
+    </div>
+  </DefineArticleTags>
+
   <!--
     Раскладка привязана к ширине КОНТЕЙНЕРА (как в SpellBody/CreatureBody), а не
     окна: на широкой странице (>800px) картинка слева, весь текст справа; в узком
@@ -83,29 +99,32 @@
         </div>
 
         <!--
-          Как навигация классов: липнет к верху колонки, а в узкой раскладке
-          (дровер, мобильные) скрыта — там колонка стоит над текстом.
+          Как навигация классов: липнет к верху колонки вместе с тегами под ним.
+          В узкой раскладке (дровер, мобильные) содержание скрыто, а теги стоят
+          над текстом — колонка там над ним, а не рядом.
         -->
-        <ArticleTableOfContents
-          v-if="headings.length"
-          :class="[$style.toc, 'max-lg:hidden']"
-          :headings
-        />
+        <div class="sticky top-0 flex flex-col gap-4">
+          <ArticleTableOfContents
+            v-if="headings.length"
+            :class="[$style.sideOnly, 'max-lg:hidden']"
+            :headings
+          />
+
+          <div
+            v-if="article.tags.length"
+            :class="$style.sideOnly"
+          >
+            <ArticleTags />
+          </div>
+        </div>
       </div>
 
       <div :class="$style.text">
         <div
           v-if="article.tags.length"
-          class="mb-3 flex flex-wrap gap-1.5"
+          :class="[$style.stackedOnly, 'mb-3']"
         >
-          <UBadge
-            v-for="tag in article.tags"
-            :key="tag"
-            :label="tag"
-            color="neutral"
-            variant="soft"
-            icon="tabler:tag"
-          />
+          <ArticleTags />
         </div>
 
         <div
@@ -157,12 +176,19 @@
     object-fit: cover;
   }
 
-  // Содержание имеет смысл только рядом с текстом, а не над ним.
-  .toc {
+  // Содержание и теги сбоку имеют смысл только рядом с текстом, а не над ним.
+  .sideOnly {
     display: none;
 
     @container (width > 800px) {
       display: block;
+    }
+  }
+
+  // Теги над текстом — только в узкой раскладке, в широкой они под содержанием.
+  .stackedOnly {
+    @container (width > 800px) {
+      display: none;
     }
   }
 
