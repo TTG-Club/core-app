@@ -23,14 +23,15 @@ function getPaymentErrorMessage(error: unknown): string {
 }
 
 /**
- * Оплата подписки: создаёт платёж в subscriber-service и уводит пользователя на
- * платёжную форму PayAnyWay. Пока идёт переход, кнопка остаётся в состоянии загрузки.
+ * Оплата подписки: создаёт платёж в subscriber-service за выбранное число месяцев
+ * (без автопродления) и уводит пользователя на платёжную форму PayAnyWay. Пока идёт
+ * переход, кнопка остаётся в состоянии загрузки.
  */
 export function useSubscriptionPayment() {
   const toast = useToast();
   const isPending = ref(false);
 
-  async function startPayment(): Promise<void> {
+  async function startPayment(months: number): Promise<void> {
     if (isPending.value) {
       return;
     }
@@ -41,6 +42,7 @@ export function useSubscriptionPayment() {
       const payment = subscriptionPaymentSchema.parse(
         await $fetch<unknown>(SUBSCRIPTION_PAYMENT_API_PATH, {
           method: 'POST',
+          body: { months },
         }),
       );
 
