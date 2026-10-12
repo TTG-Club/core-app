@@ -28,6 +28,7 @@
   const nuxtApp = useNuxtApp();
   const route = useRoute();
   const router = useRouter();
+  const { scrollToTop } = useAnchorScroll();
 
   /**
    * Разделы страницы по их якорям в адресе. Якорь — id раздела, а навигация
@@ -91,10 +92,21 @@
     sectionId: string,
     behavior: 'smooth' | 'instant',
   ): void {
-    document.getElementById(getSectionHeadingId(sectionId))?.scrollIntoView({
-      behavior,
-      block: 'start',
-    });
+    const heading = document.getElementById(getSectionHeadingId(sectionId));
+
+    if (!heading) {
+      return;
+    }
+
+    // Над первым разделом стоит шапка страницы, поэтому «Основное» прокручивает
+    // контейнер к самому началу, а не к разделу: иначе шапка остаётся срезанной.
+    if (sectionId === CLASS_SECTION_ANCHOR.table) {
+      scrollToTop({ behavior, offsetTop: 0 }, heading);
+
+      return;
+    }
+
+    heading.scrollIntoView({ behavior, block: 'start' });
   }
 
   /**

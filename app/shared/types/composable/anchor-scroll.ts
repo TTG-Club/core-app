@@ -9,7 +9,7 @@ export interface AnchorScrollComposable {
     target: MaybeRefOrGetter<HTMLElement | string>,
     options?: AnchorScrollOptions,
   ) => boolean;
-  scrollToTop: (options?: AnchorScrollOptions) => void;
+  scrollToTop: (options?: AnchorScrollOptions, target?: HTMLElement) => void;
 }
 
 export interface AnchorScrollPageMetaCustomOptions {

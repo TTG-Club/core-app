@@ -107,7 +107,11 @@ export function useAnchorScroll(config?: AnchorScrollConfiguration) {
     return true;
   };
 
-  const scrollToTop = (options?: AnchorScrollOptions) => {
+  /**
+   * Прокручивает наверх документ или, если передан `target`, ближайший
+   * прокручиваемый контейнер этого элемента (панель, дровер).
+   */
+  const scrollToTop = (options?: AnchorScrollOptions, target?: HTMLElement) => {
     const defaultOptions = toValue(resultConfig.toTop);
     const mergedOptions = toMerged(defaultOptions ?? {}, options ?? {});
 
@@ -117,8 +121,16 @@ export function useAnchorScroll(config?: AnchorScrollConfiguration) {
       top: mergedOptions.offsetTop,
     };
 
-    document.documentElement.scrollTo(scrollToOptions);
-    document.body.scrollTo(scrollToOptions);
+    const scrollContainer = target
+      ? getScrollParent(target)
+      : document.documentElement;
+
+    if (scrollContainer === document.documentElement) {
+      document.documentElement.scrollTo(scrollToOptions);
+      document.body.scrollTo(scrollToOptions);
+    } else {
+      scrollContainer.scrollTo(scrollToOptions);
+    }
   };
 
   return {
