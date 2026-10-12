@@ -38,11 +38,17 @@ function getPaymentResult(
 ): SubscriptionPaymentResult | null {
   const result = query[SUBSCRIPTION_PAYMENT_RESULT_QUERY];
 
-  if (typeof result === 'string' && isSubscriptionPaymentResult(result)) {
+  if (
+    typeof result === 'string'
+    && result
+    && isSubscriptionPaymentResult(result)
+  ) {
     return result;
   }
 
-  return query[SUBSCRIPTION_PAYMENT_OPERATION_QUERY] ? 'pending' : null;
+  const operationId = query[SUBSCRIPTION_PAYMENT_OPERATION_QUERY];
+
+  return typeof operationId === 'string' && operationId ? 'pending' : null;
 }
 
 /**

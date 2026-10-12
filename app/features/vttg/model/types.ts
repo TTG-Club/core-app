@@ -126,3 +126,13 @@ export interface VttgSubscriptionPerkGroup {
 export const VIDEO_EXTENSIONS = ['.webm', '.mp4'] as const;
 
 export type VideoExtension = (typeof VIDEO_EXTENSIONS)[number];
+
+/** Что пользователь выбрал в окне покупки. */
+export interface SubscriptionPaymentParams {
+  /** Срок подписки в месяцах. */
+  months: number;
+  /** Почта для чека. */
+  email: string;
+  /** Отметил ли пользователь согласия, которых у аккаунта ещё нет. */
+  acceptConsents: boolean;
+}

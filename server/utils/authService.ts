@@ -395,6 +395,17 @@ export function isInvalidRefreshTokenError(error: unknown): boolean {
 }
 
 /**
+ * Согласия с офертой и на обработку персональных данных: без обоих аккаунт не
+ * регистрируется и не платит. Редакции документов сохраняются в auth-service.
+ */
+export const authConsentsSchema = z.object({
+  offerAccepted: z.literal(true),
+  offerVersion: z.string().trim().min(1).max(32),
+  personalDataConsent: z.literal(true),
+  privacyPolicyVersion: z.string().trim().min(1).max(32),
+});
+
+/**
  * Создает ошибку некорректного запроса для auth endpoint.
  */
 export function createAuthValidationError(): ReturnType<typeof createError> {

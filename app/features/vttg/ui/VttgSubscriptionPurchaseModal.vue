@@ -8,9 +8,12 @@
   } from '../composables';
   import {
     formatSubscriptionMonths,
+    formatSubscriptionPrice,
+    formatSubscriptionTotal,
     getSubscriptionPaymentTotal,
-    SUBSCRIPTION_EMAIL_VERIFICATION_ROUTE,
+    SUBSCRIPTION_EMAIL_VERIFICATION_ACTIONS,
     SUBSCRIPTION_PAYMENT_MONTHS,
+    SUBSCRIPTION_PURCHASE_ICONS,
     subscriptionReceiptEmailSchema,
     VTTG_SUBSCRIPTION_PRICE,
     VTTG_SUBSCRIPTION_PURCHASE_TEXT,
@@ -70,34 +73,30 @@
       || !isConsentsGiven.value,
   );
 
-  /** Сумма с валютой, пока цена не загружена — пусто. */
-  function formatPrice(amount: number): string {
-    return `${amount} ${VTTG_SUBSCRIPTION_PRICE.currency}`;
-  }
-
+  /** Итоговая сумма за выбранный срок; пока цена не загружена — нет. */
   const total = computed(() =>
     terms.value
-      ? formatPrice(
-          getSubscriptionPaymentTotal(terms.value.monthPrice, months.value),
-        )
-      : '',
+      ? getSubscriptionPaymentTotal(terms.value.monthPrice, months.value)
+      : undefined,
   );
 
   const totalCaption = computed(() =>
-    terms.value
-      ? `${total.value} за ${formatSubscriptionMonths(months.value)}`
-      : '—',
+    total.value === undefined
+      ? VTTG_SUBSCRIPTION_PURCHASE_TEXT.totalPlaceholder
+      : formatSubscriptionTotal(total.value, months.value),
   );
 
   const payLabel = computed(() =>
-    terms.value
-      ? `${VTTG_SUBSCRIPTION_PURCHASE_TEXT.payLabel} ${total.value}`
-      : VTTG_SUBSCRIPTION_PURCHASE_TEXT.payLabel,
+    total.value === undefined
+      ? VTTG_SUBSCRIPTION_PURCHASE_TEXT.payLabel
+      : `${VTTG_SUBSCRIPTION_PURCHASE_TEXT.payLabel} ${formatSubscriptionPrice(total.value)}`,
   );
+
+  const isPayLoading = computed(() => isPending.value || isTermsLoading.value);
 
   const monthPrice = computed(() =>
     terms.value
-      ? `${formatPrice(terms.value.monthPrice)} ${VTTG_SUBSCRIPTION_PRICE.cycle}`
+      ? `${formatSubscriptionPrice(terms.value.monthPrice)} ${VTTG_SUBSCRIPTION_PRICE.cycle}`
       : undefined,
   );
 
@@ -154,15 +153,8 @@
           v-if="!isEmailVerified"
           :title="VTTG_SUBSCRIPTION_PURCHASE_TEXT.unverifiedTitle"
           :description="VTTG_SUBSCRIPTION_PURCHASE_TEXT.unverifiedDescription"
-          :actions="[
-            {
-              label: VTTG_SUBSCRIPTION_PURCHASE_TEXT.unverifiedLink,
-              to: SUBSCRIPTION_EMAIL_VERIFICATION_ROUTE,
-              color: 'warning',
-              variant: 'outline',
-            },
-          ]"
-          icon="tabler:mail-exclamation"
+          :actions="SUBSCRIPTION_EMAIL_VERIFICATION_ACTIONS"
+          :icon="SUBSCRIPTION_PURCHASE_ICONS.unverified"
           color="warning"
           variant="subtle"
         />
@@ -204,7 +196,7 @@
             v-model="email"
             :disabled="isPending"
             type="email"
-            icon="tabler:mail"
+            :icon="SUBSCRIPTION_PURCHASE_ICONS.email"
             autocomplete="email"
             autocapitalize="off"
             autocorrect="off"
@@ -310,9 +302,9 @@
 
         <UButton
           :label="payLabel"
-          :loading="isPending || isTermsLoading"
+          :loading="isPayLoading"
           :disabled="isPayDisabled"
-          icon="tabler:credit-card"
+          :icon="SUBSCRIPTION_PURCHASE_ICONS.pay"
           color="primary"
           @click.left.exact.prevent="handlePayClick"
         />

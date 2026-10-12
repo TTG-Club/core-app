@@ -1,3 +1,5 @@
+import type { SubscriptionPaymentParams } from '../model';
+
 import { FetchError } from 'ofetch';
 import { z } from 'zod';
 
@@ -24,16 +26,6 @@ function getPaymentErrorMessage(error: unknown): string {
   }
 
   return VTTG_SUBSCRIPTION_PURCHASE_TEXT.errorFallback;
-}
-
-/** Что пользователь выбрал в окне покупки. */
-export interface SubscriptionPaymentParams {
-  /** Срок подписки в месяцах. */
-  months: number;
-  /** Почта для чека. */
-  email: string;
-  /** Отметил ли пользователь согласия, которых у аккаунта ещё нет. */
-  acceptConsents: boolean;
 }
 
 /**

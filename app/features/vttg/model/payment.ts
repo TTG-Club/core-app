@@ -2,7 +2,10 @@ import type { ButtonProps } from '@nuxt/ui';
 
 import { z } from 'zod';
 
-import { VTTG_SUBSCRIPTION_HERO } from './subscription';
+import {
+  VTTG_SUBSCRIPTION_HERO,
+  VTTG_SUBSCRIPTION_PRICE,
+} from './subscription';
 
 /** Создание платежа за подписку в subscriber-service (через прокси сайта). */
 export const SUBSCRIPTION_PAYMENT_API_PATH = '/api/subscriptions/payments';
@@ -105,6 +108,8 @@ export const VTTG_SUBSCRIPTION_PURCHASE_TEXT = {
   adminOnly: 'Оплата пока доступна только администраторам для проверки.',
   cancelLabel: 'Отмена',
   payLabel: 'Оплатить',
+  totalFor: 'за',
+  totalPlaceholder: '—',
   termsError: 'Не удалось загрузить цену подписки. Попробуйте позже.',
   errorTitle: 'Не удалось перейти к оплате',
   errorFallback: 'Попробуйте ещё раз чуть позже.',
@@ -155,6 +160,40 @@ export function getSubscriptionPaymentTotal(
   months: number,
 ): number {
   return Math.round(monthPrice * months * 100) / 100;
+}
+
+/** Ключ кэша условий оплаты в `useAsyncData`. */
+export const SUBSCRIPTION_PAYMENT_TERMS_DATA_KEY = 'subscription-payment-terms';
+
+/** Иконки окна покупки подписки. */
+export const SUBSCRIPTION_PURCHASE_ICONS = {
+  unverified: 'tabler:mail-exclamation',
+  email: 'tabler:mail',
+  pay: 'tabler:credit-card',
+} as const;
+
+/** Кнопка в предупреждении о неподтверждённой почте. */
+export const SUBSCRIPTION_EMAIL_VERIFICATION_ACTIONS: Array<ButtonProps> = [
+  {
+    label: VTTG_SUBSCRIPTION_PURCHASE_TEXT.unverifiedLink,
+    to: SUBSCRIPTION_EMAIL_VERIFICATION_ROUTE,
+    color: 'warning',
+    variant: 'outline',
+  },
+];
+
+/**
+ * Сумма с валютой: «330 ₽».
+ */
+export function formatSubscriptionPrice(amount: number): string {
+  return `${amount} ${VTTG_SUBSCRIPTION_PRICE.currency}`;
+}
+
+/**
+ * Подпись итога: «330 ₽ за 3 месяца».
+ */
+export function formatSubscriptionTotal(total: number, months: number): string {
+  return `${formatSubscriptionPrice(total)} ${VTTG_SUBSCRIPTION_PURCHASE_TEXT.totalFor} ${formatSubscriptionMonths(months)}`;
 }
 
 /**

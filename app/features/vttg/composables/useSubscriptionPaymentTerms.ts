@@ -1,5 +1,6 @@
 import {
   SUBSCRIPTION_PAYMENT_TERMS_API_PATH,
+  SUBSCRIPTION_PAYMENT_TERMS_DATA_KEY,
   subscriptionPaymentTermsSchema,
 } from '../model';
 
@@ -9,7 +10,7 @@ import {
  */
 export function useSubscriptionPaymentTerms() {
   return useAsyncData(
-    'subscription-payment-terms',
+    SUBSCRIPTION_PAYMENT_TERMS_DATA_KEY,
     async () =>
       subscriptionPaymentTermsSchema.parse(
         await $fetch<unknown>(SUBSCRIPTION_PAYMENT_TERMS_API_PATH),

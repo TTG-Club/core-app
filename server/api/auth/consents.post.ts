@@ -1,14 +1,10 @@
 import { StatusCodes } from 'http-status-codes';
-import { z } from 'zod';
 
-import { fetchAuthService } from '#server/utils/authService';
-
-const consentsBodySchema = z.object({
-  offerAccepted: z.literal(true),
-  offerVersion: z.string().min(1).max(32),
-  personalDataConsent: z.literal(true),
-  privacyPolicyVersion: z.string().min(1).max(32),
-});
+import {
+  authConsentsSchema,
+  createAuthValidationError,
+  fetchAuthService,
+} from '#server/utils/authService';
 
 /**
  * Принимает оферту и согласие на обработку персональных данных для аккаунта,
@@ -16,10 +12,13 @@ const consentsBodySchema = z.object({
  */
 export default defineEventHandler(async (event) => {
   const token = getTokenFromRequest(event);
-  const body = consentsBodySchema.safeParse(await readBody(event));
 
-  if (!body.success) {
-    throw createError(getErrorResponse(StatusCodes.BAD_REQUEST));
+  const parsedBody = authConsentsSchema.safeParse(
+    await readBody<unknown>(event),
+  );
+
+  if (!parsedBody.success) {
+    throw createAuthValidationError();
   }
 
   await fetchAuthService<unknown>('/api/auth/consents', {
@@ -27,7 +26,7 @@ export default defineEventHandler(async (event) => {
     headers: {
       authorization: `Bearer ${token}`,
     },
-    body: body.data,
+    body: parsedBody.data,
   });
 
   setResponseStatus(event, StatusCodes.NO_CONTENT);
