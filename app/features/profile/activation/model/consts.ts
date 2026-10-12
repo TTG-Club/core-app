@@ -5,6 +5,8 @@ import type {
   SubscriptionType,
 } from './types';
 
+import { VTTG_SUBSCRIPTION_PATH } from '~vttg/model';
+
 /** Эндпоинты подписок/наград (проксируются как есть). */
 export const SUBSCRIPTION_MY_CODES_API_PATH = '/api/subscriptions/my-codes';
 export const SUBSCRIPTION_MY_API_PATH = '/api/subscriptions/my';
@@ -181,3 +183,13 @@ export const ProfileCardUI = {
 export function normalizeCode(code: string): string {
   return code.replace(/[^A-Z0-9]/gi, '').toUpperCase();
 }
+
+/**
+ * Кнопка на странице подписки из карточки статуса. Ввод промокода — на этой же
+ * странице ниже, поэтому карточка ведёт не к нему, а к оформлению подписки.
+ */
+export const SUBSCRIPTION_STATUS_SUBSCRIBE_BUTTON = {
+  label: 'Оформить подписку',
+  icon: 'tabler:crown',
+  to: VTTG_SUBSCRIPTION_PATH,
+} as const;
