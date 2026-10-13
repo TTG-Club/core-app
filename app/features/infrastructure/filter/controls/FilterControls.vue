@@ -74,6 +74,15 @@
 
   const hasPresentationMenus = computed(() => presentationMenus.length > 0);
 
+  // Пока фильтр не загружен, кнопки стоят выключенными. Когда он пришёл без
+  // групп отбора или без источников (у статей источников нет, у новостей и
+  // групп нет), открывать нечего — и кнопок нет.
+  const hasFilterGroups = computed(
+    () => !filter.value || filter.value.filters.length > 0,
+  );
+
+  const hasSources = computed(() => !filter.value || !!filter.value.sources);
+
   // Меню «⋯» собирает «Поделиться» и группировку с сортировкой. Без меню
   // представления накрывать «Поделиться» нечем, и кнопка стоит отдельно.
   const overflowItems = computed<Array<Array<DropdownMenuItem>>>(() => [
@@ -243,7 +252,10 @@
       <!-- Кнопка отбора — только на узком экране: на широком фильтры стоят -->
       <!-- в панели. Прячется стилем, а не условием, чтобы не мигать до -->
       <!-- монтирования, пока ширина ещё неизвестна. -->
-      <UFieldGroup class="space-x-px lg:hidden">
+      <UFieldGroup
+        v-if="hasFilterGroups"
+        class="space-x-px lg:hidden"
+      >
         <UButton
           :disabled="!filter"
           :loading="isPending"
@@ -262,7 +274,10 @@
         />
       </UFieldGroup>
 
-      <UChip :show="isSourcesEdited">
+      <UChip
+        v-if="hasSources"
+        :show="isSourcesEdited"
+      >
         <UButton
           :disabled="!filter"
           :loading="isPending"
@@ -302,7 +317,7 @@
         <!-- Те же группы, что в дровере, но прямо в панели и без «Применить». -->
         <!-- На узком экране панель — строка над списком, и отбор остаётся -->
         <!-- за кнопкой «Фильтр». -->
-        <template v-if="filter?.filters">
+        <template v-if="filter?.filters.length">
           <USeparator />
 
           <FilterInline
@@ -318,7 +333,7 @@
 
   <ClientOnly>
     <FilterDrawer
-      v-if="filter?.filters"
+      v-if="filter?.filters.length"
       v-model="filterOpened"
       :title="FILTER_FILTERS_TITLE"
       :groups="filter.filters"
