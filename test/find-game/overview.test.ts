@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getAttentionReason,
   getGameCardPriceLabel,
+  getGameSeoDescription,
   getNearestPaidSession,
   getNearestSessionStart,
   getNextSessionLabel,
@@ -71,6 +72,25 @@ describe('карточка ближайшей встречи', () => {
 
     expect(getGameCardPriceLabel(game)).toContain('RUB / сессия');
     expect(getGameCardPriceLabel(game)).toMatch(/^2\s000 RUB/u);
+  });
+
+  it('ставит цену за сессию в начало описания для превью ссылки', () => {
+    const game = parseGame({
+      id: 'game-1',
+      masterId: 'master-1',
+      costType: 'PAID',
+      priceAmount: 2000,
+      priceCurrency: 'RUB',
+      paymentType: 'PREPAYMENT',
+    });
+
+    expect(getGameSeoDescription(game, 'Описание')).toMatch(
+      /^2\s000 RUB \/ сессия · Описание$/u,
+    );
+
+    expect(
+      getGameSeoDescription({ ...game, costType: 'FREE' }, 'Описание'),
+    ).toBe('Описание');
   });
 
   it('показывает переход через полночь и часовой пояс', () => {

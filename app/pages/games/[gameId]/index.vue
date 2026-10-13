@@ -44,6 +44,7 @@
     GAMES_ROUTE,
     getFindGameErrorMessage,
     getFindGameStatus,
+    getGameSeoDescription,
     getNearestPaidSession,
     getNearestSessionStart,
     getSessionPriceLabel,
@@ -148,8 +149,14 @@
 
   useSeoMeta({
     title: () => game.value?.title ?? GAMES_NAVIGATION_LABEL,
+    // Цена за сессию идёт в описание, чтобы она была видна в превью ссылки.
     description: () =>
-      game.value ? getGameDescriptionText(game.value.description) : '',
+      game.value
+        ? getGameSeoDescription(
+            game.value,
+            getGameDescriptionText(game.value.description),
+          )
+        : '',
   });
 
   // Мастера подписываем именем из core-api: сервис поиска игр имён не хранит,
