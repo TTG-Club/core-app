@@ -72,7 +72,7 @@
   const costBadgeIcon = computed(() => GAME_COST_TYPE_ICONS[game.costType]);
 
   /**
-   * У платной игры вместо «Платно» — цена за встречу, если мастер её указал.
+   * У платной игры вместо «Платно» — цена за сессию, если мастер её указал.
    */
   const costLabel = computed(() => getGameCardPriceLabel(game));
 
