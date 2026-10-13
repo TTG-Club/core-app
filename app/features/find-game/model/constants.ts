@@ -1140,7 +1140,7 @@ export const GAME_NEXT_SESSION_LOADING_LABEL = 'Время встречи…';
 export const GAME_NEXT_PAID_SESSION_PRICE_LABEL = 'Стоимость за сессию';
 /** Платная игра без цены: заведена до цены по умолчанию или ещё не дозаполнена. */
 export const GAME_PRICE_UNSPECIFIED_LABEL = 'Не указано';
-export const GAME_PRICE_PER_SESSION_LABEL = 'за встречу';
+export const GAME_PRICE_PER_SESSION_LABEL = 'сессия';
 export const GAME_FREE_SEATS_LABEL = 'Свободно мест';
 export const MY_GAMES_OVERVIEW_SIZE = 4;
 export const MY_GAMES_UPCOMING_LABEL = 'Ближайшие встречи';

@@ -10,7 +10,6 @@
   } from '../../composables';
   import {
     GAME_COST_TYPE_ICONS,
-    GAME_COST_TYPE_LABELS,
     GAME_COVER_BADGE_CLASS,
     GAME_COVER_COST_ICON_CLASS,
     GAME_COVER_STATUS_DOT_CLASSES,
@@ -24,6 +23,7 @@
     GAME_STATUS_LABELS,
     GAME_TYPE_ICONS,
     GAME_VISIBILITY_LABELS,
+    getGameCardPriceLabel,
     getGameFormatSummary,
     getGameRoute,
     getGameSeatsCounter,
@@ -71,7 +71,10 @@
    */
   const costBadgeIcon = computed(() => GAME_COST_TYPE_ICONS[game.costType]);
 
-  const costLabel = computed(() => GAME_COST_TYPE_LABELS[game.costType]);
+  /**
+   * У платной игры вместо «Платно» — цена за сессию, если мастер её указал.
+   */
+  const costLabel = computed(() => getGameCardPriceLabel(game));
 
   /**
    * Состояние игры — столбиком в углу обложки напротив формата. В каталоге
