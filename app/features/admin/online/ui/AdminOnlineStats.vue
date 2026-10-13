@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { TabsItem } from '@nuxt/ui';
+
   import type {
     AdminOnlineCounters,
     AdminOnlineSiteCard,
@@ -7,6 +9,10 @@
   } from '../model';
 
   import {
+    ADMIN_ONLINE_PREFERENCE_SECTIONS,
+    ADMIN_ONLINE_PREFERENCES_CARD_LABEL,
+    ADMIN_ONLINE_PREFERENCES_PERIOD_HINT,
+    ADMIN_ONLINE_PREFERENCES_PERIOD_LABEL,
     ADMIN_ONLINE_STATS_DESCRIPTION,
     ADMIN_ONLINE_STATS_EMPTY_TEXT,
     ADMIN_ONLINE_STATS_GUESTS_LABEL,
@@ -21,11 +27,15 @@
     ADMIN_ONLINE_STATS_VTTG_SITE_ID,
     ADMIN_ONLINE_STATS_VTTG_TABLE_SITE_ID,
     ADMIN_ONLINE_STATS_WINDOW_LABEL,
+    collectPreferencePeriods,
+    createPreferenceRows,
     formatCounter,
+    formatPreferencePeriod,
     isVttgSite,
+    sumPreferencePeriod,
   } from '../model';
   import AdminOnlineAppCard from './AdminOnlineAppCard.vue';
-  import AdminOnlineStatsRow from './AdminOnlineStatsRow.vue';
+  import AdminOnlineCounterCard from './AdminOnlineCounterCard.vue';
 
   const props = defineProps<{
     hasError: boolean;
@@ -124,6 +134,63 @@
     () => !props.hasError && !!props.stats && !props.stats.sites.length,
   );
 
+  const preferencePeriods = computed(() =>
+    collectPreferencePeriods(props.stats?.sites ?? []),
+  );
+
+  const selectedPreferencePeriod = ref<number | null>(null);
+
+  // Пока период не выбран вручную, показываем самый короткий: «сегодня» ближе всего
+  // к «чем пользуются сейчас». Выбранный период пропал из ответа — тоже к нему.
+  const activePreferencePeriod = computed(() =>
+    selectedPreferencePeriod.value !== null
+    && preferencePeriods.value.includes(selectedPreferencePeriod.value)
+      ? selectedPreferencePeriod.value
+      : (preferencePeriods.value[0] ?? null),
+  );
+
+  const preferencePeriodTabs = computed<Array<TabsItem>>(() =>
+    preferencePeriods.value.map((days) => ({
+      label: formatPreferencePeriod(days),
+      value: String(days),
+    })),
+  );
+
+  const activePreferencePeriodTab = computed(() =>
+    activePreferencePeriod.value === null
+      ? undefined
+      : String(activePreferencePeriod.value),
+  );
+
+  // Карточки настроек устроены как карточки площадок: та же строка-заголовок, те же
+  // строки и итог. Без срезов в ответе (ошибка, online-app не обновлён) — прочерки.
+  const preferenceCards = computed<AdminOnlineSiteCard[]>(() => {
+    const counts =
+      props.stats && activePreferencePeriod.value !== null
+        ? sumPreferencePeriod(props.stats.sites, activePreferencePeriod.value)
+        : null;
+
+    return ADMIN_ONLINE_PREFERENCE_SECTIONS.map((section) => ({
+      rows: createPreferenceRows(
+        section,
+        counts ? (counts[section.name] ?? {}) : null,
+      ),
+      siteId: section.title,
+      siteLabel: ADMIN_ONLINE_PREFERENCES_CARD_LABEL,
+    }));
+  });
+
+  /**
+   * Переключает период, за который показаны настройки отображения.
+   */
+  function handlePreferencePeriodChange(value: string | number): void {
+    const days = Number(value);
+
+    if (Number.isInteger(days)) {
+      selectedPreferencePeriod.value = days;
+    }
+  }
+
   /**
    * Запрашивает актуальные данные online-статистики.
    */
@@ -181,6 +248,23 @@
         {{ ADMIN_ONLINE_STATS_SUMMARY_LABEL }}:
         {{ summaryTotal }}
       </span>
+
+      <div
+        v-if="preferencePeriodTabs.length"
+        class="flex items-center gap-2"
+      >
+        <UTooltip :text="ADMIN_ONLINE_PREFERENCES_PERIOD_HINT">
+          <span>{{ ADMIN_ONLINE_PREFERENCES_PERIOD_LABEL }}:</span>
+        </UTooltip>
+
+        <UTabs
+          :items="preferencePeriodTabs"
+          :model-value="activePreferencePeriodTab"
+          :content="false"
+          size="xs"
+          @update:model-value="handlePreferencePeriodChange"
+        />
+      </div>
     </div>
 
     <div
@@ -196,28 +280,12 @@
       соседних. Карточкам сайтов лишняя ширина не мешает, им и так просторно.
     -->
     <div class="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
-      <UCard
+      <AdminOnlineCounterCard
         v-for="card in siteCards"
         :key="card.siteId"
-        variant="subtle"
-      >
-        <dl class="space-y-3 text-sm">
-          <div class="flex items-center justify-between gap-4">
-            <dt class="text-muted">{{ card.siteLabel }}</dt>
-
-            <dd class="font-semibold text-highlighted">
-              {{ card.siteId }}
-            </dd>
-          </div>
-
-          <AdminOnlineStatsRow
-            v-for="row in card.rows"
-            :key="row.label"
-            :is-pending="isPending"
-            :row="row"
-          />
-        </dl>
-      </UCard>
+        :card="card"
+        :is-pending="isPending"
+      />
 
       <AdminOnlineAppCard
         :app-counters="appCounters"
@@ -226,6 +294,13 @@
       />
 
       <slot />
+
+      <AdminOnlineCounterCard
+        v-for="card in preferenceCards"
+        :key="card.siteId"
+        :card="card"
+        :is-pending="isPending"
+      />
     </div>
   </section>
 </template>

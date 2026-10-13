@@ -1,8 +1,12 @@
-import type { OnlineHeartbeatBody } from '../model';
+import type { OnlineDisplayPreferences, OnlineHeartbeatBody } from '../model';
 
 import { v7 as uuidv7 } from 'uuid';
 
-import { USER_TOKEN_COOKIE } from '#shared/consts';
+import {
+  LAYOUT_WIDTH_STORE_KEY,
+  THEME_STORE_KEY,
+  USER_TOKEN_COOKIE,
+} from '#shared/consts';
 import {
   ONLINE_COUNTER_DATA_KEY,
   parseOnlineUsersTotal,
@@ -20,6 +24,21 @@ import {
   VISITOR_ONLINE_TYPE,
 } from '../model';
 
+/**
+ * Собирает настройки отображения для статистики. Берём только заданные строкой:
+ * значения проверяет сервис учёта, сюда может попасть что угодно из cookie.
+ */
+function createDisplayPreferences(
+  preferences: Readonly<Record<string, unknown>>,
+): OnlineDisplayPreferences {
+  return Object.fromEntries(
+    Object.entries(preferences).filter(
+      (entry): entry is [string, string] =>
+        typeof entry[1] === 'string' && entry[1] !== '',
+    ),
+  );
+}
+
 /** Автоматически учитывает посетителей из одной вкладки и освобождает ресурсы при остановке. */
 export function useOnlineHeartbeat(): void {
   const nuxtApp = useNuxtApp();
@@ -36,6 +55,8 @@ export function useOnlineHeartbeat(): void {
   });
 
   const visitorId = computed(() => parseOnlineVisitorId(storedVisitorId.value));
+  const themeCookie = useCookie<unknown>(THEME_STORE_KEY);
+  const layoutWidthCookie = useCookie<unknown>(LAYOUT_WIDTH_STORE_KEY);
   const userTokenCookie = useCookie<string | null>(USER_TOKEN_COOKIE);
   const { fetch: fetchUser, isLoggedIn, user } = useUser();
   const visibility = useDocumentVisibility();
@@ -47,12 +68,22 @@ export function useOnlineHeartbeat(): void {
   let isDisposed = false;
   let lastHeartbeatTime = Number.NEGATIVE_INFINITY;
 
-  /** Собирает тело запроса с текущим логином или идентификатором гостя. */
+  /** Собирает тело запроса с текущим логином или идентификатором гостя и настройками отображения. */
   function getHeartbeatBody(): OnlineHeartbeatBody {
+    const preferences = createDisplayPreferences({
+      theme: themeCookie.value,
+      width: layoutWidthCookie.value,
+    });
+
+    const preferencesField = Object.keys(preferences).length
+      ? { preferences }
+      : {};
+
     if (isLoggedIn.value && user.value?.username) {
       return {
         key: user.value.username,
         ...(visitorId.value ? { previousGuestKey: visitorId.value } : {}),
+        ...preferencesField,
         type: REGISTERED_ONLINE_TYPE,
       };
     }
@@ -61,7 +92,7 @@ export function useOnlineHeartbeat(): void {
 
     storedVisitorId.value = guestId;
 
-    return { key: guestId, type: VISITOR_ONLINE_TYPE };
+    return { key: guestId, ...preferencesField, type: VISITOR_ONLINE_TYPE };
   }
 
   /** Отправляет один запрос и отбрасывает результат отменённой операции. */

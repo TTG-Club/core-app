@@ -1,3 +1,12 @@
+import type { AdminOnlinePreferenceSection } from './types';
+
+import {
+  LAYOUT_WIDTH_OPTIONS,
+  LAYOUT_WIDTH_SECTION_TITLE,
+  THEME_OPTIONS,
+  THEME_SECTION_TITLE,
+} from '~infrastructure/sidebar/display-settings';
+
 export const ADMIN_ONLINE_STATS_API_URL = '/api/v2/online/stats';
 
 export const ADMIN_ONLINE_STATS_DATA_KEY = 'admin-online-stats';
@@ -95,3 +104,43 @@ export const ADMIN_ONLINE_STATS_EMPTY_VALUE = '—';
 
 export const ADMIN_ONLINE_STATS_EMPTY_TEXT =
   'Online-app пока не вернул сайты для отображения.';
+
+/** Подпись первой строки карточки настройки — как «Сайт» у карточек площадок. */
+export const ADMIN_ONLINE_PREFERENCES_CARD_LABEL = 'Настройка';
+
+export const ADMIN_ONLINE_PREFERENCES_PERIOD_LABEL = 'Настройки за';
+
+export const ADMIN_ONLINE_PREFERENCES_PERIOD_HINT =
+  'Сколько разных посетителей пользовались каждым вариантом. Кто переключался за период, учтён в обоих вариантах, поэтому «Всего» может быть больше числа людей.';
+
+/** Подписи периодов; период, которого здесь нет, подписывается числом дней. */
+export const ADMIN_ONLINE_PREFERENCES_PERIOD_LABELS: Readonly<
+  Record<number, string>
+> = {
+  1: 'Сегодня',
+  7: '7 дней',
+  30: '30 дней',
+};
+
+export const ADMIN_ONLINE_PREFERENCES_PERCENT_SIGN = '%';
+
+/** Разделитель числа и доли в строке карточки */
+export const ADMIN_ONLINE_PREFERENCES_SHARE_SEPARATOR = ' · ';
+
+/**
+ * Какие настройки показываем. Имена совпадают с теми, под которыми браузер
+ * передаёт их в heartbeat, а варианты — те же, что в панели настроек отображения.
+ */
+export const ADMIN_ONLINE_PREFERENCE_SECTIONS: ReadonlyArray<AdminOnlinePreferenceSection> =
+  [
+    {
+      name: 'theme',
+      options: THEME_OPTIONS,
+      title: THEME_SECTION_TITLE,
+    },
+    {
+      name: 'width',
+      options: LAYOUT_WIDTH_OPTIONS,
+      title: LAYOUT_WIDTH_SECTION_TITLE,
+    },
+  ];

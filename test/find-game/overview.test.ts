@@ -40,7 +40,7 @@ describe('карточка ближайшей встречи', () => {
     expect(getNextSessionLabel(game.nextSession)).toBe('Время согласуется');
   });
 
-  it('показывает цену за встречу и не называет неизвестную цену бесплатной', () => {
+  it('показывает цену за встречу, а без цены называет игру платной', () => {
     const game = parseGame({
       id: 'game-1',
       masterId: 'master-1',
@@ -51,7 +51,7 @@ describe('карточка ближайшей встречи', () => {
     expect(getGameCardPriceLabel(game)).toContain('RUB / за встречу');
 
     expect(getGameCardPriceLabel({ ...game, nextSession: null })).toBe(
-      'Не указано',
+      'Платно',
     );
 
     expect(getGameCardPriceLabel({ ...game, costType: 'FREE' })).toBe(
