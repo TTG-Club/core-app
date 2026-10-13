@@ -183,6 +183,26 @@ export function getGameCardPriceLabel(game: Game): string {
 }
 
 /**
+ * Описание игры для метаданных страницы. У платной игры впереди стоит цена
+ * за сессию: превью ссылки в мессенджерах обрезает текст, и цена должна
+ * попасть в видимую часть.
+ * @param game Игра.
+ * @param descriptionText Описание игры простым текстом.
+ */
+export function getGameSeoDescription(
+  game: Game,
+  descriptionText: string,
+): string {
+  if (game.costType === 'FREE') {
+    return descriptionText;
+  }
+
+  const priceLabel = getGameCardPriceLabel(game);
+
+  return descriptionText ? `${priceLabel} · ${descriptionText}` : priceLabel;
+}
+
+/**
  * Подпись формата игры. У офлайн-игры к формату добавляется город: без него
  * «Вживую» ничего не говорит о том, доедет ли игрок.
  * @param game Игра.
