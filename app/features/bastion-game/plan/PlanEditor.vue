@@ -49,13 +49,20 @@
    * Редактор плана бастиона — упрощённый редактор карт: комнаты на сетке,
    * стены по их границам, двери, окна, лестницы, колонны и круглые башни.
    * Смотреть план могут все участники игры, рисовать — мастер и игроки с
-   * доступом; для остальных редактор открывается только на просмотр.
+   * доступом; для остальных и по ссылке «поделиться» редактор открывается
+   * только на просмотр.
    */
-  const { bastion } = defineProps<{
+  const { bastion, shareToken = undefined } = defineProps<{
     bastion: PlayerBastion;
+    /** Секрет ссылки, если план открыт по ней. */
+    shareToken?: string;
   }>();
 
-  const editor = usePlanEditor(() => bastion.id);
+  const editor = usePlanEditor(
+    () => bastion.id,
+    () => shareToken,
+  );
+
   const canvas = useTemplateRef('canvas');
 
   const tool = ref<PlanTool>('select');

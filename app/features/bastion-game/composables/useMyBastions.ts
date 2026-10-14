@@ -44,6 +44,9 @@ export function useMyBastions({ immediate = true }: UseMyBastionsOptions = {}) {
   });
 
   const bastions = computed(() => overview.value?.bastions ?? []);
+
+  /** Чужие бастионы, которые владельцы разрешили править по ссылке. */
+  const sharedBastions = computed(() => overview.value?.shared ?? []);
   const limit = computed(() => overview.value?.limit ?? 0);
   const subscriberLimit = computed(() => overview.value?.subscriberLimit ?? 0);
   const canCreate = computed(() => bastions.value.length < limit.value);
@@ -93,6 +96,7 @@ export function useMyBastions({ immediate = true }: UseMyBastionsOptions = {}) {
 
   return {
     bastions,
+    sharedBastions,
     freeBastions,
     limit,
     subscriberLimit,

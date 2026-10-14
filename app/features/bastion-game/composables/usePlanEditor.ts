@@ -14,6 +14,7 @@ import { isEqual } from 'es-toolkit';
 import {
   createEmptyPlan,
   fetchBastionPlan,
+  fetchSharedBastionPlan,
   getBastionErrorMessage,
   getPresenceColor,
   isBastionConflictError,
@@ -82,10 +83,17 @@ function getPlanSyncUrl(): string {
  * Мазок кистью или перетаскивание корпуса — один шаг отмены: всё между
  * `beginStroke` и `endStroke` склеивается.
  *
+ * План по ссылке «поделиться» открывается только на просмотр: он берётся
+ * одним запросом, без общего документа и соавторов.
+ *
  * @param bastionId Бастион.
+ * @param shareToken Секрет ссылки, если план открыт по ней.
  * @returns Документ, признаки и действия редактора.
  */
-export function usePlanEditor(bastionId: MaybeRefOrGetter<string>) {
+export function usePlanEditor(
+  bastionId: MaybeRefOrGetter<string>,
+  shareToken?: MaybeRefOrGetter<string | undefined>,
+) {
   const toast = useToast();
   const { user } = useUser();
 
@@ -116,8 +124,20 @@ export function usePlanEditor(bastionId: MaybeRefOrGetter<string>) {
     error: loadError,
     refresh,
   } = useAsyncData(
-    () => `bastion-plan-${toValue(bastionId)}`,
-    () => fetchBastionPlan(toValue(bastionId)),
+    () => {
+      const token = toValue(shareToken);
+
+      return token
+        ? `bastion-plan-shared-${token}`
+        : `bastion-plan-${toValue(bastionId)}`;
+    },
+    () => {
+      const token = toValue(shareToken);
+
+      return token
+        ? fetchSharedBastionPlan(token)
+        : fetchBastionPlan(toValue(bastionId));
+    },
     { server: false, lazy: true },
   );
 
@@ -313,10 +333,29 @@ export function usePlanEditor(bastionId: MaybeRefOrGetter<string>) {
     }
   }
 
+  /**
+   * Открывает план по ссылке на просмотр, без общего документа.
+   *
+   * @param plan План из базы.
+   */
+  function openReadOnly(plan: PlanState): void {
+    disconnect();
+    document.value = plan.document;
+    savedDocument.value = plan.document;
+    canEdit.value = false;
+    isReady.value = true;
+  }
+
   // Загруженный план — точка отсчёта. Срабатывает на первую загрузку и на
   // ручное обновление после ошибки.
   watch(loadedPlan, (plan) => {
-    if (plan) {
+    if (!plan) {
+      return;
+    }
+
+    if (toValue(shareToken)) {
+      openReadOnly(plan);
+    } else {
       void connect(plan);
     }
   });
