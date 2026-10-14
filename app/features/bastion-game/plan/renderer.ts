@@ -1331,8 +1331,6 @@ function drawHover(
         .stroke({ color: theme.accent, width: hairline * 2 });
 
       return;
-    case 'room':
-    case 'tower':
     case 'furniture': {
       const existing = findFurnitureAt(scene.document, scene.level, point);
       const cell = getCellAt(point);
@@ -1363,8 +1361,6 @@ function drawHover(
 
       return;
     }
-    case 'area':
-    case 'corridor':
     case 'stairs': {
       const frame = getTowerStairFrame(scene.document, scene.level, point);
 
@@ -1391,6 +1387,10 @@ function drawHover(
 
       return;
     }
+    case 'room':
+    case 'tower':
+    case 'area':
+    case 'corridor':
     case 'eraser':
     case 'wall':
       graphics
