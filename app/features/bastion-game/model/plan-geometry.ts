@@ -4,10 +4,11 @@ import type {
   PlanCircle,
   PlanDocument,
   PlanEdge,
+  PlanFurniture,
   PlanRoom,
 } from './plan-schema';
 
-import { PLAN_LIMITS } from './plan-constants';
+import { PLAN_FURNITURE_SIZES, PLAN_LIMITS } from './plan-constants';
 
 /** Точность сравнения: центр ровно на окружности считается внутри. */
 const EPSILON = 1e-9;
@@ -69,6 +70,37 @@ export function isCellOnGrid(cell: PlanCell): boolean {
     && cell.y >= 0
     && cell.x < PLAN_LIMITS.gridSize
     && cell.y < PLAN_LIMITS.gridSize
+  );
+}
+
+/**
+ * Размер мебели в клетках с учётом поворота.
+ *
+ * @param furniture Предмет: вид и поворот.
+ * @returns Ширина по x и глубина по y.
+ */
+export function getFurnitureSize(
+  furniture: Pick<PlanFurniture, 'kind' | 'rotation'>,
+): { width: number; depth: number } {
+  const size = PLAN_FURNITURE_SIZES[furniture.kind];
+
+  return furniture.rotation % 180 === 0
+    ? size
+    : { width: size.depth, depth: size.width };
+}
+
+/**
+ * Помещается ли мебель на участке целиком.
+ *
+ * @param furniture Предмет.
+ * @returns true, если не выходит за край.
+ */
+export function isFurnitureOnGrid(furniture: PlanFurniture): boolean {
+  const { width, depth } = getFurnitureSize(furniture);
+
+  return (
+    isCellOnGrid(furniture)
+    && isCellOnGrid({ x: furniture.x + width - 1, y: furniture.y + depth - 1 })
   );
 }
 

@@ -1,4 +1,10 @@
-import type { CellSide, DoorKind, RoomKind, StairKind } from './plan-schema';
+import type {
+  CellSide,
+  DoorKind,
+  FurnitureKind,
+  RoomKind,
+  StairKind,
+} from './plan-schema';
 
 /** Ограничения плана — те же, что проверяет сервер (`PlanRules`). */
 export const PLAN_LIMITS = {
@@ -26,6 +32,24 @@ export const PLAN_START_FOCUS = { x: 12, y: 12 } as const;
 export const PLAN_ZOOM_MIN = 0.25;
 export const PLAN_ZOOM_MAX = 4;
 export const PLAN_ZOOM_STEP = 1.1;
+/** Шаг поворота мебели, градусы. */
+export const PLAN_FURNITURE_ROTATION_STEP = 90;
+
+/**
+ * Размер мебели в клетках без поворота: ширина по x, глубина по y. Те же
+ * числа у сервера (`PlanDocument.FurnitureKind`).
+ */
+export const PLAN_FURNITURE_SIZES: Record<
+  FurnitureKind,
+  { width: number; depth: number }
+> = {
+  TABLE: { width: 2, depth: 1 },
+  CHAIR: { width: 1, depth: 1 },
+  WARDROBE: { width: 2, depth: 1 },
+  SOFA: { width: 2, depth: 1 },
+  BED: { width: 1, depth: 2 },
+};
+
 /** Сколько шагов отмены хранит редактор. */
 export const PLAN_HISTORY_LIMIT = 100;
 /** Ширина коридора по умолчанию и варианты, клеток. */
@@ -69,6 +93,8 @@ export const PLAN_TOOLS = [
   'stairs',
   'column',
   'wall',
+  'furniture',
+  'area',
 ] as const;
 
 export type PlanTool = (typeof PLAN_TOOLS)[number];
@@ -90,6 +116,12 @@ export const PLAN_TOOL_GROUPS: ReadonlyArray<
       key: 'v',
     },
     { tool: 'pan', icon: 'tabler:hand-stop', label: 'Двигать лист', key: 'h' },
+    {
+      tool: 'area',
+      icon: 'tabler:marquee-2',
+      label: 'Выделить участок',
+      key: 'a',
+    },
   ],
   [
     { tool: 'room', icon: 'tabler:square', label: 'Комната', key: 'r' },
@@ -103,6 +135,7 @@ export const PLAN_TOOL_GROUPS: ReadonlyArray<
     { tool: 'stairs', icon: 'tabler:stairs', label: 'Лестница', key: 's' },
     { tool: 'column', icon: 'tabler:circle-dot', label: 'Колонна', key: 'o' },
     { tool: 'wall', icon: 'tabler:wall', label: 'Защитная стена', key: 'g' },
+    { tool: 'furniture', icon: 'tabler:armchair', label: 'Мебель', key: 'f' },
   ],
 ];
 
@@ -123,6 +156,9 @@ export const PLAN_TOOL_HINTS: Record<PlanTool, string> = {
     'Щёлкните клетку или тяните в сторону подъёма: рамка задаёт длину и ширину.',
   column: 'Щёлкните в центр клетки или на пересечение линий сетки.',
   wall: 'Ведите по клеткам снаружи комнат первого этажа.',
+  furniture:
+    'Щёлкните клетку, чтобы поставить предмет; щелчок по предмету поворачивает его.',
+  area: 'Тяните рамку вокруг участка. Delete убирает всё, что в ней на этом этаже.',
 };
 
 export const ROOM_KIND_LABELS: Record<RoomKind, string> = {
@@ -145,6 +181,14 @@ export const DOOR_KIND_LABELS: Record<DoorKind, string> = {
   SECRET: 'Потайная',
   PORTCULLIS: 'Решётка',
   ARCH: 'Проём',
+};
+
+export const FURNITURE_KIND_LABELS: Record<FurnitureKind, string> = {
+  TABLE: 'Стол',
+  CHAIR: 'Стул',
+  WARDROBE: 'Шкаф',
+  SOFA: 'Диван',
+  BED: 'Кровать',
 };
 
 export const STAIR_KIND_LABELS: Record<StairKind, string> = {
@@ -226,6 +270,11 @@ export const PLAN_LABELS = {
   area: '{used} / {max}',
   areaLabel: '{used} / {max} кл.',
   doorKind: 'Вид двери',
+  furnitureKind: 'Предмет',
+  selectedArea: 'Выделенный участок',
+  clearArea: 'Убрать всё на участке',
+  clearAreaHint:
+    'Комнаты обрежутся по рамке, двери, окна, лестницы, колонны и мебель внутри исчезнут.',
   stairKind: 'Вид лестницы',
   stairTarget: 'Куда ведёт',
   stairDirection: 'Подъём при щелчке',

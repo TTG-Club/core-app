@@ -3,6 +3,7 @@
   import type {
     CellSide,
     DoorKind,
+    FurnitureKind,
     PlanTool,
     PlayerBastion,
     RoomKind,
@@ -31,6 +32,7 @@
     updateRoom,
   } from '../model';
   import {
+    PlanAreaPanel,
     PlanCanvas,
     PlanFacilityList,
     PlanLevelBar,
@@ -62,6 +64,7 @@
   const stairTarget = ref<StairTarget>();
   const stairDirection = ref<CellSide>('N');
   const corridorWidth = ref<number>(PLAN_CORRIDOR_WIDTHS[0]);
+  const furnitureKind = ref<FurnitureKind>('TABLE');
 
   const interaction = usePlanInteraction({
     editor,
@@ -73,6 +76,16 @@
     stairTarget,
     stairDirection,
     corridorWidth,
+    furnitureKind,
+  });
+
+  /** Выделенный участок — только у инструмента «Выделить» и на его этаже. */
+  const visibleArea = computed(() => {
+    const area = interaction.selectedArea.value;
+
+    return tool.value === 'area' && area?.level === level.value
+      ? area
+      : undefined;
   });
 
   const facilities = computed(() =>
@@ -257,7 +270,11 @@
       (event.key === 'Delete' || event.key === 'Backspace')
       && editor.canEdit.value
     ) {
-      deleteRoom();
+      if (visibleArea.value) {
+        interaction.clearSelectedArea();
+      } else {
+        deleteRoom();
+      }
 
       return;
     }
@@ -433,6 +450,8 @@
             :preview="interaction.preview.value"
             :hover-point="interaction.hoverPoint.value"
             :cursors
+            :area="visibleArea"
+            :furniture-kind="furnitureKind"
             @point-down="interaction.handleDown"
             @point-move="handlePointMove"
             @point-up="interaction.handleUp"
@@ -477,10 +496,18 @@
           v-model:stair-target="stairTarget"
           v-model:stair-direction="stairDirection"
           v-model:corridor-width="corridorWidth"
+          v-model:furniture-kind="furnitureKind"
           :tool
           :stair-level="stairLevel"
           :has-level-above="hasLevelAbove"
           :has-level-below="hasLevelBelow"
+        />
+
+        <PlanAreaPanel
+          v-if="visibleArea"
+          :area="visibleArea"
+          :can-edit="editor.canEdit.value"
+          @clear="interaction.clearSelectedArea"
         />
 
         <PlanRoomPanel

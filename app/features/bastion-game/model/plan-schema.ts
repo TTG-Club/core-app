@@ -16,6 +16,14 @@ export const OPENING_TYPES = ['DOOR', 'WINDOW'] as const;
 
 export const STAIR_KINDS = ['STRAIGHT', 'SPIRAL'] as const;
 
+export const FURNITURE_KINDS = [
+  'TABLE',
+  'CHAIR',
+  'WARDROBE',
+  'SOFA',
+  'BED',
+] as const;
+
 export const planCellSchema = z.object({ x: z.number(), y: z.number() });
 
 export const planCircleSchema = z.object({
@@ -71,6 +79,15 @@ export const planColumnSchema = z.object({
   y: z.number(),
 });
 
+export const planFurnitureSchema = z.object({
+  id: z.string(),
+  level: z.number(),
+  x: z.number(),
+  y: z.number(),
+  kind: z.enum(FURNITURE_KINDS),
+  rotation: z.number(),
+});
+
 /** Ответ `GET /api/v2/player-bastions/{id}/plan`. */
 export const planResponseSchema = z.object({
   bastionId: z.string(),
@@ -85,6 +102,7 @@ export const planResponseSchema = z.object({
     stairs: z.array(planStairSchema).nullish(),
     columns: z.array(planColumnSchema).nullish(),
     defenseWalls: z.array(planCellSchema).nullish(),
+    furniture: z.array(planFurnitureSchema).nullish(),
   }),
 });
 
@@ -94,6 +112,7 @@ export type CellSide = (typeof CELL_SIDES)[number];
 export type DoorKind = (typeof DOOR_KINDS)[number];
 export type OpeningType = (typeof OPENING_TYPES)[number];
 export type StairKind = (typeof STAIR_KINDS)[number];
+export type FurnitureKind = (typeof FURNITURE_KINDS)[number];
 
 export interface PlanCell {
   x: number;
@@ -159,6 +178,18 @@ export interface PlanColumn extends PlanCell {
   level: number;
 }
 
+/**
+ * Мебель: прямоугольник клеток от угла `(x, y)`; при повороте на 90° и 270°
+ * ширина и глубина меняются местами.
+ */
+export interface PlanFurniture extends PlanCell {
+  id: string;
+  level: number;
+  kind: FurnitureKind;
+  /** Поворот по часовой: 0, 90, 180 или 270 градусов. */
+  rotation: number;
+}
+
 export interface PlanDocument {
   levels: Array<number>;
   rooms: Array<PlanRoom>;
@@ -168,6 +199,7 @@ export interface PlanDocument {
   stairs: Array<PlanStair>;
   columns: Array<PlanColumn>;
   defenseWalls: Array<PlanCell>;
+  furniture: Array<PlanFurniture>;
 }
 
 export interface PlanState {

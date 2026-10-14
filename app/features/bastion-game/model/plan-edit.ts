@@ -1,10 +1,12 @@
 import type {
   DoorKind,
+  FurnitureKind,
   PlanCell,
   PlanCircle,
   PlanColumn,
   PlanDocument,
   PlanEdge,
+  PlanFurniture,
   PlanRoom,
   PlanStair,
   PlanState,
@@ -12,10 +14,13 @@ import type {
   RoomKind,
 } from './plan-schema';
 
+import { isEqual } from 'es-toolkit';
+
 import { fillTemplate } from '~bastions/model';
 
 import {
   PLAN_FACILITY_COLORS,
+  PLAN_FURNITURE_ROTATION_STEP,
   PLAN_HIT_TOLERANCE,
   PLAN_LABELS,
   PLAN_LIMITS,
@@ -29,9 +34,11 @@ import {
   getCircleCells,
   getEdgeCells,
   getEdgeKey,
+  getFurnitureSize,
   getNearestEdge,
   getOccupancy,
   isCellOnGrid,
+  isFurnitureOnGrid,
   isWallEdge,
 } from './plan-geometry';
 import { DOOR_KINDS, planResponseSchema } from './plan-schema';
@@ -54,6 +61,7 @@ export function createEmptyPlan(): PlanDocument {
     stairs: [],
     columns: [],
     defenseWalls: [],
+    furniture: [],
   };
 }
 
@@ -92,6 +100,7 @@ export function parsePlanResponse(response: unknown): PlanState {
       stairs: source.stairs ?? [],
       columns: source.columns ?? [],
       defenseWalls: source.defenseWalls ?? [],
+      furniture: source.furniture ?? [],
     },
   };
 }
@@ -137,6 +146,7 @@ export function prunePlan(document: PlanDocument): PlanDocument {
       (stair) => levels.has(stair.level) && levels.has(stair.toLevel),
     ),
     columns: document.columns.filter((column) => levels.has(column.level)),
+    furniture: document.furniture.filter((item) => levels.has(item.level)),
   };
 }
 
@@ -512,6 +522,15 @@ export function eraseObjectAt(
     };
   }
 
+  const furniture = findFurnitureAt(document, level, point);
+
+  if (furniture) {
+    return {
+      ...document,
+      furniture: document.furniture.filter((item) => item.id !== furniture.id),
+    };
+  }
+
   const stair = document.stairs.find(
     (item) =>
       item.level === level
@@ -722,6 +741,177 @@ export function addColumn(
     : { ...document, columns: [...document.columns, column] };
 }
 
+/** Прямоугольник клеток этажа: оба угла входят. */
+export interface PlanArea {
+  from: PlanCell;
+  to: PlanCell;
+}
+
+/**
+ * Убирает всё на участке этажа: комнаты обрезаются по рамке, башня уходит,
+ * если в рамке её центр, двери и окна на рёбрах клеток рамки, лестницы и
+ * мебель, задевающие рамку, колонны внутри неё и защитная стена исчезают.
+ *
+ * @param document План.
+ * @param level Этаж.
+ * @param area Участок.
+ * @returns Новый план или тот же, если на участке ничего нет.
+ */
+export function clearArea(
+  document: PlanDocument,
+  level: number,
+  area: PlanArea,
+): PlanDocument {
+  const left = Math.min(area.from.x, area.to.x);
+  const right = Math.max(area.from.x, area.to.x);
+  const top = Math.min(area.from.y, area.to.y);
+  const bottom = Math.max(area.from.y, area.to.y);
+
+  const isInside = (cell: PlanCell) =>
+    cell.x >= left && cell.x <= right && cell.y >= top && cell.y <= bottom;
+
+  // Точки (колонны, центры башен) лежат и на линиях сетки: правый и нижний
+  // край рамки — граница последней клетки.
+  const isPointInside = (point: PlanCell) =>
+    point.x >= left
+    && point.x <= right + 1
+    && point.y >= top
+    && point.y <= bottom + 1;
+
+  const overlaps = (cell: PlanCell, width: number, depth: number) =>
+    cell.x <= right
+    && cell.x + width - 1 >= left
+    && cell.y <= bottom
+    && cell.y + depth - 1 >= top;
+
+  const removedTowers = new Set(
+    document.rooms
+      .filter(
+        (room) =>
+          room.level === level
+          && room.shape
+          && isPointInside({ x: room.shape.cx, y: room.shape.cy }),
+      )
+      .map((room) => room.id),
+  );
+
+  const onLevel = <T extends { level: number }>(item: T) =>
+    item.level === level;
+
+  const next: PlanDocument = prunePlan({
+    ...document,
+    rooms: document.rooms
+      .filter((room) => !removedTowers.has(room.id))
+      .map((room) =>
+        room.level === level && room.kind !== 'TOWER'
+          ? { ...room, cells: room.cells.filter((cell) => !isInside(cell)) }
+          : room,
+      ),
+    doors: document.doors.filter(
+      (door) => !onLevel(door) || !getEdgeCells(door).some(isInside),
+    ),
+    windows: document.windows.filter(
+      (item) => !onLevel(item) || !getEdgeCells(item).some(isInside),
+    ),
+    stairs: document.stairs.filter(
+      (stair) => !onLevel(stair) || !overlaps(stair, stair.width, stair.height),
+    ),
+    columns: document.columns.filter(
+      (column) => !onLevel(column) || !isPointInside(column),
+    ),
+    furniture: document.furniture.filter((item) => {
+      const { width, depth } = getFurnitureSize(item);
+
+      return !onLevel(item) || !overlaps(item, width, depth);
+    }),
+    defenseWalls:
+      level === 0
+        ? document.defenseWalls.filter((cell) => !isInside(cell))
+        : document.defenseWalls,
+  });
+
+  return isEqual(next, document) ? document : next;
+}
+
+/**
+ * Мебель под точкой.
+ *
+ * @param document План.
+ * @param level Этаж.
+ * @param point Точка в клетках.
+ * @returns Предмет или undefined.
+ */
+export function findFurnitureAt(
+  document: PlanDocument,
+  level: number,
+  point: PlanCell,
+): PlanFurniture | undefined {
+  return document.furniture.findLast((item) => {
+    if (item.level !== level) {
+      return false;
+    }
+
+    const { width, depth } = getFurnitureSize(item);
+
+    return (
+      point.x >= item.x
+      && point.x <= item.x + width
+      && point.y >= item.y
+      && point.y <= item.y + depth
+    );
+  });
+}
+
+/**
+ * Ставит мебель в клетку. Щелчок по уже стоящему предмету поворачивает его
+ * на 90° — так же, как повторный щелчок по двери меняет её вид.
+ *
+ * @param document План.
+ * @param level Этаж.
+ * @param point Точка в клетках.
+ * @param kind Что ставить.
+ * @returns Новый план или тот же, если предмет не помещается на участке.
+ */
+export function placeFurniture(
+  document: PlanDocument,
+  level: number,
+  point: PlanCell,
+  kind: FurnitureKind,
+): PlanDocument {
+  const existing = findFurnitureAt(document, level, point);
+
+  if (existing) {
+    const turned = {
+      ...existing,
+      rotation: (existing.rotation + PLAN_FURNITURE_ROTATION_STEP) % 360,
+    };
+
+    return isFurnitureOnGrid(turned)
+      ? {
+          ...document,
+          furniture: document.furniture.map((item) =>
+            item.id === existing.id ? turned : item,
+          ),
+        }
+      : document;
+  }
+
+  const cell = getCellAt(point);
+
+  const item: PlanFurniture = {
+    id: crypto.randomUUID(),
+    level,
+    x: cell.x,
+    y: cell.y,
+    kind,
+    rotation: 0,
+  };
+
+  return isFurnitureOnGrid(item)
+    ? { ...document, furniture: [...document.furniture, item] }
+    : document;
+}
+
 /**
  * Достраивает защитную стену по клеткам первого этажа вне комнат.
  *
@@ -843,6 +1033,9 @@ export function moveRoom(
       column.level === room.level && isOwn(getCellAt(column))
         ? shift(column)
         : column,
+    ),
+    furniture: document.furniture.map((item) =>
+      item.level === room.level && isOwn(item) ? shift(item) : item,
     ),
   });
 }

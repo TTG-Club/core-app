@@ -3,6 +3,7 @@ import type {
   PlanColumn,
   PlanDocument,
   PlanDoor,
+  PlanFurniture,
   PlanRoom,
   PlanStair,
   PlanTowerOpening,
@@ -22,6 +23,7 @@ import {
   planColumnSchema,
   planDoorSchema,
   planEdgeSchema,
+  planFurnitureSchema,
   planStairSchema,
   planTowerOpeningSchema,
   ROOM_KINDS,
@@ -50,6 +52,7 @@ export const PLAN_SYNC_MAPS = {
   stairs: 'stairs',
   columns: 'columns',
   defenseWalls: 'defenseWalls',
+  furniture: 'furniture',
 } as const;
 
 /** Карты с содержимым плана — их отслеживает личная отмена. */
@@ -62,6 +65,7 @@ const PLAN_CONTENT_MAPS = [
   PLAN_SYNC_MAPS.stairs,
   PLAN_SYNC_MAPS.columns,
   PLAN_SYNC_MAPS.defenseWalls,
+  PLAN_SYNC_MAPS.furniture,
 ] as const;
 
 const META_VERSION = 'version';
@@ -227,6 +231,10 @@ export function readPlanFromDoc(doc: Y.Doc): PlanDocument {
       getMap(doc, PLAN_SYNC_MAPS.defenseWalls),
       planCellSchema,
     ),
+    furniture: readValues(
+      getMap(doc, PLAN_SYNC_MAPS.furniture),
+      planFurnitureSchema,
+    ),
   });
 }
 
@@ -274,7 +282,13 @@ function applyListChanges<T>(
  * @returns Значение.
  */
 function toPlainValue(
-  item: PlanDoor | PlanWindow | PlanStair | PlanColumn | PlanCell,
+  item:
+    | PlanDoor
+    | PlanWindow
+    | PlanStair
+    | PlanColumn
+    | PlanFurniture
+    | PlanCell,
 ): unknown {
   return { ...item };
 }
@@ -479,6 +493,17 @@ export function applyPlanChanges(
         ),
     },
     {
+      name: PLAN_SYNC_MAPS.furniture,
+      apply: (map) =>
+        applyListChanges(
+          map,
+          previous.furniture,
+          next.furniture,
+          (item) => item.id,
+          toPlainValue,
+        ),
+    },
+    {
       name: PLAN_SYNC_MAPS.defenseWalls,
       apply: (map) =>
         applyListChanges(
@@ -603,5 +628,6 @@ function createEmptyDocument(): PlanDocument {
     stairs: [],
     columns: [],
     defenseWalls: [],
+    furniture: [],
   };
 }

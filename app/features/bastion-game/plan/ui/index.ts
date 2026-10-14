@@ -1,3 +1,4 @@
+export { default as PlanAreaPanel } from './PlanAreaPanel.vue';
 export { default as PlanCanvas } from './PlanCanvas.vue';
 export { default as PlanFacilityList } from './PlanFacilityList.vue';
 export { default as PlanLevelBar } from './PlanLevelBar.vue';
