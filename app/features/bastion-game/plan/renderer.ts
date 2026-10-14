@@ -66,6 +66,15 @@ export interface PlanScene {
   facilityAreas: ReadonlyMap<string, { used: number; squares: number }>;
   preview: PlanPreview | undefined;
   hoverPoint: PlanPoint | undefined;
+  /** Указатели соавторов на этом этаже. */
+  cursors: ReadonlyArray<PlanCursor>;
+}
+
+/** Указатель соавтора. */
+export interface PlanCursor {
+  point: PlanPoint;
+  name: string;
+  color: number;
 }
 
 /** Слои холста: миллиметровка перерисовывается только при смене темы. */
@@ -974,6 +983,35 @@ export function drawPlan(
 
   drawRoomLabels(context, rooms, scene);
   drawOverlay({ ...context, graphics: overlay }, scene, occupancy);
+  drawCursors({ ...context, graphics: overlay }, scene.cursors);
+}
+
+/**
+ * Указатели соавторов: точка их цвета и имя рядом.
+ *
+ * @param context Кадр со слоем подсказок.
+ * @param cursors Указатели.
+ */
+function drawCursors(
+  context: DrawContext,
+  cursors: ReadonlyArray<PlanCursor>,
+): void {
+  const { graphics, hairline, theme } = context;
+
+  for (const { point, name, color } of cursors) {
+    graphics
+      .circle(point.x * CELL, point.y * CELL, hairline * 5)
+      .fill({ color })
+      .stroke({ color: theme.background, width: hairline * 2 });
+
+    // Имя — под точкой, чтобы не закрывать место, куда указывают. Отступ
+    // задан в пикселях экрана и переведён в клетки.
+    context.addLabel(
+      name,
+      { x: point.x, y: point.y + (hairline * 20) / CELL },
+      { color, size: LABEL_SIZES.note, isBold: true },
+    );
+  }
 }
 
 /**

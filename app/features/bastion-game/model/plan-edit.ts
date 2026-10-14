@@ -141,6 +141,59 @@ export function prunePlan(document: PlanDocument): PlanDocument {
 }
 
 /**
+ * Сводит план, собранный из правок нескольких людей, к тому же виду, что
+ * получит сервер (`PlanRules.normalize`): комнаты удалённых этажей уходят,
+ * спорная клетка остаётся за башней, затем за комнатой раньше в списке, а на
+ * ребре с дверью и окном остаётся дверь. Остальное подчищает `prunePlan`.
+ *
+ * @param document План после слияния.
+ * @returns План без противоречий.
+ */
+export function resolvePlanConflicts(document: PlanDocument): PlanDocument {
+  const levels = [...new Set([0, ...document.levels])].sort(
+    (first, second) => first - second,
+  );
+
+  const levelSet = new Set(levels);
+  const taken = new Set<string>();
+
+  const claim = (room: PlanRoom): PlanRoom => {
+    const cells = room.cells.filter((cell) => {
+      const key = `${room.level}:${getCellKey(cell.x, cell.y)}`;
+
+      if (taken.has(key)) {
+        return false;
+      }
+
+      taken.add(key);
+
+      return true;
+    });
+
+    return cells.length === room.cells.length ? room : { ...room, cells };
+  };
+
+  const placed = document.rooms.filter((room) => levelSet.has(room.level));
+  const towers = placed.filter((room) => room.kind === 'TOWER').map(claim);
+  const others = placed.filter((room) => room.kind !== 'TOWER').map(claim);
+
+  const resolved = new Map(
+    [...towers, ...others].map((room) => [room.id, room]),
+  );
+
+  const doorEdges = new Set(document.doors.map(getEdgeKey));
+
+  return prunePlan({
+    ...document,
+    levels,
+    rooms: placed.flatMap((room) => resolved.get(room.id) ?? []),
+    windows: document.windows.filter(
+      (window) => !doorEdges.has(getEdgeKey(window)),
+    ),
+  });
+}
+
+/**
  * Клетки башен этажа — их не забирают комнаты, нарисованные поверх.
  *
  * @param document План.

@@ -6,6 +6,7 @@ export * from './constants';
 export * from './plan-constants';
 export * from './plan-edit';
 export * from './plan-geometry';
+export * from './plan-presence';
 export * from './plan-schema';
 export * from './schema';
 export * from './setup';

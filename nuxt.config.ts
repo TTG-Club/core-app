@@ -248,6 +248,8 @@ export default defineNuxtConfig({
   nitro: {
     experimental: {
       openAPI: true,
+      // Совместное рисование плана бастиона.
+      websocket: true,
     },
 
     // Минификация для уменьшения размера
@@ -411,6 +413,12 @@ export default defineNuxtConfig({
 
         // HTTP/API
         'http-status-codes',
+
+        // Совместное рисование плана: один инстанс Yjs, иначе y-websocket
+        // и редактор получают разные копии и Yjs ломает проверки типов.
+        'yjs',
+        'y-websocket',
+        'y-protocols/awareness',
 
         // Dev tools
         '@faker-js/faker',

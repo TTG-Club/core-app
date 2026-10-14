@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import type { PlanPoint } from '../composables';
   import type {
     CellSide,
     DoorKind,
@@ -33,6 +34,7 @@
     PlanCanvas,
     PlanFacilityList,
     PlanLevelBar,
+    PlanParticipants,
     PlanRoomList,
     PlanRoomPanel,
     PlanToolbar,
@@ -116,6 +118,42 @@
   const canRemoveCurrentLevel = computed(() =>
     canRemoveLevel(editor.document.value, level.value),
   );
+
+  /** Указатели соавторов на текущем этаже. */
+  const cursors = computed(() =>
+    editor.participants.value.flatMap((participant) =>
+      participant.pointer?.level === level.value
+        ? [
+            {
+              point: { x: participant.pointer.x, y: participant.pointer.y },
+              name: participant.name,
+              color: participant.color,
+            },
+          ]
+        : [],
+    ),
+  );
+
+  /** Состояние сохранения для значка рядом с кнопкой. */
+  const saveState = computed(() => {
+    if (!editor.canEdit.value) {
+      return { label: PLAN_LABELS.readOnly, color: 'neutral' as const };
+    }
+
+    if (!editor.isConnected.value) {
+      return { label: PLAN_LABELS.offline, color: 'warning' as const };
+    }
+
+    if (editor.isSaving.value) {
+      return { label: PLAN_LABELS.saving, color: 'neutral' as const };
+    }
+
+    if (editor.isDirty.value) {
+      return { label: PLAN_LABELS.unsaved, color: 'warning' as const };
+    }
+
+    return { label: PLAN_LABELS.allSaved, color: 'success' as const };
+  });
 
   const toolHint = computed(() =>
     tool.value === 'wall' && level.value !== 0
@@ -301,6 +339,22 @@
   }
 
   /**
+   * Движение указателя: жест редактора и указатель для соавторов.
+   *
+   * @param point Точка на плане.
+   */
+  function handlePointMove(point: PlanPoint): void {
+    interaction.handleMove(point);
+    editor.setPointer({ ...point, level: level.value });
+  }
+
+  /** Указатель ушёл с холста. */
+  function handlePointLeave(): void {
+    interaction.handleLeave();
+    editor.setPointer(undefined);
+  }
+
+  /**
    * Зум кнопками.
    *
    * @param direction Крупнее или мельче.
@@ -332,20 +386,13 @@
           @remove="handleRemoveLevel"
         />
 
-        <UBadge
-          v-if="!editor.canEdit.value"
-          color="neutral"
-          variant="subtle"
-        >
-          {{ PLAN_LABELS.readOnly }}
-        </UBadge>
+        <PlanParticipants :participants="editor.participants.value" />
 
         <UBadge
-          v-else-if="editor.isDirty.value"
-          color="warning"
+          :color="saveState.color"
           variant="subtle"
         >
-          {{ PLAN_LABELS.unsaved }}
+          {{ saveState.label }}
         </UBadge>
 
         <UButton
@@ -385,10 +432,11 @@
             :facility-areas="facilityAreas"
             :preview="interaction.preview.value"
             :hover-point="interaction.hoverPoint.value"
+            :cursors
             @point-down="interaction.handleDown"
-            @point-move="interaction.handleMove"
+            @point-move="handlePointMove"
             @point-up="interaction.handleUp"
-            @point-leave="interaction.handleLeave"
+            @point-leave="handlePointLeave"
           />
 
           <div class="absolute top-2 right-2 flex gap-1">

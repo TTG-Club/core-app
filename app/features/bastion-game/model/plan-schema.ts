@@ -16,9 +16,9 @@ export const OPENING_TYPES = ['DOOR', 'WINDOW'] as const;
 
 export const STAIR_KINDS = ['STRAIGHT', 'SPIRAL'] as const;
 
-const cellSchema = z.object({ x: z.number(), y: z.number() });
+export const planCellSchema = z.object({ x: z.number(), y: z.number() });
 
-const circleSchema = z.object({
+export const planCircleSchema = z.object({
   cx: z.number(),
   cy: z.number(),
   r: z.number(),
@@ -30,15 +30,45 @@ const roomSchema = z.object({
   kind: z.enum(ROOM_KINDS),
   level: z.number(),
   facilityId: z.string().nullish(),
-  cells: z.array(cellSchema).nullish(),
-  shape: circleSchema.nullish(),
+  cells: z.array(planCellSchema).nullish(),
+  shape: planCircleSchema.nullish(),
 });
 
-const edgeSchema = z.object({
+export const planEdgeSchema = z.object({
   level: z.number(),
   x: z.number(),
   y: z.number(),
   side: z.enum(CELL_SIDES),
+});
+
+export const planDoorSchema = planEdgeSchema.extend({
+  kind: z.enum(DOOR_KINDS),
+});
+
+export const planTowerOpeningSchema = z.object({
+  roomId: z.string(),
+  angle: z.number(),
+  type: z.enum(OPENING_TYPES),
+  kind: z.enum(DOOR_KINDS).nullish(),
+});
+
+export const planStairSchema = z.object({
+  id: z.string(),
+  level: z.number(),
+  x: z.number(),
+  y: z.number(),
+  width: z.number(),
+  height: z.number(),
+  direction: z.enum(CELL_SIDES),
+  toLevel: z.number(),
+  kind: z.enum(STAIR_KINDS),
+});
+
+export const planColumnSchema = z.object({
+  id: z.string(),
+  level: z.number(),
+  x: z.number(),
+  y: z.number(),
 });
 
 /** Ответ `GET /api/v2/player-bastions/{id}/plan`. */
@@ -49,44 +79,12 @@ export const planResponseSchema = z.object({
   document: z.object({
     levels: z.array(z.number()).nullish(),
     rooms: z.array(roomSchema).nullish(),
-    doors: z.array(edgeSchema.extend({ kind: z.enum(DOOR_KINDS) })).nullish(),
-    windows: z.array(edgeSchema).nullish(),
-    towerOpenings: z
-      .array(
-        z.object({
-          roomId: z.string(),
-          angle: z.number(),
-          type: z.enum(OPENING_TYPES),
-          kind: z.enum(DOOR_KINDS).nullish(),
-        }),
-      )
-      .nullish(),
-    stairs: z
-      .array(
-        z.object({
-          id: z.string(),
-          level: z.number(),
-          x: z.number(),
-          y: z.number(),
-          width: z.number(),
-          height: z.number(),
-          direction: z.enum(CELL_SIDES),
-          toLevel: z.number(),
-          kind: z.enum(STAIR_KINDS),
-        }),
-      )
-      .nullish(),
-    columns: z
-      .array(
-        z.object({
-          id: z.string(),
-          level: z.number(),
-          x: z.number(),
-          y: z.number(),
-        }),
-      )
-      .nullish(),
-    defenseWalls: z.array(cellSchema).nullish(),
+    doors: z.array(planDoorSchema).nullish(),
+    windows: z.array(planEdgeSchema).nullish(),
+    towerOpenings: z.array(planTowerOpeningSchema).nullish(),
+    stairs: z.array(planStairSchema).nullish(),
+    columns: z.array(planColumnSchema).nullish(),
+    defenseWalls: z.array(planCellSchema).nullish(),
   }),
 });
 
