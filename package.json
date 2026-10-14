@@ -72,6 +72,7 @@
     "pako": "^2.2.0",
     "pdf-lib": "^1.17.1",
     "pinia": "^3.0.4",
+    "pixi.js": "^8.21.0",
     "sharp": "^0.34.5",
     "stopword": "^3.1.5",
     "transliteration": "^2.6.1",
