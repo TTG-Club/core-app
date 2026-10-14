@@ -2,6 +2,7 @@
   import type {
     CellSide,
     DoorKind,
+    FurnitureKind,
     PlanTool,
     StairKind,
     StairTarget,
@@ -15,6 +16,8 @@
     DIRECTION_LABELS,
     DOOR_KIND_LABELS,
     DOOR_KINDS,
+    FURNITURE_KIND_LABELS,
+    FURNITURE_KINDS,
     getLevelLabel,
     PLAN_CORRIDOR_WIDTHS,
     PLAN_FEET_PER_CELL,
@@ -27,7 +30,7 @@
 
   /**
    * Настройки выбранного инструмента: вид двери, вид и направление лестницы,
-   * ширина коридора. У остальных инструментов настроек нет.
+   * ширина коридора, предмет мебели. У остальных инструментов настроек нет.
    */
   const { tool, stairLevel } = defineProps<{
     tool: PlanTool;
@@ -50,6 +53,10 @@
   });
 
   const corridorWidth = defineModel<number>('corridorWidth', {
+    required: true,
+  });
+
+  const furnitureKind = defineModel<FurnitureKind>('furnitureKind', {
     required: true,
   });
 
@@ -191,6 +198,25 @@
     >
       {{ stairText }}
     </p>
+  </section>
+
+  <section
+    v-else-if="tool === 'furniture'"
+    class="flex flex-col gap-2"
+  >
+    <UFormField :label="PLAN_LABELS.furnitureKind">
+      <div class="flex flex-wrap gap-1">
+        <UButton
+          v-for="kind in FURNITURE_KINDS"
+          :key="kind"
+          size="xs"
+          v-bind="getChoiceLook(furnitureKind === kind)"
+          @click.left.exact.prevent="furnitureKind = kind"
+        >
+          {{ FURNITURE_KIND_LABELS[kind] }}
+        </UButton>
+      </div>
+    </UFormField>
   </section>
 
   <section

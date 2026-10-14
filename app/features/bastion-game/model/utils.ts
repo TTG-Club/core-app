@@ -10,6 +10,7 @@ import { FetchError } from 'ofetch';
 import { BASTION_START_LEVEL, MY_BASTIONS_ROUTE } from './constants';
 
 const SERVICE_UNAVAILABLE_STATUS = StatusCodes.SERVICE_UNAVAILABLE;
+const CONFLICT_STATUS = StatusCodes.CONFLICT;
 
 /** Строка формы доступа: игрок игры и его персонаж в бастионе. */
 export interface BastionMemberDraft {
@@ -90,6 +91,16 @@ function findFetchError(error: unknown): FetchError | undefined {
   }
 
   return undefined;
+}
+
+/**
+ * Отказ из-за устаревшей версии: данные уже изменил кто-то другой.
+ *
+ * @param error Ошибка запроса.
+ * @returns true для ответа 409.
+ */
+export function isBastionConflictError(error: unknown): boolean {
+  return findFetchError(error)?.statusCode === CONFLICT_STATUS;
 }
 
 /**

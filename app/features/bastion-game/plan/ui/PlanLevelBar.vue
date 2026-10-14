@@ -27,9 +27,32 @@
     })),
   );
 
-  const removeHint = computed(() =>
-    canRemove ? PLAN_LABELS.removeLevel : PLAN_LABELS.removeLevelHint,
-  );
+  /** Меню «Этажи»: добавить сверху или снизу, убрать крайний пустой. */
+  const menuItems = computed(() => [
+    [
+      {
+        label: PLAN_LABELS.addLevelUp,
+        icon: 'tabler:arrow-up',
+        onSelect: () => emit('add', 'up'),
+      },
+      {
+        label: PLAN_LABELS.addLevelDown,
+        icon: 'tabler:arrow-down',
+        onSelect: () => emit('add', 'down'),
+      },
+    ],
+    [
+      {
+        label: canRemove
+          ? PLAN_LABELS.removeLevel
+          : PLAN_LABELS.removeLevelHint,
+        icon: 'tabler:trash',
+        color: 'error' as const,
+        disabled: !canRemove,
+        onSelect: () => emit('remove'),
+      },
+    ],
+  ]);
 </script>
 
 <template>
@@ -44,40 +67,18 @@
       class="w-32"
     />
 
-    <template v-if="canEdit">
-      <UTooltip :text="PLAN_LABELS.addLevelUp">
-        <UButton
-          icon="tabler:arrow-bar-to-up"
-          :aria-label="PLAN_LABELS.addLevelUp"
-          color="neutral"
-          variant="ghost"
-          size="sm"
-          @click.left.exact.prevent="emit('add', 'up')"
-        />
-      </UTooltip>
-
-      <UTooltip :text="PLAN_LABELS.addLevelDown">
-        <UButton
-          icon="tabler:arrow-bar-to-down"
-          :aria-label="PLAN_LABELS.addLevelDown"
-          color="neutral"
-          variant="ghost"
-          size="sm"
-          @click.left.exact.prevent="emit('add', 'down')"
-        />
-      </UTooltip>
-
-      <UTooltip :text="removeHint">
-        <UButton
-          icon="tabler:trash"
-          :aria-label="PLAN_LABELS.removeLevel"
-          color="neutral"
-          variant="ghost"
-          size="sm"
-          :disabled="!canRemove"
-          @click.left.exact.prevent="emit('remove')"
-        />
-      </UTooltip>
-    </template>
+    <UDropdownMenu
+      v-if="canEdit"
+      :items="menuItems"
+    >
+      <UButton
+        icon="tabler:plus"
+        color="neutral"
+        variant="outline"
+        size="sm"
+      >
+        {{ PLAN_LABELS.levelsMenu }}
+      </UButton>
+    </UDropdownMenu>
   </div>
 </template>

@@ -1,7 +1,9 @@
 <script setup lang="ts">
+  import type { PlanPoint } from '../composables';
   import type {
     CellSide,
     DoorKind,
+    FurnitureKind,
     PlanTool,
     PlayerBastion,
     RoomKind,
@@ -30,9 +32,11 @@
     updateRoom,
   } from '../model';
   import {
+    PlanAreaPanel,
     PlanCanvas,
     PlanFacilityList,
     PlanLevelBar,
+    PlanParticipants,
     PlanRoomList,
     PlanRoomPanel,
     PlanToolbar,
@@ -60,6 +64,7 @@
   const stairTarget = ref<StairTarget>();
   const stairDirection = ref<CellSide>('N');
   const corridorWidth = ref<number>(PLAN_CORRIDOR_WIDTHS[0]);
+  const furnitureKind = ref<FurnitureKind>('TABLE');
 
   const interaction = usePlanInteraction({
     editor,
@@ -71,6 +76,16 @@
     stairTarget,
     stairDirection,
     corridorWidth,
+    furnitureKind,
+  });
+
+  /** Выделенный участок — только у инструмента «Выделить» и на его этаже. */
+  const visibleArea = computed(() => {
+    const area = interaction.selectedArea.value;
+
+    return tool.value === 'area' && area?.level === level.value
+      ? area
+      : undefined;
   });
 
   const facilities = computed(() =>
@@ -116,6 +131,42 @@
   const canRemoveCurrentLevel = computed(() =>
     canRemoveLevel(editor.document.value, level.value),
   );
+
+  /** Указатели соавторов на текущем этаже. */
+  const cursors = computed(() =>
+    editor.participants.value.flatMap((participant) =>
+      participant.pointer?.level === level.value
+        ? [
+            {
+              point: { x: participant.pointer.x, y: participant.pointer.y },
+              name: participant.name,
+              color: participant.color,
+            },
+          ]
+        : [],
+    ),
+  );
+
+  /** Состояние сохранения для значка рядом с кнопкой. */
+  const saveState = computed(() => {
+    if (!editor.canEdit.value) {
+      return { label: PLAN_LABELS.readOnly, color: 'neutral' as const };
+    }
+
+    if (!editor.isConnected.value) {
+      return { label: PLAN_LABELS.offline, color: 'warning' as const };
+    }
+
+    if (editor.isSaving.value) {
+      return { label: PLAN_LABELS.saving, color: 'neutral' as const };
+    }
+
+    if (editor.isDirty.value) {
+      return { label: PLAN_LABELS.unsaved, color: 'warning' as const };
+    }
+
+    return { label: PLAN_LABELS.allSaved, color: 'success' as const };
+  });
 
   const toolHint = computed(() =>
     tool.value === 'wall' && level.value !== 0
@@ -219,7 +270,11 @@
       (event.key === 'Delete' || event.key === 'Backspace')
       && editor.canEdit.value
     ) {
-      deleteRoom();
+      if (visibleArea.value) {
+        interaction.clearSelectedArea();
+      } else {
+        deleteRoom();
+      }
 
       return;
     }
@@ -301,6 +356,22 @@
   }
 
   /**
+   * Движение указателя: жест редактора и указатель для соавторов.
+   *
+   * @param point Точка на плане.
+   */
+  function handlePointMove(point: PlanPoint): void {
+    interaction.handleMove(point);
+    editor.setPointer({ ...point, level: level.value });
+  }
+
+  /** Указатель ушёл с холста. */
+  function handlePointLeave(): void {
+    interaction.handleLeave();
+    editor.setPointer(undefined);
+  }
+
+  /**
    * Зум кнопками.
    *
    * @param direction Крупнее или мельче.
@@ -332,20 +403,13 @@
           @remove="handleRemoveLevel"
         />
 
-        <UBadge
-          v-if="!editor.canEdit.value"
-          color="neutral"
-          variant="subtle"
-        >
-          {{ PLAN_LABELS.readOnly }}
-        </UBadge>
+        <PlanParticipants :participants="editor.participants.value" />
 
         <UBadge
-          v-else-if="editor.isDirty.value"
-          color="warning"
+          :color="saveState.color"
           variant="subtle"
         >
-          {{ PLAN_LABELS.unsaved }}
+          {{ saveState.label }}
         </UBadge>
 
         <UButton
@@ -385,10 +449,13 @@
             :facility-areas="facilityAreas"
             :preview="interaction.preview.value"
             :hover-point="interaction.hoverPoint.value"
+            :cursors
+            :area="visibleArea"
+            :furniture-kind="furnitureKind"
             @point-down="interaction.handleDown"
-            @point-move="interaction.handleMove"
+            @point-move="handlePointMove"
             @point-up="interaction.handleUp"
-            @point-leave="interaction.handleLeave"
+            @point-leave="handlePointLeave"
           />
 
           <div class="absolute top-2 right-2 flex gap-1">
@@ -429,10 +496,18 @@
           v-model:stair-target="stairTarget"
           v-model:stair-direction="stairDirection"
           v-model:corridor-width="corridorWidth"
+          v-model:furniture-kind="furnitureKind"
           :tool
           :stair-level="stairLevel"
           :has-level-above="hasLevelAbove"
           :has-level-below="hasLevelBelow"
+        />
+
+        <PlanAreaPanel
+          v-if="visibleArea"
+          :area="visibleArea"
+          :can-edit="editor.canEdit.value"
+          @clear="interaction.clearSelectedArea"
         />
 
         <PlanRoomPanel

@@ -2,8 +2,13 @@
   import type { Application, Container, FederatedPointerEvent } from 'pixi.js';
 
   import type { PlanPoint, PlanPreview } from '../../composables';
-  import type { PlanDocument, PlanTool } from '../../model';
-  import type { PlanLayers, TextFactory } from '../renderer';
+  import type {
+    FurnitureKind,
+    PlanArea,
+    PlanDocument,
+    PlanTool,
+  } from '../../model';
+  import type { PlanCursor, PlanLayers, TextFactory } from '../renderer';
 
   import { usePlanTheme } from '../../composables';
   import {
@@ -31,6 +36,11 @@
     facilityAreas: ReadonlyMap<string, { used: number; squares: number }>;
     preview: PlanPreview | undefined;
     hoverPoint: PlanPoint | undefined;
+    /** Указатели соавторов на этом этаже. */
+    cursors: ReadonlyArray<PlanCursor>;
+    /** Выделенный участок на этом этаже. */
+    area: PlanArea | undefined;
+    furnitureKind: FurnitureKind;
   }>();
 
   const emit = defineEmits<{
@@ -82,6 +92,9 @@
         facilityAreas: props.facilityAreas,
         preview: props.preview,
         hoverPoint: props.hoverPoint,
+        cursors: props.cursors,
+        area: props.area,
+        furnitureKind: props.furnitureKind,
       },
       theme.value,
       world.scale.x,
@@ -356,6 +369,9 @@
       props.facilityAreas,
       props.preview,
       props.hoverPoint,
+      props.cursors,
+      props.area,
+      props.furnitureKind,
     ],
     render,
   );

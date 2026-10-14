@@ -5,10 +5,13 @@ import type { PlanTheme } from '../composables/usePlanTheme';
 import type {
   CellSide,
   DoorKind,
+  FurnitureKind,
+  PlanArea,
   PlanCell,
   PlanCircle,
   PlanDocument,
   PlanEdge,
+  PlanFurniture,
   PlanOccupancy,
   PlanRoom,
   PlanSegment,
@@ -19,16 +22,20 @@ import type {
 import { fillTemplate } from '~bastions/model';
 
 import {
+  findFurnitureAt,
   findTowerRing,
   getBoundarySegments,
   getCanonicalEdge,
+  getCellAt,
   getCellKey,
+  getFurnitureSize,
   getNearestEdge,
   getOccupancy,
   getRoomLabelPoint,
   getTowerRingPoint,
   isWallEdge,
   PLAN_CELL_PIXELS,
+  PLAN_FURNITURE_SIZES,
   PLAN_HIT_TOLERANCE,
   PLAN_LABELS,
   PLAN_LIMITS,
@@ -66,6 +73,19 @@ export interface PlanScene {
   facilityAreas: ReadonlyMap<string, { used: number; squares: number }>;
   preview: PlanPreview | undefined;
   hoverPoint: PlanPoint | undefined;
+  /** Указатели соавторов на этом этаже. */
+  cursors: ReadonlyArray<PlanCursor>;
+  /** Выделенный участок на этом этаже. */
+  area: PlanArea | undefined;
+  /** Какую мебель ставит инструмент «Мебель». */
+  furnitureKind: FurnitureKind;
+}
+
+/** Указатель соавтора. */
+export interface PlanCursor {
+  point: PlanPoint;
+  name: string;
+  color: number;
 }
 
 /** Слои холста: миллиметровка перерисовывается только при смене темы. */
@@ -930,6 +950,12 @@ export function drawPlan(
     }
   }
 
+  for (const item of document.furniture) {
+    if (item.level === level) {
+      drawFurniture(context, item);
+    }
+  }
+
   for (const door of document.doors) {
     if (door.level === level) {
       const { center, angle } = getEdgePlacement(door);
@@ -974,6 +1000,40 @@ export function drawPlan(
 
   drawRoomLabels(context, rooms, scene);
   drawOverlay({ ...context, graphics: overlay }, scene, occupancy);
+
+  if (scene.area) {
+    drawArea({ ...context, graphics: overlay }, scene.area);
+  }
+
+  drawCursors({ ...context, graphics: overlay }, scene.cursors);
+}
+
+/**
+ * Указатели соавторов: точка их цвета и имя рядом.
+ *
+ * @param context Кадр со слоем подсказок.
+ * @param cursors Указатели.
+ */
+function drawCursors(
+  context: DrawContext,
+  cursors: ReadonlyArray<PlanCursor>,
+): void {
+  const { graphics, hairline, theme } = context;
+
+  for (const { point, name, color } of cursors) {
+    graphics
+      .circle(point.x * CELL, point.y * CELL, hairline * 5)
+      .fill({ color })
+      .stroke({ color: theme.background, width: hairline * 2 });
+
+    // Имя — под точкой, чтобы не закрывать место, куда указывают. Отступ
+    // задан в пикселях экрана и переведён в клетки.
+    context.addLabel(
+      name,
+      { x: point.x, y: point.y + (hairline * 20) / CELL },
+      { color, size: LABEL_SIZES.note, isBold: true },
+    );
+  }
 }
 
 /**
@@ -1119,6 +1179,30 @@ function drawHover(
       return;
     case 'room':
     case 'tower':
+    case 'furniture': {
+      const existing = findFurnitureAt(scene.document, scene.level, point);
+      const cell = getCellAt(point);
+
+      const footprint = existing ?? {
+        ...cell,
+        kind: scene.furnitureKind,
+        rotation: 0,
+      };
+
+      const { width, depth } = getFurnitureSize(footprint);
+
+      graphics
+        .rect(
+          footprint.x * CELL,
+          footprint.y * CELL,
+          width * CELL,
+          depth * CELL,
+        )
+        .stroke({ color: theme.accent, width: hairline * 2 });
+
+      return;
+    }
+    case 'area':
     case 'corridor':
     case 'eraser':
     case 'wall':
@@ -1131,5 +1215,158 @@ function drawHover(
           CELL,
         )
         .stroke({ color: theme.accent, width: hairline * 1.5, alpha: 0.8 });
+  }
+}
+
+/**
+ * Выделенный участок: рамка и лёгкая заливка цветом акцента.
+ *
+ * @param context Кадр со слоем подсказок.
+ * @param area Участок.
+ */
+function drawArea(context: DrawContext, area: PlanArea): void {
+  const { graphics, theme, hairline } = context;
+  const left = Math.min(area.from.x, area.to.x);
+  const top = Math.min(area.from.y, area.to.y);
+  const width = Math.abs(area.to.x - area.from.x) + 1;
+  const height = Math.abs(area.to.y - area.from.y) + 1;
+
+  graphics
+    .rect(left * CELL, top * CELL, width * CELL, height * CELL)
+    .fill({ color: theme.accent, alpha: 0.12 })
+    .stroke({ color: theme.accent, width: hairline * 2 });
+}
+
+/** Прямоугольник в долях клетки внутри предмета мебели без поворота. */
+interface FurniturePart {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Переводит часть предмета из его собственных координат (без поворота) в
+ * координаты холста с учётом поворота по часовой стрелке.
+ *
+ * @param item Предмет.
+ * @param part Часть в клетках от угла предмета.
+ * @returns Прямоугольник на холсте, пикселей.
+ */
+function placeFurniturePart(
+  item: PlanFurniture,
+  part: FurniturePart,
+): FurniturePart {
+  const size = PLAN_FURNITURE_SIZES[item.kind];
+
+  const corners = [
+    { x: part.x, y: part.y },
+    { x: part.x + part.width, y: part.y + part.height },
+  ].map(({ x, y }) => {
+    switch (item.rotation) {
+      case 90:
+        return { x: size.depth - y, y: x };
+      case 180:
+        return { x: size.width - x, y: size.depth - y };
+      case 270:
+        return { x: y, y: size.width - x };
+      default:
+        return { x, y };
+    }
+  });
+
+  const [first = { x: 0, y: 0 }, second = { x: 0, y: 0 }] = corners;
+
+  return {
+    x: (item.x + Math.min(first.x, second.x)) * CELL,
+    y: (item.y + Math.min(first.y, second.y)) * CELL,
+    width: Math.abs(second.x - first.x) * CELL,
+    height: Math.abs(second.y - first.y) * CELL,
+  };
+}
+
+/**
+ * Части предмета мебели в его собственных координатах: корпус и детали,
+ * по которым предмет узнаётся на плане. Спинка дивана и стула и изголовье
+ * кровати — у верхней стороны (y = 0).
+ *
+ * @param kind Вид мебели.
+ * @returns Корпус и детали.
+ */
+function getFurnitureParts(kind: FurnitureKind): {
+  body: FurniturePart;
+  details: Array<FurniturePart>;
+} {
+  const { width, depth } = PLAN_FURNITURE_SIZES[kind];
+  const inset = 0.12;
+
+  const body = {
+    x: inset,
+    y: inset,
+    width: width - inset * 2,
+    height: depth - inset * 2,
+  };
+
+  switch (kind) {
+    case 'CHAIR':
+      return {
+        body: { x: 0.22, y: 0.22, width: 0.56, height: 0.56 },
+        details: [{ x: 0.22, y: 0.22, width: 0.56, height: 0.12 }],
+      };
+    case 'SOFA':
+      return {
+        body,
+        details: [
+          { x: inset, y: inset, width: width - inset * 2, height: 0.25 },
+          { x: inset, y: inset, width: 0.2, height: depth - inset * 2 },
+          {
+            x: width - inset - 0.2,
+            y: inset,
+            width: 0.2,
+            height: depth - inset * 2,
+          },
+        ],
+      };
+    case 'BED':
+      return {
+        body,
+        details: [
+          { x: 0.25, y: 0.22, width: width - 0.5, height: 0.3 },
+          { x: inset, y: 0.75, width: width - inset * 2, height: 0.01 },
+        ],
+      };
+    case 'WARDROBE':
+      return {
+        body: { x: inset, y: inset, width: width - inset * 2, height: 0.6 },
+        details: [{ x: width / 2, y: inset, width: 0.01, height: 0.6 }],
+      };
+    default:
+      return { body, details: [] };
+  }
+}
+
+/**
+ * Рисует предмет мебели: корпус цветом листа с тонкой обводкой и детали.
+ *
+ * @param context Кадр.
+ * @param item Предмет.
+ */
+function drawFurniture(context: DrawContext, item: PlanFurniture): void {
+  const { graphics, theme, hairline } = context;
+  const { body, details } = getFurnitureParts(item.kind);
+  const outline = { color: theme.text, width: hairline * 1.4 };
+  const placedBody = placeFurniturePart(item, body);
+
+  graphics
+    .rect(placedBody.x, placedBody.y, placedBody.width, placedBody.height)
+    .fill({ color: theme.background })
+    .stroke(outline);
+
+  for (const detail of details) {
+    const placed = placeFurniturePart(item, detail);
+
+    graphics
+      .rect(placed.x, placed.y, placed.width, placed.height)
+      .stroke(outline);
   }
 }
