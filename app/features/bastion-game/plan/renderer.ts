@@ -34,6 +34,7 @@ import {
   getRoomLabelPoint,
   getTowerRingPoint,
   getTowerStairFrame,
+  isDefenseWallCell,
   isWallEdge,
   PLAN_CELL_PIXELS,
   PLAN_FURNITURE_SIZES,
@@ -1294,6 +1295,21 @@ function drawHover(
       return;
     case 'door':
     case 'window': {
+      const cell = getCellAt(point);
+
+      // Дверь в защитной стене становится воротами — подсвечивается клетка.
+      if (
+        scene.tool === 'door'
+        && scene.level === 0
+        && isDefenseWallCell(scene.document, cell)
+      ) {
+        graphics
+          .rect(cell.x * CELL, cell.y * CELL, CELL, CELL)
+          .stroke({ color: theme.accent, width: hairline * 2 });
+
+        return;
+      }
+
       const ring = findTowerRing(
         scene.document,
         scene.level,

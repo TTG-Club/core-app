@@ -1128,8 +1128,24 @@ export function isDefenseGate(document: PlanDocument, cell: PlanCell): boolean {
 }
 
 /**
- * Ставит или убирает ворота в защитной стене. Ворота встают только в стену:
- * там, где её нет, стена достраивается.
+ * Есть ли на клетке защитная стена.
+ *
+ * @param document План.
+ * @param cell Клетка первого этажа.
+ * @returns true, если есть.
+ */
+export function isDefenseWallCell(
+  document: PlanDocument,
+  cell: PlanCell,
+): boolean {
+  return document.defenseWalls.some(
+    (wall) => wall.x === cell.x && wall.y === cell.y,
+  );
+}
+
+/**
+ * Ставит или убирает ворота в защитной стене. Ворота встают только в уже
+ * построенную стену: клетки без стены пропускаются.
  *
  * @param document План.
  * @param cells Клетки мазка.
@@ -1141,14 +1157,12 @@ export function paintDefenseGates(
   cells: ReadonlyArray<PlanCell>,
   isGate: boolean,
 ): PlanDocument {
-  const walled = isGate ? paintDefenseWall(document, cells) : document;
-
   const walls = new Set(
-    walled.defenseWalls.map((cell) => getCellKey(cell.x, cell.y)),
+    document.defenseWalls.map((cell) => getCellKey(cell.x, cell.y)),
   );
 
   const gates = new Set(
-    walled.defenseGates.map((cell) => getCellKey(cell.x, cell.y)),
+    document.defenseGates.map((cell) => getCellKey(cell.x, cell.y)),
   );
 
   const changed = cells.filter((cell) => {
@@ -1168,14 +1182,14 @@ export function paintDefenseGates(
   });
 
   if (!changed.length) {
-    return walled;
+    return document;
   }
 
   return {
-    ...walled,
+    ...document,
     defenseGates: isGate
-      ? [...walled.defenseGates, ...changed]
-      : walled.defenseGates.filter((cell) =>
+      ? [...document.defenseGates, ...changed]
+      : document.defenseGates.filter((cell) =>
           gates.has(getCellKey(cell.x, cell.y)),
         ),
   };

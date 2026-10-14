@@ -221,7 +221,7 @@ describe('ворота в защитной стене', () => {
     { x: 2, y: 0 },
   ];
 
-  it('встают в стену и достраивают её', () => {
+  it('встают только в построенную стену', () => {
     const walled = paintDefenseWall(createEmptyPlan(), line.slice(0, 2));
 
     const gated = paintDefenseGates(
@@ -233,16 +233,13 @@ describe('ворота в защитной стене', () => {
       true,
     );
 
-    expect(gated.defenseWalls).toHaveLength(3);
-
-    expect(gated.defenseGates).toEqual([
-      { x: 1, y: 0 },
-      { x: 2, y: 0 },
-    ]);
+    expect(gated.defenseWalls).toHaveLength(2);
+    expect(gated.defenseGates).toEqual([{ x: 1, y: 0 }]);
   });
 
   it('закладываются стеной и пропадают вместе со стеной', () => {
-    const gated = paintDefenseGates(createEmptyPlan(), line, true);
+    const walled = paintDefenseWall(createEmptyPlan(), line);
+    const gated = paintDefenseGates(walled, line, true);
     const closed = paintDefenseGates(gated, [{ x: 0, y: 0 }], false);
 
     expect(closed.defenseGates).toHaveLength(2);
@@ -255,7 +252,12 @@ describe('ворота в защитной стене', () => {
 
   it('переживают синхронизацию', () => {
     const doc = new Y.Doc();
-    const plan = paintDefenseGates(createEmptyPlan(), line, true);
+
+    const plan = paintDefenseGates(
+      paintDefenseWall(createEmptyPlan(), line),
+      line,
+      true,
+    );
 
     applyPlanChanges(doc, createEmptyPlan(), plan, 'local');
 

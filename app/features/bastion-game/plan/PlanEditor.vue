@@ -9,7 +9,6 @@
     RoomKind,
     StairKind,
     StairTarget,
-    WallPiece,
   } from '../model';
 
   import { fillTemplate } from '~bastions/model';
@@ -75,7 +74,6 @@
   const corridorWidth = ref<number>(PLAN_CORRIDOR_WIDTHS[0]);
   const furnitureKind = ref<FurnitureKind>('TABLE');
   const furnitureRotation = ref(0);
-  const wallPiece = ref<WallPiece>('WALL');
 
   const interaction = usePlanInteraction({
     editor,
@@ -89,7 +87,6 @@
     corridorWidth,
     furnitureKind,
     furnitureRotation,
-    wallPiece,
   });
 
   /**
@@ -533,7 +530,6 @@
           v-model:stair-target="stairTarget"
           v-model:stair-direction="stairDirection"
           v-model:corridor-width="corridorWidth"
-          v-model:wall-piece="wallPiece"
           v-model:furniture-rotation="furnitureRotation"
           :tool
           :stair-level="stairLevel"
