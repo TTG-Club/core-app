@@ -1,4 +1,7 @@
-export { default as PlanBuildingPanel } from './PlanBuildingPanel.vue';
 export { default as PlanCanvas } from './PlanCanvas.vue';
-export { default as PlanFacilityPalette } from './PlanFacilityPalette.vue';
+export { default as PlanFacilityList } from './PlanFacilityList.vue';
+export { default as PlanLevelBar } from './PlanLevelBar.vue';
+export { default as PlanRoomList } from './PlanRoomList.vue';
+export { default as PlanRoomPanel } from './PlanRoomPanel.vue';
 export { default as PlanToolbar } from './PlanToolbar.vue';
+export { default as PlanToolOptions } from './PlanToolOptions.vue';

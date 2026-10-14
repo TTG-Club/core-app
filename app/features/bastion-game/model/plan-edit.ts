@@ -1,703 +1,964 @@
 import type {
-  BuildingKind,
-  CellSide,
   DoorKind,
-  PassageKind,
-  PlanBuilding,
   PlanCell,
+  PlanCircle,
+  PlanColumn,
   PlanDocument,
-  PlanFloor,
-  PlanOutline,
+  PlanEdge,
+  PlanRoom,
+  PlanStair,
   PlanState,
-  ResponseOutline,
+  PlanTowerOpening,
+  RoomKind,
 } from './plan-schema';
 
 import { fillTemplate } from '~bastions/model';
 
 import {
   PLAN_FACILITY_COLORS,
+  PLAN_HIT_TOLERANCE,
   PLAN_LABELS,
   PLAN_LIMITS,
+  ROOM_KIND_LABELS,
 } from './plan-constants';
-import { isCellInside } from './plan-geometry';
-import { planResponseSchema } from './plan-schema';
+import {
+  findTowerRing,
+  getCanonicalEdge,
+  getCellAt,
+  getCellKey,
+  getCircleCells,
+  getEdgeCells,
+  getEdgeKey,
+  getNearestEdge,
+  getOccupancy,
+  isCellOnGrid,
+  isWallEdge,
+} from './plan-geometry';
+import { DOOR_KINDS, planResponseSchema } from './plan-schema';
 
-/** Пустой план. */
+/** Имя, этаж и идентификатор комнаты, которую создаст правка. */
+export interface PlanRoomSeed {
+  id: string;
+  name: string;
+  level: number;
+}
+
+/** Пустой план: один первый этаж. */
 export function createEmptyPlan(): PlanDocument {
-  return { buildings: [], passages: [], walls: [] };
+  return {
+    levels: [0],
+    rooms: [],
+    doors: [],
+    windows: [],
+    towerOpenings: [],
+    stairs: [],
+    columns: [],
+    defenseWalls: [],
+  };
 }
 
 /**
- * Приводит контур из ответа к строгому виду; неполный контур отбрасывается.
- *
- * @param outline Контур из ответа.
- * @returns Контур или undefined.
- */
-function normalizeOutline(outline: ResponseOutline): PlanOutline | undefined {
-  if (outline.type === 'CIRCLE') {
-    return outline.cx != null && outline.cy != null && outline.r != null
-      ? { type: 'CIRCLE', cx: outline.cx, cy: outline.cy, r: outline.r }
-      : undefined;
-  }
-
-  if (outline.type === 'RECTANGLE') {
-    return outline.x != null
-      && outline.y != null
-      && outline.width != null
-      && outline.height != null
-      ? {
-          type: 'RECTANGLE',
-          x: outline.x,
-          y: outline.y,
-          width: outline.width,
-          height: outline.height,
-        }
-      : undefined;
-  }
-
-  const points = (outline.points ?? []).flatMap(
-    (point): Array<[number, number]> =>
-      point.length === 2 ? [[point[0]!, point[1]!]] : [],
-  );
-
-  return points.length >= 3 ? { type: 'POLYGON', points } : undefined;
-}
-
-/**
- * Разбирает ответ сервера о плане: пустые списки вместо null, строгие контуры.
+ * Разбирает ответ сервера о плане: пустые списки вместо null, первый этаж
+ * есть всегда.
  *
  * @param response Ответ `GET /plan`.
  * @returns Состояние плана.
  */
 export function parsePlanResponse(response: unknown): PlanState {
   const parsed = planResponseSchema.parse(response);
-
-  const buildings = (parsed.document.buildings ?? []).flatMap(
-    (building): Array<PlanBuilding> => {
-      const outline = normalizeOutline(building.outline);
-
-      if (!outline) {
-        return [];
-      }
-
-      return [
-        {
-          id: building.id,
-          name: building.name ?? '',
-          kind: building.kind ?? 'KEEP',
-          outline,
-          floors: (building.floors ?? []).map((floor) => ({
-            level: floor.level,
-            cells: floor.cells ?? [],
-            doors: floor.doors ?? [],
-            windows: floor.windows ?? [],
-            stairs: floor.stairs ?? [],
-          })),
-        },
-      ];
-    },
-  );
+  const source = parsed.document;
+  const levels = new Set([0, ...(source.levels ?? [])]);
 
   return {
     version: parsed.version,
     canEdit: parsed.canEdit,
     document: {
-      buildings,
-      passages: (parsed.document.passages ?? []).map((passage) => ({
-        kind: passage.kind,
-        level: passage.level,
-        cells: passage.cells ?? [],
+      levels: [...levels].sort((first, second) => first - second),
+      rooms: (source.rooms ?? []).map((room) => ({
+        id: room.id,
+        name: room.name ?? ROOM_KIND_LABELS[room.kind],
+        kind: room.kind,
+        level: room.level,
+        facilityId: room.facilityId ?? undefined,
+        cells: room.cells ?? [],
+        shape: room.kind === 'TOWER' ? (room.shape ?? undefined) : undefined,
       })),
-      walls: parsed.document.walls ?? [],
+      doors: source.doors ?? [],
+      windows: source.windows ?? [],
+      towerOpenings: (source.towerOpenings ?? []).map((opening) => ({
+        ...opening,
+        kind: opening.kind ?? undefined,
+      })),
+      stairs: source.stairs ?? [],
+      columns: source.columns ?? [],
+      defenseWalls: source.defenseWalls ?? [],
     },
   };
 }
 
 /**
- * Пустой этаж.
- *
- * @param level Уровень.
- * @returns Этаж без клеток и проёмов.
- */
-function createFloor(level: number): PlanFloor {
-  return { level, cells: [], doors: [], windows: [], stairs: [] };
-}
-
-/**
- * Уровни этажей нового корпуса: от первого этажа до текущего, чтобы по нему
- * сразу можно было рисовать. Подвал — только сам подвал.
- *
- * @param level Текущий уровень редактора.
- * @returns Уровни этажей.
- */
-function getInitialLevels(level: number): Array<number> {
-  if (level < 0) {
-    return [level];
-  }
-
-  return Array.from({ length: level + 1 }, (_, index) => index);
-}
-
-/**
- * Добавляет корпус.
+ * Убирает всё повисшее после правки: пустые комнаты, двери и окна там, где
+ * стены больше нет, проёмы удалённых башен, лестницы и колонны удалённых
+ * этажей.
  *
  * @param document План.
- * @param building Идентификатор, название, вид и контур нового корпуса.
- * @param building.id Идентификатор.
- * @param building.name Название.
- * @param building.kind Вид.
- * @param building.outline Контур.
- * @param level Текущий уровень редактора.
- * @returns Новый план.
+ * @returns Чистый план.
  */
-export function addBuilding(
-  document: PlanDocument,
-  building: {
-    id: string;
-    name: string;
-    kind: BuildingKind;
-    outline: PlanOutline;
-  },
-  level: number,
-): PlanDocument {
-  return {
-    ...document,
-    buildings: [
-      ...document.buildings,
-      { ...building, floors: getInitialLevels(level).map(createFloor) },
-    ],
+export function prunePlan(document: PlanDocument): PlanDocument {
+  const rooms = document.rooms.filter((room) => room.cells.length > 0);
+  const levels = new Set(document.levels);
+
+  const occupancies = new Map(
+    document.levels.map((level) => [
+      level,
+      getOccupancy({ ...document, rooms }, level),
+    ]),
+  );
+
+  const isOnWall = (edge: PlanEdge): boolean => {
+    const occupancy = occupancies.get(edge.level);
+
+    return occupancy !== undefined && isWallEdge(occupancy, edge);
   };
-}
 
-/**
- * Меняет корпус.
- *
- * @param document План.
- * @param buildingId Корпус.
- * @param change Что поменять.
- * @returns Новый план.
- */
-export function updateBuilding(
-  document: PlanDocument,
-  buildingId: string,
-  change: (building: PlanBuilding) => PlanBuilding,
-): PlanDocument {
+  const towers = new Set(
+    rooms.filter((room) => room.kind === 'TOWER').map((room) => room.id),
+  );
+
   return {
     ...document,
-    buildings: document.buildings.map((building) =>
-      building.id === buildingId ? change(building) : building,
+    rooms,
+    doors: document.doors.filter(isOnWall),
+    windows: document.windows.filter(isOnWall),
+    towerOpenings: document.towerOpenings.filter((opening) =>
+      towers.has(opening.roomId),
     ),
-  };
-}
-
-/**
- * Удаляет корпус вместе с его этажами.
- *
- * @param document План.
- * @param buildingId Корпус.
- * @returns Новый план.
- */
-export function removeBuilding(
-  document: PlanDocument,
-  buildingId: string,
-): PlanDocument {
-  return {
-    ...document,
-    buildings: document.buildings.filter(
-      (building) => building.id !== buildingId,
+    stairs: document.stairs.filter(
+      (stair) => levels.has(stair.level) && levels.has(stair.toLevel),
     ),
+    columns: document.columns.filter((column) => levels.has(column.level)),
   };
 }
 
 /**
- * Сдвигает контур на целое число клеток.
- *
- * @param outline Контур.
- * @param dx Сдвиг по x.
- * @param dy Сдвиг по y.
- * @returns Сдвинутый контур.
- */
-function translateOutline(
-  outline: PlanOutline,
-  dx: number,
-  dy: number,
-): PlanOutline {
-  switch (outline.type) {
-    case 'CIRCLE':
-      return { ...outline, cx: outline.cx + dx, cy: outline.cy + dy };
-    case 'RECTANGLE':
-      return { ...outline, x: outline.x + dx, y: outline.y + dy };
-    default:
-      return {
-        ...outline,
-        points: outline.points.map(([x, y]) => [x + dx, y + dy]),
-      };
-  }
-}
-
-/**
- * Сдвигает точку на плане.
- *
- * @param point Точка с координатами клетки.
- * @param dx Сдвиг по x.
- * @param dy Сдвиг по y.
- * @returns Сдвинутая точка.
- */
-function translatePoint<TPoint extends PlanCell>(
-  point: TPoint,
-  dx: number,
-  dy: number,
-): TPoint {
-  return { ...point, x: point.x + dx, y: point.y + dy };
-}
-
-/**
- * Перемещает корпус вместе со всем, что на его этажах.
+ * Клетки башен этажа — их не забирают комнаты, нарисованные поверх.
  *
  * @param document План.
- * @param buildingId Корпус.
- * @param dx Сдвиг по x, клеток.
- * @param dy Сдвиг по y, клеток.
- * @returns Новый план.
+ * @param level Этаж.
+ * @param exceptRoomId Башня, которую не учитывать.
+ * @returns Ключи клеток.
  */
-export function moveBuilding(
-  document: PlanDocument,
-  buildingId: string,
-  dx: number,
-  dy: number,
-): PlanDocument {
-  return updateBuilding(document, buildingId, (building) => ({
-    ...building,
-    outline: translateOutline(building.outline, dx, dy),
-    floors: building.floors.map((floor) => ({
-      ...floor,
-      cells: floor.cells.map((cell) => translatePoint(cell, dx, dy)),
-      doors: floor.doors.map((door) => translatePoint(door, dx, dy)),
-      windows: floor.windows.map((window) => translatePoint(window, dx, dy)),
-      stairs: floor.stairs.map((stair) => translatePoint(stair, dx, dy)),
-    })),
-  }));
-}
-
-/**
- * Добавляет этаж над верхним или под нижним.
- *
- * @param document План.
- * @param buildingId Корпус.
- * @param direction Вверх или вниз.
- * @returns Новый план.
- */
-export function addFloor(
-  document: PlanDocument,
-  buildingId: string,
-  direction: 'up' | 'down',
-): PlanDocument {
-  return updateBuilding(document, buildingId, (building) => {
-    const levels = building.floors.map((floor) => floor.level);
-
-    const level =
-      direction === 'up' ? Math.max(...levels) + 1 : Math.min(...levels) - 1;
-
-    const outOfRange =
-      level > PLAN_LIMITS.maxLevel
-      || level < PLAN_LIMITS.minLevel
-      || building.floors.length >= PLAN_LIMITS.maxFloors;
-
-    return outOfRange
-      ? building
-      : { ...building, floors: [...building.floors, createFloor(level)] };
-  });
-}
-
-/**
- * Убирает этаж; лестницы на него исчезают вместе с ним. Последний этаж не
- * убирается — корпус без этажей сервер не примет.
- *
- * @param document План.
- * @param buildingId Корпус.
- * @param level Уровень этажа.
- * @returns Новый план.
- */
-export function removeFloor(
-  document: PlanDocument,
-  buildingId: string,
-  level: number,
-): PlanDocument {
-  return updateBuilding(document, buildingId, (building) => {
-    if (building.floors.length <= 1) {
-      return building;
-    }
-
-    return {
-      ...building,
-      floors: building.floors
-        .filter((floor) => floor.level !== level)
-        .map((floor) => ({
-          ...floor,
-          stairs: floor.stairs.filter((stair) => stair.toLevel !== level),
-        })),
-    };
-  });
-}
-
-/**
- * Корпус, в который входит клетка и у которого есть этаж на этом уровне.
- * Верхний по порядку добавления выигрывает: его и видно поверх остальных.
- *
- * @param document План.
- * @param level Уровень.
- * @param cell Клетка.
- * @returns Корпус или undefined.
- */
-export function findBuildingAt(
+function getTowerCellKeys(
   document: PlanDocument,
   level: number,
-  cell: PlanCell,
-): PlanBuilding | undefined {
-  return document.buildings.findLast(
-    (building) =>
-      building.floors.some((floor) => floor.level === level)
-      && isCellInside(building.outline, cell),
+  exceptRoomId?: string,
+): Set<string> {
+  return new Set(
+    document.rooms
+      .filter(
+        (room) =>
+          room.kind === 'TOWER'
+          && room.level === level
+          && room.id !== exceptRoomId,
+      )
+      .flatMap((room) => room.cells.map((cell) => getCellKey(cell.x, cell.y))),
   );
 }
 
 /**
- * Меняет этаж корпуса, в который входит клетка. Вне корпусов план не меняется.
+ * Отдаёт клетки комнате, забирая их у других комнат этажа. Клетки башен и
+ * клетки вне участка не забираются; защитная стена под новой комнатой
+ * исчезает.
  *
  * @param document План.
- * @param level Уровень.
- * @param cell Клетка.
- * @param change Что поменять на этаже.
+ * @param target Комната, которой достаются клетки (может быть новой).
+ * @param cells Клетки.
  * @returns Новый план.
  */
-function updateFloorAt(
+function claimCells(
+  document: PlanDocument,
+  target: PlanRoom,
+  cells: ReadonlyArray<PlanCell>,
+): PlanDocument {
+  const towerCells = getTowerCellKeys(document, target.level, target.id);
+
+  const free = cells.filter(
+    (cell) => isCellOnGrid(cell) && !towerCells.has(getCellKey(cell.x, cell.y)),
+  );
+
+  const taken = new Set(free.map((cell) => getCellKey(cell.x, cell.y)));
+  const own = new Set(target.cells.map((cell) => getCellKey(cell.x, cell.y)));
+
+  // Клетки мазка могут повторяться (кисть шире клетки, слитый коридор):
+  // каждая добавляется один раз.
+  const added = [...taken]
+    .filter((key) => !own.has(key))
+    .map((key) => {
+      const [x = 0, y = 0] = key.split(':').map(Number);
+
+      return { x, y };
+    });
+
+  const merged = [...target.cells, ...added];
+
+  const others = document.rooms
+    .filter((room) => room.id !== target.id)
+    .map((room) =>
+      room.level === target.level && room.kind !== 'TOWER'
+        ? {
+            ...room,
+            cells: room.cells.filter(
+              (cell) => !taken.has(getCellKey(cell.x, cell.y)),
+            ),
+          }
+        : room,
+    );
+
+  const defenseWalls =
+    target.level === 0
+      ? document.defenseWalls.filter(
+          (cell) => !taken.has(getCellKey(cell.x, cell.y)),
+        )
+      : document.defenseWalls;
+
+  return prunePlan({
+    ...document,
+    rooms: [...others, { ...target, cells: merged }],
+    defenseWalls,
+  });
+}
+
+/**
+ * Комната под точкой.
+ *
+ * @param document План.
+ * @param level Этаж.
+ * @param point Точка в клетках.
+ * @returns Комната или undefined.
+ */
+export function findRoomAt(
   document: PlanDocument,
   level: number,
-  cell: PlanCell,
-  change: (floor: PlanFloor) => PlanFloor,
-): PlanDocument {
-  const building = findBuildingAt(document, level, cell);
+  point: PlanCell,
+): PlanRoom | undefined {
+  const cell = getCellAt(point);
 
-  if (!building) {
+  return getOccupancy(document, level).get(getCellKey(cell.x, cell.y));
+}
+
+/**
+ * Название новой комнаты: вид и номер следующей такой.
+ *
+ * @param document План.
+ * @param kind Вид.
+ * @returns «Комната 3».
+ */
+export function getNextRoomName(
+  document: PlanDocument,
+  kind: RoomKind,
+): string {
+  const number = document.rooms.filter((room) => room.kind === kind).length + 1;
+
+  return fillTemplate(PLAN_LABELS.newRoom, {
+    kind: ROOM_KIND_LABELS[kind],
+    number,
+  });
+}
+
+/**
+ * Рисует прямоугольную комнату или расширяет существующую.
+ *
+ * @param document План.
+ * @param cells Клетки прямоугольника.
+ * @param target Комната, которую расширить, или данные новой.
+ * @returns Новый план.
+ */
+export function drawRoom(
+  document: PlanDocument,
+  cells: ReadonlyArray<PlanCell>,
+  target: PlanRoom | PlanRoomSeed,
+): PlanDocument {
+  const room: PlanRoom =
+    'kind' in target
+      ? target
+      : {
+          ...target,
+          kind: 'ROOM',
+          facilityId: undefined,
+          cells: [],
+          shape: undefined,
+        };
+
+  return claimCells(document, room, cells);
+}
+
+/**
+ * Ставит круглую башню. Её клетки забираются у комнат под ней.
+ *
+ * @param document План.
+ * @param seed Идентификатор, название и этаж.
+ * @param shape Окружность пола.
+ * @returns Новый план.
+ */
+export function addTower(
+  document: PlanDocument,
+  seed: PlanRoomSeed,
+  shape: PlanCircle,
+): PlanDocument {
+  const cells = getCircleCells(shape).filter(isCellOnGrid);
+  const taken = new Set(cells.map((cell) => getCellKey(cell.x, cell.y)));
+
+  const rooms = document.rooms.map((room) =>
+    room.level === seed.level
+      ? {
+          ...room,
+          cells: room.cells.filter(
+            (cell) => !taken.has(getCellKey(cell.x, cell.y)),
+          ),
+        }
+      : room,
+  );
+
+  const defenseWalls =
+    seed.level === 0
+      ? document.defenseWalls.filter(
+          (cell) => !taken.has(getCellKey(cell.x, cell.y)),
+        )
+      : document.defenseWalls;
+
+  return prunePlan({
+    ...document,
+    rooms: [
+      ...rooms,
+      { ...seed, kind: 'TOWER', facilityId: undefined, cells, shape },
+    ],
+    defenseWalls,
+  });
+}
+
+/**
+ * Прокладывает коридор по клеткам. Комнаты коридор не перекрывает, а
+ * задетые им другие коридоры сливаются с ним в один.
+ *
+ * @param document План.
+ * @param cells Клетки мазка.
+ * @param target Коридор, который продолжить, или данные нового.
+ * @returns Новый план.
+ */
+export function paintCorridor(
+  document: PlanDocument,
+  cells: ReadonlyArray<PlanCell>,
+  target: PlanRoom | PlanRoomSeed,
+): PlanDocument {
+  const occupancy = getOccupancy(document, target.level);
+  const touched = new Set<string>();
+
+  const free = cells.filter((cell) => {
+    const owner = occupancy.get(getCellKey(cell.x, cell.y));
+
+    if (owner && owner.kind === 'CORRIDOR' && owner.id !== target.id) {
+      touched.add(owner.id);
+    }
+
+    return !owner || owner.kind === 'CORRIDOR';
+  });
+
+  const existing = document.rooms.find((room) => room.id === target.id);
+
+  const corridor: PlanRoom = existing ?? {
+    ...target,
+    kind: 'CORRIDOR',
+    facilityId: undefined,
+    cells: [],
+    shape: undefined,
+  };
+
+  const absorbed = document.rooms
+    .filter((room) => touched.has(room.id))
+    .flatMap((room) => room.cells);
+
+  return claimCells(
+    {
+      ...document,
+      rooms: document.rooms.filter((room) => !touched.has(room.id)),
+    },
+    corridor,
+    [...absorbed, ...free],
+  );
+}
+
+/**
+ * Стирает пол в клетках и защитную стену на них. Башню ластик не режет —
+ * её убирают щелчком по кольцу или кнопкой «Удалить».
+ *
+ * @param document План.
+ * @param level Этаж.
+ * @param cells Клетки.
+ * @returns Новый план или тот же, если стирать нечего.
+ */
+export function eraseCells(
+  document: PlanDocument,
+  level: number,
+  cells: ReadonlyArray<PlanCell>,
+): PlanDocument {
+  const erased = new Set(cells.map((cell) => getCellKey(cell.x, cell.y)));
+  const isKept = (cell: PlanCell) => !erased.has(getCellKey(cell.x, cell.y));
+
+  const hasFloor = document.rooms.some(
+    (room) =>
+      room.level === level
+      && room.kind !== 'TOWER'
+      && !room.cells.every(isKept),
+  );
+
+  const hasWall = level === 0 && !document.defenseWalls.every(isKept);
+
+  if (!hasFloor && !hasWall) {
     return document;
   }
 
-  return updateBuilding(document, building.id, (current) => ({
-    ...current,
-    floors: current.floors.map((floor) =>
-      floor.level === level ? change(floor) : floor,
+  return prunePlan({
+    ...document,
+    rooms: document.rooms.map((room) =>
+      room.level === level && room.kind !== 'TOWER'
+        ? { ...room, cells: room.cells.filter(isKept) }
+        : room,
     ),
-  }));
+    defenseWalls:
+      level === 0
+        ? document.defenseWalls.filter(isKept)
+        : document.defenseWalls,
+  });
 }
 
 /**
- * Одинаковое ли положение у двух точек.
- *
- * @param first Первая точка.
- * @param second Вторая точка.
- * @returns true, если клетка одна.
- */
-function isSameCell(first: PlanCell, second: PlanCell): boolean {
-  return first.x === second.x && first.y === second.y;
-}
-
-/**
- * Площадь сооружений на плане: сумма клеток по всем этажам и корпусам.
+ * Убирает то, что лежит под точкой: колонну, лестницу, проём в башне, дверь
+ * или окно. Щелчок по кольцу башни без проёма убирает саму башню.
  *
  * @param document План.
- * @returns Сооружение → число клеток.
+ * @param level Этаж.
+ * @param point Точка в клетках.
+ * @returns Новый план или тот же, если под точкой ничего нет.
+ */
+export function eraseObjectAt(
+  document: PlanDocument,
+  level: number,
+  point: PlanCell,
+): PlanDocument {
+  const column = document.columns.find(
+    (item) =>
+      item.level === level
+      && Math.hypot(item.x - point.x, item.y - point.y)
+        < PLAN_HIT_TOLERANCE.column,
+  );
+
+  if (column) {
+    return {
+      ...document,
+      columns: document.columns.filter((item) => item.id !== column.id),
+    };
+  }
+
+  const stair = document.stairs.find(
+    (item) =>
+      item.level === level
+      && point.x >= item.x
+      && point.x <= item.x + item.width
+      && point.y >= item.y
+      && point.y <= item.y + item.height,
+  );
+
+  if (stair) {
+    return {
+      ...document,
+      stairs: document.stairs.filter((item) => item.id !== stair.id),
+    };
+  }
+
+  const ring = findTowerRing(
+    document,
+    level,
+    point,
+    PLAN_HIT_TOLERANCE.edge * 2,
+  );
+
+  if (ring) {
+    const opening = document.towerOpenings.find(
+      (item) => item.roomId === ring.room.id && item.angle === ring.angle,
+    );
+
+    return opening
+      ? {
+          ...document,
+          towerOpenings: document.towerOpenings.filter(
+            (item) => item !== opening,
+          ),
+        }
+      : removeRoom(document, ring.room.id);
+  }
+
+  const edge = getNearestEdge(level, point);
+
+  if (edge.distance > PLAN_HIT_TOLERANCE.edge) {
+    return document;
+  }
+
+  const key = getEdgeKey(edge);
+  const doors = document.doors.filter((door) => getEdgeKey(door) !== key);
+  const windows = document.windows.filter((item) => getEdgeKey(item) !== key);
+
+  return doors.length === document.doors.length
+    && windows.length === document.windows.length
+    ? document
+    : { ...document, doors, windows };
+}
+
+/**
+ * Следующий вид двери по кругу — повторный щелчок по двери меняет её вид.
+ *
+ * @param kind Текущий вид.
+ * @returns Следующий вид.
+ */
+function getNextDoorKind(kind: DoorKind): DoorKind {
+  const index = DOOR_KINDS.indexOf(kind);
+
+  return DOOR_KINDS[(index + 1) % DOOR_KINDS.length] ?? kind;
+}
+
+/**
+ * Ставит проём в кольцо башни. Повторный щелчок по двери меняет её вид.
+ *
+ * @param document План.
+ * @param opening Проём.
+ * @returns Новый план.
+ */
+function placeTowerOpening(
+  document: PlanDocument,
+  opening: PlanTowerOpening,
+): PlanDocument {
+  const existing = document.towerOpenings.find(
+    (item) => item.roomId === opening.roomId && item.angle === opening.angle,
+  );
+
+  if (!existing) {
+    return {
+      ...document,
+      towerOpenings: [...document.towerOpenings, opening],
+    };
+  }
+
+  if (existing.type !== 'DOOR' || opening.type !== 'DOOR' || !existing.kind) {
+    return document;
+  }
+
+  const kind = getNextDoorKind(existing.kind);
+
+  return {
+    ...document,
+    towerOpenings: document.towerOpenings.map((item) =>
+      item === existing ? { ...item, kind } : item,
+    ),
+  };
+}
+
+/**
+ * Ставит дверь или окно в стену под точкой: в ребро сетки или в кольцо
+ * башни. Дверь заменяет окно на том же месте и наоборот; повторный щелчок по
+ * двери меняет её вид.
+ *
+ * @param document План.
+ * @param level Этаж.
+ * @param point Точка в клетках.
+ * @param opening Что ставить: дверь с видом или окно.
+ * @returns Новый план или тот же, если стены под точкой нет.
+ */
+export function placeOpening(
+  document: PlanDocument,
+  level: number,
+  point: PlanCell,
+  opening: { type: 'DOOR'; kind: DoorKind } | { type: 'WINDOW' },
+): PlanDocument {
+  const ring = findTowerRing(document, level, point, PLAN_HIT_TOLERANCE.tower);
+
+  if (ring) {
+    return placeTowerOpening(document, {
+      roomId: ring.room.id,
+      angle: ring.angle,
+      type: opening.type,
+      kind: opening.type === 'DOOR' ? opening.kind : undefined,
+    });
+  }
+
+  const nearest = getNearestEdge(level, point);
+
+  const edge = getCanonicalEdge({
+    level,
+    x: nearest.x,
+    y: nearest.y,
+    side: nearest.side,
+  });
+
+  if (!isWallEdge(getOccupancy(document, level), edge)) {
+    return document;
+  }
+
+  const key = getEdgeKey(edge);
+  const door = document.doors.find((item) => getEdgeKey(item) === key);
+  const windows = document.windows.filter((item) => getEdgeKey(item) !== key);
+
+  if (opening.type === 'WINDOW') {
+    return windows.length !== document.windows.length
+      ? document
+      : {
+          ...document,
+          doors: document.doors.filter((item) => item !== door),
+          windows: [...document.windows, edge],
+        };
+  }
+
+  if (door) {
+    const kind = getNextDoorKind(door.kind);
+
+    return {
+      ...document,
+      doors: document.doors.map((item) =>
+        item === door ? { ...item, kind } : item,
+      ),
+    };
+  }
+
+  return {
+    ...document,
+    windows,
+    doors: [...document.doors, { ...edge, kind: opening.kind }],
+  };
+}
+
+/**
+ * Добавляет лестницу.
+ *
+ * @param document План.
+ * @param stair Лестница.
+ * @returns Новый план.
+ */
+export function addStair(
+  document: PlanDocument,
+  stair: PlanStair,
+): PlanDocument {
+  return { ...document, stairs: [...document.stairs, stair] };
+}
+
+/**
+ * Ставит колонну; на занятое колонной место вторую не ставит.
+ *
+ * @param document План.
+ * @param column Колонна.
+ * @returns Новый план или тот же.
+ */
+export function addColumn(
+  document: PlanDocument,
+  column: PlanColumn,
+): PlanDocument {
+  const isTaken = document.columns.some(
+    (item) =>
+      item.level === column.level && item.x === column.x && item.y === column.y,
+  );
+
+  return isTaken
+    ? document
+    : { ...document, columns: [...document.columns, column] };
+}
+
+/**
+ * Достраивает защитную стену по клеткам первого этажа вне комнат.
+ *
+ * @param document План.
+ * @param cells Клетки мазка.
+ * @returns Новый план или тот же, если добавлять нечего.
+ */
+export function paintDefenseWall(
+  document: PlanDocument,
+  cells: ReadonlyArray<PlanCell>,
+): PlanDocument {
+  const occupancy = getOccupancy(document, 0);
+
+  const existing = new Set(
+    document.defenseWalls.map((cell) => getCellKey(cell.x, cell.y)),
+  );
+
+  const added = cells.filter((cell) => {
+    const key = getCellKey(cell.x, cell.y);
+
+    if (existing.has(key) || occupancy.has(key) || !isCellOnGrid(cell)) {
+      return false;
+    }
+
+    existing.add(key);
+
+    return true;
+  });
+
+  return added.length
+    ? { ...document, defenseWalls: [...document.defenseWalls, ...added] }
+    : document;
+}
+
+/**
+ * Можно ли сдвинуть комнату: на новом месте нет чужих клеток и она не уходит
+ * за участок.
+ *
+ * @param document План.
+ * @param room Комната.
+ * @param offset Сдвиг в клетках.
+ * @returns true, если можно.
+ */
+export function canMoveRoom(
+  document: PlanDocument,
+  room: PlanRoom,
+  offset: PlanCell,
+): boolean {
+  const occupancy = getOccupancy(document, room.level);
+
+  return room.cells.every((cell) => {
+    const moved = { x: cell.x + offset.x, y: cell.y + offset.y };
+    const owner = occupancy.get(getCellKey(moved.x, moved.y));
+
+    return isCellOnGrid(moved) && (!owner || owner.id === room.id);
+  });
+}
+
+/**
+ * Сдвигает комнату вместе с её дверями, окнами, лестницами и колоннами.
+ *
+ * @param document План.
+ * @param roomId Комната.
+ * @param offset Сдвиг в клетках.
+ * @returns Новый план или тот же, если сдвиг невозможен.
+ */
+export function moveRoom(
+  document: PlanDocument,
+  roomId: string,
+  offset: PlanCell,
+): PlanDocument {
+  const room = document.rooms.find((item) => item.id === roomId);
+
+  if (
+    !room
+    || (offset.x === 0 && offset.y === 0)
+    || !canMoveRoom(document, room, offset)
+  ) {
+    return document;
+  }
+
+  const own = new Set(room.cells.map((cell) => getCellKey(cell.x, cell.y)));
+  const isOwn = (cell: PlanCell) => own.has(getCellKey(cell.x, cell.y));
+
+  const shift = <T extends PlanCell & { level: number }>(item: T): T =>
+    item.level === room.level
+      ? { ...item, x: item.x + offset.x, y: item.y + offset.y }
+      : item;
+
+  const isOnEdge = (edge: PlanEdge) =>
+    edge.level === room.level && getEdgeCells(edge).some(isOwn);
+
+  const moved: PlanRoom = {
+    ...room,
+    cells: room.cells.map((cell) => ({
+      x: cell.x + offset.x,
+      y: cell.y + offset.y,
+    })),
+    shape: room.shape
+      ? {
+          ...room.shape,
+          cx: room.shape.cx + offset.x,
+          cy: room.shape.cy + offset.y,
+        }
+      : undefined,
+  };
+
+  return prunePlan({
+    ...document,
+    rooms: document.rooms.map((item) => (item.id === roomId ? moved : item)),
+    doors: document.doors.map((door) => (isOnEdge(door) ? shift(door) : door)),
+    windows: document.windows.map((item) =>
+      isOnEdge(item) ? shift(item) : item,
+    ),
+    stairs: document.stairs.map((stair) =>
+      stair.level === room.level && isOwn(stair) ? shift(stair) : stair,
+    ),
+    columns: document.columns.map((column) =>
+      column.level === room.level && isOwn(getCellAt(column))
+        ? shift(column)
+        : column,
+    ),
+  });
+}
+
+/**
+ * Меняет комнату: название, вид или сооружение.
+ *
+ * @param document План.
+ * @param roomId Комната.
+ * @param change Что поменять.
+ * @returns Новый план.
+ */
+export function updateRoom(
+  document: PlanDocument,
+  roomId: string,
+  change: Partial<Pick<PlanRoom, 'name' | 'kind' | 'facilityId'>>,
+): PlanDocument {
+  return prunePlan({
+    ...document,
+    rooms: document.rooms.map((room) =>
+      room.id === roomId ? { ...room, ...change } : room,
+    ),
+  });
+}
+
+/**
+ * Удаляет комнату.
+ *
+ * @param document План.
+ * @param roomId Комната.
+ * @returns Новый план.
+ */
+export function removeRoom(
+  document: PlanDocument,
+  roomId: string,
+): PlanDocument {
+  return prunePlan({
+    ...document,
+    rooms: document.rooms.filter((room) => room.id !== roomId),
+  });
+}
+
+/**
+ * Этажи плана по возрастанию.
+ *
+ * @param document План.
+ * @returns Уровни.
+ */
+export function getPlanLevels(document: PlanDocument): Array<number> {
+  return [...document.levels].sort((first, second) => first - second);
+}
+
+/**
+ * Добавляет этаж над верхним или подвал под нижним.
+ *
+ * @param document План.
+ * @param direction Вверх или вниз.
+ * @returns Новый план и уровень нового этажа или тот же план, если упёрлись
+ *   в предел.
+ */
+export function addLevel(
+  document: PlanDocument,
+  direction: 'up' | 'down',
+): { document: PlanDocument; level: number | undefined } {
+  const levels = getPlanLevels(document);
+
+  const level =
+    direction === 'up' ? (levels.at(-1) ?? 0) + 1 : (levels[0] ?? 0) - 1;
+
+  const isAllowed =
+    levels.length < PLAN_LIMITS.maxFloors
+    && level >= PLAN_LIMITS.minLevel
+    && level <= PLAN_LIMITS.maxLevel;
+
+  return isAllowed
+    ? { document: { ...document, levels: [...levels, level] }, level }
+    : { document, level: undefined };
+}
+
+/**
+ * Можно ли убрать этаж: только пустой верхний или нижний, кроме первого.
+ *
+ * @param document План.
+ * @param level Этаж.
+ * @returns true, если можно.
+ */
+export function canRemoveLevel(document: PlanDocument, level: number): boolean {
+  const levels = getPlanLevels(document);
+  const isEdge = level === levels[0] || level === levels.at(-1);
+
+  return (
+    level !== 0
+    && isEdge
+    && !document.rooms.some((room) => room.level === level)
+    && !document.stairs.some((stair) => stair.level === level)
+    && !document.columns.some((column) => column.level === level)
+  );
+}
+
+/**
+ * Убирает пустой крайний этаж; лестницы на него исчезают.
+ *
+ * @param document План.
+ * @param level Этаж.
+ * @returns Новый план или тот же, если убрать нельзя.
+ */
+export function removeLevel(
+  document: PlanDocument,
+  level: number,
+): PlanDocument {
+  return canRemoveLevel(document, level)
+    ? prunePlan({
+        ...document,
+        levels: document.levels.filter((item) => item !== level),
+      })
+    : document;
+}
+
+/**
+ * Этаж, на который поведёт новая лестница: выбранное направление или, если
+ * его нет, ближайший этаж выше, а за ним — ниже.
+ *
+ * @param document План.
+ * @param level Текущий этаж.
+ * @param target Выбранное направление.
+ * @returns Уровень или undefined, если вести некуда.
+ */
+export function getStairTargetLevel(
+  document: PlanDocument,
+  level: number,
+  target: 'up' | 'down' | undefined,
+): number | undefined {
+  const levels = new Set(document.levels);
+  const above = levels.has(level + 1) ? level + 1 : undefined;
+  const below = levels.has(level - 1) ? level - 1 : undefined;
+
+  if (target === 'up') {
+    return above;
+  }
+
+  if (target === 'down') {
+    return below;
+  }
+
+  return above ?? below;
+}
+
+/**
+ * Площадь каждого сооружения на плане: клетки всех его комнат.
+ *
+ * @param document План.
+ * @returns Сооружение → клеток.
  */
 export function getFacilityAreas(document: PlanDocument): Map<string, number> {
   const areas = new Map<string, number>();
 
-  for (const building of document.buildings) {
-    for (const floor of building.floors) {
-      for (const cell of floor.cells) {
-        areas.set(cell.facilityId, (areas.get(cell.facilityId) ?? 0) + 1);
-      }
+  for (const room of document.rooms) {
+    if (room.facilityId) {
+      areas.set(
+        room.facilityId,
+        (areas.get(room.facilityId) ?? 0) + room.cells.length,
+      );
     }
   }
 
   return areas;
 }
 
-/**
- * Закрашивает клетку сооружением. Не красит вне корпусов и сверх площади
- * пространства — сервер такой план всё равно не примет.
- *
- * @param document План.
- * @param level Уровень.
- * @param cell Клетка.
- * @param facility Сооружение и его наибольшая площадь.
- * @param facility.id Сооружение персонажа.
- * @param facility.squares Площадь пространства, клеток.
- * @returns Новый план.
- */
-export function paintFacilityCell(
-  document: PlanDocument,
-  level: number,
-  cell: PlanCell,
-  facility: { id: string; squares: number },
-): PlanDocument {
-  const building = findBuildingAt(document, level, cell);
-  const floor = building?.floors.find((item) => item.level === level);
-  const existing = floor?.cells.find((item) => isSameCell(item, cell));
-
-  if (!floor || existing?.facilityId === facility.id) {
-    return document;
-  }
-
-  if ((getFacilityAreas(document).get(facility.id) ?? 0) >= facility.squares) {
-    return document;
-  }
-
-  return updateFloorAt(document, level, cell, (current) => ({
-    ...current,
-    cells: [
-      ...current.cells.filter((item) => !isSameCell(item, cell)),
-      { ...cell, facilityId: facility.id },
-    ],
-  }));
-}
-
-/**
- * Стирает всё, что лежит в клетке на этом уровне: сооружение, лестницу,
- * двери и окна клетки, переход; на первом этаже — и стену.
- *
- * @param document План.
- * @param level Уровень.
- * @param cell Клетка.
- * @returns Новый план.
- */
-export function eraseAt(
-  document: PlanDocument,
-  level: number,
-  cell: PlanCell,
-): PlanDocument {
-  const withoutFloorItems = updateFloorAt(document, level, cell, (floor) => ({
-    ...floor,
-    cells: floor.cells.filter((item) => !isSameCell(item, cell)),
-    doors: floor.doors.filter((item) => !isSameCell(item, cell)),
-    windows: floor.windows.filter((item) => !isSameCell(item, cell)),
-    stairs: floor.stairs.filter((item) => !isSameCell(item, cell)),
-  }));
-
-  return {
-    ...withoutFloorItems,
-    passages: withoutFloorItems.passages
-      .map((passage) =>
-        passage.level === level
-          ? {
-              ...passage,
-              cells: passage.cells.filter((item) => !isSameCell(item, cell)),
-            }
-          : passage,
-      )
-      .filter((passage) => passage.cells.length > 0),
-    walls:
-      level === 0
-        ? withoutFloorItems.walls.filter((item) => !isSameCell(item, cell))
-        : withoutFloorItems.walls,
-  };
-}
-
-/**
- * Ставит дверь на ребро клетки или убирает её, если такая уже стоит.
- *
- * @param document План.
- * @param level Уровень.
- * @param edge Клетка и сторона.
- * @param kind Вид двери.
- * @returns Новый план.
- */
-export function toggleDoor(
-  document: PlanDocument,
-  level: number,
-  edge: PlanCell & { side: CellSide },
-  kind: DoorKind,
-): PlanDocument {
-  return updateFloorAt(document, level, edge, (floor) => {
-    const isSameEdge = (door: PlanCell & { side: CellSide }) =>
-      isSameCell(door, edge) && door.side === edge.side;
-
-    const existing = floor.doors.find(isSameEdge);
-
-    const doors = floor.doors.filter((door) => !isSameEdge(door));
-
-    return {
-      ...floor,
-      doors: existing?.kind === kind ? doors : [...doors, { ...edge, kind }],
-    };
-  });
-}
-
-/**
- * Ставит окно на ребро клетки или убирает его.
- *
- * @param document План.
- * @param level Уровень.
- * @param edge Клетка и сторона.
- * @returns Новый план.
- */
-export function toggleWindow(
-  document: PlanDocument,
-  level: number,
-  edge: PlanCell & { side: CellSide },
-): PlanDocument {
-  return updateFloorAt(document, level, edge, (floor) => {
-    const exists = floor.windows.some(
-      (window) => isSameCell(window, edge) && window.side === edge.side,
-    );
-
-    return {
-      ...floor,
-      windows: exists
-        ? floor.windows.filter(
-            (window) =>
-              !(isSameCell(window, edge) && window.side === edge.side),
-          )
-        : [...floor.windows, edge],
-    };
-  });
-}
-
-/**
- * Ставит лестницу или убирает её. Лестница ведёт на этаж выше, а с верхнего —
- * на этаж ниже; у одноэтажного корпуса лестницы нет.
- *
- * @param document План.
- * @param level Уровень.
- * @param cell Клетка.
- * @returns Новый план.
- */
-export function toggleStair(
-  document: PlanDocument,
-  level: number,
-  cell: PlanCell,
-): PlanDocument {
-  const building = findBuildingAt(document, level, cell);
-  const levels = new Set(building?.floors.map((floor) => floor.level) ?? []);
-
-  const toLevel = [level + 1, level - 1].find((candidate) =>
-    levels.has(candidate),
-  );
-
-  if (toLevel === undefined) {
-    return document;
-  }
-
-  return updateFloorAt(document, level, cell, (floor) => {
-    const exists = floor.stairs.some((stair) => isSameCell(stair, cell));
-
-    return {
-      ...floor,
-      stairs: exists
-        ? floor.stairs.filter((stair) => !isSameCell(stair, cell))
-        : [...floor.stairs, { ...cell, toLevel }],
-    };
-  });
-}
-
-/**
- * Лежит ли клетка на участке.
- *
- * @param cell Клетка.
- * @returns true, если внутри участка.
- */
-function isOnGrid(cell: PlanCell): boolean {
-  return (
-    cell.x >= 0
-    && cell.y >= 0
-    && cell.x < PLAN_LIMITS.gridSize
-    && cell.y < PLAN_LIMITS.gridSize
-  );
-}
-
-/**
- * Добавляет клетку перехода нужного вида на уровне.
- *
- * @param document План.
- * @param level Уровень.
- * @param cell Клетка.
- * @param kind Вид перехода.
- * @returns Новый план.
- */
-export function paintPassage(
-  document: PlanDocument,
-  level: number,
-  cell: PlanCell,
-  kind: PassageKind,
-): PlanDocument {
-  const taken = document.passages.some(
-    (passage) =>
-      passage.level === level
-      && passage.cells.some((item) => isSameCell(item, cell)),
-  );
-
-  if (taken || !isOnGrid(cell)) {
-    return document;
-  }
-
-  const group = document.passages.find(
-    (passage) => passage.level === level && passage.kind === kind,
-  );
-
-  return {
-    ...document,
-    passages: group
-      ? document.passages.map((passage) =>
-          passage === group
-            ? { ...passage, cells: [...passage.cells, cell] }
-            : passage,
-        )
-      : [...document.passages, { kind, level, cells: [cell] }],
-  };
-}
-
-/**
- * Добавляет клетку защитной стены.
- *
- * @param document План.
- * @param cell Клетка.
- * @returns Новый план.
- */
-export function paintWall(
-  document: PlanDocument,
-  cell: PlanCell,
-): PlanDocument {
-  if (
-    !isOnGrid(cell)
-    || document.walls.some((item) => isSameCell(item, cell))
-  ) {
-    return document;
-  }
-
-  return { ...document, walls: [...document.walls, cell] };
-}
-
-/**
- * Все уровни плана — чтобы показать переключатель этажей.
- *
- * @param document План.
- * @returns Уровни по возрастанию; первый этаж есть всегда.
- */
-export function getPlanLevels(document: PlanDocument): Array<number> {
-  const levels = new Set<number>([0]);
-
-  for (const building of document.buildings) {
-    for (const floor of building.floors) {
-      levels.add(floor.level);
-    }
-  }
-
-  for (const passage of document.passages) {
-    levels.add(passage.level);
-  }
-
-  return [...levels].sort((first, second) => first - second);
-}
-
-/** Сооружение в палитре редактора: имя, персонаж, цвет и занятая площадь. */
+/** Сооружение бастиона в редакторе: имя, персонаж, цвет и занятая площадь. */
 export interface PlanPaletteFacility {
   id: string;
   name: string;
@@ -708,7 +969,7 @@ export interface PlanPaletteFacility {
 }
 
 /**
- * Палитра сооружений всех персонажей бастиона. Цвет закреплён за позицией
+ * Сооружения всех персонажей бастиона. Цвет закреплён за позицией
  * сооружения в бастионе, а не на плане: при правке плана цвета не прыгают.
  *
  * @param members Персонажи бастиона с сооружениями.

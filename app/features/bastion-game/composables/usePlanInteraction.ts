@@ -1,52 +1,55 @@
 import type { Ref, ShallowRef } from 'vue';
 
 import type {
-  BuildingKind,
+  CellSide,
   DoorKind,
-  PassageKind,
   PlanCell,
+  PlanCircle,
   PlanDocument,
-  PlanOutline,
+  PlanRoom,
+  PlanRoomSeed,
   PlanTool,
+  StairKind,
+  StairTarget,
 } from '../model';
 
 import { fillTemplate } from '~bastions/model';
 
 import {
-  addBuilding,
-  BUILDING_KIND_LABELS,
-  eraseAt,
-  findBuildingAt,
+  addColumn,
+  addStair,
+  addTower,
+  canMoveRoom,
+  drawRoom,
+  eraseCells,
+  eraseObjectAt,
+  findRoomAt,
   getCellAt,
-  getNearestEdge,
-  isCellInside,
-  moveBuilding,
-  OUTLINE_BUILDING_KINDS,
-  paintFacilityCell,
-  paintPassage,
-  paintWall,
+  getLineCells,
+  getNextRoomName,
+  getRectCells,
+  getStairTargetLevel,
+  moveRoom,
+  paintCorridor,
+  paintDefenseWall,
+  placeOpening,
+  PLAN_FEET_PER_CELL,
   PLAN_LABELS,
   PLAN_LIMITS,
-  snapToGrid,
-  toggleDoor,
-  toggleStair,
-  toggleWindow,
+  snapToHalf,
 } from '../model';
-
-/** Черновик корпуса, пока его рисуют. */
-export type PlanDraft =
-  | { kind: 'outline'; outline: PlanOutline }
-  | {
-      kind: 'polyline';
-      points: Array<[number, number]>;
-      cursor: [number, number] | undefined;
-    };
 
 /** Точка холста в клетках (дробная). */
 export interface PlanPoint {
   x: number;
   y: number;
 }
+
+/** Что рисуется поверх плана, пока жест не закончен. */
+export type PlanPreview =
+  | { kind: 'rect'; from: PlanCell; to: PlanCell; label: string | undefined }
+  | { kind: 'circle'; circle: PlanCircle; label: string }
+  | { kind: 'move'; cells: Array<PlanCell>; isValid: boolean };
 
 interface PlanEditorApi {
   document: ShallowRef<PlanDocument>;
@@ -60,83 +63,104 @@ interface PlanInteractionOptions {
   editor: PlanEditorApi;
   tool: Ref<PlanTool>;
   level: Ref<number>;
-  selectedBuildingId: Ref<string | undefined>;
-  selectedFacilityId: Ref<string | undefined>;
+  selectedRoomId: Ref<string | undefined>;
   doorKind: Ref<DoorKind>;
-  passageKind: Ref<PassageKind>;
-  /** Сооружение персонажа → площадь его пространства, клеток. */
-  facilitySquares: Ref<Map<string, number>>;
+  stairKind: Ref<StairKind>;
+  stairTarget: Ref<StairTarget | undefined>;
+  stairDirection: Ref<CellSide>;
+  corridorWidth: Ref<number>;
 }
 
-/**
- * Прямоугольник по двум углам на сетке.
- *
- * @param anchor Угол, где начали тянуть.
- * @param point Текущая точка.
- * @returns Контур-прямоугольник не меньше клетки.
- */
-function createRectangle(anchor: PlanPoint, point: PlanPoint): PlanOutline {
-  const endX = snapToGrid(point.x, 1);
-  const endY = snapToGrid(point.y, 1);
-
-  const x = Math.min(anchor.x, endX);
-  const y = Math.min(anchor.y, endY);
-
-  return {
-    type: 'RECTANGLE',
-    x,
-    y,
-    width: Math.max(1, Math.abs(endX - anchor.x)),
-    height: Math.max(1, Math.abs(endY - anchor.y)),
-  };
-}
+/** Жест, который сейчас выполняется указателем. */
+type PlanGesture =
+  | {
+      type: 'room';
+      anchor: PlanCell;
+      current: PlanCell;
+      target: PlanRoom | PlanRoomSeed;
+    }
+  | { type: 'tower'; center: PlanCell; radius: number }
+  | { type: 'move'; room: PlanRoom; anchor: PlanCell; offset: PlanCell }
+  | { type: 'stairs'; anchor: PlanCell; current: PlanCell }
+  | { type: 'corridor'; last: PlanCell; target: PlanRoom | PlanRoomSeed }
+  | { type: 'erase'; last: PlanCell }
+  | { type: 'wall'; last: PlanCell };
 
 /**
- * Окружность с центром на сетке (шаг полклетки) до текущей точки.
+ * Квадрат кисти шириной в несколько клеток от клетки под указателем.
  *
- * @param center Центр.
- * @param point Текущая точка.
- * @returns Контур-окружность радиусом не меньше полклетки.
+ * @param cell Клетка под указателем.
+ * @param width Сторона квадрата в клетках.
+ * @returns Клетки кисти.
  */
-function createCircle(center: PlanPoint, point: PlanPoint): PlanOutline {
-  const radius = Math.hypot(point.x - center.x, point.y - center.y);
+function getBrushCells(cell: PlanCell, width: number): Array<PlanCell> {
+  const cells: Array<PlanCell> = [];
 
-  return {
-    type: 'CIRCLE',
-    cx: center.x,
-    cy: center.y,
-    r: Math.max(0.5, snapToGrid(radius, 0.5)),
-  };
-}
-
-/**
- * Лежит ли контур целиком на участке — иначе сервер его не примет.
- *
- * @param outline Контур.
- * @returns true, если на участке.
- */
-function isOutlineOnGrid(outline: PlanOutline): boolean {
-  const size = PLAN_LIMITS.gridSize;
-  const inRange = (value: number) => value >= 0 && value <= size;
-
-  switch (outline.type) {
-    case 'CIRCLE':
-      return (
-        inRange(outline.cx - outline.r)
-        && inRange(outline.cx + outline.r)
-        && inRange(outline.cy - outline.r)
-        && inRange(outline.cy + outline.r)
-      );
-    case 'RECTANGLE':
-      return (
-        inRange(outline.x)
-        && inRange(outline.x + outline.width)
-        && inRange(outline.y)
-        && inRange(outline.y + outline.height)
-      );
-    default:
-      return outline.points.every(([x, y]) => inRange(x) && inRange(y));
+  for (let row = 0; row < width; row++) {
+    for (let column = 0; column < width; column++) {
+      cells.push({ x: cell.x + column, y: cell.y + row });
+    }
   }
+
+  return cells;
+}
+
+/**
+ * Направление подъёма по протянутой рамке лестницы: вдоль длинной стороны,
+ * туда, куда тянули.
+ *
+ * @param anchor Клетка, где начали тянуть.
+ * @param current Клетка, где отпустили.
+ * @param fallback Направление, если рамку не тянули.
+ * @returns Сторона света.
+ */
+function getDragDirection(
+  anchor: PlanCell,
+  current: PlanCell,
+  fallback: CellSide,
+): CellSide {
+  const deltaX = current.x - anchor.x;
+  const deltaY = current.y - anchor.y;
+
+  if (deltaX === 0 && deltaY === 0) {
+    return fallback;
+  }
+
+  if (Math.abs(deltaY) >= Math.abs(deltaX)) {
+    return deltaY < 0 ? 'N' : 'S';
+  }
+
+  return deltaX < 0 ? 'W' : 'E';
+}
+
+/**
+ * Подпись размера прямоугольника в футах.
+ *
+ * @param from Угловая клетка.
+ * @param to Противоположная клетка.
+ * @returns «20×15 фт.».
+ */
+function getRectangleLabel(from: PlanCell, to: PlanCell): string {
+  return fillTemplate(PLAN_LABELS.rectangleSize, {
+    width: (Math.abs(to.x - from.x) + 1) * PLAN_FEET_PER_CELL,
+    height: (Math.abs(to.y - from.y) + 1) * PLAN_FEET_PER_CELL,
+  });
+}
+
+/**
+ * Ограничивает рамку лестницы допустимым размером, считая от начала.
+ *
+ * @param anchor Клетка, где начали тянуть.
+ * @param current Текущая клетка.
+ * @returns Клетка конца рамки.
+ */
+function clampStairEnd(anchor: PlanCell, current: PlanCell): PlanCell {
+  const limit = PLAN_LIMITS.maxStairSide - 1;
+
+  return {
+    x: anchor.x + Math.max(-limit, Math.min(limit, current.x - anchor.x)),
+    y: anchor.y + Math.max(-limit, Math.min(limit, current.y - anchor.y)),
+  };
 }
 
 /**
@@ -144,335 +168,455 @@ function isOutlineOnGrid(outline: PlanOutline): boolean {
  * указателя для каждого инструмента. Холст сообщает только точки в клетках,
  * вся логика — здесь.
  *
- * @param options Редактор, выбранные инструмент, этаж, корпус и сооружение.
- * @returns Черновик корпуса, клетка под указателем и обработчики.
+ * @param options Редактор и настройки инструментов.
+ * @returns Подсказка поверх плана, точка под указателем и обработчики.
  */
 export function usePlanInteraction(options: PlanInteractionOptions) {
-  const { editor, tool, level } = options;
+  const { editor, tool, level, selectedRoomId } = options;
 
-  const draft = ref<PlanDraft>();
-  const hoverCell = ref<PlanCell>();
+  const preview = shallowRef<PlanPreview>();
+  const hoverPoint = shallowRef<PlanPoint>();
 
-  let anchor: PlanPoint | undefined;
-  let dragCell: PlanCell | undefined;
-  let isStroke = false;
+  let gesture: PlanGesture | undefined;
 
   /**
-   * Добавляет корпус по нарисованному контуру и выбирает его.
+   * Новая комната: идентификатор, название по виду и текущий этаж.
    *
-   * @param outline Контур.
+   * @param kind Вид комнаты — для названия.
+   * @returns Заготовка комнаты.
    */
-  function finishBuilding(outline: PlanOutline): void {
-    draft.value = undefined;
+  function createSeed(kind: PlanRoom['kind']): PlanRoomSeed {
+    return {
+      id: crypto.randomUUID(),
+      name: getNextRoomName(editor.document.value, kind),
+      level: level.value,
+    };
+  }
 
-    if (!isOutlineOnGrid(outline)) {
+  /**
+   * Начало жеста для комнаты: расширить выбранную, если начали в ней, или
+   * нарисовать новую.
+   *
+   * @param cell Клетка, где нажали.
+   */
+  function startRoom(cell: PlanCell): void {
+    const selected = editor.document.value.rooms.find(
+      (room) => room.id === selectedRoomId.value,
+    );
+
+    const isExtending =
+      selected !== undefined
+      && selected.level === level.value
+      && selected.kind !== 'TOWER'
+      && selected.cells.some((item) => item.x === cell.x && item.y === cell.y);
+
+    gesture = {
+      type: 'room',
+      anchor: cell,
+      current: cell,
+      target: isExtending ? selected : createSeed('ROOM'),
+    };
+
+    preview.value = { kind: 'rect', from: cell, to: cell, label: undefined };
+  }
+
+  /**
+   * Начало коридора: продолжает коридор под указателем или начинает новый.
+   *
+   * @param point Точка нажатия.
+   * @param cell Клетка нажатия.
+   */
+  function startCorridor(point: PlanPoint, cell: PlanCell): void {
+    const start = findRoomAt(editor.document.value, level.value, point);
+    const target = start?.kind === 'CORRIDOR' ? start : createSeed('CORRIDOR');
+
+    editor.beginStroke();
+    gesture = { type: 'corridor', last: cell, target };
+    paintCorridorAt(cell, target);
+  }
+
+  /**
+   * Красит коридор кистью текущей ширины.
+   *
+   * @param cell Клетка под указателем.
+   * @param target Коридор или заготовка нового.
+   */
+  function paintCorridorAt(
+    cell: PlanCell,
+    target: PlanRoom | PlanRoomSeed,
+  ): void {
+    editor.applyInStroke(
+      paintCorridor(
+        editor.document.value,
+        getBrushCells(cell, options.corridorWidth.value),
+        target,
+      ),
+    );
+  }
+
+  /**
+   * Ластик: щелчок по предмету убирает его, иначе начинается мазок по полу.
+   *
+   * @param point Точка нажатия.
+   * @param cell Клетка нажатия.
+   */
+  function startErase(point: PlanPoint, cell: PlanCell): void {
+    const next = eraseObjectAt(editor.document.value, level.value, point);
+
+    if (next !== editor.document.value) {
+      editor.commit(next);
+
       return;
     }
 
-    const kind: BuildingKind = OUTLINE_BUILDING_KINDS[outline.type];
-    const id = crypto.randomUUID();
+    editor.beginStroke();
+    gesture = { type: 'erase', last: cell };
 
-    const number =
-      editor.document.value.buildings.filter(
-        (building) => building.kind === kind,
-      ).length + 1;
-
-    editor.commit(
-      addBuilding(
-        editor.document.value,
-        {
-          id,
-          name: fillTemplate(PLAN_LABELS.newBuilding, {
-            kind: BUILDING_KIND_LABELS[kind],
-            number,
-          }),
-          kind,
-          outline,
-        },
-        level.value,
-      ),
+    editor.applyInStroke(
+      eraseCells(editor.document.value, level.value, [cell]),
     );
-
-    options.selectedBuildingId.value = id;
   }
 
   /**
-   * Правка в клетке для «рисующих» инструментов: кисть, ластик, переход, стена.
-   *
-   * @param cell Клетка под указателем.
-   * @returns Новый документ.
-   */
-  function paintAt(cell: PlanCell): PlanDocument {
-    const document = editor.document.value;
-
-    switch (tool.value) {
-      case 'brush': {
-        const facilityId = options.selectedFacilityId.value;
-
-        const squares = facilityId
-          ? options.facilitySquares.value.get(facilityId)
-          : undefined;
-
-        return facilityId && squares
-          ? paintFacilityCell(document, level.value, cell, {
-              id: facilityId,
-              squares,
-            })
-          : document;
-      }
-      case 'eraser':
-        return eraseAt(document, level.value, cell);
-      case 'passage':
-        return paintPassage(
-          document,
-          level.value,
-          cell,
-          options.passageKind.value,
-        );
-      case 'wall':
-        return level.value === 0 ? paintWall(document, cell) : document;
-      default:
-        return document;
-    }
-  }
-
-  /**
-   * Нажатие указателя.
+   * Нажатие указателя на холсте.
    *
    * @param point Точка в клетках.
    */
   function handleDown(point: PlanPoint): void {
-    const cell = getCellAt(point.x, point.y);
+    const cell = getCellAt(point);
     const document = editor.document.value;
 
     switch (tool.value) {
       case 'select': {
-        const building =
-          findBuildingAt(document, level.value, cell)
-          ?? document.buildings.findLast((item) =>
-            isCellInside(item.outline, cell),
-          );
+        const room = findRoomAt(document, level.value, point);
 
-        options.selectedBuildingId.value = building?.id;
+        selectedRoomId.value = room?.id;
 
-        if (building) {
-          dragCell = cell;
-          editor.beginStroke();
-          isStroke = true;
+        if (room) {
+          gesture = {
+            type: 'move',
+            room,
+            anchor: cell,
+            offset: { x: 0, y: 0 },
+          };
         }
 
         break;
       }
-      case 'rectangle':
-        anchor = { x: snapToGrid(point.x, 1), y: snapToGrid(point.y, 1) };
+      case 'room':
+        startRoom(cell);
 
-        draft.value = {
-          kind: 'outline',
-          outline: createRectangle(anchor, point),
+        break;
+      case 'tower': {
+        const center = { x: snapToHalf(point.x), y: snapToHalf(point.y) };
+
+        gesture = { type: 'tower', center, radius: PLAN_LIMITS.minTowerRadius };
+        updateTowerPreview(center, PLAN_LIMITS.minTowerRadius);
+
+        break;
+      }
+      case 'corridor':
+        startCorridor(point, cell);
+
+        break;
+      case 'eraser':
+        startErase(point, cell);
+
+        break;
+      case 'wall':
+        if (level.value === 0) {
+          editor.beginStroke();
+          gesture = { type: 'wall', last: cell };
+          editor.applyInStroke(paintDefenseWall(document, [cell]));
+        }
+
+        break;
+      case 'stairs':
+        gesture = { type: 'stairs', anchor: cell, current: cell };
+
+        preview.value = {
+          kind: 'rect',
+          from: cell,
+          to: cell,
+          label: undefined,
         };
-
-        break;
-      case 'circle':
-        anchor = { x: snapToGrid(point.x, 0.5), y: snapToGrid(point.y, 0.5) };
-        draft.value = { kind: 'outline', outline: createCircle(anchor, point) };
-
-        break;
-      case 'polygon':
-        addPolygonPoint(point);
 
         break;
       case 'door':
         editor.commit(
-          toggleDoor(
-            document,
-            level.value,
-            getNearestEdge(point.x, point.y),
-            options.doorKind.value,
-          ),
+          placeOpening(document, level.value, point, {
+            type: 'DOOR',
+            kind: options.doorKind.value,
+          }),
         );
 
         break;
       case 'window':
         editor.commit(
-          toggleWindow(document, level.value, getNearestEdge(point.x, point.y)),
+          placeOpening(document, level.value, point, { type: 'WINDOW' }),
         );
 
         break;
-      case 'stairs':
-        editor.commit(toggleStair(document, level.value, cell));
+      case 'column':
+        editor.commit(
+          addColumn(document, {
+            id: crypto.randomUUID(),
+            level: level.value,
+            x: snapToHalf(point.x),
+            y: snapToHalf(point.y),
+          }),
+        );
 
         break;
-      case 'brush':
-      case 'eraser':
-      case 'passage':
-      case 'wall':
-        editor.beginStroke();
-        isStroke = true;
-        editor.applyInStroke(paintAt(cell));
-
-        break;
-      default:
+      case 'pan':
         break;
     }
   }
 
   /**
-   * Движение указателя.
+   * Подсказка круглой башни: окружность и диаметр в футах.
    *
-   * @param point Точка в клетках.
-   * @param isPressed Кнопка нажата.
+   * @param center Центр.
+   * @param radius Радиус в клетках.
    */
-  function handleMove(point: PlanPoint, isPressed: boolean): void {
-    const cell = getCellAt(point.x, point.y);
-
-    hoverCell.value = cell;
-
-    if (tool.value === 'polygon' && draft.value?.kind === 'polyline') {
-      draft.value = {
-        ...draft.value,
-        cursor: [snapToGrid(point.x, 1), snapToGrid(point.y, 1)],
-      };
-
-      return;
-    }
-
-    if (!isPressed) {
-      return;
-    }
-
-    switch (tool.value) {
-      case 'select': {
-        const buildingId = options.selectedBuildingId.value;
-
-        if (!dragCell || !buildingId) {
-          return;
-        }
-
-        const dx = cell.x - dragCell.x;
-        const dy = cell.y - dragCell.y;
-
-        if (dx || dy) {
-          editor.applyInStroke(
-            moveBuilding(editor.document.value, buildingId, dx, dy),
-          );
-
-          dragCell = cell;
-        }
-
-        break;
-      }
-      case 'rectangle':
-        if (anchor) {
-          draft.value = {
-            kind: 'outline',
-            outline: createRectangle(anchor, point),
-          };
-        }
-
-        break;
-      case 'circle':
-        if (anchor) {
-          draft.value = {
-            kind: 'outline',
-            outline: createCircle(anchor, point),
-          };
-        }
-
-        break;
-      case 'brush':
-      case 'eraser':
-      case 'passage':
-      case 'wall':
-        if (isStroke) {
-          editor.applyInStroke(paintAt(cell));
-        }
-
-        break;
-      default:
-        break;
-    }
-  }
-
-  /** Отпускание указателя: заканчивает мазок или рисование корпуса. */
-  function handleUp(): void {
-    if (isStroke) {
-      editor.endStroke();
-      isStroke = false;
-    }
-
-    dragCell = undefined;
-
-    const isOutlineTool = tool.value === 'rectangle' || tool.value === 'circle';
-
-    if (isOutlineTool && draft.value?.kind === 'outline') {
-      finishBuilding(draft.value.outline);
-    }
-
-    anchor = undefined;
-  }
-
-  /**
-   * Добавляет вершину многоугольника; щелчок по первой вершине замыкает его.
-   *
-   * @param point Точка в клетках.
-   */
-  function addPolygonPoint(point: PlanPoint): void {
-    const vertex: [number, number] = [
-      snapToGrid(point.x, 1),
-      snapToGrid(point.y, 1),
-    ];
-
-    const points = draft.value?.kind === 'polyline' ? draft.value.points : [];
-    const [first] = points;
-
-    if (
-      first
-      && points.length >= 3
-      && first[0] === vertex[0]
-      && first[1] === vertex[1]
-    ) {
-      closePolygon();
-
-      return;
-    }
-
-    if (points.length >= PLAN_LIMITS.maxPolygonPoints) {
-      return;
-    }
-
-    draft.value = {
-      kind: 'polyline',
-      points: [...points, vertex],
-      cursor: vertex,
+  function updateTowerPreview(center: PlanCell, radius: number): void {
+    preview.value = {
+      kind: 'circle',
+      circle: { cx: center.x, cy: center.y, r: radius },
+      label: fillTemplate(PLAN_LABELS.feet, {
+        feet: radius * 2 * PLAN_FEET_PER_CELL,
+      }),
     };
   }
 
-  /** Замыкает многоугольник, если у него хотя бы три вершины. */
-  function closePolygon(): void {
-    if (draft.value?.kind !== 'polyline' || draft.value.points.length < 3) {
+  /**
+   * Движение указателя: обновляет подсказку или продолжает мазок.
+   *
+   * @param point Точка в клетках.
+   */
+  function handleMove(point: PlanPoint): void {
+    hoverPoint.value = point;
+
+    if (!gesture) {
       return;
     }
 
-    finishBuilding({ type: 'POLYGON', points: draft.value.points });
+    const cell = getCellAt(point);
+
+    switch (gesture.type) {
+      case 'room':
+        gesture.current = cell;
+
+        preview.value = {
+          kind: 'rect',
+          from: gesture.anchor,
+          to: cell,
+          label: getRectangleLabel(gesture.anchor, cell),
+        };
+
+        break;
+      case 'tower': {
+        const distance = Math.hypot(
+          point.x - gesture.center.x,
+          point.y - gesture.center.y,
+        );
+
+        gesture.radius = Math.min(
+          PLAN_LIMITS.maxTowerRadius,
+          Math.max(PLAN_LIMITS.minTowerRadius, snapToHalf(distance)),
+        );
+
+        updateTowerPreview(gesture.center, gesture.radius);
+
+        break;
+      }
+      case 'move': {
+        const offset = {
+          x: cell.x - gesture.anchor.x,
+          y: cell.y - gesture.anchor.y,
+        };
+
+        const { room } = gesture;
+
+        gesture.offset = offset;
+
+        preview.value = {
+          kind: 'move',
+          cells: room.cells.map((item) => ({
+            x: item.x + offset.x,
+            y: item.y + offset.y,
+          })),
+          isValid: canMoveRoom(editor.document.value, room, offset),
+        };
+
+        break;
+      }
+      case 'stairs':
+        gesture.current = clampStairEnd(gesture.anchor, cell);
+
+        preview.value = {
+          kind: 'rect',
+          from: gesture.anchor,
+          to: gesture.current,
+          label: getRectangleLabel(gesture.anchor, gesture.current),
+        };
+
+        break;
+      case 'corridor': {
+        const { target } = gesture;
+
+        for (const lineCell of getLineCells(gesture.last, cell)) {
+          paintCorridorAt(lineCell, target);
+        }
+
+        gesture.last = cell;
+
+        break;
+      }
+      case 'erase':
+        editor.applyInStroke(
+          eraseCells(
+            editor.document.value,
+            level.value,
+            getLineCells(gesture.last, cell),
+          ),
+        );
+
+        gesture.last = cell;
+
+        break;
+      case 'wall':
+        editor.applyInStroke(
+          paintDefenseWall(
+            editor.document.value,
+            getLineCells(gesture.last, cell),
+          ),
+        );
+
+        gesture.last = cell;
+
+        break;
+    }
   }
 
-  /** Бросает рисуемый корпус. */
-  function cancelDraft(): void {
-    draft.value = undefined;
-    anchor = undefined;
+  /** Отпускание указателя: завершает жест одним шагом истории. */
+  function handleUp(): void {
+    const finished = gesture;
+
+    gesture = undefined;
+    preview.value = undefined;
+
+    if (!finished) {
+      return;
+    }
+
+    const document = editor.document.value;
+
+    switch (finished.type) {
+      case 'room':
+        editor.commit(
+          drawRoom(
+            document,
+            getRectCells(finished.anchor, finished.current),
+            finished.target,
+          ),
+        );
+
+        selectedRoomId.value = finished.target.id;
+
+        break;
+      case 'tower': {
+        const seed = createSeed('TOWER');
+        const { center, radius } = finished;
+
+        editor.commit(
+          addTower(document, seed, { cx: center.x, cy: center.y, r: radius }),
+        );
+
+        selectedRoomId.value = seed.id;
+
+        break;
+      }
+      case 'move':
+        editor.commit(moveRoom(document, finished.room.id, finished.offset));
+
+        break;
+      case 'stairs':
+        finishStairs(finished.anchor, finished.current);
+
+        break;
+      case 'corridor':
+      case 'erase':
+      case 'wall':
+        editor.endStroke();
+
+        if (finished.type === 'corridor') {
+          selectedRoomId.value = finished.target.id;
+        }
+
+        break;
+    }
   }
 
-  // Смена инструмента бросает недорисованный корпус: иначе черновик остался бы
-  // висеть на холсте без способа его закончить.
-  watch(tool, cancelDraft);
+  /**
+   * Ставит лестницу по рамке. Если вести некуда — ничего не делает: панель
+   * инструмента уже подсказывает добавить этаж.
+   *
+   * @param anchor Клетка, где начали тянуть.
+   * @param current Клетка, где отпустили.
+   */
+  function finishStairs(anchor: PlanCell, current: PlanCell): void {
+    const toLevel = getStairTargetLevel(
+      editor.document.value,
+      level.value,
+      options.stairTarget.value,
+    );
+
+    if (toLevel === undefined) {
+      return;
+    }
+
+    editor.commit(
+      addStair(editor.document.value, {
+        id: crypto.randomUUID(),
+        level: level.value,
+        x: Math.min(anchor.x, current.x),
+        y: Math.min(anchor.y, current.y),
+        width: Math.abs(current.x - anchor.x) + 1,
+        height: Math.abs(current.y - anchor.y) + 1,
+        direction: getDragDirection(
+          anchor,
+          current,
+          options.stairDirection.value,
+        ),
+        toLevel,
+        kind: options.stairKind.value,
+      }),
+    );
+  }
+
+  /** Указатель ушёл с холста. */
+  function handleLeave(): void {
+    hoverPoint.value = undefined;
+  }
+
+  /** Прерывает жест без изменений (Escape). */
+  function cancel(): void {
+    if (gesture && ['corridor', 'erase', 'wall'].includes(gesture.type)) {
+      editor.endStroke();
+    }
+
+    gesture = undefined;
+    preview.value = undefined;
+  }
 
   return {
-    draft,
-    hoverCell,
+    preview,
+    hoverPoint,
     handleDown,
     handleMove,
     handleUp,
-    closePolygon,
-    cancelDraft,
+    handleLeave,
+    cancel,
   };
 }

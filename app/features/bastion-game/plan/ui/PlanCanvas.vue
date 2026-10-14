@@ -1,13 +1,13 @@
 <script setup lang="ts">
   import type { Application, Container, FederatedPointerEvent } from 'pixi.js';
 
-  import type { PlanDraft, PlanPoint } from '../../composables';
-  import type { PlanCell, PlanDocument, PlanTool } from '../../model';
+  import type { PlanPoint, PlanPreview } from '../../composables';
+  import type { PlanDocument, PlanTool } from '../../model';
   import type { PlanLayers, TextFactory } from '../renderer';
 
   import { usePlanTheme } from '../../composables';
   import {
-    getOutlineCenter,
+    getLevelCenter,
     PLAN_CELL_PIXELS,
     PLAN_START_FOCUS,
     PLAN_ZOOM_MAX,
@@ -26,10 +26,11 @@
     document: PlanDocument;
     level: number;
     tool: PlanTool;
-    selectedBuildingId: string | undefined;
+    selectedRoomId: string | undefined;
     facilityColors: ReadonlyMap<string, number>;
-    draft: PlanDraft | undefined;
-    hoverCell: PlanCell | undefined;
+    facilityAreas: ReadonlyMap<string, { used: number; squares: number }>;
+    preview: PlanPreview | undefined;
+    hoverPoint: PlanPoint | undefined;
   }>();
 
   const emit = defineEmits<{
@@ -75,10 +76,12 @@
       {
         document: props.document,
         level: props.level,
-        selectedBuildingId: props.selectedBuildingId,
+        tool: props.tool,
+        selectedRoomId: props.selectedRoomId,
         facilityColors: props.facilityColors,
-        draft: props.draft,
-        hoverCell: props.hoverCell,
+        facilityAreas: props.facilityAreas,
+        preview: props.preview,
+        hoverPoint: props.hoverPoint,
       },
       theme.value,
       world.scale.x,
@@ -168,48 +171,80 @@
   }
 
   /**
-   * Зум колесом у курсора: точка под курсором остаётся на месте.
+   * Меняет масштаб так, чтобы точка экрана осталась на месте.
    *
-   * @param event Событие колеса.
+   * @param factor Во сколько раз изменить масштаб.
+   * @param screenX Точка на холсте, x.
+   * @param screenY Точка на холсте, y.
    */
-  function handleWheel(event: WheelEvent): void {
-    if (!world || !application) {
+  function zoomAt(factor: number, screenX: number, screenY: number): void {
+    if (!world) {
       return;
     }
-
-    event.preventDefault();
-
-    const factor = event.deltaY < 0 ? PLAN_ZOOM_STEP : 1 / PLAN_ZOOM_STEP;
 
     const scale = Math.min(
       PLAN_ZOOM_MAX,
       Math.max(PLAN_ZOOM_MIN, world.scale.x * factor),
     );
 
-    const rect = application.canvas.getBoundingClientRect();
-    const pointerX = event.clientX - rect.left;
-    const pointerY = event.clientY - rect.top;
-    const localX = (pointerX - world.position.x) / world.scale.x;
-    const localY = (pointerY - world.position.y) / world.scale.y;
+    const localX = (screenX - world.position.x) / world.scale.x;
+    const localY = (screenY - world.position.y) / world.scale.y;
 
     world.scale.set(scale);
-    world.position.set(pointerX - localX * scale, pointerY - localY * scale);
+    world.position.set(screenX - localX * scale, screenY - localY * scale);
     render();
   }
 
   /**
-   * Показывает на старте середину плана: первый корпус или угол участка.
+   * Зум колесом у курсора: точка под курсором остаётся на месте.
+   *
+   * @param event Событие колеса.
+   */
+  function handleWheel(event: WheelEvent): void {
+    if (!application) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const rect = application.canvas.getBoundingClientRect();
+
+    zoomAt(
+      event.deltaY < 0 ? PLAN_ZOOM_STEP : 1 / PLAN_ZOOM_STEP,
+      event.clientX - rect.left,
+      event.clientY - rect.top,
+    );
+  }
+
+  /**
+   * Зум кнопками: относительно середины холста.
+   *
+   * @param direction Крупнее или мельче.
+   */
+  function zoomStep(direction: 'in' | 'out'): void {
+    if (!application) {
+      return;
+    }
+
+    const factor = PLAN_ZOOM_STEP * PLAN_ZOOM_STEP;
+
+    zoomAt(
+      direction === 'in' ? factor : 1 / factor,
+      application.screen.width / 2,
+      application.screen.height / 2,
+    );
+  }
+
+  /**
+   * Показывает на старте середину этажа или угол участка, если он пуст.
    */
   function centerView(): void {
     if (!world || !application) {
       return;
     }
 
-    const firstBuilding = props.document.buildings[0];
-
-    const focus = firstBuilding
-      ? getOutlineCenter(firstBuilding.outline)
-      : PLAN_START_FOCUS;
+    const focus =
+      getLevelCenter(props.document, props.level) ?? PLAN_START_FOCUS;
 
     world.position.set(
       application.screen.width / 2 - focus.x * PLAN_CELL_PIXELS * world.scale.x,
@@ -226,6 +261,11 @@
     }
 
     const pixi = await import('pixi.js');
+
+    // CSP сайта запрещает eval, а PixiJS по умолчанию собирает шейдеры и
+    // синхронизацию униформ через new Function; модуль подменяет это на
+    // заранее собранные функции.
+    await import('pixi.js/unsafe-eval');
 
     application = new pixi.Application();
 
@@ -251,10 +291,19 @@
     world.addChild(layers.grid, layers.content, layers.labels, layers.overlay);
     application.stage.addChild(world);
 
-    createText = (text, color) =>
+    const fontFamily = getComputedStyle(document.body).fontFamily;
+
+    createText = (text, style) =>
       new pixi.Text({
         text,
-        style: { fontFamily: 'sans-serif', fontSize: 13, fill: color },
+        resolution: window.devicePixelRatio,
+        style: {
+          fontFamily,
+          fontSize: style.size,
+          fontWeight: style.isBold ? '700' : '400',
+          fill: style.color,
+          stroke: { color: theme.value.background, width: 3 },
+        },
       });
 
     const stage = application.stage;
@@ -301,22 +350,24 @@
     () => [
       props.document,
       props.level,
-      props.selectedBuildingId,
+      props.tool,
+      props.selectedRoomId,
       props.facilityColors,
-      props.draft,
-      props.hoverCell,
+      props.facilityAreas,
+      props.preview,
+      props.hoverPoint,
     ],
     render,
   );
 
-  /** Сбрасывает масштаб и показывает первый корпус. */
+  /** Сбрасывает масштаб и показывает середину этажа. */
   function resetView(): void {
     world?.scale.set(1);
     centerView();
     render();
   }
 
-  defineExpose({ resetView });
+  defineExpose({ resetView, zoomStep });
 </script>
 
 <template>

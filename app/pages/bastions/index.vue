@@ -30,7 +30,6 @@
     search,
     filterQuery,
     isPending: isFilterPending,
-    isShowedPreview: isFilterPreviewShowed,
     defaults: filterDefaults,
   } = await useFilter(BASTION_SECTION, `${BASTION_API_PATH}/filters`);
 
@@ -99,7 +98,6 @@
         v-model:filter="filter"
         :defaults="filterDefaults"
         :is-pending="isFilterPending"
-        :show-preview="isFilterPreviewShowed"
       >
       </FilterControls>
     </template>

@@ -6,16 +6,12 @@
   import { PLAN_LABELS } from '../../model';
 
   /**
-   * Палитра сооружений для кисти: цвет на холсте и счётчик «занято / можно».
+   * Сооружения бастиона: цвет на плане и счётчик «занято / можно». Сооружение
+   * назначается комнате в её карточке.
    */
-  const { facilities, canEdit } = defineProps<{
+  const { facilities } = defineProps<{
     facilities: ReadonlyArray<PlanPaletteFacility>;
-    canEdit: boolean;
   }>();
-
-  const selectedFacilityId = defineModel<string | undefined>('selected', {
-    required: true,
-  });
 
   /**
    * Цвет для образца в CSS: холст хранит его числом.
@@ -41,14 +37,13 @@
   }
 
   /**
-   * Выбирает сооружение для кисти.
+   * Цвет счётчика: красный, если сооружение заняло больше своего пространства.
    *
    * @param facility Сооружение.
+   * @returns Класс цвета.
    */
-  function select(facility: PlanPaletteFacility): void {
-    if (canEdit) {
-      selectedFacilityId.value = facility.id;
-    }
+  function getAreaClass(facility: PlanPaletteFacility): string {
+    return facility.used > facility.squares ? 'text-error' : 'text-muted';
   }
 </script>
 
@@ -65,19 +60,13 @@
       {{ PLAN_LABELS.noFacilities }}
     </p>
 
-    <button
+    <div
       v-for="facility in facilities"
       :key="facility.id"
-      type="button"
-      class="flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-elevated"
-      :class="{
-        'bg-elevated ring-1 ring-primary': facility.id === selectedFacilityId,
-      }"
-      :disabled="!canEdit"
-      @click.left.exact.prevent="select(facility)"
+      class="flex items-center gap-2 px-1 text-sm"
     >
       <span
-        class="size-3.5 shrink-0 rounded-sm"
+        class="size-3 shrink-0 rounded-sm"
         :style="{ backgroundColor: toCssColor(facility.color) }"
       />
 
@@ -91,10 +80,10 @@
 
       <span
         class="shrink-0 text-xs tabular-nums"
-        :class="facility.used > facility.squares ? 'text-error' : 'text-muted'"
+        :class="getAreaClass(facility)"
       >
         {{ getAreaText(facility) }}
       </span>
-    </button>
+    </div>
   </section>
 </template>

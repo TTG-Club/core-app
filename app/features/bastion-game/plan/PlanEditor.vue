@@ -1,10 +1,12 @@
 <script setup lang="ts">
   import type {
-    BuildingKind,
+    CellSide,
     DoorKind,
-    PassageKind,
     PlanTool,
     PlayerBastion,
+    RoomKind,
+    StairKind,
+    StairTarget,
   } from '../model';
 
   import { fillTemplate } from '~bastions/model';
@@ -12,159 +14,185 @@
 
   import { usePlanEditor, usePlanInteraction } from '../composables';
   import {
-    addFloor,
+    addLevel,
+    canRemoveLevel,
     createPaletteFacilities,
-    DOOR_KIND_LABELS,
-    DOOR_KINDS,
-    getLevelLabel,
     getPlanLevels,
-    PASSAGE_KIND_LABELS,
-    PASSAGE_KINDS,
+    getStairTargetLevel,
+    PLAN_CORRIDOR_WIDTHS,
+    PLAN_EDIT_TOOLS,
     PLAN_LABELS,
     PLAN_LIMITS,
-    removeBuilding,
-    removeFloor,
-    updateBuilding,
+    PLAN_TOOL_GROUPS,
+    PLAN_TOOL_HINTS,
+    removeLevel,
+    removeRoom,
+    updateRoom,
   } from '../model';
   import {
-    PlanBuildingPanel,
     PlanCanvas,
-    PlanFacilityPalette,
+    PlanFacilityList,
+    PlanLevelBar,
+    PlanRoomList,
+    PlanRoomPanel,
     PlanToolbar,
+    PlanToolOptions,
   } from './ui';
 
   /**
-   * Редактор плана бастиона: холст, инструменты, этажи, корпуса и палитра
-   * сооружений. Смотреть план могут все участники игры, рисовать — мастер и
-   * игроки с доступом; для остальных редактор открывается только на просмотр.
+   * Редактор плана бастиона — упрощённый редактор карт: комнаты на сетке,
+   * стены по их границам, двери, окна, лестницы, колонны и круглые башни.
+   * Смотреть план могут все участники игры, рисовать — мастер и игроки с
+   * доступом; для остальных редактор открывается только на просмотр.
    */
   const { bastion } = defineProps<{
     bastion: PlayerBastion;
   }>();
 
   const editor = usePlanEditor(() => bastion.id);
+  const canvas = useTemplateRef('canvas');
 
   const tool = ref<PlanTool>('select');
   const level = ref(0);
-  const selectedBuildingId = ref<string>();
-  const selectedFacilityId = ref<string>();
+  const selectedRoomId = ref<string>();
   const doorKind = ref<DoorKind>('DOOR');
-  const passageKind = ref<PassageKind>('CORRIDOR');
-
-  const palette = computed(() =>
-    createPaletteFacilities(bastion.members, editor.document.value),
-  );
-
-  const facilityColors = computed(
-    () =>
-      new Map(palette.value.map((facility) => [facility.id, facility.color])),
-  );
-
-  const facilitySquares = computed(
-    () =>
-      new Map(palette.value.map((facility) => [facility.id, facility.squares])),
-  );
+  const stairKind = ref<StairKind>('STRAIGHT');
+  const stairTarget = ref<StairTarget>();
+  const stairDirection = ref<CellSide>('N');
+  const corridorWidth = ref<number>(PLAN_CORRIDOR_WIDTHS[0]);
 
   const interaction = usePlanInteraction({
     editor,
     tool,
     level,
-    selectedBuildingId,
-    selectedFacilityId,
+    selectedRoomId,
     doorKind,
-    passageKind,
-    facilitySquares,
+    stairKind,
+    stairTarget,
+    stairDirection,
+    corridorWidth,
   });
 
-  const levelItems = computed(() =>
-    getPlanLevels(editor.document.value).map((value) => ({
-      label: getLevelLabel(value),
-      value,
-    })),
+  const facilities = computed(() =>
+    createPaletteFacilities(bastion.members, editor.document.value),
   );
 
-  const doorItems = DOOR_KINDS.map((kind) => ({
-    label: DOOR_KIND_LABELS[kind],
-    value: kind,
-  }));
+  const facilityColors = computed(
+    () =>
+      new Map(
+        facilities.value.map((facility) => [facility.id, facility.color]),
+      ),
+  );
 
-  const passageItems = PASSAGE_KINDS.map((kind) => ({
-    label: PASSAGE_KIND_LABELS[kind],
-    value: kind,
-  }));
+  const facilityAreas = computed(
+    () =>
+      new Map(
+        facilities.value.map((facility) => [
+          facility.id,
+          { used: facility.used, squares: facility.squares },
+        ]),
+      ),
+  );
 
-  const selectedBuilding = computed(() =>
-    editor.document.value.buildings.find(
-      (building) => building.id === selectedBuildingId.value,
+  const levels = computed(() => getPlanLevels(editor.document.value));
+
+  const levelRooms = computed(() =>
+    editor.document.value.rooms.filter((room) => room.level === level.value),
+  );
+
+  const selectedRoom = computed(() =>
+    editor.document.value.rooms.find(
+      (room) => room.id === selectedRoomId.value,
     ),
   );
 
+  const stairLevel = computed(() =>
+    getStairTargetLevel(editor.document.value, level.value, stairTarget.value),
+  );
+
+  const hasLevelAbove = computed(() => levels.value.includes(level.value + 1));
+  const hasLevelBelow = computed(() => levels.value.includes(level.value - 1));
+
+  const canRemoveCurrentLevel = computed(() =>
+    canRemoveLevel(editor.document.value, level.value),
+  );
+
+  const toolHint = computed(() =>
+    tool.value === 'wall' && level.value !== 0
+      ? PLAN_LABELS.wallsGroundOnly
+      : PLAN_TOOL_HINTS[tool.value],
+  );
+
   const wallsText = computed(() => {
-    const cells = editor.document.value.walls.length;
+    const cells = editor.document.value.defenseWalls.length;
 
     return cells
-      ? fillTemplate(PLAN_LABELS.walls, {
+      ? fillTemplate(PLAN_LABELS.wallsSummary, {
           cells,
-          cost: cells * PLAN_LIMITS.wallCostPerCell,
+          cost: (cells * PLAN_LIMITS.wallCostPerCell).toLocaleString('ru-RU'),
           days: cells * PLAN_LIMITS.wallDaysPerCell,
         })
       : '';
   });
 
-  const toolHint = computed(() => {
-    if (tool.value === 'polygon') {
-      return PLAN_LABELS.polygonHint;
-    }
-
-    return tool.value === 'brush' && !selectedFacilityId.value
-      ? PLAN_LABELS.brushHint
-      : '';
-  });
+  const toolByKey = new Map(
+    PLAN_TOOL_GROUPS.flat().map((option) => [option.key, option.tool]),
+  );
 
   // Без права правки остаётся только панорама; инструмент рисования в режиме
-  // просмотра ничего бы не делал.
+  // просмотра ничего бы не делал. Право приходит с загрузкой плана — тогда
+  // редактор открывается с выбором комнат.
   watch(
     editor.canEdit,
     (canEdit) => {
-      if (!canEdit) {
-        tool.value = 'pan';
-      }
+      tool.value = canEdit ? 'select' : 'pan';
     },
     { immediate: true },
   );
 
-  // Выбор сооружения в палитре — намерение рисовать им.
-  watch(selectedFacilityId, (facilityId) => {
-    if (facilityId && editor.canEdit.value) {
-      tool.value = 'brush';
+  // Удалённая или отменённая комната больше не выбрана; на другом этаже
+  // выбор тоже снимается — карточка комнаты относится к текущему этажу.
+  watch([selectedRoom, level], ([room, currentLevel]) => {
+    if (!room || room.level !== currentLevel) {
+      selectedRoomId.value = undefined;
     }
   });
 
-  // Удалённый или отменённый корпус больше не выбран.
-  watch(selectedBuilding, (building) => {
-    if (!building) {
-      selectedBuildingId.value = undefined;
+  // Этаж мог пропасть после отмены — тогда показывается первый.
+  watch(levels, (current) => {
+    if (!current.includes(level.value)) {
+      level.value = 0;
     }
   });
 
-  useEventListener('keydown', (event: KeyboardEvent) => {
-    const target = event.target;
-
-    if (
+  /**
+   * Нажатие в поле ввода не должно переключать инструменты.
+   *
+   * @param target Элемент, где нажата клавиша.
+   * @returns true, если это поле ввода.
+   */
+  function isTyping(target: EventTarget | null): boolean {
+    return (
       target instanceof HTMLInputElement
       || target instanceof HTMLTextAreaElement
-    ) {
+      || (target instanceof HTMLElement && target.isContentEditable)
+    );
+  }
+
+  /**
+   * Горячие клавиши: отмена и повтор, удаление комнаты, сброс жеста и буквы
+   * инструментов.
+   *
+   * @param event Нажатие клавиши.
+   */
+  function handleKeydown(event: KeyboardEvent): void {
+    if (isTyping(event.target)) {
       return;
     }
 
-    if (event.key === 'Enter') {
-      interaction.closePolygon();
-    } else if (event.key === 'Escape') {
-      interaction.cancelDraft();
-    } else if (
-      (event.ctrlKey || event.metaKey)
-      && event.key.toLowerCase() === 'z'
-    ) {
+    const key = event.key.toLowerCase();
+
+    if ((event.ctrlKey || event.metaKey) && key === 'z') {
       event.preventDefault();
 
       if (event.shiftKey) {
@@ -172,79 +200,113 @@
       } else {
         editor.undo();
       }
+
+      return;
     }
-  });
+
+    if (event.ctrlKey || event.metaKey || event.altKey) {
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      interaction.cancel();
+      selectedRoomId.value = undefined;
+
+      return;
+    }
+
+    if (
+      (event.key === 'Delete' || event.key === 'Backspace')
+      && editor.canEdit.value
+    ) {
+      deleteRoom();
+
+      return;
+    }
+
+    const next = toolByKey.get(key);
+
+    if (next && (editor.canEdit.value || !PLAN_EDIT_TOOLS.has(next))) {
+      tool.value = next;
+    }
+  }
+
+  useEventListener('keydown', handleKeydown);
 
   /**
-   * Переименовывает выбранный корпус.
+   * Переименовывает выбранную комнату.
    *
    * @param name Новое название.
    */
-  function renameBuilding(name: string): void {
-    const id = selectedBuildingId.value;
-
-    if (id) {
+  function renameRoom(name: string): void {
+    if (selectedRoomId.value) {
       editor.commit(
-        updateBuilding(editor.document.value, id, (building) => ({
-          ...building,
-          name,
-        })),
+        updateRoom(editor.document.value, selectedRoomId.value, { name }),
       );
     }
   }
 
   /**
-   * Меняет вид выбранного корпуса.
+   * Меняет вид выбранной комнаты.
    *
    * @param kind Вид.
    */
-  function changeBuildingKind(kind: BuildingKind): void {
-    const id = selectedBuildingId.value;
-
-    if (id) {
+  function changeRoomKind(kind: RoomKind): void {
+    if (selectedRoomId.value) {
       editor.commit(
-        updateBuilding(editor.document.value, id, (building) => ({
-          ...building,
-          kind,
-        })),
+        updateRoom(editor.document.value, selectedRoomId.value, { kind }),
       );
     }
   }
 
   /**
-   * Добавляет выбранному корпусу этаж выше или подвал.
+   * Назначает выбранной комнате сооружение или снимает его.
    *
-   * @param direction Вверх или вниз.
+   * @param facilityId Сооружение или undefined.
    */
-  function addBuildingFloor(direction: 'up' | 'down'): void {
-    const id = selectedBuildingId.value;
+  function changeRoomFacility(facilityId: string | undefined): void {
+    if (selectedRoomId.value) {
+      editor.commit(
+        updateRoom(editor.document.value, selectedRoomId.value, { facilityId }),
+      );
+    }
+  }
 
-    if (id) {
-      editor.commit(addFloor(editor.document.value, id, direction));
+  /** Удаляет выбранную комнату. */
+  function deleteRoom(): void {
+    if (selectedRoomId.value) {
+      editor.commit(removeRoom(editor.document.value, selectedRoomId.value));
+      selectedRoomId.value = undefined;
     }
   }
 
   /**
-   * Убирает этаж выбранного корпуса.
+   * Добавляет этаж выше или подвал и переходит на него.
    *
-   * @param floorLevel Уровень этажа.
+   * @param direction Вверх или вниз.
    */
-  function removeBuildingFloor(floorLevel: number): void {
-    const id = selectedBuildingId.value;
+  function handleAddLevel(direction: 'up' | 'down'): void {
+    const result = addLevel(editor.document.value, direction);
 
-    if (id) {
-      editor.commit(removeFloor(editor.document.value, id, floorLevel));
+    if (result.level !== undefined) {
+      editor.commit(result.document);
+      level.value = result.level;
     }
   }
 
-  /** Удаляет выбранный корпус. */
-  function deleteBuilding(): void {
-    const id = selectedBuildingId.value;
+  /** Убирает пустой текущий этаж и переходит на первый. */
+  function handleRemoveLevel(): void {
+    editor.commit(removeLevel(editor.document.value, level.value));
+    level.value = 0;
+  }
 
-    if (id) {
-      editor.commit(removeBuilding(editor.document.value, id));
-      selectedBuildingId.value = undefined;
-    }
+  /**
+   * Зум кнопками.
+   *
+   * @param direction Крупнее или мельче.
+   */
+  function zoom(direction: 'in' | 'out'): void {
+    canvas.value?.zoomStep(direction);
   }
 </script>
 
@@ -261,13 +323,13 @@
       />
 
       <div class="flex flex-wrap items-center gap-2">
-        <USelect
-          id="plan-level"
-          v-model="level"
-          :items="levelItems"
-          value-key="value"
-          size="sm"
-          class="w-32"
+        <PlanLevelBar
+          v-model:level="level"
+          :levels
+          :can-edit="editor.canEdit.value"
+          :can-remove="canRemoveCurrentLevel"
+          @add="handleAddLevel"
+          @remove="handleRemoveLevel"
         />
 
         <UBadge
@@ -298,15 +360,8 @@
       </div>
     </div>
 
-    <p
-      v-if="toolHint"
-      class="text-sm text-muted"
-    >
-      {{ toolHint }}
-    </p>
-
     <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_18rem]">
-      <div class="h-[70vh] min-h-[28rem]">
+      <div class="relative h-[70vh] min-h-[28rem]">
         <UiResult
           v-if="editor.status.value === 'error'"
           status="error"
@@ -321,85 +376,95 @@
 
         <ClientOnly v-else>
           <PlanCanvas
+            ref="canvas"
             :document="editor.document.value"
             :level
             :tool
-            :selected-building-id="selectedBuildingId"
+            :selected-room-id="selectedRoomId"
             :facility-colors="facilityColors"
-            :draft="interaction.draft.value"
-            :hover-cell="interaction.hoverCell.value"
+            :facility-areas="facilityAreas"
+            :preview="interaction.preview.value"
+            :hover-point="interaction.hoverPoint.value"
             @point-down="interaction.handleDown"
             @point-move="interaction.handleMove"
             @point-up="interaction.handleUp"
+            @point-leave="interaction.handleLeave"
           />
+
+          <div class="absolute top-2 right-2 flex gap-1">
+            <UButton
+              icon="tabler:minus"
+              :aria-label="PLAN_LABELS.zoomOut"
+              color="neutral"
+              variant="outline"
+              size="xs"
+              @click.left.exact.prevent="zoom('out')"
+            />
+
+            <UButton
+              icon="tabler:plus"
+              :aria-label="PLAN_LABELS.zoomIn"
+              color="neutral"
+              variant="outline"
+              size="xs"
+              @click.left.exact.prevent="zoom('in')"
+            />
+          </div>
+
+          <p
+            class="pointer-events-none absolute right-3 bottom-2 left-3 text-xs text-muted"
+          >
+            {{ toolHint }}
+          </p>
         </ClientOnly>
       </div>
 
       <aside
         class="flex flex-col gap-5 rounded-lg border border-default bg-muted p-3"
       >
-        <UFormField
-          v-if="tool === 'door'"
-          :label="PLAN_LABELS.doorKind"
-        >
-          <USelect
-            id="plan-door-kind"
-            v-model="doorKind"
-            :items="doorItems"
-            value-key="value"
-            class="w-full"
-          />
-        </UFormField>
-
-        <UFormField
-          v-if="tool === 'passage'"
-          :label="PLAN_LABELS.passageKind"
-        >
-          <USelect
-            id="plan-passage-kind"
-            v-model="passageKind"
-            :items="passageItems"
-            value-key="value"
-            class="w-full"
-          />
-        </UFormField>
-
-        <section class="flex flex-col gap-2">
-          <h3 class="text-sm font-semibold text-highlighted">
-            {{ PLAN_LABELS.buildings }}
-          </h3>
-
-          <p
-            v-if="!editor.document.value.buildings.length"
-            class="text-sm text-muted"
-          >
-            {{ PLAN_LABELS.noBuildings }}
-          </p>
-
-          <PlanBuildingPanel
-            v-if="selectedBuilding"
-            :building="selectedBuilding"
-            :can-edit="editor.canEdit.value"
-            @rename="renameBuilding"
-            @change-kind="changeBuildingKind"
-            @add-floor="addBuildingFloor"
-            @remove-floor="removeBuildingFloor"
-            @remove="deleteBuilding"
-          />
-        </section>
-
-        <PlanFacilityPalette
-          v-model:selected="selectedFacilityId"
-          :facilities="palette"
-          :can-edit="editor.canEdit.value"
+        <PlanToolOptions
+          v-if="editor.canEdit.value"
+          v-model:door-kind="doorKind"
+          v-model:stair-kind="stairKind"
+          v-model:stair-target="stairTarget"
+          v-model:stair-direction="stairDirection"
+          v-model:corridor-width="corridorWidth"
+          :tool
+          :stair-level="stairLevel"
+          :has-level-above="hasLevelAbove"
+          :has-level-below="hasLevelBelow"
         />
 
-        <p
+        <PlanRoomPanel
+          v-if="selectedRoom"
+          :room="selectedRoom"
+          :facilities
+          :can-edit="editor.canEdit.value"
+          @rename="renameRoom"
+          @change-kind="changeRoomKind"
+          @change-facility="changeRoomFacility"
+          @remove="deleteRoom"
+        />
+
+        <PlanRoomList
+          v-model:selected="selectedRoomId"
+          :rooms="levelRooms"
+        />
+
+        <PlanFacilityList :facilities />
+
+        <section
           v-if="wallsText"
-          class="text-xs text-muted"
+          class="flex flex-col gap-1"
         >
-          {{ wallsText }}
-        </p>
+          <h3 class="text-sm font-semibold text-highlighted">
+            {{ PLAN_LABELS.walls }}
+          </h3>
+
+          <p class="text-xs text-muted tabular-nums">
+            {{ wallsText }}
+          </p>
+        </section>
       </aside>
     </div>
   </div>

@@ -7,6 +7,8 @@ export interface PlanTheme {
   muted: number;
   accent: number;
   warning: number;
+  error: number;
+  shade: number;
 }
 
 /** Запасные цвета — если тему прочитать не удалось (SSR, тесты). */
@@ -18,6 +20,8 @@ const FALLBACK_THEME: PlanTheme = {
   muted: 0x9aa6b8,
   accent: 0xc8a24a,
   warning: 0xd9a441,
+  error: 0xe0806f,
+  shade: 0x2b3545,
 };
 
 const THEME_KEYS: ReadonlyArray<keyof PlanTheme> = [
@@ -28,6 +32,8 @@ const THEME_KEYS: ReadonlyArray<keyof PlanTheme> = [
   'muted',
   'accent',
   'warning',
+  'error',
+  'shade',
 ];
 
 /** CSS-переменные Nuxt UI, из которых берётся тема холста. */
@@ -39,6 +45,8 @@ const THEME_VARIABLES: Record<keyof PlanTheme, string> = {
   muted: '--ui-text-muted',
   accent: '--ui-primary',
   warning: '--ui-warning',
+  error: '--ui-error',
+  shade: '--ui-bg-accented',
 };
 
 /**
