@@ -85,10 +85,15 @@
     wallPiece,
   });
 
-  /** Поворачивает предмет, который сейчас поставит инструмент мебели. */
-  function rotateFurniture(): void {
+  /**
+   * Поворачивает предмет, который сейчас поставит инструмент мебели.
+   *
+   * @param direction 1 — по часовой, -1 — против.
+   */
+  function rotateFurniture(direction: 1 | -1 = 1): void {
     furnitureRotation.value =
-      (furnitureRotation.value + PLAN_FURNITURE_ROTATION_STEP) % 360;
+      (furnitureRotation.value + direction * PLAN_FURNITURE_ROTATION_STEP + 360)
+      % 360;
   }
 
   /** Выделенный участок — только у инструмента «Выделить» и на его этаже. */
@@ -480,6 +485,7 @@
             @point-move="handlePointMove"
             @point-up="interaction.handleUp"
             @point-leave="handlePointLeave"
+            @rotate="rotateFurniture"
           />
 
           <div class="absolute top-2 right-2 flex gap-1">

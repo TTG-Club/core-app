@@ -15,6 +15,7 @@
     getLevelCenter,
     PLAN_CELL_PIXELS,
     PLAN_START_FOCUS,
+    PLAN_WHEEL_ROTATE_MS,
     PLAN_ZOOM_MAX,
     PLAN_ZOOM_MIN,
     PLAN_ZOOM_STEP,
@@ -50,7 +51,12 @@
     'point-move': [point: PlanPoint, isPressed: boolean];
     'point-up': [];
     'point-leave': [];
+    /** Колесо с инструментом мебели: 1 — по часовой, -1 — против. */
+    'rotate': [direction: 1 | -1];
   }>();
+
+  /** Когда колесо последний раз повернуло мебель: тачпад шлёт много мелких событий. */
+  let lastRotateAt = 0;
 
   const container = useTemplateRef('container');
   const { theme } = usePlanTheme();
@@ -212,7 +218,8 @@
   }
 
   /**
-   * Зум колесом у курсора: точка под курсором остаётся на месте.
+   * Зум колесом у курсора: точка под курсором остаётся на месте. С
+   * инструментом мебели колесо поворачивает предмет, а зум — с Ctrl.
    *
    * @param event Событие колеса.
    */
@@ -222,6 +229,18 @@
     }
 
     event.preventDefault();
+
+    if (props.tool === 'furniture' && !event.ctrlKey && !event.metaKey) {
+      if (
+        event.deltaY !== 0
+        && event.timeStamp - lastRotateAt > PLAN_WHEEL_ROTATE_MS
+      ) {
+        lastRotateAt = event.timeStamp;
+        emit('rotate', event.deltaY > 0 ? 1 : -1);
+      }
+
+      return;
+    }
 
     const rect = application.canvas.getBoundingClientRect();
 
