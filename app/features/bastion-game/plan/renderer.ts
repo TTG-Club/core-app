@@ -33,6 +33,7 @@ import {
   getOccupancy,
   getRoomLabelPoint,
   getTowerRingPoint,
+  getTowerStairFrame,
   isWallEdge,
   PLAN_CELL_PIXELS,
   PLAN_FURNITURE_SIZES,
@@ -79,6 +80,8 @@ export interface PlanScene {
   area: PlanArea | undefined;
   /** Какую мебель ставит инструмент «Мебель». */
   furnitureKind: FurnitureKind;
+  /** Поворот, с которым инструмент «Мебель» поставит новый предмет. */
+  furnitureRotation: number;
 }
 
 /** Указатель соавтора. */
@@ -470,9 +473,77 @@ function drawTower(
     .stroke({ color: theme.text, width: hairline * 2.5 });
 }
 
+/** Сколько ступеней в витке винтовой лестницы и какую долю круга они занимают. */
+const SPIRAL_STEPS = 10;
+const SPIRAL_SWEEP = (Math.PI * 5) / 3;
+
+/**
+ * Рисует винтовую лестницу: круг, центральный столб, ступени-клинья на
+ * пять шестых витка (остаток — площадка) и дугу со стрелкой по ходу подъёма.
+ * Первая ступень смотрит в сторону `direction`, подъём идёт по часовой.
+ *
+ * @param context Кадр.
+ * @param stair Лестница.
+ */
+function drawSpiralStair(context: DrawContext, stair: PlanStair): void {
+  const { graphics, theme, hairline } = context;
+  const centerX = (stair.x + stair.width / 2) * CELL;
+  const centerY = (stair.y + stair.height / 2) * CELL;
+  const radius = (Math.min(stair.width, stair.height) / 2 - 0.08) * CELL;
+  const newel = Math.min(0.14 * CELL, radius * 0.25);
+  const [unitX, unitY] = DIRECTION_VECTORS[stair.direction];
+  const start = Math.atan2(unitY, unitX);
+
+  graphics
+    .circle(centerX, centerY, radius)
+    .fill({ color: theme.background })
+    .stroke({ color: theme.text, width: hairline * 1.4 });
+
+  for (let index = 0; index <= SPIRAL_STEPS; index++) {
+    const angle = start + (index / SPIRAL_STEPS) * SPIRAL_SWEEP;
+
+    graphics
+      .moveTo(
+        centerX + Math.cos(angle) * newel,
+        centerY + Math.sin(angle) * newel,
+      )
+      .lineTo(
+        centerX + Math.cos(angle) * radius,
+        centerY + Math.sin(angle) * radius,
+      );
+  }
+
+  graphics.stroke({ color: theme.text, width: hairline });
+
+  const path = radius * 0.62;
+  const end = start + SPIRAL_SWEEP;
+  const tipX = centerX + Math.cos(end) * path;
+  const tipY = centerY + Math.sin(end) * path;
+  // Касательная по часовой стрелке и нормаль к ней — для наконечника.
+  const alongX = -Math.sin(end);
+  const alongY = Math.cos(end);
+  const wing = Math.min(0.2 * CELL, radius * 0.3);
+
+  graphics
+    .moveTo(centerX + Math.cos(start) * path, centerY + Math.sin(start) * path)
+    .arc(centerX, centerY, path, start, end)
+    .moveTo(
+      tipX - alongX * wing + Math.cos(end) * wing * 0.6,
+      tipY - alongY * wing + Math.sin(end) * wing * 0.6,
+    )
+    .lineTo(tipX, tipY)
+    .lineTo(
+      tipX - alongX * wing - Math.cos(end) * wing * 0.6,
+      tipY - alongY * wing - Math.sin(end) * wing * 0.6,
+    )
+    .stroke({ color: theme.text, width: hairline * 1.6 });
+
+  graphics.circle(centerX, centerY, newel).fill({ color: theme.text });
+}
+
 /**
  * Рисует лестницу: ступени поперёк подъёма и стрелку, у винтовой — круг со
- * ступенями-лучами. Подпись «Вверх» или «Вниз» — у нижнего конца.
+ * ступенями-клиньями. Подпись «Вверх» или «Вниз» — у нижнего конца.
  *
  * @param context Кадр.
  * @param stair Лестница.
@@ -493,32 +564,7 @@ function drawStair(context: DrawContext, stair: PlanStair): void {
   const note = { color: theme.text, size: LABEL_SIZES.note, isBold: true };
 
   if (stair.kind === 'SPIRAL') {
-    const radius = (Math.min(stair.width, stair.height) / 2 - 0.08) * CELL;
-
-    graphics
-      .circle(centerX * CELL, centerY * CELL, radius)
-      .fill({ color: theme.background })
-      .stroke({ color: theme.text, width: hairline * 1.4 });
-
-    for (let index = 0; index < 12; index++) {
-      const angle = (index / 12) * 2 * Math.PI;
-
-      graphics
-        .moveTo(
-          centerX * CELL + Math.cos(angle) * 0.12 * CELL,
-          centerY * CELL + Math.sin(angle) * 0.12 * CELL,
-        )
-        .lineTo(
-          centerX * CELL + Math.cos(angle) * radius,
-          centerY * CELL + Math.sin(angle) * radius,
-        );
-    }
-
-    graphics.stroke({ color: theme.text, width: hairline });
-
-    graphics
-      .circle(centerX * CELL, centerY * CELL, 0.12 * CELL)
-      .fill({ color: theme.text });
+    drawSpiralStair(context, stair);
 
     context.addLabel(
       caption,
@@ -584,13 +630,33 @@ function drawStair(context: DrawContext, stair: PlanStair): void {
 }
 
 /**
- * Лестница с другого этажа, которая приходит сюда: пунктирная рамка.
+ * Лестница с другого этажа, которая приходит сюда: пунктирная рамка, у
+ * винтовой — пунктирный круг.
  *
  * @param context Кадр.
  * @param stair Лестница.
  */
 function drawArrivingStair(context: DrawContext, stair: PlanStair): void {
   const { graphics, theme, hairline } = context;
+
+  if (stair.kind === 'SPIRAL') {
+    traceDashedCircle(graphics, {
+      cx: stair.x + stair.width / 2,
+      cy: stair.y + stair.height / 2,
+      r: Math.min(stair.width, stair.height) / 2 - 0.08,
+    });
+
+    graphics.stroke({ color: theme.muted, width: hairline * 1.4 });
+
+    context.addLabel(
+      stair.toLevel > stair.level ? PLAN_LABELS.stairDown : PLAN_LABELS.stairUp,
+      { x: stair.x + stair.width / 2, y: stair.y + stair.height / 2 },
+      { color: theme.muted, size: LABEL_SIZES.note, isBold: true },
+    );
+
+    return;
+  }
+
   const inset = 0.08;
   const right = stair.x + stair.width - inset;
   const bottom = stair.y + stair.height - inset;
@@ -616,7 +682,8 @@ function drawArrivingStair(context: DrawContext, stair: PlanStair): void {
 }
 
 /**
- * Защитная стена: клетки с косой штриховкой и обводкой по краю.
+ * Защитная стена: клетки с косой штриховкой и обводкой по краю. Ворота —
+ * проём без штриховки с косяками по краям и двумя створками поперёк прохода.
  *
  * @param context Кадр.
  * @param document План.
@@ -624,17 +691,23 @@ function drawArrivingStair(context: DrawContext, stair: PlanStair): void {
 function drawDefenseWalls(context: DrawContext, document: PlanDocument): void {
   const { graphics, theme, hairline } = context;
 
-  const cells = new Set(
-    document.defenseWalls.map((cell) => getCellKey(cell.x, cell.y)),
+  const gates = new Set(
+    document.defenseGates.map((cell) => getCellKey(cell.x, cell.y)),
   );
 
-  for (const cell of document.defenseWalls) {
+  const solid = document.defenseWalls.filter(
+    (cell) => !gates.has(getCellKey(cell.x, cell.y)),
+  );
+
+  const cells = new Set(solid.map((cell) => getCellKey(cell.x, cell.y)));
+
+  for (const cell of solid) {
     graphics.rect(cell.x * CELL, cell.y * CELL, CELL, CELL);
   }
 
   graphics.fill({ color: theme.shade, alpha: 0.5 });
 
-  for (const cell of document.defenseWalls) {
+  for (const cell of solid) {
     for (let offset = HATCH_STEP * 2; offset < 2; offset += HATCH_STEP * 2) {
       const startX = Math.max(0, offset - 1);
       const startY = Math.min(1, offset);
@@ -649,7 +722,7 @@ function drawDefenseWalls(context: DrawContext, document: PlanDocument): void {
 
   graphics.stroke({ color: theme.text, width: hairline, alpha: 0.6 });
 
-  for (const cell of document.defenseWalls) {
+  for (const cell of solid) {
     const sides: Array<[boolean, number, number, number, number]> = [
       [!cells.has(getCellKey(cell.x, cell.y - 1)), 0, 0, 1, 0],
       [!cells.has(getCellKey(cell.x, cell.y + 1)), 0, 1, 1, 1],
@@ -667,6 +740,87 @@ function drawDefenseWalls(context: DrawContext, document: PlanDocument): void {
   }
 
   graphics.stroke({ color: theme.text, width: hairline * 2 });
+
+  const walls = new Set(
+    document.defenseWalls.map((cell) => getCellKey(cell.x, cell.y)),
+  );
+
+  for (const gate of document.defenseGates) {
+    drawDefenseGate(context, gate, walls, gates);
+  }
+}
+
+/**
+ * Ворота в клетке защитной стены. Стена идёт вдоль соседних клеток стены,
+ * проход — поперёк неё; створки сходятся посередине клетки.
+ *
+ * @param context Кадр.
+ * @param gate Клетка ворот.
+ * @param walls Ключи всех клеток стены, с воротами.
+ * @param gates Ключи клеток с воротами.
+ */
+function drawDefenseGate(
+  context: DrawContext,
+  gate: PlanCell,
+  walls: ReadonlySet<string>,
+  gates: ReadonlySet<string>,
+): void {
+  const { graphics, theme, hairline } = context;
+
+  const isAlongX =
+    walls.has(getCellKey(gate.x - 1, gate.y))
+    || walls.has(getCellKey(gate.x + 1, gate.y))
+    || !(
+      walls.has(getCellKey(gate.x, gate.y - 1))
+      || walls.has(getCellKey(gate.x, gate.y + 1))
+    );
+
+  const left = gate.x * CELL;
+  const top = gate.y * CELL;
+  const middle = 0.5 * CELL;
+  const leaf = 0.12 * CELL;
+  const outline = { color: theme.text, width: hairline * 2 };
+
+  graphics
+    .rect(left, top, CELL, CELL)
+    .fill({ color: theme.background, alpha: 0.9 });
+
+  if (isAlongX) {
+    graphics
+      .rect(left + hairline, top + middle - leaf, middle - hairline, leaf)
+      .rect(left + middle, top + middle - leaf, middle - hairline, leaf)
+      .fill({ color: theme.shade })
+      .stroke(outline);
+  } else {
+    graphics
+      .rect(left + middle - leaf, top + hairline, leaf, middle - hairline)
+      .rect(left + middle - leaf, top + middle, leaf, middle - hairline)
+      .fill({ color: theme.shade })
+      .stroke(outline);
+  }
+
+  // Косяки — везде, кроме стыка с соседними воротами: широкие ворота из
+  // нескольких клеток читаются одним проёмом.
+  const sides: Array<[number, number, number, number, number, number]> =
+    isAlongX
+      ? [
+          [-1, 0, 0, 0, 0, 1],
+          [1, 0, 1, 0, 1, 1],
+        ]
+      : [
+          [0, -1, 0, 0, 1, 0],
+          [0, 1, 0, 1, 1, 1],
+        ];
+
+  for (const [stepX, stepY, fromX, fromY, toX, toY] of sides) {
+    if (!gates.has(getCellKey(gate.x + stepX, gate.y + stepY))) {
+      graphics
+        .moveTo((gate.x + fromX) * CELL, (gate.y + fromY) * CELL)
+        .lineTo((gate.x + toX) * CELL, (gate.y + toY) * CELL);
+    }
+  }
+
+  graphics.stroke({ color: theme.text, width: hairline * 3 });
 }
 
 /**
@@ -1185,9 +1339,16 @@ function drawHover(
 
       const footprint = existing ?? {
         ...cell,
+        id: '',
+        level: scene.level,
         kind: scene.furnitureKind,
-        rotation: 0,
+        rotation: scene.furnitureRotation,
       };
+
+      // Новый предмет виден целиком — так понятно, как он встанет.
+      if (!existing) {
+        drawFurniture(context, footprint);
+      }
 
       const { width, depth } = getFurnitureSize(footprint);
 
@@ -1204,9 +1365,34 @@ function drawHover(
     }
     case 'area':
     case 'corridor':
+    case 'stairs': {
+      const frame = getTowerStairFrame(scene.document, scene.level, point);
+
+      if (frame) {
+        graphics
+          .circle(
+            (frame.x + frame.width / 2) * CELL,
+            (frame.y + frame.height / 2) * CELL,
+            (Math.min(frame.width, frame.height) / 2) * CELL,
+          )
+          .stroke({ color: theme.accent, width: hairline * 2 });
+
+        return;
+      }
+
+      graphics
+        .rect(
+          Math.floor(point.x) * CELL,
+          Math.floor(point.y) * CELL,
+          CELL,
+          CELL,
+        )
+        .stroke({ color: theme.accent, width: hairline * 1.5, alpha: 0.8 });
+
+      return;
+    }
     case 'eraser':
     case 'wall':
-    case 'stairs':
       graphics
         .rect(
           Math.floor(point.x) * CELL,
@@ -1339,6 +1525,14 @@ function getFurnitureParts(kind: FurnitureKind): {
       return {
         body: { x: inset, y: inset, width: width - inset * 2, height: 0.6 },
         details: [{ x: width / 2, y: inset, width: 0.01, height: 0.6 }],
+      };
+    case 'CHEST':
+      return {
+        body: { x: 0.15, y: 0.25, width: 0.7, height: 0.5 },
+        details: [
+          { x: 0.15, y: 0.25, width: 0.7, height: 0.16 },
+          { x: 0.44, y: 0.41, width: 0.12, height: 0.12 },
+        ],
       };
     default:
       return { body, details: [] };

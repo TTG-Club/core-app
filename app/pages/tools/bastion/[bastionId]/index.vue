@@ -225,6 +225,7 @@
           :key="member.id"
           :bastion
           :member
+          :activity="activity ?? undefined"
           @updated="handleUpdated"
         />
 

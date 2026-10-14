@@ -53,6 +53,7 @@ export const PLAN_SYNC_MAPS = {
   columns: 'columns',
   defenseWalls: 'defenseWalls',
   furniture: 'furniture',
+  defenseGates: 'defenseGates',
 } as const;
 
 /** Карты с содержимым плана — их отслеживает личная отмена. */
@@ -66,6 +67,7 @@ const PLAN_CONTENT_MAPS = [
   PLAN_SYNC_MAPS.columns,
   PLAN_SYNC_MAPS.defenseWalls,
   PLAN_SYNC_MAPS.furniture,
+  PLAN_SYNC_MAPS.defenseGates,
 ] as const;
 
 const META_VERSION = 'version';
@@ -234,6 +236,10 @@ export function readPlanFromDoc(doc: Y.Doc): PlanDocument {
     furniture: readValues(
       getMap(doc, PLAN_SYNC_MAPS.furniture),
       planFurnitureSchema,
+    ),
+    defenseGates: readValues(
+      getMap(doc, PLAN_SYNC_MAPS.defenseGates),
+      planCellSchema,
     ),
   });
 }
@@ -514,6 +520,17 @@ export function applyPlanChanges(
           toPlainValue,
         ),
     },
+    {
+      name: PLAN_SYNC_MAPS.defenseGates,
+      apply: (map) =>
+        applyListChanges(
+          map,
+          previous.defenseGates,
+          next.defenseGates,
+          (cell) => getCellKey(cell.x, cell.y),
+          toPlainValue,
+        ),
+    },
   ];
 
   doc.transact(() => {
@@ -629,5 +646,6 @@ function createEmptyDocument(): PlanDocument {
     columns: [],
     defenseWalls: [],
     furniture: [],
+    defenseGates: [],
   };
 }

@@ -8,11 +8,13 @@ import type {
   PlanCell,
   PlanCircle,
   PlanDocument,
+  PlanFurniture,
   PlanRoom,
   PlanRoomSeed,
   PlanTool,
   StairKind,
   StairTarget,
+  WallPiece,
 } from '../model';
 
 import { fillTemplate } from '~bastions/model';
@@ -26,20 +28,29 @@ import {
   drawRoom,
   eraseCells,
   eraseObjectAt,
+  findFurnitureAt,
   findRoomAt,
   getCellAt,
+  getFurnitureSize,
   getLineCells,
   getNextRoomName,
   getRectCells,
   getStairTargetLevel,
+  getTowerStairFrame,
+  isDefenseGate,
+  isFurnitureOnGrid,
+  moveFurniture,
   moveRoom,
   paintCorridor,
+  paintDefenseGates,
   paintDefenseWall,
   placeFurniture,
   placeOpening,
+  placeTowerStair,
   PLAN_FEET_PER_CELL,
   PLAN_LABELS,
   PLAN_LIMITS,
+  rotateFurniture,
   snapToHalf,
 } from '../model';
 
@@ -74,6 +85,8 @@ interface PlanInteractionOptions {
   stairDirection: Ref<CellSide>;
   corridorWidth: Ref<number>;
   furnitureKind: Ref<FurnitureKind>;
+  furnitureRotation: Ref<number>;
+  wallPiece: Ref<WallPiece>;
 }
 
 /** Жест, который сейчас выполняется указателем. */
@@ -86,11 +99,24 @@ type PlanGesture =
     }
   | { type: 'tower'; center: PlanCell; radius: number }
   | { type: 'move'; room: PlanRoom; anchor: PlanCell; offset: PlanCell }
+  | {
+      type: 'furniture';
+      item: PlanFurniture;
+      anchor: PlanCell;
+      offset: PlanCell;
+      /** Щелчок без сдвига поворачивает предмет (инструмент «Мебель»). */
+      rotateOnClick: boolean;
+    }
   | { type: 'stairs'; anchor: PlanCell; current: PlanCell }
   | { type: 'corridor'; last: PlanCell; target: PlanRoom | PlanRoomSeed }
   | { type: 'erase'; last: PlanCell }
   | { type: 'area'; anchor: PlanCell; current: PlanCell }
-  | { type: 'wall'; last: PlanCell };
+  | {
+      type: 'wall';
+      last: PlanCell;
+      /** Что делает мазок: строит стену, ставит или убирает ворота. */
+      paint: (document: PlanDocument, cells: Array<PlanCell>) => PlanDocument;
+    };
 
 /**
  * Квадрат кисти шириной в несколько клеток от клетки под указателем.
@@ -187,6 +213,48 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
   const selectedArea = shallowRef<PlanArea & { level: number }>();
 
   let gesture: PlanGesture | undefined;
+
+  /**
+   * Что делает мазок защитной стены. В режиме ворот мазок, начатый на
+   * воротах, закладывает проёмы стеной, иначе ставит ворота.
+   *
+   * @param document План в начале мазка.
+   * @param cell Клетка, где начали вести.
+   * @returns Правка для клеток мазка.
+   */
+  function getWallPaint(
+    document: PlanDocument,
+    cell: PlanCell,
+  ): (next: PlanDocument, cells: Array<PlanCell>) => PlanDocument {
+    if (options.wallPiece.value === 'WALL') {
+      return paintDefenseWall;
+    }
+
+    const isGate = !isDefenseGate(document, cell);
+
+    return (next, cells) => paintDefenseGates(next, cells, isGate);
+  }
+
+  /**
+   * Начинает перетаскивание стоящего предмета мебели.
+   *
+   * @param item Предмет.
+   * @param cell Клетка, за которую взяли.
+   * @param rotateOnClick Поворачивать ли предмет, если его не сдвинули.
+   */
+  function startFurnitureMove(
+    item: PlanFurniture,
+    cell: PlanCell,
+    rotateOnClick: boolean,
+  ): void {
+    gesture = {
+      type: 'furniture',
+      item,
+      anchor: cell,
+      offset: { x: 0, y: 0 },
+      rotateOnClick,
+    };
+  }
 
   /**
    * Новая комната: идентификатор, название по виду и текущий этаж.
@@ -297,6 +365,14 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
 
     switch (tool.value) {
       case 'select': {
+        const item = findFurnitureAt(document, level.value, point);
+
+        if (item) {
+          startFurnitureMove(item, cell, false);
+
+          break;
+        }
+
         const room = findRoomAt(document, level.value, point);
 
         selectedRoomId.value = room?.id;
@@ -334,9 +410,11 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
         break;
       case 'wall':
         if (level.value === 0) {
+          const paint = getWallPaint(document, cell);
+
           editor.beginStroke();
-          gesture = { type: 'wall', last: cell };
-          editor.applyInStroke(paintDefenseWall(document, [cell]));
+          gesture = { type: 'wall', last: cell, paint };
+          editor.applyInStroke(paint(document, [cell]));
         }
 
         break;
@@ -377,17 +455,27 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
         );
 
         break;
-      case 'furniture':
+      case 'furniture': {
+        const item = findFurnitureAt(document, level.value, point);
+
+        if (item) {
+          startFurnitureMove(item, cell, true);
+
+          break;
+        }
+
         editor.commit(
           placeFurniture(
             document,
             level.value,
             point,
             options.furnitureKind.value,
+            options.furnitureRotation.value,
           ),
         );
 
         break;
+      }
       case 'area':
         selectedArea.value = undefined;
         gesture = { type: 'area', anchor: cell, current: cell };
@@ -462,6 +550,29 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
 
         break;
       }
+      case 'furniture': {
+        const offset = {
+          x: cell.x - gesture.anchor.x,
+          y: cell.y - gesture.anchor.y,
+        };
+
+        const { item } = gesture;
+        const moved = { ...item, x: item.x + offset.x, y: item.y + offset.y };
+        const { width, depth } = getFurnitureSize(moved);
+
+        gesture.offset = offset;
+
+        preview.value = {
+          kind: 'move',
+          cells: getRectCells(moved, {
+            x: moved.x + width - 1,
+            y: moved.y + depth - 1,
+          }),
+          isValid: isFurnitureOnGrid(moved),
+        };
+
+        break;
+      }
       case 'move': {
         const offset = {
           x: cell.x - gesture.anchor.x,
@@ -530,7 +641,7 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
         break;
       case 'wall':
         editor.applyInStroke(
-          paintDefenseWall(
+          gesture.paint(
             editor.document.value,
             getLineCells(gesture.last, cell),
           ),
@@ -584,6 +695,18 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
         editor.commit(moveRoom(document, finished.room.id, finished.offset));
 
         break;
+      case 'furniture': {
+        const { item, offset } = finished;
+        const isClick = offset.x === 0 && offset.y === 0;
+
+        if (isClick && finished.rotateOnClick) {
+          editor.commit(rotateFurniture(document, item.id));
+        } else if (!isClick) {
+          editor.commit(moveFurniture(document, item.id, offset));
+        }
+
+        break;
+      }
       case 'stairs':
         finishStairs(finished.anchor, finished.current);
 
@@ -624,6 +747,24 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
     );
 
     if (toLevel === undefined) {
+      return;
+    }
+
+    const isClick = anchor.x === current.x && anchor.y === current.y;
+
+    const tower = isClick
+      ? getTowerStairFrame(editor.document.value, level.value, anchor)
+      : undefined;
+
+    if (tower) {
+      editor.commit(
+        placeTowerStair(editor.document.value, level.value, anchor, {
+          id: crypto.randomUUID(),
+          toLevel,
+          direction: options.stairDirection.value,
+        }),
+      );
+
       return;
     }
 

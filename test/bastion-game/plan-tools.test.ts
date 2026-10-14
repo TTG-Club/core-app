@@ -5,15 +5,23 @@ import * as Y from 'yjs';
 
 import {
   addColumn,
+  addLevel,
+  addTower,
   clearArea,
   createEmptyPlan,
   drawRoom,
+  eraseCells,
   eraseObjectAt,
   getFurnitureSize,
   getRectCells,
+  getTowerStairFrame,
+  moveFurniture,
   moveRoom,
+  paintDefenseGates,
+  paintDefenseWall,
   placeFurniture,
   placeOpening,
+  placeTowerStair,
 } from '~bastion-game/model';
 import {
   applyPlanChanges,
@@ -144,5 +152,149 @@ describe('выделенный участок', () => {
     expect(
       clearArea(plan, 0, { from: { x: 20, y: 20 }, to: { x: 25, y: 25 } }),
     ).toBe(plan);
+  });
+});
+
+describe('винтовая лестница в башне', () => {
+  /**
+   * План с башней радиусом 3 и этажом выше.
+   *
+   * @param cx Центр башни по x.
+   * @returns План.
+   */
+  function createTowerPlan(cx: number): PlanDocument {
+    return addTower(addLevel(createEmptyPlan(), 'up').document, seed('tower'), {
+      cx,
+      cy: 10,
+      r: 3,
+    });
+  }
+
+  it('встаёт по центру башни с проходом у стены', () => {
+    expect(
+      getTowerStairFrame(createTowerPlan(10), 0, { x: 10, y: 10 }),
+    ).toEqual({ x: 8, y: 8, width: 4, height: 4 });
+
+    expect(
+      getTowerStairFrame(createTowerPlan(10.5), 0, { x: 10, y: 10 }),
+    ).toEqual({ x: 8, y: 8, width: 5, height: 4 });
+  });
+
+  it('вне башни рамки нет', () => {
+    expect(
+      getTowerStairFrame(createTowerPlan(10), 0, { x: 30, y: 30 }),
+    ).toBeUndefined();
+  });
+
+  it('ставится винтовой и не дублируется', () => {
+    const stairSeed = { id: 'spiral', toLevel: 1, direction: 'N' as const };
+
+    const plan = placeTowerStair(
+      createTowerPlan(10),
+      0,
+      { x: 9, y: 9 },
+      stairSeed,
+    );
+
+    expect(plan.stairs).toEqual([
+      {
+        ...stairSeed,
+        level: 0,
+        x: 8,
+        y: 8,
+        width: 4,
+        height: 4,
+        kind: 'SPIRAL',
+      },
+    ]);
+
+    expect(
+      placeTowerStair(plan, 0, { x: 11, y: 11 }, { ...stairSeed, id: 'again' }),
+    ).toBe(plan);
+  });
+});
+
+describe('ворота в защитной стене', () => {
+  const line = [
+    { x: 0, y: 0 },
+    { x: 1, y: 0 },
+    { x: 2, y: 0 },
+  ];
+
+  it('встают в стену и достраивают её', () => {
+    const walled = paintDefenseWall(createEmptyPlan(), line.slice(0, 2));
+
+    const gated = paintDefenseGates(
+      walled,
+      [
+        { x: 1, y: 0 },
+        { x: 2, y: 0 },
+      ],
+      true,
+    );
+
+    expect(gated.defenseWalls).toHaveLength(3);
+
+    expect(gated.defenseGates).toEqual([
+      { x: 1, y: 0 },
+      { x: 2, y: 0 },
+    ]);
+  });
+
+  it('закладываются стеной и пропадают вместе со стеной', () => {
+    const gated = paintDefenseGates(createEmptyPlan(), line, true);
+    const closed = paintDefenseGates(gated, [{ x: 0, y: 0 }], false);
+
+    expect(closed.defenseGates).toHaveLength(2);
+    expect(closed.defenseWalls).toHaveLength(3);
+
+    expect(eraseCells(closed, 0, [{ x: 1, y: 0 }]).defenseGates).toEqual([
+      { x: 2, y: 0 },
+    ]);
+  });
+
+  it('переживают синхронизацию', () => {
+    const doc = new Y.Doc();
+    const plan = paintDefenseGates(createEmptyPlan(), line, true);
+
+    applyPlanChanges(doc, createEmptyPlan(), plan, 'local');
+
+    expect(readPlanFromDoc(doc).defenseGates).toHaveLength(3);
+  });
+});
+
+describe('поворот мебели до установки', () => {
+  it('новый предмет встаёт с выбранным поворотом', () => {
+    const plan = placeFurniture(
+      createEmptyPlan(),
+      0,
+      { x: 3, y: 3 },
+      'BED',
+      90,
+    );
+
+    expect(plan.furniture[0]).toMatchObject({ kind: 'BED', rotation: 90 });
+
+    expect(getFurnitureSize(plan.furniture[0]!)).toEqual({
+      width: 2,
+      depth: 1,
+    });
+  });
+});
+
+describe('перетаскивание мебели', () => {
+  it('сдвигает предмет и не выносит его за участок', () => {
+    const plan = placeFurniture(createEmptyPlan(), 0, { x: 3, y: 3 }, 'TABLE');
+    const id = plan.furniture[0]!.id;
+
+    expect(moveFurniture(plan, id, { x: 2, y: -1 }).furniture[0]).toMatchObject(
+      {
+        x: 5,
+        y: 2,
+      },
+    );
+
+    expect(moveFurniture(plan, id, { x: -10, y: 0 })).toBe(plan);
+    expect(moveFurniture(plan, id, { x: 0, y: 0 })).toBe(plan);
   });
 });

@@ -2,10 +2,10 @@
   import type {
     CellSide,
     DoorKind,
-    FurnitureKind,
     PlanTool,
     StairKind,
     StairTarget,
+    WallPiece,
   } from '../../model';
 
   import { fillTemplate } from '~bastions/model';
@@ -16,21 +16,25 @@
     DIRECTION_LABELS,
     DOOR_KIND_LABELS,
     DOOR_KINDS,
-    FURNITURE_KIND_LABELS,
-    FURNITURE_KINDS,
     getLevelLabel,
     PLAN_CORRIDOR_WIDTHS,
     PLAN_FEET_PER_CELL,
+    PLAN_FURNITURE_ROTATION_STEP,
     PLAN_LABELS,
+    STAIR_KIND_ICONS,
     STAIR_KIND_LABELS,
     STAIR_KINDS,
     STAIR_TARGET_LABELS,
     STAIR_TARGETS,
+    WALL_PIECE_ICONS,
+    WALL_PIECE_LABELS,
+    WALL_PIECES,
   } from '../../model';
 
   /**
    * Настройки выбранного инструмента: вид двери, вид и направление лестницы,
-   * ширина коридора, предмет мебели. У остальных инструментов настроек нет.
+   * ширина коридора, стена или ворота, поворот мебели. У остальных
+   * инструментов настроек нет.
    */
   const { tool, stairLevel } = defineProps<{
     tool: PlanTool;
@@ -56,17 +60,26 @@
     required: true,
   });
 
-  const furnitureKind = defineModel<FurnitureKind>('furnitureKind', {
+  const wallPiece = defineModel<WallPiece>('wallPiece', { required: true });
+
+  const furnitureRotation = defineModel<number>('furnitureRotation', {
     required: true,
   });
 
+  const rotationText = computed(() =>
+    fillTemplate(PLAN_LABELS.degrees, { degrees: furnitureRotation.value }),
+  );
+
+  /** Поворачивает предмет, который поставит инструмент мебели. */
+  function rotateFurniture(): void {
+    furnitureRotation.value =
+      (furnitureRotation.value + PLAN_FURNITURE_ROTATION_STEP) % 360;
+  }
+
+  const isSpiral = computed(() => stairKind.value === 'SPIRAL');
+
   const doorItems = DOOR_KINDS.map((kind) => ({
     label: DOOR_KIND_LABELS[kind],
-    value: kind,
-  }));
-
-  const stairKindItems = STAIR_KINDS.map((kind) => ({
-    label: STAIR_KIND_LABELS[kind],
     value: kind,
   }));
 
@@ -154,14 +167,26 @@
     class="flex flex-col gap-3"
   >
     <UFormField :label="PLAN_LABELS.stairKind">
-      <USelect
-        id="plan-stair-kind"
-        v-model="stairKind"
-        :items="stairKindItems"
-        value-key="value"
-        class="w-full"
-      />
+      <div class="flex gap-1">
+        <UButton
+          v-for="kind in STAIR_KINDS"
+          :key="kind"
+          size="xs"
+          :icon="STAIR_KIND_ICONS[kind]"
+          v-bind="getChoiceLook(stairKind === kind)"
+          @click.left.exact.prevent="stairKind = kind"
+        >
+          {{ STAIR_KIND_LABELS[kind] }}
+        </UButton>
+      </div>
     </UFormField>
+
+    <p
+      v-if="isSpiral"
+      class="text-xs text-muted"
+    >
+      {{ PLAN_LABELS.spiralHint }}
+    </p>
 
     <UFormField :label="PLAN_LABELS.stairTarget">
       <div class="flex gap-1">
@@ -178,7 +203,10 @@
       </div>
     </UFormField>
 
-    <UFormField :label="PLAN_LABELS.stairDirection">
+    <UFormField
+      v-if="!isSpiral"
+      :label="PLAN_LABELS.stairDirection"
+    >
       <div class="flex gap-1">
         <UButton
           v-for="side in CELL_SIDES"
@@ -204,16 +232,38 @@
     v-else-if="tool === 'furniture'"
     class="flex flex-col gap-2"
   >
-    <UFormField :label="PLAN_LABELS.furnitureKind">
-      <div class="flex flex-wrap gap-1">
+    <UFormField :label="PLAN_LABELS.furnitureRotation">
+      <div class="flex items-center gap-2">
         <UButton
-          v-for="kind in FURNITURE_KINDS"
-          :key="kind"
+          icon="tabler:rotate-clockwise"
           size="xs"
-          v-bind="getChoiceLook(furnitureKind === kind)"
-          @click.left.exact.prevent="furnitureKind = kind"
+          color="neutral"
+          variant="outline"
+          @click.left.exact.prevent="rotateFurniture"
         >
-          {{ FURNITURE_KIND_LABELS[kind] }}
+          {{ PLAN_LABELS.rotateFurniture }}
+        </UButton>
+
+        <span class="text-sm text-muted tabular-nums">{{ rotationText }}</span>
+      </div>
+    </UFormField>
+  </section>
+
+  <section
+    v-else-if="tool === 'wall'"
+    class="flex flex-col gap-2"
+  >
+    <UFormField :label="PLAN_LABELS.wallPiece">
+      <div class="flex gap-1">
+        <UButton
+          v-for="piece in WALL_PIECES"
+          :key="piece"
+          size="xs"
+          :icon="WALL_PIECE_ICONS[piece]"
+          v-bind="getChoiceLook(wallPiece === piece)"
+          @click.left.exact.prevent="wallPiece = piece"
+        >
+          {{ WALL_PIECE_LABELS[piece] }}
         </UButton>
       </div>
     </UFormField>

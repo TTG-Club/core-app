@@ -22,6 +22,7 @@ export const FURNITURE_KINDS = [
   'WARDROBE',
   'SOFA',
   'BED',
+  'CHEST',
 ] as const;
 
 export const planCellSchema = z.object({ x: z.number(), y: z.number() });
@@ -103,6 +104,7 @@ export const planResponseSchema = z.object({
     columns: z.array(planColumnSchema).nullish(),
     defenseWalls: z.array(planCellSchema).nullish(),
     furniture: z.array(planFurnitureSchema).nullish(),
+    defenseGates: z.array(planCellSchema).nullish(),
   }),
 });
 
@@ -200,6 +202,8 @@ export interface PlanDocument {
   columns: Array<PlanColumn>;
   defenseWalls: Array<PlanCell>;
   furniture: Array<PlanFurniture>;
+  /** Клетки защитной стены, где стоят ворота. */
+  defenseGates: Array<PlanCell>;
 }
 
 export interface PlanState {

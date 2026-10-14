@@ -9,6 +9,7 @@
     RoomKind,
     StairKind,
     StairTarget,
+    WallPiece,
   } from '../model';
 
   import { fillTemplate } from '~bastions/model';
@@ -23,6 +24,7 @@
     getStairTargetLevel,
     PLAN_CORRIDOR_WIDTHS,
     PLAN_EDIT_TOOLS,
+    PLAN_FURNITURE_ROTATION_STEP,
     PLAN_LABELS,
     PLAN_LIMITS,
     PLAN_TOOL_GROUPS,
@@ -65,6 +67,8 @@
   const stairDirection = ref<CellSide>('N');
   const corridorWidth = ref<number>(PLAN_CORRIDOR_WIDTHS[0]);
   const furnitureKind = ref<FurnitureKind>('TABLE');
+  const furnitureRotation = ref(0);
+  const wallPiece = ref<WallPiece>('WALL');
 
   const interaction = usePlanInteraction({
     editor,
@@ -77,7 +81,20 @@
     stairDirection,
     corridorWidth,
     furnitureKind,
+    furnitureRotation,
+    wallPiece,
   });
+
+  /**
+   * Поворачивает предмет, который сейчас поставит инструмент мебели.
+   *
+   * @param direction 1 — по часовой, -1 — против.
+   */
+  function rotateFurniture(direction: 1 | -1 = 1): void {
+    furnitureRotation.value =
+      (furnitureRotation.value + direction * PLAN_FURNITURE_ROTATION_STEP + 360)
+      % 360;
+  }
 
   /** Выделенный участок — только у инструмента «Выделить» и на его этаже. */
   const visibleArea = computed(() => {
@@ -279,6 +296,13 @@
       return;
     }
 
+    // У мебели R поворачивает предмет перед установкой, а не берёт комнату.
+    if (key === 'r' && tool.value === 'furniture' && editor.canEdit.value) {
+      rotateFurniture();
+
+      return;
+    }
+
     const next = toolByKey.get(key);
 
     if (next && (editor.canEdit.value || !PLAN_EDIT_TOOLS.has(next))) {
@@ -386,6 +410,7 @@
     <div class="flex flex-wrap items-center justify-between gap-2">
       <PlanToolbar
         v-model:tool="tool"
+        v-model:furniture-kind="furnitureKind"
         :can-edit="editor.canEdit.value"
         :can-undo="editor.canUndo.value"
         :can-redo="editor.canRedo.value"
@@ -412,15 +437,18 @@
           {{ saveState.label }}
         </UBadge>
 
-        <UButton
+        <UTooltip
           v-if="editor.canEdit.value"
-          icon="tabler:device-floppy"
-          :loading="editor.isSaving.value"
-          :disabled="!editor.isDirty.value"
-          @click.left.exact.prevent="editor.save"
+          :text="PLAN_LABELS.save"
         >
-          {{ PLAN_LABELS.save }}
-        </UButton>
+          <UButton
+            icon="tabler:device-floppy"
+            :aria-label="PLAN_LABELS.save"
+            :loading="editor.isSaving.value"
+            :disabled="!editor.isDirty.value"
+            @click.left.exact.prevent="editor.save"
+          />
+        </UTooltip>
       </div>
     </div>
 
@@ -452,10 +480,12 @@
             :cursors
             :area="visibleArea"
             :furniture-kind="furnitureKind"
+            :furniture-rotation="furnitureRotation"
             @point-down="interaction.handleDown"
             @point-move="handlePointMove"
             @point-up="interaction.handleUp"
             @point-leave="handlePointLeave"
+            @rotate="rotateFurniture"
           />
 
           <div class="absolute top-2 right-2 flex gap-1">
@@ -496,7 +526,8 @@
           v-model:stair-target="stairTarget"
           v-model:stair-direction="stairDirection"
           v-model:corridor-width="corridorWidth"
-          v-model:furniture-kind="furnitureKind"
+          v-model:wall-piece="wallPiece"
+          v-model:furniture-rotation="furnitureRotation"
           :tool
           :stair-level="stairLevel"
           :has-level-above="hasLevelAbove"
