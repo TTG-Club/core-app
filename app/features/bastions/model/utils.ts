@@ -135,14 +135,19 @@ export function getFacilitySubtitle(
 }
 
 /**
- * Подпись пространства с площадью: «Вместительное (16 кв.)».
+ * Подпись пространства с площадью: «Вместительное (16 кв.)». У базового
+ * сооружения своего пространства нет — его выбирает игрок при закладке.
  *
  * @param facility - Сооружение
  * @returns Подпись пространства; пустая, если пространство не задано
  */
 export function getSpaceText(
-  facility: Pick<BastionFacilityDetailResponse, 'space'>,
+  facility: Pick<BastionFacilityDetailResponse, 'space' | 'category'>,
 ): string {
+  if (facility.category?.value === 'BASIC') {
+    return BASTION_BODY_LABELS.basicSpace;
+  }
+
   if (!facility.space) {
     return '';
   }
@@ -249,6 +254,7 @@ export function transformBastionBeforeSubmit(
   return {
     ...state,
     level: isBasic ? undefined : state.level,
+    space: isBasic ? undefined : state.space,
     prerequisite: isBasic ? undefined : state.prerequisite,
     orders: isBasic ? [] : state.orders,
     orderOptions: isBasic

@@ -1,26 +1,24 @@
 import type { MaybeRefOrGetter } from 'vue';
 
-import type {
-  CreatePlayerBastionRequest,
-  PlayerBastion,
-  UpdatePlayerBastionRequest,
-} from '../model';
+import type { PlayerBastion, UpdatePlayerBastionRequest } from '../model';
 
 import {
   archivePlayerBastion,
   BASTION_GAME_LABELS,
-  createPlayerBastion,
   fetchGameBastions,
   getBastionErrorMessage,
+  joinGameWithBastion,
+  leaveGameWithBastion,
   updatePlayerBastion,
 } from '../model';
 
 /**
- * Бастионы игры для вкладки «Бастионы»: загрузка и действия мастера.
+ * Бастионы игры для вкладки «Бастионы»: загрузка, добавление своего
+ * бастиона и действия мастера.
  * Каждое действие показывает итог уведомлением и перечитывает список.
  *
  * @param gameId Игра каталога.
- * @returns Данные вкладки и действия мастера.
+ * @returns Данные вкладки и действия.
  */
 export function useGameBastions(gameId: MaybeRefOrGetter<string>) {
   const toast = useToast();
@@ -38,7 +36,7 @@ export function useGameBastions(gameId: MaybeRefOrGetter<string>) {
   );
 
   /**
-   * Выполняет действие мастера: уведомляет об успехе или об ошибке и
+   * Выполняет действие: уведомляет об успехе или об ошибке и
    * перечитывает список.
    *
    * @param action Запрос к core-api.
@@ -82,8 +80,13 @@ export function useGameBastions(gameId: MaybeRefOrGetter<string>) {
     ),
     refresh,
     isSaving,
-    create: (request: CreatePlayerBastionRequest) =>
-      run(() => createPlayerBastion(request), BASTION_GAME_LABELS.created),
+    join: (id: string) =>
+      run(
+        () => joinGameWithBastion(id, toValue(gameId)),
+        BASTION_GAME_LABELS.added,
+      ),
+    leave: (id: string) =>
+      run(() => leaveGameWithBastion(id), BASTION_GAME_LABELS.leftGame),
     update: (id: string, request: UpdatePlayerBastionRequest) =>
       run(() => updatePlayerBastion(id, request), BASTION_GAME_LABELS.updated),
     archive: (id: string) =>

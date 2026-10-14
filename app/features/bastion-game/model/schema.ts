@@ -86,14 +86,20 @@ const memberSchema = z.object({
 /** Бастион игроков глазами открывшего (`PlayerBastionResponse` core-api). */
 export const playerBastionSchema = z.object({
   id: z.string(),
-  gameId: z.string(),
+  /** Игра, в которую добавлен бастион; null — бастион вне игры. */
+  gameId: z.string().nullable(),
+  ownerId: z.string(),
   name: z.string(),
   status: z.enum(PLAYER_BASTION_STATUSES),
   turn: z.number(),
   treasuryGp: z.number(),
   version: z.number(),
+  /** Открывший — владелец: может удалить бастион и добавить его в игру. */
+  owned: z.boolean(),
   canManage: z.boolean(),
   canEdit: z.boolean(),
+  /** Можно убрать бастион из игры: владелец или мастер этой игры. */
+  canLeaveGame: z.boolean(),
   members: z.array(memberSchema),
   createdAt: z.string().nullable().optional(),
   updatedAt: z.string().nullable().optional(),
@@ -104,13 +110,21 @@ export const playerBastionGameSchema = z.object({
   gameId: z.string(),
   title: z.string(),
   role: z.enum(GAME_ROLES),
-  canCreate: z.boolean(),
+  /** Можно добавить в игру свой бастион. */
+  canAdd: z.boolean(),
   players: z.array(
     z.object({
       userId: z.string(),
       characterName: z.string().nullable().optional(),
     }),
   ),
+  bastions: z.array(playerBastionSchema),
+});
+
+/** Свои бастионы и лимит (`MyPlayerBastionsResponse` core-api). */
+export const myPlayerBastionsSchema = z.object({
+  limit: z.number(),
+  subscriberLimit: z.number(),
   bastions: z.array(playerBastionSchema),
 });
 
@@ -165,6 +179,7 @@ export type SelectedChoice = z.infer<typeof selectedChoiceSchema>;
 export type CatalogFacility = z.infer<typeof catalogFacilitySchema>;
 export type FacilitySpaceCode = (typeof FACILITY_SPACES)[number];
 export type PlayerBastionGame = z.infer<typeof playerBastionGameSchema>;
+export type MyPlayerBastions = z.infer<typeof myPlayerBastionsSchema>;
 export type PlayerBastionStatus = PlayerBastion['status'];
 export type GamePlayer = PlayerBastionGame['players'][number];
 
@@ -175,10 +190,11 @@ export interface PlayerBastionMemberRequest {
   characterLevel: number;
 }
 
+/** Новый бастион: принадлежит создавшему, его персонаж сразу в составе. */
 export interface CreatePlayerBastionRequest {
-  gameId: string;
   name: string;
-  members: Array<PlayerBastionMemberRequest>;
+  characterName: string;
+  characterLevel: number;
 }
 
 /** Стартовый выбор сооружений персонажа (`FacilitySetupRequest` core-api). */

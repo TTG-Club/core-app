@@ -20,9 +20,10 @@
   } from '../../model';
 
   /**
-   * Создание и правка бастиона мастером: название и доступ игрокам. Доступ
-   * даётся только игрокам игры с одобренной заявкой, у каждого — свой персонаж
-   * и уровень: по уровню считается лимит специализированных сооружений.
+   * Правка бастиона тем, кто его ведёт: название и доступ игрокам. В игре
+   * доступ даётся игрокам с одобренной заявкой, вне игры в форме только
+   * нынешний состав. У каждого — свой персонаж и уровень: по уровню считается
+   * лимит специализированных сооружений.
    */
   const isOpen = defineModel<boolean>('open', { required: true });
 
@@ -32,7 +33,7 @@
     loading = false,
   } = defineProps<{
     players: ReadonlyArray<GamePlayer>;
-    /** Редактируемый бастион; нет — форма создания. */
+    /** Редактируемый бастион; пока его нет, окно закрыто. */
     bastion?: PlayerBastion;
     loading?: boolean;
   }>();
@@ -44,13 +45,15 @@
   const name = ref('');
   const drafts = ref<Array<BastionMemberDraft>>([]);
 
-  const title = computed(() =>
-    bastion ? BASTION_FORM_LABELS.editTitle : BASTION_FORM_LABELS.createTitle,
+  /** Пустой состав — пояснение: в игре нет игроков или бастион вне игры. */
+  const emptyHint = computed(() =>
+    bastion?.gameId
+      ? BASTION_FORM_LABELS.noPlayers
+      : BASTION_FORM_LABELS.outsideGame,
   );
 
-  const submitLabel = computed(() =>
-    bastion ? BASTION_FORM_LABELS.save : BASTION_FORM_LABELS.create,
-  );
+  /** Вне игры новых игроков не добавить — форма об этом напоминает. */
+  const isOutsideGame = computed(() => !!bastion && !bastion.gameId);
 
   const isValid = computed(() => {
     const trimmed = name.value.trim();
@@ -64,7 +67,7 @@
   );
 
   // Окно живёт вместе со страницей: при каждом открытии форма заполняется
-  // заново — названием и составом редактируемого бастиона или пустой.
+  // заново — названием и составом редактируемого бастиона.
   watch(isOpen, (opened) => {
     if (!opened) {
       return;
@@ -105,7 +108,7 @@
 <template>
   <UModal
     v-model:open="isOpen"
-    :title
+    :title="BASTION_FORM_LABELS.editTitle"
     :ui="{ content: 'sm:max-w-2xl' }"
   >
     <template #body>
@@ -136,10 +139,10 @@
           </div>
 
           <p
-            v-if="!drafts.length"
+            v-if="!drafts.length || isOutsideGame"
             class="text-sm text-muted"
           >
-            {{ BASTION_FORM_LABELS.noPlayers }}
+            {{ emptyHint }}
           </p>
 
           <div
@@ -192,7 +195,7 @@
     <template #footer>
       <UiModalActions
         :cancel-label="BASTION_FORM_LABELS.cancel"
-        :submit-label="submitLabel"
+        :submit-label="BASTION_FORM_LABELS.save"
         submit-icon="tabler:check"
         :loading
         :disabled="!isValid"

@@ -12,6 +12,9 @@
     fetchBastionActivity,
     fetchPlayerBastion,
     getBastionErrorMessage,
+    getBastionPlanRoute,
+    getGameRoute,
+    MY_BASTIONS_ROUTE,
     PLAN_LABELS,
     PLAYER_BASTION_STATUS_COLORS,
     PLAYER_BASTION_STATUS_LABELS,
@@ -19,10 +22,6 @@
   import { UiResult } from '~ui/result';
 
   const route = useRoute();
-
-  const gameId = computed(() =>
-    typeof route.params.gameId === 'string' ? route.params.gameId : '',
-  );
 
   const bastionId = computed(() =>
     typeof route.params.bastionId === 'string' ? route.params.bastionId : '',
@@ -50,16 +49,25 @@
     robots: 'noindex',
   });
 
-  const gameRoute = computed(() => `/games/${gameId.value}`);
-
-  const planRoute = computed(
-    () => `/games/${gameId.value}/bastions/${bastionId.value}/plan`,
+  /** Назад — в игру, если бастион в ней, иначе к своим бастионам. */
+  const backRoute = computed(() =>
+    bastion.value?.gameId
+      ? getGameRoute(bastion.value.gameId)
+      : MY_BASTIONS_ROUTE,
   );
+
+  const backLabel = computed(() =>
+    bastion.value?.gameId
+      ? BASTION_DETAIL_LABELS.back
+      : BASTION_DETAIL_LABELS.backToMine,
+  );
+
+  const planRoute = computed(() => getBastionPlanRoute(bastionId.value));
 
   const toast = useToast();
   const isActivating = ref(false);
 
-  /** Мастер может запустить бастион, пока тот в закладке. */
+  /** Тот, кто ведёт бастион, может запустить его, пока тот в закладке. */
   const canActivate = computed(
     () => !!bastion.value?.canManage && bastion.value.status === 'SETUP',
   );
@@ -97,7 +105,7 @@
     await refreshActivity();
   }
 
-  /** Что случилось: чужая игра, бастиона нет или сбой. */
+  /** Что случилось: чужой бастион, бастиона нет или сбой. */
   const errorTitle = computed(() => {
     switch (error.value?.statusCode) {
       case StatusCodes.FORBIDDEN:
@@ -124,12 +132,12 @@
   >
     <template #actions>
       <UButton
-        :to="gameRoute"
+        :to="backRoute"
         icon="tabler:arrow-left"
         color="neutral"
         variant="ghost"
       >
-        {{ BASTION_DETAIL_LABELS.back }}
+        {{ backLabel }}
       </UButton>
     </template>
 
