@@ -3,30 +3,47 @@
 
   import {
     BASTION_GAME_LABELS,
+    getBastionRoute,
+    getGameRoute,
+    MY_BASTIONS_LABELS,
     PLAYER_BASTION_STATUS_COLORS,
     PLAYER_BASTION_STATUS_LABELS,
   } from '../../model';
   import BastionMemberList from './BastionMemberList.vue';
 
-  const { bastion, currentUserId = undefined } = defineProps<{
+  const {
+    bastion,
+    currentUserId = undefined,
+    showGame = false,
+    canRemove = false,
+  } = defineProps<{
     bastion: PlayerBastion;
     /** Текущий пользователь: по нему отмечается «Ваш» бастион. */
     currentUserId?: string;
+    /** Показывать ссылку на игру, в которую добавлен бастион. */
+    showGame?: boolean;
+    /** Показывать удаление: только в «Моих бастионах». */
+    canRemove?: boolean;
   }>();
 
   defineEmits<{
     edit: [];
     archive: [];
+    leave: [];
+    remove: [];
   }>();
 
-  const detailRoute = computed(
-    () => `/games/${bastion.gameId}/bastions/${bastion.id}`,
+  const detailRoute = computed(() => getBastionRoute(bastion.id));
+
+  const gameRoute = computed(() =>
+    showGame && bastion.gameId ? getGameRoute(bastion.gameId) : undefined,
   );
 
   const isOwn = computed(
     () =>
       !!currentUserId
-      && bastion.members.some((member) => member.userId === currentUserId),
+      && (bastion.ownerId === currentUserId
+        || bastion.members.some((member) => member.userId === currentUserId)),
   );
 </script>
 
@@ -57,12 +74,25 @@
           </UBadge>
         </div>
 
-        <UBadge
-          :color="PLAYER_BASTION_STATUS_COLORS[bastion.status]"
-          variant="subtle"
-        >
-          {{ PLAYER_BASTION_STATUS_LABELS[bastion.status] }}
-        </UBadge>
+        <div class="flex flex-wrap items-center gap-2">
+          <UButton
+            v-if="gameRoute"
+            :to="gameRoute"
+            icon="tabler:users-group"
+            color="neutral"
+            variant="subtle"
+            size="xs"
+          >
+            {{ BASTION_GAME_LABELS.inGame }}
+          </UButton>
+
+          <UBadge
+            :color="PLAYER_BASTION_STATUS_COLORS[bastion.status]"
+            variant="subtle"
+          >
+            {{ PLAYER_BASTION_STATUS_LABELS[bastion.status] }}
+          </UBadge>
+        </div>
       </div>
     </template>
 
@@ -81,6 +111,26 @@
 
     <template #footer>
       <div class="flex flex-wrap justify-end gap-2">
+        <UButton
+          v-if="canRemove && bastion.owned"
+          icon="tabler:trash"
+          color="error"
+          variant="ghost"
+          @click.left.exact.prevent="$emit('remove')"
+        >
+          {{ MY_BASTIONS_LABELS.remove }}
+        </UButton>
+
+        <UButton
+          v-if="bastion.canLeaveGame"
+          icon="tabler:door-exit"
+          color="neutral"
+          variant="ghost"
+          @click.left.exact.prevent="$emit('leave')"
+        >
+          {{ BASTION_GAME_LABELS.leaveGame }}
+        </UButton>
+
         <UButton
           v-if="bastion.canManage"
           icon="tabler:archive"

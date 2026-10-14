@@ -51,6 +51,9 @@ export const FACILITY_SETUP_LABELS = {
 /** Значение вкладки «Бастионы» на странице игры. */
 export const GAME_BASTIONS_TAB_VALUE = 'bastions';
 
+/** Страница «Мои бастионы». */
+export const MY_BASTIONS_ROUTE = '/tools/bastion';
+
 /** Уровень персонажа, с которого у него появляется бастион. */
 export const BASTION_START_LEVEL = 5;
 export const CHARACTER_LEVEL_MIN = 1;
@@ -76,14 +79,20 @@ export const PLAYER_BASTION_STATUS_COLORS: Record<
 export const BASTION_GAME_LABELS = {
   panelTitle: 'Бастионы игры',
   panelDescription:
-    'Бастионы видят все участники игры. Менять бастион могут мастер и игроки, которым он дал доступ.',
-  create: 'Создать бастион',
+    'Бастионы видят все участники игры. Ведёт бастион мастер, менять его могут игроки с доступом.',
+  add: 'Добавить бастион',
   empty: 'В игре пока нет бастионов',
-  emptyMaster: 'Создайте бастион и дайте к нему доступ игрокам',
-  emptyPlayer: 'Мастер ещё не создал бастионы',
+  emptyDescription: 'Добавьте в игру свой бастион из «Моих бастионов»',
   open: 'Открыть',
   edit: 'Изменить',
   archive: 'В архив',
+  leaveGame: 'Убрать из игры',
+  leaveGameConfirmTitle: 'Убрать бастион из игры?',
+  leaveGameConfirmDescription:
+    'Бастион вернётся к владельцу со всеми сооружениями, планом и журналами.',
+  leaveGameConfirm: 'Убрать',
+  leftGame: 'Бастион убран из игры',
+  inGame: 'В игре',
   archiveConfirmTitle: 'Отправить бастион в архив?',
   archiveConfirmDescription:
     'Бастион останется для просмотра, но менять его больше будет нельзя.',
@@ -99,6 +108,7 @@ export const BASTION_GAME_LABELS = {
   loadError: 'Не удалось загрузить бастионы',
   retry: 'Повторить',
   created: 'Бастион создан',
+  added: 'Бастион добавлен в игру',
   updated: 'Бастион сохранён',
   archived: 'Бастион отправлен в архив',
   saveError: 'Не удалось сохранить бастион',
@@ -107,6 +117,11 @@ export const BASTION_GAME_LABELS = {
 export const BASTION_FORM_LABELS = {
   createTitle: 'Новый бастион',
   editTitle: 'Бастион',
+  owner: 'Ваш персонаж',
+  ownerHint:
+    'Персонаж владельца сразу получает доступ. Лимит специализированных сооружений считается по его уровню.',
+  outsideGame:
+    'Дать доступ другим игрокам можно, когда бастион добавлен в игру.',
   name: 'Название',
   namePlaceholder: 'Вороний утёс',
   players: 'Доступ игрокам',
@@ -126,14 +141,47 @@ export const BASTION_FORM_LABELS = {
 
 export const BASTION_DETAIL_LABELS = {
   back: 'К игре',
+  backToMine: 'Мои бастионы',
   members: 'Игроки и персонажи',
   notFound: 'Бастион не найден',
-  forbidden: 'Бастион видят только участники игры',
+  forbidden:
+    'Бастион видят его владелец, игроки с доступом и участники его игры',
   loadError: 'Не удалось открыть бастион',
   activate: 'Запустить бастион',
   activateHint:
-    'Когда у всех персонажей выбраны базовые сооружения, мастер запускает бастион: закладка заканчивается, начинаются ходы.',
+    'Когда у всех персонажей выбраны базовые сооружения, бастион можно запустить: закладка заканчивается, начинаются ходы. В игре это делает мастер.',
   activated: 'Бастион запущен',
   activateError: 'Не удалось запустить бастион',
   seoTitle: 'Бастион',
+} as const;
+
+export const MY_BASTIONS_LABELS = {
+  title: 'Мои бастионы',
+  description:
+    'Бастионы принадлежат вам, как листы персонажа. Здесь их создают, меняют и удаляют, а в игру бастион добавляется со страницы игры.',
+  create: 'Создать бастион',
+  empty: 'У вас пока нет бастионов',
+  emptyDescription:
+    'Создайте бастион, выберите стартовые сооружения и нарисуйте план.',
+  counter: '{count} из {limit}',
+  limitReached: 'Достигнут лимит бастионов. Удалите один из существующих.',
+  subscriberHint: 'С подпиской можно создать до {limit} бастионов.',
+  remove: 'Удалить',
+  removeConfirmTitle: 'Удалить бастион?',
+  removeConfirmDescription:
+    'Бастион удалится вместе с сооружениями, планом и журналами. Это нельзя отменить.',
+  removeConfirm: 'Удалить',
+  removed: 'Бастион удалён',
+  loadError: 'Не удалось загрузить бастионы',
+} as const;
+
+export const BASTION_JOIN_LABELS = {
+  title: 'Добавить бастион в игру',
+  description:
+    'Бастион может быть только в одной игре. Вести его в игре будет мастер.',
+  empty: 'Свободных бастионов нет: все уже в играх или ещё не созданы.',
+  createLink: 'Мои бастионы',
+  submit: 'Добавить',
+  cancel: 'Отмена',
+  loadError: 'Не удалось загрузить ваши бастионы',
 } as const;

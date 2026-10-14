@@ -3,6 +3,7 @@ import type {
   CatalogFacility,
   CreatePlayerBastionRequest,
   FacilitySetupRequest,
+  MyPlayerBastions,
   PlayerBastion,
   PlayerBastionGame,
   UpdatePlayerBastionRequest,
@@ -15,6 +16,7 @@ import {
 import { parsePlanResponse } from './plan-edit';
 import {
   catalogFacilitiesSchema,
+  myPlayerBastionsSchema,
   playerBastionGameSchema,
   playerBastionSchema,
 } from './schema';
@@ -110,9 +112,23 @@ export async function fetchPlayerBastion(id: string): Promise<PlayerBastion> {
 }
 
 /**
- * Создаёт бастион. Доступно только мастеру игры.
+ * Свои бастионы и лимит на создание.
  *
- * @param request Игра, название и игроки с доступом.
+ * @returns Бастионы пользователя, старые первыми.
+ */
+export async function fetchMyBastions(): Promise<MyPlayerBastions> {
+  const response = await $fetch<unknown>(`${PLAYER_BASTIONS_API_PATH}/my`, {
+    method: 'GET',
+    retry: 0,
+  });
+
+  return myPlayerBastionsSchema.parse(response);
+}
+
+/**
+ * Создаёт свой бастион вне игры. Сверх лимита сервер отвечает 409.
+ *
+ * @param request Название и персонаж владельца.
  * @returns Созданный бастион.
  */
 export async function createPlayerBastion(
@@ -128,7 +144,53 @@ export async function createPlayerBastion(
 }
 
 /**
- * Меняет название и состав игроков. Доступно только мастеру игры.
+ * Удаляет свой бастион вместе с планом и журналами.
+ *
+ * @param id Бастион.
+ */
+export async function deletePlayerBastion(id: string): Promise<void> {
+  await $fetch(`${PLAYER_BASTIONS_API_PATH}/${id}`, {
+    method: 'DELETE',
+    retry: 0,
+  });
+}
+
+/**
+ * Добавляет свой бастион в игру, участник которой пользователь.
+ *
+ * @param id Бастион.
+ * @param gameId Игра каталога.
+ * @returns Бастион в игре.
+ */
+export async function joinGameWithBastion(
+  id: string,
+  gameId: string,
+): Promise<PlayerBastion> {
+  const response = await $fetch<unknown>(
+    `${PLAYER_BASTIONS_API_PATH}/${id}/game`,
+    { method: 'POST', body: { gameId }, retry: 0 },
+  );
+
+  return playerBastionSchema.parse(response);
+}
+
+/**
+ * Убирает бастион из игры: владелец уходит сам или мастер убирает чужой.
+ *
+ * @param id Бастион.
+ * @returns Бастион вне игры.
+ */
+export async function leaveGameWithBastion(id: string): Promise<PlayerBastion> {
+  const response = await $fetch<unknown>(
+    `${PLAYER_BASTIONS_API_PATH}/${id}/game`,
+    { method: 'DELETE', retry: 0 },
+  );
+
+  return playerBastionSchema.parse(response);
+}
+
+/**
+ * Меняет название и состав игроков: мастер игры, а вне игры — владелец.
  *
  * @param id Бастион.
  * @param request Новое название, состав и версия, с которой начата правка.
@@ -148,7 +210,7 @@ export async function updatePlayerBastion(
 }
 
 /**
- * Отправляет бастион в архив. Доступно только мастеру игры.
+ * Отправляет бастион в архив: мастер игры, а вне игры — владелец.
  *
  * @param id Бастион.
  * @returns Бастион в архиве.

@@ -157,6 +157,12 @@ export const MENU_SECTIONS: Array<MenuSection> = [
         label: 'Лист персонажа',
         icon: 'tabler:id',
       },
+      {
+        href: '/tools/bastion',
+        label: 'Мои бастионы',
+        icon: 'tabler:building-castle',
+        roles: [Role.USER],
+      },
     ],
   },
   {

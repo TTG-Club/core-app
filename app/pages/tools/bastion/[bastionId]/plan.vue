@@ -5,16 +5,13 @@
     BASTION_DETAIL_LABELS,
     fetchPlayerBastion,
     getBastionErrorMessage,
+    getBastionRoute,
     PLAN_LABELS,
   } from '~bastion-game/model';
   import { PlanEditor } from '~bastion-game/plan';
   import { UiResult } from '~ui/result';
 
   const route = useRoute();
-
-  const gameId = computed(() =>
-    typeof route.params.gameId === 'string' ? route.params.gameId : '',
-  );
 
   const bastionId = computed(() =>
     typeof route.params.bastionId === 'string' ? route.params.bastionId : '',
@@ -38,9 +35,7 @@
     robots: 'noindex',
   });
 
-  const bastionRoute = computed(
-    () => `/games/${gameId.value}/bastions/${bastionId.value}`,
-  );
+  const bastionRoute = computed(() => getBastionRoute(bastionId.value));
 
   const errorTitle = computed(() =>
     error.value?.statusCode === StatusCodes.FORBIDDEN

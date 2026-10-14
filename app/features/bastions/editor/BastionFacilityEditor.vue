@@ -27,11 +27,18 @@
 
   const formRef = useTemplateRef('formRef');
 
-  const schema = z.object({
-    category: z.enum(['BASIC', 'SPECIAL']),
-    space: z.enum(['CRAMPED', 'ROOMY', 'VAST']),
-    description: z.string().nonempty(),
-  });
+  // Пространство обязательно только специализированному сооружению: базовое
+  // игрок при закладке делает тесным или вместительным сам.
+  const schema = z
+    .object({
+      category: z.enum(['BASIC', 'SPECIAL']),
+      space: z.enum(['CRAMPED', 'ROOMY', 'VAST']).optional(),
+      description: z.string().nonempty(),
+    })
+    .refine((value) => value.category === 'BASIC' || !!value.space, {
+      path: ['space'],
+      message: BASTION_EDITOR_LABELS.spaceRequired,
+    });
 
   defineExpose({
     submit: () => formRef.value!.submit(),
@@ -136,6 +143,7 @@
         </UFormField>
 
         <UFormField
+          v-if="isSpecial"
           class="md:col-span-8"
           :label="BASTION_EDITOR_LABELS.space"
           name="space"

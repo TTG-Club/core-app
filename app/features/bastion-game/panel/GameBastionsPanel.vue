@@ -4,13 +4,13 @@
   import { UiModalActions } from '~ui/modal-actions';
   import { UiResult } from '~ui/result';
 
-  import { useGameBastions } from '../composables';
+  import { useGameBastions, useMyBastions } from '../composables';
   import { BASTION_GAME_LABELS } from '../model';
-  import { BastionCard, BastionFormModal } from './ui';
+  import { BastionCard, BastionFormModal, BastionJoinModal } from './ui';
 
   /**
-   * Вкладка «Бастионы» на странице игры: все бастионы игры, а для мастера —
-   * создание, правка состава и архив.
+   * Вкладка «Бастионы» на странице игры: все бастионы игры, добавление своего
+   * бастиона, а для мастера — правка состава, архив и уход из игры.
    */
   const { gameId } = defineProps<{
     gameId: string;
@@ -24,10 +24,14 @@
     errorMessage,
     refresh,
     isSaving,
-    create,
+    join,
+    leave,
     update,
     archive,
   } = useGameBastions(() => gameId);
+
+  // Свои бастионы нужны только окну добавления — грузятся при его открытии.
+  const mine = useMyBastions({ immediate: false });
 
   /**
    * Пояснение под заголовком ошибки — текст сервера. Если сервер ничего не
@@ -40,8 +44,10 @@
   );
 
   const isFormOpen = ref(false);
+  const isJoinOpen = ref(false);
   const editedBastion = ref<PlayerBastion>();
   const archivedBastion = ref<PlayerBastion>();
+  const leavingBastion = ref<PlayerBastion>();
 
   const isArchiveOpen = computed({
     get: () => !!archivedBastion.value,
@@ -52,21 +58,39 @@
     },
   });
 
+  const isLeaveOpen = computed({
+    get: () => !!leavingBastion.value,
+    set: (opened: boolean) => {
+      if (!opened) {
+        leavingBastion.value = undefined;
+      }
+    },
+  });
+
   const bastions = computed(() => overview.value?.bastions ?? []);
   const players = computed(() => overview.value?.players ?? []);
-  const canCreate = computed(() => !!overview.value?.canCreate);
+  const canAdd = computed(() => !!overview.value?.canAdd);
   const currentUserId = computed(() => user.value?.id ?? undefined);
 
-  const emptyDescription = computed(() =>
-    canCreate.value
-      ? BASTION_GAME_LABELS.emptyMaster
-      : BASTION_GAME_LABELS.emptyPlayer,
+  const mineErrorMessage = computed(() =>
+    mine.status.value === 'error' ? mine.errorMessage.value : undefined,
   );
 
-  /** Открывает форму создания. */
-  function openCreate(): void {
-    editedBastion.value = undefined;
-    isFormOpen.value = true;
+  /** Открывает выбор своего бастиона и перечитывает список своих. */
+  async function openJoin(): Promise<void> {
+    isJoinOpen.value = true;
+    await mine.refresh();
+  }
+
+  /**
+   * Добавляет выбранный свой бастион в игру.
+   *
+   * @param bastionId Бастион.
+   */
+  async function handleJoin(bastionId: string): Promise<void> {
+    if (await join(bastionId)) {
+      isJoinOpen.value = false;
+    }
   }
 
   /**
@@ -80,7 +104,7 @@
   }
 
   /**
-   * Сохраняет форму: создаёт бастион или правит выбранный.
+   * Сохраняет название и состав редактируемого бастиона.
    *
    * @param name Название.
    * @param members Игроки с доступом.
@@ -91,11 +115,10 @@
   ): Promise<void> {
     const bastion = editedBastion.value;
 
-    const saved = bastion
-      ? await update(bastion.id, { name, members, version: bastion.version })
-      : await create({ gameId, name, members });
-
-    if (saved) {
+    if (
+      bastion
+      && (await update(bastion.id, { name, members, version: bastion.version }))
+    ) {
       isFormOpen.value = false;
     }
   }
@@ -106,6 +129,15 @@
 
     if (bastion && (await archive(bastion.id))) {
       archivedBastion.value = undefined;
+    }
+  }
+
+  /** Убирает выбранный бастион из игры. */
+  async function confirmLeave(): Promise<void> {
+    const bastion = leavingBastion.value;
+
+    if (bastion && (await leave(bastion.id))) {
+      leavingBastion.value = undefined;
     }
   }
 </script>
@@ -124,11 +156,11 @@
       </div>
 
       <UButton
-        v-if="canCreate"
+        v-if="canAdd"
         icon="tabler:plus"
-        @click.left.exact.prevent="openCreate"
+        @click.left.exact.prevent="openJoin"
       >
-        {{ BASTION_GAME_LABELS.create }}
+        {{ BASTION_GAME_LABELS.add }}
       </UButton>
     </div>
 
@@ -173,7 +205,7 @@
       </p>
 
       <p class="text-sm text-muted">
-        {{ emptyDescription }}
+        {{ BASTION_GAME_LABELS.emptyDescription }}
       </p>
     </div>
 
@@ -188,6 +220,7 @@
         :current-user-id
         @edit="openEdit(bastion)"
         @archive="archivedBastion = bastion"
+        @leave="leavingBastion = bastion"
       />
     </div>
 
@@ -198,6 +231,32 @@
       :loading="isSaving"
       @submit="handleSubmit"
     />
+
+    <BastionJoinModal
+      v-model:open="isJoinOpen"
+      :bastions="mine.freeBastions.value"
+      :pending="mine.status.value === 'pending'"
+      :error-message="mineErrorMessage"
+      :loading="isSaving"
+      @submit="handleJoin"
+    />
+
+    <UModal
+      v-model:open="isLeaveOpen"
+      :title="BASTION_GAME_LABELS.leaveGameConfirmTitle"
+      :description="BASTION_GAME_LABELS.leaveGameConfirmDescription"
+    >
+      <template #footer>
+        <UiModalActions
+          :cancel-label="BASTION_GAME_LABELS.cancel"
+          :submit-label="BASTION_GAME_LABELS.leaveGameConfirm"
+          submit-icon="tabler:door-exit"
+          :loading="isSaving"
+          @cancel="isLeaveOpen = false"
+          @submit="confirmLeave"
+        />
+      </template>
+    </UModal>
 
     <UModal
       v-model:open="isArchiveOpen"

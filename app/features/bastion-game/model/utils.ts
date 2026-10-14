@@ -7,7 +7,7 @@ import type {
 import { StatusCodes } from 'http-status-codes';
 import { FetchError } from 'ofetch';
 
-import { BASTION_START_LEVEL } from './constants';
+import { BASTION_START_LEVEL, MY_BASTIONS_ROUTE } from './constants';
 
 const SERVICE_UNAVAILABLE_STATUS = StatusCodes.SERVICE_UNAVAILABLE;
 
@@ -20,32 +20,39 @@ export interface BastionMemberDraft {
 }
 
 /**
- * Собирает строки формы доступа: по одной на каждого игрока игры. Игроки, у
- * которых доступ уже есть, отмечены и несут своего персонажа; остальные —
- * с именем персонажа из заявки и стартовым уровнем бастиона.
+ * Собирает строки формы доступа: нынешний состав бастиона отмечен и несёт
+ * своих персонажей, остальные игроки игры — с именем персонажа из заявки и
+ * стартовым уровнем бастиона. Вне игры игроков нет, и в форме только состав.
  *
  * @param players Игроки игры с одобренной заявкой.
- * @param bastion Редактируемый бастион; нет — форма создания.
- * @returns Строки формы в порядке игроков игры.
+ * @param bastion Редактируемый бастион.
+ * @returns Строки формы: сначала состав, затем игроки игры.
  */
 export function createMemberDrafts(
   players: ReadonlyArray<GamePlayer>,
   bastion?: PlayerBastion,
 ): Array<BastionMemberDraft> {
-  const members = new Map(
-    (bastion?.members ?? []).map((member) => [member.userId, member]),
-  );
+  const members = bastion?.members ?? [];
+  const memberIds = new Set(members.map((member) => member.userId));
 
-  return players.map((player) => {
-    const member = members.get(player.userId);
-
-    return {
-      userId: player.userId,
-      selected: !!member,
-      characterName: member?.characterName ?? player.characterName ?? '',
-      characterLevel: member?.characterLevel ?? BASTION_START_LEVEL,
-    };
-  });
+  // Сначала нынешний состав — в нём бывают не игроки игры (владелец-мастер
+  // или участник из времени до игры), затем остальные игроки игры.
+  return [
+    ...members.map((member) => ({
+      userId: member.userId,
+      selected: true,
+      characterName: member.characterName,
+      characterLevel: member.characterLevel,
+    })),
+    ...players
+      .filter((player) => !memberIds.has(player.userId))
+      .map((player) => ({
+        userId: player.userId,
+        selected: false,
+        characterName: player.characterName ?? '',
+        characterLevel: BASTION_START_LEVEL,
+      })),
+  ];
 }
 
 /**
@@ -116,4 +123,34 @@ export function getBastionErrorMessage(
   }
 
   return fallback;
+}
+
+/**
+ * Страница бастиона — одна для своих бастионов и для бастионов в игре.
+ *
+ * @param id Бастион.
+ * @returns Путь страницы.
+ */
+export function getBastionRoute(id: string): string {
+  return `${MY_BASTIONS_ROUTE}/${id}`;
+}
+
+/**
+ * Страница плана бастиона.
+ *
+ * @param id Бастион.
+ * @returns Путь страницы.
+ */
+export function getBastionPlanRoute(id: string): string {
+  return `${getBastionRoute(id)}/plan`;
+}
+
+/**
+ * Страница игры, в которую добавлен бастион.
+ *
+ * @param gameId Игра каталога.
+ * @returns Путь страницы.
+ */
+export function getGameRoute(gameId: string): string {
+  return `/games/${gameId}`;
 }
