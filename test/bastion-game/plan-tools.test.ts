@@ -15,6 +15,7 @@ import {
   getFurnitureSize,
   getRectCells,
   getTowerStairFrame,
+  moveFurniture,
   moveRoom,
   paintDefenseGates,
   paintDefenseWall,
@@ -278,5 +279,22 @@ describe('поворот мебели до установки', () => {
       width: 2,
       depth: 1,
     });
+  });
+});
+
+describe('перетаскивание мебели', () => {
+  it('сдвигает предмет и не выносит его за участок', () => {
+    const plan = placeFurniture(createEmptyPlan(), 0, { x: 3, y: 3 }, 'TABLE');
+    const id = plan.furniture[0]!.id;
+
+    expect(moveFurniture(plan, id, { x: 2, y: -1 }).furniture[0]).toMatchObject(
+      {
+        x: 5,
+        y: 2,
+      },
+    );
+
+    expect(moveFurniture(plan, id, { x: -10, y: 0 })).toBe(plan);
+    expect(moveFurniture(plan, id, { x: 0, y: 0 })).toBe(plan);
   });
 });

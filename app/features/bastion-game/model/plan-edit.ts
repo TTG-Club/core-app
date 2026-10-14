@@ -989,19 +989,7 @@ export function placeFurniture(
   const existing = findFurnitureAt(document, level, point);
 
   if (existing) {
-    const turned = {
-      ...existing,
-      rotation: (existing.rotation + PLAN_FURNITURE_ROTATION_STEP) % 360,
-    };
-
-    return isFurnitureOnGrid(turned)
-      ? {
-          ...document,
-          furniture: document.furniture.map((item) =>
-            item.id === existing.id ? turned : item,
-          ),
-        }
-      : document;
+    return rotateFurniture(document, existing.id);
   }
 
   const cell = getCellAt(point);
@@ -1017,6 +1005,78 @@ export function placeFurniture(
 
   return isFurnitureOnGrid(item)
     ? { ...document, furniture: [...document.furniture, item] }
+    : document;
+}
+
+/**
+ * Поворачивает стоящий предмет на 90° по часовой.
+ *
+ * @param document План.
+ * @param id Предмет.
+ * @returns Новый план или тот же, если после поворота предмет не помещается.
+ */
+export function rotateFurniture(
+  document: PlanDocument,
+  id: string,
+): PlanDocument {
+  return updateFurniture(document, id, (item) => ({
+    ...item,
+    rotation: (item.rotation + PLAN_FURNITURE_ROTATION_STEP) % 360,
+  }));
+}
+
+/**
+ * Сдвигает стоящий предмет на несколько клеток.
+ *
+ * @param document План.
+ * @param id Предмет.
+ * @param offset Сдвиг в клетках.
+ * @returns Новый план или тот же, если сдвигать некуда.
+ */
+export function moveFurniture(
+  document: PlanDocument,
+  id: string,
+  offset: PlanCell,
+): PlanDocument {
+  if (offset.x === 0 && offset.y === 0) {
+    return document;
+  }
+
+  return updateFurniture(document, id, (item) => ({
+    ...item,
+    x: item.x + offset.x,
+    y: item.y + offset.y,
+  }));
+}
+
+/**
+ * Меняет предмет, если он и после правки помещается на участке.
+ *
+ * @param document План.
+ * @param id Предмет.
+ * @param change Правка.
+ * @returns Новый план или тот же.
+ */
+function updateFurniture(
+  document: PlanDocument,
+  id: string,
+  change: (item: PlanFurniture) => PlanFurniture,
+): PlanDocument {
+  const existing = document.furniture.find((item) => item.id === id);
+
+  if (!existing) {
+    return document;
+  }
+
+  const next = change(existing);
+
+  return isFurnitureOnGrid(next)
+    ? {
+        ...document,
+        furniture: document.furniture.map((item) =>
+          item.id === id ? next : item,
+        ),
+      }
     : document;
 }
 

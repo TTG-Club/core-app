@@ -8,6 +8,7 @@ import type {
   PlanCell,
   PlanCircle,
   PlanDocument,
+  PlanFurniture,
   PlanRoom,
   PlanRoomSeed,
   PlanTool,
@@ -27,14 +28,18 @@ import {
   drawRoom,
   eraseCells,
   eraseObjectAt,
+  findFurnitureAt,
   findRoomAt,
   getCellAt,
+  getFurnitureSize,
   getLineCells,
   getNextRoomName,
   getRectCells,
   getStairTargetLevel,
   getTowerStairFrame,
   isDefenseGate,
+  isFurnitureOnGrid,
+  moveFurniture,
   moveRoom,
   paintCorridor,
   paintDefenseGates,
@@ -45,6 +50,7 @@ import {
   PLAN_FEET_PER_CELL,
   PLAN_LABELS,
   PLAN_LIMITS,
+  rotateFurniture,
   snapToHalf,
 } from '../model';
 
@@ -93,6 +99,14 @@ type PlanGesture =
     }
   | { type: 'tower'; center: PlanCell; radius: number }
   | { type: 'move'; room: PlanRoom; anchor: PlanCell; offset: PlanCell }
+  | {
+      type: 'furniture';
+      item: PlanFurniture;
+      anchor: PlanCell;
+      offset: PlanCell;
+      /** Щелчок без сдвига поворачивает предмет (инструмент «Мебель»). */
+      rotateOnClick: boolean;
+    }
   | { type: 'stairs'; anchor: PlanCell; current: PlanCell }
   | { type: 'corridor'; last: PlanCell; target: PlanRoom | PlanRoomSeed }
   | { type: 'erase'; last: PlanCell }
@@ -222,6 +236,27 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
   }
 
   /**
+   * Начинает перетаскивание стоящего предмета мебели.
+   *
+   * @param item Предмет.
+   * @param cell Клетка, за которую взяли.
+   * @param rotateOnClick Поворачивать ли предмет, если его не сдвинули.
+   */
+  function startFurnitureMove(
+    item: PlanFurniture,
+    cell: PlanCell,
+    rotateOnClick: boolean,
+  ): void {
+    gesture = {
+      type: 'furniture',
+      item,
+      anchor: cell,
+      offset: { x: 0, y: 0 },
+      rotateOnClick,
+    };
+  }
+
+  /**
    * Новая комната: идентификатор, название по виду и текущий этаж.
    *
    * @param kind Вид комнаты — для названия.
@@ -330,6 +365,14 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
 
     switch (tool.value) {
       case 'select': {
+        const item = findFurnitureAt(document, level.value, point);
+
+        if (item) {
+          startFurnitureMove(item, cell, false);
+
+          break;
+        }
+
         const room = findRoomAt(document, level.value, point);
 
         selectedRoomId.value = room?.id;
@@ -412,7 +455,15 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
         );
 
         break;
-      case 'furniture':
+      case 'furniture': {
+        const item = findFurnitureAt(document, level.value, point);
+
+        if (item) {
+          startFurnitureMove(item, cell, true);
+
+          break;
+        }
+
         editor.commit(
           placeFurniture(
             document,
@@ -424,6 +475,7 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
         );
 
         break;
+      }
       case 'area':
         selectedArea.value = undefined;
         gesture = { type: 'area', anchor: cell, current: cell };
@@ -495,6 +547,29 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
         );
 
         updateTowerPreview(gesture.center, gesture.radius);
+
+        break;
+      }
+      case 'furniture': {
+        const offset = {
+          x: cell.x - gesture.anchor.x,
+          y: cell.y - gesture.anchor.y,
+        };
+
+        const { item } = gesture;
+        const moved = { ...item, x: item.x + offset.x, y: item.y + offset.y };
+        const { width, depth } = getFurnitureSize(moved);
+
+        gesture.offset = offset;
+
+        preview.value = {
+          kind: 'move',
+          cells: getRectCells(moved, {
+            x: moved.x + width - 1,
+            y: moved.y + depth - 1,
+          }),
+          isValid: isFurnitureOnGrid(moved),
+        };
 
         break;
       }
@@ -620,6 +695,18 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
         editor.commit(moveRoom(document, finished.room.id, finished.offset));
 
         break;
+      case 'furniture': {
+        const { item, offset } = finished;
+        const isClick = offset.x === 0 && offset.y === 0;
+
+        if (isClick && finished.rotateOnClick) {
+          editor.commit(rotateFurniture(document, item.id));
+        } else if (!isClick) {
+          editor.commit(moveFurniture(document, item.id, offset));
+        }
+
+        break;
+      }
       case 'stairs':
         finishStairs(finished.anchor, finished.current);
 

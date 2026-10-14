@@ -219,7 +219,7 @@
 
   /**
    * Зум колесом у курсора: точка под курсором остаётся на месте. С
-   * инструментом мебели колесо поворачивает предмет, а зум — с Ctrl.
+   * инструментом мебели Ctrl+колесо поворачивает предмет.
    *
    * @param event Событие колеса.
    */
@@ -230,7 +230,7 @@
 
     event.preventDefault();
 
-    if (props.tool === 'furniture' && !event.ctrlKey && !event.metaKey) {
+    if (props.tool === 'furniture' && (event.ctrlKey || event.metaKey)) {
       if (
         event.deltaY !== 0
         && event.timeStamp - lastRotateAt > PLAN_WHEEL_ROTATE_MS
