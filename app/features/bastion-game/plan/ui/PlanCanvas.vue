@@ -41,6 +41,8 @@
     /** Выделенный участок на этом этаже. */
     area: PlanArea | undefined;
     furnitureKind: FurnitureKind;
+    /** Поворот предмета, который поставит инструмент мебели. */
+    furnitureRotation: number;
   }>();
 
   const emit = defineEmits<{
@@ -95,6 +97,7 @@
         cursors: props.cursors,
         area: props.area,
         furnitureKind: props.furnitureKind,
+        furnitureRotation: props.furnitureRotation,
       },
       theme.value,
       world.scale.x,
@@ -372,6 +375,7 @@
       props.cursors,
       props.area,
       props.furnitureKind,
+      props.furnitureRotation,
     ],
     render,
   );

@@ -102,6 +102,13 @@ export const ACTIVITY_LABELS = {
   enlarge: 'Расширить',
   enlargeDone: 'Расширение началось',
   remove: 'Убрать',
+  idle: 'Простаивает',
+  busyOrder: 'Выполняет «{order}» до хода {turn}',
+  busyOrderOption: 'Выполняет «{order}: {option}» до хода {turn}',
+  orderBusy: 'Сооружение уже выполняет приказ',
+  orderBuilding: 'Сооружение ещё строится',
+  orderPrerequisite: 'Мастер ещё не подтвердил требование',
+  orderAfterStart: 'Приказы отдаются, когда бастион запущен',
   removeTitle: 'Убрать сооружение?',
   removeDescription:
     'Незавершённые приказы сооружения отменятся без возврата денег, клетки исчезнут с плана.',

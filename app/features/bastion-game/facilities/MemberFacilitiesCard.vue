@@ -1,5 +1,7 @@
 <script setup lang="ts">
   import type {
+    BastionActivity,
+    BastionActivityOrder,
     PlayerBastion,
     PlayerBastionFacility,
     PlayerBastionMember,
@@ -24,11 +26,18 @@
 
   /**
    * Персонаж в бастионе и его сооружения: базовые и специализированные, с
-   * подтверждением требований для мастера и кнопкой выбора для игрока.
+   * подтверждением требований для мастера и кнопкой выбора для игрока. У
+   * сооружения видно, простаивает оно или выполняет приказ.
    */
-  const { bastion, member } = defineProps<{
+  const {
+    bastion,
+    member,
+    activity = undefined,
+  } = defineProps<{
     bastion: PlayerBastion;
     member: PlayerBastionMember;
+    /** Журнал бастиона: из него — приказы, которые сооружения выполняют. */
+    activity?: BastionActivity;
   }>();
 
   const emit = defineEmits<{
@@ -73,8 +82,46 @@
       && specialFacilities.value.length < member.specialFacilityLimit,
   );
 
-  /** Убирать сооружения может только мастер запущенного бастиона. */
-  const canRemove = computed(() => member.canGiveOrders && bastion.canManage);
+  const isSetup = computed(() => bastion.status === 'SETUP');
+
+  /**
+   * В закладке ошибочно выбранное сооружение убирает игрок персонажа или тот,
+   * кто ведёт бастион; в запущенном — только тот, кто ведёт.
+   */
+  const canRemove = computed(() =>
+    isSetup.value
+      ? member.canEditFacilities
+      : member.canGiveOrders && bastion.canManage,
+  );
+
+  /** Пока бастион в закладке, кнопка приказа видна, но объясняет, почему ждёт. */
+  const orderLock = computed(() =>
+    isSetup.value && member.canEditFacilities
+      ? ACTIVITY_LABELS.orderAfterStart
+      : undefined,
+  );
+
+  /** Приказы, которые сооружения выполняют сейчас, по сооружению. */
+  const activeOrders = computed(
+    () =>
+      new Map(
+        (activity?.orders ?? [])
+          .filter((order) => order.status === 'ACTIVE' && order.facilityId)
+          .map((order) => [order.facilityId, order]),
+      ),
+  );
+
+  /**
+   * Приказ, который сооружение выполняет сейчас.
+   *
+   * @param facilityId Сооружение.
+   * @returns Приказ или undefined, если простаивает.
+   */
+  function getActiveOrder(
+    facilityId: string,
+  ): BastionActivityOrder | undefined {
+    return activeOrders.value.get(facilityId);
+  }
 
   /**
    * Открывает приказ сооружению.
@@ -238,6 +285,8 @@
             :facility
             :can-act="member.canGiveOrders"
             :can-remove
+            :active-order="getActiveOrder(facility.id)"
+            :order-lock="orderLock"
             @order="openOrder(facility)"
             @enlarge="enlarge(facility.id)"
             @remove="askRemove(facility)"
@@ -259,6 +308,8 @@
             :can-confirm="bastion.canManage"
             :can-act="member.canGiveOrders"
             :can-remove
+            :active-order="getActiveOrder(facility.id)"
+            :order-lock="orderLock"
             @toggle-confirmation="toggleConfirmation(facility.id, $event)"
             @order="openOrder(facility)"
             @enlarge="enlarge(facility.id)"
@@ -299,17 +350,18 @@
         :character-level="member.characterLevel"
         @updated="emit('updated', $event)"
       />
-
-      <ConfirmDialog
-        v-model:open="isRemoveOpen"
-        :title="ACTIVITY_LABELS.removeTitle"
-        :description="ACTIVITY_LABELS.removeDescription"
-        :confirm-label="ACTIVITY_LABELS.remove"
-        confirm-color="error"
-        confirm-icon="tabler:trash"
-        :loading="isRunning"
-        @confirm="remove"
-      />
     </template>
+
+    <ConfirmDialog
+      v-if="canRemove"
+      v-model:open="isRemoveOpen"
+      :title="ACTIVITY_LABELS.removeTitle"
+      :description="ACTIVITY_LABELS.removeDescription"
+      :confirm-label="ACTIVITY_LABELS.remove"
+      confirm-color="error"
+      confirm-icon="tabler:trash"
+      :loading="isRunning"
+      @confirm="remove"
+    />
   </UCard>
 </template>

@@ -48,6 +48,7 @@ export const PLAN_FURNITURE_SIZES: Record<
   WARDROBE: { width: 2, depth: 1 },
   SOFA: { width: 2, depth: 1 },
   BED: { width: 1, depth: 2 },
+  CHEST: { width: 1, depth: 1 },
 };
 
 /** Сколько шагов отмены хранит редактор. */
@@ -153,11 +154,11 @@ export const PLAN_TOOL_HINTS: Record<PlanTool, string> = {
   door: 'Щёлкните по стене или по кольцу башни. Повторный щелчок по двери меняет её вид.',
   window: 'Щёлкните по стене или по кольцу башни.',
   stairs:
-    'Щёлкните клетку или тяните в сторону подъёма: рамка задаёт длину и ширину.',
+    'Щёлкните клетку или тяните в сторону подъёма: рамка задаёт длину и ширину. Щелчок внутри башни ставит винтовую лестницу по её размеру.',
   column: 'Щёлкните в центр клетки или на пересечение линий сетки.',
-  wall: 'Ведите по клеткам снаружи комнат первого этажа.',
+  wall: 'Ведите по клеткам снаружи комнат первого этажа. Ворота встают в стену; щелчок по воротам закладывает проём.',
   furniture:
-    'Щёлкните клетку, чтобы поставить предмет; щелчок по предмету поворачивает его.',
+    'Выберите предмет на кнопке мебели. R поворачивает его до установки; щелчок по стоящему предмету поворачивает его.',
   area: 'Тяните рамку вокруг участка. Delete убирает всё, что в ней на этом этаже.',
 };
 
@@ -189,11 +190,41 @@ export const FURNITURE_KIND_LABELS: Record<FurnitureKind, string> = {
   WARDROBE: 'Шкаф',
   SOFA: 'Диван',
   BED: 'Кровать',
+  CHEST: 'Сундук',
+};
+
+export const FURNITURE_KIND_ICONS: Record<FurnitureKind, string> = {
+  TABLE: 'tabler:table',
+  CHAIR: 'tabler:chair-director',
+  WARDROBE: 'tabler:layout-columns',
+  SOFA: 'tabler:sofa',
+  BED: 'tabler:bed',
+  CHEST: 'tabler:box',
 };
 
 export const STAIR_KIND_LABELS: Record<StairKind, string> = {
   STRAIGHT: 'Прямая',
   SPIRAL: 'Винтовая',
+};
+
+export const STAIR_KIND_ICONS: Record<StairKind, string> = {
+  STRAIGHT: 'tabler:stairs',
+  SPIRAL: 'tabler:spiral',
+};
+
+/** Что строит инструмент защитной стены: саму стену или ворота в ней. */
+export const WALL_PIECES = ['WALL', 'GATE'] as const;
+
+export type WallPiece = (typeof WALL_PIECES)[number];
+
+export const WALL_PIECE_LABELS: Record<WallPiece, string> = {
+  WALL: 'Стена',
+  GATE: 'Ворота',
+};
+
+export const WALL_PIECE_ICONS: Record<WallPiece, string> = {
+  WALL: 'tabler:wall',
+  GATE: 'tabler:door',
 };
 
 /** Куда ведёт новая лестница: на ближайший этаж выше или ниже. */
@@ -271,11 +302,16 @@ export const PLAN_LABELS = {
   areaLabel: '{used} / {max} кл.',
   doorKind: 'Вид двери',
   furnitureKind: 'Предмет',
+  furnitureRotation: 'Поворот',
+  rotateFurniture: 'Повернуть (R)',
+  degrees: '{degrees}°',
   selectedArea: 'Выделенный участок',
   clearArea: 'Убрать всё на участке',
   clearAreaHint:
     'Комнаты обрежутся по рамке, двери, окна, лестницы, колонны и мебель внутри исчезнут.',
   stairKind: 'Вид лестницы',
+  spiralHint: 'Щёлкните внутри башни — лестница займёт её середину.',
+  wallPiece: 'Что строить',
   stairTarget: 'Куда ведёт',
   stairDirection: 'Подъём при щелчке',
   stairNoTarget: 'Нет этажа выше или ниже — добавьте его.',

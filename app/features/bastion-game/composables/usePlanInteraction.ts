@@ -13,6 +13,7 @@ import type {
   PlanTool,
   StairKind,
   StairTarget,
+  WallPiece,
 } from '../model';
 
 import { fillTemplate } from '~bastions/model';
@@ -32,11 +33,15 @@ import {
   getNextRoomName,
   getRectCells,
   getStairTargetLevel,
+  getTowerStairFrame,
+  isDefenseGate,
   moveRoom,
   paintCorridor,
+  paintDefenseGates,
   paintDefenseWall,
   placeFurniture,
   placeOpening,
+  placeTowerStair,
   PLAN_FEET_PER_CELL,
   PLAN_LABELS,
   PLAN_LIMITS,
@@ -74,6 +79,8 @@ interface PlanInteractionOptions {
   stairDirection: Ref<CellSide>;
   corridorWidth: Ref<number>;
   furnitureKind: Ref<FurnitureKind>;
+  furnitureRotation: Ref<number>;
+  wallPiece: Ref<WallPiece>;
 }
 
 /** Жест, который сейчас выполняется указателем. */
@@ -90,7 +97,12 @@ type PlanGesture =
   | { type: 'corridor'; last: PlanCell; target: PlanRoom | PlanRoomSeed }
   | { type: 'erase'; last: PlanCell }
   | { type: 'area'; anchor: PlanCell; current: PlanCell }
-  | { type: 'wall'; last: PlanCell };
+  | {
+      type: 'wall';
+      last: PlanCell;
+      /** Что делает мазок: строит стену, ставит или убирает ворота. */
+      paint: (document: PlanDocument, cells: Array<PlanCell>) => PlanDocument;
+    };
 
 /**
  * Квадрат кисти шириной в несколько клеток от клетки под указателем.
@@ -187,6 +199,27 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
   const selectedArea = shallowRef<PlanArea & { level: number }>();
 
   let gesture: PlanGesture | undefined;
+
+  /**
+   * Что делает мазок защитной стены. В режиме ворот мазок, начатый на
+   * воротах, закладывает проёмы стеной, иначе ставит ворота.
+   *
+   * @param document План в начале мазка.
+   * @param cell Клетка, где начали вести.
+   * @returns Правка для клеток мазка.
+   */
+  function getWallPaint(
+    document: PlanDocument,
+    cell: PlanCell,
+  ): (next: PlanDocument, cells: Array<PlanCell>) => PlanDocument {
+    if (options.wallPiece.value === 'WALL') {
+      return paintDefenseWall;
+    }
+
+    const isGate = !isDefenseGate(document, cell);
+
+    return (next, cells) => paintDefenseGates(next, cells, isGate);
+  }
 
   /**
    * Новая комната: идентификатор, название по виду и текущий этаж.
@@ -334,9 +367,11 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
         break;
       case 'wall':
         if (level.value === 0) {
+          const paint = getWallPaint(document, cell);
+
           editor.beginStroke();
-          gesture = { type: 'wall', last: cell };
-          editor.applyInStroke(paintDefenseWall(document, [cell]));
+          gesture = { type: 'wall', last: cell, paint };
+          editor.applyInStroke(paint(document, [cell]));
         }
 
         break;
@@ -384,6 +419,7 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
             level.value,
             point,
             options.furnitureKind.value,
+            options.furnitureRotation.value,
           ),
         );
 
@@ -530,7 +566,7 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
         break;
       case 'wall':
         editor.applyInStroke(
-          paintDefenseWall(
+          gesture.paint(
             editor.document.value,
             getLineCells(gesture.last, cell),
           ),
@@ -624,6 +660,24 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
     );
 
     if (toLevel === undefined) {
+      return;
+    }
+
+    const isClick = anchor.x === current.x && anchor.y === current.y;
+
+    const tower = isClick
+      ? getTowerStairFrame(editor.document.value, level.value, anchor)
+      : undefined;
+
+    if (tower) {
+      editor.commit(
+        placeTowerStair(editor.document.value, level.value, anchor, {
+          id: crypto.randomUUID(),
+          toLevel,
+          direction: options.stairDirection.value,
+        }),
+      );
+
       return;
     }
 

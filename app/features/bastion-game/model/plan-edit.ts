@@ -62,6 +62,7 @@ export function createEmptyPlan(): PlanDocument {
     columns: [],
     defenseWalls: [],
     furniture: [],
+    defenseGates: [],
   };
 }
 
@@ -101,6 +102,7 @@ export function parsePlanResponse(response: unknown): PlanState {
       columns: source.columns ?? [],
       defenseWalls: source.defenseWalls ?? [],
       furniture: source.furniture ?? [],
+      defenseGates: source.defenseGates ?? [],
     },
   };
 }
@@ -108,7 +110,7 @@ export function parsePlanResponse(response: unknown): PlanState {
 /**
  * Убирает всё повисшее после правки: пустые комнаты, двери и окна там, где
  * стены больше нет, проёмы удалённых башен, лестницы и колонны удалённых
- * этажей.
+ * этажей, ворота без защитной стены.
  *
  * @param document План.
  * @returns Чистый план.
@@ -134,6 +136,10 @@ export function prunePlan(document: PlanDocument): PlanDocument {
     rooms.filter((room) => room.kind === 'TOWER').map((room) => room.id),
   );
 
+  const wallCells = new Set(
+    document.defenseWalls.map((cell) => getCellKey(cell.x, cell.y)),
+  );
+
   return {
     ...document,
     rooms,
@@ -147,6 +153,9 @@ export function prunePlan(document: PlanDocument): PlanDocument {
     ),
     columns: document.columns.filter((column) => levels.has(column.level)),
     furniture: document.furniture.filter((item) => levels.has(item.level)),
+    defenseGates: document.defenseGates.filter((cell) =>
+      wallCells.has(getCellKey(cell.x, cell.y)),
+    ),
   };
 }
 
@@ -720,6 +729,103 @@ export function addStair(
   return { ...document, stairs: [...document.stairs, stair] };
 }
 
+/** Рамка лестницы в клетках. */
+export interface PlanStairFrame extends PlanCell {
+  width: number;
+  height: number;
+}
+
+/**
+ * Сторона винтовой лестницы вдоль одной оси: крупнейшая, что встаёт по центру
+ * башни целыми клетками и оставляет у стены проход. В самой узкой башне
+ * лестница занимает её всю.
+ *
+ * @param center Центр башни по оси.
+ * @param radius Радиус башни.
+ * @returns Сторона в клетках.
+ */
+function fitSpiralSide(center: number, radius: number): number {
+  const limit = Math.min(
+    PLAN_LIMITS.maxStairSide,
+    Math.max(1, Math.floor(radius * 2) - 1),
+  );
+
+  for (let side = limit; side >= 1; side--) {
+    if (Number.isInteger(center - side / 2)) {
+      return side;
+    }
+  }
+
+  return 2;
+}
+
+/**
+ * Рамка винтовой лестницы в башне под точкой: по центру башни, с проходом
+ * вдоль стены.
+ *
+ * @param document План.
+ * @param level Этаж.
+ * @param point Точка в клетках.
+ * @returns Рамка или undefined, если под точкой не башня.
+ */
+export function getTowerStairFrame(
+  document: PlanDocument,
+  level: number,
+  point: PlanCell,
+): PlanStairFrame | undefined {
+  const shape = findRoomAt(document, level, point)?.shape;
+
+  if (!shape) {
+    return undefined;
+  }
+
+  const width = fitSpiralSide(shape.cx, shape.r);
+  const height = fitSpiralSide(shape.cy, shape.r);
+
+  return {
+    x: shape.cx - width / 2,
+    y: shape.cy - height / 2,
+    width,
+    height,
+  };
+}
+
+/**
+ * Ставит в башню под точкой винтовую лестницу по её размеру. Вторую такую же
+ * лестницу на то же место не ставит.
+ *
+ * @param document План.
+ * @param level Этаж.
+ * @param point Точка в клетках.
+ * @param seed Идентификатор, этаж назначения и сторона подъёма.
+ * @returns Новый план или тот же, если под точкой не башня.
+ */
+export function placeTowerStair(
+  document: PlanDocument,
+  level: number,
+  point: PlanCell,
+  seed: Pick<PlanStair, 'id' | 'toLevel' | 'direction'>,
+): PlanDocument {
+  const frame = getTowerStairFrame(document, level, point);
+
+  if (!frame) {
+    return document;
+  }
+
+  const isTaken = document.stairs.some(
+    (stair) =>
+      stair.level === level
+      && stair.x === frame.x
+      && stair.y === frame.y
+      && stair.width === frame.width
+      && stair.height === frame.height,
+  );
+
+  return isTaken
+    ? document
+    : addStair(document, { ...seed, ...frame, level, kind: 'SPIRAL' });
+}
+
 /**
  * Ставит колонну; на занятое колонной место вторую не ставит.
  *
@@ -870,6 +976,7 @@ export function findFurnitureAt(
  * @param level Этаж.
  * @param point Точка в клетках.
  * @param kind Что ставить.
+ * @param rotation Поворот нового предмета, градусы по часовой.
  * @returns Новый план или тот же, если предмет не помещается на участке.
  */
 export function placeFurniture(
@@ -877,6 +984,7 @@ export function placeFurniture(
   level: number,
   point: PlanCell,
   kind: FurnitureKind,
+  rotation = 0,
 ): PlanDocument {
   const existing = findFurnitureAt(document, level, point);
 
@@ -904,7 +1012,7 @@ export function placeFurniture(
     x: cell.x,
     y: cell.y,
     kind,
-    rotation: 0,
+    rotation,
   };
 
   return isFurnitureOnGrid(item)
@@ -944,6 +1052,73 @@ export function paintDefenseWall(
   return added.length
     ? { ...document, defenseWalls: [...document.defenseWalls, ...added] }
     : document;
+}
+
+/**
+ * Стоят ли ворота в клетке защитной стены.
+ *
+ * @param document План.
+ * @param cell Клетка.
+ * @returns true, если стоят.
+ */
+export function isDefenseGate(document: PlanDocument, cell: PlanCell): boolean {
+  return document.defenseGates.some(
+    (gate) => gate.x === cell.x && gate.y === cell.y,
+  );
+}
+
+/**
+ * Ставит или убирает ворота в защитной стене. Ворота встают только в стену:
+ * там, где её нет, стена достраивается.
+ *
+ * @param document План.
+ * @param cells Клетки мазка.
+ * @param isGate true — поставить ворота, false — заложить проём стеной.
+ * @returns Новый план или тот же, если менять нечего.
+ */
+export function paintDefenseGates(
+  document: PlanDocument,
+  cells: ReadonlyArray<PlanCell>,
+  isGate: boolean,
+): PlanDocument {
+  const walled = isGate ? paintDefenseWall(document, cells) : document;
+
+  const walls = new Set(
+    walled.defenseWalls.map((cell) => getCellKey(cell.x, cell.y)),
+  );
+
+  const gates = new Set(
+    walled.defenseGates.map((cell) => getCellKey(cell.x, cell.y)),
+  );
+
+  const changed = cells.filter((cell) => {
+    const key = getCellKey(cell.x, cell.y);
+
+    if (!walls.has(key) || gates.has(key) === isGate) {
+      return false;
+    }
+
+    if (isGate) {
+      gates.add(key);
+    } else {
+      gates.delete(key);
+    }
+
+    return true;
+  });
+
+  if (!changed.length) {
+    return walled;
+  }
+
+  return {
+    ...walled,
+    defenseGates: isGate
+      ? [...walled.defenseGates, ...changed]
+      : walled.defenseGates.filter((cell) =>
+          gates.has(getCellKey(cell.x, cell.y)),
+        ),
+  };
 }
 
 /**
