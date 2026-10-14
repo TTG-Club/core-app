@@ -22,6 +22,13 @@
 
   const markdown = useEntityMarkdown(species, getSpeciesMarkdown);
 
+  /** Возврат к странице родительского вида. */
+  const backTo = computed(() => {
+    const parentUrl = species.value?.parent?.url ?? species.value?.species?.url;
+
+    return parentUrl ? `/species/${parentUrl}` : undefined;
+  });
+
   useSeoMeta({
     title: getSeoTitle,
     description: getSeoDescription,
@@ -64,13 +71,7 @@
     :subtitle="species?.name.eng"
     :source="species?.source"
     :date-time="species?.updatedAt"
-    :back-to="
-      species?.parent
-        ? `/species/${species.parent.url}`
-        : species?.species
-          ? `/species/${species.species.url}`
-          : undefined
-    "
+    :back-to="backTo"
     copy-text
   >
     <template #actions>

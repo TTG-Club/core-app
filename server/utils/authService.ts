@@ -20,6 +20,8 @@ const authUserSchema = z.object({
   // Признак необязателен: старые сборки auth-service его не отдают, и
   // отсутствие поля не должно ронять весь профиль.
   emailVerified: z.boolean().optional(),
+  // Согласия с офертой и на обработку ПД; старые сборки auth-service поле не отдают.
+  consentsAccepted: z.boolean().optional(),
 });
 
 const authJwtPayloadSchema = z.object({
@@ -391,6 +393,17 @@ export function isInvalidRefreshTokenError(error: unknown): boolean {
     || statusCode === StatusCodes.BAD_REQUEST
   );
 }
+
+/**
+ * Согласия с офертой и на обработку персональных данных: без обоих аккаунт не
+ * регистрируется и не платит. Редакции документов сохраняются в auth-service.
+ */
+export const authConsentsSchema = z.object({
+  offerAccepted: z.literal(true),
+  offerVersion: z.string().trim().min(1).max(32),
+  personalDataConsent: z.literal(true),
+  privacyPolicyVersion: z.string().trim().min(1).max(32),
+});
 
 /**
  * Создает ошибку некорректного запроса для auth endpoint.

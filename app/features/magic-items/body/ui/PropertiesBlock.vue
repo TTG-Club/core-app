@@ -1,13 +1,38 @@
 <script setup lang="ts">
   import type { MagicItemDetailResponse } from '../../model';
 
-  import { getMagicItemPropertyRows } from '../../model';
+  import {
+    fetchMagicItemBaseWeapon,
+    getMagicItemBaseWeaponDataKey,
+    getMagicItemPropertyRows,
+  } from '../../model';
 
-  const { magicItem } = defineProps<{
+  const { magicItem, baseItemUrls = undefined } = defineProps<{
     magicItem: MagicItemDetailResponse;
+
+    /**
+     * Слаги немагической основы, если они уже известны: предпросмотр мастерской
+     * показывает ещё не сохранённый предмет, и спросить их у раздела нельзя.
+     */
+    baseItemUrls?: Array<string>;
   }>();
 
-  const rows = computed(() => getMagicItemPropertyRows(magicItem));
+  const baseWeaponDataKey = computed(() =>
+    getMagicItemBaseWeaponDataKey(magicItem.url, baseItemUrls),
+  );
+
+  /**
+   * Урон немагической основы. Без `await`: блок рисуется сразу, а строка
+   * основного урона появляется, когда основа загрузится; при серверном рендере
+   * Nuxt дожидается запроса сам.
+   */
+  const { data: baseWeaponLookup } = useAsyncData(baseWeaponDataKey, () =>
+    fetchMagicItemBaseWeapon(magicItem, baseItemUrls),
+  );
+
+  const rows = computed(() =>
+    getMagicItemPropertyRows(magicItem, baseWeaponLookup.value?.baseWeapon),
+  );
 </script>
 
 <template>
@@ -22,7 +47,12 @@
     >
       <span :class="$style.name">{{ row.label }}:</span>
 
-      <span>{{ row.value }}</span>
+      <span
+        v-for="(valueLine, lineIndex) in row.lines"
+        :key="lineIndex"
+      >
+        {{ valueLine }}
+      </span>
     </div>
   </div>
 </template>

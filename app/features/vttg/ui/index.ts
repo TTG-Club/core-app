@@ -1,3 +1,4 @@
+export { default as VttgAuthorizeCard } from './VttgAuthorizeCard.vue';
 export { default as VttgDownloadBuilds } from './VttgDownloadBuilds.vue';
 export { default as VttgDownloadModal } from './VttgDownloadModal.vue';
 export { default as VttgFaqSection } from './VttgFaqSection.vue';
@@ -9,4 +10,9 @@ export { default as VttgGuideSteps } from './VttgGuideSteps.vue';
 export { default as VttgHeroSection } from './VttgHeroSection.vue';
 export { default as VttgLanding } from './VttgLanding.vue';
 export { default as VttgSectionHeading } from './VttgSectionHeading.vue';
+export { default as VttgSubscribeButton } from './VttgSubscribeButton.vue';
+export { default as VttgSubscriptionHero } from './VttgSubscriptionHero.vue';
+export { default as VttgSubscriptionLimitComparison } from './VttgSubscriptionLimitComparison.vue';
+export { default as VttgSubscriptionPerks } from './VttgSubscriptionPerks.vue';
+export { default as VttgSubscriptionPurchaseModal } from './VttgSubscriptionPurchaseModal.vue';
 export { default as VttgVideoPlayer } from './VttgVideoPlayer.vue';

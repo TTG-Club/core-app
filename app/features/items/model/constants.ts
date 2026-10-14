@@ -564,6 +564,7 @@ export const EQUIPMENT_CATEGORY_OPTIONS: Array<
   { label: 'Кольцо', value: 'ring' },
   { label: 'Жезл', value: 'wand' },
   { label: 'Чудесный предмет', value: 'wondrous' },
+  { label: 'Зелье', value: 'potion' },
   { label: 'Еда', value: 'food' },
   { label: 'Снаряжение транспорта', value: 'vehicle-equipment' },
 ];

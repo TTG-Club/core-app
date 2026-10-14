@@ -29,6 +29,23 @@ export default defineNuxtConfig({
 
   compatibilityDate: '2025-07-22',
 
+  experimental: {
+    // Как часто открытая вкладка сверяет свою сборку с сервером. По умолчанию
+    // раз в час — после выкладки старая вкладка долго жила на удалённых
+    // чанках. Проверка — крошечный `builds/latest.json`; при новой сборке
+    // страница перезагрузится на ближайшем переходе (см. buildUpdate.client.ts).
+    checkOutdatedBuildInterval: ms('10m'),
+
+    // Без карты импорта `#entry`. С ней Nuxt убирает имя главного чанка из
+    // кода, чтобы хэши остальных не менялись, но Vite потом дописывает это имя
+    // в списки предзагрузки (`__vite__mapDeps`) уже после расчёта хэша. Чанк
+    // меняет содержимое, не меняя имени: браузер держит старую копию
+    // (`immutable` на год), её SRI-хэш не сходится с новым HTML, и приложение
+    // не запускается до очистки кэша. Без карты импорта имя главного чанка
+    // входит в хэши зависимых, и после выкладки они получают новые имена.
+    entryImportMap: false,
+  },
+
   // Конфигурация среды разработки
   devServer: {
     https: process.env.NUXT_DEV_SSL === 'true',
@@ -159,6 +176,7 @@ export default defineNuxtConfig({
 
   ui: {
     colorMode: false,
+    content: true,
   },
 
   icon: {
@@ -482,6 +500,14 @@ export default defineNuxtConfig({
     // Переопределяется через NUXT_VTTG_UPDATE_BASE_URL.
     vttg: {
       updateBaseUrl: 'https://update-v.ttg.club/vttg/',
+      // core-api каналов компендиума VTTG — те же, откуда их качает приложение
+      // (CHANNELS в vttg/packages/server/src/modules/compendium/compendiumUpdate.ts).
+      // Админка любого сайта видит и поднимает версии обоих каналов.
+      // Переопределяются через NUXT_VTTG_COMPENDIUM_API_URLS_DEV / _PROD.
+      compendiumApiUrls: {
+        dev: 'https://dev.api.ttg.club',
+        prod: 'https://api.ttg.club',
+      },
     },
   },
 });

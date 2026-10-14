@@ -28,6 +28,7 @@
   } from '../../model';
   import SheetCurrencyRow from './SheetCurrencyRow.vue';
   import SheetInventoryItemRow from './SheetInventoryItemRow.vue';
+  import SheetItemSellModal from './SheetItemSellModal.vue';
 
   const props = defineProps<{
     currency: CharacterCurrency;
@@ -63,7 +64,7 @@
 
   // Пополнение снаряжения — правка листа: у запертого и у чужого листа кнопка
   // «Добавить» прячется, а ряд с переносимым весом остаётся прежним.
-  const { editControlClass } = useCharacterSheet();
+  const { editControlClass, sellInventoryItem } = useCharacterSheet();
 
   const addMenuItems = getEquipmentAddMenuItems({
     onAddItem: () => emit('add-item'),
@@ -136,6 +137,28 @@
     }
 
     isRemoveOpen.value = false;
+  }
+
+  // Продажа идёт через своё окно: в нём игрок видит цену справочника и
+  // задаёт выручку (по умолчанию полцены). Деньги пишутся в лист прямо
+  // отсюда: вкладка и так читает общее состояние, а цепочка событий через
+  // вкладки ничего бы не добавила.
+  const sellModal = overlay.create(SheetItemSellModal);
+
+  /**
+   * Открывает окно продажи и продаёт предмет за выбранную цену.
+   *
+   * @param inventoryItem предмет, который просят продать.
+   */
+  async function handleSellRequest(inventoryItem: CharacterInventoryItem) {
+    const salePrice = await sellModal.open({ inventoryItem }).result;
+
+    // Отмена или закрытие окна мимо кнопок — предмет остаётся.
+    if (typeof salePrice !== 'number') {
+      return;
+    }
+
+    sellInventoryItem(inventoryItem.id, salePrice);
   }
 
   const displayGroups = computed(() => getInventoryGroups(props.inventory));
@@ -293,6 +316,7 @@
           @edit="emit('edit-item', inventoryItem.id)"
           @copy="emit('copy-item', inventoryItem.id)"
           @remove="handleRemoveRequest(inventoryItem)"
+          @sell="handleSellRequest(inventoryItem)"
           @adjust="(delta) => handleQuantityAdjust(inventoryItem.id, delta)"
           @toggle-equip="emit('toggle-equip', inventoryItem.id)"
           @toggle-attuned="emit('toggle-attuned', inventoryItem.id)"

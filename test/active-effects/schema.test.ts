@@ -8,15 +8,22 @@ import {
   FIXED_MIN_SAVE_DC,
   normalizeActiveEffects,
   normalizeLoadedActiveEffects,
+  toDraftActivationExclusive,
+  writeEffectActivationMode,
 } from '~active-effects/model';
 
 import {
+  ACTIVATION_RANGE,
   AURA_RADIUS,
+  createEffect,
   createRawEffect,
   SAVE_DC,
   stripUndefinedKeys,
   TYPED_SAVE_DC,
 } from './fixtures';
+
+/** Имя включения длиннее предела в 100 знаков: схема его отбрасывает. */
+const TOO_LONG_ACTIVATION_EXCLUSIVE = 'Ярость'.repeat(20);
 
 describe('терпимая загрузка эффектов', () => {
   it('эффект без id или с changes не той формы выпадает, соседний остаётся', () => {
@@ -525,6 +532,154 @@ describe('сохранение эффектов', () => {
     expect(
       normalizeActiveEffects(loadedEffects, 'spell')[0]?.applySave?.dc,
     ).toBe(APPLIER_SAVE_DC);
+  });
+});
+
+describe('дальность применения 0.8.87', () => {
+  it('дальность держится у применения, числом строкой — числом', () => {
+    const storedEffect = createRawEffect({
+      effectTarget: 'target',
+      activation: {
+        mode: 'use',
+        counter: 'channel-divinity',
+        range: ACTIVATION_RANGE,
+      },
+    });
+
+    const savedEffects = normalizeActiveEffects(
+      normalizeLoadedActiveEffects([storedEffect]),
+      'feature',
+    );
+
+    expect(stripUndefinedKeys(savedEffects)).toEqual([storedEffect]);
+
+    const [typedEffect] = normalizeLoadedActiveEffects([
+      createRawEffect({
+        activation: { mode: 'use', range: String(ACTIVATION_RANGE) },
+      }),
+    ]);
+
+    expect(typedEffect?.activation?.range).toBe(ACTIVATION_RANGE);
+  });
+
+  it('ноль, доля фута и мусор снимают только дальность', () => {
+    for (const range of [0, 2.5, 'далеко', -5]) {
+      const [loadedEffect] = normalizeLoadedActiveEffects([
+        createRawEffect({
+          activation: { mode: 'use', counter: 'channel-divinity', range },
+        }),
+      ]);
+
+      expect(loadedEffect?.activation, String(range)).toEqual({
+        mode: 'use',
+        counter: 'channel-divinity',
+        amount: undefined,
+        range: undefined,
+      });
+    }
+  });
+
+  it('у переключателя и без применения дальности нет', () => {
+    const toggled = createRawEffect({
+      activation: { mode: 'toggle', counter: 'rage', range: ACTIVATION_RANGE },
+    });
+
+    const [savedToggle] = normalizeActiveEffects(
+      normalizeLoadedActiveEffects([toggled]),
+      'feature',
+    );
+
+    expect(stripUndefinedKeys(savedToggle?.activation)).toEqual({
+      mode: 'toggle',
+      counter: 'rage',
+    });
+
+    const [savedPermanent] = normalizeActiveEffects(
+      normalizeLoadedActiveEffects([createRawEffect()]),
+      'feature',
+    );
+
+    expect(savedPermanent?.activation).toBeUndefined();
+  });
+});
+
+describe('одно включение 0.8.124', () => {
+  it('имя включения переключателя переживает «открыл и сохранил»', () => {
+    const storedEffect = createRawEffect({
+      activation: { mode: 'toggle', counter: 'rage', exclusive: 'Ярость' },
+    });
+
+    const savedEffects = normalizeActiveEffects(
+      normalizeLoadedActiveEffects([storedEffect]),
+      'feature',
+    );
+
+    expect(stripUndefinedKeys(savedEffects)).toEqual([storedEffect]);
+  });
+
+  it('у применения, пустое и слишком длинное имя не пишется', () => {
+    const rawActivations = [
+      { mode: 'use', counter: 'rage', exclusive: 'Ярость' },
+      { mode: 'toggle', counter: 'rage', exclusive: '   ' },
+      {
+        mode: 'toggle',
+        counter: 'rage',
+        exclusive: TOO_LONG_ACTIVATION_EXCLUSIVE,
+      },
+    ];
+
+    for (const activation of rawActivations) {
+      const [savedEffect] = normalizeActiveEffects(
+        normalizeLoadedActiveEffects([createRawEffect({ activation })]),
+        'feature',
+      );
+
+      expect(
+        savedEffect?.activation?.exclusive,
+        activation.mode,
+      ).toBeUndefined();
+    }
+  });
+
+  it('имя из формы пишется без пробелов по краям только у переключателя', () => {
+    const [savedToggle, savedUse] = normalizeActiveEffects(
+      [
+        createEffect({
+          id: 'toggle',
+          activation: { mode: 'toggle', exclusive: '  Ярость ' },
+        }),
+        createEffect({
+          id: 'use',
+          activation: { mode: 'use', exclusive: 'Ярость' },
+        }),
+      ],
+      'feature',
+    );
+
+    expect(savedToggle?.activation?.exclusive).toBe('Ярость');
+    expect(savedUse?.activation?.exclusive).toBeUndefined();
+  });
+
+  it('поле формы: пустое снимает имя, пробел между словами остаётся', () => {
+    expect(toDraftActivationExclusive('   ')).toBeUndefined();
+    expect(toDraftActivationExclusive('Гнев ')).toBe('Гнев ');
+  });
+
+  it('смена способа снимает имя включения, ресурс остаётся', () => {
+    const rage = createEffect({
+      activation: { mode: 'toggle', counter: 'rage', exclusive: 'Ярость' },
+    });
+
+    const usedRage = writeEffectActivationMode(rage, 'use');
+
+    expect(stripUndefinedKeys(usedRage.activation)).toEqual({
+      mode: 'use',
+      counter: 'rage',
+    });
+
+    expect(
+      writeEffectActivationMode(rage, 'toggle').activation?.exclusive,
+    ).toBe('Ярость');
   });
 });
 

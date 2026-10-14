@@ -9,6 +9,11 @@ interface Option<Value extends string> {
   value: Value;
 }
 
+/** Порядок редкости для диапазона; специальные значения выбираются отдельно. */
+export const MAGIC_ITEM_FILTER_RANGE_ORDERS = {
+  rarity: ['COMMON', 'UNCOMMON', 'RARE', 'VERY_RARE', 'LEGENDARY', 'ARTIFACT'],
+};
+
 /** Категория магического оружия (`MagicItemCategory.WEAPON` бэкенда). */
 export const MAGIC_ITEM_WEAPON_CATEGORY = 'WEAPON';
 
@@ -141,8 +146,21 @@ export const MAGIC_ITEM_FORM_HINTS = {
 export const MAGIC_ITEM_DAMAGE_EMPTY_LABEL =
   'Своего урона предмет не добавляет';
 
+/** Адрес раздела магических предметов в API: деталь и «сырой» ответ. */
+export const MAGIC_ITEM_API_PATH = '/api/v2/magic-items';
+
+/** Адрес раздела предметов в API: оттуда приходит немагическая основа. */
+export const MAGIC_ITEM_BASE_ITEM_API_PATH = '/api/v2/item';
+
+/** Хвост адреса «сырого» ответа раздела. */
+export const MAGIC_ITEM_RAW_PATH_SUFFIX = 'raw';
+
+/** Начало ключа запроса немагической основы для блока свойств. */
+export const MAGIC_ITEM_BASE_WEAPON_DATA_KEY = 'magic-items-base-weapon';
+
 /** Названия строк блока свойств на странице раздела. */
 export const MAGIC_ITEM_PROPERTY_LABELS = {
+  baseDamage: 'Основной урон',
   attack: 'Бонус к атаке',
   damage: 'Бонус к урону',
   armorClass: 'Бонус к КД',
@@ -154,4 +172,28 @@ export const MAGIC_ITEM_PROPERTY_LABELS = {
   traits: 'Свойства',
   focus: 'Заклинательная фокусировка',
   adamantine: 'Адамантиновый',
+} as const;
+
+/**
+ * Тире блока свойств — короткое. Им же блок заменяет длинное тире в тексте,
+ * который пишут руками (пассивные свойства): иначе в соседних строках стояли
+ * бы два разных тире.
+ */
+export const MAGIC_ITEM_PROPERTY_DASH = '–';
+
+/** Длинное тире, которое блок свойств заменяет на своё. */
+export const MAGIC_ITEM_PROPERTY_REPLACED_DASH = '—';
+
+/** Слова, из которых собираются значения строк блока свойств. */
+export const MAGIC_ITEM_PROPERTY_PHRASES = {
+  /** Перед уроном двуручного хвата: «1к8 рубящий, двумя руками 1к10 рубящий». */
+  versatilePrefix: 'двумя руками ',
+  /** Между значениями одной строки. */
+  listJoiner: ', ',
+  /** Между уроном и теми, кому он достаётся: «2к6 излучение – по нежити». */
+  recipientJoiner: ` ${MAGIC_ITEM_PROPERTY_DASH} `,
+  /** Перед названием основы: «1к6 дробящий (булава)». */
+  baseNamePrefix: ' (',
+  /** После названия основы. */
+  baseNameSuffix: ')',
 } as const;

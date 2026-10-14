@@ -6,6 +6,7 @@
   import type {
     CharacterInventoryItem,
     ItemCatalogItem,
+    ItemPurchaseLine,
     ItemSummary,
   } from '../../model';
 
@@ -28,9 +29,12 @@
     ITEMS_FILTERS_PATH,
     ITEMS_SEARCH_PATH,
     parseItemCatalog,
+    PURCHASE_QUANTITY_MIN,
     SHEET_CATALOG_MODAL_LABELS,
     SHEET_ITEM_ADD_LABELS,
+    SHEET_ITEM_PURCHASE_LABELS,
   } from '../../model';
+  import SheetItemPurchaseModal from './SheetItemPurchaseModal.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
 
   const emit = defineEmits<{
@@ -41,7 +45,8 @@
 
   const overlay = useOverlay();
 
-  const { character, addInventoryItems } = useCharacterSheet();
+  const { character, addInventoryItems, purchaseInventoryItems } =
+    useCharacterSheet();
 
   // Дровер описания предмета; без destroyOnClose — повторный open()
   // после закрытия иначе падает («Overlay not found»).
@@ -55,6 +60,8 @@
   function handlePreview(itemUrl: string) {
     itemPreviewDrawer.open({ url: itemUrl });
   }
+
+  const purchaseModal = overlay.create(SheetItemPurchaseModal);
 
   // Полный набор групп фильтров раздела «Предметы» — лёгкий запрос вместо
   // жёстко зашитого списка категорий.
@@ -224,8 +231,12 @@
     resetFilterSelections();
   }
 
-  /** Черновик выбора: url новых, ещё не добавленных предметов. */
-  const draftUrls = ref(new Set<string>());
+  /**
+   * Черновик выбора: новые, ещё не добавленные предметы по url. Хранятся сами
+   * предметы, а не только url: окну покупки нужны названия и цены и тех, что
+   * текущий фильтр уже скрыл, а заодно количество, выбранное в окне покупки.
+   */
+  const draftItems = ref(new Map<string, ItemPurchaseLine>());
 
   const isApplying = ref(false);
 
@@ -252,7 +263,7 @@
         getInventoryItemId('item', catalogItem.url),
       );
 
-      const isSelected = draftUrls.value.has(catalogItem.url);
+      const isSelected = draftItems.value.has(catalogItem.url);
 
       return {
         ...catalogItem,
@@ -266,10 +277,12 @@
     }),
   );
 
-  const selectedCountLabel = computed(() => `Выбрано: ${draftUrls.value.size}`);
+  const selectedCountLabel = computed(
+    () => `${SHEET_ITEM_ADD_LABELS.selectedPrefix}: ${draftItems.value.size}`,
+  );
 
   const isApplyDisabled = computed(
-    () => !draftUrls.value.size || isApplying.value,
+    () => !draftItems.value.size || isApplying.value,
   );
 
   function toggleItem(catalogRow: ItemCatalogRow) {
@@ -277,19 +290,44 @@
       return;
     }
 
-    const nextUrls = new Set(draftUrls.value);
+    const nextItems = new Map(draftItems.value);
 
-    if (nextUrls.has(catalogRow.url)) {
-      nextUrls.delete(catalogRow.url);
+    if (nextItems.has(catalogRow.url)) {
+      nextItems.delete(catalogRow.url);
     } else {
-      nextUrls.add(catalogRow.url);
+      nextItems.set(catalogRow.url, {
+        url: catalogRow.url,
+        name: catalogRow.name,
+        nameEng: catalogRow.nameEng,
+        cost: catalogRow.cost,
+        sourceLabel: catalogRow.sourceLabel,
+        quantity: PURCHASE_QUANTITY_MIN,
+      });
     }
 
-    draftUrls.value = nextUrls;
+    draftItems.value = nextItems;
+  }
+
+  /**
+   * Загрузка деталей выбранных предметов и сборка записей инвентаря. Предметы,
+   * которые не загрузились, отбрасываются.
+   *
+   * @param urls url выбранных предметов.
+   * @returns записи инвентаря загрузившихся предметов.
+   */
+  async function loadInventoryItems(
+    urls: string[],
+  ): Promise<CharacterInventoryItem[]> {
+    const results = await Promise.allSettled(urls.map(fetchItemSummary));
+
+    return results
+      .map((result) => (result.status === 'fulfilled' ? result.value : null))
+      .filter((summary): summary is ItemSummary => summary !== null)
+      .map(buildInventoryItem);
   }
 
   async function handleApply() {
-    const urls = [...draftUrls.value];
+    const urls = [...draftItems.value.keys()];
 
     if (!urls.length || isApplying.value) {
       return;
@@ -298,12 +336,7 @@
     isApplying.value = true;
 
     try {
-      const results = await Promise.allSettled(urls.map(fetchItemSummary));
-
-      const inventoryItems: CharacterInventoryItem[] = results
-        .map((result) => (result.status === 'fulfilled' ? result.value : null))
-        .filter((summary): summary is ItemSummary => summary !== null)
-        .map(buildInventoryItem);
+      const inventoryItems = await loadInventoryItems(urls);
 
       if (inventoryItems.length) {
         addInventoryItems(inventoryItems);
@@ -314,13 +347,105 @@
         toast.add({
           color: 'error',
           icon: 'tabler:alert-triangle',
-          title: 'Не удалось добавить часть предметов',
+          title: SHEET_ITEM_ADD_LABELS.partialFailed,
         });
       }
 
       emit('close');
     } finally {
       isApplying.value = false;
+    }
+  }
+
+  /**
+   * Загрузка детали позиции покупки и сборка записи инвентаря с купленным
+   * количеством.
+   *
+   * @param purchaseLine позиция покупки.
+   * @returns запись инвентаря; null — деталь не загрузилась.
+   */
+  async function loadPurchasedItem(
+    purchaseLine: ItemPurchaseLine,
+  ): Promise<CharacterInventoryItem | null> {
+    const summary = await fetchItemSummary(purchaseLine.url);
+
+    return summary
+      ? { ...buildInventoryItem(summary), quantity: purchaseLine.quantity }
+      : null;
+  }
+
+  /**
+   * Покупка выбранных предметов. Окно подтверждения показывает траты и остаток;
+   * предметы, убранные там из списка, снимаются и с выбора. Списание считается
+   * по ценам загруженных деталей и выбранному количеству: не загрузившийся
+   * предмет не оплачивается.
+   *
+   * @param purchaseLines позиции, оставшиеся в списке покупки.
+   */
+  async function purchaseItems(
+    purchaseLines: ItemPurchaseLine[],
+  ): Promise<void> {
+    isApplying.value = true;
+
+    try {
+      const results = await Promise.allSettled(
+        purchaseLines.map(loadPurchasedItem),
+      );
+
+      const inventoryItems = results
+        .map((result) => (result.status === 'fulfilled' ? result.value : null))
+        .filter(
+          (inventoryItem): inventoryItem is CharacterInventoryItem =>
+            inventoryItem !== null,
+        );
+
+      if (!inventoryItems.length || !purchaseInventoryItems(inventoryItems)) {
+        toast.add({
+          color: 'error',
+          icon: 'tabler:alert-triangle',
+          title: SHEET_ITEM_PURCHASE_LABELS.failed,
+        });
+
+        return;
+      }
+
+      if (inventoryItems.length < purchaseLines.length) {
+        toast.add({
+          color: 'error',
+          icon: 'tabler:alert-triangle',
+          title: SHEET_ITEM_PURCHASE_LABELS.partialFailed,
+        });
+      }
+
+      emit('close');
+    } finally {
+      isApplying.value = false;
+    }
+  }
+
+  /**
+   * Открытие окна покупки выбранных предметов и оплата после подтверждения.
+   */
+  async function handleBuy() {
+    if (isApplyDisabled.value) {
+      return;
+    }
+
+    const purchase = await purchaseModal.open({
+      items: [...draftItems.value.values()],
+    }).result;
+
+    // Окно закрыто крестиком или кликом мимо — выбор не меняется.
+    if (!purchase) {
+      return;
+    }
+
+    draftItems.value = new Map(
+      purchase.items.map((purchaseLine) => [purchaseLine.url, purchaseLine]),
+    );
+
+    if (purchase.confirmed && purchase.items.length) {
+      await purchaseItems(purchase.items);
     }
   }
 
@@ -531,6 +656,15 @@
             color="neutral"
             variant="ghost"
             @click.left.exact.prevent="handleCancel"
+          />
+
+          <UButton
+            :label="SHEET_ITEM_ADD_LABELS.buy"
+            icon="tabler:coins"
+            color="primary"
+            variant="subtle"
+            :disabled="isApplyDisabled"
+            @click.left.exact.prevent="handleBuy"
           />
 
           <UButton

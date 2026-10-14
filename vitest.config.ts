@@ -28,6 +28,9 @@ export default defineConfig({
     alias: {
       '~admin': fileURLToPath(new URL('./app/features/admin', import.meta.url)),
       '~home': fileURLToPath(new URL('./app/features/home', import.meta.url)),
+      '~bug-report': fileURLToPath(
+        new URL('./app/features/bug-report', import.meta.url),
+      ),
       '~active-effects': fileURLToPath(
         new URL('./app/features/active-effects', import.meta.url),
       ),
@@ -59,9 +62,16 @@ export default defineConfig({
       '~magic-items': fileURLToPath(
         new URL('./app/features/magic-items', import.meta.url),
       ),
+      '~species': fileURLToPath(
+        new URL('./app/features/species', import.meta.url),
+      ),
       '~spells': fileURLToPath(
         new URL('./app/features/spells', import.meta.url),
       ),
+      '~vttg-modules': fileURLToPath(
+        new URL('./app/features/vttg-modules', import.meta.url),
+      ),
+      '~vttg': fileURLToPath(new URL('./app/features/vttg', import.meta.url)),
       '~ui': fileURLToPath(new URL('./app/shared/ui', import.meta.url)),
       '~infrastructure': fileURLToPath(
         new URL('./app/features/infrastructure', import.meta.url),

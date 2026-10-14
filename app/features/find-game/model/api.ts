@@ -43,6 +43,7 @@ import {
   CITIES_API_PATH,
   FAVORITE_GAMES_API_PATH,
   FIND_GAME_PROFILE_API_PATH,
+  FIND_GAME_SESSION_EXPIRED_MESSAGE,
   FIND_GAME_UNKNOWN_ERROR_MESSAGE,
   FOLLOWED_MASTERS_API_PATH,
   GAME_FAVORITE_PATH_SUFFIX,
@@ -148,9 +149,14 @@ export function getFindGameErrorMessage(
     return problem.title;
   }
 
-  return error instanceof FetchError && error.message
-    ? error.message
-    : fallback;
+  // Отказ без тела (401 от сервиса, сбой прокси) объясняем сами: текст
+  // `FetchError` — это метод, путь и статус запроса, человеку он ни о чём
+  // не говорит.
+  if (getFindGameStatus(error) === StatusCodes.UNAUTHORIZED) {
+    return FIND_GAME_SESSION_EXPIRED_MESSAGE;
+  }
+
+  return fallback;
 }
 
 /* ------------------------------------------------------------------ */

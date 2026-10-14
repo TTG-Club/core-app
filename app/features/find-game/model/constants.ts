@@ -587,8 +587,15 @@ export const GAME_PLAYERS_MIN = 1;
  */
 export const GAME_PLAYERS_MAX = 15;
 
-/** Тот же предел без подписки — он звучит только в подсказке поля. */
-const GAME_PLAYERS_FREE_MAX = 5;
+/** Тот же предел без подписки — он звучит в подсказке поля и на странице подписки. */
+export const GAME_PLAYERS_FREE_MAX = 5;
+
+/**
+ * Сколько незавершённых игр (черновик или открытая) может вести мастер: без
+ * подписки одну, с ней десять. Проверяет сервис игр, здесь — для подсказок.
+ */
+export const GAME_ACTIVE_FREE_MAX = 1;
+export const GAME_ACTIVE_SUBSCRIBER_MAX = 10;
 
 export const GAME_AGE_MIN = 0;
 export const GAME_AGE_MAX = 120;
@@ -663,6 +670,13 @@ export const FIND_GAME_TOAST_ERROR_ICON = 'tabler:alert-triangle';
 
 export const FIND_GAME_UNKNOWN_ERROR_MESSAGE =
   'Что-то пошло не так. Попробуйте ещё раз.';
+
+/**
+ * Отказ 401 сервис отдаёт без тела: объяснить его может только сайт. Повтор
+ * здесь не помогает — нужна перезагрузка, она уведёт на страницу входа.
+ */
+export const FIND_GAME_SESSION_EXPIRED_MESSAGE =
+  'Сессия истекла. Обновите страницу и войдите заново.';
 
 export const PROFILE_SAVED_TITLE = 'Профиль сохранён';
 
@@ -1122,6 +1136,7 @@ export const GAME_FORM_ADDITIONAL_SECTION = 'Дополнительно: ссы�
 export const GAME_FORM_UNSAVED_WARNING =
   'Изменения не сохранены. Покинуть форму?';
 export const GAME_FORM_REQUIRED_ERROR = 'Заполните это поле';
+export const GAME_FORM_FREE_PRICE_ERROR = 'У бесплатной игры цены нет';
 export const GAME_FORM_LEAVE_TITLE = 'Несохранённые изменения';
 export const GAME_FORM_LEAVE_LABEL = 'Выйти без сохранения';
 export const GAME_FORM_STAY_LABEL = 'Продолжить редактирование';
@@ -1129,8 +1144,9 @@ export const SESSION_AGENDA_CLOCK_INTERVAL = 60_000;
 export const GAME_NEXT_SESSION_FALLBACK = 'Время согласуется';
 export const GAME_NEXT_SESSION_LOADING_LABEL = 'Время встречи…';
 export const GAME_NEXT_PAID_SESSION_PRICE_LABEL = 'Стоимость за сессию';
-export const GAME_PRICE_PENDING_LABEL = 'Стоимость уточняется';
-export const GAME_PRICE_PER_SESSION_LABEL = 'за встречу';
+/** Платная игра без цены: заведена до цены по умолчанию или ещё не дозаполнена. */
+export const GAME_PRICE_UNSPECIFIED_LABEL = 'Не указано';
+export const GAME_PRICE_PER_SESSION_LABEL = 'сессия';
 export const GAME_FREE_SEATS_LABEL = 'Свободно мест';
 export const MY_GAMES_OVERVIEW_SIZE = 4;
 export const MY_GAMES_UPCOMING_LABEL = 'Ближайшие встречи';
@@ -1267,7 +1283,8 @@ export const GAME_FIELD_VENUE_PLACEHOLDER = 'Клуб «Кубик», Пятни
 export const GAME_FIELD_DURATION_LABEL = 'Длительность';
 export const GAME_FIELD_COST_LABEL = 'Стоимость';
 export const GAME_FIELD_COST_HINT =
-  'Сумму и условия оплаты вы зададите у каждой сессии отдельно.';
+  'У платной игры цену за сессию видно до первой встречи; у отдельной сессии её можно изменить.';
+export const GAME_FIELD_PRICE_LABEL = 'Цена за сессию';
 export const GAME_FIELD_VISIBILITY_LABEL = 'Видимость';
 export const GAME_FIELD_VISIBILITY_HINT =
   'Приватную игру видно только по ссылке-приглашению.';
@@ -1288,8 +1305,7 @@ export const GAME_FORM_PLAYERS_ERROR =
   'Для старта нужно не больше игроков, чем максимум';
 export const GAME_FORM_AGE_ERROR =
   'Минимальный возраст не может превышать максимальный';
-export const GAME_FORM_LIMIT_HINT =
-  'Без подписки у мастера может быть только одна незавершённая игра. Завершите текущую или оформите подписку.';
+export const GAME_FORM_LIMIT_HINT = `Без подписки у мастера может быть только одна незавершённая игра, с подпиской — до ${GAME_ACTIVE_SUBSCRIBER_MAX}. Завершите одну из текущих игр или оформите подписку.`;
 
 /* Подписи раздела «Мои игры». */
 // Список собирает и свои игры, и чужие, куда пользователь записался,

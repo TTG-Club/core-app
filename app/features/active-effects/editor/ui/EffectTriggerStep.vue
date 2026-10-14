@@ -2,11 +2,17 @@
   import type {
     ActiveEffect,
     EffectActivation,
+    EffectActivationCostChoice,
+    EffectAreaChoice,
     EffectAura,
     EffectAuraTarget,
     EffectFormLayout,
+    EffectPay,
+    EffectUseArea,
     EffectVariantPick,
   } from '../../model';
+
+  import { InfoTooltip } from '~ui/tooltip';
 
   import {
     buildActivationOptions,
@@ -16,29 +22,44 @@
     DEFAULT_EFFECT_AURA,
     DEFAULT_EFFECT_VARIANT_PICK,
     EFFECT_ACTIVATION_CHOICE_HINTS,
+    EFFECT_ACTIVATION_COST_OPTIONS,
     EFFECT_ACTIVATION_COUNTER_LABELS,
+    EFFECT_ACTIVATION_EXTRA_LABELS,
+    EFFECT_ACTIVATION_RANGE_LABELS,
     EFFECT_AREA_TRIGGER_HINTS,
     EFFECT_AURA_LABELS,
     EFFECT_AURA_RADIUS_STEP,
     EFFECT_AURA_TARGET_OPTIONS,
     EFFECT_LANDING_CONDITION_LABELS,
     EFFECT_NO_KNOWN_TAGS,
+    EFFECT_PAY_FIELD_LABELS,
     EFFECT_PERMANENT_ACTIVATION,
     EFFECT_SCROLLABLE_TABS_UI,
+    EFFECT_USE_AREA_OPTIONS,
     EFFECT_VARIANT_LABELS,
     EFFECT_VARIANT_PICK_OPTIONS,
     findAreaTrigger,
+    isToggleActivatedEffect,
+    MIN_ACTIVATION_RANGE,
     MIN_EFFECT_AURA_RADIUS,
+    NO_ACTIVATION_COST,
     resolveEffectDeliveryHint,
+    toDraftActivationExclusive,
+    writeEffectActivationMode,
     writeEffectAreaTrigger,
     writeEffectDelivery,
   } from '../../model';
+  import EffectAreaChoiceFields from './EffectAreaChoiceFields.vue';
+  import EffectPayFields from './EffectPayFields.vue';
   import EffectTriggerConditionPicker from './EffectTriggerConditionPicker.vue';
+  import EffectUseAreaFields from './EffectUseAreaFields.vue';
 
   /**
-   * Шаг «Когда срабатывает»: постоянно ли действует эффект или его применяют,
-   * на кого он ложится (носитель, цель, аура, зона заклинания), момент
-   * срабатывания зоны или ауры, настройки ауры, условие наложения и вариант.
+   * Шаг «Когда срабатывает»: постоянно ли действует эффект или его применяют
+   * (чем за это платят ходом и ресурсом, по какой области и кого в ней
+   * выбирает применивший), на кого он
+   * ложится (носитель, цель, аура, зона), момент срабатывания зоны или ауры,
+   * настройки ауры, условие наложения и вариант.
    */
   const { layout } = defineProps<{
     /** Раскладка формы. */
@@ -75,10 +96,7 @@
     );
 
     if (mode) {
-      effect.value = {
-        ...effect.value,
-        activation: { ...effect.value.activation, mode },
-      };
+      effect.value = writeEffectActivationMode(effect.value, mode);
     }
   }
 
@@ -103,6 +121,19 @@
     set: (counter: string) => updateActivation({ counter }),
   });
 
+  const activationExclusive = computed({
+    get: () => effect.value.activation?.exclusive ?? '',
+    set: (exclusiveInput: string) =>
+      updateActivation({
+        exclusive: toDraftActivationExclusive(exclusiveInput),
+      }),
+  });
+
+  /** Имя включения — только у переключателя: применение ничего не держит. */
+  const showActivationExclusive = computed(
+    () => layout.showActivationCounter && isToggleActivatedEffect(effect.value),
+  );
+
   const activationAmount = computed({
     get: () => effect.value.activation?.amount ?? DEFAULT_ACTIVATION_AMOUNT,
     set: (amount: number | null | undefined) => {
@@ -112,6 +143,61 @@
       }
     },
   });
+
+  // Пустое поле — касание: дальность снимается, а не становится нулём.
+  // Очищенное поле числа отдаёт `undefined`, а не `null`
+  const activationRange = computed({
+    get: () => effect.value.activation?.range,
+    set: (range: number | null | undefined) =>
+      updateActivation({ range: range ?? undefined }),
+  });
+
+  // Трата хода на применение или включение: «не тратит» в данных не пишется
+  const activationCost = computed<EffectActivationCostChoice>({
+    get: () => effect.value.activation?.cost ?? NO_ACTIVATION_COST,
+    set: (nextCost) =>
+      updateActivation({
+        cost: nextCost === NO_ACTIVATION_COST ? undefined : nextCost,
+      }),
+  });
+
+  // Область применения: «одна цель» — без поля
+  const activationArea = computed({
+    get: () => effect.value.activation?.area,
+    set: (nextArea: EffectUseArea | undefined) =>
+      updateActivation({ area: nextArea }),
+  });
+
+  // Концентрация применения: снятая отметка не пишется вовсе
+  const activationConcentration = computed({
+    get: () => effect.value.activation?.concentration === true,
+    set: (enabled: boolean) =>
+      updateActivation({ concentration: enabled ? true : undefined }),
+  });
+
+  const pay = computed({
+    get: () => effect.value.pay,
+    set: (nextPay: EffectPay | undefined) => {
+      effect.value = { ...effect.value, pay: nextPay };
+    },
+  });
+
+  const areaChoice = computed({
+    get: () => effect.value.areaChoice,
+    set: (nextAreaChoice: EffectAreaChoice | undefined) => {
+      effect.value = { ...effect.value, areaChoice: nextAreaChoice };
+    },
+  });
+
+  /** Ряд полей применения есть у любого применения и включения: трата хода. */
+  const showActivationFields = computed(
+    () => effect.value.activation !== undefined,
+  );
+
+  /** «Сколько» тратить — только когда ресурс задан. */
+  const showActivationAmount = computed(
+    () => layout.showActivationCounter && activationCounter.value !== '',
+  );
 
   const deliveryOptions = computed(() => buildDeliveryOptions(layout));
 
@@ -301,14 +387,24 @@
     </p>
 
     <div
-      v-if="layout.showActivationCounter"
+      v-if="showActivationFields"
       class="flex flex-wrap items-end gap-2"
     >
+      <!-- Подсказка под значком: строкой под полем она выталкивала поле
+        вверх, и оно не стояло в ряд с «Сколько» -->
       <UFormField
-        :label="EFFECT_ACTIVATION_COUNTER_LABELS.counter"
-        :help="EFFECT_ACTIVATION_COUNTER_LABELS.hint"
+        v-if="layout.showActivationCounter"
         class="w-full sm:w-72"
       >
+        <template #label>
+          <InfoTooltip
+            :text="EFFECT_ACTIVATION_COUNTER_LABELS.hint"
+            icon="tabler:info-circle-filled"
+          >
+            <span>{{ EFFECT_ACTIVATION_COUNTER_LABELS.counter }}</span>
+          </InfoTooltip>
+        </template>
+
         <UInput
           v-model="activationCounter"
           :placeholder="EFFECT_ACTIVATION_COUNTER_LABELS.counterPlaceholder"
@@ -318,7 +414,7 @@
       </UFormField>
 
       <UFormField
-        v-if="activationCounter"
+        v-if="showActivationAmount"
         :label="EFFECT_ACTIVATION_COUNTER_LABELS.amount"
         class="w-24"
       >
@@ -329,8 +425,107 @@
           class="w-full"
         />
       </UFormField>
+
+      <UFormField
+        v-if="showActivationExclusive"
+        class="w-full sm:w-56"
+      >
+        <template #label>
+          <InfoTooltip
+            :text="EFFECT_ACTIVATION_COUNTER_LABELS.exclusiveHint"
+            icon="tabler:info-circle-filled"
+          >
+            <span>{{ EFFECT_ACTIVATION_COUNTER_LABELS.exclusive }}</span>
+          </InfoTooltip>
+        </template>
+
+        <UInput
+          v-model="activationExclusive"
+          :placeholder="EFFECT_ACTIVATION_COUNTER_LABELS.exclusivePlaceholder"
+          size="sm"
+          class="w-full"
+        />
+      </UFormField>
+
+      <UFormField
+        v-if="layout.showActivationRange"
+        class="w-40"
+      >
+        <template #label>
+          <InfoTooltip
+            :text="EFFECT_ACTIVATION_RANGE_LABELS.hint"
+            icon="tabler:info-circle-filled"
+          >
+            <span>{{ EFFECT_ACTIVATION_RANGE_LABELS.range }}</span>
+          </InfoTooltip>
+        </template>
+
+        <UInputNumber
+          v-model="activationRange"
+          :min="MIN_ACTIVATION_RANGE"
+          :placeholder="EFFECT_ACTIVATION_RANGE_LABELS.placeholder"
+          size="sm"
+          class="w-full"
+        />
+      </UFormField>
+
+      <UFormField class="w-full sm:w-52">
+        <template #label>
+          <InfoTooltip
+            :text="EFFECT_ACTIVATION_EXTRA_LABELS.costHint"
+            icon="tabler:info-circle-filled"
+          >
+            <span>{{ EFFECT_ACTIVATION_EXTRA_LABELS.cost }}</span>
+          </InfoTooltip>
+        </template>
+
+        <USelect
+          v-model="activationCost"
+          :items="EFFECT_ACTIVATION_COST_OPTIONS"
+          value-key="value"
+          size="sm"
+          class="w-full"
+        />
+      </UFormField>
+
+      <!-- Область и концентрация — только у применения: переключатель ни на
+        кого не ложится и держится сам -->
+      <template v-if="layout.showActivationRange">
+        <EffectUseAreaFields
+          v-model="activationArea"
+          :label="EFFECT_ACTIVATION_EXTRA_LABELS.area"
+          :hint="EFFECT_ACTIVATION_EXTRA_LABELS.areaHint"
+          :items="EFFECT_USE_AREA_OPTIONS"
+        />
+
+        <InfoTooltip
+          :text="EFFECT_ACTIVATION_EXTRA_LABELS.concentrationHint"
+          icon="tabler:info-circle-filled"
+          class="mb-2"
+        >
+          <USwitch
+            v-model="activationConcentration"
+            :label="EFFECT_ACTIVATION_EXTRA_LABELS.concentration"
+            size="sm"
+          />
+        </InfoTooltip>
+      </template>
     </div>
   </div>
+
+  <!-- Цена ресурсом: у заклинания это цена каста сверх ячейки, у применения и
+    переключателя — цена кнопки -->
+  <EffectPayFields
+    v-if="layout.showPay"
+    v-model="pay"
+    :hint="EFFECT_PAY_FIELD_LABELS.hintEffect"
+  />
+
+  <!-- Выбор целей из накрытых областью: там, где применение ставит шаблон -->
+  <EffectAreaChoiceFields
+    v-if="layout.showAreaChoice"
+    v-model="areaChoice"
+  />
 
   <div
     v-if="showDeliveryChoice"
@@ -490,7 +685,7 @@
 
       <UFormField
         :label="EFFECT_VARIANT_LABELS.pick"
-        class="w-48"
+        class="w-full sm:w-80"
       >
         <USelect
           v-model="variantPick"

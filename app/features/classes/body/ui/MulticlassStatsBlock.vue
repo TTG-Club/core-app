@@ -64,7 +64,7 @@
 <template>
   <div
     :class="[
-      'w-full min-w-72 overflow-hidden bg-muted py-1.5',
+      'w-full min-w-68 overflow-hidden bg-muted py-1.5',
       'rounded-lg border border-default',
     ]"
   >

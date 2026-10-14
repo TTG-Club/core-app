@@ -29,7 +29,6 @@
     search,
     filterQuery,
     isPending: isFilterPending,
-    isShowedPreview: isFilterPreviewShowed,
     defaults: filterDefaults,
   } = await useFilter('items', '/api/v2/item/filters');
 
@@ -123,7 +122,6 @@
         v-model:filter="filter"
         :defaults="filterDefaults"
         :is-pending="isFilterPending"
-        :show-preview="isFilterPreviewShowed"
         :presentation-menus="presentationMenus"
       >
       </FilterControls>

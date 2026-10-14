@@ -5,6 +5,7 @@
 
   import { computed } from 'vue';
 
+  import { getHeadingAnchor } from '../anchors';
   import { clampHeadingLevel } from '../utils';
 
   const { node, renderNodes } = defineProps<{
@@ -19,6 +20,10 @@
 
   const userLevel = clampHeadingLevel(node.attrs?.level);
   const tag = HEADING_TAGS[userLevel];
+
+  // Якорь для содержания статьи (см. withHeadingAnchors). Отступ прокрутки
+  // оставляет над заголовком воздух, когда к нему прокручивают по клику.
+  const anchorId = computed(() => getHeadingAnchor(node));
 
   // Выравнивание заголовка (`left` — по умолчанию, класс не нужен).
   const alignClass = computed(() => {
@@ -61,7 +66,8 @@
 <template>
   <component
     :is="tag"
-    :class="headingClasses"
+    :id="anchorId"
+    :class="[headingClasses, 'scroll-mt-4']"
   >
     <component
       :is="vnode"

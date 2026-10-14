@@ -8,6 +8,7 @@ import {
   EFFECT_TARGET_KEY_SUGGESTIONS,
   EFFECT_VALUE_SUGGESTIONS,
   isAdjacentAllyCondition,
+  parseWeaponBaseTypeCondition,
 } from '~active-effects/model';
 
 /**
@@ -16,14 +17,39 @@ import {
  * порт отстал), либо на сайте завелась своя запись, которой VTTG не знает.
  * Меняются числа только вместе с `EFFECT_SYSTEM_VERSION`; какие именно записи
  * разошлись, показывает `node scripts/compare-effect-dictionaries.mjs`.
+ *
  */
 const SYSTEM_DICTIONARY_SIZES = {
-  version: '0.8.66',
-  flags: 200,
-  changeKeys: 61,
-  conditions: 93,
-  values: 32,
+  version: '0.8.157',
+  flags: 228,
+  changeKeys: 68,
+  conditions: 107,
+  values: 51,
 };
+
+/**
+ * Подсказки значений, которых нет в списке системы. Голый токен круга ячейки
+ * `@castLevel` VTTG понимает в формулах эффектов заклинания, но подсказкой
+ * предлагает только внутри формул («(@castLevel)к10»). Токены потраченного
+ * ценой ресурсом и чисел получателя система называет только в пояснениях к
+ * полям — сайт предлагает их строками библиотеки.
+ */
+const SITE_ONLY_VALUE_SUGGESTIONS = [
+  '@castLevel',
+  '@paid.slotLevel',
+  '@paid.hitDice',
+  '@paid.hitDie',
+  '@paid.hitDiceRoll',
+  '@paid.counter',
+  '@paid.itemUses',
+  '(1 + @paid.slotLevel)к8',
+  '@paid.hitDiceRoll * even(@paid.hitDiceRoll)',
+  '@hp.temp',
+  'ceil(@hitDice.left / 2)',
+  '(@tag.pressure)к8',
+  '2к12@dmg.event',
+  '@mod.feat',
+];
 
 describe('словари эффектов', () => {
   it('размеры совпадают с системой, с которой снят порт', () => {
@@ -42,8 +68,16 @@ describe('словари эффектов', () => {
     );
 
     expect(EFFECT_VALUE_SUGGESTIONS).toHaveLength(
-      SYSTEM_DICTIONARY_SIZES.values,
+      SYSTEM_DICTIONARY_SIZES.values + SITE_ONLY_VALUE_SUGGESTIONS.length,
     );
+
+    const suggestedValues = EFFECT_VALUE_SUGGESTIONS.map(
+      (suggestion) => suggestion.value,
+    );
+
+    for (const siteValue of SITE_ONLY_VALUE_SUGGESTIONS) {
+      expect(suggestedValues, siteValue).toContain(siteValue);
+    }
   });
 
   it('новые ключи и флаги 0.8.62 на месте', () => {
@@ -96,9 +130,35 @@ describe('словари эффектов', () => {
     }
   });
 
+  it('замены свойств оружия 0.8.96 на месте', () => {
+    const changeKeys = EFFECT_TARGET_KEY_SUGGESTIONS.map(
+      (suggestion) => suggestion.value,
+    );
+
+    for (const changeKey of [
+      'weapon.damageDice',
+      'weapon.attackAbility',
+      'weapon.damageType',
+    ]) {
+      expect(changeKeys).toContain(changeKey);
+    }
+
+    expect(
+      EFFECT_CONDITION_EXPR_SUGGESTIONS.map((suggestion) => suggestion.value),
+    ).toContain('weapon.baseType === "club, quarterstaff"');
+
+    expect(
+      parseWeaponBaseTypeCondition('weapon.baseType === "club, quarterstaff"'),
+    ).toEqual(['club', 'quarterstaff']);
+
+    expect(parseWeaponBaseTypeCondition('attack.ability === "strength"')).toBe(
+      undefined,
+    );
+  });
+
   it('условия о союзнике рядом с целью — семейством, с распознаванием', () => {
-    // Дееспособный, в любом состоянии и по пятнадцати состояниям в двух видах
-    expect(ADJACENT_ALLY_CONDITION_OPTIONS).toHaveLength(32);
+    // Дееспособный, в любом состоянии и по шестнадцати состояниям в двух видах
+    expect(ADJACENT_ALLY_CONDITION_OPTIONS).toHaveLength(34);
 
     const conditions = EFFECT_CONDITION_EXPR_SUGGESTIONS.map(
       (suggestion) => suggestion.value,

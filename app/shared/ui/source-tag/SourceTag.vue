@@ -28,26 +28,31 @@
     v-if="source?.name || source?.group"
     class="flex gap-1"
   >
-    <UBadge
-      variant="subtle"
-      size="sm"
-      :color
-      :title="`${source.name.rus} [${source.name.eng}]`"
-    >
-      {{ source.name.label }}
-    </UBadge>
+    <!-- Opaque backdrop: colored subtle badges have a translucent background -->
+    <span class="flex rounded-sm bg-default">
+      <UBadge
+        variant="subtle"
+        size="sm"
+        :color
+        :title="`${source.name.rus} [${source.name.eng}]`"
+      >
+        {{ source.name.label }}
+      </UBadge>
+    </span>
 
     <UTooltip
       v-if="source?.group && showGroup"
       :text="source.group.rus"
       :disabled="!showTooltip"
     >
-      <UBadge
-        variant="subtle"
-        size="sm"
-      >
-        {{ source.group.label }}
-      </UBadge>
+      <span class="flex rounded-sm bg-default">
+        <UBadge
+          variant="subtle"
+          size="sm"
+        >
+          {{ source.group.label }}
+        </UBadge>
+      </span>
     </UTooltip>
   </div>
 </template>

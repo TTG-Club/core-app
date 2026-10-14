@@ -1,4 +1,4 @@
-import type { RenderNode } from '~ui/markup';
+import type { MarkupHeadingAnchor, RenderNode } from '~ui/markup';
 
 import { getNodeText, parse, toMarkupSource } from '~ui/markup';
 
@@ -21,4 +21,53 @@ export function toArticleMarkup(value: RenderNode): RenderNode | RenderNode[] {
  */
 export function getArticlePreviewText(value: RenderNode): string {
   return getNodeText(toArticleMarkup(value));
+}
+
+/** Пункт содержания статьи для `UContentToc`. */
+export interface ArticleTocLink {
+  id: string;
+  text: string;
+  depth: number;
+  children?: Array<ArticleTocLink>;
+}
+
+/**
+ * Складывает плоский список заголовков статьи в дерево для содержания: каждый
+ * заголовок становится вложенным пунктом ближайшего выше заголовка с меньшим
+ * уровнем. Пропуск уровня (после `level:1` сразу `level:3`) вкладывает пункт
+ * на один шаг, а не на два.
+ *
+ * @param headings - Заголовки в порядке появления в тексте
+ * @returns Пункты верхнего уровня с вложенными подпунктами
+ */
+export function buildArticleTocLinks(
+  headings: Array<MarkupHeadingAnchor>,
+): Array<ArticleTocLink> {
+  const rootLinks: Array<ArticleTocLink> = [];
+  const parents: Array<{ level: number; link: ArticleTocLink }> = [];
+
+  for (const heading of headings) {
+    let parent = parents.at(-1);
+
+    while (parent && parent.level >= heading.level) {
+      parents.pop();
+      parent = parents.at(-1);
+    }
+
+    const link: ArticleTocLink = {
+      id: heading.id,
+      text: heading.text,
+      depth: parents.length + 1,
+    };
+
+    if (parent) {
+      parent.link.children = [...(parent.link.children ?? []), link];
+    } else {
+      rootLinks.push(link);
+    }
+
+    parents.push({ level: heading.level, link });
+  }
+
+  return rootLinks;
 }

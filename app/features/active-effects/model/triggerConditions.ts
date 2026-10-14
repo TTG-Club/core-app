@@ -17,20 +17,34 @@
 import type { EffectTriggerEvent } from './triggerTypes';
 
 import {
+  isChoiceKey,
+  readChoiceKey,
+  splitConditionList,
+  stripListQuotes,
+  writeChoiceToken,
+} from './conditionSyntax';
+import {
+  EFFECT_ATTACK_ABILITY_CONDITION_PREFIX,
+  EFFECT_CARRIER_SPECIES_CONDITION_PREFIX,
+  EFFECT_CARRIER_SPECIES_NOT_CONDITION_PREFIX,
   EFFECT_CARRIER_TAG_CONDITION_PREFIX,
   EFFECT_CARRIER_TAG_NOT_CONDITION_PREFIX,
   EFFECT_CARRIER_TYPE_CONDITION_PREFIX,
+  EFFECT_CARRIER_TYPE_NOT_CONDITION_PREFIX,
   EFFECT_CONDITION_AND_SEPARATOR,
   EFFECT_DAMAGE_TYPE_CONDITION_PREFIX,
   EFFECT_DAMAGE_TYPE_NOT_CONDITION_PREFIX,
+  EFFECT_TARGET_SPECIES_CONDITION_PREFIX,
+  EFFECT_TARGET_SPECIES_NOT_CONDITION_PREFIX,
   EFFECT_TARGET_TYPE_CONDITION_PREFIX,
+  EFFECT_TARGET_TYPE_NOT_CONDITION_PREFIX,
   EFFECT_TRIGGER_FIXED_CONDITIONS,
   isEffectAbility,
-  isEffectCreatureCategory,
   isEffectCreatureSize,
   isEffectDamageType,
   splitConditionParts,
 } from './constants';
+import { isCreatureTypeList } from './creatureTypeCondition';
 import {
   ATTACK_DATA_TRIGGER_EVENTS,
   COMBAT_ROUND_TRIGGER_EVENTS,
@@ -77,11 +91,13 @@ export const TRIGGER_CONDITION_KINDS = [
   'selfBloodied',
   'selfWounded',
   'selfCreatureType',
+  'selfCreatureTypeNot',
   'selfTag',
   'selfTagNot',
   'rollAdvantage',
   'rollDisadvantage',
   'otherCreatureType',
+  'otherCreatureTypeNot',
   'otherMarkedBySelf',
   'selfHpAtMost',
   'selfHpAtLeast',
@@ -111,6 +127,13 @@ export const TRIGGER_CONDITION_KINDS = [
   'combatRoundAtLeast',
   'movementOwn',
   'movementForced',
+  'selfSpeciesNot',
+  'otherSpecies',
+  'otherSpeciesNot',
+  'damageTypeChosen',
+  'otherCreatureTypeChosen',
+  'selfHpMaxAtMost',
+  'otherIsSourceSide',
 ] as const;
 
 /**
@@ -118,10 +141,12 @@ export const TRIGGER_CONDITION_KINDS = [
  * - `damageType` / `damageTypeNot` — урон этого типа / без этого типа;
  * - `damageCritical` / `damageNotCritical` — крит / не крит;
  * - `selfBloodied` / `selfWounded` — у носителя не больше половины хитов / хиты не полные;
- * - `selfCreatureType` — тип носителя;
+ * - `selfCreatureType` / `selfCreatureTypeNot` — тип носителя из списка / не
+ *   из списка («нежить или исчадие» — `"undead, fiend"`);
  * - `selfTag` / `selfTagNot` — на носителе есть / нет отметки;
  * - `rollAdvantage` / `rollDisadvantage` — атака с преимуществом / помехой;
- * - `otherCreatureType` — тип другой стороны;
+ * - `otherCreatureType` / `otherCreatureTypeNot` — тип другой стороны из
+ *   списка / не из списка;
  * - `otherMarkedBySelf` — другая сторона помечена носителем;
  * - `selfHpAtMost` / `selfHpAtLeast` — хитов у носителя не больше / не меньше N;
  * - `selfSizeAtMost` / `selfSizeAtLeast` — размер носителя не больше / не меньше;
@@ -147,7 +172,18 @@ export const TRIGGER_CONDITION_KINDS = [
  * - `combatRoundIs` / `combatRoundAtLeast` — идёт раунд боя N / раунд не
  *   раньше N (расписание «на втором раунде», «с третьего раунда»);
  * - `movementOwn` / `movementForced` — носитель шёл сам / его переставили
- *   правила (толчок, притягивание, телепортация).
+ *   правила (толчок, притягивание, телепортация);
+ * - `selfSpeciesNot` — вид носителя не из списка («не эльф»: вид персонажа или
+ *   подтип статблока);
+ * - `otherSpecies` / `otherSpeciesNot` — вид другой стороны из списка / не из
+ *   списка;
+ * - `damageTypeChosen` — урон одного из типов, выбранных владельцем эффекта
+ *   (токен `@choice.` с ключом выбора);
+ * - `otherCreatureTypeChosen` — тип другой стороны из выбора владельца
+ *   («существо из вашего Гримуара»);
+ * - `selfHpMaxAtMost` — максимум хитов носителя не больше N;
+ * - `otherIsSourceSide` — другая сторона — наложивший эффект или его союзник
+ *   («пока вы или ваши союзники не нанесёте ей урон»).
  */
 export type TriggerConditionKind = (typeof TRIGGER_CONDITION_KINDS)[number];
 
@@ -195,11 +231,13 @@ const KIND_EVENTS: Record<
   selfBloodied: undefined,
   selfWounded: undefined,
   selfCreatureType: undefined,
+  selfCreatureTypeNot: undefined,
   selfTag: undefined,
   selfTagNot: undefined,
   rollAdvantage: ['attackRoll'],
   rollDisadvantage: ['attackRoll'],
   otherCreatureType: OTHER_CONDITION_EVENTS,
+  otherCreatureTypeNot: OTHER_CONDITION_EVENTS,
   otherMarkedBySelf: ['attackRoll'],
   selfHpAtMost: undefined,
   selfHpAtLeast: undefined,
@@ -229,6 +267,13 @@ const KIND_EVENTS: Record<
   combatRoundAtLeast: COMBAT_ROUND_TRIGGER_EVENTS,
   movementOwn: MOVEMENT_TRIGGER_EVENTS,
   movementForced: MOVEMENT_TRIGGER_EVENTS,
+  selfSpeciesNot: undefined,
+  otherSpecies: OTHER_CONDITION_EVENTS,
+  otherSpeciesNot: OTHER_CONDITION_EVENTS,
+  damageTypeChosen: DAMAGE_DATA_TRIGGER_EVENTS,
+  otherCreatureTypeChosen: OTHER_CONDITION_EVENTS,
+  selfHpMaxAtMost: undefined,
+  otherIsSourceSide: OTHER_CONDITION_EVENTS,
 };
 
 /** Части условия со значением: приставка строки и что выбирается. */
@@ -250,8 +295,16 @@ const PARAMETRIC_PARTS: Partial<
     prefix: EFFECT_CARRIER_TYPE_CONDITION_PREFIX,
     parameter: 'creatureType',
   },
+  selfCreatureTypeNot: {
+    prefix: EFFECT_CARRIER_TYPE_NOT_CONDITION_PREFIX,
+    parameter: 'creatureType',
+  },
   otherCreatureType: {
     prefix: EFFECT_TARGET_TYPE_CONDITION_PREFIX,
+    parameter: 'creatureType',
+  },
+  otherCreatureTypeNot: {
+    prefix: EFFECT_TARGET_TYPE_NOT_CONDITION_PREFIX,
     parameter: 'creatureType',
   },
   selfTag: { prefix: EFFECT_CARRIER_TAG_CONDITION_PREFIX, parameter: 'tag' },
@@ -261,6 +314,7 @@ const PARAMETRIC_PARTS: Partial<
   },
   selfHpAtMost: { prefix: 'self.hp.value <= ', parameter: 'number' },
   selfHpAtLeast: { prefix: 'self.hp.value >= ', parameter: 'number' },
+  selfHpMaxAtMost: { prefix: 'self.hp.max <= ', parameter: 'number' },
   selfSizeAtMost: { prefix: 'self.size <= ', parameter: 'size' },
   selfSizeAtLeast: { prefix: 'self.size >= ', parameter: 'size' },
   selfCondition: { prefix: 'self.condition === ', parameter: 'condition' },
@@ -271,17 +325,83 @@ const PARAMETRIC_PARTS: Partial<
     prefix: 'self.tagFromSource !== ',
     parameter: 'tag',
   },
-  selfSpecies: { prefix: 'self.species === ', parameter: 'text' },
+  selfSpecies: {
+    prefix: EFFECT_CARRIER_SPECIES_CONDITION_PREFIX,
+    parameter: 'text',
+  },
+  selfSpeciesNot: {
+    prefix: EFFECT_CARRIER_SPECIES_NOT_CONDITION_PREFIX,
+    parameter: 'text',
+  },
+  otherSpecies: {
+    prefix: EFFECT_TARGET_SPECIES_CONDITION_PREFIX,
+    parameter: 'text',
+  },
+  otherSpeciesNot: {
+    prefix: EFFECT_TARGET_SPECIES_NOT_CONDITION_PREFIX,
+    parameter: 'text',
+  },
+  // Значение — ключ выбора владельца: в строке оно стоит токеном выбора
+  // (см. `CHOSEN_PARTS`)
+  damageTypeChosen: {
+    prefix: EFFECT_DAMAGE_TYPE_CONDITION_PREFIX,
+    parameter: 'text',
+  },
+  otherCreatureTypeChosen: {
+    prefix: EFFECT_TARGET_TYPE_CONDITION_PREFIX,
+    parameter: 'text',
+  },
   otherHpAtMost: { prefix: 'target.hp.value <= ', parameter: 'number' },
   damageAtLeast: { prefix: 'damage.amount >= ', parameter: 'number' },
   sourceWithin: { prefix: 'source.distance <= ', parameter: 'number' },
   attackKind: { prefix: 'attack.kind === ', parameter: 'attackKind' },
-  attackAbility: { prefix: 'attack.ability === ', parameter: 'ability' },
+  attackAbility: {
+    prefix: EFFECT_ATTACK_ABILITY_CONDITION_PREFIX,
+    parameter: 'ability',
+  },
   selfAbilityAtMost: { prefix: 'self.ability[', parameter: 'ability' },
   selfAbilityAtLeast: { prefix: 'self.ability[', parameter: 'ability' },
   combatRoundIs: { prefix: 'combat.round === ', parameter: 'number' },
   combatRoundAtLeast: { prefix: 'combat.round >= ', parameter: 'number' },
 };
+
+/**
+ * Части, чьё значение — выбор владельца эффекта: в строке на месте списка
+ * стоит токен выбора, и лист владельца в VTTG заменяет его выбранным. После
+ * замены часть читается обычной — списком типов; до неё не выполняется.
+ */
+const CHOSEN_PARTS: readonly TriggerConditionKind[] = [
+  'damageTypeChosen',
+  'otherCreatureTypeChosen',
+];
+
+/**
+ * Берётся ли значение части из выбора владельца эффекта: тогда значение —
+ * ключ выбора, а не свободная строка.
+ *
+ * @param kind вид части.
+ * @returns `true` для «урон / тип другой стороны из выбора владельца».
+ */
+function isChosenTriggerConditionKind(kind: TriggerConditionKind): boolean {
+  return CHOSEN_PARTS.includes(kind);
+}
+
+/**
+ * Годится ли строка значением части со свободным вводом: у выбора владельца
+ * это ключ выбора, у остальных — любая непустая строка.
+ *
+ * @param kind вид части.
+ * @param enteredText строка из поля без пробелов по краям.
+ * @returns `true`, если часть с таким значением разберётся обратно.
+ */
+export function isTriggerConditionText(
+  kind: TriggerConditionKind,
+  enteredText: string,
+): boolean {
+  return isChosenTriggerConditionKind(kind)
+    ? isChoiceKey(enteredText)
+    : enteredText.length > 0;
+}
 
 /**
  * Счётчик отметок строкой: `self.tagCount["провал"] >= 3`. Ключ в квадратных
@@ -361,9 +481,6 @@ function isConditionNumber(value: string): boolean {
   );
 }
 
-/** Кавычки вокруг значения в строке условия. */
-const QUOTES_PATTERN = /^["']|["']$/g;
-
 /**
  * Годится ли значение для части условия.
  *
@@ -376,10 +493,16 @@ function isParameterValue(
   value: string,
 ): boolean {
   switch (parameter) {
-    case 'damageType':
-      return isEffectDamageType(value);
+    // Список типов через запятую: «огонь или холод» — так читается и
+    // подставленный выбор владельца
+    case 'damageType': {
+      const damageTypes = splitConditionList(value);
+
+      return damageTypes.length > 0 && damageTypes.every(isEffectDamageType);
+    }
+    // Список типов через запятую: «нежить или исчадие»
     case 'creatureType':
-      return isEffectCreatureCategory(value);
+      return isCreatureTypeList(value);
     case 'number':
       return isConditionNumber(value);
     case 'size':
@@ -394,6 +517,24 @@ function isParameterValue(
       // Ключ состояния мира и ключ отметки — одного вида: буквы, цифры, «_.-»
       return isEffectTag(value);
   }
+}
+
+/** Части о типе существа «не из списка». */
+const NEGATED_CREATURE_TYPE_KINDS: ReadonlySet<TriggerConditionKind> = new Set([
+  'selfCreatureTypeNot',
+  'otherCreatureTypeNot',
+]);
+
+/**
+ * Часть ли это о типе существа «не из списка».
+ *
+ * @param kind вид части.
+ * @returns `true` для «носитель / другая сторона — не существо типа».
+ */
+export function isNegatedCreatureTypeConditionKind(
+  kind: TriggerConditionKind,
+): boolean {
+  return NEGATED_CREATURE_TYPE_KINDS.has(kind);
 }
 
 /**
@@ -429,6 +570,11 @@ function buildTriggerConditionPart(part: TriggerConditionPart): string {
 
   if (!parametric) {
     return EFFECT_TRIGGER_FIXED_CONDITIONS[part.kind] ?? '';
+  }
+
+  // Выбор владельца — токеном на месте списка
+  if (isChosenTriggerConditionKind(part.kind)) {
+    return `${parametric.prefix}"${writeChoiceToken(part.value ?? '')}"`;
   }
 
   // Число пишется без кавычек: `self.hp.value <= 50`
@@ -471,18 +617,31 @@ export function parseTriggerConditionPart(
       : null;
   }
 
+  // Список из выбора владельца — раньше обычных частей с той же приставкой
+  for (const kind of CHOSEN_PARTS) {
+    const chosenPrefix = PARAMETRIC_PARTS[kind]?.prefix;
+
+    const choiceKey =
+      chosenPrefix !== undefined && trimmed.startsWith(chosenPrefix)
+        ? readChoiceKey(stripListQuotes(trimmed.slice(chosenPrefix.length)))
+        : undefined;
+
+    if (choiceKey !== undefined) {
+      return { kind, value: choiceKey };
+    }
+  }
+
   for (const kind of TRIGGER_CONDITION_KINDS) {
     if (EFFECT_TRIGGER_FIXED_CONDITIONS[kind] === trimmed) {
       return { kind };
     }
 
-    const parametric = PARAMETRIC_PARTS[kind];
+    const parametric = isChosenTriggerConditionKind(kind)
+      ? undefined
+      : PARAMETRIC_PARTS[kind];
 
     if (parametric && trimmed.startsWith(parametric.prefix)) {
-      const value = trimmed
-        .slice(parametric.prefix.length)
-        .trim()
-        .replace(QUOTES_PATTERN, '');
+      const value = stripListQuotes(trimmed.slice(parametric.prefix.length));
 
       return isParameterValue(parametric.parameter, value)
         ? { kind, value }

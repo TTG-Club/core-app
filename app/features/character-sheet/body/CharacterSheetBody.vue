@@ -6,6 +6,7 @@
     PreparedSpellKind,
     ProficiencyGroupKey,
     SavingThrowRow,
+    SheetRollContext,
     SkillRow,
     SpellDamageRoll,
   } from '../model';
@@ -15,8 +16,11 @@
 
   import {
     useCharacterSheet,
+    useCharacterSheetEditors,
+    useCharacterSheetEditRequests,
     useCharacterSheetList,
     useCharacterSheetPdf,
+    useCharacterSheetPresence,
     useCharacterSheetSaved,
     useCharacterSheetSaveStatus,
     useCharacterSheetShare,
@@ -24,7 +28,10 @@
   import {
     ABILITY_LABELS,
     ARMOR_PROFICIENCY_GROUPS,
+    CHARACTER_SHEET_ROUTE,
+    CHARACTER_SHEET_SHARED_ROUTE,
     combineRollModes,
+    DRAFT_CHARACTER_ID,
     EMPTY_DAMAGE_ROLL_SOURCE,
     findCharacterSpell,
     getAbilityCheckValue,
@@ -33,10 +40,12 @@
     getSkillKeyByName,
     getWeaponAttackBonus,
     getWeaponAttackRollMode,
+    getWeaponAttackRollModeSources,
     getWeaponDamageSource,
     isProficientWeapon,
     LANGUAGE_PROFICIENCY_GROUPS,
     SHEET_BODY_LABELS,
+    SHEET_EDIT_REVOKED_TOAST,
     SHEET_REMOVE_CONFIRM_TITLE,
   } from '../model';
   import CharacterSheetSkeleton from './CharacterSheetSkeleton.vue';
@@ -56,6 +65,7 @@
     SheetCustomSpellModal,
     SheetDamageModal,
     SheetDefencesPanel,
+    SheetEditRequestsBanner,
     SheetEffectModal,
     SheetExhaustionPanel,
     SheetExperienceModal,
@@ -154,6 +164,7 @@
     adjustInventoryItemCharges,
     restoreInventoryItemCharges,
     toggleInventoryItemTwoHanded,
+    setInventoryItemAttackAbility,
     copyInnateSpellToSheet,
     copyInventoryItemToSheet,
     copySpellToSheet,
@@ -165,6 +176,7 @@
     toggleInspiration,
     downloadCharacter,
     getRollMode,
+    getRollModeSources,
   } = useCharacterSheet();
 
   // Действия над листом целиком (копия и удаление) живут в общем состоянии
@@ -182,9 +194,46 @@
   // Доступ по ссылке: состояние читает меню шапки, меняет — модалка.
   // `viewedShareToken` — токен, по которому открыт чужой лист: им меню
   // сохраняет его к себе.
-  const { viewedShareToken, isSheetShared } = useCharacterSheetShare();
+  // `isEditorAccess` — лист чужой, но открыт по праву редактора.
+  const { viewedShareToken, isSheetShared, isEditorAccess } =
+    useCharacterSheetShare();
 
   const isShared = computed(() => isSheetShared(character.value.id));
+
+  /** Лист свой: запросы на правки и управление доступом — только здесь. */
+  const isOwnSheet = computed(() => !isReadonly.value && !isEditorAccess.value);
+
+  // Запросы на правки своего листа показываются баннером над ним. Перечитываются
+  // при открытии листа и когда сводка у шлема изменилась: новый запрос мог
+  // прийти, пока лист открыт. Цикла нет: решение по запросу перечитывает
+  // сводку, сводка — список, а загрузка списка сводку уже не трогает.
+  const { load: loadEditors } = useCharacterSheetEditors();
+  const { count: incomingEditRequests } = useCharacterSheetEditRequests();
+
+  watch(
+    [() => character.value.id, isOwnSheet, incomingEditRequests],
+    ([sheetId, ownSheet]) => {
+      if (ownSheet && sheetId !== DRAFT_CHARACTER_ID) {
+        void loadEditors(sheetId);
+      }
+    },
+    { immediate: true },
+  );
+
+  // Совместная правка: пока лист открыт на правку (владельцем или редактором),
+  // он отмечается на сервере, и по версии из ответа автосохранение подтягивает
+  // чужие правки. Лист на просмотр не отмечается — зритель ничего не меняет.
+  const presenceSheetId = computed(() =>
+    isReadonly.value || character.value.id === DRAFT_CHARACTER_ID
+      ? ''
+      : character.value.id,
+  );
+
+  // Редактору чужого листа отметка заодно сообщает, что право отозвали.
+  const { isAccessLost } = useCharacterSheetPresence(
+    presenceSheetId,
+    isEditorAccess,
+  );
 
   // Сохранить чужой лист к себе может только тот, у кого есть доступ к самому
   // инструменту: обе ручки закрыты авторизацией, анониму их показывать нечестно.
@@ -193,13 +242,46 @@
   const { isLoggedIn } = useUser();
 
   const {
+    savedSheets,
+    load: loadSaved,
     canSave: canSaveLink,
     ensureLoaded: ensureSavedLoaded,
     isTokenSaved,
+    findByToken,
     save: saveLink,
+    requestEdit,
   } = useCharacterSheetSaved();
 
   const canSaveShared = computed(() => isReadonly.value && isLoggedIn.value);
+
+  // Попросить правки можно только у листа по ссылке: запрос привязан к
+  // сохранённой ссылке, а у листа, открытого администратором, её нет.
+  const canRequestEdit = computed(
+    () => canSaveShared.value && readonlyReason.value === 'shared',
+  );
+
+  const viewedEditStatus = computed(() => {
+    const saved = viewedShareToken.value
+      ? findByToken(viewedShareToken.value)
+      : undefined;
+
+    return saved?.editStatus ?? null;
+  });
+
+  // Право на правки выдано — промежуточного режима «просмотр с кнопкой правки»
+  // нет: лист сразу открывается как свой, по id. Срабатывает и когда право
+  // пришло, пока лист открыт по ссылке.
+  watch(
+    () => canRequestEdit.value && viewedEditStatus.value === 'APPROVED',
+    (isApproved) => {
+      if (isApproved) {
+        void navigateTo(`${CHARACTER_SHEET_ROUTE}/${character.value.id}`, {
+          replace: true,
+        });
+      }
+    },
+    { immediate: true },
+  );
 
   const isLinkSaved = computed(() =>
     viewedShareToken.value ? isTokenSaved(viewedShareToken.value) : false,
@@ -217,6 +299,43 @@
   const overlay = useOverlay();
 
   const toast = useToast();
+
+  /**
+   * Право на правки отозвали, пока лист был открыт: правки сразу закрываются —
+   * лист переоткрывается на просмотр по сохранённой ссылке, а без неё (ссылку
+   * тоже отключили) — возвращаемся к списку листов.
+   */
+  async function handleEditAccessLost(): Promise<void> {
+    toast.add({
+      title: SHEET_EDIT_REVOKED_TOAST.title,
+      description: SHEET_EDIT_REVOKED_TOAST.description,
+      color: 'warning',
+      icon: 'tabler:eye',
+    });
+
+    // Свежий список, а не закэшированный: в нём право ещё «выдано», и лист по
+    // ссылке сразу вернул бы на правку.
+    await loadSaved();
+
+    const sheetId = character.value.id;
+    const saved = savedSheets.value.find((sheet) => sheet.sheetId === sheetId);
+
+    await navigateTo(
+      saved
+        ? `${CHARACTER_SHEET_SHARED_ROUTE}/${saved.shareToken}`
+        : CHARACTER_SHEET_ROUTE,
+      { replace: true },
+    );
+  }
+
+  watch(
+    () => isEditorAccess.value && isAccessLost.value,
+    (isLost) => {
+      if (isLost) {
+        void handleEditAccessLost();
+      }
+    },
+  );
 
   // Статус автосохранения пишет автосейв контейнера (страница/панель/drawer),
   // тело листа лишь показывает его в шапке.
@@ -750,27 +869,47 @@
       return;
     }
 
+    // Окно получает атаку по правилам и выбор игрока отдельно: подсказка
+    // «По правилам — Сила» остаётся верной, а выбранная характеристика
+    // подменяется в окне так же, как при ручном выборе.
     const attack = getWeaponAttackBonus(
       character.value,
       inventoryItem.weapon,
       isProficientWeapon(character.value, inventoryItem),
+      null,
     );
+
+    const inventoryItemId = inventoryItem.id;
+
+    const attackContext: SheetRollContext = {
+      kind: 'attack',
+      attackType: inventoryItem.weapon.ranged ? 'ranged' : 'melee',
+    };
 
     rollModal.open({
       title: `Атака: ${inventoryItem.name}`,
       modifier: attack.value,
       ability: attack.ability,
+      selectedAbility: inventoryItem.attackAbility,
+      // Зритель чужого листа выбирает характеристику на один бросок: сохранить
+      // её ему некуда.
+      rememberAbility: isReadonly.value
+        ? undefined
+        : (ability) => setInventoryItemAttackAbility(inventoryItemId, ability),
       actionLabel: 'Бросить атаку',
       // Режим дают два независимых источника: помеха тяжёлого оружия не по руке
       // (правила 2024) и активные эффекты — Опутанный бьёт с помехой. Свести их
       // можно только правилом 5e, поэтому не «или», а `combineRollModes`.
       mode: combineRollModes(
         getWeaponAttackRollMode(attack),
-        getRollMode({
-          kind: 'attack',
-          attackType: inventoryItem.weapon.ranged ? 'ranged' : 'melee',
-        }),
+        getRollMode(attackContext),
       ),
+      // Окно называет, откуда взялись преимущество и помеха: сам значок режима
+      // о причине не говорит.
+      modeSources: [
+        ...getWeaponAttackRollModeSources(attack),
+        ...getRollModeSources(attackContext),
+      ],
     });
   }
 
@@ -780,6 +919,7 @@
           character.value,
           inventoryItem.weapon,
           inventoryItem.twoHanded,
+          inventoryItem.attackAbility,
         )
       : null;
 
@@ -1093,6 +1233,15 @@
     await saveLink(viewedShareToken.value);
   }
 
+  /** Запрос права на правки чужого листа; несохранённая ссылка сохранится. */
+  async function handleRequestEdit() {
+    if (!viewedShareToken.value) {
+      return;
+    }
+
+    await requestEdit(viewedShareToken.value);
+  }
+
   /** Подтверждённое удаление: лист уходит в историю, затем закрывается. */
   async function handleRemoveConfirm() {
     if (!(await removeSheet(character.value.id))) {
@@ -1148,6 +1297,9 @@
         :can-copy-shared="canCreate && !isMutating"
         :can-save-link="canSaveLink"
         :link-saved="isLinkSaved"
+        :editor-access="isEditorAccess"
+        :can-request-edit="canRequestEdit"
+        :edit-status="viewedEditStatus"
         @close="handleClose"
         @download="downloadCharacter"
         @download-pdf="handleDownloadPdf"
@@ -1156,6 +1308,7 @@
         @share="handleShare"
         @copy-shared="handleCopyShared"
         @save-link="handleSaveLink"
+        @request-edit="handleRequestEdit"
         @expand="handleExpand"
         @edit-ability-scores="handleAbilityScoresEdit"
         @edit-background="handleBackgroundEdit"
@@ -1170,6 +1323,11 @@
         @short-rest="handleShortRest"
         @toggle-inspiration="toggleInspiration"
         @toggle-lock="toggleLock"
+      />
+
+      <SheetEditRequestsBanner
+        v-if="isOwnSheet"
+        :sheet-id="character.id"
       />
 
       <div class="relative flex items-center justify-center py-1">

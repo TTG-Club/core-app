@@ -1,4 +1,9 @@
-import type { BrushColor, BugReportDetailTab, BugReportStatus } from './types';
+import type {
+  BrushColor,
+  BugReportDetailTab,
+  BugReportServerLagCause,
+  BugReportStatus,
+} from './types';
 
 import { SOURCE_PLATFORM_LABELS } from '#shared/consts';
 
@@ -624,3 +629,157 @@ export const BUG_REPORT_DIAGNOSTICS_SPAN_TOTAL_WARN_MS = 100;
 
 /** Порог одиночного выполнения участка кадра, выше которого он рвёт кадр (мс) */
 export const BUG_REPORT_DIAGNOSTICS_SPAN_MAX_WARN_MS = 8;
+
+/** Заголовок секции машины и нагрузки сервера мира */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_HOST_TITLE = 'Машина сервера мира';
+
+/** Заголовок ленты нагрузки сервера */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_TITLE =
+  'Самые долгие зависания сервера за последние минуты';
+
+/** Подпись процессора процесса сервера и машины */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_CPU_LABEL =
+  'CPU (процесс, % ядра / машина, %)';
+
+/** Подпись памяти процесса сервера и свободной памяти машины */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_RAM_LABEL =
+  'RAM (процесс / свободно / всего)';
+
+/** Подпись сборки мусора */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_GC_LABEL =
+  'Сборка мусора (Σ / макс.)';
+
+/** Подпись процессора машины сервера */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_CPU_MODEL_LABEL = 'Процессор';
+
+/** Подпись ОС машины сервера */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_OS_LABEL = 'ОС';
+
+/** Подпись среды запуска сервера */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_RUNTIME_LABEL = 'Среда';
+
+/** Подпись времени работы процесса и машины */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_UPTIME_LABEL =
+  'Работает (процесс / машина)';
+
+/** Среда запуска сервера без Electron */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_HEADLESS_LABEL =
+  'без Electron (VDS)';
+
+/** Колонка ленты: за сколько секунд до отправки */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_AGO_LABEL = 'Когда';
+
+/** Колонка ленты: максимальная задержка event-loop */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_LAG_LABEL = 'Лаг, мс';
+
+/** Колонка ленты: процессор процесса сервера */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_PROCESS_CPU_LABEL = 'CPU проц.';
+
+/** Колонка ленты: процессор машины */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_SYSTEM_CPU_LABEL = 'CPU маш.';
+
+/** Колонка ленты: сборка мусора */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_GC_LABEL = 'GC, мс';
+
+/** Колонка ленты: самое тяжёлое WS-событие интервала */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_EVENT_LABEL = 'Тяжелее всего';
+
+/** Подпись момента снапшота: столько секунд до отправки */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_AGO_SUFFIX = 'с назад';
+
+/** Подпись сводки ленты: сколько интервалов с зависанием */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_SUMMARY_LABEL =
+  'Интервалов по 2 с с зависанием';
+
+/**
+ * Задержка event-loop, начиная с которой интервал считается зависанием, а не
+ * фоновым шумом (мс). Игрок замечает задержку примерно с этого порога.
+ */
+export const BUG_REPORT_SERVER_STALL_MS = 200;
+
+/**
+ * Процессор процесса сервера (% одного ядра), начиная с которого зависание
+ * считается делом нашего кода: JS в Node работает в одном потоке, и почти
+ * целое ядро значит, что поток был занят сам.
+ */
+export const BUG_REPORT_SERVER_OWN_CPU_PERCENT = 70;
+
+/** Процессор всей машины (%), начиная с которого она считается перегруженной */
+export const BUG_REPORT_SERVER_MACHINE_CPU_PERCENT = 85;
+
+/** Доля зависания, которую должна занять сборка мусора, чтобы винить её */
+export const BUG_REPORT_SERVER_GC_SHARE = 0.3;
+
+/** Сколько самых долгих зависаний показывать в ленте */
+export const BUG_REPORT_SERVER_TIMELINE_ROWS = 10;
+
+/** Порог процессора в таблицах и строках нагрузки (%) */
+export const BUG_REPORT_DIAGNOSTICS_CPU_WARN_PERCENT = 80;
+
+/** Порог сборки мусора за интервал, выше которого она заметна (мс) */
+export const BUG_REPORT_DIAGNOSTICS_GC_WARN_MS = 50;
+
+/** Заголовки вывода о причине тормозов сервера */
+export const BUG_REPORT_SERVER_LAG_TITLES: Record<
+  BugReportServerLagCause,
+  string
+> = {
+  'calm': 'Сервер не зависал',
+  'own-code': 'Тормозит код сервера VTTG',
+  'garbage-collection': 'Тормозит сборка мусора на сервере',
+  'machine-busy': 'Машину сервера заняли другие программы',
+  'process-stalled': 'Сервер стоял без нагрузки',
+};
+
+/** Пояснения к выводу о причине тормозов сервера */
+export const BUG_REPORT_SERVER_LAG_DESCRIPTIONS: Record<
+  BugReportServerLagCause,
+  string
+> = {
+  'calm':
+    'За всю ленту сервер мира ни разу не вставал. Если игрок жаловался на задержки — ищите в клиенте (FPS, профиль кадра) или в сети.',
+  'own-code':
+    'Во время зависаний процесс сервера сам занимал ядро процессора. Это наша проблема: смотрите, какое событие было тяжелее всего.',
+  'garbage-collection':
+    'Зависания совпали с долгой сборкой мусора. Процесс держит слишком много памяти — это наша проблема (утечка или раздутый кэш).',
+  'machine-busy':
+    'Процесс сервера почти не работал, а процессор машины был занят. Мешали другие программы на машине, где запущен мир, — это не наша сторона.',
+  'process-stalled':
+    'И процесс, и машина простаивали, но сервер не отвечал. Обычно это сон или гибернация машины, медленный диск или подкачка памяти. Реже — синхронный вызов внешней программы из нашего кода.',
+};
+
+/** Цвет плашки вывода о причине тормозов сервера */
+export const BUG_REPORT_SERVER_LAG_COLORS: Record<
+  BugReportServerLagCause,
+  'success' | 'error' | 'warning' | 'info'
+> = {
+  'calm': 'success',
+  'own-code': 'error',
+  'garbage-collection': 'error',
+  'machine-busy': 'info',
+  'process-stalled': 'warning',
+};
+
+/** Подпись события, которое чаще всего было самым тяжёлым во время зависаний */
+export const BUG_REPORT_SERVER_LAG_SUSPECT_LABEL =
+  'Чаще всего тяжелее всего было событие';
+
+/** Единица времени в строках снимка: миллисекунды */
+export const BUG_REPORT_DIAGNOSTICS_MS_UNIT = 'мс';
+
+/** Единица памяти в строках снимка: мегабайты */
+export const BUG_REPORT_DIAGNOSTICS_MB_UNIT = 'МБ';
+
+/** Подпись самого долгого зависания в сводке ленты */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_WORST_LABEL = 'макс.';
+
+/** Название среды выполнения сервера перед её версией */
+export const BUG_REPORT_DIAGNOSTICS_NODE_LABEL = 'Node';
+
+/** Единицы в подписи времени работы сервера: дни, часы, минуты, секунды */
+export const BUG_REPORT_UPTIME_UNITS = {
+  days: 'д',
+  hours: 'ч',
+  minutes: 'мин',
+  seconds: 'с',
+} as const;

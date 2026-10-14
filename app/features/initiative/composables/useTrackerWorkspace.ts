@@ -113,7 +113,7 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
     const link = findParticipant(participantId)?.sheetLink;
 
     // Отказ трекера — ничего дальше: иначе лист персонажа получил бы урон,
-    // которого в бою нет, а существо было бы помечено повержённым при живых
+    // которого в бою нет, а существо было бы помечено поверженным при живых
     // хитах на сервере.
     if (!(await editParticipant(participantId, { currentHitPoints }))) {
       return;
@@ -128,7 +128,7 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
 
   /**
    * Прокидывает максимум хитов существа: он же ставит текущие «на полных»,
-   * поэтому существо, помеченное повержённым, возвращается в бой.
+   * поэтому существо, помеченное поверженным, возвращается в бой.
    * @param participantId Идентификатор участника.
    * @param value Прокинутый максимум хитов.
    */
@@ -482,7 +482,7 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
   }
 
   /**
-   * Помечает участника повержённым/живым (partial PUT `{ dead }`). Повержённый
+   * Помечает участника поверженным/живым (partial PUT `{ dead }`). Поверженный
    * остаётся в списке на своей позиции, но бэк пропускает его в очереди хода.
    * Если помечаем ТЕКУЩЕГО в бою — бэк указатель не сдвигает сам, поэтому сразу
    * передаём ход дальше.
@@ -600,7 +600,7 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
   }
 
   /**
-   * Завершает бой: броски и состояния очищаются, повержённые оживают, состав
+   * Завершает бой: броски и состояния очищаются, поверженные оживают, состав
    * сохраняется, статус — PREPARING. Всё это делает бэк одним запросом.
    */
   function reset(): Promise<boolean> {

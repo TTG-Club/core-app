@@ -38,10 +38,14 @@ export function useFindGameToast() {
     reason: unknown,
     title: string = FIND_GAME_UNKNOWN_ERROR_MESSAGE,
   ): void {
+    const description =
+      typeof reason === 'string' ? reason : getFindGameErrorMessage(reason);
+
     toast.add({
       title,
-      description:
-        typeof reason === 'string' ? reason : getFindGameErrorMessage(reason),
+      // Без внятной причины описание совпадает с заголовком — дважды один
+      // текст не показываем.
+      description: description === title ? undefined : description,
       color: 'error',
       icon: FIND_GAME_TOAST_ERROR_ICON,
     });

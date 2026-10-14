@@ -8,18 +8,20 @@ import type {
 
 import type { MarkerNode, RenderNode } from '~ui/markup';
 
-import type { DeferredInlineTokens } from './block-tokenizer';
+import type { BlockSegment } from './block-tokenizer';
 
 import { Extension } from '@tiptap/core';
 import { Blockquote } from '@tiptap/extension-blockquote';
 
-import { isMarkerNode, parse, serializeInlineNodes } from '~ui/markup';
+import { isBlockNode, isMarkerNode, parse } from '~ui/markup';
 
 import {
+  blockSegmentsToContent,
+  buildBlockSegments,
   createBlockMarkerTokenizer,
-  deferInline,
   markerNameMatches,
 } from './block-tokenizer';
+import { QUOTE_PARAGRAPH_SEPARATOR } from './constants';
 import { dataAttr } from './node-utils';
 
 const QUOTE_TOKEN = 'ttgQuote';
@@ -27,9 +29,12 @@ const QUOTE_TOKEN = 'ttgQuote';
 /** Имена маркеров, обозначающих цитату (алиасы из markup/config.ts). */
 const QUOTE_NAMES = new Set(['quote', 'blockquote', 'q']);
 
-/** Разобранная цитата: абзацы (ленивые инлайн-токены) + атрибуты оформления. */
+/**
+ * Разобранная цитата: группы-абзацы (сегменты: инлайн → абзац, вложенный
+ * `{@list}`/`{@table}` → нативный узел) + атрибуты оформления.
+ */
 interface QuoteData {
-  paragraphs: { tokens: DeferredInlineTokens }[];
+  paragraphs: BlockSegment[][];
   color?: string;
   variant?: string;
 }
@@ -101,8 +106,28 @@ function groupParagraphs(content: RenderNode[]): RenderNode[][] {
 }
 
 /**
- * Разбирает сырой `{@quote …}` в структуру абзацев с уже разобранными инлайн-
- * токенами и атрибутами (color/variant). undefined — если это не цитата.
+ * Убирает `{@br}`, прилегающие к блочному узлу группы: блок и так начинается с
+ * новой строки, а висящий перенос стал бы пустой строкой абзаца и при сохранении
+ * склеился бы с разделителем `{@br}{@br}` в лишний перенос.
+ */
+function dropBreaksAroundBlocks(group: RenderNode[]): RenderNode[] {
+  return group.filter((node, index) => {
+    if (!isBreakNode(node)) {
+      return true;
+    }
+
+    const previousNode = group[index - 1];
+    const nextNode = group[index + 1];
+
+    return !(isBlockNode(previousNode) || isBlockNode(nextNode));
+  });
+}
+
+/**
+ * Разбирает сырой `{@quote …}` в группы-абзацы и атрибуты (color/variant).
+ * Вложенный `{@list}`/`{@table}` выделяется в свой сегмент и грузится НАТИВНЫМ
+ * узлом — иначе стал бы атомарным чипом и текст в нём не редактировался бы.
+ * undefined — если это не цитата.
  */
 function buildQuoteData(
   raw: string,
@@ -119,9 +144,9 @@ function buildQuoteData(
 
   const groups = groupParagraphs(node.content ?? []);
 
-  const paragraphs = (groups.length ? groups : [[]]).map((group) => ({
-    tokens: deferInline(lexer, serializeInlineNodes(group)),
-  }));
+  const paragraphs = (groups.length ? groups : [[]]).map((group) =>
+    buildBlockSegments(dropBreaksAroundBlocks(group), lexer),
+  );
 
   return {
     paragraphs,
@@ -161,14 +186,15 @@ export const TtgQuoteMarkdown = Extension.create({
       ? token.paragraphs
       : [];
 
-    return helpers.createNode(
-      'blockquote',
-      { color, variant },
-      paragraphs.map((paragraph) => ({
-        type: 'paragraph',
-        content: helpers.parseInline(paragraph.tokens()),
-      })),
-    );
+    // Пустая группа не даёт сегментов — она остаётся пустым абзацем (автор
+    // видит строку, куда писать; и blockquote требует `block+`).
+    const quoteContent = paragraphs.flatMap((segments) => {
+      const groupNodes = blockSegmentsToContent(segments, helpers);
+
+      return groupNodes.length ? groupNodes : [{ type: 'paragraph' }];
+    });
+
+    return helpers.createNode('blockquote', { color, variant }, quoteContent);
   },
 });
 
@@ -191,17 +217,30 @@ function quoteAttrs(node: JSONContent): string {
  * Цитата: нативный редактируемый узел TipTap (можно кликнуть внутрь, добавлять
  * абзацы Enter'ом, мягкий перенос Shift+Enter'ом), но сериализуется/парсится через
  * `{@quote}`. Абзацы разделяются `{@br}{@br}` (граница), мягкий перенос — `{@br}`;
+ * вложенный список/таблица пишется без разделителя (блок сам начинается с новой
+ * строки — лишний `{@br}{@br}` дал бы на сайте пустую строку перед ним).
  * НИКАКИХ `\n` внутри маркера (бэкенд бьёт описание по `\n\n`). Штатный GFM-разбор
  * цитат (`> `) отключён (`parseMarkdown → []`) — источник только `{@quote}`.
  */
 export const TtgQuote = Blockquote.extend({
   parseMarkdown: () => [],
   renderMarkdown: (node: JSONContent, helpers: MarkdownRendererHelpers) => {
-    const paragraphs = (Array.isArray(node.content) ? node.content : []).map(
-      (paragraph) => helpers.renderChildren([paragraph]),
-    );
+    const childNodes = Array.isArray(node.content) ? node.content : [];
 
-    return `{@quote ${paragraphs.join('{@br}{@br}')}${quoteAttrs(node)}}`;
+    const quoteBody = childNodes
+      .map((childNode, index) => {
+        const previousNode = childNodes[index - 1];
+
+        const paragraphSeparator =
+          previousNode?.type === 'paragraph' && childNode.type === 'paragraph'
+            ? QUOTE_PARAGRAPH_SEPARATOR
+            : '';
+
+        return paragraphSeparator + helpers.renderChildren([childNode]);
+      })
+      .join('');
+
+    return `{@quote ${quoteBody}${quoteAttrs(node)}}`;
   },
   markdownOptions: { indentsContent: false },
   addAttributes() {

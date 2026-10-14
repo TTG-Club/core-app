@@ -22,7 +22,6 @@
     filter,
     search,
     isPending: isFilterPending,
-    isShowedPreview: isFilterPreviewShowed,
     defaults: filterDefaults,
   } = await useFilter('sources-filters', '/api/v2/source/filters');
 
@@ -103,6 +102,14 @@
     items: sources,
   });
 
+  const { canEditSources } = useUserRoles();
+
+  // useSectionDetail отдаёт ссылку в мастерскую всем, кто правит сущности, а
+  // источники правит только админ — модератору кнопку не показываем.
+  const sourceEditUrl = computed(() =>
+    canEditSources.value ? detailEditUrl.value : undefined,
+  );
+
   const markdown = useEntityMarkdown(detailSource, getSourceMarkdown);
 </script>
 
@@ -117,7 +124,6 @@
         v-model:filter="filter"
         :defaults="filterDefaults"
         :is-pending="isFilterPending"
-        :show-preview="isFilterPreviewShowed"
       />
     </template>
 
@@ -171,7 +177,7 @@
         :source="detailSource?.source"
         :date-time="detailSource?.updatedAt"
         :url="detailUrlForCopy"
-        :edit-url="detailEditUrl"
+        :edit-url="sourceEditUrl"
         :markdown
         :is-loading="isDetailLoading"
         :is-error="isDetailError"

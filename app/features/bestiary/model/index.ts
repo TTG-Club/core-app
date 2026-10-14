@@ -1,5 +1,6 @@
 export * from './action';
 export * from './create';
+export * from './damageAlternatives';
 export * from './detail';
 export * from './inventory';
 export * from './link';

@@ -10,6 +10,8 @@
   import { MulticlassDrawer } from '~classes/multiclass-drawer';
   import { SourceTag } from '~ui/source-tag';
 
+  import { CLASS_SECTION_ANCHOR } from './constants';
+
   const {
     url,
     name,
@@ -143,7 +145,7 @@
 
   /** Прокрутка к блоку описания внутри текущего контейнера */
   function scrollToDescription(): void {
-    document.getElementById('description')?.scrollIntoView({
+    document.getElementById(CLASS_SECTION_ANCHOR.description)?.scrollIntoView({
       behavior: 'smooth',
       block: 'start',
     });

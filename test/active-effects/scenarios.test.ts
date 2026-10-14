@@ -14,7 +14,14 @@ import {
   resolveEffectFormLayout,
 } from '~active-effects/model';
 
-import { createRawEffect, SAVE_DC, stripUndefinedKeys } from './fixtures';
+import {
+  ACTIVATION_RANGE,
+  createRawEffect,
+  SAVE_DC,
+  SHILLELAGH_DICE,
+  SHILLELAGH_WEAPONS,
+  stripUndefinedKeys,
+} from './fixtures';
 
 /**
  * Эффекты каталога сценариев системы dnd5e-2024 (`tests/scenarios`,
@@ -52,6 +59,9 @@ const DISPEL_MAX_LEVEL = 3;
 
 /** Срок «Вибрирующих жидкостей», раунды. */
 const SAVED_ROLL_DURATION_ROUNDS = 3;
+
+/** Лечение и урон «Божественной искры»: лишняя к8 на 7, 13 и 18 уровнях. */
+const DIVINE_SPARK_DICE = '(1 + steps(@classLevel, 7, 13, 18))к8';
 
 /** Сценарий каталога системы: эффект и место окна, где его собирает автор. */
 interface EffectScenario {
@@ -120,7 +130,7 @@ describeScenarios('каталог: вопросы человеку', [
     id: 'Q01',
     name: 'Опутывание',
     context: 'spell',
-    layoutOptions: { zoneAvailable: false },
+    layoutOptions: { areaAvailable: false },
     storedEffect: createRawEffect({
       id: 'Опутывание',
       name: 'Опутывание',
@@ -978,6 +988,85 @@ describeScenarios('каталог: значения формулой', [
       ],
     }),
   },
+  {
+    id: 'V19',
+    name: 'Доспехи мага',
+    context: 'spell',
+    storedEffect: createRawEffect({
+      id: 'Доспехи мага',
+      name: 'Доспехи мага',
+      effectTarget: 'target',
+      // Модификатор читается по цели: Ловкость того, на ком доспех
+      changes: [
+        {
+          key: 'armorClass',
+          mode: 'override',
+          value: '13 + @mod.dex',
+          priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
+        },
+      ],
+    }),
+  },
+  {
+    id: 'V19',
+    name: 'Лечение числами применившего',
+    context: 'item',
+    storedEffect: createRawEffect({
+      id: 'Лечение',
+      name: 'Лечение',
+      disabled: true,
+      activation: { mode: 'use' },
+      effectTarget: 'target',
+      triggers: [
+        {
+          id: 'heal',
+          event: 'applied',
+          actions: [
+            {
+              type: 'damage',
+              parts: [{ formula: '1к8@heal + @mod.wis', target: 'selected' }],
+            },
+          ],
+        },
+      ],
+    }),
+  },
+  {
+    id: 'V20',
+    name: 'Число костей выражением',
+    context: 'item',
+    storedEffect: createRawEffect({
+      id: 'Кости по ступеням',
+      name: 'Кости по ступеням',
+      disabled: true,
+      activation: { mode: 'use' },
+      effectTarget: 'target',
+      damageParts: [
+        {
+          formula: '(1 + steps(@classLevel, 7, 13, 18))к8@dmg.fire',
+          target: 'selected',
+        },
+      ],
+    }),
+  },
+  {
+    id: 'V20',
+    name: 'Грань кости выражением',
+    context: 'item',
+    storedEffect: createRawEffect({
+      id: 'Грань по ступеням',
+      name: 'Грань по ступеням',
+      disabled: true,
+      activation: { mode: 'use' },
+      effectTarget: 'target',
+      damageParts: [
+        {
+          formula: '1к(8 + 2 * steps(@level, 5, 11))@dmg.force',
+          target: 'selected',
+        },
+      ],
+    }),
+  },
 ]);
 
 describeScenarios('каталог: получатели и отбор', [
@@ -1359,6 +1448,185 @@ describeScenarios('каталог: магические предметы и ор
           key: 'attack.weapon',
           mode: 'add',
           value: '1',
+          priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
+        },
+      ],
+    }),
+  },
+]);
+
+/**
+ * Вариант «Божественной искры» жреца (F19) в форме хранения сайта: срок у
+ * системы «мгновенный» — такого срока у сайта нет, копия снимает себя сама.
+ *
+ * @param label подпись варианта.
+ * @param overrides поля варианта.
+ * @returns эффект, как его хранит сервер.
+ */
+function createDivineSpark(
+  label: string,
+  overrides: Record<string, unknown>,
+): Record<string, unknown> {
+  return createRawEffect({
+    id: `Божественная искра: ${label}`,
+    name: label,
+    origin: 'feature',
+    disabled: true,
+    activation: {
+      mode: 'use',
+      counter: 'channel-divinity',
+      range: ACTIVATION_RANGE,
+    },
+    variant: { group: 'Божественная искра', label },
+    effectTarget: 'target',
+    ...overrides,
+  });
+}
+
+describeScenarios('каталог: классы и черты', [
+  {
+    id: 'F19',
+    name: 'Божественная искра: лечение',
+    context: 'feature',
+    storedEffect: createDivineSpark('Лечение', {
+      triggers: [
+        {
+          id: 'spark-heal',
+          event: 'applied',
+          actions: [
+            {
+              type: 'damage',
+              parts: [
+                {
+                  formula: `${DIVINE_SPARK_DICE}@heal + @mod.wis`,
+                  target: 'selected',
+                },
+              ],
+            },
+            { type: 'removeSelf' },
+          ],
+        },
+      ],
+    }),
+  },
+  {
+    id: 'F19',
+    name: 'Божественная искра: излучение',
+    context: 'feature',
+    storedEffect: createDivineSpark('Излучение', {
+      applySave: {
+        ability: 'constitution',
+        dc: APPLIER_SAVE_DC,
+        onSuccess: 'half',
+      },
+      // Тип урона — токеном формулы, цель части — явно
+      damageParts: [
+        {
+          formula: `${DIVINE_SPARK_DICE}@dmg.radiant + @mod.wis`,
+          target: 'selected',
+        },
+      ],
+    }),
+  },
+  {
+    id: 'F19',
+    name: 'Божественная искра: некротическая энергия',
+    context: 'feature',
+    storedEffect: createDivineSpark('Некротическая энергия', {
+      applySave: {
+        ability: 'constitution',
+        dc: APPLIER_SAVE_DC,
+        onSuccess: 'half',
+      },
+      damageParts: [
+        {
+          formula: `${DIVINE_SPARK_DICE}@dmg.necrotic + @mod.wis`,
+          target: 'selected',
+        },
+      ],
+    }),
+  },
+]);
+
+/**
+ * Строка замены свойства оружия «Дубинки».
+ *
+ * @param key ключ замены.
+ * @param changeValue значение.
+ * @returns строка модификатора, как её хранит сервер.
+ */
+function createShillelaghChange(
+  key: string,
+  changeValue: string,
+): Record<string, unknown> {
+  return {
+    key,
+    mode: 'override',
+    value: changeValue,
+    condition: SHILLELAGH_WEAPONS,
+    priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
+  };
+}
+
+/**
+ * Вариант «Дубинки» (S31): кость и заклинательная характеристика, у
+ * «Силового» — ещё и тип урона.
+ *
+ * @param label подпись варианта.
+ * @param damageType тип урона варианта.
+ * @returns эффект, как его хранит сервер.
+ */
+function createShillelagh(
+  label: string,
+  damageType?: string,
+): Record<string, unknown> {
+  return createRawEffect({
+    id: `Дубинка: ${label}`,
+    name: 'Дубинка',
+    effectTarget: 'self',
+    variant: { group: 'урон', label },
+    changes: [
+      createShillelaghChange('weapon.damageDice', SHILLELAGH_DICE),
+      createShillelaghChange('weapon.attackAbility', 'spell'),
+      ...(damageType
+        ? [createShillelaghChange('weapon.damageType', damageType)]
+        : []),
+    ],
+  });
+}
+
+describeScenarios('каталог: заклинания, меняющие оружие', [
+  {
+    id: 'S31',
+    name: 'Дубинка: дробящий',
+    context: 'spell',
+    storedEffect: createShillelagh('Дробящий'),
+  },
+  {
+    id: 'S31',
+    name: 'Дубинка: силовой',
+    context: 'spell',
+    storedEffect: createShillelagh('Силовой', 'force'),
+  },
+  {
+    id: 'S31b',
+    name: 'Громовой посох',
+    context: 'weapon',
+    storedEffect: createRawEffect({
+      id: 'Громовой посох',
+      name: 'Громовой посох',
+      transfer: true,
+      changes: [
+        {
+          key: 'weapon.damageType',
+          mode: 'override',
+          value: 'thunder',
+          priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
+        },
+        {
+          key: 'weapon.attackAbility',
+          mode: 'override',
+          value: 'spell',
           priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
         },
       ],

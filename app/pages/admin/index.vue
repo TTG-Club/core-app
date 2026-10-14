@@ -55,6 +55,11 @@
     ADMIN_USERS_PAGE_DESCRIPTION,
   } from '~admin/users/model';
   import {
+    VTTG_COMPENDIUM_ADMIN_ROUTE,
+    VTTG_COMPENDIUM_PAGE_DESCRIPTION,
+    VTTG_COMPENDIUM_PAGE_TITLE,
+  } from '~admin/vttg-compendium/model';
+  import {
     ARTICLES_ADMIN_CREATE_ROUTE,
     ARTICLES_ADMIN_ROUTE,
   } from '~articles/model';
@@ -363,6 +368,27 @@
 
           <div class="text-sm text-muted">
             {{ MAILING_PAGE_DESCRIPTION }}
+          </div>
+        </UCard>
+
+        <UCard variant="subtle">
+          <template #header>
+            <div class="flex items-center justify-between gap-2">
+              <h2 class="truncate text-base text-highlighted">
+                {{ VTTG_COMPENDIUM_PAGE_TITLE }}
+              </h2>
+
+              <UButton
+                size="sm"
+                :to="VTTG_COMPENDIUM_ADMIN_ROUTE"
+              >
+                {{ ADMIN_DASHBOARD_CONFIGURE_LABEL }}
+              </UButton>
+            </div>
+          </template>
+
+          <div class="text-sm text-muted">
+            {{ VTTG_COMPENDIUM_PAGE_DESCRIPTION }}
           </div>
         </UCard>
       </div>

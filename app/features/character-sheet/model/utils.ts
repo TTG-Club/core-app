@@ -108,6 +108,7 @@ import type {
   InventoryItemOrigin,
   InventoryWeapon,
   InventoryWeaponDamage,
+  ItemPurchaseLine,
   ItemSummary,
   LevelUpAbilityImprovement,
   LevelUpClassSpellListPick,
@@ -131,11 +132,14 @@ import type {
   ResourceRecoveryMode,
   ResourceRecoveryRule,
   RollMode,
+  RollModeSource,
+  SavedCharacterSheet,
   SavingThrowRow,
   SheetChoiceControl,
   SheetChoiceOption,
   SheetChoiceOrigin,
   SheetChoicePoolStatus,
+  SheetEditStatus,
   SkillRow,
   SkillRowGroup,
   SpeciesFeatureSummary,
@@ -145,6 +149,7 @@ import type {
   SpeedUnit,
   SpellcastingBreakdown,
   SpellcastingClassRow,
+  SpellCastingKind,
   SpellCatalogItem,
   SpellCatalogPreset,
   SpellDamage,
@@ -162,6 +167,7 @@ import type {
   VisionRow,
   WeaponAttack,
   WeaponDamage,
+  WeaponDamageRider,
 } from './types';
 
 import {
@@ -178,7 +184,11 @@ import {
 } from 'es-toolkit';
 
 import { LEVELS } from '~/shared/consts';
-import { DEFAULT_EFFECT_CHANGE_PRIORITY } from '~active-effects/model';
+import {
+  DEFAULT_EFFECT_CHANGE_PRIORITY,
+  EFFECT_ACTIVATION_MODE,
+  evaluateFormula,
+} from '~active-effects/model';
 import {
   CasterType,
   FULL_CASTER_SPELL_SLOTS,
@@ -192,7 +202,13 @@ import {
   EMPTY_MAGIC_ITEM_BONUSES,
   MAGIC_ITEM_BONUS_NONE,
 } from '~magic-items/model';
-import { DAMAGE_TYPE_LABELS } from '~ui/damage-formula';
+import {
+  DAMAGE_FORMULA_TYPE_CHOICE_TOKEN_SOURCE,
+  DAMAGE_TYPE_LABELS,
+  describeDamageFormulaStatusToken,
+  readDamageFormulaStatusToken,
+  readDamageFormulaTypeChoices,
+} from '~ui/damage-formula';
 import {
   getNodeText,
   isBlockNode,
@@ -262,10 +278,13 @@ import {
   CREATURE_TYPE_LABELS,
   CURRENCY_AMOUNT_MAX,
   CURRENCY_AMOUNT_MIN,
+  CURRENCY_CHANGE_ORDER,
+  CURRENCY_COPPER_RATES,
   CURRENCY_GOLD_RATES,
   CURRENCY_KEYS_BY_LABEL,
   CURRENCY_LABELS,
   CURRENCY_ORDER,
+  CURRENCY_PRICE_ORDER,
   CUSTOM_ARMOR_TYPE_BY_DEXTERITY_MOD,
   CUSTOM_ARMOR_TYPE_META,
   CUSTOM_BACKGROUND_URL_PREFIX,
@@ -325,10 +344,12 @@ import {
   FILTER_CHIP_SELECTED_CLASS,
   GENERAL_FEAT_CATEGORY,
   HEAVY_WEAPON_ABILITY_MINIMUM,
+  HEAVY_WEAPON_RIDER_EFFECT_IDS,
   HIT_DICE_ROLL_COUNT,
   HIT_POINTS_LEVEL_GAIN_MIN,
   INNATE_SPELL_REMOVE_MENU_LABEL,
   INVENTORY_ACTIVE_MENU_LABELS,
+  INVENTORY_ATTACK_ABILITY_MENU_LABEL,
   INVENTORY_ATTUNEMENT_MENU_LABELS,
   INVENTORY_BONUS_GROUP_LABELS,
   INVENTORY_BONUS_LABELS,
@@ -343,8 +364,11 @@ import {
   INVENTORY_GRIP_MENU_LABELS,
   INVENTORY_QUANTITY_MAX,
   INVENTORY_QUANTITY_MIN,
+  INVENTORY_QUANTITY_UNIT_LABEL,
   INVENTORY_REMOVE_MENU_LABEL,
   INVENTORY_RESTORE_CHARGES_MENU_LABEL,
+  INVENTORY_SALE_PRICE_RATIO,
+  INVENTORY_SELL_MENU_LABEL,
   ITEM_BONUS_MAX,
   ITEM_BONUS_MIN,
   ITEM_BONUS_VALUE_MAX,
@@ -411,6 +435,7 @@ import {
   SHEET_DOWNLOAD_JSON_LABEL,
   SHEET_DOWNLOAD_PDF_HINT,
   SHEET_DOWNLOAD_PDF_LABEL,
+  SHEET_EDIT_ACCESS_LABELS,
   SHEET_FEAT_CHOICE_LABELS,
   SHEET_PDF_MIME_TYPE,
   SHEET_PERSONALITY_LABELS,
@@ -436,8 +461,12 @@ import {
   SPEED_UNIT_SHORT_LABELS,
   SPEED_VALUE_MAX,
   SPEED_VALUE_MIN,
+  SPELL_CASTING_BEYOND_TURN_KIND,
+  SPELL_CASTING_KIND_ORDER,
+  SPELL_CASTING_TEXT_PATTERNS,
   SPELL_DAMAGE_ABILITY_MODIFIER_TAG,
   SPELL_DAMAGE_CONDITION_TAG_LABELS,
+  SPELL_DAMAGE_TYPE_CHOICE_PREFIX,
   SPELL_DAMAGE_TYPE_SEPARATOR,
   SPELL_DAMAGE_TYPE_TAG_LABELS,
   SPELL_DAMAGE_TYPE_TAG_PREFIX,
@@ -461,6 +490,7 @@ import {
   VISION_ORDER,
   VISION_UNLIMITED_LABEL,
   WEAPON_CATEGORY_LABELS,
+  WEAPON_DAMAGE_TYPE_TOKEN,
   WEAPON_MASTERY_PROPERTY_NAMES,
   WEAPON_MATCH_KEYWORDS,
   WEAPON_NAMES_BY_MASTERY_PROPERTY_NAME,
@@ -479,7 +509,9 @@ import {
 } from './effect-engine';
 import {
   getEffectBonusTarget,
+  getWeaponDamageChangeKeys,
   isSelfAppliedEffect,
+  matchesAttackAbilityCondition,
   parseEffectValue,
   toInventoryBonusesFromEffects,
 } from './effects';
@@ -2355,6 +2387,7 @@ export function buildInventoryItem(
     weapon: summary.weapon,
     equipped: false,
     twoHanded: false,
+    attackAbility: null,
     // Влияние предмета на лист мастерская описывает активными эффектами — теми
     // же, что у магического предмета: лист берёт из них числовые изменения.
     bonuses: toInventoryBonusesFromEffects(summary.activeEffects),
@@ -2395,6 +2428,227 @@ export function parseItemCostInGold(costText: string): number | null {
   return Number.isFinite(amount)
     ? amount * CURRENCY_GOLD_RATES[currencyKey]
     : null;
+}
+
+/**
+ * Стоимость в медных монетах из подписи справочника («10 зм» → 1000).
+ *
+ * @param costText подпись стоимости из ответа API.
+ * @returns стоимость в медных; null — подпись не распознана или пуста.
+ */
+export function parseItemCostInCopper(costText: string): number | null {
+  const gold = parseItemCostInGold(costText);
+
+  return gold === null ? null : Math.round(gold * CURRENCY_COPPER_RATES.gold);
+}
+
+/**
+ * Суммарная стоимость покупки в медных монетах: цена штуки на количество по
+ * каждой позиции. Предметы с нераспознанной или пустой ценой бесплатны.
+ *
+ * @param purchaseLines позиции покупки: подпись цены штуки и количество.
+ * @returns сумма в медных монетах.
+ */
+export function getPurchaseCostInCopper(
+  purchaseLines: Array<Pick<ItemPurchaseLine, 'cost' | 'quantity'>>,
+): number {
+  return purchaseLines.reduce(
+    (sum, purchaseLine) =>
+      sum
+      + (parseItemCostInCopper(purchaseLine.cost) ?? 0) * purchaseLine.quantity,
+    0,
+  );
+}
+
+/**
+ * Все стандартные монеты кошелька, пересчитанные в медные.
+ *
+ * @param currency кошелёк персонажа.
+ * @returns сумма в медных монетах.
+ */
+export function getCurrencyInCopper(currency: CharacterCurrency): number {
+  return CURRENCY_ORDER.reduce(
+    (sum, key) => sum + currency[key] * CURRENCY_COPPER_RATES[key],
+    0,
+  );
+}
+
+/**
+ * Раскладка суммы в медных на монеты: от крупной к мелкой, каждой — сколько
+ * помещается целиком.
+ *
+ * @param copperAmount сумма в медных монетах.
+ * @param order монеты раскладки от крупной к мелкой; последней должна быть медь.
+ * @returns количества монет; монет вне `order` — ноль.
+ */
+function splitCopperIntoCoins(
+  copperAmount: number,
+  order: CurrencyKey[],
+): CharacterCurrency {
+  const coins: CharacterCurrency = {
+    copper: 0,
+    silver: 0,
+    electrum: 0,
+    gold: 0,
+    platinum: 0,
+  };
+
+  let remainingCopper = copperAmount;
+
+  for (const key of order) {
+    const count = Math.floor(remainingCopper / CURRENCY_COPPER_RATES[key]);
+
+    coins[key] = count;
+    remainingCopper -= count * CURRENCY_COPPER_RATES[key];
+  }
+
+  return coins;
+}
+
+/**
+ * Оплата покупки из кошелька. Сначала платим монетами от крупной к мелкой без
+ * сдачи; если без сдачи не выходит (мелочи не хватило), разменивается самая
+ * мелкая из оставшихся монет, которая покрывает остаток, а сдача приходит
+ * платиной, золотом, серебром и медью — как размен у торговца по правилам.
+ *
+ * @param currency кошелёк персонажа.
+ * @param costInCopper стоимость покупки в медных монетах.
+ * @returns кошелёк после оплаты; null — денег не хватает.
+ */
+export function spendCurrency(
+  currency: CharacterCurrency,
+  costInCopper: number,
+): CharacterCurrency | null {
+  if (costInCopper > getCurrencyInCopper(currency)) {
+    return null;
+  }
+
+  const wallet: CharacterCurrency = { ...currency };
+
+  let remainingCost = costInCopper;
+
+  for (const key of CURRENCY_ORDER.toReversed()) {
+    const rate = CURRENCY_COPPER_RATES[key];
+    const used = Math.min(wallet[key], Math.floor(remainingCost / rate));
+
+    wallet[key] -= used;
+    remainingCost -= used * rate;
+  }
+
+  if (remainingCost === 0) {
+    return wallet;
+  }
+
+  // Оставшиеся монеты каждого номинала дороже остатка: жадный проход забрал
+  // всё, что в него помещалось. Денег хватает, значит такая монета есть.
+  const brokenKey = CURRENCY_ORDER.find((key) => wallet[key] > 0);
+
+  if (!brokenKey) {
+    return null;
+  }
+
+  wallet[brokenKey] -= 1;
+
+  const change = splitCopperIntoCoins(
+    CURRENCY_COPPER_RATES[brokenKey] - remainingCost,
+    CURRENCY_CHANGE_ORDER,
+  );
+
+  return {
+    copper: wallet.copper + change.copper,
+    silver: wallet.silver + change.silver,
+    electrum: wallet.electrum + change.electrum,
+    gold: wallet.gold + change.gold,
+    platinum: wallet.platinum + change.platinum,
+  };
+}
+
+/**
+ * Подпись суммы в медных монетах золотом, серебром и медью («12 зм 5 см»).
+ *
+ * @param copperAmount сумма в медных монетах.
+ * @returns подпись суммы; нулевая сумма — «0 зм».
+ */
+export function getCopperAmountLabel(copperAmount: number): string {
+  const coins = splitCopperIntoCoins(copperAmount, CURRENCY_PRICE_ORDER);
+
+  const parts = CURRENCY_PRICE_ORDER.filter((key) => coins[key] > 0).map(
+    (key) => `${coins[key]} ${CURRENCY_LABELS[key].toLowerCase()}`,
+  );
+
+  return parts.length
+    ? parts.join(' ')
+    : `0 ${CURRENCY_LABELS.gold.toLowerCase()}`;
+}
+
+/**
+ * Выручка за продажу предмета в медных монетах: цена справочника за каждую
+ * штуку в наличии.
+ *
+ * @param inventoryItem продаваемый предмет снаряжения.
+ * @returns выручка в медных; null — продавать нечего (цены нет или она не
+ * распознана, либо предмета нет в наличии).
+ */
+export function getInventoryItemSalePriceInCopper(
+  inventoryItem: CharacterInventoryItem,
+): number | null {
+  const unitPrice = parseItemCostInCopper(inventoryItem.cost);
+
+  if (!unitPrice || isMissingInventoryItem(inventoryItem)) {
+    return null;
+  }
+
+  return unitPrice * inventoryItem.quantity;
+}
+
+/**
+ * Пополнение кошелька суммой в медных: она приходит золотом, серебром и
+ * медью — теми же монетами, которыми справочник задаёт цены.
+ *
+ * @param currency кошелёк персонажа.
+ * @param copperAmount пополнение в медных монетах.
+ * @returns кошелёк после пополнения.
+ */
+export function addCopperToCurrency(
+  currency: CharacterCurrency,
+  copperAmount: number,
+): CharacterCurrency {
+  const income = splitCopperIntoCoins(copperAmount, CURRENCY_PRICE_ORDER);
+
+  return {
+    copper: currency.copper + income.copper,
+    silver: currency.silver + income.silver,
+    electrum: currency.electrum + income.electrum,
+    gold: currency.gold + income.gold,
+    platinum: currency.platinum + income.platinum,
+  };
+}
+
+/**
+ * Цена продажи по умолчанию: по правилам снаряжение сбывают за полцены.
+ *
+ * @param fullPrice цена справочника за всё количество в медных монетах.
+ * @returns цена продажи в медных монетах.
+ */
+export function getDefaultSalePriceInCopper(fullPrice: number): number {
+  return Math.round(fullPrice * INVENTORY_SALE_PRICE_RATIO);
+}
+
+/**
+ * Текст окна продажи предмета: что уйдёт из снаряжения.
+ *
+ * @param inventoryItem продаваемый предмет снаряжения.
+ * @returns описание для окна продажи.
+ */
+export function getInventorySellDescription(
+  inventoryItem: CharacterInventoryItem,
+): string {
+  const quantityLabel =
+    inventoryItem.quantity > 1
+      ? ` (${inventoryItem.quantity} ${INVENTORY_QUANTITY_UNIT_LABEL})`
+      : '';
+
+  return `«${inventoryItem.name}»${quantityLabel} уйдёт из снаряжения, а выручка — в кошелёк.`;
 }
 
 /**
@@ -2571,6 +2825,7 @@ export function buildMagicItemInventoryItem(
     ),
     equipped: false,
     twoHanded: false,
+    attackAbility: null,
     // Остальное влияние на лист мастерская описывает активными эффектами: лист
     // берёт из них числовые изменения своих значений.
     bonuses: toInventoryBonusesFromEffects(summary?.activeEffects ?? []),
@@ -2669,6 +2924,7 @@ export function buildStartingEquipmentItem(
       weapon: null,
       equipped: false,
       twoHanded: false,
+      attackAbility: null,
       bonuses: [],
       ...DEFAULT_INVENTORY_MAGIC_STATE,
     };
@@ -2692,6 +2948,7 @@ export function buildStartingEquipmentItem(
     weapon: null,
     equipped: false,
     twoHanded: false,
+    attackAbility: null,
     // Пассивные бонусы есть только у своих предметов: их задаёт форма листа.
     bonuses: [],
     ...DEFAULT_INVENTORY_MAGIC_STATE,
@@ -3627,6 +3884,7 @@ export function toCustomInventoryItem(
     // Хват начинается с одной руки: взять универсальное оружие двумя предлагает
     // меню предмета, а правку хвата сохраняет `toUpdatedCustomInventoryItem`.
     twoHanded: false,
+    attackAbility: null,
     bonuses: getCustomInventoryBonuses(draft),
     // Включение и настройка — состояние игрока, форма задаёт только само
     // требование настройки и запас зарядов; свежий предмет заряжен полностью.
@@ -3657,6 +3915,26 @@ function withKeptVersatileGrip(
   }
 
   return { ...updatedItem, twoHanded: editedItem.twoHanded };
+}
+
+/**
+ * Возврат выбранной характеристики атаки правленому предмету: её игрок задаёт в
+ * окне броска, и правка описания серпа не должна возвращать его к Силе.
+ * Переставший быть оружием предмет выбор теряет: атаковать им больше нечем.
+ *
+ * @param updatedItem предмет, собранный из значений формы.
+ * @param editedItem предмет до правки.
+ * @returns предмет с сохранённой характеристикой атаки.
+ */
+function withKeptAttackAbility(
+  updatedItem: CharacterInventoryItem,
+  editedItem: CharacterInventoryItem,
+): CharacterInventoryItem {
+  if (!updatedItem.weapon) {
+    return updatedItem;
+  }
+
+  return { ...updatedItem, attackAbility: editedItem.attackAbility };
 }
 
 /**
@@ -3715,7 +3993,10 @@ export function toUpdatedCustomInventoryItem(
 
   const updatedItem = draftItem
     ? withKeptMagicState(
-        withKeptVersatileGrip(draftItem, editedItem),
+        withKeptAttackAbility(
+          withKeptVersatileGrip(draftItem, editedItem),
+          editedItem,
+        ),
         editedItem,
       )
     : null;
@@ -4311,22 +4592,18 @@ function getArmorClassWithItemLimits(
 }
 
 /**
- * Токен формулы эффекта — число или переменная листа.
+ * Значение переменной листа в формуле эффекта.
  *
  * @param character персонаж.
- * @param token токен формулы в нижнем регистре.
+ * @param token токен переменной в нижнем регистре.
  * @param classLevel уровень в классе, выдавшем эффект, — значение `@classLevel`.
- * @returns число; null — переменная листу незнакома.
+ * @returns число; undefined — переменная листу незнакома.
  */
-function evaluateEffectFormulaToken(
+function getEffectFormulaVariable(
   character: Character,
   token: string,
   classLevel: number,
-): number | null {
-  if (/^\d+$/.test(token)) {
-    return Number(token);
-  }
-
+): number | undefined {
   if (token === RESOURCE_FORMULA_PROFICIENCY) {
     return getCharacterProficiencyBonus(character);
   }
@@ -4345,21 +4622,22 @@ function evaluateEffectFormulaToken(
         token.slice(RESOURCE_FORMULA_ABILITY_PREFIX.length)
       ];
 
-    return ability ? getAbilityModifier(character, ability) : null;
+    return ability ? getAbilityModifier(character, ability) : undefined;
   }
 
-  return null;
+  return undefined;
 }
 
 /**
- * Значение формулы эффекта числом: сумма слагаемых, каждое — число или
- * переменная листа (`@prof`, `@level`, `@classLevel`, `@mod.<аббревиатура>`) с
- * множителем.
+ * Значение формулы эффекта числом: арифметика со скобками и функциями (`max`,
+ * `min`, `floor`, `ceil`) над числами и переменными листа (`@prof`, `@level`,
+ * `@classLevel`, `@mod.` с аббревиатурой характеристики).
  *
- * Грамматика та же, что у максимума ресурса, только слагаемых сколько угодно:
- * «Защита без доспехов» пишется как `10+@mod.dex+@mod.con`. Незнакомая
- * переменная (`@mod.spell`, кость) делает формулу непонятной целиком — лист
- * лучше не применит эффект, чем применит его с нулём вместо слагаемого.
+ * Разбор общий с редактором эффектов, поэтому лист читает формулу так же, как
+ * VTTG: «Защита без доспехов» — `10+@mod.dex+@mod.con`, «Аура защиты» —
+ * `max(1, @mod.cha)`. Незнакомая переменная (`@mod.spell`, кость) делает
+ * формулу непонятной целиком — лист лучше не применит эффект, чем применит
+ * его с нулём вместо слагаемого.
  *
  * @param character персонаж.
  * @param formula значение изменения эффекта.
@@ -4373,39 +4651,11 @@ function evaluateEffectFormula(
   formula: string,
   classLevel: number = character.level,
 ): number | null {
-  const compact = formula.toLowerCase().replaceAll(/\s+/g, '');
-
-  if (!compact) {
-    return null;
-  }
-
-  const terms = compact.match(/[+-]?[^+-]+/g);
-
-  if (!terms) {
-    return null;
-  }
-
-  let total = 0;
-
-  for (const term of terms) {
-    const sign = term.startsWith('-') ? -1 : 1;
-
-    let product = 1;
-
-    for (const factor of term.replace(/^[+-]/, '').split('*')) {
-      const value = evaluateEffectFormulaToken(character, factor, classLevel);
-
-      if (value === null) {
-        return null;
-      }
-
-      product *= value;
-    }
-
-    total += sign * product;
-  }
-
-  return total;
+  return (
+    evaluateFormula(formula.toLowerCase(), (variableToken) =>
+      getEffectFormulaVariable(character, variableToken, classLevel),
+    ) ?? null
+  );
 }
 
 /**
@@ -4834,14 +5084,16 @@ export function isProficientWeapon(
  * @param character персонаж.
  * @param weapon параметры оружия.
  * @param isProficient персонаж владеет этим оружием.
+ * @param attackAbility характеристика, выбранная у предмета; null — по правилам.
  * @returns бонус атаки и использованная характеристика.
  */
 export function getWeaponAttackBonus(
   character: Character,
   weapon: InventoryWeapon,
   isProficient: boolean,
+  attackAbility: AbilityKey | null,
 ): WeaponAttack {
-  const ability = getWeaponAbility(character, weapon);
+  const ability = getWeaponAbility(character, weapon, attackAbility);
 
   const proficiencyBonus = isProficient
     ? getCharacterProficiencyBonus(character)
@@ -4912,6 +5164,28 @@ export function getWeaponAttackRollMode(attack: WeaponAttack): RollMode {
 }
 
 /**
+ * Источник помехи атаки по правилам оружия: тяжёлое оружие не по руке. Окно
+ * атаки показывает его рядом с источниками из эффектов.
+ *
+ * @param attack разбор бонуса атаки оружием.
+ * @returns источник помехи; пустой список — оружие по руке.
+ */
+export function getWeaponAttackRollModeSources(
+  attack: WeaponAttack,
+): RollModeSource[] {
+  if (!attack.heavyAbility) {
+    return [];
+  }
+
+  return [
+    {
+      label: getHeavyWeaponHint(attack.heavyAbility),
+      mode: 'disadvantage',
+    },
+  ];
+}
+
+/**
  * Подсказка помехи от свойства «Тяжёлое»: называет характеристику, которой не
  * хватает, — сам значок «Помеха» о причине не говорит.
  *
@@ -4923,16 +5197,16 @@ export function getHeavyWeaponHint(ability: AbilityKey): string {
 }
 
 /**
- * Характеристика конкретного оружия: дальнобойное бьёт от Ловкости,
+ * Характеристика оружия по правилам: дальнобойное бьёт от Ловкости,
  * фехтовальное — от лучшей из Ловкости и базовой характеристики атаки (по
  * правилам игрок выбирает между Силой и Ловкостью), остальное — от базовой
  * характеристики из настроек листа.
  *
  * @param character персонаж.
  * @param weapon параметры оружия.
- * @returns характеристика атаки и урона этим оружием.
+ * @returns характеристика атаки и урона этим оружием по правилам.
  */
-function getWeaponAbility(
+export function getWeaponRulesAbility(
   character: Character,
   weapon: InventoryWeapon,
 ): AbilityKey {
@@ -4949,20 +5223,167 @@ function getWeaponAbility(
 }
 
 /**
- * Бросок урона оружием: кости из справочника, собственный бонус оружия и
- * модификатор той же характеристики, что и у атаки. Универсальное оружие, взятое
+ * Характеристика конкретного оружия: выбранная игроком в окне атаки, а без
+ * выбора — по правилам.
+ *
+ * @param character персонаж.
+ * @param weapon параметры оружия.
+ * @param attackAbility характеристика, выбранная у предмета; null — по правилам.
+ * @returns характеристика атаки и урона этим оружием.
+ */
+function getWeaponAbility(
+  character: Character,
+  weapon: InventoryWeapon,
+  attackAbility: AbilityKey | null,
+): AbilityKey {
+  return attackAbility ?? getWeaponRulesAbility(character, weapon);
+}
+
+/**
+ * Прибавка к урону оружия от активных эффектов листа: умений и черт («Дуэлянт»,
+ * «Ярость»), надетого снаряжения и своих эффектов игрока.
+ *
+ * Берутся изменения режима «добавить» с числом или формулой листа — без
+ * условия либо с условием о характеристике удара. Кость («1к6») и условие о
+ * цели остаются броску за виртуальным столом: посчитать их листу нечем.
+ *
+ * Считается по самим эффектам, а не по снимку бонусов записи: так прибавку
+ * получают и листы, где черта взята раньше, чем лист научился её читать.
+ *
+ * @param character персонаж.
+ * @param weapon параметры оружия.
+ * @param ability характеристика атаки этим оружием.
+ * @returns суммарная прибавка; 0 — подходящих эффектов нет.
+ */
+function getWeaponDamageEffectBonus(
+  character: Character,
+  weapon: InventoryWeapon,
+  ability: AbilityKey,
+): number {
+  const damageKeys = getWeaponDamageChangeKeys(weapon.ranged);
+
+  return getEffectCarriers(character).reduce(
+    (total, { effects, classLevel }) =>
+      effects
+        .filter(isSelfAppliedEffect)
+        .flatMap((effect) => effect.changes)
+        .filter(
+          (change) =>
+            change.mode === 'add'
+            && damageKeys.includes(change.key)
+            && (!change.condition
+              || matchesAttackAbilityCondition(change.condition, ability)),
+        )
+        .reduce(
+          (carrierTotal, change) =>
+            carrierTotal
+            + (evaluateEffectFormula(character, change.value, classLevel) ?? 0),
+          total,
+        ),
+    0,
+  );
+}
+
+/**
+ * Величина прибавки «по применению» числом: сумма частей урона эффекта.
+ *
+ * Прибавкой к удару оружием считается эффект, у которого каждая часть урона
+ * идёт типом оружия и считается листом числом («бонус мастерства»). Кость, свой
+ * тип урона и лечение дают null: это отдельный бросок, а не слагаемое удара.
+ *
+ * @param character персонаж.
+ * @param effect активный эффект записи.
+ * @param classLevel уровень в классе записи-носителя — значение `@classLevel`.
+ * @returns прибавка к урону; null — эффект не прибавка к удару оружием.
+ */
+function getWeaponDamageRiderBonus(
+  character: Character,
+  effect: ActiveEffect,
+  classLevel: number,
+): number | null {
+  const damageParts = effect.damageParts ?? [];
+
+  if (!damageParts.length) {
+    return null;
+  }
+
+  let total = 0;
+
+  for (const damagePart of damageParts) {
+    const formula = damagePart.formula.trim();
+
+    const value = formula.endsWith(WEAPON_DAMAGE_TYPE_TOKEN)
+      ? evaluateEffectFormula(
+          character,
+          formula.slice(0, -WEAPON_DAMAGE_TYPE_TOKEN.length),
+          classLevel,
+        )
+      : null;
+
+    if (value === null) {
+      return null;
+    }
+
+    total += value;
+  }
+
+  return total;
+}
+
+/**
+ * Прибавки к урону оружия «по применению»: эффекты умений и черт, которые
+ * за виртуальным столом накладывают на цель после попадания («Мастерство
+ * тяжёлого оружия» — урон, равный бонусу мастерства). Цели у листа нет, поэтому
+ * такая прибавка предлагается галочкой в окне броска урона.
+ *
+ * Эффект берётся и выключенным: «по применению» он выключен всегда — включает
+ * его само применение.
+ *
+ * @param character персонаж.
+ * @param weapon параметры оружия.
+ * @returns прибавки, подходящие этому оружию; пустой список — их нет.
+ */
+export function getWeaponDamageRiders(
+  character: Character,
+  weapon: InventoryWeapon,
+): WeaponDamageRider[] {
+  return getEffectCarriers(character).flatMap(({ effects, classLevel }) =>
+    effects
+      .filter(
+        (effect) =>
+          effect.activation?.mode === EFFECT_ACTIVATION_MODE.use
+          && effect.effectTarget === 'target'
+          && (weapon.heavy
+            || !HEAVY_WEAPON_RIDER_EFFECT_IDS.includes(effect.id)),
+      )
+      .map((effect) => ({
+        id: effect.id,
+        name: effect.name,
+        description: effect.description,
+        bonus: getWeaponDamageRiderBonus(character, effect, classLevel) ?? 0,
+      }))
+      .filter((rider) => rider.bonus > 0),
+  );
+}
+
+/**
+ * Бросок урона оружием: кости из справочника, собственный бонус оружия,
+ * прибавки активных эффектов и модификатор той же характеристики, что и у
+ * атаки. Универсальное оружие, взятое
  * двумя руками, катит свой второй бросок — кость у него больше. Использует
  * ASCII-минус — формула уходит в парсер дайс-роллера.
  *
  * @param character персонаж.
  * @param weapon параметры оружия.
  * @param twoHanded оружие взято двумя руками (свойство «Универсальное»).
+ * @param attackAbility характеристика, выбранная у предмета; null — по правилам.
  * @returns разбор броска урона или null, если справочник не дал костей урона.
  */
 export function getWeaponDamage(
   character: Character,
   weapon: InventoryWeapon,
   twoHanded: boolean,
+  attackAbility: AbilityKey | null,
 ): WeaponDamage | null {
   // Хват двумя руками без второго броска ничего не меняет: оружие катит свой
   // обычный урон.
@@ -4972,7 +5393,7 @@ export function getWeaponDamage(
     return null;
   }
 
-  const ability = getWeaponAbility(character, weapon);
+  const ability = getWeaponAbility(character, weapon, attackAbility);
 
   const diceNotation = `${damage.diceCount}${DICE_NOTATION_LETTER}${damage.diceFaces}`;
 
@@ -4989,7 +5410,10 @@ export function getWeaponDamage(
     ? `${diceNotation}+${extraNotation}`
     : diceNotation;
 
-  const totalBonus = damage.bonus + getAbilityModifier(character, ability);
+  const effectBonus = getWeaponDamageEffectBonus(character, weapon, ability);
+
+  const totalBonus =
+    damage.bonus + effectBonus + getAbilityModifier(character, ability);
 
   const sign = totalBonus < 0 ? '-' : '+';
 
@@ -5000,6 +5424,7 @@ export function getWeaponDamage(
         : `${diceFormula}${sign}${Math.abs(totalBonus)}`,
     diceNotation,
     weaponBonus: damage.bonus,
+    effectBonus,
     ability,
     typeLabel: DAMAGE_TYPE_LABELS[damage.type] ?? '',
     extraNotation,
@@ -5017,14 +5442,16 @@ export function getWeaponDamage(
  * @param character персонаж.
  * @param weapon параметры оружия.
  * @param twoHanded оружие взято двумя руками (свойство «Универсальное»).
+ * @param attackAbility характеристика, выбранная у предмета; null — по правилам.
  * @returns данные броска или null, если справочник не дал костей урона.
  */
 export function getWeaponDamageSource(
   character: Character,
   weapon: InventoryWeapon,
   twoHanded: boolean,
+  attackAbility: AbilityKey | null,
 ): DamageRollSource | null {
-  const damage = getWeaponDamage(character, weapon, twoHanded);
+  const damage = getWeaponDamage(character, weapon, twoHanded, attackAbility);
 
   if (!damage) {
     return null;
@@ -5042,6 +5469,8 @@ export function getWeaponDamageSource(
       ? `${damage.diceNotation}+${damage.extraNotation}`
       : damage.diceNotation,
     flatBonus: damage.weaponBonus,
+    effectBonus: damage.effectBonus,
+    riders: getWeaponDamageRiders(character, weapon),
     ability: damage.ability,
     // Модификатор характеристики входит в урон оружия ровно один раз.
     abilityModifierCount: 1,
@@ -5526,6 +5955,10 @@ function getTotalLevelHitPoints(gains: CharacterLevelHitPoints[]): number {
  * текущие хиты растут на его сумму. Номер уровня в записи — общий уровень
  * персонажа после взятия, класс — чей это уровень.
  *
+ * Потолка у текущих хитов здесь нет: итоговый максимум выше записанного на
+ * прибавки, и знает его только лист целиком — обрезает
+ * {@link withSettledCurrentHitPoints}.
+ *
  * @param health здоровье персонажа.
  * @param previousLevel общий уровень до повышения.
  * @param gains прирост максимума хитов за каждый взятый уровень по порядку.
@@ -5546,12 +5979,10 @@ export function applyLevelHitPoints(
 
   const total = getTotalLevelHitPoints(addedGains);
 
-  const max = health.max + total;
-
   return {
     ...health,
-    max,
-    current: clamp(health.current + total, 0, max),
+    max: health.max + total,
+    current: Math.max(0, health.current + total),
     levelGains,
   };
 }
@@ -5605,8 +6036,10 @@ export function getLevelHitPointsLoss(
 
 /**
  * Снятие хитов за снимаемые уровни классов: максимум уменьшается на записанный
- * за них прирост, записи удаляются, текущие хиты обрезаются новым максимумом.
- * Уровни без записи максимум не двигают.
+ * за них прирост, записи удаляются. Уровни без записи максимум не двигают.
+ *
+ * Текущие хиты здесь не трогаются: обрезать их нужно итоговым максимумом, а не
+ * записанным, — это делает {@link withSettledCurrentHitPoints}.
  *
  * @param health здоровье персонажа.
  * @param removedByClass сколько уровней снимается у каждого класса.
@@ -5626,12 +6059,9 @@ export function removeLevelHitPoints(
 
   const loss = getTotalLevelHitPoints([...removed]);
 
-  const max = Math.max(0, health.max - loss);
-
   return {
     ...health,
-    max,
-    current: clamp(health.current, 0, max),
+    max: Math.max(0, health.max - loss),
     levelGains,
   };
 }
@@ -5678,6 +6108,9 @@ export function shiftClassHitDice(
  * максимум и текущие хиты на разницу, умноженную на уровень. Незаполненное
  * здоровье (нулевой максимум) не трогается — прибавлять не к чему.
  *
+ * Потолок текущих хитов ставит {@link withSettledCurrentHitPoints}: итоговый
+ * максимум выше записанного на прибавки, и здесь он неизвестен.
+ *
  * @param health здоровье персонажа.
  * @param level уровень персонажа.
  * @param previousScore прежнее значение Телосложения.
@@ -5698,12 +6131,10 @@ export function adjustHealthForConstitution(
     return health;
   }
 
-  const max = Math.max(HIT_POINTS_LEVEL_GAIN_MIN, health.max + delta);
-
   return {
     ...health,
-    max,
-    current: clamp(health.current + delta, 0, max),
+    max: Math.max(HIT_POINTS_LEVEL_GAIN_MIN, health.max + delta),
+    current: Math.max(0, health.current + delta),
     // Модификатор входит в прирост каждого уровня, поэтому записи двигаются
     // вместе с максимумом: иначе снижение уровня вернуло бы устаревшую сумму.
     levelGains: health.levelGains.map((gain) => ({
@@ -5820,6 +6251,59 @@ export function getMaxHitPointsHint(character: Character): string | null {
   return getMaxHitPointsBreakdown(character)
     .map((part) => `${part.label} ${part.formattedValue}`)
     .join(' · ');
+}
+
+/**
+ * Прибавка к записанному максимуму хитов: всё, что итоговый максимум набирает
+ * сверх него, — поправка на итоговое Телосложение и адресные бонусы.
+ *
+ * @param character персонаж.
+ * @returns разница между итоговым и записанным максимумом хитов.
+ */
+function getMaxHitPointsBonus(character: Character): number {
+  return getMaxHitPoints(character) - character.health.max;
+}
+
+/**
+ * Доведение текущих хитов до итогового максимума после изменения листа.
+ *
+ * Записанный максимум двигают сами операции (уровень, черта, правка
+ * Телосложения), и текущие хиты идут за ним там же. Но итоговый максимум выше
+ * записанного на прибавки, а они меняются вместе с листом: повышение
+ * характеристик поднимает Телосложение эффектом, новый уровень добавляет
+ * прибавке ещё один хит. Здесь текущие хиты сдвигаются на изменение этой
+ * прибавки и обрезаются итоговым максимумом — иначе здоровый персонаж терял бы
+ * хиты на каждом повышении уровня.
+ *
+ * Незаполненное здоровье (нулевой максимум) не трогается — как и в
+ * {@link getMaxHitPoints}.
+ *
+ * @param next лист после изменения.
+ * @param previous лист до изменения.
+ * @returns лист с текущими хитами в пределах итогового максимума.
+ */
+export function withSettledCurrentHitPoints(
+  next: Character,
+  previous: Character,
+): Character {
+  if (next.health.max <= 0) {
+    return next;
+  }
+
+  const bonusDelta =
+    getMaxHitPointsBonus(next) - getMaxHitPointsBonus(previous);
+
+  const current = clamp(
+    next.health.current + bonusDelta,
+    0,
+    getMaxHitPoints(next),
+  );
+
+  if (current === next.health.current) {
+    return next;
+  }
+
+  return { ...next, health: { ...next.health, current } };
 }
 
 /**
@@ -6086,6 +6570,19 @@ export function toClassResourceDraft(
     longRest: { ...resource.longRest },
     maxRule: resource.maxRule ? { ...resource.maxRule } : null,
   };
+}
+
+/**
+ * Свой ресурс игрока из формы — к записи в лист: ключ без пробелов по краям, а
+ * пустой не пишется вовсе — ресурс без ключа эффекты просто не тратят.
+ *
+ * @param draftResource черновик ресурса из формы.
+ * @returns ресурс для списка листа.
+ */
+export function toSavedClassResource(
+  draftResource: CharacterClassResource,
+): CharacterClassResource {
+  return { ...draftResource, key: draftResource.key?.trim() || undefined };
 }
 
 /** Целое число без знака — им записаны и своё число максимума, и множитель. */
@@ -6419,6 +6916,7 @@ function buildFeatResource(
 
   const base: CharacterClassResource = {
     id: `${FEAT_RESOURCE_ID_PREFIX}${feature.id}:${counter.key}`,
+    key: counter.key,
     name: counter.name,
     // Краткой подписи у ресурса может не быть — тогда её место в строке
     // панели заняло бы пустое поле; достраиваем из названия, как это
@@ -6426,8 +6924,9 @@ function buildFeatResource(
     shortLabel:
       counter.shortName
       || counter.name.slice(0, RESOURCE_SHORT_LABEL_MAX_LENGTH),
-    shortRest: getCounterShortRestRule(counter.recovery),
-    longRest: {
+    // Раздельные правила справочника главнее: без них — откат одним словом
+    shortRest: counter.shortRest ?? getCounterShortRestRule(counter.recovery),
+    longRest: counter.longRest ?? {
       // Короткий отдых в правилах короче продолжительного: ресурс,
       // восстанавливаемый коротким, продолжительным восстанавливается тоже.
       mode: 'all',
@@ -6587,6 +7086,30 @@ export function toEditedFeatResource(
 }
 
 /**
+ * Сколько зарядов ресурса справочника уже потрачено.
+ *
+ * Ресурс «появляется пустым» при первом появлении потрачен целиком: его
+ * набирают действием. Первым появлением считается и запись без зарядов —
+ * ресурс со ступенями лежит на листе с нулевым максимумом до своего уровня.
+ *
+ * @param counter счётчик из механики справочника.
+ * @param previousResource прежняя запись ресурса на листе; нет — ресурс новый.
+ * @param rebuiltMax максимум пересобранной записи.
+ * @returns число потраченных зарядов.
+ */
+function getFeatResourceSpent(
+  counter: FeatCounter,
+  previousResource: CharacterClassResource | undefined,
+  rebuiltMax: number,
+): number {
+  if (!previousResource || previousResource.max <= RESOURCE_COUNT_MIN) {
+    return counter.startsEmpty ? rebuiltMax : RESOURCE_COUNT_MIN;
+  }
+
+  return previousResource.max - previousResource.current;
+}
+
+/**
  * Ресурсы листа, согласованные с чертами.
  *
  * Записи черт пересобираются целиком — как свои бонусы инициативы
@@ -6628,7 +7151,7 @@ export function withFeatResources(
 
       // Потраченное считается от прежней записи: пересборка не должна
       // восполнять заряды, даже если максимум с тех пор вырос.
-      const spent = previous ? previous.max - previous.current : 0;
+      const spent = getFeatResourceSpent(counter, previous, resource.max);
 
       const rebuilt = {
         ...resource,
@@ -7201,21 +7724,68 @@ export function getSpellListLevels(
 /**
  * Проходит ли заклинание отбор вкладки: подготовленное — только помеченное
  * значком (врождённые заклинания помечены сразу, пока подготовку с них не
- * сняли, выданные заговоры — всегда), круг — любой из отобранных.
+ * сняли, выданные заговоры — всегда), круг — любой из отобранных, время
+ * накладывания — любое из отобранных.
  *
  * @param spell заклинание списка.
+ * @param castingKinds время накладывания заклинания; пусто — неизвестно.
  * @param filter отбор вкладки заклинаний.
  * @returns true — заклинание остаётся в списке.
  */
 export function matchesSpellFilter(
   spell: CharacterSpell,
+  castingKinds: SpellCastingKind[],
   filter: SpellTabFilter,
 ): boolean {
   if (filter.preparedOnly && !spell.prepared) {
     return false;
   }
 
+  if (
+    filter.castingKinds.length
+    && !castingKinds.some((kind) => filter.castingKinds.includes(kind))
+  ) {
+    return false;
+  }
+
   return !filter.levels.length || filter.levels.includes(spell.level);
+}
+
+/**
+ * Время накладывания без повторов и в порядке строки: действие, бонусное
+ * действие, реакция, дольше хода.
+ *
+ * @param kinds время накладывания в любом порядке, с повторами.
+ * @returns упорядоченное время накладывания.
+ */
+export function getOrderedSpellCastingKinds(
+  kinds: SpellCastingKind[],
+): SpellCastingKind[] {
+  return SPELL_CASTING_KIND_ORDER.filter((kind) => kinds.includes(kind));
+}
+
+/**
+ * Время накладывания своего заклинания по тексту поля: игрок вводит его руками
+ * («1 бонусное действие», «1 минута»), поэтому оно распознаётся по словам.
+ * Текст без знакомого слова — время дольше хода.
+ *
+ * @param castingTime текст времени накладывания; нет — не заполнено.
+ * @returns время накладывания; пусто — поле не заполнено.
+ */
+export function getCustomSpellCastingKinds(
+  castingTime: string | undefined,
+): SpellCastingKind[] {
+  const castingTimeText = castingTime?.trim();
+
+  if (!castingTimeText) {
+    return [];
+  }
+
+  const matchedPattern = SPELL_CASTING_TEXT_PATTERNS.find(({ pattern }) =>
+    pattern.test(castingTimeText),
+  );
+
+  return [matchedPattern?.kind ?? SPELL_CASTING_BEYOND_TURN_KIND];
 }
 
 /**
@@ -7738,11 +8308,22 @@ export function getSpellStatRows(spell: CharacterSpell): CustomSpellStatRow[] {
  */
 const SPELL_DAMAGE_VARIANT_SEPARATOR = ' + ';
 
-/** Тег формулы справочника: `@dmg.fire`, `@target.full`, `@mod.spell`. */
-const SPELL_FORMULA_TAG_PATTERN = /@[a-z]+(?:\.[a-z]+)*/gi;
+/**
+ * Исходник шаблона тега формулы справочника: `@dmg.fire`, `@target.full`,
+ * `@mod.spell`, `@target.status.prone`, `@dmg.choice(acid,cold)`. Тип на выбор
+ * и тег состояния идут первыми: общий шаблон оставил бы в костях хвост списка
+ * типов или ключа состояния с цифрами и дефисом.
+ */
+const SPELL_FORMULA_TAG_SOURCE = `${DAMAGE_FORMULA_TYPE_CHOICE_TOKEN_SOURCE}|@(?:self|target)\\.status\\.[a-z0-9][a-z0-9-]*|@[a-z]+(?:\\.[a-z]+)*`;
+
+/** Тег формулы справочника. */
+const SPELL_FORMULA_TAG_PATTERN = new RegExp(SPELL_FORMULA_TAG_SOURCE, 'gi');
 
 /** Тег вместе с предшествующим плюсом — так его вырезают из формулы целиком. */
-const SPELL_FORMULA_TAG_WITH_SIGN_PATTERN = /\+?@[a-z]+(?:\.[a-z]+)*/gi;
+const SPELL_FORMULA_TAG_WITH_SIGN_PATTERN = new RegExp(
+  `\\+?(?:${SPELL_FORMULA_TAG_SOURCE})`,
+  'gi',
+);
 
 /** Латинское и русское обозначение кости в формуле справочника (`8d6`). */
 const SPELL_FORMULA_DICE_LETTER_PATTERN = /(\d)[dд](\d)/gi;
@@ -7764,6 +8345,9 @@ interface SpellDamageTags {
   /** Названия типов урона в порядке появления; пусто — тип не распознан. */
   typeLabels: string[];
 
+  /** Подписи типов урона на выбор: «На выбор: Кислотный/Холодный». */
+  typeChoiceLabels: string[];
+
   /** Формула помечена тегом типа урона (а не лечения). */
   hasDamageType: boolean;
 
@@ -7772,6 +8356,56 @@ interface SpellDamageTags {
 
   /** Сколько раз в формулу входит модификатор заклинательной характеристики. */
   abilityModifierCount: number;
+}
+
+/**
+ * Теги типов урона одного тега формулы: у обычного тега — он сам, у типа на
+ * выбор (`@dmg.choice(acid,cold)`) — теги всех типов списка: урон идёт одним
+ * из них, и подписываются все, как у формулы с несколькими типами.
+ *
+ * @param token тег формулы целиком, с приставкой `@`.
+ * @returns теги типов урона (`dmg.acid`); null — тег не про тип урона.
+ */
+function getSpellDamageTypeTags(token: string): string[] | null {
+  const [typeChoice] = readDamageFormulaTypeChoices(token);
+
+  if (typeChoice) {
+    return typeChoice.damageTypes.map(
+      (damageType) => `${SPELL_DAMAGE_TYPE_TAG_PREFIX}${damageType}`,
+    );
+  }
+
+  const tag = token.slice(1);
+
+  return tag.startsWith(SPELL_DAMAGE_TYPE_TAG_PREFIX) ? [tag] : null;
+}
+
+/**
+ * Подпись типа урона на выбор для подсказки плитки: «На выбор:
+ * Кислотный/Холодный» или «Случайно: …» — как в листе VTTG.
+ *
+ * @param token тег формулы целиком, с приставкой `@`.
+ * @returns подпись; '' — тег не про тип на выбор.
+ */
+function getSpellDamageTypeChoiceLabel(token: string): string {
+  const [typeChoice] = readDamageFormulaTypeChoices(token);
+
+  if (!typeChoice) {
+    return '';
+  }
+
+  const prefix = typeChoice.random
+    ? SPELL_DAMAGE_TYPE_CHOICE_PREFIX.random
+    : SPELL_DAMAGE_TYPE_CHOICE_PREFIX.choice;
+
+  const typeLabels = typeChoice.damageTypes.map(
+    (damageType) =>
+      SPELL_DAMAGE_TYPE_TAG_LABELS[
+        `${SPELL_DAMAGE_TYPE_TAG_PREFIX}${damageType}`
+      ] ?? damageType,
+  );
+
+  return `${prefix}${typeLabels.join(SPELL_DAMAGE_TYPE_SEPARATOR)}`;
 }
 
 /**
@@ -7785,6 +8419,7 @@ interface SpellDamageTags {
 function parseSpellDamageTags(formula: string): SpellDamageTags | null {
   const tags: SpellDamageTags = {
     typeLabels: [],
+    typeChoiceLabels: [],
     hasDamageType: false,
     conditionLabel: '',
     abilityModifierCount: 0,
@@ -7792,14 +8427,32 @@ function parseSpellDamageTags(formula: string): SpellDamageTags | null {
 
   for (const match of formula.matchAll(SPELL_FORMULA_TAG_PATTERN)) {
     const tag = match[0].slice(1);
+    const statusToken = readDamageFormulaStatusToken(match[0]);
+    const typeTags = getSpellDamageTypeTags(match[0]);
+    const typeChoiceLabel = getSpellDamageTypeChoiceLabel(match[0]);
 
-    if (tag.startsWith(SPELL_DAMAGE_TYPE_TAG_PREFIX)) {
+    // Состояние стороны — такое же условие формулы, как хиты цели
+    if (statusToken) {
+      tags.conditionLabel = upperFirst(
+        describeDamageFormulaStatusToken(statusToken),
+      );
+
+      continue;
+    }
+
+    if (typeTags) {
       tags.hasDamageType = true;
 
-      const typeLabel = SPELL_DAMAGE_TYPE_TAG_LABELS[tag];
+      if (typeChoiceLabel) {
+        tags.typeChoiceLabels.push(typeChoiceLabel);
+      }
 
-      if (typeLabel && !tags.typeLabels.includes(typeLabel)) {
-        tags.typeLabels.push(typeLabel);
+      for (const typeTag of typeTags) {
+        const typeLabel = SPELL_DAMAGE_TYPE_TAG_LABELS[typeTag];
+
+        if (typeLabel && !tags.typeLabels.includes(typeLabel)) {
+          tags.typeLabels.push(typeLabel);
+        }
       }
 
       continue;
@@ -7925,6 +8578,7 @@ export function getSpellDamage(
         diceNotation,
         abilityModifierCount: tags.abilityModifierCount,
         typeLabel: tags.typeLabels.join(SPELL_DAMAGE_TYPE_SEPARATOR),
+        typeChoiceLabels: tags.typeChoiceLabels,
         conditionLabel: tags.conditionLabel,
       };
     })
@@ -10247,9 +10901,13 @@ function applyFeatHitPoints(
     return health;
   }
 
-  const max = Math.max(0, health.max + delta);
-
-  return { ...health, max, current: clamp(health.current + delta, 0, max) };
+  // Потолок текущих хитов — итоговый максимум, а он известен только листу
+  // целиком: обрезает `withSettledCurrentHitPoints`.
+  return {
+    ...health,
+    max: Math.max(0, health.max + delta),
+    current: Math.max(0, health.current + delta),
+  };
 }
 
 /**
@@ -10964,22 +11622,26 @@ function withFeatProficiencyGrants(
  * Свои бонусы инициативы и записи журнала выдач пересобираются целиком — эти
  * части сверки идемпотентны.
  *
+ * Текущие хиты доводятся последним шагом: и уровень, и особенности меняют
+ * прибавку к максимуму хитов (повышение характеристик поднимает Телосложение
+ * эффектом), поэтому лист «до» нужен целиком.
+ *
  * Вызывать нужно везде, где меняется список особенностей или уровень.
  *
  * @param next лист после изменения.
- * @param previous особенности и уровень до изменения.
+ * @param previous лист до изменения.
  * @returns лист с согласованной прибавкой черт.
  */
 export function withFeatModifiers(
   next: Character,
-  previous: Pick<Character, 'features' | 'level'>,
+  previous: Character,
 ): Character {
   const proficiencyGrants = withFeatProficiencyGrants(
     next.proficiencyGrants,
     next.features,
   );
 
-  return {
+  const withModifiers: Character = {
     ...next,
     abilities: applyFeatAbilityIncreases(next.abilities, previous, next),
     health: applyFeatHitPoints(next.health, previous, next),
@@ -11010,6 +11672,8 @@ export function withFeatModifiers(
     ),
     classResources: withFeatResources(next.classResources, next.features, next),
   };
+
+  return withSettledCurrentHitPoints(withModifiers, previous);
 }
 
 /**
@@ -12878,6 +13542,8 @@ export function mergeClassResources(
 
     return {
       ...resource,
+      // Ключ книжный: листы, собранные до него, получают его пересборкой
+      key: next.key,
       name: next.name,
       shortLabel: next.shortLabel,
       max: next.max,
@@ -15619,14 +16285,19 @@ export interface SheetActionMenuOptions {
    * чужого листа и мест без управления доступом остаётся без лишнего действия.
    */
   onShare?: () => void;
+
+  /**
+   * Копия чужого листа, открытого по ссылке, к себе; не передан — у такого
+   * листа в меню только выгрузка. Доступность — по тому же `canDuplicate`.
+   */
+  onCopyShared?: () => void;
 }
 
 /**
  * Пункты меню действий над листом — общие для шапки открытого листа и карточки
  * в списке персонажей: экспорт, копия, доступ по ссылке и настройки одной
  * группой, удаление — отдельной, оно необратимее прочих. У листа, открытого по
- * ссылке, остаётся только выгрузка: сохранить его к себе зритель может кнопками
- * в шапке, а не отсюда.
+ * ссылке, остаётся выгрузка и, если передан `onCopyShared`, копия к себе.
  *
  * @param options доступность действий и обработчики пунктов.
  * @returns группы пунктов для `UDropdownMenu`.
@@ -15650,22 +16321,32 @@ export function getSheetActionMenuItems(
     onSelect: options.onDownload,
   };
 
+  /**
+   * Пункт копии листа.
+   *
+   * @param onSelect создание копии.
+   * @returns пункт меню.
+   */
+  const getCopyItem = (onSelect: () => void): DropdownMenuItem => ({
+    label: 'Создать копию',
+    icon: 'tabler:copy',
+    // Причина недоступности прямо в пункте: без неё серый пункт выглядит
+    // поломкой, а тултипа у пунктов меню нет.
+    description: options.canDuplicate ? undefined : SHEET_COPY_LIMIT_HINT,
+    disabled: !options.canDuplicate,
+    onSelect,
+  });
+
   if (options.isReadonly) {
-    return [[downloadPdf, download]];
+    return options.onCopyShared
+      ? [[downloadPdf, download, getCopyItem(options.onCopyShared)]]
+      : [[downloadPdf, download]];
   }
 
   const actions: DropdownMenuItem[] = [
     downloadPdf,
     download,
-    {
-      label: 'Создать копию',
-      icon: 'tabler:copy',
-      // Причина недоступности прямо в пункте: без неё серый пункт выглядит
-      // поломкой, а тултипа у пунктов меню нет.
-      description: options.canDuplicate ? undefined : SHEET_COPY_LIMIT_HINT,
-      disabled: !options.canDuplicate,
-      onSelect: options.onDuplicate,
-    },
+    getCopyItem(options.onDuplicate),
   ];
 
   if (options.onShare) {
@@ -15720,16 +16401,69 @@ export interface SavedSheetActionMenuOptions {
   /** Идёт сборка PDF: пункт показывает загрузку и не принимает повторный клик. */
   isPdfLoading?: boolean;
 
+  /**
+   * Право на редактирование листа; null — его не запрашивали. От него зависит
+   * пункт запроса: доступен, ждёт ответа или не нужен (право уже выдано).
+   */
+  editStatus: SheetEditStatus | null;
+
   onDownload: () => void;
   onDownloadPdf: () => void;
   onCopy: () => void;
+  onRequestEdit: () => void;
   onRemove: () => void;
+}
+
+/**
+ * Ключ карточки сохранённого листа в списке. Право на правки входит в ключ:
+ * карточка снимает режим (просмотр или правка) при монтировании, и смена права
+ * должна пересоздать её целиком.
+ *
+ * @param sheet сохранённый лист.
+ * @returns ключ для `v-for`.
+ */
+export function getSavedSheetCardKey(sheet: SavedCharacterSheet): string {
+  return `${sheet.shareToken}:${sheet.editStatus ?? 'NONE'}`;
+}
+
+/**
+ * Пункт запроса права на редактирование в меню сохранённого листа. С выданным
+ * правом пункта нет: карточка сама открывает лист на правку.
+ *
+ * @param editStatus право на редактирование; null — не запрашивалось.
+ * @param onRequestEdit отправка запроса.
+ * @returns пункт меню; null — пункт не нужен.
+ */
+function getRequestEditMenuItem(
+  editStatus: SheetEditStatus | null,
+  onRequestEdit: () => void,
+): DropdownMenuItem | null {
+  if (editStatus === 'APPROVED') {
+    return null;
+  }
+
+  if (editStatus === 'PENDING') {
+    return {
+      label: SHEET_EDIT_ACCESS_LABELS.pending,
+      icon: 'tabler:clock',
+      description: SHEET_EDIT_ACCESS_LABELS.pendingHint,
+      disabled: true,
+    };
+  }
+
+  return {
+    label: SHEET_EDIT_ACCESS_LABELS.request,
+    icon: 'tabler:pencil-plus',
+    description: SHEET_EDIT_ACCESS_LABELS.requestHint,
+    onSelect: onRequestEdit,
+  };
 }
 
 /**
  * Пункты меню карточки чужого листа, сохранённого по ссылке. От меню своего
  * листа отличается тем, чего у зрителя нет: правок, настроек и управления
- * доступом. Копия остаётся — она создаёт уже свой лист.
+ * доступом. Копия остаётся — она создаёт уже свой лист. Правки же можно
+ * попросить у владельца — пунктом запроса.
  *
  * @param options доступность действий и обработчики пунктов.
  * @returns группы пунктов для `UDropdownMenu`.
@@ -15737,6 +16471,11 @@ export interface SavedSheetActionMenuOptions {
 export function getSavedSheetActionMenuItems(
   options: SavedSheetActionMenuOptions,
 ): Array<Array<DropdownMenuItem>> {
+  const requestEdit = getRequestEditMenuItem(
+    options.editStatus,
+    options.onRequestEdit,
+  );
+
   return [
     [
       {
@@ -15760,6 +16499,7 @@ export function getSavedSheetActionMenuItems(
         disabled: !options.canCopy,
         onSelect: options.onCopy,
       },
+      ...(requestEdit ? [requestEdit] : []),
     ],
     [
       {
@@ -15998,11 +16738,14 @@ export interface SheetEntryMenuOptions {
  *
  * @param options обработчики пунктов.
  * @param removeLabel подпись удаления (у снаряжения и книги она своя).
+ * @param beforeRemoveItems пункты, которые встают прямо перед удалением (у
+ * снаряжения — продажа: она тоже убирает предмет).
  * @returns пункты для `UDropdownMenu`.
  */
 function getSheetEntryMenuItems(
   options: SheetEntryMenuOptions,
   removeLabel: string,
+  beforeRemoveItems: DropdownMenuItem[] = [],
 ): DropdownMenuItem[] {
   const items: DropdownMenuItem[] = [];
 
@@ -16022,7 +16765,7 @@ function getSheetEntryMenuItems(
     });
   }
 
-  items.push({
+  items.push(...beforeRemoveItems, {
     label: removeLabel,
     icon: 'tabler:trash',
     color: 'error',
@@ -16052,6 +16795,18 @@ export interface InventoryItemMenuOptions extends SheetEntryMenuOptions {
   /** Оружие уже взято двумя руками — пункт предлагает вернуть его в одну. */
   twoHanded: boolean;
 
+  /**
+   * Выбор характеристики атаки оружием; не передан — пункта нет (предмет не
+   * оружие).
+   */
+  onSelectAttackAbility?: (ability: AbilityKey | null) => void;
+
+  /** Характеристика, выбранная у оружия; null — по правилам. */
+  attackAbility: AbilityKey | null;
+
+  /** Характеристика оружия по правилам — подпись пункта «Авто». */
+  rulesAttackAbility: AbilityKey | null;
+
   /** Настройка на предмет; не передан — предмет её не требует. */
   onToggleAttunement?: () => void;
 
@@ -16066,6 +16821,12 @@ export interface InventoryItemMenuOptions extends SheetEntryMenuOptions {
 
   /** Восстановление зарядов; не передан — зарядов у предмета нет. */
   onRestoreCharges?: () => void;
+
+  /**
+   * Продажа предмета; не передан — пункта нет (у предмета нет распознанной
+   * цены или его нет в наличии).
+   */
+  onSell?: () => void;
 }
 
 /**
@@ -16081,7 +16842,22 @@ export interface InventoryItemMenuOptions extends SheetEntryMenuOptions {
 export function getInventoryItemMenuItems(
   options: InventoryItemMenuOptions,
 ): DropdownMenuItem[] {
-  const items = getSheetEntryMenuItems(options, INVENTORY_REMOVE_MENU_LABEL);
+  const sellItems: DropdownMenuItem[] = options.onSell
+    ? [
+        {
+          label: INVENTORY_SELL_MENU_LABEL,
+          icon: 'tabler:coins',
+          onSelect: options.onSell,
+        },
+      ]
+    : [];
+
+  const items = getSheetEntryMenuItems(
+    options,
+    INVENTORY_REMOVE_MENU_LABEL,
+    sellItems,
+  );
+
   const gameItems: DropdownMenuItem[] = [];
 
   if (options.onToggleGrip) {
@@ -16091,6 +16867,32 @@ export function getInventoryItemMenuItems(
         : INVENTORY_GRIP_MENU_LABELS.twoHanded,
       icon: 'tabler:sword',
       onSelect: options.onToggleGrip,
+    });
+  }
+
+  const { onSelectAttackAbility, attackAbility, rulesAttackAbility } = options;
+
+  if (onSelectAttackAbility && rulesAttackAbility) {
+    // Подменю, а не окно: выбор в одно нажатие, отметка показывает нынешний.
+    gameItems.push({
+      label: INVENTORY_ATTACK_ABILITY_MENU_LABEL,
+      icon: 'tabler:target-arrow',
+      children: [
+        {
+          label: `Авто (${ABILITY_LABELS[rulesAttackAbility]})`,
+          type: 'checkbox',
+          checked: attackAbility === null,
+          onSelect: () => onSelectAttackAbility(null),
+        },
+        ...ABILITY_ORDER.map(
+          (ability): DropdownMenuItem => ({
+            label: ABILITY_LABELS[ability],
+            type: 'checkbox',
+            checked: attackAbility === ability,
+            onSelect: () => onSelectAttackAbility(ability),
+          }),
+        ),
+      ],
     });
   }
 

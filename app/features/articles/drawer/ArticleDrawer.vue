@@ -20,7 +20,7 @@
     (e: 'close'): void;
   }>();
 
-  const { isAdmin } = useUserRoles();
+  const { canEditEntities } = useUserRoles();
 
   const { data: article, status } = await useAsyncData(
     computed(() => `article-drawer-${url}`),
@@ -37,7 +37,7 @@
   const urlForCopy = computed(() => `${getOrigin()}${getArticleRoute(url)}`);
 
   const editUrl = computed(() =>
-    isAdmin.value ? `${ARTICLES_ADMIN_ROUTE}/${url}` : undefined,
+    canEditEntities.value ? `${ARTICLES_ADMIN_ROUTE}/${url}` : undefined,
   );
 
   const markdown = useEntityMarkdown(article, getArticleMarkdown);

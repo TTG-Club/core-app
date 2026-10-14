@@ -182,6 +182,9 @@ export const SPELL_USAGE_LABELS = {
   materialConsumable: 'Материалы расходуются',
 } as const;
 
+/** Наименьший рост области за круг в поле формы: ноль — роста нет. */
+export const SPELL_SCALING_AREA_SIZE_MIN = 0;
+
 /** Подписи блока масштабирования заклинания. */
 export const SPELL_SCALING_LABELS = {
   title: 'Масштабирование',
@@ -192,6 +195,10 @@ export const SPELL_SCALING_LABELS = {
   enable: 'Усиление на высших уровнях',
   additionalDice: 'Доп. урон за каждый уровень',
   additionalDicePlaceholder: '1к6',
+  additionalAreaSize: 'Рост области за круг',
+  additionalAreaSizeHint:
+    'На сколько растёт размер области за каждый круг ячейки выше базового: '
+    + '«Туманное облако» — 20. Круг тогда выбирают до шаблона.',
   description: 'Описание усиления',
   descriptionPlaceholder: 'Например: урон увеличивается на 1к6 за уровень',
   fallbackHint:

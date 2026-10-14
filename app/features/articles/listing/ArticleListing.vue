@@ -5,6 +5,11 @@
     ArticleType,
   } from '../model';
 
+  import { FilterControls, useFilter } from '~infrastructure/filter';
+  import {
+    useListPresentation,
+    useListPresentationMenus,
+  } from '~infrastructure/list-presentation/composable';
   import { UiDetailPane } from '~ui/detail-pane';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkBig } from '~ui/skeleton';
@@ -13,12 +18,17 @@
   import { ArticleLink } from '../link';
   import {
     ARTICLE_DATE_FORMAT,
+    ARTICLE_LIST_PRESENTATION,
+    ARTICLE_TAGS_EMPTY_TEXT,
+    ARTICLE_TYPE,
     ARTICLES_ADMIN_ROUTE,
     ARTICLES_API_PATH,
+    ARTICLES_FILTERS_PATH,
     ARTICLES_LIST_COUNT,
     ARTICLES_ROUTE,
     ARTICLES_SEARCH_PATH,
     getArticleMarkdown,
+    getArticleSearchEmptyText,
   } from '../model';
 
   const { type, title } = defineProps<{
@@ -26,22 +36,57 @@
     title: string;
   }>();
 
-  const { isAdmin } = useUserRoles();
+  const { canEditEntities } = useUserRoles();
 
-  // Поиск — серверный: дебаунсим ввод и уводим в query (пустую строку не шлём;
-  // `search` фильтрует по всему набору, `cnt` лишь режет выдачу).
-  const search = ref('');
-  const debouncedSearch = refDebounced(search, 300);
+  // Тулбар — общий для разделов: поиск, отбор по тегам и сортировка в одном
+  // `FilterControls`. Поиск серверный и вместе с выбранными тегами живёт в
+  // адресе страницы. Новостям бэкенд отдаёт фильтр без групп — у них остаётся
+  // только поиск.
+  const {
+    filter,
+    search,
+    filterQuery,
+    isPending: isFilterPending,
+    defaults: filterDefaults,
+  } = await useFilter(
+    `articles-${type}`,
+    `${ARTICLES_FILTERS_PATH}?type=${type}`,
+  );
+
+  // Сортировка и рейтинг — только у статей: у новостей лента остаётся
+  // хронологической. Сортировка серверная и запоминается, как в других разделах.
+  const isArticleListing = computed(() => type === ARTICLE_TYPE.ARTICLE);
+
+  const presentation = useListPresentation(ARTICLE_LIST_PRESENTATION);
+
+  const articlePresentationMenus = useListPresentationMenus(
+    ARTICLE_LIST_PRESENTATION,
+    presentation.grouping,
+    presentation.sorting,
+  );
+
+  const presentationMenus = computed(() =>
+    isArticleListing.value ? articlePresentationMenus.value : [],
+  );
+
+  const sorting = computed(() =>
+    isArticleListing.value ? presentation.query.value.sorting : undefined,
+  );
 
   // Пагинация «через cnt»: увеличиваем запрашиваемое число и перезапрашиваем.
   const count = ref(ARTICLES_LIST_COUNT);
 
-  // Новый поисковый запрос → сбрасываем пагинацию на первую страницу, иначе
-  // раздутый после «Показать ещё» cnt тянулся бы в каждый следующий запрос.
-  // Watch объявлен до useAsyncData, чтобы сброс успел примениться к его рефетчу.
-  watch(debouncedSearch, () => {
+  // Новый поисковый запрос, фильтр или сортировка → сбрасываем пагинацию на
+  // первую страницу, иначе раздутый после «Показать ещё» cnt тянулся бы в каждый
+  // следующий запрос. Watch объявлен до useAsyncData, чтобы сброс успел
+  // примениться к его рефетчу.
+  watch([search, filterQuery, sorting], () => {
     count.value = ARTICLES_LIST_COUNT;
   });
+
+  const hasActiveFilter = computed(
+    () => !!search.value || Object.keys(filterQuery.value).length > 0,
+  );
 
   const { data, status, error, refresh } = await useAsyncData(
     `articles-list-${type}`,
@@ -51,10 +96,12 @@
         query: {
           cnt: count.value,
           type,
-          search: debouncedSearch.value.trim() || undefined,
+          search: search.value,
+          sorting: sorting.value,
+          ...filterQuery.value,
         },
       }),
-    { watch: [count, debouncedSearch] },
+    { watch: [count, search, filterQuery, sorting] },
   );
 
   const hasMore = ref(true);
@@ -65,6 +112,12 @@
       hasMore.value = (value?.length ?? 0) >= count.value;
     },
     { immediate: true },
+  );
+
+  const emptyFilterText = computed(() =>
+    search.value
+      ? getArticleSearchEmptyText(search.value)
+      : ARTICLE_TAGS_EMPTY_TEXT,
   );
 
   const isInitialLoading = computed(
@@ -99,7 +152,7 @@
 
   // Правка — в админке (useSectionDetail целится в /workshop, у записей другой путь).
   const detailEditUrl = computed(() =>
-    isAdmin.value && detailUrl.value
+    canEditEntities.value && detailUrl.value
       ? `${ARTICLES_ADMIN_ROUTE}/${detailUrl.value}`
       : undefined,
   );
@@ -111,26 +164,13 @@
     :title="title"
   >
     <template #controls>
-      <UInput
-        v-model="search"
-        icon="tabler:search"
-        placeholder="Поиск по заголовку"
-        :ui="{ trailing: 'pe-0.5' }"
-      >
-        <template
-          v-if="search"
-          #trailing
-        >
-          <UButton
-            icon="tabler:x"
-            variant="link"
-            color="neutral"
-            size="sm"
-            aria-label="Очистить"
-            @click.left.exact.prevent="search = ''"
-          />
-        </template>
-      </UInput>
+      <FilterControls
+        v-model:search="search"
+        v-model:filter="filter"
+        :defaults="filterDefaults"
+        :is-pending="isFilterPending"
+        :presentation-menus="presentationMenus"
+      />
     </template>
 
     <template #default>
@@ -173,7 +213,7 @@
         </div>
 
         <div
-          v-else-if="search.trim()"
+          v-else-if="hasActiveFilter"
           class="flex flex-col items-center gap-2 py-12 text-center"
         >
           <UIcon
@@ -182,7 +222,7 @@
           />
 
           <p class="text-sm text-secondary">
-            По запросу «{{ search }}» ничего не найдено
+            {{ emptyFilterText }}
           </p>
         </div>
 

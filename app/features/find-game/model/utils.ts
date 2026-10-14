@@ -3,6 +3,7 @@ import type {
   FindGameUserProfile,
   Game,
   GameSession,
+  GameSessionPrice,
   NextGameSession,
   Reputation,
 } from './types';
@@ -16,7 +17,6 @@ import {
   GAME_GENRE_MAX_LENGTH,
   GAME_GENRES_MAX_COUNT,
   GAME_NEXT_SESSION_FALLBACK,
-  GAME_PRICE_PENDING_LABEL,
   GAME_PRICE_PER_SESSION_LABEL,
   GAME_TITLE_MAX_LENGTH,
   GAME_TYPE_LABELS,
@@ -101,6 +101,18 @@ export function toGameCopyRequest(game: Game): CreateGameRequest {
     ...(game.venue ? { venue: game.venue } : {}),
     ...(game.minAge !== null ? { minAge: game.minAge } : {}),
     ...(game.maxAge !== null ? { maxAge: game.maxAge } : {}),
+    // Цена игры переходит в копию целиком; у старой платной игры её нет, и
+    // копию мастер дозаполнит в форме.
+    ...(game.costType === 'PAID'
+    && game.priceAmount !== null
+    && game.priceCurrency
+    && game.paymentType
+      ? {
+          priceAmount: game.priceAmount,
+          priceCurrency: game.priceCurrency,
+          paymentType: game.paymentType,
+        }
+      : {}),
   };
 }
 
@@ -138,7 +150,21 @@ export function getNextSessionLabel(
   return formatter.formatRange(start, end);
 }
 
-/** Цена ближайшей встречи; отсутствие цены не означает бесплатную игру. */
+/**
+ * Сумма цены в русской записи: с разрядами и без лишних нулей после запятой,
+ * чтобы карточка и страница игры показывали её одинаково.
+ * @param amount Сумма цены.
+ */
+function formatPriceAmount(amount: number): string {
+  return amount.toLocaleString('ru-RU');
+}
+
+/**
+ * Цена встречи для карточки: сначала ближайшей, затем игры по умолчанию.
+ * Отсутствие цены не означает бесплатную игру — у старой платной игры её
+ * просто не указали, и карточка называет её просто платной.
+ * @param game Игра.
+ */
 export function getGameCardPriceLabel(game: Game): string {
   if (game.costType === 'FREE') {
     return GAME_COST_TYPE_LABELS.FREE;
@@ -146,11 +172,34 @@ export function getGameCardPriceLabel(game: Game): string {
 
   const session = game.nextSession;
 
-  if (session?.priceAmount == null || !session.priceCurrency) {
-    return GAME_PRICE_PENDING_LABEL;
+  const price =
+    session?.priceAmount != null && session.priceCurrency ? session : game;
+
+  if (price.priceAmount === null || !price.priceCurrency) {
+    return GAME_COST_TYPE_LABELS.PAID;
   }
 
-  return `${session.priceAmount.toLocaleString('ru-RU')} ${session.priceCurrency} / ${GAME_PRICE_PER_SESSION_LABEL}`;
+  return `${formatPriceAmount(price.priceAmount)} ${price.priceCurrency} / ${GAME_PRICE_PER_SESSION_LABEL}`;
+}
+
+/**
+ * Описание игры для метаданных страницы. У платной игры впереди стоит цена
+ * за сессию: превью ссылки в мессенджерах обрезает текст, и цена должна
+ * попасть в видимую часть.
+ * @param game Игра.
+ * @param descriptionText Описание игры простым текстом.
+ */
+export function getGameSeoDescription(
+  game: Game,
+  descriptionText: string,
+): string {
+  if (game.costType === 'FREE') {
+    return descriptionText;
+  }
+
+  const priceLabel = getGameCardPriceLabel(game);
+
+  return descriptionText ? `${priceLabel} · ${descriptionText}` : priceLabel;
 }
 
 /**
@@ -431,22 +480,25 @@ export function getGameStartingLevelLabel(game: Game): string {
 }
 
 /**
- * Подпись стоимости сессии вместе с условиями оплаты.
+ * Подпись стоимости сессии вместе с условиями оплаты. Подходит и для цены
+ * игры по умолчанию: поля у неё те же.
  * У бесплатной игры платёжных полей нет вовсе.
- * @param session Сессия игры.
+ * @param sessionPrice Цена сессии игры или цена игры по умолчанию.
  */
-export function getSessionPriceLabel(session: GameSession): string | null {
-  if (session.priceAmount === null || !session.priceCurrency) {
+export function getSessionPriceLabel(
+  sessionPrice: GameSessionPrice,
+): string | null {
+  if (sessionPrice.priceAmount === null || !sessionPrice.priceCurrency) {
     return null;
   }
 
-  const price = `${session.priceAmount.toFixed(2)} ${session.priceCurrency}`;
+  const price = `${formatPriceAmount(sessionPrice.priceAmount)} ${sessionPrice.priceCurrency}`;
 
-  if (!session.paymentType) {
+  if (!sessionPrice.paymentType) {
     return price;
   }
 
-  return `${price} · ${SESSION_PAYMENT_TYPE_LABELS[session.paymentType]}`;
+  return `${price} · ${SESSION_PAYMENT_TYPE_LABELS[sessionPrice.paymentType]}`;
 }
 
 /**

@@ -1,10 +1,15 @@
 <script setup lang="ts">
-  import { useCharacterSheetShare } from '../../composables';
   import {
+    useCharacterSheetEditors,
+    useCharacterSheetShare,
+  } from '../../composables';
+  import {
+    SHEET_EDITORS_LABELS,
     SHEET_SHARE_LABELS,
     SHEET_SHARE_REVOKED_DESCRIPTION,
     SHEET_SHARE_REVOKED_TITLE,
   } from '../../model';
+  import SheetEditorRow from './SheetEditorRow.vue';
 
   // Идентификатор приходит пропом, а не из состояния листа: открывающий явно
   // называет лист, которым делится, и модалка не зависит от того, что лежит в
@@ -23,6 +28,59 @@
   const isShared = computed(() => isSheetShared(props.sheetId));
 
   const shareUrl = computed(() => getShareUrl(props.sheetId));
+
+  // Права на редактирование выдаются только тем, кто пришёл по ссылке, поэтому
+  // список живёт рядом с ней и без ссылки не показывается.
+  const {
+    isPending: isEditorsPending,
+    getPendingRequests,
+    getApprovedEditors,
+    canApproveMore,
+    load: loadEditors,
+    approve,
+    remove,
+  } = useCharacterSheetEditors();
+
+  const editorRows = computed(() => [
+    ...getPendingRequests(props.sheetId),
+    ...getApprovedEditors(props.sheetId),
+  ]);
+
+  const hasApprovedEditors = computed(
+    () => getApprovedEditors(props.sheetId).length > 0,
+  );
+
+  const canApproveEditor = computed(() => canApproveMore(props.sheetId));
+
+  // Список перечитывается при каждом включении ссылки: отзыв ссылки снимает
+  // права на сервере, и прежний список был бы уже неправдой.
+  watch(
+    isShared,
+    (shared) => {
+      if (shared) {
+        void loadEditors(props.sheetId);
+      }
+    },
+    { immediate: true },
+  );
+
+  /**
+   * Разрешает правки по запросу; ошибку показывает тостом композабл.
+   *
+   * @param editorId идентификатор запроса.
+   */
+  function handleApproveEditor(editorId: string): void {
+    void approve(props.sheetId, editorId);
+  }
+
+  /**
+   * Отклоняет запрос или отзывает право; ошибку показывает тостом композабл.
+   *
+   * @param editorId идентификатор запроса или права.
+   */
+  function handleRemoveEditor(editorId: string): void {
+    void remove(props.sheetId, editorId);
+  }
 
   const { copy, share, isShareAvailable } = useCopyAndShare();
 
@@ -143,6 +201,42 @@
             :title="SHEET_SHARE_LABELS.viewerNoteTitle"
             :description="SHEET_SHARE_LABELS.viewerNoteDescription"
           />
+
+          <div class="flex flex-col gap-3">
+            <div class="flex flex-col gap-1">
+              <span class="text-xs font-medium text-muted">
+                {{ SHEET_EDITORS_LABELS.editorsTitle }}
+              </span>
+
+              <span class="text-xs text-muted">
+                {{ SHEET_EDITORS_LABELS.editorsHint }}
+              </span>
+            </div>
+
+            <SheetEditorRow
+              v-for="editorRow in editorRows"
+              :key="editorRow.id"
+              :editor="editorRow"
+              :can-approve="canApproveEditor"
+              :disabled="isEditorsPending"
+              @approve="handleApproveEditor"
+              @remove="handleRemoveEditor"
+            />
+
+            <span
+              v-if="!editorRows.length"
+              class="text-sm text-toned"
+            >
+              {{ SHEET_EDITORS_LABELS.editorsEmpty }}
+            </span>
+
+            <span
+              v-if="hasApprovedEditors"
+              class="text-xs text-muted"
+            >
+              {{ SHEET_EDITORS_LABELS.revokeOnDisableHint }}
+            </span>
+          </div>
         </template>
       </div>
     </template>

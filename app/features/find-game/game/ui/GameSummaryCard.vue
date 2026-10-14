@@ -26,6 +26,7 @@
     GAME_NEXT_SESSION_EMPTY,
     GAME_NEXT_SESSION_LABEL,
     GAME_ONLINE_PLATFORM_LABELS,
+    GAME_PRICE_UNSPECIFIED_LABEL,
     GAME_RECRUITMENT_CLOSED_BADGE,
     GAME_RECRUITMENT_FULL_BADGE,
     GAME_STATUS_COLORS,
@@ -39,6 +40,7 @@
     getGamePlayersLabel,
     getGameStartingLevelLabel,
     getGenresLabel,
+    getSessionPriceLabel,
     isGameRecruitmentClosed,
     MASTER_PROFILE_OPEN_HINT,
   } from '../../model';
@@ -80,7 +82,10 @@
      * и само расписание.
      */
     nextSessionAt?: string | null;
-    /** Цена ближайшей платной сессии из открытого расписания игры. */
+    /**
+     * Цена ближайшей платной сессии из открытого расписания игры. Без неё
+     * показывается цена игры по умолчанию, а без той — «Не указано».
+     */
     nextPaidSessionPrice?: string | null;
   }>();
 
@@ -162,11 +167,16 @@
       },
     ];
 
-    if (game.costType === 'PAID' && nextPaidSessionPrice) {
+    // Цену платной игры видно всегда: игрок решает по ней, даже пока
+    // встречи не назначены.
+    if (game.costType === 'PAID') {
       items.push({
         key: 'next-paid-session-price',
         label: GAME_NEXT_PAID_SESSION_PRICE_LABEL,
-        value: nextPaidSessionPrice,
+        value:
+          nextPaidSessionPrice
+          ?? getSessionPriceLabel(game)
+          ?? GAME_PRICE_UNSPECIFIED_LABEL,
       });
     }
 

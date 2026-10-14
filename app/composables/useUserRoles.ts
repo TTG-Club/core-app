@@ -13,6 +13,9 @@ export function useUserRoles() {
 
   const canEditEntities = computed(() => isAdmin.value || isModerator.value);
 
+  /** Правка источников: в core-api она закрыта для всех, кроме ADMIN. */
+  const canEditSources = computed(() => isAdmin.value);
+
   const canManageBugReports = computed(
     () => isAdmin.value || isModerator.value,
   );
@@ -34,6 +37,7 @@ export function useUserRoles() {
     isModerator,
     isAdmin,
     canEditEntities,
+    canEditSources,
     canManageBugReports,
     canModerateComments,
     canAccessModerationPanel,

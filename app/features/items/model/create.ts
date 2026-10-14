@@ -105,6 +105,8 @@ export type ItemToolCategory = 'artisan' | 'gaming' | 'musical' | 'other';
 /**
  * Категория снаряжения. Зеркало `EquipmentCategory` из VTTG. Броню задаёт
  * подформа доспеха (`ArmorCategory` сайта), здесь — всё остальное.
+ * `potion` — категория системы `dnd5e-2024`: в нейтральном `EquipmentCategory`
+ * ядра VTTG её нет, но ядро категорию не проверяет и хранит строкой.
  */
 export type ItemEquipmentCategory =
   | 'trinket'
@@ -112,6 +114,7 @@ export type ItemEquipmentCategory =
   | 'clothing'
   | 'wand'
   | 'wondrous'
+  | 'potion'
   | 'food'
   | 'adventurer-equipment'
   | 'vehicle-equipment';

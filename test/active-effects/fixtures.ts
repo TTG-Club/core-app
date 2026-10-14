@@ -27,6 +27,22 @@ export const TYPED_SAVE_DC = 15;
 /** Радиус ауры в тестах. */
 export const AURA_RADIUS = 10;
 
+/** Дальность применения в тестах, фт: «Божественная искра». */
+export const ACTIVATION_RANGE = 30;
+
+/** Условие «Дубинки»: дубинка или боевой посох. */
+export const SHILLELAGH_WEAPONS = 'weapon.baseType === "club, quarterstaff"';
+
+/** Кость «Дубинки» по уровню заклинателя: к8, к10, к12, 2к6. */
+export const SHILLELAGH_DICE =
+  '(1 + steps(@level, 17))к(8 + 2 * steps(@level, 5, 11) - 6 * steps(@level, 17))';
+
+/** Формула «Ауры защиты»: модификатор Харизмы, но не меньше 1. */
+export const AURA_OF_PROTECTION_FORMULA = 'max(1, @mod.cha)';
+
+/** Наименьшая прибавка «Ауры защиты». */
+export const MIN_AURA_OF_PROTECTION_BONUS = 1;
+
 /** Id нового эффекта в тестах. */
 export const NEW_EFFECT_ID = 'effect_new';
 

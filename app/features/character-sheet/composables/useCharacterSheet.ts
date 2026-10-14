@@ -40,6 +40,7 @@ import type {
   PreparedSpellKind,
   ProficiencyGrant,
   RollMode,
+  RollModeSource,
   SheetReadonlyReason,
   SheetRollContext,
   SpeedTypeKey,
@@ -55,6 +56,7 @@ import {
   ABILITY_ORDER,
   ABILITY_SCORE_MAX,
   ABILITY_SCORE_MIN,
+  addCopperToCurrency,
   adjustHealthForConstitution,
   adjustHitDice,
   applyAbilityIncreases,
@@ -111,10 +113,12 @@ import {
   getNextLevelExperience,
   getPreparedSpellsLimitDescription,
   getProficiencySourceId,
+  getPurchaseCostInCopper,
   getResourceMax,
   getSavingThrowRows,
   getSheetRollFlags,
   getSheetRollMode,
+  getSheetRollModeSources,
   getSkillRowGroups,
   getSkillRows,
   getSpellcastingBreakdown,
@@ -167,6 +171,7 @@ import {
   sortAbilityKeys,
   SPELL_COPY_TOAST_TITLE,
   SPELL_SLOTS_EMPTY_TOAST_TITLE,
+  spendCurrency,
   syncClassHitDice,
   toCopiedInventoryItem,
   toCopiedSpell,
@@ -183,6 +188,7 @@ import {
   withFeatModifiers,
   withProficiencyGrant,
   withSavingThrowProficiencies,
+  withSettledCurrentHitPoints,
   withToggledFeatureEffect,
 } from '../model';
 
@@ -214,6 +220,43 @@ function clampCurrencyAmount(amount: number): number {
   }
 
   return clamp(Math.trunc(amount), CURRENCY_AMOUNT_MIN, CURRENCY_AMOUNT_MAX);
+}
+
+/**
+ * Кошелёк с количествами каждой стандартной монеты в допустимом диапазоне.
+ *
+ * @param currency количества пяти стандартных денежных единиц.
+ * @returns кошелёк с ограниченными количествами.
+ */
+function clampCurrency(currency: CharacterCurrency): CharacterCurrency {
+  return {
+    copper: clampCurrencyAmount(currency.copper),
+    silver: clampCurrencyAmount(currency.silver),
+    electrum: clampCurrencyAmount(currency.electrum),
+    gold: clampCurrencyAmount(currency.gold),
+    platinum: clampCurrencyAmount(currency.platinum),
+  };
+}
+
+/**
+ * Предметы, которых ещё нет в инвентаре: идентификаторы каталога устойчивы
+ * (`item:url`), поэтому повтор отбрасывается.
+ *
+ * @param inventory текущий инвентарь персонажа.
+ * @param inventoryItems добавляемые предметы.
+ * @returns добавляемые предметы без уже имеющихся.
+ */
+function getFreshInventoryItems(
+  inventory: CharacterInventoryItem[],
+  inventoryItems: CharacterInventoryItem[],
+): CharacterInventoryItem[] {
+  const existingIds = new Set(
+    inventory.map((inventoryItem) => inventoryItem.id),
+  );
+
+  return inventoryItems.filter(
+    (inventoryItem) => !existingIds.has(inventoryItem.id),
+  );
 }
 
 /**
@@ -468,22 +511,28 @@ export function useCharacterSheet() {
       ABILITY_SCORE_MAX,
     );
 
-    character.value = {
-      ...character.value,
-      abilities: {
-        ...character.value.abilities,
-        [ability]: clampedScore,
+    // Сдвиг записанного Телосложения меняет и прибавку от итогового (бонус
+    // предмета мог перестать менять модификатор), поэтому текущие хиты
+    // доводятся по итоговому максимуму.
+    character.value = withSettledCurrentHitPoints(
+      {
+        ...character.value,
+        abilities: {
+          ...character.value.abilities,
+          [ability]: clampedScore,
+        },
+        health:
+          ability === 'constitution'
+            ? adjustHealthForConstitution(
+                character.value.health,
+                character.value.level,
+                character.value.abilities.constitution,
+                clampedScore,
+              )
+            : character.value.health,
       },
-      health:
-        ability === 'constitution'
-          ? adjustHealthForConstitution(
-              character.value.health,
-              character.value.level,
-              character.value.abilities.constitution,
-              clampedScore,
-            )
-          : character.value.health,
-    };
+      character.value,
+    );
   }
 
   /**
@@ -532,16 +581,19 @@ export function useCharacterSheet() {
       );
     }
 
-    character.value = {
-      ...character.value,
-      abilities: clampedAbilities,
-      health: adjustHealthForConstitution(
-        character.value.health,
-        character.value.level,
-        character.value.abilities.constitution,
-        clampedAbilities.constitution,
-      ),
-    };
+    character.value = withSettledCurrentHitPoints(
+      {
+        ...character.value,
+        abilities: clampedAbilities,
+        health: adjustHealthForConstitution(
+          character.value.health,
+          character.value.level,
+          character.value.abilities.constitution,
+          clampedAbilities.constitution,
+        ),
+      },
+      character.value,
+    );
   }
 
   /**
@@ -1571,11 +1623,6 @@ export function useCharacterSheet() {
     // Умения вида несут снимок механики, как черты: хиты, ресурсы и бонусы
     // инициативы доводит та же сверка, что при смене черт, — иначе прибавка
     // «Дварфийской выдержки» осталась бы от прежнего вида
-    const previous = {
-      features: character.value.features,
-      level: character.value.level,
-    };
-
     character.value = withFeatModifiers(
       {
         ...character.value,
@@ -1603,7 +1650,7 @@ export function useCharacterSheet() {
           ...preservedFeatures,
         ],
       },
-      previous,
+      character.value,
     );
   }
 
@@ -1630,11 +1677,6 @@ export function useCharacterSheet() {
       null,
     );
 
-    const previous = {
-      features: character.value.features,
-      level: character.value.level,
-    };
-
     character.value = withFeatModifiers(
       {
         ...character.value,
@@ -1650,7 +1692,7 @@ export function useCharacterSheet() {
             feature.origin !== 'species' && feature.origin !== 'lineage',
         ),
       },
-      previous,
+      character.value,
     );
   }
 
@@ -1804,64 +1846,70 @@ export function useCharacterSheet() {
     //
     // Максимум хитов здесь пересобран из записей прироста, а значит прибавки
     // черт в нём нет вовсе — сверка получает пустое «до» и кладёт её целиком.
-    character.value = withFeatModifiers(
-      {
-        ...character.value,
-        // Прибавки черт умений считаются в момент взятия, как в мастере
-        // повышения уровня; снятие класса их не откатывает — так же, как там
-        abilities: applyAbilityIncreases(
-          character.value.abilities,
-          payload.abilityIncreases ?? {},
-        ),
-        characterClass: {
-          ...characterClass,
-          startingEquipment: startingEquipment.granted,
-        },
-        level: getTotalClassLevel([characterClass, ...additionalClasses]),
-        experience: {
-          ...character.value.experience,
-          nextLevel: getNextLevelExperience(
-            getTotalClassLevel([characterClass, ...additionalClasses]),
-          ),
-        },
-        inventory: startingEquipment.inventory,
-        currency: startingEquipment.currency,
-        // Класс переписывает только владения: подменённая характеристика
-        // спасброска и его свои бонусы переживают смену класса.
-        savingThrows: withSavingThrowProficiencies(
-          character.value.savingThrows,
-          payload.savingThrows,
-        ),
-        // Свежий класс выдаёт свои кости непотраченными; кости второго класса
-        // (другого номинала) сохраняют трату.
-        hitDice: syncClassHitDice(character.value.hitDice, [
-          characterClass,
-          ...additionalClasses,
-        ]).map((hitDie) =>
-          hitDie.die === payload.hitDie
-            ? { ...hitDie, current: hitDie.max }
-            : hitDie,
-        ),
-        health: {
-          ...character.value.health,
-          max: recordedMaxHitPoints,
-          current: recordedMaxHitPoints,
-          levelGains,
-        },
-        proficiencies: classProficiencies.proficiencies,
-        proficiencyGrants: classProficiencies.grants,
-        skills: classProficiencies.skills,
-        classResources: [...preservedResources, ...payload.classResources],
-        features: [
-          ...payload.features.map((feature) => ({
-            ...feature,
-            description: [...feature.description],
-          })),
-          ...preservedFeatures,
-        ],
+    const withClass: Character = {
+      ...character.value,
+      // Прибавки черт умений считаются в момент взятия, как в мастере
+      // повышения уровня; снятие класса их не откатывает — так же, как там
+      abilities: applyAbilityIncreases(
+        character.value.abilities,
+        payload.abilityIncreases ?? {},
+      ),
+      characterClass: {
+        ...characterClass,
+        startingEquipment: startingEquipment.granted,
       },
-      { features: [], level: 0 },
-    );
+      level: getTotalClassLevel([characterClass, ...additionalClasses]),
+      experience: {
+        ...character.value.experience,
+        nextLevel: getNextLevelExperience(
+          getTotalClassLevel([characterClass, ...additionalClasses]),
+        ),
+      },
+      inventory: startingEquipment.inventory,
+      currency: startingEquipment.currency,
+      // Класс переписывает только владения: подменённая характеристика
+      // спасброска и его свои бонусы переживают смену класса.
+      savingThrows: withSavingThrowProficiencies(
+        character.value.savingThrows,
+        payload.savingThrows,
+      ),
+      // Свежий класс выдаёт свои кости непотраченными; кости второго класса
+      // (другого номинала) сохраняют трату.
+      hitDice: syncClassHitDice(character.value.hitDice, [
+        characterClass,
+        ...additionalClasses,
+      ]).map((hitDie) =>
+        hitDie.die === payload.hitDie
+          ? { ...hitDie, current: hitDie.max }
+          : hitDie,
+      ),
+      health: {
+        ...character.value.health,
+        max: recordedMaxHitPoints,
+        current: recordedMaxHitPoints,
+        levelGains,
+      },
+      proficiencies: classProficiencies.proficiencies,
+      proficiencyGrants: classProficiencies.grants,
+      skills: classProficiencies.skills,
+      classResources: [...preservedResources, ...payload.classResources],
+      features: [
+        ...payload.features.map((feature) => ({
+          ...feature,
+          description: [...feature.description],
+        })),
+        ...preservedFeatures,
+      ],
+    };
+
+    // «До» — тот же лист без особенностей и уровней: так текущие хиты
+    // получают и прибавку от итогового Телосложения, и свежий класс приходит
+    // с полным здоровьем.
+    character.value = withFeatModifiers(withClass, {
+      ...withClass,
+      features: [],
+      level: 0,
+    });
   }
 
   /**
@@ -2974,12 +3022,9 @@ export function useCharacterSheet() {
       return;
     }
 
-    const existingIds = new Set(
-      character.value.inventory.map((inventoryItem) => inventoryItem.id),
-    );
-
-    const freshItems = inventoryItems.filter(
-      (inventoryItem) => !existingIds.has(inventoryItem.id),
+    const freshItems = getFreshInventoryItems(
+      character.value.inventory,
+      inventoryItems,
     );
 
     if (!freshItems.length) {
@@ -2993,6 +3038,50 @@ export function useCharacterSheet() {
         ...freshItems.map((inventoryItem) => ({ ...inventoryItem })),
       ],
     };
+  }
+
+  /**
+   * Покупка предметов из каталога раздела «Предметы»: предметы добавляются в
+   * инвентарь, а их стоимость списывается из кошелька одним обновлением листа.
+   * Уже добавленные предметы отбрасываются и не оплачиваются; предметы без
+   * распознанной цены бесплатны. Нехватку монеты нужного номинала закрывает
+   * размен более крупной.
+   *
+   * @param inventoryItems предметы с готовыми идентификаторами.
+   * @returns true — покупка прошла; false — лист заблокирован или денег не
+   * хватает.
+   */
+  function purchaseInventoryItems(
+    inventoryItems: CharacterInventoryItem[],
+  ): boolean {
+    if (!ensureEditable()) {
+      return false;
+    }
+
+    const freshItems = getFreshInventoryItems(
+      character.value.inventory,
+      inventoryItems,
+    );
+
+    const currency = spendCurrency(
+      character.value.currency,
+      getPurchaseCostInCopper(freshItems),
+    );
+
+    if (!currency) {
+      return false;
+    }
+
+    character.value = {
+      ...character.value,
+      currency: clampCurrency(currency),
+      inventory: [
+        ...character.value.inventory,
+        ...freshItems.map((inventoryItem) => ({ ...inventoryItem })),
+      ],
+    };
+
+    return true;
   }
 
   /**
@@ -3128,6 +3217,42 @@ export function useCharacterSheet() {
 
     character.value = {
       ...character.value,
+      inventory: character.value.inventory.filter(
+        (inventoryItem) => inventoryItem.id !== inventoryItemId,
+      ),
+    };
+  }
+
+  /**
+   * Продажа предмета: он уходит из инвентаря, а выручка возвращается в
+   * кошелёк одним обновлением листа. Цену выбирает игрок в окне продажи (по
+   * умолчанию — полцены справочника); дробная или отрицательная цена в лист
+   * не попадает.
+   *
+   * @param inventoryItemId идентификатор предмета инвентаря.
+   * @param salePrice выручка в медных монетах.
+   */
+  function sellInventoryItem(inventoryItemId: string, salePrice: number): void {
+    if (!ensureEditable() || !Number.isFinite(salePrice)) {
+      return;
+    }
+
+    const hasItem = character.value.inventory.some(
+      (inventoryItem) => inventoryItem.id === inventoryItemId,
+    );
+
+    if (!hasItem) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      currency: clampCurrency(
+        addCopperToCurrency(
+          character.value.currency,
+          Math.max(CURRENCY_AMOUNT_MIN, Math.round(salePrice)),
+        ),
+      ),
       inventory: character.value.inventory.filter(
         (inventoryItem) => inventoryItem.id !== inventoryItemId,
       ),
@@ -3362,6 +3487,32 @@ export function useCharacterSheet() {
         inventoryItem.id === inventoryItemId
         && isVersatileInventoryItem(inventoryItem)
           ? { ...inventoryItem, twoHanded: !inventoryItem.twoHanded }
+          : inventoryItem,
+      ),
+    };
+  }
+
+  /**
+   * Выбор характеристики атаки оружием: игрок меняет её в окне броска атаки, и
+   * выбор остаётся у предмета — плитки атаки и урона считаются уже от неё.
+   * Игровое действие — блокировкой листа не ограничивается.
+   *
+   * @param inventoryItemId идентификатор предмета инвентаря.
+   * @param ability выбранная характеристика; null — по правилам.
+   */
+  function setInventoryItemAttackAbility(
+    inventoryItemId: string,
+    ability: AbilityKey | null,
+  ): void {
+    if (!ensureOwnSheet()) {
+      return;
+    }
+
+    character.value = {
+      ...character.value,
+      inventory: character.value.inventory.map((inventoryItem) =>
+        inventoryItem.id === inventoryItemId && inventoryItem.weapon
+          ? { ...inventoryItem, attackAbility: ability }
           : inventoryItem,
       ),
     };
@@ -3610,6 +3761,16 @@ export function useCharacterSheet() {
   }
 
   /**
+   * Источники преимущества и помехи броска: что именно задало его режим.
+   *
+   * @param context обстоятельства броска.
+   * @returns эффекты, умения и предметы, дающие преимущество или помеху.
+   */
+  function getRollModeSources(context: SheetRollContext): RollModeSource[] {
+    return getSheetRollModeSources(character.value, context);
+  }
+
+  /**
    * Установка личности персонажа: приметы, мировоззрение и подробное описание.
    * Правят её две модалки, каждая своей частью, поэтому обе присылают личность
    * целиком — поверх текущей. Пробелы по краям снимаются: строка из одних
@@ -3760,13 +3921,7 @@ export function useCharacterSheet() {
 
     character.value = {
       ...character.value,
-      currency: {
-        copper: clampCurrencyAmount(currency.copper),
-        silver: clampCurrencyAmount(currency.silver),
-        electrum: clampCurrencyAmount(currency.electrum),
-        gold: clampCurrencyAmount(currency.gold),
-        platinum: clampCurrencyAmount(currency.platinum),
-      },
+      currency: clampCurrency(currency),
       customCurrencies: customCurrencies
         .map((customCurrency) => ({
           id: customCurrency.id,
@@ -3827,6 +3982,7 @@ export function useCharacterSheet() {
     adjustInventoryItemCharges,
     restoreInventoryItemCharges,
     toggleInventoryItemTwoHanded,
+    setInventoryItemAttackAbility,
     toggleInspiration,
     downloadCharacter,
     addFeature,
@@ -3834,6 +3990,7 @@ export function useCharacterSheet() {
     addNote,
     applyLevelUp,
     addInventoryItems,
+    purchaseInventoryItems,
     addCustomInventoryItem,
     addCustomSpell,
     copyInnateSpellToSheet,
@@ -3842,6 +3999,7 @@ export function useCharacterSheet() {
     removeFeature,
     removeInnateSpell,
     removeInventoryItem,
+    sellInventoryItem,
     removeNote,
     removeSpell,
     updateActiveEffects,
@@ -3849,6 +4007,7 @@ export function useCharacterSheet() {
     appliedActiveEffects,
     resolvedEffects,
     getRollMode,
+    getRollModeSources,
     updateFeature,
     updateNote,
     updateCustomInventoryItem,

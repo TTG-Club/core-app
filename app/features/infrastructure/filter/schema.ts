@@ -1,4 +1,4 @@
-import type { Filter } from './types';
+import type { Filter, FilterRangeOrders } from './types';
 
 import { z } from 'zod';
 
@@ -47,15 +47,23 @@ const filterSchema = z.object({
  * поля вроде `relations` отбрасываются через `catch`, чтобы каскад не падал с
  * TypeError. При полностью некорректном payload возвращает пустой фильтр.
  */
-export function parseFilter(payload: unknown): Filter {
+export function parseFilter(
+  payload: unknown,
+  rangeOrders?: FilterRangeOrders,
+): Filter {
   const result = filterSchema.safeParse(payload);
 
   if (result.success) {
+    const filters = result.data.filters.map((group) => ({
+      ...group,
+      rangeOrder: rangeOrders?.[group.key],
+    }));
+
     // Порядок групп источников задаёт интерфейс, а не сервис: читателю нужны
     // сначала официальные книги, а не порядок перечисления на бэкенде.
     return result.data.sources
-      ? { ...result.data, sources: sortSourceGroups(result.data.sources) }
-      : result.data;
+      ? { filters, sources: sortSourceGroups(result.data.sources) }
+      : { filters };
   }
 
   consola.error('[useFilter] Некорректные данные фильтра:', result.error);

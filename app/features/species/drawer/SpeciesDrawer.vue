@@ -10,7 +10,7 @@
   }>();
 
   defineEmits<{
-    (e: 'close'): void;
+    (event: 'close'): void;
   }>();
 
   const { data: detail, status } = await useAsyncData(
@@ -46,7 +46,6 @@
     <SpeciesBody
       v-if="detail"
       :species="detail"
-      hide-gallery
     />
   </UiDrawer>
 </template>

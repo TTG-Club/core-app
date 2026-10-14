@@ -8,6 +8,8 @@
     ArticleRequest,
   } from '../model';
 
+  import { uniq } from 'es-toolkit';
+
   import { MarkupEditor } from '~ui/markup-editor';
   import { UploadImage } from '~ui/upload';
   import { useWorkshopForm } from '~workshop/composable';
@@ -25,18 +27,26 @@
     ARTICLE_PUB_STATE_OPTIONS,
     ARTICLE_PUBLISH_CHANNELS,
     ARTICLE_PUBLISH_MODES,
+    ARTICLE_TAG_MAX_LENGTH,
+    ARTICLE_TAGS_HINT,
+    ARTICLE_TAGS_LABEL,
+    ARTICLE_TAGS_PLACEHOLDER,
     ARTICLE_TELEGRAM_FORMAT_DEFAULT,
     ARTICLE_TELEGRAM_FORMAT_OPTIONS,
     ARTICLE_TELEGRAM_FORMATS,
     ARTICLE_TELEGRAM_SUMMARY_TARGET,
+    ARTICLE_TYPE,
     ARTICLE_TYPE_DEFAULT,
     ARTICLE_TYPE_OPTIONS,
     ARTICLES_ADMIN_ROUTE,
     ARTICLES_API_PATH,
+    ARTICLES_TAGS_PATH,
     getArticlePreviewText,
     getArticleRoute,
+    normalizeArticleTag,
   } from '../model';
   import { ArticlePreview } from '../preview';
+  import { useArticleEditorCloseRoute } from './composables';
   import { ArticlePublishDateField, ArticleSlugField } from './ui';
 
   const formRef = useTemplateRef('formRef');
@@ -76,6 +86,7 @@
       discordCompact: false,
       discordCompactText: '',
       publishToVk: false,
+      tags: [],
       title: '',
       previewImageUrl: null,
       publishDateTime: null,
@@ -111,6 +122,7 @@
         telegramFormat: raw.telegramFormat ?? ARTICLE_TELEGRAM_FORMAT_DEFAULT,
         telegramSummaryEnabled: raw.telegramSummaryEnabled ?? false,
         telegramSummary: raw.telegramSummary ?? '',
+        tags: raw.tags ?? [],
       }),
       transformBeforeSubmit: (formState) => {
         const isActivePublish = !formState.draft && formState.active;
@@ -127,6 +139,9 @@
           // «Доступна по ссылке» актуальна только для неактивной опубликованной
           // записи — в остальных состояниях не тащим устаревший флаг в тело.
           accessibleByLink: isInactive ? formState.accessibleByLink : false,
+          // Теги — только у статей: у новости поле скрыто, и выбранные до смены
+          // типа теги не должны уехать на бэк.
+          tags: formState.type === ARTICLE_TYPE.ARTICLE ? formState.tags : [],
         };
       },
     });
@@ -252,6 +267,49 @@
 
   const $toast = useToast();
   const route = useRoute();
+  const closeRoute = useArticleEditorCloseRoute();
+
+  // Тип, url, состояние публикации и отправка в соцсети — решения админа.
+  // Модератор правит только содержание записи, эти блоки ему не показываем.
+  const { isAdmin } = useUserRoles();
+
+  // Теги — только у статей (фильтр и рейтинг есть только в их листинге).
+  const isTagsShown = computed(() => state.value.type === ARTICLE_TYPE.ARTICLE);
+
+  // Подсказки — теги уже опубликованных статей; грузим только на клиенте и не
+  // держим ими открытие формы.
+  const { data: knownTags } = useAsyncData(
+    'article-editor-tags',
+    () =>
+      $fetch<string[]>(ARTICLES_TAGS_PATH, {
+        method: 'GET',
+        query: { type: ARTICLE_TYPE.ARTICLE },
+      }),
+    { default: () => [], lazy: true, server: false },
+  );
+
+  // В списке выбора — известные теги и уже выбранные (в т.ч. только что созданные).
+  const tagItems = computed(() =>
+    uniq([...knownTags.value, ...state.value.tags]),
+  );
+
+  /**
+   * Добавляет новый тег, набранный в поле, в том виде, в каком его сохранит бэк,
+   * и без повторов.
+   */
+  function addTag(rawTag: string): void {
+    const tag = normalizeArticleTag(rawTag);
+
+    if (!tag || state.value.tags.includes(tag)) {
+      return;
+    }
+
+    state.value.tags = [...state.value.tags, tag];
+  }
+
+  const mainColumnClass = computed(() =>
+    isAdmin.value ? 'sm:col-span-3' : 'sm:col-span-5',
+  );
 
   // Собственный url записи при редактировании — чтобы проверка доступности slug
   // не считала его занятым.
@@ -319,6 +377,10 @@
   );
 
   const mainActionLabel = computed(() => {
+    if (!isAdmin.value) {
+      return 'Сохранить';
+    }
+
     if (pubState.value === 'draft') {
       return 'Сохранить черновик';
     }
@@ -426,6 +488,7 @@
     discordCompact: z.boolean(),
     discordCompactText: z.string(),
     publishToVk: z.boolean(),
+    tags: z.array(z.string().trim().max(ARTICLE_TAG_MAX_LENGTH)),
     // Анонс необязателен: пустую строку допускаем (бэк принимает пустой preview).
     preview: z.string().trim(),
     content: z.string().trim().nonempty(),
@@ -499,9 +562,13 @@
       </template>
 
       <div class="grid grid-cols-1 gap-6 sm:grid-cols-5">
-        <!-- Колонка 1: тип, заголовок, url -->
-        <div class="flex flex-col gap-5 sm:col-span-3">
+        <!-- Колонка 1: тип, заголовок, url (модератору — только заголовок) -->
+        <div
+          class="flex flex-col gap-5"
+          :class="mainColumnClass"
+        >
           <UFormField
+            v-if="isAdmin"
             label="Тип"
             name="type"
             required
@@ -527,6 +594,7 @@
             </UFormField>
 
             <UFormField
+              v-if="isAdmin"
               label="URL"
               name="url"
               required
@@ -538,10 +606,29 @@
               />
             </UFormField>
           </div>
+
+          <UFormField
+            v-if="isTagsShown"
+            :label="ARTICLE_TAGS_LABEL"
+            :help="ARTICLE_TAGS_HINT"
+            name="tags"
+          >
+            <USelectMenu
+              v-model="state.tags"
+              :items="tagItems"
+              multiple
+              create-item
+              icon="tabler:tags"
+              :placeholder="ARTICLE_TAGS_PLACEHOLDER"
+              class="w-full"
+              @create="addTag"
+            />
+          </UFormField>
         </div>
 
-        <!-- Колонка 2: публикация -->
+        <!-- Колонка 2: публикация (только админу) -->
         <div
+          v-if="isAdmin"
           class="flex flex-col gap-4 border-t border-default pt-4 sm:col-span-2 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-6"
         >
           <UTabs
@@ -595,7 +682,10 @@
       </div>
     </UCard>
 
-    <UCard variant="subtle">
+    <UCard
+      v-if="isAdmin"
+      variant="subtle"
+    >
       <div class="flex flex-wrap items-center gap-2">
         <span class="text-sm font-medium text-highlighted">Опубликовать:</span>
 
@@ -897,7 +987,7 @@
           color="neutral"
           icon="tabler:x"
           class="mr-auto"
-          :to="ARTICLES_ADMIN_ROUTE"
+          :to="closeRoute"
         >
           Закрыть
         </UButton>

@@ -15,6 +15,7 @@
  * Зеркало: dnd5-test-migrate/src/engine/effectTriggers.ts
  */
 
+import type { SaveDcSource } from './saveDc';
 import type {
   EffectTrigger,
   EffectTriggerAction,
@@ -167,11 +168,34 @@ function readEffectLandingTrigger(
           save: {
             ability: effect.applySave.ability,
             dc: effect.applySave.dc,
+            ...pickSaveDcFormula(effect.applySave),
+            ...pickSaveAltAbilities(effect.applySave),
           },
         }
       : {}),
     actions,
   };
+}
+
+/**
+ * Переводит старый эффект зоны или ауры «пока внутри» со спасброском в «при
+ * входе». Прежний редактор позволял собрать такую пару, но у «пока внутри»
+ * спасброска нет: VTTG прежде клал эффект на каждого вошедшего без броска, а
+ * теперь сам читает такой эффект как «при входе». Автор явно хотел
+ * «спасбросок — и эффект при провале», а это и есть вход.
+ *
+ * Вызывать только для эффектов зоны или ауры: у эффекта «на цели» спасбросок
+ * законный и момента срабатывания нет.
+ *
+ * @param effect эффект зоны или ауры.
+ * @returns эффект с моментом «при входе» либо тот же эффект.
+ */
+export function upgradeStaySaveEffect(effect: ActiveEffect): ActiveEffect {
+  if (!effect.applySave || (effect.areaTrigger ?? 'stay') !== 'stay') {
+    return effect;
+  }
+
+  return { ...effect, areaTrigger: 'enter' };
 }
 
 /**
@@ -217,7 +241,16 @@ function readLegacyListTriggers(effect: ActiveEffect): EffectTrigger[] {
     triggers.push({
       id: LEGACY_TRIGGER_IDS.recurringDamage,
       event: turnTriggerEventOf(recurringDamage.timing),
-      ...(save ? { save: { ability: save.ability, dc: save.dc } } : {}),
+      ...(save
+        ? {
+            save: {
+              ability: save.ability,
+              dc: save.dc,
+              ...pickSaveDcFormula(save),
+              ...pickSaveAltAbilities(save),
+            },
+          }
+        : {}),
       actions: [
         {
           type: 'damage',
@@ -233,7 +266,11 @@ function readLegacyListTriggers(effect: ActiveEffect): EffectTrigger[] {
     triggers.push({
       id: LEGACY_TRIGGER_IDS.recurringSave,
       event: turnTriggerEventOf(recurringSave.timing),
-      save: { ability: recurringSave.ability, dc: recurringSave.dc },
+      save: {
+        ability: recurringSave.ability,
+        dc: recurringSave.dc,
+        ...pickSaveDcFormula(recurringSave),
+      },
       actions: [{ type: 'removeSelf', on: 'saved' }],
     });
   }
@@ -353,9 +390,38 @@ function isPlainTrigger(trigger: EffectTrigger): boolean {
     // Цены, вопроса человеку и шанса срабатывания у старых полей нет
     && trigger.cost === undefined
     && trigger.ask === undefined
+    && trigger.pay === undefined
     && trigger.chancePercent === undefined
     && isPlainTriggerSave(trigger.save)
   );
+}
+
+/**
+ * Формула Сл старого поля для срабатывания и обратно — только если она есть:
+ * пустое поле в данных не пишется.
+ *
+ * @param save Сл старого поля или срабатывания.
+ * @returns поле формулы либо ничего.
+ */
+function pickSaveDcFormula(
+  save: SaveDcSource,
+): Pick<SaveDcSource, 'dcFormula'> {
+  return save.dcFormula ? { dcFormula: save.dcFormula } : {};
+}
+
+/** Характеристики на выбор бросающего у спасброска. */
+type SaveAltAbilities = Pick<EffectTriggerSave, 'altAbilities'>;
+
+/**
+ * Характеристики на выбор старого поля для срабатывания и обратно — только
+ * если они есть. Их знают спасбросок при наложении и спасбросок против урона
+ * каждый ход; у повторного спасброска, снимающего эффект, такого поля нет.
+ *
+ * @param save спасбросок старого поля или срабатывания.
+ * @returns поле характеристик либо ничего.
+ */
+function pickSaveAltAbilities(save: SaveAltAbilities): SaveAltAbilities {
+  return save.altAbilities?.length ? { altAbilities: save.altAbilities } : {};
 }
 
 /**
@@ -430,6 +496,8 @@ export function classifyLegacyTrigger(
     isTurn
     && trigger.role === undefined
     && trigger.save
+    // Характеристик на выбор у старого повторного спасброска нет
+    && trigger.save.altAbilities === undefined
     && action.type === 'removeSelf'
     && gate === 'saved'
   ) {
@@ -474,6 +542,8 @@ function toLegacyFields(
               save: {
                 ability: trigger.save.ability,
                 dc: trigger.save.dc,
+                ...pickSaveDcFormula(trigger.save),
+                ...pickSaveAltAbilities(trigger.save),
                 onSuccess: action.halfOnSave ? 'half' : 'negate',
               },
             }
@@ -487,6 +557,7 @@ function toLegacyFields(
       recurringSave: {
         ability: trigger.save.ability,
         dc: trigger.save.dc,
+        ...pickSaveDcFormula(trigger.save),
         timing,
       },
     };

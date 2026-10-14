@@ -317,6 +317,13 @@ export interface Game {
    */
   inviteCode: string | null;
   /**
+   * Стоимость сессии по умолчанию у платной игры. Видна до первой встречи;
+   * пусто у бесплатной игры и у платной, заведённой до появления цены игры.
+   */
+  priceAmount: number | null;
+  priceCurrency: string | null;
+  paymentType: SessionPaymentType | null;
+  /**
    * Ближайшая предстоящая встреча; `null` — расписания ещё нет. Считает её
    * сам сервис: у игры своей даты начала нет, время назначается встречам.
    */
@@ -437,6 +444,14 @@ export interface CreateGameRequest {
   durationType: GameDurationType;
   costType: GameCostType;
   visibility: GameVisibility;
+
+  /**
+   * Стоимость сессии по умолчанию. У платной игры сервис требует все три
+   * поля, у бесплатной — ни одного.
+   */
+  priceAmount?: number;
+  priceCurrency?: string;
+  paymentType?: SessionPaymentType;
 }
 
 /**
@@ -477,6 +492,18 @@ export interface GameFormState {
   durationType: GameDurationType;
   costType: GameCostType;
   visibility: GameVisibility;
+
+  /** Стоимость сессии по умолчанию; спрашивается только у платной игры. */
+  priceAmount: number | null;
+  priceCurrency: string;
+  paymentType: SessionPaymentType;
+}
+
+/** Стоимость сессии по умолчанию, которую игра передаёт своим встречам. */
+export interface GameSessionPrice {
+  priceAmount: number | null;
+  priceCurrency: string | null;
+  paymentType: SessionPaymentType | null;
 }
 
 /** Сессия игры. */
@@ -517,6 +544,12 @@ export interface CreateGameSessionRequest {
   priceAmount?: number;
   priceCurrency?: string;
   paymentType?: SessionPaymentType;
+
+  /**
+   * Бесплатная встреча платной игры. Без отметки сессия без своей цены
+   * получает цену игры по умолчанию.
+   */
+  free?: boolean;
 }
 
 /**
@@ -541,6 +574,9 @@ export interface CreateGameSessionSeriesRequest {
   priceAmount?: number;
   priceCurrency?: string;
   paymentType?: SessionPaymentType;
+
+  /** Бесплатная серия платной игры. */
+  free?: boolean;
 }
 
 /**

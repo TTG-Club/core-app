@@ -11,6 +11,9 @@
       root?: ClassValue;
       content?: ClassValue;
     };
+
+    /** Якорь заголовка: по нему навигация понимает, что раздел на экране. */
+    headingId?: string;
   }
 
   const props = withDefaults(defineProps<CollapsibleProps>(), {
@@ -20,7 +23,10 @@
     unmountOnHide: undefined,
     class: undefined,
     ui: undefined,
+    headingId: undefined,
   });
+
+  const collapsibleProps = reactiveOmit(props, 'headingId');
 
   defineEmits<{
     (e: 'update:open', open: boolean): void;
@@ -29,11 +35,14 @@
 
 <template>
   <UCollapsible
-    v-bind="props"
+    v-bind="collapsibleProps"
     @update:open="$emit('update:open', $event)"
   >
     <template #default="{ open: opened }">
-      <h4 class="flex cursor-pointer items-center gap-2 text-xl font-semibold">
+      <h4
+        :id="props.headingId"
+        class="flex cursor-pointer items-center gap-2 text-xl font-semibold"
+      >
         <UIcon
           name="tabler:chevron-down"
           class="transition-transform duration-150 ease-in-out"

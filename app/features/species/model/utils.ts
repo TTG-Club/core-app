@@ -1,3 +1,5 @@
+import type { FeatGrantedSpellRef } from '~feats/model';
+
 import type { SpeciesFeatureCreate } from './types';
 
 import { SPECIES_FEATURE_LEVEL_BADGE } from './constants';
@@ -41,4 +43,37 @@ export function getSpeciesFeatureLevelBadge(
   }
 
   return `${SPECIES_FEATURE_LEVEL_BADGE.prefix}${level}${SPECIES_FEATURE_LEVEL_BADGE.suffix}`;
+}
+
+/**
+ * Отметка «Подготавливать не нужно» у заклинаний умения вида. Врождённая
+ * магия вида подготовки не требует, поэтому отметка стоит, пока запись прямо
+ * не сняла её у заклинаний.
+ *
+ * @param spells выданные заклинания умения.
+ * @returns `true`, если готовить заклинания не нужно.
+ */
+export function readSpeciesSpellsAlwaysPrepared(
+  spells: ReadonlyArray<FeatGrantedSpellRef>,
+): boolean {
+  return spells.every((spell) => spell.alwaysPrepared !== false);
+}
+
+/**
+ * Ставит отметку «Подготавливать не нужно» всему списку умения: отметка одна
+ * на умение, как в системе. Пишется только снятая — без поля заклинание вида
+ * и так всегда подготовлено.
+ *
+ * @param spells выданные заклинания умения.
+ * @param alwaysPrepared отметка «Подготавливать не нужно».
+ * @returns заклинания с отметкой.
+ */
+export function writeSpeciesSpellsAlwaysPrepared(
+  spells: ReadonlyArray<FeatGrantedSpellRef>,
+  alwaysPrepared: boolean,
+): Array<FeatGrantedSpellRef> {
+  return spells.map((spell) => ({
+    ...spell,
+    alwaysPrepared: alwaysPrepared ? undefined : false,
+  }));
 }

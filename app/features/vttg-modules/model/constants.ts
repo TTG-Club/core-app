@@ -1,0 +1,323 @@
+import type { BadgeProps } from '@nuxt/ui';
+
+import type { SubmissionStatus } from './types';
+
+import { VTTG_MODULES_API_PREFIX } from '#shared/consts';
+
+/* ------------------------------------------------------------------ */
+/* Маршруты и пути API                                                 */
+/* ------------------------------------------------------------------ */
+
+/** Страница автора: свои заявки на модули. */
+export const VTTG_MODULES_ROUTE = '/vttg/modules';
+
+/** Очередь модерации заявок на модули. */
+export const VTTG_MODULES_MODERATION_ROUTE = '/moderation/vttg-modules';
+
+/** Справочник игровых систем для формы заявки. */
+export const VTTG_MODULES_SYSTEMS_API_PATH = `${VTTG_MODULES_API_PREFIX}/systems`;
+
+/** Заявки автора. */
+export const VTTG_MODULES_SUBMISSIONS_API_PATH = `${VTTG_MODULES_API_PREFIX}/submissions`;
+
+/** Свои заявки автора. */
+export const VTTG_MODULES_MY_SUBMISSIONS_API_PATH = `${VTTG_MODULES_SUBMISSIONS_API_PATH}/my`;
+
+/** Очередь модерации. */
+export const VTTG_MODULES_MODERATION_API_PATH = `${VTTG_MODULES_API_PREFIX}/moderation/submissions`;
+
+/** Ключ `useAsyncData` справочника игровых систем: общий на всю страницу. */
+export const VTTG_MODULES_SYSTEMS_ASYNC_KEY = 'vttg-modules-game-systems';
+
+/** Ключ `useAsyncData` списка своих заявок автора. */
+export const VTTG_MODULES_MY_SUBMISSIONS_ASYNC_KEY =
+  'vttg-modules-my-submissions';
+
+/** Ключ `useAsyncData` очереди модерации. */
+export const VTTG_MODULES_MODERATION_ASYNC_KEY = 'moderation-vttg-modules';
+
+/** Хвост пути перечитывания манифеста. */
+export const REFRESH_MANIFEST_PATH_SUFFIX = 'refresh-manifest';
+
+/** Хвост пути одобрения заявки. */
+export const APPROVE_PATH_SUFFIX = 'approve';
+
+/** Хвост пути отклонения заявки. */
+export const REJECT_PATH_SUFFIX = 'reject';
+
+/* ------------------------------------------------------------------ */
+/* Ограничения полей — те же, что у сервиса                            */
+/* ------------------------------------------------------------------ */
+
+/** Длина ссылки на репозиторий и манифест. */
+export const SUBMISSION_URL_MAX_LENGTH = 2048;
+
+/** Начальная высота поля причины отклонения, в строках. */
+export const TEXTAREA_ROWS = 4;
+
+/** Длина комментария модератора. */
+export const MODERATION_COMMENT_MAX_LENGTH = 2000;
+
+/** Заявок на странице очереди модерации. */
+export const MODERATION_PAGE_SIZE = 20;
+
+/** Сколько заглушек показывать, пока грузится очередь модерации. */
+export const MODERATION_SKELETON_COUNT = 3;
+
+/** Сколько заглушек показывать, пока грузятся заявки автора. */
+export const SUBMISSIONS_SKELETON_COUNT = 2;
+
+/* ------------------------------------------------------------------ */
+/* Статусы                                                             */
+/* ------------------------------------------------------------------ */
+
+/** Все статусы заявки в порядке жизненного цикла. */
+export const SUBMISSION_STATUSES = [
+  'PENDING',
+  'APPROVED',
+  'REJECTED',
+  'WITHDRAWN',
+  'SUPERSEDED',
+] as const;
+
+/** Подписи статусов. */
+export const SUBMISSION_STATUS_LABELS: Record<SubmissionStatus, string> = {
+  PENDING: 'На рассмотрении',
+  APPROVED: 'Одобрен',
+  REJECTED: 'Отклонён',
+  WITHDRAWN: 'Отозван',
+  SUPERSEDED: 'Заменён',
+};
+
+/** Цвета значков статусов. */
+export const SUBMISSION_STATUS_COLORS: Record<
+  SubmissionStatus,
+  NonNullable<BadgeProps['color']>
+> = {
+  PENDING: 'warning',
+  APPROVED: 'success',
+  REJECTED: 'error',
+  WITHDRAWN: 'neutral',
+  SUPERSEDED: 'neutral',
+};
+
+/** Статусы, которые автор может исправить и отправить заново. */
+export const EDITABLE_STATUSES: ReadonlyArray<SubmissionStatus> = [
+  'PENDING',
+  'REJECTED',
+];
+
+/** Закрытые заявки: над ними больше нет действий. */
+export const CLOSED_STATUSES: ReadonlyArray<SubmissionStatus> = [
+  'WITHDRAWN',
+  'SUPERSEDED',
+];
+
+/** Заявки, которые модератор может одобрить. */
+export const APPROVABLE_STATUSES: ReadonlyArray<SubmissionStatus> = ['PENDING'];
+
+/** Заявки, которые модератор может отклонить или снять из каталога. */
+export const REJECTABLE_STATUSES: ReadonlyArray<SubmissionStatus> = [
+  'PENDING',
+  'APPROVED',
+];
+
+/** Статус модуля в каталоге VTTG: его отклонение — это снятие из каталога. */
+export const CATALOG_STATUS: SubmissionStatus = 'APPROVED';
+
+/** Варианты фильтра очереди модерации по статусам. */
+export const SUBMISSION_STATUS_ITEMS = SUBMISSION_STATUSES.map((status) => ({
+  value: status,
+  label: SUBMISSION_STATUS_LABELS[status],
+}));
+
+/* ------------------------------------------------------------------ */
+/* Тексты страницы автора                                              */
+/* ------------------------------------------------------------------ */
+
+export const VTTG_MODULES_TITLE = 'Мои модули VTTG';
+
+/** Значок раздела в меню профиля. */
+export const VTTG_MODULES_ICON = 'tabler:puzzle';
+
+export const VTTG_MODULES_DESCRIPTION =
+  'Каталог VTTG собирается из модулей, которые авторы ведут в открытых репозиториях. Подайте заявку — модератор проверит модуль, и после одобрения он появится в каталоге.';
+
+export const SUBMIT_LABEL = 'Подать заявку';
+
+export const SUBMIT_ICON = 'tabler:plus';
+
+export const SUBMISSIONS_EMPTY_TITLE = 'Заявок пока нет';
+
+export const SUBMISSIONS_EMPTY_DESCRIPTION =
+  'Подайте первую заявку — модератор рассмотрит её и ответит здесь же.';
+
+export const SUBMISSIONS_LOAD_ERROR_TITLE = 'Не удалось загрузить заявки';
+
+export const RETRY_LABEL = 'Повторить';
+
+/* ------------------------------------------------------------------ */
+/* Форма заявки                                                        */
+/* ------------------------------------------------------------------ */
+
+export const FORM_CREATE_TITLE = 'Заявка на модуль';
+
+export const FORM_EDIT_TITLE = 'Исправить заявку';
+
+export const FORM_LINKS_LOCKED_HINT =
+  'Модуль уже одобрялся — ссылку менять нельзя. Для новой ссылки подайте новую заявку на этот же модуль.';
+
+export const FORM_EDIT_HINT =
+  'После правки заявка снова уйдёт на рассмотрение.';
+
+export const FORM_MANIFEST_LABEL = 'Ссылка на module.json';
+
+export const FORM_MANIFEST_PLACEHOLDER =
+  'https://github.com/автор/модуль/blob/main/module.json';
+
+export const FORM_MANIFEST_HINT =
+  'Файл в открытом репозитории GitHub или GitLab. Подойдёт и ссылка на страницу файла в GitHub. Название, описание и игровые системы модуля сервис возьмёт из этого файла.';
+
+export const FORM_SUBMIT_LABEL = 'Отправить';
+
+export const FORM_SUBMIT_ICON = 'tabler:send';
+
+export const FORM_RESUBMIT_LABEL = 'Отправить заново';
+
+export const CANCEL_LABEL = 'Отмена';
+
+export const SUBMITTED_TOAST = 'Заявка отправлена на рассмотрение';
+
+export const RESUBMITTED_TOAST = 'Исправленная заявка отправлена';
+
+/* ------------------------------------------------------------------ */
+/* Карточка заявки                                                     */
+/* ------------------------------------------------------------------ */
+
+export const CARD_VERSION_PREFIX = 'v';
+
+/** Значок модуля, если в манифесте его нет или он не из разрешённых коллекций. */
+export const DEFAULT_MODULE_ICON = 'tabler:puzzle';
+
+/** Коллекции значков, которые разрешены и сайту, и VTTG. */
+export const ALLOWED_ICON_PREFIXES = ['tabler:', 'ttg:'] as const;
+
+export const CARD_REPOSITORY_ICON = 'tabler:brand-git';
+
+export const CARD_MANIFEST_ICON = 'tabler:file-code';
+
+export const CARD_DOWNLOAD_ICON = 'tabler:file-zip';
+
+export const CARD_REPOSITORY_LABEL = 'Репозиторий';
+
+export const CARD_MANIFEST_LABEL = 'module.json';
+
+export const CARD_DOWNLOAD_LABEL = 'Архив';
+
+export const CARD_UNIVERSAL_LABEL = 'Любая система';
+
+export const CARD_SUBMITTED_PREFIX = 'Подана';
+
+export const CARD_SYNCED_PREFIX = 'Манифест прочитан';
+
+export const CARD_MODERATOR_COMMENT_LABEL = 'Комментарий модератора';
+
+export const CARD_DATE_FORMAT = 'DD.MM.YYYY HH:mm';
+
+export const EDIT_LABEL = 'Исправить';
+
+export const EDIT_ICON = 'tabler:pencil';
+
+export const REFRESH_MANIFEST_LABEL = 'Перечитать манифест';
+
+export const REFRESH_MANIFEST_ICON = 'tabler:refresh';
+
+export const REFRESHED_TOAST = 'Манифест перечитан';
+
+export const WITHDRAW_LABEL = 'Отозвать';
+
+export const WITHDRAW_ICON = 'tabler:trash';
+
+export const WITHDRAW_CONFIRM_TITLE = 'Отозвать заявку?';
+
+export const WITHDRAW_CONFIRM_DESCRIPTION =
+  'Одобренный модуль пропадёт из каталога VTTG. Вернуть его можно только новой заявкой.';
+
+export const WITHDRAWN_TOAST = 'Заявка отозвана';
+
+/* ------------------------------------------------------------------ */
+/* Модерация                                                           */
+/* ------------------------------------------------------------------ */
+
+export const MODERATION_TITLE = 'Модули VTTG';
+
+/** Пояснение к очереди в боковой колонке. */
+export const MODERATION_DESCRIPTION =
+  'Заявки авторов на включение модулей в каталог VTTG. Откройте заявку, чтобы посмотреть манифест и принять решение.';
+
+/** Оформление обычной строки очереди. */
+export const MODERATION_ROW_CLASS =
+  'border-default bg-elevated hover:border-accented hover:bg-accented';
+
+/** Оформление строки, чья карточка открыта. */
+export const MODERATION_ROW_OPENED_CLASS =
+  'border-primary bg-primary/10 shadow-xs ring-1 ring-primary/50';
+
+export const MODERATION_DETAIL_EMPTY_ICON = 'tabler:puzzle';
+
+export const MODERATION_DETAIL_EMPTY_TITLE = 'Заявка не выбрана';
+
+export const MODERATION_DETAIL_EMPTY_TEXT =
+  'Выберите заявку из списка слева, чтобы посмотреть манифест и принять решение';
+
+export const VTTG_MODULES_DASHBOARD_TITLE = 'Модули VTTG';
+
+export const VTTG_MODULES_DASHBOARD_DESCRIPTION =
+  'Заявки авторов на включение модулей в каталог виртуального стола';
+
+/** Подсказка фильтра, когда ни один статус не выбран — показываются все. */
+export const MODERATION_STATUS_FILTER_PLACEHOLDER = 'Все статусы';
+
+export const MODERATION_EMPTY_TITLE = 'Заявок нет';
+
+export const MODERATION_EMPTY_DESCRIPTION =
+  'С выбранными статусами сейчас нет ни одной заявки.';
+
+export const MODERATION_AUTHOR_PREFIX = 'Автор';
+
+export const APPROVE_LABEL = 'Одобрить';
+
+export const APPROVE_ICON = 'tabler:check';
+
+export const APPROVED_TOAST = 'Модуль добавлен в каталог';
+
+export const REJECT_LABEL = 'Отклонить';
+
+export const TAKE_DOWN_LABEL = 'Снять из каталога';
+
+export const REJECT_ICON = 'tabler:x';
+
+export const REJECT_TITLE = 'Отклонить заявку';
+
+export const TAKE_DOWN_TITLE = 'Снять модуль из каталога';
+
+export const REJECT_COMMENT_LABEL = 'Причина';
+
+export const REJECT_COMMENT_PLACEHOLDER =
+  'Автор увидит этот текст в своей заявке';
+
+export const REJECTED_TOAST = 'Заявка отклонена';
+
+/* ------------------------------------------------------------------ */
+/* Ошибки и уведомления                                                */
+/* ------------------------------------------------------------------ */
+
+export const VTTG_MODULES_UNKNOWN_ERROR_MESSAGE =
+  'Не получилось. Попробуйте ещё раз';
+
+export const VTTG_MODULES_SESSION_EXPIRED_MESSAGE =
+  'Сессия истекла — войдите снова';
+
+export const VTTG_MODULES_TOAST_SUCCESS_ICON = 'tabler:circle-check';
+
+export const VTTG_MODULES_TOAST_ERROR_ICON = 'tabler:alert-circle';

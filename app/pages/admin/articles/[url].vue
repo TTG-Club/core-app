@@ -1,6 +1,14 @@
 <script setup lang="ts">
-  import { ArticleEditor } from '~articles/editor';
-  import { ARTICLES_ADMIN_ROUTE } from '~articles/model';
+  import { Role } from '~/shared/types';
+  import { ArticleEditor, useArticleEditorCloseRoute } from '~articles/editor';
+
+  // Править записи может и модератор (создание и список — только админу, см.
+  // admin.vue). Мета дочерней страницы перекрывает роли родителя.
+  definePageMeta({
+    auth: { roles: [Role.ADMIN, Role.MODERATOR] },
+  });
+
+  const closeRoute = useArticleEditorCloseRoute();
 
   useSeoMeta({
     title: 'Редактирование записи',
@@ -18,7 +26,7 @@
           icon="tabler:x"
           variant="ghost"
           color="neutral"
-          :to="ARTICLES_ADMIN_ROUTE"
+          :to="closeRoute"
           aria-label="Закрыть"
         />
       </UTooltip>

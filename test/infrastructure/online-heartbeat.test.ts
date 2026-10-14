@@ -15,10 +15,13 @@ import { useOnlineHeartbeat } from '~infrastructure/analytics/composables';
 import { useCookieNotice } from '~infrastructure/cookie-consent/composables';
 
 const noticeCookie = ref<unknown>(null);
+const themeCookie = ref<unknown>(null);
+const layoutWidthCookie = ref<unknown>(null);
 
 const scopes: Array<EffectScope> = [];
 const visitor = ref<unknown>(null);
 const user = ref<{ username: string } | null>(null);
+const userToken = ref<string | null>(null);
 const counter = ref<number | null>(null);
 const visibility = ref('visible');
 const fetchProfile = vi.fn<() => Promise<void>>();
@@ -46,8 +49,11 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(Date.parse('2026-09-13T12:00:00Z'));
   noticeCookie.value = null;
+  themeCookie.value = null;
+  layoutWidthCookie.value = null;
   visitor.value = null;
   user.value = null;
+  userToken.value = null;
   counter.value = null;
   visibility.value = 'visible';
   mountHook = undefined;
@@ -60,9 +66,23 @@ beforeEach(() => {
   vi.stubGlobal('onScopeDispose', onScopeDispose);
   vi.stubGlobal('useIntervalFn', useIntervalFn);
 
-  vi.stubGlobal('useCookie', (name: string) =>
-    name === 'ttg-cookie-notice' ? noticeCookie : visitor,
-  );
+  vi.stubGlobal('useCookie', (name: string) => {
+    if (name === 'ttg-cookie-notice') {
+      return noticeCookie;
+    }
+
+    if (name === 'ttg-theme') {
+      return themeCookie;
+    }
+
+    if (name === 'ttg-layout-width') {
+      return layoutWidthCookie;
+    }
+
+    return name === 'ttg-user-token' ? userToken : visitor;
+  });
+
+  vi.stubGlobal('refreshCookie', vi.fn());
 
   vi.stubGlobal('useState', () => counter);
   vi.stubGlobal('useDocumentVisibility', () => visibility);
@@ -100,7 +120,6 @@ describe('автоматический учёт посетителей онла�
     async ({ cookie: invalidCookie }) => {
       visitor.value = invalidCookie;
       mountHeartbeat();
-      expect(visitor.value).toEqual(invalidCookie);
       await vi.advanceTimersByTimeAsync(0);
       expect(visitor.value).toEqual(expect.any(String));
       expect(visitor.value).not.toEqual(invalidCookie);
@@ -160,10 +179,36 @@ describe('автоматический учёт посетителей онла�
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it('передаёт тему и ширину сайта из cookie, пропуская пустые значения', async () => {
+    themeCookie.value = 'light';
+    layoutWidthCookie.value = '';
+    mountHeartbeat();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(heartbeat).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        body: {
+          key: visitor.value,
+          preferences: { theme: 'light' },
+          type: 'GUEST',
+        },
+      }),
+    );
+  });
+
+  it('не спрашивает профиль гостя без токена', async () => {
+    mountHeartbeat();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetchProfile).not.toHaveBeenCalled();
+    expect(heartbeat).toHaveBeenCalledOnce();
+  });
+
   it('не отправляет статистику после остановки во время загрузки профиля', async () => {
     const profile = Promise.withResolvers<void>();
 
     fetchProfile.mockReturnValue(profile.promise);
+    userToken.value = 'token';
 
     const scope = mountHeartbeat();
 

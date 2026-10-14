@@ -9,6 +9,7 @@
   import {
     applySpellDamageFormulaParts,
     getSpellDamageFormulaParts,
+    hasSpellArea,
     SPELL_DAMAGE_PART_EMPTY,
     SPELL_EDITOR_SECTIONS,
     SPELL_PROJECTILE_HINTS,
@@ -33,6 +34,8 @@
   );
 
   const damageTypeOptions = computed(() => damageTypes.value ?? []);
+
+  const hasArea = computed(() => hasSpellArea(model.value));
 
   const isDamageTypesPending = computed(
     () => damageTypesStatus.value === 'pending',
@@ -130,6 +133,7 @@
           v-model:scaling="scaling"
           v-model:tiers="cantripScalingTiers"
           :level="level"
+          :has-area="hasArea"
           :damage-type-options="damageTypeOptions"
           :damage-types-pending="isDamageTypesPending"
         />

@@ -1,10 +1,19 @@
 <script setup lang="ts">
-  const { section, maxSize = undefined } = defineProps<{
+  const {
+    section,
+    maxSize = undefined,
+    removable = true,
+  } = defineProps<{
     section: string;
     /**
      * Максимальная длина короткой стороны
      */
     maxSize?: string | number;
+    /**
+     * Показывать на превью кнопку удаления картинки при наведении. Выключают
+     * там, где у формы своя кнопка удаления.
+     */
+    removable?: boolean;
   }>();
 
   const maxSizeConverted = Number(maxSize);
@@ -66,6 +75,16 @@
       title: 'Успех',
       description: 'Изображение успешно загружено',
     });
+  }
+
+  const isRemoveVisible = computed(() => removable && !!imageUploaded.value);
+
+  /**
+   * Убирает картинку из поля. Файл в хранилище не удаляется: форму ещё можно
+   * закрыть без сохранения, и запись должна остаться со своей картинкой.
+   */
+  function handleRemoveClick(): void {
+    imageUploaded.value = undefined;
   }
 
   const dropZoneRef = useTemplateRef<HTMLElement>('dropZoneRef');
@@ -131,9 +150,23 @@
 
     <div
       v-if="$slots.preview"
-      class="w-full"
+      class="group relative w-full"
     >
       <slot name="preview" />
+
+      <div
+        v-if="isRemoveVisible"
+        class="absolute top-0 right-0 p-2 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
+      >
+        <UButton
+          icon="tabler:trash"
+          color="error"
+          size="xs"
+          aria-label="Удалить изображение"
+          :disabled="isUploading"
+          @click.left.exact.prevent="handleRemoveClick"
+        />
+      </div>
     </div>
   </div>
 </template>

@@ -6,9 +6,12 @@
     EffectTurnTiming,
   } from '../../model';
 
+  import { InfoTooltip } from '~ui/tooltip';
+
   import {
     DEFAULT_EFFECT_TURN_ANCHOR,
     DEFAULT_EFFECT_TURN_TIMING,
+    durationAcceptsCurrentTurn,
     durationHint,
     EFFECT_DURATION_STEP_LABELS,
     EFFECT_DURATION_TYPE_OPTIONS,
@@ -106,6 +109,36 @@
     },
   });
 
+  /**
+   * «До конца текущего хода» есть только у срока «до конца хода»: у начала
+   * хода «текущего» не бывает.
+   */
+  const showsTurnCurrent = computed(() =>
+    durationAcceptsCurrentTurn(effect.value.duration),
+  );
+
+  // Галочка пишется только включённой: `turnCurrent: true`
+  const turnCurrent = computed({
+    get: () => effect.value.turnCurrent === true,
+    set: (enabled: boolean) => {
+      effect.value = {
+        ...effect.value,
+        turnCurrent: enabled ? true : undefined,
+      };
+    },
+  });
+
+  // Галочка пишется только включённой: `stackable: true`
+  const stackable = computed({
+    get: () => effect.value.stackable === true,
+    set: (enabled: boolean) => {
+      effect.value = {
+        ...effect.value,
+        stackable: enabled ? true : undefined,
+      };
+    },
+  });
+
   const turnAnchor = computed({
     get: () => effect.value.duration.turnAnchor ?? DEFAULT_EFFECT_TURN_ANCHOR,
     set: (anchor: EffectTurnAnchor) => {
@@ -173,6 +206,18 @@
           class="w-48"
         />
       </template>
+
+      <InfoTooltip
+        v-if="showsTurnCurrent"
+        :text="EFFECT_DURATION_STEP_LABELS.turnCurrentHint"
+        icon="tabler:info-circle-filled"
+      >
+        <USwitch
+          v-model="turnCurrent"
+          :label="EFFECT_DURATION_STEP_LABELS.turnCurrent"
+          size="sm"
+        />
+      </InfoTooltip>
     </div>
 
     <p class="text-xs text-muted">
@@ -185,5 +230,12 @@
     >
       {{ EFFECT_DURATION_STEP_LABELS.formulaToggleHint }}
     </p>
+
+    <USwitch
+      v-model="stackable"
+      :label="EFFECT_DURATION_STEP_LABELS.stackable"
+      :description="EFFECT_DURATION_STEP_LABELS.stackableHint"
+      size="sm"
+    />
   </div>
 </template>

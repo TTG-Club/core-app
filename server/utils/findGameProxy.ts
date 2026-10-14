@@ -1,28 +1,11 @@
 import type { H3Event } from 'h3';
 
-import { StatusCodes } from 'http-status-codes';
-
 import {
   FIND_GAME_API_PREFIX,
   FIND_GAME_UPSTREAM_PREFIX,
 } from '#shared/consts';
 
-/**
- * Делит путь запроса на часть до знака вопроса и строку параметров.
- * @param path Путь запроса вместе с query-строкой.
- */
-function splitPath(path: string): { pathname: string; search: string } {
-  const queryStart = path.indexOf('?');
-
-  if (queryStart < 0) {
-    return { pathname: path, search: '' };
-  }
-
-  return {
-    pathname: path.slice(0, queryStart),
-    search: path.slice(queryStart),
-  };
-}
+import { getServiceUpstreamPath } from './serviceProxy';
 
 /**
  * Переписывает same-origin путь сайта в путь find-game-api.
@@ -36,24 +19,11 @@ function splitPath(path: string): { pathname: string; search: string } {
  * @param path Путь запроса к сайту вместе с query-строкой.
  */
 export function getFindGameUpstreamPath(path: string): string {
-  const { pathname, search } = splitPath(path);
-
-  if (
-    pathname !== FIND_GAME_API_PREFIX
-    && !pathname.startsWith(`${FIND_GAME_API_PREFIX}/`)
-  ) {
-    throw createError(getErrorResponse(StatusCodes.NOT_FOUND));
-  }
-
-  const rest = pathname.slice(FIND_GAME_API_PREFIX.length);
-
-  // Путь до сервиса собирается только из сегментов запроса; `..` в нём мог бы
-  // увести запрос за пределы `/api/v1`, поэтому такой путь не обслуживаем.
-  if (rest.split('/').includes('..')) {
-    throw createError(getErrorResponse(StatusCodes.NOT_FOUND));
-  }
-
-  return `${FIND_GAME_UPSTREAM_PREFIX}${rest}${search}`;
+  return getServiceUpstreamPath(
+    path,
+    FIND_GAME_API_PREFIX,
+    FIND_GAME_UPSTREAM_PREFIX,
+  );
 }
 
 /**

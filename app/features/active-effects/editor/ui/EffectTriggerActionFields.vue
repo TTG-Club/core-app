@@ -11,6 +11,8 @@
     EffectTriggerMoveOrigin,
   } from '../../model';
 
+  import { InfoTooltip } from '~ui/tooltip';
+
   import {
     ANY_CONDITION_KEY,
     buildAreaShiftKindOptions,
@@ -24,6 +26,7 @@
     DEFAULT_TRIGGER_MOVE_KIND,
     DEFAULT_TRIGGER_MOVE_ORIGIN,
     EFFECT_CAST_OWNER_OPTIONS,
+    EFFECT_CREATURE_CATEGORY_OPTIONS,
     EFFECT_NOTIFY_TARGET_OPTIONS,
     EFFECT_RESTORE_KIND_OPTIONS,
     EFFECT_TEMP_HP_MODE_OPTIONS,
@@ -37,6 +40,7 @@
     MIN_REVIVE_HP,
     MIN_SPELL_SLOT_LEVEL,
     MIN_TRIGGER_MOVE_DISTANCE,
+    moveKindTakesDistance,
     PATH_AREA_SHIFT_KINDS,
   } from '../../model';
 
@@ -114,6 +118,24 @@
 
       if (currentAction.type === 'move') {
         action.value = { ...currentAction, kind: nextKind };
+      }
+    },
+  });
+
+  /** Расстояние есть у всех перемещений, кроме переноса вплотную к опоре. */
+  const moveTakesDistance = computed(
+    () =>
+      action.value.type === 'move' && moveKindTakesDistance(action.value.kind),
+  );
+
+  // Расстояние «до N»: снятая отметка не пишется вовсе
+  const moveUpTo = computed({
+    get: () => action.value.type === 'move' && action.value.upTo === true,
+    set: (enabled: boolean) => {
+      const currentAction = action.value;
+
+      if (currentAction.type === 'move') {
+        action.value = { ...currentAction, upTo: enabled ? true : undefined };
       }
     },
   });
@@ -210,6 +232,25 @@
     },
   });
 
+  // Пустой список значит «кем бы ни было наложено»: поля в данных нет
+  const removedFromTypes = computed({
+    get: () =>
+      action.value.type === 'removeCondition'
+        ? (action.value.fromCreatureTypes ?? [])
+        : [],
+    set: (creatureTypes: string[]) => {
+      const currentAction = action.value;
+
+      if (currentAction.type === 'removeCondition') {
+        action.value = {
+          ...currentAction,
+          fromCreatureTypes:
+            creatureTypes.length > 0 ? creatureTypes : undefined,
+        };
+      }
+    },
+  });
+
   // Полный запас хитов вместо числа
   const reviveFull = computed({
     get: () => action.value.type === 'revive' && action.value.full === true,
@@ -254,6 +295,8 @@
           what: nextKind,
           level: nextKind === 'spellSlot' ? MIN_SPELL_SLOT_LEVEL : undefined,
           counter: nextKind === 'counter' ? currentAction.counter : undefined,
+          // «Установить в число» бывает только у счётчика листа
+          set: nextKind === 'counter' ? currentAction.set : undefined,
         };
       }
     },
@@ -290,6 +333,57 @@
 
       if (currentAction.type === 'restore' && counter) {
         action.value = { ...currentAction, counter };
+      }
+    },
+  });
+
+  // «Сколько вернуть»: число или формула; пусто — одна единица
+  const restoreAmount = computed({
+    get: () =>
+      action.value.type === 'restore' ? (action.value.amount ?? '') : '',
+    set: (enteredAmount: string) => {
+      const currentAction = action.value;
+
+      if (currentAction.type === 'restore') {
+        action.value = {
+          ...currentAction,
+          amount: enteredAmount.trim() || undefined,
+        };
+      }
+    },
+  });
+
+  /** «Установить в это число» — только у счётчика листа. */
+  const restoresCounter = computed(
+    () => action.value.type === 'restore' && action.value.what === 'counter',
+  );
+
+  // Галочка пишется только включённой: `set: true`
+  const restoreSet = computed({
+    get: () => action.value.type === 'restore' && action.value.set === true,
+    set: (enabled: boolean) => {
+      const currentAction = action.value;
+
+      if (currentAction.type === 'restore') {
+        action.value = { ...currentAction, set: enabled ? true : undefined };
+      }
+    },
+  });
+
+  // Круг рассеивания формулой: пустая строка — круг числом
+  const dispelFormula = computed({
+    get: () =>
+      action.value.type === 'dispel'
+        ? (action.value.maxLevelFormula ?? '')
+        : '',
+    set: (enteredFormula: string) => {
+      const currentAction = action.value;
+
+      if (currentAction.type === 'dispel') {
+        action.value = {
+          ...currentAction,
+          maxLevelFormula: enteredFormula.trim() || undefined,
+        };
       }
     },
   });
@@ -464,7 +558,7 @@
   >
     <UFormField
       :label="EFFECT_TRIGGER_ROW_LABELS.moveKind"
-      class="w-full sm:w-44"
+      class="w-full sm:w-96"
     >
       <USelect
         v-model="moveKind"
@@ -475,19 +569,32 @@
       />
     </UFormField>
 
-    <UFormField
-      :label="EFFECT_TRIGGER_ROW_LABELS.moveDistance"
-      class="w-full sm:w-28"
-    >
-      <UInputNumber
-        :model-value="action.distance"
-        :min="MIN_TRIGGER_MOVE_DISTANCE"
-        :max="MAX_TRIGGER_MOVE_DISTANCE"
-        size="sm"
-        class="w-full"
-        @update:model-value="updateMoveDistance"
-      />
-    </UFormField>
+    <template v-if="moveTakesDistance">
+      <UFormField
+        :label="EFFECT_TRIGGER_ROW_LABELS.moveDistance"
+        class="w-full sm:w-28"
+      >
+        <UInputNumber
+          :model-value="action.distance"
+          :min="MIN_TRIGGER_MOVE_DISTANCE"
+          :max="MAX_TRIGGER_MOVE_DISTANCE"
+          size="sm"
+          class="w-full"
+          @update:model-value="updateMoveDistance"
+        />
+      </UFormField>
+
+      <InfoTooltip
+        :text="EFFECT_TRIGGER_ROW_LABELS.moveUpToHint"
+        icon="tabler:info-circle-filled"
+        class="mt-7"
+      >
+        <USwitch
+          v-model="moveUpTo"
+          :label="EFFECT_TRIGGER_ROW_LABELS.moveUpTo"
+        />
+      </InfoTooltip>
+    </template>
 
     <UFormField
       :label="EFFECT_TRIGGER_ROW_LABELS.moveFrom"
@@ -504,20 +611,48 @@
     </UFormField>
   </div>
 
-  <UFormField
+  <div
     v-else-if="action.type === 'removeCondition'"
-    :label="EFFECT_TRIGGER_ROW_LABELS.condition"
-    class="w-full sm:w-64"
+    class="flex flex-wrap items-end gap-3"
   >
-    <USelectMenu
-      v-model="removedCondition"
-      :items="removableConditionItems"
-      value-key="value"
-      label-key="label"
-      size="sm"
-      class="w-full"
-    />
-  </UFormField>
+    <UFormField
+      :label="EFFECT_TRIGGER_ROW_LABELS.condition"
+      class="w-full sm:w-64"
+    >
+      <USelectMenu
+        v-model="removedCondition"
+        :items="removableConditionItems"
+        value-key="value"
+        label-key="label"
+        size="sm"
+        class="w-full"
+      />
+    </UFormField>
+
+    <UFormField class="w-full sm:w-72">
+      <template #label>
+        <InfoTooltip
+          :text="EFFECT_TRIGGER_ROW_LABELS.removeConditionFromTypesHint"
+          icon="tabler:info-circle-filled"
+        >
+          <span>{{ EFFECT_TRIGGER_ROW_LABELS.removeConditionFromTypes }}</span>
+        </InfoTooltip>
+      </template>
+
+      <USelectMenu
+        v-model="removedFromTypes"
+        :items="EFFECT_CREATURE_CATEGORY_OPTIONS"
+        value-key="value"
+        label-key="label"
+        multiple
+        :placeholder="
+          EFFECT_TRIGGER_ROW_LABELS.removeConditionFromTypesPlaceholder
+        "
+        size="sm"
+        class="w-full"
+      />
+    </UFormField>
+  </div>
 
   <div
     v-else-if="action.type === 'revive'"
@@ -584,11 +719,36 @@
         class="w-full"
       />
     </UFormField>
+
+    <UFormField class="w-full sm:w-44">
+      <template #label>
+        <InfoTooltip
+          :text="EFFECT_TRIGGER_ROW_LABELS.restoreAmountHint"
+          icon="tabler:info-circle-filled"
+        >
+          <span>{{ EFFECT_TRIGGER_ROW_LABELS.restoreAmount }}</span>
+        </InfoTooltip>
+      </template>
+
+      <UInput
+        v-model="restoreAmount"
+        :placeholder="EFFECT_TRIGGER_ROW_LABELS.restoreAmountPlaceholder"
+        size="sm"
+        class="w-full font-mono"
+      />
+    </UFormField>
+
+    <USwitch
+      v-if="restoresCounter"
+      v-model="restoreSet"
+      :label="EFFECT_TRIGGER_ROW_LABELS.restoreSet"
+      :description="EFFECT_TRIGGER_ROW_LABELS.restoreSetHint"
+    />
   </div>
 
   <div
     v-else-if="action.type === 'dispel'"
-    class="flex flex-wrap items-center gap-3"
+    class="flex flex-wrap items-start gap-3"
   >
     <UFormField
       :label="EFFECT_TRIGGER_ROW_LABELS.dispelMaxLevel"
@@ -601,6 +761,21 @@
         size="sm"
         class="w-full"
         @update:model-value="updateDispelLevel"
+      />
+    </UFormField>
+
+    <UFormField
+      :label="EFFECT_TRIGGER_ROW_LABELS.dispelMaxLevelFormula"
+      :help="EFFECT_TRIGGER_ROW_LABELS.dispelMaxLevelFormulaHint"
+      class="w-full sm:w-64"
+    >
+      <UInput
+        v-model="dispelFormula"
+        :placeholder="
+          EFFECT_TRIGGER_ROW_LABELS.dispelMaxLevelFormulaPlaceholder
+        "
+        size="sm"
+        class="w-full font-mono"
       />
     </UFormField>
 

@@ -1,4 +1,6 @@
-import type { Filter } from '../types';
+import type { LocationQuery } from 'vue-router';
+
+import type { Filter, FilterRangeOrders } from '../types';
 
 import { isEqual } from 'es-toolkit';
 
@@ -7,13 +9,43 @@ import {
   applyQueryToFilters,
   buildFullQuery,
   buildSearchQuery,
+  collectGroupKeys,
   getFilterKey,
-  getGroupItems,
-  hasTouchedItem,
   normalizeDependentSelections,
 } from '../utils';
 
-export async function useFilter(key: string, url: string) {
+/**
+ * Проверяет, задаёт ли адрес страницы условия отбора или источники.
+ *
+ * @param pristine фильтр раздела в исходном виде — по нему известны ключи.
+ * @param query параметры текущего адреса.
+ * @returns `true`, если в адресе есть хотя бы один параметр фильтра.
+ */
+function hasFilterQuery(pristine: Filter, query: LocationQuery): boolean {
+  const filterKeys = collectGroupKeys([
+    ...pristine.filters,
+    ...(pristine.sources ?? []),
+  ]);
+
+  filterKeys.add('source');
+
+  return Object.keys(query).some((queryKey) => filterKeys.has(queryKey));
+}
+
+/**
+ * Состояние фильтра раздела: загружает группы, держит выбор и поисковую
+ * строку, синхронизирует их с адресом страницы.
+ *
+ * @param key ключ раздела — по нему выбор хранится между страницами.
+ * @param url ручка, отдающая группы фильтра и источники раздела.
+ * @param rangeOrders порядок значений групп, которые выбираются диапазоном.
+ * @returns фильтр, поиск, готовые query-параметры и признаки загрузки.
+ */
+export async function useFilter(
+  key: string,
+  url: string,
+  rangeOrders?: FilterRangeOrders,
+) {
   const route = useRoute();
   const router = useRouter();
 
@@ -39,22 +71,10 @@ export async function useFilter(key: string, url: string) {
   // Внешние данные API не доверенные: валидируем/санитизируем один раз на
   // изменение ответа, чтобы каскад работал с проверенными дефолтами.
   const validatedDefaults = computed(() =>
-    defaults.value ? parseFilter(defaults.value) : undefined,
+    defaults.value ? parseFilter(defaults.value, rangeOrders) : undefined,
   );
 
   const isPending = computed(() => status.value === 'pending');
-
-  const isShowedPreview = computed(() => {
-    if (!filter.value) {
-      return false;
-    }
-
-    return (
-      filter.value.filters?.some((group) =>
-        hasTouchedItem(getGroupItems(group)),
-      ) || false
-    );
-  });
 
   const filterQuery = computed(() => buildSearchQuery(filter.value));
 
@@ -88,14 +108,34 @@ export async function useFilter(key: string, url: string) {
     );
 
     if (!isEqual(route.query, finalQuery)) {
-      router.replace({ query: finalQuery });
+      // Якорь раздела страницы (например, умения класса) фильтры не трогают.
+      router.replace({ query: finalQuery, hash: route.hash });
     }
   }
+
+  // Выбор раздела живёт в `useState` и переживает уход на другую страницу.
+  // При возвращении по ссылке без параметров он остаётся в силе; адрес с
+  // параметрами (ссылкой поделились) всегда важнее запомненного.
+  let isRememberedFilterKept = false;
+  let isFirstDefaultsRun = true;
 
   watch(
     validatedDefaults,
     (value) => {
       if (!value) {
+        return;
+      }
+
+      // Только на первом прогоне: дальше дефолты меняются из-за обновления
+      // ответа (например, сменились источники профиля), и их надо применить.
+      isRememberedFilterKept =
+        isFirstDefaultsRun
+        && !!filter.value
+        && !hasFilterQuery(value, route.query);
+
+      isFirstDefaultsRun = false;
+
+      if (isRememberedFilterKept) {
         return;
       }
 
@@ -140,12 +180,17 @@ export async function useFilter(key: string, url: string) {
     { deep: true },
   );
 
+  // Запомненный выбор в адресе ещё не отражён, а вотчер выше не сработает:
+  // сам фильтр не менялся. Возвращаем параметры в адрес вручную.
+  if (isRememberedFilterKept) {
+    syncUrlWithFilter();
+  }
+
   return {
     filter,
     search,
     filterQuery,
     isPending,
-    isShowedPreview,
     defaults,
     refresh,
   };

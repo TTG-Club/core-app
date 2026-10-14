@@ -7,6 +7,8 @@
   import Lightgallery from 'lightgallery/vue';
   import { computed } from 'vue';
 
+  import { GALLERY_LABELS } from './constants';
+
   const {
     preview,
     images = [],
@@ -38,6 +40,9 @@
     ];
   });
 
+  /** Есть ли что листать: подсказка с числом нужна, только когда картинок больше одной. */
+  const hasMultipleItems = computed(() => items.value.length > 1);
+
   const settings = computed<LightGallerySettings>(() => ({
     licenseKey,
     speed: 500,
@@ -66,15 +71,42 @@
       v-for="(item, index) in items"
       :key="item.src"
       :data-src="item.src"
+      :title="GALLERY_LABELS.zoom"
       :class="!!index ? 'hidden' : undefined"
-      class="cursor-zoom-in"
+      class="group relative cursor-zoom-in"
     >
       <img
-        class="w-full rounded-lg object-cover"
+        class="block w-full rounded-lg object-cover"
         :class="!disableSquare ? 'aspect-square' : undefined"
         :src="item.src"
         :alt="item.alt || undefined"
       />
+
+      <!-- Подсказки поверх превью: не все догадываются, что картинка открывает галерею -->
+      <template v-if="!index">
+        <span
+          v-if="hasMultipleItems"
+          class="pointer-events-none absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-default/80 px-2 py-1 text-xs font-medium text-highlighted shadow-sm ring ring-default backdrop-blur-sm"
+          aria-hidden="true"
+        >
+          <UIcon
+            name="tabler:photo"
+            class="size-4"
+          />
+
+          {{ items.length }}
+        </span>
+
+        <span
+          class="pointer-events-none absolute right-2 bottom-2 flex size-8 items-center justify-center rounded-full bg-default/80 text-highlighted shadow-sm ring ring-default backdrop-blur-sm transition-transform duration-200 group-hover:scale-110"
+          aria-hidden="true"
+        >
+          <UIcon
+            name="tabler:zoom-in"
+            class="size-4.5"
+          />
+        </span>
+      </template>
     </div>
   </Lightgallery>
 </template>

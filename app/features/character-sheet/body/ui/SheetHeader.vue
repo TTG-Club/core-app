@@ -3,6 +3,7 @@
 
   import type {
     Character,
+    SheetEditStatus,
     SheetReadonlyReason,
     SheetSaveStatus,
   } from '../../model';
@@ -16,7 +17,9 @@
     getSpeciesDisplayName,
     getVisionRows,
     LONG_REST_LABELS,
-    SHEET_COPY_LIMIT_HINT,
+    SHEET_EDIT_ACCESS_LABELS,
+    SHEET_EDITOR_BADGE_LABEL,
+    SHEET_EDITOR_BADGE_TOOLTIP,
     SHEET_EMPTY_LABELS,
     SHEET_HEADER_LABELS,
     SHEET_OPEN_ON_PAGE_LABEL,
@@ -63,6 +66,15 @@
     canSaveLink?: boolean;
     /** Ссылка на этот лист уже сохранена. */
     linkSaved?: boolean;
+    /**
+     * Лист чужой, но открыт по праву редактора: правки есть, а удаления и
+     * управления доступом — нет. Вместо них пометка «Редактор».
+     */
+    editorAccess?: boolean;
+    /** Зритель листа по ссылке может попросить у владельца право правок. */
+    canRequestEdit?: boolean;
+    /** Право зрителя на правки этого листа; null — не запрашивалось. */
+    editStatus?: SheetEditStatus | null;
   }>();
 
   const emit = defineEmits<{
@@ -88,10 +100,12 @@
     'share': [];
     'copy-shared': [];
     'save-link': [];
+    'request-edit': [];
   }>();
 
   // Подсказка пометки «только просмотр» объясняет причину режима; null — лист
-  // свой, пометки нет.
+  // свой, пометки нет. Если владелец уже разрешил правки, вместо глаза стоит
+  // карандаш, открывающий лист на редактирование.
   const readonlyTooltip = computed(() =>
     props.readonlyReason ? SHEET_READONLY_TOOLTIPS[props.readonlyReason] : null,
   );
@@ -106,8 +120,12 @@
   // `isLocked`.
   const menuItems = computed<Array<Array<DropdownMenuItem>>>(() =>
     getSheetActionMenuItems({
-      canDuplicate: props.canDuplicate ?? false,
-      canRemove: true,
+      // У листа по ссылке копия — своя, чужая: место в лимите считается так же.
+      canDuplicate: props.readonlyReason
+        ? (props.canCopyShared ?? false)
+        : (props.canDuplicate ?? false),
+      // Удалить лист и поделиться им может только владелец, не редактор.
+      canRemove: !props.editorAccess,
       isShared: props.shared,
       isReadonly: Boolean(props.readonlyReason),
       isLocked: props.locked,
@@ -118,9 +136,29 @@
       onRemove: () => emit('remove'),
       onSettings: () => emit('edit-settings'),
       onAbilityScores: () => emit('edit-ability-scores'),
-      onShare: () => emit('share'),
+      onShare: props.editorAccess ? undefined : () => emit('share'),
+      onCopyShared: props.canSaveShared ? () => emit('copy-shared') : undefined,
     }),
   );
+
+  // Кнопка права на правки у зрителя по ссылке: попросить или ждать ответа.
+  // С выданным правом лист сам открывается на редактирование, кнопки нет.
+  const isEditRequestPending = computed(() => props.editStatus === 'PENDING');
+
+  const editRequestIcon = computed(() =>
+    isEditRequestPending.value ? 'tabler:clock' : 'tabler:pencil-plus',
+  );
+
+  const editRequestTooltip = computed(() =>
+    isEditRequestPending.value
+      ? `${SHEET_EDIT_ACCESS_LABELS.pending}. ${SHEET_EDIT_ACCESS_LABELS.pendingHint}`
+      : SHEET_EDIT_ACCESS_LABELS.request,
+  );
+
+  /** Запрос права на правки у владельца листа. */
+  function handleEditRequest(): void {
+    emit('request-edit');
+  }
 
   const saveStatusMeta = computed(() =>
     props.saveStatus ? SHEET_SAVE_STATUS_META[props.saveStatus] : null,
@@ -138,13 +176,8 @@
     return 'text-muted';
   });
 
-  // Сохранить чужой лист к себе — главное, зачем зритель пришёл по ссылке,
-  // поэтому оба действия стоят кнопками рядом с пометкой «только просмотр», а
-  // не прячутся в меню за троеточием.
-  const copySharedTooltip = computed(() =>
-    props.canCopyShared ? SHEET_SAVE_SHARED_LABELS.copy : SHEET_COPY_LIMIT_HINT,
-  );
-
+  // Закладка чужого листа стоит кнопкой рядом с пометкой просмотра, а копия к
+  // себе — в меню за троеточием: в шапке ей не хватало места.
   const saveLinkIcon = computed(() =>
     props.linkSaved ? 'tabler:bookmark-filled' : 'tabler:bookmark-plus',
   );
@@ -447,45 +480,37 @@
         </UTooltip>
 
         <!-- Замок чужого листа бессмысленен: снять его зритель всё равно не
-          может, поэтому вместо него — пометка о режиме просмотра -->
+          может, поэтому вместо него — значок режима просмотра. Подпись — в
+          подсказке: словами пометка занимала полшапки -->
         <UTooltip
           v-if="readonlyTooltip"
           :text="readonlyTooltip"
         >
           <UBadge
-            :label="SHEET_READONLY_BADGE_LABEL"
             icon="tabler:eye"
             color="neutral"
             variant="subtle"
             size="lg"
-            class="@max-2xl:hidden"
-          />
-
-          <!-- В компактной шапке подписи не остаётся: ряд с кнопками
-            сохранения и без неё занимает всю ширину -->
-          <UBadge
-            icon="tabler:eye"
-            color="neutral"
-            variant="subtle"
-            size="lg"
-            class="@2xl:hidden"
             :aria-label="SHEET_READONLY_BADGE_LABEL"
           />
         </UTooltip>
 
-        <template v-if="canSaveShared">
-          <UTooltip :text="copySharedTooltip">
-            <UButton
-              icon="tabler:user-plus"
-              color="neutral"
-              variant="ghost"
-              square
-              :disabled="!canCopyShared"
-              :aria-label="copySharedTooltip"
-              @click.left.exact.prevent="emit('copy-shared')"
-            />
-          </UTooltip>
+        <!-- Чужой лист по праву редактора: карандаш говорит, что править можно,
+          а подсказка — что удалить лист и поделиться им может только владелец -->
+        <UTooltip
+          v-if="editorAccess"
+          :text="SHEET_EDITOR_BADGE_TOOLTIP"
+        >
+          <UBadge
+            icon="tabler:pencil"
+            color="primary"
+            variant="subtle"
+            size="lg"
+            :aria-label="SHEET_EDITOR_BADGE_LABEL"
+          />
+        </UTooltip>
 
+        <template v-if="canSaveShared">
           <UTooltip
             v-if="canBookmarkLink"
             :text="saveLinkTooltip"
@@ -498,6 +523,21 @@
               :disabled="linkSaved || !canSaveLink"
               :aria-label="saveLinkTooltip"
               @click.left.exact.prevent="emit('save-link')"
+            />
+          </UTooltip>
+
+          <UTooltip
+            v-if="canRequestEdit"
+            :text="editRequestTooltip"
+          >
+            <UButton
+              :icon="editRequestIcon"
+              color="neutral"
+              variant="ghost"
+              square
+              :disabled="isEditRequestPending"
+              :aria-label="editRequestTooltip"
+              @click.left.exact.prevent="handleEditRequest"
             />
           </UTooltip>
         </template>

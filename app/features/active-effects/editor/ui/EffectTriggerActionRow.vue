@@ -2,6 +2,7 @@
   import type {
     EffectConditionKey,
     EffectDamagePart,
+    EffectEscape,
     EffectFormLayout,
     EffectRecurringSave,
     EffectSaveTiming,
@@ -14,13 +15,17 @@
     NestedEffectTrigger,
   } from '../../model';
 
+  import { InfoTooltip } from '~ui/tooltip';
+
   import {
     createDefaultEffectSave,
+    createDefaultEscape,
     createEffectTriggerAction,
     createEffectTriggerId,
     DEFAULT_NESTED_TRIGGER_EVENT,
     DEFAULT_RECURRING_SAVE_TIMING,
     DEFAULT_TRIGGER_REST_TYPE,
+    EFFECT_APPLIER_DC_LABELS,
     EFFECT_CONDITION_OPTIONS,
     EFFECT_SAVE_TIMING_OPTIONS,
     EFFECT_TRIGGER_ACTION_ICONS,
@@ -34,6 +39,7 @@
     EFFECT_TRIGGER_ROW_ICONS,
     EFFECT_TRIGGER_ROW_LABELS,
     isEffectTag,
+    layoutAcceptsApplierSaveDc,
     listNestedTriggerActionTypes,
     MIN_SET_HP_VALUE,
     MIN_TRIGGER_ACTION_ROUNDS,
@@ -44,6 +50,8 @@
     writeTriggerActionRounds,
   } from '../../model';
   import EffectDamageParts from './EffectDamageParts.vue';
+  import EffectEscapeFields from './EffectEscapeFields.vue';
+  import EffectFlags from './EffectFlags.vue';
   import EffectSaveFields from './EffectSaveFields.vue';
   import EffectTriggerActionFields from './EffectTriggerActionFields.vue';
 
@@ -108,6 +116,104 @@
 
   /** Срок состояния или отметки в раундах. */
   const rounds = computed(() => readTriggerActionRounds(action.value));
+
+  // Срок состояния или отметки формулой: пустая строка — срок числом
+  const durationFormula = computed({
+    get: () => {
+      const currentAction = action.value;
+
+      return currentAction.type === 'applyCondition'
+        || currentAction.type === 'applyTag'
+        ? (currentAction.durationFormula ?? '')
+        : '';
+    },
+    set: (enteredFormula: string) => {
+      const currentAction = action.value;
+
+      if (
+        currentAction.type === 'applyCondition'
+        || currentAction.type === 'applyTag'
+      ) {
+        action.value = {
+          ...currentAction,
+          durationFormula: enteredFormula.trim() || undefined,
+        };
+      }
+    },
+  });
+
+  /** «Авто» у Сл «вырваться» — там, где Сл источника вообще бывает. */
+  const autoDcAllowed = computed(() => layoutAcceptsApplierSaveDc(layout));
+
+  const applierDcLabel = computed(
+    () => EFFECT_APPLIER_DC_LABELS[layout.context],
+  );
+
+  /** Блок «вырваться» наложенного состояния; нет — кнопки у состояния нет. */
+  const conditionEscape = computed(() =>
+    action.value.type === 'applyCondition' ? action.value.escape : undefined,
+  );
+
+  const hasConditionEscape = computed({
+    get: () => conditionEscape.value !== undefined,
+    set: (enabled: boolean) => {
+      const currentAction = action.value;
+
+      if (currentAction.type === 'applyCondition') {
+        action.value = {
+          ...currentAction,
+          escape: enabled
+            ? createDefaultEscape(autoDcAllowed.value)
+            : undefined,
+        };
+      }
+    },
+  });
+
+  /**
+   * Записывает блок «вырваться» наложенного состояния.
+   *
+   * @param nextEscape блок действия.
+   */
+  function updateConditionEscape(nextEscape: EffectEscape): void {
+    const currentAction = action.value;
+
+    if (currentAction.type === 'applyCondition') {
+      action.value = { ...currentAction, escape: nextEscape };
+    }
+  }
+
+  // Флаги сверх самого состояния: пустой список в данных не пишется
+  const conditionFlags = computed({
+    get: () =>
+      action.value.type === 'applyCondition' ? (action.value.flags ?? []) : [],
+    set: (nextFlags: string[]) => {
+      const currentAction = action.value;
+
+      if (currentAction.type === 'applyCondition') {
+        action.value = {
+          ...currentAction,
+          flags: nextFlags.length > 0 ? nextFlags : undefined,
+        };
+      }
+    },
+  });
+
+  // Хиты формулой у «Хиты становятся»: пустая строка — число действия
+  const setHpFormula = computed({
+    get: () =>
+      action.value.type === 'setHp' ? (action.value.formula ?? '') : '',
+    set: (enteredFormula: string) => {
+      const currentAction = action.value;
+
+      if (currentAction.type === 'setHp') {
+        action.value = {
+          ...currentAction,
+          formula: enteredFormula.trim() || undefined,
+        };
+      }
+    },
+  });
 
   /** Состояние действия, если оно из списка выбора. */
   const conditionKey = computed<EffectConditionKey | undefined>(() => {
@@ -564,12 +670,50 @@
             @update:model-value="updateActionRounds"
           />
         </UFormField>
+
+        <UFormField class="w-52">
+          <template #label>
+            <InfoTooltip
+              :text="EFFECT_TRIGGER_ROW_LABELS.durationFormulaHint"
+              icon="tabler:info-circle-filled"
+            >
+              <span>{{ EFFECT_TRIGGER_ROW_LABELS.durationFormula }}</span>
+            </InfoTooltip>
+          </template>
+
+          <UInput
+            v-model="durationFormula"
+            size="sm"
+            class="w-full font-mono"
+          />
+        </UFormField>
       </div>
 
       <USwitch
         v-model="conditionLocked"
         :label="EFFECT_TRIGGER_ROW_LABELS.conditionLocked"
         :description="EFFECT_TRIGGER_ROW_LABELS.conditionLockedHint"
+      />
+
+      <USwitch
+        v-model="hasConditionEscape"
+        :label="EFFECT_TRIGGER_ROW_LABELS.conditionEscapeToggle"
+        :description="EFFECT_TRIGGER_ROW_LABELS.conditionEscapeHint"
+      />
+
+      <EffectEscapeFields
+        v-if="conditionEscape"
+        :model-value="conditionEscape"
+        :auto-dc-allowed="autoDcAllowed"
+        :auto-label="applierDcLabel"
+        :applier-save-dc="applierSaveDc"
+        @update:model-value="updateConditionEscape"
+      />
+
+      <EffectFlags
+        v-model="conditionFlags"
+        :title="EFFECT_TRIGGER_ROW_LABELS.conditionFlags"
+        :hint="EFFECT_TRIGGER_ROW_LABELS.conditionFlagsHint"
       />
 
       <USwitch
@@ -664,7 +808,7 @@
 
     <div
       v-else-if="action.type === 'setHp'"
-      class="flex flex-wrap items-center gap-3"
+      class="flex flex-wrap items-end gap-3"
     >
       <UFormField
         v-if="!action.toMax"
@@ -677,6 +821,26 @@
           size="sm"
           class="w-full"
           @update:model-value="updateSetHp"
+        />
+      </UFormField>
+
+      <UFormField
+        v-if="!action.toMax"
+        class="w-full sm:w-64"
+      >
+        <template #label>
+          <InfoTooltip
+            :text="EFFECT_TRIGGER_ROW_LABELS.setHpFormulaHint"
+            icon="tabler:info-circle-filled"
+          >
+            <span>{{ EFFECT_TRIGGER_ROW_LABELS.setHpFormula }}</span>
+          </InfoTooltip>
+        </template>
+
+        <UInput
+          v-model="setHpFormula"
+          size="sm"
+          class="w-full font-mono"
         />
       </UFormField>
 
@@ -727,6 +891,23 @@
           size="sm"
           class="w-full"
           @update:model-value="updateActionRounds"
+        />
+      </UFormField>
+
+      <UFormField class="w-52">
+        <template #label>
+          <InfoTooltip
+            :text="EFFECT_TRIGGER_ROW_LABELS.durationFormulaHint"
+            icon="tabler:info-circle-filled"
+          >
+            <span>{{ EFFECT_TRIGGER_ROW_LABELS.durationFormula }}</span>
+          </InfoTooltip>
+        </template>
+
+        <UInput
+          v-model="durationFormula"
+          size="sm"
+          class="w-full font-mono"
         />
       </UFormField>
 

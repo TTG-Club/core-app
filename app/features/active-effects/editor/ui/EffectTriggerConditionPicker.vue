@@ -19,12 +19,16 @@
     EFFECT_TRIGGER_CONDITION_VALUE_OPTIONS,
     getTriggerConditionParameter,
     isEffectTag,
+    isTriggerConditionText,
+    joinCreatureTypeList,
     listTriggerConditionKinds,
     MIN_CONDITION_NUMBER,
     MIN_TAG_COUNT_THRESHOLD,
     normalizeTagCountThreshold,
     readTriggerConditionParts,
+    splitCreatureTypeList,
     TRIGGER_CONDITION_ABILITY_PARAMETER,
+    TRIGGER_CONDITION_CREATURE_TYPE_PARAMETER,
     TRIGGER_CONDITION_NUMBER_PARAMETER,
     TRIGGER_CONDITION_TAG_PARAMETER,
     TRIGGER_CONDITION_TEXT_PARAMETER,
@@ -71,6 +75,10 @@
     valueItems: Array<{ label: string; value: string }>;
     /** Значение части выбирается списком. */
     showsValueSelect: boolean;
+    /** Значение части — несколько типов существ: «нежить или исчадие». */
+    showsTypeList: boolean;
+    /** Выбранные типы существ части со списком типов. */
+    creatureTypes: string[];
     /** Значение части вводится строкой — ключ отметки. */
     showsTagInput: boolean;
     /** Значение части — свободная строка: название вида. */
@@ -124,6 +132,8 @@
           value: undefined,
           valueItems: [],
           showsValueSelect: false,
+          showsTypeList: false,
+          creatureTypes: [],
           showsTagInput: false,
           showsTextInput: false,
           showsNumberInput: false,
@@ -136,12 +146,17 @@
         ? EFFECT_TRIGGER_CONDITION_VALUE_OPTIONS[parameter]
         : [];
 
+      const showsTypeList =
+        parameter === TRIGGER_CONDITION_CREATURE_TYPE_PARAMETER;
+
       return {
         key: `${index}-${part.kind}`,
         text: EFFECT_TRIGGER_CONDITION_KIND_LABELS[part.kind],
         value: part.value,
         valueItems,
-        showsValueSelect: valueItems.length > 0,
+        showsValueSelect: valueItems.length > 0 && !showsTypeList,
+        showsTypeList,
+        creatureTypes: showsTypeList ? splitCreatureTypeList(part.value) : [],
         showsTagInput: parameter === TRIGGER_CONDITION_TAG_PARAMETER,
         showsTextInput: parameter === TRIGGER_CONDITION_TEXT_PARAMETER,
         showsNumberInput: parameter === TRIGGER_CONDITION_NUMBER_PARAMETER,
@@ -204,16 +219,22 @@
   }
 
   /**
-   * Меняет свободную строку части. Пустая не пишется: с ней часть не
-   * разобралась бы обратно и поле ввода пропало бы.
+   * Меняет свободную строку части. Пустая строка и негодный ключ выбора
+   * владельца не пишутся: с ними часть не разобралась бы обратно и поле ввода
+   * пропало бы.
    *
    * @param index номер части.
    * @param enteredText введённая строка.
    */
   function updatePartText(index: number, enteredText: string): void {
+    const conditionPart = parts.value[index];
     const text = enteredText.trim();
 
-    if (text) {
+    if (
+      conditionPart !== undefined
+      && typeof conditionPart !== 'string'
+      && isTriggerConditionText(conditionPart.kind, text)
+    ) {
       updatePartValue(index, text);
     }
   }
@@ -241,6 +262,22 @@
           : part,
       ),
     );
+  }
+
+  /**
+   * Меняет список типов части. Пустой не пишется: часть без типов не
+   * разобралась бы обратно.
+   *
+   * @param index номер части.
+   * @param creatureTypes выбранные типы.
+   */
+  function updatePartCreatureTypes(
+    index: number,
+    creatureTypes: string[],
+  ): void {
+    if (creatureTypes.length > 0) {
+      updatePartValue(index, joinCreatureTypeList(creatureTypes));
+    }
   }
 
   /**
@@ -336,8 +373,20 @@
         {{ conditionRow.text }}
       </span>
 
+      <USelectMenu
+        v-if="conditionRow.showsTypeList"
+        :model-value="conditionRow.creatureTypes"
+        :items="conditionRow.valueItems"
+        value-key="value"
+        label-key="label"
+        multiple
+        size="xs"
+        class="w-56"
+        @update:model-value="updatePartCreatureTypes(index, $event)"
+      />
+
       <USelect
-        v-if="conditionRow.showsValueSelect"
+        v-else-if="conditionRow.showsValueSelect"
         :model-value="conditionRow.value"
         :items="conditionRow.valueItems"
         value-key="value"

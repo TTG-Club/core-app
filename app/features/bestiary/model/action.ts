@@ -1,6 +1,8 @@
 import type { ActiveEffect, EffectFormContext } from '~active-effects/model';
 import type { DamageFormulaPart } from '~ui/damage-formula';
 
+import type { CreatureDamageAlternative } from './damageAlternatives';
+
 import { AbilityKey } from '~/shared/types';
 import {
   EFFECT_FORM_CONTEXT,
@@ -11,6 +13,11 @@ import {
   normalizeDamageFormulaParts,
   parseLoadedDamageFormulaParts,
 } from '~ui/damage-formula';
+
+import {
+  normalizeCreatureDamageAlternatives,
+  parseLoadedCreatureDamageAlternatives,
+} from './damageAlternatives';
 
 /**
  * Тип атаки записи существа — словарь сайта. В VTTG он переводится в тип
@@ -81,10 +88,24 @@ export interface CreatureAreaOfEffect {
 export interface CreatureActionEffect {
   attackType: CreatureAttackType | undefined;
   attackBonus: number | undefined;
+
+  /**
+   * Автопопадание: запись наносит урон сразу, без броска атаки и спасброска
+   * цели. Тот же флаг, что `autoHit` у действия существа в системе VTTG.
+   */
+  autoHit: boolean;
+
   reach: number | undefined;
   rangeNormal: number | undefined;
   rangeLong: number | undefined;
   damageParts: Array<DamageFormulaPart>;
+
+  /**
+   * Урон «или»: другие наборы частей, каждый заменяет основной урон целиком.
+   * См. `damageAlternatives.ts`.
+   */
+  damageAlternatives: Array<CreatureDamageAlternative>;
+
   savingThrows: Array<CreatureSavingThrow>;
   saveEffect: CreatureSaveEffect | undefined;
   areaOfEffect: CreatureAreaOfEffect;
@@ -109,10 +130,12 @@ export function createEmptyCreatureActionEffect(): CreatureActionEffect {
   return {
     attackType: undefined,
     attackBonus: undefined,
+    autoHit: false,
     reach: undefined,
     rangeNormal: undefined,
     rangeLong: undefined,
     damageParts: [],
+    damageAlternatives: [],
     savingThrows: [],
     saveEffect: undefined,
     areaOfEffect: {
@@ -140,10 +163,12 @@ const loadedActionEffectSchema = z
   .object({
     attackType: z.string().nullish().catch(null),
     attackBonus: z.number().nullish().catch(null),
+    autoHit: z.boolean().nullish().catch(null),
     reach: z.number().nullish().catch(null),
     rangeNormal: z.number().nullish().catch(null),
     rangeLong: z.number().nullish().catch(null),
     damageParts: z.unknown().nullish().catch(null),
+    damageAlternatives: z.unknown().nullish().catch(null),
     savingThrows: z
       .array(
         z.object({
@@ -187,10 +212,14 @@ export function parseLoadedCreatureActionEffect(
   return {
     attackType: ATTACK_TYPES.find((type) => type === parsed.attackType),
     attackBonus: parsed.attackBonus ?? undefined,
+    autoHit: parsed.autoHit ?? false,
     reach: parsed.reach ?? undefined,
     rangeNormal: parsed.rangeNormal ?? undefined,
     rangeLong: parsed.rangeLong ?? undefined,
     damageParts: parseLoadedDamageFormulaParts(parsed.damageParts),
+    damageAlternatives: parseLoadedCreatureDamageAlternatives(
+      parsed.damageAlternatives,
+    ),
     savingThrows: (parsed.savingThrows ?? []).map((save) => ({
       ability: ABILITY_KEYS.find((ability) => ability === save.ability),
       dc: save.dc ?? undefined,
@@ -298,6 +327,9 @@ export function normalizeCreatureActionEffect(
   return {
     ...effect,
     damageParts: normalizeDamageFormulaParts(effect.damageParts),
+    damageAlternatives: normalizeCreatureDamageAlternatives(
+      effect.damageAlternatives,
+    ),
     savingThrows: effect.savingThrows.filter(
       (save) => save.ability !== undefined,
     ),
@@ -326,12 +358,22 @@ export function getCreatureActionCombatFilledCount(
   }
 
   return [
-    effect.attackType !== undefined || effect.attackBonus !== undefined,
+    effect.attackType !== undefined
+      || effect.attackBonus !== undefined
+      || effect.autoHit,
     effect.reach !== undefined
       || effect.rangeNormal !== undefined
       || effect.rangeLong !== undefined,
     effect.savingThrows.some((save) => save.ability !== undefined),
     Boolean(effect.areaOfEffect.type),
-    effect.damageParts.some((part) => part.formula.trim().length > 0),
+    // Урон заведён, если формула есть у основного урона или у любого «или»
+    [
+      effect.damageParts,
+      ...effect.damageAlternatives.map(
+        (alternative) => alternative.damageParts,
+      ),
+    ].some((formulaParts) =>
+      formulaParts.some((part) => part.formula.trim().length > 0),
+    ),
   ].filter(Boolean).length;
 }
