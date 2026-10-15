@@ -10,6 +10,7 @@ import { FetchError } from 'ofetch';
 import {
   ARTISAN_TOOL_ICONS,
   BASTION_START_LEVEL,
+  MENAGERIE_LARGE_SPACE,
   MY_BASTIONS_ROUTE,
   SHARED_BASTION_ROUTE,
 } from './constants';
@@ -201,4 +202,23 @@ export function getArtisanToolIcon(name: string): string | undefined {
   const lower = name.toLowerCase();
 
   return ARTISAN_TOOL_ICONS.find(([stem]) => lower.includes(stem))?.[1];
+}
+
+const QUARTER_FRACTIONS = ['', '¼', '½', '¾'];
+
+/**
+ * Место в вольерах зверинца в больших существах: 9 четвертей → «2¼».
+ *
+ * @param quarters Место в четвертях большого существа.
+ * @returns Число больших мест с дробью.
+ */
+export function formatMenagerieSpace(quarters: number): string {
+  const whole = Math.floor(quarters / MENAGERIE_LARGE_SPACE);
+  const fraction = QUARTER_FRACTIONS[quarters % MENAGERIE_LARGE_SPACE] ?? '';
+
+  if (!whole && fraction) {
+    return fraction;
+  }
+
+  return `${whole}${fraction}`;
 }

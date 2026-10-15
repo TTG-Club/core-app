@@ -11,7 +11,12 @@
   import { ParticipantName } from '~find-game/ui';
   import { ConfirmDialog } from '~initiative/ui-kit';
 
-  import { AddSpecialModal, BuildBasicModal, OrderModal } from '../activity';
+  import {
+    AddSpecialModal,
+    BuildBasicModal,
+    MenagerieModal,
+    OrderModal,
+  } from '../activity';
   import { useBastionAction } from '../composables';
   import {
     ACTIVITY_LABELS,
@@ -52,9 +57,17 @@
   const isAddSpecialOpen = ref(false);
   const isOrderOpen = ref(false);
   const isRemoveOpen = ref(false);
+  const isMenagerieOpen = ref(false);
 
   /** Сооружение, которому отдают приказ или которое убирают. */
   const selected = ref<PlayerBastionFacility>();
+
+  /** Зверинец, чьи вольеры открыты: берётся из свежего персонажа после правок. */
+  const menagerieId = ref<string>();
+
+  const menagerieFacility = computed(() =>
+    member.facilities.find((facility) => facility.id === menagerieId.value),
+  );
 
   const basicFacilities = computed(() =>
     member.facilities.filter(
@@ -131,6 +144,16 @@
   function openOrder(facility: PlayerBastionFacility): void {
     selected.value = facility;
     isOrderOpen.value = true;
+  }
+
+  /**
+   * Открывает вольеры зверинца.
+   *
+   * @param facility Зверинец.
+   */
+  function openMenagerie(facility: PlayerBastionFacility): void {
+    menagerieId.value = facility.id;
+    isMenagerieOpen.value = true;
   }
 
   /**
@@ -288,6 +311,7 @@
             :active-order="getActiveOrder(facility.id)"
             :order-lock="orderLock"
             @order="openOrder(facility)"
+            @menagerie="openMenagerie(facility)"
             @enlarge="enlarge(facility.id)"
             @remove="askRemove(facility)"
           />
@@ -312,6 +336,7 @@
             :order-lock="orderLock"
             @toggle-confirmation="toggleConfirmation(facility.id, $event)"
             @order="openOrder(facility)"
+            @menagerie="openMenagerie(facility)"
             @enlarge="enlarge(facility.id)"
             @remove="askRemove(facility)"
           />
@@ -351,6 +376,15 @@
         @updated="emit('updated', $event)"
       />
     </template>
+
+    <MenagerieModal
+      v-if="menagerieFacility"
+      v-model:open="isMenagerieOpen"
+      :bastion
+      :facility="menagerieFacility"
+      :can-manage="member.canGiveOrders"
+      @updated="emit('updated', $event)"
+    />
 
     <ConfirmDialog
       v-if="canRemove"

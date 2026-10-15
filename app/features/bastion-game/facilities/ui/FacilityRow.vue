@@ -9,8 +9,10 @@
   import {
     ACTIVITY_LABELS,
     FACILITY_SETUP_LABELS,
+    formatMenagerieSpace,
     getArtisanToolIcon,
     getOrderSubject,
+    MENAGERIE_LARGE_SPACE,
   } from '../../model';
 
   /**
@@ -44,6 +46,7 @@
     'toggle-confirmation': [confirmed: boolean];
     'order': [];
     'enlarge': [];
+    'menagerie': [];
     'remove': [];
   }>();
 
@@ -144,6 +147,71 @@
         ? { index, icon: 'tabler:shield-filled', tone: 'text-info' }
         : { index, icon: 'ttg:shield-dashed', tone: 'text-muted' },
     );
+  });
+
+  /**
+   * Вольеры зверинца: лапа на каждое существо — большая у большого, малая у
+   * маленького и среднего; закрашенная у защитника бастиона, приглушённая у
+   * существа, выведенного из защитников. Свободное место — пунктирные лапы:
+   * большая на каждое большое место, малая на каждую оставшуюся четверть.
+   */
+  const menagerieSlots = computed(() => {
+    const menagerie = facility.menagerie;
+
+    if (!menagerie) {
+      return [];
+    }
+
+    const creatures = menagerie.creatures.map((creature) => ({
+      key: creature.id,
+      icon: 'tabler:paw-filled',
+      size: creature.space >= MENAGERIE_LARGE_SPACE ? 'size-4' : 'size-3',
+      tone: creature.defender ? 'text-info' : 'text-muted',
+    }));
+
+    const free = Math.max(0, menagerie.capacity - menagerie.occupied);
+    const freeLarge = Math.floor(free / MENAGERIE_LARGE_SPACE);
+
+    const freeSlots = Array.from(
+      { length: freeLarge + (free % MENAGERIE_LARGE_SPACE) },
+      (_, index) => ({
+        key: `free-${index}`,
+        icon: 'ttg:paw-dashed',
+        size: index < freeLarge ? 'size-4' : 'size-3',
+        tone: 'text-muted',
+      }),
+    );
+
+    return [...creatures, ...freeSlots];
+  });
+
+  /** Подсказка к значкам: кто в вольерах и сколько места свободно. */
+  const menagerieHint = computed(() => {
+    const menagerie = facility.menagerie;
+
+    if (!menagerie) {
+      return '';
+    }
+
+    const values = {
+      names: menagerie.creatures
+        .map((creature) =>
+          creature.defender
+            ? creature.name
+            : fillTemplate(FACILITY_SETUP_LABELS.creatureNotDefender, {
+                name: creature.name,
+              }),
+        )
+        .join(', '),
+      free: formatMenagerieSpace(
+        Math.max(0, menagerie.capacity - menagerie.occupied),
+      ),
+      capacity: formatMenagerieSpace(menagerie.capacity),
+    };
+
+    return menagerie.creatures.length
+      ? fillTemplate(FACILITY_SETUP_LABELS.creatures, values)
+      : fillTemplate(FACILITY_SETUP_LABELS.creaturesEmpty, values);
   });
 
   const defendersHint = computed(() =>
@@ -260,6 +328,24 @@
         </UTooltip>
 
         <UTooltip
+          v-if="menagerieSlots.length"
+          :text="menagerieHint"
+        >
+          <div
+            class="flex flex-wrap items-end gap-0.5"
+            role="img"
+            :aria-label="menagerieHint"
+          >
+            <UIcon
+              v-for="cell in menagerieSlots"
+              :key="cell.key"
+              :name="cell.icon"
+              :class="[cell.size, cell.tone]"
+            />
+          </div>
+        </UTooltip>
+
+        <UTooltip
           v-if="defenderSlots.length"
           :text="defendersHint"
         >
@@ -320,7 +406,12 @@
     </div>
 
     <div
-      v-if="isOrderVisible || (canAct && facility.enlargeable) || canRemove"
+      v-if="
+        isOrderVisible
+        || (canAct && facility.enlargeable)
+        || canRemove
+        || !!facility.menagerie
+      "
       class="flex flex-wrap items-center justify-end gap-1"
     >
       <span
@@ -346,6 +437,17 @@
           {{ ACTIVITY_LABELS.giveOrder }}
         </UButton>
       </UTooltip>
+
+      <UButton
+        v-if="facility.menagerie"
+        icon="tabler:paw"
+        size="xs"
+        color="neutral"
+        variant="subtle"
+        @click.left.exact.prevent="emit('menagerie')"
+      >
+        {{ ACTIVITY_LABELS.menagerie }}
+      </UButton>
 
       <UButton
         v-if="canAct && facility.enlargeable"
