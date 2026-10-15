@@ -20,8 +20,8 @@
 
   /**
    * Приказ сооружению: приказ из тех, что сооружение принимает, вариант из
-   * справочника со сроком и ценой и пояснение. Цена варианта списывается из
-   * казны сразу.
+   * справочника со сроком и ценой, предмет для изготовления в мастерской и
+   * пояснение. Цена варианта списывается из казны сразу.
    */
   const isOpen = defineModel<boolean>('open', { required: true });
 
@@ -39,6 +39,7 @@
 
   const order = ref<BastionOrderCode>();
   const optionName = ref<string>();
+  const itemUrl = ref<string>();
   const note = ref('');
   const options = ref<Array<FacilityOrderOptionDetail>>([]);
 
@@ -108,6 +109,28 @@
       })),
   );
 
+  /**
+   * «Изготовить» в мастерской: предмет выбирается из тех, что создаются
+   * выбранными в ней инструментами. У сооружений без выбора инструментов
+   * списка нет вовсе.
+   */
+  const isCraftWithTools = computed(
+    () => order.value === 'CRAFT' && !!facility.craftableItems,
+  );
+
+  const craftItems = computed(() =>
+    isCraftWithTools.value
+      ? (facility.craftableItems ?? []).map((item) => ({
+          label: item.name ?? item.url,
+          value: item.url,
+        }))
+      : [],
+  );
+
+  const isCraftEmpty = computed(
+    () => isCraftWithTools.value && !craftItems.value.length,
+  );
+
   const selectedOption = computed(() =>
     options.value.find(
       (option) =>
@@ -127,6 +150,7 @@
 
       order.value = orderItems.value[0]?.value;
       optionName.value = undefined;
+      itemUrl.value = undefined;
       note.value = '';
 
       options.value = await fetchFacilityOrderOptions(
@@ -138,6 +162,7 @@
 
   watch(order, () => {
     optionName.value = undefined;
+    itemUrl.value = undefined;
   });
 
   /** Отдаёт приказ. */
@@ -154,6 +179,7 @@
           facilityId: facility.id,
           order: code,
           optionName: optionName.value,
+          itemUrl: isCraftWithTools.value ? itemUrl.value : undefined,
           note: note.value.trim() || undefined,
         }),
       ACTIVITY_LABELS.orderGiven,
@@ -203,6 +229,27 @@
           class="text-sm text-muted"
         >
           {{ selectedOption.description }}
+        </p>
+
+        <UFormField
+          v-if="craftItems.length"
+          :label="ACTIVITY_LABELS.craftItem"
+        >
+          <USelectMenu
+            id="bastion-order-item"
+            v-model="itemUrl"
+            :items="craftItems"
+            value-key="value"
+            :placeholder="ACTIVITY_LABELS.craftItemPlaceholder"
+            class="w-full"
+          />
+        </UFormField>
+
+        <p
+          v-else-if="isCraftEmpty"
+          class="text-sm text-warning"
+        >
+          {{ ACTIVITY_LABELS.craftItemEmpty }}
         </p>
 
         <p

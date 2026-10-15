@@ -44,8 +44,8 @@ export const FACILITY_SETUP_LABELS = {
   basicMissing: 'Не выбраны стартовые базовые сооружения',
   add: 'Добавить',
   remove: 'Убрать',
-  hirelings: 'наёмников',
-  defenders: 'защитников: {count} из {capacity}',
+  hirelings: 'Наёмники: {count}',
+  defenders: 'Защитники: {count} из {capacity}',
   squares: 'кв.',
 } as const;
 

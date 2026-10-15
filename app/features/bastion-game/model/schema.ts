@@ -34,6 +34,12 @@ const labelSchema = z.object({
   name: z.string(),
 });
 
+/** Ссылка на предмет справочника с названием на момент сохранения. */
+const entityRefSchema = z.object({
+  url: z.string(),
+  name: z.string().nullish(),
+});
+
 const selectedChoiceSchema = z.object({
   name: z.string(),
   options: z.array(z.string()),
@@ -72,6 +78,8 @@ const facilitySchema = z.object({
   defenders: z.number().nullish(),
   /** Сколько защитников помещается в барак: 12 во вместительном, 24 в просторном. */
   defenderCapacity: z.number().nullish(),
+  /** Что можно изготовить выбранными инструментами; null — у сооружения нет выбора инструментов. */
+  craftableItems: z.array(entityRefSchema).nullish(),
 });
 
 const memberSchema = z.object({
@@ -265,6 +273,8 @@ export const bastionActivitySchema = z.object({
       facilityName: z.string().nullish(),
       order: z.object({ value: z.enum(BASTION_ORDERS), name: z.string() }),
       optionName: z.string().nullish(),
+      /** Изготавливаемый предмет справочника (мастерская). */
+      item: entityRefSchema.nullish(),
       costGp: z.number(),
       givenOnTurn: z.number(),
       completesOnTurn: z.number(),

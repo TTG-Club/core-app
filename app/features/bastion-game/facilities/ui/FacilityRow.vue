@@ -6,7 +6,11 @@
 
   import { fillTemplate } from '~bastions/model';
 
-  import { ACTIVITY_LABELS, FACILITY_SETUP_LABELS } from '../../model';
+  import {
+    ACTIVITY_LABELS,
+    FACILITY_SETUP_LABELS,
+    getOrderSubject,
+  } from '../../model';
 
   /**
    * Сооружение персонажа: название со ссылкой на справочник, пространство,
@@ -72,13 +76,15 @@
       return ACTIVITY_LABELS.idle;
     }
 
+    const subject = getOrderSubject(activeOrder);
+
     const values = {
       order: activeOrder.order.name,
-      option: activeOrder.optionName ?? '',
+      option: subject,
       turn: activeOrder.completesOnTurn,
     };
 
-    return activeOrder.optionName
+    return subject
       ? fillTemplate(ACTIVITY_LABELS.busyOrderOption, values)
       : fillTemplate(ACTIVITY_LABELS.busyOrder, values);
   });
@@ -108,26 +114,42 @@
     emit('toggle-confirmation', !facility.prerequisiteConfirmed);
   }
 
-  /** Защитники барака: «защитников: 4 из 12»; у других сооружений пусто. */
-  const defendersText = computed(() =>
-    facility.defenderCapacity
-      ? fillTemplate(FACILITY_SETUP_LABELS.defenders, {
-          count: facility.defenders ?? 0,
-          capacity: facility.defenderCapacity,
-        })
-      : '',
+  const spaceText = computed(
+    () =>
+      `${facility.space.name} (${facility.space.squares} ${FACILITY_SETUP_LABELS.squares})`,
   );
 
-  const details = computed(() =>
-    [
-      `${facility.space.name} (${facility.space.squares} ${FACILITY_SETUP_LABELS.squares})`,
-      facility.hirelings
-        ? `${facility.hirelings} ${FACILITY_SETUP_LABELS.hirelings}`
-        : '',
-      defendersText.value,
-    ]
-      .filter(Boolean)
-      .join(' · '),
+  /** Наёмники сооружения: по закрашенному человечку на каждого. */
+  const hirelingIcons = computed(() =>
+    Array.from({ length: facility.hirelings ?? 0 }, (_, index) => index),
+  );
+
+  const hirelingsHint = computed(() =>
+    fillTemplate(FACILITY_SETUP_LABELS.hirelings, {
+      count: facility.hirelings ?? 0,
+    }),
+  );
+
+  /**
+   * Места в бараке: закрашенный щит — нанятый защитник, пунктирный —
+   * свободное место. У других сооружений мест нет, и список пуст.
+   */
+  const defenderSlots = computed(() => {
+    const capacity = facility.defenderCapacity ?? 0;
+    const count = facility.defenders ?? 0;
+
+    return Array.from({ length: capacity }, (_, index) =>
+      index < count
+        ? { index, icon: 'tabler:shield-filled', tone: 'text-info' }
+        : { index, icon: 'ttg:shield-dashed', tone: 'text-muted' },
+    );
+  });
+
+  const defendersHint = computed(() =>
+    fillTemplate(FACILITY_SETUP_LABELS.defenders, {
+      count: facility.defenders ?? 0,
+      capacity: facility.defenderCapacity ?? 0,
+    }),
   );
 
   const choicesText = computed(() =>
@@ -164,7 +186,48 @@
         {{ facility.name }}
       </ULink>
 
-      <span class="text-xs text-muted">{{ details }}</span>
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+        <span class="text-muted">{{ spaceText }}</span>
+
+        <!-- Значки сами по себе ничего не говорят вслух, поэтому число
+          людей идёт и подсказкой, и `aria-label` -->
+        <UTooltip
+          v-if="hirelingIcons.length"
+          :text="hirelingsHint"
+        >
+          <div
+            class="flex items-center gap-0.5"
+            role="img"
+            :aria-label="hirelingsHint"
+          >
+            <UIcon
+              v-for="index in hirelingIcons"
+              :key="index"
+              name="tabler:user-filled"
+              class="size-4 text-primary"
+            />
+          </div>
+        </UTooltip>
+
+        <UTooltip
+          v-if="defenderSlots.length"
+          :text="defendersHint"
+        >
+          <div
+            class="flex flex-wrap items-center gap-0.5"
+            role="img"
+            :aria-label="defendersHint"
+          >
+            <UIcon
+              v-for="seat in defenderSlots"
+              :key="seat.index"
+              :name="seat.icon"
+              class="size-4"
+              :class="seat.tone"
+            />
+          </div>
+        </UTooltip>
+      </div>
     </div>
 
     <p

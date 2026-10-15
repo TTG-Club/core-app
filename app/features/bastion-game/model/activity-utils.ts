@@ -82,14 +82,27 @@ export function getBuildTermsText(space: FacilitySpaceCode): string {
 }
 
 /**
- * Заголовок приказа: приказ, сооружение и вариант.
+ * Что именно выполняется по приказу: вариант и изготавливаемый предмет.
+ *
+ * @param order Приказ из журнала.
+ * @returns «снаряжение, Кинжал»; пусто, если ни того ни другого нет.
+ */
+export function getOrderSubject(order: BastionActivityOrder): string {
+  return [order.optionName, order.item?.name ?? order.item?.url]
+    .filter(Boolean)
+    .join(', ');
+}
+
+/**
+ * Заголовок приказа: приказ, сооружение, вариант и предмет.
  *
  * @param order Приказ из журнала.
  * @returns «Изучать — Библиотека: тему».
  */
 export function getOrderTitle(order: BastionActivityOrder): string {
   const target = order.facilityName ?? ACTIVITY_LABELS.maintain;
-  const option = order.optionName ? `: ${order.optionName}` : '';
+  const subject = getOrderSubject(order);
+  const option = subject ? `: ${subject}` : '';
 
   return `${order.order.name} — ${target}${option}`;
 }
