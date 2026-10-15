@@ -14,6 +14,7 @@
     ACTIVITY_LABELS,
     fetchFacilityOrderOptions,
     getOptionTermsText,
+    getTurnsFor,
     giveBastionOrder,
     isBastionOrderCode,
   } from '../../model';
@@ -121,11 +122,44 @@
   const craftItems = computed(() =>
     isCraftWithTools.value
       ? (facility.craftableItems ?? []).map((item) => ({
-          label: item.name ?? item.url,
+          label: item.days
+            ? fillTemplate(ACTIVITY_LABELS.craftItemTerms, {
+                name: item.name ?? item.url,
+                days: item.days,
+              })
+            : (item.name ?? item.url),
           value: item.url,
         }))
       : [],
   );
+
+  const selectedCraft = computed(() =>
+    facility.craftableItems?.find((item) => item.url === itemUrl.value),
+  );
+
+  /**
+   * Срок изготовления выбранного предмета: цена в зм делится на 10 зм за
+   * 8-часовой день, наёмники мастерской работают одновременно. Так же
+   * считает сервер.
+   */
+  const craftDaysText = computed(() => {
+    const item = selectedCraft.value;
+
+    if (!item) {
+      return '';
+    }
+
+    if (!item.days || item.priceGp == null) {
+      return ACTIVITY_LABELS.craftDaysUnknown;
+    }
+
+    return fillTemplate(ACTIVITY_LABELS.craftDays, {
+      price: item.priceGp,
+      hirelings: facility.hirelings ?? 1,
+      days: item.days,
+      turns: getTurnsFor(item.days),
+    });
+  });
 
   const isCraftEmpty = computed(
     () => isCraftWithTools.value && !craftItems.value.length,
@@ -250,6 +284,13 @@
           class="text-sm text-warning"
         >
           {{ ACTIVITY_LABELS.craftItemEmpty }}
+        </p>
+
+        <p
+          v-if="craftDaysText"
+          class="text-sm text-muted"
+        >
+          {{ craftDaysText }}
         </p>
 
         <p
