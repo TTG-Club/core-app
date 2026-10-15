@@ -79,7 +79,16 @@ const facilitySchema = z.object({
   /** Сколько защитников помещается в барак: 12 во вместительном, 24 в просторном. */
   defenderCapacity: z.number().nullish(),
   /** Что можно изготовить выбранными инструментами; null — у сооружения нет выбора инструментов. */
-  craftableItems: z.array(entityRefSchema).nullish(),
+  craftableItems: z
+    .array(
+      entityRefSchema.extend({
+        /** Покупная стоимость, зм; null — в справочнике нет числовой цены. */
+        priceGp: z.number().nullish(),
+        /** Дней изготовления силами наёмников сооружения; null — цена неизвестна. */
+        days: z.number().nullish(),
+      }),
+    )
+    .nullish(),
 });
 
 const memberSchema = z.object({

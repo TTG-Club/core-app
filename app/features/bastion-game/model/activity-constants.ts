@@ -76,6 +76,11 @@ export const ACTIVITY_LABELS = {
   craftItem: 'Предмет',
   craftItemPlaceholder: 'Выберите предмет',
   craftItemEmpty: 'Выбранные инструменты мастерской ничего не создают',
+  craftItemTerms: '{name} — {days} дн.',
+  craftDays:
+    'Изготовление: {price} зм / 10 зм в день, наёмников: {hirelings} — {days} дн. (ходов: {turns})',
+  craftDaysUnknown:
+    'У предмета нет числовой цены в справочнике — срок берётся из варианта приказа',
   note: 'Пояснение',
   notePlaceholder: 'Тема исследования, что изготовить',
   submitOrder: 'Отдать приказ',
