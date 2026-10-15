@@ -46,6 +46,9 @@ export const FACILITY_SETUP_LABELS = {
   remove: 'Убрать',
   hirelings: 'Наёмники: {count}',
   defenders: 'Защитники: {count} из {capacity}',
+  creatures: 'Зверинец: {names}. Свободно {free} из {capacity} больших мест',
+  creaturesEmpty: 'Зверинец пуст. Свободно {free} из {capacity} больших мест',
+  creatureNotDefender: '{name} (не защитник)',
   squares: 'кв.',
 } as const;
 
@@ -249,3 +252,16 @@ export const ARTISAN_TOOL_ICONS: ReadonlyArray<
   ['ткач', 'tabler:needle-thread'],
   ['резчик', 'tabler:tree'],
 ];
+
+/** Сколько четвертей места занимает большое существо в вольерах зверинца. */
+export const MENAGERIE_LARGE_SPACE = 4;
+
+/** Размеры существ, которых держат в вольерах зверинца. */
+export const MENAGERIE_SIZES = [
+  { value: 'TINY', label: 'Крошечный' },
+  { value: 'SMALL', label: 'Маленький' },
+  { value: 'MEDIUM', label: 'Средний' },
+  { value: 'LARGE', label: 'Большой' },
+] as const;
+
+export type MenagerieSizeCode = (typeof MENAGERIE_SIZES)[number]['value'];

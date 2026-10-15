@@ -19,6 +19,14 @@ function bastionPath(bastionId: string, suffix: string): string {
   return `${PLAYER_BASTIONS_API_PATH}/${bastionId}${suffix}`;
 }
 
+/** Существо, которое вербует зверинец: из таблицы или (у мастера) любое другое. */
+export interface MenagerieRecruit {
+  beast?: string;
+  name?: string;
+  size?: string;
+  challenge?: string;
+}
+
 /**
  * Отправляет правку бастиона и разбирает ответ — бастион после правки.
  *
@@ -29,7 +37,7 @@ function bastionPath(bastionId: string, suffix: string): string {
  */
 async function mutateBastion(
   path: string,
-  method: 'POST' | 'DELETE',
+  method: 'POST' | 'PATCH' | 'DELETE',
   body?: Record<string, unknown>,
 ): Promise<PlayerBastion> {
   const response = await $fetch<unknown>(path, { method, body, retry: 0 });
@@ -84,6 +92,8 @@ export async function fetchFacilityOrderOptions(
  * сооружения ещё выполняют.
  * @param request.itemUrl Для «Изготовить» в мастерской: предмет из тех, что
  * создаются её инструментами.
+ * @param request.creature Для «Завербовать» в зверинце: существо из таблицы
+ * или, у мастера, любое другое по показателю опасности.
  * @returns Бастион после приказа.
  */
 export function giveBastionOrder(
@@ -95,9 +105,51 @@ export function giveBastionOrder(
     note?: string;
     cancelActive?: boolean;
     itemUrl?: string;
+    creature?: MenagerieRecruit;
   },
 ): Promise<PlayerBastion> {
   return mutateBastion(bastionPath(bastionId, '/orders'), 'POST', request);
+}
+
+/**
+ * Выводит существо зверинца из защитников бастиона или возвращает туда.
+ *
+ * @param bastionId Бастион.
+ * @param facilityId Зверинец.
+ * @param creatureId Существо.
+ * @param defender Считать защитником.
+ * @returns Бастион после изменения.
+ */
+export function setMenagerieCreatureDefender(
+  bastionId: string,
+  facilityId: string,
+  creatureId: string,
+  defender: boolean,
+): Promise<PlayerBastion> {
+  return mutateBastion(
+    bastionPath(bastionId, `/facilities/${facilityId}/creatures/${creatureId}`),
+    'PATCH',
+    { defender },
+  );
+}
+
+/**
+ * Убирает существо из зверинца — например, оно погибло, защищая бастион.
+ *
+ * @param bastionId Бастион.
+ * @param facilityId Зверинец.
+ * @param creatureId Существо.
+ * @returns Бастион после изменения.
+ */
+export function removeMenagerieCreature(
+  bastionId: string,
+  facilityId: string,
+  creatureId: string,
+): Promise<PlayerBastion> {
+  return mutateBastion(
+    bastionPath(bastionId, `/facilities/${facilityId}/creatures/${creatureId}`),
+    'DELETE',
+  );
 }
 
 /**

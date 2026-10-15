@@ -45,6 +45,40 @@ const selectedChoiceSchema = z.object({
   options: z.array(z.string()),
 });
 
+/**
+ * Вольеры зверинца. Место считается в четвертях большого существа: большое
+ * занимает 4, маленькое или среднее — 1.
+ */
+const menagerieSchema = z.object({
+  capacity: z.number(),
+  occupied: z.number(),
+  creatures: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      size: labelSchema.nullish(),
+      challenge: z.string().nullish(),
+      space: z.number(),
+      /** Считается защитником бастиона. */
+      defender: z.boolean(),
+    }),
+  ),
+  /** Таблица «Существа зверинца». */
+  beasts: z.array(
+    z.object({
+      value: z.string(),
+      name: z.string(),
+      size: labelSchema.nullish(),
+      space: z.number(),
+      cost: z.number(),
+    }),
+  ),
+  /** Цены существ не из таблицы по показателю опасности. */
+  challengeCosts: z.array(
+    z.object({ challenge: z.string(), cost: z.number() }),
+  ),
+});
+
 /** Сооружение персонажа вместе с данными справочника. */
 const facilitySchema = z.object({
   id: z.string(),
@@ -89,6 +123,8 @@ const facilitySchema = z.object({
       }),
     )
     .nullish(),
+  /** Вольеры зверинца; null — сооружение не зверинец. */
+  menagerie: menagerieSchema.nullish(),
 });
 
 const memberSchema = z.object({
@@ -235,6 +271,8 @@ export const catalogFacilitiesSchema = z.array(catalogFacilitySchema);
 export type PlayerBastion = z.infer<typeof playerBastionSchema>;
 export type PlayerBastionMember = z.infer<typeof memberSchema>;
 export type PlayerBastionFacility = z.infer<typeof facilitySchema>;
+export type BastionMenagerie = z.infer<typeof menagerieSchema>;
+export type MenagerieCreature = BastionMenagerie['creatures'][number];
 export type SelectedChoice = z.infer<typeof selectedChoiceSchema>;
 export type CatalogFacility = z.infer<typeof catalogFacilitySchema>;
 export type FacilitySpaceCode = (typeof FACILITY_SPACES)[number];

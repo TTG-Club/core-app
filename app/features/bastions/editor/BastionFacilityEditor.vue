@@ -71,6 +71,7 @@
       hirelings: null,
       repeatable: false,
       barrack: false,
+      menagerie: false,
       orders: [],
       orderOptions: [],
       enlargement: null,
@@ -233,6 +234,17 @@
           <UCheckbox
             v-model="state.barrack"
             :label="BASTION_EDITOR_LABELS.barrackCheckbox"
+          />
+        </UFormField>
+
+        <UFormField
+          class="md:col-span-8"
+          :label="BASTION_EDITOR_LABELS.menagerie"
+          name="menagerie"
+        >
+          <UCheckbox
+            v-model="state.menagerie"
+            :label="BASTION_EDITOR_LABELS.menagerieCheckbox"
           />
         </UFormField>
       </div>
