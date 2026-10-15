@@ -100,6 +100,8 @@ export function usePlanEditor(
   const document = shallowRef<PlanDocument>(createEmptyPlan());
   const savedDocument = shallowRef<PlanDocument>(createEmptyPlan());
   const canEdit = ref(false);
+  /** У владельца бастиона подписка: доступны предметы интерьера по подписке. */
+  const isPremium = ref(false);
   const isReady = ref(false);
   const isConnected = ref(false);
   const isSaving = ref(false);
@@ -276,6 +278,7 @@ export function usePlanEditor(
 
     session = current;
     canEdit.value = plan.canEdit;
+    isPremium.value = plan.premium;
 
     doc.on('update', (_update: Uint8Array, origin: unknown) => {
       if (!isReady.value) {
@@ -343,6 +346,7 @@ export function usePlanEditor(
     document.value = plan.document;
     savedDocument.value = plan.document;
     canEdit.value = false;
+    isPremium.value = false;
     isReady.value = true;
   }
 
@@ -510,6 +514,7 @@ export function usePlanEditor(
   return {
     document,
     canEdit,
+    isPremium,
     status,
     loadErrorMessage,
     refresh,

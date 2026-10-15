@@ -416,6 +416,7 @@
         v-model:tool="tool"
         v-model:furniture-kind="furnitureKind"
         :can-edit="editor.canEdit.value"
+        :premium="editor.isPremium.value"
         :can-undo="editor.canUndo.value"
         :can-redo="editor.canRedo.value"
         @undo="editor.undo"

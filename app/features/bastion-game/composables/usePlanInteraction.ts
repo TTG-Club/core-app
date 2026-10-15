@@ -39,6 +39,7 @@ import {
   isDefenseGate,
   isDefenseWallCell,
   isFurnitureOnGrid,
+  isPremiumFurniture,
   moveFurniture,
   moveRoom,
   paintCorridor,
@@ -68,6 +69,8 @@ export type PlanPreview =
 
 interface PlanEditorApi {
   document: ShallowRef<PlanDocument>;
+  /** У владельца бастиона подписка: можно ставить предметы по подписке. */
+  isPremium: Readonly<Ref<boolean>>;
   commit: (next: PlanDocument) => void;
   beginStroke: () => void;
   applyInStroke: (next: PlanDocument) => void;
@@ -465,6 +468,14 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
         if (item) {
           startFurnitureMove(item, cell, true);
 
+          break;
+        }
+
+        // Предмет по подписке ставит только бастион владельца с подпиской.
+        if (
+          isPremiumFurniture(options.furnitureKind.value)
+          && !editor.isPremium.value
+        ) {
           break;
         }
 

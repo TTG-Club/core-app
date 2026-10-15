@@ -41,7 +41,11 @@ import {
   isFurnitureOnGrid,
   isWallEdge,
 } from './plan-geometry';
-import { DOOR_KINDS, planResponseSchema } from './plan-schema';
+import {
+  DOOR_KINDS,
+  planResponseSchema,
+  PREMIUM_FURNITURE_KINDS,
+} from './plan-schema';
 
 /** Имя, этаж и идентификатор комнаты, которую создаст правка. */
 export interface PlanRoomSeed {
@@ -81,6 +85,7 @@ export function parsePlanResponse(response: unknown): PlanState {
   return {
     version: parsed.version,
     canEdit: parsed.canEdit,
+    premium: parsed.premium ?? false,
     document: {
       levels: [...levels].sort((first, second) => first - second),
       rooms: (source.rooms ?? []).map((room) => ({
@@ -966,6 +971,19 @@ export function findFurnitureAt(
       && point.y <= item.y + depth
     );
   });
+}
+
+const PREMIUM_FURNITURE = new Set<FurnitureKind>(PREMIUM_FURNITURE_KINDS);
+
+/**
+ * Предмет интерьера по подписке: ставится только в бастион владельца с
+ * подпиской.
+ *
+ * @param kind Вид предмета.
+ * @returns true, если по подписке.
+ */
+export function isPremiumFurniture(kind: FurnitureKind): boolean {
+  return PREMIUM_FURNITURE.has(kind);
 }
 
 /**

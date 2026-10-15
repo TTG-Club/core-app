@@ -2,21 +2,24 @@
   import type { FurnitureKind, PlanTool } from '../../model';
 
   import {
+    BASIC_FURNITURE_KINDS,
     FURNITURE_KIND_ICONS,
     FURNITURE_KIND_LABELS,
-    FURNITURE_KINDS,
     PLAN_EDIT_TOOLS,
     PLAN_LABELS,
     PLAN_TOOL_GROUPS,
+    PREMIUM_FURNITURE_KINDS,
   } from '../../model';
 
   /**
-   * Инструменты редактора плана группами, отмена и повтор. Кнопка мебели
-   * открывает панель с предметами. В режиме просмотра остаётся только «рука»
-   * для панорамы.
+   * Инструменты редактора плана группами, отмена и повтор. Кнопка интерьера
+   * открывает панель с предметами: обычными и по подписке владельца бастиона.
+   * В режиме просмотра остаётся только «рука» для панорамы.
    */
-  const { canEdit, canUndo, canRedo } = defineProps<{
+  const { canEdit, canUndo, canRedo, premium } = defineProps<{
     canEdit: boolean;
+    /** У владельца бастиона подписка: предметы по подписке доступны. */
+    premium: boolean;
     canUndo: boolean;
     canRedo: boolean;
   }>();
@@ -101,6 +104,7 @@
         <UPopover
           v-if="option.tool === 'furniture'"
           v-model:open="isFurnitureOpen"
+          :ui="{ content: 'md:max-w-2xl' }"
         >
           <UTooltip
             :text="option.label"
@@ -118,17 +122,55 @@
           </UTooltip>
 
           <template #content>
-            <div class="grid grid-cols-2 gap-1 p-1">
-              <UButton
-                v-for="kind in FURNITURE_KINDS"
-                :key="kind"
-                :icon="FURNITURE_KIND_ICONS[kind]"
-                v-bind="getFurnitureLook(kind)"
-                size="sm"
-                @click.left.exact.prevent="chooseFurniture(kind)"
-              >
-                {{ FURNITURE_KIND_LABELS[kind] }}
-              </UButton>
+            <div
+              class="flex max-h-[70vh] w-[32rem] max-w-full flex-col gap-2 overflow-x-hidden overflow-y-auto p-1"
+            >
+              <div class="grid grid-cols-3 gap-1">
+                <UButton
+                  v-for="kind in BASIC_FURNITURE_KINDS"
+                  :key="kind"
+                  :icon="FURNITURE_KIND_ICONS[kind]"
+                  v-bind="getFurnitureLook(kind)"
+                  size="sm"
+                  class="text-left"
+                  @click.left.exact.prevent="chooseFurniture(kind)"
+                >
+                  {{ FURNITURE_KIND_LABELS[kind] }}
+                </UButton>
+              </div>
+
+              <USeparator />
+
+              <div class="flex items-start gap-1 px-2 text-xs text-muted">
+                <UIcon
+                  :name="premium ? 'tabler:sparkles' : 'tabler:lock'"
+                  class="mt-px size-3.5 shrink-0"
+                />
+
+                <span>
+                  {{
+                    premium
+                      ? PLAN_LABELS.premiumFurniture
+                      : PLAN_LABELS.premiumFurnitureLocked
+                  }}
+                </span>
+              </div>
+
+              <div class="grid grid-cols-3 gap-1">
+                <UButton
+                  v-for="kind in PREMIUM_FURNITURE_KINDS"
+                  :key="kind"
+                  :icon="FURNITURE_KIND_ICONS[kind]"
+                  v-bind="getFurnitureLook(kind)"
+                  size="sm"
+                  class="text-left"
+                  :class="{ 'opacity-50': !premium }"
+                  :disabled="!premium"
+                  @click.left.exact.prevent="chooseFurniture(kind)"
+                >
+                  {{ FURNITURE_KIND_LABELS[kind] }}
+                </UButton>
+              </div>
             </div>
           </template>
         </UPopover>

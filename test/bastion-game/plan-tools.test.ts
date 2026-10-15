@@ -15,10 +15,12 @@ import {
   getFurnitureSize,
   getRectCells,
   getTowerStairFrame,
+  isPremiumFurniture,
   moveFurniture,
   moveRoom,
   paintDefenseGates,
   paintDefenseWall,
+  parsePlanResponse,
   placeFurniture,
   placeOpening,
   placeTowerStair,
@@ -298,5 +300,37 @@ describe('перетаскивание мебели', () => {
 
     expect(moveFurniture(plan, id, { x: -10, y: 0 })).toBe(plan);
     expect(moveFurniture(plan, id, { x: 0, y: 0 })).toBe(plan);
+  });
+});
+
+describe('предметы интерьера по подписке', () => {
+  it('отличаются от обычных', () => {
+    expect(isPremiumFurniture('FOUNTAIN')).toBe(true);
+    expect(isPremiumFurniture('TABLE')).toBe(false);
+  });
+
+  it('без признака подписки в ответе недоступны', () => {
+    const plan = parsePlanResponse({
+      bastionId: 'b',
+      version: 1,
+      canEdit: true,
+      document: {},
+    });
+
+    expect(plan.premium).toBe(false);
+  });
+
+  it('ставятся с размером из справочника', () => {
+    const plan = placeFurniture(
+      createEmptyPlan(),
+      0,
+      { x: 1.5, y: 1.5 },
+      'FOUNTAIN',
+      0,
+    );
+
+    const [item] = plan.furniture;
+
+    expect(item && getFurnitureSize(item)).toEqual({ width: 2, depth: 2 });
   });
 });
