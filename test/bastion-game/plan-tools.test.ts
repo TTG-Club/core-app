@@ -13,8 +13,11 @@ import {
   drawRoom,
   eraseCells,
   eraseObjectAt,
+  findTowerRing,
+  getCircleCells,
   getFurnitureSize,
   getRectCells,
+  getRoomKindLabel,
   getSquareCorner,
   getTowerStairFrame,
   isPremiumFurniture,
@@ -441,5 +444,37 @@ describe('предметы интерьера по подписке', () => {
     const [item] = plan.furniture;
 
     expect(item && getFurnitureSize(item)).toEqual({ width: 2, depth: 2 });
+  });
+});
+
+describe('многоугольная башня', () => {
+  it('восьмиугольная срезает углы квадрата', () => {
+    const cells = getCircleCells({ cx: 5, cy: 6, r: 2, sides: 8 });
+
+    expect(cells).toHaveLength(12);
+    expect(cells).not.toContainEqual({ x: 3, y: 4 });
+    expect(cells).toContainEqual({ x: 3, y: 5 });
+  });
+
+  it('называется по форме и ставит проёмы посередине сторон', () => {
+    const plan = addTower(createEmptyPlan(), seed('tower'), {
+      cx: 10,
+      cy: 10,
+      r: 3,
+      sides: 5,
+    });
+
+    const [tower] = plan.rooms;
+
+    expect(tower && getRoomKindLabel(tower)).toBe('Пятиугольная башня');
+
+    // Южная сторона пятиугольника: середина стены под центром.
+    const apothem = 3 * Math.cos(Math.PI / 5);
+
+    expect(
+      findTowerRing(plan, 0, { x: 10.3, y: 10 + apothem + 0.25 }, 0.6)?.angle,
+    ).toBe(90);
+
+    expect(findTowerRing(plan, 0, { x: 10, y: 10 - 3.2 }, 0.6)).toBeUndefined();
   });
 });

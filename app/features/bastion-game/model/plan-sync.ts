@@ -16,7 +16,7 @@ import { z } from 'zod';
 
 import { ROOM_KIND_LABELS } from './plan-constants';
 import { resolvePlanConflicts } from './plan-edit';
-import { getCellKey, getEdgeKey } from './plan-geometry';
+import { getCellKey, getEdgeKey, toPlanCircle } from './plan-geometry';
 import {
   planCellSchema,
   planCircleSchema,
@@ -194,7 +194,9 @@ function readRooms(map: Y.Map<unknown>): Array<PlanRoom> {
             facilityId: room.facilityId ?? undefined,
             cells: readCells(cells),
             shape:
-              room.kind === 'TOWER' ? (room.shape ?? undefined) : undefined,
+              room.kind === 'TOWER' && room.shape
+                ? toPlanCircle(room.shape)
+                : undefined,
           },
         },
       ];

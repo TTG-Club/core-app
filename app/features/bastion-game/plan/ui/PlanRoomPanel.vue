@@ -4,6 +4,7 @@
   import { fillTemplate } from '~bastions/model';
 
   import {
+    getRoomKindLabel,
     GRID_ROOM_KINDS,
     isTowerKind,
     PLAN_FEET_PER_CELL,
@@ -104,7 +105,7 @@
 <template>
   <section class="flex flex-col gap-3">
     <h3 class="text-sm font-semibold text-highlighted">
-      {{ ROOM_KIND_LABELS[room.kind] }}
+      {{ getRoomKindLabel(room) }}
     </h3>
 
     <UFormField :label="PLAN_LABELS.roomName">

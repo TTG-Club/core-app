@@ -160,19 +160,121 @@ export function getCircleCells(circle: PlanCircle): Array<PlanCell> {
   const cells: Array<PlanCell> = [];
   const top = Math.floor(circle.cy - circle.r);
   const left = Math.floor(circle.cx - circle.r);
+  const normals = getTowerSideAngles(circle).map(toUnit);
+  const apothem = getTowerApothem(circle);
 
   for (let y = top; y < Math.ceil(circle.cy + circle.r); y++) {
     for (let x = left; x < Math.ceil(circle.cx + circle.r); x++) {
       const deltaX = x + 0.5 - circle.cx;
       const deltaY = y + 0.5 - circle.cy;
 
-      if (deltaX * deltaX + deltaY * deltaY <= circle.r * circle.r + EPSILON) {
+      const isInside = circle.sides
+        ? normals.every(
+            (normal) =>
+              deltaX * normal.x + deltaY * normal.y <= apothem + EPSILON,
+          )
+        : deltaX * deltaX + deltaY * deltaY <= circle.r * circle.r + EPSILON;
+
+      if (isInside) {
         cells.push({ x, y });
       }
     }
   }
 
   return cells;
+}
+
+/**
+ * Окружность башни из ответа сервера или общего документа: число сторон
+ * есть только у многоугольной.
+ *
+ * @param shape Окружность, где сторон может не быть или быть null.
+ * @param shape.cx Центр по x.
+ * @param shape.cy Центр по y.
+ * @param shape.r Радиус.
+ * @param shape.sides Число сторон.
+ * @returns Окружность плана.
+ */
+export function toPlanCircle(shape: {
+  cx: number;
+  cy: number;
+  r: number;
+  sides?: number | null;
+}): PlanCircle {
+  const { cx, cy, r, sides } = shape;
+
+  return sides ? { cx, cy, r, sides } : { cx, cy, r };
+}
+
+/**
+ * Единичный вектор по углу.
+ *
+ * @param angle Угол в градусах от востока по часовой.
+ * @returns Вектор.
+ */
+function toUnit(angle: number): PlanCell {
+  const radians = (angle * Math.PI) / 180;
+
+  return { x: Math.cos(radians), y: Math.sin(radians) };
+}
+
+/**
+ * Углы на середины сторон многоугольной башни, как у сервера
+ * (`PlanGeometry.sideAngles`): пятиугольник стоит вершиной на север, у
+ * восьмиугольника на север смотрит сторона. У круглой башни сторон нет.
+ *
+ * @param circle Окружность башни.
+ * @returns Углы в градусах от востока по часовой, в [0, 360).
+ */
+export function getTowerSideAngles(circle: PlanCircle): Array<number> {
+  const { sides } = circle;
+
+  if (!sides) {
+    return [];
+  }
+
+  const step = 360 / sides;
+  const first = sides % 2 === 1 ? -90 + step / 2 : -90;
+
+  return Array.from(
+    { length: sides },
+    (_, index) => (((first + index * step) % 360) + 360) % 360,
+  );
+}
+
+/**
+ * Расстояние от центра башни до её стены изнутри: радиус у круглой, до
+ * середины стороны у многоугольной.
+ *
+ * @param circle Окружность башни.
+ * @returns Расстояние в клетках.
+ */
+export function getTowerApothem(circle: PlanCircle): number {
+  return circle.sides ? circle.r * Math.cos(Math.PI / circle.sides) : circle.r;
+}
+
+/**
+ * Вершины многоугольника башни на заданном расстоянии от центра до сторон.
+ *
+ * @param circle Окружность многоугольной башни.
+ * @param apothem Расстояние до середин сторон в клетках.
+ * @returns Вершины в клетках по часовой.
+ */
+export function getTowerPolygon(
+  circle: PlanCircle,
+  apothem: number,
+): Array<PlanCell> {
+  const sides = circle.sides ?? 0;
+  const radius = apothem / Math.cos(Math.PI / sides);
+
+  return getTowerSideAngles(circle).map((angle) => {
+    const vertex = toUnit(angle - 180 / sides);
+
+    return {
+      x: circle.cx + vertex.x * radius,
+      y: circle.cy + vertex.y * radius,
+    };
+  });
 }
 
 /**
@@ -462,10 +564,22 @@ export function findTowerRing(
       continue;
     }
 
-    const { cx, cy } = room.shape;
+    const { shape } = room;
+
+    if (shape.sides) {
+      const side = findPolygonSide(shape, point, tolerance);
+
+      if (side !== undefined) {
+        return { room, angle: side };
+      }
+
+      continue;
+    }
+
+    const { cx, cy } = shape;
     const distance = Math.hypot(point.x - cx, point.y - cy);
 
-    if (Math.abs(distance - getTowerRingRadius(room.shape)) > tolerance) {
+    if (Math.abs(distance - getTowerRingRadius(shape)) > tolerance) {
       continue;
     }
 
@@ -480,13 +594,41 @@ export function findTowerRing(
 }
 
 /**
- * Радиус середины кольца стены башни: стена лежит снаружи окружности пола.
+ * Сторона многоугольной башни, по стене которой щёлкнули.
+ *
+ * @param circle Окружность многоугольной башни.
+ * @param point Точка в клетках.
+ * @param tolerance Насколько можно промахнуться мимо середины стены.
+ * @returns Угол на середину стороны или undefined.
+ */
+function findPolygonSide(
+  circle: PlanCircle,
+  point: PlanCell,
+  tolerance: number,
+): number | undefined {
+  const deltaX = point.x - circle.cx;
+  const deltaY = point.y - circle.cy;
+  const ring = getTowerRingRadius(circle);
+  const halfSide = circle.r * Math.sin(Math.PI / (circle.sides ?? 1));
+
+  return getTowerSideAngles(circle).find((angle) => {
+    const normal = toUnit(angle);
+    const across = deltaX * normal.x + deltaY * normal.y;
+    const along = deltaY * normal.x - deltaX * normal.y;
+
+    return Math.abs(across - ring) <= tolerance && Math.abs(along) <= halfSide;
+  });
+}
+
+/**
+ * Расстояние от центра до середины стены башни: стена лежит снаружи пола.
+ * У многоугольной — до середины стены на стороне.
  *
  * @param circle Окружность пола башни.
- * @returns Радиус в клетках.
+ * @returns Расстояние в клетках.
  */
 export function getTowerRingRadius(circle: PlanCircle): number {
-  return circle.r + 0.25;
+  return getTowerApothem(circle) + 0.25;
 }
 
 /**

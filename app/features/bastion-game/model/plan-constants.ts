@@ -179,7 +179,7 @@ export const PLAN_TOOL_HINTS: Record<PlanTool, string> = {
     'Щёлкните комнату, чтобы выбрать её; тяните комнату или предмет интерьера, чтобы переставить. Delete удаляет комнату.',
   pan: 'Тяните лист. Колесо — масштаб.',
   room: 'Тяните прямоугольник. Если начать внутри выбранной комнаты, она расширится.',
-  tower: 'Круглая: тяните от центра башни наружу.',
+  tower: 'Тяните от центра башни наружу. Форму выбирают на кнопке «Башня».',
   corridor:
     'Ведите по клеткам. Коридор, начатый на другом коридоре, продолжает его.',
   eraser:
@@ -206,11 +206,29 @@ export const ROOM_KIND_LABELS: Record<RoomKind, string> = {
 export const TOWER_SHAPE_LABELS: Record<TowerShape, string> = {
   ROUND: 'Круглая',
   SQUARE: 'Квадратная',
+  PENTAGON: 'Пятиугольная',
+  OCTAGON: 'Восьмиугольная',
+};
+
+/** Вид башни в названии новой башни и в карточке комнаты. */
+export const TOWER_SHAPE_ROOM_LABELS: Record<TowerShape, string> = {
+  ROUND: 'Круглая башня',
+  SQUARE: 'Квадратная башня',
+  PENTAGON: 'Пятиугольная башня',
+  OCTAGON: 'Восьмиугольная башня',
 };
 
 export const TOWER_SHAPE_ICONS: Record<TowerShape, string> = {
   ROUND: 'tabler:circle',
   SQUARE: 'tabler:square',
+  PENTAGON: 'tabler:pentagon',
+  OCTAGON: 'tabler:octagon',
+};
+
+/** Число сторон многоугольной башни; круглой и квадратной здесь нет. */
+export const TOWER_SHAPE_SIDES: Partial<Record<TowerShape, number>> = {
+  PENTAGON: 5,
+  OCTAGON: 8,
 };
 
 /** Виды, между которыми можно переключить нарисованную на сетке комнату. */
@@ -392,8 +410,8 @@ export const PLAN_LABELS = {
   spiralSizeHint: 'Ctrl+колесо над башней меняет размер.',
   spiralSmaller: 'Меньше',
   spiralLarger: 'Больше',
-  towerShape: 'Форма башни',
-  squareTowerHint: 'Квадратная: тяните от угла башни.',
+  squareTowerHint:
+    'Тяните квадрат от угла башни. Форму выбирают на кнопке «Башня».',
   stairTarget: 'Куда ведёт',
   stairDirection: 'Подъём при щелчке',
   stairNoTarget: 'Нет этажа выше или ниже — добавьте его.',

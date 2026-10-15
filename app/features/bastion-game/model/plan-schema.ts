@@ -9,7 +9,7 @@ export const ROOM_KINDS = [
 ] as const;
 
 /** Формы башни: круглая с кольцом стены или квадратная на сетке. */
-export const TOWER_SHAPES = ['ROUND', 'SQUARE'] as const;
+export const TOWER_SHAPES = ['ROUND', 'SQUARE', 'PENTAGON', 'OCTAGON'] as const;
 
 export const CELL_SIDES = ['N', 'E', 'S', 'W'] as const;
 
@@ -72,6 +72,7 @@ export const planCircleSchema = z.object({
   cx: z.number(),
   cy: z.number(),
   r: z.number(),
+  sides: z.number().nullish(),
 });
 
 const roomSchema = z.object({
@@ -165,11 +166,16 @@ export interface PlanCell {
   y: number;
 }
 
-/** Окружность башни в клетках; значения кратны половине клетки. */
+/**
+ * Окружность башни в клетках; значения кратны половине клетки. У
+ * многоугольной башни пол — правильный многоугольник, вписанный в неё.
+ */
 export interface PlanCircle {
   cx: number;
   cy: number;
   r: number;
+  /** Число сторон многоугольной башни (5 или 8); у круглой нет. */
+  sides?: number;
 }
 
 /**
