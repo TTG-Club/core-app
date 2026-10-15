@@ -1,6 +1,7 @@
 import type {
   FacilityChoiceForm,
   FacilityChoiceOptionForm,
+  FacilityChoiceSource,
   FacilityEnlargementForm,
   FacilityFeatureForm,
   FacilityOrderOptionForm,
@@ -99,6 +100,11 @@ export const BASTION_EDITOR_LABELS = {
   addChoiceOption: 'Добавить вариант',
   choiceOptionName: 'Вариант',
   choiceOptionDescription: 'Описание',
+  choiceSource: 'Откуда варианты',
+  choiceSourceUnset: 'Перечислить вручную',
+  choiceSourceHint:
+    'Варианты подставляются из справочника, вместе с тем, что ими можно '
+    + 'создать. Список создаваемых предметов задаётся в редакторе предмета.',
   enlargementEnabled: 'Сооружение можно расширить',
   enlargementSpace: 'Пространство после расширения',
   enlargementCost: 'Цена, зм',
@@ -144,6 +150,12 @@ export const EMPTY_CHOICE: FacilityChoiceForm = {
   enlargedCount: null,
   options: [],
 };
+
+/** Источники вариантов выбора сооружения. */
+export const FACILITY_CHOICE_SOURCE_OPTIONS: Array<{
+  label: string;
+  value: FacilityChoiceSource;
+}> = [{ label: 'Инструменты ремесленников', value: 'ARTISAN_TOOLS' }];
 
 export const EMPTY_ENLARGEMENT: FacilityEnlargementForm = {
   cost: null,

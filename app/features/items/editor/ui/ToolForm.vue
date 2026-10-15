@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { ToolCreate } from '~items/model';
+  import type { ToolCraftRef, ToolCreate } from '~items/model';
 
   import {
     ITEM_ABILITY_OPTIONS,
@@ -10,7 +10,7 @@
     TOOL_PROFICIENCY_MODE_OPTIONS,
     WEAPON_FORM_LABELS,
   } from '~items/model';
-  import { SelectOptional } from '~ui/select';
+  import { SelectItem, SelectOptional } from '~ui/select';
 
   const model = defineModel<ToolCreate>({ required: true });
 
@@ -25,6 +25,28 @@
       ? TOOL_BASE_TYPE_OPTIONS.filter((tool) => tool.category === category)
       : TOOL_BASE_TYPE_OPTIONS;
   });
+
+  /** Адреса создаваемых предметов — значение поля выбора. */
+  const craftUrls = computed(() =>
+    model.value.crafts.map((craft) => craft.url),
+  );
+
+  /**
+   * Записывает создаваемые предметы вместе со снимком названий: мастерская
+   * бастиона показывает их без лишних запросов к каталогу.
+   *
+   * @param refs выбранные предметы.
+   */
+  function setCrafts(refs: Array<ToolCraftRef>): void {
+    const known = new Map(
+      model.value.crafts.map((craft) => [craft.url, craft.name]),
+    );
+
+    model.value.crafts = refs.map((reference) => ({
+      url: reference.url,
+      name: reference.name || known.get(reference.url) || reference.url,
+    }));
+  }
 </script>
 
 <template>
@@ -93,6 +115,20 @@
           v-model="model.proficiencyMode"
           :items="TOOL_PROFICIENCY_MODE_OPTIONS"
           :unset-label="TOOL_FORM_LABELS.proficiencyModeUnset"
+        />
+      </UFormField>
+
+      <UFormField
+        class="md:col-span-24"
+        :label="TOOL_FORM_LABELS.crafts"
+        :tooltip="TOOL_FORM_LABELS.craftsHint"
+        name="tool.crafts"
+      >
+        <SelectItem
+          :model-value="craftUrls"
+          :placeholder="TOOL_FORM_LABELS.craftsPlaceholder"
+          multiple
+          @select="setCrafts"
         />
       </UFormField>
     </div>

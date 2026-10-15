@@ -3,10 +3,13 @@
 
   import { cloneDeep } from 'es-toolkit';
 
+  import { SelectOptional } from '~ui/select';
+
   import {
     BASTION_EDITOR_LABELS,
     EMPTY_CHOICE,
     EMPTY_CHOICE_OPTION,
+    FACILITY_CHOICE_SOURCE_OPTIONS,
   } from '../../model';
   import EditorRowsCard from './EditorRowsCard.vue';
 
@@ -120,7 +123,20 @@
         />
       </UFormField>
 
+      <UFormField
+        class="md:col-span-24"
+        :label="BASTION_EDITOR_LABELS.choiceSource"
+        :tooltip="BASTION_EDITOR_LABELS.choiceSourceHint"
+      >
+        <SelectOptional
+          v-model="choice.source"
+          :items="FACILITY_CHOICE_SOURCE_OPTIONS"
+          :unset-label="BASTION_EDITOR_LABELS.choiceSourceUnset"
+        />
+      </UFormField>
+
       <div
+        v-if="!choice.source"
         class="flex flex-col gap-2 border-l-2 border-default pl-3 md:col-span-24"
       >
         <div class="flex items-center justify-between gap-2">
