@@ -269,7 +269,10 @@ export function transformBastionBeforeSubmit(
       .filter((choice) => hasText(choice.name))
       .map((choice) => ({
         ...choice,
-        options: choice.options.filter((option) => hasText(option.name)),
+        // Варианты из справочника подставляет сервер: свой список им не нужен
+        options: choice.source
+          ? []
+          : choice.options.filter((option) => hasText(option.name)),
       })),
     enlargement: state.enlargement?.space ? state.enlargement : null,
   };

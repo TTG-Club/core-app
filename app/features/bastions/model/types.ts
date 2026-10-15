@@ -132,12 +132,20 @@ export interface FacilityChoiceOptionForm {
   description?: string;
 }
 
+/**
+ * Откуда берутся варианты выбора вместо списка: `ARTISAN_TOOLS` — инструменты
+ * ремесленников из справочника предметов (инструменты мастерской).
+ */
+export type FacilityChoiceSource = 'ARTISAN_TOOLS';
+
 export interface FacilityChoiceForm {
   name?: string;
   description?: string;
   count: number | null;
   enlargedCount: number | null;
   options: Array<FacilityChoiceOptionForm>;
+  /** Источник вариантов; пусто — варианты перечислены в `options`. */
+  source?: FacilityChoiceSource;
 }
 
 /** Состояние формы сооружения — то же, что отдаёт `GET /bastions/{url}/raw`. */

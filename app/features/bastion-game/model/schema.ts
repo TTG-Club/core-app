@@ -193,6 +193,12 @@ export const catalogFacilitySchema = z.object({
             z.object({
               name: z.string().nullable().optional(),
               description: z.string().nullable().optional(),
+              /** Предмет справочника, если варианты — инструменты ремесленников. */
+              url: z.string().nullish(),
+              /** Что создаётся этим инструментом в мастерской. */
+              crafts: z
+                .array(z.object({ url: z.string(), name: z.string() }))
+                .nullish(),
             }),
           )
           .nullable()

@@ -70,7 +70,8 @@
    * Выборы сооружения с вариантами для селекта.
    *
    * @param facility Сооружение справочника.
-   * @returns Выборы с названием, числом вариантов и списком.
+   * @returns Выборы с названием, числом вариантов и списком. Описание
+   * варианта — например, что создаётся инструментом мастерской.
    */
   function getChoices(facility: CatalogFacility) {
     return (facility.choices ?? []).flatMap((choice) =>
@@ -80,7 +81,15 @@
               name: choice.name,
               count: choice.count ?? 1,
               items: (choice.options ?? []).flatMap((option) =>
-                option.name ? [option.name] : [],
+                option.name
+                  ? [
+                      {
+                        label: option.name,
+                        value: option.name,
+                        description: option.description ?? undefined,
+                      },
+                    ]
+                  : [],
               ),
             },
           ]
@@ -204,6 +213,7 @@
             :model-value="getChoiceValue(selection, choice.name)"
             :items="choice.items"
             :placeholder="FACILITY_SETUP_LABELS.choicePlaceholder"
+            value-key="value"
             multiple
             class="w-full"
             @update:model-value="setChoice(selection, choice, $event)"
