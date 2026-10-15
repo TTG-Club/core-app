@@ -8,6 +8,7 @@ import { StatusCodes } from 'http-status-codes';
 import { FetchError } from 'ofetch';
 
 import {
+  ARTISAN_TOOL_ICONS,
   BASTION_START_LEVEL,
   MY_BASTIONS_ROUTE,
   SHARED_BASTION_ROUTE,
@@ -188,4 +189,16 @@ export function getSharedBastionPlanRoute(token: string): string {
  */
 export function getGameRoute(gameId: string): string {
   return `/games/${gameId}`;
+}
+
+/**
+ * Значок инструмента ремесленника по его названию.
+ *
+ * @param name Название варианта выбора: «Инструменты кузнеца».
+ * @returns Значок или undefined, если это не инструмент ремесленника.
+ */
+export function getArtisanToolIcon(name: string): string | undefined {
+  const lower = name.toLowerCase();
+
+  return ARTISAN_TOOL_ICONS.find(([stem]) => lower.includes(stem))?.[1];
 }

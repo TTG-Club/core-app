@@ -222,3 +222,30 @@ export const BASTION_JOIN_LABELS = {
   cancel: 'Отмена',
   loadError: 'Не удалось загрузить ваши бастионы',
 } as const;
+
+/**
+ * Значки инструментов ремесленников по основе названия («Инструменты
+ * кузнеца» → молот). Ищется первое совпадение в названии без учёта регистра.
+ */
+export const ARTISAN_TOOL_ICONS: ReadonlyArray<
+  readonly [stem: string, icon: string]
+> = [
+  ['алхимик', 'tabler:flask'],
+  ['пивовар', 'tabler:beer'],
+  ['каллиграф', 'tabler:writing'],
+  ['плотник', 'tabler:axe'],
+  ['картограф', 'tabler:map'],
+  ['сапожник', 'tabler:shoe'],
+  ['повар', 'tabler:chef-hat'],
+  ['стеклодув', 'tabler:glass-full'],
+  ['ювелир', 'tabler:diamond'],
+  ['кожевник', 'tabler:needle'],
+  ['каменщик', 'tabler:wall'],
+  ['художник', 'tabler:palette'],
+  ['гончар', 'tabler:cup'],
+  ['кузнец', 'tabler:hammer'],
+  ['жестянщик', 'tabler:tools'],
+  ['ремонтник', 'tabler:tools'],
+  ['ткач', 'tabler:needle-thread'],
+  ['резчик', 'tabler:tree'],
+];
