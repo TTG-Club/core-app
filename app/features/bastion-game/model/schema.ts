@@ -68,6 +68,10 @@ const facilitySchema = z.object({
     .nullish(),
   pendingReadyOnTurn: z.number().nullish(),
   enlargeable: z.boolean(),
+  /** Защитников в бараке; null — сооружение не барак. */
+  defenders: z.number().nullish(),
+  /** Сколько защитников помещается в барак: 12 во вместительном, 24 в просторном. */
+  defenderCapacity: z.number().nullish(),
 });
 
 const memberSchema = z.object({

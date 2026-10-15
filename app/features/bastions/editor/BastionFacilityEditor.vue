@@ -70,6 +70,7 @@
       space: undefined,
       hirelings: null,
       repeatable: false,
+      barrack: false,
       orders: [],
       orderOptions: [],
       enlargement: null,
@@ -221,6 +222,17 @@
           <UCheckbox
             v-model="state.repeatable"
             :label="BASTION_EDITOR_LABELS.repeatableCheckbox"
+          />
+        </UFormField>
+
+        <UFormField
+          class="md:col-span-8"
+          :label="BASTION_EDITOR_LABELS.barrack"
+          name="barrack"
+        >
+          <UCheckbox
+            v-model="state.barrack"
+            :label="BASTION_EDITOR_LABELS.barrackCheckbox"
           />
         </UFormField>
       </div>
