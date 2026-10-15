@@ -6,7 +6,11 @@
 
   import { fillTemplate } from '~bastions/model';
 
-  import { ACTIVITY_LABELS, FACILITY_SETUP_LABELS } from '../../model';
+  import {
+    ACTIVITY_LABELS,
+    FACILITY_SETUP_LABELS,
+    getOrderSubject,
+  } from '../../model';
 
   /**
    * Сооружение персонажа: название со ссылкой на справочник, пространство,
@@ -72,13 +76,15 @@
       return ACTIVITY_LABELS.idle;
     }
 
+    const subject = getOrderSubject(activeOrder);
+
     const values = {
       order: activeOrder.order.name,
-      option: activeOrder.optionName ?? '',
+      option: subject,
       turn: activeOrder.completesOnTurn,
     };
 
-    return activeOrder.optionName
+    return subject
       ? fillTemplate(ACTIVITY_LABELS.busyOrderOption, values)
       : fillTemplate(ACTIVITY_LABELS.busyOrder, values);
   });

@@ -82,6 +82,8 @@ export async function fetchFacilityOrderOptions(
  * @param request.note Пояснение.
  * @param request.cancelActive Для «Обслуживать»: отменить приказы, которые
  * сооружения ещё выполняют.
+ * @param request.itemUrl Для «Изготовить» в мастерской: предмет из тех, что
+ * создаются её инструментами.
  * @returns Бастион после приказа.
  */
 export function giveBastionOrder(
@@ -92,6 +94,7 @@ export function giveBastionOrder(
     optionName?: string;
     note?: string;
     cancelActive?: boolean;
+    itemUrl?: string;
   },
 ): Promise<PlayerBastion> {
   return mutateBastion(bastionPath(bastionId, '/orders'), 'POST', request);
