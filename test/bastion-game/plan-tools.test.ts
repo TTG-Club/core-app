@@ -6,6 +6,7 @@ import * as Y from 'yjs';
 import {
   addColumn,
   addLevel,
+  addSquareTower,
   addTower,
   clearArea,
   createEmptyPlan,
@@ -14,6 +15,7 @@ import {
   eraseObjectAt,
   getFurnitureSize,
   getRectCells,
+  getSquareCorner,
   getTowerStairFrame,
   isPremiumFurniture,
   moveFurniture,
@@ -213,6 +215,113 @@ describe('винтовая лестница в башне', () => {
     expect(
       placeTowerStair(plan, 0, { x: 11, y: 11 }, { ...stairSeed, id: 'again' }),
     ).toBe(plan);
+  });
+
+  it('берёт заданный размер, пока башня его вмещает', () => {
+    const plan = createTowerPlan(10);
+    const point = { x: 10, y: 10 };
+
+    expect(getTowerStairFrame(plan, 0, point, 2)).toEqual({
+      x: 9,
+      y: 9,
+      width: 2,
+      height: 2,
+    });
+
+    expect(getTowerStairFrame(plan, 0, point, 3)).toMatchObject({ width: 2 });
+    expect(getTowerStairFrame(plan, 0, point, 9)).toMatchObject({ width: 4 });
+  });
+
+  it('повторный щелчок с другим размером меняет размер лестницы', () => {
+    const stairSeed = { id: 'spiral', toLevel: 1, direction: 'N' as const };
+
+    const plan = placeTowerStair(
+      createTowerPlan(10),
+      0,
+      { x: 9, y: 9 },
+      stairSeed,
+    );
+
+    const resized = placeTowerStair(
+      plan,
+      0,
+      { x: 9, y: 9 },
+      { ...stairSeed, id: 'again' },
+      2,
+    );
+
+    expect(resized.stairs).toEqual([
+      { ...plan.stairs[0], x: 9, y: 9, width: 2, height: 2 },
+    ]);
+  });
+});
+
+describe('квадратная башня', () => {
+  it('тянется квадратом в сторону указателя', () => {
+    expect(getSquareCorner({ x: 5, y: 5 }, { x: 3, y: 8 })).toEqual({
+      x: 2,
+      y: 8,
+    });
+
+    expect(getSquareCorner({ x: 5, y: 5 }, { x: 5, y: 5 })).toEqual({
+      x: 6,
+      y: 6,
+    });
+  });
+
+  it('забирает клетки у комнаты и не отдаёт их новой', () => {
+    const room = drawRoom(
+      createEmptyPlan(),
+      getRectCells({ x: 0, y: 0 }, { x: 5, y: 5 }),
+      seed('room'),
+    );
+
+    const plan = addSquareTower(
+      room,
+      seed('tower'),
+      getRectCells({ x: 4, y: 4 }, { x: 7, y: 7 }),
+    );
+
+    const tower = plan.rooms.find((item) => item.id === 'tower');
+
+    expect(tower).toMatchObject({ kind: 'SQUARE_TOWER', shape: undefined });
+    expect(tower?.cells).toHaveLength(16);
+
+    expect(plan.rooms.find((item) => item.id === 'room')?.cells).toHaveLength(
+      32,
+    );
+
+    const redrawn = drawRoom(
+      plan,
+      getRectCells({ x: 6, y: 6 }, { x: 9, y: 9 }),
+      seed('hall'),
+    );
+
+    expect(
+      redrawn.rooms.find((item) => item.id === 'tower')?.cells,
+    ).toHaveLength(16);
+  });
+
+  it('вмещает винтовую лестницу во всю ширину', () => {
+    const plan = addSquareTower(
+      addLevel(createEmptyPlan(), 'up').document,
+      seed('tower'),
+      getRectCells({ x: 10, y: 10 }, { x: 13, y: 13 }),
+    );
+
+    expect(getTowerStairFrame(plan, 0, { x: 11, y: 11 })).toEqual({
+      x: 10,
+      y: 10,
+      width: 4,
+      height: 4,
+    });
+
+    expect(getTowerStairFrame(plan, 0, { x: 11, y: 11 }, 2)).toEqual({
+      x: 11,
+      y: 11,
+      width: 2,
+      height: 2,
+    });
   });
 });
 

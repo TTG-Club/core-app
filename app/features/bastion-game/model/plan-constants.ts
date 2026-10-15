@@ -4,6 +4,7 @@ import type {
   FurnitureKind,
   RoomKind,
   StairKind,
+  TowerShape,
 } from './plan-schema';
 
 /** Ограничения плана — те же, что проверяет сервер (`PlanRules`). */
@@ -15,6 +16,9 @@ export const PLAN_LIMITS = {
   maxLevel: 9,
   minTowerRadius: 1,
   maxTowerRadius: 25,
+  /** Сторона квадратной башни в клетках. */
+  minSquareTowerSide: 2,
+  maxSquareTowerSide: 50,
   maxStairSide: 10,
   /** Шаг угла проёма в стене башни, градусы. */
   towerAngleStep: 22.5,
@@ -34,7 +38,7 @@ export const PLAN_ZOOM_MAX = 4;
 export const PLAN_ZOOM_STEP = 1.1;
 /** Шаг поворота мебели, градусы. */
 export const PLAN_FURNITURE_ROTATION_STEP = 90;
-/** Не чаще одного поворота мебели колесом за столько миллисекунд. */
+/** Не чаще одного шага Ctrl+колесом (поворот мебели, размер лестницы) за столько миллисекунд. */
 export const PLAN_WHEEL_ROTATE_MS = 150;
 
 /**
@@ -150,7 +154,12 @@ export const PLAN_TOOL_GROUPS: ReadonlyArray<
   ],
   [
     { tool: 'room', icon: 'tabler:square', label: 'Комната', key: 'r' },
-    { tool: 'tower', icon: 'tabler:circle', label: 'Круглая башня', key: 't' },
+    {
+      tool: 'tower',
+      icon: 'tabler:building-castle',
+      label: 'Башня',
+      key: 't',
+    },
     { tool: 'corridor', icon: 'tabler:route', label: 'Коридор', key: 'c' },
     { tool: 'eraser', icon: 'tabler:eraser', label: 'Ластик', key: 'e' },
   ],
@@ -170,7 +179,7 @@ export const PLAN_TOOL_HINTS: Record<PlanTool, string> = {
     'Щёлкните комнату, чтобы выбрать её; тяните комнату или предмет интерьера, чтобы переставить. Delete удаляет комнату.',
   pan: 'Тяните лист. Колесо — масштаб.',
   room: 'Тяните прямоугольник. Если начать внутри выбранной комнаты, она расширится.',
-  tower: 'Тяните от центра башни наружу.',
+  tower: 'Круглая: тяните от центра башни наружу.',
   corridor:
     'Ведите по клеткам. Коридор, начатый на другом коридоре, продолжает его.',
   eraser:
@@ -178,7 +187,7 @@ export const PLAN_TOOL_HINTS: Record<PlanTool, string> = {
   door: 'Щёлкните по стене или по кольцу башни. Повторный щелчок по двери меняет её вид. На защитной стене дверь становится воротами: ведите вдоль стены, чтобы сделать их шире, щелчок по воротам закладывает проём.',
   window: 'Щёлкните по стене или по кольцу башни.',
   stairs:
-    'Щёлкните клетку или тяните в сторону подъёма: рамка задаёт длину и ширину. Щелчок внутри башни ставит винтовую лестницу по её размеру.',
+    'Щёлкните клетку или тяните в сторону подъёма: рамка задаёт длину и ширину. Щелчок внутри башни ставит винтовую лестницу, Ctrl+колесо меняет её размер.',
   column: 'Щёлкните в центр клетки или на пересечение линий сетки.',
   wall: 'Ведите по клеткам снаружи комнат первого этажа. Ворота ставит инструмент «Дверь».',
   furniture:
@@ -190,7 +199,18 @@ export const ROOM_KIND_LABELS: Record<RoomKind, string> = {
   ROOM: 'Комната',
   CORRIDOR: 'Коридор',
   COURTYARD: 'Двор',
-  TOWER: 'Башня',
+  TOWER: 'Круглая башня',
+  SQUARE_TOWER: 'Квадратная башня',
+};
+
+export const TOWER_SHAPE_LABELS: Record<TowerShape, string> = {
+  ROUND: 'Круглая',
+  SQUARE: 'Квадратная',
+};
+
+export const TOWER_SHAPE_ICONS: Record<TowerShape, string> = {
+  ROUND: 'tabler:circle',
+  SQUARE: 'tabler:square',
 };
 
 /** Виды, между которыми можно переключить нарисованную на сетке комнату. */
@@ -367,6 +387,13 @@ export const PLAN_LABELS = {
     'Комнаты обрежутся по рамке, двери, окна, лестницы, колонны и предметы интерьера внутри исчезнут.',
   stairKind: 'Вид лестницы',
   spiralHint: 'Щёлкните внутри башни — лестница займёт её середину.',
+  spiralSize: 'Размер винтовой лестницы',
+  spiralSizeAuto: 'Наибольший',
+  spiralSizeHint: 'Ctrl+колесо над башней меняет размер.',
+  spiralSmaller: 'Меньше',
+  spiralLarger: 'Больше',
+  towerShape: 'Форма башни',
+  squareTowerHint: 'Квадратная: тяните от угла башни.',
   stairTarget: 'Куда ведёт',
   stairDirection: 'Подъём при щелчке',
   stairNoTarget: 'Нет этажа выше или ниже — добавьте его.',

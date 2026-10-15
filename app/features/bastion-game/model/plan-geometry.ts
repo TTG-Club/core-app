@@ -6,6 +6,7 @@ import type {
   PlanEdge,
   PlanFurniture,
   PlanRoom,
+  RoomKind,
 } from './plan-schema';
 
 import { PLAN_FURNITURE_SIZES, PLAN_LIMITS } from './plan-constants';
@@ -121,6 +122,30 @@ export function getRectCells(from: PlanCell, to: PlanCell): Array<PlanCell> {
   }
 
   return cells;
+}
+
+/**
+ * Дальний угол квадрата, который тянут от угла `from` к `to`: сторона —
+ * большее из смещений, в пределах размеров квадратной башни.
+ *
+ * @param from Клетка, где начали тянуть.
+ * @param to Клетка под указателем.
+ * @returns Противоположная `from` клетка квадрата.
+ */
+export function getSquareCorner(from: PlanCell, to: PlanCell): PlanCell {
+  const side = Math.min(
+    PLAN_LIMITS.maxSquareTowerSide,
+    Math.max(
+      PLAN_LIMITS.minSquareTowerSide,
+      Math.abs(to.x - from.x) + 1,
+      Math.abs(to.y - from.y) + 1,
+    ),
+  );
+
+  return {
+    x: from.x + (to.x < from.x ? 1 - side : side - 1),
+    y: from.y + (to.y < from.y ? 1 - side : side - 1),
+  };
 }
 
 /**
@@ -253,6 +278,17 @@ export function getOccupancy(
   }
 
   return occupancy;
+}
+
+/**
+ * Башня, круглая или квадратная: её клетки не забирают комнаты, нарисованные
+ * поверх, и на ней можно поставить винтовую лестницу.
+ *
+ * @param kind Вид комнаты.
+ * @returns true, если башня.
+ */
+export function isTowerKind(kind: RoomKind): boolean {
+  return kind === 'TOWER' || kind === 'SQUARE_TOWER';
 }
 
 /**

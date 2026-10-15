@@ -1,6 +1,15 @@
 import { z } from 'zod';
 
-export const ROOM_KINDS = ['ROOM', 'CORRIDOR', 'COURTYARD', 'TOWER'] as const;
+export const ROOM_KINDS = [
+  'ROOM',
+  'CORRIDOR',
+  'COURTYARD',
+  'TOWER',
+  'SQUARE_TOWER',
+] as const;
+
+/** Формы башни: круглая с кольцом стены или квадратная на сетке. */
+export const TOWER_SHAPES = ['ROUND', 'SQUARE'] as const;
 
 export const CELL_SIDES = ['N', 'E', 'S', 'W'] as const;
 
@@ -144,6 +153,7 @@ export const planResponseSchema = z.object({
 
 export type PlanResponse = z.infer<typeof planResponseSchema>;
 export type RoomKind = (typeof ROOM_KINDS)[number];
+export type TowerShape = (typeof TOWER_SHAPES)[number];
 export type CellSide = (typeof CELL_SIDES)[number];
 export type DoorKind = (typeof DOOR_KINDS)[number];
 export type OpeningType = (typeof OPENING_TYPES)[number];

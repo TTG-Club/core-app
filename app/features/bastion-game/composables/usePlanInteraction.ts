@@ -14,12 +14,14 @@ import type {
   PlanTool,
   StairKind,
   StairTarget,
+  TowerShape,
 } from '../model';
 
 import { fillTemplate } from '~bastions/model';
 
 import {
   addColumn,
+  addSquareTower,
   addStair,
   addTower,
   canMoveRoom,
@@ -34,12 +36,14 @@ import {
   getLineCells,
   getNextRoomName,
   getRectCells,
+  getSquareCorner,
   getStairTargetLevel,
   getTowerStairFrame,
   isDefenseGate,
   isDefenseWallCell,
   isFurnitureOnGrid,
   isPremiumFurniture,
+  isTowerKind,
   moveFurniture,
   moveRoom,
   paintCorridor,
@@ -86,6 +90,9 @@ interface PlanInteractionOptions {
   stairKind: Ref<StairKind>;
   stairTarget: Ref<StairTarget | undefined>;
   stairDirection: Ref<CellSide>;
+  /** Заданная сторона винтовой лестницы; undefined — наибольшая. */
+  spiralSide: Ref<number | undefined>;
+  towerShape: Ref<TowerShape>;
   corridorWidth: Ref<number>;
   furnitureKind: Ref<FurnitureKind>;
   furnitureRotation: Ref<number>;
@@ -100,6 +107,7 @@ type PlanGesture =
       target: PlanRoom | PlanRoomSeed;
     }
   | { type: 'tower'; center: PlanCell; radius: number }
+  | { type: 'squareTower'; anchor: PlanCell; current: PlanCell }
   | { type: 'move'; room: PlanRoom; anchor: PlanCell; offset: PlanCell }
   | {
       type: 'furniture';
@@ -282,7 +290,7 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
     const isExtending =
       selected !== undefined
       && selected.level === level.value
-      && selected.kind !== 'TOWER'
+      && !isTowerKind(selected.kind)
       && selected.cells.some((item) => item.x === cell.x && item.y === cell.y);
 
     gesture = {
@@ -391,6 +399,12 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
 
         break;
       case 'tower': {
+        if (options.towerShape.value === 'SQUARE') {
+          startSquareTower(cell);
+
+          break;
+        }
+
         const center = { x: snapToHalf(point.x), y: snapToHalf(point.y) };
 
         gesture = { type: 'tower', center, radius: PLAN_LIMITS.minTowerRadius };
@@ -525,6 +539,33 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
   }
 
   /**
+   * Подсказка квадратной башни: рамка и её размер в футах.
+   *
+   * @param from Угол, откуда тянут.
+   * @param to Противоположный угол.
+   */
+  function updateSquareTowerPreview(from: PlanCell, to: PlanCell): void {
+    preview.value = {
+      kind: 'rect',
+      from,
+      to,
+      label: getRectangleLabel(from, to),
+    };
+  }
+
+  /**
+   * Начало квадратной башни: квадрат наименьшего размера от клетки нажатия.
+   *
+   * @param cell Клетка нажатия.
+   */
+  function startSquareTower(cell: PlanCell): void {
+    const current = getSquareCorner(cell, cell);
+
+    gesture = { type: 'squareTower', anchor: cell, current };
+    updateSquareTowerPreview(cell, current);
+  }
+
+  /**
    * Движение указателя: обновляет подсказку или продолжает мазок.
    *
    * @param point Точка в клетках.
@@ -565,6 +606,11 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
 
         break;
       }
+      case 'squareTower':
+        gesture.current = getSquareCorner(gesture.anchor, cell);
+        updateSquareTowerPreview(gesture.anchor, gesture.current);
+
+        break;
       case 'furniture': {
         const offset = {
           x: cell.x - gesture.anchor.x,
@@ -706,6 +752,21 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
 
         break;
       }
+      case 'squareTower': {
+        const seed = createSeed('SQUARE_TOWER');
+
+        editor.commit(
+          addSquareTower(
+            document,
+            seed,
+            getRectCells(finished.anchor, finished.current),
+          ),
+        );
+
+        selectedRoomId.value = seed.id;
+
+        break;
+      }
       case 'move':
         editor.commit(moveRoom(document, finished.room.id, finished.offset));
 
@@ -773,11 +834,17 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
 
     if (tower) {
       editor.commit(
-        placeTowerStair(editor.document.value, level.value, anchor, {
-          id: crypto.randomUUID(),
-          toLevel,
-          direction: options.stairDirection.value,
-        }),
+        placeTowerStair(
+          editor.document.value,
+          level.value,
+          anchor,
+          {
+            id: crypto.randomUUID(),
+            toLevel,
+            direction: options.stairDirection.value,
+          },
+          options.spiralSide.value,
+        ),
       );
 
       return;

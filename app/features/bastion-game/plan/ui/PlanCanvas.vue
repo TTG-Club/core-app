@@ -44,6 +44,8 @@
     furnitureKind: FurnitureKind;
     /** Поворот предмета, который поставит инструмент мебели. */
     furnitureRotation: number;
+    /** Заданная сторона винтовой лестницы; undefined — наибольшая. */
+    spiralSide: number | undefined;
   }>();
 
   const emit = defineEmits<{
@@ -51,11 +53,14 @@
     'point-move': [point: PlanPoint, isPressed: boolean];
     'point-up': [];
     'point-leave': [];
-    /** Колесо с инструментом мебели: 1 — по часовой, -1 — против. */
-    'rotate': [direction: 1 | -1];
+    /**
+     * Ctrl+колесо у мебели и лестницы: 1 — от себя к себе (по часовой,
+     * меньше), -1 — наоборот.
+     */
+    'wheel-step': [direction: 1 | -1];
   }>();
 
-  /** Когда колесо последний раз повернуло мебель: тачпад шлёт много мелких событий. */
+  /** Когда Ctrl+колесо последний раз сработало: тачпад шлёт много мелких событий. */
   let lastRotateAt = 0;
 
   const container = useTemplateRef('container');
@@ -104,6 +109,7 @@
         area: props.area,
         furnitureKind: props.furnitureKind,
         furnitureRotation: props.furnitureRotation,
+        spiralSide: props.spiralSide,
       },
       theme.value,
       world.scale.x,
@@ -219,7 +225,8 @@
 
   /**
    * Зум колесом у курсора: точка под курсором остаётся на месте. С
-   * инструментом мебели Ctrl+колесо поворачивает предмет.
+   * инструментом мебели Ctrl+колесо поворачивает предмет, с лестницей —
+   * меняет размер винтовой.
    *
    * @param event Событие колеса.
    */
@@ -230,13 +237,16 @@
 
     event.preventDefault();
 
-    if (props.tool === 'furniture' && (event.ctrlKey || event.metaKey)) {
+    if (
+      (props.tool === 'furniture' || props.tool === 'stairs')
+      && (event.ctrlKey || event.metaKey)
+    ) {
       if (
         event.deltaY !== 0
         && event.timeStamp - lastRotateAt > PLAN_WHEEL_ROTATE_MS
       ) {
         lastRotateAt = event.timeStamp;
-        emit('rotate', event.deltaY > 0 ? 1 : -1);
+        emit('wheel-step', event.deltaY > 0 ? 1 : -1);
       }
 
       return;
@@ -395,6 +405,7 @@
       props.area,
       props.furnitureKind,
       props.furnitureRotation,
+      props.spiralSide,
     ],
     render,
   );
