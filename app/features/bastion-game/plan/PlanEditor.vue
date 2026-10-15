@@ -9,6 +9,7 @@
     RoomKind,
     StairKind,
     StairTarget,
+    TowerShape,
   } from '../model';
 
   import { fillTemplate } from '~bastions/model';
@@ -21,6 +22,7 @@
     createPaletteFacilities,
     getPlanLevels,
     getStairTargetLevel,
+    getTowerStairFrame,
     PLAN_CORRIDOR_WIDTHS,
     PLAN_EDIT_TOOLS,
     PLAN_FURNITURE_ROTATION_STEP,
@@ -46,7 +48,8 @@
 
   /**
    * Редактор плана бастиона — упрощённый редактор карт: комнаты на сетке,
-   * стены по их границам, двери, окна, лестницы, колонны и круглые башни.
+   * стены по их границам, двери, окна, лестницы, колонны, круглые и
+   * квадратные башни.
    * Смотреть план могут все участники игры, рисовать — мастер и игроки с
    * доступом; для остальных и по ссылке «поделиться» редактор открывается
    * только на просмотр.
@@ -71,6 +74,8 @@
   const stairKind = ref<StairKind>('STRAIGHT');
   const stairTarget = ref<StairTarget>();
   const stairDirection = ref<CellSide>('N');
+  const spiralSide = ref<number>();
+  const towerShape = ref<TowerShape>('ROUND');
   const corridorWidth = ref<number>(PLAN_CORRIDOR_WIDTHS[0]);
   const furnitureKind = ref<FurnitureKind>('TABLE');
   const furnitureRotation = ref(0);
@@ -84,6 +89,8 @@
     stairKind,
     stairTarget,
     stairDirection,
+    spiralSide,
+    towerShape,
     corridorWidth,
     furnitureKind,
     furnitureRotation,
@@ -98,6 +105,50 @@
     furnitureRotation.value =
       (furnitureRotation.value + direction * PLAN_FURNITURE_ROTATION_STEP + 360)
       % 360;
+  }
+
+  /**
+   * Меняет размер винтовой лестницы на шаг в две клетки — так она остаётся
+   * по центру башни. Над башней размер отсчитывается от того, что в неё
+   * встанет, и не выходит за то, что она вмещает.
+   *
+   * @param direction -1 — больше, 1 — меньше.
+   */
+  function resizeSpiral(direction: 1 | -1): void {
+    const point = interaction.hoverPoint.value;
+
+    const frame = point
+      ? getTowerStairFrame(
+          editor.document.value,
+          level.value,
+          point,
+          spiralSide.value,
+        )
+      : undefined;
+
+    const largest = point
+      ? getTowerStairFrame(editor.document.value, level.value, point)
+      : undefined;
+
+    const current =
+      frame?.width ?? spiralSide.value ?? PLAN_LIMITS.maxStairSide;
+
+    const limit = largest?.width ?? PLAN_LIMITS.maxStairSide;
+
+    spiralSide.value = Math.min(limit, Math.max(1, current - direction * 2));
+  }
+
+  /**
+   * Ctrl+колесо: у мебели поворот, у лестницы размер винтовой.
+   *
+   * @param direction Куда повернули колесо.
+   */
+  function handleWheelStep(direction: 1 | -1): void {
+    if (tool.value === 'stairs') {
+      resizeSpiral(direction);
+    } else {
+      rotateFurniture(direction);
+    }
   }
 
   /** Выделенный участок — только у инструмента «Выделить» и на его этаже. */
@@ -189,11 +240,17 @@
     return { label: PLAN_LABELS.allSaved, color: 'success' as const };
   });
 
-  const toolHint = computed(() =>
-    tool.value === 'wall' && level.value !== 0
-      ? PLAN_LABELS.wallsGroundOnly
-      : PLAN_TOOL_HINTS[tool.value],
-  );
+  const toolHint = computed(() => {
+    if (tool.value === 'wall' && level.value !== 0) {
+      return PLAN_LABELS.wallsGroundOnly;
+    }
+
+    if (tool.value === 'tower' && towerShape.value === 'SQUARE') {
+      return PLAN_LABELS.squareTowerHint;
+    }
+
+    return PLAN_TOOL_HINTS[tool.value];
+  });
 
   const wallsText = computed(() => {
     const cells = editor.document.value.defenseWalls.length;
@@ -486,11 +543,12 @@
             :area="visibleArea"
             :furniture-kind="furnitureKind"
             :furniture-rotation="furnitureRotation"
+            :spiral-side="spiralSide"
             @point-down="interaction.handleDown"
             @point-move="handlePointMove"
             @point-up="interaction.handleUp"
             @point-leave="handlePointLeave"
-            @rotate="rotateFurniture"
+            @wheel-step="handleWheelStep"
           />
 
           <div class="absolute top-2 right-2 flex gap-1">
@@ -530,6 +588,8 @@
           v-model:stair-kind="stairKind"
           v-model:stair-target="stairTarget"
           v-model:stair-direction="stairDirection"
+          v-model:spiral-side="spiralSide"
+          v-model:tower-shape="towerShape"
           v-model:corridor-width="corridorWidth"
           v-model:furniture-rotation="furnitureRotation"
           :tool

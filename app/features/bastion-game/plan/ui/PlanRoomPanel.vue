@@ -5,6 +5,7 @@
 
   import {
     GRID_ROOM_KINDS,
+    isTowerKind,
     PLAN_FEET_PER_CELL,
     PLAN_LABELS,
     ROOM_KIND_LABELS,
@@ -64,7 +65,7 @@
     }),
   );
 
-  const isTower = computed(() => room.kind === 'TOWER');
+  const isTower = computed(() => isTowerKind(room.kind));
 
   /** Сохраняет название, если оно поменялось и не пустое. */
   function commitName(): void {

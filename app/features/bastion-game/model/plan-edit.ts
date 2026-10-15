@@ -39,6 +39,7 @@ import {
   getOccupancy,
   isCellOnGrid,
   isFurnitureOnGrid,
+  isTowerKind,
   isWallEdge,
 } from './plan-geometry';
 import {
@@ -198,8 +199,8 @@ export function resolvePlanConflicts(document: PlanDocument): PlanDocument {
   };
 
   const placed = document.rooms.filter((room) => levelSet.has(room.level));
-  const towers = placed.filter((room) => room.kind === 'TOWER').map(claim);
-  const others = placed.filter((room) => room.kind !== 'TOWER').map(claim);
+  const towers = placed.filter((room) => isTowerKind(room.kind)).map(claim);
+  const others = placed.filter((room) => !isTowerKind(room.kind)).map(claim);
 
   const resolved = new Map(
     [...towers, ...others].map((room) => [room.id, room]),
@@ -234,7 +235,7 @@ function getTowerCellKeys(
     document.rooms
       .filter(
         (room) =>
-          room.kind === 'TOWER'
+          isTowerKind(room.kind)
           && room.level === level
           && room.id !== exceptRoomId,
       )
@@ -281,7 +282,7 @@ function claimCells(
   const others = document.rooms
     .filter((room) => room.id !== target.id)
     .map((room) =>
-      room.level === target.level && room.kind !== 'TOWER'
+      room.level === target.level && !isTowerKind(room.kind)
         ? {
             ...room,
             cells: room.cells.filter(
@@ -370,6 +371,38 @@ export function drawRoom(
 }
 
 /**
+ * Ставит башню: её клетки забираются у всех комнат этажа под ней, и у других
+ * башен тоже, а защитная стена под ней исчезает.
+ *
+ * @param document План.
+ * @param tower Новая башня.
+ * @returns Новый план.
+ */
+function placeTower(document: PlanDocument, tower: PlanRoom): PlanDocument {
+  const taken = new Set(tower.cells.map((cell) => getCellKey(cell.x, cell.y)));
+
+  const rooms = document.rooms.map((room) =>
+    room.level === tower.level
+      ? {
+          ...room,
+          cells: room.cells.filter(
+            (cell) => !taken.has(getCellKey(cell.x, cell.y)),
+          ),
+        }
+      : room,
+  );
+
+  const defenseWalls =
+    tower.level === 0
+      ? document.defenseWalls.filter(
+          (cell) => !taken.has(getCellKey(cell.x, cell.y)),
+        )
+      : document.defenseWalls;
+
+  return prunePlan({ ...document, rooms: [...rooms, tower], defenseWalls });
+}
+
+/**
  * Ставит круглую башню. Её клетки забираются у комнат под ней.
  *
  * @param document План.
@@ -382,34 +415,41 @@ export function addTower(
   seed: PlanRoomSeed,
   shape: PlanCircle,
 ): PlanDocument {
-  const cells = getCircleCells(shape).filter(isCellOnGrid);
-  const taken = new Set(cells.map((cell) => getCellKey(cell.x, cell.y)));
+  return placeTower(document, {
+    ...seed,
+    kind: 'TOWER',
+    facilityId: undefined,
+    cells: getCircleCells(shape).filter(isCellOnGrid),
+    shape,
+  });
+}
 
-  const rooms = document.rooms.map((room) =>
-    room.level === seed.level
-      ? {
-          ...room,
-          cells: room.cells.filter(
-            (cell) => !taken.has(getCellKey(cell.x, cell.y)),
-          ),
-        }
-      : room,
-  );
+/**
+ * Ставит квадратную башню: прямоугольник клеток с толстой стеной по краю.
+ * Её клетки, как и у круглой, забираются у комнат под ней.
+ *
+ * @param document План.
+ * @param seed Идентификатор, название и этаж.
+ * @param cells Клетки квадрата.
+ * @returns Новый план или тот же, если квадрат вне участка.
+ */
+export function addSquareTower(
+  document: PlanDocument,
+  seed: PlanRoomSeed,
+  cells: ReadonlyArray<PlanCell>,
+): PlanDocument {
+  const inside = cells.filter(isCellOnGrid);
 
-  const defenseWalls =
-    seed.level === 0
-      ? document.defenseWalls.filter(
-          (cell) => !taken.has(getCellKey(cell.x, cell.y)),
-        )
-      : document.defenseWalls;
+  if (!inside.length) {
+    return document;
+  }
 
-  return prunePlan({
-    ...document,
-    rooms: [
-      ...rooms,
-      { ...seed, kind: 'TOWER', facilityId: undefined, cells, shape },
-    ],
-    defenseWalls,
+  return placeTower(document, {
+    ...seed,
+    kind: 'SQUARE_TOWER',
+    facilityId: undefined,
+    cells: inside,
+    shape: undefined,
   });
 }
 
@@ -742,21 +782,29 @@ export interface PlanStairFrame extends PlanCell {
 
 /**
  * Сторона винтовой лестницы вдоль одной оси: крупнейшая, что встаёт по центру
- * башни целыми клетками и оставляет у стены проход. В самой узкой башне
- * лестница занимает её всю.
+ * башни целыми клетками и не больше заданной. Если заданная меньше любой
+ * подходящей, берётся наименьшая подходящая.
  *
  * @param center Центр башни по оси.
- * @param radius Радиус башни.
+ * @param limit Наибольшая сторона, что помещается в башню.
+ * @param requested Заданная сторона; undefined — наибольшая.
  * @returns Сторона в клетках.
  */
-function fitSpiralSide(center: number, radius: number): number {
-  const limit = Math.min(
-    PLAN_LIMITS.maxStairSide,
-    Math.max(1, Math.floor(radius * 2) - 1),
-  );
+function fitSpiralSide(
+  center: number,
+  limit: number,
+  requested = limit,
+): number {
+  const fits = (side: number) => Number.isInteger(center - side / 2);
 
-  for (let side = limit; side >= 1; side--) {
-    if (Number.isInteger(center - side / 2)) {
+  for (let side = Math.min(limit, requested); side >= 1; side--) {
+    if (fits(side)) {
+      return side;
+    }
+  }
+
+  for (let side = 1; side <= limit; side++) {
+    if (fits(side)) {
       return side;
     }
   }
@@ -765,44 +813,90 @@ function fitSpiralSide(center: number, radius: number): number {
 }
 
 /**
- * Рамка винтовой лестницы в башне под точкой: по центру башни, с проходом
- * вдоль стены.
+ * Где в башне помещается винтовая лестница: центр и наибольшая сторона. В
+ * круглой башне у стены остаётся проход (в самой узкой лестница занимает её
+ * всю), в квадратной лестница может занять её целиком.
+ *
+ * @param room Башня.
+ * @returns Центр и наибольшая сторона или undefined, если это не башня.
+ */
+function getSpiralBounds(
+  room: PlanRoom,
+): { cx: number; cy: number; limit: number } | undefined {
+  if (room.kind === 'TOWER' && room.shape) {
+    const { cx, cy, r } = room.shape;
+
+    return {
+      cx,
+      cy,
+      limit: Math.min(
+        PLAN_LIMITS.maxStairSide,
+        Math.max(1, Math.floor(r * 2) - 1),
+      ),
+    };
+  }
+
+  if (room.kind !== 'SQUARE_TOWER' || !room.cells.length) {
+    return undefined;
+  }
+
+  const xs = room.cells.map((cell) => cell.x);
+  const ys = room.cells.map((cell) => cell.y);
+  const left = Math.min(...xs);
+  const top = Math.min(...ys);
+  const width = Math.max(...xs) - left + 1;
+  const height = Math.max(...ys) - top + 1;
+
+  return {
+    cx: left + width / 2,
+    cy: top + height / 2,
+    limit: Math.min(PLAN_LIMITS.maxStairSide, width, height),
+  };
+}
+
+/**
+ * Рамка винтовой лестницы в башне под точкой: по центру башни, заданного
+ * размера, насколько башня позволяет.
  *
  * @param document План.
  * @param level Этаж.
  * @param point Точка в клетках.
+ * @param side Заданная сторона в клетках; undefined — наибольшая.
  * @returns Рамка или undefined, если под точкой не башня.
  */
 export function getTowerStairFrame(
   document: PlanDocument,
   level: number,
   point: PlanCell,
+  side?: number,
 ): PlanStairFrame | undefined {
-  const shape = findRoomAt(document, level, point)?.shape;
+  const room = findRoomAt(document, level, point);
+  const bounds = room ? getSpiralBounds(room) : undefined;
 
-  if (!shape) {
+  if (!bounds) {
     return undefined;
   }
 
-  const width = fitSpiralSide(shape.cx, shape.r);
-  const height = fitSpiralSide(shape.cy, shape.r);
+  const width = fitSpiralSide(bounds.cx, bounds.limit, side);
+  const height = fitSpiralSide(bounds.cy, bounds.limit, side);
 
   return {
-    x: shape.cx - width / 2,
-    y: shape.cy - height / 2,
+    x: bounds.cx - width / 2,
+    y: bounds.cy - height / 2,
     width,
     height,
   };
 }
 
 /**
- * Ставит в башню под точкой винтовую лестницу по её размеру. Вторую такую же
- * лестницу на то же место не ставит.
+ * Ставит в башню под точкой винтовую лестницу по её размеру. Если в середине
+ * башни уже стоит винтовая лестница, меняет её размер.
  *
  * @param document План.
  * @param level Этаж.
  * @param point Точка в клетках.
  * @param seed Идентификатор, этаж назначения и сторона подъёма.
+ * @param side Заданная сторона в клетках; undefined — наибольшая.
  * @returns Новый план или тот же, если под точкой не башня.
  */
 export function placeTowerStair(
@@ -810,25 +904,39 @@ export function placeTowerStair(
   level: number,
   point: PlanCell,
   seed: Pick<PlanStair, 'id' | 'toLevel' | 'direction'>,
+  side?: number,
 ): PlanDocument {
-  const frame = getTowerStairFrame(document, level, point);
+  const frame = getTowerStairFrame(document, level, point, side);
 
   if (!frame) {
     return document;
   }
 
-  const isTaken = document.stairs.some(
+  const centerX = frame.x + frame.width / 2;
+  const centerY = frame.y + frame.height / 2;
+
+  const existing = document.stairs.find(
     (stair) =>
       stair.level === level
-      && stair.x === frame.x
-      && stair.y === frame.y
-      && stair.width === frame.width
-      && stair.height === frame.height,
+      && stair.kind === 'SPIRAL'
+      && stair.x + stair.width / 2 === centerX
+      && stair.y + stair.height / 2 === centerY,
   );
 
-  return isTaken
-    ? document
-    : addStair(document, { ...seed, ...frame, level, kind: 'SPIRAL' });
+  if (!existing) {
+    return addStair(document, { ...seed, ...frame, level, kind: 'SPIRAL' });
+  }
+
+  if (existing.width === frame.width && existing.height === frame.height) {
+    return document;
+  }
+
+  return {
+    ...document,
+    stairs: document.stairs.map((stair) =>
+      stair.id === existing.id ? { ...stair, ...frame } : stair,
+    ),
+  };
 }
 
 /**

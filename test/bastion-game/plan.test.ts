@@ -418,7 +418,7 @@ describe('ответ сервера', () => {
     });
 
     expect(state.document.rooms[0]).toMatchObject({
-      name: 'Башня',
+      name: 'Круглая башня',
       shape: { r: 1 },
     });
 

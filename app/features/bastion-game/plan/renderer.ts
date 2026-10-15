@@ -28,6 +28,7 @@ import {
   getCanonicalEdge,
   getCellAt,
   getCellKey,
+  getEdgeCells,
   getFurnitureSize,
   getNearestEdge,
   getOccupancy,
@@ -37,6 +38,7 @@ import {
   isDefenseWallCell,
   isWallEdge,
   PLAN_CELL_PIXELS,
+  PLAN_FEET_PER_CELL,
   PLAN_FURNITURE_SIZES,
   PLAN_HIT_TOLERANCE,
   PLAN_LABELS,
@@ -83,6 +85,8 @@ export interface PlanScene {
   furnitureKind: FurnitureKind;
   /** Поворот, с которым инструмент «Мебель» поставит новый предмет. */
   furnitureRotation: number;
+  /** Заданная сторона винтовой лестницы; undefined — наибольшая. */
+  spiralSide: number | undefined;
 }
 
 /** Указатель соавтора. */
@@ -472,6 +476,85 @@ function drawTower(
     .stroke({ color: theme.text, width: hairline * 2.5 })
     .circle(centerX, centerY, outer * CELL)
     .stroke({ color: theme.text, width: hairline * 2.5 });
+}
+
+/**
+ * Толстая стена квадратной башни по её краю: полоса толщиной со стену
+ * круглой башни, с обводкой и той же штриховкой, что у кольца. Полоса идёт
+ * по рёбрам клеток, как обычная стена, — двери и окна встают в неё так же.
+ *
+ * @param context Кадр.
+ * @param room Квадратная башня.
+ * @param level Этаж.
+ */
+function drawSquareTowerWall(
+  context: DrawContext,
+  room: PlanRoom,
+  level: number,
+): void {
+  const { graphics, theme, hairline } = context;
+  const band = PLAN_SHAPES.towerWallWidth;
+  const outline = hairline * 2.5;
+
+  const segments = getBoundarySegments(
+    new Map(room.cells.map((cell) => [getCellKey(cell.x, cell.y), room])),
+    level,
+    'wall',
+  );
+
+  const traceSegments = () => {
+    for (const segment of segments) {
+      graphics
+        .moveTo(segment.fromX * CELL, segment.fromY * CELL)
+        .lineTo(segment.toX * CELL, segment.toY * CELL);
+    }
+  };
+
+  // Квадратные концы закрывают углы: обводка — широкой линией цвета стен,
+  // полоса — линией цвета бумаги поверх неё.
+  traceSegments();
+
+  graphics.stroke({
+    color: theme.text,
+    width: band * CELL + outline * 2,
+    cap: 'square',
+  });
+
+  traceSegments();
+
+  graphics.stroke({
+    color: theme.background,
+    width: band * CELL,
+    cap: 'square',
+  });
+
+  for (const segment of segments) {
+    const length = Math.hypot(
+      segment.toX - segment.fromX,
+      segment.toY - segment.fromY,
+    );
+
+    const alongX = (segment.toX - segment.fromX) / length;
+    const alongY = (segment.toY - segment.fromY) / length;
+
+    for (let offset = 0; offset < length; offset += HATCH_STEP) {
+      const x = segment.fromX + alongX * offset;
+      const y = segment.fromY + alongY * offset;
+
+      // Поперёк полосы со сдвигом вдоль неё — как штрихи кольца башни.
+      graphics
+        .moveTo(
+          (x - alongY * (band / 2)) * CELL,
+          (y + alongX * (band / 2)) * CELL,
+        )
+        .lineTo(
+          (x + alongX * HATCH_STEP + alongY * (band / 2)) * CELL,
+          (y + alongY * HATCH_STEP - alongX * (band / 2)) * CELL,
+        );
+    }
+  }
+
+  graphics.stroke({ color: theme.text, width: hairline, alpha: 0.7 });
 }
 
 /** Сколько ступеней в витке винтовой лестницы и какую долю круга они занимают. */
@@ -1075,7 +1158,9 @@ export function drawPlan(
   drawWalls(context, occupancy, level);
 
   for (const room of rooms) {
-    if (room.shape) {
+    if (room.kind === 'SQUARE_TOWER') {
+      drawSquareTowerWall(context, room, level);
+    } else if (room.shape) {
       drawTower(context, room.shape, room.id === scene.selectedRoomId);
     }
   }
@@ -1111,11 +1196,31 @@ export function drawPlan(
     }
   }
 
+  const towerWallContext = {
+    ...context,
+    wallWidth: PLAN_SHAPES.towerWallWidth * CELL,
+  };
+
+  /**
+   * Кадр для двери или окна: в стене квадратной башни они шире, по её
+   * толщине.
+   *
+   * @param edge Ребро.
+   * @returns Кадр.
+   */
+  const getEdgeContext = (edge: PlanEdge): DrawContext =>
+    getEdgeCells(edge).some(
+      (cell) =>
+        occupancy.get(getCellKey(cell.x, cell.y))?.kind === 'SQUARE_TOWER',
+    )
+      ? towerWallContext
+      : context;
+
   for (const door of document.doors) {
     if (door.level === level) {
       const { center, angle } = getEdgePlacement(door);
 
-      drawDoor(context, center, angle, door.kind);
+      drawDoor(getEdgeContext(door), center, angle, door.kind);
     }
   }
 
@@ -1123,7 +1228,7 @@ export function drawPlan(
     if (window.level === level) {
       const { center, angle } = getEdgePlacement(window);
 
-      drawWindow(context, center, angle);
+      drawWindow(getEdgeContext(window), center, angle);
     }
   }
 
@@ -1138,18 +1243,9 @@ export function drawPlan(
     const angle = (opening.angle * Math.PI) / 180 + Math.PI / 2;
 
     if (opening.type === 'WINDOW') {
-      drawWindow(
-        { ...context, wallWidth: PLAN_SHAPES.towerWallWidth * CELL },
-        center,
-        angle,
-      );
+      drawWindow(towerWallContext, center, angle);
     } else if (opening.kind) {
-      drawDoor(
-        { ...context, wallWidth: PLAN_SHAPES.towerWallWidth * CELL },
-        center,
-        angle,
-        opening.kind,
-      );
+      drawDoor(towerWallContext, center, angle, opening.kind);
     }
   }
 
@@ -1378,7 +1474,12 @@ function drawHover(
       return;
     }
     case 'stairs': {
-      const frame = getTowerStairFrame(scene.document, scene.level, point);
+      const frame = getTowerStairFrame(
+        scene.document,
+        scene.level,
+        point,
+        scene.spiralSide,
+      );
 
       if (frame) {
         graphics
@@ -1388,6 +1489,17 @@ function drawHover(
             (Math.min(frame.width, frame.height) / 2) * CELL,
           )
           .stroke({ color: theme.accent, width: hairline * 2 });
+
+        context.addLabel(
+          fillTemplate(PLAN_LABELS.feet, {
+            feet: Math.min(frame.width, frame.height) * PLAN_FEET_PER_CELL,
+          }),
+          {
+            x: frame.x + frame.width / 2,
+            y: frame.y + frame.height / 2,
+          },
+          { color: theme.accent, size: LABEL_SIZES.note, isBold: true },
+        );
 
         return;
       }

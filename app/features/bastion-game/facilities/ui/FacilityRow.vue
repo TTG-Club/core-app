@@ -10,7 +10,7 @@
 
   /**
    * Сооружение персонажа: название со ссылкой на справочник, пространство,
-   * приказы, наёмники, сделанные выборы и состояние требования. У сооружения
+   * наёмники, сделанные выборы и состояние требования. У сооружения
    * с приказами видно, простаивает ли оно, и есть кнопка приказа; если
    * приказ сейчас не отдать, подсказка объясняет почему.
    */
@@ -111,7 +111,6 @@
   const details = computed(() =>
     [
       `${facility.space.name} (${facility.space.squares} ${FACILITY_SETUP_LABELS.squares})`,
-      facility.orders.map((order) => order.name).join(', '),
       facility.hirelings
         ? `${facility.hirelings} ${FACILITY_SETUP_LABELS.hirelings}`
         : '',

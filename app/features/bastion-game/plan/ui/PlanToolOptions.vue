@@ -5,6 +5,7 @@
     PlanTool,
     StairKind,
     StairTarget,
+    TowerShape,
   } from '../../model';
 
   import { fillTemplate } from '~bastions/model';
@@ -20,17 +21,21 @@
     PLAN_FEET_PER_CELL,
     PLAN_FURNITURE_ROTATION_STEP,
     PLAN_LABELS,
+    PLAN_LIMITS,
     STAIR_KIND_ICONS,
     STAIR_KIND_LABELS,
     STAIR_KINDS,
     STAIR_TARGET_LABELS,
     STAIR_TARGETS,
+    TOWER_SHAPE_ICONS,
+    TOWER_SHAPE_LABELS,
+    TOWER_SHAPES,
   } from '../../model';
 
   /**
-   * Настройки выбранного инструмента: вид двери, вид и направление лестницы,
-   * ширина коридора, поворот мебели. У остальных
-   * инструментов настроек нет.
+   * Настройки выбранного инструмента: форма башни, вид двери, вид,
+   * направление лестницы и размер винтовой, ширина коридора, поворот мебели.
+   * У остальных инструментов настроек нет.
    */
   const { tool, stairLevel } = defineProps<{
     tool: PlanTool;
@@ -49,6 +54,15 @@
   });
 
   const stairDirection = defineModel<CellSide>('stairDirection', {
+    required: true,
+  });
+
+  /** Заданная сторона винтовой лестницы; undefined — наибольшая. */
+  const spiralSide = defineModel<number | undefined>('spiralSide', {
+    required: true,
+  });
+
+  const towerShape = defineModel<TowerShape>('towerShape', {
     required: true,
   });
 
@@ -71,6 +85,27 @@
   }
 
   const isSpiral = computed(() => stairKind.value === 'SPIRAL');
+
+  const spiralText = computed(() =>
+    spiralSide.value === undefined
+      ? PLAN_LABELS.spiralSizeAuto
+      : getWidthLabel(spiralSide.value),
+  );
+
+  /**
+   * Меняет заданный размер винтовой лестницы на две клетки — так она
+   * остаётся по центру башни.
+   *
+   * @param direction 1 — больше, -1 — меньше.
+   */
+  function resizeSpiral(direction: 1 | -1): void {
+    const current = spiralSide.value ?? PLAN_LIMITS.maxStairSide;
+
+    spiralSide.value = Math.min(
+      PLAN_LIMITS.maxStairSide,
+      Math.max(1, current + direction * 2),
+    );
+  }
 
   const doorItems = DOOR_KINDS.map((kind) => ({
     label: DOOR_KIND_LABELS[kind],
@@ -142,7 +177,27 @@
 
 <template>
   <section
-    v-if="tool === 'door'"
+    v-if="tool === 'tower'"
+    class="flex flex-col gap-2"
+  >
+    <UFormField :label="PLAN_LABELS.towerShape">
+      <div class="flex gap-1">
+        <UButton
+          v-for="shape in TOWER_SHAPES"
+          :key="shape"
+          size="xs"
+          :icon="TOWER_SHAPE_ICONS[shape]"
+          v-bind="getChoiceLook(towerShape === shape)"
+          @click.left.exact.prevent="towerShape = shape"
+        >
+          {{ TOWER_SHAPE_LABELS[shape] }}
+        </UButton>
+      </div>
+    </UFormField>
+  </section>
+
+  <section
+    v-else-if="tool === 'door'"
     class="flex flex-col gap-2"
   >
     <UFormField :label="PLAN_LABELS.doorKind">
@@ -181,6 +236,47 @@
     >
       {{ PLAN_LABELS.spiralHint }}
     </p>
+
+    <UFormField
+      :label="PLAN_LABELS.spiralSize"
+      :help="PLAN_LABELS.spiralSizeHint"
+    >
+      <div class="flex items-center gap-1">
+        <UButton
+          icon="tabler:minus"
+          size="xs"
+          color="neutral"
+          variant="outline"
+          :aria-label="PLAN_LABELS.spiralSmaller"
+          :disabled="spiralSide === 1"
+          @click.left.exact.prevent="resizeSpiral(-1)"
+        />
+
+        <span class="min-w-20 text-center text-sm text-muted tabular-nums">
+          {{ spiralText }}
+        </span>
+
+        <UButton
+          icon="tabler:plus"
+          size="xs"
+          color="neutral"
+          variant="outline"
+          :aria-label="PLAN_LABELS.spiralLarger"
+          :disabled="spiralSide === undefined"
+          @click.left.exact.prevent="resizeSpiral(1)"
+        />
+
+        <UButton
+          v-if="spiralSide !== undefined"
+          size="xs"
+          color="neutral"
+          variant="ghost"
+          @click.left.exact.prevent="spiralSide = undefined"
+        >
+          {{ PLAN_LABELS.spiralSizeAuto }}
+        </UButton>
+      </div>
+    </UFormField>
 
     <UFormField :label="PLAN_LABELS.stairTarget">
       <div class="flex gap-1">
