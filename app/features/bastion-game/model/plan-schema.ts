@@ -16,13 +16,45 @@ export const OPENING_TYPES = ['DOOR', 'WINDOW'] as const;
 
 export const STAIR_KINDS = ['STRAIGHT', 'SPIRAL'] as const;
 
-export const FURNITURE_KINDS = [
+/** Обычные предметы интерьера: доступны всем. */
+export const BASIC_FURNITURE_KINDS = [
   'TABLE',
   'CHAIR',
   'WARDROBE',
   'SOFA',
   'BED',
   'CHEST',
+] as const;
+
+/** Предметы интерьера по подписке владельца бастиона. */
+export const PREMIUM_FURNITURE_KINDS = [
+  'STATUE',
+  'FOUNTAIN',
+  'ALTAR',
+  'THRONE',
+  'BOOKSHELF',
+  'FIREPLACE',
+  'DINING_TABLE',
+  'BARREL',
+  'PANTRY_RACK',
+  'WORKBENCH',
+  'ANVIL',
+  'ALCHEMY_TABLE',
+  'WEAPON_RACK',
+  'TRAINING_DUMMY',
+  'CAGE',
+  'RUG',
+  'TAPESTRY',
+  'WELL',
+  'TREE',
+  'FLOWERBED',
+  'TELESCOPE',
+  'MAGIC_CIRCLE',
+] as const;
+
+export const FURNITURE_KINDS = [
+  ...BASIC_FURNITURE_KINDS,
+  ...PREMIUM_FURNITURE_KINDS,
 ] as const;
 
 export const planCellSchema = z.object({ x: z.number(), y: z.number() });
@@ -94,6 +126,8 @@ export const planResponseSchema = z.object({
   bastionId: z.string(),
   version: z.number(),
   canEdit: z.boolean(),
+  /** У владельца бастиона подписка: можно ставить предметы по подписке. */
+  premium: z.boolean().nullish(),
   document: z.object({
     levels: z.array(z.number()).nullish(),
     rooms: z.array(roomSchema).nullish(),
@@ -209,5 +243,7 @@ export interface PlanDocument {
 export interface PlanState {
   version: number;
   canEdit: boolean;
+  /** У владельца бастиона подписка: можно ставить предметы по подписке. */
+  premium: boolean;
   document: PlanDocument;
 }

@@ -7,7 +7,11 @@ import type {
 import { StatusCodes } from 'http-status-codes';
 import { FetchError } from 'ofetch';
 
-import { BASTION_START_LEVEL, MY_BASTIONS_ROUTE } from './constants';
+import {
+  BASTION_START_LEVEL,
+  MY_BASTIONS_ROUTE,
+  SHARED_BASTION_ROUTE,
+} from './constants';
 
 const SERVICE_UNAVAILABLE_STATUS = StatusCodes.SERVICE_UNAVAILABLE;
 const CONFLICT_STATUS = StatusCodes.CONFLICT;
@@ -154,6 +158,26 @@ export function getBastionRoute(id: string): string {
  */
 export function getBastionPlanRoute(id: string): string {
   return `${getBastionRoute(id)}/plan`;
+}
+
+/**
+ * Страница бастиона по ссылке «поделиться».
+ *
+ * @param token Секрет ссылки.
+ * @returns Путь страницы.
+ */
+export function getSharedBastionRoute(token: string): string {
+  return `${SHARED_BASTION_ROUTE}/${token}`;
+}
+
+/**
+ * План бастиона по ссылке «поделиться».
+ *
+ * @param token Секрет ссылки.
+ * @returns Путь страницы.
+ */
+export function getSharedBastionPlanRoute(token: string): string {
+  return `${getSharedBastionRoute(token)}/plan`;
 }
 
 /**

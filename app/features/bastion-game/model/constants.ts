@@ -54,6 +54,42 @@ export const GAME_BASTIONS_TAB_VALUE = 'bastions';
 /** Страница «Мои бастионы». */
 export const MY_BASTIONS_ROUTE = '/tools/bastion';
 
+/** Бастион по ссылке «поделиться»: открывается кем угодно, только на чтение. */
+export const SHARED_BASTION_ROUTE = '/tools/bastion/shared';
+
+export const BASTION_SHARE_LABELS = {
+  share: 'Поделиться',
+  title: 'Поделиться бастионом',
+  hint: 'По ссылке бастион и его план открываются только на чтение. Право на правку человек попросит у вас.',
+  enable: 'Включить ссылку',
+  disable: 'Отключить ссылку',
+  disableHint:
+    'Ссылка перестанет работать, а все выданные права на правку снимутся.',
+  copy: 'Скопировать ссылку',
+  copied: 'Ссылка скопирована',
+  editors: 'Право на правку',
+  noEditors: 'Запросов пока нет',
+  pending: 'Просит право на правку',
+  approved: 'Может править',
+  approve: 'Разрешить',
+  decline: 'Отклонить',
+  revoke: 'Отозвать',
+  requests: 'Запросов на правку: {count}',
+  error: 'Не удалось изменить доступ',
+  sharedTitle: 'Бастион по ссылке',
+  readOnly: 'Только просмотр',
+  notFound: 'Бастион недоступен',
+  notFoundHint: 'Ссылка неверна или владелец отключил доступ по ней',
+  toHome: 'На главную',
+  signIn: 'Войдите, чтобы попросить право на правку',
+  requestEdit: 'Попросить право на правку',
+  requested: 'Запрос отправлен владельцу',
+  requestSent: 'Запрос отправлен',
+  open: 'Открыть бастион',
+  sharedWithMe: 'Доступные мне',
+  sharedWithMeHint: 'Чужие бастионы, которые владельцы разрешили вам править',
+} as const;
+
 /** Уровень персонажа, с которого у него появляется бастион. */
 export const BASTION_START_LEVEL = 5;
 export const CHARACTER_LEVEL_MIN = 1;

@@ -51,6 +51,28 @@ export const PLAN_FURNITURE_SIZES: Record<
   SOFA: { width: 2, depth: 1 },
   BED: { width: 1, depth: 2 },
   CHEST: { width: 1, depth: 1 },
+  STATUE: { width: 1, depth: 1 },
+  FOUNTAIN: { width: 2, depth: 2 },
+  ALTAR: { width: 2, depth: 1 },
+  THRONE: { width: 1, depth: 1 },
+  BOOKSHELF: { width: 2, depth: 1 },
+  FIREPLACE: { width: 2, depth: 1 },
+  DINING_TABLE: { width: 4, depth: 2 },
+  BARREL: { width: 1, depth: 1 },
+  PANTRY_RACK: { width: 2, depth: 1 },
+  WORKBENCH: { width: 2, depth: 1 },
+  ANVIL: { width: 1, depth: 1 },
+  ALCHEMY_TABLE: { width: 2, depth: 1 },
+  WEAPON_RACK: { width: 2, depth: 1 },
+  TRAINING_DUMMY: { width: 1, depth: 1 },
+  CAGE: { width: 2, depth: 2 },
+  RUG: { width: 3, depth: 2 },
+  TAPESTRY: { width: 2, depth: 1 },
+  WELL: { width: 1, depth: 1 },
+  TREE: { width: 2, depth: 2 },
+  FLOWERBED: { width: 2, depth: 1 },
+  TELESCOPE: { width: 1, depth: 1 },
+  MAGIC_CIRCLE: { width: 3, depth: 3 },
 };
 
 /** Сколько шагов отмены хранит редактор. */
@@ -138,14 +160,14 @@ export const PLAN_TOOL_GROUPS: ReadonlyArray<
     { tool: 'stairs', icon: 'tabler:stairs', label: 'Лестница', key: 's' },
     { tool: 'column', icon: 'tabler:circle-dot', label: 'Колонна', key: 'o' },
     { tool: 'wall', icon: 'tabler:wall', label: 'Защитная стена', key: 'g' },
-    { tool: 'furniture', icon: 'tabler:armchair', label: 'Мебель', key: 'f' },
+    { tool: 'furniture', icon: 'tabler:armchair', label: 'Интерьер', key: 'f' },
   ],
 ];
 
 /** Подсказка к инструменту под холстом. */
 export const PLAN_TOOL_HINTS: Record<PlanTool, string> = {
   select:
-    'Щёлкните комнату, чтобы выбрать её; тяните комнату или мебель, чтобы переставить. Delete удаляет комнату.',
+    'Щёлкните комнату, чтобы выбрать её; тяните комнату или предмет интерьера, чтобы переставить. Delete удаляет комнату.',
   pan: 'Тяните лист. Колесо — масштаб.',
   room: 'Тяните прямоугольник. Если начать внутри выбранной комнаты, она расширится.',
   tower: 'Тяните от центра башни наружу.',
@@ -153,14 +175,14 @@ export const PLAN_TOOL_HINTS: Record<PlanTool, string> = {
     'Ведите по клеткам. Коридор, начатый на другом коридоре, продолжает его.',
   eraser:
     'Щёлкните дверь, окно, колонну или лестницу, чтобы убрать их; ведите по клеткам, чтобы стереть пол.',
-  door: 'Щёлкните по стене или по кольцу башни. Повторный щелчок по двери меняет её вид.',
+  door: 'Щёлкните по стене или по кольцу башни. Повторный щелчок по двери меняет её вид. На защитной стене дверь становится воротами: ведите вдоль стены, чтобы сделать их шире, щелчок по воротам закладывает проём.',
   window: 'Щёлкните по стене или по кольцу башни.',
   stairs:
     'Щёлкните клетку или тяните в сторону подъёма: рамка задаёт длину и ширину. Щелчок внутри башни ставит винтовую лестницу по её размеру.',
   column: 'Щёлкните в центр клетки или на пересечение линий сетки.',
-  wall: 'Ведите по клеткам снаружи комнат первого этажа. Ворота встают в стену; щелчок по воротам закладывает проём.',
+  wall: 'Ведите по клеткам снаружи комнат первого этажа. Ворота ставит инструмент «Дверь».',
   furniture:
-    'Выберите предмет на кнопке мебели. Ctrl+колесо или R поворачивают его до установки. Стоящий предмет можно перетащить, щелчок по нему поворачивает его.',
+    'Выберите предмет на кнопке «Интерьер». Ctrl+колесо или R поворачивают его до установки. Стоящий предмет можно перетащить, щелчок по нему поворачивает его.',
   area: 'Тяните рамку вокруг участка. Delete убирает всё, что в ней на этом этаже.',
 };
 
@@ -193,6 +215,28 @@ export const FURNITURE_KIND_LABELS: Record<FurnitureKind, string> = {
   SOFA: 'Диван',
   BED: 'Кровать',
   CHEST: 'Сундук',
+  STATUE: 'Статуя',
+  FOUNTAIN: 'Фонтан',
+  ALTAR: 'Алтарь',
+  THRONE: 'Трон',
+  BOOKSHELF: 'Книжный стеллаж',
+  FIREPLACE: 'Камин',
+  DINING_TABLE: 'Обеденный стол',
+  BARREL: 'Бочка',
+  PANTRY_RACK: 'Стеллаж кладовой',
+  WORKBENCH: 'Верстак',
+  ANVIL: 'Наковальня',
+  ALCHEMY_TABLE: 'Алхимический стол',
+  WEAPON_RACK: 'Оружейная стойка',
+  TRAINING_DUMMY: 'Манекен',
+  CAGE: 'Клетка',
+  RUG: 'Ковёр',
+  TAPESTRY: 'Гобелен',
+  WELL: 'Колодец',
+  TREE: 'Дерево',
+  FLOWERBED: 'Клумба',
+  TELESCOPE: 'Телескоп',
+  MAGIC_CIRCLE: 'Магический круг',
 };
 
 export const FURNITURE_KIND_ICONS: Record<FurnitureKind, string> = {
@@ -202,6 +246,28 @@ export const FURNITURE_KIND_ICONS: Record<FurnitureKind, string> = {
   SOFA: 'tabler:sofa',
   BED: 'tabler:bed',
   CHEST: 'tabler:box',
+  STATUE: 'tabler:building-monument',
+  FOUNTAIN: 'tabler:fountain',
+  ALTAR: 'tabler:candle',
+  THRONE: 'tabler:crown',
+  BOOKSHELF: 'tabler:books',
+  FIREPLACE: 'tabler:flame',
+  DINING_TABLE: 'tabler:tools-kitchen-2',
+  BARREL: 'tabler:barrel',
+  PANTRY_RACK: 'tabler:packages',
+  WORKBENCH: 'tabler:hammer',
+  ANVIL: 'tabler:tools',
+  ALCHEMY_TABLE: 'tabler:flask',
+  WEAPON_RACK: 'tabler:sword',
+  TRAINING_DUMMY: 'tabler:target',
+  CAGE: 'tabler:border-all',
+  RUG: 'tabler:rectangle',
+  TAPESTRY: 'tabler:flag',
+  WELL: 'tabler:bucket',
+  TREE: 'tabler:tree',
+  FLOWERBED: 'tabler:flower',
+  TELESCOPE: 'tabler:telescope',
+  MAGIC_CIRCLE: 'tabler:pentagram',
 };
 
 export const STAIR_KIND_LABELS: Record<StairKind, string> = {
@@ -212,21 +278,6 @@ export const STAIR_KIND_LABELS: Record<StairKind, string> = {
 export const STAIR_KIND_ICONS: Record<StairKind, string> = {
   STRAIGHT: 'tabler:stairs',
   SPIRAL: 'tabler:spiral',
-};
-
-/** Что строит инструмент защитной стены: саму стену или ворота в ней. */
-export const WALL_PIECES = ['WALL', 'GATE'] as const;
-
-export type WallPiece = (typeof WALL_PIECES)[number];
-
-export const WALL_PIECE_LABELS: Record<WallPiece, string> = {
-  WALL: 'Стена',
-  GATE: 'Ворота',
-};
-
-export const WALL_PIECE_ICONS: Record<WallPiece, string> = {
-  WALL: 'tabler:wall',
-  GATE: 'tabler:door',
 };
 
 /** Куда ведёт новая лестница: на ближайший этаж выше или ниже. */
@@ -304,16 +355,18 @@ export const PLAN_LABELS = {
   areaLabel: '{used} / {max} кл.',
   doorKind: 'Вид двери',
   furnitureKind: 'Предмет',
+  premiumFurniture: 'По подписке',
+  premiumFurnitureLocked:
+    'По подписке: доступно, когда подписка есть у владельца бастиона',
   furnitureRotation: 'Поворот',
   rotateFurniture: 'Повернуть (R, Ctrl+колесо)',
   degrees: '{degrees}°',
   selectedArea: 'Выделенный участок',
   clearArea: 'Убрать всё на участке',
   clearAreaHint:
-    'Комнаты обрежутся по рамке, двери, окна, лестницы, колонны и мебель внутри исчезнут.',
+    'Комнаты обрежутся по рамке, двери, окна, лестницы, колонны и предметы интерьера внутри исчезнут.',
   stairKind: 'Вид лестницы',
   spiralHint: 'Щёлкните внутри башни — лестница займёт её середину.',
-  wallPiece: 'Что строить',
   stairTarget: 'Куда ведёт',
   stairDirection: 'Подъём при щелчке',
   stairNoTarget: 'Нет этажа выше или ниже — добавьте его.',

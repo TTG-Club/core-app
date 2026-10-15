@@ -9,7 +9,6 @@
     RoomKind,
     StairKind,
     StairTarget,
-    WallPiece,
   } from '../model';
 
   import { fillTemplate } from '~bastions/model';
@@ -49,13 +48,20 @@
    * Редактор плана бастиона — упрощённый редактор карт: комнаты на сетке,
    * стены по их границам, двери, окна, лестницы, колонны и круглые башни.
    * Смотреть план могут все участники игры, рисовать — мастер и игроки с
-   * доступом; для остальных редактор открывается только на просмотр.
+   * доступом; для остальных и по ссылке «поделиться» редактор открывается
+   * только на просмотр.
    */
-  const { bastion } = defineProps<{
+  const { bastion, shareToken = undefined } = defineProps<{
     bastion: PlayerBastion;
+    /** Секрет ссылки, если план открыт по ней. */
+    shareToken?: string;
   }>();
 
-  const editor = usePlanEditor(() => bastion.id);
+  const editor = usePlanEditor(
+    () => bastion.id,
+    () => shareToken,
+  );
+
   const canvas = useTemplateRef('canvas');
 
   const tool = ref<PlanTool>('select');
@@ -68,7 +74,6 @@
   const corridorWidth = ref<number>(PLAN_CORRIDOR_WIDTHS[0]);
   const furnitureKind = ref<FurnitureKind>('TABLE');
   const furnitureRotation = ref(0);
-  const wallPiece = ref<WallPiece>('WALL');
 
   const interaction = usePlanInteraction({
     editor,
@@ -82,7 +87,6 @@
     corridorWidth,
     furnitureKind,
     furnitureRotation,
-    wallPiece,
   });
 
   /**
@@ -412,6 +416,7 @@
         v-model:tool="tool"
         v-model:furniture-kind="furnitureKind"
         :can-edit="editor.canEdit.value"
+        :premium="editor.isPremium.value"
         :can-undo="editor.canUndo.value"
         :can-redo="editor.canRedo.value"
         @undo="editor.undo"
@@ -526,7 +531,6 @@
           v-model:stair-target="stairTarget"
           v-model:stair-direction="stairDirection"
           v-model:corridor-width="corridorWidth"
-          v-model:wall-piece="wallPiece"
           v-model:furniture-rotation="furnitureRotation"
           :tool
           :stair-level="stairLevel"

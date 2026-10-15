@@ -10,4 +10,5 @@ export * from './plan-presence';
 export * from './plan-schema';
 export * from './schema';
 export * from './setup';
+export * from './share-api';
 export * from './utils';

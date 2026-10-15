@@ -7,7 +7,11 @@
 
   import { Role } from '~/shared/types';
   import { useMyBastions } from '~bastion-game/composables';
-  import { BASTION_GAME_LABELS, MY_BASTIONS_LABELS } from '~bastion-game/model';
+  import {
+    BASTION_GAME_LABELS,
+    BASTION_SHARE_LABELS,
+    MY_BASTIONS_LABELS,
+  } from '~bastion-game/model';
   import {
     BastionCard,
     BastionCreateModal,
@@ -35,6 +39,7 @@
 
   const {
     bastions,
+    sharedBastions,
     limit,
     subscriberLimit,
     canCreate,
@@ -275,6 +280,30 @@
           @remove="removedBastion = bastion"
         />
       </div>
+
+      <section
+        v-if="!isLoading && sharedBastions.length"
+        class="flex flex-col gap-3"
+      >
+        <div class="flex flex-col gap-1">
+          <h2 class="text-base font-semibold text-highlighted">
+            {{ BASTION_SHARE_LABELS.sharedWithMe }}
+          </h2>
+
+          <p class="text-sm text-muted">
+            {{ BASTION_SHARE_LABELS.sharedWithMeHint }}
+          </p>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-2">
+          <BastionCard
+            v-for="bastion in sharedBastions"
+            :key="bastion.id"
+            :bastion
+            show-game
+          />
+        </div>
+      </section>
     </div>
 
     <BastionCreateModal

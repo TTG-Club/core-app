@@ -100,6 +100,12 @@ export const playerBastionSchema = z.object({
   canEdit: z.boolean(),
   /** Можно убрать бастион из игры: владелец или мастер этой игры. */
   canLeaveGame: z.boolean(),
+  /** Секрет ссылки «поделиться»; приходит только владельцу, null — ссылки нет. */
+  shareToken: z.string().nullish(),
+  /** Сколько запросов на правку ждут ответа владельца. */
+  editRequests: z.number().nullish(),
+  /** Владелец разрешил открывшему править бастион по ссылке. */
+  editor: z.boolean().nullish(),
   members: z.array(memberSchema),
   createdAt: z.string().nullable().optional(),
   updatedAt: z.string().nullable().optional(),
@@ -126,7 +132,34 @@ export const myPlayerBastionsSchema = z.object({
   limit: z.number(),
   subscriberLimit: z.number(),
   bastions: z.array(playerBastionSchema),
+  /** Чужие бастионы, которые владелец разрешил править по ссылке. */
+  shared: z.array(playerBastionSchema).nullish(),
 });
+
+export const BASTION_SHARE_ACCESSES = [
+  'ANONYMOUS',
+  'NONE',
+  'PENDING',
+  'GRANTED',
+] as const;
+
+/** Бастион по ссылке (`SharedPlayerBastionResponse` core-api). */
+export const sharedPlayerBastionSchema = z.object({
+  bastion: playerBastionSchema,
+  access: z.enum(BASTION_SHARE_ACCESSES),
+});
+
+export const BASTION_EDITOR_STATUSES = ['PENDING', 'APPROVED'] as const;
+
+/** Запрос на правку или выданное право (`PlayerBastionEditorResponse` core-api). */
+export const bastionEditorSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  status: z.enum(BASTION_EDITOR_STATUSES),
+  createdAt: z.string().nullish(),
+});
+
+export const bastionEditorsSchema = z.array(bastionEditorSchema);
 
 /**
  * Сооружение справочника для экрана выбора: краткий ответ
@@ -180,6 +213,9 @@ export type CatalogFacility = z.infer<typeof catalogFacilitySchema>;
 export type FacilitySpaceCode = (typeof FACILITY_SPACES)[number];
 export type PlayerBastionGame = z.infer<typeof playerBastionGameSchema>;
 export type MyPlayerBastions = z.infer<typeof myPlayerBastionsSchema>;
+export type SharedPlayerBastion = z.infer<typeof sharedPlayerBastionSchema>;
+export type BastionShareAccess = (typeof BASTION_SHARE_ACCESSES)[number];
+export type BastionEditor = z.infer<typeof bastionEditorSchema>;
 export type PlayerBastionStatus = PlayerBastion['status'];
 export type GamePlayer = PlayerBastionGame['players'][number];
 

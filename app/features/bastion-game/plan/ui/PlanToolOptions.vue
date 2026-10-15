@@ -5,7 +5,6 @@
     PlanTool,
     StairKind,
     StairTarget,
-    WallPiece,
   } from '../../model';
 
   import { fillTemplate } from '~bastions/model';
@@ -26,14 +25,11 @@
     STAIR_KINDS,
     STAIR_TARGET_LABELS,
     STAIR_TARGETS,
-    WALL_PIECE_ICONS,
-    WALL_PIECE_LABELS,
-    WALL_PIECES,
   } from '../../model';
 
   /**
    * Настройки выбранного инструмента: вид двери, вид и направление лестницы,
-   * ширина коридора, стена или ворота, поворот мебели. У остальных
+   * ширина коридора, поворот мебели. У остальных
    * инструментов настроек нет.
    */
   const { tool, stairLevel } = defineProps<{
@@ -59,8 +55,6 @@
   const corridorWidth = defineModel<number>('corridorWidth', {
     required: true,
   });
-
-  const wallPiece = defineModel<WallPiece>('wallPiece', { required: true });
 
   const furnitureRotation = defineModel<number>('furnitureRotation', {
     required: true,
@@ -245,26 +239,6 @@
         </UButton>
 
         <span class="text-sm text-muted tabular-nums">{{ rotationText }}</span>
-      </div>
-    </UFormField>
-  </section>
-
-  <section
-    v-else-if="tool === 'wall'"
-    class="flex flex-col gap-2"
-  >
-    <UFormField :label="PLAN_LABELS.wallPiece">
-      <div class="flex gap-1">
-        <UButton
-          v-for="piece in WALL_PIECES"
-          :key="piece"
-          size="xs"
-          :icon="WALL_PIECE_ICONS[piece]"
-          v-bind="getChoiceLook(wallPiece === piece)"
-          @click.left.exact.prevent="wallPiece = piece"
-        >
-          {{ WALL_PIECE_LABELS[piece] }}
-        </UButton>
       </div>
     </UFormField>
   </section>

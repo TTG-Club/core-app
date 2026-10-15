@@ -14,7 +14,6 @@ import type {
   PlanTool,
   StairKind,
   StairTarget,
-  WallPiece,
 } from '../model';
 
 import { fillTemplate } from '~bastions/model';
@@ -38,7 +37,9 @@ import {
   getStairTargetLevel,
   getTowerStairFrame,
   isDefenseGate,
+  isDefenseWallCell,
   isFurnitureOnGrid,
+  isPremiumFurniture,
   moveFurniture,
   moveRoom,
   paintCorridor,
@@ -68,6 +69,8 @@ export type PlanPreview =
 
 interface PlanEditorApi {
   document: ShallowRef<PlanDocument>;
+  /** У владельца бастиона подписка: можно ставить предметы по подписке. */
+  isPremium: Readonly<Ref<boolean>>;
   commit: (next: PlanDocument) => void;
   beginStroke: () => void;
   applyInStroke: (next: PlanDocument) => void;
@@ -86,7 +89,6 @@ interface PlanInteractionOptions {
   corridorWidth: Ref<number>;
   furnitureKind: Ref<FurnitureKind>;
   furnitureRotation: Ref<number>;
-  wallPiece: Ref<WallPiece>;
 }
 
 /** Жест, который сейчас выполняется указателем. */
@@ -215,21 +217,17 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
   let gesture: PlanGesture | undefined;
 
   /**
-   * Что делает мазок защитной стены. В режиме ворот мазок, начатый на
-   * воротах, закладывает проёмы стеной, иначе ставит ворота.
+   * Мазок ворот: начатый на воротах закладывает проёмы стеной, иначе ставит
+   * ворота в стену.
    *
    * @param document План в начале мазка.
    * @param cell Клетка, где начали вести.
    * @returns Правка для клеток мазка.
    */
-  function getWallPaint(
+  function getGatePaint(
     document: PlanDocument,
     cell: PlanCell,
   ): (next: PlanDocument, cells: Array<PlanCell>) => PlanDocument {
-    if (options.wallPiece.value === 'WALL') {
-      return paintDefenseWall;
-    }
-
     const isGate = !isDefenseGate(document, cell);
 
     return (next, cells) => paintDefenseGates(next, cells, isGate);
@@ -410,11 +408,9 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
         break;
       case 'wall':
         if (level.value === 0) {
-          const paint = getWallPaint(document, cell);
-
           editor.beginStroke();
-          gesture = { type: 'wall', last: cell, paint };
-          editor.applyInStroke(paint(document, [cell]));
+          gesture = { type: 'wall', last: cell, paint: paintDefenseWall };
+          editor.applyInStroke(paintDefenseWall(document, [cell]));
         }
 
         break;
@@ -430,6 +426,17 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
 
         break;
       case 'door':
+        // Дверь в защитной стене — ворота: их можно протянуть на несколько клеток.
+        if (level.value === 0 && isDefenseWallCell(document, cell)) {
+          const paint = getGatePaint(document, cell);
+
+          editor.beginStroke();
+          gesture = { type: 'wall', last: cell, paint };
+          editor.applyInStroke(paint(document, [cell]));
+
+          break;
+        }
+
         editor.commit(
           placeOpening(document, level.value, point, {
             type: 'DOOR',
@@ -461,6 +468,14 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
         if (item) {
           startFurnitureMove(item, cell, true);
 
+          break;
+        }
+
+        // Предмет по подписке ставит только бастион владельца с подпиской.
+        if (
+          isPremiumFurniture(options.furnitureKind.value)
+          && !editor.isPremium.value
+        ) {
           break;
         }
 

@@ -34,6 +34,7 @@ import {
   getRoomLabelPoint,
   getTowerRingPoint,
   getTowerStairFrame,
+  isDefenseWallCell,
   isWallEdge,
   PLAN_CELL_PIXELS,
   PLAN_FURNITURE_SIZES,
@@ -1294,6 +1295,21 @@ function drawHover(
       return;
     case 'door':
     case 'window': {
+      const cell = getCellAt(point);
+
+      // Дверь в защитной стене становится воротами — подсвечивается клетка.
+      if (
+        scene.tool === 'door'
+        && scene.level === 0
+        && isDefenseWallCell(scene.document, cell)
+      ) {
+        graphics
+          .rect(cell.x * CELL, cell.y * CELL, CELL, CELL)
+          .stroke({ color: theme.accent, width: hairline * 2 });
+
+        return;
+      }
+
       const ring = findTowerRing(
         scene.document,
         scene.level,
@@ -1331,8 +1347,6 @@ function drawHover(
         .stroke({ color: theme.accent, width: hairline * 2 });
 
       return;
-    case 'room':
-    case 'tower':
     case 'furniture': {
       const existing = findFurnitureAt(scene.document, scene.level, point);
       const cell = getCellAt(point);
@@ -1363,8 +1377,6 @@ function drawHover(
 
       return;
     }
-    case 'area':
-    case 'corridor':
     case 'stairs': {
       const frame = getTowerStairFrame(scene.document, scene.level, point);
 
@@ -1391,6 +1403,10 @@ function drawHover(
 
       return;
     }
+    case 'room':
+    case 'tower':
+    case 'area':
+    case 'corridor':
     case 'eraser':
     case 'wall':
       graphics
@@ -1429,6 +1445,38 @@ interface FurniturePart {
   y: number;
   width: number;
   height: number;
+  /** Круг или овал, вписанный в прямоугольник части. */
+  isRound?: boolean;
+}
+
+/**
+ * Круглая часть предмета.
+ *
+ * @param x Левый край.
+ * @param y Верхний край.
+ * @param size Поперечник.
+ * @returns Часть.
+ */
+function roundPart(x: number, y: number, size: number): FurniturePart {
+  return { x, y, width: size, height: size, isRound: true };
+}
+
+/**
+ * Тонкая черта поперёк или вдоль предмета.
+ *
+ * @param x Левый край.
+ * @param y Верхний край.
+ * @param width Ширина.
+ * @param height Высота.
+ * @returns Часть.
+ */
+function linePart(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): FurniturePart {
+  return { x, y, width, height };
 }
 
 /**
@@ -1468,6 +1516,7 @@ function placeFurniturePart(
     y: (item.y + Math.min(first.y, second.y)) * CELL,
     width: Math.abs(second.x - first.x) * CELL,
     height: Math.abs(second.y - first.y) * CELL,
+    isRound: part.isRound,
   };
 }
 
@@ -1535,8 +1584,177 @@ function getFurnitureParts(kind: FurnitureKind): {
         ],
       };
     default:
+      return getPremiumFurnitureParts(kind, body);
+  }
+}
+
+/**
+ * Части предметов интерьера по подписке: статуи, фонтаны, мастерские и сад.
+ *
+ * @param kind Вид предмета.
+ * @param body Корпус по умолчанию — прямоугольник с отступом.
+ * @returns Корпус и детали.
+ */
+function getPremiumFurnitureParts(
+  kind: FurnitureKind,
+  body: FurniturePart,
+): { body: FurniturePart; details: Array<FurniturePart> } {
+  switch (kind) {
+    case 'STATUE':
+      return {
+        body: { x: 0.15, y: 0.15, width: 0.7, height: 0.7 },
+        details: [roundPart(0.3, 0.3, 0.4)],
+      };
+    case 'FOUNTAIN':
+      return {
+        body: roundPart(0.1, 0.1, 1.8),
+        details: [roundPart(0.45, 0.45, 1.1), roundPart(0.85, 0.85, 0.3)],
+      };
+    case 'ALTAR':
+      return {
+        body: { x: 0.15, y: 0.25, width: 1.7, height: 0.5 },
+        details: [roundPart(0.85, 0.35, 0.3)],
+      };
+    case 'THRONE':
+      return {
+        body: { x: 0.15, y: 0.15, width: 0.7, height: 0.7 },
+        details: [
+          linePart(0.15, 0.15, 0.7, 0.2),
+          linePart(0.15, 0.15, 0.12, 0.7),
+          linePart(0.73, 0.15, 0.12, 0.7),
+        ],
+      };
+    case 'BOOKSHELF':
+      return {
+        body: { x: 0.12, y: 0.12, width: 1.76, height: 0.4 },
+        details: [
+          linePart(0.7, 0.12, 0.01, 0.4),
+          linePart(1.3, 0.12, 0.01, 0.4),
+        ],
+      };
+    case 'FIREPLACE':
+      return {
+        body: { x: 0.12, y: 0.12, width: 1.76, height: 0.6 },
+        details: [linePart(0.5, 0.12, 1, 0.4)],
+      };
+    case 'DINING_TABLE':
+      return {
+        body: { x: 0.3, y: 0.4, width: 3.4, height: 1.2 },
+        details: [0.6, 1.75, 2.9].flatMap((x) => [
+          linePart(x, 0.05, 0.5, 0.3),
+          linePart(x, 1.65, 0.5, 0.3),
+        ]),
+      };
+    case 'BARREL':
+      return {
+        body: roundPart(0.15, 0.15, 0.7),
+        details: [roundPart(0.35, 0.35, 0.3)],
+      };
+    case 'PANTRY_RACK':
+      return {
+        body: { x: 0.12, y: 0.12, width: 1.76, height: 0.5 },
+        details: [
+          linePart(0.12, 0.37, 1.76, 0.01),
+          linePart(1, 0.12, 0.01, 0.5),
+        ],
+      };
+    case 'WORKBENCH':
+      return {
+        body: { x: 0.12, y: 0.2, width: 1.76, height: 0.6 },
+        details: [linePart(0.2, 0.2, 0.3, 0.15), linePart(1, 0.5, 0.6, 0.01)],
+      };
+    case 'ANVIL':
+      return {
+        body: { x: 0.3, y: 0.35, width: 0.5, height: 0.3 },
+        details: [
+          linePart(0.12, 0.42, 0.18, 0.16),
+          linePart(0.4, 0.65, 0.3, 0.15),
+        ],
+      };
+    case 'ALCHEMY_TABLE':
+      return {
+        body,
+        details: [
+          roundPart(0.3, 0.35, 0.25),
+          roundPart(0.75, 0.4, 0.2),
+          roundPart(1.3, 0.32, 0.35),
+        ],
+      };
+    case 'WEAPON_RACK':
+      return {
+        body: { x: 0.12, y: 0.35, width: 1.76, height: 0.3 },
+        details: [0.55, 1, 1.45].map((x) => linePart(x, 0.2, 0.01, 0.6)),
+      };
+    case 'TRAINING_DUMMY':
+      return {
+        body: roundPart(0.3, 0.3, 0.4),
+        details: [linePart(0.12, 0.45, 0.76, 0.1)],
+      };
+    case 'CAGE':
+      return {
+        body,
+        details: [0.55, 1, 1.45].map((x) => linePart(x, 0.12, 0.01, 1.76)),
+      };
+    case 'RUG':
+      return {
+        body: { x: 0.1, y: 0.1, width: 2.8, height: 1.8 },
+        details: [linePart(0.3, 0.3, 2.4, 1.4)],
+      };
+    case 'TAPESTRY':
+      return {
+        body: { x: 0.12, y: 0.05, width: 1.76, height: 0.18 },
+        details: [linePart(0.12, 0.3, 1.76, 0.01)],
+      };
+    case 'WELL':
+      return {
+        body: roundPart(0.1, 0.1, 0.8),
+        details: [roundPart(0.25, 0.25, 0.5)],
+      };
+    case 'TREE':
+      return {
+        body: roundPart(0.05, 0.05, 1.9),
+        details: [roundPart(0.8, 0.8, 0.4)],
+      };
+    case 'FLOWERBED':
+      return {
+        body: { x: 0.12, y: 0.15, width: 1.76, height: 0.7 },
+        details: [
+          roundPart(0.3, 0.35, 0.3),
+          roundPart(0.85, 0.35, 0.3),
+          roundPart(1.4, 0.35, 0.3),
+        ],
+      };
+    case 'TELESCOPE':
+      return {
+        body: roundPart(0.3, 0.3, 0.4),
+        details: [linePart(0.44, 0.06, 0.12, 0.6)],
+      };
+    case 'MAGIC_CIRCLE':
+      return {
+        body: roundPart(0.1, 0.1, 2.8),
+        details: [roundPart(0.4, 0.4, 2.2), linePart(0.85, 0.85, 1.3, 1.3)],
+      };
+    default:
       return { body, details: [] };
   }
+}
+
+/**
+ * Обводит часть предмета: прямоугольник или вписанный овал.
+ *
+ * @param graphics Слой.
+ * @param part Часть в пикселях.
+ * @returns Тот же слой для заливки и обводки.
+ */
+function tracePart(graphics: Graphics, part: FurniturePart): Graphics {
+  return part.isRound
+    ? graphics.ellipse(
+        part.x + part.width / 2,
+        part.y + part.height / 2,
+        part.width / 2,
+        part.height / 2,
+      )
+    : graphics.rect(part.x, part.y, part.width, part.height);
 }
 
 /**
@@ -1551,16 +1769,11 @@ function drawFurniture(context: DrawContext, item: PlanFurniture): void {
   const outline = { color: theme.text, width: hairline * 1.4 };
   const placedBody = placeFurniturePart(item, body);
 
-  graphics
-    .rect(placedBody.x, placedBody.y, placedBody.width, placedBody.height)
+  tracePart(graphics, placedBody)
     .fill({ color: theme.background })
     .stroke(outline);
 
   for (const detail of details) {
-    const placed = placeFurniturePart(item, detail);
-
-    graphics
-      .rect(placed.x, placed.y, placed.width, placed.height)
-      .stroke(outline);
+    tracePart(graphics, placeFurniturePart(item, detail)).stroke(outline);
   }
 }
