@@ -57,6 +57,7 @@ import {
   PLAN_LIMITS,
   rotateFurniture,
   snapToHalf,
+  TOWER_SHAPE_SIDES,
 } from '../model';
 
 /** Точка холста в клетках (дробная). */
@@ -106,7 +107,13 @@ type PlanGesture =
       current: PlanCell;
       target: PlanRoom | PlanRoomSeed;
     }
-  | { type: 'tower'; center: PlanCell; radius: number }
+  | {
+      type: 'tower';
+      center: PlanCell;
+      radius: number;
+      /** Число сторон многоугольной башни; у круглой нет. */
+      sides: number | undefined;
+    }
   | { type: 'squareTower'; anchor: PlanCell; current: PlanCell }
   | { type: 'move'; room: PlanRoom; anchor: PlanCell; offset: PlanCell }
   | {
@@ -127,6 +134,21 @@ type PlanGesture =
       /** Что делает мазок: строит стену, ставит или убирает ворота. */
       paint: (document: PlanDocument, cells: Array<PlanCell>) => PlanDocument;
     };
+
+/** Жест башни, которую тянут от центра. */
+type TowerGesture = Extract<PlanGesture, { type: 'tower' }>;
+
+/**
+ * Окружность башни по жесту: у многоугольной — с числом сторон.
+ *
+ * @param tower Жест башни.
+ * @returns Окружность.
+ */
+function getGestureCircle(tower: TowerGesture): PlanCircle {
+  const circle = { cx: tower.center.x, cy: tower.center.y, r: tower.radius };
+
+  return tower.sides ? { ...circle, sides: tower.sides } : circle;
+}
 
 /**
  * Квадрат кисти шириной в несколько клеток от клетки под указателем.
@@ -266,12 +288,16 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
    * Новая комната: идентификатор, название по виду и текущий этаж.
    *
    * @param kind Вид комнаты — для названия.
+   * @param shape Форма башни — для названия.
    * @returns Заготовка комнаты.
    */
-  function createSeed(kind: PlanRoom['kind']): PlanRoomSeed {
+  function createSeed(
+    kind: PlanRoom['kind'],
+    shape?: TowerShape,
+  ): PlanRoomSeed {
     return {
       id: crypto.randomUUID(),
-      name: getNextRoomName(editor.document.value, kind),
+      name: getNextRoomName(editor.document.value, kind, shape),
       level: level.value,
     };
   }
@@ -407,8 +433,14 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
 
         const center = { x: snapToHalf(point.x), y: snapToHalf(point.y) };
 
-        gesture = { type: 'tower', center, radius: PLAN_LIMITS.minTowerRadius };
-        updateTowerPreview(center, PLAN_LIMITS.minTowerRadius);
+        gesture = {
+          type: 'tower',
+          center,
+          radius: PLAN_LIMITS.minTowerRadius,
+          sides: TOWER_SHAPE_SIDES[options.towerShape.value],
+        };
+
+        updateTowerPreview(gesture);
 
         break;
       }
@@ -523,17 +555,16 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
   }
 
   /**
-   * Подсказка круглой башни: окружность и диаметр в футах.
+   * Подсказка башни: окружность или многоугольник и поперечник в футах.
    *
-   * @param center Центр.
-   * @param radius Радиус в клетках.
+   * @param tower Жест башни.
    */
-  function updateTowerPreview(center: PlanCell, radius: number): void {
+  function updateTowerPreview(tower: TowerGesture): void {
     preview.value = {
       kind: 'circle',
-      circle: { cx: center.x, cy: center.y, r: radius },
+      circle: getGestureCircle(tower),
       label: fillTemplate(PLAN_LABELS.feet, {
-        feet: radius * 2 * PLAN_FEET_PER_CELL,
+        feet: tower.radius * 2 * PLAN_FEET_PER_CELL,
       }),
     };
   }
@@ -602,7 +633,7 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
           Math.max(PLAN_LIMITS.minTowerRadius, snapToHalf(distance)),
         );
 
-        updateTowerPreview(gesture.center, gesture.radius);
+        updateTowerPreview(gesture);
 
         break;
       }
@@ -741,19 +772,16 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
 
         break;
       case 'tower': {
-        const seed = createSeed('TOWER');
-        const { center, radius } = finished;
+        const seed = createSeed('TOWER', options.towerShape.value);
 
-        editor.commit(
-          addTower(document, seed, { cx: center.x, cy: center.y, r: radius }),
-        );
+        editor.commit(addTower(document, seed, getGestureCircle(finished)));
 
         selectedRoomId.value = seed.id;
 
         break;
       }
       case 'squareTower': {
-        const seed = createSeed('SQUARE_TOWER');
+        const seed = createSeed('SQUARE_TOWER', 'SQUARE');
 
         editor.commit(
           addSquareTower(

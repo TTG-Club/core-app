@@ -12,6 +12,7 @@ import type {
   PlanState,
   PlanTowerOpening,
   RoomKind,
+  TowerShape,
 } from './plan-schema';
 
 import { isEqual } from 'es-toolkit';
@@ -25,6 +26,8 @@ import {
   PLAN_LABELS,
   PLAN_LIMITS,
   ROOM_KIND_LABELS,
+  TOWER_SHAPE_ROOM_LABELS,
+  TOWER_SHAPE_SIDES,
 } from './plan-constants';
 import {
   findTowerRing,
@@ -37,15 +40,18 @@ import {
   getFurnitureSize,
   getNearestEdge,
   getOccupancy,
+  getTowerApothem,
   isCellOnGrid,
   isFurnitureOnGrid,
   isTowerKind,
   isWallEdge,
+  toPlanCircle,
 } from './plan-geometry';
 import {
   DOOR_KINDS,
   planResponseSchema,
   PREMIUM_FURNITURE_KINDS,
+  TOWER_SHAPES,
 } from './plan-schema';
 
 /** Имя, этаж и идентификатор комнаты, которую создаст правка. */
@@ -96,7 +102,10 @@ export function parsePlanResponse(response: unknown): PlanState {
         level: room.level,
         facilityId: room.facilityId ?? undefined,
         cells: room.cells ?? [],
-        shape: room.kind === 'TOWER' ? (room.shape ?? undefined) : undefined,
+        shape:
+          room.kind === 'TOWER' && room.shape
+            ? toPlanCircle(room.shape)
+            : undefined,
       })),
       doors: source.doors ?? [],
       windows: source.windows ?? [],
@@ -334,13 +343,49 @@ export function findRoomAt(
 export function getNextRoomName(
   document: PlanDocument,
   kind: RoomKind,
+  shape?: TowerShape,
 ): string {
-  const number = document.rooms.filter((room) => room.kind === kind).length + 1;
+  const label = shape ? TOWER_SHAPE_ROOM_LABELS[shape] : ROOM_KIND_LABELS[kind];
 
-  return fillTemplate(PLAN_LABELS.newRoom, {
-    kind: ROOM_KIND_LABELS[kind],
-    number,
-  });
+  const number =
+    document.rooms.filter((room) => getRoomKindLabel(room) === label).length
+    + 1;
+
+  return fillTemplate(PLAN_LABELS.newRoom, { kind: label, number });
+}
+
+/**
+ * Форма башни.
+ *
+ * @param room Комната.
+ * @returns Форма или undefined, если это не башня.
+ */
+export function getTowerShape(room: PlanRoom): TowerShape | undefined {
+  if (room.kind === 'SQUARE_TOWER') {
+    return 'SQUARE';
+  }
+
+  if (room.kind !== 'TOWER') {
+    return undefined;
+  }
+
+  const sides = room.shape?.sides;
+
+  return (
+    TOWER_SHAPES.find((shape) => TOWER_SHAPE_SIDES[shape] === sides) ?? 'ROUND'
+  );
+}
+
+/**
+ * Вид комнаты словами; у башни — с её формой.
+ *
+ * @param room Комната.
+ * @returns «Комната», «Пятиугольная башня».
+ */
+export function getRoomKindLabel(room: PlanRoom): string {
+  const shape = getTowerShape(room);
+
+  return shape ? TOWER_SHAPE_ROOM_LABELS[shape] : ROOM_KIND_LABELS[room.kind];
 }
 
 /**
@@ -403,7 +448,8 @@ function placeTower(document: PlanDocument, tower: PlanRoom): PlanDocument {
 }
 
 /**
- * Ставит круглую башню. Её клетки забираются у комнат под ней.
+ * Ставит круглую или многоугольную башню. Её клетки забираются у комнат под
+ * ней.
  *
  * @param document План.
  * @param seed Идентификатор, название и этаж.
@@ -824,14 +870,15 @@ function getSpiralBounds(
   room: PlanRoom,
 ): { cx: number; cy: number; limit: number } | undefined {
   if (room.kind === 'TOWER' && room.shape) {
-    const { cx, cy, r } = room.shape;
+    const { cx, cy } = room.shape;
+    const apothem = getTowerApothem(room.shape);
 
     return {
       cx,
       cy,
       limit: Math.min(
         PLAN_LIMITS.maxStairSide,
-        Math.max(1, Math.floor(r * 2) - 1),
+        Math.max(1, Math.floor(apothem * 2) - 1),
       ),
     };
   }

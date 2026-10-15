@@ -48,8 +48,8 @@
 
   /**
    * Редактор плана бастиона — упрощённый редактор карт: комнаты на сетке,
-   * стены по их границам, двери, окна, лестницы, колонны, круглые и
-   * квадратные башни.
+   * стены по их границам, двери, окна, лестницы, колонны и башни: круглые,
+   * квадратные, пятиугольные и восьмиугольные.
    * Смотреть план могут все участники игры, рисовать — мастер и игроки с
    * доступом; для остальных и по ссылке «поделиться» редактор открывается
    * только на просмотр.
@@ -472,6 +472,7 @@
       <PlanToolbar
         v-model:tool="tool"
         v-model:furniture-kind="furnitureKind"
+        v-model:tower-shape="towerShape"
         :can-edit="editor.canEdit.value"
         :premium="editor.isPremium.value"
         :can-undo="editor.canUndo.value"
@@ -589,7 +590,6 @@
           v-model:stair-target="stairTarget"
           v-model:stair-direction="stairDirection"
           v-model:spiral-side="spiralSide"
-          v-model:tower-shape="towerShape"
           v-model:corridor-width="corridorWidth"
           v-model:furniture-rotation="furnitureRotation"
           :tool

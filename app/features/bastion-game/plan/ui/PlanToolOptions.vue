@@ -5,7 +5,6 @@
     PlanTool,
     StairKind,
     StairTarget,
-    TowerShape,
   } from '../../model';
 
   import { fillTemplate } from '~bastions/model';
@@ -27,13 +26,10 @@
     STAIR_KINDS,
     STAIR_TARGET_LABELS,
     STAIR_TARGETS,
-    TOWER_SHAPE_ICONS,
-    TOWER_SHAPE_LABELS,
-    TOWER_SHAPES,
   } from '../../model';
 
   /**
-   * Настройки выбранного инструмента: форма башни, вид двери, вид,
+   * Настройки выбранного инструмента: вид двери, вид,
    * направление лестницы и размер винтовой, ширина коридора, поворот мебели.
    * У остальных инструментов настроек нет.
    */
@@ -59,10 +55,6 @@
 
   /** Заданная сторона винтовой лестницы; undefined — наибольшая. */
   const spiralSide = defineModel<number | undefined>('spiralSide', {
-    required: true,
-  });
-
-  const towerShape = defineModel<TowerShape>('towerShape', {
     required: true,
   });
 
@@ -177,27 +169,7 @@
 
 <template>
   <section
-    v-if="tool === 'tower'"
-    class="flex flex-col gap-2"
-  >
-    <UFormField :label="PLAN_LABELS.towerShape">
-      <div class="flex gap-1">
-        <UButton
-          v-for="shape in TOWER_SHAPES"
-          :key="shape"
-          size="xs"
-          :icon="TOWER_SHAPE_ICONS[shape]"
-          v-bind="getChoiceLook(towerShape === shape)"
-          @click.left.exact.prevent="towerShape = shape"
-        >
-          {{ TOWER_SHAPE_LABELS[shape] }}
-        </UButton>
-      </div>
-    </UFormField>
-  </section>
-
-  <section
-    v-else-if="tool === 'door'"
+    v-if="tool === 'door'"
     class="flex flex-col gap-2"
   >
     <UFormField :label="PLAN_LABELS.doorKind">

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { FurnitureKind, PlanTool } from '../../model';
+  import type { FurnitureKind, PlanTool, TowerShape } from '../../model';
 
   import {
     BASIC_FURNITURE_KINDS,
@@ -9,11 +9,15 @@
     PLAN_LABELS,
     PLAN_TOOL_GROUPS,
     PREMIUM_FURNITURE_KINDS,
+    TOWER_SHAPE_ICONS,
+    TOWER_SHAPE_LABELS,
+    TOWER_SHAPES,
   } from '../../model';
 
   /**
-   * Инструменты редактора плана группами, отмена и повтор. Кнопка интерьера
-   * открывает панель с предметами: обычными и по подписке владельца бастиона.
+   * Инструменты редактора плана группами, отмена и повтор. Кнопка башни
+   * открывает панель с формами башни, кнопка интерьера — с предметами:
+   * обычными и по подписке владельца бастиона.
    * В режиме просмотра остаётся только «рука» для панорамы.
    */
   const { canEdit, canUndo, canRedo, premium } = defineProps<{
@@ -30,7 +34,10 @@
     required: true,
   });
 
+  const towerShape = defineModel<TowerShape>('towerShape', { required: true });
+
   const isFurnitureOpen = ref(false);
+  const isTowerOpen = ref(false);
 
   defineEmits<{
     undo: [];
@@ -74,6 +81,32 @@
   }
 
   /**
+   * Вид кнопки формы башни: выбранная подсвечена.
+   *
+   * @param shape Форма.
+   * @returns Цвет и вид кнопки.
+   */
+  function getTowerLook(shape: TowerShape): {
+    color: 'primary' | 'neutral';
+    variant: 'soft' | 'ghost';
+  } {
+    return towerShape.value === shape
+      ? { color: 'primary', variant: 'soft' }
+      : { color: 'neutral', variant: 'ghost' };
+  }
+
+  /**
+   * Берёт форму башни и закрывает панель.
+   *
+   * @param shape Форма.
+   */
+  function chooseTower(shape: TowerShape): void {
+    towerShape.value = shape;
+    tool.value = 'tower';
+    isTowerOpen.value = false;
+  }
+
+  /**
    * Берёт предмет мебели и закрывает панель.
    *
    * @param kind Предмет.
@@ -102,7 +135,43 @@
         :key="option.tool"
       >
         <UPopover
-          v-if="option.tool === 'furniture'"
+          v-if="option.tool === 'tower'"
+          v-model:open="isTowerOpen"
+        >
+          <UTooltip
+            :text="option.label"
+            :kbds="[option.key]"
+          >
+            <UButton
+              :icon="TOWER_SHAPE_ICONS[towerShape]"
+              :aria-label="option.label"
+              :aria-pressed="tool === option.tool"
+              v-bind="getButtonLook(option)"
+              size="sm"
+              trailing-icon="tabler:chevron-down"
+              @click.left.exact="tool = option.tool"
+            />
+          </UTooltip>
+
+          <template #content>
+            <div class="grid grid-cols-2 gap-1 p-1">
+              <UButton
+                v-for="shape in TOWER_SHAPES"
+                :key="shape"
+                :icon="TOWER_SHAPE_ICONS[shape]"
+                v-bind="getTowerLook(shape)"
+                size="sm"
+                class="text-left"
+                @click.left.exact.prevent="chooseTower(shape)"
+              >
+                {{ TOWER_SHAPE_LABELS[shape] }}
+              </UButton>
+            </div>
+          </template>
+        </UPopover>
+
+        <UPopover
+          v-else-if="option.tool === 'furniture'"
           v-model:open="isFurnitureOpen"
           :ui="{ content: 'md:max-w-2xl' }"
         >

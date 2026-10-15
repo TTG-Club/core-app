@@ -33,6 +33,8 @@ import {
   getNearestEdge,
   getOccupancy,
   getRoomLabelPoint,
+  getTowerApothem,
+  getTowerPolygon,
   getTowerRingPoint,
   getTowerStairFrame,
   isDefenseWallCell,
@@ -404,6 +406,12 @@ function drawTower(
   circle: PlanCircle,
   isSelected: boolean,
 ): void {
+  if (circle.sides) {
+    drawPolygonTower(context, circle, isSelected);
+
+    return;
+  }
+
   const { graphics, theme, hairline } = context;
   const centerX = circle.cx * CELL;
   const centerY = circle.cy * CELL;
@@ -475,6 +483,150 @@ function drawTower(
     .circle(centerX, centerY, inner * CELL)
     .stroke({ color: theme.text, width: hairline * 2.5 })
     .circle(centerX, centerY, outer * CELL)
+    .stroke({ color: theme.text, width: hairline * 2.5 });
+}
+
+/**
+ * Стороны многоугольника отрезками.
+ *
+ * @param vertices Вершины по порядку.
+ * @returns Отрезки от каждой вершины к следующей.
+ */
+function getPolygonSegments(
+  vertices: ReadonlyArray<PlanCell>,
+): Array<PlanSegment> {
+  return vertices.flatMap((from, index) => {
+    const to = vertices[(index + 1) % vertices.length];
+
+    return to ? [{ fromX: from.x, fromY: from.y, toX: to.x, toY: to.y }] : [];
+  });
+}
+
+/**
+ * Где линия сетки пересекает выпуклый многоугольник.
+ *
+ * @param vertices Вершины многоугольника.
+ * @param axis Вдоль какой оси идёт линия: 'x' — вертикальная `x = value`.
+ * @param value Положение линии.
+ * @returns Отрезок внутри многоугольника по другой оси или undefined.
+ */
+function getPolygonChord(
+  vertices: ReadonlyArray<PlanCell>,
+  axis: 'x' | 'y',
+  value: number,
+): { from: number; to: number } | undefined {
+  const other = axis === 'x' ? 'y' : 'x';
+  const hits: Array<number> = [];
+
+  for (const segment of getPolygonSegments(vertices)) {
+    const start = axis === 'x' ? segment.fromX : segment.fromY;
+    const end = axis === 'x' ? segment.toX : segment.toY;
+
+    if (start === end || (value - start) * (value - end) > 0) {
+      continue;
+    }
+
+    const share = (value - start) / (end - start);
+    const from = other === 'x' ? segment.fromX : segment.fromY;
+    const to = other === 'x' ? segment.toX : segment.toY;
+
+    hits.push(from + (to - from) * share);
+  }
+
+  return hits.length < 2
+    ? undefined
+    : { from: Math.min(...hits), to: Math.max(...hits) };
+}
+
+/**
+ * Многоугольная башня: стена полосой вокруг пола со штриховкой, как у
+ * круглой, и сетка пола внутри.
+ *
+ * @param context Кадр.
+ * @param circle Окружность многоугольной башни.
+ * @param isSelected Выбрана ли башня.
+ */
+function drawPolygonTower(
+  context: DrawContext,
+  circle: PlanCircle,
+  isSelected: boolean,
+): void {
+  const { graphics, theme, hairline } = context;
+  const apothem = getTowerApothem(circle);
+  const wall = PLAN_SHAPES.towerWallWidth;
+  const inner = getTowerPolygon(circle, apothem);
+  const outer = getTowerPolygon(circle, apothem + wall);
+
+  const toPixels = (points: ReadonlyArray<PlanCell>) =>
+    points.flatMap((point) => [point.x * CELL, point.y * CELL]);
+
+  graphics.poly(toPixels(outer)).fill({ color: theme.background });
+
+  // Штриховка полосы: косые штрихи от внутренней стороны к внешней.
+  for (const segment of getPolygonSegments(inner)) {
+    const length = Math.hypot(
+      segment.toX - segment.fromX,
+      segment.toY - segment.fromY,
+    );
+
+    const alongX = (segment.toX - segment.fromX) / length;
+    const alongY = (segment.toY - segment.fromY) / length;
+    // Вершины идут по часовой, наружу смотрит левая нормаль в осях холста.
+    const outX = alongY;
+    const outY = -alongX;
+
+    for (let offset = 0; offset < length; offset += HATCH_STEP) {
+      const x = segment.fromX + alongX * offset;
+      const y = segment.fromY + alongY * offset;
+
+      graphics
+        .moveTo(x * CELL, y * CELL)
+        .lineTo(
+          (x + alongX * HATCH_STEP + outX * wall) * CELL,
+          (y + alongY * HATCH_STEP + outY * wall) * CELL,
+        );
+    }
+  }
+
+  graphics.stroke({ color: theme.text, width: hairline, alpha: 0.7 });
+
+  graphics.poly(toPixels(inner)).fill({
+    color: isSelected ? theme.accent : theme.background,
+    alpha: isSelected ? 0.14 : 1,
+  });
+
+  for (const axis of ['x', 'y'] as const) {
+    const center = axis === 'x' ? circle.cx : circle.cy;
+
+    for (
+      let line = Math.ceil(center - circle.r);
+      line <= center + circle.r;
+      line++
+    ) {
+      const chord = getPolygonChord(inner, axis, line);
+
+      if (!chord) {
+        continue;
+      }
+
+      if (axis === 'x') {
+        graphics
+          .moveTo(line * CELL, chord.from * CELL)
+          .lineTo(line * CELL, chord.to * CELL);
+      } else {
+        graphics
+          .moveTo(chord.from * CELL, line * CELL)
+          .lineTo(chord.to * CELL, line * CELL);
+      }
+    }
+  }
+
+  graphics.stroke({ color: theme.grid, width: 1, pixelLine: true });
+
+  graphics
+    .poly(toPixels(inner))
+    .stroke({ color: theme.text, width: hairline * 2.5 })
+    .poly(toPixels(outer))
     .stroke({ color: theme.text, width: hairline * 2.5 });
 }
 
@@ -935,10 +1087,22 @@ function drawLevelBelow(
   }
 
   for (const room of document.rooms) {
-    if (room.level === below && room.shape) {
+    if (room.level !== below || !room.shape) {
+      continue;
+    }
+
+    const { shape } = room;
+
+    if (shape.sides) {
+      const ring = getTowerApothem(shape) + PLAN_SHAPES.towerWallWidth / 2;
+
+      for (const segment of getPolygonSegments(getTowerPolygon(shape, ring))) {
+        traceDashedLine(graphics, segment);
+      }
+    } else {
       traceDashedCircle(graphics, {
-        ...room.shape,
-        r: room.shape.r + PLAN_SHAPES.towerWallWidth / 2,
+        ...shape,
+        r: shape.r + PLAN_SHAPES.towerWallWidth / 2,
       });
     }
   }
@@ -1332,10 +1496,18 @@ function drawOverlay(
   if (preview?.kind === 'circle') {
     const { circle } = preview;
 
-    graphics
-      .circle(circle.cx * CELL, circle.cy * CELL, circle.r * CELL)
-      .fill({ color: theme.accent, alpha: 0.15 })
-      .stroke(accent);
+    if (circle.sides) {
+      graphics.poly(
+        getTowerPolygon(circle, getTowerApothem(circle)).flatMap((point) => [
+          point.x * CELL,
+          point.y * CELL,
+        ]),
+      );
+    } else {
+      graphics.circle(circle.cx * CELL, circle.cy * CELL, circle.r * CELL);
+    }
+
+    graphics.fill({ color: theme.accent, alpha: 0.15 }).stroke(accent);
 
     context.addLabel(
       preview.label,
