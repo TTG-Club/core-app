@@ -1,5 +1,6 @@
 import type {
   BastionActivity,
+  BastionEventDecision,
   BastionOrderCode,
   FacilityOrderOptionDetail,
   FacilitySpaceCode,
@@ -150,6 +151,47 @@ export function removeMenagerieCreature(
     bastionPath(bastionId, `/facilities/${facilityId}/creatures/${creatureId}`),
     'DELETE',
   );
+}
+
+/**
+ * Решение по событию бастиона: взятка, удачный случай, помощь, полученный предмет.
+ *
+ * @param bastionId Бастион.
+ * @param eventId Событие.
+ * @param request Решение.
+ * @param request.decision Заплатить, отказаться, отправить защитников или записать предмет.
+ * @param request.defenders Сколько защитников отправить на помощь.
+ * @param request.note Какой предмет получен.
+ * @returns Бастион после решения.
+ */
+export function decideBastionEvent(
+  bastionId: string,
+  eventId: string,
+  request: {
+    decision: BastionEventDecision;
+    defenders?: number;
+    note?: string;
+  },
+): Promise<PlayerBastion> {
+  return mutateBastion(
+    bastionPath(bastionId, `/events/${eventId}/decision`),
+    'POST',
+    request,
+  );
+}
+
+/**
+ * Отсылает гостя бастиона или находит беженцам новый дом.
+ *
+ * @param bastionId Бастион.
+ * @param guestId Гость.
+ * @returns Бастион после этого.
+ */
+export function dismissBastionGuest(
+  bastionId: string,
+  guestId: string,
+): Promise<PlayerBastion> {
+  return mutateBastion(bastionPath(bastionId, `/guests/${guestId}`), 'DELETE');
 }
 
 /**

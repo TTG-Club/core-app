@@ -1,4 +1,9 @@
-import type { FacilitySpaceCode, LedgerReason } from './schema';
+import type {
+  BastionEventType,
+  BastionGuestKind,
+  FacilitySpaceCode,
+  LedgerReason,
+} from './schema';
 
 /** Дней в ходе бастиона. */
 export const DAYS_PER_TURN = 7;
@@ -35,7 +40,77 @@ export const LEDGER_REASON_LABELS: Record<LedgerReason, string> = {
   REFUND: 'Возврат',
   BUILD: 'Постройка',
   ENLARGE: 'Расширение',
+  EVENT: 'Событие',
 };
+
+export const BASTION_EVENT_ICONS: Record<BastionEventType, string> = {
+  ALL_IS_WELL: 'tabler:mood-smile',
+  ATTACK: 'tabler:swords',
+  CRIMINAL_HIRELING: 'tabler:fingerprint',
+  EXTRAORDINARY_OPPORTUNITY: 'tabler:confetti',
+  FRIENDLY_VISITORS: 'tabler:users-group',
+  GUEST: 'tabler:door-enter',
+  LOST_HIRELINGS: 'tabler:user-question',
+  MAGICAL_DISCOVERY: 'tabler:flask',
+  REFUGEES: 'tabler:tent',
+  REQUEST_FOR_AID: 'tabler:lifebuoy',
+  TREASURE: 'tabler:diamond',
+};
+
+/** Цвет события: угроза, выгода или ничего особенного. */
+export const BASTION_EVENT_COLORS: Record<
+  BastionEventType,
+  'error' | 'warning' | 'success' | 'info' | 'neutral'
+> = {
+  ALL_IS_WELL: 'neutral',
+  ATTACK: 'error',
+  CRIMINAL_HIRELING: 'warning',
+  EXTRAORDINARY_OPPORTUNITY: 'info',
+  FRIENDLY_VISITORS: 'success',
+  GUEST: 'info',
+  LOST_HIRELINGS: 'warning',
+  MAGICAL_DISCOVERY: 'success',
+  REFUGEES: 'info',
+  REQUEST_FOR_AID: 'warning',
+  TREASURE: 'success',
+};
+
+export const BASTION_GUEST_ICONS: Record<BastionGuestKind, string> = {
+  CELEBRITY: 'tabler:crown',
+  SANCTUARY: 'tabler:home-heart',
+  DEFENDER: 'tabler:user-shield',
+  MONSTER: 'tabler:paw',
+  REFUGEES: 'tabler:tent',
+};
+
+export const EVENT_LABELS = {
+  tab: 'События',
+  empty: 'Событий пока не было: их бросают после приказа «Обслуживать».',
+  pendingTitle: 'События ждут решения',
+  terms: 'Ход {turn} · {character} · 1к100: {roll}',
+  termsNoCharacter: 'Ход {turn} · 1к100: {roll}',
+  pending: 'Ждёт решения',
+  dice: 'Кости: {dice}',
+  waiting: 'Решение принимает игрок персонажа или Мастер.',
+  pay: 'Заплатить {cost} зм',
+  refuse: 'Отказаться',
+  arrest: 'Пусть арестуют',
+  send: 'Отправить',
+  sendDefenders: 'Защитников',
+  sendHint: 'Доступно защитников: {count}',
+  noDefenders: 'Защитников нет — помочь нельзя.',
+  record: 'Записать',
+  recordLabel: 'Какой предмет получен',
+  recordPlaceholder: 'Зелье полёта, свиток «Огненный шар»',
+  decided: 'Решение принято',
+  guestsTitle: 'Гости бастиона',
+  guestTerms: '{name} · с хода {turn}',
+  guestCount: '{name}: {count} · с хода {turn}',
+  guestLeaves: ', уедет на ходу {turn}',
+  dismiss: 'Отослать',
+  dismissRefugees: 'Нашли новый дом',
+  dismissed: 'Гость уехал',
+} as const;
 
 export const ACTIVITY_LABELS = {
   journal: 'Журнал бастиона',
@@ -116,7 +191,7 @@ export const ACTIVITY_LABELS = {
   turnNoCompleting: 'В этот ход приказы не завершаются.',
   turnEvent: 'Событие бастиона',
   turnEventHint:
-    'Бастион обслуживали: бросьте по таблице событий бастиона и запишите итог.',
+    'Бастион обслуживали: события уже брошены по таблице, здесь можно дописать подробности.',
   turnDone: 'Ход сделан',
   treasury: 'Казна',
   treasuryTitle: 'Казна бастиона',
@@ -146,6 +221,8 @@ export const ACTIVITY_LABELS = {
   orderBuilding: 'Сооружение ещё строится',
   orderPrerequisite: 'Мастер ещё не подтвердил требование',
   orderAfterStart: 'Приказы отдаются, когда бастион запущен',
+  unavailable: 'Не работает в ход {turn}: {reason}',
+  unavailableBadge: 'Не работает',
   removeTitle: 'Убрать сооружение?',
   removeDescription:
     'Незавершённые приказы сооружения отменятся без возврата денег, клетки исчезнут с плана.',

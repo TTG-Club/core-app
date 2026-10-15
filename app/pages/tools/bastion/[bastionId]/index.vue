@@ -3,7 +3,12 @@
 
   import { StatusCodes } from 'http-status-codes';
 
-  import { BastionActionsBar, BastionJournal } from '~bastion-game/activity';
+  import {
+    BastionActionsBar,
+    BastionGuests,
+    BastionJournal,
+    BastionPendingEvents,
+  } from '~bastion-game/activity';
   import { MemberFacilitiesCard } from '~bastion-game/facilities';
   import {
     activatePlayerBastion,
@@ -240,6 +245,17 @@
         <BastionActionsBar
           :bastion
           :activity="activity ?? undefined"
+          @updated="handleUpdated"
+        />
+
+        <BastionPendingEvents
+          :bastion
+          :activity="activity ?? undefined"
+          @updated="handleUpdated"
+        />
+
+        <BastionGuests
+          :bastion
           @updated="handleUpdated"
         />
 

@@ -14,14 +14,16 @@
   import {
     ACTIVITY_LABELS,
     cancelBastionOrder,
+    EVENT_LABELS,
     formatLedgerAmount,
     getOrderTitle,
     LEDGER_REASON_LABELS,
     ORDER_STATUS_COLORS,
   } from '../model';
+  import { BastionEventCard } from './ui';
 
   /**
-   * Журнал бастиона: приказы, ходы и казна. Приказ текущего хода можно
+   * Журнал бастиона: приказы, события, ходы и казна. Приказ текущего хода можно
    * отменить — цена вернётся в казну.
    */
   const { bastion, activity } = defineProps<{
@@ -37,6 +39,7 @@
 
   const tabs: Array<TabsItem> = [
     { label: ACTIVITY_LABELS.ordersTab, slot: 'orders', value: 'orders' },
+    { label: EVENT_LABELS.tab, slot: 'events', value: 'events' },
     { label: ACTIVITY_LABELS.turnsTab, slot: 'turns', value: 'turns' },
     { label: ACTIVITY_LABELS.ledgerTab, slot: 'ledger', value: 'ledger' },
   ];
@@ -157,6 +160,28 @@
             </p>
           </li>
         </ul>
+      </template>
+
+      <template #events>
+        <p
+          v-if="!activity?.events.length"
+          class="text-sm text-muted"
+        >
+          {{ EVENT_LABELS.empty }}
+        </p>
+
+        <div
+          v-else
+          class="flex flex-col gap-2"
+        >
+          <BastionEventCard
+            v-for="event in activity.events"
+            :key="event.id"
+            :bastion
+            :event
+            @updated="emit('updated', $event)"
+          />
+        </div>
       </template>
 
       <template #turns>
