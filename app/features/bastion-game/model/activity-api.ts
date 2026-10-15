@@ -19,14 +19,6 @@ function bastionPath(bastionId: string, suffix: string): string {
   return `${PLAYER_BASTIONS_API_PATH}/${bastionId}${suffix}`;
 }
 
-/**
- * Отправляет правку бастиона и разбирает ответ — бастион после правки.
- *
- * @param path Адрес ручки.
- * @param method Метод.
- * @param body Тело запроса.
- * @returns Бастион после правки.
- */
 /** Существо, которое вербует зверинец: из таблицы или (у мастера) любое другое. */
 export interface MenagerieRecruit {
   beast?: string;
@@ -35,6 +27,14 @@ export interface MenagerieRecruit {
   challenge?: string;
 }
 
+/**
+ * Отправляет правку бастиона и разбирает ответ — бастион после правки.
+ *
+ * @param path Адрес ручки.
+ * @param method Метод.
+ * @param body Тело запроса.
+ * @returns Бастион после правки.
+ */
 async function mutateBastion(
   path: string,
   method: 'POST' | 'PATCH' | 'DELETE',
