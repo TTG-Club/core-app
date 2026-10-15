@@ -1,13 +1,17 @@
 <script setup lang="ts">
   import type { BastionActivity, PlayerBastion } from '../model';
 
+  import { fillTemplate } from '~bastions/model';
+  import { ConfirmDialog } from '~initiative/ui-kit';
+
   import { useBastionAction } from '../composables';
-  import { ACTIVITY_LABELS, giveBastionOrder } from '../model';
+  import { ACTIVITY_LABELS, getOrderTitle, giveBastionOrder } from '../model';
   import { TreasuryModal, TurnModal } from './ui';
 
   /**
    * Действия запущенного бастиона: «Обслуживать» — мастеру и игрокам с
-   * доступом, ход и казна — только мастеру.
+   * доступом, ход и казна — только мастеру. «Обслуживать» отменяет приказы,
+   * которые сооружения ещё выполняют, — перед этим спрашивает подтверждение.
    */
   const { bastion, activity } = defineProps<{
     bastion: PlayerBastion;
@@ -22,6 +26,7 @@
 
   const isTurnOpen = ref(false);
   const isTreasuryOpen = ref(false);
+  const isMaintainConfirmOpen = ref(false);
 
   const isActive = computed(() => bastion.status === 'ACTIVE');
 
@@ -32,16 +37,52 @@
         || bastion.members.some((member) => member.canGiveOrders)),
   );
 
-  /** Отдаёт «Обслуживать» всему бастиону. */
-  async function maintain(): Promise<void> {
+  /** Приказы сооружений, которые ещё выполняются: «Обслуживать» их отменит. */
+  const activeOrders = computed(
+    () =>
+      activity?.orders.filter(
+        (order) =>
+          order.status === 'ACTIVE' && order.order.value !== 'MAINTAIN',
+      ) ?? [],
+  );
+
+  const maintainCancelDescription = computed(() =>
+    fillTemplate(ACTIVITY_LABELS.maintainCancelDescription, {
+      orders: activeOrders.value.map(getOrderTitle).join(', '),
+    }),
+  );
+
+  /**
+   * Отдаёт «Обслуживать» всему бастиону.
+   *
+   * @param cancelActive Отменить приказы, которые ещё выполняются.
+   */
+  async function giveMaintain(cancelActive: boolean): Promise<void> {
     const updated = await run(
-      () => giveBastionOrder(bastion.id, { order: 'MAINTAIN' }),
+      () =>
+        giveBastionOrder(bastion.id, {
+          order: 'MAINTAIN',
+          ...(cancelActive ? { cancelActive } : {}),
+        }),
       ACTIVITY_LABELS.orderGiven,
     );
+
+    isMaintainConfirmOpen.value = false;
 
     if (updated) {
       emit('updated', updated);
     }
+  }
+
+  /** «Обслуживать»: если сооружения заняты, сначала спрашивает подтверждение. */
+  function maintain(): void {
+    if (activeOrders.value.length) {
+      isMaintainConfirmOpen.value = true;
+
+      return;
+    }
+
+    void giveMaintain(false);
   }
 </script>
 
@@ -64,6 +105,19 @@
         {{ ACTIVITY_LABELS.maintainOrder }}
       </UButton>
     </UTooltip>
+
+    <ConfirmDialog
+      v-if="canMaintain"
+      v-model:open="isMaintainConfirmOpen"
+      :title="ACTIVITY_LABELS.maintainCancelTitle"
+      :description="maintainCancelDescription"
+      :confirm-label="ACTIVITY_LABELS.cancel"
+      :cancel-label="ACTIVITY_LABELS.maintainCancelNo"
+      confirm-color="warning"
+      confirm-icon="tabler:tool"
+      :loading="isRunning"
+      @confirm="giveMaintain(true)"
+    />
 
     <template v-if="bastion.canManage">
       <UButton
