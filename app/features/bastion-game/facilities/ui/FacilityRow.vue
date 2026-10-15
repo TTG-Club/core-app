@@ -9,6 +9,7 @@
   import {
     ACTIVITY_LABELS,
     FACILITY_SETUP_LABELS,
+    getArtisanToolIcon,
     getOrderSubject,
   } from '../../model';
 
@@ -152,8 +153,39 @@
     }),
   );
 
+  /**
+   * Выбор инструментов ремесленников: каждый выбранный вариант узнаётся как
+   * инструмент.
+   *
+   * @param options Выбранные варианты.
+   * @returns true, если все варианты — инструменты.
+   */
+  function isToolChoice(options: Array<string>): boolean {
+    return (
+      options.length > 0
+      && options.every((option) => !!getArtisanToolIcon(option))
+    );
+  }
+
+  /**
+   * Выборы, где каждый вариант — инструмент ремесленника, показываются
+   * значками в ряду с наёмниками: длинный список инструментов мастерской
+   * занимал полстроки. Название — в подсказке.
+   */
+  const toolIcons = computed(() =>
+    facility.choices
+      .filter((choice) => isToolChoice(choice.options))
+      .flatMap((choice) =>
+        choice.options.map((option) => ({
+          name: option,
+          icon: getArtisanToolIcon(option) ?? '',
+        })),
+      ),
+  );
+
   const choicesText = computed(() =>
     facility.choices
+      .filter((choice) => !isToolChoice(choice.options))
       .map((choice) => `${choice.name}: ${choice.options.join(', ')}`)
       .join('; '),
   );
@@ -191,6 +223,24 @@
 
         <!-- Значки сами по себе ничего не говорят вслух, поэтому число
           людей идёт и подсказкой, и `aria-label` -->
+        <div
+          v-if="toolIcons.length"
+          class="flex items-center gap-1"
+        >
+          <UTooltip
+            v-for="tool in toolIcons"
+            :key="tool.name"
+            :text="tool.name"
+          >
+            <UIcon
+              :name="tool.icon"
+              class="size-4 text-toned"
+              role="img"
+              :aria-label="tool.name"
+            />
+          </UTooltip>
+        </div>
+
         <UTooltip
           v-if="hirelingIcons.length"
           :text="hirelingsHint"
