@@ -69,6 +69,9 @@ export const ACTIVITY_LABELS = {
   optionPlaceholder: 'Без варианта',
   optionTerms: '{days} дн. · {cost}',
   free: 'бесплатно',
+  barrackRecruit:
+    'Барак бесплатно нанимает до 4 защитников. Сейчас защитников: {count} из {capacity}.',
+  barrackFull: 'Барак полон: защитников {count} из {capacity}.',
   costNote: 'цена по правилу: {note}',
   note: 'Пояснение',
   notePlaceholder: 'Тема исследования, что изготовить',

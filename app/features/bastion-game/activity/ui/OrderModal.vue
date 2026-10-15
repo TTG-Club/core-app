@@ -6,6 +6,7 @@
     PlayerBastionFacility,
   } from '../../model';
 
+  import { fillTemplate } from '~bastions/model';
   import { UiModalActions } from '~ui/modal-actions';
 
   import { useBastionAction } from '../../composables';
@@ -49,6 +50,50 @@
     ),
   );
 
+  /** Вербовка в бараке: защитники нанимаются бесплатно, пока есть место. */
+  const isBarrackRecruit = computed(
+    () => order.value === 'RECRUIT' && !!facility.defenderCapacity,
+  );
+
+  const isBarrackFull = computed(
+    () =>
+      isBarrackRecruit.value
+      && (facility.defenders ?? 0) >= (facility.defenderCapacity ?? 0),
+  );
+
+  const barrackText = computed(() => {
+    if (!isBarrackRecruit.value) {
+      return '';
+    }
+
+    return fillTemplate(
+      isBarrackFull.value
+        ? ACTIVITY_LABELS.barrackFull
+        : ACTIVITY_LABELS.barrackRecruit,
+      {
+        count: facility.defenders ?? 0,
+        capacity: facility.defenderCapacity ?? 0,
+      },
+    );
+  });
+
+  const barrackTextClass = computed(() =>
+    isBarrackFull.value ? 'text-warning' : 'text-muted',
+  );
+
+  /**
+   * Условия варианта для подписи. В бараке защитники вербуются бесплатно,
+   * какую бы цену ни указал справочник, — так же считает сервер.
+   *
+   * @param option Вариант приказа.
+   * @returns Подпись «7 дн. · бесплатно».
+   */
+  function getTermsText(option: FacilityOrderOptionDetail): string {
+    return getOptionTermsText(
+      isBarrackRecruit.value ? { ...option, cost: 0, costNote: null } : option,
+    );
+  }
+
   const optionItems = computed(() =>
     options.value
       .filter(
@@ -58,7 +103,7 @@
           && (option.minLevel ?? 0) <= characterLevel,
       )
       .map((option) => ({
-        label: `${option.name} — ${getOptionTermsText(option)}`,
+        label: `${option.name} — ${getTermsText(option)}`,
         value: option.name ?? '',
       })),
   );
@@ -70,21 +115,26 @@
     ),
   );
 
-  // Окно живёт вместе со страницей: при открытии — первый приказ сооружения
-  // и свежие варианты из справочника.
-  watch(isOpen, async (opened) => {
-    if (!opened) {
-      return;
-    }
+  // При открытии — первый приказ сооружения и свежие варианты из справочника.
+  // Окно монтируется уже открытым (по выбору сооружения), поэтому первое
+  // открытие ловим сразу, а не только по смене флага.
+  watch(
+    isOpen,
+    async (opened) => {
+      if (!opened) {
+        return;
+      }
 
-    order.value = orderItems.value[0]?.value;
-    optionName.value = undefined;
-    note.value = '';
+      order.value = orderItems.value[0]?.value;
+      optionName.value = undefined;
+      note.value = '';
 
-    options.value = await fetchFacilityOrderOptions(facility.facilityUrl).catch(
-      () => [],
-    );
-  });
+      options.value = await fetchFacilityOrderOptions(
+        facility.facilityUrl,
+      ).catch(() => []);
+    },
+    { immediate: true },
+  );
 
   watch(order, () => {
     optionName.value = undefined;
@@ -155,6 +205,14 @@
           {{ selectedOption.description }}
         </p>
 
+        <p
+          v-if="barrackText"
+          class="text-sm"
+          :class="barrackTextClass"
+        >
+          {{ barrackText }}
+        </p>
+
         <UFormField :label="ACTIVITY_LABELS.note">
           <UTextarea
             id="bastion-order-note"
@@ -174,7 +232,7 @@
         :submit-label="ACTIVITY_LABELS.submitOrder"
         submit-icon="tabler:check"
         :loading="isRunning"
-        :disabled="!order"
+        :disabled="!order || isBarrackFull"
         @cancel="isOpen = false"
         @submit="submit"
       />

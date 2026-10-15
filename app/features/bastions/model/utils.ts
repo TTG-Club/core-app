@@ -224,6 +224,7 @@ export function normalizeLoadedBastion(
       ? record.choices.map(normalizeLoadedChoice)
       : [],
     repeatable: record.repeatable ?? false,
+    barrack: record.barrack ?? false,
   };
 }
 

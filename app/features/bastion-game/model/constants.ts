@@ -45,6 +45,7 @@ export const FACILITY_SETUP_LABELS = {
   add: 'Добавить',
   remove: 'Убрать',
   hirelings: 'наёмников',
+  defenders: 'защитников: {count} из {capacity}',
   squares: 'кв.',
 } as const;
 

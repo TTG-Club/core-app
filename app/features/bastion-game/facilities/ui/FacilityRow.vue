@@ -108,12 +108,23 @@
     emit('toggle-confirmation', !facility.prerequisiteConfirmed);
   }
 
+  /** Защитники барака: «защитников: 4 из 12»; у других сооружений пусто. */
+  const defendersText = computed(() =>
+    facility.defenderCapacity
+      ? fillTemplate(FACILITY_SETUP_LABELS.defenders, {
+          count: facility.defenders ?? 0,
+          capacity: facility.defenderCapacity,
+        })
+      : '',
+  );
+
   const details = computed(() =>
     [
       `${facility.space.name} (${facility.space.squares} ${FACILITY_SETUP_LABELS.squares})`,
       facility.hirelings
         ? `${facility.hirelings} ${FACILITY_SETUP_LABELS.hirelings}`
         : '',
+      defendersText.value,
     ]
       .filter(Boolean)
       .join(' · '),

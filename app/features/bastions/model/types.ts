@@ -90,6 +90,8 @@ export interface BastionFacilityDetailResponse {
   space?: FacilitySpaceResponse;
   hirelings?: number;
   repeatable?: boolean;
+  /** Барак: размещает защитников бастиона. */
+  barrack?: boolean;
   orders?: Array<BastionLabel<BastionOrderCode>>;
   orderOptions?: Array<FacilityOrderOption>;
   enlargement?: FacilityEnlargement;
@@ -157,6 +159,7 @@ export interface BastionFacilityCreate extends EditorBaseInfoState {
   space: FacilitySpaceCode | undefined;
   hirelings: number | null;
   repeatable: boolean;
+  barrack: boolean;
   orders: Array<BastionOrderCode>;
   orderOptions: Array<FacilityOrderOptionForm>;
   /** `null` — сооружение не расширяется. */
