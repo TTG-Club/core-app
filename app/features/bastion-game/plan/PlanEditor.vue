@@ -4,6 +4,7 @@
     CellSide,
     DoorKind,
     FurnitureKind,
+    PlanSelection,
     PlanTool,
     PlayerBastion,
     RoomKind,
@@ -18,11 +19,14 @@
   import { usePlanEditor, usePlanInteraction } from '../composables';
   import {
     addLevel,
+    canMergeRooms,
     canRemoveLevel,
     createPaletteFacilities,
     getPlanLevels,
+    getSelectedRooms,
     getStairTargetLevel,
     getTowerStairFrame,
+    mergeRooms,
     PLAN_CORRIDOR_WIDTHS,
     PLAN_EDIT_TOOLS,
     PLAN_FURNITURE_ROTATION_STEP,
@@ -30,8 +34,9 @@
     PLAN_LIMITS,
     PLAN_TOOL_GROUPS,
     PLAN_TOOL_HINTS,
+    pruneSelection,
     removeLevel,
-    removeRoom,
+    removeObjects,
     updateRoom,
   } from '../model';
   import {
@@ -69,7 +74,22 @@
 
   const tool = ref<PlanTool>('select');
   const level = ref(0);
-  const selectedRoomId = ref<string>();
+  const selection = shallowRef<PlanSelection>([]);
+
+  /** Единственная выбранная комната: её показывает карточка комнаты. */
+  const selectedRoomId = computed<string | undefined>({
+    get: () => {
+      const [first] = selection.value;
+
+      return selection.value.length === 1 && first?.kind === 'room'
+        ? first.id
+        : undefined;
+    },
+    set: (id) => {
+      selection.value = id ? [{ kind: 'room', id }] : [];
+    },
+  });
+
   const doorKind = ref<DoorKind>('DOOR');
   const stairKind = ref<StairKind>('STRAIGHT');
   const stairTarget = ref<StairTarget>();
@@ -84,6 +104,7 @@
     editor,
     tool,
     level,
+    selection,
     selectedRoomId,
     doorKind,
     stairKind,
@@ -279,12 +300,12 @@
     { immediate: true },
   );
 
-  // Удалённая или отменённая комната больше не выбрана; на другом этаже
-  // выбор тоже снимается — карточка комнаты относится к текущему этажу.
-  watch([selectedRoom, level], ([room, currentLevel]) => {
-    if (!room || room.level !== currentLevel) {
-      selectedRoomId.value = undefined;
-    }
+  // Удалённые или отменённые объекты больше не выбраны; на другом этаже
+  // выбор тоже снимается — он относится к текущему этажу. Цикла нет:
+  // выбор не источник этого наблюдателя, а pruneSelection возвращает тот же
+  // массив, если ничего не ушло.
+  watch([editor.document, level], ([document, currentLevel]) => {
+    selection.value = pruneSelection(document, selection.value, currentLevel);
   });
 
   // Этаж мог пропасть после отмены — тогда показывается первый.
@@ -339,7 +360,7 @@
 
     if (event.key === 'Escape') {
       interaction.cancel();
-      selectedRoomId.value = undefined;
+      selection.value = [];
 
       return;
     }
@@ -351,7 +372,7 @@
       if (visibleArea.value) {
         interaction.clearSelectedArea();
       } else {
-        deleteRoom();
+        deleteSelection();
       }
 
       return;
@@ -412,11 +433,78 @@
     }
   }
 
-  /** Удаляет выбранную комнату. */
-  function deleteRoom(): void {
-    if (selectedRoomId.value) {
-      editor.commit(removeRoom(editor.document.value, selectedRoomId.value));
-      selectedRoomId.value = undefined;
+  const selectedRooms = computed(() =>
+    getSelectedRooms(editor.document.value, selection.value),
+  );
+
+  const canMergeSelected = computed(() => canMergeRooms(selectedRooms.value));
+
+  /** Удаляет все выбранные объекты одним шагом истории. */
+  function deleteSelection(): void {
+    if (selection.value.length) {
+      editor.commit(removeObjects(editor.document.value, selection.value));
+      selection.value = [];
+    }
+  }
+
+  /** Объединяет выбранные комнаты в первую выбранную и выбирает её. */
+  function mergeSelectedRooms(): void {
+    const [target] = selectedRooms.value;
+
+    if (target && canMergeSelected.value) {
+      editor.commit(
+        mergeRooms(
+          editor.document.value,
+          selectedRooms.value.map((room) => room.id),
+        ),
+      );
+
+      selection.value = [{ kind: 'room', id: target.id }];
+    }
+  }
+
+  const isContextMenuOpen = ref(false);
+  const contextMenuPosition = shallowRef({ x: 0, y: 0 });
+
+  /** Невидимая точка, у которой открывается контекстное меню. */
+  const contextMenuContent = computed(() => {
+    const { x, y } = contextMenuPosition.value;
+
+    return {
+      align: 'start' as const,
+      side: 'bottom' as const,
+      reference: { getBoundingClientRect: () => new DOMRect(x, y, 0, 0) },
+    };
+  });
+
+  const contextMenuItems = computed(() => [
+    {
+      label: PLAN_LABELS.mergeRooms,
+      description: canMergeSelected.value
+        ? undefined
+        : PLAN_LABELS.mergeRoomsHint,
+      icon: 'tabler:layers-union',
+      disabled: !canMergeSelected.value,
+      onSelect: mergeSelectedRooms,
+    },
+    {
+      label: PLAN_LABELS.removeSelected,
+      icon: 'tabler:trash',
+      color: 'error' as const,
+      kbds: ['delete'],
+      onSelect: deleteSelection,
+    },
+  ]);
+
+  /**
+   * Правая кнопка без панорамы: меню над несколькими выбранными комнатами.
+   *
+   * @param position Точка окна, где отпустили кнопку.
+   */
+  function handleContextMenu(position: { x: number; y: number }): void {
+    if (editor.canEdit.value && selectedRooms.value.length > 1) {
+      contextMenuPosition.value = position;
+      isContextMenuOpen.value = true;
     }
   }
 
@@ -535,7 +623,7 @@
             :document="editor.document.value"
             :level
             :tool
-            :selected-room-id="selectedRoomId"
+            :selection
             :facility-colors="facilityColors"
             :facility-areas="facilityAreas"
             :preview="interaction.preview.value"
@@ -550,6 +638,13 @@
             @point-up="interaction.handleUp"
             @point-leave="handlePointLeave"
             @wheel-step="handleWheelStep"
+            @context-menu="handleContextMenu"
+          />
+
+          <UDropdownMenu
+            v-model:open="isContextMenuOpen"
+            :items="contextMenuItems"
+            :content="contextMenuContent"
           />
 
           <div class="absolute top-2 right-2 flex gap-1">
@@ -613,7 +708,7 @@
           @rename="renameRoom"
           @change-kind="changeRoomKind"
           @change-facility="changeRoomFacility"
-          @remove="deleteRoom"
+          @remove="deleteSelection"
         />
 
         <PlanRoomList

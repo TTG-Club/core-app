@@ -608,12 +608,7 @@ export function eraseObjectAt(
   level: number,
   point: PlanCell,
 ): PlanDocument {
-  const column = document.columns.find(
-    (item) =>
-      item.level === level
-      && Math.hypot(item.x - point.x, item.y - point.y)
-        < PLAN_HIT_TOLERANCE.column,
-  );
+  const column = findColumnAt(document, level, point);
 
   if (column) {
     return {
@@ -631,14 +626,7 @@ export function eraseObjectAt(
     };
   }
 
-  const stair = document.stairs.find(
-    (item) =>
-      item.level === level
-      && point.x >= item.x
-      && point.x <= item.x + item.width
-      && point.y >= item.y
-      && point.y <= item.y + item.height,
-  );
+  const stair = findStairAt(document, level, point);
 
   if (stair) {
     return {
@@ -1128,6 +1116,50 @@ export function findFurnitureAt(
   });
 }
 
+/**
+ * Лестница под точкой.
+ *
+ * @param document План.
+ * @param level Этаж.
+ * @param point Точка в клетках.
+ * @returns Лестница или undefined.
+ */
+export function findStairAt(
+  document: PlanDocument,
+  level: number,
+  point: PlanCell,
+): PlanStair | undefined {
+  return document.stairs.find(
+    (item) =>
+      item.level === level
+      && point.x >= item.x
+      && point.x <= item.x + item.width
+      && point.y >= item.y
+      && point.y <= item.y + item.height,
+  );
+}
+
+/**
+ * Колонна рядом с точкой.
+ *
+ * @param document План.
+ * @param level Этаж.
+ * @param point Точка в клетках.
+ * @returns Колонна или undefined.
+ */
+export function findColumnAt(
+  document: PlanDocument,
+  level: number,
+  point: PlanCell,
+): PlanColumn | undefined {
+  return document.columns.find(
+    (item) =>
+      item.level === level
+      && Math.hypot(item.x - point.x, item.y - point.y)
+        < PLAN_HIT_TOLERANCE.column,
+  );
+}
+
 const PREMIUM_FURNITURE = new Set<FurnitureKind>(PREMIUM_FURNITURE_KINDS);
 
 /**
@@ -1366,100 +1398,6 @@ export function paintDefenseGates(
           gates.has(getCellKey(cell.x, cell.y)),
         ),
   };
-}
-
-/**
- * Можно ли сдвинуть комнату: на новом месте нет чужих клеток и она не уходит
- * за участок.
- *
- * @param document План.
- * @param room Комната.
- * @param offset Сдвиг в клетках.
- * @returns true, если можно.
- */
-export function canMoveRoom(
-  document: PlanDocument,
-  room: PlanRoom,
-  offset: PlanCell,
-): boolean {
-  const occupancy = getOccupancy(document, room.level);
-
-  return room.cells.every((cell) => {
-    const moved = { x: cell.x + offset.x, y: cell.y + offset.y };
-    const owner = occupancy.get(getCellKey(moved.x, moved.y));
-
-    return isCellOnGrid(moved) && (!owner || owner.id === room.id);
-  });
-}
-
-/**
- * Сдвигает комнату вместе с её дверями, окнами, лестницами и колоннами.
- *
- * @param document План.
- * @param roomId Комната.
- * @param offset Сдвиг в клетках.
- * @returns Новый план или тот же, если сдвиг невозможен.
- */
-export function moveRoom(
-  document: PlanDocument,
-  roomId: string,
-  offset: PlanCell,
-): PlanDocument {
-  const room = document.rooms.find((item) => item.id === roomId);
-
-  if (
-    !room
-    || (offset.x === 0 && offset.y === 0)
-    || !canMoveRoom(document, room, offset)
-  ) {
-    return document;
-  }
-
-  const own = new Set(room.cells.map((cell) => getCellKey(cell.x, cell.y)));
-  const isOwn = (cell: PlanCell) => own.has(getCellKey(cell.x, cell.y));
-
-  const shift = <T extends PlanCell & { level: number }>(item: T): T =>
-    item.level === room.level
-      ? { ...item, x: item.x + offset.x, y: item.y + offset.y }
-      : item;
-
-  const isOnEdge = (edge: PlanEdge) =>
-    edge.level === room.level && getEdgeCells(edge).some(isOwn);
-
-  const moved: PlanRoom = {
-    ...room,
-    cells: room.cells.map((cell) => ({
-      x: cell.x + offset.x,
-      y: cell.y + offset.y,
-    })),
-    shape: room.shape
-      ? {
-          ...room.shape,
-          cx: room.shape.cx + offset.x,
-          cy: room.shape.cy + offset.y,
-        }
-      : undefined,
-  };
-
-  return prunePlan({
-    ...document,
-    rooms: document.rooms.map((item) => (item.id === roomId ? moved : item)),
-    doors: document.doors.map((door) => (isOnEdge(door) ? shift(door) : door)),
-    windows: document.windows.map((item) =>
-      isOnEdge(item) ? shift(item) : item,
-    ),
-    stairs: document.stairs.map((stair) =>
-      stair.level === room.level && isOwn(stair) ? shift(stair) : stair,
-    ),
-    columns: document.columns.map((column) =>
-      column.level === room.level && isOwn(getCellAt(column))
-        ? shift(column)
-        : column,
-    ),
-    furniture: document.furniture.map((item) =>
-      item.level === room.level && isOwn(item) ? shift(item) : item,
-    ),
-  });
 }
 
 /**

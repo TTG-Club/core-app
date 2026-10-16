@@ -6,6 +6,7 @@
     FurnitureKind,
     PlanArea,
     PlanDocument,
+    PlanSelection,
     PlanTool,
   } from '../../model';
   import type { PlanCursor, PlanLayers, TextFactory } from '../renderer';
@@ -14,6 +15,7 @@
   import {
     getLevelCenter,
     PLAN_CELL_PIXELS,
+    PLAN_CONTEXT_MENU_TOLERANCE,
     PLAN_START_FOCUS,
     PLAN_WHEEL_ROTATE_MS,
     PLAN_ZOOM_MAX,
@@ -26,13 +28,15 @@
    * Холст плана на WebGL (PixiJS). Рисует план и сообщает родителю точки
    * указателя в клетках; что с ними делать, решает редактор. Сам холст умеет
    * только панораму и зум: колесо — зум у курсора, средняя или правая кнопка,
-   * пробел или инструмент «рука» — панорама.
+   * пробел или инструмент «рука» — панорама. Щелчок правой кнопкой без сдвига
+   * просит контекстное меню.
    */
   const props = defineProps<{
     document: PlanDocument;
     level: number;
     tool: PlanTool;
-    selectedRoomId: string | undefined;
+    /** Выбранные объекты плана. */
+    selection: PlanSelection;
     facilityColors: ReadonlyMap<string, number>;
     facilityAreas: ReadonlyMap<string, { used: number; squares: number }>;
     preview: PlanPreview | undefined;
@@ -49,7 +53,8 @@
   }>();
 
   const emit = defineEmits<{
-    'point-down': [point: PlanPoint];
+    /** `isAdditive` — зажат Shift или Ctrl: добавить к выбору. */
+    'point-down': [point: PlanPoint, isAdditive: boolean];
     'point-move': [point: PlanPoint, isPressed: boolean];
     'point-up': [];
     'point-leave': [];
@@ -58,6 +63,8 @@
      * меньше), -1 — наоборот.
      */
     'wheel-step': [direction: 1 | -1];
+    /** Щелчок правой кнопкой без панорамы: точка окна, где открыть меню. */
+    'context-menu': [position: { x: number; y: number }];
   }>();
 
   /** Когда Ctrl+колесо последний раз сработало: тачпад шлёт много мелких событий. */
@@ -77,6 +84,9 @@
 
   let isPressed = false;
   let lastPan: { x: number; y: number } | undefined;
+
+  /** Где нажали правую кнопку: если её отпустят рядом, это щелчок. */
+  let rightPressAt: { x: number; y: number } | undefined;
 
   const cursor = computed(() => {
     if (isPanning.value) {
@@ -100,7 +110,7 @@
         document: props.document,
         level: props.level,
         tool: props.tool,
-        selectedRoomId: props.selectedRoomId,
+        selection: props.selection,
         facilityColors: props.facilityColors,
         facilityAreas: props.facilityAreas,
         preview: props.preview,
@@ -156,11 +166,21 @@
       isPanning.value = true;
       lastPan = { x: event.global.x, y: event.global.y };
 
+      rightPressAt =
+        event.button === 2
+          ? { x: event.global.x, y: event.global.y }
+          : undefined;
+
       return;
     }
 
     isPressed = true;
-    emit('point-down', toPlanPoint(event));
+
+    emit(
+      'point-down',
+      toPlanPoint(event),
+      event.shiftKey || event.ctrlKey || event.metaKey,
+    );
   }
 
   /**
@@ -183,11 +203,28 @@
     emit('point-move', toPlanPoint(event), isPressed);
   }
 
-  /** Отпускание: конец панорамы или мазка. */
-  function handlePointerUp(): void {
+  /**
+   * Отпускание: конец панорамы или мазка. Правая кнопка, отпущенная почти там
+   * же, где её нажали, — щелчок для контекстного меню.
+   *
+   * @param event Событие PixiJS.
+   */
+  function handlePointerUp(event: FederatedPointerEvent): void {
     if (isPanning.value) {
       isPanning.value = false;
       lastPan = undefined;
+
+      if (
+        rightPressAt
+        && Math.hypot(
+          event.global.x - rightPressAt.x,
+          event.global.y - rightPressAt.y,
+        ) <= PLAN_CONTEXT_MENU_TOLERANCE
+      ) {
+        emit('context-menu', { x: event.clientX, y: event.clientY });
+      }
+
+      rightPressAt = undefined;
 
       return;
     }
@@ -396,7 +433,7 @@
       props.document,
       props.level,
       props.tool,
-      props.selectedRoomId,
+      props.selection,
       props.facilityColors,
       props.facilityAreas,
       props.preview,

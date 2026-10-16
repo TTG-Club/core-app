@@ -15,6 +15,7 @@ import type {
   PlanOccupancy,
   PlanRoom,
   PlanSegment,
+  PlanSelection,
   PlanStair,
   PlanTool,
 } from '../model';
@@ -33,6 +34,7 @@ import {
   getNearestEdge,
   getOccupancy,
   getRoomLabelPoint,
+  getSelectedIds,
   getTowerApothem,
   getTowerPolygon,
   getTowerRingPoint,
@@ -74,7 +76,8 @@ export interface PlanScene {
   document: PlanDocument;
   level: number;
   tool: PlanTool;
-  selectedRoomId: string | undefined;
+  /** Выбранные объекты плана. */
+  selection: PlanSelection;
   facilityColors: ReadonlyMap<string, number>;
   facilityAreas: ReadonlyMap<string, { used: number; squares: number }>;
   preview: PlanPreview | undefined;
@@ -1124,6 +1127,7 @@ function drawFloors(
   scene: PlanScene,
 ): void {
   const { graphics, theme } = context;
+  const selectedRooms = getSelectedIds(scene.selection, 'room');
 
   for (const room of rooms) {
     if (room.kind === 'TOWER') {
@@ -1142,7 +1146,7 @@ function drawFloors(
       ? scene.facilityColors.get(room.facilityId)
       : undefined;
 
-    const isSelected = room.id === scene.selectedRoomId;
+    const isSelected = selectedRooms.has(room.id);
 
     if (tint === undefined && !isSelected) {
       continue;
@@ -1318,6 +1322,8 @@ export function drawPlan(
     drawDefenseWalls(context, document);
   }
 
+  const selectedRooms = getSelectedIds(scene.selection, 'room');
+
   drawFloors(context, rooms, scene);
   drawWalls(context, occupancy, level);
 
@@ -1325,7 +1331,7 @@ export function drawPlan(
     if (room.kind === 'SQUARE_TOWER') {
       drawSquareTowerWall(context, room, level);
     } else if (room.shape) {
-      drawTower(context, room.shape, room.id === scene.selectedRoomId);
+      drawTower(context, room.shape, selectedRooms.has(room.id));
     }
   }
 
@@ -1414,6 +1420,7 @@ export function drawPlan(
   }
 
   drawRoomLabels(context, rooms, scene);
+  drawSelection({ ...context, graphics: overlay }, scene);
   drawOverlay({ ...context, graphics: overlay }, scene, occupancy);
 
   if (scene.area) {
@@ -1421,6 +1428,85 @@ export function drawPlan(
   }
 
   drawCursors({ ...context, graphics: overlay }, scene.cursors);
+}
+
+/**
+ * Подсветка выбранного: контур комнат цветом акцента поверх стен (круглые и
+ * многоугольные башни подсвечивает их кольцо), рамки лестниц, предметов
+ * интерьера и колонн.
+ *
+ * @param context Кадр со слоем подсказок.
+ * @param scene Сцена.
+ */
+function drawSelection(context: DrawContext, scene: PlanScene): void {
+  const { graphics, theme, hairline } = context;
+  const { document, level, selection } = scene;
+  const roomIds = getSelectedIds(selection, 'room');
+
+  for (const room of document.rooms) {
+    if (room.level !== level || !roomIds.has(room.id) || room.shape) {
+      continue;
+    }
+
+    // Комната отдельно от соседей: контур идёт по всей её границе, у двора
+    // тоже — поэтому вид для расчёта границы обычный.
+    const outlined: PlanRoom = { ...room, kind: 'ROOM' };
+
+    const alone = new Map(
+      room.cells.map((cell) => [getCellKey(cell.x, cell.y), outlined]),
+    );
+
+    for (const segment of getBoundarySegments(alone, level, 'wall')) {
+      graphics
+        .moveTo(segment.fromX * CELL, segment.fromY * CELL)
+        .lineTo(segment.toX * CELL, segment.toY * CELL);
+    }
+  }
+
+  graphics.stroke({ color: theme.accent, width: hairline * 3, cap: 'square' });
+
+  const stairIds = getSelectedIds(selection, 'stair');
+  const furnitureIds = getSelectedIds(selection, 'furniture');
+  const columnIds = getSelectedIds(selection, 'column');
+  const frame = { color: theme.accent, width: hairline * 2 };
+  const fill = { color: theme.accent, alpha: 0.16 };
+
+  for (const stair of document.stairs) {
+    if (stair.level === level && stairIds.has(stair.id)) {
+      graphics
+        .rect(
+          stair.x * CELL,
+          stair.y * CELL,
+          stair.width * CELL,
+          stair.height * CELL,
+        )
+        .fill(fill)
+        .stroke(frame);
+    }
+  }
+
+  for (const item of document.furniture) {
+    if (item.level === level && furnitureIds.has(item.id)) {
+      const { width, depth } = getFurnitureSize(item);
+
+      graphics
+        .rect(item.x * CELL, item.y * CELL, width * CELL, depth * CELL)
+        .fill(fill)
+        .stroke(frame);
+    }
+  }
+
+  for (const column of document.columns) {
+    if (column.level === level && columnIds.has(column.id)) {
+      graphics
+        .circle(
+          column.x * CELL,
+          column.y * CELL,
+          PLAN_SHAPES.columnRadius * CELL + hairline * 3,
+        )
+        .stroke(frame);
+    }
+  }
 }
 
 /**
