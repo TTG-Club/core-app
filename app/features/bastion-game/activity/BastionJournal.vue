@@ -20,7 +20,7 @@
     LEDGER_REASON_LABELS,
     ORDER_STATUS_COLORS,
   } from '../model';
-  import { BastionEventCard } from './ui';
+  import { BastionEventCard, OrderResultEditor } from './ui';
 
   /**
    * Журнал бастиона: приказы, события, ходы и казна. Приказ текущего хода можно
@@ -158,6 +158,13 @@
             >
               {{ order.result }}
             </p>
+
+            <OrderResultEditor
+              v-if="order.canWriteResult"
+              :bastion
+              :order
+              @updated="emit('updated', $event)"
+            />
           </li>
         </ul>
       </template>
