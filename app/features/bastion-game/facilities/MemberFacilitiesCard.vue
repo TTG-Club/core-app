@@ -310,6 +310,7 @@
             :can-remove
             :active-order="getActiveOrder(facility.id)"
             :order-lock="orderLock"
+            :bastion-turn="bastion.turn"
             @order="openOrder(facility)"
             @menagerie="openMenagerie(facility)"
             @enlarge="enlarge(facility.id)"
@@ -334,6 +335,7 @@
             :can-remove
             :active-order="getActiveOrder(facility.id)"
             :order-lock="orderLock"
+            :bastion-turn="bastion.turn"
             @toggle-confirmation="toggleConfirmation(facility.id, $event)"
             @order="openOrder(facility)"
             @menagerie="openMenagerie(facility)"

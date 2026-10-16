@@ -27,6 +27,40 @@ export const LEDGER_REASONS = [
   'REFUND',
   'BUILD',
   'ENLARGE',
+  'EVENT',
+] as const;
+
+/** Таблица «События бастиона», 1к100. */
+export const BASTION_EVENT_TYPES = [
+  'ALL_IS_WELL',
+  'ATTACK',
+  'CRIMINAL_HIRELING',
+  'EXTRAORDINARY_OPPORTUNITY',
+  'FRIENDLY_VISITORS',
+  'GUEST',
+  'LOST_HIRELINGS',
+  'MAGICAL_DISCOVERY',
+  'REFUGEES',
+  'REQUEST_FOR_AID',
+  'TREASURE',
+] as const;
+
+export const BASTION_EVENT_STATUSES = ['PENDING', 'RESOLVED'] as const;
+
+/** Решения по событию: заплатить, отказаться, отправить защитников, записать предмет. */
+export const BASTION_EVENT_DECISIONS = [
+  'PAY',
+  'REFUSE',
+  'SEND',
+  'RECORD',
+] as const;
+
+export const BASTION_GUEST_KINDS = [
+  'CELEBRITY',
+  'SANCTUARY',
+  'DEFENDER',
+  'MONSTER',
+  'REFUGEES',
 ] as const;
 
 const labelSchema = z.object({
@@ -125,6 +159,22 @@ const facilitySchema = z.object({
     .nullish(),
   /** Вольеры зверинца; null — сооружение не зверинец. */
   menagerie: menagerieSchema.nullish(),
+  /** Ход, в который сооружение не работает после события; null — работает. */
+  unavailableOnTurn: z.number().nullish(),
+  /** Почему сооружение не работает. */
+  unavailableReason: z.string().nullish(),
+});
+
+/** Гость бастиона из событий «Гость» и «Беженцы». */
+const guestSchema = z.object({
+  id: z.string(),
+  kind: z.object({ value: z.enum(BASTION_GUEST_KINDS), name: z.string() }),
+  name: z.string(),
+  /** Сколько их: у беженцев 2к4. */
+  count: z.number(),
+  arrivedOnTurn: z.number(),
+  /** Ход, на котором гость уедет сам; null — пока не отошлют. */
+  leavesOnTurn: z.number().nullish(),
 });
 
 const memberSchema = z.object({
@@ -164,6 +214,8 @@ export const playerBastionSchema = z.object({
   /** Владелец разрешил открывшему править бастион по ссылке. */
   editor: z.boolean().nullish(),
   members: z.array(memberSchema),
+  /** Гости бастиона из событий. */
+  guests: z.array(guestSchema).nullish(),
   createdAt: z.string().nullable().optional(),
   updatedAt: z.string().nullable().optional(),
 });
@@ -352,6 +404,43 @@ export const bastionActivitySchema = z.object({
       createdAt: z.string(),
     }),
   ),
+  /** События бастиона: бросок 1к100 после «Обслуживать». */
+  events: z
+    .array(
+      z.object({
+        id: z.string(),
+        memberId: z.string().nullish(),
+        characterName: z.string().nullish(),
+        turn: z.number(),
+        roll: z.number(),
+        type: z.object({
+          value: z.enum(BASTION_EVENT_TYPES),
+          name: z.string(),
+        }),
+        status: z.enum(BASTION_EVENT_STATUSES),
+        summary: z.string(),
+        details: z.object({
+          detailRoll: z.number().nullish(),
+          detail: z.string().nullish(),
+          dice: z.array(z.number()).nullish(),
+          amountGp: z.number().nullish(),
+          facilityId: z.string().nullish(),
+          facilityName: z.string().nullish(),
+          count: z.number().nullish(),
+          lost: z.array(z.string()).nullish(),
+        }),
+        decision: z.enum(BASTION_EVENT_DECISIONS).nullish(),
+        note: z.string().nullish(),
+        parentId: z.string().nullish(),
+        /** Решения, которые событие ждёт; пусто — разрешено само. */
+        decisions: z.array(z.enum(BASTION_EVENT_DECISIONS)),
+        /** Открывший может принять решение: игрок персонажа или мастер. */
+        canDecide: z.boolean(),
+        /** Сколько защитников персонажа можно отправить на помощь. */
+        defenders: z.number(),
+      }),
+    )
+    .default([]),
 });
 
 /** Сооружение справочника целиком — для вариантов приказа. */
@@ -380,3 +469,8 @@ export type FacilityOrderOptionDetail = NonNullable<
   z.infer<typeof facilityDetailSchema>['orderOptions']
 >[number];
 export type LedgerReason = (typeof LEDGER_REASONS)[number];
+export type BastionEvent = BastionActivity['events'][number];
+export type BastionEventType = (typeof BASTION_EVENT_TYPES)[number];
+export type BastionEventDecision = (typeof BASTION_EVENT_DECISIONS)[number];
+export type BastionGuest = z.infer<typeof guestSchema>;
+export type BastionGuestKind = (typeof BASTION_GUEST_KINDS)[number];

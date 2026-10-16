@@ -28,6 +28,7 @@
     canRemove = false,
     activeOrder = undefined,
     orderLock = undefined,
+    bastionTurn = undefined,
   } = defineProps<{
     facility: PlayerBastionFacility;
     /** Мастер может подтвердить требование. */
@@ -40,6 +41,8 @@
     activeOrder?: BastionActivityOrder;
     /** Почему приказы пока не отдаются вовсе — например, бастион в закладке. */
     orderLock?: string;
+    /** Текущий ход бастиона: в этот ход неработающее сооружение приказов не принимает. */
+    bastionTurn?: number;
   }>();
 
   const emit = defineEmits<{
@@ -57,6 +60,16 @@
     () => hasOrders.value && (canAct || !!orderLock),
   );
 
+  /** Сооружение не работает после события бастиона: почему и в какой ход. */
+  const unavailableText = computed(() =>
+    facility.unavailableOnTurn == null
+      ? ''
+      : fillTemplate(ACTIVITY_LABELS.unavailable, {
+          turn: facility.unavailableOnTurn,
+          reason: facility.unavailableReason?.toLowerCase() ?? '',
+        }),
+  );
+
   /** Почему приказ сейчас не отдать; undefined — можно. */
   const orderBlocker = computed(() => {
     if (orderLock) {
@@ -69,6 +82,10 @@
 
     if (!facility.prerequisiteConfirmed) {
       return ACTIVITY_LABELS.orderPrerequisite;
+    }
+
+    if (unavailableText.value && facility.unavailableOnTurn === bastionTurn) {
+      return unavailableText.value;
     }
 
     return activeOrder ? ACTIVITY_LABELS.orderBusy : undefined;
@@ -411,6 +428,7 @@
         || (canAct && facility.enlargeable)
         || canRemove
         || !!facility.menagerie
+        || !!unavailableText
       "
       class="flex flex-wrap items-center justify-end gap-1"
     >
@@ -421,6 +439,20 @@
       >
         {{ occupationText }}
       </span>
+
+      <UTooltip
+        v-if="unavailableText"
+        :text="unavailableText"
+      >
+        <UBadge
+          icon="tabler:tools-off"
+          color="warning"
+          variant="subtle"
+          size="sm"
+        >
+          {{ ACTIVITY_LABELS.unavailableBadge }}
+        </UBadge>
+      </UTooltip>
 
       <UTooltip
         v-if="isOrderVisible"
