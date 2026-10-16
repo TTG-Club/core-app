@@ -382,6 +382,8 @@ export const bastionActivitySchema = z.object({
       note: z.string().nullish(),
       result: z.string().nullish(),
       canCancel: z.boolean(),
+      /** Открывший может записать итог выполненного приказа. */
+      canWriteResult: z.boolean().nullish(),
     }),
   ),
   turns: z.array(

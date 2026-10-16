@@ -5,8 +5,13 @@
   import { ConfirmDialog } from '~initiative/ui-kit';
 
   import { useBastionAction } from '../composables';
-  import { ACTIVITY_LABELS, getOrderTitle, giveBastionOrder } from '../model';
-  import { TreasuryModal, TurnModal } from './ui';
+  import {
+    ACTIVITY_LABELS,
+    getOrderTitle,
+    giveBastionOrder,
+    performBastionTurn,
+  } from '../model';
+  import { TreasuryModal } from './ui';
 
   /**
    * Действия запущенного бастиона: «Обслуживать» — мастеру и игрокам с
@@ -24,7 +29,7 @@
 
   const { isRunning, run } = useBastionAction();
 
-  const isTurnOpen = ref(false);
+  const isTurnConfirmOpen = ref(false);
   const isTreasuryOpen = ref(false);
   const isMaintainConfirmOpen = ref(false);
 
@@ -45,6 +50,41 @@
           order.status === 'ACTIVE' && order.order.value !== 'MAINTAIN',
       ) ?? [],
   );
+
+  const nextTurn = computed(() => bastion.turn + 1);
+
+  const turnTitle = computed(() =>
+    fillTemplate(ACTIVITY_LABELS.turnTitle, { turn: nextTurn.value }),
+  );
+
+  /** Что произойдёт за ход: 7 дней и приказы, которые завершатся. */
+  const turnDescription = computed(() => {
+    const completing = (activity?.orders ?? []).filter(
+      (order) =>
+        order.status === 'ACTIVE' && order.completesOnTurn <= nextTurn.value,
+    );
+
+    return completing.length
+      ? `${ACTIVITY_LABELS.turnHint} ${fillTemplate(
+          ACTIVITY_LABELS.turnCompleting,
+          { orders: completing.map(getOrderTitle).join(', ') },
+        )}`
+      : ACTIVITY_LABELS.turnHint;
+  });
+
+  /** Делает ход бастиона: проходят 7 дней. */
+  async function performTurn(): Promise<void> {
+    const updated = await run(
+      () => performBastionTurn(bastion.id),
+      ACTIVITY_LABELS.turnDone,
+    );
+
+    isTurnConfirmOpen.value = false;
+
+    if (updated) {
+      emit('updated', updated);
+    }
+  }
 
   const maintainCancelDescription = computed(() =>
     fillTemplate(ACTIVITY_LABELS.maintainCancelDescription, {
@@ -131,16 +171,20 @@
 
       <UButton
         icon="tabler:player-track-next"
-        @click.left.exact.prevent="isTurnOpen = true"
+        @click.left.exact.prevent="isTurnConfirmOpen = true"
       >
         {{ ACTIVITY_LABELS.turn }}
       </UButton>
 
-      <TurnModal
-        v-model:open="isTurnOpen"
-        :bastion
-        :activity
-        @updated="emit('updated', $event)"
+      <ConfirmDialog
+        v-model:open="isTurnConfirmOpen"
+        :title="turnTitle"
+        :description="turnDescription"
+        :confirm-label="ACTIVITY_LABELS.turn"
+        :cancel-label="ACTIVITY_LABELS.cancelAction"
+        confirm-icon="tabler:player-track-next"
+        :loading="isRunning"
+        @confirm="performTurn"
       />
 
       <TreasuryModal
