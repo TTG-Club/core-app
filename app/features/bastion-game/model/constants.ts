@@ -45,6 +45,8 @@ export const FACILITY_SETUP_LABELS = {
   add: 'Добавить',
   remove: 'Убрать',
   hirelings: 'Наёмники: {count}',
+  hirelingsMissing:
+    'Наёмники: {count}. Ещё {missing} забрало событие, замену найдут бесплатно',
   defenders: 'Защитники: {count} из {capacity}',
   creatures: 'Зверинец: {names}. Свободно {free} из {capacity} больших мест',
   creaturesEmpty: 'Зверинец пуст. Свободно {free} из {capacity} больших мест',

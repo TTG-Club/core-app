@@ -163,6 +163,8 @@ const facilitySchema = z.object({
   unavailableOnTurn: z.number().nullish(),
   /** Почему сооружение не работает. */
   unavailableReason: z.string().nullish(),
+  /** Наёмники, которых забрало событие и которым ещё ищут замену; null — все на месте. */
+  hirelingsMissing: z.number().nullish(),
 });
 
 /** Гость бастиона из событий «Гость» и «Беженцы». */
