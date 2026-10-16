@@ -463,7 +463,6 @@
         :disabled="!orderBlocker"
       >
         <UButton
-          icon="tabler:send"
           size="xs"
           variant="subtle"
           :disabled="!!orderBlocker"
