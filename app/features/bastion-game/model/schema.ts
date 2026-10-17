@@ -192,6 +192,18 @@ const memberSchema = z.object({
   facilities: z.array(facilitySchema),
 });
 
+/** Защитные стены вокруг бастиона. */
+const defenseWallsSchema = z.object({
+  /** Достроенные блоки (5-футовые квадраты): столько клеток стены можно поставить на план. */
+  built: z.number(),
+  /** Блоки в стройке. */
+  building: z.number(),
+  /** Ход, к которому блоки в стройке достроятся. */
+  readyOnTurn: z.number().nullish(),
+  /** Бастион полностью окружён стенами: при атаке на 2 кубика потерь меньше. */
+  enclosed: z.boolean(),
+});
+
 /** Бастион игроков глазами открывшего (`PlayerBastionResponse` core-api). */
 export const playerBastionSchema = z.object({
   id: z.string(),
@@ -215,11 +227,11 @@ export const playerBastionSchema = z.object({
   editRequests: z.number().nullish(),
   /** Владелец разрешил открывшему править бастион по ссылке. */
   editor: z.boolean().nullish(),
-  /** Сколько блоков защитной стены куплено и построено. */
-  defenseWallBlocks: z.number().int().nonnegative().nullish(),
   members: z.array(memberSchema),
   /** Гости бастиона из событий. */
   guests: z.array(guestSchema).nullish(),
+  /** Защитные стены; нет у ответов старого core-api. */
+  defenseWalls: defenseWallsSchema.nullish(),
   createdAt: z.string().nullable().optional(),
   updatedAt: z.string().nullable().optional(),
 });
