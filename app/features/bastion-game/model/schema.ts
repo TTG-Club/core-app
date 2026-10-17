@@ -345,18 +345,23 @@ export interface PlayerBastionMemberRequest {
   characterLevel: number;
 }
 
-/** Новый бастион: принадлежит создавшему, его персонаж сразу в составе. */
-export interface CreatePlayerBastionRequest {
-  name: string;
-  characterName: string;
-  characterLevel: number;
-}
-
 /** Стартовый выбор сооружений персонажа (`FacilitySetupRequest` core-api). */
 export interface FacilitySetupRequest {
   basic: Array<{ facilityUrl: string; space: FacilitySpaceCode }>;
   special: Array<{ facilityUrl: string; choices: Array<SelectedChoice> }>;
   version: number;
+}
+
+/**
+ * Новый бастион: принадлежит создавшему, его персонаж сразу в составе. Со
+ * стартовыми сооружениями бастион сразу начинает действовать.
+ */
+export interface CreatePlayerBastionRequest {
+  name: string;
+  characterName: string;
+  characterLevel: number;
+  basic?: FacilitySetupRequest['basic'];
+  special?: FacilitySetupRequest['special'];
 }
 
 export interface UpdatePlayerBastionRequest {

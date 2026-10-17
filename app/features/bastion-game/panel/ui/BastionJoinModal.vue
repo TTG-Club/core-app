@@ -5,6 +5,7 @@
 
   import {
     BASTION_JOIN_LABELS,
+    isBastionStatusShown,
     MY_BASTIONS_ROUTE,
     PLAYER_BASTION_STATUS_LABELS,
   } from '../../model';
@@ -40,7 +41,9 @@
     bastions.map((bastion) => ({
       value: bastion.id,
       label: bastion.name,
-      description: PLAYER_BASTION_STATUS_LABELS[bastion.status],
+      description: isBastionStatusShown(bastion.status)
+        ? PLAYER_BASTION_STATUS_LABELS[bastion.status]
+        : undefined,
     })),
   );
 

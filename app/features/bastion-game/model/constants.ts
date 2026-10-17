@@ -98,6 +98,21 @@ export const BASTION_SHARE_LABELS = {
 
 /** Уровень персонажа, с которого у него появляется бастион. */
 export const BASTION_START_LEVEL = 5;
+
+/**
+ * Сколько специализированных сооружений положено персонажу с какого уровня
+ * (`BastionRules.SPECIAL_FACILITY_PROGRESSION` core-api).
+ */
+export const SPECIAL_FACILITY_PROGRESSION: ReadonlyArray<{
+  level: number;
+  count: number;
+}> = [
+  { level: 5, count: 2 },
+  { level: 9, count: 4 },
+  { level: 13, count: 5 },
+  { level: 17, count: 6 },
+];
+
 export const CHARACTER_LEVEL_MIN = 1;
 export const CHARACTER_LEVEL_MAX = 20;
 export const BASTION_NAME_MAX_LENGTH = 100;
@@ -125,7 +140,7 @@ export const BASTION_GAME_LABELS = {
   add: 'Добавить бастион',
   empty: 'В игре пока нет бастионов',
   emptyDescription: 'Добавьте в игру свой бастион из «Моих бастионов»',
-  open: 'Открыть',
+  actions: 'Действия с бастионом',
   edit: 'Изменить',
   archive: 'В архив',
   leaveGame: 'Убрать из игры',
@@ -179,6 +194,8 @@ export const BASTION_FORM_LABELS = {
   create: 'Создать',
   cancel: 'Отмена',
   nameRequired: 'Введите название бастиона',
+  facilitiesHint:
+    'Бастион начинает действовать сразу после создания, поэтому сооружения персонажа выбираются здесь.',
 } as const;
 
 export const BASTION_DETAIL_LABELS = {
