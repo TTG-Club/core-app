@@ -36,10 +36,6 @@
 
 <template>
   <section class="flex flex-col gap-1">
-    <h3 class="text-sm font-semibold text-highlighted">
-      {{ PLAN_LABELS.rooms }}
-    </h3>
-
     <p
       v-if="!rooms.length"
       class="text-sm text-muted"

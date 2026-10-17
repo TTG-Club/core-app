@@ -4,7 +4,6 @@
   import type { PlanPoint, PlanPreview } from '../../composables';
   import type {
     FurnitureKind,
-    PlanArea,
     PlanDocument,
     PlanSelection,
     PlanTool,
@@ -43,8 +42,6 @@
     hoverPoint: PlanPoint | undefined;
     /** Указатели соавторов на этом этаже. */
     cursors: ReadonlyArray<PlanCursor>;
-    /** Выделенный участок на этом этаже. */
-    area: PlanArea | undefined;
     furnitureKind: FurnitureKind;
     /** Поворот предмета, который поставит инструмент мебели. */
     furnitureRotation: number;
@@ -116,7 +113,6 @@
         preview: props.preview,
         hoverPoint: props.hoverPoint,
         cursors: props.cursors,
-        area: props.area,
         furnitureKind: props.furnitureKind,
         furnitureRotation: props.furnitureRotation,
         spiralSide: props.spiralSide,
@@ -318,7 +314,8 @@
   }
 
   /**
-   * Показывает на старте середину этажа или угол участка, если он пуст.
+   * Ставит середину этажа в центр холста, не меняя масштаб; на пустом этаже —
+   * угол участка.
    */
   function centerView(): void {
     if (!world || !application) {
@@ -439,7 +436,6 @@
       props.preview,
       props.hoverPoint,
       props.cursors,
-      props.area,
       props.furnitureKind,
       props.furnitureRotation,
       props.spiralSide,
@@ -447,14 +443,13 @@
     render,
   );
 
-  /** Сбрасывает масштаб и показывает середину этажа. */
-  function resetView(): void {
-    world?.scale.set(1);
+  /** Кнопка «Центрировать»: середина нарисованного — в центр холста. */
+  function centerPlan(): void {
     centerView();
     render();
   }
 
-  defineExpose({ resetView, zoomStep });
+  defineExpose({ centerPlan, zoomStep });
 </script>
 
 <template>
