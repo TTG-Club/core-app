@@ -29,6 +29,7 @@ export const LEDGER_REASONS = [
   'ENLARGE',
   'WALL',
   'EVENT',
+  'SALE',
 ] as const;
 
 /** Таблица «События бастиона», 1к100. */
@@ -78,6 +79,45 @@ const entityRefSchema = z.object({
 const selectedChoiceSchema = z.object({
   name: z.string(),
   options: z.array(z.string()),
+});
+
+/**
+ * Конюшня. Место считается в половинах большого животного: большое занимает
+ * 2, маленькое или среднее — 1.
+ */
+const stableSchema = z.object({
+  capacity: z.number(),
+  occupied: z.number(),
+  animals: z.array(
+    z.object({
+      id: z.string(),
+      /** Животное из таблицы; null — другое, с согласия Мастера. */
+      kind: z.string().nullish(),
+      name: z.string(),
+      size: labelSchema.nullish(),
+      space: z.number(),
+      /** Обычная цена, зм. */
+      cost: z.number(),
+      arrivedOnTurn: z.number(),
+      /** Прожило в конюшне 14 дней: Уход за животными с преимуществом. */
+      bonded: z.boolean(),
+      /** Статблок в бестиарии; null — не найден. */
+      bestiaryUrl: z.string().nullish(),
+    }),
+  ),
+  /** Таблица «Верховые и прочие животные». */
+  kinds: z.array(
+    z.object({
+      value: z.string(),
+      name: z.string(),
+      size: labelSchema.nullish(),
+      space: z.number(),
+      cost: z.number(),
+      bestiaryUrl: z.string().nullish(),
+    }),
+  ),
+  /** На сколько процентов дороже обычной цены покупатель платит при продаже. */
+  saleBonusPercent: z.number(),
 });
 
 /**
@@ -160,6 +200,8 @@ const facilitySchema = z.object({
     .nullish(),
   /** Вольеры зверинца; null — сооружение не зверинец. */
   menagerie: menagerieSchema.nullish(),
+  /** Животные конюшни; null — сооружение не конюшня. */
+  stable: stableSchema.nullish(),
   /** Ход, в который сооружение не работает после события; null — работает. */
   unavailableOnTurn: z.number().nullish(),
   /** Почему сооружение не работает. */
@@ -342,6 +384,8 @@ export type PlayerBastionMember = z.infer<typeof memberSchema>;
 export type PlayerBastionFacility = z.infer<typeof facilitySchema>;
 export type BastionMenagerie = z.infer<typeof menagerieSchema>;
 export type MenagerieCreature = BastionMenagerie['creatures'][number];
+export type BastionStable = z.infer<typeof stableSchema>;
+export type StableAnimal = BastionStable['animals'][number];
 export type SelectedChoice = z.infer<typeof selectedChoiceSchema>;
 export type CatalogFacility = z.infer<typeof catalogFacilitySchema>;
 export type FacilitySpaceCode = (typeof FACILITY_SPACES)[number];

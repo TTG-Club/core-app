@@ -2,6 +2,7 @@
   import type {
     BastionActivityOrder,
     PlayerBastionFacility,
+    StableAnimal,
   } from '../../model';
 
   import { BastionFacilityDrawer } from '~bastions/drawer';
@@ -15,6 +16,7 @@
     getOrderSubject,
     getTurnsLeftText,
   } from '../../model';
+  import StableAnimalList from './StableAnimalList.vue';
 
   /**
    * Карточка сооружения персонажа: название открывает описание из справочника, пространство,
@@ -28,6 +30,7 @@
     showPrerequisite = false,
     canAct = false,
     canRemove = false,
+    canEditAnimals = false,
     activeOrder = undefined,
     orderLock = undefined,
     bastionTurn = undefined,
@@ -41,6 +44,8 @@
     canAct?: boolean;
     /** Можно убрать сооружение. */
     canRemove?: boolean;
+    /** Можно забирать животных из конюшни: режим редактирования, игрок персонажа или мастер. */
+    canEditAnimals?: boolean;
     /** Приказ, который сооружение выполняет сейчас. */
     activeOrder?: BastionActivityOrder;
     /** Почему приказы пока не отдаются вовсе — например, бастион в закладке. */
@@ -55,6 +60,7 @@
     'enlarge': [];
     'menagerie': [];
     'remove': [];
+    'remove-animal': [animal: StableAnimal];
   }>();
 
   const overlay = useOverlay();
@@ -442,6 +448,13 @@
         {{ confirmLabel }}
       </UButton>
     </div>
+
+    <StableAnimalList
+      v-if="facility.stable"
+      :stable="facility.stable"
+      :can-remove="canEditAnimals"
+      @remove="emit('remove-animal', $event)"
+    />
 
     <div
       v-if="hasOrders"

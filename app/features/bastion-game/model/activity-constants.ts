@@ -42,6 +42,7 @@ export const LEDGER_REASON_LABELS: Record<LedgerReason, string> = {
   ENLARGE: 'Расширение',
   WALL: 'Защитная стена',
   EVENT: 'Событие',
+  SALE: 'Продажа',
 };
 
 export const BASTION_EVENT_ICONS: Record<BastionEventType, string> = {
@@ -238,6 +239,35 @@ export const ACTIVITY_LABELS = {
   gold: 'зм',
   specialOption: '{name} ({level} ур.)',
   cancelAction: 'Отмена',
+} as const;
+
+export const STABLE_LABELS = {
+  title: 'Животные',
+  occupied: '{occupied} из {capacity} больших мест',
+  empty: 'В конюшне пока нет животных.',
+  bonded:
+    'Живёт в конюшне 14 дней и больше: проверки Мудрости (Уход за животными) с преимуществом',
+  remove: 'Забрать из конюшни',
+  removed: 'Животное забрали из конюшни',
+  mode: 'Сделка',
+  buy: 'Купить',
+  sell: 'Продать',
+  kind: 'Животное',
+  kindPlaceholder: 'Выбери животное',
+  kindTerms: '{name} ({size}) — {cost} зм',
+  custom: 'Другое животное',
+  customName: 'Название',
+  customSize: 'Размер',
+  customCost: 'Обычная цена, зм',
+  sellAnimal: 'Какое животное продать',
+  sellItem: '{name} — {cost} зм',
+  sellPlaceholder: 'Выбери животное',
+  sellTerms:
+    'Покупатель заплатит {price} зм: обычная цена {cost} зм и {bonus}% сверху.',
+  buyTerms:
+    'Займёт 7 дней, полная цена списывается сразу. Свободно {free} из {capacity} больших мест.',
+  noRoom: 'Для этого животного в конюшне нет места.',
+  nothingToSell: 'В конюшне нет животных на продажу.',
 } as const;
 
 export const LAST_TURN_LABELS = {
