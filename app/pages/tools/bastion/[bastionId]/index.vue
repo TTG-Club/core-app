@@ -5,6 +5,7 @@
 
   import {
     BastionActionsBar,
+    BastionDefenseWalls,
     BastionGuests,
     BastionJournal,
     BastionPendingEvents,
@@ -13,6 +14,7 @@
   import {
     activatePlayerBastion,
     BASTION_DETAIL_LABELS,
+    BASTION_EDIT_LABELS,
     BASTION_GAME_LABELS,
     fetchBastionActivity,
     fetchPlayerBastion,
@@ -75,6 +77,28 @@
 
   const isStatusShown = computed(
     () => !!bastion.value && isBastionStatusShown(bastion.value.status),
+  );
+
+  /** Режим редактирования: стройка, новые и разрушение сооружений, стены. */
+  const isEditing = ref(false);
+
+  /** Редактировать есть что: бастион не в архиве, и открывший может строить. */
+  const canToggleEditing = computed(
+    () =>
+      !!bastion.value
+      && bastion.value.status !== 'ARCHIVED'
+      && (bastion.value.canEdit
+        || bastion.value.members.some(
+          (member) => member.canGiveOrders || member.canEditFacilities,
+        )),
+  );
+
+  const editButtonLabel = computed(() =>
+    isEditing.value ? BASTION_EDIT_LABELS.done : BASTION_EDIT_LABELS.edit,
+  );
+
+  const editButtonIcon = computed(() =>
+    isEditing.value ? 'tabler:check' : 'tabler:pencil',
   );
 
   /** Тот, кто ведёт бастион, может запустить его, пока тот в закладке. */
@@ -196,6 +220,20 @@
               {{ PLAN_LABELS.open }}
             </UButton>
 
+            <UTooltip
+              v-if="canToggleEditing"
+              :text="BASTION_EDIT_LABELS.hint"
+            >
+              <UButton
+                :icon="editButtonIcon"
+                :variant="isEditing ? 'solid' : 'subtle'"
+                :color="isEditing ? 'primary' : 'neutral'"
+                @click.left.exact.prevent="isEditing = !isEditing"
+              >
+                {{ editButtonLabel }}
+              </UButton>
+            </UTooltip>
+
             <UButton
               v-if="canActivate"
               icon="tabler:player-play"
@@ -231,6 +269,12 @@
           @updated="handleUpdated"
         />
 
+        <BastionDefenseWalls
+          :bastion
+          :editing="isEditing"
+          @updated="handleUpdated"
+        />
+
         <h2 class="text-base font-semibold text-highlighted">
           {{ BASTION_DETAIL_LABELS.members }}
         </h2>
@@ -248,6 +292,7 @@
           :bastion
           :member
           :activity="activity ?? undefined"
+          :editing="isEditing"
           @updated="handleUpdated"
         />
 

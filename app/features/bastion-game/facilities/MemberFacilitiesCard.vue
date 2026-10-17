@@ -30,19 +30,23 @@
   import { FacilityCard, FacilitySetupSlideover } from './ui';
 
   /**
-   * Персонаж в бастионе и его сооружения: базовые и специализированные, с
+   * Персонаж в бастионе и его сооружения: специализированные и базовые, с
    * подтверждением требований для мастера и кнопкой выбора для игрока. У
-   * сооружения видно, простаивает оно или выполняет приказ.
+   * сооружения видно, простаивает оно или выполняет приказ. Строить, добавлять
+   * и разрушать сооружения можно только в режиме редактирования.
    */
   const {
     bastion,
     member,
     activity = undefined,
+    editing = false,
   } = defineProps<{
     bastion: PlayerBastion;
     member: PlayerBastionMember;
     /** Журнал бастиона: из него — приказы, которые сооружения выполняют. */
     activity?: BastionActivity;
+    /** Включён режим редактирования бастиона. */
+    editing?: boolean;
   }>();
 
   const emit = defineEmits<{
@@ -88,23 +92,29 @@
     }),
   );
 
+  /** Строить новые базовые можно в режиме редактирования. */
+  const canBuild = computed(() => editing && member.canGiveOrders);
+
   /** Лимит специализированных по уровню ещё не выбран. */
   const canAddSpecial = computed(
     () =>
-      member.canGiveOrders
+      editing
+      && member.canGiveOrders
       && specialFacilities.value.length < member.specialFacilityLimit,
   );
 
   const isSetup = computed(() => bastion.status === 'SETUP');
 
   /**
-   * В закладке ошибочно выбранное сооружение убирает игрок персонажа или тот,
-   * кто ведёт бастион; в запущенном — только тот, кто ведёт.
+   * Разрушить сооружение можно в режиме редактирования: в закладке — игроку
+   * персонажа или тому, кто ведёт бастион, в запущенном — только тому, кто ведёт.
    */
-  const canRemove = computed(() =>
-    isSetup.value
-      ? member.canEditFacilities
-      : member.canGiveOrders && bastion.canManage,
+  const canRemove = computed(
+    () =>
+      editing
+      && (isSetup.value
+        ? member.canEditFacilities
+        : member.canGiveOrders && bastion.canManage),
   );
 
   /** Пока бастион в закладке, кнопка приказа видна, но объясняет, почему ждёт. */
@@ -257,7 +267,7 @@
           </UButton>
 
           <UButton
-            v-if="member.canGiveOrders"
+            v-if="canBuild"
             icon="tabler:hammer"
             color="neutral"
             variant="subtle"

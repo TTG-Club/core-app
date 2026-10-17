@@ -40,6 +40,7 @@ export const LEDGER_REASON_LABELS: Record<LedgerReason, string> = {
   REFUND: 'Возврат',
   BUILD: 'Постройка',
   ENLARGE: 'Расширение',
+  WALL: 'Защитная стена',
   EVENT: 'Событие',
 };
 
@@ -215,7 +216,7 @@ export const ACTIVITY_LABELS = {
   addSpecialDone: 'Сооружение добавлено',
   enlarge: 'Расширить',
   enlargeDone: 'Расширение началось',
-  remove: 'Убрать',
+  remove: 'Разрушить',
   idle: 'Простаивает',
   busyOrder: 'Выполняет «{order}» до хода {turn}',
   busyOrderOption: 'Выполняет «{order}: {option}» до хода {turn}',
@@ -225,10 +226,10 @@ export const ACTIVITY_LABELS = {
   orderAfterStart: 'Приказы отдаются, когда бастион запущен',
   unavailable: 'Не работает в ход {turn}: {reason}',
   unavailableBadge: 'Не работает',
-  removeTitle: 'Убрать сооружение?',
+  removeTitle: 'Разрушить сооружение?',
   removeDescription:
     'Незавершённые приказы сооружения отменятся без возврата денег, клетки исчезнут с плана.',
-  removeDone: 'Сооружение убрано',
+  removeDone: 'Сооружение разрушено',
   building: 'Строится, готово на ходу {turn}',
   enlarging: 'Расширяется до «{space}», готово на ходу {turn}',
   actionError: 'Не удалось выполнить действие',
@@ -236,4 +237,31 @@ export const ACTIVITY_LABELS = {
   gold: 'зм',
   specialOption: '{name} ({level} ур.)',
   cancelAction: 'Отмена',
+} as const;
+
+/** Защитная стена: цена и срок 5-футового квадрата (`BastionRules` core-api). */
+export const DEFENSE_WALL_COST_PER_SQUARE = 250;
+export const DEFENSE_WALL_DAYS_PER_SQUARE = 10;
+/** Больше блоков за раз сервер не строит. */
+export const DEFENSE_WALL_MAX_SQUARES = 1000;
+
+export const DEFENSE_WALL_LABELS = {
+  title: 'Защитные стены',
+  hint: 'Стена высотой 20 футов вокруг бастиона. Блок — 5-футовый квадрат: 250 зм и 10 дней стройки, блоки строятся друг за другом. На план ставятся только достроенные блоки. Если бастион полностью окружён стенами, при атаке потери защитников бросаются на 2 кубика меньше.',
+  built: 'Построено блоков: {count}',
+  none: 'Стен пока нет',
+  building: 'Строится блоков: {count}, готово на ходу {turn}',
+  enclosed: 'Бастион окружён стенами',
+  build: 'Построить стену',
+  buildTitle: 'Защитная стена',
+  squares: 'Сколько блоков построить',
+  terms: '{cost} зм · {days} дн. (ходов: {turns})',
+  buildDone: 'Стройка стены началась',
+  busy: 'Новые блоки можно заказать, когда достроится текущая партия',
+} as const;
+
+export const BASTION_EDIT_LABELS = {
+  edit: 'Редактировать',
+  done: 'Готово',
+  hint: 'Режим редактирования: можно строить, добавлять и разрушать сооружения',
 } as const;

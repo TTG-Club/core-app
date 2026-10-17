@@ -1,6 +1,7 @@
 export { default as AddSpecialModal } from './AddSpecialModal.vue';
 export { default as BastionEventCard } from './BastionEventCard.vue';
 export { default as BuildBasicModal } from './BuildBasicModal.vue';
+export { default as DefenseWallModal } from './DefenseWallModal.vue';
 export { default as MenagerieModal } from './MenagerieModal.vue';
 export { default as OrderModal } from './OrderModal.vue';
 export { default as OrderResultEditor } from './OrderResultEditor.vue';

@@ -11,6 +11,9 @@ import {
   ACTIVITY_LABELS,
   BASIC_BUILD_TERMS,
   DAYS_PER_TURN,
+  DEFENSE_WALL_COST_PER_SQUARE,
+  DEFENSE_WALL_DAYS_PER_SQUARE,
+  DEFENSE_WALL_LABELS,
 } from './activity-constants';
 import { BASTION_ORDERS } from './schema';
 
@@ -78,6 +81,22 @@ export function getBuildTermsText(space: FacilitySpaceCode): string {
     cost: terms.cost,
     days: terms.days,
     turns: getTurnsFor(terms.days),
+  });
+}
+
+/**
+ * Цена и срок постройки блоков защитной стены: блоки строятся друг за другом.
+ *
+ * @param squares Сколько блоков.
+ * @returns «750 зм · 30 дн. (ходов: 5)».
+ */
+export function getDefenseWallTermsText(squares: number): string {
+  const days = squares * DEFENSE_WALL_DAYS_PER_SQUARE;
+
+  return fillTemplate(DEFENSE_WALL_LABELS.terms, {
+    cost: squares * DEFENSE_WALL_COST_PER_SQUARE,
+    days,
+    turns: getTurnsFor(days),
   });
 }
 
