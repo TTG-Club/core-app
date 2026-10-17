@@ -290,6 +290,17 @@
       : '';
   });
 
+  // Комнаты этажа и сооружения на отдельных вкладках: вместе список не
+  // помещался в панель.
+  const sideTabs = [
+    { label: PLAN_LABELS.rooms, value: 'rooms', slot: 'rooms' as const },
+    {
+      label: PLAN_LABELS.facilities,
+      value: 'facilities',
+      slot: 'facilities' as const,
+    },
+  ];
+
   const wallsBlocksText = computed(() =>
     wallLimit.value === undefined
       ? ''
@@ -737,12 +748,24 @@
           @remove="deleteSelection"
         />
 
-        <PlanRoomList
-          v-model:selected="selectedRoomId"
-          :rooms="levelRooms"
-        />
+        <UTabs
+          :items="sideTabs"
+          default-value="rooms"
+          variant="link"
+          size="sm"
+          :ui="{ list: 'w-full', trigger: 'grow' }"
+        >
+          <template #rooms>
+            <PlanRoomList
+              v-model:selected="selectedRoomId"
+              :rooms="levelRooms"
+            />
+          </template>
 
-        <PlanFacilityList :facilities />
+          <template #facilities>
+            <PlanFacilityList :facilities />
+          </template>
+        </UTabs>
 
         <section
           v-if="wallsText || wallsBlocksText"
