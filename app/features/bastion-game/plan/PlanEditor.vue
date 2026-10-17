@@ -100,8 +100,9 @@
   const furnitureKind = ref<FurnitureKind>('TABLE');
   const furnitureRotation = ref(0);
 
-  // Пока сервер не присылает купленные блоки, стена не ограничена.
-  const wallLimit = computed(() => bastion.defenseWallBlocks ?? undefined);
+  // Ставить можно только достроенные блоки. Старый core-api стены не
+  // присылает — тогда стена не ограничена.
+  const wallLimit = computed(() => bastion.defenseWalls?.built);
 
   const interaction = usePlanInteraction({
     editor,
