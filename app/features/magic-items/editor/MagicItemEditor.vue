@@ -35,6 +35,7 @@
     MagicItemMechanics,
     MagicItemProperties,
     MagicItemRarity,
+    SelectMagicItemTheme,
   } from './ui';
 
   function getInitialState(): MagicItemCreate {
@@ -55,6 +56,7 @@
         type: undefined,
         clarification: undefined,
       },
+      theme: undefined,
       rarity: {
         type: undefined,
         varies: undefined,
@@ -172,6 +174,17 @@
 
             <div class="grid grid-cols-1 gap-4 md:grid-cols-24">
               <MagicItemCategory v-model="state.category" />
+
+              <UFormField
+                class="col-span-full md:col-span-8"
+                :label="MAGIC_ITEM_FORM_LABELS.theme"
+                name="theme"
+              >
+                <SelectMagicItemTheme
+                  v-model="state.theme"
+                  :placeholder="MAGIC_ITEM_FORM_LABELS.themePlaceholder"
+                />
+              </UFormField>
 
               <MagicItemRarity v-model="state.rarity" />
 

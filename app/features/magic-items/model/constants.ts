@@ -80,6 +80,8 @@ export const MAGIC_ITEM_FORM_LABELS = {
   category: 'Категория',
   categoryClarification: 'Уточнение категории',
   categoryClarificationPlaceholder: 'Введи уточнение категории',
+  theme: 'Тематика',
+  themePlaceholder: 'Выбери тематику',
   rarity: 'Редкость',
   rarityPlaceholder: 'Выбери редкость',
   rarityVaries: 'Текст редкости',
