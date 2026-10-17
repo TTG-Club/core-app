@@ -423,6 +423,7 @@ export const PLAN_LABELS = {
   walls: 'Защитная стена',
   wallsSummary: '{cells} кл. · {cost} зм · {days} дн. постройки',
   wallsGroundOnly: 'Защитная стена строится только на первом этаже.',
+  stairsNeedLevel: 'Лестница ведёт на другой этаж: сначала добавьте этаж.',
   wallsBlocks: 'Блоков стены: {placed} из {limit}',
   wallsLimitReached:
     'Все купленные блоки стены уже стоят на плане. Купите ещё блоки в бастионе.',

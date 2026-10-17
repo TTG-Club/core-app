@@ -319,6 +319,17 @@
 
   const isWalled = computed(() => isBastionWalled(editor.document.value));
 
+  // Лестница соединяет этажи: пока этаж один, ставить её некуда.
+  const disabledTools = computed<Partial<Record<PlanTool, string>>>(() =>
+    levels.value.length > 1 ? {} : { stairs: PLAN_LABELS.stairsNeedLevel },
+  );
+
+  watch(disabledTools, (disabled) => {
+    if (disabled[tool.value]) {
+      tool.value = 'select';
+    }
+  });
+
   const toolByKey = new Map(
     PLAN_TOOL_GROUPS.flat().map((option) => [option.key, option.tool]),
   );
@@ -417,7 +428,11 @@
 
     const next = toolByKey.get(key);
 
-    if (next && (editor.canEdit.value || !PLAN_EDIT_TOOLS.has(next))) {
+    if (
+      next
+      && !disabledTools.value[next]
+      && (editor.canEdit.value || !PLAN_EDIT_TOOLS.has(next))
+    ) {
       tool.value = next;
     }
   }
@@ -597,6 +612,7 @@
         v-model:furniture-kind="furnitureKind"
         v-model:tower-shape="towerShape"
         :can-edit="editor.canEdit.value"
+        :disabled-tools="disabledTools"
         :premium="editor.isPremium.value"
         :can-undo="editor.canUndo.value"
         :can-redo="editor.canRedo.value"

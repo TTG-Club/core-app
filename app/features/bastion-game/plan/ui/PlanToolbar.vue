@@ -20,8 +20,10 @@
    * обычными и по подписке владельца бастиона.
    * В режиме просмотра остаётся только «рука» для панорамы.
    */
-  const { canEdit, canUndo, canRedo, premium } = defineProps<{
+  const { canEdit, canUndo, canRedo, premium, disabledTools } = defineProps<{
     canEdit: boolean;
+    /** Недоступные сейчас инструменты и почему: причина видна в подсказке. */
+    disabledTools: Partial<Record<PlanTool, string>>;
     /** У владельца бастиона подписка: предметы по подписке доступны. */
     premium: boolean;
     canUndo: boolean;
@@ -246,8 +248,8 @@
 
         <UTooltip
           v-else
-          :text="option.label"
-          :kbds="[option.key]"
+          :text="disabledTools[option.tool] ?? option.label"
+          :kbds="disabledTools[option.tool] ? [] : [option.key]"
         >
           <UButton
             :icon="option.icon"
@@ -255,6 +257,7 @@
             :aria-pressed="tool === option.tool"
             v-bind="getButtonLook(option)"
             size="sm"
+            :disabled="Boolean(disabledTools[option.tool])"
             @click.left.exact.prevent="tool = option.tool"
           />
         </UTooltip>
