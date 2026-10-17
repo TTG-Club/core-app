@@ -9,7 +9,8 @@
   /**
    * Итоги последнего хода над персонажами: что завершилось и какие события
    * выпали, чтобы не искать их в журнале внизу страницы. События, которые
-   * ждут решения, показывает `BastionPendingEvents`, здесь их нет. Скрытые
+   * ждут решения, показывает `BastionPendingEvents`, здесь о них только
+   * упоминание, если своих итогов у хода нет. Скрытые
    * итоги снова появятся после следующего хода.
    */
   const { bastion, activity } = defineProps<{
@@ -35,12 +36,25 @@
     ),
   );
 
+  /**
+   * Ход, на котором выпали события этих итогов: «Обслуживать» бросает
+   * событие до перехода хода, поэтому у событий итогов хода N номер N − 1.
+   */
+  const eventsTurn = computed(() =>
+    lastTurn.value ? lastTurn.value.number - 1 : undefined,
+  );
+
   const resolvedEvents = computed(
     () =>
       activity?.events.filter(
         (event) =>
-          event.turn === lastTurn.value?.number && event.status !== 'PENDING',
+          event.turn === eventsTurn.value && event.status !== 'PENDING',
       ) ?? [],
+  );
+
+  /** События, которые ждут решения: их показывает `BastionPendingEvents` ниже. */
+  const pendingEvents = computed(
+    () => activity?.events.filter((event) => event.status === 'PENDING') ?? [],
   );
 
   const isVisible = computed(
@@ -53,6 +67,24 @@
       && !lastTurn.value?.summary.length
       && !resolvedEvents.value.length,
   );
+
+  /**
+   * Что написать, когда у хода нет своих итогов: если ниже ждут решения
+   * события, «ничего не произошло» читалось бы как противоречие.
+   */
+  const emptyText = computed(() => {
+    const pending = pendingEvents.value;
+
+    if (!pending.length) {
+      return LAST_TURN_LABELS.nothing;
+    }
+
+    return pending.some((event) => event.turn === eventsTurn.value)
+      ? LAST_TURN_LABELS.pendingNow
+      : fillTemplate(LAST_TURN_LABELS.pendingEarlier, {
+          count: pending.length,
+        });
+  });
 
   const title = computed(() =>
     fillTemplate(LAST_TURN_LABELS.title, {
@@ -114,7 +146,7 @@
         v-if="isEmpty"
         class="text-sm text-muted"
       >
-        {{ LAST_TURN_LABELS.nothing }}
+        {{ emptyText }}
       </p>
 
       <p
