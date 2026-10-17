@@ -4,6 +4,7 @@
     PlayerBastionFacility,
   } from '../../model';
 
+  import { BastionFacilityDrawer } from '~bastions/drawer';
   import { fillTemplate } from '~bastions/model';
 
   import {
@@ -15,7 +16,7 @@
   } from '../../model';
 
   /**
-   * Карточка сооружения персонажа: название со ссылкой на справочник, пространство,
+   * Карточка сооружения персонажа: название открывает описание из справочника, пространство,
    * наёмники, сделанные выборы и состояние требования. У сооружения
    * с приказами видно, простаивает ли оно, и есть кнопка приказа; если
    * приказ сейчас не отдать, подсказка объясняет почему.
@@ -51,6 +52,18 @@
     'menagerie': [];
     'remove': [];
   }>();
+
+  const overlay = useOverlay();
+
+  // Описание открывается дровером поверх страницы бастиона; ссылка остаётся,
+  // чтобы справочник можно было открыть и в новой вкладке.
+  const drawer = overlay.create(BastionFacilityDrawer, {
+    props: {
+      url: facility.facilityUrl,
+      onClose: () => drawer.close(),
+    },
+    destroyOnClose: true,
+  });
 
   const hasOrders = computed(() => facility.orders.length > 0);
 
@@ -292,8 +305,8 @@
     <header class="flex flex-col gap-0.5">
       <ULink
         :to="`/bastions/${facility.facilityUrl}`"
-        target="_blank"
         class="font-medium text-highlighted"
+        @click.left.exact.prevent="drawer.open()"
       >
         {{ facility.name }}
       </ULink>
