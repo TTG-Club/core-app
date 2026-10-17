@@ -442,6 +442,8 @@ export const bastionActivitySchema = z.object({
         canDecide: z.boolean(),
         /** Сколько защитников персонажа можно отправить на помощь. */
         defenders: z.number(),
+        /** Полученный магический предмет из раздела «Магические предметы». */
+        noteUrl: z.string().nullish(),
       }),
     )
     .default([]),

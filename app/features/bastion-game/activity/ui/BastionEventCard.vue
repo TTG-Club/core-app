@@ -6,6 +6,7 @@
   } from '../../model';
 
   import { fillTemplate } from '~bastions/model';
+  import { SelectMagicItem } from '~ui/select';
 
   import { useBastionAction } from '../../composables';
   import {
@@ -32,7 +33,8 @@
   const { isRunning, run } = useBastionAction();
 
   const defenders = ref<number>(1);
-  const note = ref('');
+  /** Выбранный магический предмет: слаг из раздела «Магические предметы». */
+  const itemUrl = ref<string>();
 
   const isPending = computed(() => event.status === 'PENDING');
 
@@ -82,7 +84,31 @@
     () => (event.details.amountGp ?? 0) > bastion.treasuryGp,
   );
 
-  const isRecordDisabled = computed(() => !note.value.trim());
+  const isRecordDisabled = computed(() => !itemUrl.value);
+
+  /** Волшебное открытие даёт необычное зелье или свиток — подсказка в пустом поле. */
+  const recordPlaceholder = computed(() =>
+    event.type.value === 'MAGICAL_DISCOVERY'
+      ? EVENT_LABELS.recordDiscoveryPlaceholder
+      : EVENT_LABELS.recordPlaceholder,
+  );
+
+  /** Полученный предмет ссылкой на его карточку; пусто — записан словами или не получен. */
+  const itemLink = computed(() =>
+    event.noteUrl ? `/magic-items/${event.noteUrl}` : '',
+  );
+
+  /**
+   * Итог события без хвоста «Получено: …», когда предмет показан ссылкой
+   * отдельной строкой: иначе название повторилось бы дважды.
+   */
+  const summaryText = computed(() => {
+    const suffix = ` ${EVENT_LABELS.recordItem} ${event.note}.`;
+
+    return itemLink.value && event.summary.endsWith(suffix)
+      ? event.summary.slice(0, -suffix.length)
+      : event.summary;
+  });
 
   /**
    * Отправляет решение по событию.
@@ -95,7 +121,7 @@
         decideBastionEvent(bastion.id, event.id, {
           decision,
           ...(decision === 'SEND' ? { defenders: defenders.value } : {}),
-          ...(decision === 'RECORD' ? { note: note.value.trim() } : {}),
+          ...(decision === 'RECORD' ? { itemUrl: itemUrl.value } : {}),
         }),
       EVENT_LABELS.decided,
     );
@@ -132,7 +158,22 @@
     </div>
 
     <p class="text-sm text-toned">
-      {{ event.summary }}
+      {{ summaryText }}
+    </p>
+
+    <p
+      v-if="itemLink"
+      class="text-sm text-toned"
+    >
+      {{ EVENT_LABELS.recordItem }}
+
+      <ULink
+        :to="itemLink"
+        target="_blank"
+        class="font-medium text-highlighted"
+      >
+        {{ event.note }}
+      </ULink>
     </p>
 
     <p
@@ -196,13 +237,9 @@
           :label="EVENT_LABELS.recordLabel"
           class="min-w-64 flex-1"
         >
-          <UInput
-            :id="`bastion-event-note-${event.id}`"
-            v-model="note"
-            :maxlength="500"
-            :placeholder="EVENT_LABELS.recordPlaceholder"
-            size="sm"
-            class="w-full"
+          <SelectMagicItem
+            v-model="itemUrl"
+            :placeholder="recordPlaceholder"
           />
         </UFormField>
 

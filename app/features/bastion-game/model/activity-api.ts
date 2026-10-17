@@ -161,7 +161,8 @@ export function removeMenagerieCreature(
  * @param request Решение.
  * @param request.decision Заплатить, отказаться, отправить защитников или записать предмет.
  * @param request.defenders Сколько защитников отправить на помощь.
- * @param request.note Какой предмет получен.
+ * @param request.note Какой предмет получен, словами.
+ * @param request.itemUrl Магический предмет из раздела «Магические предметы».
  * @returns Бастион после решения.
  */
 export function decideBastionEvent(
@@ -171,6 +172,8 @@ export function decideBastionEvent(
     decision: BastionEventDecision;
     defenders?: number;
     note?: string;
+    /** Магический предмет из раздела «Магические предметы»: название сервер берёт сам. */
+    itemUrl?: string;
   },
 ): Promise<PlayerBastion> {
   return mutateBastion(
