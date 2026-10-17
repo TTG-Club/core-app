@@ -27,6 +27,7 @@ export const LEDGER_REASONS = [
   'REFUND',
   'BUILD',
   'ENLARGE',
+  'WALL',
   'EVENT',
 ] as const;
 

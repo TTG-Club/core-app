@@ -284,6 +284,20 @@ export function buildBasicFacility(
 }
 
 /**
+ * Строит блоки защитной стены: цена списывается из казны, блоки достраиваются ходами.
+ *
+ * @param bastionId Бастион.
+ * @param squares Сколько 5-футовых квадратов стены построить.
+ * @returns Бастион после начала стройки.
+ */
+export function buildDefenseWall(
+  bastionId: string,
+  squares: number,
+): Promise<PlayerBastion> {
+  return mutateBastion(bastionPath(bastionId, '/walls'), 'POST', { squares });
+}
+
+/**
  * Добавляет специализированное сооружение, полученное с уровнем.
  *
  * @param bastionId Бастион.

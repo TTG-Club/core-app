@@ -8,6 +8,7 @@
     BASTION_GUEST_ICONS,
     dismissBastionGuest,
     EVENT_LABELS,
+    getTurnsSpanText,
   } from '../model';
 
   /**
@@ -48,7 +49,9 @@
 
     return guest.leavesOnTurn
       ? terms
-          + fillTemplate(EVENT_LABELS.guestLeaves, { turn: guest.leavesOnTurn })
+          + fillTemplate(EVENT_LABELS.guestLeaves, {
+            left: getTurnsSpanText(guest.leavesOnTurn, bastion.turn),
+          })
       : terms;
   }
 

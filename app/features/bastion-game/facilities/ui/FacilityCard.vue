@@ -4,6 +4,7 @@
     PlayerBastionFacility,
   } from '../../model';
 
+  import { BastionFacilityDrawer } from '~bastions/drawer';
   import { fillTemplate } from '~bastions/model';
 
   import {
@@ -12,10 +13,11 @@
     formatMenagerieSpace,
     getArtisanToolIcon,
     getOrderSubject,
+    getTurnsLeftText,
   } from '../../model';
 
   /**
-   * Карточка сооружения персонажа: название со ссылкой на справочник, пространство,
+   * Карточка сооружения персонажа: название открывает описание из справочника, пространство,
    * наёмники, сделанные выборы и состояние требования. У сооружения
    * с приказами видно, простаивает ли оно, и есть кнопка приказа; если
    * приказ сейчас не отдать, подсказка объясняет почему.
@@ -23,6 +25,7 @@
   const {
     facility,
     canConfirm = false,
+    showPrerequisite = false,
     canAct = false,
     canRemove = false,
     activeOrder = undefined,
@@ -32,6 +35,8 @@
     facility: PlayerBastionFacility;
     /** Мастер может подтвердить требование. */
     canConfirm?: boolean;
+    /** Показывать требование и его подтверждение: только в режиме редактирования. */
+    showPrerequisite?: boolean;
     /** Можно отдавать приказы и расширять: бастион запущен, это мастер или игрок персонажа. */
     canAct?: boolean;
     /** Можно убрать сооружение. */
@@ -51,6 +56,18 @@
     'menagerie': [];
     'remove': [];
   }>();
+
+  const overlay = useOverlay();
+
+  // Описание открывается дровером поверх страницы бастиона; ссылка остаётся,
+  // чтобы справочник можно было открыть и в новой вкладке.
+  const drawer = overlay.create(BastionFacilityDrawer, {
+    props: {
+      url: facility.facilityUrl,
+      onClose: () => drawer.close(),
+    },
+    destroyOnClose: true,
+  });
 
   const hasOrders = computed(() => facility.orders.length > 0);
 
@@ -105,7 +122,7 @@
     return activeOrder ? ACTIVITY_LABELS.orderBusy : undefined;
   });
 
-  /** Чем сооружение занято: простаивает или выполняет приказ до хода. */
+  /** Чем сооружение занято: простаивает или выполняет приказ, сколько ходов осталось. */
   const occupationText = computed(() => {
     if (!activeOrder) {
       return ACTIVITY_LABELS.idle;
@@ -116,7 +133,7 @@
     const values = {
       order: activeOrder.order.name,
       option: subject,
-      turn: activeOrder.completesOnTurn,
+      left: getTurnsLeftText(activeOrder.completesOnTurn, bastionTurn),
     };
 
     return subject
@@ -128,18 +145,18 @@
     activeOrder ? 'text-info' : 'text-muted',
   );
 
-  /** Стройка или расширение: подпись с ходом, на котором закончится. */
+  /** Стройка или расширение: подпись с числом оставшихся ходов. */
   const constructionText = computed(() => {
     if (facility.status === 'BUILDING') {
       return fillTemplate(ACTIVITY_LABELS.building, {
-        turn: facility.readyOnTurn ?? '—',
+        left: getTurnsLeftText(facility.readyOnTurn, bastionTurn),
       });
     }
 
     return facility.pendingSpace
       ? fillTemplate(ACTIVITY_LABELS.enlarging, {
           space: facility.pendingSpace.name,
-          turn: facility.pendingReadyOnTurn ?? '—',
+          left: getTurnsLeftText(facility.pendingReadyOnTurn, bastionTurn),
         })
       : '';
   });
@@ -292,8 +309,8 @@
     <header class="flex flex-col gap-0.5">
       <ULink
         :to="`/bastions/${facility.facilityUrl}`"
-        target="_blank"
         class="font-medium text-highlighted"
+        @click.left.exact.prevent="drawer.open()"
       >
         {{ facility.name }}
       </ULink>
@@ -402,7 +419,7 @@
     </p>
 
     <div
-      v-if="facility.prerequisite"
+      v-if="showPrerequisite && facility.prerequisite"
       class="flex flex-wrap items-center gap-2"
     >
       <UBadge
@@ -496,7 +513,7 @@
 
       <UButton
         v-if="canRemove"
-        icon="tabler:trash"
+        icon="tabler:bulldozer"
         size="xs"
         color="error"
         variant="ghost"
