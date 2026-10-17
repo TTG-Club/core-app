@@ -87,6 +87,26 @@
     class="flex flex-col gap-8"
   >
     <section class="flex flex-col gap-3">
+      <h3 class="text-base font-semibold text-highlighted">
+        {{ FACILITY_SETUP_LABELS.specialTitle }}
+      </h3>
+
+      <p
+        v-if="!limit"
+        class="text-sm text-muted"
+      >
+        {{ FACILITY_SETUP_LABELS.specialNone }}
+      </p>
+
+      <SpecialFacilityPicker
+        v-else
+        v-model="draft"
+        :facilities="specialFacilities"
+        :limit
+      />
+    </section>
+
+    <section class="flex flex-col gap-3">
       <div class="flex flex-col gap-1">
         <h3 class="text-base font-semibold text-highlighted">
           {{ FACILITY_SETUP_LABELS.basicTitle }}
@@ -114,26 +134,6 @@
           />
         </UFormField>
       </div>
-    </section>
-
-    <section class="flex flex-col gap-3">
-      <h3 class="text-base font-semibold text-highlighted">
-        {{ FACILITY_SETUP_LABELS.specialTitle }}
-      </h3>
-
-      <p
-        v-if="!limit"
-        class="text-sm text-muted"
-      >
-        {{ FACILITY_SETUP_LABELS.specialNone }}
-      </p>
-
-      <SpecialFacilityPicker
-        v-else
-        v-model="draft"
-        :facilities="specialFacilities"
-        :limit
-      />
     </section>
   </div>
 </template>
