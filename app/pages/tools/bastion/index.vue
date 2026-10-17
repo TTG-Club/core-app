@@ -16,6 +16,7 @@
     BastionCard,
     BastionCreateModal,
     BastionFormModal,
+    BastionShareModal,
   } from '~bastion-game/panel';
   import { fillTemplate } from '~bastions/model';
   import { UiModalActions } from '~ui/modal-actions';
@@ -60,6 +61,7 @@
   const editedBastion = ref<PlayerBastion>();
   const removedBastion = ref<PlayerBastion>();
   const leavingBastion = ref<PlayerBastion>();
+  const sharingBastion = ref<PlayerBastion>();
 
   const isRemoveOpen = computed({
     get: () => !!removedBastion.value,
@@ -75,6 +77,15 @@
     set: (opened: boolean) => {
       if (!opened) {
         leavingBastion.value = undefined;
+      }
+    },
+  });
+
+  const isShareOpen = computed({
+    get: () => !!sharingBastion.value,
+    set: (opened: boolean) => {
+      if (!opened) {
+        sharingBastion.value = undefined;
       }
     },
   });
@@ -158,6 +169,17 @@
     ) {
       isFormOpen.value = false;
     }
+  }
+
+  /**
+   * Подменяет бастион в окне «Поделиться» ответом сервера и обновляет список:
+   * на карточке меняется число запросов на правку.
+   *
+   * @param updated Бастион после изменения доступа.
+   */
+  async function handleShared(updated: PlayerBastion): Promise<void> {
+    sharingBastion.value = updated;
+    await refresh();
   }
 
   /** Удаляет выбранный бастион. */
@@ -278,6 +300,7 @@
           @edit="openEdit(bastion)"
           @leave="leavingBastion = bastion"
           @remove="removedBastion = bastion"
+          @share="sharingBastion = bastion"
         />
       </div>
 
@@ -318,6 +341,13 @@
       :bastion="editedBastion"
       :loading="isSaving"
       @submit="handleSubmit"
+    />
+
+    <BastionShareModal
+      v-if="sharingBastion"
+      v-model:open="isShareOpen"
+      :bastion="sharingBastion"
+      @updated="handleShared"
     />
 
     <UModal

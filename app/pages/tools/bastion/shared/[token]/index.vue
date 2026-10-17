@@ -12,6 +12,7 @@
     getBastionErrorMessage,
     getBastionRoute,
     getSharedBastionPlanRoute,
+    isBastionStatusShown,
     PLAN_LABELS,
     PLAYER_BASTION_STATUS_COLORS,
     PLAYER_BASTION_STATUS_LABELS,
@@ -131,6 +132,7 @@
       <template v-else>
         <div class="flex flex-wrap items-center gap-3 text-sm text-muted">
           <UBadge
+            v-if="isBastionStatusShown(bastion.status)"
             :color="PLAYER_BASTION_STATUS_COLORS[bastion.status]"
             variant="subtle"
           >

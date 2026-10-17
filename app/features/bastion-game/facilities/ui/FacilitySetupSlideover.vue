@@ -7,19 +7,14 @@
 
   import { UiModalActions } from '~ui/modal-actions';
 
-  import { useFacilityCatalog } from '../../composables';
   import {
     createSetupDraft,
     FACILITY_SETUP_LABELS,
-    getAvailableSpecialFacilities,
-    getBasicFacilities,
     getBastionErrorMessage,
-    STARTING_BASIC_SPACE_LABELS,
-    STARTING_BASIC_SPACES,
     toSetupRequest,
     updateMemberFacilities,
   } from '../../model';
-  import SpecialFacilityPicker from './SpecialFacilityPicker.vue';
+  import FacilitySetupForm from './FacilitySetupForm.vue';
 
   /**
    * Стартовый выбор сооружений персонажа: два базовых (тесное и вместительное)
@@ -38,21 +33,9 @@
   }>();
 
   const toast = useToast();
-  const { catalog, status: catalogStatus } = useFacilityCatalog();
 
   const draft = ref<FacilitySetupDraft>(createSetupDraft(member));
   const isSaving = ref(false);
-
-  const basicItems = computed(() =>
-    getBasicFacilities(catalog.value).map((facility) => ({
-      label: facility.name.rus,
-      value: facility.url,
-    })),
-  );
-
-  const specialFacilities = computed(() =>
-    getAvailableSpecialFacilities(catalog.value, member.characterLevel),
-  );
 
   // Панель живёт вместе со страницей: при каждом открытии черновик собирается
   // заново из сохранённого выбора, иначе после отмены остались бы правки.
@@ -99,77 +82,12 @@
     :ui="{ content: 'sm:max-w-2xl' }"
   >
     <template #body>
-      <div
-        v-if="catalogStatus === 'pending' || catalogStatus === 'idle'"
-        class="flex flex-col gap-3"
-      >
-        <USkeleton
-          v-for="index in 4"
-          :key="index"
-          class="h-16"
-        />
-      </div>
-
-      <p
-        v-else-if="catalogStatus === 'error'"
-        class="text-sm text-error"
-      >
-        {{ FACILITY_SETUP_LABELS.catalogError }}
-      </p>
-
-      <div
-        v-else
-        class="flex flex-col gap-8"
-      >
-        <section class="flex flex-col gap-3">
-          <div class="flex flex-col gap-1">
-            <h3 class="text-base font-semibold text-highlighted">
-              {{ FACILITY_SETUP_LABELS.basicTitle }}
-            </h3>
-
-            <p class="text-sm text-muted">
-              {{ FACILITY_SETUP_LABELS.basicHint }}
-            </p>
-          </div>
-
-          <div class="grid gap-3 sm:grid-cols-2">
-            <UFormField
-              v-for="space in STARTING_BASIC_SPACES"
-              :key="space"
-              :label="STARTING_BASIC_SPACE_LABELS[space]"
-            >
-              <USelect
-                :id="`facility-basic-${member.id}-${space}`"
-                v-model="draft.basic[space]"
-                :items="basicItems"
-                value-key="value"
-                :placeholder="FACILITY_SETUP_LABELS.basicPlaceholder"
-                class="w-full"
-              />
-            </UFormField>
-          </div>
-        </section>
-
-        <section class="flex flex-col gap-3">
-          <h3 class="text-base font-semibold text-highlighted">
-            {{ FACILITY_SETUP_LABELS.specialTitle }}
-          </h3>
-
-          <p
-            v-if="!member.specialFacilityLimit"
-            class="text-sm text-muted"
-          >
-            {{ FACILITY_SETUP_LABELS.specialNone }}
-          </p>
-
-          <SpecialFacilityPicker
-            v-else
-            v-model="draft"
-            :facilities="specialFacilities"
-            :limit="member.specialFacilityLimit"
-          />
-        </section>
-      </div>
+      <FacilitySetupForm
+        v-model="draft"
+        :character-level="member.characterLevel"
+        :limit="member.specialFacilityLimit"
+        :id-prefix="`facility-basic-${member.id}`"
+      />
     </template>
 
     <template #footer>

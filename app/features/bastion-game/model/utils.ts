@@ -2,6 +2,7 @@ import type {
   GamePlayer,
   PlayerBastion,
   PlayerBastionMemberRequest,
+  PlayerBastionStatus,
 } from './schema';
 
 import { StatusCodes } from 'http-status-codes';
@@ -140,6 +141,17 @@ export function getBastionErrorMessage(
   }
 
   return fallback;
+}
+
+/**
+ * Показывать ли статус бастиона: «Действует» — обычное состояние, бастион
+ * действует сразу после создания, поэтому отмечаются только закладка и архив.
+ *
+ * @param status Статус бастиона.
+ * @returns true для закладки и архива.
+ */
+export function isBastionStatusShown(status: PlayerBastionStatus): boolean {
+  return status !== 'ACTIVE';
 }
 
 /**

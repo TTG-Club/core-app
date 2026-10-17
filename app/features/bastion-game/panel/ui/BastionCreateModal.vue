@@ -1,20 +1,28 @@
 <script setup lang="ts">
-  import type { CreatePlayerBastionRequest } from '../../model';
+  import type {
+    CreatePlayerBastionRequest,
+    FacilitySetupDraft,
+  } from '../../model';
 
   import { UiModalActions } from '~ui/modal-actions';
 
+  import { FacilitySetupForm } from '../../facilities';
   import {
     BASTION_FORM_LABELS,
     BASTION_NAME_MAX_LENGTH,
     BASTION_START_LEVEL,
     CHARACTER_LEVEL_MAX,
     CHARACTER_LEVEL_MIN,
+    createEmptySetupDraft,
+    getSpecialFacilityLimit,
+    isBasicChosen,
+    toSetupRequest,
   } from '../../model';
 
   /**
-   * Создание своего бастиона: название и персонаж владельца. Персонаж сразу
-   * получает доступ, по его уровню считается лимит специализированных
-   * сооружений.
+   * Создание своего бастиона: название, персонаж владельца и его стартовые
+   * сооружения. Бастион начинает действовать сразу, поэтому без двух базовых
+   * сооружений создать его нельзя.
    */
   const isOpen = defineModel<boolean>('open', { required: true });
 
@@ -29,16 +37,27 @@
   const name = ref('');
   const characterName = ref('');
   const characterLevel = ref(BASTION_START_LEVEL);
+  const draft = ref<FacilitySetupDraft>(createEmptySetupDraft());
 
-  const isValid = computed(() => {
+  const specialLimit = computed(() =>
+    getSpecialFacilityLimit(characterLevel.value),
+  );
+
+  const isNameValid = computed(() => {
     const trimmed = name.value.trim();
 
     return trimmed.length > 0 && trimmed.length <= BASTION_NAME_MAX_LENGTH;
   });
 
+  const isValid = computed(
+    () => isNameValid.value && isBasicChosen(draft.value),
+  );
+
   /** Ошибка поля названия: только когда что-то введено, но не подходит. */
   const nameError = computed(() =>
-    name.value && !isValid.value ? BASTION_FORM_LABELS.nameRequired : undefined,
+    name.value && !isNameValid.value
+      ? BASTION_FORM_LABELS.nameRequired
+      : undefined,
   );
 
   /** Персонаж ниже 5 уровня бастиона по правилам ещё не имеет. */
@@ -57,6 +76,7 @@
     name.value = '';
     characterName.value = '';
     characterLevel.value = BASTION_START_LEVEL;
+    draft.value = createEmptySetupDraft();
   });
 
   /** Закрывает окно без сохранения. */
@@ -70,10 +90,14 @@
       return;
     }
 
+    const { basic, special } = toSetupRequest(draft.value, 0);
+
     emit('submit', {
       name: name.value.trim(),
       characterName: characterName.value.trim(),
       characterLevel: characterLevel.value,
+      basic,
+      special,
     });
   }
 </script>
@@ -82,6 +106,7 @@
   <UModal
     v-model:open="isOpen"
     :title="BASTION_FORM_LABELS.createTitle"
+    :ui="{ content: 'sm:max-w-2xl' }"
   >
     <template #body>
       <div class="flex flex-col gap-5">
@@ -137,6 +162,19 @@
             </UFormField>
           </div>
         </div>
+
+        <USeparator />
+
+        <p class="text-sm text-muted">
+          {{ BASTION_FORM_LABELS.facilitiesHint }}
+        </p>
+
+        <FacilitySetupForm
+          v-model="draft"
+          :character-level="characterLevel"
+          :limit="specialLimit"
+          id-prefix="new-bastion-facility"
+        />
       </div>
     </template>
 
