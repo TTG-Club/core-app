@@ -240,6 +240,12 @@ export const ACTIVITY_LABELS = {
   cancelAction: 'Отмена',
 } as const;
 
+export const LAST_TURN_LABELS = {
+  title: 'Итоги хода {turn}',
+  hide: 'Скрыть итоги хода',
+  nothing: 'За ход ничего не произошло',
+} as const;
+
 /** Формы слова «ход» для «осталось N ходов». */
 export const TURN_FORMS: [string, string, string] = ['ход', 'хода', 'ходов'];
 

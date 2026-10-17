@@ -8,6 +8,7 @@
     BastionDefenseWalls,
     BastionGuests,
     BastionJournal,
+    BastionLastTurn,
     BastionPendingEvents,
   } from '~bastion-game/activity';
   import { MemberFacilitiesCard } from '~bastion-game/facilities';
@@ -253,6 +254,12 @@
         </p>
 
         <BastionActionsBar
+          :bastion
+          :activity="activity ?? undefined"
+          @updated="handleUpdated"
+        />
+
+        <BastionLastTurn
           :bastion
           :activity="activity ?? undefined"
           @updated="handleUpdated"
