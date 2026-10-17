@@ -261,6 +261,18 @@ describe('квадратная башня', () => {
     ).toHaveLength(16);
   });
 
+  it('не режется ластиком', () => {
+    const plan = addSquareTower(
+      createEmptyPlan(),
+      seed('tower'),
+      getRectCells({ x: 4, y: 4 }, { x: 7, y: 7 }),
+    );
+
+    expect(
+      eraseCells(plan, 0, getRectCells({ x: 4, y: 4 }, { x: 5, y: 7 })),
+    ).toBe(plan);
+  });
+
   it('вмещает винтовую лестницу во всю ширину', () => {
     const plan = addSquareTower(
       addLevel(createEmptyPlan(), 'up').document,

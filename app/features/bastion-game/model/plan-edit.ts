@@ -567,7 +567,7 @@ export function eraseCells(
   const hasFloor = document.rooms.some(
     (room) =>
       room.level === level
-      && room.kind !== 'TOWER'
+      && !isTowerKind(room.kind)
       && !room.cells.every(isKept),
   );
 
@@ -580,7 +580,7 @@ export function eraseCells(
   return prunePlan({
     ...document,
     rooms: document.rooms.map((room) =>
-      room.level === level && room.kind !== 'TOWER'
+      room.level === level && !isTowerKind(room.kind)
         ? { ...room, cells: room.cells.filter(isKept) }
         : room,
     ),
