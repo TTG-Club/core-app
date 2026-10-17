@@ -14,6 +14,7 @@
     BASTION_API_PATH,
     BASTION_EDITOR_LABELS,
     BASTION_SECTION,
+    getRoomTemplateSpaces,
     normalizeLoadedBastion,
     transformBastionBeforeSubmit,
   } from '../model';
@@ -23,6 +24,7 @@
     EnlargementFields,
     FeatureRows,
     OrderOptionRows,
+    RoomTemplateFields,
   } from './ui';
 
   const formRef = useTemplateRef('formRef');
@@ -76,6 +78,7 @@
       orders: [],
       orderOptions: [],
       enlargement: null,
+      roomTemplates: [],
       features: [],
       choices: [],
     };
@@ -92,6 +95,7 @@
 
   const {
     categoryItems,
+    spaces,
     spaceItems,
     facilityOrderItems,
     prerequisiteItems,
@@ -107,6 +111,13 @@
       state.value.orders.includes(order.value),
     ),
   );
+
+  /** Пространства, для которых настраивается комната на плане бастиона. */
+  const roomTemplateSpaces = computed(() => {
+    const codes = getRoomTemplateSpaces(state.value);
+
+    return spaces.value.filter((space) => codes.includes(space.value));
+  });
 </script>
 
 <template>
@@ -294,6 +305,13 @@
     <EnlargementFields
       v-model="state.enlargement"
       :space-items="spaceItems"
+    />
+
+    <RoomTemplateFields
+      v-model="state.roomTemplates"
+      :facility-url="state.url"
+      :name="state.name.rus"
+      :spaces="roomTemplateSpaces"
     />
 
     <WorkshopEditorFormControls :revision-control>
