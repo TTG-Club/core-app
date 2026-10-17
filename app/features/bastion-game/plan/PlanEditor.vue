@@ -1,9 +1,11 @@
 <script setup lang="ts">
-  import type { PlanPoint } from '../composables';
+  import type { PlanPoint, PlanPreview } from '../composables';
   import type {
     CellSide,
     DoorKind,
     FurnitureKind,
+    PlanCell,
+    PlanPaletteFacility,
     PlanSelection,
     PlanTool,
     PlayerBastion,
@@ -20,14 +22,19 @@
   import {
     addLevel,
     canMergeRooms,
+    canPlaceFacilityRoom,
     canRemoveLevel,
     createPaletteFacilities,
+    getCellAt,
+    getFacilityRoomCells,
+    getFacilityRoomSize,
     getPlanLevels,
     getSelectedRooms,
     getStairTargetLevel,
     getTowerStairFrame,
     isBastionWalled,
     mergeRooms,
+    placeFacilityRoom,
     PLAN_CORRIDOR_WIDTHS,
     PLAN_EDIT_TOOLS,
     PLAN_FURNITURE_ROTATION_STEP,
@@ -199,6 +206,94 @@
   );
 
   const levels = computed(() => getPlanLevels(editor.document.value));
+
+  /** Сооружение, которое тянут из боковой панели на план. */
+  const draggedFacility = shallowRef<PlanPaletteFacility>();
+
+  /** Клетка под указателем, пока сооружение тянут над планом. */
+  const facilityDropCell = shallowRef<PlanCell>();
+
+  // Пока тянут сооружение, вместо подсказки инструмента видна будущая
+  // комната: зелёная, если место свободно, красная, если занято.
+  const preview = computed<PlanPreview | undefined>(() => {
+    const facility = draggedFacility.value;
+    const center = facilityDropCell.value;
+
+    if (!facility || !center) {
+      return interaction.preview.value;
+    }
+
+    const cells = getFacilityRoomCells(
+      center,
+      getFacilityRoomSize(facility.squares),
+    );
+
+    return {
+      kind: 'move',
+      cells,
+      isValid: canPlaceFacilityRoom(editor.document.value, level.value, cells),
+    };
+  });
+
+  /**
+   * Сооружение взяли в боковой панели.
+   *
+   * @param facility Сооружение.
+   */
+  function handleFacilityDragStart(facility: PlanPaletteFacility): void {
+    draggedFacility.value = facility;
+  }
+
+  /** Перетаскивание сооружения закончилось — брошено или отменено. */
+  function handleFacilityDragEnd(): void {
+    draggedFacility.value = undefined;
+    facilityDropCell.value = undefined;
+  }
+
+  /**
+   * Сооружение тянут над планом.
+   *
+   * @param point Точка под указателем; undefined — увели с холста.
+   */
+  function handleFacilityDrag(point: PlanPoint | undefined): void {
+    facilityDropCell.value = point ? getCellAt(point) : undefined;
+  }
+
+  /**
+   * Сооружение отпустили над планом: на свободном месте встаёт готовая
+   * обставленная комната и сразу выбирается.
+   *
+   * @param point Точка под указателем.
+   */
+  function handleFacilityDrop(point: PlanPoint): void {
+    const facility = draggedFacility.value;
+
+    handleFacilityDragEnd();
+
+    if (!facility || !editor.canEdit.value) {
+      return;
+    }
+
+    const document = editor.document.value;
+
+    const next = placeFacilityRoom(
+      document,
+      level.value,
+      getCellAt(point),
+      facility,
+      editor.isPremium.value,
+    );
+
+    if (next === document) {
+      return;
+    }
+
+    editor.commit(next);
+
+    selectedRoomId.value = next.rooms.find(
+      (room) => room.facilityId === facility.id,
+    )?.id;
+  }
 
   const levelRooms = computed(() =>
     editor.document.value.rooms.filter((room) => room.level === level.value),
@@ -677,7 +772,7 @@
             :selection
             :facility-colors="facilityColors"
             :facility-areas="facilityAreas"
-            :preview="interaction.preview.value"
+            :preview
             :hover-point="interaction.hoverPoint.value"
             :cursors
             :furniture-kind="furnitureKind"
@@ -689,6 +784,8 @@
             @point-leave="handlePointLeave"
             @wheel-step="handleWheelStep"
             @context-menu="handleContextMenu"
+            @facility-drag="handleFacilityDrag"
+            @facility-drop="handleFacilityDrop"
           />
 
           <UDropdownMenu
@@ -780,7 +877,12 @@
           </template>
 
           <template #facilities>
-            <PlanFacilityList :facilities />
+            <PlanFacilityList
+              :facilities
+              :can-edit="editor.canEdit.value"
+              @drag-start="handleFacilityDragStart"
+              @drag-end="handleFacilityDragEnd"
+            />
           </template>
         </UTabs>
 
