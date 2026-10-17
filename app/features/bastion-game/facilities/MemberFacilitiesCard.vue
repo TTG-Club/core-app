@@ -287,6 +287,34 @@
       </p>
 
       <template v-else>
+        <section
+          v-if="specialFacilities.length"
+          class="flex flex-col gap-2"
+        >
+          <h3 class="text-sm font-medium text-muted">
+            {{ FACILITY_SETUP_LABELS.specialTitle }}
+          </h3>
+
+          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <FacilityCard
+              v-for="facility in specialFacilities"
+              :key="facility.id"
+              :facility
+              :can-confirm="bastion.canManage"
+              :can-act="member.canGiveOrders"
+              :can-remove
+              :active-order="getActiveOrder(facility.id)"
+              :order-lock="orderLock"
+              :bastion-turn="bastion.turn"
+              @toggle-confirmation="toggleConfirmation(facility.id, $event)"
+              @order="openOrder(facility)"
+              @menagerie="openMenagerie(facility)"
+              @enlarge="enlarge(facility.id)"
+              @remove="askRemove(facility)"
+            />
+          </div>
+        </section>
+
         <p
           v-if="!member.basicComplete"
           class="text-sm text-warning"
@@ -312,34 +340,6 @@
               :active-order="getActiveOrder(facility.id)"
               :order-lock="orderLock"
               :bastion-turn="bastion.turn"
-              @order="openOrder(facility)"
-              @menagerie="openMenagerie(facility)"
-              @enlarge="enlarge(facility.id)"
-              @remove="askRemove(facility)"
-            />
-          </div>
-        </section>
-
-        <section
-          v-if="specialFacilities.length"
-          class="flex flex-col gap-2"
-        >
-          <h3 class="text-sm font-medium text-muted">
-            {{ FACILITY_SETUP_LABELS.specialTitle }}
-          </h3>
-
-          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            <FacilityCard
-              v-for="facility in specialFacilities"
-              :key="facility.id"
-              :facility
-              :can-confirm="bastion.canManage"
-              :can-act="member.canGiveOrders"
-              :can-remove
-              :active-order="getActiveOrder(facility.id)"
-              :order-lock="orderLock"
-              :bastion-turn="bastion.turn"
-              @toggle-confirmation="toggleConfirmation(facility.id, $event)"
               @order="openOrder(facility)"
               @menagerie="openMenagerie(facility)"
               @enlarge="enlarge(facility.id)"
