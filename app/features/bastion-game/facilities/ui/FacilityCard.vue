@@ -496,7 +496,7 @@
 
       <UButton
         v-if="canRemove"
-        icon="tabler:trash"
+        icon="tabler:bulldozer"
         size="xs"
         color="error"
         variant="ghost"
