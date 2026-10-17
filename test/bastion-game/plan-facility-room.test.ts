@@ -1,23 +1,41 @@
-import type { PlanDocument } from '~bastion-game/model';
+import type { FacilityRoomTemplate, PlanDocument } from '~bastion-game/model';
 
 import { describe, expect, it } from 'vitest';
 
 import {
+  createDefaultRoomTemplate,
   createEmptyPlan,
+  createTemplatePlan,
   drawRoom,
   getFacilityFurniture,
   getFacilityRoomSize,
   getFurnitureSize,
   getRectCells,
+  getRoomSizeOptions,
   isPremiumFurniture,
   placeFacilityRoom,
+  readTemplatePlan,
+  resizeRoomTemplate,
 } from '~bastion-game/model';
+import { getRoomTemplateSpaces } from '~bastions/model';
 
 const bedroom = {
   id: 'f-bedroom',
   name: 'Спальня',
   facilityUrl: 'bedroom',
   squares: 16,
+  roomTemplate: undefined,
+};
+
+const template: FacilityRoomTemplate = {
+  space: 'ROOMY',
+  width: 8,
+  depth: 2,
+  furniture: [
+    { kind: 'BED', x: 0, y: 0, rotation: 0 },
+    { kind: 'FOUNTAIN', x: 2, y: 0, rotation: 0 },
+    { kind: 'CHEST', x: 7, y: 1, rotation: 0 },
+  ],
 };
 
 /**
@@ -97,5 +115,128 @@ describe('готовая комната сооружения', () => {
     expect(placeFacilityRoom(plan, 0, { x: 8, y: 8 }, bedroom, false)).not.toBe(
       plan,
     );
+  });
+});
+
+describe('шаблон готовой комнаты', () => {
+  it('ставит комнату по шаблону, если он на эту площадь', () => {
+    const plan = placeFacilityRoom(
+      createEmptyPlan(),
+      0,
+      { x: 10, y: 10 },
+      { ...bedroom, roomTemplate: template },
+      true,
+    );
+
+    const cells = plan.rooms[0]?.cells ?? [];
+    const left = Math.min(...cells.map((cell) => cell.x));
+    const top = Math.min(...cells.map((cell) => cell.y));
+
+    expect(Math.max(...cells.map((cell) => cell.x)) - left + 1).toBe(8);
+
+    expect(
+      plan.furniture.map(({ kind, x, y, rotation }) => ({
+        kind,
+        x: x - left,
+        y: y - top,
+        rotation,
+      })),
+    ).toEqual(template.furniture);
+  });
+
+  it('без подписки убирает из шаблона предметы по подписке', () => {
+    const plan = placeFacilityRoom(
+      createEmptyPlan(),
+      0,
+      { x: 10, y: 10 },
+      { ...bedroom, roomTemplate: template },
+      false,
+    );
+
+    expect(plan.furniture.map((item) => item.kind)).toEqual(['BED', 'CHEST']);
+  });
+
+  it('после расширения шаблон не на ту площадь, и мебель расставляется сама', () => {
+    const plan = placeFacilityRoom(
+      createEmptyPlan(),
+      0,
+      { x: 10, y: 10 },
+      { ...bedroom, squares: 36, roomTemplate: template },
+      false,
+    );
+
+    expect(plan.rooms[0]?.cells).toHaveLength(36);
+    expect(plan.furniture.length).toBeGreaterThan(0);
+  });
+
+  it('по умолчанию берёт автоматическую расстановку', () => {
+    const fallback = createDefaultRoomTemplate('bedroom', 'ROOMY', 16);
+
+    expect(fallback).toMatchObject({ space: 'ROOMY', width: 4, depth: 4 });
+    expect(fallback.furniture.map((item) => item.kind)).toContain('BED');
+  });
+
+  it('план редактора возвращает тот же шаблон', () => {
+    expect(
+      readTemplatePlan(createTemplatePlan(template, ''), template),
+    ).toEqual(template);
+  });
+
+  it('мебель за стенами в шаблон не попадает', () => {
+    const plan = createTemplatePlan(template, '');
+
+    const moved = {
+      ...plan,
+      furniture: plan.furniture.map((item) =>
+        item.kind === 'CHEST' ? { ...item, x: item.x + 1 } : item,
+      ),
+    };
+
+    expect(
+      readTemplatePlan(moved, template).furniture.map((item) => item.kind),
+    ).toEqual(['BED', 'FOUNTAIN']);
+  });
+
+  it('при смене размера убирает то, что не помещается', () => {
+    const resized = resizeRoomTemplate(template, 4, 4);
+
+    expect(resized).toMatchObject({ width: 4, depth: 4 });
+
+    expect(resized.furniture.map((item) => item.kind)).toEqual([
+      'BED',
+      'FOUNTAIN',
+    ]);
+  });
+
+  it('предлагает все прямоугольники на площадь', () => {
+    expect(getRoomSizeOptions(4)).toEqual([
+      { width: 1, depth: 4 },
+      { width: 2, depth: 2 },
+      { width: 4, depth: 1 },
+    ]);
+  });
+
+  it('шаблоны настраиваются для своих пространств и расширения', () => {
+    expect(
+      getRoomTemplateSpaces({
+        category: 'BASIC',
+        space: undefined,
+        enlargement: null,
+      }),
+    ).toEqual(['CRAMPED', 'ROOMY']);
+
+    expect(
+      getRoomTemplateSpaces({
+        category: 'SPECIAL',
+        space: 'ROOMY',
+        enlargement: {
+          space: 'VAST',
+          cost: null,
+          days: null,
+          additionalHirelings: null,
+          description: '',
+        },
+      }),
+    ).toEqual(['ROOMY', 'VAST']);
   });
 });

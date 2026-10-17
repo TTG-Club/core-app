@@ -6,12 +6,14 @@ import type {
   FacilityChoice,
   FacilityEnlargementForm,
   FacilityOrderOption,
+  FacilitySpaceCode,
 } from './types';
 
 import {
   BASTION_BASIC_GROUP_LABEL,
   BASTION_BODY_LABELS,
   EMPTY_ENLARGEMENT,
+  FACILITY_SPACE_ORDER,
 } from './constants';
 
 /**
@@ -220,6 +222,7 @@ export function normalizeLoadedBastion(
     orders: record.orders ?? [],
     orderOptions: record.orderOptions ?? [],
     features: record.features ?? [],
+    roomTemplates: record.roomTemplates ?? [],
     choices: Array.isArray(record.choices)
       ? record.choices.map(normalizeLoadedChoice)
       : [],
@@ -278,7 +281,29 @@ export function transformBastionBeforeSubmit(
           : choice.options.filter((option) => hasText(option.name)),
       })),
     enlargement: state.enlargement?.space ? state.enlargement : null,
+    roomTemplates: state.roomTemplates.filter((template) =>
+      getRoomTemplateSpaces(state).includes(template.space),
+    ),
   };
+}
+
+/**
+ * Пространства, в которых сооружение бывает на плане бастиона: у базового —
+ * тесное и вместительное на выбор игрока, у специализированного — своё; плюс
+ * пространство после расширения. Шаблон комнаты задаётся для каждого из них.
+ *
+ * @param state - Форма сооружения
+ * @returns Пространства без повторов, от меньшего к большему
+ */
+export function getRoomTemplateSpaces(
+  state: Pick<BastionFacilityCreate, 'category' | 'space' | 'enlargement'>,
+): Array<FacilitySpaceCode> {
+  const own: Array<FacilitySpaceCode | undefined> =
+    state.category === 'BASIC' ? ['CRAMPED', 'ROOMY'] : [state.space];
+
+  const spaces = new Set([...own, state.enlargement?.space]);
+
+  return FACILITY_SPACE_ORDER.filter((space) => spaces.has(space));
 }
 
 /**
