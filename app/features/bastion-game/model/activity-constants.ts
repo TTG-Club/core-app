@@ -109,7 +109,7 @@ export const EVENT_LABELS = {
   guestsTitle: 'Гости бастиона',
   guestTerms: '{name} · с хода {turn}',
   guestCount: '{name}: {count} · с хода {turn}',
-  guestLeaves: ', уедет на ходу {turn}',
+  guestLeaves: ', уедет через {left}',
   dismiss: 'Отослать',
   dismissRefugees: 'Нашли новый дом',
   dismissed: 'Гость уехал',
@@ -124,7 +124,8 @@ export const ACTIVITY_LABELS = {
   noTurns: 'Ходов пока не было',
   noLedger: 'Движений казны пока не было',
   turnLabel: 'Ход {turn}',
-  orderTerms: 'отдан на ходу {given}, срок — ход {completes}',
+  orderTerms: 'ходы {given}–{completes}',
+  orderTermsActive: 'с хода {given}, {left}',
   maintain: 'Обслуживание',
   maintainOrder: 'Обслуживать',
   maintainHint:
@@ -218,8 +219,8 @@ export const ACTIVITY_LABELS = {
   enlargeDone: 'Расширение началось',
   remove: 'Разрушить',
   idle: 'Простаивает',
-  busyOrder: 'Выполняет «{order}» до хода {turn}',
-  busyOrderOption: 'Выполняет «{order}: {option}» до хода {turn}',
+  busyOrder: '{order}, {left}',
+  busyOrderOption: '{order}: {option}, {left}',
   orderBusy: 'Сооружение уже выполняет приказ',
   orderBuilding: 'Сооружение ещё строится',
   orderPrerequisite: 'Мастер ещё не подтвердил требование',
@@ -230,13 +231,22 @@ export const ACTIVITY_LABELS = {
   removeDescription:
     'Незавершённые приказы сооружения отменятся без возврата денег, клетки исчезнут с плана.',
   removeDone: 'Сооружение разрушено',
-  building: 'Строится, готово на ходу {turn}',
-  enlarging: 'Расширяется до «{space}», готово на ходу {turn}',
+  building: 'Строится, {left}',
+  enlarging: 'Расширяется до «{space}», {left}',
   actionError: 'Не удалось выполнить действие',
   confirm: 'Подтвердить',
   gold: 'зм',
   specialOption: '{name} ({level} ур.)',
   cancelAction: 'Отмена',
+} as const;
+
+/** Формы слова «ход» для «осталось N ходов». */
+export const TURN_FORMS: [string, string, string] = ['ход', 'хода', 'ходов'];
+
+export const TURNS_LEFT_LABELS = {
+  left: 'осталось {count} {turns}',
+  leftOne: 'остался {count} {turns}',
+  span: '{count} {turns}',
 } as const;
 
 /** Защитная стена: цена и срок 5-футового квадрата (`BastionRules` core-api). */
@@ -250,7 +260,7 @@ export const DEFENSE_WALL_LABELS = {
   hint: 'Стена высотой 20 футов вокруг бастиона. Блок — 5-футовый квадрат: 250 зм и 10 дней стройки, блоки строятся друг за другом. На план ставятся только достроенные блоки. Если бастион полностью окружён стенами, при атаке потери защитников бросаются на 2 кубика меньше.',
   built: 'Построено блоков: {count}',
   none: 'Стен пока нет',
-  building: 'Строится блоков: {count}, готово на ходу {turn}',
+  building: 'Строится блоков: {count}, {left}',
   enclosed: 'Бастион окружён стенами',
   build: 'Построить стену',
   buildTitle: 'Защитная стена',

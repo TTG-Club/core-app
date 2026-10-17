@@ -311,6 +311,7 @@
               :key="facility.id"
               :facility
               :can-confirm="bastion.canManage"
+              :show-prerequisite="editing"
               :can-act="member.canGiveOrders"
               :can-remove
               :active-order="getActiveOrder(facility.id)"

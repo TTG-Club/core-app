@@ -13,6 +13,7 @@
     formatMenagerieSpace,
     getArtisanToolIcon,
     getOrderSubject,
+    getTurnsLeftText,
   } from '../../model';
 
   /**
@@ -24,6 +25,7 @@
   const {
     facility,
     canConfirm = false,
+    showPrerequisite = false,
     canAct = false,
     canRemove = false,
     activeOrder = undefined,
@@ -33,6 +35,8 @@
     facility: PlayerBastionFacility;
     /** Мастер может подтвердить требование. */
     canConfirm?: boolean;
+    /** Показывать требование и его подтверждение: только в режиме редактирования. */
+    showPrerequisite?: boolean;
     /** Можно отдавать приказы и расширять: бастион запущен, это мастер или игрок персонажа. */
     canAct?: boolean;
     /** Можно убрать сооружение. */
@@ -118,7 +122,7 @@
     return activeOrder ? ACTIVITY_LABELS.orderBusy : undefined;
   });
 
-  /** Чем сооружение занято: простаивает или выполняет приказ до хода. */
+  /** Чем сооружение занято: простаивает или выполняет приказ, сколько ходов осталось. */
   const occupationText = computed(() => {
     if (!activeOrder) {
       return ACTIVITY_LABELS.idle;
@@ -129,7 +133,7 @@
     const values = {
       order: activeOrder.order.name,
       option: subject,
-      turn: activeOrder.completesOnTurn,
+      left: getTurnsLeftText(activeOrder.completesOnTurn, bastionTurn),
     };
 
     return subject
@@ -141,18 +145,18 @@
     activeOrder ? 'text-info' : 'text-muted',
   );
 
-  /** Стройка или расширение: подпись с ходом, на котором закончится. */
+  /** Стройка или расширение: подпись с числом оставшихся ходов. */
   const constructionText = computed(() => {
     if (facility.status === 'BUILDING') {
       return fillTemplate(ACTIVITY_LABELS.building, {
-        turn: facility.readyOnTurn ?? '—',
+        left: getTurnsLeftText(facility.readyOnTurn, bastionTurn),
       });
     }
 
     return facility.pendingSpace
       ? fillTemplate(ACTIVITY_LABELS.enlarging, {
           space: facility.pendingSpace.name,
-          turn: facility.pendingReadyOnTurn ?? '—',
+          left: getTurnsLeftText(facility.pendingReadyOnTurn, bastionTurn),
         })
       : '';
   });
@@ -415,7 +419,7 @@
     </p>
 
     <div
-      v-if="facility.prerequisite"
+      v-if="showPrerequisite && facility.prerequisite"
       class="flex flex-wrap items-center gap-2"
     >
       <UBadge

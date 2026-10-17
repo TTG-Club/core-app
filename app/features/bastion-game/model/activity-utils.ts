@@ -14,6 +14,8 @@ import {
   DEFENSE_WALL_COST_PER_SQUARE,
   DEFENSE_WALL_DAYS_PER_SQUARE,
   DEFENSE_WALL_LABELS,
+  TURN_FORMS,
+  TURNS_LEFT_LABELS,
 } from './activity-constants';
 import { BASTION_ORDERS } from './schema';
 
@@ -37,6 +39,66 @@ export function isBastionOrderCode(value: string): value is BastionOrderCode {
  */
 export function getTurnsFor(days: number | null | undefined): number {
   return days && days > 0 ? Math.ceil(days / DAYS_PER_TURN) : 1;
+}
+
+/**
+ * Сколько ходов осталось до хода, на котором дело закончится. Дело
+ * завершается при переходе на этот ход, поэтому на текущем ходу остаётся
+ * хотя бы один.
+ *
+ * @param readyOnTurn Ход, на котором дело закончится.
+ * @param currentTurn Текущий ход бастиона.
+ * @returns Число ходов, не меньше одного.
+ */
+export function getTurnsLeft(readyOnTurn: number, currentTurn: number): number {
+  return Math.max(1, readyOnTurn - currentTurn);
+}
+
+/**
+ * Подпись «осталось 3 хода» или «остался 1 ход».
+ *
+ * @param readyOnTurn Ход, на котором дело закончится; пусто — срок неизвестен.
+ * @param currentTurn Текущий ход бастиона.
+ * @returns Подпись или прочерк, если срока нет.
+ */
+export function getTurnsLeftText(
+  readyOnTurn: number | null | undefined,
+  currentTurn: number | null | undefined,
+): string {
+  if (readyOnTurn == null || currentTurn == null) {
+    return '—';
+  }
+
+  const count = getTurnsLeft(readyOnTurn, currentTurn);
+  const turns = getPlural(count, TURN_FORMS);
+
+  return fillTemplate(
+    getPlural(count, [
+      TURNS_LEFT_LABELS.leftOne,
+      TURNS_LEFT_LABELS.left,
+      TURNS_LEFT_LABELS.left,
+    ]),
+    { count, turns },
+  );
+}
+
+/**
+ * Подпись «через 3 хода»: сколько ходов осталось, без глагола.
+ *
+ * @param readyOnTurn Ход события.
+ * @param currentTurn Текущий ход бастиона.
+ * @returns «3 хода».
+ */
+export function getTurnsSpanText(
+  readyOnTurn: number,
+  currentTurn: number,
+): string {
+  const count = getTurnsLeft(readyOnTurn, currentTurn);
+
+  return fillTemplate(TURNS_LEFT_LABELS.span, {
+    count,
+    turns: getPlural(count, TURN_FORMS),
+  });
 }
 
 /**
