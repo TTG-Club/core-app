@@ -108,7 +108,7 @@
     class="relative transition-colors hover:bg-elevated hover:ring-primary/50"
   >
     <template #header>
-      <div class="flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center justify-between gap-2">
         <div class="flex min-w-0 items-center gap-2">
           <UIcon
             name="tabler:building-castle"
@@ -122,6 +122,7 @@
           -->
           <NuxtLink
             :to="detailRoute"
+            :title="bastion.name"
             class="truncate rounded-md text-base font-semibold text-highlighted outline-primary/25 after:absolute after:inset-0 after:rounded-lg focus-visible:outline-3"
           >
             {{ bastion.name }}
@@ -132,31 +133,13 @@
             color="primary"
             variant="subtle"
             size="sm"
+            class="shrink-0"
           >
             {{ BASTION_GAME_LABELS.yours }}
           </UBadge>
         </div>
 
-        <div class="relative z-10 flex flex-wrap items-center gap-2">
-          <UButton
-            v-if="gameRoute"
-            :to="gameRoute"
-            icon="tabler:users-group"
-            color="neutral"
-            variant="subtle"
-            size="xs"
-          >
-            {{ BASTION_GAME_LABELS.inGame }}
-          </UButton>
-
-          <UBadge
-            v-if="isStatusShown"
-            :color="PLAYER_BASTION_STATUS_COLORS[bastion.status]"
-            variant="subtle"
-          >
-            {{ PLAYER_BASTION_STATUS_LABELS[bastion.status] }}
-          </UBadge>
-
+        <div class="relative z-10 flex shrink-0 items-center gap-1">
           <UTooltip
             v-if="bastion.owned"
             :text="shareTooltip"
@@ -196,13 +179,41 @@
     </template>
 
     <div class="flex flex-col gap-3">
-      <div class="flex gap-4 text-sm text-muted tabular-nums">
-        <span>{{ BASTION_GAME_LABELS.turn }}: {{ bastion.turn }}</span>
+      <div
+        class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted"
+      >
+        <span class="tabular-nums">
+          {{ BASTION_GAME_LABELS.turn }}: {{ bastion.turn }}
+        </span>
 
-        <span>
+        <span class="tabular-nums">
           {{ BASTION_GAME_LABELS.treasury }}: {{ bastion.treasuryGp }}
           {{ BASTION_GAME_LABELS.gold }}
         </span>
+
+        <div
+          v-if="gameRoute || isStatusShown"
+          class="relative z-10 ml-auto flex items-center gap-2"
+        >
+          <UBadge
+            v-if="isStatusShown"
+            :color="PLAYER_BASTION_STATUS_COLORS[bastion.status]"
+            variant="subtle"
+          >
+            {{ PLAYER_BASTION_STATUS_LABELS[bastion.status] }}
+          </UBadge>
+
+          <UButton
+            v-if="gameRoute"
+            :to="gameRoute"
+            icon="tabler:users-group"
+            color="neutral"
+            variant="subtle"
+            size="xs"
+          >
+            {{ BASTION_GAME_LABELS.inGame }}
+          </UButton>
+        </div>
       </div>
 
       <BastionMemberList :members="bastion.members" />
