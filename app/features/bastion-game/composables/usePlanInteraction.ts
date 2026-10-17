@@ -4,7 +4,6 @@ import type {
   CellSide,
   DoorKind,
   FurnitureKind,
-  PlanArea,
   PlanCell,
   PlanCircle,
   PlanDocument,
@@ -28,7 +27,6 @@ import {
   addToSelection,
   addTower,
   canMoveObjects,
-  clearArea,
   drawRoom,
   eraseCells,
   eraseObjectAt,
@@ -153,7 +151,6 @@ type PlanGesture =
   | { type: 'stairs'; anchor: PlanCell; current: PlanCell }
   | { type: 'corridor'; last: PlanCell; target: PlanRoom | PlanRoomSeed }
   | { type: 'erase'; last: PlanCell }
-  | { type: 'area'; anchor: PlanCell; current: PlanCell }
   | {
       type: 'wall';
       last: PlanCell;
@@ -266,9 +263,6 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
 
   const preview = shallowRef<PlanPreview>();
   const hoverPoint = shallowRef<PlanPoint>();
-
-  /** Выделенный участок: остаётся после жеста, пока его не уберут или сбросят. */
-  const selectedArea = shallowRef<PlanArea & { level: number }>();
 
   let gesture: PlanGesture | undefined;
 
@@ -596,18 +590,6 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
 
         break;
       }
-      case 'area':
-        selectedArea.value = undefined;
-        gesture = { type: 'area', anchor: cell, current: cell };
-
-        preview.value = {
-          kind: 'rect',
-          from: cell,
-          to: cell,
-          label: undefined,
-        };
-
-        break;
       case 'pan':
         break;
     }
@@ -746,7 +728,6 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
         break;
       }
       case 'frame':
-      case 'area':
         gesture.current = cell;
 
         preview.value = {
@@ -892,14 +873,6 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
         finishStairs(finished.anchor, finished.current);
 
         break;
-      case 'area':
-        selectedArea.value = {
-          level: level.value,
-          from: finished.anchor,
-          to: finished.current,
-        };
-
-        break;
       case 'corridor':
       case 'erase':
       case 'wall':
@@ -979,25 +952,8 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
     hoverPoint.value = undefined;
   }
 
-  /**
-   * Убирает всё на выделенном участке одним шагом истории и снимает
-   * выделение.
-   */
-  function clearSelectedArea(): void {
-    const area = selectedArea.value;
-
-    if (!area) {
-      return;
-    }
-
-    editor.commit(clearArea(editor.document.value, area.level, area));
-    selectedArea.value = undefined;
-  }
-
-  /** Прерывает жест без изменений (Escape) и снимает выделение участка. */
+  /** Прерывает жест без изменений (Escape). */
   function cancel(): void {
-    selectedArea.value = undefined;
-
     if (gesture && ['corridor', 'erase', 'wall'].includes(gesture.type)) {
       editor.endStroke();
     }
@@ -1009,8 +965,6 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
   return {
     preview,
     hoverPoint,
-    selectedArea,
-    clearSelectedArea,
     handleDown,
     handleMove,
     handleUp,

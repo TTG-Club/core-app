@@ -9,6 +9,7 @@ import {
   createEmptyPlan,
   drawRoom,
   findObjectAt,
+  getLevelCenter,
   getObjectsInArea,
   getRectCells,
   mergeRooms,
@@ -209,5 +210,18 @@ describe('удаление и объединение', () => {
     });
 
     expect(mergeRooms(plan, ['west', 'tower'])).toBe(plan);
+  });
+});
+
+describe('центр плана', () => {
+  it('учитывает комнаты и стоящие вне них предметы', () => {
+    const plan = createTwoRoomsPlan();
+
+    expect(getLevelCenter(plan, 0)).toEqual({ x: 3, y: 1.5 });
+
+    const withColumn = addColumn(plan, { id: 'far', level: 0, x: 10, y: 1.5 });
+
+    expect(getLevelCenter(withColumn, 0)).toEqual({ x: 5, y: 1.5 });
+    expect(getLevelCenter(plan, 1)).toBeUndefined();
   });
 });

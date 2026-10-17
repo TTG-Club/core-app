@@ -15,8 +15,6 @@ import type {
   TowerShape,
 } from './plan-schema';
 
-import { isEqual } from 'es-toolkit';
-
 import { fillTemplate } from '~bastions/model';
 
 import {
@@ -35,7 +33,6 @@ import {
   getCellAt,
   getCellKey,
   getCircleCells,
-  getEdgeCells,
   getEdgeKey,
   getFurnitureSize,
   getNearestEdge,
@@ -999,92 +996,6 @@ export function addColumn(
 export interface PlanArea {
   from: PlanCell;
   to: PlanCell;
-}
-
-/**
- * Убирает всё на участке этажа: комнаты обрезаются по рамке, башня уходит,
- * если в рамке её центр, двери и окна на рёбрах клеток рамки, лестницы и
- * мебель, задевающие рамку, колонны внутри неё и защитная стена исчезают.
- *
- * @param document План.
- * @param level Этаж.
- * @param area Участок.
- * @returns Новый план или тот же, если на участке ничего нет.
- */
-export function clearArea(
-  document: PlanDocument,
-  level: number,
-  area: PlanArea,
-): PlanDocument {
-  const left = Math.min(area.from.x, area.to.x);
-  const right = Math.max(area.from.x, area.to.x);
-  const top = Math.min(area.from.y, area.to.y);
-  const bottom = Math.max(area.from.y, area.to.y);
-
-  const isInside = (cell: PlanCell) =>
-    cell.x >= left && cell.x <= right && cell.y >= top && cell.y <= bottom;
-
-  // Точки (колонны, центры башен) лежат и на линиях сетки: правый и нижний
-  // край рамки — граница последней клетки.
-  const isPointInside = (point: PlanCell) =>
-    point.x >= left
-    && point.x <= right + 1
-    && point.y >= top
-    && point.y <= bottom + 1;
-
-  const overlaps = (cell: PlanCell, width: number, depth: number) =>
-    cell.x <= right
-    && cell.x + width - 1 >= left
-    && cell.y <= bottom
-    && cell.y + depth - 1 >= top;
-
-  const removedTowers = new Set(
-    document.rooms
-      .filter(
-        (room) =>
-          room.level === level
-          && room.shape
-          && isPointInside({ x: room.shape.cx, y: room.shape.cy }),
-      )
-      .map((room) => room.id),
-  );
-
-  const onLevel = <T extends { level: number }>(item: T) =>
-    item.level === level;
-
-  const next: PlanDocument = prunePlan({
-    ...document,
-    rooms: document.rooms
-      .filter((room) => !removedTowers.has(room.id))
-      .map((room) =>
-        room.level === level && room.kind !== 'TOWER'
-          ? { ...room, cells: room.cells.filter((cell) => !isInside(cell)) }
-          : room,
-      ),
-    doors: document.doors.filter(
-      (door) => !onLevel(door) || !getEdgeCells(door).some(isInside),
-    ),
-    windows: document.windows.filter(
-      (item) => !onLevel(item) || !getEdgeCells(item).some(isInside),
-    ),
-    stairs: document.stairs.filter(
-      (stair) => !onLevel(stair) || !overlaps(stair, stair.width, stair.height),
-    ),
-    columns: document.columns.filter(
-      (column) => !onLevel(column) || !isPointInside(column),
-    ),
-    furniture: document.furniture.filter((item) => {
-      const { width, depth } = getFurnitureSize(item);
-
-      return !onLevel(item) || !overlaps(item, width, depth);
-    }),
-    defenseWalls:
-      level === 0
-        ? document.defenseWalls.filter((cell) => !isInside(cell))
-        : document.defenseWalls,
-  });
-
-  return isEqual(next, document) ? document : next;
 }
 
 /**

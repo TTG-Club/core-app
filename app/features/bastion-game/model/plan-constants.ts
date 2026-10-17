@@ -129,7 +129,6 @@ export const PLAN_TOOLS = [
   'column',
   'wall',
   'furniture',
-  'area',
 ] as const;
 
 export type PlanTool = (typeof PLAN_TOOLS)[number];
@@ -151,12 +150,6 @@ export const PLAN_TOOL_GROUPS: ReadonlyArray<
       key: 'v',
     },
     { tool: 'pan', icon: 'tabler:hand-stop', label: 'Двигать лист', key: 'h' },
-    {
-      tool: 'area',
-      icon: 'tabler:marquee-2',
-      label: 'Выделить участок',
-      key: 'a',
-    },
   ],
   [
     { tool: 'room', icon: 'tabler:square', label: 'Комната', key: 'r' },
@@ -198,7 +191,6 @@ export const PLAN_TOOL_HINTS: Record<PlanTool, string> = {
   wall: 'Ведите по клеткам снаружи комнат первого этажа. Ворота ставит инструмент «Дверь».',
   furniture:
     'Выберите предмет на кнопке «Интерьер». Ctrl+колесо или R поворачивают его до установки. Стоящий предмет можно перетащить, щелчок по нему поворачивает его.',
-  area: 'Тяните рамку вокруг участка. Delete убирает всё, что в ней на этом этаже.',
 };
 
 export const ROOM_KIND_LABELS: Record<RoomKind, string> = {
@@ -376,6 +368,7 @@ export const PLAN_LABELS = {
   redo: 'Повторить',
   zoomIn: 'Крупнее',
   zoomOut: 'Мельче',
+  centerPlan: 'Центрировать',
   level: 'Этаж',
   levelsMenu: 'Этаж',
   addLevelUp: 'Добавить этаж выше',
@@ -408,10 +401,6 @@ export const PLAN_LABELS = {
   furnitureRotation: 'Поворот',
   rotateFurniture: 'Повернуть (R, Ctrl+колесо)',
   degrees: '{degrees}°',
-  selectedArea: 'Выделенный участок',
-  clearArea: 'Убрать всё на участке',
-  clearAreaHint:
-    'Комнаты обрежутся по рамке, двери, окна, лестницы, колонны и предметы интерьера внутри исчезнут.',
   stairKind: 'Вид лестницы',
   spiralHint: 'Щёлкните внутри башни — лестница займёт её середину.',
   spiralSize: 'Размер винтовой лестницы',

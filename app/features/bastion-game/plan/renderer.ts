@@ -6,7 +6,6 @@ import type {
   CellSide,
   DoorKind,
   FurnitureKind,
-  PlanArea,
   PlanCell,
   PlanCircle,
   PlanDocument,
@@ -84,8 +83,6 @@ export interface PlanScene {
   hoverPoint: PlanPoint | undefined;
   /** Указатели соавторов на этом этаже. */
   cursors: ReadonlyArray<PlanCursor>;
-  /** Выделенный участок на этом этаже. */
-  area: PlanArea | undefined;
   /** Какую мебель ставит инструмент «Мебель». */
   furnitureKind: FurnitureKind;
   /** Поворот, с которым инструмент «Мебель» поставит новый предмет. */
@@ -1423,10 +1420,6 @@ export function drawPlan(
   drawSelection({ ...context, graphics: overlay }, scene);
   drawOverlay({ ...context, graphics: overlay }, scene, occupancy);
 
-  if (scene.area) {
-    drawArea({ ...context, graphics: overlay }, scene.area);
-  }
-
   drawCursors({ ...context, graphics: overlay }, scene.cursors);
 }
 
@@ -1775,7 +1768,6 @@ function drawHover(
     }
     case 'room':
     case 'tower':
-    case 'area':
     case 'corridor':
     case 'eraser':
     case 'wall':
@@ -1788,25 +1780,6 @@ function drawHover(
         )
         .stroke({ color: theme.accent, width: hairline * 1.5, alpha: 0.8 });
   }
-}
-
-/**
- * Выделенный участок: рамка и лёгкая заливка цветом акцента.
- *
- * @param context Кадр со слоем подсказок.
- * @param area Участок.
- */
-function drawArea(context: DrawContext, area: PlanArea): void {
-  const { graphics, theme, hairline } = context;
-  const left = Math.min(area.from.x, area.to.x);
-  const top = Math.min(area.from.y, area.to.y);
-  const width = Math.abs(area.to.x - area.from.x) + 1;
-  const height = Math.abs(area.to.y - area.from.y) + 1;
-
-  graphics
-    .rect(left * CELL, top * CELL, width * CELL, height * CELL)
-    .fill({ color: theme.accent, alpha: 0.12 })
-    .stroke({ color: theme.accent, width: hairline * 2 });
 }
 
 /** Прямоугольник в долях клетки внутри предмета мебели без поворота. */

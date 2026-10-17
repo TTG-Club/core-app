@@ -40,7 +40,6 @@
     updateRoom,
   } from '../model';
   import {
-    PlanAreaPanel,
     PlanCanvas,
     PlanFacilityList,
     PlanLevelBar,
@@ -171,15 +170,6 @@
       rotateFurniture(direction);
     }
   }
-
-  /** Выделенный участок — только у инструмента «Выделить» и на его этаже. */
-  const visibleArea = computed(() => {
-    const area = interaction.selectedArea.value;
-
-    return tool.value === 'area' && area?.level === level.value
-      ? area
-      : undefined;
-  });
 
   const facilities = computed(() =>
     createPaletteFacilities(bastion.members, editor.document.value),
@@ -369,11 +359,7 @@
       (event.key === 'Delete' || event.key === 'Backspace')
       && editor.canEdit.value
     ) {
-      if (visibleArea.value) {
-        interaction.clearSelectedArea();
-      } else {
-        deleteSelection();
-      }
+      deleteSelection();
 
       return;
     }
@@ -552,6 +538,11 @@
   function zoom(direction: 'in' | 'out'): void {
     canvas.value?.zoomStep(direction);
   }
+
+  /** Ставит середину плана в центр холста. */
+  function centerPlan(): void {
+    canvas.value?.centerPlan();
+  }
 </script>
 
 <template>
@@ -629,7 +620,6 @@
             :preview="interaction.preview.value"
             :hover-point="interaction.hoverPoint.value"
             :cursors
-            :area="visibleArea"
             :furniture-kind="furnitureKind"
             :furniture-rotation="furnitureRotation"
             :spiral-side="spiralSide"
@@ -648,6 +638,17 @@
           />
 
           <div class="absolute top-2 right-2 flex gap-1">
+            <UTooltip :text="PLAN_LABELS.centerPlan">
+              <UButton
+                icon="tabler:focus-centered"
+                :aria-label="PLAN_LABELS.centerPlan"
+                color="neutral"
+                variant="outline"
+                size="xs"
+                @click.left.exact.prevent="centerPlan"
+              />
+            </UTooltip>
+
             <UButton
               icon="tabler:minus"
               :aria-label="PLAN_LABELS.zoomOut"
@@ -691,13 +692,6 @@
           :stair-level="stairLevel"
           :has-level-above="hasLevelAbove"
           :has-level-below="hasLevelBelow"
-        />
-
-        <PlanAreaPanel
-          v-if="visibleArea"
-          :area="visibleArea"
-          :can-edit="editor.canEdit.value"
-          @clear="interaction.clearSelectedArea"
         />
 
         <PlanRoomPanel

@@ -4,11 +4,9 @@ import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
 
 import {
-  addColumn,
   addLevel,
   addSquareTower,
   addTower,
-  clearArea,
   createEmptyPlan,
   drawRoom,
   eraseCells,
@@ -117,48 +115,6 @@ describe('мебель на плане', () => {
     applyPlanChanges(doc, empty, plan, 'local');
 
     expect(readPlanFromDoc(doc).furniture).toEqual(plan.furniture);
-  });
-});
-
-describe('выделенный участок', () => {
-  it('обрезает комнату и убирает предметы внутри рамки', () => {
-    const withColumn = addColumn(createHallPlan(), {
-      id: 'column',
-      level: 0,
-      x: 1,
-      y: 1,
-    });
-
-    const plan = placeFurniture(withColumn, 0, { x: 0.5, y: 2.5 }, 'TABLE');
-
-    const cleared = clearArea(plan, 0, {
-      from: { x: 0, y: 0 },
-      to: { x: 2, y: 3 },
-    });
-
-    expect(cleared.rooms[0]?.cells).toHaveLength(12);
-    expect(cleared.columns).toEqual([]);
-    expect(cleared.furniture).toEqual([]);
-    // Дверь стоит над клеткой (4, 0) — вне рамки — и остаётся.
-    expect(cleared.doors).toHaveLength(1);
-  });
-
-  it('целиком убирает то, что лежит на участке', () => {
-    const cleared = clearArea(createHallPlan(), 0, {
-      from: { x: 6, y: 4 },
-      to: { x: -1, y: -1 },
-    });
-
-    expect(cleared.rooms).toEqual([]);
-    expect(cleared.doors).toEqual([]);
-  });
-
-  it('пустой участок план не меняет', () => {
-    const plan = createHallPlan();
-
-    expect(
-      clearArea(plan, 0, { from: { x: 20, y: 20 }, to: { x: 25, y: 25 } }),
-    ).toBe(plan);
   });
 });
 
