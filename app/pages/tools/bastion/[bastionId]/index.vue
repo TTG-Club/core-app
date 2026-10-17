@@ -14,19 +14,17 @@
     activatePlayerBastion,
     BASTION_DETAIL_LABELS,
     BASTION_GAME_LABELS,
-    BASTION_SHARE_LABELS,
     fetchBastionActivity,
     fetchPlayerBastion,
     getBastionErrorMessage,
     getBastionPlanRoute,
     getGameRoute,
+    isBastionStatusShown,
     MY_BASTIONS_ROUTE,
     PLAN_LABELS,
     PLAYER_BASTION_STATUS_COLORS,
     PLAYER_BASTION_STATUS_LABELS,
   } from '~bastion-game/model';
-  import { BastionShareModal } from '~bastion-game/panel';
-  import { fillTemplate } from '~bastions/model';
   import { UiResult } from '~ui/result';
 
   const route = useRoute();
@@ -74,16 +72,10 @@
 
   const toast = useToast();
   const isActivating = ref(false);
-  const isShareOpen = ref(false);
 
-  /** Сколько запросов на правку ждут владельца — для подсказки у кнопки. */
-  const editRequestsText = computed(() => {
-    const count = bastion.value?.editRequests ?? 0;
-
-    return count
-      ? fillTemplate(BASTION_SHARE_LABELS.requests, { count })
-      : BASTION_SHARE_LABELS.share;
-  });
+  const isStatusShown = computed(
+    () => !!bastion.value && isBastionStatusShown(bastion.value.status),
+  );
 
   /** Тот, кто ведёт бастион, может запустить его, пока тот в закладке. */
   const canActivate = computed(
@@ -179,6 +171,7 @@
       <template v-else>
         <div class="flex flex-wrap items-center gap-3 text-sm text-muted">
           <UBadge
+            v-if="isStatusShown"
             :color="PLAYER_BASTION_STATUS_COLORS[bastion.status]"
             variant="subtle"
           >
@@ -202,27 +195,6 @@
             >
               {{ PLAN_LABELS.open }}
             </UButton>
-
-            <UTooltip
-              v-if="bastion.owned"
-              :text="editRequestsText"
-            >
-              <UChip
-                :show="!!bastion.editRequests"
-                :text="bastion.editRequests ?? undefined"
-                color="warning"
-                size="xl"
-              >
-                <UButton
-                  icon="tabler:share"
-                  color="neutral"
-                  variant="subtle"
-                  @click.left.exact.prevent="isShareOpen = true"
-                >
-                  {{ BASTION_SHARE_LABELS.share }}
-                </UButton>
-              </UChip>
-            </UTooltip>
 
             <UButton
               v-if="canActivate"
@@ -287,12 +259,5 @@
         />
       </template>
     </div>
-
-    <BastionShareModal
-      v-if="bastion?.owned"
-      v-model:open="isShareOpen"
-      :bastion
-      @updated="bastion = $event"
-    />
   </NuxtLayout>
 </template>

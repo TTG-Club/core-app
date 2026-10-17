@@ -6,7 +6,12 @@
 
   import { useGameBastions, useMyBastions } from '../composables';
   import { BASTION_GAME_LABELS } from '../model';
-  import { BastionCard, BastionFormModal, BastionJoinModal } from './ui';
+  import {
+    BastionCard,
+    BastionFormModal,
+    BastionJoinModal,
+    BastionShareModal,
+  } from './ui';
 
   /**
    * Вкладка «Бастионы» на странице игры: все бастионы игры, добавление своего
@@ -48,6 +53,7 @@
   const editedBastion = ref<PlayerBastion>();
   const archivedBastion = ref<PlayerBastion>();
   const leavingBastion = ref<PlayerBastion>();
+  const sharingBastion = ref<PlayerBastion>();
 
   const isArchiveOpen = computed({
     get: () => !!archivedBastion.value,
@@ -63,6 +69,15 @@
     set: (opened: boolean) => {
       if (!opened) {
         leavingBastion.value = undefined;
+      }
+    },
+  });
+
+  const isShareOpen = computed({
+    get: () => !!sharingBastion.value,
+    set: (opened: boolean) => {
+      if (!opened) {
+        sharingBastion.value = undefined;
       }
     },
   });
@@ -121,6 +136,17 @@
     ) {
       isFormOpen.value = false;
     }
+  }
+
+  /**
+   * Подменяет бастион в окне «Поделиться» ответом сервера и обновляет список:
+   * на карточке меняется число запросов на правку.
+   *
+   * @param updated Бастион после изменения доступа.
+   */
+  async function handleShared(updated: PlayerBastion): Promise<void> {
+    sharingBastion.value = updated;
+    await refresh();
   }
 
   /** Отправляет выбранный бастион в архив. */
@@ -221,8 +247,16 @@
         @edit="openEdit(bastion)"
         @archive="archivedBastion = bastion"
         @leave="leavingBastion = bastion"
+        @share="sharingBastion = bastion"
       />
     </div>
+
+    <BastionShareModal
+      v-if="sharingBastion"
+      v-model:open="isShareOpen"
+      :bastion="sharingBastion"
+      @updated="handleShared"
+    />
 
     <BastionFormModal
       v-model:open="isFormOpen"

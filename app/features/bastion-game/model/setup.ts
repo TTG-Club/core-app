@@ -5,7 +5,10 @@ import type {
   SelectedChoice,
 } from './schema';
 
-import { STARTING_BASIC_SPACES } from './constants';
+import {
+  SPECIAL_FACILITY_PROGRESSION,
+  STARTING_BASIC_SPACES,
+} from './constants';
 
 export type StartingBasicSpace = (typeof STARTING_BASIC_SPACES)[number];
 
@@ -36,6 +39,15 @@ function isStartingBasicSpace(space: string): space is StartingBasicSpace {
 }
 
 /**
+ * Пустой черновик: для персонажа, у которого сооружений ещё нет.
+ *
+ * @returns Черновик без выбранных сооружений.
+ */
+export function createEmptySetupDraft(): FacilitySetupDraft {
+  return { basic: { CRAMPED: undefined, ROOMY: undefined }, special: [] };
+}
+
+/**
  * Собирает черновик из уже выбранных сооружений персонажа.
  *
  * @param member Персонаж в бастионе.
@@ -44,10 +56,7 @@ function isStartingBasicSpace(space: string): space is StartingBasicSpace {
 export function createSetupDraft(
   member: PlayerBastionMember,
 ): FacilitySetupDraft {
-  const draft: FacilitySetupDraft = {
-    basic: { CRAMPED: undefined, ROOMY: undefined },
-    special: [],
-  };
+  const draft = createEmptySetupDraft();
 
   for (const facility of member.facilities) {
     if (facility.category?.value === 'BASIC') {
@@ -171,4 +180,49 @@ export function canAddSpecial(
   }
 
   return !!facility.repeatable || countSelected(draft, facility.url) === 0;
+}
+
+/**
+ * Лимит специализированных сооружений по уровню персонажа, как его считает
+ * core-api: до 5 уровня их нет.
+ *
+ * @param characterLevel Уровень персонажа.
+ * @returns Сколько специализированных сооружений можно выбрать.
+ */
+export function getSpecialFacilityLimit(characterLevel: number): number {
+  return SPECIAL_FACILITY_PROGRESSION.reduce(
+    (limit, step) => (characterLevel >= step.level ? step.count : limit),
+    0,
+  );
+}
+
+/**
+ * Выбраны ли оба стартовых базовых сооружения.
+ *
+ * @param draft Черновик.
+ * @returns true, если тесное и вместительное выбраны.
+ */
+export function isBasicChosen(draft: FacilitySetupDraft): boolean {
+  return STARTING_BASIC_SPACES.every((space) => !!draft.basic[space]);
+}
+
+/**
+ * Оставляет в черновике только то, что персонаж может взять: сооружения не
+ * выше его уровня и не больше лимита. Нужно, когда уровень меняют после выбора.
+ *
+ * @param draft Черновик.
+ * @param available Специализированные сооружения, доступные по уровню.
+ * @param limit Лимит специализированных сооружений.
+ * @returns Специализированные сооружения, которые остаются в черновике.
+ */
+export function fitSpecialToLevel(
+  draft: FacilitySetupDraft,
+  available: ReadonlyArray<CatalogFacility>,
+  limit: number,
+): Array<SpecialFacilityDraft> {
+  const urls = new Set(available.map((facility) => facility.url));
+
+  return draft.special
+    .filter((selection) => urls.has(selection.facilityUrl))
+    .slice(0, limit);
 }
