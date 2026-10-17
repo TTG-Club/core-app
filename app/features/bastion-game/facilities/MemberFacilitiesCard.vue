@@ -5,7 +5,6 @@
     PlayerBastion,
     PlayerBastionFacility,
     PlayerBastionMember,
-    StableAnimal,
   } from '../model';
 
   import { fillTemplate } from '~bastions/model';
@@ -27,10 +26,8 @@
     FACILITY_SETUP_LABELS,
     getBastionErrorMessage,
     removeBastionFacility,
-    removeStableAnimal,
-    STABLE_LABELS,
   } from '../model';
-  import { FacilityCard, FacilitySetupSlideover } from './ui';
+  import { FacilityCard, FacilitySetupSlideover, StableModal } from './ui';
 
   /**
    * Персонаж в бастионе и его сооружения: специализированные и базовые, с
@@ -65,6 +62,7 @@
   const isOrderOpen = ref(false);
   const isRemoveOpen = ref(false);
   const isMenagerieOpen = ref(false);
+  const isStableOpen = ref(false);
 
   /** Сооружение, которому отдают приказ или которое убирают. */
   const selected = ref<PlayerBastionFacility>();
@@ -74,6 +72,13 @@
 
   const menagerieFacility = computed(() =>
     member.facilities.find((facility) => facility.id === menagerieId.value),
+  );
+
+  /** Конюшня, чьё стойло открыто: берётся из свежего персонажа после правок. */
+  const stableId = ref<string>();
+
+  const stableFacility = computed(() =>
+    member.facilities.find((facility) => facility.id === stableId.value),
   );
 
   const basicFacilities = computed(() =>
@@ -112,9 +117,9 @@
    * Разрушить сооружение можно в режиме редактирования: в закладке — игроку
    * персонажа или тому, кто ведёт бастион, в запущенном — только тому, кто ведёт.
    */
-  /** Животных забирают из конюшни в режиме редактирования запущенного бастиона. */
-  const canEditAnimals = computed(
-    () => editing && bastion.status === 'ACTIVE' && member.canGiveOrders,
+  /** Животных забирают из стойла в запущенном бастионе. */
+  const canManageStable = computed(
+    () => bastion.status === 'ACTIVE' && member.canGiveOrders,
   );
 
   const canRemove = computed(
@@ -175,6 +180,16 @@
   }
 
   /**
+   * Открывает стойло конюшни.
+   *
+   * @param facility Конюшня.
+   */
+  function openStable(facility: PlayerBastionFacility): void {
+    stableId.value = facility.id;
+    isStableOpen.value = true;
+  }
+
+  /**
    * Спрашивает, убрать ли сооружение.
    *
    * @param facility Сооружение.
@@ -193,26 +208,6 @@
     const updated = await run(
       () => enlargeFacility(bastion.id, facilityId),
       ACTIVITY_LABELS.enlargeDone,
-    );
-
-    if (updated) {
-      emit('updated', updated);
-    }
-  }
-
-  /**
-   * Забирает животное из конюшни — персонаж взял его с собой или оно погибло.
-   *
-   * @param facilityId Конюшня.
-   * @param animal Животное.
-   */
-  async function removeAnimal(
-    facilityId: string,
-    animal: StableAnimal,
-  ): Promise<void> {
-    const updated = await run(
-      () => removeStableAnimal(bastion.id, facilityId, animal.id),
-      STABLE_LABELS.removed,
     );
 
     if (updated) {
@@ -342,16 +337,15 @@
               :show-prerequisite="editing"
               :can-act="member.canGiveOrders"
               :can-remove
-              :can-edit-animals
               :active-order="getActiveOrder(facility.id)"
               :order-lock="orderLock"
               :bastion-turn="bastion.turn"
               @toggle-confirmation="toggleConfirmation(facility.id, $event)"
               @order="openOrder(facility)"
               @menagerie="openMenagerie(facility)"
+              @stable="openStable(facility)"
               @enlarge="enlarge(facility.id)"
               @remove="askRemove(facility)"
-              @remove-animal="removeAnimal(facility.id, $event)"
             />
           </div>
         </section>
@@ -383,9 +377,9 @@
               :bastion-turn="bastion.turn"
               @order="openOrder(facility)"
               @menagerie="openMenagerie(facility)"
+              @stable="openStable(facility)"
               @enlarge="enlarge(facility.id)"
               @remove="askRemove(facility)"
-              @remove-animal="removeAnimal(facility.id, $event)"
             />
           </div>
         </section>
@@ -431,6 +425,15 @@
       :bastion
       :facility="menagerieFacility"
       :can-manage="member.canGiveOrders"
+      @updated="emit('updated', $event)"
+    />
+
+    <StableModal
+      v-if="stableFacility"
+      v-model:open="isStableOpen"
+      :bastion
+      :facility="stableFacility"
+      :can-manage="canManageStable"
       @updated="emit('updated', $event)"
     />
 
