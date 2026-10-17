@@ -226,6 +226,7 @@ export function normalizeLoadedBastion(
     repeatable: record.repeatable ?? false,
     barrack: record.barrack ?? false,
     menagerie: record.menagerie ?? false,
+    stable: record.stable ?? false,
   };
 }
 

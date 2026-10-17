@@ -14,6 +14,7 @@ import {
   MENAGERIE_LARGE_SPACE,
   MY_BASTIONS_ROUTE,
   SHARED_BASTION_ROUTE,
+  STABLE_LARGE_SPACE,
 } from './constants';
 
 const SERVICE_UNAVAILABLE_STATUS = StatusCodes.SERVICE_UNAVAILABLE;
@@ -233,4 +234,28 @@ export function formatMenagerieSpace(quarters: number): string {
   }
 
   return `${whole}${fraction}`;
+}
+
+/**
+ * Место в конюшне в больших животных: 5 половин → «2½».
+ *
+ * @param halves Место в половинах большого животного.
+ * @returns Число больших мест с дробью.
+ */
+export function formatStableSpace(halves: number): string {
+  return formatMenagerieSpace(
+    (halves * MENAGERIE_LARGE_SPACE) / STABLE_LARGE_SPACE,
+  );
+}
+
+/**
+ * Сколько платит покупатель за животное из конюшни: обычная цена с наценкой,
+ * с округлением вниз — так же считает сервер.
+ *
+ * @param cost Обычная цена, зм.
+ * @param bonusPercent Наценка, процентов.
+ * @returns Цена продажи, зм.
+ */
+export function getStableSalePrice(cost: number, bonusPercent: number): number {
+  return Math.floor((cost * (100 + bonusPercent)) / 100);
 }

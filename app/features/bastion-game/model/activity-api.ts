@@ -29,6 +29,18 @@ export interface MenagerieRecruit {
 }
 
 /**
+ * Сделка конюшни: продать животное из конюшни или купить новое — из таблицы
+ * или (у мастера) любое другое по указанной цене.
+ */
+export interface StableTrade {
+  sellAnimalId?: string;
+  kind?: string;
+  name?: string;
+  size?: string;
+  cost?: number;
+}
+
+/**
  * Отправляет правку бастиона и разбирает ответ — бастион после правки.
  *
  * @param path Адрес ручки.
@@ -95,6 +107,8 @@ export async function fetchFacilityOrderOptions(
  * создаются её инструментами.
  * @param request.creature Для «Завербовать» в зверинце: существо из таблицы
  * или, у мастера, любое другое по показателю опасности.
+ * @param request.trade Для «Торговать» в конюшне: какое животное купить или
+ * продать.
  * @returns Бастион после приказа.
  */
 export function giveBastionOrder(
@@ -107,6 +121,7 @@ export function giveBastionOrder(
     cancelActive?: boolean;
     itemUrl?: string;
     creature?: MenagerieRecruit;
+    trade?: StableTrade;
   },
 ): Promise<PlayerBastion> {
   return mutateBastion(bastionPath(bastionId, '/orders'), 'POST', request);
@@ -149,6 +164,26 @@ export function removeMenagerieCreature(
 ): Promise<PlayerBastion> {
   return mutateBastion(
     bastionPath(bastionId, `/facilities/${facilityId}/creatures/${creatureId}`),
+    'DELETE',
+  );
+}
+
+/**
+ * Забирает животное из конюшни — например, персонаж взял его в путешествие или
+ * оно погибло.
+ *
+ * @param bastionId Бастион.
+ * @param facilityId Конюшня.
+ * @param animalId Животное.
+ * @returns Бастион после изменения.
+ */
+export function removeStableAnimal(
+  bastionId: string,
+  facilityId: string,
+  animalId: string,
+): Promise<PlayerBastion> {
+  return mutateBastion(
+    bastionPath(bastionId, `/facilities/${facilityId}/animals/${animalId}`),
     'DELETE',
   );
 }

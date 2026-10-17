@@ -72,6 +72,7 @@
       repeatable: false,
       barrack: false,
       menagerie: false,
+      stable: false,
       orders: [],
       orderOptions: [],
       enlargement: null,
@@ -245,6 +246,17 @@
           <UCheckbox
             v-model="state.menagerie"
             :label="BASTION_EDITOR_LABELS.menagerieCheckbox"
+          />
+        </UFormField>
+
+        <UFormField
+          class="md:col-span-8"
+          :label="BASTION_EDITOR_LABELS.stable"
+          name="stable"
+        >
+          <UCheckbox
+            v-model="state.stable"
+            :label="BASTION_EDITOR_LABELS.stableCheckbox"
           />
         </UFormField>
       </div>

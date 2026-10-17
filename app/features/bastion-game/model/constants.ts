@@ -284,3 +284,6 @@ export const MENAGERIE_SIZES = [
 ] as const;
 
 export type MenagerieSizeCode = (typeof MENAGERIE_SIZES)[number]['value'];
+
+/** Сколько половин места занимает большое животное в конюшне. */
+export const STABLE_LARGE_SPACE = 2;

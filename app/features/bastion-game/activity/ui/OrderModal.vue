@@ -6,6 +6,7 @@
     MenagerieSizeCode,
     PlayerBastion,
     PlayerBastionFacility,
+    StableTrade,
   } from '../../model';
 
   import { fillTemplate } from '~bastions/model';
@@ -23,11 +24,12 @@
     MENAGERIE_LARGE_SPACE,
     MENAGERIE_SIZES,
   } from '../../model';
+  import StableTradeFields from './StableTradeFields.vue';
 
   /**
    * Приказ сооружению: приказ из тех, что сооружение принимает, вариант из
    * справочника со сроком и ценой, предмет для изготовления в мастерской,
-   * существо для зверинца и пояснение. Цена списывается из казны сразу.
+   * существо для зверинца, сделка конюшни и пояснение. Цена списывается из казны сразу.
    */
   const isOpen = defineModel<boolean>('open', { required: true });
 
@@ -50,6 +52,7 @@
   const customName = ref('');
   const customSize = ref<MenagerieSizeCode>('MEDIUM');
   const customChallenge = ref<string>();
+  const trade = ref<StableTrade>();
   const note = ref('');
   const options = ref<Array<FacilityOrderOptionDetail>>([]);
 
@@ -207,17 +210,24 @@
     isCustomNoRoom.value ? 'text-warning' : 'text-muted',
   );
 
+  /** «Торговать» в конюшне: купить или продать животное. */
+  const isStableTrade = computed(
+    () => order.value === 'TRADE' && !!facility.stable,
+  );
+
   const isSubmitDisabled = computed(
     () =>
       !order.value
+      || (isStableTrade.value && !trade.value)
       || isBarrackFull.value
       || isCreatureMissing.value
       || isCustomNoRoom.value,
   );
 
-  // У зверинца цену и срок задаёт таблица существ, варианты справочника не нужны
+  // У зверинца цену и срок задаёт таблица существ, у конюшни — таблица
+  // животных, варианты справочника не нужны
   const optionItems = computed(() =>
-    isMenagerieRecruit.value
+    isMenagerieRecruit.value || isStableTrade.value
       ? []
       : options.value
           .filter(
@@ -346,6 +356,7 @@
           optionName: optionName.value,
           itemUrl: isCraftWithTools.value ? itemUrl.value : undefined,
           creature: creatureRequest.value,
+          trade: isStableTrade.value ? trade.value : undefined,
           note: note.value.trim() || undefined,
         }),
       ACTIVITY_LABELS.orderGiven,
@@ -476,6 +487,13 @@
             {{ menagerieText }}
           </p>
         </template>
+
+        <StableTradeFields
+          v-if="isStableTrade && facility.stable"
+          v-model="trade"
+          :stable="facility.stable"
+          :can-manage="bastion.canManage"
+        />
 
         <p
           v-if="barrackText"

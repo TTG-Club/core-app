@@ -5,6 +5,7 @@
     PlayerBastion,
     PlayerBastionFacility,
     PlayerBastionMember,
+    StableAnimal,
   } from '../model';
 
   import { fillTemplate } from '~bastions/model';
@@ -26,6 +27,8 @@
     FACILITY_SETUP_LABELS,
     getBastionErrorMessage,
     removeBastionFacility,
+    removeStableAnimal,
+    STABLE_LABELS,
   } from '../model';
   import { FacilityCard, FacilitySetupSlideover } from './ui';
 
@@ -109,6 +112,11 @@
    * Разрушить сооружение можно в режиме редактирования: в закладке — игроку
    * персонажа или тому, кто ведёт бастион, в запущенном — только тому, кто ведёт.
    */
+  /** Животных забирают из конюшни в режиме редактирования запущенного бастиона. */
+  const canEditAnimals = computed(
+    () => editing && bastion.status === 'ACTIVE' && member.canGiveOrders,
+  );
+
   const canRemove = computed(
     () =>
       editing
@@ -185,6 +193,26 @@
     const updated = await run(
       () => enlargeFacility(bastion.id, facilityId),
       ACTIVITY_LABELS.enlargeDone,
+    );
+
+    if (updated) {
+      emit('updated', updated);
+    }
+  }
+
+  /**
+   * Забирает животное из конюшни — персонаж взял его с собой или оно погибло.
+   *
+   * @param facilityId Конюшня.
+   * @param animal Животное.
+   */
+  async function removeAnimal(
+    facilityId: string,
+    animal: StableAnimal,
+  ): Promise<void> {
+    const updated = await run(
+      () => removeStableAnimal(bastion.id, facilityId, animal.id),
+      STABLE_LABELS.removed,
     );
 
     if (updated) {
@@ -314,6 +342,7 @@
               :show-prerequisite="editing"
               :can-act="member.canGiveOrders"
               :can-remove
+              :can-edit-animals
               :active-order="getActiveOrder(facility.id)"
               :order-lock="orderLock"
               :bastion-turn="bastion.turn"
@@ -322,6 +351,7 @@
               @menagerie="openMenagerie(facility)"
               @enlarge="enlarge(facility.id)"
               @remove="askRemove(facility)"
+              @remove-animal="removeAnimal(facility.id, $event)"
             />
           </div>
         </section>
@@ -355,6 +385,7 @@
               @menagerie="openMenagerie(facility)"
               @enlarge="enlarge(facility.id)"
               @remove="askRemove(facility)"
+              @remove-animal="removeAnimal(facility.id, $event)"
             />
           </div>
         </section>

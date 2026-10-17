@@ -94,6 +94,8 @@ export interface BastionFacilityDetailResponse {
   barrack?: boolean;
   /** Зверинец: вольеры для существ-защитников. */
   menagerie?: boolean;
+  /** Конюшня: верховые животные, «Торговать» покупает и продаёт их. */
+  stable?: boolean;
   orders?: Array<BastionLabel<BastionOrderCode>>;
   orderOptions?: Array<FacilityOrderOption>;
   enlargement?: FacilityEnlargement;
@@ -163,6 +165,7 @@ export interface BastionFacilityCreate extends EditorBaseInfoState {
   repeatable: boolean;
   barrack: boolean;
   menagerie: boolean;
+  stable: boolean;
   orders: Array<BastionOrderCode>;
   orderOptions: Array<FacilityOrderOptionForm>;
   /** `null` — сооружение не расширяется. */
