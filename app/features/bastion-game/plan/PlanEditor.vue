@@ -26,6 +26,7 @@
     getSelectedRooms,
     getStairTargetLevel,
     getTowerStairFrame,
+    isBastionWalled,
     mergeRooms,
     PLAN_CORRIDOR_WIDTHS,
     PLAN_EDIT_TOOLS,
@@ -40,7 +41,6 @@
     updateRoom,
   } from '../model';
   import {
-    PlanAreaPanel,
     PlanCanvas,
     PlanFacilityList,
     PlanLevelBar,
@@ -100,6 +100,9 @@
   const furnitureKind = ref<FurnitureKind>('TABLE');
   const furnitureRotation = ref(0);
 
+  // Пока сервер не присылает купленные блоки, стена не ограничена.
+  const wallLimit = computed(() => bastion.defenseWallBlocks ?? undefined);
+
   const interaction = usePlanInteraction({
     editor,
     tool,
@@ -115,6 +118,7 @@
     corridorWidth,
     furnitureKind,
     furnitureRotation,
+    wallLimit,
   });
 
   /**
@@ -171,15 +175,6 @@
       rotateFurniture(direction);
     }
   }
-
-  /** Выделенный участок — только у инструмента «Выделить» и на его этаже. */
-  const visibleArea = computed(() => {
-    const area = interaction.selectedArea.value;
-
-    return tool.value === 'area' && area?.level === level.value
-      ? area
-      : undefined;
-  });
 
   const facilities = computed(() =>
     createPaletteFacilities(bastion.members, editor.document.value),
@@ -266,6 +261,16 @@
       return PLAN_LABELS.wallsGroundOnly;
     }
 
+    if (tool.value === 'wall' && wallLimit.value !== undefined) {
+      if (wallLimit.value === 0) {
+        return PLAN_LABELS.wallsNoBlocks;
+      }
+
+      if (editor.document.value.defenseWalls.length >= wallLimit.value) {
+        return PLAN_LABELS.wallsLimitReached;
+      }
+    }
+
     if (tool.value === 'tower' && towerShape.value === 'SQUARE') {
       return PLAN_LABELS.squareTowerHint;
     }
@@ -284,6 +289,34 @@
         })
       : '';
   });
+
+  // Комнаты этажа и сооружения на отдельных вкладках: вместе список не
+  // помещался в панель.
+  const sideTabs = [
+    { label: PLAN_LABELS.rooms, value: 'rooms', slot: 'rooms' as const },
+    {
+      label: PLAN_LABELS.facilities,
+      value: 'facilities',
+      slot: 'facilities' as const,
+    },
+  ];
+
+  const wallsBlocksText = computed(() =>
+    wallLimit.value === undefined
+      ? ''
+      : fillTemplate(PLAN_LABELS.wallsBlocks, {
+          placed: editor.document.value.defenseWalls.length,
+          limit: wallLimit.value,
+        }),
+  );
+
+  const isWallsOverLimit = computed(
+    () =>
+      wallLimit.value !== undefined
+      && editor.document.value.defenseWalls.length > wallLimit.value,
+  );
+
+  const isWalled = computed(() => isBastionWalled(editor.document.value));
 
   const toolByKey = new Map(
     PLAN_TOOL_GROUPS.flat().map((option) => [option.key, option.tool]),
@@ -369,11 +402,7 @@
       (event.key === 'Delete' || event.key === 'Backspace')
       && editor.canEdit.value
     ) {
-      if (visibleArea.value) {
-        interaction.clearSelectedArea();
-      } else {
-        deleteSelection();
-      }
+      deleteSelection();
 
       return;
     }
@@ -552,6 +581,11 @@
   function zoom(direction: 'in' | 'out'): void {
     canvas.value?.zoomStep(direction);
   }
+
+  /** Ставит середину плана в центр холста. */
+  function centerPlan(): void {
+    canvas.value?.centerPlan();
+  }
 </script>
 
 <template>
@@ -629,7 +663,6 @@
             :preview="interaction.preview.value"
             :hover-point="interaction.hoverPoint.value"
             :cursors
-            :area="visibleArea"
             :furniture-kind="furnitureKind"
             :furniture-rotation="furnitureRotation"
             :spiral-side="spiralSide"
@@ -648,6 +681,17 @@
           />
 
           <div class="absolute top-2 right-2 flex gap-1">
+            <UTooltip :text="PLAN_LABELS.centerPlan">
+              <UButton
+                icon="tabler:focus-centered"
+                :aria-label="PLAN_LABELS.centerPlan"
+                color="neutral"
+                variant="outline"
+                size="xs"
+                @click.left.exact.prevent="centerPlan"
+              />
+            </UTooltip>
+
             <UButton
               icon="tabler:minus"
               :aria-label="PLAN_LABELS.zoomOut"
@@ -693,13 +737,6 @@
           :has-level-below="hasLevelBelow"
         />
 
-        <PlanAreaPanel
-          v-if="visibleArea"
-          :area="visibleArea"
-          :can-edit="editor.canEdit.value"
-          @clear="interaction.clearSelectedArea"
-        />
-
         <PlanRoomPanel
           v-if="selectedRoom"
           :room="selectedRoom"
@@ -711,23 +748,59 @@
           @remove="deleteSelection"
         />
 
-        <PlanRoomList
-          v-model:selected="selectedRoomId"
-          :rooms="levelRooms"
-        />
+        <UTabs
+          :items="sideTabs"
+          default-value="rooms"
+          variant="link"
+          size="sm"
+          :ui="{ list: 'w-full', trigger: 'grow' }"
+        >
+          <template #rooms>
+            <PlanRoomList
+              v-model:selected="selectedRoomId"
+              :rooms="levelRooms"
+            />
+          </template>
 
-        <PlanFacilityList :facilities />
+          <template #facilities>
+            <PlanFacilityList :facilities />
+          </template>
+        </UTabs>
 
         <section
-          v-if="wallsText"
+          v-if="wallsText || wallsBlocksText"
           class="flex flex-col gap-1"
         >
           <h3 class="text-sm font-semibold text-highlighted">
             {{ PLAN_LABELS.walls }}
           </h3>
 
-          <p class="text-xs text-muted tabular-nums">
+          <p
+            v-if="wallsBlocksText"
+            class="text-xs text-muted tabular-nums"
+          >
+            {{ wallsBlocksText }}
+          </p>
+
+          <p
+            v-if="wallsText"
+            class="text-xs text-muted tabular-nums"
+          >
             {{ wallsText }}
+          </p>
+
+          <p
+            v-if="isWallsOverLimit"
+            class="text-xs text-error"
+          >
+            {{ PLAN_LABELS.wallsOverLimit }}
+          </p>
+
+          <p
+            v-if="wallsText"
+            :class="['text-xs', isWalled ? 'text-success' : 'text-muted']"
+          >
+            {{ isWalled ? PLAN_LABELS.wallsEnclosed : PLAN_LABELS.wallsOpen }}
           </p>
         </section>
       </aside>

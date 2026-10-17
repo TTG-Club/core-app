@@ -713,8 +713,28 @@ export function getRoomLabelPoint(room: PlanRoom): PlanCell | undefined {
   return { x: nearest.x + 0.5, y: nearest.y + 0.5 };
 }
 
+/** Прямоугольник в клетках: левый верхний и правый нижний края. */
+interface PlanBounds {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
 /**
- * Середина всех комнат этажа — куда смотреть на старте.
+ * Края одной клетки.
+ *
+ * @param cell Клетка.
+ * @returns Прямоугольник клетки.
+ */
+function getCellBounds(cell: PlanCell): PlanBounds {
+  return { left: cell.x, top: cell.y, right: cell.x + 1, bottom: cell.y + 1 };
+}
+
+/**
+ * Середина всего, что нарисовано на этаже: комнат, защитной стены, лестниц,
+ * колонн и предметов интерьера. Сюда смотрят на старте и по кнопке
+ * «Центрировать».
  *
  * @param document План.
  * @param level Этаж.
@@ -724,19 +744,46 @@ export function getLevelCenter(
   document: PlanDocument,
   level: number,
 ): PlanCell | undefined {
-  const cells = document.rooms
-    .filter((room) => room.level === level)
-    .flatMap((room) => room.cells);
+  const onLevel = <T extends { level: number }>(item: T) =>
+    item.level === level;
 
-  if (!cells.length) {
+  const bounds: Array<PlanBounds> = [
+    ...document.rooms
+      .filter(onLevel)
+      .flatMap((room) => room.cells.map(getCellBounds)),
+    ...(level === 0 ? document.defenseWalls.map(getCellBounds) : []),
+    ...document.stairs.filter(onLevel).map((stair) => ({
+      left: stair.x,
+      top: stair.y,
+      right: stair.x + stair.width,
+      bottom: stair.y + stair.height,
+    })),
+    ...document.furniture.filter(onLevel).map((item) => {
+      const { width, depth } = getFurnitureSize(item);
+
+      return {
+        left: item.x,
+        top: item.y,
+        right: item.x + width,
+        bottom: item.y + depth,
+      };
+    }),
+    ...document.columns.filter(onLevel).map((column) => ({
+      left: column.x,
+      top: column.y,
+      right: column.x,
+      bottom: column.y,
+    })),
+  ];
+
+  if (!bounds.length) {
     return undefined;
   }
 
-  const xs = cells.map((cell) => cell.x);
-  const ys = cells.map((cell) => cell.y);
+  const left = Math.min(...bounds.map((item) => item.left));
+  const top = Math.min(...bounds.map((item) => item.top));
+  const right = Math.max(...bounds.map((item) => item.right));
+  const bottom = Math.max(...bounds.map((item) => item.bottom));
 
-  return {
-    x: (Math.min(...xs) + Math.max(...xs) + 1) / 2,
-    y: (Math.min(...ys) + Math.max(...ys) + 1) / 2,
-  };
+  return { x: (left + right) / 2, y: (top + bottom) / 2 };
 }
