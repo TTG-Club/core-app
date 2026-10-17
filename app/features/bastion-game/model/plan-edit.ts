@@ -15,8 +15,6 @@ import type {
   TowerShape,
 } from './plan-schema';
 
-import { isEqual } from 'es-toolkit';
-
 import { fillTemplate } from '~bastions/model';
 
 import {
@@ -35,7 +33,6 @@ import {
   getCellAt,
   getCellKey,
   getCircleCells,
-  getEdgeCells,
   getEdgeKey,
   getFurnitureSize,
   getNearestEdge,
@@ -570,7 +567,7 @@ export function eraseCells(
   const hasFloor = document.rooms.some(
     (room) =>
       room.level === level
-      && room.kind !== 'TOWER'
+      && !isTowerKind(room.kind)
       && !room.cells.every(isKept),
   );
 
@@ -583,7 +580,7 @@ export function eraseCells(
   return prunePlan({
     ...document,
     rooms: document.rooms.map((room) =>
-      room.level === level && room.kind !== 'TOWER'
+      room.level === level && !isTowerKind(room.kind)
         ? { ...room, cells: room.cells.filter(isKept) }
         : room,
     ),
@@ -1002,92 +999,6 @@ export interface PlanArea {
 }
 
 /**
- * Убирает всё на участке этажа: комнаты обрезаются по рамке, башня уходит,
- * если в рамке её центр, двери и окна на рёбрах клеток рамки, лестницы и
- * мебель, задевающие рамку, колонны внутри неё и защитная стена исчезают.
- *
- * @param document План.
- * @param level Этаж.
- * @param area Участок.
- * @returns Новый план или тот же, если на участке ничего нет.
- */
-export function clearArea(
-  document: PlanDocument,
-  level: number,
-  area: PlanArea,
-): PlanDocument {
-  const left = Math.min(area.from.x, area.to.x);
-  const right = Math.max(area.from.x, area.to.x);
-  const top = Math.min(area.from.y, area.to.y);
-  const bottom = Math.max(area.from.y, area.to.y);
-
-  const isInside = (cell: PlanCell) =>
-    cell.x >= left && cell.x <= right && cell.y >= top && cell.y <= bottom;
-
-  // Точки (колонны, центры башен) лежат и на линиях сетки: правый и нижний
-  // край рамки — граница последней клетки.
-  const isPointInside = (point: PlanCell) =>
-    point.x >= left
-    && point.x <= right + 1
-    && point.y >= top
-    && point.y <= bottom + 1;
-
-  const overlaps = (cell: PlanCell, width: number, depth: number) =>
-    cell.x <= right
-    && cell.x + width - 1 >= left
-    && cell.y <= bottom
-    && cell.y + depth - 1 >= top;
-
-  const removedTowers = new Set(
-    document.rooms
-      .filter(
-        (room) =>
-          room.level === level
-          && room.shape
-          && isPointInside({ x: room.shape.cx, y: room.shape.cy }),
-      )
-      .map((room) => room.id),
-  );
-
-  const onLevel = <T extends { level: number }>(item: T) =>
-    item.level === level;
-
-  const next: PlanDocument = prunePlan({
-    ...document,
-    rooms: document.rooms
-      .filter((room) => !removedTowers.has(room.id))
-      .map((room) =>
-        room.level === level && room.kind !== 'TOWER'
-          ? { ...room, cells: room.cells.filter((cell) => !isInside(cell)) }
-          : room,
-      ),
-    doors: document.doors.filter(
-      (door) => !onLevel(door) || !getEdgeCells(door).some(isInside),
-    ),
-    windows: document.windows.filter(
-      (item) => !onLevel(item) || !getEdgeCells(item).some(isInside),
-    ),
-    stairs: document.stairs.filter(
-      (stair) => !onLevel(stair) || !overlaps(stair, stair.width, stair.height),
-    ),
-    columns: document.columns.filter(
-      (column) => !onLevel(column) || !isPointInside(column),
-    ),
-    furniture: document.furniture.filter((item) => {
-      const { width, depth } = getFurnitureSize(item);
-
-      return !onLevel(item) || !overlaps(item, width, depth);
-    }),
-    defenseWalls:
-      level === 0
-        ? document.defenseWalls.filter((cell) => !isInside(cell))
-        : document.defenseWalls,
-  });
-
-  return isEqual(next, document) ? document : next;
-}
-
-/**
  * Мебель под точкой.
  *
  * @param document План.
@@ -1286,21 +1197,29 @@ function updateFurniture(
 }
 
 /**
- * Достраивает защитную стену по клеткам первого этажа вне комнат.
+ * Достраивает защитную стену по клеткам первого этажа вне комнат, не больше
+ * купленных блоков.
  *
  * @param document План.
  * @param cells Клетки мазка.
+ * @param limit Сколько блоков стены куплено; undefined — без ограничения.
  * @returns Новый план или тот же, если добавлять нечего.
  */
 export function paintDefenseWall(
   document: PlanDocument,
   cells: ReadonlyArray<PlanCell>,
+  limit?: number,
 ): PlanDocument {
   const occupancy = getOccupancy(document, 0);
 
   const existing = new Set(
     document.defenseWalls.map((cell) => getCellKey(cell.x, cell.y)),
   );
+
+  const free =
+    limit === undefined
+      ? Number.POSITIVE_INFINITY
+      : limit - document.defenseWalls.length;
 
   const added = cells.filter((cell) => {
     const key = getCellKey(cell.x, cell.y);
@@ -1314,9 +1233,77 @@ export function paintDefenseWall(
     return true;
   });
 
-  return added.length
-    ? { ...document, defenseWalls: [...document.defenseWalls, ...added] }
+  const placed = added.slice(0, Math.max(0, free));
+
+  return placed.length
+    ? { ...document, defenseWalls: [...document.defenseWalls, ...placed] }
     : document;
+}
+
+/**
+ * Окружён ли бастион защитной стеной полностью: от края участка нельзя дойти
+ * до комнат первого этажа, не пересекая стену. Ходят только по сторонам
+ * клеток, поэтому диагональный стык двух клеток стены сплошной. Ворота стоят
+ * в стене и тоже её замыкают.
+ *
+ * @param document План.
+ * @returns true, если на первом этаже есть комнаты и стена их окружает.
+ */
+export function isBastionWalled(document: PlanDocument): boolean {
+  const occupancy = getOccupancy(document, 0);
+
+  if (occupancy.size === 0 || document.defenseWalls.length === 0) {
+    return false;
+  }
+
+  const size = PLAN_LIMITS.gridSize;
+
+  const walls = new Set(
+    document.defenseWalls.map((cell) => getCellKey(cell.x, cell.y)),
+  );
+
+  const visited = new Set<string>();
+  const queue: Array<PlanCell> = [];
+
+  /**
+   * Ставит клетку в обход, если она на участке, не стена и ещё не пройдена.
+   *
+   * @param cell Клетка.
+   */
+  const visit = (cell: PlanCell): void => {
+    const key = getCellKey(cell.x, cell.y);
+
+    if (isCellOnGrid(cell) && !walls.has(key) && !visited.has(key)) {
+      visited.add(key);
+      queue.push(cell);
+    }
+  };
+
+  for (let index = 0; index < size; index++) {
+    visit({ x: index, y: 0 });
+    visit({ x: index, y: size - 1 });
+    visit({ x: 0, y: index });
+    visit({ x: size - 1, y: index });
+  }
+
+  for (let cursor = 0; cursor < queue.length; cursor++) {
+    const cell = queue[cursor];
+
+    if (!cell) {
+      continue;
+    }
+
+    if (occupancy.has(getCellKey(cell.x, cell.y))) {
+      return false;
+    }
+
+    visit({ x: cell.x + 1, y: cell.y });
+    visit({ x: cell.x - 1, y: cell.y });
+    visit({ x: cell.x, y: cell.y + 1 });
+    visit({ x: cell.x, y: cell.y - 1 });
+  }
+
+  return true;
 }
 
 /**
