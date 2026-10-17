@@ -38,7 +38,7 @@ export interface MenagerieRecruit {
  */
 async function mutateBastion(
   path: string,
-  method: 'POST' | 'PATCH' | 'DELETE',
+  method: 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   body?: Record<string, unknown>,
 ): Promise<PlayerBastion> {
   const response = await $fetch<unknown>(path, { method, body, retry: 0 });
@@ -161,7 +161,8 @@ export function removeMenagerieCreature(
  * @param request Решение.
  * @param request.decision Заплатить, отказаться, отправить защитников или записать предмет.
  * @param request.defenders Сколько защитников отправить на помощь.
- * @param request.note Какой предмет получен.
+ * @param request.note Какой предмет получен, словами.
+ * @param request.itemUrl Магический предмет из раздела «Магические предметы».
  * @returns Бастион после решения.
  */
 export function decideBastionEvent(
@@ -171,6 +172,8 @@ export function decideBastionEvent(
     decision: BastionEventDecision;
     defenders?: number;
     note?: string;
+    /** Магический предмет из раздела «Магические предметы»: название сервер берёт сам. */
+    itemUrl?: string;
   },
 ): Promise<PlayerBastion> {
   return mutateBastion(
@@ -209,19 +212,34 @@ export function cancelBastionOrder(
 }
 
 /**
- * Делает ход бастиона. Только мастер.
+ * Делает ход бастиона. Только мастер. События бастиона сервер бросает сам,
+ * итоги приказов записываются в журнале после хода.
  *
  * @param bastionId Бастион.
- * @param request Событие бастиона и итоги завершающихся приказов.
- * @param request.event Событие при обслуживании.
- * @param request.results Итоги приказов: приказ → текст.
  * @returns Бастион после хода.
  */
-export function performBastionTurn(
+export function performBastionTurn(bastionId: string): Promise<PlayerBastion> {
+  return mutateBastion(bastionPath(bastionId, '/turns'), 'POST', {});
+}
+
+/**
+ * Записывает итог выполненного приказа: что получили или узнали.
+ *
+ * @param bastionId Бастион.
+ * @param orderId Приказ.
+ * @param result Итог; пусто — стереть.
+ * @returns Бастион после записи.
+ */
+export function writeBastionOrderResult(
   bastionId: string,
-  request: { event?: string; results: Record<string, string> },
+  orderId: string,
+  result: string,
 ): Promise<PlayerBastion> {
-  return mutateBastion(bastionPath(bastionId, '/turns'), 'POST', request);
+  return mutateBastion(
+    bastionPath(bastionId, `/orders/${orderId}/result`),
+    'PUT',
+    { result },
+  );
 }
 
 /**

@@ -12,11 +12,10 @@
     formatMenagerieSpace,
     getArtisanToolIcon,
     getOrderSubject,
-    MENAGERIE_LARGE_SPACE,
   } from '../../model';
 
   /**
-   * Сооружение персонажа: название со ссылкой на справочник, пространство,
+   * Карточка сооружения персонажа: название со ссылкой на справочник, пространство,
    * наёмники, сделанные выборы и состояние требования. У сооружения
    * с приказами видно, простаивает ли оно, и есть кнопка приказа; если
    * приказ сейчас не отдать, подсказка объясняет почему.
@@ -70,6 +69,21 @@
         }),
   );
 
+  /** Сооружение не работает в текущий ход: вместо кнопки приказа — отметка. */
+  const isUnavailableNow = computed(
+    () => !!unavailableText.value && facility.unavailableOnTurn === bastionTurn,
+  );
+
+  /** Есть хотя бы одно действие для подвала карточки. */
+  const hasActions = computed(
+    () =>
+      isOrderVisible.value
+      || (canAct && facility.enlargeable)
+      || canRemove
+      || !!facility.menagerie
+      || isUnavailableNow.value,
+  );
+
   /** Почему приказ сейчас не отдать; undefined — можно. */
   const orderBlocker = computed(() => {
     if (orderLock) {
@@ -84,7 +98,7 @@
       return ACTIVITY_LABELS.orderPrerequisite;
     }
 
-    if (unavailableText.value && facility.unavailableOnTurn === bastionTurn) {
+    if (isUnavailableNow.value) {
       return unavailableText.value;
     }
 
@@ -140,66 +154,45 @@
       `${facility.space.name} (${facility.space.squares} ${FACILITY_SETUP_LABELS.squares})`,
   );
 
-  /** Наёмники сооружения: по закрашенному человечку на каждого. */
-  const hirelingIcons = computed(() =>
-    Array.from({ length: facility.hirelings ?? 0 }, (_, index) => index),
+  /** Наёмники видны и тогда, когда событие забрало всех: число станет 0. */
+  const hasHirelings = computed(
+    () => !!facility.hirelings || !!facility.hirelingsMissing,
+  );
+
+  /** Число наёмников подсвечено предупреждением, пока событие забрало часть из них. */
+  const hirelingsClass = computed(() =>
+    facility.hirelingsMissing ? 'text-warning' : 'text-toned',
   );
 
   const hirelingsHint = computed(() =>
-    fillTemplate(FACILITY_SETUP_LABELS.hirelings, {
-      count: facility.hirelings ?? 0,
-    }),
+    fillTemplate(
+      facility.hirelingsMissing
+        ? FACILITY_SETUP_LABELS.hirelingsMissing
+        : FACILITY_SETUP_LABELS.hirelings,
+      {
+        count: facility.hirelings ?? 0,
+        missing: facility.hirelingsMissing ?? 0,
+      },
+    ),
+  );
+
+  /** Барак: сколько защитников из скольких мест, вида «4/12»; пусто — не барак. */
+  const defendersCount = computed(() =>
+    facility.defenderCapacity
+      ? `${facility.defenders ?? 0}/${facility.defenderCapacity}`
+      : '',
   );
 
   /**
-   * Места в бараке: закрашенный щит — нанятый защитник, пунктирный —
-   * свободное место. У других сооружений мест нет, и список пуст.
+   * Зверинец: сколько больших мест занято из скольких, вида «1½/4»;
+   * пусто — не зверинец.
    */
-  const defenderSlots = computed(() => {
-    const capacity = facility.defenderCapacity ?? 0;
-    const count = facility.defenders ?? 0;
-
-    return Array.from({ length: capacity }, (_, index) =>
-      index < count
-        ? { index, icon: 'tabler:shield-filled', tone: 'text-info' }
-        : { index, icon: 'ttg:shield-dashed', tone: 'text-muted' },
-    );
-  });
-
-  /**
-   * Вольеры зверинца: лапа на каждое существо — большая у большого, малая у
-   * маленького и среднего; закрашенная у защитника бастиона, приглушённая у
-   * существа, выведенного из защитников. Свободное место — пунктирные лапы:
-   * большая на каждое большое место, малая на каждую оставшуюся четверть.
-   */
-  const menagerieSlots = computed(() => {
+  const menagerieCount = computed(() => {
     const menagerie = facility.menagerie;
 
-    if (!menagerie) {
-      return [];
-    }
-
-    const creatures = menagerie.creatures.map((creature) => ({
-      key: creature.id,
-      icon: 'tabler:paw-filled',
-      size: creature.space >= MENAGERIE_LARGE_SPACE ? 'size-4' : 'size-3',
-      tone: creature.defender ? 'text-info' : 'text-muted',
-    }));
-
-    const free = Math.max(0, menagerie.capacity - menagerie.occupied);
-    const freeLarge = Math.floor(free / MENAGERIE_LARGE_SPACE);
-
-    const freeSlots = Array.from(
-      { length: freeLarge + (free % MENAGERIE_LARGE_SPACE) },
-      (_, index) => ({
-        key: `free-${index}`,
-        icon: 'ttg:paw-dashed',
-        size: index < freeLarge ? 'size-4' : 'size-3',
-        tone: 'text-muted',
-      }),
-    );
-
-    return [...creatures, ...freeSlots];
+    return menagerie
+      ? `${formatMenagerieSpace(menagerie.occupied)}/${formatMenagerieSpace(menagerie.capacity)}`
+      : '';
   });
 
   /** Подсказка к значкам: кто в вольерах и сколько места свободно. */
@@ -293,8 +286,10 @@
 </script>
 
 <template>
-  <div class="flex flex-col gap-1 rounded-lg bg-elevated/40 px-3 py-2">
-    <div class="flex flex-wrap items-baseline justify-between gap-2">
+  <article
+    class="flex flex-col gap-2 rounded-lg border border-default bg-elevated/40 p-3"
+  >
+    <header class="flex flex-col gap-0.5">
       <ULink
         :to="`/bastions/${facility.facilityUrl}`"
         target="_blank"
@@ -303,82 +298,91 @@
         {{ facility.name }}
       </ULink>
 
-      <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-        <span class="text-muted">{{ spaceText }}</span>
+      <span class="text-xs text-muted">{{ spaceText }}</span>
+    </header>
 
-        <!-- Значки сами по себе ничего не говорят вслух, поэтому число
-          людей идёт и подсказкой, и `aria-label` -->
+    <!-- Значки сами по себе ничего не говорят вслух, поэтому число
+      людей и мест идёт и подсказкой, и `aria-label` -->
+    <div
+      v-if="
+        toolIcons.length || hasHirelings || defendersCount || menagerieCount
+      "
+      class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm"
+    >
+      <UTooltip
+        v-if="hasHirelings"
+        :text="hirelingsHint"
+      >
         <div
-          v-if="toolIcons.length"
           class="flex items-center gap-1"
+          role="img"
+          :aria-label="hirelingsHint"
         >
-          <UTooltip
-            v-for="tool in toolIcons"
-            :key="tool.name"
-            :text="tool.name"
+          <UIcon
+            name="tabler:user-filled"
+            class="size-4 text-primary"
+          />
+
+          <span
+            class="tabular-nums"
+            :class="hirelingsClass"
           >
-            <UIcon
-              :name="tool.icon"
-              class="size-4 text-toned"
-              role="img"
-              :aria-label="tool.name"
-            />
-          </UTooltip>
+            {{ facility.hirelings ?? 0 }}
+          </span>
         </div>
+      </UTooltip>
 
-        <UTooltip
-          v-if="hirelingIcons.length"
-          :text="hirelingsHint"
+      <UTooltip
+        v-if="defendersCount"
+        :text="defendersHint"
+      >
+        <div
+          class="flex items-center gap-1"
+          role="img"
+          :aria-label="defendersHint"
         >
-          <div
-            class="flex items-center gap-0.5"
-            role="img"
-            :aria-label="hirelingsHint"
-          >
-            <UIcon
-              v-for="index in hirelingIcons"
-              :key="index"
-              name="tabler:user-filled"
-              class="size-4 text-primary"
-            />
-          </div>
-        </UTooltip>
+          <UIcon
+            name="tabler:shield-filled"
+            class="size-4 text-info"
+          />
 
-        <UTooltip
-          v-if="menagerieSlots.length"
-          :text="menagerieHint"
-        >
-          <div
-            class="flex flex-wrap items-end gap-0.5"
-            role="img"
-            :aria-label="menagerieHint"
-          >
-            <UIcon
-              v-for="cell in menagerieSlots"
-              :key="cell.key"
-              :name="cell.icon"
-              :class="[cell.size, cell.tone]"
-            />
-          </div>
-        </UTooltip>
+          <span class="text-toned tabular-nums">{{ defendersCount }}</span>
+        </div>
+      </UTooltip>
 
-        <UTooltip
-          v-if="defenderSlots.length"
-          :text="defendersHint"
+      <UTooltip
+        v-if="menagerieCount"
+        :text="menagerieHint"
+      >
+        <div
+          class="flex items-center gap-1"
+          role="img"
+          :aria-label="menagerieHint"
         >
-          <div
-            class="flex flex-wrap items-center gap-0.5"
+          <UIcon
+            name="tabler:paw-filled"
+            class="size-4 text-info"
+          />
+
+          <span class="text-toned tabular-nums">{{ menagerieCount }}</span>
+        </div>
+      </UTooltip>
+
+      <div
+        v-if="toolIcons.length"
+        class="flex flex-wrap items-center gap-1"
+      >
+        <UTooltip
+          v-for="tool in toolIcons"
+          :key="tool.name"
+          :text="tool.name"
+        >
+          <UIcon
+            :name="tool.icon"
+            class="size-4 text-toned"
             role="img"
-            :aria-label="defendersHint"
-          >
-            <UIcon
-              v-for="seat in defenderSlots"
-              :key="seat.index"
-              :name="seat.icon"
-              class="size-4"
-              :class="seat.tone"
-            />
-          </div>
+            :aria-label="tool.name"
+          />
         </UTooltip>
       </div>
     </div>
@@ -423,25 +427,24 @@
     </div>
 
     <div
-      v-if="
-        isOrderVisible
-        || (canAct && facility.enlargeable)
-        || canRemove
-        || !!facility.menagerie
-        || !!unavailableText
-      "
-      class="flex flex-wrap items-center justify-end gap-1"
+      v-if="hasOrders"
+      class="flex flex-wrap items-center gap-2"
     >
       <span
         v-if="hasOrders"
-        class="mr-auto text-xs"
+        class="text-xs"
         :class="occupationClass"
       >
         {{ occupationText }}
       </span>
+    </div>
 
+    <footer
+      v-if="hasActions"
+      class="mt-auto flex flex-wrap items-center gap-1 border-t border-default pt-2"
+    >
       <UTooltip
-        v-if="unavailableText"
+        v-if="isUnavailableNow"
         :text="unavailableText"
       >
         <UBadge
@@ -455,12 +458,11 @@
       </UTooltip>
 
       <UTooltip
-        v-if="isOrderVisible"
+        v-else-if="isOrderVisible"
         :text="orderBlocker"
         :disabled="!orderBlocker"
       >
         <UButton
-          icon="tabler:send"
           size="xs"
           variant="subtle"
           :disabled="!!orderBlocker"
@@ -498,10 +500,11 @@
         size="xs"
         color="error"
         variant="ghost"
+        class="ml-auto"
         @click.left.exact.prevent="emit('remove')"
       >
         {{ ACTIVITY_LABELS.remove }}
       </UButton>
-    </div>
-  </div>
+    </footer>
+  </article>
 </template>

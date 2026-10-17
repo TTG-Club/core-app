@@ -163,6 +163,8 @@ const facilitySchema = z.object({
   unavailableOnTurn: z.number().nullish(),
   /** Почему сооружение не работает. */
   unavailableReason: z.string().nullish(),
+  /** Наёмники, которых забрало событие и которым ещё ищут замену; null — все на месте. */
+  hirelingsMissing: z.number().nullish(),
 });
 
 /** Гость бастиона из событий «Гость» и «Беженцы». */
@@ -382,6 +384,8 @@ export const bastionActivitySchema = z.object({
       note: z.string().nullish(),
       result: z.string().nullish(),
       canCancel: z.boolean(),
+      /** Открывший может записать итог выполненного приказа. */
+      canWriteResult: z.boolean().nullish(),
     }),
   ),
   turns: z.array(
@@ -438,6 +442,8 @@ export const bastionActivitySchema = z.object({
         canDecide: z.boolean(),
         /** Сколько защитников персонажа можно отправить на помощь. */
         defenders: z.number(),
+        /** Полученный магический предмет из раздела «Магические предметы». */
+        noteUrl: z.string().nullish(),
       }),
     )
     .default([]),
