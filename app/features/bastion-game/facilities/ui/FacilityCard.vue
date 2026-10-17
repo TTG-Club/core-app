@@ -154,10 +154,26 @@
       `${facility.space.name} (${facility.space.squares} ${FACILITY_SETUP_LABELS.squares})`,
   );
 
+  /** Наёмники видны и тогда, когда событие забрало всех: число станет 0. */
+  const hasHirelings = computed(
+    () => !!facility.hirelings || !!facility.hirelingsMissing,
+  );
+
+  /** Число наёмников подсвечено предупреждением, пока событие забрало часть из них. */
+  const hirelingsClass = computed(() =>
+    facility.hirelingsMissing ? 'text-warning' : 'text-toned',
+  );
+
   const hirelingsHint = computed(() =>
-    fillTemplate(FACILITY_SETUP_LABELS.hirelings, {
-      count: facility.hirelings ?? 0,
-    }),
+    fillTemplate(
+      facility.hirelingsMissing
+        ? FACILITY_SETUP_LABELS.hirelingsMissing
+        : FACILITY_SETUP_LABELS.hirelings,
+      {
+        count: facility.hirelings ?? 0,
+        missing: facility.hirelingsMissing ?? 0,
+      },
+    ),
   );
 
   /** Барак: сколько защитников из скольких мест, вида «4/12»; пусто — не барак. */
@@ -289,15 +305,12 @@
       людей и мест идёт и подсказкой, и `aria-label` -->
     <div
       v-if="
-        toolIcons.length
-        || facility.hirelings
-        || defendersCount
-        || menagerieCount
+        toolIcons.length || hasHirelings || defendersCount || menagerieCount
       "
       class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm"
     >
       <UTooltip
-        v-if="facility.hirelings"
+        v-if="hasHirelings"
         :text="hirelingsHint"
       >
         <div
@@ -310,7 +323,12 @@
             class="size-4 text-primary"
           />
 
-          <span class="text-toned tabular-nums">{{ facility.hirelings }}</span>
+          <span
+            class="tabular-nums"
+            :class="hirelingsClass"
+          >
+            {{ facility.hirelings ?? 0 }}
+          </span>
         </div>
       </UTooltip>
 
@@ -445,7 +463,6 @@
         :disabled="!orderBlocker"
       >
         <UButton
-          icon="tabler:send"
           size="xs"
           variant="subtle"
           :disabled="!!orderBlocker"
