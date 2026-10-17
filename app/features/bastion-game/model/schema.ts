@@ -227,8 +227,6 @@ export const playerBastionSchema = z.object({
   editRequests: z.number().nullish(),
   /** Владелец разрешил открывшему править бастион по ссылке. */
   editor: z.boolean().nullish(),
-  /** Сколько блоков защитной стены куплено и построено. */
-  defenseWallBlocks: z.number().int().nonnegative().nullish(),
   members: z.array(memberSchema),
   /** Гости бастиона из событий. */
   guests: z.array(guestSchema).nullish(),
