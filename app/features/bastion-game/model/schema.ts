@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { FURNITURE_KINDS } from './plan-schema';
+
 export const PLAYER_BASTION_STATUSES = ['SETUP', 'ACTIVE', 'ARCHIVED'] as const;
 
 export const GAME_ROLES = ['MASTER', 'PLAYER', 'NONE'] as const;
@@ -154,6 +156,26 @@ const menagerieSchema = z.object({
   ),
 });
 
+/**
+ * Шаблон готовой комнаты сооружения на плане: прямоугольник площадью
+ * пространства и мебель в нём, координаты от левого верхнего угла комнаты.
+ */
+export const facilityRoomTemplateSchema = z.object({
+  space: z.enum(FACILITY_SPACES),
+  width: z.number(),
+  depth: z.number(),
+  furniture: z.array(
+    z.object({
+      kind: z.enum(FURNITURE_KINDS),
+      x: z.number(),
+      y: z.number(),
+      rotation: z.number(),
+    }),
+  ),
+});
+
+export type FacilityRoomTemplate = z.infer<typeof facilityRoomTemplateSchema>;
+
 /** Сооружение персонажа вместе с данными справочника. */
 const facilitySchema = z.object({
   id: z.string(),
@@ -208,6 +230,8 @@ const facilitySchema = z.object({
   unavailableReason: z.string().nullish(),
   /** Наёмники, которых забрало событие и которым ещё ищут замену; null — все на месте. */
   hirelingsMissing: z.number().nullish(),
+  /** Шаблон готовой комнаты для текущего пространства; null — мебель расставит план. */
+  roomTemplate: facilityRoomTemplateSchema.nullish(),
 });
 
 /** Гость бастиона из событий «Гость» и «Беженцы». */

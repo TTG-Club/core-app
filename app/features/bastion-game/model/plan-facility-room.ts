@@ -5,13 +5,14 @@ import type {
   PlanFurniture,
   PlanRoom,
 } from './plan-schema';
+import type { FacilityRoomTemplate } from './schema';
 
 import {
   PLAN_CENTER_FURNITURE,
   PLAN_FACILITY_FURNITURE,
   PLAN_FACILITY_FURNITURE_DEFAULT,
 } from './plan-constants';
-import { drawRoom, isPremiumFurniture } from './plan-edit';
+import { createEmptyPlan, drawRoom, isPremiumFurniture } from './plan-edit';
 import {
   getCellKey,
   getFurnitureSize,
@@ -26,6 +27,8 @@ export interface PlanFacilityRoomSource {
   name: string;
   facilityUrl: string;
   squares: number;
+  /** Шаблон комнаты из справочника; нет — мебель расставляется сама. */
+  roomTemplate: FacilityRoomTemplate | undefined;
 }
 
 /** Размер прямоугольной комнаты в клетках. */
@@ -243,8 +246,52 @@ export function furnishRoom(
 }
 
 /**
+ * Подходит ли шаблон к площади сооружения: после расширения у сооружения
+ * другое пространство, и старый шаблон ему мал.
+ *
+ * @param template Шаблон.
+ * @param squares Площадь сооружения.
+ * @returns true, если комната шаблона ровно этой площади.
+ */
+function isTemplateFor(
+  template: FacilityRoomTemplate | undefined,
+  squares: number,
+): template is FacilityRoomTemplate {
+  return !!template && template.width * template.depth === squares;
+}
+
+/**
+ * Мебель шаблона на плане: координаты от угла комнаты переносятся в клетки
+ * этажа. Предметы по подписке без неё отбрасываются.
+ *
+ * @param template Шаблон.
+ * @param corner Левая верхняя клетка комнаты.
+ * @param level Этаж.
+ * @param isPremium Есть ли у владельца бастиона подписка.
+ * @returns Предметы плана.
+ */
+function placeTemplateFurniture(
+  template: FacilityRoomTemplate,
+  corner: PlanCell,
+  level: number,
+  isPremium: boolean,
+): Array<PlanFurniture> {
+  return template.furniture
+    .filter((item) => isPremium || !isPremiumFurniture(item.kind))
+    .map((item) => ({
+      id: crypto.randomUUID(),
+      level,
+      x: corner.x + item.x,
+      y: corner.y + item.y,
+      kind: item.kind,
+      rotation: item.rotation,
+    }));
+}
+
+/**
  * Ставит готовую комнату сооружения: прямоугольник его площади с центром в
- * клетке под указателем, обставленный мебелью по виду сооружения.
+ * клетке под указателем. Мебель берётся из шаблона справочника, а без
+ * шаблона расставляется по виду сооружения.
  *
  * @param document План.
  * @param level Этаж.
@@ -260,7 +307,11 @@ export function placeFacilityRoom(
   facility: PlanFacilityRoomSource,
   isPremium: boolean,
 ): PlanDocument {
-  const size = getFacilityRoomSize(facility.squares);
+  const template = isTemplateFor(facility.roomTemplate, facility.squares)
+    ? facility.roomTemplate
+    : undefined;
+
+  const size = template ?? getFacilityRoomSize(facility.squares);
   const cells = getFacilityRoomCells(center, size);
   const [corner] = cells;
 
@@ -280,11 +331,155 @@ export function placeFacilityRoom(
 
   const withRoom = drawRoom(document, cells, room);
 
-  const furniture = furnishRoom(
-    { ...corner, ...size },
-    level,
-    getFacilityFurniture(facility.facilityUrl, isPremium),
-  );
+  const furniture = template
+    ? placeTemplateFurniture(template, corner, level, isPremium)
+    : furnishRoom(
+        { ...corner, width: size.width, depth: size.depth },
+        level,
+        getFacilityFurniture(facility.facilityUrl, isPremium),
+      );
 
   return { ...withRoom, furniture: [...withRoom.furniture, ...furniture] };
+}
+
+/**
+ * Шаблон комнаты по умолчанию: прямоугольник ближе к квадрату и мебель по
+ * виду сооружения, включая предметы по подписке — без подписки их уберёт
+ * сам план.
+ *
+ * @param facilityUrl Адрес сооружения в справочнике.
+ * @param space Пространство.
+ * @param squares Площадь пространства.
+ * @returns Шаблон.
+ */
+export function createDefaultRoomTemplate(
+  facilityUrl: string,
+  space: FacilityRoomTemplate['space'],
+  squares: number,
+): FacilityRoomTemplate {
+  const size = getFacilityRoomSize(squares);
+
+  const furniture = furnishRoom(
+    { x: 0, y: 0, ...size },
+    0,
+    getFacilityFurniture(facilityUrl, true),
+  );
+
+  return {
+    space,
+    ...size,
+    furniture: furniture.map(({ kind, x, y, rotation }) => ({
+      kind,
+      x,
+      y,
+      rotation,
+    })),
+  };
+}
+
+/** Отступ комнаты шаблона от угла участка, клеток. */
+const TEMPLATE_ROOM_OFFSET = 4;
+
+/**
+ * План с одной комнатой шаблона: на нём шаблон правится тем же холстом, что
+ * и план бастиона.
+ *
+ * @param template Шаблон.
+ * @param name Подпись комнаты.
+ * @returns План первого этажа.
+ */
+export function createTemplatePlan(
+  template: FacilityRoomTemplate,
+  name: string,
+): PlanDocument {
+  // Комната чуть отступает от угла участка, чтобы вокруг неё была видна сетка.
+  const corner = { x: TEMPLATE_ROOM_OFFSET, y: TEMPLATE_ROOM_OFFSET };
+
+  const plan = drawRoom(
+    createEmptyPlan(),
+    getRectCells(corner, {
+      x: corner.x + template.width - 1,
+      y: corner.y + template.depth - 1,
+    }),
+    { id: 'template-room', name, level: 0 },
+  );
+
+  return {
+    ...plan,
+    furniture: placeTemplateFurniture(template, corner, 0, true),
+  };
+}
+
+/**
+ * Шаблон из плана редактора: размер берётся по комнате, мебель — та, что
+ * целиком стоит в ней, с координатами от её угла.
+ *
+ * @param plan План редактора шаблона.
+ * @param template Исходный шаблон: если комнаты на плане нет, он и остаётся.
+ * @returns Шаблон.
+ */
+export function readTemplatePlan(
+  plan: PlanDocument,
+  template: FacilityRoomTemplate,
+): FacilityRoomTemplate {
+  const [room] = plan.rooms;
+  const cells = room?.cells ?? [];
+
+  if (!cells.length) {
+    return template;
+  }
+
+  const left = Math.min(...cells.map((cell) => cell.x));
+  const top = Math.min(...cells.map((cell) => cell.y));
+  const inside = new Set(cells.map((cell) => getCellKey(cell.x, cell.y)));
+
+  const furniture = plan.furniture
+    .filter((item) => {
+      const { width, depth } = getFurnitureSize(item);
+
+      return getRectCells(item, {
+        x: item.x + width - 1,
+        y: item.y + depth - 1,
+      }).every((cell) => inside.has(getCellKey(cell.x, cell.y)));
+    })
+    .map((item) => ({
+      kind: item.kind,
+      x: item.x - left,
+      y: item.y - top,
+      rotation: item.rotation,
+    }));
+
+  return { ...template, furniture };
+}
+
+/**
+ * Меняет размер комнаты шаблона: мебель остаётся на своих местах от угла,
+ * а то, что больше не помещается в стенах, убирается.
+ *
+ * @param template Шаблон.
+ * @param width Новая ширина.
+ * @param depth Новая глубина.
+ * @returns Шаблон нового размера.
+ */
+export function resizeRoomTemplate(
+  template: FacilityRoomTemplate,
+  width: number,
+  depth: number,
+): FacilityRoomTemplate {
+  const resized = { ...template, width, depth };
+
+  return readTemplatePlan(createTemplatePlan(resized, ''), resized);
+}
+
+/**
+ * Прямоугольники ровно на заданную площадь: «ширина × глубина» от узкого к
+ * широкому.
+ *
+ * @param squares Площадь в клетках.
+ * @returns Размеры комнаты.
+ */
+export function getRoomSizeOptions(squares: number): Array<PlanRoomSize> {
+  return Array.from({ length: squares }, (_, index) => index + 1)
+    .filter((width) => squares % width === 0)
+    .map((width) => ({ width, depth: squares / width }));
 }
