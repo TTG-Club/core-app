@@ -8,6 +8,7 @@ export * from './plan-edit';
 export * from './plan-geometry';
 export * from './plan-presence';
 export * from './plan-schema';
+export * from './plan-selection';
 export * from './schema';
 export * from './setup';
 export * from './share-api';

@@ -9,8 +9,10 @@ import type {
   PlanCircle,
   PlanDocument,
   PlanFurniture,
+  PlanObjectRef,
   PlanRoom,
   PlanRoomSeed,
+  PlanSelection,
   PlanTool,
   StairKind,
   StairTarget,
@@ -23,29 +25,34 @@ import {
   addColumn,
   addSquareTower,
   addStair,
+  addToSelection,
   addTower,
-  canMoveRoom,
+  canMoveObjects,
   clearArea,
   drawRoom,
   eraseCells,
   eraseObjectAt,
   findFurnitureAt,
+  findObjectAt,
   findRoomAt,
   getCellAt,
   getFurnitureSize,
   getLineCells,
   getNextRoomName,
+  getObjectsInArea,
   getRectCells,
+  getSelectionCells,
   getSquareCorner,
   getStairTargetLevel,
   getTowerStairFrame,
   isDefenseGate,
   isDefenseWallCell,
   isFurnitureOnGrid,
+  isObjectSelected,
   isPremiumFurniture,
   isTowerKind,
   moveFurniture,
-  moveRoom,
+  moveObjects,
   paintCorridor,
   paintDefenseGates,
   paintDefenseWall,
@@ -57,6 +64,7 @@ import {
   PLAN_LIMITS,
   rotateFurniture,
   snapToHalf,
+  toggleObject,
   TOWER_SHAPE_SIDES,
 } from '../model';
 
@@ -86,6 +94,9 @@ interface PlanInteractionOptions {
   editor: PlanEditorApi;
   tool: Ref<PlanTool>;
   level: Ref<number>;
+  /** Выбранные объекты плана. */
+  selection: Ref<PlanSelection>;
+  /** Единственная выбранная комната; запись заменяет выбор этой комнатой. */
   selectedRoomId: Ref<string | undefined>;
   doorKind: Ref<DoorKind>;
   stairKind: Ref<StairKind>;
@@ -115,7 +126,22 @@ type PlanGesture =
       sides: number | undefined;
     }
   | { type: 'squareTower'; anchor: PlanCell; current: PlanCell }
-  | { type: 'move'; room: PlanRoom; anchor: PlanCell; offset: PlanCell }
+  | {
+      type: 'move';
+      /** Что тянут: весь выбор на момент нажатия. */
+      selection: PlanSelection;
+      /** Объект, за который взяли: щелчок без сдвига оставляет только его. */
+      target: PlanObjectRef;
+      anchor: PlanCell;
+      offset: PlanCell;
+    }
+  | {
+      type: 'frame';
+      anchor: PlanCell;
+      current: PlanCell;
+      /** Выбор до рамки: с Shift рамка добавляет к нему. */
+      base: PlanSelection;
+    }
   | {
       type: 'furniture';
       item: PlanFurniture;
@@ -236,7 +262,7 @@ function clampStairEnd(anchor: PlanCell, current: PlanCell): PlanCell {
  * @returns Подсказка поверх плана, точка под указателем и обработчики.
  */
 export function usePlanInteraction(options: PlanInteractionOptions) {
-  const { editor, tool, level, selectedRoomId } = options;
+  const { editor, tool, level, selection, selectedRoomId } = options;
 
   const preview = shallowRef<PlanPreview>();
   const hoverPoint = shallowRef<PlanPoint>();
@@ -281,6 +307,58 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
       anchor: cell,
       offset: { x: 0, y: 0 },
       rotateOnClick,
+    };
+  }
+
+  /**
+   * Нажатие инструментом «Выбрать»: щелчок выбирает объект и начинает
+   * перетаскивание всего выбора, Shift+щелчок добавляет объект к выбору или
+   * убирает из него, нажатие на пустом месте начинает рамку.
+   *
+   * @param point Точка нажатия.
+   * @param cell Клетка нажатия.
+   * @param isAdditive Зажат ли Shift (или Ctrl).
+   */
+  function startSelect(
+    point: PlanPoint,
+    cell: PlanCell,
+    isAdditive: boolean,
+  ): void {
+    const target = findObjectAt(editor.document.value, level.value, point);
+
+    if (!target) {
+      if (!isAdditive) {
+        selection.value = [];
+      }
+
+      gesture = {
+        type: 'frame',
+        anchor: cell,
+        current: cell,
+        base: selection.value,
+      };
+
+      preview.value = { kind: 'rect', from: cell, to: cell, label: undefined };
+
+      return;
+    }
+
+    if (isAdditive) {
+      selection.value = toggleObject(selection.value, target);
+
+      return;
+    }
+
+    if (!isObjectSelected(selection.value, target)) {
+      selection.value = [target];
+    }
+
+    gesture = {
+      type: 'move',
+      selection: selection.value,
+      target,
+      anchor: cell,
+      offset: { x: 0, y: 0 },
     };
   }
 
@@ -390,36 +468,17 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
    * Нажатие указателя на холсте.
    *
    * @param point Точка в клетках.
+   * @param isAdditive Зажат ли Shift (или Ctrl): добавить к выбору.
    */
-  function handleDown(point: PlanPoint): void {
+  function handleDown(point: PlanPoint, isAdditive = false): void {
     const cell = getCellAt(point);
     const document = editor.document.value;
 
     switch (tool.value) {
-      case 'select': {
-        const item = findFurnitureAt(document, level.value, point);
-
-        if (item) {
-          startFurnitureMove(item, cell, false);
-
-          break;
-        }
-
-        const room = findRoomAt(document, level.value, point);
-
-        selectedRoomId.value = room?.id;
-
-        if (room) {
-          gesture = {
-            type: 'move',
-            room,
-            anchor: cell,
-            offset: { x: 0, y: 0 },
-          };
-        }
+      case 'select':
+        startSelect(point, cell, isAdditive);
 
         break;
-      }
       case 'room':
         startRoom(cell);
 
@@ -671,21 +730,22 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
           y: cell.y - gesture.anchor.y,
         };
 
-        const { room } = gesture;
+        const document = editor.document.value;
 
         gesture.offset = offset;
 
         preview.value = {
           kind: 'move',
-          cells: room.cells.map((item) => ({
+          cells: getSelectionCells(document, gesture.selection).map((item) => ({
             x: item.x + offset.x,
             y: item.y + offset.y,
           })),
-          isValid: canMoveRoom(editor.document.value, room, offset),
+          isValid: canMoveObjects(document, gesture.selection, offset),
         };
 
         break;
       }
+      case 'frame':
       case 'area':
         gesture.current = cell;
 
@@ -795,8 +855,25 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
 
         break;
       }
-      case 'move':
-        editor.commit(moveRoom(document, finished.room.id, finished.offset));
+      case 'move': {
+        const { offset } = finished;
+
+        if (offset.x === 0 && offset.y === 0) {
+          selection.value = [finished.target];
+        } else {
+          editor.commit(moveObjects(document, finished.selection, offset));
+        }
+
+        break;
+      }
+      case 'frame':
+        selection.value = addToSelection(
+          finished.base,
+          getObjectsInArea(document, level.value, {
+            from: finished.anchor,
+            to: finished.current,
+          }),
+        );
 
         break;
       case 'furniture': {
