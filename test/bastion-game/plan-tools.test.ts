@@ -18,6 +18,7 @@ import {
   getRoomKindLabel,
   getSquareCorner,
   getTowerStairFrame,
+  isBastionWalled,
   isPremiumFurniture,
   moveFurniture,
   moveRoom,
@@ -344,6 +345,77 @@ describe('ворота в защитной стене', () => {
     applyPlanChanges(doc, createEmptyPlan(), plan, 'local');
 
     expect(readPlanFromDoc(doc).defenseGates).toHaveLength(3);
+  });
+});
+
+describe('купленные блоки защитной стены', () => {
+  /**
+   * Комната 3×3 в (5, 5) и кольцо стены вокруг неё.
+   *
+   * @returns План и клетки кольца.
+   */
+  function createRoomWithRing(): {
+    plan: PlanDocument;
+    ring: Array<{ x: number; y: number }>;
+  } {
+    const plan = drawRoom(
+      createEmptyPlan(),
+      getRectCells({ x: 5, y: 5 }, { x: 7, y: 7 }),
+      seed('hall'),
+    );
+
+    const ring = getRectCells({ x: 4, y: 4 }, { x: 8, y: 8 }).filter(
+      (cell) => cell.x === 4 || cell.x === 8 || cell.y === 4 || cell.y === 8,
+    );
+
+    return { plan, ring };
+  }
+
+  it('ставит не больше купленных блоков', () => {
+    const line = getRectCells({ x: 0, y: 0 }, { x: 4, y: 0 });
+    const walled = paintDefenseWall(createEmptyPlan(), line, 3);
+
+    expect(walled.defenseWalls).toHaveLength(3);
+    expect(paintDefenseWall(walled, [{ x: 0, y: 5 }], 3)).toBe(walled);
+
+    expect(paintDefenseWall(createEmptyPlan(), line, 0).defenseWalls).toEqual(
+      [],
+    );
+  });
+
+  it('видит, что стена замыкает бастион', () => {
+    const { plan, ring } = createRoomWithRing();
+
+    expect(isBastionWalled(plan)).toBe(false);
+    expect(isBastionWalled(paintDefenseWall(plan, ring))).toBe(true);
+  });
+
+  it('стык по диагонали не даёт пройти, ворота замыкают стену', () => {
+    const { plan, ring } = createRoomWithRing();
+
+    const corners = new Set(['4:4', '8:4', '4:8', '8:8']);
+
+    const withoutCorners = paintDefenseWall(
+      plan,
+      ring.filter((cell) => !corners.has(`${cell.x}:${cell.y}`)),
+    );
+
+    expect(isBastionWalled(withoutCorners)).toBe(true);
+
+    const gated = paintDefenseGates(withoutCorners, [{ x: 6, y: 4 }], true);
+
+    expect(isBastionWalled(gated)).toBe(true);
+  });
+
+  it('с проломом стена бастион не окружает', () => {
+    const { plan, ring } = createRoomWithRing();
+
+    const broken = paintDefenseWall(
+      plan,
+      ring.filter((cell) => !(cell.x === 6 && cell.y === 4)),
+    );
+
+    expect(isBastionWalled(broken)).toBe(false);
   });
 });
 

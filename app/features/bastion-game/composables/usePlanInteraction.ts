@@ -106,6 +106,8 @@ interface PlanInteractionOptions {
   corridorWidth: Ref<number>;
   furnitureKind: Ref<FurnitureKind>;
   furnitureRotation: Ref<number>;
+  /** Сколько блоков защитной стены можно поставить; undefined — без ограничения. */
+  wallLimit: Ref<number | undefined>;
 }
 
 /** Жест, который сейчас выполняется указателем. */
@@ -265,6 +267,17 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
   const hoverPoint = shallowRef<PlanPoint>();
 
   let gesture: PlanGesture | undefined;
+
+  /**
+   * Мазок защитной стены в пределах купленных блоков.
+   *
+   * @param next План.
+   * @param cells Клетки мазка.
+   * @returns Правка для клеток мазка.
+   */
+  function paintWall(next: PlanDocument, cells: Array<PlanCell>): PlanDocument {
+    return paintDefenseWall(next, cells, options.wallLimit.value);
+  }
 
   /**
    * Мазок ворот: начатый на воротах закладывает проёмы стеной, иначе ставит
@@ -508,8 +521,8 @@ export function usePlanInteraction(options: PlanInteractionOptions) {
       case 'wall':
         if (level.value === 0) {
           editor.beginStroke();
-          gesture = { type: 'wall', last: cell, paint: paintDefenseWall };
-          editor.applyInStroke(paintDefenseWall(document, [cell]));
+          gesture = { type: 'wall', last: cell, paint: paintWall };
+          editor.applyInStroke(paintWall(document, [cell]));
         }
 
         break;

@@ -1197,21 +1197,29 @@ function updateFurniture(
 }
 
 /**
- * Достраивает защитную стену по клеткам первого этажа вне комнат.
+ * Достраивает защитную стену по клеткам первого этажа вне комнат, не больше
+ * купленных блоков.
  *
  * @param document План.
  * @param cells Клетки мазка.
+ * @param limit Сколько блоков стены куплено; undefined — без ограничения.
  * @returns Новый план или тот же, если добавлять нечего.
  */
 export function paintDefenseWall(
   document: PlanDocument,
   cells: ReadonlyArray<PlanCell>,
+  limit?: number,
 ): PlanDocument {
   const occupancy = getOccupancy(document, 0);
 
   const existing = new Set(
     document.defenseWalls.map((cell) => getCellKey(cell.x, cell.y)),
   );
+
+  const free =
+    limit === undefined
+      ? Number.POSITIVE_INFINITY
+      : limit - document.defenseWalls.length;
 
   const added = cells.filter((cell) => {
     const key = getCellKey(cell.x, cell.y);
@@ -1225,9 +1233,77 @@ export function paintDefenseWall(
     return true;
   });
 
-  return added.length
-    ? { ...document, defenseWalls: [...document.defenseWalls, ...added] }
+  const placed = added.slice(0, Math.max(0, free));
+
+  return placed.length
+    ? { ...document, defenseWalls: [...document.defenseWalls, ...placed] }
     : document;
+}
+
+/**
+ * Окружён ли бастион защитной стеной полностью: от края участка нельзя дойти
+ * до комнат первого этажа, не пересекая стену. Ходят только по сторонам
+ * клеток, поэтому диагональный стык двух клеток стены сплошной. Ворота стоят
+ * в стене и тоже её замыкают.
+ *
+ * @param document План.
+ * @returns true, если на первом этаже есть комнаты и стена их окружает.
+ */
+export function isBastionWalled(document: PlanDocument): boolean {
+  const occupancy = getOccupancy(document, 0);
+
+  if (occupancy.size === 0 || document.defenseWalls.length === 0) {
+    return false;
+  }
+
+  const size = PLAN_LIMITS.gridSize;
+
+  const walls = new Set(
+    document.defenseWalls.map((cell) => getCellKey(cell.x, cell.y)),
+  );
+
+  const visited = new Set<string>();
+  const queue: Array<PlanCell> = [];
+
+  /**
+   * Ставит клетку в обход, если она на участке, не стена и ещё не пройдена.
+   *
+   * @param cell Клетка.
+   */
+  const visit = (cell: PlanCell): void => {
+    const key = getCellKey(cell.x, cell.y);
+
+    if (isCellOnGrid(cell) && !walls.has(key) && !visited.has(key)) {
+      visited.add(key);
+      queue.push(cell);
+    }
+  };
+
+  for (let index = 0; index < size; index++) {
+    visit({ x: index, y: 0 });
+    visit({ x: index, y: size - 1 });
+    visit({ x: 0, y: index });
+    visit({ x: size - 1, y: index });
+  }
+
+  for (let cursor = 0; cursor < queue.length; cursor++) {
+    const cell = queue[cursor];
+
+    if (!cell) {
+      continue;
+    }
+
+    if (occupancy.has(getCellKey(cell.x, cell.y))) {
+      return false;
+    }
+
+    visit({ x: cell.x + 1, y: cell.y });
+    visit({ x: cell.x - 1, y: cell.y });
+    visit({ x: cell.x, y: cell.y + 1 });
+    visit({ x: cell.x, y: cell.y - 1 });
+  }
+
+  return true;
 }
 
 /**
