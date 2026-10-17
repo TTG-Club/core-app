@@ -192,10 +192,10 @@
 
     <div
       v-if="status === 'pending' || status === 'idle'"
-      class="grid gap-4 md:grid-cols-2"
+      class="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
     >
       <USkeleton
-        v-for="index in 2"
+        v-for="index in 3"
         :key="index"
         class="h-44"
       />
@@ -237,7 +237,7 @@
 
     <div
       v-else
-      class="grid gap-4 md:grid-cols-2"
+      class="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
     >
       <BastionCard
         v-for="bastion in bastions"
