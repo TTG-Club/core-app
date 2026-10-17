@@ -25,6 +25,7 @@ export interface MagicItemCreate extends EditorBaseInfoState {
   image: string | undefined;
   rarity: MagicItemRarity;
   category: MagicItemCategory;
+  theme: string | undefined; // тематика: вооружение, магия, реликвии или инструменты
   items: Array<string>; // связанные немагические предметы (url) для веса/стоимости и фильтра
   bonuses: MagicItemBonuses; // что магия добавляет поверх немагического предмета
   // Кости, которые магия добавляет к броску основы («2к6 огнём» Огненного языка).

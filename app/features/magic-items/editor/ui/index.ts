@@ -5,3 +5,4 @@ export { default as MagicItemDamage } from './MagicItemDamage.vue';
 export { default as MagicItemMechanics } from './MagicItemMechanics.vue';
 export { default as MagicItemProperties } from './MagicItemProperties.vue';
 export * from './rarity';
+export { default as SelectMagicItemTheme } from './SelectMagicItemTheme.vue';
