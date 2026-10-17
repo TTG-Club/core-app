@@ -2,7 +2,6 @@
   import type {
     BastionActivityOrder,
     PlayerBastionFacility,
-    StableAnimal,
   } from '../../model';
 
   import { BastionFacilityDrawer } from '~bastions/drawer';
@@ -12,11 +11,12 @@
     ACTIVITY_LABELS,
     FACILITY_SETUP_LABELS,
     formatMenagerieSpace,
+    formatStableSpace,
     getArtisanToolIcon,
     getOrderSubject,
     getTurnsLeftText,
+    STABLE_LABELS,
   } from '../../model';
-  import StableAnimalList from './StableAnimalList.vue';
 
   /**
    * Карточка сооружения персонажа: название открывает описание из справочника, пространство,
@@ -30,7 +30,6 @@
     showPrerequisite = false,
     canAct = false,
     canRemove = false,
-    canEditAnimals = false,
     activeOrder = undefined,
     orderLock = undefined,
     bastionTurn = undefined,
@@ -44,8 +43,6 @@
     canAct?: boolean;
     /** Можно убрать сооружение. */
     canRemove?: boolean;
-    /** Можно забирать животных из конюшни: режим редактирования, игрок персонажа или мастер. */
-    canEditAnimals?: boolean;
     /** Приказ, который сооружение выполняет сейчас. */
     activeOrder?: BastionActivityOrder;
     /** Почему приказы пока не отдаются вовсе — например, бастион в закладке. */
@@ -59,8 +56,8 @@
     'order': [];
     'enlarge': [];
     'menagerie': [];
+    'stable': [];
     'remove': [];
-    'remove-animal': [animal: StableAnimal];
   }>();
 
   const overlay = useOverlay();
@@ -104,6 +101,7 @@
       || (canAct && facility.enlargeable)
       || canRemove
       || !!facility.menagerie
+      || !!facility.stable
       || isUnavailableNow.value,
   );
 
@@ -247,6 +245,34 @@
       : fillTemplate(FACILITY_SETUP_LABELS.creaturesEmpty, values);
   });
 
+  /** Конюшня: сколько больших мест занято из скольких; пусто — не конюшня. */
+  const stableCount = computed(() => {
+    const stable = facility.stable;
+
+    return stable
+      ? `${formatStableSpace(stable.occupied)}/${formatStableSpace(stable.capacity)}`
+      : '';
+  });
+
+  /** Подсказка к значку конюшни: кто в стойле и сколько места свободно. */
+  const stableHint = computed(() => {
+    const stable = facility.stable;
+
+    if (!stable) {
+      return '';
+    }
+
+    const values = {
+      names: stable.animals.map((animal) => animal.name).join(', '),
+      free: formatStableSpace(Math.max(0, stable.capacity - stable.occupied)),
+      capacity: formatStableSpace(stable.capacity),
+    };
+
+    return stable.animals.length
+      ? fillTemplate(STABLE_LABELS.hint, values)
+      : fillTemplate(STABLE_LABELS.hintEmpty, values);
+  });
+
   const defendersHint = computed(() =>
     fillTemplate(FACILITY_SETUP_LABELS.defenders, {
       count: facility.defenders ?? 0,
@@ -328,7 +354,11 @@
       людей и мест идёт и подсказкой, и `aria-label` -->
     <div
       v-if="
-        toolIcons.length || hasHirelings || defendersCount || menagerieCount
+        toolIcons.length
+        || hasHirelings
+        || defendersCount
+        || menagerieCount
+        || stableCount
       "
       class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm"
     >
@@ -391,6 +421,24 @@
         </div>
       </UTooltip>
 
+      <UTooltip
+        v-if="stableCount"
+        :text="stableHint"
+      >
+        <div
+          class="flex items-center gap-1"
+          role="img"
+          :aria-label="stableHint"
+        >
+          <UIcon
+            name="tabler:horse"
+            class="size-4 text-info"
+          />
+
+          <span class="text-toned tabular-nums">{{ stableCount }}</span>
+        </div>
+      </UTooltip>
+
       <div
         v-if="toolIcons.length"
         class="flex flex-wrap items-center gap-1"
@@ -449,13 +497,6 @@
       </UButton>
     </div>
 
-    <StableAnimalList
-      v-if="facility.stable"
-      :stable="facility.stable"
-      :can-remove="canEditAnimals"
-      @remove="emit('remove-animal', $event)"
-    />
-
     <div
       v-if="hasOrders"
       class="flex flex-wrap items-center gap-2"
@@ -511,6 +552,17 @@
         @click.left.exact.prevent="emit('menagerie')"
       >
         {{ ACTIVITY_LABELS.menagerie }}
+      </UButton>
+
+      <UButton
+        v-if="facility.stable"
+        icon="tabler:horse"
+        size="xs"
+        color="neutral"
+        variant="subtle"
+        @click.left.exact.prevent="emit('stable')"
+      >
+        {{ STABLE_LABELS.open }}
       </UButton>
 
       <UButton

@@ -242,8 +242,11 @@ export const ACTIVITY_LABELS = {
 } as const;
 
 export const STABLE_LABELS = {
-  title: 'Животные',
-  occupied: '{occupied} из {capacity} больших мест',
+  open: 'Стойло',
+  title: 'Стойло конюшни',
+  occupied: 'Занято {occupied} из {capacity} больших мест',
+  hint: 'Конюшня: {names}. Свободно {free} из {capacity} больших мест',
+  hintEmpty: 'Конюшня пуста. Свободно {free} из {capacity} больших мест',
   empty: 'В конюшне пока нет животных.',
   bonded:
     'Живёт в конюшне 14 дней и больше: проверки Мудрости (Уход за животными) с преимуществом',

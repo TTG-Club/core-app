@@ -1,13 +1,12 @@
 <script setup lang="ts">
   import type { BastionStable, StableAnimal } from '../../model';
 
-  import { fillTemplate } from '~bastions/model';
   import { useCreatureDrawer } from '~initiative/composables';
 
-  import { formatStableSpace, STABLE_LABELS } from '../../model';
+  import { STABLE_LABELS } from '../../model';
 
   /**
-   * Животные конюшни: название открывает статблок из бестиария в дровере,
+   * Животные в стойле конюшни: название открывает статблок из бестиария в дровере,
    * значок отмечает тех, кто прожил в конюшне 14 дней. В режиме редактирования
    * животное можно забрать из конюшни.
    */
@@ -22,23 +21,10 @@
   }>();
 
   const { openCreature } = useCreatureDrawer();
-
-  const occupiedText = computed(() =>
-    fillTemplate(STABLE_LABELS.occupied, {
-      occupied: formatStableSpace(stable.occupied),
-      capacity: formatStableSpace(stable.capacity),
-    }),
-  );
 </script>
 
 <template>
   <section class="flex flex-col gap-1">
-    <div class="flex items-baseline justify-between gap-2 text-xs text-muted">
-      <span>{{ STABLE_LABELS.title }}</span>
-
-      <span class="tabular-nums">{{ occupiedText }}</span>
-    </div>
-
     <p
       v-if="!stable.animals.length"
       class="text-sm text-muted"
@@ -48,12 +34,12 @@
 
     <ul
       v-else
-      class="flex flex-col gap-0.5 text-sm"
+      class="flex flex-col divide-y divide-default text-sm"
     >
       <li
         v-for="animal in stable.animals"
         :key="animal.id"
-        class="flex items-center gap-1.5"
+        class="flex items-center gap-1.5 py-2"
       >
         <UIcon
           name="tabler:horse"
