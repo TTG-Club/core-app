@@ -17,6 +17,7 @@
     EVENT_LABELS,
     formatLedgerAmount,
     getOrderTitle,
+    getTurnsLeftText,
     LEDGER_REASON_LABELS,
     ORDER_STATUS_COLORS,
   } from '../model';
@@ -45,12 +46,19 @@
   ];
 
   /**
-   * Сроки приказа.
+   * Сроки приказа: у выполняемого — сколько ходов осталось.
    *
    * @param order Приказ.
-   * @returns «отдан на ходу 2, срок — ход 3».
+   * @returns «с хода 2, остался 1 ход» или «ходы 2–3».
    */
   function getOrderTerms(order: BastionActivityOrder): string {
+    if (order.status === 'ACTIVE') {
+      return fillTemplate(ACTIVITY_LABELS.orderTermsActive, {
+        given: order.givenOnTurn,
+        left: getTurnsLeftText(order.completesOnTurn, bastion.turn),
+      });
+    }
+
     return fillTemplate(ACTIVITY_LABELS.orderTerms, {
       given: order.givenOnTurn,
       completes: order.completesOnTurn,

@@ -3,7 +3,7 @@
 
   import { fillTemplate } from '~bastions/model';
 
-  import { DEFENSE_WALL_LABELS } from '../model';
+  import { DEFENSE_WALL_LABELS, getTurnsLeftText } from '../model';
   import { DefenseWallModal } from './ui';
 
   /**
@@ -48,7 +48,7 @@
     walls.value?.building
       ? fillTemplate(DEFENSE_WALL_LABELS.building, {
           count: walls.value.building,
-          turn: walls.value.readyOnTurn ?? '—',
+          left: getTurnsLeftText(walls.value.readyOnTurn, bastion.turn),
         })
       : undefined,
   );
