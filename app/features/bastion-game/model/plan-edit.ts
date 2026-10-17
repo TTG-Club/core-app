@@ -1555,6 +1555,8 @@ export function getFacilityAreas(document: PlanDocument): Map<string, number> {
 export interface PlanPaletteFacility {
   id: string;
   name: string;
+  /** Адрес сооружения в справочнике: по нему подбирается мебель. */
+  facilityUrl: string;
   characterName: string;
   squares: number;
   used: number;
@@ -1575,6 +1577,7 @@ export function createPaletteFacilities(
     facilities: ReadonlyArray<{
       id: string;
       name: string;
+      facilityUrl: string;
       space: { squares: number };
     }>;
   }>,
@@ -1587,6 +1590,7 @@ export function createPaletteFacilities(
       member.facilities.map((facility) => ({
         id: facility.id,
         name: facility.name,
+        facilityUrl: facility.facilityUrl,
         characterName: member.characterName,
         squares: facility.space.squares,
         used: areas.get(facility.id) ?? 0,

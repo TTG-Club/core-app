@@ -38,6 +38,99 @@ export const PLAN_ZOOM_MAX = 4;
 export const PLAN_ZOOM_STEP = 1.1;
 /** Шаг поворота мебели, градусы. */
 export const PLAN_FURNITURE_ROTATION_STEP = 90;
+
+/** Тип данных перетаскивания сооружения из боковой панели на план. */
+export const PLAN_FACILITY_DRAG_TYPE = 'application/x-bastion-facility';
+
+/**
+ * Мебель готовой комнаты по адресу сооружения в справочнике, в порядке
+ * расстановки: что важнее, ставится первым и занимает лучшее место.
+ * Предметы по подписке без неё пропускаются.
+ */
+export const PLAN_FACILITY_FURNITURE: Record<
+  string,
+  ReadonlyArray<FurnitureKind>
+> = {
+  'bedroom': ['BED', 'CHEST', 'WARDROBE', 'RUG', 'CHAIR'],
+  'dining-room': ['DINING_TABLE', 'TABLE', 'CHAIR', 'CHAIR', 'CHAIR', 'CHAIR'],
+  'parlor': ['RUG', 'SOFA', 'FIREPLACE', 'TABLE', 'CHAIR', 'CHAIR'],
+  'courtyard': ['WELL', 'TREE', 'FLOWERBED', 'FLOWERBED'],
+  'kitchen': [
+    'TABLE',
+    'CHAIR',
+    'CHAIR',
+    'FIREPLACE',
+    'PANTRY_RACK',
+    'BARREL',
+    'CHEST',
+  ],
+  'storage': ['CHEST', 'CHEST', 'BARREL', 'BARREL', 'PANTRY_RACK', 'WARDROBE'],
+  'arcane-study': ['MAGIC_CIRCLE', 'BOOKSHELF', 'TABLE', 'CHAIR', 'CHEST'],
+  'armory': ['WEAPON_RACK', 'WEAPON_RACK', 'CHEST', 'WARDROBE'],
+  'barrack': ['BED', 'BED', 'BED', 'BED', 'CHEST', 'CHEST', 'WEAPON_RACK'],
+  'garden': ['TREE', 'FLOWERBED', 'FLOWERBED', 'WELL'],
+  'library': ['BOOKSHELF', 'BOOKSHELF', 'BOOKSHELF', 'TABLE', 'CHAIR', 'CHAIR'],
+  'sanctuary': ['ALTAR', 'STATUE', 'RUG', 'CHAIR'],
+  'smithy': ['ANVIL', 'WORKBENCH', 'FIREPLACE', 'BARREL', 'CHEST'],
+  'storehouse': ['CHEST', 'CHEST', 'BARREL', 'BARREL', 'PANTRY_RACK'],
+  'workshop': ['WORKBENCH', 'WORKBENCH', 'TABLE', 'CHAIR', 'CHEST'],
+  'gaming-hall': [
+    'TABLE',
+    'TABLE',
+    'CHAIR',
+    'CHAIR',
+    'CHAIR',
+    'CHAIR',
+    'BARREL',
+  ],
+  'greenhouse': ['TREE', 'FLOWERBED', 'FLOWERBED', 'FLOWERBED', 'WELL'],
+  'laboratory': ['ALCHEMY_TABLE', 'BOOKSHELF', 'TABLE', 'CHAIR', 'CHEST'],
+  'sacristy': ['ALTAR', 'WARDROBE', 'CHEST', 'CHAIR'],
+  'scriptorium': ['TABLE', 'TABLE', 'CHAIR', 'CHAIR', 'BOOKSHELF', 'CHEST'],
+  'stable': ['BARREL', 'CHEST', 'PANTRY_RACK'],
+  'teleportation-circle': ['MAGIC_CIRCLE'],
+  'theater': ['RUG', 'SOFA', 'CHAIR', 'CHAIR', 'CHAIR', 'CHAIR'],
+  'training-area': ['TRAINING_DUMMY', 'TRAINING_DUMMY', 'WEAPON_RACK', 'CHEST'],
+  'trophy-room': ['STATUE', 'TAPESTRY', 'TAPESTRY', 'CHEST', 'RUG'],
+  'archive': ['BOOKSHELF', 'BOOKSHELF', 'BOOKSHELF', 'TABLE', 'CHAIR', 'CHEST'],
+  'meditation-chamber': ['RUG', 'FOUNTAIN'],
+  'menagerie': ['CAGE', 'CAGE', 'CAGE', 'BARREL'],
+  'observatory': ['TELESCOPE', 'TABLE', 'CHAIR', 'BOOKSHELF'],
+  'pub': [
+    'TABLE',
+    'TABLE',
+    'CHAIR',
+    'CHAIR',
+    'CHAIR',
+    'CHAIR',
+    'BARREL',
+    'BARREL',
+  ],
+  'reliquary': ['ALTAR', 'CHEST', 'CHEST', 'STATUE'],
+  'demiplane': ['MAGIC_CIRCLE'],
+  'guildhall': ['DINING_TABLE', 'TABLE', 'CHAIR', 'CHAIR', 'CHAIR', 'CHEST'],
+  'sanctum': ['ALTAR', 'RUG', 'STATUE'],
+  'war-room': ['TABLE', 'CHAIR', 'CHAIR', 'CHAIR', 'WEAPON_RACK', 'TAPESTRY'],
+};
+
+/** Мебель незнакомого сооружения. */
+export const PLAN_FACILITY_FURNITURE_DEFAULT: ReadonlyArray<FurnitureKind> = [
+  'TABLE',
+  'CHAIR',
+  'CHEST',
+];
+
+/** Мебель, которую готовая комната ставит ближе к середине, а не к стене. */
+export const PLAN_CENTER_FURNITURE: ReadonlySet<FurnitureKind> = new Set([
+  'RUG',
+  'MAGIC_CIRCLE',
+  'DINING_TABLE',
+  'FOUNTAIN',
+  'WELL',
+  'TREE',
+  'TRAINING_DUMMY',
+  'TABLE',
+]);
 /** Не чаще одного шага Ctrl+колесом (поворот мебели, размер лестницы) за столько миллисекунд. */
 export const PLAN_WHEEL_ROTATE_MS = 150;
 
@@ -423,6 +516,9 @@ export const PLAN_LABELS = {
   walls: 'Защитная стена',
   wallsSummary: '{cells} кл. · {cost} зм · {days} дн. постройки',
   wallsGroundOnly: 'Защитная стена строится только на первом этаже.',
+  facilityDragHint:
+    'Перетащите сооружение на план: появится комната его размера с мебелью.',
+  stairsNeedLevel: 'Лестница ведёт на другой этаж: сначала добавьте этаж.',
   wallsBlocks: 'Блоков стены: {placed} из {limit}',
   wallsLimitReached:
     'Все купленные блоки стены уже стоят на плане. Купите ещё блоки в бастионе.',

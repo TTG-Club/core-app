@@ -15,6 +15,7 @@
     getLevelCenter,
     PLAN_CELL_PIXELS,
     PLAN_CONTEXT_MENU_TOLERANCE,
+    PLAN_FACILITY_DRAG_TYPE,
     PLAN_START_FOCUS,
     PLAN_WHEEL_ROTATE_MS,
     PLAN_ZOOM_MAX,
@@ -62,6 +63,10 @@
     'wheel-step': [direction: 1 | -1];
     /** Щелчок правой кнопкой без панорамы: точка окна, где открыть меню. */
     'context-menu': [position: { x: number; y: number }];
+    /** Сооружение тянут над планом; undefined — увели с холста. */
+    'facility-drag': [point: PlanPoint | undefined];
+    /** Сооружение отпустили над планом. */
+    'facility-drop': [point: PlanPoint];
   }>();
 
   /** Когда Ctrl+колесо последний раз сработало: тачпад шлёт много мелких событий. */
@@ -135,6 +140,87 @@
       : { x: event.global.x, y: event.global.y };
 
     return { x: local.x / PLAN_CELL_PIXELS, y: local.y / PLAN_CELL_PIXELS };
+  }
+
+  /**
+   * Точка окна в клетках плана.
+   *
+   * @param event Событие перетаскивания.
+   * @returns Точка на плане или undefined, пока холст не готов.
+   */
+  function toPlanPointFromClient(event: DragEvent): PlanPoint | undefined {
+    if (!world || !application) {
+      return undefined;
+    }
+
+    const rect = application.canvas.getBoundingClientRect();
+
+    const local = world.toLocal({
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    });
+
+    return { x: local.x / PLAN_CELL_PIXELS, y: local.y / PLAN_CELL_PIXELS };
+  }
+
+  /**
+   * Тянут ли над холстом сооружение из боковой панели.
+   *
+   * @param event Событие перетаскивания.
+   * @returns true для сооружения; файлы и текст холст не принимает.
+   */
+  function isFacilityDrag(event: DragEvent): boolean {
+    return !!event.dataTransfer?.types.includes(PLAN_FACILITY_DRAG_TYPE);
+  }
+
+  /**
+   * Сооружение над холстом: разрешает бросок и показывает, где встанет
+   * комната.
+   *
+   * @param event Событие перетаскивания.
+   */
+  function handleDragOver(event: DragEvent): void {
+    if (!isFacilityDrag(event)) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'copy';
+    }
+
+    emit('facility-drag', toPlanPointFromClient(event));
+  }
+
+  /**
+   * Сооружение увели с холста.
+   *
+   * @param event Событие перетаскивания.
+   */
+  function handleDragLeave(event: DragEvent): void {
+    if (isFacilityDrag(event)) {
+      emit('facility-drag', undefined);
+    }
+  }
+
+  /**
+   * Сооружение отпустили над холстом.
+   *
+   * @param event Событие перетаскивания.
+   */
+  function handleDrop(event: DragEvent): void {
+    if (!isFacilityDrag(event)) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const point = toPlanPointFromClient(event);
+
+    if (point) {
+      emit('facility-drop', point);
+    }
   }
 
   /**
@@ -457,5 +543,8 @@
     ref="container"
     class="relative h-full w-full touch-none overflow-hidden rounded-lg border border-default select-none"
     :class="cursor"
+    @dragover="handleDragOver"
+    @dragleave="handleDragLeave"
+    @drop="handleDrop"
   />
 </template>

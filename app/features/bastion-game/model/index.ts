@@ -5,6 +5,7 @@ export * from './api';
 export * from './constants';
 export * from './plan-constants';
 export * from './plan-edit';
+export * from './plan-facility-room';
 export * from './plan-geometry';
 export * from './plan-presence';
 export * from './plan-schema';
