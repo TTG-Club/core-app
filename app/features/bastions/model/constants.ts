@@ -11,6 +11,8 @@ import type {
 export const BASTION_SECTION = 'bastions';
 export const BASTION_API_PATH = '/api/v2/bastions';
 export const BASTION_RULES_API_PATH = `${BASTION_API_PATH}/rules`;
+/** Страница справочника сооружений бастиона. */
+export const BASTION_ROUTE = `/${BASTION_SECTION}`;
 export const BASTION_WORKSHOP_PATH = `/workshop/${BASTION_SECTION}`;
 
 /** Название раздела: в меню, заголовке страницы и на главной. */
