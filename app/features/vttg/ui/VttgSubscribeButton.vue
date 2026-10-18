@@ -17,10 +17,17 @@
   }>();
 
   // Оплату можно выключить переключателем в админке — тогда у всех кнопка «скоро».
-  const { isSalesEnabled } = useSubscriptionSales();
+  const { isSalesEnabled, checkSalesEnabled } = useSubscriptionSales();
 
   const overlay = useOverlay();
   const purchaseModal = overlay.create(VttgSubscriptionPurchaseModal);
+
+  // Оплату выключили, пока окно покупки открыто, — закрываем его.
+  watch(isSalesEnabled, (isEnabled) => {
+    if (!isEnabled) {
+      purchaseModal.close();
+    }
+  });
 
   const { isLoading: isTermsLoading, load: loadTerms } =
     useSubscriptionPaymentTerms();
@@ -34,7 +41,16 @@
       return;
     }
 
-    const terms = await loadTerms();
+    // Оплату могли выключить, пока страница была открыта: тогда кнопка сама
+    // станет «скоро», а окно покупки не откроется.
+    const [isEnabled, terms] = await Promise.all([
+      checkSalesEnabled(),
+      loadTerms(),
+    ]);
+
+    if (!isEnabled) {
+      return;
+    }
 
     if (terms) {
       purchaseModal.open({ terms });
