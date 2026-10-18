@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { BackgroundDetailResponse } from '../model';
 
+  import { UiDetailLayout } from '~ui/detail-layout';
+
   import { useBackgroundToolCategories } from '../composable';
   import {
     getBackgroundFeatNode,
@@ -30,12 +32,9 @@
 </script>
 
 <template>
-  <div :class="$style.container">
-    <div :class="$style.body">
-      <div
-        class="flex flex-col gap-3"
-        :class="$style.info"
-      >
+  <UiDetailLayout>
+    <template #aside>
+      <div class="flex flex-col gap-3">
         <StatsBlock
           :ability-scores="background.abilityScores"
           :feat="featNode"
@@ -45,40 +44,10 @@
           :equipment="background.equipment"
         />
       </div>
+    </template>
 
-      <div class="flex flex-auto flex-col gap-3">
-        <DescriptionsBlock :description="background.description" />
-      </div>
+    <div class="flex flex-col gap-3">
+      <DescriptionsBlock :description="background.description" />
     </div>
-  </div>
+  </UiDetailLayout>
 </template>
-
-<style module lang="scss">
-  .container {
-    container-type: inline-size;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .body {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-
-    @container (width > 800px) {
-      flex-direction: row;
-      gap: 28px;
-    }
-  }
-
-  .info {
-    width: 100%;
-    max-width: 100%;
-
-    @container (width > 800px) {
-      flex-shrink: 0;
-      width: 320px;
-    }
-  }
-</style>

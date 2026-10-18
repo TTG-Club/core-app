@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { MagicItemDetailResponse } from '../model';
 
+  import { UiDetailLayout } from '~ui/detail-layout';
   import { UiGallery } from '~ui/gallery';
 
   import { DescriptionsBlock, PropertiesBlock, TopBar } from './ui';
@@ -14,9 +15,9 @@
 </script>
 
 <template>
-  <div class="@container flex flex-col gap-4">
-    <div class="flex flex-col gap-3 @min-3xl:flex-row @min-3xl:gap-7">
-      <div class="flex w-full flex-col gap-3 @min-3xl:max-w-80">
+  <UiDetailLayout>
+    <template #aside>
+      <div class="flex flex-col gap-3">
         <TopBar :subtitle="magicItem.subtitle" />
 
         <div class="max-w-40 overflow-hidden rounded-md border border-default">
@@ -28,10 +29,8 @@
           :base-item-urls
         />
       </div>
+    </template>
 
-      <div class="flex flex-auto flex-col gap-3">
-        <DescriptionsBlock :description="magicItem.description" />
-      </div>
-    </div>
-  </div>
+    <DescriptionsBlock :description="magicItem.description" />
+  </UiDetailLayout>
 </template>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { ArticleDetailedResponse } from '../model';
 
+  import { UiDetailLayout } from '~ui/detail-layout';
   import { UiGallery } from '~ui/gallery';
   import { getNodeText, MarkupRender, withHeadingAnchors } from '~ui/markup';
   import { RatingWidget } from '~ui/rating';
@@ -63,73 +64,75 @@
   </DefineArticleTags>
 
   <!--
-    Раскладка привязана к ширине КОНТЕЙНЕРА (как в SpellBody/CreatureBody), а не
-    окна: на широкой странице (>800px) картинка слева, весь текст справа; в узком
-    дровере (~672px) — в столбик. Один ArticleBody на чтение/дровер/предпросмотр.
+    Общая раскладка карточек: на широком контейнере картинка слева, весь текст
+    справа; в узком дровере — в столбик. Один ArticleBody на чтение/дровер/предпросмотр.
   -->
-  <article :class="$style.container">
+  <article>
     <!-- Метка начала статьи для пункта содержания «На самый верх» -->
     <span
       :id="ARTICLE_TOP_ANCHOR_ID"
       class="block scroll-mt-4"
     />
 
-    <div :class="$style.body">
-      <!--
+    <UiDetailLayout>
+      <template #aside>
+        <!--
         Обложку открываем в лайтбоксе (как галереи классов/видов). Заглушку
         увеличивать нечего — она остаётся обычной картинкой без zoom-курсора.
       -->
-      <div :class="[$style.cover, 'flex flex-col gap-4']">
-        <!-- Рейтинг — компактной плашкой поверх нижнего края обложки -->
-        <div class="relative">
-          <UiGallery
-            v-if="article.previewImageUrl"
-            :preview="article.previewImageUrl"
-            :alt="article.title"
-            disable-square
-          />
+        <!-- Растянута на высоту колонки, чтобы содержанию было где липнуть -->
+        <div :class="[$style.cover, 'flex grow flex-col gap-4']">
+          <!-- Рейтинг — компактной плашкой поверх нижнего края обложки -->
+          <div class="relative">
+            <UiGallery
+              v-if="article.previewImageUrl"
+              :preview="article.previewImageUrl"
+              :alt="article.title"
+              disable-square
+            />
 
-          <img
-            v-else
-            :src="ARTICLE_FALLBACK_IMAGE"
-            :alt="article.title"
-            :class="$style.coverImage"
-          />
+            <img
+              v-else
+              :src="ARTICLE_FALLBACK_IMAGE"
+              :alt="article.title"
+              :class="$style.coverImage"
+            />
 
-          <RatingWidget
-            v-if="isRatingShown"
-            class="absolute bottom-2 left-2"
-            size="compact"
-            :section="ARTICLE_RATING_SECTION"
-            :url="article.url"
-          />
-        </div>
+            <RatingWidget
+              v-if="isRatingShown"
+              class="absolute bottom-2 left-2"
+              size="compact"
+              :section="ARTICLE_RATING_SECTION"
+              :url="article.url"
+            />
+          </div>
 
-        <!--
+          <!--
           Как навигация классов: липнет к верху колонки вместе с тегами под ним.
           В узкой раскладке (дровер, мобильные) содержание скрыто, а теги стоят
           над текстом — колонка там над ним, а не рядом.
         -->
-        <div class="sticky top-0 flex flex-col gap-4">
-          <ArticleTableOfContents
-            v-if="headings.length"
-            :class="[$style.sideOnly, 'max-lg:hidden']"
-            :headings
-          />
+          <div class="sticky top-0 flex flex-col gap-4">
+            <ArticleTableOfContents
+              v-if="headings.length"
+              class="hidden lg:@min-3xl:block"
+              :headings
+            />
 
-          <div
-            v-if="article.tags.length"
-            :class="$style.sideOnly"
-          >
-            <ArticleTags />
+            <div
+              v-if="article.tags.length"
+              class="hidden @min-3xl:block"
+            >
+              <ArticleTags />
+            </div>
           </div>
         </div>
-      </div>
+      </template>
 
-      <div :class="$style.text">
+      <div class="flex flex-col">
         <div
           v-if="article.tags.length"
-          :class="[$style.stackedOnly, 'mb-3']"
+          class="mb-3 @min-3xl:hidden"
         >
           <ArticleTags />
         </div>
@@ -143,66 +146,19 @@
 
         <MarkupRender :render-node="contentNodes" />
       </div>
-    </div>
+    </UiDetailLayout>
   </article>
 </template>
 
 <style module lang="scss">
-  .container {
-    container-type: inline-size;
-  }
-
-  .body {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-
-    @container (width > 800px) {
-      flex-direction: row;
-      gap: 24px;
-    }
-  }
-
-  .cover {
-    width: 100%;
-
-    @container (width > 800px) {
-      flex-shrink: 0;
-      width: 320px;
-    }
-  }
-
-  // Картинку внутри UiGallery пропом не достать — правим вложенный <img>
+  // Картинку внутри UiGallery пропом не достать — правим вложенный img
   // (модуль не scoped, селектор потомка работает). Для заглушки тот же набор
-  // вешаем прямо на <img> через .coverImage.
+  // вешаем прямо на img через .coverImage.
   .coverImage,
   .cover img {
     aspect-ratio: 16 / 9;
     width: 100%;
     border-radius: 12px;
     object-fit: cover;
-  }
-
-  // Содержание и теги сбоку имеют смысл только рядом с текстом, а не над ним.
-  .sideOnly {
-    display: none;
-
-    @container (width > 800px) {
-      display: block;
-    }
-  }
-
-  // Теги над текстом — только в узкой раскладке, в широкой они под содержанием.
-  .stackedOnly {
-    @container (width > 800px) {
-      display: none;
-    }
-  }
-
-  .text {
-    display: flex;
-    flex: 1 1 0;
-    flex-direction: column;
-    min-width: 0;
   }
 </style>

@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { ItemDetailResponse } from '~items/model';
 
+  import { UiDetailLayout } from '~ui/detail-layout';
+
   import { DescriptionsBlock, StatsBlock, TopBar } from './ui';
 
   defineProps<{
@@ -9,9 +11,9 @@
 </script>
 
 <template>
-  <div class="@container flex flex-col gap-4">
-    <div class="flex flex-col gap-3 @min-3xl:flex-row @min-3xl:gap-7">
-      <div class="flex w-full flex-col gap-3 @min-3xl:max-w-80">
+  <UiDetailLayout>
+    <template #aside>
+      <div class="flex flex-col gap-3">
         <TopBar :types="item.types" />
 
         <StatsBlock
@@ -19,10 +21,8 @@
           :weight="item.weight"
         />
       </div>
+    </template>
 
-      <div class="flex flex-auto flex-col gap-3">
-        <DescriptionsBlock :description="item.description" />
-      </div>
-    </div>
-  </div>
+    <DescriptionsBlock :description="item.description" />
+  </UiDetailLayout>
 </template>

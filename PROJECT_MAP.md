@@ -1099,7 +1099,7 @@ imported via the auto-generated `~<domain>` alias (see
 
 ---
 
-## 🎨 Shared UI Kit (`app/shared/ui/` — 34 components)
+## 🎨 Shared UI Kit (`app/shared/ui/` — 35 components)
 
 **UI Components Priority:** Nuxt UI → `shared/ui` → `features/*/ui`
 
@@ -1114,6 +1114,7 @@ imported via the auto-generated `~<domain>` alias (see
 | `damage-formula`  | VTTG damage/heal formula input & parts editor (spells, weapons, active effects)                                                                                                                                                                                                                                                                                                  |
 | `date-picker`     | Date/time picker input                                                                                                                                                                                                                                                                                                                                                           |
 | `detail-pane`     | Wide-mode entity detail panel                                                                                                                                                                                                                                                                                                                                                    |
+| `detail-layout`   | Single two-column layout of every section card body (fixed 320px aside + text, stacked in narrow containers)                                                                                                                                                                                                                                                                     |
 | `drawer`          | Overlay drawer (+ header/body/title/actions, DrawerCollection)                                                                                                                                                                                                                                                                                                                   |
 | `editor`          | Workshop form controls (array/form controls, ability mastery, `EditorNestedSection` — the nesting rail)                                                                                                                                                                                                                                                                          |
 | `gallery`         | LightGallery image viewer; the preview carries a magnifier and an image count so readers see it opens the gallery                                                                                                                                                                                                                                                                |

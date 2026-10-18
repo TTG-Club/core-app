@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { BastionFacilityDetailResponse } from '../model';
 
+  import { UiDetailLayout } from '~ui/detail-layout';
   import { MarkupRender } from '~ui/markup';
 
   import {
@@ -15,19 +16,17 @@
 </script>
 
 <template>
-  <div class="@container flex flex-col gap-4">
-    <div class="flex flex-col gap-3 @min-3xl:flex-row @min-3xl:gap-7">
-      <div class="flex w-full flex-col gap-3 @min-3xl:max-w-80">
-        <FacilityStatsBlock :facility />
-      </div>
+  <UiDetailLayout>
+    <template #aside>
+      <FacilityStatsBlock :facility />
+    </template>
 
-      <div class="flex flex-auto flex-col gap-4">
-        <MarkupRender :render-node="facility.description" />
+    <div class="flex flex-col gap-4">
+      <MarkupRender :render-node="facility.description" />
 
-        <FacilityOrderOptions :facility />
+      <FacilityOrderOptions :facility />
 
-        <FacilityExtras :facility />
-      </div>
+      <FacilityExtras :facility />
     </div>
-  </div>
+  </UiDetailLayout>
 </template>
