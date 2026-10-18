@@ -33,6 +33,7 @@ import {
   SHILLELAGH_WEAPON_CONDITION,
   SPELL_DAMAGE_TYPE_DEFAULT,
   SPELL_DAMAGE_TYPE_KEY,
+  THROWN_WEAPON_CONDITION,
   WEAPON_ATTACK_ABILITY_KEY,
   WEAPON_DAMAGE_DICE_KEY,
   WEAPON_DAMAGE_TYPE_KEY,
@@ -475,6 +476,15 @@ const EFFECT_MODIFIER_READY_PRESETS: EffectModifierPreset[] = [
     mode: 'add',
     value: '1',
     condition: `${EFFECT_CARRIER_ARMOR_CONDITION_PREFIX}"any"`,
+  },
+  // Только брошенное метательное оружие: лук и арбалет свойства «Метательное»
+  // не имеют, и голый `damage.ranged` дал бы прибавку и им
+  {
+    key: 'damage.ranged',
+    label: 'Урон: +2 метательным оружием (Сражение метательным оружием)',
+    mode: 'add',
+    value: '2',
+    condition: THROWN_WEAPON_CONDITION,
   },
   // Ярость 2024: +2, с 9-го уровня варвара +3, с 16-го +4 — только удары Силой
   {
