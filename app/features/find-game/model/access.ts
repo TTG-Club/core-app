@@ -9,7 +9,7 @@ import type {
 
 import { Role } from '~/shared/types';
 
-import { isSessionReviewable } from './utils';
+import { isGameRecruitmentClosed, isSessionReviewable } from './utils';
 
 /** Что определяет права текущего пользователя на странице игры. */
 export interface GameViewerContext {
@@ -143,8 +143,14 @@ export function resolveGameViewerAbilities(
     canDeleteGame: canModerate,
     canReportGame: isSignedIn && !isMaster,
     // Заявка подаётся один раз на игру: повторную сервис отвергает, а мастер
-    // в собственную игру не записывается.
-    canApply: isSignedIn && !isMaster && !registration,
+    // в собственную игру не записывается. В сыгранную или отменённую игру,
+    // в полный стол и в закрытый мастером набор заявку не примут.
+    canApply:
+      isSignedIn
+      && !isMaster
+      && !registration
+      && game?.status === 'OPEN'
+      && !isGameRecruitmentClosed(game),
     // Принятый игрок может выйти из состава, ожидающий — отозвать заявку.
     canWithdraw: registration?.status === 'PENDING' || isApprovedPlayer,
     isPending: registration?.status === 'PENDING',

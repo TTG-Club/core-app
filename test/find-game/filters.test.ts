@@ -72,12 +72,10 @@ describe('чтение фильтра из адреса', () => {
     const filter = parseGameFilterFromQuery({
       system: 'DND_2024',
       excludeType: 'TEXT',
-      excludeStatus: 'CLOSED',
     });
 
     expect(filter.system).toEqual(['DND_2024']);
     expect(filter.excludeType).toEqual(['TEXT']);
-    expect(filter.excludeStatus).toEqual(['CLOSED']);
     expect(filter.type).toEqual([]);
   });
 
@@ -367,7 +365,7 @@ describe('группы общей панели фильтров', () => {
     ).toBeNull();
   });
 
-  it('не отдаёт отменённые игры в статусы каталога', () => {
+  it('не предлагает отбор по статусу: в каталоге только открытые игры', () => {
     const status = toGameFilterGroups(
       createEmptyGameFilter(),
       true,
@@ -375,10 +373,7 @@ describe('группы общей панели фильтров', () => {
       GENRES,
     ).find((group) => group.key === 'status');
 
-    expect(status?.values?.map((filterItem) => filterItem.id)).toEqual([
-      'OPEN',
-      'CLOSED',
-    ]);
+    expect(status).toBeUndefined();
   });
 
   it('ставит свой жанр последним вариантом группы жанров', () => {
