@@ -12,10 +12,16 @@ export const ADMIN_ONLINE_STATS_API_URL = '/api/v2/online/stats';
 
 export const ADMIN_ONLINE_STATS_DATA_KEY = 'admin-online-stats';
 
-export const ADMIN_ONLINE_STATS_TITLE = 'Онлайн сейчас';
+export const ADMIN_ONLINE_STATS_TITLE = 'Сайты онлайн';
 
 export const ADMIN_ONLINE_STATS_DESCRIPTION =
-  'Сколько людей на каждой площадке за последнее окно учёта.';
+  'Сколько людей на каждом сайте за последнее окно учёта.';
+
+/** Общий итог online-app: сумма всех площадок, поэтому стоит над панелями, а не в одной из них. */
+export const ADMIN_ONLINE_STATS_SUMMARY_LABEL = 'Онлайн';
+
+export const ADMIN_ONLINE_STATS_SUMMARY_HINT =
+  'Сумма по всем площадкам — сайтам и VTTG — за последнее окно учёта.';
 
 export const ADMIN_ONLINE_STATS_WINDOW_LABEL = 'Окно';
 
@@ -26,6 +32,12 @@ export const ADMIN_ONLINE_STATS_GUESTS_LABEL = 'Гостей';
 /** VTTG — десктопное приложение, а не сайт, поэтому подписи у него свои. */
 export const ADMIN_ONLINE_STATS_VTTG_SITE_ID = 'vttg';
 
+/** VTTG живёт своей панелью: его числа устроены иначе, чем у сайтов. */
+export const ADMIN_ONLINE_STATS_VTTG_TITLE = 'VTTG онлайн';
+
+export const ADMIN_ONLINE_STATS_VTTG_DESCRIPTION =
+  'Запущенные приложения и игроки за чужими столами за последнее окно учёта.';
+
 /**
  * Вторая аудитория VTTG: люди за чужими столами. Приложения у них нет — только вкладка
  * браузера с чужим миром, поэтому сервис онлайна держит их отдельным сайтом, иначе один
@@ -35,7 +47,7 @@ export const ADMIN_ONLINE_STATS_VTTG_SITE_ID = 'vttg';
 export const ADMIN_ONLINE_STATS_VTTG_TABLE_SITE_ID = 'vttg-play';
 
 /**
- * Подписи чисел плитки приложения.
+ * Подписи чисел панели приложения.
  *
  * Чисел у приложения вшестеро больше, чем у сайта, поэтому подписи короткие, а весь
  * смысл вынесен в подсказку рядом: правило «текст целиком» для компактных плиток-чисел
@@ -53,7 +65,7 @@ export const ADMIN_ONLINE_STATS_VTTG_TABLE_HINT =
   'Игроки, пришедшие в чужой мир по ссылке: приложение у них не запущено, только вкладка браузера.';
 
 /**
- * Три числа помельче — доли запущенных приложений, а не слагаемые: играющий под
+ * Три числа под «Запущено» — доли запущенных приложений, а не слагаемые: играющий под
  * аккаунтом попадает и в «В игре», и в «Аккаунт». Что это доли, проговаривают подсказки.
  */
 export const ADMIN_ONLINE_STATS_VTTG_PLAYERS_LABEL = 'В игре';
@@ -71,7 +83,7 @@ export const ADMIN_ONLINE_STATS_VTTG_REGISTERED_LABEL = 'Аккаунт';
 export const ADMIN_ONLINE_STATS_VTTG_REGISTERED_HINT =
   'Из запущенных приложений: сколько вошли в аккаунт TTG. Остальных считаем по идентификатору браузера.';
 
-/** Главное число плитки приложения: что в нём сложено, говорит подсказка. */
+/** Итог панели приложения: что в нём сложено, говорит подсказка. */
 export const ADMIN_ONLINE_STATS_VTTG_TOTAL_HINT =
   'Всего людей: запущенные приложения и игроки за столами — разные люди, поэтому складываются.';
 

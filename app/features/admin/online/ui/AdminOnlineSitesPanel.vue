@@ -15,18 +15,12 @@
     ADMIN_ONLINE_STATS_DESCRIPTION,
     ADMIN_ONLINE_STATS_EMPTY_TEXT,
     ADMIN_ONLINE_STATS_GUESTS_LABEL,
-    ADMIN_ONLINE_STATS_MINUTES_LABEL,
     ADMIN_ONLINE_STATS_PLACEHOLDER_SITE_IDS,
     ADMIN_ONLINE_STATS_REGISTERED_LABEL,
     ADMIN_ONLINE_STATS_TITLE,
-    ADMIN_ONLINE_STATS_TOTAL_LABEL,
-    ADMIN_ONLINE_STATS_VTTG_SITE_ID,
-    ADMIN_ONLINE_STATS_VTTG_TABLE_SITE_ID,
-    ADMIN_ONLINE_STATS_WINDOW_LABEL,
     formatCounter,
     isVttgSite,
   } from '../model';
-  import AdminOnlineAppTile from './AdminOnlineAppTile.vue';
 
   const props = defineProps<{
     hasError: boolean;
@@ -58,16 +52,6 @@
     };
   }
 
-  /**
-   * Находит счётчики площадки в ответе.
-   */
-  function findSiteCounters(siteId: string): AdminOnlineCounters | null {
-    return (
-      props.stats?.sites.find((siteStats) => siteStats.siteId === siteId)
-      ?? null
-    );
-  }
-
   // Без данных панель не схлопывается: остаётся каркас из известных площадок, а
   // числа показываем скелетоном (ждём ответ) или прочерком (ответа не будет).
   const siteTiles = computed<AdminOnlineSiteTile[]>(() =>
@@ -80,19 +64,9 @@
         ).map((siteId) => createSiteTile(siteId, null)),
   );
 
-  const appCounters = computed(() =>
-    findSiteCounters(ADMIN_ONLINE_STATS_VTTG_SITE_ID),
-  );
-
-  const tableCounters = computed(() =>
-    findSiteCounters(ADMIN_ONLINE_STATS_VTTG_TABLE_SITE_ID),
-  );
-
-  const summaryTotal = computed(() => formatCounter(props.stats?.total.total));
-
-  // Сообщение показываем, когда online-app ответил без сайтов, — плитка приложения
-  // при этом остаётся, иначе пропажу online-данных не заметить. При ошибке и загрузке
-  // говорить «сайтов нет» рано: там каркас с прочерками.
+  // Сообщение показываем, когда online-app ответил без сайтов, — иначе пропажу
+  // online-данных не заметить. При ошибке и загрузке говорить «сайтов нет» рано: там
+  // каркас с прочерками.
   const hasEmptySites = computed(
     () => !props.hasError && !!props.stats && !props.stats.sites.length,
   );
@@ -103,31 +77,6 @@
     :title="ADMIN_ONLINE_STATS_TITLE"
     :hint="ADMIN_ONLINE_STATS_DESCRIPTION"
   >
-    <template #meta>
-      <USkeleton
-        v-if="isPending"
-        class="h-5 w-32"
-      />
-
-      <template v-else-if="stats">
-        <UBadge
-          color="neutral"
-          variant="subtle"
-        >
-          {{ ADMIN_ONLINE_STATS_WINDOW_LABEL }}
-          {{ stats.windowMinutes }}
-          {{ ADMIN_ONLINE_STATS_MINUTES_LABEL }}
-        </UBadge>
-
-        <span>
-          {{ ADMIN_ONLINE_STATS_TOTAL_LABEL }}
-          <span class="font-semibold text-highlighted tabular-nums">
-            {{ summaryTotal }}
-          </span>
-        </span>
-      </template>
-    </template>
-
     <p
       v-if="hasEmptySites"
       class="border-b border-dashed border-default px-4 py-2 text-xs text-muted"
@@ -136,9 +85,7 @@
     </p>
 
     <!-- Плитки делят ряд поровну, сколько бы площадок ни вернул online-app -->
-    <div
-      class="grid h-full divide-y divide-default sm:auto-cols-fr sm:grid-flow-col sm:divide-x sm:divide-y-0"
-    >
+    <div class="grid h-full auto-cols-fr grid-flow-col divide-x divide-default">
       <AdminStatTile
         v-for="siteTile in siteTiles"
         :key="siteTile.siteId"
@@ -151,12 +98,6 @@
           :is-pending="isPending"
         />
       </AdminStatTile>
-
-      <AdminOnlineAppTile
-        :app-counters="appCounters"
-        :is-pending="isPending"
-        :table-counters="tableCounters"
-      />
     </div>
   </AdminDashboardPanel>
 </template>

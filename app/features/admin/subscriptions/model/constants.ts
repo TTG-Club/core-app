@@ -291,7 +291,7 @@ export function codesSearchEmptyText(query: string): string {
 /** Подпись включённой оплаты: она же подпись переключателя и тост после включения. */
 const SUBSCRIPTION_SALES_ENABLED_LABEL = 'Оплата подписки включена';
 
-/** Полоса переключателя оплаты подписки на главной админки. */
+/** Строка переключателя оплаты подписки в группе «Пользователи» на главной админки. */
 export const SUBSCRIPTION_SALES_SWITCH_TEXT = {
   title: 'Оплата подписки',
   enabledStatus: 'Включена',
@@ -306,16 +306,17 @@ export const SUBSCRIPTION_SALES_SWITCH_TEXT = {
 };
 
 /**
- * Полоса оплаты — табло состояния: цвет, значок и подпись меняются вместе, чтобы
- * выключенную оплату было видно с первого взгляда. При выключенной карта перечёркнута.
+ * Строка оплаты — табло состояния: цвет, значок и подпись меняются вместе, чтобы
+ * выключенную оплату было видно с первого взгляда. При выключенной карта перечёркнута,
+ * а что из этого следует, говорит подсказка.
  */
 export const SUBSCRIPTION_SALES_SWITCH_ENABLED_STATE: SubscriptionSalesSwitchState =
   {
     color: 'success',
     description: SUBSCRIPTION_SALES_SWITCH_TEXT.enabledDescription,
     icon: 'tabler:credit-card',
-    iconClass: 'bg-success/15 text-success',
-    rootClass: 'border-success/40 bg-success/5',
+    iconClass: 'text-success',
+    rootClass: 'bg-success/10',
     status: SUBSCRIPTION_SALES_SWITCH_TEXT.enabledStatus,
   };
 
@@ -324,7 +325,7 @@ export const SUBSCRIPTION_SALES_SWITCH_DISABLED_STATE: SubscriptionSalesSwitchSt
     color: 'warning',
     description: SUBSCRIPTION_SALES_SWITCH_TEXT.disabledDescription,
     icon: 'tabler:credit-card-off',
-    iconClass: 'bg-warning/15 text-warning',
-    rootClass: 'border-warning/40 bg-warning/5',
+    iconClass: 'text-warning',
+    rootClass: 'bg-warning/10',
     status: SUBSCRIPTION_SALES_SWITCH_TEXT.disabledStatus,
   };

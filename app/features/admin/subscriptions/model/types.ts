@@ -73,14 +73,14 @@ export interface CreateCodesFormState {
   label: string;
 }
 
-/** Вид полосы оплаты подписки в одном из двух состояний. */
+/** Вид строки оплаты подписки в одном из двух состояний. */
 export interface SubscriptionSalesSwitchState {
   color: 'success' | 'warning';
   description: string;
   icon: string;
-  /** Подложка значка в цвет состояния */
+  /** Цвет значка в цвет состояния */
   iconClass: string;
-  /** Рамка и фон полосы в цвет состояния */
+  /** Фон строки в цвет состояния */
   rootClass: string;
   status: string;
 }

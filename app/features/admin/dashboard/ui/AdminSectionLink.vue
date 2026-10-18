@@ -12,16 +12,15 @@
 </script>
 
 <template>
-  <UFieldGroup class="w-full">
+  <div class="flex items-center gap-1">
     <UButton
       :to="section.to"
       :icon="section.icon"
       color="neutral"
-      variant="subtle"
-      size="lg"
+      variant="ghost"
       block
-      class="justify-start"
-      :ui="{ leadingIcon: 'text-primary', label: 'truncate' }"
+      class="min-w-0 flex-1 justify-start"
+      :ui="{ leadingIcon: 'text-muted', label: 'truncate' }"
     >
       {{ section.label }}
     </UButton>
@@ -35,10 +34,9 @@
         :icon="ADMIN_DASHBOARD_CREATE_ICON"
         :aria-label="ADMIN_DASHBOARD_CREATE_LABEL"
         color="neutral"
-        variant="subtle"
-        size="lg"
+        variant="ghost"
         square
       />
     </UTooltip>
-  </UFieldGroup>
+  </div>
 </template>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import { SUBSCRIPTION_SALES_ADMIN_API_PATH } from '#shared/consts';
+  import { ADMIN_DASHBOARD_TOOLTIP_UI } from '~admin/dashboard/model';
   import { useSubscriptionSales } from '~vttg/composables';
 
   import {
@@ -51,37 +52,39 @@
 </script>
 
 <template>
-  <section
-    class="flex items-center gap-3 rounded-lg border px-4 py-3 transition-colors"
+  <div
+    class="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 transition-colors"
     :class="salesState.rootClass"
   >
-    <span
-      class="flex size-9 shrink-0 items-center justify-center rounded-full"
-      :class="salesState.iconClass"
+    <UTooltip
+      :text="salesState.description"
+      :ui="ADMIN_DASHBOARD_TOOLTIP_UI"
     >
-      <UIcon
-        :name="salesState.icon"
-        class="size-5"
-      />
-    </span>
+      <div class="flex min-w-0 flex-1 items-center gap-1.5">
+        <!--
+          Ключ пересоздаёт значок при смене состояния: модуль иконок в CSS-режиме
+          оставляет у живого элемента картинку прежнего имени.
+        -->
+        <UIcon
+          :key="salesState.icon"
+          :name="salesState.icon"
+          class="size-5 shrink-0"
+          :class="salesState.iconClass"
+        />
 
-    <div class="min-w-0 flex-1">
-      <div class="flex flex-wrap items-center gap-2">
-        <h2 class="text-sm font-semibold text-highlighted">
+        <span class="truncate text-sm font-medium text-default">
           {{ SUBSCRIPTION_SALES_SWITCH_TEXT.title }}
-        </h2>
-
-        <UBadge
-          :color="salesState.color"
-          variant="subtle"
-          size="sm"
-        >
-          {{ salesState.status }}
-        </UBadge>
+        </span>
       </div>
+    </UTooltip>
 
-      <p class="mt-0.5 text-xs text-muted">{{ salesState.description }}</p>
-    </div>
+    <UBadge
+      :color="salesState.color"
+      variant="subtle"
+      size="sm"
+    >
+      {{ salesState.status }}
+    </UBadge>
 
     <USwitch
       :model-value="isSalesEnabled"
@@ -89,8 +92,8 @@
       :loading="isSaving"
       :disabled="isSaving"
       :aria-label="SUBSCRIPTION_SALES_SWITCH_TEXT.switchLabel"
-      size="lg"
+      size="sm"
       @update:model-value="handleToggle"
     />
-  </section>
+  </div>
 </template>

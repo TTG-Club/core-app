@@ -17,7 +17,7 @@
     ADMIN_DASHBOARD_STATS_TITLE,
     ADMIN_DASHBOARD_TOTALS_TITLE,
   } from '~admin/dashboard/model';
-  import { AdminDashboardPanel, AdminSectionLink } from '~admin/dashboard/ui';
+  import { AdminDashboardPanel, AdminSectionGroup } from '~admin/dashboard/ui';
   import {
     ADMIN_GAME_STATISTICS_API_URL,
     ADMIN_GAME_STATISTICS_DATA_KEY,
@@ -25,15 +25,22 @@
     parseAdminGameStatistics,
   } from '~admin/games/model';
   import { AdminGameStatisticsTile } from '~admin/games/ui';
-  import { ADMIN_SECTION_ITEMS } from '~admin/navigation/model';
+  import {
+    ADMIN_CONTENT_SECTION_GROUP,
+    ADMIN_TOOLS_SECTION_GROUP,
+    ADMIN_USERS_SECTION_GROUP,
+    ADMIN_VTTG_SECTION_GROUP,
+  } from '~admin/navigation/model';
   import {
     ADMIN_ONLINE_STATS_API_URL,
     ADMIN_ONLINE_STATS_DATA_KEY,
     parseAdminOnlineStats,
   } from '~admin/online/model';
   import {
-    AdminOnlineNowPanel,
     AdminOnlinePreferencesPanel,
+    AdminOnlineSitesPanel,
+    AdminOnlineSummary,
+    AdminOnlineVttgPanel,
   } from '~admin/online/ui';
   import { SubscriptionSalesSwitch } from '~admin/subscriptions/ui';
 
@@ -141,19 +148,23 @@
     :title="ADMIN_DASHBOARD_PAGE_TITLE"
   >
     <div class="space-y-6">
-      <SubscriptionSalesSwitch />
-
       <section class="space-y-3">
-        <div class="flex items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
           <h2 class="text-sm font-semibold text-muted">
             {{ ADMIN_DASHBOARD_STATS_TITLE }}
           </h2>
+
+          <AdminOnlineSummary
+            :stats="resolvedOnlineStats"
+            :is-pending="isOnlineStatsPending"
+          />
 
           <UButton
             :icon="ADMIN_DASHBOARD_REFRESH_ICON"
             color="neutral"
             variant="ghost"
             size="xs"
+            class="ml-auto"
             :loading="isStatsLoading"
             @click.left.exact.prevent="handleStatsRefresh"
           >
@@ -161,18 +172,14 @@
           </UButton>
         </div>
 
-        <div class="grid gap-3 lg:grid-cols-5">
-          <AdminOnlineNowPanel
-            class="lg:col-span-3"
+        <div class="grid gap-3 lg:grid-cols-2">
+          <AdminOnlineSitesPanel
             :stats="resolvedOnlineStats"
             :is-pending="isOnlineStatsPending"
             :has-error="hasOnlineStatsError"
           />
 
-          <AdminDashboardPanel
-            class="lg:col-span-2"
-            :title="ADMIN_DASHBOARD_TOTALS_TITLE"
-          >
+          <AdminDashboardPanel :title="ADMIN_DASHBOARD_TOTALS_TITLE">
             <div class="grid h-full grid-cols-2 divide-x divide-default">
               <ClientOnly>
                 <AdminCharacterSheetStatsTile
@@ -198,8 +205,12 @@
             </div>
           </AdminDashboardPanel>
 
+          <AdminOnlineVttgPanel
+            :stats="resolvedOnlineStats"
+            :is-pending="isOnlineStatsPending"
+          />
+
           <AdminOnlinePreferencesPanel
-            class="lg:col-span-5"
             :stats="resolvedOnlineStats"
             :is-pending="isOnlineStatsPending"
           />
@@ -211,14 +222,16 @@
           {{ ADMIN_DASHBOARD_SECTIONS_TITLE }}
         </h2>
 
-        <div
-          class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
-        >
-          <AdminSectionLink
-            v-for="adminSection in ADMIN_SECTION_ITEMS"
-            :key="adminSection.to"
-            :section="adminSection"
-          />
+        <div class="grid items-start gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <AdminSectionGroup :group="ADMIN_USERS_SECTION_GROUP">
+            <SubscriptionSalesSwitch />
+          </AdminSectionGroup>
+
+          <AdminSectionGroup :group="ADMIN_CONTENT_SECTION_GROUP" />
+
+          <AdminSectionGroup :group="ADMIN_TOOLS_SECTION_GROUP" />
+
+          <AdminSectionGroup :group="ADMIN_VTTG_SECTION_GROUP" />
         </div>
       </section>
     </div>

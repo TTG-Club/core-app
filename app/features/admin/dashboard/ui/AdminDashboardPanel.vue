@@ -6,6 +6,8 @@
 
   defineProps<{
     title: string;
+    /** Значок перед заголовком: у панелей-групп разделов */
+    icon?: string;
     /** Пояснение к панели: прячется за значком у заголовка */
     hint?: string;
   }>();
@@ -29,6 +31,12 @@
   >
     <template #header>
       <div class="flex items-center gap-1.5">
+        <UIcon
+          v-if="icon"
+          :name="icon"
+          class="size-4 text-primary"
+        />
+
         <h3 class="text-sm font-semibold text-highlighted">{{ title }}</h3>
 
         <UTooltip
