@@ -102,6 +102,8 @@ export const MENU_SECTIONS: Array<MenuSection> = [
         label: 'Сооружения бастиона',
         icon: 'tabler:building-castle',
         disabled: false,
+        // Бастионы пока открыты только админам
+        roles: [Role.ADMIN],
       },
     ],
   },
@@ -161,7 +163,7 @@ export const MENU_SECTIONS: Array<MenuSection> = [
         href: '/tools/bastion',
         label: 'Мои бастионы',
         icon: 'tabler:building-castle',
-        roles: [Role.USER],
+        roles: [Role.ADMIN],
       },
     ],
   },

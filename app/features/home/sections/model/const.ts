@@ -1,4 +1,4 @@
-import type { Role } from '~/shared/types';
+import { Role } from '~/shared/types';
 
 /**
  * Разделы каталога плиткой на главной. `icon` — опознавательный знак раздела:
@@ -72,5 +72,7 @@ export const CARD_LINKS: Array<{
     url: '/bastions',
     img: '/s3/home/section-link/bastions.webp',
     icon: 'tabler:building-castle',
+    // Бастионы пока открыты только админам
+    roles: [Role.ADMIN],
   },
 ];

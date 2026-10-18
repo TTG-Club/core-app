@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { BastionFacilityDetailResponse } from '~bastions/model';
 
+  import { Role } from '~/shared/types';
   import { BastionFacilityBody } from '~bastions/body';
   import {
     BASTION_API_PATH,
@@ -10,6 +11,11 @@
     getBastionFacilityMarkdown,
   } from '~bastions/model';
   import { PageActions } from '~ui/page';
+
+  // Бастионы пока открыты только админам
+  definePageMeta({
+    auth: { roles: [Role.ADMIN] },
+  });
 
   const route = useRoute();
 

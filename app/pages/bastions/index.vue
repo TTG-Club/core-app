@@ -4,6 +4,7 @@
     BastionFacilityLinkResponse,
   } from '~bastions/model';
 
+  import { Role } from '~/shared/types';
   import { BastionFacilityBody } from '~bastions/body';
   import { BastionFacilityLink } from '~bastions/link';
   import {
@@ -20,6 +21,11 @@
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
+
+  // Бастионы пока открыты только админам
+  definePageMeta({
+    auth: { roles: [Role.ADMIN] },
+  });
 
   useSeoMeta({
     title: BASTION_SEO.title,

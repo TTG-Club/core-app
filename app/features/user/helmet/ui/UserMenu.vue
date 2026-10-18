@@ -1,6 +1,4 @@
 <script setup lang="ts">
-  import { MY_BASTIONS_LABELS, MY_BASTIONS_ROUTE } from '~bastion-game/model';
-  import { BASTION_ROUTE, BASTION_SECTION_TITLE } from '~bastions/model';
   import { MY_BUGS_UPDATES_HINT } from '~bug-report/model';
   import { useMyBugReportUpdates } from '~bug-report/my';
   import {
@@ -267,34 +265,6 @@
             >
               {{ VTTG_MODULES_TITLE }}
             </UButton>
-
-            <!-- Бастионы — короткий путь для игроков; у админов сооружения
-              бастиона под рукой в «Мастерской» -->
-            <template v-if="!isAdmin">
-              <UButton
-                icon="tabler:building-castle"
-                color="neutral"
-                variant="ghost"
-                class="w-full"
-                size="lg"
-                :to="BASTION_ROUTE"
-                @click.left.exact="closeMenu"
-              >
-                {{ BASTION_SECTION_TITLE }}
-              </UButton>
-
-              <UButton
-                icon="tabler:building-fortress"
-                color="neutral"
-                variant="ghost"
-                class="w-full"
-                size="lg"
-                :to="MY_BASTIONS_ROUTE"
-                @click.left.exact="closeMenu"
-              >
-                {{ MY_BASTIONS_LABELS.title }}
-              </UButton>
-            </template>
 
             <UButton
               v-if="canEditEntities"
