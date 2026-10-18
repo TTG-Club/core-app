@@ -6305,6 +6305,9 @@ export const SHEET_BODY_LABELS = {
   initiative: 'Инициатива',
 } as const;
 
+/** Иконка у значения класса доспеха: щит помогает быстро найти КД глазами. */
+export const SHEET_ARMOR_CLASS_ICON = 'tabler:shield';
+
 /** Подписи шапки листа персонажа. */
 export const SHEET_HEADER_LABELS = {
   vision: 'Настроить зрение',
