@@ -42,6 +42,7 @@ import {
   isFurnitureOnGrid,
   isTowerKind,
   isWallEdge,
+  sortFurnitureByLayer,
   toPlanCircle,
 } from './plan-geometry';
 import {
@@ -1011,7 +1012,8 @@ export function findFurnitureAt(
   level: number,
   point: PlanCell,
 ): PlanFurniture | undefined {
-  return document.furniture.findLast((item) => {
+  // Сверху тот, кто нарисован последним: ковёр под остальной мебелью.
+  return sortFurnitureByLayer(document.furniture).findLast((item) => {
     if (item.level !== level) {
       return false;
     }
