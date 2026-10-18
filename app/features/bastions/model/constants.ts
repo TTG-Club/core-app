@@ -5,7 +5,6 @@ import type {
   FacilityEnlargementForm,
   FacilityFeatureForm,
   FacilityOrderOptionForm,
-  FacilitySpaceCode,
 } from './types';
 
 export const BASTION_SECTION = 'bastions';
@@ -127,19 +126,10 @@ export const BASTION_EDITOR_LABELS = {
   enlargementDays: 'Дней',
   enlargementHirelings: 'Доп. наёмники',
   enlargementDescription: 'Что даёт расширение',
-  roomTemplateTitle: 'Комната на плане бастиона',
-  roomTemplateHint:
-    'Какой комнатой сооружение встаёт на план, когда его вытягивают из '
-    + 'закладки «Сооружения»: размер и расстановка мебели для каждого '
-    + 'пространства.',
-  roomTemplateNoSpaces:
-    'Выберите пространство сооружения, чтобы настроить его комнату',
-  roomTemplateAuto:
-    'Мебель расставляется автоматически по виду сооружения. Настройте '
-    + 'шаблон, чтобы задать размер комнаты и расстановку самому.',
-  roomTemplateCustomize: 'Настроить',
-  roomTemplateReset: 'Сбросить к автоматической',
-  roomTemplateSize: 'Размер комнаты',
+  furniture: 'Предметы интерьера',
+  furniturePlaceholder: 'По умолчанию',
+  furnitureHelp:
+    'Чем обставляется комната сооружения, когда его вытягивают на план бастиона: предметы встают в случайные места и занимают не больше 60% пола. Пусто — {defaults}.',
   remove: 'Удалить',
 } as const;
 
@@ -185,13 +175,6 @@ export const FACILITY_CHOICE_SOURCE_OPTIONS: Array<{
   label: string;
   value: FacilityChoiceSource;
 }> = [{ label: 'Инструменты ремесленников', value: 'ARTISAN_TOOLS' }];
-
-/** Пространства сооружения от меньшего к большему. */
-export const FACILITY_SPACE_ORDER: ReadonlyArray<FacilitySpaceCode> = [
-  'CRAMPED',
-  'ROOMY',
-  'VAST',
-];
 
 export const EMPTY_ENLARGEMENT: FacilityEnlargementForm = {
   cost: null,

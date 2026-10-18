@@ -24,8 +24,6 @@ export async function useBastionRules() {
     })),
   );
 
-  const spaces = computed(() => rules.value?.spaces ?? []);
-
   const spaceItems = computed(() =>
     (rules.value?.spaces ?? []).map((space) => ({
       label: `${space.name} (${space.squares} кв.)`,
@@ -58,7 +56,6 @@ export async function useBastionRules() {
     rules,
     status,
     categoryItems,
-    spaces,
     spaceItems,
     facilityOrderItems,
     prerequisiteItems,

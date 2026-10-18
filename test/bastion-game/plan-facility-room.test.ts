@@ -1,42 +1,46 @@
-import type { FacilityRoomTemplate, PlanDocument } from '~bastion-game/model';
+import type { PlanDocument } from '~bastion-game/model';
 
 import { describe, expect, it } from 'vitest';
 
 import {
-  createDefaultRoomTemplate,
   createEmptyPlan,
-  createTemplatePlan,
   drawRoom,
+  furnishRoom,
   getFacilityFurniture,
   getFacilityRoomSize,
   getFurnitureSize,
   getRectCells,
-  getRoomSizeOptions,
   isPremiumFurniture,
   placeFacilityRoom,
-  readTemplatePlan,
-  resizeRoomTemplate,
 } from '~bastion-game/model';
-import { getRoomTemplateSpaces } from '~bastions/model';
 
 const bedroom = {
   id: 'f-bedroom',
   name: 'Спальня',
   facilityUrl: 'bedroom',
   squares: 16,
-  roomTemplate: undefined,
+  furniture: [],
 };
 
-const template: FacilityRoomTemplate = {
-  space: 'ROOMY',
-  width: 8,
-  depth: 2,
-  furniture: [
-    { kind: 'BED', x: 0, y: 0, rotation: 0 },
-    { kind: 'FOUNTAIN', x: 2, y: 0, rotation: 0 },
-    { kind: 'CHEST', x: 7, y: 1, rotation: 0 },
-  ],
-};
+/**
+ * Предсказуемый источник случайных чисел (mulberry32) для повторяемых тестов.
+ *
+ * @param seed Зерно.
+ * @returns Функция, как Math.random.
+ */
+function createRandom(seed: number): () => number {
+  let state = seed;
+
+  return () => {
+    state = (state + 0x6d2b79f5) | 0;
+
+    let value = Math.imul(state ^ (state >>> 15), 1 | state);
+
+    value = (value + Math.imul(value ^ (value >>> 7), 61 | value)) ^ value;
+
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
 /**
  * Клетки, которые занимают предметы плана.
@@ -44,7 +48,9 @@ const template: FacilityRoomTemplate = {
  * @param plan План.
  * @returns Ключи «x:y» по одному на клетку, с повторами.
  */
-function getFurnitureCells(plan: PlanDocument): Array<string> {
+function getFurnitureCells(
+  plan: Pick<PlanDocument, 'furniture'>,
+): Array<string> {
   return plan.furniture.flatMap((item) => {
     const { width, depth } = getFurnitureSize(item);
 
@@ -86,15 +92,15 @@ describe('готовая комната сооружения', () => {
   });
 
   it('без подписки не ставит предметы по подписке', () => {
-    expect(getFacilityFurniture('kitchen', false)).toEqual(
-      getFacilityFurniture('kitchen', true).filter(
+    expect(getFacilityFurniture('kitchen', [], false)).toEqual(
+      getFacilityFurniture('kitchen', [], true).filter(
         (kind) => !isPremiumFurniture(kind),
       ),
     );
 
-    expect(getFacilityFurniture('kitchen', true)).toContain('BARREL');
+    expect(getFacilityFurniture('kitchen', [], true)).toContain('BARREL');
 
-    expect(getFacilityFurniture('unknown-facility', false)).toEqual([
+    expect(getFacilityFurniture('unknown-facility', [], false)).toEqual([
       'TABLE',
       'CHAIR',
       'CHEST',
@@ -118,125 +124,80 @@ describe('готовая комната сооружения', () => {
   });
 });
 
-describe('шаблон готовой комнаты', () => {
-  it('ставит комнату по шаблону, если он на эту площадь', () => {
-    const plan = placeFacilityRoom(
-      createEmptyPlan(),
+describe('случайная расстановка мебели', () => {
+  it('без наложений, в стенах и не больше 60% пола', () => {
+    for (const side of [2, 4, 6]) {
+      const room = { x: 3, y: 5, width: side, depth: side };
+
+      const inside = new Set(
+        getRectCells(room, { x: 3 + side - 1, y: 5 + side - 1 }).map(
+          (cell) => `${cell.x}:${cell.y}`,
+        ),
+      );
+
+      for (let seed = 1; seed <= 50; seed++) {
+        const furniture = furnishRoom(
+          room,
+          0,
+          ['BED', 'CHEST', 'WARDROBE', 'TABLE', 'CHAIR', 'RUG'],
+          createRandom(seed),
+        );
+
+        const cells = getFurnitureCells({ furniture });
+
+        expect(new Set(cells).size).toBe(cells.length);
+        expect(cells.every((cell) => inside.has(cell))).toBe(true);
+        expect(cells.length).toBeLessThanOrEqual(side * side * 0.6);
+      }
+    }
+  });
+
+  it('ставит каждый предмет хотя бы раз, если он помещается', () => {
+    const furniture = furnishRoom(
+      { x: 0, y: 0, width: 6, depth: 6 },
       0,
-      { x: 10, y: 10 },
-      { ...bedroom, roomTemplate: template },
-      true,
+      ['BED', 'CHEST', 'TABLE'],
+      createRandom(7),
     );
 
-    const cells = plan.rooms[0]?.cells ?? [];
-    const left = Math.min(...cells.map((cell) => cell.x));
-    const top = Math.min(...cells.map((cell) => cell.y));
+    const kinds = new Set(furniture.map((item) => item.kind));
 
-    expect(Math.max(...cells.map((cell) => cell.x)) - left + 1).toBe(8);
-
-    expect(
-      plan.furniture.map(({ kind, x, y, rotation }) => ({
-        kind,
-        x: x - left,
-        y: y - top,
-        rotation,
-      })),
-    ).toEqual(template.furniture);
+    expect(kinds).toEqual(new Set(['BED', 'CHEST', 'TABLE']));
   });
 
-  it('без подписки убирает из шаблона предметы по подписке', () => {
-    const plan = placeFacilityRoom(
-      createEmptyPlan(),
-      0,
-      { x: 10, y: 10 },
-      { ...bedroom, roomTemplate: template },
-      false,
-    );
-
-    expect(plan.furniture.map((item) => item.kind)).toEqual(['BED', 'CHEST']);
-  });
-
-  it('после расширения шаблон не на ту площадь, и мебель расставляется сама', () => {
-    const plan = placeFacilityRoom(
-      createEmptyPlan(),
-      0,
-      { x: 10, y: 10 },
-      { ...bedroom, squares: 36, roomTemplate: template },
-      false,
-    );
-
-    expect(plan.rooms[0]?.cells).toHaveLength(36);
-    expect(plan.furniture.length).toBeGreaterThan(0);
-  });
-
-  it('по умолчанию берёт автоматическую расстановку', () => {
-    const fallback = createDefaultRoomTemplate('bedroom', 'ROOMY', 16);
-
-    expect(fallback).toMatchObject({ space: 'ROOMY', width: 4, depth: 4 });
-    expect(fallback.furniture.map((item) => item.kind)).toContain('BED');
-  });
-
-  it('план редактора возвращает тот же шаблон', () => {
-    expect(
-      readTemplatePlan(createTemplatePlan(template, ''), template),
-    ).toEqual(template);
-  });
-
-  it('мебель за стенами в шаблон не попадает', () => {
-    const plan = createTemplatePlan(template, '');
-
-    const moved = {
-      ...plan,
-      furniture: plan.furniture.map((item) =>
-        item.kind === 'CHEST' ? { ...item, x: item.x + 1 } : item,
+  it('с разным случаем расстановка разная', () => {
+    const layouts = [1, 2, 3, 4].map((seed) =>
+      JSON.stringify(
+        furnishRoom(
+          { x: 0, y: 0, width: 4, depth: 4 },
+          0,
+          ['BED', 'CHEST', 'CHAIR'],
+          createRandom(seed),
+        ).map(({ kind, x, y, rotation }) => [kind, x, y, rotation]),
       ),
-    };
+    );
 
-    expect(
-      readTemplatePlan(moved, template).furniture.map((item) => item.kind),
-    ).toEqual(['BED', 'FOUNTAIN']);
+    expect(new Set(layouts).size).toBeGreaterThan(1);
   });
 
-  it('при смене размера убирает то, что не помещается', () => {
-    const resized = resizeRoomTemplate(template, 4, 4);
-
-    expect(resized).toMatchObject({ width: 4, depth: 4 });
-
-    expect(resized.furniture.map((item) => item.kind)).toEqual([
-      'BED',
-      'FOUNTAIN',
-    ]);
-  });
-
-  it('предлагает все прямоугольники на площадь', () => {
-    expect(getRoomSizeOptions(4)).toEqual([
-      { width: 1, depth: 4 },
-      { width: 2, depth: 2 },
-      { width: 4, depth: 1 },
-    ]);
-  });
-
-  it('шаблоны настраиваются для своих пространств и расширения', () => {
-    expect(
-      getRoomTemplateSpaces({
-        category: 'BASIC',
-        space: undefined,
-        enlargement: null,
-      }),
-    ).toEqual(['CRAMPED', 'ROOMY']);
+  it('берёт предметы из справочника сооружения', () => {
+    const plan = placeFacilityRoom(
+      createEmptyPlan(),
+      0,
+      { x: 10, y: 10 },
+      { ...bedroom, furniture: ['BARREL', 'CHEST'] },
+      true,
+      createRandom(3),
+    );
 
     expect(
-      getRoomTemplateSpaces({
-        category: 'SPECIAL',
-        space: 'ROOMY',
-        enlargement: {
-          space: 'VAST',
-          cost: null,
-          days: null,
-          additionalHirelings: null,
-          description: '',
-        },
-      }),
-    ).toEqual(['ROOMY', 'VAST']);
+      new Set(plan.furniture.map((item) => item.kind)).isSubsetOf(
+        new Set(['BARREL', 'CHEST']),
+      ),
+    ).toBe(true);
+
+    expect(getFacilityFurniture('bedroom', ['BARREL', 'CHEST'], false)).toEqual(
+      ['CHEST'],
+    );
   });
 });

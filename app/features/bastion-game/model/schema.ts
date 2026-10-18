@@ -156,26 +156,6 @@ const menagerieSchema = z.object({
   ),
 });
 
-/**
- * Шаблон готовой комнаты сооружения на плане: прямоугольник площадью
- * пространства и мебель в нём, координаты от левого верхнего угла комнаты.
- */
-export const facilityRoomTemplateSchema = z.object({
-  space: z.enum(FACILITY_SPACES),
-  width: z.number(),
-  depth: z.number(),
-  furniture: z.array(
-    z.object({
-      kind: z.enum(FURNITURE_KINDS),
-      x: z.number(),
-      y: z.number(),
-      rotation: z.number(),
-    }),
-  ),
-});
-
-export type FacilityRoomTemplate = z.infer<typeof facilityRoomTemplateSchema>;
-
 /** Сооружение персонажа вместе с данными справочника. */
 const facilitySchema = z.object({
   id: z.string(),
@@ -231,7 +211,8 @@ const facilitySchema = z.object({
   /** Наёмники, которых забрало событие и которым ещё ищут замену; null — все на месте. */
   hirelingsMissing: z.number().nullish(),
   /** Шаблон готовой комнаты для текущего пространства; null — мебель расставит план. */
-  roomTemplate: facilityRoomTemplateSchema.nullish(),
+  /** Предметы интерьера из справочника; пусто — набор по виду сооружения. */
+  furniture: z.array(z.enum(FURNITURE_KINDS)).nullish(),
 });
 
 /** Гость бастиона из событий «Гость» и «Беженцы». */
