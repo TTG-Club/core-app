@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import { StatusCodes } from 'http-status-codes';
 
+  import { Role } from '~/shared/types';
   import {
     BASTION_DETAIL_LABELS,
     BASTION_SHARE_LABELS,
@@ -11,6 +12,11 @@
   } from '~bastion-game/model';
   import { PlanEditor } from '~bastion-game/plan';
   import { UiResult } from '~ui/result';
+
+  // Бастионы пока открыты только админам
+  definePageMeta({
+    auth: { roles: [Role.ADMIN] },
+  });
 
   /** План бастиона по ссылке «поделиться»: только просмотр. */
   const route = useRoute();

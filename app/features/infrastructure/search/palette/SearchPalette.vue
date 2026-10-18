@@ -13,6 +13,7 @@
   } from './model';
 
   const { isOpen, close } = useGlobalSearch();
+  const { isAdmin } = useUserRoles();
 
   const searchTerm = shallowRef('');
   const searchQuery = refDebounced(searchTerm, 700);
@@ -56,7 +57,12 @@
       return [];
     }
 
-    const results = Object.values(SearchItems).map((type) => ({
+    // Бастионы пока открыты только админам
+    const types = Object.values(SearchItems).filter(
+      (type) => isAdmin.value || type !== SearchItems.BASTION,
+    );
+
+    const results = types.map((type) => ({
       id: type,
       label: getTypeNameBySearchItem(type),
       ignoreFilter: true,

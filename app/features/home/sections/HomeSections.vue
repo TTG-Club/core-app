@@ -4,21 +4,13 @@
 
   const { user } = useUser();
 
+  /** Плитки с ролями видят только их обладатели, остальным раздел не показывается. */
   const sections = computed(() =>
-    CARD_LINKS.map((link) => {
-      if (!Array.isArray(link.roles)) {
-        return link;
-      }
-
-      const available = link.roles.some((role) =>
-        user.value?.roles.includes(role),
-      );
-
-      return {
-        ...link,
-        disabled: link.disabled || !available,
-      };
-    }),
+    CARD_LINKS.filter(
+      (link) =>
+        !Array.isArray(link.roles)
+        || link.roles.some((role) => user.value?.roles.includes(role)),
+    ),
   );
 </script>
 

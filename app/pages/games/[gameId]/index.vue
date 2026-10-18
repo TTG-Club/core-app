@@ -67,6 +67,7 @@
 
   const route = useRoute();
   const { showError, showSuccess } = useFindGameToast();
+  const { isAdmin } = useUserRoles();
 
   const { watchParticipantNames } = useParticipantNames();
 
@@ -132,9 +133,11 @@
       abilities.value.canReviewRegistrations && game.value?.costType === 'PAID';
 
     // Бастионы игры видят её участники: мастер и игроки с одобренной заявкой —
-    // остальным core-api всё равно ответит 403.
+    // остальным core-api всё равно ответит 403. Пока бастионы открыты только
+    // админам.
     const showBastions =
-      abilities.value.isMaster || abilities.value.isApprovedPlayer;
+      isAdmin.value
+      && (abilities.value.isMaster || abilities.value.isApprovedPlayer);
 
     return GAME_DETAIL_TABS.filter(
       (tab) =>
