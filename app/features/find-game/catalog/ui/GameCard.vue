@@ -19,8 +19,6 @@
     GAME_NEXT_SESSION_SHORT_LABEL,
     GAME_SEATS_LABEL,
     GAME_SEATS_MAX_ICONS,
-    GAME_STATUS_COLORS,
-    GAME_STATUS_LABELS,
     GAME_TYPE_ICONS,
     GAME_VISIBILITY_LABELS,
     getGameCardPriceLabel,
@@ -28,6 +26,7 @@
     getGameRoute,
     getGameSeatsCounter,
     getGameSeatsHint,
+    getGameStateBadge,
     getGenresLabel,
     MASTER_PROFILE_OPEN_HINT,
     SESSION_REGISTRATION_STATUS_COLORS,
@@ -86,12 +85,13 @@
       return [];
     }
 
+    const stateBadge = getGameStateBadge(game);
+
     const items: Array<StatusBadge> = [
       {
         key: 'status',
-        label: GAME_STATUS_LABELS[game.status],
-        dotClass:
-          GAME_COVER_STATUS_DOT_CLASSES[GAME_STATUS_COLORS[game.status]],
+        label: stateBadge.label,
+        dotClass: GAME_COVER_STATUS_DOT_CLASSES[stateBadge.color],
       },
     ];
 
