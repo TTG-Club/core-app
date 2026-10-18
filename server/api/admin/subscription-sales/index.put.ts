@@ -2,15 +2,19 @@ import type { SubscriptionSalesSettings } from '#shared/types';
 
 import { StatusCodes } from 'http-status-codes';
 
-import { setSubscriptionSalesSettings } from '#server/domain/subscription-sales';
-import { assertAdminRole } from '#server/utils/getUser';
+import { fetchSubscriberAdminService } from '#server/utils/subscriberAdminService';
 import { subscriptionSalesSettingsSchema } from '#shared/utils';
 
-/** Включает или выключает оплату подписки для всех. Только для администратора. */
+/** Ручка выключателя оплаты в subscriber-service. */
+const SUBSCRIBER_SALES_ADMIN_PATH = '/api/admin/payments/availability';
+
+/**
+ * Включает или выключает оплату подписки для всех. Выключатель живёт в
+ * subscriber-service: он же и не создаёт платежи, пока оплата выключена, —
+ * даже на запрос в обход сайта. Только для администратора.
+ */
 export default defineEventHandler(
   async (event): Promise<SubscriptionSalesSettings> => {
-    await assertAdminRole(event);
-
     const parsedBody = subscriptionSalesSettingsSchema.safeParse(
       await readBody<unknown>(event),
     );
@@ -19,6 +23,12 @@ export default defineEventHandler(
       throw createError(getErrorResponse(StatusCodes.BAD_REQUEST));
     }
 
-    return setSubscriptionSalesSettings(parsedBody.data);
+    return subscriptionSalesSettingsSchema.parse(
+      await fetchSubscriberAdminService<unknown>(
+        event,
+        SUBSCRIBER_SALES_ADMIN_PATH,
+        { method: 'PUT', body: parsedBody.data },
+      ),
+    );
   },
 );
