@@ -6320,7 +6320,7 @@ export const SHEET_BODY_LABELS = {
 } as const;
 
 /** Иконка у значения класса доспеха: щит помогает быстро найти КД глазами. */
-export const SHEET_ARMOR_CLASS_ICON = 'tabler:shield';
+export const SHEET_ARMOR_CLASS_ICON = 'tabler:shield-filled';
 
 /** Подписи шапки листа персонажа. */
 export const SHEET_HEADER_LABELS = {

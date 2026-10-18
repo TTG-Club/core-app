@@ -50,7 +50,7 @@
       <UIcon
         v-if="icon"
         :name="icon"
-        class="size-5 shrink-0 text-primary"
+        class="size-6 shrink-0 text-primary"
         aria-hidden="true"
       />
 
@@ -73,7 +73,7 @@
       <UIcon
         v-if="icon"
         :name="icon"
-        class="size-5 shrink-0 text-primary"
+        class="size-6 shrink-0 text-primary"
         aria-hidden="true"
       />
 
