@@ -266,6 +266,26 @@
       />
 
       <UiResult
+        v-else-if="!requestBody"
+        status="info"
+        title="Классы не выбраны"
+        sub-title="Выберите основной класс и хотя бы один дополнительный, чтобы собрать мультикласс."
+      >
+        <template #extra>
+          <UButton @click.left.exact.prevent="handleEditDrawerOpen()">
+            Выбрать классы
+          </UButton>
+
+          <UButton
+            variant="ghost"
+            @click.left.exact.prevent="navigateTo('/classes')"
+          >
+            Вернуться в список
+          </UButton>
+        </template>
+      </UiResult>
+
+      <UiResult
         v-else
         :error
         status="error"
