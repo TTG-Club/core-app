@@ -10,6 +10,8 @@ export interface MenuItem {
   action?: string;
   /** Пункт ведёт на другой сайт */
   external?: boolean;
+  /** Пункт выделен золотой рамкой и цветом */
+  highlighted?: boolean;
 }
 
 /** Секция меню навигации */
