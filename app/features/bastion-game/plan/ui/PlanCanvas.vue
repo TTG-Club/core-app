@@ -16,7 +16,10 @@
     PLAN_CELL_PIXELS,
     PLAN_CONTEXT_MENU_TOLERANCE,
     PLAN_FACILITY_DRAG_TYPE,
+    PLAN_LONG_PRESS_MS,
     PLAN_START_FOCUS,
+    PLAN_TOUCH_HOLD_MS,
+    PLAN_TOUCH_TOLERANCE,
     PLAN_WHEEL_ROTATE_MS,
     PLAN_ZOOM_MAX,
     PLAN_ZOOM_MIN,
@@ -30,6 +33,10 @@
    * только панораму и зум: колесо — зум у курсора, средняя или правая кнопка,
    * пробел или инструмент «рука» — панорама. Щелчок правой кнопкой без сдвига
    * просит контекстное меню.
+   *
+   * На сенсорном экране один палец рисует тем же инструментом, два пальца
+   * двигают и масштабируют план, а долгое нажатие с инструментом «Выбрать»
+   * добавляет объект к выбору и открывает меню — как Shift и правая кнопка.
    */
   const props = defineProps<{
     document: PlanDocument;
@@ -55,6 +62,8 @@
     'point-down': [point: PlanPoint, isAdditive: boolean];
     'point-move': [point: PlanPoint, isPressed: boolean];
     'point-up': [];
+    /** Жест оборван без изменений: на экран лёг второй палец. */
+    'point-cancel': [];
     'point-leave': [];
     /**
      * Ctrl+колесо у мебели и лестницы: 1 — от себя к себе (по часовой,
@@ -89,6 +98,28 @@
 
   /** Где нажали правую кнопку: если её отпустят рядом, это щелчок. */
   let rightPressAt: { x: number; y: number } | undefined;
+
+  /** Пальцы на холсте: точка экрана каждого. */
+  const touches = new Map<number, { x: number; y: number }>();
+
+  /** Середина и расстояние между двумя пальцами в прошлом кадре щипка. */
+  let pinch: { x: number; y: number; distance: number } | undefined;
+
+  /** Пальцы щипка ещё не все сняты: оставшийся палец не рисует. */
+  let isTouchGesture = false;
+
+  /**
+   * Касание одним пальцем, которое ещё не стало мазком: оно ждёт, не ляжет ли
+   * второй палец, сдвига или долгого нажатия.
+   */
+  let pendingTouch:
+    | {
+        point: PlanPoint;
+        screen: { x: number; y: number };
+        client: { x: number; y: number };
+        timer: ReturnType<typeof setTimeout>;
+      }
+    | undefined;
 
   const cursor = computed(() => {
     if (isPanning.value) {
@@ -239,11 +270,218 @@
   }
 
   /**
+   * Середина и расстояние между первыми двумя пальцами.
+   *
+   * @returns Данные щипка или undefined, если пальцев меньше двух.
+   */
+  function getPinch(): { x: number; y: number; distance: number } | undefined {
+    const [first, second] = [...touches.values()];
+
+    if (!first || !second) {
+      return undefined;
+    }
+
+    return {
+      x: (first.x + second.x) / 2,
+      y: (first.y + second.y) / 2,
+      distance: Math.hypot(first.x - second.x, first.y - second.y),
+    };
+  }
+
+  /**
+   * Отложенное касание становится нажатием для редактора.
+   *
+   * @param isAdditive Добавить к выбору (долгое нажатие).
+   */
+  function flushPendingTouch(isAdditive: boolean): void {
+    if (!pendingTouch) {
+      return;
+    }
+
+    clearTimeout(pendingTouch.timer);
+
+    const { point } = pendingTouch;
+
+    pendingTouch = undefined;
+    isPressed = true;
+    emit('point-down', point, isAdditive);
+  }
+
+  /** Отложенное касание отменяется: лёг второй палец. */
+  function dropPendingTouch(): void {
+    if (pendingTouch) {
+      clearTimeout(pendingTouch.timer);
+      pendingTouch = undefined;
+    }
+  }
+
+  /**
+   * Долгое нажатие с инструментом «Выбрать»: объект добавляется к выбору, и
+   * открывается меню, как от правой кнопки.
+   */
+  function handleLongPress(): void {
+    const client = pendingTouch?.client;
+
+    flushPendingTouch(true);
+
+    if (isPressed) {
+      isPressed = false;
+      emit('point-up');
+    }
+
+    // Палец ещё на экране: до отпускания он больше ничего не делает.
+    isTouchGesture = true;
+
+    if (client) {
+      emit('context-menu', client);
+    }
+  }
+
+  /**
+   * Палец лёг на холст. Второй палец обрывает мазок и начинает щипок; первый
+   * ждёт, чтобы щипок не оставил на плане след.
+   *
+   * @param event Событие PixiJS.
+   * @returns true, если касание обработано и мышиная логика не нужна.
+   */
+  function handleTouchDown(event: FederatedPointerEvent): boolean {
+    touches.set(event.pointerId, { x: event.global.x, y: event.global.y });
+
+    if (touches.size > 1) {
+      dropPendingTouch();
+
+      // Начатый мазок обрывается без изменений: пальцы легли для щипка.
+      if (isPressed) {
+        isPressed = false;
+        emit('point-cancel');
+      }
+
+      isPanning.value = false;
+      lastPan = undefined;
+      isTouchGesture = true;
+      pinch = getPinch();
+      emit('point-leave');
+
+      return true;
+    }
+
+    if (isTouchGesture || props.tool === 'pan') {
+      return isTouchGesture;
+    }
+
+    const isSelect = props.tool === 'select';
+
+    pendingTouch = {
+      point: toPlanPoint(event),
+      screen: { x: event.global.x, y: event.global.y },
+      client: { x: event.clientX, y: event.clientY },
+      timer: setTimeout(
+        () => (isSelect ? handleLongPress() : flushPendingTouch(false)),
+        isSelect ? PLAN_LONG_PRESS_MS : PLAN_TOUCH_HOLD_MS,
+      ),
+    };
+
+    return true;
+  }
+
+  /**
+   * Палец движется: щипок двигает и масштабирует план, отложенное касание
+   * после заметного сдвига становится мазком.
+   *
+   * @param event Событие PixiJS.
+   * @returns true, если движение обработано и мышиная логика не нужна.
+   */
+  function handleTouchMove(event: FederatedPointerEvent): boolean {
+    if (!touches.has(event.pointerId)) {
+      return true;
+    }
+
+    touches.set(event.pointerId, { x: event.global.x, y: event.global.y });
+
+    if (isTouchGesture) {
+      const next = getPinch();
+
+      if (pinch && next && world) {
+        world.position.set(
+          world.position.x + next.x - pinch.x,
+          world.position.y + next.y - pinch.y,
+        );
+
+        zoomAt(
+          pinch.distance > 0 ? next.distance / pinch.distance : 1,
+          next.x,
+          next.y,
+        );
+
+        pinch = next;
+      }
+
+      return true;
+    }
+
+    if (pendingTouch) {
+      const moved = Math.hypot(
+        event.global.x - pendingTouch.screen.x,
+        event.global.y - pendingTouch.screen.y,
+      );
+
+      if (moved <= PLAN_TOUCH_TOLERANCE) {
+        return true;
+      }
+
+      flushPendingTouch(false);
+    }
+
+    return false;
+  }
+
+  /**
+   * Палец снят. Короткое касание без сдвига — щелчок; после щипка холст ждёт,
+   * пока снимут все пальцы. Без мыши подсветка под указателем не нужна.
+   *
+   * @param event Событие PixiJS.
+   * @returns true, если отпускание обработано и мышиная логика не нужна.
+   */
+  function handleTouchUp(event: FederatedPointerEvent): boolean {
+    touches.delete(event.pointerId);
+
+    if (isTouchGesture) {
+      pinch = getPinch();
+
+      if (!touches.size) {
+        isTouchGesture = false;
+      }
+
+      return true;
+    }
+
+    flushPendingTouch(false);
+
+    // Палец двигал план инструментом «рука»: это доделает мышиная логика.
+    if (isPanning.value) {
+      return false;
+    }
+
+    if (isPressed) {
+      isPressed = false;
+      emit('point-up');
+    }
+
+    emit('point-leave');
+
+    return true;
+  }
+
+  /**
    * Нажатие: панорама или точка для редактора.
    *
    * @param event Событие PixiJS.
    */
   function handlePointerDown(event: FederatedPointerEvent): void {
+    if (event.pointerType === 'touch' && handleTouchDown(event)) {
+      return;
+    }
+
     if (isPanGesture(event)) {
       isPanning.value = true;
       lastPan = { x: event.global.x, y: event.global.y };
@@ -271,6 +509,10 @@
    * @param event Событие PixiJS.
    */
   function handlePointerMove(event: FederatedPointerEvent): void {
+    if (event.pointerType === 'touch' && handleTouchMove(event)) {
+      return;
+    }
+
     if (isPanning.value && lastPan && world) {
       world.position.set(
         world.position.x + event.global.x - lastPan.x,
@@ -292,6 +534,10 @@
    * @param event Событие PixiJS.
    */
   function handlePointerUp(event: FederatedPointerEvent): void {
+    if (event.pointerType === 'touch' && handleTouchUp(event)) {
+      return;
+    }
+
     if (isPanning.value) {
       isPanning.value = false;
       lastPan = undefined;
@@ -490,6 +736,9 @@
     );
 
     drawGrid(layers.grid, theme.value);
+    // resizeTo подгоняет размер только к следующему кадру; без этого на
+    // телефоне план центрировался бы по размеру холста по умолчанию.
+    application.resize();
     centerView();
     render();
   });
