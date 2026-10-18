@@ -558,7 +558,11 @@ modals), so its capabilities are listed here rather than squeezed into the table
 - A class feature carries the same mechanics a feat does — grants, choices,
   counters, granted spells, a spellcasting ability — and both the class wizard and
   the level-up wizard ask **every** choice a feature declares, not one: expertise
-  wants two skills, a subclass feature may want a skill and a language. The parse
+  wants two skills, a subclass feature may want a skill and a language. An
+  expertise choice draws from skills the character already has (narrowed by the
+  listed pool, «Учёный» волшебника) unless `onlyIfProficient` is explicitly off:
+  then it offers the listed skills and grants proficiency and expertise at once
+  («Благословение знаний», `grantsProficiency`). The parse
   is literally the feat's (`toMechanicChoices`, `collectChosenProficiencies`): the
   `MechanicChoice` model in core-api is shared, so a second copy would drift.
   Answers land as a snapshot on the feature record — the grant ledger owns them

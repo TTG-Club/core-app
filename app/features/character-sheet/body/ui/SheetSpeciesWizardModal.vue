@@ -1196,10 +1196,8 @@
 
     const lineage = selectedLineage.value;
 
-    // Сбор выборов-селекторов: навыки (владение/экспертиза) и языки; выбранные
-    // значения также идут в текст особенности, чтобы отображаться на листе.
-    const proficientSkills: string[] = [];
-    const expertiseSkills: string[] = [];
+    // Сбор выборов-селекторов: языки; выбранные значения также идут в текст
+    // особенности, чтобы отображаться на листе.
     const chosenLanguages: string[] = [];
     const featureChoices: Record<string, string> = { ...choices.value };
 
@@ -1214,11 +1212,7 @@
         continue;
       }
 
-      if (control.kind === 'skill-proficiency') {
-        proficientSkills.push(...values);
-      } else if (control.kind === 'skill-expertise') {
-        expertiseSkills.push(...values);
-      } else if (control.kind === 'language') {
+      if (control.kind === 'language') {
         chosenLanguages.push(...values);
       }
 
@@ -1299,12 +1293,15 @@
         // Навыки из даров вида идут туда же, куда выбранные игроком: лист
         // ставит владение строке навыка, а не списку владений
         proficient: [
-          ...new Set([...declaredProficiencies.skills, ...proficientSkills]),
+          ...new Set([
+            ...declaredProficiencies.skills,
+            ...(chosenGrants.skills ?? []),
+          ]),
         ],
         expertise: [
           ...new Set([
             ...declaredProficiencies.expertiseSkills,
-            ...expertiseSkills,
+            ...(chosenGrants.expertiseSkills ?? []),
           ]),
         ],
       },

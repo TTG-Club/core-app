@@ -430,6 +430,7 @@ import {
   SHEET_CHOICE_EXPLANATION_LABELS,
   SHEET_CHOICE_OPTIONS_LABELS,
   SHEET_CHOICE_PICKER_LABELS,
+  SHEET_CHOICE_SKILL_PROFICIENCY_EXPERTISE_EXPLANATION,
   SHEET_CHOICE_SPELL_EXPLANATION,
   SHEET_COPY_LIMIT_HINT,
   SHEET_DOWNLOAD_JSON_LABEL,
@@ -10493,6 +10494,10 @@ export function collectChosenProficiencies(
     if (choice.kind === 'skill-expertise') {
       expertiseSkills.push(...values);
 
+      if (choice.grantsProficiency) {
+        skills.push(...values);
+      }
+
       continue;
     }
 
@@ -13469,6 +13474,10 @@ export function collectChoiceSelections(
       proficientSkills.push(...values);
     } else if (choice.kind === 'skill-expertise') {
       expertiseSkills.push(...values);
+
+      if (choice.grantsProficiency) {
+        proficientSkills.push(...values);
+      }
     } else if (choice.kind === 'language') {
       languages.push(...values);
     }
@@ -14181,12 +14190,24 @@ export function resolveChoiceOptions(
   }
 
   if (choice.kind === 'skill-expertise') {
-    return [
-      ...new Set([
-        ...context.proficientSkillNames,
-        ...context.chosenProficientSkills,
-      ]),
-    ];
+    // Выбор, который даёт и владение, не требует владеть навыком заранее:
+    // пул — перечень записи.
+    if (choice.grantsProficiency) {
+      return choice.listed.length ? choice.listed : context.skillNames;
+    }
+
+    const ownedSkills = uniq([
+      ...context.proficientSkillNames,
+      ...context.chosenProficientSkills,
+    ]);
+
+    if (!choice.listed.length) {
+      return ownedSkills;
+    }
+
+    const listedSkills = new Set(choice.listed);
+
+    return ownedSkills.filter((name) => listedSkills.has(name));
   }
 
   if (choice.kind === 'option') {
@@ -14995,8 +15016,12 @@ function getSpellChoiceExplanation(choice: ClassChoice): string {
  * @returns пояснение под заголовком поля.
  */
 export function getChoiceExplanation(choice: ClassChoice): string {
-  return choice.kind === 'spell'
-    ? getSpellChoiceExplanation(choice)
+  if (choice.kind === 'spell') {
+    return getSpellChoiceExplanation(choice);
+  }
+
+  return choice.kind === 'skill-expertise' && choice.grantsProficiency
+    ? SHEET_CHOICE_SKILL_PROFICIENCY_EXPERTISE_EXPLANATION
     : SHEET_CHOICE_EXPLANATION_LABELS[choice.kind];
 }
 
