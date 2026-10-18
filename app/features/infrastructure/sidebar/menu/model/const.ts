@@ -102,8 +102,8 @@ export const MENU_SECTIONS: Array<MenuSection> = [
         label: 'Сооружения бастиона',
         icon: 'tabler:building-castle',
         disabled: false,
-        // Бастионы пока открыты только админам
-        roles: [Role.ADMIN],
+        // Бастионы пока открыты только админам, остальным пункт виден закрытым
+        enabledRoles: [Role.ADMIN],
       },
     ],
   },

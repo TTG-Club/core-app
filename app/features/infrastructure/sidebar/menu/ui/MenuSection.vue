@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { Role } from '~/shared/types';
+
   import type { MenuItem } from '../model';
 
   import { MENU_EXTERNAL_ICON, MENU_SOON_LABEL } from '../model';
@@ -14,24 +16,31 @@
 
   const { user } = useUser();
 
-  // Пункты с ролями видны только пользователям с подходящей ролью
+  function hasAnyRole(roles: Array<Role>) {
+    return roles.some((role) => user.value?.roles.includes(role));
+  }
+
+  // Пункты с `roles` видны только пользователям с подходящей ролью,
+  // с `enabledRoles` — видны всем, но закрыты без подходящей роли
   const links = computed(() =>
     items
-      .filter((link) => {
-        if (!Array.isArray(link.roles)) {
-          return true;
-        }
+      .filter((link) => !Array.isArray(link.roles) || hasAnyRole(link.roles))
+      .map((link) => {
+        const disabled =
+          link.disabled
+          || (Array.isArray(link.enabledRoles)
+            && !hasAnyRole(link.enabledRoles));
 
-        return link.roles.some((role) => user.value?.roles.includes(role));
-      })
-      .map((link) => ({
-        ...link,
-        key: link.action || link.href,
-        // У пункта-действия адреса нет: он остаётся кнопкой. Закрытый раздел
-        // тоже без адреса, иначе его заглушка «/» подсвечивалась бы на главной.
-        to: link.action || link.disabled ? undefined : link.href,
-        trailingIcon: link.external ? MENU_EXTERNAL_ICON : undefined,
-      })),
+        return {
+          ...link,
+          disabled,
+          key: link.action || link.href,
+          // У пункта-действия адреса нет: он остаётся кнопкой. Закрытый раздел
+          // тоже без адреса, иначе его заглушка «/» подсвечивалась бы на главной.
+          to: link.action || disabled ? undefined : link.href,
+          trailingIcon: link.external ? MENU_EXTERNAL_ICON : undefined,
+        };
+      }),
   );
 
   function handleItemClick(link: MenuItem) {

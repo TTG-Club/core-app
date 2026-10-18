@@ -72,7 +72,7 @@ export const CARD_LINKS: Array<{
     url: '/bastions',
     img: '/s3/home/section-link/bastions.webp',
     icon: 'tabler:building-castle',
-    // Бастионы пока открыты только админам
+    // Бастионы пока открыты только админам, остальным плитка видна закрытой
     roles: [Role.ADMIN],
   },
 ];
