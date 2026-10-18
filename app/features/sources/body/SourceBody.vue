@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { SourceDetailResponse } from '~sources/types';
 
+  import { UiDetailLayout } from '~ui/detail-layout';
   import { UiGallery } from '~ui/gallery';
   import { MarkupRender } from '~ui/markup';
 
@@ -13,30 +14,26 @@
 </script>
 
 <template>
-  <div class="@container flex flex-col gap-4">
-    <div class="flex flex-col gap-3 @min-3xl:flex-row @min-3xl:gap-7">
-      <div class="flex w-full flex-col gap-3 @min-3xl:max-w-80">
+  <UiDetailLayout>
+    <template #aside>
+      <div class="flex flex-col gap-3">
         <UiGallery
           v-if="!hideGallery && source.image"
           :preview="source.image"
           class="min-w-25 overflow-hidden rounded-md border border-default @min-xl:@max-3xl:max-w-50"
         />
 
-        <div class="flex w-full flex-col gap-3 @min-3xl:max-w-80">
-          <StatsBlock
-            :type="source.type"
-            :publisher="source.publisher"
-            :translation="source.translation"
-          />
-        </div>
+        <StatsBlock
+          :type="source.type"
+          :publisher="source.publisher"
+          :translation="source.translation"
+        />
       </div>
+    </template>
 
-      <div
-        v-if="source.description"
-        class="flex flex-auto flex-col gap-3"
-      >
-        <MarkupRender :render-node="source.description" />
-      </div>
-    </div>
-  </div>
+    <MarkupRender
+      v-if="source.description"
+      :render-node="source.description"
+    />
+  </UiDetailLayout>
 </template>

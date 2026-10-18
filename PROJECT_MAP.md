@@ -391,6 +391,12 @@ modals), so its capabilities are listed here rather than squeezed into the table
   «по правилам», so sheets saved before the setting count exactly as they did.
   The row, the modal preview and the PDF all read
   `getCarryingCapacityBreakdown`, so the number cannot diverge between them.
+- An item with a recognised price can be sold from its row menu
+  (`SheetItemSellModal`). For a stack the modal first asks how many to sell
+  (one by default); the price follows the picked quantity at half the reference
+  price and stays editable. Only the sold pieces leave the inventory
+  (`removeSoldInventoryQuantity`) — the row disappears once the whole stack is
+  gone — and the money lands in the wallet in the same edit.
 - Next to the carried weight stands the attunement tile: how many items are
   attuned out of how many may be («2 / 3»), the same shape the prepared-spells
   tiles have on the spells tab. It opens `SheetAttunementModal`, where the 2024
@@ -558,7 +564,11 @@ modals), so its capabilities are listed here rather than squeezed into the table
 - A class feature carries the same mechanics a feat does — grants, choices,
   counters, granted spells, a spellcasting ability — and both the class wizard and
   the level-up wizard ask **every** choice a feature declares, not one: expertise
-  wants two skills, a subclass feature may want a skill and a language. The parse
+  wants two skills, a subclass feature may want a skill and a language. An
+  expertise choice draws from skills the character already has (narrowed by the
+  listed pool, «Учёный» волшебника) unless `onlyIfProficient` is explicitly off:
+  then it offers the listed skills and grants proficiency and expertise at once
+  («Благословение знаний», `grantsProficiency`). The parse
   is literally the feat's (`toMechanicChoices`, `collectChosenProficiencies`): the
   `MechanicChoice` model in core-api is shared, so a second copy would drift.
   Answers land as a snapshot on the feature record — the grant ledger owns them
@@ -1095,7 +1105,7 @@ imported via the auto-generated `~<domain>` alias (see
 
 ---
 
-## 🎨 Shared UI Kit (`app/shared/ui/` — 34 components)
+## 🎨 Shared UI Kit (`app/shared/ui/` — 35 components)
 
 **UI Components Priority:** Nuxt UI → `shared/ui` → `features/*/ui`
 
@@ -1110,6 +1120,7 @@ imported via the auto-generated `~<domain>` alias (see
 | `damage-formula`  | VTTG damage/heal formula input & parts editor (spells, weapons, active effects)                                                                                                                                                                                                                                                                                                  |
 | `date-picker`     | Date/time picker input                                                                                                                                                                                                                                                                                                                                                           |
 | `detail-pane`     | Wide-mode entity detail panel                                                                                                                                                                                                                                                                                                                                                    |
+| `detail-layout`   | Single two-column layout of every section card body (fixed 320px aside + text, stacked in narrow containers)                                                                                                                                                                                                                                                                     |
 | `drawer`          | Overlay drawer (+ header/body/title/actions, DrawerCollection)                                                                                                                                                                                                                                                                                                                   |
 | `editor`          | Workshop form controls (array/form controls, ability mastery, `EditorNestedSection` — the nesting rail)                                                                                                                                                                                                                                                                          |
 | `gallery`         | LightGallery image viewer; the preview carries a magnifier and an image count so readers see it opens the gallery                                                                                                                                                                                                                                                                |

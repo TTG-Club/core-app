@@ -2,6 +2,7 @@
   import type { SpellDetailResponse } from '~spells/model';
 
   import { AffiliationBlock } from '~ui/affiliation';
+  import { UiDetailLayout } from '~ui/detail-layout';
 
   import { DescriptionsBlock, StatsBlock, TopBar } from './ui';
 
@@ -11,12 +12,9 @@
 </script>
 
 <template>
-  <div :class="$style.container">
-    <div :class="$style.body">
-      <div
-        class="flex flex-col gap-3"
-        :class="$style.info"
-      >
+  <UiDetailLayout>
+    <template #aside>
+      <div class="flex flex-col gap-3">
         <TopBar
           :ritual="spell.ritual"
           :school="spell.school"
@@ -30,81 +28,51 @@
           :range="spell.range"
         />
       </div>
+    </template>
 
-      <div class="flex flex-auto flex-col gap-3">
-        <div>
-          <DescriptionsBlock
-            :description="spell.description"
-            :level="spell.level"
-            :upper="spell.upper"
-          />
-        </div>
-
-        <AffiliationBlock
-          v-if="spell.affiliation?.classes"
-          :items="spell.affiliation.classes"
-          label="Классы"
-          section="classes"
-        />
-
-        <AffiliationBlock
-          v-if="spell.affiliation?.subclasses"
-          :items="spell.affiliation.subclasses"
-          label="Подклассы"
-          section="classes"
-        />
-
-        <AffiliationBlock
-          v-if="spell.affiliation?.species"
-          :items="spell.affiliation.species"
-          label="Виды"
-          section="species"
-        />
-
-        <AffiliationBlock
-          v-if="spell.affiliation?.lineages"
-          :items="spell.affiliation.lineages"
-          label="Происхождения"
-          section="species"
-        />
-
-        <AffiliationBlock
-          v-if="spell.affiliation?.feats"
-          :items="spell.affiliation.feats"
-          label="Черты"
-          section="feats"
+    <div class="flex flex-col gap-3">
+      <div>
+        <DescriptionsBlock
+          :description="spell.description"
+          :level="spell.level"
+          :upper="spell.upper"
         />
       </div>
+
+      <AffiliationBlock
+        v-if="spell.affiliation?.classes"
+        :items="spell.affiliation.classes"
+        label="Классы"
+        section="classes"
+      />
+
+      <AffiliationBlock
+        v-if="spell.affiliation?.subclasses"
+        :items="spell.affiliation.subclasses"
+        label="Подклассы"
+        section="classes"
+      />
+
+      <AffiliationBlock
+        v-if="spell.affiliation?.species"
+        :items="spell.affiliation.species"
+        label="Виды"
+        section="species"
+      />
+
+      <AffiliationBlock
+        v-if="spell.affiliation?.lineages"
+        :items="spell.affiliation.lineages"
+        label="Происхождения"
+        section="species"
+      />
+
+      <AffiliationBlock
+        v-if="spell.affiliation?.feats"
+        :items="spell.affiliation.feats"
+        label="Черты"
+        section="feats"
+      />
     </div>
-  </div>
+  </UiDetailLayout>
 </template>
-
-<style module lang="scss">
-  .container {
-    container-type: inline-size;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .body {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-
-    @container (width > 800px) {
-      flex-direction: row;
-      gap: 28px;
-    }
-  }
-
-  .info {
-    width: 100%;
-    max-width: 100%;
-
-    @container (width > 800px) {
-      flex-shrink: 0;
-      width: 320px;
-    }
-  }
-</style>

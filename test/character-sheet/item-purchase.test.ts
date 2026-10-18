@@ -12,9 +12,12 @@ import {
   getDefaultSalePriceInCopper,
   getInventoryItemMenuItems,
   getInventoryItemSalePriceInCopper,
+  getInventorySellDescription,
   getPurchaseCostInCopper,
   INVENTORY_REMOVE_MENU_LABEL,
   INVENTORY_SELL_MENU_LABEL,
+  isInventoryItemStack,
+  removeSoldInventoryQuantity,
   spendCurrency,
 } from '~character-sheet/model';
 
@@ -137,6 +140,36 @@ describe('продажа предмета', () => {
 
     expect(getInventoryItemSalePriceInCopper({ ...ROPE, quantity: 0 })).toBe(
       null,
+    );
+  });
+
+  it('выручка за часть стопки — цена только проданных штук', () => {
+    expect(getInventoryItemSalePriceInCopper(ROPE, 1)).toBe(100);
+  });
+
+  it('продажа части стопки уменьшает количество, а всей — убирает строку', () => {
+    const inventory = [ROPE, { ...ROPE, id: 'other' }];
+
+    expect(removeSoldInventoryQuantity(inventory, ROPE.id, 1)).toEqual([
+      { ...ROPE, quantity: 2 },
+      { ...ROPE, id: 'other' },
+    ]);
+
+    expect(
+      removeSoldInventoryQuantity(inventory, ROPE.id, ROPE.quantity),
+    ).toEqual([{ ...ROPE, id: 'other' }]);
+  });
+
+  it('стопкой считается предмет больше чем из одной штуки', () => {
+    expect(isInventoryItemStack(ROPE)).toBe(true);
+    expect(isInventoryItemStack({ ...ROPE, quantity: 1 })).toBe(false);
+  });
+
+  it('в описании продажи стопки видно, сколько штук из скольких уходит', () => {
+    expect(getInventorySellDescription(ROPE, 1)).toContain('(1 шт. из 3)');
+
+    expect(getInventorySellDescription({ ...ROPE, quantity: 1 }, 1)).toBe(
+      '«Верёвка» уйдёт из снаряжения, а выручка — в кошелёк.',
     );
   });
 

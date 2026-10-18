@@ -4,11 +4,13 @@
     BastionFacilityLinkResponse,
   } from '~bastions/model';
 
+  import { Role } from '~/shared/types';
   import { BastionFacilityBody } from '~bastions/body';
   import { BastionFacilityLink } from '~bastions/link';
   import {
     BASTION_API_PATH,
     BASTION_SECTION,
+    BASTION_SECTION_TITLE,
     BASTION_SEO,
     compareBastionGroups,
     getBastionFacilityMarkdown,
@@ -19,6 +21,11 @@
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
+
+  // Бастионы пока открыты только админам
+  definePageMeta({
+    auth: { roles: [Role.ADMIN] },
+  });
 
   useSeoMeta({
     title: BASTION_SEO.title,
@@ -90,7 +97,7 @@
 <template>
   <NuxtLayout
     name="section"
-    title="Бастионы"
+    :title="BASTION_SECTION_TITLE"
   >
     <template #controls>
       <FilterControls

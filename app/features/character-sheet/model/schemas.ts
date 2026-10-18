@@ -1558,6 +1558,13 @@ function buildMechanicChoices(
       return [];
     }
 
+    // Пул навыков перечисляется кодами словаря; пусто — выбор из всех.
+    const listedSkills = (choice.options ?? []).flatMap((option) => {
+      const name = SKILL_NAME_BY_API_KEY[option.value];
+
+      return name ? [name] : [];
+    });
+
     if (choice.grants === 'EXPERTISE') {
       return [
         {
@@ -1565,9 +1572,13 @@ function buildMechanicChoices(
           kind: 'skill-expertise',
           label,
           count,
-          // Пул компетентности резолвится владениями листа, а не списком из
-          // справочника: выбирать можно только то, чем персонаж уже владеет.
-          listed: [],
+          // Перечень сужает пул: «Учёный» волшебника — компетентность только в
+          // знаниевых навыках, которыми персонаж владеет.
+          listed: listedSkills,
+          // Явно снятое «только то, чем уже владеет» — владение и
+          // компетентность разом («Благословение знаний»). У записей без
+          // отметки пул по-прежнему из владений листа.
+          grantsProficiency: choice.onlyIfProficient === false,
         },
       ];
     }
@@ -1578,12 +1589,7 @@ function buildMechanicChoices(
         kind: 'skill-proficiency',
         label,
         count,
-        // Пул навыков перечисляется кодами словаря; пусто — выбор из всех.
-        listed: (choice.options ?? []).flatMap((option) => {
-          const name = SKILL_NAME_BY_API_KEY[option.value];
-
-          return name ? [name] : [];
-        }),
+        listed: listedSkills,
         excludeOwned: choice.onlyIfNotProficient ?? false,
         // «Наблюдательный»: навык, которым персонаж уже владеет, даёт
         // компетентность вместо второго владения.

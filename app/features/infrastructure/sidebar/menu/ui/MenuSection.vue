@@ -63,14 +63,16 @@
           :icon="link.icon"
           :trailing-icon="link.trailingIcon"
           :disabled="link.disabled"
-          variant="ghost"
-          color="neutral"
+          :variant="link.highlighted ? 'outline' : 'ghost'"
+          :color="link.highlighted ? 'warning' : 'neutral'"
           active-variant="soft"
-          active-color="primary"
+          :active-color="link.highlighted ? 'warning' : 'primary'"
           block
           :ui="{
             base: 'justify-start gap-2.5 px-2.5 py-2 text-left font-normal',
-            leadingIcon: 'size-4.5 text-dimmed',
+            leadingIcon: link.highlighted
+              ? 'size-4.5 text-warning'
+              : 'size-4.5 text-dimmed',
             trailingIcon: 'size-3.5 text-dimmed',
             label: 'whitespace-normal',
           }"

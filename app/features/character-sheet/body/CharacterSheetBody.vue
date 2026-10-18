@@ -44,6 +44,7 @@
     getWeaponDamageSource,
     isProficientWeapon,
     LANGUAGE_PROFICIENCY_GROUPS,
+    SHEET_ARMOR_CLASS_ICON,
     SHEET_BODY_LABELS,
     SHEET_EDIT_REVOKED_TOAST,
     SHEET_REMOVE_CONFIRM_TITLE,
@@ -1362,6 +1363,7 @@
                 :label="SHEET_BODY_LABELS.armorClass"
                 :short-label="SHEET_BODY_LABELS.armorClassShort"
                 :value="armorClassValue"
+                :icon="SHEET_ARMOR_CLASS_ICON"
                 interactive
                 :press-label="SHEET_BODY_LABELS.armorClassPress"
                 @press="handleArmorClassEdit"

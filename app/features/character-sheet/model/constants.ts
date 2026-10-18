@@ -5406,9 +5406,19 @@ export const INVENTORY_SALE_PRICE_STEP = 0.01;
 /** Знаков после запятой в поле цены продажи (до медяка). */
 export const INVENTORY_SALE_PRICE_FRACTION_DIGITS = 2;
 
+/** Наименьшее количество штук в окне продажи предмета. */
+export const INVENTORY_SALE_QUANTITY_MIN = 1;
+
+/** Части текста окна продажи: «(1 шт. из 3) уйдёт из снаряжения…». */
+export const INVENTORY_SELL_PHRASES = {
+  quantityOutOf: 'из',
+  outcome: 'уйдёт из снаряжения, а выручка — в кошелёк.',
+};
+
 /** Подписи окна продажи предмета. */
 export const SHEET_ITEM_SELL_LABELS = {
   title: 'Продажа предмета',
+  quantity: 'Сколько продать',
   price: 'Цена продажи, зм',
   fullPricePrefix: 'Цена по справочнику',
   halfPriceHint: 'По правилам снаряжение продаётся за полцены.',
@@ -5961,6 +5971,10 @@ export const SHEET_CHOICE_EXPLANATION_LABELS: Record<ClassChoiceKind, string> =
     'feat': 'Умение даёт черту на выбор',
   };
 
+/** Пояснение к выбору, который даёт и владение навыком, и компетентность в нём. */
+export const SHEET_CHOICE_SKILL_PROFICIENCY_EXPERTISE_EXPLANATION =
+  'Умение даёт владение и компетентность в навыке на выбор';
+
 /**
  * Части пояснения к выбору заклинания: «Умение даёт заклинание 6 уровня из
  * списка класса Колдун на выбор». Собирается из фильтра пула, потому что
@@ -6304,6 +6318,9 @@ export const SHEET_BODY_LABELS = {
   armorClassPress: 'Настроить класс доспеха',
   initiative: 'Инициатива',
 } as const;
+
+/** Иконка у значения класса доспеха: щит помогает быстро найти КД глазами. */
+export const SHEET_ARMOR_CLASS_ICON = 'tabler:shield-filled';
 
 /** Подписи шапки листа персонажа. */
 export const SHEET_HEADER_LABELS = {

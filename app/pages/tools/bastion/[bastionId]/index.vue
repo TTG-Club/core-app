@@ -3,6 +3,7 @@
 
   import { StatusCodes } from 'http-status-codes';
 
+  import { Role } from '~/shared/types';
   import {
     BastionActionsBar,
     BastionDefenseWalls,
@@ -29,6 +30,11 @@
     PLAYER_BASTION_STATUS_LABELS,
   } from '~bastion-game/model';
   import { UiResult } from '~ui/result';
+
+  // Бастионы пока открыты только админам
+  definePageMeta({
+    auth: { roles: [Role.ADMIN] },
+  });
 
   const route = useRoute();
 

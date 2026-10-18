@@ -3,6 +3,7 @@
 
   import { StatusCodes } from 'http-status-codes';
 
+  import { Role } from '~/shared/types';
   import { MemberFacilitiesCard } from '~bastion-game/facilities';
   import {
     BASTION_DETAIL_LABELS,
@@ -20,6 +21,11 @@
   } from '~bastion-game/model';
   import { UiResult } from '~ui/result';
   import { AuthModal } from '~user/auth-modal';
+
+  // Бастионы пока открыты только админам
+  definePageMeta({
+    auth: { roles: [Role.ADMIN] },
+  });
 
   /**
    * Бастион по ссылке «поделиться», как лист персонажа: открывается кем
