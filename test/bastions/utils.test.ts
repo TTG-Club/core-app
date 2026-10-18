@@ -36,7 +36,7 @@ function createState(
     orders: ['RESEARCH'],
     orderOptions: [],
     enlargement: null,
-    roomTemplates: [],
+    furniture: [],
     features: [],
     choices: [],
     ...overrides,
@@ -150,21 +150,12 @@ describe('подготовка формы к отправке', () => {
     expect(body.enlargement).toBeNull();
   });
 
-  it('шаблоны комнаты остаются только для пространств сооружения', () => {
-    const roomy = {
-      space: 'ROOMY' as const,
-      width: 4,
-      depth: 4,
-      furniture: [],
-    };
-
-    const vast = { space: 'VAST' as const, width: 6, depth: 6, furniture: [] };
-
+  it('предметы интерьера отправляются без повторов', () => {
     const body = transformBastionBeforeSubmit(
-      createState({ space: 'ROOMY', roomTemplates: [roomy, vast] }),
+      createState({ furniture: ['BED', 'CHEST', 'BED'] }),
     );
 
-    expect(body.roomTemplates).toEqual([roomy]);
+    expect(body.furniture).toEqual(['BED', 'CHEST']);
   });
 });
 

@@ -33,6 +33,7 @@ export interface MagicItemCreate extends EditorBaseInfoState {
   damageParts: Array<DamageFormulaPart>;
   focus: boolean; // предметом колдуют как заклинательной фокусировкой
   adamantine: boolean; // адамантиновый предмет
+  showInList: boolean; // показывать в списке раздела; варианты вроде «Стрела +1» скрывают
   // Как предмет влияет на лист персонажа. В форме — всегда объект, в теле
   // запроса — `null`, если заполнять было нечего.
   mechanics: MagicItemMechanics | null;

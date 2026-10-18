@@ -1,6 +1,7 @@
 import type {
   APPLY_SOURCES,
   GAME_COST_TYPES,
+  GAME_COVER_STATUS_DOT_CLASSES,
   GAME_DURATION_TYPES,
   GAME_ONLINE_PLATFORMS,
   GAME_REPORT_REASONS,
@@ -28,6 +29,13 @@ export type GameCostType = (typeof GAME_COST_TYPES)[number];
 export type GameReportReason = (typeof GAME_REPORT_REASONS)[number];
 export type GameVisibility = (typeof GAME_VISIBILITIES)[number];
 export type GameStatus = (typeof GAME_STATUSES)[number];
+
+/** Значок состояния игры: подпись, цвет и, для закрытого набора, иконка. */
+export interface GameStateBadge {
+  label: string;
+  color: keyof typeof GAME_COVER_STATUS_DOT_CLASSES;
+  icon?: string;
+}
 export type GamePersonalRole =
   | 'ALL'
   | 'PLAYER'
@@ -370,8 +378,6 @@ export interface GameSearchFilter {
   excludeDurationType: Array<GameDurationType>;
   costType: Array<GameCostType>;
   excludeCostType: Array<GameCostType>;
-  status: Array<GameStatus>;
-  excludeStatus: Array<GameStatus>;
   city: Array<string>;
   crossplayAllowed: boolean | null;
   minAge: number | null;
@@ -720,7 +726,10 @@ export interface GameViewerAbilities {
   canDeleteGame: boolean;
   /** Пользователь может сообщить о чужой игре. */
   canReportGame: boolean;
-  /** Можно подать заявку: игрок вошёл, не мастер и ещё не подавал. */
+  /**
+   * Можно подать заявку: игрок вошёл, не мастер, ещё не подавал, а игра
+   * открыта и в ней есть место.
+   */
   canApply: boolean;
   /** Можно отозвать свою неразобранную заявку. */
   canWithdraw: boolean;

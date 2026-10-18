@@ -3,6 +3,12 @@
 
   import { z } from 'zod';
 
+  import {
+    FURNITURE_KIND_ICONS,
+    FURNITURE_KIND_LABELS,
+    FURNITURE_KINDS,
+    getDefaultFacilityFurniture,
+  } from '~bastion-game/model';
   import { EditorBaseInfo } from '~ui/editor';
   import { MarkupEditor } from '~ui/markup-editor';
   import { useWorkshopForm } from '~workshop/composable';
@@ -14,7 +20,7 @@
     BASTION_API_PATH,
     BASTION_EDITOR_LABELS,
     BASTION_SECTION,
-    getRoomTemplateSpaces,
+    fillTemplate,
     normalizeLoadedBastion,
     transformBastionBeforeSubmit,
   } from '../model';
@@ -24,7 +30,6 @@
     EnlargementFields,
     FeatureRows,
     OrderOptionRows,
-    RoomTemplateFields,
   } from './ui';
 
   const formRef = useTemplateRef('formRef');
@@ -78,7 +83,7 @@
       orders: [],
       orderOptions: [],
       enlargement: null,
-      roomTemplates: [],
+      furniture: [],
       features: [],
       choices: [],
     };
@@ -95,7 +100,6 @@
 
   const {
     categoryItems,
-    spaces,
     spaceItems,
     facilityOrderItems,
     prerequisiteItems,
@@ -112,12 +116,20 @@
     ),
   );
 
-  /** Пространства, для которых настраивается комната на плане бастиона. */
-  const roomTemplateSpaces = computed(() => {
-    const codes = getRoomTemplateSpaces(state.value);
+  const furnitureItems = FURNITURE_KINDS.map((kind) => ({
+    label: FURNITURE_KIND_LABELS[kind],
+    value: kind,
+    icon: FURNITURE_KIND_ICONS[kind],
+  }));
 
-    return spaces.value.filter((space) => codes.includes(space.value));
-  });
+  /** Подсказка к предметам: какой набор возьмёт план, если список пуст. */
+  const furnitureHelp = computed(() =>
+    fillTemplate(BASTION_EDITOR_LABELS.furnitureHelp, {
+      defaults: getDefaultFacilityFurniture(state.value.url)
+        .map((kind) => FURNITURE_KIND_LABELS[kind].toLowerCase())
+        .join(', '),
+    }),
+  );
 </script>
 
 <template>
@@ -228,6 +240,22 @@
         </template>
 
         <UFormField
+          class="md:col-span-24"
+          :label="BASTION_EDITOR_LABELS.furniture"
+          :help="furnitureHelp"
+          name="furniture"
+        >
+          <USelectMenu
+            v-model="state.furniture"
+            :items="furnitureItems"
+            :placeholder="BASTION_EDITOR_LABELS.furniturePlaceholder"
+            value-key="value"
+            multiple
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField
           class="md:col-span-8"
           :label="BASTION_EDITOR_LABELS.repeatable"
           name="repeatable"
@@ -305,13 +333,6 @@
     <EnlargementFields
       v-model="state.enlargement"
       :space-items="spaceItems"
-    />
-
-    <RoomTemplateFields
-      v-model="state.roomTemplates"
-      :facility-url="state.url"
-      :name="state.name.rus"
-      :spaces="roomTemplateSpaces"
     />
 
     <WorkshopEditorFormControls :revision-control>

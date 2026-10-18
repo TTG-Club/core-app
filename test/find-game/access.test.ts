@@ -8,6 +8,7 @@ import type {
 import { describe, expect, it } from 'vitest';
 
 import {
+  getGameStateBadge,
   resolveGameViewerAbilities,
   resolveGameViewerRole,
   resolveSessionAbilities,
@@ -210,6 +211,22 @@ describe('заявка в игру', () => {
     expect(masterOf(game).canApply).toBe(false);
   });
 
+  it('в сыгранную и отменённую игру не подаётся', () => {
+    expect(viewerOf(makeGame({ status: 'CLOSED' }), null).canApply).toBe(false);
+
+    expect(viewerOf(makeGame({ status: 'CANCELLED' }), null).canApply).toBe(
+      false,
+    );
+  });
+
+  it('в полный стол и закрытый набор не подаётся', () => {
+    expect(viewerOf(makeGame({ takenSeats: 5 }), null).canApply).toBe(false);
+
+    expect(viewerOf(makeGame({ recruitmentClosed: true }), null).canApply).toBe(
+      false,
+    );
+  });
+
   it('гостю предлагается войти, а не подать заявку', () => {
     const abilities = resolveGameViewerAbilities({
       game,
@@ -374,6 +391,31 @@ describe('набор в игру', () => {
 
     expect(viewerOf(gathered(3), null).canCloseRecruitment).toBe(false);
     expect(viewerOf(closed, null).canOpenRecruitment).toBe(false);
+  });
+});
+
+describe('значок состояния игры', () => {
+  it('«Набор открыт» — только пока есть место', () => {
+    expect(getGameStateBadge(makeGame()).label).toBe('Набор открыт');
+  });
+
+  it('у полного стола вместо открытого набора — «Мест нет»', () => {
+    const badge = getGameStateBadge(makeGame({ takenSeats: 5 }));
+
+    expect(badge.label).toBe('Мест нет');
+    expect(badge.color).toBe('warning');
+  });
+
+  it('закрытый мастером набор так и подписан', () => {
+    expect(getGameStateBadge(makeGame({ recruitmentClosed: true })).label).toBe(
+      'Набор закрыт',
+    );
+  });
+
+  it('у сыгранной игры — исход, а не набор', () => {
+    expect(
+      getGameStateBadge(makeGame({ status: 'CLOSED', takenSeats: 5 })).label,
+    ).toBe('Завершена');
   });
 });
 

@@ -43,9 +43,9 @@ export const PLAN_FURNITURE_ROTATION_STEP = 90;
 export const PLAN_FACILITY_DRAG_TYPE = 'application/x-bastion-facility';
 
 /**
- * Мебель готовой комнаты по адресу сооружения в справочнике, в порядке
- * расстановки: что важнее, ставится первым и занимает лучшее место.
- * Предметы по подписке без неё пропускаются.
+ * Предметы готовой комнаты по умолчанию, по адресу сооружения в справочнике:
+ * когда в справочнике у сооружения предметы не заданы. Предметы по подписке
+ * без неё пропускаются.
  */
 export const PLAN_FACILITY_FURNITURE: Record<
   string,
@@ -120,17 +120,13 @@ export const PLAN_FACILITY_FURNITURE_DEFAULT: ReadonlyArray<FurnitureKind> = [
   'CHEST',
 ];
 
-/** Мебель, которую готовая комната ставит ближе к середине, а не к стене. */
-export const PLAN_CENTER_FURNITURE: ReadonlySet<FurnitureKind> = new Set([
-  'RUG',
-  'MAGIC_CIRCLE',
-  'DINING_TABLE',
-  'FOUNTAIN',
-  'WELL',
-  'TREE',
-  'TRAINING_DUMMY',
-  'TABLE',
-]);
+/** Сколько пола готовой комнаты сооружения может занять мебель. */
+export const PLAN_FURNITURE_FILL_LIMIT = 0.6;
+
+/** Повороты предмета при случайной расстановке, градусы. */
+export const PLAN_FURNITURE_ROTATIONS: ReadonlyArray<number> = [
+  0, 90, 180, 270,
+];
 /** Не чаще одного шага Ctrl+колесом (поворот мебели, размер лестницы) за столько миллисекунд. */
 export const PLAN_WHEEL_ROTATE_MS = 150;
 
@@ -486,11 +482,6 @@ export const PLAN_LABELS = {
   readOnly: 'Только просмотр',
   undo: 'Отменить',
   redo: 'Повторить',
-  templateSelect: 'Выбрать и двигать мебель',
-  templateRotate: 'Повернуть предмет перед установкой',
-  templateRemove: 'Убрать выбранное',
-  templateHint:
-    'Щелчок по клетке ставит выбранный предмет, щелчок по стоящему поворачивает его. Тяните предметы инструментом «Выбрать»; Delete убирает выбранное. Мебель за стенами комнаты в шаблон не попадает.',
   zoomIn: 'Крупнее',
   zoomOut: 'Мельче',
   centerPlan: 'Центрировать',
