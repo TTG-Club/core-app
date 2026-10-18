@@ -139,26 +139,31 @@
     isRemoveOpen.value = false;
   }
 
-  // Продажа идёт через своё окно: в нём игрок видит цену справочника и
-  // задаёт выручку (по умолчанию полцены). Деньги пишутся в лист прямо
+  // Продажа идёт через своё окно: в нём игрок выбирает, сколько штук из стопки
+  // продать, видит цену справочника и задаёт выручку (по умолчанию полцены).
+  // Деньги пишутся в лист прямо
   // отсюда: вкладка и так читает общее состояние, а цепочка событий через
   // вкладки ничего бы не добавила.
   const sellModal = overlay.create(SheetItemSellModal);
 
   /**
-   * Открывает окно продажи и продаёт предмет за выбранную цену.
+   * Открывает окно продажи и продаёт выбранное количество за выбранную цену.
    *
    * @param inventoryItem предмет, который просят продать.
    */
   async function handleSellRequest(inventoryItem: CharacterInventoryItem) {
-    const salePrice = await sellModal.open({ inventoryItem }).result;
+    const inventorySale = await sellModal.open({ inventoryItem }).result;
 
     // Отмена или закрытие окна мимо кнопок — предмет остаётся.
-    if (typeof salePrice !== 'number') {
+    if (!inventorySale) {
       return;
     }
 
-    sellInventoryItem(inventoryItem.id, salePrice);
+    sellInventoryItem(
+      inventoryItem.id,
+      inventorySale.quantity,
+      inventorySale.salePrice,
+    );
   }
 
   const displayGroups = computed(() => getInventoryGroups(props.inventory));

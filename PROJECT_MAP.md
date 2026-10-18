@@ -391,6 +391,12 @@ modals), so its capabilities are listed here rather than squeezed into the table
   «по правилам», so sheets saved before the setting count exactly as they did.
   The row, the modal preview and the PDF all read
   `getCarryingCapacityBreakdown`, so the number cannot diverge between them.
+- An item with a recognised price can be sold from its row menu
+  (`SheetItemSellModal`). For a stack the modal first asks how many to sell
+  (one by default); the price follows the picked quantity at half the reference
+  price and stays editable. Only the sold pieces leave the inventory
+  (`removeSoldInventoryQuantity`) — the row disappears once the whole stack is
+  gone — and the money lands in the wallet in the same edit.
 - Next to the carried weight stands the attunement tile: how many items are
   attuned out of how many may be («2 / 3»), the same shape the prepared-spells
   tiles have on the spells tab. It opens `SheetAttunementModal`, where the 2024

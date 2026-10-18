@@ -3798,6 +3798,14 @@ export interface InventoryMagicState {
   passiveNote: string;
 }
 
+/** Итог окна продажи предмета. */
+export interface InventoryItemSale {
+  /** Сколько штук из стопки продаётся. */
+  quantity: number;
+  /** Выручка в медных монетах. */
+  salePrice: number;
+}
+
 /** Предмет инвентаря (добавлен из раздела «Предметы» или «Магические предметы»). */
 export interface CharacterInventoryItem extends InventoryMagicState {
   id: string;

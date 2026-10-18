@@ -368,7 +368,9 @@ import {
   INVENTORY_REMOVE_MENU_LABEL,
   INVENTORY_RESTORE_CHARGES_MENU_LABEL,
   INVENTORY_SALE_PRICE_RATIO,
+  INVENTORY_SALE_QUANTITY_MIN,
   INVENTORY_SELL_MENU_LABEL,
+  INVENTORY_SELL_PHRASES,
   ITEM_BONUS_MAX,
   ITEM_BONUS_MIN,
   ITEM_BONUS_VALUE_MAX,
@@ -2584,14 +2586,16 @@ export function getCopperAmountLabel(copperAmount: number): string {
 
 /**
  * Выручка за продажу предмета в медных монетах: цена справочника за каждую
- * штуку в наличии.
+ * продаваемую штуку.
  *
  * @param inventoryItem продаваемый предмет снаряжения.
+ * @param quantity сколько штук продаётся; по умолчанию — всё в наличии.
  * @returns выручка в медных; null — продавать нечего (цены нет или она не
  * распознана, либо предмета нет в наличии).
  */
 export function getInventoryItemSalePriceInCopper(
   inventoryItem: CharacterInventoryItem,
+  quantity: number = inventoryItem.quantity,
 ): number | null {
   const unitPrice = parseItemCostInCopper(inventoryItem.cost);
 
@@ -2599,7 +2603,34 @@ export function getInventoryItemSalePriceInCopper(
     return null;
   }
 
-  return unitPrice * inventoryItem.quantity;
+  return unitPrice * quantity;
+}
+
+/**
+ * Инвентарь после продажи части стопки: проданные штуки убираются, а если
+ * продано всё — уходит и сама строка. Продать больше, чем есть, нельзя.
+ *
+ * @param inventory инвентарь персонажа.
+ * @param inventoryItemId идентификатор продаваемого предмета.
+ * @param quantity сколько штук продано.
+ * @returns инвентарь после продажи.
+ */
+export function removeSoldInventoryQuantity(
+  inventory: CharacterInventoryItem[],
+  inventoryItemId: string,
+  quantity: number,
+): CharacterInventoryItem[] {
+  return inventory.flatMap((inventoryItem) => {
+    if (inventoryItem.id !== inventoryItemId) {
+      return [inventoryItem];
+    }
+
+    const remainingQuantity = inventoryItem.quantity - quantity;
+
+    return remainingQuantity > INVENTORY_QUANTITY_MIN
+      ? [{ ...inventoryItem, quantity: remainingQuantity }]
+      : [];
+  });
 }
 
 /**
@@ -2636,20 +2667,34 @@ export function getDefaultSalePriceInCopper(fullPrice: number): number {
 }
 
 /**
+ * Предмет лежит стопкой из нескольких штук: при продаже игрок выбирает, сколько
+ * из неё продать.
+ *
+ * @param inventoryItem предмет снаряжения.
+ * @returns true — штук больше одной.
+ */
+export function isInventoryItemStack(
+  inventoryItem: CharacterInventoryItem,
+): boolean {
+  return inventoryItem.quantity > INVENTORY_SALE_QUANTITY_MIN;
+}
+
+/**
  * Текст окна продажи предмета: что уйдёт из снаряжения.
  *
  * @param inventoryItem продаваемый предмет снаряжения.
+ * @param quantity сколько штук продаётся.
  * @returns описание для окна продажи.
  */
 export function getInventorySellDescription(
   inventoryItem: CharacterInventoryItem,
+  quantity: number,
 ): string {
-  const quantityLabel =
-    inventoryItem.quantity > 1
-      ? ` (${inventoryItem.quantity} ${INVENTORY_QUANTITY_UNIT_LABEL})`
-      : '';
+  const quantityLabel = isInventoryItemStack(inventoryItem)
+    ? ` (${quantity} ${INVENTORY_QUANTITY_UNIT_LABEL} ${INVENTORY_SELL_PHRASES.quantityOutOf} ${inventoryItem.quantity})`
+    : '';
 
-  return `«${inventoryItem.name}»${quantityLabel} уйдёт из снаряжения, а выручка — в кошелёк.`;
+  return `«${inventoryItem.name}»${quantityLabel} ${INVENTORY_SELL_PHRASES.outcome}`;
 }
 
 /**
