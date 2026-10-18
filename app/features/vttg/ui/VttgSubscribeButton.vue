@@ -1,7 +1,10 @@
 <script setup lang="ts">
   import type { ButtonProps } from '@nuxt/ui';
 
-  import { useSubscriptionPaymentTerms } from '../composables';
+  import {
+    useSubscriptionPaymentTerms,
+    useSubscriptionSales,
+  } from '../composables';
   import {
     VTTG_SUBSCRIBE_BUTTON,
     VTTG_SUBSCRIPTION_BUY_BUTTON,
@@ -9,12 +12,12 @@
   import VttgSubscriptionPurchaseModal from './VttgSubscriptionPurchaseModal.vue';
 
   const { soon = VTTG_SUBSCRIBE_BUTTON } = defineProps<{
-    /** Вид выключенной кнопки «скоро» для тех, кому покупка недоступна. */
+    /** Вид выключенной кнопки «скоро», пока оплата выключена в админке. */
     soon?: ButtonProps;
   }>();
 
-  // Покупка пока открыта только администраторам: остальные видят выключенную кнопку «скоро».
-  const { isAdmin } = useUserRoles();
+  // Оплату можно выключить переключателем в админке — тогда у всех кнопка «скоро».
+  const { isSalesEnabled } = useSubscriptionSales();
 
   const overlay = useOverlay();
   const purchaseModal = overlay.create(VttgSubscriptionPurchaseModal);
@@ -41,7 +44,7 @@
 
 <template>
   <UButton
-    v-if="isAdmin"
+    v-if="isSalesEnabled"
     v-bind="VTTG_SUBSCRIPTION_BUY_BUTTON"
     :loading="isTermsLoading"
     class="justify-center"

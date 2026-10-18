@@ -280,3 +280,14 @@ export const CODES_LIST_SKELETON_COUNT = 6;
 export function codesSearchEmptyText(query: string): string {
   return `По запросу «${query}» ничего не найдено`;
 }
+
+/** Карточка переключателя оплаты подписки на главной админки. */
+export const SUBSCRIPTION_SALES_CARD_TEXT = {
+  title: 'Оплата подписки',
+  description:
+    'Когда оплата выключена, кнопка «Оформить» у всех становится неактивной «скоро», а новые платежи не создаются.',
+  switchLabel: 'Оплата включена',
+  enabledToast: 'Оплата подписки включена',
+  disabledToast: 'Оплата подписки выключена',
+  errorToast: 'Не удалось изменить настройку оплаты',
+} as const;

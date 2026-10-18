@@ -49,6 +49,7 @@
     parseAdminOnlineStats,
   } from '~admin/online/model';
   import { AdminOnlineStats } from '~admin/online/ui';
+  import { SubscriptionSalesCard } from '~admin/subscriptions/ui';
   import {
     ADMIN_USERS_CONFIGURE_LABEL,
     ADMIN_USERS_NAVIGATION_LABEL,
@@ -294,6 +295,8 @@
             {{ ADMIN_DASHBOARD_SUBSCRIPTIONS_DESCRIPTION }}
           </div>
         </UCard>
+
+        <SubscriptionSalesCard />
 
         <UCard variant="subtle">
           <template #header>
