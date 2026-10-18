@@ -99,7 +99,7 @@ export const MENU_SECTIONS: Array<MenuSection> = [
       },
       {
         href: '/bastions',
-        label: 'Бастионы',
+        label: 'Сооружения бастиона',
         icon: 'tabler:building-castle',
         disabled: false,
       },

@@ -13,10 +13,13 @@ export const BASTION_API_PATH = '/api/v2/bastions';
 export const BASTION_RULES_API_PATH = `${BASTION_API_PATH}/rules`;
 export const BASTION_WORKSHOP_PATH = `/workshop/${BASTION_SECTION}`;
 
+/** Название раздела: в меню, заголовке страницы и на главной. */
+export const BASTION_SECTION_TITLE = 'Сооружения бастиона';
+
 export const BASTION_SEO = {
-  title: 'Бастионы [Bastions] — D&D 5 (2024)',
+  title: 'Сооружения бастиона [Bastion Facilities] — D&D 5 (2024)',
   description: 'Сооружения бастиона из D&D 5 (редакция 2024 года).',
-  titleTemplate: '%s | Бастионы D&D 5 2024',
+  titleTemplate: '%s | Сооружения бастиона D&D 5 2024',
 } as const;
 
 /** Подпись группы списка без уровня — у базовых сооружений уровня нет. */
@@ -141,7 +144,7 @@ export const BASTION_EDITOR_LABELS = {
 } as const;
 
 export const BASTION_WORKSHOP_LABELS = {
-  section: 'Бастионы',
+  section: BASTION_SECTION_TITLE,
   listTitle: 'Мастерская сооружений бастиона',
   create: 'Создать сооружение',
   createTitle: 'Создание сооружения бастиона',

@@ -68,7 +68,7 @@ export const CARD_LINKS: Array<{
     icon: 'tabler:book-2',
   },
   {
-    name: 'Бастионы',
+    name: 'Сооружения бастиона',
     url: '/bastions',
     img: '/s3/home/section-link/bastions.webp',
     icon: 'tabler:building-castle',

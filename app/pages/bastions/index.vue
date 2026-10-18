@@ -9,6 +9,7 @@
   import {
     BASTION_API_PATH,
     BASTION_SECTION,
+    BASTION_SECTION_TITLE,
     BASTION_SEO,
     compareBastionGroups,
     getBastionFacilityMarkdown,
@@ -90,7 +91,7 @@
 <template>
   <NuxtLayout
     name="section"
-    title="Бастионы"
+    :title="BASTION_SECTION_TITLE"
   >
     <template #controls>
       <FilterControls
