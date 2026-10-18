@@ -1084,6 +1084,20 @@ export function parseWeaponBaseTypeCondition(
 export const SHILLELAGH_WEAPON_CONDITION = `${WEAPON_BASE_TYPE_CONDITION_PREFIX}"club, quarterstaff"`;
 
 /**
+ * Приставка условия «у оружия броска есть свойство»: `weapon.property === "thrown"`.
+ * Ключи свойств — листа VTTG. Проверяется в броске: у атаки не оружием свойств
+ * нет, и условие не выполняется.
+ */
+export const WEAPON_PROPERTY_CONDITION_PREFIX = 'weapon.property === ';
+
+/**
+ * Условие «Сражения метательным оружием»: бросок метательным оружием. Вместе с
+ * ключом `damage.ranged` даёт «+2 к урону, когда оружие брошено»: лук и арбалет
+ * свойства «Метательное» не имеют.
+ */
+export const THROWN_WEAPON_CONDITION = `${WEAPON_PROPERTY_CONDITION_PREFIX}"thrown"`;
+
+/**
  * Условие «цель помечена мной»: цель несёт эффект с флагом `mark.bySource`,
  * наложенный носителем условия (Метка охотника, Сглаз).
  */
@@ -1332,6 +1346,13 @@ export const EFFECT_CONDITION_EXPR_SUGGESTIONS: ReadonlyArray<EffectLibrarySugge
         {
           value: `${EFFECT_ATTACK_ABILITY_CONDITION_PREFIX}"dexterity"`,
           label: 'Атака: Ловкостью (урон оружия)',
+        },
+        // Лист сайта такое условие не считает (словарь листа закрыт), а стол
+        // VTTG проверяет его по свойствам оружия в момент броска
+        {
+          value: THROWN_WEAPON_CONDITION,
+          label: 'Оружие: метательное',
+          hint: 'Сражение метательным оружием: вместе с «Урон: дальнобойная атака».',
         },
         // Только для замен свойств оружия (`weapon.*`): каждое оружие листа
         // сверяется со списком видов само

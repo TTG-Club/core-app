@@ -98,10 +98,12 @@ export const MENU_SECTIONS: Array<MenuSection> = [
         disabled: false,
       },
       {
-        href: '/',
-        label: 'Бастионы',
+        href: '/bastions',
+        label: 'Сооружения бастиона',
         icon: 'tabler:building-castle',
-        disabled: true,
+        disabled: false,
+        // Бастионы пока открыты только админам, остальным пункт виден закрытым
+        enabledRoles: [Role.ADMIN],
       },
     ],
   },
@@ -157,6 +159,12 @@ export const MENU_SECTIONS: Array<MenuSection> = [
         label: 'Лист персонажа',
         icon: 'tabler:id',
       },
+      {
+        href: '/tools/bastion',
+        label: 'Мои бастионы',
+        icon: 'tabler:building-castle',
+        roles: [Role.ADMIN],
+      },
     ],
   },
   {
@@ -206,6 +214,12 @@ export const MENU_SECTIONS: Array<MenuSection> = [
     label: 'Полезное',
     items: [
       {
+        href: VTTG_SUBSCRIPTION_PATH,
+        label: VTTG_SUBSCRIPTION_NAVIGATION_LABEL,
+        icon: 'tabler:crown',
+        highlighted: true,
+      },
+      {
         href: '/news',
         label: 'Новости',
         icon: 'tabler:news',
@@ -226,11 +240,6 @@ export const MENU_SECTIONS: Array<MenuSection> = [
         label: 'Редакция D&D 2014',
         icon: 'tabler:history',
         disabled: false,
-      },
-      {
-        href: VTTG_SUBSCRIPTION_PATH,
-        label: VTTG_SUBSCRIPTION_NAVIGATION_LABEL,
-        icon: 'tabler:crown',
       },
       {
         href: '/roadmap',

@@ -131,6 +131,7 @@ import {
   INVENTORY_COPY_TOAST_TITLE,
   INVENTORY_QUANTITY_MAX,
   INVENTORY_QUANTITY_MIN,
+  INVENTORY_SALE_QUANTITY_MIN,
   isActivatableInventoryItem,
   isAttunableInventoryItem,
   isCustomInventoryItem,
@@ -154,6 +155,7 @@ import {
   removeFeaturesAboveLevel,
   removeFeatureSpell,
   removeLevelHitPoints,
+  removeSoldInventoryQuantity,
   resolveSheetEffects,
   RESOURCE_COUNT_MAX,
   RESOURCE_COUNT_MIN,
@@ -3224,24 +3226,34 @@ export function useCharacterSheet() {
   }
 
   /**
-   * Продажа предмета: он уходит из инвентаря, а выручка возвращается в
-   * кошелёк одним обновлением листа. Цену выбирает игрок в окне продажи (по
-   * умолчанию — полцены справочника); дробная или отрицательная цена в лист
-   * не попадает.
+   * Продажа предмета: проданные штуки уходят из инвентаря (вся стопка — вместе
+   * со строкой), а выручка возвращается в кошелёк одним обновлением листа.
+   * Количество и цену выбирает игрок в окне продажи (по умолчанию — полцены
+   * справочника); дробная или отрицательная цена в лист не попадает.
    *
    * @param inventoryItemId идентификатор предмета инвентаря.
+   * @param quantity сколько штук продано.
    * @param salePrice выручка в медных монетах.
    */
-  function sellInventoryItem(inventoryItemId: string, salePrice: number): void {
-    if (!ensureEditable() || !Number.isFinite(salePrice)) {
+  function sellInventoryItem(
+    inventoryItemId: string,
+    quantity: number,
+    salePrice: number,
+  ): void {
+    if (
+      !ensureEditable()
+      || !Number.isFinite(salePrice)
+      || !Number.isInteger(quantity)
+      || quantity < INVENTORY_SALE_QUANTITY_MIN
+    ) {
       return;
     }
 
-    const hasItem = character.value.inventory.some(
+    const soldItem = character.value.inventory.find(
       (inventoryItem) => inventoryItem.id === inventoryItemId,
     );
 
-    if (!hasItem) {
+    if (!soldItem || quantity > soldItem.quantity) {
       return;
     }
 
@@ -3253,8 +3265,10 @@ export function useCharacterSheet() {
           Math.max(CURRENCY_AMOUNT_MIN, Math.round(salePrice)),
         ),
       ),
-      inventory: character.value.inventory.filter(
-        (inventoryItem) => inventoryItem.id !== inventoryItemId,
+      inventory: removeSoldInventoryQuantity(
+        character.value.inventory,
+        inventoryItemId,
+        quantity,
       ),
     };
   }

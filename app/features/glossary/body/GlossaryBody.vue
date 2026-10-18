@@ -1,6 +1,8 @@
 <script setup lang="ts">
   import type { GlossaryDetailResponse } from '~glossary/model';
 
+  import { UiDetailLayout } from '~ui/detail-layout';
+
   import { DescriptionsBlock, TopBar } from './ui';
 
   defineProps<{
@@ -9,15 +11,11 @@
 </script>
 
 <template>
-  <div class="@container flex flex-col gap-4">
-    <div class="flex flex-col gap-3 @min-3xl:flex-row @min-3xl:gap-7">
-      <div class="flex w-full flex-col gap-3 @min-3xl:max-w-80">
-        <TopBar :tags="glossary.tagCategory" />
-      </div>
+  <UiDetailLayout>
+    <template #aside>
+      <TopBar :tags="glossary.tagCategory" />
+    </template>
 
-      <div class="flex flex-auto flex-col gap-3">
-        <DescriptionsBlock :description="glossary.description" />
-      </div>
-    </div>
-  </div>
+    <DescriptionsBlock :description="glossary.description" />
+  </UiDetailLayout>
 </template>

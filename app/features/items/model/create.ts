@@ -183,12 +183,19 @@ export interface ArmorCreate {
   stealth: boolean | undefined; // помеха Скрытности
 }
 
+/** Предмет, который создаётся инструментом: url и снимок названия. */
+export interface ToolCraftRef {
+  url: string;
+  name: string;
+}
+
 export interface ToolCreate {
   category: ItemToolCategory | undefined; // пусто — вывести из типов предмета
   baseType: string | undefined; // ключ инструмента VTTG; пусто — из адреса
   ability: EffectAbility | undefined; // характеристика проверки инструментом
   bonus: number | undefined; // собственный бонус инструмента
   proficiencyMode: ToolProficiencyMode | undefined;
+  crafts: Array<ToolCraftRef>; // что создаётся инструментом — для мастерской бастиона
 }
 
 export interface ItemCreate extends EditorBaseInfoState {
@@ -259,6 +266,7 @@ export function createEmptyTool(): ToolCreate {
     ability: undefined,
     bonus: undefined,
     proficiencyMode: undefined,
+    crafts: [],
   };
 }
 
@@ -489,6 +497,16 @@ export function normalizeLoadedItem(
     consumable: raw.consumable === true,
     activeEffects: normalizeLoadedActiveEffects(raw.activeEffects),
   };
+
+  // Инструмент, сохранённый до списка создаваемых предметов, приходит без него
+  if (isPlainObject(normalized.tool)) {
+    normalized.tool = {
+      ...normalized.tool,
+      crafts: Array.isArray(normalized.tool.crafts)
+        ? normalized.tool.crafts
+        : [],
+    };
+  }
 
   if (isPlainObject(normalized.weapon)) {
     normalized.weapon = {

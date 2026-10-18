@@ -1,5 +1,6 @@
 import type { AdminOnlinePreferenceSection } from './types';
 
+import { ADMIN_DASHBOARD_EMPTY_VALUE } from '~admin/dashboard/model';
 import {
   LAYOUT_WIDTH_OPTIONS,
   LAYOUT_WIDTH_SECTION_TITLE,
@@ -11,37 +12,44 @@ export const ADMIN_ONLINE_STATS_API_URL = '/api/v2/online/stats';
 
 export const ADMIN_ONLINE_STATS_DATA_KEY = 'admin-online-stats';
 
-export const ADMIN_ONLINE_STATS_TITLE = 'Пользователи онлайн';
+export const ADMIN_ONLINE_STATS_TITLE = 'Сайты онлайн';
 
 export const ADMIN_ONLINE_STATS_DESCRIPTION =
-  'Статистика активности по сайтам за последнее окно учета.';
+  'Сколько людей на каждом сайте за последнее окно учёта.';
+
+/** Общий итог online-app: сумма всех площадок, поэтому стоит над панелями, а не в одной из них. */
+export const ADMIN_ONLINE_STATS_SUMMARY_LABEL = 'Онлайн';
+
+export const ADMIN_ONLINE_STATS_SUMMARY_HINT =
+  'Сумма по всем площадкам — сайтам и VTTG — за последнее окно учёта.';
 
 export const ADMIN_ONLINE_STATS_WINDOW_LABEL = 'Окно';
 
 export const ADMIN_ONLINE_STATS_MINUTES_LABEL = 'мин';
-
-export const ADMIN_ONLINE_STATS_SITE_LABEL = 'Сайт';
 
 export const ADMIN_ONLINE_STATS_GUESTS_LABEL = 'Гостей';
 
 /** VTTG — десктопное приложение, а не сайт, поэтому подписи у него свои. */
 export const ADMIN_ONLINE_STATS_VTTG_SITE_ID = 'vttg';
 
+/** VTTG живёт своей панелью: его числа устроены иначе, чем у сайтов. */
+export const ADMIN_ONLINE_STATS_VTTG_TITLE = 'VTTG онлайн';
+
+export const ADMIN_ONLINE_STATS_VTTG_DESCRIPTION =
+  'Запущенные приложения и игроки за чужими столами за последнее окно учёта.';
+
 /**
  * Вторая аудитория VTTG: люди за чужими столами. Приложения у них нет — только вкладка
  * браузера с чужим миром, поэтому сервис онлайна держит их отдельным сайтом, иначе один
  * человек с открытой панелью и открытым миром получил бы два ключа и стал бы двумя.
- * Своей карточки у них нет: в отрыве от приложения эта аудитория ничего не значит.
+ * Своей плитки у них нет: в отрыве от приложения эта аудитория ничего не значит.
  */
 export const ADMIN_ONLINE_STATS_VTTG_TABLE_SITE_ID = 'vttg-play';
 
-export const ADMIN_ONLINE_STATS_VTTG_SITE_LABEL = 'Приложение';
-
 /**
- * Подписи плиток карточки приложения.
+ * Подписи чисел панели приложения.
  *
- * Чисел у приложения вшестеро больше, чем у сайта, и полными подписями карточка
- * вытягивалась вдвое выше соседних, ломая ряд. Поэтому здесь короткие подписи, а весь
+ * Чисел у приложения вшестеро больше, чем у сайта, поэтому подписи короткие, а весь
  * смысл вынесен в подсказку рядом: правило «текст целиком» для компактных плиток-чисел
  * с подсказкой не действует. Подписи короткие, но не обрубленные — сокращений с точкой
  * тут нет, иначе читать пришлось бы по догадке.
@@ -57,7 +65,7 @@ export const ADMIN_ONLINE_STATS_VTTG_TABLE_HINT =
   'Игроки, пришедшие в чужой мир по ссылке: приложение у них не запущено, только вкладка браузера.';
 
 /**
- * Три плитки помельче — доли запущенных приложений, а не слагаемые: играющий под
+ * Три числа под «Запущено» — доли запущенных приложений, а не слагаемые: играющий под
  * аккаунтом попадает и в «В игре», и в «Аккаунт». Что это доли, проговаривают подсказки.
  */
 export const ADMIN_ONLINE_STATS_VTTG_PLAYERS_LABEL = 'В игре';
@@ -75,21 +83,16 @@ export const ADMIN_ONLINE_STATS_VTTG_REGISTERED_LABEL = 'Аккаунт';
 export const ADMIN_ONLINE_STATS_VTTG_REGISTERED_HINT =
   'Из запущенных приложений: сколько вошли в аккаунт TTG. Остальных считаем по идентификатору браузера.';
 
-export const ADMIN_ONLINE_STATS_VTTG_TOTAL_LABEL = 'Всего людей';
-
+/** Итог панели приложения: что в нём сложено, говорит подсказка. */
 export const ADMIN_ONLINE_STATS_VTTG_TOTAL_HINT =
-  'Запущенные приложения и игроки за столами — разные люди, поэтому складываются.';
+  'Всего людей: запущенные приложения и игроки за столами — разные люди, поэтому складываются.';
 
 export const ADMIN_ONLINE_STATS_REGISTERED_LABEL = 'Пользователей';
 
 export const ADMIN_ONLINE_STATS_TOTAL_LABEL = 'Всего';
 
-export const ADMIN_ONLINE_STATS_SUMMARY_LABEL = 'Всего';
-
-export const ADMIN_ONLINE_STATS_REFRESH_LABEL = 'Обновить';
-
 /**
- * Каркас сетки: карточки этих площадок держим на месте всегда — и пока данных
+ * Каркас панели: плитки этих площадок держим на месте всегда — и пока данных
  * нет, и когда online-app упал. Реальный ответ их заменяет, так что расхождение
  * со списком бэкенда живёт ровно до первого успешного запроса.
  */
@@ -100,15 +103,13 @@ export const ADMIN_ONLINE_STATS_PLACEHOLDER_SITE_IDS = [
 ];
 
 /** Значение, которого нет: числа не выдумываем, ставим прочерк. */
-export const ADMIN_ONLINE_STATS_EMPTY_VALUE = '—';
+export const ADMIN_ONLINE_STATS_EMPTY_VALUE = ADMIN_DASHBOARD_EMPTY_VALUE;
 
 export const ADMIN_ONLINE_STATS_EMPTY_TEXT =
   'Online-app пока не вернул сайты для отображения.';
 
-/** Подпись первой строки карточки настройки — как «Сайт» у карточек площадок. */
-export const ADMIN_ONLINE_PREFERENCES_CARD_LABEL = 'Настройка';
-
-export const ADMIN_ONLINE_PREFERENCES_PERIOD_LABEL = 'Настройки за';
+/** Срезы настроек — единственная статистика за период, поэтому период выбирается здесь. */
+export const ADMIN_ONLINE_PREFERENCES_TITLE = 'Настройки отображения';
 
 export const ADMIN_ONLINE_PREFERENCES_PERIOD_HINT =
   'Сколько разных посетителей пользовались каждым вариантом. Кто переключался за период, учтён в обоих вариантах, поэтому «Всего» может быть больше числа людей.';
@@ -124,7 +125,10 @@ export const ADMIN_ONLINE_PREFERENCES_PERIOD_LABELS: Readonly<
 
 export const ADMIN_ONLINE_PREFERENCES_PERCENT_SIGN = '%';
 
-/** Разделитель числа и доли в строке карточки */
+/** Доля варианта считается в процентах: столько составляет итог настройки. */
+export const ADMIN_ONLINE_PREFERENCES_SHARE_MAX = 100;
+
+/** Разделитель числа и доли в строке настройки */
 export const ADMIN_ONLINE_PREFERENCES_SHARE_SEPARATOR = ' · ';
 
 /**

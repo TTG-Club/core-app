@@ -23,7 +23,9 @@ const SYSTEM_DICTIONARY_SIZES = {
   version: '0.8.157',
   flags: 228,
   changeKeys: 68,
-  conditions: 107,
+  // +1 сверх 0.8.157: условие «метательным оружием» (`weapon.property`)
+  // перенесено вместе с системой 0.8.308, раньше остального порта
+  conditions: 108,
   values: 51,
 };
 

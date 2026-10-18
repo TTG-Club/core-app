@@ -328,3 +328,6 @@ export const VTTG_FEATURES_MORE: VttgHighlight = {
   description:
     'Система плейлистов, готовая система пресетов звуковых эффектов, система освещения, система заклинаний, автоматизация и многое другое.',
 };
+
+/** Ключ данных настройки продажи подписки — общий у кнопки покупки и админки. */
+export const SUBSCRIPTION_SALES_DATA_KEY = 'subscription-sales';

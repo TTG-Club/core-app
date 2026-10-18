@@ -4,6 +4,7 @@
 
   const { user } = useUser();
 
+  /** Плитку с ролями видят все, но открыта она только обладателям роли. */
   const sections = computed(() =>
     CARD_LINKS.map((link) => {
       if (!Array.isArray(link.roles)) {

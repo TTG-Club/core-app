@@ -26,6 +26,7 @@ enum DictionaryEndpoints {
   ABILITIES = '/api/v2/dictionaries/abilities',
   SKILLS = '/api/v2/dictionaries/skills',
   MAGIC_ITEM_CATEGORY = '/api/v2/dictionaries/magic-items/category',
+  MAGIC_ITEM_THEME = '/api/v2/dictionaries/magic-items/theme',
   RARITY = '/api/v2/dictionaries/rarity',
   ALIGNMENTS = '/api/v2/dictionaries/alignments',
   CONDITIONS = '/api/v2/dictionaries/conditions',
@@ -162,6 +163,15 @@ class Dictionaries {
     config: Omit<NitroFetchOptions<R>, 'method'> = {},
   ): Promise<Array<SelectOption>> => {
     return $fetch(DictionaryEndpoints.MAGIC_ITEM_CATEGORY, {
+      ...config,
+      method: 'get',
+    });
+  };
+
+  public magicItemTheme = <R extends NitroFetchRequest>(
+    config: Omit<NitroFetchOptions<R>, 'method'> = {},
+  ): Promise<Array<SelectOption>> => {
+    return $fetch(DictionaryEndpoints.MAGIC_ITEM_THEME, {
       ...config,
       method: 'get',
     });

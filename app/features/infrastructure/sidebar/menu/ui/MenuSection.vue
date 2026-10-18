@@ -1,4 +1,6 @@
 <script setup lang="ts">
+  import type { Role } from '~/shared/types';
+
   import type { MenuItem } from '../model';
 
   import { MENU_EXTERNAL_ICON, MENU_SOON_LABEL } from '../model';
@@ -14,24 +16,31 @@
 
   const { user } = useUser();
 
-  // Пункты с ролями видны только пользователям с подходящей ролью
+  function hasAnyRole(roles: Array<Role>) {
+    return roles.some((role) => user.value?.roles.includes(role));
+  }
+
+  // Пункты с `roles` видны только пользователям с подходящей ролью,
+  // с `enabledRoles` — видны всем, но закрыты без подходящей роли
   const links = computed(() =>
     items
-      .filter((link) => {
-        if (!Array.isArray(link.roles)) {
-          return true;
-        }
+      .filter((link) => !Array.isArray(link.roles) || hasAnyRole(link.roles))
+      .map((link) => {
+        const disabled =
+          link.disabled
+          || (Array.isArray(link.enabledRoles)
+            && !hasAnyRole(link.enabledRoles));
 
-        return link.roles.some((role) => user.value?.roles.includes(role));
-      })
-      .map((link) => ({
-        ...link,
-        key: link.action || link.href,
-        // У пункта-действия адреса нет: он остаётся кнопкой. Закрытый раздел
-        // тоже без адреса, иначе его заглушка «/» подсвечивалась бы на главной.
-        to: link.action || link.disabled ? undefined : link.href,
-        trailingIcon: link.external ? MENU_EXTERNAL_ICON : undefined,
-      })),
+        return {
+          ...link,
+          disabled,
+          key: link.action || link.href,
+          // У пункта-действия адреса нет: он остаётся кнопкой. Закрытый раздел
+          // тоже без адреса, иначе его заглушка «/» подсвечивалась бы на главной.
+          to: link.action || disabled ? undefined : link.href,
+          trailingIcon: link.external ? MENU_EXTERNAL_ICON : undefined,
+        };
+      }),
   );
 
   function handleItemClick(link: MenuItem) {
@@ -63,14 +72,16 @@
           :icon="link.icon"
           :trailing-icon="link.trailingIcon"
           :disabled="link.disabled"
-          variant="ghost"
-          color="neutral"
+          :variant="link.highlighted ? 'outline' : 'ghost'"
+          :color="link.highlighted ? 'warning' : 'neutral'"
           active-variant="soft"
-          active-color="primary"
+          :active-color="link.highlighted ? 'warning' : 'primary'"
           block
           :ui="{
             base: 'justify-start gap-2.5 px-2.5 py-2 text-left font-normal',
-            leadingIcon: 'size-4.5 text-dimmed',
+            leadingIcon: link.highlighted
+              ? 'size-4.5 text-warning'
+              : 'size-4.5 text-dimmed',
             trailingIcon: 'size-3.5 text-dimmed',
             label: 'whitespace-normal',
           }"

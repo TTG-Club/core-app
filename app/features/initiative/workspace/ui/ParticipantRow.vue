@@ -224,7 +224,7 @@
               onSelect: () => emit('toggle-dead', participant.id, false),
             }
           : {
-              label: 'Пометить повержённым',
+              label: 'Пометить поверженным',
               icon: 'tabler:skull',
               color: 'error',
               onSelect: () => emit('toggle-dead', participant.id, true),

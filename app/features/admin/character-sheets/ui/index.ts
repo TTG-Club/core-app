@@ -1,1 +1,1 @@
-export { default as AdminCharacterSheetStatsCard } from './AdminCharacterSheetStatsCard.vue';
+export { default as AdminCharacterSheetStatsTile } from './AdminCharacterSheetStatsTile.vue';

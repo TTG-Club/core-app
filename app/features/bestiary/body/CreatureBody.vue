@@ -5,6 +5,7 @@
 
   import { UiAction } from '~ui/action';
   import { UiCollapse } from '~ui/collapse';
+  import { UiDetailLayout } from '~ui/detail-layout';
   import { UiGallery } from '~ui/gallery';
   import { MarkupRender } from '~ui/markup';
   import { RatingWidget } from '~ui/rating';
@@ -64,12 +65,9 @@
 </script>
 
 <template>
-  <div :class="$style.container">
-    <div :class="$style.body">
-      <div
-        class="flex flex-col gap-3"
-        :class="$style.info"
-      >
+  <UiDetailLayout>
+    <template #aside>
+      <div class="flex flex-col gap-3">
         <TopBar :header="creature.header" />
 
         <div :class="$style.block">
@@ -88,231 +86,199 @@
 
         <StatsBlock v-bind="stats" />
       </div>
+    </template>
 
-      <div class="flex w-full min-w-0 flex-auto flex-col gap-6">
-        <template v-if="creature.traits?.length">
-          <UiCollapse default-open>
-            <template #default> Особенности </template>
-
-            <template #content>
-              <UiAction
-                v-for="trait in creature.traits"
-                :key="trait.name.eng"
-                :label="trait.name.rus"
-                :text="trait.description"
-              />
-            </template>
-          </UiCollapse>
-        </template>
-
-        <template v-if="creature.actions?.length">
-          <UiCollapse default-open>
-            <template #default> Действия </template>
-
-            <template #content>
-              <UiAction
-                v-for="action in creature.actions"
-                :key="action.name.eng"
-                :label="action.name.rus"
-                :text="action.description"
-              />
-            </template>
-          </UiCollapse>
-        </template>
-
-        <template v-if="creature.bonusActions?.length">
-          <UiCollapse default-open>
-            <template #default> Бонусные действия </template>
-
-            <template #content>
-              <UiAction
-                v-for="bonusAction in creature.bonusActions"
-                :key="bonusAction.name.eng"
-                :label="bonusAction.name.rus"
-                :text="bonusAction.description"
-              />
-            </template>
-          </UiCollapse>
-        </template>
-
-        <template v-if="creature.reactions?.length">
-          <UiCollapse default-open>
-            <template #default> Реакции </template>
-
-            <template #content>
-              <UiAction
-                v-for="reaction in creature.reactions"
-                :key="reaction.name.eng"
-                :label="reaction.name.rus"
-                :text="reaction.description"
-              />
-            </template>
-          </UiCollapse>
-        </template>
-
-        <template v-if="legendaryActions.length">
-          <UiCollapse default-open>
-            <template #default> Легендарные действия </template>
-
-            <template #content>
-              <p class="mb-2">
-                <strong>Использования легендарных действий:</strong>
-
-                <span>&nbsp;{{ creature.legendary.count }}.</span>
-
-                <span v-if="creature.legendary?.description?.length">
-                  {{ creature.legendary.description }}
-                </span>
-
-                <span v-else>
-                  Сразу после хода другого существа
-                  {{ creature.name.rus }} может потратить 1 использование, чтобы
-                  выполнить одно из следующих действий.
-                  {{ creature.name.rus }} восстанавливает все потраченные
-                  использования в начале своего хода.
-                </span>
-              </p>
-
-              <UiAction
-                v-for="action in legendaryActions"
-                :key="action.name.eng"
-                :label="action.name.rus"
-                :text="action.description"
-              />
-            </template>
-          </UiCollapse>
-        </template>
-
-        <UiCollapse
-          v-if="creature.description"
-          default-open
-        >
-          <template #default> Описание </template>
+    <div class="flex flex-col gap-6">
+      <template v-if="creature.traits?.length">
+        <UiCollapse default-open>
+          <template #default> Особенности </template>
 
           <template #content>
-            <DescriptionsBlock :description="creature.description" />
-          </template>
-        </UiCollapse>
-
-        <template v-if="hasLair">
-          <UiCollapse default-open>
-            <template #default>
-              {{ creature.lair.name || 'Описание логова' }}
-            </template>
-
-            <template #content>
-              <MarkupRender
-                v-if="lairDescription"
-                :render-node="lairDescription"
-              />
-
-              <template v-if="lairEffects.length">
-                <UiAction
-                  v-for="effect in lairEffects"
-                  :key="effect.name.eng"
-                  :label="effect.name.rus"
-                  :text="effect.description"
-                />
-              </template>
-
-              <MarkupRender
-                v-if="lairEnding"
-                :render-node="lairEnding"
-              />
-            </template>
-          </UiCollapse>
-        </template>
-
-        <UiCollapse
-          v-if="hasSection"
-          default-open
-        >
-          <template #default>
-            {{ creature.section.name.rus }} [{{ creature.section.name.eng }}]
-          </template>
-
-          <template
-            v-if="creature.section.subtitle"
-            #subtitle
-          >
-            {{ creature.section.subtitle }}
-          </template>
-
-          <template #content>
-            <div
-              v-if="creature.section?.habitats || creature.section?.treasures"
-              class="mb-2"
-            >
-              <p v-if="creature.section?.habitats">
-                <strong>Среда обитания: </strong>
-
-                <span>{{ creature.section.habitats }}</span>
-              </p>
-
-              <p v-if="creature.section?.treasures">
-                <strong>Сокровища: </strong>
-
-                <span>{{ creature.section.treasures }}</span>
-              </p>
-            </div>
-
-            <DescriptionsBlock
-              v-if="sectionDescription"
-              :description="sectionDescription"
+            <UiAction
+              v-for="trait in creature.traits"
+              :key="trait.name.eng"
+              :label="trait.name.rus"
+              :text="trait.description"
             />
           </template>
         </UiCollapse>
-      </div>
+      </template>
+
+      <template v-if="creature.actions?.length">
+        <UiCollapse default-open>
+          <template #default> Действия </template>
+
+          <template #content>
+            <UiAction
+              v-for="action in creature.actions"
+              :key="action.name.eng"
+              :label="action.name.rus"
+              :text="action.description"
+            />
+          </template>
+        </UiCollapse>
+      </template>
+
+      <template v-if="creature.bonusActions?.length">
+        <UiCollapse default-open>
+          <template #default> Бонусные действия </template>
+
+          <template #content>
+            <UiAction
+              v-for="bonusAction in creature.bonusActions"
+              :key="bonusAction.name.eng"
+              :label="bonusAction.name.rus"
+              :text="bonusAction.description"
+            />
+          </template>
+        </UiCollapse>
+      </template>
+
+      <template v-if="creature.reactions?.length">
+        <UiCollapse default-open>
+          <template #default> Реакции </template>
+
+          <template #content>
+            <UiAction
+              v-for="reaction in creature.reactions"
+              :key="reaction.name.eng"
+              :label="reaction.name.rus"
+              :text="reaction.description"
+            />
+          </template>
+        </UiCollapse>
+      </template>
+
+      <template v-if="legendaryActions.length">
+        <UiCollapse default-open>
+          <template #default> Легендарные действия </template>
+
+          <template #content>
+            <p class="mb-2">
+              <strong>Использования легендарных действий:</strong>
+
+              <span>&nbsp;{{ creature.legendary.count }}.</span>
+
+              <span v-if="creature.legendary?.description?.length">
+                {{ creature.legendary.description }}
+              </span>
+
+              <span v-else>
+                Сразу после хода другого существа
+                {{ creature.name.rus }} может потратить 1 использование, чтобы
+                выполнить одно из следующих действий.
+                {{ creature.name.rus }} восстанавливает все потраченные
+                использования в начале своего хода.
+              </span>
+            </p>
+
+            <UiAction
+              v-for="action in legendaryActions"
+              :key="action.name.eng"
+              :label="action.name.rus"
+              :text="action.description"
+            />
+          </template>
+        </UiCollapse>
+      </template>
+
+      <UiCollapse
+        v-if="creature.description"
+        default-open
+      >
+        <template #default> Описание </template>
+
+        <template #content>
+          <DescriptionsBlock :description="creature.description" />
+        </template>
+      </UiCollapse>
+
+      <template v-if="hasLair">
+        <UiCollapse default-open>
+          <template #default>
+            {{ creature.lair.name || 'Описание логова' }}
+          </template>
+
+          <template #content>
+            <MarkupRender
+              v-if="lairDescription"
+              :render-node="lairDescription"
+            />
+
+            <template v-if="lairEffects.length">
+              <UiAction
+                v-for="effect in lairEffects"
+                :key="effect.name.eng"
+                :label="effect.name.rus"
+                :text="effect.description"
+              />
+            </template>
+
+            <MarkupRender
+              v-if="lairEnding"
+              :render-node="lairEnding"
+            />
+          </template>
+        </UiCollapse>
+      </template>
+
+      <UiCollapse
+        v-if="hasSection"
+        default-open
+      >
+        <template #default>
+          {{ creature.section.name.rus }} [{{ creature.section.name.eng }}]
+        </template>
+
+        <template
+          v-if="creature.section.subtitle"
+          #subtitle
+        >
+          {{ creature.section.subtitle }}
+        </template>
+
+        <template #content>
+          <div
+            v-if="creature.section?.habitats || creature.section?.treasures"
+            class="mb-2"
+          >
+            <p v-if="creature.section?.habitats">
+              <strong>Среда обитания: </strong>
+
+              <span>{{ creature.section.habitats }}</span>
+            </p>
+
+            <p v-if="creature.section?.treasures">
+              <strong>Сокровища: </strong>
+
+              <span>{{ creature.section.treasures }}</span>
+            </p>
+          </div>
+
+          <DescriptionsBlock
+            v-if="sectionDescription"
+            :description="sectionDescription"
+          />
+        </template>
+      </UiCollapse>
     </div>
-  </div>
+  </UiDetailLayout>
 </template>
 
 <style module lang="scss">
-  .container {
-    container-type: inline-size;
+  .block {
     display: flex;
-    flex-direction: column;
-    gap: 16px;
-
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
-  }
-
-  .body {
-    display: flex;
-    flex-direction: column;
     gap: 12px;
-
-    @container (width > 800px) {
-      flex-direction: row;
-      gap: 28px;
-    }
+    width: 100%;
   }
 
-  .info {
-    width: 100%;
-    max-width: 100%;
+  .portrait {
+    overflow: hidden;
 
-    @container (width > 800px) {
-      flex-shrink: 0;
-      width: 320px;
-    }
-
-    .block {
-      display: flex;
-      gap: 12px;
-      width: 100%;
-    }
-
-    .portrait {
-      overflow: hidden;
-
-      width: 110px;
-      min-width: 110px;
-      height: 110px;
-      border: 1px solid var(--ui-border);
-      border-radius: 8px;
-    }
+    width: 110px;
+    min-width: 110px;
+    height: 110px;
+    border: 1px solid var(--ui-border);
+    border-radius: 8px;
   }
 </style>
