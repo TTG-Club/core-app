@@ -715,7 +715,6 @@ export const CATALOG_FILTER_SYSTEM_LABEL = 'Система';
 export const CATALOG_FILTER_TYPE_LABEL = 'Формат';
 export const CATALOG_FILTER_DURATION_LABEL = 'Длительность';
 export const CATALOG_FILTER_COST_LABEL = 'Стоимость';
-export const CATALOG_FILTER_STATUS_LABEL = 'Статус набора';
 export const CATALOG_FILTER_CITY_LABEL = 'Города';
 export const CATALOG_FILTER_CITY_PLACEHOLDER = 'Найдите и выберите город';
 export const CATALOG_FILTER_CROSSPLAY_LABEL = 'Кросспол';
@@ -776,7 +775,6 @@ export const CATALOG_FILTER_GROUP_KEYS = {
   type: 'type',
   duration: 'durationType',
   cost: 'costType',
-  status: 'status',
   crossplay: 'crossplayAllowed',
 } as const;
 
@@ -1255,6 +1253,7 @@ export const GAME_RECRUITMENT_CLOSE_LABEL = 'Закрыть набор';
 export const GAME_RECRUITMENT_OPEN_LABEL = 'Открыть набор';
 export const GAME_RECRUITMENT_CLOSED_BADGE = 'Набор закрыт';
 export const GAME_RECRUITMENT_FULL_BADGE = 'Мест нет';
+export const GAME_RECRUITMENT_CLOSED_ICON = 'tabler:user-off';
 export const GAME_RECRUITMENT_CLOSED_TOAST = 'Набор закрыт';
 export const GAME_RECRUITMENT_OPENED_TOAST = 'Набор открыт';
 
