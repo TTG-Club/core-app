@@ -4,13 +4,22 @@
 
   const { user } = useUser();
 
-  /** Плитки с ролями видят только их обладатели, остальным раздел не показывается. */
+  /** Плитку с ролями видят все, но открыта она только обладателям роли. */
   const sections = computed(() =>
-    CARD_LINKS.filter(
-      (link) =>
-        !Array.isArray(link.roles)
-        || link.roles.some((role) => user.value?.roles.includes(role)),
-    ),
+    CARD_LINKS.map((link) => {
+      if (!Array.isArray(link.roles)) {
+        return link;
+      }
+
+      const available = link.roles.some((role) =>
+        user.value?.roles.includes(role),
+      );
+
+      return {
+        ...link,
+        disabled: link.disabled || !available,
+      };
+    }),
   );
 </script>
 
