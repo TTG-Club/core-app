@@ -36,6 +36,7 @@
     MAGIC_ITEM_VARIES_RARITY,
     MAGIC_ITEMS_FILTERS_PATH,
     MAGIC_ITEMS_SEARCH_PATH,
+    MAGIC_ITEMS_SEARCH_SHEET_QUERY,
     parseMagicItemCatalog,
     PURCHASE_QUANTITY_MIN,
     SHEET_CATALOG_MODAL_LABELS,
@@ -123,7 +124,10 @@
     async () => {
       const response = await $fetch<unknown>(MAGIC_ITEMS_SEARCH_PATH, {
         method: 'GET',
-        query: { ...catalogFilterQuery.value },
+        query: {
+          ...catalogFilterQuery.value,
+          ...MAGIC_ITEMS_SEARCH_SHEET_QUERY,
+        },
         retry: 0,
       });
 

@@ -23,6 +23,7 @@ import {
   CUSTOM_INVENTORY_URL_PREFIX,
   ITEMS_SEARCH_PATH,
   MAGIC_ITEMS_SEARCH_PATH,
+  MAGIC_ITEMS_SEARCH_SHEET_QUERY,
   NEW_CUSTOM_INVENTORY_ITEM,
   SPECIES_DETAIL_BASE_PATH,
   SPECIES_SEARCH_PATH,
@@ -159,14 +160,20 @@ function findByName<TOption extends { name: string }>(
  *
  * @param path эндпоинт раздела.
  * @param parse разбор ответа.
+ * @param query параметры поиска раздела.
  * @returns записи каталога; пустой список — раздел не ответил.
  */
 async function fetchCatalog<TItem>(
   path: string,
   parse: (input: unknown) => TItem[],
+  query?: Record<string, boolean>,
 ): Promise<TItem[]> {
   try {
-    const response = await $fetch<unknown>(path, { method: 'GET', retry: 0 });
+    const response = await $fetch<unknown>(path, {
+      method: 'GET',
+      query,
+      retry: 0,
+    });
 
     return parse(response);
   } catch {
@@ -639,7 +646,11 @@ async function resolveInventory(
 
   const [catalogItems, magicItems] = await Promise.all([
     fetchCatalog(ITEMS_SEARCH_PATH, parseItemCatalog),
-    fetchCatalog(MAGIC_ITEMS_SEARCH_PATH, parseMagicItemCatalog),
+    fetchCatalog(
+      MAGIC_ITEMS_SEARCH_PATH,
+      parseMagicItemCatalog,
+      MAGIC_ITEMS_SEARCH_SHEET_QUERY,
+    ),
   ]);
 
   const catalogs = { items: catalogItems, magicItems };
