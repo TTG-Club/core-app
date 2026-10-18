@@ -42,6 +42,7 @@
     PLAN_LIMITS,
     PLAN_TOOL_GROUPS,
     PLAN_TOOL_HINTS,
+    PLAN_TOUCH_TOOL_HINTS,
     pruneSelection,
     removeLevel,
     removeObjects,
@@ -207,7 +208,10 @@
 
   const levels = computed(() => getPlanLevels(editor.document.value));
 
-  /** Сооружение, которое тянут из боковой панели на план. */
+  /**
+   * Сооружение, которое ставят на план: его тянут из боковой панели или
+   * выбрали в ней касанием и ждут касания плана.
+   */
   const draggedFacility = shallowRef<PlanPaletteFacility>();
 
   /** Клетка под указателем, пока сооружение тянут над планом. */
@@ -242,6 +246,47 @@
    */
   function handleFacilityDragStart(facility: PlanPaletteFacility): void {
     draggedFacility.value = facility;
+  }
+
+  /**
+   * Касание сооружения в боковой панели: следующее касание плана поставит
+   * его комнату. Так сооружение ставится и там, где нет перетаскивания, —
+   * на телефоне и планшете. Повторное касание отменяет.
+   *
+   * @param facility Сооружение.
+   */
+  function handleFacilityPick(facility: PlanPaletteFacility): void {
+    if (draggedFacility.value?.id === facility.id) {
+      handleFacilityDragEnd();
+    } else {
+      draggedFacility.value = facility;
+    }
+  }
+
+  /**
+   * Нажатие на плане: ставит выбранное сооружение, иначе передаёт точку
+   * инструменту.
+   *
+   * @param point Точка на плане.
+   * @param isAdditive Добавить к выбору.
+   */
+  function handlePointDown(point: PlanPoint, isAdditive: boolean): void {
+    const facility = draggedFacility.value;
+
+    if (facility) {
+      const before = editor.document.value;
+
+      handleFacilityDrop(point);
+
+      // Место занято — сооружение остаётся выбранным для другого касания.
+      if (editor.document.value === before) {
+        draggedFacility.value = facility;
+      }
+
+      return;
+    }
+
+    interaction.handleDown(point, isAdditive);
   }
 
   /** Перетаскивание сооружения закончилось — брошено или отменено. */
@@ -352,6 +397,9 @@
     return { label: PLAN_LABELS.allSaved, color: 'success' as const };
   });
 
+  /** Палец вместо мыши: подсказки без Shift, правой кнопки и колеса. */
+  const isCoarsePointer = useMediaQuery('(pointer: coarse)');
+
   const toolHint = computed(() => {
     if (tool.value === 'wall' && level.value !== 0) {
       return PLAN_LABELS.wallsGroundOnly;
@@ -371,7 +419,16 @@
       return PLAN_LABELS.squareTowerHint;
     }
 
-    return PLAN_TOOL_HINTS[tool.value];
+    if (draggedFacility.value) {
+      return fillTemplate(PLAN_LABELS.facilityPlaceHint, {
+        name: draggedFacility.value.name,
+      });
+    }
+
+    return (
+      (isCoarsePointer.value ? PLAN_TOUCH_TOOL_HINTS[tool.value] : undefined)
+      ?? PLAN_TOOL_HINTS[tool.value]
+    );
   });
 
   const wallsText = computed(() => {
@@ -499,6 +556,7 @@
     }
 
     if (event.key === 'Escape') {
+      handleFacilityDragEnd();
       interaction.cancel();
       selection.value = [];
 
@@ -637,12 +695,13 @@
   ]);
 
   /**
-   * Правая кнопка без панорамы: меню над несколькими выбранными комнатами.
+   * Правая кнопка без панорамы или долгое нажатие пальцем: меню над
+   * выбранным — объединить комнаты, удалить.
    *
    * @param position Точка окна, где отпустили кнопку.
    */
   function handleContextMenu(position: { x: number; y: number }): void {
-    if (editor.canEdit.value && selectedRooms.value.length > 1) {
+    if (editor.canEdit.value && selection.value.length) {
       contextMenuPosition.value = position;
       isContextMenuOpen.value = true;
     }
@@ -674,6 +733,10 @@
    * @param point Точка на плане.
    */
   function handlePointMove(point: PlanPoint): void {
+    if (draggedFacility.value) {
+      facilityDropCell.value = getCellAt(point);
+    }
+
     interaction.handleMove(point);
     editor.setPointer({ ...point, level: level.value });
   }
@@ -778,9 +841,10 @@
             :furniture-kind="furnitureKind"
             :furniture-rotation="furnitureRotation"
             :spiral-side="spiralSide"
-            @point-down="interaction.handleDown"
+            @point-down="handlePointDown"
             @point-move="handlePointMove"
             @point-up="interaction.handleUp"
+            @point-cancel="interaction.cancel"
             @point-leave="handlePointLeave"
             @wheel-step="handleWheelStep"
             @context-menu="handleContextMenu"
@@ -826,7 +890,7 @@
           </div>
 
           <p
-            class="pointer-events-none absolute right-3 bottom-2 left-3 text-xs text-muted"
+            class="pointer-events-none absolute right-2 bottom-2 left-2 rounded-md bg-default/80 px-2 py-1 text-xs text-muted"
           >
             {{ toolHint }}
           </p>
@@ -880,6 +944,8 @@
             <PlanFacilityList
               :facilities
               :can-edit="editor.canEdit.value"
+              :picked-id="draggedFacility?.id"
+              @pick="handleFacilityPick"
               @drag-start="handleFacilityDragStart"
               @drag-end="handleFacilityDragEnd"
             />

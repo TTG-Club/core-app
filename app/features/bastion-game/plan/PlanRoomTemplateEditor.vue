@@ -282,6 +282,7 @@
         @point-down="interaction.handleDown"
         @point-move="interaction.handleMove"
         @point-up="interaction.handleUp"
+        @point-cancel="interaction.cancel"
         @point-leave="interaction.handleLeave"
       />
     </div>

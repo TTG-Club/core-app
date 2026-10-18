@@ -8,14 +8,20 @@
   /**
    * Сооружения бастиона: цвет на плане и счётчик «занято / можно». Сооружение
    * назначается комнате в её карточке или перетаскивается на план готовой
-   * обставленной комнатой — пока его ещё нет на плане.
+   * обставленной комнатой — пока его ещё нет на плане. Там, где
+   * перетаскивания нет (телефон, планшет), сооружение выбирают касанием, а
+   * потом касаются места на плане.
    */
-  const { facilities, canEdit } = defineProps<{
+  const { facilities, canEdit, pickedId } = defineProps<{
     facilities: ReadonlyArray<PlanPaletteFacility>;
     canEdit: boolean;
+    /** Сооружение, выбранное касанием: ждёт касания плана. */
+    pickedId: string | undefined;
   }>();
 
   const emit = defineEmits<{
+    /** Сооружение выбрали касанием, чтобы поставить его на план. */
+    'pick': [facility: PlanPaletteFacility];
     /** Сооружение взяли, чтобы перетащить на план. */
     'drag-start': [facility: PlanPaletteFacility];
     'drag-end': [];
@@ -114,8 +120,12 @@
       :class="{
         'cursor-grab hover:bg-elevated active:cursor-grabbing':
           isDraggable(facility),
+        'bg-elevated ring-1 ring-primary': facility.id === pickedId,
       }"
       :draggable="isDraggable(facility)"
+      @click.left.exact.prevent="
+        isDraggable(facility) && emit('pick', facility)
+      "
       @dragstart="handleDragStart($event, facility)"
       @dragend="emit('drag-end')"
     >
