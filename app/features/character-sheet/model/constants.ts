@@ -3874,6 +3874,14 @@ export const RAW_DETAIL_PATH_SUFFIX = 'raw';
 /** Эндпоинт поиска магических предметов (раздел «Магические предметы»). */
 export const MAGIC_ITEMS_SEARCH_PATH = '/api/v2/magic-items/search';
 
+/**
+ * Параметры поиска магических предметов для листа персонажа: варианты вроде
+ * «Стрела +1», скрытые из списка раздела, в лист добавлять можно.
+ */
+export const MAGIC_ITEMS_SEARCH_SHEET_QUERY = {
+  includeUnlisted: true,
+} as const;
+
 /** Базовый путь детали магического предмета. */
 export const MAGIC_ITEMS_DETAIL_BASE_PATH = MAGIC_ITEM_API_PATH;
 
