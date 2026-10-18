@@ -75,6 +75,7 @@
       damageParts: [],
       focus: false,
       adamantine: false,
+      showInList: true,
       mechanics: createEmptyMagicItemMechanics(),
       tags: [],
     };
@@ -207,6 +208,17 @@
                   />
                 </UFormField>
               </div>
+
+              <UFormField
+                class="col-span-full"
+                name="showInList"
+              >
+                <USwitch
+                  v-model="state.showInList"
+                  :label="MAGIC_ITEM_FORM_LABELS.showInList"
+                  :description="MAGIC_ITEM_FORM_LABELS.showInListHint"
+                />
+              </UFormField>
             </div>
           </UCard>
 
