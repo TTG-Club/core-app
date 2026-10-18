@@ -1,5 +1,5 @@
 import type { NameResponse, SourceResponse } from '~/shared/types';
-import type { FacilityRoomTemplate } from '~bastion-game/model';
+import type { FurnitureKind } from '~bastion-game/model';
 import type { EditorBaseInfoState } from '~ui/editor';
 
 /** Код приказа бастиона — публичный контракт бэкенда (`BastionOrder`). */
@@ -171,8 +171,8 @@ export interface BastionFacilityCreate extends EditorBaseInfoState {
   orderOptions: Array<FacilityOrderOptionForm>;
   /** `null` — сооружение не расширяется. */
   enlargement: FacilityEnlargementForm | null;
-  /** Шаблоны комнаты на плане бастиона, по одному на пространство; нет — мебель расставит план. */
-  roomTemplates: Array<FacilityRoomTemplate>;
+  /** Предметы интерьера готовой комнаты на плане бастиона; пусто — набор по умолчанию. */
+  furniture: Array<FurnitureKind>;
   features: Array<FacilityFeatureForm>;
   choices: Array<FacilityChoiceForm>;
 }

@@ -14,7 +14,6 @@ import type {
   RoomKind,
   TowerShape,
 } from './plan-schema';
-import type { FacilityRoomTemplate } from './schema';
 
 import { fillTemplate } from '~bastions/model';
 
@@ -1558,8 +1557,8 @@ export interface PlanPaletteFacility {
   name: string;
   /** Адрес сооружения в справочнике: по нему подбирается мебель. */
   facilityUrl: string;
-  /** Шаблон готовой комнаты из справочника. */
-  roomTemplate: FacilityRoomTemplate | undefined;
+  /** Предметы интерьера из справочника; пусто — набор по виду сооружения. */
+  furniture: ReadonlyArray<FurnitureKind>;
   characterName: string;
   squares: number;
   used: number;
@@ -1582,7 +1581,7 @@ export function createPaletteFacilities(
       name: string;
       facilityUrl: string;
       space: { squares: number };
-      roomTemplate?: FacilityRoomTemplate | null;
+      furniture?: ReadonlyArray<FurnitureKind> | null;
     }>;
   }>,
   document: PlanDocument,
@@ -1595,7 +1594,7 @@ export function createPaletteFacilities(
         id: facility.id,
         name: facility.name,
         facilityUrl: facility.facilityUrl,
-        roomTemplate: facility.roomTemplate ?? undefined,
+        furniture: facility.furniture ?? [],
         characterName: member.characterName,
         squares: facility.space.squares,
         used: areas.get(facility.id) ?? 0,
