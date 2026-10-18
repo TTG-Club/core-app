@@ -25,9 +25,6 @@ export const HOME_HERO_ADMIN_PAGE_TITLE = 'Фон шапки главной';
 /** Заголовок вкладки браузера — по образцу соседних страниц настроек. */
 export const HOME_HERO_ADMIN_SEO_TITLE = `${HOME_HERO_ADMIN_PAGE_TITLE}: Настройки`;
 
-export const HOME_HERO_ADMIN_PAGE_DESCRIPTION =
-  'Своя картинка или видео вместо карты в шапке главной';
-
 export const HOME_HERO_ADMIN_NAVIGATION_ICON = 'tabler:photo-edit';
 
 export const HOME_HERO_PREVIEW_PAGE_TITLE = 'Превью шапки главной';

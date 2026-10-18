@@ -16,6 +16,11 @@ import {
   MAILING_ROUTE,
 } from '~admin/mailing/model';
 import {
+  CODES_ADMIN_ROUTE,
+  CODES_NAVIGATION_ICON,
+  CODES_PAGE_TITLE,
+} from '~admin/subscriptions/model';
+import {
   ADMIN_USERS_NAVIGATION_ICON,
   ADMIN_USERS_NAVIGATION_LABEL,
 } from '~admin/users/model';
@@ -24,7 +29,10 @@ import {
   VTTG_COMPENDIUM_NAVIGATION_ICON,
   VTTG_COMPENDIUM_PAGE_TITLE,
 } from '~admin/vttg-compendium/model';
-import { ARTICLES_ADMIN_ROUTE } from '~articles/model';
+import {
+  ARTICLES_ADMIN_CREATE_ROUTE,
+  ARTICLES_ADMIN_ROUTE,
+} from '~articles/model';
 
 /** Маршрут главной страницы админ-панели (дашборд со статистикой) */
 export const ADMIN_DASHBOARD_ROUTE = '/admin';
@@ -59,9 +67,15 @@ export const ADMIN_NAVIGATION_ITEMS: NavigationItem[] = [
     to: '/admin/users',
   },
   {
+    label: CODES_PAGE_TITLE,
+    icon: CODES_NAVIGATION_ICON,
+    to: CODES_ADMIN_ROUTE,
+  },
+  {
     label: 'Статьи / Новости',
     icon: 'tabler:news',
     to: ARTICLES_ADMIN_ROUTE,
+    createRoute: ARTICLES_ADMIN_CREATE_ROUTE,
   },
   {
     label: HOME_HERO_ADMIN_PAGE_TITLE,
@@ -79,6 +93,14 @@ export const ADMIN_NAVIGATION_ITEMS: NavigationItem[] = [
     to: VTTG_COMPENDIUM_ADMIN_ROUTE,
   },
 ];
+
+/**
+ * Разделы админ-панели без самой главной — плитки на дашборде
+ */
+export const ADMIN_SECTION_ITEMS: ReadonlyArray<NavigationItem> =
+  ADMIN_NAVIGATION_ITEMS.filter(
+    (navigationItem) => navigationItem.to !== ADMIN_DASHBOARD_ROUTE,
+  );
 
 /**
  * Заголовок админ-панели

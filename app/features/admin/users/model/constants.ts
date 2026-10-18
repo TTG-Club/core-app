@@ -92,8 +92,6 @@ export const ADMIN_USERS_ROLE_PLACEHOLDER = 'Выбери роли';
 
 export const ADMIN_USERS_SAVE_LABEL = 'Сохранить';
 
-export const ADMIN_USERS_CONFIGURE_LABEL = 'Настроить';
-
 export const ADMIN_USERS_SAVED_TOAST = 'Роли пользователя обновлены';
 
 export const ADMIN_USERS_SAVE_ERROR_TOAST = 'Не удалось обновить роли';

@@ -1,23 +1,24 @@
 import type {
   AdminOnlinePreferenceCounts,
+  AdminOnlinePreferenceRow,
   AdminOnlinePreferenceSection,
-  AdminOnlineSiteCardRow,
+  AdminOnlinePreferenceSummary,
   AdminOnlineSiteStats,
 } from './types';
 
 import {
   ADMIN_ONLINE_PREFERENCES_PERCENT_SIGN,
   ADMIN_ONLINE_PREFERENCES_PERIOD_LABELS,
+  ADMIN_ONLINE_PREFERENCES_SHARE_MAX,
   ADMIN_ONLINE_PREFERENCES_SHARE_SEPARATOR,
   ADMIN_ONLINE_STATS_EMPTY_VALUE,
-  ADMIN_ONLINE_STATS_TOTAL_LABEL,
   ADMIN_ONLINE_STATS_VTTG_SITE_ID,
   ADMIN_ONLINE_STATS_VTTG_TABLE_SITE_ID,
 } from './constants';
 
 /**
  * Относится ли площадка к VTTG. Аудиторий у приложения две — запущенные приложения и
- * игроки за чужими столами, — но карточка у них одна: в отрыве друг от друга эти числа
+ * игроки за чужими столами, — но плитка у них одна: в отрыве друг от друга эти числа
  * не значат ничего, поэтому в общей сетке площадок обе пропускаются.
  */
 export function isVttgSite(siteId: string): boolean {
@@ -114,49 +115,52 @@ export function formatPreferencePeriod(days: number): string {
 }
 
 /**
- * Собирает строки карточки настройки в том же виде, что у карточек площадок: сначала
- * известные варианты в порядке панели настроек (даже с нулём — так видно, что вариантом
- * не пользуются), затем незнакомые значения из ответа и итог внизу. Без данных вместо
- * чисел прочерки.
+ * Собирает сводку настройки: сначала известные варианты в порядке панели настроек
+ * (даже с нулём — так видно, что вариантом не пользуются), затем незнакомые значения
+ * из ответа; итог — сумма всех вариантов. Без данных вместо чисел прочерки.
  */
-export function createPreferenceRows(
+export function createPreferenceSummary(
   section: AdminOnlinePreferenceSection,
   counts: Readonly<Record<string, number>> | null,
-): Array<AdminOnlineSiteCardRow> {
+): AdminOnlinePreferenceSummary {
   const knownValues = new Set(section.options.map(({ value }) => value));
 
   const unknownOptions = Object.keys(counts ?? {})
-    .filter((value) => !knownValues.has(value))
-    .map((value) => ({ label: value, value }));
+    .filter((preferenceValue) => !knownValues.has(preferenceValue))
+    .map((preferenceValue) => ({
+      label: preferenceValue,
+      value: preferenceValue,
+    }));
 
-  const options = [...section.options, ...unknownOptions];
+  const preferenceOptions = [...section.options, ...unknownOptions];
 
-  const total = options.reduce(
-    (sum, option) => sum + (counts?.[option.value] ?? 0),
+  const total = preferenceOptions.reduce(
+    (sum, preferenceOption) => sum + (counts?.[preferenceOption.value] ?? 0),
     0,
   );
 
-  const optionRows = options.map((option): AdminOnlineSiteCardRow => {
-    const count = counts?.[option.value] ?? 0;
-    const percent = total ? Math.round((count / total) * 100) : 0;
+  const optionRows = preferenceOptions.map(
+    (preferenceOption): AdminOnlinePreferenceRow => {
+      const count = counts?.[preferenceOption.value] ?? 0;
 
-    return {
-      divider: 'none',
-      isTotal: false,
-      label: option.label,
-      value: counts
-        ? `${count}${ADMIN_ONLINE_PREFERENCES_SHARE_SEPARATOR}${percent}${ADMIN_ONLINE_PREFERENCES_PERCENT_SIGN}`
-        : ADMIN_ONLINE_STATS_EMPTY_VALUE,
-    };
-  });
+      const share = total
+        ? Math.round((count / total) * ADMIN_ONLINE_PREFERENCES_SHARE_MAX)
+        : 0;
 
-  return [
-    ...optionRows,
-    {
-      divider: 'above',
-      isTotal: true,
-      label: ADMIN_ONLINE_STATS_TOTAL_LABEL,
-      value: counts ? String(total) : ADMIN_ONLINE_STATS_EMPTY_VALUE,
+      return {
+        label: preferenceOption.label,
+        share,
+        value: counts
+          ? `${count}${ADMIN_ONLINE_PREFERENCES_SHARE_SEPARATOR}${share}${ADMIN_ONLINE_PREFERENCES_PERCENT_SIGN}`
+          : ADMIN_ONLINE_STATS_EMPTY_VALUE,
+      };
     },
-  ];
+  );
+
+  return {
+    name: section.name,
+    rows: optionRows,
+    title: section.title,
+    total: counts ? String(total) : ADMIN_ONLINE_STATS_EMPTY_VALUE,
+  };
 }

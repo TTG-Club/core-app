@@ -10,7 +10,8 @@ export const ADMIN_GAME_STATISTICS_NUMBER_FORMAT = new Intl.NumberFormat(
   'ru-RU',
 );
 export const ADMIN_GAME_STATISTICS_TITLE = 'Игры';
-export const ADMIN_GAME_STATISTICS_TOTAL_LABEL = 'Всего игр';
+export const ADMIN_GAME_STATISTICS_TOTAL_HINT =
+  'Всего игр: опубликованные, без черновиков и удалённых.';
 export const ADMIN_GAME_STATISTICS_COMPLETED_LABEL = 'Завершено';
 export const ADMIN_GAME_STATISTICS_ERROR_TEXT =
   'Не удалось загрузить статистику игр. Нажмите «Обновить».';

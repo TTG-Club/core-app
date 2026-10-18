@@ -6,6 +6,7 @@ import type {
   RedemptionCodeResponse,
   RewardPerk,
   RewardTier,
+  SubscriptionSalesSwitchState,
   SubscriptionType,
 } from './types';
 
@@ -245,6 +246,12 @@ export const CODES_LIST_DATA_KEY = 'admin-subscription-codes';
 /** Заголовок страницы промокодов в админке. */
 export const CODES_PAGE_TITLE = 'Промокоды';
 
+/** Адрес страницы промокодов в админке. */
+export const CODES_ADMIN_ROUTE = '/admin/subscriptions';
+
+/** Иконка раздела промокодов в навигации админки. */
+export const CODES_NAVIGATION_ICON = 'tabler:ticket';
+
 /** SEO-заголовок страницы промокодов. */
 export const CODES_PAGE_SEO_TITLE = 'Промокоды: Настройки';
 
@@ -281,13 +288,43 @@ export function codesSearchEmptyText(query: string): string {
   return `По запросу «${query}» ничего не найдено`;
 }
 
-/** Карточка переключателя оплаты подписки на главной админки. */
-export const SUBSCRIPTION_SALES_CARD_TEXT = {
+/** Подпись включённой оплаты: она же подпись переключателя и тост после включения. */
+const SUBSCRIPTION_SALES_ENABLED_LABEL = 'Оплата подписки включена';
+
+/** Полоса переключателя оплаты подписки на главной админки. */
+export const SUBSCRIPTION_SALES_SWITCH_TEXT = {
   title: 'Оплата подписки',
-  description:
-    'Когда оплата выключена, кнопка «Оформить» у всех становится неактивной «скоро», а новые платежи не создаются.',
-  switchLabel: 'Оплата включена',
-  enabledToast: 'Оплата подписки включена',
+  enabledStatus: 'Включена',
+  disabledStatus: 'Выключена',
+  enabledDescription: 'Кнопка «Оформить» работает, новые платежи создаются.',
+  disabledDescription:
+    'У всех кнопка «Оформить» неактивна с пометкой «скоро», новые платежи не создаются.',
+  switchLabel: SUBSCRIPTION_SALES_ENABLED_LABEL,
+  enabledToast: SUBSCRIPTION_SALES_ENABLED_LABEL,
   disabledToast: 'Оплата подписки выключена',
   errorToast: 'Не удалось изменить настройку оплаты',
-} as const;
+};
+
+/**
+ * Полоса оплаты — табло состояния: цвет, значок и подпись меняются вместе, чтобы
+ * выключенную оплату было видно с первого взгляда. При выключенной карта перечёркнута.
+ */
+export const SUBSCRIPTION_SALES_SWITCH_ENABLED_STATE: SubscriptionSalesSwitchState =
+  {
+    color: 'success',
+    description: SUBSCRIPTION_SALES_SWITCH_TEXT.enabledDescription,
+    icon: 'tabler:credit-card',
+    iconClass: 'bg-success/15 text-success',
+    rootClass: 'border-success/40 bg-success/5',
+    status: SUBSCRIPTION_SALES_SWITCH_TEXT.enabledStatus,
+  };
+
+export const SUBSCRIPTION_SALES_SWITCH_DISABLED_STATE: SubscriptionSalesSwitchState =
+  {
+    color: 'warning',
+    description: SUBSCRIPTION_SALES_SWITCH_TEXT.disabledDescription,
+    icon: 'tabler:credit-card-off',
+    iconClass: 'bg-warning/15 text-warning',
+    rootClass: 'border-warning/40 bg-warning/5',
+    status: SUBSCRIPTION_SALES_SWITCH_TEXT.disabledStatus,
+  };

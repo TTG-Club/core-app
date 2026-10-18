@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   collectPreferencePeriods,
-  createPreferenceRows,
+  createPreferenceSummary,
   sumPreferencePeriod,
 } from '~admin/online/model';
 
@@ -44,7 +44,7 @@ describe('sumPreferencePeriod', () => {
   });
 });
 
-describe('createPreferenceRows', () => {
+describe('createPreferenceSummary', () => {
   const section = {
     name: 'theme',
     options: [
@@ -54,22 +54,24 @@ describe('createPreferenceRows', () => {
     title: 'Тема',
   };
 
-  it('держит известные варианты с нулём, незнакомые добавляет в конец, итог внизу', () => {
-    const rows = createPreferenceRows(section, { dark: 3, old: 1 });
+  it('держит известные варианты с нулём, незнакомые добавляет в конец, итог — сумма', () => {
+    const summary = createPreferenceSummary(section, { dark: 3, old: 1 });
 
     expect(
-      rows.map(({ label, value, isTotal }) => [label, value, isTotal]),
+      summary.rows.map(({ label, share, value }) => [label, value, share]),
     ).toEqual([
-      ['Светлая', '0 · 0%', false],
-      ['Темная', '3 · 75%', false],
-      ['old', '1 · 25%', false],
-      ['Всего', '4', true],
+      ['Светлая', '0 · 0%', 0],
+      ['Темная', '3 · 75%', 75],
+      ['old', '1 · 25%', 25],
     ]);
+
+    expect(summary.total).toBe('4');
   });
 
   it('без данных ставит прочерки', () => {
-    expect(
-      createPreferenceRows(section, null).map(({ value }) => value),
-    ).toEqual(['—', '—', '—']);
+    const summary = createPreferenceSummary(section, null);
+
+    expect(summary.rows.map(({ value }) => value)).toEqual(['—', '—']);
+    expect(summary.total).toBe('—');
   });
 });

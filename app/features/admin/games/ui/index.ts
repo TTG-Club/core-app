@@ -1,1 +1,1 @@
-export { default as AdminGameStatisticsCard } from './AdminGameStatisticsCard.vue';
+export { default as AdminGameStatisticsTile } from './AdminGameStatisticsTile.vue';

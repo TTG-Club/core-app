@@ -33,9 +33,6 @@ export const VTTG_COMPENDIUM_PAGE_TITLE = 'Версия компендиума V
 /** Заголовок вкладки браузера — по образцу соседних страниц настроек. */
 export const VTTG_COMPENDIUM_SEO_TITLE = `${VTTG_COMPENDIUM_PAGE_TITLE}: Настройки`;
 
-export const VTTG_COMPENDIUM_PAGE_DESCRIPTION =
-  'Версии Dev- и Прод-компендиума в одном месте: поднять — приложение VTTG перекачает канал целиком';
-
 export const VTTG_COMPENDIUM_NAVIGATION_ICON = 'tabler:versions';
 
 export const VTTG_COMPENDIUM_UPDATED_LABEL = 'Изменена';
