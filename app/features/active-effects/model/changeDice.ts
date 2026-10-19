@@ -10,8 +10,13 @@ import {
   ACTIVE_EFFECT_LABELS,
   hasConditionAlternatives,
   isOptionValueKey,
+  isSneakAttackKey,
+  SNEAK_ATTACK_CUNNING_STRIKE_COUNT_KEY,
+  SNEAK_ATTACK_CUNNING_STRIKE_KEY,
   SNEAK_ATTACK_DAMAGE_KEY,
   SNEAK_ATTACK_DICE_KEY,
+  SNEAK_ATTACK_MIN_DIE_KEY,
+  SNEAK_ATTACK_RIDER_KEY,
   splitConditionGroups,
 } from './constants';
 import { validateChangeOptionValue } from './weaponOverrides';
@@ -83,6 +88,21 @@ export function isRollDiceEffectChange(
 }
 
 /**
+ * Пояснения к значениям строк Скрытой атаки — зеркало `SNEAK_ATTACK_KEY_HINTS`
+ * VTTG.
+ */
+const SNEAK_ATTACK_KEY_HINTS: Readonly<Record<string, string>> = {
+  [SNEAK_ATTACK_DAMAGE_KEY]: ACTIVE_EFFECT_LABELS.changeSneakAttackDamageHint,
+  [SNEAK_ATTACK_DICE_KEY]: ACTIVE_EFFECT_LABELS.changeSneakAttackDiceHint,
+  [SNEAK_ATTACK_CUNNING_STRIKE_KEY]:
+    ACTIVE_EFFECT_LABELS.changeCunningStrikeHint,
+  [SNEAK_ATTACK_CUNNING_STRIKE_COUNT_KEY]:
+    ACTIVE_EFFECT_LABELS.changeCunningStrikeCountHint,
+  [SNEAK_ATTACK_RIDER_KEY]: ACTIVE_EFFECT_LABELS.changeSneakAttackRiderHint,
+  [SNEAK_ATTACK_MIN_DIE_KEY]: ACTIVE_EFFECT_LABELS.changeSneakAttackMinDieHint,
+};
+
+/**
  * Пояснение под значением строки: у ключей Скрытой атаки — их правило (раз в
  * ход, число костей), у кости к броску — «бросается заново». Зеркало
  * `describeValueHelp` из `EffectChangeRows.vue` VTTG в части, которая есть на
@@ -94,12 +114,10 @@ export function isRollDiceEffectChange(
 export function describeEffectChangeValueNote(
   change: Pick<EffectChange, 'key' | 'mode' | 'value'>,
 ): string | undefined {
-  if (change.key === SNEAK_ATTACK_DAMAGE_KEY) {
-    return ACTIVE_EFFECT_LABELS.changeSneakAttackDamageHint;
-  }
+  const sneakAttackHint = SNEAK_ATTACK_KEY_HINTS[change.key];
 
-  if (change.key === SNEAK_ATTACK_DICE_KEY) {
-    return ACTIVE_EFFECT_LABELS.changeSneakAttackDiceHint;
+  if (sneakAttackHint) {
+    return sneakAttackHint;
   }
 
   return isRollDiceEffectChange(change)
@@ -169,7 +187,7 @@ export function describeEffectChangeConditionWarning(
 
   if (
     isRollTimeDiceKey(change.key)
-    || change.key === SNEAK_ATTACK_DICE_KEY
+    || isSneakAttackKey(change.key)
     || change.key === CRIT_THRESHOLD_KEY
   ) {
     return undefined;

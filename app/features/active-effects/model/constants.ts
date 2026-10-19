@@ -577,11 +577,51 @@ export const SNEAK_ATTACK_DAMAGE_KEY = 'sneakAttack.damage';
 export const SNEAK_ATTACK_DICE_KEY = 'sneakAttack.dice';
 
 /**
+ * Ключ приёма Хитрого удара: строка на эффекте приёма («Отравить»,
+ * «Повалить»), значение — ЦЕНА в костях Скрытой атаки (формулой: `1`, `6`).
+ * Эффект приёма — обычный эффект «на цель» с кнопкой «Применить»: окно атаки
+ * VTTG предлагает его, когда идёт Скрытая атака и костей хватает. Условие
+ * строки — когда приём доступен (набор отравителя, оружие).
+ */
+export const SNEAK_ATTACK_CUNNING_STRIKE_KEY = 'sneakAttack.cunningStrike';
+
+/**
+ * Ключ прибавки к числу приёмов Хитрого удара за один удар: один — по
+ * правилу, «Улучшенный хитрый удар» прибавляет `1`.
+ */
+export const SNEAK_ATTACK_CUNNING_STRIKE_COUNT_KEY =
+  'sneakAttack.cunningStrikeCount';
+
+/**
+ * Ключ эффекта по выбору при уроне Скрытой атаки, который приёмом Хитрого
+ * удара не считается («Раздирание разума» Клинка души): значение — цена в
+ * костях (обычно `0`), в число приёмов не входит.
+ */
+export const SNEAK_ATTACK_RIDER_KEY = 'sneakAttack.rider';
+
+/**
+ * Ключ наименьшего значения кости Скрытой атаки: «результат 1 или 2 считайте
+ * за 3» («Убийственное намерение») — значение `3`. Из нескольких строк
+ * берётся наибольшее.
+ */
+export const SNEAK_ATTACK_MIN_DIE_KEY = 'sneakAttack.minDie';
+
+/**
  * Кости Скрытой атаки плута по уровню в классе: 1к6 на 1-м, +1к6 на каждом
  * нечётном (10к6 на 19-м).
  */
 export const SNEAK_ATTACK_DICE_FORMULA =
   '(1 + steps(@classLevel, 3, 5, 7, 9, 11, 13, 15, 17, 19))к6';
+
+/** Все ключи Скрытой атаки: их читает окно атаки VTTG, а не лист. */
+const SNEAK_ATTACK_KEYS: ReadonlySet<string> = new Set([
+  SNEAK_ATTACK_DAMAGE_KEY,
+  SNEAK_ATTACK_DICE_KEY,
+  SNEAK_ATTACK_CUNNING_STRIKE_KEY,
+  SNEAK_ATTACK_CUNNING_STRIKE_COUNT_KEY,
+  SNEAK_ATTACK_RIDER_KEY,
+  SNEAK_ATTACK_MIN_DIE_KEY,
+]);
 
 /**
  * Относится ли ключ к Скрытой атаке. Такие строки — не числа листа: их читает
@@ -591,7 +631,7 @@ export const SNEAK_ATTACK_DICE_FORMULA =
  * @returns `true` для `sneakAttack.*`.
  */
 export function isSneakAttackKey(key: string): boolean {
-  return key === SNEAK_ATTACK_DAMAGE_KEY || key === SNEAK_ATTACK_DICE_KEY;
+  return SNEAK_ATTACK_KEYS.has(key);
 }
 
 /** Ключ второго типа существа: добавляется к своему, а не заменяет его. */
@@ -707,6 +747,22 @@ export const EFFECT_TARGET_KEY_SUGGESTIONS: Array<Option<string>> = [
   {
     value: SNEAK_ATTACK_DICE_KEY,
     label: 'Скрытая атака: прибавка к числу костей',
+  },
+  {
+    value: SNEAK_ATTACK_CUNNING_STRIKE_KEY,
+    label: 'Хитрый удар: приём (цена в костях Скрытой атаки)',
+  },
+  {
+    value: SNEAK_ATTACK_CUNNING_STRIKE_COUNT_KEY,
+    label: 'Хитрый удар: прибавка к числу приёмов за удар',
+  },
+  {
+    value: SNEAK_ATTACK_RIDER_KEY,
+    label: 'Скрытая атака: эффект по выбору при её уроне (цена в костях)',
+  },
+  {
+    value: SNEAK_ATTACK_MIN_DIE_KEY,
+    label: 'Скрытая атака: наименьшее значение кости',
   },
 
   // Замены свойств оружия («Дубинка»)
@@ -1157,6 +1213,19 @@ export function joinConditionGroups(
 export const EFFECT_CARRIER_ARMOR_CONDITION_PREFIX = 'self.armor === ';
 
 /**
+ * Приставка условия «у носителя в снаряжении инструмент этого вида»: значение
+ * — вид инструмента (`baseToolType` VTTG), например `"poisoners-kit"`. Лист
+ * сайта его не считает: проверяет окно атаки VTTG.
+ */
+export const EFFECT_CARRIER_TOOL_CONDITION_PREFIX = 'self.tool === ';
+
+/** Вид инструмента «набор отравителя» — для приёма «Отравить». */
+export const POISONERS_KIT_TOOL = 'poisoners-kit';
+
+/** Условие «у носителя набор отравителя» — приём «Отравить» Хитрого удара. */
+export const POISONERS_KIT_CONDITION = `${EFFECT_CARRIER_TOOL_CONDITION_PREFIX}"${POISONERS_KIT_TOOL}"`;
+
+/**
  * Приставка условия «атака идёт этой характеристикой». Общая для модификаторов
  * («Ярость»: бонус урона только атакам Силой) и срабатываний.
  */
@@ -1241,6 +1310,23 @@ export const RANGED_WEAPON_CONDITION = `${WEAPON_RANGE_CONDITION_PREFIX}"ranged"
  * урона этим ножом, если идёт Скрытая атака»).
  */
 export const SNEAK_ATTACK_APPLIED_CONDITION = 'attack.sneakAttack === true';
+
+/**
+ * Приставка условия «идёт раунд боя N» — та же строка, что у срабатываний
+ * (`combat.round === 1`): «Ликвидация» Убийцы действует в первом раунде. Вне
+ * боя номера нет, и условие не выполняется.
+ */
+export const EFFECT_COMBAT_ROUND_CONDITION_PREFIX = 'combat.round === ';
+
+/** Приставка условия «идёт раунд боя не раньше N» — как у срабатываний. */
+export const EFFECT_COMBAT_ROUND_AT_LEAST_CONDITION_PREFIX = 'combat.round >= ';
+
+/**
+ * Условие «цель ещё не ходила в этом бою»: в первом раунде её место в порядке
+ * инициативы ещё не наступило. Считает VTTG по трекеру инициативы, вне боя не
+ * выполняется.
+ */
+export const EFFECT_TARGET_NOT_ACTED_CONDITION = 'target.hasActed === false';
 
 /**
  * Условие «цель помечена мной»: цель несёт эффект с флагом `mark.bySource`,
@@ -1336,6 +1422,7 @@ export const EFFECT_TRIGGER_FIXED_CONDITIONS: Partial<
   otherBloodied: 'target.hp.value <= (target.hp.max / 2)',
   attackLanded: 'attack.landed === true',
   attackMissed: 'attack.landed === false',
+  attackSneakAttack: SNEAK_ATTACK_APPLIED_CONDITION,
   movementOwn: 'move.forced === false',
   movementForced: 'move.forced === true',
   spellVerbal: 'spell.verbal === true',
@@ -1538,6 +1625,18 @@ export const EFFECT_CONDITION_EXPR_SUGGESTIONS: ReadonlyArray<EffectLibrarySugge
             + 'рядом с целью без помехи.',
         },
         {
+          value: `${EFFECT_COMBAT_ROUND_CONDITION_PREFIX}1`,
+          label: 'Бой: первый раунд',
+          hint: 'Вне боя не выполняется.',
+        },
+        {
+          value: EFFECT_TARGET_NOT_ACTED_CONDITION,
+          label: 'Цель: ещё не ходила в этом бою',
+          hint:
+            'По порядку инициативы: в первом раунде её ход ещё впереди. Вне '
+            + 'боя не выполняется.',
+        },
+        {
           value: SNEAK_ATTACK_APPLIED_CONDITION,
           label: 'Атака: идёт Скрытая атака',
           hint: 'Строка добавляется, только если кости Скрытой атаки вошли в этот урон.',
@@ -1590,6 +1689,13 @@ export const EFFECT_CONDITION_EXPR_SUGGESTIONS: ReadonlyArray<EffectLibrarySugge
           value: `${EFFECT_CARRIER_ARMOR_CONDITION_PREFIX}"${armor.value}"`,
           label: `Носитель: ${armor.label}`,
         })),
+        // Лист сайта инструменты не считает: строка с этим условием в
+        // постоянные числа не идёт, её проверяет окно атаки VTTG
+        {
+          value: POISONERS_KIT_CONDITION,
+          label: 'Носитель: с набором отравителя',
+          hint: 'Инструмент этого вида есть в снаряжении — «Отравить» Хитрого удара.',
+        },
         {
           value: `${EFFECT_CARRIER_ARMOR_CONDITION_PREFIX}"none" ${EFFECT_CONDITION_AND_SEPARATOR} ${EFFECT_CARRIER_ARMOR_CONDITION_PREFIX}"noShield"`,
           label: 'Носитель: без доспеха и без щита',
@@ -2824,6 +2930,7 @@ export const EFFECT_TRIGGER_CONDITION_PHRASES: Record<
     `атака считается характеристикой «${abilityLabel}»`,
   attackLanded: () => 'атака попала',
   attackMissed: () => 'атака промахнулась',
+  attackSneakAttack: () => 'урон нанесён Скрытой атакой',
   combatRoundIs: (round) => `на ${round}-м раунде боя`,
   combatRoundAtLeast: (round) => `с ${round}-го раунда боя`,
   movementOwn: () => 'носитель шёл сам',
@@ -2931,6 +3038,18 @@ export const ACTIVE_EFFECT_LABELS = {
     + 'строка не подействует нигде. Разбейте её на строки без «||».',
   changeSneakAttackDiceHint:
     'Число костей, прибавляемых к Скрытой атаке, когда она идёт: «1» — +1к6.',
+  changeCunningStrikeHint:
+    'Цена приёма в костях Скрытой атаки: «1» — минус 1к6 до броска. Строка '
+    + 'ставится на кнопку «Применить» с эффектом на цель (спасбросок, '
+    + 'состояние); в окне атаки приём выбирают, когда идёт Скрытая атака. '
+    + 'Условие строки — когда приём доступен.',
+  changeCunningStrikeCountHint:
+    'Сколько приёмов Хитрого удара прибавить к одному за удар: «1» — два.',
+  changeSneakAttackRiderHint:
+    'Эффект кнопки по выбору при уроне Скрытой атаки, не приём Хитрого удара: '
+    + 'значение — цена в костях (обычно «0»), ресурс — счётчик кнопки.',
+  changeSneakAttackMinDieHint:
+    'Наименьшее значение кости Скрытой атаки: «3» — 1 и 2 считаются за 3.',
   changeValueReadablePrefix: 'Значение: ',
   changeDiceNotRolledError:
     'Здесь кость никто не бросит: она работает только у атак, спасбросков, '
@@ -4642,6 +4761,7 @@ export const EFFECT_TRIGGER_CONDITION_KIND_LABELS: Record<
   attackAbility: 'Атака считается характеристикой',
   attackLanded: 'Атака попала',
   attackMissed: 'Атака промахнулась',
+  attackSneakAttack: 'Атака нанесла урон Скрытой атакой',
   combatRoundIs: 'Идёт раунд боя',
   combatRoundAtLeast: 'Раунд боя не раньше',
   movementOwn: 'Носитель шёл сам',

@@ -31,6 +31,8 @@ import {
   EFFECT_CARRIER_TAG_NOT_CONDITION_PREFIX,
   EFFECT_CARRIER_TYPE_CONDITION_PREFIX,
   EFFECT_CARRIER_TYPE_NOT_CONDITION_PREFIX,
+  EFFECT_COMBAT_ROUND_AT_LEAST_CONDITION_PREFIX,
+  EFFECT_COMBAT_ROUND_CONDITION_PREFIX,
   EFFECT_DAMAGE_TYPE_CONDITION_PREFIX,
   EFFECT_DAMAGE_TYPE_NOT_CONDITION_PREFIX,
   EFFECT_TARGET_SPECIES_CONDITION_PREFIX,
@@ -126,6 +128,7 @@ export const TRIGGER_CONDITION_KINDS = [
   'attackAbility',
   'attackLanded',
   'attackMissed',
+  'attackSneakAttack',
   'combatRoundIs',
   'combatRoundAtLeast',
   'movementOwn',
@@ -173,6 +176,7 @@ export const TRIGGER_CONDITION_KINDS = [
  * - `attackKind` — вид атаки события;
  * - `attackAbility` — атака считается этой характеристикой;
  * - `attackLanded` / `attackMissed` — атака попала / промахнулась;
+ * - `attackSneakAttack` — кости Скрытой атаки вошли в урон этой атаки;
  * - `combatRoundIs` / `combatRoundAtLeast` — идёт раунд боя N / раунд не
  *   раньше N (расписание «на втором раунде», «с третьего раунда»);
  * - `movementOwn` / `movementForced` — носитель шёл сам / его переставили
@@ -267,6 +271,8 @@ const KIND_EVENTS: Record<
   attackAbility: ATTACK_DATA_TRIGGER_EVENTS,
   attackLanded: ATTACK_DATA_TRIGGER_EVENTS,
   attackMissed: ATTACK_DATA_TRIGGER_EVENTS,
+  // Скрытая атака известна только броску атаки: при наложении её нет
+  attackSneakAttack: ['attackRoll'],
   combatRoundIs: COMBAT_ROUND_TRIGGER_EVENTS,
   combatRoundAtLeast: COMBAT_ROUND_TRIGGER_EVENTS,
   movementOwn: MOVEMENT_TRIGGER_EVENTS,
@@ -366,8 +372,14 @@ const PARAMETRIC_PARTS: Partial<
   },
   selfAbilityAtMost: { prefix: 'self.ability[', parameter: 'ability' },
   selfAbilityAtLeast: { prefix: 'self.ability[', parameter: 'ability' },
-  combatRoundIs: { prefix: 'combat.round === ', parameter: 'number' },
-  combatRoundAtLeast: { prefix: 'combat.round >= ', parameter: 'number' },
+  combatRoundIs: {
+    prefix: EFFECT_COMBAT_ROUND_CONDITION_PREFIX,
+    parameter: 'number',
+  },
+  combatRoundAtLeast: {
+    prefix: EFFECT_COMBAT_ROUND_AT_LEAST_CONDITION_PREFIX,
+    parameter: 'number',
+  },
 };
 
 /**
