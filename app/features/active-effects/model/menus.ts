@@ -31,6 +31,11 @@ import {
   SAVE_VS_CONDITION_FLAG_KEYS,
   SHILLELAGH_DAMAGE_TYPE,
   SHILLELAGH_WEAPON_CONDITION,
+  SNEAK_ATTACK_APPLIED_CONDITION,
+  SNEAK_ATTACK_CONDITION,
+  SNEAK_ATTACK_DAMAGE_KEY,
+  SNEAK_ATTACK_DICE_FORMULA,
+  SNEAK_ATTACK_DICE_KEY,
   SPELL_DAMAGE_TYPE_DEFAULT,
   SPELL_DAMAGE_TYPE_KEY,
   THROWN_WEAPON_CONDITION,
@@ -512,6 +517,27 @@ const EFFECT_MODIFIER_READY_PRESETS: EffectModifierPreset[] = [
     label: 'Урон: +2к6 только по нежити',
     mode: 'add',
     value: '2к6@target.type.undead',
+  },
+  // Скрытая атака 2024: 1к6 на 1-м уровне плута и ещё 1к6 каждые два уровня
+  {
+    key: SNEAK_ATTACK_DAMAGE_KEY,
+    label: 'Скрытая атака: 1к6 → 10к6 по уровню плута',
+    mode: 'add',
+    value: SNEAK_ATTACK_DICE_FORMULA,
+    condition: SNEAK_ATTACK_CONDITION,
+  },
+  {
+    key: SNEAK_ATTACK_DICE_KEY,
+    label: 'Скрытая атака: +1к6 к её костям',
+    mode: 'add',
+    value: '1',
+  },
+  {
+    key: 'damage.weapon',
+    label: 'Урон предмета: +1к6, если идёт Скрытая атака',
+    mode: 'add',
+    value: '1к6',
+    condition: SNEAK_ATTACK_APPLIED_CONDITION,
   },
   // «Дубинка»: кость растёт по уровню заклинателя — к8, к10, к12, 2к6
   {

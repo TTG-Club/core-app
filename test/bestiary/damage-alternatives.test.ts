@@ -7,6 +7,7 @@ import {
   createCreatureDamageAlternative,
   createEmptyCreatureActionEffect,
   CREATURE_ACTION_EFFECT_CONTEXTS,
+  creatureDamageAlternativeNeedsAdvantage,
   getCreatureActionCombatFilledCount,
   getCreatureDamageAlternativeView,
   MAX_CREATURE_DAMAGE_ALTERNATIVES,
@@ -254,6 +255,68 @@ describe('вариант в форме', () => {
       getCreatureDamageAlternativeView(createAlternative('ask', '2к8'), false)
         .lacksStatus,
     ).toBe(false);
+  });
+
+  it('«@roll.advantage» в формуле — вариант «с преимуществом», берётся сам', () => {
+    const advantageFormula = `${CHIMERA_ADVANTAGE_FORMULA}@roll.advantage`;
+
+    const alternativeView = getCreatureDamageAlternativeView(
+      createAlternative('formula', advantageFormula),
+      false,
+    );
+
+    expect(alternativeView.isAutomatic).toBe(true);
+
+    expect(alternativeView.automaticCaption).toBe(
+      'Берётся сам — если атака с преимуществом',
+    );
+
+    expect(alternativeView.lacksStatus).toBe(false);
+
+    // Вместе с состоянием — обе фразы, преимущество первым
+    expect(
+      getCreatureDamageAlternativeView(
+        createAlternative(
+          'formula',
+          `${SWARM_BLOODIED_FORMULA} + 1@roll.advantage`,
+        ),
+        false,
+      ).automaticCaption,
+    ).toBe(
+      'Берётся сам — если атака с преимуществом и если у атакующего: Окровавленный',
+    );
+
+    // Токен в формуле ставит способ «по формуле»; значения способа не новые
+    expect(
+      replaceCreatureDamageAlternativeParts(createAlternative('ask', '2к8'), [
+        createPart(advantageFormula),
+      ]).condition,
+    ).toBe('formula');
+
+    expect(creatureDamageAlternativeNeedsAdvantage([createPart('2к8')])).toBe(
+      false,
+    );
+  });
+
+  it('вариант с «@roll.advantage» проходит разбор и отправку как есть', () => {
+    const advantageFormula = '4к6 + 4@roll.advantage';
+
+    const effect = normalizeCreatureActionEffect(
+      parseLoadedCreatureActionEffect({
+        damageAlternatives: [
+          createLoadedAlternative('formula', advantageFormula),
+        ],
+      }),
+      CREATURE_ACTION_EFFECT_CONTEXTS.actions,
+    );
+
+    expect(effect.damageAlternatives).toEqual([
+      {
+        condition: 'formula',
+        label: undefined,
+        damageParts: [createPart(advantageFormula)],
+      },
+    ]);
   });
 
   it('состояние цели у действия с областью предупреждает', () => {

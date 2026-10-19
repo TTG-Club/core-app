@@ -31,7 +31,6 @@ import {
   EFFECT_CARRIER_TAG_NOT_CONDITION_PREFIX,
   EFFECT_CARRIER_TYPE_CONDITION_PREFIX,
   EFFECT_CARRIER_TYPE_NOT_CONDITION_PREFIX,
-  EFFECT_CONDITION_AND_SEPARATOR,
   EFFECT_DAMAGE_TYPE_CONDITION_PREFIX,
   EFFECT_DAMAGE_TYPE_NOT_CONDITION_PREFIX,
   EFFECT_TARGET_SPECIES_CONDITION_PREFIX,
@@ -39,9 +38,12 @@ import {
   EFFECT_TARGET_TYPE_CONDITION_PREFIX,
   EFFECT_TARGET_TYPE_NOT_CONDITION_PREFIX,
   EFFECT_TRIGGER_FIXED_CONDITIONS,
+  hasConditionAlternatives,
   isEffectAbility,
   isEffectCreatureSize,
   isEffectDamageType,
+  joinConditionGroups,
+  splitConditionGroups,
   splitConditionParts,
 } from './constants';
 import { isCreatureTypeList } from './creatureTypeCondition';
@@ -656,12 +658,20 @@ export function parseTriggerConditionPart(
  * Части условия срабатывания: разобранные и строки, которых словарь не знает
  * (их форма показывает как есть, чтобы не терять).
  *
+ * Условие с «или» форма по частям не разбирает: оно приходит одной строкой как
+ * есть, а `writeTriggerCondition` при добавлении к нему частей раскрывает
+ * скобки сам — «(a или b) и c» становится «a и c или b и c».
+ *
  * @param condition условие срабатывания.
  * @returns части по порядку.
  */
 export function readTriggerConditionParts(
   condition: string | undefined,
 ): Array<TriggerConditionPart | string> {
+  if (condition && hasConditionAlternatives(condition)) {
+    return [condition.trim()];
+  }
+
   return splitConditionParts(condition ?? '').map(
     (text) => parseTriggerConditionPart(text) ?? text,
   );
@@ -676,15 +686,25 @@ export function readTriggerConditionParts(
 export function writeTriggerCondition(
   parts: ReadonlyArray<TriggerConditionPart | string>,
 ): string | undefined {
-  const texts = parts
+  // Части соединяются «и»; часть с «или» умножает группы: скобок в условии
+  // нет, и «(a или b) и c» пишется как «a и c или b и c»
+  const groups = parts
     .map((part) =>
       typeof part === 'string' ? part : buildTriggerConditionPart(part),
     )
-    .filter((text) => text.length > 0);
+    .map(splitConditionGroups)
+    .filter((alternatives) => alternatives.length > 0)
+    .reduce<string[][]>(
+      (combined, alternatives) =>
+        combined.flatMap((group) =>
+          alternatives.map((alternative) => [...group, ...alternative]),
+        ),
+      [[]],
+    );
 
-  return texts.length > 0
-    ? texts.join(` ${EFFECT_CONDITION_AND_SEPARATOR} `)
-    : undefined;
+  const condition = joinConditionGroups(groups);
+
+  return condition.length > 0 ? condition : undefined;
 }
 
 /**

@@ -85,7 +85,7 @@ import {
   EFFECT_USE_DELIVERY_HINTS,
   isEffectConditionKey,
   isEffectDamageType,
-  splitConditionParts,
+  splitConditionGroups,
 } from './constants';
 import {
   parseCreatureTypeCondition,
@@ -594,14 +594,36 @@ function describeListCondition(part: string): string | undefined {
 
 /**
  * Подпись условия, в том числе составного: части, соединённые `&&`, читаются
- * как «… и …». Незнакомая часть отдаётся кодом — лучше показать автору
- * непонятную строку, чем скрыть от него условие целиком.
+ * как «… и …», группы, соединённые `||`, — как «… или …». Незнакомая часть
+ * отдаётся кодом — лучше показать автору непонятную строку, чем скрыть от него
+ * условие целиком.
  *
  * @param condition условие изменения.
  * @returns человекочитаемая подпись.
  */
 export function describeEffectChangeCondition(condition: string): string {
-  return splitConditionParts(condition)
+  // Условие целиком из словаря (Скрытая атака по правилам) — его подписью:
+  // четыре ветки «или» по частям читались бы хуже
+  const groups = splitConditionGroups(condition);
+
+  const wholeLabel =
+    groups.length > 1 ? CONDITION_LABELS.get(condition.trim()) : undefined;
+
+  if (wholeLabel) {
+    return wholeLabel;
+  }
+
+  return groups.map(describeConditionGroup).join(EFFECT_PHRASE_PARTS.orJoiner);
+}
+
+/**
+ * Подпись одной группы «и»: части через «и».
+ *
+ * @param group части группы.
+ * @returns подпись группы.
+ */
+function describeConditionGroup(group: readonly string[]): string {
+  return group
     .map((part) => {
       // Свои значения автора — раньше словаря: иначе образец из подсказок
       // отдал бы свою подпись

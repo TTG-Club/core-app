@@ -6,7 +6,12 @@
 
 import type { EffectChange } from './types';
 
-import { ACTIVE_EFFECT_LABELS, isOptionValueKey } from './constants';
+import {
+  ACTIVE_EFFECT_LABELS,
+  isOptionValueKey,
+  SNEAK_ATTACK_DAMAGE_KEY,
+  SNEAK_ATTACK_DICE_KEY,
+} from './constants';
 import { validateChangeOptionValue } from './weaponOverrides';
 
 /** Ключ «все проверки характеристик (и навыков)». */
@@ -48,6 +53,7 @@ export function isDiceFormulaValue(value: string): boolean {
 export function isRollTimeDiceKey(key: string): boolean {
   return (
     key === ATTACKS_AGAINST_KEY
+    || key === SNEAK_ATTACK_DAMAGE_KEY
     || key === ABILITY_CHECK_KEY
     || key === DEATH_SAVE_KEY
     || key.startsWith(DAMAGE_CHANGE_KEY_PREFIX)
@@ -67,10 +73,36 @@ export function isRollDiceEffectChange(
 ): boolean {
   return (
     !change.key.startsWith(DAMAGE_CHANGE_KEY_PREFIX)
+    && change.key !== SNEAK_ATTACK_DAMAGE_KEY
     && change.mode === 'add'
     && isRollTimeDiceKey(change.key)
     && isDiceFormulaValue(change.value)
   );
+}
+
+/**
+ * Пояснение под значением строки: у ключей Скрытой атаки — их правило (раз в
+ * ход, число костей), у кости к броску — «бросается заново». Зеркало
+ * `describeValueHelp` из `EffectChangeRows.vue` VTTG в части, которая есть на
+ * сайте.
+ *
+ * @param change строка модификатора.
+ * @returns текст пояснения либо `undefined`.
+ */
+export function describeEffectChangeValueNote(
+  change: Pick<EffectChange, 'key' | 'mode' | 'value'>,
+): string | undefined {
+  if (change.key === SNEAK_ATTACK_DAMAGE_KEY) {
+    return ACTIVE_EFFECT_LABELS.changeSneakAttackDamageHint;
+  }
+
+  if (change.key === SNEAK_ATTACK_DICE_KEY) {
+    return ACTIVE_EFFECT_LABELS.changeSneakAttackDiceHint;
+  }
+
+  return isRollDiceEffectChange(change)
+    ? ACTIVE_EFFECT_LABELS.changeRollDiceHint
+    : undefined;
 }
 
 /**

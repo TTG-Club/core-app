@@ -547,6 +547,42 @@ const TEMP_HP_GAIN_KEY = 'tempHp.gain';
  */
 const ATTACK_REACH_KEY = 'attack.reach';
 
+/**
+ * Ключ Скрытой атаки: кости, которые идут в урон атаки оружием, когда
+ * выполнено условие строки (`SNEAK_ATTACK_CONDITION`). Общий механизм для
+ * любого источника — класса, существа, черты, предмета.
+ *
+ * Метка Скрытой атаки — сам ключ, отдельного поля у строки нет: раз в ход,
+ * необязательность и «наибольший из источников» — правило ключа, одинаковое у
+ * всех источников. Кость в значении допустима, как у `damage.*`.
+ */
+export const SNEAK_ATTACK_DAMAGE_KEY = 'sneakAttack.damage';
+
+/**
+ * Ключ прибавки к костям Скрытой атаки: «+1к6 к Скрытой атаке». Значение —
+ * ЧИСЛО костей (формулой: `1`, `@prof`), их размер — как у самой Скрытой
+ * атаки.
+ */
+export const SNEAK_ATTACK_DICE_KEY = 'sneakAttack.dice';
+
+/**
+ * Кости Скрытой атаки плута по уровню в классе: 1к6 на 1-м, +1к6 на каждом
+ * нечётном (10к6 на 19-м).
+ */
+export const SNEAK_ATTACK_DICE_FORMULA =
+  '(1 + steps(@classLevel, 3, 5, 7, 9, 11, 13, 15, 17, 19))к6';
+
+/**
+ * Относится ли ключ к Скрытой атаке. Такие строки — не числа листа: их читает
+ * окно атаки VTTG в момент броска.
+ *
+ * @param key ключ строки эффекта.
+ * @returns `true` для `sneakAttack.*`.
+ */
+export function isSneakAttackKey(key: string): boolean {
+  return key === SNEAK_ATTACK_DAMAGE_KEY || key === SNEAK_ATTACK_DICE_KEY;
+}
+
 /** Ключ второго типа существа: добавляется к своему, а не заменяет его. */
 const EXTRA_CREATURE_TYPE_KEY = 'creatureType.extra';
 
@@ -653,6 +689,14 @@ export const EFFECT_TARGET_KEY_SUGGESTIONS: Array<Option<string>> = [
   { value: 'damage.all', label: 'Урон: весь наносимый' },
   { value: 'damage.weapon', label: 'Урон: только этим предметом' },
   { value: 'attack.weapon', label: 'Атака: только этим предметом' },
+  {
+    value: SNEAK_ATTACK_DAMAGE_KEY,
+    label: 'Скрытая атака: кости (раз в ход, можно не добавлять)',
+  },
+  {
+    value: SNEAK_ATTACK_DICE_KEY,
+    label: 'Скрытая атака: прибавка к числу костей',
+  },
 
   // Замены свойств оружия («Дубинка»)
   { value: WEAPON_DAMAGE_DICE_KEY, label: 'Оружие: кость урона' },
@@ -1007,10 +1051,22 @@ export const EFFECT_TARGET_TYPE_NOT_CONDITION_PREFIX =
  *
  * Это не выражение и не шаг к нему: каждая часть остаётся строкой из закрытого
  * перечня, а `&&` только позволяет требовать нескольких условий разом — «нет
- * доспеха И нет щита» у наручей защиты. Другой связки (`||`, отрицания,
- * скобок) намеренно нет: разбирать их пришлось бы парсером.
+ * доспеха И нет щита» у наручей защиты. Вторая связка — «или»
+ * (`EFFECT_CONDITION_OR_SEPARATOR`); отрицаний и скобок нет.
  */
 export const EFFECT_CONDITION_AND_SEPARATOR = '&&';
+
+/**
+ * Разделитель групп условия, соединённых «или»: `a && b || c` — «(a и b) или
+ * c». «И» связывает сильнее, скобок нет: условие — перечень групп, и выполнено
+ * оно, когда выполнена хоть одна группа целиком. Так записана Скрытая атака:
+ * (фехтовальное ∨ дальнобойное) × (преимущество ∨ союзник рядом без помехи) —
+ * четыре группы.
+ *
+ * Лист сайта «или» не считает: такая строка в постоянные числа не идёт, она
+ * проверяется только в броске VTTG.
+ */
+export const EFFECT_CONDITION_OR_SEPARATOR = '||';
 
 /**
  * Части составного условия.
@@ -1026,6 +1082,64 @@ export function splitConditionParts(condition: string): string[] {
     .split(EFFECT_CONDITION_AND_SEPARATOR)
     .map((part) => part.trim())
     .filter((part) => part.length > 0);
+}
+
+/**
+ * Группы условия, соединённые «или»; в каждой — части, соединённые «и».
+ * Условие без «или» — одна группа, так что оценка у всех одна: выполнена хоть
+ * одна группа целиком.
+ *
+ * @param condition условие изменения.
+ * @returns непустые группы непустых частей.
+ */
+export function splitConditionGroups(condition: string): string[][] {
+  return condition
+    .split(EFFECT_CONDITION_OR_SEPARATOR)
+    .map(splitConditionParts)
+    .filter((group) => group.length > 0);
+}
+
+/**
+ * Есть ли в условии «или». Такое условие считается только в броске: по листу
+ * его части не проверить по одной.
+ *
+ * @param condition условие изменения.
+ * @returns `true`, если групп больше одной.
+ */
+export function hasConditionAlternatives(condition: string): boolean {
+  return splitConditionGroups(condition).length > 1;
+}
+
+/**
+ * Выполнено ли условие: хоть одна группа «или», в которой выполнены все части
+ * «и». Пустое условие не выполнено — такое пишет только недописанная форма.
+ *
+ * @param condition условие изменения.
+ * @param partHolds проверка одной части.
+ * @returns `true`, если условие выполнено.
+ */
+export function conditionHolds(
+  condition: string,
+  partHolds: (part: string) => boolean,
+): boolean {
+  return splitConditionGroups(condition).some((group) =>
+    group.every(partHolds),
+  );
+}
+
+/**
+ * Собирает условие из групп «или» с частями «и».
+ *
+ * @param groups группы частей.
+ * @returns строка условия; пустых групп в ней нет.
+ */
+export function joinConditionGroups(
+  groups: ReadonlyArray<readonly string[]>,
+): string {
+  return groups
+    .filter((group) => group.length > 0)
+    .map((group) => group.join(` ${EFFECT_CONDITION_AND_SEPARATOR} `))
+    .join(` ${EFFECT_CONDITION_OR_SEPARATOR} `);
 }
 
 /** Приставка условия по надетому доспеху носителя. */
@@ -1097,6 +1211,26 @@ export const WEAPON_PROPERTY_CONDITION_PREFIX = 'weapon.property === ';
  */
 export const THROWN_WEAPON_CONDITION = `${WEAPON_PROPERTY_CONDITION_PREFIX}"thrown"`;
 
+/** Условие «оружие броска фехтовальное» — ветка Скрытой атаки. */
+export const FINESSE_WEAPON_CONDITION = `${WEAPON_PROPERTY_CONDITION_PREFIX}"finesse"`;
+
+/**
+ * Приставка условия «дальность самого оружия»: `weapon.rangeType === "ranged"`.
+ * Считается по ОРУЖИЮ, а не по виду атаки: лук и дротик — дальнобойное оружие,
+ * брошенный кинжал — рукопашное оружие, которым атакуют издали.
+ */
+export const WEAPON_RANGE_CONDITION_PREFIX = 'weapon.rangeType === ';
+
+/** Условие «оружие дальнобойное» (по самому оружию, не по виду атаки). */
+export const RANGED_WEAPON_CONDITION = `${WEAPON_RANGE_CONDITION_PREFIX}"ranged"`;
+
+/**
+ * Условие «в этой атаке идёт Скрытая атака»: истинно, только когда кости
+ * строки `sneakAttack.damage` реально вошли в урон. Для зависимых строк («+1к6
+ * урона этим ножом, если идёт Скрытая атака»).
+ */
+export const SNEAK_ATTACK_APPLIED_CONDITION = 'attack.sneakAttack === true';
+
 /**
  * Условие «цель помечена мной»: цель несёт эффект с флагом `mark.bySource`,
  * наложенный носителем условия (Метка охотника, Сглаз).
@@ -1109,6 +1243,13 @@ export const EFFECT_ROLL_ADVANTAGE_CONDITION = 'roll.hasAdvantage === true';
 /** Условие «бросок с помехой» — у модификаторов и у срабатываний. */
 export const EFFECT_ROLL_DISADVANTAGE_CONDITION =
   'roll.hasDisadvantage === true';
+
+/**
+ * Условие «у броска нет помехи». Погашенная преимуществом помеха — тоже «нет
+ * помехи»: по глоссарию 2024 они отменяют друг друга.
+ */
+export const EFFECT_ROLL_NO_DISADVANTAGE_CONDITION =
+  'roll.hasDisadvantage === false';
 
 /** Приставка условия срабатывания «урон этого типа». */
 export const EFFECT_DAMAGE_TYPE_CONDITION_PREFIX = 'damage.type === ';
@@ -1271,6 +1412,22 @@ export const ADJACENT_ALLY_CONDITION_OPTIONS: Array<Option<string>> = [
   ),
 ];
 
+/**
+ * Условие Скрытой атаки 2024: фехтовальное или дальнобойное оружие, и
+ * преимущество на атаку либо дееспособный союзник в 5 фт от цели без помехи на
+ * бросок. Четыре группы «или»: скобок в условиях нет.
+ */
+export const SNEAK_ATTACK_CONDITION = joinConditionGroups(
+  [FINESSE_WEAPON_CONDITION, RANGED_WEAPON_CONDITION].flatMap((weapon) => [
+    [weapon, EFFECT_ROLL_ADVANTAGE_CONDITION],
+    [
+      weapon,
+      EFFECT_TARGET_ALLY_ADJACENT_CONDITION,
+      EFFECT_ROLL_NO_DISADVANTAGE_CONDITION,
+    ],
+  ]),
+);
+
 /** Общая часть подписи условий «союзник рядом с целью». */
 export const ADJACENT_ALLY_CONDITION_LABEL = 'Цель: рядом с ней мой союзник';
 
@@ -1336,6 +1493,24 @@ export const EFFECT_CONDITION_EXPR_SUGGESTIONS: ReadonlyArray<EffectLibrarySugge
           value: EFFECT_ROLL_DISADVANTAGE_CONDITION,
           label: 'Бросок: уже идёт с помехой',
         },
+        {
+          value: EFFECT_ROLL_NO_DISADVANTAGE_CONDITION,
+          label: 'Бросок: без помехи',
+          hint: 'Помеха, погашенная преимуществом, — тоже «без помехи».',
+        },
+        {
+          value: SNEAK_ATTACK_CONDITION,
+          label: 'Скрытая атака: условие по правилам',
+          hint:
+            'Фехтовальное или дальнобойное оружие; преимущество либо союзник '
+            + 'рядом с целью без помехи. Группы соединены '
+            + `«${EFFECT_CONDITION_OR_SEPARATOR}» — нужна любая.`,
+        },
+        {
+          value: SNEAK_ATTACK_APPLIED_CONDITION,
+          label: 'Атака: идёт Скрытая атака',
+          hint: 'Строка добавляется, только если кости Скрытой атаки вошли в этот урон.',
+        },
         // Бонус урона оружия VTTG считает по характеристике, которой оно бьёт:
         // секира Силой получает «Ярость», рапира через Ловкость — нет
         {
@@ -1353,6 +1528,15 @@ export const EFFECT_CONDITION_EXPR_SUGGESTIONS: ReadonlyArray<EffectLibrarySugge
           value: THROWN_WEAPON_CONDITION,
           label: 'Оружие: метательное',
           hint: 'Сражение метательным оружием: вместе с «Урон: дальнобойная атака».',
+        },
+        {
+          value: FINESSE_WEAPON_CONDITION,
+          label: 'Оружие: фехтовальное',
+        },
+        {
+          value: RANGED_WEAPON_CONDITION,
+          label: 'Оружие: дальнобойное',
+          hint: 'По самому оружию: лук и дротик — да, брошенный кинжал — нет.',
         },
         // Только для замен свойств оружия (`weapon.*`): каждое оружие листа
         // сверяется со списком видов само
@@ -2701,6 +2885,11 @@ export const ACTIVE_EFFECT_LABELS = {
   changeValuePlaceholder: '+2, 1к4, @mod.spell',
   changeValueRequired: 'Без значения строка не сохранится',
   changeRollDiceHint: 'Кость бросается заново при каждом броске.',
+  changeSneakAttackDamageHint:
+    'Кости Скрытой атаки: тип урона — как у оружия, раз в ход, в окне атаки '
+    + 'их можно не добавлять. Из нескольких источников берётся наибольший.',
+  changeSneakAttackDiceHint:
+    'Число костей, прибавляемых к Скрытой атаке, когда она идёт: «1» — +1к6.',
   changeValueReadablePrefix: 'Значение: ',
   changeDiceNotRolledError:
     'Здесь кость никто не бросит: она работает только у атак, спасбросков, '
