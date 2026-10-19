@@ -1,5 +1,6 @@
 import type {
   CellSide,
+  FurnitureKind,
   PlanCell,
   PlanCircle,
   PlanDocument,
@@ -9,7 +10,11 @@ import type {
   RoomKind,
 } from './plan-schema';
 
-import { PLAN_FURNITURE_SIZES, PLAN_LIMITS } from './plan-constants';
+import {
+  PLAN_FLOOR_FURNITURE,
+  PLAN_FURNITURE_SIZES,
+  PLAN_LIMITS,
+} from './plan-constants';
 
 /** Точность сравнения: центр ровно на окружности считается внутри. */
 const EPSILON = 1e-9;
@@ -88,6 +93,34 @@ export function getFurnitureSize(
   return furniture.rotation % 180 === 0
     ? size
     : { width: size.depth, depth: size.width };
+}
+
+const FLOOR_FURNITURE = new Set<FurnitureKind>(PLAN_FLOOR_FURNITURE);
+
+/**
+ * Лежит ли предмет на полу (ковёр): он всегда под остальной мебелью.
+ *
+ * @param kind Вид предмета.
+ * @returns true, если предмет на полу.
+ */
+export function isFloorFurniture(kind: FurnitureKind): boolean {
+  return FLOOR_FURNITURE.has(kind);
+}
+
+/**
+ * Мебель в порядке отрисовки: сначала предметы на полу, потом остальные;
+ * внутри слоя порядок прежний.
+ *
+ * @param furniture Предметы.
+ * @returns Новый массив, последний предмет сверху.
+ */
+export function sortFurnitureByLayer<T extends Pick<PlanFurniture, 'kind'>>(
+  furniture: ReadonlyArray<T>,
+): Array<T> {
+  return [
+    ...furniture.filter((item) => isFloorFurniture(item.kind)),
+    ...furniture.filter((item) => !isFloorFurniture(item.kind)),
+  ];
 }
 
 /**

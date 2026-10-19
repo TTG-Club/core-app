@@ -123,6 +123,9 @@ export const PLAN_FACILITY_FURNITURE_DEFAULT: ReadonlyArray<FurnitureKind> = [
 /** Сколько пола готовой комнаты сооружения может занять мебель. */
 export const PLAN_FURNITURE_FILL_LIMIT = 0.6;
 
+/** Предметы на полу: лежат под остальной мебелью и не мешают ставить её сверху. */
+export const PLAN_FLOOR_FURNITURE: ReadonlyArray<FurnitureKind> = ['RUG'];
+
 /** Повороты предмета при случайной расстановке, градусы. */
 export const PLAN_FURNITURE_ROTATIONS: ReadonlyArray<number> = [
   0, 90, 180, 270,
