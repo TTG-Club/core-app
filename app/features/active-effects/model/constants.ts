@@ -1428,6 +1428,18 @@ export const SNEAK_ATTACK_CONDITION = joinConditionGroups(
   ]),
 );
 
+/**
+ * Условие Скрытой атаки существа: без частей про оружие. У действия существа
+ * нет свойств оружия, и условие плута у него не выполнялось бы никогда.
+ */
+export const SNEAK_ATTACK_CREATURE_CONDITION = joinConditionGroups([
+  [EFFECT_ROLL_ADVANTAGE_CONDITION],
+  [
+    EFFECT_TARGET_ALLY_ADJACENT_CONDITION,
+    EFFECT_ROLL_NO_DISADVANTAGE_CONDITION,
+  ],
+]);
+
 /** Общая часть подписи условий «союзник рядом с целью». */
 export const ADJACENT_ALLY_CONDITION_LABEL = 'Цель: рядом с ней мой союзник';
 
@@ -1505,6 +1517,13 @@ export const EFFECT_CONDITION_EXPR_SUGGESTIONS: ReadonlyArray<EffectLibrarySugge
             'Фехтовальное или дальнобойное оружие; преимущество либо союзник '
             + 'рядом с целью без помехи. Группы соединены '
             + `«${EFFECT_CONDITION_OR_SEPARATOR}» — нужна любая.`,
+        },
+        {
+          value: SNEAK_ATTACK_CREATURE_CONDITION,
+          label: 'Скрытая атака существа: без условия про оружие',
+          hint:
+            'У действия существа нет свойств оружия: преимущество либо союзник '
+            + 'рядом с целью без помехи.',
         },
         {
           value: SNEAK_ATTACK_APPLIED_CONDITION,
@@ -2888,6 +2907,9 @@ export const ACTIVE_EFFECT_LABELS = {
   changeSneakAttackDamageHint:
     'Кости Скрытой атаки: тип урона — как у оружия, раз в ход, в окне атаки '
     + 'их можно не добавлять. Из нескольких источников берётся наибольший.',
+  changeAlternativesIgnoredWarning:
+    '«Или» в условии считается только в броске, а этот ключ — число листа: '
+    + 'строка не подействует нигде. Разбейте её на строки без «||».',
   changeSneakAttackDiceHint:
     'Число костей, прибавляемых к Скрытой атаке, когда она идёт: «1» — +1к6.',
   changeValueReadablePrefix: 'Значение: ',

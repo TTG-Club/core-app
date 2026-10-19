@@ -33,6 +33,7 @@ import {
   SHILLELAGH_WEAPON_CONDITION,
   SNEAK_ATTACK_APPLIED_CONDITION,
   SNEAK_ATTACK_CONDITION,
+  SNEAK_ATTACK_CREATURE_CONDITION,
   SNEAK_ATTACK_DAMAGE_KEY,
   SNEAK_ATTACK_DICE_FORMULA,
   SNEAK_ATTACK_DICE_KEY,
@@ -525,6 +526,13 @@ const EFFECT_MODIFIER_READY_PRESETS: EffectModifierPreset[] = [
     mode: 'add',
     value: SNEAK_ATTACK_DICE_FORMULA,
     condition: SNEAK_ATTACK_CONDITION,
+  },
+  {
+    key: SNEAK_ATTACK_DAMAGE_KEY,
+    label: 'Скрытая атака существа: кости, без условия про оружие',
+    mode: 'add',
+    value: '2к6',
+    condition: SNEAK_ATTACK_CREATURE_CONDITION,
   },
   {
     key: SNEAK_ATTACK_DICE_KEY,

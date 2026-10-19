@@ -21,6 +21,7 @@
     DEFAULT_CHANGE_STEP_PER,
     DEFAULT_EFFECT_CHANGE_PRIORITY,
     DEFAULT_EFFECT_CHANGE_VALUE,
+    describeEffectChangeConditionWarning,
     describeEffectChangeValueError,
     describeEffectChangeValueLabel,
     describeEffectChangeValueNote,
@@ -85,6 +86,7 @@
         modeChoice: getEffectChangeModeChoice(change),
         shownValue: getEffectChangeShownValue(change),
         valueHint: describeEffectChangeValueNote(change),
+        conditionWarning: describeEffectChangeConditionWarning(change),
         valueReadable: describeEffectChangeValueLabel(change),
         hasStep: change.step !== undefined,
         /** Предел шага в поле: не заданный — пустое поле «без предела». */
@@ -442,6 +444,8 @@
 
       <UFormField
         :label="ACTIVE_EFFECT_LABELS.changeCondition"
+        :help="changeRow.conditionWarning"
+        :ui="{ help: 'text-warning' }"
         class="col-span-full"
       >
         <InputWithLibrary

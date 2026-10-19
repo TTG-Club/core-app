@@ -7,6 +7,7 @@ import {
   conditionHolds,
   describeEffectChange,
   describeEffectChangeCondition,
+  describeEffectChangeConditionWarning,
   describeEffectChangeValueError,
   describeEffectChangeValueNote,
   EFFECT_CONDITION_EXPR_SUGGESTIONS,
@@ -21,6 +22,7 @@ import {
   readTriggerConditionParts,
   SNEAK_ATTACK_APPLIED_CONDITION,
   SNEAK_ATTACK_CONDITION,
+  SNEAK_ATTACK_CREATURE_CONDITION,
   SNEAK_ATTACK_DAMAGE_KEY,
   SNEAK_ATTACK_DICE_FORMULA,
   SNEAK_ATTACK_DICE_KEY,
@@ -360,5 +362,39 @@ describe('лист сайта и Скрытая атака', () => {
         getConditionalDamageFormulas(resolved, { kind: 'attack', attackType }),
       ).toEqual([]);
     }
+  });
+});
+
+describe('доработки после ревью', () => {
+  it('условие Скрытой атаки существа — без частей про оружие', () => {
+    expect(SNEAK_ATTACK_CREATURE_CONDITION).toBe(
+      'roll.hasAdvantage === true || target.allyAdjacent && roll.hasDisadvantage === false',
+    );
+  });
+
+  it('«или» у ключа листа помечается предупреждением', () => {
+    const warn = (key: string, condition: string) =>
+      describeEffectChangeConditionWarning({ key, condition });
+
+    expect(
+      warn('armorClass', 'self.armor === "light" || self.armor === "medium"'),
+    ).toBeDefined();
+
+    expect(
+      warn('movement.walk', 'self.armor === "none" || self.armor === "light"'),
+    ).toBeDefined();
+
+    expect(
+      warn(
+        'armorClass',
+        'incoming.attackType === "ranged" || incoming.attackType === "spell"',
+      ),
+    ).toBeUndefined();
+
+    expect(
+      warn('damage.melee', 'roll.hasAdvantage === true || x'),
+    ).toBeUndefined();
+
+    expect(warn('armorClass', 'self.armor === "light"')).toBeUndefined();
   });
 });

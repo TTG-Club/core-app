@@ -8,9 +8,11 @@ import type { EffectChange } from './types';
 
 import {
   ACTIVE_EFFECT_LABELS,
+  hasConditionAlternatives,
   isOptionValueKey,
   SNEAK_ATTACK_DAMAGE_KEY,
   SNEAK_ATTACK_DICE_KEY,
+  splitConditionGroups,
 } from './constants';
 import { validateChangeOptionValue } from './weaponOverrides';
 
@@ -139,4 +141,47 @@ export function describeEffectChangeValueError(
   return change.mode === 'add'
     ? undefined
     : ACTIVE_EFFECT_LABELS.changeDiceModeError;
+}
+
+/** Ключ порога крита: его читает бросок атаки */
+const CRIT_THRESHOLD_KEY = 'critThreshold';
+
+/** Ключ КД: с условием входящей атаки его считает защита */
+const ARMOR_CLASS_KEY = 'armorClass';
+
+/** Приставка условий входящей атаки */
+const INCOMING_CONDITION_PREFIX = 'incoming.';
+
+/**
+ * Предупреждение условия строки: «или» у ключа, который считается только на
+ * листе (КД без условия входящей атаки, скорость), — такая строка не
+ * действует нигде. Зеркало `isIgnoredAlternativesCondition` VTTG.
+ *
+ * @param change строка модификатора.
+ * @returns текст предупреждения либо `undefined`.
+ */
+export function describeEffectChangeConditionWarning(
+  change: Pick<EffectChange, 'key' | 'condition'>,
+): string | undefined {
+  if (!change.condition || !hasConditionAlternatives(change.condition)) {
+    return undefined;
+  }
+
+  if (
+    isRollTimeDiceKey(change.key)
+    || change.key === SNEAK_ATTACK_DICE_KEY
+    || change.key === CRIT_THRESHOLD_KEY
+  ) {
+    return undefined;
+  }
+
+  const defendedByIncoming =
+    change.key === ARMOR_CLASS_KEY
+    && splitConditionGroups(change.condition)
+      .flat()
+      .some((part) => part.startsWith(INCOMING_CONDITION_PREFIX));
+
+  return defendedByIncoming
+    ? undefined
+    : ACTIVE_EFFECT_LABELS.changeAlternativesIgnoredWarning;
 }
