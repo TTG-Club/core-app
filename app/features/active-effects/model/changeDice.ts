@@ -17,6 +17,7 @@ import {
   SNEAK_ATTACK_DICE_KEY,
   SNEAK_ATTACK_MIN_DIE_KEY,
   SNEAK_ATTACK_RIDER_KEY,
+  SNEAK_ATTACK_SAVE_DOUBLE_KEY,
   splitConditionGroups,
 } from './constants';
 import { validateChangeOptionValue } from './weaponOverrides';
@@ -100,6 +101,8 @@ const SNEAK_ATTACK_KEY_HINTS: Readonly<Record<string, string>> = {
     ACTIVE_EFFECT_LABELS.changeCunningStrikeCountHint,
   [SNEAK_ATTACK_RIDER_KEY]: ACTIVE_EFFECT_LABELS.changeSneakAttackRiderHint,
   [SNEAK_ATTACK_MIN_DIE_KEY]: ACTIVE_EFFECT_LABELS.changeSneakAttackMinDieHint,
+  [SNEAK_ATTACK_SAVE_DOUBLE_KEY]:
+    ACTIVE_EFFECT_LABELS.changeSneakAttackSaveDoubleHint,
 };
 
 /**

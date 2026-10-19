@@ -607,6 +607,15 @@ export const SNEAK_ATTACK_RIDER_KEY = 'sneakAttack.rider';
 export const SNEAK_ATTACK_MIN_DIE_KEY = 'sneakAttack.minDie';
 
 /**
+ * Ключ спасброска цели при уроне Скрытой атаки, ПРОВАЛ которого удваивает урон
+ * всей атаки («Смертельный удар» Убийцы). Значение — характеристика
+ * спасброска (`constitution`), условие строки — когда («первый раунд»). Сл —
+ * правило ключа, как у Хитрого удара: 8 + Ловкость + БМ; считает окно атаки
+ * VTTG.
+ */
+export const SNEAK_ATTACK_SAVE_DOUBLE_KEY = 'sneakAttack.saveDouble';
+
+/**
  * Кости Скрытой атаки плута по уровню в классе: 1к6 на 1-м, +1к6 на каждом
  * нечётном (10к6 на 19-м).
  */
@@ -621,6 +630,7 @@ const SNEAK_ATTACK_KEYS: ReadonlySet<string> = new Set([
   SNEAK_ATTACK_CUNNING_STRIKE_COUNT_KEY,
   SNEAK_ATTACK_RIDER_KEY,
   SNEAK_ATTACK_MIN_DIE_KEY,
+  SNEAK_ATTACK_SAVE_DOUBLE_KEY,
 ]);
 
 /**
@@ -639,13 +649,18 @@ const EXTRA_CREATURE_TYPE_KEY = 'creatureType.extra';
 
 /**
  * Задаётся ли значение строки словом из списка или костью, а не формулой:
- * замены свойств оружия и тип урона заклинаний.
+ * замены свойств оружия, тип урона заклинаний и характеристика спасброска
+ * «Смертельного удара».
  *
  * @param key ключ изменения.
  * @returns `true`, если значение формулой не проверяют.
  */
 export function isOptionValueKey(key: string): boolean {
-  return isWeaponOverrideKey(key) || key === SPELL_DAMAGE_TYPE_KEY;
+  return (
+    isWeaponOverrideKey(key)
+    || key === SPELL_DAMAGE_TYPE_KEY
+    || key === SNEAK_ATTACK_SAVE_DOUBLE_KEY
+  );
 }
 
 /**
@@ -763,6 +778,10 @@ export const EFFECT_TARGET_KEY_SUGGESTIONS: Array<Option<string>> = [
   {
     value: SNEAK_ATTACK_MIN_DIE_KEY,
     label: 'Скрытая атака: наименьшее значение кости',
+  },
+  {
+    value: SNEAK_ATTACK_SAVE_DOUBLE_KEY,
+    label: 'Скрытая атака: спасбросок цели, провал — урон атаки удвоен',
   },
 
   // Замены свойств оружия («Дубинка»)
@@ -3050,6 +3069,9 @@ export const ACTIVE_EFFECT_LABELS = {
     + 'значение — цена в костях (обычно «0»), ресурс — счётчик кнопки.',
   changeSneakAttackMinDieHint:
     'Наименьшее значение кости Скрытой атаки: «3» — 1 и 2 считаются за 3.',
+  changeSneakAttackSaveDoubleHint:
+    'Характеристика спасброска цели; Сл — 8 + Ловкость + БМ. Провал удваивает '
+    + 'урон всей атаки.',
   changeValueReadablePrefix: 'Значение: ',
   changeDiceNotRolledError:
     'Здесь кость никто не бросит: она работает только у атак, спасбросков, '

@@ -27,8 +27,9 @@ const SYSTEM_DICTIONARY_SIZES = {
   // +2 сверх 0.8.157: ключи Скрытой атаки (`sneakAttack.damage`,
   // `sneakAttack.dice`) перенесены раньше остального порта; +4 — ключи
   // Хитрого удара и Скрытой атаки этапа 3 (`sneakAttack.cunningStrike`,
-  // `.cunningStrikeCount`, `.rider`, `.minDie`)
-  changeKeys: 74,
+  // `.cunningStrikeCount`, `.rider`, `.minDie`); +1 — «Смертельный удар»
+  // (`sneakAttack.saveDouble`)
+  changeKeys: 75,
   // +1 сверх 0.8.157: условие «метательным оружием» (`weapon.property`)
   // перенесено вместе с системой 0.8.308, раньше остального порта; +5 —
   // условия Скрытой атаки: «без помехи», фехтовальное и дальнобойное оружие,

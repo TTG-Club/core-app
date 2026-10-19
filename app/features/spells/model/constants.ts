@@ -240,6 +240,7 @@ export const SPELL_SAVE_EFFECT_OPTIONS: Array<
   { label: 'Половина урона', value: 'HALF' },
   { label: 'Нет урона', value: 'NONE' },
   { label: 'Особый', value: 'SPECIAL' },
+  { label: 'Провал — урон удвоен', value: 'DOUBLE' },
 ];
 
 /** Подписи снарядного режима заклинания. */

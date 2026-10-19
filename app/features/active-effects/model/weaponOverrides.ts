@@ -13,6 +13,7 @@ import {
   EFFECT_ABILITY_OPTIONS,
   EFFECT_DAMAGE_TYPE_OPTIONS,
   isOptionValueKey,
+  SNEAK_ATTACK_SAVE_DOUBLE_KEY,
   SPELL_DAMAGE_TYPE_KEY,
   WEAPON_ATTACK_ABILITY_KEY,
   WEAPON_DAMAGE_TYPE_KEY,
@@ -59,7 +60,8 @@ export function getWeaponOverrideValueOptions(
 
 /**
  * Значения на выбор у строки, чьё значение — слово из списка: замены свойств
- * оружия и тип урона заклинаний.
+ * оружия, тип урона заклинаний и характеристика спасброска «Смертельного
+ * удара».
  *
  * @param key ключ строки эффекта.
  * @returns пункты выбора либо `undefined`, если значение набирают сами.
@@ -67,6 +69,10 @@ export function getWeaponOverrideValueOptions(
 export function getChangeValueOptions(
   key: string,
 ): WeaponOverrideValueOption[] | undefined {
+  if (key === SNEAK_ATTACK_SAVE_DOUBLE_KEY) {
+    return EFFECT_ABILITY_OPTIONS;
+  }
+
   return key === SPELL_DAMAGE_TYPE_KEY
     ? EFFECT_DAMAGE_TYPE_OPTIONS
     : getWeaponOverrideValueOptions(key);

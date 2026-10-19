@@ -328,7 +328,7 @@ export const CREATURE_DAMAGE_CONDITION_OPTIONS: Array<{
   value: condition,
 }));
 
-/** Что происходит с уроном при успешном спасброске цели. */
+/** Что спасбросок цели делает с уроном. */
 export const CREATURE_SAVE_EFFECT_OPTIONS: Array<{
   label: string;
   value: CreatureSaveEffect;
@@ -336,6 +336,7 @@ export const CREATURE_SAVE_EFFECT_OPTIONS: Array<{
   { label: 'Половина урона', value: 'HALF' },
   { label: 'Урона нет', value: 'NONE' },
   { label: 'Особый случай', value: 'SPECIAL' },
+  { label: 'Провал — урон удвоен', value: 'DOUBLE' },
 ];
 
 /**

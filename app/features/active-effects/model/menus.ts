@@ -18,6 +18,7 @@ import { ABILITY_CHECK_KEY } from './changeDice';
 import {
   EFFECT_CARRIER_ARMOR_CONDITION_PREFIX,
   EFFECT_CARRIER_TYPE_CONDITION_PREFIX,
+  EFFECT_COMBAT_ROUND_CONDITION_PREFIX,
   EFFECT_CONDITION_EXPR_SUGGESTIONS,
   EFFECT_CONDITION_SECTIONS,
   EFFECT_DAMAGE_DEFENSE_KINDS,
@@ -42,6 +43,7 @@ import {
   SNEAK_ATTACK_DICE_KEY,
   SNEAK_ATTACK_MIN_DIE_KEY,
   SNEAK_ATTACK_RIDER_KEY,
+  SNEAK_ATTACK_SAVE_DOUBLE_KEY,
   SPELL_DAMAGE_TYPE_DEFAULT,
   SPELL_DAMAGE_TYPE_KEY,
   THROWN_WEAPON_CONDITION,
@@ -583,6 +585,15 @@ const EFFECT_MODIFIER_READY_PRESETS: EffectModifierPreset[] = [
     label: 'Скрытая атака: 1 и 2 на костях считаются за 3',
     mode: 'add',
     value: '3',
+  },
+  // «Смертельный удар» Убийцы: значение — характеристика спасброска цели
+  {
+    key: SNEAK_ATTACK_SAVE_DOUBLE_KEY,
+    label:
+      'Смертельный удар: спасбросок Телосложения в первом раунде, провал — урон ×2',
+    mode: 'add',
+    value: 'constitution',
+    condition: `${EFFECT_COMBAT_ROUND_CONDITION_PREFIX}1`,
   },
   // «Дубинка»: кость растёт по уровню заклинателя — к8, к10, к12, 2к6
   {
