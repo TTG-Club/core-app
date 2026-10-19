@@ -7,6 +7,7 @@ import type {
 } from '../model';
 
 import {
+  CREATURE_COOLDOWN_TURNS_LABEL,
   CREATURE_DAMAGE_CONDITION_LABELS,
   CREATURE_DAMAGE_CONDITIONS,
   SpeedType,
@@ -158,6 +159,11 @@ export const CREATURE_SPELLCASTING_EDITOR = {
     'Столько применений на ВСЮ группу, вместе взятую, — заголовок «2/день».',
   rest: 'Возвращает применения',
   recharge: 'Перезарядка',
+  cooldownTurns: 'Ходов',
+  cooldownTurnsPlaceholder: '3',
+  cooldownTurnsHint:
+    'Группа снова доступна через столько ходов после применения, без броска. '
+    + 'Не из книг — для своих существ.',
   groupLabel: 'Своя подпись',
   groupLabelPlaceholder: 'Оставь пустым — соберётся из ограничения',
   spells: 'Заклинания группы',
@@ -256,6 +262,11 @@ export const CREATURE_ACTION_LABELS = {
   description: 'Описание',
   descriptionPlaceholder: 'Введи описание',
   recharge: 'Перезарядка',
+  cooldownTurns: CREATURE_COOLDOWN_TURNS_LABEL,
+  cooldownTurnsPlaceholder: 'Нет',
+  cooldownTurnsHint:
+    'Снова доступно через N ходов после использования, без броска. Не из книг '
+    + '— для своих существ',
   saveSuccessPerDay: 'Провал спасброска → успех, раз в день',
   saveSuccessPerDayPlaceholder: 'Нет',
   saveSuccessPerDayHint:
