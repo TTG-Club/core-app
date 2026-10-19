@@ -36,8 +36,10 @@ export const EFFECT_TRIGGER_EVENTS = [
   'healed',
   'hpZero',
   'downedOther',
+  'damageDealt',
   'conditionLost',
   'castEnd',
+  'spellCast',
   'moved',
   'rest',
   'activate',
@@ -82,9 +84,24 @@ export const DAMAGE_TRIGGER_EVENTS: readonly EffectTriggerEvent[] = [
 /**
  * События, где носитель — действующая сторона, а другая сторона события —
  * тот, кого он задел. Сюда же смотрят условия о другой стороне.
+ *
+ * «Носитель нанёс урон» (`damageDealt`) идёт в VTTG по каждому удару, у
+ * которого известен нанёсший: раненый — другая сторона, урон события — удар
+ * по нему. Им кончается «Невидимость» 2024.
  */
 export const OWN_DEED_TRIGGER_EVENTS: readonly EffectTriggerEvent[] = [
   'downedOther',
+  'damageDealt',
+];
+
+/**
+ * Событие «носитель накладывает заклинание»: идёт в VTTG у заклинателя, когда
+ * каст состоялся. Несёт признак вербального компонента: им кончается засада,
+ * а «Невидимость» 2024 — любым заклинанием. Выполняются только действия
+ * самому носителю (снятие, наложения на себя).
+ */
+export const SPELL_CAST_TRIGGER_EVENTS: readonly EffectTriggerEvent[] = [
+  'spellCast',
 ];
 
 /**
@@ -106,6 +123,7 @@ export const CONDITION_LOST_TRIGGER_EVENTS: readonly EffectTriggerEvent[] = [
 export const DAMAGE_DATA_TRIGGER_EVENTS: readonly EffectTriggerEvent[] = [
   ...DAMAGE_TRIGGER_EVENTS,
   'applied',
+  'damageDealt',
 ];
 
 /**

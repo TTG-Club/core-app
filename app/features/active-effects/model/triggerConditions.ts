@@ -55,6 +55,7 @@ import {
   MOVEMENT_TRIGGER_EVENTS,
   OTHER_PARTY_TRIGGER_EVENTS,
   OWN_DEED_TRIGGER_EVENTS,
+  SPELL_CAST_TRIGGER_EVENTS,
 } from './triggerTypes';
 
 /** Чем бьют: вид атаки, от которого зависят части условия. */
@@ -136,6 +137,7 @@ export const TRIGGER_CONDITION_KINDS = [
   'otherCreatureTypeChosen',
   'selfHpMaxAtMost',
   'otherIsSourceSide',
+  'spellVerbal',
 ] as const;
 
 /**
@@ -276,6 +278,7 @@ const KIND_EVENTS: Record<
   otherCreatureTypeChosen: OTHER_CONDITION_EVENTS,
   selfHpMaxAtMost: undefined,
   otherIsSourceSide: OTHER_CONDITION_EVENTS,
+  spellVerbal: SPELL_CAST_TRIGGER_EVENTS,
 };
 
 /** Части условия со значением: приставка строки и что выбирается. */

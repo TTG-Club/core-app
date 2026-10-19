@@ -253,6 +253,7 @@ export const EFFECT_CONDITION_OPTIONS: Array<Option<EffectConditionKey>> = [
   { label: 'Истощённый', value: 'exhaustion' },
   { label: 'Испуганный', value: 'frightened' },
   { label: 'Схваченный', value: 'grappled' },
+  { label: 'В засаде', value: 'hidden' },
   { label: 'Недееспособный', value: 'incapacitated' },
   { label: 'Невидимый', value: 'invisible' },
   { label: 'Парализованный', value: 'paralyzed' },
@@ -261,6 +262,7 @@ export const EFFECT_CONDITION_OPTIONS: Array<Option<EffectConditionKey>> = [
   { label: 'Лежащий ничком', value: 'prone' },
   { label: 'Опутанный', value: 'restrained' },
   { label: 'Ошеломлённый', value: 'stunned' },
+  { label: 'Застигнутый врасплох', value: 'surprised' },
   { label: 'Бессознательный', value: 'unconscious' },
 ];
 
@@ -271,13 +273,22 @@ export const EFFECT_CONDITION_OPTIONS: Array<Option<EffectConditionKey>> = [
 export const BLOODIED_CONDITION_KEY = 'bloodied' satisfies EffectConditionKey;
 
 /**
+ * Состояния без спасброска против них: окровавленность ставит и снимает запас
+ * хитов, «В засаде» даёт своё действие, «Застигнутый врасплох» — начало боя.
+ */
+const NO_SAVE_CONDITION_KEYS: ReadonlySet<EffectConditionKey> = new Set([
+  BLOODIED_CONDITION_KEY,
+  'hidden',
+  'surprised',
+]);
+
+/**
  * Состояния, против которых бывает преимущество или помеха на спасбросок.
- * Окровавленность сюда не идёт: спасброска против неё не бывает — её ставит и
- * снимает запас хитов. Зеркало `SaveConditionKey` системы VTTG.
+ * Зеркало `SaveConditionKey` системы VTTG.
  */
 export const EFFECT_SAVE_CONDITION_OPTIONS: Array<Option<EffectConditionKey>> =
   EFFECT_CONDITION_OPTIONS.filter(
-    (condition) => condition.value !== BLOODIED_CONDITION_KEY,
+    (condition) => !NO_SAVE_CONDITION_KEYS.has(condition.value),
   );
 
 /**
@@ -1327,6 +1338,7 @@ export const EFFECT_TRIGGER_FIXED_CONDITIONS: Partial<
   attackMissed: 'attack.landed === false',
   movementOwn: 'move.forced === false',
   movementForced: 'move.forced === true',
+  spellVerbal: 'spell.verbal === true',
 };
 
 /**
@@ -1973,6 +1985,10 @@ export const EFFECT_FLAG_LABELS: Record<string, string> = Object.fromEntries([
     'actions.noOpportunityAttack',
     'Не может совершать провоцированные атаки (остальные реакции доступны)',
   ],
+  [
+    'hide.bonusAction',
+    'Засада бонусным действием (Хитрое действие, Проворный побег)',
+  ],
   ['spellcasting.blocked', 'Не может накладывать заклинания'],
   [
     'spellcasting.noVerbal',
@@ -2591,6 +2607,8 @@ export const EFFECT_TRIGGER_EVENT_PHRASES: Record<EffectTriggerEvent, string> =
     healed: 'когда носителя лечат',
     hpZero: 'когда хиты падают до 0',
     downedOther: 'когда носитель сваливает цель',
+    damageDealt: 'когда носитель наносит урон',
+    spellCast: 'когда носитель накладывает заклинание',
     conditionLost: 'когда состояние снимается',
     rest: 'после отдыха',
     activate: 'при включении',
@@ -2810,6 +2828,7 @@ export const EFFECT_TRIGGER_CONDITION_PHRASES: Record<
   combatRoundAtLeast: (round) => `с ${round}-го раунда боя`,
   movementOwn: () => 'носитель шёл сам',
   movementForced: () => 'носителя переставили толчком или переносом',
+  spellVerbal: () => 'у заклинания вербальный компонент',
 };
 
 /** Сообщения об ошибках разбора формулы — те же, что у системы. */
@@ -4244,6 +4263,8 @@ export const EFFECT_TRIGGER_EVENT_LABELS: Partial<
   healed: 'Когда носителя лечат',
   hpZero: 'Когда хиты носителя падают до 0',
   downedOther: 'Когда носитель сваливает цель',
+  damageDealt: 'Когда носитель наносит урон',
+  spellCast: 'Когда носитель накладывает заклинание',
   conditionLost: 'Когда с носителя снимается состояние',
   castEnd: 'Когда заклинание заканчивается',
   moved: 'Когда носитель проходит путь',
@@ -4625,6 +4646,7 @@ export const EFFECT_TRIGGER_CONDITION_KIND_LABELS: Record<
   combatRoundAtLeast: 'Раунд боя не раньше',
   movementOwn: 'Носитель шёл сам',
   movementForced: 'Носителя переставили (толчок, перенос)',
+  spellVerbal: 'Заклинание с вербальным компонентом',
 };
 
 /** Значение новой части условия с выбором. */

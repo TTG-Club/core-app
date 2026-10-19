@@ -911,6 +911,8 @@ describe('список «Срабатывания»', () => {
       'healed',
       'conditionLost',
       'downedOther',
+      'damageDealt',
+      'spellCast',
       'moved',
       'rest',
     ]);
@@ -999,6 +1001,8 @@ describe('список «Срабатывания»', () => {
       'healed',
       'conditionLost',
       'downedOther',
+      'damageDealt',
+      'spellCast',
       'moved',
       'castEnd',
       'rest',
@@ -1056,6 +1060,8 @@ describe('список «Срабатывания»', () => {
       'healed',
       'conditionLost',
       'downedOther',
+      'damageDealt',
+      'spellCast',
       'moved',
       'rest',
     ]);
@@ -1095,6 +1101,8 @@ describe('список «Срабатывания»', () => {
       'healed',
       'conditionLost',
       'downedOther',
+      'damageDealt',
+      'spellCast',
       'moved',
       'rest',
     ]);
@@ -1105,7 +1113,15 @@ describe('список «Срабатывания»', () => {
     // Эффект оружия «на владельце» — такой же эффект предмета в руке
     expect(
       resolveLayoutFor('weapon', { effectTarget: 'self' }).triggerEvents,
-    ).toEqual(['attackRoll', 'conditionLost', 'downedOther', 'moved', 'rest']);
+    ).toEqual([
+      'attackRoll',
+      'conditionLost',
+      'downedOther',
+      'damageDealt',
+      'spellCast',
+      'moved',
+      'rest',
+    ]);
 
     // Эффект умения скопирован на персонажа и слышит его поступки: атаку,
     // путь, отдых. Снять сам себя он не может — это сняло бы выданную черту
@@ -1118,6 +1134,8 @@ describe('список «Срабатывания»', () => {
       'healed',
       'conditionLost',
       'downedOther',
+      'damageDealt',
+      'spellCast',
       'moved',
       'rest',
     ]);

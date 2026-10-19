@@ -95,6 +95,7 @@ import {
   OTHER_PARTY_TRIGGER_EVENTS,
   OWN_DEED_TRIGGER_EVENTS,
   PRESENCE_TRIGGER_EVENTS,
+  SPELL_CAST_TRIGGER_EVENTS,
   triggerEventAcceptsAreaTemplate,
   TURN_TRIGGER_EVENTS,
 } from './triggerTypes';
@@ -1158,6 +1159,8 @@ function resolveTriggerListLayout(
     // действует и с которого что-то снимают
     ...(place.actsWithCarrier ? CONDITION_LOST_TRIGGER_EVENTS : []),
     ...(place.actsWithCarrier ? OWN_DEED_TRIGGER_EVENTS : []),
+    // «Накладывает заклинание» — тоже поступок живого носителя
+    ...(place.actsWithCarrier ? SPELL_CAST_TRIGGER_EVENTS : []),
     // «Прошёл N футов» — про носителя, у которого есть фишка и путь
     ...(place.actsWithCarrier ? MOVEMENT_TRIGGER_EVENTS : []),
     ...(place.endsWithCast ? (['castEnd'] as const) : []),

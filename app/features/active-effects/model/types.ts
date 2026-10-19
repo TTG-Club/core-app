@@ -103,6 +103,7 @@ export type EffectConditionKey =
   | 'exhaustion'
   | 'frightened'
   | 'grappled'
+  | 'hidden'
   | 'incapacitated'
   | 'invisible'
   | 'paralyzed'
@@ -111,6 +112,7 @@ export type EffectConditionKey =
   | 'prone'
   | 'restrained'
   | 'stunned'
+  | 'surprised'
   | 'unconscious';
 
 /**
