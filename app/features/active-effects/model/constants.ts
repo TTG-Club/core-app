@@ -1341,6 +1341,11 @@ export const EFFECT_COMBAT_ROUND_CONDITION_PREFIX = 'combat.round === ';
 export const EFFECT_COMBAT_ROUND_AT_LEAST_CONDITION_PREFIX = 'combat.round >= ';
 
 /**
+ * Условие «идёт первый раунд боя»: «Ликвидация» и «Смертельный удар» Убийцы.
+ */
+export const EFFECT_FIRST_COMBAT_ROUND_CONDITION = `${EFFECT_COMBAT_ROUND_CONDITION_PREFIX}1`;
+
+/**
  * Условие «цель ещё не ходила в этом бою»: в первом раунде её место в порядке
  * инициативы ещё не наступило. Считает VTTG по трекеру инициативы, вне боя не
  * выполняется.
@@ -1644,7 +1649,7 @@ export const EFFECT_CONDITION_EXPR_SUGGESTIONS: ReadonlyArray<EffectLibrarySugge
             + 'рядом с целью без помехи.',
         },
         {
-          value: `${EFFECT_COMBAT_ROUND_CONDITION_PREFIX}1`,
+          value: EFFECT_FIRST_COMBAT_ROUND_CONDITION,
           label: 'Бой: первый раунд',
           hint: 'Вне боя не выполняется.',
         },
@@ -3052,9 +3057,6 @@ export const ACTIVE_EFFECT_LABELS = {
   changeSneakAttackDamageHint:
     'Кости Скрытой атаки: тип урона — как у оружия, раз в ход, в окне атаки '
     + 'их можно не добавлять. Из нескольких источников берётся наибольший.',
-  changeAlternativesIgnoredWarning:
-    '«Или» в условии считается только в броске, а этот ключ — число листа: '
-    + 'строка не подействует нигде. Разбейте её на строки без «||».',
   changeSneakAttackDiceHint:
     'Число костей, прибавляемых к Скрытой атаке, когда она идёт: «1» — +1к6.',
   changeCunningStrikeHint:
@@ -3072,6 +3074,10 @@ export const ACTIVE_EFFECT_LABELS = {
   changeSneakAttackSaveDoubleHint:
     'Характеристика спасброска цели; Сл — 8 + Ловкость + БМ. Провал удваивает '
     + 'урон всей атаки.',
+  changeAlternativesIgnoredWarning:
+    '«Или» в условии считается только в броске, а этот ключ — число листа: '
+    + 'строка не подействует нигде. Разбейте её на строки без '
+    + `«${EFFECT_CONDITION_OR_SEPARATOR}».`,
   changeValueReadablePrefix: 'Значение: ',
   changeDiceNotRolledError:
     'Здесь кость никто не бросит: она работает только у атак, спасбросков, '

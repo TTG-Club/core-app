@@ -18,11 +18,11 @@ import { ABILITY_CHECK_KEY } from './changeDice';
 import {
   EFFECT_CARRIER_ARMOR_CONDITION_PREFIX,
   EFFECT_CARRIER_TYPE_CONDITION_PREFIX,
-  EFFECT_COMBAT_ROUND_CONDITION_PREFIX,
   EFFECT_CONDITION_EXPR_SUGGESTIONS,
   EFFECT_CONDITION_SECTIONS,
   EFFECT_DAMAGE_DEFENSE_KINDS,
   EFFECT_DAMAGE_TYPE_OPTIONS,
+  EFFECT_FIRST_COMBAT_ROUND_CONDITION,
   EFFECT_FLAG_LABELS,
   EFFECT_MENU_SORT_LOCALE,
   EFFECT_STRENGTH_ATTACK_CONDITION,
@@ -593,7 +593,7 @@ const EFFECT_MODIFIER_READY_PRESETS: EffectModifierPreset[] = [
       'Смертельный удар: спасбросок Телосложения в первом раунде, провал — урон ×2',
     mode: 'add',
     value: 'constitution',
-    condition: `${EFFECT_COMBAT_ROUND_CONDITION_PREFIX}1`,
+    condition: EFFECT_FIRST_COMBAT_ROUND_CONDITION,
   },
   // «Дубинка»: кость растёт по уровню заклинателя — к8, к10, к12, 2к6
   {

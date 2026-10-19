@@ -1,4 +1,7 @@
-import type { EffectChange, EffectModifierPreset } from '~active-effects/model';
+import type {
+  EffectLibrarySuggestion,
+  EffectModifierPreset,
+} from '~active-effects/model';
 
 import { describe, expect, it } from 'vitest';
 
@@ -26,7 +29,7 @@ import {
   toInventoryBonusesFromEffects,
 } from '~character-sheet/model';
 
-import { createEffect } from './fixtures';
+import { createAddChange, createEffect } from './fixtures';
 
 /**
  * Скрытая атака, этап 3 — Хитрый удар: ключи приёмов, условия «первый раунд»,
@@ -50,28 +53,12 @@ const SYSTEM_KEY_LABELS: Record<string, string> = {
 const SYSTEM_POISONERS_KIT_CONDITION = 'self.tool === "poisoners-kit"';
 
 /**
- * Строка «Добавить» с условием.
- *
- * @param key ключ строки.
- * @param value значение.
- * @param condition условие строки.
- * @returns строка модификатора.
- */
-function addChange(
-  key: string,
-  value: string,
-  condition?: string,
-): EffectChange {
-  return { key, mode: 'add', value, condition, priority: 20 };
-}
-
-/**
  * Подсказка условия по значению.
  *
  * @param value строка условия.
  * @returns подсказка либо `undefined`.
  */
-function findCondition(value: string) {
+function findCondition(value: string): EffectLibrarySuggestion | undefined {
   return EFFECT_CONDITION_EXPR_SUGGESTIONS.find(
     (suggestion) => suggestion.value === value,
   );
@@ -95,32 +82,34 @@ describe('хитрый удар: словарь', () => {
   it('значения — числа: у каждого ключа своё пояснение, кость — ошибка', () => {
     expect(
       describeEffectChangeValueNote(
-        addChange('sneakAttack.cunningStrike', '1'),
+        createAddChange('sneakAttack.cunningStrike', '1'),
       ),
     ).toBe(ACTIVE_EFFECT_LABELS.changeCunningStrikeHint);
 
     expect(
       describeEffectChangeValueNote(
-        addChange('sneakAttack.cunningStrikeCount', '1'),
+        createAddChange('sneakAttack.cunningStrikeCount', '1'),
       ),
     ).toBe(ACTIVE_EFFECT_LABELS.changeCunningStrikeCountHint);
 
     expect(
-      describeEffectChangeValueNote(addChange('sneakAttack.rider', '0')),
+      describeEffectChangeValueNote(createAddChange('sneakAttack.rider', '0')),
     ).toBe(ACTIVE_EFFECT_LABELS.changeSneakAttackRiderHint);
 
     expect(
-      describeEffectChangeValueNote(addChange('sneakAttack.minDie', '3')),
+      describeEffectChangeValueNote(createAddChange('sneakAttack.minDie', '3')),
     ).toBe(ACTIVE_EFFECT_LABELS.changeSneakAttackMinDieHint);
 
     expect(
       describeEffectChangeValueError(
-        addChange('sneakAttack.cunningStrike', '1'),
+        createAddChange('sneakAttack.cunningStrike', '1'),
       ),
     ).toBeUndefined();
 
     expect(
-      describeEffectChangeValueError(addChange('sneakAttack.minDie', '1к6')),
+      describeEffectChangeValueError(
+        createAddChange('sneakAttack.minDie', '1к6'),
+      ),
     ).toBe(ACTIVE_EFFECT_LABELS.changeDiceNotRolledError);
 
     // «Или» у ключей Скрытой атаки считает окно атаки — предупреждать не о чем
@@ -237,17 +226,17 @@ describe('лист сайта и Хитрый удар', () => {
   it('новые ключи и условие инструмента лист пропускает, не падая', () => {
     const effect = createEffect({
       changes: [
-        addChange('sneakAttack.cunningStrike', '1'),
-        addChange(
+        createAddChange('sneakAttack.cunningStrike', '1'),
+        createAddChange(
           'sneakAttack.cunningStrike',
           '1',
           SYSTEM_POISONERS_KIT_CONDITION,
         ),
-        addChange('sneakAttack.cunningStrikeCount', '1'),
-        addChange('sneakAttack.rider', '0'),
-        addChange('sneakAttack.minDie', '3'),
+        createAddChange('sneakAttack.cunningStrikeCount', '1'),
+        createAddChange('sneakAttack.rider', '0'),
+        createAddChange('sneakAttack.minDie', '3'),
         // Ключ листа с условием инструмента: лист его не считает
-        addChange('armorClass', '1', SYSTEM_POISONERS_KIT_CONDITION),
+        createAddChange('armorClass', '1', SYSTEM_POISONERS_KIT_CONDITION),
       ],
     });
 

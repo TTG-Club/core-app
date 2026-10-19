@@ -109,6 +109,28 @@ export function createEffect(
 }
 
 /**
+ * Строка модификатора «Добавить» с условием и приоритетом по умолчанию.
+ *
+ * @param key ключ строки.
+ * @param value значение.
+ * @param condition условие строки.
+ * @returns строка модификатора.
+ */
+export function createAddChange(
+  key: string,
+  value: string,
+  condition?: string,
+): EffectChange {
+  return {
+    key,
+    mode: 'add',
+    value,
+    condition,
+    priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
+  };
+}
+
+/**
  * Сырой эффект, как его отдаёт сервер: поля могут быть битыми.
  *
  * @param overrides поля, отличные от умолчания, — в том числе негодные.

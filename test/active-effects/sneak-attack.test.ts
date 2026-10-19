@@ -1,4 +1,4 @@
-import type { EffectChange, EffectModifierPreset } from '~active-effects/model';
+import type { EffectModifierPreset } from '~active-effects/model';
 
 import { describe, expect, it } from 'vitest';
 
@@ -38,7 +38,7 @@ import {
   toInventoryBonusesFromEffects,
 } from '~character-sheet/model';
 
-import { createEffect } from './fixtures';
+import { createAddChange, createEffect } from './fixtures';
 
 /**
  * Скрытая атака, этап 1 — зеркало `tests/sneakAttack.test.mjs` и
@@ -60,22 +60,6 @@ const SYSTEM_SNEAK_ATTACK_DICE =
 
 /** Подпись готового условия по правилам. */
 const SNEAK_ATTACK_CONDITION_LABEL = 'Скрытая атака: условие по правилам';
-
-/**
- * Строка «Добавить» с условием.
- *
- * @param key ключ строки.
- * @param value значение.
- * @param condition условие строки.
- * @returns строка модификатора.
- */
-function addChange(
-  key: string,
-  value: string,
-  condition?: string,
-): EffectChange {
-  return { key, mode: 'add', value, condition, priority: 20 };
-}
 
 /**
  * Готовые строки меню модификаторов (без подменю).
@@ -232,7 +216,7 @@ describe('словарь Скрытой атаки', () => {
   });
 
   it('проверка формы: кость у костей Скрытой атаки допустима', () => {
-    const damage = addChange(
+    const damage = createAddChange(
       SNEAK_ATTACK_DAMAGE_KEY,
       SNEAK_ATTACK_DICE_FORMULA,
       SNEAK_ATTACK_CONDITION,
@@ -241,7 +225,9 @@ describe('словарь Скрытой атаки', () => {
     expect(describeEffectChangeValueError(damage)).toBeUndefined();
 
     expect(
-      describeEffectChangeValueError(addChange(SNEAK_ATTACK_DICE_KEY, '1')),
+      describeEffectChangeValueError(
+        createAddChange(SNEAK_ATTACK_DICE_KEY, '1'),
+      ),
     ).toBeUndefined();
 
     // Кости — урон: пояснение «бросается заново» к ним не относится
@@ -252,17 +238,19 @@ describe('словарь Скрытой атаки', () => {
     );
 
     expect(
-      describeEffectChangeValueNote(addChange(SNEAK_ATTACK_DICE_KEY, '1')),
+      describeEffectChangeValueNote(
+        createAddChange(SNEAK_ATTACK_DICE_KEY, '1'),
+      ),
     ).toBe(ACTIVE_EFFECT_LABELS.changeSneakAttackDiceHint);
 
     expect(
-      describeEffectChangeValueNote(addChange('attack.melee', '1к4')),
+      describeEffectChangeValueNote(createAddChange('attack.melee', '1к4')),
     ).toBe(ACTIVE_EFFECT_LABELS.changeRollDiceHint);
   });
 
   it('описание строки: ключ, кости и условие по правилам', () => {
     const description = describeEffectChange(
-      addChange(
+      createAddChange(
         SNEAK_ATTACK_DAMAGE_KEY,
         SNEAK_ATTACK_DICE_FORMULA,
         SNEAK_ATTACK_CONDITION,
@@ -341,13 +329,13 @@ describe('лист сайта и Скрытая атака', () => {
   it('ключи Скрытой атаки лист пропускает, не падая', () => {
     const effect = createEffect({
       changes: [
-        addChange(
+        createAddChange(
           SNEAK_ATTACK_DAMAGE_KEY,
           SNEAK_ATTACK_DICE_FORMULA,
           SNEAK_ATTACK_CONDITION,
         ),
-        addChange(SNEAK_ATTACK_DICE_KEY, '1'),
-        addChange('damage.weapon', '1к6', SNEAK_ATTACK_APPLIED_CONDITION),
+        createAddChange(SNEAK_ATTACK_DICE_KEY, '1'),
+        createAddChange('damage.weapon', '1к6', SNEAK_ATTACK_APPLIED_CONDITION),
       ],
     });
 

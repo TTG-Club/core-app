@@ -37,6 +37,15 @@ const DAMAGE_CHANGE_KEY_PREFIX = 'damage.';
 /** Приставки ключей, у которых кость катается в самом броске. */
 const ROLL_BONUS_KEY_PREFIXES = ['attack.', 'save.', 'skill.'] as const;
 
+/** Ключ порога крита: его читает бросок атаки. */
+const CRIT_THRESHOLD_KEY = 'critThreshold';
+
+/** Ключ КД: с условием входящей атаки его считает защита. */
+const ARMOR_CLASS_KEY = 'armorClass';
+
+/** Приставка условий входящей атаки. */
+const INCOMING_CONDITION_PREFIX = 'incoming.';
+
 /** Кубиковая нотация в значении строки («2к6», «1d4», «к8»). */
 const DICE_VALUE_REGEX = /\d*\s*[кдd]\s*\d+/i;
 
@@ -163,15 +172,6 @@ export function describeEffectChangeValueError(
     ? undefined
     : ACTIVE_EFFECT_LABELS.changeDiceModeError;
 }
-
-/** Ключ порога крита: его читает бросок атаки */
-const CRIT_THRESHOLD_KEY = 'critThreshold';
-
-/** Ключ КД: с условием входящей атаки его считает защита */
-const ARMOR_CLASS_KEY = 'armorClass';
-
-/** Приставка условий входящей атаки */
-const INCOMING_CONDITION_PREFIX = 'incoming.';
 
 /**
  * Предупреждение условия строки: «или» у ключа, который считается только на
