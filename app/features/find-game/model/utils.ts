@@ -4,6 +4,7 @@ import type {
   Game,
   GameSession,
   GameSessionPrice,
+  GameStateBadge,
   NextGameSession,
   Reputation,
 } from './types';
@@ -18,6 +19,11 @@ import {
   GAME_GENRES_MAX_COUNT,
   GAME_NEXT_SESSION_FALLBACK,
   GAME_PRICE_PER_SESSION_LABEL,
+  GAME_RECRUITMENT_CLOSED_BADGE,
+  GAME_RECRUITMENT_CLOSED_ICON,
+  GAME_RECRUITMENT_FULL_BADGE,
+  GAME_STATUS_COLORS,
+  GAME_STATUS_LABELS,
   GAME_TITLE_MAX_LENGTH,
   GAME_TYPE_LABELS,
   GAMES_ROUTE,
@@ -434,6 +440,39 @@ export function getGameSeatsCounter(game: Game): string {
  */
 export function isGameRecruitmentClosed(game: Game): boolean {
   return game.recruitmentClosed || game.takenSeats >= game.maxPlayers;
+}
+
+/**
+ * Значок состояния игры. У сыгранной и отменённой игры он называет исход. У
+ * открытой — состояние набора: «Набор открыт» ставится, только пока в игру
+ * можно подать заявку, а полный стол и закрытый мастером набор подписаны
+ * по-своему.
+ *
+ * @param game Игра.
+ */
+export function getGameStateBadge(game: Game): GameStateBadge {
+  if (game.status !== 'OPEN') {
+    return {
+      label: GAME_STATUS_LABELS[game.status],
+      color: GAME_STATUS_COLORS[game.status],
+    };
+  }
+
+  if (!isGameRecruitmentClosed(game)) {
+    return {
+      label: GAME_STATUS_LABELS.OPEN,
+      color: GAME_STATUS_COLORS.OPEN,
+    };
+  }
+
+  return {
+    label:
+      game.takenSeats >= game.maxPlayers
+        ? GAME_RECRUITMENT_FULL_BADGE
+        : GAME_RECRUITMENT_CLOSED_BADGE,
+    color: 'warning',
+    icon: GAME_RECRUITMENT_CLOSED_ICON,
+  };
 }
 
 /**
