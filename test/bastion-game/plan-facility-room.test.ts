@@ -1,17 +1,20 @@
-import type { PlanDocument } from '~bastion-game/model';
+import type { PlanDocument, PlanFurniture } from '~bastion-game/model';
 
 import { describe, expect, it } from 'vitest';
 
 import {
   createEmptyPlan,
   drawRoom,
+  findFurnitureAt,
   furnishRoom,
   getFacilityFurniture,
   getFacilityRoomSize,
   getFurnitureSize,
   getRectCells,
+  isFloorFurniture,
   isPremiumFurniture,
   placeFacilityRoom,
+  sortFurnitureByLayer,
 } from '~bastion-game/model';
 
 const bedroom = {
@@ -88,7 +91,6 @@ describe('готовая комната сооружения', () => {
 
     expect(plan.furniture.map((item) => item.kind)).toContain('BED');
     expect(furnitureCells.every((cell) => roomCells.has(cell))).toBe(true);
-    expect(new Set(furnitureCells).size).toBe(furnitureCells.length);
   });
 
   it('без подписки не ставит предметы по подписке', () => {
@@ -125,7 +127,7 @@ describe('готовая комната сооружения', () => {
 });
 
 describe('случайная расстановка мебели', () => {
-  it('без наложений, в стенах и не больше 60% пола', () => {
+  it('без наложений в слое, в стенах и не больше 60% пола', () => {
     for (const side of [2, 4, 6]) {
       const room = { x: 3, y: 5, width: side, depth: side };
 
@@ -143,11 +145,20 @@ describe('случайная расстановка мебели', () => {
           createRandom(seed),
         );
 
-        const cells = getFurnitureCells({ furniture });
+        const rugs = getFurnitureCells({
+          furniture: furniture.filter((item) => isFloorFurniture(item.kind)),
+        });
 
-        expect(new Set(cells).size).toBe(cells.length);
-        expect(cells.every((cell) => inside.has(cell))).toBe(true);
-        expect(cells.length).toBeLessThanOrEqual(side * side * 0.6);
+        const solid = getFurnitureCells({
+          furniture: furniture.filter((item) => !isFloorFurniture(item.kind)),
+        });
+
+        const covered = new Set([...rugs, ...solid]);
+
+        expect(new Set(rugs).size).toBe(rugs.length);
+        expect(new Set(solid).size).toBe(solid.length);
+        expect([...covered].every((cell) => inside.has(cell))).toBe(true);
+        expect(covered.size).toBeLessThanOrEqual(side * side * 0.6);
       }
     }
   });
@@ -199,5 +210,71 @@ describe('случайная расстановка мебели', () => {
     expect(getFacilityFurniture('bedroom', ['BARREL', 'CHEST'], false)).toEqual(
       ['CHEST'],
     );
+  });
+
+  it('мебель встаёт на ковёр', () => {
+    const layouts = Array.from({ length: 20 }, (_, index) =>
+      furnishRoom(
+        { x: 0, y: 0, width: 4, depth: 4 },
+        0,
+        ['RUG', 'CHAIR', 'CHEST'],
+        createRandom(index + 1),
+      ),
+    );
+
+    const isOnRug = layouts.some((furniture) => {
+      const rugs = new Set(
+        getFurnitureCells({
+          furniture: furniture.filter((item) => isFloorFurniture(item.kind)),
+        }),
+      );
+
+      return getFurnitureCells({
+        furniture: furniture.filter((item) => !isFloorFurniture(item.kind)),
+      }).some((cell) => rugs.has(cell));
+    });
+
+    expect(isOnRug).toBe(true);
+
+    expect(layouts.every((furniture) => furniture[0]?.kind === 'RUG')).toBe(
+      true,
+    );
+  });
+});
+
+describe('ковёр под мебелью', () => {
+  const rug: PlanFurniture = {
+    id: 'rug',
+    level: 0,
+    x: 0,
+    y: 0,
+    kind: 'RUG',
+    rotation: 0,
+  };
+
+  const chair: PlanFurniture = {
+    id: 'chair',
+    level: 0,
+    x: 1,
+    y: 0,
+    kind: 'CHAIR',
+    rotation: 0,
+  };
+
+  it('ковры рисуются первыми', () => {
+    expect(sortFurnitureByLayer([chair, rug]).map((item) => item.id)).toEqual([
+      'rug',
+      'chair',
+    ]);
+  });
+
+  it('щелчок по стулу на ковре попадает в стул', () => {
+    const plan: PlanDocument = {
+      ...createEmptyPlan(),
+      furniture: [chair, rug],
+    };
+
+    expect(findFurnitureAt(plan, 0, { x: 1.5, y: 0.5 })?.id).toBe('chair');
+    expect(findFurnitureAt(plan, 0, { x: 2.5, y: 1.5 })?.id).toBe('rug');
   });
 });

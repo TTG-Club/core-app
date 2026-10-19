@@ -19,12 +19,14 @@ import {
  * `2к8@dmg.necrotic@self.status.bloodied + 2`.
  *
  * Зеркало `creatureDamageAlternatives.ts` системы VTTG: условие варианта —
- * состояние в его формуле; такой вариант берётся сам, когда все его состояния
- * есть. Способ выбора нужен вариантам без состояний.
+ * состояние в его формуле или токен `@roll.advantage` («если у атаки было
+ * преимущество», гоблины и химера MM 2024); такой вариант берётся сам: по
+ * состояниям — когда все они есть, по преимуществу — окно атаки VTTG решает
+ * по итоговому режиму броска. Способ выбора нужен вариантам без условий.
  *
  * Способы:
- * - `formula` — «по формуле»: вариант решают состояния в формуле; без них не
- *   берётся никогда (вариант не дописан);
+ * - `formula` — «по формуле»: вариант решают состояния или `@roll.advantage`
+ *   в формуле; без них не берётся никогда (вариант не дописан);
  * - `ask` — решает бросающий («если у химеры было преимущество»);
  * - `random` — набор выпадает сам.
  */
@@ -67,6 +69,17 @@ const CREATURE_DAMAGE_STATUS_PHRASE_PREFIXES: Record<
 
 /** Между состояниями в одной фразе. */
 const CREATURE_DAMAGE_STATUS_PHRASE_JOINER = ' и ';
+
+/**
+ * Токен условия варианта «атака с преимуществом». Пишется в формулу любой
+ * части варианта, как состояние; VTTG снимает его вместе с выбором набора, и
+ * бросать его роллеру нечего. Способ (`condition`) при этом остаётся
+ * «по формуле» — новых значений способа нет.
+ */
+export const CREATURE_DAMAGE_ROLL_ADVANTAGE_TOKEN = '@roll.advantage';
+
+/** Фраза условия «с преимуществом» в строке варианта. */
+const CREATURE_DAMAGE_ROLL_ADVANTAGE_PHRASE = 'если атака с преимуществом';
 
 /** Вариант урона действия существа. */
 export interface CreatureDamageAlternative {
@@ -191,32 +204,69 @@ function listCreatureDamageAlternativeStatuses(
 }
 
 /**
- * Строка варианта с состояниями: «Берётся сам — если у атакующего:
- * Окровавленный»; несколько состояний — через « и ».
+ * Требует ли вариант преимущества на атаке: токен
+ * `CREATURE_DAMAGE_ROLL_ADVANTAGE_TOKEN` в формуле какой-либо части.
  *
+ * @param damageParts части урона варианта.
+ * @returns `true`, если вариант решает режим броска.
+ */
+export function creatureDamageAlternativeNeedsAdvantage(
+  damageParts: Array<DamageFormulaPart>,
+): boolean {
+  return damageParts.some((part) =>
+    part.formula.toLowerCase().includes(CREATURE_DAMAGE_ROLL_ADVANTAGE_TOKEN),
+  );
+}
+
+/**
+ * Строка варианта с условием: «Берётся сам — если атака с преимуществом и если
+ * у атакующего: Окровавленный»; несколько условий — через « и ».
+ *
+ * @param needsAdvantage вариант требует преимущества.
  * @param statuses состояния варианта.
  * @returns строка условия.
  */
-function describeCreatureDamageStatuses(
+function describeCreatureDamageAutomaticCondition(
+  needsAdvantage: boolean,
   statuses: Array<DamageFormulaStatusToken>,
 ): string {
-  const statusPhrase = statuses
-    .map(
+  const conditionPhrase = [
+    ...(needsAdvantage ? [CREATURE_DAMAGE_ROLL_ADVANTAGE_PHRASE] : []),
+    ...statuses.map(
       (statusToken) =>
         `${CREATURE_DAMAGE_STATUS_PHRASE_PREFIXES[statusToken.side]}${getDamageFormulaStatusName(statusToken.status)}`,
-    )
-    .join(CREATURE_DAMAGE_STATUS_PHRASE_JOINER);
+    ),
+  ].join(CREATURE_DAMAGE_STATUS_PHRASE_JOINER);
 
-  return `${CREATURE_DAMAGE_AUTOMATIC_PREFIX}${statusPhrase}`;
+  return `${CREATURE_DAMAGE_AUTOMATIC_PREFIX}${conditionPhrase}`;
+}
+
+/**
+ * Берётся ли вариант сам, без способа выбора: по состояниям в формуле или по
+ * преимуществу на атаке.
+ *
+ * @param damageParts части урона варианта.
+ * @returns `true`, если условие варианта записано в формуле.
+ */
+function isAutomaticCreatureDamageAlternative(
+  damageParts: Array<DamageFormulaPart>,
+): boolean {
+  return (
+    listCreatureDamageAlternativeStatuses(damageParts).length > 0
+    || creatureDamageAlternativeNeedsAdvantage(damageParts)
+  );
 }
 
 /** Что показать у варианта в форме. */
 export interface CreatureDamageAlternativeView {
-  /** Состояние в формуле — вариант берётся сам, способ ему не нужен. */
+  /**
+   * Состояние или `@roll.advantage` в формуле — вариант берётся сам, способ
+   * ему не нужен.
+   */
   isAutomatic: boolean;
-  /** Строка «Берётся сам — …»; пустая без состояний. */
+  /** Строка «Берётся сам — …»; пустая без условий в формуле. */
   automaticCaption: string;
-  /** «По формуле», а состояния в формуле нет — вариант не сработает. */
+  /** «По формуле», а условия в формуле нет — вариант не сработает. */
   lacksStatus: boolean;
   /** Состояние цели у действия с областью: одной цели там нет. */
   warnsArea: boolean;
@@ -239,12 +289,16 @@ export function getCreatureDamageAlternativeView(
     alternative.damageParts,
   );
 
-  const isAutomatic = statuses.length > 0;
+  const needsAdvantage = creatureDamageAlternativeNeedsAdvantage(
+    alternative.damageParts,
+  );
+
+  const isAutomatic = statuses.length > 0 || needsAdvantage;
 
   return {
     isAutomatic,
     automaticCaption: isAutomatic
-      ? describeCreatureDamageStatuses(statuses)
+      ? describeCreatureDamageAutomaticCondition(needsAdvantage, statuses)
       : '',
     lacksStatus:
       !isAutomatic
@@ -279,9 +333,10 @@ export function createCreatureDamageAlternative(
 }
 
 /**
- * Заменяет части урона варианта. Появилось состояние в формуле — способ сам
- * становится «по формуле»: вариант теперь решает состояние, и прежний способ
- * лишь путал бы, всплыв после того, как состояние уберут.
+ * Заменяет части урона варианта. Появилось условие в формуле (состояние или
+ * `@roll.advantage`) — способ сам становится «по формуле»: вариант теперь
+ * решает условие, и прежний способ лишь путал бы, всплыв после того, как
+ * условие уберут.
  *
  * @param alternative вариант урона.
  * @param damageParts новые части.
@@ -291,10 +346,9 @@ export function replaceCreatureDamageAlternativeParts(
   alternative: CreatureDamageAlternative,
   damageParts: Array<DamageFormulaPart>,
 ): CreatureDamageAlternative {
-  const condition =
-    listCreatureDamageAlternativeStatuses(damageParts).length > 0
-      ? FORMULA_CREATURE_DAMAGE_CONDITION
-      : alternative.condition;
+  const condition = isAutomaticCreatureDamageAlternative(damageParts)
+    ? FORMULA_CREATURE_DAMAGE_CONDITION
+    : alternative.condition;
 
   return { ...alternative, condition, damageParts };
 }

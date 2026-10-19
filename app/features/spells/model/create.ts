@@ -37,7 +37,11 @@ export type SpellTargetType =
   | 'AREA'
   | 'NONE';
 
-export type SpellSaveEffect = 'HALF' | 'NONE' | 'SPECIAL';
+/**
+ * Что спасбросок цели делает с уроном заклинания; `DOUBLE` — провал удваивает
+ * урон, успех ничего не меняет.
+ */
+export type SpellSaveEffect = 'HALF' | 'NONE' | 'SPECIAL' | 'DOUBLE';
 
 /**
  * Вложенный объект области воздействия.

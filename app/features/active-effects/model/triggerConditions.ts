@@ -31,7 +31,8 @@ import {
   EFFECT_CARRIER_TAG_NOT_CONDITION_PREFIX,
   EFFECT_CARRIER_TYPE_CONDITION_PREFIX,
   EFFECT_CARRIER_TYPE_NOT_CONDITION_PREFIX,
-  EFFECT_CONDITION_AND_SEPARATOR,
+  EFFECT_COMBAT_ROUND_AT_LEAST_CONDITION_PREFIX,
+  EFFECT_COMBAT_ROUND_CONDITION_PREFIX,
   EFFECT_DAMAGE_TYPE_CONDITION_PREFIX,
   EFFECT_DAMAGE_TYPE_NOT_CONDITION_PREFIX,
   EFFECT_TARGET_SPECIES_CONDITION_PREFIX,
@@ -39,9 +40,12 @@ import {
   EFFECT_TARGET_TYPE_CONDITION_PREFIX,
   EFFECT_TARGET_TYPE_NOT_CONDITION_PREFIX,
   EFFECT_TRIGGER_FIXED_CONDITIONS,
+  hasConditionAlternatives,
   isEffectAbility,
   isEffectCreatureSize,
   isEffectDamageType,
+  joinConditionGroups,
+  splitConditionGroups,
   splitConditionParts,
 } from './constants';
 import { isCreatureTypeList } from './creatureTypeCondition';
@@ -53,6 +57,7 @@ import {
   MOVEMENT_TRIGGER_EVENTS,
   OTHER_PARTY_TRIGGER_EVENTS,
   OWN_DEED_TRIGGER_EVENTS,
+  SPELL_CAST_TRIGGER_EVENTS,
 } from './triggerTypes';
 
 /** Чем бьют: вид атаки, от которого зависят части условия. */
@@ -123,6 +128,7 @@ export const TRIGGER_CONDITION_KINDS = [
   'attackAbility',
   'attackLanded',
   'attackMissed',
+  'attackSneakAttack',
   'combatRoundIs',
   'combatRoundAtLeast',
   'movementOwn',
@@ -134,6 +140,7 @@ export const TRIGGER_CONDITION_KINDS = [
   'otherCreatureTypeChosen',
   'selfHpMaxAtMost',
   'otherIsSourceSide',
+  'spellVerbal',
 ] as const;
 
 /**
@@ -169,6 +176,7 @@ export const TRIGGER_CONDITION_KINDS = [
  * - `attackKind` — вид атаки события;
  * - `attackAbility` — атака считается этой характеристикой;
  * - `attackLanded` / `attackMissed` — атака попала / промахнулась;
+ * - `attackSneakAttack` — кости Скрытой атаки вошли в урон этой атаки;
  * - `combatRoundIs` / `combatRoundAtLeast` — идёт раунд боя N / раунд не
  *   раньше N (расписание «на втором раунде», «с третьего раунда»);
  * - `movementOwn` / `movementForced` — носитель шёл сам / его переставили
@@ -263,6 +271,8 @@ const KIND_EVENTS: Record<
   attackAbility: ATTACK_DATA_TRIGGER_EVENTS,
   attackLanded: ATTACK_DATA_TRIGGER_EVENTS,
   attackMissed: ATTACK_DATA_TRIGGER_EVENTS,
+  // Скрытая атака известна только броску атаки: при наложении её нет
+  attackSneakAttack: ['attackRoll'],
   combatRoundIs: COMBAT_ROUND_TRIGGER_EVENTS,
   combatRoundAtLeast: COMBAT_ROUND_TRIGGER_EVENTS,
   movementOwn: MOVEMENT_TRIGGER_EVENTS,
@@ -274,6 +284,7 @@ const KIND_EVENTS: Record<
   otherCreatureTypeChosen: OTHER_CONDITION_EVENTS,
   selfHpMaxAtMost: undefined,
   otherIsSourceSide: OTHER_CONDITION_EVENTS,
+  spellVerbal: SPELL_CAST_TRIGGER_EVENTS,
 };
 
 /** Части условия со значением: приставка строки и что выбирается. */
@@ -361,8 +372,14 @@ const PARAMETRIC_PARTS: Partial<
   },
   selfAbilityAtMost: { prefix: 'self.ability[', parameter: 'ability' },
   selfAbilityAtLeast: { prefix: 'self.ability[', parameter: 'ability' },
-  combatRoundIs: { prefix: 'combat.round === ', parameter: 'number' },
-  combatRoundAtLeast: { prefix: 'combat.round >= ', parameter: 'number' },
+  combatRoundIs: {
+    prefix: EFFECT_COMBAT_ROUND_CONDITION_PREFIX,
+    parameter: 'number',
+  },
+  combatRoundAtLeast: {
+    prefix: EFFECT_COMBAT_ROUND_AT_LEAST_CONDITION_PREFIX,
+    parameter: 'number',
+  },
 };
 
 /**
@@ -656,12 +673,20 @@ export function parseTriggerConditionPart(
  * Части условия срабатывания: разобранные и строки, которых словарь не знает
  * (их форма показывает как есть, чтобы не терять).
  *
+ * Условие с «или» форма по частям не разбирает: оно приходит одной строкой как
+ * есть, а `writeTriggerCondition` при добавлении к нему частей раскрывает
+ * скобки сам — «(a или b) и c» становится «a и c или b и c».
+ *
  * @param condition условие срабатывания.
  * @returns части по порядку.
  */
 export function readTriggerConditionParts(
   condition: string | undefined,
 ): Array<TriggerConditionPart | string> {
+  if (condition && hasConditionAlternatives(condition)) {
+    return [condition.trim()];
+  }
+
   return splitConditionParts(condition ?? '').map(
     (text) => parseTriggerConditionPart(text) ?? text,
   );
@@ -676,15 +701,25 @@ export function readTriggerConditionParts(
 export function writeTriggerCondition(
   parts: ReadonlyArray<TriggerConditionPart | string>,
 ): string | undefined {
-  const texts = parts
+  // Части соединяются «и»; часть с «или» умножает группы: скобок в условии
+  // нет, и «(a или b) и c» пишется как «a и c или b и c»
+  const groups = parts
     .map((part) =>
       typeof part === 'string' ? part : buildTriggerConditionPart(part),
     )
-    .filter((text) => text.length > 0);
+    .map(splitConditionGroups)
+    .filter((alternatives) => alternatives.length > 0)
+    .reduce<string[][]>(
+      (combined, alternatives) =>
+        combined.flatMap((group) =>
+          alternatives.map((alternative) => [...group, ...alternative]),
+        ),
+      [[]],
+    );
 
-  return texts.length > 0
-    ? texts.join(` ${EFFECT_CONDITION_AND_SEPARATOR} `)
-    : undefined;
+  const condition = joinConditionGroups(groups);
+
+  return condition.length > 0 ? condition : undefined;
 }
 
 /**

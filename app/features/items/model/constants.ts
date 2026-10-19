@@ -598,13 +598,14 @@ export const WEAPON_PROFICIENCY_MODE_OPTIONS: Array<
   { label: 'Не учитывать', value: 'never' },
 ];
 
-/** Что происходит с уроном при успешном спасброске. */
+/** Что спасбросок делает с уроном. */
 export const WEAPON_SAVE_EFFECT_OPTIONS: Array<
   ItemSelectOption<WeaponSaveEffect>
 > = [
   { label: 'Урон вдвое меньше', value: 'half' },
   { label: 'Урона нет', value: 'none' },
   { label: 'Особый исход', value: 'special' },
+  { label: 'Провал — урон удвоен', value: 'double' },
 ];
 
 /** Режим учёта владения инструментом (`ToolProficiencyMode` VTTG) без `auto`. */

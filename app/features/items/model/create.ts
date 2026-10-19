@@ -96,8 +96,11 @@ export type ToolProficiencyMode =
  */
 export type WeaponDamageAbility = EffectAbility | 'none';
 
-/** Что происходит с уроном при успешном спасброске (`saveEffect` VTTG). */
-export type WeaponSaveEffect = 'half' | 'none' | 'special';
+/**
+ * Что спасбросок делает с уроном (`SaveDamageEffect` VTTG): `double` — провал
+ * удваивает урон, успех ничего не меняет.
+ */
+export type WeaponSaveEffect = 'half' | 'none' | 'special' | 'double';
 
 /** Категория инструмента. Зеркало `ToolCategory` из VTTG. */
 export type ItemToolCategory = 'artisan' | 'gaming' | 'musical' | 'other';

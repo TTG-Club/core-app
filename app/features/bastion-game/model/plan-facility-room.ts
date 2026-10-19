@@ -19,6 +19,8 @@ import {
   getOccupancy,
   getRectCells,
   isCellOnGrid,
+  isFloorFurniture,
+  sortFurnitureByLayer,
 } from './plan-geometry';
 
 /** Сооружение, из которого ставится готовая комната. */
@@ -196,9 +198,10 @@ function shuffle<T>(items: ReadonlyArray<T>, random: () => number): Array<T> {
 
 /**
  * Случайно расставляет предметы по прямоугольной комнате без наложений.
- * Сначала каждый предмет ставится по разу, потом случайные предметы из
- * списка добавляются, пока мебель не займёт 60% пола или пока ничего больше
- * не поместится.
+ * Ковёр лежит на полу, и мебель может стоять на нём; два ковра и два других
+ * предмета друг на друга не встают. Сначала каждый предмет ставится по разу,
+ * потом случайные предметы из списка добавляются, пока мебель вместе с
+ * коврами не закроет 60% пола или пока ничего больше не поместится.
  *
  * @param room Комната.
  * @param level Этаж.
@@ -213,7 +216,10 @@ export function furnishRoom(
   random: () => number = Math.random,
 ): Array<PlanFurniture> {
   const limit = Math.floor(room.width * room.depth * PLAN_FURNITURE_FILL_LIMIT);
-  const taken = new Set<string>();
+  // Клетки под коврами, под остальной мебелью и закрытые хоть чем-то.
+  const floor = new Set<string>();
+  const solid = new Set<string>();
+  const covered = new Set<string>();
   const placed: Array<PlanFurniture> = [];
   const queue = shuffle(kinds, random);
 
@@ -227,25 +233,26 @@ export function furnishRoom(
    */
   function place(kind: FurnitureKind): boolean {
     const rotations = shuffle(PLAN_FURNITURE_ROTATIONS, random);
+    const layer = isFloorFurniture(kind) ? floor : solid;
 
     for (const rotation of rotations) {
       const { width, depth } = getFurnitureSize({ kind, rotation });
-
-      if (taken.size + width * depth > limit) {
-        return false;
-      }
-
-      const spots: Array<PlanCell> = [];
+      const spots: Array<{ cell: PlanCell; keys: Array<string> }> = [];
 
       for (let y = room.y; y + depth <= room.y + room.depth; y++) {
         for (let x = room.x; x + width <= room.x + room.width; x++) {
-          const isFree = getRectCells(
+          const keys = getRectCells(
             { x, y },
             { x: x + width - 1, y: y + depth - 1 },
-          ).every((cell) => !taken.has(getCellKey(cell.x, cell.y)));
+          ).map((cell) => getCellKey(cell.x, cell.y));
 
-          if (isFree) {
-            spots.push({ x, y });
+          const added = keys.filter((key) => !covered.has(key)).length;
+
+          if (
+            keys.every((key) => !layer.has(key))
+            && covered.size + added <= limit
+          ) {
+            spots.push({ cell: { x, y }, keys });
           }
         }
       }
@@ -253,15 +260,15 @@ export function furnishRoom(
       const spot = pickRandom(spots, random);
 
       if (spot) {
-        getRectCells(spot, {
-          x: spot.x + width - 1,
-          y: spot.y + depth - 1,
-        }).forEach((cell) => taken.add(getCellKey(cell.x, cell.y)));
+        spot.keys.forEach((key) => {
+          layer.add(key);
+          covered.add(key);
+        });
 
         placed.push({
           id: crypto.randomUUID(),
           level,
-          ...spot,
+          ...spot.cell,
           kind,
           rotation,
         });
@@ -289,7 +296,7 @@ export function furnishRoom(
     }
   }
 
-  return placed;
+  return sortFurnitureByLayer(placed);
 }
 
 /**

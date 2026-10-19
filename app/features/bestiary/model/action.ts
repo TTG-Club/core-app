@@ -58,8 +58,12 @@ export const CREATURE_ACTION_EFFECT_CONTEXTS = {
   lair: EFFECT_FORM_CONTEXT.creatureAction,
 } as const satisfies Record<CreatureActionListKey, CreatureEffectContext>;
 
-/** Что происходит с уроном при успешном спасброске цели. */
-export type CreatureSaveEffect = 'HALF' | 'NONE' | 'SPECIAL';
+/**
+ * Что спасбросок цели делает с уроном: успех вдвое уменьшает его (`HALF`),
+ * снимает (`NONE`), исход разбирает ведущий (`SPECIAL`) либо провал удваивает
+ * урон (`DOUBLE`, «Смертельный удар»).
+ */
+export type CreatureSaveEffect = 'HALF' | 'NONE' | 'SPECIAL' | 'DOUBLE';
 
 /** Спасбросок записи: характеристика и Сл плоским числом. */
 export interface CreatureSavingThrow {
@@ -154,7 +158,12 @@ const ATTACK_TYPES: Array<CreatureAttackType> = [
   'MELEE_OR_RANGE',
 ];
 
-const SAVE_EFFECTS: Array<CreatureSaveEffect> = ['HALF', 'NONE', 'SPECIAL'];
+const SAVE_EFFECTS: Array<CreatureSaveEffect> = [
+  'HALF',
+  'NONE',
+  'SPECIAL',
+  'DOUBLE',
+];
 
 const ABILITY_KEYS: Array<AbilityKey> = Object.values(AbilityKey);
 

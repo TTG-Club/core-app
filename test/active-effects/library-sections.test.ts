@@ -6,6 +6,7 @@ import {
   describeEffectChangeValueError,
   EFFECT_CONDITION_AND_SEPARATOR,
   EFFECT_CONDITION_EXPR_SUGGESTIONS,
+  EFFECT_CONDITION_OR_SEPARATOR,
   EFFECT_CONDITION_SECTIONS,
   EFFECT_FLAG_LABELS,
   EFFECT_FLAG_LIBRARY,
@@ -195,8 +196,11 @@ describe('библиотеки условий, ключей и правил', ()
   });
 
   it('составное условие без доспеха и щита читается подписью', () => {
+    // Условие Скрытой атаки тоже с «и», но собрано группами «или»
     const compositeCondition = EFFECT_CONDITION_EXPR_SUGGESTIONS.find(
-      (suggestion) => suggestion.value.includes(EFFECT_CONDITION_AND_SEPARATOR),
+      (suggestion) =>
+        suggestion.value.includes(EFFECT_CONDITION_AND_SEPARATOR)
+        && !suggestion.value.includes(EFFECT_CONDITION_OR_SEPARATOR),
     );
 
     expect(compositeCondition?.label).toBe(COMPOSITE_CONDITION_LABEL);

@@ -21,8 +21,10 @@
     DEFAULT_CHANGE_STEP_PER,
     DEFAULT_EFFECT_CHANGE_PRIORITY,
     DEFAULT_EFFECT_CHANGE_VALUE,
+    describeEffectChangeConditionWarning,
     describeEffectChangeValueError,
     describeEffectChangeValueLabel,
+    describeEffectChangeValueNote,
     EFFECT_CHANGE_MODE_OPTIONS,
     EFFECT_CHANGE_STEP_LABELS,
     EFFECT_CHANGE_STEP_PER_OPTIONS,
@@ -36,7 +38,6 @@
     getEffectChangeShownValue,
     IDLE_CHANGE_STEP_BY,
     isEffectModifierSubmenu,
-    isRollDiceEffectChange,
     MAX_EFFECT_CHANGE_STEP,
     toStoredEffectChangeValue,
   } from '../../model';
@@ -84,9 +85,8 @@
         // «Вычесть» — только в форме: в данных это «Добавить» с минусом
         modeChoice: getEffectChangeModeChoice(change),
         shownValue: getEffectChangeShownValue(change),
-        valueHint: isRollDiceEffectChange(change)
-          ? ACTIVE_EFFECT_LABELS.changeRollDiceHint
-          : undefined,
+        valueHint: describeEffectChangeValueNote(change),
+        conditionWarning: describeEffectChangeConditionWarning(change),
         valueReadable: describeEffectChangeValueLabel(change),
         hasStep: change.step !== undefined,
         /** Предел шага в поле: не заданный — пустое поле «без предела». */
@@ -444,6 +444,8 @@
 
       <UFormField
         :label="ACTIVE_EFFECT_LABELS.changeCondition"
+        :help="changeRow.conditionWarning"
+        :ui="{ help: 'text-warning' }"
         class="col-span-full"
       >
         <InputWithLibrary

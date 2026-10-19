@@ -48,6 +48,7 @@ import {
   PLAN_LIMITS,
   PLAN_SHAPES,
   snapToHalf,
+  sortFurnitureByLayer,
 } from '../model';
 
 const CELL = PLAN_CELL_PIXELS;
@@ -1357,7 +1358,7 @@ export function drawPlan(
     }
   }
 
-  for (const item of document.furniture) {
+  for (const item of sortFurnitureByLayer(document.furniture)) {
     if (item.level === level) {
       drawFurniture(context, item);
     }

@@ -31,6 +31,7 @@ import {
   EFFECT_CARRIER_ARMOR_CONDITION_PREFIX,
   EFFECT_DAMAGE_TYPE_OPTIONS,
   EFFECT_SKILL_OPTIONS,
+  hasConditionAlternatives,
   splitConditionParts,
 } from '~active-effects/model';
 
@@ -158,12 +159,19 @@ export function getSheetArmorState(character: Character): SheetArmorState {
  *
  * @param condition условие изменения.
  * @param armor состояние доспеха персонажа.
- * @returns признак выполнения; условие другого семейства — `false`.
+ * @returns признак выполнения; условие другого семейства и условие с «или» —
+ *   `false`.
  */
 export function matchesArmorCondition(
   condition: string,
   armor: SheetArmorState | undefined,
 ): boolean {
+  // «Или» лист не считает: ветки пришлось бы класть в постоянные числа по
+  // отдельности. Такое условие (Скрытая атака) проверяет только бросок VTTG
+  if (hasConditionAlternatives(condition)) {
+    return false;
+  }
+
   const parts = splitConditionParts(condition);
 
   return (

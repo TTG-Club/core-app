@@ -21,6 +21,7 @@ import { camelCase } from 'es-toolkit';
 
 import {
   EFFECT_ATTACK_ABILITY_CONDITION_PREFIX,
+  hasConditionAlternatives,
   splitQuotedList,
 } from '~active-effects/model';
 
@@ -128,7 +129,8 @@ export function getWeaponDamageChangeKeys(ranged: boolean): string[] {
  * Выполнено ли условие «атака идёт этой характеристикой» — единственное
  * условие урона, которое лист проверяет сам: характеристику удара он знает.
  * Так считает и VTTG (`readAbilityDamageScope`): «Ярость» прибавляет урон
- * только ударам Силой. Составное условие и условие о цели дают `false`.
+ * только ударам Силой. Составное условие (с «и» или «или») и условие о цели
+ * дают `false`.
  *
  * @param condition условие изменения.
  * @param ability характеристика атаки этим оружием.
@@ -142,6 +144,7 @@ export function matchesAttackAbilityCondition(
 
   return (
     trimmed.startsWith(EFFECT_ATTACK_ABILITY_CONDITION_PREFIX)
+    && !hasConditionAlternatives(trimmed)
     && splitQuotedList(
       trimmed.slice(EFFECT_ATTACK_ABILITY_CONDITION_PREFIX.length),
     ).includes(ability.toLowerCase())
