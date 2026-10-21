@@ -3,7 +3,7 @@
 
   import { fillTemplate } from '~bastions/model';
 
-  import { ACTIVITY_LABELS, LAST_TURN_LABELS } from '../model';
+  import { ACTIVITY_LABELS, BASTION_CARD_UI, LAST_TURN_LABELS } from '../model';
   import { BastionEventCard } from './ui';
 
   /**
@@ -104,7 +104,7 @@
   <UCard
     v-if="isVisible && lastTurn"
     variant="subtle"
-    :ui="{ root: 'ring-info/40' }"
+    :ui="{ ...BASTION_CARD_UI, root: 'ring-info/40' }"
   >
     <template #header>
       <div class="flex items-center justify-between gap-2">

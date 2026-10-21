@@ -13,6 +13,7 @@
   import { useBastionAction } from '../composables';
   import {
     ACTIVITY_LABELS,
+    BASTION_CARD_UI,
     cancelBastionOrder,
     EVENT_LABELS,
     formatLedgerAmount,
@@ -104,7 +105,10 @@
 </script>
 
 <template>
-  <UCard variant="subtle">
+  <UCard
+    variant="subtle"
+    :ui="BASTION_CARD_UI"
+  >
     <template #header>
       <h2 class="text-base font-semibold text-highlighted">
         {{ ACTIVITY_LABELS.journal }}
