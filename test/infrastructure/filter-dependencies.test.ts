@@ -1,16 +1,20 @@
-import type { FilterGroup, FilterGroups } from '~infrastructure/filter';
+import type { FilterGroup } from '~infrastructure/filter';
 
 import { describe, expect, it } from 'vitest';
 
 import {
   getAvailableGroupItems,
-  hasRequiredRelations,
   normalizeDependentSelections,
 } from '~infrastructure/filter';
 
 const COMPONENT_KEY = 'component';
 
-/** Группа компонентов с отмеченными значениями. */
+const MATERIAL_PROPERTY_IDS = ['WITH_COST', 'CONSUMABLE'];
+
+/**
+ * Группа компонентов: «С ценой» и «Расходуемый» связаны с «Материальным»
+ * той же группы и доступны только при его выборе.
+ */
 function createComponentGroup(
   selectedIds: Array<string>,
   mode = false,
@@ -20,77 +24,70 @@ function createComponentGroup(
     name: 'Компоненты',
     type: 'filter',
     mode,
-    values: ['VERBAL', 'SOMATIC', 'MATERIAL'].map((id) => ({
-      id,
-      value: id,
-      name: id,
-      selected: selectedIds.includes(id) ? true : null,
-    })),
+    values: ['VERBAL', 'SOMATIC', 'MATERIAL', ...MATERIAL_PROPERTY_IDS].map(
+      (id) => ({
+        id,
+        value: id,
+        name: id,
+        selected: selectedIds.includes(id) ? true : null,
+        ...(MATERIAL_PROPERTY_IDS.includes(id)
+          ? {
+              relations: { [COMPONENT_KEY]: ['MATERIAL'] },
+              relationsRequired: true,
+            }
+          : {}),
+      }),
+    ),
   };
 }
 
-/** Группа свойств материального компонента, зависящая от «Материального». */
-function createMaterialGroup(selectedIds: Array<string> = []): FilterGroup {
-  return {
-    key: 'material',
-    name: 'Материальный компонент',
-    type: 'filter',
-    values: ['WITH_COST', 'CONSUMABLE'].map((id) => ({
-      id,
-      value: id,
-      name: id,
-      selected: selectedIds.includes(id) ? true : null,
-      relations: { [COMPONENT_KEY]: ['MATERIAL'] },
-      relationsRequired: true,
-    })),
-  };
-}
-
-/** Доступные id группы свойств при заданной группе компонентов. */
-function getMaterialIds(componentGroup: FilterGroup): Array<string> {
-  const materialGroup = createMaterialGroup();
-  const groups: FilterGroups = [componentGroup, materialGroup];
-
-  return getAvailableGroupItems(materialGroup, groups).map((filterItem) =>
-    String(filterItem.id),
+/** Доступные id группы компонентов. */
+function getAvailableIds(componentGroup: FilterGroup): Array<string> {
+  return getAvailableGroupItems(componentGroup, [componentGroup]).map(
+    (filterItem) => String(filterItem.id),
   );
 }
 
 describe('обязательные связи фильтров', () => {
-  it('скрывает значения, пока в родителе ничего не выбрано', () => {
-    expect(getMaterialIds(createComponentGroup([]))).toEqual([]);
+  it('скрывает уточнения, пока «Материальный» не выбран', () => {
+    expect(getAvailableIds(createComponentGroup([]))).toEqual([
+      'VERBAL',
+      'SOMATIC',
+      'MATERIAL',
+    ]);
+
+    expect(getAvailableIds(createComponentGroup(['VERBAL']))).toEqual([
+      'VERBAL',
+      'SOMATIC',
+      'MATERIAL',
+    ]);
   });
 
-  it('скрывает значения, если выбран не связанный компонент', () => {
-    expect(getMaterialIds(createComponentGroup(['VERBAL']))).toEqual([]);
-  });
-
-  it('показывает значения при выборе связанного компонента', () => {
-    expect(getMaterialIds(createComponentGroup(['MATERIAL']))).toEqual([
+  it('показывает уточнения при выборе «Материального»', () => {
+    expect(getAvailableIds(createComponentGroup(['MATERIAL']))).toEqual([
+      'VERBAL',
+      'SOMATIC',
+      'MATERIAL',
       'WITH_COST',
       'CONSUMABLE',
     ]);
   });
 
-  it('скрывает значения, если связанный компонент исключён', () => {
-    expect(getMaterialIds(createComponentGroup(['MATERIAL'], true))).toEqual(
-      [],
-    );
+  it('скрывает уточнения в режиме исключения', () => {
+    expect(
+      getAvailableIds(createComponentGroup(['MATERIAL'], true)),
+    ).not.toContain('CONSUMABLE');
   });
 
-  it('снимает выбор свойств, когда «Материальный» снят', () => {
-    const [, materialGroup] = normalizeDependentSelections([
-      createComponentGroup([]),
-      createMaterialGroup(['CONSUMABLE']),
+  it('снимает уточнения, когда «Материальный» снят', () => {
+    const [componentGroup] = normalizeDependentSelections([
+      createComponentGroup(['VERBAL', 'CONSUMABLE']),
     ]);
 
-    expect(
-      materialGroup?.values?.some((filterItem) => filterItem.selected),
-    ).toBe(false);
-  });
+    const selectedIds = componentGroup?.values
+      ?.filter((filterItem) => filterItem.selected)
+      .map((filterItem) => filterItem.id);
 
-  it('распознаёт группу с обязательными связями', () => {
-    expect(hasRequiredRelations(createMaterialGroup())).toBe(true);
-    expect(hasRequiredRelations(createComponentGroup([]))).toBe(false);
+    expect(selectedIds).toEqual(['VERBAL']);
   });
 });

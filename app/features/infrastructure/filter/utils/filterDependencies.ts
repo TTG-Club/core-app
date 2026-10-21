@@ -83,16 +83,6 @@ export function getAvailableGroupItems(
   );
 }
 
-/**
- * Определяет, показывается ли группа только по выбору в родительской группе:
- * такая группа без доступных значений скрывается целиком.
- */
-export function hasRequiredRelations(group: FilterGroup): boolean {
-  return getGroupItems(group).some(
-    (filterItem) => filterItem.relationsRequired === true,
-  );
-}
-
 /** Определяет, зависит ли дочерняя группа от родительской группы. */
 export function isGroupDependentOn(
   childGroup: FilterGroup,
