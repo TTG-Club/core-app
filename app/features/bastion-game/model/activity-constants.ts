@@ -118,6 +118,8 @@ export const EVENT_LABELS = {
 
 export const ACTIVITY_LABELS = {
   journal: 'Журнал бастиона',
+  /** Формат даты и времени записей журнала. */
+  journalDateFormat: 'DD.MM.YYYY HH:mm',
   ordersTab: 'Приказы',
   turnsTab: 'Ходы',
   ledgerTab: 'Казна',

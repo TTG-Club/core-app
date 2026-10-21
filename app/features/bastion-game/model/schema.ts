@@ -450,6 +450,9 @@ export const bastionActivitySchema = z.object({
       completesOnTurn: z.number(),
       status: z.enum(ORDER_STATUSES),
       givenBy: z.string(),
+      /** Персонаж, от чьего имени отдан приказ; пусто у мастера без персонажа. */
+      characterName: z.string().nullish(),
+      givenAt: z.string().nullish(),
       note: z.string().nullish(),
       result: z.string().nullish(),
       canCancel: z.boolean(),
@@ -474,6 +477,8 @@ export const bastionActivitySchema = z.object({
       reason: z.enum(LEDGER_REASONS),
       note: z.string().nullish(),
       createdBy: z.string(),
+      /** Персонаж того, кто провёл движение; пусто у мастера без персонажа. */
+      characterName: z.string().nullish(),
       createdAt: z.string(),
     }),
   ),
