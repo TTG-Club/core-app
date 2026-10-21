@@ -790,9 +790,11 @@
 
         <PlanParticipants :participants="editor.participants.value" />
 
+        <!-- Высота как у кнопок и селекта размера sm: вся панель одной высоты -->
         <UBadge
           :color="saveState.color"
           variant="subtle"
+          class="h-7"
         >
           {{ saveState.label }}
         </UBadge>
@@ -803,6 +805,7 @@
         >
           <UButton
             icon="tabler:device-floppy"
+            size="sm"
             :aria-label="PLAN_LABELS.save"
             :loading="editor.isSaving.value"
             :disabled="!editor.isDirty.value"

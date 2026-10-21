@@ -338,123 +338,126 @@
   <article
     class="flex flex-col gap-2 rounded-lg border border-default bg-elevated/40 p-3"
   >
-    <header class="flex flex-col gap-0.5">
-      <ULink
-        :to="`/bastions/${facility.facilityUrl}`"
-        class="font-medium text-highlighted"
-        @click.left.exact.prevent="drawer.open()"
-      >
-        {{ facility.name }}
-      </ULink>
+    <!-- Счётчики людей и мест — в правом верхнем углу, рядом с названием -->
+    <div class="flex items-start justify-between gap-2">
+      <header class="flex min-w-0 flex-col gap-0.5">
+        <ULink
+          :to="`/bastions/${facility.facilityUrl}`"
+          class="font-medium text-highlighted"
+          @click.left.exact.prevent="drawer.open()"
+        >
+          {{ facility.name }}
+        </ULink>
 
-      <span class="text-xs text-muted">{{ spaceText }}</span>
-    </header>
+        <span class="text-xs text-muted">{{ spaceText }}</span>
+      </header>
 
-    <!-- Значки сами по себе ничего не говорят вслух, поэтому число
+      <!-- Значки сами по себе ничего не говорят вслух, поэтому число
       людей и мест идёт и подсказкой, и `aria-label` -->
-    <div
-      v-if="
-        toolIcons.length
-        || hasHirelings
-        || defendersCount
-        || menagerieCount
-        || stableCount
-      "
-      class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm"
-    >
-      <UTooltip
-        v-if="hasHirelings"
-        :text="hirelingsHint"
-      >
-        <div
-          class="flex items-center gap-1"
-          role="img"
-          :aria-label="hirelingsHint"
-        >
-          <UIcon
-            name="tabler:user-filled"
-            class="size-4 text-primary"
-          />
-
-          <span
-            class="tabular-nums"
-            :class="hirelingsClass"
-          >
-            {{ facility.hirelings ?? 0 }}
-          </span>
-        </div>
-      </UTooltip>
-
-      <UTooltip
-        v-if="defendersCount"
-        :text="defendersHint"
-      >
-        <div
-          class="flex items-center gap-1"
-          role="img"
-          :aria-label="defendersHint"
-        >
-          <UIcon
-            name="tabler:shield-filled"
-            class="size-4 text-info"
-          />
-
-          <span class="text-toned tabular-nums">{{ defendersCount }}</span>
-        </div>
-      </UTooltip>
-
-      <UTooltip
-        v-if="menagerieCount"
-        :text="menagerieHint"
-      >
-        <div
-          class="flex items-center gap-1"
-          role="img"
-          :aria-label="menagerieHint"
-        >
-          <UIcon
-            name="tabler:paw-filled"
-            class="size-4 text-info"
-          />
-
-          <span class="text-toned tabular-nums">{{ menagerieCount }}</span>
-        </div>
-      </UTooltip>
-
-      <UTooltip
-        v-if="stableCount"
-        :text="stableHint"
-      >
-        <div
-          class="flex items-center gap-1"
-          role="img"
-          :aria-label="stableHint"
-        >
-          <UIcon
-            name="tabler:horse"
-            class="size-4 text-info"
-          />
-
-          <span class="text-toned tabular-nums">{{ stableCount }}</span>
-        </div>
-      </UTooltip>
-
       <div
-        v-if="toolIcons.length"
-        class="flex flex-wrap items-center gap-1"
+        v-if="
+          toolIcons.length
+          || hasHirelings
+          || defendersCount
+          || menagerieCount
+          || stableCount
+        "
+        class="flex shrink-0 flex-wrap items-center justify-end gap-x-3 gap-y-1 text-sm"
       >
         <UTooltip
-          v-for="tool in toolIcons"
-          :key="tool.name"
-          :text="tool.name"
+          v-if="hasHirelings"
+          :text="hirelingsHint"
         >
-          <UIcon
-            :name="tool.icon"
-            class="size-4 text-toned"
+          <div
+            class="flex items-center gap-1"
             role="img"
-            :aria-label="tool.name"
-          />
+            :aria-label="hirelingsHint"
+          >
+            <UIcon
+              name="tabler:user-filled"
+              class="size-4 text-primary"
+            />
+
+            <span
+              class="tabular-nums"
+              :class="hirelingsClass"
+            >
+              {{ facility.hirelings ?? 0 }}
+            </span>
+          </div>
         </UTooltip>
+
+        <UTooltip
+          v-if="defendersCount"
+          :text="defendersHint"
+        >
+          <div
+            class="flex items-center gap-1"
+            role="img"
+            :aria-label="defendersHint"
+          >
+            <UIcon
+              name="tabler:shield-filled"
+              class="size-4 text-info"
+            />
+
+            <span class="text-toned tabular-nums">{{ defendersCount }}</span>
+          </div>
+        </UTooltip>
+
+        <UTooltip
+          v-if="menagerieCount"
+          :text="menagerieHint"
+        >
+          <div
+            class="flex items-center gap-1"
+            role="img"
+            :aria-label="menagerieHint"
+          >
+            <UIcon
+              name="tabler:paw-filled"
+              class="size-4 text-info"
+            />
+
+            <span class="text-toned tabular-nums">{{ menagerieCount }}</span>
+          </div>
+        </UTooltip>
+
+        <UTooltip
+          v-if="stableCount"
+          :text="stableHint"
+        >
+          <div
+            class="flex items-center gap-1"
+            role="img"
+            :aria-label="stableHint"
+          >
+            <UIcon
+              name="tabler:horse"
+              class="size-4 text-info"
+            />
+
+            <span class="text-toned tabular-nums">{{ stableCount }}</span>
+          </div>
+        </UTooltip>
+
+        <div
+          v-if="toolIcons.length"
+          class="flex flex-wrap items-center gap-1"
+        >
+          <UTooltip
+            v-for="tool in toolIcons"
+            :key="tool.name"
+            :text="tool.name"
+          >
+            <UIcon
+              :name="tool.icon"
+              class="size-4 text-toned"
+              role="img"
+              :aria-label="tool.name"
+            />
+          </UTooltip>
+        </div>
       </div>
     </div>
 

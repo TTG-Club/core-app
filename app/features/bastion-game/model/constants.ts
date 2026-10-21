@@ -43,7 +43,7 @@ export const FACILITY_SETUP_LABELS = {
   empty: 'Сооружения ещё не выбраны',
   basicMissing: 'Не выбраны стартовые базовые сооружения',
   add: 'Добавить',
-  remove: 'Убрать',
+  remove: 'Удалить',
   hirelings: 'Наёмники: {count}',
   hirelingsMissing:
     'Наёмники: {count}. Ещё {missing} забрало событие, замену найдут бесплатно',

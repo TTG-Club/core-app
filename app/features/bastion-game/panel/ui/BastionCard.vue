@@ -103,82 +103,79 @@
 </script>
 
 <template>
-  <UCard
-    variant="subtle"
-    class="relative transition-colors hover:bg-elevated hover:ring-primary/50"
+  <div
+    class="relative flex flex-col gap-2 rounded-xl border border-default bg-elevated p-3 transition-all hover:border-accented hover:bg-accented"
   >
-    <template #header>
-      <div class="flex items-center justify-between gap-2">
-        <div class="flex min-w-0 items-center gap-2">
-          <UIcon
-            name="tabler:building-castle"
-            class="size-5 shrink-0 text-muted"
-          />
+    <div class="flex items-center justify-between gap-2">
+      <div class="flex min-w-0 items-center gap-2">
+        <UIcon
+          name="tabler:building-castle"
+          class="size-5 shrink-0 text-muted"
+        />
 
-          <!--
+        <!--
             Ссылка растянута на всю карточку: клик по карточке открывает
             бастион. NuxtLink, а не ULink: фильтр ULink при нажатии сжимает
             растянутую область до текста, и клик теряется.
           -->
-          <NuxtLink
-            :to="detailRoute"
-            :title="bastion.name"
-            class="truncate rounded-md text-base font-semibold text-highlighted outline-primary/25 after:absolute after:inset-0 after:rounded-lg focus-visible:outline-3"
-          >
-            {{ bastion.name }}
-          </NuxtLink>
+        <NuxtLink
+          :to="detailRoute"
+          :title="bastion.name"
+          class="truncate rounded-md text-base font-semibold text-highlighted outline-primary/25 after:absolute after:inset-0 after:rounded-xl focus-visible:outline-3"
+        >
+          {{ bastion.name }}
+        </NuxtLink>
 
-          <UBadge
-            v-if="isOwn"
-            color="primary"
-            variant="subtle"
-            size="sm"
-            class="shrink-0"
-          >
-            {{ BASTION_GAME_LABELS.yours }}
-          </UBadge>
-        </div>
+        <UBadge
+          v-if="isOwn"
+          color="primary"
+          variant="subtle"
+          size="sm"
+          class="shrink-0"
+        >
+          {{ BASTION_GAME_LABELS.yours }}
+        </UBadge>
+      </div>
 
-        <div class="relative z-10 flex shrink-0 items-center gap-1">
-          <UTooltip
-            v-if="bastion.owned"
-            :text="shareTooltip"
-          >
-            <UChip
-              :show="!!bastion.editRequests"
-              :text="bastion.editRequests ?? undefined"
-              color="warning"
-              size="xl"
-            >
-              <UButton
-                icon="tabler:share"
-                color="neutral"
-                variant="ghost"
-                size="xs"
-                :aria-label="BASTION_SHARE_LABELS.share"
-                @click.left.exact.prevent="$emit('share')"
-              />
-            </UChip>
-          </UTooltip>
-
-          <UDropdownMenu
-            v-if="menuItems.length"
-            :items="menuItems"
-            :content="{ align: 'end' }"
+      <div class="relative z-10 flex shrink-0 items-center gap-1">
+        <UTooltip
+          v-if="bastion.owned"
+          :text="shareTooltip"
+        >
+          <UChip
+            :show="!!bastion.editRequests"
+            :text="bastion.editRequests ?? undefined"
+            color="warning"
+            size="xl"
           >
             <UButton
-              icon="tabler:dots"
+              icon="tabler:share"
               color="neutral"
               variant="ghost"
               size="xs"
-              :aria-label="BASTION_GAME_LABELS.actions"
+              :aria-label="BASTION_SHARE_LABELS.share"
+              @click.left.exact.prevent="$emit('share')"
             />
-          </UDropdownMenu>
-        </div>
-      </div>
-    </template>
+          </UChip>
+        </UTooltip>
 
-    <div class="flex flex-col gap-3">
+        <UDropdownMenu
+          v-if="menuItems.length"
+          :items="menuItems"
+          :content="{ align: 'end' }"
+        >
+          <UButton
+            icon="tabler:dots"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            :aria-label="BASTION_GAME_LABELS.actions"
+          />
+        </UDropdownMenu>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-2">
       <div
         class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted"
       >
@@ -218,5 +215,5 @@
 
       <BastionMemberList :members="bastion.members" />
     </div>
-  </UCard>
+  </div>
 </template>
