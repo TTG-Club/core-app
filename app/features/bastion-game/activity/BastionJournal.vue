@@ -13,6 +13,7 @@
   import { useBastionAction } from '../composables';
   import {
     ACTIVITY_LABELS,
+    BASTION_CARD_UI,
     cancelBastionOrder,
     EVENT_LABELS,
     formatLedgerAmount,
@@ -37,6 +38,7 @@
   }>();
 
   const { run } = useBastionAction();
+  const { format } = useDayjs();
 
   const tabs: Array<TabsItem> = [
     { label: ACTIVITY_LABELS.ordersTab, slot: 'orders', value: 'orders' },
@@ -63,6 +65,16 @@
       given: order.givenOnTurn,
       completes: order.completesOnTurn,
     });
+  }
+
+  /**
+   * Дата и время записи журнала.
+   *
+   * @param date Момент записи из API.
+   * @returns «21.10.2026 18:47» или пусто, если даты нет.
+   */
+  function formatJournalDate(date: string | null | undefined): string {
+    return date ? format(date, ACTIVITY_LABELS.journalDateFormat) : '';
   }
 
   /**
@@ -93,7 +105,10 @@
 </script>
 
 <template>
-  <UCard variant="subtle">
+  <UCard
+    variant="subtle"
+    :ui="BASTION_CARD_UI"
+  >
     <template #header>
       <h2 class="text-base font-semibold text-highlighted">
         {{ ACTIVITY_LABELS.journal }}
@@ -150,7 +165,18 @@
 
             <span class="text-xs text-muted">
               {{ getOrderTerms(order) }} ·
-              <ParticipantName :user-id="order.givenBy" />
+              <template v-if="order.characterName">
+                {{ order.characterName }}
+              </template>
+
+              <ParticipantName
+                v-else
+                :user-id="order.givenBy"
+              />
+
+              <template v-if="order.givenAt">
+                · {{ formatJournalDate(order.givenAt) }}
+              </template>
             </span>
 
             <p
@@ -267,16 +293,30 @@
             :key="index"
             class="flex flex-wrap items-baseline justify-between gap-2 py-2 text-sm"
           >
-            <span class="min-w-0">
-              <span class="text-highlighted">
-                {{ LEDGER_REASON_LABELS[entry.reason] }}
+            <span class="flex min-w-0 flex-col gap-0.5">
+              <span>
+                <span class="text-highlighted">
+                  {{ LEDGER_REASON_LABELS[entry.reason] }}
+                </span>
+
+                <span
+                  v-if="entry.note"
+                  class="text-muted"
+                >
+                  · {{ entry.note }}
+                </span>
               </span>
 
-              <span
-                v-if="entry.note"
-                class="text-muted"
-              >
-                · {{ entry.note }}
+              <span class="text-xs text-muted">
+                <template v-if="entry.characterName">
+                  {{ entry.characterName }}
+                </template>
+
+                <ParticipantName
+                  v-else
+                  :user-id="entry.createdBy"
+                />
+                · {{ formatJournalDate(entry.createdAt) }}
               </span>
             </span>
 

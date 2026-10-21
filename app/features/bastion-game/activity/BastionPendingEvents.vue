@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import type { BastionActivity, PlayerBastion } from '../model';
 
-  import { EVENT_LABELS } from '../model';
+  import { BASTION_CARD_UI, EVENT_LABELS } from '../model';
   import { BastionEventCard } from './ui';
 
   /**
@@ -26,7 +26,7 @@
   <UCard
     v-if="pendingEvents.length"
     variant="subtle"
-    :ui="{ root: 'ring-warning/40' }"
+    :ui="{ ...BASTION_CARD_UI, root: 'ring-warning/40' }"
   >
     <template #header>
       <h2

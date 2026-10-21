@@ -9,6 +9,15 @@ import type {
 export const DAYS_PER_TURN = 7;
 
 /**
+ * Отступы карточек бастиона: одинаковые и компактные в шапке и теле, вместо
+ * крупных отступов `UCard` по умолчанию.
+ */
+export const BASTION_CARD_UI = {
+  header: 'p-3 sm:px-3',
+  body: 'p-3 sm:p-3',
+} as const;
+
+/**
  * Цена и срок базового сооружения по пространству — из правил бастиона, те же,
  * что у сервера (`FacilitySpace`).
  */
@@ -118,6 +127,8 @@ export const EVENT_LABELS = {
 
 export const ACTIVITY_LABELS = {
   journal: 'Журнал бастиона',
+  /** Формат даты и времени записей журнала. */
+  journalDateFormat: 'DD.MM.YYYY HH:mm',
   ordersTab: 'Приказы',
   turnsTab: 'Ходы',
   ledgerTab: 'Казна',
