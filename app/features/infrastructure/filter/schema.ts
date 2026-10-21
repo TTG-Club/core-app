@@ -20,6 +20,7 @@ const filterItemSchema = z.looseObject({
     .record(z.string(), z.array(z.union([z.string(), z.number()])))
     .optional()
     .catch(undefined),
+  relationsRequired: z.boolean().optional().catch(undefined),
 });
 
 const filterGroupSchema = z.object({
