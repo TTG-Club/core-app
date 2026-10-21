@@ -110,13 +110,19 @@
   }
 
   /**
-   * Убирает экземпляр сооружения из черновика.
+   * Удаляет последний добавленный экземпляр сооружения из черновика.
    *
-   * @param index Позиция в черновике.
+   * @param facility Сооружение справочника.
    */
-  function remove(index: number): void {
+  function remove(facility: CatalogFacility): void {
+    const last = getSelections(facility).at(-1);
+
+    if (!last) {
+      return;
+    }
+
     draft.value.special = draft.value.special.filter(
-      (_, position) => position !== index,
+      (_, position) => position !== last.index,
     );
   }
 
@@ -184,53 +190,58 @@
           </span>
         </div>
 
-        <UButton
-          icon="tabler:plus"
-          size="sm"
-          variant="subtle"
-          :disabled="!canAddSpecial(draft, facility, limit)"
-          @click.left.exact.prevent="add(facility)"
-        >
-          {{ FACILITY_SETUP_LABELS.add }}
-          <template v-if="countSelected(draft, facility.url) > 0">
-            ({{ countSelected(draft, facility.url) }})
-          </template>
-        </UButton>
+        <div class="flex shrink-0 items-center gap-2">
+          <UButton
+            v-if="facility.repeatable || !countSelected(draft, facility.url)"
+            icon="tabler:plus"
+            size="sm"
+            variant="subtle"
+            :disabled="!canAddSpecial(draft, facility, limit)"
+            @click.left.exact.prevent="add(facility)"
+          >
+            {{ FACILITY_SETUP_LABELS.add }}
+            <template v-if="countSelected(draft, facility.url) > 0">
+              ({{ countSelected(draft, facility.url) }})
+            </template>
+          </UButton>
+
+          <UButton
+            v-if="countSelected(draft, facility.url) > 0"
+            icon="tabler:trash"
+            color="error"
+            variant="subtle"
+            size="sm"
+            @click.left.exact.prevent="remove(facility)"
+          >
+            {{ FACILITY_SETUP_LABELS.remove }}
+          </UButton>
+        </div>
       </div>
 
-      <div
-        v-for="{ index, selection } in getSelections(facility)"
-        :key="index"
-        class="flex flex-wrap items-end gap-2 border-l-2 border-primary/60 pl-3"
-      >
-        <UFormField
-          v-for="choice in getChoices(facility)"
-          :key="choice.name"
-          :label="choice.name"
-          class="min-w-48 flex-1"
+      <template v-if="getChoices(facility).length">
+        <div
+          v-for="{ index, selection } in getSelections(facility)"
+          :key="index"
+          class="flex flex-wrap items-end gap-2 border-l-2 border-primary/60 pl-3"
         >
-          <USelectMenu
-            :model-value="getChoiceValue(selection, choice.name)"
-            :items="choice.items"
-            :placeholder="FACILITY_SETUP_LABELS.choicePlaceholder"
-            value-key="value"
-            multiple
-            class="w-full"
-            @update:model-value="setChoice(selection, choice, $event)"
-          />
-        </UFormField>
-
-        <UButton
-          icon="tabler:trash"
-          color="error"
-          variant="ghost"
-          size="sm"
-          :aria-label="FACILITY_SETUP_LABELS.remove"
-          @click.left.exact.prevent="remove(index)"
-        >
-          {{ FACILITY_SETUP_LABELS.remove }}
-        </UButton>
-      </div>
+          <UFormField
+            v-for="choice in getChoices(facility)"
+            :key="choice.name"
+            :label="choice.name"
+            class="min-w-48 flex-1"
+          >
+            <USelectMenu
+              :model-value="getChoiceValue(selection, choice.name)"
+              :items="choice.items"
+              :placeholder="FACILITY_SETUP_LABELS.choicePlaceholder"
+              value-key="value"
+              multiple
+              class="w-full"
+              @update:model-value="setChoice(selection, choice, $event)"
+            />
+          </UFormField>
+        </div>
+      </template>
     </div>
   </div>
 </template>
