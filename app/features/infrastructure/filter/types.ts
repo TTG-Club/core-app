@@ -40,6 +40,8 @@ export interface FilterItem {
   name: string;
   selected: boolean | null; // UI state
   relations?: Record<string, Array<string | number>>;
+  /** Значение доступно, только когда в родителе выбрано связанное значение. */
+  relationsRequired?: boolean;
   [p: string]: unknown;
 }
 

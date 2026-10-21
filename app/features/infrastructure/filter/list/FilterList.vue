@@ -4,6 +4,7 @@
   import {
     getAvailableGroupItems,
     getSearchedGroupItems,
+    hasRequiredRelations,
     isGroupDependentOn,
   } from '../utils';
   import { FilterGroup as FilterGroupComponent } from './ui';
@@ -46,14 +47,15 @@
    * прежнее: группа без доступных значений остаётся на месте.
    *
    * Сворачиваемая группа без значений тоже прячется: под её шапкой было бы
-   * пусто, и раскрывать её незачем.
+   * пусто, и раскрывать её незачем. Так же прячется группа, которая
+   * показывается только по выбору в родителе, пока выбора нет.
    */
-  function isGroupVisible(items: FilterItems): boolean {
-    if ((search || collapsible) && items.length === 0) {
-      return false;
+  function isGroupVisible(group: FilterGroup, items: FilterItems): boolean {
+    if (items.length > 0) {
+      return true;
     }
 
-    return true;
+    return !(search || collapsible || hasRequiredRelations(group));
   }
 
   const filter = defineModel<FilterGroups>({
@@ -111,11 +113,11 @@
         const nextAvailableItems = getVisibleGroupItems(nextGroup, groups);
         const combinedGroups: DisplayGroup[] = [];
 
-        if (isGroupVisible(availableItems)) {
+        if (isGroupVisible(group, availableItems)) {
           combinedGroups.push({ group, index: i, availableItems });
         }
 
-        if (isGroupVisible(nextAvailableItems)) {
+        if (isGroupVisible(nextGroup, nextAvailableItems)) {
           combinedGroups.push({
             group: nextGroup,
             index: i + 1,
@@ -130,7 +132,7 @@
         // Зависимая группа уже отрисована в паре с текущей — пропускаем её,
         // чтобы не вывести повторно на следующей итерации.
         i++;
-      } else if (isGroupVisible(availableItems)) {
+      } else if (isGroupVisible(group, availableItems)) {
         displayGroups.push([{ group, index: i, availableItems }]);
       }
     }

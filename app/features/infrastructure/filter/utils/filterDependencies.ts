@@ -28,12 +28,16 @@ function getSelectedIds(groups: FilterGroups, groupKey: string): Set<string> {
 
 /**
  * Проверяет доступность значения с учётом выбранных значений родительских групп.
- * Пустой (или исключающий) родительский фильтр не ограничивает дочерние значения.
+ * Пустой (или исключающий) родительский фильтр не ограничивает дочерние значения,
+ * если у значения не задан `relationsRequired`: тогда без выбора связанного
+ * значения в родителе оно недоступно.
  */
 function isItemAvailable(
-  relations: FilterItem['relations'],
+  filterItem: FilterItem,
   resolveSelectedIds: (parentKey: string) => Set<string>,
 ): boolean {
+  const { relations, relationsRequired } = filterItem;
+
   if (!relations) {
     return true;
   }
@@ -41,11 +45,12 @@ function isItemAvailable(
   return Object.entries(relations).every(([parentKey, relatedIds]) => {
     const selectedParentIds = resolveSelectedIds(parentKey);
 
-    return (
-      selectedParentIds.size === 0
-      || relatedIds.some((relatedId) =>
-        selectedParentIds.has(String(relatedId)),
-      )
+    if (selectedParentIds.size === 0) {
+      return !relationsRequired;
+    }
+
+    return relatedIds.some((relatedId) =>
+      selectedParentIds.has(String(relatedId)),
     );
   });
 }
@@ -74,7 +79,17 @@ export function getAvailableGroupItems(
   };
 
   return getGroupItems(group).filter((filterItem) =>
-    isItemAvailable(filterItem.relations, resolveSelectedIds),
+    isItemAvailable(filterItem, resolveSelectedIds),
+  );
+}
+
+/**
+ * Определяет, показывается ли группа только по выбору в родительской группе:
+ * такая группа без доступных значений скрывается целиком.
+ */
+export function hasRequiredRelations(group: FilterGroup): boolean {
+  return getGroupItems(group).some(
+    (filterItem) => filterItem.relationsRequired === true,
   );
 }
 
