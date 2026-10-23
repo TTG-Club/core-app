@@ -8,6 +8,7 @@
     BugReportResponse,
     BugReportStatus,
     BugReportStatusUpdatePayload,
+    BugReportType,
     PageBugReportResponse,
   } from '~bug-report/model';
 
@@ -52,12 +53,17 @@
     applyBugStatusPatch,
     BUG_REPORT_DETAIL_DATE_FORMAT,
     BUG_REPORT_PLATFORM_LABELS,
-    BUG_REPORT_STATUS_LABELS,
     BUG_REPORT_STATUSES,
+    BUG_REPORT_TYPE_LIST_TABS,
+    BUG_REPORT_TYPE_QUERY_KEY,
     buildLoginFilterOptions,
     getAdminBugApiUrl,
     getBugReportStatusColor,
+    getBugReportStatusLabel,
+    isBugReportType,
+    parseBugReportTypeQuery,
     toAdminBugFilterApiValue,
+    toBugReportTypeQuery,
   } from '~bug-report/model';
   import { UiPagination } from '~ui/pagination';
 
@@ -74,15 +80,48 @@
   const currentPage = ref(1);
   const itemsPerPage = ADMIN_BUGS_DEFAULT_PAGE_SIZE;
 
+  /**
+   * Тип записей в списке: баги или пожелания. Живёт в адресе (`?type=wish`);
+   * отсутствующее или неизвестное значение означает баги. Смена типа, как и
+   * смена фильтра, закрывает открытую карточку.
+   */
+  const typeFilter = computed<BugReportType>({
+    get: () => parseBugReportTypeQuery(route.query[BUG_REPORT_TYPE_QUERY_KEY]),
+    set: (type) => {
+      router.replace({
+        query: {
+          ...route.query,
+          [BUG_REPORT_TYPE_QUERY_KEY]: toBugReportTypeQuery(type),
+          [ADMIN_BUGS_ID_QUERY_KEY]: undefined,
+        },
+      });
+    },
+  });
+
+  /**
+   * Переключает баги и пожелания. Значение приходит от вкладок строкой —
+   * неизвестное пропускаем.
+   *
+   * @param value Значение выбранной вкладки.
+   */
+  function handleTypeChange(value: string | number): void {
+    if (isBugReportType(value)) {
+      typeFilter.value = value;
+    }
+  }
+
   // Логины для выпадающих списков авторов и исполнителей. Загружаются до
-  // создания фильтров: значение фильтра из адреса сверяется с этим списком
+  // создания фильтров: значение фильтра из адреса сверяется с этим списком.
+  // Списки свои у багов и у пожеланий
   const { data: filterOptions, refresh: refreshFilterOptions } =
     await useAsyncData<BugReportFilterOptionsResponse>(
       ADMIN_BUGS_FILTER_OPTIONS_DATA_KEY,
       () =>
         requestFetch<BugReportFilterOptionsResponse>(
           ADMIN_BUGS_FILTER_OPTIONS_API_URL,
+          { query: { type: typeFilter.value } },
         ),
+      { watch: [typeFilter] },
     );
 
   const authorLogins = computed(() => filterOptions.value?.userLogins ?? []);
@@ -166,14 +205,16 @@
     },
   });
 
-  // Опции фильтров не зависят от состояния страницы — считаются один раз
-  const statusOptions: AdminBugFilterOption[] = [
+  // Подписи статусов у багов и пожеланий разные — список зависит от типа
+  const statusOptions = computed<AdminBugFilterOption[]>(() => [
     { label: ADMIN_BUGS_STATUS_ALL_LABEL, value: ADMIN_BUGS_FILTER_ALL },
     ...BUG_REPORT_STATUSES.map((status) => ({
-      label: BUG_REPORT_STATUS_LABELS[status],
+      label: getBugReportStatusLabel(status, typeFilter.value),
       value: status,
     })),
-  ];
+  ]);
+
+  // Опции платформ не зависят от состояния страницы — считаются один раз
 
   const platformOptions: AdminBugFilterOption[] = [
     { label: ADMIN_BUGS_PLATFORM_ALL_LABEL, value: ADMIN_BUGS_FILTER_ALL },
@@ -195,11 +236,14 @@
     ),
   );
 
-  // Сброс страницы и выделения при изменении фильтров
-  watch([statusFilter, platformFilter, authorFilter, resolverFilter], () => {
-    currentPage.value = 1;
-    selectedBugId.value = null;
-  });
+  // Сброс страницы и выделения при изменении фильтров и типа записей
+  watch(
+    [typeFilter, statusFilter, platformFilter, authorFilter, resolverFilter],
+    () => {
+      currentPage.value = 1;
+      selectedBugId.value = null;
+    },
+  );
 
   /**
    * Сколько фильтров отличаются от «все». Число стоит на кнопке, которая на
@@ -259,12 +303,14 @@
           sourcePlatform: toAdminBugFilterApiValue(platformFilter.value),
           userLogin: toAdminBugFilterApiValue(authorFilter.value),
           statusUpdatedBy: toAdminBugFilterApiValue(resolverFilter.value),
+          type: typeFilter.value,
         },
       });
     },
     {
       watch: [
         currentPage,
+        typeFilter,
         statusFilter,
         platformFilter,
         authorFilter,
@@ -297,11 +343,12 @@
               sourcePlatform: toAdminBugFilterApiValue(platformFilter.value),
               userLogin: toAdminBugFilterApiValue(authorFilter.value),
               statusUpdatedBy: toAdminBugFilterApiValue(resolverFilter.value),
+              type: typeFilter.value,
             },
           },
         ),
       {
-        watch: [platformFilter, authorFilter, resolverFilter],
+        watch: [typeFilter, platformFilter, authorFilter, resolverFilter],
       },
     );
 
@@ -312,7 +359,7 @@
   const statusSummaryRows = computed(() => {
     return BUG_REPORT_STATUSES.map((status) => ({
       status,
-      label: BUG_REPORT_STATUS_LABELS[status],
+      label: getBugReportStatusLabel(status, typeFilter.value),
       color: getBugReportStatusColor(status),
       count:
         statusCounts.value?.find((statusCount) => statusCount.status === status)
@@ -465,6 +512,30 @@
       }),
     };
   }
+
+  /**
+   * Запись переведена в другой тип: она уходит из текущего списка, сводка и
+   * логины фильтров меняются — всё перечитываем. Открытая карточка остаётся
+   * на месте: до перезагрузки списка она показывает ответ сервиса.
+   *
+   * @param updatedBug Запись в ответе сервиса после смены типа.
+   */
+  function handleBugTypeUpdate(updatedBug: BugReportResponse): void {
+    fetchedSelectedBug.value = updatedBug;
+
+    if (bugsData.value) {
+      bugsData.value = {
+        ...bugsData.value,
+        content: bugsData.value.content.map((bugReport) =>
+          bugReport.id === updatedBug.id ? updatedBug : bugReport,
+        ),
+      };
+    }
+
+    void refreshBugs();
+    void refreshStatusCounts();
+    void refreshFilterOptions();
+  }
 </script>
 
 <template>
@@ -581,6 +652,16 @@
           <p class="hidden text-xs leading-normal text-secondary lg:block">
             {{ ADMIN_BUGS_PAGE_DESCRIPTION }}
           </p>
+
+          <!-- Баги и пожелания: виден на любой ширине, над фильтрами -->
+          <UTabs
+            :model-value="typeFilter"
+            :items="BUG_REPORT_TYPE_LIST_TABS"
+            :content="false"
+            size="sm"
+            class="w-full"
+            @update:model-value="handleTypeChange"
+          />
 
           <!-- Широкие экраны: сводка и фильтры прямо в боковой колонке -->
           <div class="hidden flex-col gap-3 lg:flex">
@@ -734,6 +815,7 @@
           :date-time="detailDateTime"
           @close="closeDetail"
           @update-status="handleBugStatusUpdate"
+          @update-type="handleBugTypeUpdate"
         />
 
         <div
@@ -773,6 +855,7 @@
           :date-time="detailDateTime"
           @close="closeDetail"
           @update-status="handleBugStatusUpdate"
+          @update-type="handleBugTypeUpdate"
         />
       </template>
     </USlideover>

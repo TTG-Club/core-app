@@ -12,9 +12,12 @@
     BUG_REPORT_SCREENSHOT_PRESENT_TITLE,
     BUG_REPORT_SELECTION_ABSENT_TITLE,
     BUG_REPORT_SELECTION_PRESENT_TITLE,
-    BUG_REPORT_STATUS_LABELS,
+    BUG_REPORT_TYPE_ICONS,
+    BUG_REPORT_TYPE_LABELS,
     BUG_REPORT_UUID_TITLE,
     getBugReportStatusColor,
+    getBugReportStatusLabel,
+    resolveBugReportType,
   } from '../../model';
 
   /** Иконка-признак строки: подсказка при наведении и цвет. */
@@ -93,6 +96,19 @@
     return format(props.bugReport.createdAt, BUG_REPORT_DATE_FORMAT);
   });
 
+  /** Тип записи; у старого сервиса поля нет — тогда это баг. */
+  const bugReportType = computed(() =>
+    resolveBugReportType(props.bugReport.type),
+  );
+
+  /** Пожелание помечается отдельной плашкой: у багов пометки нет. */
+  const isWish = computed(() => bugReportType.value === 'WISH');
+
+  /** Название статуса с учётом типа записи. */
+  const statusLabel = computed(() =>
+    getBugReportStatusLabel(props.bugReport.status, bugReportType.value),
+  );
+
   /** Оформление строки: выбранная подсвечена рамкой и фоном. */
   const rowClass = computed(() => {
     return props.isOpened ? OPENED_ROW_CLASS : ROW_CLASS;
@@ -139,7 +155,7 @@
     :class="rowClass"
     @click.left.exact.prevent="handleClick"
   >
-    <!-- Левая секция: UUID, Статус, Платформа -->
+    <!-- Левая секция: UUID, Статус, пометка пожелания, Платформа -->
     <div
       class="flex w-full min-w-0 items-center justify-between gap-4 sm:w-auto sm:flex-initial sm:gap-8"
     >
@@ -158,9 +174,21 @@
           variant="subtle"
           size="sm"
         >
-          {{ BUG_REPORT_STATUS_LABELS[bugReport.status] }}
+          {{ statusLabel }}
         </UBadge>
       </div>
+
+      <!-- Пометка пожелания -->
+      <UBadge
+        v-if="isWish"
+        color="secondary"
+        variant="subtle"
+        size="sm"
+        :icon="BUG_REPORT_TYPE_ICONS.WISH"
+        class="shrink-0"
+      >
+        {{ BUG_REPORT_TYPE_LABELS.WISH }}
+      </UBadge>
 
       <!-- Платформа -->
       <UBadge

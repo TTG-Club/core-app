@@ -2,13 +2,19 @@ import { StatusCodes } from 'http-status-codes';
 import { z } from 'zod';
 
 import { BUG_REPORT_EXTERNAL_API_BASE_URL } from '#server/utils/bugReportApi';
-import { BUG_REPORT_STATUSES, SOURCE_PLATFORMS } from '#shared/consts';
+import {
+  BUG_REPORT_STATUSES,
+  BUG_REPORT_TYPES,
+  DEFAULT_BUG_REPORT_TYPE,
+  SOURCE_PLATFORMS,
+} from '#shared/consts';
 
 const listQuerySchema = z.object({
   page: z.coerce.number().int().min(0).optional(),
   size: z.coerce.number().int().min(1).max(100).optional(),
   sort: z.string().optional(),
   status: z.enum(BUG_REPORT_STATUSES).optional(),
+  type: z.enum(BUG_REPORT_TYPES).optional(),
 });
 
 /**
@@ -24,6 +30,8 @@ const myBugReportSchema = z.object({
   description: z.string(),
   url: z.string().nullish(),
   status: z.enum(BUG_REPORT_STATUSES),
+  // Старый сервис поля не отдаёт — тогда запись считается багом
+  type: z.enum(BUG_REPORT_TYPES).catch(DEFAULT_BUG_REPORT_TYPE),
   sourcePlatform: z.enum(SOURCE_PLATFORMS),
   screenshotUrl: z.string().nullish(),
   createdAt: z.string(),
@@ -42,7 +50,7 @@ const myBugsPageSchema = z.object({
 /**
  * Обработчик списка баг-репортов текущего пользователя.
  *
- * Проверяет авторизацию, пробрасывает пагинацию и фильтр по статусу на внешний
+ * Проверяет авторизацию, пробрасывает пагинацию и фильтры по статусу и типу на внешний
  * микросервис и возвращает ответ, очищенный от полей, по которым автор мог бы
  * узнать, кто менял статус его репорта.
  */

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { DrawingTool } from '../model';
+  import type { BugReportType, DrawingTool } from '../model';
 
   import { toMarkupSource } from '~ui/markup';
   import { MarkupEditor } from '~ui/markup-editor';
@@ -7,10 +7,13 @@
   import { useBugReport } from '../composables';
   import {
     BUG_REPORT_DESCRIPTION_MAX_LENGTH,
-    BUG_REPORT_DESCRIPTION_PLACEHOLDER,
     BUG_REPORT_DESCRIPTION_TOO_LONG_ERROR,
+    BUG_REPORT_MODAL_TEXTS,
+    BUG_REPORT_TYPE_TABS,
     DEFAULT_BRUSH_COLOR,
     DEFAULT_BRUSH_SIZE,
+    DEFAULT_BUG_REPORT_TYPE,
+    isBugReportType,
   } from '../model';
   import {
     BugReportAuthor,
@@ -37,6 +40,24 @@
   const brushColor = ref(DEFAULT_BRUSH_COLOR.value);
   const drawingTool = ref<DrawingTool>('brush');
   const isSubmitting = ref(false);
+
+  /** Что отправляем: баг или пожелание. Каждое открытие начинается с бага */
+  const reportType = ref<BugReportType>(DEFAULT_BUG_REPORT_TYPE);
+
+  /** Заголовок, подписи и подсказки окна под выбранный тип */
+  const modalTexts = computed(() => BUG_REPORT_MODAL_TEXTS[reportType.value]);
+
+  /**
+   * Переключает тип записи. Значение приходит от вкладок строкой — неизвестное
+   * пропускаем.
+   *
+   * @param value Значение выбранной вкладки.
+   */
+  function handleTypeChange(value: string | number): void {
+    if (isBugReportType(value)) {
+      reportType.value = value;
+    }
+  }
 
   const screenshotUrl = ref('');
 
@@ -121,7 +142,11 @@
         ? await canvasRef.value.exportToBlob()
         : null;
 
-      const success = await submit(descriptionSource.value, screenshotBlob);
+      const success = await submit(
+        descriptionSource.value,
+        screenshotBlob,
+        reportType.value,
+      );
 
       if (success) {
         description.value = '';
@@ -154,6 +179,10 @@
   }
 
   watch(isModalOpen, (opened) => {
+    // Окно живёт смонтированным между открытиями: тип сбрасываем и при
+    // открытии, и при закрытии, чтобы оно всегда начиналось с бага
+    reportType.value = DEFAULT_BUG_REPORT_TYPE;
+
     if (!opened) {
       description.value = '';
       brushColor.value = DEFAULT_BRUSH_COLOR.value;
@@ -205,13 +234,23 @@
 <template>
   <UModal
     v-model:open="isModalOpen"
-    title="Сообщить о баге"
+    :title="modalTexts.title"
     class="sm:w-fit sm:max-w-[90vw]"
     :ui="{ overlay: 'z-[100]', content: 'z-[100]' }"
   >
     <!-- UModal (Nuxt UI 3) поддерживает слоты body/footer — предупреждение WebStorm ложное -->
     <!-- suppress VueUnrecognizedSlot -->
     <template #body>
+      <!-- Тип записи: баг или пожелание -->
+      <UTabs
+        :model-value="reportType"
+        :items="BUG_REPORT_TYPE_TABS"
+        :content="false"
+        size="sm"
+        class="mb-4 w-full sm:w-fit"
+        @update:model-value="handleTypeChange"
+      />
+
       <div class="flex flex-col gap-4 lg:flex-row">
         <!-- Левая колонка: скриншот + инструменты -->
         <!-- На маленьких экранах скриншот-колонка скрыта -->
@@ -420,10 +459,10 @@
             </span>
           </div>
 
-          <!-- Описание бага -->
+          <!-- Описание бага или пожелания -->
           <UFormField
             name="description"
-            label="Описание проблемы"
+            :label="modalTexts.descriptionLabel"
             required
             :error="descriptionError"
           >
@@ -431,7 +470,7 @@
               <MarkupEditor
                 v-model="description"
                 preset="basic"
-                :placeholder="BUG_REPORT_DESCRIPTION_PLACEHOLDER"
+                :placeholder="modalTexts.descriptionPlaceholder"
               />
             </div>
           </UFormField>

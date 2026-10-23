@@ -1,13 +1,17 @@
-import type { BugReportCreateRequest, TextSelection } from '../model';
+import type {
+  BugReportCreateRequest,
+  BugReportType,
+  TextSelection,
+} from '../model';
 
 import { v4 as createUuid } from 'uuid';
 
 import {
   BUG_REPORT_API_URL,
+  BUG_REPORT_MODAL_TEXTS,
   BUG_REPORT_SUBMIT_ERROR_DESC,
   BUG_REPORT_SUBMIT_ERROR_TITLE,
-  BUG_REPORT_SUBMIT_SUCCESS_DESC,
-  BUG_REPORT_SUBMIT_SUCCESS_TITLE,
+  BUG_REPORT_TYPE_ICONS,
   SCREENSHOT_EXPORT_MIME,
   SCREENSHOT_FILE_NAME_PNG,
   SCREENSHOT_FILE_NAME_WEBP,
@@ -122,15 +126,20 @@ export function useBugReport() {
   }
 
   /**
-   * Отправляет баг-репорт на сервер.
+   * Отправляет баг-репорт или пожелание на сервер.
    *
    * Формирует FormData с JSON-объектом запроса и файлом скриншота,
    * передает JWT-токен авторизации из кук при его наличии.
    * Возвращает true при успешной отправке и false при ошибке.
+   *
+   * @param description Описание в исходнике разметки.
+   * @param screenshotBlob Скриншот с пометками, если приложен.
+   * @param type Тип записи: баг или пожелание.
    */
   async function submit(
     description: string,
     screenshotBlob: Blob | null,
+    type: BugReportType,
   ): Promise<boolean> {
     const userTokenCookie = useCookie<string | null>('ttg-user-token');
     const guestId = useLocalStorage('bug-report:guest-id', () => createUuid());
@@ -145,6 +154,7 @@ export function useBugReport() {
       sourcePlatform: SOURCE_PLATFORM,
       sessionId: userTokenCookie.value ? undefined : guestId.value,
       selectedText: formattedSelectedText,
+      type,
     };
 
     const formData = new FormData();
@@ -177,9 +187,9 @@ export function useBugReport() {
 
       $toast.add({
         color: 'success',
-        title: BUG_REPORT_SUBMIT_SUCCESS_TITLE,
-        description: BUG_REPORT_SUBMIT_SUCCESS_DESC,
-        icon: 'tabler:bug',
+        title: BUG_REPORT_MODAL_TEXTS[type].successTitle,
+        description: BUG_REPORT_MODAL_TEXTS[type].successDescription,
+        icon: BUG_REPORT_TYPE_ICONS[type],
       });
 
       cancel();

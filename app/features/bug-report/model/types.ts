@@ -4,7 +4,11 @@
  * в фиче значило бы дублировать значения, которые обязаны совпадать.
  * Реэкспорт оставлен, чтобы не переписывать импорты внутри фичи.
  */
-import type { BugReportStatus, SourcePlatform } from '#shared/consts';
+import type {
+  BugReportStatus,
+  BugReportType,
+  SourcePlatform,
+} from '#shared/consts';
 
 /** Контекст выделенного текста для баг-репорта */
 export interface TextSelection {
@@ -18,7 +22,7 @@ export interface TextSelection {
   after: string;
 }
 
-export type { BugReportStatus, SourcePlatform };
+export type { BugReportStatus, BugReportType, SourcePlatform };
 
 /** Запрос на создание баг-репорта для API */
 export interface BugReportCreateRequest {
@@ -36,6 +40,9 @@ export interface BugReportCreateRequest {
 
   /** Выделенный текст на странице */
   selectedText?: string;
+
+  /** Тип записи: баг или пожелание (без поля сервис считает баг) */
+  type: BugReportType;
 }
 
 /** Результат парсинга выделенного текста с контекстом */
@@ -66,6 +73,13 @@ export interface BugReportResponse {
 
   /** Текущий статус бага */
   status: BugReportStatus;
+
+  /**
+   * Тип записи: баг или пожелание. Необязателен: список админки проксируется
+   * без пересборки, и старый сервис поля не отдаёт — тогда это баг
+   * (см. `resolveBugReportType`).
+   */
+  type?: BugReportType;
 
   /** Платформа-источник */
   sourcePlatform: SourcePlatform;
@@ -118,6 +132,9 @@ export interface MyBugReportResponse {
 
   /** Текущий статус бага */
   status: BugReportStatus;
+
+  /** Тип записи: баг или пожелание (прокси подставляет баг для старого сервиса) */
+  type: BugReportType;
 
   /** Платформа-источник */
   sourcePlatform: SourcePlatform;
@@ -269,6 +286,36 @@ export interface BugReportFilterOptionsResponse {
 
   /** Логины пользователей, менявших статус баг-репортов, по алфавиту */
   statusUpdatedByLogins: string[];
+}
+
+/** Вкладка переключателя типа записи */
+export interface BugReportTypeTab {
+  /** Подпись вкладки */
+  label: string;
+
+  /** Тип записи */
+  value: BugReportType;
+
+  /** Иконка вкладки */
+  icon: string;
+}
+
+/** Тексты окна отправки, зависящие от типа записи */
+export interface BugReportModalTexts {
+  /** Заголовок окна */
+  title: string;
+
+  /** Подпись поля описания */
+  descriptionLabel: string;
+
+  /** Подсказка в пустом поле описания */
+  descriptionPlaceholder: string;
+
+  /** Заголовок тоста об успешной отправке */
+  successTitle: string;
+
+  /** Текст тоста об успешной отправке */
+  successDescription: string;
 }
 
 /** Пункт селекта-фильтра в админке баг-репортов */

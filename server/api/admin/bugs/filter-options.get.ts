@@ -1,7 +1,13 @@
+import { StatusCodes } from 'http-status-codes';
 import { z } from 'zod';
 
 import { BUG_REPORT_EXTERNAL_API_BASE_URL } from '#server/utils/bugReportApi';
 import { assertAdminAccess } from '#server/utils/getUser';
+import { BUG_REPORT_TYPES } from '#shared/consts';
+
+const filterOptionsQuerySchema = z.object({
+  type: z.enum(BUG_REPORT_TYPES).optional(),
+});
 
 const filterOptionsSchema = z.object({
   userLogins: z.array(z.string()),
@@ -13,12 +19,19 @@ const filterOptionsSchema = z.object({
  * логины авторов и логины пользователей, менявших статус.
  *
  * Проверяет права пользователя (требуется ADMIN или MODERATOR)
- * и пересылает запрос на внешний микросервис.
+ * и пересылает запрос на внешний микросервис. Необязательный `type` сужает
+ * логины до записей одного типа: багов или пожеланий.
  */
 export default defineEventHandler(async (event) => {
   const user = await getUserFromToken(event);
 
   assertAdminAccess(user);
+
+  const parsedQuery = filterOptionsQuerySchema.safeParse(getQuery(event));
+
+  if (!parsedQuery.success) {
+    throw createError(getErrorResponse(StatusCodes.BAD_REQUEST));
+  }
 
   const authHeader = getHeader(event, 'authorization');
 
@@ -32,6 +45,7 @@ export default defineEventHandler(async (event) => {
     return filterOptionsSchema.parse(
       await $fetch(`${BUG_REPORT_EXTERNAL_API_BASE_URL}/filter-options`, {
         method: 'GET',
+        query: parsedQuery.data,
         headers,
       }),
     );
