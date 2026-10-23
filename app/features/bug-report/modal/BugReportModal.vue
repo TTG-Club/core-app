@@ -241,16 +241,6 @@
     <!-- UModal (Nuxt UI 3) поддерживает слоты body/footer — предупреждение WebStorm ложное -->
     <!-- suppress VueUnrecognizedSlot -->
     <template #body>
-      <!-- Тип записи: баг или пожелание -->
-      <UTabs
-        :model-value="reportType"
-        :items="BUG_REPORT_TYPE_TABS"
-        :content="false"
-        size="sm"
-        class="mb-4 w-full sm:w-fit"
-        @update:model-value="handleTypeChange"
-      />
-
       <div class="flex flex-col gap-4 lg:flex-row">
         <!-- Левая колонка: скриншот + инструменты -->
         <!-- На маленьких экранах скриншот-колонка скрыта -->
@@ -415,6 +405,16 @@
 
         <!-- Правая колонка: форма -->
         <div class="flex w-full shrink-0 flex-col gap-4 lg:w-100">
+          <!-- Тип записи: баг или пожелание -->
+          <UTabs
+            :model-value="reportType"
+            :items="BUG_REPORT_TYPE_TABS"
+            :content="false"
+            size="sm"
+            class="w-full"
+            @update:model-value="handleTypeChange"
+          />
+
           <!-- Автор и URL -->
           <div class="flex flex-col gap-3">
             <BugReportAuthor />
@@ -467,7 +467,9 @@
             :error="descriptionError"
           >
             <div ref="descriptionField">
+              <!-- UEditor читает placeholder только при создании: ключ по типу пересоздаёт редактор, текст живёт в v-model -->
               <MarkupEditor
+                :key="reportType"
                 v-model="description"
                 preset="basic"
                 :placeholder="modalTexts.descriptionPlaceholder"
