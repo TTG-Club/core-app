@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import {
   filterPayments,
   getAverageCheck,
+  getListPage,
   getSubscriptionStatsSummary,
   joinSubscriptionPeriod,
   PAYMENT_FILTER_ALL,
@@ -132,5 +133,21 @@ describe('joinSubscriptionPeriod', () => {
     expect(joinSubscriptionPeriod('01.10.2026', '01.01.2027')).toBe(
       '01.10.2026 — 01.01.2027',
     );
+  });
+});
+
+describe('getListPage', () => {
+  const rows = [1, 2, 3, 4, 5];
+
+  it('отдаёт строки нужной страницы', () => {
+    expect(getListPage(rows, 2, 2)).toEqual([3, 4]);
+  });
+
+  it('на последней странице отдаёт остаток', () => {
+    expect(getListPage(rows, 3, 2)).toEqual([5]);
+  });
+
+  it('за концом списка отдаёт пустую страницу', () => {
+    expect(getListPage(rows, 4, 2)).toEqual([]);
   });
 });

@@ -131,3 +131,6 @@ export const SUBSCRIPTION_TYPE_COLORS: Record<
   BUY: 'primary',
   GIFT: 'neutral',
 };
+
+/** Строк на странице в списках покупок и подписок. */
+export const SUBSCRIPTION_STATS_LIST_PAGE_SIZE = 15;

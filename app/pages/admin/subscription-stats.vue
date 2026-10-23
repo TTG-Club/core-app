@@ -13,11 +13,13 @@
   import { AdminDashboardPanel } from '~admin/dashboard/ui';
   import {
     filterPayments,
+    getListPage,
     getSubscriptionStatsSummary,
     parseAdminPayments,
     parseAdminSubscriptions,
     PAYMENT_FILTER_DEFAULT,
     PAYMENT_FILTER_OPTIONS,
+    SUBSCRIPTION_STATS_LIST_PAGE_SIZE,
     SUBSCRIPTION_STATS_PAGE_TITLE,
     SUBSCRIPTION_STATS_PAYMENTS_API_PATH,
     SUBSCRIPTION_STATS_PAYMENTS_DATA_KEY,
@@ -37,6 +39,8 @@
     SubscriptionStatsList,
     SubscriptionStatsTiles,
   } from '~admin/subscription-stats/ui';
+  import { useAdminUserDrawer } from '~admin/users/composables';
+  import { UiPagination } from '~ui/pagination';
 
   useSeoMeta({
     title: SUBSCRIPTION_STATS_PAGE_TITLE,
@@ -107,6 +111,47 @@
     filterPayments(payments.value, paymentFilter.value),
   );
 
+  // Списки приходят целиком, страницы режем на клиенте.
+  const paymentsPage = ref(1);
+  const subscriptionsPage = ref(1);
+
+  const visiblePayments = computed(() =>
+    getListPage(
+      filteredPayments.value,
+      paymentsPage.value,
+      SUBSCRIPTION_STATS_LIST_PAGE_SIZE,
+    ),
+  );
+
+  const visibleSubscriptions = computed(() =>
+    getListPage(
+      subscriptions.value,
+      subscriptionsPage.value,
+      SUBSCRIPTION_STATS_LIST_PAGE_SIZE,
+    ),
+  );
+
+  const hasPaymentsPagination = computed(
+    () =>
+      !isPaymentsPending.value
+      && !hasPaymentsError.value
+      && filteredPayments.value.length > SUBSCRIPTION_STATS_LIST_PAGE_SIZE,
+  );
+
+  const hasSubscriptionsPagination = computed(
+    () =>
+      !isSubscriptionsPending.value
+      && !hasSubscriptionsError.value
+      && subscriptions.value.length > SUBSCRIPTION_STATS_LIST_PAGE_SIZE,
+  );
+
+  // Другой фильтр — другой список: прежний номер страницы мог оказаться за его концом.
+  watch(paymentFilter, () => {
+    paymentsPage.value = 1;
+  });
+
+  const { open: openUser } = useAdminUserDrawer();
+
   const isFilteredPaymentsEmpty = computed(
     () => !filteredPayments.value.length,
   );
@@ -176,11 +221,20 @@
             :error-text="paymentsErrorText"
           >
             <PaymentHistoryRow
-              v-for="payment in filteredPayments"
+              v-for="payment in visiblePayments"
               :key="payment.id"
               :payment="payment"
+              @select="openUser"
             />
           </SubscriptionStatsList>
+
+          <UiPagination
+            v-if="hasPaymentsPagination"
+            v-model:page="paymentsPage"
+            class="border-t border-default px-4 py-2"
+            :total="filteredPayments.length"
+            :items-per-page="SUBSCRIPTION_STATS_LIST_PAGE_SIZE"
+          />
         </AdminDashboardPanel>
 
         <AdminDashboardPanel :title="SUBSCRIPTION_STATS_SUBSCRIPTIONS_TITLE">
@@ -191,11 +245,20 @@
             :error-text="subscriptionsErrorText"
           >
             <SubscriptionHistoryRow
-              v-for="subscription in subscriptions"
+              v-for="subscription in visibleSubscriptions"
               :key="subscription.id"
               :subscription="subscription"
+              @select="openUser"
             />
           </SubscriptionStatsList>
+
+          <UiPagination
+            v-if="hasSubscriptionsPagination"
+            v-model:page="subscriptionsPage"
+            class="border-t border-default px-4 py-2"
+            :total="subscriptions.length"
+            :items-per-page="SUBSCRIPTION_STATS_LIST_PAGE_SIZE"
+          />
         </AdminDashboardPanel>
       </div>
     </div>

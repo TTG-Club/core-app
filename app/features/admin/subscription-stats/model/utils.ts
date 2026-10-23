@@ -85,3 +85,16 @@ export function joinSubscriptionPeriod(
 ): string {
   return `${startDateText}${SUBSCRIPTION_STATS_PERIOD_SEPARATOR}${endDateText}`;
 }
+
+/**
+ * Отрезает строки одной страницы списка (страницы считаются с 1).
+ */
+export function getListPage<T>(
+  items: ReadonlyArray<T>,
+  page: number,
+  pageSize: number,
+): T[] {
+  const start = (page - 1) * pageSize;
+
+  return items.slice(start, start + pageSize);
+}
