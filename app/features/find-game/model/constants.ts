@@ -1,4 +1,10 @@
+import type { ButtonProps } from '@nuxt/ui';
+
 import { FIND_GAME_API_PREFIX } from '#shared/consts';
+import {
+  SUBSCRIPTION_LIMIT_HINT,
+  SUBSCRIPTION_PAGE_PATH,
+} from '~/shared/consts';
 
 export const GAME_LEAVE_LABEL = 'Выйти из игры';
 export const GAME_LEAVE_DESCRIPTION =
@@ -1305,6 +1311,16 @@ export const GAME_FORM_PLAYERS_ERROR =
 export const GAME_FORM_AGE_ERROR =
   'Минимальный возраст не может превышать максимальный';
 export const GAME_FORM_LIMIT_HINT = `Без подписки у мастера может быть только одна незавершённая игра, с подпиской — до ${GAME_ACTIVE_SUBSCRIBER_MAX}. Завершите одну из текущих игр или оформите подписку.`;
+
+/** Кнопка в предупреждении о лимите игр: ведёт на страницу подписки. */
+export const GAME_FORM_LIMIT_SUBSCRIBE_ACTION: ButtonProps = {
+  label: SUBSCRIPTION_LIMIT_HINT.linkLabel,
+  icon: SUBSCRIPTION_LIMIT_HINT.icon,
+  to: SUBSCRIPTION_PAGE_PATH,
+  color: 'warning',
+  variant: 'solid',
+  size: 'sm',
+};
 
 /* Подписи раздела «Мои игры». */
 // Список собирает и свои игры, и чужие, куда пользователь записался,

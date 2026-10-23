@@ -5,7 +5,9 @@
 
   import { StatusCodes } from 'http-status-codes';
 
+  import { useSubscriptionOffer } from '~profile/activation/composables';
   import { MarkupEditor } from '~ui/markup-editor';
+  import { SubscriptionLimitHint } from '~ui/subscription-hint';
   import { UploadImage } from '~ui/upload';
 
   import {
@@ -89,6 +91,7 @@
     GAME_FORM_LEAVE_LABEL,
     GAME_FORM_LEAVE_TITLE,
     GAME_FORM_LIMIT_HINT,
+    GAME_FORM_LIMIT_SUBSCRIBE_ACTION,
     GAME_FORM_MAIN_SECTION,
     GAME_FORM_PLAYERS_ERROR,
     GAME_FORM_PLAYERS_SECTION,
@@ -253,6 +256,13 @@
   const isSaving = ref(false);
   const submitError = ref<string | null>(null);
   const isLimitReached = ref(false);
+
+  const { canOfferSubscription } = useSubscriptionOffer();
+
+  /** Подписка снимает лимит игр — кнопку к ней видят только те, у кого её нет. */
+  const limitAlertActions = computed(() =>
+    canOfferSubscription.value ? [GAME_FORM_LIMIT_SUBSCRIBE_ACTION] : undefined,
+  );
 
   // Пока файл жмётся и льётся в S3, публикацию держим закрытой: иначе игра
   // сохранится без «догоняющей» обложки.
@@ -636,6 +646,7 @@
         icon="tabler:alert-triangle"
         :title="submitError ?? ''"
         :description="GAME_FORM_LIMIT_HINT"
+        :actions="limitAlertActions"
       />
 
       <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
@@ -948,6 +959,13 @@
                 :help="GAME_FIELD_MAX_PLAYERS_HINT"
                 required
               >
+                <template
+                  v-if="canOfferSubscription"
+                  #help
+                >
+                  <SubscriptionLimitHint :text="GAME_FIELD_MAX_PLAYERS_HINT" />
+                </template>
+
                 <UInputNumber
                   v-model="form.maxPlayers"
                   :min="GAME_PLAYERS_MIN"

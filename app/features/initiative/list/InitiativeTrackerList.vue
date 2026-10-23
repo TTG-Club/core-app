@@ -8,10 +8,11 @@
     createTracker,
     getFetchStatus,
     getTrackerErrorMessage,
+    getTrackerSubscriptionHint,
     INITIATIVE_TOOL_ROUTE,
-    MAX_AUTHORIZED_TRACKERS,
   } from '~initiative/model';
   import { UiResult } from '~ui/result';
+  import { SubscriptionLimitHint } from '~ui/subscription-hint';
   import { AuthModal } from '~user/auth-modal';
 
   import { TrackerCreateCard, TrackerListItem } from './ui';
@@ -25,7 +26,10 @@
   const {
     activeTrackers,
     deletedTrackers,
+    limit,
+    subscriberLimit,
     canCreate,
+    canRaiseLimit,
     isLoading,
     isMutating,
     loadError,
@@ -73,7 +77,11 @@
 
   const countTooltip = computed(
     () =>
-      `Активных боёв — ${activeTrackers.value.length} из ${MAX_AUTHORIZED_TRACKERS} возможных`,
+      `Активных боёв — ${activeTrackers.value.length} из ${limit.value} возможных`,
+  );
+
+  const subscriptionHint = computed(() =>
+    getTrackerSubscriptionHint(subscriberLimit.value),
   );
 
   function openAuth(): void {
@@ -229,9 +237,14 @@
             v-if="!canCreate"
             class="text-xs text-error"
           >
-            Достигнут лимит {{ MAX_AUTHORIZED_TRACKERS }} трекеров — удалите
-            один, чтобы собрать новый.
+            Достигнут лимит {{ limit }} трекеров — удалите один, чтобы собрать
+            новый.
           </p>
+
+          <SubscriptionLimitHint
+            v-if="!canCreate && canRaiseLimit"
+            :text="subscriptionHint"
+          />
         </template>
       </TrackerCreateCard>
 
@@ -289,7 +302,7 @@
 
             <span class="flex items-center gap-1 text-xs tabular-nums">
               <span :class="trackerCountColorClass">
-                {{ activeTrackers.length }} / {{ MAX_AUTHORIZED_TRACKERS }}
+                {{ activeTrackers.length }} / {{ limit }}
               </span>
 
               <UTooltip :text="countTooltip">

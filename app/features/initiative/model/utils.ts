@@ -172,3 +172,11 @@ export function getSheetPlayerRoute(link: ParticipantSheetLink): string {
     ? `${CHARACTER_SHEET_SHARED_ROUTE}/${link.shareToken}`
     : '';
 }
+
+/**
+ * Подсказка в списке боёв о лимите, который даёт подписка.
+ * @param subscriberLimit Лимит трекеров по подписке.
+ */
+export function getTrackerSubscriptionHint(subscriberLimit: number): string {
+  return `С подпиской можно вести до ${subscriberLimit} боёв.`;
+}

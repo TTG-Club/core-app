@@ -3,6 +3,7 @@
 
   import { PageGrid } from '~ui/page';
   import { UiResult } from '~ui/result';
+  import { SubscriptionLimitHint } from '~ui/subscription-hint';
 
   import {
     useCharacterSheetEditRequests,
@@ -17,11 +18,7 @@
     SHEET_LIST_LABELS,
   } from '../model';
   import { CharacterSheetSavedList } from '../saved';
-  import {
-    CharacterSheetCard,
-    CharacterSheetCreateCard,
-    SheetLimitHint,
-  } from './ui';
+  import { CharacterSheetCard, CharacterSheetCreateCard } from './ui';
 
   const {
     activeSheets,
@@ -232,7 +229,7 @@
             {{ getSheetsLimitReachedHint(limit) }}
           </p>
 
-          <SheetLimitHint
+          <SubscriptionLimitHint
             v-if="canRaiseLimit"
             :text="subscriptionHint"
           />

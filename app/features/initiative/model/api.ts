@@ -1,6 +1,7 @@
 import type {
   AddParticipantRequest,
   TrackerDetailed,
+  TrackerLimits,
   TrackerListItem,
   TrackerUpdateRequest,
   UpdateParticipantRequest,
@@ -13,7 +14,11 @@ import {
   TRACKER_KEY_HEADER,
   UNKNOWN_ERROR_MESSAGE,
 } from './constants';
-import { parseTrackerDetailed, parseTrackerList } from './schemas';
+import {
+  parseTrackerDetailed,
+  parseTrackerLimits,
+  parseTrackerList,
+} from './schemas';
 
 /**
  * Заголовки запроса к конкретному трекеру.
@@ -63,6 +68,18 @@ export async function createTracker(name?: string): Promise<TrackerDetailed> {
   });
 
   return parseTrackerDetailed(response);
+}
+
+/**
+ * Лимит трекеров текущего (авторизованного) пользователя и лимит по подписке.
+ */
+export async function fetchTrackerLimits(): Promise<TrackerLimits> {
+  const response = await $fetch(`${INITIATIVE_API_PATH}/limits`, {
+    method: 'GET',
+    retry: 0,
+  });
+
+  return parseTrackerLimits(response);
 }
 
 /**

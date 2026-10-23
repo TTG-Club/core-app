@@ -3,6 +3,7 @@ import type {
   CreatureOption,
   CreatureSummary,
   TrackerDetailed,
+  TrackerLimits,
   TrackerListItem,
 } from './types';
 
@@ -101,6 +102,20 @@ const trackerListItemSchema = z.object({
 });
 
 const trackerListSchema = z.array(trackerListItemSchema);
+
+/** Схема лимита трекеров из ответа `GET /limits`. */
+const trackerLimitsSchema = z.object({
+  limit: z.number().int().nonnegative(),
+  subscriberLimit: z.number().int().nonnegative(),
+});
+
+/**
+ * Валидирует лимит трекеров из ответа `GET /limits`.
+ * @param input Сырой ответ сервера.
+ */
+export function parseTrackerLimits(input: unknown): TrackerLimits {
+  return trackerLimitsSchema.parse(input);
+}
 
 /**
  * Валидирует и нормализует полное состояние трекера из ответа API.

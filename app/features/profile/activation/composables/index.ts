@@ -5,3 +5,4 @@ export * from './useProfileBadges';
 export * from './useRedeem';
 export * from './useSubscriptionActivation';
 export * from './useSubscriptionAutoRefresh';
+export * from './useSubscriptionOffer';

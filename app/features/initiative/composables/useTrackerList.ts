@@ -3,6 +3,7 @@ import type { TrackerDetailed, TrackerListItem } from '~initiative/model';
 import {
   createTracker,
   deleteTracker,
+  fetchTrackerLimits,
   fetchTrackerList,
   getTrackerErrorMessage,
   MAX_AUTHORIZED_TRACKERS,
@@ -33,9 +34,15 @@ export function useTrackerList() {
     trackers.value.filter((tracker) => tracker.deleted),
   );
 
-  const canCreate = computed(
-    () => activeTrackers.value.length < MAX_AUTHORIZED_TRACKERS,
-  );
+  // Лимит приходит с сервера: он зависит от подписки. До ответа и при ошибке
+  // остаётся базовый, а подсказка о подписке не показывается.
+  const limit = ref(MAX_AUTHORIZED_TRACKERS);
+  const subscriberLimit = ref(0);
+
+  const canCreate = computed(() => activeTrackers.value.length < limit.value);
+
+  /** Подписка прибавит боёв — значит, есть что предложить. */
+  const canRaiseLimit = computed(() => subscriberLimit.value > limit.value);
 
   /**
    * Показывает тост с ошибкой (текст берётся из ответа бэка).
@@ -52,6 +59,21 @@ export function useTrackerList() {
   }
 
   /**
+   * Загружает лимит трекеров. Ошибка не мешает списку: остаётся прежний лимит,
+   * а окончательное слово при создании всё равно за сервером.
+   */
+  async function loadLimits(): Promise<void> {
+    try {
+      const limits = await fetchTrackerLimits();
+
+      limit.value = limits.limit;
+      subscriberLimit.value = limits.subscriberLimit;
+    } catch {
+      // Лимит не критичен для показа списка — оставляем прежние значения.
+    }
+  }
+
+  /**
    * Загружает список трекеров (включая удалённые для истории).
    */
   async function load(): Promise<void> {
@@ -59,7 +81,9 @@ export function useTrackerList() {
     loadError.value = null;
 
     try {
-      trackers.value = await fetchTrackerList(true);
+      const [list] = await Promise.all([fetchTrackerList(true), loadLimits()]);
+
+      trackers.value = list;
     } catch (error) {
       loadError.value = error;
     } finally {
@@ -136,7 +160,10 @@ export function useTrackerList() {
     trackers,
     activeTrackers,
     deletedTrackers,
+    limit,
+    subscriberLimit,
     canCreate,
+    canRaiseLimit,
     isLoading,
     isMutating,
     loadError,

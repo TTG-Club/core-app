@@ -63,6 +63,12 @@ export interface TrackerDetailed {
   participants: Array<TrackerParticipant>;
 }
 
+/** Лимит трекеров из `GET /limits`: текущий и тот, что даёт подписка. */
+export interface TrackerLimits {
+  limit: number;
+  subscriberLimit: number;
+}
+
 /** Короткий объект трекера в списке `GET /`. */
 export interface TrackerListItem {
   id: string;

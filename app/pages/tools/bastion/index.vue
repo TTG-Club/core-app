@@ -21,6 +21,7 @@
   import { fillTemplate } from '~bastions/model';
   import { UiModalActions } from '~ui/modal-actions';
   import { UiResult } from '~ui/result';
+  import { SubscriptionLimitHint } from '~ui/subscription-hint';
 
   /**
    * «Мои бастионы»: свои бастионы, как листы персонажа. Здесь бастион
@@ -234,12 +235,10 @@
           </template>
         </p>
 
-        <p
+        <SubscriptionLimitHint
           v-if="subscriberHint"
-          class="text-xs text-muted"
-        >
-          {{ subscriberHint }}
-        </p>
+          :text="subscriberHint"
+        />
       </div>
 
       <div

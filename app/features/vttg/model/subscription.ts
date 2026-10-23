@@ -7,6 +7,7 @@ import type {
   VttgSubscriptionPerkGroup,
 } from './types';
 
+import { SUBSCRIPTION_PAGE_PATH } from '~/shared/consts';
 import {
   GAME_ACTIVE_FREE_MAX,
   GAME_ACTIVE_SUBSCRIBER_MAX,
@@ -16,8 +17,8 @@ import {
 
 import { VTTG_LANDING_PATH } from './passwordReset';
 
-/** Адрес страницы подписки. */
-export const VTTG_SUBSCRIPTION_PATH = '/subscription';
+/** Адрес страницы подписки — общий для всего сайта, сюда ведут подсказки о лимитах. */
+export const VTTG_SUBSCRIPTION_PATH = SUBSCRIPTION_PAGE_PATH;
 
 /** Подпись пункта меню. */
 export const VTTG_SUBSCRIPTION_NAVIGATION_LABEL = 'Подписка';
@@ -98,9 +99,9 @@ export const VTTG_SUBSCRIPTION_PERKS_HEADING: VttgHeading = {
 /**
  * Привилегии подписки, разложенные по месту действия. Свои игры и игроки за
  * столом берутся из констант поиска игр. Остальные числа — зеркало бэкендов:
- * листы — `CharacterSheetLimits` в core-api, поднятия игры — `GameService` в
- * find-game-api, туннель — `TIERS` в tunnel-service. Поменялись там —
- * поправить здесь.
+ * листы — `CharacterSheetLimits` в core-api, бои трекера — `TrackerLimits` в
+ * core-api, поднятия игры — `GameService` в find-game-api, туннель — `TIERS`
+ * в tunnel-service. Поменялись там — поправить здесь.
  */
 export const VTTG_SUBSCRIPTION_PERK_GROUPS: Array<VttgSubscriptionPerkGroup> = [
   {
@@ -138,6 +139,13 @@ export const VTTG_SUBSCRIPTION_PERK_GROUPS: Array<VttgSubscriptionPerkGroup> = [
         description:
           'До 40 сохранённых чужих листов вместо 16, а в истории удалённых хранится 30 листов вместо 20.',
         limit: { label: 'Активных листов', base: 8, subscriber: 20 },
+      },
+      {
+        icon: 'tabler:swords',
+        title: 'Больше боёв в трекере',
+        description:
+          'Держите в трекере инициативы готовые бои для нескольких сцен и групп сразу.',
+        limit: { label: 'Активных боёв', base: 10, subscriber: 30 },
       },
       {
         icon: 'tabler:calendar-plus',
