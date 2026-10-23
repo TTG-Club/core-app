@@ -798,6 +798,15 @@ export interface EffectTriggerRemoveSelfAction {
   on?: EffectTriggerActionGate;
 }
 
+/**
+ * Продлить срок самого эффекта: отсчёт начинается заново, как при включении
+ * или наложении («Ярость» продлевается атакой).
+ */
+export interface EffectTriggerRefreshDurationAction {
+  type: 'refreshDuration';
+  on?: EffectTriggerActionGate;
+}
+
 /** Кому адресовано сообщение срабатывания. */
 export const EFFECT_NOTIFY_TARGETS = ['subject', 'source'] as const;
 
@@ -1122,7 +1131,8 @@ export type EffectTriggerAction =
   | EffectTriggerGrantInspirationAction
   | EffectTriggerMoveAction
   | EffectTriggerMoveAreaAction
-  | EffectTriggerRemoveSelfAction;
+  | EffectTriggerRemoveSelfAction
+  | EffectTriggerRefreshDurationAction;
 
 /**
  * Срабатывание эффекта. Цена (`cost`, `moveCostFeet`) — действие, бонусное

@@ -2767,6 +2767,7 @@ export const EFFECT_TRIGGER_PHRASE_PARTS = {
   conditionPrefix: ', если ',
   effect: 'эффект',
   removeSelf: 'эффект снимается',
+  refreshDuration: 'срок эффекта продлевается',
   tagPrefix: 'отметка ',
   setHpPrefix: 'хиты становятся ',
   setHpMax: 'хиты восстанавливаются полностью',
@@ -4560,6 +4561,7 @@ export const EFFECT_TRIGGER_ACTION_LABELS: Record<
   notify: 'Сообщить человеку',
   nextStage: 'Следующая ступень',
   removeSelf: 'Снять эффект',
+  refreshDuration: 'Продлить срок',
 };
 
 /** Иконки видов действий. */
@@ -4587,6 +4589,7 @@ export const EFFECT_TRIGGER_ACTION_ICONS: Record<
   notify: 'tabler:message-2',
   nextStage: 'tabler:stairs-up',
   removeSelf: 'tabler:circle-x',
+  refreshDuration: 'tabler:clock-plus',
 };
 
 /** Подписи того, кому адресовано сообщение срабатывания. */

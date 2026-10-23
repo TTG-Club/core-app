@@ -701,6 +701,18 @@ describe('срабатывания 0.8.66', () => {
       ].join(', '),
     );
 
+    // «Ярость»: атака продлевает срок
+    expect(
+      describeEffectTrigger(
+        {
+          id: 'rage',
+          event: 'attackRoll',
+          actions: [{ type: 'refreshDuration' }],
+        },
+        { formatDc },
+      ),
+    ).toMatch(/: срок эффекта продлевается$/u);
+
     expect(
       describeEffectTrigger(
         {

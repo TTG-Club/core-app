@@ -936,6 +936,7 @@ describe('список «Срабатывания»', () => {
       'nextStage',
       'endCast',
       'removeSelf',
+      'refreshDuration',
     ]);
 
     expect(listTriggerActionTypes(ownLayout, 'attackRoll')).toEqual([
@@ -956,6 +957,7 @@ describe('список «Срабатывания»', () => {
       'nextStage',
       'endCast',
       'removeSelf',
+      'refreshDuration',
     ]);
 
     expect(listTriggerActionTypes(ownLayout, 'hpZero')).toEqual([
@@ -977,6 +979,7 @@ describe('список «Срабатывания»', () => {
       'nextStage',
       'endCast',
       'removeSelf',
+      'refreshDuration',
     ]);
 
     expect(triggerEventAcceptsDamageDc('damageTaken')).toBe(true);
@@ -1141,6 +1144,20 @@ describe('список «Срабатывания»', () => {
     ]);
 
     expect(featureLayout.triggerActions).not.toContain('removeSelf');
+    // Срока у постоянного умения нет — продлевать нечего
+    expect(featureLayout.triggerActions).not.toContain('refreshDuration');
+    expect(itemLayout.triggerActions).not.toContain('refreshDuration');
+
+    // «Ярость» включают переключателем: атака продлевает её срок
+    const rageLayout = resolveLayoutFor('feature', {
+      activation: { mode: 'toggle', counter: 'rage' },
+    });
+
+    expect(listTriggerActionTypes(rageLayout, 'attackRoll')).toContain(
+      'refreshDuration',
+    );
+
+    expect(rageLayout.triggerActions).not.toContain('removeSelf');
   });
 
   it('пресеты по месту; повторный спасбросок повторяет спасбросок эффекта', () => {

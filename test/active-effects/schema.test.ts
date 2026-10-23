@@ -617,6 +617,27 @@ describe('одно включение 0.8.124', () => {
     expect(stripUndefinedKeys(savedEffects)).toEqual([storedEffect]);
   });
 
+  it('«продлить срок» у атаки переключателя переживает «открыл и сохранил»', () => {
+    const storedEffect = createRawEffect({
+      activation: { mode: 'toggle', counter: 'rage', exclusive: 'Ярость' },
+      triggers: [
+        {
+          id: 'rage_attack',
+          event: 'attackRoll',
+          role: 'attacker',
+          actions: [{ type: 'refreshDuration' }],
+        },
+      ],
+    });
+
+    const savedEffects = normalizeActiveEffects(
+      normalizeLoadedActiveEffects([storedEffect]),
+      'feature',
+    );
+
+    expect(stripUndefinedKeys(savedEffects)).toEqual([storedEffect]);
+  });
+
   it('у применения, пустое и слишком длинное имя не пишется', () => {
     const rawActivations = [
       { mode: 'use', counter: 'rage', exclusive: 'Ярость' },

@@ -1196,6 +1196,11 @@ function resolveTriggerListLayout(
       ...(place.canRemoveSelf
         ? (['endCast', 'removeSelf'] as const)
         : (['endCast'] as const)),
+      // Продлить можно идущий срок: у эффекта на существе и у включённого
+      // переключателем («Ярость» продлевается атакой)
+      ...(place.canRemoveSelf || place.switchesOn
+        ? (['refreshDuration'] as const)
+        : []),
     ],
     triggerTurnOwners: place.hasApplier
       ? EFFECT_TRIGGER_TURN_OWNERS
