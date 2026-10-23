@@ -1,16 +1,13 @@
-import type { Subscription } from '../model';
-
-import { hasActiveSubscription, SUBSCRIPTION_MY_DATA_KEY } from '../model';
+import { hasActiveSubscription } from '../model';
+import { useCachedSubscriptions } from './useCachedSubscriptions';
 
 /**
  * Активна ли подписка у текущего пользователя — для подсказок у лимитов.
- *
- * Своего запроса не делает: читает список подписок по общему ключу, который
- * у каждого вошедшего грузит меню пользователя (`useProfileBadges`). У гостя
- * данных нет, и ответ — «нет подписки».
+ * Своего запроса не делает (см. `useCachedSubscriptions`); у гостя ответ —
+ * «нет подписки».
  */
 export function useIsSubscriber() {
-  const { data } = useNuxtData<Array<Subscription>>(SUBSCRIPTION_MY_DATA_KEY);
+  const subscriptions = useCachedSubscriptions();
 
-  return computed(() => hasActiveSubscription(data.value ?? []));
+  return computed(() => hasActiveSubscription(subscriptions.value));
 }

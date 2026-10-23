@@ -1,3 +1,5 @@
+export * from './useCachedSubscriptions';
+export * from './useExpiringSubscription';
 export * from './useIsSubscriber';
 export * from './useMyCodes';
 export * from './useMyRewards';

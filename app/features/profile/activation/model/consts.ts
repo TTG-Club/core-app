@@ -1,3 +1,5 @@
+import type { ButtonProps } from '@nuxt/ui';
+
 import type {
   RewardPerk,
   RewardTier,
@@ -5,6 +7,9 @@ import type {
   SubscriptionStatus,
   SubscriptionType,
 } from './types';
+
+import { maxBy } from 'es-toolkit';
+import ms from 'ms';
 
 import { VTTG_SUBSCRIPTION_LINK } from '~vttg/model';
 
@@ -206,4 +211,137 @@ export function hasActiveSubscription(
   return subscriptions.some(
     (subscription) => subscription.status === SUBSCRIPTION_ACTIVE_STATUS,
   );
+}
+
+/** За сколько дней до окончания подписки сайт предупреждает о нём. */
+export const SUBSCRIPTION_EXPIRY_WARNING_DAYS = 7;
+
+/** Длительность суток для подсчёта оставшихся дней подписки. */
+const SUBSCRIPTION_DAY_MS = ms('1d');
+
+/** Как часто пересчитывается остаток дней на открытой вкладке. */
+export const SUBSCRIPTION_EXPIRY_CLOCK_INTERVAL = ms('1h');
+
+/** Формы слова «день» для предупреждения об окончании подписки. */
+const SUBSCRIPTION_DAY_PLURAL_FORMS: [string, string, string] = [
+  'день',
+  'дня',
+  'дней',
+];
+
+/** Плашка о скором окончании подписки: тексты и иконка. */
+export const SUBSCRIPTION_EXPIRY_NOTICE = {
+  title: 'Подписка скоро закончится',
+  icon: 'tabler:hourglass',
+  endPrefix: 'Действует до',
+  daysLeftPrefix: 'осталось',
+  renewHint: 'Продлите её, чтобы не потерять привилегии.',
+};
+
+/**
+ * Ключ браузерного хранилища: когда пользователь скрыл напоминание — дата
+ * окончания и день закрытия. Скрытое напоминание возвращается на следующий
+ * день, пока подписка не продлена или не закончилась.
+ */
+export const SUBSCRIPTION_EXPIRY_DISMISSED_STORAGE_KEY =
+  'subscription:expiry-dismissed';
+
+/** Формат дня закрытия напоминания: сутки по часам пользователя. */
+export const SUBSCRIPTION_EXPIRY_DISMISS_DAY_FORMAT = 'YYYY-MM-DD';
+
+/** Разделитель даты окончания и дня закрытия в отметке о закрытии. */
+const SUBSCRIPTION_EXPIRY_DISMISS_SEPARATOR = '|';
+
+/** Кнопка продления в плашке: ведёт на страницу оформления подписки. */
+export const SUBSCRIPTION_EXPIRY_ACTIONS: Array<ButtonProps> = [
+  {
+    label: 'Продлить',
+    icon: VTTG_SUBSCRIPTION_LINK.icon,
+    to: VTTG_SUBSCRIPTION_LINK.to,
+    color: 'warning',
+    variant: 'solid',
+  },
+];
+
+/** Подписка, срок которой подходит к концу. */
+export interface ExpiringSubscription {
+  /** Дата окончания из ответа сервиса. */
+  expiresAt: string;
+  /** Сколько суток осталось, с округлением вверх: последние часы — «1 день». */
+  daysLeft: number;
+}
+
+/**
+ * Подписка, которая скоро закончится. Берётся самая поздняя дата окончания
+ * среди действующих: если пользователь уже продлил подписку, предупреждать
+ * не о чем.
+ *
+ * @param subscriptions подписки пользователя.
+ * @param now текущий момент в миллисекундах.
+ * @returns срок и остаток дней; `undefined` — действующей подписки нет или до
+ * окончания дальше порога предупреждения.
+ */
+export function getExpiringSubscription(
+  subscriptions: ReadonlyArray<Subscription>,
+  now: number,
+): ExpiringSubscription | undefined {
+  const activeEnds = subscriptions
+    .filter(
+      (subscription) => subscription.status === SUBSCRIPTION_ACTIVE_STATUS,
+    )
+    .map((subscription) => subscription.expiresAt)
+    .filter((expiresAt) => expiresAt !== null);
+
+  const latestEnd = maxBy(activeEnds, (expiresAt) => Date.parse(expiresAt));
+
+  if (latestEnd === undefined) {
+    return undefined;
+  }
+
+  const endTime = Date.parse(latestEnd);
+
+  const warningStart =
+    endTime - SUBSCRIPTION_EXPIRY_WARNING_DAYS * SUBSCRIPTION_DAY_MS;
+
+  if (endTime <= now || now < warningStart) {
+    return undefined;
+  }
+
+  return {
+    expiresAt: latestEnd,
+    daysLeft: Math.ceil((endTime - now) / SUBSCRIPTION_DAY_MS),
+  };
+}
+
+/**
+ * Отметка о закрытии напоминания: о каком сроке и в какой день. Совпала с
+ * сегодняшней — напоминание скрыто; наступил новый день или срок сменился —
+ * показывается снова.
+ *
+ * @param expiresAt дата окончания подписки.
+ * @param dismissDay день закрытия в формате `SUBSCRIPTION_EXPIRY_DISMISS_DAY_FORMAT`.
+ * @returns отметка для браузерного хранилища.
+ */
+export function getSubscriptionExpiryDismissMark(
+  expiresAt: string,
+  dismissDay: string,
+): string {
+  return `${expiresAt}${SUBSCRIPTION_EXPIRY_DISMISS_SEPARATOR}${dismissDay}`;
+}
+
+/**
+ * Текст плашки: «Действует до 26.10.2026 — осталось 3 дня. Продлите её, чтобы
+ * не потерять привилегии.»
+ *
+ * @param formattedEnd дата окончания, уже отформатированная для показа.
+ * @param daysLeft сколько дней осталось.
+ * @returns текст плашки.
+ */
+export function formatSubscriptionExpiryDescription(
+  formattedEnd: string,
+  daysLeft: number,
+): string {
+  const daysWord = getPlural(daysLeft, SUBSCRIPTION_DAY_PLURAL_FORMS);
+
+  return `${SUBSCRIPTION_EXPIRY_NOTICE.endPrefix} ${formattedEnd} — ${SUBSCRIPTION_EXPIRY_NOTICE.daysLeftPrefix} ${daysLeft} ${daysWord}. ${SUBSCRIPTION_EXPIRY_NOTICE.renewHint}`;
 }
