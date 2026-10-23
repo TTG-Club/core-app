@@ -597,6 +597,13 @@ export const GAME_PLAYERS_FREE_MAX = 5;
 export const GAME_ACTIVE_FREE_MAX = 1;
 export const GAME_ACTIVE_SUBSCRIBER_MAX = 10;
 
+/**
+ * Сколько раз в сутки мастер может поднять игру в каталоге: без подписки раз,
+ * с ней три. Считает сервис игр (`GameService`), здесь — для подсказок.
+ */
+export const GAME_RAISES_FREE_MAX = 1;
+export const GAME_RAISES_SUBSCRIBER_MAX = 3;
+
 export const GAME_AGE_MIN = 0;
 export const GAME_AGE_MAX = 120;
 export const GAME_STARTING_LEVEL_MIN = 1;
@@ -1061,6 +1068,8 @@ export const RETRY_AFTER_PREFIX = 'Попробуйте снова через';
 
 export const GAME_RAISE_LABEL = 'Поднять в каталоге';
 export const GAME_RAISED_TOAST = 'Игра поднята в каталоге';
+export const GAME_RAISE_ERROR_TITLE = 'Не удалось поднять игру';
+export const GAME_RAISE_LIMIT_HINT = `Без подписки игру можно поднимать раз в сутки, с подпиской — до ${GAME_RAISES_SUBSCRIBER_MAX} раз.`;
 
 export const GAME_DELETE_LABEL = 'Заблокировать игру';
 export const GAME_DELETE_CONFIRM_TITLE = 'Заблокировать игру?';
@@ -1290,6 +1299,7 @@ export const GAME_FIELD_VISIBILITY_HINT =
 export const GAME_FIELD_PLAYERS_TO_START_LABEL = 'Игроков для старта';
 export const GAME_FIELD_MAX_PLAYERS_LABEL = 'Максимум игроков';
 export const GAME_FIELD_MAX_PLAYERS_HINT = `До ${GAME_PLAYERS_FREE_MAX}, с подпиской — до ${GAME_PLAYERS_MAX}`;
+export const GAME_FIELD_MAX_PLAYERS_LIMIT_HINT = `Больше ${GAME_PLAYERS_FREE_MAX} игроков за столом — только с подпиской.`;
 export const GAME_FIELD_MIN_AGE_LABEL = 'Возраст от';
 export const GAME_FIELD_MAX_AGE_LABEL = 'Возраст до';
 export const GAME_FIELD_AGE_HINT = 'Обе границы необязательны.';

@@ -27,6 +27,13 @@ export interface VttgHighlight {
   description: string;
 }
 
+/** Ссылка на страницу подписки: подпись, иконка и адрес. */
+export interface VttgSubscriptionLink {
+  label: string;
+  icon: string;
+  to: string;
+}
+
 export interface VttgHeading {
   title: string;
   subtitle?: string;

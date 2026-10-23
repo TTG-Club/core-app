@@ -1,4 +1,4 @@
-import { AVATAR_FRAME_IMAGE_URL } from '../model';
+import { AVATAR_FRAME_IMAGE_URL, hasActiveSubscription } from '../model';
 import { useMyRewards } from './useMyRewards';
 import { useMySubscriptions } from './useMySubscriptions';
 
@@ -25,10 +25,10 @@ export function useProfileBadges() {
 
   watch(
     [subscriptionsStatus, subscriptions],
-    ([status, subs]) => {
+    ([status, loadedSubscriptions]) => {
       if (status === 'success') {
-        isSubscriptionActive.value = (subs ?? []).some(
-          (sub) => sub.status === 'ACTIVE',
+        isSubscriptionActive.value = hasActiveSubscription(
+          loadedSubscriptions ?? [],
         );
       }
     },

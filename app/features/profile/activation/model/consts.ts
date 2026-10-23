@@ -1,11 +1,12 @@
 import type {
   RewardPerk,
   RewardTier,
+  Subscription,
   SubscriptionStatus,
   SubscriptionType,
 } from './types';
 
-import { VTTG_SUBSCRIPTION_PATH } from '~vttg/model';
+import { VTTG_SUBSCRIPTION_LINK } from '~vttg/model';
 
 /** Эндпоинты подписок/наград (проксируются как есть). */
 export const SUBSCRIPTION_MY_CODES_API_PATH = '/api/subscriptions/my-codes';
@@ -188,8 +189,21 @@ export function normalizeCode(code: string): string {
  * Кнопка на странице подписки из карточки статуса. Ввод промокода — на этой же
  * странице ниже, поэтому карточка ведёт не к нему, а к оформлению подписки.
  */
-export const SUBSCRIPTION_STATUS_SUBSCRIBE_BUTTON = {
-  label: 'Оформить подписку',
-  icon: 'tabler:crown',
-  to: VTTG_SUBSCRIPTION_PATH,
-} as const;
+export const SUBSCRIPTION_STATUS_SUBSCRIBE_BUTTON = VTTG_SUBSCRIPTION_LINK;
+
+/** Статус действующей подписки. */
+export const SUBSCRIPTION_ACTIVE_STATUS: SubscriptionStatus = 'ACTIVE';
+
+/**
+ * Есть ли среди подписок пользователя действующая.
+ *
+ * @param subscriptions подписки пользователя.
+ * @returns true — хотя бы одна подписка активна.
+ */
+export function hasActiveSubscription(
+  subscriptions: ReadonlyArray<Subscription>,
+): boolean {
+  return subscriptions.some(
+    (subscription) => subscription.status === SUBSCRIPTION_ACTIVE_STATUS,
+  );
+}

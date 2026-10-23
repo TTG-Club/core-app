@@ -5,8 +5,11 @@
 
   import { StatusCodes } from 'http-status-codes';
 
+  import { useIsSubscriber } from '~profile/activation/composables';
   import { MarkupEditor } from '~ui/markup-editor';
   import { UploadImage } from '~ui/upload';
+  import { VTTG_SUBSCRIPTION_LIMIT_ACTION } from '~vttg/model';
+  import { VttgSubscriptionLimitHint } from '~vttg/ui';
 
   import {
     useCityDictionary,
@@ -63,6 +66,7 @@
     GAME_FIELD_MAX_AGE_LABEL,
     GAME_FIELD_MAX_PLAYERS_HINT,
     GAME_FIELD_MAX_PLAYERS_LABEL,
+    GAME_FIELD_MAX_PLAYERS_LIMIT_HINT,
     GAME_FIELD_MIN_AGE_LABEL,
     GAME_FIELD_ONLINE_PLATFORM_LABEL,
     GAME_FIELD_PLAYERS_TO_START_LABEL,
@@ -104,6 +108,7 @@
     GAME_LINKS_TITLE,
     GAME_ONLINE_PLATFORM_LABELS,
     GAME_ONLINE_PLATFORMS,
+    GAME_PLAYERS_FREE_MAX,
     GAME_PLAYERS_MAX,
     GAME_PLAYERS_MIN,
     GAME_REQUIREMENTS_MAX_LENGTH,
@@ -253,6 +258,18 @@
   const isSaving = ref(false);
   const submitError = ref<string | null>(null);
   const isLimitReached = ref(false);
+
+  // Лимиты без подписки: игр у мастера и игроков за столом. Подписчику
+  // подсказку об оформлении не показываем — он уже на расширенном лимите.
+  const isSubscriber = useIsSubscriber();
+
+  const limitAlertActions = computed(() =>
+    isSubscriber.value ? [] : [VTTG_SUBSCRIPTION_LIMIT_ACTION],
+  );
+
+  const isOverFreePlayers = computed(
+    () => !isSubscriber.value && form.value.maxPlayers > GAME_PLAYERS_FREE_MAX,
+  );
 
   // Пока файл жмётся и льётся в S3, публикацию держим закрытой: иначе игра
   // сохранится без «догоняющей» обложки.
@@ -636,6 +653,7 @@
         icon="tabler:alert-triangle"
         :title="submitError ?? ''"
         :description="GAME_FORM_LIMIT_HINT"
+        :actions="limitAlertActions"
       />
 
       <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
@@ -954,6 +972,15 @@
                   :max="GAME_PLAYERS_MAX"
                   class="w-full"
                 />
+
+                <template
+                  v-if="isOverFreePlayers"
+                  #help
+                >
+                  <VttgSubscriptionLimitHint
+                    :text="GAME_FIELD_MAX_PLAYERS_LIMIT_HINT"
+                  />
+                </template>
               </UFormField>
             </div>
 

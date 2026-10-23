@@ -5,6 +5,7 @@
     useMyRewards,
     useMySubscriptions,
   } from '~profile/activation/composables';
+  import { hasActiveSubscription } from '~profile/activation/model';
 
   const props = defineProps<{
     profile?: UserProfile;
@@ -19,9 +20,9 @@
       props.profile?.displayName || props.profile?.username || 'Путешественник',
   );
 
-  // Бейдж активной подписки — если есть хотя бы одна подписка в статусе ACTIVE.
+  // Бейдж активной подписки — если есть хотя бы одна действующая подписка.
   const isSubscriptionActive = computed(() =>
-    (subscriptions.value ?? []).some((sub) => sub.status === 'ACTIVE'),
+    hasActiveSubscription(subscriptions.value ?? []),
   );
 
   // Косметические перки, применяемые к профилю (выдаются кодом).
