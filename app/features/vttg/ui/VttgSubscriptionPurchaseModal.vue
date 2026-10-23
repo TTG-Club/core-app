@@ -15,6 +15,7 @@
     getSubscriptionPaymentTotal,
     getSubscriptionSaving,
     SUBSCRIPTION_EMAIL_VERIFICATION_ACTIONS,
+    SUBSCRIPTION_IN_DEVELOPMENT_ALERT,
     SUBSCRIPTION_PAYMENT_MONTHS,
     SUBSCRIPTION_PURCHASE_ICONS,
     subscriptionReceiptEmailSchema,
@@ -42,6 +43,9 @@
   const offerAccepted = ref(false);
 
   const personalDataConsent = ref(false);
+
+  /** Покупатель подтвердил, что подписка не даёт раннего доступа к приложению. */
+  const inDevelopmentAccepted = ref(false);
 
   const isEmailVerified = computed(() => user.value?.emailVerified !== false);
 
@@ -71,7 +75,8 @@
       isPending.value
       || !isEmailVerified.value
       || !isEmailValid.value
-      || !isConsentsGiven.value,
+      || !isConsentsGiven.value
+      || !inDevelopmentAccepted.value,
   );
 
   /** Итоговая сумма за выбранный срок со скидкой. */
@@ -190,6 +195,8 @@
         <p class="text-sm leading-relaxed text-toned">
           {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.description }}
         </p>
+
+        <UAlert v-bind="SUBSCRIPTION_IN_DEVELOPMENT_ALERT" />
 
         <USeparator />
 
@@ -342,6 +349,12 @@
             </template>
           </UCheckbox>
         </div>
+
+        <UCheckbox
+          v-model="inDevelopmentAccepted"
+          :label="VTTG_SUBSCRIPTION_PURCHASE_TEXT.inDevelopmentConsent"
+          :disabled="isPending"
+        />
 
         <div class="flex flex-col gap-1.5 text-xs leading-relaxed text-muted">
           <p>{{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.extendHint }}</p>
