@@ -177,7 +177,7 @@ export const VTTG_SUBSCRIPTION_PERK_GROUPS: Array<VttgSubscriptionPerkGroup> = [
       {
         icon: 'tabler:rosette',
         title: 'Значок подписчика',
-        description: 'Отметка подписчика в вашем профиле — своих видно сразу.',
+        description: 'Отметка подписчика в вашем профиле.',
       },
     ],
   },
