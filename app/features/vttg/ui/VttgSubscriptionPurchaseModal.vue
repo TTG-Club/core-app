@@ -364,10 +364,6 @@
           <p>
             {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.refundNote }}
           </p>
-
-          <p class="text-warning">
-            {{ VTTG_SUBSCRIPTION_PURCHASE_TEXT.adminOnly }}
-          </p>
         </div>
       </div>
     </template>
