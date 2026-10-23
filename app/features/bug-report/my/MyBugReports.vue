@@ -4,11 +4,14 @@
   import { UiPagination } from '~ui/pagination';
 
   import {
+    BUG_REPORT_TYPE_ICONS,
+    BUG_REPORT_TYPE_LIST_TABS,
+    isBugReportType,
     MY_BUGS_DESCRIPTION,
     MY_BUGS_EMPTY_FILTERED_TEXT,
     MY_BUGS_EMPTY_FILTERED_TITLE,
-    MY_BUGS_EMPTY_TEXT,
-    MY_BUGS_EMPTY_TITLE,
+    MY_BUGS_EMPTY_TEXTS,
+    MY_BUGS_EMPTY_TITLES,
     MY_BUGS_LOAD_ERROR_TEXT,
     MY_BUGS_PAGE_SIZE,
     MY_BUGS_RETRY_LABEL,
@@ -26,6 +29,7 @@
     statusCounts,
     currentPage,
     statusFilter,
+    typeFilter,
     totalCount,
     totalStatusCount,
     isLoading,
@@ -89,12 +93,30 @@
   const isFiltered = computed(() => statusFilter.value !== null);
 
   const emptyTitle = computed(() =>
-    isFiltered.value ? MY_BUGS_EMPTY_FILTERED_TITLE : MY_BUGS_EMPTY_TITLE,
+    isFiltered.value
+      ? MY_BUGS_EMPTY_FILTERED_TITLE
+      : MY_BUGS_EMPTY_TITLES[typeFilter.value],
   );
 
   const emptyText = computed(() =>
-    isFiltered.value ? MY_BUGS_EMPTY_FILTERED_TEXT : MY_BUGS_EMPTY_TEXT,
+    isFiltered.value
+      ? MY_BUGS_EMPTY_FILTERED_TEXT
+      : MY_BUGS_EMPTY_TEXTS[typeFilter.value],
   );
+
+  const emptyIcon = computed(() => BUG_REPORT_TYPE_ICONS[typeFilter.value]);
+
+  /**
+   * Переключает баги и пожелания. Значение приходит от вкладок строкой —
+   * неизвестное пропускаем.
+   *
+   * @param value Значение выбранной вкладки.
+   */
+  function handleTypeChange(value: string | number): void {
+    if (isBugReportType(value)) {
+      typeFilter.value = value;
+    }
+  }
 
   /** Повторяет загрузку списка после ошибки. */
   function handleRetry(): void {
@@ -122,12 +144,23 @@
           {{ MY_BUGS_DESCRIPTION }}
         </p>
 
+        <!-- Баги и пожелания: у каждого свои статусы и сводка -->
+        <UTabs
+          :model-value="typeFilter"
+          :items="BUG_REPORT_TYPE_LIST_TABS"
+          :content="false"
+          size="sm"
+          class="w-full sm:w-fit"
+          @update:model-value="handleTypeChange"
+        />
+
         <!-- Сводка из одних нулей ничего не сообщает: у новичка её не показываем -->
         <MyBugReportsSummary
           v-if="totalStatusCount > 0"
           v-model="statusFilter"
           :status-counts="statusCounts"
           :total-count="totalStatusCount"
+          :type="typeFilter"
         />
       </div>
     </UCard>
@@ -167,7 +200,7 @@
       class="flex min-h-[200px] items-center justify-center rounded-xl border border-dashed border-default bg-elevated p-8"
     >
       <UEmpty
-        icon="tabler:bug-off"
+        :icon="emptyIcon"
         :title="emptyTitle"
         :description="emptyText"
       />

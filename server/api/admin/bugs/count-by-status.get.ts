@@ -3,7 +3,11 @@ import { z } from 'zod';
 
 import { BUG_REPORT_EXTERNAL_API_BASE_URL } from '#server/utils/bugReportApi';
 import { assertAdminAccess } from '#server/utils/getUser';
-import { BUG_REPORT_STATUSES, SOURCE_PLATFORMS } from '#shared/consts';
+import {
+  BUG_REPORT_STATUSES,
+  BUG_REPORT_TYPES,
+  SOURCE_PLATFORMS,
+} from '#shared/consts';
 
 /**
  * Размер страницы для подсчёта: сами баг-репорты не нужны, интересует только
@@ -15,6 +19,7 @@ const countQuerySchema = z.object({
   sourcePlatform: z.enum(SOURCE_PLATFORMS).optional(),
   userLogin: z.string().optional(),
   statusUpdatedBy: z.string().optional(),
+  type: z.enum(BUG_REPORT_TYPES).optional(),
 });
 
 const countPageSchema = z.object({
@@ -28,8 +33,8 @@ const countPageSchema = z.object({
  * спрашивает у микросервиса количество багов по каждому статусу: отдельной ручки
  * со сводкой по всем пользователям он не отдаёт, поэтому считаем по
  * `totalElements` отфильтрованного списка. Необязательные `sourcePlatform`,
- * `userLogin` и `statusUpdatedBy` сужают сводку так же, как список, — чтобы
- * цифры совпадали с ним под теми же фильтрами.
+ * `userLogin`, `statusUpdatedBy` и `type` (баги или пожелания) сужают сводку
+ * так же, как список, — чтобы цифры совпадали с ним под теми же фильтрами.
  */
 export default defineEventHandler(async (event) => {
   const user = await getUserFromToken(event);
@@ -61,6 +66,7 @@ export default defineEventHandler(async (event) => {
               sourcePlatform: parsedQuery.data.sourcePlatform,
               userLogin: parsedQuery.data.userLogin,
               statusUpdatedBy: parsedQuery.data.statusUpdatedBy,
+              type: parsedQuery.data.type,
               page: 0,
               size: COUNT_PAGE_SIZE,
             },

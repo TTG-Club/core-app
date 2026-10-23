@@ -2,12 +2,18 @@ import type {
   AdminBugFilterOption,
   BugReportResponse,
   BugReportStatusUpdatePayload,
+  BugReportType,
   ParsedSelection,
 } from './types';
 
 import { getNodeText, parse, toMarkupSource } from '~ui/markup';
 
-import { ADMIN_BUGS_FILTER_ALL } from './constants';
+import {
+  ADMIN_BUGS_FILTER_ALL,
+  BUG_REPORT_TYPE_QUERY_VALUES,
+  BUG_REPORT_TYPES,
+  DEFAULT_BUG_REPORT_TYPE,
+} from './constants';
 
 /**
  * Возвращает копию баг-репорта с применёнными полями обновления статуса.
@@ -113,4 +119,55 @@ export function buildLoginFilterOptions(
     { label: allLabel, value: ADMIN_BUGS_FILTER_ALL },
     ...logins.map((login) => ({ label: login, value: login })),
   ];
+}
+
+/**
+ * Проверяет, что значение — известный тип записи (баг или пожелание).
+ *
+ * @param value Проверяемое значение (например, из события переключателя).
+ */
+export function isBugReportType(value: unknown): value is BugReportType {
+  return BUG_REPORT_TYPES.find((type) => type === value) !== undefined;
+}
+
+/**
+ * Тип записи с учётом старого сервиса, который поля `type` ещё не отдаёт:
+ * такая запись — баг.
+ *
+ * @param type Тип из ответа сервиса, если он есть.
+ */
+export function resolveBugReportType(
+  type: BugReportType | undefined,
+): BugReportType {
+  return type ?? DEFAULT_BUG_REPORT_TYPE;
+}
+
+/**
+ * Тип записей из URL-параметра. Отсутствующее, пустое и неизвестное значение
+ * означает баги — так произвольная строка из адреса не уйдёт в API.
+ *
+ * @param queryValue Значение параметра из `route.query`.
+ */
+export function parseBugReportTypeQuery(queryValue: unknown): BugReportType {
+  if (typeof queryValue !== 'string' || !queryValue) {
+    return DEFAULT_BUG_REPORT_TYPE;
+  }
+
+  return (
+    BUG_REPORT_TYPES.find(
+      (type) => BUG_REPORT_TYPE_QUERY_VALUES[type] === queryValue,
+    ) ?? DEFAULT_BUG_REPORT_TYPE
+  );
+}
+
+/**
+ * Значение URL-параметра для типа записей. Тип по умолчанию в адрес не
+ * пишется — параметр убирается.
+ *
+ * @param type Выбранный тип записей.
+ */
+export function toBugReportTypeQuery(type: BugReportType): string | undefined {
+  return type === DEFAULT_BUG_REPORT_TYPE
+    ? undefined
+    : BUG_REPORT_TYPE_QUERY_VALUES[type];
 }

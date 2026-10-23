@@ -1,10 +1,14 @@
 <script setup lang="ts">
-  import type { BugCountByStatusResponse, BugReportStatus } from '../../model';
+  import type {
+    BugCountByStatusResponse,
+    BugReportStatus,
+    BugReportType,
+  } from '../../model';
 
   import {
-    BUG_REPORT_STATUS_LABELS,
     BUG_REPORT_STATUSES,
     getBugReportStatusColor,
+    getBugReportStatusLabel,
     MY_BUGS_SUMMARY_ALL_LABEL,
   } from '../../model';
 
@@ -36,6 +40,9 @@
 
     /** Общее количество репортов пользователя без учёта фильтра */
     totalCount: number;
+
+    /** Тип записей в сводке: от него зависят подписи статусов */
+    type: BugReportType;
   }>();
 
   /** Выбранный статус; `null` — показаны все репорты. */
@@ -74,7 +81,7 @@
   const statusTiles = computed<SummaryTile[]>(() =>
     BUG_REPORT_STATUSES.map((status) => ({
       key: status,
-      label: BUG_REPORT_STATUS_LABELS[status],
+      label: getBugReportStatusLabel(status, props.type),
       count: resolveCount(status),
       status,
       valueClass: STATUS_VALUE_CLASS[getBugReportStatusColor(status)],
