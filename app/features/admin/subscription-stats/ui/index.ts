@@ -1,3 +1,4 @@
+export { default as AdminSubscribersTile } from './AdminSubscribersTile.vue';
 export { default as PaymentHistoryRow } from './PaymentHistoryRow.vue';
 export { default as SubscriptionHistoryRow } from './SubscriptionHistoryRow.vue';
 export { default as SubscriptionStatsList } from './SubscriptionStatsList.vue';

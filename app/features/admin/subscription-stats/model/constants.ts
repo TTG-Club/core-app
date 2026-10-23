@@ -131,3 +131,9 @@ export const SUBSCRIPTION_TYPE_COLORS: Record<
   BUY: 'primary',
   GIFT: 'neutral',
 };
+
+/** Строк на странице в списках покупок и подписок. */
+export const SUBSCRIPTION_STATS_LIST_PAGE_SIZE = 15;
+
+/** Плитка подписчиков на главной админки. */
+export const SUBSCRIPTION_STATS_DASHBOARD_TILE_TITLE = 'Подписчики';

@@ -263,3 +263,18 @@ export function adminSubscriptionGrantPath(username: string): string {
 export function adminSubscriptionCodesPath(username: string): string {
   return `${adminSubscriptionPath(username)}/codes`;
 }
+
+/** Не удалось найти пользователя по логину для дровера профиля. */
+export const ADMIN_USERS_DRAWER_NOT_FOUND_TEXT =
+  'Пользователь с таким логином не найден.';
+
+/** Сколько совпадений поиска просить, чтобы среди них оказался точный логин. */
+export const ADMIN_USERS_DRAWER_SEARCH_SIZE = 20;
+
+/** BFF-ручки auth-service: поиск пользователей и справочник ролей. */
+export const ADMIN_USERS_API_PATH = '/api/auth/users';
+export const ADMIN_ROLES_API_PATH = '/api/auth/roles';
+
+/** Ключи `useAsyncData` дровера профиля; справочник ролей общий со страницей «Пользователи». */
+export const ADMIN_USERS_DRAWER_DATA_KEY_PREFIX = 'admin-user-drawer';
+export const ADMIN_ROLES_DATA_KEY = 'admin-roles';

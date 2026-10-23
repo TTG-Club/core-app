@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { AdminCharacterSheetStats } from '~admin/character-sheets/model';
   import type { AdminOnlineStatsResponse } from '~admin/online/model';
+  import type { AdminSubscription } from '~admin/subscription-stats/model';
 
   import { FetchStatus } from '~/shared/consts';
   import {
@@ -42,6 +43,12 @@
     AdminOnlineSummary,
     AdminOnlineVttgPanel,
   } from '~admin/online/ui';
+  import {
+    parseAdminSubscriptions,
+    SUBSCRIPTION_STATS_SUBSCRIPTIONS_API_PATH,
+    SUBSCRIPTION_STATS_SUBSCRIPTIONS_DATA_KEY,
+  } from '~admin/subscription-stats/model';
+  import { AdminSubscribersTile } from '~admin/subscription-stats/ui';
   import { SubscriptionSalesSwitch } from '~admin/subscriptions/ui';
 
   const {
@@ -123,11 +130,42 @@
 
   const resolvedGameStatistics = computed(() => gameStatistics.value ?? null);
 
+  // Тот же ключ и те же опции, что на странице статистики подписок: при
+  // переходе туда список уже в кэше и не грузится заново.
+  const {
+    data: subscriptions,
+    error: subscriptionsError,
+    refresh: refreshSubscriptions,
+    status: subscriptionsStatus,
+  } = await useAsyncData<AdminSubscription[]>(
+    SUBSCRIPTION_STATS_SUBSCRIPTIONS_DATA_KEY,
+    async () =>
+      parseAdminSubscriptions(
+        await requestFetch(SUBSCRIPTION_STATS_SUBSCRIPTIONS_API_PATH),
+      ),
+    { default: () => [], server: false, lazy: true },
+  );
+
+  const isSubscriptionsLoading = computed(
+    () => subscriptionsStatus.value === FetchStatus.Pending,
+  );
+
+  // Пустой список по умолчанию не отличить от «подписок нет», поэтому плитка
+  // ждёт и в 'idle': на клиенте запрос стартует после первого рендера.
+  const isSubscriptionsPending = computed(
+    () =>
+      isSubscriptionsLoading.value
+      || subscriptionsStatus.value === FetchStatus.Idle,
+  );
+
+  const hasSubscriptionsError = computed(() => !!subscriptionsError.value);
+
   const isStatsLoading = computed(
     () =>
       isOnlineStatsLoading.value
       || isSheetStatsLoading.value
-      || isGameStatisticsLoading.value,
+      || isGameStatisticsLoading.value
+      || isSubscriptionsLoading.value,
   );
 
   /**
@@ -138,6 +176,7 @@
       refreshOnlineStats(),
       refreshSheetStats(),
       refreshGameStatistics(),
+      refreshSubscriptions(),
     ]);
   }
 </script>
@@ -180,7 +219,7 @@
           />
 
           <AdminDashboardPanel :title="ADMIN_DASHBOARD_TOTALS_TITLE">
-            <div class="grid h-full grid-cols-2 divide-x divide-default">
+            <div class="grid h-full grid-cols-3 divide-x divide-default">
               <ClientOnly>
                 <AdminCharacterSheetStatsTile
                   :stats="resolvedSheetStats"
@@ -201,6 +240,12 @@
                 :statistics="resolvedGameStatistics"
                 :is-loading="isGameStatisticsLoading"
                 :has-error="hasGameStatisticsError"
+              />
+
+              <AdminSubscribersTile
+                :subscriptions="subscriptions"
+                :is-pending="isSubscriptionsPending"
+                :has-error="hasSubscriptionsError"
               />
             </div>
           </AdminDashboardPanel>
