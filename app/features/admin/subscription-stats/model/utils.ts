@@ -13,6 +13,21 @@ import {
 } from './constants';
 
 /**
+ * Сколько разных пользователей сейчас с подпиской: у одного их может идти несколько.
+ */
+export function countActiveSubscribers(
+  subscriptions: ReadonlyArray<AdminSubscription>,
+): number {
+  return uniq(
+    compact(
+      subscriptions
+        .filter((subscription) => subscription.status === 'ACTIVE')
+        .map((subscription) => subscription.ownerUsername),
+    ),
+  ).length;
+}
+
+/**
  * Считает итоги для плиток: активных подписчиков, покупки и выручку.
  * Тестовые платежи в итоги не входят — деньги по ним не списывались.
  */
@@ -31,11 +46,7 @@ export function getSubscriptionStatsSummary(
   );
 
   return {
-    activeSubscribers: uniq(
-      compact(
-        activeSubscriptions.map((subscription) => subscription.ownerUsername),
-      ),
-    ).length,
+    activeSubscribers: countActiveSubscribers(subscriptions),
     activeBought: activeSubscriptions.filter(
       (subscription) => subscription.type === 'BUY',
     ).length,

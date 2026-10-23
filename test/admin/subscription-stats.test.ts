@@ -6,6 +6,7 @@ import type {
 import { describe, expect, it } from 'vitest';
 
 import {
+  countActiveSubscribers,
   filterPayments,
   getAverageCheck,
   getListPage,
@@ -99,6 +100,12 @@ describe('getSubscriptionStatsSummary', () => {
     expect(subscriptionStats.revenue).toBe(
       MONTH_PRICE * (SUBSCRIPTION_MONTHS + 1),
     );
+  });
+});
+
+describe('countActiveSubscribers', () => {
+  it('считает людей с идущей подпиской, а не сами подписки', () => {
+    expect(countActiveSubscribers(subscriptions)).toBe(2);
   });
 });
 
