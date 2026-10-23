@@ -215,7 +215,6 @@
   ]);
 
   // Опции платформ не зависят от состояния страницы — считаются один раз
-
   const platformOptions: AdminBugFilterOption[] = [
     { label: ADMIN_BUGS_PLATFORM_ALL_LABEL, value: ADMIN_BUGS_FILTER_ALL },
     ...SOURCE_PLATFORMS.map((platform) => ({
