@@ -18,6 +18,19 @@
   }
 }
 
+.slide-up {
+  &-enter-from,
+  &-leave-to {
+    transform: translateY(0.75rem);
+    opacity: 0;
+  }
+
+  &-enter-active,
+  &-leave-active {
+    @include css-anim($time: 0.2s, $item: transform opacity, $style: ease);
+  }
+}
+
 .nav-popover-animation {
   &-enter-from,
   &-leave-to {

@@ -10,7 +10,13 @@
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectRecharge } from '~ui/select';
 
-  import { toStoredSaveSuccessPerDay } from '../../../model';
+  import {
+    MAX_CREATURE_COOLDOWN_TURNS,
+    MIN_CREATURE_COOLDOWN_TURNS,
+    setCreatureActionCooldownTurns,
+    setCreatureActionRecharge,
+    toStoredSaveSuccessPerDay,
+  } from '../../../model';
   import {
     CREATURE_ACTION_LABELS,
     CREATURE_ACTION_SECTIONS,
@@ -61,6 +67,25 @@
       };
     },
   });
+
+  // Перезарядка и «раз в N ходов» взаимоисключающи: выбор одного сбрасывает
+  // другое — иначе VTTG не знал бы, какое ограничение вести
+  const recharge = computed({
+    get: () => model.value.recharge,
+    set: (selectedRecharge: string | undefined) => {
+      model.value = setCreatureActionRecharge(model.value, selectedRecharge);
+    },
+  });
+
+  const cooldownTurns = computed({
+    get: () => model.value.cooldownTurns ?? undefined,
+    set: (enteredTurns: number | null | undefined) => {
+      model.value = setCreatureActionCooldownTurns(model.value, enteredTurns);
+    },
+  });
+
+  /** При выбранной перезарядке «раз в N ходов» не заполняется. */
+  const isCooldownDisabled = computed(() => Boolean(model.value.recharge));
 </script>
 
 <template>
@@ -91,7 +116,23 @@
     :label="CREATURE_ACTION_LABELS.recharge"
     name="recharge"
   >
-    <SelectRecharge v-model="model.recharge" />
+    <SelectRecharge v-model="recharge" />
+  </UFormField>
+
+  <UFormField
+    class="col-span-full md:col-span-8"
+    :label="CREATURE_ACTION_LABELS.cooldownTurns"
+    :help="CREATURE_ACTION_LABELS.cooldownTurnsHint"
+    name="cooldownTurns"
+  >
+    <UInputNumber
+      v-model="cooldownTurns"
+      :min="MIN_CREATURE_COOLDOWN_TURNS"
+      :max="MAX_CREATURE_COOLDOWN_TURNS"
+      :disabled="isCooldownDisabled"
+      :placeholder="CREATURE_ACTION_LABELS.cooldownTurnsPlaceholder"
+      class="w-40"
+    />
   </UFormField>
 
   <UFormField

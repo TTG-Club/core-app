@@ -37,6 +37,8 @@
     GAME_GUEST_NOTICE_DESCRIPTION,
     GAME_GUEST_NOTICE_TITLE,
     GAME_LEFT_TOAST,
+    GAME_RAISE_ERROR_TITLE,
+    GAME_RAISE_LIMIT_HINT,
     GAME_RAISED_TOAST,
     GAME_RECRUITMENT_CLOSED_TOAST,
     GAME_RECRUITMENT_OPENED_TOAST,
@@ -63,11 +65,13 @@
   } from '~find-game/registrations';
   import { GameSessions } from '~find-game/sessions';
   import { getGameDescriptionText } from '~find-game/ui';
+  import { useIsSubscriber } from '~profile/activation/composables';
   import { UiResult } from '~ui/result';
 
   const route = useRoute();
-  const { showError, showSuccess } = useFindGameToast();
+  const { showError, showSubscriptionLimit, showSuccess } = useFindGameToast();
   const { isAdmin } = useUserRoles();
+  const isSubscriber = useIsSubscriber();
 
   const { watchParticipantNames } = useParticipantNames();
 
@@ -215,8 +219,31 @@
   }
 
   /** Поднимает игру в каталоге. */
-  function handleRaise(): void {
-    runAction(GAME_RAISED_TOAST, raise);
+  async function handleRaise(): Promise<void> {
+    isBusy.value = true;
+
+    try {
+      await raise();
+
+      showSuccess(GAME_RAISED_TOAST);
+    } catch (error) {
+      // Отказ 429 — суточная норма поднятий кончилась. Без подписки её можно
+      // расширить, поэтому уведомление ведёт к оформлению.
+      const isRaiseLimit =
+        getFindGameStatus(error) === StatusCodes.TOO_MANY_REQUESTS;
+
+      if (isRaiseLimit && !isSubscriber.value) {
+        showSubscriptionLimit(
+          error,
+          GAME_RAISE_ERROR_TITLE,
+          GAME_RAISE_LIMIT_HINT,
+        );
+      } else {
+        showError(error);
+      }
+    } finally {
+      isBusy.value = false;
+    }
   }
 
   /** Передаёт жалобу и сообщает об успешной постановке в очередь. */

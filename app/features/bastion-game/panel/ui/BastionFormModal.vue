@@ -116,7 +116,6 @@
         <UFormField
           :label="BASTION_FORM_LABELS.name"
           :error="nameError"
-          required
         >
           <UInput
             id="player-bastion-name"

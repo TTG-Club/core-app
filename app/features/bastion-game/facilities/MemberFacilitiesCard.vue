@@ -20,6 +20,7 @@
   import { useBastionAction } from '../composables';
   import {
     ACTIVITY_LABELS,
+    BASTION_CARD_UI,
     BASTION_GAME_LABELS,
     confirmFacilityPrerequisite,
     enlargeFacility,
@@ -264,7 +265,10 @@
 </script>
 
 <template>
-  <UCard variant="subtle">
+  <UCard
+    variant="subtle"
+    :ui="BASTION_CARD_UI"
+  >
     <template #header>
       <div class="flex flex-wrap items-center justify-between gap-2">
         <div class="flex min-w-0 flex-col">

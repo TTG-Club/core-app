@@ -62,6 +62,9 @@ export default defineConfig({
       '~magic-items': fileURLToPath(
         new URL('./app/features/magic-items', import.meta.url),
       ),
+      '~profile': fileURLToPath(
+        new URL('./app/features/profile', import.meta.url),
+      ),
       '~species': fileURLToPath(
         new URL('./app/features/species', import.meta.url),
       ),

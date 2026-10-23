@@ -14,6 +14,8 @@
     getCreatureSpellGroupLabel,
     isCreatureSpellCountMode,
     isCreatureSpellRestMode,
+    MAX_CREATURE_COOLDOWN_TURNS,
+    MIN_CREATURE_COOLDOWN_TURNS,
   } from '../../../model';
   import {
     CREATURE_SPELLCASTING_EDITOR,
@@ -44,6 +46,8 @@
 
   const isRechargeShown = computed(() => model.value.mode === 'RECHARGE');
 
+  const isCooldownShown = computed(() => model.value.mode === 'COOLDOWN');
+
   /**
    * Пояснение к числу применений: у «каждого» и «на весь список» одно и то же
    * число значит разное, и без подсказки их путают.
@@ -65,7 +69,7 @@
    * Пустыми их оставлять нельзя: в статблоке «N за отдых» без числа и без вида
    * отдыха не бывает, а пустое поле читалось бы как «неизвестно» и уехало бы
    * таким в выгрузку. Умолчания взяты самые частые — одно применение и
-   * продолжительный отдых.
+   * продолжительный отдых, а у «раз в N ходов» — наименьшее число ходов.
    *
    * @param mode - выбранное ограничение применений
    */
@@ -78,6 +82,10 @@
 
     if (isCreatureSpellRestMode(mode) && model.value.rest === undefined) {
       model.value.rest = DEFAULT_CREATURE_SPELL_REST;
+    }
+
+    if (mode === 'COOLDOWN' && model.value.cooldownTurns === undefined) {
+      model.value.cooldownTurns = MIN_CREATURE_COOLDOWN_TURNS;
     }
   }
 </script>
@@ -112,7 +120,7 @@
       />
     </div>
 
-    <!-- Поля группы строкой: их четыре, и часть показывается не всегда —
+    <!-- Поля группы строкой: их пять, и часть показывается не всегда —
       в сетке на месте скрытых оставались бы дыры. Перенос на узком экране
       делает `flex-wrap` -->
     <div class="flex flex-wrap items-end gap-3">
@@ -169,6 +177,28 @@
         :label="CREATURE_SPELLCASTING_EDITOR.recharge"
       >
         <SelectRecharge v-model="model.recharge" />
+      </UFormField>
+
+      <UFormField
+        v-if="isCooldownShown"
+        class="w-full sm:w-32"
+      >
+        <template #label>
+          <InfoTooltip
+            :text="CREATURE_SPELLCASTING_EDITOR.cooldownTurnsHint"
+            icon="tabler:info-circle-filled"
+          >
+            <span>{{ CREATURE_SPELLCASTING_EDITOR.cooldownTurns }}</span>
+          </InfoTooltip>
+        </template>
+
+        <UInputNumber
+          v-model="model.cooldownTurns"
+          :min="MIN_CREATURE_COOLDOWN_TURNS"
+          :max="MAX_CREATURE_COOLDOWN_TURNS"
+          :placeholder="CREATURE_SPELLCASTING_EDITOR.cooldownTurnsPlaceholder"
+          :aria-label="CREATURE_SPELLCASTING_EDITOR.cooldownTurns"
+        />
       </UFormField>
 
       <UFormField

@@ -1,5 +1,10 @@
 import { AbilityKey } from '~/shared/types';
 
+import {
+  CREATURE_COOLDOWN_TURNS_LABEL,
+  toStoredCooldownTurns,
+} from './cooldown';
+
 /**
  * Как ограничены применения группы заклинаний.
  *
@@ -12,7 +17,8 @@ import { AbilityKey } from '~/shared/types';
  * «Неограниченно», «N/день каждое» и «N/день» (N от 1 до 3). Отдых,
  * перезарядка и постоянное действие встречаются у одиночных записей — «Щит
  * (1/отдых)», «Очарование (перезарядка 5–6)», — и теперь заводятся тем же
- * блоком.
+ * блоком. «Раз в N ходов» (`COOLDOWN`) в книгах не встречается — это режим
+ * для своих существ: применённое в ход 1 снова доступно в ход 1 + N.
  */
 export type CreatureSpellUsageMode =
   | 'AT_WILL'
@@ -21,6 +27,7 @@ export type CreatureSpellUsageMode =
   | 'PER_REST_EACH'
   | 'PER_REST_POOL'
   | 'RECHARGE'
+  | 'COOLDOWN'
   | 'CONSTANT';
 
 /** Какой отдых возвращает применения группы. */
@@ -59,6 +66,9 @@ export interface CreatureSpellGroup {
 
   /** Значение словаря перезарядки («5-6»); только у режима перезарядки. */
   recharge: string | undefined;
+
+  /** Через сколько ходов группа снова доступна (2–20); только у режима `COOLDOWN`. */
+  cooldownTurns: number | undefined;
 
   /** Своя подпись группы вместо выведенной из режима. */
   label: string | undefined;
@@ -166,6 +176,7 @@ export function createEmptyCreatureSpellGroup(): CreatureSpellGroup {
     count: undefined,
     rest: undefined,
     recharge: undefined,
+    cooldownTurns: undefined,
     label: undefined,
     spells: [],
   };
@@ -196,6 +207,17 @@ export function createEmptyCreatureSpellcastingBlock(): CreatureSpellcastingBloc
 }
 
 /**
+ * «Раз в N ходов» к полю группы: у группы пустое поле — `undefined`, а не
+ * `null`, как у записи боевого блока.
+ *
+ * @param cooldownTurns число из формы или из ответа сервера.
+ * @returns число ходов (2–20) либо `undefined`.
+ */
+function toGroupCooldownTurns(cooldownTurns: unknown): number | undefined {
+  return toStoredCooldownTurns(cooldownTurns) ?? undefined;
+}
+
+/**
  * Готовит блоки заклинаний к отправке.
  *
  * Чистится только заведомый мусор: строки без слага (по ним ни VTTG заклинание
@@ -221,6 +243,10 @@ export function normalizeCreatureSpellcasting(
       count: isCreatureSpellCountMode(group.mode) ? group.count : undefined,
       rest: isCreatureSpellRestMode(group.mode) ? group.rest : undefined,
       recharge: group.mode === 'RECHARGE' ? group.recharge : undefined,
+      cooldownTurns:
+        group.mode === 'COOLDOWN'
+          ? toGroupCooldownTurns(group.cooldownTurns)
+          : undefined,
       spells: group.spells.filter((spell) => Boolean(spell.url)),
     })),
   }));
@@ -234,6 +260,7 @@ const USAGE_MODES: Array<CreatureSpellUsageMode> = [
   'PER_REST_EACH',
   'PER_REST_POOL',
   'RECHARGE',
+  'COOLDOWN',
   'CONSTANT',
 ];
 
@@ -266,6 +293,7 @@ const loadedSpellGroupSchema = z
     count: z.coerce.number().nullish().catch(null),
     rest: z.string().nullish().catch(null),
     recharge: z.string().nullish().catch(null),
+    cooldownTurns: z.coerce.number().nullish().catch(null),
     label: z.string().nullish().catch(null),
     spells: z.array(loadedSpellRefSchema).nullish().catch(null),
   })
@@ -274,6 +302,7 @@ const loadedSpellGroupSchema = z
     count: null,
     rest: null,
     recharge: null,
+    cooldownTurns: null,
     label: null,
     spells: null,
   })
@@ -283,6 +312,7 @@ const loadedSpellGroupSchema = z
       count: group.count ?? undefined,
       rest: REST_KINDS.find((rest) => rest === group.rest),
       recharge: group.recharge ?? undefined,
+      cooldownTurns: toGroupCooldownTurns(group.cooldownTurns),
       label: group.label ?? undefined,
       spells: group.spells ?? [],
     }),
@@ -356,6 +386,7 @@ export const CREATURE_SPELL_USAGE_MODE_OPTIONS: Array<{
   { label: 'N за отдых, каждое', value: 'PER_REST_EACH' },
   { label: 'N за отдых, на весь список', value: 'PER_REST_POOL' },
   { label: 'Перезарядка', value: 'RECHARGE' },
+  { label: CREATURE_COOLDOWN_TURNS_LABEL, value: 'COOLDOWN' },
   { label: 'Постоянно активно', value: 'CONSTANT' },
 ];
 
@@ -373,6 +404,8 @@ const GROUP_LABEL_PARTS = {
   atWill: 'По желанию',
   constant: 'Постоянно активно',
   recharge: 'Перезарядка',
+  cooldown: 'Раз в',
+  cooldownUnset: CREATURE_COOLDOWN_TURNS_LABEL,
   perDay: 'в день',
   perShortRest: 'за короткий отдых',
   perLongRest: 'за продолжительный отдых',
@@ -380,6 +413,9 @@ const GROUP_LABEL_PARTS = {
   pool: 'на весь список',
   unset: 'Группа без числа применений',
 } as const;
+
+/** Формы слова «ход» для 1, 2 и 5: «раз в 2 хода», «раз в 5 ходов». */
+const TURN_WORD_FORMS: [string, string, string] = ['ход', 'хода', 'ходов'];
 
 /**
  * Хвост подписи группы со счётчиком: за какой промежуток возвращаются
@@ -422,6 +458,12 @@ export function getCreatureSpellGroupLabel(group: CreatureSpellGroup): string {
     return group.recharge
       ? `${GROUP_LABEL_PARTS.recharge} ${group.recharge}`
       : GROUP_LABEL_PARTS.recharge;
+  }
+
+  if (group.mode === 'COOLDOWN') {
+    return group.cooldownTurns === undefined
+      ? GROUP_LABEL_PARTS.cooldownUnset
+      : `${GROUP_LABEL_PARTS.cooldown} ${group.cooldownTurns} ${getPlural(group.cooldownTurns, TURN_WORD_FORMS)}`;
   }
 
   const scope =
