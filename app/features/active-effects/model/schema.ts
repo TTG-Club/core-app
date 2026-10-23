@@ -822,6 +822,7 @@ const plainTriggerActionSchemas = [
   }),
   z.object({ type: z.literal('nextStage'), on: triggerGateSchema }),
   z.object({ type: z.literal('removeSelf'), on: triggerGateSchema }),
+  z.object({ type: z.literal('refreshDuration'), on: triggerGateSchema }),
 ] as const;
 
 /** Поля наложения состояния без собственных срабатываний. */

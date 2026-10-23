@@ -16,6 +16,11 @@ import {
   MAILING_ROUTE,
 } from '~admin/mailing/model';
 import {
+  SUBSCRIPTION_STATS_NAVIGATION_ICON,
+  SUBSCRIPTION_STATS_PAGE_TITLE,
+  SUBSCRIPTION_STATS_ROUTE,
+} from '~admin/subscription-stats/model';
+import {
   CODES_ADMIN_ROUTE,
   CODES_NAVIGATION_ICON,
   CODES_PAGE_TITLE,
@@ -73,6 +78,12 @@ const ADMIN_CODES_ITEM: NavigationItem = {
   to: CODES_ADMIN_ROUTE,
 };
 
+const ADMIN_SUBSCRIPTION_STATS_ITEM: NavigationItem = {
+  label: SUBSCRIPTION_STATS_PAGE_TITLE,
+  icon: SUBSCRIPTION_STATS_NAVIGATION_ICON,
+  to: SUBSCRIPTION_STATS_ROUTE,
+};
+
 const ADMIN_ARTICLES_ITEM: NavigationItem = {
   label: 'Статьи / Новости',
   icon: 'tabler:news',
@@ -108,6 +119,7 @@ export const ADMIN_NAVIGATION_ITEMS: NavigationItem[] = [
   ADMIN_PERSONAS_ITEM,
   ADMIN_USERS_ITEM,
   ADMIN_CODES_ITEM,
+  ADMIN_SUBSCRIPTION_STATS_ITEM,
   ADMIN_ARTICLES_ITEM,
   ADMIN_HOME_HERO_ITEM,
   ADMIN_MAILING_ITEM,
@@ -118,7 +130,12 @@ export const ADMIN_NAVIGATION_ITEMS: NavigationItem[] = [
 export const ADMIN_USERS_SECTION_GROUP: NavigationGroup = {
   title: 'Пользователи и подписки',
   icon: 'tabler:users-group',
-  items: [ADMIN_USERS_ITEM, ADMIN_CODES_ITEM, ADMIN_MAILING_ITEM],
+  items: [
+    ADMIN_USERS_ITEM,
+    ADMIN_CODES_ITEM,
+    ADMIN_SUBSCRIPTION_STATS_ITEM,
+    ADMIN_MAILING_ITEM,
+  ],
 };
 
 export const ADMIN_CONTENT_SECTION_GROUP: NavigationGroup = {
