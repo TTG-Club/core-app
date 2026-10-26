@@ -1,13 +1,20 @@
 <script setup lang="ts">
-  import { clamp } from 'es-toolkit';
+  import type { HitPointsState } from '~initiative/model';
 
   import { useDiceRoller } from '~dice-roller/composables';
+  import {
+    applyHitPointsDelta,
+    clampHitPoints,
+    mergeTemporaryHitPoints,
+    TEMPORARY_HIT_POINTS_LABELS,
+  } from '~initiative/model';
 
   import ParticipantStatTile from './ParticipantStatTile.vue';
 
   const {
     current = undefined,
     max = 0,
+    temporary = 0,
     formula = '',
     disabled = false,
     isPlayer = false,
@@ -16,6 +23,8 @@
     current?: number;
     /** Максимум хитов из статблока (`0` — неизвестен / игрок). */
     max?: number;
+    /** Временные хиты (`0` — нет). */
+    temporary?: number;
     /** Формула броска хитов из статблока (например, `8к8 + 16`). */
     formula?: string;
     disabled?: boolean;
@@ -24,7 +33,10 @@
   }>();
 
   const emit = defineEmits<{
-    'change': [value: number];
+    /** Новые хиты; временные приходят, только когда урон снял часть из них. */
+    'change': [value: number, temporary?: number];
+    /** Новые временные хиты (`0` — снять). */
+    'set-temporary': [value: number];
     /** Новый максимум хитов, прокинутый по формуле статблока. */
     'set-max': [value: number];
   }>();
@@ -50,6 +62,18 @@
 
     return current ?? 0;
   });
+
+  const hitPointsState = computed<HitPointsState>(() => ({
+    current: currentValue.value,
+    temporary,
+  }));
+
+  const hasTemporary = computed(() => temporary > 0);
+
+  const temporaryDisplay = computed(() => `+${temporary}`);
+
+  /** Подсказка в пустом поле временных хитов — их текущее значение. */
+  const temporaryPlaceholder = computed(() => String(temporary));
 
   const display = computed(() => {
     if (isKnown.value) {
@@ -84,6 +108,36 @@
     }
   });
 
+  const temporaryDraft = ref('');
+
+  // Поле временных хитов каждый раз открывается пустым: значение в нём —
+  // новые временные хиты, а не правка прежних.
+  watch(isOpen, (open) => {
+    if (open) {
+      temporaryDraft.value = '';
+    }
+  });
+
+  /** Ввод временных хитов — только целое неотрицательное число. */
+  const TEMPORARY_DRAFT_PATTERN = /^\d+$/;
+
+  /**
+   * Отправляет хиты после урона/лечения. Временные хиты уходят вместе с
+   * текущими, только если урон снял часть из них.
+   * @param next Хиты после сдвига.
+   */
+  function emitHitPoints(next: HitPointsState): void {
+    if (next.temporary !== temporary) {
+      emit('change', next.current, next.temporary);
+
+      return;
+    }
+
+    if (next.current !== currentValue.value) {
+      emit('change', next.current);
+    }
+  }
+
   /** Ввод хитов: `58` — установить точное значение, `+7`/`-6` — сдвинуть. */
   const DRAFT_PATTERN = /^([+-])?(\d+)$/;
 
@@ -92,11 +146,7 @@
    * @param delta Смещение хитов (отрицательное — урон).
    */
   function applyStep(delta: number): void {
-    if (isKnown.value) {
-      emit('change', clamp(currentValue.value + delta, 0, max));
-    } else {
-      emit('change', Math.max(0, currentValue.value + delta));
-    }
+    emitHitPoints(applyHitPointsDelta(hitPointsState.value, delta, max));
   }
 
   /**
@@ -145,9 +195,10 @@
   }
 
   /**
-   * Применяет введённое значение по `DRAFT_PATTERN`: без знака — точные хиты,
-   * со знаком — сдвиг от текущих (`+7` — лечение, `-6` — урон). Невалидный
-   * ввод закрывает попап без изменений.
+   * Применяет введённое значение по `DRAFT_PATTERN`: без знака — точные хиты
+   * (временные не трогаются), со знаком — сдвиг от текущих (`+7` — лечение,
+   * `-6` — урон, сначала по временным хитам). Невалидный ввод закрывает попап
+   * без изменений.
    */
   function applyDraft(): void {
     isOpen.value = false;
@@ -161,14 +212,51 @@
     const [, sign, digits] = match;
     const amount = Number(digits);
 
-    const target = sign
-      ? currentValue.value + (sign === '-' ? -amount : amount)
-      : amount;
+    if (sign) {
+      emitHitPoints(
+        applyHitPointsDelta(
+          hitPointsState.value,
+          sign === '-' ? -amount : amount,
+          max,
+        ),
+      );
 
-    const clamped = isKnown.value ? clamp(target, 0, max) : Math.max(0, target);
+      return;
+    }
 
-    if (clamped !== currentValue.value) {
-      emit('change', clamped);
+    emitHitPoints({
+      ...hitPointsState.value,
+      current: clampHitPoints(amount, max),
+    });
+  }
+
+  /**
+   * Задаёт временные хиты: они не складываются, поэтому новое значение
+   * заменяет прежнее, только если оно больше. Невалидный ввод закрывает попап
+   * без изменений.
+   */
+  function applyTemporaryDraft(): void {
+    isOpen.value = false;
+
+    const value = temporaryDraft.value.trim();
+
+    if (!TEMPORARY_DRAFT_PATTERN.test(value)) {
+      return;
+    }
+
+    const next = mergeTemporaryHitPoints(temporary, Number(value));
+
+    if (next !== temporary) {
+      emit('set-temporary', next);
+    }
+  }
+
+  /** Снимает временные хиты. */
+  function clearTemporary(): void {
+    isOpen.value = false;
+
+    if (hasTemporary.value) {
+      emit('set-temporary', 0);
     }
   }
 
@@ -217,6 +305,15 @@
           label="Хиты"
           class="w-full transition-colors hover:border-accented"
         >
+          <!-- Временные хиты — рядом с подписью: в значение плитки они не
+               влезают без переноса. -->
+          <template
+            v-if="hasTemporary"
+            #label-icon
+          >
+            <span class="text-info">{{ temporaryDisplay }}</span>
+          </template>
+
           <span :class="valueClass">{{ display }}</span>
         </ParticipantStatTile>
       </button>
@@ -236,6 +333,13 @@
                 class="min-w-14 text-center font-bold text-highlighted tabular-nums"
               >
                 {{ display }}
+
+                <span
+                  v-if="hasTemporary"
+                  class="text-info"
+                >
+                  {{ temporaryDisplay }}
+                </span>
               </span>
 
               <UButton
@@ -304,6 +408,47 @@
             >
               ОК
             </UButton>
+          </div>
+
+          <!-- Временные хиты: не складываются — новое значение заменяет
+               прежнее, только если больше. Урон сначала снимает их. -->
+          <UTooltip :text="TEMPORARY_HIT_POINTS_LABELS.hint">
+            <div class="flex items-center gap-2">
+              <span class="shrink-0 text-xs text-secondary">
+                {{ TEMPORARY_HIT_POINTS_LABELS.title }}
+              </span>
+
+              <div class="h-px flex-1 bg-default" />
+            </div>
+          </UTooltip>
+
+          <div class="flex gap-2">
+            <UInput
+              v-model="temporaryDraft"
+              class="flex-1"
+              inputmode="numeric"
+              :placeholder="temporaryPlaceholder"
+              :ui="{ base: 'text-center' }"
+              :aria-label="TEMPORARY_HIT_POINTS_LABELS.input"
+              @keydown.enter.prevent="applyTemporaryDraft"
+            />
+
+            <UButton
+              color="info"
+              variant="soft"
+              @click.left.exact.prevent="applyTemporaryDraft"
+            >
+              {{ TEMPORARY_HIT_POINTS_LABELS.apply }}
+            </UButton>
+
+            <UButton
+              v-if="hasTemporary"
+              icon="tabler:shield-x"
+              color="neutral"
+              variant="subtle"
+              :aria-label="TEMPORARY_HIT_POINTS_LABELS.clear"
+              @click.left.exact.prevent="clearTemporary"
+            />
           </div>
         </div>
       </template>

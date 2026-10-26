@@ -53,6 +53,7 @@
     reset,
     destroy,
     setHitPoints,
+    setTemporaryHitPoints,
     setMaxHitPoints,
     setArmorClass,
     setParticipantColor,
@@ -213,6 +214,7 @@
         @roll-participant="rollParticipant"
         @toggle-dead="setDead"
         @set-hit-points="setHitPoints"
+        @set-temporary-hit-points="setTemporaryHitPoints"
         @set-max-hit-points="setMaxHitPoints"
         @set-armor-class="setArmorClass"
         @set-color="setParticipantColor"

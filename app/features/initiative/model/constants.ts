@@ -307,3 +307,12 @@ export const TRACKER_STATUS_BADGE: Record<
   PREPARING: { color: 'neutral', icon: 'tabler:swords' },
   ACTIVE: { color: 'success', icon: 'tabler:flame' },
 };
+
+/** Подписи временных хитов в попапе хитов участника. */
+export const TEMPORARY_HIT_POINTS_LABELS = {
+  title: 'Временные хиты',
+  hint: 'Новое значение заменит текущее, только если оно больше. Урон сначала снимает временные хиты.',
+  input: 'Количество временных хитов',
+  apply: 'Задать',
+  clear: 'Снять временные хиты',
+} as const;
