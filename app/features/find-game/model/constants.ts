@@ -333,6 +333,9 @@ export const NOTIFICATION_TYPES = [
   'SESSION_CANCELLED',
   'GAME_CLOSED',
   'GAME_CANCELLED',
+  'GAME_INACTIVITY_WARNING',
+  'GAME_CANCELLED_FOR_INACTIVITY',
+  'GAME_HIDDEN_BY_MODERATOR',
   'MASTER_PUBLISHED_GAME',
   'GAME_INVITE',
 ] as const;
@@ -350,6 +353,11 @@ export const NOTIFICATION_TEXTS = {
   SESSION_COMPLETED: 'Сессия завершена',
   GAME_CLOSED: 'Игра завершена',
   GAME_CANCELLED: 'Игра отменена',
+  GAME_INACTIVITY_WARNING:
+    'Игра ещё актуальна? Подтвердите, иначе она отменится',
+  GAME_CANCELLED_FOR_INACTIVITY:
+    'Игра отменена: вы не подтвердили, что она актуальна',
+  GAME_HIDDEN_BY_MODERATOR: 'Игра скрыта модератором',
   MASTER_PUBLISHED_GAME: 'Отмеченный мастер объявил игру',
   GAME_INVITE: 'Мастер зовёт вас в игру',
 } as const;
@@ -367,6 +375,9 @@ export const NOTIFICATION_ICONS = {
   SESSION_COMPLETED: 'tabler:flag-check',
   GAME_CLOSED: 'tabler:circle-check',
   GAME_CANCELLED: 'tabler:ban',
+  GAME_INACTIVITY_WARNING: 'tabler:hourglass',
+  GAME_CANCELLED_FOR_INACTIVITY: 'tabler:hourglass-off',
+  GAME_HIDDEN_BY_MODERATOR: 'tabler:eye-off',
   MASTER_PUBLISHED_GAME: 'tabler:bookmark',
   GAME_INVITE: 'tabler:mail',
 } as const;
@@ -1070,6 +1081,14 @@ export const GAME_RAISE_LABEL = 'Поднять в каталоге';
 export const GAME_RAISED_TOAST = 'Игра поднята в каталоге';
 export const GAME_RAISE_ERROR_TITLE = 'Не удалось поднять игру';
 export const GAME_RAISE_LIMIT_HINT = `Без подписки игру можно поднимать раз в сутки, с подпиской — до ${GAME_RAISES_SUBSCRIBER_MAX} раз.`;
+
+export const GAME_INACTIVITY_TITLE = 'Игра ещё актуальна?';
+export const GAME_INACTIVITY_DESCRIPTION_PREFIX =
+  'Больше месяца в игре ничего не происходило. Если не подтвердить, она будет отменена';
+export const GAME_INACTIVITY_DESCRIPTION_SUFFIX =
+  'Новая встреча, решение по заявке или правка игры тоже считаются ответом.';
+export const GAME_KEEP_ACTIVE_LABEL = 'Игра актуальна';
+export const GAME_KEPT_ACTIVE_TOAST = 'Игра остаётся в каталоге';
 
 export const GAME_DELETE_LABEL = 'Заблокировать игру';
 export const GAME_DELETE_CONFIRM_TITLE = 'Заблокировать игру?';

@@ -344,6 +344,12 @@ export interface Game {
    */
   listPositionAt: string | null;
   updatedAt: string;
+  /**
+   * Мастер давно ничего не делал в игре, и сервис спросил, актуальна ли она.
+   * Без ответа к этому моменту игра отменится сама. Приходит только мастеру;
+   * `null` — вопроса нет.
+   */
+  autoCancelAt: string | null;
 }
 
 /** Страница Spring-пагинации. */
