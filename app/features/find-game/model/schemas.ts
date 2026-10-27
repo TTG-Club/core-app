@@ -8,13 +8,15 @@ import type {
   Game,
   GameRegistration,
   GameReport,
+  GameReview,
   GameSession,
   GameSystemOption,
   MasterPublicProfile,
+  PendingReview,
   PlayerPublicProfile,
   Reputation,
+  ReviewTarget,
   SessionParticipant,
-  SessionReview,
   SpringPage,
 } from './types';
 
@@ -192,12 +194,11 @@ export function parsePlayerProfile(input: unknown): PlayerPublicProfile {
 }
 
 /* ------------------------------------------------------------------ */
-/* Оценки за встречу                                                   */
+/* Оценки за игру                                                      */
 /* ------------------------------------------------------------------ */
 
-const sessionReviewResponseSchema = z.object({
+const gameReviewResponseSchema = z.object({
   id: uuidSchema,
-  sessionId: uuidSchema,
   gameId: uuidSchema,
   authorId: uuidSchema,
   targetId: uuidSchema,
@@ -213,16 +214,29 @@ const reputationResponseSchema = z.object({
   total: z.coerce.number().int().catch(0),
 });
 
+const reviewTargetResponseSchema = z.object({
+  targetId: uuidSchema,
+  kind: z.enum(REVIEW_KINDS),
+  review: gameReviewResponseSchema.nullish().catch(null),
+  editable: z.boolean().catch(false),
+});
+
+const pendingReviewResponseSchema = z.object({
+  gameId: uuidSchema,
+  gameTitle: z.string(),
+  kind: z.enum(REVIEW_KINDS),
+  targetIds: z.array(uuidSchema).catch([]),
+});
+
 /**
  * Приводит разобранный ответ к доменной оценке.
  * @param parsed Результат разбора ответа сервиса.
  */
-function toSessionReview(
-  parsed: z.infer<typeof sessionReviewResponseSchema>,
-): SessionReview {
+function toGameReview(
+  parsed: z.infer<typeof gameReviewResponseSchema>,
+): GameReview {
   return {
     id: parsed.id,
-    sessionId: parsed.sessionId,
     gameId: parsed.gameId,
     authorId: parsed.authorId,
     targetId: parsed.targetId,
@@ -237,21 +251,21 @@ function toSessionReview(
  * Разбирает одну оценку.
  * @param input Сырой ответ сервиса.
  */
-export function parseSessionReview(input: unknown): SessionReview {
-  return toSessionReview(sessionReviewResponseSchema.parse(input));
+export function parseGameReview(input: unknown): GameReview {
+  return toGameReview(gameReviewResponseSchema.parse(input));
 }
 
 /**
  * Разбирает список оценок, отсеивая битые записи поштучно.
  * @param input Сырой массив из ответа сервиса.
  */
-export function parseSessionReviews(input: unknown): Array<SessionReview> {
+export function parseGameReviews(input: unknown): Array<GameReview> {
   if (!Array.isArray(input)) {
     return [];
   }
 
   return input.flatMap((item) => {
-    const parsed = sessionReviewResponseSchema.safeParse(item);
+    const parsed = gameReviewResponseSchema.safeParse(item);
 
     if (!parsed.success) {
       consola.warn('[find-game] Оценка не прошла разбор:', item);
@@ -259,7 +273,59 @@ export function parseSessionReviews(input: unknown): Array<SessionReview> {
       return [];
     }
 
-    return [toSessionReview(parsed.data)];
+    return [toGameReview(parsed.data)];
+  });
+}
+
+/**
+ * Разбирает, кого пользователь вправе оценить в игре, отсеивая битые записи
+ * поштучно.
+ * @param input Сырой массив из ответа сервиса.
+ */
+export function parseReviewTargets(input: unknown): Array<ReviewTarget> {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input.flatMap((item) => {
+    const parsed = reviewTargetResponseSchema.safeParse(item);
+
+    if (!parsed.success) {
+      consola.warn('[find-game] Цель оценки не прошла разбор:', item);
+
+      return [];
+    }
+
+    return [
+      {
+        targetId: parsed.data.targetId,
+        kind: parsed.data.kind,
+        review: parsed.data.review ? toGameReview(parsed.data.review) : null,
+        editable: parsed.data.editable,
+      },
+    ];
+  });
+}
+
+/**
+ * Разбирает игры, ждущие оценки, отсеивая битые записи поштучно.
+ * @param input Сырой массив из ответа сервиса.
+ */
+export function parsePendingReviews(input: unknown): Array<PendingReview> {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input.flatMap((item) => {
+    const parsed = pendingReviewResponseSchema.safeParse(item);
+
+    if (!parsed.success) {
+      consola.warn('[find-game] Ждущая оценки игра не прошла разбор:', item);
+
+      return [];
+    }
+
+    return [parsed.data];
   });
 }
 

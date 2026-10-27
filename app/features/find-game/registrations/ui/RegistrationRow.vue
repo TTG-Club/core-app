@@ -1,9 +1,5 @@
 <script setup lang="ts">
-  import type {
-    GameRegistration,
-    Reputation,
-    SessionReview,
-  } from '../../model';
+  import type { GameRegistration, GameReview, Reputation } from '../../model';
 
   import { CharacterSheetDrawer } from '~character-sheet/drawer';
   import { UserAvatar } from '~ui/user-avatar';
@@ -138,7 +134,7 @@
 
   // Тексты отзывов подтягиваются по требованию: доля отвечает на вопрос
   // «брать ли», а подробности нужны, только когда мастер сомневается.
-  const reviews = ref<Array<SessionReview>>([]);
+  const reviews = ref<Array<GameReview>>([]);
   const areReviewsOpen = ref(false);
 
   const reviewsToggleIcon = computed(() =>
