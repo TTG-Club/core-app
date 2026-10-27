@@ -2,6 +2,7 @@
   import type { SpeciesDetailResponse } from '~species/model';
 
   import { SpeciesBody } from '~species/body';
+  import { useLineagePaths } from '~species/composable';
   import { getSpeciesMarkdown } from '~species/model';
   import { PageActions } from '~ui/page';
   import { UiResult } from '~ui/result';
@@ -28,6 +29,11 @@
 
     return parentUrl ? `/species/${parentUrl}` : undefined;
   });
+
+  // Происхождение листает соседние происхождения своего вида, а не список
+  const lineagePaths = await useLineagePaths(
+    species.value?.parent?.url ?? species.value?.species?.url,
+  );
 
   useSeoMeta({
     title: getSeoTitle,
@@ -68,6 +74,7 @@
     id="species-base"
     name="detail"
     :section-path="sectionPath"
+    :swipe-paths="lineagePaths"
     :title="species?.name.rus"
     :subtitle="species?.name.eng"
     :source="species?.source"
