@@ -198,6 +198,9 @@ export const SOURCES_SEARCH_PATH = '/api/v2/source/search';
 /** Своя репутация игрока: доля оценок без текстов и авторов. */
 export const OWN_REPUTATION_API_PATH = `${FIND_GAME_API_PREFIX}/profiles/me/reputation`;
 
+/** Игры, где пользователь ещё не оценил тех, с кем играл. */
+export const PENDING_REVIEWS_API_PATH = `${FIND_GAME_API_PREFIX}/reviews/pending`;
+
 /** Отмеченные мастера: их новые игры приходят уведомлением. */
 export const FOLLOWED_MASTERS_API_PATH = `${FIND_GAME_API_PREFIX}/profiles/me/follows/masters`;
 
@@ -333,8 +336,10 @@ export const NOTIFICATION_TYPES = [
   'SESSION_CANCELLED',
   'GAME_CLOSED',
   'GAME_CANCELLED',
+  'GAME_HIDDEN_BY_MODERATOR',
   'MASTER_PUBLISHED_GAME',
   'GAME_INVITE',
+  'REVIEW_REQUESTED',
 ] as const;
 
 export const NOTIFICATION_TEXTS = {
@@ -350,8 +355,10 @@ export const NOTIFICATION_TEXTS = {
   SESSION_COMPLETED: 'Сессия завершена',
   GAME_CLOSED: 'Игра завершена',
   GAME_CANCELLED: 'Игра отменена',
+  GAME_HIDDEN_BY_MODERATOR: 'Модератор скрыл игру',
   MASTER_PUBLISHED_GAME: 'Отмеченный мастер объявил игру',
   GAME_INVITE: 'Мастер зовёт вас в игру',
+  REVIEW_REQUESTED: 'Оцените, как вам игралось',
 } as const;
 
 export const NOTIFICATION_ICONS = {
@@ -367,8 +374,10 @@ export const NOTIFICATION_ICONS = {
   SESSION_COMPLETED: 'tabler:flag-check',
   GAME_CLOSED: 'tabler:circle-check',
   GAME_CANCELLED: 'tabler:ban',
+  GAME_HIDDEN_BY_MODERATOR: 'tabler:eye-off',
   MASTER_PUBLISHED_GAME: 'tabler:bookmark',
   GAME_INVITE: 'tabler:mail',
+  REVIEW_REQUESTED: 'tabler:thumb-up',
 } as const;
 
 export const NOTIFICATIONS_TITLE = 'Уведомления';
@@ -983,35 +992,48 @@ export const INVITE_NO_GAMES_HINT = 'Нет игр с открытым набо�
 export const REVIEW_KINDS = ['MASTER_REVIEW', 'PLAYER_REVIEW'] as const;
 
 /**
- * Сколько дней после встречи её можно оценить. Ровно столько же держит окно
- * сервис: позже он отвечает отказом.
+ * Сколько дней оценка ждёт ответа второй стороны. Ровно столько же держит
+ * сервис: потом оценка раскрывается и без ответа, а поправить её уже нельзя.
  */
-export const REVIEW_WINDOW_DAYS = 14;
+export const REVIEW_REVEAL_DAYS = 14;
 
 export const REVIEW_COMMENT_MAX_LENGTH = 2000;
 
-export const REVIEW_TITLE = 'Оценка встречи';
-export const REVIEW_OPEN_LABEL = 'Оценить встречу';
+export const REVIEW_TITLE = 'Оценка игры';
+export const REVIEW_OPEN_MASTER_LABEL = 'Оценить мастера';
+export const REVIEW_OPEN_PLAYERS_LABEL = 'Оценить игроков';
 export const REVIEW_SUBMIT_LABEL = 'Сохранить';
 export const REVIEW_UP_LABEL = 'Сыграл бы снова';
 export const REVIEW_DOWN_LABEL = 'Больше не сяду';
 export const REVIEW_COMMENT_LABEL = 'Отзыв';
-export const REVIEW_COMMENT_PLACEHOLDER = 'Необязательно: как прошла встреча';
+export const REVIEW_COMMENT_PLACEHOLDER = 'Необязательно: как вам игралось';
 export const REVIEW_SAVED_TOAST = 'Оценка сохранена';
+export const REVIEW_LOCKED_LABEL = 'Оценка раскрыта';
 
 /** Почему чужая оценка ещё не видна: пара раскрывается разом. */
 export const REVIEW_HIDDEN_HINT =
   'Оценка второй стороны откроется, когда ответят оба';
 
-export const REVIEW_WINDOW_HINT = `Оценить встречу можно в течение ${REVIEW_WINDOW_DAYS} дней после её завершения`;
+export const REVIEW_RULES_HINT = `Оценка ставится одна за всю игру. Пока вторая сторона не ответила, её можно поправить; через ${REVIEW_REVEAL_DAYS} дней она откроется и без ответа.`;
 
 export const REVIEW_EMPTY_PARTICIPANTS =
-  'Во встрече не было других участников — оценивать некого';
+  'Оценивать пока некого: оценка открывается после первой прошедшей встречи или через неделю в составе';
+
+/** Раздел сводки «Моих игр» с играми, где осталось кого-то оценить. */
+export const MY_GAMES_REVIEWS_LABEL = 'Ждут вашей оценки';
+export const MY_GAMES_REVIEWS_EMPTY = 'Всех, с кем играли, вы уже оценили';
+export const PENDING_REVIEW_MASTER_CAPTION = 'Оцените мастера';
+export const PENDING_REVIEW_PLAYERS_CAPTION = 'Оцените игроков';
+export const PENDING_REVIEWS_DATA_KEY = 'find-game-pending-reviews';
+
+/** Параметр адреса страницы игры, который сразу открывает окно оценки. */
+export const REVIEW_OPEN_QUERY_KEY = 'review';
+export const REVIEW_OPEN_QUERY_VALUE = '1';
 
 export const REVIEWS_EMPTY_TITLE = 'Отзывов пока нет';
 
 export const REVIEWS_EMPTY_DESCRIPTION =
-  'Они появятся, когда игроки оценят проведённые встречи';
+  'Они появятся, когда игроки оценят игры мастера';
 
 export const REPUTATION_EMPTY_LABEL = 'Пока без оценок';
 export const PLAYER_REVIEWS_OPEN_LABEL = 'Отзывы мастеров';
