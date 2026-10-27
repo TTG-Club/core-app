@@ -19,7 +19,7 @@
     params: { url },
   } = useRoute();
 
-  useSectionDetailRedirect('classes');
+  const sectionPath = useSectionDetailRedirect('classes');
 
   const {
     data: detail,
@@ -104,6 +104,7 @@
   <NuxtLayout
     id="classes-base"
     name="detail"
+    :section-path="sectionPath"
     :title
     :subtitle
     :source="detail?.source"

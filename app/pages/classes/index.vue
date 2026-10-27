@@ -61,6 +61,11 @@
     getParentUrl: (detail) => detail.parent?.url,
   });
 
+  // На телефоне страница класса листает соседние классы списка
+  useSectionNeighbours('/classes', () =>
+    classes.value?.map((link) => link.url),
+  );
+
   const markdown = useEntityMarkdown(detailClass, getClassMarkdown);
 
   /** Возврат от подкласса к его классу в той же сплит-панели. */

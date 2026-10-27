@@ -7,7 +7,7 @@
 
   const route = useRoute();
 
-  useSectionDetailRedirect('backgrounds');
+  const sectionPath = useSectionDetailRedirect('backgrounds');
 
   const { data: background } = await useAsyncData(
     `background-${route.params.url}`,
@@ -52,6 +52,7 @@
 <template>
   <NuxtLayout
     name="detail"
+    :section-path="sectionPath"
     :title="background?.name.rus"
     :subtitle="background?.name.eng"
     :source="background?.source"

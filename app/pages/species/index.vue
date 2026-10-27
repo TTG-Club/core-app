@@ -60,6 +60,9 @@
     getParentUrl: (detail) => detail.parent?.url ?? detail.species?.url,
   });
 
+  // На телефоне страница вида листает соседние виды списка
+  useSectionNeighbours('/species', () => data.value?.map((link) => link.url));
+
   const markdown = useEntityMarkdown(detailSpecies, getSpeciesMarkdown);
 
   /** Возврат к родительскому виду в той же сплит-панели. */
