@@ -2,6 +2,7 @@
   import type { ClassDetailResponse } from '~classes/model';
 
   import { ClassBody } from '~classes/body';
+  import { useSubclassPaths } from '~classes/composable';
   import { getClassMarkdown } from '~classes/model';
   import { PageActions } from '~ui/page';
   import { UiResult } from '~ui/result';
@@ -37,6 +38,9 @@
 
     return parentUrl ? `/classes/${parentUrl}` : undefined;
   });
+
+  // Подкласс листает соседние подклассы своего класса, а не список
+  const subclassPaths = await useSubclassPaths(detail.value?.parent?.url);
 
   useSeoMeta({
     title: getSeoTitle,
@@ -105,6 +109,7 @@
     id="classes-base"
     name="detail"
     :section-path="sectionPath"
+    :swipe-paths="subclassPaths"
     :title
     :subtitle
     :source="detail?.source"

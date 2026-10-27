@@ -57,7 +57,8 @@ function waitForFrame(): Promise<number> {
 /**
  * Листание записей свайпом на странице записи на телефоне:
  * влево — следующая запись списка, вправо — предыдущая. Работает, только
- * если пришли из списка раздела; переход заменяет запись в истории, и
+ * если пришли из списка раздела, или если запись сама задала, что листать,
+ * как подкласс — подклассы своего класса; переход заменяет запись в истории, и
  * «назад» возвращает к списку.
  *
  * Запись идёт за пальцем и гаснет, отпущенная — уезжает в сторону жеста,
@@ -69,16 +70,21 @@ function waitForFrame(): Promise<number> {
  *   свайп выключен.
  * @param target Страница записи.
  * @param path Адрес открытой записи.
+ * @param ownPaths Что листать вместо списка раздела, если запись это задала:
+ *   например, подклассы своего класса.
  * @returns Стиль сдвига записи.
  */
 export function useSectionSwipe(
   sectionPath: string | undefined,
   target: MaybeRefOrGetter<HTMLElement | null | undefined>,
   path: MaybeRefOrGetter<string>,
+  ownPaths?: MaybeRefOrGetter<Array<string> | undefined>,
 ) {
-  const paths = sectionPath
+  const sectionPaths = sectionPath
     ? useSectionPaths(sectionPath)
     : ref<Array<string>>([]);
+
+  const paths = computed(() => toValue(ownPaths) ?? sectionPaths.value);
 
   const preferredMotion = usePreferredReducedMotion();
 

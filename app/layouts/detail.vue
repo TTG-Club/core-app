@@ -16,6 +16,7 @@
     dateTimeFormat = 'LLL',
     backTo = undefined,
     sectionPath = undefined,
+    swipePaths = undefined,
   } = defineProps<{
     title: string | undefined;
     copyText?: boolean;
@@ -26,6 +27,11 @@
     backTo?: RouteLocationRaw;
     /** Путь раздела: на телефоне свайп листает записи его списка. */
     sectionPath?: string;
+    /**
+     * Что листать свайпом вместо списка раздела, например подклассы класса;
+     * без него листается список.
+     */
+    swipePaths?: Array<string>;
   }>();
 
   const { format } = useDayjs();
@@ -39,6 +45,7 @@
     sectionPath,
     page,
     () => route.path,
+    () => swipePaths,
   );
 
   // Запись под пальцем уезжает вбок и не должна растягивать страницу
