@@ -122,6 +122,11 @@ export const ITEM_FORM_LABELS = {
   descriptionPlaceholder: 'Введи описание',
   image: 'Основное',
   imageHint: 'Эта картинка отображается при просмотре страницы предмета',
+  consumable: 'Расходуемый',
+  consumableHint:
+    'Применение тратит единицу предмета, последний уходит из инвентаря. Этим '
+    + 'же признаком игрок заряжает стрелковое оружие на листе. Боеприпасы, яды '
+    + 'и еда с эффектом расходуются и без галочки.',
   equipmentCategory: 'Категория снаряжения',
   equipmentCategoryUnset: 'Определить по типам предмета',
   equipmentCategoryHint:
@@ -199,6 +204,11 @@ export const TOOL_FORM_LABELS = {
   bonus: 'Собственный бонус',
   proficiencyMode: 'Учёт владения',
   proficiencyModeUnset: 'Автоматически',
+  crafts: 'Создаваемые предметы',
+  craftsHint:
+    'Что можно создать этим инструментом. Мастерская бастиона предлагает '
+    + 'эти предметы для выбранных инструментов ремесленников.',
+  craftsPlaceholder: 'Выбери предметы',
 } as const;
 
 /** Подсказки полей броска костей. */
@@ -559,6 +569,7 @@ export const EQUIPMENT_CATEGORY_OPTIONS: Array<
   { label: 'Кольцо', value: 'ring' },
   { label: 'Жезл', value: 'wand' },
   { label: 'Чудесный предмет', value: 'wondrous' },
+  { label: 'Зелье', value: 'potion' },
   { label: 'Еда', value: 'food' },
   { label: 'Снаряжение транспорта', value: 'vehicle-equipment' },
 ];
@@ -587,13 +598,14 @@ export const WEAPON_PROFICIENCY_MODE_OPTIONS: Array<
   { label: 'Не учитывать', value: 'never' },
 ];
 
-/** Что происходит с уроном при успешном спасброске. */
+/** Что спасбросок делает с уроном. */
 export const WEAPON_SAVE_EFFECT_OPTIONS: Array<
   ItemSelectOption<WeaponSaveEffect>
 > = [
   { label: 'Урон вдвое меньше', value: 'half' },
   { label: 'Урона нет', value: 'none' },
   { label: 'Особый исход', value: 'special' },
+  { label: 'Провал — урон удвоен', value: 'double' },
 ];
 
 /** Режим учёта владения инструментом (`ToolProficiencyMode` VTTG) без `auto`. */

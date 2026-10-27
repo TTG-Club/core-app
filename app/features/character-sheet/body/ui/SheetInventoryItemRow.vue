@@ -24,8 +24,10 @@
     getInventoryEquipIcon,
     getInventoryItemBonusLabels,
     getInventoryItemMenuItems,
+    getInventoryItemSalePriceInCopper,
     getWeaponAttackBonus,
     getWeaponDamage,
+    getWeaponRulesAbility,
     INVENTORY_ACTIVE_BADGE_HINT,
     INVENTORY_ACTIVE_BADGE_LABEL,
     INVENTORY_ATTUNED_BADGE_HINT,
@@ -165,6 +167,7 @@
     'edit': [];
     'copy': [];
     'remove': [];
+    'sell': [];
     'adjust': [delta: number];
     'toggle-equip': [];
     'toggle-attuned': [];
@@ -180,7 +183,12 @@
   // состояние листа через composable (как модалки). Оттуда же классы кнопок:
   // правка и удаление предмета меняют лист, а количество — игровое действие,
   // его запертый лист разрешает, чужой — нет.
-  const { character, editControlClass, gameControlClass } = useCharacterSheet();
+  const {
+    character,
+    editControlClass,
+    gameControlClass,
+    setInventoryItemAttackAbility,
+  } = useCharacterSheet();
 
   const categoryIcon = computed(
     () => INVENTORY_CATEGORY_ICONS[props.inventoryItem.category],
@@ -215,13 +223,14 @@
   // Разбор атаки нужен и плитке, и значку помехи тяжёлого оружия — считаем его
   // один раз. null — предмет оружием не является.
   const weaponAttack = computed<WeaponAttack | null>(() => {
-    const { weapon } = props.inventoryItem;
+    const { weapon, attackAbility } = props.inventoryItem;
 
     return weapon
       ? getWeaponAttackBonus(
           character.value,
           weapon,
           hasWeaponProficiency.value,
+          attackAbility,
         )
       : null;
   });
@@ -300,6 +309,11 @@
 
   const charges = computed(() => props.inventoryItem.charges);
 
+  // Продать можно только то, что есть в наличии и имеет цену.
+  const isSellable = computed(
+    () => getInventoryItemSalePriceInCopper(props.inventoryItem) !== null,
+  );
+
   // Правка и удаление — под многоточием: строка и без них плотная (иконка,
   // название, плитки, «+/−»), а два разных набора кнопок ломали бы её ритм.
   // Каталожный предмет правится в своём разделе — вместо правки ему предлагается
@@ -310,6 +324,16 @@
         ? () => emit('toggle-two-handed')
         : undefined,
       twoHanded: isTwoHanded.value,
+      // Выбор пишется в лист прямо отсюда: строка и так читает общее состояние,
+      // а цепочка событий через вкладки ничего бы не добавила.
+      onSelectAttackAbility: props.inventoryItem.weapon
+        ? (ability) =>
+            setInventoryItemAttackAbility(props.inventoryItem.id, ability)
+        : undefined,
+      attackAbility: props.inventoryItem.attackAbility,
+      rulesAttackAbility: props.inventoryItem.weapon
+        ? getWeaponRulesAbility(character.value, props.inventoryItem.weapon)
+        : null,
       // Игровые действия магии отбирает отсутствующий предмет: настраиваться,
       // включать и заряжать нечего, пока его у персонажа нет.
       onToggleAttunement:
@@ -329,6 +353,7 @@
       onEdit: isCustom.value ? () => emit('edit') : undefined,
       onCopy: isCustom.value ? undefined : () => emit('copy'),
       onRemove: () => emit('remove'),
+      onSell: isSellable.value ? () => emit('sell') : undefined,
     }),
   );
 
@@ -511,7 +536,12 @@
    * нет (например, у предмета, добавленного до появления урона в листе).
    */
   function getWeaponDamageStat(weapon: InventoryWeapon): ItemStat | null {
-    const damage = getWeaponDamage(character.value, weapon, isTwoHanded.value);
+    const damage = getWeaponDamage(
+      character.value,
+      weapon,
+      isTwoHanded.value,
+      props.inventoryItem.attackAbility,
+    );
 
     if (!damage) {
       return null;
@@ -530,6 +560,12 @@
     if (damage.weaponBonus !== 0) {
       tooltipParts.push(
         getBonusPart(INVENTORY_STAT_HINT_LABELS.weapon, damage.weaponBonus),
+      );
+    }
+
+    if (damage.effectBonus !== 0) {
+      tooltipParts.push(
+        getBonusPart(INVENTORY_STAT_HINT_LABELS.effects, damage.effectBonus),
       );
     }
 

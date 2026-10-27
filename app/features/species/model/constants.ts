@@ -1,5 +1,7 @@
 import type { FeatEditorLabelOverrides } from '~feats/model';
 
+import { FEAT_EDITOR_LABELS } from '~feats/model';
+
 /**
  * Подписи заклинаний умения.
  *
@@ -18,6 +20,12 @@ export const SPECIES_INNATE_SPELL_EDITOR = {
   characterLevelPlaceholder: 'С умения',
   minimumCharacterLevel: 1,
   maximumCharacterLevel: 20,
+  /** Та же отметка, что у группы выданных заклинаний класса и черты */
+  alwaysPrepared: FEAT_EDITOR_LABELS.alwaysPrepared,
+  alwaysPreparedHint:
+    'Врождённая магия вида: заклинания всегда подготовлены и не занимают '
+    + 'места в числе подготовленных класса. Снимите отметку, если особенность '
+    + 'только добавляет заклинания, которые нужно готовить.',
 };
 
 /**
@@ -180,8 +188,14 @@ export const SPECIES_FEATURE_LEVEL = {
   max: 20,
 } as const;
 
+/** Заголовок происхождений вида: кнопка, дровер и список на странице. */
+export const SPECIES_LINEAGES_TITLE = 'Происхождения';
+
 /** Подписи статблока вида на странице. */
 export const SPECIES_STATS_LABELS = {
+  type: 'Тип:',
+  size: 'Размер:',
+  speed: 'Скорость:',
   vision: 'Зрение:',
   markdownVision: 'Обычное зрение',
   /** Ноль дальности у обычного зрения — «видит без предела», как у токена VTTG. */

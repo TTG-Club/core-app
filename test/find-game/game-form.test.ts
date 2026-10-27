@@ -86,6 +86,36 @@ describe('тело создания игры', () => {
     ).toThrow();
   });
 
+  it('платная игра требует цену за сессию целиком', () => {
+    expect(
+      createGameRequestSchema.safeParse(onlineGame({ costType: 'PAID' }))
+        .success,
+    ).toBe(false);
+
+    const paid = createGameRequestSchema.parse(
+      onlineGame({
+        costType: 'PAID',
+        priceAmount: 1500,
+        priceCurrency: 'RUB',
+        paymentType: 'POSTPAYMENT',
+      }),
+    );
+
+    expect(paid.priceAmount).toBe(1500);
+  });
+
+  it('у бесплатной игры цена не допускается', () => {
+    const freeValidation = createGameRequestSchema.safeParse(
+      onlineGame({ priceAmount: 1500 }),
+    );
+
+    expect(freeValidation.success).toBe(false);
+
+    expect(freeValidation.error?.issues.map((issue) => issue.path)).toEqual([
+      ['priceAmount'],
+    ]);
+  });
+
   it('минимальная онлайн-игра проходит проверку', () => {
     const parsed = createGameRequestSchema.parse(onlineGame());
 
@@ -218,14 +248,11 @@ describe('тело создания игры', () => {
     ).toThrow();
   });
 
-  it('платность игры задаётся типом, без суммы', () => {
-    // Сумма и условия оплаты живут у сессии, а не у игры.
-    const paid = createGameRequestSchema.parse(
-      onlineGame({ costType: 'PAID' }),
-    );
+  it('бесплатная игра обходится без цены', () => {
+    const free = createGameRequestSchema.parse(onlineGame());
 
-    expect(paid.costType).toBe('PAID');
-    expect('priceAmount' in paid).toBe(false);
+    expect(free.costType).toBe('FREE');
+    expect('priceAmount' in free).toBe(false);
   });
 
   it('приватная игра отличается только видимостью', () => {
@@ -304,7 +331,7 @@ describe('подписи сессии', () => {
       paymentType: 'PREPAYMENT',
     } as never);
 
-    expect(label).toBe('15.00 EUR · Предоплата');
+    expect(label).toBe('15 EUR · Предоплата');
   });
 
   it('у бесплатной сессии стоимости нет', () => {

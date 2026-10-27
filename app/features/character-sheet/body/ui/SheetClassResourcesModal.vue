@@ -7,11 +7,13 @@
   import {
     CLASS_RESOURCE_MODAL_TITLES,
     FEAT_RESOURCE_HINT,
+    getFeatResourceBase,
     getResourceMax,
     getResourceRecoveryBadges,
     isEmptyFeatResource,
     isFeatResource,
     NEW_CLASS_RESOURCE,
+    RESOURCE_ROW_BADGE_CLASS,
     RESOURCE_ROW_LABELS,
     RESOURCES_TITLE,
     SHEET_EMPTY_LABELS,
@@ -42,23 +44,41 @@
     draftResources.value
       .filter((resource) => !isEmptyFeatResource(character.value, resource))
       .map((resource) => {
-        // Ресурс черты пересобирается из справочника при каждой смене черт:
-        // правка и удаление вернулись бы назад, поэтому их и не предлагаем —
-        // строка такого ресурса не кнопка, а обычный блок с замком.
         const isFromFeat = isFeatResource(resource);
+
+        // Правки ресурса справочника считаются как разница с книжной записью.
+        // Справочник мог перестать давать счётчик (механику переписали) — без
+        // книжной записи разницу считать не с чем, и строка остаётся только
+        // для чтения.
+        const bookResource = getFeatResourceBase(character.value, resource);
+        const isEditable = !isFromFeat || Boolean(bookResource);
+        const isHidden = Boolean(resource.hidden);
 
         return {
           ...resource,
           max: getResourceMax(character.value, resource),
           recoveryBadges: getResourceRecoveryBadges(resource),
           isFromFeat,
-          tag: isFromFeat ? 'div' : 'button',
-          buttonType: isFromFeat ? undefined : 'button',
-          cursorClass: isFromFeat ? 'cursor-default' : 'cursor-pointer',
-          editLabel: isFromFeat
-            ? undefined
-            : `${RESOURCE_ROW_LABELS.edit}: ${resource.name}`,
+          isEditable,
+          isHidden,
+          isOverridden: Boolean(resource.overrides),
+          tag: isEditable ? 'button' : 'div',
+          buttonType: isEditable ? 'button' : undefined,
+          cursorClass: isEditable ? 'cursor-pointer' : 'cursor-default',
+          // Убранная с листа строка приглушена: в списке настройки она нужна,
+          // иначе вернуть её было бы нечем.
+          hiddenClass: isHidden ? 'opacity-60' : undefined,
+          editLabel: isEditable
+            ? `${RESOURCE_ROW_LABELS.edit}: ${resource.name}`
+            : undefined,
           removeLabel: `${RESOURCE_ROW_LABELS.remove}: ${resource.name}`,
+          visibilityIcon: isHidden ? 'tabler:eye' : 'tabler:eye-off',
+          visibilityHint: isHidden
+            ? RESOURCE_ROW_LABELS.show
+            : RESOURCE_ROW_LABELS.hide,
+          visibilityLabel: isHidden
+            ? `${RESOURCE_ROW_LABELS.show}: ${resource.name}`
+            : `${RESOURCE_ROW_LABELS.hide}: ${resource.name}`,
         };
       }),
   );
@@ -85,7 +105,8 @@
   /**
    * Правка ресурса в своём окне. В форму уходит запись черновика, а не строка
    * списка: у строки есть пометки восстановления, которым в документе листа
-   * не место.
+   * не место. Вместе с записью справочника уходит её книжный вид — по нему
+   * форма считает правки.
    *
    * @param resourceId идентификатор правимого ресурса.
    */
@@ -94,13 +115,20 @@
       (draft) => draft.id === resourceId,
     );
 
-    if (!resource || isFeatResource(resource)) {
+    if (!resource) {
+      return;
+    }
+
+    const bookResource = getFeatResourceBase(character.value, resource);
+
+    if (isFeatResource(resource) && !bookResource) {
       return;
     }
 
     const saved = await resourceModal.open({
       title: CLASS_RESOURCE_MODAL_TITLES.edit,
       resource,
+      bookResource,
     }).result;
 
     if (!saved) {
@@ -109,6 +137,21 @@
 
     draftResources.value = draftResources.value.map((draft) =>
       draft.id === saved.id ? saved : draft,
+    );
+  }
+
+  /**
+   * Ресурс справочника убирается с листа и возвращается обратно. Удалить его
+   * нельзя: черта выдаст его снова на ближайшей пересборке, поэтому строка
+   * остаётся в списке настройки с пометкой.
+   *
+   * @param resourceId идентификатор ресурса.
+   */
+  function handleToggleVisibility(resourceId: string) {
+    draftResources.value = draftResources.value.map((resource) =>
+      resource.id === resourceId
+        ? { ...resource, hidden: !resource.hidden }
+        : resource,
     );
   }
 
@@ -161,7 +204,7 @@
             :is="row.tag"
             :type="row.buttonType"
             class="flex min-w-0 grow flex-wrap items-center gap-x-2 gap-y-1 text-left"
-            :class="row.cursorClass"
+            :class="[row.cursorClass, row.hiddenClass]"
             :aria-label="row.editLabel"
             @click.left.exact.prevent="handleEditResource(row.id)"
           >
@@ -173,6 +216,24 @@
 
             <span class="min-w-0 grow truncate text-sm text-toned">
               {{ row.name }}
+            </span>
+
+            <!-- Пометки записи справочника: что в ней правлено игроком и что
+              она убрана с листа. Без них строка со своими числами ничем не
+              отличалась бы от книжной -->
+            <span
+              v-if="row.isOverridden"
+              :class="RESOURCE_ROW_BADGE_CLASS"
+              :title="RESOURCE_ROW_LABELS.overriddenHint"
+            >
+              {{ RESOURCE_ROW_LABELS.overridden }}
+            </span>
+
+            <span
+              v-if="row.isHidden"
+              :class="RESOURCE_ROW_BADGE_CLASS"
+            >
+              {{ RESOURCE_ROW_LABELS.hidden }}
             </span>
 
             <span class="shrink-0 text-sm text-muted tabular-nums">
@@ -197,25 +258,36 @@
             </span>
 
             <UIcon
-              v-if="!row.isFromFeat"
+              v-if="row.isEditable"
               name="tabler:pencil"
               class="size-4 shrink-0 text-dimmed"
             />
           </component>
 
-          <!-- Замок вместо корзины: ресурс уходит вместе с чертой, а не отсюда.
-            Иконка, а не запертая кнопка, — у выключенной кнопки нет наведения,
-            и подсказка с объяснением до игрока не дошла бы -->
-          <UTooltip
-            v-if="row.isFromFeat"
-            :text="FEAT_RESOURCE_HINT"
-          >
-            <UIcon
-              name="tabler:lock"
-              class="mx-1.5 size-5 shrink-0 text-dimmed"
-              :aria-label="FEAT_RESOURCE_HINT"
-            />
-          </UTooltip>
+          <!-- У записи справочника вместо корзины — глаз: удалить её нельзя,
+            черта выдаст ресурс снова, а вот убрать с листа можно. Значок книги
+            рядом объясняет, откуда ресурс взялся -->
+          <template v-if="row.isFromFeat">
+            <UTooltip :text="FEAT_RESOURCE_HINT">
+              <UIcon
+                name="tabler:book"
+                class="size-5 shrink-0 text-dimmed"
+                :aria-label="FEAT_RESOURCE_HINT"
+              />
+            </UTooltip>
+
+            <UTooltip :text="row.visibilityHint">
+              <UButton
+                :icon="row.visibilityIcon"
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                square
+                :aria-label="row.visibilityLabel"
+                @click.left.exact.prevent="handleToggleVisibility(row.id)"
+              />
+            </UTooltip>
+          </template>
 
           <UButton
             v-else

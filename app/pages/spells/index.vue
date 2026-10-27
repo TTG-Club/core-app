@@ -39,7 +39,6 @@
     search,
     filterQuery,
     isPending: isFilterPending,
-    isShowedPreview: isFilterPreviewShowed,
     defaults: filterDefaults,
   } = await useFilter('spells', '/api/v2/spells/filters');
 
@@ -77,6 +76,14 @@
 
   const visibleSpells = computed(() =>
     isClassGrouping.value ? loadedClassSpells.value : spells.value,
+  );
+
+  // По классам заклинания выводятся без общего списка: на телефоне страница
+  // заклинания листает их в порядке групп, иначе порядок задаёт список
+  useSectionNeighbours('/spells', () =>
+    isClassGrouping.value
+      ? loadedClassSpells.value.map((spell) => spell.url)
+      : undefined,
   );
 
   const hasNextPage = ref(false);
@@ -387,7 +394,6 @@
         v-model:filter="filter"
         :defaults="filterDefaults"
         :is-pending="isFilterPending"
-        :show-preview="isFilterPreviewShowed"
         :presentation-menus="presentationMenus"
       >
         <template #legend>

@@ -26,10 +26,7 @@
     GAME_NEXT_SESSION_EMPTY,
     GAME_NEXT_SESSION_LABEL,
     GAME_ONLINE_PLATFORM_LABELS,
-    GAME_RECRUITMENT_CLOSED_BADGE,
-    GAME_RECRUITMENT_FULL_BADGE,
-    GAME_STATUS_COLORS,
-    GAME_STATUS_LABELS,
+    GAME_PRICE_UNSPECIFIED_LABEL,
     GAME_VIRTUAL_TABLE_ICON,
     GAME_VIRTUAL_TABLE_LABEL,
     GAME_VIRTUAL_TABLE_MEMBERS_ONLY_HINT,
@@ -38,8 +35,9 @@
     getGameFormatLabel,
     getGamePlayersLabel,
     getGameStartingLevelLabel,
+    getGameStateBadge,
     getGenresLabel,
-    isGameRecruitmentClosed,
+    getSessionPriceLabel,
     MASTER_PROFILE_OPEN_HINT,
   } from '../../model';
   import { GameCover, ParticipantName } from '../../ui';
@@ -80,7 +78,10 @@
      * и само расписание.
      */
     nextSessionAt?: string | null;
-    /** Цена ближайшей платной сессии из открытого расписания игры. */
+    /**
+     * Цена ближайшей платной сессии из открытого расписания игры. Без неё
+     * показывается цена игры по умолчанию, а без той — «Не указано».
+     */
     nextPaidSessionPrice?: string | null;
   }>();
 
@@ -91,24 +92,8 @@
    */
   const stateBadges = computed<Array<StateBadge>>(() => {
     const items: Array<StateBadge> = [
-      {
-        key: 'status',
-        label: GAME_STATUS_LABELS[game.status],
-        color: GAME_STATUS_COLORS[game.status],
-      },
+      { key: 'status', ...getGameStateBadge(game) },
     ];
-
-    if (isGameRecruitmentClosed(game)) {
-      items.push({
-        key: 'recruitment',
-        label:
-          game.takenSeats >= game.maxPlayers
-            ? GAME_RECRUITMENT_FULL_BADGE
-            : GAME_RECRUITMENT_CLOSED_BADGE,
-        icon: 'tabler:user-off',
-        color: 'warning',
-      });
-    }
 
     if (game.visibility === 'PRIVATE') {
       items.push({
@@ -162,11 +147,16 @@
       },
     ];
 
-    if (game.costType === 'PAID' && nextPaidSessionPrice) {
+    // Цену платной игры видно всегда: игрок решает по ней, даже пока
+    // встречи не назначены.
+    if (game.costType === 'PAID') {
       items.push({
         key: 'next-paid-session-price',
         label: GAME_NEXT_PAID_SESSION_PRICE_LABEL,
-        value: nextPaidSessionPrice,
+        value:
+          nextPaidSessionPrice
+          ?? getSessionPriceLabel(game)
+          ?? GAME_PRICE_UNSPECIFIED_LABEL,
       });
     }
 

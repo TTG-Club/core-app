@@ -5,6 +5,8 @@
   import { UiCollapse } from '~ui/collapse';
   import { MarkupRender } from '~ui/markup';
 
+  import { getSectionHeadingId } from './constants';
+
   const props = withDefaults(
     defineProps<{
       feature: ClassFeature;
@@ -16,6 +18,8 @@
   );
 
   const optionsOpened = ref(false);
+
+  const sectionId = computed(() => props.anchorId ?? props.feature.key);
 
   const subtitle = computed(() => {
     const str: Array<string | VNode> = [`${props.feature.level}-й уровень`];
@@ -69,7 +73,8 @@
 
 <template>
   <UiCollapse
-    :id="props.anchorId ?? props.feature.key"
+    :id="sectionId"
+    :heading-id="getSectionHeadingId(sectionId)"
     default-open
   >
     <template #default>

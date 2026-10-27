@@ -4,20 +4,35 @@
   import type {
     EffectTriggerEvent,
     TriggerConditionKind,
+    TriggerConditionListParameter,
     TriggerConditionParameter,
     TriggerConditionPart,
   } from '../../model';
 
   import {
+    DEFAULT_ABILITY_THRESHOLD,
+    DEFAULT_TAG_COUNT_THRESHOLD,
     EFFECT_TRIGGER_CONDITION_DEFAULT_VALUES,
+    EFFECT_TRIGGER_CONDITION_KIND_DEFAULT_VALUES,
     EFFECT_TRIGGER_CONDITION_KIND_LABELS,
     EFFECT_TRIGGER_CONDITION_LABELS,
     EFFECT_TRIGGER_CONDITION_VALUE_OPTIONS,
     getTriggerConditionParameter,
     isEffectTag,
+    isTriggerConditionText,
+    joinCreatureTypeList,
     listTriggerConditionKinds,
+    MIN_CONDITION_NUMBER,
+    MIN_TAG_COUNT_THRESHOLD,
+    normalizeTagCountThreshold,
     readTriggerConditionParts,
+    splitCreatureTypeList,
+    TRIGGER_CONDITION_ABILITY_PARAMETER,
+    TRIGGER_CONDITION_CREATURE_TYPE_PARAMETER,
+    TRIGGER_CONDITION_NUMBER_PARAMETER,
     TRIGGER_CONDITION_TAG_PARAMETER,
+    TRIGGER_CONDITION_TEXT_PARAMETER,
+    triggerConditionHasAmount,
     writeTriggerCondition,
   } from '../../model';
 
@@ -27,11 +42,20 @@
    * (`listTriggerConditionKinds`); часть, которую словарь не знает,
    * показывается как есть и не теряется.
    */
-  const { event, knownTags } = defineProps<{
+  const {
+    event,
+    knownTags,
+    title = EFFECT_TRIGGER_CONDITION_LABELS.title,
+    emptyText = EFFECT_TRIGGER_CONDITION_LABELS.always,
+  } = defineProps<{
     /** Событие срабатывания: от него зависят доступные части. */
     event: EffectTriggerEvent;
     /** Отметки, которые ставит этот эффект: условие по отметке их предлагает. */
     knownTags: readonly string[];
+    /** Заголовок списка; по умолчанию — «Условие». */
+    title?: string;
+    /** Текст без условия; по умолчанию — «срабатывает всегда». */
+    emptyText?: string;
   }>();
 
   /** Условие строкой словаря (`self.tag === "x" && …`); пусто — без условия. */
@@ -51,8 +75,49 @@
     valueItems: Array<{ label: string; value: string }>;
     /** Значение части выбирается списком. */
     showsValueSelect: boolean;
+    /** Значение части — несколько типов существ: «нежить или исчадие». */
+    showsTypeList: boolean;
+    /** Выбранные типы существ части со списком типов. */
+    creatureTypes: string[];
     /** Значение части вводится строкой — ключ отметки. */
     showsTagInput: boolean;
+    /** Значение части — свободная строка: название вида. */
+    showsTextInput: boolean;
+    /** Значение части — число: хиты носителя. */
+    showsNumberInput: boolean;
+    /** У части есть порог: сколько отметок нужно или какая характеристика. */
+    amount?: number;
+  }
+
+  /**
+   * Выбирается ли значение части списком.
+   *
+   * @param parameter что выбирается у части; `undefined` — значения нет.
+   * @returns `true`, если у параметра есть список вариантов.
+   */
+  function isConditionListParameter(
+    parameter: TriggerConditionParameter | undefined,
+  ): parameter is TriggerConditionListParameter {
+    return (
+      parameter !== undefined
+      && parameter !== TRIGGER_CONDITION_TAG_PARAMETER
+      && parameter !== TRIGGER_CONDITION_NUMBER_PARAMETER
+      && parameter !== TRIGGER_CONDITION_TEXT_PARAMETER
+    );
+  }
+
+  /**
+   * Порог части по умолчанию: у характеристики и у счётчика отметок свой.
+   *
+   * @param parameter что выбирается у части.
+   * @returns порог.
+   */
+  function getDefaultAmount(
+    parameter: TriggerConditionParameter | undefined,
+  ): number {
+    return parameter === TRIGGER_CONDITION_ABILITY_PARAMETER
+      ? DEFAULT_ABILITY_THRESHOLD
+      : DEFAULT_TAG_COUNT_THRESHOLD;
   }
 
   const parts = computed(() => readTriggerConditionParts(condition.value));
@@ -67,24 +132,37 @@
           value: undefined,
           valueItems: [],
           showsValueSelect: false,
+          showsTypeList: false,
+          creatureTypes: [],
           showsTagInput: false,
+          showsTextInput: false,
+          showsNumberInput: false,
         };
       }
 
       const parameter = getTriggerConditionParameter(part.kind);
 
-      const valueItems =
-        parameter && parameter !== TRIGGER_CONDITION_TAG_PARAMETER
-          ? EFFECT_TRIGGER_CONDITION_VALUE_OPTIONS[parameter]
-          : [];
+      const valueItems = isConditionListParameter(parameter)
+        ? EFFECT_TRIGGER_CONDITION_VALUE_OPTIONS[parameter]
+        : [];
+
+      const showsTypeList =
+        parameter === TRIGGER_CONDITION_CREATURE_TYPE_PARAMETER;
 
       return {
         key: `${index}-${part.kind}`,
         text: EFFECT_TRIGGER_CONDITION_KIND_LABELS[part.kind],
         value: part.value,
         valueItems,
-        showsValueSelect: valueItems.length > 0,
+        showsValueSelect: valueItems.length > 0 && !showsTypeList,
+        showsTypeList,
+        creatureTypes: showsTypeList ? splitCreatureTypeList(part.value) : [],
         showsTagInput: parameter === TRIGGER_CONDITION_TAG_PARAMETER,
+        showsTextInput: parameter === TRIGGER_CONDITION_TEXT_PARAMETER,
+        showsNumberInput: parameter === TRIGGER_CONDITION_NUMBER_PARAMETER,
+        amount: triggerConditionHasAmount(part.kind)
+          ? (part.amount ?? getDefaultAmount(parameter))
+          : undefined,
       };
     }),
   );
@@ -104,12 +182,23 @@
   }
 
   /**
-   * Значение новой части: у отметки — первая отметка эффекта.
+   * Значение новой части: своё у вида, где общее не годится («на раунде 50»
+   * бессмысленно), у отметки — первая отметка эффекта.
    *
+   * @param kind вид части.
    * @param parameter что выбирается.
    * @returns значение.
    */
-  function getDefaultValue(parameter: TriggerConditionParameter): string {
+  function getDefaultValue(
+    kind: TriggerConditionKind,
+    parameter: TriggerConditionParameter,
+  ): string {
+    const kindDefault = EFFECT_TRIGGER_CONDITION_KIND_DEFAULT_VALUES[kind];
+
+    if (kindDefault !== undefined) {
+      return kindDefault;
+    }
+
     return parameter === TRIGGER_CONDITION_TAG_PARAMETER
       ? (knownTags[0] ?? EFFECT_TRIGGER_CONDITION_DEFAULT_VALUES.tag)
       : EFFECT_TRIGGER_CONDITION_DEFAULT_VALUES[parameter];
@@ -125,8 +214,29 @@
 
     writeParts([
       ...parts.value,
-      parameter ? { kind, value: getDefaultValue(parameter) } : { kind },
+      parameter ? { kind, value: getDefaultValue(kind, parameter) } : { kind },
     ]);
+  }
+
+  /**
+   * Меняет свободную строку части. Пустая строка и негодный ключ выбора
+   * владельца не пишутся: с ними часть не разобралась бы обратно и поле ввода
+   * пропало бы.
+   *
+   * @param index номер части.
+   * @param enteredText введённая строка.
+   */
+  function updatePartText(index: number, enteredText: string): void {
+    const conditionPart = parts.value[index];
+    const text = enteredText.trim();
+
+    if (
+      conditionPart !== undefined
+      && typeof conditionPart !== 'string'
+      && isTriggerConditionText(conditionPart.kind, text)
+    ) {
+      updatePartValue(index, text);
+    }
   }
 
   /**
@@ -149,6 +259,60 @@
       parts.value.map((part, partIndex) =>
         partIndex === index && typeof part !== 'string'
           ? { ...part, value: partValue }
+          : part,
+      ),
+    );
+  }
+
+  /**
+   * Меняет список типов части. Пустой не пишется: часть без типов не
+   * разобралась бы обратно.
+   *
+   * @param index номер части.
+   * @param creatureTypes выбранные типы.
+   */
+  function updatePartCreatureTypes(
+    index: number,
+    creatureTypes: string[],
+  ): void {
+    if (creatureTypes.length > 0) {
+      updatePartValue(index, joinCreatureTypeList(creatureTypes));
+    }
+  }
+
+  /**
+   * Меняет число части условия: хиты носителя. Пустое поле — ноль: условие без
+   * числа форма не знает и потеряла бы поле ввода.
+   *
+   * @param index номер части.
+   * @param enteredNumber введённое число.
+   */
+  function updatePartNumber(
+    index: number,
+    enteredNumber: number | null | undefined,
+  ): void {
+    updatePartValue(
+      index,
+      String(Math.max(MIN_CONDITION_NUMBER, Math.trunc(enteredNumber ?? 0))),
+    );
+  }
+
+  /**
+   * Меняет порог счётчика отметок.
+   *
+   * @param index номер части.
+   * @param enteredAmount введённый порог; пусто — наименьший.
+   */
+  function updatePartAmount(
+    index: number,
+    enteredAmount: number | null | undefined,
+  ): void {
+    const amount = normalizeTagCountThreshold(enteredAmount);
+
+    writeParts(
+      parts.value.map((part, partIndex) =>
+        partIndex === index && typeof part !== 'string'
+          ? { ...part, amount }
           : part,
       ),
     );
@@ -180,14 +344,14 @@
 <template>
   <div class="flex flex-col gap-1.5">
     <span class="text-xs font-medium text-default">
-      {{ EFFECT_TRIGGER_CONDITION_LABELS.title }}
+      {{ title }}
     </span>
 
     <p
       v-if="isEmpty"
       class="text-xs text-muted"
     >
-      {{ EFFECT_TRIGGER_CONDITION_LABELS.always }}
+      {{ emptyText }}
     </p>
 
     <div
@@ -209,14 +373,43 @@
         {{ conditionRow.text }}
       </span>
 
+      <USelectMenu
+        v-if="conditionRow.showsTypeList"
+        :model-value="conditionRow.creatureTypes"
+        :items="conditionRow.valueItems"
+        value-key="value"
+        label-key="label"
+        multiple
+        size="xs"
+        class="w-56"
+        @update:model-value="updatePartCreatureTypes(index, $event)"
+      />
+
       <USelect
-        v-if="conditionRow.showsValueSelect"
+        v-else-if="conditionRow.showsValueSelect"
         :model-value="conditionRow.value"
         :items="conditionRow.valueItems"
         value-key="value"
         size="xs"
         class="w-44"
         @update:model-value="updatePartValue(index, $event)"
+      />
+
+      <UInputNumber
+        v-else-if="conditionRow.showsNumberInput"
+        :model-value="Number(conditionRow.value)"
+        :min="MIN_CONDITION_NUMBER"
+        size="xs"
+        class="w-28"
+        @update:model-value="updatePartNumber(index, $event)"
+      />
+
+      <UInput
+        v-else-if="conditionRow.showsTextInput"
+        :model-value="conditionRow.value"
+        size="xs"
+        class="w-44"
+        @update:model-value="updatePartText(index, $event)"
       />
 
       <template v-else-if="conditionRow.showsTagInput">
@@ -236,6 +429,20 @@
           :label="tag"
           :title="EFFECT_TRIGGER_CONDITION_LABELS.knownTags"
           @click.left.exact.prevent="updatePartValue(index, tag)"
+        />
+      </template>
+
+      <template v-if="conditionRow.amount !== undefined">
+        <span class="text-xs text-muted">
+          {{ EFFECT_TRIGGER_CONDITION_LABELS.amount }}
+        </span>
+
+        <UInputNumber
+          :model-value="conditionRow.amount"
+          :min="MIN_TAG_COUNT_THRESHOLD"
+          size="xs"
+          class="w-24"
+          @update:model-value="updatePartAmount(index, $event)"
         />
       </template>
 

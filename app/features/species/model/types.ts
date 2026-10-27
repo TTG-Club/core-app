@@ -112,7 +112,6 @@ export interface SpeciesFeatureCreate {
 export interface SpeciesCreate extends EditorBaseInfoState {
   description: string;
   image: string | undefined;
-  linkImage: string | undefined;
   gallery: Array<string>;
   parent: string | undefined;
   properties: {

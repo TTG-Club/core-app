@@ -25,7 +25,6 @@
     search,
     filterQuery,
     isPending: isFilterPending,
-    isShowedPreview: isFilterPreviewShowed,
     defaults: filterDefaults,
   } = await useFilter('species', '/api/v2/species/filters');
 
@@ -61,7 +60,20 @@
     getParentUrl: (detail) => detail.parent?.url ?? detail.species?.url,
   });
 
+  // На телефоне страница вида листает соседние виды списка
+  useSectionNeighbours('/species', () => data.value?.map((link) => link.url));
+
   const markdown = useEntityMarkdown(detailSpecies, getSpeciesMarkdown);
+
+  /** Возврат к родительскому виду в той же сплит-панели. */
+  const backTo = computed(() => {
+    const parentUrl =
+      detailSpecies.value?.parent?.url ?? detailSpecies.value?.species?.url;
+
+    return parentUrl
+      ? { query: { ...route.query, detail: parentUrl } }
+      : undefined;
+  });
 </script>
 
 <template>
@@ -75,7 +87,6 @@
         v-model:filter="filter"
         :defaults="filterDefaults"
         :is-pending="isFilterPending"
-        :show-preview="isFilterPreviewShowed"
       >
       </FilterControls>
     </template>
@@ -121,20 +132,13 @@
         :markdown
         :is-loading="isDetailLoading"
         :is-error="isDetailError"
-        :back-to="
-          detailSpecies?.parent
-            ? { query: { ...route.query, detail: detailSpecies.parent.url } }
-            : detailSpecies?.species
-              ? { query: { ...route.query, detail: detailSpecies.species.url } }
-              : undefined
-        "
+        :back-to="backTo"
         copy-title
         @close="handleCloseDetail"
       >
         <SpeciesBody
           v-if="detailSpecies"
           :species="detailSpecies"
-          hide-gallery
         />
       </UiDetailPane>
 

@@ -8,6 +8,7 @@ import type {
 import { describe, expect, it } from 'vitest';
 
 import {
+  getGameStateBadge,
   resolveGameViewerAbilities,
   resolveGameViewerRole,
   resolveSessionAbilities,
@@ -55,6 +56,9 @@ function makeGame(overrides: Partial<Game> = {}): Game {
     costType: 'PAID',
     visibility: 'PUBLIC',
     inviteCode: null,
+    priceAmount: null,
+    priceCurrency: null,
+    paymentType: null,
     createdAt: '2026-08-01T10:00:00Z',
     listPositionAt: '2026-08-01T10:00:00Z',
     updatedAt: '2026-08-01T10:00:00Z',
@@ -205,6 +209,22 @@ describe('заявка в игру', () => {
 
   it('мастер в собственную игру не записывается', () => {
     expect(masterOf(game).canApply).toBe(false);
+  });
+
+  it('в сыгранную и отменённую игру не подаётся', () => {
+    expect(viewerOf(makeGame({ status: 'CLOSED' }), null).canApply).toBe(false);
+
+    expect(viewerOf(makeGame({ status: 'CANCELLED' }), null).canApply).toBe(
+      false,
+    );
+  });
+
+  it('в полный стол и закрытый набор не подаётся', () => {
+    expect(viewerOf(makeGame({ takenSeats: 5 }), null).canApply).toBe(false);
+
+    expect(viewerOf(makeGame({ recruitmentClosed: true }), null).canApply).toBe(
+      false,
+    );
   });
 
   it('гостю предлагается войти, а не подать заявку', () => {
@@ -374,6 +394,31 @@ describe('набор в игру', () => {
   });
 });
 
+describe('значок состояния игры', () => {
+  it('«Набор открыт» — только пока есть место', () => {
+    expect(getGameStateBadge(makeGame()).label).toBe('Набор открыт');
+  });
+
+  it('у полного стола вместо открытого набора — «Мест нет»', () => {
+    const badge = getGameStateBadge(makeGame({ takenSeats: 5 }));
+
+    expect(badge.label).toBe('Мест нет');
+    expect(badge.color).toBe('warning');
+  });
+
+  it('закрытый мастером набор так и подписан', () => {
+    expect(getGameStateBadge(makeGame({ recruitmentClosed: true })).label).toBe(
+      'Набор закрыт',
+    );
+  });
+
+  it('у сыгранной игры — исход, а не набор', () => {
+    expect(
+      getGameStateBadge(makeGame({ status: 'CLOSED', takenSeats: 5 })).label,
+    ).toBe('Завершена');
+  });
+});
+
 describe('участие во встрече', () => {
   const game = makeGame();
 
@@ -518,6 +563,26 @@ describe('состояния сессии у мастера', () => {
     expect(abilities.canStart).toBe(false);
     expect(abilities.canComplete).toBe(false);
     expect(abilities.canCancel).toBe(false);
+    expect(abilities.canEdit).toBe(false);
+  });
+
+  it('переносят только ещё не начатую встречу', () => {
+    expect(
+      resolveSessionAbilities(makeSession(), game, null, masterOf(game))
+        .canEdit,
+    ).toBe(true);
+
+    // Время идущей или закрытой встречи уже стало историей.
+    for (const status of ['IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const) {
+      const abilities = resolveSessionAbilities(
+        makeSession({ status }),
+        game,
+        null,
+        masterOf(game),
+      );
+
+      expect(abilities.canEdit).toBe(false);
+    }
   });
 });
 

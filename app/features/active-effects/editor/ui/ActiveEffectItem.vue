@@ -16,15 +16,20 @@
     resolveEffectFormLayout,
   } from '../../model';
   import EffectAdvancedSection from './EffectAdvancedSection.vue';
+  import EffectCastRuleSection from './EffectCastRuleSection.vue';
   import EffectDamageStep from './EffectDamageStep.vue';
   import EffectDescriptionSection from './EffectDescriptionSection.vue';
   import EffectDurationStep from './EffectDurationStep.vue';
+  import EffectEscapeSection from './EffectEscapeSection.vue';
   import EffectFormStepSection from './EffectFormStepSection.vue';
   import EffectHeaderFields from './EffectHeaderFields.vue';
   import EffectInertFieldsNotice from './EffectInertFieldsNotice.vue';
+  import EffectLightSection from './EffectLightSection.vue';
   import EffectModifiersStep from './EffectModifiersStep.vue';
+  import EffectSaveOverrideSection from './EffectSaveOverrideSection.vue';
   import EffectSaveStep from './EffectSaveStep.vue';
   import EffectScenarioSummary from './EffectScenarioSummary.vue';
+  import EffectStagesSection from './EffectStagesSection.vue';
   import EffectTriggersStep from './EffectTriggersStep.vue';
   import EffectTriggerStep from './EffectTriggerStep.vue';
 
@@ -40,16 +45,16 @@
    */
   const {
     context,
-    zoneAvailable = undefined,
+    areaAvailable = undefined,
     applierSaveDc = undefined,
   } = defineProps<{
     /** Место формы: задаёт, какие шаги и поля показать. */
     context: EffectFormContext;
     /**
-     * Есть ли у заклинания область — где появиться зоне на месте шаблона. Не
-     * задано — доставка «зоной» не прячется.
+     * Есть ли у заклинания или действия существа область — где появиться зоне
+     * на месте шаблона и из кого выбирать цели. Не задано — ничего не прячется.
      */
-    zoneAvailable?: boolean;
+    areaAvailable?: boolean;
     /**
      * Сл источника, которую подставит «Авто» у полей Сл: у действия существа
      * это Сл самого действия из формы. Не задано — видна только подпись.
@@ -70,7 +75,7 @@
   const showPriorityField = ref(false);
 
   const layout = computed(() =>
-    resolveEffectFormLayout(context, effect.value, { zoneAvailable }),
+    resolveEffectFormLayout(context, effect.value, { areaAvailable }),
   );
 
   /**
@@ -119,6 +124,7 @@
     <EffectHeaderFields
       v-model:effect="effect"
       :show-condition-preset="layout.showConditionPreset"
+      :show-status-toggle="layout.showStatusToggle"
     />
 
     <!-- Сводка держится сверху при прокрутке: правка любого шага видна в ней
@@ -178,6 +184,25 @@
         :layout="layout"
         :show-priority-field="showPriorityField"
       />
+
+      <EffectStagesSection
+        v-if="layout.showStages"
+        v-model:effect="effect"
+        :show-priority-field="showPriorityField"
+      />
+
+      <EffectSaveOverrideSection
+        v-if="layout.showSaveOverride"
+        v-model:effect="effect"
+      />
+
+      <EffectCastRuleSection
+        v-model:effect="effect"
+        :layout="layout"
+        :applier-save-dc="applierSaveDc"
+      />
+
+      <EffectLightSection v-model:effect="effect" />
     </EffectFormStepSection>
 
     <EffectFormStepSection
@@ -187,6 +212,13 @@
       :icon="EFFECT_FORM_STEP_ICONS.duration"
     >
       <EffectDurationStep v-model:effect="effect" />
+
+      <EffectEscapeSection
+        v-if="layout.showEscape"
+        v-model:effect="effect"
+        :layout="layout"
+        :applier-save-dc="applierSaveDc"
+      />
     </EffectFormStepSection>
 
     <EffectFormStepSection

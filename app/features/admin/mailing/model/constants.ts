@@ -22,9 +22,6 @@ export const MAILING_ROUTE = '/admin/mailing';
 /** Заголовок и описание раздела (шапка страницы, карточка дашборда, навигация). */
 export const MAILING_PAGE_TITLE = 'Рассылка кодов';
 
-export const MAILING_PAGE_DESCRIPTION =
-  'Массовая выдача промокодов письмами: свой код на каждый адрес';
-
 export const MAILING_NAVIGATION_ICON = 'tabler:mail';
 
 /** Эндпоинт отправки пачки писем (создаёт коды и шлёт письма). */

@@ -11,6 +11,8 @@ import type {
   ToolProficiencyGroupKey,
 } from '../model';
 
+import { uniqBy } from 'es-toolkit';
+
 import {
   buildSearchQuery,
   getGroupItems,
@@ -128,10 +130,15 @@ function buildCatalogGroups(
           )
         : catalogItems;
 
+    // Обобщённую карточку («Музыкальный инструмент») раздел держит по одной на
+    // книгу. Владение хранится по названию, поэтому тёзки в списке — один и
+    // тот же вариант дважды.
+    const uniqueItems = uniqBy(groupItems, (catalogItem) => catalogItem.name);
+
     return {
       key: groupKey,
       title: getGroupTitle(groupKey, filterGroups),
-      items: groupItems.map((catalogItem) => ({
+      items: uniqueItems.map((catalogItem) => ({
         name: catalogItem.name,
         url: catalogItem.url,
       })),

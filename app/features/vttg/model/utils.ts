@@ -1,5 +1,9 @@
 import type { VttgBuild, VttgBuildFile } from '#shared/types';
 
+import type { VttgSubscriptionLimitValue } from './types';
+
+import { VTTG_SUBSCRIPTION_LIMIT_LABELS } from './subscription';
+
 /** Подписи форматов файлов — как их называют сами платформы. */
 const BUILD_FORMAT_LABELS: Record<string, string> = {
   'exe': 'Установщик',
@@ -83,4 +87,21 @@ export function formatBuildFileLabel(
   }
 
   return BUILD_FORMAT_LABELS[file.format.toLowerCase()] ?? file.format;
+}
+
+/**
+ * Подпись значения лимита на карточке привилегии подписки: число как есть,
+ * отсутствие возможности — «Нет».
+ *
+ * @param value значение лимита.
+ * @returns текст для показа.
+ */
+export function formatSubscriptionLimitValue(
+  value: VttgSubscriptionLimitValue,
+): string {
+  if (typeof value === 'number') {
+    return String(value);
+  }
+
+  return VTTG_SUBSCRIPTION_LIMIT_LABELS.none;
 }

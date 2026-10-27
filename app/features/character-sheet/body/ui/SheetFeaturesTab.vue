@@ -15,6 +15,7 @@
     FEATURE_ORIGIN_LABELS,
     FEATURE_REMOVE_CONFIRM_LABEL,
     FEATURE_REMOVE_CONFIRM_TITLE,
+    getFeatureBadgeOrigin,
     getFeatureOriginGroups,
     getFeatureRemoveDescription,
     getFeaturesAddMenuItems,
@@ -222,12 +223,14 @@
     ).map((feature) => {
       const isExpanded = expandedIds.value.has(feature.id);
 
+      const badgeOrigin = getFeatureBadgeOrigin(feature);
+
       return {
         ...feature,
         isExpanded,
         showBadge: feature.origin !== 'none',
-        originLabel: FEATURE_ORIGIN_LABELS[feature.origin],
-        badgeColor: ORIGIN_BADGE_COLORS[feature.origin],
+        originLabel: FEATURE_ORIGIN_LABELS[badgeOrigin],
+        badgeColor: ORIGIN_BADGE_COLORS[badgeOrigin],
         chevronClass: isExpanded ? 'rotate-180' : '',
         hasDescription: feature.description.length > 0,
       };

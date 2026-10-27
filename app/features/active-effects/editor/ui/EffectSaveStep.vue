@@ -6,13 +6,17 @@
     EffectSuccessOutcome,
   } from '../../model';
 
+  import { InfoTooltip } from '~ui/tooltip';
+
   import {
     ACTIVE_EFFECT_FORM_LABELS,
     buildSuccessOutcomeOptions,
     EFFECT_ACTION_SAVE_SUCCESS_TITLES,
     EFFECT_SAVE_STEP_LABELS,
     EFFECT_SAVE_UNAVAILABLE_HINTS,
+    NO_DC_SKILL,
     readEffectSuccessOutcome,
+    SAVE_DC_SKILL_ITEMS,
     writeEffectSaveEnabled,
     writeEffectSuccessOutcome,
   } from '../../model';
@@ -96,6 +100,39 @@
     effect.value = { ...effect.value, applySave: nextSave };
   }
 
+  // Сл — итог проверки навыка применившего: «обычная Сл» в данных не пишется
+  const saveDcSkill = computed({
+    get: () => effect.value.applySave?.dcSkill ?? NO_DC_SKILL,
+    set: (skillKey: string) => {
+      const { applySave } = effect.value;
+
+      if (applySave) {
+        effect.value = {
+          ...effect.value,
+          applySave: {
+            ...applySave,
+            dcSkill: skillKey === NO_DC_SKILL ? undefined : skillKey,
+          },
+        };
+      }
+    },
+  });
+
+  // Галочка пишется только включённой: `allowWilling: true`
+  const allowWilling = computed({
+    get: () => effect.value.applySave?.allowWilling === true,
+    set: (enabled: boolean) => {
+      const { applySave } = effect.value;
+
+      if (applySave) {
+        effect.value = {
+          ...effect.value,
+          applySave: { ...applySave, allowWilling: enabled ? true : undefined },
+        };
+      }
+    },
+  });
+
   const successOutcome = computed({
     get: () => readEffectSuccessOutcome(effect.value),
     set: (outcome: EffectSuccessOutcome) => {
@@ -122,7 +159,38 @@
         :applier-save-dc="applierSaveDc"
         :ability-label="ACTIVE_EFFECT_FORM_LABELS.ability"
         :save-dc-label="ACTIVE_EFFECT_FORM_LABELS.saveDc"
+        :alt-abilities-label="EFFECT_SAVE_STEP_LABELS.altAbilities"
         @update:save="updateSave"
+      />
+
+      <!-- Проверку бросает применивший — она есть только у применения -->
+      <UFormField
+        v-if="layout.useActivated"
+        class="w-full sm:w-64"
+      >
+        <template #label>
+          <InfoTooltip
+            :text="EFFECT_SAVE_STEP_LABELS.dcSkillHint"
+            icon="tabler:info-circle-filled"
+          >
+            <span>{{ EFFECT_SAVE_STEP_LABELS.dcSkill }}</span>
+          </InfoTooltip>
+        </template>
+
+        <USelect
+          v-model="saveDcSkill"
+          :items="SAVE_DC_SKILL_ITEMS"
+          value-key="value"
+          size="sm"
+          class="w-full"
+        />
+      </UFormField>
+
+      <USwitch
+        v-model="allowWilling"
+        class="mb-2"
+        :label="EFFECT_SAVE_STEP_LABELS.allowWilling"
+        :description="EFFECT_SAVE_STEP_LABELS.allowWillingHint"
       />
     </div>
   </template>

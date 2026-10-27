@@ -27,6 +27,13 @@ export interface VttgHighlight {
   description: string;
 }
 
+/** Ссылка на страницу подписки: подпись, иконка и адрес. */
+export interface VttgSubscriptionLink {
+  label: string;
+  icon: string;
+  to: string;
+}
+
 export interface VttgHeading {
   title: string;
   subtitle?: string;
@@ -56,6 +63,83 @@ export interface VttgBuildDescriptor {
   icon: string;
 }
 
+/** Папка или файл на диске для конкретной операционной системы. */
+export interface VttgGuideLocation {
+  /** Операционная система — «Windows», «macOS», «Linux». */
+  label: string;
+  /** Иконка операционной системы. */
+  icon: string;
+  /** Путь, который человек вставляет в проводник или терминал. */
+  path: string;
+}
+
+/** Фрагмент кода в шаге инструкции: команда или пример содержимого файла. */
+export interface VttgGuideCode {
+  /** Подпись над фрагментом — «Было», «Команда». */
+  caption: string;
+  /** Текст фрагмента; копируется кнопкой целиком. */
+  content: string;
+}
+
+/** Шаг инструкции. */
+export interface VttgGuideStep {
+  title: string;
+  /** Абзацы пояснения. */
+  paragraphs: Array<string>;
+  /** Пути для разных операционных систем после абзацев. */
+  locations?: Array<VttgGuideLocation>;
+  /** Команды или примеры после абзацев. */
+  codes?: Array<VttgGuideCode>;
+  /** Предупреждение в конце шага. */
+  warning?: string;
+}
+
+/** Вариант установки VTTG со своим порядком сброса пароля. */
+export interface VttgGuideVariant {
+  label: string;
+  icon: string;
+  /** Для кого этот вариант — абзац над шагами. */
+  description: string;
+  steps: Array<VttgGuideStep>;
+  /** Сборка ещё не выдаётся пользователям — вкладка не показывается. */
+  hidden?: boolean;
+}
+
+/** Значение лимита: число или `none`, когда возможности нет совсем. */
+export type VttgSubscriptionLimitValue = number | 'none';
+
+/** Как подписка поднимает лимит: значение без неё и с ней. */
+export interface VttgSubscriptionLimit {
+  /** Что именно считается — «Активных листов», «Игроков в одной игре». */
+  label: string;
+  base: VttgSubscriptionLimitValue;
+  subscriber: VttgSubscriptionLimitValue;
+}
+
+/** Привилегия подписки. */
+export interface VttgSubscriptionPerk extends VttgHighlight {
+  /** Главный лимит, который поднимает подписка, — показывается сравнением «бесплатно / с подпиской». */
+  limit?: VttgSubscriptionLimit;
+}
+
+/** Группа привилегий подписки: где она работает — в столе или на сайте. */
+export interface VttgSubscriptionPerkGroup {
+  title: string;
+  description: string;
+  icon: string;
+  perks: Array<VttgSubscriptionPerk>;
+}
+
 export const VIDEO_EXTENSIONS = ['.webm', '.mp4'] as const;
 
 export type VideoExtension = (typeof VIDEO_EXTENSIONS)[number];
+
+/** Что пользователь выбрал в окне покупки. */
+export interface SubscriptionPaymentParams {
+  /** Срок подписки в месяцах. */
+  months: number;
+  /** Почта для чека. */
+  email: string;
+  /** Отметил ли пользователь согласия, которых у аккаунта ещё нет. */
+  acceptConsents: boolean;
+}

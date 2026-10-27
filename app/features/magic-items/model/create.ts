@@ -25,6 +25,7 @@ export interface MagicItemCreate extends EditorBaseInfoState {
   image: string | undefined;
   rarity: MagicItemRarity;
   category: MagicItemCategory;
+  theme: string | undefined; // тематика: вооружение, магия, реликвии или инструменты
   items: Array<string>; // связанные немагические предметы (url) для веса/стоимости и фильтра
   bonuses: MagicItemBonuses; // что магия добавляет поверх немагического предмета
   // Кости, которые магия добавляет к броску основы («2к6 огнём» Огненного языка).
@@ -32,9 +33,36 @@ export interface MagicItemCreate extends EditorBaseInfoState {
   damageParts: Array<DamageFormulaPart>;
   focus: boolean; // предметом колдуют как заклинательной фокусировкой
   adamantine: boolean; // адамантиновый предмет
+  showInList: boolean; // показывать в списке раздела; варианты вроде «Стрела +1» скрывают
   // Как предмет влияет на лист персонажа. В форме — всегда объект, в теле
   // запроса — `null`, если заполнять было нечего.
   mechanics: MagicItemMechanics | null;
+}
+
+/** Условие «при использовании»: применение тратит единицу предмета. */
+export const MAGIC_ITEM_CONSUMED_ACTIVATION = 'CONSUMED';
+
+/**
+ * Условия применения, при которых предмет применяют действием: эффект такого
+ * предмета не работает надетым, его копия ложится при применении.
+ */
+const USED_MAGIC_ITEM_ACTIVATIONS: ReadonlySet<MagicItemActivation> = new Set([
+  MAGIC_ITEM_CONSUMED_ACTIVATION,
+  'MANUAL',
+]);
+
+/**
+ * Применяют ли предмет с таким условием.
+ *
+ * @param activation условие применения механики.
+ * @returns `true`, если предмет применяют действием.
+ */
+export function isUsedMagicItemActivation(
+  activation: MagicItemActivation | undefined,
+): boolean {
+  return (
+    activation !== undefined && USED_MAGIC_ITEM_ACTIVATIONS.has(activation)
+  );
 }
 
 const magicItemActivationSchema = z.enum([

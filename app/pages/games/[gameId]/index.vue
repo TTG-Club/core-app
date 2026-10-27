@@ -4,6 +4,8 @@
   import { StatusCodes } from 'http-status-codes';
 
   import { ACTION_LABELS } from '~/shared/consts';
+  import { GAME_BASTIONS_TAB_VALUE } from '~bastion-game/model';
+  import { GameBastionsPanel } from '~bastion-game/panel';
   import {
     useFindGameToast,
     useGameDetail,
@@ -35,6 +37,8 @@
     GAME_GUEST_NOTICE_DESCRIPTION,
     GAME_GUEST_NOTICE_TITLE,
     GAME_LEFT_TOAST,
+    GAME_RAISE_ERROR_TITLE,
+    GAME_RAISE_LIMIT_HINT,
     GAME_RAISED_TOAST,
     GAME_RECRUITMENT_CLOSED_TOAST,
     GAME_RECRUITMENT_OPENED_TOAST,
@@ -44,6 +48,7 @@
     GAMES_ROUTE,
     getFindGameErrorMessage,
     getFindGameStatus,
+    getGameSeoDescription,
     getNearestPaidSession,
     getNearestSessionStart,
     getSessionPriceLabel,
@@ -60,10 +65,13 @@
   } from '~find-game/registrations';
   import { GameSessions } from '~find-game/sessions';
   import { getGameDescriptionText } from '~find-game/ui';
+  import { useIsSubscriber } from '~profile/activation/composables';
   import { UiResult } from '~ui/result';
 
   const route = useRoute();
-  const { showError, showSuccess } = useFindGameToast();
+  const { showError, showSubscriptionLimit, showSuccess } = useFindGameToast();
+  const { isAdmin } = useUserRoles();
+  const isSubscriber = useIsSubscriber();
 
   const { watchParticipantNames } = useParticipantNames();
 
@@ -112,6 +120,7 @@
     sessions,
     shouldShowProfileRequirement,
     startSession,
+    updateSession,
     withdrawFromGame,
   } = useGameDetail(gameId, inviteCode);
 
@@ -123,11 +132,23 @@
 
   const isError = computed(() => gameStatus.value === 'error');
 
-  const detailTabs = computed(() =>
-    abilities.value.canReviewRegistrations && game.value?.costType === 'PAID'
-      ? GAME_DETAIL_TABS
-      : GAME_DETAIL_TABS.filter((tab) => tab.value !== 'finance'),
-  );
+  const detailTabs = computed(() => {
+    const showFinance =
+      abilities.value.canReviewRegistrations && game.value?.costType === 'PAID';
+
+    // Бастионы игры видят её участники: мастер и игроки с одобренной заявкой —
+    // остальным core-api всё равно ответит 403. Пока бастионы открыты только
+    // админам.
+    const showBastions =
+      isAdmin.value
+      && (abilities.value.isMaster || abilities.value.isApprovedPlayer);
+
+    return GAME_DETAIL_TABS.filter(
+      (tab) =>
+        (tab.value !== 'finance' || showFinance)
+        && (tab.value !== GAME_BASTIONS_TAB_VALUE || showBastions),
+    );
+  });
 
   /**
    * Ближайшая встреча для сводки. Своё поле игры сервис заполняет только в
@@ -147,8 +168,14 @@
 
   useSeoMeta({
     title: () => game.value?.title ?? GAMES_NAVIGATION_LABEL,
+    // Цена за сессию идёт в описание, чтобы она была видна в превью ссылки.
     description: () =>
-      game.value ? getGameDescriptionText(game.value.description) : '',
+      game.value
+        ? getGameSeoDescription(
+            game.value,
+            getGameDescriptionText(game.value.description),
+          )
+        : '',
   });
 
   // Мастера подписываем именем из core-api: сервис поиска игр имён не хранит,
@@ -192,8 +219,31 @@
   }
 
   /** Поднимает игру в каталоге. */
-  function handleRaise(): void {
-    runAction(GAME_RAISED_TOAST, raise);
+  async function handleRaise(): Promise<void> {
+    isBusy.value = true;
+
+    try {
+      await raise();
+
+      showSuccess(GAME_RAISED_TOAST);
+    } catch (error) {
+      // Отказ 429 — суточная норма поднятий кончилась. Без подписки её можно
+      // расширить, поэтому уведомление ведёт к оформлению.
+      const isRaiseLimit =
+        getFindGameStatus(error) === StatusCodes.TOO_MANY_REQUESTS;
+
+      if (isRaiseLimit && !isSubscriber.value) {
+        showSubscriptionLimit(
+          error,
+          GAME_RAISE_ERROR_TITLE,
+          GAME_RAISE_LIMIT_HINT,
+        );
+      } else {
+        showError(error);
+      }
+    } finally {
+      isBusy.value = false;
+    }
   }
 
   /** Передаёт жалобу и сообщает об успешной постановке в очередь. */
@@ -565,6 +615,7 @@
                   :complete-session="completeSession"
                   :cancel-session="cancelSession"
                   :start-session="startSession"
+                  :update-session="updateSession"
                   :loading="areSessionsLoading"
                   @refresh="handleRegistrationsChanged"
                 />
@@ -572,6 +623,10 @@
 
               <template #finance>
                 <GameFinancePanel :game="game" />
+              </template>
+
+              <template #bastions>
+                <GameBastionsPanel :game-id="game.id" />
               </template>
             </UTabs>
 

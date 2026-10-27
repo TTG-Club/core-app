@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getAttentionReason,
   getGameCardPriceLabel,
+  getGameSeoDescription,
   getNearestPaidSession,
   getNearestSessionStart,
   getNextSessionLabel,
@@ -40,7 +41,7 @@ describe('карточка ближайшей встречи', () => {
     expect(getNextSessionLabel(game.nextSession)).toBe('Время согласуется');
   });
 
-  it('показывает цену за встречу и не называет неизвестную цену бесплатной', () => {
+  it('показывает цену за сессию, а без цены называет игру платной', () => {
     const game = parseGame({
       id: 'game-1',
       masterId: 'master-1',
@@ -48,15 +49,48 @@ describe('карточка ближайшей встречи', () => {
       nextSession: NEXT_SESSION,
     });
 
-    expect(getGameCardPriceLabel(game)).toContain('RUB / за встречу');
+    expect(getGameCardPriceLabel(game)).toContain('RUB / сессия');
 
     expect(getGameCardPriceLabel({ ...game, nextSession: null })).toBe(
-      'Стоимость уточняется',
+      'Платно',
     );
 
     expect(getGameCardPriceLabel({ ...game, costType: 'FREE' })).toBe(
       'Бесплатно',
     );
+  });
+
+  it('без назначенной встречи показывает цену игры по умолчанию', () => {
+    const game = parseGame({
+      id: 'game-1',
+      masterId: 'master-1',
+      costType: 'PAID',
+      priceAmount: 2000,
+      priceCurrency: 'RUB',
+      paymentType: 'PREPAYMENT',
+    });
+
+    expect(getGameCardPriceLabel(game)).toContain('RUB / сессия');
+    expect(getGameCardPriceLabel(game)).toMatch(/^2\s000 RUB/u);
+  });
+
+  it('ставит цену за сессию в начало описания для превью ссылки', () => {
+    const game = parseGame({
+      id: 'game-1',
+      masterId: 'master-1',
+      costType: 'PAID',
+      priceAmount: 2000,
+      priceCurrency: 'RUB',
+      paymentType: 'PREPAYMENT',
+    });
+
+    expect(getGameSeoDescription(game, 'Описание')).toMatch(
+      /^2\s000 RUB \/ сессия · Описание$/u,
+    );
+
+    expect(
+      getGameSeoDescription({ ...game, costType: 'FREE' }, 'Описание'),
+    ).toBe('Описание');
   });
 
   it('показывает переход через полночь и часовой пояс', () => {

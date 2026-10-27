@@ -2,10 +2,12 @@
   import type { CharacterClassResource, ResourceMaxSource } from '../../model';
 
   import { ACTION_LABELS } from '~/shared/consts';
+  import { InfoTooltip } from '~ui/tooltip';
 
   import { useCharacterSheet } from '../../composables';
   import {
     ABILITY_OPTIONS,
+    FEAT_RESOURCE_EDIT_LABELS,
     getResourceMax,
     RESOURCE_COUNT_MAX,
     RESOURCE_COUNT_MIN,
@@ -31,6 +33,8 @@
     RESOURCE_SHORT_LABEL_MAX_LENGTH,
     SHEET_CLASS_RESOURCE_MODAL_LABELS,
     toClassResourceDraft,
+    toEditedFeatResource,
+    toSavedClassResource,
   } from '../../model';
 
   const props = defineProps<{
@@ -39,6 +43,12 @@
 
     /** Ресурс, который правится; форма работает с его копией. */
     resource: CharacterClassResource;
+
+    /**
+     * Книжная запись ресурса справочника; нет — правится свой ресурс игрока.
+     * По ней считаются правки: в лист уходит только разница со справочником.
+     */
+    bookResource?: CharacterClassResource;
   }>();
 
   const emit = defineEmits<{
@@ -52,6 +62,15 @@
   // Черновик живёт до закрытия — оверлей размонтирует модалку.
   const draftResource = ref<CharacterClassResource>(
     toClassResourceDraft(props.resource),
+  );
+
+  /** Ресурс пришёл из справочника: правки лягут поверх книжной записи. */
+  const isFromBook = computed(() => Boolean(props.bookResource));
+
+  // Максимум книжный, пока игрок не задал свой: правка максимума — та самая
+  // правка, из-за которой ресурс перестаёт расти вместе с персонажем сам.
+  const isBookMax = ref(
+    Boolean(props.bookResource) && props.resource.overrides?.max === undefined,
   );
 
   /** Источник максимума: без правила — своё число. */
@@ -82,6 +101,42 @@
       }
     },
   });
+
+  /**
+   * Переключение отметки «максимум как в справочнике». Отметка не просто
+   * флаг: книжная возвращает в черновик книжный максимум целиком, а снятая
+   * переводит ресурс со ступеней на своё число — ступени форма не правит, и
+   * без перевода игрок менял бы число, которого расчёт не видит.
+   *
+   * @param value значение отметки. Промежуточное состояние (`indeterminate`)
+   *   форма не задаёт, поэтому читается как снятая.
+   */
+  function handleBookMaxChange(value: boolean | 'indeterminate') {
+    const isPicked = value === true;
+
+    isBookMax.value = isPicked;
+
+    const bookResource = props.bookResource;
+
+    if (!bookResource) {
+      return;
+    }
+
+    if (isPicked) {
+      draftResource.value.max = bookResource.max;
+
+      draftResource.value.maxRule = bookResource.maxRule
+        ? { ...bookResource.maxRule }
+        : null;
+
+      return;
+    }
+
+    if (draftResource.value.maxRule?.scaling?.length) {
+      draftResource.value.max = computedMax.value;
+      draftResource.value.maxRule = null;
+    }
+  }
 
   /**
    * Смена источника максимума. «Своё число» убирает правило целиком — иначе
@@ -120,9 +175,41 @@
       && !draftResource.value.shortLabel.trim(),
   );
 
-  /** Сохранение: ресурс уходит в список, применение к листу — уже там. */
+  /**
+   * Возврат ресурса справочника к книжной записи: правки снимаются целиком,
+   * потраченные заряды остаются — отдых их и вернёт.
+   */
+  function handleReset() {
+    const bookResource = props.bookResource;
+
+    if (!bookResource) {
+      return;
+    }
+
+    draftResource.value = {
+      ...toClassResourceDraft(bookResource),
+      current: Math.min(draftResource.value.current, bookResource.max),
+      hidden: draftResource.value.hidden,
+    };
+
+    isBookMax.value = true;
+  }
+
+  /**
+   * Сохранение: ресурс уходит в список, применение к листу — уже там. У записи
+   * справочника вместо самой записи считаются правки: лист пересобирает её из
+   * справочника на каждой смене черт и уровня, а правки накладывает поверх.
+   */
   function handleSave() {
-    emit('close', draftResource.value);
+    const draft = draftResource.value;
+
+    if (!props.bookResource) {
+      emit('close', toSavedClassResource(draft));
+
+      return;
+    }
+
+    emit('close', toEditedFeatResource(props.bookResource, draft));
   }
 
   /** Закрытие без сохранения: список остаётся как был. */
@@ -159,6 +246,25 @@
               :maxlength="RESOURCE_SHORT_LABEL_MAX_LENGTH"
             />
           </div>
+
+          <!-- Ключ виден, чтобы знать, что вписать в «Тратит ресурс» у эффекта.
+            У книжного ресурса он только для чтения: на него ссылаются эффекты
+            справочника, и правка оторвала бы ресурс от них -->
+          <div class="flex w-28 shrink-0 flex-col gap-1">
+            <InfoTooltip
+              :text="SHEET_CLASS_RESOURCE_MODAL_LABELS.keyHint"
+              icon="tabler:info-circle-filled"
+              class="text-[10px] font-bold text-muted uppercase"
+            >
+              <span>{{ SHEET_CLASS_RESOURCE_MODAL_LABELS.key }}</span>
+            </InfoTooltip>
+
+            <UInput
+              v-model="draftResource.key"
+              :placeholder="RESOURCE_PLACEHOLDERS.key"
+              :disabled="isFromBook"
+            />
+          </div>
         </div>
 
         <div class="flex flex-wrap items-end gap-3">
@@ -179,7 +285,17 @@
               {{ SHEET_CLASS_RESOURCE_MODAL_LABELS.max }}
             </span>
 
+            <!-- У книжного максимума вместо выбора источника — само число:
+              считает его справочник, и менять в форме нечего -->
+            <p
+              v-if="isBookMax"
+              class="flex h-8 items-center text-sm font-bold text-highlighted"
+            >
+              {{ computedMax }}
+            </p>
+
             <USelect
+              v-else
               :model-value="maxSource"
               :items="RESOURCE_MAX_SOURCE_OPTIONS"
               :aria-label="RESOURCE_MAX_SOURCE_ARIA_LABEL"
@@ -188,7 +304,7 @@
           </div>
 
           <div
-            v-if="!isMaxComputed"
+            v-if="!isBookMax && !isMaxComputed"
             class="flex w-28 shrink-0 flex-col gap-1"
           >
             <span class="text-[10px] font-bold text-muted uppercase">
@@ -203,8 +319,16 @@
           </div>
         </div>
 
+        <UCheckbox
+          v-if="isFromBook"
+          :model-value="isBookMax"
+          :label="FEAT_RESOURCE_EDIT_LABELS.bookMax"
+          :description="FEAT_RESOURCE_EDIT_LABELS.bookMaxHint"
+          @update:model-value="handleBookMaxChange"
+        />
+
         <div
-          v-if="isMaxComputed && draftResource.maxRule"
+          v-if="!isBookMax && isMaxComputed && draftResource.maxRule"
           class="flex flex-wrap items-end gap-3 rounded-md bg-elevated/40 p-2"
         >
           <div
@@ -301,8 +425,19 @@
     </template>
 
     <template #footer>
-      <div class="flex w-full justify-end gap-2">
+      <div class="flex w-full items-center gap-2">
         <UButton
+          v-if="isFromBook"
+          icon="tabler:rotate"
+          :label="FEAT_RESOURCE_EDIT_LABELS.reset"
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          @click.left.exact.prevent="handleReset"
+        />
+
+        <UButton
+          class="ml-auto"
           :label="ACTION_LABELS.cancel"
           color="neutral"
           variant="ghost"

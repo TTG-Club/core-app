@@ -102,20 +102,32 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
    * лист, и трекер его не трогает). Свой лист правится напрямую, чужой — по
    * сохранённой ссылке, поэтому мастер ведёт хиты и своих персонажей, и тех,
    * чьи листы ему прислали.
+   * Урон, ушедший во временные хиты, приходит вместе с их новым остатком —
+   * одним запросом, чтобы трекер не застрял между двумя правками.
    * @param participantId Идентификатор участника.
    * @param value Новое значение хитов.
+   * @param temporaryHitPoints Новые временные хиты; не задано — не менять.
    */
   async function setHitPoints(
     participantId: string,
     value: number,
+    temporaryHitPoints?: number,
   ): Promise<void> {
     const currentHitPoints = Math.max(0, value);
     const link = findParticipant(participantId)?.sheetLink;
 
+    const patch: UpdateParticipantRequest =
+      temporaryHitPoints === undefined
+        ? { currentHitPoints }
+        : {
+            currentHitPoints,
+            temporaryHitPoints: Math.max(0, temporaryHitPoints),
+          };
+
     // Отказ трекера — ничего дальше: иначе лист персонажа получил бы урон,
-    // которого в бою нет, а существо было бы помечено повержённым при живых
+    // которого в бою нет, а существо было бы помечено поверженным при живых
     // хитах на сервере.
-    if (!(await editParticipant(participantId, { currentHitPoints }))) {
+    if (!(await editParticipant(participantId, patch))) {
       return;
     }
 
@@ -127,8 +139,24 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
   }
 
   /**
+   * Задаёт временные хиты участника; `0` — снимает. Правило «новые заменяют
+   * прежние, только если больше» применяет попап хитов, а снимает их мастер
+   * отдельной кнопкой.
+   * @param participantId Идентификатор участника.
+   * @param value Новые временные хиты.
+   */
+  function setTemporaryHitPoints(
+    participantId: string,
+    value: number,
+  ): Promise<boolean> {
+    return editParticipant(participantId, {
+      temporaryHitPoints: Math.max(0, value),
+    });
+  }
+
+  /**
    * Прокидывает максимум хитов существа: он же ставит текущие «на полных»,
-   * поэтому существо, помеченное повержённым, возвращается в бой.
+   * поэтому существо, помеченное поверженным, возвращается в бой.
    * @param participantId Идентификатор участника.
    * @param value Прокинутый максимум хитов.
    */
@@ -482,7 +510,7 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
   }
 
   /**
-   * Помечает участника повержённым/живым (partial PUT `{ dead }`). Повержённый
+   * Помечает участника поверженным/живым (partial PUT `{ dead }`). Поверженный
    * остаётся в списке на своей позиции, но бэк пропускает его в очереди хода.
    * Если помечаем ТЕКУЩЕГО в бою — бэк указатель не сдвигает сам, поэтому сразу
    * передаём ход дальше.
@@ -600,7 +628,7 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
   }
 
   /**
-   * Завершает бой: броски и состояния очищаются, повержённые оживают, состав
+   * Завершает бой: броски и состояния очищаются, поверженные оживают, состав
    * сохраняется, статус — PREPARING. Всё это делает бэк одним запросом.
    */
   function reset(): Promise<boolean> {
@@ -675,6 +703,7 @@ export function useTrackerWorkspace(trackerIdSource: MaybeRefOrGetter<string>) {
     reset,
     destroy,
     setHitPoints,
+    setTemporaryHitPoints,
     setMaxHitPoints,
     setArmorClass,
     setParticipantColor,

@@ -4,12 +4,21 @@ import type { EditorBaseInfoState } from '~ui/editor';
 import type { CreatureActionEffect, CreatureEffectContext } from './action';
 import type { CreatureSpellcastingBlock } from './spellcasting';
 
+import { clamp } from 'es-toolkit';
+
 import { AbilityKey, AbilityShortKey } from '~/shared/types';
+import {
+  EFFECT_FORM_CONTEXT,
+  MAX_SAVE_OVERRIDE_USES,
+  MIN_SAVE_OVERRIDE_USES,
+  parseFormNumber,
+} from '~active-effects/model';
 
 import {
   createEmptyCreatureActionEffect,
   normalizeCreatureActionEffect,
 } from './action';
+import { toStoredCooldownTurns } from './cooldown';
 
 /**
  * Раздел карточки предмета. Справочника два — обычные предметы и магические, —
@@ -247,7 +256,19 @@ export interface CreateAction {
   };
   description: string;
   recharge: string | undefined;
+  /**
+   * «Раз в N ходов»: использованное в ход 1 снова доступно в ход 1 + N, без
+   * броска. Не из книг — для своих существ. Целое 2–20, иначе `null`; с
+   * перезарядкой не сочетается.
+   */
+  cooldownTurns?: number | null;
   effect: CreatureActionEffect;
+  /**
+   * Сколько раз в день существо превращает проваленный спасбросок в успех —
+   * «Легендарное сопротивление (3/день)». Только у умения (черты); нет — не
+   * умеет. Счётчик ведёт VTTG, восстанавливает долгий отдых.
+   */
+  saveSuccessPerDay?: number;
 }
 
 /** Умение существа — та же запись, что и действие. */
@@ -265,10 +286,77 @@ export function normalizeCreatureActions(
   actions: Array<CreateAction>,
   effectContext: CreatureEffectContext,
 ): Array<CreateAction> {
+  const isTrait = effectContext === EFFECT_FORM_CONTEXT.creatureTrait;
+
   return actions.map((action) => ({
     ...action,
     effect: normalizeCreatureActionEffect(action.effect, effectContext),
+    // Перезарядка и «раз в N ходов» взаимоисключающи: при обеих VTTG не знал
+    // бы, какое ограничение вести, — побеждает книжная перезарядка
+    cooldownTurns: action.recharge
+      ? null
+      : toStoredCooldownTurns(action.cooldownTurns),
+    saveSuccessPerDay: isTrait
+      ? toStoredSaveSuccessPerDay(action.saveSuccessPerDay)
+      : undefined,
   }));
+}
+
+/**
+ * «Провал в успех, раз в день» к записи: целое в пределах, пусто и ноль — поля
+ * нет.
+ *
+ * @param saveSuccessPerDay число из формы.
+ * @returns число раз либо `undefined`.
+ */
+export function toStoredSaveSuccessPerDay(
+  saveSuccessPerDay: unknown,
+): number | undefined {
+  const times = parseFormNumber(saveSuccessPerDay);
+
+  return times !== undefined && times >= MIN_SAVE_OVERRIDE_USES
+    ? clamp(Math.trunc(times), MIN_SAVE_OVERRIDE_USES, MAX_SAVE_OVERRIDE_USES)
+    : undefined;
+}
+
+/**
+ * Выбирает перезарядку записи. Выбранная перезарядка сбрасывает «раз в N
+ * ходов»: два ограничения сразу у записи не бывает.
+ *
+ * @param action запись боевого блока.
+ * @param recharge значение словаря перезарядки; пусто — перезарядки нет.
+ * @returns новая запись.
+ */
+export function setCreatureActionRecharge(
+  action: CreateAction,
+  recharge: string | undefined,
+): CreateAction {
+  return {
+    ...action,
+    recharge: recharge || undefined,
+    cooldownTurns: recharge ? null : (action.cooldownTurns ?? null),
+  };
+}
+
+/**
+ * Задаёт «раз в N ходов» записи. Годное число сбрасывает перезарядку, негодное
+ * и пустое очищает поле, не трогая её.
+ *
+ * @param action запись боевого блока.
+ * @param enteredTurns число из формы.
+ * @returns новая запись.
+ */
+export function setCreatureActionCooldownTurns(
+  action: CreateAction,
+  enteredTurns: unknown,
+): CreateAction {
+  const cooldownTurns = toStoredCooldownTurns(enteredTurns);
+
+  return {
+    ...action,
+    cooldownTurns,
+    recharge: cooldownTurns === null ? action.recharge : undefined,
+  };
 }
 
 /**
@@ -284,6 +372,7 @@ export function createEmptyCreatureAction(): CreateAction {
     },
     description: '',
     recharge: undefined,
+    cooldownTurns: null,
     effect: createEmptyCreatureActionEffect(),
   };
 }

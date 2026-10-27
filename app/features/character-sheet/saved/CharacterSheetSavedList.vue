@@ -1,12 +1,14 @@
 <script setup lang="ts">
   import { PageGrid } from '~ui/page';
+  import { VttgSubscriptionLimitHint } from '~vttg/ui';
 
   import {
+    useCharacterSheetEditGrants,
     useCharacterSheetList,
     useCharacterSheetSaved,
   } from '../composables';
-  import { SheetLimitHint } from '../list/ui';
   import {
+    getSavedSheetCardKey,
     getSavedSheetsCountTooltip,
     getSavedSheetsSubscriptionHint,
     SAVED_SHEETS_LABELS,
@@ -25,6 +27,7 @@
     isMutating,
     loadErrorMessage,
     load,
+    requestEdit,
     remove,
   } = useCharacterSheetSaved();
 
@@ -41,6 +44,20 @@
     void load();
     void ensureListLoaded();
   });
+
+  // Раздел на экране — значит, о разрешениях на правку пользователь узнал:
+  // карточки уже показывают их, и точка у шлема гаснет.
+  const { hasUnseenGrants, markGrantsSeen } = useCharacterSheetEditGrants();
+
+  watch(
+    hasUnseenGrants,
+    (unseen) => {
+      if (unseen) {
+        markGrantsSeen();
+      }
+    },
+    { immediate: true },
+  );
 
   const canCopy = computed(() => canCreate.value && !isListMutating.value);
 
@@ -127,11 +144,12 @@
           монтировании — иначе они остались бы со старым токеном -->
         <CharacterSheetSavedCard
           v-for="sheet in savedSheets"
-          :key="sheet.shareToken"
+          :key="getSavedSheetCardKey(sheet)"
           :sheet
           :disabled="isMutating"
           :can-copy="canCopy"
           @copy="copyShared"
+          @request-edit="requestEdit"
           @remove="remove"
         />
       </PageGrid>
@@ -148,7 +166,7 @@
           {{ SAVED_SHEETS_LABELS.limitReached }}
         </p>
 
-        <SheetLimitHint
+        <VttgSubscriptionLimitHint
           v-if="canRaiseLimit"
           :text="subscriptionHint"
         />

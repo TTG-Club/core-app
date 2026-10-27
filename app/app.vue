@@ -6,6 +6,7 @@
   import { CookieConsentBanner } from '~infrastructure/cookie-consent/ui';
   import { PwaConfig } from '~infrastructure/pwa';
   import { SidebarPanel } from '~infrastructure/sidebar';
+  import { SubscriptionExpiryNotice } from '~profile/activation/ui';
 
   import '~/assets/css/index.scss';
 
@@ -49,6 +50,8 @@
           <DiceRollerModal />
 
           <CookieConsentBanner />
+
+          <SubscriptionExpiryNotice />
         </Teleport>
       </ClientOnly>
     </div>

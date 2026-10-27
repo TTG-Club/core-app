@@ -2,7 +2,11 @@ import type { AdminSubscriptionResponse } from '../model';
 
 import { FetchError } from 'ofetch';
 
-import { adminSubscriptionGrantPath, adminSubscriptionPath } from '../model';
+import {
+  adminSubscriptionGrantPath,
+  adminSubscriptionHistoryKey,
+  adminSubscriptionPath,
+} from '../model';
 
 /**
  * Управление подпиской пользователя в админ-карточке: загрузка статуса,
@@ -19,6 +23,11 @@ export function useUserSubscription(username: MaybeRefOrGetter<string>) {
   const isLoading = ref(false);
   const isGranting = ref(false);
   const isRevoking = ref(false);
+
+  /** Обновляет историю подписки, если её блок открыт. */
+  async function refreshHistory(): Promise<void> {
+    await refreshNuxtData(adminSubscriptionHistoryKey(toValue(username)));
+  }
 
   /**
    * Загружает текущий статус подписки пользователя.
@@ -57,6 +66,8 @@ export function useUserSubscription(username: MaybeRefOrGetter<string>) {
 
       toast.add({ title: 'Подписка выдана', color: 'success' });
 
+      await refreshHistory();
+
       return true;
     } catch (error) {
       let description = 'Не удалось выдать подписку';
@@ -86,6 +97,8 @@ export function useUserSubscription(username: MaybeRefOrGetter<string>) {
       );
 
       toast.add({ title: 'Подписка отключена', color: 'success' });
+
+      await refreshHistory();
 
       return true;
     } catch (error) {

@@ -165,9 +165,10 @@ export function useSectionDetail<TDetail>(
     () => detailStatus.value === FetchStatus.Error,
   );
 
+  // С якорем: делятся ссылкой на конкретный раздел записи.
   const detailUrlForCopy = computed(() =>
     detailUrl.value
-      ? `${getOrigin()}${options.sectionPath}/${detailUrl.value}`
+      ? `${getOrigin()}${options.sectionPath}/${detailUrl.value}${route.hash}`
       : undefined,
   );
 

@@ -57,6 +57,7 @@
     <MagicItemBody
       v-if="magicItem"
       :magic-item
+      :base-item-urls="state.items"
     />
   </UiDrawer>
 </template>

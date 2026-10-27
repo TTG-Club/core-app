@@ -3,7 +3,9 @@
 
   import { SpeciesLineages } from '~species/lineages';
   import { SpeciesLineagesDrawer } from '~species/lineages-drawer';
+  import { SPECIES_LINEAGES_TITLE } from '~species/model';
   import { UiCollapse } from '~ui/collapse';
+  import { UiDetailLayout } from '~ui/detail-layout';
   import { UiGallery } from '~ui/gallery';
   import { MarkupRender } from '~ui/markup';
 
@@ -60,80 +62,65 @@
       ? description.length > 0
       : Boolean(description);
   }
-
-  const activeFeatures = ref<Array<string>>([]);
-
-  watch(
-    () => species,
-    (value) => {
-      if (!value) {
-        return;
-      }
-
-      activeFeatures.value = visibleFeatures.value.map(
-        (feature) => feature.url,
-      );
-    },
-    {
-      immediate: true,
-    },
-  );
 </script>
 
 <template>
-  <div class="@container">
-    <div class="flex flex-col gap-6 @min-3xl:flex-row @min-3xl:gap-7">
-      <div
-        v-if="!hideLeftBlock"
-        class="flex w-full flex-col gap-4 @min-3xl:max-w-80 @min-3xl:min-w-68"
-      >
-        <UiGallery
-          v-if="!hideGallery"
-          :preview="species.image"
-          :images="species.gallery"
-        />
+  <UiDetailLayout>
+    <template
+      v-if="!hideLeftBlock"
+      #aside
+    >
+      <div class="flex flex-col gap-4">
+        <div class="flex flex-col gap-4 @min-xl:@max-3xl:flex-row">
+          <UiGallery
+            v-if="!hideGallery"
+            class="min-w-25 shrink-0 @min-xl:@max-3xl:w-50"
+            :preview="species.image"
+            :images="species.gallery"
+          />
 
-        <StatsBlock :properties="species.properties" />
+          <StatsBlock :properties="species.properties" />
+        </div>
 
         <UButton
           v-if="species.hasLineages"
           block
           @click.left.exact.prevent="openLineages(species.url)"
         >
-          Происхождения
+          {{ SPECIES_LINEAGES_TITLE }}
         </UButton>
       </div>
+    </template>
 
-      <div class="flex flex-auto flex-col gap-6">
-        <div>
-          <MarkupRender
-            v-if="species.description"
-            :render-node="species.description"
-          />
-        </div>
-
-        <template v-if="visibleFeatures.length">
-          <UiCollapse
-            v-for="feature in visibleFeatures"
-            :id="feature.url"
-            :key="feature.url"
-            default-open
-          >
-            <template #default>
-              {{ feature.name.rus }}
-            </template>
-
-            <template #content>
-              <MarkupRender :render-node="feature.description" />
-            </template>
-          </UiCollapse>
-        </template>
-
-        <SpeciesLineages
-          v-if="!species.parent && species.hasLineages"
-          :url="species.url"
+    <div class="flex flex-col gap-6">
+      <div>
+        <MarkupRender
+          v-if="species.description"
+          :render-node="species.description"
         />
       </div>
+
+      <template v-if="visibleFeatures.length">
+        <UiCollapse
+          v-for="feature in visibleFeatures"
+          :id="feature.url"
+          :key="feature.url"
+          default-open
+        >
+          <template #default>
+            {{ feature.name.rus }}
+          </template>
+
+          <template #content>
+            <MarkupRender :render-node="feature.description" />
+          </template>
+        </UiCollapse>
+      </template>
+
+      <SpeciesLineages
+        v-if="!species.parent && species.hasLineages"
+        :url="species.url"
+      />
     </div>
-  </div>
+  </UiDetailLayout>
 </template>

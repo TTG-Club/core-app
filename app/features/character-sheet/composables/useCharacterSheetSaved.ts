@@ -4,8 +4,12 @@ import {
   deleteSavedCharacterSheet,
   fetchSavedCharacterSheets,
   getSheetErrorMessage,
+  requestSheetEdit,
   SAVED_SHEETS_TITLE,
   saveSharedCharacterSheet,
+  SHEET_EDIT_REQUEST_APPROVED_TOAST,
+  SHEET_EDIT_REQUEST_ERROR_TITLE,
+  SHEET_EDIT_REQUEST_SENT_TOAST,
   SHEET_SAVE_LINK_ERROR_TITLE,
   SHEET_SAVE_LINK_REMOVE_ERROR_TITLE,
   SHEET_SAVE_LINK_SUCCESS_TITLE,
@@ -126,6 +130,17 @@ export function useCharacterSheetSaved() {
   }
 
   /**
+   * Сохранённая запись по токену ссылки — на странице по ссылке известен
+   * только он.
+   *
+   * @param shareToken токен ссылки.
+   * @returns запись; undefined — ссылка не сохранена.
+   */
+  function findByToken(shareToken: string): SavedCharacterSheet | undefined {
+    return savedSheets.value.find((sheet) => sheet.shareToken === shareToken);
+  }
+
+  /**
    * Сохраняет чужой лист по токену ссылки. Отказы (свой лист, лимит, отозванная
    * ссылка) объясняет тостом — их текст присылает сервер.
    *
@@ -150,6 +165,51 @@ export function useCharacterSheetSaved() {
       return true;
     } catch (error) {
       notifyError(error, SHEET_SAVE_LINK_ERROR_TITLE);
+
+      return false;
+    } finally {
+      isMutating.value = false;
+    }
+  }
+
+  /**
+   * Просит у владельца право редактировать лист. Бэк принимает запрос только
+   * по сохранённой ссылке, поэтому несохранённая сохраняется сначала — зритель
+   * просит правки, а не закладку. Отказы (лимит, пауза после отклонения,
+   * отозванная ссылка) объясняет тостом — их текст присылает сервер.
+   *
+   * @param shareToken токен ссылки на лист.
+   * @returns true, если запрос отправлен или право уже выдано.
+   */
+  async function requestEdit(shareToken: string): Promise<boolean> {
+    if (!findByToken(shareToken) && !(await save(shareToken))) {
+      return false;
+    }
+
+    const saved = findByToken(shareToken);
+
+    if (!saved) {
+      return false;
+    }
+
+    isMutating.value = true;
+
+    try {
+      const status = await requestSheetEdit(saved.id);
+
+      await load();
+
+      toast.add({
+        ...(status === 'APPROVED'
+          ? SHEET_EDIT_REQUEST_APPROVED_TOAST
+          : SHEET_EDIT_REQUEST_SENT_TOAST),
+        color: 'success',
+        icon: 'tabler:pencil-plus',
+      });
+
+      return true;
+    } catch (error) {
+      notifyError(error, SHEET_EDIT_REQUEST_ERROR_TITLE);
 
       return false;
     } finally {
@@ -193,7 +253,9 @@ export function useCharacterSheetSaved() {
     load,
     ensureLoaded,
     isTokenSaved,
+    findByToken,
     save,
+    requestEdit,
     remove,
   };
 }

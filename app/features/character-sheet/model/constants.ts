@@ -9,6 +9,7 @@ import type {
   CharacterCustomBonus,
   CharacterCustomCurrency,
   ClassChoiceKind,
+  ClassSpellListMode,
   CurrencyKey,
   CustomArmorType,
   CustomArmorTypeMeta,
@@ -46,12 +47,16 @@ import type {
   ResourceRecoveryField,
   ResourceRecoveryMode,
   RollMode,
+  RollModeSourceMode,
   SheetReadonlyReason,
   SheetSaveStatus,
   SheetTab,
   SkillProficiencyLevel,
   SpeedTypeKey,
   SpeedUnit,
+  SpellCastingKind,
+  SpellCastingKindMeta,
+  SpellCastingTextPattern,
   ToolProficiencyGroupKey,
   VisionKey,
   WeaponCategory,
@@ -63,7 +68,9 @@ import bytes from 'bytes';
 import { range } from 'es-toolkit';
 
 import { AbilityKey as ApiAbilityKey } from '~/shared/types';
+import { EFFECT_ACTION_COST_LABELS } from '~active-effects/model';
 import { CasterType } from '~classes/model';
+import { MAGIC_ITEM_API_PATH } from '~magic-items/model';
 import { DAMAGE_TYPE_LABELS } from '~ui/damage-formula';
 
 /** Название инструмента «Лист персонажа». */
@@ -89,6 +96,9 @@ export const CHARACTER_SHEET_SHARED_API_PATH = `${CHARACTER_SHEET_API_PATH}/shar
 
 /** Эндпоинт чужих листов, сохранённых по ссылке. */
 export const CHARACTER_SHEET_SAVED_API_PATH = `${CHARACTER_SHEET_API_PATH}/saved`;
+
+/** Эндпоинт числа неотвеченных запросов на редактирование листов пользователя. */
+export const CHARACTER_SHEET_EDIT_REQUESTS_COUNT_API_PATH = `${CHARACTER_SHEET_API_PATH}/edit-requests/count`;
 
 /**
  * Эндпоинт чтения любого листа администратором — например, по ссылке из
@@ -355,12 +365,12 @@ export const SHEET_SHARE_LABELS: Record<
   disable: 'Отключить доступ',
   close: 'Закрыть',
   enabledHint:
-    'Лист откроется у любого, кто перейдёт по ссылке. Редактировать его смогут только вы.',
+    'Лист откроется у любого, кто перейдёт по ссылке. Редактировать его смогут только вы и те, кому вы разрешите.',
   disabledHint:
     'Пока доступ выключен, лист виден только вам. Ссылку можно отозвать в любой момент.',
   viewerNoteTitle: 'Гость видит лист целиком',
   viewerNoteDescription:
-    'Правки, броски и настройки ему недоступны — редактирование остаётся только у вас.',
+    'Правки, броски и настройки ему недоступны, пока вы не разрешите редактирование по его запросу.',
 };
 
 /**
@@ -376,6 +386,136 @@ export const SHEET_SEARCH_LABELS: Record<
   byNamePlaceholder: 'Поиск по названию…',
   clear: 'Очистить поиск',
 };
+
+/**
+ * Подписи прав на редактирование у владельца листа: баннер с запросами в
+ * листе и список редакторов в модалке «Поделиться».
+ */
+export const SHEET_EDITORS_LABELS = {
+  requestsTitle: 'Просят доступ к редактированию',
+  requestsHint:
+    'Редактор сможет менять лист, но не удалять его, не делиться им и не раздавать права.',
+  editorsTitle: 'Редактирование',
+  editorsHint:
+    'Тот, кто сохранил лист по ссылке, может попросить доступ к правкам — запрос появится здесь и у шлема.',
+  editorsEmpty: 'Кроме вас лист пока никто не редактирует.',
+  approve: 'Разрешить',
+  decline: 'Отклонить',
+  revoke: 'Отозвать',
+  limitReached: 'Достигнут лимит редакторов',
+  revokeOnDisableHint:
+    'Если отключить доступ по ссылке, права на редактирование тоже пропадут.',
+} as const;
+
+/** Заголовок тоста с ошибкой решения по запросу на редактирование. */
+export const SHEET_EDITORS_ERROR_TITLE =
+  'Не удалось изменить доступ к редактированию';
+
+/** Подсказка к точке у шлема: на листы пользователя пришли запросы. */
+export const SHEET_EDIT_REQUESTS_UPDATES_HINT =
+  'Просят доступ к редактированию ваших листов';
+
+/** Ключ `useAsyncData` сводки входящих запросов на редактирование. */
+export const SHEET_EDIT_REQUESTS_DATA_KEY =
+  'character-sheet:edit-requests-count';
+
+/** Интервал фонового опроса сводки входящих запросов. */
+export const SHEET_EDIT_REQUESTS_POLL_INTERVAL_MS = 60_000;
+
+/** Минимальный интервал между двумя опросами сводки запросов. */
+export const SHEET_EDIT_REQUESTS_POLL_COOLDOWN_MS = 10_000;
+
+/** Потолок backoff опроса сводки, если она перестала отвечать. */
+export const SHEET_EDIT_REQUESTS_POLL_MAX_BACKOFF_MS = 5 * 60_000;
+
+/**
+ * Подписи права на редактирование у того, кто сохранил чужой лист: запрос,
+ * его ожидание и работа с листом по выданному праву.
+ */
+export const SHEET_EDIT_ACCESS_LABELS = {
+  request: 'Запросить редактирование',
+  requestHint: 'Владелец листа увидит запрос и решит, разрешить ли правки',
+  pending: 'Запрос на редактирование отправлен',
+  pendingHint: 'Ждёт ответа владельца',
+  approvedBadge: 'Владелец разрешил вам редактировать этот лист',
+} as const;
+
+/** Тост об отправленном запросе на редактирование. */
+export const SHEET_EDIT_REQUEST_SENT_TOAST = {
+  title: 'Запрос отправлен',
+  description:
+    'Когда владелец разрешит правки, лист откроется на редактирование из раздела «Другие листы».',
+} as const;
+
+/** Тост: владелец уже разрешил правки, повторный запрос не нужен. */
+export const SHEET_EDIT_REQUEST_APPROVED_TOAST = {
+  title: 'Редактирование уже разрешено',
+  description: 'Лист открывается на правку из раздела «Другие листы».',
+} as const;
+
+/** Заголовок тоста с ошибкой запроса на редактирование. */
+export const SHEET_EDIT_REQUEST_ERROR_TITLE =
+  'Не удалось запросить редактирование';
+
+/** Подсказка к точке у шлема: владелец разрешил править его лист. */
+export const SHEET_EDIT_GRANTS_UPDATES_HINT =
+  'Вам разрешили редактировать лист';
+
+/** Тост: владелец разрешил править его лист. */
+export const SHEET_EDIT_GRANTED_TOAST = {
+  title: 'Редактирование разрешено',
+  descriptionSuffix:
+    'можно править: лист открывается из раздела «Другие листы».',
+  action: 'Открыть',
+} as const;
+
+/** Тост: владелец отклонил запрос на правку. */
+export const SHEET_EDIT_DECLINED_TOAST = {
+  title: 'В редактировании отказано',
+  descriptionSuffix: 'владелец отклонил запрос. Его можно отправить снова.',
+} as const;
+
+/** Тост: владелец отозвал право править его лист, лист открыт на просмотр. */
+export const SHEET_EDIT_REVOKED_TOAST = {
+  title: 'Редактирование закрыто',
+  description: 'Владелец отозвал доступ — лист открыт только для просмотра.',
+} as const;
+
+/** Ключ `useAsyncData` сводки прав на редактирование сохранённых листов. */
+export const SHEET_EDIT_ACCESS_DATA_KEY = 'character-sheet:edit-access';
+
+/**
+ * Ключ хранилища: листы, о разрешении на правку которых пользователь уже
+ * знает, — по ним точка у шлема больше не горит.
+ */
+export const SHEET_SEEN_EDIT_GRANTS_STORAGE_KEY =
+  'character-sheet:seen-edit-grants';
+
+/**
+ * Интервал опроса сводки прав, пока есть запрос без ответа: разрешение должно
+ * дойти до мастера сразу, а не после F5.
+ */
+export const SHEET_EDIT_ACCESS_POLL_INTERVAL_MS = 15_000;
+
+/** Пометка в шапке листа, открытого по праву редактора. */
+export const SHEET_EDITOR_BADGE_LABEL = 'Редактор';
+
+/** Подсказка к пометке редактора в шапке листа. */
+export const SHEET_EDITOR_BADGE_TOOLTIP =
+  'Чужой лист: владелец разрешил вам правки. Удалить лист и поделиться им может только он.';
+
+/**
+ * Как часто открытый лист отмечается на сервере, когда его больше никто не
+ * правит. Сервер считает отметку живой 45 секунд — один пропущенный запрос её
+ * не гасит.
+ */
+export const SHEET_PRESENCE_INTERVAL_MS = 20_000;
+
+/**
+ * Как часто отмечается лист, открытый ещё у кого-то: по версии из ответа
+ * подтягиваются чужие правки, и чем чаще, тем ближе совместная правка к живой.
+ */
+export const SHEET_PRESENCE_SHARED_INTERVAL_MS = 4000;
 
 /** Заголовок тоста с ошибкой доступа по ссылке. */
 export const SHEET_SHARE_ERROR_TITLE = 'Не удалось изменить доступ по ссылке';
@@ -462,15 +602,6 @@ export const SHEET_SHARED_COPY_SUCCESS_TITLE = 'Лист скопирован';
 
 /** Причина недоступности сохранения: свободных мест в лимите не осталось. */
 export const SHEET_SAVE_LINK_LIMIT_HINT = 'Достигнут лимит сохранённых листов';
-
-/**
- * Раздел профиля с подпиской и кодами: туда ведёт подсказка о лимитах — там
- * подписка и активируется, и видно её статус.
- */
-export const SUBSCRIPTION_PROFILE_ROUTE = '/user/profile/activation';
-
-/** Подпись ссылки в подсказке о расширении лимитов подпиской. */
-export const SUBSCRIPTION_HINT_LINK_LABEL = 'Подписка и коды';
 
 /** Формы слова «лист» для подписей лимитов. */
 export const SHEET_PLURAL_FORMS: [string, string, string] = [
@@ -700,6 +831,16 @@ export const API_SHORT_REST_RECOVERY = 'SHORT_REST';
  */
 export const API_SHORT_REST_ONE_RECOVERY = 'SHORT_REST_ONE';
 
+/** Режим восстановления ресурса из механики справочника в вид листа. */
+export const API_COUNTER_REST_MODES: Record<
+  'NONE' | 'ALL' | 'AMOUNT',
+  ResourceRecoveryMode
+> = {
+  NONE: 'none',
+  ALL: 'all',
+  AMOUNT: 'amount',
+};
+
 /** Обозначение бонуса мастерства в формуле максимума ресурса. */
 export const RESOURCE_FORMULA_PROFICIENCY = '@prof';
 
@@ -802,17 +943,51 @@ export const RESOURCE_MAX_COMPUTED_LABEL = 'Сейчас максимум';
  */
 export const RESOURCES_TITLE = 'Ресурсы';
 
-/** Пометка ресурса, который завела черта: правится он только сменой черты. */
+/**
+ * Пометка ресурса, который завела черта: удалить его нельзя (черта выдаст
+ * снова), но правки поверх справочника и уход с листа ему доступны.
+ */
 export const FEAT_RESOURCE_HINT =
-  'Ресурс даёт черта — уберите её на вкладке особенностей, чтобы снять';
+  'Ресурс даёт черта: удалить его нельзя, но можно поправить под себя или убрать с листа';
 
 /** Подписи строки ресурса в списке настройки. */
 export const RESOURCE_ROW_LABELS = {
-  /** Подсказка кнопки правки своего ресурса. */
+  /** Подсказка кнопки правки ресурса. */
   edit: 'Изменить ресурс',
 
   /** Подсказка кнопки удаления своего ресурса. */
   remove: 'Удалить ресурс',
+
+  /** Подсказка кнопки, убирающей ресурс справочника с листа. */
+  hide: 'Убрать с листа',
+
+  /** Подсказка кнопки, возвращающей убранный ресурс на лист. */
+  show: 'Вернуть на лист',
+
+  /** Пометка ресурса справочника, который игрок правил под себя. */
+  overridden: 'Правлено',
+
+  /** Подсказка пометки правленого ресурса. */
+  overriddenHint:
+    'Ресурс справочника с вашими правками; остальное он по-прежнему берёт из справочника',
+
+  /** Пометка ресурса, убранного с листа. */
+  hidden: 'Убран с листа',
+} as const;
+
+/** Пометка строки ресурса в списке настройки: «Правлено», «Убран с листа». */
+export const RESOURCE_ROW_BADGE_CLASS =
+  'shrink-0 rounded bg-elevated px-1.5 py-0.5 text-[10px] font-bold text-muted uppercase';
+
+/**
+ * Подписи правки ресурса справочника: переключатель книжного максимума и
+ * возврат записи к справочнику целиком.
+ */
+export const FEAT_RESOURCE_EDIT_LABELS = {
+  bookMax: 'Максимум как в справочнике',
+  bookMaxHint:
+    'Ресурс считается по справочнику и растёт вместе с персонажем; снимите отметку, чтобы задать свой максимум',
+  reset: 'Вернуть как в справочнике',
 } as const;
 
 /** Подпись поля «сколько зарядов» у ресурса со своим числом. */
@@ -847,9 +1022,13 @@ export const CLASS_RESOURCE_MODAL_TITLES: Record<'add' | 'edit', string> = {
 };
 
 /** Подсказки полей ресурса класса: пример вместо подставленного текста. */
-export const RESOURCE_PLACEHOLDERS: Record<'name' | 'shortLabel', string> = {
+export const RESOURCE_PLACEHOLDERS: Record<
+  'name' | 'shortLabel' | 'key',
+  string
+> = {
   name: 'Например, Ярость',
   shortLabel: 'ЯР',
+  key: 'rage',
 };
 
 /**
@@ -994,6 +1173,12 @@ export const ARMOR_CLASS_LABELS: Record<
  */
 export const DEFAULT_WEAPON_ATTACK_ABILITY: AbilityKey = 'strength';
 
+/**
+ * Характеристика дальнобойного оружия и альтернатива базовой у фехтовального:
+ * по правилам это Ловкость независимо от настройки листа.
+ */
+export const DEXTERITY_WEAPON_ABILITY: AbilityKey = 'dexterity';
+
 /** Значение «Авто (по правилам)» в селекте характеристики атаки оружием. */
 export const WEAPON_ATTACK_ABILITY_AUTO = 'auto';
 
@@ -1010,10 +1195,10 @@ export const WEAPON_ATTACK_ABILITY_OPTIONS: Array<{
 export const WEAPON_ATTACK_ABILITY_AUTO_HINT = `По правилам: ${ABILITY_LABELS[DEFAULT_WEAPON_ATTACK_ABILITY]}`;
 
 /**
- * Пояснение к исключению из базовой характеристики: фехтовальное и
- * дальнобойное оружие считается от Ловкости независимо от настройки.
+ * Пояснение к исключениям из базовой характеристики: дальнобойное оружие
+ * считается от Ловкости, фехтовальное — от лучшей из Ловкости и настройки.
  */
-export const WEAPON_ATTACK_FINESSE_HINT = `Фехтовальное и дальнобойное оружие бьёт от характеристики «${ABILITY_LABELS.dexterity}» независимо от настройки.`;
+export const WEAPON_ATTACK_FINESSE_HINT = `Дальнобойное оружие бьёт от характеристики «${ABILITY_LABELS[DEXTERITY_WEAPON_ABILITY]}», фехтовальное — от лучшей из «${ABILITY_LABELS[DEXTERITY_WEAPON_ABILITY]}» и базовой характеристики.`;
 
 /** Вкладка модалки настроек листа с правилом подсчёта атаки оружием. */
 export const SHEET_SETTINGS_WEAPON_TAB = 'weapon-attack';
@@ -1793,6 +1978,12 @@ export const SPEED_UNIT_OPTIONS: Array<{ label: string; value: SpeedUnit }> = [
 /** Режим броска d20 по умолчанию: без преимущества и помехи. */
 export const DEFAULT_ROLL_MODE: RollMode = 'normal';
 
+/** Значки преимущества и помехи: одни и те же на кнопках режима и в источниках. */
+export const ROLL_MODE_ICONS: Record<RollModeSourceMode, string> = {
+  advantage: 'tabler:arrow-big-up-filled',
+  disadvantage: 'tabler:arrow-big-down-filled',
+};
+
 /** Варианты режима броска d20. */
 export const ROLL_MODE_OPTIONS: Array<{
   value: RollMode;
@@ -1800,13 +1991,30 @@ export const ROLL_MODE_OPTIONS: Array<{
   icon?: string;
 }> = [
   { value: 'normal', label: 'Обычный' },
-  { value: 'advantage', label: 'Преим.', icon: 'tabler:arrow-big-up-filled' },
+  { value: 'advantage', label: 'Преим.', icon: ROLL_MODE_ICONS.advantage },
   {
     value: 'disadvantage',
     label: 'Помеха',
-    icon: 'tabler:arrow-big-down-filled',
+    icon: ROLL_MODE_ICONS.disadvantage,
   },
 ];
+
+/** Вид строки источника режима в окне броска: подпись, значок и его цвет. */
+export const ROLL_MODE_SOURCE_VIEWS: Record<
+  RollModeSourceMode,
+  { label: string; icon: string; iconClass: string }
+> = {
+  advantage: {
+    label: 'Преимущество',
+    icon: ROLL_MODE_ICONS.advantage,
+    iconClass: 'text-success',
+  },
+  disadvantage: {
+    label: 'Помеха',
+    icon: ROLL_MODE_ICONS.disadvantage,
+    iconClass: 'text-error',
+  },
+};
 
 /** Количество костей в броске по его режиму: преимущество и помеха катят две. */
 export const ROLL_MODE_DICE_COUNT: Record<RollMode, number> = {
@@ -2646,8 +2854,88 @@ export const SPELLS_DETAIL_BASE_PATH = '/api/v2/spells';
  */
 export const SPELLS_RAW_DETAIL_PATH_SUFFIX = 'raw';
 
-/** Ключ общего кэша формул урона заклинаний (каталожные данные, не листа). */
-export const SPELL_DAMAGE_STATE_KEY = 'character-sheet:spell-damage';
+/**
+ * Ключ общего кэша урона и времени накладывания заклинаний (каталожные данные,
+ * не листа).
+ */
+export const SPELL_CATALOG_MECHANICS_STATE_KEY =
+  'character-sheet:spell-catalog-mechanics';
+
+/**
+ * Единицы времени накладывания справочника (`castingTime[].unit`), которые
+ * укладываются в боевой ход. Остальные — минуты, часы, особое — читаются как
+ * «дольше хода». Ритуал (null) пропускается: у строки для него свой бейдж.
+ */
+export const SPELL_CASTING_UNIT_KINDS: Partial<
+  Record<string, SpellCastingKind | null>
+> = {
+  ACTION: 'action',
+  BONUS: 'bonus',
+  REACTION: 'reaction',
+  RITUAL: null,
+};
+
+/**
+ * Время накладывания, которым читается всё, что не укладывается в боевой ход:
+ * незнакомая единица справочника и текст своего заклинания без знакомого слова.
+ */
+export const SPELL_CASTING_BEYOND_TURN_KIND: SpellCastingKind = 'long';
+
+/**
+ * Распознавание времени накладывания своего заклинания по тексту поля: оно
+ * вводится руками («1 бонусное действие»). Порядок важен — «бонусное действие»
+ * проверяется раньше просто «действия». Не подошло ни одно, а текст есть —
+ * время дольше хода ({@link SPELL_CASTING_BEYOND_TURN_KIND}).
+ */
+export const SPELL_CASTING_TEXT_PATTERNS: SpellCastingTextPattern[] = [
+  { kind: 'bonus', pattern: /бонусн/iu },
+  { kind: 'reaction', pattern: /реакци/iu },
+  { kind: 'action', pattern: /действи/iu },
+];
+
+/** Порядок времени накладывания в строке и в чипах отбора. */
+export const SPELL_CASTING_KIND_ORDER: SpellCastingKind[] = [
+  'action',
+  'bonus',
+  'reaction',
+  'long',
+];
+
+/**
+ * Время накладывания в строке заклинания и в чипах отбора: подпись, значок и
+ * цвет значка — у каждого своё, чтобы различать строки с одного взгляда.
+ */
+export const SPELL_CASTING_KIND_META: Record<
+  SpellCastingKind,
+  SpellCastingKindMeta
+> = {
+  action: {
+    label: EFFECT_ACTION_COST_LABELS.action,
+    icon: 'tabler:bolt',
+    iconClass: 'text-success',
+  },
+  bonus: {
+    label: EFFECT_ACTION_COST_LABELS.bonus,
+    icon: 'tabler:circle-plus',
+    iconClass: 'text-warning',
+  },
+  reaction: {
+    label: EFFECT_ACTION_COST_LABELS.reaction,
+    icon: 'tabler:arrow-back-up',
+    iconClass: 'text-info',
+  },
+  long: {
+    label: 'Дольше хода',
+    icon: 'tabler:hourglass',
+    iconClass: 'text-muted',
+  },
+};
+
+/**
+ * Подпись времени накладывания: поле формы своего заклинания и подсказка у
+ * времени в строке вкладки.
+ */
+export const SPELL_CASTING_TIME_LABEL = 'Время накладывания';
 
 /**
  * Подпись группы заклинаний, которые персонаж знает вне книги: врождённых
@@ -2672,6 +2960,16 @@ export const CLASS_SPELL_BADGE = {
 
 /** Служебный ключ группы заклинаний вне книги, не пересекающийся с кругами 0–9. */
 export const INNATE_SPELL_GROUP_LEVEL = -1;
+
+/**
+ * Группа заговоров вне книги: от вида, черты, предыстории и умений класса. Они
+ * подготовлены всегда, поэтому стоят отдельно от «Заговоров» книги, из которых
+ * игрок отмечает свои.
+ */
+export const GRANTED_CANTRIP_GROUP_LABEL = 'Выданные заговоры';
+
+/** Служебный ключ группы выданных заговоров, не пересекающийся с кругами 0–9. */
+export const GRANTED_CANTRIP_GROUP_LEVEL = -2;
 
 /** Локаль сортировки русских названий заклинаний. */
 export const SPELL_NAME_SORT_LOCALE = 'ru';
@@ -2736,7 +3034,7 @@ export const SPELL_COMPONENT_LABELS = {
 export const CUSTOM_SPELL_FIELDS: CustomSpellField[] = [
   {
     key: 'castingTime',
-    label: 'Время накладывания',
+    label: SPELL_CASTING_TIME_LABEL,
     placeholder: 'Например: 1 действие',
   },
   { key: 'range', label: 'Дистанция', placeholder: 'Например: 30 футов' },
@@ -2852,22 +3150,17 @@ export const PREPARED_SPELL_TOGGLE_LABELS: Record<
   unprepare: 'Снять подготовку',
   innate: 'Заклинание вне книги не занимает место среди подготовленных',
   limit: 'Больше подготовить нельзя',
-  // Заговор подготовки не требует ни по одному классу: колонка «Заговоры»
-  // таблицы класса задаёт, сколько заговоров персонаж ЗНАЕТ
-  cantrip: 'Заговор всегда доступен — подготавливать его не нужно',
+  // Заговор вида, черты или умения класса выдан насовсем: снять его нельзя,
+  // заговоры про запас игрок держит в книге
+  cantrip: 'Выданный заговор подготовлен всегда',
 };
-
-/** Заголовок предупреждения о достигнутом пределе подготовленных заклинаний. */
-export const PREPARED_SPELLS_LIMIT_TOAST_TITLE =
-  'Предел подготовленных заклинаний';
 
 /** Виды счёта заклинаний по порядку плиток в шапке вкладки заклинаний. */
 export const PREPARED_KINDS: PreparedSpellKind[] = ['spells', 'cantrips'];
 
 /**
- * Подписи блока и модалки по виду счёта: заклинания кругов 1+ персонаж
- * подготавливает, а заговоры знает — у них своя колонка таблицы класса и своя
- * проза.
+ * Подписи блока и модалки по виду счёта: заговоры считаются отдельным
+ * счётчиком со своей колонкой таблицы класса, поэтому и подписи у них свои.
  */
 export const PREPARED_KIND_LABELS: Record<
   PreparedSpellKind,
@@ -2893,24 +3186,26 @@ export const PREPARED_KIND_LABELS: Record<
       unknown:
         'Класс не даёт числа подготовленных заклинаний — нажмите, чтобы задать своё',
     },
+    limitToastTitle: 'Предел подготовленных заклинаний',
   },
   cantrips: {
     // «Заговоры» и так короче любой осмысленной сокращённой формы.
     stat: 'Заговоры',
     statFull: 'Заговоры',
     icon: 'tabler:sparkles',
-    ariaLabel: 'Настроить число известных заговоров',
-    title: 'Известные заговоры',
+    ariaLabel: 'Настроить подготовленные заговоры',
+    title: 'Подготовленные заговоры',
     customValue: 'Число заговоров',
     unknownClassValue:
       'Класс не даёт числа заговоров. Если оно должно быть, выберите класс заново или повысьте уровень — лист запомнит таблицу класса.',
-    countHint: 'Известно заговоров',
-    total: 'Всего можно знать',
+    countHint: 'Подготовлено заговоров',
+    total: 'Всего можно подготовить',
     hints: {
       auto: 'Заговоров по таблице класса',
       custom: 'Своё число заговоров: подсчёт по классу выключен',
       unknown: 'Класс не даёт числа заговоров — нажмите, чтобы задать своё',
     },
+    limitToastTitle: 'Предел подготовленных заговоров',
   },
 };
 
@@ -2942,15 +3237,15 @@ export const SHEET_FILTER_LABELS: Record<
 
 /** Подписи чипов отбора заклинаний на вкладке заклинаний. */
 export const SPELL_FILTER_LABELS: Record<
-  'prepared' | 'preparedHint' | 'cantrip',
+  'prepared' | 'preparedHint' | 'castingHint' | 'castingToggle',
   string
 > = {
   prepared: 'Подготовленные',
+  castingToggle: 'Отбор по времени накладывания',
   preparedHint:
-    'Оставить в списке подготовленные заклинания; заговоры доступны всегда и остаются в нём',
-  // Чипы кругов — числа, у заговоров вместо номера сокращение: одной буквы «З»
-  // мало, её путают с цифрой в соседних чипах.
-  cantrip: 'Зг',
+    'Оставить в списке только заклинания и заговоры, помеченные значком',
+  castingHint:
+    'Оставить в списке только заклинания с таким временем накладывания',
 };
 
 /** Общая часть оформления чипа отбора (каталог заклинаний, вкладка). */
@@ -3120,6 +3415,40 @@ export const CLASS_WIZARD_LABELS = {
   subclassesLoading: 'Загрузка подклассов…',
   empty: 'Ничего не найдено',
 } as const;
+
+/**
+ * Подписи выбора «весь список класса»: умение, которое выдаёт список класса
+ * правилом, мастер класса даёт взять целиком либо выбрать из него. Подстановки:
+ * `{count}` — число заклинаний, `{prepared}` — сколько готовят по таблице.
+ */
+export const CLASS_SPELL_LIST_LABELS = {
+  title: 'Заклинания списка класса',
+  allLabel: 'Весь список сразу',
+  allDescription:
+    'На лист лягут все доступные заклинания списка ({count}), новые круги добавятся сами.',
+  chosenLabel: 'Выбрать самому',
+  chosenDescription:
+    'На лист лягут только выбранные. Добрать можно при повышении уровня или во вкладке заклинаний.',
+  pickerTitle: 'Заклинания из списка класса',
+  pickerExplanation:
+    'Выбранные ложатся на лист неподготовленными — подготовку отмечаете сами.',
+  preparedHint: 'По таблице класса на этом уровне подготавливают: {prepared}.',
+  levelUpExplanation:
+    'Можно добавить заклинания из списка класса. Они ложатся неподготовленными.',
+} as const;
+
+/**
+ * Режим «весь список класса», предложенный в мастере класса: выбор. Жалобы
+ * были ровно на то, что список ложился на лист целиком.
+ */
+export const CLASS_SPELL_LIST_DEFAULT_MODE: ClassSpellListMode = 'chosen';
+
+/**
+ * Сегмент ключа добора заклинаний списка класса в черновике шага мастера
+ * повышения: за ним идёт уровень в классе (`…:class-list-3`), перед ним —
+ * идентификатор умения.
+ */
+export const CLASS_SPELL_LIST_PICK_ID_SEGMENT = 'class-list';
 
 /** Сокращение уровня в подписях («3 ур.»). */
 export const LEVEL_SHORT_SUFFIX = 'ур.';
@@ -3536,8 +3865,16 @@ export const RAW_DETAIL_PATH_SUFFIX = 'raw';
 /** Эндпоинт поиска магических предметов (раздел «Магические предметы»). */
 export const MAGIC_ITEMS_SEARCH_PATH = '/api/v2/magic-items/search';
 
+/**
+ * Параметры поиска магических предметов для листа персонажа: варианты вроде
+ * «Стрела +1», скрытые из списка раздела, в лист добавлять можно.
+ */
+export const MAGIC_ITEMS_SEARCH_SHEET_QUERY = {
+  includeUnlisted: true,
+} as const;
+
 /** Базовый путь детали магического предмета. */
-export const MAGIC_ITEMS_DETAIL_BASE_PATH = '/api/v2/magic-items';
+export const MAGIC_ITEMS_DETAIL_BASE_PATH = MAGIC_ITEM_API_PATH;
 
 /** Эндпоинт фильтров магических предметов. */
 export const MAGIC_ITEMS_FILTERS_PATH = '/api/v2/magic-items/filters';
@@ -3578,6 +3915,35 @@ export const CURRENCY_GOLD_RATES: Record<CurrencyKey, number> = {
   gold: 1,
   platinum: 10,
 };
+
+/**
+ * Стоимость денежной единицы в медных монетах: покупка считается в целых
+ * медяках, чтобы доли золотого не копили ошибку округления.
+ */
+export const CURRENCY_COPPER_RATES: Record<CurrencyKey, number> = {
+  copper: 1,
+  silver: 10,
+  electrum: 50,
+  gold: 100,
+  platinum: 1000,
+};
+
+/**
+ * Монеты сдачи при размене крупной монеты, от крупной к мелкой. Электрум в
+ * сдачу не идёт: по правилам он редкий, и сдачу им не дают.
+ */
+export const CURRENCY_CHANGE_ORDER: CurrencyKey[] = [
+  'platinum',
+  'gold',
+  'silver',
+  'copper',
+];
+
+/**
+ * Монеты подписи цены покупки, от крупной к мелкой: цены справочника заданы в
+ * золоте и мелочи, поэтому платина и электрум в подписи суммы не нужны.
+ */
+export const CURRENCY_PRICE_ORDER: CurrencyKey[] = ['gold', 'silver', 'copper'];
 
 /** Подписи групп каталога для предметов без значения поля группировки. */
 export const MAGIC_ITEM_CATALOG_EMPTY_GROUP_LABELS: Record<
@@ -3798,6 +4164,13 @@ export const INVENTORY_GRIP_MENU_LABELS: Record<
   oneHanded: 'Взять в одну руку',
   twoHanded: 'Взять в две руки',
 };
+
+/**
+ * Подпись пункта меню оружия с выбором характеристики атаки и урона: тот же
+ * выбор, что в окне броска атаки, только без броска.
+ */
+export const INVENTORY_ATTACK_ABILITY_MENU_LABEL =
+  'Характеристика атаки и урона';
 
 /** Значок универсального оружия, взятого двумя руками. */
 export const INVENTORY_TWO_HANDED_BADGE_LABEL = 'Двумя руками';
@@ -4142,6 +4515,21 @@ export const SPELL_DAMAGE_ABILITY_MODIFIER_TAG = 'mod.spell';
 
 /** Разделитель типов урона одного броска («Кислотный/Холодный» — на выбор). */
 export const SPELL_DAMAGE_TYPE_SEPARATOR = '/';
+
+/**
+ * Начало подписи типа урона на выбор в подсказке плитки: «На выбор:
+ * Кислотный/Холодный», у случайного типа — «Случайно: …». Как в листе VTTG.
+ */
+export const SPELL_DAMAGE_TYPE_CHOICE_PREFIX = {
+  choice: 'На выбор: ',
+  random: 'Случайно: ',
+} as const;
+
+/**
+ * Значок плитки урона с выбором: формула в плитке одна, а варианты — в
+ * подсказке. Тот же, что у плитки урона с выбором в листе VTTG.
+ */
+export const DAMAGE_VARIANTS_STAT_ICON = 'tabler:arrows-split';
 
 /** Короткая подпись плитки урона заклинания — та же, что и у оружия. */
 export const SPELL_DAMAGE_STAT_LABEL = 'Урон';
@@ -4651,6 +5039,8 @@ export const DAMAGE_DICE_GROUPS_MAX = 6;
 export const EMPTY_DAMAGE_ROLL_SOURCE: DamageRollSource = {
   diceNotation: '',
   flatBonus: 0,
+  effectBonus: 0,
+  riders: [],
   ability: null,
   abilityModifierCount: 0,
   typeLabel: '',
@@ -4996,6 +5386,46 @@ export const INVENTORY_REMOVE_CONFIRM_LABEL = 'Убрать';
  * слова «Убрать» мало — непонятно, откуда именно исчезнет предмет.
  */
 export const INVENTORY_REMOVE_MENU_LABEL = 'Убрать из снаряжения';
+
+/** Подпись пункта меню строки снаряжения о продаже предмета. */
+export const INVENTORY_SELL_MENU_LABEL = 'Продать';
+
+/** Единица количества в тексте подтверждения продажи («3 шт.»). */
+export const INVENTORY_QUANTITY_UNIT_LABEL = 'шт.';
+
+/**
+ * Доля цены справочника, за которую предмет продаётся по умолчанию: по
+ * правилам снаряжение сбывают за полцены. Игрок может указать свою цену.
+ */
+export const INVENTORY_SALE_PRICE_RATIO = 0.5;
+
+/** Шаг поля цены продажи в золотых: цена задаётся с точностью до медяка. */
+export const INVENTORY_SALE_PRICE_STEP = 0.01;
+
+/** Знаков после запятой в поле цены продажи (до медяка). */
+export const INVENTORY_SALE_PRICE_FRACTION_DIGITS = 2;
+
+/** Наименьшее количество штук в окне продажи предмета. */
+export const INVENTORY_SALE_QUANTITY_MIN = 1;
+
+/** Части текста окна продажи: «(1 шт. из 3) уйдёт из снаряжения…». */
+export const INVENTORY_SELL_PHRASES = {
+  quantityOutOf: 'из',
+  outcome: 'уйдёт из снаряжения, а выручка — в кошелёк.',
+};
+
+/** Подписи окна продажи предмета. */
+export const SHEET_ITEM_SELL_LABELS = {
+  title: 'Продажа предмета',
+  quantity: 'Сколько продать',
+  price: 'Цена продажи, зм',
+  fullPricePrefix: 'Цена по справочнику',
+  halfPriceHint: 'По правилам снаряжение продаётся за полцены.',
+  confirm: 'Продать',
+} as const;
+
+/** Наименьшее количество позиции в окне покупки. */
+export const PURCHASE_QUANTITY_MIN = 1;
 
 /** То же для строки заклинания: убирается оно из книги заклинаний. */
 export const SPELL_REMOVE_MENU_LABEL = 'Убрать из книги';
@@ -5360,6 +5790,29 @@ export const SHEET_ITEM_ADD_LABELS = {
   pickAria: 'Выбрать предмет',
   preview: 'Открыть описание предмета',
   previewAria: 'Описание предмета',
+  buy: 'Купить',
+  selectedPrefix: 'Выбрано',
+  partialFailed: 'Не удалось добавить часть предметов',
+} as const;
+
+/** Подписи окна подтверждения покупки предметов. */
+export const SHEET_ITEM_PURCHASE_LABELS = {
+  title: 'Покупка снаряжения',
+  confirm: 'Купить',
+  free: 'Бесплатно',
+  wallet: 'В кошельке',
+  cost: 'Будет списано',
+  remaining: 'Останется',
+  shortage: 'Не хватает',
+  shortageTitle: 'Не хватает денег',
+  shortageHint: 'Уберите что-нибудь из списка, чтобы хватило.',
+  purchases: 'Покупки',
+  quantityAria: 'Количество',
+  remove: 'Убрать из покупки',
+  empty: 'Список покупки пуст',
+  failed: 'Не удалось купить предметы',
+  partialFailed:
+    'Часть предметов не загрузилась: куплены и оплачены только остальные',
 } as const;
 
 /** Подписи окна добавления магических предметов. */
@@ -5370,6 +5823,8 @@ export const SHEET_MAGIC_ITEM_ADD_MODAL_LABELS = {
   pickAria: 'Выбрать магический предмет',
   preview: 'Открыть описание магического предмета',
   previewAria: 'Описание магического предмета',
+  buy: 'Купить',
+  selectedPrefix: 'Выбрано',
 } as const;
 
 /** Подписи окна мастера класса: список классов и подклассов. */
@@ -5514,6 +5969,10 @@ export const SHEET_CHOICE_EXPLANATION_LABELS: Record<ClassChoiceKind, string> =
     'option': 'Умение даёт вариант на выбор',
     'feat': 'Умение даёт черту на выбор',
   };
+
+/** Пояснение к выбору, который даёт и владение навыком, и компетентность в нём. */
+export const SHEET_CHOICE_SKILL_PROFICIENCY_EXPERTISE_EXPLANATION =
+  'Умение даёт владение и компетентность в навыке на выбор';
 
 /**
  * Части пояснения к выбору заклинания: «Умение даёт заклинание 6 уровня из
@@ -5772,7 +6231,25 @@ export const SHEET_DAMAGE_MODAL_LABELS = {
   addDie: 'Добавить кость',
   ability: 'Характеристика',
   bonus: 'Доп. бонус',
+  riders: 'Прибавки по применению',
 } as const;
+
+/**
+ * Токен «урон того же типа, что у оружия» в части урона эффекта: тип на выбор
+ * без списка типов. По нему лист узнаёт прибавку к удару оружием среди прочих
+ * эффектов «по применению» (лечение, урон умения своим типом).
+ */
+export const WEAPON_DAMAGE_TYPE_TOKEN = '@dmg.choice';
+
+/**
+ * Эффекты, чья прибавка идёт только оружию со свойством «Тяжёлое». Само
+ * ограничение в данных эффекта не записано — оно стоит в его описании, а
+ * виртуальному столу его заменяет выбор цели игроком, — поэтому лист знает
+ * такие эффекты поимённо. Эффект не из списка предлагается любому оружию.
+ */
+export const HEAVY_WEAPON_RIDER_EFFECT_IDS: readonly string[] = [
+  'effect-great-weapon-master-phb-heavy-weapon-mastery',
+];
 
 /** Подписи окна валюты. */
 export const SHEET_CURRENCY_MODAL_LABELS = {
@@ -5791,6 +6268,11 @@ export const SHEET_CURRENCY_MODAL_LABELS = {
 export const SHEET_CLASS_RESOURCE_MODAL_LABELS = {
   name: 'Название',
   shortLabel: 'Кратко',
+  key: 'Ключ',
+  keyHint:
+    'Под этим ключом ресурс тратит эффект: его вписывают в поле «Тратит '
+    + 'ресурс» — rage у «Ярости». Латиницей, без пробелов. У ресурса '
+    + 'справочника ключ книжный и не меняется: на него ссылаются его эффекты.',
   current: 'Сейчас',
   max: 'Максимум',
   recovery: 'Восстановление',
@@ -5821,6 +6303,7 @@ export const SHEET_CARD_LABELS = {
   level: 'Уровень',
   menuAria: 'Действия с листом',
   savedMenuAria: 'Действия с сохранённым листом',
+  editRequests: 'Просят доступ',
 } as const;
 
 /** Заголовок подтверждения удаления листа персонажа. */
@@ -5834,6 +6317,9 @@ export const SHEET_BODY_LABELS = {
   armorClassPress: 'Настроить класс доспеха',
   initiative: 'Инициатива',
 } as const;
+
+/** Иконка у значения класса доспеха: щит помогает быстро найти КД глазами. */
+export const SHEET_ARMOR_CLASS_ICON = 'tabler:shield-filled';
 
 /** Подписи шапки листа персонажа. */
 export const SHEET_HEADER_LABELS = {
@@ -5860,6 +6346,7 @@ export const SHEET_ROLL_MODAL_LABELS = {
   againstMagicHelp: 'Заклинание или иной магический эффект',
   magicSource: 'Магический источник',
   mode: 'Режим броска',
+  modeCancelled: 'Преимущество и помеха гасят друг друга — бросок обычный',
 } as const;
 
 /** Подписи окна заклинательной характеристики. */

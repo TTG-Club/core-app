@@ -2,17 +2,20 @@
   import type { ClassDetailResponse } from '../model';
 
   import { UiCollapse } from '~ui/collapse';
+  import { UiDetailLayout } from '~ui/detail-layout';
   import { UiGallery } from '~ui/gallery';
   import { MarkupRender } from '~ui/markup';
 
   import {
     ClassEquipment,
+    ClassPageNavigation,
     ClassProficiency,
     ClassRouting,
     ClassTable,
     FeatureCollapse,
     StatsBlock,
   } from './ui';
+  import { CLASS_SECTION_ANCHOR, getSectionHeadingId } from './ui/constants';
 
   const {
     detail,
@@ -45,29 +48,15 @@
 </script>
 
 <template>
-  <div class="@container">
-    <div
-      :class="[
-        'flex flex-col gap-6',
-        inSplit ? '' : '@min-3xl:flex-row @min-3xl:gap-7',
-      ]"
-    >
-      <div
-        :class="[
-          'flex w-full shrink-0 flex-col gap-4',
-          inSplit
-            ? '@min-xl:flex-row'
-            : '@min-xl:@max-3xl:flex-row @min-3xl:w-80',
-        ]"
-      >
+  <UiDetailLayout>
+    <template #aside>
+      <!-- Растянута на высоту колонки, чтобы навигации было где липнуть -->
+      <div class="flex grow flex-col gap-4 @min-xl:@max-3xl:flex-row">
         <UiGallery
           v-if="!hideGallery && detail.image"
+          class="min-w-25 shrink-0 @min-xl:@max-3xl:w-50"
           :preview="detail.image"
           :images="detail.gallery"
-          :class="[
-            'min-w-25',
-            inSplit ? '@min-xl:max-w-50' : '@min-xl:@max-3xl:max-w-50',
-          ]"
         />
 
         <StatsBlock
@@ -75,10 +64,28 @@
           :saving-throws="detail.savingThrows"
           :primary-characteristics="detail.primaryCharacteristics"
         />
-      </div>
 
-      <div class="flex min-w-0 flex-auto flex-col gap-6">
-        <div class="flex min-w-0 flex-col gap-2">
+        <!-- Липнет к верху колонки, картинка и характеристики уезжают -->
+        <ClassPageNavigation
+          v-if="!navigateInPlace"
+          class="max-lg:hidden @max-3xl:hidden"
+          :features="detail.features"
+          :has-equipment="!!detail.equipment"
+          :has-description="!!detail.description"
+        />
+      </div>
+    </template>
+
+    <div class="flex flex-col gap-6">
+      <div
+        :id="CLASS_SECTION_ANCHOR.table"
+        class="flex min-w-0 flex-col gap-2"
+      >
+        <!--
+            Якорь на обёртке, а не на ClassRouting: тот асинхронный и появляется
+            в DOM позже, чем навигация собирает отслеживаемые заголовки.
+          -->
+        <div :id="getSectionHeadingId(CLASS_SECTION_ANCHOR.table)">
           <ClassRouting
             :url="detail.url"
             :name="detail.name"
@@ -90,40 +97,49 @@
             :hide-navigation="hideNavigation"
             @navigate="emit('navigate', $event)"
           />
-
-          <ClassTable
-            :table="detail.table"
-            :caster-type="detail.casterType"
-            :features="detail.features"
-          />
         </div>
 
-        <ClassProficiency
-          :proficiency="detail.proficiency"
-          :saving-throws="detail.savingThrows"
+        <ClassTable
+          :table="detail.table"
+          :caster-type="detail.casterType"
+          :features="detail.features"
         />
+      </div>
 
-        <ClassEquipment :equipment="detail.equipment" />
+      <ClassProficiency
+        :id="CLASS_SECTION_ANCHOR.proficiency"
+        :heading-id="getSectionHeadingId(CLASS_SECTION_ANCHOR.proficiency)"
+        :proficiency="detail.proficiency"
+        :saving-throws="detail.savingThrows"
+      />
 
-        <FeatureCollapse
-          v-for="feature in detail.features"
-          :key="feature.key"
-          :feature
-        />
+      <ClassEquipment
+        :id="CLASS_SECTION_ANCHOR.equipment"
+        :heading-id="getSectionHeadingId(CLASS_SECTION_ANCHOR.equipment)"
+        :equipment="detail.equipment"
+      />
 
-        <div
-          v-if="detail.description"
-          id="description"
+      <FeatureCollapse
+        v-for="feature in detail.features"
+        :key="feature.key"
+        :feature
+      />
+
+      <div
+        v-if="detail.description"
+        :id="CLASS_SECTION_ANCHOR.description"
+      >
+        <UiCollapse
+          default-open
+          :heading-id="getSectionHeadingId(CLASS_SECTION_ANCHOR.description)"
         >
-          <UiCollapse default-open>
-            <template #default>Описание</template>
+          <template #default>Описание</template>
 
-            <template #content>
-              <MarkupRender :render-node="detail.description" />
-            </template>
-          </UiCollapse>
-        </div>
+          <template #content>
+            <MarkupRender :render-node="detail.description" />
+          </template>
+        </UiCollapse>
       </div>
     </div>
-  </div>
+  </UiDetailLayout>
 </template>

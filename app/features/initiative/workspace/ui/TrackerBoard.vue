@@ -51,7 +51,8 @@
     'remove-participant': [id: string];
     'roll-participant': [id: string];
     'toggle-dead': [id: string, dead: boolean];
-    'set-hit-points': [id: string, value: number];
+    'set-hit-points': [id: string, value: number, temporary?: number];
+    'set-temporary-hit-points': [id: string, value: number];
     'set-max-hit-points': [id: string, value: number];
     'set-armor-class': [id: string, value: number];
     'set-color': [id: string, value: ParticipantColor];
@@ -116,8 +117,12 @@
     emit('toggle-dead', id, dead);
   }
 
-  function onSetHitPoints(id: string, value: number): void {
-    emit('set-hit-points', id, value);
+  function onSetHitPoints(id: string, value: number, temporary?: number): void {
+    emit('set-hit-points', id, value, temporary);
+  }
+
+  function onSetTemporaryHitPoints(id: string, value: number): void {
+    emit('set-temporary-hit-points', id, value);
   }
 
   function onSetMaxHitPoints(id: string, value: number): void {
@@ -278,6 +283,7 @@
         @roll="onRollParticipant"
         @toggle-dead="onToggleDead"
         @set-hit-points="onSetHitPoints"
+        @set-temporary-hit-points="onSetTemporaryHitPoints"
         @set-max-hit-points="onSetMaxHitPoints"
         @set-armor-class="onSetArmorClass"
         @set-color="onSetColor"

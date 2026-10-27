@@ -8,6 +8,7 @@ export function getSecrets() {
     bugReport: getBugReportSecrets(),
     comments: getCommentsSecrets(),
     findGame: getFindGameSecrets(),
+    vttgModules: getVttgModulesSecrets(),
   };
 }
 
@@ -112,6 +113,23 @@ export function getFindGameSecrets() {
 
   if (!url) {
     throw new Error('[FIND-GAME] Variables are not set');
+  }
+
+  return {
+    url: url.replace(/\/+$/, ''),
+  };
+}
+
+/**
+ * Возвращает адрес реестра модулей VTTG (vttg-module-registry): заявки
+ * авторов, модерация и каталог одобренных модулей. Без переменной раздел не
+ * работает — по той же причине, что и find-game.
+ */
+export function getVttgModulesSecrets() {
+  const { NITRO_VTTG_MODULES_API_URL: url = '' } = process.env;
+
+  if (!url) {
+    throw new Error('[VTTG-MODULES] Variables are not set');
   }
 
   return {

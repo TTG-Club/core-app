@@ -4,4 +4,7 @@ export * from './find-game';
 export * from './home-hero';
 export * from './mailing';
 export * from './platform';
+export * from './subscription-sales';
 export * from './upload';
+export * from './vttg-compendium';
+export * from './vttg-modules';

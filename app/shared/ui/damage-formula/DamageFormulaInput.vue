@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { DamageFormulaToolSlot } from './constants';
+  import type { DamageFormulaTypeChoiceMode } from './constants';
 
   import {
     DAMAGE_FORMULA_CONDITION_TAGS,
@@ -8,6 +8,8 @@
     DAMAGE_FORMULA_HEALING_TAGS,
     DAMAGE_FORMULA_LABELS,
     DAMAGE_FORMULA_MODIFIER_TAGS,
+    DAMAGE_FORMULA_TYPE_CHOICE_BUTTONS,
+    DAMAGE_FORMULA_TYPE_CHOICE_MIN_OPTIONS,
   } from './constants';
   import {
     buildDamageFormulaModifier,
@@ -15,6 +17,8 @@
     incrementDamageFormulaDice,
     insertIntoDamageFormula,
   } from './formula';
+  import { buildDamageFormulaTools } from './tools';
+  import { buildDamageFormulaTypeChoiceToken } from './type-choice';
 
   interface DamageTypeOption {
     /** Подпись типа урона. */
@@ -44,7 +48,7 @@
     hideModifiers?: boolean;
     /** Скрыть вкладку лечения. */
     hideHealing?: boolean;
-    /** Скрыть вкладки условий: по хитам цели и по её типу. */
+    /** Скрыть вкладки условий: по хитам цели, по состояниям и по типу. */
     hideConditions?: boolean;
   }>();
 
@@ -59,44 +63,8 @@
     () => inputRef.value?.input ?? inputRef.value?.$el?.querySelector('input'),
   );
 
-  const tools = computed<Array<{ label: string; slot: DamageFormulaToolSlot }>>(
-    () => {
-      // Порядок вкладок системы, но «Кости» впереди: в справочнике формулу
-      // набирают с нуля, а не правят готовую — начинают всегда с кости.
-      const items: Array<{ label: string; slot: DamageFormulaToolSlot }> = [
-        { label: DAMAGE_FORMULA_LABELS.dice, slot: 'dice' },
-      ];
-
-      if (!hideModifiers) {
-        items.push({
-          label: DAMAGE_FORMULA_LABELS.modifiers,
-          slot: 'modifiers',
-        });
-      }
-
-      items.push({
-        label: DAMAGE_FORMULA_LABELS.damageTypes,
-        slot: 'damageTypes',
-      });
-
-      if (!hideHealing) {
-        items.push({ label: DAMAGE_FORMULA_LABELS.healing, slot: 'healing' });
-      }
-
-      if (!hideConditions) {
-        // Тип существа — такое же условие по цели, как и её хиты, поэтому
-        // прячется тем же пропом.
-        items.push(
-          { label: DAMAGE_FORMULA_LABELS.conditions, slot: 'conditions' },
-          {
-            label: DAMAGE_FORMULA_LABELS.creatureTypes,
-            slot: 'creatureTypes',
-          },
-        );
-      }
-
-      return items;
-    },
+  const tools = computed(() =>
+    buildDamageFormulaTools({ hideModifiers, hideHealing, hideConditions }),
   );
 
   /**
@@ -152,6 +120,32 @@
     const { start } = getSelection();
 
     return insertText(buildDamageFormulaModifier(model.value, modifier, start));
+  }
+
+  /** Теги типов урона (`dmg.fire`), из которых собирается токен на выбор. */
+  const choiceTypeTags = ref<Array<string>>([]);
+
+  /** Токен на выбор имеет смысл от двух типов: из одного выбирать нечего. */
+  const canInsertTypeChoice = computed(
+    () => choiceTypeTags.value.length >= DAMAGE_FORMULA_TYPE_CHOICE_MIN_OPTIONS,
+  );
+
+  /**
+   * Вставляет токен типа урона на выбор (`@dmg.choice(…)`) или случайного
+   * (`@dmg.random(…)`) из отмеченных типов.
+   *
+   * @param mode способ выбора типа.
+   */
+  async function insertTypeChoice(mode: DamageFormulaTypeChoiceMode) {
+    const token = buildDamageFormulaTypeChoiceToken(
+      mode,
+      choiceTypeTags.value,
+      damageTypeOptions.map((damageType) => damageType.value),
+    );
+
+    if (token) {
+      await insertText(token);
+    }
   }
 
   /**
@@ -230,6 +224,41 @@
         </div>
       </template>
 
+      <!-- Один тип из списка: несколько «@dmg.<тип>» подряд — это урон
+        всеми сразу, а токен на выбор бросает ровно один -->
+      <template #damageTypeChoice>
+        <div class="flex flex-col gap-2">
+          <div class="flex flex-wrap items-end gap-2">
+            <USelectMenu
+              v-model="choiceTypeTags"
+              :items="damageTypeOptions"
+              value-key="value"
+              label-key="label"
+              multiple
+              size="xs"
+              :loading="damageTypesPending"
+              :placeholder="DAMAGE_FORMULA_LABELS.typeChoicePlaceholder"
+              class="min-w-56 flex-1"
+            />
+
+            <UButton
+              v-for="choiceButton in DAMAGE_FORMULA_TYPE_CHOICE_BUTTONS"
+              :key="choiceButton.mode"
+              :label="choiceButton.label"
+              size="xs"
+              color="neutral"
+              variant="subtle"
+              :disabled="!canInsertTypeChoice"
+              @click.left.exact.prevent="insertTypeChoice(choiceButton.mode)"
+            />
+          </div>
+
+          <p class="text-xs text-muted">
+            {{ DAMAGE_FORMULA_LABELS.typeChoiceHint }}
+          </p>
+        </div>
+      </template>
+
       <template #healing>
         <div class="flex flex-wrap gap-1.5">
           <UButton
@@ -255,6 +284,28 @@
             variant="subtle"
             @click.left.exact.prevent="insertTag(condition.value)"
           />
+        </div>
+      </template>
+
+      <!-- Слагаемое — только при состоянии цели или атакующего: сторону
+        несёт вкладка -->
+      <template #statuses="{ item }">
+        <div class="flex flex-col gap-2">
+          <div class="flex flex-wrap gap-1.5">
+            <UButton
+              v-for="status in item.statusButtons"
+              :key="status.value"
+              :label="status.label"
+              size="xs"
+              color="neutral"
+              variant="subtle"
+              @click.left.exact.prevent="insertText(status.value)"
+            />
+          </div>
+
+          <p class="text-xs text-muted">
+            {{ item.statusHint }}
+          </p>
         </div>
       </template>
 

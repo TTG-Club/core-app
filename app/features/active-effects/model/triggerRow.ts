@@ -15,26 +15,47 @@ import type {
 } from './triggerTypes';
 
 import {
+  DEFAULT_DISPEL_MAX_LEVEL,
+  DEFAULT_MAX_HP_REDUCTION,
   DEFAULT_TRIGGER_CONDITION,
+  DEFAULT_TRIGGER_NOTIFY_TEXT,
+  DEFAULT_TRIGGER_TEMP_HP,
   EFFECT_TRIGGER_DAMAGE_HALF_GATE,
   MIN_TRIGGER_ACTION_ROUNDS,
 } from './constants';
 import {
   DEFAULT_SET_HP_VALUE,
   listTriggerActionTypes,
-  triggerEventAcceptsDcFormula,
-  triggerEventHasOtherParty,
+  triggerEventAcceptsArea,
+  triggerEventAcceptsChoice,
+  triggerEventAcceptsDamageDc,
   triggerEventHasRole,
 } from './layout';
-import { isTurnTriggerEvent } from './triggers';
+import { buildTriggerRecipientOptions } from './options';
+import { saveDcFormulaReadsDamage } from './saveDc';
+import {
+  isTurnTriggerEvent,
+  triggerEventHasConditionKey,
+  triggerEventHasPathFeet,
+  triggerEventHasRestType,
+} from './triggers';
 import {
   DEFAULT_EFFECT_TAG,
+  DEFAULT_RESTORE_KIND,
+  DEFAULT_TRIGGER_AREA_SHIFT_KIND,
   DEFAULT_TRIGGER_ATTACK_ROLE,
+  DEFAULT_TRIGGER_MOVE_DISTANCE,
+  DEFAULT_TRIGGER_MOVE_KIND,
+  MIN_REVIVE_HP,
+  MIN_SPELL_SLOT_LEVEL,
+  triggerEventAcceptsAreaTemplate,
 } from './triggerTypes';
 
 /**
  * Новое действие срабатывания со значениями по умолчанию: урон без частей,
- * состояние по умолчанию, отметка с ключом по умолчанию, «Хиты становятся» — 1.
+ * состояние по умолчанию, отметка с ключом по умолчанию, «Хиты становятся» — 1,
+ * уменьшение максимума хитов — на урон события. Действие с обязательными
+ * полями получает их сразу: пустой `{ type }` выпал бы при следующем открытии.
  *
  * @param type вид действия.
  * @returns действие.
@@ -51,6 +72,32 @@ export function createEffectTriggerAction(
       return { type, tag: DEFAULT_EFFECT_TAG };
     case 'setHp':
       return { type, value: DEFAULT_SET_HP_VALUE };
+    case 'reduceMaxHp':
+      return { type, amount: DEFAULT_MAX_HP_REDUCTION };
+    case 'notify':
+      return { type, text: DEFAULT_TRIGGER_NOTIFY_TEXT };
+    case 'tempHp':
+      return { type, amount: DEFAULT_TRIGGER_TEMP_HP };
+    case 'removeCondition':
+      return { type, conditionKey: DEFAULT_TRIGGER_CONDITION };
+    case 'revive':
+      return { type, hp: MIN_REVIVE_HP };
+    case 'restore':
+      return { type, what: DEFAULT_RESTORE_KIND, level: MIN_SPELL_SLOT_LEVEL };
+    case 'dispel':
+      return { type, maxLevel: DEFAULT_DISPEL_MAX_LEVEL };
+    case 'move':
+      return {
+        type,
+        kind: DEFAULT_TRIGGER_MOVE_KIND,
+        distance: DEFAULT_TRIGGER_MOVE_DISTANCE,
+      };
+    case 'moveArea':
+      return {
+        type,
+        kind: DEFAULT_TRIGGER_AREA_SHIFT_KIND,
+        distance: DEFAULT_TRIGGER_MOVE_DISTANCE,
+      };
     default:
       return { type };
   }
@@ -74,7 +121,8 @@ export function clearTriggerActionGate(
 }
 
 /**
- * Спасбросок срабатывания без формулы Сл: остаются характеристика и число.
+ * Спасбросок срабатывания без формулы Сл: остальное — характеристика, число,
+ * режим и условия режима — остаётся.
  *
  * @param save спасбросок строки.
  * @returns спасбросок без формулы.
@@ -82,14 +130,19 @@ export function clearTriggerActionGate(
 export function omitTriggerSaveDcFormula(
   save: EffectTriggerSave,
 ): EffectTriggerSave {
-  return { ability: save.ability, dc: save.dc };
+  const { dcFormula: _dcFormula, ...saveWithoutFormula } = save;
+
+  return saveWithoutFormula;
 }
 
 /**
  * Строка срабатывания под новое событие. Смена события отбрасывает то, чего у
  * нового события нет: действия, которые на нём не работают, роль в броске
- * атаки, получателя, чей ход и формулу Сл. Роль у броска атаки остаётся
- * прежней, а если её не было — берётся роль по умолчанию.
+ * атаки, получателя с его радиусом, шаблон получателей (его ставят только у
+ * «При действии»), чей ход, отдых, снятое состояние, шаг пути и формулу Сл,
+ * которая читает урон, если у нового события урона нет: формула по владельцу
+ * работает у любого события. Роль у броска атаки остаётся прежней, а если её
+ * не было — берётся роль по умолчанию.
  *
  * @param trigger строка срабатывания.
  * @param nextEvent новое событие.
@@ -103,7 +156,10 @@ export function writeTriggerEvent(
 ): EffectTrigger {
   const allowedActionTypes = listTriggerActionTypes(layout, nextEvent);
   const { save } = trigger;
-  const dropsDcFormula = !triggerEventAcceptsDcFormula(nextEvent);
+
+  const dropsDcFormula =
+    !triggerEventAcceptsDamageDc(nextEvent)
+    && saveDcFormulaReadsDamage(save?.dcFormula);
 
   return {
     ...trigger,
@@ -112,9 +168,27 @@ export function writeTriggerEvent(
       ? (trigger.role ?? DEFAULT_TRIGGER_ATTACK_ROLE)
       : undefined,
     turnOf: isTurnTriggerEvent(nextEvent) ? trigger.turnOf : undefined,
-    recipient: triggerEventHasOtherParty(nextEvent)
-      ? trigger.recipient
+    restType: triggerEventHasRestType(nextEvent) ? trigger.restType : undefined,
+    conditionKey: triggerEventHasConditionKey(nextEvent)
+      ? trigger.conditionKey
       : undefined,
+    everyFeet: triggerEventHasPathFeet(nextEvent)
+      ? trigger.everyFeet
+      : undefined,
+    // Недоступного получателя новое событие не наследует
+    recipient: buildTriggerRecipientOptions({ ...trigger, event: nextEvent })
+      .map((recipientOption) => recipientOption.value)
+      .find((recipientValue) => recipientValue === trigger.recipient),
+    area:
+      trigger.area && triggerEventAcceptsArea(nextEvent)
+        ? {
+            ...trigger.area,
+            template: triggerEventAcceptsAreaTemplate(nextEvent)
+              ? trigger.area.template
+              : undefined,
+          }
+        : undefined,
+    choice: triggerEventAcceptsChoice(nextEvent) ? trigger.choice : undefined,
     save: save && dropsDcFormula ? omitTriggerSaveDcFormula(save) : save,
     actions: trigger.actions.filter((action) =>
       allowedActionTypes.includes(action.type),

@@ -10,7 +10,7 @@ export const YANDEX_METRIKA_INIT_METHOD = 'init';
 /** Метод Метрики, отправляющий просмотр страницы */
 export const YANDEX_METRIKA_HIT_METHOD = 'hit';
 
-/** Метод остановки счётчика после отзыва согласия. */
+/** Метод остановки счётчика при завершении работы приложения. */
 export const YANDEX_METRIKA_DESTRUCT_METHOD = 'destruct';
 
 /**

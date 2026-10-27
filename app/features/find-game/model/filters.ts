@@ -7,7 +7,6 @@ import type {
   GameDurationType,
   GameFilterChip,
   GameSearchFilter,
-  GameStatus,
   GameSystem,
   GameSystemOption,
   GameType,
@@ -27,7 +26,6 @@ import {
   CATALOG_FILTER_MAX_SEATS_TO_START_LABEL,
   CATALOG_FILTER_MIN_AGE_LABEL,
   CATALOG_FILTER_SEATS_TO_START_MIN,
-  CATALOG_FILTER_STATUS_LABEL,
   CATALOG_FILTER_SYSTEM_LABEL,
   CATALOG_FILTER_TYPE_LABEL,
   FAVORITE_GAMES_TAB_LABEL,
@@ -42,8 +40,6 @@ import {
   GAME_FIELD_CITY_LABEL,
   GAME_FIELD_CUSTOM_GENRE_LABEL,
   GAME_PLAYERS_MAX,
-  GAME_STATUS_LABELS,
-  GAME_STATUSES,
   GAME_TYPE_LABELS,
   GAME_TYPES,
 } from './constants';
@@ -170,8 +166,6 @@ export function createEmptyGameFilter(): GameSearchFilter {
     excludeDurationType: [],
     costType: [],
     excludeCostType: [],
-    status: [],
-    excludeStatus: [],
     city: [],
     crossplayAllowed: null,
     minAge: null,
@@ -224,14 +218,6 @@ export function parseGameFilterFromQuery(
       readQueryValues(query.excludeCostType),
       GAME_COST_TYPES,
     ),
-    status: readEnumValues<GameStatus>(
-      readQueryValues(query.status),
-      GAME_STATUSES,
-    ),
-    excludeStatus: readEnumValues<GameStatus>(
-      readQueryValues(query.excludeStatus),
-      GAME_STATUSES,
-    ),
     city: [...new Set(readQueryValues(query.city))],
     crossplayAllowed: readTriStateFlag(query.crossplayAllowed),
     minAge,
@@ -277,8 +263,6 @@ const LIST_FILTER_KEYS = [
   'excludeDurationType',
   'costType',
   'excludeCostType',
-  'status',
-  'excludeStatus',
   'city',
 ] as const satisfies ReadonlyArray<keyof GameSearchFilter>;
 
@@ -402,15 +386,6 @@ interface PlainGroupEntry {
   name: string;
   selected: boolean;
 }
-
-/**
- * Статусы, по которым отбирается каталог. Отменённая игра в выдачу не
- * попадает вовсе: отбор по ней дал бы пустой каталог, а не «покажи
- * отменённые».
- */
-const CATALOG_STATUS_OPTIONS = GAME_STATUSES.filter(
-  (status) => status !== 'CANCELLED',
-);
 
 /**
  * Строит группу «искать — исключить» из двух половин фильтра.
@@ -606,13 +581,6 @@ export function toGameFilterGroups(
       GAME_COST_TYPE_LABELS,
       { included: filter.costType, excluded: filter.excludeCostType },
     ),
-    toChoiceGroup(
-      CATALOG_FILTER_GROUP_KEYS.status,
-      CATALOG_FILTER_STATUS_LABEL,
-      CATALOG_STATUS_OPTIONS,
-      GAME_STATUS_LABELS,
-      { included: filter.status, excluded: filter.excludeStatus },
-    ),
     toPlainGroup(
       CATALOG_FILTER_GROUP_KEYS.crossplay,
       CATALOG_FILTER_CROSSPLAY_LABEL,
@@ -695,12 +663,6 @@ export function applyGameFilterGroups(
     GAME_COST_TYPES,
   );
 
-  const status = readChoiceGroup(
-    groups,
-    CATALOG_FILTER_GROUP_KEYS.status,
-    CATALOG_STATUS_OPTIONS,
-  );
-
   const crossplay = readSelectedIds(
     groups,
     CATALOG_FILTER_GROUP_KEYS.crossplay,
@@ -726,8 +688,6 @@ export function applyGameFilterGroups(
     excludeDurationType: duration.excluded,
     costType: cost.included,
     excludeCostType: cost.excluded,
-    status: status.included,
-    excludeStatus: status.excluded,
     // Отмечены оба варианта или ни одного — условие не задано.
     crossplayAllowed:
       isCrossplayAllowed === isCrossplayForbidden ? null : isCrossplayAllowed,
@@ -827,7 +787,6 @@ export function getGameFilterChips(
   const getSystemLabel = (value: GameSystem) => systemLabels[value] ?? value;
   const getTypeLabel = (value: GameType) => GAME_TYPE_LABELS[value];
   const getCostLabel = (value: GameCostType) => GAME_COST_TYPE_LABELS[value];
-  const getStatusLabel = (value: GameStatus) => GAME_STATUS_LABELS[value];
 
   const getDurationLabel = (value: GameDurationType) =>
     GAME_DURATION_TYPE_LABELS[value];
@@ -865,8 +824,6 @@ export function getGameFilterChips(
       getCostLabel,
       true,
     ),
-    ...toListChips('status', filter.status, getStatusLabel, false),
-    ...toListChips('excludeStatus', filter.excludeStatus, getStatusLabel, true),
     ...toListChips('city', filter.city, getCityLabel, false),
   );
 

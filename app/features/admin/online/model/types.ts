@@ -1,3 +1,5 @@
+import type { AdminStatFigure } from '~admin/dashboard/model';
+
 export interface AdminOnlineCounters {
   guests: number;
   /**
@@ -10,7 +12,24 @@ export interface AdminOnlineCounters {
   total: number;
 }
 
+/** Имя настройки отображения → значение → число уникальных посетителей. */
+export type AdminOnlinePreferenceCounts = Record<
+  string,
+  Record<string, number>
+>;
+
+/** Чем пользовались посетители площадки за последние `days` суток, включая сегодня. */
+export interface AdminOnlinePreferencePeriod {
+  days: number;
+  preferences: AdminOnlinePreferenceCounts;
+}
+
 export interface AdminOnlineSiteStats extends AdminOnlineCounters {
+  /**
+   * Срезы настроек отображения. Поле необязательное: площадки, которые настройки
+   * не шлют, и online-app до обновления его не отдают.
+   */
+  preferences?: AdminOnlinePreferencePeriod[];
   siteId: string;
 }
 
@@ -20,38 +39,44 @@ export interface AdminOnlineStatsResponse {
   windowMinutes: number;
 }
 
-/** Где строку карточки отделяет линия от соседних. */
-export type AdminOnlineSiteCardDivider = 'above' | 'below' | 'none';
-
 /**
- * Строка карточки: подпись слева, число справа. Число уже приведено к строке — без
- * данных там прочерк, шаблону считать нечего.
+ * Плитка площадки: главное число — все посетители, под ним расшифровка. Площадка
+ * известна всегда (в каркасе — из констант), а числа без данных — прочерки.
  */
-export interface AdminOnlineSiteCardRow {
-  divider: AdminOnlineSiteCardDivider;
-  /** Итог площадки — крупнее остальных строк. */
-  isTotal: boolean;
-  label: string;
-  value: string;
-}
-
-/**
- * Карточка сетки: площадка известна всегда (в каркасе — из констант), а набор строк
- * зависит от площадки — у приложения и у сайтов считаются разные вещи.
- */
-export interface AdminOnlineSiteCard {
-  rows: AdminOnlineSiteCardRow[];
+export interface AdminOnlineSiteTile {
+  figures: Array<AdminStatFigure>;
   siteId: string;
-  siteLabel: string;
+  value: string;
 }
 
 /**
- * Плитка карточки приложения: короткая подпись, число и расшифровка для подсказки.
- * Число уже приведено к строке — без данных там прочерк.
+ * Строка варианта настройки: подпись, число с долей и сама доля в процентах — для
+ * полосы. Без данных вместо числа прочерк, а доля нулевая.
  */
-export interface AdminOnlineAppTile {
-  /** Что за число: разворачивается в подсказке при наведении */
-  hint: string;
+export interface AdminOnlinePreferenceRow {
+  label: string;
+  /** Доля варианта от итога настройки, 0–100 */
+  share: number;
+  value: string;
+}
+
+/** Сводка одной настройки за период: варианты и итог. */
+export interface AdminOnlinePreferenceSummary {
+  name: string;
+  rows: Array<AdminOnlinePreferenceRow>;
+  title: string;
+  total: string;
+}
+
+/** Вариант настройки отображения, который панель знает в лицо. */
+export interface AdminOnlinePreferenceOption {
   label: string;
   value: string;
+}
+
+/** Настройка отображения и её известные варианты. */
+export interface AdminOnlinePreferenceSection {
+  name: string;
+  options: ReadonlyArray<AdminOnlinePreferenceOption>;
+  title: string;
 }

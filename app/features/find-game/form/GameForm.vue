@@ -5,8 +5,11 @@
 
   import { StatusCodes } from 'http-status-codes';
 
+  import { useIsSubscriber } from '~profile/activation/composables';
   import { MarkupEditor } from '~ui/markup-editor';
   import { UploadImage } from '~ui/upload';
+  import { VTTG_SUBSCRIPTION_LIMIT_ACTION } from '~vttg/model';
+  import { VttgSubscriptionLimitHint } from '~vttg/ui';
 
   import {
     useCityDictionary,
@@ -63,9 +66,11 @@
     GAME_FIELD_MAX_AGE_LABEL,
     GAME_FIELD_MAX_PLAYERS_HINT,
     GAME_FIELD_MAX_PLAYERS_LABEL,
+    GAME_FIELD_MAX_PLAYERS_LIMIT_HINT,
     GAME_FIELD_MIN_AGE_LABEL,
     GAME_FIELD_ONLINE_PLATFORM_LABEL,
     GAME_FIELD_PLAYERS_TO_START_LABEL,
+    GAME_FIELD_PRICE_LABEL,
     GAME_FIELD_REQUIREMENTS_LABEL,
     GAME_FIELD_REQUIREMENTS_PLACEHOLDER,
     GAME_FIELD_STARTING_LEVEL_LABEL,
@@ -103,6 +108,7 @@
     GAME_LINKS_TITLE,
     GAME_ONLINE_PLATFORM_LABELS,
     GAME_ONLINE_PLATFORMS,
+    GAME_PLAYERS_FREE_MAX,
     GAME_PLAYERS_MAX,
     GAME_PLAYERS_MIN,
     GAME_REQUIREMENTS_MAX_LENGTH,
@@ -119,6 +125,17 @@
     getFindGameErrorMessage,
     getFindGameStatus,
     normalizeGenres,
+    SESSION_CURRENCY_LABEL,
+    SESSION_CURRENCY_OPTIONS,
+    SESSION_CURRENCY_PLACEHOLDER,
+    SESSION_DEFAULT_CURRENCY,
+    SESSION_DEFAULT_PAYMENT_TYPE,
+    SESSION_PAYMENT_TYPE_LABEL,
+    SESSION_PAYMENT_TYPE_LABELS,
+    SESSION_PAYMENT_TYPES,
+    SESSION_PRICE_FORMAT,
+    SESSION_PRICE_MIN,
+    SESSION_PRICE_STEP,
     updateGame,
   } from '../model';
   import { GameCover } from '../ui';
@@ -180,6 +197,9 @@
       durationType: 'CAMPAIGN',
       costType: 'FREE',
       visibility: 'PUBLIC',
+      priceAmount: null,
+      priceCurrency: SESSION_DEFAULT_CURRENCY,
+      paymentType: SESSION_DEFAULT_PAYMENT_TYPE,
     };
   }
 
@@ -224,6 +244,10 @@
       durationType: source.durationType,
       costType: source.costType,
       visibility: source.visibility,
+      // У игры, заведённой до цены по умолчанию, её нет: мастер дозаполнит.
+      priceAmount: source.priceAmount,
+      priceCurrency: source.priceCurrency ?? SESSION_DEFAULT_CURRENCY,
+      paymentType: source.paymentType ?? SESSION_DEFAULT_PAYMENT_TYPE,
     };
   }
 
@@ -234,6 +258,18 @@
   const isSaving = ref(false);
   const submitError = ref<string | null>(null);
   const isLimitReached = ref(false);
+
+  // Лимиты без подписки: игр у мастера и игроков за столом. Подписчику
+  // подсказку об оформлении не показываем — он уже на расширенном лимите.
+  const isSubscriber = useIsSubscriber();
+
+  const limitAlertActions = computed(() =>
+    isSubscriber.value ? [] : [VTTG_SUBSCRIPTION_LIMIT_ACTION],
+  );
+
+  const isOverFreePlayers = computed(
+    () => !isSubscriber.value && form.value.maxPlayers > GAME_PLAYERS_FREE_MAX,
+  );
 
   // Пока файл жмётся и льётся в S3, публикацию держим закрытой: иначе игра
   // сохранится без «догоняющей» обложки.
@@ -410,6 +446,15 @@
 
   const costItems = toSelectItems(GAME_COST_TYPES, GAME_COST_TYPE_LABELS);
 
+  const paymentTypeItems = toSelectItems(
+    SESSION_PAYMENT_TYPES,
+    SESSION_PAYMENT_TYPE_LABELS,
+  );
+
+  // Цену за сессию спрашиваем только у платной игры: у бесплатной сервис
+  // платёжные поля отвергает.
+  const isPaid = computed(() => form.value.costType === 'PAID');
+
   const visibilityItems = toSelectItems(
     GAME_VISIBILITIES,
     GAME_VISIBILITY_LABELS,
@@ -534,6 +579,16 @@
       request.maxAge = state.maxAge;
     }
 
+    // Цена уходит только у платной игры; пустую сумму ловит проверка схемой.
+    if (isPaid.value) {
+      if (state.priceAmount !== null) {
+        request.priceAmount = state.priceAmount;
+      }
+
+      request.priceCurrency = state.priceCurrency.toUpperCase();
+      request.paymentType = state.paymentType;
+    }
+
     return request;
   }
 
@@ -598,6 +653,7 @@
         icon="tabler:alert-triangle"
         :title="submitError ?? ''"
         :description="GAME_FORM_LIMIT_HINT"
+        :actions="limitAlertActions"
       />
 
       <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start">
@@ -821,6 +877,51 @@
                 />
               </UFormField>
 
+              <template v-if="isPaid">
+                <UFormField
+                  name="priceAmount"
+                  data-game-field="priceAmount"
+                  :label="GAME_FIELD_PRICE_LABEL"
+                  required
+                >
+                  <UInputNumber
+                    v-model="form.priceAmount"
+                    :min="SESSION_PRICE_MIN"
+                    :step="SESSION_PRICE_STEP"
+                    :format-options="SESSION_PRICE_FORMAT"
+                    class="w-full"
+                  />
+                </UFormField>
+
+                <UFormField
+                  name="priceCurrency"
+                  data-game-field="priceCurrency"
+                  :label="SESSION_CURRENCY_LABEL"
+                  required
+                >
+                  <USelectMenu
+                    v-model="form.priceCurrency"
+                    value-key="value"
+                    :items="SESSION_CURRENCY_OPTIONS"
+                    :placeholder="SESSION_CURRENCY_PLACEHOLDER"
+                    class="w-full"
+                  />
+                </UFormField>
+
+                <UFormField
+                  name="paymentType"
+                  data-game-field="paymentType"
+                  :label="SESSION_PAYMENT_TYPE_LABEL"
+                  required
+                >
+                  <USelect
+                    v-model="form.paymentType"
+                    :items="paymentTypeItems"
+                    class="w-full"
+                  />
+                </UFormField>
+              </template>
+
               <UFormField
                 :label="GAME_FIELD_VISIBILITY_LABEL"
                 :help="visibilityHint"
@@ -871,6 +972,15 @@
                   :max="GAME_PLAYERS_MAX"
                   class="w-full"
                 />
+
+                <template
+                  v-if="isOverFreePlayers"
+                  #help
+                >
+                  <VttgSubscriptionLimitHint
+                    :text="GAME_FIELD_MAX_PLAYERS_LIMIT_HINT"
+                  />
+                </template>
               </UFormField>
             </div>
 

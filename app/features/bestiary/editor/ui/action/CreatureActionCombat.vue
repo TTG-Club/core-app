@@ -17,6 +17,7 @@
     CREATURE_DAMAGE_PART_EMPTY,
     CREATURE_SAVE_EFFECT_OPTIONS,
   } from '../../constants';
+  import CreatureDamageAlternatives from './CreatureDamageAlternatives.vue';
 
   const { fieldNamePrefix } = defineProps<{
     /** Приставка имени поля формы — по ней подсвечивается ошибка. */
@@ -70,6 +71,38 @@
   const hasSave = computed(() => saveAbility.value !== undefined);
 
   /**
+   * Автопопадание снимает и бросок атаки, и спасбросок — урон наносится сразу,
+   * как у действия существа в системе VTTG.
+   */
+  const isAutoHit = computed(() => model.value.autoHit);
+
+  /** Бросок атаки не нужен: его заменяет спасбросок или автопопадание. */
+  const isAttackBonusDisabled = computed(
+    () => hasSave.value || isAutoHit.value,
+  );
+
+  /** Подсказка под бонусом атаки: почему он не нужен или каким его вводить. */
+  const attackBonusHelp = computed(() => {
+    if (isAutoHit.value) {
+      return CREATURE_ACTION_LABELS.attackBonusAutoHit;
+    }
+
+    return hasSave.value
+      ? CREATURE_ACTION_LABELS.attackBonusReplaced
+      : CREATURE_ACTION_LABELS.attackBonusHint;
+  });
+
+  /** Поля спасброска: при автопопадании цель не защищается. */
+  const saveAbilityHelp = computed(() =>
+    isAutoHit.value ? CREATURE_ACTION_LABELS.saveAutoHit : undefined,
+  );
+
+  /** Сл и исход спасброска: без спасброска или при автопопадании не нужны. */
+  const isSaveDetailsDisabled = computed(
+    () => !hasSave.value || isAutoHit.value,
+  );
+
+  /**
    * Сколько частей механики заполнено — числом в шапке раздела. Раздел
    * сворачивается вместе с записью, и без бейджа заведённая механика ничем не
    * отличалась бы от пустой.
@@ -77,6 +110,9 @@
   const filledCount = computed(() =>
     getCreatureActionCombatFilledCount(model.value),
   );
+
+  /** Задана ли область: у атаки по области одной цели нет. */
+  const hasArea = computed(() => Boolean(model.value.areaOfEffect.type));
 
   /** Второе значение области: только у линии (ширина) и цилиндра (высота). */
   const areaSecondLabel = computed(() => {
@@ -109,18 +145,23 @@
       <UFormField
         class="col-span-full md:col-span-8"
         :label="CREATURE_ACTION_LABELS.attackBonus"
-        :help="
-          hasSave
-            ? CREATURE_ACTION_LABELS.attackBonusReplaced
-            : CREATURE_ACTION_LABELS.attackBonusHint
-        "
+        :help="attackBonusHelp"
         :name="`${fieldNamePrefix}.attackBonus`"
       >
         <UInputNumber
           v-model="model.attackBonus"
-          :disabled="hasSave"
+          :disabled="isAttackBonusDisabled"
           :placeholder="CREATURE_ACTION_LABELS.attackBonusPlaceholder"
         />
+      </UFormField>
+
+      <UFormField
+        class="col-span-full md:col-span-8"
+        :label="CREATURE_ACTION_LABELS.autoHit"
+        :help="CREATURE_ACTION_LABELS.autoHitHint"
+        :name="`${fieldNamePrefix}.autoHit`"
+      >
+        <USwitch v-model="model.autoHit" />
       </UFormField>
 
       <UFormField
@@ -136,7 +177,7 @@
       </UFormField>
 
       <UFormField
-        class="col-span-full md:col-span-12"
+        class="col-span-full md:col-span-8"
         :label="CREATURE_ACTION_LABELS.rangeNormal"
         :name="`${fieldNamePrefix}.rangeNormal`"
       >
@@ -148,7 +189,7 @@
       </UFormField>
 
       <UFormField
-        class="col-span-full md:col-span-12"
+        class="col-span-full md:col-span-8"
         :label="CREATURE_ACTION_LABELS.rangeLong"
         :name="`${fieldNamePrefix}.rangeLong`"
       >
@@ -162,10 +203,12 @@
       <UFormField
         class="col-span-full md:col-span-8"
         :label="CREATURE_ACTION_LABELS.saveAbility"
+        :help="saveAbilityHelp"
         :name="`${fieldNamePrefix}.savingThrows`"
       >
         <SelectAbilities
           v-model="saveAbility"
+          :disabled="isAutoHit"
           :placeholder="CREATURE_ACTION_LABELS.saveAbilityPlaceholder"
         />
       </UFormField>
@@ -178,7 +221,7 @@
         <UInputNumber
           v-model="saveDc"
           :min="0"
-          :disabled="!hasSave"
+          :disabled="isSaveDetailsDisabled"
           :placeholder="CREATURE_ACTION_LABELS.saveDcPlaceholder"
         />
       </UFormField>
@@ -191,7 +234,7 @@
         <USelect
           v-model="model.saveEffect"
           :items="CREATURE_SAVE_EFFECT_OPTIONS"
-          :disabled="!hasSave"
+          :disabled="isSaveDetailsDisabled"
           :placeholder="CREATURE_ACTION_LABELS.saveEffectPlaceholder"
           clearable
         />
@@ -240,6 +283,16 @@
         :damage-types-pending="damageTypesPending"
         :empty-label="CREATURE_DAMAGE_PART_EMPTY"
         :field-name-prefix="`${fieldNamePrefix}.damageParts`"
+      />
+
+      <!-- Урон «или»: наборы частей, целиком заменяющие основной -->
+      <CreatureDamageAlternatives
+        v-model="model.damageAlternatives"
+        :base-parts="model.damageParts"
+        :has-area="hasArea"
+        :damage-type-options="damageTypeOptions"
+        :damage-types-pending="damageTypesPending"
+        :field-name-prefix="fieldNamePrefix"
       />
     </div>
   </EditorNestedSection>

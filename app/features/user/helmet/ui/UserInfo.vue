@@ -19,7 +19,7 @@
   // Аватарка из профиля; без неё UAvatar рисует инициалы.
   const avatarImageUrl = computed(() => props.user.avatarUrl ?? undefined);
 
-  // Данные бейджей прогреваются заранее в хелмете (см. UserHelmet), поэтому к
+  // Данные бейджей прогреваются заранее в меню шлема (см. UserMenu), поэтому к
   // моменту открытия панели корона и рамка уже готовы — без «доезда».
   const { hasAvatarFrame, isSubscriptionActive, frameImageUrl } =
     useProfileBadges();

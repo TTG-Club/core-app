@@ -1,51 +1,55 @@
 <script setup lang="ts">
   import type { AdminCharacterSheetStats } from '~admin/character-sheets/model';
   import type { AdminOnlineStatsResponse } from '~admin/online/model';
+  import type { AdminSubscription } from '~admin/subscription-stats/model';
 
+  import { FetchStatus } from '~/shared/consts';
   import {
     ADMIN_SHEET_STATS_API_URL,
     ADMIN_SHEET_STATS_DATA_KEY,
     parseAdminCharacterSheetStats,
   } from '~admin/character-sheets/model';
-  import { AdminCharacterSheetStatsCard } from '~admin/character-sheets/ui';
+  import { AdminCharacterSheetStatsTile } from '~admin/character-sheets/ui';
   import {
-    ADMIN_DASHBOARD_ARTICLES_ACTION_LABEL,
-    ADMIN_DASHBOARD_ARTICLES_DESCRIPTION,
-    ADMIN_DASHBOARD_ARTICLES_TITLE,
-    ADMIN_DASHBOARD_CONFIGURE_LABEL,
     ADMIN_DASHBOARD_PAGE_TITLE,
-    ADMIN_DASHBOARD_PERSONAS_DESCRIPTION,
-    ADMIN_DASHBOARD_PERSONAS_TITLE,
-    ADMIN_DASHBOARD_SUBSCRIPTIONS_DESCRIPTION,
-    ADMIN_DASHBOARD_SUBSCRIPTIONS_TITLE,
-    ADMIN_DASHBOARD_TOKENATOR_DESCRIPTION,
-    ADMIN_DASHBOARD_TOKENATOR_TITLE,
+    ADMIN_DASHBOARD_REFRESH_ICON,
+    ADMIN_DASHBOARD_REFRESH_LABEL,
+    ADMIN_DASHBOARD_SECTIONS_TITLE,
+    ADMIN_DASHBOARD_STATS_TITLE,
+    ADMIN_DASHBOARD_TOTALS_TITLE,
   } from '~admin/dashboard/model';
+  import { AdminDashboardPanel, AdminSectionGroup } from '~admin/dashboard/ui';
   import {
-    HOME_HERO_ADMIN_PAGE_DESCRIPTION,
-    HOME_HERO_ADMIN_PAGE_TITLE,
-    HOME_HERO_ADMIN_ROUTE,
-  } from '~admin/home-hero/model';
+    ADMIN_GAME_STATISTICS_API_URL,
+    ADMIN_GAME_STATISTICS_DATA_KEY,
+    ADMIN_GAME_STATISTICS_REQUEST_TIMEOUT,
+    parseAdminGameStatistics,
+  } from '~admin/games/model';
+  import { AdminGameStatisticsTile } from '~admin/games/ui';
   import {
-    MAILING_PAGE_DESCRIPTION,
-    MAILING_PAGE_TITLE,
-    MAILING_ROUTE,
-  } from '~admin/mailing/model';
+    ADMIN_CONTENT_SECTION_GROUP,
+    ADMIN_TOOLS_SECTION_GROUP,
+    ADMIN_USERS_SECTION_GROUP,
+    ADMIN_VTTG_SECTION_GROUP,
+  } from '~admin/navigation/model';
   import {
     ADMIN_ONLINE_STATS_API_URL,
     ADMIN_ONLINE_STATS_DATA_KEY,
     parseAdminOnlineStats,
   } from '~admin/online/model';
-  import { AdminOnlineStats } from '~admin/online/ui';
   import {
-    ADMIN_USERS_CONFIGURE_LABEL,
-    ADMIN_USERS_NAVIGATION_LABEL,
-    ADMIN_USERS_PAGE_DESCRIPTION,
-  } from '~admin/users/model';
+    AdminOnlinePreferencesPanel,
+    AdminOnlineSitesPanel,
+    AdminOnlineSummary,
+    AdminOnlineVttgPanel,
+  } from '~admin/online/ui';
   import {
-    ARTICLES_ADMIN_CREATE_ROUTE,
-    ARTICLES_ADMIN_ROUTE,
-  } from '~articles/model';
+    parseAdminSubscriptions,
+    SUBSCRIPTION_STATS_SUBSCRIPTIONS_API_PATH,
+    SUBSCRIPTION_STATS_SUBSCRIPTIONS_DATA_KEY,
+  } from '~admin/subscription-stats/model';
+  import { AdminSubscribersTile } from '~admin/subscription-stats/ui';
+  import { SubscriptionSalesSwitch } from '~admin/subscriptions/ui';
 
   const {
     data: onlineStats,
@@ -87,6 +91,13 @@
 
   const resolvedOnlineStats = computed(() => onlineStats.value ?? null);
 
+  // Скелетон только пока ответа ждём: после ошибки ждать нечего — там прочерки.
+  const isOnlineStatsPending = computed(
+    () =>
+      isOnlineStatsLoading.value
+      || (!hasOnlineStatsError.value && !resolvedOnlineStats.value),
+  );
+
   // Статус 'idle' (запрос ещё не стартовал на сервере и в первом клиентском рендере)
   // сюда не берём — иначе кнопка «Обновить» уезжала бы в SSR-разметку со спиннером.
   // Скелетон в это время держит сама карточка: данных ещё нет.
@@ -98,15 +109,75 @@
 
   const resolvedSheetStats = computed(() => sheetStats.value ?? null);
 
+  const {
+    data: gameStatistics,
+    error: gameStatisticsError,
+    refresh: refreshGameStatistics,
+    status: gameStatisticsStatus,
+  } = await useFetch(ADMIN_GAME_STATISTICS_API_URL, {
+    key: ADMIN_GAME_STATISTICS_DATA_KEY,
+    server: false,
+    lazy: true,
+    timeout: ADMIN_GAME_STATISTICS_REQUEST_TIMEOUT,
+    transform: parseAdminGameStatistics,
+  });
+
+  const isGameStatisticsLoading = computed(
+    () => gameStatisticsStatus.value === FetchStatus.Pending,
+  );
+
+  const hasGameStatisticsError = computed(() => !!gameStatisticsError.value);
+
+  const resolvedGameStatistics = computed(() => gameStatistics.value ?? null);
+
+  // Тот же ключ и те же опции, что на странице статистики подписок: при
+  // переходе туда список уже в кэше и не грузится заново.
+  const {
+    data: subscriptions,
+    error: subscriptionsError,
+    refresh: refreshSubscriptions,
+    status: subscriptionsStatus,
+  } = await useAsyncData<AdminSubscription[]>(
+    SUBSCRIPTION_STATS_SUBSCRIPTIONS_DATA_KEY,
+    async () =>
+      parseAdminSubscriptions(
+        await requestFetch(SUBSCRIPTION_STATS_SUBSCRIPTIONS_API_PATH),
+      ),
+    { default: () => [], server: false, lazy: true },
+  );
+
+  const isSubscriptionsLoading = computed(
+    () => subscriptionsStatus.value === FetchStatus.Pending,
+  );
+
+  // Пустой список по умолчанию не отличить от «подписок нет», поэтому плитка
+  // ждёт и в 'idle': на клиенте запрос стартует после первого рендера.
+  const isSubscriptionsPending = computed(
+    () =>
+      isSubscriptionsLoading.value
+      || subscriptionsStatus.value === FetchStatus.Idle,
+  );
+
+  const hasSubscriptionsError = computed(() => !!subscriptionsError.value);
+
   const isStatsLoading = computed(
-    () => isOnlineStatsLoading.value || isSheetStatsLoading.value,
+    () =>
+      isOnlineStatsLoading.value
+      || isSheetStatsLoading.value
+      || isGameStatisticsLoading.value
+      || isSubscriptionsLoading.value,
   );
 
   /**
-   * Обновляет обе статистики блока — кнопка «Обновить» в шапке одна на всю секцию.
+   * Обновляет все показатели общей кнопкой в заголовке статистики.
    */
   async function handleStatsRefresh(): Promise<void> {
-    await Promise.all([refreshOnlineStats(), refreshSheetStats()]);
+    await Promise.all([
+      refreshOnlineStats(),
+      refreshSheetStats(),
+      refreshGameStatistics(),
+      refreshSubscriptions(),
+    ]);
   }
 </script>
 
@@ -115,193 +186,99 @@
     name="detail"
     :title="ADMIN_DASHBOARD_PAGE_TITLE"
   >
-    <div class="space-y-8">
-      <AdminOnlineStats
-        :stats="resolvedOnlineStats"
-        :is-loading="isStatsLoading"
-        :has-error="hasOnlineStatsError"
-        @refresh="handleStatsRefresh"
-      >
-        <ClientOnly>
-          <AdminCharacterSheetStatsCard
-            :stats="resolvedSheetStats"
-            :is-loading="isSheetStatsLoading"
-            :has-error="hasSheetStatsError"
+    <div class="space-y-6">
+      <section class="space-y-3">
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <h2 class="text-sm font-semibold text-muted">
+            {{ ADMIN_DASHBOARD_STATS_TITLE }}
+          </h2>
+
+          <AdminOnlineSummary
+            :stats="resolvedOnlineStats"
+            :is-pending="isOnlineStatsPending"
           />
 
-          <template #fallback>
-            <AdminCharacterSheetStatsCard
-              :stats="null"
-              is-loading
-              :has-error="false"
-            />
-          </template>
-        </ClientOnly>
-      </AdminOnlineStats>
+          <UButton
+            :icon="ADMIN_DASHBOARD_REFRESH_ICON"
+            color="neutral"
+            variant="ghost"
+            size="xs"
+            class="ml-auto"
+            :loading="isStatsLoading"
+            @click.left.exact.prevent="handleStatsRefresh"
+          >
+            {{ ADMIN_DASHBOARD_REFRESH_LABEL }}
+          </UButton>
+        </div>
 
-      <div
-        class="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-4 sm:grid-cols-[repeat(auto-fit,minmax(360px,1fr))]"
-      >
-        <UCard variant="subtle">
-          <template #header>
-            <div class="flex items-center justify-between gap-2">
-              <h2 class="truncate text-base text-highlighted">
-                {{ ADMIN_DASHBOARD_TOKENATOR_TITLE }}
-              </h2>
+        <div class="grid gap-3 lg:grid-cols-2">
+          <AdminOnlineSitesPanel
+            :stats="resolvedOnlineStats"
+            :is-pending="isOnlineStatsPending"
+            :has-error="hasOnlineStatsError"
+          />
 
-              <UButton
-                size="sm"
-                to="/admin/tokenator"
-              >
-                {{ ADMIN_DASHBOARD_CONFIGURE_LABEL }}
-              </UButton>
-            </div>
-          </template>
+          <AdminDashboardPanel :title="ADMIN_DASHBOARD_TOTALS_TITLE">
+            <div class="grid h-full grid-cols-3 divide-x divide-default">
+              <ClientOnly>
+                <AdminCharacterSheetStatsTile
+                  :stats="resolvedSheetStats"
+                  :is-loading="isSheetStatsLoading"
+                  :has-error="hasSheetStatsError"
+                />
 
-          <div class="text-sm text-muted">
-            {{ ADMIN_DASHBOARD_TOKENATOR_DESCRIPTION }}
-          </div>
-        </UCard>
-
-        <UCard variant="subtle">
-          <template #header>
-            <div class="flex items-center justify-between gap-2">
-              <h2 class="truncate text-base text-highlighted">
-                {{ ADMIN_DASHBOARD_PERSONAS_TITLE }}
-              </h2>
-
-              <UButton
-                size="sm"
-                to="/admin/personas"
-              >
-                {{ ADMIN_DASHBOARD_CONFIGURE_LABEL }}
-              </UButton>
-            </div>
-          </template>
-
-          <div class="text-sm text-muted">
-            {{ ADMIN_DASHBOARD_PERSONAS_DESCRIPTION }}
-          </div>
-        </UCard>
-
-        <UCard variant="subtle">
-          <template #header>
-            <div class="flex items-center justify-between gap-2">
-              <h2 class="truncate text-base text-highlighted">
-                {{ ADMIN_USERS_NAVIGATION_LABEL }}
-              </h2>
-
-              <UButton
-                size="sm"
-                to="/admin/users"
-              >
-                {{ ADMIN_USERS_CONFIGURE_LABEL }}
-              </UButton>
-            </div>
-          </template>
-
-          <div class="text-sm text-muted">
-            {{ ADMIN_USERS_PAGE_DESCRIPTION }}
-          </div>
-        </UCard>
-
-        <UCard variant="subtle">
-          <template #header>
-            <div class="flex items-center justify-between gap-2">
-              <h2 class="truncate text-base text-highlighted">
-                {{ ADMIN_DASHBOARD_SUBSCRIPTIONS_TITLE }}
-              </h2>
-
-              <UButton
-                size="sm"
-                to="/admin/subscriptions"
-              >
-                {{ ADMIN_DASHBOARD_CONFIGURE_LABEL }}
-              </UButton>
-            </div>
-          </template>
-
-          <div class="text-sm text-muted">
-            {{ ADMIN_DASHBOARD_SUBSCRIPTIONS_DESCRIPTION }}
-          </div>
-        </UCard>
-
-        <UCard variant="subtle">
-          <template #header>
-            <div class="flex items-center justify-between gap-2">
-              <h2 class="truncate text-base text-highlighted">
-                {{ ADMIN_DASHBOARD_ARTICLES_TITLE }}
-              </h2>
-
-              <div class="flex shrink-0 items-center gap-2">
-                <UButton
-                  size="sm"
-                  color="neutral"
-                  variant="subtle"
-                  :to="ARTICLES_ADMIN_ROUTE"
-                >
-                  {{ ADMIN_DASHBOARD_CONFIGURE_LABEL }}
-                </UButton>
-
-                <UTooltip :text="ADMIN_DASHBOARD_ARTICLES_ACTION_LABEL">
-                  <UButton
-                    size="sm"
-                    icon="tabler:plus"
-                    :to="ARTICLES_ADMIN_CREATE_ROUTE"
-                    :aria-label="ADMIN_DASHBOARD_ARTICLES_ACTION_LABEL"
+                <template #fallback>
+                  <AdminCharacterSheetStatsTile
+                    :stats="null"
+                    is-loading
+                    :has-error="false"
                   />
-                </UTooltip>
-              </div>
+                </template>
+              </ClientOnly>
+
+              <AdminGameStatisticsTile
+                :statistics="resolvedGameStatistics"
+                :is-loading="isGameStatisticsLoading"
+                :has-error="hasGameStatisticsError"
+              />
+
+              <AdminSubscribersTile
+                :subscriptions="subscriptions"
+                :is-pending="isSubscriptionsPending"
+                :has-error="hasSubscriptionsError"
+              />
             </div>
-          </template>
+          </AdminDashboardPanel>
 
-          <div class="text-sm text-muted">
-            {{ ADMIN_DASHBOARD_ARTICLES_DESCRIPTION }}
-          </div>
-        </UCard>
+          <AdminOnlineVttgPanel
+            :stats="resolvedOnlineStats"
+            :is-pending="isOnlineStatsPending"
+          />
 
-        <UCard variant="subtle">
-          <template #header>
-            <div class="flex items-center justify-between gap-2">
-              <h2 class="truncate text-base text-highlighted">
-                {{ HOME_HERO_ADMIN_PAGE_TITLE }}
-              </h2>
+          <AdminOnlinePreferencesPanel
+            :stats="resolvedOnlineStats"
+            :is-pending="isOnlineStatsPending"
+          />
+        </div>
+      </section>
 
-              <UButton
-                size="sm"
-                :to="HOME_HERO_ADMIN_ROUTE"
-              >
-                {{ ADMIN_DASHBOARD_CONFIGURE_LABEL }}
-              </UButton>
-            </div>
-          </template>
+      <section class="space-y-3">
+        <h2 class="text-sm font-semibold text-muted">
+          {{ ADMIN_DASHBOARD_SECTIONS_TITLE }}
+        </h2>
 
-          <div class="text-sm text-muted">
-            {{ HOME_HERO_ADMIN_PAGE_DESCRIPTION }}
-          </div>
-        </UCard>
+        <div class="grid items-start gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <AdminSectionGroup :group="ADMIN_USERS_SECTION_GROUP">
+            <SubscriptionSalesSwitch />
+          </AdminSectionGroup>
 
-        <UCard variant="subtle">
-          <template #header>
-            <div class="flex items-center justify-between gap-2">
-              <h2 class="truncate text-base text-highlighted">
-                {{ MAILING_PAGE_TITLE }}
-              </h2>
+          <AdminSectionGroup :group="ADMIN_CONTENT_SECTION_GROUP" />
 
-              <UButton
-                size="sm"
-                :to="MAILING_ROUTE"
-              >
-                {{ ADMIN_DASHBOARD_CONFIGURE_LABEL }}
-              </UButton>
-            </div>
-          </template>
+          <AdminSectionGroup :group="ADMIN_TOOLS_SECTION_GROUP" />
 
-          <div class="text-sm text-muted">
-            {{ MAILING_PAGE_DESCRIPTION }}
-          </div>
-        </UCard>
-      </div>
+          <AdminSectionGroup :group="ADMIN_VTTG_SECTION_GROUP" />
+        </div>
+      </section>
     </div>
   </NuxtLayout>
 </template>

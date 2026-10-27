@@ -10,7 +10,6 @@
   } from '../../composables';
   import {
     GAME_COST_TYPE_ICONS,
-    GAME_COST_TYPE_LABELS,
     GAME_COVER_BADGE_CLASS,
     GAME_COVER_COST_ICON_CLASS,
     GAME_COVER_STATUS_DOT_CLASSES,
@@ -20,14 +19,14 @@
     GAME_NEXT_SESSION_SHORT_LABEL,
     GAME_SEATS_LABEL,
     GAME_SEATS_MAX_ICONS,
-    GAME_STATUS_COLORS,
-    GAME_STATUS_LABELS,
     GAME_TYPE_ICONS,
     GAME_VISIBILITY_LABELS,
+    getGameCardPriceLabel,
     getGameFormatSummary,
     getGameRoute,
     getGameSeatsCounter,
     getGameSeatsHint,
+    getGameStateBadge,
     getGenresLabel,
     MASTER_PROFILE_OPEN_HINT,
     SESSION_REGISTRATION_STATUS_COLORS,
@@ -71,7 +70,10 @@
    */
   const costBadgeIcon = computed(() => GAME_COST_TYPE_ICONS[game.costType]);
 
-  const costLabel = computed(() => GAME_COST_TYPE_LABELS[game.costType]);
+  /**
+   * У платной игры вместо «Платно» — цена за сессию, если мастер её указал.
+   */
+  const costLabel = computed(() => getGameCardPriceLabel(game));
 
   /**
    * Состояние игры — столбиком в углу обложки напротив формата. В каталоге
@@ -83,12 +85,13 @@
       return [];
     }
 
+    const stateBadge = getGameStateBadge(game);
+
     const items: Array<StatusBadge> = [
       {
         key: 'status',
-        label: GAME_STATUS_LABELS[game.status],
-        dotClass:
-          GAME_COVER_STATUS_DOT_CLASSES[GAME_STATUS_COLORS[game.status]],
+        label: stateBadge.label,
+        dotClass: GAME_COVER_STATUS_DOT_CLASSES[stateBadge.color],
       },
     ];
 

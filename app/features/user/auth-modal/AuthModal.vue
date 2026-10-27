@@ -67,17 +67,27 @@
 <template>
   <UModal
     v-model:open="opened"
-    class="w-full max-w-sm overflow-hidden md:max-w-163"
+    class="w-full max-w-sm overflow-hidden md:max-w-176"
   >
     <template #content>
-      <div class="flex items-center">
-        <img
-          class="hidden w-55 shrink-0 object-cover md:block"
-          alt="auth-background-image"
-          src="/img/bg-login.png"
-        />
+      <div class="grid md:min-h-120 md:grid-cols-[15rem_1fr]">
+        <div class="relative hidden md:block">
+          <img
+            class="absolute inset-0 size-full object-cover"
+            alt=""
+            src="/img/bg-login.png"
+          />
 
-        <div class="w-full p-8 md:py-12 md:pr-16 md:pl-6">
+          <div
+            class="absolute inset-0 bg-linear-to-r from-transparent from-55% to-default"
+          />
+
+          <div
+            class="absolute inset-x-0 bottom-0 h-1/3 bg-linear-to-t from-default/90 to-transparent"
+          />
+        </div>
+
+        <div class="flex flex-col justify-center p-8 md:py-10 md:pr-12 md:pl-8">
           <SignIn
             v-if="isSignIn"
             @close="close"
@@ -100,6 +110,7 @@
       <UButton
         class="absolute top-3 right-3"
         icon="tabler:x"
+        color="neutral"
         variant="ghost"
         @click.left.exact.prevent="close"
       />

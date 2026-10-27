@@ -1,0 +1,208 @@
+/**
+ * Кость в значении строки модификатора: где её бросают, а где она не значит
+ * ничего. Зеркало `isRollTimeDiceKey` и `isDiceFormulaValue` из
+ * `effectPipeline.ts` VTTG и проверки значения из `EffectChangeRows.vue`.
+ */
+
+import type { EffectChange } from './types';
+
+import {
+  ACTIVE_EFFECT_LABELS,
+  hasConditionAlternatives,
+  isOptionValueKey,
+  isSneakAttackKey,
+  SNEAK_ATTACK_CUNNING_STRIKE_COUNT_KEY,
+  SNEAK_ATTACK_CUNNING_STRIKE_KEY,
+  SNEAK_ATTACK_DAMAGE_KEY,
+  SNEAK_ATTACK_DICE_KEY,
+  SNEAK_ATTACK_MIN_DIE_KEY,
+  SNEAK_ATTACK_RIDER_KEY,
+  SNEAK_ATTACK_SAVE_DOUBLE_KEY,
+  splitConditionGroups,
+} from './constants';
+import { validateChangeOptionValue } from './weaponOverrides';
+
+/** Ключ «все проверки характеристик (и навыков)». */
+export const ABILITY_CHECK_KEY = 'abilityCheck';
+
+/** Ключ «атаки по носителю: прибавка атакующему». */
+const ATTACKS_AGAINST_KEY = 'attacksAgainst';
+
+/** Ключ спасброска от смерти. */
+const DEATH_SAVE_KEY = 'deathSave';
+
+/** Приставка ключей урона. */
+const DAMAGE_CHANGE_KEY_PREFIX = 'damage.';
+
+/** Приставки ключей, у которых кость катается в самом броске. */
+const ROLL_BONUS_KEY_PREFIXES = ['attack.', 'save.', 'skill.'] as const;
+
+/** Ключ порога крита: его читает бросок атаки. */
+const CRIT_THRESHOLD_KEY = 'critThreshold';
+
+/** Ключ КД: с условием входящей атаки его считает защита. */
+const ARMOR_CLASS_KEY = 'armorClass';
+
+/** Приставка условий входящей атаки. */
+const INCOMING_CONDITION_PREFIX = 'incoming.';
+
+/** Кубиковая нотация в значении строки («2к6», «1d4», «к8»). */
+const DICE_VALUE_REGEX = /\d*\s*[кдd]\s*\d+/i;
+
+/**
+ * Есть ли в значении строки кость, а не только число.
+ *
+ * @param value значение строки модификатора.
+ * @returns `true`, если в значении кубиковая нотация.
+ */
+export function isDiceFormulaValue(value: string): boolean {
+  return DICE_VALUE_REGEX.test(value);
+}
+
+/**
+ * Бросается ли кость в строке с этим ключом: урон, атака, спасбросок, проверка
+ * или навык. У прочих ключей («Класс доспеха», скорость) кость не бросает
+ * никто — такая строка не значит ничего, и форма говорит об этом автору.
+ *
+ * @param key ключ изменения.
+ * @returns `true`, если кость в значении строки катается при броске.
+ */
+export function isRollTimeDiceKey(key: string): boolean {
+  return (
+    key === ATTACKS_AGAINST_KEY
+    || key === SNEAK_ATTACK_DAMAGE_KEY
+    || key === ABILITY_CHECK_KEY
+    || key === DEATH_SAVE_KEY
+    || key.startsWith(DAMAGE_CHANGE_KEY_PREFIX)
+    || ROLL_BONUS_KEY_PREFIXES.some((prefix) => key.startsWith(prefix))
+  );
+}
+
+/**
+ * Кость к броску атаки, спасброска или проверки. У урона кость — отдельная
+ * часть урона, пояснение «бросается заново» к ней не относится.
+ *
+ * @param change строка модификатора.
+ * @returns `true`, если кость катается в самом броске.
+ */
+export function isRollDiceEffectChange(
+  change: Pick<EffectChange, 'key' | 'mode' | 'value'>,
+): boolean {
+  return (
+    !change.key.startsWith(DAMAGE_CHANGE_KEY_PREFIX)
+    && change.key !== SNEAK_ATTACK_DAMAGE_KEY
+    && change.mode === 'add'
+    && isRollTimeDiceKey(change.key)
+    && isDiceFormulaValue(change.value)
+  );
+}
+
+/**
+ * Пояснения к значениям строк Скрытой атаки — зеркало `SNEAK_ATTACK_KEY_HINTS`
+ * VTTG.
+ */
+const SNEAK_ATTACK_KEY_HINTS: Readonly<Record<string, string>> = {
+  [SNEAK_ATTACK_DAMAGE_KEY]: ACTIVE_EFFECT_LABELS.changeSneakAttackDamageHint,
+  [SNEAK_ATTACK_DICE_KEY]: ACTIVE_EFFECT_LABELS.changeSneakAttackDiceHint,
+  [SNEAK_ATTACK_CUNNING_STRIKE_KEY]:
+    ACTIVE_EFFECT_LABELS.changeCunningStrikeHint,
+  [SNEAK_ATTACK_CUNNING_STRIKE_COUNT_KEY]:
+    ACTIVE_EFFECT_LABELS.changeCunningStrikeCountHint,
+  [SNEAK_ATTACK_RIDER_KEY]: ACTIVE_EFFECT_LABELS.changeSneakAttackRiderHint,
+  [SNEAK_ATTACK_MIN_DIE_KEY]: ACTIVE_EFFECT_LABELS.changeSneakAttackMinDieHint,
+  [SNEAK_ATTACK_SAVE_DOUBLE_KEY]:
+    ACTIVE_EFFECT_LABELS.changeSneakAttackSaveDoubleHint,
+};
+
+/**
+ * Пояснение под значением строки: у ключей Скрытой атаки — их правило (раз в
+ * ход, число костей), у кости к броску — «бросается заново». Зеркало
+ * `describeValueHelp` из `EffectChangeRows.vue` VTTG в части, которая есть на
+ * сайте.
+ *
+ * @param change строка модификатора.
+ * @returns текст пояснения либо `undefined`.
+ */
+export function describeEffectChangeValueNote(
+  change: Pick<EffectChange, 'key' | 'mode' | 'value'>,
+): string | undefined {
+  const sneakAttackHint = SNEAK_ATTACK_KEY_HINTS[change.key];
+
+  if (sneakAttackHint) {
+    return sneakAttackHint;
+  }
+
+  return isRollDiceEffectChange(change)
+    ? ACTIVE_EFFECT_LABELS.changeRollDiceHint
+    : undefined;
+}
+
+/**
+ * Ошибка значения строки модификатора. Кость числом не считается: её катает
+ * бросок — если он у ключа вообще есть. Кость в «Классе доспеха» VTTG молча
+ * пропустил бы. Замена свойства оружия и тип урона заклинаний проверяются
+ * своим списком или костью.
+ * Строку без ключа не проверяем: о ней говорит поле ключа.
+ *
+ * @param change строка модификатора.
+ * @returns текст ошибки либо `undefined`.
+ */
+export function describeEffectChangeValueError(
+  change: Pick<EffectChange, 'key' | 'mode' | 'value'>,
+): string | undefined {
+  if (!change.value.trim()) {
+    return ACTIVE_EFFECT_LABELS.changeValueRequired;
+  }
+
+  // Замена свойства оружия и тип урона заклинаний — не формула: кость или
+  // слово из списка
+  if (isOptionValueKey(change.key)) {
+    return validateChangeOptionValue(change.key, change.value);
+  }
+
+  if (!change.key.trim() || !isDiceFormulaValue(change.value)) {
+    return undefined;
+  }
+
+  if (!isRollTimeDiceKey(change.key)) {
+    return ACTIVE_EFFECT_LABELS.changeDiceNotRolledError;
+  }
+
+  return change.mode === 'add'
+    ? undefined
+    : ACTIVE_EFFECT_LABELS.changeDiceModeError;
+}
+
+/**
+ * Предупреждение условия строки: «или» у ключа, который считается только на
+ * листе (КД без условия входящей атаки, скорость), — такая строка не
+ * действует нигде. Зеркало `isIgnoredAlternativesCondition` VTTG.
+ *
+ * @param change строка модификатора.
+ * @returns текст предупреждения либо `undefined`.
+ */
+export function describeEffectChangeConditionWarning(
+  change: Pick<EffectChange, 'key' | 'condition'>,
+): string | undefined {
+  if (!change.condition || !hasConditionAlternatives(change.condition)) {
+    return undefined;
+  }
+
+  if (
+    isRollTimeDiceKey(change.key)
+    || isSneakAttackKey(change.key)
+    || change.key === CRIT_THRESHOLD_KEY
+  ) {
+    return undefined;
+  }
+
+  const defendedByIncoming =
+    change.key === ARMOR_CLASS_KEY
+    && splitConditionGroups(change.condition)
+      .flat()
+      .some((part) => part.startsWith(INCOMING_CONDITION_PREFIX));
+
+  return defendedByIncoming
+    ? undefined
+    : ACTIVE_EFFECT_LABELS.changeAlternativesIgnoredWarning;
+}

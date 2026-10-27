@@ -9,7 +9,7 @@ import type {
 
 import { Role } from '~/shared/types';
 
-import { isSessionReviewable } from './utils';
+import { isGameRecruitmentClosed, isSessionReviewable } from './utils';
 
 /** Что определяет права текущего пользователя на странице игры. */
 export interface GameViewerContext {
@@ -39,6 +39,8 @@ export interface SessionAbilities {
   canComplete: boolean;
   /** Мастер может отметить сессию несостоявшейся. */
   canCancel: boolean;
+  /** Мастер может поправить встречу: перенести её или переименовать. */
+  canEdit: boolean;
   /** Мастер может перевести сессию в «идёт». */
   canStart: boolean;
 
@@ -141,8 +143,14 @@ export function resolveGameViewerAbilities(
     canDeleteGame: canModerate,
     canReportGame: isSignedIn && !isMaster,
     // Заявка подаётся один раз на игру: повторную сервис отвергает, а мастер
-    // в собственную игру не записывается.
-    canApply: isSignedIn && !isMaster && !registration,
+    // в собственную игру не записывается. В сыгранную или отменённую игру,
+    // в полный стол и в закрытый мастером набор заявку не примут.
+    canApply:
+      isSignedIn
+      && !isMaster
+      && !registration
+      && game?.status === 'OPEN'
+      && !isGameRecruitmentClosed(game),
     // Принятый игрок может выйти из состава, ожидающий — отозвать заявку.
     canWithdraw: registration?.status === 'PENDING' || isApprovedPlayer,
     isPending: registration?.status === 'PENDING',
@@ -193,6 +201,9 @@ export function resolveSessionAbilities(
       && (session.status === 'IN_PROGRESS'
         || session.confirmedPlayerIds.length > 0),
     canCancel: abilities.isMaster && !isSessionClosed,
+    // Править можно только то, что ещё не началось: время идущей или
+    // закрытой встречи уже стало историей.
+    canEdit: abilities.isMaster && session.status === 'SCHEDULED',
     // Встречу без единого подтверждения сервис не начнёт: так мастер не
     // набивает себе счётчик сыгранных, начиная и закрывая её в одиночку.
     canStart:

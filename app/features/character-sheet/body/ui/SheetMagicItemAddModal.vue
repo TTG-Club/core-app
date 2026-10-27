@@ -4,6 +4,8 @@
   import type { Filter, FilterGroups } from '~infrastructure/filter';
 
   import type {
+    CharacterInventoryItem,
+    ItemPurchaseLine,
     MagicItemCatalogGroup,
     MagicItemCatalogItem,
   } from '../../model';
@@ -34,19 +36,26 @@
     MAGIC_ITEM_VARIES_RARITY,
     MAGIC_ITEMS_FILTERS_PATH,
     MAGIC_ITEMS_SEARCH_PATH,
+    MAGIC_ITEMS_SEARCH_SHEET_QUERY,
     parseMagicItemCatalog,
+    PURCHASE_QUANTITY_MIN,
     SHEET_CATALOG_MODAL_LABELS,
+    SHEET_ITEM_PURCHASE_LABELS,
     SHEET_MAGIC_ITEM_ADD_MODAL_LABELS,
   } from '../../model';
+  import SheetItemPurchaseModal from './SheetItemPurchaseModal.vue';
   import SheetSearchInput from './SheetSearchInput.vue';
 
   const emit = defineEmits<{
     close: [];
   }>();
 
+  const toast = useToast();
+
   const overlay = useOverlay();
 
-  const { character, addInventoryItems } = useCharacterSheet();
+  const { character, addInventoryItems, purchaseInventoryItems } =
+    useCharacterSheet();
 
   // Дровер описания магического предмета; без destroyOnClose — повторный
   // open() после закрытия иначе падает («Overlay not found»).
@@ -60,6 +69,8 @@
   function handlePreview(magicItemUrl: string) {
     magicItemPreviewDrawer.open({ url: magicItemUrl });
   }
+
+  const purchaseModal = overlay.create(SheetItemPurchaseModal);
 
   // Полный набор групп фильтров раздела «Магические предметы».
   const { data: filterDefaults } = await useAsyncData(
@@ -113,7 +124,10 @@
     async () => {
       const response = await $fetch<unknown>(MAGIC_ITEMS_SEARCH_PATH, {
         method: 'GET',
-        query: { ...catalogFilterQuery.value },
+        query: {
+          ...catalogFilterQuery.value,
+          ...MAGIC_ITEMS_SEARCH_SHEET_QUERY,
+        },
         retry: 0,
       });
 
@@ -318,8 +332,15 @@
   );
 
   const selectedCountLabel = computed(
-    () => `Выбрано: ${draftMagicItems.value.size}`,
+    () =>
+      `${SHEET_MAGIC_ITEM_ADD_MODAL_LABELS.selectedPrefix}: ${draftMagicItems.value.size}`,
   );
+
+  /**
+   * Количество, выбранное в окне покупки, по URL предмета: при повторном
+   * открытии окна оно сохраняется.
+   */
+  const purchaseQuantities = ref(new Map<string, number>());
 
   const isApplying = ref(false);
 
@@ -350,8 +371,29 @@
     draftMagicItems.value = nextItems;
   }
 
-  // Категория и подпись редкости есть прямо в ответе поиска, а вот её значение
-  // (по нему цена) и немагическая основа — только в «сыром» ответе детали.
+  /**
+   * Сборка записей инвентаря выбранных магических предметов. Категория и
+   * подпись редкости есть прямо в ответе поиска, а вот её значение (по нему
+   * цена) и немагическая основа — только в «сыром» ответе детали.
+   *
+   * @param catalogItems выбранные предметы каталога.
+   * @returns записи инвентаря по URL предмета каталога.
+   */
+  async function loadMagicInventoryItems(
+    catalogItems: MagicItemCatalogItem[],
+  ): Promise<Map<string, CharacterInventoryItem>> {
+    const summaries = await Promise.all(
+      catalogItems.map((catalogItem) => fetchMagicItemSummary(catalogItem.url)),
+    );
+
+    return new Map(
+      catalogItems.map((catalogItem, index) => [
+        catalogItem.url,
+        buildMagicItemInventoryItem(catalogItem, summaries[index] ?? null),
+      ]),
+    );
+  }
+
   async function handleApply() {
     const catalogItems = [...draftMagicItems.value.values()];
 
@@ -362,21 +404,127 @@
     isApplying.value = true;
 
     try {
-      const summaries = await Promise.all(
-        catalogItems.map((catalogItem) =>
-          fetchMagicItemSummary(catalogItem.url),
-        ),
-      );
+      const inventoryItemsByUrl = await loadMagicInventoryItems(catalogItems);
 
-      addInventoryItems(
-        catalogItems.map((catalogItem, index) =>
-          buildMagicItemInventoryItem(catalogItem, summaries[index] ?? null),
-        ),
-      );
+      addInventoryItems([...inventoryItemsByUrl.values()]);
 
       emit('close');
     } finally {
       isApplying.value = false;
+    }
+  }
+
+  /**
+   * Позиция окна покупки для магического предмета: цену поиск не отдаёт, она
+   * берётся из собранной записи инвентаря (редкость и немагическая основа).
+   *
+   * @param catalogItem предмет каталога.
+   * @param inventoryItem собранная запись инвентаря этого предмета.
+   * @returns позиция покупки с сохранённым количеством.
+   */
+  function toPurchaseLine(
+    catalogItem: MagicItemCatalogItem,
+    inventoryItem: CharacterInventoryItem,
+  ): ItemPurchaseLine {
+    return {
+      url: catalogItem.url,
+      name: catalogItem.name,
+      nameEng: catalogItem.nameEng,
+      cost: inventoryItem.cost,
+      sourceLabel: catalogItem.sourceLabel,
+      quantity:
+        purchaseQuantities.value.get(catalogItem.url) ?? PURCHASE_QUANTITY_MIN,
+    };
+  }
+
+  /**
+   * Оплата подтверждённых позиций: записи инвентаря получают выбранное
+   * количество, деньги списываются из кошелька.
+   *
+   * @param purchaseLines позиции, оставшиеся в списке покупки.
+   * @param inventoryItemsByUrl собранные записи инвентаря по URL предмета.
+   */
+  function payForMagicItems(
+    purchaseLines: ItemPurchaseLine[],
+    inventoryItemsByUrl: Map<string, CharacterInventoryItem>,
+  ): void {
+    const purchasedItems = purchaseLines.flatMap((purchaseLine) => {
+      const inventoryItem = inventoryItemsByUrl.get(purchaseLine.url);
+
+      return inventoryItem
+        ? [{ ...inventoryItem, quantity: purchaseLine.quantity }]
+        : [];
+    });
+
+    if (!purchaseInventoryItems(purchasedItems)) {
+      toast.add({
+        color: 'error',
+        icon: 'tabler:alert-triangle',
+        title: SHEET_ITEM_PURCHASE_LABELS.failed,
+      });
+
+      return;
+    }
+
+    emit('close');
+  }
+
+  /**
+   * Покупка выбранных магических предметов. Детали грузятся до окна покупки:
+   * без них нет цены. Предметы, убранные в окне из списка, снимаются и с
+   * выбора, а выбранное количество запоминается.
+   */
+  async function handleBuy() {
+    const catalogItems = [...draftMagicItems.value.values()];
+
+    if (!catalogItems.length || isApplying.value) {
+      return;
+    }
+
+    isApplying.value = true;
+
+    let inventoryItemsByUrl: Map<string, CharacterInventoryItem>;
+
+    try {
+      inventoryItemsByUrl = await loadMagicInventoryItems(catalogItems);
+    } finally {
+      isApplying.value = false;
+    }
+
+    const purchase = await purchaseModal.open({
+      items: catalogItems.flatMap((catalogItem) => {
+        const inventoryItem = inventoryItemsByUrl.get(catalogItem.url);
+
+        return inventoryItem
+          ? [toPurchaseLine(catalogItem, inventoryItem)]
+          : [];
+      }),
+    }).result;
+
+    // Окно закрыто крестиком или кликом мимо — выбор не меняется.
+    if (!purchase) {
+      return;
+    }
+
+    const keptUrls = new Set(
+      purchase.items.map((purchaseLine) => purchaseLine.url),
+    );
+
+    draftMagicItems.value = new Map(
+      [...draftMagicItems.value].filter(([magicItemUrl]) =>
+        keptUrls.has(magicItemUrl),
+      ),
+    );
+
+    purchaseQuantities.value = new Map(
+      purchase.items.map((purchaseLine) => [
+        purchaseLine.url,
+        purchaseLine.quantity,
+      ]),
+    );
+
+    if (purchase.confirmed && purchase.items.length) {
+      payForMagicItems(purchase.items, inventoryItemsByUrl);
     }
   }
 
@@ -641,6 +789,15 @@
             color="neutral"
             variant="ghost"
             @click.left.exact.prevent="handleCancel"
+          />
+
+          <UButton
+            :label="SHEET_MAGIC_ITEM_ADD_MODAL_LABELS.buy"
+            icon="tabler:coins"
+            color="primary"
+            variant="subtle"
+            :disabled="isApplyDisabled"
+            @click.left.exact.prevent="handleBuy"
           />
 
           <UButton

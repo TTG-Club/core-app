@@ -2,6 +2,7 @@
   import type { FeatDetailResponse } from '../model';
 
   import { AffiliationBlock } from '~ui/affiliation';
+  import { UiDetailLayout } from '~ui/detail-layout';
 
   import { getFeatPrerequisiteParts } from '../model';
   import { FEAT_BODY_LABELS } from './model';
@@ -23,9 +24,9 @@
 </script>
 
 <template>
-  <div class="@container flex flex-col gap-4">
-    <div class="flex flex-col gap-3 @min-3xl:flex-row @min-3xl:gap-7">
-      <div class="flex flex-col gap-3 @min-3xl:max-w-80 @min-3xl:min-w-68">
+  <UiDetailLayout>
+    <template #aside>
+      <div class="flex flex-col gap-3">
         <TopBar :category="feat.category" />
 
         <StatsBlock
@@ -34,17 +35,17 @@
           :prerequisite-details="feat.prerequisiteDetails"
         />
       </div>
+    </template>
 
-      <div class="flex flex-auto flex-col gap-3">
-        <DescriptionsBlock :description="feat.description" />
+    <div class="flex flex-col gap-3">
+      <DescriptionsBlock :description="feat.description" />
 
-        <AffiliationBlock
-          v-if="feat.backgrounds"
-          :items="feat.backgrounds"
-          :label="FEAT_BODY_LABELS.backgrounds"
-          section="backgrounds"
-        />
-      </div>
+      <AffiliationBlock
+        v-if="feat.backgrounds"
+        :items="feat.backgrounds"
+        :label="FEAT_BODY_LABELS.backgrounds"
+        section="backgrounds"
+      />
     </div>
-  </div>
+  </UiDetailLayout>
 </template>

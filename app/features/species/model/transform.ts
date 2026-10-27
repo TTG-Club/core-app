@@ -10,6 +10,11 @@ import {
   fromFeatEditorRows,
 } from '~feats/model';
 
+import {
+  readSpeciesSpellsAlwaysPrepared,
+  writeSpeciesSpellsAlwaysPrepared,
+} from './utils';
+
 /** Носитель даров: и сама запись вида, и любое её умение. */
 interface MechanicsHolder {
   mechanics: SpeciesCreate['mechanics'];
@@ -52,7 +57,11 @@ function transformFeature(feature: SpeciesFeatureCreate): SpeciesFeatureCreate {
     // Первый уровень — значение по умолчанию у потребителя, и писать его
     // каждому умению незачем
     level,
-    grantedSpells: feature.grantedSpells.map((spell) => ({
+    // Отметка одна на умение: строка, добавленная после снятия, её тоже получает
+    grantedSpells: writeSpeciesSpellsAlwaysPrepared(
+      feature.grantedSpells,
+      readSpeciesSpellsAlwaysPrepared(feature.grantedSpells),
+    ).map((spell) => ({
       ...spell,
       // То же и у уровня ссылки: совпал с уровнем умения — писать его незачем
       requiredLevel:

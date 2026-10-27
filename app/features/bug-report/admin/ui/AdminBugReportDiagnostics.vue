@@ -55,6 +55,7 @@
     BUG_REPORT_DIAGNOSTICS_WALLS_LABEL,
     BUG_REPORT_DIAGNOSTICS_YES_LABEL,
   } from '../../model';
+  import { AdminBugReportServerHealth } from './';
 
   /**
    * Снимок метрик производительности, приложенный к баг-репорту.
@@ -70,6 +71,14 @@
   }>();
 
   const { copy } = useCopyAndShare();
+
+  /** Есть ли что показать про машину сервера: у старых репортов этого нет */
+  const hasServerHealth = computed(
+    () =>
+      Boolean(diagnostics.serverHost)
+      || Boolean(diagnostics.serverTimeline?.length)
+      || Boolean(diagnostics.server?.load),
+  );
 
   /** Сырой JSON снимка — для выгрузки в задачу или в чат разработчиков */
   const rawJson = computed(() => JSON.stringify(diagnostics, null, 2));
@@ -414,6 +423,12 @@
         </div>
       </div>
     </section>
+
+    <!-- Машина сервера: нагрузка, лента и вывод, чья это проблема -->
+    <AdminBugReportServerHealth
+      v-if="hasServerHealth"
+      :diagnostics="diagnostics"
+    />
 
     <!-- Сцена -->
     <section

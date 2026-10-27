@@ -1,4 +1,4 @@
-import { FetchError } from 'ofetch';
+import { createFetch, FetchError } from 'ofetch';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -165,6 +165,27 @@ describe('код приглашения в запросах приватной �
 });
 
 describe('своя заявка', () => {
+  it('пустой ответ 204 означает, что заявки ещё нет', async () => {
+    const request = vi.fn(() =>
+      Promise.resolve(new Response(null, { status: 204 })),
+    );
+
+    vi.stubGlobal('$fetch', createFetch({ fetch: request }));
+
+    await expect(fetchOwnGameRegistration(GAME_ID, null)).resolves.toBeNull();
+    expect(request).toHaveBeenCalledOnce();
+  });
+
+  it('возвращает существующую заявку вместе с её статусом', async () => {
+    const registration = registrationResponse();
+
+    stubFetch(registration);
+
+    await expect(
+      fetchOwnGameRegistration(GAME_ID, null),
+    ).resolves.toMatchObject(registration);
+  });
+
   it('404 означает «заявки ещё не было», а не ошибку', async () => {
     // Без распознавания 404 страница игры показывала бы ошибку вместо
     // предложения подать заявку.
@@ -208,6 +229,20 @@ describe('разбор отказа сервиса', () => {
 describe('сообщение об ошибке', () => {
   it('без распознанной ошибки отдаёт общий текст', () => {
     expect(getFindGameErrorMessage(new Error('boom'))).toBe(
+      'Что-то пошло не так. Попробуйте ещё раз.',
+    );
+  });
+
+  it('отказ 401 без тела объясняет, что вход истёк', () => {
+    // Сервис отвечает на 401 пустым телом, и раньше человек видел текст
+    // запроса: `[POST] "/api/find-game/games": 401`.
+    expect(getFindGameErrorMessage(createFetchError(401))).toBe(
+      'Сессия истекла. Обновите страницу и войдите заново.',
+    );
+  });
+
+  it('отказ без тела не показывает технический текст запроса', () => {
+    expect(getFindGameErrorMessage(createFetchError(400))).toBe(
       'Что-то пошло не так. Попробуйте ещё раз.',
     );
   });

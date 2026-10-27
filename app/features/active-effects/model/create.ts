@@ -5,11 +5,20 @@
 
 import type { EffectConditionTemplate } from './constants';
 import type { EffectFormContext } from './layout';
-import type { ActiveEffect, EffectConditionKey, EffectOrigin } from './types';
+import type {
+  ActiveEffect,
+  EffectActivationMode,
+  EffectConditionKey,
+  EffectOrigin,
+} from './types';
 
 import { EFFECT_CONDITION_TEMPLATES, EFFECT_NEW_NAME } from './constants';
 import { createEffectForContext } from './layout';
-import { DEFAULT_EFFECT_ICON, EFFECT_ORIGIN } from './types';
+import {
+  DEFAULT_EFFECT_ICON,
+  EFFECT_ORIGIN,
+  withActivationDefaults,
+} from './types';
 
 /** Приставка ключа эффекта: по ней в данных видно, чей это ключ. */
 const EFFECT_ID_PREFIX = 'effect';
@@ -21,13 +30,16 @@ const EFFECT_ID_PREFIX = 'effect';
  *
  * @param origin чем эффект выдан.
  * @param context место формы.
+ * @param activationMode способ применения; `use` — эффект ложится применением
+ *   источника и создаётся выключенным, как его создаёт система.
  * @returns новый эффект.
  */
 export function createEmptyActiveEffect(
   origin: EffectOrigin,
   context: EffectFormContext,
+  activationMode?: EffectActivationMode,
 ): ActiveEffect {
-  return {
+  const effect: ActiveEffect = {
     ...createEffectForContext(
       context,
       createEntityId(EFFECT_ID_PREFIX),
@@ -36,6 +48,13 @@ export function createEmptyActiveEffect(
     ),
     icon: DEFAULT_EFFECT_ICON,
   };
+
+  return activationMode
+    ? withActivationDefaults({
+        ...effect,
+        activation: { mode: activationMode },
+      })
+    : effect;
 }
 
 /**

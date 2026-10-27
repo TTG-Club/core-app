@@ -2,12 +2,13 @@
   import type { SourceDetailResponse } from '~sources/types';
 
   import { SourceBody } from '~sources/body';
-  import { getSourceMarkdown } from '~sources/types';
+  import { getSourceMarkdown, SOURCES_WORKSHOP_ROUTE } from '~sources/types';
   import { PageActions } from '~ui/page';
 
   const route = useRoute();
+  const { canEditSources } = useUserRoles();
 
-  useSectionDetailRedirect('sources');
+  const sectionPath = useSectionDetailRedirect('sources');
 
   const { data: source } = await useAsyncData(
     `source-${route.params.url}`,
@@ -42,12 +43,17 @@
     );
   }
 
-  const editUrl = computed(() => `/workshop/sources/${route.params.url}`);
+  const editUrl = computed(() =>
+    canEditSources.value
+      ? `${SOURCES_WORKSHOP_ROUTE}/${route.params.url}`
+      : undefined,
+  );
 </script>
 
 <template>
   <NuxtLayout
     name="detail"
+    :section-path="sectionPath"
     :title="source?.name.rus"
     :subtitle="source?.name.eng"
     :source="source?.source"

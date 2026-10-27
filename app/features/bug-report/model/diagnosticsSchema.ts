@@ -36,6 +36,16 @@ const clientSchema = z.object({
   frameSpans: z.array(spanSchema),
 });
 
+const serverLoadSchema = z.object({
+  processCpuPercent: z.number(),
+  systemCpuPercent: z.number(),
+  rssMb: z.number(),
+  heapUsedMb: z.number(),
+  systemFreeMemoryMb: z.number(),
+  gcMs: z.number(),
+  gcMaxMs: z.number(),
+});
+
 const serverSchema = z.object({
   loopLag: z.object({
     meanMs: z.number(),
@@ -44,6 +54,35 @@ const serverSchema = z.object({
   }),
   clients: z.number(),
   topEvents: z.array(spanSchema),
+  // Появилось позже остальных полей: у старых репортов его нет, и секция
+  // сервера из-за этого теряться не должна.
+  load: serverLoadSchema.optional().catch(undefined),
+});
+
+const serverHostSchema = z.object({
+  cpuModel: z.string(),
+  cpuCores: z.number(),
+  totalMemoryMb: z.number(),
+  freeMemoryMb: z.number(),
+  os: z.string(),
+  nodeVersion: z.string(),
+  electronVersion: z.string(),
+  processUptimeSec: z.number(),
+  systemUptimeSec: z.number(),
+  rssMb: z.number(),
+  heapUsedMb: z.number(),
+});
+
+const timelineSampleSchema = z.object({
+  agoSec: z.number(),
+  lagMeanMs: z.number(),
+  lagMaxMs: z.number(),
+  processCpu: z.number(),
+  systemCpu: z.number(),
+  gcMs: z.number(),
+  rssMb: z.number(),
+  heaviestEvent: z.string(),
+  heaviestEventMs: z.number(),
 });
 
 const sceneSchema = z.object({
@@ -79,6 +118,8 @@ const bugReportDiagnosticsSchema: z.ZodType<BugReportDiagnostics> = z.object({
   server: serverSchema.optional().catch(undefined),
   scene: sceneSchema.optional().catch(undefined),
   device: deviceSchema.optional().catch(undefined),
+  serverHost: serverHostSchema.optional().catch(undefined),
+  serverTimeline: z.array(timelineSampleSchema).optional().catch(undefined),
 });
 
 /**

@@ -16,6 +16,10 @@ import type {
   ResourceRecoveryRule,
   SavedCharacterSheet,
   SavedCharacterSheetListPage,
+  SavedSheetEditAccess,
+  SheetEditorList,
+  SheetEditStatus,
+  SheetPresence,
 } from './types';
 
 import { clamp, uniqBy } from 'es-toolkit';
@@ -43,7 +47,7 @@ import {
   SHEET_NOTE_LABELS,
 } from './constants';
 import { DEFAULT_CHARACTER } from './mock';
-import { normalizeCatalogName } from './utils';
+import { normalizeCatalogName, settleBookCantripsPrepared } from './utils';
 
 /**
  * Схема сохранённого персонажа. Каждое поле снабжено `catch`-дефолтом из
@@ -195,6 +199,11 @@ const grantedProficienciesSchema = z.object({
   savingThrows: z.array(abilityKeySchema).catch([]),
 });
 
+const resourceRecoveryRuleSchema = z.object({
+  mode: z.enum(['none', 'all', 'amount']).catch('none'),
+  amount: z.coerce.number().catch(RESOURCE_RECOVERY_AMOUNT_MIN),
+});
+
 /**
  * Снимок ресурса черты в записи умения: максимум приходит формулой справочника
  * и разбирается при сборке панели, поэтому здесь он строкой.
@@ -218,6 +227,13 @@ const featCounterSchema = z.object({
   recovery: z
     .enum(['short-rest', 'long-rest', 'short-rest-one'])
     .catch('long-rest'),
+  // Раздельные правила отдыха появились позже: у снимков до них полей нет —
+  // ресурс восстанавливается по `recovery`
+  shortRest: resourceRecoveryRuleSchema.optional().catch(undefined),
+  longRest: resourceRecoveryRuleSchema.optional().catch(undefined),
+  // «Появляется пустым» появилось позже: у снимков до него поля нет — такой
+  // ресурс появлялся полным
+  startsEmpty: z.boolean().optional().catch(undefined),
 });
 
 /**
@@ -336,6 +352,9 @@ const spellSchema = z.object({
   // Заклинание пришло из группы «весь список класса, не выше доступного круга»:
   // список лежит на записи целиком, а круги лист отбирает каждый раз заново
   limitedBySlots: z.boolean().optional().catch(undefined),
+  // Заклинание умения, взятого списком класса целиком: при пересборке умения
+  // в режиме выбора такие уходят, а выбранные игроком остаются
+  fromClassList: z.boolean().optional().catch(undefined),
   // Своя характеристика заклинания: её ставит черта, давшая заклинание. Нет
   // поля — заклинание считается от характеристики класса
   spellcastingAbility: abilityKeySchema.optional().catch(undefined),
@@ -416,6 +435,9 @@ const featureSchema = z.object({
     .nullable()
     .optional()
     .catch(undefined),
+  // Как игрок взял «весь список класса» умения; у записей до появления выбора
+  // поля нет — такой список взят целиком.
+  classSpellListMode: z.enum(['all', 'chosen']).optional().catch(undefined),
   // Ответы игрока на выборы черты по ключу выбора; у записей до их появления
   // поля нет.
   choiceAnswers: z
@@ -805,11 +827,6 @@ const extraHitDieSchema = hitDieSchema.extend({
   id: z.string(),
 });
 
-const resourceRecoveryRuleSchema = z.object({
-  mode: z.enum(['none', 'all', 'amount']).catch('none'),
-  amount: z.coerce.number().catch(RESOURCE_RECOVERY_AMOUNT_MIN),
-});
-
 /**
  * Правило максимума ресурса. Неизвестный источник читается как своё число:
  * такой ресурс останется с записанным максимумом, а не обнулится.
@@ -858,9 +875,25 @@ function toResourceRecoveryRule(
   return { mode, amount: RESOURCE_RECOVERY_AMOUNT_MIN };
 }
 
+/**
+ * Правки игрока поверх записи справочника: в документе лежат только изменённые
+ * поля, остальное ресурс берёт из справочника на каждой пересборке.
+ */
+const classResourceOverridesSchema = z.object({
+  name: z.string().optional(),
+  shortLabel: z.string().optional(),
+  shortRest: resourceRecoveryRuleSchema.optional(),
+  longRest: resourceRecoveryRuleSchema.optional(),
+  max: z.coerce.number().optional(),
+  // Правка максимума пишется парой с `max`, и `null` здесь значит «своё
+  // число вместо книжного правила», а не «правки нет».
+  maxRule: resourceMaxRuleSchema.nullable().optional(),
+});
+
 const classResourceSchema = z
   .object({
     id: z.string(),
+    key: z.string().optional().catch(undefined),
     name: z.string().catch(''),
     shortLabel: z.string().catch(''),
     // Легаси-поле одного вида отдыха: у листов до раздельных порций оно
@@ -873,6 +906,8 @@ const classResourceSchema = z
     // Правило максимума: у ресурсов до него поля нет — их максимум записан
     // числом и от листа не зависит.
     maxRule: resourceMaxRuleSchema.nullable().optional().catch(null),
+    overrides: classResourceOverridesSchema.optional().catch(undefined),
+    hidden: z.boolean().optional().catch(undefined),
   })
   .transform(({ recovery, shortRest, longRest, ...resource }) => ({
     ...resource,
@@ -1169,6 +1204,9 @@ const inventoryItemBaseSchema = z.object({
   weapon: inventoryWeaponSchema,
   equipped: z.boolean().catch(false),
   twoHanded: z.boolean().catch(false),
+  // Выбор характеристики атаки появился позже: у листов без него оружие бьёт
+  // по правилам.
+  attackAbility: abilityKeySchema.nullable().catch(null),
   bonuses: inventoryBonusesSchema,
   // Эффекты предмета целиком: у листов, сохранённых до их появления, поля нет,
   // и лист считает предмет по одним бонусам, как считал раньше.
@@ -1403,12 +1441,16 @@ const characterSchema = z
   })
   // Легаси-список владений спасбросками уходит из документа, как только тот
   // разобран: дальше по листу ходят только сами записи спасбросков. Тем же
-  // проходом лист приводится к мультиклассовой форме.
+  // проходом лист приводится к мультиклассовой форме, а заговоры книги без
+  // пометки (листы, сохранённые, пока заговоры не подготавливались) получают
+  // её — по уже нормализованным классам, от которых зависит предел.
   .transform(({ savingThrowProficiencies, savingThrows, ...character }) =>
-    normalizeCharacterClasses({
-      ...character,
-      savingThrows: toSavingThrows(savingThrows, savingThrowProficiencies),
-    }),
+    settleBookCantripsPrepared(
+      normalizeCharacterClasses({
+        ...character,
+        savingThrows: toSavingThrows(savingThrows, savingThrowProficiencies),
+      }),
+    ),
   );
 
 /**
@@ -1471,6 +1513,10 @@ const sheetListItemSchema = z.object({
   shareToken: z.string().nullable().catch(null),
   createdAt: z.string().nullable().catch(null),
   updatedAt: z.string().nullable().catch(null),
+  // С `catch`: бэк без версий поля не пришлёт, а лист по ссылке его не отдаёт.
+  version: z.number().int().nullable().catch(null),
+  // С `catch`: бэк без прав на редактирование поля не пришлёт — меток просто нет.
+  pendingEditRequests: z.number().int().nonnegative().catch(0),
 });
 
 /**
@@ -1498,6 +1544,17 @@ const sheetDetailSchema = z.object({
   name: z.string().catch(''),
   data: z.unknown(),
   shareToken: z.string().nullable().catch(null),
+  version: z.number().int().nullable().catch(null),
+  // Без поля лист считается своим: так его прислал бы бэк без прав на редактирование.
+  editor: z.boolean().catch(false),
+});
+
+/**
+ * Схема ответа сохранения листа: из него нужна только новая версия. Документ
+ * не разбирается — он тот же, что клиент только что отправил.
+ */
+const sheetVersionSchema = z.object({
+  version: z.number().int().nullable().catch(null),
 });
 
 /**
@@ -1547,6 +1604,8 @@ export function parseCharacterSheetListPage(
     shareToken: sheet.shareToken,
     createdAt: sheet.createdAt,
     updatedAt: sheet.updatedAt,
+    version: sheet.version,
+    pendingEditRequests: sheet.pendingEditRequests,
   }));
 
   return {
@@ -1559,6 +1618,9 @@ export function parseCharacterSheetListPage(
   };
 }
 
+/** Схема состояния права на редактирование чужого листа. */
+const sheetEditStatusSchema = z.enum(['PENDING', 'APPROVED', 'DECLINED']);
+
 /**
  * Схема сохранённого чужого листа. `data` приходит только у доступных записей —
  * у остальных сервер отдаёт null вместе с `available: false`.
@@ -1570,6 +1632,9 @@ const savedSheetSchema = z.object({
   name: z.string().catch(''),
   data: z.unknown(),
   available: z.boolean().catch(false),
+  // С `catch`: незнакомый статус безопаснее считать «не запрашивалось», чем
+  // открыть по нему лист на правку.
+  editStatus: sheetEditStatusSchema.nullable().catch(null),
 });
 
 /**
@@ -1627,6 +1692,7 @@ function toSavedSheet(
     name: sheet.name,
     data: toSavedSheetCharacter(sheet),
     available: sheet.available,
+    editStatus: sheet.editStatus,
   };
 }
 
@@ -1693,5 +1759,126 @@ export function parseCharacterSheetDetail(
     name: detail.name,
     data: parseCharacter(detail.data, detail.id),
     shareToken: detail.shareToken,
+    version: detail.version,
+    editor: detail.editor,
   };
+}
+
+/**
+ * Версия листа из ответа сохранения `PUT /{id}`.
+ *
+ * @param input сырой ответ сервера.
+ * @returns новая версия листа; null — бэк без версий её не прислал.
+ */
+export function parseCharacterSheetVersion(input: unknown): number | null {
+  const result = sheetVersionSchema.safeParse(input);
+
+  return result.success ? result.data.version : null;
+}
+
+/**
+ * Схема запросов и редакторов листа (`GET /{id}/editors` и ответы решений
+ * владельца). Отклонённые записи бэк в список не отдаёт.
+ */
+const sheetEditorListSchema = z.object({
+  limit: z.number().int(),
+  editors: z
+    .array(
+      z.object({
+        id: z.string(),
+        displayName: z.string(),
+        avatarUrl: z.string().nullable().catch(null),
+        status: z.enum(['PENDING', 'APPROVED']),
+      }),
+    )
+    .catch([]),
+});
+
+/**
+ * Валидация запросов и редакторов листа.
+ *
+ * @param input сырой ответ сервера.
+ * @returns запросы, выданные права и лимит редакторов.
+ */
+export function parseSheetEditorList(input: unknown): SheetEditorList {
+  return sheetEditorListSchema.parse(input);
+}
+
+/** Схема числа неотвеченных запросов на листы пользователя. */
+const sheetEditRequestCountSchema = z.object({
+  count: z.number().int().nonnegative(),
+});
+
+/**
+ * Валидация ответа `GET /edit-requests/count`.
+ *
+ * @param input сырой ответ сервера.
+ * @returns число неотвеченных запросов на редактирование.
+ */
+export function parseSheetEditRequestCount(input: unknown): number {
+  return sheetEditRequestCountSchema.parse(input).count;
+}
+
+/** Схема ответа на запрос права редактирования. */
+const sheetEditRequestSchema = z.object({
+  status: sheetEditStatusSchema,
+});
+
+/**
+ * Валидация ответа `POST /saved/{id}/edit-request`.
+ *
+ * @param input сырой ответ сервера.
+ * @returns состояние права после запроса.
+ */
+export function parseSheetEditRequestStatus(input: unknown): SheetEditStatus {
+  return sheetEditRequestSchema.parse(input).status;
+}
+
+/** Схема сводки прав на редактирование сохранённых листов. */
+const savedSheetEditAccessSchema = z.object({
+  sheets: z
+    .array(
+      z.object({
+        savedId: z.string(),
+        sheetId: z.string(),
+        name: z.string().catch(''),
+        status: sheetEditStatusSchema,
+      }),
+    )
+    .catch([]),
+});
+
+/**
+ * Валидация ответа `GET /saved/edit-access`.
+ *
+ * @param input сырой ответ сервера.
+ * @returns права на редактирование сохранённых листов.
+ */
+export function parseSavedSheetEditAccess(
+  input: unknown,
+): SavedSheetEditAccess[] {
+  return savedSheetEditAccessSchema.parse(input).sheets;
+}
+
+/** Схема ответа на отметку присутствия в листе. */
+const sheetPresenceSchema = z.object({
+  users: z
+    .array(
+      z.object({
+        displayName: z.string(),
+        avatarUrl: z.string().nullable().catch(null),
+      }),
+    )
+    .catch([]),
+  version: z.number().int().nullable().catch(null),
+});
+
+/**
+ * Валидация ответа `POST /{id}/presence`.
+ *
+ * @param input сырой ответ сервера.
+ * @returns другие пользователи, у которых лист открыт, и версия листа.
+ */
+export function parseSheetPresence(input: unknown): SheetPresence {
+  return sheetPresenceSchema.parse(input);
 }

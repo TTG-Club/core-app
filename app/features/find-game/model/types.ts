@@ -1,6 +1,7 @@
 import type {
   APPLY_SOURCES,
   GAME_COST_TYPES,
+  GAME_COVER_STATUS_DOT_CLASSES,
   GAME_DURATION_TYPES,
   GAME_ONLINE_PLATFORMS,
   GAME_REPORT_REASONS,
@@ -28,6 +29,13 @@ export type GameCostType = (typeof GAME_COST_TYPES)[number];
 export type GameReportReason = (typeof GAME_REPORT_REASONS)[number];
 export type GameVisibility = (typeof GAME_VISIBILITIES)[number];
 export type GameStatus = (typeof GAME_STATUSES)[number];
+
+/** Значок состояния игры: подпись, цвет и, для закрытого набора, иконка. */
+export interface GameStateBadge {
+  label: string;
+  color: keyof typeof GAME_COVER_STATUS_DOT_CLASSES;
+  icon?: string;
+}
 export type GamePersonalRole =
   | 'ALL'
   | 'PLAYER'
@@ -317,6 +325,13 @@ export interface Game {
    */
   inviteCode: string | null;
   /**
+   * Стоимость сессии по умолчанию у платной игры. Видна до первой встречи;
+   * пусто у бесплатной игры и у платной, заведённой до появления цены игры.
+   */
+  priceAmount: number | null;
+  priceCurrency: string | null;
+  paymentType: SessionPaymentType | null;
+  /**
    * Ближайшая предстоящая встреча; `null` — расписания ещё нет. Считает её
    * сам сервис: у игры своей даты начала нет, время назначается встречам.
    */
@@ -363,8 +378,6 @@ export interface GameSearchFilter {
   excludeDurationType: Array<GameDurationType>;
   costType: Array<GameCostType>;
   excludeCostType: Array<GameCostType>;
-  status: Array<GameStatus>;
-  excludeStatus: Array<GameStatus>;
   city: Array<string>;
   crossplayAllowed: boolean | null;
   minAge: number | null;
@@ -437,6 +450,14 @@ export interface CreateGameRequest {
   durationType: GameDurationType;
   costType: GameCostType;
   visibility: GameVisibility;
+
+  /**
+   * Стоимость сессии по умолчанию. У платной игры сервис требует все три
+   * поля, у бесплатной — ни одного.
+   */
+  priceAmount?: number;
+  priceCurrency?: string;
+  paymentType?: SessionPaymentType;
 }
 
 /**
@@ -477,6 +498,18 @@ export interface GameFormState {
   durationType: GameDurationType;
   costType: GameCostType;
   visibility: GameVisibility;
+
+  /** Стоимость сессии по умолчанию; спрашивается только у платной игры. */
+  priceAmount: number | null;
+  priceCurrency: string;
+  paymentType: SessionPaymentType;
+}
+
+/** Стоимость сессии по умолчанию, которую игра передаёт своим встречам. */
+export interface GameSessionPrice {
+  priceAmount: number | null;
+  priceCurrency: string | null;
+  paymentType: SessionPaymentType | null;
 }
 
 /** Сессия игры. */
@@ -517,6 +550,12 @@ export interface CreateGameSessionRequest {
   priceAmount?: number;
   priceCurrency?: string;
   paymentType?: SessionPaymentType;
+
+  /**
+   * Бесплатная встреча платной игры. Без отметки сессия без своей цены
+   * получает цену игры по умолчанию.
+   */
+  free?: boolean;
 }
 
 /**
@@ -541,6 +580,19 @@ export interface CreateGameSessionSeriesRequest {
   priceAmount?: number;
   priceCurrency?: string;
   paymentType?: SessionPaymentType;
+
+  /** Бесплатная серия платной игры. */
+  free?: boolean;
+}
+
+/**
+ * Правка назначенной встречи. Оплата сюда не входит: по ней уже могут быть
+ * расчёты с игроками.
+ */
+export interface UpdateGameSessionRequest {
+  title: string;
+  startsAt: string;
+  estimatedDurationMinutes?: number;
 }
 
 /** Тело копирования сессии: и название, и дата необязательны. */
@@ -674,7 +726,10 @@ export interface GameViewerAbilities {
   canDeleteGame: boolean;
   /** Пользователь может сообщить о чужой игре. */
   canReportGame: boolean;
-  /** Можно подать заявку: игрок вошёл, не мастер и ещё не подавал. */
+  /**
+   * Можно подать заявку: игрок вошёл, не мастер, ещё не подавал, а игра
+   * открыта и в ней есть место.
+   */
   canApply: boolean;
   /** Можно отозвать свою неразобранную заявку. */
   canWithdraw: boolean;

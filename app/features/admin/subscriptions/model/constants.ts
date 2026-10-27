@@ -6,6 +6,7 @@ import type {
   RedemptionCodeResponse,
   RewardPerk,
   RewardTier,
+  SubscriptionSalesSwitchState,
   SubscriptionType,
 } from './types';
 
@@ -245,6 +246,12 @@ export const CODES_LIST_DATA_KEY = 'admin-subscription-codes';
 /** Заголовок страницы промокодов в админке. */
 export const CODES_PAGE_TITLE = 'Промокоды';
 
+/** Адрес страницы промокодов в админке. */
+export const CODES_ADMIN_ROUTE = '/admin/subscriptions';
+
+/** Иконка раздела промокодов в навигации админки. */
+export const CODES_NAVIGATION_ICON = 'tabler:ticket';
+
 /** SEO-заголовок страницы промокодов. */
 export const CODES_PAGE_SEO_TITLE = 'Промокоды: Настройки';
 
@@ -280,3 +287,45 @@ export const CODES_LIST_SKELETON_COUNT = 6;
 export function codesSearchEmptyText(query: string): string {
   return `По запросу «${query}» ничего не найдено`;
 }
+
+/** Подпись включённой оплаты: она же подпись переключателя и тост после включения. */
+const SUBSCRIPTION_SALES_ENABLED_LABEL = 'Оплата подписки включена';
+
+/** Строка переключателя оплаты подписки в группе «Пользователи» на главной админки. */
+export const SUBSCRIPTION_SALES_SWITCH_TEXT = {
+  title: 'Оплата подписки',
+  enabledStatus: 'Включена',
+  disabledStatus: 'Выключена',
+  enabledDescription: 'Кнопка «Оформить» работает, новые платежи создаются.',
+  disabledDescription:
+    'У всех кнопка «Оформить» неактивна с пометкой «скоро», новые платежи не создаются.',
+  switchLabel: SUBSCRIPTION_SALES_ENABLED_LABEL,
+  enabledToast: SUBSCRIPTION_SALES_ENABLED_LABEL,
+  disabledToast: 'Оплата подписки выключена',
+  errorToast: 'Не удалось изменить настройку оплаты',
+};
+
+/**
+ * Строка оплаты — табло состояния: цвет, значок и подпись меняются вместе, чтобы
+ * выключенную оплату было видно с первого взгляда. При выключенной карта перечёркнута,
+ * а что из этого следует, говорит подсказка.
+ */
+export const SUBSCRIPTION_SALES_SWITCH_ENABLED_STATE: SubscriptionSalesSwitchState =
+  {
+    color: 'success',
+    description: SUBSCRIPTION_SALES_SWITCH_TEXT.enabledDescription,
+    icon: 'tabler:credit-card',
+    iconClass: 'text-success',
+    rootClass: 'bg-success/10',
+    status: SUBSCRIPTION_SALES_SWITCH_TEXT.enabledStatus,
+  };
+
+export const SUBSCRIPTION_SALES_SWITCH_DISABLED_STATE: SubscriptionSalesSwitchState =
+  {
+    color: 'warning',
+    description: SUBSCRIPTION_SALES_SWITCH_TEXT.disabledDescription,
+    icon: 'tabler:credit-card-off',
+    iconClass: 'text-warning',
+    rootClass: 'bg-warning/10',
+    status: SUBSCRIPTION_SALES_SWITCH_TEXT.disabledStatus,
+  };

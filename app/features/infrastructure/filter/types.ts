@@ -25,7 +25,12 @@ export interface FilterGroup {
   union?: boolean; // true = AND (точное совпадение)
 
   values?: FilterItems;
+  /** Заданный доменом порядок значений для дискретного диапазона. */
+  rangeOrder?: ReadonlyArray<string>;
 }
+
+/** Порядки диапазонов по ключам групп; задаются владельцем каталога. */
+export type FilterRangeOrders = Readonly<Record<string, ReadonlyArray<string>>>;
 
 export type FilterGroups = Array<FilterGroup>;
 
@@ -35,6 +40,8 @@ export interface FilterItem {
   name: string;
   selected: boolean | null; // UI state
   relations?: Record<string, Array<string | number>>;
+  /** Значение доступно, только когда в родителе выбрано связанное значение. */
+  relationsRequired?: boolean;
   [p: string]: unknown;
 }
 

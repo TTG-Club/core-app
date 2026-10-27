@@ -51,7 +51,7 @@
 </script>
 
 <template>
-  <div class="flex w-full min-w-72 flex-col gap-4">
+  <div class="flex w-full min-w-68 flex-col gap-4">
     <div
       :class="[
         'w-full overflow-hidden bg-muted',

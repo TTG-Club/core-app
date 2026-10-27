@@ -2,6 +2,7 @@
   import type { ClassDetailResponse } from '~classes/model';
 
   import { ClassBody } from '~classes/body';
+  import { useSubclassPaths } from '~classes/composable';
   import { getClassMarkdown } from '~classes/model';
   import { PageActions } from '~ui/page';
   import { UiResult } from '~ui/result';
@@ -19,7 +20,7 @@
     params: { url },
   } = useRoute();
 
-  useSectionDetailRedirect('classes');
+  const sectionPath = useSectionDetailRedirect('classes');
 
   const {
     data: detail,
@@ -30,6 +31,16 @@
   );
 
   const markdown = useEntityMarkdown(detail, getClassMarkdown);
+
+  /** Возврат от подкласса к странице его класса. */
+  const backTo = computed(() => {
+    const parentUrl = detail.value?.parent?.url;
+
+    return parentUrl ? `/classes/${parentUrl}` : undefined;
+  });
+
+  // Подкласс листает соседние подклассы своего класса, а не список
+  const subclassPaths = await useSubclassPaths(detail.value?.parent?.url);
 
   useSeoMeta({
     title: getSeoTitle,
@@ -97,11 +108,13 @@
   <NuxtLayout
     id="classes-base"
     name="detail"
+    :section-path="sectionPath"
+    :swipe-paths="subclassPaths"
     :title
     :subtitle
     :source="detail?.source"
     :date-time="detail?.updatedAt"
-    :back-to="detail?.parent ? `/classes/${detail.parent.url}` : undefined"
+    :back-to="backTo"
     copy-text
   >
     <template #actions>

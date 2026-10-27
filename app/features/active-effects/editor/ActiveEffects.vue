@@ -1,5 +1,10 @@
 <script setup lang="ts">
-  import type { ActiveEffect, EffectFormContext, EffectOrigin } from '../model';
+  import type {
+    ActiveEffect,
+    EffectActivationMode,
+    EffectFormContext,
+    EffectOrigin,
+  } from '../model';
 
   import { EditorNestedSection } from '~ui/editor';
 
@@ -12,15 +17,17 @@
     EFFECT_ORIGIN,
     listInertEffectFields,
     resolveEffectFormLayout,
+    upgradeEffectDraft,
   } from '../model';
   import ActiveEffectItem from './ui/ActiveEffectItem.vue';
 
   // Источник задаёт редактор-хозяин: он же и знает, чем эффект выдан.
   const {
     context,
-    zoneAvailable = undefined,
+    areaAvailable = undefined,
     applierSaveDc = undefined,
     origin = EFFECT_ORIGIN.spell,
+    newEffectActivation = undefined,
     title = ACTIVE_EFFECT_LABELS.title,
     nested = false,
   } = defineProps<{
@@ -32,10 +39,11 @@
     context: EffectFormContext;
 
     /**
-     * Есть ли у заклинания область — где появиться зоне на месте шаблона.
-     * Передаёт только редактор заклинания; не задано — зона не прячется.
+     * Есть ли у заклинания или действия существа область — где появиться зоне
+     * на месте шаблона и из кого выбирать цели. Передают редакторы заклинания
+     * и действия существа; не задано — ничего не прячется.
      */
-    zoneAvailable?: boolean;
+    areaAvailable?: boolean;
 
     /**
      * Сл источника для «Авто» у полей Сл: у действия существа — Сл самого
@@ -44,6 +52,13 @@
     applierSaveDc?: number;
 
     origin?: EffectOrigin;
+
+    /**
+     * Как действует новый эффект: `use` — ложится применением источника.
+     * Передаёт редактор-хозяин, который знает, применяют ли запись: у зелья и
+     * жезла «вручную» эффект не работает, пока предмет не применили.
+     */
+    newEffectActivation?: EffectActivationMode;
 
     /**
      * Заголовок блока. Своим его называет редактор, у которого эффекты лежат
@@ -98,19 +113,23 @@
   /**
    * Свёрнутые строки: сводка — по ней автор и модератор сразу видят, что
    * делает каждый эффект, — и число настроек, которые здесь не работают.
+   * Сводка и счётчик — по эффекту, как его прочтёт VTTG: старая зона «пока
+   * внутри» со спасброском — уже «при входе».
    */
   const effectRows = computed(() =>
     model.value.map((effect) => {
+      const upgradedEffect = upgradeEffectDraft(effect, context);
+
       const inertCount = listInertEffectFields(
-        effect,
-        resolveEffectFormLayout(context, effect, { zoneAvailable }),
+        upgradedEffect,
+        resolveEffectFormLayout(context, upgradedEffect, { areaAvailable }),
       ).length;
 
       return {
         effect,
         icon: effect.icon || DEFAULT_EFFECT_ICON,
         name: effect.name || ACTIVE_EFFECT_LABELS.unnamed,
-        scenario: describeEffectScenario(effect, context),
+        scenario: describeEffectScenario(upgradedEffect, context),
         inertBadge:
           inertCount > 0
             ? `${ACTIVE_EFFECT_LABELS.inertBadge}${inertCount}`
@@ -125,10 +144,35 @@
     // прежний массив — проп доедет только следующим тиком.
     const addedIndex = model.value.length;
 
-    model.value = [...model.value, createEmptyActiveEffect(origin, context)];
+    model.value = [
+      ...model.value,
+      createEmptyActiveEffect(origin, context, newEffectActivation),
+    ];
 
     // Новый эффект сразу раскрыт: его всё равно тут же настраивают.
     expand(addedIndex);
+  }
+
+  /**
+   * Раскрывает или сворачивает эффект. Раскрытый эффект открывается в новом
+   * виде: старая зона «пока внутри» со спасброском — уже «при входе», как её
+   * читает VTTG. Иначе форма числила бы спасбросок неработающим и «Убрать»
+   * стёрло бы его.
+   *
+   * @param index номер эффекта.
+   */
+  function toggleEffect(index: number) {
+    const effect = model.value[index];
+
+    if (!isExpanded(index) && effect) {
+      const upgradedEffect = upgradeEffectDraft(effect, context);
+
+      if (upgradedEffect !== effect) {
+        updateEffect(index, upgradedEffect);
+      }
+    }
+
+    toggle(index);
   }
 
   /**
@@ -198,7 +242,7 @@
             type="button"
             class="flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md before:absolute before:inset-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             :aria-expanded="isExpanded(index)"
-            @click.left.exact.prevent="toggle(index)"
+            @click.left.exact.prevent="toggleEffect(index)"
           >
             <UIcon
               :name="effectRow.icon"
@@ -250,7 +294,7 @@
           <ActiveEffectItem
             :model-value="effectRow.effect"
             :context="context"
-            :zone-available="zoneAvailable"
+            :area-available="areaAvailable"
             :applier-save-dc="applierSaveDc"
             @update:model-value="updateEffect(index, $event)"
           />

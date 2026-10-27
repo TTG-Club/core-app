@@ -1,3 +1,5 @@
+import type { EffectFormContext } from '~active-effects/model';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -6,15 +8,22 @@ import {
   FIXED_MIN_SAVE_DC,
   normalizeActiveEffects,
   normalizeLoadedActiveEffects,
+  toDraftActivationExclusive,
+  writeEffectActivationMode,
 } from '~active-effects/model';
 
 import {
+  ACTIVATION_RANGE,
   AURA_RADIUS,
+  createEffect,
   createRawEffect,
   SAVE_DC,
   stripUndefinedKeys,
   TYPED_SAVE_DC,
 } from './fixtures';
+
+/** Имя включения длиннее предела в 100 знаков: схема его отбрасывает. */
+const TOO_LONG_ACTIVATION_EXCLUSIVE = 'Ярость'.repeat(20);
 
 describe('терпимая загрузка эффектов', () => {
   it('эффект без id или с changes не той формы выпадает, соседний остаётся', () => {
@@ -65,12 +74,26 @@ describe('терпимая загрузка эффектов', () => {
     ]);
   });
 
-  it('незнакомый флаг выпадает, эффект остаётся', () => {
+  it('незнакомый флаг остаётся: словарь сайта отстаёт от системы', () => {
     const [effect] = normalizeLoadedActiveEffects([
-      createRawEffect({ flags: ['attack.advantage', 'homebrew.flag'] }),
+      createRawEffect({
+        flags: [
+          'attack.advantage',
+          'healing.blocked',
+          'homebrew.flag',
+          '',
+          '   ',
+          42,
+          null,
+        ],
+      }),
     ]);
 
-    expect(effect?.flags).toEqual(['attack.advantage']);
+    expect(effect?.flags).toEqual([
+      'attack.advantage',
+      'healing.blocked',
+      'homebrew.flag',
+    ]);
   });
 
   it('незнакомые значения перечислений обнуляют поле, а не эффект', () => {
@@ -255,6 +278,152 @@ describe('сохранение эффектов', () => {
     expect(stripUndefinedKeys(savedEffects)).toEqual([legacyStoredEffect]);
   });
 
+  it('поля применения, варианта и новых срабатываний переживают «открыл и сохранил»', () => {
+    const storedEffect = createRawEffect({
+      activation: { mode: 'toggle', counter: 'rage' },
+      variant: { group: 'вариант', label: 'Оглушение', pick: 'random' },
+      landingCondition: 'source.weaponMastery === true',
+      rollCondition: 'incoming.attackType === "melee"',
+      aura: {
+        radius: AURA_RADIUS,
+        target: 'allies',
+        applyToSelf: true,
+        visible: true,
+        radiusFormula: '10 + 20 * floor(@classLevel / 18)',
+        whileCapable: true,
+      },
+      triggers: [
+        {
+          id: 'rest',
+          event: 'rest',
+          restType: 'short',
+          actions: [
+            { type: 'reduceMaxHp', amount: '@damage', endsOnRest: 'never' },
+          ],
+        },
+        {
+          id: 'burst',
+          event: 'hpZero',
+          recipient: 'area',
+          area: { radius: AURA_RADIUS, target: 'enemies' },
+          save: { ability: 'dexterity', dc: SAVE_DC, mode: 'advantage' },
+          actions: [
+            { type: 'applyTag', tag: 'burst', stack: true },
+            {
+              type: 'applyCondition',
+              conditionKey: 'prone',
+              recurringSave: {
+                ability: 'strength',
+                dc: SAVE_DC,
+                timing: 'endOfTurn',
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const savedEffects = normalizeActiveEffects(
+      normalizeLoadedActiveEffects([storedEffect]),
+      'ownEffects',
+    );
+
+    expect(stripUndefinedKeys(savedEffects)).toEqual([storedEffect]);
+  });
+
+  it('эффекты сценариев системы переживают круг «открыл и сохранил»', () => {
+    // Данные — из tests/scenarios системы: зелье (I16), «Тактика стаи»,
+    // «Опрокидывание» (W08) и взрыв спор на нуле хитов
+    const scenarios: Array<{
+      context: EffectFormContext;
+      name: string;
+      storedEffect: Record<string, unknown>;
+    }> = [
+      {
+        context: 'item',
+        name: 'Зелье лечения',
+        storedEffect: createRawEffect({
+          name: 'Зелье лечения',
+          activation: { mode: 'use' },
+          triggers: [
+            {
+              id: 'trigger_heal',
+              event: 'applied',
+              actions: [
+                {
+                  type: 'damage',
+                  // Цель части урона сайт пишет явно — у системы это умолчание
+                  parts: [{ formula: '2d4@heal+2', target: 'selected' }],
+                },
+                { type: 'removeSelf' },
+              ],
+            },
+          ],
+        }),
+      },
+      {
+        context: 'creatureTrait',
+        name: 'Тактика стаи',
+        storedEffect: createRawEffect({
+          name: 'Тактика стаи',
+          flags: ['attack.advantage'],
+          rollCondition: 'target.allyAdjacent',
+        }),
+      },
+      {
+        context: 'weapon',
+        name: 'Опрокидывание',
+        storedEffect: createRawEffect({
+          name: 'Опрокидывание',
+          effectTarget: 'target',
+          landingCondition: 'source.weaponMastery === true',
+          applySave: {
+            ability: 'constitution',
+            dc: APPLIER_SAVE_DC,
+            onSuccess: 'negate',
+          },
+          conditionKey: 'prone',
+        }),
+      },
+      {
+        context: 'creatureTrait',
+        name: 'Газовые споры',
+        storedEffect: createRawEffect({
+          name: 'Газовые споры',
+          triggers: [
+            {
+              id: 'trigger_spores',
+              event: 'hpZero',
+              recipient: 'area',
+              area: { radius: 10, target: 'all' },
+              save: { ability: 'constitution', dc: SAVE_DC },
+              actions: [
+                {
+                  type: 'applyCondition',
+                  conditionKey: 'poisoned',
+                  recurringSave: {
+                    ability: 'constitution',
+                    dc: SAVE_DC,
+                    timing: 'endOfTurn',
+                  },
+                },
+              ],
+            },
+          ],
+        }),
+      },
+    ];
+
+    for (const { context, name, storedEffect } of scenarios) {
+      const savedEffects = normalizeActiveEffects(
+        normalizeLoadedActiveEffects([storedEffect]),
+        context,
+      );
+
+      expect(stripUndefinedKeys(savedEffects), name).toEqual([storedEffect]);
+    }
+  });
+
   it('урон каждый ход без частей не пишется, «при успехе» — ровно один исход', () => {
     const [effect] = normalizeActiveEffects(
       normalizeLoadedActiveEffects([
@@ -272,6 +441,75 @@ describe('сохранение эффектов', () => {
     expect(effect?.recurringDamage).toBeUndefined();
     expect(effect?.applyOnSuccess).toBeUndefined();
     expect(effect?.applyOnSuccessOnly).toBe(true);
+  });
+
+  it('вложенное срабатывание состояния и блок «по выбору» переживают круг', () => {
+    const storedEffect = createRawEffect({
+      triggers: [
+        {
+          id: 'trigger_sleep',
+          event: 'applied',
+          actions: [
+            {
+              type: 'applyCondition',
+              conditionKey: 'unconscious',
+              triggers: [
+                {
+                  id: 'trigger_wake',
+                  event: 'damageTaken',
+                  actions: [{ type: 'removeSelf' }],
+                },
+              ],
+            },
+          ],
+        },
+        {
+          id: 'trigger_heal',
+          event: 'turnStart',
+          recipient: 'choice',
+          choice: {
+            radius: AURA_RADIUS,
+            target: 'allies',
+            count: 2,
+            condition: 'self.creatureType === "undead"',
+            optional: true,
+            chooser: 'source',
+          },
+          actions: [{ type: 'damage', parts: [{ formula: '5@heal' }] }],
+        },
+      ],
+    });
+
+    const [effect] = normalizeActiveEffects(
+      normalizeLoadedActiveEffects([storedEffect]),
+      'spell',
+    );
+
+    const [sleepTrigger, healTrigger] = effect?.triggers ?? [];
+    const [applyCondition] = sleepTrigger?.actions ?? [];
+
+    expect(
+      applyCondition?.type === 'applyCondition'
+        ? applyCondition.triggers
+        : undefined,
+    ).toEqual([
+      {
+        id: 'trigger_wake',
+        event: 'damageTaken',
+        actions: [{ type: 'removeSelf' }],
+      },
+    ]);
+
+    expect(healTrigger?.recipient).toBe('choice');
+
+    expect(stripUndefinedKeys(healTrigger?.choice ?? {})).toEqual({
+      radius: AURA_RADIUS,
+      target: 'allies',
+      count: 2,
+      condition: 'self.creatureType === "undead"',
+      optional: true,
+      chooser: 'source',
+    });
   });
 
   it('сл 0 у предмета поднимается до 1, у заклинания остаётся «Авто»', () => {
@@ -294,5 +532,333 @@ describe('сохранение эффектов', () => {
     expect(
       normalizeActiveEffects(loadedEffects, 'spell')[0]?.applySave?.dc,
     ).toBe(APPLIER_SAVE_DC);
+  });
+});
+
+describe('дальность применения 0.8.87', () => {
+  it('дальность держится у применения, числом строкой — числом', () => {
+    const storedEffect = createRawEffect({
+      effectTarget: 'target',
+      activation: {
+        mode: 'use',
+        counter: 'channel-divinity',
+        range: ACTIVATION_RANGE,
+      },
+    });
+
+    const savedEffects = normalizeActiveEffects(
+      normalizeLoadedActiveEffects([storedEffect]),
+      'feature',
+    );
+
+    expect(stripUndefinedKeys(savedEffects)).toEqual([storedEffect]);
+
+    const [typedEffect] = normalizeLoadedActiveEffects([
+      createRawEffect({
+        activation: { mode: 'use', range: String(ACTIVATION_RANGE) },
+      }),
+    ]);
+
+    expect(typedEffect?.activation?.range).toBe(ACTIVATION_RANGE);
+  });
+
+  it('ноль, доля фута и мусор снимают только дальность', () => {
+    for (const range of [0, 2.5, 'далеко', -5]) {
+      const [loadedEffect] = normalizeLoadedActiveEffects([
+        createRawEffect({
+          activation: { mode: 'use', counter: 'channel-divinity', range },
+        }),
+      ]);
+
+      expect(loadedEffect?.activation, String(range)).toEqual({
+        mode: 'use',
+        counter: 'channel-divinity',
+        amount: undefined,
+        range: undefined,
+      });
+    }
+  });
+
+  it('у переключателя и без применения дальности нет', () => {
+    const toggled = createRawEffect({
+      activation: { mode: 'toggle', counter: 'rage', range: ACTIVATION_RANGE },
+    });
+
+    const [savedToggle] = normalizeActiveEffects(
+      normalizeLoadedActiveEffects([toggled]),
+      'feature',
+    );
+
+    expect(stripUndefinedKeys(savedToggle?.activation)).toEqual({
+      mode: 'toggle',
+      counter: 'rage',
+    });
+
+    const [savedPermanent] = normalizeActiveEffects(
+      normalizeLoadedActiveEffects([createRawEffect()]),
+      'feature',
+    );
+
+    expect(savedPermanent?.activation).toBeUndefined();
+  });
+});
+
+describe('одно включение 0.8.124', () => {
+  it('имя включения переключателя переживает «открыл и сохранил»', () => {
+    const storedEffect = createRawEffect({
+      activation: { mode: 'toggle', counter: 'rage', exclusive: 'Ярость' },
+    });
+
+    const savedEffects = normalizeActiveEffects(
+      normalizeLoadedActiveEffects([storedEffect]),
+      'feature',
+    );
+
+    expect(stripUndefinedKeys(savedEffects)).toEqual([storedEffect]);
+  });
+
+  it('«продлить срок» у атаки переключателя переживает «открыл и сохранил»', () => {
+    const storedEffect = createRawEffect({
+      activation: { mode: 'toggle', counter: 'rage', exclusive: 'Ярость' },
+      triggers: [
+        {
+          id: 'rage_attack',
+          event: 'attackRoll',
+          role: 'attacker',
+          actions: [{ type: 'refreshDuration' }],
+        },
+      ],
+    });
+
+    const savedEffects = normalizeActiveEffects(
+      normalizeLoadedActiveEffects([storedEffect]),
+      'feature',
+    );
+
+    expect(stripUndefinedKeys(savedEffects)).toEqual([storedEffect]);
+  });
+
+  it('у применения, пустое и слишком длинное имя не пишется', () => {
+    const rawActivations = [
+      { mode: 'use', counter: 'rage', exclusive: 'Ярость' },
+      { mode: 'toggle', counter: 'rage', exclusive: '   ' },
+      {
+        mode: 'toggle',
+        counter: 'rage',
+        exclusive: TOO_LONG_ACTIVATION_EXCLUSIVE,
+      },
+    ];
+
+    for (const activation of rawActivations) {
+      const [savedEffect] = normalizeActiveEffects(
+        normalizeLoadedActiveEffects([createRawEffect({ activation })]),
+        'feature',
+      );
+
+      expect(
+        savedEffect?.activation?.exclusive,
+        activation.mode,
+      ).toBeUndefined();
+    }
+  });
+
+  it('имя из формы пишется без пробелов по краям только у переключателя', () => {
+    const [savedToggle, savedUse] = normalizeActiveEffects(
+      [
+        createEffect({
+          id: 'toggle',
+          activation: { mode: 'toggle', exclusive: '  Ярость ' },
+        }),
+        createEffect({
+          id: 'use',
+          activation: { mode: 'use', exclusive: 'Ярость' },
+        }),
+      ],
+      'feature',
+    );
+
+    expect(savedToggle?.activation?.exclusive).toBe('Ярость');
+    expect(savedUse?.activation?.exclusive).toBeUndefined();
+  });
+
+  it('поле формы: пустое снимает имя, пробел между словами остаётся', () => {
+    expect(toDraftActivationExclusive('   ')).toBeUndefined();
+    expect(toDraftActivationExclusive('Гнев ')).toBe('Гнев ');
+  });
+
+  it('смена способа снимает имя включения, ресурс остаётся', () => {
+    const rage = createEffect({
+      activation: { mode: 'toggle', counter: 'rage', exclusive: 'Ярость' },
+    });
+
+    const usedRage = writeEffectActivationMode(rage, 'use');
+
+    expect(stripUndefinedKeys(usedRage.activation)).toEqual({
+      mode: 'use',
+      counter: 'rage',
+    });
+
+    expect(
+      writeEffectActivationMode(rage, 'toggle').activation?.exclusive,
+    ).toBe('Ярость');
+  });
+});
+
+describe('поля эффекта 0.8.66', () => {
+  it('негодное значение обнуляет только своё поле, числа строкой — числами', () => {
+    const [effect] = normalizeLoadedActiveEffects([
+      createRawEffect({
+        charges: { max: '3', current: '2', endsWhenEmpty: 'yes' },
+        savedRoll: '  ',
+        durationFormula: '1к4',
+        suppressConditions: ['restrained', 5],
+        escape: {
+          by: 'everyone',
+          cost: 'move',
+          moveCostFeet: '10',
+          check: { skill: 'luck', dc: 14 },
+          label: '',
+        },
+        stageIndex: '1',
+        stages: [
+          { label: 'Первая', changes: [], flags: ['speed.zero'] },
+          { label: 'Вторая', changes: 'мусор', flags: [] },
+        ],
+        changes: [
+          {
+            key: 'attack.melee',
+            mode: 'add',
+            value: '-1',
+            priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
+            step: { by: -1, per: 'turn', until: '-5' },
+          },
+          {
+            key: 'armorClass',
+            mode: 'add',
+            value: '1',
+            priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
+            step: { by: 1, per: 'week' },
+          },
+        ],
+        applySave: {
+          ability: 'wisdom',
+          dc: SAVE_DC,
+          onSuccess: 'negate',
+          allowWilling: 'да',
+        },
+      }),
+    ]);
+
+    expect(effect?.charges).toEqual({ max: 3, current: 2 });
+    expect(effect?.savedRoll).toBeUndefined();
+    expect(effect?.durationFormula).toBe('1к4');
+    // Список ключей с негодным элементом обнуляется целиком, как у системы
+    expect(effect?.suppressConditions).toBeUndefined();
+    expect(effect?.escape).toEqual({ cost: 'move', moveCostFeet: 10 });
+    expect(effect?.stageIndex).toBe(1);
+
+    expect(effect?.stages).toEqual([
+      { label: 'Первая', changes: [], flags: ['speed.zero'] },
+      { label: 'Вторая', changes: [], flags: [] },
+    ]);
+
+    expect(effect?.changes.map((change) => change.step)).toEqual([
+      { by: -1, per: 'turn', until: -5 },
+      undefined,
+    ]);
+
+    expect(effect?.applySave).toEqual({
+      ability: 'wisdom',
+      dc: SAVE_DC,
+      onSuccess: 'negate',
+    });
+  });
+
+  it('срабатывание с новым событием и новыми полями не выпадает', () => {
+    const [effect] = normalizeLoadedActiveEffects([
+      createRawEffect({
+        triggers: [
+          {
+            id: 'path',
+            event: 'moved',
+            everyFeet: '5',
+            cost: 'teleport',
+            chancePercent: 100,
+            ask: true,
+            asker: 'source',
+            actions: [{ type: 'moveArea', kind: 'follow' }],
+          },
+          {
+            id: 'lost',
+            event: 'conditionLost',
+            conditionKey: 'grappled',
+            save: {
+              ability: 'wisdom',
+              dc: SAVE_DC,
+              modeIf: [{ condition: 'self.hp.temp === 0', mode: 'lucky' }],
+              autoSuccessIf: 'self.grounded === true',
+            },
+            actions: [{ type: 'notify', text: 'Свободен', to: 'source' }],
+          },
+        ],
+      }),
+    ]);
+
+    expect(effect?.triggers).toEqual([
+      {
+        id: 'path',
+        event: 'moved',
+        everyFeet: 5,
+        ask: true,
+        asker: 'source',
+        actions: [{ type: 'moveArea', kind: 'follow' }],
+      },
+      {
+        id: 'lost',
+        event: 'conditionLost',
+        conditionKey: 'grappled',
+        save: {
+          ability: 'wisdom',
+          dc: SAVE_DC,
+          autoSuccessIf: 'self.grounded === true',
+        },
+        actions: [{ type: 'notify', text: 'Свободен', to: 'source' }],
+      },
+    ]);
+  });
+
+  it('при сохранении строки эффекта берутся из действующей ступени, заряды — целыми', () => {
+    const firstStageChange = {
+      key: 'movement.walk',
+      mode: 'add',
+      value: '-10',
+      priority: DEFAULT_EFFECT_CHANGE_PRIORITY,
+    } as const;
+
+    const [savedEffect] = normalizeActiveEffects(
+      normalizeLoadedActiveEffects([
+        createRawEffect({
+          changes: [],
+          flags: [],
+          charges: { max: 5, current: 9 },
+          stages: [
+            { label: 'Первая', changes: [firstStageChange], flags: [] },
+            { label: 'Вторая', changes: [], flags: ['speed.zero'] },
+          ],
+          escape: { check: { skill: 'athletics', dc: APPLIER_SAVE_DC } },
+        }),
+      ]),
+      'item',
+    );
+
+    expect(savedEffect?.changes).toEqual([firstStageChange]);
+    expect(savedEffect?.stageIndex).toBe(0);
+    expect(savedEffect?.charges).toEqual({ max: 5, current: 5 });
+
+    // У предмета источника нет: «Авто» поднимается до наименьшей Сл
+    expect(savedEffect?.escape?.check).toEqual({
+      skill: 'athletics',
+      dc: FIXED_MIN_SAVE_DC,
+    });
   });
 });

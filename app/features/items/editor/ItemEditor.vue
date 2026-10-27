@@ -185,6 +185,17 @@
                   :placeholder="ITEM_FORM_LABELS.weightPlaceholder"
                 />
               </UFormField>
+
+              <UFormField
+                class="md:col-span-24"
+                :help="ITEM_FORM_LABELS.consumableHint"
+                name="consumable"
+              >
+                <UCheckbox
+                  v-model="state.consumable"
+                  :label="ITEM_FORM_LABELS.consumable"
+                />
+              </UFormField>
             </div>
           </UCard>
 
@@ -222,7 +233,18 @@
                 v-model="state.image"
                 section="item"
                 max-size="480"
-              />
+              >
+                <template
+                  v-if="state.image"
+                  #preview
+                >
+                  <img
+                    :src="state.image"
+                    :alt="ITEM_FORM_LABELS.image"
+                    class="w-full rounded-lg object-contain"
+                  />
+                </template>
+              </UploadImage>
             </UFormField>
           </UCard>
         </div>

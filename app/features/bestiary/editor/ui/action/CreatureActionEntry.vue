@@ -2,13 +2,25 @@
   import type { CreateAction, CreatureEffectContext } from '../../../model';
 
   import { ActiveEffects } from '~active-effects/editor';
-  import { EFFECT_ORIGIN } from '~active-effects/model';
+  import {
+    EFFECT_FORM_CONTEXT,
+    EFFECT_ORIGIN,
+    MAX_SAVE_OVERRIDE_USES,
+  } from '~active-effects/model';
   import { MarkupEditor } from '~ui/markup-editor';
   import { SelectRecharge } from '~ui/select';
 
   import {
+    MAX_CREATURE_COOLDOWN_TURNS,
+    MIN_CREATURE_COOLDOWN_TURNS,
+    setCreatureActionCooldownTurns,
+    setCreatureActionRecharge,
+    toStoredSaveSuccessPerDay,
+  } from '../../../model';
+  import {
     CREATURE_ACTION_LABELS,
     CREATURE_ACTION_SECTIONS,
+    CREATURE_SAVE_SUCCESS_PER_DAY_MIN,
   } from '../../constants';
   import CreatureActionCombat from './CreatureActionCombat.vue';
 
@@ -19,7 +31,7 @@
    * свёрнутыми полями. Поэтому имена полей здесь относительные: путь записи
    * (`actions.0`) вложенная форма подставляет сама.
    */
-  defineProps<{
+  const { effectContext } = defineProps<{
     /** Место эффектов записи: черта существа или действие. */
     effectContext: CreatureEffectContext;
   }>();
@@ -33,6 +45,47 @@
    * действия без спасброска числа нет, остаётся одна подпись.
    */
   const actionSaveDc = computed(() => model.value.effect.savingThrows[0]?.dc);
+
+  /**
+   * Есть ли у записи область: из накрытых ею применивший выбирает цели
+   * эффекта («до шести существ на выбор»).
+   */
+  const hasArea = computed(() => Boolean(model.value.effect.areaOfEffect.type));
+
+  /** «Провал в успех, раз в день» бывает только у умения (черты) существа. */
+  const isTrait = computed(
+    () => effectContext === EFFECT_FORM_CONTEXT.creatureTrait,
+  );
+
+  // Очищенное поле и ноль — «не умеет»: в данных остаётся только число раз
+  const saveSuccessPerDay = computed({
+    get: () => model.value.saveSuccessPerDay,
+    set: (enteredTimes: number | null | undefined) => {
+      model.value = {
+        ...model.value,
+        saveSuccessPerDay: toStoredSaveSuccessPerDay(enteredTimes),
+      };
+    },
+  });
+
+  // Перезарядка и «раз в N ходов» взаимоисключающи: выбор одного сбрасывает
+  // другое — иначе VTTG не знал бы, какое ограничение вести
+  const recharge = computed({
+    get: () => model.value.recharge,
+    set: (selectedRecharge: string | undefined) => {
+      model.value = setCreatureActionRecharge(model.value, selectedRecharge);
+    },
+  });
+
+  const cooldownTurns = computed({
+    get: () => model.value.cooldownTurns ?? undefined,
+    set: (enteredTurns: number | null | undefined) => {
+      model.value = setCreatureActionCooldownTurns(model.value, enteredTurns);
+    },
+  });
+
+  /** При выбранной перезарядке «раз в N ходов» не заполняется. */
+  const isCooldownDisabled = computed(() => Boolean(model.value.recharge));
 </script>
 
 <template>
@@ -63,7 +116,39 @@
     :label="CREATURE_ACTION_LABELS.recharge"
     name="recharge"
   >
-    <SelectRecharge v-model="model.recharge" />
+    <SelectRecharge v-model="recharge" />
+  </UFormField>
+
+  <UFormField
+    class="col-span-full md:col-span-8"
+    :label="CREATURE_ACTION_LABELS.cooldownTurns"
+    :help="CREATURE_ACTION_LABELS.cooldownTurnsHint"
+    name="cooldownTurns"
+  >
+    <UInputNumber
+      v-model="cooldownTurns"
+      :min="MIN_CREATURE_COOLDOWN_TURNS"
+      :max="MAX_CREATURE_COOLDOWN_TURNS"
+      :disabled="isCooldownDisabled"
+      :placeholder="CREATURE_ACTION_LABELS.cooldownTurnsPlaceholder"
+      class="w-40"
+    />
+  </UFormField>
+
+  <UFormField
+    v-if="isTrait"
+    class="col-span-full"
+    :label="CREATURE_ACTION_LABELS.saveSuccessPerDay"
+    :help="CREATURE_ACTION_LABELS.saveSuccessPerDayHint"
+    name="saveSuccessPerDay"
+  >
+    <UInputNumber
+      v-model="saveSuccessPerDay"
+      :min="CREATURE_SAVE_SUCCESS_PER_DAY_MIN"
+      :max="MAX_SAVE_OVERRIDE_USES"
+      :placeholder="CREATURE_ACTION_LABELS.saveSuccessPerDayPlaceholder"
+      class="w-40"
+    />
   </UFormField>
 
   <UFormField
@@ -93,6 +178,7 @@
     v-model="model.effect.activeEffects"
     nested
     :context="effectContext"
+    :area-available="hasArea"
     :applier-save-dc="actionSaveDc"
     :origin="EFFECT_ORIGIN.feature"
     :title="CREATURE_ACTION_SECTIONS.effects"

@@ -3,6 +3,15 @@
 
   import { omit } from 'es-toolkit';
 
+  import {
+    PRIVACY_POLICY_ROUTE,
+    PRIVACY_POLICY_UPDATED_AT,
+  } from '~infrastructure/privacy-policy/model';
+  import {
+    PUBLIC_OFFER_ROUTE,
+    PUBLIC_OFFER_UPDATED_AT,
+  } from '~infrastructure/public-offer/model';
+
   const emit = defineEmits<{
     (e: 'switch:sign-in'): void;
   }>();
@@ -56,6 +65,9 @@
     email: '',
     password: '',
     repeat: '',
+    // Согласия не отмечены заранее: человек ставит каждую галочку сам.
+    offerAccepted: false,
+    personalDataConsent: false,
   });
 
   const { execute, status, error } = useFetch<
@@ -64,7 +76,13 @@
     '/api/auth/sign-up',
     'post'
   >('/api/auth/sign-up', {
-    body: computed(() => omit(state, ['repeat'])),
+    // Вместе с согласиями уходят редакции документов, которые видел
+    // пользователь: в базе остаётся, с чем именно он согласился.
+    body: computed(() => ({
+      ...omit(state, ['repeat']),
+      offerVersion: PUBLIC_OFFER_UPDATED_AT,
+      privacyPolicyVersion: PRIVACY_POLICY_UPDATED_AT,
+    })),
     method: 'post',
     watch: false,
     retry: false,
@@ -73,7 +91,18 @@
 
   const inProgress = computed(() => status.value === 'pending');
 
+  const consentsGiven = computed(
+    () => state.offerAccepted && state.personalDataConsent,
+  );
+
+  const submitDisabled = computed(() => success.value || !consentsGiven.value);
+
   async function onSubmit() {
+    // Enter в поле формы обходит выключенную кнопку.
+    if (!consentsGiven.value) {
+      return;
+    }
+
     await execute();
 
     if (error.value) {
@@ -105,7 +134,11 @@
 
 <template>
   <div class="flex flex-col gap-6">
-    <h4 class="text-2xl">Регистрация</h4>
+    <div class="flex flex-col gap-1">
+      <h4 class="text-2xl font-semibold text-highlighted">Регистрация</h4>
+
+      <p class="text-sm text-muted">Пара минут — и аккаунт готов</p>
+    </div>
 
     <UForm
       class="flex flex-col gap-4"
@@ -116,6 +149,9 @@
       <UFormField name="username">
         <UInput
           v-model="state.username"
+          class="w-full"
+          size="lg"
+          icon="tabler:user"
           autocapitalize="off"
           autocomplete="username"
           autocorrect="off"
@@ -127,6 +163,9 @@
       <UFormField name="email">
         <UInput
           v-model="state.email"
+          class="w-full"
+          size="lg"
+          icon="tabler:mail"
           autocapitalize="off"
           autocomplete="email"
           autocorrect="off"
@@ -149,6 +188,9 @@
           <UInput
             ref="passwordField"
             v-model="state.password"
+            class="w-full"
+            size="lg"
+            icon="tabler:lock"
             autocapitalize="off"
             autocomplete="new-password"
             autocorrect="off"
@@ -174,6 +216,9 @@
       <UFormField name="repeat">
         <UInput
           v-model="state.repeat"
+          class="w-full"
+          size="lg"
+          icon="tabler:lock-check"
           autocapitalize="off"
           autocomplete="new-password"
           autocorrect="off"
@@ -195,26 +240,61 @@
         </UInput>
       </UFormField>
 
-      <div class="flex flex-col gap-2 md:flex-row">
-        <UButton
-          :loading="inProgress"
-          :disabled="success"
-          class="md:w-auto"
-          block
-          @click.left.exact.prevent="onSubmit"
-        >
-          Зарегистрироваться
-        </UButton>
+      <UFormField name="offerAccepted">
+        <UCheckbox v-model="state.offerAccepted">
+          <template #label>
+            Принимаю условия
 
-        <UButton
-          class="md:w-auto"
-          variant="soft"
-          block
-          @click.left.exact.prevent="$emit('switch:sign-in')"
-        >
-          Есть аккаунт?
-        </UButton>
-      </div>
+            <ULink
+              :to="PUBLIC_OFFER_ROUTE"
+              target="_blank"
+              class="text-primary"
+            >
+              публичной оферты
+            </ULink>
+          </template>
+        </UCheckbox>
+      </UFormField>
+
+      <UFormField name="personalDataConsent">
+        <UCheckbox v-model="state.personalDataConsent">
+          <template #label>
+            Даю согласие на обработку персональных данных в соответствии с
+
+            <ULink
+              :to="PRIVACY_POLICY_ROUTE"
+              target="_blank"
+              class="text-primary"
+            >
+              политикой конфиденциальности
+            </ULink>
+          </template>
+        </UCheckbox>
+      </UFormField>
+
+      <UButton
+        :loading="inProgress"
+        :disabled="submitDisabled"
+        size="lg"
+        block
+        @click.left.exact.prevent="onSubmit"
+      >
+        Зарегистрироваться
+      </UButton>
     </UForm>
+
+    <div
+      class="flex flex-wrap items-center justify-center gap-x-2 border-t border-default pt-5 text-sm text-muted"
+    >
+      Уже есть аккаунт?
+
+      <UButton
+        class="p-0"
+        variant="link"
+        @click.left.exact.prevent="$emit('switch:sign-in')"
+      >
+        Войти
+      </UButton>
+    </div>
   </div>
 </template>

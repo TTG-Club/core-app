@@ -26,6 +26,9 @@ export interface TrackerParticipant {
   /** Максимум хитов, заданный мастером; не задано — среднее из статблока. */
   maxHitPoints?: number;
 
+  /** Временные хиты: урон сначала снимает их; не задано — временных хитов нет. */
+  temporaryHitPoints?: number;
+
   /** КД игрока; не задано — не задан (у существа берётся из статблока). */
   armorClass?: number;
 
@@ -123,12 +126,25 @@ export interface UpdateParticipantRequest {
   dead?: boolean;
   currentHitPoints?: number;
   maxHitPoints?: number;
+
+  /** Временные хиты; `0` — снять. */
+  temporaryHitPoints?: number;
+
   armorClass?: number;
   color?: ParticipantColor;
   sheetLink?: ParticipantSheetLink;
 
   /** Состояния целиком: присланный список заменяет прежний, пустой — снимает все. */
   conditions?: Array<ParticipantCondition>;
+}
+
+/** Хиты участника вместе с временными. */
+export interface HitPointsState {
+  /** Текущие хиты. */
+  current: number;
+
+  /** Временные хиты; `0` — их нет. */
+  temporary: number;
 }
 
 /** Слот единственного анонимного трекера в localStorage. */
@@ -145,12 +161,13 @@ export interface CreatureOption {
 }
 
 /**
- * Состояние участника: пятнадцать состояний PHB 2024 и частые эффекты боя,
- * которые состояниями по правилам не являются, но мастеру их отмечать так же
- * нужно (концентрация, ускорение, увеличение и прочее).
+ * Состояние участника: состояния PHB 2024 (с «Окровавленным») и частые
+ * эффекты боя, которые состояниями по правилам не являются, но мастеру их
+ * отмечать так же нужно (концентрация, ускорение, увеличение и прочее).
  */
 export type ConditionKey =
   | 'blinded'
+  | 'bloodied'
   | 'charmed'
   | 'deafened'
   | 'exhaustion'

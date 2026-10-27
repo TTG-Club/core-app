@@ -3,6 +3,8 @@ import type {
   FindGameUserProfile,
   Game,
   GameSession,
+  GameSessionPrice,
+  GameStateBadge,
   NextGameSession,
   Reputation,
 } from './types';
@@ -16,8 +18,12 @@ import {
   GAME_GENRE_MAX_LENGTH,
   GAME_GENRES_MAX_COUNT,
   GAME_NEXT_SESSION_FALLBACK,
-  GAME_PRICE_PENDING_LABEL,
   GAME_PRICE_PER_SESSION_LABEL,
+  GAME_RECRUITMENT_CLOSED_BADGE,
+  GAME_RECRUITMENT_CLOSED_ICON,
+  GAME_RECRUITMENT_FULL_BADGE,
+  GAME_STATUS_COLORS,
+  GAME_STATUS_LABELS,
   GAME_TITLE_MAX_LENGTH,
   GAME_TYPE_LABELS,
   GAMES_ROUTE,
@@ -101,6 +107,18 @@ export function toGameCopyRequest(game: Game): CreateGameRequest {
     ...(game.venue ? { venue: game.venue } : {}),
     ...(game.minAge !== null ? { minAge: game.minAge } : {}),
     ...(game.maxAge !== null ? { maxAge: game.maxAge } : {}),
+    // Цена игры переходит в копию целиком; у старой платной игры её нет, и
+    // копию мастер дозаполнит в форме.
+    ...(game.costType === 'PAID'
+    && game.priceAmount !== null
+    && game.priceCurrency
+    && game.paymentType
+      ? {
+          priceAmount: game.priceAmount,
+          priceCurrency: game.priceCurrency,
+          paymentType: game.paymentType,
+        }
+      : {}),
   };
 }
 
@@ -138,7 +156,21 @@ export function getNextSessionLabel(
   return formatter.formatRange(start, end);
 }
 
-/** Цена ближайшей встречи; отсутствие цены не означает бесплатную игру. */
+/**
+ * Сумма цены в русской записи: с разрядами и без лишних нулей после запятой,
+ * чтобы карточка и страница игры показывали её одинаково.
+ * @param amount Сумма цены.
+ */
+function formatPriceAmount(amount: number): string {
+  return amount.toLocaleString('ru-RU');
+}
+
+/**
+ * Цена встречи для карточки: сначала ближайшей, затем игры по умолчанию.
+ * Отсутствие цены не означает бесплатную игру — у старой платной игры её
+ * просто не указали, и карточка называет её просто платной.
+ * @param game Игра.
+ */
 export function getGameCardPriceLabel(game: Game): string {
   if (game.costType === 'FREE') {
     return GAME_COST_TYPE_LABELS.FREE;
@@ -146,11 +178,34 @@ export function getGameCardPriceLabel(game: Game): string {
 
   const session = game.nextSession;
 
-  if (session?.priceAmount == null || !session.priceCurrency) {
-    return GAME_PRICE_PENDING_LABEL;
+  const price =
+    session?.priceAmount != null && session.priceCurrency ? session : game;
+
+  if (price.priceAmount === null || !price.priceCurrency) {
+    return GAME_COST_TYPE_LABELS.PAID;
   }
 
-  return `${session.priceAmount.toLocaleString('ru-RU')} ${session.priceCurrency} / ${GAME_PRICE_PER_SESSION_LABEL}`;
+  return `${formatPriceAmount(price.priceAmount)} ${price.priceCurrency} / ${GAME_PRICE_PER_SESSION_LABEL}`;
+}
+
+/**
+ * Описание игры для метаданных страницы. У платной игры впереди стоит цена
+ * за сессию: превью ссылки в мессенджерах обрезает текст, и цена должна
+ * попасть в видимую часть.
+ * @param game Игра.
+ * @param descriptionText Описание игры простым текстом.
+ */
+export function getGameSeoDescription(
+  game: Game,
+  descriptionText: string,
+): string {
+  if (game.costType === 'FREE') {
+    return descriptionText;
+  }
+
+  const priceLabel = getGameCardPriceLabel(game);
+
+  return descriptionText ? `${priceLabel} · ${descriptionText}` : priceLabel;
 }
 
 /**
@@ -388,6 +443,39 @@ export function isGameRecruitmentClosed(game: Game): boolean {
 }
 
 /**
+ * Значок состояния игры. У сыгранной и отменённой игры он называет исход. У
+ * открытой — состояние набора: «Набор открыт» ставится, только пока в игру
+ * можно подать заявку, а полный стол и закрытый мастером набор подписаны
+ * по-своему.
+ *
+ * @param game Игра.
+ */
+export function getGameStateBadge(game: Game): GameStateBadge {
+  if (game.status !== 'OPEN') {
+    return {
+      label: GAME_STATUS_LABELS[game.status],
+      color: GAME_STATUS_COLORS[game.status],
+    };
+  }
+
+  if (!isGameRecruitmentClosed(game)) {
+    return {
+      label: GAME_STATUS_LABELS.OPEN,
+      color: GAME_STATUS_COLORS.OPEN,
+    };
+  }
+
+  return {
+    label:
+      game.takenSeats >= game.maxPlayers
+        ? GAME_RECRUITMENT_FULL_BADGE
+        : GAME_RECRUITMENT_CLOSED_BADGE,
+    color: 'warning',
+    icon: GAME_RECRUITMENT_CLOSED_ICON,
+  };
+}
+
+/**
  * Подпись количества игроков: сколько нужно для старта и сколько максимум.
  * @param game Игра.
  */
@@ -431,22 +519,25 @@ export function getGameStartingLevelLabel(game: Game): string {
 }
 
 /**
- * Подпись стоимости сессии вместе с условиями оплаты.
+ * Подпись стоимости сессии вместе с условиями оплаты. Подходит и для цены
+ * игры по умолчанию: поля у неё те же.
  * У бесплатной игры платёжных полей нет вовсе.
- * @param session Сессия игры.
+ * @param sessionPrice Цена сессии игры или цена игры по умолчанию.
  */
-export function getSessionPriceLabel(session: GameSession): string | null {
-  if (session.priceAmount === null || !session.priceCurrency) {
+export function getSessionPriceLabel(
+  sessionPrice: GameSessionPrice,
+): string | null {
+  if (sessionPrice.priceAmount === null || !sessionPrice.priceCurrency) {
     return null;
   }
 
-  const price = `${session.priceAmount.toFixed(2)} ${session.priceCurrency}`;
+  const price = `${formatPriceAmount(sessionPrice.priceAmount)} ${sessionPrice.priceCurrency}`;
 
-  if (!session.paymentType) {
+  if (!sessionPrice.paymentType) {
     return price;
   }
 
-  return `${price} · ${SESSION_PAYMENT_TYPE_LABELS[session.paymentType]}`;
+  return `${price} · ${SESSION_PAYMENT_TYPE_LABELS[sessionPrice.paymentType]}`;
 }
 
 /**
@@ -568,6 +659,42 @@ export function getGameInviteLink(gameId: string, inviteCode: string): string {
 }
 
 /**
+ * Двузначная часть даты или времени для полей ввода.
+ * @param value Месяц, день, часы или минуты.
+ */
+function padDatePart(value: number): string {
+  return `${value}`.padStart(2, '0');
+}
+
+/**
+ * Разбирает момент времени; пустой или нечитаемый даёт `null`.
+ * @param isoDate Момент времени в ISO-формате.
+ */
+function parseMoment(isoDate: string | null): Date | null {
+  if (!isoDate) {
+    return null;
+  }
+
+  const date = new Date(isoDate);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/**
+ * Приводит момент времени к значению поля `date` — дате по местным часам.
+ * @param isoDate Момент времени в ISO-формате.
+ */
+export function toLocalDateInput(isoDate: string | null): string {
+  const date = parseMoment(isoDate);
+
+  if (!date) {
+    return '';
+  }
+
+  return `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())}`;
+}
+
+/**
  * Приводит момент времени к значению поля `datetime-local`.
  *
  * Поле работает в местном времени браузера без указания зоны — ровно то, что
@@ -576,21 +703,15 @@ export function getGameInviteLink(gameId: string, inviteCode: string): string {
  * @param isoDate Момент времени в ISO-формате.
  */
 export function toLocalDateTimeInput(isoDate: string | null): string {
-  if (!isoDate) {
+  const date = parseMoment(isoDate);
+
+  if (!date) {
     return '';
   }
-
-  const date = new Date(isoDate);
-
-  if (Number.isNaN(date.getTime())) {
-    return '';
-  }
-
-  const pad = (value: number) => `${value}`.padStart(2, '0');
 
   return [
-    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
-    `${pad(date.getHours())}:${pad(date.getMinutes())}`,
+    toLocalDateInput(isoDate),
+    `${padDatePart(date.getHours())}:${padDatePart(date.getMinutes())}`,
   ].join('T');
 }
 
@@ -614,7 +735,7 @@ export function getDefaultSessionStart(): string {
  * границами встречи, поэтому в дате его нет.
  */
 export function getDefaultSessionDate(): string {
-  return toLocalDateTimeInput(new Date().toISOString()).slice(0, 10);
+  return toLocalDateInput(new Date().toISOString());
 }
 
 /**

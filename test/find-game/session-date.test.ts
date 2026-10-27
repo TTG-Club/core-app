@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { isFutureSessionStart } from '~find-game/model';
+import {
+  isFutureSessionStart,
+  toLocalDateInput,
+  toLocalDateTimeInput,
+} from '~find-game/model';
 
 describe('проверка начала сессии', () => {
   const currentTime = Date.parse('2026-09-09T12:00:00Z');
@@ -41,4 +45,21 @@ describe('проверка начала сессии', () => {
     expect(isFutureSessionStart(startsAt, currentTime)).toBe(true);
     expect(isFutureSessionStart(startsAt, Date.parse(startsAt))).toBe(false);
   });
+});
+
+describe('поля даты формы сессии', () => {
+  it('дата и время берутся по местным часам', () => {
+    const startsAt = new Date(2026, 9, 7, 21, 5).toISOString();
+
+    expect(toLocalDateInput(startsAt)).toBe('2026-10-07');
+    expect(toLocalDateTimeInput(startsAt)).toBe('2026-10-07T21:05');
+  });
+
+  it.each([null, '', 'invalid'])(
+    'пустое или нечитаемое даёт пустое поле: %s',
+    (startsAt) => {
+      expect(toLocalDateInput(startsAt)).toBe('');
+      expect(toLocalDateTimeInput(startsAt)).toBe('');
+    },
+  );
 });

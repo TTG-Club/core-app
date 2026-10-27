@@ -1,12 +1,13 @@
 import { z } from 'zod';
 
 import {
+  authConsentsSchema,
   createAuthValidationError,
   fetchAuthService,
   getFrontendOriginHeaders,
 } from '#server/utils/authService';
 
-const signUpRequestSchema = z.object({
+const signUpRequestSchema = authConsentsSchema.extend({
   email: z.string().email().max(320),
   password: z.string().min(8).max(100),
   username: z.string().min(3).max(100),

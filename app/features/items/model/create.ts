@@ -96,8 +96,11 @@ export type ToolProficiencyMode =
  */
 export type WeaponDamageAbility = EffectAbility | 'none';
 
-/** Что происходит с уроном при успешном спасброске (`saveEffect` VTTG). */
-export type WeaponSaveEffect = 'half' | 'none' | 'special';
+/**
+ * Что спасбросок делает с уроном (`SaveDamageEffect` VTTG): `double` — провал
+ * удваивает урон, успех ничего не меняет.
+ */
+export type WeaponSaveEffect = 'half' | 'none' | 'special' | 'double';
 
 /** Категория инструмента. Зеркало `ToolCategory` из VTTG. */
 export type ItemToolCategory = 'artisan' | 'gaming' | 'musical' | 'other';
@@ -105,6 +108,8 @@ export type ItemToolCategory = 'artisan' | 'gaming' | 'musical' | 'other';
 /**
  * Категория снаряжения. Зеркало `EquipmentCategory` из VTTG. Броню задаёт
  * подформа доспеха (`ArmorCategory` сайта), здесь — всё остальное.
+ * `potion` — категория системы `dnd5e-2024`: в нейтральном `EquipmentCategory`
+ * ядра VTTG её нет, но ядро категорию не проверяет и хранит строкой.
  */
 export type ItemEquipmentCategory =
   | 'trinket'
@@ -112,6 +117,7 @@ export type ItemEquipmentCategory =
   | 'clothing'
   | 'wand'
   | 'wondrous'
+  | 'potion'
   | 'food'
   | 'adventurer-equipment'
   | 'vehicle-equipment';
@@ -180,12 +186,19 @@ export interface ArmorCreate {
   stealth: boolean | undefined; // помеха Скрытности
 }
 
+/** Предмет, который создаётся инструментом: url и снимок названия. */
+export interface ToolCraftRef {
+  url: string;
+  name: string;
+}
+
 export interface ToolCreate {
   category: ItemToolCategory | undefined; // пусто — вывести из типов предмета
   baseType: string | undefined; // ключ инструмента VTTG; пусто — из адреса
   ability: EffectAbility | undefined; // характеристика проверки инструментом
   bonus: number | undefined; // собственный бонус инструмента
   proficiencyMode: ToolProficiencyMode | undefined;
+  crafts: Array<ToolCraftRef>; // что создаётся инструментом — для мастерской бастиона
 }
 
 export interface ItemCreate extends EditorBaseInfoState {
@@ -198,6 +211,11 @@ export interface ItemCreate extends EditorBaseInfoState {
   image: string | undefined;
   /** Категория снаряжения VTTG; пусто — вывести из типов предмета. */
   equipmentCategory: ItemEquipmentCategory | undefined;
+  /**
+   * Расходуемый: применение тратит единицу предмета. Им же игрок заряжает
+   * стрелковое оружие на листе — с 0.8.62 система не спрашивает тип боеприпаса.
+   */
+  consumable: boolean;
   weapon: WeaponCreate; // данные оружия
   armor: ArmorCreate; // данные доспеха
   tool: ToolCreate; // данные инструмента
@@ -251,6 +269,7 @@ export function createEmptyTool(): ToolCreate {
     ability: undefined,
     bonus: undefined,
     proficiencyMode: undefined,
+    crafts: [],
   };
 }
 
@@ -276,6 +295,7 @@ export function createEmptyItem(): ItemCreate {
     weight: undefined,
     image: undefined,
     equipmentCategory: undefined,
+    consumable: false,
     tags: [],
     weapon: createEmptyWeapon(),
     armor: createEmptyArmor(),
@@ -475,8 +495,21 @@ export function normalizeLoadedItem(
   const normalized: Record<string, unknown> = {
     ...rest,
     ...subforms,
+    // Незаданный признак приходит как `null`: галочке нужен именно `false`,
+    // иначе она встанет в неопределённое состояние
+    consumable: raw.consumable === true,
     activeEffects: normalizeLoadedActiveEffects(raw.activeEffects),
   };
+
+  // Инструмент, сохранённый до списка создаваемых предметов, приходит без него
+  if (isPlainObject(normalized.tool)) {
+    normalized.tool = {
+      ...normalized.tool,
+      crafts: Array.isArray(normalized.tool.crafts)
+        ? normalized.tool.crafts
+        : [],
+    };
+  }
 
   if (isPlainObject(normalized.weapon)) {
     normalized.weapon = {

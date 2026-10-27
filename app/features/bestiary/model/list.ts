@@ -3,7 +3,11 @@ import type { ListPresentationConfig } from '~infrastructure/list-presentation/m
 import type { CreatureLinkResponse } from './link';
 
 export type CreatureGrouping = 'CHALLENGE_RATING' | 'TYPE' | 'NONE';
-export type CreatureSorting = 'CHALLENGE_RATING' | 'NAME' | 'ENGLISH';
+export type CreatureSorting =
+  | 'CHALLENGE_RATING'
+  | 'RATING'
+  | 'NAME'
+  | 'ENGLISH';
 
 /**
  * Создаёт конфигурацию представления бестиария с актуальным порядком ПО.
@@ -49,6 +53,11 @@ export function createBestiaryListPresentationConfig(
         label: 'По показателю опасности',
         value: 'CHALLENGE_RATING',
         apiValue: 'CHALLENGE_RATING',
+      },
+      {
+        label: 'По рейтингу',
+        value: 'RATING',
+        apiValue: 'RATING',
       },
       {
         label: 'По русскому названию',

@@ -7,9 +7,11 @@
 
   import {
     BUG_REPORT_PLATFORM_LABELS,
-    BUG_REPORT_STATUS_LABELS,
+    BUG_REPORT_TYPE_ICONS,
+    BUG_REPORT_TYPE_LABELS,
     getBugReportDescriptionText,
     getBugReportStatusColor,
+    getBugReportStatusLabel,
     MY_BUGS_CHANGE_COMMENT_LABEL,
     MY_BUGS_CHANGE_GENERIC_LABEL,
     MY_BUGS_CHANGE_STATUS_LABEL,
@@ -29,6 +31,7 @@
     parseSelectedText,
     toBugReportDescriptionBlocks,
   } from '../../model';
+  import { BugReportScreenshotModal } from '../../screenshot';
 
   /** Оформление карточки с непросмотренным изменением статуса. */
   const UPDATED_CARD_CLASS =
@@ -61,9 +64,12 @@
     getBugReportStatusColor(props.bugReport.status),
   );
 
-  const statusLabel = computed(
-    () => BUG_REPORT_STATUS_LABELS[props.bugReport.status],
+  const statusLabel = computed(() =>
+    getBugReportStatusLabel(props.bugReport.status, props.bugReport.type),
   );
+
+  /** Пожелание помечается отдельной плашкой: у багов пометки нет */
+  const isWish = computed(() => props.bugReport.type === 'WISH');
 
   const platformLabel = computed(
     () => BUG_REPORT_PLATFORM_LABELS[props.bugReport.sourcePlatform],
@@ -188,6 +194,16 @@
           size="sm"
         >
           {{ statusLabel }}
+        </UBadge>
+
+        <UBadge
+          v-if="isWish"
+          color="secondary"
+          variant="subtle"
+          size="sm"
+          :icon="BUG_REPORT_TYPE_ICONS.WISH"
+        >
+          {{ BUG_REPORT_TYPE_LABELS.WISH }}
         </UBadge>
 
         <UBadge
@@ -367,23 +383,12 @@
     </div>
 
     <!-- Скриншот в полном размере -->
-    <UModal
+    <BugReportScreenshotModal
+      v-if="bugReport.screenshotUrl"
       v-model:open="isScreenshotModalOpen"
+      :url="bugReport.screenshotUrl"
       :title="MY_BUGS_SCREENSHOT_MODAL_TITLE"
-      :ui="{ content: 'max-w-5xl' }"
-    >
-      <template #body>
-        <div
-          class="flex items-center justify-center overflow-hidden rounded-lg bg-black/10 p-2"
-        >
-          <img
-            v-if="bugReport.screenshotUrl"
-            :src="bugReport.screenshotUrl"
-            :alt="MY_BUGS_SCREENSHOT_ALT"
-            class="max-h-[80vh] max-w-full object-contain"
-          />
-        </div>
-      </template>
-    </UModal>
+      :alt="MY_BUGS_SCREENSHOT_ALT"
+    />
   </div>
 </template>

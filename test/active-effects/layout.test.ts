@@ -1,9 +1,12 @@
+import type { EffectTrigger } from '~active-effects/model';
+
 import { describe, expect, it } from 'vitest';
 
 import {
   APPLIER_SAVE_DC,
   applyConditionPresetToEffect,
   buildConditionActiveEffect,
+  buildTriggerRecipientOptions,
   clearInertEffectFields,
   createEffectForContext,
   createEffectTriggerPreset,
@@ -19,21 +22,25 @@ import {
   listInertEffectFields,
   listTriggerActionTypes,
   listTriggerTags,
+  MIN_TRIGGER_AREA_RADIUS,
   normalizeEffectDraft,
   readEffectAreaTrigger,
   readEffectDelivery,
   readEffectSuccessOutcome,
   resolveEffectFormLayout,
-  triggerEventAcceptsDcFormula,
+  triggerEventAcceptsArea,
+  triggerEventAcceptsDamageDc,
   triggerEventHasOtherParty,
   writeEffectAreaTrigger,
   writeEffectDelivery,
   writeEffectSaveEnabled,
   writeEffectSuccessOutcome,
   writeEffectTriggerRow,
+  writeTriggerEvent,
 } from '~active-effects/model';
 
 import {
+  ACTIVATION_RANGE,
   ALL_CREATURES_AURA,
   ALLIES_AURA,
   AURA_RADIUS,
@@ -50,6 +57,9 @@ import {
 
 /** Радиус ауры, настроенный автором. */
 const CUSTOM_AURA_RADIUS = 30;
+
+/** Отрицательный радиус «всем в радиусе»: нормализация поднимает его до нуля. */
+const NEGATIVE_AREA_RADIUS = -5;
 
 describe('новый эффект по месту формы', () => {
   it('у действия существа и заклинания эффект сразу на цели', () => {
@@ -184,7 +194,7 @@ describe('раскладка формы эффекта', () => {
       conditionKey: 'prone',
     });
 
-    expect(layout.deliveryOptions).toEqual(['target']);
+    expect(layout.deliveryOptions).toEqual(['target', 'carrier']);
     expect(layout.minSaveDc).toBe(APPLIER_SAVE_DC);
     expect(layout.successOutcomeForActionSave).toBe(true);
 
@@ -392,17 +402,13 @@ describe('неработающие поля', () => {
     }
   });
 
-  it('эффект действия существа «на носителе» уходит на цель', () => {
+  it('эффект действия существа ложится и на само существо', () => {
     const effect = createEffect({ effectTarget: 'self' });
     const layout = resolveEffectFormLayout('creatureAction', effect);
 
-    expect(layout.delivery).toBe('target');
-    expect(listInertEffectFields(effect, layout)).toEqual(['effectTarget']);
-
-    expect(
-      clearInertEffectFields(effect, ['effectTarget'], 'creatureAction')
-        .effectTarget,
-    ).toBe('target');
+    // Доставка «На существе» работает с 0.8.62: неработающих полей нет
+    expect(layout.delivery).toBe('carrier');
+    expect(listInertEffectFields(effect, layout)).toEqual([]);
   });
 
   it('спасбросок, «при успехе» и урон у ауры «пока внутри»', () => {
@@ -450,12 +456,365 @@ describe('шаги формы', () => {
     ).toEqual([...EFFECT_FORM_STEPS]);
   });
 
-  it('действие существа: выбирать доставку не из чего', () => {
+  it('действие существа: шаг держат условие наложения и вариант', () => {
     expect(
       listEffectFormSteps(
         resolveLayoutFor('creatureAction', { effectTarget: 'target' }),
       ),
-    ).toEqual(['save', 'damage', 'modifiers', 'duration', 'triggers']);
+    ).toEqual([
+      'trigger',
+      'save',
+      'damage',
+      'modifiers',
+      'duration',
+      'triggers',
+    ]);
+  });
+
+  it('условие наложения и вариант держат шаг «Когда срабатывает»', () => {
+    expect(listEffectFormSteps(resolveLayoutFor('condition'))).toEqual([
+      'modifiers',
+    ]);
+
+    const layout = resolveLayoutFor('spell', { effectTarget: 'target' });
+
+    expect(layout.showVariant).toBe(true);
+    expect(listEffectFormSteps(layout)).toContain('trigger');
+  });
+});
+
+describe('получатель «всем в радиусе»', () => {
+  /**
+   * Срабатывание после нормализации черновика.
+   *
+   * @param trigger поля срабатывания поверх обязательных.
+   * @returns срабатывание записи.
+   */
+  function normalizeAreaTrigger(
+    trigger: Partial<EffectTrigger>,
+  ): EffectTrigger | undefined {
+    const draft = createEffect({
+      triggers: [
+        {
+          id: 'trigger_area',
+          event: 'hpZero',
+          actions: [{ type: 'removeSelf' }],
+          ...trigger,
+        },
+      ],
+    });
+
+    return normalizeEffectDraft(draft, resolveLayoutFor('creatureTrait'))
+      .triggers?.[0];
+  }
+
+  it('выбор только у событий сервера со сценой, радиус от нуля', () => {
+    expect(triggerEventAcceptsArea('hpZero')).toBe(true);
+    expect(triggerEventAcceptsArea('applied')).toBe(true);
+    expect(triggerEventAcceptsArea('turnStart')).toBe(false);
+
+    expect(
+      normalizeAreaTrigger({
+        recipient: 'area',
+        area: { radius: NEGATIVE_AREA_RADIUS, target: 'enemies' },
+      })?.area,
+    ).toEqual({ radius: MIN_TRIGGER_AREA_RADIUS, target: 'enemies' });
+
+    const turnTrigger = normalizeAreaTrigger({
+      event: 'turnStart',
+      recipient: 'area',
+      area: { radius: AURA_RADIUS },
+    });
+
+    expect(turnTrigger?.recipient).toBeUndefined();
+    expect(turnTrigger?.area).toBeUndefined();
+  });
+
+  it('смена события уносит недоступного получателя и его радиус', () => {
+    const areaTrigger: EffectTrigger = {
+      id: 'trigger_area',
+      event: 'hpZero',
+      recipient: 'area',
+      area: { radius: AURA_RADIUS },
+      actions: [{ type: 'removeSelf' }],
+    };
+
+    expect(
+      buildTriggerRecipientOptions(areaTrigger).map(
+        (recipientOption) => recipientOption.value,
+      ),
+    ).toEqual(['subject', 'source', 'area', 'choice']);
+
+    const turnTrigger = writeTriggerEvent(
+      areaTrigger,
+      'turnStart',
+      resolveLayoutFor('ownEffects'),
+    );
+
+    expect(turnTrigger.recipient).toBeUndefined();
+    expect(turnTrigger.area).toBeUndefined();
+  });
+
+  it('«по выбору» доступен и на границе хода, чужой блок не наследуется', () => {
+    const choiceTrigger: EffectTrigger = {
+      id: 'trigger_choice',
+      event: 'turnStart',
+      recipient: 'choice',
+      choice: { radius: AURA_RADIUS, target: 'allies', count: 1 },
+      actions: [{ type: 'removeSelf' }],
+    };
+
+    expect(
+      buildTriggerRecipientOptions(choiceTrigger).map(
+        (recipientOption) => recipientOption.value,
+      ),
+    ).toEqual(['subject', 'choice']);
+
+    const restTrigger = writeTriggerEvent(
+      choiceTrigger,
+      'rest',
+      resolveLayoutFor('ownEffects'),
+    );
+
+    expect(restTrigger.recipient).toBeUndefined();
+    expect(restTrigger.choice).toBeUndefined();
+  });
+});
+
+describe('применение и включение', () => {
+  it('способы по месту формы: предмет, оружие и умение применяют и включают', () => {
+    for (const context of ['item', 'weapon', 'feature'] as const) {
+      expect(resolveLayoutFor(context).activationModes, context).toEqual([
+        'use',
+        'toggle',
+      ]);
+    }
+
+    expect(resolveLayoutFor('ownEffects').activationModes).toEqual([
+      'use',
+      'toggle',
+    ]);
+
+    expect(resolveLayoutFor('spell').activationModes).toEqual([]);
+    expect(resolveLayoutFor('creatureTrait').activationModes).toEqual([]);
+  });
+
+  it('применяемый предмет: цель, копия живёт сама и слышит «при наложении»', () => {
+    const potion = createEffect({ activation: { mode: 'use' } });
+    const potionLayout = resolveEffectFormLayout('item', potion);
+
+    expect(potionLayout.deliveryOptions).toEqual(['carrier', 'target', 'aura']);
+    expect(potionLayout.showDuration).toBe(true);
+    expect(potionLayout.showVariant).toBe(true);
+    expect(potionLayout.showLandingCondition).toBe(true);
+    expect(potionLayout.showActivationCounter).toBe(false);
+    expect(potionLayout.triggerEvents).toContain('applied');
+    expect(potionLayout.triggerActions).toContain('removeSelf');
+
+    const potionOnTarget = createEffect({
+      activation: { mode: 'use' },
+      effectTarget: 'target',
+    });
+
+    expect(
+      listInertEffectFields(
+        potionOnTarget,
+        resolveEffectFormLayout('item', potionOnTarget),
+      ),
+    ).toEqual([]);
+
+    const wornItem = createEffect({ effectTarget: 'target' });
+
+    expect(
+      listInertEffectFields(
+        wornItem,
+        resolveEffectFormLayout('item', wornItem),
+      ),
+    ).toEqual(['effectTarget']);
+  });
+
+  it('переключаемое умение: ресурс и событие «При включении»', () => {
+    const rage = createEffect({
+      activation: { mode: 'toggle', counter: 'rage' },
+    });
+
+    const rageLayout = resolveEffectFormLayout('feature', rage);
+
+    expect(rageLayout.showActivationCounter).toBe(true);
+    expect(rageLayout.showDuration).toBe(true);
+    expect(rageLayout.triggerEvents).toContain('activate');
+    expect(rageLayout.minSaveDc).toBe(FIXED_MIN_SAVE_DC);
+  });
+
+  it('сценарий переключателя называет одно включение, у применения — нет', () => {
+    const rage = createEffect({
+      activation: { mode: 'toggle', counter: 'rage', exclusive: 'Ярость' },
+    });
+
+    expect(describeEffectScenario(rage, 'feature')).toContain(
+      'одно включение «Ярость»',
+    );
+
+    const channel = createEffect({
+      activation: { mode: 'use', counter: 'rage', exclusive: 'Ярость' },
+    });
+
+    expect(describeEffectScenario(channel, 'feature')).not.toContain(
+      'одно включение',
+    );
+  });
+
+  it('переключаемое умение держит вариант: его выбирают при включении', () => {
+    const wildRage = createEffect({
+      activation: { mode: 'toggle' },
+      variant: { group: 'Ярость диких земель', label: 'Медведь' },
+    });
+
+    const wildRageLayout = resolveEffectFormLayout('feature', wildRage);
+
+    expect(wildRageLayout.showVariant).toBe(true);
+
+    expect(listInertEffectFields(wildRage, wildRageLayout)).not.toContain(
+      'variant',
+    );
+  });
+
+  it('у применяемого предмета Сл своя: источника у зелья нет', () => {
+    const poison = createEffect({
+      effectTarget: 'target',
+      activation: { mode: 'use' },
+    });
+
+    const poisonLayout = resolveEffectFormLayout('item', poison);
+
+    expect(poisonLayout.delivery).toBe('target');
+    expect(poisonLayout.minSaveDc).toBe(FIXED_MIN_SAVE_DC);
+  });
+
+  it('применяемое умение на цели бросает против Сл применившего', () => {
+    const channel = createEffect({
+      effectTarget: 'target',
+      activation: { mode: 'use', counter: 'channelDivinity' },
+    });
+
+    const channelLayout = resolveEffectFormLayout('feature', channel);
+
+    expect(channelLayout.delivery).toBe('target');
+    expect(channelLayout.minSaveDc).toBe(APPLIER_SAVE_DC);
+    expect(channelLayout.showSave).toBe(true);
+  });
+
+  it('применение не для этого места — неработающее поле', () => {
+    const toggledEffect = createEffect({ activation: { mode: 'toggle' } });
+
+    expect(
+      listInertEffectFields(
+        toggledEffect,
+        resolveEffectFormLayout('creatureTrait', toggledEffect),
+      ),
+    ).toEqual(['activation']);
+
+    // У предмета переключатель работает: «Язык пламени» зажигают и гасят
+    expect(
+      listInertEffectFields(
+        toggledEffect,
+        resolveEffectFormLayout('item', toggledEffect),
+      ),
+    ).toEqual([]);
+  });
+
+  it('шаблон применения на своём листе сохраняется выключенным', () => {
+    const template = createEffect({ activation: { mode: 'use' } });
+    const templateLayout = resolveEffectFormLayout('ownEffects', template);
+
+    expect(normalizeEffectDraft(template, templateLayout).disabled).toBe(true);
+    expect(templateLayout.showStatusToggle).toBe(false);
+  });
+
+  it('ресурс и расход пишутся только заданными', () => {
+    const rage = createEffect({
+      activation: { mode: 'toggle', counter: '  rage  ', amount: 2 },
+    });
+
+    expect(
+      normalizeEffectDraft(rage, resolveEffectFormLayout('feature', rage))
+        .activation,
+    ).toEqual({ mode: 'toggle', counter: 'rage', amount: 2 });
+
+    const singleCharge = createEffect({
+      activation: { mode: 'toggle', counter: 'rage', amount: 1 },
+    });
+
+    expect(
+      normalizeEffectDraft(
+        singleCharge,
+        resolveEffectFormLayout('feature', singleCharge),
+      ).activation,
+    ).toEqual({ mode: 'toggle', counter: 'rage', amount: undefined });
+
+    const withoutCounter = createEffect({
+      activation: { mode: 'use', amount: 3 },
+    });
+
+    expect(
+      normalizeEffectDraft(
+        withoutCounter,
+        resolveEffectFormLayout('feature', withoutCounter),
+      ).activation,
+    ).toEqual({ mode: 'use', counter: undefined, amount: undefined });
+  });
+
+  it('дальность применения: поле у применения, пишется только у него и от 1 фт', () => {
+    const spark = createEffect({
+      effectTarget: 'target',
+      activation: {
+        mode: 'use',
+        counter: 'channel-divinity',
+        range: ACTIVATION_RANGE,
+      },
+    });
+
+    const sparkLayout = resolveEffectFormLayout('feature', spark);
+
+    expect(sparkLayout.showActivationRange).toBe(true);
+
+    expect(normalizeEffectDraft(spark, sparkLayout).activation).toEqual({
+      mode: 'use',
+      counter: 'channel-divinity',
+      amount: undefined,
+      range: ACTIVATION_RANGE,
+    });
+
+    const potion = createEffect({ activation: { mode: 'use' } });
+
+    expect(resolveEffectFormLayout('item', potion).showActivationRange).toBe(
+      true,
+    );
+
+    const rage = createEffect({
+      activation: { mode: 'toggle', counter: 'rage', range: ACTIVATION_RANGE },
+    });
+
+    const rageLayout = resolveEffectFormLayout('feature', rage);
+
+    expect(rageLayout.showActivationRange).toBe(false);
+
+    expect(
+      normalizeEffectDraft(rage, rageLayout).activation?.range,
+    ).toBeUndefined();
+
+    expect(resolveLayoutFor('feature').showActivationRange).toBe(false);
+
+    // Очищенное поле отдаёт `undefined`, ноль и доля фута — касание
+    for (const range of [undefined, 0, 0.5]) {
+      const touch = createEffect({ activation: { mode: 'use', range } });
+      const touchLayout = resolveEffectFormLayout('feature', touch);
+
+      expect(
+        normalizeEffectDraft(touch, touchLayout).activation?.range,
+        String(range),
+      ).toBeUndefined();
+    }
   });
 });
 
@@ -549,39 +908,108 @@ describe('список «Срабатывания»', () => {
       'attackRoll',
       'damageTaken',
       'hpZero',
+      'healed',
+      'conditionLost',
+      'downedOther',
+      'damageDealt',
+      'spellCast',
+      'moved',
+      'rest',
     ]);
 
     expect(ownLayout.triggerActions).toEqual([
       'damage',
       'applyCondition',
       'applyTag',
+      'reduceMaxHp',
       'setHp',
+      'tempHp',
+      'move',
+      'removeCondition',
+      'kill',
+      'revive',
+      'dropHeld',
+      'restore',
+      'dispel',
+      'grantInspiration',
+      'notify',
+      'nextStage',
       'endCast',
       'removeSelf',
+      'refreshDuration',
     ]);
 
     expect(listTriggerActionTypes(ownLayout, 'attackRoll')).toEqual([
       'damage',
       'applyCondition',
       'applyTag',
+      'reduceMaxHp',
+      'tempHp',
+      'move',
+      'removeCondition',
+      'kill',
+      'revive',
+      'dropHeld',
+      'restore',
+      'dispel',
+      'grantInspiration',
+      'notify',
+      'nextStage',
       'endCast',
       'removeSelf',
+      'refreshDuration',
     ]);
 
     expect(listTriggerActionTypes(ownLayout, 'hpZero')).toEqual([
       'damage',
       'applyCondition',
       'applyTag',
+      'reduceMaxHp',
       'setHp',
+      'tempHp',
+      'move',
+      'removeCondition',
+      'kill',
+      'revive',
+      'dropHeld',
+      'restore',
+      'dispel',
+      'grantInspiration',
+      'notify',
+      'nextStage',
       'endCast',
       'removeSelf',
+      'refreshDuration',
     ]);
 
-    expect(triggerEventAcceptsDcFormula('damageTaken')).toBe(true);
-    expect(triggerEventAcceptsDcFormula('turnEnd')).toBe(false);
+    expect(triggerEventAcceptsDamageDc('damageTaken')).toBe(true);
+    expect(triggerEventAcceptsDamageDc('turnEnd')).toBe(false);
+    expect(triggerEventAcceptsDamageDc('applied')).toBe(true);
     expect(triggerEventHasOtherParty('attackRoll')).toBe(true);
     expect(triggerEventHasOtherParty('damageTaken')).toBe(true);
+    expect(triggerEventHasOtherParty('applied')).toBe(true);
     expect(triggerEventHasOtherParty('hpZero')).toBe(false);
+
+    expect(
+      resolveLayoutFor('spell', { effectTarget: 'target' }).triggerEvents,
+    ).toEqual([
+      'applied',
+      // У действующего заклинания на цели есть своя кнопка действия
+      'activate',
+      'turnStart',
+      'turnEnd',
+      'attackRoll',
+      'damageTaken',
+      'hpZero',
+      'healed',
+      'conditionLost',
+      'downedOther',
+      'damageDealt',
+      'spellCast',
+      'moved',
+      'castEnd',
+      'rest',
+    ]);
 
     const spellZone = resolveLayoutFor('spell', { effectTarget: 'zone' });
 
@@ -596,6 +1024,18 @@ describe('список «Срабатывания»', () => {
       'damage',
       'applyCondition',
       'applyTag',
+      'reduceMaxHp',
+      'tempHp',
+      'move',
+      'removeCondition',
+      'kill',
+      'revive',
+      'dropHeld',
+      'restore',
+      'dispel',
+      'grantInspiration',
+      'notify',
+      'endCast',
     ]);
 
     // В ауру входят и выходят так же, как в зону
@@ -608,22 +1048,44 @@ describe('список «Срабатывания»', () => {
       'exit',
       'damageTaken',
       'hpZero',
+      'healed',
     ]);
 
     const traitLayout = resolveLayoutFor('creatureTrait');
 
+    // Черта действует вместе с существом: слышит и его атаку, путь, отдых
     expect(traitLayout.triggerEvents).toEqual([
       'turnStart',
       'turnEnd',
+      'attackRoll',
       'damageTaken',
       'hpZero',
+      'healed',
+      'conditionLost',
+      'downedOther',
+      'damageDealt',
+      'spellCast',
+      'moved',
+      'rest',
     ]);
 
     expect(traitLayout.triggerActions).toEqual([
       'damage',
       'applyCondition',
       'applyTag',
+      'reduceMaxHp',
       'setHp',
+      'tempHp',
+      'move',
+      'removeCondition',
+      'kill',
+      'revive',
+      'dropHeld',
+      'restore',
+      'dispel',
+      'grantInspiration',
+      'notify',
+      'endCast',
     ]);
 
     // Эффект накладывают — выбирается и ход наложившего
@@ -631,14 +1093,71 @@ describe('список «Срабатывания»', () => {
     // У черты существа наложившего нет
     expect(traitLayout.triggerTurnOwners).toEqual(['subject']);
 
-    for (const context of ['feature', 'item'] as const) {
-      expect(resolveLayoutFor(context).triggerEvents, context).toEqual([
-        'damageTaken',
-        'hpZero',
-      ]);
-    }
+    // Постоянный эффект надетого предмета слышит то же, что эффект умения:
+    // урон по носителю и его поступки — атаку, путь, отдых
+    const itemLayout = resolveLayoutFor('item');
 
-    expect(resolveLayoutFor('weapon').triggerEvents).toEqual([]);
+    expect(itemLayout.triggerEvents).toEqual([
+      'attackRoll',
+      'damageTaken',
+      'hpZero',
+      'healed',
+      'conditionLost',
+      'downedOther',
+      'damageDealt',
+      'spellCast',
+      'moved',
+      'rest',
+    ]);
+
+    // Свойство предмета срабатывание не снимает
+    expect(itemLayout.triggerActions).not.toContain('removeSelf');
+
+    // Эффект оружия «на владельце» — такой же эффект предмета в руке
+    expect(
+      resolveLayoutFor('weapon', { effectTarget: 'self' }).triggerEvents,
+    ).toEqual([
+      'attackRoll',
+      'conditionLost',
+      'downedOther',
+      'damageDealt',
+      'spellCast',
+      'moved',
+      'rest',
+    ]);
+
+    // Эффект умения скопирован на персонажа и слышит его поступки: атаку,
+    // путь, отдых. Снять сам себя он не может — это сняло бы выданную черту
+    const featureLayout = resolveLayoutFor('feature');
+
+    expect(featureLayout.triggerEvents).toEqual([
+      'attackRoll',
+      'damageTaken',
+      'hpZero',
+      'healed',
+      'conditionLost',
+      'downedOther',
+      'damageDealt',
+      'spellCast',
+      'moved',
+      'rest',
+    ]);
+
+    expect(featureLayout.triggerActions).not.toContain('removeSelf');
+    // Срока у постоянного умения нет — продлевать нечего
+    expect(featureLayout.triggerActions).not.toContain('refreshDuration');
+    expect(itemLayout.triggerActions).not.toContain('refreshDuration');
+
+    // «Ярость» включают переключателем: атака продлевает её срок
+    const rageLayout = resolveLayoutFor('feature', {
+      activation: { mode: 'toggle', counter: 'rage' },
+    });
+
+    expect(listTriggerActionTypes(rageLayout, 'attackRoll')).toContain(
+      'refreshDuration',
+    );
+
+    expect(rageLayout.triggerActions).not.toContain('removeSelf');
   });
 
   it('пресеты по месту; повторный спасбросок повторяет спасбросок эффекта', () => {
@@ -782,7 +1301,7 @@ describe('список «Срабатывания»', () => {
     ).toEqual([]);
   });
 
-  it('черта существа: срабатывание броска атаки не работает', () => {
+  it('черта существа: срабатывание броска атаки работает', () => {
     const effect = createEffect({
       triggers: [
         {
@@ -798,7 +1317,7 @@ describe('список «Срабатывания»', () => {
         effect,
         resolveEffectFormLayout('creatureTrait', effect),
       ),
-    ).toEqual(['triggers']);
+    ).toEqual([]);
   });
 
   it('сохранение: без действий не пишется, Сл и лимит — в границах', () => {

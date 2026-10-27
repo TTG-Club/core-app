@@ -16,6 +16,7 @@
   import {
     createMagicItemListPresentationConfig,
     getMagicItemMarkdown,
+    MAGIC_ITEM_FILTER_RANGE_ORDERS,
   } from '~magic-items/model';
   import { UiDetailPane } from '~ui/detail-pane';
   import { GroupedList } from '~ui/grouped-list';
@@ -32,9 +33,12 @@
     search,
     filterQuery,
     isPending: isFilterPending,
-    isShowedPreview: isFilterPreviewShowed,
     defaults: filterDefaults,
-  } = await useFilter('magic-items', '/api/v2/magic-items/filters');
+  } = await useFilter(
+    'magic-items',
+    '/api/v2/magic-items/filters',
+    MAGIC_ITEM_FILTER_RANGE_ORDERS,
+  );
 
   const { order: rarityOrder, pending: isRarityPending } =
     useMagicItemRarityGroupOrder();
@@ -121,7 +125,6 @@
         v-model:filter="filter"
         :defaults="filterDefaults"
         :is-pending="isFilterPending"
-        :show-preview="isFilterPreviewShowed"
         :presentation-menus="presentationMenus"
       >
         <template #legend>

@@ -26,7 +26,11 @@ export default defineConfig({
   plugins: [stubVueComponents],
   resolve: {
     alias: {
+      '~admin': fileURLToPath(new URL('./app/features/admin', import.meta.url)),
       '~home': fileURLToPath(new URL('./app/features/home', import.meta.url)),
+      '~bug-report': fileURLToPath(
+        new URL('./app/features/bug-report', import.meta.url),
+      ),
       '~active-effects': fileURLToPath(
         new URL('./app/features/active-effects', import.meta.url),
       ),
@@ -41,6 +45,16 @@ export default defineConfig({
       '~character-sheet': fileURLToPath(
         new URL('./app/features/character-sheet', import.meta.url),
       ),
+      '~classes': fileURLToPath(
+        new URL('./app/features/classes', import.meta.url),
+      ),
+      '~feats': fileURLToPath(new URL('./app/features/feats', import.meta.url)),
+      '~bastion-game': fileURLToPath(
+        new URL('./app/features/bastion-game', import.meta.url),
+      ),
+      '~bastions': fileURLToPath(
+        new URL('./app/features/bastions', import.meta.url),
+      ),
       '~bestiary': fileURLToPath(
         new URL('./app/features/bestiary', import.meta.url),
       ),
@@ -48,9 +62,19 @@ export default defineConfig({
       '~magic-items': fileURLToPath(
         new URL('./app/features/magic-items', import.meta.url),
       ),
+      '~profile': fileURLToPath(
+        new URL('./app/features/profile', import.meta.url),
+      ),
+      '~species': fileURLToPath(
+        new URL('./app/features/species', import.meta.url),
+      ),
       '~spells': fileURLToPath(
         new URL('./app/features/spells', import.meta.url),
       ),
+      '~vttg-modules': fileURLToPath(
+        new URL('./app/features/vttg-modules', import.meta.url),
+      ),
+      '~vttg': fileURLToPath(new URL('./app/features/vttg', import.meta.url)),
       '~ui': fileURLToPath(new URL('./app/shared/ui', import.meta.url)),
       '~infrastructure': fileURLToPath(
         new URL('./app/features/infrastructure', import.meta.url),

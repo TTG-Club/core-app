@@ -1,11 +1,17 @@
 import type {
   CreatureActionListKey,
+  CreatureDamageCondition,
   CreatureInventorySection,
   CreatureSaveEffect,
   CreatureSpellRestKind,
 } from '../model';
 
-import { SpeedType } from '../model';
+import {
+  CREATURE_COOLDOWN_TURNS_LABEL,
+  CREATURE_DAMAGE_CONDITION_LABELS,
+  CREATURE_DAMAGE_CONDITIONS,
+  SpeedType,
+} from '../model';
 
 export const CREATURE_IMAGE_SECTION_TITLE = 'Изображения';
 
@@ -153,6 +159,11 @@ export const CREATURE_SPELLCASTING_EDITOR = {
     'Столько применений на ВСЮ группу, вместе взятую, — заголовок «2/день».',
   rest: 'Возвращает применения',
   recharge: 'Перезарядка',
+  cooldownTurns: 'Ходов',
+  cooldownTurnsPlaceholder: '3',
+  cooldownTurnsHint:
+    'Группа снова доступна через столько ходов после применения, без броска. '
+    + 'Не из книг — для своих существ.',
   groupLabel: 'Своя подпись',
   groupLabelPlaceholder: 'Оставь пустым — соберётся из ограничения',
   spells: 'Заклинания группы',
@@ -239,6 +250,9 @@ export const CREATURE_ACTION_ENTRY = {
   removeConfirmApply: 'Удалить',
 } as const;
 
+/** Наименьшее число в поле «провал в успех, раз в день»: ноль — не умеет. */
+export const CREATURE_SAVE_SUCCESS_PER_DAY_MIN = 0;
+
 /** Подписи полей записи боевого блока. */
 export const CREATURE_ACTION_LABELS = {
   nameRus: 'Название',
@@ -248,11 +262,26 @@ export const CREATURE_ACTION_LABELS = {
   description: 'Описание',
   descriptionPlaceholder: 'Введи описание',
   recharge: 'Перезарядка',
+  cooldownTurns: CREATURE_COOLDOWN_TURNS_LABEL,
+  cooldownTurnsPlaceholder: 'Нет',
+  cooldownTurnsHint:
+    'Снова доступно через N ходов после использования, без броска. Не из книг '
+    + '— для своих существ',
+  saveSuccessPerDay: 'Провал спасброска → успех, раз в день',
+  saveSuccessPerDayPlaceholder: 'Нет',
+  saveSuccessPerDayHint:
+    '«Легендарное сопротивление (3/день)»: провалив спасбросок, существо '
+    + 'может преуспеть — ведущий решает в окне после броска. Счёт '
+    + 'восстанавливает долгий отдых.',
   attackType: 'Тип атаки',
   attackBonus: 'Бонус атаки',
   attackBonusPlaceholder: 'Например: 5',
   attackBonusHint: 'Плоское число: у существа он не выводится из характеристик',
   attackBonusReplaced: 'Спасбросок заменяет бросок попадания',
+  attackBonusAutoHit: 'При автопопадании броска атаки нет',
+  autoHit: 'Автопопадание',
+  autoHitHint: 'Урон наносится сразу, без броска атаки и спасброска цели',
+  saveAutoHit: 'При автопопадании спасброска нет',
   reach: 'Досягаемость, фт',
   rangeNormal: 'Дистанция, фт',
   rangeLong: 'Максимальная дистанция, фт',
@@ -274,7 +303,43 @@ export const CREATURE_ACTION_LABELS = {
 export const CREATURE_DAMAGE_PART_EMPTY =
   'Урона нет. Добавь часть, если запись его наносит или лечит.';
 
-/** Что происходит с уроном при успешном спасброске цели. */
+/** Подписи урона «или» — как в окне действия системы VTTG. */
+export const CREATURE_DAMAGE_ALTERNATIVE_LABELS = {
+  title: 'Или другой урон',
+  hint:
+    'Урон, который целиком заменяет основной. Состояние в формуле варианта '
+    + '(вкладки «Статусы цели» и «Статусы атакующего») делает его условием: '
+    + '«2к8@self.status.bloodied + 2» берётся сам, когда атакующий окровавлен. '
+    + '«@roll.advantage» в формуле — вариант «если у атаки преимущество»: окно '
+    + 'атаки выбирает его само по режиму броска. '
+    + 'Без условий вариант выбирается при броске или случайно.',
+  add: 'Добавить «или»',
+  /** Слово над каждым вариантом. */
+  or: 'или',
+  condition: 'Как выбрать',
+  label: 'Подпись',
+  labelPlaceholder: 'Необязательно: «С преимуществом»',
+  remove: 'Убрать вариант',
+  /** «По формуле», а условия в формуле ещё нет. */
+  formulaWithoutStatus:
+    'Добавьте состояние во вкладке «Статусы цели» или «Статусы атакующего» '
+    + 'либо «@roll.advantage» — без условия вариант не сработает.',
+  /** Состояние цели у действия с областью: одной цели там нет. */
+  areaTargetWarning:
+    'У действия с областью цель не одна — вариант с состоянием цели не '
+    + 'сработает.',
+} as const;
+
+/** Способы выбора варианта урона «или» для списка. */
+export const CREATURE_DAMAGE_CONDITION_OPTIONS: Array<{
+  label: string;
+  value: CreatureDamageCondition;
+}> = CREATURE_DAMAGE_CONDITIONS.map((condition) => ({
+  label: CREATURE_DAMAGE_CONDITION_LABELS[condition],
+  value: condition,
+}));
+
+/** Что спасбросок цели делает с уроном. */
 export const CREATURE_SAVE_EFFECT_OPTIONS: Array<{
   label: string;
   value: CreatureSaveEffect;
@@ -282,6 +347,7 @@ export const CREATURE_SAVE_EFFECT_OPTIONS: Array<{
   { label: 'Половина урона', value: 'HALF' },
   { label: 'Урона нет', value: 'NONE' },
   { label: 'Особый случай', value: 'SPECIAL' },
+  { label: 'Провал — урон удвоен', value: 'DOUBLE' },
 ];
 
 /**

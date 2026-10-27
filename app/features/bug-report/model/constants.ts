@@ -1,6 +1,14 @@
-import type { BrushColor, BugReportDetailTab, BugReportStatus } from './types';
+import type {
+  BrushColor,
+  BugReportDetailTab,
+  BugReportModalTexts,
+  BugReportServerLagCause,
+  BugReportStatus,
+  BugReportType,
+  BugReportTypeTab,
+} from './types';
 
-import { SOURCE_PLATFORM_LABELS } from '#shared/consts';
+import { BUG_REPORT_TYPE_LABELS, SOURCE_PLATFORM_LABELS } from '#shared/consts';
 
 /** Предустановленные цвета кисти для рисования на скриншоте */
 export const BRUSH_COLORS: ReadonlyArray<BrushColor> = [
@@ -87,6 +95,16 @@ export const ADMIN_BUGS_COUNT_BY_STATUS_API_URL = `${ADMIN_BUGS_API_URL}/count-b
 export const ADMIN_BUGS_FILTER_OPTIONS_API_URL = `${ADMIN_BUGS_API_URL}/filter-options`;
 
 /**
+ * Типы записи (баг или пожелание), тип по умолчанию и их подписи. Реэкспорт из
+ * `#shared/consts`: тем же набором серверные ручки проверяют параметр `type`.
+ */
+export {
+  BUG_REPORT_TYPE_LABELS,
+  BUG_REPORT_TYPES,
+  DEFAULT_BUG_REPORT_TYPE,
+} from '#shared/consts';
+
+/**
  * Платформа-источник бага. Реэкспорт из `#shared/consts`: идентичность сайта —
  * общее знание, её нельзя разнести по константам двух фич.
  */
@@ -113,6 +131,15 @@ export function getAdminBugApiUrl(bugId: string): string {
  */
 export function getAdminBugStatusApiUrl(bugId: string): string {
   return `${ADMIN_BUGS_API_URL}/${bugId}/status`;
+}
+
+/**
+ * Возвращает URL для смены типа записи (баг ↔ пожелание).
+ *
+ * @param bugId Уникальный идентификатор записи.
+ */
+export function getAdminBugTypeApiUrl(bugId: string): string {
+  return `${ADMIN_BUGS_API_URL}/${bugId}/type`;
 }
 
 /** Заголовок страницы админки баг-репортов */
@@ -199,6 +226,133 @@ export const BUG_REPORT_STATUS_LABELS: Record<BugReportStatus, string> = {
 };
 
 /**
+ * Названия статусов для пожеланий: те же статусы сервиса, но «Исправлен» для
+ * идеи звучит странно — её добавляют.
+ */
+export const BUG_REPORT_WISH_STATUS_LABELS: Record<BugReportStatus, string> = {
+  NEW: 'Новое',
+  WAIT: 'Ожидает',
+  FIXED: 'Добавлено',
+  REJECTED: 'Отклонено',
+};
+
+/** Названия статусов в зависимости от типа записи */
+const BUG_REPORT_STATUS_LABELS_BY_TYPE: Record<
+  BugReportType,
+  Record<BugReportStatus, string>
+> = {
+  BUG: BUG_REPORT_STATUS_LABELS,
+  WISH: BUG_REPORT_WISH_STATUS_LABELS,
+};
+
+/**
+ * Возвращает название статуса с учётом типа записи.
+ *
+ * @param status Статус записи.
+ * @param type Тип записи: баг или пожелание.
+ */
+export function getBugReportStatusLabel(
+  status: BugReportStatus,
+  type: BugReportType,
+): string {
+  return BUG_REPORT_STATUS_LABELS_BY_TYPE[type][status];
+}
+
+/** Ключ URL-параметра с типом записей в списке (баги или пожелания) */
+export const BUG_REPORT_TYPE_QUERY_KEY = 'type';
+
+/**
+ * Значения URL-параметра типа. Тип по умолчанию (баги) в адрес не пишется:
+ * его отсутствие и означает баги.
+ */
+export const BUG_REPORT_TYPE_QUERY_VALUES: Record<BugReportType, string> = {
+  BUG: 'bug',
+  WISH: 'wish',
+};
+
+/** Иконки типов записи */
+export const BUG_REPORT_TYPE_ICONS: Record<BugReportType, string> = {
+  BUG: 'tabler:bug',
+  WISH: 'tabler:bulb',
+};
+
+/** Вкладки типа в окне отправки: в единственном числе — что отправляем */
+export const BUG_REPORT_TYPE_TABS: Array<BugReportTypeTab> = [
+  {
+    label: BUG_REPORT_TYPE_LABELS.BUG,
+    value: 'BUG',
+    icon: BUG_REPORT_TYPE_ICONS.BUG,
+  },
+  {
+    label: BUG_REPORT_TYPE_LABELS.WISH,
+    value: 'WISH',
+    icon: BUG_REPORT_TYPE_ICONS.WISH,
+  },
+];
+
+/** Вкладки типа над списками (модерация, профиль): во множественном числе */
+export const BUG_REPORT_TYPE_LIST_TABS: Array<BugReportTypeTab> = [
+  { label: 'Баг-репорты', value: 'BUG', icon: BUG_REPORT_TYPE_ICONS.BUG },
+  { label: 'Пожелания', value: 'WISH', icon: BUG_REPORT_TYPE_ICONS.WISH },
+];
+
+/** Тексты окна отправки для бага и для пожелания */
+export const BUG_REPORT_MODAL_TEXTS: Record<
+  BugReportType,
+  BugReportModalTexts
+> = {
+  BUG: {
+    title: 'Сообщить о баге',
+    descriptionLabel: 'Описание проблемы',
+    descriptionPlaceholder: 'Опишите, что произошло...',
+    successTitle: 'Репорт отправлен',
+    successDescription: 'Спасибо за обратную связь! Мы рассмотрим ваш репорт.',
+  },
+  WISH: {
+    title: 'Предложить идею',
+    descriptionLabel: 'Описание пожелания',
+    descriptionPlaceholder: 'Опишите, что хотелось бы добавить или улучшить...',
+    successTitle: 'Пожелание отправлено',
+    successDescription: 'Спасибо за идею! Мы рассмотрим ваше пожелание.',
+  },
+};
+
+/**
+ * Подпись действия смены типа в карточке модератора — по текущему типу
+ * записи: баг переводят в пожелания и обратно.
+ */
+export const BUG_REPORT_TYPE_CHANGE_LABELS: Record<BugReportType, string> = {
+  BUG: 'Перевести в пожелания',
+  WISH: 'Перевести в баги',
+};
+
+/** Тип, в который переводит действие смены типа, — по текущему типу записи */
+export const BUG_REPORT_TYPE_CHANGE_TARGETS: Record<
+  BugReportType,
+  BugReportType
+> = {
+  BUG: 'WISH',
+  WISH: 'BUG',
+};
+
+/** Заголовок тоста об успешной смене типа */
+export const BUG_REPORT_TYPE_CHANGE_SUCCESS_TITLE = 'Тип изменён';
+
+/** Текст тоста об успешной смене типа — по новому типу записи */
+export const BUG_REPORT_TYPE_CHANGE_SUCCESS_DESCRIPTIONS: Record<
+  BugReportType,
+  string
+> = {
+  BUG: 'Запись перенесена в баг-репорты',
+  WISH: 'Запись перенесена в пожелания',
+};
+
+/** Тост об ошибке смены типа */
+export const BUG_REPORT_TYPE_CHANGE_ERROR_TITLE = 'Ошибка смены типа';
+export const BUG_REPORT_TYPE_CHANGE_ERROR_DESC =
+  'Не удалось изменить тип записи на сервере';
+
+/**
  * Мапа русских названий для платформ. Сам набор живёт в `#shared/consts`: теми же
  * подписями пользуется лента модерации комментариев.
  */
@@ -259,18 +413,10 @@ export const BUG_REPORT_DATE_FORMAT = 'DD.MM.YY HH:mm';
 /** Формат подробной даты для детального просмотра */
 export const BUG_REPORT_DETAIL_DATE_FORMAT = 'LLL';
 
-/** Заголовок и описание успешной отправки репорта */
-export const BUG_REPORT_SUBMIT_SUCCESS_TITLE = 'Репорт отправлен';
-export const BUG_REPORT_SUBMIT_SUCCESS_DESC =
-  'Спасибо за обратную связь! Мы рассмотрим ваш репорт.';
-
 /** Заголовок и описание ошибки при отправке репорта */
 export const BUG_REPORT_SUBMIT_ERROR_TITLE = 'Ошибка отправки';
 export const BUG_REPORT_SUBMIT_ERROR_DESC =
   'Не удалось отправить баг-репорт. Пожалуйста, попробуйте позже.';
-
-/** Placeholder поля описания проблемы в форме отправки */
-export const BUG_REPORT_DESCRIPTION_PLACEHOLDER = 'Опишите, что произошло...';
 
 /** Максимальная длина описания вместе с разметкой (ограничение API и колонки в базе) */
 export const BUG_REPORT_DESCRIPTION_MAX_LENGTH = 2000;
@@ -353,13 +499,16 @@ export const MY_BUGS_ROUTE = '/user/profile/bugs';
 
 /** Описание раздела под заголовком */
 export const MY_BUGS_DESCRIPTION =
-  'Здесь видно, что стало с ошибками, о которых вы сообщили, и что ответила команда.';
+  'Здесь видно, что стало с ошибками и пожеланиями, которые вы отправили, и что ответила команда.';
 
 /** Ключ кеша списка баг-репортов пользователя */
 export const MY_BUGS_LIST_DATA_KEY = 'my-bugs-list';
 
 /** Ключ кеша сводки количества баг-репортов пользователя по статусам */
 export const MY_BUGS_STATUS_COUNTS_DATA_KEY = 'my-bugs-status-counts';
+
+/** Ключ кеша сводки количества пожеланий пользователя по статусам */
+export const MY_WISHES_STATUS_COUNTS_DATA_KEY = 'my-wishes-status-counts';
 
 /** Ключ кеша сводки изменений по баг-репортам пользователя */
 export const MY_BUGS_UPDATES_DATA_KEY = 'my-bugs-updates';
@@ -471,18 +620,53 @@ export const MY_BUGS_SCREENSHOT_TITLE = 'Скриншот';
 /** Заголовок модалки с полным скриншотом */
 export const MY_BUGS_SCREENSHOT_MODAL_TITLE = 'Скриншот к баг-репорту';
 
+/**
+ * Рамка окна просмотра скриншота: почти во весь экран.
+ *
+ * Скриншот уходит на сервер в разрешении экрана того, кто его прислал, — это
+ * бывает и 4K. Обычная ширина модалки (32rem) ужимала такой снимок в несколько
+ * раз, и читать на нём было нечего. Ширину по содержимому (`w-fit`) не берём:
+ * с ней ширина картинки и ширина окна начинают считаться друг от друга, и окно
+ * схлопывается вдвое меньше экрана.
+ */
+export const SCREENSHOT_MODAL_UI = {
+  content: 'max-w-[96vw]',
+};
+
+/**
+ * Переключатель окна: показать снимок крупнее — во всю ширину окна, а если он
+ * шире окна, то в его настоящем размере.
+ */
+export const SCREENSHOT_MODAL_ZOOM_LABEL = 'Увеличить';
+
+/** Переключатель окна: вернуть снимок, вписанный в экран. */
+export const SCREENSHOT_MODAL_FIT_LABEL = 'Вписать в экран';
+
+/**
+ * Ссылка на исходный файл: в окне снимок всё-таки вписан в экран, а оригинал
+ * может быть крупнее.
+ */
+export const SCREENSHOT_ORIGINAL_LINK_LABEL = 'Открыть оригинал';
+
 /** Alt-текст миниатюры и полного скриншота */
 export const MY_BUGS_SCREENSHOT_ALT = 'Скриншот к баг-репорту';
 
-/** Заголовок и текст пустого состояния */
-export const MY_BUGS_EMPTY_TITLE = 'Вы ещё не сообщали об ошибках';
-export const MY_BUGS_EMPTY_TEXT =
-  'Нашли неточность или поломку — нажмите кнопку «Сообщить об ошибке» в боковом меню. Репорты, отправленные без входа в аккаунт, сюда не попадают.';
+/** Заголовок пустого состояния по типу записей */
+export const MY_BUGS_EMPTY_TITLES: Record<BugReportType, string> = {
+  BUG: 'Вы ещё не сообщали об ошибках',
+  WISH: 'Вы ещё не отправляли пожеланий',
+};
+
+/** Текст пустого состояния по типу записей */
+export const MY_BUGS_EMPTY_TEXTS: Record<BugReportType, string> = {
+  BUG: 'Нашли неточность или поломку — нажмите кнопку «Сообщить об ошибке» в боковом меню. Репорты, отправленные без входа в аккаунт, сюда не попадают.',
+  WISH: 'Есть идея, как сделать сайт лучше, — нажмите кнопку «Сообщить об ошибке» в боковом меню и выберите вкладку «Пожелание». Пожелания, отправленные без входа в аккаунт, сюда не попадают.',
+};
 
 /** Заголовок и текст пустого состояния при активном фильтре по статусу */
-export const MY_BUGS_EMPTY_FILTERED_TITLE = 'Нет репортов с таким статусом';
+export const MY_BUGS_EMPTY_FILTERED_TITLE = 'Нет записей с таким статусом';
 export const MY_BUGS_EMPTY_FILTERED_TEXT =
-  'Выберите другой статус или посмотрите все репорты.';
+  'Выберите другой статус или посмотрите все записи.';
 
 /** Текст ошибки загрузки списка и подпись кнопки повтора */
 export const MY_BUGS_LOAD_ERROR_TEXT = 'Не удалось загрузить ваши баг-репорты.';
@@ -596,3 +780,157 @@ export const BUG_REPORT_DIAGNOSTICS_SPAN_TOTAL_WARN_MS = 100;
 
 /** Порог одиночного выполнения участка кадра, выше которого он рвёт кадр (мс) */
 export const BUG_REPORT_DIAGNOSTICS_SPAN_MAX_WARN_MS = 8;
+
+/** Заголовок секции машины и нагрузки сервера мира */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_HOST_TITLE = 'Машина сервера мира';
+
+/** Заголовок ленты нагрузки сервера */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_TITLE =
+  'Самые долгие зависания сервера за последние минуты';
+
+/** Подпись процессора процесса сервера и машины */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_CPU_LABEL =
+  'CPU (процесс, % ядра / машина, %)';
+
+/** Подпись памяти процесса сервера и свободной памяти машины */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_RAM_LABEL =
+  'RAM (процесс / свободно / всего)';
+
+/** Подпись сборки мусора */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_GC_LABEL =
+  'Сборка мусора (Σ / макс.)';
+
+/** Подпись процессора машины сервера */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_CPU_MODEL_LABEL = 'Процессор';
+
+/** Подпись ОС машины сервера */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_OS_LABEL = 'ОС';
+
+/** Подпись среды запуска сервера */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_RUNTIME_LABEL = 'Среда';
+
+/** Подпись времени работы процесса и машины */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_UPTIME_LABEL =
+  'Работает (процесс / машина)';
+
+/** Среда запуска сервера без Electron */
+export const BUG_REPORT_DIAGNOSTICS_SERVER_HEADLESS_LABEL =
+  'без Electron (VDS)';
+
+/** Колонка ленты: за сколько секунд до отправки */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_AGO_LABEL = 'Когда';
+
+/** Колонка ленты: максимальная задержка event-loop */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_LAG_LABEL = 'Лаг, мс';
+
+/** Колонка ленты: процессор процесса сервера */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_PROCESS_CPU_LABEL = 'CPU проц.';
+
+/** Колонка ленты: процессор машины */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_SYSTEM_CPU_LABEL = 'CPU маш.';
+
+/** Колонка ленты: сборка мусора */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_GC_LABEL = 'GC, мс';
+
+/** Колонка ленты: самое тяжёлое WS-событие интервала */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_EVENT_LABEL = 'Тяжелее всего';
+
+/** Подпись момента снапшота: столько секунд до отправки */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_AGO_SUFFIX = 'с назад';
+
+/** Подпись сводки ленты: сколько интервалов с зависанием */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_SUMMARY_LABEL =
+  'Интервалов по 2 с с зависанием';
+
+/**
+ * Задержка event-loop, начиная с которой интервал считается зависанием, а не
+ * фоновым шумом (мс). Игрок замечает задержку примерно с этого порога.
+ */
+export const BUG_REPORT_SERVER_STALL_MS = 200;
+
+/**
+ * Процессор процесса сервера (% одного ядра), начиная с которого зависание
+ * считается делом нашего кода: JS в Node работает в одном потоке, и почти
+ * целое ядро значит, что поток был занят сам.
+ */
+export const BUG_REPORT_SERVER_OWN_CPU_PERCENT = 70;
+
+/** Процессор всей машины (%), начиная с которого она считается перегруженной */
+export const BUG_REPORT_SERVER_MACHINE_CPU_PERCENT = 85;
+
+/** Доля зависания, которую должна занять сборка мусора, чтобы винить её */
+export const BUG_REPORT_SERVER_GC_SHARE = 0.3;
+
+/** Сколько самых долгих зависаний показывать в ленте */
+export const BUG_REPORT_SERVER_TIMELINE_ROWS = 10;
+
+/** Порог процессора в таблицах и строках нагрузки (%) */
+export const BUG_REPORT_DIAGNOSTICS_CPU_WARN_PERCENT = 80;
+
+/** Порог сборки мусора за интервал, выше которого она заметна (мс) */
+export const BUG_REPORT_DIAGNOSTICS_GC_WARN_MS = 50;
+
+/** Заголовки вывода о причине тормозов сервера */
+export const BUG_REPORT_SERVER_LAG_TITLES: Record<
+  BugReportServerLagCause,
+  string
+> = {
+  'calm': 'Сервер не зависал',
+  'own-code': 'Тормозит код сервера VTTG',
+  'garbage-collection': 'Тормозит сборка мусора на сервере',
+  'machine-busy': 'Машину сервера заняли другие программы',
+  'process-stalled': 'Сервер стоял без нагрузки',
+};
+
+/** Пояснения к выводу о причине тормозов сервера */
+export const BUG_REPORT_SERVER_LAG_DESCRIPTIONS: Record<
+  BugReportServerLagCause,
+  string
+> = {
+  'calm':
+    'За всю ленту сервер мира ни разу не вставал. Если игрок жаловался на задержки — ищите в клиенте (FPS, профиль кадра) или в сети.',
+  'own-code':
+    'Во время зависаний процесс сервера сам занимал ядро процессора. Это наша проблема: смотрите, какое событие было тяжелее всего.',
+  'garbage-collection':
+    'Зависания совпали с долгой сборкой мусора. Процесс держит слишком много памяти — это наша проблема (утечка или раздутый кэш).',
+  'machine-busy':
+    'Процесс сервера почти не работал, а процессор машины был занят. Мешали другие программы на машине, где запущен мир, — это не наша сторона.',
+  'process-stalled':
+    'И процесс, и машина простаивали, но сервер не отвечал. Обычно это сон или гибернация машины, медленный диск или подкачка памяти. Реже — синхронный вызов внешней программы из нашего кода.',
+};
+
+/** Цвет плашки вывода о причине тормозов сервера */
+export const BUG_REPORT_SERVER_LAG_COLORS: Record<
+  BugReportServerLagCause,
+  'success' | 'error' | 'warning' | 'info'
+> = {
+  'calm': 'success',
+  'own-code': 'error',
+  'garbage-collection': 'error',
+  'machine-busy': 'info',
+  'process-stalled': 'warning',
+};
+
+/** Подпись события, которое чаще всего было самым тяжёлым во время зависаний */
+export const BUG_REPORT_SERVER_LAG_SUSPECT_LABEL =
+  'Чаще всего тяжелее всего было событие';
+
+/** Единица времени в строках снимка: миллисекунды */
+export const BUG_REPORT_DIAGNOSTICS_MS_UNIT = 'мс';
+
+/** Единица памяти в строках снимка: мегабайты */
+export const BUG_REPORT_DIAGNOSTICS_MB_UNIT = 'МБ';
+
+/** Подпись самого долгого зависания в сводке ленты */
+export const BUG_REPORT_DIAGNOSTICS_TIMELINE_WORST_LABEL = 'макс.';
+
+/** Название среды выполнения сервера перед её версией */
+export const BUG_REPORT_DIAGNOSTICS_NODE_LABEL = 'Node';
+
+/** Единицы в подписи времени работы сервера: дни, часы, минуты, секунды */
+export const BUG_REPORT_UPTIME_UNITS = {
+  days: 'д',
+  hours: 'ч',
+  minutes: 'мин',
+  seconds: 'с',
+} as const;

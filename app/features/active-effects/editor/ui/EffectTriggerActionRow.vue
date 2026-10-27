@@ -2,36 +2,84 @@
   import type {
     EffectConditionKey,
     EffectDamagePart,
+    EffectEscape,
+    EffectFormLayout,
+    EffectRecurringSave,
+    EffectSaveTiming,
     EffectTriggerAction,
+    EffectTriggerActionType,
+    EffectTriggerEvent,
+    EffectTriggerMaxHpRestEnd,
+    EffectTriggerReduceMaxHpAction,
     EffectTriggerSave,
+    NestedEffectTrigger,
   } from '../../model';
 
+  import { InfoTooltip } from '~ui/tooltip';
+
   import {
+    createDefaultEffectSave,
+    createDefaultEscape,
+    createEffectTriggerAction,
+    createEffectTriggerId,
+    DEFAULT_NESTED_TRIGGER_EVENT,
+    DEFAULT_RECURRING_SAVE_TIMING,
+    DEFAULT_TRIGGER_REST_TYPE,
+    EFFECT_APPLIER_DC_LABELS,
     EFFECT_CONDITION_OPTIONS,
+    EFFECT_SAVE_TIMING_OPTIONS,
     EFFECT_TRIGGER_ACTION_ICONS,
     EFFECT_TRIGGER_ACTION_LABELS,
     EFFECT_TRIGGER_DAMAGE_GATE_OPTIONS,
     EFFECT_TRIGGER_DAMAGE_HALF_GATE,
+    EFFECT_TRIGGER_EVENT_LABELS,
     EFFECT_TRIGGER_GATE_OPTIONS,
+    EFFECT_TRIGGER_MAX_HP_REST_OPTIONS,
+    EFFECT_TRIGGER_NESTED_LABELS,
     EFFECT_TRIGGER_ROW_ICONS,
     EFFECT_TRIGGER_ROW_LABELS,
     isEffectTag,
+    layoutAcceptsApplierSaveDc,
+    listNestedTriggerActionTypes,
     MIN_SET_HP_VALUE,
     MIN_TRIGGER_ACTION_ROUNDS,
+    NESTED_TRIGGER_EVENTS,
     readTriggerActionRounds,
     resolveTriggerActionGate,
     writeTriggerActionGate,
     writeTriggerActionRounds,
   } from '../../model';
   import EffectDamageParts from './EffectDamageParts.vue';
+  import EffectEscapeFields from './EffectEscapeFields.vue';
+  import EffectFlags from './EffectFlags.vue';
+  import EffectSaveFields from './EffectSaveFields.vue';
+  import EffectTriggerActionFields from './EffectTriggerActionFields.vue';
 
   /**
    * Действие строки срабатывания: вид, исход относительно спасброска строки и
-   * поля вида — части урона, состояние и срок, число хитов, ключ и имя отметки.
+   * поля вида — части урона, состояние со сроком и повторным спасброском, число
+   * хитов, ключ и имя отметки со счётчиком, уменьшение максимума хитов. Поля
+   * остальных действий — в `EffectTriggerActionFields`.
    */
-  const { triggerSave = undefined } = defineProps<{
+  const {
+    layout,
+    triggerSave = undefined,
+    applierSaveDc = undefined,
+    event = undefined,
+  } = defineProps<{
+    /** Раскладка формы: по ней подставляется Сл повторного спасброска. */
+    layout: EffectFormLayout;
     /** Спасбросок строки: без него исход действия не выбирается. */
     triggerSave?: EffectTriggerSave;
+    /** Сл источника для «Авто», если форма её знает. */
+    applierSaveDc?: number;
+    /**
+     * Действие уже вложено в наложенное состояние: своих срабатываний у него не
+     * бывает — вложенность на одну ступень.
+     */
+    nested?: boolean;
+    /** Событие срабатывания: «зона за носителем» бывает только на пути. */
+    event?: EffectTriggerEvent;
   }>();
 
   const emit = defineEmits<{
@@ -68,6 +116,104 @@
 
   /** Срок состояния или отметки в раундах. */
   const rounds = computed(() => readTriggerActionRounds(action.value));
+
+  // Срок состояния или отметки формулой: пустая строка — срок числом
+  const durationFormula = computed({
+    get: () => {
+      const currentAction = action.value;
+
+      return currentAction.type === 'applyCondition'
+        || currentAction.type === 'applyTag'
+        ? (currentAction.durationFormula ?? '')
+        : '';
+    },
+    set: (enteredFormula: string) => {
+      const currentAction = action.value;
+
+      if (
+        currentAction.type === 'applyCondition'
+        || currentAction.type === 'applyTag'
+      ) {
+        action.value = {
+          ...currentAction,
+          durationFormula: enteredFormula.trim() || undefined,
+        };
+      }
+    },
+  });
+
+  /** «Авто» у Сл «вырваться» — там, где Сл источника вообще бывает. */
+  const autoDcAllowed = computed(() => layoutAcceptsApplierSaveDc(layout));
+
+  const applierDcLabel = computed(
+    () => EFFECT_APPLIER_DC_LABELS[layout.context],
+  );
+
+  /** Блок «вырваться» наложенного состояния; нет — кнопки у состояния нет. */
+  const conditionEscape = computed(() =>
+    action.value.type === 'applyCondition' ? action.value.escape : undefined,
+  );
+
+  const hasConditionEscape = computed({
+    get: () => conditionEscape.value !== undefined,
+    set: (enabled: boolean) => {
+      const currentAction = action.value;
+
+      if (currentAction.type === 'applyCondition') {
+        action.value = {
+          ...currentAction,
+          escape: enabled
+            ? createDefaultEscape(autoDcAllowed.value)
+            : undefined,
+        };
+      }
+    },
+  });
+
+  /**
+   * Записывает блок «вырваться» наложенного состояния.
+   *
+   * @param nextEscape блок действия.
+   */
+  function updateConditionEscape(nextEscape: EffectEscape): void {
+    const currentAction = action.value;
+
+    if (currentAction.type === 'applyCondition') {
+      action.value = { ...currentAction, escape: nextEscape };
+    }
+  }
+
+  // Флаги сверх самого состояния: пустой список в данных не пишется
+  const conditionFlags = computed({
+    get: () =>
+      action.value.type === 'applyCondition' ? (action.value.flags ?? []) : [],
+    set: (nextFlags: string[]) => {
+      const currentAction = action.value;
+
+      if (currentAction.type === 'applyCondition') {
+        action.value = {
+          ...currentAction,
+          flags: nextFlags.length > 0 ? nextFlags : undefined,
+        };
+      }
+    },
+  });
+
+  // Хиты формулой у «Хиты становятся»: пустая строка — число действия
+  const setHpFormula = computed({
+    get: () =>
+      action.value.type === 'setHp' ? (action.value.formula ?? '') : '',
+    set: (enteredFormula: string) => {
+      const currentAction = action.value;
+
+      if (currentAction.type === 'setHp') {
+        action.value = {
+          ...currentAction,
+          formula: enteredFormula.trim() || undefined,
+        };
+      }
+    },
+  });
 
   /** Состояние действия, если оно из списка выбора. */
   const conditionKey = computed<EffectConditionKey | undefined>(() => {
@@ -163,6 +309,254 @@
     }
   }
 
+  const hasNestedTrigger = computed({
+    get: () =>
+      action.value.type === 'applyCondition'
+      && (action.value.triggers?.length ?? 0) > 0,
+    set: (enabled: boolean) => {
+      const currentAction = action.value;
+
+      if (currentAction.type !== 'applyCondition') {
+        return;
+      }
+
+      action.value = {
+        ...currentAction,
+        triggers: enabled
+          ? [
+              {
+                id: createEffectTriggerId(),
+                event: DEFAULT_NESTED_TRIGGER_EVENT,
+                actions: [{ type: 'removeSelf' }],
+              },
+            ]
+          : undefined,
+      };
+    },
+  });
+
+  /** Единственное вложенное срабатывание состояния. */
+  const nestedTrigger = computed(() =>
+    action.value.type === 'applyCondition'
+      ? action.value.triggers?.[0]
+      : undefined,
+  );
+
+  /** Единственное действие вложенного срабатывания. */
+  const nestedAction = computed<EffectTriggerAction>({
+    get: () => nestedTrigger.value?.actions[0] ?? { type: 'removeSelf' },
+    set: (nextAction) => updateNestedTrigger({ actions: [nextAction] }),
+  });
+
+  /** События, на которые реагирует наложенное состояние. */
+  const nestedEventItems = NESTED_TRIGGER_EVENTS.map((event) => ({
+    value: event,
+    label: EFFECT_TRIGGER_EVENT_LABELS[event],
+  }));
+
+  /** Что вложенное срабатывание может сделать. */
+  const nestedActionItems = computed(() =>
+    listNestedTriggerActionTypes(
+      layout,
+      nestedTrigger.value?.event ?? DEFAULT_NESTED_TRIGGER_EVENT,
+    ).map((type) => ({
+      value: type,
+      label: EFFECT_TRIGGER_ACTION_LABELS[type],
+    })),
+  );
+
+  /**
+   * Меняет вложенное срабатывание, не теряя остальных его полей.
+   *
+   * @param patch изменённые поля срабатывания.
+   */
+  function updateNestedTrigger(patch: Partial<NestedEffectTrigger>): void {
+    const currentAction = action.value;
+    const currentTrigger = nestedTrigger.value;
+
+    if (currentAction.type !== 'applyCondition' || !currentTrigger) {
+      return;
+    }
+
+    action.value = {
+      ...currentAction,
+      triggers: [{ ...currentTrigger, ...patch }],
+    };
+  }
+
+  /**
+   * Меняет событие вложенного срабатывания.
+   *
+   * @param nextEvent событие наложенного состояния.
+   */
+  function updateNestedEvent(nextEvent: EffectTriggerEvent): void {
+    updateNestedTrigger({ event: nextEvent });
+  }
+
+  /**
+   * Меняет вид действия вложенного срабатывания.
+   *
+   * @param nextType вид действия.
+   */
+  function updateNestedActionType(nextType: EffectTriggerActionType): void {
+    nestedAction.value = createEffectTriggerAction(nextType);
+  }
+
+  const hasRecurringSave = computed({
+    get: () =>
+      action.value.type === 'applyCondition'
+      && action.value.recurringSave !== undefined,
+    set: (enabled: boolean) => {
+      const currentAction = action.value;
+
+      if (currentAction.type !== 'applyCondition') {
+        return;
+      }
+
+      action.value = {
+        ...currentAction,
+        recurringSave: enabled
+          ? {
+              ...createDefaultEffectSave(layout),
+              timing: DEFAULT_RECURRING_SAVE_TIMING,
+            }
+          : undefined,
+      };
+    },
+  });
+
+  /** Повторный спасбросок состояния: поля заменяют его целиком. */
+  const recurringSave = computed({
+    get: (): EffectRecurringSave =>
+      action.value.type === 'applyCondition' && action.value.recurringSave
+        ? action.value.recurringSave
+        : {
+            ...createDefaultEffectSave(layout),
+            timing: DEFAULT_RECURRING_SAVE_TIMING,
+          },
+    set: (nextSave: EffectRecurringSave) => {
+      const currentAction = action.value;
+
+      if (currentAction.type === 'applyCondition') {
+        action.value = { ...currentAction, recurringSave: nextSave };
+      }
+    },
+  });
+
+  /**
+   * Меняет момент повторного спасброска состояния.
+   *
+   * @param nextTiming момент броска.
+   */
+  function updateRecurringSaveTiming(nextTiming: EffectSaveTiming): void {
+    recurringSave.value = { ...recurringSave.value, timing: nextTiming };
+  }
+
+  // «Снимает только источник» пишется только включённым: `locked: true`
+  const conditionLocked = computed({
+    get: () =>
+      action.value.type === 'applyCondition' && action.value.locked === true,
+    set: (enabled: boolean) => {
+      const currentAction = action.value;
+
+      if (currentAction.type === 'applyCondition') {
+        action.value = {
+          ...currentAction,
+          locked: enabled ? true : undefined,
+        };
+      }
+    },
+  });
+
+  /** «Спадает при выходе»: настройка есть только там, где эффект в зоне. */
+  const canEndOnZoneExit = computed(() => layout.delivery === 'zone');
+
+  const conditionEndsOnExit = computed({
+    get: () =>
+      action.value.type === 'applyCondition'
+      && action.value.endsOnExit === true,
+    set: (enabled: boolean) => {
+      const currentAction = action.value;
+
+      if (currentAction.type === 'applyCondition') {
+        action.value = {
+          ...currentAction,
+          endsOnExit: enabled ? true : undefined,
+        };
+      }
+    },
+  });
+
+  // Полный запас хитов вместо числа
+  const setHpToMax = computed({
+    get: () => action.value.type === 'setHp' && action.value.toMax === true,
+    set: (enabled: boolean) => {
+      const currentAction = action.value;
+
+      if (currentAction.type === 'setHp') {
+        action.value = {
+          ...currentAction,
+          toMax: enabled ? true : undefined,
+        };
+      }
+    },
+  });
+
+  // Счётчик пишется только включённым: `stack: true`
+  const tagStack = computed({
+    get: () => action.value.type === 'applyTag' && action.value.stack === true,
+    set: (enabled: boolean) => {
+      const currentAction = action.value;
+
+      if (currentAction.type === 'applyTag') {
+        action.value = { ...currentAction, stack: enabled ? true : undefined };
+      }
+    },
+  });
+
+  /**
+   * Меняет поля уменьшения максимума хитов.
+   *
+   * @param patch изменённые поля.
+   */
+  function updateMaxHp(
+    patch: Partial<Omit<EffectTriggerReduceMaxHpAction, 'type'>>,
+  ): void {
+    const currentAction = action.value;
+
+    if (currentAction.type === 'reduceMaxHp') {
+      action.value = { ...currentAction, ...patch };
+    }
+  }
+
+  /**
+   * Меняет «на сколько». Пустое значение не пишется: без него действие не
+   * разобралось бы и срабатывание пропало бы из данных.
+   *
+   * @param nextAmount введённая строка.
+   */
+  function updateMaxHpAmount(nextAmount: string): void {
+    const amount = nextAmount.trim();
+
+    if (amount) {
+      updateMaxHp({ amount });
+    }
+  }
+
+  // Долгий отдых — значение по умолчанию: в данных он не пишется
+  const maxHpRest = computed({
+    get: () =>
+      action.value.type === 'reduceMaxHp'
+        ? (action.value.endsOnRest ?? DEFAULT_TRIGGER_REST_TYPE)
+        : DEFAULT_TRIGGER_REST_TYPE,
+    set: (nextRestEnd: EffectTriggerMaxHpRestEnd) => {
+      updateMaxHp({
+        endsOnRest:
+          nextRestEnd === DEFAULT_TRIGGER_REST_TYPE ? undefined : nextRestEnd,
+      });
+    },
+  });
+
   /**
    * Меняет ключ отметки.
    *
@@ -247,52 +641,214 @@
       @update:model-value="updateDamageParts"
     />
 
+    <template v-else-if="action.type === 'applyCondition'">
+      <div class="flex flex-wrap items-end gap-2">
+        <UFormField
+          :label="EFFECT_TRIGGER_ROW_LABELS.condition"
+          class="w-56"
+        >
+          <USelect
+            :model-value="conditionKey"
+            :items="EFFECT_CONDITION_OPTIONS"
+            value-key="value"
+            size="sm"
+            class="w-full"
+            @update:model-value="updateCondition"
+          />
+        </UFormField>
+
+        <UFormField
+          :label="EFFECT_TRIGGER_ROW_LABELS.conditionRounds"
+          class="w-40"
+        >
+          <UInputNumber
+            :model-value="rounds"
+            :min="MIN_TRIGGER_ACTION_ROUNDS"
+            :placeholder="EFFECT_TRIGGER_ROW_LABELS.conditionRoundsPlaceholder"
+            size="sm"
+            class="w-full"
+            @update:model-value="updateActionRounds"
+          />
+        </UFormField>
+
+        <UFormField class="w-52">
+          <template #label>
+            <InfoTooltip
+              :text="EFFECT_TRIGGER_ROW_LABELS.durationFormulaHint"
+              icon="tabler:info-circle-filled"
+            >
+              <span>{{ EFFECT_TRIGGER_ROW_LABELS.durationFormula }}</span>
+            </InfoTooltip>
+          </template>
+
+          <UInput
+            v-model="durationFormula"
+            size="sm"
+            class="w-full font-mono"
+          />
+        </UFormField>
+      </div>
+
+      <USwitch
+        v-model="conditionLocked"
+        :label="EFFECT_TRIGGER_ROW_LABELS.conditionLocked"
+        :description="EFFECT_TRIGGER_ROW_LABELS.conditionLockedHint"
+      />
+
+      <USwitch
+        v-model="hasConditionEscape"
+        :label="EFFECT_TRIGGER_ROW_LABELS.conditionEscapeToggle"
+        :description="EFFECT_TRIGGER_ROW_LABELS.conditionEscapeHint"
+      />
+
+      <EffectEscapeFields
+        v-if="conditionEscape"
+        :model-value="conditionEscape"
+        :auto-dc-allowed="autoDcAllowed"
+        :auto-label="applierDcLabel"
+        :applier-save-dc="applierSaveDc"
+        @update:model-value="updateConditionEscape"
+      />
+
+      <EffectFlags
+        v-model="conditionFlags"
+        :title="EFFECT_TRIGGER_ROW_LABELS.conditionFlags"
+        :hint="EFFECT_TRIGGER_ROW_LABELS.conditionFlagsHint"
+      />
+
+      <USwitch
+        v-if="canEndOnZoneExit"
+        v-model="conditionEndsOnExit"
+        :label="EFFECT_TRIGGER_ROW_LABELS.conditionEndsOnExit"
+        :description="EFFECT_TRIGGER_ROW_LABELS.conditionEndsOnExitHint"
+      />
+
+      <USwitch
+        v-model="hasRecurringSave"
+        :label="EFFECT_TRIGGER_ROW_LABELS.recurringSaveToggle"
+      />
+
+      <div
+        v-if="action.recurringSave"
+        class="flex flex-wrap items-end gap-2"
+      >
+        <EffectSaveFields
+          v-model:save="recurringSave"
+          :layout="layout"
+          :applier-save-dc="applierSaveDc"
+          :ability-label="EFFECT_TRIGGER_ROW_LABELS.saveAbility"
+          :save-dc-label="EFFECT_TRIGGER_ROW_LABELS.saveDc"
+        />
+
+        <UFormField
+          :label="EFFECT_TRIGGER_ROW_LABELS.recurringSaveTiming"
+          class="w-40"
+        >
+          <USelect
+            :model-value="action.recurringSave.timing"
+            :items="EFFECT_SAVE_TIMING_OPTIONS"
+            value-key="value"
+            size="sm"
+            class="w-full"
+            @update:model-value="updateRecurringSaveTiming"
+          />
+        </UFormField>
+      </div>
+
+      <!-- Своё срабатывание состояния: «Сон» просыпается от урона сам, не
+           заканчивая каст всем целям -->
+      <USwitch
+        v-if="!nested"
+        v-model="hasNestedTrigger"
+        :label="EFFECT_TRIGGER_NESTED_LABELS.toggle"
+      />
+
+      <div
+        v-if="!nested && nestedTrigger"
+        class="flex flex-col gap-2 border-l-2 border-muted/50 pl-3"
+      >
+        <div class="flex flex-wrap items-end gap-2">
+          <UFormField
+            :label="EFFECT_TRIGGER_NESTED_LABELS.event"
+            class="w-full sm:w-56"
+          >
+            <USelect
+              :model-value="nestedTrigger.event"
+              :items="nestedEventItems"
+              value-key="value"
+              size="sm"
+              class="w-full"
+              @update:model-value="updateNestedEvent"
+            />
+          </UFormField>
+
+          <UFormField
+            :label="EFFECT_TRIGGER_NESTED_LABELS.action"
+            class="w-full sm:w-56"
+          >
+            <USelect
+              :model-value="nestedAction.type"
+              :items="nestedActionItems"
+              value-key="value"
+              size="sm"
+              class="w-full"
+              @update:model-value="updateNestedActionType"
+            />
+          </UFormField>
+        </div>
+
+        <EffectTriggerActionRow
+          v-model:action="nestedAction"
+          :layout="layout"
+          :applier-save-dc="applierSaveDc"
+          nested
+        />
+      </div>
+    </template>
+
     <div
-      v-else-if="action.type === 'applyCondition'"
-      class="flex flex-wrap items-end gap-2"
+      v-else-if="action.type === 'setHp'"
+      class="flex flex-wrap items-end gap-3"
     >
       <UFormField
-        :label="EFFECT_TRIGGER_ROW_LABELS.condition"
-        class="w-56"
-      >
-        <USelect
-          :model-value="conditionKey"
-          :items="EFFECT_CONDITION_OPTIONS"
-          value-key="value"
-          size="sm"
-          class="w-full"
-          @update:model-value="updateCondition"
-        />
-      </UFormField>
-
-      <UFormField
-        :label="EFFECT_TRIGGER_ROW_LABELS.conditionRounds"
-        class="w-40"
+        v-if="!action.toMax"
+        :label="EFFECT_TRIGGER_ROW_LABELS.setHpValue"
+        class="w-32"
       >
         <UInputNumber
-          :model-value="rounds"
-          :min="MIN_TRIGGER_ACTION_ROUNDS"
-          :placeholder="EFFECT_TRIGGER_ROW_LABELS.conditionRoundsPlaceholder"
+          :model-value="action.value"
+          :min="MIN_SET_HP_VALUE"
           size="sm"
           class="w-full"
-          @update:model-value="updateActionRounds"
+          @update:model-value="updateSetHp"
         />
       </UFormField>
-    </div>
 
-    <UFormField
-      v-else-if="action.type === 'setHp'"
-      :label="EFFECT_TRIGGER_ROW_LABELS.setHpValue"
-      class="w-32"
-    >
-      <UInputNumber
-        :model-value="action.value"
-        :min="MIN_SET_HP_VALUE"
-        size="sm"
-        class="w-full"
-        @update:model-value="updateSetHp"
+      <UFormField
+        v-if="!action.toMax"
+        class="w-full sm:w-64"
+      >
+        <template #label>
+          <InfoTooltip
+            :text="EFFECT_TRIGGER_ROW_LABELS.setHpFormulaHint"
+            icon="tabler:info-circle-filled"
+          >
+            <span>{{ EFFECT_TRIGGER_ROW_LABELS.setHpFormula }}</span>
+          </InfoTooltip>
+        </template>
+
+        <UInput
+          v-model="setHpFormula"
+          size="sm"
+          class="w-full font-mono"
+        />
+      </UFormField>
+
+      <USwitch
+        v-model="setHpToMax"
+        :label="EFFECT_TRIGGER_ROW_LABELS.setHpToMax"
       />
-    </UFormField>
+    </div>
 
     <div
       v-else-if="action.type === 'applyTag'"
@@ -337,6 +893,68 @@
           @update:model-value="updateActionRounds"
         />
       </UFormField>
+
+      <UFormField class="w-52">
+        <template #label>
+          <InfoTooltip
+            :text="EFFECT_TRIGGER_ROW_LABELS.durationFormulaHint"
+            icon="tabler:info-circle-filled"
+          >
+            <span>{{ EFFECT_TRIGGER_ROW_LABELS.durationFormula }}</span>
+          </InfoTooltip>
+        </template>
+
+        <UInput
+          v-model="durationFormula"
+          size="sm"
+          class="w-full font-mono"
+        />
+      </UFormField>
+
+      <USwitch
+        v-model="tagStack"
+        class="self-end"
+        :label="EFFECT_TRIGGER_ROW_LABELS.tagStack"
+        :description="EFFECT_TRIGGER_ROW_LABELS.tagStackHint"
+      />
     </div>
+
+    <div
+      v-else-if="action.type === 'reduceMaxHp'"
+      class="flex flex-wrap items-start gap-2"
+    >
+      <UFormField
+        :label="EFFECT_TRIGGER_ROW_LABELS.maxHpAmount"
+        :help="EFFECT_TRIGGER_ROW_LABELS.maxHpAmountHint"
+        class="w-56"
+      >
+        <UInput
+          :model-value="action.amount"
+          :placeholder="EFFECT_TRIGGER_ROW_LABELS.maxHpAmountPlaceholder"
+          size="sm"
+          class="w-full font-mono"
+          @update:model-value="updateMaxHpAmount"
+        />
+      </UFormField>
+
+      <UFormField
+        :label="EFFECT_TRIGGER_ROW_LABELS.maxHpRest"
+        class="w-48"
+      >
+        <USelect
+          v-model="maxHpRest"
+          :items="EFFECT_TRIGGER_MAX_HP_REST_OPTIONS"
+          value-key="value"
+          size="sm"
+          class="w-full"
+        />
+      </UFormField>
+    </div>
+
+    <EffectTriggerActionFields
+      v-else
+      v-model:action="action"
+      :event="event"
+    />
   </div>
 </template>

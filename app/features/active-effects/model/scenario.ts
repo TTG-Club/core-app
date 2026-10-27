@@ -13,11 +13,11 @@
 
 import type { EffectConditionTemplate } from './constants';
 import type { EffectFormContext, EffectFormLayout } from './layout';
+import type { SaveDcSource } from './saveDc';
 import type { EffectTrigger } from './triggerTypes';
 import type { ActiveEffect, EffectChange } from './types';
 
 import {
-  EFFECT_ABILITY_GENITIVE_LABELS,
   EFFECT_AURA_MOMENT_PREFIXES,
   EFFECT_AURA_TARGET_SCENARIO_LABELS,
   EFFECT_CARRIER_MOMENT_LABELS,
@@ -25,27 +25,42 @@ import {
   EFFECT_SCENARIO_APPLIER_DC_LABELS,
   EFFECT_SCENARIO_LABELS,
   EFFECT_SCENARIO_MAX_NAMED_MODIFIERS,
+  EFFECT_SKILL_OPTIONS,
   EFFECT_SPELL_ZONE_MOMENT_LABELS,
   EFFECT_TARGET_MOMENT_LABELS,
+  EFFECT_TOGGLE_MOMENT_LABEL,
+  EFFECT_USE_MOMENT_LABELS,
   EFFECT_ZONE_MOMENT_LABELS,
 } from './constants';
 import { findEffectConditionTemplate } from './create';
 import {
+  describeAreaChoice,
   describeConditionName,
   describeEffectChange,
+  describeEffectChangeCondition,
   describeEffectDamageParts,
   describeEffectDuration,
   describeEffectFlag,
+  describeEffectLight,
+  describeSaveOverride,
   formatEffectSaveDc,
 } from './describe';
 import {
   APPLIER_SAVE_DC,
+  EFFECT_FORM_CONTEXT,
+  isEffectTriggerSupported,
   readEffectSuccessOutcome,
   resolveEffectFormLayout,
 } from './layout';
-import { describeEffectTrigger } from './triggerDescribe';
+import { describeEffectPayClause } from './pay';
+import { describeSaveAbilitiesGenitive } from './saveAbilities';
+import {
+  describeEffectTrigger,
+  describeTriggerCondition,
+} from './triggerDescribe';
 import { listEffectListTriggers } from './triggers';
 import { LEGACY_TRIGGER_IDS } from './triggerTypes';
+import { DEFAULT_ACTIVATION_AMOUNT, isToggleActivatedEffect } from './types';
 
 /** Что состояние уже делает само: это сводка не перечисляет. */
 type ConditionPayload = Pick<
@@ -56,16 +71,38 @@ type ConditionPayload = Pick<
 /**
  * Подпись Сл спасброска в сводке.
  *
- * @param dc сложность из эффекта.
+ * @param save Сл из эффекта.
  * @param context место формы.
  * @returns подпись сложности.
  */
-function formatScenarioSaveDc(dc: number, context: EffectFormContext): string {
+function formatScenarioSaveDc(
+  save: SaveDcSource,
+  context: EffectFormContext,
+): string {
   const applierLabel = EFFECT_SCENARIO_APPLIER_DC_LABELS[context];
 
-  return dc === APPLIER_SAVE_DC && applierLabel
+  return save.dc === APPLIER_SAVE_DC && !save.dcFormula && applierLabel
     ? applierLabel
-    : formatEffectSaveDc(dc);
+    : formatEffectSaveDc(save);
+}
+
+/**
+ * Навык, итог проверки которого становится Сл спасброска: «(при применении —
+ * итог проверки: Запугивание)».
+ *
+ * @param skillKey ключ навыка; нет — Сл обычная.
+ * @returns продолжение фразы либо пустая строка.
+ */
+function describeDcSkill(skillKey: string | undefined): string {
+  if (!skillKey) {
+    return '';
+  }
+
+  const skillLabel =
+    EFFECT_SKILL_OPTIONS.find((skill) => skill.value === skillKey)?.label
+    ?? skillKey;
+
+  return `${EFFECT_SCENARIO_LABELS.dcSkillPrefix}${skillLabel}${EFFECT_SCENARIO_LABELS.dcSkillSuffix}`;
 }
 
 /**
@@ -79,6 +116,21 @@ function describeMoment(
   effect: ActiveEffect,
   layout: EffectFormLayout,
 ): string {
+  const { mode } = effect.activation ?? {};
+
+  const activation =
+    mode && layout.activationModes.includes(mode) ? mode : undefined;
+
+  if (activation === 'use' && layout.delivery !== 'aura') {
+    return layout.delivery === 'target'
+      ? EFFECT_USE_MOMENT_LABELS.target
+      : EFFECT_USE_MOMENT_LABELS.carrier;
+  }
+
+  if (activation === 'toggle' && layout.delivery === 'carrier') {
+    return EFFECT_TOGGLE_MOMENT_LABEL;
+  }
+
   switch (layout.delivery) {
     case 'zone':
       return layout.context === 'spell'
@@ -91,12 +143,55 @@ function describeMoment(
         return EFFECT_CARRIER_MOMENT_LABELS[layout.context];
       }
 
-      return `${EFFECT_AURA_MOMENT_PREFIXES[layout.trigger]}${effect.aura.radius}${EFFECT_PHRASE_PARTS.feetSuffix} (${EFFECT_AURA_TARGET_SCENARIO_LABELS[effect.aura.target]})`;
+      const radius = effect.aura.radiusFormula ?? String(effect.aura.radius);
+
+      const capable = effect.aura.whileCapable
+        ? EFFECT_SCENARIO_LABELS.auraWhileCapable
+        : '';
+
+      return `${EFFECT_AURA_MOMENT_PREFIXES[layout.trigger]}${radius}${EFFECT_PHRASE_PARTS.feetSuffix} (${EFFECT_AURA_TARGET_SCENARIO_LABELS[effect.aura.target]})${capable}`;
     }
     case 'carrier':
     default:
       return EFFECT_CARRIER_MOMENT_LABELS[layout.context];
   }
+}
+
+/**
+ * Какой счётчик тратит применение или включение.
+ *
+ * @param effect эффект.
+ * @returns часть фразы либо пустая строка.
+ */
+function describeActivationCounter(effect: ActiveEffect): string {
+  const counter = effect.activation?.counter;
+
+  if (!counter) {
+    return '';
+  }
+
+  const amount = effect.activation?.amount ?? DEFAULT_ACTIVATION_AMOUNT;
+
+  const amountText =
+    amount > DEFAULT_ACTIVATION_AMOUNT
+      ? `${EFFECT_SCENARIO_LABELS.counterAmountPrefix}${amount}`
+      : '';
+
+  return `${EFFECT_SCENARIO_LABELS.counterPrefix}${counter}${EFFECT_SCENARIO_LABELS.counterSuffix}${amountText}`;
+}
+
+/**
+ * Имя включения переключателя: с ним копии «Ярости» горят по одной.
+ *
+ * @param effect эффект.
+ * @returns часть фразы либо пустая строка.
+ */
+function describeActivationExclusive(effect: ActiveEffect): string {
+  const exclusive = effect.activation?.exclusive;
+
+  return exclusive && isToggleActivatedEffect(effect)
+    ? `${EFFECT_SCENARIO_LABELS.exclusivePrefix}${exclusive}${EFFECT_SCENARIO_LABELS.exclusiveSuffix}`
+    : '';
 }
 
 /**
@@ -177,7 +272,8 @@ function describeModifiers(
 
 /**
  * Показывается ли срабатывание в сводке этого места: старые поля — там, где их
- * шаг работает, явные срабатывания — всегда.
+ * шаг работает, явные срабатывания — там, где они работают. Неработающее
+ * называет плашка, а сводка обещала бы то, чего не случится.
  *
  * @param trigger срабатывание.
  * @param layout раскладка формы.
@@ -195,7 +291,11 @@ function isTriggerShown(
     case LEGACY_TRIGGER_IDS.consumeOn:
       return layout.showConsumeOn;
     default:
-      return true;
+      // Место без раскладки плашку не показывает — и сводка ничего не прячет
+      return (
+        layout.context === EFFECT_FORM_CONTEXT.generic
+        || isEffectTriggerSupported(trigger, layout)
+      );
   }
 }
 
@@ -232,13 +332,21 @@ function describeLastingPayload(
     );
   }
 
+  if (layout.showSaveOverride && effect.saveOverride) {
+    parts.push(describeSaveOverride(effect.saveOverride));
+  }
+
+  if (effect.light) {
+    parts.push(describeEffectLight(effect.light));
+  }
+
   for (const trigger of listEffectListTriggers(effect)) {
     if (!isTriggerShown(trigger, layout)) {
       continue;
     }
 
     const phrase = describeEffectTrigger(trigger, {
-      formatDc: (dc) => formatScenarioSaveDc(dc, layout.context),
+      formatDc: (save) => formatScenarioSaveDc(save, layout.context),
     });
 
     if (phrase) {
@@ -248,7 +356,7 @@ function describeLastingPayload(
 
   const duration =
     layout.showDuration && effect.duration.type !== 'permanent'
-      ? describeEffectDuration(effect.duration)
+      ? describeEffectDuration(effect.duration, effect.turnCurrent === true)
       : null;
 
   if (duration && parts.length > 0) {
@@ -312,7 +420,37 @@ export function describeEffectScenario(
   context: EffectFormContext,
 ): string {
   const layout = resolveEffectFormLayout(context, effect);
-  const moment = describeMoment(effect, layout);
+
+  const variant =
+    layout.showVariant && effect.variant
+      ? `${EFFECT_SCENARIO_LABELS.variantPrefix}«${effect.variant.label}»${EFFECT_SCENARIO_LABELS.variantSuffix}`
+      : '';
+
+  const landingCondition =
+    layout.showLandingCondition && effect.landingCondition
+      ? `${EFFECT_SCENARIO_LABELS.landingConditionPrefix}${describeTriggerCondition(effect.landingCondition)}`
+      : '';
+
+  const counter = layout.showActivationCounter
+    ? `${describeActivationCounter(effect)}${describeActivationExclusive(effect)}`
+    : '';
+
+  const pay = layout.showPay ? describeEffectPayClause(effect.pay) : '';
+
+  const areaChoiceText = layout.showAreaChoice
+    ? describeAreaChoice(effect.areaChoice)
+    : '';
+
+  const areaChoice = areaChoiceText
+    ? `${EFFECT_PHRASE_PARTS.listJoiner}${areaChoiceText}`
+    : '';
+
+  const rollCondition = effect.rollCondition
+    ? `${EFFECT_SCENARIO_LABELS.rollConditionPrefix}${describeEffectChangeCondition(effect.rollCondition).toLowerCase()}`
+    : '';
+
+  const moment = `${variant}${describeMoment(effect, layout)}${counter}${pay}${areaChoice}${landingCondition}${rollCondition}`;
+
   const lasting = describeLastingPayload(effect, layout);
 
   const damage =
@@ -323,7 +461,7 @@ export function describeEffectScenario(
   const failurePayload = damage ? [damage, ...lasting] : lasting;
 
   if (layout.showSave && effect.applySave) {
-    const { ability, dc } = effect.applySave;
+    const abilities = describeSaveAbilitiesGenitive(effect.applySave);
     const outcome = readEffectSuccessOutcome(effect);
 
     const failure =
@@ -332,7 +470,7 @@ export function describeEffectScenario(
         : joinParts(failurePayload);
 
     return [
-      `${moment}: ${EFFECT_PHRASE_PARTS.savePrefix}${EFFECT_ABILITY_GENITIVE_LABELS[ability]}, ${formatScenarioSaveDc(dc, context)}.`,
+      `${moment}: ${EFFECT_PHRASE_PARTS.savePrefix}${abilities}, ${formatScenarioSaveDc(effect.applySave, context)}${describeDcSkill(effect.applySave.dcSkill)}.`,
       `${EFFECT_SCENARIO_LABELS.failurePrefix}${failure}.`,
       `${EFFECT_SCENARIO_LABELS.successPrefix}${describeSuccess(effect, damage, lasting)}.`,
     ].join(' ');

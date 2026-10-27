@@ -5,7 +5,7 @@
  * (`mechanics.activeEffects`), а лист считает свои значения бонусами
  * `InventoryItemBonus`. Здесь их и сводят: лист берёт из эффекта только
  * числовые изменения, попадающие в известные ему цели, — остальное (флаги,
- * ауры, урон, периодика) остаётся работой виртуального стола.
+ * ауры для окружающих, урон, периодика) остаётся работой виртуального стола.
  */
 
 import type { ActiveEffect, EffectChange } from '~active-effects/model';
@@ -18,6 +18,12 @@ import type {
 } from './types';
 
 import { camelCase } from 'es-toolkit';
+
+import {
+  EFFECT_ATTACK_ABILITY_CONDITION_PREFIX,
+  hasConditionAlternatives,
+  splitQuotedList,
+} from '~active-effects/model';
 
 import { ABILITY_ORDER, SKILL_NAME_BY_API_KEY } from './constants';
 
@@ -95,6 +101,56 @@ const EFFECT_BONUS_MODES: Record<string, InventoryBonusMode> = {
   downgrade: 'downgrade',
 };
 
+/** Ключ изменения «урон рукопашным оружием». */
+const MELEE_DAMAGE_CHANGE_KEY = 'damage.melee';
+
+/** Ключ изменения «урон дальнобойным оружием». */
+const RANGED_DAMAGE_CHANGE_KEY = 'damage.ranged';
+
+/** Ключ изменения «весь наносимый урон». */
+const ALL_DAMAGE_CHANGE_KEY = 'damage.all';
+
+/**
+ * Ключи изменений, прибавляющих урон этому оружию: свой по дальности атаки и
+ * общий «весь наносимый урон». Урон «только этим предметом» сюда не идёт —
+ * его предмет несёт собственным бонусом урона.
+ *
+ * @param ranged оружие дальнобойное.
+ * @returns ключи изменений урона.
+ */
+export function getWeaponDamageChangeKeys(ranged: boolean): string[] {
+  return [
+    ranged ? RANGED_DAMAGE_CHANGE_KEY : MELEE_DAMAGE_CHANGE_KEY,
+    ALL_DAMAGE_CHANGE_KEY,
+  ];
+}
+
+/**
+ * Выполнено ли условие «атака идёт этой характеристикой» — единственное
+ * условие урона, которое лист проверяет сам: характеристику удара он знает.
+ * Так считает и VTTG (`readAbilityDamageScope`): «Ярость» прибавляет урон
+ * только ударам Силой. Составное условие (с «и» или «или») и условие о цели
+ * дают `false`.
+ *
+ * @param condition условие изменения.
+ * @param ability характеристика атаки этим оружием.
+ * @returns true — условие названо и выполнено.
+ */
+export function matchesAttackAbilityCondition(
+  condition: string,
+  ability: string,
+): boolean {
+  const trimmed = condition.trim();
+
+  return (
+    trimmed.startsWith(EFFECT_ATTACK_ABILITY_CONDITION_PREFIX)
+    && !hasConditionAlternatives(trimmed)
+    && splitQuotedList(
+      trimmed.slice(EFFECT_ATTACK_ABILITY_CONDITION_PREFIX.length),
+    ).includes(ability.toLowerCase())
+  );
+}
+
 /**
  * Величина изменения числом. Значение эффекта — строка, и в ней бывает формула
  * с @-переменными («@abilities.str.mod») или кость: посчитать такое лист не
@@ -112,15 +168,19 @@ export function parseEffectValue(value: string): number | null {
 /**
  * Действует ли эффект на владельца записи прямо сейчас.
  *
- * Выключенный пропускается целиком, как и нацеленный на кого-то другого и аура:
- * лист считает только то, что запись даёт своему владельцу, — ауру и чужую цель
- * отыгрывает виртуальный стол.
+ * Выключенный пропускается целиком, как и нацеленный на кого-то другого: лист
+ * считает только то, что запись даёт своему владельцу. Аура идёт в счёт, когда
+ * действует и на носителя («Аура защиты» паладина), — то же правило у VTTG.
+ * Аура только для окружающих остаётся виртуальному столу, как и условие «пока
+ * носитель дееспособен»: состояний носителя лист не отслеживает.
  *
  * @param effect активный эффект записи.
  * @returns true — эффект работает на владельца.
  */
 export function isSelfAppliedEffect(effect: ActiveEffect): boolean {
-  return !effect.disabled && effect.effectTarget !== 'target' && !effect.aura;
+  const isOutwardAura = effect.aura?.applyToSelf === false;
+
+  return !effect.disabled && effect.effectTarget !== 'target' && !isOutwardAura;
 }
 
 /**

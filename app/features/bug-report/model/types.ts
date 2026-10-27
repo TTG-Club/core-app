@@ -4,7 +4,11 @@
  * в фиче значило бы дублировать значения, которые обязаны совпадать.
  * Реэкспорт оставлен, чтобы не переписывать импорты внутри фичи.
  */
-import type { BugReportStatus, SourcePlatform } from '#shared/consts';
+import type {
+  BugReportStatus,
+  BugReportType,
+  SourcePlatform,
+} from '#shared/consts';
 
 /** Контекст выделенного текста для баг-репорта */
 export interface TextSelection {
@@ -18,7 +22,7 @@ export interface TextSelection {
   after: string;
 }
 
-export type { BugReportStatus, SourcePlatform };
+export type { BugReportStatus, BugReportType, SourcePlatform };
 
 /** Запрос на создание баг-репорта для API */
 export interface BugReportCreateRequest {
@@ -36,6 +40,9 @@ export interface BugReportCreateRequest {
 
   /** Выделенный текст на странице */
   selectedText?: string;
+
+  /** Тип записи: баг или пожелание (без поля сервис считает баг) */
+  type: BugReportType;
 }
 
 /** Результат парсинга выделенного текста с контекстом */
@@ -66,6 +73,13 @@ export interface BugReportResponse {
 
   /** Текущий статус бага */
   status: BugReportStatus;
+
+  /**
+   * Тип записи: баг или пожелание. Необязателен: список админки проксируется
+   * без пересборки, и старый сервис поля не отдаёт — тогда это баг
+   * (см. `resolveBugReportType`).
+   */
+  type?: BugReportType;
 
   /** Платформа-источник */
   sourcePlatform: SourcePlatform;
@@ -118,6 +132,9 @@ export interface MyBugReportResponse {
 
   /** Текущий статус бага */
   status: BugReportStatus;
+
+  /** Тип записи: баг или пожелание (прокси подставляет баг для старого сервиса) */
+  type: BugReportType;
 
   /** Платформа-источник */
   sourcePlatform: SourcePlatform;
@@ -271,6 +288,36 @@ export interface BugReportFilterOptionsResponse {
   statusUpdatedByLogins: string[];
 }
 
+/** Вкладка переключателя типа записи */
+export interface BugReportTypeTab {
+  /** Подпись вкладки */
+  label: string;
+
+  /** Тип записи */
+  value: BugReportType;
+
+  /** Иконка вкладки */
+  icon: string;
+}
+
+/** Тексты окна отправки, зависящие от типа записи */
+export interface BugReportModalTexts {
+  /** Заголовок окна */
+  title: string;
+
+  /** Подпись поля описания */
+  descriptionLabel: string;
+
+  /** Подсказка в пустом поле описания */
+  descriptionPlaceholder: string;
+
+  /** Заголовок тоста об успешной отправке */
+  successTitle: string;
+
+  /** Текст тоста об успешной отправке */
+  successDescription: string;
+}
+
 /** Пункт селекта-фильтра в админке баг-репортов */
 export interface AdminBugFilterOption {
   /** Подпись пункта */
@@ -368,6 +415,146 @@ export interface BugReportDiagnosticsServer {
 
   /** Самые тяжёлые WS-события за интервал замера */
   topEvents: BugReportDiagnosticsSpan[];
+
+  /** Нагрузка процесса и машины сервера за тот же интервал (в старых репортах нет) */
+  load?: BugReportDiagnosticsServerLoad;
+}
+
+/**
+ * Нагрузка на процесс сервера мира и на его машину за интервал замера.
+ *
+ * Отличает «сервер занят своим кодом» от «машину заняли другие программы»:
+ * loop-lag в обоих случаях одинаковый.
+ */
+export interface BugReportDiagnosticsServerLoad {
+  /** Процессор процесса сервера, % одного ядра (бывает больше 100) */
+  processCpuPercent: number;
+
+  /** Процессор всей машины, % всех ядер */
+  systemCpuPercent: number;
+
+  /** Память процесса целиком (RSS), МБ */
+  rssMb: number;
+
+  /** Занято в куче JS процесса, МБ */
+  heapUsedMb: number;
+
+  /** Свободная память машины, МБ */
+  systemFreeMemoryMb: number;
+
+  /** Сборка мусора за интервал, мс */
+  gcMs: number;
+
+  /** Самая долгая одиночная сборка мусора за интервал, мс */
+  gcMaxMs: number;
+}
+
+/**
+ * Машина, на которой работает сервер мира, и сам процесс сервера.
+ *
+ * Пишет её сам сервер, а не браузер отправителя: секция `device` описывает
+ * компьютер того, кто нажал «Отправить», а сервер обычно живёт на другой машине.
+ */
+export interface BugReportDiagnosticsServerHost {
+  /** Модель процессора */
+  cpuModel: string;
+
+  /** Число логических ядер */
+  cpuCores: number;
+
+  /** Вся память машины, МБ */
+  totalMemoryMb: number;
+
+  /** Свободная память машины в момент отправки, МБ */
+  freeMemoryMb: number;
+
+  /** ОС, её версия и разрядность */
+  os: string;
+
+  /** Версия Node.js */
+  nodeVersion: string;
+
+  /** Версия Electron; пусто — сервер запущен без него (VDS, headless) */
+  electronVersion: string;
+
+  /** Сколько процесс сервера уже работает, с */
+  processUptimeSec: number;
+
+  /** Сколько машина работает с последней загрузки, с */
+  systemUptimeSec: number;
+
+  /** Память процесса целиком (RSS), МБ */
+  rssMb: number;
+
+  /** Занято в куче JS процесса, МБ */
+  heapUsedMb: number;
+}
+
+/** Один двухсекундный снапшот из ленты нагрузки сервера */
+export interface BugReportDiagnosticsTimelineSample {
+  /** За сколько секунд до отправки снят снапшот */
+  agoSec: number;
+
+  /** Средняя задержка event-loop за интервал, мс */
+  lagMeanMs: number;
+
+  /** Максимальная задержка event-loop за интервал, мс */
+  lagMaxMs: number;
+
+  /** Процессор процесса сервера, % одного ядра */
+  processCpu: number;
+
+  /** Процессор всей машины, % всех ядер */
+  systemCpu: number;
+
+  /** Сборка мусора за интервал, мс */
+  gcMs: number;
+
+  /** Память процесса (RSS), МБ */
+  rssMb: number;
+
+  /** Самое тяжёлое WS-событие интервала; пусто — событий не было */
+  heaviestEvent: string;
+
+  /** Суммарное время этого события за интервал, мс */
+  heaviestEventMs: number;
+}
+
+/**
+ * Чем, судя по нагрузке, было вызвано зависание сервера мира.
+ *
+ * - `calm` — за всю ленту сервер ни разу не зависал;
+ * - `own-code` — процесс сервера сам съедал ядро: тормозит наш код;
+ * - `garbage-collection` — зависания совпали с долгой сборкой мусора;
+ * - `machine-busy` — процесс почти простаивал, а машина была загружена
+ *   другими программами;
+ * - `process-stalled` — и процесс, и машина простаивали, а сервер всё равно
+ *   стоял: сон или гибернация, диск, подкачка, синхронный вызов внешней
+ *   программы.
+ */
+export type BugReportServerLagCause =
+  | 'calm'
+  | 'own-code'
+  | 'garbage-collection'
+  | 'machine-busy'
+  | 'process-stalled';
+
+/** Вывод о причине тормозов сервера по ленте нагрузки */
+export interface BugReportServerLagVerdict {
+  /** Причина, на которую приходится больше всего зависаний */
+  cause: BugReportServerLagCause;
+
+  /** Сколько двухсекундных интервалов в ленте с зависанием */
+  stalledSamples: number;
+
+  /** Сколько интервалов в ленте всего */
+  totalSamples: number;
+
+  /** Самое долгое зависание в ленте, мс */
+  worstLagMs: number;
+
+  /** WS-событие, которое чаще всего было самым тяжёлым в зависших интервалах */
+  suspectEvent: string;
 }
 
 /** Размер открытой сцены: чем её наполнили, тем она и тяжелее */
@@ -461,4 +648,10 @@ export interface BugReportDiagnostics {
 
   /** Железо и браузер отправителя */
   device?: BugReportDiagnosticsDevice;
+
+  /** Машина и процесс сервера мира — дописывает сам сервер */
+  serverHost?: BugReportDiagnosticsServerHost;
+
+  /** Лента нагрузки сервера за последние минуты, от старых снапшотов к новым */
+  serverTimeline?: BugReportDiagnosticsTimelineSample[];
 }

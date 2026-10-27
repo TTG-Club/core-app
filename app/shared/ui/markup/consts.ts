@@ -47,3 +47,18 @@ export const GROUP_SPACING_BEFORE_SEPARATOR = 'mb-0';
 // свой `mt-*` изнутри (MarkupHeading), и без этого зазор снизу линии оказывался
 // шире, чем сверху.
 export const GROUP_SPACING_AFTER_SEPARATOR = 'mt-0! mb-2';
+
+// Тип блочного маркера-заголовка (`{@h}`). По нему withHeadingAnchors находит
+// заголовки, которым нужен якорь для содержания.
+export const HEADING_BLOCK_TYPE = 'heading';
+
+// Атрибут, в который withHeadingAnchors кладёт id якоря заголовка. Живёт только
+// в дереве для рендера — в хранимую разметку не попадает.
+export const HEADING_ANCHOR_ATTRIBUTE = 'anchor';
+
+// Префикс id якоря заголовка: не даёт слагу совпасть с другими id страницы
+// (например, `comments`).
+export const HEADING_ANCHOR_PREFIX = 'heading-';
+
+// Слаг для заголовка, из текста которого транслитерация ничего не оставила.
+export const HEADING_ANCHOR_FALLBACK_SLUG = 'section';

@@ -1,0 +1,278 @@
+import type { PlanDocument, PlanState } from './plan-schema';
+import type {
+  CatalogFacility,
+  CreatePlayerBastionRequest,
+  FacilitySetupRequest,
+  MyPlayerBastions,
+  PlayerBastion,
+  PlayerBastionGame,
+  UpdatePlayerBastionRequest,
+} from './schema';
+
+import {
+  BASTION_FACILITY_CATALOG_API_PATH,
+  PLAYER_BASTIONS_API_PATH,
+} from './constants';
+import { parsePlanResponse } from './plan-edit';
+import {
+  catalogFacilitiesSchema,
+  myPlayerBastionsSchema,
+  playerBastionGameSchema,
+  playerBastionSchema,
+} from './schema';
+
+/**
+ * Все сооружения справочника — для экрана стартового выбора. Справочник
+ * небольшой (около тридцати сооружений), поэтому грузится одним запросом.
+ *
+ * @returns Сооружения справочника.
+ */
+export async function fetchFacilityCatalog(): Promise<Array<CatalogFacility>> {
+  const response = await $fetch<unknown>(BASTION_FACILITY_CATALOG_API_PATH, {
+    method: 'GET',
+    retry: 0,
+  });
+
+  return catalogFacilitiesSchema.parse(response);
+}
+
+/**
+ * Сохраняет стартовый выбор сооружений персонажа целиком.
+ *
+ * @param bastionId Бастион.
+ * @param memberId Персонаж в бастионе.
+ * @param request Базовые и специализированные сооружения и версия бастиона.
+ * @returns Бастион после сохранения.
+ */
+export async function updateMemberFacilities(
+  bastionId: string,
+  memberId: string,
+  request: FacilitySetupRequest,
+): Promise<PlayerBastion> {
+  const response = await $fetch<unknown>(
+    `${PLAYER_BASTIONS_API_PATH}/${bastionId}/members/${memberId}/facilities`,
+    { method: 'PUT', body: request, retry: 0 },
+  );
+
+  return playerBastionSchema.parse(response);
+}
+
+/**
+ * Мастер подтверждает или снимает подтверждение требования сооружения.
+ *
+ * @param bastionId Бастион.
+ * @param facilityId Сооружение персонажа.
+ * @param confirmed Подтвердить или снять подтверждение.
+ * @returns Бастион после сохранения.
+ */
+export async function confirmFacilityPrerequisite(
+  bastionId: string,
+  facilityId: string,
+  confirmed: boolean,
+): Promise<PlayerBastion> {
+  const response = await $fetch<unknown>(
+    `${PLAYER_BASTIONS_API_PATH}/${bastionId}/facilities/${facilityId}/prerequisite`,
+    { method: 'PUT', body: { confirmed }, retry: 0 },
+  );
+
+  return playerBastionSchema.parse(response);
+}
+
+/**
+ * Бастионы игры и, для мастера, игроки, которым можно дать доступ.
+ * Bearer-токен подставляет серверный прокси из куки.
+ *
+ * @param gameId Игра каталога.
+ * @returns Бастионы игры.
+ */
+export async function fetchGameBastions(
+  gameId: string,
+): Promise<PlayerBastionGame> {
+  const response = await $fetch<unknown>(
+    `${PLAYER_BASTIONS_API_PATH}/games/${gameId}`,
+    { method: 'GET', retry: 0 },
+  );
+
+  return playerBastionGameSchema.parse(response);
+}
+
+/**
+ * Бастион по идентификатору.
+ *
+ * @param id Бастион.
+ * @returns Бастион глазами открывшего.
+ */
+export async function fetchPlayerBastion(id: string): Promise<PlayerBastion> {
+  const response = await $fetch<unknown>(`${PLAYER_BASTIONS_API_PATH}/${id}`, {
+    method: 'GET',
+    retry: 0,
+  });
+
+  return playerBastionSchema.parse(response);
+}
+
+/**
+ * Свои бастионы и лимит на создание.
+ *
+ * @returns Бастионы пользователя, старые первыми.
+ */
+export async function fetchMyBastions(): Promise<MyPlayerBastions> {
+  const response = await $fetch<unknown>(`${PLAYER_BASTIONS_API_PATH}/my`, {
+    method: 'GET',
+    retry: 0,
+  });
+
+  return myPlayerBastionsSchema.parse(response);
+}
+
+/**
+ * Создаёт свой бастион вне игры. Сверх лимита сервер отвечает 409.
+ *
+ * @param request Название и персонаж владельца.
+ * @returns Созданный бастион.
+ */
+export async function createPlayerBastion(
+  request: CreatePlayerBastionRequest,
+): Promise<PlayerBastion> {
+  const response = await $fetch<unknown>(PLAYER_BASTIONS_API_PATH, {
+    method: 'POST',
+    body: request,
+    retry: 0,
+  });
+
+  return playerBastionSchema.parse(response);
+}
+
+/**
+ * Удаляет свой бастион вместе с планом и журналами.
+ *
+ * @param id Бастион.
+ */
+export async function deletePlayerBastion(id: string): Promise<void> {
+  await $fetch(`${PLAYER_BASTIONS_API_PATH}/${id}`, {
+    method: 'DELETE',
+    retry: 0,
+  });
+}
+
+/**
+ * Добавляет свой бастион в игру, участник которой пользователь.
+ *
+ * @param id Бастион.
+ * @param gameId Игра каталога.
+ * @returns Бастион в игре.
+ */
+export async function joinGameWithBastion(
+  id: string,
+  gameId: string,
+): Promise<PlayerBastion> {
+  const response = await $fetch<unknown>(
+    `${PLAYER_BASTIONS_API_PATH}/${id}/game`,
+    { method: 'POST', body: { gameId }, retry: 0 },
+  );
+
+  return playerBastionSchema.parse(response);
+}
+
+/**
+ * Убирает бастион из игры: владелец уходит сам или мастер убирает чужой.
+ *
+ * @param id Бастион.
+ * @returns Бастион вне игры.
+ */
+export async function leaveGameWithBastion(id: string): Promise<PlayerBastion> {
+  const response = await $fetch<unknown>(
+    `${PLAYER_BASTIONS_API_PATH}/${id}/game`,
+    { method: 'DELETE', retry: 0 },
+  );
+
+  return playerBastionSchema.parse(response);
+}
+
+/**
+ * Меняет название и состав игроков: мастер игры, а вне игры — владелец.
+ *
+ * @param id Бастион.
+ * @param request Новое название, состав и версия, с которой начата правка.
+ * @returns Сохранённый бастион.
+ */
+export async function updatePlayerBastion(
+  id: string,
+  request: UpdatePlayerBastionRequest,
+): Promise<PlayerBastion> {
+  const response = await $fetch<unknown>(`${PLAYER_BASTIONS_API_PATH}/${id}`, {
+    method: 'PUT',
+    body: request,
+    retry: 0,
+  });
+
+  return playerBastionSchema.parse(response);
+}
+
+/**
+ * Отправляет бастион в архив: мастер игры, а вне игры — владелец.
+ *
+ * @param id Бастион.
+ * @returns Бастион в архиве.
+ */
+export async function archivePlayerBastion(id: string): Promise<PlayerBastion> {
+  const response = await $fetch<unknown>(
+    `${PLAYER_BASTIONS_API_PATH}/${id}/archive`,
+    { method: 'POST', retry: 0 },
+  );
+
+  return playerBastionSchema.parse(response);
+}
+
+/**
+ * План бастиона.
+ *
+ * @param bastionId Бастион.
+ * @returns Версия, право правки и документ плана.
+ */
+export async function fetchBastionPlan(bastionId: string): Promise<PlanState> {
+  const response = await $fetch<unknown>(
+    `${PLAYER_BASTIONS_API_PATH}/${bastionId}/plan`,
+    { method: 'GET', retry: 0 },
+  );
+
+  return parsePlanResponse(response);
+}
+
+/**
+ * Сохраняет план целиком. Версия устарела — сервер отвечает 409.
+ *
+ * @param bastionId Бастион.
+ * @param version Версия плана, с которой начата правка.
+ * @param document План.
+ * @returns Сохранённый план с новой версией.
+ */
+export async function saveBastionPlan(
+  bastionId: string,
+  version: number,
+  document: PlanDocument,
+): Promise<PlanState> {
+  const response = await $fetch<unknown>(
+    `${PLAYER_BASTIONS_API_PATH}/${bastionId}/plan`,
+    { method: 'PUT', body: { version, document }, retry: 0 },
+  );
+
+  return parsePlanResponse(response);
+}
+
+/**
+ * Запускает бастион: закладка закончена, начинаются ходы. Только мастер.
+ *
+ * @param bastionId Бастион.
+ * @returns Бастион в статусе «Действует».
+ */
+export async function activatePlayerBastion(
+  bastionId: string,
+): Promise<PlayerBastion> {
+  const response = await $fetch<unknown>(
+    `${PLAYER_BASTIONS_API_PATH}/${bastionId}/activate`,
+    { method: 'POST', retry: 0 },
+  );
+
+  return playerBastionSchema.parse(response);
+}

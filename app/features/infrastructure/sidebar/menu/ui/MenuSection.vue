@@ -1,15 +1,13 @@
 <script setup lang="ts">
   import type { Role } from '~/shared/types';
 
+  import type { MenuItem } from '../model';
+
+  import { MENU_EXTERNAL_ICON, MENU_SOON_LABEL } from '../model';
+
   const { items } = defineProps<{
     label: string;
-    items: Array<{
-      href: string;
-      label: string;
-      disabled?: boolean;
-      roles?: Array<Role>;
-      action?: string;
-    }>;
+    items: Array<MenuItem>;
   }>();
 
   const emit = defineEmits<{
@@ -18,18 +16,34 @@
 
   const { user } = useUser();
 
-  // Пункты с ролями видны только пользователям с подходящей ролью
-  const links = computed(() =>
-    items.filter((link) => {
-      if (!Array.isArray(link.roles)) {
-        return true;
-      }
+  function hasAnyRole(roles: Array<Role>) {
+    return roles.some((role) => user.value?.roles.includes(role));
+  }
 
-      return link.roles.some((role) => user.value?.roles.includes(role));
-    }),
+  // Пункты с `roles` видны только пользователям с подходящей ролью,
+  // с `enabledRoles` — видны всем, но закрыты без подходящей роли
+  const links = computed(() =>
+    items
+      .filter((link) => !Array.isArray(link.roles) || hasAnyRole(link.roles))
+      .map((link) => {
+        const disabled =
+          link.disabled
+          || (Array.isArray(link.enabledRoles)
+            && !hasAnyRole(link.enabledRoles));
+
+        return {
+          ...link,
+          disabled,
+          key: link.action || link.href,
+          // У пункта-действия адреса нет: он остаётся кнопкой. Закрытый раздел
+          // тоже без адреса, иначе его заглушка «/» подсвечивалась бы на главной.
+          to: link.action || disabled ? undefined : link.href,
+          trailingIcon: link.external ? MENU_EXTERNAL_ICON : undefined,
+        };
+      }),
   );
 
-  function handleItemClick(link: (typeof links.value)[number]) {
+  function handleItemClick(link: MenuItem) {
     if (link.action) {
       emit('action', link.action);
     }
@@ -37,65 +51,74 @@
 </script>
 
 <template>
-  <div
-    class="flex flex-col"
-    :class="$style.menu"
-  >
-    <span :class="$style.title">{{ label }}</span>
-
-    <template
-      v-for="link in links"
-      :key="link.action || link.href"
+  <section :class="$style.section">
+    <h3
+      class="mb-1 px-2.5 font-mono text-[11px] tracking-[0.14em] text-muted uppercase"
     >
-      <button
-        v-if="link.action"
-        :class="[$style.item, { [$style.disabled]: link.disabled }]"
-        @click.left.exact.prevent="handleItemClick(link)"
-      >
-        {{ link.label }}
-      </button>
+      {{ label }}
+    </h3>
 
-      <NuxtLink
-        v-else
-        :class="[$style.item, { [$style.disabled]: link.disabled }]"
-        :to="link.href"
+    <ul class="flex flex-col gap-0.5">
+      <li
+        v-for="link in links"
+        :key="link.key"
       >
-        {{ link.label }}
-      </NuxtLink>
-    </template>
-  </div>
+        <!--
+          Обычный @click без .prevent: у пункта-ссылки отменённый клик
+          не дал бы NuxtLink перейти в раздел.
+        -->
+        <UButton
+          :to="link.to"
+          :icon="link.icon"
+          :trailing-icon="link.trailingIcon"
+          :disabled="link.disabled"
+          :variant="link.highlighted ? 'outline' : 'ghost'"
+          :color="link.highlighted ? 'warning' : 'neutral'"
+          active-variant="soft"
+          :active-color="link.highlighted ? 'warning' : 'primary'"
+          block
+          :ui="{
+            base: 'justify-start gap-2.5 px-2.5 py-2 text-left font-normal',
+            leadingIcon: link.highlighted
+              ? 'size-4.5 text-warning'
+              : 'size-4.5 text-dimmed',
+            trailingIcon: 'size-3.5 text-dimmed',
+            label: 'whitespace-normal',
+          }"
+          :class="$style.item"
+          :active-class="$style.active"
+          @click="handleItemClick(link)"
+        >
+          {{ link.label }}
+
+          <UBadge
+            v-if="link.disabled"
+            :label="MENU_SOON_LABEL"
+            size="sm"
+            variant="subtle"
+            color="neutral"
+            class="ml-auto"
+          />
+        </UButton>
+      </li>
+    </ul>
+  </section>
 </template>
 
 <style lang="scss" module>
-  .menu {
-    width: 100%;
-    min-width: 200px;
-    max-width: 240px;
-    margin: 0;
-    padding: 0;
-
-    list-style: none;
+  // Раздел не рвётся между колонками меню (см. .content в AppMenu)
+  .section {
+    break-inside: avoid;
+    padding-bottom: 32px;
   }
-  .title {
-    margin-bottom: 4px;
-    padding: 0 16px;
 
-    font-size: 13px;
-    font-weight: 200;
-    color: var(--ui-text-toned);
-  }
+  // Иконка пункта подхватывает цвет текста при наведении и на текущем разделе
   .item {
-    padding: 6px 16px;
-    border-radius: 6px;
-    text-align: left;
-    &:hover {
-      background-color: var(--color-hover);
-      transition: all 0.15s ease-in-out;
+    &:hover,
+    &.active {
+      :global(.iconify) {
+        color: currentcolor;
+      }
     }
-  }
-
-  .disabled {
-    pointer-events: none;
-    opacity: 0.4;
   }
 </style>

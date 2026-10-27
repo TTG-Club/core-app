@@ -27,6 +27,12 @@ export const GAME_DETAIL_TABS = [
     slot: 'finance',
     value: 'finance',
   },
+  {
+    label: 'Бастионы',
+    icon: 'tabler:building-castle',
+    slot: 'bastions',
+    value: 'bastions',
+  },
 ];
 
 export const GAME_FINANCE_TITLE = 'Финансы игры';
@@ -321,6 +327,7 @@ export const NOTIFICATION_TYPES = [
   'REGISTRATION_WITHDRAWN',
   'PLAYER_REMOVED',
   'SESSION_SCHEDULED',
+  'SESSION_RESCHEDULED',
   'SESSION_STARTED',
   'SESSION_COMPLETED',
   'SESSION_CANCELLED',
@@ -338,6 +345,7 @@ export const NOTIFICATION_TEXTS = {
   REGISTRATION_WITHDRAWN: 'Игрок вышел из игры',
   PLAYER_REMOVED: 'Мастер исключил вас из игры',
   SESSION_SCHEDULED: 'Назначена новая встреча',
+  SESSION_RESCHEDULED: 'Встреча перенесена: подтвердите участие заново',
   SESSION_STARTED: 'Сессия началась',
   SESSION_COMPLETED: 'Сессия завершена',
   GAME_CLOSED: 'Игра завершена',
@@ -354,6 +362,7 @@ export const NOTIFICATION_ICONS = {
   REGISTRATION_WITHDRAWN: 'tabler:user-minus',
   PLAYER_REMOVED: 'tabler:user-off',
   SESSION_SCHEDULED: 'tabler:calendar-plus',
+  SESSION_RESCHEDULED: 'tabler:calendar-time',
   SESSION_STARTED: 'tabler:player-play',
   SESSION_COMPLETED: 'tabler:flag-check',
   GAME_CLOSED: 'tabler:circle-check',
@@ -578,8 +587,22 @@ export const GAME_PLAYERS_MIN = 1;
  */
 export const GAME_PLAYERS_MAX = 15;
 
-/** Тот же предел без подписки — он звучит только в подсказке поля. */
-const GAME_PLAYERS_FREE_MAX = 5;
+/** Тот же предел без подписки — он звучит в подсказке поля и на странице подписки. */
+export const GAME_PLAYERS_FREE_MAX = 5;
+
+/**
+ * Сколько незавершённых игр (черновик или открытая) может вести мастер: без
+ * подписки одну, с ней десять. Проверяет сервис игр, здесь — для подсказок.
+ */
+export const GAME_ACTIVE_FREE_MAX = 1;
+export const GAME_ACTIVE_SUBSCRIBER_MAX = 10;
+
+/**
+ * Сколько раз в сутки мастер может поднять игру в каталоге: без подписки раз,
+ * с ней три. Считает сервис игр (`GameService`), здесь — для подсказок.
+ */
+export const GAME_RAISES_FREE_MAX = 1;
+export const GAME_RAISES_SUBSCRIBER_MAX = 3;
 
 export const GAME_AGE_MIN = 0;
 export const GAME_AGE_MAX = 120;
@@ -655,6 +678,13 @@ export const FIND_GAME_TOAST_ERROR_ICON = 'tabler:alert-triangle';
 export const FIND_GAME_UNKNOWN_ERROR_MESSAGE =
   'Что-то пошло не так. Попробуйте ещё раз.';
 
+/**
+ * Отказ 401 сервис отдаёт без тела: объяснить его может только сайт. Повтор
+ * здесь не помогает — нужна перезагрузка, она уведёт на страницу входа.
+ */
+export const FIND_GAME_SESSION_EXPIRED_MESSAGE =
+  'Сессия истекла. Обновите страницу и войдите заново.';
+
 export const PROFILE_SAVED_TITLE = 'Профиль сохранён';
 
 export const PROFILE_SAVE_ERROR_TITLE = 'Не удалось сохранить профиль';
@@ -692,7 +722,6 @@ export const CATALOG_FILTER_SYSTEM_LABEL = 'Система';
 export const CATALOG_FILTER_TYPE_LABEL = 'Формат';
 export const CATALOG_FILTER_DURATION_LABEL = 'Длительность';
 export const CATALOG_FILTER_COST_LABEL = 'Стоимость';
-export const CATALOG_FILTER_STATUS_LABEL = 'Статус набора';
 export const CATALOG_FILTER_CITY_LABEL = 'Города';
 export const CATALOG_FILTER_CITY_PLACEHOLDER = 'Найдите и выберите город';
 export const CATALOG_FILTER_CROSSPLAY_LABEL = 'Кросспол';
@@ -753,7 +782,6 @@ export const CATALOG_FILTER_GROUP_KEYS = {
   type: 'type',
   duration: 'durationType',
   cost: 'costType',
-  status: 'status',
   crossplay: 'crossplayAllowed',
 } as const;
 
@@ -1040,6 +1068,8 @@ export const RETRY_AFTER_PREFIX = 'Попробуйте снова через';
 
 export const GAME_RAISE_LABEL = 'Поднять в каталоге';
 export const GAME_RAISED_TOAST = 'Игра поднята в каталоге';
+export const GAME_RAISE_ERROR_TITLE = 'Не удалось поднять игру';
+export const GAME_RAISE_LIMIT_HINT = `Без подписки игру можно поднимать раз в сутки, с подпиской — до ${GAME_RAISES_SUBSCRIBER_MAX} раз.`;
 
 export const GAME_DELETE_LABEL = 'Заблокировать игру';
 export const GAME_DELETE_CONFIRM_TITLE = 'Заблокировать игру?';
@@ -1113,6 +1143,7 @@ export const GAME_FORM_ADDITIONAL_SECTION = 'Дополнительно: ссы�
 export const GAME_FORM_UNSAVED_WARNING =
   'Изменения не сохранены. Покинуть форму?';
 export const GAME_FORM_REQUIRED_ERROR = 'Заполните это поле';
+export const GAME_FORM_FREE_PRICE_ERROR = 'У бесплатной игры цены нет';
 export const GAME_FORM_LEAVE_TITLE = 'Несохранённые изменения';
 export const GAME_FORM_LEAVE_LABEL = 'Выйти без сохранения';
 export const GAME_FORM_STAY_LABEL = 'Продолжить редактирование';
@@ -1120,8 +1151,9 @@ export const SESSION_AGENDA_CLOCK_INTERVAL = 60_000;
 export const GAME_NEXT_SESSION_FALLBACK = 'Время согласуется';
 export const GAME_NEXT_SESSION_LOADING_LABEL = 'Время встречи…';
 export const GAME_NEXT_PAID_SESSION_PRICE_LABEL = 'Стоимость за сессию';
-export const GAME_PRICE_PENDING_LABEL = 'Стоимость уточняется';
-export const GAME_PRICE_PER_SESSION_LABEL = 'за встречу';
+/** Платная игра без цены: заведена до цены по умолчанию или ещё не дозаполнена. */
+export const GAME_PRICE_UNSPECIFIED_LABEL = 'Не указано';
+export const GAME_PRICE_PER_SESSION_LABEL = 'сессия';
 export const GAME_FREE_SEATS_LABEL = 'Свободно мест';
 export const MY_GAMES_OVERVIEW_SIZE = 4;
 export const MY_GAMES_UPCOMING_LABEL = 'Ближайшие встречи';
@@ -1230,6 +1262,7 @@ export const GAME_RECRUITMENT_CLOSE_LABEL = 'Закрыть набор';
 export const GAME_RECRUITMENT_OPEN_LABEL = 'Открыть набор';
 export const GAME_RECRUITMENT_CLOSED_BADGE = 'Набор закрыт';
 export const GAME_RECRUITMENT_FULL_BADGE = 'Мест нет';
+export const GAME_RECRUITMENT_CLOSED_ICON = 'tabler:user-off';
 export const GAME_RECRUITMENT_CLOSED_TOAST = 'Набор закрыт';
 export const GAME_RECRUITMENT_OPENED_TOAST = 'Набор открыт';
 
@@ -1258,13 +1291,15 @@ export const GAME_FIELD_VENUE_PLACEHOLDER = 'Клуб «Кубик», Пятни
 export const GAME_FIELD_DURATION_LABEL = 'Длительность';
 export const GAME_FIELD_COST_LABEL = 'Стоимость';
 export const GAME_FIELD_COST_HINT =
-  'Сумму и условия оплаты вы зададите у каждой сессии отдельно.';
+  'У платной игры цену за сессию видно до первой встречи; у отдельной сессии её можно изменить.';
+export const GAME_FIELD_PRICE_LABEL = 'Цена за сессию';
 export const GAME_FIELD_VISIBILITY_LABEL = 'Видимость';
 export const GAME_FIELD_VISIBILITY_HINT =
   'Приватную игру видно только по ссылке-приглашению.';
 export const GAME_FIELD_PLAYERS_TO_START_LABEL = 'Игроков для старта';
 export const GAME_FIELD_MAX_PLAYERS_LABEL = 'Максимум игроков';
 export const GAME_FIELD_MAX_PLAYERS_HINT = `До ${GAME_PLAYERS_FREE_MAX}, с подпиской — до ${GAME_PLAYERS_MAX}`;
+export const GAME_FIELD_MAX_PLAYERS_LIMIT_HINT = `Больше ${GAME_PLAYERS_FREE_MAX} игроков за столом — только с подпиской.`;
 export const GAME_FIELD_MIN_AGE_LABEL = 'Возраст от';
 export const GAME_FIELD_MAX_AGE_LABEL = 'Возраст до';
 export const GAME_FIELD_AGE_HINT = 'Обе границы необязательны.';
@@ -1279,8 +1314,7 @@ export const GAME_FORM_PLAYERS_ERROR =
   'Для старта нужно не больше игроков, чем максимум';
 export const GAME_FORM_AGE_ERROR =
   'Минимальный возраст не может превышать максимальный';
-export const GAME_FORM_LIMIT_HINT =
-  'Без подписки у мастера может быть только одна незавершённая игра. Завершите текущую или оформите подписку.';
+export const GAME_FORM_LIMIT_HINT = `Без подписки у мастера может быть только одна незавершённая игра, с подпиской — до ${GAME_ACTIVE_SUBSCRIBER_MAX}. Завершите одну из текущих игр или оформите подписку.`;
 
 /* Подписи раздела «Мои игры». */
 // Список собирает и свои игры, и чужие, куда пользователь записался,
@@ -1358,6 +1392,15 @@ export const SESSION_SERIES_CREATED_TOAST = 'Серия сессий созда�
 /** Предел серии: столько же встреч за раз принимает сервис. */
 export const SESSION_SERIES_MAX = 100;
 export const SESSION_COPY_LABEL = 'Скопировать';
+export const SESSION_EDIT_LABEL = 'Изменить';
+export const SESSION_EDIT_ICON = 'tabler:calendar-time';
+export const SESSION_EDIT_SUBMIT_ICON = 'tabler:device-floppy';
+export const SESSION_CREATE_SUBMIT_ICON = 'tabler:plus';
+export const SESSION_EDIT_TITLE = 'Изменение сессии';
+export const SESSION_EDIT_DESCRIPTION =
+  'Стоимость и условия оплаты не меняются. Если сдвинуть время, игроки получат уведомление, а их отметки присутствия сбросятся: каждый заново решит, успевает ли он.';
+export const SESSION_EDIT_SUBMIT_LABEL = 'Сохранить';
+export const SESSION_UPDATED_TOAST = 'Сессия изменена';
 export const SESSION_CREATE_TITLE = 'Новая сессия';
 export const SESSION_COPY_TITLE = 'Копия сессии';
 export const SESSION_COPY_DESCRIPTION =

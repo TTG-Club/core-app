@@ -7,6 +7,7 @@
     shortLabel = undefined,
     unit = undefined,
     pressLabel = undefined,
+    icon = undefined,
   } = defineProps<{
     label: string;
     value: string | number;
@@ -20,6 +21,9 @@
 
     /** Подпись действия для скринридера; по умолчанию — бросок. */
     pressLabel?: string;
+
+    /** Иконка слева от значения, чтобы плитку было легче найти глазами. */
+    icon?: string;
   }>();
 
   const emit = defineEmits<{
@@ -39,10 +43,17 @@
     <button
       v-if="interactive"
       type="button"
-      class="flex w-full cursor-pointer items-center justify-center pt-1 after:absolute after:inset-0 after:cursor-pointer"
+      class="flex w-full cursor-pointer items-center justify-center gap-1.5 pt-1 after:absolute after:inset-0 after:cursor-pointer"
       :aria-label="pressAriaLabel"
       @click.left.exact.prevent="emit('press')"
     >
+      <UIcon
+        v-if="icon"
+        :name="icon"
+        class="size-6 shrink-0 text-primary"
+        aria-hidden="true"
+      />
+
       <span class="text-2xl leading-none font-bold text-highlighted">
         {{ value }}
 
@@ -57,8 +68,15 @@
 
     <div
       v-else
-      class="flex items-center justify-center pt-1"
+      class="flex items-center justify-center gap-1.5 pt-1"
     >
+      <UIcon
+        v-if="icon"
+        :name="icon"
+        class="size-6 shrink-0 text-primary"
+        aria-hidden="true"
+      />
+
       <span class="text-2xl leading-none font-bold text-highlighted">
         {{ value }}
 

@@ -15,19 +15,23 @@
  * Зеркало: dnd5-test-migrate/src/engine/effectTriggers.ts
  */
 
+import type { SaveDcSource } from './saveDc';
 import type {
   EffectTrigger,
   EffectTriggerAction,
   EffectTriggerActionGate,
   EffectTriggerEvent,
+  EffectTriggerSave,
   LegacyTriggerKind,
 } from './triggerTypes';
 import type { ActiveEffect, EffectSaveTiming } from './types';
 
 import {
+  CONDITION_LOST_TRIGGER_EVENTS,
   isEffectTag,
   LEGACY_TRIGGER_ID_PREFIX,
   LEGACY_TRIGGER_IDS,
+  MOVEMENT_TRIGGER_EVENTS,
   TURN_TRIGGER_EVENTS,
 } from './triggerTypes';
 
@@ -164,11 +168,34 @@ function readEffectLandingTrigger(
           save: {
             ability: effect.applySave.ability,
             dc: effect.applySave.dc,
+            ...pickSaveDcFormula(effect.applySave),
+            ...pickSaveAltAbilities(effect.applySave),
           },
         }
       : {}),
     actions,
   };
+}
+
+/**
+ * Переводит старый эффект зоны или ауры «пока внутри» со спасброском в «при
+ * входе». Прежний редактор позволял собрать такую пару, но у «пока внутри»
+ * спасброска нет: VTTG прежде клал эффект на каждого вошедшего без броска, а
+ * теперь сам читает такой эффект как «при входе». Автор явно хотел
+ * «спасбросок — и эффект при провале», а это и есть вход.
+ *
+ * Вызывать только для эффектов зоны или ауры: у эффекта «на цели» спасбросок
+ * законный и момента срабатывания нет.
+ *
+ * @param effect эффект зоны или ауры.
+ * @returns эффект с моментом «при входе» либо тот же эффект.
+ */
+export function upgradeStaySaveEffect(effect: ActiveEffect): ActiveEffect {
+  if (!effect.applySave || (effect.areaTrigger ?? 'stay') !== 'stay') {
+    return effect;
+  }
+
+  return { ...effect, areaTrigger: 'enter' };
 }
 
 /**
@@ -214,7 +241,16 @@ function readLegacyListTriggers(effect: ActiveEffect): EffectTrigger[] {
     triggers.push({
       id: LEGACY_TRIGGER_IDS.recurringDamage,
       event: turnTriggerEventOf(recurringDamage.timing),
-      ...(save ? { save: { ability: save.ability, dc: save.dc } } : {}),
+      ...(save
+        ? {
+            save: {
+              ability: save.ability,
+              dc: save.dc,
+              ...pickSaveDcFormula(save),
+              ...pickSaveAltAbilities(save),
+            },
+          }
+        : {}),
       actions: [
         {
           type: 'damage',
@@ -230,7 +266,11 @@ function readLegacyListTriggers(effect: ActiveEffect): EffectTrigger[] {
     triggers.push({
       id: LEGACY_TRIGGER_IDS.recurringSave,
       event: turnTriggerEventOf(recurringSave.timing),
-      save: { ability: recurringSave.ability, dc: recurringSave.dc },
+      save: {
+        ability: recurringSave.ability,
+        dc: recurringSave.dc,
+        ...pickSaveDcFormula(recurringSave),
+      },
       actions: [{ type: 'removeSelf', on: 'saved' }],
     });
   }
@@ -304,6 +344,16 @@ export function isTurnTriggerEvent(event: EffectTriggerEvent): boolean {
 }
 
 /**
+ * Выбирается ли у события отдых: «после долгого», «после короткого».
+ *
+ * @param event событие срабатывания.
+ * @returns `true` для события отдыха.
+ */
+export function triggerEventHasRestType(event: EffectTriggerEvent): boolean {
+  return event === 'rest';
+}
+
+/**
  * Ключи отметок, которые ставят срабатывания: их предлагает условие «на
  * носителе отметка» того же эффекта.
  *
@@ -323,6 +373,10 @@ export function listTriggerTags(triggers: readonly EffectTrigger[]): string[] {
 /**
  * Простое срабатывание: без роли, условия и лимита, ход — субъекта.
  *
+ * Список закрытый и обязан расти вместе с полями срабатывания: то, чего старые
+ * поля не выражают, нельзя в них записывать — настройка молча пропала бы при
+ * сохранении, а форма после переоткрытия показала бы её пустой.
+ *
  * @param trigger срабатывание.
  * @returns `true`, если ничего сверх события, спасброска и действий нет.
  */
@@ -330,8 +384,83 @@ function isPlainTrigger(trigger: EffectTrigger): boolean {
   return (
     trigger.condition === undefined
     && trigger.limit === undefined
+    // Получателя старые поля не знают: урон каждый ход всегда про носителя
+    && trigger.recipient === undefined
     && (trigger.turnOf === undefined || trigger.turnOf === 'subject')
+    // Цены, вопроса человеку и шанса срабатывания у старых полей нет
+    && trigger.cost === undefined
+    && trigger.ask === undefined
+    && trigger.pay === undefined
+    && trigger.chancePercent === undefined
+    && isPlainTriggerSave(trigger.save)
   );
+}
+
+/**
+ * Формула Сл старого поля для срабатывания и обратно — только если она есть:
+ * пустое поле в данных не пишется.
+ *
+ * @param save Сл старого поля или срабатывания.
+ * @returns поле формулы либо ничего.
+ */
+function pickSaveDcFormula(
+  save: SaveDcSource,
+): Pick<SaveDcSource, 'dcFormula'> {
+  return save.dcFormula ? { dcFormula: save.dcFormula } : {};
+}
+
+/** Характеристики на выбор бросающего у спасброска. */
+type SaveAltAbilities = Pick<EffectTriggerSave, 'altAbilities'>;
+
+/**
+ * Характеристики на выбор старого поля для срабатывания и обратно — только
+ * если они есть. Их знают спасбросок при наложении и спасбросок против урона
+ * каждый ход; у повторного спасброска, снимающего эффект, такого поля нет.
+ *
+ * @param save спасбросок старого поля или срабатывания.
+ * @returns поле характеристик либо ничего.
+ */
+function pickSaveAltAbilities(save: SaveAltAbilities): SaveAltAbilities {
+  return save.altAbilities?.length ? { altAbilities: save.altAbilities } : {};
+}
+
+/**
+ * Простой спасбросок срабатывания: без режима по условию и без
+ * автоматического исхода — их старые поля тоже не выражают.
+ *
+ * @param save спасбросок срабатывания.
+ * @returns `true`, если спасброска нет или он простой.
+ */
+function isPlainTriggerSave(save: EffectTriggerSave | undefined): boolean {
+  return (
+    save === undefined
+    || (save.modeIf === undefined
+      && save.autoSuccessIf === undefined
+      && save.autoFailIf === undefined)
+  );
+}
+
+/**
+ * Выбирается ли у события состояние: «когда состояние снимается» слушает одно
+ * состояние или любое.
+ *
+ * @param event событие срабатывания.
+ * @returns `true` для события снятия состояния.
+ */
+export function triggerEventHasConditionKey(
+  event: EffectTriggerEvent,
+): boolean {
+  return CONDITION_LOST_TRIGGER_EVENTS.includes(event);
+}
+
+/**
+ * Событие перемещения: у него выбирается шаг пути — «за каждые N футов».
+ *
+ * @param event событие срабатывания.
+ * @returns `true` для события перемещения.
+ */
+export function triggerEventHasPathFeet(event: EffectTriggerEvent): boolean {
+  return MOVEMENT_TRIGGER_EVENTS.includes(event);
 }
 
 /**
@@ -367,6 +496,8 @@ export function classifyLegacyTrigger(
     isTurn
     && trigger.role === undefined
     && trigger.save
+    // Характеристик на выбор у старого повторного спасброска нет
+    && trigger.save.altAbilities === undefined
     && action.type === 'removeSelf'
     && gate === 'saved'
   ) {
@@ -411,6 +542,8 @@ function toLegacyFields(
               save: {
                 ability: trigger.save.ability,
                 dc: trigger.save.dc,
+                ...pickSaveDcFormula(trigger.save),
+                ...pickSaveAltAbilities(trigger.save),
                 onSuccess: action.halfOnSave ? 'half' : 'negate',
               },
             }
@@ -424,6 +557,7 @@ function toLegacyFields(
       recurringSave: {
         ability: trigger.save.ability,
         dc: trigger.save.dc,
+        ...pickSaveDcFormula(trigger.save),
         timing,
       },
     };

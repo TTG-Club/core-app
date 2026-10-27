@@ -33,11 +33,12 @@ export const TRACKER_KEY_HEADER = 'X-Tracker-Key';
  * Справочник состояний: подпись и иконка каждого. Названия и рисунки состояний
  * PHB 2024 — те же, что в VTTG (`packages/client/public/assets/status`), чтобы
  * состояние узнавалось одинаково на столе и в трекере. Своей картинки в VTTG
- * нет у двух состояний и у боевых эффектов сверх правил — у них, как и там,
+ * нет у трёх состояний и у боевых эффектов сверх правил — у них, как и там,
  * иконка из `tabler`.
  */
 export const CONDITION_CATALOG: Record<ConditionKey, ConditionOption> = {
   blinded: { label: 'Ослеплённый', icon: 'ttg:status-blinded' },
+  bloodied: { label: 'Окровавленный', icon: 'tabler:droplet' },
   charmed: { label: 'Очарованный', icon: 'ttg:status-charmed' },
   deafened: { label: 'Оглохший', icon: 'ttg:status-deafened' },
   exhaustion: { label: 'Истощённый', icon: 'ttg:status-exhaustion' },
@@ -66,6 +67,7 @@ export const CONDITION_CATALOG: Record<ConditionKey, ConditionOption> = {
  */
 export const CONDITION_KEYS: Array<ConditionKey> = [
   'blinded',
+  'bloodied',
   'charmed',
   'deafened',
   'exhaustion',
@@ -305,3 +307,12 @@ export const TRACKER_STATUS_BADGE: Record<
   PREPARING: { color: 'neutral', icon: 'tabler:swords' },
   ACTIVE: { color: 'success', icon: 'tabler:flame' },
 };
+
+/** Подписи временных хитов в попапе хитов участника. */
+export const TEMPORARY_HIT_POINTS_LABELS = {
+  title: 'Временные хиты',
+  hint: 'Новое значение заменит текущее, только если оно больше. Урон сначала снимает временные хиты.',
+  input: 'Количество временных хитов',
+  apply: 'Задать',
+  clear: 'Снять временные хиты',
+} as const;

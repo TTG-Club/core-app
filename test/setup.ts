@@ -1,8 +1,9 @@
 import { consola } from 'consola';
 import { createError } from 'h3';
 
-import { getErrorResponse, getPlural } from '#shared/utils';
+import { getErrorResponse, getPlural, getSlug } from '#shared/utils';
 import { createEntityId } from '~/utils/createEntityId';
+import { getModifier } from '~/utils/modifier';
 import { z } from '~/utils/zod';
 
 /**
@@ -20,7 +21,9 @@ Object.assign(globalThis, {
   createEntityId,
   createError,
   getErrorResponse,
+  getModifier,
   getPlural,
+  getSlug,
   getOrigin: () => TEST_ORIGIN,
   z,
 });

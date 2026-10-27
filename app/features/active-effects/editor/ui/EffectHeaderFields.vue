@@ -16,6 +16,11 @@
   defineProps<{
     /** Показывать кнопку «Шаблон состояния». */
     showConditionPreset: boolean;
+    /**
+     * Показывать переключатель «Работает». У шаблона применения его нет: на
+     * листе такой шаблон всегда лежит выключенным.
+     */
+    showStatusToggle: boolean;
   }>();
 
   const effect = defineModel<ActiveEffect>('effect', { required: true });
@@ -117,6 +122,7 @@
     </UDropdownMenu>
 
     <USwitch
+      v-if="showStatusToggle"
       v-model="isActive"
       :label="statusLabel"
       class="h-8 items-center"
