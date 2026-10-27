@@ -8,7 +8,7 @@
   const route = useRoute();
   const { canEditSources } = useUserRoles();
 
-  useSectionDetailRedirect('sources');
+  const sectionPath = useSectionDetailRedirect('sources');
 
   const { data: source } = await useAsyncData(
     `source-${route.params.url}`,
@@ -53,6 +53,7 @@
 <template>
   <NuxtLayout
     name="detail"
+    :section-path="sectionPath"
     :title="source?.name.rus"
     :subtitle="source?.name.eng"
     :source="source?.source"

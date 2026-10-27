@@ -7,7 +7,7 @@
 
   const route = useRoute();
 
-  useSectionDetailRedirect('feats');
+  const sectionPath = useSectionDetailRedirect('feats');
 
   const { data: feat } = await useAsyncData(`feat-${route.params.url}`, () =>
     $fetch<FeatDetailResponse>(`/api/v2/feats/${route.params.url}`),
@@ -47,6 +47,7 @@
 <template>
   <NuxtLayout
     name="detail"
+    :section-path="sectionPath"
     :title="feat?.name.rus"
     :subtitle="feat?.name.eng"
     :source="feat?.source"

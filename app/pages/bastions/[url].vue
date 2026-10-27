@@ -19,7 +19,7 @@
 
   const route = useRoute();
 
-  useSectionDetailRedirect(BASTION_SECTION);
+  const sectionPath = useSectionDetailRedirect(BASTION_SECTION);
 
   const { data: facility } = await useAsyncData(
     `bastion-${route.params.url}`,
@@ -77,6 +77,7 @@
 <template>
   <NuxtLayout
     name="detail"
+    :section-path="sectionPath"
     :title="facility?.name.rus"
     :subtitle="facility?.name.eng"
     :source="facility?.source"

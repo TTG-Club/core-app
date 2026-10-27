@@ -87,6 +87,13 @@
     return Array.from(groupMap.values());
   });
 
+  // На телефоне страница источника листает соседние в порядке групп
+  useSectionNeighbours('/sources', () =>
+    groupedSources.value.flatMap((group) =>
+      group.items.map((source) => source.url),
+    ),
+  );
+
   const {
     detailUrl,
     detailData: detailSource,

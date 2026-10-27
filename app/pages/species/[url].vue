@@ -10,7 +10,7 @@
     params: { url },
   } = useRoute();
 
-  useSectionDetailRedirect('species');
+  const sectionPath = useSectionDetailRedirect('species');
 
   const {
     data: species,
@@ -67,6 +67,7 @@
   <NuxtLayout
     id="species-base"
     name="detail"
+    :section-path="sectionPath"
     :title="species?.name.rus"
     :subtitle="species?.name.eng"
     :source="species?.source"
