@@ -3,5 +3,6 @@ export {
   GameInactivityAlert,
   GameInviteCard,
   GameOverview,
+  GameReviewModal,
   GameSummaryCard,
 } from './ui';

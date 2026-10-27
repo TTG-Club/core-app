@@ -1,10 +1,5 @@
 <script setup lang="ts">
-  import type {
-    Game,
-    GameSession,
-    GameViewerAbilities,
-    SessionReview,
-  } from '../../model';
+  import type { Game, ReviewTarget } from '../../model';
 
   import { UiResult } from '~ui/result';
   import { UserAvatar } from '~ui/user-avatar';
@@ -12,105 +7,79 @@
   import { useFindGameToast, useParticipantNames } from '../../composables';
   import {
     CANCEL_LABEL,
-    fetchSessionReviews,
-    FIND_GAME_UNKNOWN_ERROR_MESSAGE,
-    getFindGameErrorMessage,
+    PENDING_REVIEWS_DATA_KEY,
     REVIEW_COMMENT_LABEL,
     REVIEW_COMMENT_MAX_LENGTH,
     REVIEW_COMMENT_PLACEHOLDER,
     REVIEW_DOWN_LABEL,
     REVIEW_EMPTY_PARTICIPANTS,
     REVIEW_HIDDEN_HINT,
+    REVIEW_LOCKED_LABEL,
+    REVIEW_RULES_HINT,
     REVIEW_SAVED_TOAST,
     REVIEW_SUBMIT_LABEL,
     REVIEW_TITLE,
     REVIEW_UP_LABEL,
-    REVIEW_WINDOW_HINT,
-    submitSessionReview,
+    submitGameReview,
   } from '../../model';
   import { ParticipantName } from '../../ui';
 
   /**
-   * Взаимные оценки за встречу.
+   * Взаимные оценки за игру.
    *
-   * Игрок отвечает про мастера, мастер — про каждого игрока. Оценка бинарная:
-   * «сыграл бы снова» или нет. Чужой вердикт до ответа второй стороны не
-   * показывается — увидевший первым отвечал бы тем же.
+   * Игрок отвечает про мастера, мастер — про каждого сыгравшего игрока.
+   * Оценка бинарная: «сыграл бы снова» или нет, и ставится одна за всю игру.
+   * Чужой вердикт до ответа второй стороны не показывается — увидевший
+   * первым отвечал бы тем же.
    */
   const isOpen = defineModel<boolean>('open', { required: true });
 
-  const { game, session, abilities } = defineProps<{
+  const { game, targets } = defineProps<{
     game: Game;
-    /** Встреча, которую оценивают; `null` — окно закрыто. */
-    session: GameSession | null;
-    abilities: GameViewerAbilities;
+    /** Кого пользователь вправе оценить, со своими оценками. */
+    targets: Array<ReviewTarget>;
+  }>();
+
+  const emit = defineEmits<{
+    saved: [];
   }>();
 
   const { showError, showSuccess } = useFindGameToast();
-  const { user } = useUser();
   const { getParticipantAvatarName, resolveNames } = useParticipantNames();
-
-  const currentUserId = computed(() => user.value?.id ?? null);
 
   /** Свои вердикты по оцениваемым, пока их правят в форме. */
   const verdicts = ref<Record<string, boolean>>({});
   const comments = ref<Record<string, string>>({});
   const savedTargets = ref<Array<string>>([]);
   const busyTargetId = ref<string | null>(null);
-  const loadError = ref<unknown>(null);
-  const isLoading = ref(false);
+
+  const targetIds = computed(() => targets.map((target) => target.targetId));
+
+  /** Раскрытые оценки: их уже прочла вторая сторона, и поправить их нельзя. */
+  const lockedTargetIds = computed(() =>
+    targets
+      .filter((target) => !target.editable)
+      .map((target) => target.targetId),
+  );
 
   /**
-   * Кого оценивает пользователь: мастер — каждого участника встречи, игрок —
-   * мастера игры.
+   * Заполняет форму уже поставленными оценками: повторная оценка правит свою
+   * же, и форма должна открываться с ней, а не пустой.
    */
-  const targetIds = computed(() => {
-    if (!session) {
-      return [];
-    }
+  function fillFromTargets(): void {
+    const reviewed = targets.flatMap((target) =>
+      target.review ? [target.review] : [],
+    );
 
-    if (abilities.isMaster) {
-      return session.registeredPlayerIds.filter(
-        (playerId) => playerId !== currentUserId.value,
-      );
-    }
+    verdicts.value = Object.fromEntries(
+      reviewed.map((review) => [review.targetId, review.recommended]),
+    );
 
-    return game.masterId === currentUserId.value ? [] : [game.masterId];
-  });
+    comments.value = Object.fromEntries(
+      reviewed.map((review) => [review.targetId, review.comment ?? '']),
+    );
 
-  /**
-   * Загружает уже поставленные оценки: повторная оценка правит свою же, и
-   * форма должна открываться с ней, а не пустой.
-   */
-  async function loadReviews(): Promise<void> {
-    if (!session) {
-      return;
-    }
-
-    isLoading.value = true;
-    loadError.value = null;
-
-    try {
-      const reviews = await fetchSessionReviews(game.id, session.id);
-
-      const own = reviews.filter(
-        (review: SessionReview) => review.authorId === currentUserId.value,
-      );
-
-      verdicts.value = Object.fromEntries(
-        own.map((review) => [review.targetId, review.recommended]),
-      );
-
-      comments.value = Object.fromEntries(
-        own.map((review) => [review.targetId, review.comment ?? '']),
-      );
-
-      savedTargets.value = own.map((review) => review.targetId);
-    } catch (error) {
-      loadError.value = error;
-    } finally {
-      isLoading.value = false;
-    }
+    savedTargets.value = reviewed.map((review) => review.targetId);
   }
 
   /**
@@ -120,7 +89,7 @@
   async function save(targetId: string): Promise<void> {
     const recommended = verdicts.value[targetId];
 
-    if (!session || recommended === undefined) {
+    if (recommended === undefined) {
       return;
     }
 
@@ -129,7 +98,7 @@
     try {
       const comment = (comments.value[targetId] ?? '').trim();
 
-      await submitSessionReview(game.id, session.id, {
+      await submitGameReview(game.id, {
         targetId,
         recommended,
         ...(comment ? { comment } : {}),
@@ -140,6 +109,8 @@
       }
 
       showSuccess(REVIEW_SAVED_TOAST);
+      emit('saved');
+      await refreshNuxtData(PENDING_REVIEWS_DATA_KEY);
     } catch (error) {
       showError(error);
     } finally {
@@ -150,7 +121,7 @@
   /**
    * Цвет кнопки вердикта: выбранная сторона загорается, вторая остаётся
    * нейтральной. Функции, а не `computed`: пара кнопок своя у каждого
-   * участника встречи.
+   * участника игры.
    *
    * @param targetId Кого оценивают.
    * @param recommended Кнопка «сыграл бы снова» или «не сыграл бы».
@@ -181,17 +152,17 @@
     verdicts.value = { ...verdicts.value, [targetId]: recommended };
   }
 
+  // Форма заполняется при открытии, а не на каждое обновление списка: после
+  // сохранения список перезагружается, и правка соседней карточки не должна
+  // сбрасываться.
   watch(
-    [isOpen, () => session?.id],
-    ([opened]) => {
+    isOpen,
+    (opened) => {
       if (!opened) {
         return;
       }
 
-      verdicts.value = {};
-      comments.value = {};
-      savedTargets.value = [];
-      loadReviews();
+      fillFromTargets();
       resolveNames(targetIds.value);
     },
     { immediate: true },
@@ -202,32 +173,14 @@
   <UModal
     v-model:open="isOpen"
     :title="REVIEW_TITLE"
-    :description="session?.title"
+    :description="game.title"
   >
     <template #body>
       <div class="flex flex-col gap-4">
-        <p class="text-sm text-muted">{{ REVIEW_WINDOW_HINT }}</p>
-
-        <div
-          v-if="isLoading"
-          class="flex flex-col gap-2"
-        >
-          <USkeleton
-            v-for="index in 2"
-            :key="index"
-            class="h-24 w-full rounded-lg"
-          />
-        </div>
+        <p class="text-sm text-muted">{{ REVIEW_RULES_HINT }}</p>
 
         <UiResult
-          v-else-if="loadError"
-          status="error"
-          :title="FIND_GAME_UNKNOWN_ERROR_MESSAGE"
-          :sub-title="getFindGameErrorMessage(loadError)"
-        />
-
-        <UiResult
-          v-else-if="!targetIds.length"
+          v-if="!targetIds.length"
           status="info"
           :title="REVIEW_EMPTY_PARTICIPANTS"
         />
@@ -253,7 +206,16 @@
               </span>
 
               <UBadge
-                v-if="savedTargets.includes(targetId)"
+                v-if="lockedTargetIds.includes(targetId)"
+                color="neutral"
+                variant="subtle"
+                size="sm"
+                icon="tabler:lock"
+                :label="REVIEW_LOCKED_LABEL"
+              />
+
+              <UBadge
+                v-else-if="savedTargets.includes(targetId)"
                 color="success"
                 variant="subtle"
                 size="sm"
@@ -269,6 +231,7 @@
                 :color="verdictButtonColor(targetId, true)"
                 :variant="verdictButtonVariant(targetId, true)"
                 :label="REVIEW_UP_LABEL"
+                :disabled="lockedTargetIds.includes(targetId)"
                 @click.left.exact.prevent="setVerdict(targetId, true)"
               />
 
@@ -278,6 +241,7 @@
                 :color="verdictButtonColor(targetId, false)"
                 :variant="verdictButtonVariant(targetId, false)"
                 :label="REVIEW_DOWN_LABEL"
+                :disabled="lockedTargetIds.includes(targetId)"
                 @click.left.exact.prevent="setVerdict(targetId, false)"
               />
             </div>
@@ -288,11 +252,13 @@
                 :rows="3"
                 :maxlength="REVIEW_COMMENT_MAX_LENGTH"
                 :placeholder="REVIEW_COMMENT_PLACEHOLDER"
+                :disabled="lockedTargetIds.includes(targetId)"
                 class="w-full"
               />
             </UFormField>
 
             <UButton
+              v-if="!lockedTargetIds.includes(targetId)"
               size="sm"
               class="self-start"
               icon="tabler:device-floppy"

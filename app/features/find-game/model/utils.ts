@@ -6,6 +6,7 @@ import type {
   GameSessionPrice,
   GameStateBadge,
   NextGameSession,
+  PendingReview,
   Reputation,
 } from './types';
 
@@ -34,10 +35,13 @@ import {
   MY_GAMES_ATTENTION_NO_DATE_LABEL,
   MY_GAMES_ATTENTION_NO_SESSION_LABEL,
   MY_GAMES_ATTENTION_REASON_SEPARATOR,
+  PENDING_REVIEW_MASTER_CAPTION,
+  PENDING_REVIEW_PLAYERS_CAPTION,
   REPUTATION_EMPTY_LABEL,
+  REVIEW_OPEN_QUERY_KEY,
+  REVIEW_OPEN_QUERY_VALUE,
   REVIEW_VERDICT_ICON,
   REVIEW_VERDICT_TEXT_CLASS,
-  REVIEW_WINDOW_DAYS,
   SESSION_PAYMENT_TYPE_LABELS,
   TABLETOP_EXPERIENCE_LABEL,
 } from './constants';
@@ -589,9 +593,6 @@ export function getWaitLabel(availableAt: string): string | null {
   return `${hours} ${getPlural(hours, ['час', 'часа', 'часов'])}`;
 }
 
-/** Миллисекунд в сутках — для окна на оценку встречи. */
-const MILLIS_IN_DAY = 24 * MINUTES_IN_HOUR * MILLIS_IN_MINUTE;
-
 /**
  * Подпись репутации: «11 из 12 сыграли бы снова».
  *
@@ -609,24 +610,16 @@ export function getReputationLabel(reputation: Reputation | null): string {
 }
 
 /**
- * Открыто ли окно на оценку встречи.
+ * Подпись игры в списке ждущих оценки: кого осталось оценить.
  *
- * Считается по отметке завершения — той же, по которой окно закрывает сервис.
- * Встречи, закрытые до появления оценок, отметки не имеют и оценке не
- * подлежат.
- *
- * @param session Встреча.
+ * @param pending Игра, где пользователь ещё не оценил тех, с кем играл.
  */
-export function isSessionReviewable(session: GameSession): boolean {
-  if (session.status !== 'COMPLETED' || !session.completedAt) {
-    return false;
+export function getPendingReviewCaption(pending: PendingReview): string {
+  if (pending.kind === 'MASTER_REVIEW') {
+    return PENDING_REVIEW_MASTER_CAPTION;
   }
 
-  const closesAt =
-    new Date(session.completedAt).getTime()
-    + REVIEW_WINDOW_DAYS * MILLIS_IN_DAY;
-
-  return Number.isFinite(closesAt) && closesAt > Date.now();
+  return `${PENDING_REVIEW_PLAYERS_CAPTION}: ${pending.targetIds.length}`;
 }
 
 /**
@@ -646,6 +639,15 @@ export function getGameRoute(
   }
 
   return `${path}?${INVITE_CODE_QUERY_KEY}=${encodeURIComponent(inviteCode)}`;
+}
+
+/**
+ * Ссылка на страницу игры, которая сразу открывает окно оценки. По ней ведут
+ * напоминание об оценке и сводка «Моих игр».
+ * @param gameId Идентификатор игры.
+ */
+export function getGameReviewRoute(gameId: string): string {
+  return `${GAMES_ROUTE}/${gameId}?${REVIEW_OPEN_QUERY_KEY}=${REVIEW_OPEN_QUERY_VALUE}`;
 }
 
 /**

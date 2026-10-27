@@ -5,6 +5,7 @@
 
   import { useFindGameNotifications } from '../composables';
   import {
+    getGameReviewRoute,
     getGameRoute,
     NOTIFICATION_ICONS,
     NOTIFICATION_TEXTS,
@@ -51,7 +52,13 @@
   async function open(notification: FindGameNotification): Promise<void> {
     isOpen.value = false;
 
-    await navigateTo(getGameRoute(notification.gameId));
+    // Напоминание об оценке ведёт сразу в окно оценки: искать, где её
+    // поставить, никто не станет.
+    await navigateTo(
+      notification.type === 'REVIEW_REQUESTED'
+        ? getGameReviewRoute(notification.gameId)
+        : getGameRoute(notification.gameId),
+    );
 
     if (!notification.readAt) {
       await read(notification.id);

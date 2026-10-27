@@ -1,13 +1,15 @@
 <script setup lang="ts">
-  import type { Game } from '../../model';
+  import type { Game, PendingReview } from '../../model';
 
-  import { useMyGamesOverview } from '../../composables';
+  import { useMyGamesOverview, usePendingReviews } from '../../composables';
   import {
     CATALOG_RETRY_LABEL,
     GAME_NEXT_SESSION_FALLBACK,
     getAttentionReason,
     getFindGameErrorMessage,
+    getGameReviewRoute,
     getGameRoute,
+    getPendingReviewCaption,
     MY_GAMES_AGENDA_DAY_FORMAT,
     MY_GAMES_AGENDA_MONTH_FORMAT,
     MY_GAMES_AGENDA_TIME_FORMAT,
@@ -15,11 +17,13 @@
     MY_GAMES_ATTENTION_LABEL,
     MY_GAMES_ERROR_TITLE,
     MY_GAMES_OVERVIEW_SIZE,
+    MY_GAMES_REVIEWS_EMPTY,
+    MY_GAMES_REVIEWS_LABEL,
     MY_GAMES_UPCOMING_EMPTY,
     MY_GAMES_UPCOMING_LABEL,
   } from '../../model';
 
-  type OverviewSectionKey = 'upcoming' | 'attention';
+  type OverviewSectionKey = 'upcoming' | 'attention' | 'reviews';
 
   /** Строка сводки: игра, подпись под ней и плашка слева. */
   interface OverviewEntry {
@@ -44,6 +48,8 @@
     tileClass: string;
     /** Раздел раскрыт на узком экране; на широком раскрыты все. */
     isOpen: boolean;
+    /** Данные раздела ещё грузятся: оценки приходят отдельным запросом. */
+    isLoading: boolean;
   }
 
   const {
@@ -56,6 +62,8 @@
     isLoading,
     refresh,
   } = useMyGamesOverview();
+
+  const { pendingReviews, isLoading: isPendingLoading } = usePendingReviews();
 
   const { user } = useUser();
   const { format } = useDayjs();
@@ -77,6 +85,22 @@
         : GAME_NEXT_SESSION_FALLBACK,
       day: startsAt ? format(startsAt, MY_GAMES_AGENDA_DAY_FORMAT) : null,
       month: startsAt ? format(startsAt, MY_GAMES_AGENDA_MONTH_FORMAT) : null,
+    };
+  }
+
+  /**
+   * Строка игры, где осталось кого-то оценить: ссылка сразу открывает окно
+   * оценки.
+   * @param pending Игра, ждущая оценки.
+   */
+  function toReviewEntry(pending: PendingReview): OverviewEntry {
+    return {
+      id: `${pending.gameId}-${pending.kind}`,
+      title: pending.gameTitle,
+      route: getGameReviewRoute(pending.gameId),
+      caption: getPendingReviewCaption(pending),
+      day: null,
+      month: null,
     };
   }
 
@@ -103,6 +127,7 @@
       entries: upcomingGames.value.map(toUpcomingEntry),
       tileClass: 'bg-primary/10 text-primary',
       isOpen: openSectionKeys.value.includes('upcoming'),
+      isLoading: isLoading.value,
     },
     {
       key: 'attention',
@@ -120,8 +145,37 @@
       })),
       tileClass: 'bg-warning/10 text-warning',
       isOpen: openSectionKeys.value.includes('attention'),
+      isLoading: isLoading.value,
     },
   ]);
+
+  /**
+   * Раздел оценок показывается, только когда есть кого оценить: пустой он
+   * лишь занимал бы место над списком игр.
+   */
+  const reviewSection = computed<OverviewSection | null>(() => {
+    if (!isPendingLoading.value && !pendingReviews.value.length) {
+      return null;
+    }
+
+    return {
+      key: 'reviews',
+      title: MY_GAMES_REVIEWS_LABEL,
+      icon: 'tabler:thumb-up',
+      emptyLabel: MY_GAMES_REVIEWS_EMPTY,
+      totalLabel: String(pendingReviews.value.length),
+      entries: pendingReviews.value.map(toReviewEntry),
+      tileClass: 'bg-success/10 text-success',
+      isOpen: openSectionKeys.value.includes('reviews'),
+      isLoading: isPendingLoading.value,
+    };
+  });
+
+  const visibleSections = computed(() =>
+    reviewSection.value
+      ? [...sections.value, reviewSection.value]
+      : sections.value,
+  );
 
   /**
    * Раскрывает или сворачивает раздел на узком экране.
@@ -145,7 +199,7 @@
   <DefineEntries v-slot="{ section }">
     <div class="px-2 pb-2">
       <div
-        v-if="isLoading"
+        v-if="section.isLoading"
         class="flex flex-col gap-1"
       >
         <USkeleton
@@ -233,7 +287,7 @@
   >
     <template v-if="isColumn">
       <section
-        v-for="section in sections"
+        v-for="section in visibleSections"
         :key="section.key"
         class="rounded-xl border border-default bg-elevated"
       >
@@ -248,7 +302,7 @@
           </span>
 
           <UBadge
-            v-if="!isLoading"
+            v-if="!section.isLoading"
             color="neutral"
             variant="subtle"
             size="sm"
@@ -262,7 +316,7 @@
 
     <template v-else>
       <UCollapsible
-        v-for="section in sections"
+        v-for="section in visibleSections"
         :key="section.key"
         :open="section.isOpen"
         class="group rounded-xl border border-default bg-elevated"
@@ -286,7 +340,7 @@
           </span>
 
           <UBadge
-            v-if="!isLoading"
+            v-if="!section.isLoading"
             color="neutral"
             variant="subtle"
             size="sm"
