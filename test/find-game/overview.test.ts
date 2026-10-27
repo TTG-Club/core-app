@@ -271,3 +271,21 @@ describe('причина в «Требуют внимания»', () => {
     );
   });
 });
+
+describe('брошенная игра', () => {
+  it('читает срок автоотмены из ответа мастеру', () => {
+    const game = parseGame({
+      id: 'game-1',
+      masterId: 'master-1',
+      autoCancelAt: '2026-10-30T15:30:00Z',
+    });
+
+    expect(game.autoCancelAt).toBe('2026-10-30T15:30:00Z');
+  });
+
+  it('без вопроса мастеру срока нет', () => {
+    const game = parseGame({ id: 'game-1', masterId: 'master-1' });
+
+    expect(game.autoCancelAt).toBeNull();
+  });
+});

@@ -1,5 +1,6 @@
 export {
   GameActions,
+  GameInactivityAlert,
   GameInviteCard,
   GameOverview,
   GameReviewModal,

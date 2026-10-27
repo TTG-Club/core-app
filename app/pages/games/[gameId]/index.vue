@@ -16,6 +16,7 @@
   import { GameApplyModal } from '~find-game/form';
   import {
     GameActions,
+    GameInactivityAlert,
     GameInviteCard,
     GameOverview,
     GameReviewModal,
@@ -39,6 +40,7 @@
     GAME_DETAIL_TABS,
     GAME_GUEST_NOTICE_DESCRIPTION,
     GAME_GUEST_NOTICE_TITLE,
+    GAME_KEPT_ACTIVE_TOAST,
     GAME_LEFT_TOAST,
     GAME_RAISE_ERROR_TITLE,
     GAME_RAISE_LIMIT_HINT,
@@ -117,6 +119,7 @@
     areSessionsLoading,
     isApplicationProfileLoading,
     isGameLoading,
+    keepActive,
     openRecruitment,
     ownParticipationBySession,
     ownRegistration,
@@ -195,6 +198,24 @@
   );
 
   const isError = computed(() => gameStatus.value === 'error');
+
+  /**
+   * Срок автоотмены брошенной игры. Сервис отдаёт его только мастеру, но
+   * вопрос уместен лишь у открытой игры — у закрытой отменять уже нечего.
+   */
+  const autoCancelAt = computed(() =>
+    abilities.value.isMaster && game.value?.status === 'OPEN'
+      ? game.value.autoCancelAt
+      : null,
+  );
+
+  /**
+   * Строка столбцов страницы: вопрос об актуальности занимает первую во всю
+   * ширину, чтобы и на телефоне мастер увидел его раньше сводки.
+   */
+  const columnRowClass = computed(() =>
+    autoCancelAt.value ? 'lg:row-start-2' : 'lg:row-start-1',
+  );
 
   const detailTabs = computed(() => {
     const showFinance =
@@ -321,6 +342,11 @@
     runAction(GAME_REPORT_SENT_TOAST, () =>
       reportGame(reportedGame.id, request),
     );
+  }
+
+  /** Подтверждает, что игра ещё актуальна: автоотмена снимается. */
+  function handleKeepActive(): void {
+    runAction(GAME_KEPT_ACTIVE_TOAST, keepActive);
   }
 
   /** Закрывает набор: объявление уходит из поиска, игра у своих остаётся. */
@@ -535,7 +561,18 @@
         v-else
         class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start"
       >
-        <div class="flex flex-col gap-4 lg:col-start-2 lg:row-start-1">
+        <GameInactivityAlert
+          v-if="autoCancelAt"
+          class="lg:col-span-2"
+          :auto-cancel-at="autoCancelAt"
+          :busy="isBusy"
+          @keep-active="handleKeepActive"
+        />
+
+        <div
+          class="flex flex-col gap-4 lg:col-start-2"
+          :class="columnRowClass"
+        >
           <GameSummaryCard
             :game="game"
             :next-session-at="nextSessionAt"
@@ -624,7 +661,10 @@
           />
         </div>
 
-        <div class="flex flex-col gap-4 lg:col-start-1 lg:row-start-1">
+        <div
+          class="flex flex-col gap-4 lg:col-start-1"
+          :class="columnRowClass"
+        >
           <GameOverview :game="game" />
 
           <!-- Гостю расписание не отдаётся сервисом, поэтому на его месте

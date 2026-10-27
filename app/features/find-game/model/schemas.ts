@@ -553,6 +553,9 @@ const gameResponseSchema = z.object({
   // Поле сборок сервиса с поднятием игр: на старой сборке его просто нет.
   listPositionAt: nullableInstantSchema,
   updatedAt: instantSchema,
+  // Срок автоотмены брошенной игры. Приходит только мастеру и только когда
+  // ему задан вопрос об актуальности.
+  autoCancelAt: nullableInstantSchema,
 });
 
 /**
@@ -613,6 +616,7 @@ function toGame(parsed: z.infer<typeof gameResponseSchema>): Game {
     createdAt: parsed.createdAt,
     listPositionAt: parsed.listPositionAt,
     updatedAt: parsed.updatedAt,
+    autoCancelAt: parsed.autoCancelAt,
   };
 }
 

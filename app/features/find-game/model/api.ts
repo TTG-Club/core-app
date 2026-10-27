@@ -383,6 +383,19 @@ export async function raiseGame(gameId: string): Promise<Game> {
 }
 
 /**
+ * Подтверждает, что своя игра ещё актуальна: снимает срок автоотмены.
+ * @param gameId Идентификатор игры.
+ */
+export async function keepGameActive(gameId: string): Promise<Game> {
+  const response = await $fetch(`${gamePath(gameId)}/keep-active`, {
+    method: 'PATCH',
+    retry: 0,
+  });
+
+  return parseGame(response);
+}
+
+/**
  * Публичный профиль мастера: рассказ о себе и счётчики его игр.
  * @param masterId Идентификатор мастера.
  */
