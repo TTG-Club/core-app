@@ -7,9 +7,11 @@
 
   import {
     BUG_REPORT_PLATFORM_LABELS,
-    BUG_REPORT_STATUS_LABELS,
+    BUG_REPORT_TYPE_ICONS,
+    BUG_REPORT_TYPE_LABELS,
     getBugReportDescriptionText,
     getBugReportStatusColor,
+    getBugReportStatusLabel,
     MY_BUGS_CHANGE_COMMENT_LABEL,
     MY_BUGS_CHANGE_GENERIC_LABEL,
     MY_BUGS_CHANGE_STATUS_LABEL,
@@ -62,9 +64,12 @@
     getBugReportStatusColor(props.bugReport.status),
   );
 
-  const statusLabel = computed(
-    () => BUG_REPORT_STATUS_LABELS[props.bugReport.status],
+  const statusLabel = computed(() =>
+    getBugReportStatusLabel(props.bugReport.status, props.bugReport.type),
   );
+
+  /** Пожелание помечается отдельной плашкой: у багов пометки нет */
+  const isWish = computed(() => props.bugReport.type === 'WISH');
 
   const platformLabel = computed(
     () => BUG_REPORT_PLATFORM_LABELS[props.bugReport.sourcePlatform],
@@ -189,6 +194,16 @@
           size="sm"
         >
           {{ statusLabel }}
+        </UBadge>
+
+        <UBadge
+          v-if="isWish"
+          color="secondary"
+          variant="subtle"
+          size="sm"
+          :icon="BUG_REPORT_TYPE_ICONS.WISH"
+        >
+          {{ BUG_REPORT_TYPE_LABELS.WISH }}
         </UBadge>
 
         <UBadge

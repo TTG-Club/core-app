@@ -4,6 +4,7 @@
     BugReportResponse,
     BugReportStatus,
     BugReportStatusUpdatePayload,
+    BugReportType,
   } from '../../model';
 
   import {
@@ -19,15 +20,25 @@
     BUG_REPORT_STATUS_COMMENT_MAX_LENGTH,
     BUG_REPORT_STATUS_COMMENT_PLACEHOLDER,
     BUG_REPORT_STATUS_COMMENT_PUBLIC_HINT,
-    BUG_REPORT_STATUS_LABELS,
     BUG_REPORT_STATUS_UPDATE_ERROR_DESC,
     BUG_REPORT_STATUS_UPDATE_ERROR_TITLE,
     BUG_REPORT_STATUS_UPDATE_SUCCESS_TITLE,
     BUG_REPORT_STATUS_UPDATED_BY_LABEL,
     BUG_REPORT_STATUSES,
+    BUG_REPORT_TYPE_CHANGE_ERROR_DESC,
+    BUG_REPORT_TYPE_CHANGE_ERROR_TITLE,
+    BUG_REPORT_TYPE_CHANGE_LABELS,
+    BUG_REPORT_TYPE_CHANGE_SUCCESS_DESCRIPTIONS,
+    BUG_REPORT_TYPE_CHANGE_SUCCESS_TITLE,
+    BUG_REPORT_TYPE_CHANGE_TARGETS,
+    BUG_REPORT_TYPE_ICONS,
+    BUG_REPORT_TYPE_LABELS,
     getAdminBugStatusApiUrl,
+    getAdminBugTypeApiUrl,
     getBugReportStatusColor,
+    getBugReportStatusLabel,
     parseBugReportDiagnostics,
+    resolveBugReportType,
   } from '../../model';
   import { AdminBugReportContent, AdminBugReportDiagnostics } from './';
 
@@ -42,6 +53,8 @@
   const emit = defineEmits<{
     /** Событие успешного обновления статуса */
     'update-status': [payload: BugReportStatusUpdatePayload];
+    /** Событие успешной смены типа: запись в ответе сервиса */
+    'update-type': [bugReport: BugReportResponse];
   }>();
 
   const requestFetch = useRequestFetch();
@@ -57,6 +70,31 @@
   const statusCommentInput = ref(props.bugReport.statusComment ?? '');
 
   const isSavingComment = ref(false);
+
+  const isChangingType = ref(false);
+
+  /** Тип записи; у старого сервиса поля нет — тогда это баг. */
+  const bugReportType = computed<BugReportType>(() =>
+    resolveBugReportType(props.bugReport.type),
+  );
+
+  /** Пожелание помечается отдельной плашкой: у багов пометки нет. */
+  const isWish = computed(() => bugReportType.value === 'WISH');
+
+  /** Тип, в который переводит кнопка смены типа. */
+  const typeChangeTarget = computed(
+    () => BUG_REPORT_TYPE_CHANGE_TARGETS[bugReportType.value],
+  );
+
+  /** Подпись кнопки смены типа. */
+  const typeChangeLabel = computed(
+    () => BUG_REPORT_TYPE_CHANGE_LABELS[bugReportType.value],
+  );
+
+  /** Иконка кнопки смены типа — тип, в который переводим. */
+  const typeChangeIcon = computed(
+    () => BUG_REPORT_TYPE_ICONS[typeChangeTarget.value],
+  );
 
   const activeTab = ref<BugReportDetailTab>(BUG_REPORT_DETAIL_DEFAULT_TAB);
 
@@ -90,7 +128,7 @@
   const statusButtons = computed<StatusButtonOption[]>(() => {
     return BUG_REPORT_STATUSES.map((status) => ({
       status,
-      label: BUG_REPORT_STATUS_LABELS[status],
+      label: getBugReportStatusLabel(status, bugReportType.value),
       color: getBugReportStatusColor(status),
     }));
   });
@@ -148,7 +186,7 @@
 
       toast.add({
         title: BUG_REPORT_STATUS_UPDATE_SUCCESS_TITLE,
-        description: `Новый статус: ${BUG_REPORT_STATUS_LABELS[targetStatus]}`,
+        description: `Новый статус: ${getBugReportStatusLabel(targetStatus, bugReportType.value)}`,
         color: 'success',
       });
     } catch {
@@ -209,6 +247,48 @@
     } finally {
       isUpdating.value = false;
       isSavingComment.value = false;
+    }
+  }
+
+  /**
+   * Переводит запись в другой тип: баг в пожелания или обратно. Статус и
+   * комментарий сервис не трогает.
+   */
+  async function handleTypeChange(): Promise<void> {
+    if (isUpdating.value) {
+      return;
+    }
+
+    isUpdating.value = true;
+    isChangingType.value = true;
+
+    const targetType = typeChangeTarget.value;
+
+    try {
+      const updatedBug = await requestFetch<BugReportResponse>(
+        getAdminBugTypeApiUrl(props.bugReport.id),
+        {
+          method: 'PATCH',
+          body: { type: targetType },
+        },
+      );
+
+      emit('update-type', updatedBug);
+
+      toast.add({
+        title: BUG_REPORT_TYPE_CHANGE_SUCCESS_TITLE,
+        description: BUG_REPORT_TYPE_CHANGE_SUCCESS_DESCRIPTIONS[targetType],
+        color: 'success',
+      });
+    } catch {
+      toast.add({
+        title: BUG_REPORT_TYPE_CHANGE_ERROR_TITLE,
+        description: BUG_REPORT_TYPE_CHANGE_ERROR_DESC,
+        color: 'error',
+      });
+    } finally {
+      isUpdating.value = false;
+      isChangingType.value = false;
     }
   }
 
@@ -277,6 +357,30 @@
         <span class="text-sm text-highlighted">
           {{ bugReport.userLogin || BUG_REPORT_ANONYMOUS_USER }}
         </span>
+      </div>
+
+      <!-- Тип записи и смена типа -->
+      <div class="col-span-4 flex flex-wrap items-center gap-2">
+        <UBadge
+          v-if="isWish"
+          color="secondary"
+          variant="subtle"
+          size="md"
+          :icon="BUG_REPORT_TYPE_ICONS.WISH"
+        >
+          {{ BUG_REPORT_TYPE_LABELS.WISH }}
+        </UBadge>
+
+        <UButton
+          :label="typeChangeLabel"
+          :icon="typeChangeIcon"
+          color="neutral"
+          variant="outline"
+          size="sm"
+          :loading="isChangingType"
+          :disabled="isUpdating"
+          @click.left.exact.prevent="handleTypeChange"
+        />
       </div>
 
       <!-- Сессия -->

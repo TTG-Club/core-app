@@ -78,6 +78,14 @@
     isClassGrouping.value ? loadedClassSpells.value : spells.value,
   );
 
+  // По классам заклинания выводятся без общего списка: на телефоне страница
+  // заклинания листает их в порядке групп, иначе порядок задаёт список
+  useSectionNeighbours('/spells', () =>
+    isClassGrouping.value
+      ? loadedClassSpells.value.map((spell) => spell.url)
+      : undefined,
+  );
+
   const hasNextPage = ref(false);
   const isLoadingMore = ref(false);
 

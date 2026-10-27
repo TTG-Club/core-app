@@ -1,4 +1,4 @@
-import type { ButtonProps } from '@nuxt/ui';
+import type { AlertProps, ButtonProps } from '@nuxt/ui';
 
 import { z } from 'zod';
 
@@ -126,6 +126,11 @@ export const VTTG_SUBSCRIPTION_PURCHASE_TEXT = {
   unverifiedDescription:
     'Оплатить подписку можно только с подтверждённой почтой аккаунта. Откройте ссылку из письма или отправьте его заново в профиле.',
   unverifiedLink: 'Перейти к подтверждению',
+  inDevelopmentTitle: 'Virtual TTG Club ещё в разработке',
+  inDevelopmentDescription:
+    'Подписка не даёт раннего доступа к приложению: сейчас скачать его могут только участники кампании по сбору средств. Привилегии подписки в виртуальном столе заработают, когда приложение выйдет для всех, а на сайте — сразу после оплаты.',
+  inDevelopmentConsent:
+    'Понимаю, что приложение ещё в разработке и подписка не даёт раннего доступа к нему',
   consentsTitle: 'Нужно ваше согласие',
   offerConsent: 'Принимаю условия',
   personalDataConsent:
@@ -146,7 +151,6 @@ export const VTTG_SUBSCRIPTION_PURCHASE_TEXT = {
     'Без автопродления: деньги списываются один раз, а подписка просто закончится в конце оплаченного срока.',
   offerLink: 'публичной оферты',
   refundNote: 'Оплаченный период не возвращается.',
-  adminOnly: 'Оплата пока доступна только администраторам для проверки.',
   cancelLabel: 'Отмена',
   payLabel: 'Оплатить',
   totalFor: 'за',
@@ -279,7 +283,21 @@ export const SUBSCRIPTION_PURCHASE_ICONS = {
   unverified: 'tabler:mail-exclamation',
   email: 'tabler:mail',
   pay: 'tabler:credit-card',
+  inDevelopment: 'tabler:tools',
 } as const;
+
+/**
+ * Предупреждение в окне покупки: приложение ещё в разработке, и подписка не
+ * даёт раннего доступа к нему. Оплата открывается только после отдельной
+ * галочки с тем же смыслом.
+ */
+export const SUBSCRIPTION_IN_DEVELOPMENT_ALERT: AlertProps = {
+  title: VTTG_SUBSCRIPTION_PURCHASE_TEXT.inDevelopmentTitle,
+  description: VTTG_SUBSCRIPTION_PURCHASE_TEXT.inDevelopmentDescription,
+  icon: SUBSCRIPTION_PURCHASE_ICONS.inDevelopment,
+  color: 'warning',
+  variant: 'subtle',
+};
 
 /** Кнопка в предупреждении о неподтверждённой почте. */
 export const SUBSCRIPTION_EMAIL_VERIFICATION_ACTIONS: Array<ButtonProps> = [

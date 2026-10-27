@@ -2,6 +2,7 @@ import type { Character } from '~character-sheet/model';
 
 import type {
   ConditionKey,
+  HitPointsState,
   ParticipantColor,
   ParticipantSheetLink,
   ParticipantType,
@@ -171,4 +172,52 @@ export function getSheetPlayerRoute(link: ParticipantSheetLink): string {
   return link.shareToken
     ? `${CHARACTER_SHEET_SHARED_ROUTE}/${link.shareToken}`
     : '';
+}
+
+/**
+ * Держит хиты в пределах: не ниже нуля и не выше максимума, если он известен.
+ * @param value Новые хиты.
+ * @param max Максимум хитов; `0` — неизвестен.
+ */
+export function clampHitPoints(value: number, max: number): number {
+  return max > 0 ? clamp(value, 0, max) : Math.max(0, value);
+}
+
+/**
+ * Сдвиг хитов с учётом временных: урон сначала снимает временные хиты, остаток
+ * — текущие; лечение восстанавливает только текущие (временные хиты не
+ * лечатся).
+ * @param state Текущие и временные хиты участника.
+ * @param delta Сдвиг хитов (отрицательный — урон).
+ * @param max Максимум хитов; `0` — неизвестен.
+ */
+export function applyHitPointsDelta(
+  state: HitPointsState,
+  delta: number,
+  max: number,
+): HitPointsState {
+  if (delta >= 0) {
+    return { ...state, current: clampHitPoints(state.current + delta, max) };
+  }
+
+  const damage = -delta;
+  const absorbed = Math.min(state.temporary, damage);
+
+  return {
+    current: clampHitPoints(state.current - (damage - absorbed), max),
+    temporary: state.temporary - absorbed,
+  };
+}
+
+/**
+ * Временные хиты не складываются: новое значение заменяет прежнее, только
+ * если оно больше.
+ * @param current Временные хиты, что уже есть.
+ * @param incoming Новые временные хиты.
+ */
+export function mergeTemporaryHitPoints(
+  current: number,
+  incoming: number,
+): number {
+  return Math.max(current, incoming, 0);
 }

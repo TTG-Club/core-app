@@ -61,6 +61,7 @@ const participantSchema = z.object({
   creatureUrl: z.string().optional(),
   currentHitPoints: z.coerce.number().optional(),
   maxHitPoints: z.coerce.number().optional(),
+  temporaryHitPoints: z.coerce.number().optional(),
   armorClass: z.coerce.number().optional(),
   color: z
     .string()

@@ -105,6 +105,10 @@ describe('новое действие срабатывания', () => {
     expect(createEffectTriggerAction('removeSelf')).toStrictEqual({
       type: 'removeSelf',
     });
+
+    expect(createEffectTriggerAction('refreshDuration')).toStrictEqual({
+      type: 'refreshDuration',
+    });
   });
 });
 

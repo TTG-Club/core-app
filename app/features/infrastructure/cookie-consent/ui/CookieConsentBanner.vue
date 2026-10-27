@@ -20,7 +20,7 @@
 </script>
 
 <template>
-  <Transition name="cookie-consent">
+  <Transition name="slide-up">
     <UCard
       v-if="isVisible"
       role="region"
@@ -95,18 +95,3 @@
     </UCard>
   </Transition>
 </template>
-
-<style lang="scss">
-  .cookie-consent-enter-active,
-  .cookie-consent-leave-active {
-    transition:
-      transform 0.2s ease,
-      opacity 0.2s ease;
-  }
-
-  .cookie-consent-enter-from,
-  .cookie-consent-leave-to {
-    transform: translateY(0.75rem);
-    opacity: 0;
-  }
-</style>

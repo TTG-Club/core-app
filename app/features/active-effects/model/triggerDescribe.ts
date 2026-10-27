@@ -313,6 +313,8 @@ function describeAction(
         : EFFECT_TRIGGER_PHRASE_PARTS.endCast;
     case 'removeSelf':
       return EFFECT_TRIGGER_PHRASE_PARTS.removeSelf;
+    case 'refreshDuration':
+      return EFFECT_TRIGGER_PHRASE_PARTS.refreshDuration;
     default:
       return '';
   }

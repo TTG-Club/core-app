@@ -4,6 +4,7 @@ import type {
   FaqItem,
   VttgHeading,
   VttgHighlight,
+  VttgSubscriptionLink,
   VttgSubscriptionPerkGroup,
 } from './types';
 
@@ -12,6 +13,8 @@ import {
   GAME_ACTIVE_SUBSCRIBER_MAX,
   GAME_PLAYERS_FREE_MAX,
   GAME_PLAYERS_MAX,
+  GAME_RAISES_FREE_MAX,
+  GAME_RAISES_SUBSCRIBER_MAX,
 } from '~find-game/model';
 
 import { VTTG_LANDING_PATH } from './passwordReset';
@@ -96,11 +99,10 @@ export const VTTG_SUBSCRIPTION_PERKS_HEADING: VttgHeading = {
 };
 
 /**
- * Привилегии подписки, разложенные по месту действия. Свои игры и игроки за
- * столом берутся из констант поиска игр. Остальные числа — зеркало бэкендов:
- * листы — `CharacterSheetLimits` в core-api, поднятия игры — `GameService` в
- * find-game-api, туннель — `TIERS` в tunnel-service. Поменялись там —
- * поправить здесь.
+ * Привилегии подписки, разложенные по месту действия. Свои игры, игроки за
+ * столом и поднятия игры берутся из констант поиска игр. Остальные числа —
+ * зеркало бэкендов: листы — `CharacterSheetLimits` в core-api, туннель —
+ * `TIERS` в tunnel-service. Поменялись там — поправить здесь.
  */
 export const VTTG_SUBSCRIPTION_PERK_GROUPS: Array<VttgSubscriptionPerkGroup> = [
   {
@@ -166,16 +168,37 @@ export const VTTG_SUBSCRIPTION_PERK_GROUPS: Array<VttgSubscriptionPerkGroup> = [
         title: 'Чаще наверху списка',
         description:
           'Поднимайте свою игру в поиске чаще, чтобы её быстрее заметили игроки.',
-        limit: { label: 'Поднятий игры в сутки', base: 1, subscriber: 3 },
+        limit: {
+          label: 'Поднятий игры в сутки',
+          base: GAME_RAISES_FREE_MAX,
+          subscriber: GAME_RAISES_SUBSCRIBER_MAX,
+        },
       },
       {
         icon: 'tabler:rosette',
         title: 'Значок подписчика',
-        description: 'Отметка подписчика в вашем профиле — своих видно сразу.',
+        description: 'Отметка подписчика в вашем профиле.',
       },
     ],
   },
 ];
+
+/**
+ * Ссылка «Оформить подписку»: из подсказок у лимитов (листы, игры, поднятия) и
+ * из карточки статуса подписки в профиле.
+ */
+export const VTTG_SUBSCRIPTION_LINK: VttgSubscriptionLink = {
+  label: 'Оформить подписку',
+  icon: VTTG_SUBSCRIPTION_HERO.icon,
+  to: VTTG_SUBSCRIPTION_PATH,
+};
+
+/** Кнопка той же ссылки в уведомлениях и предупреждениях о лимите. */
+export const VTTG_SUBSCRIPTION_LIMIT_ACTION: ButtonProps = {
+  ...VTTG_SUBSCRIPTION_LINK,
+  color: 'primary',
+  variant: 'solid',
+};
 
 /** Подписи столбцов сравнения лимитов на карточке привилегии. */
 export const VTTG_SUBSCRIPTION_LIMIT_LABELS = {

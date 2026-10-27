@@ -7,7 +7,7 @@
 
   const route = useRoute();
 
-  useSectionDetailRedirect('glossary');
+  const sectionPath = useSectionDetailRedirect('glossary');
 
   const { data: glossary } = await useAsyncData(
     `glossary-${route.params.url}`,
@@ -49,6 +49,7 @@
 <template>
   <NuxtLayout
     name="detail"
+    :section-path="sectionPath"
     :title="glossary?.name.rus"
     :subtitle="glossary?.name.eng"
     :source="glossary?.source"
