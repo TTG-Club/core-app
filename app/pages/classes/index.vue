@@ -82,6 +82,7 @@
   <NuxtLayout
     name="section"
     title="Классы"
+    wide-detail
   >
     <template #controls>
       <FilterControls
