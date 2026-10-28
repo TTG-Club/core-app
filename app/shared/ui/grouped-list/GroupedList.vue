@@ -239,6 +239,25 @@
     return flattenGroupTree(groupSort.build(sortedItems.value));
   });
 
+  // Записи в порядке экрана: по ним страница записи на телефоне листает
+  // соседние. Путь раздела берётся один раз: при уходе со списка адрес уже
+  // сменится, а список ещё жив
+  const visibleUrls = computed(() => {
+    if (isTreeMode.value) {
+      return treeRows.value.flatMap((row) =>
+        row.type === 'items' ? row.items.map(getItemKey) : [],
+      );
+    }
+
+    const visibleItems = field
+      ? groupedItems.value.flatMap((group) => group.items)
+      : sortedItems.value;
+
+    return visibleItems.map(getItemKey);
+  });
+
+  useSectionNeighbours(route.path, visibleUrls);
+
   const shouldUseVirtual = computed(
     () => virtual && items.length >= virtualThreshold,
   );

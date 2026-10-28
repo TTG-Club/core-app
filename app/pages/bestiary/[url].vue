@@ -7,7 +7,7 @@
 
   const route = useRoute();
 
-  useSectionDetailRedirect('bestiary');
+  const sectionPath = useSectionDetailRedirect('bestiary');
 
   const { data: creature } = await useAsyncData(
     `bestiary-${route.params.url}`,
@@ -50,6 +50,7 @@
 <template>
   <NuxtLayout
     name="detail"
+    :section-path="sectionPath"
     :title="creature?.name.rus"
     :subtitle="creature?.name.eng"
     :source="creature?.source"

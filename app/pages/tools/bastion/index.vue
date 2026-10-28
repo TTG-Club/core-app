@@ -361,6 +361,7 @@
           :cancel-label="BASTION_GAME_LABELS.cancel"
           :submit-label="MY_BASTIONS_LABELS.removeConfirm"
           submit-icon="tabler:trash"
+          submit-color="error"
           :loading="isSaving"
           @cancel="isRemoveOpen = false"
           @submit="confirmRemove"

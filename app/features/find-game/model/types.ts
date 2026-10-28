@@ -136,14 +136,14 @@ export interface PlayerPublicProfile {
 export type ReviewKind = (typeof REVIEW_KINDS)[number];
 
 /**
- * Вердикт одного участника встречи о другом.
+ * Вердикт одного участника игры о другом.
  *
  * Оценка бинарная — «сыграл бы снова» или нет: на малых числах это честнее
  * пятизвёздочной шкалы, которая быстро схлопывается в сплошные пятёрки.
+ * Ставится одна на пару в игре, а не на каждую встречу.
  */
-export interface SessionReview {
+export interface GameReview {
   id: string;
-  sessionId: string;
   gameId: string;
   authorId: string;
   targetId: string;
@@ -153,6 +153,26 @@ export interface SessionReview {
   /** Текст отзыва; `null` — оценку поставили молча. */
   comment: string | null;
   createdAt: string;
+}
+
+/** Кого пользователь вправе оценить в игре. */
+export interface ReviewTarget {
+  targetId: string;
+  kind: ReviewKind;
+
+  /** Своя оценка; `null` — ещё не оценивал. */
+  review: GameReview | null;
+
+  /** Можно ли поставить или поправить: раскрытую оценку не меняют. */
+  editable: boolean;
+}
+
+/** Игра, где пользователь ещё не оценил тех, с кем играл. */
+export interface PendingReview {
+  gameId: string;
+  gameTitle: string;
+  kind: ReviewKind;
+  targetIds: Array<string>;
 }
 
 /**
@@ -185,8 +205,8 @@ export interface Reputation {
   total: number;
 }
 
-/** Тело оценки участника встречи. */
-export interface CreateSessionReviewRequest {
+/** Тело оценки участника игры. */
+export interface CreateGameReviewRequest {
   targetId: string;
   recommended: boolean;
   comment?: string;
@@ -344,6 +364,12 @@ export interface Game {
    */
   listPositionAt: string | null;
   updatedAt: string;
+  /**
+   * Мастер давно ничего не делал в игре, и сервис спросил, актуальна ли она.
+   * Без ответа к этому моменту игра отменится сама. Приходит только мастеру;
+   * `null` — вопроса нет.
+   */
+  autoCancelAt: string | null;
 }
 
 /** Страница Spring-пагинации. */

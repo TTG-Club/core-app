@@ -4,9 +4,12 @@
  * detail, если активирован сплит-режим (Wide Mode).
  *
  * @param parentRouteName Имя роута родительского списка (например, 'spells', 'feats').
+ * @returns Путь раздела (например, '/spells'): по нему страница записи на
+ *   телефоне листает соседние записи списка.
  */
-export function useSectionDetailRedirect(parentRouteName: string) {
+export function useSectionDetailRedirect(parentRouteName: string): string {
   const route = useRoute();
+  const sectionPath = `/${parentRouteName}`;
   const { isSplitActive } = useLayoutWidth();
 
   // Якорь сохраняется: deep-link на комментарий должен пережить редирект.
@@ -23,7 +26,7 @@ export function useSectionDetailRedirect(parentRouteName: string) {
   if (import.meta.server && isSplitActive.value) {
     navigateTo(splitLocation, { replace: true, redirectCode: 302 });
 
-    return;
+    return sectionPath;
   }
 
   watch(
@@ -35,4 +38,6 @@ export function useSectionDetailRedirect(parentRouteName: string) {
     },
     { immediate: true },
   );
+
+  return sectionPath;
 }

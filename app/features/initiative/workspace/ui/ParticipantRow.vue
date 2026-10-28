@@ -67,7 +67,8 @@
     'remove': [id: string];
     'roll': [id: string];
     'toggle-dead': [id: string, dead: boolean];
-    'set-hit-points': [id: string, value: number];
+    'set-hit-points': [id: string, value: number, temporary?: number];
+    'set-temporary-hit-points': [id: string, value: number];
     'set-max-hit-points': [id: string, value: number];
     'set-armor-class': [id: string, value: number];
     'set-color': [id: string, value: ParticipantColor];
@@ -367,8 +368,21 @@
     emit('edit', id, { name });
   }
 
-  function onChangeHitPoints(value: number): void {
-    emit('set-hit-points', participant.id, value);
+  /**
+   * Пробрасывает новые хиты с id участника.
+   * @param value Новые текущие хиты.
+   * @param temporary Остаток временных хитов, если урон снял часть из них.
+   */
+  function onChangeHitPoints(value: number, temporary?: number): void {
+    emit('set-hit-points', participant.id, value, temporary);
+  }
+
+  /**
+   * Пробрасывает новые временные хиты с id участника.
+   * @param value Новые временные хиты (`0` — снять).
+   */
+  function onSetTemporaryHitPoints(value: number): void {
+    emit('set-temporary-hit-points', participant.id, value);
   }
 
   /**
@@ -513,10 +527,12 @@
           <ParticipantHitPointsControl
             :current="participant.currentHitPoints"
             :max="maxHitPoints"
+            :temporary="participant.temporaryHitPoints"
             :formula="hitFormula"
             :disabled="disabled"
             :is-player="participant.type === 'PLAYER'"
             @change="onChangeHitPoints"
+            @set-temporary="onSetTemporaryHitPoints"
             @set-max="onSetMaxHitPoints"
           />
         </div>

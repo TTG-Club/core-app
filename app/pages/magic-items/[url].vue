@@ -7,7 +7,7 @@
 
   const route = useRoute();
 
-  useSectionDetailRedirect('magic-items');
+  const sectionPath = useSectionDetailRedirect('magic-items');
 
   const { data: magicItem } = await useAsyncData(
     `magic-items-${route.params.url}`,
@@ -53,6 +53,7 @@
 <template>
   <NuxtLayout
     name="detail"
+    :section-path="sectionPath"
     :title="magicItem?.name.rus"
     :subtitle="magicItem?.name.eng"
     :source="magicItem?.source"
