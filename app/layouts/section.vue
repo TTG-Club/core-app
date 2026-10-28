@@ -1,15 +1,37 @@
 <script setup lang="ts">
+  import {
+    SECTION_SPLIT_LIST_SIZE,
+    SECTION_SPLIT_STORAGE_KEY,
+    SECTION_SPLIT_WIDE_DETAIL_STORAGE_KEY,
+  } from '~/shared/consts';
   import { SectionContent, SectionSidebar } from '~/shared/ui/section';
   import { AppFooter } from '~infrastructure/footer';
 
-  defineProps<{
+  const { wideDetail = false } = defineProps<{
     title: string;
+    /**
+     * Карточка раздела по умолчанию шире списка: ей нужно место под колонку
+     * свойств и навигацию рядом с текстом (страница класса).
+     */
+    wideDetail?: boolean;
   }>();
 
   const route = useRoute();
   const alert = computed(() => route.meta.alert);
 
   const { isSplitActive } = useLayoutWidth();
+
+  const listDefaultSize = computed(() =>
+    wideDetail
+      ? SECTION_SPLIT_LIST_SIZE.wideDetail
+      : SECTION_SPLIT_LIST_SIZE.default,
+  );
+
+  const splitStorageKey = computed(() =>
+    wideDetail
+      ? SECTION_SPLIT_WIDE_DETAIL_STORAGE_KEY
+      : SECTION_SPLIT_STORAGE_KEY,
+  );
 </script>
 
 <template>
@@ -25,7 +47,7 @@
     <!-- Средняя и правая колонки (Dashboard Group) -->
     <UDashboardGroup
       storage="cookie"
-      storage-key="ttg-section-split"
+      :storage-key="splitStorageKey"
       :ui="{
         base: 'relative inset-auto flex flex-1 overflow-hidden h-dvh w-full',
       }"
@@ -35,9 +57,9 @@
       <UDashboardPanel
         id="section-list"
         resizable
-        :default-size="50"
-        :min-size="30"
-        :max-size="70"
+        :default-size="listDefaultSize"
+        :min-size="SECTION_SPLIT_LIST_SIZE.min"
+        :max-size="SECTION_SPLIT_LIST_SIZE.max"
         :ui="{
           handle:
             'after:absolute after:inset-y-0 after:right-0 after:w-px after:transition hover:after:bg-(--ui-border-accented)',
