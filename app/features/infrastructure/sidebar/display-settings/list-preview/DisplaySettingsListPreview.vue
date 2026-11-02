@@ -1,27 +1,35 @@
 <script setup lang="ts">
-  import type { ListView } from '~infrastructure/list-presentation/composable';
+  import type { ListColumnCount } from '~infrastructure/list-presentation/composable';
 
-  import { LIST_PREVIEW_CARD_COUNT, LIST_PREVIEW_ROW_COUNT } from './constants';
+  import {
+    LIST_PREVIEW_CARD_ROW_COUNT,
+    LIST_PREVIEW_GRID_CLASS,
+    LIST_PREVIEW_ROW_COUNT,
+  } from './constants';
 
   /**
-   * Миниатюра вида списка: сетка карточек или строки во всю ширину.
+   * Миниатюра вида списка: сетка карточек в нужное число колонок или строки
+   * во всю ширину.
    */
-  const { view } = defineProps<{
-    /** Вид списка */
-    view: ListView;
+  const { columns } = defineProps<{
+    /** Наибольшее число колонок; одна — строки */
+    columns: ListColumnCount;
   }>();
 
-  const isGrid = computed(() => view === 'grid');
+  const gridClass = computed(() => LIST_PREVIEW_GRID_CLASS[columns]);
+
+  const cardCount = computed(() => columns * LIST_PREVIEW_CARD_ROW_COUNT);
 </script>
 
 <template>
   <span
-    v-if="isGrid"
-    class="grid h-10 grid-cols-2 gap-0.5"
+    v-if="gridClass"
+    class="grid h-10 gap-0.5"
+    :class="gridClass"
     aria-hidden="true"
   >
     <span
-      v-for="card in LIST_PREVIEW_CARD_COUNT"
+      v-for="card in cardCount"
       :key="card"
       class="rounded-xs border border-accented"
     />

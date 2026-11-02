@@ -183,7 +183,7 @@
             :options="LIST_VIEW_OPTIONS"
           >
             <template #preview="{ option }">
-              <DisplaySettingsListPreview :view="option.value" />
+              <DisplaySettingsListPreview :columns="option.columns" />
             </template>
           </DisplaySettingsChoice>
         </section>
