@@ -85,9 +85,11 @@ export default defineAppConfig({
       },
       compoundVariants: [
         {
+          // Цвет фона, а не text-inverted: в тёмной теме text-inverted белый,
+          // как и сама кнопка (bg-inverted). Фон всегда противоположен кнопке
           color: 'neutral',
           variant: 'solid',
-          class: 'text-secondary',
+          class: 'text-(--ui-bg)',
         },
       ],
     },
