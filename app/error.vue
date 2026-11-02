@@ -10,13 +10,7 @@
     error: NuxtError;
   }>();
 
-  const { name } = useTheme();
-
-  useHead({
-    htmlAttrs: {
-      class: name,
-    },
-  });
+  useThemeHead();
 
   function handleError() {
     clearError();

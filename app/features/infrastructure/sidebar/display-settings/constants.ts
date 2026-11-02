@@ -16,6 +16,11 @@ export const THEME_OPTIONS = [
     label: 'svifty7',
     icon: 'tabler:palette',
   },
+  {
+    value: ThemeName.Custom,
+    label: 'Своя',
+    icon: 'tabler:color-swatch',
+  },
 ] as const;
 
 export const LAYOUT_WIDTH_OPTIONS = [

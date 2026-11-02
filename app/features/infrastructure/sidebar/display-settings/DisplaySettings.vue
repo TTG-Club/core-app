@@ -1,8 +1,7 @@
 <script setup lang="ts">
-  import type { ThemeName } from '~/shared/consts';
   import type { ListView } from '~infrastructure/list-presentation/composable';
 
-  import { LayoutWidthName } from '~/shared/consts';
+  import { LayoutWidthName, ThemeName } from '~/shared/consts';
   import { useListView } from '~infrastructure/list-presentation/composable';
   import { LIST_VIEW_OPTIONS } from '~infrastructure/list-presentation/model';
 
@@ -18,6 +17,7 @@
     THEME_OPTIONS,
     THEME_SECTION_TITLE,
   } from './constants';
+  import { DisplaySettingsCustomTheme } from './custom-theme';
   import { DisplaySettingsLayoutPreview } from './layout-preview';
   import { DisplaySettingsListPreview } from './list-preview';
 
@@ -35,6 +35,7 @@
   const { isCentered, setCentered } = useSectionCentered();
 
   const { view: listView, setView: setListView } = useListView();
+
   const { greaterOrEqual, isLgOrGreater } = useBreakpoints();
   const isMounted = useMounted();
 
@@ -63,6 +64,8 @@
     get: () => themeName.value,
     set: (value: ThemeName) => changeTheme(value),
   });
+
+  const isCustomTheme = computed(() => themeName.value === ThemeName.Custom);
 
   // Раскладка складывается из настроек: ширины сайта, узкой колонки, места
   // фильтров (над списком — это свёрнутая колонка) и стороны записи
@@ -152,6 +155,8 @@
             :options="THEME_OPTIONS"
             shape="pill"
           />
+
+          <DisplaySettingsCustomTheme v-if="isCustomTheme" />
         </section>
 
         <USeparator />

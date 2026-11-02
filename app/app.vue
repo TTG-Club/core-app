@@ -10,13 +10,7 @@
 
   import '~/assets/css/index.scss';
 
-  const { name } = useTheme();
-
-  useHead({
-    htmlAttrs: {
-      class: name,
-    },
-  });
+  useThemeHead();
 </script>
 
 <template>
