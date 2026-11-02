@@ -8,7 +8,8 @@
   import { BackgroundLink } from '~backgrounds/link';
   import { getBackgroundMarkdown } from '~backgrounds/model';
   import { FilterControls, useFilter } from '~infrastructure/filter';
-  import { UiDetailPane } from '~ui/detail-pane';
+  import { useListView } from '~infrastructure/list-presentation/composable';
+  import { UiDetailPane, UiDetailPaneEmpty } from '~ui/detail-pane';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
@@ -52,10 +53,11 @@
     detailData: detailBackground,
     isDetailLoading,
     isDetailError,
-    isDetailDismissed,
     detailUrlForCopy,
     detailEditUrl,
     handleCloseDetail,
+    detailNeighbours,
+    openDetail,
   } = useSectionDetail<BackgroundDetailResponse>({
     sectionPath: '/backgrounds',
     apiBasePath: '/api/v2/backgrounds',
@@ -63,11 +65,14 @@
   });
 
   const markdown = useEntityMarkdown(detailBackground, getBackgroundMarkdown);
+
+  const { columns: listColumns } = useListView();
 </script>
 
 <template>
   <NuxtLayout
     name="section"
+    collapsible-controls
     title="Предыстории"
   >
     <template #controls>
@@ -97,6 +102,7 @@
 
         <GroupedList
           v-else-if="status === 'success' && backgrounds?.length"
+          :columns="listColumns"
           :items="backgrounds"
           :active-item-key="detailUrl"
         >
@@ -127,7 +133,9 @@
         :is-loading="isDetailLoading"
         :is-error="isDetailError"
         copy-title
+        :neighbours="detailNeighbours"
         @close="handleCloseDetail"
+        @navigate="openDetail"
       >
         <BackgroundBody
           v-if="detailBackground"
@@ -135,31 +143,10 @@
         />
       </UiDetailPane>
 
-      <div
-        v-else-if="isDetailDismissed"
-        class="flex h-full w-full flex-col items-center justify-center p-6 text-center select-none"
-      >
-        <div class="flex max-w-xs flex-col items-center gap-3">
-          <UIcon
-            name="tabler:click"
-            class="size-10 text-muted"
-          />
-
-          <h3 class="text-lg font-semibold text-highlighted">
-            Предыстория не выбрана
-          </h3>
-
-          <p class="text-sm text-secondary">
-            Выберите предысторию из списка слева, чтобы просмотреть подробную
-            информацию
-          </p>
-        </div>
-      </div>
-
-      <UiDetailPane
+      <UiDetailPaneEmpty
         v-else
-        title=""
-        :is-loading="true"
+        title="Предыстория не выбрана"
+        description="Выберите предысторию из списка слева, чтобы просмотреть подробную информацию"
       />
     </template>
   </NuxtLayout>

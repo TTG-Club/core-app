@@ -8,7 +8,8 @@
   import { GlossaryLink } from '~glossary/link';
   import { getGlossaryMarkdown } from '~glossary/model';
   import { FilterControls, useFilter } from '~infrastructure/filter';
-  import { UiDetailPane } from '~ui/detail-pane';
+  import { useListView } from '~infrastructure/list-presentation/composable';
+  import { UiDetailPane, UiDetailPaneEmpty } from '~ui/detail-pane';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
@@ -52,10 +53,11 @@
     detailData: detailGlossary,
     isDetailLoading,
     isDetailError,
-    isDetailDismissed,
     detailUrlForCopy,
     detailEditUrl,
     handleCloseDetail,
+    detailNeighbours,
+    openDetail,
   } = useSectionDetail<GlossaryDetailResponse>({
     sectionPath: '/glossary',
     apiBasePath: '/api/v2/glossary',
@@ -70,11 +72,14 @@
       search: search.value ?? '',
     }),
   );
+
+  const { columns: listColumns } = useListView();
 </script>
 
 <template>
   <NuxtLayout
     name="section"
+    collapsible-controls
     title="Глоссарий"
   >
     <template #controls>
@@ -104,6 +109,7 @@
 
         <GroupedList
           v-else-if="status === 'success' && glossaryItems?.length"
+          :columns="listColumns"
           :items="glossaryItems"
           :reset-key="listResetKey"
           field="tagCategory"
@@ -136,7 +142,9 @@
         :is-loading="isDetailLoading"
         :is-error="isDetailError"
         copy-title
+        :neighbours="detailNeighbours"
         @close="handleCloseDetail"
+        @navigate="openDetail"
       >
         <GlossaryBody
           v-if="detailGlossary"
@@ -144,31 +152,10 @@
         />
       </UiDetailPane>
 
-      <div
-        v-else-if="isDetailDismissed"
-        class="flex h-full w-full flex-col items-center justify-center p-6 text-center select-none"
-      >
-        <div class="flex max-w-xs flex-col items-center gap-3">
-          <UIcon
-            name="tabler:click"
-            class="size-10 text-muted"
-          />
-
-          <h3 class="text-lg font-semibold text-highlighted">
-            Запись не выбрана
-          </h3>
-
-          <p class="text-sm text-secondary">
-            Выберите запись из списка слева, чтобы просмотреть подробную
-            информацию
-          </p>
-        </div>
-      </div>
-
-      <UiDetailPane
+      <UiDetailPaneEmpty
         v-else
-        title=""
-        :is-loading="true"
+        title="Запись не выбрана"
+        description="Выберите запись из списка слева, чтобы просмотреть подробную информацию"
       />
     </template>
   </NuxtLayout>

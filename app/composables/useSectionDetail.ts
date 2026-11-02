@@ -1,20 +1,23 @@
 import type { ComputedRef, MaybeRefOrGetter, Ref } from 'vue';
 
 import type { FetchStatusValue } from '~/shared/consts';
+import type { DetailPaneNeighbours } from '~ui/detail-pane';
 
 import { omit } from 'es-toolkit';
 
 import { useLayoutWidth } from '~/composables/useLayoutWidth';
+import { useSectionPaths } from '~/composables/useSectionNeighbours';
 import { FetchStatus } from '~/shared/consts';
 import { createLruCache } from '~/utils/createLruCache';
 import { getOrigin } from '~/utils/getOrigin';
+import { GALLERY_OPENED_STATE_KEY } from '~ui/gallery';
 
 export interface UseSectionDetailOptions<TDetail = unknown> {
   /** Базовый путь раздела (например, '/classes') */
   sectionPath: string;
   /** Базовый путь API для загрузки сущности (например, '/api/v2/classes') */
   apiBasePath: string;
-  /** Список элементов раздела для автоматического выбора первого */
+  /** Загруженные записи раздела: по ним карточка сверяется с выдачей */
   items: Ref<Array<{ url: string }> | null | undefined>;
   /**
    * Извлекает URL родительского элемента из детальных данных.
@@ -41,23 +44,66 @@ export interface UseSectionDetailReturn<TDetail> {
   isDetailLoading: ComputedRef<boolean>;
   /** Флаг, показывающий, произошла ли ошибка при загрузке */
   isDetailError: ComputedRef<boolean>;
-  /** Флаг, показывающий, закрыл ли пользователь панель */
-  isDetailDismissed: Ref<boolean>;
   /** Ссылка на детальную страницу для копирования */
   detailUrlForCopy: ComputedRef<string | undefined>;
   /** Ссылка на страницу редактирования в мастерской */
   detailEditUrl: ComputedRef<string | undefined>;
   /** Обработчик закрытия детальной панели */
   handleCloseDetail: () => void;
+  /** Соседи открытой записи в списке; нет — запись не из списка */
+  detailNeighbours: ComputedRef<DetailPaneNeighbours | undefined>;
+  /** Открывает запись раздела в панели */
+  openDetail: (url: string) => void;
+}
+
+/** Элементы, где стрелки заняты своим делом: меню, списки, ползунки. */
+const ARROW_KEYS_OWNER_SELECTOR =
+  '[role="menu"], [role="listbox"], [role="dialog"], [role="slider"], [role="tablist"], [role="radiogroup"], [role="grid"]';
+
+/**
+ * Можно ли отдать нажатие стрелки листанию записей: без модификаторов, не в
+ * поле ввода и не в элементе, которому стрелки нужны самому.
+ *
+ * @param event Нажатие клавиши.
+ * @returns `true`, если стрелка свободна.
+ */
+function isFreeArrowKey(event: KeyboardEvent): boolean {
+  if (
+    event.defaultPrevented
+    || event.altKey
+    || event.ctrlKey
+    || event.metaKey
+    || event.shiftKey
+  ) {
+    return false;
+  }
+
+  const target = event.target;
+
+  if (!(target instanceof Element)) {
+    return true;
+  }
+
+  if (
+    target instanceof HTMLInputElement
+    || target instanceof HTMLTextAreaElement
+    || target instanceof HTMLSelectElement
+    || (target instanceof HTMLElement && target.isContentEditable)
+  ) {
+    return false;
+  }
+
+  return !target.closest(ARROW_KEYS_OWNER_SELECTOR);
 }
 
 /**
  * Универсальный composable для управления детальной панелью в широком режиме (Wide Mode).
- * Инкапсулирует загрузку данных с кэшированием, обработку query-параметров, редиректы,
- * автовыбор первого элемента и SEO-метаданные.
+ * Инкапсулирует загрузку данных с кэшированием, обработку query-параметров, редиректы
+ * и SEO-метаданные.
  *
- * Сам меняет `detail` в адресе: после смены фильтров или поиска карточка
- * записи, выпавшей из выдачи, переключается на первую запись нового списка.
+ * Запись сама не открывается: пока её не выбрали, панель пуста. Сам меняет
+ * `detail` в адресе только в одном случае: после смены фильтров или поиска
+ * карточка записи, выпавшей из выдачи, закрывается.
  *
  * @param options Параметры конфигурации раздела.
  * @returns Набор реактивных переменных и методов для управления детальной панелью.
@@ -100,7 +146,6 @@ export function useSectionDetail<TDetail>(
 
   const detailData = shallowRef<TDetail | null>(null);
   const detailStatus = ref<FetchStatusValue>(FetchStatus.Idle);
-  const isDetailDismissed = ref(false);
   const isRouterReady = ref(false);
 
   /**
@@ -140,17 +185,7 @@ export function useSectionDetail<TDetail>(
     }
   }
 
-  watch(
-    detailUrl,
-    (url) => {
-      if (url) {
-        isDetailDismissed.value = false;
-      }
-
-      fetchDetail(url);
-    },
-    { immediate: true },
-  );
+  watch(detailUrl, fetchDetail, { immediate: true });
 
   watch(detailData, (detail) => {
     detailParentUrl.value =
@@ -189,27 +224,6 @@ export function useSectionDetail<TDetail>(
     }
   });
 
-  /**
-   * Автоматически выбирает первый элемент из списка, если активен сплит-режим
-   * и пользователь еще не закрывал панель вручную.
-   */
-  function autoSelectFirst(): void {
-    if (!isSplitActive.value || isDetailDismissed.value) {
-      return;
-    }
-
-    const firstItem = options.items.value?.[0];
-
-    if (firstItem && !route.query.detail) {
-      router.replace({
-        query: {
-          ...route.query,
-          detail: firstItem.url,
-        },
-      });
-    }
-  }
-
   onMounted(async () => {
     await router.isReady();
     isRouterReady.value = true;
@@ -217,16 +231,6 @@ export function useSectionDetail<TDetail>(
     if (!isSplitActive.value && detailUrl.value) {
       // Якорь сохраняется: deep-link на комментарий должен пережить редирект.
       router.replace({ path: detailPagePath.value, hash: route.hash });
-
-      return;
-    }
-
-    autoSelectFirst();
-  });
-
-  watch([options.items, isSplitActive], () => {
-    if (isRouterReady.value) {
-      autoSelectFirst();
     }
   });
 
@@ -267,9 +271,9 @@ export function useSectionDetail<TDetail>(
   /**
    * После смены фильтров или поиска сверяет открытую карточку с новой выдачей.
    *
-   * Запись, которую фильтр убрал из списка, уступает место первой записи
-   * выдачи: иначе справа оставалась бы, например, запись снятого источника, и
-   * казалось бы, что фильтр не сработал. При первой загрузке проверки нет —
+   * Запись, которую фильтр убрал из списка, закрывается: иначе справа
+   * оставалась бы, например, запись снятого источника, и казалось бы, что
+   * фильтр не сработал. При первой загрузке проверки нет —
    * расшаренная ссылка открывает свою запись, даже если та не проходит фильтры
    * получателя.
    */
@@ -299,22 +303,15 @@ export function useSectionDetail<TDetail>(
       return;
     }
 
-    // Флаг снимается до смены `detail`, и на этом цикл обрывается: новая
-    // карточка грузится, меняет `detailParentUrl`, вотчер снова зовёт
-    // проверку — но она выходит на первом же условии.
+    // Флаг снимается до смены `detail`, и на этом цикл обрывается: закрытая
+    // карточка сбрасывает `detailParentUrl`, вотчер снова зовёт проверку —
+    // но она выходит на первом же условии.
     isListCheckPending = false;
-
-    const firstEntity = options.items.value[0];
-
-    // Пустая выдача: вместо вечной заглушки загрузки — «запись не выбрана».
-    if (!firstEntity) {
-      isDetailDismissed.value = true;
-    }
 
     router.replace({
       query: {
         ...route.query,
-        detail: firstEntity?.url,
+        detail: undefined,
       },
     });
   }
@@ -328,8 +325,6 @@ export function useSectionDetail<TDetail>(
    * Закрывает детальную панель и очищает query-параметр detail.
    */
   function handleCloseDetail(): void {
-    isDetailDismissed.value = true;
-
     router.push({
       query: {
         ...route.query,
@@ -337,6 +332,81 @@ export function useSectionDetail<TDetail>(
       },
     });
   }
+
+  // Порядок записей пишет сам список (`GroupedList` или страница через
+  // `useSectionNeighbours`) — тот же, по которому листают на телефоне.
+  const sectionPaths = useSectionPaths(options.sectionPath);
+
+  const detailNeighbours = computed<DetailPaneNeighbours | undefined>(() => {
+    if (!detailUrl.value) {
+      return undefined;
+    }
+
+    const paths = sectionPaths.value;
+    const pathPrefix = `${options.sectionPath}/`;
+
+    // Подзапись (подкласс) стоит в списке своим родителем.
+    let index = paths.indexOf(`${pathPrefix}${detailUrl.value}`);
+
+    if (index < 0 && detailParentUrl.value) {
+      index = paths.indexOf(`${pathPrefix}${detailParentUrl.value}`);
+    }
+
+    if (index < 0 || paths.length < 2) {
+      return undefined;
+    }
+
+    const previousPath = paths[index - 1];
+    const nextPath = paths[index + 1];
+
+    return {
+      previousUrl: previousPath?.slice(pathPrefix.length),
+      nextUrl: nextPath?.slice(pathPrefix.length),
+      position: index + 1,
+      total: paths.length,
+    };
+  });
+
+  /**
+   * Открывает запись в панели — так же, как клик по ней в списке.
+   *
+   * @param url Адрес записи.
+   */
+  function openDetail(url: string): void {
+    router.push({
+      query: {
+        ...route.query,
+        detail: url,
+      },
+    });
+  }
+
+  const isGalleryOpened = useState(GALLERY_OPENED_STATE_KEY, () => false);
+
+  // Стрелки влево и вправо листают записи, пока панель открыта в широком
+  // режиме и галерея картинок не перехватила их себе.
+  onKeyStroke(['ArrowLeft', 'ArrowRight'], (event) => {
+    const neighbours = detailNeighbours.value;
+
+    if (
+      !isSplitActive.value
+      || !neighbours
+      || isGalleryOpened.value
+      || !isFreeArrowKey(event)
+    ) {
+      return;
+    }
+
+    const url =
+      event.key === 'ArrowLeft' ? neighbours.previousUrl : neighbours.nextUrl;
+
+    if (!url) {
+      return;
+    }
+
+    event.preventDefault();
+    openDetail(url);
+  });
 
   useHead(() => {
     if (isSplitActive.value && detailUrl.value) {
@@ -359,9 +429,10 @@ export function useSectionDetail<TDetail>(
     detailStatus,
     isDetailLoading,
     isDetailError,
-    isDetailDismissed,
     detailUrlForCopy,
     detailEditUrl,
     handleCloseDetail,
+    detailNeighbours,
+    openDetail,
   };
 }

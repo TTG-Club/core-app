@@ -5,7 +5,8 @@
   import { FeatLink } from '~feats/link';
   import { getFeatMarkdown } from '~feats/model';
   import { FilterControls, useFilter } from '~infrastructure/filter';
-  import { UiDetailPane } from '~ui/detail-pane';
+  import { useListView } from '~infrastructure/list-presentation/composable';
+  import { UiDetailPane, UiDetailPaneEmpty } from '~ui/detail-pane';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
@@ -49,10 +50,11 @@
     detailData: detailFeat,
     isDetailLoading,
     isDetailError,
-    isDetailDismissed,
     detailUrlForCopy,
     detailEditUrl,
     handleCloseDetail,
+    detailNeighbours,
+    openDetail,
   } = useSectionDetail<FeatDetailResponse>({
     sectionPath: '/feats',
     apiBasePath: '/api/v2/feats',
@@ -67,11 +69,14 @@
       search: search.value ?? '',
     }),
   );
+
+  const { columns: listColumns } = useListView();
 </script>
 
 <template>
   <NuxtLayout
     name="section"
+    collapsible-controls
     title="Черты"
   >
     <template #controls>
@@ -101,6 +106,7 @@
 
         <GroupedList
           v-else-if="status === 'success' && feats?.length"
+          :columns="listColumns"
           :items="feats"
           :reset-key="listResetKey"
           field="category"
@@ -133,7 +139,9 @@
         :is-loading="isDetailLoading"
         :is-error="isDetailError"
         copy-title
+        :neighbours="detailNeighbours"
         @close="handleCloseDetail"
+        @navigate="openDetail"
       >
         <FeatBody
           v-if="detailFeat"
@@ -141,31 +149,10 @@
         />
       </UiDetailPane>
 
-      <div
-        v-else-if="isDetailDismissed"
-        class="flex h-full w-full flex-col items-center justify-center p-6 text-center select-none"
-      >
-        <div class="flex max-w-xs flex-col items-center gap-3">
-          <UIcon
-            name="tabler:click"
-            class="size-10 text-muted"
-          />
-
-          <h3 class="text-lg font-semibold text-highlighted">
-            Черта не выбрана
-          </h3>
-
-          <p class="text-sm text-secondary">
-            Выберите черту из списка слева, чтобы просмотреть подробную
-            информацию
-          </p>
-        </div>
-      </div>
-
-      <UiDetailPane
+      <UiDetailPaneEmpty
         v-else
-        title=""
-        :is-loading="true"
+        title="Черта не выбрана"
+        description="Выберите черту из списка слева, чтобы просмотреть подробную информацию"
       />
     </template>
   </NuxtLayout>

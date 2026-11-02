@@ -17,7 +17,8 @@
     getBastionGroupLabel,
   } from '~bastions/model';
   import { FilterControls, useFilter } from '~infrastructure/filter';
-  import { UiDetailPane } from '~ui/detail-pane';
+  import { useListView } from '~infrastructure/list-presentation/composable';
+  import { UiDetailPane, UiDetailPaneEmpty } from '~ui/detail-pane';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
@@ -66,10 +67,11 @@
     detailData: detailFacility,
     isDetailLoading,
     isDetailError,
-    isDetailDismissed,
     detailUrlForCopy,
     detailEditUrl,
     handleCloseDetail,
+    detailNeighbours,
+    openDetail,
   } = useSectionDetail<BastionFacilityDetailResponse>({
     sectionPath: `/${BASTION_SECTION}`,
     apiBasePath: BASTION_API_PATH,
@@ -92,11 +94,14 @@
     mode: 'comparator',
     compare: compareBastionGroups,
   } as const;
+
+  const { columns: listColumns } = useListView();
 </script>
 
 <template>
   <NuxtLayout
     name="section"
+    collapsible-controls
     :title="BASTION_SECTION_TITLE"
   >
     <template #controls>
@@ -126,6 +131,7 @@
 
         <GroupedList
           v-else-if="status === 'success' && facilities?.length"
+          :columns="listColumns"
           :items="facilities"
           :reset-key="listResetKey"
           field="level"
@@ -160,7 +166,9 @@
         :is-loading="isDetailLoading"
         :is-error="isDetailError"
         copy-title
+        :neighbours="detailNeighbours"
         @close="handleCloseDetail"
+        @navigate="openDetail"
       >
         <BastionFacilityBody
           v-if="detailFacility"
@@ -168,31 +176,10 @@
         />
       </UiDetailPane>
 
-      <div
-        v-else-if="isDetailDismissed"
-        class="flex h-full w-full flex-col items-center justify-center p-6 text-center select-none"
-      >
-        <div class="flex max-w-xs flex-col items-center gap-3">
-          <UIcon
-            name="tabler:click"
-            class="size-10 text-muted"
-          />
-
-          <h3 class="text-lg font-semibold text-highlighted">
-            Сооружение не выбрано
-          </h3>
-
-          <p class="text-sm text-secondary">
-            Выберите сооружение из списка слева, чтобы просмотреть подробную
-            информацию
-          </p>
-        </div>
-      </div>
-
-      <UiDetailPane
+      <UiDetailPaneEmpty
         v-else
-        title=""
-        :is-loading="true"
+        title="Сооружение не выбрано"
+        description="Выберите сооружение из списка слева, чтобы просмотреть подробную информацию"
       />
     </template>
   </NuxtLayout>

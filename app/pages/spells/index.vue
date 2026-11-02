@@ -10,6 +10,7 @@
   import {
     useListPresentation,
     useListPresentationMenus,
+    useListView,
   } from '~infrastructure/list-presentation/composable';
   import { SpellBody } from '~spells/body';
   import { useSpellClassPagination } from '~spells/composable';
@@ -22,7 +23,7 @@
     SPELL_LIST_PAGE_SIZE,
     SPELL_LIST_PRESENTATION_CONFIG,
   } from '~spells/model';
-  import { UiDetailPane } from '~ui/detail-pane';
+  import { UiDetailPane, UiDetailPaneEmpty } from '~ui/detail-pane';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
@@ -52,6 +53,8 @@
     presentation.grouping,
     presentation.sorting,
   );
+
+  const { columns: listColumns } = useListView();
 
   const isClassGrouping = computed(
     () => presentation.grouping.value === 'CLASS',
@@ -94,10 +97,11 @@
     detailData: detailSpell,
     isDetailLoading,
     isDetailError,
-    isDetailDismissed,
     detailUrlForCopy,
     detailEditUrl,
     handleCloseDetail,
+    detailNeighbours,
+    openDetail,
   } = useSectionDetail<SpellDetailResponse>({
     sectionPath: '/spells',
     apiBasePath: '/api/v2/spells',
@@ -386,6 +390,7 @@
 <template>
   <NuxtLayout
     name="section"
+    collapsible-controls
     title="Заклинания"
   >
     <template #controls>
@@ -425,6 +430,7 @@
 
         <GroupedList
           v-else-if="status === 'success' && spells.length"
+          :columns="listColumns"
           virtual
           :virtual-threshold="SPELL_LIST_PAGE_SIZE"
           :reset-key="listResetKey"
@@ -463,7 +469,9 @@
         :is-loading="isDetailLoading"
         :is-error="isDetailError"
         copy-title
+        :neighbours="detailNeighbours"
         @close="handleCloseDetail"
+        @navigate="openDetail"
       >
         <SpellBody
           v-if="detailSpell"
@@ -471,31 +479,10 @@
         />
       </UiDetailPane>
 
-      <div
-        v-else-if="isDetailDismissed"
-        class="flex h-full w-full flex-col items-center justify-center p-6 text-center select-none"
-      >
-        <div class="flex max-w-xs flex-col items-center gap-3">
-          <UIcon
-            name="tabler:click"
-            class="size-10 text-muted"
-          />
-
-          <h3 class="text-lg font-semibold text-highlighted">
-            Заклинание не выбрано
-          </h3>
-
-          <p class="text-sm text-secondary">
-            Выберите заклинание из списка слева, чтобы просмотреть подробную
-            информацию
-          </p>
-        </div>
-      </div>
-
-      <UiDetailPane
+      <UiDetailPaneEmpty
         v-else
-        title=""
-        :is-loading="true"
+        title="Заклинание не выбрано"
+        description="Выберите заклинание из списка слева, чтобы просмотреть подробную информацию"
       />
     </template>
   </NuxtLayout>

@@ -71,10 +71,10 @@
       #aside
     >
       <div class="flex flex-col gap-4">
-        <div class="flex flex-col gap-4 @min-xl:@max-3xl:flex-row">
+        <div class="flex flex-col gap-4 @min-md:@max-3xl:flex-row">
           <UiGallery
             v-if="!hideGallery"
-            class="min-w-25 shrink-0 @min-xl:@max-3xl:w-50"
+            class="min-w-25 shrink-0 @min-md:@max-xl:w-36 @min-xl:@max-3xl:w-50"
             :preview="species.image"
             :images="species.gallery"
           />

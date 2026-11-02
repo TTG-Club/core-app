@@ -37,3 +37,91 @@ export const DISPLAY_SETTINGS_TITLE = 'Настройки отображения
 export const THEME_SECTION_TITLE = 'Тема';
 export const LAYOUT_WIDTH_SECTION_TITLE = 'Ширина сайта';
 export const DISPLAY_SETTINGS_ARIA = 'Настройки отображения';
+
+/** Заголовок группы настроек оформления. */
+export const APPEARANCE_GROUP_TITLE = 'Оформление';
+
+/** Заголовок группы настроек разделов справочника. */
+export const SECTIONS_GROUP_TITLE = 'Разделы справочника';
+
+/** Настройка раскладки разделов. */
+export const SECTION_LAYOUT_SETTING_TITLE = 'Раскладка';
+
+/** Почему колонки рядом недоступны. */
+export const SECTION_LAYOUT_UNAVAILABLE_HINT = 'колонки — на экране от 1024 px';
+
+/**
+ * Раскладки разделов: две узкие — запись поверх списка или рядом с ним в
+ * колонке по центру, как на старом сайте 5e14, — и шесть широких, где
+ * колонки фильтров, списка и записи стоят в разном порядке. Каждая —
+ * сочетание ширины сайта, места фильтров, стороны записи и узкой колонки.
+ */
+export const SECTION_LAYOUT_OPTIONS = [
+  {
+    value: 'default',
+    label: 'Узкая · запись поверх списка',
+    width: LayoutWidthName.Default,
+    filters: 'left',
+    detail: 'right',
+    centered: false,
+  },
+  {
+    value: 'centered',
+    label: 'Узкая · список и запись рядом',
+    width: LayoutWidthName.Wide,
+    filters: 'top',
+    detail: 'right',
+    centered: true,
+  },
+  {
+    value: 'left-right',
+    label: 'Фильтры · список · запись',
+    width: LayoutWidthName.Wide,
+    filters: 'left',
+    detail: 'right',
+    centered: false,
+  },
+  {
+    value: 'left-left',
+    label: 'Фильтры · запись · список',
+    width: LayoutWidthName.Wide,
+    filters: 'left',
+    detail: 'left',
+    centered: false,
+  },
+  {
+    value: 'top-right',
+    label: 'Фильтры над списком · запись',
+    width: LayoutWidthName.Wide,
+    filters: 'top',
+    detail: 'right',
+    centered: false,
+  },
+  {
+    value: 'right-right',
+    label: 'Список · запись · фильтры',
+    width: LayoutWidthName.Wide,
+    filters: 'right',
+    detail: 'right',
+    centered: false,
+  },
+  {
+    value: 'right-left',
+    label: 'Запись · список · фильтры',
+    width: LayoutWidthName.Wide,
+    filters: 'right',
+    detail: 'left',
+    centered: false,
+  },
+  {
+    value: 'top-left',
+    label: 'Запись · фильтры над списком',
+    width: LayoutWidthName.Wide,
+    filters: 'top',
+    detail: 'left',
+    centered: false,
+  },
+] as const;
+
+/** Настройка вида списков разделов. */
+export const LIST_VIEW_SETTING_TITLE = 'Списки';

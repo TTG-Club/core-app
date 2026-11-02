@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { SpeciesLinkResponse } from '~species/model';
 
+  import { useListView } from '~infrastructure/list-presentation/composable';
   import { SpeciesDrawer } from '~species/drawer';
   import { CardLink } from '~ui/link';
 
@@ -12,6 +13,7 @@
 
   const { isDesktop } = useDevice();
   const { isSplitActive } = useLayoutWidth();
+  const { isRows } = useListView();
   const overlay = useOverlay();
 
   const drawer = overlay.create(SpeciesDrawer, {
@@ -37,6 +39,7 @@
     :source="species.source"
     :has-actions="species.hasLineages"
     :is-opened="isOpened"
+    :row="isRows"
     @open-drawer="handleOpen"
   >
     <template #actions>
