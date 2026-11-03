@@ -5,6 +5,7 @@ export * from './home-hero';
 export * from './mailing';
 export * from './platform';
 export * from './subscription-codes';
+export * from './subscription-extension';
 export * from './subscription-sales';
 export * from './upload';
 export * from './vttg-compendium';

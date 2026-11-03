@@ -9,6 +9,7 @@ export const ADMIN_SUBSCRIPTION_EVENT_TYPES = [
   'REVOKE',
   'CODE_REDEEM',
   'ACTIVATE',
+  'BULK_EXTEND',
 ] as const;
 
 export type AdminSubscriptionEventType =
@@ -19,6 +20,7 @@ export const adminSubscriptionEventSchema = z.object({
   id: z.string(),
   type: z.enum(ADMIN_SUBSCRIPTION_EVENT_TYPES),
   months: z.number().int().nullish(),
+  days: z.number().int().nullish(),
   expiresBefore: z.string().nullish(),
   expiresAfter: z.string().nullish(),
   actorUsername: z.string().nullish(),
@@ -47,6 +49,7 @@ export const ADMIN_SUBSCRIPTION_HISTORY_TEXT = {
   noSubscription: 'нет',
   expiresLabel: 'Окончание:',
   monthsSuffix: 'мес.',
+  daysSuffix: 'дн.',
   currency: '₽',
   codePrefix: 'код',
   actorPrefix: 'кто:',
@@ -62,6 +65,7 @@ export const ADMIN_SUBSCRIPTION_EVENT_LABELS: Record<
   REVOKE: 'Отключена администратором',
   CODE_REDEEM: 'Погашен промокод',
   ACTIVATE: 'Активирована по промокоду',
+  BULK_EXTEND: 'Продлена всем подписчикам',
 };
 
 /** Иконки событий истории. */
@@ -74,6 +78,7 @@ export const ADMIN_SUBSCRIPTION_EVENT_ICONS: Record<
   REVOKE: 'tabler:player-stop',
   CODE_REDEEM: 'tabler:ticket',
   ACTIVATE: 'tabler:player-play',
+  BULK_EXTEND: 'tabler:calendar-plus',
 };
 
 /** Цвета иконок событий истории. */
@@ -86,6 +91,7 @@ export const ADMIN_SUBSCRIPTION_EVENT_COLORS: Record<
   REVOKE: 'text-error',
   CODE_REDEEM: 'text-muted',
   ACTIVATE: 'text-info',
+  BULK_EXTEND: 'text-primary',
 };
 
 /** Иконка заголовка блока истории. */
