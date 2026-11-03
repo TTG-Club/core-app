@@ -9,10 +9,11 @@ import type { RewardPerk, RewardTier, SubscriptionType } from '~/shared/types';
 export type { RewardPerk, RewardTier, SubscriptionType };
 
 /**
- * Тело запроса на выпуск пачки кодов (POST /api/subscriptions/codes).
+ * Содержимое кода — что получит активировавший его пользователь.
+ * Общее для выпуска пачки кодов и рассылки кодов письмами.
  * Код должен нести хотя бы что-то одно: подписку, тир, перки или достижения.
  */
-export interface CreateCodesRequest {
+export interface CodeContentRequest {
   /** Тип подписки; обязателен, если задан subscriptionMonths. */
   subscriptionType?: SubscriptionType;
   /** Срок подписки в месяцах (>= 1); опускается — код без подписки. */
@@ -23,6 +24,22 @@ export interface CreateCodesRequest {
   perks?: RewardPerk[];
   /** Произвольный набор кодов достижений. */
   achievements?: string[];
+}
+
+/**
+ * Содержимое кода для краткого описания: подходит и запрос на выпуск, и уже
+ * выпущенный код (у него пустые поля приходят как null).
+ */
+export interface CodeContentSummarySource {
+  rewardTier?: RewardTier | null;
+  subscriptionMonths?: number | null;
+  subscriptionType?: SubscriptionType | null;
+  perks?: RewardPerk[];
+  achievements?: string[];
+}
+
+/** Тело запроса на выпуск пачки кодов (POST /api/subscriptions/codes). */
+export interface CreateCodesRequest extends CodeContentRequest {
   /** Сколько одинаковых кодов выпустить (1..1000). */
   count?: number;
   /** Пометка админа для всей пачки. */
@@ -58,17 +75,21 @@ export type CodeStatus = 'active' | 'redeemed' | 'disabled';
 export type CodeStatusFilterValue = CodeStatus | 'all';
 
 /**
- * Локальное состояние формы выпуска кодов.
+ * Локальное состояние полей содержимого кода (общие для выпуска и рассылки).
  * Поля includeSubscription/subscriptionMonths/subscriptionType разворачиваются
- * в CreateCodesRequest на сабмите (см. toCreateCodesRequest).
+ * в CodeContentRequest на сабмите (см. toCodeContentRequest).
  */
-export interface CreateCodesFormState {
+export interface CodeContentFormState {
   rewardTier: RewardTier | null;
   includeSubscription: boolean;
   subscriptionType: SubscriptionType;
   subscriptionMonths: number;
   perks: RewardPerk[];
   achievements: string[];
+}
+
+/** Локальное состояние формы выпуска кодов: содержимое кода + партия. */
+export interface CreateCodesFormState extends CodeContentFormState {
   count: number;
   label: string;
 }

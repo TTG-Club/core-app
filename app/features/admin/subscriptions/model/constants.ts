@@ -1,4 +1,7 @@
 import type {
+  CodeContentFormState,
+  CodeContentRequest,
+  CodeContentSummarySource,
   CodeStatus,
   CodeStatusFilterValue,
   CreateCodesFormState,
@@ -9,6 +12,11 @@ import type {
   SubscriptionSalesSwitchState,
   SubscriptionType,
 } from './types';
+
+import {
+  SUBSCRIPTION_MONTHS_MAX,
+  SUBSCRIPTION_MONTHS_MIN,
+} from '#shared/consts';
 
 /** Эндпоинт кодов: POST — выпуск пачки, GET — список (проксируется как есть). */
 export const SUBSCRIPTION_CODES_API_PATH = '/api/subscriptions/codes';
@@ -33,9 +41,11 @@ export const CODE_DETAIL_DATE_FORMAT = 'DD.MM.YYYY HH:mm';
 export const CODES_BATCH_MIN = 1;
 export const CODES_BATCH_MAX = 1000;
 
-/** Разумный предел срока подписки в форме (бэкенд требует лишь >= 1). */
-export const SUBSCRIPTION_MONTHS_MIN = 1;
-export const SUBSCRIPTION_MONTHS_MAX = 60;
+/**
+ * Пределы срока подписки общие с сервером рассылки — переэкспортируем, чтобы
+ * потребители фичи брали их отсюда.
+ */
+export { SUBSCRIPTION_MONTHS_MAX, SUBSCRIPTION_MONTHS_MIN };
 
 /** Порядок тиров по возрастанию (= порядок объявления на бэкенде). */
 export const REWARD_TIERS: readonly RewardTier[] = [
@@ -155,23 +165,104 @@ export const REWARD_PERK_OPTIONS = REWARD_PERKS.map((perk) => ({
   value: perk,
 }));
 
-/** Начальное состояние формы выпуска кодов. */
-export function getInitialCreateCodesForm(): CreateCodesFormState {
+/**
+ * Начальное состояние полей содержимого кода.
+ *
+ * @param rewardTier тир по умолчанию (в рассылке он предвыбран)
+ */
+export function getInitialCodeContent(
+  rewardTier: RewardTier | null = null,
+): CodeContentFormState {
   return {
-    rewardTier: null,
+    rewardTier,
     includeSubscription: false,
     subscriptionType: 'GIFT',
     subscriptionMonths: 1,
     perks: [],
     achievements: [],
+  };
+}
+
+/**
+ * Подсказка под селектором тира по умолчанию (форма выпуска кодов).
+ */
+export const CODE_TIER_HELP =
+  'Главное содержимое кода. Тир кумулятивен — включает награды всех нижестоящих тиров.';
+
+/** Подсказки под дополнительными перками и достижениями. */
+export const CODE_PERKS_HELP = 'Выдаются сверх перков тира.';
+
+export const CODE_ACHIEVEMENTS_HELP = 'Коды достижений; добавляйте по одному.';
+
+/** Подписи тумблера подписки: обычная и когда тир уже несёт свою подписку. */
+export const CODE_SUBSCRIPTION_SWITCH_LABEL = 'Добавить подписку';
+
+export const CODE_SUBSCRIPTION_OVERRIDE_SWITCH_LABEL =
+  'Переопределить подписку тира';
+
+export const CODE_SUBSCRIPTION_SWITCH_DESCRIPTION =
+  'Код зарегистрирует подписку; пользователь активирует её сам.';
+
+/**
+ * Пояснение тумблера, когда тир уже несёт подписку.
+ *
+ * @param months срок подписки, зашитый в тир
+ */
+export function codeSubscriptionOverrideDescription(months: number): string {
+  return `Задать свой срок и тип вместо пресета тира (${months} мес., подарочная).`;
+}
+
+/** Начальное состояние формы выпуска кодов. */
+export function getInitialCreateCodesForm(): CreateCodesFormState {
+  return {
+    ...getInitialCodeContent(),
     count: 1,
     label: '',
   };
 }
 
 /**
- * Разворачивает состояние формы в тело запроса, опуская пустые поля.
+ * Несёт ли код хоть что-то: тир, подписку, перки или достижения.
+ *
+ * @param content поля содержимого кода
+ */
+export function hasCodeContent(content: CodeContentFormState): boolean {
+  return (
+    !!content.rewardTier
+    || content.includeSubscription
+    || content.perks.length > 0
+    || content.achievements.length > 0
+  );
+}
+
+/**
+ * Разворачивает поля содержимого кода в тело запроса, опуская пустые поля.
  * Подписка попадает в запрос только при включённом тумблере.
+ *
+ * @param content поля содержимого кода
+ */
+export function toCodeContentRequest(
+  content: CodeContentFormState,
+): CodeContentRequest {
+  return {
+    rewardTier: content.rewardTier ?? undefined,
+    subscriptionType: content.includeSubscription
+      ? content.subscriptionType
+      : undefined,
+    subscriptionMonths: content.includeSubscription
+      ? content.subscriptionMonths
+      : undefined,
+    perks: content.perks.length ? [...content.perks] : undefined,
+    achievements: content.achievements.length
+      ? [...content.achievements]
+      : undefined,
+  };
+}
+
+/**
+ * Разворачивает состояние формы выпуска в тело запроса.
+ *
+ * @param state состояние формы выпуска кодов
  */
 export function toCreateCodesRequest(
   state: CreateCodesFormState,
@@ -179,20 +270,44 @@ export function toCreateCodesRequest(
   const trimmedLabel = state.label.trim();
 
   return {
-    rewardTier: state.rewardTier ?? undefined,
-    subscriptionType: state.includeSubscription
-      ? state.subscriptionType
-      : undefined,
-    subscriptionMonths: state.includeSubscription
-      ? state.subscriptionMonths
-      : undefined,
-    perks: state.perks.length ? [...state.perks] : undefined,
-    achievements: state.achievements.length
-      ? [...state.achievements]
-      : undefined,
+    ...toCodeContentRequest(state),
     count: state.count,
     label: trimmedLabel || undefined,
   };
+}
+
+/**
+ * Короткое описание содержимого кода одной строкой: «Тир 2 · подписка 6 мес. ·
+ * перки: 2 · достижения: 1». Подходит и для запроса, и для выпущенного кода.
+ *
+ * @param content содержимое кода
+ */
+export function describeCodeContent(content: CodeContentSummarySource): string {
+  const parts: string[] = [];
+
+  if (content.rewardTier) {
+    parts.push(REWARD_TIER_LABELS[content.rewardTier]);
+  }
+
+  if (content.subscriptionMonths) {
+    const type = content.subscriptionType
+      ? `, ${SUBSCRIPTION_TYPE_LABELS[content.subscriptionType].toLowerCase()}`
+      : '';
+
+    parts.push(`подписка ${content.subscriptionMonths} мес.${type}`);
+  }
+
+  if (content.perks?.length) {
+    parts.push(
+      `перки: ${content.perks.map((perk) => REWARD_PERK_LABELS[perk]).join(', ')}`,
+    );
+  }
+
+  if (content.achievements?.length) {
+    parts.push(`достижения: ${content.achievements.join(', ')}`);
+  }
+
+  return parts.join(' · ');
 }
 
 export const CODE_STATUS_LABELS: Record<CodeStatus, string> = {

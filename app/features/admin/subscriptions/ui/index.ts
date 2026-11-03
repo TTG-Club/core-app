@@ -1,3 +1,4 @@
+export { default as CodeContentFields } from './CodeContentFields.vue';
 export { default as CodeDetailPane } from './CodeDetailPane.vue';
 export { default as CodeRow } from './CodeRow.vue';
 export { default as CodesPanel } from './CodesPanel.vue';
