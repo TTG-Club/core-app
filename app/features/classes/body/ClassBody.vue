@@ -51,10 +51,10 @@
   <UiDetailLayout>
     <template #aside>
       <!-- Растянута на высоту колонки, чтобы навигации было где липнуть -->
-      <div class="flex grow flex-col gap-4 @min-xl:@max-3xl:flex-row">
+      <div class="flex grow flex-col gap-4 @min-md:@max-3xl:flex-row">
         <UiGallery
           v-if="!hideGallery && detail.image"
-          class="min-w-25 shrink-0 @min-xl:@max-3xl:w-50"
+          class="min-w-25 shrink-0 @min-md:@max-xl:w-36 @min-xl:@max-3xl:w-50"
           :preview="detail.image"
           :images="detail.gallery"
         />

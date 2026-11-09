@@ -5,6 +5,11 @@
 
   import { SourceTag } from '~ui/source-tag';
 
+  import {
+    CARD_LINK_CONTENT_WIDTH_CLASSES,
+    CARD_LINK_LAYOUT_CLASSES,
+  } from './constants';
+
   const {
     to,
     name,
@@ -13,6 +18,7 @@
     hasActions = false,
     hideImageOnMobile = false,
     isOpened = false,
+    row = false,
   } = defineProps<{
     to: RouteLocationRaw;
     name: NameResponse;
@@ -21,6 +27,11 @@
     hasActions?: boolean;
     hideImageOnMobile?: boolean;
     isOpened?: boolean;
+    /**
+     * Строкой: обложка маленьким квадратом слева, как на узком экране. Для
+     * вида списков «строками» из шестерёнки.
+     */
+    row?: boolean;
   }>();
 
   const emit = defineEmits<{
@@ -38,7 +49,25 @@
 
   const isImageHidden = computed(() => hideImageOnMobile && isMobile);
 
+  // На маленькой обложке строки значок источника не помещается — он у названия
+  const isSourceInline = computed(() => row || isImageHidden.value);
+
+  const contentWidthClass = computed(() => {
+    if (row) {
+      return undefined;
+    }
+
+    return isImageHidden.value
+      ? CARD_LINK_CONTENT_WIDTH_CLASSES.full
+      : CARD_LINK_CONTENT_WIDTH_CLASSES.besideImage;
+  });
+
   const { isSplitActive } = useLayoutWidth();
+
+  // Строкой карточка всегда выглядит так, как на узком контейнере
+  const layoutClasses = computed(() =>
+    row ? CARD_LINK_LAYOUT_CLASSES.row : CARD_LINK_LAYOUT_CLASSES.card,
+  );
 
   /**
    * Обработчик клика по карточке.
@@ -59,14 +88,15 @@
 <template>
   <NuxtLink
     v-slot="{ href }"
-    v-memo="[to, isOpened]"
+    v-memo="[to, isOpened, row]"
     custom
     :to="to"
   >
     <a
       :href="href ?? undefined"
       :class="[
-        'group overflow-hidden transition-all @max-md:flex',
+        'group overflow-hidden transition-all',
+        layoutClasses.link,
         'rounded-xl border',
         isOpened
           ? 'border-primary bg-primary/10 text-highlighted shadow-sm ring-1 ring-primary/50'
@@ -80,8 +110,7 @@
         :class="[
           'relative overflow-hidden',
           'flex flex-none items-center justify-center',
-          'aspect-square w-full',
-          '@max-md:size-25',
+          layoutClasses.image,
         ]"
       >
         <img
@@ -95,12 +124,13 @@
           :class="[
             'absolute inset-0',
             'bg-linear-to-t from-muted to-transparent to-50%',
-            'transition-all duration-300 @md:group-hover:top-full',
-            '@max-md:bg-linear-to-l',
+            'transition-all duration-300',
+            layoutClasses.gradient,
           ]"
         />
 
         <SourceTag
+          v-if="!isSourceInline"
           :source="source"
           class="absolute top-2 right-2"
           show-tooltip
@@ -110,20 +140,19 @@
       <!-- Content Block -->
       <div
         :class="[
-          'flex flex-auto justify-between gap-2 px-4 py-3',
-          '@max-md:gap-1 @max-md:px-3 @max-md:py-2',
-          !isImageHidden
-            ? '@max-md:max-w-[calc(100cqw-calc(var(--spacing)*25))]'
-            : '@max-md:max-w-full',
+          'flex flex-auto justify-between',
+          layoutClasses.content,
+          contentWidthClass,
         ]"
       >
         <!-- Info -->
         <div class="flex min-w-0 flex-auto flex-col justify-center gap-0.5">
           <!-- Main row -->
-          <div class="flex justify-between">
+          <div class="flex justify-between gap-2">
             <span
               :class="[
-                'inline-block overflow-hidden @md:flex-1',
+                'inline-block overflow-hidden',
+                layoutClasses.name,
                 'text-ellipsis whitespace-nowrap',
                 'font-semibold text-highlighted',
               ]"
@@ -133,7 +162,7 @@
             </span>
 
             <SourceTag
-              v-if="isImageHidden"
+              v-if="isSourceInline"
               :source="source"
               show-tooltip
             />

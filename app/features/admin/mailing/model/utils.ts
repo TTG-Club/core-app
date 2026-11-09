@@ -11,6 +11,7 @@ import {
   extractMailingEmail,
   isEmailAddress,
 } from '#shared/utils';
+import { describeCodeContent } from '~admin/subscriptions/model';
 
 import { MAILING_STATUS_LABELS } from './constants';
 
@@ -82,7 +83,7 @@ export function getMailingHistory(
       email,
       code: code.code,
       campaign: extractMailingCampaign(code.label),
-      rewardTier: code.rewardTier,
+      contentSummary: describeCodeContent(code),
       createdAt: code.createdAt,
       redeemedBy: code.redeemedBy,
       redeemedAt: code.redeemedAt,

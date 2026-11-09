@@ -1,4 +1,8 @@
-import type { AdminPayment, AdminSubscription } from './types';
+import type {
+  AdminPayment,
+  AdminSubscription,
+  BulkSubscriptionExtension,
+} from './types';
 
 import * as z from 'zod';
 
@@ -38,4 +42,31 @@ export function parseAdminPayments(payload: unknown): AdminPayment[] {
  */
 export function parseAdminSubscriptions(payload: unknown): AdminSubscription[] {
   return z.array(adminSubscriptionSchema).parse(payload);
+}
+
+const bulkSubscriptionExtensionSchema: z.ZodType<BulkSubscriptionExtension> =
+  z.object({
+    id: z.string(),
+    days: z.number().int(),
+    extendedCount: z.number().int(),
+    actorUsername: z.string().nullable(),
+    createdAt: z.string(),
+  });
+
+/**
+ * Проверяет ответ subscriber-service о массовом продлении подписки.
+ */
+export function parseBulkSubscriptionExtension(
+  payload: unknown,
+): BulkSubscriptionExtension {
+  return bulkSubscriptionExtensionSchema.parse(payload);
+}
+
+/**
+ * Проверяет ответ subscriber-service с журналом массовых продлений.
+ */
+export function parseBulkSubscriptionExtensions(
+  payload: unknown,
+): BulkSubscriptionExtension[] {
+  return z.array(bulkSubscriptionExtensionSchema).parse(payload);
 }

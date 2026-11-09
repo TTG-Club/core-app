@@ -5,8 +5,19 @@
   import type { SourceResponse } from '~/shared/types';
 
   import type { DrawerTitleName } from '../drawer/ui';
+  import type { DetailPaneNeighbours } from './types';
 
   import { DrawerActions, DrawerBody, DrawerHeader } from '../drawer/ui';
+  import {
+    DETAIL_PANE_COLLAPSE_ICON,
+    DETAIL_PANE_COLLAPSE_LABEL,
+    DETAIL_PANE_EXPAND_ICON,
+    DETAIL_PANE_EXPAND_LABEL,
+    DETAIL_PANE_NEXT_ICON,
+    DETAIL_PANE_NEXT_LABEL,
+    DETAIL_PANE_PREVIOUS_ICON,
+    DETAIL_PANE_PREVIOUS_LABEL,
+  } from './constants';
 
   const {
     title,
@@ -19,6 +30,7 @@
     dateTimeFormat = undefined,
     backTo = undefined,
     noComments = false,
+    neighbours = undefined,
   } = defineProps<{
     /** Заголовок панели */
     title: DrawerTitleName;
@@ -52,12 +64,44 @@
      * из баг-репорта).
      */
     noComments?: boolean;
+    /**
+     * Соседи записи в списке раздела: кнопки ‹ › и счётчик в шапке. Нет —
+     * запись открыта не из списка, листать нечего.
+     */
+    neighbours?: DetailPaneNeighbours;
   }>();
 
-  defineEmits<{
+  const emit = defineEmits<{
     /** Событие закрытия панели детального просмотра */
     (event: 'close'): void;
+    /** Открыть соседнюю запись по её адресу */
+    (event: 'navigate', url: string): void;
   }>();
+
+  const neighbourCounter = computed(() =>
+    neighbours ? `${neighbours.position} / ${neighbours.total}` : undefined,
+  );
+
+  /**
+   * Открывает соседнюю запись, если она есть.
+   *
+   * @param url Адрес соседней записи.
+   */
+  function handleNeighbour(url: string | undefined): void {
+    if (url) {
+      emit('navigate', url);
+    }
+  }
+
+  /** Открывает предыдущую запись списка. */
+  function openPrevious(): void {
+    handleNeighbour(neighbours?.previousUrl);
+  }
+
+  /** Открывает следующую запись списка. */
+  function openNext(): void {
+    handleNeighbour(neighbours?.nextUrl);
+  }
 
   const computedTitle = computed(() =>
     typeof title === 'string' ? title : title?.rus,
@@ -65,6 +109,21 @@
 
   const computedSubtitle = computed(() =>
     typeof title === 'string' ? undefined : title?.eng,
+  );
+
+  const { isCenteredInSplit, isDetailExpanded, toggleDetailExpanded } =
+    useSectionCentered();
+
+  const expandLabel = computed(() =>
+    isDetailExpanded.value
+      ? DETAIL_PANE_COLLAPSE_LABEL
+      : DETAIL_PANE_EXPAND_LABEL,
+  );
+
+  const expandIcon = computed(() =>
+    isDetailExpanded.value
+      ? DETAIL_PANE_COLLAPSE_ICON
+      : DETAIL_PANE_EXPAND_ICON,
   );
 
   /** Путь для блока комментариев под телом открытой сущности. */
@@ -86,7 +145,53 @@
         :back-to="backTo"
       >
         <template #actions>
+          <div
+            v-if="neighbours"
+            class="flex items-center"
+          >
+            <UButton
+              :icon="DETAIL_PANE_PREVIOUS_ICON"
+              :title="DETAIL_PANE_PREVIOUS_LABEL"
+              :aria-label="DETAIL_PANE_PREVIOUS_LABEL"
+              :disabled="!neighbours.previousUrl"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              square
+              @click.left.exact.prevent="openPrevious"
+            />
+
+            <span class="px-1 text-xs text-muted tabular-nums">
+              {{ neighbourCounter }}
+            </span>
+
+            <UButton
+              :icon="DETAIL_PANE_NEXT_ICON"
+              :title="DETAIL_PANE_NEXT_LABEL"
+              :aria-label="DETAIL_PANE_NEXT_LABEL"
+              :disabled="!neighbours.nextUrl"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              square
+              @click.left.exact.prevent="openNext"
+            />
+          </div>
+
           <slot name="actions" />
+
+          <!-- Узкая раскладка: запись разворачивается на всю колонку -->
+          <UButton
+            v-if="isCenteredInSplit"
+            :icon="expandIcon"
+            :title="expandLabel"
+            :aria-label="expandLabel"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            square
+            @click.left.exact.prevent="toggleDetailExpanded"
+          />
 
           <DrawerActions
             :edit-url="editUrl"

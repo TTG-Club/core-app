@@ -9,7 +9,7 @@
   import { SourceBody } from '~sources/body';
   import { SourceLink } from '~sources/link';
   import { getSourceMarkdown } from '~sources/types';
-  import { UiDetailPane } from '~ui/detail-pane';
+  import { UiDetailPane, UiDetailPaneEmpty } from '~ui/detail-pane';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkBig } from '~ui/skeleton';
 
@@ -99,10 +99,11 @@
     detailData: detailSource,
     isDetailLoading,
     isDetailError,
-    isDetailDismissed,
     detailUrlForCopy,
     detailEditUrl,
     handleCloseDetail,
+    detailNeighbours,
+    openDetail,
   } = useSectionDetail<SourceDetailResponse>({
     sectionPath: '/sources',
     apiBasePath: '/api/v2/source',
@@ -123,6 +124,7 @@
 <template>
   <NuxtLayout
     name="section"
+    collapsible-controls
     title="Источники"
   >
     <template #controls>
@@ -189,7 +191,9 @@
         :is-loading="isDetailLoading"
         :is-error="isDetailError"
         copy-title
+        :neighbours="detailNeighbours"
         @close="handleCloseDetail"
+        @navigate="openDetail"
       >
         <SourceBody
           v-if="detailSource"
@@ -197,31 +201,10 @@
         />
       </UiDetailPane>
 
-      <div
-        v-else-if="isDetailDismissed"
-        class="flex h-full w-full flex-col items-center justify-center p-6 text-center select-none"
-      >
-        <div class="flex max-w-xs flex-col items-center gap-3">
-          <UIcon
-            name="tabler:click"
-            class="size-10 text-muted"
-          />
-
-          <h3 class="text-lg font-semibold text-highlighted">
-            Источник не выбран
-          </h3>
-
-          <p class="text-sm text-secondary">
-            Выберите источник из списка слева, чтобы просмотреть подробную
-            информацию
-          </p>
-        </div>
-      </div>
-
-      <UiDetailPane
+      <UiDetailPaneEmpty
         v-else
-        title=""
-        :is-loading="true"
+        title="Источник не выбран"
+        description="Выберите источник из списка слева, чтобы просмотреть подробную информацию"
       />
     </template>
   </NuxtLayout>

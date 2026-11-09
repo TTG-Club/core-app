@@ -6,6 +6,7 @@ export * from './getSlug';
 export * from './getStatusMessage';
 export * from './home-hero';
 export * from './mailing';
+export * from './maintenance';
 export * from './sortString';
 export * from './subscription-sales';
 export * from './user-avatar';

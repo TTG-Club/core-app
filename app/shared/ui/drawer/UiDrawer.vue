@@ -5,6 +5,8 @@
 
   import type { DrawerTitleName } from './ui';
 
+  import { GALLERY_OPENED_STATE_KEY } from '~ui/gallery';
+
   import { DrawerActions, DrawerBody, DrawerHeader } from './ui';
 
   const {
@@ -63,7 +65,7 @@
     url ? extractRelativePath(url) : undefined,
   );
 
-  const isGalleryOpened = useState('ui-gallery-opened', () => false);
+  const isGalleryOpened = useState(GALLERY_OPENED_STATE_KEY, () => false);
   const { greaterOrEqual } = useBreakpoints();
 
   const isTabletOrGreater = greaterOrEqual(Breakpoint.MD);

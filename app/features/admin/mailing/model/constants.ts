@@ -8,7 +8,7 @@ import {
   MAILING_CODE_PLACEHOLDER,
   MAILING_EMAIL_PLACEHOLDER,
 } from '#shared/consts';
-import { REWARD_TIER_LABELS, REWARD_TIERS } from '~admin/subscriptions/model';
+import { getInitialCodeContent } from '~admin/subscriptions/model';
 
 /**
  * Маркеры письма переэкспортируем: форма, превью и подсказки берут их отсюда,
@@ -60,11 +60,13 @@ ${MAILING_CODE_PLACEHOLDER}
 
 Если что-то не сработает, просто ответьте на это письмо — поможем.`;
 
-/** Опции селектора тира: в рассылке тир обязателен, варианта «без тира» нет. */
-export const MAILING_TIER_OPTIONS = REWARD_TIERS.map((tier) => ({
-  label: REWARD_TIER_LABELS[tier],
-  value: tier,
-}));
+/** Подсказка под селектором тира в рассылке. */
+export const MAILING_TIER_HELP =
+  'Каждому адресу выпустится свой код с этим содержимым. Тир кумулятивен — включает награды всех нижестоящих тиров.';
+
+/** Итог формы, пока содержимое кода не задано. */
+export const MAILING_EMPTY_CONTENT_SUMMARY =
+  'Укажите, что получит адресат: тир, подписку, перки или достижения';
 
 /** Подписи статусов строк отчёта. */
 export const MAILING_STATUS_LABELS: Record<MailingSendStatus, string> = {
@@ -81,7 +83,7 @@ export const MAILING_STATUS_COLORS: Record<
   failed: 'error',
 };
 
-/** Тир по умолчанию в форме. */
+/** Тир, предвыбранный в новой рассылке. */
 const MAILING_DEFAULT_TIER = 'TIER_1';
 
 /** Начальное состояние формы рассылки. */
@@ -89,7 +91,7 @@ export function getInitialMailingForm(): MailingFormState {
   return {
     subject: MAILING_DEFAULT_SUBJECT,
     bodyText: MAILING_DEFAULT_BODY,
-    rewardTier: MAILING_DEFAULT_TIER,
+    content: getInitialCodeContent(MAILING_DEFAULT_TIER),
     label: '',
     recipients: '',
   };
@@ -104,7 +106,7 @@ export function getEmptyMailingCampaign(): MailingCampaign {
     startedAt: '',
     subject: '',
     bodyText: '',
-    rewardTier: MAILING_DEFAULT_TIER,
+    content: {},
     label: '',
     results: [],
   };

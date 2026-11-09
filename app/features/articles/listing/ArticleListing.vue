@@ -10,7 +10,7 @@
     useListPresentation,
     useListPresentationMenus,
   } from '~infrastructure/list-presentation/composable';
-  import { UiDetailPane } from '~ui/detail-pane';
+  import { UiDetailPane, UiDetailPaneEmpty } from '~ui/detail-pane';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkBig } from '~ui/skeleton';
 
@@ -139,14 +139,21 @@
     detailData,
     isDetailLoading,
     isDetailError,
-    isDetailDismissed,
     detailUrlForCopy,
     handleCloseDetail,
+    detailNeighbours,
+    openDetail,
   } = useSectionDetail<ArticleDetailedResponse>({
     sectionPath: ARTICLES_ROUTE,
     apiBasePath: ARTICLES_API_PATH,
     items: data,
   });
+
+  // Порядок записей для листания: в панели — кнопками и стрелками, на
+  // телефоне — свайпом со страницы записи.
+  useSectionNeighbours(ARTICLES_ROUTE, () =>
+    data.value?.map((article) => article.url),
+  );
 
   const markdown = useEntityMarkdown(detailData, getArticleMarkdown);
 
@@ -161,6 +168,7 @@
 <template>
   <NuxtLayout
     name="section"
+    collapsible-controls
     :title="title"
   >
     <template #controls>
@@ -248,7 +256,9 @@
         :is-loading="isDetailLoading"
         :is-error="isDetailError"
         copy-title
+        :neighbours="detailNeighbours"
         @close="handleCloseDetail"
+        @navigate="openDetail"
       >
         <ArticleBody
           v-if="detailData"
@@ -256,30 +266,10 @@
         />
       </UiDetailPane>
 
-      <div
-        v-else-if="isDetailDismissed"
-        class="flex h-full w-full flex-col items-center justify-center p-6 text-center select-none"
-      >
-        <div class="flex max-w-xs flex-col items-center gap-3">
-          <UIcon
-            name="tabler:click"
-            class="size-10 text-muted"
-          />
-
-          <h3 class="text-lg font-semibold text-highlighted">
-            Запись не выбрана
-          </h3>
-
-          <p class="text-sm text-secondary">
-            Выберите запись из списка слева, чтобы прочитать её здесь.
-          </p>
-        </div>
-      </div>
-
-      <UiDetailPane
+      <UiDetailPaneEmpty
         v-else
-        title=""
-        :is-loading="true"
+        title="Запись не выбрана"
+        description="Выберите запись из списка слева, чтобы прочитать её здесь."
       />
     </template>
   </NuxtLayout>

@@ -1,10 +1,11 @@
 <script setup lang="ts">
-  const { name } = useTheme();
+  // У своей темы манифест берётся от её основы — тёмной или светлой
+  const { baseName } = useTheme();
 </script>
 
 <template>
   <Link
     rel="manifest"
-    :href="`/manifest.json?theme=${name}`"
+    :href="`/manifest.json?theme=${baseName}`"
   />
 </template>

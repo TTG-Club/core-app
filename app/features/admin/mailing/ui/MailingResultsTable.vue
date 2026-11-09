@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import type { MailingCampaign } from '../model';
 
-  import { REWARD_TIER_LABELS } from '~admin/subscriptions/model';
+  import { describeCodeContent } from '~admin/subscriptions/model';
 
   import {
     getMailingReportText,
@@ -34,8 +34,8 @@
       : '',
   );
 
-  const tierLabel = computed(
-    () => REWARD_TIER_LABELS[props.campaign.rewardTier],
+  const contentSummary = computed(() =>
+    describeCodeContent(props.campaign.content),
   );
 
   const summaryColor = computed(() =>
@@ -89,11 +89,12 @@
           </UBadge>
 
           <UBadge
+            v-if="contentSummary"
             color="neutral"
             variant="subtle"
             size="sm"
           >
-            {{ tierLabel }}
+            {{ contentSummary }}
           </UBadge>
 
           <span

@@ -6,6 +6,11 @@ import type {
   PaymentStatus,
 } from './types';
 
+import {
+  SUBSCRIPTION_EXTENSION_DAYS_MAX,
+  SUBSCRIPTION_EXTENSION_DAYS_MIN,
+} from '#shared/consts';
+
 export const SUBSCRIPTION_STATS_ROUTE = '/admin/subscription-stats';
 
 export const SUBSCRIPTION_STATS_PAGE_TITLE = 'Подписки и покупки';
@@ -137,3 +142,73 @@ export const SUBSCRIPTION_STATS_LIST_PAGE_SIZE = 15;
 
 /** Плитка подписчиков на главной админки. */
 export const SUBSCRIPTION_STATS_DASHBOARD_TILE_TITLE = 'Подписчики';
+
+/** Массовое продление: ручка сайта (BFF), она проверяет роль ADMIN. */
+export const BULK_EXTENSION_API_PATH = '/api/admin/subscriptions/extend-all';
+
+export const BULK_EXTENSION_DATA_KEY = 'admin-subscription-bulk-extensions';
+
+export const BULK_EXTENSION_TITLE = 'Продлить всем';
+
+export const BULK_EXTENSION_DESCRIPTION =
+  'Добавляет дни всем, у кого подписка идёт прямо сейчас. Истёкшие и ещё не активированные промокоды не меняются.';
+
+export const BULK_EXTENSION_DAYS_LABEL = 'Дней';
+
+export const BULK_EXTENSION_DAYS_MIN = SUBSCRIPTION_EXTENSION_DAYS_MIN;
+
+export const BULK_EXTENSION_DAYS_MAX = SUBSCRIPTION_EXTENSION_DAYS_MAX;
+
+export const BULK_EXTENSION_DAYS_DEFAULT = 1;
+
+export const BULK_EXTENSION_ICON = 'tabler:calendar-plus';
+
+export const BULK_EXTENSION_SUBMIT_LABEL = 'Продлить';
+
+export const BULK_EXTENSION_CONFIRM_TITLE = 'Продлить подписку всем?';
+
+export const BULK_EXTENSION_CONFIRM_LABEL = 'Да, продлить';
+
+export const BULK_EXTENSION_CANCEL_LABEL = 'Отмена';
+
+export const BULK_EXTENSION_CONFIRM_WARNING =
+  'Отменить продление нельзя. Повторное нажатие добавит дни ещё раз.';
+
+export const BULK_EXTENSION_SUCCESS_TITLE = 'Подписка продлена';
+
+export const BULK_EXTENSION_ERROR_TITLE = 'Ошибка';
+
+export const BULK_EXTENSION_ERROR_TEXT = 'Не удалось продлить подписку';
+
+export const BULK_EXTENSION_JOURNAL_TITLE = 'Прошлые продления';
+
+export const BULK_EXTENSION_JOURNAL_EMPTY_TEXT =
+  'Массовых продлений ещё не было';
+
+export const BULK_EXTENSION_JOURNAL_ERROR_TEXT =
+  'Не удалось загрузить прошлые продления';
+
+export const BULK_EXTENSION_DATE_FORMAT = 'DD.MM.YYYY HH:mm';
+
+/** Между частями строки журнала и итога продления. */
+export const BULK_EXTENSION_DETAILS_SEPARATOR = ' · ';
+
+/** Знак перед числом добавленных дней. */
+export const BULK_EXTENSION_DAYS_PREFIX = '+';
+
+/** Хвост текста подтверждения: «N пользователей получат +M дней …». */
+export const BULK_EXTENSION_CONFIRM_VERB = 'получат';
+
+export const BULK_EXTENSION_CONFIRM_SUFFIX = 'к окончанию подписки.';
+
+export const BULK_EXTENSION_DAY_FORMS: [string, string, string] = [
+  'день',
+  'дня',
+  'дней',
+];
+
+export const BULK_EXTENSION_USER_FORMS: [string, string, string] = [
+  'пользователь',
+  'пользователя',
+  'пользователей',
+];

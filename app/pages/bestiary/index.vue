@@ -19,8 +19,9 @@
   import {
     useListPresentation,
     useListPresentationMenus,
+    useListView,
   } from '~infrastructure/list-presentation/composable';
-  import { UiDetailPane } from '~ui/detail-pane';
+  import { UiDetailPane, UiDetailPaneEmpty } from '~ui/detail-pane';
   import { GroupedList } from '~ui/grouped-list';
   import { PageGrid, PageResult } from '~ui/page';
   import { SkeletonLinkSmall } from '~ui/skeleton';
@@ -42,10 +43,11 @@
     detailData: detailCreature,
     isDetailLoading,
     isDetailError,
-    isDetailDismissed,
     detailUrlForCopy,
     detailEditUrl,
     handleCloseDetail,
+    detailNeighbours,
+    openDetail,
   } = useSectionDetail<CreatureDetailResponse>({
     sectionPath: '/bestiary',
     apiBasePath: '/api/v2/bestiary',
@@ -80,6 +82,8 @@
     presentation.grouping,
     presentation.sorting,
   );
+
+  const { columns: listColumns } = useListView();
 
   // Динамический таргет для бесконечного скролла
   // В стандартном режиме — window с большим distance (900px),
@@ -365,6 +369,7 @@
 <template>
   <NuxtLayout
     name="section"
+    collapsible-controls
     title="Бестиарий"
   >
     <template #controls>
@@ -394,6 +399,7 @@
 
         <GroupedList
           v-else-if="status === 'success' && bestiary.length"
+          :columns="listColumns"
           virtual
           :virtual-threshold="BESTIARY_LIST_PAGE_SIZE"
           :items="bestiary"
@@ -430,7 +436,9 @@
         :is-loading="isDetailLoading"
         :is-error="isDetailError"
         copy-title
+        :neighbours="detailNeighbours"
         @close="handleCloseDetail"
+        @navigate="openDetail"
       >
         <CreatureBody
           v-if="detailCreature"
@@ -438,31 +446,10 @@
         />
       </UiDetailPane>
 
-      <div
-        v-else-if="isDetailDismissed"
-        class="flex h-full w-full flex-col items-center justify-center p-6 text-center select-none"
-      >
-        <div class="flex max-w-xs flex-col items-center gap-3">
-          <UIcon
-            name="tabler:click"
-            class="size-10 text-muted"
-          />
-
-          <h3 class="text-lg font-semibold text-highlighted">
-            Существо не выбрано
-          </h3>
-
-          <p class="text-sm text-secondary">
-            Выберите существо из списка слева, чтобы просмотреть подробную
-            информацию
-          </p>
-        </div>
-      </div>
-
-      <UiDetailPane
+      <UiDetailPaneEmpty
         v-else
-        title=""
-        :is-loading="true"
+        title="Существо не выбрано"
+        description="Выберите существо из списка слева, чтобы просмотреть подробную информацию"
       />
     </template>
   </NuxtLayout>

@@ -12,6 +12,7 @@
     getArticlePreviewText,
     NEWS_ROUTE,
   } from '~articles/model';
+  import { ArticleReadingProgress } from '~articles/reading-progress';
   import { PageActions } from '~ui/page';
 
   const route = useRoute();
@@ -85,6 +86,8 @@
 
     <!-- Блок комментариев вставляет layout detail — общий для всех разделов -->
     <template #default>
+      <ArticleReadingProgress />
+
       <ArticleBody
         v-if="article"
         :article

@@ -2,6 +2,7 @@
   import type { ClassLinkResponse } from '../model';
 
   import { ClassDrawer } from '~classes/drawer';
+  import { useListView } from '~infrastructure/list-presentation/composable';
   import { CardLink } from '~ui/link';
 
   import { LinkPreview, LinkSubclasses } from './ui';
@@ -12,6 +13,7 @@
 
   const { isDesktop } = useDevice();
   const { isSplitActive } = useLayoutWidth();
+  const { isRows } = useListView();
   const overlay = useOverlay();
 
   const drawer = overlay.create(ClassDrawer, {
@@ -39,6 +41,7 @@
     :source="characterClass.source"
     :has-actions="characterClass.hasSubclasses"
     :is-opened="isOpened"
+    :row="isRows"
     @open-drawer="handleOpen"
   >
     <template #actions>

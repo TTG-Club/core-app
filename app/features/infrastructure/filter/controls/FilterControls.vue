@@ -5,10 +5,12 @@
 
   import { cloneDeep } from 'es-toolkit';
 
+  import { FilterActiveChips } from '../active-chips';
   import { FilterDrawer } from '../drawer';
   import { FilterInline } from '../inline';
   import {
-    FILTER_CONTROLS_MORE_LABEL,
+    FILTER_CONTROLS_PRESENTATION_ICON,
+    FILTER_CONTROLS_PRESENTATION_LABEL,
     FILTER_CONTROLS_RESET_LABEL,
     FILTER_CONTROLS_SEARCH_PLACEHOLDER,
     FILTER_CONTROLS_SHARE_LABEL,
@@ -26,8 +28,8 @@
     normalizeDependentSelections,
   } from '../utils';
 
-  // Меню представления списка (группировка/сортировка), которое тулбар
-  // раскладывает сам: на десктопе — отдельным рядом, на мобильном — под «⋯».
+  // Меню представления списка (группировка/сортировка), которое раздел
+  // отдаёт в тулбар
   interface PresentationMenu {
     id: string;
     label: string;
@@ -62,8 +64,32 @@
   const sourcesOpened = ref(false);
   const localSearch = ref(toValue(search) ?? '');
 
+  const { isCollapsedInSplit } = useSectionFiltersCollapsed();
+
   const isLarge = computed(
     () => isMounted.value && greaterOrEqual(Breakpoint.LG).value,
+  );
+
+  // Свёрнутая колонка в широком режиме: панель — строка над списком, и
+  // фильтры, как на узком экране, открываются кнопкой.
+  const isInlineShown = computed(
+    () => isLarge.value && !isCollapsedInSplit.value,
+  );
+
+  // Кнопка фильтров и плашки нужны там, где нет встроенных фильтров. Прячутся
+  // стилем, а не условием, чтобы не мигать до монтирования: ширина экрана
+  // известна только на клиенте, а свёрнутость — уже на сервере, из куки.
+  const compactOnlyClass = computed(() =>
+    isCollapsedInSplit.value ? undefined : 'lg:hidden',
+  );
+
+  // Группировка и сортировка — вложенными меню одной кнопки
+  const presentationItems = computed<Array<DropdownMenuItem>>(() =>
+    presentationMenus.map((menu) => ({
+      label: menu.label,
+      icon: menu.icon,
+      children: menu.items,
+    })),
   );
 
   const shareIcon = isApple ? FILTER_SHARE_ICON_APPLE : FILTER_SHARE_ICON;
@@ -71,8 +97,6 @@
   const urlForCopy = computed(() => {
     return getOrigin() + useRoute().fullPath;
   });
-
-  const hasPresentationMenus = computed(() => presentationMenus.length > 0);
 
   // Пока фильтр не загружен, кнопки стоят выключенными. Когда он пришёл без
   // групп отбора или без источников (у статей источников нет, у новостей и
@@ -82,25 +106,6 @@
   );
 
   const hasSources = computed(() => !filter.value || !!filter.value.sources);
-
-  // Меню «⋯» собирает «Поделиться» и группировку с сортировкой. Без меню
-  // представления накрывать «Поделиться» нечем, и кнопка стоит отдельно.
-  const overflowItems = computed<Array<Array<DropdownMenuItem>>>(() => [
-    [
-      {
-        label: FILTER_CONTROLS_SHARE_LABEL,
-        icon: shareIcon,
-        onSelect: () => {
-          share(urlForCopy.value);
-        },
-      },
-    ],
-    presentationMenus.map((menu) => ({
-      label: menu.label,
-      icon: menu.icon,
-      children: menu.items,
-    })),
-  ]);
 
   const isFilterEdited = computed(
     () =>
@@ -249,12 +254,12 @@
         :placeholder="FILTER_CONTROLS_SEARCH_PLACEHOLDER"
       />
 
-      <!-- Кнопка отбора — только на узком экране: на широком фильтры стоят -->
-      <!-- в панели. Прячется стилем, а не условием, чтобы не мигать до -->
-      <!-- монтирования, пока ширина ещё неизвестна. -->
+      <!-- Кнопка отбора — там, где фильтры не стоят в панели: на узком экране -->
+      <!-- и при свёрнутой колонке -->
       <UFieldGroup
         v-if="hasFilterGroups"
-        class="space-x-px lg:hidden"
+        class="space-x-px"
+        :class="compactOnlyClass"
       >
         <UButton
           :disabled="!filter"
@@ -288,30 +293,36 @@
         />
       </UChip>
 
+      <UDropdownMenu
+        v-if="presentationItems.length"
+        :items="presentationItems"
+        :ui="{ content: 'w-56' }"
+      >
+        <UButton
+          :icon="FILTER_CONTROLS_PRESENTATION_ICON"
+          :title="FILTER_CONTROLS_PRESENTATION_LABEL"
+          :aria-label="FILTER_CONTROLS_PRESENTATION_LABEL"
+          square
+        />
+      </UDropdownMenu>
+
       <UButton
-        v-if="!hasPresentationMenus"
         :icon="shareIcon"
         :title="FILTER_CONTROLS_SHARE_LABEL"
         square
         @click.left.exact.prevent="share(urlForCopy)"
       />
-
-      <UDropdownMenu
-        v-if="hasPresentationMenus"
-        :items="overflowItems"
-        :ui="{ content: 'w-56' }"
-      >
-        <UButton
-          icon="tabler:dots"
-          :title="FILTER_CONTROLS_MORE_LABEL"
-          :aria-label="FILTER_CONTROLS_MORE_LABEL"
-          square
-        />
-      </UDropdownMenu>
     </div>
 
+    <FilterActiveChips
+      v-if="filter?.filters.length"
+      :class="compactOnlyClass"
+      :groups="filter.filters"
+      @update="applyFilter"
+    />
+
     <ClientOnly>
-      <template v-if="isLarge">
+      <template v-if="isInlineShown">
         <slot name="legend" />
 
         <!-- Те же группы, что в дровере, но прямо в панели и без «Применить». -->

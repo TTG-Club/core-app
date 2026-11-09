@@ -288,13 +288,13 @@
 
     <UButton
       v-if="hasDescription"
-      class="ml-auto hidden md:block"
+      class="hidden md:block"
       variant="soft"
       color="secondary"
       size="md"
       @click.left.exact.prevent="scrollToDescription"
     >
-      <div class="flex flex-col items-end leading-tight">
+      <div class="flex flex-col items-start leading-tight">
         <span class="text-xs text-secondary">О классе</span>
 
         <span>Описание</span>

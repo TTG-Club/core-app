@@ -1,6 +1,14 @@
 <script setup lang="ts">
   import type { ApiFetchError } from '~/shared/types';
 
+  const { signInOnly = false } = defineProps<{
+    /**
+     * Только вход, без восстановления пароля и регистрации: так форма стоит на
+     * заглушке режима обновления, где остальные страницы закрыты.
+     */
+    signInOnly?: boolean;
+  }>();
+
   const emit = defineEmits<{
     (event: 'switch:sign-up' | 'switch:change-password' | 'close'): void;
   }>();
@@ -143,6 +151,7 @@
         />
 
         <UButton
+          v-if="!signInOnly"
           class="p-0"
           variant="link"
           :disabled="inProgress"
@@ -164,6 +173,7 @@
     </UForm>
 
     <div
+      v-if="!signInOnly"
       class="flex flex-wrap items-center justify-center gap-x-2 border-t border-default pt-5 text-sm text-muted"
     >
       Ещё нет аккаунта?

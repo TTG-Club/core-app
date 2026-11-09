@@ -235,8 +235,9 @@ export const MENU_SECTIONS: Array<MenuSection> = [
         icon: 'tabler:message-circle',
       },
       {
-        href: 'https://5e14.ttg.club/',
+        href: '/',
         external: true,
+        legacySite: true,
         label: 'Редакция D&D 2014',
         icon: 'tabler:history',
         disabled: false,

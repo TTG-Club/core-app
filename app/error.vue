@@ -2,6 +2,8 @@
   import type { NuxtError } from '#app';
 
   import { ru } from '#ui/locale';
+  import { useMaintenanceGate } from '~infrastructure/maintenance/composables';
+  import { MaintenanceScreen } from '~infrastructure/maintenance/ui';
   import { PwaConfig } from '~infrastructure/pwa/config';
 
   import 'assets/css/index.scss';
@@ -10,13 +12,11 @@
     error: NuxtError;
   }>();
 
-  const { name } = useTheme();
+  useThemeHead();
 
-  useHead({
-    htmlAttrs: {
-      class: name,
-    },
-  });
+  // При закрытом сайте ошибка (например, 401 на странице админки) не
+  // показывается — посетитель видит ту же заглушку.
+  const { isBlocked: isMaintenanceBlocked } = useMaintenanceGate();
 
   function handleError() {
     clearError();
@@ -41,7 +41,12 @@
       position: 'top-right',
     }"
   >
-    <div class="ttg-app">
+    <MaintenanceScreen v-if="isMaintenanceBlocked" />
+
+    <div
+      v-else
+      class="ttg-app"
+    >
       <PwaConfig />
 
       <div
