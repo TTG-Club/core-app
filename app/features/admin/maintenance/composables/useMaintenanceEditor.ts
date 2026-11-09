@@ -1,4 +1,7 @@
-import type { MaintenanceSettingsUpdate } from '#shared/types';
+import type {
+  MaintenanceSettingsUpdate,
+  MaintenanceSiteId,
+} from '#shared/types';
 
 import { MAINTENANCE_ADMIN_API_PATH } from '#shared/consts';
 import { maintenanceSiteSettingsSchema } from '#shared/utils';
@@ -11,21 +14,25 @@ import {
 } from '../model';
 
 /**
- * Редактор режима «сайт закрыт на обновление»: сохранённая настройка, форма с
- * её копией и сохранение.
+ * Редактор режима «сайт закрыт на обновление» одного сайта: сохранённая
+ * настройка, форма с её копией и сохранение. У каждого сайта свои данные и
+ * своя форма.
  *
+ * @param siteId сайт (`5e24`, `5e14`)
  * @returns сохранённая настройка, форма и действия с ней
  */
-export function useMaintenanceEditor() {
+export function useMaintenanceEditor(siteId: MaintenanceSiteId) {
   const $toast = useToast();
 
   // server: false — приватные данные админки грузим на клиенте, где
   // авторизация (cookie → Bearer) гарантированно работает.
   const { data, error, refresh } = useAsyncData(
-    MAINTENANCE_ADMIN_DATA_KEY,
+    `${MAINTENANCE_ADMIN_DATA_KEY}:${siteId}`,
     async () =>
       maintenanceSiteSettingsSchema.parse(
-        await $fetch<unknown>(MAINTENANCE_ADMIN_API_PATH),
+        await $fetch<unknown>(MAINTENANCE_ADMIN_API_PATH, {
+          query: { siteId },
+        }),
       ),
     { server: false, lazy: true },
   );
@@ -73,6 +80,7 @@ export function useMaintenanceEditor() {
       data.value = maintenanceSiteSettingsSchema.parse(
         await $fetch<unknown>(MAINTENANCE_ADMIN_API_PATH, {
           method: 'PUT',
+          query: { siteId },
           body: form.value,
         }),
       );

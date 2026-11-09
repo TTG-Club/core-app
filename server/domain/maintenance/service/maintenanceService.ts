@@ -9,7 +9,6 @@ import type {
 
 import ms from 'ms';
 
-import { getOnlineSiteId } from '#server/domain/online';
 import { S3Service } from '#server/domain/s3';
 import { parseAuthJwtPayload } from '#server/utils/authService';
 import {
@@ -46,22 +45,26 @@ const SETTINGS_FILENAME = 'maintenance.json';
 
 const SETTINGS_CONTENT_TYPE = 'application/json';
 
-/** Имя и ключ кешированной функции чтения настройки. */
+/** Имя кешированной функции чтения настройки; ключ кеша — сайт. */
 const SETTINGS_CACHE_NAME = 'maintenance';
-const SETTINGS_CACHE_KEY = 'settings';
 
 /**
- * Запись кеша в хранилище `cache`: так Nitro раскладывает результаты
+ * Запись кеша сайта в хранилище `cache`: так Nitro раскладывает результаты
  * `defineCachedFunction` — `nitro:functions`, затем имя функции и ключ с
  * расширением `.json`.
+ *
+ * @param siteId сайт (`5e24`, `5e14`)
  */
-const SETTINGS_CACHE_STORAGE_KEY = `nitro:functions:${SETTINGS_CACHE_NAME}:${SETTINGS_CACHE_KEY}.json`;
+function getSettingsCacheStorageKey(siteId: string): string {
+  return `nitro:functions:${SETTINGS_CACHE_NAME}:${siteId}.json`;
+}
 
 /**
  * Сколько Nitro держит настройку (сек). Её читает каждый заход на любую
- * страницу. На этом экземпляре кеш сбрасывается сразу после сохранения; срок
- * ограничивает устаревание, если экземпляров несколько, — включение и
- * выключение должно доходить до всех быстро.
+ * страницу этого сайта, а настройку второго сайта — его сервер. На этом
+ * экземпляре кеш сбрасывается сразу после сохранения; срок ограничивает
+ * устаревание, если экземпляров несколько, — включение и выключение должно
+ * доходить до всех быстро.
  */
 const SETTINGS_CACHE_MAX_AGE_SECONDS = ms('1m') / 1000;
 
@@ -148,16 +151,18 @@ async function writeSettingsFile(
 }
 
 /**
- * Запись этого сайта из файла настройки. Нет записи или она негодная —
- * действует умолчание, то есть режим включён.
+ * Запись сайта из файла настройки. Нет записи или она негодная — действует
+ * умолчание, то есть режим включён.
  *
  * @param settingsFile файл настройки; `null` — файла нет
+ * @param siteId сайт (`5e24`, `5e14`)
  */
 function pickSiteSettings(
   settingsFile: MaintenanceSettingsFile | null,
+  siteId: string,
 ): MaintenanceSiteSettings {
   const parsedSettings = maintenanceSiteSettingsSchema.safeParse(
-    settingsFile?.sites[getOnlineSiteId()],
+    settingsFile?.sites[siteId],
   );
 
   return parsedSettings.success
@@ -165,9 +170,13 @@ function pickSiteSettings(
     : MAINTENANCE_DEFAULT_SITE_SETTINGS;
 }
 
-/** Сбрасывает кеш настройки: следующий запрос прочитает новую. */
-async function invalidateSettingsCache(): Promise<void> {
-  await useStorage('cache').removeItem(SETTINGS_CACHE_STORAGE_KEY);
+/**
+ * Сбрасывает кеш настройки сайта: следующий запрос прочитает новую.
+ *
+ * @param siteId сайт (`5e24`, `5e14`)
+ */
+async function invalidateSettingsCache(siteId: string): Promise<void> {
+  await useStorage('cache').removeItem(getSettingsCacheStorageKey(siteId));
 }
 
 /**
@@ -189,40 +198,49 @@ async function getRequestRoles(event: H3Event): Promise<string[] | null> {
 }
 
 /**
- * Настройка этого сайта прямо из хранилища, мимо кеша, — для формы админки.
- * Сбой хранилища пробрасывается.
+ * Настройка сайта прямо из хранилища, мимо кеша, — для формы админки. Сбой
+ * хранилища пробрасывается.
+ *
+ * @param siteId сайт (`5e24`, `5e14`)
  */
-export async function readMaintenanceSiteSettings(): Promise<MaintenanceSiteSettings> {
-  return pickSiteSettings(await readSettingsFile());
+export async function readMaintenanceSiteSettings(
+  siteId: string,
+): Promise<MaintenanceSiteSettings> {
+  return pickSiteSettings(await readSettingsFile(), siteId);
 }
 
 /**
- * Настройка с кешем Nitro. В режиме stale-while-revalidate сбой хранилища при
- * обновлении оставляет последнее прочитанное значение.
+ * Настройка с кешем Nitro, отдельным для каждого сайта. В режиме
+ * stale-while-revalidate сбой хранилища при обновлении оставляет последнее
+ * прочитанное значение.
  */
 const getCachedSiteSettings = defineCachedFunction(
   readMaintenanceSiteSettings,
   {
     name: SETTINGS_CACHE_NAME,
-    getKey: () => SETTINGS_CACHE_KEY,
+    getKey: (siteId: string) => siteId,
     maxAge: SETTINGS_CACHE_MAX_AGE_SECONDS,
   },
 );
 
 /**
- * Настройка этого сайта для решения о заглушке; её читает каждый заход на
- * страницу. Никогда не падает: если хранилище недоступно и прочитанного
- * значения нет, сайт считается закрытым — администраторы всё равно войдут, а
- * посторонние не увидят сайт в непонятном состоянии. После сбоя хранилище
- * какое-то время не спрашивается вовсе.
+ * Настройка сайта для решения о заглушке: этого — на каждый заход на
+ * страницу, второго — по запросу его сервера. Никогда не падает: если
+ * хранилище недоступно и прочитанного значения нет, сайт считается закрытым —
+ * администраторы всё равно войдут, а посторонние не увидят сайт в непонятном
+ * состоянии. После сбоя хранилище какое-то время не спрашивается вовсе.
+ *
+ * @param siteId сайт (`5e24`, `5e14`)
  */
-export async function getMaintenanceSiteSettings(): Promise<MaintenanceSiteSettings> {
+export async function getMaintenanceSiteSettings(
+  siteId: string,
+): Promise<MaintenanceSiteSettings> {
   if (Date.now() < readFailureBackoffUntil) {
     return MAINTENANCE_DEFAULT_SITE_SETTINGS;
   }
 
   try {
-    return await getCachedSiteSettings();
+    return await getCachedSiteSettings(siteId);
   } catch (error) {
     consola.error(MAINTENANCE_SETTINGS_READ_FAILED_LOG, error);
 
@@ -233,14 +251,15 @@ export async function getMaintenanceSiteSettings(): Promise<MaintenanceSiteSetti
 }
 
 /**
- * Сохраняет настройку этого сайта. Записи других сайтов в файле остаются как
- * были.
+ * Сохраняет настройку сайта. Записи других сайтов в файле остаются как были.
  *
+ * @param siteId сайт (`5e24`, `5e14`)
  * @param update новое состояние из формы админки
  * @param username кто сохраняет
  * @returns сохранённая настройка
  */
 export async function saveMaintenanceSiteSettings(
+  siteId: string,
   update: MaintenanceSettingsUpdate,
   username: string,
 ): Promise<MaintenanceSiteSettings> {
@@ -253,10 +272,10 @@ export async function saveMaintenanceSiteSettings(
   };
 
   await writeSettingsFile({
-    sites: { ...settingsFile?.sites, [getOnlineSiteId()]: siteSettings },
+    sites: { ...settingsFile?.sites, [siteId]: siteSettings },
   });
 
-  await invalidateSettingsCache();
+  await invalidateSettingsCache(siteId);
 
   return siteSettings;
 }

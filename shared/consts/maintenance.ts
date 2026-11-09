@@ -1,5 +1,6 @@
 import type {
   MaintenanceGate,
+  MaintenanceSiteId,
   MaintenanceSiteSettings,
 } from '../types/maintenance';
 
@@ -12,8 +13,23 @@ import type {
 /** Публичный роут: показывать ли заглушку текущему посетителю. */
 export const MAINTENANCE_API_PATH = '/api/maintenance';
 
-/** Роут админки: чтение (`GET`) и сохранение (`PUT`) настройки. */
+/**
+ * Роут админки: чтение (`GET`) и сохранение (`PUT`) настройки. Сайт — в
+ * параметре `siteId`.
+ */
 export const MAINTENANCE_ADMIN_API_PATH = '/api/admin/maintenance';
+
+/**
+ * Публичный роут настройки сайта для его сервера:
+ * `/api/maintenance/sites/<siteId>`. Его спрашивает сервер сайта D&D 2014.
+ */
+export const MAINTENANCE_SITES_API_PATH = '/api/maintenance/sites';
+
+/** Сайты, у которых свой режим обновления. */
+export const MAINTENANCE_SITE_IDS = [
+  '5e24',
+  '5e14',
+] as const satisfies readonly MaintenanceSiteId[];
 
 export const MAINTENANCE_DEFAULT_TITLE =
   'Таверна закрыта: мы восстаём из пепла';

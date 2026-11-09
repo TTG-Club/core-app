@@ -5,6 +5,7 @@ import {
   MAINTENANCE_CACHE_CONTROL,
   resolveMaintenanceGate,
 } from '#server/domain/maintenance';
+import { getOnlineSiteId } from '#server/domain/online';
 import { CACHE_CONTROL_HEADER } from '#server/domain/page-cache';
 
 /**
@@ -15,5 +16,8 @@ import { CACHE_CONTROL_HEADER } from '#server/domain/page-cache';
 export default defineEventHandler(async (event): Promise<MaintenanceGate> => {
   setResponseHeader(event, CACHE_CONTROL_HEADER, MAINTENANCE_CACHE_CONTROL);
 
-  return resolveMaintenanceGate(event, await getMaintenanceSiteSettings());
+  return resolveMaintenanceGate(
+    event,
+    await getMaintenanceSiteSettings(getOnlineSiteId()),
+  );
 });

@@ -3,6 +3,7 @@ import {
   isMaintenancePageRequest,
   resolveMaintenanceGate,
 } from '#server/domain/maintenance';
+import { getOnlineSiteId } from '#server/domain/online';
 import { MAINTENANCE_CONTEXT_KEY } from '#shared/consts';
 
 /**
@@ -20,7 +21,7 @@ export default defineEventHandler(async (event) => {
     return;
   }
 
-  const settings = await getMaintenanceSiteSettings();
+  const settings = await getMaintenanceSiteSettings(getOnlineSiteId());
 
   if (!settings.enabled) {
     return;

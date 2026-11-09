@@ -1,6 +1,9 @@
 import type { BadgeProps } from '@nuxt/ui';
 
-import type { MaintenanceSettingsUpdate } from '#shared/types';
+import type {
+  MaintenanceSettingsUpdate,
+  MaintenanceSiteId,
+} from '#shared/types';
 
 /** Страница режима обновления в админке. */
 export const MAINTENANCE_ADMIN_ROUTE = '/admin/maintenance';
@@ -23,12 +26,36 @@ export const MAINTENANCE_ADMIN_SEO_TITLE = `${MAINTENANCE_ADMIN_PAGE_TITLE}: Н�
 export const MAINTENANCE_ADMIN_NAVIGATION_ICON = 'tabler:barrier-block';
 
 export const MAINTENANCE_ADMIN_PAGE_HINT =
-  'Пока режим включён, все, кроме администраторов, вместо любой страницы сайта видят заглушку с текстом ниже и формой входа (ответ 503, поисковики её не индексируют). API продолжает работать. Если хранилище настроек недоступно или настройку ни разу не сохраняли, сайт считается закрытым.';
+  'Пока режим включён, все, кроме администраторов, вместо любой страницы сайта видят заглушку с текстом ниже и формой входа (ответ 503, поисковики её не индексируют). API продолжает работать. Если хранилище настроек недоступно или настройку ни разу не сохраняли, сайт считается закрытым. У каждого сайта настройка своя: сайт D&D 2014 берёт её отсюда и, не получив, тоже считается закрытым.';
+
+/** Вкладка сайта на странице режима обновления. */
+export interface MaintenanceAdminSiteTab {
+  label: string;
+  /** Значение вкладки для `UTabs`. */
+  value: MaintenanceSiteId;
+  /** Пояснение к переключателю: когда сохранённое дойдёт до сайта. */
+  switchDescription: string;
+}
+
+/** Вкладка, открытая при входе на страницу, — этот сайт. */
+export const MAINTENANCE_ADMIN_DEFAULT_SITE: MaintenanceSiteId = '5e24';
+
+/** Сайты на странице режима обновления: у каждого своя форма. */
+export const MAINTENANCE_ADMIN_SITE_TABS: MaintenanceAdminSiteTab[] = [
+  {
+    label: 'Сайт D&D 2024',
+    value: '5e24',
+    switchDescription: 'Действует сразу после сохранения.',
+  },
+  {
+    label: 'Сайт D&D 2014',
+    value: '5e14',
+    switchDescription:
+      'Действует в течение минуты после сохранения: сайт D&D 2014 перечитывает настройку раз в минуту.',
+  },
+];
 
 export const MAINTENANCE_ADMIN_SWITCH_LABEL = 'Сайт закрыт на обновление';
-
-export const MAINTENANCE_ADMIN_SWITCH_DESCRIPTION =
-  'Действует сразу после сохранения.';
 
 export const MAINTENANCE_ADMIN_TITLE_LABEL = 'Заголовок заглушки';
 

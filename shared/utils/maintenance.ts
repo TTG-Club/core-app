@@ -1,6 +1,7 @@
 import type {
   MaintenanceGate,
   MaintenanceSettingsUpdate,
+  MaintenanceSiteId,
   MaintenanceSiteSettings,
 } from '../types/maintenance';
 
@@ -8,8 +9,18 @@ import { z } from 'zod';
 
 import {
   MAINTENANCE_MESSAGE_MAX_LENGTH,
+  MAINTENANCE_SITE_IDS,
   MAINTENANCE_TITLE_MAX_LENGTH,
 } from '../consts/maintenance';
+
+/** Схема сайта с режимом обновления — для параметров роутов. */
+export const maintenanceSiteIdSchema: z.ZodType<MaintenanceSiteId> =
+  z.enum(MAINTENANCE_SITE_IDS);
+
+/** Схема параметра `siteId` роутов: в query админки и в пути публичного. */
+export const maintenanceSiteParamsSchema = z.object({
+  siteId: maintenanceSiteIdSchema,
+});
 
 /**
  * Схема настройки режима обновления одного сайта. Одна на обе стороны: сервер
