@@ -1,4 +1,5 @@
 <script setup lang="ts">
+  import { SvgLogo } from '~ui/icon';
   import { SignIn } from '~user/auth-modal/ui';
 
   import { useMaintenanceGate } from '../composables';
@@ -12,7 +13,6 @@
     MAINTENANCE_SIGN_OUT_ICON,
     MAINTENANCE_SIGN_OUT_LABEL,
   } from '../model';
-  import MaintenanceIllustration from './MaintenanceIllustration.vue';
 
   const { gate, setSignedIn } = useMaintenanceGate();
   const { isAdmin, logout } = useUser();
@@ -57,7 +57,10 @@
 <template>
   <main class="flex min-h-dvh w-full items-center justify-center px-4 py-10">
     <div class="flex w-full max-w-md flex-col items-center gap-6">
-      <MaintenanceIllustration class="w-60 max-w-full sm:w-72" />
+      <!-- Логотип тянется на 100% родителя, размер задаёт обёртка -->
+      <div class="size-32 sm:size-40">
+        <SvgLogo />
+      </div>
 
       <div class="flex flex-col gap-3 text-center">
         <h1
