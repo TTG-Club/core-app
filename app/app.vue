@@ -4,6 +4,8 @@
   import { DiceRollerFloatButton } from '~dice-roller/float-button';
   import { DiceRollerModal } from '~dice-roller/modal';
   import { CookieConsentBanner } from '~infrastructure/cookie-consent/ui';
+  import { useMaintenanceGate } from '~infrastructure/maintenance/composables';
+  import { MaintenanceScreen } from '~infrastructure/maintenance/ui';
   import { PwaConfig } from '~infrastructure/pwa';
   import { SidebarPanel } from '~infrastructure/sidebar';
   import { SubscriptionExpiryNotice } from '~profile/activation/ui';
@@ -11,6 +13,10 @@
   import '~/assets/css/index.scss';
 
   useThemeHead();
+
+  // Режим «сайт закрыт на обновление»: вместо страницы — заглушка. Сама
+  // страница при этом не рендерится вовсе, и её данные не загружаются.
+  const { isBlocked: isMaintenanceBlocked } = useMaintenanceGate();
 </script>
 
 <template>
@@ -28,7 +34,12 @@
       error-color="var(--color-error)"
     />
 
-    <div class="ttg-app">
+    <MaintenanceScreen v-if="isMaintenanceBlocked" />
+
+    <div
+      v-else
+      class="ttg-app"
+    >
       <PwaConfig />
 
       <SidebarPanel />
