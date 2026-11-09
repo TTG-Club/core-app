@@ -2,11 +2,16 @@
   import { HomeEyebrow } from '~home/ui-kit';
 
   import { LEGACY_SITE } from './model';
+
+  const { oldSiteUrl } = useRuntimeConfig().public;
+
+  /** Главная сайта другой редакции в том же окружении (dev → dev, прод → прод). */
+  const legacySiteUrl = `${oldSiteUrl}/`;
 </script>
 
 <template>
   <NuxtLink
-    :to="LEGACY_SITE.url"
+    :to="legacySiteUrl"
     :class="[
       $style.card,
       'relative flex min-h-28 flex-col justify-end gap-1.5 overflow-hidden',
