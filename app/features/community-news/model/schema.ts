@@ -41,7 +41,6 @@ const shortResponseSchema: z.ZodType<CommunityNewsShortResponse> = z.object({
   statusName: z.string(),
   accessibleByLink: z.boolean(),
   publishDateTime: z.string().nullable(),
-  preview: renderNodeSchema,
 });
 
 const detailedResponseSchema: z.ZodType<CommunityNewsDetailedResponse> =
@@ -59,7 +58,6 @@ const detailedResponseSchema: z.ZodType<CommunityNewsDetailedResponse> =
     statusName: z.string(),
     accessibleByLink: z.boolean(),
     publishDateTime: z.string().nullable(),
-    preview: renderNodeSchema,
     content: renderNodeSchema,
     createdAt: z.string(),
     updatedAt: z.string(),
@@ -81,10 +79,6 @@ const requestSchema: z.ZodType<CommunityNewsRequest> = z.object({
   active: z.boolean(),
   accessibleByLink: z.boolean(),
   publishDateTime: z.string().nullable(),
-  preview: z
-    .string()
-    .nullable()
-    .transform((value) => value ?? ''),
   content: z
     .string()
     .nullable()

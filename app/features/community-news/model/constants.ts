@@ -131,9 +131,7 @@ export const COMMUNITY_NEWS_PAGE_TEXT = {
 export const COMMUNITY_NEWS_EDITOR_TEXT = {
   mainSection: 'Основная информация',
   mediaSection: 'Обложка и видео',
-  previewSection: 'Анонс',
-  contentSection: 'Подробности',
-  optionalMark: '(по желанию)',
+  contentSection: 'Текст новости',
   titleLabel: 'Заголовок',
   titlePlaceholder: 'Введи заголовок',
   urlLabel: 'URL',
@@ -143,9 +141,6 @@ export const COMMUNITY_NEWS_EDITOR_TEXT = {
   accessibleByLinkDescription:
     'Снятую новость можно открыть по прямой ссылке — для предпросмотра. В списках её нет.',
   copyPreviewLink: 'Скопировать ссылку для предпросмотра',
-  previewHelp:
-    'Пара фраз о главном — показывается в карточке и первым абзацем новости.',
-  previewPlaceholder: 'Коротко о главном',
   contentPlaceholder: 'Полный текст новости',
   removeCover: 'Удалить обложку',
   noCoverAlt: 'Обложки нет',

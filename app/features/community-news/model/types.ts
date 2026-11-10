@@ -19,8 +19,8 @@ export type CommunityNewsAdminTab = 'published' | 'unpublished' | 'draft';
 
 /**
  * Тело создания/правки/предпросмотра новости сообщества и ответ
- * `GET /community-news/{url}/raw`. `preview` и `content` — строки хранимой
- * разметки (модель `MarkupEditor`).
+ * `GET /community-news/{url}/raw`. `content` — строка хранимой разметки
+ * (модель `MarkupEditor`).
  *
  * - `authorName` — кто прислал новость или о ком она (мастер, клуб, канал);
  *   пустая строка — без подписи;
@@ -42,7 +42,6 @@ export interface CommunityNewsRequest {
   active: boolean;
   accessibleByLink: boolean;
   publishDateTime: string | null;
-  preview: string;
   content: string;
 }
 
@@ -61,11 +60,10 @@ export interface CommunityNewsShortResponse {
   statusName: string;
   accessibleByLink: boolean;
   publishDateTime: string | null;
-  preview: RenderNode;
 }
 
 /**
- * Полная новость для чтения и предпросмотра: `preview` и `content` приходят
+ * Полная новость для чтения и предпросмотра: `content` приходит
  * разметкой (AST или сырой JSON-строкой — см. `toArticleMarkup`).
  */
 export interface CommunityNewsDetailedResponse extends CommunityNewsShortResponse {
